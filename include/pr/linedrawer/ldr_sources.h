@@ -22,18 +22,24 @@ namespace pr
 {
 	namespace ldr
 	{
-		// A collection of the file sources.
-		// This class manages an internal 'ObjectCont'.
-		// It adds/removes objects from the object container, but only the ones it knows about.
-		// Files each have their own unique Guid. This is so all objects created by a
-		// file group can be removed.
+		// A collection of LDraw script sources
 		class ScriptSources :pr::IFileChangedHandler
 		{
-		public:
-			using filepath_t = pr::string<wchar_t>;
-			using Location = pr::script::Location;
-			using GroupIds = std::unordered_set<pr::Guid, std::hash<Guid>>;
+			// Notes:
+			//  - A collection of the ldr sources.
+			//  - Typically ldr sources are files, but string sources are also supported.
+			//  - This class manages an internal collection of objects, 'ObjectCont'.
+			//  - It adds/removes objects from the object container, but only the ones it knows about.
+			//  - Files each have their own unique Guid. This is so all objects created by a file group can be removed.
 
+		public:
+
+			using filepath_t = pr::string<wchar_t>;
+			using Location = script::Location;
+			using GuidSet = std::unordered_set<Guid, std::hash<Guid>>;
+			using GuidCont = pr::vector<Guid>;
+
+			// Reasons for changes to the sources collection
 			enum class EReason
 			{
 				NewData,
@@ -41,35 +47,46 @@ namespace pr
 				Removal,
 			};
 
-			// A watched file
-			struct File
+			// An Ldr script source
+			struct Source
 			{
-				filepath_t           m_filepath;      // The file to watch
-				pr::Guid             m_file_group_id; // Id for the group of files that this object is part of
-				pr::script::Includes m_includes;      // Include paths to use with this file
+				ObjectCont           m_objects;    // Objects created by this source
+				pr::Guid             m_context_id; // Id for the group of files that this object is part of
+				filepath_t           m_filepath;   // The filepath of the source (if there is one)
+				pr::script::Includes m_includes;   // Include paths to use with this file
 
-				File()
-					:m_filepath()
-					,m_file_group_id(pr::GuidZero)
+				Source()
+					:m_context_id(pr::GuidZero)
+					,m_filepath()
 					,m_includes()
 				{}
-				File(wchar_t const* filepath, pr::Guid const& file_group_id, pr::script::Includes const& includes)
-					:m_filepath(pr::filesys::Standardise<filepath_t>(filepath))
-					,m_file_group_id(file_group_id)
+				Source(Guid const& context_id)
+					:m_context_id(context_id)
+					,m_filepath()
+					,m_includes()
+				{}
+				Source(Guid const& context_id, wchar_t const* filepath, script::Includes const& includes)
+					:m_context_id(context_id)
+					,m_filepath(pr::filesys::Standardise<filepath_t>(filepath))
 					,m_includes(includes)
 				{
-					m_includes.AddSearchPath(pr::filesys::GetDirectory(m_filepath));
+					if (!m_filepath.empty())
+						m_includes.AddSearchPath(pr::filesys::GetDirectory(m_filepath));
+				}
+				bool IsFile() const
+				{
+					return !m_filepath.empty();
 				}
 			};
 
 			// A container that doesn't invalidate on add/remove is needed because
-			// the file watcher contains a pointer to 'File' objects.
-			using FileCont = std::unordered_map<filepath_t, File>;
+			// the file watcher contains a pointer into the 'Source' objects.
+			using SourceCont = std::unordered_map<Guid, Source>;
 
 			// Progress update event args
 			struct AddFileProgressEventArgs :CancelEventArgs
 			{
-				// The context id for the AddFile group
+				// The context id for the file group
 				Guid m_context_id;
 
 				// The parse result that objects are being added to
@@ -89,96 +106,81 @@ namespace pr
 				{}
 			};
 
-			// Source reload event args
-			struct ReloadEventArgs
-			{
-				// The object container that is effected
-				ObjectCont const* m_objects;
-
-				// The origin of the object container change
-				EReason m_reason;
-
-				ReloadEventArgs(ObjectCont const& objects, EReason why)
-					:m_objects(&objects)
-					,m_reason(why)
-				{}
-			};
-
 			// Store changed event args
 			struct StoreChangedEventArgs
 			{
-				// The object container that was added to
-				ObjectCont const* m_objects;
+				// The context ids that changed
+				std::initializer_list<Guid> m_context_ids;
 
 				// Contains the results of parsing including the object container that the objects where added to
 				ParseResult const* m_result;
 
 				// The number of objects added as a result of the parsing.
-				int m_count;
+				int m_object_count;
 
 				// The origin of the object container change
 				EReason m_reason;
 
-				StoreChangedEventArgs(ObjectCont const& objects, int count, ParseResult const& result, EReason why)
-					:m_objects(&objects)
+				StoreChangedEventArgs(Guid const* context_ids, int id_count, ParseResult const& result, int object_count, EReason why)
+					:m_context_ids(context_ids, context_ids + id_count)
 					,m_result(&result)
-					,m_count(count)
+					,m_object_count(object_count)
 					,m_reason(why)
 				{}
 			};
 
-			// Source file removed event args
-			struct FileRemovedEventArgs
+			// Source (context id) removed event args
+			struct SourceRemovedEventArgs
 			{
-				pr::Guid m_file_group_id;
+				// The Guid of the source to be removed
+				pr::Guid m_context_id;
 
-				FileRemovedEventArgs(pr::Guid file_group_id)
-					:m_file_group_id(file_group_id)
+				// The origin of the object container change
+				EReason m_reason;
+
+				SourceRemovedEventArgs(pr::Guid context_id, EReason reason)
+					:m_context_id(context_id)
+					,m_reason(reason)
 				{}
 			};
 
 		private:
 
-			pr::FileWatch                m_watcher; // The watcher of files
-			FileCont                     m_files;   // The file sources of ldr script
-			ObjectCont                   m_objects; // The created ldr objects
-			GizmoCont                    m_gizmos;  // The created ldr gizmos
-			pr::Renderer*                m_rdr;     // Renderer used to create models
-			pr::script::IEmbeddedCode*   m_embed;   // Embedded code handler
-			GroupIds                     m_loading; // File group ids in the process of being reloaded
-			std::thread::id              m_main_thread_id;
+			SourceCont                 m_srcs;           // The sources of ldr script
+			GizmoCont                  m_gizmos;         // The created ldr gizmos
+			pr::Renderer*              m_rdr;            // Renderer used to create models
+			pr::script::IEmbeddedCode* m_embed;          // Embedded code handler
+			GuidSet                    m_loading;        // File group ids in the process of being reloaded
+			pr::FileWatch              m_watcher;        // The watcher of files
+			std::thread::id            m_main_thread_id; // The main thread id
 
 		public:
 
 			ScriptSources(pr::Renderer& rdr, pr::script::IEmbeddedCode* embed)
-				:m_watcher()
-				,m_files()
-				,m_objects()
+				:m_srcs()
 				,m_gizmos()
 				,m_rdr(&rdr)
 				,m_embed(embed)
 				,m_loading()
+				,m_watcher()
 				,m_main_thread_id(std::this_thread::get_id())
 			{
+				// Handle notification of changed files from the watcher.
+				// 'OnFilesChanged' is raised before any of the 'FileWatch_OnFileChanged'
+				// callbacks are made. So this notifies of the reload before anything starts changing.
 				m_watcher.OnFilesChanged += [&](FileWatch::FileCont&)
 				{
-					OnReload(*this, ReloadEventArgs(m_objects, EReason::Reload));
+					OnReload(*this, EmptyArgs());
 				};
 			}
 
-			// The source sources
-			FileCont const& Files() const
+			// The ldr script sources
+			SourceCont const& Sources() const
 			{
-				return m_files;
+				return m_srcs;
 			}
 
-			// The store of objects
-			ObjectCont const& Objects() const
-			{
-				return m_objects;
-			}
-
-			// The contained gizmos
+			// The store of gizmos
 			GizmoCont const& Gizmos() const
 			{
 				return m_gizmos;
@@ -187,124 +189,133 @@ namespace pr
 			// Parse error event.
 			pr::EventHandler<ScriptSources&, ErrorEventArgs const&> OnError;
 
+			// Reload event. Note: Don't AddFile() or RefreshChangedFiles() during this event.
+			pr::EventHandler<ScriptSources&, EmptyArgs const&> OnReload;
+
 			// An event raised during parsing of files. This is called in the context of the threads that call 'AddFile'. Do not sign up while AddFile calls are running.
 			pr::EventHandler<ScriptSources&, AddFileProgressEventArgs&> OnAddFileProgress;
-
-			// Reload event. Note: Don't AddFile() or RefreshChangedFiles() during this event.
-			pr::EventHandler<ScriptSources&, ReloadEventArgs const&> OnReload;
 
 			// Store changed event.
 			pr::EventHandler<ScriptSources&, StoreChangedEventArgs const&> OnStoreChanged;
 
-			// Source file being removed event (i.e. objects deleted by Id)
-			pr::EventHandler<ScriptSources&, FileRemovedEventArgs const&> OnFileRemoved;
+			// Source removed event (i.e. objects deleted by Id)
+			pr::EventHandler<ScriptSources&, SourceRemovedEventArgs const&> OnSourceRemoved;
 
-			// Remove all objects and file sources
+			// Remove all objects and sources
 			void ClearAll()
 			{
 				assert(std::this_thread::get_id() == m_main_thread_id);
+				
+				GuidCont guids;
+				for (auto& src : m_srcs)
+					guids.push_back(src.first);
 
-				m_objects.clear();
 				m_gizmos.clear();
-				m_files.clear();
+				m_srcs.clear();
 				m_watcher.RemoveAll();
 
 				// Notify of the object container change
-				OnStoreChanged(*this, StoreChangedEventArgs(m_objects, 0, ParseResult(), ScriptSources::EReason::Removal));
+				OnStoreChanged(*this, StoreChangedEventArgs(guids.data(), int(guids.size()), ParseResult(), 0, EReason::Removal));
 			}
 
 			// Remove all file sources
-			void Clear()
+			void ClearFiles()
 			{
 				assert(std::this_thread::get_id() == m_main_thread_id);
+				GuidCont guids;
 
-				// Delete all objects belonging to all file groups
-				for (auto& file : m_files)
+				// Notify of the delete of each file source
+				for (auto& src : m_srcs)
 				{
-					OnFileRemoved(*this, FileRemovedEventArgs(file.second.m_file_group_id));
-					pr::ldr::Remove(m_objects, &file.second.m_file_group_id, 1, 0, 0);
+					if (!src.second.IsFile()) continue;
+					OnSourceRemoved(*this, SourceRemovedEventArgs(src.first, EReason::Removal));
+					guids.push_back(src.first);
 				}
 
-				// Notify of the object container change
-				OnStoreChanged(*this, StoreChangedEventArgs(m_objects, 0, ParseResult(), ScriptSources::EReason::Removal));
-
-				// Remove all file watches
-				m_files.clear();
+				// Remove all file sources and watcher references
+				for (auto& id : guids) m_srcs.erase(id);
 				m_watcher.RemoveAll();
+
+				// Notify of the object container change
+				OnStoreChanged(*this, StoreChangedEventArgs(guids.data(), int(guids.size()), ParseResult(), 0, EReason::Removal));
 			}
 
 			// Remove a single object from the object container
-			void Remove(LdrObject* object)
+			void Remove(LdrObject* object, EReason reason = EReason::Removal)
 			{
 				assert(std::this_thread::get_id() == m_main_thread_id);
-				pr::ldr::Remove(m_objects, object);
+				auto id = object->m_context_id;
+
+				// Remove the object from the source it belongs to
+				auto& src = m_srcs[id];
+				auto count = src.m_objects.size();
+				pr::ldr::Remove(src.m_objects, object);
 
 				// Notify of the object container change
-				OnStoreChanged(*this, StoreChangedEventArgs(m_objects, 0, ParseResult(), ScriptSources::EReason::Removal));
+				if (src.m_objects.size() != count)
+					OnStoreChanged(*this, StoreChangedEventArgs(&id, 1, ParseResult(), 0, reason));
+
+				// If that was the last object for the source, remove the source too
+				if (src.m_objects.empty())
+					Remove(id);
 			}
 
-			// Remove all objects associated with 'file_group_id'
-			void Remove(Guid const& file_group_id)
+			// Remove all objects associated with 'context_id'
+			void Remove(Guid const& context_id, EReason reason = EReason::Removal)
 			{
+				// Copy the id, because removing the source will delete the memory that 'context_id' is in
 				assert(std::this_thread::get_id() == m_main_thread_id);
+				auto id = context_id;
 
 				// Notify of objects about to be deleted
-				OnFileRemoved(*this, FileRemovedEventArgs(file_group_id));
+				OnSourceRemoved(*this, SourceRemovedEventArgs(id, reason));
 
-				// Delete all objects belonging to this file group
-				pr::ldr::Remove(m_objects, &file_group_id, 1, 0, 0);
+				// Delete the source and its associated objects
+				m_srcs.erase(id);
+
+				// Delete any associated files and watches
+				m_watcher.RemoveAll(id);
 
 				// Notify of the object container change
-				OnStoreChanged(*this, StoreChangedEventArgs(m_objects, 0, ParseResult(), ScriptSources::EReason::Removal));
-
-				// Delete all associated file watches
-				m_watcher.RemoveAll(file_group_id);
+				OnStoreChanged(*this, StoreChangedEventArgs(&id, 1, ParseResult(), 0, reason));
 			}
 
 			// Remove a file source
-			void RemoveFile(wchar_t const* filepath)
+			void RemoveFile(wchar_t const* filepath, EReason reason = EReason::Removal)
 			{
 				assert(std::this_thread::get_id() == m_main_thread_id);
 
-				// Find the file in the file list
-				auto fpath = pr::filesys::Standardise<filepath_t>(filepath);
-				auto iter = m_files.find(fpath);
-				if (iter == std::end(m_files))
-					return;
-
-				// Remove the objects created from this file source
-				auto& file = iter->second;
-				Remove(file.m_file_group_id);
-
-				// Remove the file source
-				m_files.erase(iter);
+				// Remove the objects created 'filepath'
+				auto context_id = ContextIdFromFilepath(filepath);
+				if (context_id != nullptr)
+					Remove(*context_id, reason);
 			}
 
 			// Reload all files
-			void Reload()
+			void ReloadFiles()
 			{
 				assert(std::this_thread::get_id() == m_main_thread_id);
 
 				// Notify reloading
-				OnReload(*this, ReloadEventArgs(m_objects, EReason::Reload));
+				OnReload(*this, EmptyArgs());
 
-				// Make a copy of the file list
-				FileCont files = m_files;
+				// Make a copy of the sources container
+				auto srcs = m_srcs;
 
 				// Add each file again (asynchronously)
-				// Note: don't need to clear because each file will remove itself
-				for (auto& f : files)
+				// Note: don't need to clear because each file will remove itself.
+				// Don't re-add non file sources, since they can't change.
+				for (auto& src : srcs)
 				{
-					auto file = f.second;
+					if (!src.second.IsFile()) continue;
+					auto& file = src.second;
 
 					// Skip files that are in the process of loading
-					if (m_loading.find(file.m_file_group_id) != std::end(m_loading)) continue;
-					m_loading.insert(file.m_file_group_id);
+					if (m_loading.find(file.m_context_id) != std::end(m_loading)) continue;
+					m_loading.insert(file.m_context_id);
 
-					std::thread([=]
-					{
-						AddFile(file, EReason::Reload, true);
-					}).detach();
+					// Fire off a thread to add the file
+					std::thread([=]{ AddFile(file.m_filepath.c_str(), EReason::Reload, file.m_context_id, file.m_includes, true); }).detach();
 				}
 			}
 
@@ -315,27 +326,30 @@ namespace pr
 			}
 
 			// Add an object created externally
-			void Add(LdrObjectPtr object)
+			void Add(LdrObjectPtr object, EReason reason = EReason::NewData)
 			{
-				m_objects.push_back(object);
+				auto context_id = object->m_context_id;
+
+				// Add the object to the collection
+				m_srcs[context_id].m_context_id = context_id;
+				m_srcs[context_id].m_objects.push_back(object);
 
 				// Notify of the object container change
-				OnStoreChanged(*this, StoreChangedEventArgs(m_objects, 1, ParseResult(), ScriptSources::EReason::NewData));
+				OnStoreChanged(*this, StoreChangedEventArgs(&context_id, 1, ParseResult(), 1, reason));
 			}
 
-			// Add a file source
+			// Add a file source.
 			// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 			// Returns the Guid of the context that the objects were added to.
-			pr::Guid AddFile(wchar_t const* filepath, pr::script::Includes const& includes, bool additional)
+			Guid AddFile(wchar_t const* filepath, script::Includes const& includes, bool additional)
 			{
-				File file(filepath, pr::GenerateGUID(), includes);
-				return AddFile(file, EReason::NewData, additional);
+				return AddFile(filepath, EReason::NewData, pr::GenerateGUID(), includes, additional);
 			}
 
-			// Add ldr objects from a script string or file (but not as a script source)
+			// Add ldr objects from a script string or file (but not as a file source).
 			// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 			// Returns the Guid of the context that the objects were added to.
-			pr::Guid AddScript(wchar_t const* ldr_script, bool file, pr::Guid const* context_id, pr::script::Includes const& includes)
+			Guid AddScript(wchar_t const* ldr_script, bool file, Guid const* context_id, script::Includes const& includes)
 			{
 				// Create a context id if none given
 				auto guid = context_id ? *context_id : pr::GenerateGUID();
@@ -358,51 +372,45 @@ namespace pr
 			}
 
 			// Return the file group id for objects created from 'filepath' (if filepath is an existing source)
-			bool ContextIdFromFilepath(wchar_t const* filepath, Guid& id) const
+			Guid const* ContextIdFromFilepath(wchar_t const* filepath) const
 			{
 				assert(std::this_thread::get_id() == m_main_thread_id);
 
-				// Find the file in the file list
+				// Find the corresponding source in the sources collection
 				auto fpath = pr::filesys::Standardise<filepath_t>(filepath);
-				auto iter = m_files.find(fpath);
-				if (iter == std::end(m_files))
-					return false;
-
-				// Return the file group id
-				auto& file = iter->second;
-				id = file.m_file_group_id;
-				return true;
+				auto iter = pr::find_if(m_srcs, [=](auto& src){ return src.second.m_filepath == fpath; });
+				return iter != std::end(m_srcs) ? &iter->second.m_context_id : nullptr;
 			}
 
 		private:
 
 			// 'filepath' is the name of the changed file
-			void FileWatch_OnFileChanged(wchar_t const*, pr::Guid const& file_group_id, void*, bool&)
+			void FileWatch_OnFileChanged(wchar_t const*, Guid const& context_id, void*, bool&)
 			{
 				assert(std::this_thread::get_id() == m_main_thread_id);
 
-				// Look for the root file for group 'file_group_id'
-				auto iter = pr::find_if(m_files, [=](auto& file){ return file.second.m_file_group_id == file_group_id; });
-				if (iter == std::end(m_files)) return;
+				// Look for the root file for group 'context_id'
+				auto iter = pr::find_if(m_srcs, [=](auto& src){ return src.second.m_context_id == context_id; });
+				if (iter == std::end(m_srcs)) return;
 				auto root_file = iter->second;
 
 				// Skip files that are in the process of loading
-				if (m_loading.find(root_file.m_file_group_id) != std::end(m_loading)) return;
-				m_loading.insert(root_file.m_file_group_id);
+				if (m_loading.find(root_file.m_context_id) != std::end(m_loading)) return;
+				m_loading.insert(root_file.m_context_id);
 
 				// Reload that file group (asynchronously)
+				auto filepath = root_file.m_filepath;
+				auto ctx_id = root_file.m_context_id;
+				auto inc = root_file.m_includes;
 				std::thread([=]
 				{
-					auto id = AddFile(root_file, EReason::Reload, true);
+					auto id = AddFile(filepath.c_str(), EReason::Reload, ctx_id, inc, true);
 					if (id != pr::GuidZero)
 						return;
 
 					// Don't do this, because it leaves LDraw in an infinite loop trying to load a broken file
 					//// On failure, mark the file as changed again.
-					//m_rdr->RunOnMainThread([=]
-					//{
-					//	m_watcher.MarkAsChanged(root_file.m_filepath.c_str());
-					//});
+					//m_rdr->RunOnMainThread([=]{ m_watcher.MarkAsChanged(root_file.m_filepath.c_str()); });
 				}).detach();
 			}
 
@@ -410,48 +418,50 @@ namespace pr
 			// Note: 'file' not passed by reference because it can be a file already in the collection, so we need a local copy.
 			// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 			// Returns the Guid of the context that the objects were added to.
-			pr::Guid AddFile(File file, EReason reason, bool additional)
+			Guid AddFile(wchar_t const* ldr_file, EReason reason, Guid const& context_id, script::Includes const& includes, bool additional) // worker thread context
 			{
-				// Note: worker thread context
 				using namespace pr::script;
+				assert(ldr_file && *ldr_file != 0);
+
+				// Create a file source
+				Source file(context_id, ldr_file, includes);
 
 				// Record the files that get included so we can watch them for changes
 				pr::vector<filepath_t> filepaths;
-				filepaths.push_back(pr::filesys::Standardise(file.m_filepath));
+				filepaths.push_back(file.m_filepath);
 				auto file_opened = [&](filepath_t const& fp)
 				{
 					// Add the directory of the included file to the paths
-					file.m_includes.AddSearchPath(pr::filesys::GetDirectory(fp));
-					filepaths.push_back(pr::filesys::Standardise(fp));
+					file.m_includes.AddSearchPath(filesys::GetDirectory(fp));
+					filepaths.push_back(filesys::Standardise(fp));
 				};
 
 				// Parse the contents of the file
+				ParseResult out;
 				ErrorEventArgs errors;
-				auto context_id = pr::GuidZero;
-				auto out = std::make_shared<ParseResult>();
 				#pragma region Parse
 				try
 				{
 					// Add the file based on it's file type
-					auto extn = pr::filesys::GetExtension(file.m_filepath);
-					if (pr::str::EqualI(extn, "lua"))
+					auto extn = filesys::GetExtension(file.m_filepath);
+					if (str::EqualI(extn, "lua"))
 					{
 						// Lua script that generates ldr script
 						//m_lua_src.Add(fpath.c_str());
 					}
-					else if (pr::str::EqualI(extn, "p3d"))
+					else if (str::EqualI(extn, "p3d"))
 					{
 						// P3D binary model file
 						Buffer<> src(ESrcType::Buffered, pr::FmtS(L"*Model {\"%s\"}", file.m_filepath.c_str()));
 						Reader reader(src, false, &file.m_includes, nullptr, m_embed);
-						Parse(*m_rdr, reader, *out, file.m_file_group_id, pr::StaticCallBack(AddFileProgressCB, this));
+						Parse(*m_rdr, reader, out, file.m_context_id, pr::StaticCallBack(AddFileProgressCB, this));
 					}
-					else if (pr::str::EqualI(extn, "csv"))
+					else if (str::EqualI(extn, "csv"))
 					{
 						// CSV data, create a chart to graph the data
 						Buffer<> src(ESrcType::Buffered, pr::FmtS(L"*Chart {3 #include \"%s\"}", file.m_filepath.c_str()));
 						Reader reader(src, false, &file.m_includes, nullptr, m_embed);
-						Parse(*m_rdr, reader, *out, file.m_file_group_id, pr::StaticCallBack(AddFileProgressCB, this));
+						Parse(*m_rdr, reader, out, file.m_context_id, pr::StaticCallBack(AddFileProgressCB, this));
 					}
 					else
 					{
@@ -464,10 +474,8 @@ namespace pr
 
 						// Parse the script
 						Reader reader(src, false, &file.m_includes, nullptr, m_embed);
-						Parse(*m_rdr, reader, *out, file.m_file_group_id, pr::StaticCallBack(AddFileProgressCB, this));
+						Parse(*m_rdr, reader, out, file.m_context_id, pr::StaticCallBack(AddFileProgressCB, this));
 					}
-
-					context_id = file.m_file_group_id;
 				}
 				catch (pr::script::Exception const& ex)
 				{
@@ -480,36 +488,32 @@ namespace pr
 				#pragma endregion
 
 				// Raise events on the main thread
-				auto new_count = int(out->m_objects.size());
 				auto merge = [=]
 				{
-					// If not additional, clear all files
-					// Otherwise, just remove 'file'
+					// If not additional, clear all sources.
+					// Otherwise, just remove any objects associated with 'file'.
 					if (!additional)
-						Clear();
+						ClearAll();
 					else
-						RemoveFile(file.m_filepath.c_str());
+						RemoveFile(file.m_filepath.c_str(), reason);
 
 					// Remove from the 'loading' set
-					m_loading.erase(file.m_file_group_id);
+					m_loading.erase(file.m_context_id);
 
 					// Add to the container of script sources
-					m_files[file.m_filepath] = file;
+					auto& src = m_srcs[file.m_context_id] = file;
+					src.m_objects.insert(std::end(src.m_objects), std::begin(out.m_objects), std::end(out.m_objects));
 
 					// Add to the watcher
 					for (auto& fp : filepaths)
-						m_watcher.Add(fp.c_str(), this, file.m_file_group_id);
-
-					// Merge the objects into the store
-					for (auto& obj : out->m_objects)
-						m_objects.push_back(obj);
+						m_watcher.Add(fp.c_str(), this, file.m_context_id);
 
 					// Notify of any errors that occurred
 					if (!errors.m_msg.empty())
 						OnError(*this, errors);
 
 					// Notify of the object container change
-					OnStoreChanged(*this, StoreChangedEventArgs(m_objects, new_count, *out, reason));
+					OnStoreChanged(*this, StoreChangedEventArgs(&file.m_context_id, 1, out, int(out.m_objects.size()), reason));
 				};
 
 				// Marshal to the main thread if this is a worker thread context
@@ -521,11 +525,11 @@ namespace pr
 				return context_id;
 			}
 
-			// Internal add script
-			// Add ldr objects from a script string or file (but not as a script source)
+			// Internal add script.
+			// Add ldr objects from a script string or file (but not as a file source).
 			// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 			// Returns the Guid of the context that the objects were added to
-			pr::Guid AddScript(wchar_t const* ldr_script, bool file, EReason reason, pr::Guid const& context_id, pr::script::Includes const& includes)
+			Guid AddScript(wchar_t const* ldr_script, bool file, EReason reason, Guid const& context_id, script::Includes const& includes) // worker thread context
 			{
 				using namespace pr::script;
 
@@ -533,24 +537,24 @@ namespace pr
 				auto inc = includes;
 
 				// Parse the description
+				ParseResult out;
 				ErrorEventArgs errors;
-				auto out = std::make_shared<ParseResult>();
 				#pragma region Parse
 				try
 				{
 					if (file)
 					{
-						inc.AddSearchPath(pr::filesys::GetDirectory<pr::script::string>(ldr_script));
+						inc.AddSearchPath(filesys::GetDirectory<script::string>(ldr_script));
 
 						FileSrc src(ldr_script);
 						Reader reader(src, false, &inc, nullptr, m_embed);
-						pr::ldr::Parse(*m_rdr, reader, *out, context_id);
+						ldr::Parse(*m_rdr, reader, out, context_id);
 					}
 					else // string
 					{
 						PtrW src(ldr_script);
 						Reader reader(src, false, &inc, nullptr, m_embed);
-						pr::ldr::Parse(*m_rdr, reader, *out, context_id);
+						ldr::Parse(*m_rdr, reader, out, context_id);
 					}
 				}
 				catch (pr::script::Exception const& ex)
@@ -564,19 +568,22 @@ namespace pr
 				#pragma endregion
 
 				// Merge the results
-				auto new_count = int(out->m_objects.size());
 				auto merge = [=]
 				{
-					// Merge the objects into the store
-					for (auto& obj : out->m_objects)
-						m_objects.push_back(obj);
+					// Don't remove previous 'context_id' objects.
+					// Objects for a set may be added with multiple AddScript calls
+
+					// Ensure the source exists and add the objects
+					auto& src = m_srcs[context_id];
+					src.m_context_id = context_id;
+					src.m_objects.insert(std::end(src.m_objects), std::begin(out.m_objects), std::end(out.m_objects));
 
 					// Notify of any errors that occurred
 					if (!errors.m_msg.empty())
 						OnError(*this, errors);
 
 					// Notify of the object container change
-					OnStoreChanged(*this, StoreChangedEventArgs(m_objects, new_count, *out, reason));
+					OnStoreChanged(*this, StoreChangedEventArgs(&context_id, 1, out, int(out.m_objects.size()), reason));
 
 					// Throw on errors
 					if (!errors.m_msg.empty())
@@ -607,30 +614,6 @@ namespace pr
 
 
 #if 0
-// Add a string source
-void AddString(wchar_t const* str)
-{
-	try
-	{
-		using namespace pr::script;
-
-		ParseResult out(m_store);
-		auto bcount = m_store.size();
-
-		PtrW src(str);
-		Reader reader(src, false, nullptr, nullptr, &m_lua_src);
-		Parse(m_rdr, reader, out, false);
-
-		auto added = int(m_store.size() - bcount);
-		OnStoreChanged(*this, StoreChangedEventArgs(m_store, added, out, StoreChangedEventArgs::EReason::NewData));
-	}
-	catch (std::exception const& ex)
-	{
-		auto msg = pr::FmtS(L"Script error found while parsing source string.\r\n%S", ex.what());
-		OnError(*this, ErrorEventArgs(msg, pr::script::EResult::Failed));
-	}
-}
-
 // This class processes lua code
 struct LuaSource :pr::script::IEmbeddedCode
 {

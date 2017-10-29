@@ -128,32 +128,14 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\renderer11\renderer.h" />
     <ClInclude Include="..\include\pr\renderer11\forward.h" />
-    <ClInclude Include="..\include\pr\geometry\line.h">
-      <Filter>geometry</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\geometry\box.h">
-      <Filter>geometry</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\geometry\common.h">
       <Filter>geometry</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\renderer11\lights\light.h">
       <Filter>lights</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\geometry\sphere.h">
-      <Filter>geometry</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\geometry\quad.h">
-      <Filter>geometry</Filter>
-    </ClInclude>
     <ClInclude Include="..\projects\renderer11\render\stereo.h">
       <Filter>render</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\geometry\cylinder.h">
-      <Filter>geometry</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\geometry\mesh.h">
-      <Filter>geometry</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\geometry\utility.h">
       <Filter>geometry</Filter>
@@ -225,14 +207,8 @@
     <ClInclude Include="..\projects\renderer11\util\forward_private.h">
       <Filter>util</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\renderer11\shaders\screen_space_shaders.h">
-      <Filter>shaders</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\renderer11\render\window.h">
       <Filter>render</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\geometry\shape2d.h">
-      <Filter>geometry</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\geometry\3ds.h">
       <Filter>geometry</Filter>
@@ -246,8 +222,35 @@
     <ClInclude Include="..\include\pr\renderer11\lights\light_ui.h">
       <Filter>lights</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\geometry\extrude.h">
+    <ClInclude Include="..\include\pr\geometry\models_box.h">
       <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_cylinder.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_extrude.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_line.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_mesh.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_point.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_quad.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_shape2d.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_sphere.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\shaders\shdr_screen_space.h">
+      <Filter>shaders</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -365,22 +368,7 @@
     <ClCompile Include="..\projects\renderer11\steps\shadow_map.cpp">
       <Filter>steps</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\renderer11\shaders\dslighting_shader.cpp">
-      <Filter>shaders</Filter>
-    </ClCompile>
-    <ClCompile Include="..\projects\renderer11\shaders\fwd_shader.cpp">
-      <Filter>shaders</Filter>
-    </ClCompile>
-    <ClCompile Include="..\projects\renderer11\shaders\gbuffer_shader.cpp">
-      <Filter>shaders</Filter>
-    </ClCompile>
     <ClCompile Include="..\projects\renderer11\shaders\shader.cpp">
-      <Filter>shaders</Filter>
-    </ClCompile>
-    <ClCompile Include="..\projects\renderer11\shaders\shadow_map_shader.cpp">
-      <Filter>shaders</Filter>
-    </ClCompile>
-    <ClCompile Include="..\projects\renderer11\shaders\screen_space_shaders.cpp">
       <Filter>shaders</Filter>
     </ClCompile>
     <ClCompile Include="..\projects\renderer11\render\window.cpp">
@@ -394,6 +382,21 @@
     </ClCompile>
     <ClCompile Include="..\projects\renderer11\render\state_block.cpp">
       <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\shaders\shdr_dslighting.cpp">
+      <Filter>shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\shaders\shdr_fwd.cpp">
+      <Filter>shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\shaders\shdr_gbuffer.cpp">
+      <Filter>shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\shaders\shdr_screen_space.cpp">
+      <Filter>shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\shaders\shdr_shadow_map.cpp">
+      <Filter>shaders</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -445,6 +448,9 @@
       <Filter>shaders\hlsl\screenspace</Filter>
     </CustomBuild>
     <CustomBuild Include="..\projects\renderer11\shaders\hlsl\screenspace\arrow_head.hlsl">
+      <Filter>shaders\hlsl\screenspace</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\projects\renderer11\shaders\hlsl\screenspace\point_sprites.hlsl">
       <Filter>shaders\hlsl\screenspace</Filter>
     </CustomBuild>
   </ItemGroup>

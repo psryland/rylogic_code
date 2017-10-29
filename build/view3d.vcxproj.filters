@@ -125,6 +125,12 @@
     <ClCompile Include="..\include\pr\linedrawer\ldr_gizmo.cpp">
       <Filter>src\pr\ldraw</Filter>
     </ClCompile>
+    <ClCompile Include="..\projects\view3d\context.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\view3d\window.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\Rylogic\gfx\view3d.cs">

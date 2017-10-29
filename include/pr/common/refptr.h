@@ -18,8 +18,10 @@
 
 #define PR_REFPTR_TRACE 0
 #if PR_REFPTR_TRACE == 1
-#include "pr/common/assert.h"
-#include "pr/common/stackdump.h"
+	#include <d3d11.h>
+	#include "pr/common/fmt.h"
+	#include "pr/common/assert.h"
+	#include "pr/common/stackdump.h"
 #endif
 
 namespace pr
@@ -28,15 +30,17 @@ namespace pr
 	// A function prototype for clients to implement/specialise to aid stack traces, etc
 	// Example code:
 	// #define PR_REFPTR_TRACE 1
+	// #include "pr/common/assert.h"
+	// #include "pr/common/stackdump.h"
 	// template <typename T> inline long PtrRefCount(T*);
 	// template <typename T> inline void RefPtrTrace(bool, T*){}
 	// template <> inline void RefPtrTrace<ID3D11Buffer>(bool add, ID3D11Buffer* ptr)
 	// {
 	//    OutputDebugStringA(pr::FmtS("[%s] - [%p] - Count = %d\n", add ? "AddRef" : "Release", ptr, PtrRefCount(ptr)));
-	//    pr::StackDump(3,5,[](std::string const& file, int line)
+	//    pr::DumpStack([](std::string const& name, std::string const& file, int line)
 	//    {
-	//        OutputDebugStringA(pr::FmtS("%s(%d):\n", file.c_str(), line));
-	//    });
+	//        OutputDebugStringA(pr::FmtS("%s(%d): %s\n", file.c_str(), line, name.c_str()));
+	//    },3,5);
 	// }
 	template <typename T> void RefPtrTrace(bool,T*) {}
 	template <typename T> long PtrRefCount(T*);
@@ -124,6 +128,7 @@ namespace pr
 		// Move assign
 		RefPtr& operator = (RefPtr&& rhs)
 		{
+			if (this == &rhs) return *this;
 			std::swap(m_ptr, rhs.m_ptr);
 			return *this;
 		}
@@ -131,13 +136,11 @@ namespace pr
 		// Copy assign
 		RefPtr& operator = (RefPtr const& rhs)
 		{
-			if (this != &rhs)
-			{
-				auto ptr = m_ptr;
-				m_ptr = rhs.m_ptr;
-				if (m_ptr) IncRef(m_ptr);
-				if (ptr) DecRef(ptr);
-			}
+			if (this == &rhs) return *this;
+			auto ptr = m_ptr;
+			m_ptr = rhs.m_ptr;
+			if (m_ptr) IncRef(m_ptr);
+			if (ptr) DecRef(ptr);
 			return *this;
 		}
 
@@ -195,6 +198,12 @@ namespace pr
 		{
 			return m_ptr;
 		}
+		T* release()
+		{
+			auto ptr = m_ptr;
+			m_ptr = nullptr;
+			return ptr;
+		}
 
 	protected:
 
@@ -248,20 +257,51 @@ namespace pr
 		virtual long Release() const = 0;
 	};
 
+	// Return the current ref count for a ref pointer
+	template <typename T> inline long PtrRefCount(T* ptr)
+	{
+		if (!ptr) return 0;
+
+		// A crash here indicates that 'ptr' has already been released.
+		// If ptr is a D3DPtr, check that two or more D3DPtrs haven't
+		// been created from the same raw pointer. e.g.
+		// ID3DInterface* raw (ref count = 1)
+		// D3DPtr p0(raw) (ref count = 1 still because the DecRef in the constructor)
+		// D3DPtr p1(raw) (ref count = 1 still because the DecRef in the constructor)
+		// p1->~D3DPtr()  (ref count = 0)
+		// p0->~D3DPtr()  "app.exe has triggered a break point" (i.e. crashed)
+		//
+		// Watch out for:
+		//   D3DPtr<IBlah> p = CorrectlyCreatedBlah();
+		//   D3DPtr<IBlahBase> b = p.m_ptr; -- this is wrong, it should be: b = p;
+		return impl::RefCount(ptr, nullptr);
+	}
+	namespace impl
+	{
+		template <typename T> inline long RefCount(T* ptr, decltype(&T::m_ref_count)*)
+		{
+			return ptr->m_ref_count;
+		}
+		template <typename T> inline long RefCount(T* ptr, ...)
+		{
+			auto count = ptr->AddRef();
+			ptr->Release();
+			return count - 1;
+		}
+	}
+
 	// Some helper trace methods
 	#if PR_REFPTR_TRACE == 1
-	#if defined(__d3d11_h__)
-		template <> inline void RefPtrTrace<ID3D11Device>(bool add, ID3D11Device* ptr)
-		{
-			OutputDebugStringA(pr::FmtS("[%s] - [%p] - Count = %d\n", add ? "AddRef" : "Release", ptr, PtrRefCount(ptr)));
-			pr::StackDump(3,5,[](std::string const& file, int line){ OutputDebugStringA(pr::FmtS("%s(%d):\n", file.c_str(), line)); });
-		}
-		template <> inline void RefPtrTrace<ID3D11Buffer>(bool add, ID3D11Buffer* ptr)
-		{
-			OutputDebugStringA(pr::FmtS("[%s] - [%p] - Count = %d\n", add ? "AddRef" : "Release", ptr, PtrRefCount(ptr)));
-			pr::StackDump(3,5,[](std::string const& file, int line){ OutputDebugStringA(pr::FmtS("%s(%d):\n", file.c_str(), line)); });
-		}
-	#endif
+	//template <> inline void RefPtrTrace<ID3D11Device>(bool add, ID3D11Device* ptr)
+	//{
+	//	OutputDebugStringA(pr::FmtS("[%s] - [%p] - Count = %d\n", add ? "AddRef" : "Release", ptr, PtrRefCount(ptr)));
+	//	pr::DumpStack([](std::string const& name, std::string const& file, int line){ OutputDebugStringA(pr::FmtS("%s(%d): %s\n", file.c_str(), line, name.c_str())); },3,5);
+	//}
+	//template <> inline void RefPtrTrace<ID3D11Buffer>(bool add, ID3D11Buffer* ptr)
+	//{
+	//	OutputDebugStringA(pr::FmtS("[%s] - [%p] - Count = %d\n", add ? "AddRef" : "Release", ptr, PtrRefCount(ptr)));
+	//	pr::DumpStack([](std::string const& name, std::string const& file, int line){ OutputDebugStringA(pr::FmtS("%s(%d): %s\n", file.c_str(), line, name.c_str())); },3,5);
+	//}
 	#endif
 }
 

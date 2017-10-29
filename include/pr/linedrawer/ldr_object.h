@@ -43,6 +43,7 @@ namespace pr
 		#pragma region Ldr object types
 		#define PR_ENUM(x)\
 			x(Unknown    ,= HashI("Unknown"   ))\
+			x(Point      ,= HashI("Point"     ))\
 			x(Line       ,= HashI("Line"      ))\
 			x(LineD      ,= HashI("LineD"     ))\
 			x(LineStrip  ,= HashI("LineStrip" ))\
@@ -133,6 +134,7 @@ namespace pr
 			x(Delimiters           ,= HashI("Delimiters"          ))\
 			x(Clear                ,= HashI("Clear"               ))\
 			x(AllowMissingIncludes ,= HashI("AllowMissingIncludes"))\
+			x(Dependency           ,= HashI("Dependency"          ))\
 			x(Camera               ,= HashI("Camera"              ))\
 			x(LookAt               ,= HashI("LookAt"              ))\
 			x(Align                ,= HashI("Align"               ))\
@@ -173,11 +175,13 @@ namespace pr
 			x(Step                 ,= HashI("Step"                ))\
 			x(Addr                 ,= HashI("Addr"                ))\
 			x(Filter               ,= HashI("Filter"              ))\
+			x(Alpha                ,= HashI("Alpha"               ))\
 			x(Range                ,= HashI("Range"               ))\
 			x(Specular             ,= HashI("Specular"            ))\
 			x(ScreenSpace          ,= HashI("ScreenSpace"         ))\
 			x(Billboard            ,= HashI("Billboard"           ))\
-			x(CastShadow           ,= HashI("CastShadow"        ))
+			x(Depth                ,= HashI("Depth"               ))\
+			x(CastShadow           ,= HashI("CastShadow"          ))
 		PR_DEFINE_ENUM2(EKeyword, PR_ENUM);
 		#undef PR_ENUM
 		#pragma endregion
@@ -266,7 +270,7 @@ namespace pr
 			ELdrObject   m_type;     // Object type
 			string32     m_name;     // Name of the object
 			pr::Colour32 m_colour;   // Base colour of the object
-			bool         m_instance; // True if an instance should be created
+			bool         m_instance; // False if this instance should never be drawn (it's used for instancing only)
 
 			ObjectAttributes() :m_type(ELdrObject::Unknown) ,m_name("unnamed") ,m_colour(pr::Colour32White) ,m_instance(true) {}
 			ObjectAttributes(ELdrObject type) :m_type(type), m_name("unnamed") ,m_colour(pr::Colour32White) ,m_instance(true) {}
@@ -394,7 +398,7 @@ namespace pr
 			bool              m_instanced;     // False if this instance should never be drawn (it's used for instancing only)
 			bool              m_visible;       // True if the instance should be rendered
 			bool              m_wireframe;     // True if this object is drawn in wireframe
-			EventHandlerId    m_screen_space;  // True if this object should be rendered in screen space
+			EvtSub            m_screen_space;  // True if this object should be rendered in screen space
 			ELdrFlags         m_flags;         // Property flags controlling meta behaviour of the object
 			pr::UserData      m_user_data;     // User data
 
@@ -409,9 +413,6 @@ namespace pr
 			pr::EventHandler<LdrObject&, rdr::Scene const&> OnAddToScene;
 
 			// Recursively add this object and its children to a scene
-			// Note, LdrObject does not inherit Evt_UpdateScene, because child LdrObjects need to be
-			// added using the parents transform. Any app containing LdrObjects should handle the scene
-			// render event and then call 'AddToScene' on all of the root objects only
 			void AddToScene(pr::rdr::Scene& scene, float time_s = 0.0f, pr::m4x4 const* p2w = &pr::m4x4Identity);
 
 			// Recursively add the bounding box instance for this object using 'bbox_model'
@@ -594,12 +595,6 @@ namespace pr
 
 		// LdrObject Creation functions *********************************************
 
-		// Parsing data cache.
-		// Create one of these and provide it in successive Parse calls to speed up parsing.
-		struct CacheData;
-		CacheData* ThisThreadCache();
-		std::unique_ptr<CacheData> CreateCache();
-
 		// Callback function type used during script parsing
 		// 'bool function(Guid context_id, ParseResult& out, pr::script::Location const& loc, bool complete)'
 		// Returns 'true' to continue parsing, false to abort parsing.
@@ -614,8 +609,7 @@ namespace pr
 			pr::script::Reader& reader,            // The source of the script
 			ParseResult& out,                      // The results of parsing the script
 			pr::Guid const& context_id = GuidZero, // The context id to assign to each created object
-			ParseProgressCB progress_cb = nullptr, // Progress callback
-			CacheData* cache = nullptr);           // Parsing cache for speeding up parsing
+			ParseProgressCB progress_cb = nullptr); // Progress callback
 
 		// Parse ldr script from a text file.
 		// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
@@ -626,12 +620,11 @@ namespace pr
 			wchar_t const* filename,               // The file containing the ldr script
 			ParseResult& out,                      // The results of parsing the script
 			pr::Guid const& context_id = GuidZero, // The context id to assign to each created object
-			ParseProgressCB progress_cb = nullptr, // Progress callback
-			CacheData* cache = nullptr)            // Parsing cache for speeding up parsing
+			ParseProgressCB progress_cb = nullptr) // Progress callback
 		{
 			pr::script::FileSrc src(filename);
 			pr::script::Reader reader(src);
-			Parse(rdr, reader, out, context_id, progress_cb, cache);
+			Parse(rdr, reader, out, context_id, progress_cb);
 		}
 
 		// Parse ldr script from a string
@@ -644,12 +637,11 @@ namespace pr
 			Char const* ldr_script,                // The string containing the script
 			ParseResult& out,                      // The results of parsing the script
 			pr::Guid const& context_id = GuidZero, // The context id to assign to each created object
-			ParseProgressCB progress_cb = nullptr, // Progress callback
-			CacheData* cache = nullptr)            // Parsing cache for speeding up parsing
+			ParseProgressCB progress_cb = nullptr) // Progress callback
 		{
 			pr::script::Ptr<Char const*> src(ldr_script);
 			pr::script::Reader reader(src);
-			Parse(rdr, reader, out, context_id, progress_cb, cache);
+			Parse(rdr, reader, out, context_id, progress_cb);
 		}
 
 		// Callback function for editing a dynamic model
@@ -684,7 +676,7 @@ namespace pr
 		void Edit(pr::Renderer& rdr, LdrObject* object, EditObjectCB edit_cb, void* ctx);
 
 		// Update 'object' with info from 'desc'. 'keep' describes the properties of 'object' to update
-		void Update(pr::Renderer& rdr, LdrObject* object, pr::script::Reader& reader, EUpdateObject flags = EUpdateObject::All, CacheData* cache = nullptr);
+		void Update(pr::Renderer& rdr, LdrObject* object, pr::script::Reader& reader, EUpdateObject flags = EUpdateObject::All);
 
 		// Remove all objects from 'objects' that have a context id matching one in 'doomed' and not in 'excluded'
 		// If 'doomed' is 0, all are assumed doomed. If 'excluded' is 0, none are assumed excluded

@@ -32,7 +32,7 @@ namespace pr
 				// True if the included data is binary data
 				Binary = 1 << 0,
 
-				// true for #include "file", false for #include <file>
+				// True for #include "file", false for #include <file>
 				IncludeLocalDir = 1 << 1,
 
 				_bitwise_operators_allowed = -1,
@@ -139,9 +139,7 @@ namespace pr
 					m_paths.push_back(p.substr(s, e - s));
 				});
 
-				if (m_paths.empty())
-					m_types &= ~EType::Files;
-				else
+				if (!m_paths.empty())
 					m_types |= EType::Files;
 			}
 
@@ -154,9 +152,7 @@ namespace pr
 			{
 				m_modules.assign(std::begin(modules), std::end(modules));
 
-				if (m_modules.empty())
-					m_types &= ~EType::Resources;
-				else
+				if (!m_modules.empty())
 					m_types |= EType::Resources;
 			}
 
@@ -169,9 +165,7 @@ namespace pr
 			{
 				m_strtab = strtab;
 
-				if (m_modules.empty())
-					m_types &= ~EType::Strings;
-				else
+				if (!m_strtab.empty())
 					m_types |= EType::Strings;
 			}
 

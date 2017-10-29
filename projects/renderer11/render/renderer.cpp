@@ -132,13 +132,23 @@ namespace pr
 				m_immediate->OMSetRenderTargets(0, 0, 0);
 				m_immediate = nullptr;
 			}
+			m_d2dfactory = nullptr;
+			m_dwrite = nullptr;
+
 			if (m_d3d_device != nullptr)
 			{
+				#ifdef PR_DBG_RDR
+				if ((m_settings.m_device_layers & D3D11_CREATE_DEVICE_DEBUG) != 0)
+				{
+					D3DPtr<ID3D11Debug> dbg;
+					pr::Throw(m_d3d_device->QueryInterface(__uuidof(ID3D11Debug), (void**)&dbg.m_ptr));
+					pr::Throw(dbg->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL|D3D11_RLDO_IGNORE_INTERNAL));
+				}
+				#endif
+
 				PR_ASSERT(PR_DBG_RDR, (rcnt = m_d3d_device.RefCount()) == 1, "Outstanding references to the dx device");
 				m_d3d_device = nullptr;
 			}
-			m_d2dfactory = nullptr;
-			m_dwrite = nullptr;
 		}
 	}
 
@@ -146,16 +156,16 @@ namespace pr
 	Renderer::Renderer(rdr::RdrSettings const& settings)
 		:RdrState(settings)
 		,m_main_thread_id(GetCurrentThreadId())
-		, m_d3d_mutex()
+		,m_d3d_mutex()
 		,m_mutex_task_queue()
 		,m_task_queue()
 		,m_dummy_hwnd()
-		,m_mdl_mgr(m_settings.m_mem, This())
-		,m_shdr_mgr(m_settings.m_mem, This())
-		,m_tex_mgr(m_settings.m_mem, This())
 		,m_bs_mgr(m_settings.m_mem, This())
 		,m_ds_mgr(m_settings.m_mem, This())
 		,m_rs_mgr(m_settings.m_mem, This())
+		,m_tex_mgr(m_settings.m_mem, This())
+		,m_shdr_mgr(m_settings.m_mem, This())
+		,m_mdl_mgr(m_settings.m_mem, This())
 	{
 		try
 		{
@@ -189,9 +199,6 @@ namespace pr
 	}
 	Renderer::~Renderer()
 	{
-		// Notify of the renderer shutdown
-		pr::events::Send(pr::rdr::Evt_RendererDestroy(*this));
-
 		// Release the dummy window
 		if (m_dummy_hwnd != nullptr)
 		{

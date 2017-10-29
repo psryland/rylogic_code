@@ -26,7 +26,8 @@ namespace pr
 			x(Gray     ,)\
 			x(Checker  ,)\
 			x(Checker2 ,)\
-			x(Checker3 ,)
+			x(Checker3 ,)\
+			x(WhiteSpot,)
 		PR_DEFINE_ENUM2(EStockTexture, PR_ENUM);
 		#undef PR_ENUM
 
@@ -42,6 +43,7 @@ namespace pr
 			x(ShadowMapFaceGS ,)\
 			x(ShadowMapLineGS ,)\
 			x(ShadowMapPS     ,)\
+			x(PointSpritesGS  ,)\
 			x(ThickLineListGS ,)\
 			x(ArrowHeadGS     ,)
 		PR_DEFINE_ENUM2(EStockShader, PR_ENUM);

@@ -30,7 +30,6 @@ namespace LDraw
 			InitializeComponent();
 			Settings    = model.SceneSettings(name);
 			Model       = model;
-			ContextIds  = new HashSet<Guid>();
 			DragDropCtx = new DragDrop();
 
 			DockControl = new DockControl(this, name)
@@ -81,7 +80,10 @@ namespace LDraw
 		}
 		protected override void OnChartRendering(ChartRenderingEventArgs args)
 		{
-			Populate();
+			// Update the selection box if necessary
+			if (SelectionBoxVisible)
+				Window.SelectionBoxFitToSelected();
+
 			base.OnChartRendering(args);
 		}
 		protected override void OnKeyDown(KeyEventArgs e)
@@ -175,13 +177,6 @@ namespace LDraw
 		}
 		private DockControl m_dock_control;
 
-		/// <summary>Context Ids of objects added to this scene</summary>
-		public HashSet<Guid> ContextIds
-		{
-			get;
-			private set;
-		}
-
 		/// <summary>Raised when objects are added/removed from the scene</summary>
 		public event EventHandler<View3d.SceneChangedEventArgs> SceneChanged;
 
@@ -240,21 +235,8 @@ namespace LDraw
 		public void Clear()
 		{
 			// Remove all objects from the window's drawlist
-			Window.RemoveObjects(ContextIds.ToArray());
-
-			ContextIds.Clear();
+			Window.RemoveAllObjects();
 			Invalidate();
-		}
-
-		/// <summary>Add objects to the scene just prior to rendering</summary>
-		public void Populate()
-		{
-			// Add all objects to the window's drawlist
-			Window.AddObjects(ContextIds.ToArray());
-
-			// Update the selection box if necessary
-			if (SelectionBoxVisible)
-				Window.SelectionBoxFitToSelected();
 		}
 
 		/// <summary>Add a file source to this scene</summary>
@@ -268,45 +250,31 @@ namespace LDraw
 			var ctx_id = View3d.ContextIdFromFilepath(filepath);
 			if (ctx_id != null)
 			{
-				if (!additional)
+				AddObjects(ctx_id.Value);
+			}
+			else
+			{
+				// Otherwise, load the source in a background thread
+				ThreadPool.QueueUserWorkItem(x =>
 				{
-					Clear();
-				}
-
-				// Add the context id to this scene only
-				ContextIds.Add(ctx_id.Value);
-
-				if (auto_range)
-				{
-					Populate();
-					AutoRange();
-				}
-				return;
+					// Load a source file and save the context id for that file
+					var id = View3d.LoadScriptSource(filepath, true, include_paths: Model.IncludePaths.ToArray());
+					this.BeginInvoke(() => AddObjects(id));
+				});
 			}
 
-			// Otherwise, load the source in a background thread
-			ThreadPool.QueueUserWorkItem(x =>
+			// Add objects associated with 'id' to this scene
+			void AddObjects(Guid id)
 			{
-				// Load a source file and save the context id for that file
-				var id = View3d.LoadScriptSource(filepath, true, include_paths: Model.IncludePaths.ToArray());
-				this.BeginInvoke(() =>
-				{
-					if (!additional)
-					{
-						Clear();
-					}
+				if (!additional)
+					Clear();
 
-					// Add the context id to both the collection of all context ids and the ids for this scene.
-					Model.SourceContextIds.Add(id);
-					ContextIds.Add(id);
+				// Add the context id this scene.
+				Window.AddObjects(id);
 
-					if (auto_range)
-					{
-						Populate();
-						AutoRange();
-					}
-				});
-			});
+				if (auto_range)
+					AutoRange();
+			}
 		}
 
 		/// <summary>Reset the camera to view objects in the scene</summary>
@@ -437,10 +405,7 @@ namespace LDraw
 			{
 				// Just after reloading sources
 				if (!args.Before && Model.Settings.ResetOnLoad)
-				{
-					Populate();
 					AutoRange(View3d.ESceneBounds.All);
-				}
 			}
 		}
 
@@ -448,6 +413,7 @@ namespace LDraw
 		private void HandleSceneChanged(object sender, View3d.SceneChangedEventArgs args)
 		{
 			SceneChanged.Raise(this, args);
+			Invalidate();
 		}
 
 		/// <summary>Apply setting changes</summary>

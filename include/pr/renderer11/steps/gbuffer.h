@@ -15,10 +15,9 @@ namespace pr
 	{
 		// Constructs the g-buffer for a scene
 		struct GBuffer :RenderStep
-			,pr::events::IRecv<pr::rdr::Evt_Resize>
 		{
 			enum RTEnum_ { RTDiffuse = 0, RTNormal = 1, RTDepth = 2, RTCount = 3 };
-			static_assert(RTCount <= D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT, "Too many sumultaneous render targets");
+			static_assert(RTCount <= D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT, "Too many simultaneous render targets");
 
 			static const ERenderStep::Enum_ Id = ERenderStep::GBuffer;
 
@@ -31,13 +30,13 @@ namespace pr
 			D3DPtr<ID3D11Buffer>             m_cbuf_camera;  // Per-frame camera constants
 			D3DPtr<ID3D11Buffer>             m_cbuf_nugget;  // Per-nugget constants
 			ShaderSet                        m_sset;
+			pr::EvtAutoSub                   m_eh_resize;    // RT resize
 
 			explicit GBuffer(Scene& scene);
 
 		private:
 
 			GBuffer(GBuffer const&);
-			GBuffer& operator = (GBuffer const&);
 
 			// The type of render step this is
 			ERenderStep::Enum_ GetId() const override { return Id; }
@@ -53,9 +52,6 @@ namespace pr
 
 			// Perform the render step
 			void ExecuteInternal(StateStack& ss) override;
-
-			// Handle main window resize events
-			void OnEvent(Evt_Resize const& evt) override;
 		};
 
 		// Debugging helper for printing the render target resource name

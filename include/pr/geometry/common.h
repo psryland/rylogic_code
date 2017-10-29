@@ -32,7 +32,8 @@ namespace pr
 			Colr    = 1 << 1, // Diffuse base colour
 			Norm    = 1 << 2, // Object space 3D normal
 			Tex0    = 1 << 3, // Diffuse texture
-			_bitwise_operators_allowed
+
+			_bitwise_operators_allowed = 0x7FFFFFFF,
 		};
 
 		// EPrim

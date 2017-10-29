@@ -66,25 +66,26 @@ namespace pr
 			{}
 		};
 
-		// The base class for a shader. All shaders must inherit this class.
-		// This object wraps a single VS, or PS, or GS, etc
-		// A Shader is an instance of a dx shader, it contains shader-specific per-nugget data.
+		// The base class for a shader.
 		struct ShaderBase :pr::RefCount<ShaderBase>
 		{
-			D3DPtr<ID3D11DeviceChild> m_shdr;      // Pointer to the dx shader
+			// Notes:
+			// - This object wraps a single VS, or PS, or GS, etc
+			// - ShaderBase objects are intended to be lightweight instances of D3D shaders.
+			// - ShaderBase objects group a D3D shader with it's per-nugget constants.
+			// - ShaderBase objects can be created for each nugget that needs them.
+
+			D3DPtr<ID3D11DeviceChild> m_dx_shdr;   // Pointer to the dx shader
 			EShaderType               m_shdr_type; // The type of shader this is
 			ShaderManager*            m_mgr;       // The shader manager that created this shader
 			Renderer*                 m_rdr;       // The renderer
 			RdrId                     m_id;        // Id for this shader
-			EGeom                     m_geom;      // Required geometry format for this shader
 			SortKeyId                 m_sort_id;   // A key used to order shaders next to each other in the drawlist
 			BSBlock                   m_bsb;       // The blend state for the shader
 			RSBlock                   m_rsb;       // The rasterizer state for the shader
 			DSBlock                   m_dsb;       // The depth buffering state for the shader
 			string32                  m_name;      // Human readable id for the shader
 			RdrId                     m_orig_id;   // Id of the shader this is a clone of (used for debugging)
-			
-			virtual ~ShaderBase() {}
 
 			// Set up the shader ready to be used on 'dle'
 			// This needs to take the state stack and set things via that, to prevent unnecessary state changes
@@ -93,46 +94,39 @@ namespace pr
 			// Undo any changes made by this shader
 			virtual void Cleanup(ID3D11DeviceContext*) {}
 
-			// Create a clone of this shader
-			ShaderPtr Clone(RdrId new_id, char const* new_name = nullptr)
-			{
-				return MakeClone(new_id, new_name);
-			}
-			template <typename ShaderType> pr::RefPtr<ShaderType> Clone(RdrId new_id, char const* new_name = nullptr)
-			{
-				return MakeClone(new_id, new_name);
-			}
-
-			// Return the input layout associated with this shader.
-			// Note, returns null for all shaders except vertex shaders
+			// Return the input layout associated with this shader. Note: returns null for all shaders except vertex shaders
 			D3DPtr<ID3D11InputLayout> IpLayout() const;
-
-			// Ref counting clean up
-			static void RefCountZero(pr::RefCount<ShaderBase>* doomed);
-			protected: virtual void Delete() = 0;
 
 		protected:
 
-			// Use the shader manager 'CreateShader' factory method to create new shaders
 			friend struct Allocator<ShaderBase>;
-			template <typename DxShaderType> ShaderBase(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<DxShaderType> dx_shdr)
+
+			// Use the shader manager 'CreateShader' factory method to create new shaders
+			template <typename DxShaderType>
+			ShaderBase(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<DxShaderType> const& dx_shdr)
 				:pr::RefCount<ShaderBase>()
-				,m_shdr(dx_shdr)
+				,m_dx_shdr(dx_shdr.get(), true)
 				,m_shdr_type(ShaderTypeId<DxShaderType>::value)
 				,m_mgr(mgr)
 				,m_rdr(&mgr->m_rdr)
 				,m_id(id == AutoId ? MakeId(this) : id)
-				,m_geom()
-				,m_sort_id()
+				,m_sort_id(sort_id)
 				,m_bsb()
 				,m_rsb()
 				,m_dsb()
 				,m_name(name ? name : "")
 				,m_orig_id(m_id)
 			{}
+			virtual ~ShaderBase()
+			{}
 
-			// Create a new shader that is a copy of this shader
-			virtual ShaderPtr MakeClone(RdrId new_id, char const* new_name) = 0;
+			// Ref counting clean up
+			friend struct pr::RefCount<ShaderBase>;
+			static void RefCountZero(pr::RefCount<ShaderBase>* doomed)
+			{
+				static_cast<ShaderBase*>(doomed)->OnRefCountZero();
+			}
+			virtual void OnRefCountZero() = 0;
 
 			// Forwarding methods are needed because only ShaderBase is a friend of the ShaderManager
 			template <typename ShaderType> void Delete(ShaderType* shdr)
@@ -147,27 +141,20 @@ namespace pr
 		template <typename DxShaderType, typename Derived>
 		struct Shader :ShaderBase
 		{
-		protected:
-
-			Shader(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<DxShaderType> dx_shdr)
-				:ShaderBase(mgr, id, name, dx_shdr)
-			{}
-
-			// Default implementation. Derived can override if needed
-			ShaderPtr MakeClone(RdrId new_id, char const* new_name) override
+			// Return the D3D shader interface down-cast to 'DxShaderType'
+			D3DPtr<DxShaderType> dx_shader() const
 			{
-				auto shdr = m_mgr->CreateShader<Derived>(new_id, m_shdr, new_name);
-
-				shdr->m_geom     = m_geom;
-				shdr->m_bsb      = m_bsb;
-				shdr->m_rsb      = m_rsb;
-				shdr->m_dsb      = m_dsb;
-				shdr->m_orig_id  = m_orig_id;
-				return shdr;
+				return static_cast<D3DPtr<DxShaderType>>(m_dx_shdr);
 			}
 
+		protected:
+
+			Shader(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<DxShaderType> const& dx_shdr)
+				:ShaderBase(mgr, id, sort_id, name, dx_shdr)
+			{}
+
 			// Ref count clean up
-			void Delete() override
+			void OnRefCountZero() override
 			{
 				ShaderBase::Delete<Derived>(static_cast<Derived*>(this));
 			}

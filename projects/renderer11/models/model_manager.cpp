@@ -82,10 +82,10 @@ namespace pr
 		}
 
 		// Create a nugget using our allocator
-		Nugget* ModelManager::CreateNugget(NuggetProps props, ModelBuffer* model_buffer, Model* model)
+		Nugget* ModelManager::CreateNugget(NuggetData const& ndata, ModelBuffer* model_buffer, Model* model)
 		{
 			Renderer::Lock lock(m_rdr);
-			Nugget* ptr(m_alex_nugget.New(props, model_buffer, model));
+			Nugget* ptr(m_alex_nugget.New(ndata, model_buffer, model));
 			assert(m_dbg_mem_nugget.add(ptr));
 			return ptr;
 		}

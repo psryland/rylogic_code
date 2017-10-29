@@ -21,9 +21,9 @@ namespace pr
 
 			ShaderSet() :m_vs() ,m_gs() ,m_ps() {}
 			std::initializer_list<ShaderPtr> Enumerate() const { return std::initializer_list<ShaderPtr>(&m_vs, &m_ps + 1); }
-			D3DPtr<ID3D11VertexShader>   VS() const { return m_vs ? m_vs->m_shdr : nullptr; }
-			D3DPtr<ID3D11GeometryShader> GS() const { return m_gs ? m_gs->m_shdr : nullptr; }
-			D3DPtr<ID3D11PixelShader>    PS() const { return m_ps ? m_ps->m_shdr : nullptr; }
+			D3DPtr<ID3D11VertexShader>   VS() const { return m_vs ? m_vs->m_dx_shdr : nullptr; }
+			D3DPtr<ID3D11GeometryShader> GS() const { return m_gs ? m_gs->m_dx_shdr : nullptr; }
+			D3DPtr<ID3D11PixelShader>    PS() const { return m_ps ? m_ps->m_dx_shdr : nullptr; }
 		};
 
 		// A mapping from render step to shader set

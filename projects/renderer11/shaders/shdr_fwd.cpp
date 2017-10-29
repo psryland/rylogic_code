@@ -23,9 +23,9 @@ namespace pr
 		// Forward rendering vertex shader
 		struct FwdShaderVS :Shader<ID3D11VertexShader, FwdShaderVS>
 		{
-			typedef Shader<ID3D11VertexShader, FwdShaderVS> base;
-			FwdShaderVS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11VertexShader> shdr)
-				:base(mgr, id, name, shdr)
+			using base = Shader<ID3D11VertexShader, FwdShaderVS>;
+			FwdShaderVS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11VertexShader> const& shdr)
+				:base(mgr, id, sort_id, name, shdr)
 			{
 				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "forward_vs.cso"));
 			}
@@ -34,9 +34,9 @@ namespace pr
 		// Forward rendering pixel shader
 		struct FwdShaderPS :Shader<ID3D11PixelShader, FwdShaderPS>
 		{
-			typedef Shader<ID3D11PixelShader, FwdShaderPS> base;
-			FwdShaderPS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11PixelShader> shdr)
-				:base(mgr, id, name, shdr)
+			using base = Shader<ID3D11PixelShader, FwdShaderPS>;
+			FwdShaderPS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11PixelShader> const& shdr)
+				:base(mgr, id, sort_id, name, shdr)
 			{
 				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "forward_ps.cso"));
 			}
@@ -47,13 +47,13 @@ namespace pr
 		{
 			VShaderDesc desc(forward_vs, Vert());
 			auto dx = GetVS(EStockShader::FwdShaderVS, &desc);
-			CreateShader<FwdShaderVS>(EStockShader::FwdShaderVS, dx, "fwd_shader_vs");
+			m_stock_shaders.emplace_back(CreateShader<FwdShaderVS>(EStockShader::FwdShaderVS, dx, "fwd_shader_vs"));
 		}
 		template <> void ShaderManager::CreateShader<FwdShaderPS>()
 		{
 			PShaderDesc desc(forward_ps);
 			auto dx = GetPS(EStockShader::FwdShaderPS, &desc);
-			CreateShader<FwdShaderPS>(EStockShader::FwdShaderPS, dx, "fwd_shader_ps");
+			m_stock_shaders.emplace_back(CreateShader<FwdShaderPS>(EStockShader::FwdShaderPS, dx, "fwd_shader_ps"));
 		}
 	}
 }

@@ -92,7 +92,7 @@ namespace pr
 
 	template <typename T> struct Vec2;
 	template <typename T> struct Vec3;
-	struct Vec4;
+	template <typename T> struct Vec4;
 	template <typename T> struct IVec2;
 	struct IVec4;
 	struct Quat;
@@ -154,6 +154,8 @@ namespace pr
 		template <typename T> struct is_mat4 :std::integral_constant<bool, is_vec4<T>::value && is_vec4<typename is_vec<T>::elem_type>::value> {};
 
 		// Helper meta functions
+		template <typename T> using enable_if_arith = typename std::enable_if<std::is_arithmetic<T>::value>::type;
+		template <typename T> using enable_if_intg = typename std::enable_if<std::is_integral<T>::value>::type;
 		template <typename T> using enable_if_vec_cp = typename std::enable_if<is_vec_cp<T>::value>::type;
 		template <typename T> using enable_if_vN = typename std::enable_if<is_vec<T>::value>::type;
 		template <typename T> using enable_if_v2 = typename std::enable_if<is_vec2<T>::value>::type;
@@ -190,7 +192,7 @@ namespace pr
 			using cp_type = float;
 			static int const dim = 3;
 		};
-		template <> struct is_vec<Vec4> :std::true_type
+		template <typename T> struct is_vec<Vec4<T>> :std::true_type
 		{
 			using elem_type = float;
 			using cp_type = float;
@@ -216,13 +218,13 @@ namespace pr
 		};
 		template <> struct is_vec<Mat3x4> :std::true_type
 		{
-			using elem_type = Vec4;
+			using elem_type = Vec4<void>;
 			using cp_type = float;
 			static int const dim = 3;
 		};
 		template <> struct is_vec<Mat4x4> :std::true_type
 		{
-			using elem_type = Vec4;
+			using elem_type = Vec4<void>;
 			using cp_type = float;
 			static int const dim = 4;
 		};

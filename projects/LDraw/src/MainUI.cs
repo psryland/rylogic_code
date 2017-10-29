@@ -203,7 +203,7 @@ namespace LDraw
 			InitializeComponent();
 			KeyPreview = true;
 
-			Settings = new Settings(Util.ResolveUserDocumentsPath(Application.CompanyName, Application.ProductName, "settings.xml"));
+			Settings = new Settings(Util.ResolveUserDocumentsPath(Application.CompanyName, Application.ProductName, "settings.xml")){ ReadOnly = true };
 			DockContainer = new DockContainer();
 			Model = new Model(this);
 			AnimTimer = new Timer{ Interval = 1, Enabled = false };
@@ -212,6 +212,7 @@ namespace LDraw
 			UpdateUI();
 
 			RestoreWindowPosition();
+			Settings.ReadOnly = false;
 		}
 		protected override void Dispose(bool disposing)
 		{
@@ -334,17 +335,20 @@ namespace LDraw
 					m_tsc.ContentPanel.Controls.Add(m_dc);
 					m_dc.ActiveContentChanged += HandleActiveContentChanged;
 				}
+
+				// Handlers
+				void HandleActiveContentChanged(object sender, ActiveContentChangedEventArgs e)
+				{
+					if (Model == null) return;
+					if (e.ContentNew is SceneUI scene)
+						Model.CurrentScene = scene;
+
+					Settings.UI.UILayout = m_dc.SaveLayout();
+					UpdateUI();
+				}
 			}
 		}
 		private DockContainer m_dc;
-		private void HandleActiveContentChanged(object sender, ActiveContentChangedEventArgs e)
-		{
-			if (Model == null) return;
-			if (e.ContentNew is SceneUI scene)
-				Model.CurrentScene = scene;
-
-			UpdateUI();
-		}
 
 		/// <summary>Animation timer</summary>
 		public Timer AnimTimer
@@ -398,10 +402,6 @@ namespace LDraw
 		private void SetupUI()
 		{
 			#region Dock Container
-			m_dc.ActiveContentChanged += (s,a) =>
-			{
-				UpdateUI();
-			};
 			if (Settings.UI.UILayout != null)
 			{
 				// Restore the layout
@@ -940,7 +940,7 @@ namespace LDraw
 			// Load the file source
 			Model.CurrentScene.OpenFile(filepath, additional);
 
-			Invalidate();
+			UpdateUI();
 		}
 
 		/// <summary>Save a script UI to file</summary>

@@ -175,7 +175,7 @@ namespace pr
 			D3DPtr<TD3DInterface> GetState(TStateBlock const& desc, CreateFunc create)
 			{
 				// Look for a corresponding state object
-				auto hash = pr::hash::HashObj(desc);
+				auto hash = pr::hash::Hash(desc);
 				auto iter = m_lookup.find(hash);
 				if (iter == end(m_lookup))
 				{

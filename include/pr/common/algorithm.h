@@ -8,10 +8,22 @@
 #include <exception>
 #include <algorithm>
 #include <unordered_set>
+#include <unordered_map>
 #include <set>
+#include <map>
 
 namespace pr
 {
+	// Container traits
+	template <class T> struct container_traits
+	{
+		using value_type = typename T::value_type;
+	};
+	template <typename U> struct container_traits<U[]>
+	{
+		using value_type = U;
+	};
+
 	// Return the length of a container or array
 	template <typename TCont> size_t length(TCont const& cont)
 	{
@@ -43,47 +55,56 @@ namespace pr
 	}
 
 	// True if 'func' returns true for any element in 'cont'
-	template <typename TCont> inline bool contains(TCont const& cont, decltype(cont[0]) const& item)
+	template <typename TCont, typename TElem = typename container_traits<TCont>::value_type> inline bool contains(TCont const& cont, TElem const& item)
 	{
 		auto iter = std::find(std::begin(cont), std::end(cont), item);
 		return iter != std::end(cont);
 	}
-	template <typename TIter> inline bool contains(TIter beg, TIter end, decltype(*beg) const& item)
+	template <typename TIter, typename TElem = typename std::iterator_traits<TIter>::value_type> inline bool contains(TIter beg, TIter end, TElem const& item)
 	{
 		auto iter = std::find(beg, end, item);
 		return iter != end;
 	}
 
 	// Return the lower bound
-	template <typename TCont, typename TValue> inline auto lower_bound(TCont const& cont, TValue const& val) -> decltype(std::begin(cont))
+	template <typename TCont, typename TValue> inline auto lower_bound(TCont& cont, TValue const& val) -> decltype(std::begin(cont))
 	{
 		return std::lower_bound(std::begin(cont), std::end(cont), val);
 	}
-	template <typename TCont, typename TValue, typename TFunc> inline auto lower_bound(TCont const& cont, TValue const& val, TFunc pred) -> decltype(std::begin(cont))
+	template <typename TCont, typename TValue, typename TFunc> inline auto lower_bound(TCont& cont, TValue const& val, TFunc pred) -> decltype(std::begin(cont))
 	{
 		return std::lower_bound(std::begin(cont), std::end(cont), val, pred);
 	}
 
 	// Return the upper bound
-	template <typename TCont, typename TValue> inline auto upper_bound(TCont const& cont, TValue const& val) -> decltype(std::begin(cont))
+	template <typename TCont, typename TValue> inline auto upper_bound(TCont& cont, TValue const& val) -> decltype(std::begin(cont))
 	{
 		return std::upper_bound(std::begin(cont), std::end(cont), val);
 	}
-	template <typename TCont, typename TValue, typename TFunc> inline auto upper_bound(TCont const& cont, TValue const& val, TFunc pred) -> decltype(std::begin(cont))
+	template <typename TCont, typename TValue, typename TFunc> inline auto upper_bound(TCont& cont, TValue const& val, TFunc pred) -> decltype(std::begin(cont))
 	{
 		return std::upper_bound(std::begin(cont), std::end(cont), val, pred);
 	}
 
 	// Returns a pair [lower, upper) for the range equal to 'val'
-	template <typename TCont, typename TValue> inline auto equal_range(TCont const& cont, TValue const& val) -> decltype(std::make_pair(std::begin(cont), std::begin(cont)))
+	template <typename TCont, typename TValue> inline auto equal_range(TCont& cont, TValue const& val) -> decltype(std::make_pair(std::begin(cont), std::begin(cont)))
 	{
 		return std::equal_range(std::begin(cont), std::end(cont), val);
 	}
-	template <typename TCont, typename TValue, typename TFunc> inline auto equal_range(TCont const& cont, TValue const& val, TFunc pred) -> decltype(std::make_pair(std::begin(cont), std::begin(cont)))
+	template <typename TCont, typename TValue, typename TFunc> inline auto equal_range(TCont& cont, TValue const& val, TFunc pred) -> decltype(std::make_pair(std::begin(cont), std::begin(cont)))
 	{
 		return std::equal_range(std::begin(cont), std::end(cont), val, pred);
 	}
 
+	// Returns a pair [lower, upper) for the range from 'first' to 'last'
+	template <typename TCont, typename TValue> inline auto find_bounds(TCont& cont, TValue const& first, TValue const& last) -> decltype(std::make_pair(std::begin(cont), std::begin(cont)))
+	{
+		assert(first <= last);
+		auto lwr = std::lower_bound(std::begin(cont), std::end(cont), first);
+		auto upr = std::upper_bound(lwr, std::end(cont), last);
+		return std::make_pair(lwr, upr);
+	}
+	
 	// True if 'func' returns true for any element in 'cont'
 	template <typename TCont, typename TFunc> inline bool contains_if(TCont const& cont, TFunc pred)
 	{
@@ -179,6 +200,13 @@ namespace pr
 		if (iter == std::end(cont)) return;
 		cont.erase(iter);
 	}
+	template <typename TCont, typename Value = TCont::value_type> inline void erase_unstable(TCont& cont, Value const& value)
+	{
+		auto iter = std::find(std::begin(cont), std::end(cont), value);
+		if (iter == std::end(cont)) return;
+		*iter = std::move(cont.back());
+		cont.pop_back();
+	}
 
 	// Erase the first match to 'pred' from 'cont'
 	template <typename TCont, typename Pred> inline void erase_first(TCont& cont, Pred pred)
@@ -187,6 +215,13 @@ namespace pr
 		if (iter == std::end(cont)) return;
 		cont.erase(iter);
 	}
+	template <typename TCont, typename Pred> inline void erase_first_unstable(TCont& cont, Pred pred)
+	{
+		auto iter = std::find_if(std::begin(cont), std::end(cont), pred);
+		if (iter == std::end(cont)) return;
+		*iter = std::move(cont.back());
+		cont.pop_back();
+	}
 
 	// Erase all elements from 'cont' that match 'pred'
 	template <typename TCont, typename Pred> inline void erase_if(TCont& cont, Pred pred)
@@ -194,24 +229,44 @@ namespace pr
 		auto end = std::remove_if(std::begin(cont), std::end(cont), pred);
 		cont.erase(end, std::end(cont));
 	}
+	template <typename TCont, typename Pred> inline void erase_if_unstable(TCont& cont, Pred pred)
+	{
+		auto beg = std::begin(cont);
+		auto end = std::end(cont);
+		for (;beg != end;)
+		{
+			if (!pred(*beg)) ++beg;
+			else *beg = std::move(*(--end));
+		}
+		cont.erase(end, std::end(cont));
+	}
 	template <typename TType, typename Pred> inline void erase_if(std::set<TType>& cont, Pred pred)
 	{
-		// 'std::remove_if' does not work on 'std::set' because set cannot be reordered.
-		for (auto i = std::begin(cont);;)
-		{
-			i = std::find_if(i, std::end(cont), pred);
-			if (i == std::end(cont)) break;
-			i = cont.erase(i);
-		}
+		impl::associative_erase_if(cont, pred);
 	}
 	template <typename TType, typename Pred> inline void erase_if(std::unordered_set<TType>& cont, Pred pred)
 	{
-		// 'std::remove_if' does not work on 'std::unordered_set' because set cannot be reordered.
-		for (auto i = std::begin(cont);;)
+		impl::associative_erase_if(cont, pred);
+	}
+	template <typename TKey, typename TValue, typename Pred> inline void erase_if(std::unordered_map<TKey,TValue>& cont, Pred pred)
+	{
+		impl::associative_erase_if(cont, pred);
+	}
+	template <typename TKey, typename TValue, typename Pred> inline void erase_if(std::map<TKey,TValue>& cont, Pred pred)
+	{
+		impl::associative_erase_if(cont, pred);
+	}
+	namespace impl
+	{
+		template <typename TAssocCont, typename Pred> inline void associative_erase_if(TAssocCont& cont, Pred pred)
 		{
-			i = std::find_if(i, std::end(cont), pred);
-			if (i == std::end(cont)) break;
-			i = cont.erase(i);
+			// 'std::remove_if' does not work on associative containers because they cannot be reordered.
+			for (auto i = std::begin(cont);;)
+			{
+				i = std::find_if(i, std::end(cont), pred);
+				if (i == std::end(cont)) break;
+				i = cont.erase(i);
+			}
 		}
 	}
 
@@ -230,4 +285,25 @@ namespace pr
 	{
 		std::transform(std::begin(cont), std::end(cont), std::begin(cont), func);
 	}
+
+	// Set intersection/union
+	template <typename TContOut, typename TCont0, typename TCont1> TContOut set_intersection(TCont0 const& cont0, TCont1 const& cont1)
+	{
+		TContOut out;
+		std::set_intersection(
+			std::begin(cont0), std::end(cont0),
+			std::begin(cont1), std::end(cont1),
+			std::back_inserter(out));
+		return std::move(out);
+	}
+	template <typename TContOut, typename TCont0, typename TCont1> TContOut set_union(TCont0 const& cont0, TCont1 const& cont1)
+	{
+		TContOut out;
+		std::set_union(
+			std::begin(cont0), std::end(cont0),
+			std::begin(cont1), std::end(cont1),
+			std::back_inserter(out));
+		return std::move(out);
+	}
 }
+

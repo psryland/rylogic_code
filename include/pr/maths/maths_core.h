@@ -216,7 +216,7 @@ namespace pr
 	{
 		return std::isnan(value);
 	}
-	template <typename T, typename = std::enable_if<std::is_arithmetic<T>::value>::type> inline bool IsNaN(T value)
+	template <typename T, typename = typename maths::enable_if_arith<T>> inline bool IsNaN(T value)
 	{
 		return false;
 	}
@@ -252,11 +252,11 @@ namespace pr
 	{
 		return IsFinite(value) && std::fabs(value) < max_value;
 	}
-	template <typename T, typename = std::enable_if<std::is_arithmetic<T>::value>::type> inline bool IsFinite(T value)
+	template <typename T, typename = maths::enable_if_arith<T>> inline bool IsFinite(T value)
 	{
 		return value >= limits<T>::lowest() && value <= limits<T>::max();
 	}
-	template <typename T, typename = std::enable_if<std::is_arithmetic<T>::value>::type> inline bool IsFinite(T value, T max_value)
+	template <typename T, typename = maths::enable_if_arith<T>> inline bool IsFinite(T value, T max_value)
 	{
 		return IsFinite(value) && Abs(value) < max_value;
 	}
@@ -355,7 +355,7 @@ namespace pr
 	}
 
 	// Ceil
-	template <typename T, typename = std::enable_if<std::is_arithmetic<T>::value>::type> inline T Ceil(T x)
+	template <typename T, typename = maths::enable_if_arith<T>> inline T Ceil(T x)
 	{
 		return static_cast<T>(std::ceil(x));
 	}
@@ -392,7 +392,7 @@ namespace pr
 	}
 
 	// Floor
-	template <typename T, typename = std::enable_if<std::is_arithmetic<T>::value>::type> inline T Floor(T x)
+	template <typename T, typename = maths::enable_if_arith<T>> inline T Floor(T x)
 	{
 		return static_cast<T>(std::floor(x));
 	}
@@ -583,7 +583,7 @@ namespace pr
 	{
 		// Sqrt is ill-defined for non-square vectors
 		// Matrices have an overload that finds the matrix whose product is 'x'.
-		static_assert(false, "Sqrt is not defined for general vector types");
+		static_assert(typename is_same<T, std::false_type>::value, "Sqrt is not defined for general vector types");
 	}
 	template <typename T, typename = maths::enable_if_vN<T>> inline T SqrtCmp(T const& x) // Component Sqrt
 	{
@@ -716,7 +716,7 @@ namespace pr
 	}
 
 	// Test any or all components pass 'Pred'
-	template <typename T, typename Pred, typename = std::enable_if<std::is_arithmetic<T>::value>::type> inline bool Any(T value, Pred pred)
+	template <typename T, typename Pred, typename = maths::enable_if_arith<T>> inline bool Any(T value, Pred pred)
 	{
 		return pred(value);
 	}
@@ -747,7 +747,7 @@ namespace pr
 			pred(z_cp(v)) ||
 			pred(w_cp(v));
 	}
-	template <typename T, typename Pred, typename = std::enable_if<std::is_arithmetic<T>::value>::type> inline bool All(T value, Pred pred)
+	template <typename T, typename Pred, typename = maths::enable_if_arith<T>> inline bool All(T value, Pred pred)
 	{
 		return pred(value);
 	}
@@ -1129,7 +1129,7 @@ namespace pr
 	}
 	template <typename T, typename U> inline T Lerp(T const& lhs, T const& rhs, U frac)
 	{
-		return lhs + frac * (rhs - lhs);
+		return static_cast<T>(lhs + frac * (rhs - lhs));
 	}
 
 	// Spherical linear interpolation from 'a' to 'b' for t=[0,1]
@@ -1331,7 +1331,7 @@ namespace pr
 	}
 
 	// Return the greatest common factor between 'a' and 'b'
-	template <typename T, typename = std::enable_if<std::is_integral<T>::value>::type> inline T GreatestCommonFactor(T a, T b)
+	template <typename T, typename = maths::enable_if_intg<T>> inline T GreatestCommonFactor(T a, T b)
 	{
 		// Uses the Euclidean algorithm. If the greatest common factor is 1, then 'a' and 'b' are co-prime
 		while (b) { auto t = b; b = a % b; a = t; }
@@ -1339,7 +1339,7 @@ namespace pr
 	}
 
 	// Return the least common multiple between 'a' and 'b'
-	template <typename T, typename = std::enable_if<std::is_integral<T>::value>::type> inline T LeastCommonMultiple(T a, T b)
+	template <typename T, typename = maths::enable_if_intg<T>> inline T LeastCommonMultiple(T a, T b)
 	{
 		return (a*b) / GreatestCommonFactor(a,b);
 	}

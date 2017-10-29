@@ -37,10 +37,9 @@ namespace pr
 			// Use line antialiasing if multi-sampling is enabled
 			if (wnd.m_multisamp.Count != 1)
 				m_rsb.Set(ERS::MultisampleEnable, TRUE);
-		}
-		Scene::~Scene()
-		{
-			pr::events::Send(Evt_SceneDestroy(*this));
+
+			// Sign up for render target resize events
+			m_eh_resize = wnd.m_rdr->RenderTargetSizeChanged += std::bind(&Scene::HandleRenderTargetSizeChanged, this, _1, _2);
 		}
 
 		// Set the render steps to use for rendering the scene
@@ -140,15 +139,15 @@ namespace pr
 		}
 
 		// Resize the viewport on back buffer resize
-		void Scene::OnEvent(Evt_Resize const& evt)
+		void Scene::HandleRenderTargetSizeChanged(Window& wnd, RenderTargetSizeChangedEventArgs const& args)
 		{
-			if (evt.m_done && evt.m_window == m_wnd)
+			if (args.m_done && &wnd == m_wnd)
 			{
 				// Only adjust the width/height of the viewport to the new area.
 				// If an application is using a different viewport region they'll
 				// have to adjust it after this (and before the next frame is drawn)
-				m_viewport.Width = float(evt.m_area.x);
-				m_viewport.Height = float(evt.m_area.y);
+				m_viewport.Width = float(args.m_area.x);
+				m_viewport.Height = float(args.m_area.y);
 			}
 		}
 	}

@@ -8,6 +8,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
+using System.Threading;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using pr.attrib;
@@ -992,22 +993,16 @@ namespace pr.gui
 					return;
 
 				// Block scene changed events while clearing/re-adding objects to the window
-				using (Window.SuspendSceneChanged())
+				//using (Window.SuspendSceneChanged())
 				{
-					// Clear the scene
-					Window.RemoveObjects(all_except: true, context_id: ChartTools.Id);
-
-					// Add axis graphics
+					// Update axis graphics
 					m_owner.Range.AddToScene(Window);
 
-					// Add all chart elements
+					// Add/Remove all chart elements
 					foreach (var elem in m_owner.Elements)
-					{
-						if (!elem.Visible) continue;
-						elem.AddToScene(Window);
-					}
+						elem.UpdateScene(Window);
 
-					// Add user graphics
+					// Add/Remove user graphics
 					m_owner.RaiseChartRendering(new ChartRenderingEventArgs(m_owner, Window));
 				}
 
@@ -1811,33 +1806,39 @@ namespace pr.gui
 					
 				// Position the grid lines so that they line up with the axis tick marks
 				// Grid lines are modelled from the bottom left corner
-				if (XAxis.Owner.Options.ShowGridLines && XAxis.Options.ShowGridLines)
+				if (XAxis.GridLineGfx != null)
 				{
-					XAxis.GridLines(out var min, out var max, out var step);
+					if (XAxis.Owner.Options.ShowGridLines && XAxis.Options.ShowGridLines)
+					{
+						XAxis.GridLines(out var min, out var max, out var step);
 
-					var o2w = cam.O2W;
-					o2w.pos = cam.FocusPoint - o2w * new v4((float)(wh.x/2 - min), wh.y/2, -Owner.Options.GridZOffset, 0);
+						var o2w = cam.O2W;
+						o2w.pos = cam.FocusPoint - o2w * new v4((float)(wh.x/2 - min), wh.y/2, -Owner.Options.GridZOffset, 0);
 
-					XAxis.GridLineGfx.O2WSet(o2w);
-					window.AddObject(XAxis.GridLineGfx);
+						XAxis.GridLineGfx.O2WSet(o2w);
+						window.AddObject(XAxis.GridLineGfx);
+					}
+					else
+					{
+						window.RemoveObject(XAxis.GridLineGfx);
+					}
 				}
-				else
+				if (YAxis.GridLineGfx != null)
 				{
-					window.RemoveObject(XAxis.GridLineGfx);
-				}
-				if (YAxis.Owner.Options.ShowGridLines && YAxis.Options.ShowGridLines)
-				{
-					YAxis.GridLines(out var min, out var max, out var step);
+					if (YAxis.Owner.Options.ShowGridLines && YAxis.Options.ShowGridLines)
+					{
+						YAxis.GridLines(out var min, out var max, out var step);
 
-					var o2w = cam.O2W;
-					o2w.pos = cam.FocusPoint - o2w * new v4(wh.x/2, (float)(wh.y/2 - min), -Owner.Options.GridZOffset, 0);
+						var o2w = cam.O2W;
+						o2w.pos = cam.FocusPoint - o2w * new v4(wh.x/2, (float)(wh.y/2 - min), -Owner.Options.GridZOffset, 0);
 
-					YAxis.GridLineGfx.O2WSet(o2w);
-					window.AddObject(YAxis.GridLineGfx);
-				}
-				else
-				{
-					window.RemoveObject(YAxis.GridLineGfx);
+						YAxis.GridLineGfx.O2WSet(o2w);
+						window.AddObject(YAxis.GridLineGfx);
+					}
+					else
+					{
+						window.RemoveObject(YAxis.GridLineGfx);
+					}
 				}
 			}
 
@@ -1910,10 +1911,12 @@ namespace pr.gui
 					TickText        = rhs.TickText;
 					MeasureTickText = rhs.MeasureTickText;
 				}
-				public virtual void Dispose()
+				public void Dispose()
 				{
+					m_disposed = true;
 					GridLineGfx = null;
 				}
+				private bool m_disposed;
 
 				/// <summary>Render options for the axis</summary>
 				public RdrOptions.Axis Options
@@ -2118,69 +2121,70 @@ namespace pr.gui
 				{
 					get
 					{
-						Debug.Assert(Options.ShowGridLines);
-						if (m_gridlines == null)
-						{
-							// Create a model for the grid lines
-							// Need to allow for one step in either direction because we only create the
-							// grid lines model when scaling and we can translate by a max of one step in
-							// either direction.
-							GridLines(out var min, out var max, out var step);
-							var num_lines = (int)(2 + (max - min) / step);
-
-							// Create the grid lines at the origin, they get positioned as the camera moves
-							var verts = new View3d.Vertex[num_lines * 2];
-							var indices = new ushort[num_lines * 2];
-							var nuggets = new View3d.Nugget[1];
-							var name = string.Empty;
-							var v = 0;
-							var i = 0;
-
-							// Grid verts
-							if (this == Owner.XAxis)
-							{
-								name = "xaxis_grid";
-								var x = 0f; var y0 = 0f; var y1 = (float)Owner.YAxis.Span;
-								for (int l = 0; l != num_lines; ++l)
-								{
-									verts[v++] = new View3d.Vertex(new v4(x, y0, 0f, 1f), Options.GridColour.ToArgbU());
-									verts[v++] = new View3d.Vertex(new v4(x, y1, 0f, 1f), Options.GridColour.ToArgbU());
-									x += (float)step;
-								}
-							}
-							if (this == Owner.YAxis)
-							{
-								name = "yaxis_grid";
-								var y = 0f; var x0 = 0f; var x1 = (float)Owner.XAxis.Span;
-								for (int l = 0; l != num_lines; ++l)
-								{
-									verts[v++] = new View3d.Vertex(new v4(x0, y, 0f, 1f), Options.GridColour.ToArgbU());
-									verts[v++] = new View3d.Vertex(new v4(x1, y, 0f, 1f), Options.GridColour.ToArgbU());
-									y += (float)step;
-								}
-							}
-
-							// Grid indices
-							for (int l = 0; l != num_lines; ++l)
-							{
-								indices[i] = (ushort)i++;
-								indices[i] = (ushort)i++;
-							}
-
-							// Grid nugget
-							nuggets[0] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert|View3d.EGeom.Colr);
-							m_gridlines = new View3d.Object(name, 0xFFFFFFFF, verts.Length, indices.Length, nuggets.Length, verts, indices, nuggets, ChartTools.Id);
-							m_gridlines.FlagsSet(View3d.EFlags.BBoxInvisible, true); 
-						}
-						return m_gridlines;
+						if (m_disposed) throw new Exception();
+						return m_gridlines ?? (m_gridlines = CreateGridLineGfx());
 					}
 					set
 					{
-						Debug.Assert(value == null);
+						if (m_gridlines == value) return;
 						Util.Dispose(ref m_gridlines);
 					}
 				}
 				private View3d.Object m_gridlines;
+				private View3d.Object CreateGridLineGfx()
+				{
+					// Create a model for the grid lines
+					// Need to allow for one step in either direction because we only create the
+					// grid lines model when scaling and we can translate by a max of one step in
+					// either direction.
+					GridLines(out var min, out var max, out var step);
+					var num_lines = (int)(2 + (max - min) / step);
+
+					// Create the grid lines at the origin, they get positioned as the camera moves
+					var verts = new View3d.Vertex[num_lines * 2];
+					var indices = new ushort[num_lines * 2];
+					var nuggets = new View3d.Nugget[1];
+					var name = string.Empty;
+					var v = 0;
+					var i = 0;
+
+					// Grid verts
+					if (this == Owner.XAxis)
+					{
+						name = "xaxis_grid";
+						var x = 0f; var y0 = 0f; var y1 = (float)Owner.YAxis.Span;
+						for (int l = 0; l != num_lines; ++l)
+						{
+							verts[v++] = new View3d.Vertex(new v4(x, y0, 0f, 1f), Options.GridColour.ToArgbU());
+							verts[v++] = new View3d.Vertex(new v4(x, y1, 0f, 1f), Options.GridColour.ToArgbU());
+							x += (float)step;
+						}
+					}
+					if (this == Owner.YAxis)
+					{
+						name = "yaxis_grid";
+						var y = 0f; var x0 = 0f; var x1 = (float)Owner.XAxis.Span;
+						for (int l = 0; l != num_lines; ++l)
+						{
+							verts[v++] = new View3d.Vertex(new v4(x0, y, 0f, 1f), Options.GridColour.ToArgbU());
+							verts[v++] = new View3d.Vertex(new v4(x1, y, 0f, 1f), Options.GridColour.ToArgbU());
+							y += (float)step;
+						}
+					}
+
+					// Grid indices
+					for (int l = 0; l != num_lines; ++l)
+					{
+						indices[i] = (ushort)i++;
+						indices[i] = (ushort)i++;
+					}
+
+					// Grid nugget
+					nuggets[0] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert|View3d.EGeom.Colr);
+					var gridlines = new View3d.Object(name, 0xFFFFFFFF, verts.Length, indices.Length, nuggets.Length, verts, indices, nuggets, ChartTools.Id);
+					gridlines.FlagsSet(View3d.EFlags.BBoxInvisible, true);
+					return gridlines;
+				}
 
 				/// <summary>Show the axis context menu</summary>
 				public void ShowContextMenu(Point location, HitTestResult hit_result)
@@ -2501,6 +2505,18 @@ namespace pr.gui
 				var rect = new RectangleF(args.SelectionArea.MinX, args.SelectionArea.MinY, args.SelectionArea.SizeX, args.SelectionArea.SizeY);
 				SelectElements(rect, ModifierKeys);
 			}
+		}
+
+		/// <summary>Adjust the X/Y axis of the chart to cover the given area</summary>
+		public void PositionChart(BBox area)
+		{
+			// Ignore if the given area is smaller than the minimum selection distance
+			if (area.Radius.Length3Sq < Maths.Sqr(Options.MinSelectionDistance))
+				return;
+
+			XAxis.Set(area.MinX, area.MaxX);
+			YAxis.Set(area.MinY, area.MaxY);
+			SetCameraFromRange();
 		}
 
 		/// <summary>Shifts the X and Y range of the chart so that chart space position 'gs_point' is at client space position 'cs_point'</summary>
@@ -3528,14 +3544,19 @@ namespace pr.gui
 			protected virtual void UpdateGfxCore() { }
 			private int m_impl_updating_gfx;
 
-			/// <summary>Add the graphics associated with this element to the window</summary>
-			internal void AddToScene(View3d.Window window)
+			/// <summary>Add/Remove the graphics associated with this element to the window</summary>
+			internal void UpdateScene(View3d.Window window)
 			{
 				if (IsInvalidated) UpdateGfx();
-				AddToSceneCore(window);
+				UpdateSceneCore(window);
 			}
-			protected virtual void AddToSceneCore(View3d.Window window)
+			protected virtual void UpdateSceneCore(View3d.Window window)
 			{
+				// Add or remove associated graphics
+				// if (Visible)
+				// 	window.AddObject();
+				// else
+				// 	window.RemoveObject();
 			}
 
 			/// <summary>Check the self consistency of this element</summary>
@@ -4074,8 +4095,10 @@ namespace pr.gui
 		{
 			public static readonly Guid Id = new Guid("62D495BB-36D1-4B52-A067-1B7DB4011831");
 
+			private readonly ChartControl m_owner;
 			internal ChartTools(ChartControl owner, RdrOptions opts)
 			{
+				m_owner = owner;
 				if (owner.IsInDesignMode())
 					return;
 
@@ -4142,7 +4165,7 @@ namespace pr.gui
 			private ResizeGrabber[] m_resizer;
 			public class ResizeGrabber :View3d.Object
 			{
-				public ResizeGrabber(int corner) :base("*Box resizer_{0} {{5}}".Fmt(corner), false, Id, null)
+				public ResizeGrabber(int corner) :base($"*Box resizer_{corner} {{5}}", false, Id, null)
 				{
 					switch (corner)
 					{
@@ -4765,4 +4788,320 @@ namespace pr.gui
 		}
 		#endregion
 	}
+
+	#region ChartDataSeries
+
+	/// <summary>Represents a data source that can be added to a chart control</summary>
+	public class ChartDataSeries :ChartControl.Element
+	{
+		private readonly List<Pt> m_data;
+
+		public ChartDataSeries(string name, OptionsData options = null, int? capacity = null)
+			:this(Guid.NewGuid(), name, options, capacity)
+		{ }
+		public ChartDataSeries(Guid id, string name, OptionsData options = null, int? capacity = null)
+			:base(id, m4x4.Identity, name)
+		{
+			m_data = new List<Pt>(capacity:capacity ?? 100);
+			Options = options ?? new OptionsData();
+			Sorted = true;
+		}
+		public ChartDataSeries(XElement node)
+			:base(node)
+		{
+			PlotType = node.Element(nameof(PlotType)).As(PlotType);
+			Options = node.Element(nameof(Options)).As(Options);
+		}
+		public override XElement ToXml(XElement node)
+		{
+			node.Add2(nameof(PlotType), PlotType, false);
+			node.Add2(nameof(Options), Options, false);
+			return base.ToXml(node);
+		}
+		protected override void Dispose(bool disposing)
+		{
+			Gfx = null;
+			base.Dispose(disposing);
+		}
+
+		/// <summary>The style of plot for this series</summary>
+		public EPlotType PlotType
+		{
+			get { return m_plot_type; }
+			set
+			{
+				if (m_plot_type == value) return;
+				SetProp(ref m_plot_type, value, nameof(PlotType), invalidate_graphics:true, invalidate_chart:true);
+			}
+		}
+		private EPlotType m_plot_type;
+
+		/// <summary>Options for rendering this series</summary>
+		public OptionsData Options { get; set; }
+
+		/// <summary>Get/Set a flag to indicate whether the collection is expected to be sorted (defaults to true)</summary>
+		public virtual bool Sorted { get; set; }
+
+		/// <summary>View3d graphics object for the plot</summary>
+		public View3d.Object Gfx
+		{
+			[DebuggerStepThrough] get { return m_gfx; }
+			set
+			{
+				if (m_gfx == value) return;
+				Util.Dispose(ref m_gfx);
+				m_gfx = value;
+			}
+		}
+		private View3d.Object m_gfx;
+
+		/// <summary>Update the graphics model for this data series</summary>
+		protected override void UpdateGfxCore()
+		{
+			// Create graphics for the data series
+			switch (PlotType)
+			{
+			default: throw new Exception($"Unsupported plot type: {PlotType}");
+			case EPlotType.Point:
+				{
+					CreatePointPlot();
+					break;
+				}
+			case EPlotType.Line:
+				{
+					CreateLinePlot();
+					break;
+				}
+			case EPlotType.Bar:
+				{
+					CreateBarPlot();
+					break;
+				}
+			}
+		}
+
+		private void CreateBarPlot()
+		{
+
+		}
+
+		private void CreateLinePlot()
+		{
+		}
+
+		private void CreatePointPlot()
+		{
+		}
+
+		/// <summary>Update the graphics for this indicator and add it to the scene</summary>
+		protected override void UpdateSceneCore(View3d.Window window)
+		{
+			if (Gfx == null)
+				return;
+
+			if (Visible)
+				window.AddObject(Gfx);
+			else
+				window.RemoveObject(Gfx);
+		}
+
+		/// <summary>ToString</summary>
+		public override string ToString()
+		{
+			return $"{Name} count={m_data.Count}";
+		}
+
+
+
+		/// <summary>Supported plot types</summary>
+		public enum EPlotType
+		{
+			Point,
+			Line,
+			Bar,
+		}
+
+		/// <summary>A single point in the data series. A class so that it can be sub-classed</summary>
+		public class Pt
+		{
+			public Pt(double x_, double y_)
+			{
+				x = x_;
+				y = y_;
+			}
+
+			public double x;
+			public double y;
+
+			public static implicit operator Pt(v2 pt) { return new Pt(pt.x, pt.y); }
+			public static implicit operator v2(Pt pt) { return new v2((float)pt.x, (float)pt.y); }
+			public static implicit operator Pt(PointF pt) { return new Pt(pt.X, pt.Y); }
+			public static implicit operator PointF(Pt pt) { return new PointF((float)pt.x, (float)pt.y); }
+
+			/// <summary>Sorting predicate on X</summary>
+			public static IComparer<Pt> CompareX
+			{
+				get { return Comparer<Pt>.Create((l,r) => l.x.CompareTo(r.x)); }
+			}
+		}
+
+		/// <summary>Gain access to the underlying data</summary>
+		public LockData Lock() { return new LockData(this); }
+		public class LockData :IDisposable
+		{
+			private readonly ChartDataSeries m_owner;
+			public LockData(ChartDataSeries owner)
+			{
+				m_owner = owner;
+				Monitor.Enter(m_owner.m_data);
+			}
+			public void Dispose()
+			{
+				Monitor.Exit(m_owner.m_data);
+			}
+
+			/// <summary>The number of elements in the data series</summary>
+			public int Count
+			{
+				get { return Data.Count; }
+			}
+
+			/// <summary>Reset the collection</summary>
+			public void Clear()
+			{
+				Data.Clear();
+			}
+
+			/// <summary>The data series</summary>
+			public List<Pt> Data
+			{
+				get { return m_owner.m_data; }
+			}
+
+			/// <summary>Sort the data series on X values</summary>
+			public void Sort()
+			{
+				Data.Sort(Pt.CompareX);
+				m_owner.Sorted = true;
+			}
+
+			///<summary>
+			/// Return the range of indices that need to be considered when plotting from 'xmin' to 'xmax'
+			/// Note: in general, this range should include one point to the left of 'xmin' and one to the right
+			/// of 'xmax' so that line graphs plot a line up to the border of the plot area</summary>
+			public void IndexRange(double xmin, double xmax, out int imin, out int imax)
+			{
+				var lwr = new Pt(xmin, 0.0);
+				var upr = new Pt(xmax, 0.0);
+
+				imin = Data.BinarySearch(0, Count, lwr, Pt.CompareX);
+				if (imin < 0) imin = ~imin;
+				if (imin != 0) --imin;
+
+				imax = Data.BinarySearch(imin, Count - imin, upr, Pt.CompareX);
+				if (imax < 0) imax = ~imax;
+				if (imax != Count) ++imax;
+			}
+
+			/// <summary>Enumerable access to the data given an index range</summary>
+			public IEnumerable<Pt> Values(int i0 = 0, int i1 = int.MaxValue)
+			{
+				Debug.Assert(i0 >= 0 && i0 <= Count);
+				Debug.Assert(i1 >= i0);
+				for (int i = i0, iend = Math.Min(i1, Count); i != iend; ++i)
+				{
+					var pt = Data[i];
+					yield return pt;
+				}
+			}
+
+			/// <summary>
+			/// Returns the range of series data to consider when plotting from 'xmin' to 'xmax'
+			/// Note: in general, this range should include one point to the left of 'xmin' and one to
+			/// the right of 'xmax' so that line graphs plot a line up to the border of the plot area</summary>
+			public IEnumerable<Pt> Values(double xmin, double xmax)
+			{
+				IndexRange(xmin, xmax, out var i0, out var i1);
+				return Values(i0, i1);
+			}
+
+			/// <summary>
+			/// Returns the range of indices to consider when plotting from 'xmin' to 'xmax'
+			/// Note: in general, this range should include one point to the left of 'xmin' and one to
+			/// the right of 'xmax' so that line graphs plot a line up to the border of the plot area</summary>
+			public IEnumerable<int> Indices(double xmin, double xmax)
+			{
+				IndexRange(xmin, xmax, out var i0, out var i1);
+				return Enumerable.Range(i0, i1 - i0);
+			}
+		}
+
+		/// <summary>Plot colour generator</summary>
+		public static Color GenerateColour(int i)
+		{
+			return m_colours[i % m_colours.Length];
+		}
+		private static Color[] m_colours =
+		{
+			Color.Black     ,
+			Color.Blue      , Color.Red       , Color.Green      ,
+			Color.DarkBlue  , Color.DarkRed   , Color.DarkGreen  ,
+			Color.Purple    , Color.Turquoise , Color.Magenta    ,
+			Color.Orange    , Color.Yellow    ,
+			Color.LightBlue , Color.LightSalmon , Color.LightGreen ,
+		};
+
+		/// <summary>Rendering options for this data series</summary>
+		public class OptionsData :SettingsXml<OptionsData>
+		{
+			public OptionsData()
+			{
+				Colour = Color.Black;
+				//Visible        = true;
+				//DrawData       = true;
+				//DrawErrorBars  = false;
+				//PlotType       = EPlotType.Line;
+				//PointColour    = Color.FromArgb(0xff, 0x80, 0, 0);
+				//PointSize      = 5f;
+				//LineColour     = Color.FromArgb(0xff, 0, 0, 0);
+				//LineWidth      = 1f;
+				//BarColour      = Color.FromArgb(0xff, 0x80, 0, 0);
+				//BarWidth       = 0.8f;
+				//ErrorBarColour = Color.FromArgb(0x80, 0xff, 0, 0);
+				//DrawMovingAvr  = false;
+				//MAWindowSize   = 10;
+				//MALineColour   = Color.FromArgb(0xff, 0, 0, 0xFF);
+				//MALineWidth    = 3f;
+			}
+			public OptionsData(OptionsData rhs)
+			{
+				Colour = rhs.Colour;
+			}
+
+			/// <summary>The base colour for this plot</summary>
+			public Color Colour
+			{
+				get { return get<Color>(nameof(Colour)); }
+				set { set(nameof(Colour), value); }
+			}
+
+			//public bool       Visible        { get; set; }
+			//public bool       DrawData       { get; set; }
+			//public bool       DrawErrorBars  { get; set; }
+			//public EPlotType  PlotType       { get; set; }
+			//public Color      PointColour    { get; set; }
+			//public float      PointSize      { get; set; }
+			//public Color      LineColour     { get; set; }
+			//public float      LineWidth      { get; set; }
+			//public Color      BarColour      { get; set; }
+			//public float      BarWidth       { get; set; }
+			//public Color      ErrorBarColour { get; set; }
+			//public bool       DrawMovingAvr  { get; set; }
+			//public int        MAWindowSize   { get; set; }
+			//public Color      MALineColour   { get; set; }
+			//public float      MALineWidth    { get; set; }
+		}
+	}
+
+	#endregion
 }

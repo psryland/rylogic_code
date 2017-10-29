@@ -8,8 +8,8 @@
 
 // Notes:
 // - use float4x4 not matrix... they're not the same (don't know why tho)
-// - hlsl float4x4 is column major (by default) but pr::m4x4 is row major.
-//   Rememeber to transpose matrices
+// - HLSL float4x4 is column major (by default) but pr::m4x4 is row major.
+//   Remember to transpose matrices
 // - For efficiency, constant buffers need to be grouped by frequency of update
 
 #ifdef SHADER_BUILD

@@ -163,9 +163,9 @@ namespace pr
 				for (auto& s : current.m_shdrs.Enumerate())
 					if (s) s->Cleanup(m_dc);
 
-				m_dc->VSSetShader(pending.m_shdrs.VS().m_ptr, nullptr, 0);
-				m_dc->GSSetShader(pending.m_shdrs.GS().m_ptr, nullptr, 0);
-				m_dc->PSSetShader(pending.m_shdrs.PS().m_ptr, nullptr, 0);
+				if (current.m_shdrs.VS() != pending.m_shdrs.VS()) m_dc->VSSetShader(pending.m_shdrs.VS().m_ptr, nullptr, 0);
+				if (current.m_shdrs.GS() != pending.m_shdrs.GS()) m_dc->GSSetShader(pending.m_shdrs.GS().m_ptr, nullptr, 0);
+				if (current.m_shdrs.PS() != pending.m_shdrs.PS()) m_dc->PSSetShader(pending.m_shdrs.PS().m_ptr, nullptr, 0);
 			}
 
 			// Always call set up on the pending shaders even if they

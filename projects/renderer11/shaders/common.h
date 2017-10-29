@@ -49,7 +49,7 @@ namespace pr
 		}
 
 		// Set the geometry type
-		template <typename TCBuf> void SetGeomType(NuggetProps const& ddata, TCBuf& cb)
+		template <typename TCBuf> void SetGeomType(NuggetData const& ddata, TCBuf& cb)
 		{
 			// Convert a geom into an iv4 for flags passed to a shader
 			cb.m_geom = iv4(
@@ -84,7 +84,7 @@ namespace pr
 		}
 
 		// Set the texture properties of a constants buffer
-		template <typename TCBuf> void SetTexDiffuse(NuggetProps const& ddata, TCBuf& cb)
+		template <typename TCBuf> void SetTexDiffuse(NuggetData const& ddata, TCBuf& cb)
 		{
 			cb.m_tex2surf0 = ddata.m_tex_diffuse != nullptr
 				? ddata.m_tex_diffuse->m_t2s

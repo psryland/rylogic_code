@@ -3,29 +3,30 @@
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 #include "renderer11/util/stdafx.h"
+#include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/textures/texture2d.h"
 #include "pr/renderer11/textures/texture_manager.h"
+#include "pr/renderer11/util/util.h"
 #include "renderer11/directxtex/directxtex.h"
-#include "pr/renderer11/render/renderer.h"
 
 namespace pr
 {
 	namespace rdr
 	{
-		Texture2D::Texture2D(TextureManager* mgr, ID3D11Texture2D* tex, SamplerDesc const& sam_desc, SortKeyId sort_id)
-			:Texture2D(mgr, tex, nullptr, sam_desc, sort_id)
+		Texture2D::Texture2D(TextureManager* mgr, RdrId id, ID3D11Texture2D* tex, SamplerDesc const& sam_desc, SortKeyId sort_id, bool has_alpha, char const* name)
+			:Texture2D(mgr, id, tex, nullptr, sam_desc, sort_id, has_alpha, name)
 		{}
-		Texture2D::Texture2D(TextureManager* mgr, ID3D11Texture2D* tex, ID3D11ShaderResourceView* srv, SamplerDesc const& sam_desc, SortKeyId sort_id)
+		Texture2D::Texture2D(TextureManager* mgr, RdrId id, ID3D11Texture2D* tex, ID3D11ShaderResourceView* srv, SamplerDesc const& sam_desc, SortKeyId sort_id, bool has_alpha, char const* name)
 			:m_t2s(pr::m4x4Identity)
 			,m_tex(tex, true)
 			,m_srv(srv, true)
 			,m_samp()
-			,m_id()
+			,m_id(id == AutoId ? MakeId(this) : id)
 			,m_src_id()
 			,m_sort_id(sort_id)
-			,m_has_alpha(false)
+			,m_has_alpha(has_alpha)
 			,m_mgr(mgr)
-			,m_name()
+			,m_name(name ? name : "")
 		{
 			if (m_srv == nullptr)
 			{
@@ -40,32 +41,32 @@ namespace pr
 			}
 			SamDesc(sam_desc);
 		}
-		Texture2D::Texture2D(TextureManager* mgr, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, SortKeyId sort_id, ShaderResViewDesc const* srvdesc)
+		Texture2D::Texture2D(TextureManager* mgr, RdrId id, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name, ShaderResViewDesc const* srvdesc)
 			:m_t2s(pr::m4x4Identity)
 			,m_tex()
 			,m_srv()
 			,m_samp()
-			,m_id()
+			,m_id(id == AutoId ? MakeId(this) : id)
 			,m_src_id()
 			,m_sort_id(sort_id)
-			,m_has_alpha(false)
+			,m_has_alpha(has_alpha)
 			,m_mgr(mgr)
-			,m_name()
+			,m_name(name ? name : "")
 		{
 			TexDesc(src, tdesc, false, false, srvdesc);
 			SamDesc(sdesc);
 		}
-		Texture2D::Texture2D(TextureManager* mgr, Texture2D const& existing, SortKeyId sort_id)
+		Texture2D::Texture2D(TextureManager* mgr, RdrId id, Texture2D const& existing, SortKeyId sort_id, char const* name)
 			:m_t2s(existing.m_t2s)
 			,m_tex(existing.m_tex)
 			,m_srv(existing.m_srv)
 			,m_samp(existing.m_samp)
-			,m_id()
+			,m_id(id == AutoId ? MakeId(this) : id)
 			,m_src_id(existing.m_src_id)
 			,m_sort_id(sort_id)
-			,m_has_alpha(false)
+			,m_has_alpha(existing.m_has_alpha)
 			,m_mgr(mgr)
-			,m_name()
+			,m_name(name ? name : "")
 		{}
 
 		// Get the description of the current texture pointed to by 'm_tex'
@@ -104,7 +105,8 @@ namespace pr
 				DirectX::ScratchImage scratch;
 				if (tdesc.MipLevels != 1)
 				{
-					PR_ASSERT(PR_DBG_RDR, pr::CoInitializeCalled(), "'CoInitialize' has not been called.");
+					// This might be needed, but not always.
+					// PR_ASSERT(PR_DBG_RDR, pr::CoInitializeCalled(), "'CoInitialize' has not been called.");
 					pr::Throw(DirectX::GenerateMipMaps(img, DirectX::TEX_FILTER_FANT, tdesc.MipLevels, scratch));
 				}
 				else

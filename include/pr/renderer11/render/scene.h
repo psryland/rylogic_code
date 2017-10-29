@@ -20,9 +20,7 @@ namespace pr
 		// one scene however, examples of multiple scenes are: the rear vision mirror
 		// in a car, map view, etc.
 		// A scene contains an ordered collection of render steps.
-		struct Scene
-			:pr::events::IRecv<Evt_Resize>
-			,pr::AlignTo<16>
+		struct Scene :pr::AlignTo<16>
 		{
 			// Fixed container of render steps. Doesn't really need to be fixed,
 			// but non-fixed means we need the pr::rdr::Allocator to construct it.
@@ -32,14 +30,14 @@ namespace pr
 			SceneView      m_view;         // Represents the camera properties used to project onto the screen
 			Viewport       m_viewport;     // Represents the rectangular area on the back buffer that this scene covers
 			RenderStepCont m_render_steps; // The stages of rendering the scene
-			pr::Colour     m_bkgd_colour;  // The background colour for the scene
+			Colour         m_bkgd_colour;  // The background colour for the scene
 			Light          m_global_light; // The global light settings
 			DSBlock        m_dsb;          // Scene-wide states
 			RSBlock        m_rsb;          // Scene-wide states
 			BSBlock        m_bsb;          // Scene-wide states
+			EvtAutoSub     m_eh_resize;    // RT resize event handler subscription
 
 			Scene(Window& wnd, std::vector<ERenderStep>&& rsteps = {ERenderStep::ForwardRender}, SceneView const& view = SceneView());
-			~Scene();
 
 			// Set the render steps to use for rendering the scene
 			void SetRenderSteps(std::vector<ERenderStep>&& rsteps);
@@ -105,7 +103,7 @@ namespace pr
 		private:
 
 			// Resize the viewport on back buffer resize
-			void OnEvent(Evt_Resize const& evt) override;
+			void HandleRenderTargetSizeChanged(Window& wnd, RenderTargetSizeChangedEventArgs const& evt);
 		};
 	}
 }

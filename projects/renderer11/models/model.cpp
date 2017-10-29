@@ -52,17 +52,18 @@ namespace pr
 		// Create a nugget from a range within this model
 		// Ranges are model relative, i.e. the first vert in the model is range [0,1)
 		// Remember you might need to delete render nuggets first
-		void Model::CreateNugget(NuggetProps props)
+		void Model::CreateNugget(NuggetProps const& props)
 		{
-			PR_ASSERT(PR_DBG_RDR, props.m_irange.empty() == props.m_vrange.empty(), "Illogical combination of I-Range and V-Range");
+			NuggetData ndata(props);
+			PR_ASSERT(PR_DBG_RDR, ndata.m_irange.empty() == ndata.m_vrange.empty(), "Illogical combination of I-Range and V-Range");
 
 			// Empty ranges are assumed to mean the entire model
-			if (props.m_vrange.empty()) props.m_vrange = m_vrange;
-			else                        props.m_vrange.shift((int)m_vrange.m_beg);
-			if (props.m_irange.empty()) props.m_irange = m_irange;
-			else                        props.m_irange.shift((int)m_irange.m_beg);
-			PR_ASSERT(PR_DBG_RDR, IsWithin(m_vrange, props.m_vrange), "This range exceeds the size of this model"); 
-			PR_ASSERT(PR_DBG_RDR, IsWithin(m_irange, props.m_irange), "This range exceeds the size of this model");
+			if (ndata.m_vrange.empty()) ndata.m_vrange = m_vrange;
+			else                        ndata.m_vrange.shift((int)m_vrange.m_beg);
+			if (ndata.m_irange.empty()) ndata.m_irange = m_irange;
+			else                        ndata.m_irange.shift((int)m_irange.m_beg);
+			PR_ASSERT(PR_DBG_RDR, IsWithin(m_vrange, ndata.m_vrange), "This range exceeds the size of this model"); 
+			PR_ASSERT(PR_DBG_RDR, IsWithin(m_irange, ndata.m_irange), "This range exceeds the size of this model");
 
 			// Verify the ranges do not overlap with existing nuggets in this chain, unless explicitly allowed.
 			#if PR_DBG_RDR
@@ -70,15 +71,15 @@ namespace pr
 			{
 				for (auto& nug : m_nuggets)
 				{
-					PR_ASSERT(PR_DBG_RDR, !Intersects(props.m_irange, nug.m_irange), "A render nugget covering this index range already exists. DeleteNuggets() call may be needed");
+					PR_ASSERT(PR_DBG_RDR, !Intersects(ndata.m_irange, nug.m_irange), "A render nugget covering this index range already exists. DeleteNuggets() call may be needed");
 				}
 			}
 			#endif
 
 			// Create the nugget and add it to the model
-			if (!props.m_irange.empty())
+			if (!ndata.m_irange.empty())
 			{
-				auto nug = MdlMgr().CreateNugget(props, m_model_buffer.get(), this);
+				auto nug = MdlMgr().CreateNugget(ndata, m_model_buffer.get(), this);
 				m_nuggets.push_back(*nug);
 			}
 		}

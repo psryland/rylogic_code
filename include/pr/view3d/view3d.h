@@ -316,6 +316,7 @@ extern "C"
 	};
 
 	using View3D_SettingsChangedCB     = void (__stdcall *)(void* ctx, View3DWindow window);
+	using View3D_EnumGuidsCB           = BOOL (__stdcall *)(void* ctx, GUID const& context_id);
 	using View3D_EnumObjectsCB         = BOOL (__stdcall *)(void* ctx, View3DObject object);
 	using View3D_AddFileProgressCB     = BOOL (__stdcall *)(void* ctx, GUID const& context_id, wchar_t const* filepath, long long file_offset, BOOL complete);
 	using View3D_SourcesChangedCB      = void (__stdcall *)(void* ctx, ESourcesChangedReason reason, BOOL before);
@@ -341,10 +342,22 @@ extern "C"
 		BSTR& result,        // The string result of running the source code (execution code blocks only)
 		BSTR& errors);       // Any errors in the compilation of the code
 
-	// Initialise/shutdown the dll
-	VIEW3D_API View3DContext __stdcall View3D_Initialise       (View3D_ReportErrorCB initialise_error_cb, void* ctx, BOOL gdi_compatibility);
-	VIEW3D_API void          __stdcall View3D_Shutdown         (View3DContext context);
-	VIEW3D_API void          __stdcall View3D_GlobalErrorCBSet (View3D_ReportErrorCB error_cb, void* ctx, BOOL add);
+	// Context
+	VIEW3D_API View3DContext __stdcall View3D_Initialise            (View3D_ReportErrorCB initialise_error_cb, void* ctx, BOOL gdi_compatibility);
+	VIEW3D_API void          __stdcall View3D_Shutdown              (View3DContext context);
+	VIEW3D_API void          __stdcall View3D_GlobalErrorCBSet      (View3D_ReportErrorCB error_cb, void* ctx, BOOL add);
+	VIEW3D_API void          __stdcall View3D_SourceEnumGuids       (View3D_EnumGuidsCB enum_guids_cb, void* ctx);
+	VIEW3D_API GUID          __stdcall View3D_LoadScriptSource      (wchar_t const* filepath, BOOL additional, View3DIncludes const* includes);
+	VIEW3D_API GUID          __stdcall View3D_LoadScript            (wchar_t const* ldr_script, BOOL file, GUID const* context_id, View3DIncludes const* includes);
+	VIEW3D_API void          __stdcall View3D_ReloadScriptSources   ();
+	VIEW3D_API void          __stdcall View3D_ClearScriptSources    ();
+	VIEW3D_API void          __stdcall View3D_ObjectsDeleteAll      ();
+	VIEW3D_API void          __stdcall View3D_ObjectsDeleteById     (GUID const* context_ids, int count);
+	VIEW3D_API void          __stdcall View3D_CheckForChangedSources();
+	VIEW3D_API void          __stdcall View3D_AddFileProgressCBSet  (View3D_AddFileProgressCB progress_cb, void* ctx, BOOL add);
+	VIEW3D_API void          __stdcall View3D_SourcesChangedCBSet   (View3D_SourcesChangedCB sources_changed_cb, void* ctx, BOOL add);
+	VIEW3D_API void          __stdcall View3D_EmbeddedCodeCBSet     (View3D_EmbeddedCodeHandlerCB embedded_code_cb, void* ctx, BOOL add);
+	VIEW3D_API BOOL          __stdcall View3D_ContextIdFromFilepath (wchar_t const* filepath, GUID& id);
 
 	// Windows
 	VIEW3D_API View3DWindow __stdcall View3D_WindowCreate             (HWND hwnd, View3DWindowOptions const& opts);
@@ -361,6 +374,7 @@ extern "C"
 	VIEW3D_API void         __stdcall View3D_WindowRemoveAllObjects   (View3DWindow window);
 	VIEW3D_API BOOL         __stdcall View3D_WindowHasObject          (View3DWindow window, View3DObject object);
 	VIEW3D_API int          __stdcall View3D_WindowObjectCount        (View3DWindow window);
+	VIEW3D_API void         __stdcall View3D_WindowEnumGuids          (View3DWindow window, View3D_EnumGuidsCB enum_guids_cb, void* ctx);
 	VIEW3D_API void         __stdcall View3D_WindowEnumObjects        (View3DWindow window, View3D_EnumObjectsCB enum_objects_cb, void* ctx);
 	VIEW3D_API void         __stdcall View3D_WindowEnumObjectsById    (View3DWindow window, View3D_EnumObjectsCB enum_objects_cb, void* ctx, GUID const* context_id, int count, BOOL all_except);
 	VIEW3D_API void         __stdcall View3D_WindowAddObjectsById     (View3DWindow window, GUID const* context_id, int count, BOOL all_except);
@@ -419,18 +433,7 @@ extern "C"
 	VIEW3D_API void        __stdcall View3D_ShowLightingDlg          (View3DWindow window);
 
 	// Objects
-	VIEW3D_API GUID            __stdcall View3D_LoadScriptSource         (wchar_t const* filepath, BOOL additional, View3DIncludes const* includes);
-	VIEW3D_API GUID            __stdcall View3D_LoadScript               (wchar_t const* ldr_script, BOOL file, GUID const* context_id, View3DIncludes const* includes);
-	VIEW3D_API void            __stdcall View3D_ReloadScriptSources      ();
-	VIEW3D_API void            __stdcall View3D_ClearScriptSources       ();
-	VIEW3D_API void            __stdcall View3D_CheckForChangedSources   ();
-	VIEW3D_API void            __stdcall View3D_AddFileProgressCBSet     (View3D_AddFileProgressCB progress_cb, void* ctx, BOOL add);
-	VIEW3D_API void            __stdcall View3D_SourcesChangedCBSet      (View3D_SourcesChangedCB sources_changed_cb, void* ctx, BOOL add);
-	VIEW3D_API void            __stdcall View3D_EmbeddedCodeCBSet        (View3D_EmbeddedCodeHandlerCB embedded_code_cb, void* ctx, BOOL add);
-	VIEW3D_API BOOL            __stdcall View3D_ContextIdFromFilepath    (wchar_t const* filepath, GUID& id);
 	VIEW3D_API GUID            __stdcall View3D_ObjectContextIdGet       (View3DObject object);
-	VIEW3D_API void            __stdcall View3D_ObjectsDeleteAll         ();
-	VIEW3D_API void            __stdcall View3D_ObjectsDeleteById        (GUID const* context_ids, int count);
 	VIEW3D_API View3DObject    __stdcall View3D_ObjectCreateLdr          (wchar_t const* ldr_script, BOOL file, GUID const* context_id, View3DIncludes const* includes);
 	VIEW3D_API View3DObject    __stdcall View3D_ObjectCreate             (char const* name, View3DColour colour, int vcount, int icount, int ncount, View3DVertex const* verts, UINT16 const* indices, View3DNugget const* nuggets, GUID const& context_id);
 	VIEW3D_API View3DObject    __stdcall View3D_ObjectCreateEditCB       (char const* name, View3DColour colour, int vcount, int icount, int ncount, View3D_EditObjectCB edit_cb, void* ctx, GUID const& context_id);
@@ -500,6 +503,7 @@ extern "C"
 	VIEW3D_API void            __stdcall View3D_MultiSamplingSet    (View3DWindow window, int multisampling);
 
 	// Tools
+	VIEW3D_API void __stdcall View3D_ObjectManagerShow        (View3DWindow window, BOOL show);
 	VIEW3D_API BOOL __stdcall View3D_MeasureToolVisible       (View3DWindow window);
 	VIEW3D_API void __stdcall View3D_ShowMeasureTool          (View3DWindow window, BOOL show);
 	VIEW3D_API BOOL __stdcall View3D_AngleToolVisible         (View3DWindow window);
@@ -544,7 +548,6 @@ extern "C"
 	VIEW3D_API void       __stdcall View3D_DemoSceneDelete          ();
 	VIEW3D_API BSTR       __stdcall View3D_ExampleScriptBStr        ();
 	VIEW3D_API void       __stdcall View3D_DemoScriptShow           (View3DWindow window);
-	VIEW3D_API void       __stdcall View3D_ObjectManagerShow        (View3DWindow window, BOOL show);
 	VIEW3D_API View3DM4x4 __stdcall View3D_ParseLdrTransform        (char const* ldr_script);
 
 	// Ldr Editor Ctrl

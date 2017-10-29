@@ -33,6 +33,12 @@ namespace pr
 			m_sset.m_ps = m_shdr_mgr->FindShader(EStockShader::GBufferPS);
 
 			InitRT(true);
+			m_eh_resize = m_scene->m_wnd->m_rdr->RenderTargetSizeChanged += [this](Window& wnd, RenderTargetSizeChangedEventArgs const& args)
+			{
+				// Recreate the g-buffer on resize
+				if (&wnd == m_scene->m_wnd)
+					InitRT(args.m_done);
+			};
 
 			m_rsb = RSBlock::SolidCullBack();
 		}
@@ -200,13 +206,6 @@ namespace pr
 					UINT(nugget.m_irange.m_beg),
 					0);
 			}
-		}
-
-		// Handle main window resize events
-		void GBuffer::OnEvent(Evt_Resize const& evt)
-		{
-			// Recreate the g-buffer on resize
-			InitRT(evt.m_done);
 		}
 	}
 }

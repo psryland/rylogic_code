@@ -34,10 +34,10 @@ namespace pr
 			,m_range_overlaps(false)
 		{}
 
-		Nugget::Nugget(NuggetProps const& props, ModelBuffer* model_buffer, Model* owner)
-			:NuggetData(props)
+		Nugget::Nugget(NuggetData const& ndata, ModelBuffer* model_buffer, Model* owner)
+			:NuggetData(ndata)
 			,m_model_buffer(model_buffer)
-			,m_prim_count(PrimCount(props.m_irange.size(), props.m_topo))
+			,m_prim_count(PrimCount(ndata.m_irange.size(), ndata.m_topo))
 			,m_owner(owner)
 			,m_nuggets()
 			,m_alpha_enabled(false)
@@ -115,8 +115,7 @@ namespace pr
 				// Create a dependent nugget to do the back faces
 				if (m_owner != nullptr)
 				{
-					NuggetProps props = *this;
-					auto& nug = *MdlMgr().CreateNugget(props, m_model_buffer, nullptr);
+					auto& nug = *MdlMgr().CreateNugget(*this, m_model_buffer, nullptr);
 					nug.m_sort_key.Group(ESortGroup::AlphaBack);
 					nug.m_rsb.Set(ERS::CullMode, D3D11_CULL_FRONT);
 					nug.m_owner = m_owner;

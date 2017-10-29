@@ -19,15 +19,16 @@ namespace pr
 		// Shaders
 		struct FwdShaderVS;
 		struct FwdShaderPS;
-		struct GBufferShaderVS;
-		struct GBufferShaderPS;
-		struct DSLightingShaderVS;
-		struct DSLightingShaderPS;
+		struct GBufferVS;
+		struct GBufferPS;
+		struct DSLightingVS;
+		struct DSLightingPS;
 		struct ShadowMapVS;
 		struct ShadowMapFaceGS;
 		struct ShadowMapLineGS;
 		struct ShadowMapPS;
-		struct ThickLineListShaderGS;
-		struct ArrowHeadShaderGS;
+		struct PointSpritesGS;
+		struct ThickLineListGS;
+		struct ArrowHeadGS;
 	}
 }

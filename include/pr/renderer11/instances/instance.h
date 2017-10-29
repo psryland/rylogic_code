@@ -42,7 +42,7 @@ namespace pr
 			DSBlock            , // pr::rdr::DSBlock
 			RSBlock            , // pr::rdr::RSBlock
 			TintColour32       , // pr::Colour32
-			SSWidth            , // pr::uint (screen space width)
+			SSSize             , // pr::v2 (screen space size)
 			FirstUserCpt       , // Clients may add other component types
 		};
 

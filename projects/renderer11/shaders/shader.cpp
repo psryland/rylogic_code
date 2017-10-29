@@ -21,6 +21,8 @@ namespace pr
 		// Look for a compiled shader object file by the name 'compiled_shader_filename'
 		// If the file exists, check the last modified time, and if newer, replace the shader 'ptr' and update 'last_modified'
 		#if PR_RDR_RUNTIME_SHADERS
+		#pragma message(PR_LINK "WARNING: ************************************************** PR_RDR_RUNTIME_SHADERS enabled")
+
 		std::unordered_map<RdrId, wstring256> shader_cso;
 		void RegisterRuntimeShader(RdrId id, char const* cso_filepath)
 		{
@@ -34,11 +36,9 @@ namespace pr
 		}
 		#endif
 	
-		void ShaderBase::Setup(ID3D11DeviceContext* dc, DeviceState&)
+		void ShaderBase::Setup(ID3D11DeviceContext*, DeviceState&)
 		{
-			#if !PR_RDR_RUNTIME_SHADERS
-			(void)dc;
-			#else
+			#if PR_RDR_RUNTIME_SHADERS
 			struct ModCheck
 			{
 				DWORD  m_last_check;    // Tick value when the last check for a changed shader was made
@@ -52,7 +52,8 @@ namespace pr
 			if (GetTickCount() - check.m_last_check < check_frequency_ms) return;
 			check.m_last_check = GetTickCount();
 
-			auto device = Device(dc);
+			Renderer::Lock lock(m_mgr->m_rdr);
+			auto device = lock.D3DDevice();
 			auto iter = shader_cso.find(m_orig_id);
 			if (iter == std::end(shader_cso))
 				return;
@@ -74,7 +75,7 @@ namespace pr
 					case EShaderType::HS: pr::Throw(device->CreateHullShader     (&buf[0], buf.size(), 0, (ID3D11HullShader    **)&dxshdr.m_ptr)); break;
 					case EShaderType::DS: pr::Throw(device->CreateDomainShader   (&buf[0], buf.size(), 0, (ID3D11DomainShader  **)&dxshdr.m_ptr)); break;
 					}
-					m_shdr = dxshdr;
+					m_dx_shdr = dxshdr;
 					if (last_mod > newest) newest = last_mod;
 					PR_INFO(1, pr::FmtS("Shader %s replaced", pr::To<std::string>(cso_filepath).c_str()));
 				}
@@ -84,20 +85,12 @@ namespace pr
 			#endif
 		}
 
-		
 		// Return the input layout associated with this shader.
 		// Note, returns null for all shaders except vertex shaders
 		D3DPtr<ID3D11InputLayout> ShaderBase::IpLayout() const
 		{
 			if (m_shdr_type != EShaderType::VS) return nullptr;
 			return m_mgr->GetIP(m_id);
-		}
-
-		// Ref counting clean up function
-		void ShaderBase::RefCountZero(pr::RefCount<ShaderBase>* doomed)
-		{
-			ShaderBase* shdr = static_cast<ShaderBase*>(doomed);
-			shdr->Delete();
 		}
 	}
 }

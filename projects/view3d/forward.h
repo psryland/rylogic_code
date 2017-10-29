@@ -56,11 +56,14 @@
 
 namespace view3d
 {
+	struct Context;
+	struct Window;
+	using GuidCont              = pr::vector<GUID>;
 	using EditorPtr             = std::unique_ptr<pr::ldr::ScriptEditorUI>;
 	using CodeHandlerPtr        = std::unique_ptr<pr::script::IEmbeddedCode>;
 	using ObjectSet             = std::unordered_set<View3DObject>;
 	using GizmoSet              = std::unordered_set<View3DGizmo>;
-	using WindowCont            = std::unordered_set<View3DWindow>;
+	using GuidSet               = std::unordered_set<GUID>;
 	using EditorCont            = std::unordered_set<EditorPtr>;
 	using LockGuard             = std::lock_guard<std::recursive_mutex>;
 	using ReportErrorCB         = pr::StaticCB<void, wchar_t const*>;

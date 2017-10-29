@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 #pragma once
-#ifndef PR_RDR_RENDER_STEREO_H
-#define PR_RDR_RENDER_STEREO_H
 
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/render/scene_view.h"
@@ -62,7 +60,7 @@ namespace pr
 			D3DPtr<ID3D11DepthStencilView> m_dsv; // A depth stencil view of 'm_ds_tex'
 			float m_eye_separation;               // The eye separation value to use (world space distance)
 
-			Stereo(D3DPtr<ID3D11Device>& device, Viewport const& viewport, DXGI_FORMAT target_format, bool swap_eyes, float eye_separation);
+			Stereo(ID3D11Device* device, Viewport const& viewport, DXGI_FORMAT target_format, bool swap_eyes, float eye_separation);
 
 			// Add the nvidia magic data to the bottom row of the current render target
 			void BlitNvMagic(D3DPtr<ID3D11DeviceContext>& dc) const;
@@ -101,5 +99,3 @@ namespace pr
 		};
 	}
 }
-
-#endif

@@ -144,35 +144,83 @@ namespace pr
 		template <typename VType = Vert, typename IType = pr::uint16>
 		struct ModelGenerator
 		{
-			// A container for the model data
-			struct Cont :AlignTo<16>
+			using VCont = pr::vector<VType>;
+			using ICont = pr::vector<IType>;
+			using NCont = pr::vector<NuggetProps>;
+
+			using VIter = typename VCont::iterator;
+			using IIter = typename ICont::iterator;
+			using NIter = typename NCont::iterator;
+
+			class Cache
 			{
-				typedef VType VType;
-				typedef IType IType;
+				// The cached buffers
+				struct Buffers :AlignTo<16>
+				{
+					std::string m_name;  // Model name
+					VCont       m_vcont; // Model verts
+					ICont       m_icont; // Model faces/lines/points/etc
+					NCont       m_ncont; // Model nuggets
+					BBox        m_bbox;  // Model bounding box
+				};
+				static Buffers& this_thread_instance()
+				{
+					// A static instance for this thread
+					thread_local static Buffers* buffers;
+					if (!buffers) buffers = new Buffers();
+					return *buffers;
+				}
+				static bool& this_thread_cache_in_use()
+				{
+					thread_local static bool in_use;
+					if (in_use) throw std::exception("Reentrant use of the model generator cache for this thread");
+					return in_use;
+				}
+				Buffers& m_buffers;
+				bool& m_in_use;
 
-				using VCont = pr::vector<VType>;
-				using ICont = pr::vector<IType>;
-				using NCont = pr::vector<NuggetProps>;
+			public:
 
-				using VIter = typename VCont::iterator;
-				using IIter = typename ICont::iterator;
-				using NIter = typename NCont::iterator;
+				std::string& m_name;  // Model name
+				VCont&       m_vcont; // Model verts
+				ICont&       m_icont; // Model faces/lines/points/etc
+				NCont&       m_ncont; // Model nuggets
+				BBox&        m_bbox;  // Model bounding box
 
-				static EGeom const GeomMask = VType::GeomMask;
+				Cache(int vcount = 0, int icount = 0, int ncount = 0)
+					:m_buffers(this_thread_instance())
+					,m_in_use(this_thread_cache_in_use())
+					,m_name(m_buffers.m_name)
+					,m_vcont(m_buffers.m_vcont)
+					,m_icont(m_buffers.m_icont)
+					,m_ncont(m_buffers.m_ncont)
+					,m_bbox(m_buffers.m_bbox)
+				{
+					assert(vcount >= 0 && icount >= 0 && ncount >= 0);
+					m_vcont.resize(vcount);
+					m_icont.resize(icount);
+					m_ncont.resize(ncount);
+					m_in_use = true;
+				}
+				~Cache()
+				{
+					Reset();
+					m_in_use = false;
+				}
+				Cache(Cache const& rhs) = delete;
+				Cache operator =(Cache const& rhs) = delete;
+	
+				// Resize all buffers to 0
+				void Reset()
+				{
+					m_name.resize(0);
+					m_vcont.resize(0);
+					m_icont.resize(0);
+					m_ncont.resize(0);
+					m_bbox = BBoxReset;
+				}
 
-				std::string m_name; // Model name
-				VCont m_vcont; // Model verts
-				ICont m_icont; // Model faces/lines/points/etc
-				NCont m_ncont; // Model nuggets
-				BBox  m_bbox;  // Model bounding box
-
-				Cont(int vcount = 0, int icount = 0, int ncount = 0)
-					:m_name()
-					,m_vcont(vcount)
-					,m_icont(icount)
-					,m_ncont(ncount)
-					,m_bbox(BBoxReset)
-				{}
+				// Add a nugget to 'm_ncont' (helper)
 				void AddNugget(EPrim topo, EGeom geom, bool geometry_has_alpha, bool tint_has_alpha, NuggetProps const* mat = nullptr)
 				{
 					NuggetProps nug;
@@ -185,35 +233,21 @@ namespace pr
 				}
 			};
 
-			// Return the thread local static instance of a 'Cont'
-			static Cont& CacheCont(int vcount = 0, int icount = 0, int ncount = 0)
-			{
-				assert(vcount >= 0 && icount >= 0 && ncount >= 0);
-				thread_local static Cont* cont;
-				if (!cont) cont = new Cont();
-				cont->m_name.resize(0);
-				cont->m_vcont.resize(vcount);
-				cont->m_icont.resize(icount);
-				cont->m_ncont.resize(ncount);
-				cont->m_bbox = BBoxReset;
-				return *cont;
-			}
-
 			// Create a model from 'cont'
 			// 'alpha' if true, the default nugget will have alpha enabled. Ignored if 'cont' contains nuggets
 			// 'bake' is a transform to bake into the model
 			// 'gen_normals' generates normals for the model if >= 0f. Value is the threshold for smoothing (in rad)
-			static ModelPtr Create(Renderer& rdr, Cont& cont, m4x4 const* bake = nullptr, float gen_normals = -1.0f)
+			static ModelPtr Create(Renderer& rdr, Cache& cache, m4x4 const* bake = nullptr, float gen_normals = -1.0f)
 			{
-				// Sanity check 'cont'
+				// Sanity check 'cache'
 				#if PR_DBG_RDR
-				PR_ASSERT(1, !cont.m_ncont.empty(), "No nuggets given");
-				for (auto& nug : cont.m_ncont)
+				PR_ASSERT(1, !cache.m_ncont.empty(), "No nuggets given");
+				for (auto& nug : cache.m_ncont)
 				{
-					PR_ASSERT(1, nug.m_vrange.begin() < cont.m_vcont.size(), "Nugget range invalid");
-					PR_ASSERT(1, nug.m_irange.begin() < cont.m_icont.size(), "Nugget range invalid");
-					PR_ASSERT(1, nug.m_vrange.end()  <= cont.m_vcont.size(), "Nugget range invalid");
-					PR_ASSERT(1, nug.m_irange.end()  <= cont.m_icont.size(), "Nugget range invalid");
+					PR_ASSERT(1, nug.m_vrange.begin() < cache.m_vcont.size(), "Nugget range invalid");
+					PR_ASSERT(1, nug.m_irange.begin() < cache.m_icont.size(), "Nugget range invalid");
+					PR_ASSERT(1, nug.m_vrange.end()  <= cache.m_vcont.size(), "Nugget range invalid");
+					PR_ASSERT(1, nug.m_irange.end()  <= cache.m_icont.size(), "Nugget range invalid");
 				}
 				#endif
 
@@ -222,8 +256,8 @@ namespace pr
 				if (bake)
 				{
 					// Apply the 'bake' transform to every vertex
-					cont.m_bbox = *bake * cont.m_bbox;
-					for (auto& v : cont.m_vcont)
+					cache.m_bbox = *bake * cache.m_bbox;
+					for (auto& v : cache.m_vcont)
 					{
 						v.m_vert = *bake * v.m_vert;
 						v.m_norm = *bake * v.m_norm;
@@ -233,7 +267,7 @@ namespace pr
 					if (Determinant3(*bake) < 0)
 					{
 						// Check each nugget for faces
-						for (auto& nug : cont.m_ncont)
+						for (auto& nug : cache.m_ncont)
 						{
 							switch (nug.m_topo)
 							{
@@ -241,14 +275,14 @@ namespace pr
 								{
 									assert((nug.m_irange.size() % 3) == 0);
 									for (size_t i = nug.m_irange.begin(), iend = nug.m_irange.end(); i != iend; i += 3)
-										std::swap(cont.m_icont[i+1], cont.m_icont[i+2]);
+										std::swap(cache.m_icont[i+1], cache.m_icont[i+2]);
 									break;
 								}
 							case EPrim::TriStrip:
 								{
 									assert((nug.m_irange.size() % 2) == 0);
 									for (size_t i = nug.m_irange.begin(), iend = nug.m_irange.end(); i != iend; i += 2)
-										std::swap(cont.m_icont[i+0], cont.m_icont[i+1]);
+										std::swap(cache.m_icont[i+0], cache.m_icont[i+1]);
 									break;
 								}
 							}
@@ -262,27 +296,27 @@ namespace pr
 				if (gen_normals >= 0.0f)
 				{
 					// Check each nugget for faces
-					for (auto& nug : cont.m_ncont)
+					for (auto& nug : cache.m_ncont)
 					{
 						switch (nug.m_topo)
 						{
 						case EPrim::TriList:
 							{
 								// Generate normals
-								auto iout = std::begin(cont.m_icont) + nug.m_irange.begin();
+								auto iout = std::begin(cache.m_icont) + nug.m_irange.begin();
 								pr::geometry::GenerateNormals(
-									nug.m_irange.size(), cont.m_icont.data() + nug.m_irange.begin(), gen_normals,
-									[&](Cont::IType idx)
+									nug.m_irange.size(), cache.m_icont.data() + nug.m_irange.begin(), gen_normals,
+									[&](IType idx)
 									{
-										return GetP(cont.m_vcont[idx]);
+										return GetP(cache.m_vcont[idx]);
 									},
-									cont.m_vcont.size(),
-									[&](Cont::IType idx, Cont::IType orig, v4 const& norm)
+									cache.m_vcont.size(),
+									[&](IType idx, IType orig, v4 const& norm)
 									{
-										if (idx >= cont.m_vcont.size()) cont.m_vcont.resize(idx + 1, cont.m_vcont[orig]);
-										SetN(cont.m_vcont[idx], norm);
+										if (idx >= cache.m_vcont.size()) cache.m_vcont.resize(idx + 1, cache.m_vcont[orig]);
+										SetN(cache.m_vcont[idx], norm);
 									},
-									[&](Cont::IType i0, Cont::IType i1, Cont::IType i2)
+									[&](IType i0, IType i1, IType i2)
 									{
 										*iout++ = i0;
 										*iout++ = i1;
@@ -300,13 +334,13 @@ namespace pr
 				#pragma endregion
 
 				// Create the model
-				VBufferDesc vb(cont.m_vcont.size(), cont.m_vcont.data());
-				IBufferDesc ib(cont.m_icont.size(), cont.m_icont.data());
-				auto model = rdr.m_mdl_mgr.CreateModel(MdlSettings(vb, ib, cont.m_bbox));
-				model->m_name = cont.m_name;
+				VBufferDesc vb(cache.m_vcont.size(), cache.m_vcont.data());
+				IBufferDesc ib(cache.m_icont.size(), cache.m_icont.data());
+				auto model = rdr.m_mdl_mgr.CreateModel(MdlSettings(vb, ib, cache.m_bbox));
+				model->m_name = cache.m_name;
 
 				// Create the render nuggets
-				for (auto& nug : cont.m_ncont)
+				for (auto& nug : cache.m_ncont)
 				{
 					// If the model geom has valid texture data but no texture, use white
 					if (AllSet(nug.m_geom, EGeom::Tex0) && nug.m_tex_diffuse == nullptr)
@@ -316,7 +350,25 @@ namespace pr
 					model->CreateNugget(nug);
 				}
 
+				// Return the freshly minted model.
 				return model;
+			}
+
+			// Points/Sprites *********************************************************************
+			static ModelPtr Points(Renderer& rdr, int num_points, v4 const* points, int num_colours = 0, Colour32 const* colours = nullptr, NuggetProps const* mat = nullptr)
+			{
+				// Calculate the required buffer sizes
+				auto vcount = num_points;
+				auto icount = num_points;
+
+				// Generate the geometry
+				Cache cache(vcount, icount);
+				auto props = pr::geometry::Points(num_points, points, num_colours, colours, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+				cache.m_bbox = props.m_bbox;
+				cache.AddNugget(EPrim::PointList, props.m_geom, props.m_has_alpha, false, mat);
+
+				// Create the model
+				return Create(rdr, cache);
 			}
 
 			// Lines ******************************************************************************
@@ -333,13 +385,13 @@ namespace pr
 				pr::geometry::LineSize(num_lines, vcount, icount);
 
 				// Generate the geometry
-				auto& cont = CacheCont(vcount, icount);
-				auto props = pr::geometry::Lines(num_lines, points, num_colours, colours, std::begin(cont.m_vcont), std::begin(cont.m_icont));
-				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::LineList, props.m_geom, props.m_has_alpha, false, mat);
+				Cache cache(vcount, icount);
+				auto props = pr::geometry::Lines(num_lines, points, num_colours, colours, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+				cache.m_bbox = props.m_bbox;
+				cache.AddNugget(EPrim::LineList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
-				return Create(rdr, cont);
+				return Create(rdr, cache);
 			}
 			static ModelPtr LinesD(Renderer& rdr, int num_lines, v4 const* points, v4 const* directions, int num_colours = 0, Colour32 const* colours = nullptr, NuggetProps const* mat = nullptr)
 			{
@@ -348,13 +400,13 @@ namespace pr
 				pr::geometry::LineSize(num_lines, vcount, icount);
 
 				// Generate the geometry
-				auto& cont = CacheCont(vcount, icount);
-				auto props = pr::geometry::LinesD(num_lines, points, directions, num_colours, colours, std::begin(cont.m_vcont), std::begin(cont.m_icont));
-				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::LineList, props.m_geom, props.m_has_alpha, false, mat);
+				Cache cache(vcount, icount);
+				auto props = pr::geometry::LinesD(num_lines, points, directions, num_colours, colours, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+				cache.m_bbox = props.m_bbox;
+				cache.AddNugget(EPrim::LineList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
-				return Create(rdr, cont);
+				return Create(rdr, cache);
 			}
 			static ModelPtr LineStrip(Renderer& rdr, int num_lines, v4 const* points, int num_colours = 0, Colour32 const* colour = nullptr, NuggetProps const* mat = nullptr)
 			{
@@ -363,13 +415,13 @@ namespace pr
 				pr::geometry::LineStripSize(num_lines, vcount, icount);
 
 				// Generate the geometry
-				auto& cont = CacheCont(vcount, icount);
-				auto props = pr::geometry::LinesStrip(num_lines, points, num_colours, colour, std::begin(cont.m_vcont), std::begin(cont.m_icont));
-				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
+				Cache cache(vcount, icount);
+				auto props = pr::geometry::LinesStrip(num_lines, points, num_colours, colour, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+				cache.m_bbox = props.m_bbox;
+				cache.AddNugget(EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
-				return Create(rdr, cont);
+				return Create(rdr, cache);
 			}
 
 			// Quad *******************************************************************************
@@ -380,13 +432,13 @@ namespace pr
 				pr::geometry::QuadSize(num_quads, vcount, icount);
 
 				// Generate the geometry
-				auto& cont = CacheCont(vcount, icount);
-				auto props = pr::geometry::Quad(num_quads, verts, num_colours, colours, t2q, std::begin(cont.m_vcont), std::begin(cont.m_icont));
-				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+				Cache cache(vcount, icount);
+				auto props = pr::geometry::Quad(num_quads, verts, num_colours, colours, t2q, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+				cache.m_bbox = props.m_bbox;
+				cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
-				return Create(rdr, cont);
+				return Create(rdr, cache);
 			}
 			static ModelPtr Quad(Renderer& rdr, v2 const& anchor, v4 const& quad_w, v4 const& quad_h, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, m4x4 const& t2q = m4x4Identity, NuggetProps const* mat = nullptr)
 			{
@@ -395,13 +447,13 @@ namespace pr
 				pr::geometry::QuadSize(divisions, vcount, icount);
 
 				// Generate the geometry
-				auto& cont = CacheCont(vcount, icount);
-				auto props = pr::geometry::Quad(anchor, quad_w, quad_h, divisions, colour, t2q, std::begin(cont.m_vcont), std::begin(cont.m_icont));
-				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+				Cache cache(vcount, icount);
+				auto props = pr::geometry::Quad(anchor, quad_w, quad_h, divisions, colour, t2q, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+				cache.m_bbox = props.m_bbox;
+				cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
-				return Create(rdr, cont);
+				return Create(rdr, cache);
 			}
 			static ModelPtr Quad(Renderer& rdr, AxisId axis_id, v2 const& anchor, float width, float height, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, m4x4 const& t2q = m4x4Identity, m4x4 const& o2w = m4x4Identity, NuggetProps const* mat = nullptr)
 			{
@@ -410,13 +462,13 @@ namespace pr
 				pr::geometry::QuadSize(divisions, vcount, icount);
 
 				// Generate the geometry
-				auto& cont = CacheCont(vcount, icount);
-				auto props = pr::geometry::Quad(axis_id, anchor, width, height, divisions, colour, t2q, o2w, std::begin(cont.m_vcont), std::begin(cont.m_icont));
-				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+				Cache cache(vcount, icount);
+				auto props = pr::geometry::Quad(axis_id, anchor, width, height, divisions, colour, t2q, o2w, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+				cache.m_bbox = props.m_bbox;
+				cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
-				return Create(rdr, cont);
+				return Create(rdr, cache);
 			}
 			static ModelPtr Quad(Renderer& rdr, v4 const& centre, v4 const& forward, v4 const& top, float width, float height, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, v2 const& tex_origin = v2Zero, v2 const& tex_dim = v2One, NuggetProps const* mat = nullptr)
 			{
@@ -425,13 +477,13 @@ namespace pr
 				pr::geometry::QuadSize(divisions, vcount, icount);
 
 				// Generate the geometry
-				auto& cont = CacheCont(vcount, icount);
-				auto props = pr::geometry::Quad(centre, forward, top, width, height, divisions, colour, tex_origin, tex_dim, std::begin(cont.m_vcont), std::begin(cont.m_icont));
-				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+				Cache cache(vcount, icount);
+				auto props = pr::geometry::Quad(centre, forward, top, width, height, divisions, colour, tex_origin, tex_dim, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+				cache.m_bbox = props.m_bbox;
+				cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
-				return Create(rdr, cont);
+				return Create(rdr, cache);
 			}
 			static ModelPtr QuadStrip(Renderer& rdr, int num_quads, v4 const* verts, float width, int num_normals = 0, v4 const* normals = nullptr, int num_colours = 0, Colour32 const* colours = nullptr, NuggetProps const* mat = nullptr)
 			{
@@ -440,13 +492,13 @@ namespace pr
 				pr::geometry::QuadStripSize(num_quads, vcount, icount);
 
 				// Generate the geometry
-				auto& cont = CacheCont(vcount, icount);
-				auto props = pr::geometry::QuadStrip(num_quads, verts, width, num_normals, normals, num_colours, colours, std::begin(cont.m_vcont), std::begin(cont.m_icont));
-				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriStrip, props.m_geom, props.m_has_alpha, false, mat);
+				Cache cache(vcount, icount);
+				auto props = pr::geometry::QuadStrip(num_quads, verts, width, num_normals, normals, num_colours, colours, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+				cache.m_bbox = props.m_bbox;
+				cache.AddNugget(EPrim::TriStrip, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
-				return Create(rdr, cont);
+				return Create(rdr, cache);
 			}
 
 			// Shape2d ****************************************************************************
@@ -457,13 +509,13 @@ namespace pr
 				pr::geometry::EllipseSize(solid, facets, vcount, icount);
 
 				// Generate the geometry
-				auto& cont = CacheCont(vcount, icount);
-				auto props = pr::geometry::Ellipse(dimx, dimy, solid, facets, colour, std::begin(cont.m_vcont), std::begin(cont.m_icont));
-				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(solid ? EPrim::TriStrip : EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
+				Cache cache(vcount, icount);
+				auto props = pr::geometry::Ellipse(dimx, dimy, solid, facets, colour, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+				cache.m_bbox = props.m_bbox;
+				cache.AddNugget(solid ? EPrim::TriStrip : EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
-				return Create(rdr, cont, o2w);
+				return Create(rdr, cache, o2w);
 			}
 			static ModelPtr Pie(Renderer& rdr, float dimx, float dimy, float ang0, float ang1, float radius0, float radius1, bool solid, int facets = 40, Colour32 colour = Colour32White, m4x4 const* o2w = nullptr, NuggetProps const* mat = nullptr)
 			{
@@ -472,13 +524,13 @@ namespace pr
 				pr::geometry::PieSize(solid, ang0, ang1, facets, vcount, icount);
 
 				// Generate the geometry
-				auto& cont = CacheCont(vcount, icount);
-				auto props = pr::geometry::Pie(dimx, dimy, ang0, ang1, radius0, radius1, solid, facets, colour, std::begin(cont.m_vcont), std::begin(cont.m_icont));
-				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(solid ? EPrim::TriStrip : EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
+				Cache cache(vcount, icount);
+				auto props = pr::geometry::Pie(dimx, dimy, ang0, ang1, radius0, radius1, solid, facets, colour, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+				cache.m_bbox = props.m_bbox;
+				cache.AddNugget(solid ? EPrim::TriStrip : EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
-				return Create(rdr, cont, o2w);
+				return Create(rdr, cache, o2w);
 			}
 			static ModelPtr RoundedRectangle(Renderer& rdr, float dimx, float dimy, float corner_radius, bool solid, int facets = 10, Colour32 colour = Colour32White, m4x4 const* o2w = nullptr, NuggetProps const* mat = nullptr)
 			{
@@ -487,13 +539,13 @@ namespace pr
 				pr::geometry::RoundedRectangleSize(solid, corner_radius, facets, vcount, icount);
 
 				// Generate the geometry
-				auto& cont = CacheCont(vcount, icount);
-				auto props = pr::geometry::RoundedRectangle(dimx, dimy, solid, corner_radius, facets, colour, std::begin(cont.m_vcont), std::begin(cont.m_icont));
-				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(solid ? EPrim::TriStrip : EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
+				Cache cache(vcount, icount);
+				auto props = pr::geometry::RoundedRectangle(dimx, dimy, solid, corner_radius, facets, colour, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+				cache.m_bbox = props.m_bbox;
+				cache.AddNugget(solid ? EPrim::TriStrip : EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
-				return Create(rdr, cont, o2w);
+				return Create(rdr, cache, o2w);
 			}
 			static ModelPtr Polygon(Renderer& rdr, int num_points, v2 const* points, bool solid, int num_colours = 0, Colour32 const* colours = nullptr, m4x4 const* o2w = nullptr, NuggetProps const* mat = nullptr)
 			{
@@ -502,13 +554,13 @@ namespace pr
 				pr::geometry::PolygonSize(num_points, solid, vcount, icount);
 
 				// Generate the geometry
-				auto& cont = CacheCont(vcount, icount);
-				auto props = pr::geometry::Polygon(num_points, points, solid, num_colours, colours, std::begin(cont.m_vcont), std::begin(cont.m_icont));
-				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(solid ? EPrim::TriList : EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
+				Cache cache(vcount, icount);
+				auto props = pr::geometry::Polygon(num_points, points, solid, num_colours, colours, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+				cache.m_bbox = props.m_bbox;
+				cache.AddNugget(solid ? EPrim::TriList : EPrim::LineStrip, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
-				return Create(rdr, cont, o2w);
+				return Create(rdr, cache, o2w);
 			}
 			
 			// Boxes ******************************************************************************
@@ -519,13 +571,13 @@ namespace pr
 				pr::geometry::BoxSize(num_boxes, vcount, icount);
 
 				// Generate the geometry
-				auto& cont = CacheCont(vcount, icount);
-				auto props = pr::geometry::Boxes(num_boxes, points, num_colours, colours, std::begin(cont.m_vcont), std::begin(cont.m_icont));
-				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+				Cache cache(vcount, icount);
+				auto props = pr::geometry::Boxes(num_boxes, points, num_colours, colours, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+				cache.m_bbox = props.m_bbox;
+				cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
-				return Create(rdr, cont);
+				return Create(rdr, cache);
 			}
 			static ModelPtr Boxes(Renderer& rdr, int num_boxes, v4 const* points, m4x4 const& o2w, int num_colours = 0, Colour32 const* colours = nullptr, NuggetProps const* mat = nullptr)
 			{
@@ -534,13 +586,13 @@ namespace pr
 				pr::geometry::BoxSize(num_boxes, vcount, icount);
 
 				// Generate the geometry
-				auto& cont = CacheCont(vcount, icount);
-				auto props = pr::geometry::Boxes(num_boxes, points, o2w, num_colours, colours, std::begin(cont.m_vcont), std::begin(cont.m_icont));
-				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+				Cache cache(vcount, icount);
+				auto props = pr::geometry::Boxes(num_boxes, points, o2w, num_colours, colours, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+				cache.m_bbox = props.m_bbox;
+				cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
-				return Create(rdr, cont);
+				return Create(rdr, cache);
 			}
 			static ModelPtr Box(Renderer& rdr, v4 const& rad, m4x4 const& o2w = m4x4Identity, Colour32 colour = Colour32White, NuggetProps const* mat = nullptr)
 			{
@@ -549,13 +601,13 @@ namespace pr
 				pr::geometry::BoxSize(1, vcount, icount);
 
 				// Generate the geometry
-				auto& cont = CacheCont(vcount, icount);
-				auto props = pr::geometry::Box(rad, o2w, colour, std::begin(cont.m_vcont), std::begin(cont.m_icont));
-				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+				Cache cache(vcount, icount);
+				auto props = pr::geometry::Box(rad, o2w, colour, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+				cache.m_bbox = props.m_bbox;
+				cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
-				return Create(rdr, cont);
+				return Create(rdr, cache);
 			}
 			static ModelPtr Box(Renderer& rdr, float rad, m4x4 const& o2w = m4x4Identity, Colour32 colour = Colour32White, NuggetProps const* mat = nullptr)
 			{
@@ -568,13 +620,13 @@ namespace pr
 				pr::geometry::BoxSize(num_boxes, vcount, icount);
 
 				// Generate the geometry
-				auto& cont = CacheCont(vcount, icount);
-				auto props = pr::geometry::BoxList(num_boxes, positions, rad, num_colours, colours, std::begin(cont.m_vcont), std::begin(cont.m_icont));
-				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+				Cache cache(vcount, icount);
+				auto props = pr::geometry::BoxList(num_boxes, positions, rad, num_colours, colours, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+				cache.m_bbox = props.m_bbox;
+				cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
-				return Create(rdr, cont);
+				return Create(rdr, cache);
 			}
 
 			// Sphere *****************************************************************************
@@ -585,13 +637,13 @@ namespace pr
 				pr::geometry::GeosphereSize(divisions, vcount, icount);
 
 				// Generate the geometry
-				auto& cont = CacheCont(vcount, icount);
-				auto props = pr::geometry::Geosphere(radius, divisions, colour, std::begin(cont.m_vcont), std::begin(cont.m_icont));
-				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+				Cache cache(vcount, icount);
+				auto props = pr::geometry::Geosphere(radius, divisions, colour, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+				cache.m_bbox = props.m_bbox;
+				cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
-				return Create(rdr, cont);
+				return Create(rdr, cache);
 			}
 			static ModelPtr Geosphere(Renderer& rdr, float radius, int divisions = 3, Colour32 colour = Colour32White, NuggetProps const* mat = nullptr)
 			{
@@ -604,13 +656,13 @@ namespace pr
 				pr::geometry::SphereSize(wedges, layers, vcount, icount);
 
 				// Generate the geometry
-				auto& cont = CacheCont(vcount, icount);
-				auto props = pr::geometry::Sphere(radius, wedges, layers, colour, std::begin(cont.m_vcont), std::begin(cont.m_icont));
-				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+				Cache cache(vcount, icount);
+				auto props = pr::geometry::Sphere(radius, wedges, layers, colour, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+				cache.m_bbox = props.m_bbox;
+				cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
-				return Create(rdr, cont);
+				return Create(rdr, cache);
 			}
 			static ModelPtr Sphere(Renderer& rdr, float radius, int wedges = 20, int layers = 5, Colour32 colour = Colour32White, NuggetProps const* mat = nullptr)
 			{
@@ -625,13 +677,13 @@ namespace pr
 				pr::geometry::CylinderSize(wedges, layers, vcount, icount);
 
 				// Generate the geometry
-				auto& cont = CacheCont(vcount, icount);
-				auto props = pr::geometry::Cylinder(radius0, radius1, height, xscale, yscale, wedges, layers, num_colours, colours, std::begin(cont.m_vcont), std::begin(cont.m_icont));
-				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+				Cache cache(vcount, icount);
+				auto props = pr::geometry::Cylinder(radius0, radius1, height, xscale, yscale, wedges, layers, num_colours, colours, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+				cache.m_bbox = props.m_bbox;
+				cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
-				return Create(rdr, cont, o2w);
+				return Create(rdr, cache, o2w);
 			}
 
 			// Capsule ****************************************************************************
@@ -669,13 +721,13 @@ namespace pr
 				};
 
 				// Generate the geometry
-				auto& cont = CacheCont(vcount, icount);
-				auto props = pr::geometry::Extrude(cs_count, cs, path_count, make_path, closed, smooth_cs, num_colours, colours, std::begin(cont.m_vcont), std::begin(cont.m_icont));
-				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+				Cache cache(vcount, icount);
+				auto props = pr::geometry::Extrude(cs_count, cs, path_count, make_path, closed, smooth_cs, num_colours, colours, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+				cache.m_bbox = props.m_bbox;
+				cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
-				return Create(rdr, cont, o2w);
+				return Create(rdr, cache, o2w);
 			}
 			static ModelPtr Extrude(Renderer& rdr, int cs_count, v2 const* cs, int path_count, m4x4 const* path, bool closed, bool smooth_cs, int num_colours = 0, Colour32 const* colours = nullptr, m4x4 const* o2w = nullptr, NuggetProps const* mat = nullptr)
 			{
@@ -688,13 +740,13 @@ namespace pr
 				auto make_path = [&]{ return *p++; };
 
 				// Generate the geometry
-				auto& cont = CacheCont(vcount, icount);
-				auto props = pr::geometry::Extrude(cs_count, cs, path_count, make_path, closed, smooth_cs, num_colours, colours, std::begin(cont.m_vcont), std::begin(cont.m_icont));
-				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
+				Cache cache(vcount, icount);
+				auto props = pr::geometry::Extrude(cs_count, cs, path_count, make_path, closed, smooth_cs, num_colours, colours, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+				cache.m_bbox = props.m_bbox;
+				cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
 
 				// Create the model
-				return Create(rdr, cont, o2w);
+				return Create(rdr, cache, o2w);
 			}
 
 			// Mesh *******************************************************************************
@@ -705,34 +757,34 @@ namespace pr
 				pr::geometry::MeshSize(cdata.m_vcount, cdata.m_icount, vcount, icount);
 
 				// Generate the geometry
-				auto& cont = CacheCont(vcount, icount);
+				Cache cache(vcount, icount);
 				auto props = pr::geometry::Mesh(
 					cdata.m_vcount, cdata.m_icount,
 					cdata.m_verts, cdata.m_indices,
 					cdata.m_ccount, cdata.m_colours,
 					cdata.m_ncount, cdata.m_normals,
 					cdata.m_tex_coords,
-					std::begin(cont.m_vcont), std::begin(cont.m_icont));
-				cont.m_bbox = props.m_bbox;
+					std::begin(cache.m_vcont), std::begin(cache.m_icont));
+				cache.m_bbox = props.m_bbox;
 
 				// Create the nuggets
-				cont.m_ncont.insert(std::begin(cont.m_ncont), cdata.m_nuggets, cdata.m_nuggets + cdata.m_gcount);
+				cache.m_ncont.insert(std::begin(cache.m_ncont), cdata.m_nuggets, cdata.m_nuggets + cdata.m_gcount);
 
 				// Create the model
-				return Create(rdr, cont);
+				return Create(rdr, cache);
 			}
 
 			// ModelFile **************************************************************************
-			// Populates 'cont' from 'src' which is expected to be a p3d model file stream.
+			// Populates 'cache' from 'src' which is expected to be a p3d model file stream.
 			// 'P3D' models can contain more than one mesh. If 'mesh_name' is nullptr, then the
 			// first mesh in the scene is loaded. If not null, then the first mesh that matches
 			// 'mesh_name' is loaded. If 'mesh_name' is non-null and 'src' does not contain a matching
 			// mesh, an exception is thrown.
-			static void LoadP3DModel(Renderer& rdr, std::istream& src, char const* mesh_name, Cont& cont)
+			static void LoadP3DModel(Renderer& rdr, std::istream& src, char const* mesh_name, Cache& cache)
 			{
 				using namespace pr::geometry::p3d;
-				static_assert(sizeof(Cont::VType) == sizeof(Vert), "P3D vert is a different size");
-				static_assert(sizeof(Cont::IType) == sizeof(u16), "P3D index is a different size");
+				static_assert(sizeof(VType) == sizeof(Vert), "P3D vert is a different size");
+				static_assert(sizeof(IType) == sizeof(u16), "P3D index is a different size");
 
 				std::vector<std::string> mats;
 
@@ -746,22 +798,22 @@ namespace pr
 						return false;
 
 					// Name/Bounding box
-					cont.m_name = mesh.m_name;
-					cont.m_bbox = mesh.m_bbox;
+					cache.m_name = mesh.m_name;
+					cache.m_bbox = mesh.m_bbox;
 
 					// Copy the verts
-					cont.m_vcont.resize(mesh.m_verts.size());
-					memcpy(cont.m_vcont.data(), mesh.m_verts.data(), sizeof(Vert) * mesh.m_verts.size());
+					cache.m_vcont.resize(mesh.m_verts.size());
+					memcpy(cache.m_vcont.data(), mesh.m_verts.data(), sizeof(Vert) * mesh.m_verts.size());
 
 					// Copy the indices
-					cont.m_icont.resize(mesh.m_idx16.size());
-					memcpy(cont.m_icont.data(), mesh.m_idx16.data(), sizeof(u16) * mesh.m_idx16.size());
+					cache.m_icont.resize(mesh.m_idx16.size());
+					memcpy(cache.m_icont.data(), mesh.m_idx16.data(), sizeof(u16) * mesh.m_idx16.size());
 
 					// Copy the nuggets
-					cont.m_ncont.reserve(mesh.m_nugget.size());
+					cache.m_ncont.reserve(mesh.m_nugget.size());
 					for (auto& nug : mesh.m_nugget)
 					{
-						cont.m_ncont.emplace_back(
+						cache.m_ncont.emplace_back(
 							static_cast<EPrim>(nug.m_topo),
 							static_cast<EGeom>(nug.m_geom),
 							nullptr,
@@ -783,26 +835,26 @@ namespace pr
 					(void)rdr,mat;
 				}
 			}
-			static void Load3DSModel(Renderer& rdr, std::istream& src, char const* mesh_name, Cont& cont)
+			static void Load3DSModel(Renderer& rdr, std::istream& src, char const* mesh_name, Cache& cache)
 			{
 				using namespace pr::geometry::max_3ds;
 
 				// Bounding box
-				cont.m_bbox = BBoxReset;
-				auto bb = [&](v4 const& v){ Encompass(cont.m_bbox, v); return v; };
+				cache.m_bbox = BBoxReset;
+				auto bb = [&](v4 const& v){ Encompass(cache.m_bbox, v); return v; };
 
 				// Output callback functions
 				auto vout = [&](v4 const& p, Colour const& c, v4 const& n, v2 const& t)
 				{
 					VType vert;
 					SetPCNT(vert, bb(p), c, n, t);
-					cont.m_vcont.push_back(vert);
+					cache.m_vcont.push_back(vert);
 				};
 				auto iout = [&](pr::uint16 i0, pr::uint16 i1, pr::uint16 i2)
 				{
-					cont.m_icont.push_back(i0);
-					cont.m_icont.push_back(i1);
-					cont.m_icont.push_back(i2);
+					cache.m_icont.push_back(i0);
+					cache.m_icont.push_back(i1);
+					cache.m_icont.push_back(i2);
 				};
 				auto nout = [&](Material const& mat, EGeom geom, Range vrange, Range irange)
 				{
@@ -820,7 +872,7 @@ namespace pr
 						//ddata.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D();
 					}
 
-					cont.m_ncont.push_back(ddata);
+					cache.m_ncont.push_back(ddata);
 				};
 
 				// Parse the materials in the 3ds stream
@@ -841,15 +893,15 @@ namespace pr
 			}
 			static ModelPtr LoadP3DModel(Renderer& rdr, std::istream& src, char const* mesh_name = nullptr, m4x4 const* bake = nullptr, float gen_normals = -1.0f)
 			{
-				auto& cont = CacheCont();
-				LoadP3DModel(rdr, src, mesh_name, cont);
-				return Create(rdr, cont, bake, gen_normals);
+				Cache cache;
+				LoadP3DModel(rdr, src, mesh_name, cache);
+				return Create(rdr, cache, bake, gen_normals);
 			}
 			static ModelPtr Load3DSModel(Renderer& rdr, std::istream& src, char const* mesh_name = nullptr, m4x4 const* bake = nullptr, float gen_normals = -1.0f)
 			{
-				auto& cont = CacheCont();
-				Load3DSModel(rdr, src, mesh_name, cont);
-				return Create(rdr, cont, bake, gen_normals);
+				Cache cache;
+				Load3DSModel(rdr, src, mesh_name, cache);
+				return Create(rdr, cache, bake, gen_normals);
 			}
 			static ModelPtr LoadModel(Renderer& rdr, pr::geometry::EModelFileFormat format, std::istream& src, char const* mesh_name = nullptr, m4x4 const* bake = nullptr, float gen_normals = -1.0f)
 			{
@@ -891,8 +943,8 @@ namespace pr
 				SamplerDesc sdesc(D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_FILTER_MIN_MAG_MIP_POINT);
 				TextureDesc tdesc(size_t(texture_size.x), size_t(texture_size.y), 1, DXGI_FORMAT_R8G8B8A8_UNORM);
 				tdesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-				auto tex = rdr.m_tex_mgr.CreateTexture2D(AutoId, Image(), tdesc, sdesc);
-				tex->m_has_alpha = bk_colour.a != 0xff || fr_colour.a != 0xff;
+				auto has_alpha = bk_colour.a != 0xff || fr_colour.a != 0xff;
+				auto tex = rdr.m_tex_mgr.CreateTexture2D(AutoId, Image(), tdesc, sdesc, has_alpha, "text_quad");
 
 				// Get a D2D device context to draw on
 				auto dc = tex->GetD2DeviceContext();
@@ -925,13 +977,13 @@ namespace pr
 				mat.m_tex_diffuse = tex;
 
 				// Generate the geometry
-				auto& cont = CacheCont(vcount, icount);
-				auto props = pr::geometry::Quad(axis_id, anchor, text_size.x, text_size.y, iv2Zero, Colour32White, t2q, std::begin(cont.m_vcont), std::begin(cont.m_icont));
-				cont.m_bbox = props.m_bbox;
-				cont.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, &mat);
+				Cache cache(vcount, icount);
+				auto props = pr::geometry::Quad(axis_id, anchor, text_size.x, text_size.y, iv2Zero, Colour32White, t2q, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+				cache.m_bbox = props.m_bbox;
+				cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, &mat);
 
 				// Create the model
-				return Create(rdr, cont, bake);
+				return Create(rdr, cache, bake);
 			}
 			static ModelPtr Text(Renderer& rdr, IDWriteTextLayout* text, AxisId axis_id, Colour32 fr_colour, Colour32 bk_colour, v2 const& anchor)
 			{
@@ -962,102 +1014,3 @@ namespace pr
 		};
 	}
 }
-
-			/*
-
-			//// Utility ****************************************************************************
-			//// Generate normals for this model
-			//// Assumes the locked region of the model contains a triangle list
-			//// Note: you're probably better off generating the normals before creating the model.
-			//// That way you don't need to create a buffer that has CPU read/write access
-			//template <typename TVert> void GenerateNormals(MLock& mlock, Range const* vrange = 0, Range const* irange = 0)
-			//{
-			//	if (!vrange) vrange = &mlock.m_vrange;
-			//	if (!irange) irange = &mlock.m_irange;
-			//	PR_ASSERT(PR_DBG_RDR, IsWithin(mlock.m_vlock.m_range, *vrange), "The provided vertex range is not within the locked range");
-			//	PR_ASSERT(PR_DBG_RDR, IsWithin(mlock.m_ilock.m_range, *irange), "The provided index range is not within the locked range");
-			//	PR_ASSERT(PR_DBG_RDR, (irange->size() % 3) == 0, "This function assumes the index range refers to a triangle list");
-
-			//	TVert* verts = mlock.m_vlock.ptr<TVert>()
-			//	pr::geometry::GenerateNormals();
-			//}
-			//template <typename TVert> void GenerateNormals(ModelPtr& model, Range const* vrange, Range const* irange)
-			//{
-			//	MLock mlock(model);
-			//	GenerateNormals<TVert>(mlock, vrange, irange);
-			//}
-			//void SetVertexColours(MLock& mlock, Colour32 colour, Range const* vrange = 0)
-			//{
-			//	if (!vrange) vrange = &mlock.m_vrange;
-			//	PR_ASSERT(PR_DBG_RDR, IsWithin(mlock.m_vlock.m_range, *vrange), "The provided vertex range is not within the locked range");
-
-			//	TVert* vb = mlock.m_vlock.ptr + v_range->m_begin;
-			//	for (std::size_t v = 0; v != v_range->size(); ++v, ++vb)
-			//		vb->colour() = colour;
-			//}
-
-
-			// Helper function for creating a model
-			template <typename GenFunc>
-			static ModelPtr Create(Renderer& rdr, std::size_t vcount, std::size_t icount, EPrim topo, NuggetProps const* ddata_, GenFunc& GenerateFunc, m4x4 const* bake = nullptr)
-			{
-				// Generate the model in local buffers
-				Cont cont(vcount, icount);
-				pr::geometry::Props props = GenerateFunc(begin(cont.m_vcont), begin(cont.m_icont));
-
-				// Bake a transform into the model
-				if (bake)
-				{
-					props.m_bbox = *bake * props.m_bbox;
-					for (auto& v : cont.m_vcont)
-					{
-						v.m_vert = *bake * v.m_vert;
-						v.m_norm = *bake * v.m_norm;
-					}
-					if (Determinant3(*bake) < 0) // flip faces
-					{
-						switch (topo) {
-						case EPrim::TriList:
-							for (size_t i = 0, iend = cont.m_icont.size(); i != iend; i += 3)
-								std::swap(cont.m_icont[i+1], cont.m_icont[i+2]);
-							break;
-						case EPrim::TriStrip:
-							if (!cont.m_icont.empty())
-								cont.m_icont.insert(begin(cont.m_icont), *begin(cont.m_icont));
-							break;
-						}
-					}
-				}
-
-				// Create the model
-				VBufferDesc vb(cont.m_vcont.size(), &cont.m_vcont[0]);
-				IBufferDesc ib(cont.m_icont.size(), &cont.m_icont[0]);
-				ModelPtr model = rdr.m_mdl_mgr.CreateModel(MdlSettings(vb, ib, props.m_bbox));
-
-				// Default nugget creation for the model
-				NuggetProps ddata;
-
-				// If draw data is provided, use it
-				if (ddata_ != nullptr)
-					ddata = *ddata_;
-
-				// Set primitive type, this is non-negotiable
-				ddata.m_topo = topo;
-
-				// Default the geometry type from the generate function
-				if (ddata.m_geom == EGeom::Invalid)
-					ddata.m_geom = props.m_geom;
-
-				// If the model geom has valid texture data but no texture, use white
-				if (AllSet(ddata.m_geom, EGeom::Tex0) && ddata.m_tex_diffuse == nullptr)
-					ddata.m_tex_diffuse = rdr.m_tex_mgr.FindTexture(EStockTexture::White);
-
-				// If the model has alpha, set the alpha blending state
-				if (props.m_has_alpha)
-					SetAlphaBlending(ddata, true);
-
-				// Create the render nugget
-				model->CreateNugget(ddata);
-				return model;
-			}
-			*/

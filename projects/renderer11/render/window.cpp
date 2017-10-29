@@ -188,7 +188,7 @@ namespace pr
 				pr::Throw(device->CreateShaderResourceView(back_buffer.m_ptr, nullptr, &m_main_srv.m_ptr));
 
 			// Get the render target as a texture
-			m_main_tex = tex_mgr().CreateTexture2D(AutoId, back_buffer.get(), m_main_srv.get(), SamplerDesc::LinearClamp(), "main_rt");
+			m_main_tex = tex_mgr().CreateTexture2D(AutoId, back_buffer.get(), m_main_srv.get(), SamplerDesc::LinearClamp(), false, "main_rt");
 
 			// Create a texture buffer that we will use as the depth buffer
 			TextureDesc desc;
@@ -503,7 +503,8 @@ namespace pr
 
 			// Notify that a resize of the swap chain is about to happen.
 			// Receivers need to ensure they don't have any outstanding references to the swap chain resources
-			pr::events::Send(rdr::Evt_Resize(this, false, RenderTargetSize())); // notify before changing the RT (with the old size)
+			//pr::events::Send(rdr::Evt_Resize(this, false, RenderTargetSize())); // notify before changing the RT (with the old size)
+			m_rdr->RenderTargetSizeChanged(*this, RenderTargetSizeChangedEventArgs(RenderTargetSize(), false));
 
 			// Drop the render targets from the immediate context and D2D
 			if (m_d2d_dc != nullptr) m_d2d_dc->SetTarget(nullptr);
@@ -526,7 +527,8 @@ namespace pr
 			RestoreRT();
 
 			// Notify that the resize is done
-			pr::events::Send(rdr::Evt_Resize(this, true, m_dbg_area = RenderTargetSize())); // notify after changing the RT (with the new size)
+			m_rdr->RenderTargetSizeChanged(*this, RenderTargetSizeChangedEventArgs(m_dbg_area = RenderTargetSize(), true));
+			//pr::events::Send(rdr::Evt_Resize(this, true, m_dbg_area = RenderTargetSize())); // notify after changing the RT (with the new size)
 		}
 
 		// Flip the scene to the display

@@ -104,17 +104,19 @@ namespace LDraw
 				{
 					m_scene.SceneChanged += HandleSceneChanged;
 				}
+
+				// Handlers
+				void HandleSceneChanged(object sender = null, View3d.SceneChangedEventArgs args = null)
+				{
+					// Ignore if only excluded context ids have changed
+					if (args.ContextIds.All(x => Exclude.Contains(x)))
+						return;
+
+					SyncObjectsWithScene();
+				}
 			}
 		}
 		private SceneUI m_scene;
-		private void HandleSceneChanged(object sender = null, View3d.SceneChangedEventArgs args = null)
-		{
-			// Ignore if only excluded context ids have changed
-			if (args.ContextIds.All(x => Exclude.Contains(x)))
-				return;
-
-			SyncObjectsWithScene();
-		}
 
 		/// <summary>Set up UI elements</summary>
 		private void SetupUI()

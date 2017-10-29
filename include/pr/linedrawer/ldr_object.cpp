@@ -43,8 +43,35 @@ namespace pr
 		using EResult = pr::script::EResult;
 		template <typename T> using optional = pr::optional<T>;
 
-		struct CacheData
+		class Cache
 		{
+			struct Buffers :AlignTo<16>
+			{
+				VCont m_point;
+				NCont m_norms;
+				ICont m_index;
+				CCont m_color;
+				TCont m_texts;
+				GCont m_nugts;
+			};
+			static Buffers& this_thread_instance()
+			{
+				// A static instance for this thread
+				thread_local static Buffers* buffers;
+				if (!buffers) buffers = new Buffers();
+				return *buffers;
+			}
+			static bool& this_thread_cache_in_use()
+			{
+				thread_local static bool in_use;
+				if (in_use) throw std::exception("Reentrant use of the model generator cache for this thread");
+				return in_use;
+			}
+			Buffers& m_buffers;
+			bool& m_in_use;
+
+		public:
+
 			VCont& m_point;
 			NCont& m_norms;
 			ICont& m_index;
@@ -52,28 +79,28 @@ namespace pr
 			TCont& m_texts;
 			GCont& m_nugts;
 
-			CacheData()
-				:m_point(*new (_aligned_malloc(sizeof(VCont), 16)) VCont)
-				,m_norms(*new (_aligned_malloc(sizeof(NCont), 16)) NCont)
-				,m_index(*new (_aligned_malloc(sizeof(ICont), 16)) ICont)
-				,m_color(*new (_aligned_malloc(sizeof(CCont), 16)) CCont)
-				,m_texts(*new (_aligned_malloc(sizeof(TCont), 16)) TCont)
-				,m_nugts(*new (_aligned_malloc(sizeof(GCont), 16)) GCont)
-			{}
-			~CacheData()
+			Cache()
+				:m_buffers(this_thread_instance())
+				,m_in_use(this_thread_cache_in_use())
+				,m_point(m_buffers.m_point)
+				,m_norms(m_buffers.m_norms)
+				,m_index(m_buffers.m_index)
+				,m_color(m_buffers.m_color)
+				,m_texts(m_buffers.m_texts)
+				,m_nugts(m_buffers.m_nugts)
 			{
-				m_nugts.~GCont(); _aligned_free(&m_nugts);
-				m_texts.~TCont(); _aligned_free(&m_texts);
-				m_color.~CCont(); _aligned_free(&m_color);
-				m_index.~ICont(); _aligned_free(&m_index);
-				m_norms.~NCont(); _aligned_free(&m_norms);
-				m_point.~VCont(); _aligned_free(&m_point);
+				m_in_use = true;
 			}
-			CacheData(CacheData const& rhs) = delete;
-			CacheData& operator =(CacheData const& rhs) = delete;
-
-			// Empty cache buffers
-			void reset()
+			~Cache()
+			{
+				Reset();
+				m_in_use = false;
+			}
+			Cache(Cache const& rhs) = delete;
+			Cache operator =(Cache const& rhs) = delete;
+	
+			// Resize all buffers to 0
+			void Reset()
 			{
 				m_point.resize(0);
 				m_norms.resize(0);
@@ -83,18 +110,6 @@ namespace pr
 				m_nugts.resize(0);
 			}
 		};
-		
-		// Create a parsing cache instance
-		std::unique_ptr<CacheData> CreateCache()
-		{
-			return std::make_unique<CacheData>();
-		}
-		CacheData* ThisThreadCache()
-		{
-			thread_local static CacheData* s_cache;
-			if (s_cache == nullptr) s_cache = new CacheData();
-			return s_cache;
-		}
 
 		// String hash wrapper
 		inline size_t Hash(char const* str)
@@ -135,7 +150,7 @@ namespace pr
 			ParseResult&    m_result;
 			ObjectCont&     m_objects;
 			ModelCont&      m_models;
-			CacheData&      m_cache;
+			Cache&          m_cache;
 			pr::Guid        m_context_id;
 			HashValue       m_keyword;
 			LdrObject*      m_parent;
@@ -144,7 +159,7 @@ namespace pr
 			time_point      m_last_progress_update;
 			bool&           m_cancel;
 
-			ParseParams(pr::Renderer& rdr, Reader& reader, ParseResult& result, CacheData& cache, pr::Guid const& context_id, ParseProgressCB progress_cb, bool& cancel)
+			ParseParams(pr::Renderer& rdr, Reader& reader, ParseResult& result, Cache& cache, pr::Guid const& context_id, ParseProgressCB progress_cb, bool& cancel)
 				:m_rdr(rdr)
 				,m_reader(reader)
 				,m_result(result)
@@ -479,6 +494,7 @@ namespace pr
 		{
 			std::string tex_filepath;
 			auto t2s = pr::m4x4Identity;
+			bool has_alpha = false;
 			SamplerDesc sam;
 
 			p.m_reader.SectionStart();
@@ -490,32 +506,37 @@ namespace pr
 					switch (kw)
 					{
 					default:
-					{
-						p.ReportError(EResult::UnknownToken);
-						break;
-					}
+						{
+							p.ReportError(EResult::UnknownToken);
+							break;
+						}
 					case EKeyword::O2W:
-					{
-						ParseLdrTransform(p.m_reader, t2s);
-						break;
-					}
+						{
+							ParseLdrTransform(p.m_reader, t2s);
+							break;
+						}
 					case EKeyword::Addr:
-					{
-						char word[20];
-						p.m_reader.SectionStart();
-						p.m_reader.Identifier(word); sam.AddressU = (D3D11_TEXTURE_ADDRESS_MODE)ETexAddrMode::Parse(word, false);
-						p.m_reader.Identifier(word); sam.AddressV = (D3D11_TEXTURE_ADDRESS_MODE)ETexAddrMode::Parse(word, false);
-						p.m_reader.SectionEnd();
-						break;
-					}
+						{
+							char word[20];
+							p.m_reader.SectionStart();
+							p.m_reader.Identifier(word); sam.AddressU = (D3D11_TEXTURE_ADDRESS_MODE)ETexAddrMode::Parse(word, false);
+							p.m_reader.Identifier(word); sam.AddressV = (D3D11_TEXTURE_ADDRESS_MODE)ETexAddrMode::Parse(word, false);
+							p.m_reader.SectionEnd();
+							break;
+						}
 					case EKeyword::Filter:
-					{
-						char word[20];
-						p.m_reader.SectionStart();
-						p.m_reader.Identifier(word); sam.Filter = (D3D11_FILTER)EFilter::Parse(word, false);
-						p.m_reader.SectionEnd();
-						break;
-					}
+						{
+							char word[20];
+							p.m_reader.SectionStart();
+							p.m_reader.Identifier(word); sam.Filter = (D3D11_FILTER)EFilter::Parse(word, false);
+							p.m_reader.SectionEnd();
+							break;
+						}
+					case EKeyword::Alpha:
+						{
+							has_alpha = true;
+							break;
+						}
 					}
 				}
 				else
@@ -531,12 +552,12 @@ namespace pr
 				// Create the texture
 				try
 				{
-					tex = p.m_rdr.m_tex_mgr.CreateTexture2D(AutoId, sam, tex_filepath.c_str());
+					tex = p.m_rdr.m_tex_mgr.CreateTexture2D(AutoId, sam, tex_filepath.c_str(), has_alpha, pr::filesys::GetFiletitle(tex_filepath).c_str());
 					tex->m_t2s = t2s;
 				}
 				catch (std::exception const& e)
 				{
-					p.ReportError(EResult::ValueNotFound, pr::FmtS("failed to create texture %s\nReason: %s", tex_filepath.c_str(), e.what()));
+					p.ReportError(EResult::ValueNotFound, pr::FmtS("failed to create texture %s\n%s", tex_filepath.c_str(), e.what()));
 				}
 			}
 			return true;
@@ -611,7 +632,7 @@ namespace pr
 			case EKeyword::ScreenSpace:
 				{
 					// Use a magic number to signal screen space mode to the ApplyState function
-					obj->m_screen_space = ~EventHandlerId();
+					obj->m_screen_space = EvtSub((evt::IEventHandler*)1, 0);
 					return true;
 				}
 			}
@@ -739,6 +760,118 @@ namespace pr
 			}
 		};
 
+		// Base class for point sprite objects
+		struct IObjectCreatorPoint :IObjectCreatorTexture
+		{
+			enum class EStyle
+			{
+				Square,
+				Circle,
+				Star,
+			};
+
+			VCont& m_point;
+			CCont& m_color;
+			bool   m_per_point_colour;
+			EStyle m_style;
+			v2     m_point_size;
+			bool   m_depth;
+
+			IObjectCreatorPoint(ParseParams& p)
+				:IObjectCreatorTexture(p)
+				,m_point(p.m_cache.m_point)
+				,m_color(p.m_cache.m_color)
+				,m_per_point_colour(false)
+				,m_style(EStyle::Square)
+				,m_point_size()
+				,m_depth(false)
+			{}
+			void Parse() override
+			{
+				pr::v4 pt;
+				p.m_reader.Vector3(pt, 1.0f);
+				m_point.push_back(pt);
+				if (m_per_point_colour)
+				{
+					pr::Colour32 col;
+					p.m_reader.Int(col.argb, 16);
+					m_color.push_back(col);
+				}
+			}
+			bool ParseKeyword(EKeyword kw) override
+			{
+				switch (kw)
+				{
+				default:
+					{
+						return IObjectCreatorTexture::ParseKeyword(kw);
+					}
+				case EKeyword::Coloured:
+					{
+						m_per_point_colour = true;
+						return true;
+					}
+				case EKeyword::Width:
+					{
+						p.m_reader.RealS(m_point_size.x);
+						m_point_size.y = m_point_size.x;
+						return true;
+					}
+				case EKeyword::Size:
+					{
+						p.m_reader.Vector2S(m_point_size);
+						return true;
+					}
+				case EKeyword::Style:
+					{
+						string32 ident;
+						p.m_reader.IdentifierS(ident);
+						switch (HashI(ident.c_str()))
+						{
+						default: p.m_reader.ReportError(pr::script::EResult::UnknownToken); break;
+						case HashI("square"): m_style = EStyle::Square; break;
+						case HashI("circle"): m_style = EStyle::Circle; break;
+						case HashI("star"):   m_style = EStyle::Star; break;
+						}
+						return true;
+					}
+				case EKeyword::Depth:
+					{
+						m_depth = true;
+						return true;
+					}
+				}
+			}
+			void CreateModel(LdrObject* obj) override
+			{
+				using namespace pr::rdr;
+
+				// Validate
+				if (m_point.size() < 1)
+				{
+					p.ReportError(EResult::Failed, pr::FmtS("Point object '%s' description incomplete", obj->TypeAndName().c_str()));
+					return;
+				}
+
+				// Create the model
+				obj->m_model = ModelGenerator<>::Points(p.m_rdr, int(m_point.size()), m_point.data(), int(m_color.size()), m_color.data(), Material());
+				obj->m_model->m_name = obj->TypeAndName();
+
+				// Use a geometry shader to draw points
+				if (m_point_size.x != 0 && m_point_size.y != 0)
+				{
+					// Get/Create an instance of the point sprites shader
+					auto id = pr::hash::Hash("LDrawPointSprites", m_point_size, m_depth);
+					auto shdr = p.m_rdr.m_shdr_mgr.GetShader<PointSpritesGS>(id, EStockShader::PointSpritesGS);
+					shdr->m_size = m_point_size;
+					shdr->m_depth = m_depth;
+
+					for (auto& nug : obj->m_model->m_nuggets)
+						nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
+				}
+			}
+		};
+
 		// Base class for object creators that are based on lines
 		struct IObjectCreatorLine :IObjectCreator
 		{
@@ -770,34 +903,26 @@ namespace pr
 				{
 				default: return IObjectCreator::ParseKeyword(kw);
 				case EKeyword::Coloured:
-					#pragma region
 					{
 						m_per_line_colour = true;
 						return true;
 					}
-					#pragma endregion
 				case EKeyword::Smooth:
-					#pragma region
 					{
 						m_smooth = true;
 						return true;
 					}
-					#pragma endregion
 				case EKeyword::Dashed:
-					#pragma region
 					{
 						p.m_reader.Vector2S(m_dashed);
 						return true;
 					}
 				case EKeyword::Width:
-					#pragma region
 					{
 						p.m_reader.RealS(m_line_width);
 						return true;
 					}
-					#pragma endregion
 				case EKeyword::Param:
-					#pragma region
 					{
 						float t[2];
 						p.m_reader.RealS(t, 2);
@@ -813,7 +938,6 @@ namespace pr
 						p1 = pt + t[1] * dir;
 						return true;
 					}
-					#pragma endregion
 				}
 			}
 			void CreateModel(LdrObject* obj) override
@@ -881,9 +1005,10 @@ namespace pr
 				if (m_line_width != 0.0f)
 				{
 					// Get or create an instance of the thick line shader
-					auto shdr = p.m_rdr.m_shdr_mgr.FindShader<ThickLineListShaderGS>(pr::FmtS("ldraw_thick_line_%f", m_line_width), EStockShader::ThickLineListGS);
+					auto id = pr::hash::Hash("LDrawThickLine", m_line_width);
+					auto shdr = p.m_rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id, EStockShader::ThickLineListGS);
+					shdr->m_width = m_line_width;
 
-					shdr->m_default_width = m_line_width;
 					for (auto& nug : obj->m_model->m_nuggets)
 						nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
 				}
@@ -1364,6 +1489,18 @@ namespace pr
 
 		#pragma endregion
 
+		#pragma region Sprite Objects
+
+		// ELdrObject::Point
+		template <> struct ObjectCreator<ELdrObject::Point> :IObjectCreatorPoint
+		{
+			ObjectCreator(ParseParams& p)
+				:IObjectCreatorPoint(p)
+			{}
+		};
+
+		#pragma endregion
+
 		#pragma region Line Objects
 
 		// ELdrObject::Line
@@ -1585,10 +1722,11 @@ namespace pr
 
 				// Generate the model
 				// 'm_point' should contain line strip data
-				ModelGenerator<>::Cont cont(int(m_point.size() + 2), int(m_point.size() + 2));
+				ModelGenerator<>::Cache cache(int(m_point.size() + 2), int(m_point.size() + 2));
+
 				auto v_in  = std::begin(m_point);
-				auto v_out = std::begin(cont.m_vcont);
-				auto i_out = std::begin(cont.m_icont);
+				auto v_out = std::begin(cache.m_vcont);
+				auto i_out = std::begin(cache.m_icont);
 				pr::Colour32 c = pr::Colour32White;
 				pr::uint16 index = 0;
 
@@ -1615,16 +1753,19 @@ namespace pr
 				}
 
 				// Create the model
-				VBufferDesc vb(cont.m_vcont.size(), &cont.m_vcont[0]);
-				IBufferDesc ib(cont.m_icont.size(), &cont.m_icont[0]);
+				VBufferDesc vb(cache.m_vcont.size(), &cache.m_vcont[0]);
+				IBufferDesc ib(cache.m_icont.size(), &cache.m_icont[0]);
 				obj->m_model = p.m_rdr.m_mdl_mgr.CreateModel(MdlSettings(vb, ib, props.m_bbox));
 				obj->m_model->m_name = obj->TypeAndName();
 
 				// Get instances of the arrow head geometry shader and the thick line shader
-				auto thk_shdr = p.m_rdr.m_shdr_mgr.FindShader<ThickLineListShaderGS>("ldraw_thick_line", EStockShader::ThickLineListGS);
-				thk_shdr->m_default_width = m_line_width;
-				auto arw_shdr = p.m_rdr.m_shdr_mgr.FindShader<ArrowHeadShaderGS>("ldraw_arrow_head", EStockShader::ArrowHeadGS);
-				arw_shdr->m_default_width = m_line_width * 2;
+				auto id_thk = pr::hash::Hash("LDrawThickLine", m_line_width);
+				auto thk_shdr = p.m_rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id_thk, EStockShader::ThickLineListGS);
+				thk_shdr->m_width = m_line_width;
+
+				auto id_arw = pr::hash::Hash("LDrawArrowHead", m_line_width*2);
+				auto arw_shdr = p.m_rdr.m_shdr_mgr.GetShader<ArrowHeadGS>(id_arw, EStockShader::ArrowHeadGS);
+				arw_shdr->m_size = m_line_width * 2;
 
 				// Create nuggets
 				NuggetProps nug;
@@ -1639,7 +1780,7 @@ namespace pr
 					nug.m_smap[ERenderStep::ForwardRender].m_gs = arw_shdr;
 					nug.m_vrange = vrange;
 					nug.m_irange = irange;
-					nug.m_geometry_has_alpha = cont.m_vcont[0].m_diff.a != 1.0f;
+					nug.m_geometry_has_alpha = cache.m_vcont[0].m_diff.a != 1.0f;
 					obj->m_model->CreateNugget(nug);
 				}
 				{
@@ -1662,7 +1803,7 @@ namespace pr
 					nug.m_smap[ERenderStep::ForwardRender].m_gs = arw_shdr;
 					nug.m_vrange = vrange;
 					nug.m_irange = irange;
-					nug.m_geometry_has_alpha = cont.m_vcont.back().m_diff.a != 1.0f;
+					nug.m_geometry_has_alpha = cache.m_vcont.back().m_diff.a != 1.0f;
 					obj->m_model->CreateNugget(nug);
 				}
 			}
@@ -2755,8 +2896,9 @@ namespace pr
 					if (m_width != 0.0f)
 					{
 						// Use thick lines
-						auto shdr = p.m_rdr.m_shdr_mgr.FindShader<ThickLineListShaderGS>(pr::FmtS("ldraw_thick_line_%f", m_width), EStockShader::ThickLineListGS);
-						shdr->m_default_width = m_width;
+						auto id = pr::hash::Hash("LDrawThickLine", m_width);
+						auto shdr = p.m_rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id, EStockShader::ThickLineListGS);
+						shdr->m_width = m_width;
 						nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
 					}
 					nugts.push_back(nug);
@@ -3302,8 +3444,8 @@ namespace pr
 			p.m_models[Hash(obj->m_name.c_str())] = obj->m_model;
 			p.m_objects.push_back(obj);
 
-			// Reset the memory pool
-			p.m_cache.reset();
+			// Reset the memory pool for the next object
+			p.m_cache.Reset();
 
 			// Report progress
 			p.ReportProgress();
@@ -3318,6 +3460,7 @@ namespace pr
 			switch (kw)
 			{
 			default: return false;
+			case ELdrObject::Point:      Parse<ELdrObject::Point     >(p); break;
 			case ELdrObject::Line:       Parse<ELdrObject::Line      >(p); break;
 			case ELdrObject::LineD:      Parse<ELdrObject::LineD     >(p); break;
 			case ELdrObject::LineStrip:  Parse<ELdrObject::LineStrip >(p); break;
@@ -3419,6 +3562,15 @@ namespace pr
 						p.m_reader.Includes().m_ignore_missing_includes = true;
 						break;
 					}
+				case EKeyword::Dependency:
+					{
+						wstring256 dep;
+						p.m_reader.String(dep);
+
+						// Get the include handler to open the file, this triggers the FileOpened event allowing
+						// the file to be seen as a dependency, without actually using the file content.
+						auto inc = p.m_reader.Includes().Open(dep, IIncludeHandler::EFlags::IncludeLocalDir);
+					}
 				case EKeyword::Wireframe:
 					{
 						p.m_result.m_wireframe = true;
@@ -3445,11 +3597,8 @@ namespace pr
 		// This function can be called from any thread (main or worker) and may be called concurrently by multiple threads.
 		// There is synchronisation in the renderer for creating/allocating models. The calling thread must control the
 		// lifetimes of the script reader, the parse output, and the 'store' container it refers to.
-		void Parse(pr::Renderer& rdr, pr::script::Reader& reader, ParseResult& out, Guid const& context_id, ParseProgressCB progress_cb, CacheData* cache)
+		void Parse(pr::Renderer& rdr, pr::script::Reader& reader, ParseResult& out, Guid const& context_id, ParseProgressCB progress_cb)
 		{
-			// Ensure the cache data is not null
-			cache = cache ? cache : ThisThreadCache();
-
 			// Give initial and final progress updates
 			auto start_loc = reader.Loc();
 			auto exit = pr::CreateScope(
@@ -3467,8 +3616,9 @@ namespace pr
 				});
 
 			// Parse the script
+			Cache cache;
 			bool cancel = false;
-			ParseParams pp(rdr, reader, out, *cache, context_id, progress_cb, cancel);
+			ParseParams pp(rdr, reader, out, cache, context_id, progress_cb, cancel);
 			ParseLdrObjects(pp, [&](int){});
 		}
 
@@ -3528,13 +3678,13 @@ namespace pr
 		}
 
 		// Update 'object' with info from 'reader'. 'flags' describes the properties of 'object' to update
-		void Update(pr::Renderer& rdr, LdrObject* object, pr::script::Reader& reader, EUpdateObject flags, CacheData* cache)
+		void Update(pr::Renderer& rdr, LdrObject* object, pr::script::Reader& reader, EUpdateObject flags)
 		{
 			// Parsing parameters
+			Cache cache;
 			ParseResult result;
 			bool cancel = false;
-			cache = cache ? cache : ThisThreadCache();
-			ParseParams pp(rdr, reader, result, *cache, object->m_context_id, nullptr, cancel);
+			ParseParams pp(rdr, reader, result, cache, object->m_context_id, nullptr, cancel);
 	
 			// Parse 'reader' for the new model
 			ParseLdrObjects(pp, [&](int object_index)
@@ -3605,27 +3755,20 @@ namespace pr
 		// 'excluded' is considered after 'doomed' so if any context ids are in both arrays, they will be excluded.
 		void Remove(ObjectCont& objects, pr::Guid const* doomed, std::size_t dcount, pr::Guid const* excluded, std::size_t ecount)
 		{
-			pr::Guid const* dend = doomed + dcount;
-			pr::Guid const* eend = excluded + ecount;
-			for (size_t i = objects.size(); i-- != 0;)
+			auto incl = std::initializer_list<pr::Guid>(doomed, doomed + dcount);
+			auto excl = std::initializer_list<pr::Guid>(excluded, excluded + ecount);
+			pr::erase_if_unstable(objects, [=](auto& ob)
 			{
-				if (doomed   && std::find(doomed, dend, objects[i]->m_context_id) == dend) continue; // not in the doomed list
-				if (excluded && std::find(excluded, eend, objects[i]->m_context_id) != eend) continue; // saved by exclusion
-				objects.erase(objects.begin() + i);
-			}
+				if (doomed   && !pr::contains(incl, ob->m_context_id)) return false; // not in the doomed list
+				if (excluded &&  pr::contains(excl, ob->m_context_id)) return false; // saved by exclusion
+				return true;
+			});
 		}
 
 		// Remove 'obj' from 'objects'
 		void Remove(ObjectCont& objects, LdrObject* obj)
 		{
-			auto ibeg = std::begin(objects);
-			auto iend = std::end(objects);
-			for (auto i = ibeg; i != iend; ++i)
-			{
-				if (*i != obj) continue;
-				objects.erase(i);
-				break;
-			}
+			pr::erase_first_unstable(objects, [=](auto& ob){ return ob == obj; });
 		}
 
 		// Generate a scene that demos the supported object types and modifiers.
@@ -3648,6 +3791,9 @@ LR"(//********************************************
 // Allow missing includes not to cause errors
 *AllowMissingIncludes
 #include "missing_file.ldr"
+
+// Add an explicit dependency on another file - useful for auto refresh
+//*Dependency "..\dir\shader_test.hlsl"
 
 // Object descriptions have the following format:
 //	*ObjectType [name] [colour] [instance]
@@ -3712,6 +3858,7 @@ LR"(// There are a number of other object modifiers that can also be used:
 		"#checker"          // texture filepath, stock texture name (e.g. #white, #black, #checker), or texture id (e.g. #1, #3)
 		*Addr {Clamp Clamp} // Optional addressing mode for the texture; U, V. Options: Wrap, Mirror, Clamp, Border, MirrorOnce
 		*Filter {Linear}    // Optional filtering of the texture. Options: Point, Linear, Anisotropic
+		*Alpha              // Optional. Indicates the texture contains alpha pixels
 		*o2w                // Optional 3d texture coord transform
 		{
 			*scale{100 100 1}
@@ -3932,6 +4079,22 @@ LR"(// *************************************************************************
 	*ForeColour {FF0000FF}
 	*BackColour {40000000}
 	*o2w{*scale{0.02}}
+}
+
+// A list of points
+*Point pts
+{
+	0 0 0                 // x y z point positions
+	1 1 1
+	#embedded(CSharp)
+	var rng = new Random();
+	for (int i = 0; i != 100; ++i)
+		Out.AppendLine(v4.Random3(1.0f, 1.0f, rng).ToString3());
+	#end
+
+	*Width {20}              // Optional. Specify a size for the point
+	*Style { Circle }        // Optional. One of: Square, Circle, Star, .. Requires 'Width'
+	*Texture {"#whitespot"}  // Optional. A texture for each point sprite. Requires 'Width'. Ignored if 'Style' given.
 }
 
 // Line modifiers:
@@ -4509,7 +4672,7 @@ LR"(// *************************************************************************
 			,m_instanced(attr.m_instance)
 			,m_visible(true)
 			,m_wireframe(false)
-			,m_screen_space(false)
+			,m_screen_space()
 			,m_flags(ELdrFlags::None)
 			,m_user_data()
 		{
@@ -4716,7 +4879,6 @@ LR"(// *************************************************************************
 					o->m_c2s = m4x4Zero;
 					o->m_flags = SetBits(o->m_flags, ELdrFlags::BBoxInvisible, false);
 					o->OnAddToScene -= o->m_screen_space;
-					o->m_screen_space = 0;
 				}
 				return true;
 			}, "");

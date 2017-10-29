@@ -17,29 +17,39 @@ namespace pr
 	{
 		class ShaderManager
 		{
+			// Notes:
+			//  - The shader manager is a store of D3D shaders.
+			//  - The shader manager allows for application specific shaders.
+			//  - The 'ShaderBase' derived objects are reference counted instances of D3D11 shaders.
+			//  - A 'ShaderBase' derived object is created for each configuration of its shader constants.
+			//    This might be as many as one per nugget.
+			//  - The 'ShaderLookup' container is a collection of weak references to ShaderBase instances.
+			//    An application can cache ShaderBase instances that use the same constants. This is not
+			//    necessary though, creating a ShaderBase instance per nugget is ok.
+
 			using IPLookup     = Lookup<RdrId, D3DPtr<ID3D11InputLayout>>;
 			using VSLookup     = Lookup<RdrId, D3DPtr<ID3D11VertexShader>>;
 			using PSLookup     = Lookup<RdrId, D3DPtr<ID3D11PixelShader>>;
 			using GSLookup     = Lookup<RdrId, D3DPtr<ID3D11GeometryShader>>;
 			using CBufLookup   = Lookup<RdrId, D3DPtr<ID3D11Buffer>>;
-			using ShaderLookup = Lookup<RdrId, RefPtr<ShaderBase>>;
+			using ShaderLookup = Lookup<RdrId, ShaderBase*>;
 
 			using ShaderAlexFunc = std::function<ShaderPtr(ShaderManager*)>;
 			using ShaderDeleteFunc = std::function<void(ShaderBase*)>;
 			using AllocationsTracker = AllocationsTracker<ShaderBase>;
-
-			MemFuncs             m_mem;           // Not using an allocator here, because the Shader type isn't known until 'CreateShader' is called
-			AllocationsTracker   m_dbg_mem;       // Allocation tracker
-			Renderer&            m_rdr;           // The owner renderer instance
-			IPLookup             m_lookup_ip;     // Map from id to D3D input layout
-			VSLookup             m_lookup_vs;     // Map from id to D3D vertex shader
-			PSLookup             m_lookup_ps;     // Map from id to D3D pixel shader
-			GSLookup             m_lookup_gs;     // Map from id to D3D geometry shader
-			ShaderLookup         m_lookup_shader; // Map from id to ShaderBase instances
-			CBufLookup           m_lookup_cbuf;   // Shared 'cbuffer' objects
-			std::recursive_mutex m_mutex;
-
 			friend struct ShaderBase;
+
+			MemFuncs              m_mem;           // Not using an allocator here, because the Shader type isn't known until 'CreateShader' is called
+			AllocationsTracker    m_dbg_mem;       // Allocation tracker
+			Renderer&             m_rdr;           // The owner renderer instance
+			IPLookup              m_lookup_ip;     // Map from id to D3D input layout
+			VSLookup              m_lookup_vs;     // Map from id to D3D vertex shader
+			PSLookup              m_lookup_ps;     // Map from id to D3D pixel shader
+			GSLookup              m_lookup_gs;     // Map from id to D3D geometry shader
+			ShaderLookup          m_lookup_shader; // Map from id to ShaderBase instances
+			CBufLookup            m_lookup_cbuf;   // Shared 'cbuffer' objects
+			pr::vector<ShaderPtr> m_stock_shaders; // A collection of references to the stock shaders
+			std::recursive_mutex  m_mutex;
 
 			// Create the built-in shaders
 			void CreateStockShaders();
@@ -47,18 +57,20 @@ namespace pr
 			// Used for stock shaders to specialise
 			template <typename TShader> void CreateShader();
 
-			// Adds a shader to the lookup map
-			void AddShader(ShaderPtr const& shdr);
-
-			// Called when a shader's ref count hits zero to delete 'shdr' via the correct allocator
+			// Called when a shader's ref count hits zero
 			template <typename ShaderType> void DeleteShader(ShaderType* shdr)
 			{
 				std::lock_guard<std::recursive_mutex> lock(m_mutex);
+				
+				// Remove from the cache
+				m_lookup_shader.erase(shdr->m_id);
+
+				// Release memory
 				assert(m_dbg_mem.remove(shdr));
 				Allocator<ShaderType>(m_mem).Delete(shdr);
 			}
 
-			// Get or create a 'cbuffer' object for 'id' of size 'sz'
+			// Get/Create a 'cbuffer' object for 'id' of size 'sz'
 			D3DPtr<ID3D11Buffer> GetCBuf(char const* name, RdrId id, size_t sz);
 
 		public:
@@ -67,50 +79,86 @@ namespace pr
 			ShaderManager(ShaderManager const&) = delete;
 			~ShaderManager();
 
-			// Get or Create a dx shader.
-			// If 'id' does not already exist, 'desc' must not be null.
+			// Get/Create a dx shader. If 'id' does not already exist, 'desc' must not be null.
 			D3DPtr<ID3D11InputLayout>    GetIP(RdrId id, VShaderDesc const* desc = nullptr);
 			D3DPtr<ID3D11VertexShader>   GetVS(RdrId id, VShaderDesc const* desc = nullptr);
 			D3DPtr<ID3D11PixelShader>    GetPS(RdrId id, PShaderDesc const* desc = nullptr);
 			D3DPtr<ID3D11GeometryShader> GetGS(RdrId id, GShaderDesc const* desc = nullptr);
 
-			// Create a custom shader object derived from ShaderBase.
-			template <typename ShaderType, typename D3DShaderType>
-			typename std::enable_if<std::is_base_of<ShaderBase, ShaderType>::value, typename RefPtr<ShaderType>>::type
-			CreateShader(RdrId id, typename D3DPtr<D3DShaderType> d3d_shdr, char const* name)
+			// Create an instance of a shader object derived from ShaderBase.
+			template <typename ShaderType, typename DxShaderType, typename = std::enable_if_t<std::is_base_of_v<ShaderBase, ShaderType>>>
+			pr::RefPtr<ShaderType> CreateShader(RdrId id, typename D3DPtr<DxShaderType> const& d3d_shdr, char const* name)
 			{
 				std::lock_guard<std::recursive_mutex> lock(m_mutex);
+				PR_ASSERT(PR_DBG_RDR, id == AutoId || FindShader(id) == nullptr, "A shader with this Id already exists");
 
-				ShaderPtr shdr(Allocator<ShaderType>(m_mem).New(this, id, name, d3d_shdr), true);
+				// Set up a sort id for the shader that groups them by D3D shader
+				auto sort_id = SortKeyId(ptrdiff_t(d3d_shdr.get() - 0) % SortKey::MaxShaderId);
+
+				// Allocate the shader instance
+				pr::RefPtr<ShaderType> shdr(Allocator<ShaderType>(m_mem).New(this, id, sort_id, name, d3d_shdr), true);
 				assert(m_dbg_mem.add(shdr.m_ptr));
-				AddShader(shdr);
+
+				// Store a weak reference to the instance
+				AddLookup(m_lookup_shader, shdr->m_id, shdr.get());
+
+				// Return the shader instance
 				return std::move(shdr);
 			}
 
-			// Return the shader corresponding to 'id' or null if not found
-			ShaderPtr FindShader(RdrId id);
-
-			// Create a copy of an existing shader.
-			ShaderPtr CloneShader(RdrId id, RdrId new_id, char const* new_name);
-
-			// Return the shader corresponding to 'id' or null if not found
-			template <typename ShaderType> pr::RefPtr<ShaderType> FindShader(RdrId id)
+			// Return a cached ShaderBase instance corresponding to 'id' or null if not found
+			template <typename ShaderType, typename = std::enable_if_t<std::is_base_of_v<ShaderBase, ShaderType>>>
+			pr::RefPtr<ShaderType> FindShader(RdrId id)
 			{
-				return FindShader(id);
+				// AutoId means make a new shader, so it'll never exist already
+				if (id == AutoId)
+					return nullptr;
+
+				std::lock_guard<std::recursive_mutex> lock(m_mutex);
+
+				// Look for 'id' in the cache.
+				auto shdr = GetOrDefault(m_lookup_shader, id, (ShaderBase*)nullptr);
+				return pr::RefPtr<ShaderType>(static_cast<ShaderType*>(shdr), true);
+			}
+			ShaderPtr FindShader(RdrId id)
+			{
+				// This allows shaders to be found without having to include the definition of the shader
+				return FindShader<ShaderBase>(id);
 			}
 
-			// Look for a shader with id 'id'. If not found, find the shader with id 'base_id' and clone it with name 'name'
-			template <typename ShaderType> pr::RefPtr<ShaderType> FindShader(RdrId id, RdrId base_id, char const* name)
+			// Get/Create a ShaderBase instance corresponding to 'id'.
+			// Use 'id' = AutoId to ignore the shader instance cache and just create a new instance of 'base_id'
+			template <typename ShaderType, typename = std::enable_if_t<std::is_base_of_v<ShaderBase, ShaderType>>>
+			pr::RefPtr<ShaderType> GetShader(RdrId id, RdrId base_id, char const* name = nullptr)
 			{
-				auto shdr = FindShader(id);
-				return shdr ? shdr : CloneShader(base_id, id, name);
+				// Look in the cache for an instance with id 'id'
+				auto shdr = FindShader<ShaderType>(id);
+				if (shdr == nullptr)
+				{
+					// Create a shader based on 'base_id'
+					auto existing = FindShader<ShaderType>(base_id);
+					if (!existing)
+						throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Existing shader with id %d not found", base_id));
+
+					// Create a copy of 'existing'
+					shdr = CreateShader<ShaderType>(id, existing->dx_shader(), name ? name : existing->m_name.c_str());
+					shdr->m_bsb     = existing->m_bsb;
+					shdr->m_rsb     = existing->m_rsb;
+					shdr->m_dsb     = existing->m_dsb;
+					shdr->m_orig_id = existing->m_orig_id;
+				}
+				return std::move(shdr);
 			}
 
-			// Look for a shader named 'name'. If not found, find the shader with id 'base_id' and clone it with name 'name'
-			template <typename ShaderType> pr::RefPtr<ShaderType> FindShader(char const* name, RdrId base_id)
+			// Get/Create a ShaderBase instance corresponding to 'id'.
+			// 'id' should be a string that uniquely identifies the shader and it's constants.
+			// This allows the caching of shader instances with the same constants to work.
+			// Don't worry if it's too complex though, creating new shader instances is relatively cheap.
+			template <typename ShaderType, typename = std::enable_if_t<std::is_base_of_v<ShaderBase, ShaderType>>>
+			pr::RefPtr<ShaderType> GetShader(char const* id, RdrId base_id, char const* name = nullptr)
 			{
-				auto id = MakeId(name);
-				return FindShader<ShaderType>(id, base_id, name);
+				auto id_ = id ? MakeId(id) : AutoId;
+				return std::move(GetShader<ShaderType>(id_, base_id, name));
 			}
 
 			// Get or create a 'cbuffer' object for given type 'TCBuf'

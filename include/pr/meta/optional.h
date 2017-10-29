@@ -111,7 +111,7 @@ namespace pr
 		{
 			if (this == &rhs) return *this;
 			if (*this) destruct();
-			construct(*rhs.ptr())
+			construct(*rhs.ptr());
 			return *this;
 		}
 		optional& operator =(optional&& rhs) noexcept
@@ -119,7 +119,7 @@ namespace pr
 			if (this == &rhs) return *this;
 			if (*this && rhs)
 			{
-				std::swap(*ptr, *rhs.ptr());
+				std::swap(*ptr(), *rhs.ptr());
 			}
 			else if (*this)
 			{

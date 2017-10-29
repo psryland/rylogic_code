@@ -427,9 +427,7 @@ namespace pr
 		struct SmapTest
 			:SmapTestInstance
 			,pr::events::IRecv<Evt_UpdateScene>
-			,pr::events::IRecv<Evt_SceneDestroy>
 		{
-			void OnEvent(pr::rdr::Evt_SceneDestroy const&) { m_model = nullptr; }
 			void OnEvent(pr::rdr::Evt_UpdateScene const& e)
 			{
 				auto rstep = e.m_scene.FindRStep<ShadowMap>();

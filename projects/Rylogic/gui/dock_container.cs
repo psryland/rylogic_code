@@ -2524,10 +2524,10 @@ namespace pr.gui
 						Image = image;
 						Hidden = false;
 					}
-					protected override void SetVisibleCore(bool value)
+					protected override void OnVisibleChanged(EventArgs e)
 					{
-						value &= !Hidden;
-						base.SetVisibleCore(value);
+						Visible &= !Hidden;
+						base.OnVisibleChanged(e);
 					}
 
 					/// <summary>Get/Set whether this control is visible</summary>

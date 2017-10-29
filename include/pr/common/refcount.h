@@ -50,19 +50,19 @@ namespace pr
 			return *this;
 		}
 
-		long AddRef() const
+		virtual long AddRef() const
 		{
 			return Shared ? ::InterlockedIncrement(&m_ref_count) : ++m_ref_count;
 		}
-		
-		long Release() const
+
+		virtual long Release() const
 		{
 			assert(m_ref_count > 0);
 			long ref_count = Shared ? ::InterlockedDecrement(&m_ref_count) : --m_ref_count;
 			if (!ref_count) { Deleter::RefCountZero(const_cast<RefCount<Deleter,Shared>*>(this)); }
 			return ref_count;
 		}
-		
+
 		static void RefCountZero(RefCount<Deleter,Shared>* doomed)
 		{
 			delete doomed;
@@ -83,28 +83,6 @@ namespace pr
 			return *this;
 		}
 	};
-
-	// Return the current ref count for a ref pointer
-	template <typename T> inline long PtrRefCount(T* ptr)
-	{
-		if (!ptr) return 0;
-
-		// A crash here indicates that 'ptr' has already been released.
-		// If ptr is a D3DPtr, check that two or more D3DPtrs haven't
-		// been created from the same raw pointer. e.g.
-		// ID3DInterface* raw (ref count = 1)
-		// D3DPtr p0(raw) (ref count = 1 still because the DecRef in the constructor)
-		// D3DPtr p1(raw) (ref count = 1 still because the DecRef in the constructor)
-		// p1->~D3DPtr()  (ref count = 0)
-		// p0->~D3DPtr()  "app.exe has triggered a break point" (i.e. crashed)
-		//
-		// Watch out for:
-		//   D3DPtr<IBlah> p = CorrectlyCreatedBlah();
-		//   D3DPtr<IBlahBase> b = p.m_ptr; -- this is wrong, it should be: b = p;
-		long count = ptr->AddRef() - 1;
-		ptr->Release();
-		return count;
-	}
 }
 namespace std
 {

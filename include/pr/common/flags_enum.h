@@ -3,7 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2014
 //******************************************************************************
 // Add '_bitwise_operators_allowed' to your enum for bitwise operators
-
+// Add '_arithmetic_operators_allowed' to your enum for arithmetic operators
 #pragma once
 
 #include <type_traits>
@@ -20,7 +20,7 @@
 	};
 	template <typename T> using enable_if_has_bitops = typename std::enable_if<has_bitwise_operators_allowed<T>::value>::type;
 
-	// Define the operators
+	// Define the bitwise operators
 	template <typename TEnum, typename = enable_if_has_bitops<TEnum>> constexpr TEnum operator ~ (TEnum lhs)
 	{
 		using ut = typename std::underlying_type<TEnum>::type;
@@ -89,6 +89,85 @@
 		return rhs != lhs;
 	}
 
+
+	// True (true_type) if 'T' has '_arithmetic_operators_allowed' as a static member
+	template <typename T> struct has_arithmetic_operators_allowed
+	{
+		template <typename U> static std::true_type  check(decltype(U::_arithmetic_operators_allowed)*);
+		template <typename>   static std::false_type check(...);
+		using type = decltype(check<T>(0));
+		static bool const value = type::value;
+	};
+	template <typename T> using enable_if_has_arith = typename std::enable_if<has_arithmetic_operators_allowed<T>::value>::type;
+
+	// Define the arithmetic operators
+	template <typename TEnum, typename = enable_if_has_arith<TEnum>> constexpr TEnum operator + (TEnum lhs)
+	{
+		return lhs;
+	}
+	template <typename TEnum, typename = enable_if_has_arith<TEnum>> constexpr TEnum operator - (TEnum lhs)
+	{
+		using ut = typename std::underlying_type<TEnum>::type;
+		return TEnum(-static_cast<ut>(lhs));
+	}
+	template <typename TEnum, typename = enable_if_has_arith<TEnum>> constexpr TEnum operator + (TEnum lhs, TEnum rhs)
+	{
+		using ut = typename std::underlying_type<TEnum>::type;
+		return TEnum(static_cast<ut>(lhs) + static_cast<ut>(rhs));
+	}
+	template <typename TEnum, typename = enable_if_has_arith<TEnum>> constexpr TEnum operator - (TEnum lhs, TEnum rhs)
+	{
+		using ut = typename std::underlying_type<TEnum>::type;
+		return TEnum(static_cast<ut>(lhs) - static_cast<ut>(rhs));
+	}
+	template <typename TEnum, typename = enable_if_has_arith<TEnum>> constexpr TEnum operator * (TEnum lhs, TEnum rhs)
+	{
+		using ut = typename std::underlying_type<TEnum>::type;
+		return TEnum(static_cast<ut>(lhs) * static_cast<ut>(rhs));
+	}
+	template <typename TEnum, typename = enable_if_has_arith<TEnum>> constexpr TEnum operator / (TEnum lhs, TEnum rhs)
+	{
+		using ut = typename std::underlying_type<TEnum>::type;
+		return TEnum(static_cast<ut>(lhs) / static_cast<ut>(rhs));
+	}
+	template <typename TEnum, typename T, typename = enable_if_has_arith<TEnum>> constexpr TEnum operator + (TEnum lhs, T rhs)
+	{
+		using ut = typename std::underlying_type<TEnum>::type;
+		return TEnum(static_cast<ut>(lhs) + rhs);
+	}
+	template <typename TEnum, typename T, typename = enable_if_has_arith<TEnum>> constexpr TEnum operator + (T lhs, TEnum rhs)
+	{
+		return rhs + lhs;
+	}
+	template <typename TEnum, typename T, typename = enable_if_has_arith<TEnum>> constexpr TEnum operator - (TEnum lhs, T rhs)
+	{
+		using ut = typename std::underlying_type<TEnum>::type;
+		return TEnum(static_cast<ut>(lhs) - rhs);
+	}
+	template <typename TEnum, typename T, typename = enable_if_has_arith<TEnum>> constexpr TEnum operator - (T lhs, TEnum rhs)
+	{
+		return -(rhs - lhs);
+	}
+	template <typename TEnum, typename T, typename = enable_if_has_arith<TEnum>> constexpr TEnum operator * (TEnum lhs, T rhs)
+	{
+		using ut = typename std::underlying_type<TEnum>::type;
+		return TEnum(static_cast<ut>(lhs) * rhs);
+	}
+	template <typename TEnum, typename T, typename = enable_if_has_arith<TEnum>> constexpr TEnum operator * (T lhs, TEnum rhs)
+	{
+		return rhs * lhs;
+	}
+	template <typename TEnum, typename T, typename = enable_if_has_arith<TEnum>> constexpr TEnum operator / (TEnum lhs, T rhs)
+	{
+		using ut = typename std::underlying_type<TEnum>::type;
+		return TEnum(static_cast<ut>(lhs) / rhs);
+	}
+	template <typename TEnum, typename T, typename = enable_if_has_arith<TEnum>> constexpr TEnum operator / (T lhs, TEnum rhs)
+	{
+		using ut = typename std::underlying_type<TEnum>::type;
+		return TEnum(lhs / static_cast<ut>(rhs));
+	}
+
 #else
 // C does not require operators
 #endif
@@ -116,14 +195,27 @@ namespace pr
 				_bitwise_operators_allowed,
 			};
 			static_assert(has_bitwise_operators_allowed<Flags>::value == true, "");
+
+			enum class Numbers
+			{
+				Zero     = 0,
+				Two      = 2,
+				One      = 1,
+				Six      = 6,
+				Three    = 3,
+				MinusTwo = -2,
+				_arithmetic_operators_allowed,
+			};
+			static_assert(has_arithmetic_operators_allowed<Numbers>::value == true, "");
 		}
 
 		PRUnitTest(pr_macros_flags_enum)
 		{
 			using namespace pr::unittests::flag_enum;
-			{
-				typedef Flags Enum;
-				//typedef NotFlags Enum; // Uncomment to test not-compiling-ness
+
+			{// Bitwise
+				using Enum = Flags;
+				//using Enum = NotFlags; // Uncomment to test not-compiling-ness
 
 				Enum a =  Enum::One | Enum::Two;
 				Enum b =  Enum::One & Enum::Two;
@@ -143,6 +235,30 @@ namespace pr
 				PR_CHECK((int)b, 0);
 				PR_CHECK((int)c, 1);
 			}
+
+			// Doesn't work for some weird reason :(
+			#define PR_ENABLE_ENUM_ARITHMETIC_OPERATORS 0
+			#if PR_ENABLE_ENUM_ARITHMETIC_OPERATORS 
+			{// Arithmetic
+				using Enum = Numbers;
+
+				PR_CHECK(+Enum::One == Enum::One, true);
+				PR_CHECK(-Enum::Two == Enum::MinusTwo, true);
+
+				PR_CHECK(Enum::One + Enum::Two == Enum::Three, true);
+				PR_CHECK(Enum::Six - Enum::Three == Enum::Three, true);
+				PR_CHECK(Enum::Two * Enum::Three == Enum::Six, true);
+				PR_CHECK(Enum::Six / Enum::Two == Enum::Three, true);
+
+				PR_CHECK(-2 + Enum::Three == Enum::One, true);
+				PR_CHECK(Enum::Six - 5 == Enum::One, true);
+				PR_CHECK(1 - Enum::Zero == Enum::One, true);
+				PR_CHECK(Enum::MinusTwo * -3 == Enum::Six, true);
+				PR_CHECK(-1 * Enum::Two == Enum::MinusTwo, true);
+				PR_CHECK(Enum::Two / 2 == Enum::One, true);
+				PR_CHECK(6 / Enum::Two == Enum::Three, true);
+			}
+			#endif
 		}
 	}
 }

@@ -495,9 +495,6 @@
     <ClInclude Include="..\include\pr\common\profilemanager.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\geometry\quad.h">
-      <Filter>pr\geometry</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\container\quadtree.h">
       <Filter>pr\container</Filter>
     </ClInclude>
@@ -681,31 +678,13 @@
     <ClInclude Include="..\include\pr\gui\messagemap_dbg.h">
       <Filter>pr\app</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\geometry\box.h">
-      <Filter>pr\geometry</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\geometry\common.h">
-      <Filter>pr\geometry</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\geometry\cylinder.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\geometry\deformablemesh.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\geometry\line.h">
-      <Filter>pr\geometry</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\geometry\mesh.h">
-      <Filter>pr\geometry</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\geometry\model_file.h">
-      <Filter>pr\geometry</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\geometry\shape2d.h">
-      <Filter>pr\geometry</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\geometry\sphere.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\geometry\tetramesh.h">
@@ -948,9 +927,6 @@
     <ClInclude Include="..\include\pr\common\number.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\geometry\extrude.h">
-      <Filter>pr\geometry</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\maths\matrix.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
@@ -983,6 +959,33 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\network\pipe.h">
       <Filter>pr\network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_mesh.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_line.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_sphere.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_cylinder.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_box.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_extrude.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_quad.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_shape2d.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_point.h">
+      <Filter>pr\geometry</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

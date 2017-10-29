@@ -27,6 +27,12 @@
 //  - Run '\script\BuildShader.py <hlsl_filepath> x86 debug dbg' to build the HLSL file (with .cso files)
 //  - Note: Runtime shaders are hard coded to read from '\projects\renderer\shaders\hlsl\compiled\'
 //  - Put a break point in '\projects\renderer11\shaders\shader.cpp:66' to ensure the compiled shader is being loaded
+//  - Tips:
+//      - Use Notepad++ and the NppExec->Execute plugin. Command: "py.exe P:\pr\script\BuildShader.py $(FULL_CURRENT_PATH) x86 debug dbg"  (use x86 or x64 depending on configuration being run)
+//      - Check the Output window for 'Shader <myshader.cso> replaced'
+//      - Use 'Start Graphics Debugging' -> Capture a frame -> Select the frame to launch VSGA -> Select the DrawIndexedPrimitive call -> then the green 'play' button
+//      - Make sure fxc is run with the /Zi option to add debug symbols
+//      - Add *Dependency "file.hlsl" to the LDraw script for testing the shader
 
 #ifndef PR_RDR_RUNTIME_SHADERS
 #define PR_RDR_RUNTIME_SHADERS 0
@@ -68,7 +74,7 @@
 #include "pr/renderer11/shaders/input_layout.h"
 #include "pr/renderer11/shaders/shader_manager.h"
 #include "pr/renderer11/shaders/shader.h"
-#include "pr/renderer11/shaders/screen_space_shaders.h"
+#include "pr/renderer11/shaders/shdr_screen_space.h"
 
 // Textures
 #include "pr/renderer11/textures/texture_manager.h"

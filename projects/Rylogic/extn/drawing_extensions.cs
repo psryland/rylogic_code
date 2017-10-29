@@ -564,6 +564,12 @@ namespace pr.extn
 				unit    ?? prototype.Unit
 				);
 		}
+
+		/// <summary>Create a RectangleF from the X,Y axes of this bounding box</summary>
+		public static RectangleF ToRectXY(this BBox bbox)
+		{
+			return new RectangleF(bbox.MinX, bbox.MinY, bbox.SizeX, bbox.SizeY);
+		}
 	}
 
 	/// <summary>Color extensions</summary>

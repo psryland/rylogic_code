@@ -23,24 +23,24 @@ namespace pr
 		#include PR_RDR_SHADER_COMPILED_DIR(dslighting_ps.h)
 
 		// Deferred lighting vertex shader
-		struct DSLightingShaderVS :Shader<ID3D11VertexShader, DSLightingShaderVS>
+		struct DSLightingVS :Shader<ID3D11VertexShader, DSLightingVS>
 		{
-			typedef Shader<ID3D11VertexShader, DSLightingShaderVS> base;
-			DSLightingShaderVS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11VertexShader> shdr)
-				:base(mgr, id, name, shdr)
+			using base = Shader<ID3D11VertexShader, DSLightingVS>;
+			DSLightingVS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11VertexShader> const& shdr)
+				:base(mgr, id, sort_id, name, shdr)
 			{
 				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "dslighting_vs.cso"));
 			}
 		};
 
 		// Deferred lighting pixel shader
-		struct DSLightingShaderPS :Shader<ID3D11PixelShader, DSLightingShaderPS>
+		struct DSLightingPS :Shader<ID3D11PixelShader, DSLightingPS>
 		{
-			typedef Shader<ID3D11PixelShader, DSLightingShaderPS> base;
+			using base = Shader<ID3D11PixelShader, DSLightingPS>;
 			D3DPtr<ID3D11SamplerState> m_point_sampler; // A point sampler used to sample the GBuffer
 
-			DSLightingShaderPS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11PixelShader> shdr)
-				:base(mgr, id, name, shdr)
+			DSLightingPS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11PixelShader> const& shdr)
+				:base(mgr, id, sort_id, name, shdr)
 				,m_point_sampler()
 			{
 				// Create a GBuffer sampler
@@ -78,18 +78,18 @@ namespace pr
 			}
 		};
 
-		// Create this shader
-		template <> void ShaderManager::CreateShader<DSLightingShaderVS>()
+		// Create shaders
+		template <> void ShaderManager::CreateShader<DSLightingVS>()
 		{
 			VShaderDesc desc(dslighting_vs, Vert());
 			auto dx = GetVS(EStockShader::DSLightingVS, &desc);
-			CreateShader<DSLightingShaderVS>(EStockShader::DSLightingVS, dx, "dslighting_vs");
+			m_stock_shaders.emplace_back(CreateShader<DSLightingVS>(EStockShader::DSLightingVS, dx, "dslighting_vs"));
 		}
-		template <> void ShaderManager::CreateShader<DSLightingShaderPS>()
+		template <> void ShaderManager::CreateShader<DSLightingPS>()
 		{
 			PShaderDesc desc(dslighting_ps);
 			auto dx = GetPS(EStockShader::DSLightingPS, &desc);
-			CreateShader<DSLightingShaderPS>(EStockShader::DSLightingPS, dx, "dslighting_ps");
+			m_stock_shaders.emplace_back(CreateShader<DSLightingPS>(EStockShader::DSLightingPS, dx, "dslighting_ps"));
 		}
 	}
 }

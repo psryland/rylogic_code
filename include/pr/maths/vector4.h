@@ -12,7 +12,7 @@
 
 namespace pr
 {
-	// template <typename T> - todo: when MS fix the alignment bug for templates
+	template <typename T>// - todo: when MS fix the alignment bug for templates
 	struct alignas(16) Vec4
 	{
 		#pragma warning(push)
@@ -132,7 +132,7 @@ namespace pr
 			return Normalise4(Vec4(x, y, z, w));
 		}
 	};
-	using v4 = Vec4;
+	using v4 = Vec4<void>;
 	static_assert(maths::is_vec4<v4>::value, "");
 	static_assert(std::is_pod<v4>::value, "v4 must be a pod type");
 	static_assert(std::alignment_of<v4>::value == 16, "v4 should have 16 byte alignment");

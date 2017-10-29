@@ -99,6 +99,13 @@ namespace pr
 			table[key] = value;
 		}
 
+		// Helper for reading values from an unordered map, returning 'def' if not found
+		template <class Map, typename Key, typename Value> inline Value const& GetOrDefault(Map const& map, Key const& key, Value const& def = Value())
+		{
+			auto iter = map.find(key);
+			return iter == std::end(map) ? def : static_cast<Value const&>(iter->second);
+		}
+
 		// Set the name on a dx resource (debug only)
 		template <typename T> inline void NameResource(T* res, char const* name)
 		{

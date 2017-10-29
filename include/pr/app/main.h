@@ -88,7 +88,6 @@ namespace pr
 		struct Main
 			:pr::AlignTo<16>
 			,pr::events::IRecv<pr::rdr::Evt_UpdateScene>
-			,pr::events::IRecv<pr::rdr::Evt_RenderStepExecute>
 		{
 			// Define this type as base as a helper for derived type constructors
 			// so they can call: MyType(...) :base(..) {}
@@ -216,10 +215,6 @@ namespace pr
 				e.m_scene.m_bkgd_colour = Colour(0.5f,0.5f,0.5f,1.0f);
 				e.m_scene.m_global_light.m_on = true;
 				e.m_scene.SetView(m_cam);
-			}
-			void OnEvent(pr::rdr::Evt_RenderStepExecute const&) override
-			{
-				// Inherited as most apps will use this event
 			}
 
 		private:

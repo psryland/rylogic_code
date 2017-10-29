@@ -31,7 +31,8 @@ namespace pr
 	}
 	inline ByteCont& AppendData(ByteCont& data, void const* buffer, std::size_t buffer_size)
 	{
-		data.insert(data.end(), static_cast<const unsigned char*>(buffer), static_cast<const unsigned char*>(buffer) + buffer_size);
+		auto p = static_cast<unsigned char const*>(buffer);
+		data.insert(data.end(), p, p + buffer_size);
 		return data;
 	}
 	
@@ -278,6 +279,15 @@ namespace pr
 		// A pointer to the data
 		unsigned char const* data() const { return begin(); }
 		unsigned char*       data()       { return begin(); }
+
+		// Streaming access
+		template <typename Type> Type const& read(std::size_t& ofs)
+		{
+			assert(ofs + sizeof(Type) <= size());
+			auto& r = at_byte_ofs<Type>(ofs);
+			ofs += sizeof(Type);
+			return r;
+		}
 
 	private:
 		void grow(std::size_t capacity)

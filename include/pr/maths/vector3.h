@@ -63,11 +63,11 @@ namespace pr
 		}
 
 		// Create other vector types
-		template <typename V4 = v4, typename = maths::enable_if_v4<V4>> V4 w0() const
+		template <typename V4 = typename Vec4<void>, typename = maths::enable_if_v4<V4>> V4 w0() const
 		{
 			return V4(x, y, z, 0);
 		}
-		template <typename V4 = v4, typename = maths::enable_if_v4<V4>> V4 w1() const
+		template <typename V4 = typename Vec4<void>, typename = maths::enable_if_v4<V4>> V4 w1() const
 		{
 			return V4(x, y, z, 1);
 		}

@@ -294,12 +294,9 @@ namespace LDraw
 			// Remove the objects from the associated scene
 			if (Scene != null)
 			{
-				Scene.ContextIds.Remove(ContextId);
+				Scene.Window.RemoveObjects(ContextId);
 				Scene.Invalidate();
 			}
-
-			// Remove the objects from the sources
-			Model.SourceContextIds.Remove(ContextId);
 
 			// Remove any objects previously created by this script
 			Model.View3d.DeleteAllObjects(ContextId);
@@ -317,12 +314,11 @@ namespace LDraw
 
 			// Parse the script, adding objects to the view3d context
 			Model.View3d.LoadScript(Editor.Text, false, ContextId, null);
-			Model.SourceContextIds.Add(ContextId);
 
 			// Add the script content to the selected scene
 			if (Scene != null)
 			{
-				Scene.ContextIds.Add(ContextId);
+				Scene.Window.AddObjects(ContextId);
 				Scene.Invalidate();
 			}
 		}

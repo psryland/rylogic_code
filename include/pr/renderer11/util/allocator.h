@@ -94,13 +94,31 @@ namespace pr
 		template <typename T, typename U> inline bool operator != (Allocator<T> const& lhs, Allocator<U> const& rhs) { return !(lhs == rhs); }
 
 		// Allocation tracker/memory leak detector
-		template <typename T = void> struct AllocationsTracker :private pr::vector<T*>
+		template <typename T = void> struct AllocationsTracker
 		{
+			#define PR_RDR_ALLOCATIONS_TRACKER_CALLSTACKS 0
+
+			struct Alloc
+			{
+				T* m_ptr;
+				#if PR_RDR_ALLOCATIONS_TRACKER_CALLSTACKS
+				std::string m_callstack;
+				#endif
+				
+				Alloc() :m_ptr() {}
+				Alloc(T* ptr) :m_ptr(ptr) {}
+				constexpr size_t operator()(Alloc const& val) const { return size_t(val.m_ptr - (T*)nullptr); } // std::hash
+				constexpr bool operator()(Alloc const& lhs, Alloc const& rhs) const { return lhs.m_ptr == rhs.m_ptr; } // std::equal_to
+			};
+			using AllocCont = std::unordered_set<Alloc, Alloc, Alloc>;
+			AllocCont m_live;
+
 			AllocationsTracker()
+				:m_live()
 			{}
 			~AllocationsTracker()
 			{
-				assert("Memory leaks detected" && empty());
+				assert("Memory leaks detected" && m_live.empty());
 			}
 			AllocationsTracker(AllocationsTracker const&) = delete;
 			AllocationsTracker& operator =(AllocationsTracker const&) = delete;
@@ -108,14 +126,18 @@ namespace pr
 			// Returning bool so these can be used in asserts
 			bool add(T* ptr)
 			{
-				push_back(ptr);
+				Alloc al(ptr);
+				#if PR_RDR_ALLOCATIONS_TRACKER_CALLSTACKS
+				pr::DumpStack([&](auto& name, auto& file, auto line){ al.m_callstack.append(pr::FmtS("%s(%d): %s\n", file.c_str(), line, name.c_str())); },1,10);
+				#endif
+				m_live.insert(al);
 				return true;
 			}
 			bool remove(T* ptr)
 			{
-				auto iter = std::find(begin(), end(), ptr);
-				assert("'ptr' is not a tracked allocation" && iter != end());
-				erase_fast(iter);
+				auto iter = m_live.find(ptr);
+				assert("'ptr' is not a tracked allocation" && iter != std::end(m_live));
+				m_live.erase(iter);
 				return true;
 			}
 		};

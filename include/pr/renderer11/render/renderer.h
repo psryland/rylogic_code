@@ -83,14 +83,6 @@ namespace pr
 
 	public:
 
-		// These manager classes form part of the public interface of the renderer
-		rdr::ModelManager m_mdl_mgr;
-		rdr::ShaderManager m_shdr_mgr;
-		rdr::TextureManager m_tex_mgr;
-		rdr::BlendStateManager m_bs_mgr;
-		rdr::DepthStateManager m_ds_mgr;
-		rdr::RasterStateManager m_rs_mgr;
-
 		explicit Renderer(rdr::RdrSettings const& settings);
 		~Renderer();
 
@@ -174,6 +166,11 @@ namespace pr
 			return m_settings;
 		}
 
+		// Raised when a window resizes it's back buffer.
+		// This is provided on the renderer so that other managers can receive notification
+		// without having to sign up to ever window that gets created.
+		pr::EventHandler<rdr::Window&, rdr::RenderTargetSizeChangedEventArgs> RenderTargetSizeChanged;
+
 		// Run the given function on the Main/GUI thread
 		// 'policy = std::launch::deferred' means the function is executed by the main thread during 'RunTasks'
 		// 'policy = std::launch::async' means the function is run at any time in a worker thread. The result is collected in 'RunTasks'
@@ -207,5 +204,15 @@ namespace pr
 
 		// Execute any pending tasks in the task queue. Must be called from the Main/GUI thread
 		void RunTasks();
+
+		// These manager classes form part of the public interface of the renderer
+		// Declared last so that events are fully constructed first.
+		// Note: model manager is declared last so that it is destructed first
+		rdr::BlendStateManager m_bs_mgr;
+		rdr::DepthStateManager m_ds_mgr;
+		rdr::RasterStateManager m_rs_mgr;
+		rdr::TextureManager m_tex_mgr;
+		rdr::ShaderManager m_shdr_mgr;
+		rdr::ModelManager m_mdl_mgr;
 	};
 }

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using System.Windows.Threading;
 using pr.common;
 using pr.container;
 using pr.extn;
@@ -22,7 +23,6 @@ namespace LDraw
 			Owner            = main_ui;
 			View3d           = new View3d();
 			IncludePaths     = new List<string>();
-			SourceContextIds = new HashSet<Guid>();
 			SavedViews       = new List<SavedView>();
 			Scenes           = new BindingListEx<SceneUI>{ PerItem = true };
 			Scripts          = new BindingListEx<ScriptUI>{ PerItem = true };
@@ -106,42 +106,44 @@ namespace LDraw
 				{
 					m_scenes.ListChanging += HandleScenesListChanging;
 				}
+
+				// Handlers
+				void HandleScenesListChanging(object sender, ListChgEventArgs<SceneUI> e)
+				{
+					var scene = e.Item;
+					switch (e.ChangeType)
+					{
+					case ListChg.ItemRemoved:
+						{
+							if (CurrentScene == scene)
+								CurrentScene = Scenes.Except(scene).FirstOrDefault();
+							if (Scripts != null)
+								foreach (var script in Scripts.Where(x => x.Scene == scene))
+									script.Scene = null;
+
+							Owner.DockContainer.Remove(scene);
+							scene.Options.PropertyChanged -= Owner.UpdateUI;
+							Util.Dispose(ref scene);
+							Owner.UpdateUI();
+							break;
+						}
+					case ListChg.ItemAdded:
+						{
+							// Determine a dock location from the current scene
+							var dloc =
+								CurrentScene?.DockControl.CurrentDockLocation ??
+								new DockContainer.DockLocation();
+
+							scene.Options.PropertyChanged += Owner.UpdateUI;
+							Owner.DockContainer.Add(scene, dloc);
+							Owner.UpdateUI();
+							break;
+						}
+					}
+				}
 			}
 		}
 		private BindingListEx<SceneUI> m_scenes;
-		private void HandleScenesListChanging(object sender, ListChgEventArgs<SceneUI> e)
-		{
-			var scene = e.Item;
-			switch (e.ChangeType)
-			{
-			case ListChg.ItemRemoved:
-				{
-					if (CurrentScene == scene)
-						CurrentScene = Scenes.Except(scene).FirstOrDefault();
-					if (Scripts != null)
-						foreach (var script in Scripts.Where(x => x.Scene == scene))
-							script.Scene = null;
-
-					Owner.DockContainer.Remove(scene);
-					scene.Options.PropertyChanged -= Owner.UpdateUI;
-					Util.Dispose(ref scene);
-					Owner.UpdateUI();
-					break;
-				}
-			case ListChg.ItemAdded:
-				{
-					// Determine a dock location from the current scene
-					var dloc =
-						CurrentScene?.DockControl.CurrentDockLocation ??
-						new DockContainer.DockLocation();
-
-					scene.Options.PropertyChanged += Owner.UpdateUI;
-					Owner.DockContainer.Add(scene, dloc);
-					Owner.UpdateUI();
-					break;
-				}
-			}
-		}
 
 		/// <summary>The script windows</summary>
 		public BindingListEx<ScriptUI> Scripts
@@ -262,7 +264,7 @@ namespace LDraw
 		}
 
 		/// <summary>Context Ids of loaded script sources</summary>
-		public HashSet<Guid> SourceContextIds
+		[Obsolete]public HashSet<Guid> SourceContextIds
 		{
 			get;
 			private set;
@@ -366,23 +368,15 @@ namespace LDraw
 			foreach (var scene in Scenes)
 				scene.Clear();
 
-			// Remove and delete all objects (excluding focus points, selection boxes, etc)
-			foreach (var id in SourceContextIds)
-				View3d.DeleteAllObjects(id);
-
 			// Remove all script sources
 			View3d.ClearScriptSources();
-
-			// Reset the list script source objects
-			SourceContextIds.Clear();
 		}
 
 		/// <summary>Add a demo scene to the scene</summary>
 		public void CreateDemoScene()
 		{
 			var scene = AddNewScene("Demo");
-			var id = scene.Window.CreateDemoScene();
-			scene.ContextIds.Add(id);
+			scene.Window.CreateDemoScene();
 			scene.DockControl.IsActiveContent = true;
 		}
 
@@ -395,17 +389,16 @@ namespace LDraw
 				if (AutoRefreshSources == value) return;
 				if (m_timer_refresh != null)
 				{
-					m_timer_refresh.Tick -= View3d.CheckForChangedSources;
-					Util.Dispose(ref m_timer_refresh);
+					m_timer_refresh.Stop();
 				}
-				m_timer_refresh = value ? new Timer { Interval = 500, Enabled = true } : null;
+				m_timer_refresh = value ? new DispatcherTimer(TimeSpan.FromMilliseconds(500), DispatcherPriority.Normal, View3d.CheckForChangedSources, Dispatcher.CurrentDispatcher) : null;
 				if (m_timer_refresh != null)
 				{
-					m_timer_refresh.Tick += View3d.CheckForChangedSources;
+					m_timer_refresh.Start();
 				}
 			}
 		}
-		private Timer m_timer_refresh;
+		private DispatcherTimer m_timer_refresh;
 
 		/// <summary>Apply the current scene axes to all other scenes if linked</summary>
 		private void LinkSceneAxes()

@@ -10,15 +10,16 @@ namespace pr
 {
 	namespace rdr
 	{
-		// Raised by the calling SetRenderTargetSize on the renderer
-		// Called twice, once before resizing, and once afterwards
-		struct Evt_Resize
+		// Event Args for the Window.RenderTargetSizeChanged event
+		struct RenderTargetSizeChangedEventArgs
 		{
-			Window* m_window; // The renderer window that is resizing
-			bool    m_done;   // True when the swap chain has resized it's buffers
 			pr::iv2 m_area;   // The render target size before (m_done == false) or after (m_done == true) the swap chain buffer resize
+			bool    m_done;   // True when the swap chain has resized it's buffers
 			
-			Evt_Resize(Window* window, bool done, pr::iv2 const& area) :m_window(window) ,m_done(done) ,m_area(area) {}
+			RenderTargetSizeChangedEventArgs(pr::iv2 const& area, bool done)
+				:m_area(area)
+				,m_done(done)
+			{}
 		};
 
 		// Raised once just before a scene is rendered.
@@ -33,18 +34,6 @@ namespace pr
 			Evt_UpdateScene& operator=(Evt_UpdateScene const&);
 		};
 
-		// Raised before and after each render step during a scene render.
-		struct Evt_RenderStepExecute
-		{
-			RenderStep& m_rstep;  // The render step begin executed
-			bool m_complete;      // False before, true after
-			explicit Evt_RenderStepExecute(RenderStep& rstep, bool complete) :m_rstep(rstep) ,m_complete(complete) {}
-
-		private:
-			Evt_RenderStepExecute(Evt_RenderStepExecute const&);
-			Evt_RenderStepExecute& operator =(Evt_RenderStepExecute const&);
-		};
-
 		// Raised during a compatibility test. Compatibility failures should throw
 		struct Evt_CompatibilityTest
 		{
@@ -55,20 +44,6 @@ namespace pr
 		{
 			Model* m_model; // The model being destructed
 			explicit Evt_ModelDestroy(Model& model) :m_model(&model) {}
-		};
-
-		// Raised during shutdown when a scene is about to be destructed
-		struct Evt_SceneDestroy
-		{
-			Scene* m_scene; // The scene being destructed
-			explicit Evt_SceneDestroy(Scene& scene) :m_scene(&scene) {}
-		};
-
-		// Raised during shutdown when the renderer is about to be destructed
-		struct Evt_RendererDestroy
-		{
-			Renderer* m_rdr; // The scene being destructed
-			explicit Evt_RendererDestroy(Renderer& rdr) :m_rdr(&rdr) {}
 		};
 	}
 }

@@ -21,6 +21,8 @@
 //   type.OnEvent(1, 3.14f);
 #pragma once
 
+#if 0 // depricated
+
 #include <list>
 #include <algorithm>
 #include <functional>
@@ -306,4 +308,6 @@ namespace pr
 		}
 	}
 }
+#endif
+
 #endif

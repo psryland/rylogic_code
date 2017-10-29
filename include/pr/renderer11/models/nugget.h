@@ -85,7 +85,7 @@ namespace pr
 			bool m_range_overlaps;
 
 			NuggetProps(EPrim topo = EPrim::Invalid, EGeom geom = EGeom::Invalid, ShaderMap* smap = nullptr, Range vrange = Range(), Range irange = Range());
-			NuggetProps(NuggetData const& data);
+			explicit NuggetProps(NuggetData const& data);
 		};
 
 		// A nugget is a sub range within a model buffer containing any data needed to render
@@ -100,7 +100,7 @@ namespace pr
 			TNuggetChain m_nuggets;       // The dependent nuggets associated with this nugget
 			bool         m_alpha_enabled; // True if the nugget is configured for alpha blending
 
-			Nugget(NuggetProps const& props, ModelBuffer* model_buffer, Model* owner);
+			Nugget(NuggetData const& ndata, ModelBuffer* model_buffer, Model* owner);
 			~Nugget();
 
 			// Access the model manager
@@ -142,7 +142,6 @@ namespace pr
 			// Enable/Disable alpha for this nugget.
 			// Alpha can be enabled or disabled independently to the geometry colours or diffuse texture colour.
 			// When setting 'Alpha(enable)' be sure to consider all sources of alpha.
-			bool Alpha() const;
 			void Alpha(bool enable);
 		};
 	}

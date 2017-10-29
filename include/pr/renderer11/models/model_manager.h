@@ -54,7 +54,7 @@ namespace pr
 			ModelPtr CreateModel(MdlSettings const& settings, ModelBufferPtr& model_buffer);
 
 			// Create a nugget using our allocator
-			Nugget* CreateNugget(NuggetProps props, ModelBuffer* model_buffer, Model* model);
+			Nugget* CreateNugget(NuggetData const& ndata, ModelBuffer* model_buffer, Model* model);
 
 			// Stock models
 			ModelPtr m_unit_quad;

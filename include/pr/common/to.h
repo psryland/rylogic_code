@@ -14,8 +14,8 @@ namespace pr
 	// or by simply overloading the 'To' function
 	template <typename TTo, typename TFrom> struct Convert
 	{
-		static TTo To(TFrom const&)                                      { static_assert(false, "No conversion from this type available"); }
-		template <typename... Args> static TTo To(TFrom const&, Args...) { static_assert(false, "No conversion from this type available"); }
+		static TTo To(TFrom const&)                                      { static_assert(typename is_same<TTo, std::false_type>::value, "No conversion from this type available"); }
+		template <typename... Args> static TTo To(TFrom const&, Args...) { static_assert(typename is_same<TTo, std::false_type>::value, "No conversion from this type available"); }
 	};
 	template <typename TTo, typename TFrom> inline TTo To(TFrom const& from)
 	{

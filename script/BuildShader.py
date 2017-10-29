@@ -46,7 +46,7 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 	fname,extn  = os.path.splitext(file)
 	if trace: print("File: " + fname + extn)
 
-	outdir = UserVars.root + "\\projects\\renderer11\\shaders\\hlsl\\compiled\\" + config
+	outdir = UserVars.root + "\\projects\\renderer11\\shaders\\hlsl\\compiled\\"+config
 	os.makedirs(outdir, exist_ok=True)
 	if trace: print("Output directory: " + outdir)
 
@@ -99,9 +99,9 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 			options = ["/nologo", "/Gis", "/Ges", "/WX", "/Zpc"]
 			
 			# Debug build options
-			# For some reason, the /Zi option causes the output to be different each time it's built using fxc in the windows 8.1 kit...
+			# For some reason, the /Zi option causes the output to be different each time it's built using fxc
 			if dbg:
-				options += ["/Gfp", "/Od"]#, "/Zi"]
+				options += ["/Gfp", "/Od", "/Zi"]
 
 			if not pp:
 				# Build the shader using fxc
@@ -143,10 +143,12 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 # Run as standalone script
 if __name__ == "__main__":
 	try:
+		#sys.argv = [r"P:\pr\script\BuildShader.py", r"P:\pr\projects\renderer11\shaders\hlsl\screenspace\point_sprites.hlsl", "x86", "debug", "dbg"]
+
 		trace = False
 		if trace:
 			print("Args: " + str(sys.argv));
-
+		
 		# The full path of the HLSL file to compile
 		fullpath = (sys.argv[1] if len(sys.argv) > 1 else input("Shader File? ")).lower()
 		platform = (sys.argv[2] if len(sys.argv) > 2 else "any"                 ).lower()

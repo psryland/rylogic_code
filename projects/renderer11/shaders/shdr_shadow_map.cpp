@@ -24,9 +24,9 @@ namespace pr
 		// Shadow map vertex shader
 		struct ShadowMapVS :Shader<ID3D11VertexShader, ShadowMapVS>
 		{
-			typedef Shader<ID3D11VertexShader, ShadowMapVS> base;
-			ShadowMapVS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11VertexShader> shdr)
-				:base(mgr, id, name, shdr)
+			using base = Shader<ID3D11VertexShader, ShadowMapVS>;
+			ShadowMapVS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11VertexShader> const& shdr)
+				:base(mgr, id, sort_id, name, shdr)
 			{
 				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "shadow_map_vs.cso"));
 			}
@@ -35,9 +35,9 @@ namespace pr
 		// Shadow map face geometry shader
 		struct ShadowMapFaceGS :Shader<ID3D11GeometryShader, ShadowMapFaceGS>
 		{
-			typedef Shader<ID3D11GeometryShader, ShadowMapFaceGS> base;
-			ShadowMapFaceGS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11GeometryShader> shdr)
-				:base(mgr, id, name, shdr)
+			using base = Shader<ID3D11GeometryShader, ShadowMapFaceGS>;
+			ShadowMapFaceGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader> const& shdr)
+				:base(mgr, id, sort_id, name, shdr)
 			{
 				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "shadow_map_face_gs.cso"));
 			}
@@ -46,9 +46,9 @@ namespace pr
 		// Shadow map line geometry shader
 		struct ShadowMapLineGS :Shader<ID3D11GeometryShader, ShadowMapLineGS>
 		{
-			typedef Shader<ID3D11GeometryShader, ShadowMapLineGS> base;
-			ShadowMapLineGS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11GeometryShader> shdr)
-				:base(mgr, id, name, shdr)
+			using base = Shader<ID3D11GeometryShader, ShadowMapLineGS>;
+			ShadowMapLineGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader> const& shdr)
+				:base(mgr, id, sort_id, name, shdr)
 			{
 				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "shadow_map_line_gs.cso"));
 			}
@@ -57,9 +57,9 @@ namespace pr
 		// Shadow map pixel shader
 		struct ShadowMapPS :Shader<ID3D11PixelShader, ShadowMapPS>
 		{
-			typedef Shader<ID3D11PixelShader, ShadowMapPS> base;
-			ShadowMapPS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11PixelShader> shdr)
-				:base(mgr, id, name, shdr)
+			using base = Shader<ID3D11PixelShader, ShadowMapPS>;
+			ShadowMapPS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11PixelShader> const& shdr)
+				:base(mgr, id, sort_id, name, shdr)
 			{
 				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "shadow_map_ps.cso"));
 			}
@@ -70,25 +70,25 @@ namespace pr
 		{
 			VShaderDesc desc(shadow_map_vs, Vert());
 			auto dx = GetVS(EStockShader::ShadowMapVS, &desc);
-			CreateShader<ShadowMapVS>(EStockShader::ShadowMapVS, dx, "smap_vs");
+			m_stock_shaders.emplace_back(CreateShader<ShadowMapVS>(EStockShader::ShadowMapVS, dx, "smap_vs"));
 		}
 		template <> void ShaderManager::CreateShader<ShadowMapFaceGS>()
 		{
 			GShaderDesc desc(shadow_map_face_gs);
 			auto dx = GetGS(EStockShader::ShadowMapFaceGS, &desc);
-			CreateShader<ShadowMapFaceGS>(EStockShader::ShadowMapFaceGS, dx, "smap_face_gs");
+			m_stock_shaders.emplace_back(CreateShader<ShadowMapFaceGS>(EStockShader::ShadowMapFaceGS, dx, "smap_face_gs"));
 		}
 		template <> void ShaderManager::CreateShader<ShadowMapLineGS>()
 		{
 			GShaderDesc desc(shadow_map_line_gs);
 			auto dx = GetGS(EStockShader::ShadowMapLineGS, &desc);
-			CreateShader<ShadowMapLineGS>(EStockShader::ShadowMapLineGS, dx, "smap_line_gs");
+			m_stock_shaders.emplace_back(CreateShader<ShadowMapLineGS>(EStockShader::ShadowMapLineGS, dx, "smap_line_gs"));
 		}
 		template <> void ShaderManager::CreateShader<ShadowMapPS>()
 		{
 			PShaderDesc desc(shadow_map_ps);
 			auto dx = GetPS(EStockShader::ShadowMapPS, &desc);
-			CreateShader<ShadowMapPS>(EStockShader::ShadowMapPS, dx, "smap_ps");
+			m_stock_shaders.emplace_back(CreateShader<ShadowMapPS>(EStockShader::ShadowMapPS, dx, "smap_ps"));
 		}
 	}
 }

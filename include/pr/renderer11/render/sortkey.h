@@ -37,6 +37,8 @@ namespace pr
 			AlphaBack       , // 
 			AlphaFront      , // 
 			PostAlpha       , // 
+			
+			_arithmetic_operators_allowed = 0x7FFFFFFF,
 		};
 
 		// The sort key type (wraps a uint32)
@@ -69,9 +71,14 @@ namespace pr
 			value_type m_value;
 
 			SortKey() = default;
-			SortKey(value_type value)
+			explicit SortKey(value_type value)
 				:m_value(value)
 			{}
+			explicit SortKey(ESortGroup grp)
+				:m_value()
+			{
+				Group(grp);
+			}
 			operator value_type() const
 			{
 				return m_value;

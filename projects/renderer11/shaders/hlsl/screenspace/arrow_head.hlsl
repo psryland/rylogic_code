@@ -18,10 +18,10 @@ void main(point PSIn In[1], inout TriangleStream<PSIn> OutStream)
 	float4 ss_norm = mul(In[0].ws_norm, m_cam.m_w2s);
 	
 	// Arrow direction and perpendicular in screen space
-	float width = max(8.0f, m_dim_and_width.w);
-	float2 dir = normalize(ss_norm.xy * m_dim_and_width.xy);
-	float2 tang = dir / m_dim_and_width.xy;
-	float2 perp = float2(-dir.y, dir.x) / m_dim_and_width.xy;
+	float width = max(8.0f, m_size.x);
+	float2 dir = normalize(ss_norm.xy * m_screen_dim.xy);
+	float2 tang = dir / m_screen_dim.xy;
+	float2 perp = float2(-dir.y, dir.x) / m_screen_dim.xy;
 
 	Out = In[0];
 	Out.ws_norm = float4(0,0,0,0); // null out the normal

@@ -10,7 +10,7 @@ namespace pr
 {
 	namespace rdr
 	{
-		Stereo::Stereo(D3DPtr<ID3D11Device>& device, Viewport const& viewport, DXGI_FORMAT target_format, bool swap_eyes, float eye_separation)
+		Stereo::Stereo(ID3D11Device* device, Viewport const& viewport, DXGI_FORMAT target_format, bool swap_eyes, float eye_separation)
 			:m_nv_magic(NvStereoImageHeader::make(viewport.WidthUI(), viewport.HeightUI(), BitsPerPixel(target_format), swap_eyes))
 			,m_mark()
 			,m_rt_tex()

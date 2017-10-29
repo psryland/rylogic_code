@@ -773,6 +773,16 @@ namespace pr.gfx
 			return View3D_ContextIdFromFilepath(filepath, out id) ? id : (Guid?)null;
 		}
 
+		/// <summary>Enumerate the guids in the store</summary>
+		public void EnumGuids(Action<Guid> cb)
+		{
+			EnumGuids(guid => { cb(guid); return true; });
+		}
+		public void EnumGuids(Func<Guid, bool> cb)
+		{
+			View3D_SourceEnumGuids((c,guid) => cb(guid), IntPtr.Zero);
+		}
+
 		/// <summary>Return the example Ldr script</summary>
 		public string ExampleScript
 		{
@@ -950,6 +960,16 @@ namespace pr.gfx
 				set { View3D_WindowSettingsSet(m_handle, value); }
 			}
 
+			/// <summary>Enumerate the guids associated with this window</summary>
+			public void EnumGuids(Action<Guid> cb)
+			{
+				EnumGuids(guid => { cb(guid); return true; });
+			}
+			public void EnumGuids(Func<Guid, bool> cb)
+			{
+				View3D_WindowEnumGuids(m_handle, (c,guid) => cb(guid), IntPtr.Zero);
+			}
+
 			/// <summary>Enumerate the objects associated with this window</summary>
 			public void EnumObjects(Action<Object> cb)
 			{
@@ -976,11 +996,20 @@ namespace pr.gfx
 				View3D_WindowEnumObjectsById(m_handle, (c,obj) => cb(new Object(obj)), IntPtr.Zero, context_id, context_id.Length, all_except);
 			}
 
+			/// <summary>Return the objects associated with this window</summary>
+			public Object[] Objects
+			{
+				get
+				{
+					var objs = new List<Object>();
+					EnumObjects(x => objs.Add(x));
+					return objs.ToArray();
+				}
+			}
+
 			/// <summary>Suspend scene changed events</summary>
 			public Scope SuspendSceneChanged()
 			{
-				// This suspends the events from View3d.
-				// As a result, the 'Objects' collection may get out of sync
 				return Scope.Create(
 					() => View3D_WindowSceneChangedSuspend(m_handle, true),
 					() => View3D_WindowSceneChangedSuspend(m_handle, false));
@@ -2713,7 +2742,7 @@ namespace ldr
 		{
 			public SceneChangedEventArgs(Guid[] context_ids)
 			{
-				ContextIds = context_ids;
+				ContextIds = context_ids ?? new Guid[0];
 			}
 
 			/// <summary>The context ids of the objects that were changed in the scene</summary>
@@ -2741,6 +2770,9 @@ namespace ldr
 
 		/// <summary>Report settings changed callback</summary>
 		public delegate void SettingsChangedCB(IntPtr ctx, HWindow wnd);
+
+		/// <summary>Enumerate guids callback</summary>
+		public delegate bool EnumGuidsCB(IntPtr ctx, Guid guid);
 
 		/// <summary>Enumerate objects callback</summary>
 		public delegate bool EnumObjectsCB(IntPtr ctx, HObject obj);
@@ -2772,10 +2804,22 @@ namespace ldr
 			[MarshalAs(UnmanagedType.BStr)] out string result,
 			[MarshalAs(UnmanagedType.BStr)] out string errors);
 
-		// Initialise / shutdown the dll
-		[DllImport(Dll)] private static extern HContext        View3D_Initialise             (ReportErrorCB initialise_error_cb, IntPtr ctx, bool gdi_compatibility);
-		[DllImport(Dll)] private static extern void            View3D_Shutdown               (HContext context);
-		[DllImport(Dll)] private static extern void            View3D_GlobalErrorCBSet       (ReportErrorCB error_cb, IntPtr ctx, bool add);
+		// Context
+		[DllImport(Dll)] private static extern HContext        View3D_Initialise            (ReportErrorCB initialise_error_cb, IntPtr ctx, bool gdi_compatibility);
+		[DllImport(Dll)] private static extern void            View3D_Shutdown              (HContext context);
+		[DllImport(Dll)] private static extern void            View3D_GlobalErrorCBSet      (ReportErrorCB error_cb, IntPtr ctx, bool add);
+		[DllImport(Dll)] private static extern void            View3D_SourceEnumGuids       (EnumGuidsCB enum_guids_cb, IntPtr ctx);
+		[DllImport(Dll)] private static extern Guid            View3D_LoadScriptSource      ([MarshalAs(UnmanagedType.LPWStr)] string ldr_filepath, bool additional, ref View3DIncludes includes);
+		[DllImport(Dll)] private static extern Guid            View3D_LoadScript            ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, ref Guid context_id, ref View3DIncludes includes);
+		[DllImport(Dll)] private static extern void            View3D_ReloadScriptSources   ();
+		[DllImport(Dll)] private static extern void            View3D_ClearScriptSources    ();
+		[DllImport(Dll)] private static extern void            View3D_ObjectsDeleteAll      ();
+		[DllImport(Dll)] private static extern void            View3D_ObjectsDeleteById     ([MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)] Guid[] context_ids, int count);
+		[DllImport(Dll)] private static extern void            View3D_CheckForChangedSources();
+		[DllImport(Dll)] private static extern void            View3D_AddFileProgressCBSet  (AddFileProgressCB progress_cb, IntPtr ctx, bool add);
+		[DllImport(Dll)] private static extern void            View3D_SourcesChangedCBSet   (SourcesChangedCB sources_changed_cb, IntPtr ctx, bool add);
+		[DllImport(Dll)] private static extern void            View3D_EmbeddedCodeCBSet     (EmbeddedCodeHandlerCB embedded_code_cb, IntPtr ctx, bool add);
+		[DllImport(Dll)] private static extern bool            View3D_ContextIdFromFilepath ([MarshalAs(UnmanagedType.LPWStr)] string filepath, out Guid id);
 
 		// Windows
 		[DllImport(Dll)] private static extern HWindow         View3D_WindowCreate              (HWND hwnd, ref WindowOptions opts);
@@ -2792,6 +2836,7 @@ namespace ldr
 		[DllImport(Dll)] private static extern void            View3D_WindowRemoveAllObjects    (HWindow window);
 		[DllImport(Dll)] private static extern bool            View3D_WindowHasObject           (HWindow window, HObject obj);
 		[DllImport(Dll)] private static extern int             View3D_WindowObjectCount         (HWindow window);
+		[DllImport(Dll)] private static extern void            View3D_WindowEnumGuids           (HWindow window, EnumGuidsCB enum_guids_cb, IntPtr ctx);
 		[DllImport(Dll)] private static extern void            View3D_WindowEnumObjects         (HWindow window, EnumObjectsCB enum_objects_cb, IntPtr ctx);
 		[DllImport(Dll)] private static extern void            View3D_WindowEnumObjectsById     (HWindow window, EnumObjectsCB enum_objects_cb, IntPtr ctx, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 4)] Guid[] context_id, int count, bool all_except);
 		[DllImport(Dll)] private static extern void            View3D_WindowAddObjectsById      (HWindow window, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] Guid[] context_id, int count, bool all_except);
@@ -2850,18 +2895,7 @@ namespace ldr
 		[DllImport(Dll)] private static extern void              View3D_ShowLightingDlg          (HWindow window);
 
 		// Objects
-		[DllImport(Dll)] private static extern Guid              View3D_LoadScriptSource         ([MarshalAs(UnmanagedType.LPWStr)] string ldr_filepath, bool additional, ref View3DIncludes includes);
-		[DllImport(Dll)] private static extern Guid              View3D_LoadScript               ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, ref Guid context_id, ref View3DIncludes includes);
-		[DllImport(Dll)] private static extern void              View3D_ReloadScriptSources      ();
-		[DllImport(Dll)] private static extern void              View3D_ClearScriptSources       ();
-		[DllImport(Dll)] private static extern void              View3D_CheckForChangedSources   ();
-		[DllImport(Dll)] private static extern void              View3D_AddFileProgressCBSet     (AddFileProgressCB progress_cb, IntPtr ctx, bool add);
-		[DllImport(Dll)] private static extern void              View3D_SourcesChangedCBSet      (SourcesChangedCB sources_changed_cb, IntPtr ctx, bool add);
-		[DllImport(Dll)] private static extern void              View3D_EmbeddedCodeCBSet        (EmbeddedCodeHandlerCB embedded_code_cb, IntPtr ctx, bool add);
-		[DllImport(Dll)] private static extern bool              View3D_ContextIdFromFilepath    ([MarshalAs(UnmanagedType.LPWStr)] string filepath, out Guid id);
 		[DllImport(Dll)] private static extern Guid              View3D_ObjectContextIdGet       (HObject obj);
-		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteAll         ();
-		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteById        ([MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)] Guid[] context_ids, int count);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateLdr          ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, ref Guid context_id, ref View3DIncludes includes);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreate             (string name, uint colour, int vcount, int icount, int ncount, IntPtr verts, IntPtr indices, IntPtr nuggets, ref Guid context_id);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateEditCB       (string name, uint colour, int vcount, int icount, int ncount, EditObjectCB edit_cb, IntPtr ctx, ref Guid context_id);

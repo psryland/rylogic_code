@@ -25,6 +25,7 @@ namespace pr
 			,m_lookup_gs(mem)
 			,m_lookup_shader(mem)
 			,m_lookup_cbuf(mem)
+			,m_stock_shaders()
 			,m_mutex()
 		{
 			CreateStockShaders();
@@ -40,6 +41,9 @@ namespace pr
 			dc->GSSetShader(0, 0, 0);
 			dc->HSSetShader(0, 0, 0);
 			dc->DSSetShader(0, 0, 0);
+
+			m_stock_shaders.resize(0);
+			assert(m_lookup_shader.empty() && "There are shader instances still in use");
 		}
 
 		// Create the built-in shaders
@@ -50,10 +54,10 @@ namespace pr
 			CreateShader<FwdShaderPS>();
 
 			// GBuffer shaders
-			CreateShader<GBufferShaderVS>();
-			CreateShader<GBufferShaderPS>();
-			CreateShader<DSLightingShaderVS>();
-			CreateShader<DSLightingShaderPS>();
+			CreateShader<GBufferVS>();
+			CreateShader<GBufferPS>();
+			CreateShader<DSLightingVS>();
+			CreateShader<DSLightingPS>();
 
 			// Shadow map shaders
 			CreateShader<ShadowMapVS>();
@@ -62,11 +66,12 @@ namespace pr
 			CreateShader<ShadowMapPS>();
 
 			// Other shaders
-			CreateShader<ThickLineListShaderGS>();
-			CreateShader<ArrowHeadShaderGS>();
+			CreateShader<PointSpritesGS>();
+			CreateShader<ThickLineListGS>();
+			CreateShader<ArrowHeadGS>();
 		}
 
-		// Get (or create) a d3d resource of type 'TRes'.
+		// Get/Create a d3d resource of type 'TRes'.
 		template <typename TRes, typename TCreate, typename TLookup = Lookup<RdrId, D3DPtr<TRes>>>
 		D3DPtr<TRes> Get(RdrId id, TLookup& lookup, TCreate create)
 		{
@@ -93,9 +98,8 @@ namespace pr
 		{
 			std::lock_guard<std::recursive_mutex> lock0(m_mutex);
 
-			// Note: we need an input layout per vertex shader because the CreateInputLayout
-			// validates the input layout for the vertex shader and can make changes if there
-			// is a difference.
+			// Note: we need an input layout per vertex shader because the CreateInputLayout function
+			// validates the input layout for the vertex shader and can make changes if there is a difference.
 			return Get<ID3D11InputLayout>(id, m_lookup_ip, [&]
 			{
 				if (desc == nullptr)
@@ -165,46 +169,6 @@ namespace pr
 			});
 		}
 
-		// Add a shader instance to our map
-		void ShaderManager::AddShader(ShaderPtr const& shader)
-		{
-			// Should already be lock_guarded
-			PR_ASSERT(PR_DBG_RDR, FindShader(shader->m_id) == nullptr, "A shader with this Id already exists");
-
-			// Set up a sort id for the shader
-			shader->m_sort_id = m_lookup_shader.size() % SortKey::MaxShaderId;
-
-			// Add the shader instance to the lookup map
-			AddLookup(m_lookup_shader, shader->m_id, shader);
-		}
-
-		// Find a shader by id
-		ShaderPtr ShaderManager::FindShader(RdrId id)
-		{
-			// AutoId means make a new shader, so it'll never exist already
-			if (id == AutoId)
-				return nullptr;
-
-			std::lock_guard<std::recursive_mutex> lock(m_mutex);
-
-			// See if 'id' already exists, if not, then we'll carry on and create a new shader.
-			auto iter = m_lookup_shader.find(id);
-			if (iter == std::end(m_lookup_shader))
-				return nullptr;
-
-			return iter->second;
-		}
-
-		// Create a copy of an existing shader.
-		ShaderPtr ShaderManager::CloneShader(RdrId id, RdrId new_id, char const* new_name)
-		{
-			auto existing = FindShader(id);
-			if (!existing)
-				throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Existing shader with id %d not found", id));
-
-			return existing->Clone(new_id, new_name);
-		}
-
 		// Get or create a 'cbuffer' object for given type 'TCBuf'
 		D3DPtr<ID3D11Buffer> ShaderManager::GetCBuf(char const* name, RdrId id, size_t sz)
 		{
@@ -222,57 +186,5 @@ namespace pr
 			m_lookup_cbuf[id] = cbuf;
 			return std::move(cbuf);
 		}
-
-		//// Return a pointer to a shader that is best suited for rendering geometry with the vertex structure described by 'geom_mask'
-		//ShaderSet ShaderManager::BuildShaderFor(EGeom geom) const
-		//{
-		//	//Todo
-		//	//ShaderBase const* cheapest = 0; // This is the shader that matches all bits in 'geom' with the fewest extra bits
-		//	//ShaderBase const* closest = 0;  // This is the shader that matches the most bits in 'geom_mask'
-		//	//pr::uint cheapest_bit_count = pr::maths::uint_max;
-		//	//pr::uint closest_bit_count  = 0;
-		//	//for (auto i = begin(m_lookup_shader), iend = end(m_lookup_shader); i != iend; ++i)
-		//	//{
-		//	//	ShaderBase const& shdr = *i->second;
-
-		//	//	// Quick out on an exact match
-		//	//	if (shdr.m_geom == geom)
-		//	//		return const_cast<ShaderBase*>(&shdr); // const_cast because pr::RefPtr only handles non-const pointers
-
-		//	//	// If the shader supports all the bits in 'geom_mask' with extras, find the cheapest
-		//	//	pr::uint count = pr::CountBits<pr::uint>(shdr.m_geom);
-		//	//	if (pr::AllSet(shdr.m_geom, geom))
-		//	//	{
-		//	//		if (cheapest_bit_count > count)
-		//	//		{
-		//	//			cheapest = &shdr;
-		//	//			cheapest_bit_count = count;
-		//	//		}
-		//	//	}
-		//	//	// Otherwise, find the shader that supports the most bits of 'geom_mask'
-		//	//	else
-		//	//	{
-		//	//		if (closest_bit_count < count)
-		//	//		{
-		//	//			closest = &shdr;
-		//	//			closest_bit_count = count;
-		//	//		}
-		//	//	}
-		//	//}
-
-		//	//// Choose the cheapest over the closest
-		//	//if (cheapest != 0)
-		//	//	return const_cast<ShaderBase*>(cheapest);
-		//	//if (closest != 0)
-		//	//	return const_cast<ShaderBase*>(closest);
-
-		//	// Throw if nothing suitable is found
-		//	std::string msg = pr::Fmt("No suitable shader found that supports geometry mask: %X\nAvailable Shaders:\n" ,geom);
-		//	for (auto& sh : m_lookup_shader)
-		//		msg += pr::Fmt("   %s - geometry mask: %X\n" ,sh.second->m_name.c_str() ,sh.second->m_geom);
-
-		//	PR_ASSERT(PR_DBG_RDR, false, msg.c_str());
-		//	throw pr::Exception<HRESULT>(ERROR_NOT_SUPPORTED, msg);
-		//}
 	}
 }

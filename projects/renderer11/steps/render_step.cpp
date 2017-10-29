@@ -36,7 +36,12 @@ namespace pr
 		void RenderStep::Sort()
 		{
 			Lock lock(*this);
-			pr::sort(lock.drawlist());
+			auto& dl = lock.drawlist();
+
+			// Sort by sort key
+			pr::sort(dl);
+
+			// Sorting done
 			m_sort_needed = false;
 		}
 		void RenderStep::SortIfNeeded()
@@ -98,24 +103,16 @@ namespace pr
 		// Perform the render step
 		void RenderStep::Execute(StateStack& ss)
 		{
-			// Notify that this render step is about to execute
-			pr::events::Send(Evt_RenderStepExecute(*this, false));
+			PR_EXPAND(PR_DBG_RDR, auto dbg = pr::CreateScope(
+				[&]{ ss.m_dbg->BeginEvent(ERenderStep::ToStringW(GetId())); },
+				[&]{ ss.m_dbg->EndEvent(); }));
 
-			{
-				PR_EXPAND(PR_DBG_RDR, auto dbg = pr::CreateScope(
-					[&]{ ss.m_dbg->BeginEvent(ERenderStep::ToStringW(GetId())); },
-					[&]{ ss.m_dbg->EndEvent(); }));
+			// Commit before the start of a render step to ensure changes
+			// are flushed before the render steps tries to clear back buffers, etc
+			StateStack::RSFrame frame(ss, *this);
+			ss.Commit();
 
-				// Commit before the start of a render step to ensure changes
-				// are flushed before the render steps tries to clear back buffers, etc
-				StateStack::RSFrame frame(ss, *this);
-				ss.Commit();
-
-				ExecuteInternal(ss);
-			}
-
-			// Notify that the render step has finished
-			pr::events::Send(Evt_RenderStepExecute(*this, false));
+			ExecuteInternal(ss);
 		}
 
 		// Notification of a model being destroyed

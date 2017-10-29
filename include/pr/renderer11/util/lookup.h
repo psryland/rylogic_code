@@ -18,20 +18,20 @@ namespace pr
 		template <typename Key, typename Value>
 		struct LookupGenerator
 		{
-			typedef std::pair<const Key, Value> pair;
-			typedef Allocator<pair>             alloc;
-			typedef ::std::hash<Key>            hasher;
-			typedef ::std::equal_to<Key>        keyeq;
+			using pair   = std::pair<const Key, Value>;
+			using hasher = std::hash<Key>;
+			using keyeq  = std::equal_to<Key>;
+			using alloc  = Allocator<pair>;
 
-			typedef std::unordered_map<Key, Value, hasher, keyeq, alloc> type;
+			using type = std::unordered_map<Key, Value, hasher, keyeq, alloc>;
 		};
 
 		template <typename Key, typename Value>
 		struct Lookup :LookupGenerator<Key,Value>::type
 		{
-			typedef LookupGenerator<Key, Value> generator;
-			typedef typename generator::type    base;
-			typedef typename generator::pair    pair;
+			using generator = LookupGenerator<Key, Value>;
+			using base = typename generator::type;
+			using pair = typename generator::pair;
 
 			Lookup(MemFuncs& mem)
 				:base(8, generator::hasher(), generator::keyeq(), generator::alloc(mem))

@@ -1,9 +1,7 @@
 //******************************************
-// Multicast
+// Multicast Event
 //  Copyright (c) Oct 2011 Rylogic Ltd
 //******************************************
-// See unit tests for usage
-
 #pragma once
 
 #include <list>
@@ -13,6 +11,219 @@
 
 namespace pr
 {
+	// Map place-holders into pr::
+	constexpr auto _1 = std::placeholders::_1;
+	constexpr auto _2 = std::placeholders::_2;
+	constexpr auto _3 = std::placeholders::_3;
+	constexpr auto _4 = std::placeholders::_4;
+
+	// Implementation detail for EventHandler
+	namespace evt
+	{
+		using Id = unsigned long long;
+		struct Sub;
+
+		// Non-template interface for all event handlers
+		struct IEventHandler
+		{
+			virtual ~IEventHandler() {} 
+			virtual void unsubscribe(Sub& sub) = 0;
+		};
+
+		// A reference to an event handler subscription. Used for unsubscribing.
+		struct Sub
+		{
+			IEventHandler* m_evt;
+			Id m_id;
+
+			Sub()
+				:m_evt()
+				,m_id()
+			{}
+			Sub(IEventHandler* evt, Id id)
+				:m_evt(evt)
+				,m_id(id)
+			{}
+			static Sub Make(IEventHandler* evt)
+			{
+				static std::atomic_uint s_id = {};
+				auto id = s_id.load();
+				for (;!s_id.compare_exchange_weak(id, id + 1);) {}
+				return Sub(evt, id + 1);
+			}
+
+			// Boolean test for 'subscribed'
+			struct bool_tester { int x; }; typedef int bool_tester::* bool_type;
+			operator bool_type() const { return m_evt != nullptr ? &bool_tester::x : static_cast<bool_type>(0); }
+		};
+
+		// An RAII event un-subscriber
+		struct AutoSub
+		{
+			Sub m_sub;
+
+			AutoSub()
+				:m_sub()
+			{}
+			AutoSub(Sub sub)
+				:m_sub(sub)
+			{}
+			AutoSub(AutoSub&& rhs)
+				:m_sub(rhs.m_sub)
+			{
+				rhs.m_sub = Sub();
+			}
+			AutoSub& operator =(AutoSub&& rhs)
+			{
+				if (this == &rhs) return *this;
+				m_sub = rhs.m_sub;
+				rhs.m_sub = Sub();
+				return *this;
+			}
+			~AutoSub()
+			{
+				if (m_sub.m_evt != nullptr)
+					m_sub.m_evt->unsubscribe(m_sub);
+			}
+
+			AutoSub(AutoSub const& rhs) = delete;
+			AutoSub& operator = (AutoSub const& rhs) = delete;
+		};
+	}
+
+	// EventHandler<>
+	// Use:
+	//   btn.Click += [&](Button&,EmptyArgs const) {...}
+	//   btn.Click += std::bind(&MyDlg::HandleBtn, this, _1, _2);
+	//   btn.Click += &MyDlg::HandleBtn;
+	template <typename Sender, typename Args> struct EventHandler :evt::IEventHandler
+	{
+		// Notes:
+		//  - Subscribing to event handlers is not thread safe. Lock guards should be used.
+
+		// The signature of the event handling function
+		using Delegate = std::function<void(Sender,Args)>;
+		using AutoSub = evt::AutoSub;
+		using Sub = evt::Sub;
+		using Id = evt::Id;
+
+		// Wraps a handler function
+		struct Handler
+		{
+			Delegate m_delegate;
+			Id m_id;
+
+			Handler(Delegate delegate, Id id)
+				:m_delegate(delegate)
+				,m_id(id)
+			{}
+		};
+		using HandlerCont = std::vector<Handler>;
+
+		// Subscribed handlers
+		HandlerCont m_handlers;
+
+		// Construct
+		EventHandler()
+			:m_handlers()
+		{}
+		EventHandler(EventHandler&& rhs)
+			:m_handlers(std::move(rhs.m_handlers))
+		{}
+		EventHandler(EventHandler const&) = delete;
+		EventHandler& operator=(EventHandler const&) = delete;
+
+		// Raise the event notifying subscribed observers
+		void operator()(Sender& s, Args const& a) const
+		{
+			for (auto& h : m_handlers)
+				h.m_delegate(s,a);
+		}
+
+		// Detach all handlers. NOTE: this invalidates all associated Handler's
+		void reset()
+		{
+			m_handlers.clear();
+		}
+
+		// Number of attached handlers
+		size_t count() const
+		{
+			return m_handlers.size();
+		}
+
+		// Assign/Attach/Detach handlers
+		Sub operator = (Delegate func)
+		{
+			reset();
+			return *this += func;
+		}
+		Sub operator += (Delegate func)
+		{
+			auto sub = Sub::Make(this);
+			m_handlers.push_back(Handler(func, sub.m_id));
+			return sub;
+		}
+		void operator -= (Sub& sub)
+		{
+			// Notes:
+			//  - Can't use -= (Delegate function) because std::function<> does not allow operator ==()
+			//  - Use stable erase because the order that event handlers are called might be important.
+			if (sub)
+			{
+				auto iter = std::find_if(std::begin(m_handlers), std::end(m_handlers), [=](auto& h){ return h.m_id == sub.m_id; });
+				if (iter != std::end(m_handlers))
+					m_handlers.erase(iter);
+
+				sub = Sub();
+			}
+		}
+
+		// Boolean test for no assigned handlers
+		struct bool_tester { int x; }; typedef int bool_tester::* bool_type;
+		operator bool_type() const { return !m_handlers.empty() ? &bool_tester::x : static_cast<bool_type>(0); }
+
+		// IEventHandler
+		void evt::IEventHandler::unsubscribe(Sub& sub)
+		{
+			*this -= sub;
+		}
+	};
+
+	// An event subscription
+	using EvtSub = evt::Sub;
+
+	// An RAII event un-subscriber
+	using EvtAutoSub = evt::AutoSub;
+
+	// Place-holder for events that take no arguments. (Makes the templating consistent)
+	struct EmptyArgs
+	{};
+
+	// Event args used in cancel-able operations
+	struct CancelEventArgs :EmptyArgs
+	{
+		bool m_cancel;
+		CancelEventArgs(bool cancel = false)
+			:m_cancel(cancel)
+		{}
+	};
+
+	// Event args used to report an error code and error message
+	struct ErrorEventArgs :EmptyArgs
+	{
+		std::wstring m_msg;
+		int m_code;
+
+		ErrorEventArgs(std::wstring msg = L"", int code = 0)
+			:m_msg(msg)
+			,m_code(code)
+		{}
+	};
+
+	#pragma region MultiCast
+
+	// A full-fat thread-safe multi-cast delegate
 	template <typename Type> class MultiCast
 	{
 		using TypeCont = std::vector<Type>;
@@ -208,107 +419,7 @@ namespace pr
 		}
 	};
 
-	// Returns an identifier for uniquely identifying event handlers
-	using EventHandlerId = unsigned long long;
-	inline EventHandlerId GenerateEventHandlerId()
-	{
-		static std::atomic_uint s_id = {};
-		auto id = s_id.load();
-		for (;!s_id.compare_exchange_weak(id, id + 1);) {}
-		return id + 1;
-	}
-
-	// EventHandler<>
-	// Use:
-	//   btn.Click += [&](Button&,EmptyArgs const) {...}
-	//   btn.Click += std::bind(&MyDlg::HandleBtn, this, _1, _2);
-	template <typename Sender, typename Args> struct EventHandler
-	{
-		// Note: This isn't thread safe
-		using Delegate = std::function<void(Sender,Args)>;
-		struct Func
-		{
-			Delegate m_delegate;
-			EventHandlerId m_id;
-			Func(Delegate delegate, EventHandlerId id)
-				:m_delegate(delegate)
-				,m_id(id)
-			{}
-		};
-		std::vector<Func> m_handlers;
-
-		EventHandler() :m_handlers() {}
-		EventHandler(EventHandler&& rhs) :m_handlers(std::move(rhs.m_handlers)) {}
-		EventHandler(EventHandler const&) = delete;
-		EventHandler& operator=(EventHandler const&) = delete;
-
-		// 'Raise' the event notifying subscribed observers
-		void operator()(Sender& s, Args const& a) const
-		{
-			for (auto& h : m_handlers)
-				h.m_delegate(s,a);
-		}
-
-		// Detach all handlers. NOTE: this invalidates all associated Handler's
-		void reset()
-		{
-			m_handlers.clear();
-		}
-
-		// Number of attached handlers
-		size_t count() const
-		{
-			return m_handlers.size();
-		}
-
-		// Attach/Detach handlers
-		EventHandlerId operator += (Delegate func)
-		{
-			auto handler = Func{func, GenerateEventHandlerId()};
-			m_handlers.push_back(handler);
-			return handler.m_id;
-		}
-		EventHandlerId operator = (Delegate func)
-		{
-			reset();
-			return *this += func;
-		}
-		void operator -= (EventHandlerId handler_id)
-		{
-			// Note, can't use -= (Delegate function) because std::function<> does not allow operator ==
-			auto iter = std::find_if(begin(m_handlers), end(m_handlers), [=](Func const& func){ return func.m_id == handler_id; });
-			if (iter != end(m_handlers)) m_handlers.erase(iter);
-		}
-
-		// Boolean test for no assigned handlers
-		struct bool_tester { int x; }; typedef int bool_tester::* bool_type;
-		operator bool_type() const { return !m_handlers.empty() ? &bool_tester::x : static_cast<bool_type>(0); }
-	};
-
-	// Place-holder for events that take no arguments. (Makes the templating consistent)
-	struct EmptyArgs
-	{};
-
-	// Event args used in cancel-able operations
-	struct CancelEventArgs :EmptyArgs
-	{
-		bool m_cancel;
-		CancelEventArgs(bool cancel = false)
-			:m_cancel(cancel)
-		{}
-	};
-
-	// Event args used to report an error code and error message
-	struct ErrorEventArgs :EmptyArgs
-	{
-		std::wstring m_msg;
-		int m_code;
-
-		ErrorEventArgs(std::wstring msg = L"", int code = 0)
-			:m_msg(msg)
-			,m_code(code)
-		{}
-	};
+	#pragma endregion
 }
 
 #if PR_UNITTESTS
