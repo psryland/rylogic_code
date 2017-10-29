@@ -14,6 +14,7 @@ using pr.common;
 using pr.container;
 using pr.extn;
 using pr.gui;
+using pr.maths;
 using pr.util;
 
 namespace CoinFlip
@@ -609,6 +610,41 @@ namespace CoinFlip
 		public TradePair FindPairOnCurrentExchange(string pair_name)
 		{
 			return FindPairOnExchange(pair_name, Exchanges.Current);
+		}
+
+		/// <summary>Return a pair and time frame that has candle data and is as close as possible to 'pair' and 'time_frame'</summary>
+		public bool FindCandleData(TradePair pair, ETimeFrame time_frame, out TradePair pair_out, out ETimeFrame time_frame_out)
+		{
+			pair_out = null;
+			time_frame_out = ETimeFrame.None;
+
+			// Find a pair with candle data
+			var available = new ETimeFrame[0];
+			foreach (var p in GetPairs())
+			{
+				available = p.CandleDataAvailable.ToArray();
+				if (available.Length == 0) continue;
+				pair_out = p;
+				break;
+			}
+
+			// Find the nearest time frame in the available candle data
+			if (available.Length != 0)
+			{
+				Debug.Assert(available.IsOrdered());
+				var idx = available.BinarySearch(x => x.CompareTo(time_frame), find_insert_position:true);
+				time_frame_out = available[Maths.Clamp(idx, 0, available.Length-1)];
+			}
+
+			return pair_out != null && time_frame_out != ETimeFrame.None;
+
+			// Enumerate pairs of the same instrument
+			IEnumerable<TradePair> GetPairs()
+			{
+				yield return pair;
+				foreach (var p in Pairs.Except(pair).Where(x => x.Name == pair.Name))
+					yield return p;
+			}
 		}
 
 		/// <summary>Execute 'action' in the GUI thread context</summary>

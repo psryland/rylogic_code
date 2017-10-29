@@ -422,18 +422,46 @@ namespace CoinFlip
 			Debug.Assert(pair.AssertOrdersValid());
 		}
 
-		/// <summary>Convert a time frame to a market period</summary>
+		/// <summary>Convert a time frame to the nearest market period</summary>
 		private MarketPeriod ToMarketPeriod(ETimeFrame tf)
 		{
 			switch (tf)
 			{
-			default:               return MarketPeriod.None;
-			case ETimeFrame.Min5:  return MarketPeriod.Minutes5;
-			case ETimeFrame.Min15: return MarketPeriod.Minutes15;
-			case ETimeFrame.Min30: return MarketPeriod.Minutes30;
-			case ETimeFrame.Hour2: return MarketPeriod.Hours2;
-			case ETimeFrame.Hour4: return MarketPeriod.Hours4;
-			case ETimeFrame.Day1:  return MarketPeriod.Day;
+			default:
+				return MarketPeriod.None;
+			case ETimeFrame.Tick1:
+			case ETimeFrame.Min1:
+			case ETimeFrame.Min2:
+			case ETimeFrame.Min3:
+			case ETimeFrame.Min4:
+			case ETimeFrame.Min5:
+			case ETimeFrame.Min6:
+			case ETimeFrame.Min7:
+			case ETimeFrame.Min8:
+			case ETimeFrame.Min9:
+				return MarketPeriod.Minutes5;
+			case ETimeFrame.Min10:
+			case ETimeFrame.Min15:
+				return MarketPeriod.Minutes15;
+			case ETimeFrame.Min20:
+			case ETimeFrame.Min30:
+			case ETimeFrame.Min45:
+				return MarketPeriod.Minutes30;
+			case ETimeFrame.Hour1:
+			case ETimeFrame.Hour2:
+				return MarketPeriod.Hours2;
+			case ETimeFrame.Hour3:
+			case ETimeFrame.Hour4:
+			case ETimeFrame.Hour6:
+			case ETimeFrame.Hour8:
+				return MarketPeriod.Hours4;
+			case ETimeFrame.Hour12:
+			case ETimeFrame.Day1:
+			case ETimeFrame.Day2:
+			case ETimeFrame.Day3:
+			case ETimeFrame.Weekly:
+			case ETimeFrame.Monthly:
+				return MarketPeriod.Day;
 			}
 		}
 

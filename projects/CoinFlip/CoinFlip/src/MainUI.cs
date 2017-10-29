@@ -243,11 +243,12 @@ namespace CoinFlip
 				void HandleEditTrade(object sender, EditTradeEventArgs e)
 				{
 					// Find a chart for the pair that is being edited, add one if not found
-					var chart = Charts.FirstOrDefault(x => x.Instrument.Pair == e.Trade.Pair);
+					var chart = Charts.FirstOrDefault(x => x.Instrument?.Pair == e.Trade.Pair);
 					if (chart == null)
 					{
 						chart = NewChart();
 						chart.SetInstrument(e.Trade.Pair, ETimeFrame.Hour1);
+						chart.DockControl.IsActiveContent = true;
 					}
 
 					// Create an edit order UI that places the trade when OK'd

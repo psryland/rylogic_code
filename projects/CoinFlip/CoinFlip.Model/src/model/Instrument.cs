@@ -171,7 +171,7 @@ namespace CoinFlip
 				m_price_data = value;
 				if (m_price_data != null)
 				{
-					m_pd_ref = m_price_data.RefToken();
+					m_pd_ref = m_price_data.RefToken(this);
 					m_price_data.DataChanged += HandleDataChanged;
 					m_price_data.DataSyncingChanged += HandleDataSyncingChanged;
 				}

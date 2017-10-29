@@ -109,16 +109,21 @@ namespace CoinFlip
 		}
 
 		/// <summary>Update the graphics for this indicator and add it to the scene</summary>
-		protected override void AddToSceneCore(View3d.Window window)
+		protected override void UpdateSceneCore(View3d.Window window)
 		{
-			base.AddToSceneCore(window);
+			base.UpdateSceneCore(window);
+			if (Gfx == null) return;
 
 			// Add to the scene
-			if (Gfx != null)
+			if (Visible)
 			{
 				// Graphics are created at the origin, position at XAxis.Max
 				Gfx.O2P = m4x4.Translation((float)Chart.XAxis.Min, (float)Price, ZOrder.Indicators);
 				window.AddObject(Gfx);
+			}
+			else
+			{
+				window.RemoveObject(Gfx);
 			}
 		}
 

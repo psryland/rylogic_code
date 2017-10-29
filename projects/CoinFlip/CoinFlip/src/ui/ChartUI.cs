@@ -159,6 +159,10 @@ namespace CoinFlip
 					m_instrument.DataChanged += HandleDataChanged;
 				}
 
+				// Refresh the combos
+				UpdateAvailablePairs();
+				UpdateAvailableTimeFrames();
+
 				// Handlers
 				void HandleDataChanged(object sender, DataEventArgs e)
 				{
@@ -390,10 +394,7 @@ namespace CoinFlip
 			ChartCtrl.ChartAreaSelect += (s,a) =>
 			{
 				// Area select zoom if control is held down
-				//todo var rect = new RectangleF(a.SelectionArea.MinX, a.SelectionArea.MinY, a.SelectionArea.SizeX, a.SelectionArea.SizeY);
-				//todo if (rect.Width > 0 && rect.Height > 0 && ModifierKeys == Keys.Shift)
-				//todo 	m_chart.ZoomArea(rect, false);
-
+				ChartCtrl.PositionChart(a.SelectionArea);
 				a.Handled = true;
 			};
 
@@ -403,7 +404,7 @@ namespace CoinFlip
 			#region Chart Graphics
 			GfxAsk = new View3d.Object($"*Line Ask {ChartSettings.AskColour.ToArgbU():X8} {{ 0 0 0 1 0 0 }}", file:false);
 			GfxBid = new View3d.Object($"*Line Ask {ChartSettings.BidColour.ToArgbU():X8} {{ 0 0 0 1 0 0 }}", file:false);
-			GfxUpdatingText = new View3d.Object("*Text { \"...updating...\" *CameraSpace *Anchor {+1 +1} *ForeColour {FF000000} *o2w{*pos{+1, +1, 0}} }", file:false);
+			GfxUpdatingText = new View3d.Object("*Text { \"...updating...\" *ScreenSpace *Anchor {+1 +1} *ForeColour {FF000000} *o2w{*pos{+1, +1, 0}} }", file:false);
 			#endregion
 		}
 
@@ -418,6 +419,9 @@ namespace CoinFlip
 
 			if (pair != null && time_frame != ETimeFrame.None)
 			{
+				if (!Model.FindCandleData(pair, time_frame, out pair, out time_frame))
+					return;
+
 				// Create the new instrument
 				Instrument = new Instrument($"Chart {pair.Name} {time_frame}", Model.PriceData[pair, time_frame]);
 
@@ -448,6 +452,8 @@ namespace CoinFlip
 				m_cb_pair.ComboBox.Items.Merge(AvailablePairs);
 				m_cb_pair.ComboBox.Items.Sort();
 			}
+			if (Instrument != null && m_cb_pair.ComboBox.SelectedItem == null)
+				m_cb_pair.ComboBox.SelectedItem = Instrument.Pair;
 		}
 		private int m_in_update_available_pairs;
 
@@ -472,8 +478,8 @@ namespace CoinFlip
 				m_cb_time_frame.ComboBox.Items.Merge(AvailableTimeFrames);
 				m_cb_time_frame.ComboBox.Items.Sort();
 			}
-			if (m_cb_time_frame.ComboBox.SelectedItem == null)
-				m_cb_time_frame.ComboBox.SelectedItem = ETimeFrame.None;
+			if (Instrument != null && (ETimeFrame)m_cb_time_frame.ComboBox.SelectedItem == ETimeFrame.None)
+				m_cb_time_frame.ComboBox.SelectedItem = Instrument.TimeFrame;
 		}
 		private int m_in_update_time_frames;
 
@@ -512,7 +518,7 @@ namespace CoinFlip
 			if (m_xaxis_label_mode == EXAxisLabelMode.CandleIndex)
 				return x.ToString();
 
-			if (Instrument == null)
+			if (Instrument == null || Instrument.Count == 0)
 				return string.Empty;
 
 			// The range of indices
@@ -806,8 +812,12 @@ namespace CoinFlip
 			// Include trades
 			if (ChartSettings.ShowPositions)
 			{
+				// Add 'thick' bounding boxes for the trades
 				foreach (var pos in AllPositions)
-					bb = BBox.Encompass(bb, new v4(bb.Centre.x, (float)(decimal)pos.PriceQ2B, ZOrder.Trades, 1f));
+				{
+					bb = BBox.Encompass(bb, new v4(bb.Centre.x, (float)(decimal)pos.PriceQ2B * 1.01f, ZOrder.Trades, 1f));
+					bb = BBox.Encompass(bb, new v4(bb.Centre.x, (float)(decimal)pos.PriceQ2B * 0.99f, ZOrder.Trades, 1f));
+				}
 			}
 
 			// Swell the box a little for margins

@@ -126,6 +126,12 @@ namespace CoinFlip
 	/// <summary>Odds and sods</summary>
 	public static class Misc
 	{
+		/// <summary>The smallest volume change</summary>
+		public const decimal VolumeEpsilon = 1e-8m;
+
+		/// <summary>The smallest price change</summary>
+		public const decimal PriceEpsilon = 1e-8m;
+
 		/// <summary>Regex pattern for log UIs</summary>
 		public static readonly Regex LogEntryPattern = new Regex(@"^(?<Tag>.*?)\|(?<Level>.*?)\|(?<Timestamp>.*?)\|(?<Message>.*)",RegexOptions.Singleline|RegexOptions.Multiline|RegexOptions.CultureInvariant|RegexOptions.Compiled);
 		public static readonly LogUI.HLPattern[] LogHighlighting = new[]
@@ -239,6 +245,15 @@ namespace CoinFlip
 			return 
 				tt == ETradeType.B2Q ? pair.Quote :
 				tt == ETradeType.Q2B ? pair.Base :
+				throw new Exception("Unknown trade type");
+		}
+
+		/// <summary>Return the 'base' volume for a trade in this trade direction</summary>
+		public static Unit<decimal> VolumeBase(this ETradeType tt, Unit<decimal> price_q2b, Unit<decimal>? volume_in = null, Unit<decimal>? volume_out = null)
+		{
+			return 
+				tt == ETradeType.B2Q ? (volume_in != null ? volume_in.Value             : volume_out != null ? volume_out.Value / price_q2b : throw new Exception("One of 'volume_in' or 'volume_out' must be given")) :
+				tt == ETradeType.Q2B ? (volume_in != null ? volume_in.Value / price_q2b : volume_out != null ? volume_out.Value             : throw new Exception("One of 'volume_in' or 'volume_out' must be given")) :
 				throw new Exception("Unknown trade type");
 		}
 

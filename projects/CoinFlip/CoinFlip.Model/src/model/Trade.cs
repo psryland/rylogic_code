@@ -21,51 +21,38 @@ namespace CoinFlip
 		/// <summary>Create a trade on 'pair' at 'price_q2b' using 'volume_base' or the default for CoinIn if not given</summary>
 		public Trade(ETradeType tt, TradePair pair, Unit<decimal> price_q2b, Unit<decimal>? volume_base = null)
 		{
-			var vol_base = volume_base ?? tt.DefaultTradeVolumeBase(pair, price_q2b);
-			var price = tt.Price(price_q2b);
-			var volume_in = tt.VolumeIn(vol_base, price_q2b);
-			var volume_out = tt.VolumeOut(vol_base, price_q2b);
-
 			// Check trade volumes and units
-			if (tt == ETradeType.B2Q)
-			{
-				if (volume_in < 0m._(pair.Base))
-					throw new Exception("Invalid trade volume in");
-				if (volume_out < 0m._(pair.Quote))
-					throw new Exception("Invalid trade volume out");
-				if (price < 0m._(pair.RateUnits))
-					throw new Exception("Invalid trade price");
-			}
-			if (tt == ETradeType.Q2B)
-			{
-				if (volume_in < 0m._(pair.Quote))
-					throw new Exception("Invalid trade volume in");
-				if (volume_out < 0m._(pair.Base))
-					throw new Exception("Invalid trade volume out");
-				if (price < 0m._(pair.RateUnitsInv))
-					throw new Exception("Invalid trade price");
-			}
+			var vol_base = volume_base ?? tt.DefaultTradeVolumeBase(pair, price_q2b);
+			if (vol_base < 0m._(pair.Base))
+				throw new Exception("Invalid trade volume");
+			if (price_q2b < 0m._(pair.RateUnits))
+				throw new Exception("Invalid trade price");
+			if (vol_base * price_q2b < 0m._(pair.Quote))
+				throw new Exception("Invalid trade volume (quote)");
 
-			TradeType = tt;
-			Pair      = pair;
-			VolumeIn  = volume_in;
-			VolumeOut = volume_out;
-			PriceQ2B  = price_q2b;
+			TradeType  = tt;
+			Pair       = pair;
+			VolumeBase = vol_base;
+			PriceQ2B   = price_q2b;
 		}
 
 		/// <summary>Copy construct a trade, with the volume scaled by 'scale'</summary>
 		public Trade(Trade rhs, decimal scale = 1m)
 		{
-			TradeType = rhs.TradeType;
-			Pair      = rhs.Pair;
-			VolumeIn  = rhs.VolumeIn * scale;
-			VolumeOut = rhs.VolumeOut * scale;
-			PriceQ2B  = rhs.PriceQ2B;
+			TradeType  = rhs.TradeType;
+			Pair       = rhs.Pair;
+			VolumeBase = rhs.VolumeBase * scale;
+			PriceQ2B   = rhs.PriceQ2B;
 		}
 
 		/// <summary>Create a trade based on an existing position</summary>
 		public Trade(Position pos)
 			:this(pos.TradeType, pos.Pair, pos.PriceQ2B, pos.VolumeBase)
+		{}
+
+		/// <summary>Copy constructor</summary>
+		public Trade(Trade rhs)
+			:this(rhs.TradeType, rhs.Pair, rhs.PriceQ2B, rhs.VolumeBase)
 		{}
 
 		/// <summary>Access the app model</summary>
@@ -82,11 +69,6 @@ namespace CoinFlip
 			{
 				if (m_trade_type == value) return;
 				m_trade_type = value;
-
-				// Swap
-				var tmp = VolumeIn;
-				VolumeIn = VolumeOut;
-				VolumeOut = tmp;
 			}
 		}
 		private ETradeType m_trade_type;
@@ -100,8 +82,7 @@ namespace CoinFlip
 				if (m_pair == value) return;
 				m_pair = value;
 				PriceQ2B = PriceQ2B._(value.RateUnits);
-				VolumeIn = VolumeIn._(TradeType.CoinIn(value));
-				VolumeOut = VolumeOut._(TradeType.CoinOut(value));
+				VolumeBase = VolumeBase._(value.Base);
 			}
 		}
 		private TradePair m_pair;
@@ -130,11 +111,22 @@ namespace CoinFlip
 			}
 		}
 
+		/// <summary>The base volume to trade</summary>
+		public Unit<decimal> VolumeBase { get; set; }
+
 		/// <summary>The volume being sold</summary>
-		public Unit<decimal> VolumeIn { get; set; }
+		public Unit<decimal> VolumeIn
+		{
+			get { return TradeType.VolumeIn(VolumeBase, PriceQ2B); }
+			set { VolumeBase = TradeType.VolumeBase(PriceQ2B, volume_in:value); }
+		}
 
 		/// <summary>The volume being bought</summary>
-		public Unit<decimal> VolumeOut { get; set; }
+		public Unit<decimal> VolumeOut
+		{
+			get { return TradeType.VolumeOut(VolumeBase, PriceQ2B); }
+			set { VolumeBase = TradeType.VolumeBase(PriceQ2B, volume_out:value); }
+		}
 
 		/// <summary>The volume being bought after commissions</summary>
 		public Unit<decimal> VolumeNett
@@ -266,6 +258,26 @@ namespace CoinFlip
 		{
 			return Pair.Exchange.CreateOrder(TradeType, Pair, VolumeIn, Price);
 		}
+
+		#region Equals
+		public bool Equals(Trade rhs)
+		{
+			return
+				rhs != null &&
+				TradeType == rhs.TradeType &&
+				Pair == rhs.Pair &&
+				Maths.Abs(PriceQ2B - rhs.PriceQ2B) < Misc.PriceEpsilon._(PriceQ2B) &&
+				Maths.Abs(VolumeBase - rhs.VolumeBase) < Misc.VolumeEpsilon._(VolumeBase);
+		}
+		public override bool Equals(object obj)
+		{
+			return Equals(obj as Trade);
+		}
+		public override int GetHashCode()
+		{
+			return new { TradeType, Pair, PriceQ2B, VolumeBase }.GetHashCode();
+		}
+		#endregion
 	}
 
 	/// <summary>The result of a submit trade request</summary>

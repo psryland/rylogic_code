@@ -16,6 +16,9 @@ namespace CoinFlip
 		/// <summary>If not null, then 'Trade' exists and this UI should modify the trade</summary>
 		private ulong? m_existing_order_id;
 
+		/// <summary>A copy of the trade we were handed to detect changes</summary>
+		private Trade m_initial;
+
 		#region UI Elements
 		private Button m_btn_ok;
 		private ImageList m_il_buttons;
@@ -56,6 +59,7 @@ namespace CoinFlip
 			Icon = (trade.Model.UI as Form)?.Icon;
 
 			m_existing_order_id = existing_order_id;
+			m_initial = new Trade(trade);
 			Trade = trade;
 			Chart = chart;
 			GfxTrade = new TradeIndicator(this){ Chart = chart.ChartCtrl };
@@ -236,6 +240,7 @@ namespace CoinFlip
 			};
 
 			// Ok button - not default to prevent 'Enter' causing trades to be made
+			m_btn_ok.Text = m_existing_order_id != null ? "Modify Order" : "Create Order";
 			m_btn_ok.Click += (s,a) =>
 			{
 				DialogResult = m_btn_ok.DialogResult;
@@ -292,7 +297,7 @@ namespace CoinFlip
 				validate.ToErrorDescription();
 
 			// Enable the 'OK' button if the trade is valid
-			m_btn_ok.Enabled = validate == EValidation.Valid;
+			m_btn_ok.Enabled = validate == EValidation.Valid && (m_existing_order_id == null || !Trade.Equals(m_initial));
 			m_btn_ok.ToolTip(m_tt, validate.ToErrorDescription());
 		}
 
@@ -313,17 +318,14 @@ namespace CoinFlip
 				if (price_q2b != null)
 				{
 					Trade.PriceQ2B = price_q2b.Value;
-					Trade.VolumeOut = Trade.VolumeIn * Trade.Price;
 				}
 				if (volume_in != null)
 				{
 					Trade.VolumeIn = volume_in.Value;
-					Trade.VolumeOut = Trade.VolumeIn * Trade.Price;
 				}
 				if (volume_out != null)
 				{
 					Trade.VolumeOut = volume_out.Value;
-					Trade.VolumeIn = Trade.VolumeOut / Trade.Price;
 				}
 
 				// Limit to the available balance
@@ -331,7 +333,6 @@ namespace CoinFlip
 				if (Trade.VolumeIn > bal)
 				{
 					Trade.VolumeIn = bal;
-					Trade.VolumeOut = Trade.VolumeIn * Trade.Price;
 				}
 
 				// Recreate the graphics
@@ -368,7 +369,7 @@ namespace CoinFlip
 			{
 				Trade.CreateOrder();
 			}
-			else
+			else if (m_initial != Trade)
 			{
 				Exchange.CancelOrder(Pair, m_existing_order_id.Value);
 				Trade.CreateOrder();
@@ -467,11 +468,12 @@ namespace CoinFlip
 			}
 
 			/// <summary>Add the graphics to the chart</summary>
-			protected override void AddToSceneCore(View3d.Window window)
+			protected override void UpdateSceneCore(View3d.Window window)
 			{
-				base.AddToSceneCore(window);
+				base.UpdateSceneCore(window);
+				if (Gfx == null) return;
 
-				if (Gfx != null)
+				if (Visible)
 				{
 					Gfx.Child("halo").Visible = Hovered;
 					Gfx.O2P =
@@ -479,6 +481,10 @@ namespace CoinFlip
 						m4x4.Scale((float)Chart.XAxis.Span, 1f, 1f, v4.Origin);
 
 					window.AddObject(Gfx);
+				}
+				else
+				{
+					window.RemoveObject(Gfx);
 				}
 			}
 

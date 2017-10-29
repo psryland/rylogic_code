@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using pr.common;
@@ -169,6 +170,12 @@ namespace CoinFlip
 		public string RateUnitsInv
 		{
 			get { return Base.Symbol != Quote.Symbol ? $"{Base}/{Quote}" : string.Empty; }
+		}
+
+		/// <summary>Returns the time frames for which candle data is available for this pair</summary>
+		public IEnumerable<ETimeFrame> CandleDataAvailable
+		{
+			get { return Exchange.CandleDataAvailable(this); }
 		}
 
 		/// <summary>Return the spot price (Quote/Base) for the given trade type</summary>

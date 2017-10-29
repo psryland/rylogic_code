@@ -20,9 +20,6 @@ namespace CoinFlip
 		//   and writes it into a DB.
 		// - Use 'Instrument' to view these data
 
-		/// <summary>Reference count of observers of this price data</summary>
-		private readonly RefCount m_ref;
-
 		public PriceData(Model model, TradePair pair, ETimeFrame time_frame)
 		{
 			try
@@ -32,9 +29,7 @@ namespace CoinFlip
 				TimeFrame = time_frame;
 
 				// Set up the ref count
-				m_ref = new RefCount(0);
-				m_ref.Referenced += (s,a) => UpdateThreadActive = !Model.BackTesting;
-				m_ref.ZeroCount += (s,a) => UpdateThreadActive = false;
+				m_ref = new List<object>();
 			
 				// The database filepath
 				DBFilepath = Misc.CacheDBFilePath(Pair.NameWithExchange);
@@ -176,12 +171,21 @@ namespace CoinFlip
 		private ETimeFrame m_time_frame;
 
 		/// <summary>Create a reference to this price data. When the RefCount != 0, this object collects price data</summary>
-		public Scope RefToken()
+		public Scope RefToken(object who)
 		{
 			return Scope.Create(
-				() => m_ref.AddRef(),
-				() => m_ref.ReleaseRef());
+				() =>
+				{
+					if (m_ref.Count == 0) UpdateThreadActive = !Model.BackTesting;
+					m_ref.Add(who);
+				},
+				() =>
+				{
+					m_ref.Remove(who);
+					if (m_ref.Count == 0) UpdateThreadActive = false;
+				});
 		}
+		private readonly List<object> m_ref;
 
 		/// <summary>The total number of candles in the database.</summary>
 		public int Count
