@@ -313,4 +313,77 @@ namespace pr
 			m_ptr = ptr;
 		}
 	};
+
+	// An iterator for moving over bytes interpreting as other types
+	struct ByteDataCPtr
+	{
+		uint8_t const* m_beg;
+		uint8_t const* m_end;
+		
+		ByteDataCPtr()
+			:ByteDataCPtr(nullptr, nullptr)
+		{}
+		template <int N> ByteDataCPtr(uint8_t const (&data)[N])
+			:ByteDataCPtr(&data[0], &data[0] + N)
+		{}
+		ByteDataCPtr(void const* beg, void const* end)
+			:m_beg(static_cast<uint8_t const*>(beg))
+			,m_end(static_cast<uint8_t const*>(end))
+		{}
+
+		// Interpret the current 'm_beg' pointer as 'Type'
+		template <typename Type> Type const& as() const
+		{
+			return *reinterpret_cast<Type const*>(m_beg);
+		}
+		
+		// Advance the pointer by the size of 'Type'
+		template <typename Type> Type const& read()
+		{
+			if (m_beg >= m_end)
+				throw std::out_of_range("buffer overrun");
+
+			auto& r = as<Type>();
+			m_beg += sizeof(Type);
+			return r;
+		}
+	};
+	struct ByteDataMPtr
+	{
+		uint8_t* m_beg;
+		uint8_t* m_end;
+		
+		ByteDataMPtr()
+			:ByteDataMPtr(nullptr, nullptr)
+		{}
+		template <int N> ByteDataMPtr(uint8_t (&data)[N])
+			:ByteDataMPtr(&data[0], &data[0] + N)
+		{}
+		ByteDataMPtr(void* beg, void* end)
+			:m_beg(static_cast<uint8_t*>(beg))
+			,m_end(static_cast<uint8_t*>(end))
+		{}
+
+		// Interpret the current 'm_beg' pointer as 'Type'
+		template <typename Type> Type& as() const
+		{
+			return *reinterpret_cast<Type*>(m_beg);
+		}
+		
+		// Advance the pointer by the size of 'Type'
+		template <typename Type> void write(Type const& value)
+		{
+			if (m_beg >= m_end)
+				throw std::out_of_range("buffer overrun");
+
+			as<Type>() = value;
+			m_beg += sizeof(Type);
+		}
+
+		// Convertable to const
+		operator ByteDataCPtr() const
+		{
+			return ByteDataCPtr(m_beg, m_end);
+		}
+	};
 }

@@ -79,6 +79,10 @@ PSOut main(PSIn In)
 	if (HasNormals)
 		Out.diff = Illuminate(m_global_light, In.ws_vert, In.ws_norm, m_cam.m_c2w[3], light_visible, Out.diff);
 
+	// If not alpha blending, clip alpha pixels
+	if (!HasAlpha)
+		clip(Out.diff.a - 0.5);	
+	
 	return Out;
 }
 #endif

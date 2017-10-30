@@ -55,7 +55,8 @@ namespace pr
 			cb.m_geom = iv4(
 				pr::AllSet(ddata.m_geom, EGeom::Norm),
 				pr::AllSet(ddata.m_geom, EGeom::Tex0),
-				0, 0);
+				ddata.m_sort_key.Group() > ESortGroup::PreAlpha ? 1 : 0,
+				0);
 		}
 
 		// Set the transform properties of a constants buffer

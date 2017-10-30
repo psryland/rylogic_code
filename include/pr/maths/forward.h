@@ -154,6 +154,7 @@ namespace pr
 		template <typename T> struct is_mat4 :std::integral_constant<bool, is_vec4<T>::value && is_vec4<typename is_vec<T>::elem_type>::value> {};
 
 		// Helper meta functions
+		template <typename T> using enable_if_enum = typename std::enable_if<std::is_enum<T>::value>::type;
 		template <typename T> using enable_if_arith = typename std::enable_if<std::is_arithmetic<T>::value>::type;
 		template <typename T> using enable_if_intg = typename std::enable_if<std::is_integral<T>::value>::type;
 		template <typename T> using enable_if_vec_cp = typename std::enable_if<is_vec_cp<T>::value>::type;

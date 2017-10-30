@@ -15,14 +15,38 @@
 namespace pr
 {
 	// Container traits
-	template <class T> struct container_traits
+	#pragma region Container Traits
+	template <typename T> struct container_traits
 	{
 		using value_type = typename T::value_type;
+		static bool const associative = false;
 	};
 	template <typename U> struct container_traits<U[]>
 	{
 		using value_type = U;
+		static bool const associative = false;
 	};
+	template <typename K, typename V> struct container_traits<std::unordered_map<K,V>>
+	{
+		using value_type = std::pair<K,V>;
+		static bool const associative = true;
+	};
+	template <typename K, typename V> struct container_traits<std::map<K,V>>
+	{
+		using value_type = std::pair<K,V>;
+		static bool const associative = true;
+	};
+	template <typename K> struct container_traits<std::unordered_set<K>>
+	{
+		using value_type = K;
+		static bool const associative = true;
+	};
+	template <typename K> struct container_traits<std::set<K>>
+	{
+		using value_type = K;
+		static bool const associative = true;
+	};
+	#pragma endregion
 
 	// Return the length of a container or array
 	template <typename TCont> size_t length(TCont const& cont)
@@ -64,6 +88,22 @@ namespace pr
 	{
 		auto iter = std::find(beg, end, item);
 		return iter != end;
+	}
+	template <typename TKey, typename TValue> inline bool contains(std::unordered_map<TKey, TValue> const& cont, TKey const& item)
+	{
+		return cont.count(item) != 0;
+	}
+	template <typename TKey, typename TValue> inline bool contains(std::map<TKey, TValue> const& cont, TKey const& item)
+	{
+		return cont.count(item) != 0;
+	}
+	template <typename TKey> inline bool contains(std::unordered_set<TKey> const& cont, TKey const& item)
+	{
+		return cont.count(item) != 0;
+	}
+	template <typename TKey> inline bool contains(std::set<TKey> const& cont, TKey const& item)
+	{
+		return cont.count(item) != 0;
 	}
 
 	// Return the lower bound
@@ -226,39 +266,7 @@ namespace pr
 	// Erase all elements from 'cont' that match 'pred'
 	template <typename TCont, typename Pred> inline void erase_if(TCont& cont, Pred pred)
 	{
-		auto end = std::remove_if(std::begin(cont), std::end(cont), pred);
-		cont.erase(end, std::end(cont));
-	}
-	template <typename TCont, typename Pred> inline void erase_if_unstable(TCont& cont, Pred pred)
-	{
-		auto beg = std::begin(cont);
-		auto end = std::end(cont);
-		for (;beg != end;)
-		{
-			if (!pred(*beg)) ++beg;
-			else *beg = std::move(*(--end));
-		}
-		cont.erase(end, std::end(cont));
-	}
-	template <typename TType, typename Pred> inline void erase_if(std::set<TType>& cont, Pred pred)
-	{
-		impl::associative_erase_if(cont, pred);
-	}
-	template <typename TType, typename Pred> inline void erase_if(std::unordered_set<TType>& cont, Pred pred)
-	{
-		impl::associative_erase_if(cont, pred);
-	}
-	template <typename TKey, typename TValue, typename Pred> inline void erase_if(std::unordered_map<TKey,TValue>& cont, Pred pred)
-	{
-		impl::associative_erase_if(cont, pred);
-	}
-	template <typename TKey, typename TValue, typename Pred> inline void erase_if(std::map<TKey,TValue>& cont, Pred pred)
-	{
-		impl::associative_erase_if(cont, pred);
-	}
-	namespace impl
-	{
-		template <typename TAssocCont, typename Pred> inline void associative_erase_if(TAssocCont& cont, Pred pred)
+		if constexpr (container_traits<TCont>::associative)
 		{
 			// 'std::remove_if' does not work on associative containers because they cannot be reordered.
 			for (auto i = std::begin(cont);;)
@@ -267,6 +275,29 @@ namespace pr
 				if (i == std::end(cont)) break;
 				i = cont.erase(i);
 			}
+		}
+		else
+		{
+			auto end = std::remove_if(std::begin(cont), std::end(cont), pred);
+			cont.erase(end, std::end(cont));
+		}
+	}
+	template <typename TCont, typename Pred> inline void erase_if_unstable(TCont& cont, Pred pred)
+	{
+		if constexpr (container_traits<TCont>::associative)
+		{
+			erase_if(cont, pred);
+		}
+		else
+		{
+			auto beg = std::begin(cont);
+			auto end = std::end(cont);
+			for (;beg != end;)
+			{
+				if (!pred(*beg)) ++beg;
+				else *beg = std::move(*(--end));
+			}
+			cont.erase(end, std::end(cont));
 		}
 	}
 
@@ -289,21 +320,76 @@ namespace pr
 	// Set intersection/union
 	template <typename TContOut, typename TCont0, typename TCont1> TContOut set_intersection(TCont0 const& cont0, TCont1 const& cont1)
 	{
-		TContOut out;
-		std::set_intersection(
-			std::begin(cont0), std::end(cont0),
-			std::begin(cont1), std::end(cont1),
-			std::back_inserter(out));
-		return std::move(out);
+		if constexpr (container_traits<TCont0>::associative)
+		{
+			return impl::set_intersection_associative<TContOut>(cont0, cont1);
+		}
+		else if constexpr (container_traits<TCont1>::associative)
+		{
+			return impl::set_intersection_associative<TContOut>(cont1, cont0);
+		}
+		else
+		{
+			return impl::set_intersection_ordered<TContOut>(cont0, cont1);
+		}
 	}
 	template <typename TContOut, typename TCont0, typename TCont1> TContOut set_union(TCont0 const& cont0, TCont1 const& cont1)
 	{
-		TContOut out;
-		std::set_union(
-			std::begin(cont0), std::end(cont0),
-			std::begin(cont1), std::end(cont1),
-			std::back_inserter(out));
-		return std::move(out);
+		if constexpr (container_traits<TCont0>::associative)
+		{
+			return impl::set_union_associative<TContOut>(cont0, cont1);
+		}
+		else if constexpr (container_traits<TCont1>::associative)
+		{
+			return impl::set_union_associative<TContOut>(cont1, cont0);
+		}
+		else
+		{
+			return impl::set_union_ordered<TContOut>(cont0, cont1);
+		}
+	}
+	namespace impl
+	{
+		template <typename TContOut, typename TOrderedCont0, typename TOrderedCont1> TContOut set_intersection_ordered(TOrderedCont0 const& cont0, TOrderedCont1 const& cont1)
+		{
+			TContOut out;
+			std::set_intersection(
+				std::begin(cont0), std::end(cont0),
+				std::begin(cont1), std::end(cont1),
+				std::back_inserter(out));
+			return std::move(out);
+		}
+		template <typename TContOut, typename TOrderedCont0, typename TOrderedCont1> TContOut set_union_ordered(TOrderedCont0 const& cont0, TOrderedCont1 const& cont1)
+		{
+			TContOut out;
+			std::set_union(
+				std::begin(cont0), std::end(cont0),
+				std::begin(cont1), std::end(cont1),
+				std::back_inserter(out));
+			return std::move(out);
+		}
+		template <typename TContOut, typename TAssocCont0, typename TCont1> TContOut set_intersection_associative(TAssocCont0 const& cont0, TCont1 const& cont1)
+		{
+			TContOut out;
+			auto write = std::back_inserter(out);
+			for (auto& item : cont1)
+			{
+				if (!contains(cont0, item)) continue;
+				*write++ = item;
+			}
+			return std::move(out);
+		}
+		template <typename TContOut, typename TAssocCont0, typename TCont1> TContOut set_union_associative(TAssocCont0 const& cont0, TCont1 const& cont1)
+		{
+			TContOut out(std::begin(cont0), std::end(cont0));
+			auto write = std::back_inserter(out);
+			for (auto& item : cont1)
+			{
+				if (contains(cont0, item)) continue;
+				*write++ = item;
+			}
+			return std::move(out);
+		}
 	}
 }
 

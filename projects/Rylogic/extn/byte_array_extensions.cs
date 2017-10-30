@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using pr.common;
+using pr.util;
 
 namespace pr.extn
 {
@@ -79,6 +80,12 @@ namespace pr.extn
 			var chars = new char[arr.Length / sizeof(char)];
 			Buffer.BlockCopy(arr, 0, chars, 0, arr.Length);
 			return new string(chars);
+		}
+
+		/// <summary>Convert a byte array to a hex string. e.g A3 FF 12 4D etc</summary>
+		public static string ToHexString(this byte[] arr, string sep = " ", string line_sep = "\n", int width = 16)
+		{
+			return Util.ToHexString(arr, sep, line_sep, width);
 		}
 	}
 }

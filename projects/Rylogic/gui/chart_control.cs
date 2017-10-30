@@ -1167,7 +1167,7 @@ namespace pr.gui
 				NoteFont                  = new Font("tahoma", 8, FontStyle.Regular);
 				SelectionColour           = Color.FromArgb(0x80, Color.DarkGray);
 				ShowGridLines             = true;
-				GridZOffset               = 0f;
+				GridZOffset               = 0.001f;
 				ShowAxes                  = true;
 				AntiAliasing              = true;
 				FillMode                  = View3d.EFillMode.Solid;
@@ -1813,7 +1813,7 @@ namespace pr.gui
 						XAxis.GridLines(out var min, out var max, out var step);
 
 						var o2w = cam.O2W;
-						o2w.pos = cam.FocusPoint - o2w * new v4((float)(wh.x/2 - min), wh.y/2, -Owner.Options.GridZOffset, 0);
+						o2w.pos = cam.FocusPoint - o2w * new v4((float)(wh.x/2 - min), wh.y/2, Owner.Options.GridZOffset, 0);
 
 						XAxis.GridLineGfx.O2WSet(o2w);
 						window.AddObject(XAxis.GridLineGfx);
@@ -1830,7 +1830,7 @@ namespace pr.gui
 						YAxis.GridLines(out var min, out var max, out var step);
 
 						var o2w = cam.O2W;
-						o2w.pos = cam.FocusPoint - o2w * new v4(wh.x/2, (float)(wh.y/2 - min), -Owner.Options.GridZOffset, 0);
+						o2w.pos = cam.FocusPoint - o2w * new v4(wh.x/2, (float)(wh.y/2 - min), Owner.Options.GridZOffset, 0);
 
 						YAxis.GridLineGfx.O2WSet(o2w);
 						window.AddObject(YAxis.GridLineGfx);
@@ -3345,7 +3345,7 @@ namespace pr.gui
 			public virtual bool Hovered
 			{
 				get { return m_impl_hovered; }
-				set { SetHoveredInternal(value, true); }
+				internal set { SetHoveredInternal(value, true); }
 			}
 			private bool m_impl_hovered;
 
@@ -4148,7 +4148,9 @@ namespace pr.gui
 			private View3d.Object CreateAreaSelect()
 			{
 				var ldr = Ldr.Rect("selection", Options.SelectionColour, AxisId.PosZ, 1f, 1f, true, pos:v4.Origin);
-				return new View3d.Object(ldr, false, Id, null);
+				var obj = new View3d.Object(ldr, false, Id, null);
+				obj.FlagsSet(View3d.EFlags.BBoxInvisible, true);
+				return obj;
 			}
 
 			/// <summary>Graphics for the resizing grab zones</summary>
@@ -4167,6 +4169,7 @@ namespace pr.gui
 			{
 				public ResizeGrabber(int corner) :base($"*Box resizer_{corner} {{5}}", false, Id, null)
 				{
+					FlagsSet(View3d.EFlags.BBoxInvisible, true);
 					switch (corner)
 					{
 					case 0:
@@ -4251,7 +4254,9 @@ namespace pr.gui
 				var str = horiz
 					? Ldr.Line("chart_cross_hair_h", col, new v4(-0.5f, 0, 0, 1f), new v4(+0.5f, 0, 0, 1f))
 					: Ldr.Line("chart_cross_hair_v", col, new v4(0, -0.5f, 0, 1f), new v4(0, +0.5f, 0, 1f));
-				return new View3d.Object(str, false, Id, null);
+				var obj = new View3d.Object(str, false, Id, null);
+				obj.FlagsSet(View3d.EFlags.BBoxInvisible, true);
+				return obj;
 			}
 
 			/// <summary>A line for measuring distances</summary>
@@ -4270,7 +4275,9 @@ namespace pr.gui
 			{
 				var col = Options.ChartBkColour.ToV4().Length3 > 0.5 ? 0xFFFFFFFF : 0xFF000000;
 				var str = Ldr.Line("tape_measure", col, new v4(0, 0, 0, 1f), new v4(0, 0, 1f, 1f));
-				return new View3d.Object(str, false, Id, null);
+				var obj = new View3d.Object(str, false, Id, null);
+				obj.FlagsSet(View3d.EFlags.BBoxInvisible, true);
+				return obj;
 			}
 
 			/// <summary>Update the chart tools when the options change</summary>
@@ -4794,7 +4801,9 @@ namespace pr.gui
 	/// <summary>Represents a data source that can be added to a chart control</summary>
 	public class ChartDataSeries :ChartControl.Element
 	{
-		private readonly List<Pt> m_data;
+		private List<Pt> m_data;
+		private List<GfxPiece> m_cache;
+		private PointStyleTextures m_point_textures;
 
 		public ChartDataSeries(string name, OptionsData options = null, int? capacity = null)
 			:this(Guid.NewGuid(), name, options, capacity)
@@ -4802,26 +4811,33 @@ namespace pr.gui
 		public ChartDataSeries(Guid id, string name, OptionsData options = null, int? capacity = null)
 			:base(id, m4x4.Identity, name)
 		{
-			m_data = new List<Pt>(capacity:capacity ?? 100);
+			Init();
 			Options = options ?? new OptionsData();
-			Sorted = true;
 		}
 		public ChartDataSeries(XElement node)
 			:base(node)
 		{
+			Init();
 			PlotType = node.Element(nameof(PlotType)).As(PlotType);
 			Options = node.Element(nameof(Options)).As(Options);
+		}
+		private void Init()
+		{
+			m_data = new List<Pt>();
+			m_cache = new List<GfxPiece>();
+			m_point_textures = new PointStyleTextures();
+		}
+		protected override void Dispose(bool disposing)
+		{
+			Util.DisposeAll(m_cache);
+			Util.Dispose(ref m_point_textures);
+			base.Dispose(disposing);
 		}
 		public override XElement ToXml(XElement node)
 		{
 			node.Add2(nameof(PlotType), PlotType, false);
 			node.Add2(nameof(Options), Options, false);
 			return base.ToXml(node);
-		}
-		protected override void Dispose(bool disposing)
-		{
-			Gfx = null;
-			base.Dispose(disposing);
 		}
 
 		/// <summary>The style of plot for this series</summary>
@@ -4839,70 +4855,254 @@ namespace pr.gui
 		/// <summary>Options for rendering this series</summary>
 		public OptionsData Options { get; set; }
 
-		/// <summary>Get/Set a flag to indicate whether the collection is expected to be sorted (defaults to true)</summary>
-		public virtual bool Sorted { get; set; }
-
-		/// <summary>View3d graphics object for the plot</summary>
-		public View3d.Object Gfx
+		/// <summary>Return the X-Axis range of the data</summary>
+		public RangeF RangeX
 		{
-			[DebuggerStepThrough] get { return m_gfx; }
-			set
-			{
-				if (m_gfx == value) return;
-				Util.Dispose(ref m_gfx);
-				m_gfx = value;
-			}
-		}
-		private View3d.Object m_gfx;
-
-		/// <summary>Update the graphics model for this data series</summary>
-		protected override void UpdateGfxCore()
-		{
-			// Create graphics for the data series
-			switch (PlotType)
-			{
-			default: throw new Exception($"Unsupported plot type: {PlotType}");
-			case EPlotType.Point:
-				{
-					CreatePointPlot();
-					break;
-				}
-			case EPlotType.Line:
-				{
-					CreateLinePlot();
-					break;
-				}
-			case EPlotType.Bar:
-				{
-					CreateBarPlot();
-					break;
-				}
-			}
-		}
-
-		private void CreateBarPlot()
-		{
-
-		}
-
-		private void CreateLinePlot()
-		{
-		}
-
-		private void CreatePointPlot()
-		{
+			get { return m_data.Count != 0 ? new RangeF(m_data.Front().x, m_data.Back().x) : RangeF.Invalid; }
 		}
 
 		/// <summary>Update the graphics for this indicator and add it to the scene</summary>
 		protected override void UpdateSceneCore(View3d.Window window)
 		{
-			if (Gfx == null)
-				return;
+			// Remove all pieces of the series data graphics
+			window.RemoveObjects(Id);
 
-			if (Visible)
-				window.AddObject(Gfx);
-			else
-				window.RemoveObject(Gfx);
+			// Add each graphics piece over the range
+			foreach (var piece in Get(Chart.XAxis.Min, Chart.XAxis.Max))
+				window.AddObject(piece.Gfx);
+		}
+
+		/// <summary>Get the series data graphics that spans the given x range</summary>
+		public IEnumerable<GfxPiece> Get(double xmin, double xmax)
+		{
+			// If there is no data, then there's no graphics
+			var range_x = RangeX;
+			if (range_x == RangeF.Invalid)
+				yield break;
+
+			// Get the range required for display
+			var range = new RangeF(
+				Math.Max(xmin, range_x.Beg),
+				Math.Min(xmax, range_x.End));
+
+			// Add each graphics piece over the range
+			for (var x = range.Beg; x < range.End;)
+			{
+				var piece = CacheGet(x);
+				yield return piece;
+				x = piece.Range.End;
+			}
+		}
+
+		/// <summary>Return the graphics piece that spans 'x'</summary>
+		public GfxPiece CacheGet(double x)
+		{
+			// Search the cache for the model that spans 'x'
+			var idx = m_cache.BinarySearch(p => p.Range.CompareTo(x));
+			if (idx < 0)
+			{
+				idx = ~idx;
+
+				// Get the X-range that is not cached
+				var missing = new RangeF(
+					idx != 0             ? m_cache[idx-1].Range.End : double.MinValue,
+					idx != m_cache.Count ? m_cache[idx  ].Range.Beg : double.MaxValue);
+
+				// There is no cached graphics for 'x', create it now
+				var piece = CreatePiece(x, missing);
+				m_cache.Insert(idx, piece);
+			}
+			return m_cache[idx];
+		}
+
+		/// <summary>Generate a piece of the graphics for 'x'</summary>
+		private GfxPiece CreatePiece(double x, RangeF missing)
+		{
+			Debug.Assert(missing.Contains(x));
+
+			// Find the nearest point in the data to 'x'
+			var idx = m_data.BinarySearch(pt => pt.x.CompareTo(x), find_insert_position:true);
+
+			// Convert 'missing' to an index range within the data
+			var idx_missing = new Range(
+				m_data.BinarySearch(pt => pt.x.CompareTo(missing.Beg), find_insert_position:true),
+				m_data.BinarySearch(pt => pt.x.CompareTo(missing.End), find_insert_position:true));
+
+			// Limit the size of 'idx_missing' to the block size
+			const int PieceBlockSize = 4096;
+			var idx_range = new Range(
+				Math.Max(idx_missing.Beg, idx - PieceBlockSize),
+				Math.Min(idx_missing.End, idx + PieceBlockSize));
+
+			// Create graphics over the data range 'idx_range'
+			switch (PlotType)
+			{
+			default: throw new Exception($"Unsupported plot type: {PlotType}");
+			case EPlotType.Point: return CreatePointPlot(idx_range);
+			case EPlotType.Line:  return CreateLinePlot(idx_range);
+			case EPlotType.Bar:   return CreateBarPlot(idx_range);
+			}
+		}
+
+		/// <summary>Create a point cloud plot</summary>
+		private GfxPiece CreatePointPlot(Range idx_range)
+		{
+			var n = idx_range.Sizei;
+
+			// Resize the geometry buffers
+			m_vbuf.Resize(n);
+			m_ibuf.Resize(n);
+			m_nbuf.Resize(1);
+
+			// Create the vertex/index data
+			var col = Options.Colour;
+			var x_range = RangeF.Invalid;
+			for (int i = 0, iend = n; i != iend; ++i)
+			{
+				var pt = m_data[i + idx_range.Begi];
+				m_vbuf[i] = new View3d.Vertex(new v4((float)pt.x, (float)pt.y, 0f, 1f), col);
+				m_ibuf[i] = (ushort)i;
+				x_range.Encompass(pt.x);
+			}
+
+			// Create a nugget for the points using the sprite shader
+			{
+				var mat = View3d.Material.New();
+				mat.m_diff_tex = m_point_textures[Options.PointStyle]?.Handle ?? IntPtr.Zero;
+				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.PointSpritesGS, new v2(Options.PointSize, Options.PointSize), false);
+				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.PointList, View3d.EGeom.Vert|View3d.EGeom.Colr|View3d.EGeom.Tex0, false, mat);
+			}
+
+			// Create the graphics
+			var gfx = new View3d.Object($"{Name}-[{idx_range.Beg},{idx_range.End})", 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray());
+			return new GfxPiece(gfx, x_range);
+		}
+
+		/// <summary>Create a line plot</summary>
+		private GfxPiece CreateLinePlot(Range idx_range)
+		{
+			var n = idx_range.Sizei;
+
+			// Resize the geometry buffers
+			m_vbuf.Resize(n + 1);
+			m_ibuf.Resize(n + 1);
+			m_nbuf.Resize(1 + (Options.PointsOnLinePlot ? 1 : 0));
+
+			// Create the vertex/index data
+			var col = Options.Colour;
+			var x_range = RangeF.Invalid;
+			for (int i = 0, iend = Math.Min(n + 1, m_data.Count - idx_range.Begi); i != iend; ++i)
+			{
+				var pt = m_data[i + idx_range.Begi];
+				m_vbuf[i] = new View3d.Vertex(new v4((float)pt.x, (float)pt.y, 0f, 1f), col);
+				m_ibuf[i] = (ushort)i;
+				x_range.Encompass(pt.x);
+			}
+
+			// Create a nugget for the list strip using the thick line shader
+			{
+				var mat = View3d.Material.New();
+				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.ThickLineListGS, Options.LineWidth);
+				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert|View3d.EGeom.Colr, false, mat);
+			}
+
+			// Create a nugget for the points (if visible)
+			if (Options.PointsOnLinePlot)
+			{
+				var mat = View3d.Material.New();
+				mat.m_diff_tex = m_point_textures[Options.PointStyle]?.Handle ?? IntPtr.Zero;
+				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.PointSpritesGS, new v2(Options.PointSize, Options.PointSize), false);
+				m_nbuf[1] = new View3d.Nugget(View3d.EPrim.PointList, View3d.EGeom.Vert|View3d.EGeom.Colr|View3d.EGeom.Tex0, 0, (uint)n, 0, (uint)n, false, true, mat);
+			}
+
+			// Create the graphics
+			var gfx = new View3d.Object($"{Name}-[{idx_range.Beg},{idx_range.End})", 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray());
+			return new GfxPiece(gfx, x_range);
+		}
+
+		/// <summary>Create a bar graph</summary>
+		private GfxPiece CreateBarPlot(Range idx_range)
+		{
+			var n = idx_range.Sizei;
+
+			// Resize the geometry buffers
+			m_vbuf.Resize(4 * n);
+			m_ibuf.Resize(6 * n);
+			m_nbuf.Resize(1);
+
+			// Create the vertex/index data
+			var vert = 0;
+			var indx = 0;
+			var col = Options.Colour;
+			var width = Options.BarWidth;
+			var x_range = RangeF.Invalid;
+			for (int i = 0, iend = n; i != iend; ++i)
+			{
+				// Get the points on either side of 'i'
+				var j = i + idx_range.Begi;
+				var pt_l = j != 0 ? m_data[j-1] : null;
+				var pt   = m_data[j];
+				var pt_r = j != m_data.Count-1 ? m_data[j+1] : null;
+
+				// Get the distance to the left and right of 'pt.x'
+				var l = pt_l != null ? 0.5f * width * (pt.x - pt_l.x) : 0f;
+				var r = pt_r != null ? 0.5f * width * (pt_r.x - pt.x) : 0f;
+				if (l == 0f) l = r;
+				if (r == 0f) r = l;
+
+				var v = vert;
+				m_vbuf[vert++] = new View3d.Vertex(new v4((float)(pt.x + r), (float)(pt.y >= 0f ? pt.y : 0f), 0f, 1f), col);
+				m_vbuf[vert++] = new View3d.Vertex(new v4((float)(pt.x - l), (float)(pt.y >= 0f ? pt.y : 0f), 0f, 1f), col);
+				m_vbuf[vert++] = new View3d.Vertex(new v4((float)(pt.x - l), (float)(pt.y >= 0f ? 0f : pt.y), 0f, 1f), col);
+				m_vbuf[vert++] = new View3d.Vertex(new v4((float)(pt.x + r), (float)(pt.y >= 0f ? 0f : pt.y), 0f, 1f), col);
+
+				m_ibuf[indx++] = (ushort)(v + 0);
+				m_ibuf[indx++] = (ushort)(v + 1);
+				m_ibuf[indx++] = (ushort)(v + 2);
+				m_ibuf[indx++] = (ushort)(v + 2);
+				m_ibuf[indx++] = (ushort)(v + 3);
+				m_ibuf[indx++] = (ushort)(v + 0);
+				x_range.Encompass(pt.x);
+			}
+
+			// Create a nugget for the tri list
+			{
+				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.TriList, View3d.EGeom.Vert|View3d.EGeom.Colr, false);
+			}
+
+			// Create the graphics
+			var gfx = new View3d.Object($"{Name}-[{idx_range.Beg},{idx_range.End})", 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray());
+			return new GfxPiece(gfx, x_range);
+		}
+
+		/// <summary>Graphics for a part of the series data</summary>
+		public class GfxPiece :IDisposable
+		{
+			public GfxPiece(View3d.Object gfx, RangeF range)
+			{
+				Gfx = gfx;
+				Range = range;
+			}
+			public void Dispose()
+			{
+				Gfx = null;
+			}
+
+			/// <summary>The model for the piece of the series data graphics</summary>
+			public View3d.Object Gfx
+			{
+				get { return m_gfx; }
+				private set
+				{
+					if (m_gfx == value) return;
+					Util.Dispose(ref m_gfx);
+					m_gfx = value;
+				}
+			}
+			private View3d.Object m_gfx;
+
+			/// <summary>The X-Axis span covered by this piece</summary>
+			public RangeF Range { get; private set; }
 		}
 
 		/// <summary>ToString</summary>
@@ -4910,8 +5110,6 @@ namespace pr.gui
 		{
 			return $"{Name} count={m_data.Count}";
 		}
-
-
 
 		/// <summary>Supported plot types</summary>
 		public enum EPlotType
@@ -4921,7 +5119,16 @@ namespace pr.gui
 			Bar,
 		}
 
+		/// <summary>Point styles</summary>
+		public enum EPointStyle
+		{
+			Square,
+			Circle,
+			Triangle,
+		}
+
 		/// <summary>A single point in the data series. A class so that it can be sub-classed</summary>
+		[DebuggerDisplay("{x} {y}")]
 		public class Pt
 		{
 			public Pt(double x_, double y_)
@@ -4982,7 +5189,6 @@ namespace pr.gui
 			public void Sort()
 			{
 				Data.Sort(Pt.CompareX);
-				m_owner.Sorted = true;
 			}
 
 			///<summary>
@@ -5051,12 +5257,81 @@ namespace pr.gui
 			Color.LightBlue , Color.LightSalmon , Color.LightGreen ,
 		};
 
+		/// <summary></summary>
+		private class PointStyleTextures :IDisposable
+		{
+			private readonly Dictionary<EPointStyle, View3d.Texture> m_map;
+			public PointStyleTextures()
+			{
+				m_map = new Dictionary<EPointStyle, View3d.Texture>();
+			}
+			public void Dispose()
+			{
+				foreach (var tex in m_map.Values)
+					tex.Dispose();
+
+				m_map.Clear();
+			}
+			public View3d.Texture this[EPointStyle style]
+			{
+				get
+				{
+					switch (style)
+					{
+					default: throw new Exception($"Unknown point style: {style}");
+					case EPointStyle.Square:
+						{
+							// No texture needed, squares a flat colour geometry
+							return null;
+						}
+					case EPointStyle.Circle:
+						{
+							// A circle texture
+							return m_map.GetOrAdd(style, s =>
+							{
+								var sz = 32U;
+								var tex = new View3d.Texture(sz,sz);
+								using (var surf = tex.LockSurface(true))
+								{
+									surf.Gfx.Clear(Color.Transparent);
+									surf.Gfx.FillEllipse(Brushes.White, new RectangleF(0,0,sz,sz));
+								}
+								return tex;
+							});
+						}
+					case EPointStyle.Triangle:
+						{
+							// An equilateral triangle within a square texture
+							return m_map.GetOrAdd(style, s =>
+							{
+								var sz = 128U;
+								var h0 = 0.5f * sz * (float)Math.Tan(Maths.DegreesToRadians(60));
+								var h1 = 0.5f * (sz - h0);
+								var tex = new View3d.Texture(sz,sz);
+								using (var surf = tex.LockSurface(true))
+								{
+									surf.Gfx.Clear(Color.Transparent);
+									surf.Gfx.FillPolygon(Brushes.White, new []{ new PointF(sz, h1), new PointF(0, h1), new PointF(0.5f*sz, h0+h1) });
+								}
+								return tex;
+							});
+						}
+					}
+				}
+			}
+		}
+
 		/// <summary>Rendering options for this data series</summary>
 		public class OptionsData :SettingsXml<OptionsData>
 		{
 			public OptionsData()
 			{
-				Colour = Color.Black;
+				Colour           = Color.Black;
+				PointStyle       = EPointStyle.Square;
+				PointSize        = 10f;
+				LineWidth        = 5f;
+				PointsOnLinePlot = true;
+				BarWidth         = 0.8f;
 				//Visible        = true;
 				//DrawData       = true;
 				//DrawErrorBars  = false;
@@ -5066,7 +5341,6 @@ namespace pr.gui
 				//LineColour     = Color.FromArgb(0xff, 0, 0, 0);
 				//LineWidth      = 1f;
 				//BarColour      = Color.FromArgb(0xff, 0x80, 0, 0);
-				//BarWidth       = 0.8f;
 				//ErrorBarColour = Color.FromArgb(0x80, 0xff, 0, 0);
 				//DrawMovingAvr  = false;
 				//MAWindowSize   = 10;
@@ -5075,24 +5349,60 @@ namespace pr.gui
 			}
 			public OptionsData(OptionsData rhs)
 			{
-				Colour = rhs.Colour;
+				Colour           = rhs.Colour;
+				PointStyle       = rhs.PointStyle;
+				PointSize        = rhs.PointSize;
+				LineWidth        = rhs.LineWidth;
+				PointsOnLinePlot = rhs.PointsOnLinePlot;
+				BarWidth         = rhs.BarWidth;
 			}
 
 			/// <summary>The base colour for this plot</summary>
-			public Color Colour
+			public Colour32 Colour
 			{
-				get { return get<Color>(nameof(Colour)); }
+				get { return get<Colour32>(nameof(Colour)); }
 				set { set(nameof(Colour), value); }
+			}
+
+			/// <summary>The style of points to draw</summary>
+			public EPointStyle PointStyle
+			{
+				get { return get<EPointStyle>(nameof(PointStyle)); }
+				set { set(nameof(PointStyle), value); }
+			}
+
+			/// <summary>The size of point data graphics</summary>
+			public float PointSize
+			{
+				get { return get<float>(nameof(PointSize)); }
+				set { set(nameof(PointSize), value); }
+			}
+
+			/// <summary>The width of the line in line plots</summary>
+			public float LineWidth
+			{
+				get { return get<float>(nameof(LineWidth)); }
+				set { set(nameof(LineWidth), value); }
+			}
+
+			/// <summary>True if point graphics should be drawn on line plots</summary>
+			public bool PointsOnLinePlot
+			{
+				get { return get<bool>(nameof(PointsOnLinePlot)); }
+				set { set(nameof(PointsOnLinePlot), value); }
+			}
+
+			/// <summary>The normalised bar width in bar plots</summary>
+			public float BarWidth
+			{
+				get { return get<float>(nameof(BarWidth)); }
+				set { set(nameof(BarWidth), value); }
 			}
 
 			//public bool       Visible        { get; set; }
 			//public bool       DrawData       { get; set; }
 			//public bool       DrawErrorBars  { get; set; }
 			//public EPlotType  PlotType       { get; set; }
-			//public Color      PointColour    { get; set; }
-			//public float      PointSize      { get; set; }
-			//public Color      LineColour     { get; set; }
-			//public float      LineWidth      { get; set; }
 			//public Color      BarColour      { get; set; }
 			//public float      BarWidth       { get; set; }
 			//public Color      ErrorBarColour { get; set; }

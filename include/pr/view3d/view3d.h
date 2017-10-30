@@ -59,18 +59,18 @@ extern "C"
 	using View3DColour = unsigned int;
 	using View3D_ReportErrorCB = void (__stdcall *)(void* ctx, wchar_t const* msg);
 
-	enum class EView3DResult
+	enum class EView3DResult :int
 	{
 		Success,
 		Failed,
 	};
-	enum class EView3DFillMode
+	enum class EView3DFillMode :int
 	{
 		Solid,
 		Wireframe,
 		SolidWire,
 	};
-	enum class EView3DCullMode
+	enum class EView3DCullMode :int
 	{
 		None,
 		Back,
@@ -94,19 +94,44 @@ extern "C"
 		TriList   = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
 		TriStrip  = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
 	};
-	enum class EView3DShader :int
+	enum class EView3DShaderVS :int
 	{
-		Standard,
-		ThickLineListGS,
+		Standard = 0,
 	};
-	enum class EView3DLight
+	enum class EView3DShaderPS :int
+	{
+		Standard = 0,
+	};
+	enum class EView3DShaderGS :int
+	{
+		Standard = 0,
+
+		// Point sprite data: v2(width,height) bool(depth)
+		PointSpritesGS,
+
+		// Thick line data: float(width)
+		ThickLineListGS,
+
+		// Arrow head: float(size)
+		ArrowHeadGS,
+	};
+	enum class EView3DRenderStep :int
+	{
+		Invalid = 0,
+		ForwardRender,
+		GBuffer,
+		DSLighting,
+		ShadowMap,
+		_number_of,
+	};
+	enum class EView3DLight :int
 	{
 		Ambient,
 		Directional,
 		Point,
 		Spot
 	};
-	enum class EView3DLogLevel
+	enum class EView3DLogLevel :int
 	{
 		Debug,
 		Info,
@@ -150,7 +175,7 @@ extern "C"
 		Zoom      = 1 << 2,
 		_bitwise_operators_allowed,
 	};
-	enum class EView3DCameraLockMask // pr::camera::ELockMask
+	enum class EView3DCameraLockMask :int // pr::camera::ELockMask
 	{
 		None           = 0,
 		TransX         = 1 << 0,
@@ -217,18 +242,32 @@ extern "C"
 	};
 	struct View3DMaterial
 	{
+		struct ShaderSet
+		{
+			EView3DShaderVS m_vs;
+			EView3DShaderGS m_gs;
+			EView3DShaderPS m_ps;
+			uint8_t m_vs_data[16];
+			uint8_t m_gs_data[16];
+			uint8_t m_ps_data[16];
+		};
+		struct ShaderMap
+		{
+			ShaderSet m_rstep[(int)EView3DRenderStep::_number_of];
+		};
+
 		View3DTexture m_diff_tex;
 		View3DTexture m_env_map;
-		EView3DShader m_shader;
-		int m_shader_data[4];
+		ShaderMap     m_smap;
 	};
 	struct View3DNugget
 	{
 		EView3DPrim    m_topo;
 		EView3DGeom    m_geom;
-		UINT32         m_v0, m_v1;  // Vertex buffer range. Set to 0,0 to mean the whole buffer
-		UINT32         m_i0, m_i1;  // Index buffer range. Set to 0,0 to mean the whole buffer
-		BOOL           m_has_alpha; // True of the nugget contains transparent elements
+		UINT32         m_v0, m_v1;       // Vertex buffer range. Set to 0,0 to mean the whole buffer
+		UINT32         m_i0, m_i1;       // Index buffer range. Set to 0,0 to mean the whole buffer
+		BOOL           m_has_alpha;      // True of the nugget contains transparent elements
+		BOOL           m_range_overlaps; // True if the nugget V/I range overlaps earlier nuggets
 		View3DMaterial m_mat;
 	};
 	struct View3DImageInfo

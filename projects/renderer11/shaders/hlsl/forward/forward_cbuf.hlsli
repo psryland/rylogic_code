@@ -35,7 +35,7 @@ cbuffer CBufFrame :cbuf_bank(b0)
 cbuffer CBufModel :cbuf_bank(b1)
 {
 	// Geometry type
-	int4 m_geom;  // x = 1 => has normals, y = 1 => has tex0, z,w = not used
+	int4 m_geom;  // x = 1 => has normals, y = 1 => has tex0, z => has alpha, w = not used
 
 	// Object transform
 	row_major float4x4 m_o2s; // object to screen

@@ -13,6 +13,7 @@ static const float TINY = 0.0001f;
 // Models
 #define HasNormals (m_geom.x == 1)
 #define HasTex0    (m_geom.y == 1)
+#define HasAlpha   (m_geom.z == 1)
 
 // Camera
 struct Camera

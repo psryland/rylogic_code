@@ -99,13 +99,18 @@ namespace pr
 		};
 		struct ToIV2
 		{
-			template <typename Char> static iv2 To(Char const* s, int radix = 10, Char** end = nullptr)
+			static iv2 To(v2 const& v)
+			{
+				return iv2(int(v.x), int(v.y));
+			}
+			template <typename Char>
+			static iv2 To(Char const* s, int radix = 10, Char** end = nullptr)
 			{
 				Char* e;
 				auto x = pr::To<int>(s, radix, &e);
 				auto y = pr::To<int>(e, radix, &e);
 				if (end) *end = e;
-				return iv2::make(x,y);
+				return iv2(x,y);
 			}
 			template <typename Str, typename Char = Str::value_type, typename = enable_if_str_class<Str>>
 			static iv2 To(Str const& s, Char** end = nullptr, int radix = 10)

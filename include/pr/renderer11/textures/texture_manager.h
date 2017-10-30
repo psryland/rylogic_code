@@ -85,9 +85,19 @@ namespace pr
 			Texture2DPtr CloneTexture2D(RdrId id, Texture2D const* existing, SamplerDesc const* sam_desc, char const* name);
 
 			// Return a pointer to an existing texture
-			Texture2D* FindTexture(RdrId id) const
+			Texture2DPtr FindTexture(RdrId id) const
 			{
-				return GetOrDefault(m_lookup_tex, id, (Texture2D*)nullptr);
+				return Texture2DPtr(GetOrDefault(m_lookup_tex, id, (Texture2D*)nullptr), true);
+			}
+
+			// Return a stock texture
+			Texture2DPtr FindStockTexture(EStockTexture stock);
+
+			// Convenience method for cached textures
+			template <typename Factory> Texture2DPtr GetTexture(RdrId id, Factory factory)
+			{
+				auto tex = FindTexture(id);
+				return tex != nullptr ? tex : factory();
 			}
 
 		private:
@@ -95,9 +105,6 @@ namespace pr
 			friend struct Texture2D;
 			friend struct TextureGdi;
 			void Delete(Texture2D* tex);
-
-			// Return a stock texture
-			Texture2D* FindStockTexture(EStockTexture stock);
 
 			// Create the basic textures that exist from startup
 			void CreateStockTextures();

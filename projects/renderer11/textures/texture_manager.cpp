@@ -108,7 +108,7 @@ namespace pr
 				// Return a clone of the stock texture
 				auto stock_tex = FindStockTexture(stock);
 				assert(stock_tex != nullptr);
-				return CloneTexture2D(id, stock_tex, &sam_desc, name);
+				return CloneTexture2D(id, stock_tex.get(), &sam_desc, name);
 
 			}
 
@@ -292,13 +292,13 @@ namespace pr
 			m_lookup_tex.erase(iter);
 		}
 
-		// Return a clone of a stock texture
-		Texture2D* TextureManager::FindStockTexture(EStockTexture stock)
+		// Return a stock texture
+		Texture2DPtr TextureManager::FindStockTexture(EStockTexture stock)
 		{
 			// See if the texture already exists
 			auto stock_tex = FindTexture(stock);
 			if (stock_tex != nullptr)
-				return stock_tex;
+				return std::move(stock_tex);
 
 			// If not, generate it
 			Texture2DPtr tex;
@@ -429,9 +429,8 @@ namespace pr
 
 			// Add the stock texture to the collection
 			assert(tex != nullptr);
-			stock_tex = tex.get();
 			m_stock_textures.push_back(tex);
-			return stock_tex;
+			return std::move(tex);
 		}
 
 		// Create the basic textures that exist from startup

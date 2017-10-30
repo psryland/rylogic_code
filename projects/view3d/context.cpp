@@ -49,21 +49,42 @@ namespace view3d
 		};
 		m_sources.OnStoreChanged += [&](ScriptSources&, ScriptSources::StoreChangedEventArgs const& args)
 		{
-			auto newdata = args.m_reason == ScriptSources::EReason::NewData;
-			auto removal = args.m_reason == ScriptSources::EReason::Removal;
-			for (auto& wnd : m_wnd_cont)
+			switch (args.m_reason)
 			{
-				// For each window, get the intersection of the window's context ids with the ids that have changed.
-				auto ids = pr::set_intersection<GuidCont>(wnd->m_guids, args.m_context_ids);
-				if (ids.empty()) continue;
+			default:
+				throw std::exception("Unknown store changed reason");
+			
+			// On NewData, do nothing. Callers will add objects to windows as they see fit.
+			case ScriptSources::EReason::NewData:
+				break;
 
-				// If not new data added, remove old objects
-				if (!newdata)
-					wnd->RemoveObjectsById(ids.data(), int(ids.size()), false, !removal);
+			// On Removal, do nothing. Removed objects should already have been removed from the windows.
+			case ScriptSources::EReason::Removal:
+				break;
 
-				// If reloading or adding new data, add objects from the context ids
-				if (!removal)
-					wnd->AddObjectsById(ids.data(), int(ids.size()), false);
+			// On Reload, for each object currently in the window and in the set of affected context ids, remove and re-add.
+			case ScriptSources::EReason::Reload:
+				{
+				//	for (auto& wnd : m_wnd_cont)
+				//	{
+				//		// Get the intersection of the window's context ids with the ids that have changed.
+				//		auto ids = pr::set_intersection<GuidCont>(wnd->m_guids, args.m_context_ids);
+				//		if (ids.empty()) continue;
+
+				//		
+
+				//// If not new data added, remove old objects
+				//if (!newdata)
+				//	wnd->RemoveObjectsById(ids.data(), int(ids.size()), false, !removal);
+
+				//// If reloading or adding new data, add objects from the context ids
+				//if (!removal)
+				//	wnd->AddObjectsById(ids.data(), int(ids.size()), false);
+
+				//	}
+					// Do what?
+					break;
+				}
 			}
 
 			OnSourcesChanged.Raise(static_cast<ESourcesChangedReason>(args.m_reason), false);
@@ -170,18 +191,65 @@ namespace view3d
 			nug.m_irange = n->m_i0 != n->m_i1 ? Range(n->m_i0, n->m_i1) : Range(0, icount);
 			nug.m_geometry_has_alpha = n->m_has_alpha != 0;
 			nug.m_tex_diffuse = Texture2DPtr(n->m_mat.m_diff_tex, true);
-			switch (n->m_mat.m_shader)
+			nug.m_range_overlaps = n->m_range_overlaps;
+		
+			for (int rs = int(ERenderStep::Invalid)+1; rs != int(ERenderStep::NumberOf); ++rs)
 			{
-			default: break;
-			case EView3DShader::ThickLineListGS:
-				{
-					auto line_width = n->m_mat.m_shader_data[0];
-					PR_ASSERT(PR_DBG, line_width != 0, "The thick line shader requires a non-zero line width");
-					
-					auto shdr = m_rdr.m_shdr_mgr.GetShader<pr::rdr::ThickLineListGS>(pr::FmtS("thick_line_%f", line_width), EStockShader::ThickLineListGS);
-					shdr->m_width = static_cast<float>(line_width);
-					nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
-					break;
+				auto& rstep0 = n->m_mat.m_smap.m_rstep[rs];
+				auto& rstep1 = nug.m_smap[static_cast<ERenderStep>(rs)];
+				{// VS
+					switch (rstep0.m_vs)
+					{
+					default: throw std::exception("Unknown vertex shader");
+					case EView3DShaderVS::Standard: break;
+					}
+				}
+				{// PS
+					switch (rstep0.m_ps)
+					{
+					default: throw std::exception("Unknown pixel shader");
+					case EView3DShaderPS::Standard: break;
+					}
+				}
+				{// GS
+					switch (rstep0.m_gs)
+					{
+					default: throw std::exception("Unknown geometry shader");
+					case EView3DShaderGS::Standard: break;
+					case EView3DShaderGS::PointSpritesGS:
+						{
+							auto ptr = pr::ByteDataCPtr(rstep0.m_gs_data);
+							auto point_size = ptr.read<pr::v2>();
+							auto depth = ptr.read<bool>();
+
+							auto id = pr::hash::Hash("LDrawPointSprites", point_size, depth);
+							auto shdr = m_rdr.m_shdr_mgr.GetShader<PointSpritesGS>(id, EStockShader::PointSpritesGS);
+							shdr->m_size = point_size;
+							shdr->m_depth = depth;
+							rstep1.m_gs = shdr;
+							break;
+						}
+					case EView3DShaderGS::ThickLineListGS:
+						{
+							auto ptr = pr::ByteDataCPtr(rstep0.m_gs_data);
+							auto line_width = ptr.read<float>();
+							auto id = pr::hash::Hash("LDrawThickLine", line_width);
+							auto shdr = m_rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id, EStockShader::ThickLineListGS);
+							shdr->m_width = line_width;
+							rstep1.m_gs = shdr;
+							break;
+						}
+					case EView3DShaderGS::ArrowHeadGS:
+						{
+							auto ptr = pr::ByteDataCPtr(rstep0.m_gs_data);
+							auto size = ptr.read<float>();
+							auto id = pr::hash::Hash("LDrawArrowHead", size);
+							auto shdr = m_rdr.m_shdr_mgr.GetShader<ArrowHeadGS>(id, EStockShader::ArrowHeadGS);
+							shdr->m_size = size;
+							rstep1.m_gs = shdr;
+							break;
+						}
+					}
 				}
 			}
 			ngt.push_back(nug);

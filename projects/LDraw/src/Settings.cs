@@ -199,7 +199,6 @@ namespace LDraw
 			Options.ChartBkColour    = Color_.FromArgb(0xFF808080);
 			Options.XAxis.GridColour = Color_.FromArgb(0xFF8C8C8C);
 			Options.YAxis.GridColour = Color_.FromArgb(0xFF8C8C8C);
-			Options.GridZOffset      = -0.001f;
 
 			var light = new View3d.Light(0x00000000, 0xFF808080, 0xFFFFFFFF, 1000, direction:new v4(-1,-1,-10, 0)) { CameraRelative = true };
 			Light = light.ToXml(new XElement(nameof(View3d.Light)));

@@ -90,11 +90,11 @@ namespace pr
 	}
 
 	// Returns a bit mask containing only the lowest bit of 'n'
-	template <typename T, typename = typename std::enable_if<std::is_integral<T>::value>::type> inline T LowBit(T n)
+	template <typename T, typename = maths::enable_if_intg<T>> inline T LowBit(T n)
 	{
 		return n - ((n - 1) & n);
 	}
-	template <typename T, typename = typename std::enable_if<std::is_enum<T>::value>::type> inline T LowBit(T n, int = 0)
+	template <typename T, typename = maths::enable_if_enum<T>> inline T LowBit(T n, int = 0)
 	{
 		auto x = static_cast<std::underlying_type<T>::type>(n);
 		return static_cast<T>(LowBit(x));
@@ -144,6 +144,20 @@ namespace pr
 	template <typename T> constexpr inline bool IsPowerOfTwo(T n)
 	{
 		return ((n - 1) & n) == 0;
+	}
+
+	// Return the next highest power of two greater than 'n'
+	template <typename T, typename = maths::enable_if_intg<T>> inline T PowerOfTwoGreaterThan(T n)
+	{
+		n--;
+		n |= n >> 1;
+		n |= n >> 2;
+		n |= n >> 4;
+		if constexpr (sizeof(T) > 1) n |= n >> 8;
+		if constexpr (sizeof(T) > 2) n |= n >> 16;
+		if constexpr (sizeof(T) > 4) n |= n >> 32;
+		n++;
+		return n;
 	}
 
 	// Returns the number of set bits in 'n'
@@ -303,6 +317,12 @@ namespace pr
 				PR_CHECK(LowBitIndex(mask), 2U);
 				PR_CHECK(LowBit(mask), 4);
 				PR_CHECK(HighBit(mask), 0x8000000000000000ULL);
+			}
+			{
+				PR_CHECK(PowerOfTwoGreaterThan(0x12345678), 0x20000000);
+				PR_CHECK(PowerOfTwoGreaterThan(0x9876543210UL), 0x10000000000UL);
+				PR_CHECK(PowerOfTwoGreaterThan(uint8_t(0x9a)), uint8_t(0x00));
+				PR_CHECK(PowerOfTwoGreaterThan(uint16_t(0x9a)), uint16_t(0x100));
 			}
 			{
 				auto a = uint8(0b10110101);

@@ -145,6 +145,15 @@ namespace pr.common
 			return Beg <= rng.Beg && rng.End <= End;
 		}
 
+		/// <summary>Return -1 if 'value' is less than Beg, 0 if 'value' in [Beg,End), +1 if >= End</summary>
+		[Pure] public int CompareTo(long value)
+		{
+			// -1 if this range is less than 'value'
+			// +1 if this range is greater than 'value'
+			// Otherwise 0.
+			return End <= value ? -1 : Beg > value ? +1 : 0;
+		}
+
 		/// <summary>Grow the bounds of this range to include 'x'</summary>
 		public void Encompass(long value)
 		{
@@ -378,6 +387,15 @@ namespace pr.common
 			return Beg <= rng.Beg && rng.End <= End;
 		}
 
+		/// <summary>Compare this range to the given value</summary>
+		[Pure] public int CompareTo(double value)
+		{
+			// -1 if this range is less than 'value'
+			// +1 if this range is greater than 'value'
+			// Otherwise 0.
+			return End <= value ? -1 : Beg > value ? +1 : 0;
+		}
+
 		/// <summary>Grow the bounds of this range to include 'value'</summary>
 		public void Encompass(double value)
 		{
@@ -608,6 +626,17 @@ namespace pr.common
 			Debug.Assert(Size.CompareTo(default(T)) >= 0, "this range is inside out");
 			Debug.Assert(rng.Size.CompareTo(default(T)) >= 0, "'rng' is inside out");
 			return Beg.CompareTo(rng.Beg) <= 0 && rng.End.CompareTo(End) <= 0;
+		}
+
+		/// <summary>Return -1 if 'value' is less than Beg, 0 if 'value' in [Beg,End), +1 if >= End</summary>
+		[Pure] public int CompareTo(T value)
+		{
+			// -1 if this range is less than 'value'
+			// +1 if this range is greater than 'value'
+			// Otherwise 0.
+			return
+				End.CompareTo(value) <= 0 ? -1 :
+				Beg.CompareTo(value) >  0 ? +1 : 0;
 		}
 
 		/// <summary>Grow the bounds of this range to include 'value'</summary>

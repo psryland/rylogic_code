@@ -41,15 +41,15 @@
 		using ut = typename std::underlying_type<TEnum>::type;
 		return TEnum(ut(lhs) ^ ut(rhs));
 	}
-	template <typename TEnum, typename = enable_if_has_bitops<TEnum>> inline TEnum& operator |= (TEnum& lhs, TEnum rhs)
+	template <typename TEnum, typename = enable_if_has_bitops<TEnum>> constexpr TEnum& operator |= (TEnum& lhs, TEnum rhs)
 	{
 		return lhs = (lhs | rhs);
 	}
-	template <typename TEnum, typename = enable_if_has_bitops<TEnum>> inline TEnum& operator &= (TEnum& lhs, TEnum rhs)
+	template <typename TEnum, typename = enable_if_has_bitops<TEnum>> constexpr TEnum& operator &= (TEnum& lhs, TEnum rhs)
 	{
 		return lhs = (lhs & rhs);
 	}
-	template <typename TEnum, typename = enable_if_has_bitops<TEnum>> inline TEnum& operator ^= (TEnum& lhs, TEnum rhs)
+	template <typename TEnum, typename = enable_if_has_bitops<TEnum>> constexpr TEnum& operator ^= (TEnum& lhs, TEnum rhs)
 	{
 		return lhs = (lhs ^ rhs);
 	}
@@ -63,28 +63,28 @@
 		using ut = typename std::underlying_type<TEnum>::type;
 		return TEnum(ut(lhs) >> rhs);
 	}
-	template <typename TEnum, typename T, typename = enable_if_has_bitops<TEnum>> inline TEnum& operator <<= (TEnum& lhs, T rhs)
+	template <typename TEnum, typename T, typename = enable_if_has_bitops<TEnum>> constexpr TEnum& operator <<= (TEnum& lhs, T rhs)
 	{
 		return lhs = (lhs << rhs);
 	}
-	template <typename TEnum, typename T, typename = enable_if_has_bitops<TEnum>> inline TEnum& operator >>= (TEnum& lhs, T rhs)
+	template <typename TEnum, typename T, typename = enable_if_has_bitops<TEnum>> constexpr TEnum& operator >>= (TEnum& lhs, T rhs)
 	{
 		return lhs = (lhs >> rhs);
 	}
-	template <typename TEnum, typename T, typename = enable_if_has_bitops<TEnum>> inline bool operator == (TEnum lhs, T rhs)
+	template <typename TEnum, typename T, typename = enable_if_has_bitops<TEnum>> constexpr bool operator == (TEnum lhs, T rhs)
 	{
 		using ut = typename std::underlying_type<TEnum>::type;
 		return ut(lhs) == ut(rhs);
 	}
-	template <typename TEnum, typename T, typename = enable_if_has_bitops<TEnum>> inline bool operator == (T lhs, TEnum rhs)
+	template <typename TEnum, typename T, typename = enable_if_has_bitops<TEnum>> constexpr bool operator == (T lhs, TEnum rhs)
 	{
 		return rhs == lhs;
 	}
-	template <typename TEnum, typename T, typename = enable_if_has_bitops<TEnum>> inline bool operator != (TEnum lhs, T rhs)
+	template <typename TEnum, typename T, typename = enable_if_has_bitops<TEnum>> constexpr bool operator != (TEnum lhs, T rhs)
 	{
 		return !(lhs == rhs);
 	}
-	template <typename TEnum, typename T, typename = enable_if_has_bitops<TEnum>> inline bool operator != (T lhs, TEnum rhs)
+	template <typename TEnum, typename T, typename = enable_if_has_bitops<TEnum>> constexpr bool operator != (T lhs, TEnum rhs)
 	{
 		return rhs != lhs;
 	}

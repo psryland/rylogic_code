@@ -637,11 +637,11 @@ namespace pr
 	}
 
 	// Scalar functions
-	template <typename T> inline T DegreesToRadians(T degrees)
+	template <typename T> constexpr inline T DegreesToRadians(T degrees)
 	{
 		return T(degrees * maths::tau_by_360);
 	}
-	template <typename T> inline T RadiansToDegrees(T radians)
+	template <typename T> constexpr inline T RadiansToDegrees(T radians)
 	{
 		return T(radians * maths::E60_by_tau);
 	}

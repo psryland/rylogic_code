@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -11,7 +12,6 @@ using System.Windows.Forms;
 using System.Windows.Threading;
 using System.Xml.Linq;
 using pr.common;
-using pr.container;
 using pr.extn;
 using pr.maths;
 using pr.util;
@@ -60,11 +60,30 @@ namespace pr.gfx
 			TriList   = 4,
 			TriStrip  = 5,
 		}
-		public enum EShader
+		public enum EShaderVS
 		{
-			Standard,
-			ThickLineListGS,
+			Standard = 0,
 		}
+		public enum EShaderPS
+		{
+			Standard = 0,
+		}
+		public enum EShaderGS
+		{
+			Standard = 0,
+			PointSpritesGS,
+			ThickLineListGS,
+			ArrowHeadGS,
+		}
+		public enum ERenderStep :int
+		{
+			Invalid = 0,
+			ForwardRender,
+			GBuffer,
+			DSLighting,
+			ShadowMap,
+			_number_of,
+		};
 		public enum EFormat :uint
 		{
 			DXGI_FORMAT_UNKNOWN	                    = 0,
@@ -371,22 +390,92 @@ namespace pr.gfx
 			public override string ToString()                 { return "V:<{0}> C:<{1}>".Fmt(m_pos, m_col.ToString("X8")); }
 		}
 
-		[Serializable]
-		[StructLayout(LayoutKind.Sequential)]
+		[Serializable, StructLayout(LayoutKind.Sequential)]
 		public struct Material
 		{
-			public HTexture m_diff_tex;
-			public HTexture m_env_map;
-			public EShader  m_shader;
-			[MarshalAs(UnmanagedType.ByValArray, SizeConst=4)] public int[] m_shader_data;
-
-			public Material(HTexture? diff_tex = null, HTexture? env_map = null, EShader? shader = null, int[] shader_data = null)
+			[DebuggerDisplay("{Description,nq}"), Serializable, StructLayout(LayoutKind.Sequential)] public struct ShaderSet
 			{
-				m_diff_tex    = diff_tex ?? HTexture.Zero;
-				m_env_map     = env_map ?? HTexture.Zero;
-				m_shader      = shader ?? EShader.Standard;
-				m_shader_data = shader_data ?? new int[4];
-				Debug.Assert(m_shader_data.Length == 4);
+				public ShaderSet(EShaderVS vs, EShaderGS gs, EShaderPS ps)
+				{
+					m_vs = vs;
+					m_gs = gs;
+					m_ps = ps;
+					m_vs_data = new byte[16];
+					m_gs_data = new byte[16];
+					m_ps_data = new byte[16];
+				}
+
+				public EShaderVS m_vs;
+				public EShaderGS m_gs;
+				public EShaderPS m_ps;
+
+				[MarshalAs(UnmanagedType.ByValArray, SizeConst=16)] public byte[] m_vs_data;
+				[MarshalAs(UnmanagedType.ByValArray, SizeConst=16)] public byte[] m_gs_data;
+				[MarshalAs(UnmanagedType.ByValArray, SizeConst=16)] public byte[] m_ps_data;
+
+				/// <summary>Description</summary>
+				public string Description
+				{
+					get { return $"VS={m_vs} GS={m_gs} PS={m_ps}"; }
+				}
+			}
+			[DebuggerDisplay("Smap"), Serializable, StructLayout(LayoutKind.Sequential)] public struct ShaderMap
+			{
+				public static ShaderMap New()
+				{
+					return new ShaderMap{ m_rstep = Array_.New((int)ERenderStep._number_of, i => new ShaderSet()) };
+				}
+
+				/// <summary>Get the shader set for the given render step</summary>
+				[MarshalAs(UnmanagedType.ByValArray, SizeConst=(int)ERenderStep._number_of)]
+				public ShaderSet[] m_rstep;
+			}
+
+			public static Material New()
+			{
+				return new Material(null);
+			}
+			public Material(HTexture? diff_tex = null, HTexture? env_map = null, ShaderMap? shdr_map = null)
+			{
+				m_diff_tex = diff_tex ?? HTexture.Zero;
+				m_env_map  = env_map ?? HTexture.Zero;
+				m_smap     = shdr_map ?? ShaderMap.New();
+			}
+
+			/// <summary>Material diffuse texture</summary>
+			public HTexture m_diff_tex;
+
+			/// <summary>Material environment map</summary>
+			public HTexture m_env_map;
+
+			/// <summary>Shader overrides</summary>
+			public ShaderMap m_smap;
+
+			/// <summary>Set the shader to use along with the parameters it requires</summary>
+			public void Use(ERenderStep rstep, EShaderVS shdr, params object[] args)
+			{
+				m_smap.m_rstep[(int)rstep].m_vs = shdr;
+				m_smap.m_rstep[(int)rstep].m_vs_data = GetData(args);
+			}
+			public void Use(ERenderStep rstep, EShaderGS shdr, params object[] args)
+			{
+				m_smap.m_rstep[(int)rstep].m_gs = shdr;
+				m_smap.m_rstep[(int)rstep].m_gs_data = GetData(args);
+			}
+			public void Use(ERenderStep rstep, EShaderPS shdr, params object[] args)
+			{
+				m_smap.m_rstep[(int)rstep].m_ps = shdr;
+				m_smap.m_rstep[(int)rstep].m_ps_data = GetData(args);
+			}
+			private byte[] GetData(params object[] args)
+			{
+				using (var ms = new MemoryStream())
+				{
+					Util.Serialise(ms, args);
+					for (;ms.Length < 16;) ms.WriteByte(0);
+					ms.Seek(0, SeekOrigin.Begin);
+					return ms.ToArray();
+				}
 			}
 		}
 
@@ -396,33 +485,39 @@ namespace pr.gfx
 		{
 			public EPrim m_topo;
 			public EGeom m_geom;
-			public uint m_v0, m_v1;  // Vertex buffer range. Set to 0,0 to mean the whole buffer
-			public uint m_i0, m_i1;  // Index buffer range. Set to 0,0 to mean the whole buffer
-			public bool m_has_alpha; // True of the nugget contains transparent elements
+			public uint m_v0, m_v1;       // Vertex buffer range. Set to 0,0 to mean the whole buffer
+			public uint m_i0, m_i1;       // Index buffer range. Set to 0,0 to mean the whole buffer
+			public bool m_has_alpha;      // True of the nugget contains transparent elements
+			public bool m_range_overlaps; // True if the nugget V/I range overlaps earlier nuggets
 			public Material m_mat;
 
 			public Nugget(EPrim topo, EGeom geom)
 				:this(topo, geom, false)
 			{}
 			public Nugget(EPrim topo, EGeom geom, bool has_alpha)
-				:this(topo, geom, 0, 0, 0, 0, has_alpha, default(Material))
+				:this(topo, geom, 0, 0, 0, 0, has_alpha, false, null)
+			{}
+			public Nugget(EPrim topo, EGeom geom, bool has_alpha, Material? mat)
+				:this(topo, geom, 0, 0, 0, 0, has_alpha, false, mat)
 			{}
 			public Nugget(EPrim topo, EGeom geom, uint v0, uint v1, uint i0, uint i1)
 				:this(topo, geom, v0, v1, i0, i1, false)
 			{}
 			public Nugget(EPrim topo, EGeom geom, uint v0, uint v1, uint i0, uint i1, bool has_alpha)
-				:this(topo, geom, v0, v1, i0, i1, has_alpha, default(Material))
+				:this(topo, geom, v0, v1, i0, i1, has_alpha, false, null)
 			{}
-			public Nugget(EPrim topo, EGeom geom, uint v0, uint v1, uint i0, uint i1, bool has_alpha, Material mat)
+			public Nugget(EPrim topo, EGeom geom, uint v0, uint v1, uint i0, uint i1, bool has_alpha, bool range_overlaps, Material? mat)
 			{
-				m_topo      = topo;
-				m_geom      = geom;
-				m_v0        = v0;
-				m_v1        = v1;
-				m_i0        = i0;
-				m_i1        = i1;
-				m_has_alpha = has_alpha;
-				m_mat       = mat;
+				Debug.Assert(mat == null || mat.Value.m_smap.m_rstep != null, "Don't use default(Material)");
+				m_topo           = topo;
+				m_geom           = geom;
+				m_v0             = v0;
+				m_v1             = v1;
+				m_i0             = i0;
+				m_i1             = i1;
+				m_has_alpha      = has_alpha;
+				m_range_overlaps = range_overlaps;
+				m_mat            = mat ?? new Material(null);
 			}
 		}
 
@@ -1256,7 +1351,7 @@ namespace pr.gfx
 			/// a source and destination texture at the same time</summary>
 			public void RenderTo(Texture render_target, Texture depth_buffer = null)
 			{
-				View3D_RenderTo(m_handle, render_target.m_handle, depth_buffer != null ? depth_buffer.m_handle : IntPtr.Zero);
+				View3D_RenderTo(m_handle, render_target.Handle, depth_buffer != null ? depth_buffer.Handle : IntPtr.Zero);
 			}
 
 			/// <summary>Get/Set the size/position of the viewport within the render target</summary>
@@ -2073,7 +2168,7 @@ namespace pr.gfx
 			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
 			public void SetTexture(Texture tex, string name = null)
 			{
-				View3D_ObjectSetTexture(m_handle, tex.m_handle, name);
+				View3D_ObjectSetTexture(m_handle, tex.Handle, name);
 			}
 
 			/// <summary>String description of the object</summary>
@@ -2263,16 +2358,13 @@ namespace pr.gfx
 		public class Texture :IDisposable
 		{
 			private bool m_owned;
-			public HTexture m_handle;
-			public ImageInfo m_info;
-			public object Tag {get;set;}
 
 			/// <summary>Create a texture from an existing texture resource</summary>
 			internal Texture(HTexture handle)
 			{
 				m_owned = false;
-				m_handle = handle;
-				View3D_TextureGetInfo(m_handle, out m_info);
+				Handle = handle;
+				View3D_TextureGetInfo(Handle, out Info);
 			}
 
 			/// <summary>Construct an uninitialised texture</summary>
@@ -2285,11 +2377,11 @@ namespace pr.gfx
 			public Texture(uint width, uint height, IntPtr data, uint data_size, TextureOptions options)
 			{
 				m_owned = true;
-				m_handle = View3D_TextureCreate(width, height, data, data_size, ref options);
-				if (m_handle == HTexture.Zero) throw new Exception("Failed to create {0}x{1} texture".Fmt(width,height));
+				Handle = View3D_TextureCreate(width, height, data, data_size, ref options);
+				if (Handle == HTexture.Zero) throw new Exception("Failed to create {0}x{1} texture".Fmt(width,height));
 				
-				View3D_TextureGetInfo(m_handle, out m_info);
-				View3D_TextureSetFilterAndAddrMode(m_handle, options.Filter, options.AddrU, options.AddrV);
+				View3D_TextureGetInfo(Handle, out Info);
+				View3D_TextureSetFilterAndAddrMode(Handle, options.Filter, options.AddrU, options.AddrV);
 			}
 
 			/// <summary>Construct a texture from a file</summary>
@@ -2305,63 +2397,72 @@ namespace pr.gfx
 			public Texture(string tex_filepath, uint width, uint height, TextureOptions options)
 			{
 				m_owned = true;
-				m_handle = View3D_TextureCreateFromFile(tex_filepath, width, height, ref options);
-				if (m_handle == HTexture.Zero) throw new Exception("Failed to create texture from {0}".Fmt(tex_filepath));
-				View3D_TextureGetInfo(m_handle, out m_info);
-				View3D_TextureSetFilterAndAddrMode(m_handle, options.Filter, options.AddrU, options.AddrV);
+				Handle = View3D_TextureCreateFromFile(tex_filepath, width, height, ref options);
+				if (Handle == HTexture.Zero) throw new Exception("Failed to create texture from {0}".Fmt(tex_filepath));
+				View3D_TextureGetInfo(Handle, out Info);
+				View3D_TextureSetFilterAndAddrMode(Handle, options.Filter, options.AddrU, options.AddrV);
 			}
 			
 			public virtual void Dispose()
 			{
 				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finalizer thread");
-				if (m_handle == HTexture.Zero) return;
-				if (m_owned) View3D_TextureDelete(m_handle);
-				m_handle = HTexture.Zero;
+				if (Handle == HTexture.Zero) return;
+				if (m_owned) View3D_TextureDelete(Handle);
+				Handle = HTexture.Zero;
 			}
+
+			/// <summary>View3d texture handle</summary>
+			public HTexture Handle;
+
+			/// <summary>Texture format information</summary>
+			public ImageInfo Info;
 
 			/// <summary>Get/Set the texture size. Set does not preserve the texture content</summary>
 			public Size Size
 			{
-				get { return new Size((int)m_info.m_width, (int)m_info.m_height); }
+				get { return new Size((int)Info.m_width, (int)Info.m_height); }
 				set
 				{
 					if (Size == value) return;
 					Resize((uint)value.Width, (uint)value.Height, false, false);
 				}
 			}
-			
+
+			/// <summary>User Data</summary>
+			public object Tag { get; set; }
+
 			/// <summary>Resize the texture optionally preserving content</summary>
 			public void Resize(uint width, uint height, bool all_instances, bool preserve)
 			{
-				View3D_TextureResize(m_handle, width, height, all_instances, preserve);
-				View3D_TextureGetInfo(m_handle, out m_info);
+				View3D_TextureResize(Handle, width, height, all_instances, preserve);
+				View3D_TextureGetInfo(Handle, out Info);
 			}
 			
 			/// <summary>Set the filtering and addressing modes to be used on the texture</summary>
 			public void SetFilterAndAddrMode(EFilter filter, EAddrMode addrU, EAddrMode addrV)
 			{
-				View3D_TextureSetFilterAndAddrMode(m_handle, filter, addrU, addrV);
+				View3D_TextureSetFilterAndAddrMode(Handle, filter, addrU, addrV);
 			}
 
 			/// <summary>Fill a surface of this texture from a file</summary>
 			public void LoadSurface(string tex_filepath, int level)
 			{
-				View3D_TextureLoadSurface(m_handle, level, tex_filepath, null, null, EFilter.D3D11_FILTER_MIN_MAG_MIP_LINEAR, 0);
-				View3D_TextureGetInfo(m_handle, out m_info);
+				View3D_TextureLoadSurface(Handle, level, tex_filepath, null, null, EFilter.D3D11_FILTER_MIN_MAG_MIP_LINEAR, 0);
+				View3D_TextureGetInfo(Handle, out Info);
 			}
 
 			/// <summary>Fill a surface of this texture from a file</summary>
 			public void LoadSurface(string tex_filepath, int level, EFilter filter, uint colour_key)
 			{
-				View3D_TextureLoadSurface(m_handle, level, tex_filepath, null, null, filter, colour_key);
-				View3D_TextureGetInfo(m_handle, out m_info);
+				View3D_TextureLoadSurface(Handle, level, tex_filepath, null, null, filter, colour_key);
+				View3D_TextureGetInfo(Handle, out Info);
 			}
 
 			/// <summary>Fill a surface of this texture from a file</summary>
 			public void LoadSurface(string tex_filepath, int level, Rectangle src_rect, Rectangle dst_rect, EFilter filter, uint colour_key)
 			{
-				View3D_TextureLoadSurface(m_handle, level, tex_filepath, new []{dst_rect}, new []{src_rect}, filter, colour_key);
-				View3D_TextureGetInfo(m_handle, out m_info);
+				View3D_TextureLoadSurface(Handle, level, tex_filepath, new []{dst_rect}, new []{src_rect}, filter, colour_key);
+				View3D_TextureGetInfo(Handle, out Info);
 			}
 			
 			/// <summary>Return properties of the texture</summary>
@@ -2383,7 +2484,7 @@ namespace pr.gfx
 				/// Note: if 'tex' is the render target of a window, you need to call Window.RestoreRT when finished</summary>
 				public Lock(Texture tex, bool discard)
 				{
-					m_tex = tex.m_handle;
+					m_tex = tex.Handle;
 					var dc = View3D_TextureGetDC(m_tex, discard);
 					if (dc == IntPtr.Zero) throw new Exception("Failed to get Texture DC. Check the texture is a GdiCompatible texture");
 					Gfx = Graphics.FromHdc(dc);
@@ -2416,7 +2517,7 @@ namespace pr.gfx
 			}
 			public bool Equals(Texture rhs)
 			{
-				return rhs != null && m_handle == rhs.m_handle;
+				return rhs != null && Handle == rhs.Handle;
 			}
 			public override bool Equals(object rhs)
 			{
@@ -2424,7 +2525,7 @@ namespace pr.gfx
 			}
 			public override int GetHashCode()
 			{
-				return m_handle.GetHashCode();
+				return Handle.GetHashCode();
 			}
 			#endregion
 		}

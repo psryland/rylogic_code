@@ -455,6 +455,55 @@ namespace pr.util
 				return (T)Marshal.PtrToStructure(handle.Handle.AddrOfPinnedObject(), typeof(T));
 		}
 
+		/// <summary>Simple binary serialise</summary>
+		public static byte[] Serialise(params object[] args)
+		{
+			using (var ms = new MemoryStream())
+			{
+				Serialise(ms, args);
+				ms.Seek(0, SeekOrigin.Begin);
+				return ms.ToArray();
+			}
+		}
+		public static void Serialise(MemoryStream ms, params object[] args)
+		{
+			// Using BinaryReader to deserialise
+			using (var bw = new BinaryWriter(ms, Encoding.UTF8, true))
+			{
+				foreach (var arg in args)
+					Write(arg);
+
+				void Write(object value)
+				{
+					switch (value)
+					{
+					default: throw new Exception($"Serialise: Unsupported type: {value.GetType().Name}");
+					case bool    x: bw.Write(x); break;
+					case byte    x: bw.Write(x); break;
+					case sbyte   x: bw.Write(x); break;
+					case byte[]  x: bw.Write(x); break;
+					case char    x: bw.Write(x); break;
+					case char[]  x: bw.Write(x); break;
+					case short   x: bw.Write(x); break;
+					case ushort  x: bw.Write(x); break;
+					case int     x: bw.Write(x); break;
+					case uint    x: bw.Write(x); break;
+					case long    x: bw.Write(x); break;
+					case ulong   x: bw.Write(x); break;
+					case float   x: bw.Write(x); break;
+					case double  x: bw.Write(x); break;
+					case decimal x: bw.Write(x); break;
+					case string  x: bw.Write(x); break;
+					case v2      x: bw.Write(x.x); bw.Write(x.y); break;
+					case v3      x: bw.Write(x.x); bw.Write(x.y); bw.Write(x.z); break;
+					case v4      x: bw.Write(x.x); bw.Write(x.y); bw.Write(x.z); bw.Write(x.w); break;
+					case m4x4    x: Write(x.x); Write(x.y); Write(x.z); Write(x.w); break;
+					case BBox    x: Write(x.Centre); Write(x.Radius); break;
+					}
+				}
+			}
+		}
+
 		/// <summary>Convert a byte array to a hex string. e.g A3 FF 12 4D etc</summary>
 		public static string ToHexString(byte[] arr, string sep = " ", string line_sep = "\n", int width = 16)
 		{
