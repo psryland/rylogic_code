@@ -17,6 +17,8 @@ namespace CoinFlip
 	/// <summary>Moving average indicator</summary>
 	public class IndicatorMA :Indicator
 	{
+		// Use a ChartDataSeries object to implement the series drawing
+
 		/// <summary>The moving average data. Each point is the average for one candle</summary>
 		private List<MAPoint> m_ma;
 
@@ -168,8 +170,9 @@ namespace CoinFlip
 				m_ibuf[i++] = (ushort)(vi  );
 				m_ibuf[i++] = (ushort)(vi+1);
 			}
-			var mat = new View3d.Material(shader:View3d.EShader.ThickLineListGS, shader_data:new[] {Settings.Width,0,0,0});
-			m_nbuf[0] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert|View3d.EGeom.Colr, 0, (uint)v, 0, (uint)i, false, mat);
+			var mat = View3d.Material.New();
+			mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.ThickLineListGS, (float)Settings.Width);
+			m_nbuf[0] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert|View3d.EGeom.Colr, 0, (uint)v, 0, (uint)i, false, false, mat);
 
 			// Add geometry for Bollinger bands
 			if (Settings.ShowBollingerBands && Settings.BollingerBandsStdDev != 0)
@@ -196,7 +199,7 @@ namespace CoinFlip
 			}
 
 			// Create the graphics
-			Gfx = new View3d.Object(Name, 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray());
+			Gfx = new View3d.Object(Name, 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray(), Id);
 
 			// Record the range that the graphics covers
 			m_gfx_range = rng;

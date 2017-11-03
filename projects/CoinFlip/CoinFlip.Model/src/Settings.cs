@@ -24,6 +24,7 @@ namespace CoinFlip
 			ShowLivePrices                = false;
 			BackTesting                   = new BackTestingSettings();
 			ChartTemplate                 = new ChartSettings();
+			Equity                        = new EquitySettings();
 			Coins                         = new CoinData[0];
 			Charts                        = new ChartSettings[0];
 			Bots                          = new BotData[0];
@@ -96,6 +97,13 @@ namespace CoinFlip
 		{
 			get { return get<ChartSettings>(nameof(ChartTemplate)); }
 			set { set(nameof(ChartTemplate), value); }
+		}
+
+		/// <summary>Settings for the equity plot</summary>
+		public EquitySettings Equity
+		{
+			get { return get<EquitySettings>(nameof(Equity)); }
+			set { set(nameof(Equity), value); }
 		}
 
 		/// <summary>Meta data for known coins</summary>
@@ -659,6 +667,29 @@ namespace CoinFlip
 			}
 
 			private class TyConv :GenericTypeConverter<ChartSettings> {}
+		}
+
+		/// <summary>Equity plot settings</summary>
+		[Serializable]
+		[TypeConverter(typeof(TyConv))]
+		public class EquitySettings :SettingsXml<EquitySettings>
+		{
+			public EquitySettings()
+			{
+				TimeScale = ETimeFrame.Hour1;
+			}
+			public EquitySettings(XElement node)
+				:base(node)
+			{}
+
+			/// <summary>The time scale to use for the equity plot</summary>
+			public ETimeFrame TimeScale
+			{
+				get { return get<ETimeFrame>(nameof(TimeScale)); }
+				set { set(nameof(TimeScale), value); }
+			}
+
+			private class TyConv :GenericTypeConverter<EquitySettings> {}
 		}
 
 		/// <summary></summary>

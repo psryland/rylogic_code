@@ -13,7 +13,7 @@ namespace CoinFlip
 	{
 		// Notes:
 		//  Indicators are chart elements so that they can be hit tested.
-		//  I doesn't make sense to move indicators between charts anyway.
+		//  It doesn't make sense to move indicators between charts anyway.
 
 		protected Indicator(Guid id, string name, ISettingsSet settings)
 			:base(id, m4x4.Identity, name)

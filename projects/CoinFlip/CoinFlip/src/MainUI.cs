@@ -88,6 +88,7 @@ namespace CoinFlip
 				Model = new Model(this, settings, user);
 				PairsUI = new PairsUI(Model, this);
 				Charts = new List<ChartUI>();
+				EquityUI = new EquityUI(Model, "Equity");
 
 				SetupUI();
 				UpdateUI();
@@ -106,6 +107,7 @@ namespace CoinFlip
 			UpdateActive = false;
 			PairsUI = null;
 			Charts = null;
+			EquityUI = null;
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 			Model = null;
@@ -336,6 +338,19 @@ namespace CoinFlip
 		}
 		private List<ChartUI> m_charts;
 
+		/// <summary>A chart for displaying the equity vs. time</summary>
+		public EquityUI EquityUI
+		{
+			get { return m_equity_ui; }
+			set
+			{
+				if (m_equity_ui == value) return;
+				Util.Dispose(ref m_equity_ui);
+				m_equity_ui = value;
+			}
+		}
+		private EquityUI m_equity_ui;
+
 		/// <summary>Wire up the UI</summary>
 		private void SetupUI()
 		{
@@ -505,6 +520,7 @@ namespace CoinFlip
 			m_dc.Add(m_grid_balances, EDockSite.Left, EDockSite.Bottom);
 			m_dc.Add(m_grid_arbitrage, EDockSite.Left, EDockSite.Bottom);
 			m_dc.Add(m_grid_bots, EDockSite.Right);
+			m_dc.Add(m_equity_ui, EDockSite.Centre);
 
 			// Load layout
 			if (Settings.UI.UILayout != null)
@@ -512,6 +528,10 @@ namespace CoinFlip
 				try { m_dc.LoadLayout(Settings.UI.UILayout); }
 				catch (Exception ex) { Model.Log.Write(ELogLevel.Error, ex, "Failed to restore UI layout"); }
 			}
+			m_dc.DockableMoved += (s,a) =>
+			{
+				Settings.UI.UILayout = m_dc.SaveLayout();
+			};
 
 			// Clean up
 			m_dc.Options.DisposeContent = true;

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using pr.db;
 using pr.util;
 
 namespace CoinFlip
@@ -36,7 +37,6 @@ namespace CoinFlip
 
 		/// <summary>Unique Id for the open position on an exchange</summary>
 		public ulong OrderId { get; private set; }
-		public ulong OrderIdHACK { set { OrderId = value; } }
 
 		/// <summary>Unique Id for a completed trade. 0 means not completed</summary>
 		public ulong TradeId { get; private set; }
@@ -68,7 +68,7 @@ namespace CoinFlip
 		public Unit<decimal> VolumeNett { get { return VolumeOut - Commission; } }
 
 		/// <summary>The commission that was charged on this trade (in the same currency as VolumeOut)</summary>
-		public Unit<decimal> Commission { get { return TradeType == ETradeType.B2Q ? CommissionQuote : (CommissionQuote / PriceQ2B); } }
+		public Unit<decimal> Commission { get { return TradeType.Commission(CommissionQuote, PriceQ2B); } }
 
 		/// <summary>The volume paid in commission (in Quote)</summary>
 		public Unit<decimal> CommissionQuote { get; private set; }

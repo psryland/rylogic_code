@@ -74,6 +74,9 @@
     <Compile Include="src\dlg\EditOrderUI.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="src\ui\EquityUI.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="src\ui\GridArbitrage.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -129,6 +132,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="src\dlg\PairsUI.resx">
       <DependentUpon>PairsUI.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\ui\EquityUI.resx">
+      <DependentUpon>EquityUI.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="packages.config" />
   </ItemGroup>

@@ -108,7 +108,7 @@ namespace CoinFlip
 			foreach (var pair in Pairs.Values)
 			{
 				var time_frame = Sim.TimeFrame;
-				var db_filepath = Misc.CacheDBFilePath(pair.NameWithExchange);
+				var db_filepath = Misc.CandleDBFilePath(pair.NameWithExchange);
 
 				// Assume no data available
 				m_src.Add(pair, null);
@@ -269,7 +269,8 @@ namespace CoinFlip
 					foreach (var pos in m_pos.Values)
 					{
 						if (Equals(pos, Positions[pos.OrderId])) continue;
-						Positions[pos.OrderId] = new Position(pos);
+						var position = new Position(pos);
+						Positions[pos.OrderId] = position;
 					}
 				}
 
@@ -280,7 +281,9 @@ namespace CoinFlip
 					foreach (var his in m_his.Values)
 					{
 						if (Equals(his, History[his.OrderId])) continue;
-						History[his.OrderId] = new PositionFill(his);
+						var fill = new PositionFill(his);
+						History[his.OrderId] = fill;
+						Exch.AddToTradeHistory(fill);
 					}
 				}
 
@@ -329,7 +332,6 @@ namespace CoinFlip
 
 			// Allocate a new position Id
 			var order_id = ++m_position_id;
-			var tr = new TradeResult(pair, order_id);
 
 			// The order can be filled immediately, filled partially, or not filled and remain as a 'Position'
 			TryFillOrder(pair, order_id, tt, price, volume, volume, out var pos, out var his);
@@ -340,12 +342,7 @@ namespace CoinFlip
 			ApplyToBalance(pos, his);
 
 			// Record the filled orders in the trade result
-			if (his != null)
-			{
-				foreach (var fill in his.Trades.Values)
-					tr.TradeIds.Add(fill.TradeId);
-			}
-			return tr;
+			return new TradeResult(pair, order_id, pos == null, his?.Trades.Values.Select(x => x.TradeId));
 		}
 
 		/// <summary>Cancel an existing position</summary>

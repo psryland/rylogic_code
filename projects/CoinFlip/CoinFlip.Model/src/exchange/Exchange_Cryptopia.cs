@@ -56,9 +56,12 @@ namespace CoinFlip
 			if (!msg.Success)
 				throw new Exception($"Cryptopia: Submit trade failed. {msg.Error}\n{tt} Pair: {pair.Name}  Vol: {volume.ToString("G8",true)} @  {price.ToString("G8",true)}");
 
+			// Cryptopia Hack: OrderId will be null if the order is filled immediately.
+			// Generate a random order id for consistency with the other exchanges.
+			var order_id = (ulong?)msg.Data.OrderId ?? BitConverter.ToUInt64(Guid.NewGuid().ToByteArray(), 0);
+
 			// Return the result
-			// Cryptopia Hack: OrderId will be null if the order is filled immediately
-			return new TradeResult(pair, (ulong)(msg.Data.OrderId ?? 0), msg.Data.FilledOrders.Select(x => (ulong)x));
+			return new TradeResult(pair, order_id, msg.Data.OrderId == null, msg.Data.FilledOrders.Select(x => (ulong)x));
 		}
 
 		/// <summary>Cancel an open trade</summary>
@@ -95,13 +98,13 @@ namespace CoinFlip
 						var quote = Coins.GetOrAdd(p.SymbolQuote);
 
 						// Create a trade pair
-						var instr = new TradePair(base_, quote, this, p.Id,
+						var pair = new TradePair(base_, quote, this, p.Id,
 							volume_range_base:new RangeF<Unit<decimal>>(p.MinimumTradeBase ._(p.SymbolBase ), p.MaximumTradeBase ._(p.SymbolBase )),
 							volume_range_quote:new RangeF<Unit<decimal>>(p.MinimumTradeQuote._(p.SymbolQuote), p.MaximumTradeQuote._(p.SymbolQuote)),
 							price_range:null);
 
 						// Update the pairs collection
-						Pairs[instr.UniqueKey] = instr;
+						Pairs[pair.UniqueKey] = pair;
 						ids.Add(p.Id);
 					}
 
@@ -227,12 +230,16 @@ namespace CoinFlip
 				// Request the existing orders
 				var position = Api.GetOpenOrders(cancel:Shutdown.Token);
 				if (!position.Success)
-					throw new Exception("Cryptopia: Failed to received existing orders. {0}".Fmt(position.Error));
+					throw new Exception($"Cryptopia: Failed to received existing orders. {position.Error}");
 
 				// Request the history
-				var history = Api.GetTradeHistory(count:10, cancel:Shutdown.Token);
+				var count = m_history_last == DateTimeOffset_.UnixEpoch ? 100 : 10;
+				var history = Api.GetTradeHistory(count:count, cancel:Shutdown.Token);
 				if (!history.Success)
-					throw new Exception("Cryptopia: Failed to received trade history. {0}".Fmt(history.Error));
+					throw new Exception($"Cryptopia: Failed to received trade history. {history.Error}");
+
+				// Record the time that history has been updated to
+				m_history_last = timestamp;
 
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
@@ -243,21 +250,21 @@ namespace CoinFlip
 					// Update the collection of existing orders
 					foreach (var order in position.Data)
 					{
-						// Add the position to the collection
+						// Convert from a Cryptopia position to a CoinFlip position
 						var pos = PositionFrom(order, timestamp);
+
+						// Add the position to the collection
 						Positions[pos.OrderId] = pos;
 						order_ids.Add(pos.OrderId);
 						pairs.Add(pos.Pair.TradePairId.Value);
 					}
 					foreach (var order in history.Data)
 					{
+						// Convert from a Cryptopia historic trade to a CoinFlip 'Historic'
 						var his = HistoricFrom(order, timestamp);
-
-						// Hack until history contains original order id
-						var fill = History.Values.FirstOrDefault(x => x.Pair == his.Pair && x.Created == his.Created);
-						if (fill == null) fill = History.GetOrAdd(his.TradeId, his.TradeType, his.Pair);
-						his.OrderIdHACK = fill.OrderId;
+						var fill = History.GetOrAdd(his.OrderId, his.TradeType, his.Pair);
 						fill.Trades[his.TradeId] = his;
+						AddToTradeHistory(fill);
 					}
 
 					// Update the trade pair ids
@@ -304,7 +311,13 @@ namespace CoinFlip
 		/// <summary>Convert a Cryptopia trade history result into a position object</summary>
 		private Historic HistoricFrom(TradeHistory his, DateTimeOffset updated)
 		{
-			var order_id         = unchecked((ulong)his.OrderId);
+			// Note: 'his.OrderId' is currently always 0
+			// Hack - use TradeId as the OrderId. This means 'TradeHistoryUseful' has to be false
+			// because we can't match filled positions to previously placed orders.
+			if (unchecked((ulong)his.OrderId) != 0)
+				throw new Exception("Cryptopia supports order Ids in historic trades??!");
+
+			var order_id         = unchecked((ulong)his.TradeId); // should be: unchecked((ulong)his.OrderId);
 			var trade_id         = unchecked((ulong)his.TradeId);
 			var tt               = Misc.TradeType(his.Type);
 			var sym              = CurrencyPair.Parse(his.Market);

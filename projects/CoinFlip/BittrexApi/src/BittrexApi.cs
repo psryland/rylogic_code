@@ -85,8 +85,14 @@ namespace Bittrex.API
 				new KV("market", pair.Id),
 				new KV("type", type.ToString().ToLowerInvariant()),
 				new KV("depth", depth));
+
+			// Prevent null being returned
 			if (response.Data != null)
+			{
 				response.Data.Pair = pair;
+				response.Data.BuyOrders = response.Data.BuyOrders ?? new List<OrderBook.Order>();
+				response.Data.SellOrders = response.Data.SellOrders ?? new List<OrderBook.Order>();
+			}
 
 			return response;
 		}

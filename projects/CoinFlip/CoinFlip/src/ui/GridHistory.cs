@@ -86,7 +86,6 @@ namespace CoinFlip
 				DataPropertyName = nameof(PositionFill.TradeCount),
 				FillWeight = 0.1f,
 			});
-			ContextMenuStrip = CreateCMenu();
 			DataSource = Model.History;
 		}
 		protected override void SetModelCore(Model model)
@@ -118,7 +117,17 @@ namespace CoinFlip
 		protected override void OnMouseDown(MouseEventArgs e)
 		{
 			base.OnMouseDown(e);
+
+			// Show column visibility menu
 			DataGridView_.ColumnVisibility(this, e);
+
+			// Show a item context menu
+			if (e.Button == MouseButtons.Right)
+			{
+				var hit = this.HitTestEx(e.X, e.Y);
+				if (hit.Type == DataGridView_.HitTestInfo.EType.Cell)
+					CreateCMenu().Show(this, e.X, e.Y);
+			}
 		}
 		protected override void OnCellFormatting(DataGridViewCellFormattingEventArgs a)
 		{

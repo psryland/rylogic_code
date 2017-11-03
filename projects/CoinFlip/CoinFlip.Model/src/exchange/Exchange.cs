@@ -9,6 +9,7 @@ using System.Threading;
 using System.Web;
 using pr.common;
 using pr.container;
+using pr.db;
 using pr.extn;
 using pr.util;
 
@@ -30,35 +31,43 @@ namespace CoinFlip
 	//    methods, or the 'Simulation' object when back testing is enabled
 
 	/// <summary>Base class for exchanges</summary>
+	[DebuggerDisplay("{Name,nq}")]
 	public abstract class Exchange :IDisposable ,INotifyPropertyChanged
 	{
 		public Exchange(Model model, IExchangeSettings settings)
 		{
-			Model = model;
-			Settings = settings;
-			Colour = Colours[m_colour_index++ % Colours.Length];
-			Coins = new CoinCollection(this);
-			Pairs = new PairCollection(this);
-			Balance = new BalanceCollection(this);
-			Positions = new PositionsCollection(this);
-			History = new HistoryCollection(this);
-			Shutdown = CancellationTokenSource.CreateLinkedTokenSource(Model.Shutdown.Token);
-			m_update_thread_step = new AutoResetEvent(false);
-			TradeHistoryUseful = false;
+			try
+			{
+				Model = model;
+				Settings = settings;
+				Colour = Colours[m_colour_index++ % Colours.Length];
+				Coins = new CoinCollection(this);
+				Pairs = new PairCollection(this);
+				Balance = new BalanceCollection(this);
+				Positions = new PositionsCollection(this);
+				History = new HistoryCollection(this);
+				Shutdown = CancellationTokenSource.CreateLinkedTokenSource(Model.Shutdown.Token);
+				m_update_thread_step = new AutoResetEvent(false);
+				TradeHistoryUseful = false;
 
-			// Limit the amount of history to retrieve
-			var history_start = (Model.UtcNow - TimeSpan.FromDays(5)).Ticks;
-			HistoryInterval = new Range(history_start, history_start);
-			m_history_last = HistoryInterval.End;
+				// Initialise the trade history DB
+				InitTradeHistoryDB();
 
-			// Start the exchange if enabled in the settings
-			if (Settings.Active)
-				Model.RunOnGuiThread(() => UpdateThreadActive = true);
+				// Start the exchange if enabled in the settings
+				if (Settings.Active)
+					Model.RunOnGuiThread(() => UpdateThreadActive = true);
+			}
+			catch
+			{
+				Dispose();
+				throw;
+			}
 		}
 		public virtual void Dispose()
 		{
-			Shutdown = null;
 			UpdateThreadActive = false;
+			Shutdown = null;
+			HistoryDB = null;
 			Model = null;
 		}
 
@@ -95,25 +104,53 @@ namespace CoinFlip
 				{
 					if (UpdateThreadActive) throw new Exception("Should not be nulling 'Model' when the thread is running");
 					m_model.BackTestingChanging -= HandleBackTestingChanged;
+					m_model.SimReset -= HandleSimReset;
 				}
 				m_model = value;
 				if (m_model != null)
 				{
 					m_model.BackTestingChanging += HandleBackTestingChanged;
+					m_model.SimReset += HandleSimReset;
 				}
 
 				// Handlers
 				void HandleBackTestingChanged(object sender, PrePostEventArgs e)
 				{
-					// If back testing is about to be enabled, turn off the update thread
+					// If back testing is about to be enabled...
 					if (!Model.BackTesting && e.Before)
+					{
+						// Turn off the update thread
 						UpdateThreadActive = false;
+					}
 
-					// If back testing is just been disabled, turn on the update thread
+					// If back testing has just been enabled...
+					if (Model.BackTesting && e.After)
+					{
+						// Reinitialise the history DB
+						InitTradeHistoryDB();
+					}
+
+					// If back testing is about to be disabled...
+					if (Model.BackTesting && e.Before)
+					{
+					}
+
+					// If back testing has just been disabled...
 					if (!Model.BackTesting && e.After)
+					{
+						// Reinitialise the history DB
+						InitTradeHistoryDB();
+
+						// Turn on the update thread
 						UpdateThreadActive = Enabled;
+					}
 
 					RaisePropertyChanged(new PropertyChangedEventArgs(nameof(Status)));
+				}
+				void HandleSimReset(object sender, SimResetEventArgs e)
+				{
+					// Reset the trade history DB when the sim resets
+					InitTradeHistoryDB();
 				}
 			}
 		}
@@ -341,6 +378,12 @@ namespace CoinFlip
 			get { return Pairs.Count; }
 		}
 
+		/// <summary>Return the coins available on this exchange that are coins of interest</summary>
+		public IEnumerable<Coin> CoinsOfInterest
+		{
+			get { return Coins.Values.Where(x => x.OfInterest); }
+		}
+
 		/// <summary>An identifying colour for the exchange</summary>
 		public Color Colour { get; set; }
 
@@ -448,14 +491,14 @@ namespace CoinFlip
 			var order_result =
 				Model.AllowTrades ? CreateOrderInternal(pair, tt, volume, price) :
 				Model.BackTesting ? Model.Simulation[this].CreateOrderInternal(pair, tt, volume, price) :
-				new TradeResult(pair, ++m_fake_order_number, new ulong[0]);
+				new TradeResult(pair, ++m_fake_order_number, filled:false);
 
 			// Log the event
 			Model.Log.Write(ELogLevel.Info, $"{Name}: (id={order_result.OrderId}) {volume_.ToString("G6",true)} → {(volume_ * price_).ToString("G6",true)} @ {price.ToString("G6",true)}");
 
 			// Add the position to the Positions collection so that there is no race condition
 			// between placing an order and checking 'Positions' for the order just placed.
-			if (order_result.OrderId != 0)
+			if (!order_result.Filled)
 			{
 				// It is possible for the 'Positions' collection to be updated between 'CreateOrderInternal'
 				// and here, therefore we can't use 'Add' because the key may already be in the dictionary
@@ -467,13 +510,10 @@ namespace CoinFlip
 					bal.Hold(hold_id, b => Positions[order_result.OrderId] != null);
 			}
 
-			// The order may have also been completed or partially filled. Add the filled orders to the trade history
+			// The order may have also been completed or partially filled. Add the filled orders to the trade history.
 			foreach (var tid in order_result.TradeIds)
 			{
-				//hack - all 'order_results' should return an order id, except Cryptopia doesn't when the order is
-				// filled immediately. As a work around, use the ids of the filled trades as the order id. This
-				// means we can't match orders to the trades that filled them though.
-				var order_id = order_result.OrderId != 0 ? order_result.OrderId : tid;
+				var order_id = order_result.OrderId;
 				var fill = History.GetOrAdd(order_id, tt, pair);
 				fill.Trades[tid] = new Historic(order_id, tid, pair, tt, price, volume, price*volume*Fee, now, now);
 			}
@@ -629,9 +669,109 @@ namespace CoinFlip
 			}
 		}
 
+		/// <summary>Trade history database connection</summary>
+		private Sqlite.Database HistoryDB
+		{
+			[DebuggerStepThrough] get { return m_history_db; }
+			set
+			{
+				if (m_history_db == value) return;
+				Util.Dispose(ref m_history_db);
+				m_history_db = value;
+			}
+		}
+		private Sqlite.Database m_history_db;
+
+		/// <summary>The location for the trade history database for this exchange</summary>
+		public string HistoryDBFilepath
+		{
+			get
+			{
+				var path = Model.BackTesting
+					? Misc.ResolveUserPath($"Sim\\History\\TradeHistory-{Name}.db")
+					: Misc.ResolveUserPath($"History\\TradeHistory-{Name}.db");
+				Path_.CreateDirs(Path_.Directory(path));
+				return path;
+			}
+		}
+
+		/// <summary>Initialise the trade history db</summary>
+		private void InitTradeHistoryDB()
+		{
+			// Release the connection to the DB
+			HistoryDB = null;
+
+			// In back testing mode, delete the history first
+			if (Model.BackTesting)
+				Path_.DelFile(HistoryDBFilepath);
+
+			// Connect
+			HistoryDB = new Sqlite.Database(HistoryDBFilepath);
+
+			// Tweak some DB settings for performance
+			HistoryDB.Execute(Sqlite.Sql("PRAGMA synchronous = OFF"));
+			HistoryDB.Execute(Sqlite.Sql("PRAGMA journal_mode = MEMORY"));
+
+			// Ensure the trade history table exists
+			HistoryDB.Execute(SqlExpr.HistoryTable());
+
+			// Set the interval of available history.
+			HistoryInterval = new Range(
+				DateTimeOffset_.UnixEpoch.Ticks,
+				DateTimeOffset_.UnixEpoch.Ticks);
+
+			// Set up the cache of known trade ids
+			TradeHistoryTradeIds = new HashSet<ulong>();
+			var sql = $"select [{nameof(TradeRecord.TradeId)}] from {SqlExpr.TradeHistory}";
+			foreach (var id in HistoryDB.EnumRows<ulong>(sql))
+				TradeHistoryTradeIds.Add(id);
+
+			// Set the time to get history from
+			m_history_last = new DateTimeOffset(HistoryInterval.End, TimeSpan.Zero);
+		}
+
+		/// <summary>The set of known trade ids</summary>
+		private HashSet<ulong> TradeHistoryTradeIds { get; set; }
+
+		/// <summary>Add a new or modified PositionFill to the trade history DB</summary>
+		public void AddToTradeHistory(PositionFill fill)
+		{
+			// Notes:
+			// - This doesn't happen when 'Model.History' is accessed/added to by derived exchanges
+			//   because adding 'Historic' instances to a 'PositionFill' would not raise notifications.
+			//   Also, 'PositionFill' instances are added as empty instances and then populated.
+
+			if (fill.Exchange != this)
+				throw new Exception("This position fill did not occur on this exchange");
+
+			// Get the trades not already in the DB
+			var trades = fill.Trades.Values.Where(x => !TradeHistoryTradeIds.Contains(x.TradeId)).ToList();
+			if (trades.Count != 0)
+			{
+				// Add each new trade
+				using (var t = HistoryDB.NewTransaction())
+				using (var query = new Sqlite.Query(HistoryDB, SqlExpr.InsertHistoric()))
+				{
+					foreach (var his in trades)
+					{
+						query.Reset();
+						query.BindParms(1, SqlExpr.InsertHistoricParams(his));
+						query.Run();
+
+						// Record in the cache on known trades
+						TradeHistoryTradeIds.Add(his.TradeId);
+					}
+					t.Commit();
+				}
+
+				// Notify that the trade history has changed
+				Model.RaiseTradeHistoryChanged();
+			}
+		}
+
 		/// <summary>The time range that the position history covers (in ticks)</summary>
 		public Range HistoryInterval { get; protected set; }
-		protected long m_history_last; // Worker thread context only
+		protected DateTimeOffset m_history_last; // Worker thread context only
 
 		/// <summary>Property changed notification</summary>
 		public event PropertyChangedEventHandler PropertyChanged;

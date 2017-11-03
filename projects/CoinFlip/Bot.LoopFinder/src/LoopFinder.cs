@@ -120,23 +120,21 @@ namespace Bot.LoopFinder
 		public void TriggerLoopsUpdate()
 		{
 			// If an update is already pending, ignore
-			if (m_rebuild_loops_issue != m_rebuild_loops_in_progress) return;
-			++m_rebuild_loops_issue;
-
+			if (m_rebuild_loops.Pending) return;
+			m_rebuild_loops.Signal();
 			Model.RunOnGuiThread(FindLoops);
 		}
-		private int m_rebuild_loops_in_progress;
-		private int m_rebuild_loops_issue;
+		private Trigger m_rebuild_loops;
 
 		/// <summary>Find the available trade loops</summary>
 		private void FindLoops()
 		{
 			Debug.Assert(Model.AssertMainThread());
-			bool Abort() { return m_rebuild_loops_issue != m_rebuild_loops_in_progress || Shutdown.IsCancellationRequested; }
 
 			// Record the update issue number
 			Log.Write(ELogLevel.Info, "Rebuilding loops ...");
-			m_rebuild_loops_in_progress = m_rebuild_loops_issue;
+			m_rebuild_loops.Actioned();
+			bool Abort() { return m_rebuild_loops.Pending || Shutdown.IsCancellationRequested; }
 			if (Abort())
 				return;
 

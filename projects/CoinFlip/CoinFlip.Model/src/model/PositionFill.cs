@@ -1,14 +1,16 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using pr.container;
+using pr.extn;
 using pr.util;
 
 namespace CoinFlip
 {
 	/// <summary>A collection of trades associated with filling an order</summary>
 	[DebuggerDisplay("{Description,nq}")]
-	public class PositionFill
+	public class PositionFill :INotifyPropertyChanged
 	{
 		public PositionFill(ulong order_id, ETradeType tt, TradePair pair)
 		{
@@ -33,6 +35,12 @@ namespace CoinFlip
 		/// <summary>The pair traded</summary>
 		public TradePair Pair { get; private set; }
 
+		/// <summary>The exchange that this trade occurred on</summary>
+		public Exchange Exchange
+		{
+			get { return Pair?.Exchange; }
+		}
+
 		/// <summary>The approximate price of the filled order (in Quote/Base)</summary>
 		public Unit<decimal> PriceQ2B
 		{
@@ -45,24 +53,6 @@ namespace CoinFlip
 					throw new Exception("Unknown trade type");
 			}
 		}
-
-		///// <summary>The price of the filled order (in VolumeOut/VolumeIn units)</summary>
-		//public Unit<decimal> Price
-		//{
-		//	get
-		//	{
-		//		if (Trades.Count == 0) return 0m._(VolumeOut) / 1m._(VolumeIn);
-		//		return Trades.Values.Max(x => x.Price);
-		//	}
-		//}
-		//public Unit<decimal> PriceInv
-		//{
-		//	get { var price = Price; return price != 0m ? (1m / price) : (0m._(VolumeIn) / 1m._(VolumeOut)); }
-		//}
-		//public Unit<decimal> PriceQ2B
-		//{
-		//	get { return TradeType == ETradeType.B2Q ? Price : PriceInv; }
-		//}
 
 		/// <summary>The sum of trade base volumes</summary>
 		public Unit<decimal> VolumeBase
@@ -97,7 +87,7 @@ namespace CoinFlip
 		/// <summary>The sum of trade commissions (in volume out units)</summary>
 		public Unit<decimal> Commission
 		{
-			get { return Trades.Values.Sum(x => x.Commission)._(Pair.Quote); }
+			get { return Trades.Values.Sum(x => x.Commission)._(CoinOut); }
 		}
 
 		/// <summary>The coin type being sold</summary>
@@ -154,8 +144,22 @@ namespace CoinFlip
 				{
 					Debug.Assert(value.OrderId == m_fill.OrderId);
 					base[key] = value;
+					m_fill.RaisePropertyChanged(nameof(Trades));
 				}
 			}
+		}
+
+		/// <summary>INotifyPropertyChanged</summary>
+		public event PropertyChangedEventHandler PropertyChanged;
+		private void SetProp<T>(ref T prop, T value, string name)
+		{
+			if (Equals(prop, value)) return;
+			prop = value;
+			RaisePropertyChanged(name);
+		}
+		private void RaisePropertyChanged(string name)
+		{
+			PropertyChanged.Raise(this, new PropertyChangedEventArgs(name));
 		}
 
 		#region Equals

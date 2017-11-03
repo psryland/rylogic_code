@@ -66,7 +66,9 @@
     <Compile Include="src\Misc.cs" />
     <Compile Include="src\model\Account.cs" />
     <Compile Include="src\model\APIKeys.cs" />
+    <Compile Include="src\model\CoinPair.cs" />
     <Compile Include="src\model\Equity.cs" />
+    <Compile Include="src\model\TradeRecord.cs" />
     <Compile Include="src\sim\BackTesting.cs" />
     <Compile Include="src\model\Balance.cs" />
     <Compile Include="src\model\Candle.cs" />
@@ -88,9 +90,6 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="src\ui\BaseUI.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="src\ui\EquityUI.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="src\ui\GridBase.cs">
@@ -127,9 +126,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="src\ui\APIKeysUI.resx">
       <DependentUpon>APIKeysUI.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="src\ui\EquityUI.resx">
-      <DependentUpon>EquityUI.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\ui\LogInUI.resx">
       <DependentUpon>LogInUI.cs</DependentUpon>

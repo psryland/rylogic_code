@@ -72,11 +72,11 @@ namespace CoinFlip
 			MainLoopRunning = false;
 			Simulation = null;
 			Bots = null;
+			Exchanges = null;
 			Positions = null;
 			History = null;
 			Balances = null;
 			Pairs = null;
-			Exchanges = null;
 			PriceData = null;
 			Coins = null;
 			MarketDataLock = null;
@@ -264,9 +264,9 @@ namespace CoinFlip
 				if (m_exchanges == value) return;
 				if (m_exchanges != null)
 				{
+					m_exchanges.Clear();
 					m_exchanges.ListChanging -= HandleExchangesListChanging;
 					m_exchanges.PositionChanged -= HandleCurrentExchangeChanged;
-					m_exchanges.Clear();
 				}
 				m_exchanges = value;
 				if (m_exchanges != null)
@@ -291,6 +291,8 @@ namespace CoinFlip
 					case ListChg.ItemPreRemove:
 						{
 							e.Item.PropertyChanged -= HandleExchangePropertyChanged;
+							if (e.Item == Exchanges.Current)
+								Exchanges.Current = Exchanges.Except(e.Item).FirstOrDefault();
 							break;
 						}
 					case ListChg.ItemRemoved:
@@ -300,10 +302,6 @@ namespace CoinFlip
 							break;
 						}
 					}
-
-					// Update the bindings to the current exchange
-					if (e.Item == Exchanges.Current)
-						UpdateExchangeDetails();
 				}
 				void HandleCurrentExchangeChanged(object sender = null, PositionChgEventArgs e = null)
 				{
@@ -387,6 +385,9 @@ namespace CoinFlip
 			private set
 			{
 				if (m_history == value) return;
+				if (m_history != null)
+				{
+				}
 				m_history = value;
 				if (m_history != null)
 				{
@@ -518,29 +519,35 @@ namespace CoinFlip
 		}
 		private int m_in_integrate_market_updates;
 
+		/// <summary>Raised to notify that the trade history has changed</summary>
+		public event EventHandler TradeHistoryChanged;
+		public void RaiseTradeHistoryChanged()
+		{
+			TradeHistoryChanged.Raise(this);
+		}
+
 		/// <summary>Call to kick-off an update of the pairs</summary>
 		public void TriggerPairsUpdate()
 		{
 			// If an update is already pending, ignore
-			if (m_update_pairs_issue != m_update_pairs_in_progress) return;
-			++m_update_pairs_issue;
+			if (m_pairs_update.Pending) return;
+			m_pairs_update.Signal();
 
 			// Run the update on the next message
 			RunOnGuiThread(UpdatePairs);
 		}
-		private int m_update_pairs_in_progress;
-		private int m_update_pairs_issue;
+		private Trigger m_pairs_update;
 
 		/// <summary>Get each exchange to update it's pairs</summary>
 		private void UpdatePairs()
 		{
 			// Allow update pairs in back testing mode
 			Debug.Assert(AssertMainThread());
-			bool Abort() { return m_update_pairs_issue != m_update_pairs_in_progress || Shutdown.IsCancellationRequested; }
 
 			// Record the update issue number that this update is for
 			Log.Write(ELogLevel.Info, "Updating pairs ...");
-			m_update_pairs_in_progress = m_update_pairs_issue;
+			m_pairs_update.Actioned();
+			bool Abort() { return m_pairs_update.Pending || Shutdown.IsCancellationRequested; }
 			if (Abort())
 				return;
 

@@ -36,10 +36,16 @@ namespace CoinFlip
 			MarketDepth      = new MarketDepth(base_, quote);
 		}
 
+		/// <summary>The currency pair</summary>
+		public CoinPair CurrencyPair
+		{
+			get { return new CoinPair(Base,Quote); }
+		}
+
 		/// <summary>The name of this pair. Format Base/Quote</summary>
 		public string Name
 		{
-			get { return $"{Base?.Symbol ?? "---"}/{Quote?.Symbol ?? "---"}"; }
+			get { return CurrencyPair.Name; }
 		}
 		public string NameWithExchange
 		{

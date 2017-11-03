@@ -67,7 +67,7 @@ namespace CoinFlip
 			{
 				// Place the trade order
 				var res = Api.SubmitTrade(new CurrencyPair(pair.Base, pair.Quote), Misc.ToPoloniexTT(tt), price, volume);
-				return new TradeResult(pair, res.OrderId, res.FilledOrders.Select(x => x.TradeId));
+				return new TradeResult(pair, res.OrderId, false, res.FilledOrders.Select(x => x.TradeId));
 			}
 			catch (Exception ex)
 			{
@@ -144,13 +144,13 @@ namespace CoinFlip
 						var quote = Coins.GetOrAdd(p.Value.Pair.Quote);
 
 						// Create the trade pair
-						var instr = new TradePair(base_, quote, this, p.Value.Id,
+						var pair = new TradePair(base_, quote, this, p.Value.Id,
 							volume_range_base:new RangeF<Unit<decimal>>(0.0001m._(base_), 10000000m._(base_)),
 							volume_range_quote:new RangeF<Unit<decimal>>(0.0001m._(quote), 10000000m._(quote)),
 							price_range:null);
 
 						// Add the trade pair.
-						Pairs[instr.UniqueKey] = instr;
+						Pairs[pair.UniqueKey] = pair;
 						pairs.Add(p.Value.Pair);
 					}
 
@@ -278,8 +278,10 @@ namespace CoinFlip
 				var existing_orders = Api.GetOpenOrders(cancel:Shutdown.Token);
 
 				// Request the history
-				var history = Api.GetTradeHistory(beg:new DateTimeOffset(m_history_last, TimeSpan.Zero), end:timestamp, cancel:Shutdown.Token);
-				m_history_last = timestamp.Ticks;
+				var history = Api.GetTradeHistory(beg:m_history_last, end:timestamp, cancel:Shutdown.Token);
+
+				// Record the time that history has been updated to
+				m_history_last = timestamp;
 
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
@@ -301,6 +303,7 @@ namespace CoinFlip
 						var his = HistoricFrom(order, timestamp);
 						var fill = History.GetOrAdd(his.OrderId, his.TradeType, his.Pair);
 						fill.Trades[his.TradeId] = his;
+						AddToTradeHistory(fill);
 					}
 
 					// Update the trade pairs

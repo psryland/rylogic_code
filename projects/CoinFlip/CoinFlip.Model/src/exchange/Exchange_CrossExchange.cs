@@ -15,7 +15,7 @@ namespace CoinFlip
 		/// <summary>Open a trade</summary>
 		protected override TradeResult CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> rate)
 		{
-			return new TradeResult(pair);
+			return new TradeResult(pair, false);
 		}
 
 		/// <summary>Cancel an open trade</summary>

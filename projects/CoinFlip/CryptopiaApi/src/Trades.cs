@@ -45,7 +45,7 @@ namespace Cryptopia.API
 
 	public class TradeHistory
 	{
-		/// <summary></summary>
+		/// <summary>Note: not currently supported. Always 0</summary>
 		[JsonProperty]
 		public int OrderId { get; set; }
 

@@ -9,24 +9,21 @@ namespace CoinFlip
 	/// <summary>A container of currency amounts over time</summary>
 	public class EquityMap :IEnumerable<KeyValuePair<Coin, EquityMap.Table>>
 	{
+		// Notes:
+		//  - Equity is calculated backward in time from the current account
+		//    balance and the available history of trades. This means tables
+		//    are in reverse time order.
+
 		private readonly LazyDictionary<Coin, Table> m_map;
 		public EquityMap()
 		{
 			m_map = new LazyDictionary<Coin, Table>(k => new Table(this));
 		}
 
-		/// <summary>The time that data X values are relative to</summary>
-		public DateTimeOffset StartTime { get; private set; }
-
-		/// <summary>The X resolution of the data</summary>
-		public ETimeFrame TimeFrame { get; private set; }
-
 		/// <summary>Reset the data</summary>
-		public void Reset(DateTimeOffset start_time, ETimeFrame time_frame)
+		public void Reset()
 		{
 			m_map.Clear();
-			StartTime = start_time;
-			TimeFrame = time_frame;
 			RaiseDataChanged();
 		}
 

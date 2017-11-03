@@ -29,6 +29,7 @@ namespace Bot.PriceSwing
 
 		private Random m_rng;
 		private bool m_suppress_not_created;
+		public static readonly Guid Id = Guid.NewGuid();
 
 		public PriceSwing(Model model, XElement settings_xml)
 			:base("Price Swing", model, new SettingsData(settings_xml))
@@ -36,7 +37,7 @@ namespace Bot.PriceSwing
 			TradeRecords = new BindingSource<TradeRecord>{ DataSource = new BindingListEx<TradeRecord>{ PerItem = true } };
 			PendingTradeRecords = new List<TradeRecord>();
 			PriceSwingUI = new PriceSwingUI(this);
-			GfxTemplate = new View3d.Object("*Line trade FFFFFFFF { -2 0 0 +2 0 0 }", false);
+			GfxTemplate = new View3d.Object("*Line trade FFFFFFFF { -2 0 0 +2 0 0 }", false, Id);
 			m_rng = new Random(653);
 		}
 		protected override void Dispose(bool disposing)
@@ -407,6 +408,7 @@ namespace Bot.PriceSwing
 				return;
 
 			// Draw all of the unmatched trade records
+			args.RemoveObjects(Id);
 			foreach (var tr in TradeRecords)
 			{
 				if (tr.Gfx == null) continue;

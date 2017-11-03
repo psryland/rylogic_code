@@ -125,7 +125,7 @@ namespace CoinFlip
 		/// <summary></summary>
 		public TradePair Pair
 		{
-			[DebuggerStepThrough] get { return Trade.Pair; }
+			[DebuggerStepThrough] get { return Trade?.Pair; }
 		}
 
 		/// <summary></summary>
@@ -157,6 +157,7 @@ namespace CoinFlip
 			{
 				SetTrade((Exchange)m_cb_exchange.SelectedItem);
 			};
+			m_cb_exchange.Enabled = m_existing_order_id == null;
 
 			// Trade direction
 			m_cb_trade_direction.DataSource = Enum<ETradeType>.ValuesArray;
@@ -172,6 +173,7 @@ namespace CoinFlip
 			{
 				SetTrade(tt:(ETradeType)m_cb_trade_direction.SelectedItem);
 			};
+			m_cb_trade_direction.Enabled = m_existing_order_id == null;
 
 			// Order price
 			m_lbl_order_price.Text = $"Order Price ({Trade.Pair.RateUnits}):";
@@ -317,6 +319,10 @@ namespace CoinFlip
 				}
 				if (price_q2b != null)
 				{
+					// Cause the Volume In amount to stay fixed
+					if (volume_in == null)
+						volume_in = Trade.VolumeIn;
+
 					Trade.PriceQ2B = price_q2b.Value;
 				}
 				if (volume_in != null)
@@ -329,7 +335,7 @@ namespace CoinFlip
 				}
 
 				// Limit to the available balance
-				var bal = Exchange.Balance[CoinIn].Available;
+				var bal = Exchange.Balance[CoinIn].Available + (m_existing_order_id != null ? m_initial.VolumeIn : 0);
 				if (Trade.VolumeIn > bal)
 				{
 					Trade.VolumeIn = bal;
@@ -357,6 +363,8 @@ namespace CoinFlip
 		/// <summary>Commit the changes to the trade or create a new trade</summary>
 		private void ApplyChanges()
 		{
+			m_btn_ok.Enabled = false;
+
 			// Stop orders
 			if (Trade.OrderType == EPlaceOrderType.Stop)
 			{
@@ -464,7 +472,7 @@ namespace CoinFlip
 					$"  *Text price {{ \"{price.ToString("G8",false)}\" *Billboard *Anchor {{+1 0}} *Font{{\"tahoma\" 10 500}} *ForeColour {{FFFFFFFF}} *BackColour {{{col}}} *o2w{{*pos{{1 0 0}}}} *Format {{NoZTest}} }}",
 					$"}}");
 
-				Gfx = new View3d.Object(ldr, file:false);
+				Gfx = new View3d.Object(ldr, false, Id, null);
 			}
 
 			/// <summary>Add the graphics to the chart</summary>
@@ -508,18 +516,40 @@ namespace CoinFlip
 			/// <summary>Drag the indicator to change the price</summary>
 			private class DragPrice :ChartControl.MouseOp
 			{
-				private readonly EditOrderUI m_ui;
 				public DragPrice(EditOrderUI ui)
 					:base(ui.Chart.ChartCtrl)
 				{
-					m_ui = ui;
+					UI = ui;
+				}
+				public override void Dispose()
+				{
+					UI = null;
+					base.Dispose();
 				}
 				public override void MouseMove(MouseEventArgs e)
 				{
 					var chart_pt = m_chart.ClientToChart(e.Location);
-					m_ui.SetTrade(price_q2b: ((decimal)chart_pt.Y)._(m_ui.Pair.RateUnits));
+					UI.SetTrade(price_q2b: ((decimal)chart_pt.Y)._(UI.Pair.RateUnits));
 					base.MouseMove(e);
 				}
+
+				/// <summary>The owning UI</summary>
+				private EditOrderUI UI
+				{
+					get { return m_ui; }
+					set
+					{
+						if (m_ui == value) return;
+						if (m_ui != null) m_ui.Disposed -= HandleUIDisposed;
+						m_ui = value;
+						if (m_ui != null) m_ui.Disposed += HandleUIDisposed;
+						void HandleUIDisposed(object sender, EventArgs e)
+						{
+							Dispose();
+						}
+					}
+				}
+				private EditOrderUI m_ui;
 			}
 		}
 

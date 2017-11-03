@@ -284,17 +284,18 @@ namespace CoinFlip
 	[DebuggerDisplay("{Description,nq}")]
 	public class TradeResult
 	{
-		public TradeResult(TradePair pair)
-			:this(pair, 0)
+		public TradeResult(TradePair pair, bool filled)
+			:this(pair, 0, filled)
 		{}
-		public TradeResult(TradePair pair, ulong order_id)
-			:this(pair, order_id, null)
+		public TradeResult(TradePair pair, ulong order_id, bool filled)
+			:this(pair, order_id, filled, null)
 		{}
-		public TradeResult(TradePair pair, ulong order_id, IEnumerable<ulong> trade_ids)
+		public TradeResult(TradePair pair, ulong order_id, bool filled, IEnumerable<ulong> trade_ids)
 		{
 			Pair = pair;
 			OrderId = order_id;
 			TradeIds = trade_ids?.Cast<ulong>().ToList() ?? new List<ulong>();
+			Filled = filled;
 		}
 
 		/// <summary>The pair that was traded</summary>
@@ -305,6 +306,9 @@ namespace CoinFlip
 
 		/// <summary>Filled orders as a result of a submitted trade</summary>
 		public List<ulong> TradeIds { get; private set; }
+
+		/// <summary>True if the trade is filled immediately</summary>
+		public bool Filled { get; private set; }
 
 		/// <summary>A string description of this trade result</summary>
 		public string Description

@@ -20,7 +20,6 @@ namespace CoinFlip
 			Clock = StartTime;
 			TimeFrame = Settings.TimeFrame;
 			EquityData = new EquityMap();
-			EquityUI = new EquityUI("Equity");
 
 			// Create a SimExchange for each exchange
 			foreach (var exch in Model.Exchanges)
@@ -28,7 +27,6 @@ namespace CoinFlip
 		}
 		public void Dispose()
 		{
-			EquityUI = null;
 			Running = false;
 			Exch = null;
 			Model = null;
@@ -116,28 +114,6 @@ namespace CoinFlip
 		/// <summary>Equity data</summary>
 		public EquityMap EquityData { get; private set; }
 
-		/// <summary>A chart for displaying the equity vs. time</summary>
-		public EquityUI EquityUI
-		{
-			get { return m_equity_ui; }
-			set
-			{
-				if (m_equity_ui == value) return;
-				if (m_equity_ui != null)
-				{
-					m_equity_ui.Data = null;
-					Util.Dispose(ref m_equity_ui);
-				}
-				m_equity_ui = value;
-				if (m_equity_ui != null)
-				{
-					Model.AddToUI(m_equity_ui);
-					m_equity_ui.Data = EquityData;
-				}
-			}
-		}
-		private EquityUI m_equity_ui;
-
 		/// <summary>Set the back testing start time to 'now - steps * time_frame'</summary>
 		public void SetStartTime(ETimeFrame time_frame, int steps)
 		{
@@ -176,7 +152,7 @@ namespace CoinFlip
 			Clock = StartTime;
 
 			// Reset the equity data.
-			EquityData.Reset(StartTime, TimeFrame);
+			EquityData.Reset();
 
 			// Reset the exchanges
 			foreach (var exch in Exch.Values)

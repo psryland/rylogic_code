@@ -74,6 +74,14 @@ namespace CoinFlip
 		VolumeOutIsInvalid  = 1 << 6,
 	}
 
+	/// <summary>X Axis label modes for charts</summary>
+	public enum EXAxisLabelMode
+	{
+		LocalTime,
+		UtcTime,
+		CandleIndex,
+	}
+		
 	public static class Validation
 	{
 		/// <summary>Return a string description of this validation result</summary>
@@ -150,7 +158,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Generate a filepath for the given pair name</summary>
-		public static string CacheDBFilePath(string pair_name)
+		public static string CandleDBFilePath(string pair_name)
 		{
 			var dbpath = ResolveUserPath($"PriceData\\{Path_.SanitiseFileName(pair_name)}.db");
 			Path_.CreateDirs(Path_.Directory(dbpath));
@@ -238,9 +246,23 @@ namespace CoinFlip
 				tt == ETradeType.Q2B ? pair.Quote :
 				throw new Exception("Unknown trade type");
 		}
+		public static string CoinIn(this ETradeType tt, CoinPair pair)
+		{
+			return 
+				tt == ETradeType.B2Q ? pair.Base :
+				tt == ETradeType.Q2B ? pair.Quote :
+				throw new Exception("Unknown trade type");
+		}
 
 		/// <summary>Return the 'out' coin for a trade on 'pair' in this trade direction</summary>
 		public static Coin CoinOut(this ETradeType tt, TradePair pair)
+		{
+			return 
+				tt == ETradeType.B2Q ? pair.Quote :
+				tt == ETradeType.Q2B ? pair.Base :
+				throw new Exception("Unknown trade type");
+		}
+		public static string CoinOut(this ETradeType tt, CoinPair pair)
 		{
 			return 
 				tt == ETradeType.B2Q ? pair.Quote :
@@ -272,6 +294,15 @@ namespace CoinFlip
 			return 
 				tt == ETradeType.B2Q ? volume_base * price_q2b :
 				tt == ETradeType.Q2B ? volume_base :
+				throw new Exception("Unknown trade type");
+		}
+
+		/// <summary>Return the commission in 'out' volume for a trade in this trade direction</summary>
+		public static Unit<decimal> Commission(this ETradeType tt, Unit<decimal> commission_quote, Unit<decimal> price_q2b)
+		{
+			return
+				tt == ETradeType.B2Q ? (commission_quote) :
+				tt == ETradeType.Q2B ? (commission_quote / price_q2b) :
 				throw new Exception("Unknown trade type");
 		}
 
@@ -505,8 +536,222 @@ namespace CoinFlip
 		{
 			return candle.TimestampUTC + TimeFrameToTimeSpan(1.0, time_frame);
 		}
+
+		/// <summary>Return a timestamp string suitable for a chart X tick value</summary>
+		public static string ShortTimeString(DateTimeOffset dt_curr, DateTimeOffset dt_prev, bool first)
+		{
+			// First tick on the x axis
+			if (first)
+				return dt_curr.ToString("HH:mm'\r\n'dd-MMM-yy");
+
+			// Show more of the time stamp depending on how it differs from the previous time stamp
+			if (dt_curr.Year != dt_prev.Year)
+				return dt_curr.ToString("HH:mm'\r\n'dd-MMM-yy");
+			if (dt_curr.Month != dt_prev.Month)
+				return dt_curr.ToString("HH:mm'\r\n'dd-MMM");
+			if (dt_curr.Day != dt_prev.Day)
+				return dt_curr.ToString("HH:mm'\r\n'ddd dd");
+
+			return dt_curr.ToString("HH:mm");
+		}
 	}
 
+	/// <summary>SQL expression strings</summary>
+	public static class SqlExpr
+	{
+		#region Price Data
+
+		///// <summary>Create a price data table</summary>
+		//public static string PriceDataTable()
+		//{
+		//	// Note: this doesn't store the price data history, only the last received price data
+		//	return Str.Build(
+		//		"create table if not exists PriceData (\n",
+		//		"[",nameof(PriceData.AskPrice  ),"] real,\n",
+		//		"[",nameof(PriceData.BidPrice  ),"] real,\n",
+		//		"[",nameof(PriceData.AvrSpread ),"] real,\n",
+		//		"[",nameof(PriceData.LotSize   ),"] real,\n",
+		//		"[",nameof(PriceData.PipSize   ),"] real,\n",
+		//		"[",nameof(PriceData.PipValue  ),"] real,\n",
+		//		"[",nameof(PriceData.VolumeMin ),"] real,\n",
+		//		"[",nameof(PriceData.VolumeStep),"] real,\n",
+		//		"[",nameof(PriceData.VolumeMax ),"] real)"
+		//		);
+		//}
+
+		///// <summary>Sql expression to get the price data from the db</summary>
+		//public static string GetPriceData()
+		//{
+		//	return "select * from PriceData";
+		//}
+
+		///// <summary>Update the price data</summary>
+		//public static string UpdatePriceData()
+		//{
+		//	return Str.Build(
+		//		"insert or replace into PriceData ( ",
+		//		"rowid,",
+		//		"[",nameof(PriceData.AskPrice  ),"],",
+		//		"[",nameof(PriceData.BidPrice  ),"],",
+		//		"[",nameof(PriceData.AvrSpread ),"],",
+		//		"[",nameof(PriceData.LotSize   ),"],",
+		//		"[",nameof(PriceData.PipSize   ),"],",
+		//		"[",nameof(PriceData.PipValue  ),"],",
+		//		"[",nameof(PriceData.VolumeMin ),"],",
+		//		"[",nameof(PriceData.VolumeStep),"],",
+		//		"[",nameof(PriceData.VolumeMax ),"])",
+		//		" values (",
+		//		"1,", // rowid
+		//		"?,", // AskPrice  
+		//		"?,", // BidPrice  
+		//		"?,", // AvrSpread 
+		//		"?,", // LotSize   
+		//		"?,", // PipSize   
+		//		"?,", // PipValue  
+		//		"?,", // VolumeMin 
+		//		"?,", // VolumeStep
+		//		"?)"  // VolumeMax 
+		//		);
+		//}
+
+		///// <summary>Return the properties of a price data object to match the update command</summary>
+		//public static object[] UpdatePriceDataParams(PriceData pd)
+		//{
+		//	return new object[]
+		//	{
+		//		pd.AskPrice  ,
+		//		pd.BidPrice  ,
+		//		pd.AvrSpread ,
+		//		pd.LotSize   ,
+		//		pd.PipSize   ,
+		//		pd.PipValue  ,
+		//		pd.VolumeMin ,
+		//		pd.VolumeStep,
+		//		pd.VolumeMax ,
+		//	};
+		//}
+
+		#endregion
+
+		#region Candles
+
+		/// <summary>Create a table of candles for a time frame</summary>
+		public static string CandleTable(ETimeFrame time_frame)
+		{
+			return Str.Build(
+				"create table if not exists ",time_frame," (\n",
+				"[",nameof(Candle.Timestamp),"] integer unique,\n",
+				"[",nameof(Candle.Open     ),"] real,\n",
+				"[",nameof(Candle.High     ),"] real,\n",
+				"[",nameof(Candle.Low      ),"] real,\n",
+				"[",nameof(Candle.Close    ),"] real,\n",
+				"[",nameof(Candle.Median   ),"] real,\n",
+				"[",nameof(Candle.Volume   ),"] real)"
+				);
+		}
+
+		/// <summary>Insert or replace a candle in table 'time_frame'</summary>
+		public static string InsertCandle(ETimeFrame time_frame)
+		{
+			return Str.Build(
+				"insert or replace into ",time_frame," (",
+				"[",nameof(Candle.Timestamp),"],",
+				"[",nameof(Candle.Open     ),"],",
+				"[",nameof(Candle.High     ),"],",
+				"[",nameof(Candle.Low      ),"],",
+				"[",nameof(Candle.Close    ),"],",
+				"[",nameof(Candle.Median   ),"],",
+				"[",nameof(Candle.Volume   ),"])",
+				" values (",
+				"?,", // Timestamp
+				"?,", // Open     
+				"?,", // High     
+				"?,", // Low      
+				"?,", // Close    
+				"?,", // Median   
+				"?)"  // Volume   
+				);
+		}
+
+		/// <summary>Return the properties of a candle to match an InsertCandle sql statement</summary>
+		public static object[] InsertCandleParams(Candle candle)
+		{
+			return new object[]
+			{
+				candle.Timestamp,
+				candle.Open,
+				candle.High,
+				candle.Low,
+				candle.Close,
+				candle.Median,
+				candle.Volume,
+			};
+		}
+
+		#endregion
+
+		#region Trade history
+		public const string TradeHistory = "TradeHistory";
+
+		/// <summary>Create a table of historic trades</summary>
+		public static string HistoryTable()
+		{
+			return Str.Build(
+				$"create table if not exists {TradeHistory} (\n",
+				"[",nameof(TradeRecord.TradeId        ),"] integer unique,\n",
+				"[",nameof(TradeRecord.OrderId        ),"] integer,\n",
+				"[",nameof(TradeRecord.Timestamp      ),"] integer,\n",
+				"[",nameof(TradeRecord.PairName       ),"] text,\n",
+				"[",nameof(TradeRecord.TradeType      ),"] text,\n",
+				"[",nameof(TradeRecord.PriceQ2B       ),"] real,\n",
+				"[",nameof(TradeRecord.VolumeBase     ),"] real,\n",
+				"[",nameof(TradeRecord.CommissionQuote),"] real)"
+				);
+		}
+
+		/// <summary>Insert or replace a historic trade</summary>
+		public static string InsertHistoric()
+		{
+			return Str.Build(
+				$"insert or replace into {TradeHistory} (",
+				"[",nameof(TradeRecord.TradeId        ),"],",
+				"[",nameof(TradeRecord.OrderId        ),"],",
+				"[",nameof(TradeRecord.Timestamp      ),"],",
+				"[",nameof(TradeRecord.PairName       ),"],",
+				"[",nameof(TradeRecord.TradeType      ),"],",
+				"[",nameof(TradeRecord.PriceQ2B       ),"],",
+				"[",nameof(TradeRecord.VolumeBase     ),"],",
+				"[",nameof(TradeRecord.CommissionQuote),"])",
+				" values (",
+				"?,", // TradeId        
+				"?,", // OrderId        
+				"?,", // Timestamp      
+				"?,", // PairName       
+				"?,", // TradeType      
+				"?,", // PriceQ2B       
+				"?,", // VolumeBase     
+				"?)"  // CommissionQuote
+				);
+		}
+			
+		/// <summary>Return the properties of a 'Historic' to match an InsertHistoric sql statement</summary>
+		public static object[] InsertHistoricParams(Historic his)
+		{
+			return new object[]
+			{
+				his.TradeId,
+				his.OrderId,
+				his.Created.Ticks,
+				his.Pair.Name,
+				his.TradeType.ToString(),
+				(double)(decimal)his.PriceQ2B,
+				(double)(decimal)his.VolumeBase,
+				(double)(decimal)his.CommissionQuote,
+			};
+		}
+		#endregion
+	}
+	
 	/// <summary>Application Resources</summary>
 	public static class Res
 	{

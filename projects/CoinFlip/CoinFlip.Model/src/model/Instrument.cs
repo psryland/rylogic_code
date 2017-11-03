@@ -185,10 +185,34 @@ namespace CoinFlip
 						throw new Exception("Should not be getting DataChanged events from a PriceData while back-testing");
 
 					// Update cached items
-					if (e.CandleType == DataEventArgs.ECandleType.New)
-						m_count += 1;
-					else if (e.CandleType != DataEventArgs.ECandleType.Current)
-						m_count = null;
+					switch (e.CandleType)
+					{
+					default: throw new Exception($"Unexpected candle type: {e.CandleType}");
+					case DataEventArgs.ECandleType.New:
+						{
+							// A new candle was added, update the count so that the cache grows
+							m_count += 1;
+							break;
+						}
+					case DataEventArgs.ECandleType.Current:
+						{
+							// Data for the current candle has changed, just update the cached copy
+							if (e.IndexRange.Count != 1)
+								throw new Exception("This is not the current candle");
+							if (m_cache[e.IndexRange.Begi - m_index_range.Begi].Timestamp != e.Candle.Timestamp)
+								throw new Exception("This is not the current candle");
+
+							m_cache[e.IndexRange.Begi - m_index_range.Begi] = e.Candle;
+							break;
+						}
+					case DataEventArgs.ECandleType.Other:
+						{
+							// An unknown range of candles changed, invalidate the cache
+							InvalidateCachedData();
+							EnsureCached(Count-1);
+							break;
+						}
+					}
 
 					// Notify source data changed
 					OnDataChanged(e);
@@ -459,7 +483,7 @@ namespace CoinFlip
 				using (var db = new Sqlite.Database(PriceData.DBFilepath))
 				{
 					// Read from the database. Order by timestamp so that the oldest is first, and the newest is at the end.
-					var sql = Str.Build("select * from ", TimeFrame, " order by [", nameof(Candle.Timestamp), "] limit ?,?");
+					var sql = $"select * from {TimeFrame} order by [{nameof(Candle.Timestamp)}] limit ?,?";
 					return db.EnumRows<Candle>(sql, 1, new object[] { read.Begi, read.Sizei }).ToArray();
 				}
 			}

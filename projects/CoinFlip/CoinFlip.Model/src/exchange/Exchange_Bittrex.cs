@@ -12,14 +12,14 @@ namespace CoinFlip
 {
 	public class Bittrex :Exchange
 	{
-		private readonly BiDictionary<ulong, Guid> m_order_id_lookup;
 		private readonly HashSet<CurrencyPair> m_pairs;
+		private readonly Dictionary<ulong, Guid> m_order_id_lookup;
 
 		public Bittrex(Model model, string key, string secret)
 			:base(model, model.Settings.Bittrex)
 		{
 			m_pairs = new HashSet<CurrencyPair>();
-			m_order_id_lookup = new BiDictionary<ulong, Guid>();
+			m_order_id_lookup = new Dictionary<ulong, Guid>();
 			Api = new BittrexApi(key, secret, Model.Shutdown.Token);
 			TradeHistoryUseful = true;
 		}
@@ -59,8 +59,8 @@ namespace CoinFlip
 				if (!res.Success)
 					throw new Exception(res.Message);
 
-				var order_id = ToOrderId(res.Data.Id);
-				return new TradeResult(pair, order_id);
+				var order_id = ToIdPair(res.Data.Id).OrderId;
+				return new TradeResult(pair, order_id, filled:false);
 			}
 			catch (Exception ex)
 			{
@@ -111,14 +111,14 @@ namespace CoinFlip
 						var quote = Coins.GetOrAdd(m.Pair.Quote);
 
 						// Create a trade pair. Note: m.MinTradeSize is not valid, 50,000 Satoshi is the minimum trade size
-						var instr = new TradePair(base_, quote, this,
+						var pair = new TradePair(base_, quote, this,
 							trade_pair_id:null,
 							volume_range_base: new RangeF<Unit<decimal>>(0.0005m._(base_), 10000000m._(base_)),
 							volume_range_quote:new RangeF<Unit<decimal>>(0.0005m._(quote), 10000000m._(quote)),
 							price_range:null);
 
 						// Update the pairs collection
-						Pairs[instr.UniqueKey] = instr;
+						Pairs[pair.UniqueKey] = pair;
 						pairs.Add(new CurrencyPair(base_, quote));
 					}
 
@@ -252,6 +252,9 @@ namespace CoinFlip
 				if (!history.Success)
 					throw new Exception("Cryptopia: Failed to received trade history. {0}".Fmt(history.Message));
 
+				// Record the time that history has been updated to
+				m_history_last = timestamp;
+
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
 				{
@@ -273,6 +276,7 @@ namespace CoinFlip
 						var his = HistoricFrom(order, timestamp);
 						var fill = History.GetOrAdd(his.OrderId, his.TradeType, his.Pair);
 						fill.Trades[his.TradeId] = his;
+						AddToTradeHistory(fill);
 					}
 
 					// Update the trade pairs
@@ -306,7 +310,7 @@ namespace CoinFlip
 		private Position PositionFrom(global::Bittrex.API.Position order, DateTimeOffset updated)
 		{
 			// Get the associated trade pair (add the pair if it doesn't exist)
-			var order_id = ToOrderId(order.OrderId);
+			var order_id = ToIdPair(order.OrderId).OrderId;
 			var pair = Pairs.GetOrAdd(order.Pair.Base, order.Pair.Quote);
 			var price = order.Limit._(pair.RateUnits);
 			var volume = order.VolumeBase._(pair.Base);
@@ -321,8 +325,9 @@ namespace CoinFlip
 			// Get the associated trade pair (add the pair if it doesn't exist)
 			// Bittrex doesn't use trade ids. Make them up using the Remaining
 			// volume so that each trade for a given order is unique (ish).
-			var order_id         = ToOrderId(his.OrderId);
-			var trade_id         = unchecked((ulong)(his.RemainingBase * 1_000_000 / his.QuantityBase));
+			var ids              = ToIdPair(his.OrderId);
+			var order_id         = ids.OrderId;
+			var trade_id         = ids.TradeId;
 			var tt               = Misc.TradeType(his.Type);
 			var pair             = Pairs.GetOrAdd(his.Pair.Base, his.Pair.Quote);
 			var price            = his.PricePerUnit._(pair.RateUnits);
@@ -332,26 +337,36 @@ namespace CoinFlip
 			return new Historic(order_id, trade_id, pair, tt, price, volume_base, commission_quote, created, updated);
 		}
 
-		/// <summary>Convert a bittrex UUID to a CoinFlip order id (ULONG)</summary>
-		private ulong ToOrderId(Guid guid)
+		/// <summary>Convert a Bittrex UUID to a CoinFlip order id (ULONG)</summary>
+		private TradeIdPair ToIdPair(Guid guid)
 		{
-			// Create a new order if for GUID's we haven't seen before
-			if (!m_order_id_lookup.TryGetValue(guid, out var order_id))
-			{
-				// Try to make a number that matches the GUID (for debugging helpfulness)
-				order_id = BitConverter.ToUInt32(guid.ToByteArray(), 0);
+			// Convert the guid into a order id/trade id pair and check if it's already in the map.
+			// Handle Id collisions to ensure each order id is unique
+			var ids = new TradeIdPair(guid);
+			for (; m_order_id_lookup.TryGetValue(ids.OrderId, out var g) && g != guid;)
+				++ids.OrderId;
 
-				// Handle key collisions
-				for (; m_order_id_lookup.ContainsKey(order_id); ++order_id) {}
-				m_order_id_lookup[guid] = order_id;
-			}
-			return order_id;
+			// Add the order id to the lookup table
+			m_order_id_lookup[ids.OrderId] = guid;
+			return ids;
 		}
 
-		/// <summary>Convert a CoinFlip order id (ULONG) to a bittrex UUID</summary>
+		/// <summary>Convert a CoinFlip order id (ULONG) to a Bittrex UUID</summary>
 		private Guid ToUuid(ulong order_id)
 		{
 			return m_order_id_lookup[order_id];
+		}
+
+		/// <summary>Convert a Guid into a trade id/order id pair</summary>
+		private struct TradeIdPair
+		{
+			public TradeIdPair(Guid guid)
+			{
+				OrderId = BitConverter.ToUInt64(guid.ToByteArray(), 0);
+				TradeId = BitConverter.ToUInt64(guid.ToByteArray(), 8);
+			}
+			public ulong OrderId;
+			public ulong TradeId;
 		}
 	}
 }

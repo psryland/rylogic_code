@@ -23,9 +23,6 @@ namespace CoinFlip
 		/// <summary>Return the Coin with the exchange</summary>
 		public string SymbolWithExchange { get { return $"{Symbol} - {Exchange.Name}"; } }
 
-		/// <summary>Meta data for the coin</summary>
-		private Settings.CoinData Meta { [DebuggerStepThrough] get; set; }
-
 		/// <summary>App logic</summary>
 		public Model Model { get { return Exchange.Model; } }
 
@@ -35,8 +32,17 @@ namespace CoinFlip
 		/// <summary>Trade pairs involving this coin</summary>
 		public HashSet<TradePair> Pairs { get; private set; }
 
+		/// <summary>True if this coin type is of interest</summary>
+		public bool OfInterest
+		{
+			get { return Meta.OfInterest; }
+		}
+
 		/// <summary>Return the balance for this coin on its associated exchange</summary>
-		public Balance Balance { get { return Exchange.Balance[this]; } }
+		public Balance Balance
+		{
+			get { return Exchange.Balance[this]; }
+		}
 
 		/// <summary>Return the value of 'amount' units of this currency</summary>
 		public decimal Value(decimal amount)
@@ -127,6 +133,9 @@ namespace CoinFlip
 		{
 			get { return Meta.DefaultTradeVolume._(Symbol); }
 		}
+
+		/// <summary>Meta data for the coin</summary>
+		private Settings.CoinData Meta { [DebuggerStepThrough] get; set; }
 
 		/// <summary></summary>
 		public override string ToString()

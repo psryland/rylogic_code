@@ -77,7 +77,7 @@ namespace CoinFlip
 		/// <summary>Open a trade</summary>
 		protected override TradeResult CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> rate)
 		{
-			return new TradeResult(pair, ++m_order_id);
+			return new TradeResult(pair, ++m_order_id, false);
 		}
 		private ulong m_order_id;
 
