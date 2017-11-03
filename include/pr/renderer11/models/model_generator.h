@@ -915,19 +915,101 @@ namespace pr
 			}
 
 			// Text *******************************************************************************
-			// Create a quad containing text
-			// 'text' is the formatting interface for the text
-			// 'axis_id' is the basis axis of the quad normal
-			// 'fr_colour' and 'bk_colour' are the text colour and background colours
-			// 'anchor' controls the position of the origin of the quad, anchor.x = -1,0,+1 = left,centre_h,right. anchor.y = -1,0,+1 = top,centre_v,bottom
-			// 'dim_out.xy' is the dimensions of the text texture. (measured in pixels)
-			// 'dim_out.zw' is the dimensions of the quad that contains the text (measured in pixels)
-			static ModelPtr Text(Renderer& rdr, IDWriteTextLayout* text, AxisId axis_id, Colour32 fr_colour, Colour32 bk_colour, v2 const& anchor, v4& dim_out, m4x4 const* bake = nullptr)
-			{
-				// Get the text layout to measure the string.
-				DWRITE_TEXT_METRICS metrics;
-				pr::Throw(text->GetMetrics(&metrics));
 
+			// A Direct2D font description
+			struct Font
+			{
+				wstring32           m_name;   // Font family name
+				float               m_size;   // in points (1 pt = 1/72.272 inches = 0.35145mm)
+				Colour32            m_colour; // Fore colour for the text
+				DWRITE_FONT_WEIGHT  m_weight; // boldness
+				DWRITE_FONT_STRETCH m_stretch;
+				DWRITE_FONT_STYLE   m_style;
+				bool                m_underline;
+				bool                m_strikeout;
+
+				Font()
+					:m_name(L"tahoma")
+					,m_size(12.0f)
+					,m_colour(0xFF000000)
+					,m_weight(DWRITE_FONT_WEIGHT_NORMAL)
+					,m_stretch(DWRITE_FONT_STRETCH_NORMAL)
+					,m_style(DWRITE_FONT_STYLE_NORMAL)
+					,m_underline(false)
+					,m_strikeout(false)
+				{}
+				bool operator == (Font const& rhs) const
+				{
+					return
+						m_name      == rhs.m_name      &&
+						m_size      == rhs.m_size      &&
+						m_colour    == rhs.m_colour    &&
+						m_weight    == rhs.m_weight    &&
+						m_stretch   == rhs.m_stretch   &&
+						m_style     == rhs.m_style     &&
+						m_underline == rhs.m_underline &&
+						m_strikeout == rhs.m_strikeout;
+				}
+				bool operator != (Font const& rhs) const
+				{
+					return !(*this == rhs);
+				}
+			};
+
+			// Text formatting description
+			struct TextFormat
+			{
+				// The range of characters that the format applies to
+				DWRITE_TEXT_RANGE m_range;
+
+				// Font/Style for the text range
+				Font m_font;
+
+				TextFormat()
+					:m_range()
+					,m_font()
+				{}
+				TextFormat(int beg, int count, Font const& font)
+					:m_range({UINT32(beg), UINT32(count)})
+					,m_font(font)
+				{}
+				bool empty() const
+				{
+					return m_range.length == 0;
+				}
+			};
+
+			// Layout options for a collection of text fragments
+			struct TextLayout
+			{
+				struct Padding { float left, top, right, bottom; };
+
+				v2                         m_dim;
+				v2                         m_anchor;
+				Padding                    m_padding;
+				Colour32                   m_bk_colour;
+				DWRITE_TEXT_ALIGNMENT      m_align_h;
+				DWRITE_PARAGRAPH_ALIGNMENT m_align_v;
+				DWRITE_WORD_WRAPPING       m_word_wrapping;
+
+				TextLayout()
+					:m_dim(512,128)
+					,m_anchor(0,0)
+					,m_padding()
+					,m_bk_colour(0x00000000)
+					,m_align_h(DWRITE_TEXT_ALIGNMENT_LEADING)
+					,m_align_v(DWRITE_PARAGRAPH_ALIGNMENT_NEAR)
+					,m_word_wrapping(DWRITE_WORD_WRAPPING_WRAP)
+				{}
+			};
+
+			// Create a quad containing text.
+			// 'text' is the complete text to render into the quad.
+			// 'formatting' defines regions in the text to apply formatting to.
+			// 'formatting_count' is the length of the 'formatting' array.
+			// 'layout' is global text layout information.
+			static ModelPtr Text(Renderer& rdr, wstring256 const& text, TextFormat const* formatting, int formatting_count, TextLayout const& layout, AxisId axis_id, v4& dim_out, m4x4 const* bake = nullptr)
+			{
 				// Texture sizes are in physical pixels, but D2D operates in DIP so we need to determine
 				// the size in physical pixels on this device that correspond to the returned metrics.
 				// From: https://msdn.microsoft.com/en-us/library/windows/desktop/ff684173%28v=vs.85%29.aspx?f=255&MSPPError=-2147217396
@@ -935,31 +1017,98 @@ namespace pr
 				//  In Direct2D, coordinates are measured in units called device-independent pixels (DIPs).
 				//  A DIP is defined as 1/96th of a logical inch. In Direct2D, all drawing operations are
 				//  specified in DIPs and then scaled to the current DPI setting."
+				Renderer::Lock lock(rdr);
+				auto dwrite = lock.DWrite();
 				auto dpi = rdr.DpiScale();
-				auto text_size = v2(metrics.width * dpi.x, metrics.height * dpi.y);
-				auto texture_size = Ceil(text_size);
+
+				// Get the default format
+				auto def = formatting_count != 0 && formatting[0].empty() ? formatting[0] : TextFormat();
+
+				// Determine of the model requires alpha blending.
+				// Consider alpha = 0 as not requiring blending, Alpha clip will be used instead
+				auto has_alpha = HasAlpha(layout.m_bk_colour) || HasAlpha(def.m_font.m_colour);
+
+				// Create the default font
+				D3DPtr<IDWriteTextFormat> text_format;
+				pr::Throw(dwrite->CreateTextFormat(def.m_font.m_name.c_str(), nullptr, def.m_font.m_weight, def.m_font.m_style, def.m_font.m_stretch, def.m_font.m_size, L"en-US", &text_format.m_ptr));
+
+				// Create a text layout interface
+				D3DPtr<IDWriteTextLayout> text_layout;
+				pr::Throw(dwrite->CreateTextLayout(text.data(), UINT32(text.size()), text_format.get(), layout.m_dim.x, layout.m_dim.y, &text_layout.m_ptr));
+				text_layout->SetTextAlignment(layout.m_align_h);
+				text_layout->SetParagraphAlignment(layout.m_align_v);
+				text_layout->SetWordWrapping(layout.m_word_wrapping);
+
+				// Apply the formatting
+				auto fmtting = std::initializer_list<TextFormat>(formatting, formatting + formatting_count);
+				for (auto& fmt : fmtting)
+				{
+					// A null range can be used to set the default font/style for the whole string
+					if (fmt.empty())
+						continue;
+
+					// Font changes
+					if (fmt.m_font.m_name      != def.m_font.m_name      ) text_layout->SetFontFamilyName(fmt.m_font.m_name.c_str() , fmt.m_range);
+					if (fmt.m_font.m_size      != def.m_font.m_size      ) text_layout->SetFontSize      (fmt.m_font.m_size         , fmt.m_range);
+					if (fmt.m_font.m_weight    != def.m_font.m_weight    ) text_layout->SetFontWeight    (fmt.m_font.m_weight       , fmt.m_range);
+					if (fmt.m_font.m_style     != def.m_font.m_style     ) text_layout->SetFontStyle     (fmt.m_font.m_style        , fmt.m_range);
+					if (fmt.m_font.m_stretch   != def.m_font.m_stretch   ) text_layout->SetFontStretch   (fmt.m_font.m_stretch      , fmt.m_range);
+					if (fmt.m_font.m_underline != def.m_font.m_underline ) text_layout->SetUnderline     (fmt.m_font.m_underline    , fmt.m_range);
+					if (fmt.m_font.m_strikeout != def.m_font.m_strikeout ) text_layout->SetStrikethrough (fmt.m_font.m_strikeout    , fmt.m_range);
+
+					// Record if any of the text has alpha
+					has_alpha |= HasAlpha(fmt.m_font.m_colour);
+				}
+
+				// Measure the formatted text
+				DWRITE_TEXT_METRICS metrics;
+				pr::Throw(text_layout->GetMetrics(&metrics));
+
+				// The size of the text in device independent pixels, including padding
+				auto dip_size = v2(
+					metrics.widthIncludingTrailingWhitespace + layout.m_padding.left + layout.m_padding.right,
+					metrics.height + layout.m_padding.top + layout.m_padding.bottom);
+
+				// Determine the required texture size
+				auto text_size = v2(dip_size.x * dpi.x, dip_size.y * dpi.y);
+				auto texture_size = Ceil(text_size) * 2;
 
 				// Create a texture large enough to contain the text, and render the text into it
 				SamplerDesc sdesc(D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_FILTER_MIN_MAG_MIP_POINT);
 				TextureDesc tdesc(size_t(texture_size.x), size_t(texture_size.y), 1, DXGI_FORMAT_R8G8B8A8_UNORM);
 				tdesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-				auto has_alpha = bk_colour.a != 0xff || fr_colour.a != 0xff;
 				auto tex = rdr.m_tex_mgr.CreateTexture2D(AutoId, Image(), tdesc, sdesc, has_alpha, "text_quad");
 
-				// Get a D2D device context to draw on
+				// Get a D2D device context to draw on the texture
 				auto dc = tex->GetD2DeviceContext();
-				auto fr = pr::To<D3DCOLORVALUE>(fr_colour);
-				auto bk = pr::To<D3DCOLORVALUE>(bk_colour);
+				auto fr = pr::To<D3DCOLORVALUE>(def.m_font.m_colour);
+				auto bk = pr::To<D3DCOLORVALUE>(layout.m_bk_colour);
 
-				// Create a solid brush
+				// Apply different colours to text ranges
+				for (auto& fmt : fmtting)
+				{
+					if (fmt.empty()) continue;
+					if (fmt.m_font.m_colour != def.m_font.m_colour)
+					{
+						D3DPtr<ID2D1SolidColorBrush> brush;
+						pr::Throw(dc->CreateSolidColorBrush(pr::To<D3DCOLORVALUE>(fmt.m_font.m_colour), &brush.m_ptr));
+						brush->SetOpacity(fmt.m_font.m_colour.a);
+
+						// Apply the colour
+						text_layout->SetDrawingEffect(brush.get(), fmt.m_range);
+					}
+				}
+
+				// Create the default text colour brush
 				D3DPtr<ID2D1SolidColorBrush> brush;
 				pr::Throw(dc->CreateSolidColorBrush(fr, &brush.m_ptr));
-				brush->SetOpacity(fr_colour.a);
+				brush->SetOpacity(def.m_font.m_colour.a);
 
 				// Draw the string
 				dc->BeginDraw();
 				dc->Clear(&bk);
-				dc->DrawTextLayout(D2D1::Point2F(0, 0), text, brush.get(), D2D1_DRAW_TEXT_OPTIONS_NONE);
+				dc->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_ALIASED);
+				dc->DrawTextLayout({layout.m_padding.left, layout.m_padding.top}, text_layout.get(), brush.get(), D2D1_DRAW_TEXT_OPTIONS_NONE);
 				pr::Throw(dc->EndDraw());
 
 				// Create a quad using this texture
@@ -978,38 +1127,26 @@ namespace pr
 
 				// Generate the geometry
 				Cache cache(vcount, icount);
-				auto props = pr::geometry::Quad(axis_id, anchor, text_size.x, text_size.y, iv2Zero, Colour32White, t2q, std::begin(cache.m_vcont), std::begin(cache.m_icont));
+				auto props = pr::geometry::Quad(axis_id, layout.m_anchor, text_size.x, text_size.y, iv2Zero, Colour32White, t2q, std::begin(cache.m_vcont), std::begin(cache.m_icont));
 				cache.m_bbox = props.m_bbox;
 				cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, &mat);
 
 				// Create the model
 				return Create(rdr, cache, bake);
 			}
-			static ModelPtr Text(Renderer& rdr, IDWriteTextLayout* text, AxisId axis_id, Colour32 fr_colour, Colour32 bk_colour, v2 const& anchor)
+			static ModelPtr Text(Renderer& rdr, wstring256 const& text, TextFormat const* formatting, int formatting_count, TextLayout const& layout, AxisId axis_id)
 			{
 				v4 dim_out;
-				return Text(rdr, text, axis_id, fr_colour, bk_colour, anchor, dim_out);
+				return Text(rdr, text, formatting, formatting_count, layout, axis_id, dim_out);
 			}
-			static ModelPtr Text(Renderer& rdr, wchar_t const* text, int length, AxisId axis_id, Colour32 fr_colour, Colour32 bk_colour, float max_width, float max_height, v2 const& anchor, v4& dim_out)
+			static ModelPtr Text(Renderer& rdr, wstring256 const& text, TextFormat const& formatting, TextLayout const& layout, AxisId axis_id, v4& dim_out)
 			{
-				using namespace D2D1;
-				auto dwrite = rdr.DWrite();
-
-				// Create the "font", a.k.a text format
-				D3DPtr<IDWriteTextFormat> text_format;
-				pr::Throw(dwrite->CreateTextFormat(L"tahoma", nullptr, DWRITE_FONT_WEIGHT_LIGHT, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 20.0f, L"en-GB", &text_format.m_ptr));
-
-				// Create the 'format" a.k.a text layout
-				D3DPtr<IDWriteTextLayout> text_layout;
-				pr::Throw(dwrite->CreateTextLayout(text, UINT32(length), text_format.get(), max_width, max_height, &text_layout.m_ptr));
-
-				// Create the text model
-				return Text(rdr, text_layout.get(), axis_id, fr_colour, bk_colour, anchor, dim_out);
+				return Text(rdr, text, &formatting, 1, layout, axis_id, dim_out);
 			}
-			static ModelPtr Text(Renderer& rdr, wchar_t const* text, int length, AxisId axis_id, Colour32 fr_colour, Colour32 bk_colour, float max_width, float max_height, v2 const& anchor)
+			static ModelPtr Text(Renderer& rdr, wstring256 const& text, TextFormat const& formatting, TextLayout const& layout, AxisId axis_id)
 			{
 				v4 dim_out;
-				return Text(rdr, text, length, axis_id, fr_colour, bk_colour, max_width, max_height, anchor, dim_out);
+				return Text(rdr, text, &formatting, 1, layout, axis_id, dim_out);
 			}
 		};
 	}

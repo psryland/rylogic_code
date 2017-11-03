@@ -3,11 +3,13 @@
 // Copyright (C) Rylogic Ltd 2016
 //***************************************************
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
 using System.Xml.Linq;
@@ -2621,20 +2623,45 @@ namespace pr.gui
 		/// <summary>Manages per-button mouse operations</summary>
 		public class MouseOps
 		{
-			/// <summary>The current mouse operation in effect for each mouse button</summary>
-			private readonly Dictionary<MouseButtons, MouseOp> m_ops;
-
 			/// <summary>The next mouse operation for each mouse button</summary>
 			private readonly Dictionary<MouseButtons, MouseOp> m_pending;
 
 			public MouseOps()
 			{
-				m_ops     = Enum<MouseButtons>.Values.ToDictionary(k => k, k => (MouseOp)null);
 				m_pending = Enum<MouseButtons>.Values.ToDictionary(k => k, k => (MouseOp)null);
 			}
 
 			/// <summary>The currently active mouse op</summary>
-			public MouseOp Active { get; private set; }
+			public MouseOp Active
+			{
+				get { return m_active; }
+				private set
+				{
+					if (m_active == value) return;
+					if (m_active != null)
+					{
+						// Clean up the previous active mouse op
+						if (m_active.Cancelled)
+							m_active.NotifyCancelled();
+
+						m_active.Disposed -= HandleMouseOpDisposed;
+						m_active.Dispose();
+					}
+					m_active = value;
+					if (m_active != null)
+					{
+						// Watch for external disposing
+						m_active.Disposed -= HandleMouseOpDisposed;
+						m_active.Disposed += HandleMouseOpDisposed;
+
+						// If the op starts immediately without a mouse down, fake
+						// a mouse down event as soon as it becomes active.
+						if (!m_active.StartOnMouseDown)
+							m_active.MouseDown(null);
+					}
+				}
+			}
+			private MouseOp m_active;
 
 			/// <summary>Return the op pending for button 'idx'</summary>
 			public MouseOp Pending(MouseButtons btn)
@@ -2645,8 +2672,19 @@ namespace pr.gui
 			/// <summary>Add a mouse op to be started on the next mouse down event for button 'idx'</summary>
 			public void SetPending(MouseButtons btn, MouseOp op)
 			{
-				if (m_pending[btn] != null) m_pending[btn].Dispose();
+				if (m_pending[btn] == op) return;
+				if (m_pending[btn] != null)
+				{
+					m_pending[btn].Disposed -= HandleMouseOpDisposed;
+					m_pending[btn].Dispose();
+				}
 				m_pending[btn] = op;
+				if (m_pending[btn] != null)
+				{
+					// Watch for external disposing
+					m_pending[btn].Disposed -= HandleMouseOpDisposed;
+					m_pending[btn].Disposed += HandleMouseOpDisposed;
+				}
 			}
 
 			/// <summary>Start/End the next mouse op for button 'idx'</summary>
@@ -2654,27 +2692,30 @@ namespace pr.gui
 			{
 				Active = m_pending[btn];
 				m_pending[btn] = null;
-
-				// If the op starts immediately without a mouse down, fake
-				// a mouse down event as soon as it becomes active.
-				if (Active != null)
-				{
-					if (!Active.StartOnMouseDown)
-						Active.MouseDown(null);
-				}
 			}
 			public void EndOp(MouseButtons btn)
 			{
-				if (Active != null)
-				{
-					if (Active.Cancelled) Active.NotifyCancelled();
-					Active.Dispose();
-				}
 				Active = null;
 
 				// If the next op starts immediately, begin it now
 				if (m_pending[btn] != null && !m_pending[btn].StartOnMouseDown)
 					BeginOp(btn);
+			}
+
+			/// <summary>Handle a mouse op being disposed externally</summary>
+			private void HandleMouseOpDisposed(object sender, EventArgs args)
+			{
+				// This should never be called when 'MouseOps' is the one calling dispose
+				// It's only to handle an external reference calling Dispose.
+				var op = (MouseOp)sender;
+				op.Disposed -= HandleMouseOpDisposed;
+
+				if (m_active == op)
+					m_active = null;
+
+				foreach (var key in m_pending.Keys.ToList())
+					if (m_pending[key] == op)
+						m_pending[key] = null;
 			}
 		}
 
@@ -2710,8 +2751,10 @@ namespace pr.gui
 			}
 			public virtual void Dispose()
 			{
+				Disposed.Raise(this);
 				Util.Dispose(ref m_suspend_scope);
 			}
+			public event EventHandler Disposed;
 
 			/// <summary>True if mouse down starts the op, false if the op should start as soon as possible</summary>
 			public bool StartOnMouseDown { get; set; }
@@ -4561,20 +4604,34 @@ namespace pr.gui
 		/// <summary>Event args for the ChartRendering event</summary>
 		public class ChartRenderingEventArgs :EventArgs
 		{
-			private View3d.Window m_window;
 			public ChartRenderingEventArgs(ChartControl chart, View3d.Window window)
 			{
 				Chart = chart;
-				m_window = window;
+				Window = window;
 			}
 
 			/// <summary>The chart that is rendering</summary>
 			public ChartControl Chart { get; private set; }
 
+			/// <summary>The View3d window to add/remove objects to/from</summary>
+			public View3d.Window Window { get; private set; }
+
 			/// <summary>Add a view3d object to the chart scene</summary>
 			public void AddToScene(View3d.Object obj)
 			{
-				m_window.AddObject(obj);
+				Window.AddObject(obj);
+			}
+
+			/// <summary>Remove a single object from the chart scene</summary>
+			public void RemoveFromScene(View3d.Object obj)
+			{
+				Window.RemoveObject(obj);
+			}
+
+			/// <summary>Remove all objects belonging to a group</summary>
+			public void RemoveObjects(Guid context_id, bool all_except = false)
+			{
+				Window.RemoveObjects(context_id, all_except);
 			}
 		}
 
@@ -4707,7 +4764,7 @@ namespace pr.gui
 		/// <summary>Check the self consistency of elements</summary>
 		public bool CheckConsistency()
 		{
-			if (ConsistencyCheckSuspended) return true;
+			if (m_consistency_check_ref_count != 0) return true;
 			try { CheckConsistencyInternal(); }
 			catch (Exception ex)
 			{
@@ -4756,33 +4813,22 @@ namespace pr.gui
 				elem.CheckConsistency();
 		}
 
-		/// <summary>True while consistency checks are suspended (Set calls are reference counted)</summary>
-		[Browsable(false)] public bool ConsistencyCheckSuspended
-		{
-			get { return m_consistency_check_ref_count != 0; }
-			set
-			{
-				m_consistency_check_ref_count += value ? +1 : -1;
-				Debug.Assert(m_consistency_check_ref_count >= 0);
-			}
-		}
-		private int m_consistency_check_ref_count;
-
 		/// <summary>Temporarily disable the consistency check</summary>
 		public Scope SuspendConsistencyCheck(bool check_on_exit = true)
 		{
 			return Scope.Create(
-				() => ConsistencyCheckSuspended = true,
+				() => ++m_consistency_check_ref_count,
 				() =>
 				{
-					ConsistencyCheckSuspended = false;
-					if (check_on_exit && !ConsistencyCheckSuspended)
+					--m_consistency_check_ref_count;
+					if (check_on_exit && m_consistency_check_ref_count == 0)
 						Debug.Assert(CheckConsistency());
 				});
 		}
+		private int m_consistency_check_ref_count;
 
 		/// <summary>Element sorting predicates</summary>
-		protected Cmp<Element> ByGuid   = Cmp<Element>.From((l,r) => l.Id.CompareTo(r.Id));
+		protected Cmp<Element> ByGuid = Cmp<Element>.From((l,r) => l.Id.CompareTo(r.Id));
 
 		#endregion
 
@@ -4801,7 +4847,6 @@ namespace pr.gui
 	/// <summary>Represents a data source that can be added to a chart control</summary>
 	public class ChartDataSeries :ChartControl.Element
 	{
-		private List<Pt> m_data;
 		private List<GfxPiece> m_cache;
 		private PointStyleTextures m_point_textures;
 
@@ -4818,7 +4863,6 @@ namespace pr.gui
 			:base(node)
 		{
 			Init();
-			PlotType = node.Element(nameof(PlotType)).As(PlotType);
 			Options = node.Element(nameof(Options)).As(Options);
 		}
 		private void Init()
@@ -4835,30 +4879,48 @@ namespace pr.gui
 		}
 		public override XElement ToXml(XElement node)
 		{
-			node.Add2(nameof(PlotType), PlotType, false);
 			node.Add2(nameof(Options), Options, false);
 			return base.ToXml(node);
 		}
 
-		/// <summary>The style of plot for this series</summary>
-		public EPlotType PlotType
-		{
-			get { return m_plot_type; }
-			set
-			{
-				if (m_plot_type == value) return;
-				SetProp(ref m_plot_type, value, nameof(PlotType), invalidate_graphics:true, invalidate_chart:true);
-			}
-		}
-		private EPlotType m_plot_type;
-
 		/// <summary>Options for rendering this series</summary>
 		public OptionsData Options { get; set; }
+
+		/// <summary>Gain access to the underlying data</summary>
+		public LockData Lock()
+		{
+			return new LockData(this);
+		}
+		private List<Pt> m_data;
 
 		/// <summary>Return the X-Axis range of the data</summary>
 		public RangeF RangeX
 		{
-			get { return m_data.Count != 0 ? new RangeF(m_data.Front().x, m_data.Back().x) : RangeF.Invalid; }
+			get
+			{
+				using (Lock())
+				{
+					// 'Transform' only applies to the graphics
+					if (m_data.Count == 0) return RangeF.Invalid;
+					var beg = m_data.Front();
+					var end = m_data.Back();
+					return new RangeF(beg.x, end.x);
+				}
+			}
+		}
+
+		/// <summary>Cause all graphics models to be recreated</summary>
+		public void FlushCachedGraphics()
+		{
+			m_cache.Clear();
+		}
+
+		/// <summary>Cause graphics model that intersect 'x_range' to be recreated</summary>
+		public void FlushCachedGraphics(Range x_range)
+		{
+			var beg = m_cache.BinarySearch(p => p.Range.CompareTo(x_range.Beg), find_insert_position:true);
+			var end = m_cache.BinarySearch(p => p.Range.CompareTo(x_range.End), find_insert_position:true);
+			m_cache.RemoveRange(beg, end - beg);
 		}
 
 		/// <summary>Update the graphics for this indicator and add it to the scene</summary>
@@ -4919,28 +4981,31 @@ namespace pr.gui
 		private GfxPiece CreatePiece(double x, RangeF missing)
 		{
 			Debug.Assert(missing.Contains(x));
-
-			// Find the nearest point in the data to 'x'
-			var idx = m_data.BinarySearch(pt => pt.x.CompareTo(x), find_insert_position:true);
-
-			// Convert 'missing' to an index range within the data
-			var idx_missing = new Range(
-				m_data.BinarySearch(pt => pt.x.CompareTo(missing.Beg), find_insert_position:true),
-				m_data.BinarySearch(pt => pt.x.CompareTo(missing.End), find_insert_position:true));
-
-			// Limit the size of 'idx_missing' to the block size
-			const int PieceBlockSize = 4096;
-			var idx_range = new Range(
-				Math.Max(idx_missing.Beg, idx - PieceBlockSize),
-				Math.Min(idx_missing.End, idx + PieceBlockSize));
-
-			// Create graphics over the data range 'idx_range'
-			switch (PlotType)
+			using (Lock())
 			{
-			default: throw new Exception($"Unsupported plot type: {PlotType}");
-			case EPlotType.Point: return CreatePointPlot(idx_range);
-			case EPlotType.Line:  return CreateLinePlot(idx_range);
-			case EPlotType.Bar:   return CreateBarPlot(idx_range);
+				// Find the nearest point in the data to 'x'
+				var idx = m_data.BinarySearch(pt => pt.x.CompareTo(x), find_insert_position: true);
+
+				// Convert 'missing' to an index range within the data
+				var idx_missing = new Range(
+					m_data.BinarySearch(pt => pt.x.CompareTo(missing.Beg), find_insert_position:true),
+					m_data.BinarySearch(pt => pt.x.CompareTo(missing.End), find_insert_position:true));
+
+				// Limit the size of 'idx_missing' to the block size
+				const int PieceBlockSize = 4096;
+				var idx_range = new Range(
+					Math.Max(idx_missing.Beg, idx - PieceBlockSize),
+					Math.Min(idx_missing.End, idx + PieceBlockSize));
+
+				// Create graphics over the data range 'idx_range'
+				switch (Options.PlotType)
+				{
+				default: throw new Exception($"Unsupported plot type: {Options.PlotType}");
+				case EPlotType.Point:    return CreatePointPlot(idx_range);
+				case EPlotType.Line:     return CreateLinePlot(idx_range);
+				case EPlotType.StepLine: return CreateStepLinePlot(idx_range);
+				case EPlotType.Bar:      return CreateBarPlot(idx_range);
+				}
 			}
 		}
 
@@ -4974,7 +5039,7 @@ namespace pr.gui
 			}
 
 			// Create the graphics
-			var gfx = new View3d.Object($"{Name}-[{idx_range.Beg},{idx_range.End})", 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray());
+			var gfx = new View3d.Object($"{Name}-[{idx_range.Beg},{idx_range.End})", 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray(), Id);
 			return new GfxPiece(gfx, x_range);
 		}
 
@@ -4984,18 +5049,23 @@ namespace pr.gui
 			var n = idx_range.Sizei;
 
 			// Resize the geometry buffers
-			m_vbuf.Resize(n + 1);
-			m_ibuf.Resize(n + 1);
+			m_vbuf.Resize(n);
+			m_ibuf.Resize(n);
 			m_nbuf.Resize(1 + (Options.PointsOnLinePlot ? 1 : 0));
 
 			// Create the vertex/index data
+			int vert = 0, indx = 0;
 			var col = Options.Colour;
 			var x_range = RangeF.Invalid;
 			for (int i = 0, iend = Math.Min(n + 1, m_data.Count - idx_range.Begi); i != iend; ++i)
 			{
-				var pt = m_data[i + idx_range.Begi];
-				m_vbuf[i] = new View3d.Vertex(new v4((float)pt.x, (float)pt.y, 0f, 1f), col);
-				m_ibuf[i] = (ushort)i;
+				var j = i + idx_range.Begi;
+				var pt = m_data[j];
+
+				var v = vert;
+				m_vbuf[vert++] = new View3d.Vertex(new v4((float)pt.x, (float)pt.y, 0f, 1f), col);
+				m_ibuf[indx++] = (ushort)(v);
+
 				x_range.Encompass(pt.x);
 			}
 
@@ -5012,11 +5082,67 @@ namespace pr.gui
 				var mat = View3d.Material.New();
 				mat.m_diff_tex = m_point_textures[Options.PointStyle]?.Handle ?? IntPtr.Zero;
 				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.PointSpritesGS, new v2(Options.PointSize, Options.PointSize), false);
-				m_nbuf[1] = new View3d.Nugget(View3d.EPrim.PointList, View3d.EGeom.Vert|View3d.EGeom.Colr|View3d.EGeom.Tex0, 0, (uint)n, 0, (uint)n, false, true, mat);
+				m_nbuf[1] = new View3d.Nugget(View3d.EPrim.PointList, View3d.EGeom.Vert|View3d.EGeom.Colr|View3d.EGeom.Tex0, false, true, mat);
 			}
 
 			// Create the graphics
-			var gfx = new View3d.Object($"{Name}-[{idx_range.Beg},{idx_range.End})", 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray());
+			var gfx = new View3d.Object($"{Name}-[{idx_range.Beg},{idx_range.End})", 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray(), Id);
+			return new GfxPiece(gfx, x_range);
+		}
+
+		/// <summary>Create a step line plot</summary>
+		private GfxPiece CreateStepLinePlot(Range idx_range)
+		{
+			var n = idx_range.Sizei;
+
+			// Resize the geometry buffers
+			m_vbuf.Resize(2*n);
+			m_ibuf.Resize(2*n + (Options.PointsOnLinePlot ? n : 0));
+			m_nbuf.Resize(1 + (Options.PointsOnLinePlot ? 1 : 0));
+
+			// Create the vertex/index data
+			int vert = 0, indx = 0;
+			var col = Options.Colour;
+			var x_range = RangeF.Invalid;
+			for (int i = 0, iend = Math.Min(n + 1, m_data.Count - idx_range.Begi); i != iend; ++i)
+			{
+				// Get the point and the next point
+				var j = i + idx_range.Begi;
+				var pt = m_data[j];
+				var pt_r = j+1 != m_data.Count ? m_data[j+1] : pt;
+
+				var v = vert;
+				m_vbuf[vert++] = new View3d.Vertex(new v4((float)pt.x  , (float)pt.y, 0f, 1f), col);
+				m_vbuf[vert++] = new View3d.Vertex(new v4((float)pt_r.x, (float)pt.y, 0f, 1f), col);
+				m_ibuf[indx++] = (ushort)(v + 0);
+				m_ibuf[indx++] = (ushort)(v + 1);
+
+				x_range.Encompass(pt.x);
+			}
+
+			// Create a nugget for the list strip using the thick line shader
+			{
+				var mat = View3d.Material.New();
+				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.ThickLineListGS, Options.LineWidth);
+				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert|View3d.EGeom.Colr, false, mat);
+			}
+
+			// Create a nugget for the points (if visible)
+			if (Options.PointsOnLinePlot)
+			{
+				// Add indices for the points
+				var i0 = indx;
+				for (int i = 0, iend = n; i != iend; ++i)
+					m_ibuf[indx++] = (ushort)(i * 2);
+			
+				var mat = View3d.Material.New();
+				mat.m_diff_tex = m_point_textures[Options.PointStyle]?.Handle ?? IntPtr.Zero;
+				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.PointSpritesGS, new v2(Options.PointSize, Options.PointSize), false);
+				m_nbuf[1] = new View3d.Nugget(View3d.EPrim.PointList, View3d.EGeom.Vert|View3d.EGeom.Colr|View3d.EGeom.Tex0, 0, (uint)vert, (uint)i0, (uint)indx, false, false, mat);
+			}
+
+			// Create the graphics
+			var gfx = new View3d.Object($"{Name}-[{idx_range.Beg},{idx_range.End})", 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray(), Id);
 			return new GfxPiece(gfx, x_range);
 		}
 
@@ -5031,8 +5157,7 @@ namespace pr.gui
 			m_nbuf.Resize(1);
 
 			// Create the vertex/index data
-			var vert = 0;
-			var indx = 0;
+			int vert = 0, indx = 0;
 			var col = Options.Colour;
 			var width = Options.BarWidth;
 			var x_range = RangeF.Invalid;
@@ -5042,7 +5167,7 @@ namespace pr.gui
 				var j = i + idx_range.Begi;
 				var pt_l = j != 0 ? m_data[j-1] : null;
 				var pt   = m_data[j];
-				var pt_r = j != m_data.Count-1 ? m_data[j+1] : null;
+				var pt_r = j+1 != m_data.Count ? m_data[j+1] : null;
 
 				// Get the distance to the left and right of 'pt.x'
 				var l = pt_l != null ? 0.5f * width * (pt.x - pt_l.x) : 0f;
@@ -5062,6 +5187,7 @@ namespace pr.gui
 				m_ibuf[indx++] = (ushort)(v + 2);
 				m_ibuf[indx++] = (ushort)(v + 3);
 				m_ibuf[indx++] = (ushort)(v + 0);
+
 				x_range.Encompass(pt.x);
 			}
 
@@ -5071,7 +5197,7 @@ namespace pr.gui
 			}
 
 			// Create the graphics
-			var gfx = new View3d.Object($"{Name}-[{idx_range.Beg},{idx_range.End})", 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray());
+			var gfx = new View3d.Object($"{Name}-[{idx_range.Beg},{idx_range.End})", 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray(), Id);
 			return new GfxPiece(gfx, x_range);
 		}
 
@@ -5116,6 +5242,7 @@ namespace pr.gui
 		{
 			Point,
 			Line,
+			StepLine,
 			Bar,
 		}
 
@@ -5129,6 +5256,7 @@ namespace pr.gui
 
 		/// <summary>A single point in the data series. A class so that it can be sub-classed</summary>
 		[DebuggerDisplay("{x} {y}")]
+		[StructLayout(LayoutKind.Explicit, Pack = 1)]
 		public class Pt
 		{
 			public Pt(double x_, double y_)
@@ -5136,9 +5264,26 @@ namespace pr.gui
 				x = x_;
 				y = y_;
 			}
+			public Pt(double x_, long y_)
+			{
+				x = x_;
+				yi = y_;
+			}
+			public Pt(long x_, double y_)
+			{
+				xi = x_;
+				y = y_;
+			}
+			public Pt(long x_, long y_)
+			{
+				xi = x_;
+				yi = y_;
+			}
 
-			public double x;
-			public double y;
+			[FieldOffset(0)] public double x;
+			[FieldOffset(8)] public double y;
+			[FieldOffset(0)] public long xi;
+			[FieldOffset(8)] public long yi;
 
 			public static implicit operator Pt(v2 pt) { return new Pt(pt.x, pt.y); }
 			public static implicit operator v2(Pt pt) { return new v2((float)pt.x, (float)pt.y); }
@@ -5152,8 +5297,7 @@ namespace pr.gui
 			}
 		}
 
-		/// <summary>Gain access to the underlying data</summary>
-		public LockData Lock() { return new LockData(this); }
+		/// <summary>RAII object for synchronising access to the underlying data</summary>
 		public class LockData :IDisposable
 		{
 			private readonly ChartDataSeries m_owner;
@@ -5179,7 +5323,21 @@ namespace pr.gui
 				Data.Clear();
 			}
 
+			/// <summary>Add a datum point</summary>
+			public Pt Add(Pt point)
+			{
+				Data.Add(point);
+				return point;
+			}
+
 			/// <summary>The data series</summary>
+			public Pt this[int idx]
+			{
+				get { return Data[idx]; }
+				set { Data[idx] = value; }
+			}
+
+			/// <summary>Access the series data</summary>
 			public List<Pt> Data
 			{
 				get { return m_owner.m_data; }
@@ -5216,7 +5374,7 @@ namespace pr.gui
 				Debug.Assert(i1 >= i0);
 				for (int i = i0, iend = Math.Min(i1, Count); i != iend; ++i)
 				{
-					var pt = Data[i];
+					var pt = this[i];
 					yield return pt;
 				}
 			}
@@ -5327,6 +5485,7 @@ namespace pr.gui
 			public OptionsData()
 			{
 				Colour           = Color.Black;
+				PlotType         = EPlotType.Point;
 				PointStyle       = EPointStyle.Square;
 				PointSize        = 10f;
 				LineWidth        = 5f;
@@ -5347,9 +5506,13 @@ namespace pr.gui
 				//MALineColour   = Color.FromArgb(0xff, 0, 0, 0xFF);
 				//MALineWidth    = 3f;
 			}
+			public OptionsData(XElement node)
+				:base(node)
+			{ }
 			public OptionsData(OptionsData rhs)
 			{
 				Colour           = rhs.Colour;
+				PlotType         = rhs.PlotType;
 				PointStyle       = rhs.PointStyle;
 				PointSize        = rhs.PointSize;
 				LineWidth        = rhs.LineWidth;
@@ -5362,6 +5525,13 @@ namespace pr.gui
 			{
 				get { return get<Colour32>(nameof(Colour)); }
 				set { set(nameof(Colour), value); }
+			}
+
+			/// <summary>The plot type for the series</summary>
+			public EPlotType PlotType
+			{
+				get { return get<EPlotType>(nameof(PlotType)); }
+				set { set(nameof(PlotType), value); }
 			}
 
 			/// <summary>The style of points to draw</summary>
@@ -5411,6 +5581,62 @@ namespace pr.gui
 			//public Color      MALineColour   { get; set; }
 			//public float      MALineWidth    { get; set; }
 		}
+	}
+
+	/// <summary>A Legend element for a collection of ChartDataSeries</summary>
+	public class ChartDataLegend :ChartControl.Element
+	{
+		public ChartDataLegend()
+			:this(Guid.NewGuid())
+		{}
+		public ChartDataLegend(Guid id)
+			:base(id, m4x4.Identity, "Legend")
+		{
+			Series = new BindingSource<ChartDataSeries>();
+		}
+		protected override void Dispose(bool disposing)
+		{
+			Series = null;
+			base.Dispose(disposing);
+		}
+
+		/// <summary>The source of chart data series objects to build the legend for</summary>
+		public BindingSource<ChartDataSeries> Series
+		{
+			get { return m_series; }
+			private set
+			{
+				if (m_series == value) return;
+				if (m_series != null)
+				{
+					m_series.ListChanging -= HandleListChanging;
+					m_series.DataSource = null;
+				}
+				m_series = value;
+				if (m_series != null)
+				{
+					m_series.ListChanging += HandleListChanging;
+				}
+				void HandleListChanging(object sender, ListChgEventArgs<ChartDataSeries> e)
+				{
+					if (e.IsDataChanged)
+						Invalidate();
+				}
+			}
+		}
+		public BindingSource<ChartDataSeries> m_series;
+
+		/// <summary>Generate the legend graphics</summary>
+		protected override void UpdateGfxCore()
+		{
+			base.UpdateGfxCore();
+
+			//
+			foreach (var s in Series)
+			{
+			}
+		}
+
 	}
 
 	#endregion

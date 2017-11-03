@@ -503,7 +503,6 @@ namespace pr
 
 			// Notify that a resize of the swap chain is about to happen.
 			// Receivers need to ensure they don't have any outstanding references to the swap chain resources
-			//pr::events::Send(rdr::Evt_Resize(this, false, RenderTargetSize())); // notify before changing the RT (with the old size)
 			m_rdr->RenderTargetSizeChanged(*this, RenderTargetSizeChangedEventArgs(RenderTargetSize(), false));
 
 			// Drop the render targets from the immediate context and D2D
@@ -528,7 +527,6 @@ namespace pr
 
 			// Notify that the resize is done
 			m_rdr->RenderTargetSizeChanged(*this, RenderTargetSizeChangedEventArgs(m_dbg_area = RenderTargetSize(), true));
-			//pr::events::Send(rdr::Evt_Resize(this, true, m_dbg_area = RenderTargetSize())); // notify after changing the RT (with the new size)
 		}
 
 		// Flip the scene to the display

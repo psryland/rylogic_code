@@ -537,12 +537,12 @@ namespace pr.extn
 		/// <summary>Display a context menu for showing/hiding columns in the grid. Attach to MouseDown</summary>
 		public static void ColumnVisibility(object sender, MouseEventArgs args)
 		{
-			var grid = (DataGridView)sender;
-
-			var hit = grid.HitTestEx(args.X, args.Y);
 			if (args.Button == MouseButtons.Right)
 			{
+				var grid = (DataGridView)sender;
+
 				// Right mouse on a column header displays a context menu for hiding/showing columns
+				var hit = grid.HitTestEx(args.X, args.Y);
 				if (hit.Type == HitTestInfo.EType.ColumnHeader || hit.Type == HitTestInfo.EType.None)
 					grid.ColumnVisibilityContextMenu(hit.GridPoint);
 			}

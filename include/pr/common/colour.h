@@ -397,6 +397,13 @@ namespace pr
 	#pragma endregion
 
 	#pragma region Functions
+
+	// True if 'col' requires alpha blending
+	inline bool HasAlpha(Colour32 col)
+	{
+		return col.a != 0x00 && col.a != 0xFF;
+	}
+
 	// Find the 4D distance squared between two colours
 	inline int DistanceSq(Colour32 lhs, Colour32 rhs)
 	{
@@ -429,6 +436,7 @@ namespace pr
 	{
 		return RandomRGB(rng, 1.0f);
 	}
+
 	#pragma endregion
 
 	#pragma endregion

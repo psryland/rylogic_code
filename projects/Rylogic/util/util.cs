@@ -639,7 +639,7 @@ namespace pr.util
 			using (var s = new FileStream(ass.Location, FileMode.Open, FileAccess.Read))
 				s.Read(b, 0, 2048);
 
-			DateTime ts = new DateTime(1970, 1, 1, 0, 0, 0);
+			var ts = DateTime_.UnixEpoch;
 			ts = ts.AddSeconds(BitConverter.ToInt32(b, BitConverter.ToInt32(b, PeHeaderOffset) + LinkerTimestampOffset));
 			ts = ts.AddHours(TimeZone.CurrentTimeZone.GetUtcOffset(ts).Hours);
 			return ts;
@@ -756,10 +756,9 @@ namespace pr.util
 		public static DateTime UnixTimeToDateTime(long milliseconds)
 		{
 			const long ticks_per_ms = 10000;
-			DateTime time = m_time0;
+			var time = DateTime_.UnixEpoch;
 			return time.AddTicks(milliseconds*ticks_per_ms);
 		}
-		private static readonly DateTime m_time0 = new DateTime(1970, 1, 1, 0, 0, 0, 0);
 
 		/// <summary>Helper to ignore the requirement for matched called to Cursor.Show()/Hide()</summary>
 		public static bool ShowCursor

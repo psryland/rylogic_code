@@ -711,7 +711,7 @@ namespace pr.db
 			public void AlterTable(Type type)
 			{
 				// Read the columns that we want the table to have
-				var meta = Sqlite.TableMetaData.GetMetaData(type);
+				var meta = TableMetaData.GetMetaData(type);
 				var cols0 = meta.Columns.Select(x => x.Name).ToList();
 
 				// Read the existing columns that the table has
@@ -2863,8 +2863,7 @@ namespace pr.db
 			}
 			public static void ULong(sqlite3_stmt stmt, int idx, object value)
 			{
-				// Use Convert to trap overflow exceptions
-				NativeDll.BindInt64(stmt, idx, Convert.ToInt64(value));
+				unchecked { NativeDll.BindInt64(stmt, idx, (long)(ulong)value); }
 			}
 			public static void Decimal(sqlite3_stmt stmt, int idx, object value)
 			{
@@ -3045,7 +3044,7 @@ namespace pr.db
 			}
 			public static object ULong(sqlite3_stmt stmt, int idx)
 			{
-				return (ulong)NativeDll.ColumnInt64(stmt, idx); // Sqlite returns 0 if this column is null
+				unchecked { return (ulong)NativeDll.ColumnInt64(stmt, idx); } // Sqlite returns 0 if this column is null
 			}
 			public static object Decimal(sqlite3_stmt stmt, int idx)
 			{

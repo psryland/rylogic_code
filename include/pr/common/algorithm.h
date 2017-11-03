@@ -16,36 +16,52 @@ namespace pr
 {
 	// Container traits
 	#pragma region Container Traits
-	template <typename T> struct container_traits
+	namespace impl
 	{
-		using value_type = typename T::value_type;
-		static bool const associative = false;
-	};
+		template <typename T> struct std_container_traits
+		{
+			using value_type              = typename T::value_type;
+			using const_iterator          = typename T::const_iterator;
+			using iterator                = typename T::iterator;
+			static bool const associative = false;
+		};
+		template <typename K, typename V> struct map_container_traits
+		{
+			using value_type = std::pair<K,V>;
+			static bool const associative = true;
+		};
+		template <typename K> struct set_container_traits
+		{
+			using value_type = K;
+			static bool const associative = true;
+		};
+	}
+
+	template <typename T> struct container_traits
+		:impl::std_container_traits<T>
+	{};
 	template <typename U> struct container_traits<U[]>
 	{
-		using value_type = U;
+		using value_type              = U;
+		using const_iterator          = typename value_type const*;
+		using iterator                = typename value_type*;
 		static bool const associative = false;
 	};
 	template <typename K, typename V> struct container_traits<std::unordered_map<K,V>>
-	{
-		using value_type = std::pair<K,V>;
-		static bool const associative = true;
-	};
+		:impl::map_container_traits<K,V>
+	{};
 	template <typename K, typename V> struct container_traits<std::map<K,V>>
-	{
-		using value_type = std::pair<K,V>;
-		static bool const associative = true;
-	};
+		:impl::map_container_traits<K,V>
+	{};
 	template <typename K> struct container_traits<std::unordered_set<K>>
-	{
-		using value_type = K;
-		static bool const associative = true;
-	};
+		:impl::set_container_traits<K>
+	{};
 	template <typename K> struct container_traits<std::set<K>>
-	{
-		using value_type = K;
-		static bool const associative = true;
-	};
+		:impl::set_container_traits<K>
+	{};
+
+	static_assert(container_traits<std::vector<int>>::associative == false, "");
+	static_assert(container_traits<std::unordered_set<int>>::associative == true, "");
 	#pragma endregion
 
 	// Return the length of a container or array
@@ -233,34 +249,41 @@ namespace pr
 		cont.insert(iter, val);
 	}
 
+	// Erase 'where' from 'cont'
+	template <typename TCont> inline void erase(TCont& cont, typename container_traits<TCont>::const_iterator where)
+	{
+		if (where == std::end(cont)) return;
+		cont.erase(where);
+	}
+	template <typename TCont> inline void erase_unstable(TCont& cont, typename container_traits<TCont>::iterator where)
+	{
+		if (where == std::end(cont)) return;
+		*where = std::move(cont.back());
+		cont.pop_back();
+	}
+
 	// Erase the first instance of 'value' from 'cont'
-	template <typename TCont, typename Value = TCont::value_type> inline void erase(TCont& cont, Value const& value)
+	template <typename TCont> inline void erase(TCont& cont, typename container_traits<TCont>::value_type const& value)
 	{
 		auto iter = std::remove(std::begin(cont), std::end(cont), value);
-		if (iter == std::end(cont)) return;
-		cont.erase(iter);
+		erase(cont, iter);
 	}
-	template <typename TCont, typename Value = TCont::value_type> inline void erase_unstable(TCont& cont, Value const& value)
+	template <typename TCont> inline void erase_unstable(TCont& cont, typename container_traits<TCont>::value_type const& value)
 	{
 		auto iter = std::find(std::begin(cont), std::end(cont), value);
-		if (iter == std::end(cont)) return;
-		*iter = std::move(cont.back());
-		cont.pop_back();
+		erase_unstable(cont, iter);
 	}
 
 	// Erase the first match to 'pred' from 'cont'
 	template <typename TCont, typename Pred> inline void erase_first(TCont& cont, Pred pred)
 	{
 		auto iter = std::find_if(std::begin(cont), std::end(cont), pred);
-		if (iter == std::end(cont)) return;
-		cont.erase(iter);
+		erase(cont, iter);
 	}
 	template <typename TCont, typename Pred> inline void erase_first_unstable(TCont& cont, Pred pred)
 	{
 		auto iter = std::find_if(std::begin(cont), std::end(cont), pred);
-		if (iter == std::end(cont)) return;
-		*iter = std::move(cont.back());
-		cont.pop_back();
+		erase_unstable(cont, iter);
 	}
 
 	// Erase all elements from 'cont' that match 'pred'
@@ -269,11 +292,10 @@ namespace pr
 		if constexpr (container_traits<TCont>::associative)
 		{
 			// 'std::remove_if' does not work on associative containers because they cannot be reordered.
-			for (auto i = std::begin(cont);;)
+			for (auto i = std::begin(cont); i != std::end(cont);)
 			{
-				i = std::find_if(i, std::end(cont), pred);
-				if (i == std::end(cont)) break;
-				i = cont.erase(i);
+				if (!pred(*i)) ++i;
+				else i = cont.erase(i);
 			}
 		}
 		else

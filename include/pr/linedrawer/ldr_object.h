@@ -87,6 +87,7 @@ namespace pr
 
 		#pragma region Ldr script keywords
 		#define PR_ENUM(x)\
+			x(Name                 ,= HashI("Name"                ))\
 			x(Txfm                 ,= HashI("Txfm"                ))\
 			x(O2W                  ,= HashI("O2W"                 ))\
 			x(M4x4                 ,= HashI("M4x4"                ))\
@@ -103,12 +104,12 @@ namespace pr
 			x(Dim                  ,= HashI("Dim"                 ))\
 			x(Scale                ,= HashI("Scale"               ))\
 			x(Size                 ,= HashI("Size"                ))\
+			x(Weight               ,= HashI("Weight"              ))\
 			x(Transpose            ,= HashI("Transpose"           ))\
 			x(Inverse              ,= HashI("Inverse"             ))\
 			x(Normalise            ,= HashI("Normalise"           ))\
 			x(Orthonormalise       ,= HashI("Orthonormalise"      ))\
 			x(Colour               ,= HashI("Colour"              ))\
-			x(ForeColour           ,= HashI("ForeColour"          ))\
 			x(BackColour           ,= HashI("BackColour"          ))\
 			x(Font                 ,= HashI("Font"                ))\
 			x(Stretch              ,= HashI("Stretch"             ))\
@@ -125,6 +126,7 @@ namespace pr
 			x(Format               ,= HashI("Format"              ))\
 			x(TextLayout           ,= HashI("TextLayout"          ))\
 			x(Anchor               ,= HashI("Anchor"              ))\
+			x(Padding              ,= HashI("Padding"             ))\
 			x(Period               ,= HashI("Period"              ))\
 			x(Velocity             ,= HashI("Velocity"            ))\
 			x(AngVelocity          ,= HashI("AngVelocity"         ))\

@@ -524,6 +524,39 @@ namespace pr
 			}
 			return buf;
 		}
+
+		// Remove leading white space and trailing tabs around '\n' characters.
+		template <typename Str> Str& ProcessIndentedNewlines(Str& str)
+		{
+			// Allow new lines in simple strings. 
+			int w = 0;
+			for (int i = 0, c = 0, end = int(pr::str::Length(str)); i != end; )
+			{
+				// If this is a newline
+				if (str[i] == '\n')
+				{
+					// Write the newline just after the last non-whitespace character
+					str[c++] = str[i];
+
+					// Move the write pointer to just after the new line
+					w = c;
+
+					// Skip over trailing tab characters
+					for (++i; i != end && str[i] == '\t'; ++i) {}
+				}
+				else
+				{
+					// Copy from the read position to the write position
+					str[w++] = str[i++];
+
+					// Save the location of the last non whitespace character written
+					if (!pr::str::IsWhiteSpace(str[w-1]))
+						c = w;
+				}
+			}
+			pr::str::Resize(str, w);
+			return str;
+		}
 	}
 }
 
@@ -669,6 +702,11 @@ namespace pr
 				PR_CHECK(PrettyNumber<std::wstring>(1.234e10, 3, 3)    , L"12,340,000.000");
 				PR_CHECK(PrettyNumber<std::wstring>(1.234e-10, -3, 3)  , L"0.000"         );
 				PR_CHECK(PrettyNumber<std::wstring>(1.234e-10, -12, 3) , L"123.400"       );
+			}
+			{// ProcessIndentedNewlines
+				std::string str = "\nwords    and     \n\t\t\tmore  words  \n\t\t and more\nwords\n";
+				ProcessIndentedNewlines(str);
+				PR_CHECK(str, "\nwords    and\nmore  words\n and more\nwords\n");
 			}
 		}
 	}

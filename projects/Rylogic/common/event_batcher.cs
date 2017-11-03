@@ -10,14 +10,17 @@ using pr.extn;
 
 namespace pr.common
 {
-	// Used to group bursts of events into a few events.
-	// EventBatcher does the following:
-	// - Trigger on the first event received, (optional, see TriggerOnFirst)
-	// - Collect subsequent events,
-	// - Trigger every 'Delay' interval if events have been received since the last trigger
-	
+	/// <summary>Batch events by time</summary>
 	public class EventBatcher :IDisposable
 	{
+		// Notes:
+		// Used to group bursts of events into a few events.
+		// EventBatcher does the following:
+		// - Trigger on the first event received, (optional, see TriggerOnFirst)
+		// - Collect subsequent events,
+		// - Trigger every 'Delay' interval if events have been received since the last trigger
+
+		/// <summary>Synchronisation</summary>
 		private readonly object m_lock;
 
 		/// <summary>Condition variable to signal shutdown</summary>
@@ -140,6 +143,65 @@ namespace pr.common
 			Dispatcher.Invoke(Action);
 		}
 	}
+
+	/// <summary>Batch events per message pump loop</summary>
+	public struct Trigger
+	{
+		// Notes:
+		// - Much simpler than an EventBatcher
+		// How to use:
+		//  private Trigger m_update;
+		//	public void TriggerUpdate()
+		//	{
+		//		if (m_update.Pending) return; // remember ' || !IsHandleCreated' if using Control.BeginInvoke
+		//		m_update.Signal();
+		//
+		//		BeginInvoke(DoUpdate);
+		//		void DoUpdate()
+		//		{
+		//			m_update.Actioned();
+		//			...
+		//			if (m_update.Pending)
+		//				return; // abort, another trigger has been set
+		//		}
+		//	}
+		// or:
+		//	public void TriggerUpdate()
+		//	{
+		//		if (m_update.Pending) return;
+		//		m_update.Signal();
+		//		ThreadPool.QueueUserWorkItem(_ =>
+		//		{
+		//			m_update.Actioned();
+		//			...
+		//			if (m_update.Pending)
+		//				return; // abort, another trigger has been set
+		//	
+		//			BeginInvoke(MergeResults);
+		//			void MergeResults()
+		//			{
+		//				if (m_update.Pending) return;
+		//				...
+		//			}
+		//		});
+		//	}
+
+		public bool Pending
+		{
+			get { return m_issue != m_in_progress; }
+		}
+		public void Signal()
+		{
+			++m_issue;
+		}
+		public void Actioned()
+		{
+			m_in_progress = m_issue;
+		}
+
+		private int m_issue;
+		private int m_in_progress;
+	}
 }
 
 #if PR_UNITTESTS
@@ -159,34 +221,34 @@ namespace pr.unittests
 
 			// Not trigger on first, expect one call after the delay period
 			var eb1 = new EventBatcher(() =>
-				{
-					if (thread_id != Thread.CurrentThread.ManagedThreadId)
-						throw new Exception("Event Batch should be called in the thread context that the batcher was created in");
+			{
+				if (thread_id != Thread.CurrentThread.ManagedThreadId)
+					throw new Exception("Event Batch should be called in the thread context that the batcher was created in");
 						
-					++count[0];
-					mre_eb1.Set();
-				}){TriggerOnFirst = false};
+				++count[0];
+				mre_eb1.Set();
+			}){TriggerOnFirst = false};
 
 			// Trigger on first, expect one call at the start, and one after the delay period
 			var eb2 = new EventBatcher(() =>
-				{
-					if (thread_id != Thread.CurrentThread.ManagedThreadId)
-						throw new Exception("Event Batch should be called in the thread context that the batcher was created in");
+			{
+				if (thread_id != Thread.CurrentThread.ManagedThreadId)
+					throw new Exception("Event Batch should be called in the thread context that the batcher was created in");
 
-					++count[1];
-					eb1.Signal();
-					mre_eb2.Set();
-				}){TriggerOnFirst = true};
+				++count[1];
+				eb1.Signal();
+				mre_eb2.Set();
+			}){TriggerOnFirst = true};
 
 			ThreadPool.QueueUserWorkItem(x =>
-				{
-					for (var i = 0; i != 10; ++i)
-						eb2.Signal();
+			{
+				for (var i = 0; i != 10; ++i)
+					eb2.Signal();
 
-					mre_eb1.WaitOne();
-					mre_eb2.WaitOne();
-					dis.BeginInvokeShutdown(DispatcherPriority.Normal);
-				});
+				mre_eb1.WaitOne();
+				mre_eb2.WaitOne();
+				dis.BeginInvokeShutdown(DispatcherPriority.Normal);
+			});
 
 			// The unit test framework runs the test in a worker thread.
 			// Dispatcher.CurrentDispatcher causes a new dispatcher to be

@@ -60,7 +60,7 @@ namespace pr
 		template <> struct DxShaderType<EShaderType::GS> { typedef ID3D11GeometryShader type; };
 		template <> struct DxShaderType<EShaderType::HS> { typedef ID3D11HullShader     type; };
 		template <> struct DxShaderType<EShaderType::DS> { typedef ID3D11DomainShader   type; };
-		
+
 		// The number of supported quality levels for the given format and sample count
 		UINT MultisampleQualityLevels(ID3D11Device* device, DXGI_FORMAT format, UINT sample_count);
 
@@ -72,7 +72,10 @@ namespace pr
 
 		// Returns the number of bits per pixel for a given dx format
 		size_t BitsPerPixel(DXGI_FORMAT fmt);
-		inline size_t BytesPerPixel(DXGI_FORMAT fmt) { return BitsPerPixel(fmt) >> 3; }
+		inline size_t BytesPerPixel(DXGI_FORMAT fmt)
+		{
+			return BitsPerPixel(fmt) >> 3;
+		}
 
 		// Returns the expected row and slice pitch for a given image width*height and format
 		iv2 Pitch(iv2 size, DXGI_FORMAT fmt);

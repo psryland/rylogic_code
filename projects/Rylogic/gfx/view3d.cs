@@ -500,6 +500,9 @@ namespace pr.gfx
 			public Nugget(EPrim topo, EGeom geom, bool has_alpha, Material? mat)
 				:this(topo, geom, 0, 0, 0, 0, has_alpha, false, mat)
 			{}
+			public Nugget(EPrim topo, EGeom geom, bool has_alpha, bool range_overlaps, Material? mat)
+				:this(topo, geom, 0, 0, 0, 0, has_alpha, range_overlaps, mat)
+			{}
 			public Nugget(EPrim topo, EGeom geom, uint v0, uint v1, uint i0, uint i1)
 				:this(topo, geom, v0, v1, i0, i1, false)
 			{}
@@ -1863,10 +1866,10 @@ namespace pr.gfx
 			/// 'include_paths' - is a comma separated list of include paths to use to resolve #include directives (or nullptr)
 			/// 'module' - if non-zero causes includes to be resolved from the resources in that module</summary>
 			public Object()
-				:this("*group{}", false)
+				:this("*group{}", false, null)
 			{}
-			public Object(string ldr_script, bool file)
-				:this(ldr_script, file, null, null)
+			public Object(string ldr_script, bool file, Guid? context_id)
+				:this(ldr_script, file, context_id, null)
 			{}
 			public Object(string ldr_script, bool file, Guid? context_id, View3DIncludes? includes)
 			{
@@ -1879,31 +1882,27 @@ namespace pr.gfx
 			}
 
 			/// <summary>Create from buffer</summary>
-			public Object(string name, uint colour, int vcount, int icount, int ncount, Vertex[] verts, ushort[] indices, Nugget[] nuggets)
-				:this(name, colour, vcount, icount, ncount, verts, indices, nuggets, Guid.Empty)
-			{}
-			public Object(string name, uint colour, int vcount, int icount, int ncount, Vertex[] verts, ushort[] indices, Nugget[] nuggets, Guid context_id)
+			public Object(string name, uint colour, int vcount, int icount, int ncount, Vertex[] verts, ushort[] indices, Nugget[] nuggets, Guid? context_id)
 			{
 				m_owned = true;
+				var ctx = context_id ?? Guid.NewGuid();
 
 				// Serialise the verts/indices to a memory buffer
 				using (var vbuf = Marshal_.ArrayToPtr(verts))
 				using (var ibuf = Marshal_.ArrayToPtr(indices))
 				using (var nbuf = Marshal_.ArrayToPtr(nuggets))
 				{
-					m_handle = View3D_ObjectCreate(name, colour, vcount, icount, ncount, vbuf.Value.Ptr, ibuf.Value.Ptr, nbuf.Value.Ptr, ref context_id);
+					m_handle = View3D_ObjectCreate(name, colour, vcount, icount, ncount, vbuf.Value.Ptr, ibuf.Value.Ptr, nbuf.Value.Ptr, ref ctx);
 					if (m_handle == HObject.Zero) throw new System.Exception("Failed to create object '{0}' from provided buffers".Fmt(name));
 				}
 			}
 
 			/// <summary>Create an object via callback</summary>
-			public Object(string name, uint colour, int vcount, int icount, int ncount, EditObjectCB edit_cb)
-				:this(name, colour, vcount, icount, ncount, edit_cb, Guid.Empty)
-			{}
-			public Object(string name, uint colour, int vcount, int icount, int ncount, EditObjectCB edit_cb, Guid context_id)
+			public Object(string name, uint colour, int vcount, int icount, int ncount, EditObjectCB edit_cb, Guid? context_id)
 			{
 				m_owned = true;
-				m_handle = View3D_ObjectCreateEditCB(name, colour, vcount, icount, ncount, edit_cb, IntPtr.Zero, ref context_id);
+				var ctx = context_id ?? Guid.NewGuid();
+				m_handle = View3D_ObjectCreateEditCB(name, colour, vcount, icount, ncount, edit_cb, IntPtr.Zero, ref ctx);
 				if (m_handle == HObject.Zero) throw new Exception("Failed to create object '{0}' via edit callback".Fmt(name));
 			}
 

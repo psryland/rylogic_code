@@ -350,7 +350,11 @@ namespace pr
 			{
 				auto& src = m_pp;
 				pr::str::Resize(string, 0);
-				if (pr::str::ExtractString<StrType>(string, src, m_delim.c_str())) return true;
+				if (pr::str::ExtractString<StrType>(string, src, m_delim.c_str()))
+				{
+					pr::str::ProcessIndentedNewlines(string);
+					return true;
+				}
 				return ReportError(EResult::TokenNotFound, "string expected");
 			}
 			template <typename StrType> bool StringS(StrType& string)

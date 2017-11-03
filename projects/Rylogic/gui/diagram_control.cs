@@ -1465,9 +1465,9 @@ namespace pr.gui
 			private void Init(bool find_previous_anchors)
 			{
 				// Create graphics for the connector
-				m_gfx_line = new View3d.Object("*Group{}", false);
-				m_gfx_fwd = new View3d.Object("*Triangle conn_fwd FFFFFFFF {1.5 0 0  -0.5 +1.2 0  -0.5 -1.2 0}", false);
-				m_gfx_bak = new View3d.Object("*Triangle conn_bak FFFFFFFF {1.5 0 0  -0.5 +1.2 0  -0.5 -1.2 0}", false);
+				m_gfx_line = new View3d.Object("*Group{}", false, Id);
+				m_gfx_fwd = new View3d.Object("*Triangle conn_fwd FFFFFFFF {1.5 0 0  -0.5 +1.2 0  -0.5 -1.2 0}", false, Id);
+				m_gfx_bak = new View3d.Object("*Triangle conn_bak FFFFFFFF {1.5 0 0  -0.5 +1.2 0  -0.5 -1.2 0}", false, Id);
 
 				Relink(find_previous_anchors);
 			}
@@ -3596,6 +3596,23 @@ namespace pr.gui
 		/// <summary>A collection of graphics used by the diagram itself</summary>
 		public class Tools :IDisposable
 		{
+			public static readonly Guid Id = Guid.NewGuid();
+
+			public Tools()
+			{
+				m_area_select = new View3d.Object("*Rect selection 80000000 {3 1 1 *Solid}", false, Id);
+				Resizer = Array_.New(8, i => new ResizeGrabber(i));
+			}
+			public void Dispose()
+			{
+				Util.Dispose(ref m_area_select);
+				if (Resizer != null)
+				{
+					Resizer.ForEach(x => x.Dispose());
+					Resizer = null;
+				}
+			}
+
 			/// <summary>Graphic for area selection</summary>
 			public View3d.Object AreaSelect { get { return m_area_select; } }
 			private View3d.Object m_area_select;
@@ -3604,7 +3621,8 @@ namespace pr.gui
 			public ResizeGrabber[] Resizer { get; private set; }
 			public class ResizeGrabber :View3d.Object
 			{
-				public ResizeGrabber(int corner) :base("*Box {5}", false)
+				public ResizeGrabber(int corner)
+					:base("*Box {5}", false, Id)
 				{
 					switch (corner)
 					{
@@ -3659,21 +3677,6 @@ namespace pr.gui
 
 				/// <summary>Updates the position of the grabber</summary>
 				public Action<BRect,float> Update;
-			}
-
-			public Tools()
-			{
-				m_area_select = new View3d.Object("*Rect selection 80000000 {3 1 1 *Solid}", false);
-				Resizer = Array_.New<ResizeGrabber>(8, i => new ResizeGrabber(i));
-			}
-			public void Dispose()
-			{
-				Util.Dispose(ref m_area_select);
-				if (Resizer != null)
-				{
-					Resizer.ForEach(x => x.Dispose());
-					Resizer = null;
-				}
 			}
 		}
 

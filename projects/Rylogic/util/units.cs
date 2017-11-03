@@ -312,7 +312,7 @@ namespace pr.util
 			// otherwise it will be the result of 'Types[lhs] . Types[rhs]'
 
 			// The powers of each unit type
-			var powers = new Accumulator<string>();
+			var powers = new Accumulator<string, int>();
 			
 			// Characters that are allowed for unit strings
 			Func<string, int, bool> IsUnitChar = (string str, int idx) =>

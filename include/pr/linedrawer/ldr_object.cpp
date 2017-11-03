@@ -41,6 +41,9 @@ namespace pr
 		using GCont = pr::vector<pr::rdr::NuggetProps>;
 		using ModelCont = ParseResult::ModelLookup;
 		using EResult = pr::script::EResult;
+		using Font = pr::rdr::ModelGenerator<>::Font;
+		using TextFormat = pr::rdr::ModelGenerator<>::TextFormat;
+		using TextLayout = pr::rdr::ModelGenerator<>::TextLayout;
 		template <typename T> using optional = pr::optional<T>;
 
 		class Cache
@@ -116,28 +119,6 @@ namespace pr
 		{
 			return pr::hash::Hash(str);
 		}
-
-		// A Direct2D font description
-		struct Font
-		{
-			wstring256          m_name;   // Font family name
-			float               m_size;   // in points (1 pt = 1/72.272 inches = 0.35145mm)
-			DWRITE_FONT_WEIGHT  m_weight; // boldness
-			DWRITE_FONT_STRETCH m_stretch;
-			DWRITE_FONT_STYLE   m_style;
-			bool                m_underline;
-			bool                m_strikeout;
-
-			Font()
-				:m_name(L"tahoma")
-				,m_size(12.0f)
-				,m_weight(DWRITE_FONT_WEIGHT_NORMAL)
-				,m_stretch(DWRITE_FONT_STRETCH_NORMAL)
-				,m_style(DWRITE_FONT_STYLE_NORMAL)
-				,m_underline(false)
-				,m_strikeout(false)
-			{}
-		};
 
 		// Helper object for passing parameters between parsing functions
 		struct ParseParams
@@ -400,13 +381,8 @@ namespace pr
 		void ParseFont(pr::script::Reader& reader, Font& font)
 		{
 			reader.SectionStart();
-			
-			// Parse required fields
-			reader.String(font.m_name);
-			reader.Real(font.m_size);
-			reader.Int(font.m_weight, 10);
-			
-			// Parse optional fields
+			font.m_underline = false;
+			font.m_strikeout = false;
 			for (EKeyword kw; reader.NextKeywordH(kw);)
 			{
 				switch (kw)
@@ -414,6 +390,26 @@ namespace pr
 				default:
 					{
 						reader.ReportError(pr::script::EResult::UnknownToken);
+						break;
+					}
+				case EKeyword::Name:
+					{
+						reader.StringS(font.m_name);
+						break;
+					}
+				case EKeyword::Size:
+					{
+						reader.RealS(font.m_size);
+						break;
+					}
+				case EKeyword::Colour:
+					{
+						reader.IntS(font.m_colour.argb, 16);
+						break;
+					}
+				case EKeyword::Weight:
+					{
+						reader.IntS(font.m_weight, 10);
 						break;
 					}
 				case EKeyword::Style:
@@ -953,7 +949,6 @@ namespace pr
 
 							return CreatePointStyleTexture(id, sz, "PointStyleStar", [=](auto dc, auto fr, auto){ dc->FillGeometry(geom.get(), fr, nullptr); });
 						});
-						return nullptr;
 					}
 				case EStyle::Annulus:
 					{
@@ -1557,7 +1552,7 @@ namespace pr
 					{
 						for (auto i = nug.m_irange.begin(); i != nug.m_irange.end(); ++i)
 						{
-							if (m_colours[m_indices[i]].a == 0xFF) continue;
+							if (!HasAlpha(m_colours[m_indices[i]])) continue;
 							nug.m_geometry_has_alpha = true;
 							break;
 						}
@@ -1845,7 +1840,7 @@ namespace pr
 
 				// Colour interpolation iterator
 				auto col = pr::CreateLerpRepeater(m_color.data(), int(m_color.size()), int(m_point.size()), pr::Colour32White);
-				auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= c.a != 0xff; return c; };
+				auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 				// Model bounding box
 				auto bb = [&](v4 const& v) { pr::Encompass(props.m_bbox, v); return v; };
@@ -3231,71 +3226,50 @@ namespace pr
 				Billboard,
 				ScreenSpace,
 			};
-			struct TextLayout
-			{
-				DWRITE_TEXT_ALIGNMENT      m_align_h;
-				DWRITE_PARAGRAPH_ALIGNMENT m_align_v;
-				DWRITE_WORD_WRAPPING       m_word_wrapping;
+			using TextFmtCont = pr::vector<TextFormat>;
 
-				TextLayout()
-					:m_align_h(DWRITE_TEXT_ALIGNMENT_LEADING)
-					,m_align_v(DWRITE_PARAGRAPH_ALIGNMENT_NEAR)
-					,m_word_wrapping(DWRITE_WORD_WRAPPING_WRAP)
-				{}
-			};
-
-			std::wstring   m_text;
+			wstring256     m_text;
 			EType          m_type;
-			Colour32       m_fr_colour;
-			Colour32       m_bk_colour;
-			Font           m_font;
+			TextFmtCont    m_fmt;
 			TextLayout     m_layout;
-			v2             m_anchor;
-			v2             m_dim;
+			Font           m_font;
+			AxisId         m_axis_id;
 			bool           m_no_z_write;
 			bool           m_no_z_test;
-			AxisId         m_axis_id;
-			wchar_t const* m_newline;
 
 			ObjectCreator(ParseParams& p)
 				:IObjectCreator(p)
 				,m_text()
 				,m_type(EType::Full3D)
-				,m_fr_colour(0xFFFFFFFF)
-				,m_bk_colour(0x00000000)
-				,m_font(p.m_font)
+				,m_fmt()
 				,m_layout()
-				,m_anchor()
-				,m_dim(512.0f, 128.0f)
+				,m_font(p.m_font)
+				,m_axis_id(AxisId::PosZ)
 				,m_no_z_write()
 				,m_no_z_test()
-				,m_axis_id(AxisId::PosZ)
-				,m_newline(L"")
 			{}
 			void Parse() override
 			{
-				// Successive strings have an implicit newline between them.
 				wstring256 text;
 				p.m_reader.String(text);
-				m_text.append(m_newline).append(text);
-				m_newline = L"\r\n";
+				m_text.append(text);
+
+				// Record the formatting state
+				m_fmt.push_back(TextFormat(int(m_text.size() - text.size()), int(text.size()), m_font));
 			}
 			bool ParseKeyword(EKeyword kw) override
 			{
-				switch (kw) {
+				switch (kw)
+				{
 				default: return IObjectCreator::ParseKeyword(kw);
 				case EKeyword::CString:
 					{
-						p.m_reader.SectionStart();
-						for (std::wstring text; !p.m_reader.IsSectionEnd(); text.resize(0))
-						{
-							// Successive C-Strings don't have an implicit new line between
-							// them because they can be added with escaped character sequences.
-							p.m_reader.CString(text);
-							m_text.append(m_newline).append(text);
-							m_newline = L"";
-						}
-						p.m_reader.SectionEnd();
+						wstring256 text;
+						p.m_reader.CStringS(text);
+						m_text.append(text);
+
+						// Record the formatting state
+						m_fmt.push_back(TextFormat(int(m_text.size() - text.size()), int(text.size()), m_font));
 						return true;
 					}
 				case EKeyword::ScreenSpace:
@@ -3308,14 +3282,9 @@ namespace pr
 						m_type = EType::Billboard;
 						return true;
 					}
-				case EKeyword::ForeColour:
-					{
-						p.m_reader.IntS(m_fr_colour.argb, 16);
-						return true;
-					}
 				case EKeyword::BackColour:
 					{
-						p.m_reader.IntS(m_bk_colour.argb, 16);
+						p.m_reader.IntS(m_layout.m_bk_colour.argb, 16);
 						return true;
 					}
 				case EKeyword::Font:
@@ -3329,7 +3298,6 @@ namespace pr
 						p.m_reader.SectionStart();
 						for (; !p.m_reader.IsSectionEnd(); )
 						{
-							#include <pr/common/algorithm.h>
 							p.m_reader.Identifier(ident);
 							pr::transform(ident, [](char c) { return static_cast<char>(tolower(c)); });
 							switch (HashI(ident.c_str()))
@@ -3354,12 +3322,22 @@ namespace pr
 					}
 				case EKeyword::Anchor:
 					{
-						p.m_reader.Vector2S(m_anchor);
+						p.m_reader.Vector2S(m_layout.m_anchor);
+						return true;
+					}
+				case EKeyword::Padding:
+					{
+						v4 padding;
+						p.m_reader.Vector4S(padding);
+						m_layout.m_padding.left   = padding.x;
+						m_layout.m_padding.top    = padding.y;
+						m_layout.m_padding.right  = padding.z;
+						m_layout.m_padding.bottom = padding.w;
 						return true;
 					}
 				case EKeyword::Dim:
 					{
-						p.m_reader.Vector2S(m_dim);
+						p.m_reader.Vector2S(m_layout.m_dim);
 						return true;
 					}
 				case EKeyword::Axis:
@@ -3371,23 +3349,9 @@ namespace pr
 			}
 			void CreateModel(LdrObject* obj) override
 			{
-				Renderer::Lock lock(p.m_rdr);
-				auto dwrite = lock.DWrite();
-
-				// Create the "font", a.k.a text format
-				D3DPtr<IDWriteTextFormat> text_format;
-				pr::Throw(dwrite->CreateTextFormat(m_font.m_name.c_str(), nullptr, m_font.m_weight, m_font.m_style, m_font.m_stretch, m_font.m_size, L"en-US", &text_format.m_ptr));
-				text_format->SetTextAlignment(m_layout.m_align_h);
-				text_format->SetParagraphAlignment(m_layout.m_align_v);
-				text_format->SetWordWrapping(m_layout.m_word_wrapping);
-
-				// Create the 'format" a.k.a text layout
-				D3DPtr<IDWriteTextLayout> text_layout;
-				pr::Throw(dwrite->CreateTextLayout(m_text.c_str(), UINT32(m_text.size()), text_format.get(), m_dim.x, m_dim.y, &text_layout.m_ptr));
-				if (m_font.m_underline)
-					text_layout->SetUnderline(TRUE, DWRITE_TEXT_RANGE{ 0U, UINT32(m_text.size()) });
-				if (m_font.m_strikeout)
-					text_layout->SetStrikethrough(TRUE, DWRITE_TEXT_RANGE{ 0U, UINT32(m_text.size()) });
+				// Create a quad containing the text
+				obj->m_model = ModelGenerator<>::Text(p.m_rdr, m_text, m_fmt.data(), int(m_fmt.size()), m_layout, m_axis_id);
+				obj->m_model->m_name = obj->TypeAndName();
 
 				// Create the model
 				switch (m_type)
@@ -3399,17 +3363,11 @@ namespace pr
 				// Text is a normal 3D object
 				case EType::Full3D:
 					{
-						// Create a quad containing the text
-						obj->m_model = ModelGenerator<>::Text(p.m_rdr, text_layout.get(), m_axis_id, m_fr_colour, m_bk_colour, m_anchor);
-						obj->m_model->m_name = obj->TypeAndName();
 						break;
 					}
 				// Position the text quad so that it always faces the camera and has the same size
 				case EType::Billboard:
 					{
-						obj->m_model = ModelGenerator<>::Text(p.m_rdr, text_layout.get(), m_axis_id, m_fr_colour, m_bk_colour, m_anchor);
-						obj->m_model->m_name = obj->TypeAndName();
-
 						// Do not include in bounding box calculations because we're scaling
 						// this model at a point that the bounding box calculation can't see
 						obj->m_flags = SetBits(obj->m_flags, ELdrFlags::BBoxInvisible, true);
@@ -3450,10 +3408,7 @@ namespace pr
 				case EType::ScreenSpace:
 					{
 						// Scale up the view port to reduce floating point precision noise.
-						enum { ViewPortSize = 1000 };
-
-						obj->m_model = ModelGenerator<>::Text(p.m_rdr, text_layout.get(), m_axis_id, m_fr_colour, m_bk_colour, m_anchor);
-						obj->m_model->m_name = obj->TypeAndName();
+						enum { ViewPortSize = 1024 };
 
 						// Do not include in bounding box calculations because we're scaling
 						// this model at a point that the bounding box calculation can't see
@@ -4134,30 +4089,50 @@ LR"(// *************************************************************************
 // ************************************************************************************
 // Below is an example of every supported object type with notes on their syntax
 
-// Font's declared at global scope set the default for following text objects
+// Font's declared at global scope set the default for following objects
+// All fields are optional, replacing the default if given.
 *Font
 {
-	"tahoma"  // Font name
-	18        // Font size (in points)
-	300       // Font weight (100 = ultra light, 300 = normal, 900 = heavy)
-	//*Style{Normal} // Style. One of: Normal Italic Oblique
-	//*Stretch{5}    // Stretch. 1 = condensed, 5 = normal, 9 = expanded
-	//*Underline
-	//*Strikeout
+	*Name {"tahoma"}  // Font name
+	*Size {18}        // Font size (in points)
+	*Weight {300}     // Font weight (100 = ultra light, 300 = normal, 900 = heavy)
+	*Style {Normal}   // Style. One of: Normal Italic Oblique
+	*Stretch {5}      // Stretch. 1 = condensed, 5 = normal, 9 = expanded
+	//*Underline      // Underlined text
+	//*Strikeout      // Strikethrough text
 }
 
 // Screen space text.
-*Text screen_space_text
+*Text camera_space_text
 {
-	"This is screen space text"
 	*ScreenSpace
+
+	// Text is concatenated, with changes of style applied
+	// Text containing multiple lines has the line-end whitespace and indentation tabs removed.
+	*Font {*Name{"Times New Roman"} *Colour {FF0000FF} *Size{18}}
+	"This is camera space 
+	text with new lines in it, and 
+	"
+	*Font {*Colour {FF00FF00} *Size{24} *Style{Oblique}}
+	"with varying colours 
+	and "
+	*Font {*Colour {FFFF0000} *Weight{800} *Style{Italic} *Strikeout}
+	"stiles "
+	*Font {*Colour {FFFFFF00} *Style{Italic} *Underline}
+	"styles "
+
+	// The background colour of the quad
+	*BackColour {40A0A0A0}
 
 	// Anchor defines the origin of the quad. (-1,-1) = bottom,left. (0,0) = centre (default). (+1,+1) = top,right
 	*Anchor { -1 +1 }
+
+	// Padding between the quad boundary and the text
+	*Padding {10 20 10 10}
 	
-	// *o2w is interpreted as a 'text to screen space' transform
-	// (-1,-1,-0) is the lower left corner on the near plane.
-	// (+1,+1,-1) is the upper right corner on the far plane.
+	// *o2w is interpreted as a 'text to camera space' transform
+	// (-1,-1,0) is the lower left corner on the near plane.
+	// (+1,+1,1) is the upper right corner on the far plane.
 	// The quad is automatically scaled to make the text unscaled on-screen
 	*o2w{*pos{-1, +1, 0}}
 }
@@ -4165,13 +4140,12 @@ LR"(// *************************************************************************
 // Billboard text always faces the camera
 *Text billboard_text
 {
+	*Font {*Colour {FF00FF00}}
 	"This is billboard text"
 	*Billboard
-	
+
 	*Anchor {0 0}
-	*ForeColour {FF00FF00}
-	//*BackColour {00808080}
-	
+
 	// The rotational part of *o2w is ignored, only the 3d position is used
 	*o2w{*pos{0,1,0}}
 }
@@ -4179,23 +4153,21 @@ LR"(// *************************************************************************
 // Simple text, billboarded, scaled based on camera distance
 *Text three_dee_text
 {
-	"This is a normal"         // Normal text string, everything between quotes (including new lines)
-	"3D text"
+	*Font { *Name {"Courier New"} *Size {40} }
+
+	// Normal text string, everything between quotes (including new lines)
+	"This is a normal         
+	3D text"
+	
 	*CString
 	{
-		"Can even "                 // Alternative. Text is a C-Style string that uses escape characters
-		"use\n \"C-Style\" strings" // Everything between matched quotes (including new lines)
+		// Alternative. Text is a C-Style string that uses escape characters
+		// Everything between matched quotes (including new lines, although
+		// indentation tabs are not removed for C-Style strings)
+		"Can even       
+		use\n \"C-Style\" strings" 
 	}
-	*Font
-	{
-		"Courier New"  // Font name
-		40        // Font size (in points)
-		300       // Font weight (100 = ultra light, 300 = normal, 900 = heavy)
-		//*Style{Normal} // Style. One of: Normal Italic Oblique
-		//*Stretch{5}    // Stretch. 1 = condensed, 5 = normal, 9 = expanded
-		//*Underline
-		//*Strikeout
-	}
+
 	*Axis {+3}      // Optional. Set the direction of the quad normal. One of: X = ±1, Y = ±2, Z = ±3
 	*Dim {512 128}  // Optional. The size used to determine the layout area
 	*Format         // Optional
@@ -4206,7 +4178,6 @@ LR"(// *************************************************************************
 		NoZWrite  // Don't write to the Z buffer
 		NoZTest   // Don't depth-text
 	}
-	*ForeColour {FF0000FF}
 	*BackColour {40000000}
 	*o2w{*scale{0.02}}
 }
@@ -5051,7 +5022,7 @@ LR"(// *************************************************************************
 				o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, colour.argb);
 				if (o->m_model == nullptr) return true;
 
-				auto tint_has_alpha = o->m_colour.a != 0xFF;
+				auto tint_has_alpha = HasAlpha(o->m_colour);
 				for (auto& nug : o->m_model->m_nuggets)
 				{
 					nug.m_tint_has_alpha = tint_has_alpha;
@@ -5070,7 +5041,7 @@ LR"(// *************************************************************************
 				o->m_colour = o->m_base_colour;
 				if (o->m_model == nullptr) return true;
 
-				auto has_alpha = o->m_colour.a != 0xFF;
+				auto has_alpha = HasAlpha(o->m_colour);
 				for (auto& nug : o->m_model->m_nuggets)
 				{
 					nug.m_tint_has_alpha = has_alpha;

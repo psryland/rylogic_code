@@ -12,7 +12,7 @@
 
 namespace pr
 {
-	template <typename T>// - todo: when MS fix the alignment bug for templates
+	template <typename T>
 	struct alignas(16) Vec4
 	{
 		#pragma warning(push)

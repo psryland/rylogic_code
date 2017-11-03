@@ -60,7 +60,7 @@ namespace pr
 
 			// Colour iterator wrapper
 			auto col = pr::CreateRepeater(colours, num_colours, path_count, num_colours != 0 ? colours[num_colours-1] : pr::Colour32White);
-			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= c.a != 0xff; return c; };
+			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 			// Bounding box
 			auto bb = [&](v4 const& v) { pr::Encompass(props.m_bbox, v); return v; };

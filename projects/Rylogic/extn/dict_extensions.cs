@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using pr.container;
+using pr.util;
 
 namespace pr.extn
 {
@@ -74,6 +76,16 @@ namespace pr.extn
 		public static TValue GetOrDefault<TKey, TValue>(this IDictionary<TKey,TValue> dic, TKey key, Func<TKey, TValue> on_default)
 		{
 			return dic.TryGetValue(key, out var value) ? value : on_default(key);
+		}
+
+		/// <summary>Create an accumulator from this collection</summary>
+		public static Accumulator<TKey, TValue> ToAccumulator<TSource, TKey, TValue>(this IEnumerable<TSource> src, Func<TSource,TKey> key, Func<TSource,TValue> value)
+		{
+			var d = new Accumulator<TKey,TValue>();
+			foreach (var x in src)
+				d[key(x)] = Operators<TValue>.Add(d[key(x)], value(x));
+
+			return d;
 		}
 	}
 }

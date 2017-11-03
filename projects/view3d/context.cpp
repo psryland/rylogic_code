@@ -42,8 +42,10 @@ namespace view3d
 		};
 		m_sources.OnSourceRemoved += [&](ScriptSources&, ScriptSources::SourceRemovedEventArgs const& args)
 		{
-			// When a source is about to be removed, remove it's objects from the windows
 			auto reload = args.m_reason == ScriptSources::EReason::Reload;
+
+			// When a source is about to be removed, remove it's objects from the windows.
+			// If this is a reload, save a reference to the removed objects so we know what to reload.
 			for (auto& wnd : m_wnd_cont)
 				wnd->RemoveObjectsById(&args.m_context_id, 1, false, reload);
 		};
@@ -64,27 +66,10 @@ namespace view3d
 
 			// On Reload, for each object currently in the window and in the set of affected context ids, remove and re-add.
 			case ScriptSources::EReason::Reload:
-				{
-				//	for (auto& wnd : m_wnd_cont)
-				//	{
-				//		// Get the intersection of the window's context ids with the ids that have changed.
-				//		auto ids = pr::set_intersection<GuidCont>(wnd->m_guids, args.m_context_ids);
-				//		if (ids.empty()) continue;
+				for (auto& wnd : m_wnd_cont)
+					wnd->AddObjectsById(std::begin(args.m_context_ids), int(args.m_context_ids.size()), false);
 
-				//		
-
-				//// If not new data added, remove old objects
-				//if (!newdata)
-				//	wnd->RemoveObjectsById(ids.data(), int(ids.size()), false, !removal);
-
-				//// If reloading or adding new data, add objects from the context ids
-				//if (!removal)
-				//	wnd->AddObjectsById(ids.data(), int(ids.size()), false);
-
-				//	}
-					// Do what?
-					break;
-				}
+				break;
 			}
 
 			OnSourcesChanged.Raise(static_cast<ESourcesChangedReason>(args.m_reason), false);

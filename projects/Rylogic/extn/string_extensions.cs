@@ -40,6 +40,10 @@ namespace pr.extn
 	/// <summary>Helper string building functions</summary>
 	public static class Str
 	{
+		// Notes:
+		//  - This seems to be slower than using $"..{}.." even though the StringBuilder
+		//    is cached. I guess the compiler is optimising the interpolated strings better.
+
 		/// <summary>Get the text of the cached string builder'</summary>
 		public static string Text
 		{

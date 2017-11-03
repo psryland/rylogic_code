@@ -180,7 +180,7 @@ namespace pr
 			Props props;
 			props.m_bbox = BBox(pr::v4Origin, radius);
 			props.m_geom = EGeom::Vert | EGeom::Colr | EGeom::Norm | EGeom::Tex0;
-			props.m_has_alpha = colour.a != 0xFF;
+			props.m_has_alpha = HasAlpha(colour);
 
 			// Preallocate buffers to compile the geosphere into
 			std::size_t vcount, icount;

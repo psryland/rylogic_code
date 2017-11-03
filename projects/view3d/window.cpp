@@ -444,7 +444,7 @@ namespace view3d
 		ObjectContainerChanged(context_ids.data(), int(context_ids.size()));
 	}
 
-	// Add/Remove all objects to this window with the given context id (or not with)
+	// Add/Remove all objects to this window with the given context ids (or not with)
 	void Window::AddObjectsById(GUID const* context_id, int count, bool all_except)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
@@ -475,14 +475,14 @@ namespace view3d
 			}
 		}
 	}
-	void Window::RemoveObjectsById(GUID const* context_id, int count, bool all_except, bool remove_objects_only)
+	void Window::RemoveObjectsById(GUID const* context_id, int count, bool all_except, bool keep_context_ids)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 		auto given = std::initializer_list<GUID>(context_id, context_id + count);
 		auto old_count = m_objects.size();
 
 		// Build a collection of the guids to keep
-		auto ids = m_guids;
+		GuidSet ids = m_guids;
 		if (all_except)
 			pr::erase_if(ids, [=](auto& id){ return !pr::contains(given, id); });
 		else
@@ -492,7 +492,7 @@ namespace view3d
 		pr::erase_if(m_objects, [&](auto* obj){ return ids.count(obj->m_context_id) == 0; });
 
 		// Remove context ids
-		if (!remove_objects_only)
+		if (!keep_context_ids)
 			m_guids = std::move(ids);
 
 		// Notify if changed

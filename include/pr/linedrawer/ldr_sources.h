@@ -488,7 +488,7 @@ namespace pr
 				#pragma endregion
 
 				// Raise events on the main thread
-				auto merge = [=]
+				auto merge = [=]() mutable
 				{
 					// If not additional, clear all sources.
 					// Otherwise, just remove any objects associated with 'file'.
@@ -501,19 +501,22 @@ namespace pr
 					m_loading.erase(file.m_context_id);
 
 					// Add to the container of script sources
-					auto& src = m_srcs[file.m_context_id] = file;
+					auto& src = m_srcs[file.m_context_id];
+					src.m_filepath = file.m_filepath;
+					src.m_includes = file.m_includes;
+					src.m_context_id = file.m_context_id;
 					src.m_objects.insert(std::end(src.m_objects), std::begin(out.m_objects), std::end(out.m_objects));
 
 					// Add to the watcher
 					for (auto& fp : filepaths)
-						m_watcher.Add(fp.c_str(), this, file.m_context_id);
+						m_watcher.Add(fp.c_str(), this, src.m_context_id);
 
 					// Notify of any errors that occurred
 					if (!errors.m_msg.empty())
 						OnError(*this, errors);
 
 					// Notify of the object container change
-					OnStoreChanged(*this, StoreChangedEventArgs(&file.m_context_id, 1, out, int(out.m_objects.size()), reason));
+					OnStoreChanged(*this, StoreChangedEventArgs(&src.m_context_id, 1, out, int(out.m_objects.size()), reason));
 				};
 
 				// Marshal to the main thread if this is a worker thread context

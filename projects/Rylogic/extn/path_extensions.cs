@@ -98,6 +98,12 @@ namespace pr.common
 			System.IO.Directory.CreateDirectory(path);
 		}
 
+		/// <summary>Delete a file</summary>
+		public static void DelFile(string path)
+		{
+			File.Delete(path);
+		}
+
 		/// <summary>True if 'path' is a file</summary>
 		public static bool IsFile(string path)
 		{

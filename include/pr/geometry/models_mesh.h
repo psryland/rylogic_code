@@ -46,7 +46,7 @@ namespace pr
 
 			// Colour iterator wrapper
 			auto col = pr::CreateRepeater(colours, num_colours, num_verts, pr::Colour32White);
-			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= c.a != 0xff; return c; };
+			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 			// Normal iterator wrapper
 			auto norm = pr::CreateRepeater(normals, num_normals, num_verts, pr::v4Zero);

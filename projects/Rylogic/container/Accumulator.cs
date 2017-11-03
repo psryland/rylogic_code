@@ -3,11 +3,11 @@
 namespace pr.container
 {
 	/// <summary>A specialised dictionary for counting occurrences of unique types</summary>
-	public class Accumulator<TKey> :Dictionary<TKey,int>
+	public class Accumulator<TKey,TValue> :Dictionary<TKey,TValue>
 	{
-		public new int this[TKey key]
+		public new TValue this[TKey key]
 		{
-			get { return TryGetValue(key, out var count) ? count : 0; }
+			get { return TryGetValue(key, out var count) ? count : default(TValue); }
 			set { base[key] = value; }
 		}
 	}
@@ -22,18 +22,18 @@ namespace pr.unittests
 	{
 		[Test] public void Accumulator()
 		{
-			var acc = new Accumulator<string>();
+			var acc = new Accumulator<string, float>();
 
-			acc["One"] = 1;
-			acc["Two"] = 1;
-			acc["Two"] += 1;
-			acc["Three"] += 1;
-			acc["Three"] += 1;
-			acc["Three"] += 1;
-			Assert.AreEqual(acc["One"], 1);
-			Assert.AreEqual(acc["Two"], 2);
-			Assert.AreEqual(acc["Three"], 3);
-			Assert.AreEqual(acc["Four"], 0);
+			acc["One"] = 1f;
+			acc["Two"] = 1f;
+			acc["Two"] += 1f;
+			acc["Three"] += 4f;
+			acc["Three"] -= 1f;
+			acc["Three"] *= 1f;
+			Assert.AreEqual(acc["One"], 1f);
+			Assert.AreEqual(acc["Two"], 2f);
+			Assert.AreEqual(acc["Three"], 3f);
+			Assert.AreEqual(acc["Four"], 0f);
 		}
 	}
 }

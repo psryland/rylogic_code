@@ -95,7 +95,7 @@ namespace pr
 
 			// Colour iterator wrapper
 			auto col = pr::CreateRepeater(colours, num_colours, num_quads * 4, Colour32White);
-			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= c.a != 0xff; return c; };
+			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 			// Bounding box
 			auto bb = [&](v4 const& v) { pr::Encompass(props.m_bbox, v); return v; };
@@ -201,7 +201,7 @@ namespace pr
 			Props props;
 			props.m_geom = EGeom::Vert|EGeom::Colr|EGeom::Norm|EGeom::Tex0;
 			props.m_bbox = BBox::Make(origin, Abs(origin + quad_w + quad_h));
-			props.m_has_alpha = colour.a != 0xFF;
+			props.m_has_alpha = HasAlpha(colour);
 			return props;
 		}
 
@@ -265,7 +265,7 @@ namespace pr
 
 			// Colour iterator wrapper
 			auto col = pr::CreateLerpRepeater(colours, num_colours, num_verts, Colour32White);
-			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= c.a != 0xff; return c; };
+			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= HasAlpha(c); return c; };
 
 			// Normal iterator wrapper
 			auto norm = pr::CreateLerpRepeater(normals, num_normals, num_verts, pr::v4ZAxis);
