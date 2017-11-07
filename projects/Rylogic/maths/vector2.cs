@@ -149,16 +149,6 @@ namespace pr.maths
 			return new v2(lhs.x / rhs.x, lhs.y / rhs.y);
 		}
 
-		/// <summary>Approximate equal</summary>
-		public static bool FEql2(v2 lhs, v2 rhs, float tol)
-		{
-			return Maths.FEql(lhs.x, rhs.x, tol) && Maths.FEql(lhs.y, rhs.y, tol);
-		}
-		public static bool FEql2(v2 lhs, v2 rhs)
-		{
-			return FEql2(lhs, rhs, Maths.TinyF);
-		}
-
 		/// <summary>Return a vector containing the minimum components</summary>
 		public static v2 Min(v2 lhs, v2 rhs)
 		{
@@ -232,13 +222,9 @@ namespace pr.maths
 		}
 
 		/// <summary>True if 'lhs' and 'rhs' are parallel</summary>
-		public static bool Parallel(v2 lhs, v2 rhs, float tol)
-		{
-			return Maths.FEql(Cross2(lhs, rhs), 0, tol);
-		}
 		public static bool Parallel(v2 lhs, v2 rhs)
 		{
-			return Parallel(lhs, rhs, Maths.TinyF);
+			return Maths.FEql(Cross2(lhs, rhs), 0);
 		}
 
 		/// <summary>Linearly interpolate between two vectors</summary>
@@ -257,14 +243,14 @@ namespace pr.maths
 		/// <summary>Returns a vector perpendicular to 'vec'</summary>
 		public static v2 Perpendicular(v2 vec)
 		{
-			Debug.Assert(!FEql2(vec, Zero), "Cannot make a perpendicular to a zero vector");
+			Debug.Assert(!Maths.FEql(vec, Zero), "Cannot make a perpendicular to a zero vector");
 			return RotateCCW(vec);
 		}
 
 		/// <summary>Returns a vector perpendicular to 'vec' favouring 'previous' as the preferred perpendicular</summary>
 		public static v2 Perpendicular(v2 vec, v2 previous)
 		{
-			Debug.Assert(!FEql2(vec, Zero), "Cannot make a perpendicular to a zero vector");
+			Debug.Assert(!Maths.FEql(vec, Zero), "Cannot make a perpendicular to a zero vector");
 
 			// If 'previous' is still perpendicular, keep it
 			if (Maths.FEql(Dot2(vec, previous), 0))
@@ -423,7 +409,7 @@ namespace pr.maths
 		/// <summary>Return a random vector on the unit 2D sphere</summary>
 		public static v2 Random2N(Random r)
 		{
-			v2 v; for (; FEql2(v = Random2(1.0f, r), Zero);) { }
+			v2 v; for (; Maths.FEql(v = Random2(1.0f, r), Zero);) { }
 			return Normalise2(v);
 		}
 
@@ -452,13 +438,15 @@ namespace pr.maths
 	public static partial class Maths
 	{
 		/// <summary>Approximate equal</summary>
-		public static bool FEql(v2 lhs, v2 rhs, float tol)
+		public static bool FEqlRelative(v2 lhs, v2 rhs, float tol)
 		{
-			return v2.FEql2(lhs, rhs, tol);
+			return
+				FEqlRelative(lhs.x, rhs.x, tol) &&
+				FEqlRelative(lhs.y, rhs.y, tol);
 		}
 		public static bool FEql(v2 lhs, v2 rhs)
 		{
-			return v2.FEql2(lhs, rhs);
+			return FEqlRelative(lhs.x, rhs.x, TinyF);
 		}
 
 		public static v2 Min(v2 lhs, v2 rhs)

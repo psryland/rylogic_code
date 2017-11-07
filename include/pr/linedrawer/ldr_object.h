@@ -110,11 +110,13 @@ namespace pr
 			x(Normalise            ,= HashI("Normalise"           ))\
 			x(Orthonormalise       ,= HashI("Orthonormalise"      ))\
 			x(Colour               ,= HashI("Colour"              ))\
+			x(ForeColour           ,= HashI("ForeColour"          ))\
 			x(BackColour           ,= HashI("BackColour"          ))\
 			x(Font                 ,= HashI("Font"                ))\
 			x(Stretch              ,= HashI("Stretch"             ))\
 			x(Underline            ,= HashI("Underline"           ))\
 			x(Strikeout            ,= HashI("Strikeout"           ))\
+			x(NewLine              ,= HashI("NewLine"             ))\
 			x(CString              ,= HashI("CString"             ))\
 			x(Solid                ,= HashI("Solid"               ))\
 			x(Facets               ,= HashI("Facets"              ))\
@@ -227,8 +229,10 @@ namespace pr
 			Selected = 1 << 0,
 
 			// Doesn't contribute to the bounding box on an object.
-			// Typically used for objects in a scene that are not part of the scene bbox
-			BBoxInvisible = 1 << 1,
+			BBoxExclude = 1 << 1,
+
+			// Should not be included when determining the bounds of a scene.
+			SceneBoundsExclude = 1 << 2,
 
 			// Bitwise operators
 			_bitwise_operators_allowed,
@@ -515,7 +519,7 @@ namespace pr
 
 				// Start with the bbox for this object
 				pr::BBox bbox = pr::BBoxReset;
-				if (m_model && !AllSet(m_flags,ELdrFlags::BBoxInvisible) && pred(*this)) // Get the bbox from the graphics model
+				if (m_model && !AllSet(m_flags,ELdrFlags::BBoxExclude) && pred(*this)) // Get the bbox from the graphics model
 				{
 					auto bb = i2w * m_model->m_bbox;
 					if (bb.valid()) pr::Encompass(bbox, bb);

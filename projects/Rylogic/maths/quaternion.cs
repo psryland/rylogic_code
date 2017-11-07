@@ -239,18 +239,6 @@ namespace pr.maths
 			get { return m_identity; }
 		}
 
-		/// <summary>Compare quaternions. Note: q == -q</summary>
-		public static bool FEql(quat lhs, quat rhs, float tol)
-		{
-			return
-				v4.FEql4(lhs.xyzw, +rhs.xyzw, tol) ||
-				v4.FEql4(lhs.xyzw, -rhs.xyzw, tol);
-		}
-		public static bool FEql(quat lhs, quat rhs)
-		{
-			return FEql(lhs, rhs, Maths.TinyF);
-		}
-
 		/// <summary>Operators</summary>
 		public static quat operator + (quat q)
 		{
@@ -455,6 +443,21 @@ namespace pr.maths
 		}
 		#endregion
 	}
+
+	public static partial class Maths
+	{
+		/// <summary>Approximate equal. Note: q == -q</summary>
+		public static bool FEqlRelative(quat lhs, quat rhs, float tol)
+		{
+			return
+				FEqlRelative(lhs.xyzw, +rhs.xyzw, tol) ||
+				FEqlRelative(lhs.xyzw, -rhs.xyzw, tol);
+		}
+		public static bool FEql(quat lhs, quat rhs)
+		{
+			return FEqlRelative(lhs, rhs, TinyF);
+		}
+	}
 }
 
 #if PR_UNITTESTS
@@ -522,7 +525,7 @@ namespace pr.unittests
 				var q = new quat(axis, angle);
 				return rng.Bool() ? q : -q;
 			}));
-			Assert.True(quat.FEql(ideal_mean, actual_mean, 0.01f));
+			Assert.True(Maths.FEqlRelative(ideal_mean, actual_mean, 0.01f));
 		}
 	}
 }

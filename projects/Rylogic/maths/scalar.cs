@@ -101,7 +101,11 @@ namespace pr.maths
 		public static float     Len3(float x, float y, float z)                 { return Sqrt(Len3Sq(x,y,z)); }
 
 		// Floating point comparisons
-		public static bool FEql(float a, float b, float tol = TinyF)
+		/// <summary>
+		/// Compare floats for equality.
+		/// *WARNING* 'tol' is the fraction of the largest value. i.e. abs(a-b) &lt; tol * max(abs(a), abs(b))
+		/// Do not use this expecting this behaviour: a.Within(b - tol, b + tol)</summary>
+		public static bool FEqlRelative(float a, float b, float tol)
 		{
 			// Floating point compare is dangerous and subtle.
 			// See: https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
@@ -123,7 +127,7 @@ namespace pr.maths
 			// Test relative error as a fraction of the largest value
 			return Math.Abs(a - b) < tol * Math.Max(Math.Abs(a), Math.Abs(b));
 		}
-		public static bool FEql(double a, double b, double tol = TinyD)
+		public static bool FEqlRelative(double a, double b, double tol)
 		{
 			// Handles tests against zero where relative error is meaningless
 			// Tests with 'b == 0' are the most common so do them first
@@ -135,6 +139,14 @@ namespace pr.maths
 
 			// Test relative error as a fraction of the largest value
 			return Math.Abs(a - b) < tol * Math.Max(Math.Abs(a), Math.Abs(b));
+		}
+		public static bool FEql(float a, float b)
+		{
+			return FEqlRelative(a, b, TinyF);
+		}
+		public static bool FEql(double a, double b)
+		{
+			return FEqlRelative(a, b, TinyD);
 		}
 
 		/// <summary>Absolute value of 'a'</summary>

@@ -121,8 +121,8 @@ namespace view3d
 		// Add/Remove all objects to this window with the given context id (or not with)
 		void AddObjectsById(GUID const* context_id, int count, bool all_except);
 		void RemoveObjectsById(GUID const* context_id, int count, bool all_except, bool keep_context_ids = false);
-		
-			// Return a bounding box containing the scene objects
+
+		// Return a bounding box containing the scene objects
 		template <typename Pred> pr::BBox BBox(Pred pred, bool objects = true, bool gizmos = false) const
 		{
 			assert(std::this_thread::get_id() == m_main_thread_id);

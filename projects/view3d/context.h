@@ -47,9 +47,6 @@ namespace view3d
 		Window* WindowCreate(HWND hwnd, View3DWindowOptions const& opts);
 		void WindowDestroy(Window* window);
 
-		// Remove all Ldr script sources
-		void ClearScriptSources();
-
 		// Load/Add a script source. Returns the Guid of the context that the objects were added to.
 		pr::Guid LoadScriptSource(wchar_t const* filepath, bool additional, pr::script::Includes const& includes);
 
@@ -78,7 +75,7 @@ namespace view3d
 		void DeleteAllObjects();
 
 		// Delete all objects with matching ids
-		void DeleteAllObjectsById(pr::Guid const* context_ids, int count);
+		void DeleteAllObjectsById(pr::Guid const* context_ids, int count, bool all_except);
 
 		// Delete a single object
 		void DeleteObject(pr::ldr::LdrObject* object);

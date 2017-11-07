@@ -50,7 +50,7 @@ namespace TestCS
 			m_view3d.Camera.SetPosition(new v4(10f,10f,5f,1f), v4.Origin, v4.YAxis);
 
 			// Simple create object
-			m_obj0 = new View3d.Object("*Box test FFFFFFFF {1 2 3}", false);
+			m_obj0 = new View3d.Object("*Box test FFFFFFFF {1 2 3}", false, null);
 			m_obj0.O2P = m4x4.Transform(0.5f, -0.3f, 0.2f, new v4(-0.3f, 1.2f, 0.5f, 1f));
 			m_view3d.Window.AddObject(m_obj0);
 
@@ -66,11 +66,11 @@ namespace TestCS
 			m_obj0.SetTexture(m_tex0);
 
 			// Create object via callback
-			m_obj1 = new View3d.Object("net", 0xFF0000FF, 20, 20, 1, CreateOnlyCB);
+			m_obj1 = new View3d.Object("net", 0xFF0000FF, 20, 20, 1, CreateOnlyCB, null);
 			m_view3d.Window.AddObject(m_obj1);
 
 			// Create an object with a texture from a rendered scene
-			m_obj2 = new View3d.Object("*Box Rt FFFFFFFF {0.7 0.9 0.4}", false);
+			m_obj2 = new View3d.Object("*Box Rt FFFFFFFF {0.7 0.9 0.4}", false, null);
 			m_obj2.O2P = m4x4.Transform(-0.5f, 0.4f, 0.6f, new v4(0.5f, -0.2f, -0.3f, 1f));
 			m_view3d.Window.AddObject(m_obj2);
 
@@ -128,7 +128,7 @@ namespace TestCS
 				{
 					new View3d.Nugget(View3d.EPrim.TriList, View3d.EGeom.Vert|View3d.EGeom.Colr)
 				};
-				m_obj3 = new View3d.Object("Obj3", 0xFFFFFFFF, 3, 3, 1, verts, indcs, nuggets);
+				m_obj3 = new View3d.Object("Obj3", 0xFFFFFFFF, 3, 3, 1, verts, indcs, nuggets, null);
 				m_view3d.Window.AddObject(m_obj3);
 			}
 

@@ -31,7 +31,7 @@ namespace TestCS
 				for (int i = 0; i != 100000; ++i)
 					lk.Data.Add(new ChartDataSeries.Pt(0.01*i, Math.Sin(0.01*i*Maths.Tau)));
 			}
-			m_series.PlotType = ChartDataSeries.EPlotType.Bar;
+			m_series.Options.PlotType = ChartDataSeries.EPlotType.Bar;
 			m_series.Options.PointStyle = ChartDataSeries.EPointStyle.Triangle;
 			m_series.Options.PointSize = 50f;
 			m_series.Options.LineWidth = 3f;

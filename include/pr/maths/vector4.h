@@ -269,22 +269,7 @@ namespace pr
 	#pragma region Functions
 
 	// V4 FEql
-	inline bool pr_vectorcall FEql3(v4_cref lhs, v4_cref rhs, float tol = maths::tiny)
-	{
-		#if PR_MATHS_USE_INTRINSICS
-		const __m128 zero = _mm_set_ps(tol,tol,tol,tol);
-		auto d = _mm_sub_ps(lhs.vec, rhs.vec);                         /// d = lhs - rhs
-		auto r = _mm_cmple_ps(_mm_mul_ps(d,d), _mm_mul_ps(zero,zero)); /// r = sqr(d) <= sqr(zero)
-		auto m = _mm_movemask_ps(r);
-		return (m & 0x07) == 0x07;
-		#else
-		return
-			FEql(lhs.x, rhs.x, tol) &&
-			FEql(lhs.y, rhs.y, tol) &&
-			FEql(lhs.z, rhs.z, tol);
-		#endif
-	}
-	inline bool pr_vectorcall FEql4(v4_cref lhs, v4_cref rhs, float tol = maths::tiny)
+	inline bool pr_vectorcall FEqlRelative(v4_cref lhs, v4_cref rhs, float tol)
 	{
 		#if PR_MATHS_USE_INTRINSICS
 		const __m128 zero = {tol, tol, tol, tol};
@@ -293,15 +278,15 @@ namespace pr
 		return (_mm_movemask_ps(r) & 0x0f) == 0x0f;
 		#else
 		return
-			FEql(lhs.x, rhs.x, tol) &&
-			FEql(lhs.y, rhs.y, tol) &&
-			FEql(lhs.z, rhs.z, tol) &&
-			FEql(lhs.w, rhs.w, tol);
+			FEqlRelative(lhs.x, rhs.x, tol) &&
+			FEqlRelative(lhs.y, rhs.y, tol) &&
+			FEqlRelative(lhs.z, rhs.z, tol) &&
+			FEqlRelative(lhs.w, rhs.w, tol);
 		#endif
 	}
-	inline bool pr_vectorcall FEql(v4_cref lhs, v4_cref rhs, float tol = maths::tiny)
+	inline bool pr_vectorcall FEql(v4_cref lhs, v4_cref rhs)
 	{
-		return FEql4(lhs, rhs, tol);
+		return FEqlRelative(lhs, rhs, maths::tiny);
 	}
 
 	// V4 length squared
@@ -540,14 +525,14 @@ namespace pr
 				PR_CHECK(a.y, +2);
 				PR_CHECK(a.z, -3);
 				PR_CHECK(a.w, -4);
-				PR_CHECK( FEql (a, v4(1,2,-3,-4)), true);
-				PR_CHECK(!FEql (a, v4(1,2,-3,-4+t2)), true);
-				PR_CHECK( FEql4(a, v4(1,2,-3,-4)), true);
-				PR_CHECK(!FEql4(a, v4(1,2,-3,-4+t2)), true);
-				PR_CHECK( FEql3(a, v4(1,2,-3,-4+t2)), true);
-				PR_CHECK(!FEql3(a, v4(1,2,-3+t2,-4+t2)), true);
-				PR_CHECK( FEql2(a, v4(1,2,-3+t2,-4+t2)), true);
-				PR_CHECK(!FEql2(a, v4(1,2+t2,-3+t2,-4+t2)), true);
+				PR_CHECK( FEql (a, v4(1   ,2,-3,-4)), true);
+				PR_CHECK(!FEql (a, v4(1+t2,2,-3,-4)), true);
+				PR_CHECK( FEql4(a, v4(1   ,2,-3,-4)), true);
+				PR_CHECK(!FEql4(a, v4(1+t2,2,-3,-4)), true);
+				PR_CHECK( FEql3(a, v4(1   ,2,-3,-4+1)), true);
+				PR_CHECK(!FEql3(a, v4(1+t2,2,-3,-4+1)), true);
+				PR_CHECK( FEql2(a, v4(1   ,2,-3+1,-4+1)), true);
+				PR_CHECK(!FEql2(a, v4(1+t2,2,-3+1,-4+1)), true);
 			}
 			{
 				v4 a(3,-1,2,-4);

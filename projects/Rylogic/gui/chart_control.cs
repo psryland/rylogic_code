@@ -82,6 +82,7 @@ namespace pr.gui
 				AllowEditing = false;
 				AllowSelection = false;
 				DefaultMouseControl = true;
+				AreaSelectMode = EAreaSelectMode.Zoom;
 			}
 			catch
 			{
@@ -106,7 +107,7 @@ namespace pr.gui
 				using (this.SuspendLayout(false))
 				{
 					var dims = ChartDimensions;
-					Scene.Bounds = dims.ChartArea;
+					SceneBounds = dims.ChartArea;
 					if (Options.LockAspect != null && dims.ChartArea.Area() != 0)
 						Aspect = Options.LockAspect.Value;
 				}
@@ -210,12 +211,12 @@ namespace pr.gui
 		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public double Aspect
 		{
-			get { return Camera.Aspect * Scene.Bounds.Height / Scene.Bounds.Width; }
+			get { return Camera.Aspect * SceneBounds.Height / SceneBounds.Width; }
 			set
 			{
 				if (Aspect == value) return;
 				if (Options.LockAspect != null) Options.LockAspect = value;
-				Camera.Aspect = (float)(value * Scene.Bounds.Width / Scene.Bounds.Height);
+				Camera.Aspect = (float)(value * SceneBounds.Width / SceneBounds.Height);
 				SetRangeFromCamera();
 				Invalidate();
 			}
@@ -342,18 +343,25 @@ namespace pr.gui
 				OnAutoRanging(args);
 		}
 
+		/// <summary>The client space rectangle that contains the View3d part of the control</summary>
+		public Rectangle SceneBounds
+		{
+			get { return Scene.Bounds; }
+			private set { Scene.Bounds = value; }
+		}
+
 		/// <summary>Returns a point in chart space from a point in client space. Use to convert mouse (client-space) locations to chart coordinates</summary>
 		public PointF ClientToChart(PointF client_point)
 		{
 			return new PointF(
-				(float)(XAxis.Min + (client_point.X - Scene.Bounds.Left  ) * XAxis.Span / Scene.Bounds.Width ),
-				(float)(YAxis.Min - (client_point.Y - Scene.Bounds.Bottom) * YAxis.Span / Scene.Bounds.Height));
+				(float)(XAxis.Min + (client_point.X - SceneBounds.Left  ) * XAxis.Span / SceneBounds.Width ),
+				(float)(YAxis.Min - (client_point.Y - SceneBounds.Bottom) * YAxis.Span / SceneBounds.Height));
 		}
 		public SizeF ClientToChart(SizeF client_size)
 		{
 			return new SizeF(
-				(float)(client_size.Width  * XAxis.Span / Scene.Bounds.Width ),
-				(float)(client_size.Height * YAxis.Span / Scene.Bounds.Height));
+				(float)(client_size.Width  * XAxis.Span / SceneBounds.Width ),
+				(float)(client_size.Height * YAxis.Span / SceneBounds.Height));
 		}
 		public RectangleF ClientToChart(RectangleF client_rect)
 		{
@@ -363,21 +371,21 @@ namespace pr.gui
 		}
 
 		/// <summary>Returns a point in client space from a point in chart space. Inverse of ClientToChart</summary>
-		public Point ChartToClient(PointF chart_point)
+		public PointF ChartToClient(PointF chart_point)
 		{
-			return new Point(
-				(int)(Scene.Bounds.Left   + (chart_point.X - XAxis.Min) * Scene.Bounds.Width  / XAxis.Span),
-				(int)(Scene.Bounds.Bottom - (chart_point.Y - YAxis.Min) * Scene.Bounds.Height / YAxis.Span));
+			return new PointF(
+				(float)(SceneBounds.Left   + (chart_point.X - XAxis.Min) * SceneBounds.Width  / XAxis.Span),
+				(float)(SceneBounds.Bottom - (chart_point.Y - YAxis.Min) * SceneBounds.Height / YAxis.Span));
 		}
-		public Size ChartToClient(SizeF chart_size)
+		public SizeF ChartToClient(SizeF chart_size)
 		{
-			return new Size(
-				(int)(chart_size.Width  * Scene.Bounds.Width  / XAxis.Span),
-				(int)(chart_size.Height * Scene.Bounds.Height / YAxis.Span));
+			return new SizeF(
+				(float)(chart_size.Width  * SceneBounds.Width  / XAxis.Span),
+				(float)(chart_size.Height * SceneBounds.Height / YAxis.Span));
 		}
-		public Rectangle ChartToClient(RectangleF chart_rect)
+		public RectangleF ChartToClient(RectangleF chart_rect)
 		{
-			return new Rectangle(
+			return new RectangleF(
 				ChartToClient(chart_rect.Location),
 				ChartToClient(chart_rect.Size));
 		}
@@ -439,7 +447,7 @@ namespace pr.gui
 		}
 		public m4x4 ChartToClientSpace()
 		{
-			return ChartToClientSpace(Scene.Bounds);
+			return ChartToClientSpace(SceneBounds);
 		}
 
 		/// <summary>
@@ -476,7 +484,45 @@ namespace pr.gui
 		}
 		public m4x4 ClientToChartSpace()
 		{
-			return ClientToChartSpace(Scene.Bounds);
+			return ClientToChartSpace(SceneBounds);
+		}
+
+		/// <summary>Convert between client space and normalised screen space</summary>
+		public PointF ClientToNSS(PointF client_point)
+		{
+			return new PointF(
+				((client_point.X - SceneBounds.Left) / SceneBounds.Width) * 2f - 1f,
+				((SceneBounds.Bottom - client_point.Y) / SceneBounds.Height) * 2f - 1f);
+		}
+		public SizeF ClientToNSS(SizeF client_size)
+		{
+			return new SizeF(
+				(client_size.Width  / SceneBounds.Width) * 2f,
+				(client_size.Height / SceneBounds.Height) * 2f);
+		}
+		public RectangleF ClientToNSS(RectangleF client_rect)
+		{
+			return new RectangleF(
+				ClientToNSS(client_rect.Location),
+				ClientToNSS(client_rect.Size));
+		}
+		public PointF NSSToClient(PointF nss_point)
+		{
+			return new PointF(
+				SceneBounds.Left + 0.5f * (nss_point.X + 1f) * SceneBounds.Width,
+				SceneBounds.Bottom - 0.5f * (nss_point.Y + 1f) * SceneBounds.Height);
+		}
+		public SizeF NSSToClient(SizeF nss_size)
+		{
+			return new SizeF(
+				0.5f * nss_size.Width  * SceneBounds.Width,
+				0.5f * nss_size.Height * SceneBounds.Height);
+		}
+		public RectangleF NSSToClient(RectangleF nss_rect)
+		{
+			return new RectangleF(
+				NSSToClient(nss_rect.Location),
+				NSSToClient(nss_rect.Size));
 		}
 
 		/// <summary>Perform a hit test on the chart</summary>
@@ -484,7 +530,7 @@ namespace pr.gui
 		{
 			// Determine the hit zone of the control
 			var zone = HitTestResult.EZone.None;
-			if (ChartBounds.Contains(client_point)) zone |= HitTestResult.EZone.Chart;
+			if (SceneBounds.Contains(client_point)) zone |= HitTestResult.EZone.Chart;
 			if (XAxisBounds.Contains(client_point)) zone |= HitTestResult.EZone.XAxis;
 			if (YAxisBounds.Contains(client_point)) zone |= HitTestResult.EZone.YAxis;
 			if (TitleBounds.Contains(client_point)) zone |= HitTestResult.EZone.Title;
@@ -545,7 +591,7 @@ namespace pr.gui
 			{
 				if (LockAspect == value) return;
 				if (value)
-					Options.LockAspect = (XAxis.Span * Scene.Bounds.Height) / (YAxis.Span * Scene.Bounds.Width);
+					Options.LockAspect = (XAxis.Span * SceneBounds.Height) / (YAxis.Span * SceneBounds.Width);
 				else
 					Options.LockAspect = null;
 			}
@@ -616,7 +662,7 @@ namespace pr.gui
 				m_chart_frame.DoPaint(gfx, dims);
 
 				// Ensure the scene is rendered
-				Scene.Bounds = dims.ChartArea;
+				SceneBounds = dims.ChartArea;
 				Scene.Update();
 
 				// Add user graphics over the chart
@@ -1028,7 +1074,7 @@ namespace pr.gui
 			/// <summary>Returns a point in ChartPanel-client space from a point in chart space. Inverse of ClientToChart</summary>
 			private Point ChartToClient(PointF point)
 			{
-				return Control_.MapPoint(m_owner, this, m_owner.ChartToClient(point));
+				return Control_.MapPoint(m_owner, this, m_owner.ChartToClient(point).ToPoint());
 			}
 		}
 		#endregion
@@ -1124,28 +1170,22 @@ namespace pr.gui
 			public Rectangle ChartArea { get; private set; }
 		}
 
-		/// <summary>The client space area of the view3d part of the chart</summary>
-		private Rectangle ChartBounds
-		{
-			get { return Scene.Bounds; }
-		}
-
 		/// <summary>The client space area of the XAxis area of the chart</summary>
 		private Rectangle XAxisBounds
 		{
-			get { return Rectangle.FromLTRB(ChartBounds.Left, ChartBounds.Bottom, ChartBounds.Right, ClientSize.Height); }
+			get { return Rectangle.FromLTRB(SceneBounds.Left, SceneBounds.Bottom, SceneBounds.Right, ClientSize.Height); }
 		}
 
 		/// <summary>The client space area of the YAxis area of the chart</summary>
 		private Rectangle YAxisBounds
 		{
-			get { return Rectangle.FromLTRB(0, ChartBounds.Top, ChartBounds.Left, ChartBounds.Bottom); }
+			get { return Rectangle.FromLTRB(0, SceneBounds.Top, SceneBounds.Left, SceneBounds.Bottom); }
 		}
 
 		/// <summary>The client space area of the chart title</summary>
 		private Rectangle TitleBounds
 		{
-			get { return Rectangle.FromLTRB(ChartBounds.Left, 0, ChartBounds.Right, ChartBounds.Top); }
+			get { return Rectangle.FromLTRB(SceneBounds.Left, 0, SceneBounds.Right, SceneBounds.Top); }
 		}
 
 		#endregion
@@ -2184,7 +2224,7 @@ namespace pr.gui
 					// Grid nugget
 					nuggets[0] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert|View3d.EGeom.Colr);
 					var gridlines = new View3d.Object(name, 0xFFFFFFFF, verts.Length, indices.Length, nuggets.Length, verts, indices, nuggets, ChartTools.Id);
-					gridlines.FlagsSet(View3d.EFlags.BBoxInvisible, true);
+					gridlines.FlagsSet(View3d.EFlags.SceneBoundsExclude, true);
 					return gridlines;
 				}
 
@@ -2299,6 +2339,10 @@ namespace pr.gui
 		}
 		private bool m_default_keyboard_shortcuts;
 
+		/// <summary>The default behaviour of area select mode</summary>
+		public EAreaSelectMode AreaSelectMode { get; set; }
+		public enum EAreaSelectMode { Disabled, SelectElements, Zoom }
+
 		/// <summary>Mouse events on the chart</summary>
 		protected override void OnMouseDown(MouseEventArgs e)
 		{
@@ -2385,8 +2429,8 @@ namespace pr.gui
 		{
 			base.OnMouseWheel(e);
 
-			var chart_bounds = Scene.Bounds;
-			if (chart_bounds.Contains(e.Location))
+			var scene_bounds = SceneBounds;
+			if (scene_bounds.Contains(e.Location))
 			{
 				// If there is a mouse op in progress, ignore the wheel
 				var op = MouseOperations.Active;
@@ -2408,7 +2452,7 @@ namespace pr.gui
 
 				// Change the aspect ratio by zooming on the XAxis
 				var chg = false;
-				var xaxis_bounds = Rectangle.FromLTRB(chart_bounds.Left, chart_bounds.Bottom, chart_bounds.Right, ClientSize.Height);
+				var xaxis_bounds = Rectangle.FromLTRB(scene_bounds.Left, scene_bounds.Bottom, scene_bounds.Right, ClientSize.Height);
 				if (xaxis_bounds.Contains(e.Location) && !XAxis.LockRange)
 				{
 					if (ModifierKeys == Keys.Control && XAxis.AllowScroll)
@@ -2426,7 +2470,7 @@ namespace pr.gui
 				}
 
 				// Check the aspect ratio by zooming on the YAxis
-				var yaxis_bounds = Rectangle.FromLTRB(0, chart_bounds.Top, chart_bounds.Left, chart_bounds.Bottom);
+				var yaxis_bounds = Rectangle.FromLTRB(0, scene_bounds.Top, scene_bounds.Left, scene_bounds.Bottom);
 				if (yaxis_bounds.Contains(e.Location) && !YAxis.LockRange)
 				{
 					if (ModifierKeys == Keys.Control && YAxis.AllowScroll)
@@ -2504,8 +2548,25 @@ namespace pr.gui
 			// Select chart elements by default
 			if (!args.Handled)
 			{
-				var rect = new RectangleF(args.SelectionArea.MinX, args.SelectionArea.MinY, args.SelectionArea.SizeX, args.SelectionArea.SizeY);
-				SelectElements(rect, ModifierKeys);
+				switch (AreaSelectMode)
+				{
+				default: throw new Exception("Unknown area select mode");
+				case EAreaSelectMode.Disabled:
+					{
+						break;
+					}
+				case EAreaSelectMode.SelectElements:
+					{
+						var rect = new RectangleF(args.SelectionArea.MinX, args.SelectionArea.MinY, args.SelectionArea.SizeX, args.SelectionArea.SizeY);
+						SelectElements(rect, ModifierKeys);
+						break;
+					}
+				case EAreaSelectMode.Zoom:
+					{
+						PositionChart(args.SelectionArea);
+						break;
+					}
+				}
 			}
 		}
 
@@ -2804,7 +2865,7 @@ namespace pr.gui
 			public override void MouseDown(MouseEventArgs e)
 			{
 				// See where mouse down occurred
-				if (m_chart.ChartBounds.Contains(e.Location)) m_hit_axis = EAxis.None;
+				if (m_chart.SceneBounds.Contains(e.Location)) m_hit_axis = EAxis.None;
 				if (m_chart.XAxisBounds.Contains(e.Location)) m_hit_axis = EAxis.XAxis;
 				if (m_chart.YAxisBounds.Contains(e.Location)) m_hit_axis = EAxis.YAxis;
 
@@ -2838,20 +2899,23 @@ namespace pr.gui
 				}
 				else if (m_chart.Options.NavigationMode == ENavMode.Chart2D)
 				{
-					// Otherwise change the selection area
-					if (!m_selection_graphic_added)
+					if (m_chart.AreaSelectMode != EAreaSelectMode.Disabled)
 					{
-						m_chart.Scene.AddObject(m_chart.Tools.AreaSelect);
-						m_selection_graphic_added = true;
-					}
+						// Otherwise change the selection area
+						if (!m_selection_graphic_added)
+						{
+							m_chart.Scene.AddObject(m_chart.Tools.AreaSelect);
+							m_selection_graphic_added = true;
+						}
 
-					// Position the selection graphic
-					var selection_area = BRect.FromBounds(m_grab_chart, m_chart.ClientToChart(e.Location));
-					m_chart.Tools.AreaSelect.O2P = m4x4.Scale(
-						selection_area.SizeX,
-						selection_area.SizeY,
-						1f,
-						new v4(selection_area.Centre, m_chart.HighestZ, 1));
+						// Position the selection graphic
+						var selection_area = BRect.FromBounds(m_grab_chart, m_chart.ClientToChart(e.Location));
+						m_chart.Tools.AreaSelect.O2P = m4x4.Scale(
+							selection_area.SizeX,
+							selection_area.SizeY,
+							1f,
+							new v4(selection_area.Centre, m_chart.HighestZ, 1));
+					}
 				}
 				else if (m_chart.Options.NavigationMode == ENavMode.Scene3D)
 				{
@@ -2904,7 +2968,7 @@ namespace pr.gui
 					else if (m_chart.Options.NavigationMode == ENavMode.Chart2D)
 					{
 						// Otherwise create an area selection if the click started within the chart
-						if (m_hit_result.Zone.HasFlag(HitTestResult.EZone.Chart))
+						if (m_hit_result.Zone.HasFlag(HitTestResult.EZone.Chart) && m_chart.AreaSelectMode != EAreaSelectMode.Disabled)
 						{
 							var selection_area = BBox.From(new v4(m_grab_chart, 0, 1f), new v4(m_chart.ClientToChart(e.Location), 0f, 1f));
 							m_chart.OnChartAreaSelect(new ChartAreaSelectEventArgs(selection_area));
@@ -2949,7 +3013,7 @@ namespace pr.gui
 			public override void MouseDown(MouseEventArgs e)
 			{
 				// If mouse down occurred within the chart, record it
-				if (m_chart.ChartBounds.Contains(e.Location))
+				if (m_chart.SceneBounds.Contains(e.Location))
 				{
 					m_chart.Cursor = Cursors.CrossHair;
 				}
@@ -3032,7 +3096,7 @@ namespace pr.gui
 			{}
 			public override void MouseDown(MouseEventArgs e)
 			{
-				if (m_chart.ChartBounds.Contains(e.Location)) m_drag_axis_allow = EAxis.Both;
+				if (m_chart.SceneBounds.Contains(e.Location)) m_drag_axis_allow = EAxis.Both;
 				if (m_chart.XAxisBounds.Contains(e.Location)) m_drag_axis_allow = EAxis.XAxis;
 				if (m_chart.YAxisBounds.Contains(e.Location)) m_drag_axis_allow = EAxis.YAxis;
 
@@ -3128,6 +3192,7 @@ namespace pr.gui
 				m_impl_hovered               = false;
 				m_impl_visible               = true;
 				m_impl_visible_to_find_range = true;
+				m_impl_screen_space          = false;
 				m_impl_enabled               = true;
 				IsInvalidated                = true;
 				UserData                     = new Dictionary<Guid, object>();
@@ -3160,7 +3225,7 @@ namespace pr.gui
 			/// <summary>Non-null when the element has been added to a chart. Not virtual, override 'SetChartCore' instead</summary>
 			public ChartControl Chart
 			{
-				get { return m_impl_chart; }
+				[DebuggerStepThrough] get { return m_impl_chart; }
 				set { SetChartInternal(value, true); }
 			}
 			private ChartControl m_impl_chart;
@@ -3441,6 +3506,14 @@ namespace pr.gui
 			}
 			private bool m_impl_visible_to_find_range;
 
+			/// <summary>True if this is a screen-space element (i.e. Position is in normalised screen space, not chart space)</summary>
+			public bool ScreenSpace
+			{
+				get { return m_impl_screen_space; }
+				protected set { SetProp(ref m_impl_screen_space, value, nameof(ScreenSpace), false, true); }
+			}
+			private bool m_impl_screen_space;
+
 			/// <summary>Allow users to bind arbitrary data to the chart element</summary>
 			public IDictionary<Guid, object> UserData
 			{
@@ -3492,7 +3565,7 @@ namespace pr.gui
 				get { return m_impl_position; }
 				set
 				{
-					if (m4x4.FEql(m_impl_position, value)) return;
+					if (Maths.FEql(m_impl_position, value)) return;
 					SetPosition(value);
 				}
 			}
@@ -3733,7 +3806,8 @@ namespace pr.gui
 			var is_click = r.DiametreSq < Maths.Sqr(Options.MinDragPixelDistance);
 			if (is_click)
 			{
-				var hits = HitTestCS(ChartToClient(rect.Location), modifier_keys, x => x.Enabled);
+				var pt = ChartToClient(rect.Location).ToPoint();
+				var hits = HitTestCS(pt, modifier_keys, x => x.Enabled);
 
 				// If control is down, deselect the first selected element in the hit list
 				if (Bit.AllSet((int)modifier_keys, (int)Keys.Control))
@@ -4019,7 +4093,7 @@ namespace pr.gui
 		/// <summary>Update the text in the 'show value' hint balloon. 'location' is in client space</summary>
 		private void SetValueToolTip(Point location)
 		{
-			if (Scene.Bounds.Contains(location))
+			if (SceneBounds.Contains(location))
 			{
 				m_tt_show_value.Text = LocationText(location);
 				m_tt_show_value.Location = PointToScreen(location);
@@ -4099,7 +4173,7 @@ namespace pr.gui
 		/// <summary>Update the cross hair on mouse move</summary>
 		private void OnMouseMoveCrossHair(object sender, MouseEventArgs e)
 		{
-			if (Scene.Bounds.Contains(e.Location))
+			if (SceneBounds.Contains(e.Location))
 			{
 				CrossHairLocation = ClientToChart(e.Location);
 				Invalidate();
@@ -4107,7 +4181,7 @@ namespace pr.gui
 		}
 		private void OnMouseWheelCrossHair(object sender, MouseEventArgs e)
 		{
-			if (Scene.Bounds.Contains(e.Location))
+			if (SceneBounds.Contains(e.Location))
 			{
 				CrossHairLocation = ClientToChart(e.Location);
 				Invalidate();
@@ -4192,7 +4266,7 @@ namespace pr.gui
 			{
 				var ldr = Ldr.Rect("selection", Options.SelectionColour, AxisId.PosZ, 1f, 1f, true, pos:v4.Origin);
 				var obj = new View3d.Object(ldr, false, Id, null);
-				obj.FlagsSet(View3d.EFlags.BBoxInvisible, true);
+				obj.FlagsSet(View3d.EFlags.SceneBoundsExclude, true);
 				return obj;
 			}
 
@@ -4212,7 +4286,7 @@ namespace pr.gui
 			{
 				public ResizeGrabber(int corner) :base($"*Box resizer_{corner} {{5}}", false, Id, null)
 				{
-					FlagsSet(View3d.EFlags.BBoxInvisible, true);
+					FlagsSet(View3d.EFlags.SceneBoundsExclude, true);
 					switch (corner)
 					{
 					case 0:
@@ -4298,7 +4372,7 @@ namespace pr.gui
 					? Ldr.Line("chart_cross_hair_h", col, new v4(-0.5f, 0, 0, 1f), new v4(+0.5f, 0, 0, 1f))
 					: Ldr.Line("chart_cross_hair_v", col, new v4(0, -0.5f, 0, 1f), new v4(0, +0.5f, 0, 1f));
 				var obj = new View3d.Object(str, false, Id, null);
-				obj.FlagsSet(View3d.EFlags.BBoxInvisible, true);
+				obj.FlagsSet(View3d.EFlags.SceneBoundsExclude, true);
 				return obj;
 			}
 
@@ -4319,7 +4393,7 @@ namespace pr.gui
 				var col = Options.ChartBkColour.ToV4().Length3 > 0.5 ? 0xFFFFFFFF : 0xFF000000;
 				var str = Ldr.Line("tape_measure", col, new v4(0, 0, 0, 1f), new v4(0, 0, 1f, 1f));
 				var obj = new View3d.Object(str, false, Id, null);
-				obj.FlagsSet(View3d.EFlags.BBoxInvisible, true);
+				obj.FlagsSet(View3d.EFlags.SceneBoundsExclude, true);
 				return obj;
 			}
 
@@ -4847,7 +4921,6 @@ namespace pr.gui
 	/// <summary>Represents a data source that can be added to a chart control</summary>
 	public class ChartDataSeries :ChartControl.Element
 	{
-		private List<GfxPiece> m_cache;
 		private PointStyleTextures m_point_textures;
 
 		public ChartDataSeries(string name, OptionsData options = null, int? capacity = null)
@@ -4868,12 +4941,12 @@ namespace pr.gui
 		private void Init()
 		{
 			m_data = new List<Pt>();
-			m_cache = new List<GfxPiece>();
+			Cache = new GfxCache(CreatePiece);
 			m_point_textures = new PointStyleTextures();
 		}
 		protected override void Dispose(bool disposing)
 		{
-			Util.DisposeAll(m_cache);
+			Cache = null;
 			Util.Dispose(ref m_point_textures);
 			base.Dispose(disposing);
 		}
@@ -4893,6 +4966,12 @@ namespace pr.gui
 		}
 		private List<Pt> m_data;
 
+		/// <summary>Read the number of data points in the series. (Not synchronised by 'Lock()')</summary>
+		public int SampleCount
+		{
+			get { return m_data.Count; }
+		}
+
 		/// <summary>Return the X-Axis range of the data</summary>
 		public RangeF RangeX
 		{
@@ -4904,7 +4983,7 @@ namespace pr.gui
 					if (m_data.Count == 0) return RangeF.Invalid;
 					var beg = m_data.Front();
 					var end = m_data.Back();
-					return new RangeF(beg.x, end.x);
+					return new RangeF(beg.xf, end.xf);
 				}
 			}
 		}
@@ -4912,69 +4991,38 @@ namespace pr.gui
 		/// <summary>Cause all graphics models to be recreated</summary>
 		public void FlushCachedGraphics()
 		{
-			m_cache.Clear();
+			Cache.Flush();
 		}
 
 		/// <summary>Cause graphics model that intersect 'x_range' to be recreated</summary>
 		public void FlushCachedGraphics(Range x_range)
 		{
-			var beg = m_cache.BinarySearch(p => p.Range.CompareTo(x_range.Beg), find_insert_position:true);
-			var end = m_cache.BinarySearch(p => p.Range.CompareTo(x_range.End), find_insert_position:true);
-			m_cache.RemoveRange(beg, end - beg);
+			Cache.Flush(x_range);
 		}
-
+		
 		/// <summary>Update the graphics for this indicator and add it to the scene</summary>
 		protected override void UpdateSceneCore(View3d.Window window)
 		{
-			// Remove all pieces of the series data graphics
+			// Remove all series data graphics
 			window.RemoveObjects(Id);
 
 			// Add each graphics piece over the range
-			foreach (var piece in Get(Chart.XAxis.Min, Chart.XAxis.Max))
-				window.AddObject(piece.Gfx);
-		}
-
-		/// <summary>Get the series data graphics that spans the given x range</summary>
-		public IEnumerable<GfxPiece> Get(double xmin, double xmax)
-		{
-			// If there is no data, then there's no graphics
-			var range_x = RangeX;
-			if (range_x == RangeF.Invalid)
-				yield break;
-
-			// Get the range required for display
-			var range = new RangeF(
-				Math.Max(xmin, range_x.Beg),
-				Math.Min(xmax, range_x.End));
-
-			// Add each graphics piece over the range
-			for (var x = range.Beg; x < range.End;)
+			if (Visible)
 			{
-				var piece = CacheGet(x);
-				yield return piece;
-				x = piece.Range.End;
+				// If there is no data, then there's no graphics
+				var range_x = RangeX;
+				if (range_x == RangeF.Invalid)
+					return;
+
+				// Get the range required for display
+				var range = new RangeF(
+					Math.Max(Chart.XAxis.Min, range_x.Beg),
+					Math.Min(Chart.XAxis.Max, range_x.End));
+
+				// Add each graphics piece over the range
+				foreach (var piece in Cache.Get(range))
+					window.AddObject(piece.Gfx);
 			}
-		}
-
-		/// <summary>Return the graphics piece that spans 'x'</summary>
-		public GfxPiece CacheGet(double x)
-		{
-			// Search the cache for the model that spans 'x'
-			var idx = m_cache.BinarySearch(p => p.Range.CompareTo(x));
-			if (idx < 0)
-			{
-				idx = ~idx;
-
-				// Get the X-range that is not cached
-				var missing = new RangeF(
-					idx != 0             ? m_cache[idx-1].Range.End : double.MinValue,
-					idx != m_cache.Count ? m_cache[idx  ].Range.Beg : double.MaxValue);
-
-				// There is no cached graphics for 'x', create it now
-				var piece = CreatePiece(x, missing);
-				m_cache.Insert(idx, piece);
-			}
-			return m_cache[idx];
 		}
 
 		/// <summary>Generate a piece of the graphics for 'x'</summary>
@@ -4984,12 +5032,12 @@ namespace pr.gui
 			using (Lock())
 			{
 				// Find the nearest point in the data to 'x'
-				var idx = m_data.BinarySearch(pt => pt.x.CompareTo(x), find_insert_position: true);
+				var idx = m_data.BinarySearch(pt => pt.xf.CompareTo(x), find_insert_position: true);
 
 				// Convert 'missing' to an index range within the data
 				var idx_missing = new Range(
-					m_data.BinarySearch(pt => pt.x.CompareTo(missing.Beg), find_insert_position:true),
-					m_data.BinarySearch(pt => pt.x.CompareTo(missing.End), find_insert_position:true));
+					m_data.BinarySearch(pt => pt.xf.CompareTo(missing.Beg), find_insert_position:true),
+					m_data.BinarySearch(pt => pt.xf.CompareTo(missing.End), find_insert_position:true));
 
 				// Limit the size of 'idx_missing' to the block size
 				const int PieceBlockSize = 4096;
@@ -5025,9 +5073,9 @@ namespace pr.gui
 			for (int i = 0, iend = n; i != iend; ++i)
 			{
 				var pt = m_data[i + idx_range.Begi];
-				m_vbuf[i] = new View3d.Vertex(new v4((float)pt.x, (float)pt.y, 0f, 1f), col);
+				m_vbuf[i] = new View3d.Vertex(new v4((float)pt.xf, (float)pt.yf, 0f, 1f), col);
 				m_ibuf[i] = (ushort)i;
-				x_range.Encompass(pt.x);
+				x_range.Encompass(pt.xf);
 			}
 
 			// Create a nugget for the points using the sprite shader
@@ -5063,10 +5111,10 @@ namespace pr.gui
 				var pt = m_data[j];
 
 				var v = vert;
-				m_vbuf[vert++] = new View3d.Vertex(new v4((float)pt.x, (float)pt.y, 0f, 1f), col);
+				m_vbuf[vert++] = new View3d.Vertex(new v4((float)pt.xf, (float)pt.yf, 0f, 1f), col);
 				m_ibuf[indx++] = (ushort)(v);
 
-				x_range.Encompass(pt.x);
+				x_range.Encompass(pt.xf);
 			}
 
 			// Create a nugget for the list strip using the thick line shader
@@ -5112,19 +5160,19 @@ namespace pr.gui
 				var pt_r = j+1 != m_data.Count ? m_data[j+1] : pt;
 
 				var v = vert;
-				m_vbuf[vert++] = new View3d.Vertex(new v4((float)pt.x  , (float)pt.y, 0f, 1f), col);
-				m_vbuf[vert++] = new View3d.Vertex(new v4((float)pt_r.x, (float)pt.y, 0f, 1f), col);
+				m_vbuf[vert++] = new View3d.Vertex(new v4((float)pt.xf  , (float)pt.yf, 0f, 1f), col);
+				m_vbuf[vert++] = new View3d.Vertex(new v4((float)pt_r.xf, (float)pt.yf, 0f, 1f), col);
 				m_ibuf[indx++] = (ushort)(v + 0);
 				m_ibuf[indx++] = (ushort)(v + 1);
 
-				x_range.Encompass(pt.x);
+				x_range.Encompass(pt.xf);
 			}
 
 			// Create a nugget for the list strip using the thick line shader
 			{
 				var mat = View3d.Material.New();
 				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.ThickLineListGS, Options.LineWidth);
-				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert|View3d.EGeom.Colr, false, mat);
+				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert|View3d.EGeom.Colr, 0, (uint)vert, 0, (uint)indx, false, false, mat);
 			}
 
 			// Create a nugget for the points (if visible)
@@ -5170,16 +5218,16 @@ namespace pr.gui
 				var pt_r = j+1 != m_data.Count ? m_data[j+1] : null;
 
 				// Get the distance to the left and right of 'pt.x'
-				var l = pt_l != null ? 0.5f * width * (pt.x - pt_l.x) : 0f;
-				var r = pt_r != null ? 0.5f * width * (pt_r.x - pt.x) : 0f;
+				var l = pt_l != null ? 0.5f * width * (pt.xf - pt_l.xf) : 0f;
+				var r = pt_r != null ? 0.5f * width * (pt_r.xf - pt.xf) : 0f;
 				if (l == 0f) l = r;
 				if (r == 0f) r = l;
 
 				var v = vert;
-				m_vbuf[vert++] = new View3d.Vertex(new v4((float)(pt.x + r), (float)(pt.y >= 0f ? pt.y : 0f), 0f, 1f), col);
-				m_vbuf[vert++] = new View3d.Vertex(new v4((float)(pt.x - l), (float)(pt.y >= 0f ? pt.y : 0f), 0f, 1f), col);
-				m_vbuf[vert++] = new View3d.Vertex(new v4((float)(pt.x - l), (float)(pt.y >= 0f ? 0f : pt.y), 0f, 1f), col);
-				m_vbuf[vert++] = new View3d.Vertex(new v4((float)(pt.x + r), (float)(pt.y >= 0f ? 0f : pt.y), 0f, 1f), col);
+				m_vbuf[vert++] = new View3d.Vertex(new v4((float)(pt.xf + r), (float)(pt.yf >= 0f ? pt.yf : 0f), 0f, 1f), col);
+				m_vbuf[vert++] = new View3d.Vertex(new v4((float)(pt.xf - l), (float)(pt.yf >= 0f ? pt.yf : 0f), 0f, 1f), col);
+				m_vbuf[vert++] = new View3d.Vertex(new v4((float)(pt.xf - l), (float)(pt.yf >= 0f ? 0f : pt.yf), 0f, 1f), col);
+				m_vbuf[vert++] = new View3d.Vertex(new v4((float)(pt.xf + r), (float)(pt.yf >= 0f ? 0f : pt.yf), 0f, 1f), col);
 
 				m_ibuf[indx++] = (ushort)(v + 0);
 				m_ibuf[indx++] = (ushort)(v + 1);
@@ -5188,7 +5236,7 @@ namespace pr.gui
 				m_ibuf[indx++] = (ushort)(v + 3);
 				m_ibuf[indx++] = (ushort)(v + 0);
 
-				x_range.Encompass(pt.x);
+				x_range.Encompass(pt.xf);
 			}
 
 			// Create a nugget for the tri list
@@ -5199,6 +5247,130 @@ namespace pr.gui
 			// Create the graphics
 			var gfx = new View3d.Object($"{Name}-[{idx_range.Beg},{idx_range.End})", 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray(), Id);
 			return new GfxPiece(gfx, x_range);
+		}
+
+		/// <summary>A cache of graphics pieces for this data series</summary>
+		private GfxCache Cache
+		{
+			get { return m_impl_cache; }
+			set
+			{
+				if (m_impl_cache == value) return;
+				Util.Dispose(ref m_impl_cache);
+				m_impl_cache = value;
+			}
+		}
+		private GfxCache m_impl_cache;
+
+		/// <summary>ToString</summary>
+		public override string ToString()
+		{
+			return $"{Name} count={m_data.Count}";
+		}
+
+		/// <summary>Supported plot types</summary>
+		public enum EPlotType
+		{
+			Point,
+			Line,
+			StepLine,
+			Bar,
+		}
+
+		/// <summary>Point styles</summary>
+		public enum EPointStyle
+		{
+			Square,
+			Circle,
+			Triangle,
+		}
+
+		/// <summary>A cache of graphics objects that span the X-Axis</summary>
+		public class GfxCache :IDisposable
+		{
+			// Notes:
+			// - This cache is intended to be used by other ChartDataSeries-like classes.
+			//   If provides the functionality of breaking a data series up into pieces
+			//   so that the limit of 64K indices is not exceeded.
+			public GfxCache(CreatePieceHandler handler)
+			{
+				Pieces = new List<GfxPiece>();
+				CreatePiece = handler;
+			}
+			public void Dispose()
+			{
+				Pieces = null;
+			}
+
+			/// <summary>Reset the cache</summary>
+			public void Flush()
+			{
+				Util.DisposeAll(Pieces);
+				Pieces.Clear();
+			}
+			public void Flush(Range x_range)
+			{
+				var beg = Pieces.BinarySearch(p => p.Range.CompareTo(x_range.Beg), find_insert_position:true);
+				var end = Pieces.BinarySearch(p => p.Range.CompareTo(x_range.End), find_insert_position:true);
+				Util.DisposeRange(Pieces, beg, end - beg);
+				Pieces.RemoveRange(beg, end - beg);
+			}
+
+			/// <summary>The collection of cached graphics models</summary>
+			private List<GfxPiece> Pieces
+			{
+				get { return m_pieces; }
+				set
+				{
+					if (m_pieces == value) return;
+					Util.DisposeAll(m_pieces);
+					m_pieces = value;
+				}
+			}
+			private List<GfxPiece> m_pieces;
+
+			/// <summary>Get the series data graphics that spans the given x range</summary>
+			public IEnumerable<GfxPiece> Get(RangeF range)
+			{
+				// Return each graphics piece over the range
+				for (var x = range.Beg; x < range.End;)
+				{
+					var piece = CacheGet(x);
+					yield return piece;
+					Debug.Assert(piece.Range.End > x);
+					x = piece.Range.End;
+				}
+			}
+
+			/// <summary>Return the graphics piece that spans 'x'</summary>
+			public GfxPiece CacheGet(double x)
+			{
+				// Search the cache for the model that spans 'x'
+				var idx = Pieces.BinarySearch(p => p.Range.CompareTo(x));
+				if (idx < 0)
+				{
+					idx = ~idx;
+
+					// Get the X-range that is not cached
+					var missing = new RangeF(
+						idx != 0            ? Pieces[idx-1].Range.End : double.MinValue,
+						idx != Pieces.Count ? Pieces[idx  ].Range.Beg : double.MaxValue);
+
+					// There is no cached graphics for 'x', create it now
+					var piece = CreatePiece(x, missing);
+					Pieces.Insert(idx, piece);
+				}
+				return Pieces[idx];
+			}
+
+			/// <summary>The handler for providing pieces of the graphics</summary>
+			public CreatePieceHandler CreatePiece { get; set; }
+
+			/// <summary>
+			/// Implementers of this handler should return a graphics object that spans
+			/// some region about 'x', clipped by 'missing'. The returned graphics piece
+			/// should contain the x-range that the graphics represents.</summary>
+			public delegate GfxPiece CreatePieceHandler(double x, RangeF missing);
 		}
 
 		/// <summary>Graphics for a part of the series data</summary>
@@ -5231,48 +5403,25 @@ namespace pr.gui
 			public RangeF Range { get; private set; }
 		}
 
-		/// <summary>ToString</summary>
-		public override string ToString()
-		{
-			return $"{Name} count={m_data.Count}";
-		}
-
-		/// <summary>Supported plot types</summary>
-		public enum EPlotType
-		{
-			Point,
-			Line,
-			StepLine,
-			Bar,
-		}
-
-		/// <summary>Point styles</summary>
-		public enum EPointStyle
-		{
-			Square,
-			Circle,
-			Triangle,
-		}
-
 		/// <summary>A single point in the data series. A class so that it can be sub-classed</summary>
-		[DebuggerDisplay("{x} {y}")]
+		[DebuggerDisplay("{Description,nq}")]
 		[StructLayout(LayoutKind.Explicit, Pack = 1)]
 		public class Pt
 		{
 			public Pt(double x_, double y_)
 			{
-				x = x_;
-				y = y_;
+				xf = x_;
+				yf = y_;
 			}
 			public Pt(double x_, long y_)
 			{
-				x = x_;
+				xf = x_;
 				yi = y_;
 			}
 			public Pt(long x_, double y_)
 			{
 				xi = x_;
-				y = y_;
+				yf = y_;
 			}
 			public Pt(long x_, long y_)
 			{
@@ -5280,20 +5429,30 @@ namespace pr.gui
 				yi = y_;
 			}
 
-			[FieldOffset(0)] public double x;
-			[FieldOffset(8)] public double y;
+			[FieldOffset(0)] public double xf;
+			[FieldOffset(8)] public double yf;
 			[FieldOffset(0)] public long xi;
 			[FieldOffset(8)] public long yi;
 
 			public static implicit operator Pt(v2 pt) { return new Pt(pt.x, pt.y); }
-			public static implicit operator v2(Pt pt) { return new v2((float)pt.x, (float)pt.y); }
+			public static implicit operator v2(Pt pt) { return new v2((float)pt.xf, (float)pt.yf); }
 			public static implicit operator Pt(PointF pt) { return new Pt(pt.X, pt.Y); }
-			public static implicit operator PointF(Pt pt) { return new PointF((float)pt.x, (float)pt.y); }
+			public static implicit operator PointF(Pt pt) { return new PointF((float)pt.xf, (float)pt.yf); }
 
 			/// <summary>Sorting predicate on X</summary>
-			public static IComparer<Pt> CompareX
+			public static IComparer<Pt> CompareXf
 			{
-				get { return Comparer<Pt>.Create((l,r) => l.x.CompareTo(r.x)); }
+				get { return Comparer<Pt>.Create((l,r) => l.xf.CompareTo(r.xf)); }
+			}
+			public static IComparer<Pt> CompareXi
+			{
+				get { return Comparer<Pt>.Create((l,r) => l.xi.CompareTo(r.xi)); }
+			}
+
+			/// <summary>Guess at whether double or long values are used</summary>
+			private string Description
+			{
+				get { return $"{(Math.Abs(xf) < 1e-200 ? xi.ToString() : xf.ToString())} {(Math.Abs(yf) < 1e-200 ? yi.ToString() : yf.ToString())}"; }
 			}
 		}
 
@@ -5343,10 +5502,14 @@ namespace pr.gui
 				get { return m_owner.m_data; }
 			}
 
-			/// <summary>Sort the data series on X values</summary>
-			public void Sort()
+			/// <summary>Sort the data series on X values (F = doubles, I = longs)</summary>
+			public void SortF()
 			{
-				Data.Sort(Pt.CompareX);
+				Data.Sort(Pt.CompareXf);
+			}
+			public void SortI()
+			{
+				Data.Sort(Pt.CompareXi);
 			}
 
 			///<summary>
@@ -5358,11 +5521,11 @@ namespace pr.gui
 				var lwr = new Pt(xmin, 0.0);
 				var upr = new Pt(xmax, 0.0);
 
-				imin = Data.BinarySearch(0, Count, lwr, Pt.CompareX);
+				imin = Data.BinarySearch(0, Count, lwr, Pt.CompareXf);
 				if (imin < 0) imin = ~imin;
 				if (imin != 0) --imin;
 
-				imax = Data.BinarySearch(imin, Count - imin, upr, Pt.CompareX);
+				imax = Data.BinarySearch(imin, Count - imin, upr, Pt.CompareXf);
 				if (imax < 0) imax = ~imax;
 				if (imax != Count) ++imax;
 			}
@@ -5586,57 +5749,163 @@ namespace pr.gui
 	/// <summary>A Legend element for a collection of ChartDataSeries</summary>
 	public class ChartDataLegend :ChartControl.Element
 	{
+		private List<ChartDataSeries> m_series;
+
 		public ChartDataLegend()
 			:this(Guid.NewGuid())
 		{}
 		public ChartDataLegend(Guid id)
 			:base(id, m4x4.Identity, "Legend")
 		{
-			Series = new BindingSource<ChartDataSeries>();
+			m_bk_colour = 0xFFFFFFFF;
+			m_padding = new Padding(5);
+			m_anchor = new v2(+1f, +1f);
+			m_font = new Font("tahoma", 14f, FontStyle.Regular, GraphicsUnit.Point);
+			m_series = new List<ChartDataSeries>();
+			PositionXY = new v2(1f, 1f);
+			ScreenSpace = true;
 		}
 		protected override void Dispose(bool disposing)
 		{
-			Series = null;
+			Gfx = null;
 			base.Dispose(disposing);
 		}
-
-		/// <summary>The source of chart data series objects to build the legend for</summary>
-		public BindingSource<ChartDataSeries> Series
+		protected override void SetChartCore(ChartControl chart)
 		{
-			get { return m_series; }
+			m_series.Clear();
+			base.SetChartCore(chart);
+		}
+
+		/// <summary>Legend graphics</summary>
+		public View3d.Object Gfx
+		{
+			get { return m_gfx; }
 			private set
 			{
-				if (m_series == value) return;
-				if (m_series != null)
-				{
-					m_series.ListChanging -= HandleListChanging;
-					m_series.DataSource = null;
-				}
-				m_series = value;
-				if (m_series != null)
-				{
-					m_series.ListChanging += HandleListChanging;
-				}
-				void HandleListChanging(object sender, ListChgEventArgs<ChartDataSeries> e)
-				{
-					if (e.IsDataChanged)
-						Invalidate();
-				}
+				if (m_gfx == value) return;
+				Util.Dispose(ref m_gfx);
+				m_gfx = value;
 			}
 		}
-		public BindingSource<ChartDataSeries> m_series;
+		private View3d.Object m_gfx;
+
+		/// <summary>The background colour for the legend box</summary>
+		public Colour32 BackColour
+		{
+			get { return m_bk_colour; }
+			set { SetProp(ref m_bk_colour, value, nameof(BackColour), true, true); }
+		}
+		private Colour32 m_bk_colour;
+
+		/// <summary>Padding between the legend text and the border</summary>
+		public Padding Padding
+		{
+			get { return m_padding; }
+			set { SetProp(ref m_padding, value, nameof(Padding), true, true); }
+		}
+		private Padding m_padding;
+
+		/// <summary>The origin position of the legend graphics</summary>
+		public v2 Anchor
+		{
+			get { return m_anchor; }
+			set { SetProp(ref m_anchor, value, nameof(Anchor), true, true); }
+		}
+		private v2 m_anchor;
+
+		/// <summary>Return the font to use for the legend</summary>
+		public Font Font
+		{
+			get { return m_font; }
+			set { SetProp(ref m_font, value, nameof(Font), true, false); }
+		}
+		private Font m_font;
 
 		/// <summary>Generate the legend graphics</summary>
 		protected override void UpdateGfxCore()
 		{
 			base.UpdateGfxCore();
 
-			//
-			foreach (var s in Series)
+			Gfx = null;
+			if (Chart == null)
+				return;
+
+			// Get the ChartDataSeries objects on the chart
+			m_series = Chart.Elements.OfType<ChartDataSeries>().ToList();
+			if (m_series.Count != 0)
 			{
+				// Create the legend graphics object
+				Str.Build(
+					$"*Text legend {{\n",
+					$"*ScreenSpace\n",
+					$"*BackColour {{{BackColour}}}\n",
+					$"*Anchor {{{Anchor.x} {Anchor.y}}}\n",
+					$"*Padding{{{Padding.Left} {Padding.Top} {Padding.Right} {Padding.Bottom}}}\n",
+					$"*Font{{ *Name{{\"{Font.Name}\"}} *Size{{{Font.SizeInPoints}}} }}\n");
+
+				bool newline = false;
+				foreach (var s in m_series)
+				{
+					if (newline) Str.Append("*NewLine\n");
+					Str.Append("*Font {*Colour {",(s.Visible ? s.Options.Colour : Colour32.Gray),"} }\n");
+					Str.Append($"\"{s.Name}\"\n");
+					newline = true;
+				}
+
+				Str.Append("}");
+				Gfx = new View3d.Object(Str.Text, false, Id);
 			}
 		}
 
+		/// <summary>Add/Remove graphics from the scene</summary>
+		protected override void UpdateSceneCore(View3d.Window window)
+		{
+			base.UpdateSceneCore(window);
+			if (Gfx != null)
+			{
+				Gfx.O2P = Position;
+				if (Visible)
+					window.AddObject(Gfx);
+				else
+					window.RemoveObject(Gfx);
+			}
+		}
+
+		/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in client space because typically hit testing uses pixel tolerances</summary>
+		public override ChartControl.HitTestResult.Hit HitTest(PointF chart_point, Point client_point, Keys modifier_keys, View3d.Camera cam)
+		{
+			if (Gfx == null || !Gfx.Visible)
+				return null;
+			
+			return null;
+		// todo:
+		//	// Get the area covered by the legend in screen space
+		//	var loc = Chart.NSSToClient(PositionXY.ToPointF());
+		//	var area = Gfx.BBoxMS(false).ToRectXY();
+		//
+		//
+		//
+		//	area = area.Shifted(loc);
+		//
+		//
+		//
+		//
+		//	// If this is a hit
+		//	if (!area.Contains(client_point))
+		//		return null;
+		//
+		//	// Get the hit point in legend space
+		//	var elem_point = Drawing_.Subtract(client_point, area.TopLeft()).ToPointF();
+		//
+		//	// Determine which series was hit
+		//	var idx = (int)Maths.Frac(Padding.Top, elem_point.Y, area.Height - Padding.Bottom) * m_series.Count;
+		//	if (idx < 0 || idx >= m_series.Count)
+		//		return null;
+		//
+		//	// Return hit data
+		//	var hit = new ChartControl.HitTestResult.Hit(this, elem_point, m_series[idx]);
+		//	return hit;
+		}
 	}
 
 	#endregion

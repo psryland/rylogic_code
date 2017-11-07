@@ -229,17 +229,6 @@ VIEW3D_API void __stdcall View3D_ReloadScriptSources()
 	CatchAndReport(View3D_ReloadScriptSources,,);
 }
 
-// Remove all Ldr script sources
-VIEW3D_API void __stdcall View3D_ClearScriptSources()
-{
-	try
-	{
-		DllLockGuard;
-		return Dll().ClearScriptSources();
-	}
-	CatchAndReport(View3D_ClearScriptSources,,);
-}
-
 // Delete all objects
 VIEW3D_API void __stdcall View3D_ObjectsDeleteAll()
 {
@@ -252,12 +241,12 @@ VIEW3D_API void __stdcall View3D_ObjectsDeleteAll()
 }
 
 // Delete all objects matching a context id
-VIEW3D_API void __stdcall View3D_ObjectsDeleteById(GUID const* context_ids, int count)
+VIEW3D_API void __stdcall View3D_ObjectsDeleteById(GUID const* context_ids, int count, BOOL all_except)
 {
 	try
 	{
 		DllLockGuard;
-		Dll().DeleteAllObjectsById(context_ids, count);
+		Dll().DeleteAllObjectsById(context_ids, count, all_except != 0);
 	}
 	CatchAndReport(View3D_ObjectsDeleteById, ,);
 }
@@ -2744,7 +2733,7 @@ VIEW3D_API void __stdcall View3D_DemoSceneDelete()
 	try
 	{
 		DllLockGuard;
-		Dll().DeleteAllObjectsById(&Context::GuidDemoSceneObjects, 1);
+		Dll().DeleteAllObjectsById(&Context::GuidDemoSceneObjects, 1, false);
 	}
 	CatchAndReport(View3D_DemoSceneDelete,,);
 }

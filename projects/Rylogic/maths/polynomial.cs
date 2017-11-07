@@ -598,9 +598,9 @@ namespace pr.unittests
 					new v2(9,19),
 				};
 				var q = Quadratic.FromLinearRegression(pts);
-				Assert.True(Maths.FEql(q.A, 0.689393937587738, 0.00001f));
-				Assert.True(Maths.FEql(q.B, -6.10151338577271, 0.00001f));
-				Assert.True(Maths.FEql(q.C, 17.3090972900391 , 0.00001f));
+				Assert.True(Maths.FEql(q.A, 0.689393937587738));
+				Assert.True(Maths.FEql(q.B, -6.10151338577271));
+				Assert.True(Maths.FEql(q.C, 17.3090972900391 ));
 			}
 		}
 	}

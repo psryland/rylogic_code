@@ -154,20 +154,20 @@ namespace pr
 				float p[] = {m.x.y, m.x.z, m.y.z}; // products (lower triangle)
 
 				// Diagonals of an Inertia matrix must be non-negative
-				if (FLess(d[0],0) || FLess(d[1],0) || FLess(d[2],0))
+				if (d[0] < 0 || d[1] < 0 || d[2] < 0)
 					return false;
 
 				// Diagonals of an Inertia matrix must satisfy the triangle inequality: a + b >= c
 				// Might need to relax 'tol' due to distorted rotation matrices: using: 'Max(Sum(d), 1) * tiny_sqrt'
-				if (FLess(d[0] + d[1], d[2]) ||
-					FLess(d[1] + d[2], d[0]) ||
-					FLess(d[2] + d[0], d[1]))
+				if (d[0] + d[1] < d[2] ||
+					d[1] + d[2] < d[0] ||
+					d[2] + d[0] < d[1])
 					return false;
 
 				// The magnitude of a product of inertia was too large to be physical.
-				if (FLess(d[0], Abs(2 * p[2])) || 
-					FLess(d[1], Abs(2 * p[1])) ||
-					FLess(d[2], Abs(2 * p[0])))
+				if (d[0] < Abs(2 * p[2]) || 
+					d[1] < Abs(2 * p[1]) ||
+					d[2] < Abs(2 * p[0]))
 					return false;
 
 				return true;

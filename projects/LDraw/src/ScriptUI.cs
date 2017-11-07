@@ -299,7 +299,7 @@ namespace LDraw
 			}
 
 			// Remove any objects previously created by this script
-			Model.View3d.DeleteAllObjects(ContextId);
+			Model.View3d.DeleteObjects(ContextId, all_except:false);
 		}
 
 		/// <summary>Render the script in this window</summary>

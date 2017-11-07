@@ -101,7 +101,7 @@ namespace LDraw
 			m_tb_position.ValueChanged += (s,a) => Light.Position = (v4)m_tb_position.Value;
 
 			// Direction
-			m_tb_direction.ValidateText = t => { var v = v4.TryParse3(t,0f); return v != null && !v4.FEql3(v.Value, v4.Zero); };
+			m_tb_direction.ValidateText = t => v4.TryParse3(t, out var v, 0f) && !Maths.FEql(v, v4.Zero);
 			m_tb_direction.ValueToText = v => ((v4)v).ToString3();
 			m_tb_direction.TextToValue = t => v4.Parse3(t, 0f);
 			m_tb_direction.ValueChanged += (s,a) => Light.Direction = v4.Normalise3((v4)m_tb_direction.Value, -v4.ZAxis);

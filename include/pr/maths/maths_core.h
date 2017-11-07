@@ -77,9 +77,11 @@ namespace pr
 			w_cp(lhs) == w_cp(rhs);
 	}
 
-	// Floating point comparisons
 	#pragma warning (disable:4756) // Constant overflow in floating point arithmetic
-	inline bool FEql(float a, float b, float tol = maths::tiny)
+
+	// Floating point comparisons
+	// *WARNING* 'tol' is a relative tolerance, relative to the largest of 'a' or 'b'
+	inline bool FEqlRelative(float a, float b, float tol)
 	{
 		// Floating point compare is dangerous and subtle.
 		// See: https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
@@ -104,7 +106,7 @@ namespace pr
 		// Test relative error as a fraction of the largest value
 		return std::abs(diff) < tol * std::max(std::abs(a), std::abs(b));
 	}
-	inline bool FEql(double a, double b, double tol = maths::tinyd)
+	inline bool FEqlRelative(double a, double b, double tol)
 	{
 		// Handles tests against zero where relative error is meaningless
 		// Tests with 'b == 0' are the most common so do them first
@@ -120,68 +122,61 @@ namespace pr
 		// Test relative error as a fraction of the largest value
 		return std::abs(diff) < tol * std::max(std::abs(a), std::abs(b));
 	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline bool FEql(T const& a, T const& b, float tol = maths::tiny)
+	template <typename T, typename = maths::enable_if_vN<T>> inline bool FEqlRelative(T const& a, T const& b, float tol)
 	{
 		int i = 0, iend = maths::is_vec<T>::dim;
-		for (; i != iend && FEql(a[i],b[i],tol); ++i) {}
+		for (; i != iend && FEqlRelative(a[i],b[i],tol); ++i) {}
 		return i == iend;
 	}
-	template <typename T, typename = maths::enable_if_v2<T>> inline bool FEql2(T const& lhs, T const& rhs, float tol = maths::tiny)
+	template <typename T, typename = maths::enable_if_v2<T>> inline bool FEqlRelative2(T const& lhs, T const& rhs, float tol)
 	{
 		return
-			FEql(x_as<float>(lhs), x_as<float>(rhs), tol) &&
-			FEql(y_as<float>(lhs), y_as<float>(rhs), tol);
+			FEqlRelative(x_as<float>(lhs), x_as<float>(rhs), tol) &&
+			FEqlRelative(y_as<float>(lhs), y_as<float>(rhs), tol);
 	}
-	template <typename T, typename = maths::enable_if_v3<T>> inline bool FEql3(T const& lhs, T const& rhs, float tol = maths::tiny)
+	template <typename T, typename = maths::enable_if_v3<T>> inline bool FEqlRelative3(T const& lhs, T const& rhs, float tol)
 	{
 		return
-			FEql(x_as<float>(lhs), x_as<float>(rhs), tol) &&
-			FEql(y_as<float>(lhs), y_as<float>(rhs), tol) &&
-			FEql(z_as<float>(lhs), z_as<float>(rhs), tol);
+			FEqlRelative(x_as<float>(lhs), x_as<float>(rhs), tol) &&
+			FEqlRelative(y_as<float>(lhs), y_as<float>(rhs), tol) &&
+			FEqlRelative(z_as<float>(lhs), z_as<float>(rhs), tol);
 	}
-	template <typename T, typename = maths::enable_if_v4<T>> inline bool FEql4(T const& lhs, T const& rhs, float tol = maths::tiny)
+	template <typename T, typename = maths::enable_if_v4<T>> inline bool FEqlRelative4(T const& lhs, T const& rhs, float tol)
 	{
 		return
-			FEql(x_as<float>(lhs), x_as<float>(rhs), tol) &&
-			FEql(y_as<float>(lhs), y_as<float>(rhs), tol) &&
-			FEql(z_as<float>(lhs), z_as<float>(rhs), tol) &&
-			FEql(w_as<float>(lhs), w_as<float>(rhs), tol);
+			FEqlRelative(x_as<float>(lhs), x_as<float>(rhs), tol) &&
+			FEqlRelative(y_as<float>(lhs), y_as<float>(rhs), tol) &&
+			FEqlRelative(z_as<float>(lhs), z_as<float>(rhs), tol) &&
+			FEqlRelative(w_as<float>(lhs), w_as<float>(rhs), tol);
 	}
-	#pragma warning (default:4756)
+	
+	inline bool FEql(float a, float b)
+	{
+		// Don't add a 'tol' parameter because it looks like the function should perform a == b +- tol, which isn't what it does.
+		return FEqlRelative(a, b, maths::tiny);
+	}
+	inline bool FEql(double a, double b)
+	{
+		return FEqlRelative(a, b, maths::tinyd);
+	}
+	template <typename T, typename = maths::enable_if_vN<T>> inline bool FEql(T const& a, T const& b)
+	{
+		return FEqlRelative(a, b, maths::tiny);
+	}
+	template <typename T, typename = maths::enable_if_v2<T>> inline bool FEql2(T const& lhs, T const& rhs)
+	{
+		return FEqlRelative2(lhs, rhs, maths::tiny);
+	}
+	template <typename T, typename = maths::enable_if_v3<T>> inline bool FEql3(T const& lhs, T const& rhs)
+	{
+		return FEqlRelative3(lhs, rhs, maths::tiny);
+	}
+	template <typename T, typename = maths::enable_if_v4<T>> inline bool FEql4(T const& lhs, T const& rhs)
+	{
+		return FEqlRelative4(lhs, rhs, maths::tiny);
+	}
 
-	// Float inequalities
-	inline bool FGtr(float a, float b, float tol = maths::tiny)
-	{
-		return a - b > tol;
-	}
-	inline bool FGtrEql(float a, float b, float tol = maths::tiny)
-	{
-		return a - b > -tol;
-	}
-	inline bool FLess(float a, float b, float tol = maths::tiny)
-	{
-		return !FGtrEql(a, b, tol);
-	}
-	inline bool FLessEql(float a, float b, float tol = maths::tiny)
-	{
-		return !FGtr(a, b, tol);
-	}
-	inline bool FGtr(double a, double b, double tol = maths::tiny)
-	{
-		return a - b > tol;
-	}
-	inline bool FGtrEql(double a, double b, double tol = maths::tiny)
-	{
-		return a - b > -tol;
-	}
-	inline bool FLess(double a, double b, double tol = maths::tiny)
-	{
-		return !FGtrEql(a, b, tol);
-	}
-	inline bool FLessEql(double a, double b, double tol = maths::tiny)
-	{
-		return !FGtr(a, b, tol);
-	}
+	#pragma warning (default:4756)
 
 	// Zero test
 	template <typename T, typename = maths::enable_if_vec_cp<T>> inline bool IsZero(T x)
@@ -1423,115 +1418,115 @@ namespace pr
 				constexpr float const _6dp = 1.000000111e-6f;
 
 				// Regular large numbers - generally not problematic
-				PR_CHECK(FEql(1000000.0f, 1000001.0f, _6dp), true);
-				PR_CHECK(FEql(1000001.0f, 1000000.0f, _6dp), true);
-				PR_CHECK(FEql(1000000.0f, 1000010.0f, _6dp), false);
-				PR_CHECK(FEql(1000010.0f, 1000000.0f, _6dp), false);
+				PR_CHECK(FEqlRelative(1000000.0f, 1000001.0f, _6dp), true);
+				PR_CHECK(FEqlRelative(1000001.0f, 1000000.0f, _6dp), true);
+				PR_CHECK(FEqlRelative(1000000.0f, 1000010.0f, _6dp), false);
+				PR_CHECK(FEqlRelative(1000010.0f, 1000000.0f, _6dp), false);
 
 				// Negative large numbers
-				PR_CHECK(FEql(-1000000.0f, -1000001.0f, _6dp), true);
-				PR_CHECK(FEql(-1000001.0f, -1000000.0f, _6dp), true);
-				PR_CHECK(FEql(-1000000.0f, -1000010.0f, _6dp), false);
-				PR_CHECK(FEql(-1000010.0f, -1000000.0f, _6dp), false);
+				PR_CHECK(FEqlRelative(-1000000.0f, -1000001.0f, _6dp), true);
+				PR_CHECK(FEqlRelative(-1000001.0f, -1000000.0f, _6dp), true);
+				PR_CHECK(FEqlRelative(-1000000.0f, -1000010.0f, _6dp), false);
+				PR_CHECK(FEqlRelative(-1000010.0f, -1000000.0f, _6dp), false);
 
 				// Numbers around 1
-				PR_CHECK(FEql(1.0000001f, 1.0000002f, _6dp), true);
-				PR_CHECK(FEql(1.0000002f, 1.0000001f, _6dp), true);
-				PR_CHECK(FEql(1.0000020f, 1.0000010f, _6dp), false);
-				PR_CHECK(FEql(1.0000010f, 1.0000020f, _6dp), false);
+				PR_CHECK(FEqlRelative(1.0000001f, 1.0000002f, _6dp), true);
+				PR_CHECK(FEqlRelative(1.0000002f, 1.0000001f, _6dp), true);
+				PR_CHECK(FEqlRelative(1.0000020f, 1.0000010f, _6dp), false);
+				PR_CHECK(FEqlRelative(1.0000010f, 1.0000020f, _6dp), false);
 
 				// Numbers around -1
-				PR_CHECK(FEql(-1.0000001f, -1.0000002f, _6dp), true);
-				PR_CHECK(FEql(-1.0000002f, -1.0000001f, _6dp), true);
-				PR_CHECK(FEql(-1.0000010f, -1.0000020f, _6dp), false);
-				PR_CHECK(FEql(-1.0000020f, -1.0000010f, _6dp), false);
+				PR_CHECK(FEqlRelative(-1.0000001f, -1.0000002f, _6dp), true);
+				PR_CHECK(FEqlRelative(-1.0000002f, -1.0000001f, _6dp), true);
+				PR_CHECK(FEqlRelative(-1.0000010f, -1.0000020f, _6dp), false);
+				PR_CHECK(FEqlRelative(-1.0000020f, -1.0000010f, _6dp), false);
 
 				// Numbers between 1 and 0
-				PR_CHECK(FEql(0.000000001000001f, 0.000000001000002f, _6dp), true);
-				PR_CHECK(FEql(0.000000001000002f, 0.000000001000001f, _6dp), true);
-				PR_CHECK(FEql(0.000000000100002f, 0.000000000100001f, _6dp), false);
-				PR_CHECK(FEql(0.000000000100001f, 0.000000000100002f, _6dp), false);
+				PR_CHECK(FEqlRelative(0.000000001000001f, 0.000000001000002f, _6dp), true);
+				PR_CHECK(FEqlRelative(0.000000001000002f, 0.000000001000001f, _6dp), true);
+				PR_CHECK(FEqlRelative(0.000000000100002f, 0.000000000100001f, _6dp), false);
+				PR_CHECK(FEqlRelative(0.000000000100001f, 0.000000000100002f, _6dp), false);
 
 				// Numbers between -1 and 0
-				PR_CHECK(FEql(-0.0000000010000001f, -0.0000000010000002f, _6dp), true);
-				PR_CHECK(FEql(-0.0000000010000002f, -0.0000000010000001f, _6dp), true);
-				PR_CHECK(FEql(-0.0000000001000002f, -0.0000000001000001f, _6dp), false);
-				PR_CHECK(FEql(-0.0000000001000001f, -0.0000000001000002f, _6dp), false);
+				PR_CHECK(FEqlRelative(-0.0000000010000001f, -0.0000000010000002f, _6dp), true);
+				PR_CHECK(FEqlRelative(-0.0000000010000002f, -0.0000000010000001f, _6dp), true);
+				PR_CHECK(FEqlRelative(-0.0000000001000002f, -0.0000000001000001f, _6dp), false);
+				PR_CHECK(FEqlRelative(-0.0000000001000001f, -0.0000000001000002f, _6dp), false);
 
 				// Comparisons involving zero
-				PR_CHECK(FEql(+0.0f, +0.0f, _6dp), true);
-				PR_CHECK(FEql(+0.0f, -0.0f, _6dp), true);
-				PR_CHECK(FEql(-0.0f, -0.0f, _6dp), true);
-				PR_CHECK(FEql(+0.000001f, +0.0f, _6dp), true);
-				PR_CHECK(FEql(+0.0f, +0.000001f, _6dp), true);
-				PR_CHECK(FEql(-0.000001f, +0.0f, _6dp), true);
-				PR_CHECK(FEql(+0.0f, -0.000001f, _6dp), true);
-				PR_CHECK(FEql(+0.00001f, +0.0f, _6dp), false);
-				PR_CHECK(FEql(+0.0f, +0.00001f, _6dp), false);
-				PR_CHECK(FEql(-0.00001f, +0.0f, _6dp), false);
-				PR_CHECK(FEql(+0.0f, -0.00001f, _6dp), false);
+				PR_CHECK(FEqlRelative(+0.0f, +0.0f, _6dp), true);
+				PR_CHECK(FEqlRelative(+0.0f, -0.0f, _6dp), true);
+				PR_CHECK(FEqlRelative(-0.0f, -0.0f, _6dp), true);
+				PR_CHECK(FEqlRelative(+0.000001f, +0.0f, _6dp), true);
+				PR_CHECK(FEqlRelative(+0.0f, +0.000001f, _6dp), true);
+				PR_CHECK(FEqlRelative(-0.000001f, +0.0f, _6dp), true);
+				PR_CHECK(FEqlRelative(+0.0f, -0.000001f, _6dp), true);
+				PR_CHECK(FEqlRelative(+0.00001f, +0.0f, _6dp), false);
+				PR_CHECK(FEqlRelative(+0.0f, +0.00001f, _6dp), false);
+				PR_CHECK(FEqlRelative(-0.00001f, +0.0f, _6dp), false);
+				PR_CHECK(FEqlRelative(+0.0f, -0.00001f, _6dp), false);
 
 				// Comparisons involving extreme values (overflow potential)
 				auto float_hi = maths::float_max;
 				auto float_lo = maths::float_lowest;
-				PR_CHECK(FEql(float_hi, float_hi, _6dp), true);
-				PR_CHECK(FEql(float_hi, float_lo, _6dp), false);
-				PR_CHECK(FEql(float_lo, float_hi, _6dp), false);
-				PR_CHECK(FEql(float_lo, float_lo, _6dp), true);
-				PR_CHECK(FEql(float_hi, float_hi / 2, _6dp), false);
-				PR_CHECK(FEql(float_hi, float_lo / 2, _6dp), false);
-				PR_CHECK(FEql(float_lo, float_hi / 2, _6dp), false);
-				PR_CHECK(FEql(float_lo, float_lo / 2, _6dp), false);
+				PR_CHECK(FEqlRelative(float_hi, float_hi, _6dp), true);
+				PR_CHECK(FEqlRelative(float_hi, float_lo, _6dp), false);
+				PR_CHECK(FEqlRelative(float_lo, float_hi, _6dp), false);
+				PR_CHECK(FEqlRelative(float_lo, float_lo, _6dp), true);
+				PR_CHECK(FEqlRelative(float_hi, float_hi / 2, _6dp), false);
+				PR_CHECK(FEqlRelative(float_hi, float_lo / 2, _6dp), false);
+				PR_CHECK(FEqlRelative(float_lo, float_hi / 2, _6dp), false);
+				PR_CHECK(FEqlRelative(float_lo, float_lo / 2, _6dp), false);
 
 				// Comparisons involving infinities
-				PR_CHECK(FEql(+maths::float_inf, +maths::float_inf, _6dp), true);
-				PR_CHECK(FEql(-maths::float_inf, -maths::float_inf, _6dp), true);
-				PR_CHECK(FEql(-maths::float_inf, +maths::float_inf, _6dp), false);
-				PR_CHECK(FEql(+maths::float_inf, +maths::float_max, _6dp), false);
-				PR_CHECK(FEql(-maths::float_inf, -maths::float_max, _6dp), false);
+				PR_CHECK(FEqlRelative(+maths::float_inf, +maths::float_inf, _6dp), true);
+				PR_CHECK(FEqlRelative(-maths::float_inf, -maths::float_inf, _6dp), true);
+				PR_CHECK(FEqlRelative(-maths::float_inf, +maths::float_inf, _6dp), false);
+				PR_CHECK(FEqlRelative(+maths::float_inf, +maths::float_max, _6dp), false);
+				PR_CHECK(FEqlRelative(-maths::float_inf, -maths::float_max, _6dp), false);
 
 				// Comparisons involving NaN values
-				PR_CHECK(FEql(maths::float_nan, maths::float_nan, _6dp), false);
-				PR_CHECK(FEql(maths::float_nan, +0.0f, _6dp), false);
-				PR_CHECK(FEql(-0.0f, maths::float_nan, _6dp), false);
-				PR_CHECK(FEql(maths::float_nan, -0.0f, _6dp), false);
-				PR_CHECK(FEql(+0.0f, maths::float_nan, _6dp), false);
-				PR_CHECK(FEql( maths::float_nan, +maths::float_inf, _6dp), false);
-				PR_CHECK(FEql(+maths::float_inf,  maths::float_nan, _6dp), false);
-				PR_CHECK(FEql( maths::float_nan, -maths::float_inf, _6dp), false);
-				PR_CHECK(FEql(-maths::float_inf,  maths::float_nan, _6dp), false);
-				PR_CHECK(FEql( maths::float_nan, +maths::float_max, _6dp), false);
-				PR_CHECK(FEql(+maths::float_max,  maths::float_nan, _6dp), false);
-				PR_CHECK(FEql( maths::float_nan, -maths::float_max, _6dp), false);
-				PR_CHECK(FEql(-maths::float_max,  maths::float_nan, _6dp), false);
-				PR_CHECK(FEql( maths::float_nan, +maths::float_min, _6dp), false);
-				PR_CHECK(FEql(+maths::float_min,  maths::float_nan, _6dp), false);
-				PR_CHECK(FEql( maths::float_nan, -maths::float_min, _6dp), false);
-				PR_CHECK(FEql(-maths::float_min,  maths::float_nan, _6dp), false);
+				PR_CHECK(FEqlRelative(maths::float_nan, maths::float_nan, _6dp), false);
+				PR_CHECK(FEqlRelative(maths::float_nan, +0.0f, _6dp), false);
+				PR_CHECK(FEqlRelative(-0.0f, maths::float_nan, _6dp), false);
+				PR_CHECK(FEqlRelative(maths::float_nan, -0.0f, _6dp), false);
+				PR_CHECK(FEqlRelative(+0.0f, maths::float_nan, _6dp), false);
+				PR_CHECK(FEqlRelative( maths::float_nan, +maths::float_inf, _6dp), false);
+				PR_CHECK(FEqlRelative(+maths::float_inf,  maths::float_nan, _6dp), false);
+				PR_CHECK(FEqlRelative( maths::float_nan, -maths::float_inf, _6dp), false);
+				PR_CHECK(FEqlRelative(-maths::float_inf,  maths::float_nan, _6dp), false);
+				PR_CHECK(FEqlRelative( maths::float_nan, +maths::float_max, _6dp), false);
+				PR_CHECK(FEqlRelative(+maths::float_max,  maths::float_nan, _6dp), false);
+				PR_CHECK(FEqlRelative( maths::float_nan, -maths::float_max, _6dp), false);
+				PR_CHECK(FEqlRelative(-maths::float_max,  maths::float_nan, _6dp), false);
+				PR_CHECK(FEqlRelative( maths::float_nan, +maths::float_min, _6dp), false);
+				PR_CHECK(FEqlRelative(+maths::float_min,  maths::float_nan, _6dp), false);
+				PR_CHECK(FEqlRelative( maths::float_nan, -maths::float_min, _6dp), false);
+				PR_CHECK(FEqlRelative(-maths::float_min,  maths::float_nan, _6dp), false);
 
 				// Comparisons of numbers on opposite sides of 0
-				PR_CHECK(FEql(+1.0f, -1.0f, _6dp), false);
-				PR_CHECK(FEql(-1.0f, +1.0f, _6dp), false);
-				PR_CHECK(FEql(+1.000000001f, -1.0f, _6dp), false);
-				PR_CHECK(FEql(-1.0f, +1.000000001f, _6dp), false);
-				PR_CHECK(FEql(-1.000000001f, +1.0f, _6dp), false);
-				PR_CHECK(FEql(+1.0f, -1.000000001f, _6dp), false);
-				PR_CHECK(FEql(2 * maths::float_min, 0, _6dp), true);
-				PR_CHECK(FEql(maths::float_min, -maths::float_min, _6dp), false);
+				PR_CHECK(FEqlRelative(+1.0f, -1.0f, _6dp), false);
+				PR_CHECK(FEqlRelative(-1.0f, +1.0f, _6dp), false);
+				PR_CHECK(FEqlRelative(+1.000000001f, -1.0f, _6dp), false);
+				PR_CHECK(FEqlRelative(-1.0f, +1.000000001f, _6dp), false);
+				PR_CHECK(FEqlRelative(-1.000000001f, +1.0f, _6dp), false);
+				PR_CHECK(FEqlRelative(+1.0f, -1.000000001f, _6dp), false);
+				PR_CHECK(FEqlRelative(2 * maths::float_min, 0, _6dp), true);
+				PR_CHECK(FEqlRelative(maths::float_min, -maths::float_min, _6dp), false);
 
 				// The really tricky part - comparisons of numbers very close to zero.
-				PR_CHECK(FEql(+maths::float_min, +maths::float_min, _6dp), true);
-				PR_CHECK(FEql(+maths::float_min, -maths::float_min, _6dp), false);
-				PR_CHECK(FEql(-maths::float_min, +maths::float_min, _6dp), false);
-				PR_CHECK(FEql(+maths::float_min, 0, _6dp), true);
-				PR_CHECK(FEql(0, +maths::float_min, _6dp), true);
-				PR_CHECK(FEql(-maths::float_min, 0, _6dp), true);
-				PR_CHECK(FEql(0, -maths::float_min, _6dp), true);
+				PR_CHECK(FEqlRelative(+maths::float_min, +maths::float_min, _6dp), true);
+				PR_CHECK(FEqlRelative(+maths::float_min, -maths::float_min, _6dp), false);
+				PR_CHECK(FEqlRelative(-maths::float_min, +maths::float_min, _6dp), false);
+				PR_CHECK(FEqlRelative(+maths::float_min, 0, _6dp), true);
+				PR_CHECK(FEqlRelative(0, +maths::float_min, _6dp), true);
+				PR_CHECK(FEqlRelative(-maths::float_min, 0, _6dp), true);
+				PR_CHECK(FEqlRelative(0, -maths::float_min, _6dp), true);
 
-				PR_CHECK(FEql(0.000000001f, -maths::float_min, _6dp), false);
-				PR_CHECK(FEql(0.000000001f, +maths::float_min, _6dp), false);
-				PR_CHECK(FEql(+maths::float_min, 0.000000001f, _6dp), false);
-				PR_CHECK(FEql(-maths::float_min, 0.000000001f, _6dp), false);
+				PR_CHECK(FEqlRelative(0.000000001f, -maths::float_min, _6dp), false);
+				PR_CHECK(FEqlRelative(0.000000001f, +maths::float_min, _6dp), false);
+				PR_CHECK(FEqlRelative(+maths::float_min, 0.000000001f, _6dp), false);
+				PR_CHECK(FEqlRelative(-maths::float_min, 0.000000001f, _6dp), false);
 			}
 			{// Floating point vector compare
 				float arr0[] = {1,2,3,4};
@@ -1543,12 +1538,6 @@ namespace pr
 				PR_CHECK( Equal2(arr0, arr1), true);
 				PR_CHECK( Equal3(arr0, arr1), true);
 				PR_CHECK(!Equal4(arr0, arr1), true);
-
-				PR_CHECK( FGtr    (+1.0f, +0.9f) && !FGtr    (+1.0f, +1.0f) && !FGtr    (+0.9f, +1.0f) &&  FGtr    (-0.9f, -1.0f) && !FGtr    (-1.0f, -1.0f) && !FGtr    (-1.0f, -0.9f), true);
-				PR_CHECK( FGtrEql (+1.0f, +0.9f) &&  FGtrEql (+1.0f, +1.0f) && !FGtrEql (+0.9f, +1.0f) &&  FGtrEql (-0.9f, -1.0f) &&  FGtrEql (-1.0f, -1.0f) && !FGtrEql (-1.0f, -0.9f), true);
-				PR_CHECK(!FLess   (+1.0f, +0.9f) && !FLess   (+1.0f, +1.0f) &&  FLess   (+0.9f, +1.0f) && !FLess   (-0.9f, -1.0f) && !FLess   (-1.0f, -1.0f) &&  FLess   (-1.0f, -0.9f), true);
-				PR_CHECK(!FLessEql(+1.0f, +0.9f) &&  FLessEql(+1.0f, +1.0f) &&  FLessEql(+0.9f, +1.0f) && !FLessEql(-0.9f, -1.0f) &&  FLessEql(-1.0f, -1.0f) &&  FLessEql(-1.0f, -0.9f), true);
-				PR_CHECK(!FEql    (+1.0f, +0.9f) &&  FEql    (+1.0f, +1.0f) && !FEql    (+0.9f, +1.0f) && !FEql    (-0.9f, -1.0f) &&  FEql    (-1.0f, -1.0f) && !FEql    (-1.0f, -0.9f), true);
 
 				auto t0 = 0.0f;
 				auto t1 = maths::tiny * 0.5f;
@@ -1768,12 +1757,12 @@ namespace pr
 			{// Cube Root (32bit)
 				auto a = 1.23456789123456789f;
 				auto b = Cubert(a * a * a);
-				PR_CHECK(FEql(a,b,0.000001f), true);
+				PR_CHECK(FEqlRelative(a,b,0.000001f), true);
 			}
 			{// Cube Root (64bit)
 				auto a = 1.23456789123456789;
 				auto b = Cubert(a * a * a);
-				PR_CHECK(FEql(a,b,0.000000000001), true);
+				PR_CHECK(FEqlRelative(a,b,0.000000000001), true);
 			}
 		}
 	}

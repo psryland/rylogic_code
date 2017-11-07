@@ -631,7 +631,7 @@ namespace pr
 
 	#pragma region Functions
 	// Colour FEql
-	inline bool pr_vectorcall FEql(Colour_cref lhs, Colour_cref rhs, float tol = maths::tiny)
+	inline bool pr_vectorcall FEqlRelative(Colour_cref lhs, Colour_cref rhs, float tol)
 	{
 		#if PR_MATHS_USE_INTRINSICS
 		const __m128 zero = {tol, tol, tol, tol};
@@ -640,11 +640,15 @@ namespace pr
 		return (_mm_movemask_ps(r) & 0x0f) == 0x0f;
 		#else
 		return
-			FEql(lhs.r, rhs.r, tol) &&
-			FEql(lhs.g, rhs.g, tol) &&
-			FEql(lhs.b, rhs.b, tol) &&
-			FEql(lhs.a, rhs.a, tol);
+			FEqlRelative(lhs.r, rhs.r, tol) &&
+			FEqlRelative(lhs.g, rhs.g, tol) &&
+			FEqlRelative(lhs.b, rhs.b, tol) &&
+			FEqlRelative(lhs.a, rhs.a, tol);
 		#endif
+	}
+	inline bool pr_vectorcall FEql(Colour_cref lhs, Colour_cref rhs)
+	{
+		return FEqlRelative(lhs, rhs, maths::tiny);
 	}
 	inline bool pr_vectorcall FEqlNoA(Colour_cref lhs, Colour_cref rhs)
 	{

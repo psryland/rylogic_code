@@ -84,6 +84,34 @@ namespace LDraw
 					View3d.OnSourcesChanged += HandleSourcesChanged;
 					View3d.AddFileProgress += HandleAddFileProgress;
 				}
+
+				// Handlers
+				void HandleSourcesChanged(object sender, View3d.SourcesChangedEventArgs e)
+				{
+					// Just prior to reloading sources
+					if (e.Before && Settings.UI.ClearErrorLogOnReload)
+						Log.Clear();
+				}
+				void HandleAddFileProgress(object sender, View3d.AddFileProgressEventArgs e) // Worker thread context
+				{
+					// Ignore if there is no file (i.e. string sources)
+					if (!e.Filepath.HasValue())
+						return;
+
+					// Marshal to the main thread and update progress
+					var complete = e.Complete;
+					var progress = new AddFileProgressData(e.ContextId, e.Filepath, e.FileOffset);
+					Owner.BeginInvoke(() =>
+					{
+						// Only update with info from the same file
+						if (AddFileProgress != null && AddFileProgress.ContextId != progress.ContextId)
+							return;
+
+						// If progress is complete, clear the progress data
+						AddFileProgress = !complete ? progress : null;
+						Owner.UpdateProgress();
+					});
+				}
 			}
 		}
 		private View3d m_view3d;
@@ -163,38 +191,40 @@ namespace LDraw
 				{
 					m_scripts.ListChanging += HandleScriptListChanging;
 				}
+
+				// Handlers
+				void HandleScriptListChanging(object sender, ListChgEventArgs<ScriptUI> e)
+				{
+					var script = e.Item;
+					switch (e.ChangeType)
+					{
+					case ListChg.ItemRemoved:
+						{
+							if (CurrentScript == script)
+								CurrentScript = Scripts.Except(script).FirstOrDefault();
+
+							Owner.DockContainer.Remove(script);
+							Util.Dispose(ref script);
+							Owner.UpdateUI();
+							break;
+						}
+					case ListChg.ItemAdded:
+						{
+							// Determine a dock location from the current script
+							var dloc =
+								CurrentScript?.DockControl.CurrentDockLocation ??
+								new DockContainer.DockLocation();
+
+							Owner.DockContainer.Add(script, dloc);
+							script.DockControl.IsActiveContent = true;
+							Owner.UpdateUI();
+							break;
+						}
+					}
+				}
 			}
 		}
 		private BindingListEx<ScriptUI> m_scripts;
-		private void HandleScriptListChanging(object sender, ListChgEventArgs<ScriptUI> e)
-		{
-			var script = e.Item;
-			switch (e.ChangeType)
-			{
-			case ListChg.ItemRemoved:
-				{
-					if (CurrentScript == script)
-						CurrentScript = Scripts.Except(script).FirstOrDefault();
-
-					Owner.DockContainer.Remove(script);
-					Util.Dispose(ref script);
-					Owner.UpdateUI();
-					break;
-				}
-			case ListChg.ItemAdded:
-				{
-					// Determine a dock location from the current script
-					var dloc =
-						CurrentScript?.DockControl.CurrentDockLocation ??
-						new DockContainer.DockLocation();
-
-					Owner.DockContainer.Add(script, dloc);
-					script.DockControl.IsActiveContent = true;
-					Owner.UpdateUI();
-					break;
-				}
-			}
-		}
 
 		/// <summary>The error log</summary>
 		public LogUI Log
@@ -240,6 +270,20 @@ namespace LDraw
 					LinkSceneAxes();
 					LinkSceneCrossHairs();
 				}
+
+				// Handlers
+				void HandleMouseNavigating(object sender, View3d.Window.MouseNavigateEventArgs e)
+				{
+					LinkSceneCameras(e);
+				}
+				void HandleChartMoved(object sender, ChartControl.ChartMovedEventArgs e)
+				{
+					LinkSceneAxes();
+				}
+				void HandleCrossHairMoved(object sender, EventArgs e)
+				{
+					LinkSceneCrossHairs();
+				}
 			}
 		}
 		private SceneUI m_current_scene;
@@ -260,13 +304,6 @@ namespace LDraw
 		public List<string> IncludePaths
 		{
 			[DebuggerStepThrough] get;
-			private set;
-		}
-
-		/// <summary>Context Ids of loaded script sources</summary>
-		[Obsolete]public HashSet<Guid> SourceContextIds
-		{
-			get;
 			private set;
 		}
 
@@ -366,10 +403,7 @@ namespace LDraw
 		{
 			// Reset the context ids lists in each scene
 			foreach (var scene in Scenes)
-				scene.Clear();
-
-			// Remove all script sources
-			View3d.ClearScriptSources();
+				scene.Clear(delete_objects:true);
 		}
 
 		/// <summary>Add a demo scene to the scene</summary>
@@ -485,56 +519,6 @@ namespace LDraw
 			}
 		}
 
-		/// <summary>Handle notification that the script sources are about to be reloaded</summary>
-		private void HandleSourcesChanged(object sender, View3d.SourcesChangedEventArgs e)
-		{
-			// Just prior to reloading sources
-			if (e.Before && Settings.UI.ClearErrorLogOnReload)
-				Log.Clear();
-		}
-
-		/// <summary>Handle progress updates during file parsing</summary>
-		private void HandleAddFileProgress(object sender, View3d.AddFileProgressEventArgs e)
-		{
-			// Warning: called from a background thread context
-
-			// Ignore if there is no file (i.e. string sources)
-			if (!e.Filepath.HasValue())
-				return;
-
-			// Marshal to the main thread and update progress
-			var complete = e.Complete;
-			var progress = new AddFileProgressData(e.ContextId, e.Filepath, e.FileOffset);
-			Owner.BeginInvoke(() =>
-			{
-				// Only update with info from the same file
-				if (AddFileProgress != null && AddFileProgress.ContextId != progress.ContextId)
-					return;
-
-				// If progress is complete, clear the progress data
-				AddFileProgress = !complete ? progress : null;
-				Owner.UpdateProgress();
-			});
-		}
-
-		/// <summary>Handle mouse navigation</summary>
-		private void HandleMouseNavigating(object sender, View3d.Window.MouseNavigateEventArgs e)
-		{
-			LinkSceneCameras(e);
-		}
-
-		/// <summary>Handle the scene moving</summary>
-		private void HandleChartMoved(object sender, ChartControl.ChartMovedEventArgs e)
-		{
-			LinkSceneAxes();
-		}
-
-		/// <summary>Handle the cross hair moving on the current scene</summary>
-		private void HandleCrossHairMoved(object sender, EventArgs e)
-		{
-			LinkSceneCrossHairs();
-		}
-
 		/// <summary>File loading progress data</summary>
 		public AddFileProgressData AddFileProgress { get; private set; }
 		public class AddFileProgressData
@@ -556,6 +540,7 @@ namespace LDraw
 			public long FileOffset { get; private set; }
 		}
 
+		/// <summary>Saved camera views</summary>
 		public class SavedView
 		{
 			public SavedView(string name, View3d.Camera camera)

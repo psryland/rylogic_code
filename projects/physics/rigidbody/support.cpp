@@ -111,7 +111,7 @@ void Support::Add(Rigidbody& on_obj, v4 const& gravity, v4 const& point)
 	uint pt = 0;
 	for( ; pt != m_num_supports; ++pt )
 	{
-		if( !FEql3(m_leg[pt].m_point, radius2d, thres) ) continue;
+		if( !FEqlRelative(m_leg[pt].m_point, radius2d, thres) ) continue;
 		++m_leg[pt].m_count;
 		break; // It's a repeat
 	}

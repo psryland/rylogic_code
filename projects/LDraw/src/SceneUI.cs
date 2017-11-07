@@ -149,6 +149,50 @@ namespace LDraw
 					Scene.View3d.OnSourcesChanged += HandleSourcesChanged;
 					m_model.Settings.SettingChanged += HandleSettingChanged;
 				}
+
+				// Handlers
+				void HandleSceneChanged(object sender, View3d.SceneChangedEventArgs args)
+				{
+					SceneChanged.Raise(this, args);
+					Invalidate();
+				}
+				void HandleSourcesChanged(object sender, View3d.SourcesChangedEventArgs args)
+				{
+					if (args.Reason == View3d.ESourcesChangedReason.Reload)
+					{
+						// Just after reloading sources
+						if (!args.Before && Model.Settings.ResetOnLoad)
+							AutoRange(View3d.ESceneBounds.All);
+					}
+				}
+				void HandleSettingChanged(object sender, SettingChangedEventArgs args)
+				{
+					switch (args.Key)
+					{
+					case nameof(LDraw.Settings.FocusPointVisible):
+						Window.FocusPointVisible = Model.Settings.FocusPointVisible;
+						break;
+					case nameof(LDraw.Settings.FocusPointSize):
+						Window.FocusPointSize = Model.Settings.FocusPointSize;
+						break;
+					case nameof(LDraw.Settings.OriginPointVisible):
+						Window.OriginPointVisible = Model.Settings.OriginPointVisible;
+						break;
+					case nameof(LDraw.Settings.OriginPointSize):
+						Window.OriginPointSize = Model.Settings.OriginPointSize;
+						break;
+					case nameof(LDraw.SceneSettings.ShowBBoxes):
+						Window.BBoxesVisible = Settings.ShowBBoxes;
+						break;
+					case nameof(LDraw.SceneSettings.ShowSelectionBox):
+						Window.SelectionBoxVisible = Settings.ShowSelectionBox;
+						break;
+					case nameof(LDraw.SceneSettings.Light):
+						Scene.Window.LightProperties = new View3d.Light(Settings.Light);
+						break;
+					}
+					Invalidate();
+				}
 			}
 		}
 		private Model m_model;
@@ -172,6 +216,17 @@ namespace LDraw
 				{
 					m_dock_control.SavingLayout += HandleSavingLayout;
 					m_dock_control.ActiveChanged += HandleSceneActive;
+				}
+
+				// Handlers
+				void HandleSceneActive(object sender, ActiveContentChangedEventArgs args)
+				{
+					Options.BkColour = args.ContentNew == this ? Color.LightSteelBlue : Color.LightGray;
+					Invalidate();
+				}
+				void HandleSavingLayout(object sender, DockContainerSavingLayoutEventArgs args)
+				{
+					args.Node.Add2(nameof(Camera), Camera, false);
 				}
 			}
 		}
@@ -232,10 +287,11 @@ namespace LDraw
 		public string LastFilepath { get; private set; }
 
 		/// <summary>Clear the instances from this scene</summary>
-		public void Clear()
+		public void Clear(bool delete_objects)
 		{
 			// Remove all objects from the window's drawlist
-			Window.RemoveAllObjects();
+			Window.RemoveObjects(ChartTools.Id, all_except:true);
+			if (delete_objects) View3d.DeleteObjects(ChartTools.Id, all_except:true);
 			Invalidate();
 		}
 
@@ -267,7 +323,7 @@ namespace LDraw
 			void AddObjects(Guid id)
 			{
 				if (!additional)
-					Clear();
+					Clear(delete_objects:true);
 
 				// Add the context id this scene.
 				Window.AddObjects(id);
@@ -362,102 +418,43 @@ namespace LDraw
 					m_dd.Attach(this);
 					m_dd.DoDrop += HandleDrop;
 				}
+
+				// Handlers
+				bool HandleDrop(object sender, DragEventArgs args, DragDrop.EDrop mode)
+				{
+					// File drop only
+					if (!args.Data.GetDataPresent(DataFormats.FileDrop))
+						return false;
+
+					// The drop filepaths
+					var files = (string[])args.Data.GetData(DataFormats.FileDrop);
+					var extns = new string[] { ".ldr", ".csv", ".p3d", ".x" };
+					if (!files.All(x => extns.Contains(Path_.Extn(x).ToLowerInvariant())))
+						return false;
+
+					// Set the drop effect to indicate what will happen if the item is dropped here
+					// e.g. args.Effect = Ctrl is down ? DragDropEffects.Move : DragDropEffects.Copy;
+					var shift_down = (args.KeyState & Win32.MK_SHIFT) != 0;
+					args.Effect = shift_down ? DragDropEffects.Copy : DragDropEffects.Move;
+
+					// 'mode' == 'DragDrop.EDrop.Drop' when the item is actually dropped
+					if (mode == pr.util.DragDrop.EDrop.Drop)
+					{
+						var add = shift_down;
+						foreach (var file in files)
+						{
+							OpenFile(file, add, false);
+							add = true;
+						}
+						AutoRange();
+					}
+
+					// Return true because dropping is allowed/supported by this handler
+					return true;
+				}
 			}
 		}
 		private DragDrop m_dd;
-		private bool HandleDrop(object sender, DragEventArgs args, DragDrop.EDrop mode)
-		{
-			// File drop only
-			if (!args.Data.GetDataPresent(DataFormats.FileDrop))
-				return false;
-
-			// The drop filepaths
-			var files = (string[])args.Data.GetData(DataFormats.FileDrop);
-			var extns = new string[] { ".ldr", ".csv", ".p3d", ".x" };
-			if (!files.All(x => extns.Contains(Path_.Extn(x).ToLowerInvariant())))
-				return false;
-
-			// Set the drop effect to indicate what will happen if the item is dropped here
-			// e.g. args.Effect = Ctrl is down ? DragDropEffects.Move : DragDropEffects.Copy;
-			var shift_down = (args.KeyState & Win32.MK_SHIFT) != 0;
-			args.Effect = shift_down ? DragDropEffects.Copy : DragDropEffects.Move;
-
-			// 'mode' == 'DragDrop.EDrop.Drop' when the item is actually dropped
-			if (mode == pr.util.DragDrop.EDrop.Drop)
-			{
-				var add = shift_down;
-				foreach (var file in files)
-				{
-					OpenFile(file, add, false);
-					add = true;
-				}
-				AutoRange();
-			}
-
-			// Return true because dropping is allowed/supported by this handler
-			return true;
-		}
-
-		/// <summary>Handle notification that the script sources have changed</summary>
-		private void HandleSourcesChanged(object sender, View3d.SourcesChangedEventArgs args)
-		{
-			if (args.Reason == View3d.ESourcesChangedReason.Reload)
-			{
-				// Just after reloading sources
-				if (!args.Before && Model.Settings.ResetOnLoad)
-					AutoRange(View3d.ESceneBounds.All);
-			}
-		}
-
-		/// <summary>Handle scene changed notification</summary>
-		private void HandleSceneChanged(object sender, View3d.SceneChangedEventArgs args)
-		{
-			SceneChanged.Raise(this, args);
-			Invalidate();
-		}
-
-		/// <summary>Apply setting changes</summary>
-		private void HandleSettingChanged(object sender, SettingChangedEventArgs args)
-		{
-			switch (args.Key)
-			{
-			case nameof(LDraw.Settings.FocusPointVisible):
-				Window.FocusPointVisible = Model.Settings.FocusPointVisible;
-				break;
-			case nameof(LDraw.Settings.FocusPointSize):
-				Window.FocusPointSize = Model.Settings.FocusPointSize;
-				break;
-			case nameof(LDraw.Settings.OriginPointVisible):
-				Window.OriginPointVisible = Model.Settings.OriginPointVisible;
-				break;
-			case nameof(LDraw.Settings.OriginPointSize):
-				Window.OriginPointSize = Model.Settings.OriginPointSize;
-				break;
-			case nameof(LDraw.SceneSettings.ShowBBoxes):
-				Window.BBoxesVisible = Settings.ShowBBoxes;
-				break;
-			case nameof(LDraw.SceneSettings.ShowSelectionBox):
-				Window.SelectionBoxVisible = Settings.ShowSelectionBox;
-				break;
-			case nameof(LDraw.SceneSettings.Light):
-				Scene.Window.LightProperties = new View3d.Light(Settings.Light);
-				break;
-			}
-			Invalidate();
-		}
-
-		/// <summary>Handle this scene gaining or losing focus</summary>
-		private void HandleSceneActive(object sender, ActiveContentChangedEventArgs args)
-		{
-			Options.BkColour = args.ContentNew == this ? Color.LightSteelBlue : Color.LightGray;
-			Invalidate();
-		}
-
-		/// <summary>Handle scene layout being saved to XML</summary>
-		private void HandleSavingLayout(object sender, DockContainerSavingLayoutEventArgs args)
-		{
-			args.Node.Add2(nameof(Camera), Camera, false);
-		}
 
 		/// <summary>Create a context menu for the tab</summary>
 		private ContextMenuStrip CreateTabCMenu()
@@ -480,7 +477,7 @@ namespace LDraw
 					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Clear"));
 					opt.Click += (s,a) =>
 					{
-						Clear();
+						Clear(delete_objects:true);
 					};
 				}
 				cmenu.Items.AddSeparator();

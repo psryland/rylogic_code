@@ -389,9 +389,9 @@ namespace pr
 				angles.y = pr::RadiansToDegrees(angles.y);
 				angles.z = pr::RadiansToDegrees(angles.z);
 				
-				PR_CHECK(FEql(angles.x, 26.56505f, 0.0001f), true);
-				PR_CHECK(FEql(angles.y, 45.0f    , 0.0001f), true);
-				PR_CHECK(FEql(angles.z, 108.4349f, 0.0001f), true);
+				PR_CHECK(FEql(angles.x, 26.56505f), true);
+				PR_CHECK(FEql(angles.y, 45.0f    ), true);
+				PR_CHECK(FEql(angles.z, 108.4349f), true);
 			}
 		}
 		PRUnitTest(pr_geometry_triangle_triangulate_polygon)

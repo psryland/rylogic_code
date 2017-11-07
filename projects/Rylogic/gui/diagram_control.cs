@@ -353,7 +353,7 @@ namespace pr.gui
 				get { return m_impl_position; }
 				set
 				{
-					if (m4x4.FEql(m_impl_position, value)) return;
+					if (Maths.FEql(m_impl_position, value)) return;
 					SetPosition(value);
 				}
 			}
@@ -1160,7 +1160,7 @@ namespace pr.gui
 
 				// Select the nearest anchor, but bias the anchor points that are already used
 				var used = Connectors.Where(x => x != existing).Select(x => x.Anc(this).Location).ToArray();
-				return AnchorPoints().MinBy(x => (x.Location - point).Length2Sq + (used.Any(v => v4.FEql2(v,x.Location)) ? bias_distance_sq : 0));
+				return AnchorPoints().MinBy(x => (x.Location - point).Length2Sq + (used.Any(v => Maths.FEql(v.xy, x.Location.xy)) ? bias_distance_sq : 0));
 			}
 
 			/// <summary>Update the graphics and object transforms associated with this element</summary>

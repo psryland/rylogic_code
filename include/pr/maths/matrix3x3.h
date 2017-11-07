@@ -818,7 +818,7 @@ namespace pr
 						v4(7.0f, -8.333333f, 2.333333f, 0.0f));
 
 					auto inv_m = Invert(m);
-					PR_CHECK(FEql(inv_m, INV_M, 0.0001f), true);
+					PR_CHECK(FEqlRelative(inv_m, INV_M, 0.0001f), true);
 				}
 			}
 		}

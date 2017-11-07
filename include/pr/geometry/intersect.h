@@ -384,8 +384,8 @@ namespace pr
 				
 				auto r = Intersect_LineToBBox(s, d, bbox, tmin, tmax);
 				PR_CHECK(r, true);
-				PR_CHECK(pr::FEql3(s + tmin*d, pr::v4(+0.25f, +0.05f, +0.163f, 1.0f), 0.001f), true);
-				PR_CHECK(pr::FEql3(s + tmax*d, pr::v4(-0.25f, -0.05f, -0.063f, 1.0f), 0.001f), true);
+				PR_CHECK(pr::FEqlRelative(s + tmin*d, pr::v4(+0.25f, +0.05f, +0.163f, 1.0f), 0.001f), true);
+				PR_CHECK(pr::FEqlRelative(s + tmax*d, pr::v4(-0.25f, -0.05f, -0.063f, 1.0f), 0.001f), true);
 
 				s = pr::v4(+1.0f, +0.2f, -0.22f, 1.0f);
 				r = Intersect_LineToBBox(s, d, bbox, tmin, tmax);
@@ -400,8 +400,8 @@ namespace pr
 				
 				auto r = Intersect_LineToSphere(s, d, rad, tmin, tmax);
 				PR_CHECK(r, true);
-				PR_CHECK(pr::FEql3(s + tmin*d, pr::v4(+0.247f, +0.049f, +0.161f, 1.0f), 0.001f), true);
-				PR_CHECK(pr::FEql3(s + tmax*d, pr::v4(-0.284f, -0.057f, -0.078f, 1.0f), 0.001f), true);
+				PR_CHECK(pr::FEqlRelative(s + tmin*d, pr::v4(+0.247f, +0.049f, +0.161f, 1.0f), 0.001f), true);
+				PR_CHECK(pr::FEqlRelative(s + tmax*d, pr::v4(-0.284f, -0.057f, -0.078f, 1.0f), 0.001f), true);
 
 				s = pr::v4(+1.0f, +0.2f, -0.22f, 1.0f);
 				r = Intersect_LineToSphere(s, d, rad, tmin, tmax);

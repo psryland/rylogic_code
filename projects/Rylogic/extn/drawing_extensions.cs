@@ -105,6 +105,12 @@ namespace pr.extn
 			return Cursors.Default;
 		}
 
+		/// <summary>Convert to 'Point'</summary>
+		public static Point ToPoint(this PointF p)
+		{
+			return new Point((int)p.X, (int)p.Y);
+		}
+
 		/// <summary>Convert this point into a size</summary>
 		public static Size ToSize(this Point p)
 		{

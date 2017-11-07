@@ -354,8 +354,10 @@ namespace pr.gfx
 			Selected = 1 << 0,
 
 			// Doesn't contribute to the bounding box on an object.
-			// Typically used for objects in a scene that are not part of the scene bbox
-			BBoxInvisible = 1 << 1,
+			BBoxExclude = 1 << 1,
+
+			// Should not be included when determining the bounds of a scene.
+			SceneBoundsExclude = 1 << 2,
 
 			All = ~0,
 		}
@@ -836,32 +838,29 @@ namespace pr.gfx
 			View3D_ReloadScriptSources();
 		}
 
-		/// <summary>Remove all script sources</summary>
-		public void ClearScriptSources()
-		{
-			View3D_ClearScriptSources();
-		}
-
 		/// <summary>Poll for changed script source files, and reload any that have changed. (designed as a Timer.Tick handler)</summary>
 		public void CheckForChangedSources(object sender = null, EventArgs args = null)
 		{
 			View3D_CheckForChangedSources();
 		}
 
-		/// <summary>Release all created objects</summary>
+		/// <summary>
+		/// Release all created objects
+		/// *WARNING* Careful with this function, make sure all C# references to View3D objects have been set to null
+		/// otherwise, disposing them will result in memory corruption</summary>
 		public void DeleteAllObjects()
 		{
 			View3D_ObjectsDeleteAll();
 		}
 
 		/// <summary>Release all created objects with context id 'context_id'</summary>
-		public void DeleteAllObjects(Guid context_id)
+		public void DeleteObjects(Guid context_id, bool all_except)
 		{
-			DeleteAllObjects(new []{ context_id });
+			DeleteObjects(new []{ context_id }, all_except);
 		}
-		public void DeleteAllObjects(Guid[] context_ids)
+		public void DeleteObjects(Guid[] context_ids, bool all_except)
 		{
-			View3D_ObjectsDeleteById(context_ids, context_ids.Length);
+			View3D_ObjectsDeleteById(context_ids, context_ids.Length, all_except);
 		}
 
 		/// <summary>Return the context id for objects created from file 'filepath' (or null if 'filepath' is not an existing source)</summary>
@@ -2912,9 +2911,8 @@ namespace ldr
 		[DllImport(Dll)] private static extern Guid            View3D_LoadScriptSource      ([MarshalAs(UnmanagedType.LPWStr)] string ldr_filepath, bool additional, ref View3DIncludes includes);
 		[DllImport(Dll)] private static extern Guid            View3D_LoadScript            ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, ref Guid context_id, ref View3DIncludes includes);
 		[DllImport(Dll)] private static extern void            View3D_ReloadScriptSources   ();
-		[DllImport(Dll)] private static extern void            View3D_ClearScriptSources    ();
 		[DllImport(Dll)] private static extern void            View3D_ObjectsDeleteAll      ();
-		[DllImport(Dll)] private static extern void            View3D_ObjectsDeleteById     ([MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)] Guid[] context_ids, int count);
+		[DllImport(Dll)] private static extern void            View3D_ObjectsDeleteById     ([MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)] Guid[] context_ids, int count, bool all_except);
 		[DllImport(Dll)] private static extern void            View3D_CheckForChangedSources();
 		[DllImport(Dll)] private static extern void            View3D_AddFileProgressCBSet  (AddFileProgressCB progress_cb, IntPtr ctx, bool add);
 		[DllImport(Dll)] private static extern void            View3D_SourcesChangedCBSet   (SourcesChangedCB sources_changed_cb, IntPtr ctx, bool add);

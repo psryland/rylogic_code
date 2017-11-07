@@ -127,16 +127,6 @@ namespace pr.maths
 			get { return m_identity; }
 		}
 
-		/// <summary>Compare matrices</summary>
-		public static bool FEql(m4x4 lhs, m4x4 rhs, float tol)
-		{
-			return v4.FEql4(lhs.x, rhs.x, tol) && v4.FEql4(lhs.y, rhs.y, tol) && v4.FEql4(lhs.z, rhs.z, tol) && v4.FEql4(lhs.w, rhs.w, tol);
-		}
-		public static bool FEql(m4x4 lhs, m4x4 rhs)
-		{
-			return FEql(lhs, rhs, Maths.TinyF);
-		}
-
 		// Functions
 		public static m4x4 operator + (m4x4 lhs, m4x4 rhs)
 		{
@@ -444,7 +434,7 @@ namespace pr.maths
 		{
 			Debug.Assert(eye.w == 1.0f && at.w == 1.0f && up.w == 0.0f, "Invalid position/direction vectors passed to LookAt");
 			Debug.Assert(eye - at != v4.Zero, "LookAt 'eye' and 'at' positions are coincident");
-			Debug.Assert(!v4.Parallel(eye - at, up, 0f), "LookAt 'forward' and 'up' axes are aligned");
+			Debug.Assert(!v4.Parallel(eye - at, up), "LookAt 'forward' and 'up' axes are aligned");
 			var mat = new m4x4{};
 			mat.z = v4.Normalise3(eye - at);
 			mat.x = v4.Normalise3(v4.Cross3(up, mat.z));
@@ -592,6 +582,20 @@ namespace pr.maths
 
 	public static partial class Maths
 	{
+		/// <summary>Approximate equal</summary>
+		public static bool FEqlRelative(m4x4 lhs, m4x4 rhs, float tol)
+		{
+			return
+				FEqlRelative(lhs.x, rhs.x, tol) &&
+				FEqlRelative(lhs.y, rhs.y, tol) &&
+				FEqlRelative(lhs.z, rhs.z, tol) &&
+				FEqlRelative(lhs.w, rhs.w, tol);
+		}
+		public static bool FEql(m4x4 lhs, m4x4 rhs)
+		{
+			return FEqlRelative(lhs, rhs, TinyF);
+		}
+
 		public static bool IsFinite(m4x4 vec)
 		{
 			return IsFinite(vec.x) && IsFinite(vec.y) && IsFinite(vec.z) && IsFinite(vec.w);
@@ -626,13 +630,13 @@ namespace pr.unittests
 			var m1 = m4x4.Identity;
 			var m2 = m4x4.Identity;
 			var m3 = m1 * m2;
-			Assert.True(m4x4.FEql(m3, m4x4.Identity));
+			Assert.True(Maths.FEql(m3, m4x4.Identity));
 		}
 		[Test] public void Translation()
 		{
 			var m1 = new m4x4(v4.XAxis, v4.YAxis, v4.ZAxis, new v4(1.0f, 2.0f, 3.0f, 1.0f));
 			var m2 = m4x4.Translation(new v4(1.0f, 2.0f, 3.0f, 1.0f));
-			Assert.True(m4x4.FEql(m1, m2));
+			Assert.True(Maths.FEql(m1, m2));
 		}
 		[Test] public void CreateFrom()
 		{
@@ -647,7 +651,7 @@ namespace pr.unittests
 			var V3  = b2c * V2;
 			var a2c = b2c * a2b;
 			var V4  = a2c * V1;
-			Assert.True(v4.FEql4(V3, V4));
+			Assert.True(Maths.FEql(V3, V4));
 		}
 		[Test] public void CreateFrom2()
 		{
@@ -655,7 +659,7 @@ namespace pr.unittests
 			var m2 = new m4x4(new quat(1.0f, 0.5f, 0.7f), v4.Origin);
 			Assert.True(m4x4.IsOrthonormal(m1));
 			Assert.True(m4x4.IsOrthonormal(m2));
-			Assert.True(m4x4.FEql(m1, m2));
+			Assert.True(Maths.FEql(m1, m2));
 
 			var rng = new Random(123456879);
 			var ang = rng.FloatC(0.0f,1.0f);
@@ -664,7 +668,7 @@ namespace pr.unittests
 			m2 = new m4x4(new quat(axis, ang), v4.Origin);
 			Assert.True(m4x4.IsOrthonormal(m1));
 			Assert.True(m4x4.IsOrthonormal(m2));
-			Assert.True(m4x4.FEql(m1, m2));
+			Assert.True(Maths.FEql(m1, m2));
 		}
 		[Test] public void CreateFrom3()
 		{
@@ -673,10 +677,10 @@ namespace pr.unittests
 
 			var b2a = m4x4.Invert(a2b);
 			var a2a = b2a * a2b;
-			Assert.True(m4x4.FEql(m4x4.Identity, a2a));
+			Assert.True(Maths.FEql(m4x4.Identity, a2a));
 
 			var b2a_fast = m4x4.InvertFast(a2b);
-			Assert.True(m4x4.FEql(b2a_fast, b2a, 0.001f));
+			Assert.True(Maths.FEql(b2a_fast, b2a));
 		}
 		[Test] public void Orthonormalise()
 		{

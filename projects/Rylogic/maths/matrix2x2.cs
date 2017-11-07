@@ -122,16 +122,6 @@ namespace pr.maths
 			return ans;
 		}
 
-		/// <summary>Compare matrices</summary>
-		public static bool FEql(m2x2 lhs, m2x2 rhs, float tol)
-		{
-			return v2.FEql2(lhs.x, rhs.x, tol) && v2.FEql2(lhs.y, rhs.y, tol);
-		}
-		public static bool FEql(m2x2 lhs, m2x2 rhs)
-		{
-			return FEql(lhs, rhs, Maths.TinyF);
-		}
-
 		/// <summary>Return the determinant of 'm'</summary>
 		public static float Determinant(m2x2 m)
 		{
@@ -201,9 +191,9 @@ namespace pr.maths
 		public static bool IsOrthonormal(m2x2 m)
 		{
 			return
-				Maths.FEql(m.x.Length2Sq, 1f, 2*Maths.TinyF) &&
-				Maths.FEql(m.y.Length2Sq, 1f, 2*Maths.TinyF) &&
-				Maths.FEql(v2.Dot2(m.x, m.y), 0f, Maths.TinyF);
+				Maths.FEql(m.x.Length2Sq, 1f) &&
+				Maths.FEql(m.y.Length2Sq, 1f) &&
+				Maths.FEql(v2.Dot2(m.x, m.y), 0f);
 		}
 
 		// Permute the rotation vectors in a matrix by 'n'
@@ -268,6 +258,18 @@ namespace pr.maths
 
 	public static partial class Maths
 	{
+		/// <summary>Approximate equal</summary>
+		public static bool FEqlRelative(m2x2 lhs, m2x2 rhs, float tol)
+		{
+			return
+				FEqlRelative(lhs.x, rhs.x, tol) &&
+				FEqlRelative(lhs.y, rhs.y, tol);
+		}
+		public static bool FEql(m2x2 lhs, m2x2 rhs)
+		{
+			return FEqlRelative(lhs, rhs, TinyF);
+		}
+
 		public static bool IsFinite(m2x2 vec)
 		{
 			return IsFinite(vec.x) && IsFinite(vec.y);
@@ -297,8 +299,8 @@ namespace pr.unittests
 				var I0 = inv_m * m;
 				var I1 = m * inv_m;
 
-				Assert.True(m2x2.FEql(I1, m2x2.Identity, 0.0001f));
-				Assert.True(m2x2.FEql(I0, m2x2.Identity, 0.0001f));
+				Assert.True(Maths.FEql(I1, m2x2.Identity));
+				Assert.True(Maths.FEql(I0, m2x2.Identity));
 			}
 			{
 				var m = new m2x2(
@@ -311,8 +313,8 @@ namespace pr.unittests
 					new v2(6f, -7f)/det,
 					new v2(-2f, 4f)/det);
 
-				Assert.True(m2x2.FEql(m*INV_M, m2x2.Identity, 0.00001f));
-				Assert.True(m2x2.FEql(inv_m, INV_M, 0.00001f));
+				Assert.True(Maths.FEql(m*INV_M, m2x2.Identity));
+				Assert.True(Maths.FEql(  inv_m,         INV_M));
 			}
 		}
 		[Test] public void TestQuatConversion()

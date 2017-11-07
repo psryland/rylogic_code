@@ -40,7 +40,7 @@ namespace TestWPF
 			m_view3d.BorderStyle = BorderStyle.FixedSingle;
 
 			// Simple create object
-			m_obj0 = new View3d.Object("*Box test FFFFFFFF {1 2 3}", false);
+			m_obj0 = new View3d.Object("*Box test FFFFFFFF {1 2 3}", false, null);
 			m_view3d.Window.AddObject(m_obj0);
 
 			// Create object via callback
@@ -58,7 +58,7 @@ namespace TestWPF
 						indices[new_icount++] = (ushort)(new_vcount - 1);
 					}
 					nuggets[new_ncount++] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert);
-				});
+				}, null);
 			m_view3d.Window.AddObject(m_obj1);
 
 			// Create a texture and assign it to an object

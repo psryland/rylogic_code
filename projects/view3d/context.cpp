@@ -114,13 +114,6 @@ namespace view3d
 		pr::erase_first(m_wnd_cont, [=](auto& wnd){ return wnd.get() == window; });
 	}
 
-	// Remove all Ldr script sources
-	void Context::ClearScriptSources()
-	{
-		// Reset the sources collection
-		m_sources.ClearAll();
-	}
-
 	// Load/Add a script source. Returns the Guid of the context that the objects were added to.
 	pr::Guid Context::LoadScriptSource(wchar_t const* filepath, bool additional, Includes const& includes)
 	{
@@ -250,6 +243,7 @@ namespace view3d
 				for (auto i = nug.m_vrange.begin(); i != nug.m_vrange.end(); ++i)
 					pos[j++] = view3d::To<pr::v4>(verts[i].pos);
 			}
+
 			// Colours
 			if (pr::AllSet(nug.m_geom, EGeom::Colr))
 			{
@@ -258,6 +252,11 @@ namespace view3d
 				for (auto i = nug.m_vrange.begin(); i != nug.m_vrange.end(); ++i)
 					col[j++] = verts[i].col;
 			}
+			else
+			{
+				col.resize(0);
+			}
+
 			// Normals
 			if (pr::AllSet(nug.m_geom, EGeom::Norm))
 			{
@@ -266,6 +265,11 @@ namespace view3d
 				for (auto i = nug.m_vrange.begin(); i != nug.m_vrange.begin(); ++i)
 					nrm[j++] = view3d::To<pr::v4>(verts[i].norm);
 			}
+			else
+			{
+				nrm.resize(0);
+			}
+
 			// Texture coords
 			if (pr::AllSet(nug.m_geom, EGeom::Tex0))
 			{
@@ -273,6 +277,10 @@ namespace view3d
 				tex.resize(tex.size() + nug.m_vrange.size());
 				for (auto i = nug.m_vrange.begin(); i != nug.m_vrange.end(); ++i)
 					tex[j++] = view3d::To<pr::v2>(verts[i].tex);
+			}
+			else
+			{
+				tex.resize(0);
 			}
 		}
 
@@ -344,15 +352,31 @@ namespace view3d
 	}
 
 	// Delete all objects with matching ids
-	void Context::DeleteAllObjectsById(pr::Guid const* context_ids, int count)
+	void Context::DeleteAllObjectsById(pr::Guid const* context_ids, int count, bool all_except)
 	{
 		// Remove objects from any windows they might be assigned to
 		for (auto& wnd : m_wnd_cont)
-			wnd->RemoveObjectsById(context_ids, count, false, false);
+			wnd->RemoveObjectsById(context_ids, count, all_except, false);
 
-		// Clear sources associated with 'context_ids'
-		for (auto& id : std::initializer_list<pr::Guid>(context_ids, context_ids+count))
-			m_sources.Remove(id);
+		if (all_except)
+		{
+			// Build a collection of the guids to drop
+			GuidSet ids(context_ids, context_ids+count);
+			for (auto& s : m_sources.Sources())
+			{
+				if (ids.count(s.second.m_context_id) != 0)
+					ids.erase(s.second.m_context_id);
+				else
+					ids.insert(s.second.m_context_id);
+			}
+			for (auto& id : ids)
+				m_sources.Remove(id);
+		}
+		else
+		{
+			for (auto& id : std::initializer_list<pr::Guid>(context_ids, context_ids+count))
+				m_sources.Remove(id);
+		}
 	}
 
 	// Delete a single object

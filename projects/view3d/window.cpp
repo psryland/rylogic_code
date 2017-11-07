@@ -185,7 +185,8 @@ namespace view3d
 		{
 			for (auto& obj : m_objects)
 			{
-				if (pr::AllSet(obj->m_flags, pr::ldr::ELdrFlags::BBoxInvisible)) continue;
+				// Only show bounding boxes for things that contribute to the scene bounds.
+				if (pr::AllSet(obj->m_flags, pr::ldr::ELdrFlags::SceneBoundsExclude)) continue;
 				obj->AddBBoxToScene(m_scene, m_bbox_model.m_model);
 			}
 		}
@@ -558,7 +559,7 @@ namespace view3d
 					bbox = pr::BBoxReset;
 					for (auto& obj : m_objects)
 					{
-						if (pr::AllSet(obj->m_flags, pr::ldr::ELdrFlags::BBoxInvisible)) continue;
+						if (pr::AllSet(obj->m_flags, pr::ldr::ELdrFlags::SceneBoundsExclude)) continue;
 						if (pr::contains(except_arr, obj->m_context_id)) continue;
 						pr::Encompass(bbox, obj->BBoxWS(true));
 					}
@@ -572,7 +573,7 @@ namespace view3d
 				bbox = pr::BBoxReset;
 				for (auto& obj : m_objects)
 				{
-					if (pr::AllSet(obj->m_flags, pr::ldr::ELdrFlags::BBoxInvisible)) continue;
+					if (pr::AllSet(obj->m_flags, pr::ldr::ELdrFlags::SceneBoundsExclude)) continue;
 					if (!pr::AllSet(obj->m_flags, pr::ldr::ELdrFlags::Selected)) continue;
 					if (pr::contains(except_arr, obj->m_context_id)) continue;
 					pr::Encompass(bbox, obj->BBoxWS(true));
@@ -584,7 +585,7 @@ namespace view3d
 				bbox = pr::BBoxReset;
 				for (auto& obj : m_objects)
 				{
-					if (pr::AllSet(obj->m_flags, pr::ldr::ELdrFlags::BBoxInvisible)) continue;
+					if (pr::AllSet(obj->m_flags, pr::ldr::ELdrFlags::SceneBoundsExclude)) continue;
 					if (pr::contains(except_arr, obj->m_context_id)) continue;
 					obj->Apply([&](pr::ldr::LdrObject* o)
 					{

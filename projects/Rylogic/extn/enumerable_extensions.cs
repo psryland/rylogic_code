@@ -395,6 +395,13 @@ namespace pr.extn
 			return count;
 		}
 
+		/// <summary>Concatenate a single element to the beginning of the sequence</summary>
+		public static IEnumerable<TSource> Prepend<TSource>(this IEnumerable<TSource> source, TSource first_one)
+		{
+			yield return first_one;
+			foreach (var s in source) yield return s;
+		}
+
 		/// <summary>Concatenate a single element to the end of the sequence</summary>
 		public static IEnumerable<TSource> Concat<TSource>(this IEnumerable<TSource> source, TSource one_more)
 		{

@@ -138,6 +138,12 @@ namespace pr.extn
 			}
 		}
 
+		/// <summary>Search up the control hierarchy for the first parent of type 'TParent'</summary>
+		public static TParent FindParentOfType<TParent>(this Control ctrl)
+		{
+			return ctrl.Parents(leaf_to_root:true).OfType<TParent>().FirstOrDefault();
+		}
+
 		/// <summary>Add to the controls collection and return the control for method chaining</summary>
 		public static T Add2<T>(this Control.ControlCollection collection, T ctrl) where T:Control
 		{

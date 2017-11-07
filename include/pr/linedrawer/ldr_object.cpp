@@ -46,63 +46,66 @@ namespace pr
 		using TextLayout = pr::rdr::ModelGenerator<>::TextLayout;
 		template <typename T> using optional = pr::optional<T>;
 
-		class Cache
+		// A global pool of 'Buffers' objects
+		#pragma region Buffer Pool / Cache
+		struct Buffers :AlignTo<16>
 		{
-			struct Buffers :AlignTo<16>
+			VCont m_point;
+			NCont m_norms;
+			ICont m_index;
+			CCont m_color;
+			TCont m_texts;
+			GCont m_nugts;
+		};
+		using BuffersPtr = std::unique_ptr<Buffers>;
+		std::vector<BuffersPtr> g_buffer_pool;
+		std::mutex g_buffer_pool_mutex;
+		BuffersPtr GetFromPool()
+		{
+			std::lock_guard<std::mutex> lock(g_buffer_pool_mutex);
+			if (!g_buffer_pool.empty())
 			{
-				VCont m_point;
-				NCont m_norms;
-				ICont m_index;
-				CCont m_color;
-				TCont m_texts;
-				GCont m_nugts;
-			};
-			static Buffers& this_thread_instance()
-			{
-				// A static instance for this thread
-				thread_local static Buffers* buffers;
-				if (!buffers) buffers = new Buffers();
-				return *buffers;
+				auto ptr = std::move(g_buffer_pool.back());
+				g_buffer_pool.pop_back();
+				return std::move(ptr);
 			}
-			static bool& this_thread_cache_in_use()
-			{
-				thread_local static bool in_use;
-				if (in_use) throw std::exception("Reentrant use of the model generator cache for this thread");
-				return in_use;
-			}
-			Buffers& m_buffers;
-			bool& m_in_use;
+			return std::make_unique<Buffers>();
+		}
+		void ReturnToPool(BuffersPtr& bptr)
+		{
+			std::lock_guard<std::mutex> lock(g_buffer_pool_mutex);
+			g_buffer_pool.push_back(std::move(bptr));
+		}
 
-		public:
-
+		// Cached buffers for geometry
+		struct Cache
+		{
+			BuffersPtr m_bptr;
 			VCont& m_point;
 			NCont& m_norms;
 			ICont& m_index;
 			CCont& m_color;
 			TCont& m_texts;
 			GCont& m_nugts;
-
+			
 			Cache()
-				:m_buffers(this_thread_instance())
-				,m_in_use(this_thread_cache_in_use())
-				,m_point(m_buffers.m_point)
-				,m_norms(m_buffers.m_norms)
-				,m_index(m_buffers.m_index)
-				,m_color(m_buffers.m_color)
-				,m_texts(m_buffers.m_texts)
-				,m_nugts(m_buffers.m_nugts)
-			{
-				m_in_use = true;
-			}
+				:m_bptr(GetFromPool())
+				,m_point(m_bptr->m_point)
+				,m_norms(m_bptr->m_norms)
+				,m_index(m_bptr->m_index)
+				,m_color(m_bptr->m_color)
+				,m_texts(m_bptr->m_texts)
+				,m_nugts(m_bptr->m_nugts)
+			{}
 			~Cache()
 			{
 				Reset();
-				m_in_use = false;
+				ReturnToPool(m_bptr);
 			}
 			Cache(Cache const& rhs) = delete;
 			Cache operator =(Cache const& rhs) = delete;
 	
-			// Resize all buffers to 0
+			// Resize all buffers to zero
 			void Reset()
 			{
 				m_point.resize(0);
@@ -113,6 +116,7 @@ namespace pr
 				m_nugts.resize(0);
 			}
 		};
+		#pragma endregion
 
 		// String hash wrapper
 		inline size_t Hash(char const* str)
@@ -131,8 +135,8 @@ namespace pr
 			ParseResult&    m_result;
 			ObjectCont&     m_objects;
 			ModelCont&      m_models;
-			Cache&          m_cache;
 			pr::Guid        m_context_id;
+			Cache           m_cache;
 			HashValue       m_keyword;
 			LdrObject*      m_parent;
 			Font            m_font;
@@ -140,14 +144,14 @@ namespace pr
 			time_point      m_last_progress_update;
 			bool&           m_cancel;
 
-			ParseParams(pr::Renderer& rdr, Reader& reader, ParseResult& result, Cache& cache, pr::Guid const& context_id, ParseProgressCB progress_cb, bool& cancel)
+			ParseParams(pr::Renderer& rdr, Reader& reader, ParseResult& result, pr::Guid const& context_id, ParseProgressCB progress_cb, bool& cancel)
 				:m_rdr(rdr)
 				,m_reader(reader)
 				,m_result(result)
 				,m_objects(result.m_objects)
 				,m_models(result.m_models)
-				,m_cache(cache)
 				,m_context_id(context_id)
+				,m_cache()
 				,m_keyword()
 				,m_parent()
 				,m_font()
@@ -161,8 +165,8 @@ namespace pr
 				,m_result(p.m_result)
 				,m_objects(objects)
 				,m_models(p.m_models)
-				,m_cache(p.m_cache)
 				,m_context_id(p.m_context_id)
+				,m_cache()
 				,m_keyword(keyword)
 				,m_parent(parent)
 				,m_font(p.m_font)
@@ -3272,6 +3276,11 @@ namespace pr
 						m_fmt.push_back(TextFormat(int(m_text.size() - text.size()), int(text.size()), m_font));
 						return true;
 					}
+				case EKeyword::NewLine:
+					{
+						m_text.append(L"\n");
+						return true;
+					}
 				case EKeyword::ScreenSpace:
 					{
 						m_type = EType::ScreenSpace;
@@ -3368,9 +3377,9 @@ namespace pr
 				// Position the text quad so that it always faces the camera and has the same size
 				case EType::Billboard:
 					{
-						// Do not include in bounding box calculations because we're scaling
-						// this model at a point that the bounding box calculation can't see
-						obj->m_flags = SetBits(obj->m_flags, ELdrFlags::BBoxInvisible, true);
+						// Do not include in scene bounds calculations because we're scaling
+						// this model at a point that the bounding box calculation can't see.
+						obj->m_flags = SetBits(obj->m_flags, ELdrFlags::SceneBoundsExclude, true);
 
 						// Update the rendering 'i2w' transform on add-to-scene
 						obj->OnAddToScene += [](LdrObject& ob, rdr::Scene const& scene)
@@ -3410,9 +3419,9 @@ namespace pr
 						// Scale up the view port to reduce floating point precision noise.
 						enum { ViewPortSize = 1024 };
 
-						// Do not include in bounding box calculations because we're scaling
-						// this model at a point that the bounding box calculation can't see
-						obj->m_flags = SetBits(obj->m_flags, ELdrFlags::BBoxInvisible, true);
+						// Do not include in scene bounds calculations because we're scaling
+						// this model at a point that the bounding box calculation can't see.
+						obj->m_flags = SetBits(obj->m_flags, ELdrFlags::SceneBoundsExclude, true);
 
 						// Screen space uses a standard normalised orthographic projection
 						obj->m_c2s = m4x4::ProjectionOrthographic(float(ViewPortSize), float(ViewPortSize), -0.01f, 1, true);
@@ -3701,9 +3710,8 @@ namespace pr
 				});
 
 			// Parse the script
-			Cache cache;
 			bool cancel = false;
-			ParseParams pp(rdr, reader, out, cache, context_id, progress_cb, cancel);
+			ParseParams pp(rdr, reader, out, context_id, progress_cb, cancel);
 			ParseLdrObjects(pp, [&](int){});
 		}
 
@@ -3766,10 +3774,9 @@ namespace pr
 		void Update(pr::Renderer& rdr, LdrObject* object, pr::script::Reader& reader, EUpdateObject flags)
 		{
 			// Parsing parameters
-			Cache cache;
 			ParseResult result;
 			bool cancel = false;
-			ParseParams pp(rdr, reader, result, cache, object->m_context_id, nullptr, cancel);
+			ParseParams pp(rdr, reader, result, object->m_context_id, nullptr, cancel);
 	
 			// Parse 'reader' for the new model
 			ParseLdrObjects(pp, [&](int object_index)
@@ -4111,8 +4118,8 @@ LR"(// *************************************************************************
 	// Text containing multiple lines has the line-end whitespace and indentation tabs removed.
 	*Font {*Name{"Times New Roman"} *Colour {FF0000FF} *Size{18}}
 	"This is camera space 
-	text with new lines in it, and 
-	"
+	text with new lines in it, and "
+	*NewLine
 	*Font {*Colour {FF00FF00} *Size{24} *Style{Oblique}}
 	"with varying colours 
 	and "
@@ -4943,9 +4950,9 @@ LR"(// *************************************************************************
 				{
 					enum { ViewPortSize = 2 };
 
-					// Do not include in bounding box calculations because we're scaling
-					// this model at a point that the bounding box calculation can't see
-					o->m_flags = SetBits(o->m_flags, ELdrFlags::BBoxInvisible, true);
+					// Do not include in scene bounds calculations because we're scaling
+					// this model at a point that the bounding box calculation can't see.
+					o->m_flags = SetBits(o->m_flags, ELdrFlags::SceneBoundsExclude, true);
 
 					// Update the rendering 'i2w' transform on add-to-scene.
 					o->m_screen_space = o->OnAddToScene += [](LdrObject& ob, rdr::Scene const& scene)
@@ -4978,7 +4985,7 @@ LR"(// *************************************************************************
 				else
 				{
 					o->m_c2s = m4x4Zero;
-					o->m_flags = SetBits(o->m_flags, ELdrFlags::BBoxInvisible, false);
+					o->m_flags = SetBits(o->m_flags, ELdrFlags::SceneBoundsExclude, false);
 					o->OnAddToScene -= o->m_screen_space;
 				}
 				return true;

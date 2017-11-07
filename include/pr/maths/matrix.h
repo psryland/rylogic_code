@@ -817,7 +817,7 @@ namespace pr
 	#pragma region Functions
 
 	// Value equality
-	template <typename Real> inline bool FEql(Matrix<Real> const& lhs, Matrix<Real> const& rhs, Real tol = maths::tiny)
+	template <typename Real> inline bool FEqlRelative(Matrix<Real> const& lhs, Matrix<Real> const& rhs, Real tol)
 	{
 		if (lhs.cols() != rhs.cols()) return false;
 		if (lhs.rows() != rhs.rows()) return false;
@@ -825,7 +825,7 @@ namespace pr
 		{
 			// Vectorise compares
 			for (int i = 0, iend = lhs.size(); i != iend; ++i)
-				if (!FEql(lhs.data()[i], rhs.data()[i], tol))
+				if (!FEqlRelative(lhs.data()[i], rhs.data()[i], tol))
 					return false;
 		}
 		else
@@ -833,21 +833,29 @@ namespace pr
 			// Element-by-element compares
 			for (int r = 0, rend = lhs.rows(); r != rend; ++r)
 				for (int c = 0, cend = lhs.cols(); c != cend; ++c)
-					if (!FEql(lhs(c,r), rhs(c,r), tol))
+					if (!FEqlRelative(lhs(c,r), rhs(c,r), tol))
 						return false;
 		}
 
 		return true;
 	}
-	template <typename Real> inline bool FEql(Matrix<Real> const& lhs, m4x4_cref rhs, Real tol = maths::tiny)
+	template <typename Real> inline bool FEql(Matrix<Real> const& lhs, Matrix<Real> const& rhs)
+	{
+		return FEqlRelative(lhs, rhs, maths::tiny);
+	}
+	template <typename Real> inline bool FEqlRelative(Matrix<Real> const& lhs, m4x4_cref rhs, Real tol)
 	{
 		if (lhs.cols() != 4) return false;
 		if (lhs.rows() != 4) return false;
 		return
-			FEql(float(lhs(0,0)), rhs.x.x, tol) && FEql(float(lhs(0,1)), rhs.x.y, tol) && FEql(float(lhs(0,2)), rhs.x.z, tol) && FEql(float(lhs(0,3)), rhs.x.w, tol) &&
-			FEql(float(lhs(1,0)), rhs.y.x, tol) && FEql(float(lhs(1,1)), rhs.y.y, tol) && FEql(float(lhs(1,2)), rhs.y.z, tol) && FEql(float(lhs(1,3)), rhs.y.w, tol) &&
-			FEql(float(lhs(2,0)), rhs.z.x, tol) && FEql(float(lhs(2,1)), rhs.z.y, tol) && FEql(float(lhs(2,2)), rhs.z.z, tol) && FEql(float(lhs(2,3)), rhs.z.w, tol) &&
-			FEql(float(lhs(3,0)), rhs.w.x, tol) && FEql(float(lhs(3,1)), rhs.w.y, tol) && FEql(float(lhs(3,2)), rhs.w.z, tol) && FEql(float(lhs(3,3)), rhs.w.w, tol);
+			FEqlRelative(float(lhs(0,0)), rhs.x.x, tol) && FEqlRelative(float(lhs(0,1)), rhs.x.y, tol) && FEqlRelative(float(lhs(0,2)), rhs.x.z, tol) && FEqlRelative(float(lhs(0,3)), rhs.x.w, tol) &&
+			FEqlRelative(float(lhs(1,0)), rhs.y.x, tol) && FEqlRelative(float(lhs(1,1)), rhs.y.y, tol) && FEqlRelative(float(lhs(1,2)), rhs.y.z, tol) && FEqlRelative(float(lhs(1,3)), rhs.y.w, tol) &&
+			FEqlRelative(float(lhs(2,0)), rhs.z.x, tol) && FEqlRelative(float(lhs(2,1)), rhs.z.y, tol) && FEqlRelative(float(lhs(2,2)), rhs.z.z, tol) && FEqlRelative(float(lhs(2,3)), rhs.z.w, tol) &&
+			FEqlRelative(float(lhs(3,0)), rhs.w.x, tol) && FEqlRelative(float(lhs(3,1)), rhs.w.y, tol) && FEqlRelative(float(lhs(3,2)), rhs.w.z, tol) && FEqlRelative(float(lhs(3,3)), rhs.w.w, tol);
+	}
+	template <typename Real> inline bool FEql(Matrix<Real> const& lhs, m4x4_cref rhs)
+	{
+		return FEqlRelative(lhs, rhs, maths::tiny);
 	}
 
 	// Return the transpose of matrix 'm'
@@ -1094,8 +1102,8 @@ namespace pr
 						auto i1 = m * m_inv;
 						auto i2 = m_inv * m;
 
-						PR_CHECK(FEql(i0, i1, 0.0001f), true);
-						PR_CHECK(FEql(i0, i2, 0.0001f), true);
+						PR_CHECK(FEqlRelative(i0, i1, 0.0001f), true);
+						PR_CHECK(FEqlRelative(i0, i2, 0.0001f), true);
 
 						break;
 					}

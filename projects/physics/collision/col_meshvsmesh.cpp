@@ -441,7 +441,7 @@ namespace pr
 					else														{ a = test; }
 
 					// If the directions are now equal, return
-					if( FEql3(a.direction(), b.direction(), PenetrationTolerance) )
+					if( FEqlRelative(a.direction(), b.direction(), PenetrationTolerance) )
 						return false;
 				}
 			}
@@ -502,7 +502,7 @@ namespace pr
 					
 					// If this is the last iteration, or all three normals now agree
 					// (note: trk[i] == trk[j] because of 'RefineEdge') then we're done
-					if( i == 2 || (i > 0 && FEql3(trk[i].direction(), trk[k].direction(), PenetrationTolerance)) )
+					if( i == 2 || (i > 0 && FEqlRelative(trk[i].direction(), trk[k].direction(), PenetrationTolerance)) )
 						break;
 
 					// If the origin does not project onto the edge formed between 'i' and 'i+1'

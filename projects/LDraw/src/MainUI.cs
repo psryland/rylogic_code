@@ -588,7 +588,7 @@ namespace LDraw
 			};
 			m_menu_data_clear_scene.Click += (s,a) =>
 			{
-				Model.CurrentScene.Clear();
+				Model.CurrentScene.Clear(delete_objects:true);
 			};
 			m_menu_data_create_demo_scene.Click += (s,a) =>
 			{

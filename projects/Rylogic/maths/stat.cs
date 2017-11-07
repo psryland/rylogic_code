@@ -705,7 +705,7 @@ namespace pr.maths
 		/// <summary>The correlation coefficient between 'x' and 'y' (A value between [-1,+1])</summary>
 		public double CorrCoeff
 		{
-			get { return m_count > 0 && !Maths.FEql(m_var_xy, 0, Maths.TinyD) ? m_var_xy / Maths.Sqrt(m_var_x * m_var_y) : 0.0; }
+			get { return m_count > 0 && !Maths.FEql(m_var_xy, 0) ? m_var_xy / Maths.Sqrt(m_var_x * m_var_y) : 0.0; }
 		}
 
 		/// <summary>Returns a "best-fit" linear polynomial for the data added</summary>

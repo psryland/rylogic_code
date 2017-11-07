@@ -2042,15 +2042,16 @@ namespace pr.gui
 			}
 			public void TriggerLayout()
 			{
-				if (m_layout_pending || !IsHandleCreated) return;
-				m_layout_pending = true;
+				if (m_do_layout.Pending || !IsHandleCreated) return;
+				m_do_layout.Signal();
+
 				this.BeginInvoke(() =>
 				{
-					m_layout_pending = false;
+					m_do_layout.Actioned();
 					PerformLayout();
 				});
 			}
-			private bool m_layout_pending;
+			private Trigger m_do_layout;
 
 			/// <summary>Handle mouse activation of the content within this pane</summary>
 			[SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]

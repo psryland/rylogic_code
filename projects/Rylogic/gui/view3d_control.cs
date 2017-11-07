@@ -294,10 +294,10 @@ namespace pr.gui
 						align_options.Items.Add("Z");
 
 						var axis = Camera.AlignAxis;
-						if      (v4.FEql3(axis, v4.XAxis)) align_options.SelectedIndex = 1;
-						else if (v4.FEql3(axis, v4.YAxis)) align_options.SelectedIndex = 2;
-						else if (v4.FEql3(axis, v4.ZAxis)) align_options.SelectedIndex = 3;
-						else                               align_options.SelectedIndex = 0;
+						if      (Maths.FEql(axis, v4.XAxis)) align_options.SelectedIndex = 1;
+						else if (Maths.FEql(axis, v4.YAxis)) align_options.SelectedIndex = 2;
+						else if (Maths.FEql(axis, v4.ZAxis)) align_options.SelectedIndex = 3;
+						else                                 align_options.SelectedIndex = 0;
 						align_options.SelectedIndexChanged += delegate
 						{
 							switch (align_options.SelectedIndex)

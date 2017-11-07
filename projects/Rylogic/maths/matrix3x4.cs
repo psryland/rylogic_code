@@ -32,7 +32,7 @@ namespace pr.maths
 		}
 		public m3x4(quat quaterion) :this()
 		{
-			Debug.Assert(!quat.FEql(quaterion, quat.Zero), "'quaternion' is a zero quaternion");
+			Debug.Assert(!Maths.FEql(quaterion, quat.Zero), "'quaternion' is a zero quaternion");
 
 			var q = quaterion;
 			var q_lensq = q.LengthSq;
@@ -165,16 +165,6 @@ namespace pr.maths
 				new v4(v4.Dot4(lhs.x, rhs.z), v4.Dot4(lhs.y, rhs.z), v4.Dot4(lhs.z, rhs.z), 0f));
 		}
 
-		/// <summary>Compare matrices</summary>
-		public static bool FEql(m3x4 lhs, m3x4 rhs, float tol)
-		{
-			return v4.FEql4(lhs.x, rhs.x, tol) && v4.FEql4(lhs.y, rhs.y, tol) && v4.FEql4(lhs.z, rhs.z, tol);
-		}
-		public static bool FEql(m3x4 lhs, m3x4 rhs)
-		{
-			return FEql(lhs, rhs, Maths.TinyF);
-		}
-
 		/// <summary>Return the determinant of 'm'</summary>
 		public static float Determinant(m3x4 m)
 		{
@@ -249,10 +239,10 @@ namespace pr.maths
 		public static bool IsOrthonormal(m3x4 m)
 		{
 			return
-				Maths.FEql(m.x.Length3Sq, 1f, 2*Maths.TinyF) &&
-				Maths.FEql(m.y.Length3Sq, 1f, 2*Maths.TinyF) &&
-				Maths.FEql(m.z.Length3Sq, 1f, 2*Maths.TinyF) &&
-				v4.FEql3(v4.Cross3(m.x, m.y) - m.z, v4.Zero);
+				Maths.FEql(m.x.Length3Sq, 1f) &&
+				Maths.FEql(m.y.Length3Sq, 1f) &&
+				Maths.FEql(m.z.Length3Sq, 1f) &&
+				Maths.FEql(v4.Cross3(m.x, m.y) - m.z, v4.Zero);
 		}
 
 		/// <summary>
@@ -315,7 +305,7 @@ namespace pr.maths
 		/// <summary>Create a rotation from an axis and angle</summary>
 		public static m3x4 Rotation(v4 axis_norm, v4 axis_sine_angle, float cos_angle)
 		{
-			Debug.Assert(Maths.FEql(axis_norm.Length3Sq, 1f, 2*Maths.TinyF), "'axis_norm' should be normalised");
+			Debug.Assert(Maths.FEql(axis_norm.Length3Sq, 1f), "'axis_norm' should be normalised");
 
 			var mat = new m3x4();
 
@@ -345,7 +335,7 @@ namespace pr.maths
 		/// <summary>Create from an axis and angle. 'axis' should be normalised</summary>
 		public static m3x4 Rotation(v4 axis_norm, float angle)
 		{
-			Debug.Assert(Maths.FEql(axis_norm.Length3Sq, 1f, 2*Maths.TinyF), "'axis_norm' should be normalised");
+			Debug.Assert(Maths.FEql(axis_norm.Length3Sq, 1f), "'axis_norm' should be normalised");
 			return Rotation(axis_norm, axis_norm * (float)Math.Sin(angle), (float)Math.Cos(angle));
 		}
 
@@ -466,6 +456,20 @@ namespace pr.maths
 
 	public static partial class Maths
 	{
+		/// <summary>Approximate equal</summary>
+		public static bool FEqlRelative(m3x4 lhs, m3x4 rhs, float tol)
+		{
+			return
+				FEqlRelative(lhs.x, rhs.x, tol) &&
+				FEqlRelative(lhs.y, rhs.y, tol) &&
+				FEqlRelative(lhs.z, rhs.z, tol);
+		}
+		public static bool FEql(m3x4 lhs, m3x4 rhs)
+		{
+			return
+				FEqlRelative(lhs, rhs, TinyF);
+		}
+
 		public static bool IsFinite(m3x4 vec)
 		{
 			return IsFinite(vec.x) && IsFinite(vec.y) && IsFinite(vec.z);
@@ -501,15 +505,15 @@ namespace pr.unittests
 				var m = m3x4.Random(rng, v4.Random3N(0, rng), -(float)Maths.Tau, +(float)Maths.Tau);
 				var inv_m0 = m3x4.InvertFast(m);
 				var inv_m1 = m3x4.Invert(m);
-				Assert.True(m3x4.FEql(inv_m0, inv_m1, 0.001f));
+				Assert.True(Maths.FEqlRelative(inv_m0, inv_m1, 0.001f));
 			}{
 				var m = m3x4.Random(rng, -5.0f, +5.0f);
 				var inv_m = m3x4.Invert(m);
 				var I0 = inv_m * m;
 				var I1 = m * inv_m;
 
-				Assert.True(m3x4.FEql(I0, m3x4.Identity, 0.001f));
-				Assert.True(m3x4.FEql(I1, m3x4.Identity, 0.001f));
+				Assert.True(Maths.FEqlRelative(I0, m3x4.Identity, 0.001f));
+				Assert.True(Maths.FEqlRelative(I1, m3x4.Identity, 0.001f));
 			}{
 				var m = new m3x4(
 					new v4(0.25f, 0.5f, 1.0f, 0.0f),
@@ -521,7 +525,7 @@ namespace pr.unittests
 					new v4(7.0f, -8.333333f, 2.333333f, 0.0f));
 
 				var inv_m = m3x4.Invert(m);
-				Assert.True(m3x4.FEql(inv_m, INV_M, 0.001f));
+				Assert.True(Maths.FEqlRelative(inv_m, INV_M, 0.001f));
 			}
 		}
 		[Test] public void TestQuatConversion()

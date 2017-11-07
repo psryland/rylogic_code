@@ -179,24 +179,6 @@ namespace pr.maths
 			return new v3(lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z);
 		}
 
-		/// <summary>Approximate equal</summary>
-		public static bool FEql2(v3 lhs, v3 rhs, float tol)
-		{
-			return Maths.FEql(lhs.x, rhs.x, tol) && Maths.FEql(lhs.y, rhs.y, tol);
-		}
-		public static bool FEql3(v3 lhs, v3 rhs, float tol)
-		{
-			return Maths.FEql(lhs.x, rhs.x, tol) && Maths.FEql(lhs.y, rhs.y, tol) && Maths.FEql(lhs.z, rhs.z, tol);
-		}
-		public static bool FEql2(v3 lhs, v3 rhs)
-		{
-			return FEql2(lhs, rhs, Maths.TinyF);
-		}
-		public static bool FEql3(v3 lhs, v3 rhs)
-		{
-			return FEql3(lhs, rhs, Maths.TinyF);
-		}
-
 		/// <summary>Return a vector containing the minimum components</summary>
 		public static v3 Min(v3 lhs, v3 rhs)
 		{
@@ -297,13 +279,9 @@ namespace pr.maths
 		}
 
 		/// <summary>True if 'lhs' and 'rhs' are parallel</summary>
-		public static bool Parallel(v3 lhs, v3 rhs, float tol)
-		{
-			return Maths.FEql(Cross3(lhs, rhs).Length3Sq, 0, tol);
-		}
 		public static bool Parallel(v3 lhs, v3 rhs)
 		{
-			return Parallel(lhs, rhs, Maths.TinyF);
+			return Maths.FEql(Cross3(lhs, rhs).Length3Sq, 0);
 		}
 
 		/// <summary>Linearly interpolate between two vectors</summary>
@@ -322,7 +300,7 @@ namespace pr.maths
 		/// <summary>Returns a vector perpendicular to 'vec'</summary>
 		public static v3 Perpendicular(v3 vec)
 		{
-			Debug.Assert(!FEql3(vec, Zero), "Cannot make a perpendicular to a zero vector");
+			Debug.Assert(!Maths.FEql(vec, Zero), "Cannot make a perpendicular to a zero vector");
 			var v = Cross3(vec, CreateNotParallelTo(vec));
 			v *= vec.Length3 / v.Length3;
 			return v;
@@ -331,7 +309,7 @@ namespace pr.maths
 		/// <summary>Returns a vector perpendicular to 'vec' favouring 'previous' as the preferred perpendicular</summary>
 		public static v3 Perpendicular(v3 vec, v3 previous)
 		{
-			Debug.Assert(!FEql3(vec, Zero), "Cannot make a perpendicular to a zero vector");
+			Debug.Assert(!Maths.FEql(vec, Zero), "Cannot make a perpendicular to a zero vector");
 
 			// If 'previous' is parallel to 'vec', choose a new perpendicular (includes previous == zero)
 			if (Parallel(vec, previous))
@@ -421,7 +399,7 @@ namespace pr.maths
 		/// <summary>Return a random vector on the unit 3D sphere</summary>
 		public static v3 Random3N(Random r)
 		{
-			v3 v; for (; FEql3(v = Random3(1.0f, r), Zero); ) { }
+			v3 v; for (; Maths.FEql(v = Random3(1.0f, r), Zero); ) { }
 			return Normalise3(v);
 		}
 
@@ -448,7 +426,7 @@ namespace pr.maths
 		/// <summary>Return a random vector on the unit 2D sphere</summary>
 		public static v3 Random2N(float z, Random r)
 		{
-			v3 v; for (; FEql2(v = Random2(1.0f, z, r), Zero);) { }
+			v3 v; for (; Maths.FEql(v = Random2(1.0f, z, r), Zero);) { }
 			return Normalise2(v);
 		}
 
@@ -477,13 +455,16 @@ namespace pr.maths
 	public static partial class Maths
 	{
 		/// <summary>Approximate equal</summary>
-		public static bool FEql(v3 lhs, v3 rhs, float tol)
+		public static bool FEqlRelative(v3 lhs, v3 rhs, float tol)
 		{
-			return v3.FEql3(lhs, rhs, tol);
+			return
+				FEqlRelative(lhs.x, rhs.x, tol) &&
+				FEqlRelative(lhs.y, rhs.y, tol) &&
+				FEqlRelative(lhs.z, rhs.z, tol);
 		}
 		public static bool FEql(v3 lhs, v3 rhs)
 		{
-			return v3.FEql3(lhs, rhs);
+			return FEqlRelative(lhs, rhs, TinyF);
 		}
 
 		public static v3 Min(v3 lhs, v3 rhs)

@@ -287,11 +287,15 @@ namespace pr
 	#pragma region Functions
 
 	// Quaternion FEql. Note: q == -q
-	inline bool pr_vectorcall FEql(quat_cref lhs, quat_cref rhs, float tol = maths::tiny)
+	inline bool pr_vectorcall FEqlRelative(quat_cref lhs, quat_cref rhs, float tol)
 	{
 		return
-			FEql4(lhs.xyzw, +rhs.xyzw, tol) ||
-			FEql4(lhs.xyzw, -rhs.xyzw, tol);
+			FEqlRelative(lhs.xyzw, +rhs.xyzw, tol) ||
+			FEqlRelative(lhs.xyzw, -rhs.xyzw, tol);
+	}
+	inline bool pr_vectorcall FEql(quat_cref lhs, quat_cref rhs)
+	{
+		return FEqlRelative(lhs, rhs, maths::tiny);
 	}
 
 	// Component add
@@ -491,7 +495,7 @@ namespace pr
 				}
 				
 				auto actual_mean = avr.Mean();
-				PR_CHECK(FEql(ideal_mean, actual_mean, 0.01f), true);
+				PR_CHECK(FEqlRelative(ideal_mean, actual_mean, 0.01f), true);
 
 			}
 		}
