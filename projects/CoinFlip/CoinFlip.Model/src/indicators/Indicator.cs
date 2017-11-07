@@ -133,7 +133,7 @@ namespace CoinFlip
 		{
 			get { return false; }
 		}
-		public virtual ChartControl.MouseOp CreateDragMouseOp()
+		public virtual ChartControl.MouseOp CreateDragMouseOp(ChartControl.HitTestResult hit)
 		{
 			throw new NotSupportedException("Indicator not drag-able");
 		}

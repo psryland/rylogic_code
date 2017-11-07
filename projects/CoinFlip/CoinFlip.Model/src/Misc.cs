@@ -51,6 +51,13 @@ namespace CoinFlip
 		Both = Q2B | B2Q,
 	}
 
+	/// <summary>Direction of funds transfer</summary>
+	public enum ETransfer
+	{
+		Deposit,
+		Withdrawal
+	}
+
 	/// <summary>The connection status of the exchange</summary>
 	[Flags] public enum EStatus
 	{

@@ -143,7 +143,7 @@ namespace CoinFlip
 
 		/// <summary>Allow this indicator to be dragged</summary>
 		public override bool Dragable { get { return true; } }
-		public override ChartControl.MouseOp CreateDragMouseOp()
+		public override ChartControl.MouseOp CreateDragMouseOp(ChartControl.HitTestResult hit)
 		{
 			return new DragLine(this);
 		}

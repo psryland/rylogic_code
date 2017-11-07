@@ -17,24 +17,27 @@ namespace CoinFlip
 	/// <summary>Moving average indicator</summary>
 	public class IndicatorMA :Indicator
 	{
-		// Use a ChartDataSeries object to implement the series drawing
-
 		/// <summary>The moving average data. Each point is the average for one candle</summary>
 		private List<MAPoint> m_ma;
 
 		public IndicatorMA(SettingsData settings = null)
-			:base(Guid.NewGuid(), "MA", settings ?? new SettingsData())
+			: base(Guid.NewGuid(), "MA", settings ?? new SettingsData())
 		{
-			m_ma = new List<MAPoint>();
+			Init();
 		}
 		public IndicatorMA(XElement node)
-			:base(node)
+			: base(node)
+		{
+			Init();
+		}
+		private void Init()
 		{
 			m_ma = new List<MAPoint>();
+			Cache = new ChartDataSeries.GfxCache(CreatePiece);
 		}
 		protected override void Dispose(bool disposing)
 		{
-			Gfx = null;
+			Cache = null;
 			base.Dispose(disposing);
 		}
 
@@ -44,24 +47,103 @@ namespace CoinFlip
 			[DebuggerStepThrough] get { return (SettingsData)SettingsInternal; }
 		}
 
-		/// <summary>The graphics for the indicator</summary>
-		public View3d.Object Gfx
+		/// <summary>A cache of graphics pieces for this data series</summary>
+		private ChartDataSeries.GfxCache Cache
 		{
-			[DebuggerStepThrough] get { return m_gfx; }
+			get { return m_impl_cache; }
 			set
 			{
-				if (m_gfx == value) return;
-				Util.Dispose(ref m_gfx);
-				m_gfx = value;
+				if (m_impl_cache == value) return;
+				Util.Dispose(ref m_impl_cache);
+				m_impl_cache = value;
 			}
 		}
-		private View3d.Object m_gfx;
-		private Range m_gfx_range;
+		private ChartDataSeries.GfxCache m_impl_cache;
+
+		/// <summary>Create graphics for an X-range spanning 'x'</summary>
+		private ChartDataSeries.GfxPiece CreatePiece(double x, RangeF missing)
+		{
+			// Find the nearest point in the data to 'x'
+			var idx = m_ma.BinarySearch(pt => pt.CandleIndex.CompareTo(x), find_insert_position: true);
+
+			// Convert 'missing' to an index range within the data
+			var idx_missing = new Range(
+				m_ma.BinarySearch(pt => pt.CandleIndex.CompareTo(missing.Beg), find_insert_position:true),
+				m_ma.BinarySearch(pt => pt.CandleIndex.CompareTo(missing.End), find_insert_position:true));
+
+			// Limit the size of 'idx_missing' to the block size
+			const int PieceBlockSize = 4096;
+			var idx_range = new Range(
+				Math.Max(idx_missing.Beg, idx - PieceBlockSize),
+				Math.Min(idx_missing.End, idx + PieceBlockSize));
+
+			// Resize the geometry buffers
+			var count = idx_range.Counti;
+			m_vbuf.Resize(count);
+			m_ibuf.Resize(count);
+			m_nbuf.Resize(1);
+
+			// Get the colours for the MA line
+			var ma_colour = Settings.ColourMA.ToArgbU();
+			var bol_colour = Settings.ColourBollingerBands.ToArgbU();
+
+			// Create the MA model
+			var vert = 0;
+			var indx = 0;
+			foreach (var i in idx_range.Enumeratei)
+			{
+				var v = vert;
+				var ma = m_ma[i];
+				m_vbuf[vert++] = new View3d.Vertex(new v4((float)ma.CandleIndex, (float)ma.Value, ZOrder.Indicators, 1f), ma_colour);
+				m_ibuf[indx++] = (ushort)(v);
+			}
+
+			// Create a nugget for the MA model
+			{
+				var mat = View3d.Material.New();
+				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.ThickLineListGS, (float)Settings.Width);
+				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert|View3d.EGeom.Colr, 0, (uint)vert, 0, (uint)indx, false, false, mat);
+			}
+
+			// Add geometry for Bollinger bands
+			if (Settings.ShowBollingerBands && Settings.BollingerBandsStdDev != 0)
+			{
+				m_vbuf.Resize(m_vbuf.Count + 2*count);
+				m_ibuf.Resize(m_ibuf.Count + 2*count);
+				m_nbuf.Resize(m_nbuf.Count + 2);
+
+				// Lower band
+				foreach (var i in idx_range.Enumeratei)
+				{
+					var v = vert;
+					var ma = m_ma[i];
+					m_vbuf[vert++] = new View3d.Vertex(new v4((float)ma.CandleIndex, (float)(ma.Value - Settings.BollingerBandsStdDev * ma.StdDev), ZOrder.Indicators, 1f), bol_colour);
+					m_ibuf[indx++] = (ushort)(v);
+				}
+				m_nbuf[1] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert|View3d.EGeom.Colr, (uint)(vert-count), (uint)vert, (uint)(indx-count), (uint)indx);
+
+				// Upper band
+				foreach (var i in idx_range.Enumeratei)
+				{
+					var v = vert;
+					var ma = m_ma[i];
+					m_vbuf[vert++] = new View3d.Vertex(new v4((float)ma.CandleIndex, (float)(ma.Value + Settings.BollingerBandsStdDev * ma.StdDev), ZOrder.Indicators, 1f), bol_colour);
+					m_ibuf[indx++] = (ushort)(v);
+				}
+				m_nbuf[2] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert|View3d.EGeom.Colr, (uint)(vert-count), (uint)vert, (uint)(indx-count), (uint)indx);
+			}
+
+			// Create the graphics
+			var gfx = new View3d.Object($"{Name}-[{idx_range.Beg},{idx_range.End}]", 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray(), Id);
+			var x_range = new RangeF(m_ma[idx_range.Begi].CandleIndex, m_ma[idx_range.Endi-1].CandleIndex + 1);
+			return new ChartDataSeries.GfxPiece(gfx, x_range);
+		}
 
 		/// <summary>Calculate the MA</summary>
 		protected override void ResetCore()
 		{
 			m_ma.Clear();
+			Cache.Flush();
 
 			if (Instrument != null)
 			{
@@ -70,18 +152,15 @@ namespace CoinFlip
 					? (object)new ExpMovingAvr(Settings.WindowSize)
 					: (object)new MovingAvr(Settings.WindowSize);
 
-				// Ensure the visible range is cached (plus a bit)
-				var xmin = (int)Maths.Clamp(Chart.XAxis.Min - Chart.XAxis.Span, 0, Instrument.Count-1);
-				var xmax = (int)Maths.Clamp(Chart.XAxis.Max + Chart.XAxis.Span, 0, Instrument.Count-1);
-				Instrument.EnsureCached(xmin);
-				Instrument.EnsureCached(xmax);
+				// Calculate the MA over the cached range of instrument data.
+				var range = Instrument.CachedIndexRange;
+				m_ma.Capacity = range.Sizei;
 
-				// Load the
-				var ma = new List<MAPoint>(xmax - xmin);
+				// Calculate the moving average data
 				var stat = (IStatSingleVariable)avr;
 				var value = (IStatMeanAndVariance)avr;
 				var ts = DateTimeOffset.MinValue.Ticks;
-				for (var i = xmin; i != xmax; ++i)
+				foreach (var i in range.Enumeratei)
 				{
 					var candle = Instrument[i];
 
@@ -90,11 +169,9 @@ namespace CoinFlip
 					ts = candle.Timestamp;
 
 					// Calculate the MA value and save it
-					stat.Add(candle.Close);
-					ma.Add(new MAPoint(ts, value.Mean, value.PopStdDev));
+					stat.Add(candle.Median);
+					m_ma.Add(new MAPoint(i, ts, value.Mean, value.PopStdDev));
 				}
-				
-				m_ma = ma;
 			}
 		}
 
@@ -102,10 +179,18 @@ namespace CoinFlip
 		protected override void HandleSettingChanged(object sender, SettingChangedEventArgs e)
 		{
 			// If the setting affects the underlying data, reset
-			switch (e.Key) {
-			case nameof(SettingsData.ExponentialMA):
+			switch (e.Key)
+			{
 			case nameof(SettingsData.WindowSize):
+			case nameof(SettingsData.ExponentialMA):
 				ResetRequired = true;
+				break;
+			case nameof(SettingsData.Width):
+			case nameof(SettingsData.ColourMA):
+			case nameof(SettingsData.ShowBollingerBands):
+			case nameof(SettingsData.BollingerBandsStdDev):
+			case nameof(SettingsData.ColourBollingerBands):	
+				Cache.Flush();
 				break;
 			}
 
@@ -116,130 +201,64 @@ namespace CoinFlip
 		protected override void HandleChartMoved(object sender, ChartControl.ChartMovedEventArgs e)
 		{
 			base.HandleChartMoved(sender, e);
-
-			// Get the visible X axis range
-			var rng = Instrument.IndexRange((int)(Chart.XAxis.Min - 1), (int)(Chart.XAxis.Max + 1));
-			rng.Beg = Maths.Clamp(rng.Beg, 0, m_ma.Count);
-			rng.End = Maths.Clamp(rng.End, 0, m_ma.Count);
-
-			// Check that the graphics model spans the required range
-			if ((m_gfx_range.Beg != 0 && rng.Beg < m_gfx_range.Beg) ||
-				(m_gfx_range.End != m_ma.Count && rng.End > m_gfx_range.End))
-				Invalidate();
-
-			// IF the graphics are way bigger than necessary, recreate to free up memory
-			if (m_gfx_range.Count > 3 * rng.Count)
-				Invalidate();
-		}
-
-		/// <summary>Update the graphics model for this indicator</summary>
-		protected override void UpdateGfxCore()
-		{
-			base.UpdateGfxCore();
-
-			// Get the visible X axis range
-			var rng = Instrument.IndexRange((int)(Chart.XAxis.Min - 1), (int)(Chart.XAxis.Max + 1));
-			rng.Beg = Maths.Clamp(rng.Beg, 0, m_ma.Count);
-			rng.End = Maths.Clamp(rng.End, 0, m_ma.Count);
-			if (rng.Counti == 0)
-			{
-				// Indicator isn't visible
-				Gfx = null;
+			if (Instrument == null)
 				return;
-			}
 
-			// Resize the cache buffers
-			var count = rng.Counti;
-			m_vbuf.Resize(count);
-			m_ibuf.Resize((count - 1) * 2);
-			m_nbuf.Resize(1);
+			// Get the visible X axis range
+			var rng = Instrument.IndexRange((int)(Chart.XAxis.Min - 1), (int)(Chart.XAxis.Max + 1));
+			if (rng.Count == 0)
+				return;
 
-			// Get the colours for the MA line
-			var ma_colour = Settings.ColourMA.ToArgbU();
-			var bol_colour = Settings.ColourBollingerBands.ToArgbU();
-
-			// Create the MA model
-			var v = 0;
-			var i = 0;
-			foreach (var candle_index in rng.Enumeratei)
-			{
-				m_vbuf[v++] = new View3d.Vertex(new v4(candle_index, (float)m_ma[candle_index].Value, ZOrder.Indicators, 1f), ma_colour);
-			}
-			for (var vi = 0; i != m_ibuf.Count; ++vi)
-			{
-				m_ibuf[i++] = (ushort)(vi  );
-				m_ibuf[i++] = (ushort)(vi+1);
-			}
-			var mat = View3d.Material.New();
-			mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.ThickLineListGS, (float)Settings.Width);
-			m_nbuf[0] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert|View3d.EGeom.Colr, 0, (uint)v, 0, (uint)i, false, false, mat);
-
-			// Add geometry for Bollinger bands
-			if (Settings.ShowBollingerBands && Settings.BollingerBandsStdDev != 0)
-			{
-				m_vbuf.Resize(m_vbuf.Count + 2*count);
-				m_ibuf.Resize(m_ibuf.Count + 2*count);
-				m_nbuf.Resize(m_nbuf.Count + 2);
-
-				// Lower/Upper band
-				foreach (var candle_index in rng.Enumeratei)
-				{
-					var ma = m_ma[candle_index];
-					m_vbuf[v++] = new View3d.Vertex(new v4(candle_index, (float)(ma.Value - Settings.BollingerBandsStdDev * ma.StdDev), ZOrder.Indicators, 1f), bol_colour);
-					m_ibuf[i++] = (ushort)(v-1);
-				}
-				m_nbuf[1] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert|View3d.EGeom.Colr, (uint)(v-count), (uint)v, (uint)(i-count), (uint)i);
-				foreach (var candle_index in rng.Enumeratei)
-				{
-					var ma = m_ma[candle_index];
-					m_vbuf[v++] = new View3d.Vertex(new v4(candle_index, (float)(ma.Value + Settings.BollingerBandsStdDev * ma.StdDev), ZOrder.Indicators, 1f), bol_colour);
-					m_ibuf[i++] = (ushort)(v-1);
-				}
-				m_nbuf[2] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert|View3d.EGeom.Colr, (uint)(v-count), (uint)v, (uint)(i-count), (uint)i);
-			}
-
-			// Create the graphics
-			Gfx = new View3d.Object(Name, 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray(), Id);
-
-			// Record the range that the graphics covers
-			m_gfx_range = rng;
+			// If the MA data does not span this range, reset
+			if (rng.Begi < m_ma.Front().CandleIndex ||
+				rng.Endi > m_ma.Back().CandleIndex)
+				ResetRequired = true;
 		}
 
 		/// <summary>Update the graphics for this indicator and add it to the scene</summary>
 		protected override void UpdateSceneCore(View3d.Window window)
 		{
-			base.UpdateSceneCore(window);
-			if (Gfx == null) return;
+			// Remove graphics
+			window.RemoveObjects(Id);
 
-			// Add to the scene
-			if (Visible)
+			// Add the graphics pieces over the visible range
+			if (m_ma.Count != 0 && Visible)
 			{
-				Gfx.O2P = m4x4.Translation(Settings.XOffset, 0f, 0f);
-				window.AddObject(Gfx);
-			}
-			else
-			{
-				window.RemoveObject(Gfx);
+				// Get the range required for display
+				var range = new RangeF(
+					Math.Max(Chart.XAxis.Min, m_ma.Front().CandleIndex),
+					Math.Min(Chart.XAxis.Max, m_ma.Back().CandleIndex+1));
+
+				// Add each graphics piece
+				foreach (var piece in Cache.Get(range))
+				{
+					piece.Gfx.O2P = m4x4.Translation(Settings.XOffset, 0f, 0f);
+					window.AddObject(piece.Gfx);
+				}
 			}
 		}
 
 		/// <summary>Hit test this indicator</summary>
 		public override ChartControl.HitTestResult.Hit HitTest(PointF chart_point, Point client_point, Keys modifier_keys, View3d.Camera cam)
 		{
+			if (m_ma.Count == 0)
+				return null;
+
 			// Test the distance to the MA over the selection distance
 			var dist_sq = Maths.Sqr(Chart.Options.MinSelectionDistance);
-			var xbeg = (int)Maths.Clamp(chart_point.X - Chart.Options.MinSelectionDistance/2f, 0, m_ma.Count);
-			var xend = (int)Maths.Clamp(chart_point.X + Chart.Options.MinSelectionDistance/2f, 0, m_ma.Count);
+			var idx_range = new Range(
+				m_ma.BinarySearch(pt => pt.CandleIndex.CompareTo(chart_point.X - Chart.Options.MinSelectionDistance/2f), find_insert_position:true),
+				m_ma.BinarySearch(pt => pt.CandleIndex.CompareTo(chart_point.X + Chart.Options.MinSelectionDistance/2f), find_insert_position:true));
 			var yofs = Settings.ShowBollingerBands && Settings.BollingerBandsStdDev != 0
-				? new [] { 0f, -Settings.BollingerBandsStdDev, +Settings.BollingerBandsStdDev }
-				: new [] { 0f };
+				? new[] { 0f, -Settings.BollingerBandsStdDev, +Settings.BollingerBandsStdDev }
+				: new[] { 0f };
 
-			for (var x = xbeg; x != xend; ++x)
+			foreach (var i in idx_range.Enumeratei)
 			{
-				var ma = m_ma[x];
+				var ma = m_ma[i];
 				foreach (var y in yofs)
 				{
-					var pt = Chart.ChartToClient(new PointF(x, (float)(ma.Value + y * ma.StdDev)));
+					var pt = Chart.ChartToClient(new PointF((float)ma.CandleIndex, (float)(ma.Value + y * ma.StdDev)));
 					if (Drawing_.Subtract(client_point, pt).Length2Sq() < dist_sq)
 						return new ChartControl.HitTestResult.Hit(this, pt, null);
 				}
@@ -268,23 +287,34 @@ namespace CoinFlip
 		#region MA Point
 
 		/// <summary>A single point in the MA curve, representing a single candle</summary>
+		[DebuggerDisplay("{Description,nq}")]
 		public class MAPoint
 		{
-			public MAPoint(long ts, double value, double std_dev)
+			public MAPoint(int candle_index, long ts, double value, double std_dev)
 			{
-				Timestamp = ts;
+				CandleIndex = candle_index;
 				Value = value;
 				StdDev = std_dev;
+				Timestamp = ts;
 			}
 
-			/// <summary>The candle timestamp that this MA point corresponds to</summary>
-			public long Timestamp { get; private set; }
+			/// <summary>The index in the instrument that this point corresponds to</summary>
+			public double CandleIndex { get; private set; }
 
 			/// <summary>The value of the moving average at 'Timestamp'</summary>
 			public double Value { get; private set; }
 
 			/// <summary>The standard deviation of the moving average at 'Timestamp'</summary>
 			public double StdDev { get; private set; }
+
+			/// <summary>The candle timestamp that this MA point corresponds to</summary>
+			public long Timestamp { get; private set; }
+
+			/// <summary>Guess at whether double or long values are used</summary>
+			private string Description
+			{
+				get { return $"{CandleIndex} {Value}"; }
+			}
 		}
 
 		#endregion
@@ -305,8 +335,8 @@ namespace CoinFlip
 				XOffset              = 0f;
 			}
 			public SettingsData(XElement node)
-				:base(node)
-			{}
+				: base(node)
+			{ }
 
 			/// <summary>The window size of the EMA</summary>
 			public int WindowSize
@@ -365,7 +395,7 @@ namespace CoinFlip
 				set { set(nameof(XOffset), value); }
 			}
 
-			private class TyConv :GenericTypeConverter<SettingsData> {}
+			private class TyConv :GenericTypeConverter<SettingsData> { }
 		}
 		#endregion
 	}

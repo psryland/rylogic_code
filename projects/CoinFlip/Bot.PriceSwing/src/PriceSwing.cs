@@ -27,9 +27,10 @@ namespace Bot.PriceSwing
 		// - Create new trades whenever there are no unmatched trades near the current price
 		// - Create trades so that the number of B2Q and Q2B trades is even
 
+		public static readonly Guid Id = Guid.NewGuid();
+
 		private Random m_rng;
 		private bool m_suppress_not_created;
-		public static readonly Guid Id = Guid.NewGuid();
 
 		public PriceSwing(Model model, XElement settings_xml)
 			:base("Price Swing", model, new SettingsData(settings_xml))
@@ -526,13 +527,13 @@ namespace Bot.PriceSwing
 				PriceChangeFrac  = 0;
 				VolumeFrac       = 0;
 			}
-			public SettingsData(SettingsData rhs)
-				:base(rhs)
-			{
-				PairWithExchange = rhs.PairWithExchange;
-				PriceChangeFrac  = rhs.PriceChangeFrac;
-				VolumeFrac       = rhs.VolumeFrac;
-			}
+			//public SettingsData(SettingsData rhs)
+			//	:base(rhs)
+			//{
+			//	PairWithExchange = rhs.PairWithExchange;
+			//	PriceChangeFrac  = rhs.PriceChangeFrac;
+			//	VolumeFrac       = rhs.VolumeFrac;
+			//}
 			public SettingsData(XElement node)
 				:base(node)
 			{}

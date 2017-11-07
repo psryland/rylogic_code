@@ -18,13 +18,16 @@ namespace CoinFlip
 {
 	public class EquityUI :UserControl ,IDockable
 	{
+		private const string AllExchanges = "All Exchanges";
+		private const ETimeFrame TimeScale = ETimeFrame.Day1;
+
 		#region UI Elements
 		private TableLayoutPanel m_table0;
 		private ToolStrip m_ts;
-		private System.Windows.Forms.ToolStripComboBox m_cb_time_scale;
-		private ToolStripButton m_chk_use;
-		private ToolStripLabel m_lbl_time_scale;
 		private ToolTip m_tt;
+		private ToolStripLabel m_lbl_exchange;
+		private System.Windows.Forms.ToolStripComboBox m_cb_exchange;
+		private ToolStripButton m_chk_common_value;
 		private ChartControl m_chart;
 		#endregion
 
@@ -35,8 +38,8 @@ namespace CoinFlip
 
 			Model = model;
 			DockControl = new DockControl(this, name) { TabText = name };
-			TimeScale = Model.Settings.Equity.TimeScale;
 			XAxisLabelMode = EXAxisLabelMode.LocalTime;
+			Legend = new ChartDataLegend{ Chart = m_chart };
 			Data = new EquityMap(this);
 			m_auto_range = true;
 
@@ -54,6 +57,7 @@ namespace CoinFlip
 		protected override void Dispose(bool disposing)
 		{
 			Data = null;
+			Legend = null;
 			Model = null;
 			DockControl = null;
 			Util.Dispose(ref components);
@@ -131,9 +135,16 @@ namespace CoinFlip
 				m_data = value;
 				if (m_data != null)
 				{
+					// Add each data series to the chart
+					foreach (var series in m_data.Values)
+						series.Chart = m_chart;
+
+					// Do an auto range if flagged
 					if (m_auto_range)
 						m_chart.AutoRange();
 
+					// Recreate the legend graphics
+					Legend.Invalidate();
 					m_auto_range = false;
 				}
 				m_chart.Invalidate();
@@ -141,27 +152,6 @@ namespace CoinFlip
 		}
 		private EquityMap m_data;
 		private bool m_auto_range;
-
-		/// <summary>The resolution to display the equity graph with</summary>
-		public ETimeFrame TimeScale
-		{
-			get { return m_time_scale; }
-			set
-			{
-				if (m_time_scale == value) return;
-				if (m_time_scale != ETimeFrame.None)
-				{
-				}
-				m_time_scale = value;
-				m_cb_time_scale.SelectedItem = value;
-				if (m_time_scale != ETimeFrame.None)
-				{
-					TriggerUpdate();
-					m_auto_range = true;
-				}
-			}
-		}
-		private ETimeFrame m_time_scale;
 
 		/// <summary>How to display tick values on the X Axis</summary>
 		public EXAxisLabelMode XAxisLabelMode
@@ -179,22 +169,47 @@ namespace CoinFlip
 		/// <summary></summary>
 		public ChartDataSeries.OptionsData SeriesOptionsTemplate { get; private set; }
 
+		/// <summary>Legend</summary>
+		public ChartDataLegend Legend
+		{
+			get { return m_legend; }
+			set
+			{
+				if (m_legend == value) return;
+				Util.Dispose(ref m_legend);
+				m_legend = value;
+			}
+		}
+		private ChartDataLegend m_legend;
+
 		/// <summary>Set up UI Elements</summary>
 		private void SetupUI()
 		{
 			#region Tool bar
-			m_cb_time_scale.ToolTip(m_tt, "The time scale to display equity data in");
-			m_cb_time_scale.ComboBox.DataSource = Enum<ETimeFrame>.Values;
-			m_cb_time_scale.ComboBox.SelectedItem = ETimeFrame.Hour1;
-			m_cb_time_scale.ComboBox.SelectedIndexChanged += (s,a) =>
+
+			// Exchange
+			m_cb_exchange.ToolTip(m_tt, "Display equity on the selected exchange, or all exchanges");
+			m_cb_exchange.ComboBox.DataSource = Model.TradingExchanges.Select(x => x.Name).Concat("").Prepend(AllExchanges).ToArray();
+			m_cb_exchange.ComboBox.SelectedItem = AllExchanges;
+			m_cb_exchange.ComboBox.SelectedIndexChanged += (s,a) =>
 			{
-				TimeScale = (ETimeFrame)m_cb_time_scale.SelectedItem;
+				TriggerUpdate();
 			};
+
+			// Common value
+			m_chk_common_value.ToolTip(m_tt, "Convert currencies to their assigned value prices");
+			m_chk_common_value.Checked = Model.Settings.Equity.CommonValues;
+			m_chk_common_value.CheckedChanged += (s,a) =>
+			{
+				TriggerUpdate();
+			};
+
 			#endregion
 
 			#region Chart
 			m_chart.DefaultMouseControl      = true;
 			m_chart.DefaultKeyboardShortcuts = true;
+			m_chart.AreaSelectMode = ChartControl.EAreaSelectMode.Zoom;
 			m_chart.XAxis.TickText = (double x, double step) =>
 			{
 				// Draw the X Axis labels as indices instead of time stamps
@@ -238,6 +253,24 @@ namespace CoinFlip
 			#endregion
 		}
 
+		/// <summary>Enumerable range of exchanges to show equity data for</summary>
+		private IEnumerable<Exchange> ExchangesToConsider
+		{
+			get
+			{
+				var exch = (string)m_cb_exchange.SelectedItem;
+				return exch != AllExchanges
+					? Model.TradingExchanges.Where(x => x.Name == exch)
+					: Model.TradingExchanges;
+			}
+		}
+
+		/// <summary>True if currencies should be scaled by their assigned values</summary>
+		private bool UseAssignedValues
+		{
+			get { return m_chk_common_value.Checked; }
+		}
+
 		/// <summary>Trigger a refresh of the graph data</summary>
 		public void TriggerUpdate()
 		{
@@ -249,9 +282,11 @@ namespace CoinFlip
 			void UpdateSeriesData()
 			{
 				// Get the coins we care about
-				var exchanges = Model.TradingExchanges.ToList();
+				var exchanges = ExchangesToConsider.ToList();
 				var coins = exchanges.SelectMany(x => x.CoinsOfInterest).ToList();
-				var balances = coins.ToAccumulator(x => x.Symbol, x => x.Balance.Total);
+				var transfers = exchanges.SelectMany(x => x.Transfers.Values).ToList();
+				var balances = coins.ToAccumulator(x => x.Symbol, x => (double)(decimal)x.Balance.Total);
+				var assigned_values = Model.Settings.Coins.ToDictionary(x => x.Symbol, x => UseAssignedValues ? (double)x.AssignedValue : 1.0);
 				var time_scale = TimeScale;
 				var now = Model.UtcNow.Ticks;
 
@@ -276,64 +311,56 @@ namespace CoinFlip
 								trade_history.AddRange(db.EnumRows<TradeRecord>(sql));
 						}
 
-						// Sort all the trades by descending time order
-						trade_history.Sort((l,r) => -l.Timestamp.CompareTo(r.Timestamp));
-
 						// Generate a new equity map
 						var equity = new EquityMap(this);
 
-						// For each coin, start with the starting balance and
-						// calculate the balances working backwards through the trades.
+						// For each coin, start with the current balance and work backwards
+						// through the trades, deposits, and withdrawals.
 						foreach (var sym in balances.Keys)
 						{
 							// Abort if another update is pending
 							if (m_data_update.Pending)
 								return;
 
-							// Get the series data
+							// Create series data for this currency
 							var series = equity[sym];
-							
-							// Get the final balance
-							var bal = balances[sym];
-
-							// For each trade involving this currency
 							using (var table = series.Lock())
 							{
-								// Record the current balance
-								table.Add(new ChartDataSeries.Pt(now, (double)(decimal)bal));
-
+								// Generate a collection of balance deltas with timestamps
+								table.Add(new ChartDataSeries.Pt(now, 0.0));
+								foreach (var xfr in transfers.Where(x => x.Coin.Symbol == sym && x.Status == Transfer.EStatus.Complete))
+								{
+									table.Add(new ChartDataSeries.Pt(xfr.Timestamp, (xfr.Type == ETransfer.Deposit ? +1 : -1) * (double)(decimal)xfr.Amount));
+								}
 								foreach (var trade in trade_history.Where(x => x.CoinIn == sym || x.CoinOut == sym))
 								{
-									// Careful! We're working backward in time, so each trade is reversed.
-
 									// If 'sym' was the coin that was sold
 									if (sym == trade.CoinIn)
-										bal += trade.VolumeIn;
-
+										table.Add(new ChartDataSeries.Pt(trade.Timestamp, -(double)(decimal)trade.VolumeIn));
+									
 									// If 'sym' was the coin that was bought
 									if (sym == trade.CoinOut)
-										bal -= trade.VolumeNett;
-
-									// Record the equity at this point in time
-									table.Add(new ChartDataSeries.Pt(trade.Timestamp, (double)(decimal)bal));
-
-									// Find the bounds on the time range
-									equity.TimeRange.Encompass(trade.Timestamp);
+										table.Add(new ChartDataSeries.Pt(trade.Timestamp, +(double)(decimal)trade.VolumeNett));
 								}
-								if (table.Count != 0)
+
+								// Sort the balance deltas by time
+								table.SortI();
+
+								// Get the time range covered
+								equity.TimeRange.Encompass(now);
+								equity.TimeRange.Encompass(table[0].xi);
+
+								// Start with the current balance and work backwards converting
+								// the deltas to absolute amounts, and the timestamps to TimeScale units.
+								var bal = balances[sym];
+								var value = assigned_values[sym];
+								for (int i = table.Count; i-- != 0;)
 								{
-									// Sort the series into increasing time order
-									table.Sort();
+									bal -= table[i].yf;
+									table[i].xf = Misc.TicksToTimeFrame(table[i].xi - equity.TimeRange.Beg, time_scale);
+									table[i].yf = bal * value;
 								}
 							}
-						}
-
-						// Convert all points to 'TimeScale' units, relative to the start time
-						foreach (var series in equity.Values)
-						{
-							using (var table = series.Lock())
-							foreach (var pt in table.Data)
-								pt.x = Misc.TicksToTimeFrame(pt.xi - equity.TimeRange.Beg, time_scale);
 						}
 
 						// Update the equity data
@@ -365,16 +392,13 @@ namespace CoinFlip
 				{
 					var s = new ChartDataSeries(x, new ChartDataSeries.OptionsData(m_ui.SeriesOptionsTemplate));
 					s.Options.Colour = ChartDataSeries.GenerateColour(m_map.Count);
-					s.Chart = m_ui.m_chart;
+					s.Options.PlotType = ChartDataSeries.EPlotType.StepLine;
 					return s;
 				});
 				TimeRange = Range.Invalid;
-				Legend = new ChartDataLegend();
-				Legend.Series.DataSource = m_map.Values;
 			}
 			public void Dispose()
 			{
-				Legend = null;
 				Util.DisposeAll(m_map.Values);
 				m_map.Clear();
 			}
@@ -386,6 +410,7 @@ namespace CoinFlip
 			public void Reset()
 			{
 				m_map.Clear();
+				TimeRange = Range.Invalid;
 			}
 
 			/// <summary>Return the number of symbols with data</summary>
@@ -411,19 +436,6 @@ namespace CoinFlip
 			{
 				get { return m_map.Values; }
 			}
-
-			/// <summary>Legend</summary>
-			public ChartDataLegend Legend
-			{
-				get { return m_legend; }
-				set
-				{
-					if (m_legend == value) return;
-					Util.Dispose(ref m_legend);
-					m_legend = value;
-				}
-			}
-			private ChartDataLegend m_legend;
 		}
 
 		#region Component Designer generated code
@@ -437,10 +449,10 @@ namespace CoinFlip
 			this.m_table0 = new System.Windows.Forms.TableLayoutPanel();
 			this.m_chart = new pr.gui.ChartControl();
 			this.m_ts = new System.Windows.Forms.ToolStrip();
-			this.m_cb_time_scale = new System.Windows.Forms.ToolStripComboBox();
-			this.m_chk_use = new System.Windows.Forms.ToolStripButton();
-			this.m_lbl_time_scale = new System.Windows.Forms.ToolStripLabel();
+			this.m_lbl_exchange = new System.Windows.Forms.ToolStripLabel();
+			this.m_cb_exchange = new System.Windows.Forms.ToolStripComboBox();
 			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
+			this.m_chk_common_value = new System.Windows.Forms.ToolStripButton();
 			this.m_table0.SuspendLayout();
 			this.m_ts.SuspendLayout();
 			this.SuspendLayout();
@@ -466,6 +478,7 @@ namespace CoinFlip
 			// 
 			this.m_chart.AllowEditing = false;
 			this.m_chart.AllowSelection = false;
+			this.m_chart.AreaSelectMode = pr.gui.ChartControl.EAreaSelectMode.Zoom;
 			this.m_chart.BackColor = System.Drawing.SystemColors.ControlDarkDark;
 			this.m_chart.CrossHairLocation = ((System.Drawing.PointF)(resources.GetObject("m_chart.CrossHairLocation")));
 			this.m_chart.CrossHairVisible = false;
@@ -507,35 +520,36 @@ namespace CoinFlip
 			this.m_ts.AutoSize = false;
 			this.m_ts.Dock = System.Windows.Forms.DockStyle.None;
 			this.m_ts.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_lbl_time_scale,
-            this.m_cb_time_scale,
-            this.m_chk_use});
+            this.m_lbl_exchange,
+            this.m_cb_exchange,
+            this.m_chk_common_value});
 			this.m_ts.Location = new System.Drawing.Point(0, 0);
 			this.m_ts.Name = "m_ts";
 			this.m_ts.Size = new System.Drawing.Size(826, 25);
 			this.m_ts.TabIndex = 1;
 			this.m_ts.Text = "toolStrip1";
 			// 
-			// m_cb_mode
+			// m_lbl_exchange
 			// 
-			this.m_cb_time_scale.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-			this.m_cb_time_scale.Name = "m_cb_mode";
-			this.m_cb_time_scale.Size = new System.Drawing.Size(75, 25);
+			this.m_lbl_exchange.Name = "m_lbl_exchange";
+			this.m_lbl_exchange.Size = new System.Drawing.Size(60, 22);
+			this.m_lbl_exchange.Text = "Exchange:";
 			// 
-			// m_chk_use
+			// m_cb_exchange
 			// 
-			this.m_chk_use.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_chk_use.Image = ((System.Drawing.Image)(resources.GetObject("m_chk_use.Image")));
-			this.m_chk_use.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.m_chk_use.Name = "m_chk_use";
-			this.m_chk_use.Size = new System.Drawing.Size(23, 22);
-			this.m_chk_use.Text = "toolStripButton1";
+			this.m_cb_exchange.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+			this.m_cb_exchange.Name = "m_cb_exchange";
+			this.m_cb_exchange.Size = new System.Drawing.Size(121, 25);
 			// 
-			// m_lbl_time_scale
+			// m_chk_common_value
 			// 
-			this.m_lbl_time_scale.Name = "m_lbl_time_scale";
-			this.m_lbl_time_scale.Size = new System.Drawing.Size(67, 22);
-			this.m_lbl_time_scale.Text = "Time Scale:";
+			this.m_chk_common_value.CheckOnClick = true;
+			this.m_chk_common_value.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+			this.m_chk_common_value.Image = ((System.Drawing.Image)(resources.GetObject("m_chk_common_value.Image")));
+			this.m_chk_common_value.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_chk_common_value.Name = "m_chk_common_value";
+			this.m_chk_common_value.Size = new System.Drawing.Size(93, 22);
+			this.m_chk_common_value.Text = "Common Value";
 			// 
 			// EquityUI
 			// 

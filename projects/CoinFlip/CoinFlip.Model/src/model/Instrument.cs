@@ -29,9 +29,6 @@ namespace CoinFlip
 		/// <summary>A cache of candle data read from the database</summary>
 		private List<Candle> m_cache;
 
-		/// <summary>The candle index range covered by 'm_cache'. 0 = Oldest, Count = Latest</summary>
-		private Range m_index_range;
-
 		/// <summary>Create a view of price data that updates as new data arrives</summary>
 		public Instrument(string name, PriceData pd)
 		{
@@ -455,6 +452,10 @@ namespace CoinFlip
 		#endregion
 
 		#region Candle Cache
+
+		/// <summary>The candle index range covered by 'm_cache'. 0 = Oldest, Count = Latest</summary>
+		public Range CachedIndexRange { get { return m_index_range; } }
+		private Range m_index_range;
 
 		/// <summary>Invalidate the cached data</summary>
 		public void InvalidateCachedData()

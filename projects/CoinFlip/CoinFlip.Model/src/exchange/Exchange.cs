@@ -46,6 +46,7 @@ namespace CoinFlip
 				Balance = new BalanceCollection(this);
 				Positions = new PositionsCollection(this);
 				History = new HistoryCollection(this);
+				Transfers = new TransfersCollection(this);
 				Shutdown = CancellationTokenSource.CreateLinkedTokenSource(Model.Shutdown.Token);
 				m_update_thread_step = new AutoResetEvent(false);
 				TradeHistoryUseful = false;
@@ -256,6 +257,14 @@ namespace CoinFlip
 								UpdateBalances();
 							}
 
+							// Update funds transfers
+							const int TransfersUpdatePeriodMS = 60000;
+							if (TransfersUpdatedRequired || (Model.UtcNow - Transfers.LastUpdated).TotalMilliseconds > TransfersUpdatePeriodMS)
+							{
+								TransfersUpdatedRequired = false;
+								UpdateTransfers();
+							}
+
 							// Update positions/history
 							const int PositionUpdatePeriodMS = 1000;
 							if (PositionUpdateRequired || (Model.UtcNow - Positions.LastUpdated).TotalMilliseconds > PositionUpdatePeriodMS)
@@ -333,6 +342,19 @@ namespace CoinFlip
 		}
 		private bool m_position_update_required;
 
+		/// <summary>Dirty flag for fund transfers data</summary>
+		public bool TransfersUpdatedRequired
+		{
+			get { return m_transfers_update_required; }
+			set
+			{
+				if (m_transfers_update_required == value) return;
+				m_transfers_update_required = value;
+				if (value) m_update_thread_step.Set();
+			}
+		}
+		private bool m_transfers_update_required;
+
 		/// <summary>True if TradeHistory can be mapped to previous order id's</summary>
 		public bool TradeHistoryUseful { get; protected set; }
 
@@ -398,6 +420,9 @@ namespace CoinFlip
 
 		/// <summary>Open positions held on this exchange, keyed on order ID</summary>
 		public PositionsCollection Positions { get; private set; }
+
+		/// <summary>Funds transfers on this exchange</summary>
+		public TransfersCollection Transfers { get; private set; }
 
 		/// <summary>Trade history on this exchange, keyed on order ID</summary>
 		public HistoryCollection History { get; private set; }
@@ -630,6 +655,10 @@ namespace CoinFlip
 			Positions.LastUpdated = Model.UtcNow;
 		}
 
+		/// <summary>Update all deposits and withdrawals made on this exchange</summary>
+		protected virtual void UpdateTransfers() // Worker thread context
+		{}
+
 		/// <summary>Handle an exception during an update call</summary>
 		public void HandleException(string method_name, Exception ex, string msg = null)
 		{
@@ -726,8 +755,14 @@ namespace CoinFlip
 			foreach (var id in HistoryDB.EnumRows<ulong>(sql))
 				TradeHistoryTradeIds.Add(id);
 
+			// Set the interval of available funds transfer history
+			TransfersInterval = new Range(
+				DateTimeOffset_.UnixEpoch.Ticks,
+				DateTimeOffset_.UnixEpoch.Ticks);
+
 			// Set the time to get history from
 			m_history_last = new DateTimeOffset(HistoryInterval.End, TimeSpan.Zero);
+			m_transfers_last = new DateTimeOffset(TransfersInterval.End, TimeSpan.Zero);
 		}
 
 		/// <summary>The set of known trade ids</summary>
@@ -772,6 +807,10 @@ namespace CoinFlip
 		/// <summary>The time range that the position history covers (in ticks)</summary>
 		public Range HistoryInterval { get; protected set; }
 		protected DateTimeOffset m_history_last; // Worker thread context only
+
+		/// <summary>The time range that the transfer history covers (in ticks)</summary>
+		public Range TransfersInterval { get; protected set; }
+		protected DateTimeOffset m_transfers_last; // Worker thread context only
 
 		/// <summary>Property changed notification</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
@@ -1008,7 +1047,7 @@ namespace CoinFlip
 			set
 			{
 				Debug.Assert(Model.AssertMarketDataWrite());
-				if (this[key]?.Updated> value.Updated) return; // Ignore out of date data
+				if (this[key]?.Updated > value.Updated) return; // Ignore out of date data
 				base[key] = value;
 			}
 		}
@@ -1038,6 +1077,32 @@ namespace CoinFlip
 			{
 				Debug.Assert(Model.AssertMarketDataRead());
 				return TryGetValue(key, out var pos) ? pos : null;
+			}
+			set
+			{
+				Debug.Assert(Model.AssertMarketDataWrite());
+				base[key] = value;
+			}
+		}
+	}
+	public class TransfersCollection :CollectionBase<string, Transfer>
+	{
+		public TransfersCollection(Exchange exch)
+			:base(exch)
+		{
+			KeyFrom = x => x.TransactionId;
+		}
+		public TransfersCollection(TransfersCollection rhs)
+			:base(rhs)
+		{}
+
+		/// <summary>Get/Set a history entry by order id. Returns null if 'key' is not in the collection</summary>
+		public override Transfer this[string key]
+		{
+			get
+			{
+				Debug.Assert(Model.AssertMarketDataRead());
+				return TryGetValue(key, out var txfr) ? txfr : null;
 			}
 			set
 			{

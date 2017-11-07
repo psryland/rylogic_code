@@ -84,7 +84,7 @@ namespace CoinFlip
 			}
 
 			// Otherwise, fall back to using the given value for the currency
-			return Meta.Value * amount;
+			return Meta.AssignedValue * amount;
 		}
 
 		/// <summary>True if the live price can be found using the LivePriceSymbols</summary>
@@ -124,8 +124,8 @@ namespace CoinFlip
 		/// <summary>The assigned amount this coin type is worth</summary>
 		public decimal AssignedValue
 		{
-			get { return Meta.Value; }
-			set { Meta.Value = value; }
+			get { return Meta.AssignedValue; }
+			set { Meta.AssignedValue = value; }
 		}
 
 		/// <summary>The default amount to use when creating a trade from this Coin</summary>

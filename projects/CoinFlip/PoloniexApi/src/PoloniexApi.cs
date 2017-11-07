@@ -381,6 +381,17 @@ namespace Poloniex.API
 			return history;
 		}
 
+		/// <summary>Get the history of deposits and withdrawals</summary>
+		public FundsTransfer GetTransfers(DateTimeOffset beg, DateTimeOffset end, CancellationToken? cancel = null)
+		{
+			var parms = new List<KV>
+			{
+				new KV("start", Misc.ToUnixTime(beg)),
+				new KV("end", Misc.ToUnixTime(end)),
+			};
+			return PostData<FundsTransfer>("returnDepositsWithdrawals", cancel, parms.ToArray());
+		}
+
 		#endregion
 
 		#region Market

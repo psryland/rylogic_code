@@ -300,7 +300,7 @@ namespace CoinFlip
 			public CoinData(string symbol, decimal value)
 			{
 				Symbol = symbol;
-				Value = value;
+				AssignedValue = value;
 				OfInterest = false;
 				AutoTradingLimit = 1m;
 				LivePriceSymbols = "USDT";
@@ -319,10 +319,10 @@ namespace CoinFlip
 			}
 
 			/// <summary>Value assigned to this coin</summary>
-			public decimal Value
+			public decimal AssignedValue
 			{
-				get { return get<decimal>(nameof(Value)); }
-				set { set(nameof(Value), value); }
+				get { return get<decimal>(nameof(AssignedValue)); }
+				set { set(nameof(AssignedValue), value); }
 			}
 
 			/// <summary>True if coins of this type should be included in loops</summary>
@@ -676,17 +676,17 @@ namespace CoinFlip
 		{
 			public EquitySettings()
 			{
-				TimeScale = ETimeFrame.Hour1;
+				CommonValues = false;
 			}
 			public EquitySettings(XElement node)
 				:base(node)
 			{}
 
 			/// <summary>The time scale to use for the equity plot</summary>
-			public ETimeFrame TimeScale
+			public bool CommonValues
 			{
-				get { return get<ETimeFrame>(nameof(TimeScale)); }
-				set { set(nameof(TimeScale), value); }
+				get { return get<bool>(nameof(CommonValues)); }
+				set { set(nameof(CommonValues), value); }
 			}
 
 			private class TyConv :GenericTypeConverter<EquitySettings> {}

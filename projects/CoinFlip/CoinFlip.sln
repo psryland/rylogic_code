@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26730.15
+VisualStudioVersion = 15.0.27004.2006
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoinFlip", "CoinFlip\CoinFlip.csproj", "{E3A96A1B-8314-4A17-891D-B7DE878A6D13}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -48,6 +48,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bot.Fishing", "Bot.Fishing\Bot.Fishing.csproj", "{5ABF24C9-2A01-4A50-BABE-447C9E0FEC02}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bot.LoopFinder", "Bot.LoopFinder\Bot.LoopFinder.csproj", "{4707D4A0-FA1A-4BC2-ABB3-4D61B933741E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bot.ReturnToMean", "Bot.ReturnToMean\Bot.ReturnToMean.csproj", "{28DCBB2C-9BB5-4046-9A77-9E7FB311A1B8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -215,6 +217,18 @@ Global
 		{4707D4A0-FA1A-4BC2-ABB3-4D61B933741E}.Release|x64.Build.0 = Release|Any CPU
 		{4707D4A0-FA1A-4BC2-ABB3-4D61B933741E}.Release|x86.ActiveCfg = Release|Any CPU
 		{4707D4A0-FA1A-4BC2-ABB3-4D61B933741E}.Release|x86.Build.0 = Release|Any CPU
+		{28DCBB2C-9BB5-4046-9A77-9E7FB311A1B8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{28DCBB2C-9BB5-4046-9A77-9E7FB311A1B8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{28DCBB2C-9BB5-4046-9A77-9E7FB311A1B8}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{28DCBB2C-9BB5-4046-9A77-9E7FB311A1B8}.Debug|x64.Build.0 = Debug|Any CPU
+		{28DCBB2C-9BB5-4046-9A77-9E7FB311A1B8}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{28DCBB2C-9BB5-4046-9A77-9E7FB311A1B8}.Debug|x86.Build.0 = Debug|Any CPU
+		{28DCBB2C-9BB5-4046-9A77-9E7FB311A1B8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{28DCBB2C-9BB5-4046-9A77-9E7FB311A1B8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{28DCBB2C-9BB5-4046-9A77-9E7FB311A1B8}.Release|x64.ActiveCfg = Release|Any CPU
+		{28DCBB2C-9BB5-4046-9A77-9E7FB311A1B8}.Release|x64.Build.0 = Release|Any CPU
+		{28DCBB2C-9BB5-4046-9A77-9E7FB311A1B8}.Release|x86.ActiveCfg = Release|Any CPU
+		{28DCBB2C-9BB5-4046-9A77-9E7FB311A1B8}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

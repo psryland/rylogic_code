@@ -115,6 +115,28 @@ namespace Bittrex.API
 			return GetData<PositionHistoryResponse>(Method.Account, "getorderhistory", cancel);
 		}
 
+		/// <summary>Get the history of deposits</summary>
+		public TransferHistoryResponse GetDeposits(string currency = null, CancellationToken? cancel = null)
+		{
+			// https://bittrex.com/api/v1.1/account/getdeposithistory?currency=BTC
+			var parms = new List<KV>{ };
+			if (currency != null)
+				parms.Add(new KV("currency", currency));
+
+			return GetData<TransferHistoryResponse>(Method.Account, "getdeposithistory", cancel, parms.ToArray());
+		}
+
+		/// <summary>Get the history of withdrawals</summary>
+		public TransferHistoryResponse GetWithdrawals(string currency = null, CancellationToken? cancel = null)
+		{
+			// https://bittrex.com/api/v1.1/account/getwithdrawalhistory?currency=BTC
+			var parms = new List<KV>{ };
+			if (currency != null)
+				parms.Add(new KV("currency", currency));
+
+			return GetData<TransferHistoryResponse>(Method.Account, "getwithdrawalhistory", cancel, parms.ToArray());
+		}
+
 		#endregion
 
 		#region Market

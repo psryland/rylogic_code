@@ -211,8 +211,16 @@ namespace CoinFlip
 		}
 
 		/// <summary>Check whether this trade is an allowed trade</summary>
-		public EValidation Validate(Guid? reserved_balance = null)
+		public EValidation Validate(Guid? reserved_balance_in = null, Unit<decimal>? additional_balance_in = null)
 		{
+			// Notes:
+			// - 'reserved_balance' is the Id on a hold placed on a certain amount of balance
+			//    usually when it will be needed to offset another trade. Providing this guid
+			//    means include it in the available balance.
+			// - 'additional_balance' is extra balance that is assumed to be available for the
+			//    trade. Typically, this would be from a trade that will be cancelled freeing
+			//    up some available volume (i.e. in modifying an existing order)
+
 			var result = EValidation.Valid;
 
 			// Check the trade volumes
@@ -231,9 +239,12 @@ namespace CoinFlip
 			else if (!Pair.PriceRange.Contains(PriceQ2B))
 				result |= EValidation.PriceOutOfRange;
 
-			// Check for sufficient balance
 			var bal = TradeType.CoinIn(Pair).Balance;
-			var available = bal.Available + (reserved_balance != null ? bal.Reserved(reserved_balance.Value) : 0m._(bal.Coin));
+			var available = bal.Available;
+			if (reserved_balance_in != null) available += bal.Reserved(reserved_balance_in.Value);
+			if (additional_balance_in != null) available += additional_balance_in.Value;
+
+			// Check for sufficient balance
 			if (VolumeIn > available)
 				result |= EValidation.InsufficientBalance;
 

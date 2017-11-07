@@ -52,6 +52,7 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="src\bot\BotTemplate.cs" />
     <Compile Include="src\exchange\Exchange.cs" />
     <Compile Include="src\exchange\Exchange_Bittrex.cs" />
     <Compile Include="src\exchange\Exchange_CrossExchange.cs" />
@@ -63,12 +64,14 @@
     <Compile Include="src\indicators\Indicator.cs" />
     <Compile Include="src\indicators\IndicatorHorzLine.cs" />
     <Compile Include="src\indicators\IndicatorMA.cs" />
+    <Compile Include="src\indicators\IndicatorTrendLine.cs" />
     <Compile Include="src\Misc.cs" />
     <Compile Include="src\model\Account.cs" />
     <Compile Include="src\model\APIKeys.cs" />
     <Compile Include="src\model\CoinPair.cs" />
     <Compile Include="src\model\Equity.cs" />
     <Compile Include="src\model\TradeRecord.cs" />
+    <Compile Include="src\model\Transfer.cs" />
     <Compile Include="src\sim\BackTesting.cs" />
     <Compile Include="src\model\Balance.cs" />
     <Compile Include="src\model\Candle.cs" />

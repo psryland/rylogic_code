@@ -17,15 +17,7 @@ namespace CoinFlip
 				Name = nameof(Balance.Coin),
 				DataPropertyName = nameof(Balance.Coin),
 				SortMode = DataGridViewColumnSortMode.Automatic,
-				FillWeight = 0.3f,
-			});
-			Columns.Add(new DataGridViewTextBoxColumn
-			{
-				HeaderText = "Available",
-				Name = nameof(Balance.Available),
-				DataPropertyName = nameof(Balance.Available),
-				SortMode = DataGridViewColumnSortMode.Automatic,
-				FillWeight = 0.6f,
+				FillWeight = 0.6383387f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
@@ -33,7 +25,15 @@ namespace CoinFlip
 				Name = nameof(Balance.Total),
 				DataPropertyName = nameof(Balance.Total),
 				SortMode = DataGridViewColumnSortMode.Automatic,
-				FillWeight = 0.6f,
+				FillWeight = 0.6337074f,
+			});
+			Columns.Add(new DataGridViewTextBoxColumn
+			{
+				HeaderText = "Available",
+				Name = nameof(Balance.Available),
+				DataPropertyName = nameof(Balance.Available),
+				SortMode = DataGridViewColumnSortMode.Automatic,
+				FillWeight = 0.5407636f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
@@ -42,7 +42,7 @@ namespace CoinFlip
 				DataPropertyName = nameof(Balance.Value),
 				DefaultCellStyle = new DataGridViewCellStyle{ Format = "C" },
 				SortMode = DataGridViewColumnSortMode.Automatic,
-				FillWeight = 0.6f,
+				FillWeight = 0.4985165f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
@@ -50,7 +50,7 @@ namespace CoinFlip
 				Name = nameof(Balance.AutoTradeLimit),
 				DataPropertyName = nameof(Balance.AutoTradeLimit),
 				SortMode = DataGridViewColumnSortMode.Automatic,
-				FillWeight = 0.6f,
+				FillWeight = 0.3886738f,
 			});
 			ContextMenuStrip = CreateCMenu();
 			DataSource = Model.Balances;

@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
+using System.Threading;
 using System.Windows.Forms;
 using pr.extn;
 using pr.gfx;
@@ -146,6 +147,20 @@ namespace CoinFlip
 			[DebuggerStepThrough] get { return Trade.CoinOut; }
 		}
 
+		/// <summary>Return the available balance if currency to sell (including the 'm_initial.VolumeIn' for trade modifies)</summary>
+		public Unit<decimal> AvailableIn
+		{
+			get { return Exchange.Balance[CoinIn].Available + AdditionalIn; }
+		}
+		public Unit<decimal> AvailableOut
+		{
+			get { return Exchange.Balance[CoinOut].Available; }
+		}
+		private Unit<decimal> AdditionalIn
+		{
+			get { return (m_existing_order_id != null ? m_initial.VolumeIn : 0m._(CoinIn)); }
+		}
+
 		/// <summary>Set up UI elements</summary>
 		private void SetupUI()
 		{
@@ -238,7 +253,7 @@ namespace CoinFlip
 			m_btn_all_in.ToolTip(m_tt, $"Use the entire available balance of {CoinIn}");
 			m_btn_all_in.Click += (s,a) =>
 			{
-				SetTrade(volume_in:Exchange.Balance[CoinIn].Available);
+				SetTrade(volume_in:AvailableIn);
 			};
 
 			// Ok button - not default to prevent 'Enter' causing trades to be made
@@ -260,14 +275,14 @@ namespace CoinFlip
 			{
 				text = Clean(text, out var pc);
 				return decimal.TryParse(text, out var value)
-					? (pc ? Exchange.Balance[CoinIn].Available * value * 0.01m : value._(CoinIn))
+					? (pc ? AvailableIn * value * 0.01m : value._(CoinIn))
 					: (Unit<decimal>?)null;
 			}
 			Unit<decimal>? VolOut(string text)
 			{
 				text = Clean(text, out var pc);
 				return decimal.TryParse(text, out var value)
-					? (pc ? Exchange.Balance[CoinOut].Available * value * 0.01m : value._(CoinOut))
+					? (pc ? AvailableOut * value * 0.01m : value._(CoinOut))
 					: (Unit<decimal>?)null;
 			}
 		}
@@ -275,9 +290,9 @@ namespace CoinFlip
 		/// <summary>Update the UI</summary>
 		private void UpdateUI(object sender = null, EventArgs args = null)
 		{
-			var validate = Trade.Validate();
-			var balance_in = Exchange.Balance[CoinIn].Available;
-			var vol_in_pc = Maths.Clamp(Maths.Div((decimal)Trade.VolumeIn * 100m, (decimal)balance_in, 0m), 0m, 100m);
+			var available_in = AvailableIn;
+			var validate = Trade.Validate(additional_balance_in:AdditionalIn);
+			var vol_in_pc = Maths.Clamp(Maths.Div((decimal)Trade.VolumeIn * 100m, (decimal)available_in, 0m), 0m, 100m);
 
 			// Update fields
 			m_tb_price_q2b.Value = (decimal)Trade.PriceQ2B;
@@ -288,7 +303,7 @@ namespace CoinFlip
 			m_tb_order_type.Text = $"{Trade.OrderType}";
 
 			// Available funds
-			m_lbl_available_volume_in.Text = $"Available: {balance_in.ToString("G8",true)}";
+			m_lbl_available_volume_in.Text = $"Available: {available_in.ToString("G8",true)}";
 
 			// Describe the trade
 			m_lbl_desc_in.Text = 
@@ -335,7 +350,7 @@ namespace CoinFlip
 				}
 
 				// Limit to the available balance
-				var bal = Exchange.Balance[CoinIn].Available + (m_existing_order_id != null ? m_initial.VolumeIn : 0);
+				var bal = AvailableIn;
 				if (Trade.VolumeIn > bal)
 				{
 					Trade.VolumeIn = bal;
@@ -375,12 +390,34 @@ namespace CoinFlip
 			// Create or update the trade
 			if (m_existing_order_id == null)
 			{
-				Trade.CreateOrder();
+				try { Trade.CreateOrder(); }
+				catch (Exception ex)
+				{
+					Model.Log.Write(ELogLevel.Error, ex, "Failed to create trade");
+					MsgBox.Show(Model.UI, $"Failed to create trade.\r\n{ex.Message}", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+				}
 			}
 			else if (m_initial != Trade)
 			{
-				Exchange.CancelOrder(Pair, m_existing_order_id.Value);
-				Trade.CreateOrder();
+				try
+				{
+					// Cancel the previous order
+					Exchange.CancelOrder(Pair, m_existing_order_id.Value);
+
+					// Flag that a balance update is required
+					Exchange.BalanceUpdateRequired = true;
+
+					// Wait for the balance update to complete
+					Model.WaitWhile(() => Exchange.BalanceUpdateRequired, TimeSpan.FromMinutes(1.0));
+
+					// Place the updated order
+					Trade.CreateOrder();
+				}
+				catch (Exception ex)
+				{
+					Model.Log.Write(ELogLevel.Error, ex, "Modifying a trade failed");
+					MsgBox.Show(Model.UI, $"Failed to modify this trade.\r\n{ex.Message}", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+				}
 			}
 		}
 
@@ -469,7 +506,7 @@ namespace CoinFlip
 					$"  *Line gripper {col} {{ {1f - GripperWidthFrac} 0 0  1 0 0 *Width {{{GripperHeight}}} }}",
 					$"  *Line level {col} {{0 0 0 1 0 0}}",
 					$"  *Line halo {col.Alpha(0.25f)} {{0 0 0 1 0 0 *Width {{{GripperHeight * 0.75f}}} *Hidden }}",
-					$"  *Text price {{ \"{price.ToString("G8",false)}\" *Billboard *Anchor {{+1 0}} *Font{{\"tahoma\" 10 500}} *ForeColour {{FFFFFFFF}} *BackColour {{{col}}} *o2w{{*pos{{1 0 0}}}} *Format {{NoZTest}} }}",
+					$"  *Text price {{ \"{price.ToString("G8",false)}\" *Billboard *Anchor {{+1 0}} *Font{{*Name{{\"tahoma\"}} *Size{{10}} *Weight{{500}} *Colour{{FFFFFFFF}}}} *BackColour {{{col}}} *o2w{{*pos{{1 0 0}}}} *Format {{NoZTest}} }}",
 					$"}}");
 
 				Gfx = new View3d.Object(ldr, false, Id, null);

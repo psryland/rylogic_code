@@ -108,6 +108,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="src\Balance.cs" />
+    <Compile Include="src\FundsTransfer.cs" />
     <Compile Include="src\CurrencyPair.cs" />
     <Compile Include="src\Historic.cs" />
     <Compile Include="src\MarketChartData.cs" />

@@ -355,6 +355,17 @@ namespace CoinFlip
 						() => m_btn_horz_line.Checked = false));
 			};
 
+			m_btn_trend_line.ToolTipText = "Add a Trend line";
+			m_btn_trend_line.CheckOnClick = false;
+			m_btn_trend_line.Click += (s,a) =>
+			{
+				m_btn_trend_line.Checked = true;
+				ChartCtrl.MouseOperations.SetPending(MouseButtons.Left,
+					new DropNewIndicatorOp(this,
+						() => new IndicatorTrendLine(),
+						() => m_btn_trend_line.Checked = false));
+			};
+
 			#endregion
 
 			#region Chart
@@ -363,6 +374,7 @@ namespace CoinFlip
 			ChartCtrl.Dock                     = DockStyle.Fill;
 			ChartCtrl.DefaultMouseControl      = true;
 			ChartCtrl.DefaultKeyboardShortcuts = true;
+			ChartCtrl.AreaSelectMode           = ChartControl.EAreaSelectMode.Zoom;
 
 			ChartCtrl.XAxis.Options.ShowGridLines = true;
 			ChartCtrl.XAxis.Options.PixelsPerTick = 50;
@@ -391,12 +403,6 @@ namespace CoinFlip
 				ChartSettings.Style = ChartCtrl.Options;
 				Model.Settings.Save();
 			};
-			ChartCtrl.ChartAreaSelect += (s,a) =>
-			{
-				// Area select zoom if control is held down
-				ChartCtrl.PositionChart(a.SelectionArea);
-				a.Handled = true;
-			};
 
 			m_tsc.ContentPanel.Controls.Add(ChartCtrl);
 			#endregion
@@ -404,7 +410,7 @@ namespace CoinFlip
 			#region Chart Graphics
 			GfxAsk = new View3d.Object($"*Line Ask {ChartSettings.AskColour.ToArgbU():X8} {{ 0 0 0 1 0 0 }}", false, CtxId, null);
 			GfxBid = new View3d.Object($"*Line Ask {ChartSettings.BidColour.ToArgbU():X8} {{ 0 0 0 1 0 0 }}", false, CtxId, null);
-			GfxUpdatingText = new View3d.Object("*Text { \"...updating...\" *ScreenSpace *Anchor {+1 +1} *ForeColour {FF000000} *o2w{*pos{+1, +1, 0}} }", false, CtxId, null);
+			GfxUpdatingText = new View3d.Object("*Text { \"...updating...\" *ScreenSpace *Anchor {+1 +1} *Font{*Colour{FF000000}} *o2w{*pos{+1, +1, 0}} }", false, CtxId, null);
 			#endregion
 		}
 
@@ -594,7 +600,7 @@ namespace CoinFlip
 					var indy = (Indicator)hit.Hits[0].Element;
 			
 					// Create a mouse operation for dragging the indicator
-					var op = indy.CreateDragMouseOp();
+					var op = indy.CreateDragMouseOp(hit);
 					ChartCtrl.MouseOperations.SetPending(MouseButtons.Left, op);
 				}
 			}
@@ -930,8 +936,10 @@ namespace CoinFlip
 		/// <summary>Edit an existing indicator</summary>
 		private void EditIndicator(object indicator)
 		{
-			if (indicator is IndicatorHorzLine hl) { EditHorzLineIndicator(hl); return; }
-			if (indicator is IndicatorMA ma)       { EditMaIndicator(ma); return; }
+			if (indicator is IndicatorHorzLine hl)  { EditHorzLineIndicator(hl); return; }
+			if (indicator is IndicatorTrendLine tl) { EditTrendLineIndiator(tl); return; }
+			if (indicator is IndicatorMA ma)        { EditMaIndicator(ma); return; }
+
 			//if (indicator is SnRIndicator) EditSnRLevel    ((SnRIndicator)indicator);
 			//if (indicator is SnR         ) EditSnRIndicator((SnR         )indicator);
 			throw new Exception($"Unknown indicator type: {indicator.GetType().Name}");
@@ -942,6 +950,14 @@ namespace CoinFlip
 		{
 			line = line ?? Indicators.Add2(new IndicatorHorzLine());
 			using (var dlg = new EditHorzLineUI(this, line))
+				dlg.ShowDialog(this);
+		}
+
+		/// <summary>Add/Edit a trend line indicator</summary>
+		private void EditTrendLineIndiator(IndicatorTrendLine trend_line = null)
+		{
+			trend_line = trend_line ?? Indicators.Add2(new IndicatorTrendLine());
+			using (var dlg = new EditTrendLineUI(this, trend_line))
 				dlg.ShowDialog(this);
 		}
 

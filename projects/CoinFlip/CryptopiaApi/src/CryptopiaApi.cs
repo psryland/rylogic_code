@@ -308,6 +308,22 @@ namespace Cryptopia.API
 				new KV("Address", address));
 		}
 
+		/// <summary>The history of deposits and withdrawals</summary>
+		public TransactionResponse GetDeposits(int? count = null, CancellationToken? cancel = null)
+		{
+			// https://www.cryptopia.co.nz/api/GetTransactions
+			return GetData<TransactionResponse>(HttpMethod.Post, "GetTransactions", cancel,
+				new KV("Type","Deposit"),
+				new KV("Count", count));
+		}
+		public TransactionResponse GetWithdrawals(int? count = null, CancellationToken? cancel = null)
+		{
+			// https://www.cryptopia.co.nz/api/GetTransactions
+			return GetData<TransactionResponse>(HttpMethod.Post, "GetTransactions", cancel,
+				new KV("Type","Withdraw"),
+				new KV("Count", count));
+		}
+
 		#endregion
 
 		/// <summary>Helper for GETs</summary>

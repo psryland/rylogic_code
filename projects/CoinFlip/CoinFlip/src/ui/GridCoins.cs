@@ -89,7 +89,7 @@ namespace CoinFlip
 				{
 					// Find the maximum price for the available exchanges
 					a.Value =
-						Model.Settings.ShowLivePrices == false ? cd.Value.ToString("C") :
+						Model.Settings.ShowLivePrices == false ? cd.AssignedValue.ToString("C") :
 						Model.LivePriceAvailable(cd.Symbol) ? Model.MaxLiveValue(cd.Symbol).ToString("C") :
 						"---";
 					a.FormattingApplied = true;

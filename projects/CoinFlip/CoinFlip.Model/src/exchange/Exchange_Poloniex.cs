@@ -327,6 +327,47 @@ namespace CoinFlip
 			}
 		}
 
+		/// <summary>Return the deposits and withdrawals made on this exchange</summary>
+		protected override void UpdateTransfers() // worker thread context
+		{
+			try
+			{
+				var timestamp = DateTimeOffset.Now;
+
+				// Request the transfers data
+				var transfers = Api.GetTransfers(beg:m_transfers_last, end:timestamp, cancel:Shutdown.Token);
+
+				// Record the time that transfer history has been updated to
+				m_transfers_last = timestamp;
+
+				// Queue integration of the transfer history
+				Model.MarketUpdates.Add(() =>
+				{
+					// Update the collection of funds transfers
+					foreach (var dep in transfers.Deposits)
+					{
+						var deposit = TransferFrom(dep);
+						Transfers[deposit.TransactionId] = deposit;
+					}
+					foreach (var wid in transfers.Withdrawals)
+					{
+						var withdrawal = TransferFrom(wid);
+						Transfers[withdrawal.TransactionId] = withdrawal;
+					}
+
+					// Save the available range
+					TransfersInterval = new Range(TransfersInterval.Beg, timestamp.Ticks);
+
+					// Notify updated
+					Transfers.LastUpdated = timestamp;
+				});
+			}
+			catch (Exception ex)
+			{
+				HandleException(nameof(UpdateTransfers), ex);
+			}
+		}
+
 		/// <summary>Set the maximum number of requests per second to the exchange server</summary>
 		protected override void SetServerRequestRateLimit(float limit)
 		{
@@ -357,6 +398,28 @@ namespace CoinFlip
 			var commission_quote = price * volume_base * his.Fee;
 			var created          = his.Timestamp;
 			return new Historic(order_id, trade_id, pair, tt, price, volume_base, commission_quote, created, updated);
+		}
+
+		/// <summary>Convert a poloniex deposit into a 'Transfer'</summary>
+		private Transfer TransferFrom(global::Poloniex.API.Deposit dep)
+		{
+			var id        = dep.TransactionId;
+			var type      = ETransfer.Deposit;
+			var coin      = Coins.GetOrAdd(dep.Currency);
+			var amount    = dep.Amount._(coin);
+			var timestamp = dep.Timestamp.Ticks;
+			var status    = ToTransferStatus(dep.Status);
+			return new Transfer(id, type, coin, amount, timestamp, status);
+		}
+		private Transfer TransferFrom(global::Poloniex.API.Withdrawal wid)
+		{
+			var id        = wid.WithdrawalNumber.ToString();
+			var type      = ETransfer.Withdrawal;
+			var coin      = Coins.GetOrAdd(wid.Currency);
+			var amount    = wid.Amount._(coin);
+			var timestamp = wid.Timestamp.Ticks;
+			var status    = ToTransferStatus(wid.Status);
+			return new Transfer(id, type, coin, amount, timestamp, status);
 		}
 
 		/// <summary>Handle connection to Poloniex</summary>
@@ -481,6 +544,16 @@ namespace CoinFlip
 			case MarketPeriod.Hours4:    return ETimeFrame.Hour4;
 			case MarketPeriod.Day:       return ETimeFrame.Day1;
 			}
+		}
+
+		/// <summary>Convert a poloniex transfer status to a 'Transfer.EStatus'</summary>
+		private Transfer.EStatus ToTransferStatus(string status)
+		{
+			if (status.StartsWith("COMPLETE"))
+				return Transfer.EStatus.Complete;
+			if (status.StartsWith("PENDING"))
+				return Transfer.EStatus.Pending;
+			return Transfer.EStatus.Unknown;
 		}
 	}
 }

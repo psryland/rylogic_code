@@ -41,7 +41,7 @@ namespace CoinFlip
 			// Create collections
 			Exchanges     = new BindingSource<Exchange>     { DataSource = new BindingListEx<Exchange>(), PerItem = true };
 			Pairs         = new BindingSource<TradePair>    { DataSource = new BindingListEx<TradePair>() };
-			Bots          = new BindingSource<IBot>         { DataSource = new BindingListEx<IBot>(), PerItem = true };
+			Bots          = new BindingSource<IBot>         { DataSource = new BindingListEx<IBot>() };
 			Balances      = new BindingSource<Balance>      { DataSource = null, AllowNoCurrent = true };
 			Positions     = new BindingSource<Position>     { DataSource = null, AllowNoCurrent = true };
 			History       = new BindingSource<PositionFill> { DataSource = null, AllowNoCurrent = true };
@@ -406,11 +406,11 @@ namespace CoinFlip
 				if (m_bots == value) return;
 				if (m_bots != null)
 				{
+					m_bots.ListChanging -= HandleBotsListChanging;
+
 					// Dispose each bot
 					using (Scope.Create(() => m_suspend_saving_bots = true, () => m_suspend_saving_bots = false))
-						m_bots.Clear();
-
-					m_bots.ListChanging -= HandleBotsListChanging;
+						Util.DisposeAll(m_bots);
 				}
 				m_bots = value;
 				if (m_bots != null)
@@ -421,30 +421,8 @@ namespace CoinFlip
 				// Handlers
 				void HandleBotsListChanging(object sender, ListChgEventArgs<IBot> e)
 				{
-					switch (e.ChangeType)
-					{
-					case ListChg.ItemAdded:
-						{
-							e.Item.PropertyChanged += HandleBotPropertyChanged;
-							break;
-						}
-					case ListChg.ItemPreRemove:
-						{
-							e.Item.PropertyChanged -= HandleBotPropertyChanged;
-							break;
-						}
-					case ListChg.ItemRemoved:
-						{
-							Util.Dispose(e.Item);
-							break;
-						}
-					}
 					if (e.IsDataChanged && !m_suspend_saving_bots)
 						Settings.Bots = Bots.Select(x => new Settings.BotData(x)).ToArray();
-				}
-				void HandleBotPropertyChanged(object sender, PropertyChangedEventArgs e)
-				{
-					Bots.ResetItem((IBot)sender);
 				}
 			}
 		}
@@ -663,6 +641,20 @@ namespace CoinFlip
 				m_dispatcher.BeginInvoke(action);
 		}
 		private Dispatcher m_dispatcher;
+
+		/// <summary>Block the current thread (while pumping market data updates) until 'condition' returns false</summary>
+		public bool WaitWhile(Func<bool> condition, TimeSpan timeout)
+		{
+			var now = UtcNow;
+			for (; condition(); Thread.Yield())
+			{
+				// Ensure one loop occurs, even if 'timeout' is zero
+				IntegrateMarketUpdates();
+				if (UtcNow - now >= timeout)
+					return false;
+			}
+			return true;
+		}
 
 		/// <summary>Update the data sources for the exchange specific data</summary>
 		private void UpdateExchangeDetails()

@@ -300,6 +300,53 @@ namespace CoinFlip
 			}
 		}
 
+		/// <summary>Return the deposits and withdrawals made on this exchange</summary>
+		protected override void UpdateTransfers() // worker thread context
+		{
+			try
+			{
+				var timestamp = DateTimeOffset.Now;
+
+				// Request the transfers data
+				var deposits = Api.GetDeposits(cancel:Shutdown.Token);
+				if (!deposits.Success)
+					throw new Exception("Bittrex: Failed to update deposits history. {0}".Fmt(deposits.Message));
+
+				var withdrawals = Api.GetWithdrawals(cancel:Shutdown.Token);
+				if (!withdrawals.Success)
+					throw new Exception("Bittrex: Failed to update withdrawals history. {0}".Fmt(withdrawals.Message));
+
+				// Record the time that transfer history has been updated to
+				m_transfers_last = timestamp;
+
+				// Queue integration of the transfer history
+				Model.MarketUpdates.Add(() =>
+				{
+					// Update the collection of funds transfers
+					foreach (var dep in deposits.Data)
+					{
+						var deposit = TransferFrom(dep, ETransfer.Deposit);
+						Transfers[deposit.TransactionId] = deposit;
+					}
+					foreach (var wid in withdrawals.Data)
+					{
+						var withdrawal = TransferFrom(wid, ETransfer.Withdrawal);
+						Transfers[withdrawal.TransactionId] = withdrawal;
+					}
+
+					// Save the available range
+					TransfersInterval = new Range(TransfersInterval.Beg, timestamp.Ticks);
+
+					// Notify updated
+					Transfers.LastUpdated = timestamp;
+				});
+			}
+			catch (Exception ex)
+			{
+				HandleException(nameof(UpdateTransfers), ex);
+			}
+		}
+
 		/// <summary>Set the maximum number of requests per second to the exchange server</summary>
 		protected override void SetServerRequestRateLimit(float limit)
 		{
@@ -337,6 +384,17 @@ namespace CoinFlip
 			return new Historic(order_id, trade_id, pair, tt, price, volume_base, commission_quote, created, updated);
 		}
 
+		/// <summary>Convert a poloniex deposit into a 'Transfer'</summary>
+		private Transfer TransferFrom(global::Bittrex.API.Transfer xfr, ETransfer type)
+		{
+			var id        = xfr.TxId;
+			var coin      = Coins.GetOrAdd(xfr.Currency);
+			var amount    = xfr.Amount._(coin);
+			var timestamp = xfr.Timestamp.Ticks;
+			var status    = ToTransferStatus(xfr);
+			return new Transfer(id, type, coin, amount, timestamp, status);
+		}
+
 		/// <summary>Convert a Bittrex UUID to a CoinFlip order id (ULONG)</summary>
 		private TradeIdPair ToIdPair(Guid guid)
 		{
@@ -355,6 +413,18 @@ namespace CoinFlip
 		private Guid ToUuid(ulong order_id)
 		{
 			return m_order_id_lookup[order_id];
+		}
+
+		/// <summary>Convert boolean in 'xfr' into a transfer status</summary>
+		private Transfer.EStatus ToTransferStatus(global::Bittrex.API.Transfer xfr)
+		{
+			if (xfr.PendingPayment)
+				return Transfer.EStatus.Pending;
+			if (xfr.Cancelled)
+				return Transfer.EStatus.Cancelled;
+			if (xfr.Authorized)
+				return Transfer.EStatus.Complete;
+			return Transfer.EStatus.Unknown;
 		}
 
 		/// <summary>Convert a Guid into a trade id/order id pair</summary>
