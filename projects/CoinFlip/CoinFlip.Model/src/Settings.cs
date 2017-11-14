@@ -417,47 +417,51 @@ namespace CoinFlip
 			{}
 			public ChartSettings(string symbol_code)
 			{
-				SymbolCode          = symbol_code ?? string.Empty;
-				TimeFrame           = ETimeFrame.Hour12;
-				m_style             = null;
-				m_ask_colour        = null;
-				m_bid_colour        = null;
-				m_show_positions    = null;
-				m_show_market_depth = null;
-				Indicators          = null;
+				SymbolCode           = symbol_code ?? string.Empty;
+				TimeFrame            = ETimeFrame.Hour12;
+				m_style              = null;
+				m_ask_colour         = null;
+				m_bid_colour         = null;
+				m_show_positions     = null;
+				m_show_trade_history = null;
+				m_show_market_depth  = null;
+				Indicators           = null;
 			}
 			public ChartSettings(ChartSettings rhs)
 			{
-				Inherit             = rhs.Inherit;
-				SymbolCode          = rhs.SymbolCode;
-				TimeFrame           = rhs.TimeFrame;
-				m_style             = rhs.m_style;
-				m_ask_colour        = rhs.m_ask_colour;
-				m_bid_colour        = rhs.m_bid_colour;
-				m_show_positions    = rhs.m_show_positions;
-				m_show_market_depth = rhs.m_show_market_depth;
-				Indicators          = new XElement(rhs.Indicators);
+				Inherit              = rhs.Inherit;
+				SymbolCode           = rhs.SymbolCode;
+				TimeFrame            = rhs.TimeFrame;
+				m_style              = rhs.m_style;
+				m_ask_colour         = rhs.m_ask_colour;
+				m_bid_colour         = rhs.m_bid_colour;
+				m_show_positions     = rhs.m_show_positions;
+				m_show_trade_history = rhs.m_show_trade_history;
+				m_show_market_depth  = rhs.m_show_market_depth;
+				Indicators           = new XElement(rhs.Indicators);
 			}
 			public ChartSettings(XElement node)
 			{
-				SymbolCode          = node.Element(nameof(SymbolCode     )).As(SymbolCode         );
-				TimeFrame           = node.Element(nameof(TimeFrame      )).As(TimeFrame          );
-				m_style             = node.Element(nameof(Style          )).As(m_style            );
-				m_ask_colour        = node.Element(nameof(AskColour      )).As(m_ask_colour       );
-				m_bid_colour        = node.Element(nameof(BidColour      )).As(m_bid_colour       );
-				m_show_positions    = node.Element(nameof(ShowPositions  )).As(m_show_positions   );
-				m_show_market_depth = node.Element(nameof(ShowMarketDepth)).As(m_show_market_depth);
-				Indicators          = node.Element(nameof(Indicators     )).As(Indicators         );
+				SymbolCode           = node.Element(nameof(SymbolCode      )).As(SymbolCode          );
+				TimeFrame            = node.Element(nameof(TimeFrame       )).As(TimeFrame           );
+				m_style              = node.Element(nameof(Style           )).As(m_style             );
+				m_ask_colour         = node.Element(nameof(AskColour       )).As(m_ask_colour        );
+				m_bid_colour         = node.Element(nameof(BidColour       )).As(m_bid_colour        );
+				m_show_positions     = node.Element(nameof(ShowPositions   )).As(m_show_positions    );
+				m_show_trade_history = node.Element(nameof(ShowTradeHistory)).As(m_show_trade_history);
+				m_show_market_depth  = node.Element(nameof(ShowMarketDepth )).As(m_show_market_depth );
+				Indicators           = node.Element(nameof(Indicators      )).As(Indicators          );
 			}
 			public XElement ToXml(XElement node)
 			{
-				node.Add2(nameof(SymbolCode     ), SymbolCode         , false);
-				node.Add2(nameof(TimeFrame      ), TimeFrame          , false);
-				node.Add2(nameof(Style          ), m_style            , false);
-				node.Add2(nameof(AskColour      ), m_ask_colour       , false);
-				node.Add2(nameof(BidColour      ), m_bid_colour       , false);
-				node.Add2(nameof(ShowPositions  ), m_show_positions   , false);
-				node.Add2(nameof(ShowMarketDepth), m_show_market_depth, false);
+				node.Add2(nameof(SymbolCode      ), SymbolCode           , false);
+				node.Add2(nameof(TimeFrame       ), TimeFrame            , false);
+				node.Add2(nameof(Style           ), m_style              , false);
+				node.Add2(nameof(AskColour       ), m_ask_colour         , false);
+				node.Add2(nameof(BidColour       ), m_bid_colour         , false);
+				node.Add2(nameof(ShowPositions   ), m_show_positions     , false);
+				node.Add2(nameof(ShowTradeHistory), m_show_trade_history , false);
+				node.Add2(nameof(ShowMarketDepth ), m_show_market_depth  , false);
 				node.Add2(Indicators);
 				return node;
 			}
@@ -541,6 +545,16 @@ namespace CoinFlip
 			}
 			private const bool m_def_show_positions = false;
 			private bool? m_show_positions;
+
+			/// <summary>Show trade history graphics</summary>
+			public EShowTradeHistory ShowTradeHistory
+			{
+				get { return m_show_trade_history ?? Inherit?.ShowTradeHistory ?? m_def_show_trade_history; }
+				set { SetProp(nameof(m_show_trade_history), value, m_def_show_trade_history, nameof(ShowTradeHistory)); }
+			}
+			private const EShowTradeHistory m_def_show_trade_history = EShowTradeHistory.Disabled;
+			private EShowTradeHistory? m_show_trade_history;
+			public enum EShowTradeHistory { Disabled, Selected, All }
 
 			/// <summary>Show current market depth</summary>
 			public bool ShowMarketDepth

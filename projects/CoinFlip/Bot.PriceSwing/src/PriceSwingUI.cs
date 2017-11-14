@@ -29,15 +29,15 @@ namespace Bot.PriceSwing
 		private ValueBox m_tb_volume_frac;
 		#endregion
 
-		public PriceSwingUI(PriceSwing price_swing)
+		public PriceSwingUI(PriceSwing bot)
 		{
 			InitializeComponent();
-			Bot = price_swing;
+			Bot = bot;
 
 			// Support for dock container controls
-			DockControl = new DockControl(this, price_swing.Name)
+			DockControl = new DockControl(this, bot.Name)
 			{
-				TabText = price_swing.Name,
+				TabText = bot.Name,
 				DefaultDockLocation = new[]{ EDockSite.Bottom },
 			};
 

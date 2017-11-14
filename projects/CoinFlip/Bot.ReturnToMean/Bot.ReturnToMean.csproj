@@ -33,6 +33,8 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -43,6 +45,9 @@
   <ItemGroup>
     <Compile Include="src\ReturnToMean.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="src\ReturnToMeanUI.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Rylogic\Rylogic.csproj">
@@ -53,6 +58,11 @@
       <Project>{2be1f961-7b09-469b-bbc8-a68eca8fabc6}</Project>
       <Name>CoinFlip.Model</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="src\ReturnToMeanUI.resx">
+      <DependentUpon>ReturnToMeanUI.cs</DependentUpon>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

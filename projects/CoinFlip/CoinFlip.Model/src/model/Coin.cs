@@ -44,8 +44,14 @@ namespace CoinFlip
 			get { return Exchange.Balance[this]; }
 		}
 
+		/// <summary>The value of 1 unit of this currency (Live if available, falling back to assigned)</summary>
+		public decimal Value
+		{
+			get { return ValueOf(1m); }
+		}
+
 		/// <summary>Return the value of 'amount' units of this currency</summary>
-		public decimal Value(decimal amount)
+		public Unit<decimal> ValueOf(decimal amount)
 		{
 			// Live price is only available for coins of interest
 			if (Model.Settings.ShowLivePrices/* && Meta.OfInterest*/)
@@ -80,11 +86,11 @@ namespace CoinFlip
 
 				// Return the live price if it could be determined
 				if (valid && value.HasValue)
-					return value.Value;
+					return value.Value._(Symbol);
 			}
 
 			// Otherwise, fall back to using the given value for the currency
-			return Meta.AssignedValue * amount;
+			return (Meta.AssignedValue * amount)._(Symbol);
 		}
 
 		/// <summary>True if the live price can be found using the LivePriceSymbols</summary>

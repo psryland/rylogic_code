@@ -28,6 +28,7 @@ namespace CoinFlip
 		private ToolStripLabel m_lbl_exchange;
 		private System.Windows.Forms.ToolStripComboBox m_cb_exchange;
 		private ToolStripButton m_chk_common_value;
+		private ToolStripButton m_btn_combined;
 		private ChartControl m_chart;
 		#endregion
 
@@ -286,7 +287,8 @@ namespace CoinFlip
 				var coins = exchanges.SelectMany(x => x.CoinsOfInterest).ToList();
 				var transfers = exchanges.SelectMany(x => x.Transfers.Values).ToList();
 				var balances = coins.ToAccumulator(x => x.Symbol, x => (double)(decimal)x.Balance.Total);
-				var assigned_values = Model.Settings.Coins.ToDictionary(x => x.Symbol, x => UseAssignedValues ? (double)x.AssignedValue : 1.0);
+				var assigned_values = Model.Settings.Coins.ToDictionary(x => x.Symbol, x => (double)x.AssignedValue);
+				var use_assigned_values = UseAssignedValues;
 				var time_scale = TimeScale;
 				var now = Model.UtcNow.Ticks;
 
@@ -314,20 +316,17 @@ namespace CoinFlip
 						// Generate a new equity map
 						var equity = new EquityMap(this);
 
-						// For each coin, start with the current balance and work backwards
-						// through the trades, deposits, and withdrawals.
+						// For each coin, get the changes in balance due to trades, deposits, and withdrawals
 						foreach (var sym in balances.Keys)
 						{
 							// Abort if another update is pending
 							if (m_data_update.Pending)
 								return;
 
-							// Create series data for this currency
 							var series = equity[sym];
 							using (var table = series.Lock())
 							{
 								// Generate a collection of balance deltas with timestamps
-								table.Add(new ChartDataSeries.Pt(now, 0.0));
 								foreach (var xfr in transfers.Where(x => x.Coin.Symbol == sym && x.Status == Transfer.EStatus.Complete))
 								{
 									table.Add(new ChartDataSeries.Pt(xfr.Timestamp, (xfr.Type == ETransfer.Deposit ? +1 : -1) * (double)(decimal)xfr.Amount));
@@ -343,25 +342,67 @@ namespace CoinFlip
 										table.Add(new ChartDataSeries.Pt(trade.Timestamp, +(double)(decimal)trade.VolumeNett));
 								}
 
+								// Add entries for the start time and the current time
+								table.Add(new ChartDataSeries.Pt(now, 0.0));
+								table.Add(new ChartDataSeries.Pt(0, 0.0));
+
 								// Sort the balance deltas by time
 								table.SortI();
 
-								// Get the time range covered
+								// Encompass the actual time range
+								equity.TimeRange.Encompass(table[1].xi);
 								equity.TimeRange.Encompass(now);
-								equity.TimeRange.Encompass(table[0].xi);
+							}
+						}
+
+						// For each coin, convert the balance deltas to absolute balances
+						foreach (var sym in balances.Keys)
+						{
+							// Abort if another update is pending
+							if (m_data_update.Pending)
+								return;
+
+							var series = equity[sym];
+							using (var table = series.Lock())
+							{
+								// Set the time stamp of the first point to the same start time for all currencies
+								table[0].xi = equity.TimeRange.Beg;
 
 								// Start with the current balance and work backwards converting
 								// the deltas to absolute amounts, and the timestamps to TimeScale units.
+								var delta = 0.0;
 								var bal = balances[sym];
-								var value = assigned_values[sym];
+								var value = use_assigned_values ? assigned_values[sym] : 1.0;
 								for (int i = table.Count; i-- != 0;)
 								{
-									bal -= table[i].yf;
+									delta = table[i].yf;
 									table[i].xf = Misc.TicksToTimeFrame(table[i].xi - equity.TimeRange.Beg, time_scale);
 									table[i].yf = bal * value;
+
+									// Adjust the balance by the balance delta
+									bal -= delta;
 								}
 							}
 						}
+
+						// Generate the 'Nett' equity data as the sum of the equity of each currency using assigned values
+						var sum = new List<ChartDataSeries.Pt>();
+						foreach (var sym in balances.Keys)
+						{
+							var series = equity[sym];
+							using (var sym_table = series.Lock())
+							{
+								// Merge the data sets
+								sum = Enumerable_.ZipDistinct(sum, sym_table.Data,
+									new ChartDataSeries.Pt(0.0f,0.0f),
+									(l,r) => new ChartDataSeries.Pt(r.xf, l.yf + r.yf),
+									(l,r) => l.xf.CompareTo(r.xf))
+									.ToList();
+							}
+						}
+						var nett = equity["Nett"];
+						using (var nett_table = nett.Lock())
+							nett_table.Data.AddRange(sum);
 
 						// Update the equity data
 						this.BeginInvoke(() =>
@@ -451,8 +492,9 @@ namespace CoinFlip
 			this.m_ts = new System.Windows.Forms.ToolStrip();
 			this.m_lbl_exchange = new System.Windows.Forms.ToolStripLabel();
 			this.m_cb_exchange = new System.Windows.Forms.ToolStripComboBox();
-			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
 			this.m_chk_common_value = new System.Windows.Forms.ToolStripButton();
+			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
+			this.m_btn_combined = new System.Windows.Forms.ToolStripButton();
 			this.m_table0.SuspendLayout();
 			this.m_ts.SuspendLayout();
 			this.SuspendLayout();
@@ -522,7 +564,8 @@ namespace CoinFlip
 			this.m_ts.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_lbl_exchange,
             this.m_cb_exchange,
-            this.m_chk_common_value});
+            this.m_chk_common_value,
+            this.m_btn_combined});
 			this.m_ts.Location = new System.Drawing.Point(0, 0);
 			this.m_ts.Name = "m_ts";
 			this.m_ts.Size = new System.Drawing.Size(826, 25);
@@ -544,12 +587,19 @@ namespace CoinFlip
 			// m_chk_common_value
 			// 
 			this.m_chk_common_value.CheckOnClick = true;
-			this.m_chk_common_value.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
 			this.m_chk_common_value.Image = ((System.Drawing.Image)(resources.GetObject("m_chk_common_value.Image")));
 			this.m_chk_common_value.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_chk_common_value.Name = "m_chk_common_value";
-			this.m_chk_common_value.Size = new System.Drawing.Size(93, 22);
+			this.m_chk_common_value.Size = new System.Drawing.Size(109, 22);
 			this.m_chk_common_value.Text = "Common Value";
+			// 
+			// m_btn_combined
+			// 
+			this.m_btn_combined.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_combined.Image")));
+			this.m_btn_combined.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_combined.Name = "m_btn_combined";
+			this.m_btn_combined.Size = new System.Drawing.Size(50, 22);
+			this.m_btn_combined.Text = "Nett";
 			// 
 			// EquityUI
 			// 

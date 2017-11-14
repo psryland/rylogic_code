@@ -506,7 +506,7 @@ namespace CoinFlip
 					$"  *Line gripper {col} {{ {1f - GripperWidthFrac} 0 0  1 0 0 *Width {{{GripperHeight}}} }}",
 					$"  *Line level {col} {{0 0 0 1 0 0}}",
 					$"  *Line halo {col.Alpha(0.25f)} {{0 0 0 1 0 0 *Width {{{GripperHeight * 0.75f}}} *Hidden }}",
-					$"  *Text price {{ \"{price.ToString("G8",false)}\" *Billboard *Anchor {{+1 0}} *Font{{*Name{{\"tahoma\"}} *Size{{10}} *Weight{{500}} *Colour{{FFFFFFFF}}}} *BackColour {{{col}}} *o2w{{*pos{{1 0 0}}}} *Format {{NoZTest}} }}",
+					$"  *Text price {{ \"{price.ToString("G8",false)}\" *Billboard *Anchor {{+1 0}} *Font{{*Name{{\"tahoma\"}} *Size{{8}} *Weight{{500}} *Colour{{FFFFFFFF}}}} *BackColour {{{col}}} *o2w{{*pos{{1 0 0}}}} *Format {{NoZTest}} }}",
 					$"}}");
 
 				Gfx = new View3d.Object(ldr, false, Id, null);

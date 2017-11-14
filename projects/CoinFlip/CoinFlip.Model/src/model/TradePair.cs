@@ -131,6 +131,16 @@ namespace CoinFlip
 			throw new Exception("'coin' is not in this pair");
 		}
 
+		/// <summary>Enumerate the coins of this pair</summary>
+		public IEnumerable<Coin> Coins
+		{
+			get
+			{
+				yield return Base;
+				yield return Quote;
+			}
+		}
+
 		/// <summary>The order books for this pair</summary>
 		public MarketDepth MarketDepth { [DebuggerStepThrough] get; private set; }
 

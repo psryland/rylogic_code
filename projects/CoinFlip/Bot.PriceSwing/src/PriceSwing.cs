@@ -37,7 +37,7 @@ namespace Bot.PriceSwing
 		{
 			TradeRecords = new BindingSource<TradeRecord>{ DataSource = new BindingListEx<TradeRecord>{ PerItem = true } };
 			PendingTradeRecords = new List<TradeRecord>();
-			PriceSwingUI = new PriceSwingUI(this);
+			UI = new PriceSwingUI(this);
 			GfxTemplate = new View3d.Object("*Line trade FFFFFFFF { -2 0 0 +2 0 0 }", false, Id);
 			m_rng = new Random(653);
 		}
@@ -45,13 +45,14 @@ namespace Bot.PriceSwing
 		{
 			Pair = null;
 			TradeRecords = null;
-			PriceSwingUI = null;
+			UI = null;
 			GfxTemplate = null;
 			base.Dispose(disposing);
 		}
-		protected override void HandlePairsListChanging(object sender, ListChgEventArgs<TradePair> e)
+		protected override void HandlePairsUpdated(object sender, EventArgs e)
 		{
-			RestorePair();
+			if (Pair != null) return;
+			LoadPair();
 		}
 
 		/// <summary>Settings for this strategy</summary>
@@ -60,18 +61,18 @@ namespace Bot.PriceSwing
 			get { return (SettingsData)base.Settings; }
 		}
 
-		/// <summary>The UI for displaying the loops</summary>
-		public PriceSwingUI PriceSwingUI
+		/// <summary>The UI for monitoring this bot</summary>
+		public PriceSwingUI UI
 		{
-			get { return m_price_swing_ui; }
+			get { return m_ui; }
 			private set
 			{
-				if (m_price_swing_ui == value) return;
-				Util.Dispose(ref m_price_swing_ui);
-				m_price_swing_ui = value;
+				if (m_ui == value) return;
+				Util.Dispose(ref m_ui);
+				m_ui = value;
 			}
 		}
-		private PriceSwingUI m_price_swing_ui;
+		private PriceSwingUI m_ui;
 
 		/// <summary>The pair to trade</summary>
 		public TradePair Pair
@@ -141,18 +142,18 @@ namespace Bot.PriceSwing
 		public List<TradeRecord> PendingTradeRecords { get; private set; }
 
 		/// <summary>Start the bot</summary>
-		public override void OnStart()
+		public override bool OnStart()
 		{
-			RestorePair();
+			LoadPair();
 			if (Pair == null)
 			{
-				Model.AddToUI(PriceSwingUI);
-				PriceSwingUI.DockControl.IsActiveContent = true;
+				Model.AddToUI(UI);
+				UI.DockControl.IsActiveContent = true;
+				return false;
 			}
-			else
-			{
-				LoadTradesRecord();
-			}
+
+			LoadTradesRecord();
+			return true;
 		}
 
 		/// <summary>Stop the bot</summary>
@@ -333,8 +334,8 @@ namespace Bot.PriceSwing
 				// Log the win
 				var nett0 = his.VolumeOut - rec.VolumeIn;
 				var nett1 = rec.VolumeOut - his.VolumeIn;
-				var value0 = his.CoinOut.Value(nett0);
-				var value1 = his.CoinIn.Value(nett1);
+				var value0 = his.CoinOut.ValueOf(nett0);
+				var value1 = his.CoinIn.ValueOf(nett1);
 				var sum = value0 + value1;
 
 				var msg = Str.Build(
@@ -396,13 +397,13 @@ namespace Bot.PriceSwing
 				var opt = cmenu.Items.Add2(new ToolStripMenuItem("Monitor"));
 				opt.Click += (s,a) =>
 				{
-					Model.AddToUI(PriceSwingUI);
-					PriceSwingUI.DockControl.IsActiveContent = true;
+					Model.AddToUI(UI);
+					UI.DockControl.IsActiveContent = true;
 				};
 			}
 		}
 
-		/// <summary>Add graphics to an chart displaying 'Pair'</summary>
+		/// <summary>Add graphics to a chart displaying 'Pair'</summary>
 		public override void OnChartRendering(Instrument instrument, Settings.ChartSettings chart_settings, ChartControl.ChartRenderingEventArgs args)
 		{
 			if (instrument.Pair != Pair)
@@ -425,9 +426,8 @@ namespace Bot.PriceSwing
 		}
 
 		/// <summary>Attempt to set 'Pair' to the pair recorded in the settings</summary>
-		private void RestorePair()
+		private void LoadPair()
 		{
-			if (Pair != null) return;
 			Pair = Model.Pairs.FirstOrDefault(x => x.NameWithExchange == Settings.PairWithExchange);
 		}
 

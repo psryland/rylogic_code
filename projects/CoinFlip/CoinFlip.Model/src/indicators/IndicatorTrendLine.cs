@@ -36,6 +36,29 @@ namespace CoinFlip
 			Gfx = null;
 			base.Dispose(disposing);
 		}
+		protected override void SetChartCore(ChartControl chart)
+		{
+			if (Chart != null)
+			{
+				Chart.MouseDown -= HandleMouseDown;
+			}
+			base.SetChartCore(chart);
+			if (Chart != null)
+			{
+				Chart.MouseDown += HandleMouseDown;
+			}
+
+			// Handlers
+			void HandleMouseDown(object sender, MouseEventArgs args)
+			{
+				if (Hovered && args.Button == MouseButtons.Left)
+				{
+					var t = ClosestClientPoint(args.Location, out var dist);
+					var grab = t == 0f ? EGrab.Beg : t == 1f ? EGrab.End : EGrab.Line;
+					Chart.MouseOperations.SetPending(MouseButtons.Left, new DragLine(this, grab));
+				}
+			}
+		}
 
 		/// <summary>Settings for this indicator</summary>
 		public SettingsData Settings
@@ -56,16 +79,40 @@ namespace CoinFlip
 		}
 		private View3d.Object m_gfx;
 
+		/// <summary>The start point of the trend line in chart space</summary>
+		public v2 ChartBeg
+		{
+			get
+			{
+				// Convert the trend line start/end points to screen space
+				var bx = (float)Instrument.FIndexAt(new TimeFrameTime(Settings.BegX, Instrument.TimeFrame));
+				var by = (float)Settings.BegY;
+				return new v2(bx, by);
+			}
+		}
+
+		/// <summary>The end point of the trend line in chart space</summary>
+		public v2 ChartEnd
+		{
+			get
+			{
+				// Convert the trend line start/end points to screen space
+				var ex = (float)Instrument.FIndexAt(new TimeFrameTime(Settings.EndX, Instrument.TimeFrame));
+				var ey = (float)Settings.EndY;
+				return new v2(ex, ey);
+			}
+		}
+
 		/// <summary>Update the graphics model for this indicator</summary>
 		protected override void UpdateGfxCore()
 		{
-			var line_colour = Selected ? Settings.Colour.Lerp(Colour32.Gray, 0.5f) : Settings.Colour;
-
+			var line_colour = Settings.Colour;
 			var ldr = Str.Build(
-				$"*Line {Name} {line_colour}\n",
-				$"{{\n",
-				$" 0 0 0  1 0 0\n",
-				$" *Point grab {{ 0 0 0  1 0 0  *Width {{{20}}} *Hidden }}\n",
+				$"*Group {Name} ",
+				$"{{",
+				$"  *Line line {line_colour} {{0 0 0  1 0 0}}\n",
+				$"  *Line halo {line_colour.Alpha(0.25f)} {{0 0 0  1 0 0 *Width {{{16}}} }}\n",
+				$"  *Point grab {line_colour} {{ 0 0 0  1 0 0  *Width {{{20}}} *Style{{Circle}} }}\n",
 				$"}}\n");
 
 			Gfx = new View3d.Object(ldr, false, Id);
@@ -81,19 +128,29 @@ namespace CoinFlip
 			// Add to the scene
 			if (Visible)
 			{
-				var tf = Instrument.TimeFrame;
-				var extrap = Settings.Extrapolate;
-				var bx = Misc.TicksToTimeFrame(Settings.BegX, tf);
-				var ex = Misc.TicksToTimeFrame(Settings.EndX, tf);
-				var by = Settings.BegY;
-				var ey = Settings.EndY;
-				var x = new v4((float)(ex - bx), (float)(ey - by), 1f, 0f);
-				var y = v4.Cross3(v4.ZAxis, x);
-				var z = v4.ZAxis;
-				var p = new v4((float)bx, (float)by, ZOrder.Indicators, 1f);
+				Gfx.Child("halo").Visible = Hovered || m_dragging;
+				Gfx.Child("grab").Visible = Hovered || m_dragging;
 
+				var tf = Instrument.TimeFrame;
+				var b = ChartBeg;
+				var e = ChartEnd;
+				var d = e - b;
+				if (Settings.Extrapolate)
+				{
+					// X bound, else Y bound
+					var scale = d.x * Chart.YAxis.Span > d.y * Chart.XAxis.Span
+						? (float)(Chart.XAxis.Span / Math.Abs(d.x))  // X-bound
+						: (float)(Chart.YAxis.Span / Math.Abs(d.y)); // Y-bound
+
+					Gfx.Child("line").O2P = m4x4.Scale(scale, 1f, 1f, v4.Origin);
+				}
+	
 				// Create the transform
-				Gfx.O2P = new m4x4(x, y, z, p);
+				Gfx.O2P = new m4x4(
+					(!Maths.FEql(d.Length2Sq,0) ? m3x4.Rotation(v4.XAxis, new v4(d,0,0)) : m3x4.Identity) *
+					m3x4.Scale(d.Length2,1,1),
+					new v4(b, ZOrder.Indicators, 1f));
+
 				window.AddObject(Gfx);
 			}
 			else
@@ -105,66 +162,105 @@ namespace CoinFlip
 		/// <summary>Hit test this indicator</summary>
 		public override ChartControl.HitTestResult.Hit HitTest(PointF chart_point, Point client_point, Keys modifier_keys, View3d.Camera cam)
 		{
-			// todo, hit test and include the grab location
-			return null;
+			var t = ClosestClientPoint(client_point, out var dist);
+			if (dist > Chart.Options.MinSelectionDistance)
+				return null;
+
+			if (t == 0f) return new ChartControl.HitTestResult.Hit(this, ChartBeg, null);
+			if (t == 1f) return new ChartControl.HitTestResult.Hit(this, ChartEnd, null);
+			return new ChartControl.HitTestResult.Hit(this, (1-t)*ChartBeg + t*ChartEnd, null);
+		}
+
+		/// <summary>Test a screen space point against this line</summary>
+		private float ClosestClientPoint(PointF client_point, out float dist)
+		{
+			dist = float.MaxValue;
+			if (Instrument == null || Instrument.Count == 0)
+				return 0f;
+
+			// Convert the trend line start/end points to screen space
+			var b_chart = ChartBeg;
+			var e_chart = ChartEnd;
+
+			// Screen space beg, end, line, point
+			var b = new v2(Chart.ChartToClient(b_chart.ToPointF()));
+			var e = new v2(Chart.ChartToClient(e_chart.ToPointF()));
+			var p = new v2(client_point);
+
+			// Prioritise the end points over the line
+			dist = (e - p).Length2;
+			if (dist < Chart.Options.MinSelectionDistance)
+				return 1f;
+
+			dist = (b - p).Length2;
+			if (dist < Chart.Options.MinSelectionDistance)
+				return 0f;
+
+			// Find the closest point, on the line 'b->e' to 'p'.
+			var t = Geometry.ClosestPoint(b, e, p);
+			t = Maths.Clamp(t, 0f, Settings.Extrapolate ? t : 1f);
+			dist = (b + t*(e - b) - p).Length2;
+			return t;
 		}
 
 		/// <summary>Allow this indicator to be dragged</summary>
 		public override bool Dragable { get { return true; } }
 		public override ChartControl.MouseOp CreateDragMouseOp(ChartControl.HitTestResult hit)
 		{
-			return new DragLine(this, hit);
+			var t = ClosestClientPoint(hit.ClientPoint, out var dist);
+			var grab = t == 0f ? EGrab.Beg : t == 1f ? EGrab.End : EGrab.Line;
+			return new DragLine(this, grab);
 		}
-
-		/// <summary>Grab locations on the line</summary>
-		private enum EGrab { Start, Line, End }
+		private bool m_dragging;
 
 		/// <summary>A mouse operation for dragging the horizontal line around</summary>
 		public class DragLine :ChartControl.MouseOp
 		{
 			private readonly IndicatorTrendLine m_line;
+			private v2 m_beg, m_end;
 			private EGrab m_grab;
 
-			public DragLine(IndicatorTrendLine line, ChartControl.HitTestResult hit)
+			public DragLine(IndicatorTrendLine line, EGrab grab)
 				:base(line.Chart)
 			{
 				m_line = line;
 				m_line.Selected = true;
-
-				m_grab = EGrab.Line; //(EGrab)hit.Hits[0].Context
+				m_beg = line.ChartBeg;
+				m_end = line.ChartEnd;
+				m_grab = grab;
+				m_line.m_dragging = true;
 			}
 			public override void Dispose()
 			{
+				m_line.m_dragging = false;
 				m_line.Selected = false;
 				base.Dispose();
 			}
-			public override void MouseDown(MouseEventArgs e)
-			{
-				base.MouseDown(e);
-			}
 			public override void MouseMove(MouseEventArgs e)
 			{
-				var chart_pt = m_chart.ClientToChart(e.Location);
+				var chart_pt = new v2(m_chart.ClientToChart(e.Location));
+				var chart_grab = new v2(m_grab_chart);
 				switch (m_grab)
 				{
-				case EGrab.Start:
+				case EGrab.Beg:
 					{
-						m_line.Settings.BegX = (long)Misc.TimeFrameToTicks(chart_pt.X, m_line.Instrument.TimeFrame);
-						m_line.Settings.BegY = (decimal)chart_pt.Y;
+						m_line.Settings.BegX = m_line.Instrument.TimeAtFIndex(chart_pt.x);
+						m_line.Settings.BegY = (decimal)chart_pt.y;
 						break;
 					}
 				case EGrab.End:
 					{
-						m_line.Settings.EndX = (long)Misc.TimeFrameToTicks(chart_pt.X, m_line.Instrument.TimeFrame);
-						m_line.Settings.EndY = (decimal)chart_pt.Y;
+						m_line.Settings.EndX = m_line.Instrument.TimeAtFIndex(chart_pt.x);
+						m_line.Settings.EndY = (decimal)chart_pt.y;
 						break;
 					}
 				case EGrab.Line:
 					{
-				//		m_line.Settings.BegX = (long)Misc.TimeFrameToTicks(chart_pt.X, m_line.Instrument.TimeFrame);
-				//		m_line.Settings.BegY = (decimal)chart_pt.Y;
-				//		m_line.Settings.EndX = (long)Misc.TimeFrameToTicks(chart_pt.X, m_line.Instrument.TimeFrame);
-				//		m_line.Settings.EndY = (decimal)chart_pt.Y;
+						var ofs = chart_pt - m_grab_chart;
+						m_line.Settings.BegX = m_line.Instrument.TimeAtFIndex(m_beg.x + ofs.x);
+						m_line.Settings.BegY = (decimal)(m_beg.y + ofs.y);
+						m_line.Settings.EndX = m_line.Instrument.TimeAtFIndex(m_end.x + ofs.x);
+						m_line.Settings.EndY = (decimal)(m_end.y + ofs.y);
 						break;
 					}
 				}
@@ -172,6 +268,9 @@ namespace CoinFlip
 				m_chart.Update();
 			}
 		}
+
+		/// <summary>Grab locations on the line</summary>
+		public enum EGrab { Beg, Line, End }
 
 		#region Settings
 		[TypeConverter(typeof(TyConv))]

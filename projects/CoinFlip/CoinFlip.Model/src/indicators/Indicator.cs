@@ -54,7 +54,7 @@ namespace CoinFlip
 				{
 					m_instrument.DataChanged += HandleInstrumentDataChanged;
 				}
-				ResetRequired = true;
+				Reset();
 			}
 		}
 		private Instrument m_instrument;
@@ -107,11 +107,8 @@ namespace CoinFlip
 		/// <summary>Update the graphics model for this indicator</summary>
 		protected override void UpdateGfxCore()
 		{
-			base.UpdateGfxCore();
-
 			// Recreate underlying data if necessary
-			if (ResetRequired)
-				Reset();
+			ResetIfRequired();
 		}
 
 		/// <summary>Get/Set a flag to indicator the underlying data need recalculating</summary>
@@ -124,6 +121,11 @@ namespace CoinFlip
 			Invalidate();
 			OnDataChanged();
 			ResetRequired = false;
+		}
+		public void ResetIfRequired()
+		{
+			if (!ResetRequired) return;
+			Reset();
 		}
 		protected virtual void ResetCore()
 		{}

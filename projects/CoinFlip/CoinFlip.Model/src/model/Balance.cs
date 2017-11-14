@@ -113,7 +113,7 @@ namespace CoinFlip
 		/// <summary>Get the value of this balance</summary>
 		public decimal Value
 		{
-			get { return Coin.Value(Total); }
+			get { return Coin.ValueOf(Total); }
 		}
 
 		/// <summary>The maximum amount that bots are allowed to trade</summary>
@@ -126,7 +126,7 @@ namespace CoinFlip
 		/// <summary>Reserve 'volume' until the next balance update</summary>
 		public Guid Hold(Unit<decimal> volume)
 		{
-			var ts = DateTimeOffset.Now;
+			var ts = Model.UtcNow;
 			return Hold(volume, b => b.TimeStamp < ts);
 		}
 

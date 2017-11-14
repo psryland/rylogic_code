@@ -396,24 +396,25 @@ namespace CoinFlip
 
 			// This is a new candle if it's time stamp is >= the TimeFrame period after the Newest candle.
 			// This is an update to the latest candle if within a TimeFrame period of the Newest candle.
-			var candle_type =
-				candle.Timestamp >= Newest.Timestamp + Misc.TimeFrameToTicks(1.0, TimeFrame) ? DataEventArgs.ECandleType.New :
-				candle.Timestamp >= Newest.Timestamp ? DataEventArgs.ECandleType.Current :
-				DataEventArgs.ECandleType.Other;
+			var update_type =
+				candle.Timestamp >= Newest.Timestamp + Misc.TimeFrameToTicks(1.0, TimeFrame) ? DataEventArgs.EUpdateType.New :
+				candle.Timestamp >= Newest.Timestamp ? DataEventArgs.EUpdateType.Current :
+				DataEventArgs.EUpdateType.Range;
 
 			// Insert the candle into the database if is for 'TimeFrame' and the sim isn't running.
 			DB.Execute(SqlExpr.InsertCandle(TimeFrame), 1, SqlExpr.InsertCandleParams(candle));
 
 			// Update/Invalidate cached values
-			switch (candle_type) {
-			case DataEventArgs.ECandleType.New:
+			switch (update_type)
+			{
+			case DataEventArgs.EUpdateType.New:
 				{
 					m_newest = candle;
 					m_current = m_newest;
 					m_total += 1;
 					break;
 				}
-			case DataEventArgs.ECandleType.Current:
+			case DataEventArgs.EUpdateType.Current:
 				{
 					m_newest.Update(candle);
 					m_current = m_newest;
@@ -435,7 +436,7 @@ namespace CoinFlip
 			LastUpdatedUTC = Model.UtcNow;
 
 			// Notify data added/changed
-			OnDataChanged(new DataEventArgs(this, new Range(Count-1, Count), candle, candle_type));
+			OnDataChanged(new DataEventArgs(update_type, this, new Range(Count-1, Count), candle));
 		}
 
 		/// <summary>Add a batch of candles</summary>
@@ -489,19 +490,22 @@ namespace CoinFlip
 	/// <summary>Event args for when data is changed</summary>
 	public class DataEventArgs :EventArgs
 	{
-		public DataEventArgs(PriceData pd, Range index_range, Candle candle, ECandleType candle_type)
+		public DataEventArgs(EUpdateType update_type, PriceData pd, Range index_range, Candle candle)
 		{
+			UpdateType = update_type;
 			PriceData  = pd;
 			IndexRange = index_range;
 			Candle     = candle;
-			CandleType = candle_type;
 		}
 		public DataEventArgs(PriceData pd, Range index_range)
-			:this(pd, index_range, null, ECandleType.Other)
+			:this(EUpdateType.Range, pd, index_range, null)
 		{}
 		public DataEventArgs(PriceData pd)
 			:this(pd, new Range(0, pd.Count))
 		{}
+
+		/// <summary>The type of update this event represents.</summary>
+		public EUpdateType UpdateType { get; private set; }
 
 		/// <summary>The instrument containing the changes</summary>
 		public PriceData PriceData { get; private set; }
@@ -509,13 +513,21 @@ namespace CoinFlip
 		/// <summary>The candle that was added to 'Table'</summary>
 		public Candle Candle { get; private set; }
 
-		/// <summary>True if 'Candle' is a new candle and the previous candle as just closed</summary>
-		public ECandleType CandleType { get; private set; }
-
 		/// <summary>The index range of candles that have changed</summary>
 		public Range IndexRange { get; private set; }
 
-		public enum ECandleType { Other, New, Current, };
+		/// <summary>Update types</summary>
+		public enum EUpdateType
+		{
+			/// <summary>This is an update to a range of candles</summary>
+			Range,
+
+			/// <summary>This is an update to the latest candle ('Candle')</summary>
+			Current,
+
+			/// <summary>'Candle' is a new candle and the previous candle as just closed</summary>
+			New,
+		};
 	}
 
 	#endregion

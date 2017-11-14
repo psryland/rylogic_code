@@ -129,7 +129,7 @@ namespace CoinFlip
 				}
 				void HandleSimStep(object sender, SimStepEventArgs e)
 				{
-					var candle_type = DataEventArgs.ECandleType.Current;
+					var update_type = DataEventArgs.EUpdateType.Current;
 
 					// Update 'Latest' for the new clock value
 					if (!e.Clock.Ticks.Within(Latest.Timestamp, Latest.Timestamp + Misc.TimeFrameToTicks(1.0, TimeFrame)))
@@ -137,16 +137,16 @@ namespace CoinFlip
 						if (Count - m_index_range.Begi < m_index_range.Endi)
 							++m_count;
 
-						candle_type = DataEventArgs.ECandleType.New;
+						update_type = DataEventArgs.EUpdateType.New;
 						if (!e.Clock.Ticks.Within(Latest.Timestamp, Latest.Timestamp + Misc.TimeFrameToTicks(1.0, TimeFrame)))
 						{
 							m_count = null;
-							candle_type = DataEventArgs.ECandleType.Other;
+							update_type = DataEventArgs.EUpdateType.Range;
 						}
 					}
 
 					// Raise data changed to simulate the new data having 'arrived'
-					OnDataChanged(new DataEventArgs(PriceData, new Range(Count-1,Count), Latest, candle_type));
+					OnDataChanged(new DataEventArgs(update_type, PriceData, new Range(Count-1,Count), Latest));
 				}
 			}
 		}
@@ -182,16 +182,16 @@ namespace CoinFlip
 						throw new Exception("Should not be getting DataChanged events from a PriceData while back-testing");
 
 					// Update cached items
-					switch (e.CandleType)
+					switch (e.UpdateType)
 					{
-					default: throw new Exception($"Unexpected candle type: {e.CandleType}");
-					case DataEventArgs.ECandleType.New:
+					default: throw new Exception($"Unknown update type: {e.UpdateType}");
+					case DataEventArgs.EUpdateType.New:
 						{
 							// A new candle was added, update the count so that the cache grows
 							m_count += 1;
 							break;
 						}
-					case DataEventArgs.ECandleType.Current:
+					case DataEventArgs.EUpdateType.Current:
 						{
 							// Data for the current candle has changed, just update the cached copy
 							if (e.IndexRange.Count != 1)
@@ -202,7 +202,7 @@ namespace CoinFlip
 							m_cache[e.IndexRange.Begi - m_index_range.Begi] = e.Candle;
 							break;
 						}
-					case DataEventArgs.ECandleType.Other:
+					case DataEventArgs.EUpdateType.Range:
 						{
 							// An unknown range of candles changed, invalidate the cache
 							InvalidateCachedData();
@@ -244,7 +244,7 @@ namespace CoinFlip
 				void HandlePairOrderBookChanged(object sender, EventArgs e)
 				{
 					// Notify when the order book of the latest candle changes
-					OnDataChanged(new DataEventArgs(PriceData, new Range(Count-1, Count), Latest, DataEventArgs.ECandleType.Current));
+					OnDataChanged(new DataEventArgs(DataEventArgs.EUpdateType.Current, PriceData, new Range(Count-1, Count), Latest));
 				}
 			}
 		}
@@ -353,6 +353,12 @@ namespace CoinFlip
 			DataSyncingChanged.Raise();
 		}
 
+		/// <summary>The price units (in Q2B)</summary>
+		public string RateUnits
+		{
+			get { return Pair.RateUnits; }
+		}
+
 		/// <summary>String description of the instrument</summary>
 		public string Description
 		{
@@ -407,6 +413,23 @@ namespace CoinFlip
 			var idx = IndexAt(time_stamp);
 			var frac = Misc.TicksToTimeFrame(time_stamp.ExactTicks - this[idx].Timestamp, TimeFrame);
 			return idx + frac;
+		}
+
+		/// <summary>Return the interpolated time a the fractional index 'fidx'</summary>
+		public long TimeAtFIndex(double fidx)
+		{
+			var beg = 0;
+			var end = Count - 1;
+			var idx = (int)fidx;
+
+			if (Count == 0)
+				throw new Exception("TimeAtFIndex is not defined when there is no data");
+			if (idx < beg)
+				return this[beg].Timestamp + Misc.TimeFrameToTicks(fidx, TimeFrame);
+			if (idx > end)
+				return this[end].Timestamp + Misc.TimeFrameToTicks(fidx - end, TimeFrame);
+
+			return this[idx].Timestamp + Misc.TimeFrameToTicks(fidx - idx, TimeFrame);
 		}
 
 		/// <summary>Clamps the given index range to a valid range within the data. [0, Count]</summary>

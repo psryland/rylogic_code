@@ -16,10 +16,10 @@ namespace CoinFlip
 	/// <summary>Buy/Sell</summary>
 	public enum ETradeType
 	{
-		/// <summary>Quote->Base, Buy, Bid, Long, High spot price</summary>
+		/// <summary>Quote->Base, Buy, Bid, Long, the highest one on a chart</summary>
 		Q2B,
 
-		/// <summary>Base->Quote, Sell, Ask, Short. Low spot price</summary>
+		/// <summary>Base->Quote, Sell, Ask, Short, the lowest one on a chart</summary>
 		B2Q,
 	}
 
@@ -364,6 +364,56 @@ namespace CoinFlip
 				tt == ETradeType.B2Q ? vol :                // 'vol' is in base 
 				tt == ETradeType.Q2B ? vol / price_q2b :    // 'vol' is in quote
 				throw new Exception("Unknown trade type");
+		}
+
+		/// <summary>Interpret a string as a value of 'coin'</summary>
+		public static Unit<decimal>? InterpretVolume(string text, Coin coin, Unit<decimal>? available = null)
+		{
+			text = text.Trim();
+			var sym = coin.Symbol;
+			int idx;
+
+			// If the text value is a number followed by a '%' character
+			// return the percentage of the currently available amount
+			if (text.EndsWith("%"))
+			{
+				text = text.Substring(0, text.Length - 1);
+				if (decimal.TryParse(text, out var value))
+				{
+					var avail = available ?? coin.Balance.Available;
+					return avail * value * 0.01m;
+				}
+			}
+			// If the text value is a number followed by the currency symbol
+			// just remove the currency symbol and return the number
+			else if (text.EndsWith(sym))
+			{
+				text = text.Substring(0, text.Length - sym.Length);
+				if (decimal.TryParse(text, out var value))
+					return value._(sym);
+			}
+			// If the value ends with a different currency symbol, convert using value
+			else if ((idx = text.IndexOf(x => char.IsLetter(x))).Within(0, text.Length))
+			{
+				// If the trailing characters are a recognised currency code
+				var coin2 = coin.Exchange.Coins[text.Substring(idx).Trim()];
+				if (coin2 != null)
+				{
+					// If the characters to the left of 'idx' are a valid number
+					if (decimal.TryParse(text.Substring(0, idx), out var value))
+					{
+						var value_ratio = coin2.Value / coin.Value;
+						return (value * value_ratio)._(sym);
+					}
+				}
+			}
+			// Otherwise, assume the currency is 'coin'
+			else
+			{
+				if (decimal.TryParse(text, out var value))
+					return value._(sym);
+			}
+			return null;
 		}
 
 		/// <summary>Return the order book that provides offers for a trade in this direction</summary>

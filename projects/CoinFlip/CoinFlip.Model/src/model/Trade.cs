@@ -32,8 +32,21 @@ namespace CoinFlip
 
 			TradeType  = tt;
 			Pair       = pair;
-			VolumeBase = vol_base;
 			PriceQ2B   = price_q2b;
+			VolumeBase = vol_base;
+		}
+
+		/// <summary>Create a trade on 'pair' to convert 'volume_in' of 'coin_in' to 'volume_out'</summary>
+		public Trade(TradePair pair, Coin coin_in, Unit<decimal> vol_in, Unit<decimal> vol_out)
+		{
+			TradeType =
+				pair.Base == coin_in ? ETradeType.B2Q :
+				pair.Quote == coin_in ? ETradeType.Q2B :
+				throw new Exception($"Currency {coin_in} is not one of {pair.Name}");
+
+			Pair       = pair;
+			PriceQ2B   = TradeType.PriceQ2B(vol_out / vol_in);
+			VolumeBase = TradeType.VolumeBase(PriceQ2B, volume_in:vol_in);
 		}
 
 		/// <summary>Copy construct a trade, with the volume scaled by 'scale'</summary>
@@ -41,8 +54,8 @@ namespace CoinFlip
 		{
 			TradeType  = rhs.TradeType;
 			Pair       = rhs.Pair;
-			VolumeBase = rhs.VolumeBase * scale;
 			PriceQ2B   = rhs.PriceQ2B;
+			VolumeBase = rhs.VolumeBase * scale;
 		}
 
 		/// <summary>Create a trade based on an existing position</summary>

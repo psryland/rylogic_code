@@ -384,7 +384,7 @@ namespace CoinFlip
 			get
 			{
 				if (this is CrossExchange) return 0m;
-				return Balance.Values.Sum(x => x.Coin.Value(x.Total));
+				return Balance.Values.Sum(x => (decimal)x.Coin.ValueOf(x.Total));
 			}
 		}
 
@@ -525,8 +525,7 @@ namespace CoinFlip
 			// between placing an order and checking 'Positions' for the order just placed.
 			if (!order_result.Filled)
 			{
-				// It is possible for the 'Positions' collection to be updated between 'CreateOrderInternal'
-				// and here, therefore we can't use 'Add' because the key may already be in the dictionary
+				// Add a 'Position' to the collection, this will be overwritten when UpdatePositions() is called.
 				var pos = new Position(order_result.OrderId, pair, tt, price, volume, volume, now, now, fake:fake);
 				Positions[order_result.OrderId] = pos;
 
@@ -538,18 +537,18 @@ namespace CoinFlip
 			// The order may have also been completed or partially filled. Add the filled orders to the trade history.
 			foreach (var tid in order_result.TradeIds)
 			{
-				var order_id = order_result.OrderId;
-				var fill = History.GetOrAdd(order_id, tt, pair);
-				fill.Trades[tid] = new Historic(order_id, tid, pair, tt, price, volume, price*volume*Fee, now, now);
+				var fill = History.GetOrAdd(order_result.OrderId, tt, pair);
+				fill.Trades[tid] = new Historic(order_result.OrderId, tid, pair, tt, price, volume, price*volume*Fee, now, now);
 			}
 
-			// Remove any orders we might have filled from the order book.
+			// Remove entries from the order book that this order should have filled.
+			// This will be overwritten with the next UpdateMarketData().
 			tt.OrderBook(pair).Consume(pair, price, volume, out var remaining);
 
-			// Trigger updates of market data
+			// Trigger updates
+			MarketDataUpdateRequired =  true;
 			PositionUpdateRequired = true;
 			BalanceUpdateRequired = true;
-
 			return order_result;
 		}
 		protected abstract TradeResult CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume_base, Unit<decimal> price);

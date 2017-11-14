@@ -19,7 +19,6 @@ namespace CoinFlip
 			Model = model;
 			Clock = StartTime;
 			TimeFrame = Settings.TimeFrame;
-			EquityData = new EquityMap();
 
 			// Create a SimExchange for each exchange
 			foreach (var exch in Model.Exchanges)
@@ -111,9 +110,6 @@ namespace CoinFlip
 			}
 		}
 
-		/// <summary>Equity data</summary>
-		public EquityMap EquityData { get; private set; }
-
 		/// <summary>Set the back testing start time to 'now - steps * time_frame'</summary>
 		public void SetStartTime(ETimeFrame time_frame, int steps)
 		{
@@ -150,9 +146,6 @@ namespace CoinFlip
 			m_main_loop_last_step = StartTime.Ticks;
 			TimeFrame = Settings.TimeFrame;
 			Clock = StartTime;
-
-			// Reset the equity data.
-			EquityData.Reset();
 
 			// Reset the exchanges
 			foreach (var exch in Exch.Values)

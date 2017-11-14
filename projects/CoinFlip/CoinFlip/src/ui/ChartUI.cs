@@ -37,6 +37,8 @@ namespace CoinFlip
 		private ToolStripLabel m_lbl_drawing_tools;
 		private ToolStripButton m_btn_horz_line;
 		private ToolStripButton m_btn_vert_line;
+		private ToolStripButton m_chk_show_trade_history;
+		private ImageList m_il_toolbar_btns;
 		private ToolStripButton m_btn_trend_line;
 		#endregion
 
@@ -55,11 +57,13 @@ namespace CoinFlip
 				GfxCandles = new GfxObjectCandles(this);
 				GfxMarketDepth = new GfxObjectMarketDepth(this);
 				GfxPositions = new GfxObjectPositions(this);
+				GfxHistory = new GfxObjectHistory(this);
 
 				// Chart indicators
 				Indicators = new BindingSource<Indicator> { DataSource = new BindingListEx<Indicator>(), PerItem = true };
 
 				SetupUI();
+				UpdateUI();
 			}
 			catch (Exception)
 			{
@@ -76,6 +80,7 @@ namespace CoinFlip
 			GfxBid = null;
 			GfxUpdatingText = null;
 			GfxPositions = null;
+			GfxHistory = null;
 			GfxMarketDepth = null;
 			GfxCandles = null;
 			ChartCtrl = null;
@@ -162,6 +167,7 @@ namespace CoinFlip
 				// Refresh the combos
 				UpdateAvailablePairs();
 				UpdateAvailableTimeFrames();
+				UpdateUI();
 
 				// Handlers
 				void HandleDataChanged(object sender, DataEventArgs e)
@@ -181,7 +187,7 @@ namespace CoinFlip
 					}
 
 					// Auto scroll if 'e.Candle' is a new candle
-					if (e.CandleType == DataEventArgs.ECandleType.New)
+					if (e.UpdateType == DataEventArgs.EUpdateType.New)
 					{
 						// If the latest candle is visible, move the X-Axis range forward.
 						var latest_idx = (double)Instrument.Count;
@@ -331,6 +337,26 @@ namespace CoinFlip
 				ChartCtrl.Invalidate();
 			};
 
+			// Show trade history
+			SetShowTradeHistoryImage();
+			m_chk_show_trade_history.ToolTipText = "Show/Hide previous trades";
+			m_chk_show_trade_history.Checked = ChartSettings.ShowTradeHistory != Settings.ChartSettings.EShowTradeHistory.Disabled;
+			m_chk_show_trade_history.Click += (s,a) =>
+			{
+				ChartSettings.ShowTradeHistory = Enum<Settings.ChartSettings.EShowTradeHistory>.Cycle(ChartSettings.ShowTradeHistory);
+				m_chk_show_trade_history.Checked = ChartSettings.ShowTradeHistory != Settings.ChartSettings.EShowTradeHistory.Disabled;
+				SetShowTradeHistoryImage();
+				ChartCtrl.Invalidate();
+			};
+			void SetShowTradeHistoryImage()
+			{
+				m_chk_show_trade_history.Image = 
+					ChartSettings.ShowTradeHistory == Settings.ChartSettings.EShowTradeHistory.Disabled ? m_il_toolbar_btns.Images["clock_back.png"] :
+					ChartSettings.ShowTradeHistory == Settings.ChartSettings.EShowTradeHistory.Selected ? m_il_toolbar_btns.Images["clock_back_1.png"] :
+					ChartSettings.ShowTradeHistory == Settings.ChartSettings.EShowTradeHistory.All      ? m_il_toolbar_btns.Images["clock_back_all.png"] :
+					throw new Exception($"Unknown ShowTradeHistory setting: {ChartSettings.ShowTradeHistory}");
+			}
+
 			// Show market depth
 			m_chk_show_depth.ToolTipText = "Show/Hide market depth";
 			m_chk_show_depth.Checked = ChartSettings.ShowMarketDepth;
@@ -349,21 +375,27 @@ namespace CoinFlip
 			m_btn_horz_line.Click += (s,a) =>
 			{
 				m_btn_horz_line.Checked = true;
-				ChartCtrl.MouseOperations.SetPending(MouseButtons.Left,
-					new DropNewIndicatorOp(this,
-						() => new IndicatorHorzLine{ Price = (decimal)ChartCtrl.YAxis.Centre },
-						() => m_btn_horz_line.Checked = false));
+				ChartCtrl.MouseOperations.SetPending(MouseButtons.Left, new DropNewIndicatorOp(this, CreateIndy, () => m_btn_horz_line.Checked = false));
+				IndicatorHorzLine CreateIndy(ChartControl.HitTestResult hit)
+				{
+					return new IndicatorHorzLine{ Price = (decimal)hit.ChartPoint.Y };
+				}
 			};
 
+			// Trend line
 			m_btn_trend_line.ToolTipText = "Add a Trend line";
 			m_btn_trend_line.CheckOnClick = false;
 			m_btn_trend_line.Click += (s,a) =>
 			{
 				m_btn_trend_line.Checked = true;
-				ChartCtrl.MouseOperations.SetPending(MouseButtons.Left,
-					new DropNewIndicatorOp(this,
-						() => new IndicatorTrendLine(),
-						() => m_btn_trend_line.Checked = false));
+				ChartCtrl.MouseOperations.SetPending(MouseButtons.Left, new DropNewIndicatorOp(this, CreateIndy, () => m_btn_trend_line.Checked = false));
+				IndicatorTrendLine CreateIndy(ChartControl.HitTestResult hit)
+				{
+					var x = Instrument.TimeAtFIndex(hit.ChartPoint.X);
+					var y = (decimal)hit.ChartPoint.Y;
+					var settings = new IndicatorTrendLine.SettingsData{ BegX = x, BegY = y, EndX = x, EndY = y };
+					return new IndicatorTrendLine(settings);
+				}
 			};
 
 			#endregion
@@ -412,6 +444,13 @@ namespace CoinFlip
 			GfxBid = new View3d.Object($"*Line Ask {ChartSettings.BidColour.ToArgbU():X8} {{ 0 0 0 1 0 0 }}", false, CtxId, null);
 			GfxUpdatingText = new View3d.Object("*Text { \"...updating...\" *ScreenSpace *Anchor {+1 +1} *Font{*Colour{FF000000}} *o2w{*pos{+1, +1, 0}} }", false, CtxId, null);
 			#endregion
+		}
+
+		/// <summary>Update UI elements</summary>
+		private void UpdateUI(object sender = null, EventArgs args = null)
+		{
+			// Disable the drawing tools while there's no instrument
+			m_ts_drawing.Enabled = Instrument != null && Instrument.TimeFrame != ETimeFrame.None;
 		}
 
 		/// <summary>Change the instrument displayed in this chart</summary>
@@ -489,16 +528,70 @@ namespace CoinFlip
 		}
 		private int m_in_update_time_frames;
 
-		/// <summary>Get all positions on the instrument displayed in this chart</summary>
+		/// <summary>Get positions on the instrument displayed in this chart</summary>
 		private IEnumerable<Position> AllPositions
 		{
 			get
 			{
-				return Instrument != null
-					? Model.AllPositions(Instrument.Pair.Name)
-					: new Position[0];
+				if (Instrument == null) yield break;
+				foreach (var pos in Model.AllPositions(Instrument.Pair.Name))
+					yield return pos;
 			}
 		}
+
+		/// <summary>Get history on the instrument displayed in this chart</summary>
+		private IEnumerable<PositionFill> AllHistory
+		{
+			get
+			{
+				if (Instrument == null) yield break;
+				foreach (var his in Model.AllHistory(Instrument.Pair.Name))
+					yield return his;
+			}
+		}
+
+		/// <summary>Get positions on the instrument displayed in this chart</summary>
+		private IEnumerable<Position> VisiblePositions
+		{
+			get
+			{
+				var time_min = ChartCtrl.XAxis.Min;
+				var time_max = ChartCtrl.XAxis.Max;
+				var price_min = ((decimal)ChartCtrl.YAxis.Min)._(Instrument.RateUnits);
+				var price_max = ((decimal)ChartCtrl.YAxis.Max)._(Instrument.RateUnits);
+				foreach (var pos in AllPositions)
+				{
+					// Only return positions that are visible
+					if (!pos.PriceQ2B.Within(price_min, price_max))// || pos.Created == null || !Instrument.FIndexAt(new TimeFrameTime(pos.Created.Value, Instrument.TimeFrame)).Within(time_min, time_max))
+						continue;
+
+					yield return pos;
+				}
+			}
+		}
+
+		/// <summary>Get history on the instrument displayed in this chart</summary>
+		private IEnumerable<PositionFill> VisibleHistory
+		{
+			get
+			{
+				var time_min = ChartCtrl.XAxis.Min;
+				var time_max = ChartCtrl.XAxis.Max;
+				var price_min = ((decimal)ChartCtrl.YAxis.Min)._(Instrument.RateUnits);
+				var price_max = ((decimal)ChartCtrl.YAxis.Max)._(Instrument.RateUnits);
+				foreach (var his in AllHistory)
+				{
+					// Only return historic trades that are visible
+					if (!his.PriceQ2B.Within(price_min, price_max))//|| Instrument.FIndexAt(new TimeFrameTime(his.Created, Instrument.TimeFrame)).Within(time_min, time_max))
+						continue;
+
+					yield return his;
+				}
+			}
+		}
+
+		/// <summary>The format to display the X-Axis in</summary>
+		public EXAxisLabelMode XAxisLabelMode { get; set; }
 
 		/// <summary>(Re)create indicators from settings</summary>
 		private void UpdateIndicators()
@@ -521,7 +614,7 @@ namespace CoinFlip
 			// values to X Axis values.
 
 			// Draw the X Axis labels as indices instead of time stamps
-			if (m_xaxis_label_mode == EXAxisLabelMode.CandleIndex)
+			if (XAxisLabelMode == EXAxisLabelMode.CandleIndex)
 				return x.ToString();
 
 			if (Instrument == null || Instrument.Count == 0)
@@ -553,10 +646,10 @@ namespace CoinFlip
 				throw new Exception("Impossible candle index");
 
 			// Get the date time values in the correct time zone
-			dt_curr = (m_xaxis_label_mode == EXAxisLabelMode.LocalTime)
+			dt_curr = (XAxisLabelMode == EXAxisLabelMode.LocalTime)
 				? dt_curr.LocalDateTime
 				: dt_curr.UtcDateTime;
-			dt_prev = (m_xaxis_label_mode == EXAxisLabelMode.LocalTime)
+			dt_prev = (XAxisLabelMode == EXAxisLabelMode.LocalTime)
 				? dt_prev.LocalDateTime
 				: dt_prev.UtcDateTime;
 
@@ -566,7 +659,6 @@ namespace CoinFlip
 			// Show more of the time stamp depending on how it differs from the previous time stamp
 			return Misc.ShortTimeString(dt_curr, dt_prev, first_tick);
 		}
-		private EXAxisLabelMode m_xaxis_label_mode;
 
 		/// <summary>Convert the YAxis values into pretty price strings</summary>
 		private string HandleChartYAxisTickText(double x, double step)
@@ -593,12 +685,10 @@ namespace CoinFlip
 			// Edit chart elements when Control is held down
 			if (ModifierKeys == Keys.Control)
 			{
-				// Look for hit drag-able indicators
-				var hit = ChartCtrl.HitTestCS(args.Location, ModifierKeys, x => (x as Indicator)?.Dragable ?? false);
-				if (hit.Hits.Count != 0)
+				// Look for a hit on a drag-able indicator
+				var hit = ChartCtrl.HitTestCS(args.Location, ModifierKeys, x => x is Indicator indicator && indicator.Dragable);
+				if (hit.Hits.Count != 0 && hit.Hits[0].Element is Indicator indy)
 				{
-					var indy = (Indicator)hit.Hits[0].Element;
-			
 					// Create a mouse operation for dragging the indicator
 					var op = indy.CreateDragMouseOp(hit);
 					ChartCtrl.MouseOperations.SetPending(MouseButtons.Left, op);
@@ -716,7 +806,8 @@ namespace CoinFlip
 							var is_hit = hit_indicators.Contains(indicator);
 							var colour = is_hit ? Color.Blue : Color.Black;
 							var font = is_hit ? new Font(e.Menu.Font, FontStyle.Bold) : e.Menu.Font;
-							var opt = indicators_menu.DropDownItems.Add2(new ToolStripMenuItem(indicator.Name) { ForeColor = colour, Font = font });
+							var opt = indicators_menu.DropDownItems.Add2(new ToolStripIndiatorMenuItem(indicator.Name) { ForeColor = colour, Font = font });
+							opt.CrossClicked += (s,a) => Indicators.Remove(indicator);
 							opt.Click += (s,a) => EditIndicator(indicator);
 						}
 					}
@@ -773,10 +864,10 @@ namespace CoinFlip
 			case ChartControl.AddUserMenuOptionsEventArgs.EType.XAxis:
 				#region
 				{
-					var opt = e.Menu.Items.Add2(new ToolStripMenuItem(Enum<EXAxisLabelMode>.Cycle(m_xaxis_label_mode).ToString(word_sep:Str.ESeparate.Add)));
+					var opt = e.Menu.Items.Add2(new ToolStripMenuItem(Enum<EXAxisLabelMode>.Cycle(XAxisLabelMode).ToString(word_sep:Str.ESeparate.Add)));
 					opt.Click += (s,a) =>
 					{
-						m_xaxis_label_mode = Enum<EXAxisLabelMode>.Cycle(m_xaxis_label_mode);
+						XAxisLabelMode = Enum<EXAxisLabelMode>.Cycle(XAxisLabelMode);
 						Invalidate(true);
 					};
 					break;
@@ -888,8 +979,32 @@ namespace CoinFlip
 				// Draw all positions on this instruction
 				if (ChartSettings.ShowPositions)
 				{
-					foreach (var pos in AllPositions)
+					foreach (var pos in VisiblePositions)
 						args.AddToScene(GfxPositions.Get(pos));
+				}
+
+				// Draw the selected history trade
+				switch (ChartSettings.ShowTradeHistory)
+				{
+				default: throw new Exception("Unknown trade history mode");
+				case Settings.ChartSettings.EShowTradeHistory.Disabled:
+					{
+						break;
+					}
+				case Settings.ChartSettings.EShowTradeHistory.Selected:
+					{
+						var his = Model.History.Current;
+						if (his.Pair.Name == Instrument.Pair.Name)
+							args.AddToScene(GfxHistory.Get(his));
+
+						break;
+					}
+				case Settings.ChartSettings.EShowTradeHistory.All:
+					{
+						foreach (var his in VisibleHistory)
+							args.AddToScene(GfxHistory.Get(his));
+						break;
+					}
 				}
 			}
 			#endregion
@@ -967,6 +1082,41 @@ namespace CoinFlip
 			ma = ma ?? Indicators.Add2(new IndicatorMA());
 			using (var dlg = new EditMaUI(this, ma))
 				dlg.ShowDialog(this);
+		}
+
+		/// <summary>Custom menu item for indicators</summary>
+		private class ToolStripIndiatorMenuItem :ToolStripMenuItem
+		{
+			private const int Sz = 12;
+			public ToolStripIndiatorMenuItem(string text)
+				:base(text)
+			{}
+			protected override void OnClick(EventArgs e)
+			{
+				var p = (Bounds.Height - Sz)/2;
+				var y = Bounds.Top + p;
+				var x = Bounds.Right - p - Sz;
+				var pt = Owner.PointToClient(MousePosition);
+				if (pt.X.Within(x, x + Sz) && pt.Y.Within(y, y + Sz))
+					CrossClicked.Raise(this, EventArgs.Empty);
+				else
+					base.OnClick(e);
+			}
+			protected override void OnPaint(PaintEventArgs e)
+			{
+				base.OnPaint(e);
+
+				var y = (Bounds.Height - Sz)/2;
+				var x = (Bounds.Right - Sz - y);
+				using (var pen = new Pen(SystemColors.ControlDark, 2f))
+				{
+					e.Graphics.DrawLine(pen, x + 2, y + 2, x + Sz - 2, y + Sz - 2);
+					e.Graphics.DrawLine(pen, x + 2, y + Sz - 2, x + Sz - 2, y + 2);
+				}
+			}
+
+			/// <summary>Raised when the cross button is clicked</summary>
+			public event EventHandler CrossClicked;
 		}
 
 		#endregion
@@ -1464,6 +1614,45 @@ namespace CoinFlip
 			}	
 		}
 
+		/// <summary>Graphics for trade history</summary>
+		private GfxObjectHistory GfxHistory
+		{
+			get { return m_gfx_history; }
+			set
+			{
+				if (m_gfx_history == value) return;
+				Util.Dispose(ref m_gfx_history);
+				m_gfx_history = value;
+			}
+		}
+		private GfxObjectHistory m_gfx_history;
+		private class GfxObjectHistory :IDisposable
+		{
+			private readonly ChartUI m_chart;
+			private Cache<Guid, View3d.Object> m_cache;
+			public GfxObjectHistory(ChartUI chart)
+			{
+				m_chart = chart;
+				m_cache = new Cache<Guid, View3d.Object>();
+			}
+			public virtual void Dispose()
+			{
+				Util.Dispose(ref m_cache);
+			}
+
+			/// <summary>Get the graphics for the given position fill</summary>
+			public View3d.Object Get(PositionFill his)
+			{
+				var instrument = m_chart.Instrument;
+
+				var gfx = m_cache.Get(his.UniqueKey, g => new View3d.Object($"*Line Position_{his.OrderId} FF8080FF {{ 0 0 0 1 0 0 }}", false, CtxId, null));
+				var x = instrument.IndexAt(new TimeFrameTime(his.Created, instrument.TimeFrame));
+				var y = (float)(decimal)his.PriceQ2B;
+				gfx.O2P = m4x4.Scale(instrument.Count + 10 - x, 1f, 1f, new v4(x, y, ZOrder.Trades, 1f));
+				return gfx;
+			}	
+		}
+
 		/// <summary>Debugging method</summary>
 		public void InvalidateCandleGfx()
 		{
@@ -1491,12 +1680,12 @@ namespace CoinFlip
 		public class DropNewIndicatorOp :ChartControl.MouseOp
 		{
 			private readonly ChartUI m_chart_ui;
-			private readonly Func<Indicator> m_factory;
+			private readonly Func<ChartControl.HitTestResult, Indicator> m_factory;
 			private readonly Action m_on_complete;
 			private ChartControl.MouseOp m_drag;
 			private Scope m_chart_lock;
 
-			public DropNewIndicatorOp(ChartUI chart_ui, Func<Indicator> factory, Action on_complete)
+			public DropNewIndicatorOp(ChartUI chart_ui, Func<ChartControl.HitTestResult,Indicator> factory, Action on_complete)
 				:base(chart_ui.ChartCtrl)
 			{
 				StartOnMouseDown = true;
@@ -1510,6 +1699,37 @@ namespace CoinFlip
 				Indy = null;
 				Util.Dispose(ref m_chart_lock);
 				base.Dispose();
+			}
+			public override void MouseDown(MouseEventArgs e)
+			{
+				if (m_hit_result.Zone == ChartControl.HitTestResult.EZone.Chart)
+				{
+					// Create the indicator on mouse down
+					Indy = m_chart_ui.Indicators.Add2(m_factory(m_hit_result));
+
+					// Set the initial position if drag-able
+					if (Indy.Dragable)
+					{
+						m_drag = Indy.CreateDragMouseOp(m_hit_result);
+						m_drag.MouseDown(e);
+					}
+				}
+				base.MouseDown(e);
+			}
+			public override void MouseMove(MouseEventArgs e)
+			{
+				if (m_drag != null)
+					m_drag.MouseMove(e);
+
+				base.MouseMove(e);
+			}
+			public override void MouseUp(MouseEventArgs e)
+			{
+				if (m_drag != null)
+					m_drag.MouseUp(e);
+
+				m_on_complete.Raise();
+				base.MouseUp(e);
 			}
 
 			/// <summary>The created indicator</summary>
@@ -1531,36 +1751,6 @@ namespace CoinFlip
 				}
 			}
 			private Indicator m_indy;
-
-			public override void MouseDown(MouseEventArgs e)
-			{
-				// Create the indicator on mouse down
-				Indy = m_chart_ui.Indicators.Add2(m_factory());
-
-				// Set the initial position if drag-able
-				if (Indy.Dragable)
-				{
-					m_drag = Indy.CreateDragMouseOp();
-					m_drag.MouseDown(e);
-				}
-
-				base.MouseDown(e);
-			}
-			public override void MouseMove(MouseEventArgs e)
-			{
-				if (m_drag != null)
-					m_drag.MouseMove(e);
-
-				base.MouseMove(e);
-			}
-			public override void MouseUp(MouseEventArgs e)
-			{
-				if (m_drag != null)
-					m_drag.MouseUp(e);
-
-				m_on_complete.Raise();
-				base.MouseUp(e);
-			}
 		}
 
 		#endregion
@@ -1602,6 +1792,7 @@ namespace CoinFlip
 		private System.ComponentModel.IContainer components = null;
 		private void InitializeComponent()
 		{
+			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ChartUI));
 			this.m_tsc = new pr.gui.ToolStripContainer();
 			this.m_ts = new System.Windows.Forms.ToolStrip();
@@ -1614,10 +1805,12 @@ namespace CoinFlip
 			this.m_chk_show_positions = new System.Windows.Forms.ToolStripButton();
 			this.m_chk_show_depth = new System.Windows.Forms.ToolStripButton();
 			this.m_ts_drawing = new System.Windows.Forms.ToolStrip();
+			this.m_lbl_drawing_tools = new System.Windows.Forms.ToolStripLabel();
 			this.m_btn_horz_line = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_vert_line = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_trend_line = new System.Windows.Forms.ToolStripButton();
-			this.m_lbl_drawing_tools = new System.Windows.Forms.ToolStripLabel();
+			this.m_chk_show_trade_history = new System.Windows.Forms.ToolStripButton();
+			this.m_il_toolbar_btns = new System.Windows.Forms.ImageList(this.components);
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();
 			this.m_ts.SuspendLayout();
@@ -1653,10 +1846,11 @@ namespace CoinFlip
             this.m_cb_time_frame,
             this.toolStripSeparator1,
             this.m_chk_show_positions,
+            this.m_chk_show_trade_history,
             this.m_chk_show_depth});
 			this.m_ts.Location = new System.Drawing.Point(3, 0);
 			this.m_ts.Name = "m_ts";
-			this.m_ts.Size = new System.Drawing.Size(364, 26);
+			this.m_ts.Size = new System.Drawing.Size(418, 26);
 			this.m_ts.TabIndex = 0;
 			// 
 			// m_lbl_pair
@@ -1729,10 +1923,16 @@ namespace CoinFlip
             this.m_btn_horz_line,
             this.m_btn_vert_line,
             this.m_btn_trend_line});
-			this.m_ts_drawing.Location = new System.Drawing.Point(373, 0);
+			this.m_ts_drawing.Location = new System.Drawing.Point(435, 0);
 			this.m_ts_drawing.Name = "m_ts_drawing";
 			this.m_ts_drawing.Size = new System.Drawing.Size(118, 25);
 			this.m_ts_drawing.TabIndex = 1;
+			// 
+			// m_lbl_drawing_tools
+			// 
+			this.m_lbl_drawing_tools.Name = "m_lbl_drawing_tools";
+			this.m_lbl_drawing_tools.Size = new System.Drawing.Size(37, 22);
+			this.m_lbl_drawing_tools.Text = "Draw:";
 			// 
 			// m_btn_horz_line
 			// 
@@ -1761,11 +1961,24 @@ namespace CoinFlip
 			this.m_btn_trend_line.Size = new System.Drawing.Size(23, 22);
 			this.m_btn_trend_line.Text = "Trend Line";
 			// 
-			// m_lbl_drawing_tools
+			// m_chk_show_trade_history
 			// 
-			this.m_lbl_drawing_tools.Name = "m_lbl_drawing_tools";
-			this.m_lbl_drawing_tools.Size = new System.Drawing.Size(37, 22);
-			this.m_lbl_drawing_tools.Text = "Draw:";
+			this.m_chk_show_trade_history.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_chk_show_trade_history.Image = ((System.Drawing.Image)(resources.GetObject("m_chk_show_trade_history.Image")));
+			this.m_chk_show_trade_history.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_chk_show_trade_history.Name = "m_chk_show_trade_history";
+			this.m_chk_show_trade_history.Size = new System.Drawing.Size(23, 23);
+			this.m_chk_show_trade_history.Text = "Trade History";
+			// 
+			// m_il_toolbar_btns
+			// 
+			this.m_il_toolbar_btns.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("m_il_toolbar_btns.ImageStream")));
+			this.m_il_toolbar_btns.TransparentColor = System.Drawing.Color.Transparent;
+			this.m_il_toolbar_btns.Images.SetKeyName(0, "dollar_sign.png");
+			this.m_il_toolbar_btns.Images.SetKeyName(1, "clock_back.png");
+			this.m_il_toolbar_btns.Images.SetKeyName(2, "clock_back_1.png");
+			this.m_il_toolbar_btns.Images.SetKeyName(3, "clock_back_all.png");
+			this.m_il_toolbar_btns.Images.SetKeyName(4, "market_depth.png");
 			// 
 			// ChartUI
 			// 

@@ -91,9 +91,10 @@ namespace Bot.LoopFinder
 		private LoopsUI m_loops_ui;
 
 		/// <summary>Start the bot</summary>
-		public override void OnStart()
+		public override bool OnStart()
 		{
 			TriggerLoopsUpdate();
+			return true;
 		}
 
 		/// <summary>Main loop step</summary>

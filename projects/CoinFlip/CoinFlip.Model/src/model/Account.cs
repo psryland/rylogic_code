@@ -18,7 +18,7 @@ namespace CoinFlip
 					foreach (var bal in exch.Balance.Values)
 					{
 						if (!Coins[bal.Coin].OfInterest) continue;
-						worth += bal.Coin.Value(bal.Total);
+						worth += bal.Coin.ValueOf(bal.Total);
 					}
 				}
 				return worth;
@@ -90,7 +90,7 @@ namespace CoinFlip
 			{
 				var coin = exch.Coins[sym];
 				if (coin == null) continue;
-				value = Math.Max(value, coin.Value(1m._(sym)));
+				value = Math.Max(value, coin.ValueOf(1m._(sym)));
 			}
 			return value;
 		}
@@ -99,6 +99,12 @@ namespace CoinFlip
 		public IEnumerable<Position> AllPositions(string pair_name)
 		{
 			return TradingExchanges.SelectMany(x => x.Positions.Values).Where(x => x.Pair.Name == pair_name);
+		}
+
+		/// <summary>Return all historic trades on the given pair across all exchanges</summary>
+		public IEnumerable<PositionFill> AllHistory(string pair_name)
+		{
+			return TradingExchanges.SelectMany(x => x.History.Values).Where(x => x.Pair.Name == pair_name);
 		}
 	}
 }

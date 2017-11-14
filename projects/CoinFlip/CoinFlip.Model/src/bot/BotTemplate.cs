@@ -25,8 +25,9 @@ namespace Bot.Template
 		}
 
 		/// <summary>Start the bot</summary>
-		public override void OnStart()
+		public override bool OnStart()
 		{
+			return true;
 		}
 
 		/// <summary>Stop the bot</summary>

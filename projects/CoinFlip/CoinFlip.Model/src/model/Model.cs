@@ -190,7 +190,45 @@ namespace CoinFlip
 		public Form UI { get; private set; }
 
 		/// <summary>App settings</summary>
-		public Settings Settings { get; private set; }
+		public Settings Settings
+		{
+			get { return m_settings; }
+			private set
+			{
+				if (m_settings == value) return;
+				if (m_settings != null)
+				{
+					m_settings.SettingsSaving -= HandleSaving;
+				}
+				m_settings = value;
+				if (m_settings != null)
+				{
+					m_settings.SettingsSaving += HandleSaving;
+				}
+
+				// Handlers
+				void HandleSaving(object sender, SettingsSavingEventArgs e)
+				{
+					// Update the bot settings just prior to a save
+					if (!m_suspend_saving_bots)
+					{
+						var bot_settings = Settings.Bots.ToList();
+						foreach (var bot in Bots)
+						{
+							var s = new Settings.BotData(bot);
+							var idx = bot_settings.IndexOf(x => x.BotType == s.BotType);
+							if (idx >= 0)
+								bot_settings[idx] = s;
+							else
+								bot_settings.Add(s);
+						}
+						Settings.Bots = bot_settings.ToArray();
+					}
+				}
+			}
+		}
+		private bool m_suspend_saving_bots;
+		private Settings m_settings;
 
 		/// <summary>The logged on user</summary>
 		public User User { get; private set; }
@@ -407,10 +445,7 @@ namespace CoinFlip
 				if (m_bots != null)
 				{
 					m_bots.ListChanging -= HandleBotsListChanging;
-
-					// Dispose each bot
-					using (Scope.Create(() => m_suspend_saving_bots = true, () => m_suspend_saving_bots = false))
-						Util.DisposeAll(m_bots);
+					Util.DisposeAll(m_bots);
 				}
 				m_bots = value;
 				if (m_bots != null)
@@ -422,12 +457,11 @@ namespace CoinFlip
 				void HandleBotsListChanging(object sender, ListChgEventArgs<IBot> e)
 				{
 					if (e.IsDataChanged && !m_suspend_saving_bots)
-						Settings.Bots = Bots.Select(x => new Settings.BotData(x)).ToArray();
+						Settings.Save();
 				}
 			}
 		}
 		private BindingSource<IBot> m_bots;
-		private bool m_suspend_saving_bots;
 
 		/// <summary>Mutex for multi-threaded access to market data</summary>
 		private Mutex MarketDataLock

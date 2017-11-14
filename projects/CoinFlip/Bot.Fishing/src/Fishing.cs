@@ -748,8 +748,8 @@ namespace Bot.Fishing
 							var nett0 = out0 - Trade1.VolumeIn;
 							var nett1 = out1 - Trade0.VolumeIn;
 
-							var value0 = Trade0.CoinOut.Value(nett0);
-							var value1 = Trade1.CoinOut.Value(nett1);
+							var value0 = Trade0.CoinOut.ValueOf(nett0);
+							var value1 = Trade1.CoinOut.ValueOf(nett1);
 							var sum = value0 + value1;
 
 							var effective_price0 = (decimal)Trade0.PriceQ2BNett;

@@ -413,9 +413,6 @@ namespace CoinFlip
 				m_bal[pos.CoinIn] = bal;
 				coins.Add(pos.CoinIn);
 			}
-
-			// Record the balance history
-			RecordEquity(coins.ToArray());
 		}
 
 		/// <summary>Reverse the balance changes due to 'pos'</summary>
@@ -425,20 +422,6 @@ namespace CoinFlip
 			var bal = new Balance(pos.CoinIn, bal0.Total, bal0.HeldForTrades - pos.Remaining, Model.UtcNow, bal0.Unconfirmed, bal0.PendingWithdraw);
 			Debug.Assert(bal.AssertValid());
 			m_bal[pos.CoinIn] = bal;
-
-			// Record the balance history
-			RecordEquity(pos.CoinIn);
-		}
-
-		/// <summary>Record the balance history in 'Sim.EquityData'</summary>
-		private void RecordEquity(params Coin[] coins)
-		{
-			foreach (var coin in coins)
-			{
-				var table = Sim.EquityData[coin];
-				var x = (Model.UtcNow - Sim.StartTime).Ticks;
-				table.Add(new EquityMap.Point(x, (double)(decimal)m_bal[coin].Total));
-			}
 		}
 
 		/// <summary>Generate fake market depth for 'pair', using 'latest' as the reference for the current spot price</summary>

@@ -26,6 +26,7 @@ namespace CoinFlip
 		// - Add a class with the Plugin attribute: @"[Plugin(typeof(IBot))]"
 		// - Add a constructor like this: @"public MyBot(Model model, XElement settings_xml) :base("my_bot", model, new SettingsData(settings_xml)) {}"
 		//   'SettingsData' is type that inherits 'SettingsBase<SettingsData>'
+		// - Add a build dependency on 'CoinFlip' for the new bot
 		//
 		// Bots can be clock-based, and run at a fixed rate by overriding the 'Step()' method, or they can be
 		// event-driven by subscribing to the 'OnDataChanged' event for the instruments they care about.
@@ -49,8 +50,8 @@ namespace CoinFlip
 		}
 		public void Dispose()
 		{
-			Shutdown = null;
 			Active = false;
+			Shutdown = null;
 			Dispose(true);
 			Log = null;
 			Settings = null;
@@ -115,11 +116,17 @@ namespace CoinFlip
 					else
 					{
 						// The bot is now active
-						Log.Write(ELogLevel.Debug, $"Bot '{Name}' started");
+						Log.Write(ELogLevel.Debug, $"Bot '{Name}' starting");
+
+						// Save the bot settings
+						Model.Settings.Save();
 
 						// Derived bot startup
-						try { OnStart(); }
+						var started = false;
+						try { started = OnStart(); }
 						catch (Exception ex) { Log.Write(ELogLevel.Error, ex, "Unhandled Bot.OnStart exception"); }
+						if (!started)
+							return;
 
 						// Create a cancel token
 						Shutdown = CancellationTokenSource.CreateLinkedTokenSource(Model.Shutdown.Token);
@@ -236,16 +243,14 @@ namespace CoinFlip
 					m_model.SimReset -= HandleSimReset;
 					m_model.BackTestingChanging -= HandleBackTestingChanged;
 					m_model.AllowTradesChanging -= HandleAllowTradesChanging;
-					m_model.PairsUpdated -= HandlePairsUpdated;
 					m_model.Exchanges.ListChanging -= HandleExchangeListChanging;
-					m_model.Pairs.ListChanging -= HandlePairsListChanging;
+					m_model.PairsUpdated -= HandlePairsUpdated;
 				}
 				m_model = value;
 				if (m_model != null)
 				{
-					m_model.Pairs.ListChanging += HandlePairsListChanging;
-					m_model.Exchanges.ListChanging += HandleExchangeListChanging;
 					m_model.PairsUpdated += HandlePairsUpdated;
+					m_model.Exchanges.ListChanging += HandleExchangeListChanging;
 					m_model.AllowTradesChanging += HandleAllowTradesChanging;
 					m_model.BackTestingChanging += HandleBackTestingChanged;
 					m_model.SimReset += HandleSimReset;
@@ -254,13 +259,11 @@ namespace CoinFlip
 			}
 		}
 		private Model m_model;
-		protected virtual void HandleAllowTradesChanging(object sender, PrePostEventArgs e)
-		{}
 		protected virtual void HandlePairsUpdated(object sender, EventArgs e)
 		{}
 		protected virtual void HandleExchangeListChanging(object sender, ListChgEventArgs<Exchange> e)
 		{}
-		protected virtual void HandlePairsListChanging(object sender, ListChgEventArgs<TradePair> e)
+		protected virtual void HandleAllowTradesChanging(object sender, PrePostEventArgs e)
 		{}
 		protected virtual void HandleBackTestingChanged(object sender, PrePostEventArgs e)
 		{}
@@ -318,8 +321,10 @@ namespace CoinFlip
 		}
 
 		/// <summary>Called when the bot is activated</summary>
-		public virtual void OnStart()
-		{}
+		public virtual bool OnStart()
+		{
+			return false;
+		}
 
 		/// <summary>Called when the bot is deactivated</summary>
 		public virtual void OnStop()
@@ -337,7 +342,10 @@ namespace CoinFlip
 		public virtual void OnChartRendering(Instrument instrument, Settings.ChartSettings chart_settings, ChartControl.ChartRenderingEventArgs args)
 		{}
 
-		/// <summary>Active orders to monitor</summary>
+		/// <summary>
+		/// Active orders to monitor.
+		/// When a monitored trade is filled or cancelled, the 'OnPositionFilled' and 'OnPositionCancelled'
+		/// methods are called, allowing derived types to respond appropriately.</summary>
 		protected List<TradeResult> MonitoredTrades { get; private set; }
 
 		/// <summary>Update the state of all monitored active trades</summary>

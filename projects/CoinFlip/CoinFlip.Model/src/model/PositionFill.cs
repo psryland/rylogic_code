@@ -15,6 +15,7 @@ namespace CoinFlip
 		public PositionFill(ulong order_id, ETradeType tt, TradePair pair)
 		{
 			OrderId   = order_id;
+			UniqueKey = Guid.NewGuid();
 			TradeType = tt;
 			Pair      = pair;
 			Trades    = new HistoryCollection(this);
@@ -28,6 +29,9 @@ namespace CoinFlip
 
 		/// <summary>The Id of the order that was filled by this collection of trades</summary>
 		public ulong OrderId { get; private set; }
+
+		/// <summary>A unique key assigned to this position (local only)</summary>
+		public Guid UniqueKey { get; private set; }
 
 		/// <summary>The trade type</summary>
 		public ETradeType TradeType { get; private set; }
