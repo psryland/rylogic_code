@@ -5,7 +5,7 @@
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/util/util.h"
 #include "pr/renderer11/util/wrappers.h"
-#include "pr/renderer11/util/event_types.h"
+#include "pr/renderer11/util/event_args.h"
 #include "pr/renderer11/models/nugget.h"
 #include "pr/renderer11/render/state_block.h"
 #include "renderer11/directxtex/directxtex.h"

@@ -569,27 +569,26 @@ namespace pr
 
 		#pragma region Extract Enum
 		// This is basically a convenience wrapper around ExtractInt
-		template <typename Enum, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractEnumValue(Enum& enum_, int radix, Ptr& src, Char const* delim = nullptr)
+		template <typename TEnum, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractEnumValue(TEnum& enum_, int radix, Ptr& src, Char const* delim = nullptr)
 		{
-			std::underlying_type<Enum>::type val;
+			std::underlying_type<TEnum>::type val;
 			if (!ExtractInt(val, radix, src, delim)) return false;
-			enum_ = static_cast<Enum>(val);
+			enum_ = static_cast<TEnum>(val);
 			return true;
 		}
-		template <typename Enum, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractEnumValueC(Enum& enum_, int radix, Ptr src, Char const* delim = nullptr)
+		template <typename TEnum, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractEnumValueC(TEnum& enum_, int radix, Ptr src, Char const* delim = nullptr)
 		{
 			return ExtractEnum(enum_, radix, src, delim);
 		}
 
 		// Extracts an enum by its string name. For use with 'PR_ENUM' defined enums
-		template <typename Enum, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractEnum(Enum& enum_, Ptr& src, Char const* delim = nullptr)
+		template <typename TEnum, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractEnum(TEnum& enum_, Ptr& src, Char const* delim = nullptr)
 		{
 			decltype(*src) val[512] = {};
 			if (!ExtractIdentifier(val, src, delim)) return false;
-			enum_ = Enum::Parse(val);
-			return true;
+			return Enum<TEnum>::TryParse(enum_, val, false);
 		}
-		template <typename Enum, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractEnumC(Enum& enum_, Ptr src, Char const* delim = nullptr)
+		template <typename TEnum, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractEnumC(TEnum& enum_, Ptr src, Char const* delim = nullptr)
 		{
 			return ExtractEnum(enum_, src, delim);
 		}

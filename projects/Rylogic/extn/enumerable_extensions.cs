@@ -283,7 +283,7 @@ namespace pr.extn
 			return source.MinBy(selector, comparer);
 		}
 
-		/// <summary>Returns the sum value the values in the collection</summary>
+		/// <summary>Returns the sum of the values in the collection</summary>
 		public static TValue Sum<TSource,TValue>(this IEnumerable<TSource> source, Func<TSource, TValue> selector)
 		{
 			var sum = default(TValue);
@@ -424,7 +424,7 @@ namespace pr.extn
 		/// <summary>Zip two or more collections together by cycling through 'this', then each of the given collections</summary>
 		public static IEnumerable<TSource> Zip<TSource>(this IEnumerable<TSource> source, params IEnumerable<TSource>[] others)
 		{
-			var iters = new[] { source.GetIterator() }.Concat(others.Select(x => x.GetIterator()));
+			var iters = others.Select(x => x.GetIterator()).Prepend(source.GetIterator()).ToArray();
 			for (bool all_done = false; !all_done; )
 			{
 				all_done = true;
@@ -438,35 +438,89 @@ namespace pr.extn
 		}
 
 		/// <summary>Zip two collections together in order defined by 'comparer'</summary>
-		public static IEnumerable<TSource> Zip<TSource>(this IEnumerable<TSource> source, IEnumerable<TSource> other, IComparer<TSource> comparer)
+		public static IEnumerable<T> Zip<T>(this IEnumerable<T> lhs, IEnumerable<T> rhs, Func<T,T,int> comparer = null)
 		{
-			comparer = comparer ?? Cmp<TSource>.Default;
+			return Zip(lhs, rhs, Cmp<T>.From(comparer));
+		}
+		public static IEnumerable<T> Zip<T>(this IEnumerable<T> lhs, IEnumerable<T> rhs, IComparer<T> comparer = null)
+		{
+			comparer = comparer ?? Cmp<T>.Default;
 
-			var lhs = source.GetIterator();
-			var rhs = other.GetIterator();
-			for (;!lhs.AtEnd && !rhs.AtEnd;)
+			var i = lhs.GetIterator();
+			var j = rhs.GetIterator();
+			for (;!i.AtEnd && !j.AtEnd;)
 			{
-				if (comparer.Compare(lhs.Current,rhs.Current) < 0)
+				var cmp = comparer.Compare(i.Current,j.Current);
+				if (cmp <= 0)
 				{
-					yield return lhs.Current;
-					lhs.MoveNext();
+					// lhs <= rhs, advance 'lhs'
+					yield return i.Current;
+					i.MoveNext();
 				}
 				else
 				{
-					yield return rhs.Current;
-					rhs.MoveNext();
+					// lhs > rhs, advance 'rhs'
+					yield return j.Current;
+					j.MoveNext();
 				}
 			}
-			for (; !lhs.AtEnd; lhs.MoveNext())
+			for (; !i.AtEnd; i.MoveNext())
 			{
-				yield return lhs.Current;
+				yield return i.Current;
 			}
-			for (; !rhs.AtEnd; rhs.MoveNext())
+			for (; !j.AtEnd; j.MoveNext())
 			{
-				yield return rhs.Current;
+				yield return j.Current;
 			}
 		}
-	
+
+		/// <summary>Zip two collections together in order defined by 'comparer' and accumulated using 'combine'</summary>
+		public static IEnumerable<T> ZipDistinct<T>(this IEnumerable<T> lhs, IEnumerable<T> rhs, T initial_value, Func<T,T,T> combine, Func<T,T,int> comparer = null)
+		{
+			return ZipDistinct(lhs, rhs, initial_value, combine, Cmp<T>.From(comparer));
+		}
+		public static IEnumerable<T> ZipDistinct<T>(this IEnumerable<T> lhs, IEnumerable<T> rhs, T initial_value, Func<T,T,T> combine, IComparer<T> comparer = null)
+		{
+			comparer = comparer ?? Cmp<T>.Default;
+
+			var i = Zip(lhs, rhs, comparer).GetIterator();
+			for (;!i.AtEnd;)
+			{
+				var accum = initial_value;
+
+				// Accumulate the values that compare as equal
+				var first = i.Current;
+				for (; !i.AtEnd && comparer.Compare(first, i.Current) == 0; i.MoveNext())
+					accum = combine(accum, i.Current);
+
+				// Return each distinct element
+				yield return accum;
+			}
+		}
+
+		/// <summary>Zip two collections together in order defined by 'comparer' and accumulated using 'combine'</summary>
+		public static IEnumerable<T> ZipAccumulate<T>(this IEnumerable<T> lhs, IEnumerable<T> rhs, T initial_value, Func<T,T,T> combine, Func<T,T,int> comparer = null)
+		{
+			return ZipAccumulate(lhs, rhs, initial_value, combine, Cmp<T>.From(comparer));
+		}
+		public static IEnumerable<T> ZipAccumulate<T>(this IEnumerable<T> lhs, IEnumerable<T> rhs, T initial_value, Func<T,T,T> combine, IComparer<T> comparer = null)
+		{
+			comparer = comparer ?? Cmp<T>.Default;
+			var accum = initial_value;
+
+			var i = Zip(lhs, rhs, comparer).GetIterator();
+			for (;!i.AtEnd;)
+			{
+				// Accumulate the values that compare as equal
+				var first = i.Current;
+				for (; !i.AtEnd && comparer.Compare(first, i.Current) == 0; i.MoveNext())
+					accum = combine(accum, i.Current);
+
+				// Return the accumulated value after each distinct element
+				yield return accum;
+			}
+		}
+
 		/// <summary>Compare elements with 'other' returning pairs where the elements are not equal</summary>
 		public static IEnumerable<Tuple<TSource,TSource>> Differences<TSource>(this IEnumerable<TSource> source, IEnumerable<TSource> other, IEqualityComparer<TSource> comparer = null)
 		{
@@ -547,14 +601,21 @@ namespace pr.unittests
 			Assert.AreEqual(15 ,sums[3]);
 			Assert.AreEqual(9  ,sums[4]);
 		}
-		[Test] public void Merge()
+		[Test] public void Zip()
 		{
 			var a0 = new[]{1,2,4,6,10};
 			var a1 = new[]{1,3,4,7,8};
 			var r0 = new[]{1,1,2,3,4,4,6,7,8,10};
 			var r1 = a0.Zip(a1, Cmp<int>.From((l,r) => l < r));
-
 			Assert.True(r0.SequenceEqual(r1));
+
+			var r2 = new []{2,5,8,13,8,10};
+			var r3 = Enumerable_.ZipDistinct(a0, a1, 0, (l,r) => l+r, (l,r) => (l/2).CompareTo(r/2));
+			Assert.True(r2.SequenceEqual(r3));
+
+			var r4 = new []{2,7,15,28,36,46};
+			var r5 = Enumerable_.ZipAccumulate(a0, a1, 0, (l,r) => l+r, (l,r) => (l/2).CompareTo(r/2));
+			Assert.True(r2.SequenceEqual(r3));
 		}
 		[Test] public void Differences()
 		{

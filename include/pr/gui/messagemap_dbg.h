@@ -1525,6 +1525,7 @@ namespace pr
 		PR_DEFINE_ENUM3(EWinMsg, PR_ENUM);
 		#undef PR_ENUM
 		#pragma endregion
+		static_assert(is_reflected_enum<EWinMsg>::value, "");
 
 		#pragma region SysCommands
 		#define PR_ENUM(x)\
@@ -1555,7 +1556,7 @@ namespace pr
 		// Convert a windows message to a string
 		inline char const* WMtoString(UINT uMsg)
 		{
-			return EWinMsg::IsValue(uMsg) ? EWinMsg(uMsg).ToStringA() : "";
+			return Enum<EWinMsg>::IsValue(uMsg) ? ToStringA(EWinMsg(uMsg)) : "";
 		}
 
 		// Return the Window Text for a window
@@ -1975,7 +1976,7 @@ namespace pr
 				{
 					return fmt("%s cmd=(%s) pos=(%d,%d)%s"
 						,hdr
-						,ESysCmd(wparam&0xFFF0).ToStringA()
+						,ToStringA(ESysCmd(wparam&0xFFF0))
 						,GET_X_LPARAM(lparam) ,GET_Y_LPARAM(lparam)
 						,newline);
 				}
@@ -1999,11 +2000,11 @@ namespace pr
 			case WM_NCMOUSELEAVE:
 			case WM_MOUSEMOVE:
 			case WM_GETICON:
-			case EWinMsg::wm_UAHDRAWMENUITEM:
-			case EWinMsg::wm_UAHDRAWMENU:
-			case EWinMsg::wm_UAHINITMENU:
-			case EWinMsg::wm_DWMCOLORIZATIONCOLORCHANGED:
-			case EWinMsg::wm_UAHMEASUREMENUITEM:
+			case (UINT)EWinMsg::wm_UAHDRAWMENUITEM:
+			case (UINT)EWinMsg::wm_UAHDRAWMENU:
+			case (UINT)EWinMsg::wm_UAHINITMENU:
+			case (UINT)EWinMsg::wm_DWMCOLORIZATIONCOLORCHANGED:
+			case (UINT)EWinMsg::wm_UAHMEASUREMENUITEM:
 			//case WM_CTLCOLORDLG:
 			//case WM_AFXLAST:
 			//case WM_ENTERIDLE:

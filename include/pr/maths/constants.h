@@ -65,5 +65,13 @@ namespace pr
 
 		constexpr float const   float_nan    = limits<float>::quiet_NaN();
 		constexpr double const  double_nan   = limits<double>::quiet_NaN();
+
+		// The maximum integer value that can be exactly represented by a float,double
+		constexpr int const max_int_in_float    = 16777216;           // 2^24
+		constexpr int64 const max_int_in_double = 9007199254740994LL; // 2^53
+		static_assert(int(float(max_int_in_float    )) == max_int_in_float    , "");
+		static_assert(int(float(max_int_in_float + 1)) != max_int_in_float + 1, "");
+		static_assert(int64(double(max_int_in_double    )) == max_int_in_double    , "");
+		static_assert(int64(double(max_int_in_double + 1)) != max_int_in_double + 1, "");
 	}
 }

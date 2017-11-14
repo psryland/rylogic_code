@@ -240,6 +240,18 @@ namespace pr.extn
 		{
 			return Within(x, range.Begi, range.Endi);
 		}
+		public static bool WithinInclusive(this int x, int beg, int end)
+		{
+			return x.Within(beg, end) || x == end;
+		}
+		public static bool WithinInclusive(this int? x, int beg, int end)
+		{
+			return x.HasValue && x.Value.WithinInclusive(beg,end);
+		}
+		public static bool WithinInclusive(this int x, Range range)
+		{
+			return x.WithinInclusive(range.Begi, range.Endi);
+		}
 	}
 
 	/// <summary>'uint' type extensions</summary>
@@ -272,6 +284,14 @@ namespace pr.extn
 		public static bool Within(this uint? x, uint beg, uint end)
 		{
 			return x.HasValue && x.Value.Within(beg,end);
+		}
+		public static bool WithinInclusive(this uint x, uint beg, uint end)
+		{
+			return x.Within(beg, end) || x == end;
+		}
+		public static bool WithinInclusive(this uint? x, uint beg, uint end)
+		{
+			return x.HasValue && x.Value.WithinInclusive(beg,end);
 		}
 	}
 
@@ -306,6 +326,22 @@ namespace pr.extn
 		{
 			return x.HasValue && x.Value.Within(beg,end);
 		}
+		public static bool Within(this long x, Range range)
+		{
+			return x.Within(range.Beg, range.End);
+		}
+		public static bool WithinInclusive(this long x, long beg, long end)
+		{
+			return x.Within(beg, end) || x == end;
+		}
+		public static bool WithinInclusive(this long? x, long beg, long end)
+		{
+			return x.HasValue && x.Value.WithinInclusive(beg,end);
+		}
+		public static bool WithinInclusive(this long x, Range range)
+		{
+			return x.WithinInclusive(range.Beg, range.End);
+		}
 	}
 
 	/// <summary>'ulong' type extensions</summary>
@@ -337,6 +373,14 @@ namespace pr.extn
 		public static bool Within(this ulong? x, ulong beg, ulong end)
 		{
 			return x.HasValue && x.Value.Within(beg,end);
+		}
+		public static bool WithinInclusive(this ulong x, ulong beg, ulong end)
+		{
+			return x.Within(beg, end) || x == end;
+		}
+		public static bool WithinInclusive(this ulong? x, ulong beg, ulong end)
+		{
+			return x.HasValue && x.Value.WithinInclusive(beg,end);
 		}
 	}
 
@@ -382,6 +426,22 @@ namespace pr.extn
 		{
 			return x.HasValue && x.Value.Within(beg,end);
 		}
+		public static bool Within(this float x, RangeF range)
+		{
+			return x.Within(range.Begf, range.Endf);
+		}
+		public static bool WithinInclusive(this float x, float beg, float end)
+		{
+			return x.Within(beg, end) || x == end;
+		}
+		public static bool WithinInclusive(this float? x, float beg, float end)
+		{
+			return x.HasValue && x.Value.WithinInclusive(beg,end);
+		}
+		public static bool WithinInclusive(this float x, RangeF range)
+		{
+			return x.WithinInclusive(range.Begf, range.Endf);
+		}
 	}
 
 	/// <summary>'double' type extensions</summary>
@@ -425,6 +485,22 @@ namespace pr.extn
 		{
 			return x.HasValue && x.Value.Within(beg,end);
 		}
+		public static bool Within(this double x, RangeF range)
+		{
+			return x.Within(range.Beg, range.End);
+		}
+		public static bool WithinInclusive(this double x, double beg, double end)
+		{
+			return x.Within(beg, end) || x == end;
+		}
+		public static bool WithinInclusive(this double? x, double beg, double end)
+		{
+			return x.HasValue && x.Value.WithinInclusive(beg,end);
+		}
+		public static bool WithinInclusive(this double x, RangeF range)
+		{
+			return x.WithinInclusive(range.Beg, range.End);
+		}
 	}
 
 	/// <summary>'decimal' type extensions</summary>
@@ -466,6 +542,14 @@ namespace pr.extn
 		public static bool Within(this decimal? x, decimal beg, decimal end)
 		{
 			return x.HasValue && x.Value.Within(beg,end);
+		}
+		public static bool WithinInclusive(this decimal x, decimal beg, decimal end)
+		{
+			return x.Within(beg, end) || x == end;
+		}
+		public static bool WithinInclusive(this decimal? x, decimal beg, decimal end)
+		{
+			return x.HasValue && x.Value.WithinInclusive(beg,end);
 		}
 	}
 }

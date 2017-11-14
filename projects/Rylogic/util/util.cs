@@ -124,10 +124,10 @@ namespace pr.util
 			return null;
 		}
 
-		/// <summary>Dispose a sub-range within a collection</summary>
+		/// <summary>Dispose a range within a collection</summary>
 		public static void DisposeRange(IList doomed, int start, int count)
 		{
-			for (int i = start; i != count; ++i)
+			for (int i = start, iend = start + count; i != iend; ++i)
 				doomed[i] = Dispose((IDisposable)doomed[i]);
 		}
 

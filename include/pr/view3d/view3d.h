@@ -115,6 +115,10 @@ extern "C"
 		// Arrow head: float(size)
 		ArrowHeadGS,
 	};
+	enum class EView3DShaderCS :int
+	{
+		None = 0,
+	};
 	enum class EView3DRenderStep :int
 	{
 		Invalid = 0,
@@ -122,6 +126,7 @@ extern "C"
 		GBuffer,
 		DSLighting,
 		ShadowMap,
+		RayCast,
 		_number_of,
 	};
 	enum class EView3DLight :int
@@ -209,12 +214,19 @@ extern "C"
 		Selected,
 		Visible,
 	};
-	enum class ESourcesChangedReason :int
+	enum class EView3DSourcesChangedReason :int
 	{
 		NewData,
 		Reload,
 	};
+	enum class EView3DHitTestFlags :int
+	{
+		SnapToFaces = 1 << 0,
+		SnapToEdges = 1 << 1,
+		SnapToVerts = 1 << 2,
 
+		_bitwise_operators_allowed = 0x7FFFFFF,
+	};
 	struct View3DV2
 	{
 		float x, y;
@@ -247,9 +259,11 @@ extern "C"
 			EView3DShaderVS m_vs;
 			EView3DShaderGS m_gs;
 			EView3DShaderPS m_ps;
+			EView3DShaderCS m_cs;
 			uint8_t m_vs_data[16];
 			uint8_t m_gs_data[16];
 			uint8_t m_ps_data[16];
+			uint8_t m_cs_data[16];
 		};
 		struct ShaderMap
 		{
@@ -332,6 +346,24 @@ extern "C"
 		BOOL m_step_data;
 		BOOL m_user_data;
 	};
+	struct View3DHitTestRay
+	{
+		// The world space origin and direction of the ray (normalisation not required)
+		View3DV4 m_ws_origin;
+		View3DV4 m_ws_direction;
+	};
+	struct View3DHitTestResult
+	{
+		// The origin and direction of the cast ray (in world space)
+		View3DV4 m_ws_ray_origin;
+		View3DV4 m_ws_ray_direction;
+
+		// The intercept point (in world space)
+		View3DV4 m_ws_intercept;
+
+		// The object that was hit (or null)
+		View3DObject m_obj;
+	};
 	struct View3DViewport
 	{
 		float m_x;
@@ -358,7 +390,7 @@ extern "C"
 	using View3D_EnumGuidsCB           = BOOL (__stdcall *)(void* ctx, GUID const& context_id);
 	using View3D_EnumObjectsCB         = BOOL (__stdcall *)(void* ctx, View3DObject object);
 	using View3D_AddFileProgressCB     = BOOL (__stdcall *)(void* ctx, GUID const& context_id, wchar_t const* filepath, long long file_offset, BOOL complete);
-	using View3D_SourcesChangedCB      = void (__stdcall *)(void* ctx, ESourcesChangedReason reason, BOOL before);
+	using View3D_SourcesChangedCB      = void (__stdcall *)(void* ctx, EView3DSourcesChangedReason reason, BOOL before);
 	using View3D_RenderCB              = void (__stdcall *)(void* ctx, View3DWindow window);
 	using View3D_SceneChangedCB        = void (__stdcall *)(void* ctx, View3DWindow window, GUID const* context_ids, int count);
 	using View3D_GizmoMovedCB          = void (__stdcall *)(void* ctx, View3DGizmoEvent const& args);
@@ -422,6 +454,7 @@ extern "C"
 	VIEW3D_API View3DBBox   __stdcall View3D_WindowSceneBounds        (View3DWindow window, EView3DSceneBounds bounds, int except_count, GUID const* except);
 	VIEW3D_API float        __stdcall View3D_WindowAnimTimeGet        (View3DWindow window);
 	VIEW3D_API void         __stdcall View3D_WindowAnimTimeSet        (View3DWindow window, float time_s);
+	VIEW3D_API void         __stdcall View3D_WindowHitTest            (View3DWindow window, View3DHitTestRay const& ray, float snap_distance, EView3DHitTestFlags flags, View3DHitTestResult& hit);
 
 	// Camera
 	VIEW3D_API void                  __stdcall View3D_CameraToWorldGet      (View3DWindow window, View3DM4x4& c2w);
@@ -462,7 +495,7 @@ extern "C"
 	VIEW3D_API View3DV4              __stdcall View3D_NSSPointToWSPoint     (View3DWindow window, View3DV4 screen);
 	VIEW3D_API View3DV4              __stdcall View3D_WSPointToNSSPoint     (View3DWindow window, View3DV4 world);
 	VIEW3D_API void                  __stdcall View3D_NSSPointToWSRay       (View3DWindow window, View3DV4 screen, View3DV4& ws_point, View3DV4& ws_direction);
-	VIEW3D_API EView3DNavOp          __stdcall View3D_MouseBtnToNavOp        (int mk);
+	VIEW3D_API EView3DNavOp          __stdcall View3D_MouseBtnToNavOp       (int mk);
 
 	// Lights
 	VIEW3D_API void        __stdcall View3D_LightProperties          (View3DWindow window, View3DLight& light);

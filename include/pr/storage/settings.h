@@ -76,21 +76,31 @@ namespace pr
 		{
 			return pr::FmtS(L"%08X", t.argb);
 		}
-		template <typename Char> inline string Write(std::basic_string<Char> const& t)
+		inline string Write(wchar_t const* t)
 		{
-			auto s = string(Widen(t));
-			s = pr::str::StringToCString(s);
+			auto s = pr::str::StringToCString<string>(t);
 			s = pr::filesys::AddQuotes(s);
 			return s;
 		}
-		template <typename TEnum, typename = std::enable_if_t<std::is_enum<TEnum>::value>> inline string Write(TEnum x, struct StdEnum* = nullptr)
+		template <typename Char> inline string Write(std::basic_string<Char> const& t)
+		{
+			return Write(t.c_str());
+		}
+		inline string Write(char const* t)
+		{
+			return Write(Widen(t));
+		}
+		template <typename TEnum, typename = std::enable_if_t<std::is_enum<TEnum>::value>> inline string Write(TEnum x)
 		{
 			using ut = typename std::underlying_type<TEnum>::type;
-			return Write(ut(x));
-		}
-		template <typename TEnum, typename = std::enable_if_t<pr::is_enum<TEnum>::value>> inline string Write(TEnum t, struct PrEnum* = nullptr)
-		{
-			return TEnum::ToStringW(t);
+			if constexpr (is_reflected_enum<TEnum>::value)
+			{
+				return Enum<TEnum>::ToStringW(x);
+			}
+			else
+			{
+				return Write(ut(x));
+			}
 		}
 
 		// Import function helper overloads
@@ -134,14 +144,18 @@ namespace pr
 		{
 			return reader.CStringS(t);
 		}
-		template <typename TEnum, typename = std::enable_if_t<std::is_enum<TEnum>::value>> inline bool Read(Reader& reader, TEnum& x, struct StdEnum* = nullptr)
+		template <typename TEnum, typename = std::enable_if_t<std::is_enum<TEnum>::value>> inline bool Read(Reader& reader, TEnum& x)
 		{
 			using ut = typename std::underlying_type<TEnum>::type;
-			return reader.IntS(reinterpret_cast<ut&>(x), 10);
-		}
-		template <typename TEnum, typename = std::enable_if_t<pr::is_enum<TEnum>::value>> inline bool Read(Reader& reader, TEnum& t, struct PrEnum* = nullptr)
-		{
-			return reader.EnumS(t);
+			if constexpr (is_reflected_enum<TEnum>::value)
+			{
+				std::string ident;
+				return reader.IdentifierS(ident) && Enum<TEnum>::TryParse(x, ident.c_str(), false);
+			}
+			else
+			{
+				return reader.IntS(reinterpret_cast<ut&>(x), 10);
+			}
 		}
 
 		// An event generated if there is an error parsing the settings
@@ -390,9 +404,9 @@ namespace pr
 		{
 			// pr enum
 			#define PR_ENUM(x)\
-			x(One)\
-			x(Two)\
-			x(Three)
+				x(One)\
+				x(Two)\
+				x(Three)
 			PR_DEFINE_ENUM1(Enum1, PR_ENUM);
 			#undef PR_ENUM
 
@@ -422,6 +436,8 @@ namespace pr
 		PRUnitTest(pr_storage_settings)
 		{
 			using namespace settings;
+			
+			Enum<Enum1>::NameA();
 
 			Settings s;
 			PR_CHECK(s.m_count    , 2                 );
@@ -451,7 +467,7 @@ namespace pr
 			PR_CHECK(s.m_colour   , pr::Colour32Blue);
 			PR_CHECK(s.m_area     , pr::v2One       );
 			PR_CHECK(s.m_position , pr::v4(3,2,1,1) );
-			PR_CHECK(s.m_name == "renamed"       , true);
+			PR_CHECK(s.m_name == "renamed" , true);
 			PR_CHECK(s.m_emun == Enum1::Three , true);
 			PR_CHECK(s.m_emun2 == Enum2::Won  , true);
 

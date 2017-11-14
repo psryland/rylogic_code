@@ -8,7 +8,7 @@
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/util/allocator.h"
 #include "pr/renderer11/util/lookup.h"
-#include "pr/renderer11/util/event_types.h"
+#include "pr/renderer11/util/event_args.h"
 #include "pr/renderer11/util/stock_resources.h"
 #include "pr/renderer11/textures/texture2d.h"
 
@@ -49,6 +49,9 @@ namespace pr
 			TextureManager(MemFuncs& mem, Renderer& rdr);
 			TextureManager(TextureManager const&) = delete;
 			TextureManager& operator = (TextureManager const&) = delete;
+
+			// Renderer access
+			Renderer& rdr() const { return m_rdr; }
 
 			// Create a new texture instance.
 			// 'id' is the id to assign to the created texture instance. Use 'AutoId' to auto generate an id

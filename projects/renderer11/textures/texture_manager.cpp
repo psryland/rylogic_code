@@ -102,7 +102,7 @@ namespace pr
 			if (id == AutoId && filepath[0] == L'#')
 			{
 				EStockTexture stock;
-				if (!EStockTexture::TryParse(stock, filepath + 1, false))
+				if (!TryParse(stock, filepath + 1, false))
 					throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Unknown stock texture name: %s", filepath + 1));
 
 				// Return a clone of the stock texture
@@ -296,7 +296,7 @@ namespace pr
 		Texture2DPtr TextureManager::FindStockTexture(EStockTexture stock)
 		{
 			// See if the texture already exists
-			auto stock_tex = FindTexture(stock);
+			auto stock_tex = FindTexture(RdrId(stock));
 			if (stock_tex != nullptr)
 				return std::move(stock_tex);
 
@@ -306,14 +306,14 @@ namespace pr
 			{
 			default:
 				{
-					throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Unknown stock texture: %s", stock.ToStringA()));
+					throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Unknown stock texture: %s", ToStringA(stock)));
 				}
 			case EStockTexture::Black:
 				{
 					pr::uint const data[] = {0};
 					Image src(1, 1, data, DXGI_FORMAT_R8G8B8A8_UNORM);
 					TextureDesc tdesc(src, 1, D3D11_USAGE_IMMUTABLE);
-					tex = CreateTexture2D(EStockTexture::Black, src, tdesc, SamplerDesc::LinearClamp(), false, "#black");
+					tex = CreateTexture2D(RdrId(EStockTexture::Black), src, tdesc, SamplerDesc::LinearClamp(), false, "#black");
 					break;
 				}
 			case EStockTexture::White:
@@ -321,7 +321,7 @@ namespace pr
 					pr::uint const data[] = {0xFFFFFFFF};
 					Image src(1, 1, data, DXGI_FORMAT_R8G8B8A8_UNORM);
 					TextureDesc tdesc(src, 1, D3D11_USAGE_IMMUTABLE);
-					tex = CreateTexture2D(EStockTexture::White, src, tdesc, SamplerDesc::LinearClamp(), false, "#white");
+					tex = CreateTexture2D(RdrId(EStockTexture::White), src, tdesc, SamplerDesc::LinearClamp(), false, "#white");
 					break;
 				}
 			case EStockTexture::Gray:
@@ -329,7 +329,7 @@ namespace pr
 					pr::uint const data[] = {0xFF808080};
 					Image src(1, 1, data, DXGI_FORMAT_R8G8B8A8_UNORM);
 					TextureDesc tdesc(src, 1, D3D11_USAGE_IMMUTABLE);
-					tex = CreateTexture2D(EStockTexture::Gray, src, tdesc, SamplerDesc::LinearClamp(), false, "#gray");
+					tex = CreateTexture2D(RdrId(EStockTexture::Gray), src, tdesc, SamplerDesc::LinearClamp(), false, "#gray");
 					break;
 				}
 			case EStockTexture::Checker:
@@ -353,7 +353,7 @@ namespace pr
 					TextureDesc tdesc(src, 0, D3D11_USAGE_IMMUTABLE);
 					auto sam = SamplerDesc::LinearWrap();
 					sam.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
-					tex = CreateTexture2D(EStockTexture::Checker, src, tdesc, sam, false, "#checker");
+					tex = CreateTexture2D(RdrId(EStockTexture::Checker), src, tdesc, sam, false, "#checker");
 					break;
 				}
 			case EStockTexture::Checker2:
@@ -377,7 +377,7 @@ namespace pr
 					TextureDesc tdesc(src, 0, D3D11_USAGE_IMMUTABLE);
 					auto sam = SamplerDesc::LinearWrap();
 					sam.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
-					tex = CreateTexture2D(EStockTexture::Checker2, src, tdesc, sam, false, "#checker2");
+					tex = CreateTexture2D(RdrId(EStockTexture::Checker2), src, tdesc, sam, false, "#checker2");
 					break;
 				}
 			case EStockTexture::Checker3:
@@ -401,7 +401,7 @@ namespace pr
 					TextureDesc tdesc(src, 0, D3D11_USAGE_IMMUTABLE);
 					auto sam = SamplerDesc::LinearWrap();
 					sam.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
-					tex = CreateTexture2D(EStockTexture::Checker3, src, tdesc, sam, false, "#checker3");
+					tex = CreateTexture2D(RdrId(EStockTexture::Checker3), src, tdesc, sam, false, "#checker3");
 					break;
 				}
 			case EStockTexture::WhiteSpot:
@@ -422,7 +422,7 @@ namespace pr
 					Image src(sz, sz, data.data(), DXGI_FORMAT_R8G8B8A8_UNORM);
 					TextureDesc tdesc(src, 0, D3D11_USAGE_IMMUTABLE);
 					auto sam = SamplerDesc::LinearClamp();
-					tex = CreateTexture2D(EStockTexture::WhiteSpot, src, tdesc, sam, true, "#whitespot");
+					tex = CreateTexture2D(RdrId(EStockTexture::WhiteSpot), src, tdesc, sam, true, "#whitespot");
 					break;
 				}
 			}

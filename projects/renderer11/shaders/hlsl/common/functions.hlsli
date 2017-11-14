@@ -4,7 +4,6 @@
 //***********************************************
 
 // Projected textures ********************************************
-
 float4 ProjTex(float4 ws_pos, float4 in_diff)
 {
 	float4 out_diff = in_diff;

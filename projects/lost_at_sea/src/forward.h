@@ -68,10 +68,10 @@ namespace las
 		x(StartupFailed       ,            )\
 		x(SettingsPathNotFound,            )\
 		x(SettingsOutOfDate   ,            )
-	PR_DEFINE_ENUM2(EResult, PR_ENUM);
+	PR_DEFINE_ENUM2_BASE(EResult, PR_ENUM, UINT);
 	#undef PR_ENUM
 
-	typedef pr::Exception<EResult::Enum_> Exception;
+	typedef pr::Exception<EResult> Exception;
 	typedef pr::string<> string;
 	typedef pr::string<wchar_t> wstring;
 

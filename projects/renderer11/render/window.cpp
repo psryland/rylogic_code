@@ -11,7 +11,7 @@ namespace pr
 	namespace rdr
 	{
 		// Default WndSettings
-		WndSettings::WndSettings(HWND hwnd, bool windowed, bool gdi_compatible_bb, pr::iv2 const& client_area)
+		WndSettings::WndSettings(HWND hwnd, bool windowed, bool gdi_compatible_bb, pr::iv2 const& client_area, bool w_buffer)
 			:m_hwnd(hwnd)
 			,m_windowed(windowed)
 			,m_mode(client_area)
@@ -22,6 +22,7 @@ namespace pr
 			,m_depth_format(DXGI_FORMAT_D24_UNORM_S8_UINT)
 			,m_usage(DXGI_USAGE_RENDER_TARGET_OUTPUT|DXGI_USAGE_SHADER_INPUT)
 			,m_vsync(1)
+			,m_use_w_buffer(w_buffer)
 			,m_allow_alt_enter(false)
 			,m_name()
 		{
@@ -63,6 +64,9 @@ namespace pr
 					pr::Throw(false, "D3D device has not been created with GDI compatibility");
 				if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE) && settings.m_multisamp.Count != 1)
 					pr::Throw(false, "GDI compatibility does not support multi-sampling");
+				//todo: w-buffer
+				// https://docs.microsoft.com/en-us/windows-hardware/drivers/display/w-buffering
+				// https://www.mvps.org/directx/articles/using_w-buffers.htm
 
 				// Check feature support
 				m_multisamp.Validate(device, settings.m_mode.Format);
@@ -139,27 +143,31 @@ namespace pr
 		}
 
 		// Access the renderer manager classes
-		ModelManager& Window::mdl_mgr()
+		Renderer& Window::rdr() const
+		{
+			return *m_rdr;
+		}
+		ModelManager& Window::mdl_mgr() const
 		{
 			return m_rdr->m_mdl_mgr;
 		}
-		ShaderManager& Window::shdr_mgr()
+		ShaderManager& Window::shdr_mgr() const
 		{
 			return m_rdr->m_shdr_mgr;
 		}
-		TextureManager& Window::tex_mgr()
+		TextureManager& Window::tex_mgr() const
 		{
 			return m_rdr->m_tex_mgr;
 		}
-		BlendStateManager& Window::bs_mgr()
+		BlendStateManager& Window::bs_mgr() const
 		{
 			return m_rdr->m_bs_mgr;
 		}
-		DepthStateManager& Window::ds_mgr()
+		DepthStateManager& Window::ds_mgr() const
 		{
 			return m_rdr->m_ds_mgr;
 		}
-		RasterStateManager& Window::rs_mgr()
+		RasterStateManager& Window::rs_mgr() const
 		{
 			return m_rdr->m_rs_mgr;
 		}
@@ -279,7 +287,7 @@ namespace pr
 		// 'render_target' is the texture that is rendered onto
 		// 'depth_buffer' is an optional texture that will receive the depth information (can be null)
 		// 'depth_buffer' will be created if not provided.
-		void Window::SetRT(D3DPtr<ID3D11Texture2D>& render_target, D3DPtr<ID3D11Texture2D>& depth_buffer)
+		void Window::SetRT(ID3D11Texture2D* render_target, ID3D11Texture2D* depth_buffer)
 		{
 			Renderer::Lock lock(*m_rdr);
 
@@ -289,9 +297,10 @@ namespace pr
 
 			// Get a render target view of the render target texture
 			D3DPtr<ID3D11RenderTargetView> rtv;
-			pr::Throw(lock.D3DDevice()->CreateRenderTargetView(render_target.get(), nullptr, &rtv.m_ptr));
+			pr::Throw(lock.D3DDevice()->CreateRenderTargetView(render_target, nullptr, &rtv.m_ptr));
 
 			// If no depth buffer is given, create a temporary depth buffer
+			D3DPtr<ID3D11Texture2D> tmp_depth_buffer;
 			if (depth_buffer == nullptr)
 			{
 				TextureDesc dbdesc;
@@ -303,12 +312,13 @@ namespace pr
 				dbdesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
 				dbdesc.CPUAccessFlags = 0;
 				dbdesc.MiscFlags = 0;
-				pr::Throw(lock.D3DDevice()->CreateTexture2D(&dbdesc, nullptr, &depth_buffer.m_ptr));
+				pr::Throw(lock.D3DDevice()->CreateTexture2D(&dbdesc, nullptr, &tmp_depth_buffer.m_ptr));
+				depth_buffer = tmp_depth_buffer.get();
 			}
 
 			// Create a depth stencil view of the depth buffer
 			D3DPtr<ID3D11DepthStencilView> dsv = nullptr;
-			pr::Throw(lock.D3DDevice()->CreateDepthStencilView(depth_buffer.get(), nullptr, &dsv.m_ptr));
+			pr::Throw(lock.D3DDevice()->CreateDepthStencilView(depth_buffer, nullptr, &dsv.m_ptr));
 
 			// Set the render target
 			SetRT(rtv.get(), dsv.get());

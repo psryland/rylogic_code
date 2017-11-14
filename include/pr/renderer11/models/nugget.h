@@ -103,8 +103,9 @@ namespace pr
 			Nugget(NuggetData const& ndata, ModelBuffer* model_buffer, Model* owner);
 			~Nugget();
 
-			// Access the model manager
-			ModelManager& MdlMgr();
+			// Renderer access
+			Renderer& rdr() const;
+			ModelManager& mdl_mgr() const;
 
 			// Return the sort key composed from the base 'm_sort_key' plus any shaders in 'm_smap'
 			SortKey SortKey(ERenderStep rstep) const;

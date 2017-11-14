@@ -58,6 +58,14 @@ def AssertPath(path):
 	AssertPathsExist([path])
 	return path
 	
+# Check that 'winsdk_path' is the latest version
+def AssertLatestWinSDK():
+	for dir in os.listdir(UserVars.winsdk + "\\bin"):
+		if not re.match(r"\d+\.\d+\.\d+\.\d+", dir, 0): continue
+		if dir > UserVars.winsdkvers:
+			raise ValueError("Newer windows SDK version found: "+dir+" (Currently: "+UserVars.winsdkvers+")")
+	return
+	
 # Convert a relative or full filepath that might be wrapped in quotes into a full file path
 def NormaliseFilepath(filepath):
 	filepath = filepath.replace('"','')
@@ -100,6 +108,14 @@ def EnumFiles(root, filter:str=None, flags=0):
 			if filter and not re.match(filter, filename, flags): continue
 			yield os.path.join(dirname, filename)
 
+# Enumerate recursively through a directory
+def EnumDirs(root, filter:str=None, flags=0):
+	for dirname, dirnames, filenames in os.walk(root):
+		# Return the directories
+		for dir in dirnames:
+			if filter and not re.match(filter, dir, flags): continue
+			yield os.path.join(dirname, dir)
+			
 # Read the contents of a file into a buffer
 def ReadFile(path, mode='rb', encoding="utf-8"):
 	with open(path, mode, encoding=encoding) as f:

@@ -142,7 +142,7 @@ namespace pr
 			x(UnknownValue                    ,)\
 			x(ValueNotFound                   ,)\
 			x(FileNotFound                    ,)
-		PR_DEFINE_ENUM2(EResult, PR_ENUM);
+		PR_DEFINE_ENUM2_BASE(EResult, PR_ENUM, uint);
 		#undef PR_ENUM
 		#pragma endregion
 

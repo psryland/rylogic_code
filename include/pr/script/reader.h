@@ -601,7 +601,7 @@ namespace pr
 			}
 			bool ReportError(EResult result)
 			{
-				return ReportError(result, result.ToStringA());
+				return ReportError(result, ToStringA(result));
 			}
 		};
 	}

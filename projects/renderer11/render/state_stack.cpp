@@ -23,7 +23,7 @@ namespace pr
 			,m_init_state()
 			,m_pending()
 			,m_current()
-			,m_tex_default(scene.m_wnd->tex_mgr().FindTexture(EStockTexture::White))
+			,m_tex_default(scene.m_wnd->tex_mgr().FindTexture(RdrId(EStockTexture::White)))
 			,m_dbg()
 		{
 			// Create the debugging interface

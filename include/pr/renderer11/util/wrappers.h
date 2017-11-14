@@ -392,8 +392,8 @@ namespace pr
 			DisplayMode(UINT width = 1024, UINT height = 768, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM)
 				:DXGI_MODE_DESC()
 			{
-				Width                   = width;
-				Height                  = height;
+				Width                   = width  ? width  : 8;
+				Height                  = height ? height : 8;
 				Format                  = format;
 				RefreshRate.Numerator   = 0; // let dx choose
 				RefreshRate.Denominator = 0;
@@ -403,8 +403,8 @@ namespace pr
 			DisplayMode(pr::iv2 const& area, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM)
 				:DXGI_MODE_DESC()
 			{
-				Width                   = area.x;
-				Height                  = area.y;
+				Width                   = area.x ? area.x : 8;
+				Height                  = area.y ? area.y : 8;
 				Format                  = format;
 				RefreshRate.Numerator   = 0; // let dx choose
 				RefreshRate.Denominator = 0;
@@ -416,7 +416,7 @@ namespace pr
 		// Viewport description
 		struct Viewport :D3D11_VIEWPORT
 		{
-			// Viewports are in rendertarget space
+			// View ports are in render target space
 			// e.g.
 			//  x,y          = 0,0 (not -0.5f,-0.5f)
 			//  width,height = 800,600 (not 1.0f,1.0f)

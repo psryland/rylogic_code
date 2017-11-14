@@ -203,13 +203,10 @@ namespace pr
 	}
 
 	// Return the first element in 'cont' that matches 'pred' or return a default element instance
-	template <typename TCont, typename Pred> inline auto find_or_default(TCont& cont, Pred pred) -> decltype(*std::begin(cont))
+	template <typename TCont, typename Pred, typename Elem = typename container_traits<TCont>::value_type> inline Elem first_or_default(TCont& cont, Pred pred, Elem def = Elem())
 	{
-		using Elem = std::remove_cv_t<std::remove_reference_t<decltype(*std::begin(cont))>>;
-
 		auto iter = find_if(cont, pred);
-		if (iter == std::end(cont)) return Elem();
-		return *iter;
+		return iter != std::end(cont) ? *iter : def;
 	}
 
 	// Return the number of elements in 'cont' that match 'pred'

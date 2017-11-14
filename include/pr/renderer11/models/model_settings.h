@@ -16,7 +16,7 @@ namespace pr
 		{
 			VBufferDesc m_vb;   // The vertex buffer description plus initialisation data
 			IBufferDesc m_ib;   // The index buffer description plus initialisation data
-			BBox m_bbox;        // Model space bounding box
+			BBox        m_bbox; // Model space bounding box
 			string32    m_name; // Debugging name for the model
 
 			MdlSettings()

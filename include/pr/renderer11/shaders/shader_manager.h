@@ -31,6 +31,7 @@ namespace pr
 			using VSLookup     = Lookup<RdrId, D3DPtr<ID3D11VertexShader>>;
 			using PSLookup     = Lookup<RdrId, D3DPtr<ID3D11PixelShader>>;
 			using GSLookup     = Lookup<RdrId, D3DPtr<ID3D11GeometryShader>>;
+			using CSLookup     = Lookup<RdrId, D3DPtr<ID3D11ComputeShader>>;
 			using CBufLookup   = Lookup<RdrId, D3DPtr<ID3D11Buffer>>;
 			using ShaderLookup = Lookup<RdrId, ShaderBase*>;
 
@@ -46,6 +47,7 @@ namespace pr
 			VSLookup              m_lookup_vs;     // Map from id to D3D vertex shader
 			PSLookup              m_lookup_ps;     // Map from id to D3D pixel shader
 			GSLookup              m_lookup_gs;     // Map from id to D3D geometry shader
+			CSLookup              m_lookup_cs;     // Map from id to D3D compute shader
 			ShaderLookup          m_lookup_shader; // Map from id to ShaderBase instances
 			CBufLookup            m_lookup_cbuf;   // Shared 'cbuffer' objects
 			pr::vector<ShaderPtr> m_stock_shaders; // A collection of references to the stock shaders
@@ -84,6 +86,7 @@ namespace pr
 			D3DPtr<ID3D11VertexShader>   GetVS(RdrId id, VShaderDesc const* desc = nullptr);
 			D3DPtr<ID3D11PixelShader>    GetPS(RdrId id, PShaderDesc const* desc = nullptr);
 			D3DPtr<ID3D11GeometryShader> GetGS(RdrId id, GShaderDesc const* desc = nullptr);
+			D3DPtr<ID3D11ComputeShader>  GetCS(RdrId id, CShaderDesc const* desc = nullptr);
 
 			// Create an instance of a shader object derived from ShaderBase.
 			template <typename ShaderType, typename DxShaderType, typename = std::enable_if_t<std::is_base_of_v<ShaderBase, ShaderType>>>

@@ -64,12 +64,12 @@ namespace pr
 			PR_DEFINE_ENUM2(EChunkId, PR_ENUM);
 			#undef PR_ENUM
 			#pragma endregion
-			static_assert(sizeof(EChunkId::Enum_) == sizeof(u32), "");
+			static_assert(sizeof(EChunkId) == sizeof(u32), "");
 
 			struct ChunkHeader
 			{
-				EChunkId::Enum_ m_id;
-				u32             m_length;
+				EChunkId m_id;
+				u32      m_length;
 			};
 			static_assert(sizeof(ChunkHeader) == 8, "Incorrect chunk header size");
 
@@ -78,11 +78,11 @@ namespace pr
 			{
 				std::vector<ChunkIndex> m_chunks;
 
-				ChunkIndex(EChunkId::Enum_ id, size_t data_length)
+				ChunkIndex(EChunkId id, size_t data_length)
 					:ChunkHeader({id, checked_cast<u32>(sizeof(ChunkHeader) + data_length)})
 					,m_chunks()
 				{}
-				ChunkIndex(EChunkId::Enum_ id, size_t data_length, std::initializer_list<ChunkIndex> chunks)
+				ChunkIndex(EChunkId id, size_t data_length, std::initializer_list<ChunkIndex> chunks)
 					:ChunkHeader({id, checked_cast<u32>(sizeof(ChunkHeader) + data_length)})
 					,m_chunks()
 				{
@@ -100,7 +100,7 @@ namespace pr
 						if (c.m_id == id)
 							return c;
 					
-					std::stringstream ss; ss << "Child chunk " << id.ToStringA() << " not a member of chunk " << EChunkId::ToStringA(m_id);
+					std::stringstream ss; ss << "Child chunk " << id << " not a member of chunk " << m_id;
 					throw std::exception(ss.str().c_str());
 				}
 				ChunkIndex const& find(std::initializer_list<EChunkId> chunk_id) const

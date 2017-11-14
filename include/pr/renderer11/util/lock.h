@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 #pragma once
-#ifndef PR_RDR_UTIL_LOCK_H
-#define PR_RDR_UTIL_LOCK_H
 
 #include "pr/renderer11/forward.h"
 
@@ -148,17 +146,17 @@ namespace pr
 		// index buffer and for keeping track of ranges as you fill it with stuff
 		struct MLock
 		{
-			Lock     m_local_vlock;  // A local vertex lock to allow the caller to not provide one
-			Lock     m_local_ilock;  // A local index lock to allow the caller to not provide one
-			ModelPtr m_model;        // Pointer to the model whose buffers we're locking
-			Lock&    m_vlock;        // The vertex buffer lock for the model
-			Lock&    m_ilock;        // The index buffer lock for the model
+			Lock   m_local_vlock;  // A local vertex lock to allow the caller to not provide one
+			Lock   m_local_ilock;  // A local index lock to allow the caller to not provide one
+			Model* m_model;        // Pointer to the model whose buffers we're locking
+			Lock&  m_vlock;        // The vertex buffer lock for the model
+			Lock&  m_ilock;        // The index buffer lock for the model
 
-			MLock(ModelPtr& model, D3D11_MAP map_type = D3D11_MAP_WRITE, UINT flags = 0);
-			MLock(ModelPtr& model, Lock& vlock, Lock& ilock, D3D11_MAP map_type = D3D11_MAP_WRITE, UINT flags = 0);
+			MLock(Model* model, D3D11_MAP map_type = D3D11_MAP_WRITE, UINT flags = 0);
+			MLock(Model* model, Lock& vlock, Lock& ilock, D3D11_MAP map_type = D3D11_MAP_WRITE, UINT flags = 0);
 
-			MLock(MLock const&); // no copying
-			MLock& operator=(MLock const&);
+			MLock(MLock const&) = delete;
+			MLock& operator=(MLock const&) = delete;
 
 			// Pointers to the locked vert/index range
 			template <typename VType> VType* vptr() { return pr::type_ptr<VType>(m_vlock.pData) + m_vrange.m_begin; }
@@ -166,5 +164,3 @@ namespace pr
 		};
 	}
 }
-
-#endif

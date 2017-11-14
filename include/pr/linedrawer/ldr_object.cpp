@@ -118,12 +118,6 @@ namespace pr
 		};
 		#pragma endregion
 
-		// String hash wrapper
-		inline size_t Hash(char const* str)
-		{
-			return pr::hash::Hash(str);
-		}
-
 		// Helper object for passing parameters between parsing functions
 		struct ParseParams
 		{
@@ -208,7 +202,13 @@ namespace pr
 		};
 
 		// Template prototype for ObjectCreators
-		template <ELdrObject::Enum_ ObjType> struct ObjectCreator;
+		template <ELdrObject ObjType> struct ObjectCreator;
+
+		// String hash wrapper
+		inline size_t Hash(char const* str)
+		{
+			return pr::hash::Hash(str);
+		}
 
 		// Forward declare the recursive object parsing function
 		bool ParseLdrObject(ParseParams& p);
@@ -272,7 +272,7 @@ namespace pr
 				}
 			case 0:
 				{
-					attr.m_name = model_type.ToStringA();
+					attr.m_name = ToStringA(model_type);
 					attr.m_colour = 0xFFFFFFFF;
 					break;
 				}
@@ -519,8 +519,8 @@ namespace pr
 						{
 							char word[20];
 							p.m_reader.SectionStart();
-							p.m_reader.Identifier(word); sam.AddressU = (D3D11_TEXTURE_ADDRESS_MODE)ETexAddrMode::Parse(word, false);
-							p.m_reader.Identifier(word); sam.AddressV = (D3D11_TEXTURE_ADDRESS_MODE)ETexAddrMode::Parse(word, false);
+							p.m_reader.Identifier(word); sam.AddressU = (D3D11_TEXTURE_ADDRESS_MODE)Enum<ETexAddrMode>::Parse(word, false);
+							p.m_reader.Identifier(word); sam.AddressV = (D3D11_TEXTURE_ADDRESS_MODE)Enum<ETexAddrMode>::Parse(word, false);
 							p.m_reader.SectionEnd();
 							break;
 						}
@@ -528,7 +528,7 @@ namespace pr
 						{
 							char word[20];
 							p.m_reader.SectionStart();
-							p.m_reader.Identifier(word); sam.Filter = (D3D11_FILTER)EFilter::Parse(word, false);
+							p.m_reader.Identifier(word); sam.Filter = (D3D11_FILTER)Enum<EFilter>::Parse(word, false);
 							p.m_reader.SectionEnd();
 							break;
 						}
@@ -821,7 +821,14 @@ namespace pr
 					}
 				case EKeyword::Size:
 					{
-						p.m_reader.Vector2S(m_point_size);
+						// Allow one or two dimensions
+						p.m_reader.SectionStart();
+						p.m_reader.Real(m_point_size.x);
+						if (!p.m_reader.IsSectionEnd())
+							p.m_reader.Real(m_point_size.y);
+						else
+							m_point_size.y = m_point_size.x;
+						p.m_reader.SectionEnd();
 						return true;
 					}
 				case EKeyword::Style:
@@ -866,7 +873,7 @@ namespace pr
 				{
 					// Get/Create an instance of the point sprites shader
 					auto id = pr::hash::Hash("LDrawPointSprites", m_point_size, m_depth);
-					auto shdr = p.m_rdr.m_shdr_mgr.GetShader<PointSpritesGS>(id, EStockShader::PointSpritesGS);
+					auto shdr = p.m_rdr.m_shdr_mgr.GetShader<PointSpritesGS>(id, RdrId(EStockShader::PointSpritesGS));
 					shdr->m_size = m_point_size;
 					shdr->m_depth = m_depth;
 
@@ -1135,7 +1142,7 @@ namespace pr
 				{
 					// Get or create an instance of the thick line shader
 					auto id = pr::hash::Hash("LDrawThickLine", m_line_width);
-					auto shdr = p.m_rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id, EStockShader::ThickLineListGS);
+					auto shdr = p.m_rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id, RdrId(EStockShader::ThickLineListGS));
 					shdr->m_width = m_line_width;
 
 					for (auto& nug : obj->m_model->m_nuggets)
@@ -1889,11 +1896,11 @@ namespace pr
 
 				// Get instances of the arrow head geometry shader and the thick line shader
 				auto id_thk = pr::hash::Hash("LDrawThickLine", m_line_width);
-				auto thk_shdr = p.m_rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id_thk, EStockShader::ThickLineListGS);
+				auto thk_shdr = p.m_rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id_thk, RdrId(EStockShader::ThickLineListGS));
 				thk_shdr->m_width = m_line_width;
 
 				auto id_arw = pr::hash::Hash("LDrawArrowHead", m_line_width*2);
-				auto arw_shdr = p.m_rdr.m_shdr_mgr.GetShader<ArrowHeadGS>(id_arw, EStockShader::ArrowHeadGS);
+				auto arw_shdr = p.m_rdr.m_shdr_mgr.GetShader<ArrowHeadGS>(id_arw, RdrId(EStockShader::ArrowHeadGS));
 				arw_shdr->m_size = m_line_width * 2;
 
 				// Create nuggets
@@ -3026,7 +3033,7 @@ namespace pr
 					{
 						// Use thick lines
 						auto id = pr::hash::Hash("LDrawThickLine", m_width);
-						auto shdr = p.m_rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id, EStockShader::ThickLineListGS);
+						auto shdr = p.m_rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id, RdrId(EStockShader::ThickLineListGS));
 						shdr->m_width = m_width;
 						nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
 					}
@@ -3134,7 +3141,7 @@ namespace pr
 				if (info.m_format == EModelFileFormat::Unknown)
 				{
 					string512 msg = pr::FmtS("Mesh file '%s' is not supported.\nSupported Formats: ", Narrow(m_filepath).c_str());
-					for (auto f : EModelFileFormat::MemberNames<char>()) msg.append(f).append(" ");
+					for (auto f : Enum<EModelFileFormat>::Members()) msg.append(ToStringA(f)).append(" ");
 					p.ReportError(EResult::Failed, msg.c_str());
 					return;
 				}
@@ -3489,11 +3496,11 @@ namespace pr
 
 		// Parse an ldr object of type 'ShapeType'
 		// Note: not using an output iterator style callback because model instancing relies on the map from object to model.
-		template <ELdrObject::Enum_ ShapeType> void Parse(ParseParams& p)
+		template <ELdrObject ShapeType> void Parse(ParseParams& p)
 		{
 			// Read the object attributes: name, colour, instance
 			auto attr = ParseAttributes(p.m_reader, ShapeType);
-			auto obj  = LdrObjectPtr(new LdrObject(attr, p.m_parent, p.m_context_id), true);
+			auto obj  = LdrObjectPtr(new LdrObject(attr, p.m_parent, p.m_context_id, p.m_rdr.NewId32()), true);
 
 			ObjectCreator<ShapeType> creator(p);
 
@@ -3515,7 +3522,7 @@ namespace pr
 						continue;
 
 					// Recursively parse child objects
-					ParseParams pp(p, obj->m_child, kw, obj.get());
+					ParseParams pp(p, obj->m_child, HashValue(kw), obj.get());
 					if (ParseLdrObject(pp))
 						continue;
 
@@ -3550,7 +3557,7 @@ namespace pr
 		bool ParseLdrObject(ParseParams& p)
 		{
 			auto object_count = p.m_objects.size();
-			auto kw = (ELdrObject::Enum_)p.m_keyword;
+			auto kw = ELdrObject(p.m_keyword);
 			switch (kw)
 			{
 			default: return false;
@@ -3718,7 +3725,7 @@ namespace pr
 		// Create an ldr object from creation data.
 		LdrObjectPtr Create(pr::Renderer& rdr, ObjectAttributes attr, MeshCreationData const& cdata, pr::Guid const& context_id)
 		{
-			LdrObjectPtr obj(new LdrObject(attr, nullptr, context_id), true);
+			LdrObjectPtr obj(new LdrObject(attr, nullptr, context_id, rdr.NewId32()), true);
 
 			// Create the model
 			obj->m_model = ModelGenerator<>::Mesh(rdr, cdata);
@@ -3730,7 +3737,7 @@ namespace pr
 		LdrObjectPtr CreateInstance(LdrObject const* existing)
 		{
 			ObjectAttributes attr(existing->m_type, existing->m_name.c_str(), existing->m_base_colour, true);
-			LdrObjectPtr obj(new LdrObject(attr, nullptr, existing->m_context_id), true);
+			LdrObjectPtr obj(new LdrObject(attr, nullptr, existing->m_context_id, existing->m_model->rdr().NewId32()), true);
 
 			// Use the same model
 			obj->m_model = existing->m_model;
@@ -3741,7 +3748,7 @@ namespace pr
 		// Objects created by this method will have dynamic usage and are suitable for updating every frame via the 'Edit' function.
 		LdrObjectPtr CreateEditCB(pr::Renderer& rdr, ObjectAttributes attr, int vcount, int icount, int ncount, EditObjectCB edit_cb, void* ctx, pr::Guid const& context_id)
 		{
-			LdrObjectPtr obj(new LdrObject(attr, 0, context_id), true);
+			LdrObjectPtr obj(new LdrObject(attr, 0, context_id, rdr.NewId32()), true);
 
 			// Create buffers for a dynamic model
 			VBufferDesc vbs(vcount, sizeof(Vert), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
@@ -3759,14 +3766,14 @@ namespace pr
 				obj->m_model->CreateNugget(nug);
 
 			// Initialise it via the callback
-			edit_cb(obj->m_model, ctx, rdr);
+			edit_cb(obj->m_model.get(), ctx, rdr);
 			return obj;
 		}
 
 		// Modify the geometry of an LdrObject
 		void Edit(pr::Renderer& rdr, LdrObject* object, EditObjectCB edit_cb, void* ctx)
 		{
-			edit_cb(object->m_model, ctx, rdr);
+			edit_cb(object->m_model.get(), ctx, rdr);
 			pr::events::Send(Evt_LdrObjectChg(object));
 		}
 
@@ -4163,15 +4170,15 @@ LR"(// *************************************************************************
 	*Font { *Name {"Courier New"} *Size {40} }
 
 	// Normal text string, everything between quotes (including new lines)
-	"This is a normal         
-	3D text"
+	"This is normal         
+	3D text. "
 	
 	*CString
 	{
 		// Alternative. Text is a C-Style string that uses escape characters
 		// Everything between matched quotes (including new lines, although
 		// indentation tabs are not removed for C-Style strings)
-		"Can even       
+		"It can even       
 		use\n \"C-Style\" strings" 
 	}
 
@@ -4765,7 +4772,7 @@ LR"(// *************************************************************************
 		} g_ldr_object_tracker;
 		#endif
 
-		LdrObject::LdrObject(ObjectAttributes const& attr, LdrObject* parent, pr::Guid const& context_id)
+		LdrObject::LdrObject(ObjectAttributes const& attr, LdrObject* parent, pr::Guid const& context_id, int uid)
 			:RdrInstance()
 			,m_o2p(m4x4Identity)
 			,m_type(attr.m_type)
@@ -4786,6 +4793,7 @@ LR"(// *************************************************************************
 		{
 			m_i2w = m4x4Identity;
 			m_colour = m_base_colour;
+			m_uid = uid;
 			PR_EXPAND(PR_DBG, g_ldr_object_tracker.add(this));
 		}
 		LdrObject::~LdrObject()
@@ -4797,7 +4805,7 @@ LR"(// *************************************************************************
 		// Return the declaration name of this object
 		string32 LdrObject::TypeAndName() const
 		{
-			return string32(ELdrObject::ToStringA(m_type)) + " " + m_name;
+			return string32(ToStringA(m_type)) + " " + m_name;
 		}
 
 		// Recursively add this object and its children to a viewport

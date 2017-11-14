@@ -75,6 +75,10 @@ namespace pr.gfx
 			ThickLineListGS,
 			ArrowHeadGS,
 		}
+		public enum EShaderCS
+		{
+			None = 0,
+		}
 		public enum ERenderStep :int
 		{
 			Invalid = 0,
@@ -82,6 +86,7 @@ namespace pr.gfx
 			GBuffer,
 			DSLighting,
 			ShadowMap,
+			RayCast,
 			_number_of,
 		};
 		public enum EFormat :uint
@@ -372,6 +377,12 @@ namespace pr.gfx
 			NewData,
 			Reload,
 		}
+		[Flags] public enum EHitTestFlags
+		{
+			SnapToFaces = 1 << 0,
+			SnapToEdges = 1 << 1,
+			SnapToVerts = 1 << 2,
+		}
 		#endregion
 
 		#region Structs
@@ -397,28 +408,32 @@ namespace pr.gfx
 		{
 			[DebuggerDisplay("{Description,nq}"), Serializable, StructLayout(LayoutKind.Sequential)] public struct ShaderSet
 			{
-				public ShaderSet(EShaderVS vs, EShaderGS gs, EShaderPS ps)
+				public ShaderSet(EShaderVS vs, EShaderGS gs, EShaderPS ps, EShaderCS cs)
 				{
 					m_vs = vs;
 					m_gs = gs;
 					m_ps = ps;
+					m_cs = cs;
 					m_vs_data = new byte[16];
 					m_gs_data = new byte[16];
 					m_ps_data = new byte[16];
+					m_cs_data = new byte[16];
 				}
 
 				public EShaderVS m_vs;
 				public EShaderGS m_gs;
 				public EShaderPS m_ps;
+				public EShaderCS m_cs;
 
 				[MarshalAs(UnmanagedType.ByValArray, SizeConst=16)] public byte[] m_vs_data;
 				[MarshalAs(UnmanagedType.ByValArray, SizeConst=16)] public byte[] m_gs_data;
 				[MarshalAs(UnmanagedType.ByValArray, SizeConst=16)] public byte[] m_ps_data;
+				[MarshalAs(UnmanagedType.ByValArray, SizeConst=16)] public byte[] m_cs_data;
 
 				/// <summary>Description</summary>
 				public string Description
 				{
-					get { return $"VS={m_vs} GS={m_gs} PS={m_ps}"; }
+					get { return $"VS={m_vs} GS={m_gs} PS={m_ps} CS={m_cs}"; }
 				}
 			}
 			[DebuggerDisplay("Smap"), Serializable, StructLayout(LayoutKind.Sequential)] public struct ShaderMap
@@ -452,6 +467,9 @@ namespace pr.gfx
 
 			/// <summary>Shader overrides</summary>
 			public ShaderMap m_smap;
+			// ? Replace this with a text description of the shader params?
+			// It would make it human readable, byte order independent, backwards compatible,
+			// smaller, variable size...
 
 			/// <summary>Set the shader to use along with the parameters it requires</summary>
 			public void Use(ERenderStep rstep, EShaderVS shdr, params object[] args)
@@ -662,6 +680,42 @@ namespace pr.gfx
 					m_on             = true,
 					m_cam_relative   = false,
 				};
+			}
+		}
+
+		/// <summary>A ray description for hit testing in a 3d scene</summary>
+		[Serializable]
+		[StructLayout(LayoutKind.Sequential)]
+		public struct HitTestRay
+		{
+			// The world space origin and direction of the ray (normalisation not required)
+			public v4 m_ws_origin;
+			public v4 m_ws_direction;
+		}
+
+		/// <summary>The result of a ray cast hit test in a 3d scene</summary>
+		[Serializable]
+		[StructLayout(LayoutKind.Sequential)]
+		public struct HitTestResult
+		{
+			// The origin and direction of the cast ray (in world space)
+			public v4 m_ws_ray_origin;
+			public v4 m_ws_ray_direction;
+
+			// The intercept point (in world space)
+			public v4 m_ws_intercept;
+
+			// The object that was hit (or null)
+			public Object HitObject
+			{
+				get { return IsHit ? new Object(m_obj) : null; }
+			}
+			private IntPtr m_obj;
+
+			/// <summary>True if something was hit</summary>
+			public bool IsHit
+			{
+				get { return m_obj != IntPtr.Zero; }
 			}
 		}
 
@@ -1043,6 +1097,13 @@ namespace pr.gfx
 
 			/// <summary>Raised just before a mouse navigation happens</summary>
 			public event EventHandler<MouseNavigateEventArgs> MouseNavigating;
+
+			/// <summary>Perform a hit test in the scene</summary>
+			public HitTestResult HitTest(HitTestRay ray, float snap_distance, EHitTestFlags flags)
+			{
+				View3D_WindowHitTest(Handle, ref ray, snap_distance, flags, out HitTestResult hit);
+				return hit;
+			}
 
 			/// <summary>Get the render target texture</summary>
 			public Texture RenderTarget
@@ -1984,7 +2045,11 @@ namespace pr.gfx
 			public m4x4 O2P
 			{
 				get { return View3D_ObjectO2PGet(m_handle, null); }
-				set { View3D_ObjectO2PSet(m_handle, ref value, null); }
+				set
+				{
+					Util.BreakIf(value.w.w != 1.0f, "Invalid object transform");
+					View3D_ObjectO2PSet(m_handle, ref value, null);
+				}
 			}
 
 			/// <summary>Get the model space bounding box of this object</summary>
@@ -2944,6 +3009,7 @@ namespace ldr
 		[DllImport(Dll)] private static extern BBox            View3D_WindowSceneBounds         (HWindow window, ESceneBounds bounds, int except_count, Guid[] except);
 		[DllImport(Dll)] private static extern float           View3D_WindowAnimTimeGet         (HWindow window);
 		[DllImport(Dll)] private static extern void            View3D_WindowAnimTimeSet         (HWindow window, float time_s);
+		[DllImport(Dll)] private static extern void            View3D_WindowHitTest             (HWindow window, ref HitTestRay ray, float snap_distance, EHitTestFlags flags, out HitTestResult hit);
 
 		// Camera
 		[DllImport(Dll)] private static extern void            View3D_CameraToWorldGet       (HWindow window, out m4x4 c2w);

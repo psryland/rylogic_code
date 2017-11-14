@@ -11,6 +11,9 @@ namespace pr.extn
 {
 	public static class ToolStrip_
 	{
+		/// <summary>ToolStripMenuItem comparer for alphabetical order</summary>
+		public static readonly Cmp<ToolStripItem> AlphabeticalOrder = Cmp<ToolStripItem>.From((l,r) => string.Compare(l.Text, r.Text, true));
+
 		/// <summary>RAII scope for temporarily disabling 'Enabled' on this control</summary>
 		public static Scope SuspendEnabled(this ToolStripItem ctrl)
 		{
@@ -45,13 +48,12 @@ namespace pr.extn
 		}
 
 		/// <summary>Add and return an menu item to this collection in order defined by 'cmp'</summary>
-		public static T AddOrdered<T>(this ToolStripItemCollection items, T item, Comparer<ToolStripMenuItem> cmp) where T:ToolStripMenuItem
+		public static T AddOrdered<T>(this ToolStripItemCollection items, T item, IComparer<ToolStripMenuItem> cmp) where T:ToolStripMenuItem
 		{
 			var idx = 0;
 			for (idx = 0; idx != items.Count; ++idx)
 			{
-				var mi = items[idx] as ToolStripMenuItem;
-				if (mi != null && cmp.Compare(mi, item) > 0)
+				if (items[idx] is ToolStripMenuItem mi && cmp.Compare(mi, item) > 0)
 					break;
 			}
 
@@ -162,9 +164,6 @@ namespace pr.extn
 			// Set the new size
 			item.Size = new Size(width, item.Height);
 		}
-
-		/// <summary>ToolStripMenuItem comparer for alphabetical order</summary>
-		public static readonly Cmp<ToolStripMenuItem> AlphabeticalOrder = Cmp<ToolStripMenuItem>.From((l,r) => string.Compare(l.Text, r.Text, true));
 
 		/// <summary>
 		/// Restores the tool strip locations in this container and assigns handlers so that

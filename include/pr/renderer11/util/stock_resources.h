@@ -15,7 +15,8 @@ namespace pr
 			x(ForwardRender ,)\
 			x(GBuffer       ,)\
 			x(DSLighting    ,)\
-			x(ShadowMap     ,)
+			x(ShadowMap     ,)\
+			x(RayCast       ,)
 		PR_DEFINE_ENUM2(ERenderStep, PR_ENUM);
 		#undef PR_ENUM
 
@@ -28,7 +29,7 @@ namespace pr
 			x(Checker2 ,)\
 			x(Checker3 ,)\
 			x(WhiteSpot,)
-		PR_DEFINE_ENUM2(EStockTexture, PR_ENUM);
+		PR_DEFINE_ENUM2_BASE(EStockTexture, PR_ENUM, RdrId);
 		#undef PR_ENUM
 
 		#define PR_ENUM(x) \
@@ -43,10 +44,16 @@ namespace pr
 			x(ShadowMapFaceGS ,)\
 			x(ShadowMapLineGS ,)\
 			x(ShadowMapPS     ,)\
+			x(RayCastVS       ,)\
+			x(RayCastFaceGS   ,)\
+			x(RayCastEdgeGS   ,)\
+			x(RayCastVertGS   ,)\
+			x(RayCastPS       ,)\
+			x(RayCastCS       ,)\
 			x(PointSpritesGS  ,)\
 			x(ThickLineListGS ,)\
 			x(ArrowHeadGS     ,)
-		PR_DEFINE_ENUM2(EStockShader, PR_ENUM);
+		PR_DEFINE_ENUM2_BASE(EStockShader, PR_ENUM, RdrId);
 		#undef PR_ENUM
 	}
 }

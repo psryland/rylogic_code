@@ -192,6 +192,9 @@ namespace view3d
 		// Show/Hide the angle tool
 		void ShowAngleTool(bool show);
 
+		// Cast a ray into the scene, returning hit info
+		void HitTest(View3DHitTestRay const* rays, View3DHitTestResult* results, int count, float snap_distance, EView3DHitTestFlags flags, bool immediate);
+
 		// Create stock models such as the focus point, origin, etc
 		void CreateStockModels();
 	};

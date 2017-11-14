@@ -14,22 +14,21 @@ namespace pr
 	{
 		struct ForwardRender :RenderStep
 		{
-			static const ERenderStep::Enum_ Id = ERenderStep::ForwardRender;
+			static ERenderStep const Id = ERenderStep::ForwardRender;
 
 			D3DPtr<ID3D11Buffer> m_cbuf_frame;   // Per-frame constant buffer
 			D3DPtr<ID3D11Buffer> m_cbuf_nugget;  // Per-nugget constant buffer
-			bool                 m_clear_bb;     // True if this render step clears the backbuffer before rendering
+			bool                 m_clear_bb;     // True if this render step clears the back-buffer before rendering
 			ShaderSet            m_sset;
 
 			ForwardRender(Scene& scene, bool clear_bb = true);
+			ForwardRender(ForwardRender const&) = delete;
+			ForwardRender& operator = (ForwardRender const&) = delete;
 
 		private:
 
-			ForwardRender(ForwardRender const&);
-			ForwardRender& operator = (ForwardRender const&);
-
 			// The type of render step this is
-			ERenderStep::Enum_ GetId() const override { return Id; }
+			ERenderStep GetId() const override { return Id; }
 
 			// Add model nuggets to the draw list for this render step
 			void AddNuggets(BaseInstance const& inst, TNuggetChain& nuggets) override;

@@ -10,6 +10,7 @@
 #include "pr/renderer11/shaders/shader_manager.h"
 #include "pr/renderer11/shaders/shader.h"
 #include "pr/renderer11/util/stock_resources.h"
+#include "pr/renderer11/util/event_args.h"
 #include "renderer11/shaders/common.h"
 #include "renderer11/render/state_stack.h"
 
@@ -29,8 +30,8 @@ namespace pr
 			,m_cbuf_nugget(m_shdr_mgr->GetCBuf<hlsl::ds::CBufModel >("ds::CBufModel"))
 			,m_sset()
 		{
-			m_sset.m_vs = m_shdr_mgr->FindShader(EStockShader::GBufferVS);
-			m_sset.m_ps = m_shdr_mgr->FindShader(EStockShader::GBufferPS);
+			m_sset.m_vs = m_shdr_mgr->FindShader(RdrId(EStockShader::GBufferVS));
+			m_sset.m_ps = m_shdr_mgr->FindShader(RdrId(EStockShader::GBufferPS));
 
 			InitRT(true);
 			m_eh_resize = m_scene->m_wnd->m_rdr->RenderTargetSizeChanged += [this](Window& wnd, RenderTargetSizeChangedEventArgs const& args)
@@ -193,7 +194,7 @@ namespace pr
 
 				// Set the per-nugget constants
 				hlsl::ds::CBufModel cb1 = {};
-				SetGeomType(*dle.m_nugget, cb1);
+				SetModelFlags(*dle.m_nugget, UniqueId(*dle.m_instance), cb1);
 				SetTxfm(*dle.m_instance, m_scene->m_view, cb1);
 				SetTint(*dle.m_instance, cb1);
 				SetTexDiffuse(*dle.m_nugget, cb1);

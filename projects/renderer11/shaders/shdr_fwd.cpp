@@ -46,14 +46,14 @@ namespace pr
 		template <> void ShaderManager::CreateShader<FwdShaderVS>()
 		{
 			VShaderDesc desc(forward_vs, Vert());
-			auto dx = GetVS(EStockShader::FwdShaderVS, &desc);
-			m_stock_shaders.emplace_back(CreateShader<FwdShaderVS>(EStockShader::FwdShaderVS, dx, "fwd_shader_vs"));
+			auto dx = GetVS(RdrId(EStockShader::FwdShaderVS), &desc);
+			m_stock_shaders.emplace_back(CreateShader<FwdShaderVS>(RdrId(EStockShader::FwdShaderVS), dx, "fwd_shader_vs"));
 		}
 		template <> void ShaderManager::CreateShader<FwdShaderPS>()
 		{
 			PShaderDesc desc(forward_ps);
-			auto dx = GetPS(EStockShader::FwdShaderPS, &desc);
-			m_stock_shaders.emplace_back(CreateShader<FwdShaderPS>(EStockShader::FwdShaderPS, dx, "fwd_shader_ps"));
+			auto dx = GetPS(RdrId(EStockShader::FwdShaderPS), &desc);
+			m_stock_shaders.emplace_back(CreateShader<FwdShaderPS>(RdrId(EStockShader::FwdShaderPS), dx, "fwd_shader_ps"));
 		}
 	}
 }

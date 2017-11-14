@@ -60,4 +60,10 @@ namespace pr
 			return m_marr[i];
 		}
 	};
+
+	// Type deduction helper
+	template <typename T> pr::array_view<T> make_array_view(T const* arr, int count)
+	{
+		return pr::array_view<T>(arr, count);
+	}
 }

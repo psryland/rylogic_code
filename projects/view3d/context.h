@@ -94,7 +94,7 @@ namespace view3d
 
 		// Callback function called from pr::ldr::CreateEditCB to populate the model data
 		struct ObjectEditCBData { View3D_EditObjectCB edit_cb; void* ctx; };
-		void static __stdcall ObjectEditCB(pr::rdr::ModelPtr model, void* ctx, pr::Renderer&);
+		void static __stdcall ObjectEditCB(pr::rdr::Model* model, void* ctx, pr::Renderer&);
 
 		// Create the demo scene objects
 		pr::Guid CreateDemoScene(Window* window);

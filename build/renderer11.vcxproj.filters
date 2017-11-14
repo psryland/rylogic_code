@@ -52,6 +52,12 @@
     <Filter Include="shaders\hlsl\lighting">
       <UniqueIdentifier>{f4a19bcc-f66c-4c39-b094-b66f24601c81}</UniqueIdentifier>
     </Filter>
+    <Filter Include="shaders\hlsl\utility">
+      <UniqueIdentifier>{0387a659-43ec-4915-8509-b6974d49b14a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\hlsl\common">
+      <UniqueIdentifier>{615efcb0-9bd8-49db-b07b-91d224bbf160}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\projects\renderer11\util\stdafx.h">
@@ -140,7 +146,6 @@
     <ClInclude Include="..\include\pr\geometry\utility.h">
       <Filter>geometry</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\renderer11\instance.h" />
     <ClInclude Include="..\include\pr\renderer11\render\state_block.h">
       <Filter>render</Filter>
     </ClInclude>
@@ -161,9 +166,6 @@
     </ClInclude>
     <ClInclude Include="..\projects\renderer11\textures\wic_texture_loader.h">
       <Filter>textures</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\renderer11\util\event_types.h">
-      <Filter>util</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\renderer11\textures\projected_texture.h">
       <Filter>textures</Filter>
@@ -250,6 +252,15 @@
       <Filter>geometry</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\renderer11\shaders\shdr_screen_space.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\util\event_args.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\steps\ray_cast.h">
+      <Filter>steps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\renderer11\shaders\shader_forward.h">
       <Filter>shaders</Filter>
     </ClInclude>
   </ItemGroup>
@@ -398,6 +409,12 @@
     <ClCompile Include="..\projects\renderer11\shaders\shdr_shadow_map.cpp">
       <Filter>shaders</Filter>
     </ClCompile>
+    <ClCompile Include="..\projects\renderer11\shaders\shdr_utility.cpp">
+      <Filter>shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\steps\ray_cast.cpp">
+      <Filter>steps</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\renderer11\shaders\hlsl\deferred\gbuffer.hlsli">
@@ -430,6 +447,18 @@
     <None Include="..\projects\renderer11\shaders\hlsl\screenspace\screenspace_cbuf.hlsli">
       <Filter>shaders\hlsl\screenspace</Filter>
     </None>
+    <None Include="..\projects\renderer11\shaders\hlsl\utility\ray_cast_cbuf.hlsli">
+      <Filter>shaders\hlsl\utility</Filter>
+    </None>
+    <None Include="..\projects\renderer11\shaders\hlsl\common\functions.hlsli">
+      <Filter>shaders\hlsl\common</Filter>
+    </None>
+    <None Include="..\projects\renderer11\shaders\hlsl\common\geometry.hlsli">
+      <Filter>shaders\hlsl\common</Filter>
+    </None>
+    <None Include="..\projects\renderer11\shaders\hlsl\common\vector.hlsli">
+      <Filter>shaders\hlsl\common</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\projects\renderer11\shaders\hlsl\shadow\shadow_map.hlsl">
@@ -452,6 +481,9 @@
     </CustomBuild>
     <CustomBuild Include="..\projects\renderer11\shaders\hlsl\screenspace\point_sprites.hlsl">
       <Filter>shaders\hlsl\screenspace</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\projects\renderer11\shaders\hlsl\utility\ray_cast.hlsl">
+      <Filter>shaders\hlsl\utility</Filter>
     </CustomBuild>
   </ItemGroup>
 </Project>

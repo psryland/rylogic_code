@@ -15,10 +15,10 @@
 	{
 		template <typename U> static std::true_type  check(decltype(U::_bitwise_operators_allowed)*);
 		template <typename>   static std::false_type check(...);
-		using type = decltype(check<T>(0));
+		using type = decltype(check<T>(nullptr));
 		static bool const value = type::value;
 	};
-	template <typename T> using enable_if_has_bitops = typename std::enable_if<has_bitwise_operators_allowed<T>::value>::type;
+	template <typename T> using enable_if_has_bitops = typename std::enable_if<has_bitwise_operators_allowed<T>::value, void>::type;
 
 	// Define the bitwise operators
 	template <typename TEnum, typename = enable_if_has_bitops<TEnum>> constexpr TEnum operator ~ (TEnum lhs)
@@ -95,12 +95,23 @@
 	{
 		template <typename U> static std::true_type  check(decltype(U::_arithmetic_operators_allowed)*);
 		template <typename>   static std::false_type check(...);
-		using type = decltype(check<T>(0));
+		using type = decltype(check<T>(nullptr));
 		static bool const value = type::value;
 	};
-	template <typename T> using enable_if_has_arith = typename std::enable_if<has_arithmetic_operators_allowed<T>::value>::type;
+	template <typename T> struct has_number_of
+	{
+		template <typename U> static std::true_type  check(decltype(U::NumberOf)*);
+		template <typename>   static std::false_type check(...);
+		using type = decltype(check<T>(nullptr));
+		static bool const value = type::value;
+	};
+	template <typename T> using enable_if_has_arith = typename std::enable_if<has_arithmetic_operators_allowed<T>::value || has_number_of<T>::value>::type;
 
 	// Define the arithmetic operators
+	template <typename TEnum, typename = enable_if_has_arith<TEnum>> inline TEnum& operator ++ (TEnum& lhs)
+	{
+		return lhs = static_cast<TEnum>(lhs + 1);
+	}
 	template <typename TEnum, typename = enable_if_has_arith<TEnum>> constexpr TEnum operator + (TEnum lhs)
 	{
 		return lhs;
@@ -167,6 +178,30 @@
 		using ut = typename std::underlying_type<TEnum>::type;
 		return TEnum(lhs / static_cast<ut>(rhs));
 	}
+	//template <typename TEnum, typename ut = typename std::underlying_type<TEnum>::type, typename = enable_if_has_arith<TEnum>> constexpr TEnum operator == (TEnum lhs, ut rhs)
+	//{
+	//	return static_cast<ut>(lhs) == rhs;
+	//}
+	//template <typename TEnum, typename ut = typename std::underlying_type<TEnum>::type, typename = enable_if_has_arith<TEnum>> constexpr TEnum operator != (TEnum lhs, ut rhs)
+	//{
+	//	return !(lhs == rhs);
+	//}
+	//template <typename TEnum, typename ut = typename std::underlying_type<TEnum>::type, typename = enable_if_has_arith<TEnum>> constexpr TEnum operator <  (TEnum lhs, ut rhs)
+	//{
+	//	return static_cast<ut>(lhs) < rhs;
+	//}
+	//template <typename TEnum, typename ut = typename std::underlying_type<TEnum>::type, typename = enable_if_has_arith<TEnum>> constexpr TEnum operator >  (TEnum lhs, ut rhs)
+	//{
+	//	return static_cast<ut>(lhs) > rhs;
+	//}
+	//template <typename TEnum, typename ut = typename std::underlying_type<TEnum>::type, typename = enable_if_has_arith<TEnum>> constexpr TEnum operator <= (TEnum lhs, ut rhs)
+	//{
+	//	return static_cast<ut>(lhs) <= rhs;
+	//}
+	//template <typename TEnum, typename ut = typename std::underlying_type<TEnum>::type, typename = enable_if_has_arith<TEnum>> constexpr TEnum operator >= (TEnum lhs, ut rhs)
+	//{
+	//	return static_cast<ut>(lhs) >= rhs;
+	//}
 
 #else
 // C does not require operators
@@ -204,6 +239,7 @@ namespace pr
 				Six      = 6,
 				Three    = 3,
 				MinusTwo = -2,
+
 				_arithmetic_operators_allowed,
 			};
 			static_assert(has_arithmetic_operators_allowed<Numbers>::value == true, "");

@@ -28,22 +28,13 @@ namespace pr
 		{
 			Scene& m_scene; // The scene that owns the render step
 			explicit Evt_UpdateScene(Scene& scene) :m_scene(scene)  {}
-
-		private:
-			Evt_UpdateScene(Evt_UpdateScene const&);
-			Evt_UpdateScene& operator=(Evt_UpdateScene const&);
+			Evt_UpdateScene(Evt_UpdateScene const&) = delete;
+			Evt_UpdateScene& operator=(Evt_UpdateScene const&) = delete;
 		};
 
 		// Raised during a compatibility test. Compatibility failures should throw
 		struct Evt_CompatibilityTest
 		{
-		};
-
-		// Raised when a model is deleted
-		struct Evt_ModelDestroy
-		{
-			Model* m_model; // The model being destructed
-			explicit Evt_ModelDestroy(Model& model) :m_model(&model) {}
 		};
 	}
 }

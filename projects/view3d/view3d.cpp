@@ -664,6 +664,26 @@ VIEW3D_API void __stdcall View3D_WindowAnimTimeSet(View3DWindow window, float ti
 	CatchAndReport(View3D_WindowAnimTimeSet, window, );
 }
 
+// Cast a ray into the scene, returning information about what it hit
+VIEW3D_API void __stdcall View3D_WindowHitTest(View3DWindow window, View3DHitTestRay const& ray, float snap_distance, EView3DHitTestFlags flags, View3DHitTestResult& hit)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		// todo: add the non-immediate version of this function
+		// to allow continuous hit-testing during constant rendering.
+
+		DllLockGuard;
+		View3DHitTestRay hack_rays[16] = {ray,ray,ray,ray,ray,ray,ray,ray,ray,ray,ray,ray,ray,ray,ray,ray};
+		View3DHitTestResult hack_results[16] = {hit,hit,hit,hit,hit,hit,hit,hit,hit,hit,hit,hit,hit,hit,hit,hit};
+		//window->HitTest(&ray, &hit, 1, snap_distance, flags, true);
+		window->HitTest(hack_rays, hack_results, 16, snap_distance, flags, true);
+		hit = hack_results[0];
+	}
+	CatchAndReport(View3D_WindowMouseTrackGet, window, );
+}
+
 //  ********************************************************
 
 // Return the camera to world transform
@@ -1232,7 +1252,7 @@ VIEW3D_API void __stdcall View3D_LightProperties(View3DWindow window, View3DLigh
 		DllLockGuard;
 		light.m_position        = view3d::To<View3DV4>(window->m_light.m_position);
 		light.m_direction       = view3d::To<View3DV4>(window->m_light.m_direction);
-		light.m_type            = static_cast<EView3DLight>(window->m_light.m_type.value);
+		light.m_type            = static_cast<EView3DLight>(window->m_light.m_type);
 		light.m_ambient         = window->m_light.m_ambient;
 		light.m_diffuse         = window->m_light.m_diffuse;
 		light.m_specular        = window->m_light.m_specular;
@@ -1258,7 +1278,7 @@ VIEW3D_API void __stdcall View3D_SetLightProperties(View3DWindow window, View3DL
 		DllLockGuard;
 		window->m_light.m_position        = view3d::To<pr::v4>(light.m_position);
 		window->m_light.m_direction       = view3d::To<pr::v4>(light.m_direction);
-		window->m_light.m_type            = pr::rdr::ELight::From(light.m_type);
+		window->m_light.m_type            = pr::Enum<pr::rdr::ELight>::From(light.m_type);
 		window->m_light.m_ambient         = light.m_ambient;
 		window->m_light.m_diffuse         = light.m_diffuse;
 		window->m_light.m_specular        = light.m_specular;
@@ -1553,7 +1573,7 @@ VIEW3D_API BSTR __stdcall View3D_ObjectTypeGetBStr(View3DObject object)
 	try
 	{
 		DllLockGuard;
-		auto name = object->m_type.ToStringW();
+		auto name = ToStringW(object->m_type);
 		return ::SysAllocStringLen(name, UINT(wcslen(name)));
 	}
 	CatchAndReport(View3D_ObjectTypeGetBStr, , BSTR());
@@ -1563,7 +1583,7 @@ VIEW3D_API char const*  __stdcall View3D_ObjectTypeGet(View3DObject object)
 	try
 	{
 		DllLockGuard;
-		return object->m_type.ToStringA();
+		return ToStringA(object->m_type);
 	}
 	CatchAndReport(View3D_ObjectTypeGet, , nullptr);
 }
@@ -2013,8 +2033,7 @@ VIEW3D_API void __stdcall View3D_RenderTo(View3DWindow window, View3DTexture ren
 		if (render_target == nullptr) throw std::exception("Render target texture is null");
 
 		DllLockGuard;
-		D3DPtr<ID3D11Texture2D> db;
-		window->m_wnd.SetRT(render_target->m_tex, depth_buffer != nullptr ? depth_buffer->m_tex : db);
+		window->m_wnd.SetRT(render_target->m_tex.get(), depth_buffer != nullptr ? depth_buffer->m_tex.get() : nullptr);
 		window->Render();
 	}
 	CatchAndReport(View3D_RenderTo, window,);
@@ -2897,8 +2916,12 @@ static_assert(int(EView3DGizmoMode::Translate) == int(pr::ldr::LdrGizmo::EMode::
 static_assert(int(EView3DGizmoMode::Rotate   ) == int(pr::ldr::LdrGizmo::EMode::Rotate   ), "");
 static_assert(int(EView3DGizmoMode::Scale    ) == int(pr::ldr::LdrGizmo::EMode::Scale    ), "");
 
-static_assert(int(ESourcesChangedReason::NewData) == int(pr::ldr::ScriptSources::EReason::NewData), "");
-static_assert(int(ESourcesChangedReason::Reload) == int(pr::ldr::ScriptSources::EReason::Reload), "");
+static_assert(int(EView3DSourcesChangedReason::NewData) == int(pr::ldr::ScriptSources::EReason::NewData), "");
+static_assert(int(EView3DSourcesChangedReason::Reload) == int(pr::ldr::ScriptSources::EReason::Reload), "");
+
+static_assert(int(EView3DHitTestFlags::SnapToFaces) == int(pr::rdr::EHitTestFlags::SnapToFaces), "");
+static_assert(int(EView3DHitTestFlags::SnapToEdges) == int(pr::rdr::EHitTestFlags::SnapToEdges), "");
+static_assert(int(EView3DHitTestFlags::SnapToVerts) == int(pr::rdr::EHitTestFlags::SnapToVerts), "");
 
 // Specifically used to avoid alignment problems
 static_assert(sizeof(View3DV2    ) == sizeof(pr::v2       ), "");

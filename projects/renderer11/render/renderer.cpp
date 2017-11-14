@@ -5,7 +5,7 @@
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/textures/texture2d.h"
-#include "pr/renderer11/util/event_types.h"
+#include "pr/renderer11/util/event_args.h"
 
 namespace pr
 {
@@ -49,8 +49,8 @@ namespace pr
 
 			// Add the debug layer in debug mode
 			// Note: this automatically disables multi-sampling as well
-			//PR_EXPAND(PR_DBG_RDR, m_settings.m_device_layers |= D3D11_CREATE_DEVICE_DEBUG);
-			//#pragma message(PR_LINK "WARNING: ************************************************** D3D11_CREATE_DEVICE_DEBUG enabled")
+			PR_EXPAND(PR_DBG_RDR, m_settings.m_device_layers |= D3D11_CREATE_DEVICE_DEBUG);
+			#pragma message(PR_LINK "WARNING: ************************************************** D3D11_CREATE_DEVICE_DEBUG enabled")
 
 			PR_INFO_IF(PR_DBG_RDR, AllSet(m_settings.m_device_layers, D3D11_CREATE_DEVICE_DEBUG       ), "D3D11_CREATE_DEVICE_DEBUG is enabled");
 			PR_INFO_IF(PR_DBG_RDR, AllSet(m_settings.m_device_layers, D3D11_CREATE_DEVICE_BGRA_SUPPORT), "D3D11_CREATE_DEVICE_BGRA_SUPPORT is enabled");
@@ -160,6 +160,7 @@ namespace pr
 		,m_mutex_task_queue()
 		,m_task_queue()
 		,m_dummy_hwnd()
+		,m_id32_src()
 		,m_bs_mgr(m_settings.m_mem, This())
 		,m_ds_mgr(m_settings.m_mem, This())
 		,m_rs_mgr(m_settings.m_mem, This())

@@ -190,7 +190,7 @@ namespace pr
 		x(WhiteSmoke           , = 0xFFF5F5F5)\
 		x(Yellow               , = 0xFFFFFF00)\
 		x(YellowGreen          , = 0xFF9ACD32)
-	PR_DEFINE_ENUM2(EColours, PR_ENUM);
+	PR_DEFINE_ENUM2_BASE(EColours, PR_ENUM, uint32);
 	#undef PR_ENUM
 	#pragma endregion
 
@@ -218,7 +218,7 @@ namespace pr
 		Colour32(int aarrggbb)
 			:Colour32(static_cast<uint32>(aarrggbb))
 		{}
-		Colour32(EColours::Enum_ col)
+		Colour32(EColours col)
 			:Colour32(static_cast<uint32>(col))
 		{}
 		Colour32(uint8 r_, uint8 g_, uint8 b_, uint8 a_)

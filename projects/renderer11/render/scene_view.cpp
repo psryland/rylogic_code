@@ -29,15 +29,15 @@ namespace pr
 		{}
 
 		// Return the scene views for the left and right eye in stereoscopic view
-		void SceneView::Stereo(float separation, SceneView (&eye)[EEye::NumberOf]) const
+		void SceneView::Stereo(float separation, SceneView (&eye)[Enum<EEye>::NumberOf]) const
 		{
 			auto sep = 0.5f * separation * m_c2w.x;
 			auto focus_point = FocusPoint();
 			auto lc2w = m4x4::LookAt(m_c2w.pos - sep, focus_point, m_c2w.y);
 			auto rc2w = m4x4::LookAt(m_c2w.pos + sep, focus_point, m_c2w.y);
 
-			eye[EEye::Left ] = SceneView(lc2w, m_fovY, m_aspect, Length3(lc2w.pos - focus_point), m_orthographic);
-			eye[EEye::Right] = SceneView(rc2w, m_fovY, m_aspect, Length3(rc2w.pos - focus_point), m_orthographic);
+			eye[(int)EEye::Left ] = SceneView(lc2w, m_fovY, m_aspect, Length3(lc2w.pos - focus_point), m_orthographic);
+			eye[(int)EEye::Right] = SceneView(rc2w, m_fovY, m_aspect, Length3(rc2w.pos - focus_point), m_orthographic);
 		}
 	}
 }

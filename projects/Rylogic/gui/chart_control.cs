@@ -92,6 +92,7 @@ namespace pr.gui
 		}
 		protected override void Dispose(bool disposing)
 		{
+			ShowMeasureToolUI = false;
 			MouseOperations = null;
 			Tools = null;
 			Range = null;
@@ -2573,8 +2574,11 @@ namespace pr.gui
 		/// <summary>Adjust the X/Y axis of the chart to cover the given area</summary>
 		public void PositionChart(BBox area)
 		{
-			// Ignore if the given area is smaller than the minimum selection distance
-			if (area.Radius.Length3Sq < Maths.Sqr(Options.MinSelectionDistance))
+			// Ignore if the given area is smaller than the minimum selection distance (in screen space)
+			var bl = ChartToClient(new PointF(area.MinX, area.MinY));
+			var tr = ChartToClient(new PointF(area.MaxX, area.MaxY));
+			if (Math.Abs(bl.X - tr.X) < Options.MinSelectionDistance ||
+				Math.Abs(bl.Y - tr.Y) < Options.MinSelectionDistance)
 				return;
 
 			XAxis.Set(area.MinX, area.MaxX);
@@ -4194,6 +4198,123 @@ namespace pr.gui
 
 		#region Tools
 
+		/// <summary>Enable/Disable the measure tool UI</summary>
+		public bool ShowMeasureToolUI
+		{
+			get { return m_measure_ui != null; }
+			set
+			{
+				if (ShowMeasureToolUI == value) return;
+				Util.Dispose(ref m_measure_ui);
+				m_measure_ui = value ? new MeasureToolUI(this) : null;
+				if (m_measure_ui != null)
+					m_measure_ui.Show(this);
+			}
+		}
+		private MeasureToolUI m_measure_ui;
+		private class MeasureToolUI :ToolForm
+		{
+			private View3d.HitTestRay m_ray;
+			private View3d.HitTestResult m_result;
+
+			public MeasureToolUI(ChartControl chart)
+				:base(chart.TopLevelControl, EPin.TopLeft)
+			{
+				FormBorderStyle = FormBorderStyle.SizableToolWindow;
+				ShowInTaskbar = false;
+				HideOnClose = false;
+				Text = "Measure";
+				Chart = chart;
+				HotSpot = null;//new View3d.Object("*Point hotspot FF00FFFF { 0 0 0 *Width {10} }", false, ChartTools.Id);
+				SnapDistance = 0.02f;
+				Flags = View3d.EHitTestFlags.SnapToVerts|View3d.EHitTestFlags.SnapToEdges|View3d.EHitTestFlags.SnapToFaces;
+				m_ray = new View3d.HitTestRay();
+				m_result = new View3d.HitTestResult();
+			}
+			protected override void Dispose(bool disposing)
+			{
+				HotSpot = null;
+				Chart = null;
+				base.Dispose(disposing);
+			}
+			protected override void OnVisibleChanged(EventArgs e)
+			{
+				base.OnVisibleChanged(e);
+			}
+
+			/// <summary>The owner chart</summary>
+			private ChartControl Chart
+			{
+				get { return m_chart; }
+				set
+				{
+					if (m_chart == value) return;
+					if (m_chart != null)
+					{
+						m_chart.MouseDown -= HandleMouseDown;
+						m_chart.MouseMove -= HandleMouseMove;
+						m_chart.MouseUp   -= HandleMouseUp;
+						m_chart.ChartRendering -= HandleRendering;
+					}
+					m_chart = value;
+					if (m_chart != null)
+					{
+						m_chart.ChartRendering += HandleRendering;
+						m_chart.MouseDown += HandleMouseDown;
+						m_chart.MouseMove += HandleMouseMove;
+						m_chart.MouseUp   += HandleMouseUp;
+					}
+
+					// Handlers
+					void HandleMouseDown(object sender, MouseEventArgs e)
+					{
+						if (!Visible) return;
+					}
+					void HandleMouseMove(object sender, MouseEventArgs e)
+					{
+						if (!Visible) return;
+						m_chart.Camera.SSPointToWSRay(e.Location, out m_ray.m_ws_origin, out m_ray.m_ws_direction);
+						m_result = m_chart.Window.HitTest(m_ray, SnapDistance, Flags);
+						m_chart.Invalidate();
+					}
+					void HandleMouseUp(object sender, MouseEventArgs e)
+					{
+						if (!Visible) return;
+					}
+					void HandleRendering(object sender, ChartRenderingEventArgs e)
+					{
+						if (!Visible || HotSpot == null) return;
+						if (m_result.HitObject != null)
+						{
+							HotSpot.O2P = m4x4.Translation(m_result.m_ws_intercept);
+					//		e.AddToScene(HotSpot);
+						}
+						else
+						{
+					//		e.RemoveFromScene(HotSpot);
+						}
+					}
+				}
+			}
+			private ChartControl m_chart;
+
+			/// <summary>Hotspot graphics</summary>
+			private View3d.Object HotSpot
+			{
+				get { return m_hot_spot; }
+				set
+				{
+					if (m_hot_spot == value) return;
+					Util.Dispose(ref m_hot_spot);
+					m_hot_spot = value;
+				}
+			}
+			private View3d.Object m_hot_spot;
+
+			private float SnapDistance { get; set; }
+			private View3d.EHitTestFlags Flags { get; set; }
+		}
+
 		/// <summary>Chart graphics</summary>
 		private ChartTools Tools
 		{
@@ -4991,13 +5112,13 @@ namespace pr.gui
 		/// <summary>Cause all graphics models to be recreated</summary>
 		public void FlushCachedGraphics()
 		{
-			Cache.Flush();
+			Cache.Invalidate();
 		}
 
 		/// <summary>Cause graphics model that intersect 'x_range' to be recreated</summary>
 		public void FlushCachedGraphics(Range x_range)
 		{
-			Cache.Flush(x_range);
+			Cache.Invalidate(x_range);
 		}
 		
 		/// <summary>Update the graphics for this indicator and add it to the scene</summary>
@@ -5303,12 +5424,12 @@ namespace pr.gui
 			}
 
 			/// <summary>Reset the cache</summary>
-			public void Flush()
+			public void Invalidate()
 			{
 				Util.DisposeAll(Pieces);
 				Pieces.Clear();
 			}
-			public void Flush(Range x_range)
+			public void Invalidate(Range x_range)
 			{
 				var beg = Pieces.BinarySearch(p => p.Range.CompareTo(x_range.Beg), find_insert_position:true);
 				var end = Pieces.BinarySearch(p => p.Range.CompareTo(x_range.End), find_insert_position:true);
@@ -5408,6 +5529,10 @@ namespace pr.gui
 		[StructLayout(LayoutKind.Explicit, Pack = 1)]
 		public class Pt
 		{
+			// Notes:
+			// - Not IComparible because we don't know whether to compare 'xf' or 'xi'.
+			//   Use the static 'CompareX?' functions below
+
 			public Pt(double x_, double y_)
 			{
 				xf = x_;
@@ -5428,6 +5553,11 @@ namespace pr.gui
 				xi = x_;
 				yi = y_;
 			}
+			public Pt(Pt rhs)
+			{
+				xf = rhs.xf;
+				yf = rhs.yf;
+			}
 
 			[FieldOffset(0)] public double xf;
 			[FieldOffset(8)] public double yf;
@@ -5442,11 +5572,11 @@ namespace pr.gui
 			/// <summary>Sorting predicate on X</summary>
 			public static IComparer<Pt> CompareXf
 			{
-				get { return Comparer<Pt>.Create((l,r) => l.xf.CompareTo(r.xf)); }
+				get { return Cmp<Pt>.From((l,r) => l.xf.CompareTo(r.xf)); }
 			}
 			public static IComparer<Pt> CompareXi
 			{
-				get { return Comparer<Pt>.Create((l,r) => l.xi.CompareTo(r.xi)); }
+				get { return Cmp<Pt>.From((l,r) => l.xi.CompareTo(r.xi)); }
 			}
 
 			/// <summary>Guess at whether double or long values are used</summary>
@@ -5486,6 +5616,13 @@ namespace pr.gui
 			public Pt Add(Pt point)
 			{
 				Data.Add(point);
+				return point;
+			}
+
+			/// <summary>Insert a datum point</summary>
+			public Pt Insert(int index, Pt point)
+			{
+				Data.Insert(index, point);
 				return point;
 			}
 

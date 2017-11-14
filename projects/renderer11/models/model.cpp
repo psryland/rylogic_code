@@ -30,9 +30,13 @@ namespace pr
 		}
 
 		// Access the model manager
-		ModelManager& Model::MdlMgr()
+		Renderer& Model::rdr() const
 		{
-			return m_model_buffer->MdlMgr();
+			return m_model_buffer->rdr();
+		}
+		ModelManager& Model::mdl_mgr() const
+		{
+			return m_model_buffer->mdl_mgr();
 		}
 
 		// Access to the vertex/index buffers
@@ -79,7 +83,7 @@ namespace pr
 			// Create the nugget and add it to the model
 			if (!ndata.m_irange.empty())
 			{
-				auto nug = MdlMgr().CreateNugget(ndata, m_model_buffer.get(), this);
+				auto nug = mdl_mgr().CreateNugget(ndata, m_model_buffer.get(), this);
 				m_nuggets.push_back(*nug);
 			}
 		}
@@ -88,14 +92,14 @@ namespace pr
 		void Model::DeleteNuggets()
 		{
 			while (!m_nuggets.empty())
-				MdlMgr().Delete(&m_nuggets.front());
+				mdl_mgr().Delete(&m_nuggets.front());
 		}
 
 		// Ref-counting clean up function
 		void Model::RefCountZero(pr::RefCount<Model>* doomed)
 		{
 			Model* mdl = static_cast<Model*>(doomed);
-			mdl->MdlMgr().Delete(mdl);
+			mdl->mdl_mgr().Delete(mdl);
 		}
 	}
 }

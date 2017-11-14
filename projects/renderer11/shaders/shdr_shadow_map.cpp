@@ -69,26 +69,26 @@ namespace pr
 		template <> void ShaderManager::CreateShader<ShadowMapVS>()
 		{
 			VShaderDesc desc(shadow_map_vs, Vert());
-			auto dx = GetVS(EStockShader::ShadowMapVS, &desc);
-			m_stock_shaders.emplace_back(CreateShader<ShadowMapVS>(EStockShader::ShadowMapVS, dx, "smap_vs"));
+			auto dx = GetVS(RdrId(EStockShader::ShadowMapVS), &desc);
+			m_stock_shaders.emplace_back(CreateShader<ShadowMapVS>(RdrId(EStockShader::ShadowMapVS), dx, "smap_vs"));
 		}
 		template <> void ShaderManager::CreateShader<ShadowMapFaceGS>()
 		{
 			GShaderDesc desc(shadow_map_face_gs);
-			auto dx = GetGS(EStockShader::ShadowMapFaceGS, &desc);
-			m_stock_shaders.emplace_back(CreateShader<ShadowMapFaceGS>(EStockShader::ShadowMapFaceGS, dx, "smap_face_gs"));
+			auto dx = GetGS(RdrId(EStockShader::ShadowMapFaceGS), &desc);
+			m_stock_shaders.emplace_back(CreateShader<ShadowMapFaceGS>(RdrId(EStockShader::ShadowMapFaceGS), dx, "smap_face_gs"));
 		}
 		template <> void ShaderManager::CreateShader<ShadowMapLineGS>()
 		{
 			GShaderDesc desc(shadow_map_line_gs);
-			auto dx = GetGS(EStockShader::ShadowMapLineGS, &desc);
-			m_stock_shaders.emplace_back(CreateShader<ShadowMapLineGS>(EStockShader::ShadowMapLineGS, dx, "smap_line_gs"));
+			auto dx = GetGS(RdrId(EStockShader::ShadowMapLineGS), &desc);
+			m_stock_shaders.emplace_back(CreateShader<ShadowMapLineGS>(RdrId(EStockShader::ShadowMapLineGS), dx, "smap_line_gs"));
 		}
 		template <> void ShaderManager::CreateShader<ShadowMapPS>()
 		{
 			PShaderDesc desc(shadow_map_ps);
-			auto dx = GetPS(EStockShader::ShadowMapPS, &desc);
-			m_stock_shaders.emplace_back(CreateShader<ShadowMapPS>(EStockShader::ShadowMapPS, dx, "smap_ps"));
+			auto dx = GetPS(RdrId(EStockShader::ShadowMapPS), &desc);
+			m_stock_shaders.emplace_back(CreateShader<ShadowMapPS>(RdrId(EStockShader::ShadowMapPS), dx, "smap_ps"));
 		}
 	}
 }

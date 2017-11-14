@@ -32,6 +32,7 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 
 	Tools.AssertVersion(1)
 	Tools.AssertPathsExist([UserVars.root, UserVars.winsdk, UserVars.textedit])
+	Tools.AssertLatestWinSDK()
 	fxc = UserVars.winsdk + r"\bin\x86\fxc.exe"
 
 	# Enable compiled shader objects in debug, for debugging and runtime shaders
@@ -54,9 +55,10 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 		["vs", "/Tvs_4_0", r"^#ifdef PR_RDR_VSHADER_(?P<name>.*)$"],
 		["ps", "/Tps_4_0", r"^#ifdef PR_RDR_PSHADER_(?P<name>.*)$"],
 		["gs", "/Tgs_4_0", r"^#ifdef PR_RDR_GSHADER_(?P<name>.*)$"],
+		["cs", "/Tcs_5_0", r"^#ifdef PR_RDR_CSHADER_(?P<name>.*)$"],
 		]
 
-	# Scan the file looking for VS, then GS, then PS shaders
+	# Scan the file looking for each shader type
 	for shdr,profile,patn in keys:
 		
 		# For each matching instance, build the shader

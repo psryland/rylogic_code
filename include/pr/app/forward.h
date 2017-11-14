@@ -73,7 +73,7 @@ namespace pr
 			x(StartupFailed     ,             )\
 			x(SettingsNotFound  ,             )\
 			x(SettingsOutOfDate ,             )
-		PR_DEFINE_ENUM2(EResult, PR_ENUM);
+		PR_DEFINE_ENUM2_BASE(EResult, PR_ENUM, uint);
 		#undef PR_ENUM
 
 		typedef pr::Exception<EResult> Exception;

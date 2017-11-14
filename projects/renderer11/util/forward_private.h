@@ -15,20 +15,5 @@ namespace pr
 		{
 			enum Type { WarnedNoRenderNuggets = 1 << 0 };
 		}
-
-		// Shaders
-		struct FwdShaderVS;
-		struct FwdShaderPS;
-		struct GBufferVS;
-		struct GBufferPS;
-		struct DSLightingVS;
-		struct DSLightingPS;
-		struct ShadowMapVS;
-		struct ShadowMapFaceGS;
-		struct ShadowMapLineGS;
-		struct ShadowMapPS;
-		struct PointSpritesGS;
-		struct ThickLineListGS;
-		struct ArrowHeadGS;
 	}
 }

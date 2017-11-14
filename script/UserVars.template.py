@@ -22,7 +22,7 @@ arch = "x64"
 root = "P:\\pr"
 
 # The full path to the windows sdk
-winsdkvers = "10.0.15063.0"
+winsdkvers = "10.0.16299.0"
 winsdk            = r"C:\Program Files (x86)\Windows Kits\10"
 winsdk_include    = winsdk + "\\Include\\"    + winsdkvers
 winsdk_lib        = winsdk + "\\Lib\\"        + winsdkvers

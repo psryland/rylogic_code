@@ -78,6 +78,7 @@ namespace pr
 		std::mutex m_mutex_task_queue;
 		TaskQueue m_task_queue;
 		HWND m_dummy_hwnd;
+		std::atomic_int m_id32_src;
 		
 		Renderer& This() { return *this; }
 
@@ -164,6 +165,12 @@ namespace pr
 		rdr::RdrSettings const& Settings() const
 		{
 			return m_settings;
+		}
+
+		// Generate a unique Id on each call
+		int NewId32()
+		{
+			return ++m_id32_src;
 		}
 
 		// Raised when a window resizes it's back buffer.

@@ -46,18 +46,20 @@ namespace pr
 		template <> struct DxFormat<pr::Colour> { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32A32_FLOAT; };
 
 		// Shader type to enum map
-		template <typename D3DShaderType> struct ShaderTypeId { static const EShaderType::Enum_ value = EShaderType::Invalid; };
-		template <> struct ShaderTypeId<ID3D11VertexShader  > { static const EShaderType::Enum_ value = EShaderType::VS; };
-		template <> struct ShaderTypeId<ID3D11PixelShader   > { static const EShaderType::Enum_ value = EShaderType::PS; };
-		template <> struct ShaderTypeId<ID3D11GeometryShader> { static const EShaderType::Enum_ value = EShaderType::GS; };
-		template <> struct ShaderTypeId<ID3D11HullShader    > { static const EShaderType::Enum_ value = EShaderType::HS; };
-		template <> struct ShaderTypeId<ID3D11DomainShader  > { static const EShaderType::Enum_ value = EShaderType::DS; };
+		template <typename D3DShaderType> struct ShaderTypeId { static const EShaderType value = EShaderType::Invalid; };
+		template <> struct ShaderTypeId<ID3D11VertexShader  > { static const EShaderType value = EShaderType::VS; };
+		template <> struct ShaderTypeId<ID3D11PixelShader   > { static const EShaderType value = EShaderType::PS; };
+		template <> struct ShaderTypeId<ID3D11GeometryShader> { static const EShaderType value = EShaderType::GS; };
+		template <> struct ShaderTypeId<ID3D11ComputeShader > { static const EShaderType value = EShaderType::CS; };
+		template <> struct ShaderTypeId<ID3D11HullShader    > { static const EShaderType value = EShaderType::HS; };
+		template <> struct ShaderTypeId<ID3D11DomainShader  > { static const EShaderType value = EShaderType::DS; };
 
 		// Shader enum to dx type map
-		template <EShaderType::Enum_ ST> struct DxShaderType {};
+		template <EShaderType ST> struct DxShaderType {};
 		template <> struct DxShaderType<EShaderType::VS> { typedef ID3D11VertexShader   type; };
 		template <> struct DxShaderType<EShaderType::PS> { typedef ID3D11PixelShader    type; };
 		template <> struct DxShaderType<EShaderType::GS> { typedef ID3D11GeometryShader type; };
+		template <> struct DxShaderType<EShaderType::CS> { typedef ID3D11ComputeShader  type; };
 		template <> struct DxShaderType<EShaderType::HS> { typedef ID3D11HullShader     type; };
 		template <> struct DxShaderType<EShaderType::DS> { typedef ID3D11DomainShader   type; };
 

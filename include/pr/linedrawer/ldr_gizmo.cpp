@@ -731,7 +731,7 @@ namespace pr
 				nugget.m_sort_key.Group(ESortGroup::PostOpaques);
 				nugget.m_rsb.Set(ERS::CullMode, D3D11_CULL_BACK);
 				nugget.m_dsb.Set(EDS::DepthFunc, D3D11_COMPARISON_GREATER);
-				nugget.m_tex_diffuse = m_rdr->m_tex_mgr.FindTexture(EStockTexture::Gray);
+				nugget.m_tex_diffuse = m_rdr->m_tex_mgr.FindTexture(RdrId(EStockTexture::Gray));
 				m_gfx.m_model->CreateNugget(nugget);
 			}
 			{

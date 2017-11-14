@@ -27,8 +27,8 @@ namespace pr
 			,m_cbuf_camera  (m_shdr_mgr->GetCBuf<hlsl::ds::CBufCamera  >("ds::CBufCamera"))
 			,m_cbuf_lighting(m_shdr_mgr->GetCBuf<hlsl::ds::CBufLighting>("ds::CBufLighting"))
 			,m_unit_quad()
-			,m_vs(m_shdr_mgr->FindShader(EStockShader::DSLightingVS))
-			,m_ps(m_shdr_mgr->FindShader(EStockShader::DSLightingPS))
+			,m_vs(m_shdr_mgr->FindShader(RdrId(EStockShader::DSLightingVS)))
+			,m_ps(m_shdr_mgr->FindShader(RdrId(EStockShader::DSLightingPS)))
 		{
 			{// Unit quad in Z = 0 plane
 				float const t0 = 0.000f, t1 = 0.9999f;

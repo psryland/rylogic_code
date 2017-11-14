@@ -14,7 +14,7 @@
 // 'CBufFrame' is a cbuffer managed by a scene.
 // It contains values constant for the whole frame.
 // It is defined for every shader because most will probably need it
-cbuffer CBufFrame :cbuf_bank(b0)
+cbuffer CBufFrame :reg(b0)
 {
 	// Camera transform
 	Camera m_cam;
@@ -30,12 +30,13 @@ cbuffer CBufFrame :cbuf_bank(b0)
 	row_major float4x4 m_proj_tex[PR_RDR_MAX_PROJECTED_TEXTURES];
 };
 
-// 'CBufModel' is a cbuffer updated per render nugget.
-// Shaders can select components from this structure as needed
-cbuffer CBufModel :cbuf_bank(b1)
+// Constants per render nugget.
+cbuffer CBufModel :reg(b1)
 {
-	// Geometry type
-	int4 m_geom;  // x = 1 => has normals, y = 1 => has tex0, z => has alpha, w = not used
+	// Note: A duplicate of this struct is in 'gbuffer_cbuf.hlsli'
+
+	// Model flags
+	int4 m_flags;  // x = 1 => has normals, y = 1 => has tex0, z => has alpha, w = instance id
 
 	// Object transform
 	row_major float4x4 m_o2s; // object to screen

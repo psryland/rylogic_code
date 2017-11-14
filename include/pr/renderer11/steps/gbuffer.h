@@ -5,7 +5,6 @@
 #pragma once
 
 #include "pr/renderer11/forward.h"
-#include "pr/renderer11/util/event_types.h"
 #include "pr/renderer11/steps/render_step.h"
 #include "pr/renderer11/shaders/shader_set.h"
 
@@ -19,7 +18,7 @@ namespace pr
 			enum RTEnum_ { RTDiffuse = 0, RTNormal = 1, RTDepth = 2, RTCount = 3 };
 			static_assert(RTCount <= D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT, "Too many simultaneous render targets");
 
-			static const ERenderStep::Enum_ Id = ERenderStep::GBuffer;
+			static ERenderStep const Id = ERenderStep::GBuffer;
 
 			D3DPtr<ID3D11Texture2D>          m_tex[RTCount];
 			D3DPtr<ID3D11RenderTargetView>   m_rtv[RTCount];
@@ -39,7 +38,7 @@ namespace pr
 			GBuffer(GBuffer const&);
 
 			// The type of render step this is
-			ERenderStep::Enum_ GetId() const override { return Id; }
+			ERenderStep GetId() const override { return Id; }
 
 			// Create render targets for the GBuffer based on the current render target size
 			void InitRT(bool create_buffers);

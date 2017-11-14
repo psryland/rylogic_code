@@ -564,7 +564,7 @@ namespace pr.container
 		}
 
 		/// <summary>Sort the underlying data source</summary>
-		public void Sort(Cmp<TItem> comparer = null)
+		public void Sort(IComparer<TItem> comparer = null)
 		{
 			if (!AllowSort)
 				throw new NotSupportedException("Sorting is not supported for this collection");
@@ -572,7 +572,7 @@ namespace pr.container
 			// Suspend events, since this is just a reorder
 			// Sort is expected to raise the ListChanged.Reset event
 			using (this.SuspendEvents(reset_bindings_on_resume:true, preserve_position:false))
-				List_.Sort<TItem>(this, comparer);
+				List_.Sort(this, comparer);
 		}
 
 		/// <summary>Sorts the data source with the specified sort descriptions.</summary>

@@ -6,6 +6,7 @@
 #include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/render/scene.h"
 #include "pr/renderer11/render/sortkey.h"
+#include "pr/renderer11/shaders/shader_manager.h"
 #include "pr/renderer11/instances/instance.h"
 #include "pr/renderer11/steps/forward_render.h"
 #include "pr/renderer11/steps/shadow_map.h"
@@ -24,26 +25,23 @@ namespace pr
 			,m_clear_bb(clear_bb)
 			,m_sset()
 		{
-			m_sset.m_vs = m_shdr_mgr->FindShader(EStockShader::FwdShaderVS);
-			m_sset.m_ps = m_shdr_mgr->FindShader(EStockShader::FwdShaderPS);
+			m_sset.m_vs = m_shdr_mgr->FindShader(RdrId(EStockShader::FwdShaderVS));
+			m_sset.m_ps = m_shdr_mgr->FindShader(RdrId(EStockShader::FwdShaderPS));
 		}
 
 		// Add model nuggets to the draw list for this render step
 		void ForwardRender::AddNuggets(BaseInstance const& inst, TNuggetChain& nuggets)
 		{
-			// See if the instance has a sort key override
-			SKOverride const* sko = inst.find<SKOverride>(EInstComp::SortkeyOverride);
-
 			Lock lock(*this);
 			auto& drawlist = lock.drawlist();
+
+			// See if the instance has a sort key override
+			auto sko = inst.find<SKOverride>(EInstComp::SortkeyOverride);
 
 			// Add a drawlist element for each nugget in the instance's model
 			drawlist.reserve(drawlist.size() + nuggets.size());
 			for (auto& nug : nuggets)
-			{
-				PR_ASSERT(PR_DBG_RDR, nug.RequiresAlpha() == nug.m_alpha_enabled, "Alpha states disagree with alpha flags"); // remove this 
 				nug.AddToDrawlist(drawlist, inst, sko, Id, m_sset);
-			}
 
 			m_sort_needed = true;
 		}
@@ -85,6 +83,7 @@ namespace pr
 			SetShadowMapConstants(m_scene->m_view, smap_rstep != nullptr ? 1 : 0, cb0.m_shadow);
 			WriteConstants(dc, m_cbuf_frame.get(), cb0, EShaderType::VS|EShaderType::PS);
 
+			// Draw each element in the draw list
 			Lock lock(*this);
 			for (auto& dle : lock.drawlist())
 			{
@@ -95,7 +94,7 @@ namespace pr
 
 				// Set the per-nugget constants
 				hlsl::fwd::CBufModel cb1 = {};
-				SetGeomType(nugget, cb1);
+				SetModelFlags(nugget, UniqueId(*dle.m_instance), cb1);
 				SetTxfm(*dle.m_instance, m_scene->m_view, cb1);
 				SetTint(*dle.m_instance, cb1);
 				SetTexDiffuse(nugget, cb1);
@@ -111,28 +110,24 @@ namespace pr
 	}
 }
 
-		//// Projected textures
-		//void SetProjectedTextures(D3DPtr<ID3D11DeviceContext>& dc, CBufFrame_Forward& buf, ForwardRender::ProjTextCont const& proj_tex)
-		//{
-		//	PR_ASSERT(PR_DBG_RDR, proj_tex.size() <= PR_RDR_MAX_PROJECTED_TEXTURES, "Too many projected textures for shader");
-
-		//	// Build a list of the projected texture pointers
-		//	auto texs = PR_ALLOCA_POD(ID3D11ShaderResourceView*, proj_tex.size());
-		//	auto samp = PR_ALLOCA_POD(ID3D11SamplerState*, proj_tex.size());
-
-		//	// Set the number of projected textures
-		//	auto pt_count = checked_cast<uint>(proj_tex.size());
-		//	buf.m_proj_tex_count = pr::v4(static_cast<float>(pt_count),0.0f,0.0f,0.0f);
-
-		//	// Set the PT transform and populate the textures/sampler arrays
-		//	for (uint i = 0; i != pt_count; ++i)
-		//	{
-		//		buf.m_proj_tex[i] = proj_tex[i].m_o2w;
-		//		texs[i] = proj_tex[i].m_tex->m_srv.m_ptr;
-		//		samp[i] = proj_tex[i].m_tex->m_samp.m_ptr;
-		//	}
-
-		//	// Set the shader resource view of the texture and the texture sampler
-		//	dc->PSSetShaderResources(0, pt_count, texs);
-		//	dc->PSSetSamplers(0, pt_count, samp);
-		//}
+//// Projected textures
+//void SetProjectedTextures(D3DPtr<ID3D11DeviceContext>& dc, CBufFrame_Forward& buf, ForwardRender::ProjTextCont const& proj_tex)
+//{
+//	PR_ASSERT(PR_DBG_RDR, proj_tex.size() <= PR_RDR_MAX_PROJECTED_TEXTURES, "Too many projected textures for shader");
+//	// Build a list of the projected texture pointers
+//	auto texs = PR_ALLOCA_POD(ID3D11ShaderResourceView*, proj_tex.size());
+//	auto samp = PR_ALLOCA_POD(ID3D11SamplerState*, proj_tex.size());
+//	// Set the number of projected textures
+//	auto pt_count = checked_cast<uint>(proj_tex.size());
+//	buf.m_proj_tex_count = pr::v4(static_cast<float>(pt_count),0.0f,0.0f,0.0f);
+//	// Set the PT transform and populate the textures/sampler arrays
+//	for (uint i = 0; i != pt_count; ++i)
+//	{
+//		buf.m_proj_tex[i] = proj_tex[i].m_o2w;
+//		texs[i] = proj_tex[i].m_tex->m_srv.m_ptr;
+//		samp[i] = proj_tex[i].m_tex->m_samp.m_ptr;
+//	}
+//	// Set the shader resource view of the texture and the texture sampler
+//	dc->PSSetShaderResources(0, pt_count, texs);
+//	dc->PSSetSamplers(0, pt_count, samp);
+//}

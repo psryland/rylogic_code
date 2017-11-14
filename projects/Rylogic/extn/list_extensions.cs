@@ -471,7 +471,7 @@ namespace pr.extn
 			if (find_insert_position && idx < 0) idx = ~idx;
 			return idx;
 		}
-		public static int BinarySearch<T>(this IList<T> list, T item, Cmp<T> cmp, bool find_insert_position = false)
+		public static int BinarySearch<T>(this IList<T> list, T item, IComparer<T> cmp, bool find_insert_position = false)
 		{
 			return list.BinarySearch(x => cmp.Compare(x, item), find_insert_position);
 		}
@@ -486,7 +486,7 @@ namespace pr.extn
 		/// <summary>
 		/// Insert 'item' into this list assuming the list is sorted by 'cmp'.
 		/// Returns the index of where 'item' was inserted</summary>
-		public static int AddOrdered<T>(this IList<T> list, T item, Cmp<T> cmp)
+		public static int AddOrdered<T>(this IList<T> list, T item, IComparer<T> cmp)
 		{
 			var idx = list.BinarySearch(item, cmp);
 			if (idx < 0) idx = ~idx;
@@ -498,12 +498,14 @@ namespace pr.extn
 		/// Partition 'list' within the range [left,right) such that the element at list[left]
 		/// is moved to it's correct position within the list if it was sorted.
 		/// Returns the index location of where list[left] is moved to.</summary>
-		public static int Partition<T>(this IList<T> list, int left, int right, Cmp<T> comparer)
+		public static int Partition<T>(this IList<T> list, int left, int right, IComparer<T> comparer = null)
 		{
 			if (left == right)
 				return left;
 			if (left > right)
 				throw new Exception("invalid range");
+
+			comparer = comparer ?? Cmp<T>.Default;
 
 			// Swap a "random" element to 'list[left]' to improve performance
 			// for the case where list is mostly sorted
@@ -536,52 +538,43 @@ namespace pr.extn
 			list[i] = pivot;
 			return i;
 		}
-		public static int Partition<T>(this IList<T> list, Cmp<T> comparer = null)
-		{
-			comparer = comparer ?? Cmp<T>.Default;
-			return list.Partition(0, list.Count, comparer);
-		}
 
 		/// <summary>Sort the list using a lambda</summary>
 		public static IList<T> Sort<T>(this IList<T> list, Func<T,T,int> cmp)
 		{
 			return list.Sort(Cmp<T>.From(cmp));
 		}
-		public static IList<T> Sort<T>(this IList<T> list, Cmp<T> comparer = null)
+		public static IList<T> Sort<T>(this IList<T> list, IComparer<T> comparer = null)
 		{
 			return list.Sort(0, list.Count, comparer);
 		}
-		public static IList Sort(this IList list, Cmp<object> comparer = null)
+		public static IList Sort(this IList list, IComparer<object> comparer = null)
 		{
 			return list.Sort(0, list.Count, comparer);
 		}
 
 		/// <summary>Sub range sort using a delegate</summary>
-		public static IList<T> Sort<T>(this IList<T> list, int start, int count, Cmp<T> comparer = null)
+		public static IList<T> Sort<T>(this IList<T> list, int start, int count, IComparer<T> comparer = null)
 		{
-			comparer = comparer ?? Cmp<T>.Default;
 			list.QuickSort(start, count, comparer);
 			return list;
 		}
-		public static IList Sort(this IList list, int start, int count, Cmp<object> comparer = null)
+		public static IList Sort(this IList list, int start, int count, IComparer<object> comparer = null)
 		{
 			// This is the quick sort algorithm. Sorts in place
-			ArrayList.Adapter(list).Sort(start, count, comparer);
+			ArrayList.Adapter(list).Sort(start, count, (IComparer)comparer);
 			return list;
 		}
 
 		/// <summary>Sort the list using the quick sort algorithm</summary>
-		public static IList<T> QuickSort<T>(this IList<T> list, Cmp<T> comparer = null)
+		public static IList<T> QuickSort<T>(this IList<T> list, IComparer<T> comparer = null)
 		{
-			comparer = comparer ?? Cmp<T>.Default;
 			return list.QuickSort(0, list.Count, comparer);
 		}
-		public static IList<T> QuickSort<T>(this IList<T> list, int left, int right)
+		public static IList<T> QuickSort<T>(this IList<T> list, int left, int right, IComparer<T> comparer = null)
 		{
-			return list.QuickSort(0, list.Count, Cmp<T>.Default);
-		}
-		public static IList<T> QuickSort<T>(this IList<T> list, int left, int right, Cmp<T> comparer)
-		{
+			comparer = comparer ?? Cmp<T>.Default;
+
 			// pivot and get pivot location
 			int pivot = list.Partition(left, right, comparer);
 
@@ -594,9 +587,9 @@ namespace pr.extn
 			return list;
 		}
 
-		/// <summary>Remove adjascent duplicate elements within the range [begin, end).
+		/// <summary>Remove adjacent duplicate elements within the range [begin, end).
 		/// Returns the end of the unique range (i.e. a value in the range [begin,end]</summary>
-		public static int Unique<T>(this IList<T> list, int begin, int end, Eql<T> comparer = null)
+		public static int Unique<T>(this IList<T> list, int begin, int end, IEqualityComparer<T> comparer = null)
 		{
 			Debug.Assert(begin <= end && end <= list.Count);
 			if (list.Count <= 1) return list.Count;
@@ -604,7 +597,7 @@ namespace pr.extn
 
 			comparer = comparer ?? Eql<T>.Default;
 			
-			// Find the first equal adjascent elements
+			// Find the first equal adjacent elements
 			for (r = begin + 1; r < end && !comparer.Equals(list[r-1], list[r]); ++r) {}
 
 			// back copy elements overwriting duplicates
@@ -627,13 +620,13 @@ namespace pr.extn
 
 			return range_end;
 		}
-		public static int Unique<T>(this IList<T> list, Eql<T> comparer = null)
+		public static int Unique<T>(this IList<T> list, IEqualityComparer<T> cmp = null)
 		{
-			return list.Unique(0, list.Count, comparer);
+			return list.Unique(0, list.Count, cmp);
 		}
 
 		/// <summary>Return the nth element in the list as if the list was sorted</summary>
-		public static T NthElement<T>(this IList<T> list, int n, int left, int right, Cmp<T> comparer)
+		public static T NthElement<T>(this IList<T> list, int n, int left, int right, IComparer<T> comparer)
 		{
 			// This has O(N^2) performance if 'list' is sorted.
 			// Todo: make linear
@@ -647,14 +640,14 @@ namespace pr.extn
 			}
 			return list[pivot];
 		}
-		public static T NthElement<T>(this IList<T> list, int n, Cmp<T> comparer = null)
+		public static T NthElement<T>(this IList<T> list, int n, IComparer<T> comparer = null)
 		{
 			comparer = comparer ?? Cmp<T>.Default;
 			return list.NthElement(n, 0, list.Count, comparer);
 		}
 
 		/// <summary>Merge a collection into this list. Note: this is a linear operation, this list and 'others' are expected to be ordered</summary>
-		public static IList<T> Merge<T>(this IList<T> list, IEnumerable<T> others, EMergeType merge_type, int sign = +1, Cmp<T> comparer = null)
+		public static IList<T> Merge<T>(this IList<T> list, IEnumerable<T> others, EMergeType merge_type, int sign = +1, IComparer<T> comparer = null)
 		{
 			comparer = comparer ?? Cmp<T>.Default;
 

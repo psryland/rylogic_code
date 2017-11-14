@@ -7,7 +7,7 @@
 
 #include "../types.hlsli"
 
-cbuffer CbufFrame :cbuf_bank(b0)
+cbuffer CbufFrame :reg(b0)
 {
 	Camera m_cam;
 	float2 m_screen_dim; // x = screen width, y = screen height, 

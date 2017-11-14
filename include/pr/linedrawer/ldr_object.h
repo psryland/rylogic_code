@@ -21,7 +21,7 @@
 #include "pr/crypt/hash.h"
 #include "pr/str/string.h"
 #include "pr/script/reader.h"
-#include "pr/renderer11/instance.h"
+#include "pr/renderer11/instances/instance.h"
 #include "pr/renderer11/models/model_generator.h"
 
 namespace pr
@@ -237,6 +237,7 @@ namespace pr
 			// Bitwise operators
 			_bitwise_operators_allowed,
 		};
+
 		#pragma endregion
 
 		#pragma region Types
@@ -263,6 +264,7 @@ namespace pr
 			x(pr::m4x4            ,m_c2s    ,pr::rdr::EInstComp::C2SOptional        )/*     16 bytes */\
 			x(pr::rdr::ModelPtr   ,m_model  ,pr::rdr::EInstComp::ModelPtr           )/* 4 or 8 bytes */\
 			x(pr::Colour32        ,m_colour ,pr::rdr::EInstComp::TintColour32       )/*      4 bytes */\
+			x(pr::int32           ,m_uid    ,pr::rdr::EInstComp::UniqueId           )/*      4 bytes */\
 			x(pr::rdr::SKOverride ,m_sko    ,pr::rdr::EInstComp::SortkeyOverride    )/*      8 bytes */\
 			x(pr::rdr::BSBlock    ,m_bsb    ,pr::rdr::EInstComp::BSBlock            )/*    296 bytes */\
 			x(pr::rdr::DSBlock    ,m_dsb    ,pr::rdr::EInstComp::DSBlock            )/*     60 bytes */\
@@ -408,7 +410,7 @@ namespace pr
 			ELdrFlags         m_flags;         // Property flags controlling meta behaviour of the object
 			pr::UserData      m_user_data;     // User data
 
-			LdrObject(ObjectAttributes const& attr, LdrObject* parent, pr::Guid const& context_id);
+			LdrObject(ObjectAttributes const& attr, LdrObject* parent, pr::Guid const& context_id, int uid);
 			~LdrObject();
 
 			// Return the type and name of this object
@@ -653,7 +655,7 @@ namespace pr
 		// Callback function for editing a dynamic model
 		// This callback is intentionally low level, providing the whole model for editing.
 		// Remember to update the bounding box, vertex and index ranges, and regenerate nuggets.
-		typedef void (__stdcall *EditObjectCB)(pr::rdr::ModelPtr model, void* ctx, pr::Renderer& rdr);
+		typedef void (__stdcall *EditObjectCB)(pr::rdr::Model* model, void* ctx, pr::Renderer& rdr);
 
 		// Create an ldr object from creation data.
 		LdrObjectPtr Create(
@@ -881,14 +883,7 @@ namespace pr
 {
 	namespace unittests
 	{
-		PRUnitTest(pr_linedrawer_ldr_object)
-		{
-			// Check the hash values are correct
-			auto hasher  = [](wchar_t const* s) { return pr::script::Reader::StaticHashKeyword(s, false); };
-			auto on_fail = [](char const* m) { PR_FAIL(m); };
-			pr::CheckHashEnum<pr::ldr::EKeyword  , wchar_t>(hasher, on_fail);
-			pr::CheckHashEnum<pr::ldr::ELdrObject, wchar_t>(hasher, on_fail);
-		}
+
 	}
 }
 #endif

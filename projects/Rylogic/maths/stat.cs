@@ -774,6 +774,14 @@ namespace pr.maths
 		{
 			Reset(window_size);
 		}
+		public MovingAvr(MovingAvr rhs)
+			:this(rhs.m_window.Length)
+		{
+			Array.Copy(rhs.m_window, m_window, m_window.Length);
+			m_mean  = rhs.m_mean;
+			m_count = rhs.m_count;
+			m_i     = rhs.m_i;
+		}
 
 		/// <summary>The size of the moving window</summary>
 		public int WindowSize

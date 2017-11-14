@@ -81,12 +81,6 @@ namespace pr
 		PR_DEFINE_ENUM2(ELightKW, PR_ENUM);
 		#undef PR_ENUM
 
-		// Check the hash values are correct and match the hash function that the script reader will use
-		#if PR_DBG_RDR
-		auto hash = [](wchar_t const* s) { return script::Reader::StaticHashKeyword(s, false); };
-		static bool s_light_kws_checked = CheckHashEnum<ELightKW,wchar_t>(hash);
-		#endif
-
 		// Get/Set light settings
 		std::string Light::Settings() const
 		{

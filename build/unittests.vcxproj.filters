@@ -231,9 +231,6 @@
     <ClInclude Include="..\include\pr\common\discretepidcontroller.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\macros\enum.h">
-      <Filter>pr\macros</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\common\enumerable.h">
       <Filter>pr\common</Filter>
     </ClInclude>
@@ -986,6 +983,9 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\geometry\models_point.h">
       <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\macros\enum.h">
+      <Filter>pr\macros</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

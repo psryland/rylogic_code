@@ -43,6 +43,9 @@ namespace pr
 			ModelManager(ModelManager const&) = delete;
 			ModelManager& operator =(ModelManager const&) = delete;
 
+			// Renderer access
+			Renderer& rdr() const { return m_rdr; }
+
 			// Create a model buffer in which one or more models can be created
 			ModelBufferPtr CreateModelBuffer(MdlSettings const& settings);
 
@@ -55,6 +58,9 @@ namespace pr
 
 			// Create a nugget using our allocator
 			Nugget* CreateNugget(NuggetData const& ndata, ModelBuffer* model_buffer, Model* model);
+
+			// Raised when a model is deleted
+			pr::EventHandler<Model&, EmptyArgs const&> ModelDeleted;
 
 			// Stock models
 			ModelPtr m_unit_quad;

@@ -64,11 +64,11 @@ namespace pr.maths
 		}
 
 		/// <summary>Integer cast accessors</summary>
-		public int ix
+		public int xi
 		{
 			get { return (int)x; }
 		}
-		public int iy
+		public int yi
 		{
 			get { return (int)y; }
 		}

@@ -14,7 +14,7 @@ namespace pr
 		// Constructs a shadow map
 		struct ShadowMap :RenderStep
 		{
-			static const ERenderStep::Enum_ Id = ERenderStep::ShadowMap;
+			static ERenderStep const Id = ERenderStep::ShadowMap;
 
 			Light&                           m_light;           // The shadow casting light
 			D3DPtr<ID3D11Texture2D>          m_tex;
@@ -31,15 +31,14 @@ namespace pr
 			ShaderPtr                        m_gs_face;
 			ShaderPtr                        m_gs_line;
 
-			explicit ShadowMap(Scene& scene, Light& light, pr::iv2 size);
+			ShadowMap(Scene& scene, Light& light, pr::iv2 size);
+			ShadowMap(ShadowMap const&) = delete;
+			ShadowMap& operator = (ShadowMap const&) = delete;
 
 		private:
 
-			ShadowMap(ShadowMap const&);
-			ShadowMap& operator = (ShadowMap const&);
-
 			// The type of render step this is
-			ERenderStep::Enum_ GetId() const override { return Id; }
+			ERenderStep GetId() const override { return Id; }
 
 			// Create render targets for the GBuffer based on the current render target size
 			void InitRT(pr::iv2 size);

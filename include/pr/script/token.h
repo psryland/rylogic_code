@@ -40,14 +40,14 @@ namespace pr
 		};
 
 		// Operators
-		inline bool operator == (Token const& tok, EToken   ::Enum_ type) { return tok.m_type == type; }
-		inline bool operator == (Token const& tok, EKeyword ::Enum_ type) { return tok.m_type == EToken::Keyword  && tok.m_keyword  == type; }
-		inline bool operator == (Token const& tok, ESymbol  ::Enum_ type) { return tok.m_type == EToken::Symbol   && tok.m_symbol   == type; }
-		inline bool operator == (Token const& tok, EConstant::Enum_ type) { return tok.m_type == EToken::Constant && tok.m_constant == type; }
-		inline bool operator != (Token const& tok, EToken   ::Enum_ type) { return !(tok == type); }
-		inline bool operator != (Token const& tok, EKeyword ::Enum_ type) { return !(tok == type); }
-		inline bool operator != (Token const& tok, ESymbol  ::Enum_ type) { return !(tok == type); }
-		inline bool operator != (Token const& tok, EConstant::Enum_ type) { return !(tok == type); }
+		inline bool operator == (Token const& tok, EToken    type) { return tok.m_type == type; }
+		inline bool operator == (Token const& tok, EKeyword  type) { return tok.m_type == EToken::Keyword  && tok.m_keyword  == type; }
+		inline bool operator == (Token const& tok, ESymbol   type) { return tok.m_type == EToken::Symbol   && tok.m_symbol   == type; }
+		inline bool operator == (Token const& tok, EConstant type) { return tok.m_type == EToken::Constant && tok.m_constant == type; }
+		inline bool operator != (Token const& tok, EToken    type) { return !(tok == type); }
+		inline bool operator != (Token const& tok, EKeyword  type) { return !(tok == type); }
+		inline bool operator != (Token const& tok, ESymbol   type) { return !(tok == type); }
+		inline bool operator != (Token const& tok, EConstant type) { return !(tok == type); }
 
 		// Convert a token to a string description of the token
 		inline pr::string<wchar_t> ToStringW(Token const& token)
@@ -57,18 +57,18 @@ namespace pr
 			default: return L"";
 			case EToken::Invalid:     return pr::FmtS(L"Invalid"); break;
 			case EToken::EndOfStream: return pr::FmtS(L"EndOfStream"); break;
-			case EToken::Keyword:     return pr::FmtS(L"%s %s"    ,token.m_type.ToStringW() ,token.m_keyword.ToStringW()); break;
-			case EToken::Identifier:  return pr::FmtS(L"%s %s"    ,token.m_type.ToStringW() ,token.m_svalue.c_str()     ); break;
-			case EToken::Symbol:      return pr::FmtS(L"%s %s"    ,token.m_type.ToStringW() ,token.m_symbol.ToStringW() ); break;
+			case EToken::Keyword:     return pr::FmtS(L"%s %s"    ,ToStringW(token.m_type) ,ToStringW(token.m_keyword)); break;
+			case EToken::Identifier:  return pr::FmtS(L"%s %s"    ,ToStringW(token.m_type) ,token.m_svalue.c_str()); break;
+			case EToken::Symbol:      return pr::FmtS(L"%s %s"    ,ToStringW(token.m_type) ,ToStringW(token.m_symbol)); break;
 			case EToken::Constant:
 				switch (token.m_constant)
 				{
 				default: return L"";
 				case EConstant::Invalid:        return pr::FmtS(L"Invalid"); break;
-				case EConstant::StringLiteral:  return pr::FmtS(L"%s %s %s" ,token.m_type.ToStringW() ,token.m_constant.ToStringW() ,token.m_svalue.c_str()); break;
-				case EConstant::WStringLiteral: return pr::FmtS(L"%s %s "   ,token.m_type.ToStringW() ,token.m_constant.ToStringW()); break;
-				case EConstant::Integral:       return pr::FmtS(L"%s %s %d" ,token.m_type.ToStringW() ,token.m_constant.ToStringW() ,token.m_ivalue); break;
-				case EConstant::FloatingPoint:  return pr::FmtS(L"%s %s %f" ,token.m_type.ToStringW() ,token.m_constant.ToStringW() ,token.m_fvalue); break;
+				case EConstant::StringLiteral:  return pr::FmtS(L"%s %s %s" ,ToStringW(token.m_type) ,ToStringW(token.m_constant) ,token.m_svalue.c_str()); break;
+				case EConstant::WStringLiteral: return pr::FmtS(L"%s %s "   ,ToStringW(token.m_type) ,ToStringW(token.m_constant)); break;
+				case EConstant::Integral:       return pr::FmtS(L"%s %s %d" ,ToStringW(token.m_type) ,ToStringW(token.m_constant) ,token.m_ivalue); break;
+				case EConstant::FloatingPoint:  return pr::FmtS(L"%s %s %f" ,ToStringW(token.m_type) ,ToStringW(token.m_constant) ,token.m_fvalue); break;
 				}
 				break;
 			}

@@ -385,21 +385,20 @@ namespace pr.common
 						return;
 
 					// Save already pending?
-					if (m_auto_save_in_progress != m_auto_save_issue) return;
-					++m_auto_save_issue;
+					if (m_auto_save_trigger.Pending) return;
+					m_auto_save_trigger.Signal();
 
 					// Save settings soon, to batch up multiple changes
 					Dispatcher.CurrentDispatcher.BeginInvokeDelayed(AutoSave, TimeSpan.FromMilliseconds(500));
 				}
 				void AutoSave()
 				{
-					m_auto_save_in_progress = m_auto_save_issue;
+					m_auto_save_trigger.Actioned();
 					Save();
 				}
 			}
 		}
-		private int m_auto_save_in_progress;
-		private int m_auto_save_issue;
+		private Trigger m_auto_save_trigger;
 		private bool m_auto_save;
 
 		/// <summary>An event raised whenever the settings are loaded from persistent storage</summary>

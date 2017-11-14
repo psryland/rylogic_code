@@ -82,14 +82,14 @@ namespace pr
 		template <> void ShaderManager::CreateShader<DSLightingVS>()
 		{
 			VShaderDesc desc(dslighting_vs, Vert());
-			auto dx = GetVS(EStockShader::DSLightingVS, &desc);
-			m_stock_shaders.emplace_back(CreateShader<DSLightingVS>(EStockShader::DSLightingVS, dx, "dslighting_vs"));
+			auto dx = GetVS(RdrId(EStockShader::DSLightingVS), &desc);
+			m_stock_shaders.emplace_back(CreateShader<DSLightingVS>(RdrId(EStockShader::DSLightingVS), dx, "dslighting_vs"));
 		}
 		template <> void ShaderManager::CreateShader<DSLightingPS>()
 		{
 			PShaderDesc desc(dslighting_ps);
-			auto dx = GetPS(EStockShader::DSLightingPS, &desc);
-			m_stock_shaders.emplace_back(CreateShader<DSLightingPS>(EStockShader::DSLightingPS, dx, "dslighting_ps"));
+			auto dx = GetPS(RdrId(EStockShader::DSLightingPS), &desc);
+			m_stock_shaders.emplace_back(CreateShader<DSLightingPS>(RdrId(EStockShader::DSLightingPS), dx, "dslighting_ps"));
 		}
 	}
 }

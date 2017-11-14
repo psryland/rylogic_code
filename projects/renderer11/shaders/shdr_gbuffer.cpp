@@ -44,14 +44,14 @@ namespace pr
 		template <> void ShaderManager::CreateShader<GBufferVS>()
 		{
 			VShaderDesc desc(gbuffer_vs, Vert());
-			auto dx = GetVS(EStockShader::GBufferVS, &desc);
-			m_stock_shaders.emplace_back(CreateShader<GBufferVS>(EStockShader::GBufferVS, dx, "gbuffer_vs"));
+			auto dx = GetVS(RdrId(EStockShader::GBufferVS), &desc);
+			m_stock_shaders.emplace_back(CreateShader<GBufferVS>(RdrId(EStockShader::GBufferVS), dx, "gbuffer_vs"));
 		}
 		template <> void ShaderManager::CreateShader<GBufferPS>()
 		{
 			PShaderDesc desc(gbuffer_ps);
-			auto dx = GetPS(EStockShader::GBufferPS, &desc);
-			m_stock_shaders.emplace_back(CreateShader<GBufferPS>(EStockShader::GBufferPS, dx, "gbuffer_ps"));
+			auto dx = GetPS(RdrId(EStockShader::GBufferPS), &desc);
+			m_stock_shaders.emplace_back(CreateShader<GBufferPS>(RdrId(EStockShader::GBufferPS), dx, "gbuffer_ps"));
 		}
 	}
 }

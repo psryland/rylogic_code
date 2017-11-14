@@ -155,7 +155,7 @@ static void LexLdrDoc(unsigned int startPos, int length, int initStyle, WordList
 				sc.GetCurrentLowered(s,sizeof(s));
 				
 				pr::ldr::ELdrObject obj;
-				if (pr::ldr::ELdrObject::TryParse(obj, p, false))
+				if (TryParse(obj, p, false))
 				{
 					sc.ChangeState(SCE_LDR_OBJECT);
 					sc.SetState(SCE_LDR_DEFAULT);
@@ -163,7 +163,7 @@ static void LexLdrDoc(unsigned int startPos, int length, int initStyle, WordList
 					break;
 				}
 				pr::ldr::EKeyword kw;
-				if (pr::ldr::EKeyword::TryParse(kw, p, false))
+				if (TryParse(kw, p, false))
 				{
 					sc.ChangeState(SCE_LDR_KEYWORD);
 					sc.SetState(SCE_LDR_DEFAULT);
@@ -180,7 +180,7 @@ static void LexLdrDoc(unsigned int startPos, int length, int initStyle, WordList
 				for (++p; *p && IsASpaceOrTab(*p); ++p) {}
 				
 				pr::script::EPPKeyword kw;
-				if (!pr::script::EPPKeyword::TryParse(kw, p, true))
+				if (!TryParse(kw, p, true))
 					sc.ChangeState(SCE_LDR_DEFAULT);
 
 				sc.SetState(SCE_LDR_DEFAULT);

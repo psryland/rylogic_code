@@ -17,7 +17,6 @@ namespace pr
 			x(Unknown , ""    , = 0)\
 			x(P3D     , "p3d" , = 1)/* PR3D */\
 			x(Max3DS  , "3ds" , = 2)/* 3D Studio Max */
-		
 		PR_DEFINE_ENUM3(EModelFileFormat, PR_ENUM);
 		#undef PR_ENUM
 
@@ -48,7 +47,7 @@ namespace pr
 			L::splitpath(filepath, nullptr, 0, nullptr, 0, nullptr, 0, extn, _countof(extn));
 			while (*ext != 0 && *ext == '.') ++ext;
 
-			if (!EModelFileFormat::TryParse(info.m_format, ext, false))
+			if (!EModelFileFormat_::TryParse(info.m_format, ext, false))
 			{
 				info.m_format = EModelFileFormat::Unknown;
 				return info;

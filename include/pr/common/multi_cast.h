@@ -139,6 +139,10 @@ namespace pr
 			for (auto& h : m_handlers)
 				h.m_delegate(s,a);
 		}
+		void operator()(Sender& s) const
+		{
+			(*this)(s, EmptyArgs());
+		}
 
 		// Detach all handlers. NOTE: this invalidates all associated Handler's
 		void reset()

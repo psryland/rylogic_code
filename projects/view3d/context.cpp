@@ -38,7 +38,7 @@ namespace view3d
 		};
 		m_sources.OnReload += [&](ScriptSources&, pr::EmptyArgs const&)
 		{
-			OnSourcesChanged.Raise(ESourcesChangedReason::Reload, true);
+			OnSourcesChanged.Raise(EView3DSourcesChangedReason::Reload, true);
 		};
 		m_sources.OnSourceRemoved += [&](ScriptSources&, ScriptSources::SourceRemovedEventArgs const& args)
 		{
@@ -72,7 +72,7 @@ namespace view3d
 				break;
 			}
 
-			OnSourcesChanged.Raise(static_cast<ESourcesChangedReason>(args.m_reason), false);
+			OnSourcesChanged.Raise(static_cast<EView3DSourcesChangedReason>(args.m_reason), false);
 		};
 		m_sources.OnError += [&](ScriptSources&, pr::ErrorEventArgs const& args)
 		{
@@ -153,12 +153,10 @@ namespace view3d
 	// Create an object from geometry
 	LdrObject* Context::ObjectCreate(char const* name, pr::Colour32 colour, int vcount, int icount, int ncount, View3DVertex const* verts, pr::uint16 const* indices, View3DNugget const* nuggets, pr::Guid const& context_id)
 	{
-		// Strata the vertex data
+		auto geom = EGeom::None;
+
+		// Generate the nuggets first so we can tell what geometry data is needed
 		pr::vector<pr::rdr::NuggetProps> ngt;
-		pr::vector<pr::v4>       pos;
-		pr::vector<pr::Colour32> col;
-		pr::vector<pr::v4>       nrm;
-		pr::vector<pr::v2>       tex;
 		for (auto n = nuggets, nend = n + ncount; n != nend; ++n)
 		{
 			// Create the renderer nugget
@@ -171,7 +169,7 @@ namespace view3d
 			nug.m_tex_diffuse = Texture2DPtr(n->m_mat.m_diff_tex, true);
 			nug.m_range_overlaps = n->m_range_overlaps;
 		
-			for (int rs = int(ERenderStep::Invalid)+1; rs != int(ERenderStep::NumberOf); ++rs)
+			for (int rs = 1; rs != ERenderStep_::NumberOf; ++rs)
 			{
 				auto& rstep0 = n->m_mat.m_smap.m_rstep[rs];
 				auto& rstep1 = nug.m_smap[static_cast<ERenderStep>(rs)];
@@ -201,7 +199,7 @@ namespace view3d
 							auto depth = ptr.read<bool>();
 
 							auto id = pr::hash::Hash("LDrawPointSprites", point_size, depth);
-							auto shdr = m_rdr.m_shdr_mgr.GetShader<PointSpritesGS>(id, EStockShader::PointSpritesGS);
+							auto shdr = m_rdr.m_shdr_mgr.GetShader<PointSpritesGS>(id, RdrId(EStockShader::PointSpritesGS));
 							shdr->m_size = point_size;
 							shdr->m_depth = depth;
 							rstep1.m_gs = shdr;
@@ -212,7 +210,7 @@ namespace view3d
 							auto ptr = pr::ByteDataCPtr(rstep0.m_gs_data);
 							auto line_width = ptr.read<float>();
 							auto id = pr::hash::Hash("LDrawThickLine", line_width);
-							auto shdr = m_rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id, EStockShader::ThickLineListGS);
+							auto shdr = m_rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id, RdrId(EStockShader::ThickLineListGS));
 							shdr->m_width = line_width;
 							rstep1.m_gs = shdr;
 							break;
@@ -222,7 +220,7 @@ namespace view3d
 							auto ptr = pr::ByteDataCPtr(rstep0.m_gs_data);
 							auto size = ptr.read<float>();
 							auto id = pr::hash::Hash("LDrawArrowHead", size);
-							auto shdr = m_rdr.m_shdr_mgr.GetShader<ArrowHeadGS>(id, EStockShader::ArrowHeadGS);
+							auto shdr = m_rdr.m_shdr_mgr.GetShader<ArrowHeadGS>(id, RdrId(EStockShader::ArrowHeadGS));
 							shdr->m_size = size;
 							rstep1.m_gs = shdr;
 							break;
@@ -236,52 +234,43 @@ namespace view3d
 			PR_ASSERT(PR_DBG, nug.m_vrange.begin() <= nug.m_vrange.end() && int(nug.m_vrange.end()) <= vcount, "Invalid nugget V-range");
 			PR_ASSERT(PR_DBG, nug.m_irange.begin() <= nug.m_irange.end() && int(nug.m_irange.end()) <= icount, "Invalid nugget I-range");
 
-			// Vertex positions
-			{
-				size_t j = pos.size();
-				pos.resize(pos.size() + nug.m_vrange.size());
-				for (auto i = nug.m_vrange.begin(); i != nug.m_vrange.end(); ++i)
-					pos[j++] = view3d::To<pr::v4>(verts[i].pos);
-			}
+			// Union of geometry data type
+			geom |= nug.m_geom;
+		}
 
-			// Colours
-			if (pr::AllSet(nug.m_geom, EGeom::Colr))
-			{
-				size_t j = col.size();
-				col.resize(col.size() + nug.m_vrange.size());
-				for (auto i = nug.m_vrange.begin(); i != nug.m_vrange.end(); ++i)
-					col[j++] = verts[i].col;
-			}
-			else
-			{
-				col.resize(0);
-			}
+		// Vertex buffer
+		pr::vector<pr::v4> pos;
+		{
+			pos.resize(vcount);
+			for (auto i = 0; i != vcount; ++i)
+				pos[i] = view3d::To<pr::v4>(verts[i].pos);
+		}
 
-			// Normals
-			if (pr::AllSet(nug.m_geom, EGeom::Norm))
-			{
-				size_t j = nrm.size();
-				nrm.resize(nrm.size() + nug.m_vrange.size());
-				for (auto i = nug.m_vrange.begin(); i != nug.m_vrange.begin(); ++i)
-					nrm[j++] = view3d::To<pr::v4>(verts[i].norm);
-			}
-			else
-			{
-				nrm.resize(0);
-			}
+		// Colour buffer
+		pr::vector<pr::Colour32> col;
+		if (pr::AllSet(geom, EGeom::Colr))
+		{
+			col.resize(vcount);
+			for (auto i = 0; i != vcount; ++i)
+				col[i] = verts[i].col;
+		}
 
-			// Texture coords
-			if (pr::AllSet(nug.m_geom, EGeom::Tex0))
-			{
-				size_t j = tex.size();
-				tex.resize(tex.size() + nug.m_vrange.size());
-				for (auto i = nug.m_vrange.begin(); i != nug.m_vrange.end(); ++i)
-					tex[j++] = view3d::To<pr::v2>(verts[i].tex);
-			}
-			else
-			{
-				tex.resize(0);
-			}
+		// Normals
+		pr::vector<pr::v4> nrm;
+		if (pr::AllSet(geom, EGeom::Norm))
+		{
+			nrm.resize(vcount);
+			for (auto i = 0; i != vcount; ++i)
+				nrm[i] = view3d::To<pr::v4>(verts[i].norm);
+		}
+
+		// Texture coords
+		pr::vector<pr::v2> tex;
+		if (pr::AllSet(geom, EGeom::Tex0))
+		{
+			tex.resize(vcount);
+			for (auto i = 0; i != vcount; ++i)
+				tex[i] = view3d::To<pr::v2>(verts[i].tex);
 		}
 
 		// Create the model
@@ -421,7 +410,7 @@ namespace view3d
 	}
 
 	// Callback function called from CreateEditCB to populate the model data
-	void Context::ObjectEditCB(ModelPtr model, void* ctx, pr::Renderer&)
+	void Context::ObjectEditCB(Model* model, void* ctx, pr::Renderer&)
 	{
 		using namespace pr::rdr;
 

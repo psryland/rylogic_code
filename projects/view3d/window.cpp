@@ -7,6 +7,7 @@
 #include "view3d/window.h"
 #include "view3d/context.h"
 
+using namespace pr;
 using namespace pr::rdr;
 using namespace pr::ldr;
 
@@ -704,10 +705,45 @@ namespace view3d
 		ui.Visible(show);
 	}
 
+	// Cast rays into the scene, returning hit info
+	void Window::HitTest(View3DHitTestRay const* rays, View3DHitTestResult* results, int count, float snap_distance, EView3DHitTestFlags flags, bool immediate)
+	{
+		// Set up the ray cast
+		pr::vector<HitTestRay> ray_casts;
+		for (auto& ray : make_array_view(rays, count))
+		{
+			HitTestRay r = {};
+			r.m_ws_origin = To<v4>(ray.m_ws_origin);
+			r.m_ws_direction = To<v4>(ray.m_ws_direction);
+			ray_casts.push_back(r);
+		}
+
+		// Do the ray casts into the scene
+		m_scene.SetHitTestRays(ray_casts.data(), int(ray_casts.size()), snap_distance, static_cast<EHitTestFlags>(flags), immediate);
+
+		// Return the result (only valid for 'immediate' hit tests)
+		if (immediate)
+		{
+			// Copy the hit results to 'results'
+			int i = 0; for (auto& r : m_scene.m_ht_results)
+			{
+				View3DHitTestResult result = {};
+				result.m_ws_ray_origin = view3d::To<View3DV4>(r.m_ws_origin);
+				result.m_ws_ray_direction = view3d::To<View3DV4>(r.m_ws_direction);
+				result.m_ws_intercept = view3d::To<View3DV4>(r.m_ws_intercept);
+
+				// Find the object in the scene matching 'id'
+				if (r.m_instance_id != 0)
+					result.m_obj = pr::first_or_default(m_objects, [=](auto& obj){ return obj->m_uid == r.m_instance_id; });
+
+				results[i++] = result;
+			}
+		}
+	}
+
 	// Create stock models such as the focus point, origin, etc
 	void Window::CreateStockModels()
 	{
-		using namespace pr::rdr;
 		{
 			// Create the focus point/origin models
 			// Don't know why, but the optimiser buggers this up if I use initializer_list<>. Hence local arrays

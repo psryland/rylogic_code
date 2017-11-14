@@ -66,6 +66,17 @@ namespace pr
 			{}
 		};
 
+		// Compute shader flavour
+		struct CShaderDesc :ShaderDesc
+		{
+			CShaderDesc(void const* data, size_t size)
+				:ShaderDesc(data, size)
+			{}
+			template <size_t Sz> CShaderDesc(byte const (&data)[Sz])
+				:ShaderDesc(data, Sz)
+			{}
+		};
+
 		// The base class for a shader.
 		struct ShaderBase :pr::RefCount<ShaderBase>
 		{

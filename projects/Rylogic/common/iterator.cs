@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
 namespace pr.common
 {
 	/// <summary>Iterator wrapper for IEnumerator</summary>
+	[DebuggerDisplay("Idx={Index} {Current}")]
 	public class Iterator<T> :IEnumerator<T>
 	{
 		private IEnumerable<T> m_enumerable; // The enumeration source

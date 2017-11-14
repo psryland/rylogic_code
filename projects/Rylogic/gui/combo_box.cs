@@ -31,10 +31,17 @@ namespace pr.gui
 		//   so TextChanged is raised, then SelectedIndexChanged is raised.
 		// - SelectedIndex/SelectedItem only accept values that are legal according to the Items
 		//   collection. When using a DataSource, however, the items collection isn't updated until
-		//   the control has a windows handle and a parent window (it seems)
+		//   the control has a windows handle and a parent window (it seems).
 		// - For DropDownList style combo boxes, use the 'DropDownClosed' event to trigger changes
 		//   of SelectedItem. 'SelectedIndexChanged' and other events all trigger on mouse over of
 		//   items in the drop down list.
+		// - For DropDownList style combo boxes, you can update the available objects on drop down
+		//   like this, if you use 'DropDownClosed' for committing a selection:
+		//      m_cb.DropDown += (s,a) =>
+		//      {
+		//          using (m_cb.PreserveSelectedItem())
+		//              m_cb.DataSource = GetDataSource();
+		//      };
 		//
 		// To use the text field to update the bound item do this:
 		//	m_cb.TextChanged += (s,a) =>

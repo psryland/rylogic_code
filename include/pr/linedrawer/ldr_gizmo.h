@@ -18,7 +18,7 @@
 #include "pr/common/events.h"
 #include "pr/container/vector.h"
 #include "pr/maths/maths.h"
-#include "pr/renderer11/instance.h"
+#include "pr/renderer11/instances/instance.h"
 
 namespace pr
 {

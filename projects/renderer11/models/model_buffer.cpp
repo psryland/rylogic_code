@@ -21,6 +21,15 @@ namespace pr
 			,m_mdl_mgr()
 		{}
 
+		Renderer& ModelBuffer::rdr() const
+		{
+			return m_mdl_mgr->rdr();
+		}
+		ModelManager& ModelBuffer::mdl_mgr() const
+		{
+			return *m_mdl_mgr;
+		}
+
 		// Returns true if 'settings' describe a model format that is compatible with this model buffer
 		bool ModelBuffer::IsCompatible(MdlSettings const& settings) const
 		{

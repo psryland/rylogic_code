@@ -413,6 +413,14 @@ namespace pr.util
 		{
 			return x.HasValue && x.Value.Within(beg, end);
 		}
+		public static bool WithinInclusive<T>(this Unit<T> x, Unit<T> beg, Unit<T> end) where T:IComparable
+		{
+			return x.Within(beg,end) || x == end;
+		}
+		public static bool WithinInclusive<T>(this Unit<T>? x, Unit<T> beg, Unit<T> end) where T:IComparable
+		{
+			return x.HasValue && x.Value.WithinInclusive(beg, end);
+		}
 
 		/// <summary>ToString</summary>
 		public static string ToString<T>(this Unit<T>? x, bool include_units) where T:IComparable

@@ -52,12 +52,13 @@ PSIn main(VSIn In)
 }
 #endif
 
-
-
 // Main pixel shader
 #ifdef PR_RDR_PSHADER_forward
 PSOut main(PSIn In)
 {
+	// Notes:
+	//  - 'ss_vert:SV_Position' in the pixel shader already has x,y,z divided by w (w unchanged)
+
 	PSOut Out;
 
 	// Transform
@@ -81,7 +82,7 @@ PSOut main(PSIn In)
 
 	// If not alpha blending, clip alpha pixels
 	if (!HasAlpha)
-		clip(Out.diff.a - 0.5);	
+		clip(Out.diff.a - 0.5);
 	
 	return Out;
 }

@@ -42,10 +42,10 @@ namespace pr
 			,m_cbuf_frame (m_shdr_mgr->GetCBuf<hlsl::smap::CBufFrame >("smap::CBufFrame"))
 			,m_cbuf_nugget(m_shdr_mgr->GetCBuf<hlsl::smap::CBufNugget>("smap::CBufNugget"))
 			,m_smap_size(size)
-			,m_vs(m_shdr_mgr->FindShader(EStockShader::ShadowMapVS))
-			,m_ps(m_shdr_mgr->FindShader(EStockShader::ShadowMapPS))
-			,m_gs_face(m_shdr_mgr->FindShader(EStockShader::ShadowMapFaceGS))
-			,m_gs_line(m_shdr_mgr->FindShader(EStockShader::ShadowMapLineGS))
+			,m_vs(m_shdr_mgr->FindShader(RdrId(EStockShader::ShadowMapVS)))
+			,m_ps(m_shdr_mgr->FindShader(RdrId(EStockShader::ShadowMapPS)))
+			,m_gs_face(m_shdr_mgr->FindShader(RdrId(EStockShader::ShadowMapFaceGS)))
+			,m_gs_line(m_shdr_mgr->FindShader(RdrId(EStockShader::ShadowMapLineGS)))
 		{
 			InitRT(size);
 			
@@ -65,7 +65,7 @@ namespace pr
 			m_rtv = nullptr;
 			m_srv = nullptr;
 
-			Renderer::Lock lock(*m_scene->m_wnd->m_rdr);
+			Renderer::Lock lock(m_scene->rdr());
 			auto device = lock.D3DDevice();
 
 			// Create the smap texture
@@ -80,21 +80,19 @@ namespace pr
 			tdesc.BindFlags      = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 			tdesc.CPUAccessFlags = 0;
 			tdesc.MiscFlags      = 0;
-
-			// Create the resource
 			pr::Throw(device->CreateTexture2D(&tdesc, 0, &m_tex.m_ptr));
 			PR_EXPAND(PR_DBG_RDR, NameResource(m_tex.get(), "smap tex"));
 
 			// Get the render target view
 			RenderTargetViewDesc rtvdesc(tdesc.Format, D3D11_RTV_DIMENSION_TEXTURE2D);
 			rtvdesc.Texture2D.MipSlice = 0;
-			pr::Throw(device->CreateRenderTargetView(m_tex.m_ptr, &rtvdesc, &m_rtv.m_ptr));
+			pr::Throw(device->CreateRenderTargetView(m_tex.get(), &rtvdesc, &m_rtv.m_ptr));
 
 			// Get the shader res view
 			ShaderResViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
 			srvdesc.Texture2D.MostDetailedMip = 0;
 			srvdesc.Texture2D.MipLevels = 1;
-			pr::Throw(device->CreateShaderResourceView(m_tex.m_ptr, &srvdesc, &m_srv.m_ptr));
+			pr::Throw(device->CreateShaderResourceView(m_tex.get(), &srvdesc, &m_srv.m_ptr));
 
 			// Create a sampler for sampling the shadow map
 			auto sdesc = SamplerDesc::LinearClamp();
@@ -104,7 +102,7 @@ namespace pr
 		// Bind the smap RT to the output merger
 		void ShadowMap::BindRT(bool bind)
 		{
-			Renderer::Lock lock(*m_scene->m_wnd->m_rdr);
+			Renderer::Lock lock(m_scene->rdr());
 			auto dc = lock.ImmediateDC();
 			if (bind)
 			{
@@ -136,19 +134,24 @@ namespace pr
 			for (auto& nug : nuggets)
 			{
 				// Ensure the nugget contains the required vs/gs/ps shaders
-				auto sset = ShaderSet{};
-				sset.m_vs = m_vs;
-				sset.m_ps = m_ps;
+				ShaderSet ss = {m_vs, nullptr, m_ps, nullptr};
 				switch (nug.m_topo)
 				{
 				case EPrim::LineList:
-				case EPrim::LineStrip: sset.m_gs = m_gs_line; break;
+				case EPrim::LineStrip:
+					ss.m_gs = m_gs_line;
+					break;
 				case EPrim::TriList:
-				case EPrim::TriStrip: sset.m_gs = m_gs_face; break;
-				default: continue; // Ignore point lists.. can a point cast a shadow anyway?
+				case EPrim::TriStrip:
+					ss.m_gs = m_gs_face;
+					break;
+				case EPrim::PointList:
+					continue; // Ignore point lists.. can a point cast a shadow anyway?
+				default:
+					throw std::exception("Unsupported primitive type");
 				}
 
-				nug.AddToDrawlist(drawlist, inst, nullptr, Id, sset);
+				nug.AddToDrawlist(drawlist, inst, nullptr, Id, ss);
 			}
 
 			m_sort_needed = true;
@@ -162,12 +165,12 @@ namespace pr
 			// Sort the draw list if needed
 			SortIfNeeded();
 
-			// Bind the g-buffer to the OM
-			auto bind_gbuffer = pr::CreateScope(
+			// Bind the render target to the OM
+			auto bind_smap = pr::CreateScope(
 				[this]{ BindRT(true); },
 				[this]{ BindRT(false); });
 
-			// Clear the smap depth buffer.
+			// Clear the render target/depth buffer.
 			// The depth data is the fractional distance between the frustum plane (0) and the light (1).
 			// We only care about points in front of the frustum faces => reset depths to zero.
 			dc->ClearRenderTargetView(m_rtv.m_ptr, pr::ColourZero.arr);
@@ -191,20 +194,22 @@ namespace pr
 				cb.m_frust_dim.w = m_scene->m_view.m_shadow_max_caster_dist;
 				WriteConstants(dc, m_cbuf_frame.get(), cb, EShaderType::VS|EShaderType::GS|EShaderType::PS);
 			}
-			
-			// Loop over the elements in the draw list
+
+			// Draw each element in the draw list
 			Lock lock(*this);
 			for (auto& dle : lock.drawlist())
 			{
 				StateStack::DleFrame frame(ss, dle);
 				ss.Commit();
 
+				auto const& nugget = *dle.m_nugget;
+
 				// Set the per-nugget constants
 				hlsl::smap::CBufNugget cb = {};
 				SetTxfm(*dle.m_instance, m_scene->m_view, cb);
 				WriteConstants(dc, m_cbuf_nugget.get(), cb, EShaderType::VS);
 
-				Nugget const& nugget = *dle.m_nugget;
+				// Draw the nugget
 				dc->DrawIndexed(
 					UINT(nugget.m_irange.size()),
 					UINT(nugget.m_irange.m_beg),

@@ -200,13 +200,13 @@ namespace pr
 			// Update the values in the controls
 			void PopulateControls()
 			{
-				int ids[ELight::NumberOf];
-				ids[ELight::Ambient]     = ID_RADIO_AMBIENT;
-				ids[ELight::Directional] = ID_RADIO_DIRECTIONAL;
-				ids[ELight::Point]       = ID_RADIO_POINT;
-				ids[ELight::Spot]        = ID_RADIO_SPOT;
+				int ids[Enum<ELight>::NumberOf];
+				ids[(int)ELight::Ambient]     = ID_RADIO_AMBIENT;
+				ids[(int)ELight::Directional] = ID_RADIO_DIRECTIONAL;
+				ids[(int)ELight::Point]       = ID_RADIO_POINT;
+				ids[(int)ELight::Spot]        = ID_RADIO_SPOT;
 
-				::CheckRadioButton(m_hwnd, ID_RADIO_AMBIENT, ID_RADIO_SPOT, ids[m_light.m_type]);
+				::CheckRadioButton(m_hwnd, ID_RADIO_AMBIENT, ID_RADIO_SPOT, ids[(int)m_light.m_type]);
 				m_chk_cam_rel      .Checked(m_light.m_cam_relative);
 				m_tb_position      .Text(pr::FmtS(L"%3.3f %3.3f %3.3f" ,m_light.m_position.x ,m_light.m_position.y ,m_light.m_position.z));
 				m_tb_direction     .Text(pr::FmtS(L"%3.3f %3.3f %3.3f" ,m_light.m_direction.x ,m_light.m_direction.y ,m_light.m_direction.z));

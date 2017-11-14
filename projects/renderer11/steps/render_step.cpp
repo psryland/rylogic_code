@@ -17,12 +17,13 @@ namespace pr
 	{
 		RenderStep::RenderStep(Scene& scene)
 			:m_scene(&scene)
-			,m_shdr_mgr(&scene.m_wnd->shdr_mgr())
-			,m_impl_drawlist(scene.m_wnd->m_rdr->Allocator<DrawListElement>())
+			,m_shdr_mgr(&scene.wnd().shdr_mgr())
+			,m_impl_drawlist(scene.rdr().Allocator<DrawListElement>())
 			,m_sort_needed(true)
 			,m_bsb()
 			,m_rsb()
 			,m_dsb()
+			,m_evt_model_delete(scene.wnd().mdl_mgr().ModelDeleted += std::bind(&RenderStep::OnModelDeleted, this, _1, _2))
 		{}
 
 		// Reset/Populate the drawlist
@@ -104,7 +105,7 @@ namespace pr
 		void RenderStep::Execute(StateStack& ss)
 		{
 			PR_EXPAND(PR_DBG_RDR, auto dbg = pr::CreateScope(
-				[&]{ ss.m_dbg->BeginEvent(ERenderStep::ToStringW(GetId())); },
+				[&]{ ss.m_dbg->BeginEvent(ToStringW(GetId())); },
 				[&]{ ss.m_dbg->EndEvent(); }));
 
 			// Commit before the start of a render step to ensure changes
@@ -116,16 +117,16 @@ namespace pr
 		}
 
 		// Notification of a model being destroyed
-		void RenderStep::OnEvent(Evt_ModelDestroy const& evt)
+		void RenderStep::OnModelDeleted(Model& model, EmptyArgs const&) const
 		{
-			(void)evt;
+			(void)model;
 			#if PR_DBG_RDR
 
 			// Check the model is not current in a drawlist
 			Lock lock(*this);
 			for (auto& dle : lock.drawlist())
 			{
-				assert(evt.m_model != dle.m_nugget->m_owner);
+				assert(&model != dle.m_nugget->m_owner);
 			}
 
 			#endif

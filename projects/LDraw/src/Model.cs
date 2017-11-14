@@ -256,6 +256,7 @@ namespace LDraw
 				if (m_current_scene == value) return;
 				if (m_current_scene != null)
 				{
+					m_current_scene.ShowMeasureToolUI = false;
 					m_current_scene.Window.MouseNavigating  -= HandleMouseNavigating;
 					m_current_scene.ChartMoved              -= HandleChartMoved;
 					m_current_scene.CrossHairMoved          -= HandleCrossHairMoved;
@@ -266,6 +267,7 @@ namespace LDraw
 					m_current_scene.Window.MouseNavigating  += HandleMouseNavigating;
 					m_current_scene.ChartMoved              += HandleChartMoved;
 					m_current_scene.CrossHairMoved          += HandleCrossHairMoved;
+					m_current_scene.ShowMeasureToolUI = ShowMeasureTool;
 
 					LinkSceneAxes();
 					LinkSceneCrossHairs();
@@ -518,6 +520,20 @@ namespace LDraw
 				}
 			}
 		}
+
+		/// <summary>Enable/Disable the measurement tool</summary>
+		public bool ShowMeasureTool
+		{
+			get { return m_show_measure_tool; }
+			set
+			{
+				if (m_show_measure_tool == value) return;
+				m_show_measure_tool = value;
+				if (CurrentScene != null)
+					CurrentScene.ShowMeasureToolUI = value;
+			}
+		}
+		private bool m_show_measure_tool;
 
 		/// <summary>File loading progress data</summary>
 		public AddFileProgressData AddFileProgress { get; private set; }

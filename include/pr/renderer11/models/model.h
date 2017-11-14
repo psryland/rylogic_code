@@ -24,14 +24,13 @@ namespace pr
 
 			// Only the model manager should be creating these
 			Model(MdlSettings const& settings, ModelBufferPtr& model_buffer);
-			~Model();
-
-			// No copying
 			Model(const Model&) = delete;
 			Model& operator =(const Model&) = delete;
+			~Model();
 
-			// Access the model manager
-			ModelManager& MdlMgr();
+			// Renderer access
+			Renderer& rdr() const;
+			ModelManager& mdl_mgr() const;
 
 			// Access to the vertex/index buffers
 			// Only returns false if 'D3D11_MAP_FLAG_DO_NOT_WAIT' flag is set, all other fail cases throw

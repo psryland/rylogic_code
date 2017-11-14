@@ -11,6 +11,7 @@
 #include "pr/renderer11/steps/gbuffer.h"
 #include "pr/renderer11/steps/dslighting.h"
 #include "pr/renderer11/steps/shadow_map.h"
+#include "pr/renderer11/steps/ray_cast.h"
 #include "renderer11/render/state_stack.h"
 
 namespace pr
@@ -18,18 +19,22 @@ namespace pr
 	namespace rdr
 	{
 		// Make a scene
-		Scene::Scene(Window& wnd, std::vector<ERenderStep>&& rsteps, SceneView const& view)
+		Scene::Scene(Window& wnd, std::initializer_list<ERenderStep> rsteps, SceneView const& view)
 			:m_wnd(&wnd)
 			,m_view(view)
 			,m_viewport(wnd.RenderTargetSize())
+			,m_instances()
 			,m_render_steps()
+			,m_ht_rays()
+			,m_ht_results()
 			,m_bkgd_colour()
 			,m_global_light()
 			,m_dsb()
 			,m_rsb()
 			,m_bsb()
+			,m_eh_resize()
 		{
-			SetRenderSteps(std::move(rsteps));
+			SetRenderSteps(rsteps);
 
 			// Set default scene render states
 			m_rsb = RSBlock::SolidCullBack();
@@ -42,8 +47,18 @@ namespace pr
 			m_eh_resize = wnd.m_rdr->RenderTargetSizeChanged += std::bind(&Scene::HandleRenderTargetSizeChanged, this, _1, _2);
 		}
 
+		// Access the renderer
+		Renderer& Scene::rdr() const
+		{
+			return m_wnd->rdr();
+		}
+		Window& Scene::wnd() const
+		{
+			return *m_wnd;
+		}
+
 		// Set the render steps to use for rendering the scene
-		void Scene::SetRenderSteps(std::vector<ERenderStep>&& rsteps)
+		void Scene::SetRenderSteps(std::initializer_list<ERenderStep> rsteps)
 		{
 			m_render_steps.clear();
 			for (auto rs : rsteps)
@@ -55,12 +70,72 @@ namespace pr
 				case ERenderStep::GBuffer:       m_render_steps.push_back(std::make_shared<GBuffer      >(*this)); break;
 				case ERenderStep::DSLighting:    m_render_steps.push_back(std::make_shared<DSLighting   >(*this)); break;
 				case ERenderStep::ShadowMap:     m_render_steps.push_back(std::make_shared<ShadowMap    >(*this, m_global_light, iv2(4096,4096))); break;
+				case ERenderStep::RayCast:       m_render_steps.push_back(std::make_shared<RayCastStep  >(*this, true)); break;
 				}
 			}
 		}
 
+		// Set the collection of rays to cast into the scene for hit testing.
+		// If 'immediate' is true, the scene is rendered with just the 'RayCastStep'.
+		// The function blocks until 'm_ht_results' are up to date (note: this stalls the gfx pipeline).
+		// If 'immediate' is false, the 'RayCastStep' render step is added to the steps for
+		// this scene, and triple buffering is used to update the 'm_ht_results' after each
+		// Render() call. Note, this mode is intended for continuous frame rate rendering
+		// and means the hit test results are 3 frames behind.
+		// Setting an empty set of rays disables hit testing ('immediate' is ignored).
+		void Scene::SetHitTestRays(HitTestRay const* rays, int count, float snap_distance, EHitTestFlags flags, bool immediate)
+		{
+			// Resize the buffers
+			m_ht_rays.assign(rays, rays + count);
+			m_ht_results.resize(count);
+
+			// If there are no rays, remove the RayCastStep (if there)
+			if (count == 0)
+			{
+				pr::erase_if(m_render_steps, [=](auto& rs){ return rs->GetId() == ERenderStep::RayCast; });
+			}
+			// If 'immediate', do a ray cast now, using only the RayCastStep
+			else if (immediate)
+			{
+				// Create a ray cast render step and populate its draw list.
+				// Note: don't look for and reuse an existing RayCastStep because callers may want
+				// to invoke immediate ray casts without interfering with existing continuous ray casts.
+				RayCastStep rs(*this, false);
+				for (auto& inst : m_instances)
+					rs.AddInstance(*inst);
+
+				// Set the rays to cast
+				rs.SetRays(m_ht_rays.data(), int(m_ht_rays.size()), snap_distance, flags);
+
+				// Render just this step
+				Renderer::Lock lock(m_wnd->rdr());
+				StateStack ss(lock.ImmediateDC(), *this);
+				rs.Execute(ss);
+
+				// Read (blocking) the hit test results
+				rs.ReadOutput(m_ht_results.data(), int(m_ht_results.size()));
+			}
+			// Otherwise, add the ray cast step to the render sets
+			else
+			{
+				// Ensure there is a ray cast render step, add if not.
+				auto rs = static_cast<RayCastStep*>(FindRStep(ERenderStep::RayCast));
+				if (rs == nullptr)
+				{
+					// Add the ray cast step first so that 'CopyResource' can happen while we render the rest of the scene
+					auto step = std::make_shared<RayCastStep>(*this, true);
+					m_render_steps.insert(std::begin(m_render_steps), step);
+					rs = step.get();
+				}
+
+				// Set the rays to cast.
+				// Results will be available in 'm_ht_results' after Render() has been called a few times (due to triple buffering)
+				rs->SetRays(m_ht_rays.data(), int(m_ht_rays.size()), snap_distance, flags);
+			}
+		}
+
 		// Find a render step by id
-		RenderStep* Scene::FindRStep(ERenderStep::Enum_ id) const
+		RenderStep* Scene::FindRStep(ERenderStep id) const
 		{
 			for (auto& rs : m_render_steps)
 				if (rs->GetId() == id)
@@ -70,18 +145,19 @@ namespace pr
 		}
 
 		// Access the render step by Id
-		RenderStep& Scene::operator[](ERenderStep::Enum_ id) const
+		RenderStep& Scene::operator[](ERenderStep id) const
 		{
 			auto rs = FindRStep(id);
 			if (rs) return *rs;
 
-			PR_ASSERT(PR_DBG_RDR, false, Fmt("RenderStep %s is not part of this scene", ERenderStep::ToStringA(id)).c_str());
+			PR_ASSERT(PR_DBG_RDR, false, Fmt("RenderStep %s is not part of this scene", ToStringA(id)).c_str());
 			throw std::exception("Render step not part of this scene");
 		}
 
 		// Reset the drawlist for each render step
 		void Scene::ClearDrawlists()
 		{
+			m_instances.clear();
 			for (auto& rs : m_render_steps)
 				rs->ClearDrawlist();
 		}
@@ -101,6 +177,7 @@ namespace pr
 		// Instances can be added to render steps directly if finer control is needed
 		void Scene::AddInstance(BaseInstance const& inst)
 		{
+			m_instances.insert(&inst);
 			for (auto& rs : m_render_steps)
 				rs->AddInstance(inst);
 		}
@@ -108,6 +185,7 @@ namespace pr
 		// Remove an instance from the scene
 		void Scene::RemoveInstance(BaseInstance const& inst)
 		{
+			m_instances.erase(&inst);
 			for (auto& rs : m_render_steps)
 				rs->RemoveInstance(inst);
 		}
@@ -115,7 +193,7 @@ namespace pr
 		// Render the scene
 		void Scene::Render()
 		{
-			Renderer::Lock lock(*m_wnd->m_rdr);
+			Renderer::Lock lock(rdr());
 
 			// Don't call 'm_wnd->RestoreRT();' here because we might be rendering to
 			// an off-screen texture. However, if the app contains multiple windows

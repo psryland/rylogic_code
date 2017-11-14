@@ -68,9 +68,11 @@ namespace pr.maths
 		public static int       SignI(bool positive)                            { return positive ? 1 : -1; }
 		public static float     SignF(bool positive)                            { return positive ? 1f : -1f; }
 		public static double    SignD(bool positive)                            { return positive ? 1.0 : -1.0; }
+		public static decimal   SignM(bool positive)                            { return positive ? 1m : -1m; }
 		public static int       Sign(int x)                                     { return SignI(x >= 0.0f); }
 		public static float     Sign(float x)                                   { return SignF(x >= 0.0f); }
 		public static double    Sign(double x)                                  { return SignD(x >= 0.0); }
+		public static decimal   Sign(decimal x)                                 { return SignM(x >= 0m); }
 		public static int       OneIfZero(int x)                                { return x != 0 ? x : 1; }
 		public static float     OneIfZero(float x)                              { return x != 0f ? x : 1f; }
 		public static int       Sqr(int x)                                      { return x * x; }
@@ -333,6 +335,10 @@ namespace pr.maths
 		public static double Quantise(double x, double quantum)
 		{
 			return (long)((x + 0.5*Sign(x)*quantum) / quantum) * quantum;
+		}
+		public static decimal Quantise(decimal x, decimal quantum)
+		{
+			return (long)((x + 0.5m*Sign(x)*quantum) / quantum) * quantum;
 		}
 
 		/// <summary>Convert a series of floating point values into a series of integers, preserving the remainders such that the sum of integers is within 1.0 of the sum of the floats</summary>

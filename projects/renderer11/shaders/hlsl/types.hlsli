@@ -11,9 +11,9 @@
 static const float TINY = 0.0001f;
 
 // Models
-#define HasNormals (m_geom.x == 1)
-#define HasTex0    (m_geom.y == 1)
-#define HasAlpha   (m_geom.z == 1)
+#define HasNormals (m_flags.x == 1)
+#define HasTex0    (m_flags.y == 1)
+#define HasAlpha   (m_flags.z == 1)
 
 // Camera
 struct Camera
@@ -72,6 +72,35 @@ struct Shadow
 		float4 ws_norm :Normal;
 		float4 diff    :Color0;
 		float2 tex0    :TexCoord0;
+	};
+
+	// Compute shader input
+	struct CSIn
+	{
+		// Example:
+		//  [numthreads(10,8,3)] = Number of threads in one thread group.
+		//  Dispatch(5,3,2) = Run (5*3*2=30) thread groups.
+		//  The threads in each group execute in parallel.
+
+		// 'group_id' is the 3d address in units of groups.
+		// 'group_id' is the highest level partitioning, with each value representing a block of threads.
+		// e.g. group_id = (0,0,0) = first block of (10*8*3) threads, (1,0,0) is the next block of (10*8*3) threads
+		//      Values in the range [0,0,0] -> [5,3,2]
+		uint3 group_id :SV_GroupID;
+
+		// 'thread_id' is the global address of the thread, equal to 'group_id'*[numthreads] + 'group_thread_id'.
+		//  e.g. Values in the range [0,0,0] -> [5,3,2]*[10,8,3]
+		uint3 thread_id :SV_DispatchThreadID;
+
+		// 'group_thread_id' is the address of a thread within a group.
+		// e.g. group_thread_id = (0,0,0) = first thread in the current block
+		//      Values in the range [0,0,0] -> [10,8,3]
+		uint3 group_thread_id :SV_GroupThreadID;
+
+		// 'group_idx' is the 3d address within a group, converted to a 1d index: Z*width*height + Y*width + X
+		// e.g. group_idx = group_thread_id.z*numthreads.x*numthreads.y + group_thread_id.y*numthreads.x + group_thread_id.x
+		//      Values in the range [0] -> [3*10*8 + 8*10 + 10]
+		uint group_idx :SV_GroupIndex;
 	};
 
 #endif

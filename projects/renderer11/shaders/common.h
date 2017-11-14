@@ -20,6 +20,22 @@ namespace pr
 {
 	namespace rdr
 	{
+		// How To Make A New Shader:
+		// - Add an HLSL file:  e.g. '/renderer11/shaders/hlsl/<whatever>/your_file.hlsl'
+		//   The HLSL file should contain the VS,GS,PS,etc shader definition (see existing examples)
+		//   Change the Item Type to 'Custom Build Tool'. The default python script should already
+		//   be set from the property sheets.
+		// - Add a separate HLSLI file: e.g. 'your_file_cbuf.hlsli' (copy from an existing one)
+		//   Set the Item Type to 'Does not participate in the build'
+		// - Add a 'shdr_your_file.cpp' file (see existing).
+		// - Shaders that get referenced externally to the renderer (i.e. most from now on), need
+		//   a public header file as well 'shdr_your_file.h'. This will contain the Shader<> derived
+		//   types, with the implementation in 'shdr_your_file.cpp' (e.g. shdr_screen_space).
+		//   Shaders only used by the renderer don't need a header file (e.g. shdr_fwd.cpp)
+		// - The 'Setup' function in your Shader<> derived object should follow the 'SetXYZConstants'
+		//   pattern. You should be able to #include the 'your_file_cbuf.hlsli' file in the 'shdr_your_file.cpp'
+		//   where the 'Setup' method is implemented.
+
 		#if PR_RDR_RUNTIME_SHADERS
 		void RegisterRuntimeShader(RdrId id, char const* cso_filepath);
 		#endif
@@ -46,17 +62,21 @@ namespace pr
 			{
 				#include "renderer11/shaders/hlsl/shadow/shadow_map_cbuf.hlsli"
 			}
+			namespace util
+			{
+				#include "renderer11/shaders/hlsl/utility/ray_cast_cbuf.hlsli"
+			}
 		}
 
-		// Set the geometry type
-		template <typename TCBuf> void SetGeomType(NuggetData const& ddata, TCBuf& cb)
+		// Set the CBuffer model constants flags
+		template <typename TCBuf> void SetModelFlags(NuggetData const& ddata, int inst_id, TCBuf& cb)
 		{
 			// Convert a geom into an iv4 for flags passed to a shader
-			cb.m_geom = iv4(
+			cb.m_flags = iv4(
 				pr::AllSet(ddata.m_geom, EGeom::Norm),
 				pr::AllSet(ddata.m_geom, EGeom::Tex0),
 				ddata.m_sort_key.Group() > ESortGroup::PreAlpha ? 1 : 0,
-				0);
+				inst_id);
 		}
 
 		// Set the transform properties of a constants buffer
@@ -135,11 +155,12 @@ namespace pr
 
 			// Bind the constants to the shaders
 			ID3D11Buffer* buffers[] = {cbuf};
-			if (shdr_types & EShaderType::VS) dc->VSSetConstantBuffers(TCBuf::slot, 1, buffers);
-			if (shdr_types & EShaderType::PS) dc->PSSetConstantBuffers(TCBuf::slot, 1, buffers);
-			if (shdr_types & EShaderType::GS) dc->GSSetConstantBuffers(TCBuf::slot, 1, buffers);
-			if (shdr_types & EShaderType::HS) dc->HSSetConstantBuffers(TCBuf::slot, 1, buffers);
-			if (shdr_types & EShaderType::DS) dc->DSSetConstantBuffers(TCBuf::slot, 1, buffers);
+			if (AllSet(shdr_types, EShaderType::VS)) dc->VSSetConstantBuffers(TCBuf::slot, 1, buffers);
+			if (AllSet(shdr_types, EShaderType::PS)) dc->PSSetConstantBuffers(TCBuf::slot, 1, buffers);
+			if (AllSet(shdr_types, EShaderType::GS)) dc->GSSetConstantBuffers(TCBuf::slot, 1, buffers);
+			if (AllSet(shdr_types, EShaderType::CS)) dc->CSSetConstantBuffers(TCBuf::slot, 1, buffers);
+			if (AllSet(shdr_types, EShaderType::HS)) dc->HSSetConstantBuffers(TCBuf::slot, 1, buffers);
+			if (AllSet(shdr_types, EShaderType::DS)) dc->DSSetConstantBuffers(TCBuf::slot, 1, buffers);
 		}
 	}
 }

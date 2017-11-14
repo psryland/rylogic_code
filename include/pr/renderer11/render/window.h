@@ -23,6 +23,7 @@ namespace pr
 			DXGI_FORMAT      m_depth_format;     // Depth buffer format
 			DXGI_USAGE       m_usage;            // Usage flags for the swap chain buffer
 			UINT             m_vsync;            // Present SyncInterval value
+			bool             m_use_w_buffer;     // Use W-Buffer depth rather than Z-Buffer
 			bool             m_allow_alt_enter;  // Allow switching to full screen with alt-enter
 			string32         m_name;             // A debugging name for the window
 
@@ -31,7 +32,7 @@ namespace pr
 			//   BitBlt modes: 0 = present immediately, 1,2,3,.. present after the nth vertical blank (has the effect of locking the frame rate to a fixed multiple of the VSync rate)
 			//   Flip modes (Sequential): 0 = drop this frame if there is a new frame waiting, n > 0 = same as bitblt case
 
-			WndSettings(HWND hwnd = 0, bool windowed = true, bool gdi_compatible_bb = false, iv2 const& client_area = iv2(1024,768));
+			WndSettings(HWND hwnd = 0, bool windowed = true, bool gdi_compatible_bb = false, iv2 const& client_area = iv2(1024,768), bool w_buffer = true);
 		};
 
 		// Renderer window.
@@ -57,12 +58,13 @@ namespace pr
 			~Window();
 
 			// Access the renderer manager classes
-			ModelManager& mdl_mgr();
-			ShaderManager& shdr_mgr();
-			TextureManager& tex_mgr();
-			BlendStateManager& bs_mgr();
-			DepthStateManager& ds_mgr();
-			RasterStateManager& rs_mgr();
+			Renderer& rdr() const;
+			ModelManager& mdl_mgr() const;
+			ShaderManager& shdr_mgr() const;
+			TextureManager& tex_mgr() const;
+			BlendStateManager& bs_mgr() const;
+			DepthStateManager& ds_mgr() const;
+			RasterStateManager& rs_mgr() const;
 
 			// Create the render target and depth buffer
 			void InitRT();
@@ -79,7 +81,7 @@ namespace pr
 			// Render this window into 'render_target;
 			// 'render_target' is the texture that is rendered onto
 			// 'depth_buffer' is an optional texture that will receive the depth information (can be null)
-			void SetRT(D3DPtr<ID3D11Texture2D>& render_target, D3DPtr<ID3D11Texture2D>& depth_buffer);
+			void SetRT(ID3D11Texture2D* render_target, ID3D11Texture2D* depth_buffer);
 
 			// Set the viewport to all of the render target
 			void RestoreFullViewport();

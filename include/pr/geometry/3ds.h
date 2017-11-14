@@ -148,14 +148,14 @@ namespace pr
 				*/x(MatMapBCOL                ,= 0xA368) /*
 				*/
 
-			PR_DEFINE_ENUM2(EChunkId, PR_ENUM);
+			PR_DEFINE_ENUM2_BASE(EChunkId, PR_ENUM, u16);
 			#undef PR_ENUM
 			#pragma endregion
 
 			#pragma pack(push, 1)
 			struct ChunkHeader
 			{
-				u16 id;
+				EChunkId id;
 				u32 length;
 			};
 			static_assert(sizeof(ChunkHeader) == 6, "Incorrect chunk header size");

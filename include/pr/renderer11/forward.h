@@ -32,7 +32,6 @@
 #include "pr/macros/count_of.h"
 #include "pr/macros/repeat.h"
 #include "pr/macros/enum.h"
-#include "pr/macros/no_copy.h"
 #include "pr/macros/align.h"
 #include "pr/meta/alignment_of.h"
 #include "pr/meta/optional.h"
@@ -137,6 +136,7 @@ namespace pr
 		struct GBuffer;
 		struct DSLighting;
 		struct ShadowMap;
+		struct RayCast;
 		using RenderStepPtr = std::shared_ptr<RenderStep>;
 
 		// Models
@@ -190,23 +190,25 @@ namespace pr
 		using InvokeFunc = void (__stdcall *)(void* ctx);
 
 		// EResult
-		#define PR_ENUM(x)/*
-			*/x(Success       ,= 0         )/*
-			*/x(Failed        ,= 0x80000000)/*
-			*/x(InvalidValue  ,)
-		PR_DEFINE_ENUM2(EResult, PR_ENUM);
+		#define PR_ENUM(x)\
+			x(Success       ,= 0         )\
+			x(Failed        ,= 0x80000000)\
+			x(InvalidValue  ,)
+		PR_DEFINE_ENUM2_BASE(EResult, PR_ENUM, uint);
 		#undef PR_ENUM
 
 		// EShaderType (in order of execution on the HW) http://msdn.microsoft.com/en-us/library/windows/desktop/ff476882(v=vs.85).aspx
 		#define PR_ENUM(x)\
 			x(Invalid ,= 0)\
 			x(VS      ,= 1 << 0)\
-			x(HS      ,= 1 << 1)\
-			x(DS      ,= 1 << 2)\
-			x(GS      ,= 1 << 3)\
-			x(PS      ,= 1 << 4)\
-			x(All     ,= ~0)
-		PR_DEFINE_ENUM2_FLAGS(EShaderType, PR_ENUM);
+			x(PS      ,= 1 << 1)\
+			x(GS      ,= 1 << 2)\
+			x(CS      ,= 1 << 3)\
+			x(HS      ,= 1 << 4)\
+			x(DS      ,= 1 << 5)\
+			x(All     ,= ~0)\
+			x(_bitwise_operators_allowed, = 0x7FFFFFFF)
+		PR_DEFINE_ENUM2(EShaderType, PR_ENUM);
 		#undef PR_ENUM
 
 		// ETexAddrMode

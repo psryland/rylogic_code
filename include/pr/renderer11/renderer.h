@@ -25,6 +25,7 @@
 //  - Rebuild
 //  - Edit the HLSL files in '\projects\renderer11\shaders\hlsl'
 //  - Run '\script\BuildShader.py <hlsl_filepath> x86 debug dbg' to build the HLSL file (with .cso files)
+//  - Make sure the 'BuildShader.py' script is using the same version of 'fxc.exe' as VS.
 //  - Note: Runtime shaders are hard coded to read from '\projects\renderer\shaders\hlsl\compiled\'
 //  - Put a break point in '\projects\renderer11\shaders\shader.cpp:66' to ensure the compiled shader is being loaded
 //  - Tips:
@@ -40,7 +41,6 @@
 
 // Forward
 #include "pr/renderer11/forward.h"
-#include "pr/renderer11/instance.h"
 
 // Configuration
 #include "pr/renderer11/config/config.h"
@@ -90,6 +90,6 @@
 #include "pr/renderer11/util/lock.h"
 #include "pr/renderer11/util/util.h"
 #include "pr/renderer11/util/stock_resources.h"
-#include "pr/renderer11/util/event_types.h"
+#include "pr/renderer11/util/event_args.h"
 
 #undef PR_RENDERER_INTERFACE_INCLUDE

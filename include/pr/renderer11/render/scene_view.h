@@ -27,7 +27,7 @@ namespace pr
 			}
 
 			// Return the scene views for the left and right eye in stereoscopic view
-			void Stereo(float separation, SceneView (&eye)[EEye::NumberOf]) const;
+			void Stereo(float separation, SceneView (&eye)[Enum<EEye>::NumberOf]) const;
 		};
 	}
 }

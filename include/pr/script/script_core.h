@@ -909,29 +909,6 @@ namespace pr
 {
 	namespace unittests
 	{
-		PRUnitTest(pr_script_checkhashes)
-		{
-			using namespace pr::script;
-			pr::CheckHashEnum<EKeyword, wchar_t>(
-				[](wchar_t const* name)
-				{
-					return pr::hash::Hash(name);
-				},
-				[](char const* msg)
-				{
-					PR_FAIL(msg);
-				});
-
-			pr::CheckHashEnum<EPPKeyword, wchar_t>(
-				[](wchar_t const* name)
-				{
-					return pr::hash::Hash(name);
-				},
-				[](char const* msg)
-				{
-					PR_FAIL(msg);
-				});
-		}
 		PRUnitTest(pr_script_core)
 		{
 			using namespace pr::str;

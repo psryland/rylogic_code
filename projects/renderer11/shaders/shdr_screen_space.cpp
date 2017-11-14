@@ -11,7 +11,6 @@
 #include "pr/renderer11/render/scene_view.h"
 #include "pr/renderer11/steps/render_step.h"
 #include "pr/renderer11/util/stock_resources.h"
-#include "pr/renderer11/util/event_types.h"
 #include "renderer11/render/state_stack.h"
 #include "renderer11/shaders/common.h"
 
@@ -58,8 +57,8 @@ namespace pr
 		{
 			// Create the dx shaders
 			GShaderDesc desc(point_sprites_gs);
-			auto dx = GetGS(EStockShader::PointSpritesGS, &desc);
-			m_stock_shaders.emplace_back(CreateShader<PointSpritesGS>(EStockShader::PointSpritesGS, dx, "point_sprites_gs"));
+			auto dx = GetGS(RdrId(EStockShader::PointSpritesGS), &desc);
+			m_stock_shaders.emplace_back(CreateShader<PointSpritesGS>(RdrId(EStockShader::PointSpritesGS), dx, "point_sprites_gs"));
 		}
 
 		#pragma endregion
@@ -91,8 +90,8 @@ namespace pr
 		{
 			// Create the dx shaders
 			GShaderDesc desc(thick_linelist_gs);
-			auto dx = GetGS(EStockShader::ThickLineListGS, &desc);
-			m_stock_shaders.emplace_back(CreateShader<ThickLineListGS>(EStockShader::ThickLineListGS, dx, "thick_linelist_gs"));
+			auto dx = GetGS(RdrId(EStockShader::ThickLineListGS), &desc);
+			m_stock_shaders.emplace_back(CreateShader<ThickLineListGS>(RdrId(EStockShader::ThickLineListGS), dx, "thick_linelist_gs"));
 		}
 
 		#pragma endregion
@@ -124,8 +123,8 @@ namespace pr
 		template <> void ShaderManager::CreateShader<ArrowHeadGS>()
 		{
 			GShaderDesc desc(arrow_head_gs);
-			auto dx = GetGS(EStockShader::ArrowHeadGS, &desc);
-			m_stock_shaders.emplace_back(CreateShader<ArrowHeadGS>(EStockShader::ArrowHeadGS, dx, "arrow_head_gs"));
+			auto dx = GetGS(RdrId(EStockShader::ArrowHeadGS), &desc);
+			m_stock_shaders.emplace_back(CreateShader<ArrowHeadGS>(RdrId(EStockShader::ArrowHeadGS), dx, "arrow_head_gs"));
 		}
 
 		#pragma endregion

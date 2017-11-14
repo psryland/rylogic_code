@@ -138,6 +138,9 @@ namespace LDraw
 		private ToolStripSeparator toolStripSeparator18;
 		private ToolStripMenuItem m_menu_rendering_anim_controls;
 		private ToolStripTrackBar m_tr_speed;
+		private ToolStrip m_ts_tools;
+		private ToolStripLabel m_lbl_tools;
+		private ToolStripButton m_chk_measure;
 		private ToolStripMenuItem m_menu_file_save_as;
 		#endregion
 
@@ -786,6 +789,16 @@ namespace LDraw
 			m_tr_speed.TrackBar.Set(50, 0, 100);
 			#endregion
 
+			#region Tools tool bar
+
+			// Measure tool
+			m_chk_measure.CheckedChanged += (s,a) =>
+			{
+				Model.ShowMeasureTool = m_chk_measure.Checked;
+			};
+
+			#endregion
+
 			#region Progress Bar
 			m_pb_loading.Alignment = ToolStripItemAlignment.Right;
 			#endregion
@@ -1211,9 +1224,9 @@ namespace LDraw
 			this.m_btn_step_fwd = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_run = new System.Windows.Forms.ToolStripButton();
 			this.m_lbl_step_rate = new System.Windows.Forms.ToolStripLabel();
+			this.m_tr_speed = new pr.gui.ToolStripTrackBar();
 			this.m_lbl_anim_clock = new System.Windows.Forms.ToolStripLabel();
 			this.m_tb_clock = new System.Windows.Forms.ToolStripTextBox();
-			this.m_tr_speed = new pr.gui.ToolStripTrackBar();
 			this.m_ts_multiview = new System.Windows.Forms.ToolStrip();
 			this.m_lbl_link_cameras = new System.Windows.Forms.ToolStripLabel();
 			this.m_btn_link_camera_left_right = new System.Windows.Forms.ToolStripButton();
@@ -1224,6 +1237,9 @@ namespace LDraw
 			this.m_lbl_link_axes = new System.Windows.Forms.ToolStripLabel();
 			this.m_btn_link_xaxis = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_link_yaxis = new System.Windows.Forms.ToolStripButton();
+			this.m_ts_tools = new System.Windows.Forms.ToolStrip();
+			this.m_lbl_tools = new System.Windows.Forms.ToolStripLabel();
+			this.m_chk_measure = new System.Windows.Forms.ToolStripButton();
 			this.m_tsc.BottomToolStripPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();
@@ -1231,6 +1247,7 @@ namespace LDraw
 			this.m_menu.SuspendLayout();
 			this.m_ts_anim_controls.SuspendLayout();
 			this.m_ts_multiview.SuspendLayout();
+			this.m_ts_tools.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// m_tsc
@@ -1242,7 +1259,7 @@ namespace LDraw
 			// 
 			// m_tsc.ContentPanel
 			// 
-			this.m_tsc.ContentPanel.Size = new System.Drawing.Size(663, 516);
+			this.m_tsc.ContentPanel.Size = new System.Drawing.Size(663, 464);
 			this.m_tsc.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_tsc.Location = new System.Drawing.Point(0, 0);
 			this.m_tsc.Name = "m_tsc";
@@ -1255,6 +1272,7 @@ namespace LDraw
 			this.m_tsc.TopToolStripPanel.Controls.Add(this.m_menu);
 			this.m_tsc.TopToolStripPanel.Controls.Add(this.m_ts_anim_controls);
 			this.m_tsc.TopToolStripPanel.Controls.Add(this.m_ts_multiview);
+			this.m_tsc.TopToolStripPanel.Controls.Add(this.m_ts_tools);
 			// 
 			// m_ss
 			// 
@@ -1911,7 +1929,7 @@ namespace LDraw
             this.m_tb_clock});
 			this.m_ts_anim_controls.Location = new System.Drawing.Point(3, 24);
 			this.m_ts_anim_controls.Name = "m_ts_anim_controls";
-			this.m_ts_anim_controls.Size = new System.Drawing.Size(416, 27);
+			this.m_ts_anim_controls.Size = new System.Drawing.Size(385, 27);
 			this.m_ts_anim_controls.TabIndex = 2;
 			// 
 			// m_lbl_anim_controls
@@ -1966,6 +1984,12 @@ namespace LDraw
 			this.m_lbl_step_rate.Size = new System.Drawing.Size(42, 24);
 			this.m_lbl_step_rate.Text = "Speed:";
 			// 
+			// m_tr_speed
+			// 
+			this.m_tr_speed.Name = "m_tr_speed";
+			this.m_tr_speed.Size = new System.Drawing.Size(80, 24);
+			this.m_tr_speed.Value = 0;
+			// 
 			// m_lbl_anim_clock
 			// 
 			this.m_lbl_anim_clock.Name = "m_lbl_anim_clock";
@@ -1979,11 +2003,6 @@ namespace LDraw
 			this.m_tb_clock.ReadOnly = true;
 			this.m_tb_clock.Size = new System.Drawing.Size(50, 27);
 			this.m_tb_clock.Text = "100.0";
-			// 
-			// m_tr_speed
-			// 
-			this.m_tr_speed.Name = "m_tr_speed";
-			this.m_tr_speed.Size = new System.Drawing.Size(80, 24);
 			// 
 			// m_ts_multiview
 			// 
@@ -1999,9 +2018,9 @@ namespace LDraw
             this.m_lbl_link_axes,
             this.m_btn_link_xaxis,
             this.m_btn_link_yaxis});
-			this.m_ts_multiview.Location = new System.Drawing.Point(419, 24);
+			this.m_ts_multiview.Location = new System.Drawing.Point(3, 51);
 			this.m_ts_multiview.Name = "m_ts_multiview";
-			this.m_ts_multiview.Size = new System.Drawing.Size(244, 27);
+			this.m_ts_multiview.Size = new System.Drawing.Size(302, 27);
 			this.m_ts_multiview.TabIndex = 1;
 			// 
 			// m_lbl_link_cameras
@@ -2078,6 +2097,33 @@ namespace LDraw
 			this.m_btn_link_yaxis.Size = new System.Drawing.Size(24, 24);
 			this.m_btn_link_yaxis.Text = "toolStripButton2";
 			// 
+			// m_ts_tools
+			// 
+			this.m_ts_tools.Dock = System.Windows.Forms.DockStyle.None;
+			this.m_ts_tools.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_lbl_tools,
+            this.m_chk_measure});
+			this.m_ts_tools.Location = new System.Drawing.Point(3, 78);
+			this.m_ts_tools.Name = "m_ts_tools";
+			this.m_ts_tools.Size = new System.Drawing.Size(104, 25);
+			this.m_ts_tools.TabIndex = 3;
+			// 
+			// m_lbl_tools
+			// 
+			this.m_lbl_tools.Name = "m_lbl_tools";
+			this.m_lbl_tools.Size = new System.Drawing.Size(38, 22);
+			this.m_lbl_tools.Text = "Tools:";
+			// 
+			// m_chk_measure
+			// 
+			this.m_chk_measure.CheckOnClick = true;
+			this.m_chk_measure.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_chk_measure.Image = ((System.Drawing.Image)(resources.GetObject("m_chk_measure.Image")));
+			this.m_chk_measure.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_chk_measure.Name = "m_chk_measure";
+			this.m_chk_measure.Size = new System.Drawing.Size(23, 22);
+			this.m_chk_measure.Text = "Measure Tool";
+			// 
 			// MainUI
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -2102,6 +2148,8 @@ namespace LDraw
 			this.m_ts_anim_controls.PerformLayout();
 			this.m_ts_multiview.ResumeLayout(false);
 			this.m_ts_multiview.PerformLayout();
+			this.m_ts_tools.ResumeLayout(false);
+			this.m_ts_tools.PerformLayout();
 			this.ResumeLayout(false);
 
 		}

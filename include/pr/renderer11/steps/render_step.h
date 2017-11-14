@@ -8,15 +8,16 @@
 #include "pr/renderer11/render/state_block.h"
 #include "pr/renderer11/render/drawlist_element.h"
 #include "pr/renderer11/util/stock_resources.h"
-#include "pr/renderer11/util/event_types.h"
 
 namespace pr
 {
 	namespace rdr
 	{
+		// EnableIf for RenderStep derived types
+		template <typename T> using enable_if_render_step = typename std::enable_if<std::is_base_of<RenderStep,T>::value>::type;
+
 		// Base class for render steps
 		struct RenderStep
-			:pr::events::IRecv<Evt_ModelDestroy>
 		{
 			// Draw list element container
 			using TDrawList = pr::vector<DrawListElement, 1024, false, pr::rdr::Allocator<DrawListElement>>;
@@ -32,24 +33,25 @@ namespace pr
 				TDrawList&       drawlist()       { return get().m_impl_drawlist; }
 			};
 
-			Scene*                       m_scene;         // The scene this render step is owned by
-			ShaderManager*               m_shdr_mgr;      // Convenience pointer to the shader manager
-			TDrawList                    m_impl_drawlist; // The drawlist for this render step. Access via 'Lock'
-			bool                         m_sort_needed;   // True when the list needs sorting
-			BSBlock                      m_bsb;           // Blend states
-			RSBlock                      m_rsb;           // Raster states
-			DSBlock                      m_dsb;           // Depth buffer states
-			std::recursive_mutex mutable m_mutex;         // Sync access to the drawlist
+			Scene*                       m_scene;            // The scene this render step is owned by
+			ShaderManager*               m_shdr_mgr;         // Convenience pointer to the shader manager
+			TDrawList                    m_impl_drawlist;    // The drawlist for this render step. Access via 'Lock'
+			bool                         m_sort_needed;      // True when the list needs sorting
+			BSBlock                      m_bsb;              // Blend states
+			RSBlock                      m_rsb;              // Raster states
+			DSBlock                      m_dsb;              // Depth buffer states
+			EvtAutoSub                   m_evt_model_delete; // Event subscription for model deleted notification
+			std::recursive_mutex mutable m_mutex;            // Sync access to the drawlist
 
-			RenderStep(Scene& scene);
+			explicit RenderStep(Scene& scene);
 			virtual ~RenderStep() {}
 			RenderStep(RenderStep const&) = delete;
 			RenderStep& operator = (RenderStep const&) = delete;
 
 			// The type of render step this is
-			virtual ERenderStep::Enum_ GetId() const = 0;
-			template <typename RStep> typename std::enable_if<std::is_base_of<RenderStep,RStep>::value, RStep>::type const& as() const { return *static_cast<RStep const*>(this); }
-			template <typename RStep> typename std::enable_if<std::is_base_of<RenderStep,RStep>::value, RStep>::type&       as()       { return *static_cast<RStep*>(this); }
+			virtual ERenderStep GetId() const = 0;
+			template <typename RStep, typename = enable_if_render_step<RStep>> RStep const& as() const { return *static_cast<RStep const*>(this); }
+			template <typename RStep, typename = enable_if_render_step<RStep>> RStep        as()       { return *static_cast<RStep*>(this); }
 
 			// Reset the drawlist
 			void ClearDrawlist();
@@ -94,7 +96,7 @@ namespace pr
 		private:
 
 			// Notification of a model being destroyed
-			void OnEvent(Evt_ModelDestroy const& evt) override;
+			void OnModelDeleted(Model& model, EmptyArgs const&) const;
 		};
 	}
 }

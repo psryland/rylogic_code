@@ -48,13 +48,17 @@ namespace pr
 		Nugget::~Nugget()
 		{
 			while (!m_nuggets.empty())
-				MdlMgr().Delete(&m_nuggets.front());
+				mdl_mgr().Delete(&m_nuggets.front());
 		}
 
-		// Access the model manager
-		ModelManager& Nugget::MdlMgr()
+		// Renderer access
+		Renderer& Nugget::rdr() const
 		{
-			return m_model_buffer->MdlMgr();
+			return m_model_buffer->rdr();
+		}
+		ModelManager& Nugget::mdl_mgr() const
+		{
+			return m_model_buffer->mdl_mgr();
 		}
 
 		// Return the sort key composed from the base 'm_sort_key' plus any shaders in 'm_smap'
@@ -115,7 +119,7 @@ namespace pr
 				// Create a dependent nugget to do the back faces
 				if (m_owner != nullptr)
 				{
-					auto& nug = *MdlMgr().CreateNugget(*this, m_model_buffer, nullptr);
+					auto& nug = *mdl_mgr().CreateNugget(*this, m_model_buffer, nullptr);
 					nug.m_sort_key.Group(ESortGroup::AlphaBack);
 					nug.m_rsb.Set(ERS::CullMode, D3D11_CULL_FRONT);
 					nug.m_owner = m_owner;

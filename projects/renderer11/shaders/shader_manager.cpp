@@ -8,8 +8,7 @@
 #include "pr/renderer11/render/drawlist_element.h"
 #include "pr/renderer11/render/sortkey.h"
 #include "pr/renderer11/render/renderer.h"
-#include "pr/renderer11/util/event_types.h"
-#include "renderer11/util/forward_private.h"
+#include "renderer11/shaders/shader_forward.h"
 
 namespace pr
 {
@@ -23,6 +22,7 @@ namespace pr
 			,m_lookup_vs(mem)
 			,m_lookup_ps(mem)
 			,m_lookup_gs(mem)
+			,m_lookup_cs(mem)
 			,m_lookup_shader(mem)
 			,m_lookup_cbuf(mem)
 			,m_stock_shaders()
@@ -39,6 +39,7 @@ namespace pr
 			dc->VSSetShader(0, 0, 0);
 			dc->PSSetShader(0, 0, 0);
 			dc->GSSetShader(0, 0, 0);
+			dc->CSSetShader(0, 0, 0);
 			dc->HSSetShader(0, 0, 0);
 			dc->DSSetShader(0, 0, 0);
 
@@ -64,6 +65,14 @@ namespace pr
 			CreateShader<ShadowMapFaceGS>();
 			CreateShader<ShadowMapLineGS>();
 			CreateShader<ShadowMapPS>();
+
+			// Ray cast shaders
+			CreateShader<RayCastVS>();
+			CreateShader<RayCastFaceGS>();
+			CreateShader<RayCastEdgeGS>();
+			CreateShader<RayCastVertGS>();
+			CreateShader<RayCastPS>();
+			CreateShader<RayCastCS>();
 
 			// Other shaders
 			CreateShader<PointSpritesGS>();
@@ -166,6 +175,24 @@ namespace pr
 				D3DPtr<ID3D11GeometryShader> gs;
 				pr::Throw(lock1.D3DDevice()->CreateGeometryShader(desc->m_data, desc->m_size, 0, &gs.m_ptr));
 				return std::move(gs);
+			});
+		}
+
+		// Get (or create) a compute shader.
+		D3DPtr<ID3D11ComputeShader> ShaderManager::GetCS(RdrId id, CShaderDesc const* desc)
+		{
+			std::lock_guard<std::recursive_mutex> lock0(m_mutex);
+
+			return Get<ID3D11ComputeShader>(id, m_lookup_cs, [&]
+			{
+				if (desc == nullptr)
+					throw pr::Exception<HRESULT>(E_FAIL, "Compute shader description not provided");
+
+				// Create the pixel shader
+				Renderer::Lock lock1(m_rdr);
+				D3DPtr<ID3D11ComputeShader> cs;
+				pr::Throw(lock1.D3DDevice()->CreateComputeShader(desc->m_data, desc->m_size, 0, &cs.m_ptr));
+				return std::move(cs);
 			});
 		}
 
