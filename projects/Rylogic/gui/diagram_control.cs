@@ -16,7 +16,7 @@ using pr.gfx;
 using pr.ldr;
 using pr.maths;
 using pr.util;
-using pr.win32;
+using pr.view3d;
 
 namespace pr.gui
 {
@@ -3865,7 +3865,7 @@ namespace pr.gui
 
 				// We don't need GDI compatibility in the swap chain,
 				// it's only textures that we're using with the GDI.
-				m_view3d = new View3d();
+				m_view3d = View3d.Create();
 				m_window = new View3d.Window(m_view3d, Handle, new View3d.WindowOptions(null, IntPtr.Zero) { DbgName = "Diagram" });
 				m_tools  = new Tools();
 				m_camera = m_window.Camera;

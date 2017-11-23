@@ -2,221 +2,265 @@
 // Renderer
 //  Copyright (c) Rylogic Ltd 2010
 //***********************************************
-
+//
 // Perform a ray vs. model test on all verts, edges, faces in a model
-
-// How it works:
-//  When Snap-To Ray casting is wanted, a render step is added to the scene.
-//  The render step, renders the drawlist again using the RayCast shaders below.
-//  The shaders write the model id and location of the hit point into a 1D texture (managed by the render step)
-//  The render step can then be queried to find the model that was hit
-
+//
+// Algorithm:
+//  For each Frame:
+//     Constants { rays[16], ray_count, snap_mode, snap_distance, }
+//     For each nugget:
+//         Constants { o2w, instance_pointer }
+//         Use a vertex shader to transform MS verts to world space.
+//         Use geometry shaders to perform Ray Vs. Prim tests
+//         Use a null pixel shader and set the stream output stage target to a buffer.
+//         The format of the SO target buffer is:
+//            float4 ws_intercept
+//            float distance from ray origin to intercept
+//            uint ray index
+//            uint2 instance_pointer (x=hi,y=lo)
+//  Use CopyStructureCount to read the number of intercepts written to the stream output buffer.
+//  Use CopyResource to copy the intercepts buffer to a staging buffer
 
 #include "../types.hlsli"
+#include "../common/functions.hlsli"
 #include "../common/geometry.hlsli"
 #include "ray_cast_cbuf.hlsli"
 
-// Compute shader
-#ifdef PR_RDR_CSHADER_ray_cast
-
-// A single ray to cast
-struct Ray
+// Geometry shader input format
+struct GSIn_RayCast
 {
-	float4 ws_origin;
-	float4 ws_direction;
+	float4 ws_vert :WSVert;
 };
-
-// The intercept between a ray and an object
-struct Intercept
+struct GSOut_RayCast
 {
-	float4 ws_intercept;
-	float distance;
-	int instance_id;
+	float4 ws_intercept :WSIntercept;
+	int    snap_type    :SnapType;
+	int    ray_index    :RayIndex;
+	uint2  inst_ptr     :InstPtr;
 };
-
-// The input buffer of rays to cast
-StructuredBuffer<Ray> g_rays;
-
-// The output buffer of intercepts
-RWStructuredBuffer<Intercept> g_intercepts;
-
-// Rays vs. Geometry
-[numthreads(1, 1, 1)]
-void main(CSIn addr)
+struct TestPoint
 {
-	Intercept intercept;
-	intercept.ws_intercept = float4(addr.thread_id.x/1024.0f, 0, 0, 1);
-	intercept.distance = 1.0f;
-	intercept.instance_id = addr.group_idx;
-	g_intercepts[addr.thread_id.x] = intercept;
-}
-
-#endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Pixel shader input format
-struct PSIn_RayCast
-{
-	float4 ws_vert :SV_Position; // gets divided by w and written to the depth buffer
-	float4 intercept :Intercept;
+	float4 vert;
+	int snap_type;
 };
-struct PSOut
+struct TestEdge
 {
-	float4 intercept :SV_Target;
+	float4 vert;
+	float4 edge;
+	int snap_type;
 };
 
 // Vertex shader
 #ifdef PR_RDR_VSHADER_ray_cast
-PSIn_RayCast main(VSIn In)
+GSIn_RayCast main(VSIn In)
 {
-	PSIn_RayCast Out;
-
 	// Transform the model verts to world space
+	GSIn_RayCast Out = (GSIn_RayCast)0;
 	Out.ws_vert = mul(In.vert, m_o2w);
-	Out.intercept = float4(0,0,0,0);
-
 	return Out;
 }
 #endif
 
 // Geometry shaders
 #ifdef PR_RDR_GSHADER_ray_cast_face
-[maxvertexcount(MAX_RAYS)]
-void main(triangle PSIn_RayCast In[3], inout PointStream<PSIn_RayCast> OutStream)
+[maxvertexcount(MaxRays)]
+void main(triangle GSIn_RayCast In[3], inout PointStream<GSOut_RayCast> OutStream)
 {
 	float4 v0 = In[0].ws_vert;
 	float4 v1 = In[1].ws_vert;
 	float4 v2 = In[2].ws_vert;
-	float snap_dist = m_snap_dist;
+
+	TestPoint points[] =
+	{
+		{v0, SNAP_TYPE_VERT},
+		{v1, SNAP_TYPE_VERT},
+		{v2, SNAP_TYPE_VERT},
+		{(v0 + v1) / 2, SNAP_TYPE_EDGECENTRE},
+		{(v1 + v2) / 2, SNAP_TYPE_EDGECENTRE},
+		{(v2 + v0) / 2, SNAP_TYPE_EDGECENTRE},
+		{(v0 + v1 + v2) / 3, SNAP_TYPE_FACECENTRE},
+	};
+	TestEdge edges[] =
+	{
+		{v0, v1 - v0, SNAP_TYPE_EDGE},
+		{v1, v2 - v1, SNAP_TYPE_EDGE},
+		{v2, v0 - v2, SNAP_TYPE_EDGE},
+	};
 
 	for (int i = 0; i != m_ray_count; ++i)
 	{
-		float4 origin = m_ws_ray_origin[i];
-		float4 direction = m_ws_ray_direction[i];
-
-		// Perform a ray vs. triangle intersection test
-		float4 bary = Intersect_RayVsTriangle(origin, direction, v0, v1, v2);
-		if (all_zero(bary))
+		float4 origin    = m_rays[i].ws_origin;
+		float4 direction = m_rays[i].ws_direction;
+		
+		// Perform a ray vs. triangle intersection test to get the closest point to the triangle
+		float4 para = Intersect_RayVsTriangle(origin, direction, v0, v1, v2);
+		if (AllZero(para))
 			continue; // no intersection, co-planar
-	
-		// Find the intersection point
-		float4 pt = v0*bary.x + v1*bary.y + v2*bary.z;
-	
-		// Apply 'snap'. Priority order is Vert, Edge, Face
-		bool snapped = false;
-		if (!snapped && HAS_VERT_SNAP)
-		{
-			float d0 = distance(pt, v0);
-			float d1 = distance(pt, v1);
-			float d2 = distance(pt, v2);
-		
-			// Snap to verts
-			snapped = true;
-			if      (abs(d0 - 1) < snap_dist) pt = v0;
-			else if (abs(d1 - 1) < snap_dist) pt = v1;
-			else if (abs(d2 - 1) < snap_dist) pt = v2;
-			else snapped = false;
-		}
-		if (!snapped && HAS_EDGE_SNAP)
-		{
-			float4 e0 = v1 - v0;
-			float4 e1 = v2 - v1;
-			float4 e2 = v0 - v2;
-		
-			float4 p0 = v0 + saturate(ClosestPoint_PointVsRay(pt,v0,e0)) * e0;
-			float4 p1 = v1 + saturate(ClosestPoint_PointVsRay(pt,v1,e1)) * e1;
-			float4 p2 = v2 + saturate(ClosestPoint_PointVsRay(pt,v2,e2)) * e2;
-		
-			float d0 = distance(pt, p0);
-			float d1 = distance(pt, p1);
-			float d2 = distance(pt, p2);
 
-			// Snap to edges
-			snapped = true;
-			if      (abs(d0) < snap_dist) pt = p0;
-			else if (abs(d1) < snap_dist) pt = p1;
-			else if (abs(d2) < snap_dist) pt = p2;
-			else snapped = false;
-		}
-		if (!snapped && HAS_FACE_SNAP)
+		// Find the nearest point on the ray
+		float4 pt = float4((v0*para.x + v1*para.y + v2*para.z).xyz, 1);
+
+		// Variables for finding the nearest snap-to point
+		float4 intercept = float4(0,0,0,0);
+		int snap_type    = SNAP_TYPE_NONE;
+		float dist       = m_snap_dist;
+		int j,jend;
+		
+		// Snap to points/edges within 'snap_dist'
+		jend = SelectInt(HAS_VERT_SNAP, 7, 0);
+		[unroll] for (j = 0; j != jend; ++j)
 		{
-			snapped = all_zero_or_positive(bary);
+			float4 p = points[j].vert;
+			float  d = distance(pt, p);
+			bool snap = d < dist;
+
+			// Select based on distance
+			snap_type = SelectInt(snap, points[j].snap_type, snap_type);
+			intercept = SelectFloat4(snap, p, intercept);
+			dist      = SelectFloat(snap, d, dist);
+		}
+		
+		// Only test edges if there are no vert snaps
+		jend = SelectInt(HAS_EDGE_SNAP && dist == m_snap_dist, 3, 0);
+		[unroll] for (j = 0; j != jend; ++j)
+		{
+			float  t = ClosestPoint_PointVsRay(pt, edges[j].vert, edges[j].edge);
+			float4 p = edges[j].vert + saturate(t) * edges[j].edge;
+			float  d = distance(pt, p);
+			bool snap = d < dist;
+
+			// Select based on distance
+			snap_type = SelectInt(snap, edges[j].snap_type, snap_type);
+			intercept = SelectFloat4(snap, p, intercept);
+			dist      = SelectFloat(snap, d, dist);
 		}
 
-		// If no intersect, drop the triangle
-		if (!snapped)
+		// Only test faces if there are no edge or vert snaps
+		{
+			bool snap = HAS_FACE_SNAP && dist == m_snap_dist && AllZeroOrPositive(para);
+
+			snap_type = SelectInt(snap, SNAP_TYPE_FACE, snap_type);
+			intercept = SelectFloat4(snap, pt, intercept);
+		}
+
+		// No intercept? try the next ray
+		if (snap_type == SNAP_TYPE_NONE)
 			continue;
 
-		// Get the distance from ray origin to intersect
-		float dist = distance(origin, pt);
-	
-		// Output a "screen space" pixel at (i,0)
-		PSIn_RayCast Out;
-		Out.ws_vert = float4(0, 0, dist, m_ray_max_length);
-		Out.intercept = float4(pt.xyz, m_flags.w + 0.5);
+		// Output an intercept
+		GSOut_RayCast Out = (GSOut_RayCast)0;
+		Out.ws_intercept = float4(intercept.xyz, distance(intercept, origin));
+		Out.snap_type = snap_type;
+		Out.ray_index = i;
+		Out.inst_ptr = m_inst_ptr;
 		OutStream.Append(Out);
-		OutStream.RestartStrip();
-		break;
 	}
 }
 #endif
-
-// Pixel shader
-#ifdef PR_RDR_PSHADER_ray_cast
-PSOut main(PSIn_RayCast In)
-{
-	PSOut Out;
-	if (In.ws_vert.z > 1000000) clip(In.ws_vert.z);
-	Out.intercept = In.intercept;
-	return Out;
-}
-#endif
-
-
-
-
 #ifdef PR_RDR_GSHADER_ray_cast_edge
-[maxvertexcount(1)]
-void main(line PSIn_RayCast In[2], inout PointStream<PSIn_RayCast> OutStream)
+[maxvertexcount(MaxRays)]
+void main(line GSIn_RayCast In[2], inout PointStream<GSOut_RayCast> OutStream)
 {
-	// Todo: use adjacency, to only snap to non-planar verts/edges
+	float4 v0 = In[0].ws_vert;
+	float4 v1 = In[1].ws_vert;
+	float4 edge = v1 - v0;
 
-	// Triangles come in
+	TestPoint points[] =
+	{
+		{v0, SNAP_TYPE_VERT},
+		{v1, SNAP_TYPE_VERT},
+		{(v0 + v1) / 2, SNAP_TYPE_EDGECENTRE},
+	};
 
-	// Ray test them
+	for (int i = 0; i != m_ray_count; ++i)
+	{
+		float4 origin    = m_rays[i].ws_origin;
+		float4 direction = m_rays[i].ws_direction;
 
-	// output "screen space" pixels to a 1D texture where
-	// depth is the parametric value of the intersect
-	// Pixels 0,1,2 are the x,y,z of the intersect
-	OutStream.Append(In[0]);
-	OutStream.RestartStrip();
+		// Perform a ray vs. line segment test to get the closest point to the edge
+		float2 para = ClosestPoint_LineSegmentVsRay(v0, edge, origin, direction);
+
+		// Find the nearest point on the ray and the edge
+		float4 pt = origin + para.y * direction;
+
+		// Variables for finding the nearest snap-to point
+		float4 intercept = float4(0,0,0,0);
+		int snap_type    = SNAP_TYPE_NONE;
+		float dist       = m_snap_dist;
+		int j,jend;
+
+		// Snap to points/edges within 'snap_dist'
+		jend = SelectInt(HAS_VERT_SNAP, 3, 0);
+		[unroll] for (j = 0; j != jend; ++j)
+		{
+			float4 p = points[j].vert;
+			float  d = distance(pt, p);
+			bool snap = d < dist;
+
+			// Select based on distance
+			snap_type = SelectInt(snap, points[j].snap_type, snap_type);
+			intercept = SelectFloat4(snap, p, intercept);
+			dist      = SelectFloat(snap, d, dist);
+		}
+
+		// Only test edges if there are no vert snaps
+		{
+			float4 p = v0 + para.x * edge;
+			float  d = distance(pt, p);
+			bool snap = HAS_EDGE_SNAP && dist == m_snap_dist && d < dist;
+
+			snap_type = SelectInt(snap, SNAP_TYPE_EDGE, snap_type);
+			intercept = SelectFloat4(snap, p, intercept);
+		}
+
+		// No intercept? try the next ray
+		if (snap_type == SNAP_TYPE_NONE)
+			continue;
+
+		// Output an intercept
+		GSOut_RayCast Out = (GSOut_RayCast)0;
+		Out.ws_intercept = float4(intercept.xyz, distance(intercept, origin));
+		Out.snap_type = snap_type;
+		Out.ray_index = i;
+		Out.inst_ptr = m_inst_ptr;
+		OutStream.Append(Out);
+	}
 }
 #endif
 #ifdef PR_RDR_GSHADER_ray_cast_vert
-[maxvertexcount(1)]
-void main(point PSIn_RayCast In[1], inout PointStream<PSIn_RayCast> OutStream)
+[maxvertexcount(MaxRays)]
+void main(point GSIn_RayCast In[1], inout PointStream<GSOut_RayCast> OutStream)
 {
-	// Todo: use adjacency, to only snap to non-planar verts/edges
+	float4 v0 = In[0].ws_vert;
 
-	// Triangles come in
+	for (int i = 0; i != m_ray_count; ++i)
+	{
+		float4 origin    = m_rays[i].ws_origin;
+		float4 direction = m_rays[i].ws_direction;
 
-	// Ray test them
+		// Perform a ray vs. point test
+		float para = ClosestPoint_PointVsRay(v0, origin, direction);
 
-	// output "screen space" pixels to a 1D texture where
-	// depth is the parametric value of the intersect
-	// Pixels 0,1,2 are the x,y,z of the intersect
-	OutStream.Append(In[0]);
-	OutStream.RestartStrip();
+		// Find the nearest point on the ray
+		float4 pt = origin + para * direction;
+		float  d = distance(pt, v0);
+		bool snap = HAS_VERT_SNAP && d < m_snap_dist;
+
+		// Variables for finding the nearest snap-to point
+		float4 intercept = SelectFloat4(snap, v0, float4(0,0,0,0));
+		int snap_type    = SelectInt(snap, SNAP_TYPE_VERT, SNAP_TYPE_NONE);
+
+		// No intercept? try the next ray
+		if (snap_type == SNAP_TYPE_NONE)
+			continue;
+
+		// Output an intercept
+		GSOut_RayCast Out = (GSOut_RayCast)0;
+		Out.ws_intercept = float4(intercept.xyz, distance(intercept, origin));
+		Out.snap_type = snap_type;
+		Out.ray_index = i;
+		Out.inst_ptr = m_inst_ptr;
+		OutStream.Append(Out);
+	}
 }
 #endif

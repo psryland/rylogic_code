@@ -4,21 +4,21 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
 using pr.common;
 using pr.container;
 using pr.db;
 using pr.extn;
-using pr.gfx;
 using pr.gui;
 using pr.maths;
 using pr.scintilla;
 using pr.util;
+using pr.view3d;
 using pr.win32;
-using ToolStripContainer = pr.gui.ToolStripContainer;
 using Timer = System.Windows.Forms.Timer;
-using System.Linq;
+using ToolStripContainer = pr.gui.ToolStripContainer;
 
 namespace CoinFlip
 {

@@ -29,10 +29,10 @@ namespace pr
 		//   Set the Item Type to 'Does not participate in the build'
 		// - Add a 'shdr_your_file.cpp' file (see existing).
 		// - Shaders that get referenced externally to the renderer (i.e. most from now on), need
-		//   a public header file as well 'shdr_your_file.h'. This will contain the Shader<> derived
+		//   a public header file as well 'shdr_your_file.h'. This will contain the ShaderT<> derived
 		//   types, with the implementation in 'shdr_your_file.cpp' (e.g. shdr_screen_space).
 		//   Shaders only used by the renderer don't need a header file (e.g. shdr_fwd.cpp)
-		// - The 'Setup' function in your Shader<> derived object should follow the 'SetXYZConstants'
+		// - The 'Setup' function in your ShaderT<> derived object should follow the 'SetXYZConstants'
 		//   pattern. You should be able to #include the 'your_file_cbuf.hlsli' file in the 'shdr_your_file.cpp'
 		//   where the 'Setup' method is implemented.
 
@@ -61,10 +61,6 @@ namespace pr
 			namespace smap
 			{
 				#include "renderer11/shaders/hlsl/shadow/shadow_map_cbuf.hlsli"
-			}
-			namespace util
-			{
-				#include "renderer11/shaders/hlsl/utility/ray_cast_cbuf.hlsli"
 			}
 		}
 
@@ -148,7 +144,9 @@ namespace pr
 		// Lock and write 'cb' into 'cbuf'. The set 'cbuf' as the constants for the shaders
 		template <typename TCBuf> void WriteConstants(ID3D11DeviceContext* dc, ID3D11Buffer* cbuf, TCBuf const& cb, EShaderType shdr_types)
 		{
-			{// Copy the buffer to the dx buffer
+			// Copy the buffer to the dx buffer
+			if (cbuf != nullptr)
+			{
 				LockT<TCBuf> lock(dc, cbuf, 0, D3D11_MAP_WRITE_DISCARD, 0);
 				*lock.ptr() = cb;
 			}

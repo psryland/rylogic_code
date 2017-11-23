@@ -50,12 +50,12 @@ namespace pr
 			return *this;
 		}
 
-		virtual long AddRef() const
+		long AddRef() const
 		{
 			return Shared ? ::InterlockedIncrement(&m_ref_count) : ++m_ref_count;
 		}
 
-		virtual long Release() const
+		long Release() const
 		{
 			assert(m_ref_count > 0);
 			long ref_count = Shared ? ::InterlockedDecrement(&m_ref_count) : --m_ref_count;

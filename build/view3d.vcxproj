@@ -234,11 +234,6 @@
     </ClCompile>
     <ClCompile Include="..\projects\view3d\window.cpp" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="..\projects\Rylogic\gfx\view3d.cs">
-      <DeploymentContent>false</DeploymentContent>
-    </None>
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

@@ -22,13 +22,6 @@ namespace pr
 		struct ShadowMapLineGS;
 		struct ShadowMapPS;
 
-		struct RayCastVS;
-		struct RayCastFaceGS;
-		struct RayCastEdgeGS;
-		struct RayCastVertGS;
-		struct RayCastPS;
-		struct RayCastCS;
-
 		struct PointSpritesGS;
 		struct ThickLineListGS;
 		struct ArrowHeadGS;

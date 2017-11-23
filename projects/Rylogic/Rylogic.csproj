@@ -82,6 +82,7 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Numerics" />
     <Reference Include="System.Runtime.Serialization" />
@@ -236,7 +237,7 @@
     <Compile Include="gfx\hsv.cs" />
     <Compile Include="gfx\exif.cs" />
     <Compile Include="gfx\gfx.cs" />
-    <Compile Include="gfx\view3d.cs" />
+    <Compile Include="view3d\view3d.cs" />
     <Compile Include="gui\bluetooth_ui.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -317,6 +318,9 @@
     <Compile Include="gui\value_text_box.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="view3d\view3d_measurement_ui.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="gui\vt100.cs" />
     <Compile Include="gui\colour_ui.cs">
       <SubType>Form</SubType>
@@ -368,7 +372,7 @@
     <Compile Include="gui\tree_grid_view.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\view3d_control.cs">
+    <Compile Include="view3d\view3d_control.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="gui\view_image_control.cs">
@@ -579,6 +583,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="gui\select_directories_ui.resx">
       <DependentUpon>select_directories_ui.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="view3d\view3d_measurement_ui.resx">
+      <DependentUpon>view3d_measurement_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="gui\view_video_control.resx">
       <DependentUpon>view_video_control.cs</DependentUpon>

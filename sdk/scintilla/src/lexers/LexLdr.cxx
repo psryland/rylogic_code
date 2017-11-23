@@ -101,9 +101,6 @@ static void StyleNameAndColour(StyleContext& sc)
 // Colourise an ldr script
 static void LexLdrDoc(unsigned int startPos, int length, int initStyle, WordList* /*keywordlists*/[], Accessor &styler)
 {
-	enum class ETok { None, Keyword, LineComment, BlockComment, StrLiteral, CharLiteral };
-
-	ETok tok = ETok::None;
 	StyleContext sc(startPos, length, initStyle, styler);
 	for (; sc.More(); sc.Forward())
 	{
@@ -119,29 +116,31 @@ static void LexLdrDoc(unsigned int startPos, int length, int initStyle, WordList
 				sc.SetState(SCE_LDR_PREPROC);
 				break;
 			case '/':
-				if (sc.chNext == '*') { tok = ETok::BlockComment; sc.SetState(SCE_LDR_COMMENT); sc.Forward(); }
-				if (sc.chNext == '/') { tok = ETok::LineComment;  sc.SetState(SCE_LDR_COMMENT); sc.Forward(); }
+				if (sc.chNext == '*') { sc.SetState(SCE_LDR_COMMENT_BLK); sc.Forward(); }
+				if (sc.chNext == '/') { sc.SetState(SCE_LDR_COMMENT_LINE); sc.Forward(); }
 				break;
 			case '"':
-				tok = ETok::StrLiteral;
-				sc.SetState(SCE_LDR_STRING);
+				sc.SetState(SCE_LDR_STRING_LITERAL);
 				break;
 			case '\'':
-				tok = ETok::CharLiteral;
-				sc.SetState(SCE_LDR_STRING);
+				sc.SetState(SCE_LDR_CHAR_LITERAL);
 				break;
 			}
 			break;
-		case SCE_LDR_COMMENT:
-			if (tok == ETok::LineComment && sc.atLineEnd && sc.chPrev != '\\')
+		case SCE_LDR_COMMENT_LINE:
+			if (sc.atLineEnd && sc.chPrev != '\\')
 				sc.SetState(SCE_LDR_DEFAULT);
-			if (tok == ETok::BlockComment && sc.Match('*','/'))
-				sc.Forward(),sc.ForwardSetState(SCE_LDR_DEFAULT);
 			break;
-		case SCE_LDR_STRING:
-			if (tok == ETok::StrLiteral && sc.ch == '"' && sc.chPrev != '\\')
+		case SCE_LDR_COMMENT_BLK:
+			if (sc.Match('*','/'))
+				sc.Forward(), sc.ForwardSetState(SCE_LDR_DEFAULT);
+			break;
+		case SCE_LDR_STRING_LITERAL:
+			if (sc.ch == '"' && sc.chPrev != '\\')
 				sc.ForwardSetState(SCE_LDR_DEFAULT);
-			if (tok == ETok::CharLiteral && sc.ch == '\'' && sc.chPrev != '\\')
+			break;
+		case SCE_LDR_CHAR_LITERAL:
+			if (sc.ch == '\'' && sc.chPrev != '\\')
 				sc.ForwardSetState(SCE_LDR_DEFAULT);
 			break;
 		case SCE_LDR_NUMBER:
@@ -214,7 +213,8 @@ static void FoldLdrDoc(unsigned int startPos, int length, int /* initStyle */, W
 
 		switch (styler.StyleAt(i))
 		{
-		case SCE_LDR_COMMENT:
+		case SCE_LDR_COMMENT_BLK:
+		case SCE_LDR_COMMENT_LINE:
 			{
 				if (ch_curr == '/' && ch_next == '/')
 				{

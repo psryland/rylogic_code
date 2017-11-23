@@ -143,20 +143,18 @@ extern "C"
 		Warn,
 		Error,
 	};
-	enum class EView3DUpdateObject :int// Flags for partial update of a model
+	enum class EView3DUpdateObject :unsigned int // Flags for partial update of a model
 	{
-		None        = 0     ,
-		All         = ~0    ,
-		Name        = 1 << 0,
-		Model       = 1 << 1,
-		Transform   = 1 << 2,
-		Children    = 1 << 3,
-		Colour      = 1 << 4,
-		ColourMask  = 1 << 5,
-		Wireframe   = 1 << 6,
-		Visibility  = 1 << 7,
-		Animation   = 1 << 8,
-		StepData    = 1 << 9,
+		None       = 0U,
+		All        = ~0U,
+		Name       = 1 << 0,
+		Model      = 1 << 1,
+		Transform  = 1 << 2,
+		Children   = 1 << 3,
+		Colour     = 1 << 4,
+		ColourMask = 1 << 5,
+		Flags      = 1 << 6,
+		Animation  = 1 << 7,
 		_bitwise_operators_allowed,
 	};
 	enum class EView3DGizmoEvent :int // ELdrGizmoEvent 
@@ -197,15 +195,31 @@ extern "C"
 	{
 		None = 0,
 
+		// The object is hidden
+		Hidden = 1 << 0,
+
+		// The object is filled in wireframe mode
+		Wireframe = 1 << 1,
+
+		// Render the object without testing against the depth buffer
+		NoZTest = 1 << 2,
+
+		// Render the object without effecting the depth buffer
+		NoZWrite = 1 << 3,
+
 		// Set when an object is selected. The meaning of 'selected' is up to the application
-		Selected = 1 << 0,
+		Selected = 1 << 8,
 
 		// Doesn't contribute to the bounding box on an object.
-		// Typically used for objects in a scene that are not part of the scene bbox
-		BBoxInvisible = 1 << 1,
+		BBoxExclude = 1 << 9,
 
-		All = ~0,
+		// Should not be included when determining the bounds of a scene.
+		SceneBoundsExclude = 1 << 10,
 
+		// Ignored for hit test ray casts
+		HitTestExclude = 1 << 11,
+
+		// Bitwise operators
 		_bitwise_operators_allowed,
 	};
 	enum class EView3DSceneBounds :int
@@ -218,15 +232,32 @@ extern "C"
 	{
 		NewData,
 		Reload,
+		Removal,
+	};
+	enum class EView3DSceneChanged :int
+	{
+		ObjectsAdded,
+		ObjectsRemoved,
+		GizmoAdded,
+		GizmoRemoved,
 	};
 	enum class EView3DHitTestFlags :int
 	{
-		SnapToFaces = 1 << 0,
-		SnapToEdges = 1 << 1,
-		SnapToVerts = 1 << 2,
-
+		Faces = 1 << 0,
+		Edges = 1 << 1,
+		Verts = 1 << 2,
 		_bitwise_operators_allowed = 0x7FFFFFF,
 	};
+	enum class EView3DSnapType :int
+	{
+		NoSnap,
+		Vert,
+		Edge,
+		Face,
+		EdgeMiddle,
+		FaceCentre,
+	};
+
 	struct View3DV2
 	{
 		float x, y;
@@ -363,6 +394,12 @@ extern "C"
 
 		// The object that was hit (or null)
 		View3DObject m_obj;
+
+		// The distance from ray origin to hit point
+		float m_distance;
+
+		// How the hit point was snapped (if at all)
+		EView3DSnapType m_snap_type;
 	};
 	struct View3DViewport
 	{
@@ -385,6 +422,20 @@ extern "C"
 		int            m_module_count;  // The number of valid module values in 'm_modules'
 		// (ToDo) A string lookup table
 	};
+	struct View3DSceneChanged
+	{
+		// How the scene was changed
+		EView3DSceneChanged m_change_type;
+
+		// An array of the context ids that changed
+		GUID const* m_ctx_ids;
+
+		// The length of the 'm_ctx_ids' array
+		int m_count;
+
+		// Pointer to the object that changed (for single object changes only)
+		View3DObject m_object;
+	};
 
 	using View3D_SettingsChangedCB     = void (__stdcall *)(void* ctx, View3DWindow window);
 	using View3D_EnumGuidsCB           = BOOL (__stdcall *)(void* ctx, GUID const& context_id);
@@ -392,7 +443,7 @@ extern "C"
 	using View3D_AddFileProgressCB     = BOOL (__stdcall *)(void* ctx, GUID const& context_id, wchar_t const* filepath, long long file_offset, BOOL complete);
 	using View3D_SourcesChangedCB      = void (__stdcall *)(void* ctx, EView3DSourcesChangedReason reason, BOOL before);
 	using View3D_RenderCB              = void (__stdcall *)(void* ctx, View3DWindow window);
-	using View3D_SceneChangedCB        = void (__stdcall *)(void* ctx, View3DWindow window, GUID const* context_ids, int count);
+	using View3D_SceneChangedCB        = void (__stdcall *)(void* ctx, View3DWindow window, View3DSceneChanged const&);
 	using View3D_GizmoMovedCB          = void (__stdcall *)(void* ctx, View3DGizmoEvent const& args);
 	using View3D_EditObjectCB          = void (__stdcall *)(
 		void* ctx,             // User callback context pointer
@@ -404,14 +455,13 @@ extern "C"
 		View3DNugget* nuggets, // The nugget buffer to be filled
 		UINT32& new_vcount,    // The number of verts in the updated model
 		UINT32& new_icount,    // The number indices in the updated model
-		UINT32& new_ncount);  // The number nuggets in the updated model
+		UINT32& new_ncount);   // The number nuggets in the updated model
 	using View3D_EmbeddedCodeHandlerCB = BOOL (__stdcall *)(
-		void* ctx,           // User callback context pointer
-		BOOL reset,          // If true, reset the embedded code handler state.
-		wchar_t const* lang, // The language of the embedded code.
-		wchar_t const* code, // The source code from the embedded code block.
-		BSTR& result,        // The string result of running the source code (execution code blocks only)
-		BSTR& errors);       // Any errors in the compilation of the code
+		void* ctx,              // User callback context pointer
+		wchar_t const* code,    // The source code from the embedded code block.
+		wchar_t const* support, // The support code from earlier embedded code blocks.
+		BSTR& result,           // The string result of running the source code (execution code blocks only)
+		BSTR& errors);          // Any errors in the compilation of the code
 
 	// Context
 	VIEW3D_API View3DContext __stdcall View3D_Initialise            (View3D_ReportErrorCB initialise_error_cb, void* ctx, BOOL gdi_compatibility);
@@ -422,11 +472,12 @@ extern "C"
 	VIEW3D_API GUID          __stdcall View3D_LoadScript            (wchar_t const* ldr_script, BOOL file, GUID const* context_id, View3DIncludes const* includes);
 	VIEW3D_API void          __stdcall View3D_ReloadScriptSources   ();
 	VIEW3D_API void          __stdcall View3D_ObjectsDeleteAll      ();
-	VIEW3D_API void          __stdcall View3D_ObjectsDeleteById     (GUID const* context_ids, int count, BOOL all_except);
+	VIEW3D_API void          __stdcall View3D_ObjectsDeleteById     (GUID const* context_ids, int include_count, int exclude_count);
+	VIEW3D_API void          __stdcall View3D_ObjectsDeleteUnused   (GUID const* context_ids, int include_count, int exclude_count);
 	VIEW3D_API void          __stdcall View3D_CheckForChangedSources();
 	VIEW3D_API void          __stdcall View3D_AddFileProgressCBSet  (View3D_AddFileProgressCB progress_cb, void* ctx, BOOL add);
 	VIEW3D_API void          __stdcall View3D_SourcesChangedCBSet   (View3D_SourcesChangedCB sources_changed_cb, void* ctx, BOOL add);
-	VIEW3D_API void          __stdcall View3D_EmbeddedCodeCBSet     (View3D_EmbeddedCodeHandlerCB embedded_code_cb, void* ctx, BOOL add);
+	VIEW3D_API void          __stdcall View3D_EmbeddedCodeCBSet     (wchar_t const* lang, View3D_EmbeddedCodeHandlerCB embedded_code_cb, void* ctx, BOOL add);
 	VIEW3D_API BOOL          __stdcall View3D_ContextIdFromFilepath (wchar_t const* filepath, GUID& id);
 
 	// Windows
@@ -442,19 +493,19 @@ extern "C"
 	VIEW3D_API void         __stdcall View3D_WindowAddObject          (View3DWindow window, View3DObject object);
 	VIEW3D_API void         __stdcall View3D_WindowRemoveObject       (View3DWindow window, View3DObject object);
 	VIEW3D_API void         __stdcall View3D_WindowRemoveAllObjects   (View3DWindow window);
-	VIEW3D_API BOOL         __stdcall View3D_WindowHasObject          (View3DWindow window, View3DObject object);
+	VIEW3D_API BOOL         __stdcall View3D_WindowHasObject          (View3DWindow window, View3DObject object, BOOL search_children);
 	VIEW3D_API int          __stdcall View3D_WindowObjectCount        (View3DWindow window);
 	VIEW3D_API void         __stdcall View3D_WindowEnumGuids          (View3DWindow window, View3D_EnumGuidsCB enum_guids_cb, void* ctx);
 	VIEW3D_API void         __stdcall View3D_WindowEnumObjects        (View3DWindow window, View3D_EnumObjectsCB enum_objects_cb, void* ctx);
-	VIEW3D_API void         __stdcall View3D_WindowEnumObjectsById    (View3DWindow window, View3D_EnumObjectsCB enum_objects_cb, void* ctx, GUID const* context_id, int count, BOOL all_except);
-	VIEW3D_API void         __stdcall View3D_WindowAddObjectsById     (View3DWindow window, GUID const* context_id, int count, BOOL all_except);
-	VIEW3D_API void         __stdcall View3D_WindowRemoveObjectsById  (View3DWindow window, GUID const* context_id, int count, BOOL all_except);
+	VIEW3D_API void         __stdcall View3D_WindowEnumObjectsById    (View3DWindow window, View3D_EnumObjectsCB enum_objects_cb, void* ctx, GUID const* context_ids, int include_count, int exclude_count);
+	VIEW3D_API void         __stdcall View3D_WindowAddObjectsById     (View3DWindow window, GUID const* context_ids, int include_count, int exclude_count);
+	VIEW3D_API void         __stdcall View3D_WindowRemoveObjectsById  (View3DWindow window, GUID const* context_ids, int include_count, int exclude_count);
 	VIEW3D_API void         __stdcall View3D_WindowAddGizmo           (View3DWindow window, View3DGizmo giz);
 	VIEW3D_API void         __stdcall View3D_WindowRemoveGizmo        (View3DWindow window, View3DGizmo giz);
 	VIEW3D_API View3DBBox   __stdcall View3D_WindowSceneBounds        (View3DWindow window, EView3DSceneBounds bounds, int except_count, GUID const* except);
 	VIEW3D_API float        __stdcall View3D_WindowAnimTimeGet        (View3DWindow window);
 	VIEW3D_API void         __stdcall View3D_WindowAnimTimeSet        (View3DWindow window, float time_s);
-	VIEW3D_API void         __stdcall View3D_WindowHitTest            (View3DWindow window, View3DHitTestRay const& ray, float snap_distance, EView3DHitTestFlags flags, View3DHitTestResult& hit);
+	VIEW3D_API void         __stdcall View3D_WindowHitTest            (View3DWindow window, View3DHitTestRay const* rays, View3DHitTestResult* hits, int ray_count, float snap_distance, EView3DHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count);
 
 	// Camera
 	VIEW3D_API void                  __stdcall View3D_CameraToWorldGet      (View3DWindow window, View3DM4x4& c2w);

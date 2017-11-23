@@ -22,9 +22,9 @@ namespace pr
 		#include PR_RDR_SHADER_COMPILED_DIR(shadow_map_ps.h)
 
 		// Shadow map vertex shader
-		struct ShadowMapVS :Shader<ID3D11VertexShader, ShadowMapVS>
+		struct ShadowMapVS :ShaderT<ID3D11VertexShader, ShadowMapVS>
 		{
-			using base = Shader<ID3D11VertexShader, ShadowMapVS>;
+			using base = ShaderT<ID3D11VertexShader, ShadowMapVS>;
 			ShadowMapVS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11VertexShader> const& shdr)
 				:base(mgr, id, sort_id, name, shdr)
 			{
@@ -33,9 +33,9 @@ namespace pr
 		};
 
 		// Shadow map face geometry shader
-		struct ShadowMapFaceGS :Shader<ID3D11GeometryShader, ShadowMapFaceGS>
+		struct ShadowMapFaceGS :ShaderT<ID3D11GeometryShader, ShadowMapFaceGS>
 		{
-			using base = Shader<ID3D11GeometryShader, ShadowMapFaceGS>;
+			using base = ShaderT<ID3D11GeometryShader, ShadowMapFaceGS>;
 			ShadowMapFaceGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader> const& shdr)
 				:base(mgr, id, sort_id, name, shdr)
 			{
@@ -44,9 +44,9 @@ namespace pr
 		};
 
 		// Shadow map line geometry shader
-		struct ShadowMapLineGS :Shader<ID3D11GeometryShader, ShadowMapLineGS>
+		struct ShadowMapLineGS :ShaderT<ID3D11GeometryShader, ShadowMapLineGS>
 		{
-			using base = Shader<ID3D11GeometryShader, ShadowMapLineGS>;
+			using base = ShaderT<ID3D11GeometryShader, ShadowMapLineGS>;
 			ShadowMapLineGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader> const& shdr)
 				:base(mgr, id, sort_id, name, shdr)
 			{
@@ -55,9 +55,9 @@ namespace pr
 		};
 
 		// Shadow map pixel shader
-		struct ShadowMapPS :Shader<ID3D11PixelShader, ShadowMapPS>
+		struct ShadowMapPS :ShaderT<ID3D11PixelShader, ShadowMapPS>
 		{
-			using base = Shader<ID3D11PixelShader, ShadowMapPS>;
+			using base = ShaderT<ID3D11PixelShader, ShadowMapPS>;
 			ShadowMapPS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11PixelShader> const& shdr)
 				:base(mgr, id, sort_id, name, shdr)
 			{

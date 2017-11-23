@@ -4,8 +4,6 @@
 //*********************************************
 // This file contains a set of helper wrappers for initialising some d3d11 structures
 #pragma once
-#ifndef PR_RDR_UTIL_WRAPPERS_H
-#define PR_RDR_UTIL_WRAPPERS_H
 
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/util/util.h"
@@ -21,19 +19,75 @@ namespace pr
 		//      fill the second buffer using ID3D11DeviceContext::Map, ID3D11DeviceContext::Unmap;
 		//      use ID3D11DeviceContext::CopyResource to copy from the staging buffer to the default buffer.
 		//   2) Use ID3D11DeviceContext::UpdateSubresource to copy data from memory.
-		//   3) Create a buffer with D3D11_USAGE_DYNAMIC, and fill it with ID3D11DeviceContext::Map,
+		//   3) Create a buffer with EUsage::DYNAMIC, and fill it with ID3D11DeviceContext::Map,
 		//      ID3D11DeviceContext::Unmap (using the Discard and NoOverwrite flags appropriately).
 		// #1 and #2 are useful for content that changes less than once per frame. In general, GPU
 		//  reads will be fast and CPU updates will be slower.
 		// #3 is useful for content that changes more than once per frame. In general, GPU reads will
 		//  be slower, but CPU updates will be faster.
 
+		#pragma region Wrapped Enums
+		enum class EUsage :std::underlying_type_t<D3D11_USAGE>
+		{
+			Default   = D3D11_USAGE_DEFAULT,
+			Immutable = D3D11_USAGE_IMMUTABLE,
+			Dynamic   = D3D11_USAGE_DYNAMIC,
+			Staging   = D3D11_USAGE_STAGING,
+		};
+		enum class EBind :std::underlying_type_t<D3D11_BIND_FLAG>
+		{
+			None = 0,
+			VertexBuffer    = D3D11_BIND_VERTEX_BUFFER,
+			IndexBuffer     = D3D11_BIND_INDEX_BUFFER,
+			ConstantBuffer  = D3D11_BIND_CONSTANT_BUFFER,
+			ShaderResource  = D3D11_BIND_SHADER_RESOURCE,
+			StreamOutput    = D3D11_BIND_STREAM_OUTPUT,
+			RenderTarget    = D3D11_BIND_RENDER_TARGET,
+			DepthStencil    = D3D11_BIND_DEPTH_STENCIL,
+			UnorderedAccess = D3D11_BIND_UNORDERED_ACCESS,
+			Decoder         = D3D11_BIND_DECODER,
+			VideoEncoder    = D3D11_BIND_VIDEO_ENCODER,
+
+			_bitwise_operators_allowed,
+		};
+		enum class ECPUAccess :std::underlying_type_t<D3D11_CPU_ACCESS_FLAG>
+		{
+			None = 0,
+			Write = D3D11_CPU_ACCESS_WRITE,
+			Read  = D3D11_CPU_ACCESS_READ,
+
+			_bitwise_operators_allowed,
+		};
+		enum class EResMisc :std::underlying_type_t<D3D11_RESOURCE_MISC_FLAG>
+		{
+			None = 0,
+			GenerateMips                 = D3D11_RESOURCE_MISC_GENERATE_MIPS,
+			Shared                       = D3D11_RESOURCE_MISC_SHARED,
+			TextureCube                  = D3D11_RESOURCE_MISC_TEXTURECUBE,
+			DrawIndirectArgs             = D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS,
+			BufferAllowRawViews          = D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS,
+			BufferStructured             = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED,
+			ResourceClamp                = D3D11_RESOURCE_MISC_RESOURCE_CLAMP,
+			SharedKeyedMutex             = D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX,
+			GdiCompatible                = D3D11_RESOURCE_MISC_GDI_COMPATIBLE,
+			SharedNTHandle               = D3D11_RESOURCE_MISC_SHARED_NTHANDLE,
+			RestrictedContent            = D3D11_RESOURCE_MISC_RESTRICTED_CONTENT,
+			RestrictSharedResource       = D3D11_RESOURCE_MISC_RESTRICT_SHARED_RESOURCE,
+			RestrictSharedResourceDriver = D3D11_RESOURCE_MISC_RESTRICT_SHARED_RESOURCE_DRIVER,
+			Guarded                      = D3D11_RESOURCE_MISC_GUARDED,
+			TilePool                     = D3D11_RESOURCE_MISC_TILE_POOL,
+			Tiled                        = D3D11_RESOURCE_MISC_TILED,
+			HWProtected                  = D3D11_RESOURCE_MISC_HW_PROTECTED,
+
+			_bitwise_operators_allowed,
+		};
+		#pragma endregion
+
 		// Standard buffer description
 		struct BufferDesc :D3D11_BUFFER_DESC
 		{
 			void const* Data;      // ByteWidth is the size of the data
 			size_t      ElemCount; // The number of elements in this buffer (verts, indices, whatever)
-			size_t      SizeInBytes() const { return ElemCount * StructureByteStride; }
 
 			BufferDesc()
 				:D3D11_BUFFER_DESC()
@@ -41,37 +95,41 @@ namespace pr
 				,ElemCount(0)
 			{}
 			BufferDesc(D3DPtr<ID3D11Buffer> const& buf)
-				:D3D11_BUFFER_DESC()
-				,Data(0) // Would need to 'Map' to get this
-				,ElemCount(0)
+				:BufferDesc()
 			{
+				// Would need to 'Map' to get the 'Data' in 'buf'
+				// Just get the description.
 				buf->GetDesc(this);
 			}
-			BufferDesc(size_t count, size_t element_size_in_bytes, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_BIND_FLAG bind_flags = D3D11_BIND_UNORDERED_ACCESS, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
-				:D3D11_BUFFER_DESC()
+			BufferDesc(size_t count, size_t element_size_in_bytes, EUsage usage = EUsage::Default, EBind bind_flags = EBind::UnorderedAccess, ECPUAccess cpu_access = ECPUAccess::None, EResMisc res_flag = EResMisc::None)
+				:BufferDesc()
 			{
 				Init(count, element_size_in_bytes, 0, usage, bind_flags, cpu_access, res_flag);
 			}
-			template <typename Elem> BufferDesc(size_t count, Elem const* data, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_BIND_FLAG bind_flags = D3D11_BIND_UNORDERED_ACCESS, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
-				:D3D11_BUFFER_DESC()
+			template <typename Elem> BufferDesc(size_t count, Elem const* data, EUsage usage = EUsage::Default, EBind bind_flags = EBind::UnorderedAccess, ECPUAccess cpu_access = ECPUAccess::None, EResMisc res_flag = EResMisc::None)
+				:BufferDesc()
 			{
 				Init(count, sizeof(Elem), data, usage, bind_flags, cpu_access, res_flag);
 			}
-			template <typename Elem, size_t Sz> BufferDesc(Elem const (&data)[Sz], D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_BIND_FLAG bind_flags = D3D11_BIND_UNORDERED_ACCESS, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
-				:D3D11_BUFFER_DESC()
+			template <typename Elem, size_t Sz> BufferDesc(Elem const (&data)[Sz], EUsage usage = EUsage::Default, EBind bind_flags = EBind::UnorderedAccess, ECPUAccess cpu_access = ECPUAccess::None, EResMisc res_flag = EResMisc::None)
+				:BufferDesc()
 			{
 				Init(Sz, sizeof(Elem), data, usage, bind_flags, cpu_access, res_flag);
 			}
-			void Init(size_t count, size_t element_size_in_bytes, void const* data, D3D11_USAGE usage, D3D11_BIND_FLAG bind_flags, D3D11_CPU_ACCESS_FLAG cpu_access, D3D11_RESOURCE_MISC_FLAG res_flag)
+			void Init(size_t count, size_t element_size_in_bytes, void const* data, EUsage usage, EBind bind_flags, ECPUAccess cpu_access, EResMisc res_flag)
 			{
 				Data                = data;                                // The initialisation data (or null)
 				ElemCount           = count;                               // The number of elements in the buffer
 				ByteWidth           = UINT(element_size_in_bytes * count); // Size of the buffer in bytes
-				Usage               = usage;                               // How the buffer will be used
-				BindFlags           = bind_flags;                          // How the buffer will be bound (i.e. can it be a render target too?)
-				CPUAccessFlags      = cpu_access;                          // What access the CPU needs. (if data provided, assume none)
-				MiscFlags           = res_flag;                            // General flags for the resource
+				Usage               = D3D11_USAGE(usage);                  // How the buffer will be used
+				BindFlags           = D3D11_BIND_FLAG(bind_flags);         // How the buffer will be bound (i.e. can it be a render target too?)
+				CPUAccessFlags      = D3D11_CPU_ACCESS_FLAG(cpu_access);   // What access the CPU needs. (if data provided, assume none)
+				MiscFlags           = D3D11_RESOURCE_MISC_FLAG(res_flag);  // General flags for the resource
 				StructureByteStride = UINT(element_size_in_bytes);         // For structured buffers
+			}
+			size_t SizeInBytes() const
+			{
+				return ElemCount * StructureByteStride;
 			}
 		};
 
@@ -79,22 +137,21 @@ namespace pr
 		struct VBufferDesc :BufferDesc
 		{
 			// Want a dynamic buffer? read the notes above
-
 			VBufferDesc()
 				:BufferDesc()
 			{}
-			VBufferDesc(size_t count, size_t element_size_in_bytes, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
-				:BufferDesc(count, element_size_in_bytes, usage, D3D11_BIND_VERTEX_BUFFER, cpu_access, res_flag)
+			VBufferDesc(size_t count, size_t element_size_in_bytes, EUsage usage = EUsage::Default, ECPUAccess cpu_access = ECPUAccess::None, EResMisc res_flag = EResMisc::None)
+				:BufferDesc(count, element_size_in_bytes, usage, EBind::VertexBuffer, cpu_access, res_flag)
 			{}
-			template <typename Elem> VBufferDesc(size_t count, Elem const* data, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
-				:BufferDesc(count, data, usage, D3D11_BIND_VERTEX_BUFFER, cpu_access, res_flag)
+			template <typename Elem> VBufferDesc(size_t count, Elem const* data, EUsage usage = EUsage::Default, ECPUAccess cpu_access = ECPUAccess::None, EResMisc res_flag = EResMisc::None)
+				:BufferDesc(count, data, usage, EBind::VertexBuffer, cpu_access, res_flag)
 			{}
-			template <typename Elem, size_t Sz> VBufferDesc(Elem const (&data)[Sz], D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
-				:BufferDesc(Sz, data, usage, D3D11_BIND_VERTEX_BUFFER, cpu_access, res_flag)
+			template <typename Elem, size_t Sz> VBufferDesc(Elem const (&data)[Sz], EUsage usage = EUsage::Default, ECPUAccess cpu_access = ECPUAccess::None, EResMisc res_flag = EResMisc::None)
+				:BufferDesc(Sz, data, usage, EBind::VertexBuffer, cpu_access, res_flag)
 			{}
 			template <typename Elem> static VBufferDesc Of(size_t count)
 			{
-				return VBufferDesc(count, static_cast<Elem const*>(0));
+				return VBufferDesc(count, static_cast<Elem const*>(nullptr));
 			}
 		};
 
@@ -107,16 +164,16 @@ namespace pr
 				:BufferDesc()
 				,Format(DXGI_FORMAT_UNKNOWN)
 			{}
-			IBufferDesc(size_t count, size_t element_size_in_bytes, DXGI_FORMAT format, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
-				:BufferDesc(count, element_size_in_bytes, usage, D3D11_BIND_INDEX_BUFFER, cpu_access, res_flag)
+			IBufferDesc(size_t count, size_t element_size_in_bytes, DXGI_FORMAT format, EUsage usage = EUsage::Default, ECPUAccess cpu_access = ECPUAccess::None, EResMisc res_flag = EResMisc::None)
+				:BufferDesc(count, element_size_in_bytes, usage, EBind::IndexBuffer, cpu_access, res_flag)
 				,Format(format)
 			{}
-			template <typename Elem> IBufferDesc(size_t count, Elem const* data, DXGI_FORMAT format = pr::rdr::DxFormat<Elem>::value, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
-				:BufferDesc(count, data, usage, D3D11_BIND_INDEX_BUFFER, cpu_access, res_flag)
+			template <typename Elem> IBufferDesc(size_t count, Elem const* data, DXGI_FORMAT format = DxFormat<Elem>::value, EUsage usage = EUsage::Default, ECPUAccess cpu_access = ECPUAccess::None, EResMisc res_flag = EResMisc::None)
+				:BufferDesc(count, data, usage, EBind::IndexBuffer, cpu_access, res_flag)
 				,Format(format)
 			{}
-			template <typename Elem, size_t Sz> IBufferDesc(Elem const (&data)[Sz], DXGI_FORMAT format = pr::rdr::DxFormat<Elem>::value, D3D11_USAGE usage = D3D11_USAGE_DEFAULT, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_FLAG(0), D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
-				:BufferDesc(Sz, data, usage, D3D11_BIND_INDEX_BUFFER, cpu_access, res_flag)
+			template <typename Elem, size_t Sz> IBufferDesc(Elem const (&data)[Sz], DXGI_FORMAT format = DxFormat<Elem>::value, EUsage usage = EUsage::Default, ECPUAccess cpu_access = ECPUAccess::None, EResMisc res_flag = EResMisc::None)
+				:BufferDesc(Sz, data, usage, EBind::IndexBuffer, cpu_access, res_flag)
 				,Format(format)
 			{}
 			template <typename Elem> static IBufferDesc Of(size_t count)
@@ -131,8 +188,8 @@ namespace pr
 			CBufferDesc()
 				:BufferDesc()
 			{}
-			CBufferDesc(size_t size, D3D11_USAGE usage = D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_WRITE, D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
-				:BufferDesc(size, (byte*)0, usage, D3D11_BIND_CONSTANT_BUFFER, cpu_access, res_flag)
+			CBufferDesc(size_t size, EUsage usage = EUsage::Dynamic, ECPUAccess cpu_access = ECPUAccess::Write, EResMisc res_flag = EResMisc::None)
+				:BufferDesc(size, (byte*)0, usage, EBind::ConstantBuffer, cpu_access, res_flag)
 			{
 				if ((size % 16) != 0)
 					throw std::exception("Constant buffers must be a multiple of 16 bytes");
@@ -168,7 +225,7 @@ namespace pr
 			{
 				InitDefaults();
 			}
-			TextureDesc(size_t width, size_t height, size_t mips = 0U, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM, D3D11_USAGE usage = D3D11_USAGE_DEFAULT)
+			TextureDesc(size_t width, size_t height, size_t mips = 0U, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM, EUsage usage = EUsage::Default)
 				:D3D11_TEXTURE2D_DESC(TextureDesc())
 			{
 				InitDefaults();
@@ -176,9 +233,9 @@ namespace pr
 				Height         = static_cast<UINT>(height);
 				MipLevels      = static_cast<UINT>(mips); // 0 means use all mips down to 1x1
 				Format         = format;
-				Usage          = usage;
+				Usage          = D3D11_USAGE(usage);
 			}
-			TextureDesc(Image const& src, size_t mips = 0U, D3D11_USAGE usage = D3D11_USAGE_DEFAULT)
+			TextureDesc(Image const& src, size_t mips = 0U, EUsage usage = EUsage::Default)
 				:D3D11_TEXTURE2D_DESC(TextureDesc())
 			{
 				InitDefaults();
@@ -186,7 +243,7 @@ namespace pr
 				Height         = static_cast<UINT>(src.m_dim.y);
 				MipLevels      = static_cast<UINT>(mips); // 0 means use all mips down to 1x1
 				Format         = src.m_format;
-				Usage          = usage;
+				Usage          = D3D11_USAGE(usage);
 			}
 			void InitDefaults()
 			{
@@ -198,8 +255,8 @@ namespace pr
 				ArraySize      = 1U;
 				Format         = DXGI_FORMAT_R8G8B8A8_UNORM;
 				SampleDesc     = MultiSamp();
-				Usage          = D3D11_USAGE_DEFAULT;// Other options: D3D11_USAGE_IMMUTABLE, D3D11_USAGE_DYNAMIC
-				BindFlags      = D3D11_BIND_SHADER_RESOURCE;
+				Usage          = D3D11_USAGE(EUsage::Default);// Other options: EUsage::Immutable, EUsage::Dynamic
+				BindFlags      = D3D11_BIND_FLAG(EBind::ShaderResource);
 				CPUAccessFlags = 0U;
 				MiscFlags      = 0U;
 			}
@@ -345,13 +402,13 @@ namespace pr
 		};
 
 		// Shader resource view description
-		struct ShaderResViewDesc :D3D11_SHADER_RESOURCE_VIEW_DESC
+		struct ShaderResourceViewDesc :D3D11_SHADER_RESOURCE_VIEW_DESC
 		{
-			ShaderResViewDesc()
+			ShaderResourceViewDesc()
 				:D3D11_SHADER_RESOURCE_VIEW_DESC()
 			{}
-			ShaderResViewDesc(DXGI_FORMAT format, D3D11_SRV_DIMENSION view_dim)
-				:D3D11_SHADER_RESOURCE_VIEW_DESC()
+			ShaderResourceViewDesc(DXGI_FORMAT format, D3D11_SRV_DIMENSION view_dim)
+				:ShaderResourceViewDesc()
 			{
 				Format = format;
 				ViewDimension = view_dim;
@@ -365,7 +422,7 @@ namespace pr
 				:D3D11_RENDER_TARGET_VIEW_DESC()
 			{}
 			explicit RenderTargetViewDesc(DXGI_FORMAT format, D3D11_RTV_DIMENSION view_dim = D3D11_RTV_DIMENSION_TEXTURE2D)
-				:D3D11_RENDER_TARGET_VIEW_DESC()
+				:RenderTargetViewDesc()
 			{
 				Format = format;
 				ViewDimension = view_dim;
@@ -379,7 +436,21 @@ namespace pr
 				:D3D11_DEPTH_STENCIL_VIEW_DESC()
 			{}
 			explicit DepthStencilViewDesc(DXGI_FORMAT format, D3D11_DSV_DIMENSION view_dim = D3D11_DSV_DIMENSION_TEXTURE2D)
-				:D3D11_DEPTH_STENCIL_VIEW_DESC()
+				:DepthStencilViewDesc()
+			{
+				Format = format;
+				ViewDimension = view_dim;
+			}
+		};
+
+		// Unordered access view description
+		struct UnorderedAccessViewDesc :D3D11_UNORDERED_ACCESS_VIEW_DESC
+		{
+			UnorderedAccessViewDesc()
+				:D3D11_UNORDERED_ACCESS_VIEW_DESC()
+			{}
+			explicit UnorderedAccessViewDesc(DXGI_FORMAT format, D3D11_UAV_DIMENSION view_dim = D3D11_UAV_DIMENSION_BUFFER)
+				:UnorderedAccessViewDesc()
 			{
 				Format = format;
 				ViewDimension = view_dim;
@@ -494,4 +565,3 @@ namespace pr
 	}
 }
 
-#endif

@@ -87,7 +87,7 @@ namespace pr.common
 				ptr => Marshal.FreeHGlobal(ptr));
 		}
 
-		/// <summary>Copy a structure into non-GC memory. Freeing on dispose</summary>
+		/// <summary>Convert to/from a structure to non-GC memory. Freeing on dispose</summary>
 		public static Scope<IntPtr> StructureToPtr<TStruct>(TStruct strukt) where TStruct:struct
 		{
 			return Scope.Create(
@@ -101,6 +101,10 @@ namespace pr.common
 					{
 						Marshal.FreeCoTaskMem(ptr);
 					});
+		}
+		public static TStruct PtrToStructure<TStruct>(IntPtr ptr) where TStruct:struct
+		{
+			return (TStruct)Marshal.PtrToStructure(ptr, typeof(TStruct));
 		}
 
 		/// <summary>Copy an array into non-GC memory. Freeing on dispose</summary>
@@ -118,11 +122,16 @@ namespace pr.common
 
 			return scope;
 		}
-
-		/// <summary>Convert an IntPtr to a 'TStruct'</summary>
-		public static TStruct PtrToStructure<TStruct>(IntPtr ptr) where TStruct:struct
+		public static T[] PtrToArray<T>(IntPtr ptr, int count) where T:struct
 		{
-			return (TStruct)Marshal.PtrToStructure(ptr, typeof(TStruct));
+			var r = new T[count];
+			var elem_sz = Marshal.SizeOf(typeof(T));
+			for (int i = 0; i != count; ++i)
+			{
+				r[i] = PtrToStructure<T>(ptr);
+				ptr += elem_sz;
+			}
+			return r;
 		}
 
 		/// <summary>Convert an unmanaged function pointer to a delegate</summary>
@@ -132,6 +141,12 @@ namespace pr.common
 				throw new InvalidOperationException(typeof(TFunc).Name + " is not a delegate type");
 
 			return Marshal.GetDelegateForFunctionPointer(ptr, typeof(TFunc)) as TFunc;
+		}
+
+		/// <summary>Pin an object. No copy made</summary>
+		public static PinnedObject<T> Pin<T>(T obj)
+		{
+			return new PinnedObject<T>(obj);
 		}
 	}
 }

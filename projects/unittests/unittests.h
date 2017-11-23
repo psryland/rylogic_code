@@ -47,6 +47,7 @@
 #include "pr\common\archiver.h"
 #include "pr\common\assert.h"
 #include "pr\common\base64.h"
+#include "pr\common\bstr_t.h"
 #include "pr\common\build_options.h"
 #include "pr\common\cast.h"
 #include "pr\common\chain.h"

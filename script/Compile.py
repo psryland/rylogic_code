@@ -104,7 +104,7 @@ def SetupVCEnvironment(_32bit = True):
 	os.environ["LIBPATH"] = (
 		Tools.AssertPath(UserVars.dotnet)                                                                        + ";" +
 		Tools.AssertPath(UserVars.winsdk_references)                                                             + ";" +
-		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Foundation.UniversalApiContract\\4.0.0.0")      + ";" +
+		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Foundation.UniversalApiContract\\5.0.0.0")      + ";" +
 		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Foundation.FoundationContract\\3.0.0.0")        + ";" +
 		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Networking.Connectivity.WwanContract\\1.0.0.0") + ";" +
 		#Tools.AssertPath(UserVars.winsdk + "\\UnionMetadata" + UserVars.winsdkvers)                                             + ";" +
@@ -112,7 +112,7 @@ def SetupVCEnvironment(_32bit = True):
 		"")
 	os.environ["WindowsLibPath"] = (
 		Tools.AssertPath(UserVars.winsdk_references) + ";"                                                       +
-		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Foundation.UniversalApiContract\\4.0.0.0")      + ";" +
+		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Foundation.UniversalApiContract\\5.0.0.0")      + ";" +
 		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Foundation.FoundationContract\\3.0.0.0")        + ";" +
 		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Networking.Connectivity.WwanContract\\1.0.0.0") + ";" +
 		#Tools.AssertPath(UserVars.winsdk + "\\UnionMetadata\\" + UserVars.winsdkvers) + ";" +

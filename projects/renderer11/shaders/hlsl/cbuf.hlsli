@@ -17,6 +17,7 @@
 #ifdef SHADER_BUILD
 
 	#define reg(b) register(b)
+	#define voidp uint2
 
 #else
 
@@ -42,11 +43,12 @@
 		enum { slot = rn };
 	};
 
-	using float4x4 =  pr::m4x4;
-	using float4   =  pr::v4;
-	using float3   =  pr::v3;
-	using float2   =  pr::v2;
-	using int4     =  pr::iv4;
+	using float4x4 = pr::m4x4;
+	using float4   = pr::v4;
+	using float3   = pr::v3;
+	using float2   = pr::v2;
+	using int4     = pr::iv4;
+	using voidp    = void const*;
 
 	#define cbuffer struct
 	#define reg(b) Register<ERegister::b>

@@ -28,8 +28,8 @@ namespace pr
 			D3DPtr<ID3D11Buffer> m_cbuf_lighting; // A constant buffer for the frame constant shader variables
 			Instance             m_unit_quad;     // The quad drawn to the screen for post processing
 			bool                 m_clear_bb;      // True if this render step clears the back-buffer before rendering
-			ShaderPtr            m_vs;            //
-			ShaderPtr            m_ps;            //
+			ShaderPtr            m_vs;            // Deferred lighting shaders
+			ShaderPtr            m_ps;            // Deferred lighting shaders
 
 			explicit DSLighting(Scene& scene);
 			DSLighting(DSLighting const&) = delete;
@@ -40,8 +40,11 @@ namespace pr
 			// The type of render step this is
 			ERenderStep GetId() const override { return Id; }
 
+			// Update the provided shader set appropriate for this render step
+			void ConfigShaders(ShaderSet1&, EPrim) const override {}
+
 			// Add model nuggets to the draw list for this render step
-			void AddNuggets(BaseInstance const&, TNuggetChain&) override {}
+			void AddNuggets(BaseInstance const&, TNuggetChain const&) override {}
 
 			// Perform the render step
 			void ExecuteInternal(StateStack& ss) override;

@@ -9,10 +9,13 @@
 namespace view3d
 {
 	// Global data for this dll
-	struct Context :pr::AlignTo<16> , pr::script::IEmbeddedCode
+	struct Context :pr::AlignTo<16>
 	{
 		using InitSet = std::unordered_set<View3DContext>;
 		using WindowCont = std::vector<std::unique_ptr<Window>>;
+		struct EmbCodeCB { int m_lang; EmbeddedCodeHandlerCB m_cb; };
+		using EmbCodeCBCont = pr::vector<EmbCodeCB>;
+		using IEmbeddedCode = pr::script::IEmbeddedCode;
 		static pr::Guid const GuidDemoSceneObjects;
 
 		InitSet                  m_inits;         // A unique id assigned to each Initialise call
@@ -20,6 +23,7 @@ namespace view3d
 		pr::Renderer             m_rdr;           // The renderer
 		WindowCont               m_wnd_cont;      // The created windows
 		pr::ldr::ScriptSources   m_sources;       // A container of Ldr objects and a file watcher
+		EmbCodeCBCont            m_emb;           // Embedded code execution callbacks
 		std::recursive_mutex     m_mutex;
 
 		explicit Context(HINSTANCE instance, BOOL bgra_compatible);
@@ -39,9 +43,6 @@ namespace view3d
 
 		// Event raised when the script sources are updated
 		pr::MultiCast<SourcesChangedCB> OnSourcesChanged;
-
-		// Embedded code handler objects
-		std::vector<CodeHandlerPtr> EmbeddedCodeHandlers;
 
 		// Create/Destroy windows
 		Window* WindowCreate(HWND hwnd, View3DWindowOptions const& opts);
@@ -75,7 +76,10 @@ namespace view3d
 		void DeleteAllObjects();
 
 		// Delete all objects with matching ids
-		void DeleteAllObjectsById(pr::Guid const* context_ids, int count, bool all_except);
+		void DeleteAllObjectsById(pr::Guid const* context_ids, int include_count, int exclude_count);
+
+		// Delete all objects not displayed in any windows
+		void DeleteUnused(GUID const* context_ids, int include_count, int exclude_count);
 
 		// Delete a single object
 		void DeleteObject(pr::ldr::LdrObject* object);
@@ -99,10 +103,10 @@ namespace view3d
 		// Create the demo scene objects
 		pr::Guid CreateDemoScene(Window* window);
 
-		// Reset the embedded code handlers
-		void pr::script::IEmbeddedCode::Reset();
+		// Create an embedded code handler for the given language
+		std::unique_ptr<IEmbeddedCode> CreateHandler(wchar_t const* lang);
 
-		// Handle embedded code within ldr script
-		bool pr::script::IEmbeddedCode::Execute(pr::script::string const& lang, pr::script::string const& code, pr::script::string& result);
+		// Add an embedded code handler for 'lang'
+		void SetEmbeddedCodeHandler(wchar_t const* lang, View3D_EmbeddedCodeHandlerCB embedded_code_cb, void* ctx, bool add);
 	};
 }

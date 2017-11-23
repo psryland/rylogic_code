@@ -29,7 +29,7 @@ namespace pr
 		// its own drawlist, so the same nugget can be pointed to from multiple drawlists.
 		// This leads to the conclusion that a nugget shouldn't contain shader specific data (e.g. why should all nuggets have a
 		// variable only used in one shader from one render step? This wouldn't scale as more shaders/render steps are added)
-		// ShaderBase derived objects are light weight instances of dx shaders. These shader instances contain per-nugget data
+		// Shader derived objects are light weight instances of dx shaders. These shader instances contain per-nugget data
 		// (such as line width, projection texture, etc). They can be duplicated as needed.
 		//
 		// Drawlist Sorting and sort keys:
@@ -111,14 +111,9 @@ namespace pr
 			SortKey SortKey(ERenderStep rstep) const;
 
 			// Add this nugget and any dependent nuggets to a drawlist
-			template <typename TDrawList> void AddToDrawlist(TDrawList& drawlist, BaseInstance const& inst, SKOverride const* sko, ERenderStep id, ShaderSet sset)
+			template <typename TDrawList>
+			void AddToDrawlist(TDrawList& drawlist, BaseInstance const& inst, SKOverride const* sko, ERenderStep id) const
 			{
-				// Ensure the nugget contains GBuffer shaders VS/PS
-				// Note, the nugget may contain other shaders that are used by this render step as well
-				if (!m_smap[id].m_vs) m_smap[id].m_vs = sset.m_vs;
-				if (!m_smap[id].m_gs) m_smap[id].m_gs = sset.m_gs;
-				if (!m_smap[id].m_ps) m_smap[id].m_ps = sset.m_ps;
-
 				// Create the sort key for this nugget
 				auto sk = SortKey(id);
 				if (sko) sk = sko->Combine(sk);
@@ -131,7 +126,7 @@ namespace pr
 
 				// Recursively add dependent nuggets
 				for (auto& nug : m_nuggets)
-					nug.AddToDrawlist(drawlist, inst, sko, id, sset);
+					nug.AddToDrawlist(drawlist, inst, sko, id);
 			}
 
 			// True if this nugget requires alpha blending

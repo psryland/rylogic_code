@@ -12,11 +12,11 @@ using System.Windows.Forms;
 using LDraw.Properties;
 using pr.common;
 using pr.extn;
-using pr.gfx;
 using pr.gui;
 using pr.maths;
 using pr.scintilla;
 using pr.util;
+using pr.view3d;
 using pr.win32;
 using ToolStripContainer = pr.gui.ToolStripContainer;
 
@@ -140,7 +140,7 @@ namespace LDraw
 		private ToolStripTrackBar m_tr_speed;
 		private ToolStrip m_ts_tools;
 		private ToolStripLabel m_lbl_tools;
-		private ToolStripButton m_chk_measure;
+		private ToolStripButton m_btn_measure;
 		private ToolStripMenuItem m_menu_file_save_as;
 		#endregion
 
@@ -591,7 +591,7 @@ namespace LDraw
 			};
 			m_menu_data_clear_scene.Click += (s,a) =>
 			{
-				Model.CurrentScene.Clear(delete_objects:true);
+				Model.CurrentScene?.Clear(delete_objects:true);
 			};
 			m_menu_data_create_demo_scene.Click += (s,a) =>
 			{
@@ -599,7 +599,7 @@ namespace LDraw
 			};
 			m_menu_data_object_manager.Click += (s,a) =>
 			{
-				Model.CurrentScene.ShowObjectManager(true);
+				Model.CurrentScene?.ShowObjectManager(true);
 			};
 			#endregion
 			#region Rendering Menu
@@ -792,9 +792,11 @@ namespace LDraw
 			#region Tools tool bar
 
 			// Measure tool
-			m_chk_measure.CheckedChanged += (s,a) =>
+			m_btn_measure.ToolTipText = "Open the measurement tool";
+			m_btn_measure.Click += (s,a) =>
 			{
-				Model.ShowMeasureTool = m_chk_measure.Checked;
+				if (Model.CurrentScene != null)
+					Model.CurrentScene.ShowMeasurementUI = true;
 			};
 
 			#endregion
@@ -1239,7 +1241,7 @@ namespace LDraw
 			this.m_btn_link_yaxis = new System.Windows.Forms.ToolStripButton();
 			this.m_ts_tools = new System.Windows.Forms.ToolStrip();
 			this.m_lbl_tools = new System.Windows.Forms.ToolStripLabel();
-			this.m_chk_measure = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_measure = new System.Windows.Forms.ToolStripButton();
 			this.m_tsc.BottomToolStripPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();
@@ -2102,7 +2104,7 @@ namespace LDraw
 			this.m_ts_tools.Dock = System.Windows.Forms.DockStyle.None;
 			this.m_ts_tools.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_lbl_tools,
-            this.m_chk_measure});
+            this.m_btn_measure});
 			this.m_ts_tools.Location = new System.Drawing.Point(3, 78);
 			this.m_ts_tools.Name = "m_ts_tools";
 			this.m_ts_tools.Size = new System.Drawing.Size(104, 25);
@@ -2114,15 +2116,14 @@ namespace LDraw
 			this.m_lbl_tools.Size = new System.Drawing.Size(38, 22);
 			this.m_lbl_tools.Text = "Tools:";
 			// 
-			// m_chk_measure
+			// m_btn_measure
 			// 
-			this.m_chk_measure.CheckOnClick = true;
-			this.m_chk_measure.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_chk_measure.Image = ((System.Drawing.Image)(resources.GetObject("m_chk_measure.Image")));
-			this.m_chk_measure.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.m_chk_measure.Name = "m_chk_measure";
-			this.m_chk_measure.Size = new System.Drawing.Size(23, 22);
-			this.m_chk_measure.Text = "Measure Tool";
+			this.m_btn_measure.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_measure.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_measure.Image")));
+			this.m_btn_measure.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_measure.Name = "m_btn_measure";
+			this.m_btn_measure.Size = new System.Drawing.Size(23, 22);
+			this.m_btn_measure.Text = "Measure Tool";
 			// 
 			// MainUI
 			// 

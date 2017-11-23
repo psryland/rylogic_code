@@ -8,11 +8,10 @@ using System.Windows.Threading;
 using pr.common;
 using pr.container;
 using pr.extn;
-using pr.gfx;
 using pr.gui;
 using pr.maths;
 using pr.util;
-using Timer = System.Windows.Forms.Timer;
+using pr.view3d;
 
 namespace LDraw
 {
@@ -20,13 +19,13 @@ namespace LDraw
 	{
 		public Model(MainUI main_ui)
 		{
-			Owner            = main_ui;
-			View3d           = new View3d();
-			IncludePaths     = new List<string>();
-			SavedViews       = new List<SavedView>();
-			Scenes           = new BindingListEx<SceneUI>{ PerItem = true };
-			Scripts          = new BindingListEx<ScriptUI>{ PerItem = true };
-			Log              = new LogUI(this);
+			Owner        = main_ui;
+			View3d       = View3d.Create();
+			IncludePaths = new List<string>();
+			SavedViews   = new List<SavedView>();
+			Scenes       = new BindingListEx<SceneUI>{ PerItem = true };
+			Scripts      = new BindingListEx<ScriptUI>{ PerItem = true };
+			Log          = new LogUI(this);
 
 			// Apply initial settings
 			Directory.CreateDirectory(TempScriptsDirectory);
@@ -256,7 +255,6 @@ namespace LDraw
 				if (m_current_scene == value) return;
 				if (m_current_scene != null)
 				{
-					m_current_scene.ShowMeasureToolUI = false;
 					m_current_scene.Window.MouseNavigating  -= HandleMouseNavigating;
 					m_current_scene.ChartMoved              -= HandleChartMoved;
 					m_current_scene.CrossHairMoved          -= HandleCrossHairMoved;
@@ -267,7 +265,6 @@ namespace LDraw
 					m_current_scene.Window.MouseNavigating  += HandleMouseNavigating;
 					m_current_scene.ChartMoved              += HandleChartMoved;
 					m_current_scene.CrossHairMoved          += HandleCrossHairMoved;
-					m_current_scene.ShowMeasureToolUI = ShowMeasureTool;
 
 					LinkSceneAxes();
 					LinkSceneCrossHairs();
@@ -493,9 +490,9 @@ namespace LDraw
 
 						// Replicate the navigation command
 						if (!e.ZNavigation)
-							scn.Window.MouseNavigate(e.Point, e.NavOp, e.NavBegOrEnd);
+							scn.Window.MouseNavigate(e.Point, e.Btns, e.NavOp, e.NavBegOrEnd);
 						else
-							scn.Window.MouseNavigateZ(e.Point, e.Delta, e.AlongRay);
+							scn.Window.MouseNavigateZ(e.Point, e.Btns, e.Delta, e.AlongRay);
 
 						scn.SetRangeFromCamera();
 						scn.Invalidate();
@@ -520,20 +517,6 @@ namespace LDraw
 				}
 			}
 		}
-
-		/// <summary>Enable/Disable the measurement tool</summary>
-		public bool ShowMeasureTool
-		{
-			get { return m_show_measure_tool; }
-			set
-			{
-				if (m_show_measure_tool == value) return;
-				m_show_measure_tool = value;
-				if (CurrentScene != null)
-					CurrentScene.ShowMeasureToolUI = value;
-			}
-		}
-		private bool m_show_measure_tool;
 
 		/// <summary>File loading progress data</summary>
 		public AddFileProgressData AddFileProgress { get; private set; }

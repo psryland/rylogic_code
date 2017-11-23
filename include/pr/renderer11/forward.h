@@ -37,7 +37,6 @@
 #include "pr/meta/optional.h"
 #include "pr/common/min_max_fix.h"
 #include "pr/common/build_options.h"
-#include "pr/common/prtypes.h"
 #include "pr/common/assert.h"
 #include "pr/common/hresult.h"
 #include "pr/common/prtypes.h"
@@ -51,7 +50,6 @@
 #include "pr/common/d3dptr.h"
 #include "pr/common/chain.h"
 #include "pr/common/crc.h"
-#include "pr/common/cast.h"
 #include "pr/common/alloca.h"
 #include "pr/common/range.h"
 #include "pr/common/events.h"
@@ -62,6 +60,7 @@
 #include "pr/common/algorithm.h"
 #include "pr/common/user_data.h"
 #include "pr/common/static_callback.h"
+#include "pr/container/array_view.h"
 #include "pr/container/vector.h"
 #include "pr/container/deque.h"
 #include "pr/crypt/hash.h"
@@ -71,6 +70,7 @@
 #include "pr/filesys/fileex.h"
 #include "pr/filesys/filesys.h"
 #include "pr/maths/maths.h"
+#include "pr/maths/bit_fields.h"
 #include "pr/geometry/common.h"
 #include "pr/geometry/models_point.h"
 #include "pr/geometry/models_line.h"
@@ -157,10 +157,11 @@ namespace pr
 		struct Vert;
 		class  ShaderManager;
 		struct ShaderDesc;
-		struct ShaderBase;
-		struct ShaderSet;
+		struct Shader;
+		struct ShaderSet0;
+		struct ShaderSet1;
 		struct ShaderMap;
-		using ShaderPtr = pr::RefPtr<ShaderBase>;
+		using ShaderPtr = pr::RefPtr<Shader>;
 
 		// Textures
 		class  TextureManager;

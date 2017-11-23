@@ -17,7 +17,7 @@ namespace pr
 		template <typename T> using enable_if_render_step = typename std::enable_if<std::is_base_of<RenderStep,T>::value>::type;
 
 		// Base class for render steps
-		struct RenderStep
+		struct RenderStep :AlignTo<16>
 		{
 			// Draw list element container
 			using TDrawList = pr::vector<DrawListElement, 1024, false, pr::rdr::Allocator<DrawListElement>>;
@@ -52,6 +52,9 @@ namespace pr
 			virtual ERenderStep GetId() const = 0;
 			template <typename RStep, typename = enable_if_render_step<RStep>> RStep const& as() const { return *static_cast<RStep const*>(this); }
 			template <typename RStep, typename = enable_if_render_step<RStep>> RStep        as()       { return *static_cast<RStep*>(this); }
+
+			// Update the provided shader set appropriate for this render step
+			virtual void ConfigShaders(ShaderSet1& ss, EPrim topo) const = 0;
 
 			// Reset the drawlist
 			void ClearDrawlist();
@@ -88,7 +91,7 @@ namespace pr
 			// a collection of shader instances (each containing shader specific data such
 			// as projection texture, line width, etc). This method needs to ensure the
 			// nugget's shader collection contains the appropriate shaders.
-			virtual void AddNuggets(BaseInstance const& inst, TNuggetChain& nuggets) = 0;
+			virtual void AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets) = 0;
 
 			// Derived render steps perform their action
 			virtual void ExecuteInternal(StateStack& ss) = 0;

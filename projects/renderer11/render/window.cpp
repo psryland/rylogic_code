@@ -373,7 +373,7 @@ namespace pr
 			// stencils/etc and create new ones at the new mode resolution, this is also a good place to do it.
 			//
 			// One thing I've left out until now is that your context will hold references to render targets/etc
-			// so before calling ResizeBuffers you need to call ID3D11DeviceContext::ClearState to release those
+			// so before calling ResizeBuffers you need to call ID3D11DeviceContext1::ClearState to release those
 			// references (or you could just call OMSetRenderTargets with NULL parameters - I haven't personally
 			// tested this but logic says that it should work), then release your render target view, otherwise
 			// ResizeBuffers will fail. When done, set everything up again (you don't need to recreate anything

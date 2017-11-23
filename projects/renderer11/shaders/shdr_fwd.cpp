@@ -21,9 +21,9 @@ namespace pr
 		#include PR_RDR_SHADER_COMPILED_DIR(forward_ps.h)
 
 		// Forward rendering vertex shader
-		struct FwdShaderVS :Shader<ID3D11VertexShader, FwdShaderVS>
+		struct FwdShaderVS :ShaderT<ID3D11VertexShader, FwdShaderVS>
 		{
-			using base = Shader<ID3D11VertexShader, FwdShaderVS>;
+			using base = ShaderT<ID3D11VertexShader, FwdShaderVS>;
 			FwdShaderVS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11VertexShader> const& shdr)
 				:base(mgr, id, sort_id, name, shdr)
 			{
@@ -32,9 +32,9 @@ namespace pr
 		};
 
 		// Forward rendering pixel shader
-		struct FwdShaderPS :Shader<ID3D11PixelShader, FwdShaderPS>
+		struct FwdShaderPS :ShaderT<ID3D11PixelShader, FwdShaderPS>
 		{
-			using base = Shader<ID3D11PixelShader, FwdShaderPS>;
+			using base = ShaderT<ID3D11PixelShader, FwdShaderPS>;
 			FwdShaderPS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11PixelShader> const& shdr)
 				:base(mgr, id, sort_id, name, shdr)
 			{

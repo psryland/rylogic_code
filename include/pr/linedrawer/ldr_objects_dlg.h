@@ -209,10 +209,6 @@ namespace pr
 				assert(obj != nullptr && "Attempting to add a null object to the UI");
 				assert((!obj->m_parent || UIData::get(*obj->m_parent)->m_tree_item != pr::gui::TreeView::NoItem()) && "Parent is not in the tree");
 
-				// Ignore models that aren't instanced
-				if (!obj->m_instanced)
-					return;
-
 				// Ensure the object has UI data
 				obj->m_user_data.get<UIData>(this) = UIData();
 
@@ -306,8 +302,8 @@ namespace pr
 				m_list.Item(info.subitem((int)EColumn::Name     ).text(Widen(object.m_name).c_str()));
 				m_list.Item(info.subitem((int)EColumn::LdrType  ).text(ToStringW(object.m_type)));
 				m_list.Item(info.subitem((int)EColumn::Colour   ).text(pr::FmtS(L"%8.8X", object.m_colour.argb)));
-				m_list.Item(info.subitem((int)EColumn::Visible  ).text(object.m_visible ? L"Visible" : L"Hidden"));
-				m_list.Item(info.subitem((int)EColumn::Wireframe).text(object.m_wireframe ? L"Wireframe" : L"Solid"));
+				m_list.Item(info.subitem((int)EColumn::Visible  ).text(object.Visible() ? L"Visible" : L"Hidden"));
+				m_list.Item(info.subitem((int)EColumn::Wireframe).text(object.Wireframe() ? L"Wireframe" : L"Solid"));
 				m_list.Item(info.subitem((int)EColumn::Volume   ).text(pr::FmtS(L"%3.3f", Volume(object.BBoxMS(false)))));
 				m_list.Item(info.subitem((int)EColumn::CtxtId   ).text(pr::FmtS(L"%d", object.m_context_id)));
 
@@ -368,7 +364,7 @@ namespace pr
 				for (int i = m_list.NextItem(LVNI_SELECTED); i != -1; i = m_list.NextItem(LVNI_SELECTED, i))
 				{
 					auto& object = GetLdrObject(i);
-					object.Visible(state == ETriState::Off ? false : state == ETriState::On ? true : !object.m_visible, include_children ? "" : nullptr);
+					object.Visible(state == ETriState::Off ? false : state == ETriState::On ? true : !object.Visible(), include_children ? "" : nullptr);
 					UpdateListItem(object, include_children);
 				}
 				pr::events::Send(Evt_Refresh(this));
@@ -380,7 +376,7 @@ namespace pr
 				for (int i = m_list.NextItem(LVNI_SELECTED); i != -1; i = m_list.NextItem(LVNI_SELECTED, i))
 				{
 					auto& object = GetLdrObject(i);
-					object.Wireframe(state == ETriState::Off ? false : state == ETriState::On ? true : !object.m_wireframe, include_children ? "" : nullptr);
+					object.Wireframe(state == ETriState::Off ? false : state == ETriState::On ? true : !object.Wireframe(), include_children ? "" : nullptr);
 					UpdateListItem(object, include_children);
 				}
 				pr::events::Send(Evt_Refresh(this));

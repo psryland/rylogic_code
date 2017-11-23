@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Windows.Forms;
 using pr.extn;
-using pr.gfx;
 using pr.gui;
 using pr.maths;
 using pr.util;
+using pr.view3d;
 
 namespace TestCS
 {

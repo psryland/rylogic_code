@@ -36,7 +36,7 @@ namespace pr
 		}
 		#endif
 	
-		void ShaderBase::Setup(ID3D11DeviceContext*, DeviceState&)
+		void Shader::Setup(ID3D11DeviceContext*, DeviceState&)
 		{
 			#if PR_RDR_RUNTIME_SHADERS
 			struct ModCheck
@@ -72,6 +72,7 @@ namespace pr
 					case EShaderType::VS: pr::Throw(device->CreateVertexShader   (&buf[0], buf.size(), 0, (ID3D11VertexShader  **)&dxshdr.m_ptr)); break;
 					case EShaderType::PS: pr::Throw(device->CreatePixelShader    (&buf[0], buf.size(), 0, (ID3D11PixelShader   **)&dxshdr.m_ptr)); break;
 					case EShaderType::GS: pr::Throw(device->CreateGeometryShader (&buf[0], buf.size(), 0, (ID3D11GeometryShader**)&dxshdr.m_ptr)); break;
+					case EShaderType::CS: pr::Throw(device->CreateComputeShader  (&buf[0], buf.size(), 0, (ID3D11ComputeShader **)&dxshdr.m_ptr)); break;
 					case EShaderType::HS: pr::Throw(device->CreateHullShader     (&buf[0], buf.size(), 0, (ID3D11HullShader    **)&dxshdr.m_ptr)); break;
 					case EShaderType::DS: pr::Throw(device->CreateDomainShader   (&buf[0], buf.size(), 0, (ID3D11DomainShader  **)&dxshdr.m_ptr)); break;
 					}
@@ -87,7 +88,7 @@ namespace pr
 
 		// Return the input layout associated with this shader.
 		// Note, returns null for all shaders except vertex shaders
-		D3DPtr<ID3D11InputLayout> ShaderBase::IpLayout() const
+		D3DPtr<ID3D11InputLayout> Shader::IpLayout() const
 		{
 			if (m_shdr_type != EShaderType::VS) return nullptr;
 			return m_mgr->GetIP(m_id);

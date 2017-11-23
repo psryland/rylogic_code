@@ -187,7 +187,7 @@ namespace view3d
 			for (auto& obj : m_objects)
 			{
 				// Only show bounding boxes for things that contribute to the scene bounds.
-				if (pr::AllSet(obj->m_flags, pr::ldr::ELdrFlags::SceneBoundsExclude)) continue;
+				if (pr::AllSet(obj->m_flags, ELdrFlags::SceneBoundsExclude)) continue;
 				obj->AddBBoxToScene(m_scene, m_bbox_model.m_model);
 			}
 		}
@@ -312,14 +312,29 @@ namespace view3d
 	}
 
 	// Return true if 'object' is part of this scene
-	bool Window::Has(pr::ldr::LdrObject* object) const
+	bool Window::Has(LdrObject const* object, bool search_children) const
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
-		return m_objects.find(object) != std::end(m_objects);
+
+		// Search (recursively) for a match for 'object'.
+		auto name = search_children ? "" : nullptr;
+		for (auto& obj : m_objects)
+		{
+			// 'Apply' returns false if a quick out occurred (i.e. 'object' was found)
+			if (obj->Apply([=](auto* ob){ return ob != object; }, name)) continue;
+			return true;
+		}
+		return false;
 	}
-	bool Window::Has(pr::ldr::LdrGizmo* gizmo) const
+	bool Window::Has(LdrGizmo const* gizmo) const
 	{
-		return m_gizmos.find(gizmo) != std::end(m_gizmos);
+		assert(std::this_thread::get_id() == m_main_thread_id);
+		for (auto& giz : m_gizmos)
+		{
+			if (giz != gizmo) continue;
+			return true;
+		}
+		return false;
 	}
 
 	// Return the number of objects or object groups in this scene
@@ -359,20 +374,19 @@ namespace view3d
 			break;
 		}
 	}
-	void Window::EnumObjects(View3D_EnumObjectsCB enum_objects_cb, void* ctx, GUID const* context_id, int count, bool all_except)
+	void Window::EnumObjects(View3D_EnumObjectsCB enum_objects_cb, void* ctx, GUID const* context_ids, int include_count, int exclude_count)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 		for (auto& object : m_objects)
 		{
-			if (!all_except && !pr::contains(context_id, context_id+count, object->m_context_id)) continue;
-			if ( all_except &&  pr::contains(context_id, context_id+count, object->m_context_id)) continue;
+			if (!IncludeFilter(object->m_context_id, context_ids, include_count, exclude_count)) continue;
 			if (enum_objects_cb(ctx, object)) continue;
 			break;
 		}
 	}
 
 	// Add/Remove an object to this window
-	void Window::Add(pr::ldr::LdrObject* object)
+	void Window::Add(LdrObject* object)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 		auto iter = m_objects.find(object);
@@ -380,10 +394,10 @@ namespace view3d
 		{
 			m_objects.insert(iter, object);
 			m_guids.insert(object->m_context_id);
-			ObjectContainerChanged(&object->m_context_id, 1);
+			ObjectContainerChanged(EView3DSceneChanged::ObjectsAdded, &object->m_context_id, 1, object);
 		}
 	}
-	void Window::Remove(pr::ldr::LdrObject* object)
+	void Window::Remove(LdrObject* object)
 	{
 		// 'm_guids' may be out of date now, but it doesn't really matter.
 		// It's used to track the groups of objects added to the window.
@@ -396,7 +410,7 @@ namespace view3d
 
 		// Notify if changed
 		if (m_objects.size() != count)
-			ObjectContainerChanged(&object->m_context_id, 1);
+			ObjectContainerChanged(EView3DSceneChanged::ObjectsRemoved, &object->m_context_id, 1, object);
 
 		// Sanity check, make sure there are no other references to 'object' still
 		#if PR_DBG
@@ -414,20 +428,20 @@ namespace view3d
 	}
 
 	// Add/Remove a gizmo to this window
-	void Window::Add(pr::ldr::LdrGizmo* gizmo)
+	void Window::Add(LdrGizmo* gizmo)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 		auto iter = m_gizmos.find(gizmo);
 		if (iter == std::end(m_gizmos))
 		{
 			m_gizmos.insert(iter, gizmo);
-			ObjectContainerChanged(nullptr, 0);
+			ObjectContainerChanged(EView3DSceneChanged::GizmoAdded, nullptr, 0, nullptr); // todo, overload and pass 'gizmo' out
 		}
 	}
-	void Window::Remove(pr::ldr::LdrGizmo* gizmo)
+	void Window::Remove(LdrGizmo* gizmo)
 	{
 		m_gizmos.erase(gizmo);
-		ObjectContainerChanged(nullptr, 0);
+		ObjectContainerChanged(EView3DSceneChanged::GizmoRemoved, nullptr, 0, nullptr);
 	}
 
 	// Remove all objects from this scene
@@ -443,11 +457,11 @@ namespace view3d
 		m_guids.clear();
 
 		// Notify that the scene has changed
-		ObjectContainerChanged(context_ids.data(), int(context_ids.size()));
+		ObjectContainerChanged(EView3DSceneChanged::ObjectsRemoved, context_ids.data(), int(context_ids.size()), nullptr);
 	}
 
 	// Add/Remove all objects to this window with the given context ids (or not with)
-	void Window::AddObjectsById(GUID const* context_id, int count, bool all_except)
+	void Window::AddObjectsById(GUID const* context_ids, int include_count, int exclude_count)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 
@@ -455,59 +469,50 @@ namespace view3d
 		auto old_count = m_objects.size();
 		for (auto& src : m_dll->m_sources.Sources())
 		{
-			if (!all_except && !pr::contains(context_id, context_id+count, src.second.m_context_id)) continue;
-			if ( all_except &&  pr::contains(context_id, context_id+count, src.second.m_context_id)) continue;
-			if (all_except) new_guids.push_back(src.second.m_context_id);
+			if (!IncludeFilter(src.second.m_context_id, context_ids, include_count, exclude_count))
+				continue;
 
 			// Add objects from this source
+			new_guids.push_back(src.second.m_context_id);
 			for (auto& obj : src.second.m_objects)
 				m_objects.insert(obj.get());
 		}
 		if (m_objects.size() != old_count)
 		{
-			if (!all_except)
-			{
-				m_guids.insert(context_id, context_id + count);
-				ObjectContainerChanged(context_id, count);
-			}
-			else
-			{
-				m_guids.insert(std::begin(new_guids), std::end(new_guids));
-				ObjectContainerChanged(new_guids.data(), int(new_guids.size()));
-			}
+			m_guids.insert(std::begin(new_guids), std::end(new_guids));
+			ObjectContainerChanged(EView3DSceneChanged::ObjectsAdded, new_guids.data(), int(new_guids.size()), nullptr);
 		}
 	}
-	void Window::RemoveObjectsById(GUID const* context_id, int count, bool all_except, bool keep_context_ids)
+	void Window::RemoveObjectsById(GUID const* context_ids, int include_count, int exclude_count, bool keep_context_ids)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
-		auto given = std::initializer_list<GUID>(context_id, context_id + count);
-		auto old_count = m_objects.size();
 
-		// Build a collection of the guids to keep
-		GuidSet ids = m_guids;
-		if (all_except)
-			pr::erase_if(ids, [=](auto& id){ return !pr::contains(given, id); });
-		else
-			pr::erase_if(ids, [=](auto& id){ return pr::contains(given, id); });
-
-		// Remove objects not in the valid set
-		pr::erase_if(m_objects, [&](auto* obj){ return ids.count(obj->m_context_id) == 0; });
-
-		// Remove context ids
-		if (!keep_context_ids)
-			m_guids = std::move(ids);
-
-		// Notify if changed
-		if (m_objects.size() != old_count)
+		// Create a set of ids to remove
+		GuidSet removed;
+		for (auto& id : m_guids)
 		{
-			if (!all_except)
+			if (!IncludeFilter(id, context_ids, include_count, exclude_count)) continue;
+			removed.insert(id);
+		}
+
+		if (!removed.empty())
+		{
+			// Remove objects in the 'remove' set
+			auto old_count = m_objects.size();
+			pr::erase_if(m_objects, [&](auto* obj){ return removed.count(obj->m_context_id); });
+
+			// Remove context ids
+			if (!keep_context_ids)
 			{
-				ObjectContainerChanged(context_id, count);
+				for (auto& id : removed)
+					m_guids.erase(id);
 			}
-			else
+
+			// Notify if changed
+			if (m_objects.size() != old_count)
 			{
-				pr::vector<GUID> guids(std::begin(m_guids), std::end(m_guids));
-				ObjectContainerChanged(guids.data(), int(guids.size()));
+				GuidCont guids(std::begin(removed), std::end(removed));
+				ObjectContainerChanged(EView3DSceneChanged::ObjectsRemoved, guids.data(), int(guids.size()), nullptr);
 			}
 		}
 	}
@@ -515,7 +520,7 @@ namespace view3d
 	// Return a bounding box containing the scene objects
 	pr::BBox Window::BBox() const
 	{
-		return BBox([](pr::ldr::LdrObject const&) { return true; });
+		return BBox([](LdrObject const&) { return true; });
 	}
 		
 	// Reset the scene camera, using it's current forward and up directions, to view all objects in the scene
@@ -560,7 +565,7 @@ namespace view3d
 					bbox = pr::BBoxReset;
 					for (auto& obj : m_objects)
 					{
-						if (pr::AllSet(obj->m_flags, pr::ldr::ELdrFlags::SceneBoundsExclude)) continue;
+						if (pr::AllSet(obj->m_flags, ELdrFlags::SceneBoundsExclude)) continue;
 						if (pr::contains(except_arr, obj->m_context_id)) continue;
 						pr::Encompass(bbox, obj->BBoxWS(true));
 					}
@@ -574,8 +579,8 @@ namespace view3d
 				bbox = pr::BBoxReset;
 				for (auto& obj : m_objects)
 				{
-					if (pr::AllSet(obj->m_flags, pr::ldr::ELdrFlags::SceneBoundsExclude)) continue;
-					if (!pr::AllSet(obj->m_flags, pr::ldr::ELdrFlags::Selected)) continue;
+					if (pr::AllSet(obj->m_flags, ELdrFlags::SceneBoundsExclude)) continue;
+					if (!pr::AllSet(obj->m_flags, ELdrFlags::Selected)) continue;
 					if (pr::contains(except_arr, obj->m_context_id)) continue;
 					pr::Encompass(bbox, obj->BBoxWS(true));
 				}
@@ -586,9 +591,9 @@ namespace view3d
 				bbox = pr::BBoxReset;
 				for (auto& obj : m_objects)
 				{
-					if (pr::AllSet(obj->m_flags, pr::ldr::ELdrFlags::SceneBoundsExclude)) continue;
+					if (pr::AllSet(obj->m_flags, ELdrFlags::SceneBoundsExclude)) continue;
 					if (pr::contains(except_arr, obj->m_context_id)) continue;
-					obj->Apply([&](pr::ldr::LdrObject* o)
+					obj->Apply([&](LdrObject* o)
 					{
 						pr::Encompass(bbox, o->BBoxWS(false));
 						return true;
@@ -623,9 +628,9 @@ namespace view3d
 		auto bbox = pr::BBoxReset;
 		for (auto& obj : m_objects)
 		{
-			obj->Apply([&](pr::ldr::LdrObject const* c)
+			obj->Apply([&](LdrObject const* c)
 			{
-				if (!pr::AllSet(c->m_flags, pr::ldr::ELdrFlags::Selected))
+				if (!pr::AllSet(c->m_flags, ELdrFlags::Selected))
 					return true;
 
 				auto bb = c->BBoxWS(true);
@@ -665,16 +670,18 @@ namespace view3d
 	}
 
 	// Called when objects are added/removed from this window
-	void Window::ObjectContainerChanged(GUID const* context_ids, int count)
+	void Window::ObjectContainerChanged(EView3DSceneChanged change_type, GUID const* context_ids, int count, LdrObject* object)
 	{
 		// Reset the drawlists so that removed objects are no longer in the drawlist
-		m_scene.ClearDrawlists();
+		if (change_type == EView3DSceneChanged::ObjectsRemoved)
+			m_scene.ClearDrawlists();
 
 		// Invalidate cached members
 		m_bbox_scene = pr::BBoxReset;
 
 		// Notify scene changed
-		OnSceneChanged.Raise(this, context_ids, count);
+		View3DSceneChanged args = {change_type, context_ids, count, object};
+		OnSceneChanged.Raise(this, args);
 	}
 
 	// Show/Hide the object manager for the scene
@@ -705,12 +712,12 @@ namespace view3d
 		ui.Visible(show);
 	}
 
-	// Cast rays into the scene, returning hit info
-	void Window::HitTest(View3DHitTestRay const* rays, View3DHitTestResult* results, int count, float snap_distance, EView3DHitTestFlags flags, bool immediate)
+	// Cast rays into the scene, returning hit info for the nearest intercept for each ray
+	void Window::HitTest(View3DHitTestRay const* rays, View3DHitTestResult* hits, int ray_count, float snap_distance, EView3DHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count)
 	{
 		// Set up the ray cast
 		pr::vector<HitTestRay> ray_casts;
-		for (auto& ray : make_array_view(rays, count))
+		for (auto& ray : make_array_view(rays, ray_count))
 		{
 			HitTestRay r = {};
 			r.m_ws_origin = To<v4>(ray.m_ws_origin);
@@ -718,27 +725,48 @@ namespace view3d
 			ray_casts.push_back(r);
 		}
 
-		// Do the ray casts into the scene
-		m_scene.SetHitTestRays(ray_casts.data(), int(ray_casts.size()), snap_distance, static_cast<EHitTestFlags>(flags), immediate);
+		// Initialise the results
+		View3DHitTestResult invalid = {};
+		invalid.m_distance = maths::float_max;
+		for (auto& r : make_array_view(hits, ray_count))
+			r = invalid;
 
-		// Return the result (only valid for 'immediate' hit tests)
-		if (immediate)
+		// Create an include function based on the context ids
+		RayCastStep::InstFilter include = [=](BaseInstance const* bi)
 		{
-			// Copy the hit results to 'results'
-			int i = 0; for (auto& r : m_scene.m_ht_results)
-			{
-				View3DHitTestResult result = {};
-				result.m_ws_ray_origin = view3d::To<View3DV4>(r.m_ws_origin);
-				result.m_ws_ray_direction = view3d::To<View3DV4>(r.m_ws_direction);
-				result.m_ws_intercept = view3d::To<View3DV4>(r.m_ws_intercept);
+			return IncludeFilter(cast<LdrObject>(bi)->m_context_id, context_ids, include_count, exclude_count);
+		};
 
-				// Find the object in the scene matching 'id'
-				if (r.m_instance_id != 0)
-					result.m_obj = pr::first_or_default(m_objects, [=](auto& obj){ return obj->m_uid == r.m_instance_id; });
+		// Do the ray casts into the scene and save the results
+		m_scene.HitTest(ray_casts.data(), int(ray_casts.size()), snap_distance, static_cast<EHitTestFlags>(flags), include, [=](HitTestResult const& hit)
+		{
+			// Check that 'hit.m_instance' is a valid instance in this scene.
+			// It could be a child instance, we need to search recursively for a match
+			auto ldr_obj = cast<LdrObject>(hit.m_instance);
 
-				results[i++] = result;
-			}
-		}
+			// Not an object in this scene, keep looking
+			// This needs to come first in case 'ldr_obj' points to an object that has been deleted.
+			if (!Has(ldr_obj, true))
+				return true;
+
+			// Not visible to hit tests, keep looking
+			if (AllSet(ldr_obj->Flags(), ELdrFlags::HitTestExclude))
+				return true;
+
+			// Not the closes hit, keep looking
+			if (hits[hit.m_ray_index].m_distance < hit.m_distance)
+				return true;
+
+			// Save the hit
+			auto& result = hits[hit.m_ray_index];
+			result.m_ws_ray_origin     = view3d::To<View3DV4>(hit.m_ws_origin);
+			result.m_ws_ray_direction  = view3d::To<View3DV4>(hit.m_ws_direction);
+			result.m_ws_intercept      = view3d::To<View3DV4>(hit.m_ws_intercept);
+			result.m_distance          = hit.m_distance;
+			result.m_obj               = const_cast<View3DObject>(ldr_obj);
+			result.m_snap_type         = static_cast<EView3DSnapType>(hit.m_snap_type);
+			return true;
+		});
 	}
 
 	// Create stock models such as the focus point, origin, etc

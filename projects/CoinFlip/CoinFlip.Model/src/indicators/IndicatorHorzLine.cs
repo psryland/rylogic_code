@@ -6,10 +6,10 @@ using System.Windows.Forms;
 using System.Xml.Linq;
 using pr.common;
 using pr.extn;
-using pr.gfx;
 using pr.gui;
 using pr.maths;
 using pr.util;
+using pr.view3d;
 
 namespace CoinFlip
 {

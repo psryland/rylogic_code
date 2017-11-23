@@ -409,9 +409,6 @@
     <ClCompile Include="..\projects\renderer11\shaders\shdr_shadow_map.cpp">
       <Filter>shaders</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\renderer11\shaders\shdr_utility.cpp">
-      <Filter>shaders</Filter>
-    </ClCompile>
     <ClCompile Include="..\projects\renderer11\steps\ray_cast.cpp">
       <Filter>steps</Filter>
     </ClCompile>

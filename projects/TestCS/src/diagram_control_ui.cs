@@ -1,14 +1,13 @@
-using System;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using pr.extn;
-using pr.gfx;
 using pr.gui;
 using pr.maths;
 using pr.scintilla;
 using pr.util;
+using pr.view3d;
 using pr.win32;
 using ComboBox = pr.gui.ComboBox;
 using ToolStripContainer = pr.gui.ToolStripContainer;

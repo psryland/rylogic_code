@@ -15,31 +15,25 @@ namespace pr
 	namespace script
 	{
 		// An embedded code handler that supports lua code
-		// Serves as the default for Preprocessor and as an interface definition.
 		struct EmbeddedLua :IEmbeddedCode
 		{
 			pr::lua::Lua m_lua;
 
-			// Reset the lua state
-			void Reset()
+			// The language code that this handler is for
+			wchar_t const* Lang() const override
 			{
-				// Replace with a new lua state
-				m_lua = pr::lua::Lua();
+				return L"Lua";
 			}
 
 			// A handler function for executing embedded code
-			// 'lang' is a string identifying the language of the embedded code.
 			// 'code' is the code source
+			// 'support' is true when the code is support code and shouldn't return a result
 			// 'loc' is the file location of the embedded source
 			// 'result' is the output of the code after execution, converted to a string
 			// Return true, if the code was executed successfully, false if not handled.
 			// If the code can be handled but has errors, throw 'Exception's.
-			bool Execute(string const& lang, string const& code, string& result) override
+			bool Execute(string const& code, bool support, string& result) override
 			{
-				// We only handle lua code (Lua, LuaImpl)
-				if (!pr::str::EqualNI(lang, L"lua"))
-					return false;
-
 				// Record the number of items on the stack
 				int base = lua_gettop(m_lua);
 
@@ -55,15 +49,15 @@ namespace pr
 				// If there's something still on the stack, copy it to result
 				if (lua_gettop(m_lua) != base && !lua_isnil(m_lua, -1))
 				{
-					result = Widen(lua_tostring(m_lua, -1));
+					result = !support ? Widen(lua_tostring(m_lua, -1)) : L"";
 					lua_pop(m_lua, 1);
 				}
 
 				// Ensure the stack does not grow
 				if (lua_gettop(m_lua) != base)
 				{
-					assert(false && "lua stack height not constant");
 					lua_settop(m_lua, base);
+					throw std::exception("lua stack height not constant");
 				}
 
 				// Report 'handled'

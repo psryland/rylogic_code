@@ -13,6 +13,7 @@ using System.Windows.Threading;
 using System.Xml.Linq;
 using pr.common;
 using pr.extn;
+using pr.gfx;
 using pr.maths;
 using pr.util;
 using pr.win32;
@@ -24,17 +25,14 @@ using HTexture = System.IntPtr;
 using HWindow = System.IntPtr;
 using HWND = System.IntPtr;
 
-namespace pr.gfx
+namespace pr.view3d
 {
 	/// <summary>.NET wrapper for View3D.dll</summary>
-	public class View3d :IDisposable
+	public partial class View3d :IDisposable
 	{
 		// Notes:
 		// - Each process should create a single View3d instance that is an isolated context.
 		// - Ldr objects are created and owned by the context.
-		// - A View3d.Object is a reference to a specific object owned by the context.
-		// - 
-		public const int DefaultContextId = 0;
 
 		#region Enumerations
 		public enum EResult
@@ -336,35 +334,46 @@ namespace pr.gfx
 			Warn,
 			Error,
 		}
-		[Flags] public enum EUpdateObject :int // Flags for partial update of a model
+		[Flags] public enum EUpdateObject :uint // Flags for partial update of a model
 		{
-			None        = 0     ,
-			All         = ~0    ,
-			Name        = 1 << 0,
-			Model       = 1 << 1,
-			Transform   = 1 << 2,
-			Children    = 1 << 3,
-			Colour      = 1 << 4,
-			ColourMask  = 1 << 5,
-			Wireframe   = 1 << 6,
-			Visibility  = 1 << 7,
-			Animation   = 1 << 8,
-			StepData    = 1 << 9,
+			None       = 0U,
+			All        = ~0U,
+			Name       = 1 << 0,
+			Model      = 1 << 1,
+			Transform  = 1 << 2,
+			Children   = 1 << 3,
+			Colour     = 1 << 4,
+			ColourMask = 1 << 5,
+			Flags      = 1 << 6,
+			Animation  = 1 << 7,
 		}
 		[Flags] public enum EFlags
 		{
 			None = 0,
 
+			// The object is hidden
+			Hidden = 1 << 0,
+
+			// The object is filled in wireframe mode
+			Wireframe = 1 << 1,
+
+			// Render the object without testing against the depth buffer
+			NoZTest = 1 << 2,
+
+			// Render the object without effecting the depth buffer
+			NoZWrite = 1 << 3,
+
 			// Set when an object is selected. The meaning of 'selected' is up to the application
-			Selected = 1 << 0,
+			Selected = 1 << 8,
 
 			// Doesn't contribute to the bounding box on an object.
-			BBoxExclude = 1 << 1,
+			BBoxExclude = 1 << 9,
 
 			// Should not be included when determining the bounds of a scene.
-			SceneBoundsExclude = 1 << 2,
+			SceneBoundsExclude = 1 << 10,
 
-			All = ~0,
+			// Ignored for hit test ray casts
+			HitTestExclude = 1 << 11,
 		}
 		public enum ESceneBounds
 		{
@@ -377,11 +386,27 @@ namespace pr.gfx
 			NewData,
 			Reload,
 		}
+		public enum ESceneChanged
+		{
+			ObjectsAdded,
+			ObjectsRemoved,
+			GizmoAdded,
+			GizmoRemoved,
+		}
 		[Flags] public enum EHitTestFlags
 		{
-			SnapToFaces = 1 << 0,
-			SnapToEdges = 1 << 1,
-			SnapToVerts = 1 << 2,
+			Faces = 1 << 0,
+			Edges = 1 << 1,
+			Verts = 1 << 2,
+		}
+		public enum ESnapType
+		{
+			NoSnap,
+			Vert,
+			Edge,
+			Face,
+			EdgeCentre,
+			FaceCentre,
 		}
 		#endregion
 
@@ -712,6 +737,12 @@ namespace pr.gfx
 			}
 			private IntPtr m_obj;
 
+			/// <summary>The distance from the ray origin to the hit point</summary>
+			public float m_distance;
+
+			/// <summary>How the hit point was snapped (if at all)</summary>
+			public ESnapType m_snap_type;
+
 			/// <summary>True if something was hit</summary>
 			public bool IsHit
 			{
@@ -738,6 +769,7 @@ namespace pr.gfx
 			public RectangleF ToRectF() { return new RectangleF(m_x, m_y, m_width, m_height); }
 		}
 
+		/// <summary>Include paths/sources for Ldr script #include resolving</summary>
 		[Serializable]
 		[StructLayout(LayoutKind.Sequential)]
 		public struct View3DIncludes
@@ -766,6 +798,72 @@ namespace pr.gfx
 				:this(paths, new[] { module })
 			{}
 		}
+
+		[Serializable]
+		[StructLayout(LayoutKind.Sequential)]
+		public struct View3DSceneChanged
+		{
+			/// <summary>How the scene was changed</summary>
+			public ESceneChanged ChangeType;
+
+			/// <summary>The context ids involved in the change</summary>
+			public Guid[] ContextIds
+			{
+				get { return Marshal_.PtrToArray<Guid>(m_ctx_ids, m_count); }
+			}
+			private IntPtr m_ctx_ids;
+			private int m_count;
+
+			/// <summary>The object that changed (for single object changes only)</summary>
+			public Object Object
+			{
+				get { return m_object != IntPtr.Zero ? new Object(m_object) : null; }
+			}
+			private HObject m_object;
+		}
+
+		#endregion
+
+		#region Callback Functions
+
+		/// <summary>Report errors callback</summary>
+		public delegate void ReportErrorCB(IntPtr ctx, [MarshalAs(UnmanagedType.LPWStr)] string msg);
+
+		/// <summary>Report settings changed callback</summary>
+		public delegate void SettingsChangedCB(IntPtr ctx, HWindow wnd);
+
+		/// <summary>Enumerate guids callback</summary>
+		public delegate bool EnumGuidsCB(IntPtr ctx, Guid guid);
+
+		/// <summary>Enumerate objects callback</summary>
+		public delegate bool EnumObjectsCB(IntPtr ctx, HObject obj);
+
+		/// <summary>Callback for progress updates during AddFile / Reload</summary>
+		public delegate bool AddFileProgressCB(IntPtr ctx, ref Guid context_id, [MarshalAs(UnmanagedType.LPWStr)] string filepath, long file_offset, bool complete);
+
+		/// <summary>Callback when the sources are reloaded</summary>
+		public delegate void SourcesChangedCB(IntPtr ctx, ESourcesChangedReason reason, bool before);
+
+		/// <summary>Callback for when the collection of objects associated with a window changes</summary>
+		public delegate void SceneChangedCB(IntPtr ctx, HWindow wnd, ref View3DSceneChanged args);
+
+		/// <summary>Called just prior to rendering</summary>
+		public delegate void RenderCB(IntPtr ctx, HWindow wnd);
+
+		/// <summary>Edit object callback</summary>
+		public delegate void EditObjectCB(IntPtr ctx, int vcount, int icount, int ncount,
+			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=0)][Out] Vertex[] verts,
+			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=1)][Out] ushort[] indices,
+			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=2)][Out] Nugget[] nuggets,
+			out int new_vcount, out int new_icount, out int new_ncount);
+
+		/// <summary>Embedded code handler callback</summary>
+		public delegate bool EmbeddedCodeHandlerCB(IntPtr ctx,
+			[MarshalAs(UnmanagedType.LPWStr)] string code,
+			[MarshalAs(UnmanagedType.LPWStr)] string support,
+			[MarshalAs(UnmanagedType.BStr)] out string result,
+			[MarshalAs(UnmanagedType.BStr)] out string errors);
+
 		#endregion
 
 		public class Exception : System.Exception
@@ -784,12 +882,22 @@ namespace pr.gfx
 		private ReportErrorCB         m_error_cb;             // Reference to callback
 		private AddFileProgressCB     m_add_file_progress_cb; // Reference to callback
 		private SourcesChangedCB      m_sources_changed_cb;   // Reference to callback
-		private EmbeddedCSHandler     m_embedded_cs_handler;  // Handler object for embedded C# code
+		private EmbeddedCodeHandlerCB m_csharp_handler_cb;    // Reference to callback
 
-		public View3d()
-			:this(true)
-		{}
-		public View3d(bool bgra_compatibility)
+		/// <summary>Access the View3d instance for this process</summary>
+		public static View3d Create(bool bgra_compatibility = true)
+		{
+			if (m_singleton == null)
+				m_singleton = new View3d(bgra_compatibility);
+
+			++m_ref_count;
+			return m_singleton;
+		}
+		private static View3d m_singleton;
+		private static int m_ref_count;
+
+		/// <summary></summary>
+		private View3d(bool bgra_compatibility)
 		{
 			if (!ModuleLoaded)
 				throw new Exception("View3d.dll has not been loaded");
@@ -815,14 +923,19 @@ namespace pr.gfx
 			View3D_SourcesChangedCBSet(m_sources_changed_cb = HandleSourcesChanged, IntPtr.Zero, true);
 
 			// Install a C# embedded code handler
-			m_embedded_cs_handler = new EmbeddedCSHandler(this);
+			View3D_EmbeddedCodeCBSet("CSharp", m_csharp_handler_cb = HandleEmbeddedCSharp, IntPtr.Zero, true);
 		}
 		public void Dispose()
 		{
 			Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finaliser thread");
+			if (--m_ref_count != 0)
+			{
+				Util.BreakIf(m_ref_count < 0);
+				return;
+			}
 
 			// Unsubscribe
-			Util.Dispose(ref m_embedded_cs_handler);
+			View3D_EmbeddedCodeCBSet("CSharp", m_csharp_handler_cb, IntPtr.Zero, false);
 			View3D_SourcesChangedCBSet(m_sources_changed_cb, IntPtr.Zero, false);
 			View3D_AddFileProgressCBSet(m_add_file_progress_cb, IntPtr.Zero, false);
 			View3D_GlobalErrorCBSet(m_error_cb, IntPtr.Zero, false);
@@ -831,6 +944,7 @@ namespace pr.gfx
 				m_windows[0].Dispose();
 
 			View3D_Shutdown(m_context);
+			GC.SuppressFinalize(this);
 		}
 
 		/// <summary>Event call on errors. Note: can be called in a background thread context</summary>
@@ -860,6 +974,69 @@ namespace pr.gfx
 				m_dispatcher.BeginInvoke(m_sources_changed_cb, ctx, reason, before);
 			else
 				OnSourcesChanged.Raise(this, new SourcesChangedEventArgs(reason, before));
+		}
+
+		/// <summary>Handle embedded C# in ldr script</summary>
+		private bool HandleEmbeddedCSharp(IntPtr ctx, string code, string support, out string result, out string errors) // worker thread context
+		{
+			// This function may be called simultaneously in multiple threads
+			result = null;
+			errors = null;
+
+			try
+			{
+				var src =
+				#region Embedded C# Source
+$@"//
+//Assembly: System.dll
+//Assembly: System.Drawing.dll
+//Assembly: System.IO.dll
+//Assembly: System.Linq.dll
+//Assembly: System.Windows.Forms.dll
+//Assembly: System.Xml.dll
+//Assembly: System.Xml.Linq.dll
+//Assembly: Rylogic.dll
+using System;
+using System.Drawing;
+using System.IO;
+using System.Text;
+using System.Text.RegularExpressions;
+using pr.common;
+using pr.container;
+using pr.extn;
+using pr.ldr;
+using pr.maths;
+using pr.util;
+
+namespace ldr
+{{
+	public class EmbeddedScriptGen
+	{{
+		private StringBuilder Out = new StringBuilder();
+		{support}
+		public string Execute()
+		{{
+			{code}
+			return Out.ToString();
+		}}
+	}}
+}}
+";
+					#endregion
+
+				// Create a runtime assembly from the embedded code
+				var ass = RuntimeAssembly.FromString("ldr.EmbeddedScriptGen", src);
+				result = ass.Invoke<string>("Execute");
+			}
+			catch (CompileException ex)
+			{
+				errors = ex.ErrorReport();
+			}
+			catch (System.Exception ex)
+			{
+				errors = ex.Message;
+			}
+			return true;
 		}
 
 		/// <summary>
@@ -899,7 +1076,7 @@ namespace pr.gfx
 		}
 
 		/// <summary>
-		/// Release all created objects
+		/// Delete all objects
 		/// *WARNING* Careful with this function, make sure all C# references to View3D objects have been set to null
 		/// otherwise, disposing them will result in memory corruption</summary>
 		public void DeleteAllObjects()
@@ -907,14 +1084,20 @@ namespace pr.gfx
 			View3D_ObjectsDeleteAll();
 		}
 
-		/// <summary>Release all created objects with context id 'context_id'</summary>
-		public void DeleteObjects(Guid context_id, bool all_except)
+		/// <summary>Delete all objects, filtered by 'context_ids'</summary>
+		public void DeleteObjects(Guid[] context_ids, int include_count, int exclude_count)
 		{
-			DeleteObjects(new []{ context_id }, all_except);
+			Debug.Assert(include_count + exclude_count == context_ids.Length);
+			using (var ids = Marshal_.Pin(context_ids))
+				View3D_ObjectsDeleteById(ids.Pointer, include_count, exclude_count);
 		}
-		public void DeleteObjects(Guid[] context_ids, bool all_except)
+
+		/// <summary>Release all objects not displayed in any windows (filtered by 'context_ids')</summary>
+		public void DeleteUnused(Guid[] context_ids, int include_count, int exclude_count)
 		{
-			View3D_ObjectsDeleteById(context_ids, context_ids.Length, all_except);
+			Debug.Assert(include_count + exclude_count == context_ids.Length);
+			using (var ids = Marshal_.Pin(context_ids))
+				View3D_ObjectsDeleteUnused(ids.Pointer, include_count, exclude_count);
 		}
 
 		/// <summary>Return the context id for objects created from file 'filepath' (or null if 'filepath' is not an existing source)</summary>
@@ -950,11 +1133,13 @@ namespace pr.gfx
 			private readonly RenderCB m_render_cb;              // A local reference to prevent the callback being garbage collected
 			private readonly SceneChangedCB m_scene_changed_cb; // A local reference to prevent the callback being garbage collected
 			private HWindow m_handle;
+			private HWND m_hwnd;
 
 			public Window(View3d view, HWND hwnd, WindowOptions opts)
 			{
 				m_view = view;
 				m_opts = opts;
+				m_hwnd = hwnd;
 
 				// Create the window
 				m_handle = View3D_WindowCreate(hwnd, ref opts);
@@ -962,20 +1147,20 @@ namespace pr.gfx
 					throw new Exception("Failed to create View3D window");
 
 				// Attach the global error handler
-				m_error_cb = (ctx, msg) => Error.Raise(this, new ErrorEventArgs(msg));
-				View3D_WindowErrorCBSet(m_handle, m_error_cb, IntPtr.Zero, true);
+				View3D_WindowErrorCBSet(m_handle, m_error_cb = HandleError, IntPtr.Zero, true);
+				void HandleError(IntPtr ctx, string msg) { Error.Raise(this, new ErrorEventArgs(msg)); }
 
 				// Set up a callback for when settings are changed
-				m_settings_cb = (c,w) => OnSettingsChanged.Raise(this, EventArgs.Empty);
-				View3D_WindowSettingsChangedCB(m_handle, m_settings_cb, IntPtr.Zero, true);
+				View3D_WindowSettingsChangedCB(m_handle, m_settings_cb = HandleSettingsChanged, IntPtr.Zero, true);
+				void HandleSettingsChanged(IntPtr ctx, HWindow wnd) { OnSettingsChanged.Raise(this, EventArgs.Empty); }
 
 				// Set up a callback for when a render is about to happen
-				m_render_cb = (c,w) => OnRendering.Raise(this, EventArgs.Empty);
-				View3D_WindowRenderingCB(m_handle, m_render_cb, IntPtr.Zero, true);
+				View3D_WindowRenderingCB(m_handle, m_render_cb = HandleRendering, IntPtr.Zero, true);
+				void HandleRendering(IntPtr ctx, HWindow wnd) { OnRendering.Raise(this, EventArgs.Empty); }
 
 				// Set up a callback for when the object store for this window changes
-				m_scene_changed_cb = (c,w,ids,cnt) => OnSceneChanged.Raise(this, new SceneChangedEventArgs(ids));
-				View3d_WindowSceneChangedCB(m_handle, m_scene_changed_cb, IntPtr.Zero, true);
+				View3d_WindowSceneChangedCB(m_handle, m_scene_changed_cb = HandleSceneChanged, IntPtr.Zero, true);
+				void HandleSceneChanged(IntPtr ctx, HWindow wnd, ref View3DSceneChanged args) { OnSceneChanged.Raise(this, new SceneChangedEventArgs(args)); }
 
 				// Set up the light source
 				SetLightSource(v4.Origin, -v4.ZAxis, true);
@@ -1024,11 +1209,16 @@ namespace pr.gfx
 				get { return m_view; }
 			}
 
-			/// <summary>Get the native view3d handle for the window</summary>
+			/// <summary>Get the view3d native handle for the window (Note: this is not the HWND)</summary>
 			public HWindow Handle
 			{
-				[DebuggerStepThrough]
-				get { return m_handle; }
+				[DebuggerStepThrough] get { return m_handle; }
+			}
+
+			/// <summary>Get the windows handle associated with this window</summary>
+			public HWND Hwnd
+			{
+				[DebuggerStepThrough] get { return m_hwnd; }
 			}
 
 			/// <summary>Camera controls</summary>
@@ -1040,29 +1230,33 @@ namespace pr.gfx
 
 			/// <summary>
 			/// Mouse navigation and/or object manipulation.
-			/// 'point' is a point in client rect space.
-			/// 'nav_op' is logical navigation operation to perform
-			/// 'mouse_btns' is the state of the mouse buttons (MK_LBUTTON etc)
+			/// 'point' is a point in client space.
+			/// 'btns' is the state of the mouse buttons (MK_LBUTTON etc)
+			/// 'nav_op' is the logical navigation operation to perform.
 			/// 'nav_beg_or_end' should be true on mouse button down or up, and false during mouse movement
 			/// Returns true if the scene requires refreshing</summary>
-			public bool MouseNavigate(PointF point, ENavOp nav_op, bool nav_beg_or_end)
+			public bool MouseNavigate(PointF point, MouseButtons btns, ENavOp nav_op, bool nav_beg_or_end)
 			{
 				// This function is not in the CameraControls object because it is not solely used
 				// for camera navigation. It can also be used to manipulate objects in the scene.
 				if (m_in_mouse_navigate != 0) return false;
 				using (Scope.Create(() => ++m_in_mouse_navigate, () => --m_in_mouse_navigate))
 				{
-					// Notify of navigating, allowing client code to make changes
-					var args = new MouseNavigateEventArgs(point, nav_op, nav_beg_or_end);
+					// Notify of navigating, allowing client code to make
+					// changes or optionally handle the mouse event.
+					var args = new MouseNavigateEventArgs(point, btns, nav_op, nav_beg_or_end);
 					MouseNavigating.Raise(this, args);
+					if (args.Handled)
+						return false;
 
+					// The mouse event wasn't handled, so forward to the window for navigation
 					return View3D_MouseNavigate(Handle, v2.From(args.Point), args.NavOp, args.NavBegOrEnd);
 				}
 			}
-			public bool MouseNavigate(PointF point, MouseButtons btn, bool nav_beg_or_end)
+			public bool MouseNavigate(PointF point, MouseButtons btns, bool nav_beg_or_end)
 			{
-				var op = Camera.MouseBtnToNavOp(btn);
-				return MouseNavigate(point, op, nav_beg_or_end);
+				var op = Camera.MouseBtnToNavOp(btns);
+				return MouseNavigate(point, btns, op, nav_beg_or_end);
 			}
 			private int m_in_mouse_navigate;
 
@@ -1072,15 +1266,19 @@ namespace pr.gfx
 			/// 'delta' is the mouse wheel scroll delta value (i.e. 120 = 1 click)
 			/// 'along_ray' is true if the camera should move along a ray cast through 'point'
 			/// Returns true if the scene requires refreshing</summary>
-			public bool MouseNavigateZ(PointF point, float delta, bool along_ray)
+			public bool MouseNavigateZ(PointF point, MouseButtons btns, float delta, bool along_ray)
 			{
 				if (m_in_mouse_navigate != 0) return false;
 				using (Scope.Create(() => ++m_in_mouse_navigate, () => --m_in_mouse_navigate))
 				{
-					// Notify of navigating, allowing client code to make changes
-					var args = new MouseNavigateEventArgs(point, delta, along_ray);
+					// Notify of navigating, allowing client code to make
+					// changes or optionally handle the mouse event.
+					var args = new MouseNavigateEventArgs(point, btns, delta, along_ray);
 					MouseNavigating.Raise(this, args);
+					if (args.Handled)
+						return false;
 
+					// The mouse event wasn't handled, so forward to the window for navigation
 					return View3D_MouseNavigateZ(Handle, v2.From(args.Point), args.Delta, args.AlongRay);
 				}
 			}
@@ -1101,8 +1299,20 @@ namespace pr.gfx
 			/// <summary>Perform a hit test in the scene</summary>
 			public HitTestResult HitTest(HitTestRay ray, float snap_distance, EHitTestFlags flags)
 			{
-				View3D_WindowHitTest(Handle, ref ray, snap_distance, flags, out HitTestResult hit);
-				return hit;
+				return HitTest(ray, snap_distance, flags, new Guid[0], 0, 0);
+			}
+			public HitTestResult HitTest(HitTestRay ray, float snap_distance, EHitTestFlags flags, Guid[] guids, int include_count, int exclude_count)
+			{
+				Debug.Assert(include_count + exclude_count == guids.Length);
+				var rays = new HitTestRay[1] { ray };
+				var hits = new HitTestResult[1];
+
+				using (var rays_buf = Marshal_.Pin(rays))
+				using (var hits_buf = Marshal_.Pin(hits))
+				using (var guids_buf = Marshal_.Pin(guids))
+					View3D_WindowHitTest(Handle, rays_buf.Pointer, hits_buf.Pointer, 1, snap_distance, flags, guids_buf.Pointer, include_count, exclude_count);
+
+				return hits[0];
 			}
 
 			/// <summary>Get the render target texture</summary>
@@ -1143,15 +1353,20 @@ namespace pr.gfx
 			}
 			public void EnumObjects(Func<Object, bool> cb, Guid context_id, bool all_except = false)
 			{
-				EnumObjects(cb, new [] { context_id }, all_except);
+				EnumObjects(cb, new [] { context_id }, all_except?0:1, all_except?1:0);
 			}
-			public void EnumObjects(Action<Object> cb, Guid[] context_id, bool all_except = false)
+			public void EnumObjects(Action<Object> cb, Guid[] context_ids, int include_count, int exclude_count)
 			{
-				EnumObjects(obj => { cb(obj); return true; }, context_id, all_except);
+				EnumObjects(obj => { cb(obj); return true; }, context_ids, include_count, exclude_count);
 			}
-			public void EnumObjects(Func<Object, bool> cb, Guid[] context_id, bool all_except = false)
+			public void EnumObjects(Func<Object, bool> cb, Guid[] context_ids, int include_count, int exclude_count)
 			{
-				View3D_WindowEnumObjectsById(m_handle, (c,obj) => cb(new Object(obj)), IntPtr.Zero, context_id, context_id.Length, all_except);
+				Debug.Assert(include_count + exclude_count == context_ids.Length);
+				using (var ids = Marshal_.Pin(context_ids))
+				{
+					EnumObjectsCB enum_cb = (c,obj) => cb(new Object(obj));
+					View3D_WindowEnumObjectsById(m_handle, enum_cb, IntPtr.Zero, ids.Pointer, include_count, exclude_count);
+				}
 			}
 
 			/// <summary>Return the objects associated with this window</summary>
@@ -1185,14 +1400,12 @@ namespace pr.gfx
 				View3D_WindowAddGizmo(m_handle, giz.m_handle);
 			}
 
-			/// <summary>Add multiple objects by context id</summary>
-			public void AddObjects(Guid context_id, bool all_except = false)
+			/// <summary>Add multiple objects, filtered by 'context_ids</summary>
+			public void AddObjects(Guid[] context_ids, int include_count, int exclude_count)
 			{
-				AddObjects(new[]{ context_id });
-			}
-			public void AddObjects(Guid[] context_ids, bool all_except = false)
-			{
-				View3D_WindowAddObjectsById(m_handle, context_ids, context_ids.Length, all_except);
+				Debug.Assert(include_count + exclude_count == context_ids.Length);
+				using (var ids = Marshal_.Pin(context_ids))
+					View3D_WindowAddObjectsById(m_handle, ids.Pointer, include_count, exclude_count);
 			}
 
 			/// <summary>Add a collection of objects to the window</summary>
@@ -1214,14 +1427,12 @@ namespace pr.gfx
 				View3D_WindowRemoveGizmo(m_handle, giz.m_handle);
 			}
 
-			/// <summary>Remove multiple objects by context id</summary>
-			public void RemoveObjects(Guid context_id, bool all_except = false)
+			/// <summary>Remove multiple objects, filtered by 'context_ids'</summary>
+			public void RemoveObjects(Guid[] context_ids, int include_count, int exclude_count)
 			{
-				RemoveObjects(new []{ context_id }, all_except);
-			}
-			public void RemoveObjects(Guid[] context_ids, bool all_except = false)
-			{
-				View3D_WindowRemoveObjectsById(m_handle, context_ids, context_ids.Length, all_except);
+				Debug.Assert(include_count + exclude_count == context_ids.Length);
+				using (var ids = Marshal_.Pin(context_ids))
+					View3D_WindowRemoveObjectsById(m_handle, ids.Pointer, include_count, exclude_count);
 			}
 
 			/// <summary>Remove a collection of objects from the window</summary>
@@ -1244,9 +1455,9 @@ namespace pr.gfx
 			}
 
 			/// <summary>True if 'obj' is a member of this window</summary>
-			public bool HasObject(Object obj)
+			public bool HasObject(Object obj, bool search_children)
 			{
-				return View3D_WindowHasObject(m_handle, obj.m_handle);
+				return View3D_WindowHasObject(m_handle, obj.m_handle, search_children);
 			}
 
 			/// <summary>Return a bounding box of the objects in this window</summary>
@@ -1541,26 +1752,33 @@ namespace pr.gfx
 			}
 			public class MouseNavigateEventArgs :EventArgs
 			{
-				public MouseNavigateEventArgs(PointF point, ENavOp nav_op, bool nav_beg_or_end)
+				public MouseNavigateEventArgs(PointF point, MouseButtons btns, ENavOp nav_op, bool nav_beg_or_end)
 				{
-					ZNavigation         = false;
+					ZNavigation = false;
 					Point       = point;
+					Btns        = btns;
 					NavOp       = nav_op;
 					NavBegOrEnd = nav_beg_or_end;
+					Handled     = false;
 				}
-				public MouseNavigateEventArgs(PointF point, float delta, bool along_ray)
+				public MouseNavigateEventArgs(PointF point, MouseButtons btns, float delta, bool along_ray)
 				{
-					ZNavigation      = true;
-					Point    = point;
-					Delta    = delta;
-					AlongRay = along_ray;
+					ZNavigation = true;
+					Point       = point;
+					Btns        = btns;
+					Delta       = delta;
+					AlongRay    = along_ray;
+					Handled     = false;
 				}
-
-				/// <summary>True if this is a Z axis navigation</summary>
-				public bool ZNavigation { get; private set; }
 
 				/// <summary>The mouse pointer in client rect space</summary>
 				public PointF Point { get; private set; }
+
+				/// <summary>The current state of the mouse buttons</summary>
+				public MouseButtons Btns { get; private set; }
+
+				/// <summary>The mouse wheel scroll delta</summary>
+				public float Delta { get; private set; }
 
 				/// <summary>The navigation operation to perform</summary>
 				public ENavOp NavOp { get; private set; }
@@ -1568,11 +1786,14 @@ namespace pr.gfx
 				/// <summary>True if this is the beginning or end of the navigation, false if during</summary>
 				public bool NavBegOrEnd { get; private set; }
 
-				/// <summary>The mouse wheel scroll delta</summary>
-				public float Delta { get; private set; }
+				/// <summary>True if this is a Z axis navigation</summary>
+				public bool ZNavigation { get; private set; }
 
 				/// <summary>True if Z axis navigation moves the camera along a ray through the mouse pointer</summary>
 				public bool AlongRay { get; private set; }
+
+				/// <summary>A flag used to prevent this mouse navigation being forwarded to the window</summary>
+				public bool Handled { get; set; }
 			}
 			#endregion
 		}
@@ -1868,7 +2089,7 @@ namespace pr.gfx
 			{
 				View3D_NSSPointToWSRay(m_window.Handle, screen, out ws_point, out ws_direction);
 			}
-			public void SSPointToWSRay(Point screen, out v4 ws_point, out v4 ws_direction)
+			public void SSPointToWSRay(PointF screen, out v4 ws_point, out v4 ws_direction)
 			{
 				var nss = SSPointToNSSPoint(screen);
 				NSSPointToWSRay(new v4(nss.x, nss.y, View3D_CameraFocusDistance(m_window.Handle), 1.0f), out ws_point, out ws_direction);
@@ -1948,11 +2169,11 @@ namespace pr.gfx
 				var ctx = context_id ?? Guid.NewGuid();
 
 				// Serialise the verts/indices to a memory buffer
-				using (var vbuf = Marshal_.ArrayToPtr(verts))
-				using (var ibuf = Marshal_.ArrayToPtr(indices))
+				using (var vbuf = Marshal_.Pin(verts))
+				using (var ibuf = Marshal_.Pin(indices))
 				using (var nbuf = Marshal_.ArrayToPtr(nuggets))
 				{
-					m_handle = View3D_ObjectCreate(name, colour, vcount, icount, ncount, vbuf.Value.Ptr, ibuf.Value.Ptr, nbuf.Value.Ptr, ref ctx);
+					m_handle = View3D_ObjectCreate(name, colour, vcount, icount, ncount, vbuf.Pointer, ibuf.Pointer, nbuf.Value.Ptr, ref ctx);
 					if (m_handle == HObject.Zero) throw new System.Exception("Failed to create object '{0}' from provided buffers".Fmt(name));
 				}
 			}
@@ -2021,6 +2242,11 @@ namespace pr.gfx
 			public EFlags Flags
 			{
 				get { return FlagsGet(string.Empty); }
+				set
+				{
+					FlagsSet(~EFlags.None, false);
+					FlagsSet(value, true);
+				}
 			}
 
 			/// <summary>The context id that this object belongs to</summary>
@@ -2765,104 +2991,6 @@ namespace pr.gfx
 			public static implicit operator LightInfo(Light light) { return light.m_info; }
 		}
 
-		/// <summary>A wrapper class for handling embedded C# in ldr script</summary>
-		private class EmbeddedCSHandler :IDisposable
-		{
-			private StringBuilder m_support;
-			private EmbeddedCodeHandlerCB m_cb;  // Callback reference
-
-			public EmbeddedCSHandler(View3d view3d)
-			{
-				m_support = new StringBuilder();
-				View3D_EmbeddedCodeCBSet(m_cb = Handler, IntPtr.Zero, true);
-			}
-			public void Dispose()
-			{
-				View3D_EmbeddedCodeCBSet(m_cb, IntPtr.Zero, false);
-			}
-
-			/// <summary>Ldr script embedded C# code handler</summary>
-			private bool Handler(IntPtr ctx, bool reset, string lang, string code, out string result, out string errors)
-			{
-				result = null;
-				errors = null;
-
-				// If reset is requested, reset
-				if (reset)
-				{
-					m_support.Clear();
-					return true;
-				}
-
-				// Check we handle this language
-				lang = lang.ToLowerInvariant();
-				if (!lang.StartsWith("csharp"))
-					return false;
-
-				// IF the embedded code is support code, there is nothing to execute
-				if (lang == "csharpimpl")
-				{
-					m_support.Append(code);
-					return true;
-				}
-
-				try
-				{
-					var src =
-						#region Embedded C# Source
-$@"//
-//Assembly: System.dll
-//Assembly: System.Drawing.dll
-//Assembly: System.IO.dll
-//Assembly: System.Linq.dll
-//Assembly: System.Windows.Forms.dll
-//Assembly: System.Xml.dll
-//Assembly: System.Xml.Linq.dll
-//Assembly: Rylogic.dll
-using System;
-using System.Drawing;
-using System.IO;
-using System.Text;
-using System.Text.RegularExpressions;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.ldr;
-using pr.maths;
-using pr.util;
-
-namespace ldr
-{{
-	public class EmbeddedScriptGen
-	{{
-		private StringBuilder Out = new StringBuilder();
-		{m_support.ToString()}
-		public string Execute()
-		{{
-			{code}
-			return Out.ToString();
-		}}
-	}}
-}}
-";
-					#endregion
-
-					// Create a runtime assembly from the embedded code
-					var ass = RuntimeAssembly.FromString("ldr.EmbeddedScriptGen", src);
-					result = ass.Invoke<string>("Execute");
-				}
-				catch (CompileException ex)
-				{
-					errors = ex.ErrorReport();
-				}
-				catch (System.Exception ex)
-				{
-					errors = ex.Message;
-				}
-				return true;
-			}
-		}
-
 		#region Event Args
 		public class AddFileProgressEventArgs :CancelEventArgs
 		{
@@ -2904,13 +3032,21 @@ namespace ldr
 
 		public class SceneChangedEventArgs :EventArgs
 		{
-			public SceneChangedEventArgs(Guid[] context_ids)
+			public SceneChangedEventArgs(View3DSceneChanged args)
 			{
-				ContextIds = context_ids ?? new Guid[0];
+				ChangeType = args.ChangeType;
+				ContextIds = args.ContextIds;
+				Object = args.Object;
 			}
+
+			/// <summary>How the scene was changed</summary>
+			public ESceneChanged ChangeType { get; private set; }
 
 			/// <summary>The context ids of the objects that were changed in the scene</summary>
 			public Guid[] ContextIds { get; private set; }
+
+			/// <summary>The LdrObject involved in the change (single object changes only)</summary>
+			public Object Object { get; private set; }
 		}
 
 		#endregion
@@ -2929,45 +3065,6 @@ namespace ldr
 			m_module = Win32.LoadDll(Dll+".dll", dir);
 		}
 
-		/// <summary>Report errors callback</summary>
-		public delegate void ReportErrorCB(IntPtr ctx, [MarshalAs(UnmanagedType.LPWStr)] string msg);
-
-		/// <summary>Report settings changed callback</summary>
-		public delegate void SettingsChangedCB(IntPtr ctx, HWindow wnd);
-
-		/// <summary>Enumerate guids callback</summary>
-		public delegate bool EnumGuidsCB(IntPtr ctx, Guid guid);
-
-		/// <summary>Enumerate objects callback</summary>
-		public delegate bool EnumObjectsCB(IntPtr ctx, HObject obj);
-
-		/// <summary>Callback for progress updates during AddFile / Reload</summary>
-		public delegate bool AddFileProgressCB(IntPtr ctx, ref Guid context_id, [MarshalAs(UnmanagedType.LPWStr)] string filepath, long file_offset, bool complete);
-
-		/// <summary>Callback when the sources are reloaded</summary>
-		public delegate void SourcesChangedCB(IntPtr ctx, ESourcesChangedReason reason, bool before);
-
-		/// <summary>Called just prior to rendering</summary>
-		public delegate void RenderCB(IntPtr ctx, HWindow wnd);
-
-		/// <summary>Callback for when the collection of objects associated with a window changes</summary>
-		public delegate void SceneChangedCB(IntPtr ctx, HWindow wnd, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 3)] Guid[] context_ids, int count);
-
-		/// <summary>Edit object callback</summary>
-		public delegate void EditObjectCB(IntPtr ctx, int vcount, int icount, int ncount,
-			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=0)][Out] Vertex[] verts,
-			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=1)][Out] ushort[] indices,
-			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=2)][Out] Nugget[] nuggets,
-			out int new_vcount, out int new_icount, out int new_ncount);
-
-		/// <summary>Embedded code handler callback</summary>
-		public delegate bool EmbeddedCodeHandlerCB(IntPtr ctx,
-			bool reset,
-			[MarshalAs(UnmanagedType.LPWStr)] string lang,
-			[MarshalAs(UnmanagedType.LPWStr)] string code,
-			[MarshalAs(UnmanagedType.BStr)] out string result,
-			[MarshalAs(UnmanagedType.BStr)] out string errors);
-
 		// Context
 		[DllImport(Dll)] private static extern HContext        View3D_Initialise            (ReportErrorCB initialise_error_cb, IntPtr ctx, bool gdi_compatibility);
 		[DllImport(Dll)] private static extern void            View3D_Shutdown              (HContext context);
@@ -2977,11 +3074,12 @@ namespace ldr
 		[DllImport(Dll)] private static extern Guid            View3D_LoadScript            ([MarshalAs(UnmanagedType.LPWStr)] string ldr_script, bool file, ref Guid context_id, ref View3DIncludes includes);
 		[DllImport(Dll)] private static extern void            View3D_ReloadScriptSources   ();
 		[DllImport(Dll)] private static extern void            View3D_ObjectsDeleteAll      ();
-		[DllImport(Dll)] private static extern void            View3D_ObjectsDeleteById     ([MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)] Guid[] context_ids, int count, bool all_except);
+		[DllImport(Dll)] private static extern void            View3D_ObjectsDeleteById     (IntPtr context_ids, int include_count, int exclude_count);
+		[DllImport(Dll)] private static extern void            View3D_ObjectsDeleteUnused   (IntPtr context_ids, int include_count, int exclude_count);
 		[DllImport(Dll)] private static extern void            View3D_CheckForChangedSources();
 		[DllImport(Dll)] private static extern void            View3D_AddFileProgressCBSet  (AddFileProgressCB progress_cb, IntPtr ctx, bool add);
 		[DllImport(Dll)] private static extern void            View3D_SourcesChangedCBSet   (SourcesChangedCB sources_changed_cb, IntPtr ctx, bool add);
-		[DllImport(Dll)] private static extern void            View3D_EmbeddedCodeCBSet     (EmbeddedCodeHandlerCB embedded_code_cb, IntPtr ctx, bool add);
+		[DllImport(Dll)] private static extern void            View3D_EmbeddedCodeCBSet     ([MarshalAs(UnmanagedType.LPWStr)] string lang, EmbeddedCodeHandlerCB embedded_code_cb, IntPtr ctx, bool add);
 		[DllImport(Dll)] private static extern bool            View3D_ContextIdFromFilepath ([MarshalAs(UnmanagedType.LPWStr)] string filepath, out Guid id);
 
 		// Windows
@@ -2997,19 +3095,19 @@ namespace ldr
 		[DllImport(Dll)] private static extern void            View3D_WindowAddObject           (HWindow window, HObject obj);
 		[DllImport(Dll)] private static extern void            View3D_WindowRemoveObject        (HWindow window, HObject obj);
 		[DllImport(Dll)] private static extern void            View3D_WindowRemoveAllObjects    (HWindow window);
-		[DllImport(Dll)] private static extern bool            View3D_WindowHasObject           (HWindow window, HObject obj);
+		[DllImport(Dll)] private static extern bool            View3D_WindowHasObject           (HWindow window, HObject obj, bool search_children);
 		[DllImport(Dll)] private static extern int             View3D_WindowObjectCount         (HWindow window);
 		[DllImport(Dll)] private static extern void            View3D_WindowEnumGuids           (HWindow window, EnumGuidsCB enum_guids_cb, IntPtr ctx);
 		[DllImport(Dll)] private static extern void            View3D_WindowEnumObjects         (HWindow window, EnumObjectsCB enum_objects_cb, IntPtr ctx);
-		[DllImport(Dll)] private static extern void            View3D_WindowEnumObjectsById     (HWindow window, EnumObjectsCB enum_objects_cb, IntPtr ctx, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 4)] Guid[] context_id, int count, bool all_except);
-		[DllImport(Dll)] private static extern void            View3D_WindowAddObjectsById      (HWindow window, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] Guid[] context_id, int count, bool all_except);
-		[DllImport(Dll)] private static extern void            View3D_WindowRemoveObjectsById   (HWindow window, [MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] Guid[] context_id, int count, bool all_except);
+		[DllImport(Dll)] private static extern void            View3D_WindowEnumObjectsById     (HWindow window, EnumObjectsCB enum_objects_cb, IntPtr ctx, IntPtr context_ids, int include_count, int exclude_count);
+		[DllImport(Dll)] private static extern void            View3D_WindowAddObjectsById      (HWindow window, IntPtr context_ids, int include_count, int exclude_count);
+		[DllImport(Dll)] private static extern void            View3D_WindowRemoveObjectsById   (HWindow window, IntPtr context_ids, int include_count, int exclude_count);
 		[DllImport(Dll)] private static extern void            View3D_WindowAddGizmo            (HWindow window, HGizmo giz);
 		[DllImport(Dll)] private static extern void            View3D_WindowRemoveGizmo         (HWindow window, HGizmo giz);
 		[DllImport(Dll)] private static extern BBox            View3D_WindowSceneBounds         (HWindow window, ESceneBounds bounds, int except_count, Guid[] except);
 		[DllImport(Dll)] private static extern float           View3D_WindowAnimTimeGet         (HWindow window);
 		[DllImport(Dll)] private static extern void            View3D_WindowAnimTimeSet         (HWindow window, float time_s);
-		[DllImport(Dll)] private static extern void            View3D_WindowHitTest             (HWindow window, ref HitTestRay ray, float snap_distance, EHitTestFlags flags, out HitTestResult hit);
+		[DllImport(Dll)] private static extern void            View3D_WindowHitTest             (HWindow window, IntPtr rays, IntPtr hits, int ray_count, float snap_distance, EHitTestFlags flags, IntPtr context_ids, int include_count, int exclude_count);
 
 		// Camera
 		[DllImport(Dll)] private static extern void            View3D_CameraToWorldGet       (HWindow window, out m4x4 c2w);

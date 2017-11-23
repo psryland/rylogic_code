@@ -25,8 +25,7 @@ namespace pr
 			,m_viewport(wnd.RenderTargetSize())
 			,m_instances()
 			,m_render_steps()
-			,m_ht_rays()
-			,m_ht_results()
+			,m_ht_immediate()
 			,m_bkgd_colour()
 			,m_global_light()
 			,m_dsb()
@@ -75,48 +74,47 @@ namespace pr
 			}
 		}
 
-		// Set the collection of rays to cast into the scene for hit testing.
-		// If 'immediate' is true, the scene is rendered with just the 'RayCastStep'.
-		// The function blocks until 'm_ht_results' are up to date (note: this stalls the gfx pipeline).
-		// If 'immediate' is false, the 'RayCastStep' render step is added to the steps for
-		// this scene, and triple buffering is used to update the 'm_ht_results' after each
-		// Render() call. Note, this mode is intended for continuous frame rate rendering
-		// and means the hit test results are 3 frames behind.
-		// Setting an empty set of rays disables hit testing ('immediate' is ignored).
-		void Scene::SetHitTestRays(HitTestRay const* rays, int count, float snap_distance, EHitTestFlags flags, bool immediate)
+		// Perform an immediate hit test
+		void Scene::HitTest(HitTestRay const* rays, int count, float snap_distance, EHitTestFlags flags, RayCastStep::InstFilter const& include, RayCastStep::ResultsOut const& results)
 		{
-			// Resize the buffers
-			m_ht_rays.assign(rays, rays + count);
-			m_ht_results.resize(count);
+			if (rays == nullptr || count == 0)
+				return;
 
-			// If there are no rays, remove the RayCastStep (if there)
-			if (count == 0)
-			{
-				pr::erase_if(m_render_steps, [=](auto& rs){ return rs->GetId() == ERenderStep::RayCast; });
-			}
-			// If 'immediate', do a ray cast now, using only the RayCastStep
-			else if (immediate)
-			{
-				// Create a ray cast render step and populate its draw list.
-				// Note: don't look for and reuse an existing RayCastStep because callers may want
-				// to invoke immediate ray casts without interfering with existing continuous ray casts.
-				RayCastStep rs(*this, false);
-				for (auto& inst : m_instances)
-					rs.AddInstance(*inst);
+			// Lazy create the ray cast step
+			// Note: I've noticed that with runtime shaders enabled, reusing the same RayCastStep
+			// doesn't seem to work, I never figured out why though. I had to create a new RayCastStep
+			// for each hit test.
+			if (m_ht_immediate == nullptr)
+				m_ht_immediate.reset(new RayCastStep(*this, false));
+			
+			auto& rs = *m_ht_immediate.get();
 
-				// Set the rays to cast
-				rs.SetRays(m_ht_rays.data(), int(m_ht_rays.size()), snap_distance, flags);
+			// Set the rays to cast
+			rs.SetRays(rays, count, snap_distance, flags, include);
 
-				// Render just this step
-				Renderer::Lock lock(m_wnd->rdr());
-				StateStack ss(lock.ImmediateDC(), *this);
-				rs.Execute(ss);
+			// Create a ray cast render step and populate its draw list.
+			// Note: don't look for and reuse an existing RayCastStep because callers may want
+			// to invoke immediate ray casts without interfering with existing continuous ray casts.
+			for (auto& inst : m_instances)
+				rs.AddInstance(*inst);
 
-				// Read (blocking) the hit test results
-				rs.ReadOutput(m_ht_results.data(), int(m_ht_results.size()));
-			}
-			// Otherwise, add the ray cast step to the render sets
-			else
+			// Render just this step
+			Renderer::Lock lock(m_wnd->rdr());
+			StateStack ss(lock.ImmediateDC(), *this);
+			rs.Execute(ss);
+
+			// Read (blocking) the hit test results
+			rs.ReadOutput(results);
+
+			// Reset ready for next time
+			rs.ClearDrawlist();
+		}
+
+		// Set the collection of rays to cast into the scene for continuous hit testing.
+		void Scene::HitTestContinuous(HitTestRay const* rays, int count, float snap_distance, EHitTestFlags flags, RayCastStep::InstFilter const& include)
+		{
+			// Look for an existing RayCast render step
+			if (rays == nullptr || count != 0)
 			{
 				// Ensure there is a ray cast render step, add if not.
 				auto rs = static_cast<RayCastStep*>(FindRStep(ERenderStep::RayCast));
@@ -129,9 +127,25 @@ namespace pr
 				}
 
 				// Set the rays to cast.
-				// Results will be available in 'm_ht_results' after Render() has been called a few times (due to triple buffering)
-				rs->SetRays(m_ht_rays.data(), int(m_ht_rays.size()), snap_distance, flags);
+				// Results will be available in 'm_ht_results' after Render() has been called a few times (due to multi-buffering)
+				rs->SetRays(rays, count, snap_distance, flags, include);
 			}
+			else
+			{
+				// Remove the ray cast step if there are no rays to cast
+				pr::erase_if(m_render_steps, [](auto rs){ return rs->GetId() == ERenderStep::RayCast; });
+			}
+		}
+
+		// Read the hit test results from the continuous ray cast render step
+		void Scene::HitTestGetResults(RayCastStep::ResultsOut const& results)
+		{
+			auto rs = static_cast<RayCastStep*>(FindRStep(ERenderStep::RayCast));
+			if (rs == nullptr)
+				return;
+
+			// Read the hit test results
+			rs->ReadOutput(results);
 		}
 
 		// Find a render step by id

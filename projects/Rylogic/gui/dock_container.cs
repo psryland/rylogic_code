@@ -835,7 +835,10 @@ namespace pr.gui
 				{
 					var active = node.Element(XmlTag.Active)?.As<string>();
 					if (active != null && all_content.TryGetValue(active, out var content))
-						ActiveContent = content;
+					{
+						if (content.DockPane != null)
+							ActiveContent = content;
+					}
 				}
 
 				TriggerLayout();

@@ -10,27 +10,27 @@
 
 namespace pr
 {
-	typedef unsigned char byte;
+	using byte = unsigned char;
 
 	// Casting from any type of pointer to a byte pointer
 	// Use:
 	//   int* int_ptr = ...
 	//   byte* u8_ptr = byte_ptr(int_ptr);
 	// These are templates so that byte_ptr(0) does not require an extra cast
-	template <typename T> byte const* byte_ptr(T const* t) { return reinterpret_cast<byte const*>(t); }
-	template <typename T> byte*       byte_ptr(T*       t) { return reinterpret_cast<byte*      >(t); }
-	template <typename T> char const* char_ptr(T const* t) { return reinterpret_cast<char const*>(t); }
-	template <typename T> char*       char_ptr(T*       t) { return reinterpret_cast<char*      >(t); }
-	inline byte const* byte_ptr(nullptr_t) { return reinterpret_cast<byte const*>(0); }
-	inline char const* char_ptr(nullptr_t) { return reinterpret_cast<char const*>(0); }
+	template <typename T> constexpr byte const* byte_ptr(T const* t) { return reinterpret_cast<byte const*>(t); }
+	template <typename T> constexpr byte*       byte_ptr(T*       t) { return reinterpret_cast<byte*      >(t); }
+	template <typename T> constexpr char const* char_ptr(T const* t) { return reinterpret_cast<char const*>(t); }
+	template <typename T> constexpr char*       char_ptr(T*       t) { return reinterpret_cast<char*      >(t); }
+	constexpr byte const* byte_ptr(nullptr_t) { return reinterpret_cast<byte const*>(0); }
+	constexpr char const* char_ptr(nullptr_t) { return reinterpret_cast<char const*>(0); }
 
 	// Cast from a void pointer to a pointer of type 'T' (checking alignment)
-	template <typename T> T const* type_ptr(void const* t)
+	template <typename T> constexpr T const* type_ptr(void const* t)
 	{
 		assert(((byte_ptr(t) - byte_ptr(nullptr)) % std::alignment_of<T>::value) == 0 && "Point is not correctly aligned for type");
 		return static_cast<T const*>(t);
 	}
-	template <typename T> T* type_ptr(void* t)
+	template <typename T> constexpr T* type_ptr(void* t)
 	{
 		assert(((byte_ptr(t) - byte_ptr(nullptr)) % std::alignment_of<T>::value) == 0 && "Point is not correctly aligned for type");
 		return static_cast<T*>(t);

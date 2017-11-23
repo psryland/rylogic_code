@@ -12,9 +12,9 @@ namespace pr
 	namespace rdr
 	{
 		// A geometry shader for creating quads from point list geometry
-		struct PointSpritesGS :Shader<ID3D11GeometryShader, PointSpritesGS>
+		struct PointSpritesGS :ShaderT<ID3D11GeometryShader, PointSpritesGS>
 		{
-			using base = Shader<ID3D11GeometryShader, PointSpritesGS>;
+			using base = ShaderT<ID3D11GeometryShader, PointSpritesGS>;
 			D3DPtr<ID3D11Buffer> m_cbuf_model; // Per-model constant buffer
 			v2 m_size;
 			bool m_depth;
@@ -24,9 +24,9 @@ namespace pr
 		};
 
 		// A geometry shader for creating thick lines from line list geometry
-		struct ThickLineListGS :Shader<ID3D11GeometryShader, ThickLineListGS>
+		struct ThickLineListGS :ShaderT<ID3D11GeometryShader, ThickLineListGS>
 		{
-			using base = Shader<ID3D11GeometryShader, ThickLineListGS>;
+			using base = ShaderT<ID3D11GeometryShader, ThickLineListGS>;
 			D3DPtr<ID3D11Buffer> m_cbuf_model; // Per-model constant buffer
 			float m_width;
 			
@@ -35,9 +35,9 @@ namespace pr
 		};
 
 		// A geometry shader for creating arrow heads from point list geometry
-		struct ArrowHeadGS :Shader<ID3D11GeometryShader, ArrowHeadGS>
+		struct ArrowHeadGS :ShaderT<ID3D11GeometryShader, ArrowHeadGS>
 		{
-			using base = Shader<ID3D11GeometryShader, ArrowHeadGS>;
+			using base = ShaderT<ID3D11GeometryShader, ArrowHeadGS>;
 			D3DPtr<ID3D11Buffer> m_cbuf_model; // Per-model constant buffer
 			float m_size;
 

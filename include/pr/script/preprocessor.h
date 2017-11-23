@@ -21,6 +21,7 @@ namespace pr
 		struct Preprocessor :Src
 		{
 		private:
+
 			// A source wrapper that strips line continuations and comments
 			struct PPSource :Src
 			{
@@ -198,16 +199,21 @@ namespace pr
 
 			// The stack of input streams. Streams are pushed/popped from
 			// the stack as files are opened, or macros are evaluated.
-			pr::vector<PPSource> m_stack;
+			using SourceStack = pr::vector<PPSource>;
+			SourceStack m_stack;
 
 			// A stack recording the 'inclusion' state of nested #if/#endif blocks
 			using BitStack = pr::BitStack<>;
 			BitStack m_if_stack;
 
+			// A map of embedded code handlers
+			using EmbeddedCodeHandlerCont = pr::vector<std::unique_ptr<IEmbeddedCode>>;
+			EmbeddedCodeFactory m_emb_factory;
+			EmbeddedCodeHandlerCont m_emb;
+
 			// Default handlers
 			MacroDB m_def_macros;
 			Includes m_def_includes;
-			EmbeddedCode m_def_embedded;
 
 			// Debugging helpers for the watch window
 			SrcConstPtr m_dbg_src;
@@ -215,31 +221,35 @@ namespace pr
 
 		public:
 
-			Preprocessor(IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, IEmbeddedCode* emb = nullptr)
+			Preprocessor(IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
 				:Src(ESrcType::Preprocessor, Location())
 				,m_stack()
 				,m_if_stack()
+				,m_emb_factory(emb)
+				,m_emb()
 				,m_def_macros()
 				,m_def_includes()
-				,m_def_embedded()
 				,m_dbg_buf()
 				,m_dbg_src()
 				,Macros(mac ? mac : &m_def_macros)
 				,Includes(inc ? inc : &m_def_includes)
-				,EmbeddedCode(emb ? emb : &m_def_embedded)
 			{}
-			Preprocessor(Src* src, bool delete_on_pop, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, IEmbeddedCode* emb = nullptr)
+			Preprocessor(Src* src, bool delete_on_pop, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
 				:Preprocessor(inc, mac, emb)
 			{
 				Push(src, delete_on_pop);
 			}
-			Preprocessor(Src& src, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, IEmbeddedCode* emb = nullptr)
+			Preprocessor(Src& src, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
 				:Preprocessor(inc, mac, emb)
 			{
 				Push(src);
 			}
-			template <typename Char, typename = pr::str::enable_if_char_t<Char>>
-			Preprocessor(Char const* src, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, IEmbeddedCode* emb = nullptr)
+			Preprocessor(char const* src, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
+				:Preprocessor(inc, mac, emb)
+			{
+				Push(src);
+			}
+			Preprocessor(wchar_t const* src, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
 				:Preprocessor(inc, mac, emb)
 			{
 				Push(src);
@@ -255,9 +265,6 @@ namespace pr
 
 			// Access the include handler
 			IIncludeHandler* const Includes;
-
-			// Access the embedded code handler
-			IEmbeddedCode* const EmbeddedCode;
 
 			// Push a source owned externally onto the input stack
 			void Push(Src& src)
@@ -489,12 +496,14 @@ namespace pr
 							if (src.match_adv(L"embedded"))
 							{
 								// Read the embedded language used
-								string lang;
-								if (*src == L'(') ++src; else throw Exception(EResult::InvalidPreprocessorDirective, loc_beg, "Expected the form: #embedded(lang) ... #end");
-								if (BufferIdentifier(src, emit)) lang = src.pop_str(); else throw Exception(EResult::InvalidPreprocessorDirective, loc_beg, "Expected the form: #embedded(lang) ... #end");
-								if (*src == L')') ++src; else throw Exception(EResult::InvalidPreprocessorDirective, loc_beg, "Expected the form: #embedded(lang) ... #end");
+								string lang; bool support;
+								if (*src == '(') ++src; else throw Exception(EResult::InvalidPreprocessorDirective, loc_beg, "Expected the form: #embedded(lang,[support]) ... #end");
+								if (BufferIdentifier(src, emit)) lang = src.pop_str(); else throw Exception(EResult::InvalidPreprocessorDirective, loc_beg, "Expected the form: #embedded(lang,[support]) ... #end");
+								EatLineSpace(src, 0, 0);
+								support = (*src == ',' && (++src).match_adv(L"support"));
+								if (*src == ')') ++src; else throw Exception(EResult::InvalidPreprocessorDirective, loc_beg, "Expected the form: #embedded(lang,[support]) ... #end");
 
-								// Do not include the whitespace or blank line that follows #embedded(lang)
+								// Do not include the whitespace or blank line that follows #embedded(lang,support)
 								EatLineSpace(src, 0, 0);
 								if (pr::str::IsNewLine(*src)) ++src;
 
@@ -503,7 +512,7 @@ namespace pr
 
 								// Buffer the code section up to (but not including) the #end
 								if (!BufferTo(src, emit, L"#end", false))
-									throw Exception(EResult::UnmatchedPreprocessorDirective, loc_beg, "Embedded code section '#embedded(lang)' does not have a closing '#end' marker");
+									throw Exception(EResult::UnmatchedPreprocessorDirective, loc_beg, "Embedded code section '#embedded' does not have a closing '#end' marker");
 
 								// 'code' will contain the result of executing the code, which we want to treat like an expanded macro
 								auto code = src.pop_str();
@@ -511,12 +520,13 @@ namespace pr
 								// Expand any macros in the buffered text
 								RecursiveExpandMacros(code, Macro::Ancestor(nullptr, nullptr), loc_beg);
 
-								// Get the code handler to transform the code into a result
+								// Get the code handler to transform the code into a result.
 								// Note, the code handler is expected to work or throw
 								string result;
 								try
 								{
-									if (!EmbeddedCode->Execute(lang, code, result))
+									auto emb = FindEmbeddedCodeHandler(lang);
+									if (emb == nullptr || !emb->Execute(code, support, result))
 										throw Exception(EResult::EmbeddedCodeNotSupported, loc_beg, pr::FmtS("No support for embedded '%S' code available", lang.c_str()));
 								}
 								catch (Exception const&)
@@ -890,6 +900,27 @@ namespace pr
 				if (*src == 0)
 					throw Exception(EResult::UnmatchedPreprocessorDirective, beg, "Unmatched #if, #ifdef, #ifndef, #else, or #elid");
 			}
+
+			// Get/Create the embedded code handler for 'lang
+			IEmbeddedCode* FindEmbeddedCodeHandler(string const& lang)
+			{
+				// Look for the code handler for 'lang'
+				for (auto& handler : m_emb)
+				{
+					if (!str::EqualI(handler->Lang(), lang.c_str())) continue;
+					return handler.get();
+				}
+
+				// If not found, use the factory to create one
+				auto handler = m_emb_factory ? m_emb_factory(lang.c_str()) : nullptr;
+				if (handler == nullptr)
+					return nullptr;
+
+				// Store the code handler
+				auto ptr = handler.get();
+				m_emb.push_back(std::move(handler));
+				return ptr;
+			}
 		};
 	}
 }
@@ -1172,8 +1203,7 @@ namespace pr
 					;
 
 				Includes inc;
-				EmbeddedLua emb;
-				Preprocessor pp(str_in, &inc, nullptr, &emb);
+				Preprocessor pp(str_in, &inc, nullptr, [](auto){ return make_unique<EmbeddedLua>(); });
 				for (;*pp && *str_out; ++pp, ++str_out)
 				{
 					if (*pp == *str_out) continue;

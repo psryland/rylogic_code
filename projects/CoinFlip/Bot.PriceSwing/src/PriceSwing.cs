@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using CoinFlip;
@@ -15,6 +13,7 @@ using pr.gfx;
 using pr.gui;
 using pr.maths;
 using pr.util;
+using pr.view3d;
 
 namespace Bot.PriceSwing
 {

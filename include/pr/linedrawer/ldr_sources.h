@@ -35,7 +35,7 @@ namespace pr
 		public:
 
 			using filepath_t = pr::string<wchar_t>;
-			using Location = script::Location;
+			using Location = pr::script::Location;
 			using GuidSet = std::unordered_set<Guid, std::hash<Guid>>;
 			using GuidCont = pr::vector<Guid>;
 
@@ -146,21 +146,21 @@ namespace pr
 
 		private:
 
-			SourceCont                 m_srcs;           // The sources of ldr script
-			GizmoCont                  m_gizmos;         // The created ldr gizmos
-			pr::Renderer*              m_rdr;            // Renderer used to create models
-			pr::script::IEmbeddedCode* m_embed;          // Embedded code handler
-			GuidSet                    m_loading;        // File group ids in the process of being reloaded
-			pr::FileWatch              m_watcher;        // The watcher of files
-			std::thread::id            m_main_thread_id; // The main thread id
+			SourceCont                      m_srcs;           // The sources of ldr script
+			GizmoCont                       m_gizmos;         // The created ldr gizmos
+			pr::Renderer*                   m_rdr;            // Renderer used to create models
+			pr::script::EmbeddedCodeFactory m_emb_factory;    // Embedded code handler factory
+			GuidSet                         m_loading;        // File group ids in the process of being reloaded
+			pr::FileWatch                   m_watcher;        // The watcher of files
+			std::thread::id                 m_main_thread_id; // The main thread id
 
 		public:
 
-			ScriptSources(pr::Renderer& rdr, pr::script::IEmbeddedCode* embed)
+			ScriptSources(pr::Renderer& rdr, pr::script::EmbeddedCodeFactory emb_factory)
 				:m_srcs()
 				,m_gizmos()
 				,m_rdr(&rdr)
-				,m_embed(embed)
+				,m_emb_factory(emb_factory)
 				,m_loading()
 				,m_watcher()
 				,m_main_thread_id(std::this_thread::get_id())
@@ -260,24 +260,39 @@ namespace pr
 					Remove(id);
 			}
 
-			// Remove all objects associated with 'context_id'
-			void Remove(Guid const& context_id, EReason reason = EReason::Removal)
+			// Remove all objects associated with 'context_ids'
+			void Remove(Guid const* context_ids, int include_count, int exclude_count, EReason reason = EReason::Removal)
 			{
-				// Copy the id, because removing the source will delete the memory that 'context_id' is in
 				assert(std::this_thread::get_id() == m_main_thread_id);
-				auto id = context_id;
 
-				// Notify of objects about to be deleted
-				OnSourceRemoved(*this, SourceRemovedEventArgs(id, reason));
+				// Build the set of ids to remove
+				GuidCont removed;
+				for (auto& src : m_srcs)
+				{
+					auto id = src.second.m_context_id;
+					if (!IncludeFilter(id, context_ids, include_count, exclude_count)) continue;
+					removed.push_back(id);
+				}
 
-				// Delete the source and its associated objects
-				m_srcs.erase(id);
+				for (auto& id : removed)
+				{
+					// Notify of objects about to be deleted
+					OnSourceRemoved(*this, SourceRemovedEventArgs(id, reason));
 
-				// Delete any associated files and watches
-				m_watcher.RemoveAll(id);
+					// Delete any associated files and watches
+					m_watcher.RemoveAll(id);
+
+					// Delete the source and its associated objects
+					m_srcs.erase(id);
+				}
 
 				// Notify of the object container change
-				OnStoreChanged(*this, StoreChangedEventArgs(&id, 1, ParseResult(), 0, reason));
+				if (!removed.empty())
+					OnStoreChanged(*this, StoreChangedEventArgs(removed.data(), int(removed.size()), ParseResult(), 0, reason));
+			}
+			void Remove(Guid const& context_id, EReason reason = EReason::Removal)
+			{
+				Remove(&context_id, 1, 0, reason);
 			}
 
 			// Remove a file source
@@ -453,14 +468,14 @@ namespace pr
 					{
 						// P3D binary model file
 						Buffer<> src(ESrcType::Buffered, pr::FmtS(L"*Model {\"%s\"}", file.m_filepath.c_str()));
-						Reader reader(src, false, &file.m_includes, nullptr, m_embed);
+						Reader reader(src, false, &file.m_includes, nullptr, m_emb_factory);
 						Parse(*m_rdr, reader, out, file.m_context_id, pr::StaticCallBack(AddFileProgressCB, this));
 					}
 					else if (str::EqualI(extn, "csv"))
 					{
 						// CSV data, create a chart to graph the data
 						Buffer<> src(ESrcType::Buffered, pr::FmtS(L"*Chart {3 #include \"%s\"}", file.m_filepath.c_str()));
-						Reader reader(src, false, &file.m_includes, nullptr, m_embed);
+						Reader reader(src, false, &file.m_includes, nullptr, m_emb_factory);
 						Parse(*m_rdr, reader, out, file.m_context_id, pr::StaticCallBack(AddFileProgressCB, this));
 					}
 					else
@@ -473,7 +488,7 @@ namespace pr
 						file.m_includes.FileOpened = file_opened;
 
 						// Parse the script
-						Reader reader(src, false, &file.m_includes, nullptr, m_embed);
+						Reader reader(src, false, &file.m_includes, nullptr, m_emb_factory);
 						Parse(*m_rdr, reader, out, file.m_context_id, pr::StaticCallBack(AddFileProgressCB, this));
 					}
 				}
@@ -550,13 +565,13 @@ namespace pr
 						inc.AddSearchPath(filesys::GetDirectory<script::string>(ldr_script));
 
 						FileSrc src(ldr_script);
-						Reader reader(src, false, &inc, nullptr, m_embed);
+						Reader reader(src, false, &inc, nullptr, m_emb_factory);
 						ldr::Parse(*m_rdr, reader, out, context_id);
 					}
 					else // string
 					{
 						PtrW src(ldr_script);
-						Reader reader(src, false, &inc, nullptr, m_embed);
+						Reader reader(src, false, &inc, nullptr, m_emb_factory);
 						ldr::Parse(*m_rdr, reader, out, context_id);
 					}
 				}

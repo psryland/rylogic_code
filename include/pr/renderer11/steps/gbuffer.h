@@ -28,7 +28,8 @@ namespace pr
 			D3DPtr<ID3D11DepthStencilView>   m_main_dsv;
 			D3DPtr<ID3D11Buffer>             m_cbuf_camera;  // Per-frame camera constants
 			D3DPtr<ID3D11Buffer>             m_cbuf_nugget;  // Per-nugget constants
-			ShaderSet                        m_sset;
+			ShaderPtr                        m_vs;
+			ShaderPtr                        m_ps;
 			pr::EvtAutoSub                   m_eh_resize;    // RT resize
 
 			explicit GBuffer(Scene& scene);
@@ -47,7 +48,10 @@ namespace pr
 			void BindRT(bool bind);
 
 			// Add model nuggets to the draw list for this render step
-			void AddNuggets(BaseInstance const& inst, TNuggetChain& nuggets) override;
+			void AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets) override;
+
+			// Update the provided shader set appropriate for this render step
+			void ConfigShaders(ShaderSet1& ss, EPrim topo) const override;
 
 			// Perform the render step
 			void ExecuteInternal(StateStack& ss) override;

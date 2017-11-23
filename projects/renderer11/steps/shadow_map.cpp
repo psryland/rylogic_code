@@ -89,7 +89,7 @@ namespace pr
 			pr::Throw(device->CreateRenderTargetView(m_tex.get(), &rtvdesc, &m_rtv.m_ptr));
 
 			// Get the shader res view
-			ShaderResViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
+			ShaderResourceViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
 			srvdesc.Texture2D.MostDetailedMip = 0;
 			srvdesc.Texture2D.MipLevels = 1;
 			pr::Throw(device->CreateShaderResourceView(m_tex.get(), &srvdesc, &m_srv.m_ptr));
@@ -124,7 +124,7 @@ namespace pr
 		}
 
 		// Add model nuggets to the draw list for this render step
-		void ShadowMap::AddNuggets(BaseInstance const& inst, TNuggetChain& nuggets)
+		void ShadowMap::AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets)
 		{
 			Lock lock(*this);
 			auto& drawlist = lock.drawlist();
@@ -132,29 +132,29 @@ namespace pr
 			// Add a drawlist element for each nugget in the instance's model
 			drawlist.reserve(drawlist.size() + nuggets.size());
 			for (auto& nug : nuggets)
-			{
-				// Ensure the nugget contains the required vs/gs/ps shaders
-				ShaderSet ss = {m_vs, nullptr, m_ps, nullptr};
-				switch (nug.m_topo)
-				{
-				case EPrim::LineList:
-				case EPrim::LineStrip:
-					ss.m_gs = m_gs_line;
-					break;
-				case EPrim::TriList:
-				case EPrim::TriStrip:
-					ss.m_gs = m_gs_face;
-					break;
-				case EPrim::PointList:
-					continue; // Ignore point lists.. can a point cast a shadow anyway?
-				default:
-					throw std::exception("Unsupported primitive type");
-				}
-
-				nug.AddToDrawlist(drawlist, inst, nullptr, Id, ss);
-			}
+				nug.AddToDrawlist(drawlist, inst, nullptr, Id);
 
 			m_sort_needed = true;
+		}
+
+		// Update the provided shader set appropriate for this render step
+		void ShadowMap::ConfigShaders(ShaderSet1& ss, EPrim topo) const
+		{
+			switch (topo)
+			{
+			case EPrim::PointList:
+				break; // Ignore point lists.. can a point cast a shadow anyway?
+			case EPrim::LineList:
+			case EPrim::LineStrip:
+				ss.m_gs = m_gs_line.get();
+				break;
+			case EPrim::TriList:
+			case EPrim::TriStrip:
+				ss.m_gs = m_gs_face.get();
+				break;
+			default:
+				throw std::exception("Unsupported primitive type");
+			}
 		}
 
 		// Perform the render step

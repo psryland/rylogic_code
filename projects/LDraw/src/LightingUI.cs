@@ -5,6 +5,7 @@ using System.Xml.Linq;
 using pr.gfx;
 using pr.gui;
 using pr.maths;
+using pr.view3d;
 
 namespace LDraw
 {

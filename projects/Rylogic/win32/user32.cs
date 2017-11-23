@@ -40,6 +40,7 @@ namespace pr.win32
 		[DllImport("user32.dll", SetLastError = true, CharSet=CharSet.Unicode)]                               public static extern IntPtr DefWindowProc(HWND hWnd, int Msg, WPARAM wParam, LPARAM lParam);
 		[DllImport("user32.dll", CharSet=CharSet.Auto)]                                                       public static extern bool   DestroyIcon(IntPtr hicon);
 		[DllImport("user32.dll", CharSet=CharSet.Unicode)]                                                    public static extern bool   DestroyWindow(HWND hwnd);
+		[DllImport("user32.dll")]                                                                             public static extern HWND   GetAncestor(HWND hwnd, uint flags);
 		[DllImport("user32.dll")]                                                                             public static extern short  GetAsyncKeyState(Keys vKey);
 		[DllImport("user32.dll", SetLastError = true, CharSet=CharSet.Unicode)]                               public static extern bool   GetCaretPos(ref POINT point);
 		[DllImport("user32.dll")]                                                                             public static extern bool   GetClientRect(HWND hwnd, out RECT rect);
@@ -85,6 +86,7 @@ namespace pr.win32
 		[DllImport("user32.dll", EntryPoint="SendMessage", SetLastError=true)]                                public static extern IntPtr SendMessage(HWND hwnd, uint msg, IntPtr wparam, ref POINT lparam);
 		[DllImport("user32.dll", EntryPoint="SendMessage", SetLastError=true)]                                public static extern IntPtr SendMessage(HWND hwnd, uint msg, IntPtr wparam, ref RECT lparam);
 		[DllImport("user32.dll", EntryPoint="SendMessage", SetLastError=true)]                                public static extern IntPtr SendMessage(HWND hwnd, uint msg, IntPtr wparam, out COMBOBOXINFO lparam);
+		[DllImport("user32.dll")]                                                                             public static extern HWND   SetActiveWindow(HWND hwnd);
 		[DllImport("user32.dll")]                                                                             public static extern IntPtr SetCursor(IntPtr cursor);
 		[DllImport("user32.dll")]                                                                             public static extern HWND   SetFocus(HWND hwnd);
 		[DllImport("user32.dll")]                                                                             public static extern bool   SetForegroundWindow(HWND hwnd);

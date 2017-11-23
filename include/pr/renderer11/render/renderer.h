@@ -55,14 +55,14 @@ namespace pr
 		// Renderer state variables
 		struct RdrState
 		{
-			RdrSettings                 m_settings;
-			D3D_FEATURE_LEVEL           m_feature_level;
-			D3DPtr<ID3D11Device>        m_d3d_device;
-			D3DPtr<ID3D11DeviceContext> m_immediate;
-			D3DPtr<ID2D1Factory1>       m_d2dfactory;
-			D3DPtr<IDWriteFactory>      m_dwrite;
-			D3DPtr<ID2D1Device>         m_d2d_device;
-			pr::v2                      m_dpi_scale;
+			RdrSettings                  m_settings;
+			D3D_FEATURE_LEVEL            m_feature_level;
+			D3DPtr<ID3D11Device>         m_d3d_device;
+			D3DPtr<ID3D11DeviceContext1> m_immediate;
+			D3DPtr<ID2D1Factory1>        m_d2dfactory;
+			D3DPtr<IDWriteFactory>       m_dwrite;
+			D3DPtr<ID2D1Device>          m_d2d_device;
+			pr::v2                       m_dpi_scale;
 
 			RdrState(RdrSettings const& settings);
 			~RdrState();
@@ -107,13 +107,13 @@ namespace pr
 			}
 
 			// Return the immediate device context
-			ID3D11DeviceContext* ImmediateDC() const
+			ID3D11DeviceContext1* ImmediateDC() const
 			{
 				return m_rdr.m_immediate.get();
 			}
 
 			// Create a new deferred device context
-			ID3D11DeviceContext* DeferredDC() const
+			ID3D11DeviceContext1* DeferredDC() const
 			{
 				throw std::exception("not supported");
 			}

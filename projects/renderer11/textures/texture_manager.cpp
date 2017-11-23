@@ -312,7 +312,7 @@ namespace pr
 				{
 					pr::uint const data[] = {0};
 					Image src(1, 1, data, DXGI_FORMAT_R8G8B8A8_UNORM);
-					TextureDesc tdesc(src, 1, D3D11_USAGE_IMMUTABLE);
+					TextureDesc tdesc(src, 1, EUsage::Immutable);
 					tex = CreateTexture2D(RdrId(EStockTexture::Black), src, tdesc, SamplerDesc::LinearClamp(), false, "#black");
 					break;
 				}
@@ -320,7 +320,7 @@ namespace pr
 				{
 					pr::uint const data[] = {0xFFFFFFFF};
 					Image src(1, 1, data, DXGI_FORMAT_R8G8B8A8_UNORM);
-					TextureDesc tdesc(src, 1, D3D11_USAGE_IMMUTABLE);
+					TextureDesc tdesc(src, 1, EUsage::Immutable);
 					tex = CreateTexture2D(RdrId(EStockTexture::White), src, tdesc, SamplerDesc::LinearClamp(), false, "#white");
 					break;
 				}
@@ -328,7 +328,7 @@ namespace pr
 				{
 					pr::uint const data[] = {0xFF808080};
 					Image src(1, 1, data, DXGI_FORMAT_R8G8B8A8_UNORM);
-					TextureDesc tdesc(src, 1, D3D11_USAGE_IMMUTABLE);
+					TextureDesc tdesc(src, 1, EUsage::Immutable);
 					tex = CreateTexture2D(RdrId(EStockTexture::Gray), src, tdesc, SamplerDesc::LinearClamp(), false, "#gray");
 					break;
 				}
@@ -350,7 +350,7 @@ namespace pr
 						#undef O
 					};
 					Image src(8, 8, data, DXGI_FORMAT_R8G8B8A8_UNORM);
-					TextureDesc tdesc(src, 0, D3D11_USAGE_IMMUTABLE);
+					TextureDesc tdesc(src, 0, EUsage::Immutable);
 					auto sam = SamplerDesc::LinearWrap();
 					sam.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
 					tex = CreateTexture2D(RdrId(EStockTexture::Checker), src, tdesc, sam, false, "#checker");
@@ -374,7 +374,7 @@ namespace pr
 						#undef O
 					};
 					Image src(8, 8, data, DXGI_FORMAT_R8G8B8A8_UNORM);
-					TextureDesc tdesc(src, 0, D3D11_USAGE_IMMUTABLE);
+					TextureDesc tdesc(src, 0, EUsage::Immutable);
 					auto sam = SamplerDesc::LinearWrap();
 					sam.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
 					tex = CreateTexture2D(RdrId(EStockTexture::Checker2), src, tdesc, sam, false, "#checker2");
@@ -398,7 +398,7 @@ namespace pr
 						#undef O
 					};
 					Image src(8, 8, data, DXGI_FORMAT_R8G8B8A8_UNORM);
-					TextureDesc tdesc(src, 0, D3D11_USAGE_IMMUTABLE);
+					TextureDesc tdesc(src, 0, EUsage::Immutable);
 					auto sam = SamplerDesc::LinearWrap();
 					sam.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
 					tex = CreateTexture2D(RdrId(EStockTexture::Checker3), src, tdesc, sam, false, "#checker3");
@@ -420,7 +420,7 @@ namespace pr
 					}
 
 					Image src(sz, sz, data.data(), DXGI_FORMAT_R8G8B8A8_UNORM);
-					TextureDesc tdesc(src, 0, D3D11_USAGE_IMMUTABLE);
+					TextureDesc tdesc(src, 0, EUsage::Immutable);
 					auto sam = SamplerDesc::LinearClamp();
 					tex = CreateTexture2D(RdrId(EStockTexture::WhiteSpot), src, tdesc, sam, true, "#whitespot");
 					break;

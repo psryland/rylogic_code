@@ -202,7 +202,7 @@ namespace pr.util
 				System.Diagnostics.Debug.Assert(Path_.IsValidFilepath(filepath, false));
 				m_lock = new object();
 
-				// Ensure the directory exists (todo: should probably go in an official logs folder)
+				// Ensure the directory exists (maybe this should go in an official logs folder?)
 				var dir = Path_.Directory(filepath);
 				if (!Path_.DirExists(dir))
 					Directory.CreateDirectory(dir);

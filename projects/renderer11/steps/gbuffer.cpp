@@ -28,12 +28,12 @@ namespace pr
 			,m_main_dsv()
 			,m_cbuf_camera(m_shdr_mgr->GetCBuf<hlsl::ds::CBufCamera>("ds::CBufCamera"))
 			,m_cbuf_nugget(m_shdr_mgr->GetCBuf<hlsl::ds::CBufModel >("ds::CBufModel"))
-			,m_sset()
+			,m_vs(m_shdr_mgr->FindShader(RdrId(EStockShader::GBufferVS)))
+			,m_ps(m_shdr_mgr->FindShader(RdrId(EStockShader::GBufferPS)))
 		{
-			m_sset.m_vs = m_shdr_mgr->FindShader(RdrId(EStockShader::GBufferVS));
-			m_sset.m_ps = m_shdr_mgr->FindShader(RdrId(EStockShader::GBufferPS));
-
 			InitRT(true);
+
+			// Watch for renderer target size changes
 			m_eh_resize = m_scene->m_wnd->m_rdr->RenderTargetSizeChanged += [this](Window& wnd, RenderTargetSizeChangedEventArgs const& args)
 			{
 				// Recreate the g-buffer on resize
@@ -96,7 +96,7 @@ namespace pr
 				pr::Throw(device->CreateRenderTargetView(m_tex[i].m_ptr, &rtvdesc, &m_rtv[i].m_ptr));
 
 				// Get the shader res view
-				ShaderResViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
+				ShaderResourceViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
 				srvdesc.Texture2D.MostDetailedMip = 0;
 				srvdesc.Texture2D.MipLevels = 1;
 				pr::Throw(device->CreateShaderResourceView(m_tex[i].m_ptr, &srvdesc, &m_srv[i].m_ptr));
@@ -140,7 +140,7 @@ namespace pr
 		}
 
 		// Add model nuggets to the draw list for this render step
-		void GBuffer::AddNuggets(BaseInstance const& inst, TNuggetChain& nuggets)
+		void GBuffer::AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets)
 		{
 			// See if the instance has a sort key override
 			SKOverride const* sko = inst.find<SKOverride>(EInstComp::SortkeyOverride);
@@ -152,9 +152,18 @@ namespace pr
 			// correspond to the render nuggets of the renderable
 			drawlist.reserve(drawlist.size() + nuggets.size());
 			for (auto& nug : nuggets)
-				nug.AddToDrawlist(drawlist, inst, sko, Id, m_sset);
+				nug.AddToDrawlist(drawlist, inst, sko, Id);
 
 			m_sort_needed = true;
+		}
+
+		// Update the provided shader set appropriate for this render step
+		void GBuffer::ConfigShaders(ShaderSet1& ss, EPrim) const
+		{
+			assert(ss.m_vs == nullptr);
+			assert(ss.m_ps == nullptr);
+			ss.m_vs = m_vs.get();
+			ss.m_ps = m_ps.get();
 		}
 
 		// Perform the render step

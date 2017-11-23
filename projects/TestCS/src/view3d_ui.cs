@@ -2,11 +2,10 @@
 using System.Drawing;
 using System.Windows.Forms;
 using pr.extn;
-using pr.gfx;
-using pr.gui;
 using pr.maths;
 using pr.scintilla;
 using pr.util;
+using pr.view3d;
 
 namespace TestCS
 {

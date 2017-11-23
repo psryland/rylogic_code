@@ -664,6 +664,12 @@ namespace pr.win32
 		public const int TM_MULTICODEPAGE   = 32; // default behaviour
 		#endregion
 
+		#region GetAncestor GA_
+		public const int GA_PARENT    = 1;
+		public const int GA_ROOT      = 2;
+		public const int GA_ROOTOWNER = 3;
+		#endregion
+
 		#region Common Control Messages CCM_
 		public const uint CCM_FIRST               = 0x2000;    // Common control shared messages
 		public const uint CCM_LAST                = (CCM_FIRST + 0x200);

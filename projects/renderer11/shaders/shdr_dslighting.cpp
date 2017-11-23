@@ -23,9 +23,9 @@ namespace pr
 		#include PR_RDR_SHADER_COMPILED_DIR(dslighting_ps.h)
 
 		// Deferred lighting vertex shader
-		struct DSLightingVS :Shader<ID3D11VertexShader, DSLightingVS>
+		struct DSLightingVS :ShaderT<ID3D11VertexShader, DSLightingVS>
 		{
-			using base = Shader<ID3D11VertexShader, DSLightingVS>;
+			using base = ShaderT<ID3D11VertexShader, DSLightingVS>;
 			DSLightingVS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11VertexShader> const& shdr)
 				:base(mgr, id, sort_id, name, shdr)
 			{
@@ -34,9 +34,9 @@ namespace pr
 		};
 
 		// Deferred lighting pixel shader
-		struct DSLightingPS :Shader<ID3D11PixelShader, DSLightingPS>
+		struct DSLightingPS :ShaderT<ID3D11PixelShader, DSLightingPS>
 		{
-			using base = Shader<ID3D11PixelShader, DSLightingPS>;
+			using base = ShaderT<ID3D11PixelShader, DSLightingPS>;
 			D3DPtr<ID3D11SamplerState> m_point_sampler; // A point sampler used to sample the GBuffer
 
 			DSLightingPS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11PixelShader> const& shdr)

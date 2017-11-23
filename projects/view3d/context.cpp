@@ -22,7 +22,8 @@ namespace view3d
 		,m_compatible(TestSystemCompatibility())
 		,m_rdr(RdrSettings(instance, bgra_compatible))
 		,m_wnd_cont()
-		,m_sources(m_rdr, This())
+		,m_sources(m_rdr, [this](auto lang){ return CreateHandler(lang); })
+		,m_emb()
 		,m_mutex()
 	{
 		PR_ASSERT(PR_DBG, pr::meta::is_aligned_to<16>(this), "dll data not aligned");
@@ -78,9 +79,6 @@ namespace view3d
 		{
 			ReportError(args.m_msg.c_str());
 		};
-
-		// Create code handlers
-		EmbeddedCodeHandlers.push_back(std::make_unique<EmbeddedLua>());
 	}
 
 	// Report an error to the global error handler
@@ -341,30 +339,41 @@ namespace view3d
 	}
 
 	// Delete all objects with matching ids
-	void Context::DeleteAllObjectsById(pr::Guid const* context_ids, int count, bool all_except)
+	void Context::DeleteAllObjectsById(pr::Guid const* context_ids, int include_count, int exclude_count)
 	{
 		// Remove objects from any windows they might be assigned to
 		for (auto& wnd : m_wnd_cont)
-			wnd->RemoveObjectsById(context_ids, count, all_except, false);
+			wnd->RemoveObjectsById(context_ids, include_count, exclude_count, false);
 
-		if (all_except)
+		// Remove sources that match the given set of context ids to delete
+		m_sources.Remove(context_ids, include_count, exclude_count);
+	}
+
+	// Delete all objects not displayed in any windows
+	void Context::DeleteUnused(GUID const* context_ids, int include_count, int exclude_count)
+	{
+		// Build a set of context ids, included in 'context_ids', and not used in any windows
+		GuidSet unused;
+
+		// Initialise 'unused' with all context ids (filtered by 'context_ids')
+		for (auto& src : m_sources.Sources())
 		{
-			// Build a collection of the guids to drop
-			GuidSet ids(context_ids, context_ids+count);
-			for (auto& s : m_sources.Sources())
-			{
-				if (ids.count(s.second.m_context_id) != 0)
-					ids.erase(s.second.m_context_id);
-				else
-					ids.insert(s.second.m_context_id);
-			}
-			for (auto& id : ids)
-				m_sources.Remove(id);
+			if (!pr::IncludeFilter(src.first, context_ids, include_count, exclude_count)) continue;
+			unused.insert(src.first);
 		}
-		else
+
+		// Remove those that are used in the windows
+		for (auto& wnd :m_wnd_cont)
 		{
-			for (auto& id : std::initializer_list<pr::Guid>(context_ids, context_ids+count))
-				m_sources.Remove(id);
+			for (auto& id : wnd->m_guids)
+				unused.erase(id);
+		}
+
+		// Remove unused sources
+		if (!unused.empty())
+		{
+			GuidCont ids(std::begin(unused), std::end(unused));
+			m_sources.Remove(ids.data(), int(ids.size()), 0);
 		}
 	}
 
@@ -510,20 +519,99 @@ namespace view3d
 		return GuidDemoSceneObjects;
 	}
 
-	// Reset the embedded code handlers
-	void Context::Reset()
+	// Create an embedded code handler for the given language
+	std::unique_ptr<IEmbeddedCode> Context::CreateHandler(wchar_t const* lang)
 	{
-		for (auto& handler : EmbeddedCodeHandlers)
-			handler->Reset();
+		// Embedded code handler that buffers support code and forwards to a provided code handler function
+		struct EmbeddedCode :IEmbeddedCode
+		{
+			std::wstring m_lang;
+			std::wstring m_code;
+			std::wstring m_support;
+			EmbeddedCodeHandlerCB m_handler;
+			
+			EmbeddedCode(wchar_t const* lang, EmbeddedCodeHandlerCB handler)
+				:m_lang(lang)
+				,m_code()
+				,m_support()
+				,m_handler(handler)
+			{}
+
+			// The language code that this handler is for
+			wchar_t const* Lang() const override
+			{
+				return m_lang.c_str();
+			}
+
+			// A handler function for executing embedded code
+			// 'code' is the code source
+			// 'support' is true if the code is support code
+			// 'result' is the output of the code after execution, converted to a string.
+			// Return true, if the code was executed successfully, false if not handled.
+			// If the code can be handled but has errors, throw 'std::exception's.
+			bool Execute(string const& code, bool support, string& result) override
+			{
+				if (support)
+				{
+					// Accumulate support code
+					m_support.append(code);
+				}
+				else
+				{
+					// Return false if the handler did not handle the given code
+					pr::bstr_t res, err;
+					if (m_handler(code.c_str(), m_support.c_str(), res, err) == 0)
+						return false;
+
+					// If errors are reported, raise them as an exception
+					if (err != nullptr)
+						throw std::exception(pr::Narrow(err.wstr()).c_str());
+
+					// Add the string result to 'result'
+					if (res != nullptr)
+						result.assign(res, res.size());
+				}
+				return true;
+			}
+		};
+
+		auto hash = pr::hash::HashICT(lang);
+
+		// Lua code
+		if (hash == pr::hash::HashICT(L"Lua"))
+			return std::make_unique<EmbeddedLua>();
+
+		// Look for a code handler for this language
+		for (auto& emb : m_emb)
+		{
+			if (emb.m_lang != hash) continue;
+			return std::make_unique<EmbeddedCode>(lang, emb.m_cb);
+		}
+
+		// No code handler found, unsupported
+		throw std::exception(pr::FmtS("Unsupported embedded code language: %S", lang));
 	}
 
-	// Handle embedded code within ldr script
-	bool Context::Execute(string const& lang, string const& code, string& result)
+	// Add an embedded code handler for 'lang'
+	void Context::SetEmbeddedCodeHandler(wchar_t const* lang, View3D_EmbeddedCodeHandlerCB embedded_code_cb, void* ctx, bool add)
 	{
-		for (auto& handler : EmbeddedCodeHandlers)
-			if (handler->Execute(lang, code, result))
-				return true;
+		auto hash = pr::hash::HashICT(lang);
+		if (add)
+		{
+			auto cb = pr::StaticCallBack(embedded_code_cb, ctx);
 
-		return false;
+			// Look for and replace the execution function 
+			for (auto& emb : m_emb)
+			{
+				if (emb.m_lang != hash) continue;
+				emb.m_cb = cb;
+				return;
+			}
+			m_emb.push_back(EmbCodeCB{hash, cb});
+		}
+		else
+		{
+			pr::erase_if(m_emb, [=](auto& emb){ return emb.m_lang == hash; });
+		}
 	}
 }

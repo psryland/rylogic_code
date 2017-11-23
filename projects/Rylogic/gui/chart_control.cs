@@ -21,6 +21,7 @@ using pr.gfx;
 using pr.ldr;
 using pr.maths;
 using pr.util;
+using pr.view3d;
 using pr.win32;
 using Matrix = System.Drawing.Drawing2D.Matrix;
 
@@ -92,7 +93,6 @@ namespace pr.gui
 		}
 		protected override void Dispose(bool disposing)
 		{
-			ShowMeasureToolUI = false;
 			MouseOperations = null;
 			Tools = null;
 			Range = null;
@@ -945,7 +945,7 @@ namespace pr.gui
 					};
 
 					m_owner = owner;
-					m_view3d = new View3d();
+					m_view3d = View3d.Create();
 					m_window = new View3d.Window(m_view3d, Handle, opts);
 					m_window.LightProperties = View3d.LightInfo.Directional(-v4.ZAxis, Colour32.Zero, Colour32.Gray, Colour32.Zero, 0f, 0f);
 					m_window.FocusPointVisible = false;
@@ -2440,7 +2440,7 @@ namespace pr.gui
 					// Translate the camera along a ray through 'point'
 					var loc = Control_.MapPoint(this, Scene, e.Location);
 					var along_ray = Options.PerpendicularZTranslation == (ModifierKeys == Keys.Alt);
-					Scene.Window.MouseNavigateZ(loc, e.Delta, along_ray);
+					Scene.Window.MouseNavigateZ(loc, e.Button, e.Delta, along_ray);
 					Invalidate();
 				}
 			}
@@ -2606,7 +2606,6 @@ namespace pr.gui
 			switch (e.KeyCode)
 			{
 			case Keys.Escape:
-				#region
 				{
 					if (AllowSelection)
 					{
@@ -2615,9 +2614,7 @@ namespace pr.gui
 					}
 					break;
 				}
-				#endregion
 			case Keys.Delete:
-				#region
 				{
 					if (AllowEditing)
 					{
@@ -2642,24 +2639,18 @@ namespace pr.gui
 					}
 					break;
 				}
-				#endregion
 			case Keys.F5:
-				#region
 				{
-					//InvalidateAllElements();
+					View3d.ReloadScriptSources();
 					Invalidate();
 					break;
 				}
-				#endregion
 			case Keys.F7:
-				#region
 				{
 					AutoRange();
 					break;
 				}
-				#endregion
 			case Keys.A:
-				#region
 				{
 					if ((e.Modifiers & Keys.Control) != 0)
 					{
@@ -2670,7 +2661,6 @@ namespace pr.gui
 					}
 					break;
 				}
-				#endregion
 			}
 		}
 
@@ -2827,8 +2817,8 @@ namespace pr.gui
 			/// <summary>True if the op was aborted</summary>
 			public bool Cancelled { get; protected set; }
 
-			/// <summary>True if the mouse down event should be treated as a click (so far)</summary>
-			protected bool IsClick(Point location)
+			/// <summary>True if the distance between 'location' and mouse down should be treated as a click</summary>
+			public bool IsClick(Point location)
 			{
 				if (!m_is_click) return false;
 				var grab = v2.From(m_grab_client);
@@ -2882,7 +2872,7 @@ namespace pr.gui
 
 				// For 3D scenes, left mouse rotates if mouse down is within the chart bounds
 				if (m_chart.Options.NavigationMode == ENavMode.Scene3D && m_hit_axis == EAxis.None)
-					m_chart.Scene.Window.MouseNavigate(e.Location, View3d.ENavOp.Rotate, true);
+					m_chart.Scene.Window.MouseNavigate(e.Location, e.Button, View3d.ENavOp.Rotate, true);
 
 				// Prevent events while dragging the elements around
 				m_suspend_scope = m_chart.SuspendChartChanged(raise_on_resume:true);
@@ -2924,7 +2914,7 @@ namespace pr.gui
 				else if (m_chart.Options.NavigationMode == ENavMode.Scene3D)
 				{
 					// MouseButtons.Right provides rotation, which we want for left mouse button.
-					m_chart.Scene.Window.MouseNavigate(e.Location, View3d.ENavOp.Rotate, false);
+					m_chart.Scene.Window.MouseNavigate(e.Location, e.Button, View3d.ENavOp.Rotate, false);
 				}
 				m_chart.Invalidate();
 				m_chart.Update();
@@ -2981,7 +2971,7 @@ namespace pr.gui
 					else if (m_chart.Options.NavigationMode == ENavMode.Scene3D)
 					{
 						// For 3D scenes, left mouse rotates
-						m_chart.Scene.Window.MouseNavigate(e.Location, View3d.ENavOp.Rotate, true);
+						m_chart.Scene.Window.MouseNavigate(e.Location, e.Button, View3d.ENavOp.Rotate, true);
 					}
 				}
 
@@ -3106,7 +3096,7 @@ namespace pr.gui
 
 				// Right mouse translates for 2D and 3D scene
 				var loc = Control_.MapPoint(m_chart, m_chart.Scene, e.Location);
-				m_chart.Scene.Window.MouseNavigate(loc, View3d.ENavOp.Translate, true); 
+				m_chart.Scene.Window.MouseNavigate(loc, e.Button, View3d.ENavOp.Translate, true); 
 			}
 			public override void MouseMove(MouseEventArgs e)
 			{
@@ -3123,7 +3113,7 @@ namespace pr.gui
 				if (!m_drag_axis_allow.HasFlag(EAxis.XAxis) || m_chart.XAxis.LockRange) drop_loc.X = grab_loc.X;
 				if (!m_drag_axis_allow.HasFlag(EAxis.YAxis) || m_chart.YAxis.LockRange) drop_loc.Y = grab_loc.Y;
 
-				m_chart.Scene.Window.MouseNavigate(drop_loc, View3d.ENavOp.Translate, false);
+				m_chart.Scene.Window.MouseNavigate(drop_loc, e.Button, View3d.ENavOp.Translate, false);
 				m_chart.SetRangeFromCamera();
 				m_chart.Invalidate();
 				m_chart.Update();
@@ -3161,7 +3151,7 @@ namespace pr.gui
 					if (!m_drag_axis_allow.HasFlag(EAxis.XAxis) || m_chart.XAxis.LockRange) drop_loc.X = grab_loc.X;
 					if (!m_drag_axis_allow.HasFlag(EAxis.YAxis) || m_chart.YAxis.LockRange) drop_loc.Y = grab_loc.Y;
 
-					m_chart.Scene.Window.MouseNavigate(drop_loc, View3d.ENavOp.None, true);
+					m_chart.Scene.Window.MouseNavigate(drop_loc, e.Button, View3d.ENavOp.None, true);
 					m_chart.SetRangeFromCamera();
 					m_chart.Invalidate();
 				}
@@ -4198,123 +4188,6 @@ namespace pr.gui
 
 		#region Tools
 
-		/// <summary>Enable/Disable the measure tool UI</summary>
-		public bool ShowMeasureToolUI
-		{
-			get { return m_measure_ui != null; }
-			set
-			{
-				if (ShowMeasureToolUI == value) return;
-				Util.Dispose(ref m_measure_ui);
-				m_measure_ui = value ? new MeasureToolUI(this) : null;
-				if (m_measure_ui != null)
-					m_measure_ui.Show(this);
-			}
-		}
-		private MeasureToolUI m_measure_ui;
-		private class MeasureToolUI :ToolForm
-		{
-			private View3d.HitTestRay m_ray;
-			private View3d.HitTestResult m_result;
-
-			public MeasureToolUI(ChartControl chart)
-				:base(chart.TopLevelControl, EPin.TopLeft)
-			{
-				FormBorderStyle = FormBorderStyle.SizableToolWindow;
-				ShowInTaskbar = false;
-				HideOnClose = false;
-				Text = "Measure";
-				Chart = chart;
-				HotSpot = null;//new View3d.Object("*Point hotspot FF00FFFF { 0 0 0 *Width {10} }", false, ChartTools.Id);
-				SnapDistance = 0.02f;
-				Flags = View3d.EHitTestFlags.SnapToVerts|View3d.EHitTestFlags.SnapToEdges|View3d.EHitTestFlags.SnapToFaces;
-				m_ray = new View3d.HitTestRay();
-				m_result = new View3d.HitTestResult();
-			}
-			protected override void Dispose(bool disposing)
-			{
-				HotSpot = null;
-				Chart = null;
-				base.Dispose(disposing);
-			}
-			protected override void OnVisibleChanged(EventArgs e)
-			{
-				base.OnVisibleChanged(e);
-			}
-
-			/// <summary>The owner chart</summary>
-			private ChartControl Chart
-			{
-				get { return m_chart; }
-				set
-				{
-					if (m_chart == value) return;
-					if (m_chart != null)
-					{
-						m_chart.MouseDown -= HandleMouseDown;
-						m_chart.MouseMove -= HandleMouseMove;
-						m_chart.MouseUp   -= HandleMouseUp;
-						m_chart.ChartRendering -= HandleRendering;
-					}
-					m_chart = value;
-					if (m_chart != null)
-					{
-						m_chart.ChartRendering += HandleRendering;
-						m_chart.MouseDown += HandleMouseDown;
-						m_chart.MouseMove += HandleMouseMove;
-						m_chart.MouseUp   += HandleMouseUp;
-					}
-
-					// Handlers
-					void HandleMouseDown(object sender, MouseEventArgs e)
-					{
-						if (!Visible) return;
-					}
-					void HandleMouseMove(object sender, MouseEventArgs e)
-					{
-						if (!Visible) return;
-						m_chart.Camera.SSPointToWSRay(e.Location, out m_ray.m_ws_origin, out m_ray.m_ws_direction);
-						m_result = m_chart.Window.HitTest(m_ray, SnapDistance, Flags);
-						m_chart.Invalidate();
-					}
-					void HandleMouseUp(object sender, MouseEventArgs e)
-					{
-						if (!Visible) return;
-					}
-					void HandleRendering(object sender, ChartRenderingEventArgs e)
-					{
-						if (!Visible || HotSpot == null) return;
-						if (m_result.HitObject != null)
-						{
-							HotSpot.O2P = m4x4.Translation(m_result.m_ws_intercept);
-					//		e.AddToScene(HotSpot);
-						}
-						else
-						{
-					//		e.RemoveFromScene(HotSpot);
-						}
-					}
-				}
-			}
-			private ChartControl m_chart;
-
-			/// <summary>Hotspot graphics</summary>
-			private View3d.Object HotSpot
-			{
-				get { return m_hot_spot; }
-				set
-				{
-					if (m_hot_spot == value) return;
-					Util.Dispose(ref m_hot_spot);
-					m_hot_spot = value;
-				}
-			}
-			private View3d.Object m_hot_spot;
-
-			private float SnapDistance { get; set; }
-			private View3d.EHitTestFlags Flags { get; set; }
-		}
-
 		/// <summary>Chart graphics</summary>
 		private ChartTools Tools
 		{
@@ -4822,12 +4695,6 @@ namespace pr.gui
 			{
 				Window.RemoveObject(obj);
 			}
-
-			/// <summary>Remove all objects belonging to a group</summary>
-			public void RemoveObjects(Guid context_id, bool all_except = false)
-			{
-				Window.RemoveObjects(context_id, all_except);
-			}
 		}
 
 		/// <summary>Event args for the ChartClicked event</summary>
@@ -5125,7 +4992,7 @@ namespace pr.gui
 		protected override void UpdateSceneCore(View3d.Window window)
 		{
 			// Remove all series data graphics
-			window.RemoveObjects(Id);
+			window.RemoveObjects(new[] { Id }, 1, 0);
 
 			// Add each graphics piece over the range
 			if (Visible)

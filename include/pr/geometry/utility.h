@@ -95,13 +95,6 @@ namespace pr
 								(Dot3(m_lface->m_norm, m_rface->m_norm) > cos_angle_threshold)  // Normals within the tolerance
 							);
 					}
-					//pr::v4 norm() const
-					//{
-					//	// Return the edge normal assuming this is a smooth edge
-					//	assert(m_lface && m_rface && !m_nonplanar && "Edge normal is only defined for smooth edges");
-					//	auto n0 = m_lface->normal(m_sidx);
-					//	auto n1 = m_rface->normal(m_eidx);
-					//}
 				};
 				struct Vert
 				{
@@ -241,7 +234,7 @@ namespace pr
 				//	}
 				//}
 
-				// Partition the edges for each vert into seperate groups
+				// Partition the edges for each vert into separate groups
 				void AssignSmoothingGroups(float smoothing_angle)
 				{
 					auto cos_angle_threshold = pr::Cos(smoothing_angle);
@@ -266,7 +259,7 @@ namespace pr
 					while (!no_changes);
 				}
 
-				// Generate the normal for each vertex, adding new vertices for seperate smoothing groups
+				// Generate the normal for each vertex, adding new vertices for separate smoothing groups
 				void CreateNormals(std::size_t new_vidx)
 				{
 					// Set the starting index for any new verts created
@@ -355,9 +348,9 @@ namespace pr
 		// Generate normals for a model. Assumes the model data is a TriList
 		// 'num_indices' is the number of indices available through the 'indices' iterator (should be a multiple of 3)
 		// 'indices' is an iterator to the model face data (sets of 3 indices per face)
-		// 'GetV' is a function object with sig pr::v4 (*GetV)(size_t i) returning the vertex position at index position 'i'
-		// 'GetN' is a function object with sig pr::v4 (*GetN)(size_t i) returning the vertex normal at index position 'i'
-		// 'SetN' is a function object with sig void (*SetN)(size_t i, pr::v4 const& n) used to set the value of the normal at index position 'i'
+		// 'GetV' is a function object with signature pr::v4 (*GetV)(size_t i) returning the vertex position at index position 'i'
+		// 'GetN' is a function object with signature pr::v4 (*GetN)(size_t i) returning the vertex normal at index position 'i'
+		// 'SetN' is a function object with signature void (*SetN)(size_t i, pr::v4 const& n) used to set the value of the normal at index position 'i'
 		// Only reads/writes to the normals for vertices adjoining the provided faces
 		// Note: This is the simple version without vertex weights or edge detection
 		template <typename TIdxCIter, typename TGetV, typename TGetN, typename TSetN>

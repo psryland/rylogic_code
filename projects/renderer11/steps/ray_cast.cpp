@@ -5,12 +5,10 @@
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/render/scene.h"
-//#include "pr/renderer11/render/sortkey.h"
+#include "pr/renderer11/instances/instance.h"
 #include "pr/renderer11/shaders/shader_manager.h"
-//#include "pr/renderer11/instances/instance.h"
+#include "pr/renderer11/shaders/input_layout.h"
 #include "pr/renderer11/steps/ray_cast.h"
-//#include "pr/renderer11/steps/shadow_map.h"
-//#include "pr/renderer11/util/stock_resources.h"
 #include "renderer11/shaders/common.h"
 #include "renderer11/render/state_stack.h"
 
@@ -18,9 +16,72 @@ namespace pr
 {
 	namespace rdr
 	{
+		namespace hlsl::ray_cast
+		{
+			#include "renderer11/shaders/hlsl/utility/ray_cast_cbuf.hlsli"
+		}
+		using namespace hlsl::ray_cast;
+
+		#pragma region Shaders
+
+		// Ray cast shaders are specific to this render step, don't bother making them stock shaders
+		#include PR_RDR_SHADER_COMPILED_DIR(ray_cast_vs.h)
+		#include PR_RDR_SHADER_COMPILED_DIR(ray_cast_face_gs.h)
+		#include PR_RDR_SHADER_COMPILED_DIR(ray_cast_edge_gs.h)
+		#include PR_RDR_SHADER_COMPILED_DIR(ray_cast_vert_gs.h)
+
+		// Ray cast shaders
+		struct RayCastVS :ShaderT<ID3D11VertexShader, RayCastVS>
+		{
+			using base = ShaderT<ID3D11VertexShader, RayCastVS>;
+			RayCastVS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11VertexShader> const& shdr)
+				:base(mgr, id, sort_id, name, shdr)
+			{
+				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "ray_cast_vs.cso"));
+			}
+		};
+		struct RayCastFaceGS :ShaderT<ID3D11GeometryShader, RayCastFaceGS>
+		{
+			using base = ShaderT<ID3D11GeometryShader, RayCastFaceGS>;
+			RayCastFaceGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader> const& shdr)
+				:base(mgr, id, sort_id, name, shdr)
+			{
+				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "ray_cast_face_gs.cso"));
+			}
+		};
+		struct RayCastEdgeGS :ShaderT<ID3D11GeometryShader, RayCastEdgeGS>
+		{
+			using base = ShaderT<ID3D11GeometryShader, RayCastEdgeGS>;
+			RayCastEdgeGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader> const& shdr)
+				:base(mgr, id, sort_id, name, shdr)
+			{
+				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "ray_cast_edge_gs.cso"));
+			}
+		};
+		struct RayCastVertGS :ShaderT<ID3D11GeometryShader, RayCastVertGS>
+		{
+			using base = ShaderT<ID3D11GeometryShader, RayCastVertGS>;
+			RayCastVertGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader> const& shdr)
+				:base(mgr, id, sort_id, name, shdr)
+			{
+				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "ray_cast_vert_gs.cso"));
+			}
+		};
+
+		#pragma endregion
+
+		// Stream output stage buffer format
+		StreamOutDesc so_buffer_desc(
+		{
+			{0, "WSIntercept", 0, 0, 4, 0},
+			{0, "SnapType", 0, 0, 1, 0},
+			{0, "RayIndex", 0, 0, 1, 0},
+			{0, "InstPtr", 0, 0, 2, 0},
+		});
+
 		// To render to a texture then read the resulting pixel data on a CPU:
-		// - Create a texture that the GPU can render into (D3D11_BIND_RENDER_TARGET, D3D11_USAGE_DEFAULT).
-		// - Create a staging texture (D3D11_USAGE_STAGING) that the GPU will copy data to (via CopyResource).
+		// - Create a texture that the GPU can render into (D3D11_BIND_RENDER_TARGET, EUsage::DEFAULT).
+		// - Create a staging texture (EUsage::STAGING) that the GPU will copy data to (via CopyResource).
 		// - Render to the render target texture.
 		// - Call ID3D11DeviceContext::CopyResource() or ID3D11DeviceContext::CopySubresource()
 		// - Map (ID3D11DeviceContext::Map()) the staging resource to get access to the pixels.
@@ -38,174 +99,172 @@ namespace pr
 		RayCastStep::RayCastStep(Scene& scene, bool continuous)
 			:RenderStep(scene)
 			,m_rays()
-			,m_snap_distance()
-			,m_flags()
-			,m_continuous(continuous)
-			,m_rt()
-			,m_db()
-			,m_stage()
-			,m_rtv()
-			,m_dsv()
-			,m_main_rtv()
-			,m_main_dsv()
-			,m_cbuf_frame(m_shdr_mgr->GetCBuf<hlsl::util::CBufRayCastFrame>("Util::CBufRayCastFrame"))
-			,m_cbuf_nugget(m_shdr_mgr->GetCBuf<hlsl::util::CBufRayCastNugget>("Util::CBufRayCastNugget"))
+			,m_snap_distance(1.0f)
+			,m_flags(EHitTestFlags::Verts | EHitTestFlags::Edges | EHitTestFlags::Faces)
+			,m_include([](auto){ return true; })
+			,m_cbuf_frame(m_shdr_mgr->GetCBuf<FrameCBuf>("RayCast::FrameCBuf"))
+			,m_cbuf_nugget(m_shdr_mgr->GetCBuf<NuggetCBuf>("RayCast::NuggetCBuf"))
+			,m_buf_results()
+			,m_buf_stage()
+			,m_stage_idx()
 			,m_vs()
 			,m_gs_face()
 			,m_gs_edge()
 			,m_gs_vert()
-			,m_ps()
-			,m_cs()
-			,m_stage_idx()
+			,m_continuous(continuous)
 		{
-			// Get pointers to the shaders
-			m_vs      = m_shdr_mgr->FindShader(RdrId(EStockShader::RayCastVS));
-			m_gs_face = m_shdr_mgr->FindShader(RdrId(EStockShader::RayCastFaceGS));
-			m_gs_edge = m_shdr_mgr->FindShader(RdrId(EStockShader::RayCastEdgeGS));
-			m_gs_vert = m_shdr_mgr->FindShader(RdrId(EStockShader::RayCastVertGS));
-			m_ps      = m_shdr_mgr->FindShader(RdrId(EStockShader::RayCastPS));
-			m_cs      = m_shdr_mgr->FindShader(RdrId(EStockShader::RayCastCS));
+			// Set render states
+			m_dsb.Set(EDS::DepthEnable, FALSE);
 
-			// Set up the output render target
-			InitRT();
-		}
-
-		// Set the ray to cast.
-		void RayCastStep::SetRays(HitTestRay const* rays, int count, float snap_distance, EHitTestFlags flags)
-		{
-			// Save the rays to cast
-			m_rays.assign(rays, rays + count);
-			m_snap_distance = snap_distance;
-			m_flags = flags;
-		}
-
-		// Read the results from the ray casts
-		void RayCastStep::ReadOutput(HitTestResult* results, int count)
-		{
-			// If running in continuous mode, read from 'm_stage_idx' which will be 3 frames ago.
-			// Otherwise, read from the staging texture last used in a CopyResource() call.
-			auto& stage = m_continuous
-				? m_stage[m_stage_idx]
-				: m_stage[(m_stage_idx + _countof(m_stage) - 1) % _countof(m_stage)];
-
-			// Read the values out of the texture
-			Renderer::Lock rdrlock(m_scene->rdr());
-			LockT<v4> lock(rdrlock.ImmediateDC(), stage.get(), 0, D3D11_MAP_READ, 0);
-			for (int i = 0; i != count; ++i)
+			// Get/Create shader instances
 			{
-				auto intercepts = lock.ptr();
-
-				HitTestResult result = {};
-				result.m_ws_origin = m_rays[i].m_ws_origin;
-				result.m_ws_direction = m_rays[i].m_ws_direction;
-				result.m_ws_intercept = intercepts[i].w1();
-				result.m_instance_id = int(floor(intercepts[i].w));
-				results[i] = result;
-
-				OutputDebugStringA(FmtS("Ray:[%s, %s]  Intercept:%s  Id:%d\n"
-					,To<std::string>(result.m_ws_origin).c_str()
-					,To<std::string>(result.m_ws_direction).c_str()
-					,To<std::string>(result.m_ws_intercept).c_str()
-					,result.m_instance_id
-				));
+				auto id = MakeId("RayCastStepVS");
+				if ((m_vs = m_shdr_mgr->FindShader<RayCastVS>(id)) == nullptr)
+				{
+					VShaderDesc vs_desc(ray_cast_vs, Vert());
+					auto dx = m_shdr_mgr->GetVS(id, &vs_desc);
+					m_vs = m_shdr_mgr->CreateShader<RayCastVS>(id, dx, "ray_cast_vs");
+				}
+			}{
+				auto id = MakeId("RayCastStepFaceGS");
+				if ((m_gs_face = m_shdr_mgr->FindShader<RayCastFaceGS>(id)) == nullptr)
+				{
+					GShaderDesc gs_desc(ray_cast_face_gs);
+					auto dx = m_shdr_mgr->GetGS(id, &gs_desc, so_buffer_desc);
+					m_gs_face = m_shdr_mgr->CreateShader<RayCastFaceGS>(id, dx, "ray_cast_face_gs");
+				}
+			}{
+				auto id = MakeId("RayCastStepEdgeGS");
+				if ((m_gs_edge = m_shdr_mgr->FindShader<RayCastEdgeGS>(id)) == nullptr)
+				{
+					GShaderDesc gs_desc(ray_cast_edge_gs);
+					auto dx = m_shdr_mgr->GetGS(id, &gs_desc, so_buffer_desc);
+					m_gs_edge = m_shdr_mgr->CreateShader<RayCastEdgeGS>(id, dx, "ray_cast_edge_gs");
+				}
+			}{
+				auto id = MakeId("RayCastStepVertGS");
+				if ((m_gs_vert = m_shdr_mgr->FindShader<RayCastVertGS>(id)) == nullptr)
+				{
+					GShaderDesc gs_desc(ray_cast_vert_gs);
+					auto dx = m_shdr_mgr->GetGS(id, &gs_desc, so_buffer_desc);
+					m_gs_vert = m_shdr_mgr->CreateShader<RayCastVertGS>(id, dx, "ray_cast_vert_gs");
+				}
 			}
-			OutputDebugStringA("\n");
+
+			// Set up the shader buffers
+			InitBuffers();
 		}
 
-		// Create the render target for the output of the ray cast
-		void RayCastStep::InitRT()
+		// Create the buffers used by the shaders
+		void RayCastStep::InitBuffers()
 		{
-			// Create render targets if there are rays to cast
+			// Create buffers to be used in the shaders
 			Renderer::Lock lock(m_scene->rdr());
 			auto device = lock.D3DDevice();
 
-			// Create a texture for the ray cast results to go in
+			char zeros[MaxIntercepts * sizeof(Intercept)] = {};
+			SubResourceData init_data(&zeros[0], sizeof(zeros), sizeof(zeros));
+
+			// Create a GPU buffer to receive the intercepts
 			{
-				TextureDesc tdesc = {};
-				tdesc.Width  = MAX_RAYS;
-				tdesc.Height = 1;
-				tdesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT; // x,y,z,Id = world space position of intersect, instance id
-				tdesc.MipLevels = 1;
-				tdesc.ArraySize = 1;
-				tdesc.SampleDesc = MultiSamp(1,0);
-				tdesc.Usage = D3D11_USAGE_DEFAULT;
-				tdesc.BindFlags = D3D11_BIND_RENDER_TARGET;
-				tdesc.CPUAccessFlags = 0;
-				tdesc.MiscFlags = 0;
-				pr::Throw(device->CreateTexture2D(&tdesc, 0, &m_rt.m_ptr));
-				PR_EXPAND(PR_DBG_RDR, NameResource(m_rt.get(), "ray cast RT"));
+				// Reset in case this method is public one day
+				m_buf_results = nullptr;
+				m_buf_zeros = nullptr;
 
-				// Create a render target view
-				RenderTargetViewDesc rtvdesc(tdesc.Format, D3D11_RTV_DIMENSION_TEXTURE2D);
-				pr::Throw(device->CreateRenderTargetView(m_rt.get(), &rtvdesc, &m_rtv.m_ptr));
+				BufferDesc bdesc = {};
+				bdesc.Usage = D3D11_USAGE_DEFAULT;
+				bdesc.BindFlags = D3D11_BIND_STREAM_OUTPUT;
+				bdesc.ByteWidth = MaxIntercepts * sizeof(Intercept);
+				pr::Throw(device->CreateBuffer(&bdesc, &init_data, &m_buf_results.m_ptr));
+				pr::Throw(device->CreateBuffer(&bdesc, &init_data, &m_buf_zeros.m_ptr));
+				PR_EXPAND(PR_DBG_RDR, NameResource(m_buf_results.get(), "RayCast Output Intercepts"));
+				PR_EXPAND(PR_DBG_RDR, NameResource(m_buf_zeros.get(), "RayCast Output Zero"));
 			}
-			{// Create a depth buffer for the nearest ray cast intercept
-				TextureDesc tdesc = {};
-				tdesc.Width  = MAX_RAYS;
-				tdesc.Height = 1;
-				tdesc.Format = DXGI_FORMAT_D32_FLOAT; // ray parametric value of the intercept
-				tdesc.MipLevels = 1;
-				tdesc.ArraySize = 1;
-				tdesc.SampleDesc = MultiSamp(1,0);
-				tdesc.Usage = D3D11_USAGE_DEFAULT;
-				tdesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-				tdesc.CPUAccessFlags = 0;
-				tdesc.MiscFlags = 0;
-				pr::Throw(device->CreateTexture2D(&tdesc, 0, &m_db.m_ptr));
-				PR_EXPAND(PR_DBG_RDR, NameResource(m_db.get(), "ray cast DB"));
 
-				// Create a depth stencil view
-				DepthStencilViewDesc dsvdesc(tdesc.Format, D3D11_DSV_DIMENSION_TEXTURE2D);
-				pr::Throw(device->CreateDepthStencilView(m_db.get(), &dsvdesc, &m_dsv.m_ptr));
-			}
-			{// Create triple buffered staging textures
-				TextureDesc tdesc = {};
-				tdesc.Width  = MAX_RAYS;
-				tdesc.Height = 1;
-				tdesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT; // x,y,z,Id = world space position of intersect, instance id
-				tdesc.MipLevels = 1;
-				tdesc.ArraySize = 1;
-				tdesc.SampleDesc = MultiSamp(1,0);
-				tdesc.Usage = D3D11_USAGE_STAGING;
-				tdesc.BindFlags = D3D11_BIND_FLAG(0);
-				tdesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-				for (auto& stage : m_stage)
+			// Create CPU staging buffers to copy the intercept data output to
+			{
+				// Reset in case this method is public one day
+				for (auto& stage : m_buf_stage)
+					stage = nullptr;
+
+				BufferDesc bdesc = {};
+				bdesc.Usage = D3D11_USAGE_STAGING;
+				bdesc.BindFlags = D3D11_BIND_FLAG(0);
+				bdesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+				bdesc.ByteWidth = MaxIntercepts * sizeof(Intercept);
+				for (int i = 0, iend = m_continuous ? _countof(m_buf_stage) : 1; i != iend; ++i)
 				{
-					pr::Throw(device->CreateTexture2D(&tdesc, 0, &stage.m_ptr));
-					PR_EXPAND(PR_DBG_RDR, NameResource(stage.get(), "ray cast stage"));
+					auto& stage = m_buf_stage[i];
+					pr::Throw(device->CreateBuffer(&bdesc, nullptr, &stage.m_ptr));
+					PR_EXPAND(PR_DBG_RDR, NameResource(stage.get(), "RayCast Staging Buffer"));
 				}
 			}
 		}
 
-		// Bind the render target to the output merger for this step
-		void RayCastStep::BindRT(bool bind)
+		// Set the rays to cast.
+		void RayCastStep::SetRays(HitTestRay const* rays, int count, float snap_distance, EHitTestFlags flags, InstFilter const& include)
 		{
-			Renderer::Lock lock(m_scene->rdr());
-			auto dc = lock.ImmediateDC();
-			if (bind)
-			{
-				// Save a reference to the main render target/depth buffer
-				dc->OMGetRenderTargets(1, &m_main_rtv.m_ptr, &m_main_dsv.m_ptr);
+			// Save the rays so we can match ray indices to the actual ray.
+			m_rays.assign(rays, rays + std::min(count, MaxRays));
+			m_snap_distance = snap_distance;
+			m_flags = flags;
+			m_include = include;
+		}
 
-				// Bind our RT to the OM
-				dc->OMSetRenderTargets(1, &m_rtv.m_ptr, m_dsv.m_ptr);
-			}
-			else
-			{
-				// Restore the main RT and depth buffer
-				dc->OMSetRenderTargets(1, &m_main_rtv.m_ptr, m_main_dsv.m_ptr);
+		// Read the results from the ray casts
+		void RayCastStep::ReadOutput(ResultsOut const& cb)
+		{
+			Renderer::Lock rdrlock(m_scene->rdr());
+			auto dc = rdrlock.ImmediateDC();
 
-				// Release our references
-				m_main_rtv = nullptr;
-				m_main_dsv = nullptr;
+			// Get the staging buffer to read from
+			auto& stage = m_buf_stage[m_stage_idx];
+
+			// Read the values out of the buffer.
+			// There will be duplicates in the buffer because of shared verts/edges in the models.
+			// Sort the results by distance and skip duplicates.
+			LockT<Intercept> lock(dc, stage.get(), 0, D3D11_MAP_READ, 0);
+			auto intercepts = pr::make_array_view(lock.ptr(), MaxIntercepts);
+			intercepts.m_count = pr::index_if(intercepts, [](auto& i){ return i.inst_ptr == nullptr; });
+
+			// Sort by distance
+			pr::sort(intercepts, [](auto& l, auto& r){ return l.ws_intercept.w < r.ws_intercept.w; });
+
+			// Forward each unique intercept to the callback
+			for (int i = 0, iend = int(intercepts.size()); i != iend; )
+			{
+				auto& intercept = intercepts[i];
+
+				// Forward the hits to the callback
+				HitTestResult result  = {};
+				result.m_ws_origin    = m_rays[intercept.ray_index].m_ws_origin;
+				result.m_ws_direction = m_rays[intercept.ray_index].m_ws_direction;
+				result.m_ws_intercept = intercept.ws_intercept.w1();
+				result.m_instance     = type_ptr<BaseInstance>(intercept.inst_ptr);
+				result.m_distance     = intercept.ws_intercept.w;
+				result.m_ray_index    = intercept.ray_index;
+				result.m_snap_type    = static_cast<ESnapType>(intercept.snap_type);
+				if (!cb(result))
+					return;
+
+				// Skip duplicates
+				auto Eql = [](Intercept const& l, Intercept const& r)
+				{
+					return
+						l.ws_intercept == r.ws_intercept &&
+						l.inst_ptr     == r.inst_ptr &&
+						l.ray_index    == r.ray_index;
+				};
+				for (++i; i != iend && Eql(intercepts[i], intercept); ++i)
+				{}
 			}
 		}
 
 		// Add model nuggets to the draw list for this render step
-		void RayCastStep::AddNuggets(BaseInstance const& inst, TNuggetChain& nuggets)
+		void RayCastStep::AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets)
 		{
-			// Ignore instances with no instance Id
-			if (UniqueId(inst) == 0)
+			// Ignore instances that are filtered out
+			if (!m_include(&inst))
 				return;
 
 			Lock lock(*this);
@@ -214,28 +273,32 @@ namespace pr
 			// Add a drawlist element for each nugget in the instance's model
 			drawlist.reserve(drawlist.size() + nuggets.size());
 			for (auto& nug : nuggets)
-			{
-				ShaderSet ss = {m_vs, nullptr, m_ps, m_cs};
-				switch (nug.m_topo) {
-				case EPrim::PointList:
-					ss.m_gs = m_gs_vert;
-					break;
-				case EPrim::LineList:
-				case EPrim::LineStrip:
-					ss.m_gs = m_gs_edge;
-					break;
-				case EPrim::TriList:
-				case EPrim::TriStrip:
-					ss.m_gs = m_gs_face;
-					break;
-				default:
-					throw std::exception("Unsupported primitive type");
-				}
-
-				nug.AddToDrawlist(drawlist, inst, nullptr, Id, ss);
-			}
+				nug.AddToDrawlist(drawlist, inst, nullptr, Id);
 
 			m_sort_needed = true;
+		}
+
+		// Update the provided shader set appropriate for this render step
+		void RayCastStep::ConfigShaders(ShaderSet1& ss, EPrim topo) const
+		{
+			ss = ShaderSet1{};
+			ss.m_vs = m_vs.get();
+			switch (topo)
+			{
+			case EPrim::PointList:
+				ss.m_gs = m_gs_vert.get();
+				break;
+			case EPrim::LineList:
+			case EPrim::LineStrip:
+				ss.m_gs = m_gs_edge.get();
+				break;
+			case EPrim::TriList:
+			case EPrim::TriStrip:
+				ss.m_gs = m_gs_face.get();
+				break;
+			default:
+				throw std::exception("Unsupported primitive type");
+			}
 		}
 
 		// Perform the render step
@@ -246,34 +309,22 @@ namespace pr
 			// Sort the drawlist if needed
 			SortIfNeeded();
 
-			// Bind the render target to the OM
-			auto bind_rt = pr::CreateScope(
-				[this]{ BindRT(true); },
-				[this]{ BindRT(false); });
+			// Zero the results buffer
+			dc->CopyResource(m_buf_results.get(), m_buf_zeros.get());
 
-			// Clear the render target/depth buffer.
-			// The depth data is the fractional distance between the frustum plane (0) and the light (1).
-			// We only care about points in front of the frustum faces => reset depths to zero.
-			dc->ClearRenderTargetView(m_rtv.m_ptr, pr::ColourZero.arr);
-			dc->ClearDepthStencilView(m_dsv.m_ptr, D3D11_CLEAR_DEPTH, 1.0f, 0U);
-
-			// Set the viewport
-			Viewport vp(float(MAX_RAYS), 1.0f);
-			dc->RSSetViewports(1, &vp);
-
-			{// Set the frame constants
-				hlsl::util::CBufRayCastFrame cb = {};
+			// Update the frame constants
+			{
+				FrameCBuf cb = {};
+				static_assert(sizeof(Ray) == sizeof(HitTestRay));
+				std::memcpy(&cb.m_rays[0], m_rays.data(), sizeof(Ray) * int(m_rays.size()));
 				cb.m_ray_count = int(m_rays.size());
 				cb.m_snap_mode = int(m_flags);
 				cb.m_snap_dist = m_snap_distance;
-				cb.m_ray_max_length = m_scene->m_view.Far();
-				for (int i = 0, iend = int(m_rays.size()); i != iend; ++i)
-				{
-					cb.m_ws_ray_origin[i] = m_rays[i].m_ws_origin;
-					cb.m_ws_ray_direction[i] = m_rays[i].m_ws_direction;
-				}
 				WriteConstants(dc, m_cbuf_frame.get(), cb, EShaderType::GS);
 			}
+
+			// Set the stream output stage targets
+			StateStack::SOFrame so_frame(ss, m_buf_results.get(), 0U);
 
 			// Draw each element in the draw list
 			Lock lock(*this);
@@ -285,10 +336,10 @@ namespace pr
 				auto const& nugget = *dle.m_nugget;
 
 				{// Set the per-nugget constants
-					hlsl::util::CBufRayCastNugget cb = {};
+					NuggetCBuf cb = {};
 					cb.m_o2w = GetO2W(*dle.m_instance);
-					cb.m_flags.w = UniqueId(*dle.m_instance);
-					WriteConstants(dc, m_cbuf_nugget.get(), cb, EShaderType::VS|EShaderType::GS);
+					cb.m_inst_ptr = dle.m_instance;
+					WriteConstants(dc, m_cbuf_nugget.get(), cb, EShaderType::VS | EShaderType::GS);
 				}
 
 				// Draw the nugget
@@ -298,12 +349,16 @@ namespace pr
 					0);
 			}
 
-			// Initiate the CopyResource() to the staging texture.
+			// Initiate the copy to the staging buffer.
 			// 'CopyResource()' is basically an async function that returns a future.
-			// When you call 'Map()' it awaits on that future to be completed.
-			auto& stage = m_stage[m_stage_idx];
-			dc->CopyResource(stage.get(), m_rt.get());
-			m_stage_idx = (m_stage_idx + 1) % _countof(m_stage);
+			// When you call 'Map()' it waits for the future to be completed.
+			auto& stage = m_buf_stage[m_stage_idx];
+			dc->CopyResource(stage.get(), m_buf_results.get());
+
+			// If running in continuous mode, cycle through the multi-buffers
+			// so that 'Map()' does not stall the pipeline.
+			if (m_continuous)
+				m_stage_idx = (m_stage_idx + 1) % _countof(m_buf_stage);
 		}
 	}
 }

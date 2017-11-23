@@ -19,9 +19,9 @@ namespace pr
 		#include PR_RDR_SHADER_COMPILED_DIR(gbuffer_ps.h)
 
 		// GBuffer creation vertex shader
-		struct GBufferVS :Shader<ID3D11VertexShader, GBufferVS>
+		struct GBufferVS :ShaderT<ID3D11VertexShader, GBufferVS>
 		{
-			using base = Shader<ID3D11VertexShader, GBufferVS>;
+			using base = ShaderT<ID3D11VertexShader, GBufferVS>;
 			GBufferVS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11VertexShader> const& shdr)
 				:base(mgr, id, sort_id, name, shdr)
 			{
@@ -30,9 +30,9 @@ namespace pr
 		};
 
 		// GBuffer creation pixel shader
-		struct GBufferPS :Shader<ID3D11PixelShader, GBufferPS>
+		struct GBufferPS :ShaderT<ID3D11PixelShader, GBufferPS>
 		{
-			using base = Shader<ID3D11PixelShader, GBufferPS>;
+			using base = ShaderT<ID3D11PixelShader, GBufferPS>;
 			GBufferPS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11PixelShader> const& shdr)
 				:base(mgr, id, sort_id, name, shdr)
 			{

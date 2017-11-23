@@ -3,8 +3,8 @@ using System.Diagnostics;
 using System.Xml.Linq;
 using CoinFlip;
 using pr.extn;
-using pr.gfx;
 using pr.util;
+using pr.view3d;
 
 namespace Bot.PriceSwing
 {

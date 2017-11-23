@@ -66,14 +66,6 @@ namespace pr
 			CreateShader<ShadowMapLineGS>();
 			CreateShader<ShadowMapPS>();
 
-			// Ray cast shaders
-			CreateShader<RayCastVS>();
-			CreateShader<RayCastFaceGS>();
-			CreateShader<RayCastEdgeGS>();
-			CreateShader<RayCastVertGS>();
-			CreateShader<RayCastPS>();
-			CreateShader<RayCastCS>();
-
 			// Other shaders
 			CreateShader<PointSpritesGS>();
 			CreateShader<ThickLineListGS>();
@@ -170,10 +162,26 @@ namespace pr
 				if (desc == nullptr)
 					throw pr::Exception<HRESULT>(E_FAIL, "Geometry shader description not provided");
 
-				// Create the pixel shader
+				// Create the geometry shader
 				Renderer::Lock lock1(m_rdr);
 				D3DPtr<ID3D11GeometryShader> gs;
 				pr::Throw(lock1.D3DDevice()->CreateGeometryShader(desc->m_data, desc->m_size, 0, &gs.m_ptr));
+				return std::move(gs);
+			});
+		}
+		D3DPtr<ID3D11GeometryShader> ShaderManager::GetGS(RdrId id, GShaderDesc const* desc, StreamOutDesc const& so_desc)
+		{
+			std::lock_guard<std::recursive_mutex> lock0(m_mutex);
+
+			return Get<ID3D11GeometryShader>(id, m_lookup_gs, [&]
+			{
+				if (desc == nullptr || so_desc.num_entries() == 0)
+					throw pr::Exception<HRESULT>(E_FAIL, "Geometry shader description not provided");
+
+				// Create the geometry shader with stream out
+				Renderer::Lock lock1(m_rdr);
+				D3DPtr<ID3D11GeometryShader> gs;
+				pr::Throw(lock1.D3DDevice()->CreateGeometryShaderWithStreamOutput(desc->m_data, desc->m_size, so_desc.decl(), so_desc.num_entries(), so_desc.strides(), so_desc.num_strides(), so_desc.raster_stream(), so_desc.class_linkage(), &gs.m_ptr));
 				return std::move(gs);
 			});
 		}

@@ -420,6 +420,11 @@ namespace pr
 		}
 
 		// insert element at end
+		void push_back(value_type&& value)
+		{
+			// insert by moving into element at end, provide strong guarantee
+			emplace_back(std::move(value));
+		}
 		void push_back(const_reference value)
 		{
 			if (inside(&value))
@@ -440,7 +445,7 @@ namespace pr
 		{
 			static_assert(std::is_copy_constructible<Type>::value, "Cannot copy construct 'Type'");
 			assert(m_count + 1 <= m_capacity && "Container overflow");
-			assert(!inside(&value) && "Cannot push_back_fast an item from this container");
+			//why not? assert(!inside(&value) && "Cannot push_back_fast an item from this container");
 			traits::fill_constr(alloc(), m_ptr + m_count, 1, value);
 			++m_count;
 		}

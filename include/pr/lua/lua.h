@@ -566,10 +566,11 @@ namespace pr
 				Setup();
 			}
 			Lua(Lua&& rhs)
-				:m_state()
-				,m_owned()
+				:m_state(rhs.m_state)
+				,m_owned(rhs.m_owned)
 			{
-				*this = std::move(rhs);
+				rhs.m_state = nullptr;
+				rhs.m_owned = false;
 			}
 			Lua(Lua const&) = delete;
 			~Lua()
@@ -578,14 +579,12 @@ namespace pr
 					lua_close(m_state);
 			}
 
-			// Move assignment
+			// Assignment
 			Lua& operator = (Lua&& rhs)
 			{
-				if (this != &rhs)
-				{
-					std::swap(m_state, rhs.m_state);
-					std::swap(m_owned, rhs.m_owned);
-				}
+				if (this == &rhs) return *this;
+				std::swap(m_state, rhs.m_state);
+				std::swap(m_owned, rhs.m_owned);
 				return *this;
 			}
 			Lua& operator = (Lua const&) = delete;

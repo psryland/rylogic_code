@@ -25,7 +25,7 @@ namespace pr
 			// - Write the NV_STEREO_IMAGE_SIGNITURE in row 'height'
 			// - CopySubResourceRegion to the back buffer
 
-			// Create a staging texture to contain the nvidia magic data
+			// Create a staging texture to contain the NVidia magic data
 			SubResourceData tex_data(&m_nv_magic, sizeof(m_nv_magic), 0);
 			TextureDesc nvdesc(m_nv_magic.pixel_width(), m_nv_magic.pixel_height(), 1, target_format);
 			nvdesc.BindFlags      = 0;
@@ -53,16 +53,16 @@ namespace pr
 			pr::Throw(device->CreateDepthStencilView(m_ds_tex.m_ptr, &dsvdesc, &m_dsv.m_ptr));
 		}
 
-		// Add the nvidia magic data to the bottom row of the current render target
-		void Stereo::BlitNvMagic(D3DPtr<ID3D11DeviceContext>& dc) const
+		// Add the NVidia magic data to the bottom row of the current render target
+		void Stereo::BlitNvMagic(ID3D11DeviceContext* dc) const
 		{
-			// Add the nvidia magic data to the current render target
+			// Add the NVidia magic data to the current render target
 			CD3D11_BOX nvdata_box(0, 0, 0, m_nv_magic.pixel_width(), m_nv_magic.pixel_height(), 1);
 			dc->CopySubresourceRegion(m_rt_tex.m_ptr, 0, 0, m_nv_magic.offscreen_height() - 1, 0, m_mark.m_ptr, 0, &nvdata_box);
 		}
 
-		// Copy the offscreen render target to the current render target
-		void Stereo::BlitRTV(D3DPtr<ID3D11DeviceContext>& dc) const
+		// Copy the off screen render target to the current render target
+		void Stereo::BlitRTV(ID3D11DeviceContext* dc) const
 		{
 			D3DPtr<ID3D11RenderTargetView> rtv;
 			dc->OMGetRenderTargets(1, &rtv.m_ptr, nullptr);

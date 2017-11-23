@@ -15,6 +15,7 @@ using pr.gfx;
 using pr.gui;
 using pr.maths;
 using pr.util;
+using pr.view3d;
 using ToolStripComboBox = pr.gui.ToolStripComboBox;
 using ToolStripContainer = pr.gui.ToolStripContainer;
 

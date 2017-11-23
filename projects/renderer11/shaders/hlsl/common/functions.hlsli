@@ -3,7 +3,25 @@
 //  Copyright © Rylogic Ltd 2010
 //***********************************************
 
+#ifndef PR_RDR_FUNCTIONS_HLSLI
+#define PR_RDR_FUNCTIONS_HLSLI
+
+// Conditional helper function
+int SelectInt(bool condition, int true_case, int false_case)
+{
+	return (int)(condition)*true_case + (int)(!condition)*false_case;
+}
+float SelectFloat(bool condition, float true_case, float false_case)
+{
+	return (int)(condition)*true_case + (int)(!condition)*false_case;
+}
+float4 SelectFloat4(bool condition, float4 true_case, float4 false_case)
+{
+	return (int)(condition)*true_case + (int)(!condition)*false_case;
+}
+
 // Projected textures ********************************************
+#if 0 // This needs moving to where 'm_proj_tex_count' is defined
 float4 ProjTex(float4 ws_pos, float4 in_diff)
 {
 	float4 out_diff = in_diff;
@@ -18,6 +36,7 @@ float4 ProjTex(float4 ws_pos, float4 in_diff)
 	}
 	return out_diff;
 }
+#endif
 
 // Returns the near and far plane distances in camera space from a
 // projection matrix (either perspective or orthonormal)
@@ -28,3 +47,5 @@ float2 ClipPlanes(float4x4 c2s)
 	dist.y = c2s._43 / (1 + c2s._33) + c2s._44*(c2s._43 - c2s._33 - 1)/(c2s._33 * (1 + c2s._33)); // far
 	return dist;
 }
+
+#endif

@@ -5,12 +5,13 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using pr.extn;
-using pr.gfx;
+using pr.gui;
 using pr.maths;
 using pr.util;
 using pr.win32;
+using ToolStripComboBox = pr.gui.ToolStripComboBox;
 
-namespace pr.gui
+namespace pr.view3d
 {
 	// Notes:
 	//  Keyboard events:
@@ -33,27 +34,35 @@ namespace pr.gui
 		{}
 		public View3dControl(string name, bool bgra_compatibility, bool gdi_compatible_backbuffer)
 		{
-			BackColor = Color.Gray;
-			if (this.IsInDesignMode()) return;
-			SetStyle(ControlStyles.Selectable, false);
+			try
+			{
+				BackColor = Color.Gray;
+				if (this.IsInDesignMode()) return;
+				SetStyle(ControlStyles.Selectable, false);
 
-			m_impl_view3d = new View3d(bgra_compatibility);
-			var opts = new View3d.WindowOptions(HandleReportError, IntPtr.Zero, gdi_compatible_backbuffer) { DbgName = name ?? string.Empty };
-			m_impl_wnd = new View3d.Window(View3d, Handle, opts);
+				m_view3d = View3d.Create(bgra_compatibility);
+				var opts = new View3d.WindowOptions(HandleReportError, IntPtr.Zero, gdi_compatible_backbuffer) { DbgName = name ?? string.Empty };
+				m_impl_wnd = new View3d.Window(View3d, Handle, opts);
 
-			InitializeComponent();
+				InitializeComponent();
 
-			Name = name;
-			ClickTimeMS = 180;
-			MouseNavigation = true;
-			DefaultKeyboardShortcuts = true;
+				Name = name;
+				ClickTimeMS = 180;
+				MouseNavigation = true;
+				DefaultKeyboardShortcuts = true;
+			}
+			catch
+			{
+				Dispose();
+				throw;
+			}
 		}
 		protected override void Dispose(bool disposing)
 		{
 			Util.BreakIf(m_impl_wnd != null && Util.IsGCFinalizerThread);
-			Util.BreakIf(m_impl_view3d != null && Util.IsGCFinalizerThread);
+			Util.BreakIf(m_view3d != null && Util.IsGCFinalizerThread);
 			Util.Dispose(ref m_impl_wnd);
-			Util.Dispose(ref m_impl_view3d);
+			Util.Dispose(ref m_view3d);
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
@@ -66,9 +75,9 @@ namespace pr.gui
 		/// <summary>The underlying interop wrapper</summary>
 		public View3d View3d
 		{
-			[DebuggerStepThrough] get { return m_impl_view3d; }
+			[DebuggerStepThrough] get { return m_view3d; }
 		}
-		private View3d m_impl_view3d;
+		private View3d m_view3d;
 
 		/// <summary>The binding to this control</summary>
 		public View3d.Window Window
@@ -184,7 +193,7 @@ namespace pr.gui
 			if (Window == null) return;
 			Cursor = Cursors.Default;
 			Capture = false;
-			if (Window.MouseNavigate(e.Location, View3d.ENavOp.None, true))
+			if (Window.MouseNavigate(e.Location, e.Button, View3d.ENavOp.None, true))
 				Invalidate();
 
 			// Short clicks bring up the context menu
@@ -200,7 +209,7 @@ namespace pr.gui
 		public void OnMouseWheel(object sender, MouseEventArgs e)
 		{
 			if (Window == null) return;
-			if (Window.MouseNavigateZ(e.Location, e.Delta, true))
+			if (Window.MouseNavigateZ(e.Location, e.Button, e.Delta, true))
 				Invalidate();
 		}
 		public void OnMouseDblClick(object sender, MouseEventArgs e)

@@ -1,7 +1,7 @@
 ﻿using System.Windows.Forms;
-using pr.gfx;
 using pr.scintilla;
 using pr.util;
+using pr.view3d;
 
 namespace TestCS
 {
@@ -20,7 +20,7 @@ namespace TestCS
 		public LdrEditorUI()
 		{
 			InitializeComponent();
-			m_view3d = new View3d();
+			m_view3d = View3d.Create();
 			m_sci.InitLdrStyle();
 		}
 		protected override void Dispose(bool disposing)

@@ -92,8 +92,8 @@ namespace view3d
 		pr::ldr::LdrAngleUI& LdrAngleUI();
 
 		// Return true if 'object' is part of this scene
-		bool Has(pr::ldr::LdrObject* object) const;
-		bool Has(pr::ldr::LdrGizmo* gizmo) const;
+		bool Has(pr::ldr::LdrObject const* object, bool search_children) const;
+		bool Has(pr::ldr::LdrGizmo const* gizmo) const;
 
 		// Return the number of objects or object groups in this scene
 		int ObjectCount() const;
@@ -105,7 +105,7 @@ namespace view3d
 
 		// Enumerate the objects associated with this window
 		void EnumObjects(View3D_EnumObjectsCB enum_objects_cb, void* ctx);
-		void EnumObjects(View3D_EnumObjectsCB enum_objects_cb, void* ctx, GUID const* context_id, int count, bool all_except = false);
+		void EnumObjects(View3D_EnumObjectsCB enum_objects_cb, void* ctx, GUID const* context_id, int include_count, int exclude_count);
 
 		// Add/Remove an object to this window
 		void Add(pr::ldr::LdrObject* object);
@@ -119,8 +119,8 @@ namespace view3d
 		void RemoveAllObjects();
 
 		// Add/Remove all objects to this window with the given context id (or not with)
-		void AddObjectsById(GUID const* context_id, int count, bool all_except);
-		void RemoveObjectsById(GUID const* context_id, int count, bool all_except, bool keep_context_ids = false);
+		void AddObjectsById(GUID const* context_id, int include_count, int exclude_count);
+		void RemoveObjectsById(GUID const* context_id, int include_count, int exclude_count, bool keep_context_ids = false);
 
 		// Return a bounding box containing the scene objects
 		template <typename Pred> pr::BBox BBox(Pred pred, bool objects = true, bool gizmos = false) const
@@ -181,7 +181,7 @@ namespace view3d
 		void InvalidateRect(RECT const* rect, bool erase);
 
 		// Called when objects are added/removed from this window
-		void ObjectContainerChanged(GUID const* context_ids, int count);
+		void ObjectContainerChanged(EView3DSceneChanged change_type, GUID const* context_ids, int count, pr::ldr::LdrObject* object);
 
 		// Show/Hide the object manager for the scene
 		void ShowObjectManager(bool show);
@@ -193,7 +193,7 @@ namespace view3d
 		void ShowAngleTool(bool show);
 
 		// Cast a ray into the scene, returning hit info
-		void HitTest(View3DHitTestRay const* rays, View3DHitTestResult* results, int count, float snap_distance, EView3DHitTestFlags flags, bool immediate);
+		void HitTest(View3DHitTestRay const* rays, View3DHitTestResult* hits, int ray_count, float snap_distance, EView3DHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count);
 
 		// Create stock models such as the focus point, origin, etc
 		void CreateStockModels();

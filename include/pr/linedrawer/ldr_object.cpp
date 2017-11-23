@@ -123,6 +123,7 @@ namespace pr
 		{
 			using system_clock = std::chrono::system_clock;
 			using time_point   = std::chrono::time_point<system_clock>;
+			using FontStack    = pr::vector<Font>;
 
 			pr::Renderer&   m_rdr;
 			Reader&         m_reader;
@@ -133,7 +134,7 @@ namespace pr
 			Cache           m_cache;
 			HashValue       m_keyword;
 			LdrObject*      m_parent;
-			Font            m_font;
+			FontStack       m_font;
 			ParseProgressCB m_progress_cb;
 			time_point      m_last_progress_update;
 			bool&           m_cancel;
@@ -148,7 +149,7 @@ namespace pr
 				,m_cache()
 				,m_keyword()
 				,m_parent()
-				,m_font()
+				,m_font(1)
 				,m_progress_cb(progress_cb)
 				,m_last_progress_update(system_clock::now())
 				,m_cancel(cancel)
@@ -223,26 +224,14 @@ namespace pr
 			attr.m_name = "";
 			
 			// Read the next tokens up to the section start
-			wstring32 tok0, tok1, tok2; auto count = 0;
+			wstring32 tok0, tok1; auto count = 0;
 			if (!reader.IsSectionStart()) { reader.Token(tok0, L"{}"); ++count; }
 			if (!reader.IsSectionStart()) { reader.Token(tok1, L"{}"); ++count; }
-			if (!reader.IsSectionStart()) { reader.Token(tok2, L"{}"); ++count; }
 			if (!reader.IsSectionStart())
 				reader.ReportError(pr::script::EResult::UnknownToken, "object attributes are invalid");
 
 			switch (count)
 			{
-			case 3:
-				{
-					// Expect: *Type <name> <colour> <instance>
-					if (!str::ExtractIdentifierC(attr.m_name, std::begin(tok0)))
-						reader.ReportError(pr::script::EResult::TokenNotFound, "object name is invalid");
-					if (!str::ExtractIntC(attr.m_colour.argb, 16, std::begin(tok1)))
-						reader.ReportError(pr::script::EResult::TokenNotFound, "object colour is invalid");
-					if (!str::ExtractBoolC(attr.m_instance, std::begin(tok2)))
-						reader.ReportError(pr::script::EResult::TokenNotFound, "object instance attribute is invalid");
-					break;
-				}
 			case 2:
 				{
 					// Expect: *Type <name> <colour>
@@ -621,18 +610,33 @@ namespace pr
 				}
 			case EKeyword::Hidden:
 				{
-					obj->m_visible = false;
+					obj->m_flags = SetBits(obj->m_flags, ELdrFlags::Hidden, true);
 					return true;
 				}
 			case EKeyword::Wireframe:
 				{
-					obj->m_wireframe = true;
+					obj->m_flags = SetBits(obj->m_flags, ELdrFlags::Wireframe, true);
+					return true;
+				}
+			case EKeyword::NoZTest:
+				{
+					obj->m_flags = SetBits(obj->m_flags, ELdrFlags::NoZTest, true);
+					return true;
+				}
+			case EKeyword::NoZWrite:
+				{
+					obj->m_flags = SetBits(obj->m_flags, ELdrFlags::NoZWrite, true);
 					return true;
 				}
 			case EKeyword::ScreenSpace:
 				{
 					// Use a magic number to signal screen space mode to the ApplyState function
 					obj->m_screen_space = EvtSub((evt::IEventHandler*)1, 0);
+					return true;
+				}
+			case EKeyword::Font:
+				{
+					ParseFont(p.m_reader, p.m_font.back());
 					return true;
 				}
 			}
@@ -650,12 +654,24 @@ namespace pr
 				obj->Colour(obj->m_base_colour, obj->m_colour_mask, "");
 
 			// If flagged as hidden, hide
-			if (!obj->m_visible)
+			if (AllSet(obj->m_flags, ELdrFlags::Hidden))
 				obj->Visible(false);
 
 			// If flagged as wireframe, set wireframe
-			if (obj->m_wireframe)
+			if (AllSet(obj->m_flags, ELdrFlags::Wireframe))
 				obj->Wireframe(true);
+
+			// If NoZTest
+			if (AllSet(obj->m_flags, ELdrFlags::NoZTest))
+			{
+				// Don't test against Z, and draw above all objects
+				obj->m_dsb.Set(rdr::EDS::DepthEnable, FALSE);
+				obj->m_sko.Group(rdr::ESortGroup::PostAlpha);
+			}
+
+			// If NoZWrite
+			if (AllSet(obj->m_flags, ELdrFlags::NoZWrite))
+				obj->m_dsb.Set(rdr::EDS::DepthWriteMask, D3D11_DEPTH_WRITE_MASK_ZERO);
 
 			// If flagged as screen space rendering mode
 			if (obj->m_screen_space)
@@ -3219,12 +3235,12 @@ namespace pr
 					obj->Colour(obj->m_base_colour, obj->m_colour_mask, "");
 
 				// Apply wireframe to all children
-				if (obj->m_wireframe)
-					obj->Wireframe(obj->m_wireframe, "");
+				if (AllSet(obj->m_flags, ELdrFlags::Wireframe))
+					obj->Wireframe(true, "");
 
 				// Apply visibility to all children
-				if (!obj->m_visible)
-					obj->Visible(obj->m_visible, "");
+				if (AllSet(obj->m_flags, ELdrFlags::Hidden))
+					obj->Visible(false, "");
 			}
 		};
 
@@ -3243,10 +3259,7 @@ namespace pr
 			EType          m_type;
 			TextFmtCont    m_fmt;
 			TextLayout     m_layout;
-			Font           m_font;
 			AxisId         m_axis_id;
-			bool           m_no_z_write;
-			bool           m_no_z_test;
 
 			ObjectCreator(ParseParams& p)
 				:IObjectCreator(p)
@@ -3254,10 +3267,7 @@ namespace pr
 				,m_type(EType::Full3D)
 				,m_fmt()
 				,m_layout()
-				,m_font(p.m_font)
 				,m_axis_id(AxisId::PosZ)
-				,m_no_z_write()
-				,m_no_z_test()
 			{}
 			void Parse() override
 			{
@@ -3266,7 +3276,7 @@ namespace pr
 				m_text.append(text);
 
 				// Record the formatting state
-				m_fmt.push_back(TextFormat(int(m_text.size() - text.size()), int(text.size()), m_font));
+				m_fmt.push_back(TextFormat(int(m_text.size() - text.size()), int(text.size()), p.m_font.back()));
 			}
 			bool ParseKeyword(EKeyword kw) override
 			{
@@ -3280,7 +3290,7 @@ namespace pr
 						m_text.append(text);
 
 						// Record the formatting state
-						m_fmt.push_back(TextFormat(int(m_text.size() - text.size()), int(text.size()), m_font));
+						m_fmt.push_back(TextFormat(int(m_text.size() - text.size()), int(text.size()), p.m_font.back()));
 						return true;
 					}
 				case EKeyword::NewLine:
@@ -3301,11 +3311,6 @@ namespace pr
 				case EKeyword::BackColour:
 					{
 						p.m_reader.IntS(m_layout.m_bk_colour.argb, 16);
-						return true;
-					}
-				case EKeyword::Font:
-					{
-						ParseFont(p.m_reader, m_font);
 						return true;
 					}
 				case EKeyword::Format:
@@ -3329,8 +3334,6 @@ namespace pr
 							case HashI("wholeword"     ): m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_WHOLE_WORD; break;
 							case HashI("character"     ): m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_CHARACTER; break;
 							case HashI("emergencybreak"): m_layout.m_word_wrapping = DWRITE_WORD_WRAPPING_EMERGENCY_BREAK; break;
-							case HashI("nozwrite"      ): m_no_z_write = true; break;
-							case HashI("noztest"       ): m_no_z_test = true; break;
 							}
 						}
 						p.m_reader.SectionEnd();
@@ -3456,19 +3459,6 @@ namespace pr
 						break;
 					}
 				}
-
-				// Z Write
-				if (m_no_z_write)
-				{
-					obj->m_dsb.Set(rdr::EDS::DepthWriteMask, D3D11_DEPTH_WRITE_MASK_ZERO);
-				}
-
-				// Z Test
-				if (m_no_z_test)
-				{
-					obj->m_dsb.Set(rdr::EDS::DepthEnable, false);
-					obj->m_sko.Group(rdr::ESortGroup::PostAlpha); // Draw above all objects
-				}
 			}
 		};
 
@@ -3500,8 +3490,14 @@ namespace pr
 		{
 			// Read the object attributes: name, colour, instance
 			auto attr = ParseAttributes(p.m_reader, ShapeType);
-			auto obj  = LdrObjectPtr(new LdrObject(attr, p.m_parent, p.m_context_id, p.m_rdr.NewId32()), true);
+			auto obj  = LdrObjectPtr(new LdrObject(attr, p.m_parent, p.m_context_id), true);
 
+			// Push a font onto the font stack, so that fonts are scoped to object declarations
+			auto font_scope = CreateScope(
+				[&]{ p.m_font.push_back(p.m_font.back()); },
+				[&]{ p.m_font.pop_back(); });
+
+			// Create an object creator for the given type
 			ObjectCreator<ShapeType> creator(p);
 
 			// Read the description of the model
@@ -3556,7 +3552,10 @@ namespace pr
 		// Returns true if an object was read or false if the next keyword is unrecognised
 		bool ParseLdrObject(ParseParams& p)
 		{
+			// Save the current number of objects
 			auto object_count = p.m_objects.size();
+
+			// Parse the object
 			auto kw = ELdrObject(p.m_keyword);
 			switch (kw)
 			{
@@ -3679,7 +3678,7 @@ namespace pr
 					}
 				case EKeyword::Font:
 					{
-						ParseFont(p.m_reader, p.m_font);
+						ParseFont(p.m_reader, p.m_font.back());
 						break;
 					}
 				case EKeyword::Lock:
@@ -3725,7 +3724,7 @@ namespace pr
 		// Create an ldr object from creation data.
 		LdrObjectPtr Create(pr::Renderer& rdr, ObjectAttributes attr, MeshCreationData const& cdata, pr::Guid const& context_id)
 		{
-			LdrObjectPtr obj(new LdrObject(attr, nullptr, context_id, rdr.NewId32()), true);
+			LdrObjectPtr obj(new LdrObject(attr, nullptr, context_id), true);
 
 			// Create the model
 			obj->m_model = ModelGenerator<>::Mesh(rdr, cdata);
@@ -3736,8 +3735,8 @@ namespace pr
 		// Create an instance of an existing ldr object.
 		LdrObjectPtr CreateInstance(LdrObject const* existing)
 		{
-			ObjectAttributes attr(existing->m_type, existing->m_name.c_str(), existing->m_base_colour, true);
-			LdrObjectPtr obj(new LdrObject(attr, nullptr, existing->m_context_id, existing->m_model->rdr().NewId32()), true);
+			ObjectAttributes attr(existing->m_type, existing->m_name.c_str(), existing->m_base_colour);
+			LdrObjectPtr obj(new LdrObject(attr, nullptr, existing->m_context_id), true);
 
 			// Use the same model
 			obj->m_model = existing->m_model;
@@ -3748,11 +3747,11 @@ namespace pr
 		// Objects created by this method will have dynamic usage and are suitable for updating every frame via the 'Edit' function.
 		LdrObjectPtr CreateEditCB(pr::Renderer& rdr, ObjectAttributes attr, int vcount, int icount, int ncount, EditObjectCB edit_cb, void* ctx, pr::Guid const& context_id)
 		{
-			LdrObjectPtr obj(new LdrObject(attr, 0, context_id, rdr.NewId32()), true);
+			LdrObjectPtr obj(new LdrObject(attr, 0, context_id), true);
 
 			// Create buffers for a dynamic model
-			VBufferDesc vbs(vcount, sizeof(Vert), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-			IBufferDesc ibs(icount, sizeof(pr::uint16), DxFormat<pr::uint16>::value, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+			VBufferDesc vbs(vcount, sizeof(Vert), EUsage::Dynamic, ECPUAccess::Write);
+			IBufferDesc ibs(icount, sizeof(pr::uint16), DxFormat<pr::uint16>::value, EUsage::Dynamic, ECPUAccess::Write);
 			MdlSettings settings(vbs, ibs);
 
 			// Create the model
@@ -3818,10 +3817,8 @@ namespace pr
 					std::swap(object->m_name, rhs->m_name);
 				if (AllSet(flags, EUpdateObject::Transform))
 					std::swap(object->m_o2p, rhs->m_o2p);
-				if (AllSet(flags, EUpdateObject::Wireframe))
-					std::swap(object->m_wireframe, rhs->m_wireframe);
-				if (AllSet(flags, EUpdateObject::Visibility))
-					std::swap(object->m_visible, rhs->m_visible);
+				if (AllSet(flags, EUpdateObject::Flags))
+					std::swap(object->m_flags, rhs->m_flags);
 				if (AllSet(flags, EUpdateObject::Animation))
 					std::swap(object->m_anim, rhs->m_anim);
 				if (AllSet(flags, EUpdateObject::ColourMask))
@@ -3968,6 +3965,8 @@ LR"(// There are a number of other object modifiers that can also be used:
 	                  // Screen space coordinates are in the volume:
 	                  //  (-1,-1,-0) = bottom, left, near plane
 	                  //  (+1,+1,-1) = top, right, far plane
+	//*NoZWrite  // Don't write to the Z buffer
+	//*NoZTest   // Don't depth-text
 }
 
 )"
@@ -3975,14 +3974,12 @@ LR"(// Model Instancing.
 // An instance can be created from any previously defined object. The instance will
 // share the renderable model from the object it is an instance of.
 // Note that properties of the object are not inherited by the instance.
-// The instance flag (false in this example) is used to prevent the model ever being drawn
-// It is different to the *Hidden property as that can be changed in the UI
-*Box model_instancing FF0000FF false   // Define a model to be used only for instancing
+*Box model_instancing FF0000FF // Define a model to be used only for instancing
 {
 	0.8 1 2
-	*RandColour              // Note: this will not be inheritted by the instances
+	*RandColour // Note: this will not be inherited by the instances
+	*Hidden     // Hide this object, only show the instances
 }
-
 *Instance model_instancing FFFF0000   // The name indicates which model to instance
 {
 	*o2w {*Pos {5 0 -2}}
@@ -4154,7 +4151,7 @@ LR"(// *************************************************************************
 // Billboard text always faces the camera
 *Text billboard_text
 {
-	*Font {*Colour {FF00FF00}}
+	*Font {*Colour {FF00FF00}} // Note: Font changes must come before text that uses the font
 	"This is billboard text"
 	*Billboard
 
@@ -4189,8 +4186,6 @@ LR"(// *************************************************************************
 	    Left      // Horizontal alignment. One of: Left, CentreH, Right
 		Top       // Vertical Alignment. One of: Top, CentreV, Bottom
 	    Wrap      // Text wrapping. One of: NoWrap, Wrap, WholeWord, Character, EmergencyBreak
-		NoZWrite  // Don't write to the Z buffer
-		NoZTest   // Don't depth-text
 	}
 	*BackColour {40000000}
 	*o2w{*scale{0.02}}
@@ -4650,7 +4645,7 @@ LR"(// A mesh of lines, faces, or tetrahedra.
 }
 
 // Embedded lua code can be used to programmatically generate script
-#embedded(lua)
+#embedded(lua,support)
 	-- lua code
 	function make_box(box_number)
 		return "*box b"..box_number.." FFFF0000 { 1 *o2w{*randpos {0 1 0 2}}}\n"
@@ -4679,7 +4674,7 @@ LR"(// A mesh of lines, faces, or tetrahedra.
 
 // Embedded C# code can be used also when used via View3D
 // Use 'CSharpImpl' for support code, 'CSharp' for code to execute.
-#embedded(CSharpImpl)
+#embedded(CSharp,support)
 	Random m_rng = new Random();
 	m4x4 O2W
 	{
@@ -4731,9 +4726,11 @@ LR"(// *************************************************************************
 		#pragma region LdrObject
 
 		#if PR_DBG
+		#define PR_LDR_CALLSTACKS 0
 		struct LeakedLdrObjects
 		{
 			std::unordered_set<LdrObject const*> m_ldr_objects;
+			std::string m_call_stacks;
 			std::mutex m_mutex;
 			
 			LeakedLdrObjects()
@@ -4766,13 +4763,20 @@ LR"(// *************************************************************************
 			}
 			void remove(LdrObject const* ldr)
 			{
+				#if PR_LDR_CALLSTACKS
+				#pragma message(PR_LINK "WARNING: ************************************************** PR_LDR_CALLSTACKS enabled")
+				m_call_stacks.append(FmtS("[%p] %s\n", ldr, ldr->TypeAndName().c_str()));
+				pr::DumpStack([&](auto& sym, auto& file, int line){ m_call_stacks.append(FmtS("%s(%d): %s\n", file.c_str(), line, sym.c_str()));}, 2U, 50U);
+				m_call_stacks.append("\n");
+				#endif
+
 				std::lock_guard<std::mutex> lock(m_mutex);
 				m_ldr_objects.erase(ldr);
 			}
 		} g_ldr_object_tracker;
 		#endif
 
-		LdrObject::LdrObject(ObjectAttributes const& attr, LdrObject* parent, pr::Guid const& context_id, int uid)
+		LdrObject::LdrObject(ObjectAttributes const& attr, LdrObject* parent, pr::Guid const& context_id)
 			:RdrInstance()
 			,m_o2p(m4x4Identity)
 			,m_type(attr.m_type)
@@ -4784,16 +4788,12 @@ LR"(// *************************************************************************
 			,m_colour_mask()
 			,m_anim()
 			,m_bbox_instance()
-			,m_instanced(attr.m_instance)
-			,m_visible(true)
-			,m_wireframe(false)
 			,m_screen_space()
 			,m_flags(ELdrFlags::None)
 			,m_user_data()
 		{
 			m_i2w = m4x4Identity;
 			m_colour = m_base_colour;
-			m_uid = uid;
 			PR_EXPAND(PR_DBG, g_ldr_object_tracker.add(this));
 		}
 		LdrObject::~LdrObject()
@@ -4821,7 +4821,7 @@ LR"(// *************************************************************************
 			OnAddToScene(*this, scene);
 
 			// Add the instance to the scene drawlist
-			if (m_instanced && m_visible && m_model)
+			if (m_model && !AllSet(m_flags, ELdrFlags::Hidden))
 			{
 				// Could add occlusion culling here...
 				scene.AddInstance(*this);
@@ -4840,7 +4840,7 @@ LR"(// *************************************************************************
 			auto i2w = *p2w * m_o2p * m_anim.Step(time_s);
 
 			// Add the bbox instance to the scene drawlist
-			if (m_instanced && m_visible && m_model)
+			if (m_model && !AllSet(m_flags, ELdrFlags::Hidden))
 			{
 				// Find the object to world for the bbox
 				auto o2w = i2w * m4x4::Scale(
@@ -4916,13 +4916,13 @@ LR"(// *************************************************************************
 		bool LdrObject::Visible(char const* name) const
 		{
 			auto obj = Child(name);
-			return obj ? obj->m_visible : false;
+			return obj ? !AllSet(obj->m_flags, ELdrFlags::Hidden) : false;
 		}
 		void LdrObject::Visible(bool visible, char const* name)
 		{
 			Apply([=](LdrObject* o)
 			{
-				o->m_visible = visible;
+				o->m_flags = SetBits(o->m_flags, ELdrFlags::Hidden, !visible);
 				return true;
 			}, name);
 		}
@@ -4931,15 +4931,15 @@ LR"(// *************************************************************************
 		bool LdrObject::Wireframe(char const* name) const
 		{
 			auto obj = Child(name);
-			return obj ? obj->m_wireframe : false;
+			return obj ? AllSet(obj->m_flags, ELdrFlags::Wireframe) : false;
 		}
 		void LdrObject::Wireframe(bool wireframe, char const* name)
 		{
 			Apply([=](LdrObject* o)
 			{
-				o->m_wireframe = wireframe;
-				if (o->m_wireframe) o->m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME);
-				else                o->m_rsb.Clear(ERS::FillMode);
+				o->m_flags = SetBits(o->m_flags, ELdrFlags::Wireframe, wireframe);
+				if (wireframe) o->m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME);
+				else           o->m_rsb.Clear(ERS::FillMode);
 				return true;
 			}, name);
 		}
@@ -5012,6 +5012,7 @@ LR"(// *************************************************************************
 		{
 			Apply([=](LdrObject* o)
 			{
+				// Apply flag changes
 				o->m_flags = SetBits(o->m_flags, flags, state);
 				return true;
 			}, name);
@@ -5117,7 +5118,7 @@ LR"(// *************************************************************************
 		// Called when there are no more references to this object
 		void LdrObject::RefCountZero(RefCount<LdrObject>* doomed)
 		{
-			delete doomed;
+			delete static_cast<LdrObject*>(doomed);
 		}
 		long LdrObject::AddRef() const
 		{

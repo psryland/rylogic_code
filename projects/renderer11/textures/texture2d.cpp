@@ -33,7 +33,7 @@ namespace pr
 				TextureDesc tdesc;
 				tex->GetDesc(&tdesc);
 
-				ShaderResViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
+				ShaderResourceViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
 				srvdesc.Texture2D.MipLevels = tdesc.MipLevels;
 
 				Renderer::Lock lock(mgr->m_rdr);
@@ -41,7 +41,7 @@ namespace pr
 			}
 			SamDesc(sam_desc);
 		}
-		Texture2D::Texture2D(TextureManager* mgr, RdrId id, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name, ShaderResViewDesc const* srvdesc)
+		Texture2D::Texture2D(TextureManager* mgr, RdrId id, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name, ShaderResourceViewDesc const* srvdesc)
 			:m_t2s(pr::m4x4Identity)
 			,m_tex()
 			,m_srv()
@@ -84,7 +84,7 @@ namespace pr
 		// 'perserve' - if true, the content of the current texture is stretched on to the new texture
 		//  if possible. If not possible, an exception is thrown
 		// 'srvdesc' - if not null, causes the new shader resource view to be created using this description
-		void Texture2D::TexDesc(Image const& src, TextureDesc const& tdesc, bool all_instances, bool preserve, ShaderResViewDesc const* srvdesc)
+		void Texture2D::TexDesc(Image const& src, TextureDesc const& tdesc, bool all_instances, bool preserve, ShaderResourceViewDesc const* srvdesc)
 		{
 			D3DPtr<ID3D11Texture2D> tex;
 			D3DPtr<ID3D11ShaderResourceView> srv;

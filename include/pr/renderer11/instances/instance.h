@@ -11,7 +11,7 @@
 //
 // Instance data layout:
 //  BaseInstance
-//  CompDesc[NumCpts]
+//  EInstComp[NumCpts]
 //  component
 //  component
 //  component
@@ -27,8 +27,9 @@ namespace pr
 	namespace rdr
 	{
 		// Instance component types
-		enum class EInstComp :pr::uint16
+		enum class EInstComp :pr::uint8
 		{
+			None               , // invalid entry
 			ModelPtr           , // pr::rdr::ModelPtr
 			I2WTransform       , // pr::m4x4
 			I2WTransformPtr    , // pr::m4x4*
@@ -44,20 +45,30 @@ namespace pr
 			TintColour32       , // pr::Colour32
 			UniqueId           , // int32
 			SSSize             , // pr::v2 (screen space size)
-			FirstUserCpt       , // Clients may add other component types
 		};
-
-		// Component description
-		struct CompDesc
+		constexpr size_t SizeOf(EInstComp comp)
 		{
-			EInstComp m_type;    // The type of component this is an offset to
-			pr::uint16 m_offset;  // Byte offset from the instance pointer
-			static CompDesc make(EInstComp comp, pr::uint16 offset)
+			switch (comp)
 			{
-				CompDesc c = {comp, offset};
-				return c;
+			case EInstComp::None:                return 0;
+			case EInstComp::ModelPtr:            return sizeof(pr::rdr::ModelPtr);
+			case EInstComp::I2WTransform:        return sizeof(pr::m4x4);
+			case EInstComp::I2WTransformPtr:     return sizeof(pr::m4x4*);
+			case EInstComp::I2WTransformFuncPtr: return sizeof(pr::m4x4 const& (*)(void* context));
+			case EInstComp::C2STransform:        return sizeof(pr::m4x4);
+			case EInstComp::C2SOptional:         return sizeof(pr::m4x4);
+			case EInstComp::C2STransformPtr:     return sizeof(pr::m4x4*);
+			case EInstComp::C2STransformFuncPtr: return sizeof(pr::m4x4 const& (*)(void* context));
+			case EInstComp::SortkeyOverride:     return sizeof(pr::rdr::SKOverride);
+			case EInstComp::BSBlock:             return sizeof(pr::rdr::BSBlock);
+			case EInstComp::DSBlock:             return sizeof(pr::rdr::DSBlock);
+			case EInstComp::RSBlock:             return sizeof(pr::rdr::RSBlock);
+			case EInstComp::TintColour32:        return sizeof(pr::Colour32);
+			case EInstComp::UniqueId:            return sizeof(pr::int32);
+			case EInstComp::SSSize:              return sizeof(pr::v2);
+			default: throw std::exception("Unknown instance component type");
 			}
-		};
+		}
 
 		// The header for an instance. All instances must start with one of these
 		struct BaseInstance
@@ -70,34 +81,41 @@ namespace pr
 				return b;
 			}
 
-			CompDesc const* begin() const { return pr::type_ptr<CompDesc>(this + 1); }
-			CompDesc*       begin()       { return pr::type_ptr<CompDesc>(this + 1); }
-			CompDesc const* end() const   { return begin() + m_cpt_count; }
-			CompDesc*       end()         { return begin() + m_cpt_count; }
+			// Enumerate the component types
+			EInstComp const* begin() const { return pr::type_ptr<EInstComp>(this + 1); }
+			EInstComp const* end() const   { return begin() + m_cpt_count; }
+			EInstComp* begin()             { return pr::type_ptr<EInstComp>(this + 1); }
+			EInstComp* end()               { return begin() + m_cpt_count; }
 
 			// Access the component at 'ofs'
-			template <typename Comp> Comp const* get(pr::uint16 ofs) const
+			template <typename Comp> Comp const* get(size_t ofs) const
 			{
 				return reinterpret_cast<Comp const*>(byte_ptr(this) + ofs);
 			}
-			template <typename Comp> Comp* get(pr::uint16 ofs)
+			template <typename Comp> Comp* get(size_t ofs)
 			{
 				return reinterpret_cast<Comp*>(byte_ptr(this) + ofs);
 			}
 
-			// Find the 'index'th component in this instance. Returns non-null if the component was found
+			// Find the 'index'th component of type 'comp' in this instance. Returns non-null if the component was found
 			template <typename Comp> Comp const* find(EInstComp comp, int index = 0) const
 			{
+				auto byte_ofs = pr::PadTo<size_t>(sizeof(pr::rdr::BaseInstance) + m_cpt_count * sizeof(EInstComp), 16);
 				for (auto& c : *this)
-					if (c.m_type == comp && index-- == 0)
-						return get<Comp>(c.m_offset);
+				{
+					if (c == comp && index-- == 0) return get<Comp>(byte_ofs);
+					byte_ofs += SizeOf(c);
+				}
 				return nullptr;
 			}
 			template <typename Comp> Comp* find(EInstComp comp, int index = 0)
 			{
+				auto byte_ofs = pr::PadTo<size_t>(sizeof(pr::rdr::BaseInstance) + m_cpt_count * sizeof(EInstComp), 16);
 				for (auto& c : *this)
-					if (c.m_type == comp && index-- == 0)
-						return get<Comp>(c.m_offset);
+				{
+					if (c == comp && index-- == 0) return get<Comp>(byte_ofs);
+					byte_ofs += SizeOf(c);
+				}
 				return nullptr;
 			}
 
@@ -197,6 +215,16 @@ namespace pr
 			return puid ? *puid : 0;
 		}
 
+		// Cast from a 'BaseInstance' pointer to an instance type
+		template <typename InstType> constexpr InstType const* cast(BaseInstance const* base_ptr)
+		{
+			return type_ptr<InstType>(byte_ptr(base_ptr) - offsetof(InstType, m_base));
+		}
+		template <typename InstType> constexpr InstType* cast(BaseInstance* base_ptr)
+		{
+			return type_ptr<InstType>(byte_ptr(base_ptr) - offsetof(InstType, m_base));
+		}
+
 		// Use this to define class types that are compatible with the renderer
 		// Example:
 		//  #define PR_RDR_INST(x)\
@@ -209,7 +237,7 @@ namespace pr
 		#define PR_RDR_INST_INITIALISERS(ty,nm,em)      ,nm()
 		#define PR_RDR_INST_MEMBER_COUNT(ty,nm,em)      + 1
 		#define PR_RDR_INST_MEMBERS(ty,nm,em)           ty nm;
-		#define PR_RDR_INST_INIT_COMPONENTS(ty,nm,em)   m_cpt[i++] = CompDesc::make(em, offsetof(inst_type, nm));
+		#define PR_RDR_INST_INIT_COMPONENTS(ty,nm,em)   m_cpt[i++] = em;
 
 		// Notes:
 		// No inheritance in this type. It relies on POD behaviour
@@ -218,7 +246,7 @@ namespace pr
 			struct name\
 			{\
 				pr::rdr::BaseInstance m_base;\
-				pr::rdr::CompDesc m_cpt[0 fields(PR_RDR_INST_MEMBER_COUNT)];\
+				pr::rdr::EInstComp m_cpt[pr::PadTo<size_t>(sizeof(pr::rdr::BaseInstance) fields(PR_RDR_INST_MEMBER_COUNT), 16) - sizeof(pr::rdr::BaseInstance)];\
 				fields(PR_RDR_INST_MEMBERS)\
 		\
 				name()\
@@ -230,7 +258,7 @@ namespace pr
 					using inst_type = name;\
 					static_assert(offsetof(inst_type, m_base) == 0, "'m_base' must be be the first member");\
 					int i = 0;\
-					m_base.m_cpt_count = _countof(m_cpt);\
+					m_base.m_cpt_count = 0 fields(PR_RDR_INST_MEMBER_COUNT);\
 					fields(PR_RDR_INST_INIT_COMPONENTS)\
 				}\
 		\

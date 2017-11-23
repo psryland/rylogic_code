@@ -11,7 +11,6 @@ using pr.db;
 using pr.extn;
 using pr.gfx;
 using pr.gui;
-using pr.maths;
 using pr.util;
 
 namespace CoinFlip
@@ -532,8 +531,8 @@ namespace CoinFlip
 			rdrOptions1.AntiAliasing = true;
 			rdrOptions1.BkColour = System.Drawing.SystemColors.Control;
 			rdrOptions1.ChartBkColour = System.Drawing.Color.White;
-			rdrOptions1.CullMode = pr.gfx.View3d.ECullMode.Back;
-			rdrOptions1.FillMode = pr.gfx.View3d.EFillMode.Solid;
+			rdrOptions1.CullMode = pr.view3d.View3d.ECullMode.Back;
+			rdrOptions1.FillMode = pr.view3d.View3d.EFillMode.Solid;
 			rdrOptions1.GridZOffset = 0.001F;
 			rdrOptions1.LockAspect = null;
 			rdrOptions1.Margin = new System.Windows.Forms.Padding(3);

@@ -53,7 +53,7 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 
 	keys = [
 		["vs", "/Tvs_4_0", r"^#ifdef PR_RDR_VSHADER_(?P<name>.*)$"],
-		["ps", "/Tps_4_0", r"^#ifdef PR_RDR_PSHADER_(?P<name>.*)$"],
+		["ps", "/Tps_5_0", r"^#ifdef PR_RDR_PSHADER_(?P<name>.*)$"],
 		["gs", "/Tgs_4_0", r"^#ifdef PR_RDR_GSHADER_(?P<name>.*)$"],
 		["cs", "/Tcs_5_0", r"^#ifdef PR_RDR_CSHADER_(?P<name>.*)$"],
 		]

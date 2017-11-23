@@ -20,12 +20,12 @@ namespace pr
 			// Notes:
 			//  - The shader manager is a store of D3D shaders.
 			//  - The shader manager allows for application specific shaders.
-			//  - The 'ShaderBase' derived objects are reference counted instances of D3D11 shaders.
-			//  - A 'ShaderBase' derived object is created for each configuration of its shader constants.
+			//  - The 'Shader' derived objects are reference counted instances of D3D11 shaders.
+			//  - A 'Shader' derived object is created for each configuration of its shader constants.
 			//    This might be as many as one per nugget.
-			//  - The 'ShaderLookup' container is a collection of weak references to ShaderBase instances.
-			//    An application can cache ShaderBase instances that use the same constants. This is not
-			//    necessary though, creating a ShaderBase instance per nugget is ok.
+			//  - The 'ShaderLookup' container is a collection of weak references to Shader instances.
+			//    An application can cache Shader instances that use the same constants. This is not
+			//    necessary though, creating a Shader instance per nugget is ok.
 
 			using IPLookup     = Lookup<RdrId, D3DPtr<ID3D11InputLayout>>;
 			using VSLookup     = Lookup<RdrId, D3DPtr<ID3D11VertexShader>>;
@@ -33,12 +33,12 @@ namespace pr
 			using GSLookup     = Lookup<RdrId, D3DPtr<ID3D11GeometryShader>>;
 			using CSLookup     = Lookup<RdrId, D3DPtr<ID3D11ComputeShader>>;
 			using CBufLookup   = Lookup<RdrId, D3DPtr<ID3D11Buffer>>;
-			using ShaderLookup = Lookup<RdrId, ShaderBase*>;
+			using ShaderLookup = Lookup<RdrId, Shader*>;
 
 			using ShaderAlexFunc = std::function<ShaderPtr(ShaderManager*)>;
-			using ShaderDeleteFunc = std::function<void(ShaderBase*)>;
-			using AllocationsTracker = AllocationsTracker<ShaderBase>;
-			friend struct ShaderBase;
+			using ShaderDeleteFunc = std::function<void(Shader*)>;
+			using AllocationsTracker = AllocationsTracker<Shader>;
+			friend struct Shader;
 
 			MemFuncs              m_mem;           // Not using an allocator here, because the Shader type isn't known until 'CreateShader' is called
 			AllocationsTracker    m_dbg_mem;       // Allocation tracker
@@ -48,7 +48,7 @@ namespace pr
 			PSLookup              m_lookup_ps;     // Map from id to D3D pixel shader
 			GSLookup              m_lookup_gs;     // Map from id to D3D geometry shader
 			CSLookup              m_lookup_cs;     // Map from id to D3D compute shader
-			ShaderLookup          m_lookup_shader; // Map from id to ShaderBase instances
+			ShaderLookup          m_lookup_shader; // Map from id to Shader instances
 			CBufLookup            m_lookup_cbuf;   // Shared 'cbuffer' objects
 			pr::vector<ShaderPtr> m_stock_shaders; // A collection of references to the stock shaders
 			std::recursive_mutex  m_mutex;
@@ -86,10 +86,11 @@ namespace pr
 			D3DPtr<ID3D11VertexShader>   GetVS(RdrId id, VShaderDesc const* desc = nullptr);
 			D3DPtr<ID3D11PixelShader>    GetPS(RdrId id, PShaderDesc const* desc = nullptr);
 			D3DPtr<ID3D11GeometryShader> GetGS(RdrId id, GShaderDesc const* desc = nullptr);
+			D3DPtr<ID3D11GeometryShader> GetGS(RdrId id, GShaderDesc const* desc, StreamOutDesc const& so_desc);
 			D3DPtr<ID3D11ComputeShader>  GetCS(RdrId id, CShaderDesc const* desc = nullptr);
 
-			// Create an instance of a shader object derived from ShaderBase.
-			template <typename ShaderType, typename DxShaderType, typename = std::enable_if_t<std::is_base_of_v<ShaderBase, ShaderType>>>
+			// Create an instance of a shader object derived from Shader.
+			template <typename ShaderType, typename DxShaderType, typename = std::enable_if_t<std::is_base_of_v<Shader, ShaderType>>>
 			pr::RefPtr<ShaderType> CreateShader(RdrId id, typename D3DPtr<DxShaderType> const& d3d_shdr, char const* name)
 			{
 				std::lock_guard<std::recursive_mutex> lock(m_mutex);
@@ -109,8 +110,8 @@ namespace pr
 				return std::move(shdr);
 			}
 
-			// Return a cached ShaderBase instance corresponding to 'id' or null if not found
-			template <typename ShaderType, typename = std::enable_if_t<std::is_base_of_v<ShaderBase, ShaderType>>>
+			// Return a cached Shader instance corresponding to 'id' or null if not found
+			template <typename ShaderType, typename = std::enable_if_t<std::is_base_of_v<Shader, ShaderType>>>
 			pr::RefPtr<ShaderType> FindShader(RdrId id)
 			{
 				// AutoId means make a new shader, so it'll never exist already
@@ -120,18 +121,18 @@ namespace pr
 				std::lock_guard<std::recursive_mutex> lock(m_mutex);
 
 				// Look for 'id' in the cache.
-				auto shdr = GetOrDefault(m_lookup_shader, id, (ShaderBase*)nullptr);
+				auto shdr = GetOrDefault(m_lookup_shader, id, (Shader*)nullptr);
 				return pr::RefPtr<ShaderType>(static_cast<ShaderType*>(shdr), true);
 			}
 			ShaderPtr FindShader(RdrId id)
 			{
 				// This allows shaders to be found without having to include the definition of the shader
-				return FindShader<ShaderBase>(id);
+				return FindShader<Shader>(id);
 			}
 
-			// Get/Create a ShaderBase instance corresponding to 'id'.
+			// Get/Create a Shader instance corresponding to 'id'.
 			// Use 'id' = AutoId to ignore the shader instance cache and just create a new instance of 'base_id'
-			template <typename ShaderType, typename = std::enable_if_t<std::is_base_of_v<ShaderBase, ShaderType>>>
+			template <typename ShaderType, typename = std::enable_if_t<std::is_base_of_v<Shader, ShaderType>>>
 			pr::RefPtr<ShaderType> GetShader(RdrId id, RdrId base_id, char const* name = nullptr)
 			{
 				// Look in the cache for an instance with id 'id'
@@ -153,11 +154,11 @@ namespace pr
 				return std::move(shdr);
 			}
 
-			// Get/Create a ShaderBase instance corresponding to 'id'.
+			// Get/Create a Shader instance corresponding to 'id'.
 			// 'id' should be a string that uniquely identifies the shader and it's constants.
 			// This allows the caching of shader instances with the same constants to work.
 			// Don't worry if it's too complex though, creating new shader instances is relatively cheap.
-			template <typename ShaderType, typename = std::enable_if_t<std::is_base_of_v<ShaderBase, ShaderType>>>
+			template <typename ShaderType, typename = std::enable_if_t<std::is_base_of_v<Shader, ShaderType>>>
 			pr::RefPtr<ShaderType> GetShader(char const* id, RdrId base_id, char const* name = nullptr)
 			{
 				auto id_ = id ? MakeId(id) : AutoId;

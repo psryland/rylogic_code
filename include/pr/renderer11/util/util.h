@@ -37,13 +37,13 @@ namespace pr
 		}
 
 		// Compile time type to 'DXGI_FORMAT' conversion
-		template <typename Idx> struct DxFormat { static const DXGI_FORMAT value = DXGI_FORMAT_UNKNOWN; };
-		template <> struct DxFormat<pr::uint16> { static const DXGI_FORMAT value = DXGI_FORMAT_R16_UINT; };
-		template <> struct DxFormat<pr::uint32> { static const DXGI_FORMAT value = DXGI_FORMAT_R32_UINT; };
-		template <> struct DxFormat<pr::v2>     { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32_FLOAT; };
-		template <> struct DxFormat<pr::v3>     { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32_FLOAT; };
-		template <> struct DxFormat<pr::v4>     { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32A32_FLOAT; };
-		template <> struct DxFormat<pr::Colour> { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32A32_FLOAT; };
+		template <typename Fmt> struct DxFormat { static const DXGI_FORMAT value = DXGI_FORMAT_UNKNOWN;            static const int size = sizeof(char  ); };
+		template <> struct DxFormat<uint16>     { static const DXGI_FORMAT value = DXGI_FORMAT_R16_UINT;           static const int size = sizeof(uint16); };
+		template <> struct DxFormat<uint32>     { static const DXGI_FORMAT value = DXGI_FORMAT_R32_UINT;           static const int size = sizeof(uint32); };
+		template <> struct DxFormat<v2    >     { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32_FLOAT;       static const int size = sizeof(v2    ); };
+		template <> struct DxFormat<v3    >     { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32_FLOAT;    static const int size = sizeof(v3    ); };
+		template <> struct DxFormat<v4    >     { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32A32_FLOAT; static const int size = sizeof(v4    ); };
+		template <> struct DxFormat<Colour>     { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32A32_FLOAT; static const int size = sizeof(Colour); };
 
 		// Shader type to enum map
 		template <typename D3DShaderType> struct ShaderTypeId { static const EShaderType value = EShaderType::Invalid; };
@@ -119,7 +119,9 @@ namespace pr
 			if (res->GetPrivateData(WKPDID_D3DDebugObjectName, &size, existing) != DXGI_ERROR_NOT_FOUND)
 			{
 				existing[size] = 0;
-				PR_ASSERT(PR_DBG_RDR, false, FmtS("Resource is already named: %s", existing));
+				if (!str::Equal(existing, name))
+					OutputDebugStringA(FmtS("Resource is already named '%s'. New name '%s' ignored", existing, name));
+				return;
 			}
 
 			string32 res_name = name;

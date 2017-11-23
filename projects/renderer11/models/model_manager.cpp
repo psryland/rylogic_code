@@ -36,6 +36,7 @@ namespace pr
 				throw std::exception("Attempt to create 0-length model index buffer");
 
 			Renderer::Lock lock(m_rdr);
+			auto& device = *lock.D3DDevice();
 
 			// Create a new model buffer
 			ModelBufferPtr mb(m_alex_mdlbuf.New(), true);
@@ -43,7 +44,7 @@ namespace pr
 			mb->m_mdl_mgr = this;
 			{// Create a vertex buffer
 				SubResourceData init(settings.m_vb.Data, 0, UINT(settings.m_vb.SizeInBytes()));
-				Throw(lock.D3DDevice()->CreateBuffer(&settings.m_vb, settings.m_vb.Data != 0 ? &init : 0, &mb->m_vb.m_ptr));
+				Throw(device.CreateBuffer(&settings.m_vb, settings.m_vb.Data != 0 ? &init : 0, &mb->m_vb.m_ptr));
 				mb->m_vb.m_range.set(0, settings.m_vb.ElemCount);
 				mb->m_vb.m_used.set(0, 0);
 				mb->m_vb.m_stride = settings.m_vb.StructureByteStride;
@@ -51,7 +52,7 @@ namespace pr
 			}
 			{// Create an index buffer
 				SubResourceData init(settings.m_ib.Data, 0, UINT(settings.m_ib.SizeInBytes()));
-				Throw(lock.D3DDevice()->CreateBuffer(&settings.m_ib, settings.m_ib.Data != 0 ? &init : 0, &mb->m_ib.m_ptr));
+				Throw(device.CreateBuffer(&settings.m_ib, settings.m_ib.Data != 0 ? &init : 0, &mb->m_ib.m_ptr));
 				mb->m_ib.m_range.set(0, settings.m_ib.ElemCount);
 				mb->m_ib.m_used.set(0, 0);
 				mb->m_ib.m_format = settings.m_ib.Format;

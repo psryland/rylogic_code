@@ -23,14 +23,12 @@ namespace pr
 			,m_cbuf_frame (m_shdr_mgr->GetCBuf<hlsl::fwd::CBufFrame>("Fwd::CBufFrame"))
 			,m_cbuf_nugget(m_shdr_mgr->GetCBuf<hlsl::fwd::CBufModel>("Fwd::CBufModel"))
 			,m_clear_bb(clear_bb)
-			,m_sset()
-		{
-			m_sset.m_vs = m_shdr_mgr->FindShader(RdrId(EStockShader::FwdShaderVS));
-			m_sset.m_ps = m_shdr_mgr->FindShader(RdrId(EStockShader::FwdShaderPS));
-		}
+			,m_vs(m_shdr_mgr->FindShader(RdrId(EStockShader::FwdShaderVS)))
+			,m_ps(m_shdr_mgr->FindShader(RdrId(EStockShader::FwdShaderPS)))
+		{}
 
 		// Add model nuggets to the draw list for this render step
-		void ForwardRender::AddNuggets(BaseInstance const& inst, TNuggetChain& nuggets)
+		void ForwardRender::AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets)
 		{
 			Lock lock(*this);
 			auto& drawlist = lock.drawlist();
@@ -41,9 +39,16 @@ namespace pr
 			// Add a drawlist element for each nugget in the instance's model
 			drawlist.reserve(drawlist.size() + nuggets.size());
 			for (auto& nug : nuggets)
-				nug.AddToDrawlist(drawlist, inst, sko, Id, m_sset);
+				nug.AddToDrawlist(drawlist, inst, sko, Id);
 
 			m_sort_needed = true;
+		}
+
+		// Update the provided shader set appropriate for this render step
+		void ForwardRender::ConfigShaders(ShaderSet1& ss, EPrim) const
+		{
+			if (ss.m_vs == nullptr) ss.m_vs = m_vs.get();
+			if (ss.m_ps == nullptr) ss.m_ps = m_ps.get();
 		}
 
 		// Perform the render step

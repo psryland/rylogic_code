@@ -32,7 +32,7 @@ namespace pr
 
 			Texture2D(TextureManager* mgr, RdrId id, ID3D11Texture2D* tex, SamplerDesc const& sam_desc, SortKeyId sort_id, bool has_alpha, char const* name);
 			Texture2D(TextureManager* mgr, RdrId id, ID3D11Texture2D* tex, ID3D11ShaderResourceView* srv, SamplerDesc const& sam_desc, SortKeyId sort_id, bool has_alpha, char const* name);
-			Texture2D(TextureManager* mgr, RdrId id, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name, ShaderResViewDesc const* srvdesc = nullptr);
+			Texture2D(TextureManager* mgr, RdrId id, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name, ShaderResourceViewDesc const* srvdesc = nullptr);
 			Texture2D(TextureManager* mgr, RdrId id, Texture2D const& existing, SortKeyId sort_id, char const* name);
 
 			// Get the description of the current texture pointed to by 'm_tex'
@@ -45,7 +45,7 @@ namespace pr
 			// 'perserve' - if true, the content of the current texture is stretch copied to the new texture
 			//  if possible. If not possible, an exception is thrown
 			// 'srvdesc' - if not null, causes the new shader resource view to be created using this description
-			void TexDesc(Image const& src, TextureDesc const& tdesc, bool all_instances, bool preserve, ShaderResViewDesc const* srvdesc = nullptr);
+			void TexDesc(Image const& src, TextureDesc const& tdesc, bool all_instances, bool preserve, ShaderResourceViewDesc const* srvdesc = nullptr);
 
 			// Get/Set the description of the current sampler state pointed to by 'm_samp'
 			// Setting a new sampler description, re-creates the sampler state

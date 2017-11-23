@@ -47,6 +47,7 @@ namespace pr
 			// of the model geometry that use the same data.
 			void DeleteNuggets();
 
+			// Get the model buffer range for this model
 			Range VRange() const { return m_vrange; }
 			Range IRange() const { return m_irange; }
 

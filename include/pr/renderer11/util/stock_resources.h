@@ -44,12 +44,6 @@ namespace pr
 			x(ShadowMapFaceGS ,)\
 			x(ShadowMapLineGS ,)\
 			x(ShadowMapPS     ,)\
-			x(RayCastVS       ,)\
-			x(RayCastFaceGS   ,)\
-			x(RayCastEdgeGS   ,)\
-			x(RayCastVertGS   ,)\
-			x(RayCastPS       ,)\
-			x(RayCastCS       ,)\
 			x(PointSpritesGS  ,)\
 			x(ThickLineListGS ,)\
 			x(ArrowHeadGS     ,)

@@ -23,48 +23,38 @@ namespace pr
 			string m_last_keyword;
 			bool m_case_sensitive;
 
-			// Post-construction initialisation
-			void Init()
-			{
-				// Reset the embedded code handlers
-				EmbeddedCode().Reset();
-			}
-
 		public:
 
-			Reader(bool case_sensitive = true, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, IEmbeddedCode* emb = nullptr)
+			Reader(bool case_sensitive = true, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
 				:m_pp(inc, mac, emb)
 				,m_delim(L" \t\r\n\v,;")
 				,m_last_keyword()
 				,m_case_sensitive(case_sensitive)
-			{
-				Init();
-			}
-			Reader(Src& src, bool case_sensitive = true, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, IEmbeddedCode* emb = nullptr)
+			{}
+			Reader(Src& src, bool case_sensitive = true, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
 				:m_pp(src, inc, mac, emb)
 				,m_delim(L" \t\r\n\v,;")
 				,m_last_keyword()
 				,m_case_sensitive(case_sensitive)
-			{
-				Init();
-			}
-			Reader(Src* src, bool delete_on_pop, bool case_sensitive = true, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, IEmbeddedCode* emb = nullptr)
+			{}
+			Reader(Src* src, bool delete_on_pop, bool case_sensitive = true, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
 				:m_pp(src, delete_on_pop, inc, mac, emb)
 				,m_delim(L" \t\r\n\v,;")
 				,m_last_keyword()
 				,m_case_sensitive(case_sensitive)
-			{
-				Init();
-			}
-			template <typename Char, typename = pr::str::enable_if_char_t<Char>>
-			Reader(Char const* src, bool case_sensitive = true, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, IEmbeddedCode* emb = nullptr)
+			{}
+			Reader(char const* src, bool case_sensitive = true, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
 				:m_pp(src, inc, mac, emb)
 				,m_delim(L" \t\r\n\v,;")
 				,m_last_keyword()
 				,m_case_sensitive(case_sensitive)
-			{
-				Init();
-			}
+			{}
+			Reader(wchar_t const* src, bool case_sensitive = true, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, EmbeddedCodeFactory emb = nullptr)
+				:m_pp(src, inc, mac, emb)
+				,m_delim(L" \t\r\n\v,;")
+				,m_last_keyword()
+				,m_case_sensitive(case_sensitive)
+			{}
 
 			// Access the underlying source
 			Src const& Source() const
@@ -92,12 +82,6 @@ namespace pr
 			IMacroHandler& Macros() const
 			{
 				return *m_pp.Macros;
-			}
-
-			// Access the embedded code handler
-			IEmbeddedCode& EmbeddedCode() const
-			{
-				return *m_pp.EmbeddedCode;
 			}
 
 			// Get/Set delimiter characters

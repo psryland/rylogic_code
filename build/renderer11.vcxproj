@@ -72,7 +72,7 @@
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>renderer11/util/stdafx.h</PrecompiledHeaderFile>
-      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=1;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -87,7 +87,7 @@
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>renderer11/util/stdafx.h</PrecompiledHeaderFile>
-      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=1;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/Zm200</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -106,7 +106,7 @@
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>renderer11/util/stdafx.h</PrecompiledHeaderFile>
-      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=1;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/Zm200</AdditionalOptions>
     </ClCompile>
     <CustomBuild>
@@ -122,7 +122,7 @@
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>renderer11/util/stdafx.h</PrecompiledHeaderFile>
-      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=1;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/Zm200</AdditionalOptions>
     </ClCompile>
     <CustomBuild>
@@ -202,7 +202,6 @@
     <ClInclude Include="..\projects\renderer11\util\stdafx.h" />
     <ClCompile Include="..\projects\renderer11\models\nugget.cpp" />
     <ClCompile Include="..\projects\renderer11\render\state_block.cpp" />
-    <ClCompile Include="..\projects\renderer11\shaders\shdr_utility.cpp" />
     <ClCompile Include="..\projects\renderer11\steps\ray_cast.cpp" />
     <ClCompile Include="..\projects\renderer11\util\util.cpp" />
     <ClCompile Include="..\projects\renderer11\config\config.cpp" />

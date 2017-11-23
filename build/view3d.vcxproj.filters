@@ -132,9 +132,4 @@
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="..\projects\Rylogic\gfx\view3d.cs">
-      <Filter>src</Filter>
-    </None>
-  </ItemGroup>
 </Project>

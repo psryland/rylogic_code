@@ -672,7 +672,7 @@ namespace pr.unittests
 		}
 		[Test] public void CreateFrom3()
 		{
-			var rng = new Random();
+			var rng = new Random(123456789);
 			var a2b = m4x4.Transform(v4.Random3N(0.0f, rng), rng.FloatC(0.0f,1.0f), v4.Random3(0.0f, 10.0f, 1.0f, rng));
 
 			var b2a = m4x4.Invert(a2b);

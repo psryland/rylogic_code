@@ -513,7 +513,6 @@ namespace pr.container
 		/// <summary></summary>
 		void IBindingList.AddIndex(PropertyDescriptor property)
 		{
-			// todo
 			throw new NotImplementedException();
 		}
 
@@ -545,21 +544,18 @@ namespace pr.container
 		/// <summary></summary>
 		int IBindingList.Find(PropertyDescriptor property, object key)
 		{
-			// todo
 			throw new NotImplementedException();
 		}
 
 		/// <summary></summary>
 		void IBindingList.RemoveIndex(PropertyDescriptor property)
 		{
-			// todo
 			throw new NotImplementedException();
 		}
 
 		/// <summary></summary>
 		void IBindingList.RemoveSort()
 		{
-			// todo
 			throw new NotImplementedException();
 		}
 

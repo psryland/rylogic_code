@@ -412,12 +412,18 @@ namespace pr
 		};
 	}
 
+	// Return the call source from an arbitrary memory address
+	inline CallSource GetCallSource(void* address)
+	{
+		return impl::StackDumpImpl<>::GetCallSource(reinterpret_cast<CallAddress const&>(address));
+	}
+
 	// The stack dump function
 	// 'out' is a call back function called for each stack frame
 	// 'skip' is the number of initial stack frames to not call 'func' for
 	// 'count' is the number of stack frames to call 'func' for before stopping
-	// 'TOut(std::string sym, std::string file, int line)
-	template <typename TOut> void DumpStack(TOut out, size_t skip = 0, size_t count = 256)
+	// 'TOut(std::string sym, std::string file, int line)'
+	template <typename TOut> void DumpStack(TOut out, size_t skip, size_t count)
 	{
 		size_t const max_frames = 256;
 		CallAddress frames[max_frames];
@@ -431,6 +437,61 @@ namespace pr
 			out(src.m_sym_name, src.m_filepath, src.m_line);
 		}
 	}
+
+	// Return the stack dump as a string
+	inline std::string DumpStack(size_t skip, size_t count)
+	{
+		std::stringstream out;
+		pr::DumpStack([&](std::string const& sym, std::string const& file, int line)
+		{
+			out << file << "(" << line << "): " << sym << std::endl;
+		}, skip, count);
+		return out.str();
+	}
+}
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+
+namespace pr
+{
+	namespace unittests
+	{
+		struct StackDumpTest
+		{
+			template <typename TOut> static __declspec(noinline) void Func1(TOut out) { Func2(out); }
+			template <typename TOut> static __declspec(noinline) void Func2(TOut out) { Func3(out); }
+			template <typename TOut> static __declspec(noinline) void Func3(TOut out) { DumpStack(out); }
+		};
+
+		PRUnitTest(pr_common_stackdump)
+		{
+			#if 0 // not working under VS2017... don't know why yet
+			std::stringstream out;
+			size_t fcount = 0;
+			StackDumpTest::Func1([&](std::string sym, std::string file, int line)
+			{
+				out << file << "(" << line << "): " << sym << std::endl;
+				++fcount;
+			});
+
+			PR_CHECK(fcount > 3, true);
+
+			// Requires debug symbols...
+			#if !defined(NDEBUG)
+			auto s = out.str();
+			std::string::size_type ofs = 0U;
+			PR_CHECK((ofs = s.find("pr::unittests::StackDumpTest::Func3", ofs)) != std::string::npos, true);
+			PR_CHECK((ofs = s.find("pr::unittests::StackDumpTest::Func2", ofs)) != std::string::npos, true);
+			PR_CHECK((ofs = s.find("pr::unittests::StackDumpTest::Func1", ofs)) != std::string::npos, true);
+			#endif
+			#endif
+		}
+	}
+}
+#endif
+
+
 	#if 0 // Ye Olde Way...
 	template <typename TOut> void StackDump2(TOut out, int count = 100, int skip = 0)
 	{
@@ -506,62 +567,3 @@ namespace pr
 		}
 	}
 	#endif
-
-	// Return the call source from an arbitrary memory address
-	inline CallSource GetCallSource(void* address)
-	{
-		return impl::StackDumpImpl<>::GetCallSource(reinterpret_cast<CallAddress const&>(address));
-	}
-
-	// Return the stack dump as a string
-	inline std::string DumpStack(size_t skip = 1, size_t count = 256)
-	{
-		std::stringstream out;
-		pr::DumpStack([&](std::string const& sym, std::string const& file, int line)
-		{
-			out << file << "(" << line << "): " << sym << std::endl;
-		}, skip, count);
-		return out.str();
-	}
-}
-
-#if PR_UNITTESTS
-#include "pr/common/unittests.h"
-
-namespace pr
-{
-	namespace unittests
-	{
-		struct StackDumpTest
-		{
-			template <typename TOut> static __declspec(noinline) void Func1(TOut out) { Func2(out); }
-			template <typename TOut> static __declspec(noinline) void Func2(TOut out) { Func3(out); }
-			template <typename TOut> static __declspec(noinline) void Func3(TOut out) { DumpStack(out); }
-		};
-
-		PRUnitTest(pr_common_stackdump)
-		{
-			#if 0 // not working under VS2017... don't know why yet
-			std::stringstream out;
-			size_t fcount = 0;
-			StackDumpTest::Func1([&](std::string sym, std::string file, int line)
-			{
-				out << file << "(" << line << "): " << sym << std::endl;
-				++fcount;
-			});
-
-			PR_CHECK(fcount > 3, true);
-
-			// Requires debug symbols...
-			#if !defined(NDEBUG)
-			auto s = out.str();
-			std::string::size_type ofs = 0U;
-			PR_CHECK((ofs = s.find("pr::unittests::StackDumpTest::Func3", ofs)) != std::string::npos, true);
-			PR_CHECK((ofs = s.find("pr::unittests::StackDumpTest::Func2", ofs)) != std::string::npos, true);
-			PR_CHECK((ofs = s.find("pr::unittests::StackDumpTest::Func1", ofs)) != std::string::npos, true);
-			#endif
-			#endif
-		}
-	}
-}
-#endif

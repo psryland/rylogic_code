@@ -16,6 +16,7 @@ using pr.extn;
 using pr.gfx;
 using pr.maths;
 using pr.util;
+using pr.view3d;
 
 namespace pr.ldr
 {

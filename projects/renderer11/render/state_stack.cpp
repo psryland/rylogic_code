@@ -17,7 +17,7 @@ namespace pr
 {
 	namespace rdr
 	{
-		StateStack::StateStack(ID3D11DeviceContext* dc, Scene& scene)
+		StateStack::StateStack(ID3D11DeviceContext1* dc, Scene& scene)
 			:m_dc(dc)
 			,m_scene(scene)
 			,m_init_state()
@@ -28,7 +28,7 @@ namespace pr
 		{
 			// Create the debugging interface
 			PR_EXPAND(PR_DBG_RDR, pr::Throw(dc->QueryInterface(__uuidof(ID3DUserDefinedAnnotation), (void**)&m_dbg.m_ptr)));
-			
+
 			// Apply initial state
 			ApplyState(m_current, m_init_state, true);
 		}
@@ -72,13 +72,13 @@ namespace pr
 			{
 				if (pending.m_mb != nullptr)
 				{
-					ID3D11Buffer* buffers[] = {pending.m_mb->m_vb.m_ptr};
+					ID3D11Buffer* buffers[] = {pending.m_mb->m_vb.get()};
 					UINT          strides[] = {pending.m_mb->m_vb.m_stride};
 					UINT          offsets[] = {0};
 					m_dc->IASetVertexBuffers(0, 1, buffers, strides, offsets);
 
 					// Bind the index buffer to the IA
-					m_dc->IASetIndexBuffer(pending.m_mb->m_ib.m_ptr, pending.m_mb->m_ib.m_format, 0);
+					m_dc->IASetIndexBuffer(pending.m_mb->m_ib.get(), pending.m_mb->m_ib.m_format, 0);
 				}
 				else
 				{
@@ -160,16 +160,22 @@ namespace pr
 		{
 			if (current.m_shdrs != pending.m_shdrs || force)
 			{
+				// Clean up the current shaders
 				for (auto& s : current.m_shdrs.Enumerate())
 					if (s) s->Cleanup(m_dc);
 
-				if (current.m_shdrs.VS() != pending.m_shdrs.VS()) m_dc->VSSetShader(pending.m_shdrs.VS().m_ptr, nullptr, 0);
-				if (current.m_shdrs.GS() != pending.m_shdrs.GS()) m_dc->GSSetShader(pending.m_shdrs.GS().m_ptr, nullptr, 0);
-				if (current.m_shdrs.PS() != pending.m_shdrs.PS()) m_dc->PSSetShader(pending.m_shdrs.PS().m_ptr, nullptr, 0);
+				if (current.m_shdrs.VS() != pending.m_shdrs.VS())
+					m_dc->VSSetShader(pending.m_shdrs.VS(), nullptr, 0);
+				if (current.m_shdrs.PS() != pending.m_shdrs.PS())
+					m_dc->PSSetShader(pending.m_shdrs.PS(), nullptr, 0);
+				if (current.m_shdrs.GS() != pending.m_shdrs.GS())
+					m_dc->GSSetShader(pending.m_shdrs.GS(), nullptr, 0);
+				if (current.m_shdrs.CS() != pending.m_shdrs.CS())
+					m_dc->CSSetShader(pending.m_shdrs.CS(), nullptr, 0);
 			}
 
 			// Always call set up on the pending shaders even if they
-			// haven't changed. They may have per-nugget set up to do
+			// haven't changed. They may have per-nugget set up to do.
 			for (auto& s : pending.m_shdrs.Enumerate())
 				if (s) s->Setup(m_dc, pending);
 		}
@@ -223,11 +229,15 @@ namespace pr
 		StateStack::DleFrame::DleFrame(StateStack& ss, DrawListElement const& dle)
 			:Frame(ss)
 		{
+			auto& nugget = *dle.m_nugget;
+
 			// Save the DLE
 			m_ss.m_pending.m_dle = &dle;
 
-			// Get the shaders involved
-			m_ss.m_pending.m_shdrs = dle.m_nugget->m_smap[m_ss.m_pending.m_rstep->GetId()];
+			// Get the shaders to use for this nugget.
+			// Pass them to the renderer to override or provide defaults
+			m_ss.m_pending.m_shdrs = nugget.m_smap[m_ss.m_pending.m_rstep->GetId()];
+			m_ss.m_pending.m_rstep->ConfigShaders(m_ss.m_pending.m_shdrs, nugget.m_topo);
 
 			// IA states
 			m_ss.m_pending.m_mb   = dle.m_nugget->m_model_buffer;
@@ -242,6 +252,64 @@ namespace pr
 			:Frame(ss)
 		{
 			ss.m_pending.m_rstep_smap = rstep;
+		}
+
+		// State stack frame for pushing a render target/depth buffer
+		StateStack::RTFrame::RTFrame(StateStack& ss, ID3D11RenderTargetView* rtv, ID3D11DepthStencilView* dsv)
+			:RTFrame(ss, 1U, &rtv, dsv)
+		{}
+		StateStack::RTFrame::RTFrame(StateStack& ss, UINT count, ID3D11RenderTargetView*const* rtv, ID3D11DepthStencilView* dsv)
+			:Frame(ss)
+			,m_count(count)
+			,m_rtv()
+			,m_dsv()
+		{
+			// Save the current RT, then set the given RT (only need to save 'rtv_count' because those are all we're changing)
+			m_ss.m_dc->OMGetRenderTargets(m_count, &m_rtv[0], &m_dsv);
+			m_ss.m_dc->OMSetRenderTargets(count, rtv, dsv);
+		}
+		StateStack::RTFrame::~RTFrame()
+		{
+			// Restore RT
+			m_ss.m_dc->OMSetRenderTargets(m_count, &m_rtv[0], m_dsv);
+		}
+
+		// State stack frame for pushing unordered access views
+		StateStack::UAVFrame::UAVFrame(StateStack& ss, UINT first_uav, ID3D11UnorderedAccessView* uav, UINT initial_count)
+			:UAVFrame(ss, first_uav, 1, &uav, &initial_count)
+		{}
+		StateStack::UAVFrame::UAVFrame(StateStack& ss, UINT first, UINT count, ID3D11UnorderedAccessView*const* uav, UINT const* initial_counts)
+			:Frame(ss)
+			,m_first(first)
+			,m_count(count)
+			,m_uav()
+			,m_initial_counts()
+		{
+			// Save the current UAVs, then set the given RT (only need to preserve the ones we're replacing)
+			m_ss.m_dc->OMGetRenderTargetsAndUnorderedAccessViews(0U, nullptr, nullptr, m_first, m_count, &m_uav[0]);
+			m_ss.m_dc->OMSetRenderTargetsAndUnorderedAccessViews(D3D11_KEEP_RENDER_TARGETS_AND_DEPTH_STENCIL, nullptr, nullptr, first, count, uav, initial_counts);
+			std::fill(&m_initial_counts[0], &m_initial_counts[0] + _countof(m_initial_counts), UINT(-1));
+		}
+		StateStack::UAVFrame::~UAVFrame()
+		{
+			// Restore UAVs
+			m_ss.m_dc->OMSetRenderTargetsAndUnorderedAccessViews(D3D11_KEEP_RENDER_TARGETS_AND_DEPTH_STENCIL, nullptr, nullptr, m_first, m_count, &m_uav[0], &m_initial_counts[0]);
+		}
+
+		// State stack frame for pushing Stream Out stage targets
+		StateStack::SOFrame::SOFrame(StateStack& ss, ID3D11Buffer* target, UINT offset)
+			:SOFrame(ss, 1U, &target, &offset)
+		{}
+		StateStack::SOFrame::SOFrame(StateStack& ss, UINT num_buffers, ID3D11Buffer*const* targets, UINT const* offsets)
+			:Frame(ss)
+		{
+			m_ss.m_dc->SOSetTargets(num_buffers, targets, offsets);
+		}
+		StateStack::SOFrame::~SOFrame()
+		{
+			UINT offsets = 0U;
+			ID3D11Buffer* targets = {nullptr};
+			m_ss.m_dc->SOSetTargets(1U, &targets, &offsets);
 		}
 	}
 }

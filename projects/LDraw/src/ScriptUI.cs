@@ -1,14 +1,15 @@
 ﻿using System;
 using System.IO;
 using System.Windows.Forms;
+using System.Xml.Linq;
 using pr.common;
+using pr.container;
 using pr.extn;
 using pr.gui;
 using pr.util;
-using ToolStripContainer = pr.gui.ToolStripContainer;
+using pr.win32;
 using ToolStripComboBox = pr.gui.ToolStripComboBox;
-using System.Xml.Linq;
-using pr.container;
+using ToolStripContainer = pr.gui.ToolStripContainer;
 
 namespace LDraw
 {
@@ -26,11 +27,7 @@ namespace LDraw
 		private ToolStripContainer m_tsc;
 		private ToolStripButton m_btn_render;
 		private ImageList m_il_toolbar;
-		private MenuStrip m_menu;
 		private ToolStripButton m_btn_clear;
-		private ToolStripMenuItem m_menu_shortcuts;
-		private ToolStripMenuItem m_menu_shortcuts_render;
-		private ToolStripMenuItem m_menu_shortcuts_clear;
 		private ToolStripButton m_btn_save;
 		private ToolStripSeparator toolStripSeparator1;
 		private ToolStripSeparator toolStripSeparator2;
@@ -75,6 +72,22 @@ namespace LDraw
 		{
 			args.Node.Add2(nameof(Filepath), Filepath, false);
 			base.OnSavingLayout(args);
+		}
+		protected override bool ProcessKeyPreview(ref Message m)
+		{
+			switch (Win32.ToVKey(m.WParam))
+			{
+			case Keys.F5:
+				m_btn_render.PerformClick();
+				break;
+			case Keys.F7:
+				Scene?.AutoRange();
+				break;
+			case Keys.ControlKey | Keys.D:
+				m_btn_clear.PerformClick();
+				break;
+			}
+			return base.ProcessKeyPreview(ref m);
 		}
 
 		/// <summary>The name of this script</summary>
@@ -179,12 +192,6 @@ namespace LDraw
 		/// <summary>Set up UI Elements</summary>
 		private void SetupUI()
 		{
-			#region Menu
-			m_menu_shortcuts_render.Click += (s,a) => m_btn_render.PerformClick();
-			m_menu_shortcuts_clear.Click += (s,a) => m_btn_clear.PerformClick();
-			m_menu.Visible = false;
-			#endregion
-
 			#region Tool bar
 
 			// Save file
@@ -208,14 +215,17 @@ namespace LDraw
 				RemoveScriptObjects();
 			};
 
+			// Binding source for scene selection
+			var scenes = new BindingSource<SceneUI>{ DataSource = Model.Scenes };
+			scenes.CurrentChanged += (s,a) => Scene = scenes.Current;
+
 			// Render to scene
 			m_cb_scene.ToolTipText = "The scene to render to";
-			m_cb_scene.ComboBox.DataSource = new BindingSource<SceneUI>{ DataSource = Model.Scenes };
+			m_cb_scene.ComboBox.DataSource = scenes;
 			m_cb_scene.ComboBox.DisplayMember = nameof(SceneUI.SceneName);
-			m_cb_scene.ComboBox.SelectedIndexChanged += (s,a) =>
-			{
-				Scene = ((BindingSource<SceneUI>)m_cb_scene.ComboBox.DataSource).Current;
-			};
+
+			// Initialise to the current scene
+			Scene = scenes.Current;
 
 			#endregion
 		}
@@ -294,12 +304,12 @@ namespace LDraw
 			// Remove the objects from the associated scene
 			if (Scene != null)
 			{
-				Scene.Window.RemoveObjects(ContextId);
+				Scene.Window.RemoveObjects(new [] { ContextId }, 1, 0);
 				Scene.Invalidate();
 			}
 
 			// Remove any objects previously created by this script
-			Model.View3d.DeleteObjects(ContextId, all_except:false);
+			Model.View3d.DeleteObjects(new [] { ContextId }, 1, 0);
 		}
 
 		/// <summary>Render the script in this window</summary>
@@ -318,8 +328,11 @@ namespace LDraw
 			// Add the script content to the selected scene
 			if (Scene != null)
 			{
-				Scene.Window.AddObjects(ContextId);
-				Scene.Invalidate();
+				Scene.Window.AddObjects(new [] { ContextId }, 1, 0);
+				if (Model.Settings.ResetOnLoad)
+					Scene.AutoRange();
+				else
+					Scene.Invalidate();
 			}
 		}
 
@@ -370,10 +383,6 @@ namespace LDraw
 			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ScriptUI));
 			this.m_tsc = new pr.gui.ToolStripContainer();
-			this.m_menu = new System.Windows.Forms.MenuStrip();
-			this.m_menu_shortcuts = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_shortcuts_render = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_shortcuts_clear = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_ts = new System.Windows.Forms.ToolStrip();
 			this.m_btn_save = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
@@ -385,7 +394,6 @@ namespace LDraw
 			this.m_il_toolbar = new System.Windows.Forms.ImageList(this.components);
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();
-			this.m_menu.SuspendLayout();
 			this.m_ts.SuspendLayout();
 			this.SuspendLayout();
 			// 
@@ -394,7 +402,7 @@ namespace LDraw
 			// 
 			// m_tsc.ContentPanel
 			// 
-			this.m_tsc.ContentPanel.Size = new System.Drawing.Size(495, 575);
+			this.m_tsc.ContentPanel.Size = new System.Drawing.Size(495, 599);
 			this.m_tsc.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_tsc.Location = new System.Drawing.Point(0, 0);
 			this.m_tsc.Name = "m_tsc";
@@ -404,43 +412,7 @@ namespace LDraw
 			// 
 			// m_tsc.TopToolStripPanel
 			// 
-			this.m_tsc.TopToolStripPanel.Controls.Add(this.m_menu);
 			this.m_tsc.TopToolStripPanel.Controls.Add(this.m_ts);
-			// 
-			// m_menu
-			// 
-			this.m_menu.AutoSize = false;
-			this.m_menu.Dock = System.Windows.Forms.DockStyle.None;
-			this.m_menu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_menu_shortcuts});
-			this.m_menu.Location = new System.Drawing.Point(0, 0);
-			this.m_menu.Name = "m_menu";
-			this.m_menu.Size = new System.Drawing.Size(495, 24);
-			this.m_menu.TabIndex = 1;
-			this.m_menu.Text = "Hidden, Used to provide key shortcuts";
-			// 
-			// m_menu_shortcuts
-			// 
-			this.m_menu_shortcuts.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_menu_shortcuts_render,
-            this.m_menu_shortcuts_clear});
-			this.m_menu_shortcuts.Name = "m_menu_shortcuts";
-			this.m_menu_shortcuts.Size = new System.Drawing.Size(69, 20);
-			this.m_menu_shortcuts.Text = "Shortcuts";
-			// 
-			// m_menu_shortcuts_render
-			// 
-			this.m_menu_shortcuts_render.Name = "m_menu_shortcuts_render";
-			this.m_menu_shortcuts_render.ShortcutKeys = System.Windows.Forms.Keys.F5;
-			this.m_menu_shortcuts_render.Size = new System.Drawing.Size(143, 22);
-			this.m_menu_shortcuts_render.Text = "&Render";
-			// 
-			// m_menu_shortcuts_clear
-			// 
-			this.m_menu_shortcuts_clear.Name = "m_menu_shortcuts_clear";
-			this.m_menu_shortcuts_clear.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.D)));
-			this.m_menu_shortcuts_clear.Size = new System.Drawing.Size(143, 22);
-			this.m_menu_shortcuts_clear.Text = "&Clear";
 			// 
 			// m_ts
 			// 
@@ -454,7 +426,7 @@ namespace LDraw
             this.m_btn_clear,
             this.toolStripSeparator3,
             this.m_cb_scene});
-			this.m_ts.Location = new System.Drawing.Point(3, 24);
+			this.m_ts.Location = new System.Drawing.Point(3, 0);
 			this.m_ts.Name = "m_ts";
 			this.m_ts.Size = new System.Drawing.Size(245, 31);
 			this.m_ts.TabIndex = 0;
@@ -529,8 +501,6 @@ namespace LDraw
 			this.m_tsc.TopToolStripPanel.PerformLayout();
 			this.m_tsc.ResumeLayout(false);
 			this.m_tsc.PerformLayout();
-			this.m_menu.ResumeLayout(false);
-			this.m_menu.PerformLayout();
 			this.m_ts.ResumeLayout(false);
 			this.m_ts.PerformLayout();
 			this.ResumeLayout(false);

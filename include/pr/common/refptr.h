@@ -129,7 +129,10 @@ namespace pr
 		RefPtr& operator = (RefPtr&& rhs)
 		{
 			if (this == &rhs) return *this;
-			std::swap(m_ptr, rhs.m_ptr);
+			auto ptr = m_ptr;
+			m_ptr = rhs.m_ptr;
+			rhs.release();
+			if (ptr) DecRef(ptr);
 			return *this;
 		}
 
@@ -148,7 +151,10 @@ namespace pr
 		template <typename U, class = typename std::enable_if<std::is_convertible<U*,T*>::value>::type>
 		RefPtr& operator = (RefPtr<U>&& rhs)
 		{
-			std::swap(m_ptr, static_cast<T*>(rhs.m_ptr));
+			auto ptr = m_ptr;
+			m_ptr = static_cast<T*>(rhs.m_ptr);
+			rhs.release();
+			if (ptr) DecRef(ptr);
 			return *this;
 		}
 
@@ -156,13 +162,10 @@ namespace pr
 		template <typename U, class = typename std::enable_if<std::is_convertible<U*,T*>::value>::type>
 		RefPtr& operator = (RefPtr<U> const& rhs)
 		{
-			if (m_ptr != static_cast<T*>(rhs.m_ptr))
-			{
-				auto ptr = m_ptr;
-				m_ptr = static_cast<T*>(rhs.m_ptr);
-				if (m_ptr) IncRef(m_ptr);
-				if (ptr) DecRef(ptr);
-			}
+			auto ptr = m_ptr;
+			m_ptr = static_cast<T*>(rhs.m_ptr);
+			if (m_ptr) IncRef(m_ptr);
+			if (ptr) DecRef(ptr);
 			return *this;
 		}
 

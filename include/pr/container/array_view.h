@@ -15,11 +15,11 @@ namespace pr
 		};
 		int m_count;
 
-		array_view(T const* arr, int count)
+		constexpr array_view(T const* arr, int count)
 			:m_carr(arr)
 			,m_count(count)
 		{}
-		array_view(T* arr, int count)
+		constexpr array_view(T* arr, int count)
 			:m_marr(arr)
 			,m_count(count)
 		{}
@@ -62,7 +62,11 @@ namespace pr
 	};
 
 	// Type deduction helper
-	template <typename T> pr::array_view<T> make_array_view(T const* arr, int count)
+	template <typename T> constexpr pr::array_view<T> make_array_view(T const* arr, int count)
+	{
+		return pr::array_view<T>(arr, count);
+	}
+	template <typename T> constexpr pr::array_view<T> make_array_view(T* arr, int count)
 	{
 		return pr::array_view<T>(arr, count);
 	}

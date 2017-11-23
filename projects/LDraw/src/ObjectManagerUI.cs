@@ -11,12 +11,14 @@ using pr.extn;
 using pr.gfx;
 using pr.gui;
 using pr.util;
+using pr.view3d;
 using DataGridView = pr.gui.DataGridView;
 using ToolStripComboBox = pr.gui.ToolStripComboBox;
 using ToolStripContainer = pr.gui.ToolStripContainer;
 
 namespace LDraw
 {
+	//TODO move this to pr.view3d
 	public class ObjectManagerUI :ToolForm
 	{
 		// Notes:
@@ -563,7 +565,7 @@ namespace LDraw
 
 				// Read the objects from the scene
 				var objects = new HashSet<View3d.Object>();
-				Scene.Window.EnumObjects(obj => objects.Add(obj), Exclude.ToArray(), all_except: true);
+				Scene.Window.EnumObjects(obj => objects.Add(obj), Exclude.ToArray(), 0, 1);
 
 				// Remove objects that are no longer in the scene
 				Objects.RemoveIf(x => !objects.Contains(x));

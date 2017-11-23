@@ -30,6 +30,8 @@ namespace pr
 			ModelManager* m_mdl_mgr; // The model manager that created this model buffer
 
 			ModelBuffer();
+			ModelBuffer(const ModelBuffer&) = delete;
+			ModelBuffer& operator =(const ModelBuffer&) = delete;
 
 			// Renderer access
 			Renderer& rdr() const;
@@ -49,14 +51,11 @@ namespace pr
 
 			// Access to the vertex/index buffers
 			// Only returns false if 'D3D11_MAP_FLAG_DO_NOT_WAIT' flag is set, all other fail cases throw
-			bool MapVerts  (pr::rdr::Lock& lock, D3D11_MAP map_type = D3D11_MAP_WRITE, uint flags = 0, Range vrange = RangeZero);
-			bool MapIndices(pr::rdr::Lock& lock, D3D11_MAP map_type = D3D11_MAP_WRITE, uint flags = 0, Range irange = RangeZero);
+			bool MapVerts  (Lock& lock, D3D11_MAP map_type = D3D11_MAP_WRITE, UINT flags = 0, Range vrange = RangeZero);
+			bool MapIndices(Lock& lock, D3D11_MAP map_type = D3D11_MAP_WRITE, UINT flags = 0, Range irange = RangeZero);
 
 			// Ref-counting clean up function
 			static void RefCountZero(pr::RefCount<ModelBuffer>* doomed);
-		private:
-			ModelBuffer(const ModelBuffer&);
-			ModelBuffer& operator =(const ModelBuffer&);
 		};
 	}
 }

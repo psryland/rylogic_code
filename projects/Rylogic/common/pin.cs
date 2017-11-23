@@ -1,6 +1,7 @@
 // (c) 2007 Marc Clifton
 
 using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace pr.common
@@ -16,35 +17,19 @@ namespace pr.common
 		protected IntPtr   m_ptr;
 		protected bool     m_disposed;
 
-		public T ManangedObject
-		{
-			get { return (T)m_handle.Target; }
-			set { Marshal.StructureToPtr(value, m_ptr, false); }
-		}
-
-		public IntPtr Pointer
-		{
-			get { return m_ptr; }
-		}
-
 		public PinnedObject(T obj)
-		{
-			m_managed_object = obj;
-			m_handle = GCHandle.Alloc(obj);
-			m_ptr = m_handle.AddrOfPinnedObject();
-		}
+			:this(obj, GCHandleType.Pinned)
+		{}
 		public PinnedObject(T obj, GCHandleType type)
 		{
 			m_managed_object = obj;
 			m_handle = GCHandle.Alloc(obj, type);
 			m_ptr = m_handle.AddrOfPinnedObject();
 		}
-
 		~PinnedObject()
 		{
 			Dispose();
 		}
-
 		public void Dispose()
 		{
 			if (!m_disposed)
@@ -52,7 +37,21 @@ namespace pr.common
 				m_handle.Free();
 				m_ptr = IntPtr.Zero;
 				m_disposed = true;
+				GC.SuppressFinalize(this);
 			}
+		}
+
+		/// <summary>The managed object being pinned</summary>
+		public T ManangedObject
+		{
+			[DebuggerStepThrough] get { return (T)m_handle.Target; }
+			set { Marshal.StructureToPtr(value, m_ptr, false); }
+		}
+
+		/// <summary>Pointer to the pinned object</summary>
+		public IntPtr Pointer
+		{
+			[DebuggerStepThrough] get { return m_ptr; }
 		}
 	}
 }

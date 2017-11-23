@@ -77,14 +77,39 @@ namespace pr
 			{}
 		};
 
+		// Stream output stage description
+		struct StreamOutDesc
+		{
+			pr::vector<D3D11_SO_DECLARATION_ENTRY> m_decl;
+			pr::vector<UINT> m_strides;
+			UINT m_raster_stream;
+
+			StreamOutDesc(std::initializer_list<D3D11_SO_DECLARATION_ENTRY> decl, UINT raster_stream = D3D11_SO_NO_RASTERIZED_STREAM)
+				:m_decl(std::begin(decl), std::end(decl))
+				,m_strides(D3D11_SO_BUFFER_SLOT_COUNT)
+				,m_raster_stream(raster_stream)
+			{
+				for (auto entry : m_decl)
+					m_strides[entry.Stream] += entry.ComponentCount * sizeof(float);
+				for (;!m_strides.empty() && m_strides.back() == 0;)
+					m_strides.pop_back();
+			}
+			D3D11_SO_DECLARATION_ENTRY const* decl() const { return m_decl.data(); }
+			UINT const* strides() const                    { return m_strides.data(); }
+			UINT num_entries() const                       { return UINT(m_decl.size()); }
+			UINT num_strides() const                       { return UINT(m_strides.size()); }
+			UINT raster_stream() const                     { return m_raster_stream; }
+			ID3D11ClassLinkage* class_linkage() const      { return nullptr; }
+		};
+
 		// The base class for a shader.
-		struct ShaderBase :pr::RefCount<ShaderBase>
+		struct Shader :pr::RefCount<Shader>
 		{
 			// Notes:
 			// - This object wraps a single VS, or PS, or GS, etc
-			// - ShaderBase objects are intended to be lightweight instances of D3D shaders.
-			// - ShaderBase objects group a D3D shader with it's per-nugget constants.
-			// - ShaderBase objects can be created for each nugget that needs them.
+			// - Shader objects are intended to be lightweight instances of D3D shaders.
+			// - Shader objects group a D3D shader with it's per-nugget constants.
+			// - Shader objects can be created for each nugget that needs them.
 
 			D3DPtr<ID3D11DeviceChild> m_dx_shdr;   // Pointer to the dx shader
 			EShaderType               m_shdr_type; // The type of shader this is
@@ -110,12 +135,12 @@ namespace pr
 
 		protected:
 
-			friend struct Allocator<ShaderBase>;
+			friend struct Allocator<Shader>;
 
 			// Use the shader manager 'CreateShader' factory method to create new shaders
 			template <typename DxShaderType>
-			ShaderBase(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<DxShaderType> const& dx_shdr)
-				:pr::RefCount<ShaderBase>()
+			Shader(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<DxShaderType> const& dx_shdr)
+				:pr::RefCount<Shader>()
 				,m_dx_shdr(dx_shdr.get(), true)
 				,m_shdr_type(ShaderTypeId<DxShaderType>::value)
 				,m_mgr(mgr)
@@ -128,18 +153,18 @@ namespace pr
 				,m_name(name ? name : "")
 				,m_orig_id(m_id)
 			{}
-			virtual ~ShaderBase()
+			virtual ~Shader()
 			{}
 
 			// Ref counting clean up
-			friend struct pr::RefCount<ShaderBase>;
-			static void RefCountZero(pr::RefCount<ShaderBase>* doomed)
+			friend struct pr::RefCount<Shader>;
+			static void RefCountZero(pr::RefCount<Shader>* doomed)
 			{
-				static_cast<ShaderBase*>(doomed)->OnRefCountZero();
+				static_cast<Shader*>(doomed)->OnRefCountZero();
 			}
 			virtual void OnRefCountZero() = 0;
 
-			// Forwarding methods are needed because only ShaderBase is a friend of the ShaderManager
+			// Forwarding methods are needed because only Shader is a friend of the ShaderManager
 			template <typename ShaderType> void Delete(ShaderType* shdr)
 			{
 				return m_mgr->DeleteShader(shdr);
@@ -150,7 +175,7 @@ namespace pr
 
 		// Base class for each dx shader type
 		template <typename DxShaderType, typename Derived>
-		struct Shader :ShaderBase
+		struct ShaderT :Shader
 		{
 			// Return the D3D shader interface down-cast to 'DxShaderType'
 			D3DPtr<DxShaderType> dx_shader() const
@@ -160,14 +185,14 @@ namespace pr
 
 		protected:
 
-			Shader(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<DxShaderType> const& dx_shdr)
-				:ShaderBase(mgr, id, sort_id, name, dx_shdr)
+			ShaderT(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<DxShaderType> const& dx_shdr)
+				:Shader(mgr, id, sort_id, name, dx_shdr)
 			{}
 
 			// Ref count clean up
 			void OnRefCountZero() override
 			{
-				ShaderBase::Delete<Derived>(static_cast<Derived*>(this));
+				Shader::Delete<Derived>(static_cast<Derived*>(this));
 			}
 		};
 	}

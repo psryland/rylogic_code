@@ -25,17 +25,15 @@ namespace pr
 			// Fixed container of render steps. Doesn't really need to be fixed,
 			// but non-fixed means we need the pr::rdr::Allocator to construct it.
 			using RenderStepCont = pr::vector<RenderStepPtr, 16, true>;
-			using HitTestRayCont = pr::vector<HitTestRay>;
-			using HitTestResultCont = pr::vector<HitTestResult>;
 			using InstCont = std::unordered_set<BaseInstance const*>;
+			using RayCastStepPtr = std::unique_ptr<RayCastStep>;
 
 			Window*           m_wnd;          // The controlling window
 			SceneView         m_view;         // Represents the camera properties used to project onto the screen
 			Viewport          m_viewport;     // Represents the rectangular area on the back buffer that this scene covers
 			InstCont          m_instances;    // Instances added to this scene for rendering.
 			RenderStepCont    m_render_steps; // The stages of rendering the scene
-			HitTestRayCont    m_ht_rays;      // Rays to cast into the scene for hit testing
-			HitTestResultCont m_ht_results;   // Results from the rays cast into the scene
+			RayCastStepPtr    m_ht_immediate; // A ray cast render step for performing immediate hit tests
 			Colour            m_bkgd_colour;  // The background colour for the scene
 			Light             m_global_light; // The global light settings
 			DSBlock           m_dsb;          // Scene-wide states
@@ -52,15 +50,15 @@ namespace pr
 			// Set the render steps to use for rendering the scene
 			void SetRenderSteps(std::initializer_list<ERenderStep> rsteps);
 
-			// Set the collection of rays to cast into the scene for hit testing.
-			// If 'immediate' is true, the scene is rendered with just a 'RayCastStep' render step.
-			// The function blocks until 'm_ht_results' are up to date (note: this stalls the gfx pipeline).
-			// If 'immediate' is false, the 'RayCastStep' render step is added to the steps for
-			// this scene, and triple buffering is used to update the 'm_ht_results' after each
-			// Render() call. Note, this mode is intended for continuous frame rate rendering
-			// and means the hit test results are 3 frames behind.
-			// Setting an empty set of rays disables hit testing ('immediate' is ignored).
-			void SetHitTestRays(HitTestRay const* rays, int count, float snap_distance, EHitTestFlags flags, bool immediate);
+			// Perform an immediate hit test
+			void HitTest(HitTestRay const* rays, int count, float snap_distance, EHitTestFlags flags, RayCastStep::InstFilter const& include, RayCastStep::ResultsOut const& results);
+
+			// Set the collection of rays to cast into the scene for continuous hit testing.
+			// Setting a non-zero number of rays enables a RayCast render step. Zero rays disables.
+			void HitTestContinuous(HitTestRay const* rays, int count, float snap_distance, EHitTestFlags flags, RayCastStep::InstFilter const& include);
+			
+			// Read the hit test results from the continuous ray cast render step.
+			void HitTestGetResults(RayCastStep::ResultsOut const& results);
 
 			// Get/Set the view (i.e. the camera to screen projection or 'View' matrix in dx speak)
 			void SetView(SceneView const& view) { m_view = view; }

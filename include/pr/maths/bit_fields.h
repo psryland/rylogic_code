@@ -9,6 +9,17 @@
 
 namespace pr
 {
+	// Convert to/from uint64 to uint32[2]
+	inline uint64_t MakeLL(uint32_t hi, uint32_t lo)
+	{
+		return ((uint64_t(hi) << 32L) | lo);
+	}
+	inline void BreakLL(uint64_t ll, uint32_t& hi, uint32_t& lo)
+	{
+		hi = uint32_t((ll >> 32L) & 0xFFFFFFFF);
+		lo = uint32_t((ll       ) & 0xFFFFFFFF);
+	}
+
 	// Bit manipulation functions
 	inline uint Bit32(int n)
 	{
@@ -274,6 +285,15 @@ namespace pr
 	{
 		PRUnitTest(pr_maths_bitfunctions)
 		{
+			{
+				uint hi,lo;
+				BreakLL(0x0123456789abcdef, hi, lo);
+				PR_CHECK(hi, 0x01234567U);
+				PR_CHECK(lo, 0x89abcdefU);
+
+				auto ll = MakeLL(hi, lo);
+				PR_CHECK(ll, 0x0123456789abcdefULL);
+			}
 			{
 				char const* mask_str = "1001010011";
 				auto mask = Bits<long long>(mask_str);

@@ -46,16 +46,17 @@ namespace pr
 			// Check for incompatible build settings
 			RdrSettings::BuildOptions bo;
 			pr::CheckBuildOptions(bo, settings.m_build_options);
-
+ 
 			// Add the debug layer in debug mode
 			// Note: this automatically disables multi-sampling as well
-			PR_EXPAND(PR_DBG_RDR, m_settings.m_device_layers |= D3D11_CREATE_DEVICE_DEBUG);
-			#pragma message(PR_LINK "WARNING: ************************************************** D3D11_CREATE_DEVICE_DEBUG enabled")
+			//PR_EXPAND(PR_DBG_RDR, m_settings.m_device_layers |= D3D11_CREATE_DEVICE_DEBUG);
+			//#pragma message(PR_LINK "WARNING: ************************************************** D3D11_CREATE_DEVICE_DEBUG enabled")
 
 			PR_INFO_IF(PR_DBG_RDR, AllSet(m_settings.m_device_layers, D3D11_CREATE_DEVICE_DEBUG       ), "D3D11_CREATE_DEVICE_DEBUG is enabled");
 			PR_INFO_IF(PR_DBG_RDR, AllSet(m_settings.m_device_layers, D3D11_CREATE_DEVICE_BGRA_SUPPORT), "D3D11_CREATE_DEVICE_BGRA_SUPPORT is enabled");
 
 			// Create the device interface
+			D3DPtr<ID3D11DeviceContext> immediate;
 			auto hr = D3D11CreateDevice(
 				m_settings.m_adapter.m_ptr,
 				m_settings.m_driver_type,
@@ -66,7 +67,7 @@ namespace pr
 				D3D11_SDK_VERSION,
 				&m_d3d_device.m_ptr,
 				&m_feature_level,
-				&m_immediate.m_ptr);
+				&immediate.m_ptr);
 
 			// If the device type is unsupported, fall-back to a software device
 			if (hr == DXGI_ERROR_UNSUPPORTED && m_settings.m_fallback_to_sw_device)
@@ -81,16 +82,24 @@ namespace pr
 					D3D11_SDK_VERSION,
 					&m_d3d_device.m_ptr,
 					&m_feature_level,
-					&m_immediate.m_ptr);
+					&immediate.m_ptr);
 			}
 			pr::Throw(hr);
+			pr::Throw(immediate->QueryInterface(__uuidof(ID3D11DeviceContext1), (void**)&m_immediate.m_ptr));
 			PR_EXPAND(PR_DBG_RDR, NameResource(m_d3d_device.get(), "D3D device"));
-			PR_EXPAND(PR_DBG_RDR, NameResource(m_immediate.get(), "immediate DC"));
+			PR_EXPAND(PR_DBG_RDR, NameResource(immediate.get(), "immediate DC"));
 
-			// Check dlls,dx features,etc required to run the renderer are available
-			// Check the given settings are valid for the current adaptor
-			if (m_feature_level < D3D_FEATURE_LEVEL_10_0)
-				throw std::exception("Graphics hardware does not meet the required feature level.\r\nFeature level 10.0 required\r\n\r\n(e.g. Shader Model 4.0, non power-of-two texture sizes)");
+			// Check dlls,dx features,etc required to run the renderer are available.
+			// Check the given settings are valid for the current adaptor.
+			{
+				if (m_feature_level < D3D_FEATURE_LEVEL_10_0)
+					throw std::exception("Graphics hardware does not meet the required feature level.\r\nFeature level 10.0 required\r\n\r\n(e.g. Shader Model 4.0, non power-of-two texture sizes)");
+			
+				D3D11_FEATURE_DATA_D3D10_X_HARDWARE_OPTIONS opts;
+				pr::Throw(m_d3d_device->CheckFeatureSupport(D3D11_FEATURE_D3D10_X_HARDWARE_OPTIONS, &opts, sizeof(opts)));
+				if (opts.ComputeShaders_Plus_RawAndStructuredBuffers_Via_Shader_4_x == FALSE)
+					throw std::exception("DirectX device does not support Compute Shaders 4x");
+			}
 
 			// Create the direct2d factory
 			D2D1_FACTORY_OPTIONS d2dfactory_options;

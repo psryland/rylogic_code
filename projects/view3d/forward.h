@@ -29,6 +29,7 @@
 #include "pr/common/static_callback.h"
 #include "pr/common/multi_cast.h"
 #include "pr/common/cast.h"
+#include "pr/common/bstr_t.h"
 #include "pr/container/vector.h"
 #include "pr/container/array_view.h"
 #include "pr/container/byte_data.h"
@@ -71,9 +72,9 @@ namespace view3d
 	using SettingsChangedCB     = pr::StaticCB<void, Window*>;
 	using AddFileProgressCB     = pr::StaticCB<BOOL, pr::Guid const&, wchar_t const*, long long, BOOL>;
 	using SourcesChangedCB      = pr::StaticCB<void, EView3DSourcesChangedReason, BOOL>;
-	using EmbeddedCodeHandlerCB = pr::StaticCB<BOOL, BOOL, wchar_t const*, wchar_t const*, BSTR&, BSTR&>;
+	using EmbeddedCodeHandlerCB = pr::StaticCB<BOOL, wchar_t const*, wchar_t const*, BSTR&, BSTR&>;
 	using RenderingCB           = pr::StaticCB<void, Window*>;
-	using SceneChangedCB        = pr::StaticCB<void, Window*, GUID const*, int>;
+	using SceneChangedCB        = pr::StaticCB<void, Window*, View3DSceneChanged const&>;
 	using ReportErrorCB         = pr::StaticCB<void, wchar_t const*>;
 
 	// An instance type for other models used in LDraw
@@ -90,61 +91,4 @@ namespace view3d
 		x(pr::rdr::ModelPtr ,m_model ,pr::rdr::EInstComp::ModelPtr)
 	PR_RDR_DEFINE_INSTANCE(PointInstance, PR_RDR_INST)
 	#undef PR_RDR_INST
-
-	// Helper for cleaning up BStr
-	struct BStr
-	{
-		BSTR m_str;
-
-		BStr()
-			:m_str()
-		{}
-		BStr(wchar_t const* str, int len)
-			:m_str(::SysAllocStringLen(str, UINT(len)))
-		{}
-		~BStr()
-		{
-			if (m_str == nullptr) return;
-			::SysFreeString(m_str);
-		}
-		operator BSTR&()
-		{
-			return m_str;
-		}
-	};
-
-	// Embedded code handler
-	struct EmbeddedCodeHandler :pr::script::IEmbeddedCode
-	{
-		EmbeddedCodeHandlerCB m_handler;
-		EmbeddedCodeHandler(EmbeddedCodeHandlerCB handler)
-			:m_handler(handler)
-		{}
-
-		// Reset the state of the code handler
-		void Reset() override
-		{
-			BStr res, err;
-			m_handler(TRUE, nullptr, nullptr, res, err);
-		}
-
-		// Execute the code handler
-		bool Execute(pr::script::string const& lang, pr::script::string const& code, pr::script::string& result) override
-		{
-			// Return false if 'm_handler' does not handle the given code
-			BStr res, err;
-			if (m_handler(FALSE, lang.c_str(), code.c_str(), res, err) == 0)
-				return false;
-
-			// If errors are reported, raise them as an exception
-			if (err.m_str != nullptr)
-				throw std::exception(pr::Narrow(err.m_str).c_str());
-
-			// Add the string result to 'result'
-			if (res.m_str != nullptr)
-				result.append(res.m_str);
-
-			return true;
-		}
-	};
 }

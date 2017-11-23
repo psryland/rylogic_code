@@ -241,14 +241,25 @@ VIEW3D_API void __stdcall View3D_ObjectsDeleteAll()
 }
 
 // Delete all objects matching a context id
-VIEW3D_API void __stdcall View3D_ObjectsDeleteById(GUID const* context_ids, int count, BOOL all_except)
+VIEW3D_API void __stdcall View3D_ObjectsDeleteById(GUID const* context_ids, int include_count, int exclude_count)
 {
 	try
 	{
 		DllLockGuard;
-		Dll().DeleteAllObjectsById(context_ids, count, all_except != 0);
+		Dll().DeleteAllObjectsById(context_ids, include_count, exclude_count);
 	}
 	CatchAndReport(View3D_ObjectsDeleteById, ,);
+}
+
+// Delete all objects not displayed in any windows
+VIEW3D_API void __stdcall View3D_ObjectsDeleteUnused(GUID const* context_ids, int include_count, int exclude_count)
+{
+	try
+	{
+		DllLockGuard;
+		Dll().DeleteUnused(context_ids, include_count, exclude_count);
+	}
+	CatchAndReport(View3D_ObjectsDeleteUnused, ,);
 }
 
 // Poll for changed script source files, and reload any that have changed
@@ -291,29 +302,12 @@ VIEW3D_API void __stdcall View3D_SourcesChangedCBSet(View3D_SourcesChangedCB sou
 }
 
 // Add/Remove a callback for handling embedded code within scripts
-VIEW3D_API void __stdcall View3D_EmbeddedCodeCBSet(View3D_EmbeddedCodeHandlerCB embedded_code_cb, void* ctx, BOOL add)
+VIEW3D_API void __stdcall View3D_EmbeddedCodeCBSet(wchar_t const* lang, View3D_EmbeddedCodeHandlerCB embedded_code_cb, void* ctx, BOOL add)
 {
 	try
 	{
 		DllLockGuard;
-		auto& handlers = Dll().EmbeddedCodeHandlers;
-		
-		auto cb = pr::StaticCallBack(embedded_code_cb, ctx);
-		if (add)
-		{
-			handlers.push_back(std::make_unique<EmbeddedCodeHandler>(cb));
-		}
-		else
-		{
-			// 'handlers' is a collection of pointers to IEmbeddedCode interfaces
-			// Need to dynamic cast to find EmbeddedCodeHandler instances.
-			pr::erase_first(handlers, [=](auto& x)
-			{
-				auto ech = dynamic_cast<EmbeddedCodeHandler*>(x.get());
-				if (ech == nullptr) return false;
-				return ech->m_handler == cb;
-			});
-		}
+		Dll().SetEmbeddedCodeHandler(lang, embedded_code_cb, ctx, add != 0);
 	}
 	CatchAndReport(View3D_EmbeddedCodeCBSet, , );
 }
@@ -515,14 +509,14 @@ VIEW3D_API void __stdcall View3D_WindowRemoveAllObjects(View3DWindow window)
 }
 
 // Return true if 'object' is among 'window's objects
-VIEW3D_API BOOL __stdcall View3D_WindowHasObject(View3DWindow window, View3DObject object)
+VIEW3D_API BOOL __stdcall View3D_WindowHasObject(View3DWindow window, View3DObject object, BOOL search_children)
 {
 	try
 	{
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		return window->Has(object);
+		return window->Has(object, search_children != 0);
 	}
 	CatchAndReport(View3D_WindowHasObject, window, false);
 }
@@ -565,38 +559,38 @@ VIEW3D_API void __stdcall View3D_WindowEnumObjects(View3DWindow window, View3D_E
 	}
 	CatchAndReport(View3D_WindowEnumObjects, window, );
 }
-VIEW3D_API void __stdcall View3D_WindowEnumObjectsById(View3DWindow window, View3D_EnumObjectsCB enum_objects_cb, void* ctx, GUID const* context_id, int count, BOOL all_except)
+VIEW3D_API void __stdcall View3D_WindowEnumObjectsById(View3DWindow window, View3D_EnumObjectsCB enum_objects_cb, void* ctx, GUID const* context_ids, int include_count, int exclude_count)
 {
 	try
 	{
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		window->EnumObjects(enum_objects_cb, ctx, context_id, count, all_except != 0);
+		window->EnumObjects(enum_objects_cb, ctx, context_ids, include_count, exclude_count);
 	}
 	CatchAndReport(View3D_WindowEnumObjectsById, window, );
 }
 
 // Add/Remove objects by context id
-VIEW3D_API void __stdcall View3D_WindowAddObjectsById(View3DWindow window, GUID const* context_id, int count, BOOL all_except)
+VIEW3D_API void __stdcall View3D_WindowAddObjectsById(View3DWindow window, GUID const* context_ids, int include_count, int exclude_count)
 {
 	try
 	{
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		window->AddObjectsById(context_id, count, all_except != 0);
+		window->AddObjectsById(context_ids, include_count, exclude_count);
 	}
 	CatchAndReport(View3D_WindowAddObjectsById, window,);
 }
-VIEW3D_API void __stdcall View3D_WindowRemoveObjectsById(View3DWindow window, GUID const* context_id, int count, BOOL all_except)
+VIEW3D_API void __stdcall View3D_WindowRemoveObjectsById(View3DWindow window, GUID const* context_ids, int include_count, int exclude_count)
 {
 	try
 	{
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		window->RemoveObjectsById(context_id, count, all_except != 0, false);
+		window->RemoveObjectsById(context_ids, include_count, exclude_count, false);
 	}
 	CatchAndReport(View3D_WindowRemoveObjectsById, window,);
 }
@@ -665,7 +659,16 @@ VIEW3D_API void __stdcall View3D_WindowAnimTimeSet(View3DWindow window, float ti
 }
 
 // Cast a ray into the scene, returning information about what it hit
-VIEW3D_API void __stdcall View3D_WindowHitTest(View3DWindow window, View3DHitTestRay const& ray, float snap_distance, EView3DHitTestFlags flags, View3DHitTestResult& hit)
+// 'rays' - is an input buffer of rays to cast for hit testing
+// 'hits' - are the nearest intercepts with the given rays
+// 'ray_count' - is the length of the 'rays' array
+// 'snap_distance' - the world space distance to snap to
+// 'flags' - what can be hit.
+// 'context_ids' - context ids for objects to include/exclude from hit testing
+// 'include_count' - the number of context ids that should be included
+// 'exclude_count' - the number of context ids that should be excluded
+// 'include_count+exclude_count' = the length of the 'context_ids' array. If 0, then all context ids are included for hit testing
+VIEW3D_API void __stdcall View3D_WindowHitTest(View3DWindow window, View3DHitTestRay const* rays, View3DHitTestResult* hits, int ray_count, float snap_distance, EView3DHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count)
 {
 	try
 	{
@@ -675,11 +678,7 @@ VIEW3D_API void __stdcall View3D_WindowHitTest(View3DWindow window, View3DHitTes
 		// to allow continuous hit-testing during constant rendering.
 
 		DllLockGuard;
-		View3DHitTestRay hack_rays[16] = {ray,ray,ray,ray,ray,ray,ray,ray,ray,ray,ray,ray,ray,ray,ray,ray};
-		View3DHitTestResult hack_results[16] = {hit,hit,hit,hit,hit,hit,hit,hit,hit,hit,hit,hit,hit,hit,hit,hit};
-		//window->HitTest(&ray, &hit, 1, snap_distance, flags, true);
-		window->HitTest(hack_rays, hack_results, 16, snap_distance, flags, true);
-		hit = hack_results[0];
+		window->HitTest(rays, hits, ray_count, snap_distance, flags, context_ids, include_count, exclude_count);
 	}
 	CatchAndReport(View3D_WindowMouseTrackGet, window, );
 }
@@ -2752,7 +2751,7 @@ VIEW3D_API void __stdcall View3D_DemoSceneDelete()
 	try
 	{
 		DllLockGuard;
-		Dll().DeleteAllObjectsById(&Context::GuidDemoSceneObjects, 1, false);
+		Dll().DeleteAllObjectsById(&Context::GuidDemoSceneObjects, 1, 0);
 	}
 	CatchAndReport(View3D_DemoSceneDelete,,);
 }
@@ -2853,6 +2852,16 @@ template <typename T, typename U> struct equal_size_and_alignment
 
 // EView3DFillMode - only used in this file
 
+static_assert(int(EView3DFlags::None              ) == int(pr::ldr::ELdrFlags::None              ), "");
+static_assert(int(EView3DFlags::Hidden            ) == int(pr::ldr::ELdrFlags::Hidden            ), "");
+static_assert(int(EView3DFlags::Wireframe         ) == int(pr::ldr::ELdrFlags::Wireframe         ), "");
+static_assert(int(EView3DFlags::NoZTest           ) == int(pr::ldr::ELdrFlags::NoZTest           ), "");
+static_assert(int(EView3DFlags::NoZWrite          ) == int(pr::ldr::ELdrFlags::NoZWrite          ), "");
+static_assert(int(EView3DFlags::Selected          ) == int(pr::ldr::ELdrFlags::Selected          ), "");
+static_assert(int(EView3DFlags::BBoxExclude       ) == int(pr::ldr::ELdrFlags::BBoxExclude       ), "");
+static_assert(int(EView3DFlags::SceneBoundsExclude) == int(pr::ldr::ELdrFlags::SceneBoundsExclude), "");
+static_assert(int(EView3DFlags::HitTestExclude    ) == int(pr::ldr::ELdrFlags::HitTestExclude    ), "");
+
 static_assert(int(EView3DGeom::Unknown) == int(pr::rdr::EGeom::Invalid), "");
 static_assert(int(EView3DGeom::Vert   ) == int(pr::rdr::EGeom::Vert   ), "");
 static_assert(int(EView3DGeom::Colr   ) == int(pr::rdr::EGeom::Colr   ), "");
@@ -2902,10 +2911,8 @@ static_assert(int(EView3DUpdateObject::Transform ) == int(pr::ldr::EUpdateObject
 static_assert(int(EView3DUpdateObject::Children  ) == int(pr::ldr::EUpdateObject::Children  ), "");
 static_assert(int(EView3DUpdateObject::Colour    ) == int(pr::ldr::EUpdateObject::Colour    ), "");
 static_assert(int(EView3DUpdateObject::ColourMask) == int(pr::ldr::EUpdateObject::ColourMask), "");
-static_assert(int(EView3DUpdateObject::Wireframe ) == int(pr::ldr::EUpdateObject::Wireframe ), "");
-static_assert(int(EView3DUpdateObject::Visibility) == int(pr::ldr::EUpdateObject::Visibility), "");
+static_assert(int(EView3DUpdateObject::Flags     ) == int(pr::ldr::EUpdateObject::Flags     ), "");
 static_assert(int(EView3DUpdateObject::Animation ) == int(pr::ldr::EUpdateObject::Animation ), "");
-static_assert(int(EView3DUpdateObject::StepData  ) == int(pr::ldr::EUpdateObject::StepData  ), "");
 
 static_assert(int(EView3DGizmoEvent::StartManip) == int(pr::ldr::ELdrGizmoEvent::StartManip), "");
 static_assert(int(EView3DGizmoEvent::Moving    ) == int(pr::ldr::ELdrGizmoEvent::Moving    ), "");
@@ -2919,9 +2926,16 @@ static_assert(int(EView3DGizmoMode::Scale    ) == int(pr::ldr::LdrGizmo::EMode::
 static_assert(int(EView3DSourcesChangedReason::NewData) == int(pr::ldr::ScriptSources::EReason::NewData), "");
 static_assert(int(EView3DSourcesChangedReason::Reload) == int(pr::ldr::ScriptSources::EReason::Reload), "");
 
-static_assert(int(EView3DHitTestFlags::SnapToFaces) == int(pr::rdr::EHitTestFlags::SnapToFaces), "");
-static_assert(int(EView3DHitTestFlags::SnapToEdges) == int(pr::rdr::EHitTestFlags::SnapToEdges), "");
-static_assert(int(EView3DHitTestFlags::SnapToVerts) == int(pr::rdr::EHitTestFlags::SnapToVerts), "");
+static_assert(int(EView3DHitTestFlags::Faces) == int(pr::rdr::EHitTestFlags::Faces), "");
+static_assert(int(EView3DHitTestFlags::Edges) == int(pr::rdr::EHitTestFlags::Edges), "");
+static_assert(int(EView3DHitTestFlags::Verts) == int(pr::rdr::EHitTestFlags::Verts), "");
+
+static_assert(int(EView3DSnapType::NoSnap    ) == int(pr::rdr::ESnapType::NoSnap    ), "");
+static_assert(int(EView3DSnapType::Vert      ) == int(pr::rdr::ESnapType::Vert      ), "");
+static_assert(int(EView3DSnapType::Edge      ) == int(pr::rdr::ESnapType::Edge      ), "");
+static_assert(int(EView3DSnapType::Face      ) == int(pr::rdr::ESnapType::Face      ), "");
+static_assert(int(EView3DSnapType::EdgeMiddle) == int(pr::rdr::ESnapType::EdgeMiddle), "");
+static_assert(int(EView3DSnapType::FaceCentre) == int(pr::rdr::ESnapType::FaceCentre), "");
 
 // Specifically used to avoid alignment problems
 static_assert(sizeof(View3DV2    ) == sizeof(pr::v2       ), "");

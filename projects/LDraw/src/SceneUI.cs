@@ -14,6 +14,7 @@ using pr.gfx;
 using pr.gui;
 using pr.maths;
 using pr.util;
+using pr.view3d;
 using pr.win32;
 
 namespace LDraw
@@ -64,6 +65,7 @@ namespace LDraw
 		}
 		protected override void Dispose(bool disposing)
 		{
+			ShowMeasurementUI = false;
 			CameraUI = null;
 			LightingUI = null;
 			ObjectManagerUI = null;
@@ -85,22 +87,6 @@ namespace LDraw
 				Window.SelectionBoxFitToSelected();
 
 			base.OnChartRendering(args);
-		}
-		protected override void OnKeyDown(KeyEventArgs e)
-		{
-			switch (e.KeyCode)
-			{
-			case Keys.F5:
-				#region
-				{
-					View3d.ReloadScriptSources();
-					e.Handled = true;
-					break;
-				}
-				#endregion
-			}
-
-			base.OnKeyDown(e);
 		}
 		protected override void OnMouseMove(MouseEventArgs e)
 		{
@@ -289,9 +275,13 @@ namespace LDraw
 		/// <summary>Clear the instances from this scene</summary>
 		public void Clear(bool delete_objects)
 		{
-			// Remove all objects from the window's drawlist
-			Window.RemoveObjects(ChartTools.Id, all_except:true);
-			if (delete_objects) View3d.DeleteObjects(ChartTools.Id, all_except:true);
+			// Remove all objects from the window
+			Window.RemoveObjects(new [] { ChartTools.Id }, 0, 1);
+
+			// Delete unused objects
+			if (delete_objects)
+				View3d.DeleteUnused(new[] { ChartTools.Id }, 0, 1);
+
 			Invalidate();
 		}
 
@@ -323,13 +313,22 @@ namespace LDraw
 			void AddObjects(Guid id)
 			{
 				if (!additional)
-					Clear(delete_objects:true);
+				{
+					// Remove all objects from the window (except chart tools)
+					Window.RemoveObjects(new[] { ChartTools.Id }, 0, 1);
 
-				// Add the context id this scene.
-				Window.AddObjects(id);
+					// Delete unused objects, except the chart tools and those belonging to the file just opened
+					View3d.DeleteUnused(new [] { id, ChartTools.Id }, 0, 2);
+				}
 
+				// Add the objects from 'id' this scene.
+				Window.AddObjects(new[] { id }, 1, 0);
+
+				// Refresh the window
 				if (auto_range)
 					AutoRange();
+				else
+					Invalidate();
 			}
 		}
 
@@ -492,6 +491,57 @@ namespace LDraw
 			}
 			return cmenu;
 		}
+
+		#region Measurement UI
+
+		/// <summary>Enable/Disable the measurement UI</summary>
+		public bool ShowMeasurementUI
+		{
+			get { return m_measure_ui != null; }
+			set
+			{
+				if (ShowMeasurementUI == value) return;
+				if (m_measure_ui != null)
+				{
+					Util.Dispose(ref m_measure_ui);
+				}
+				m_measure_ui = value ? new MeasurementUI(this) : null;
+				if (m_measure_ui != null)
+				{
+					m_measure_ui.Show(this);
+				}
+			}
+		}
+		private MeasurementUI m_measure_ui;
+
+		/// <summary>Tool window wrapper of the measurement control</summary>
+		private class MeasurementUI :ToolForm
+		{
+			public MeasurementUI(SceneUI scene)
+				:base(scene.Model.Owner, EPin.TopLeft, Control_.MapPoint(scene, scene.Model.Owner, new Point(10,10)), new Size(264,330), false)
+			{
+				FormBorderStyle = FormBorderStyle.SizableToolWindow;
+				ShowInTaskbar = false;
+				HideOnClose = false;
+				Text = "Measure";
+
+				Controls.Add2(new View3d.MeasurementUI
+				{
+					Dock = DockStyle.Fill,
+					CtxId = ChartTools.Id,
+					Window = scene.Window,
+					Control = scene,
+				});
+
+				FormClosed += (s,a) =>
+				{
+					if (a.CloseReason == CloseReason.UserClosing)
+						scene.ShowMeasurementUI = false;
+				};
+			}
+		}
+
+		#endregion
 
 		#region Component Designer generated code
 		private void InitializeComponent()

@@ -183,6 +183,8 @@ namespace pr
 			x(Range                ,= HashI("Range"               ))\
 			x(Specular             ,= HashI("Specular"            ))\
 			x(ScreenSpace          ,= HashI("ScreenSpace"         ))\
+			x(NoZTest              ,= HashI("NoZTest"             ))\
+			x(NoZWrite             ,= HashI("NoZWrite"            ))\
 			x(Billboard            ,= HashI("Billboard"           ))\
 			x(Depth                ,= HashI("Depth"               ))\
 			x(CastShadow           ,= HashI("CastShadow"          ))
@@ -213,10 +215,8 @@ namespace pr
 			Children   = 1 << 3,
 			Colour     = 1 << 4,
 			ColourMask = 1 << 5,
-			Wireframe  = 1 << 6,
-			Visibility = 1 << 7,
-			Animation  = 1 << 8,
-			StepData   = 1 << 9,
+			Flags      = 1 << 6,
+			Animation  = 1 << 7,
 			_bitwise_operators_allowed,
 		};
 
@@ -225,14 +225,29 @@ namespace pr
 		{
 			None = 0,
 
+			// The object is hidden
+			Hidden = 1 << 0,
+
+			// The object is filled in wireframe mode
+			Wireframe = 1 << 1,
+
+			// Render the object without testing against the depth buffer
+			NoZTest = 1 << 2,
+
+			// Render the object without effecting the depth buffer
+			NoZWrite = 1 << 3,
+
 			// Set when an object is selected. The meaning of 'selected' is up to the application
-			Selected = 1 << 0,
+			Selected = 1 << 8,
 
 			// Doesn't contribute to the bounding box on an object.
-			BBoxExclude = 1 << 1,
+			BBoxExclude = 1 << 9,
 
 			// Should not be included when determining the bounds of a scene.
-			SceneBoundsExclude = 1 << 2,
+			SceneBoundsExclude = 1 << 10,
+
+			// Ignored for hit test ray casts
+			HitTestExclude = 1 << 11,
 
 			// Bitwise operators
 			_bitwise_operators_allowed,
@@ -264,7 +279,6 @@ namespace pr
 			x(pr::m4x4            ,m_c2s    ,pr::rdr::EInstComp::C2SOptional        )/*     16 bytes */\
 			x(pr::rdr::ModelPtr   ,m_model  ,pr::rdr::EInstComp::ModelPtr           )/* 4 or 8 bytes */\
 			x(pr::Colour32        ,m_colour ,pr::rdr::EInstComp::TintColour32       )/*      4 bytes */\
-			x(pr::int32           ,m_uid    ,pr::rdr::EInstComp::UniqueId           )/*      4 bytes */\
 			x(pr::rdr::SKOverride ,m_sko    ,pr::rdr::EInstComp::SortkeyOverride    )/*      8 bytes */\
 			x(pr::rdr::BSBlock    ,m_bsb    ,pr::rdr::EInstComp::BSBlock            )/*    296 bytes */\
 			x(pr::rdr::DSBlock    ,m_dsb    ,pr::rdr::EInstComp::DSBlock            )/*     60 bytes */\
@@ -278,13 +292,11 @@ namespace pr
 			ELdrObject   m_type;     // Object type
 			string32     m_name;     // Name of the object
 			pr::Colour32 m_colour;   // Base colour of the object
-			bool         m_instance; // False if this instance should never be drawn (it's used for instancing only)
 
-			ObjectAttributes() :m_type(ELdrObject::Unknown) ,m_name("unnamed") ,m_colour(pr::Colour32White) ,m_instance(true) {}
-			ObjectAttributes(ELdrObject type) :m_type(type), m_name("unnamed") ,m_colour(pr::Colour32White) ,m_instance(true) {}
-			ObjectAttributes(ELdrObject type, char const* name) :m_type(type), m_name(name) ,m_colour(pr::Colour32White) ,m_instance(true) {}
-			ObjectAttributes(ELdrObject type, char const* name, pr::Colour32 colour) :m_type(type), m_name(name) ,m_colour(colour) ,m_instance(true) {}
-			ObjectAttributes(ELdrObject type, char const* name, pr::Colour32 colour, bool instance) :m_type(type), m_name(name) ,m_colour(colour) ,m_instance(instance) {}
+			ObjectAttributes() :m_type(ELdrObject::Unknown) ,m_name("unnamed") ,m_colour(pr::Colour32White) {}
+			ObjectAttributes(ELdrObject type) :m_type(type), m_name("unnamed") ,m_colour(pr::Colour32White) {}
+			ObjectAttributes(ELdrObject type, char const* name) :m_type(type), m_name(name) ,m_colour(pr::Colour32White) {}
+			ObjectAttributes(ELdrObject type, char const* name, pr::Colour32 colour) :m_type(type), m_name(name) ,m_colour(colour) {}
 		};
 
 		// Mesh creation data
@@ -387,8 +399,8 @@ namespace pr
 
 		// A line drawer object
 		struct LdrObject
-			:pr::RefCount<LdrObject>
-			,RdrInstance
+			:RdrInstance
+			,pr::RefCount<LdrObject>
 		{
 			// Note: try not to use the RdrInstance members for things other than rendering
 			// they can temporarily have different models/transforms/etc during rendering of
@@ -403,14 +415,11 @@ namespace pr
 			pr::uint          m_colour_mask;   // A bit mask for applying the base colour to child objects
 			Animation         m_anim;          // Animation data
 			BBoxInstance      m_bbox_instance; // Used for rendering the bounding box for this instance
-			bool              m_instanced;     // False if this instance should never be drawn (it's used for instancing only)
-			bool              m_visible;       // True if the instance should be rendered
-			bool              m_wireframe;     // True if this object is drawn in wireframe
 			EvtSub            m_screen_space;  // True if this object should be rendered in screen space
 			ELdrFlags         m_flags;         // Property flags controlling meta behaviour of the object
 			pr::UserData      m_user_data;     // User data
 
-			LdrObject(ObjectAttributes const& attr, LdrObject* parent, pr::Guid const& context_id, int uid);
+			LdrObject(ObjectAttributes const& attr, LdrObject* parent, pr::Guid const& context_id);
 			~LdrObject();
 
 			// Return the type and name of this object
@@ -451,7 +460,8 @@ namespace pr
 				{
 					if (!func(obj)) return false;
 					for (auto& child : obj->m_child)
-						Apply(func, name, child.m_ptr);
+						if (!Apply(func, name, child.m_ptr))
+							return false;
 				}
 				else
 				{
@@ -461,7 +471,8 @@ namespace pr
 							return false;
 					}
 					for (auto& child : obj->m_child)
-						Apply(func, name, child.m_ptr);
+						if (!Apply(func, name, child.m_ptr))
+							return false;
 				}
 				return true;
 			}

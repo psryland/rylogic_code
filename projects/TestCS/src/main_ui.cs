@@ -5,9 +5,9 @@ using System.Windows.Forms;
 using pr.audio;
 using pr.db;
 using pr.extn;
-using pr.gfx;
 using pr.gui;
 using pr.scintilla;
+using pr.view3d;
 
 namespace TestCS
 {
