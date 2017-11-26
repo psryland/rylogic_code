@@ -476,6 +476,13 @@ namespace pr.extn
 			public bool FitColumnsPending;
 		}
 
+		/// <summary>Make the selection colour of grid cells a shaded version of their unselected colour. (Attach to CellFormatting)</summary>
+		public static void HalfBrightSelection(object sender, DataGridViewCellFormattingEventArgs args)
+		{
+			args.CellStyle.SelectionForeColor = args.CellStyle.ForeColor;
+			args.CellStyle.SelectionBackColor = args.CellStyle.BackColor.Lerp(Color.Gray, 0.5f);
+		}
+
 		/// <summary>
 		/// Handle column sorting for grids with data sources that don't support sorting by default.
 		/// 'handle_sort' will be called after the column header glyph has changed.

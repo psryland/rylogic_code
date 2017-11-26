@@ -504,6 +504,15 @@ namespace pr.extn
 			m_size     = Size.Empty;
 			m_children = new Dictionary<string,ControlLocations>();
 		}
+		public ControlLocations(ControlLocations rhs)
+		{
+			m_name     = rhs.m_name;
+			m_location = rhs.m_location;
+			m_size     = rhs.m_size;
+			m_children = new Dictionary<string,ControlLocations>();
+			foreach (var kv in rhs.m_children)
+				m_children.Add(kv.Key, new ControlLocations(kv.Value));
+		}
 		public ControlLocations(Control ctrl, int level = 0, int index = 0) :this()
 		{
 			ReadInternal(ctrl, level, index);

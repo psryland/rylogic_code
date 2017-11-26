@@ -77,7 +77,7 @@ namespace pr
 			Guarded                      = D3D11_RESOURCE_MISC_GUARDED,
 			TilePool                     = D3D11_RESOURCE_MISC_TILE_POOL,
 			Tiled                        = D3D11_RESOURCE_MISC_TILED,
-			HWProtected                  = D3D11_RESOURCE_MISC_HW_PROTECTED,
+			//HWProtected                  = D3D11_RESOURCE_MISC_HW_PROTECTED, // requires WinSDK 10
 
 			_bitwise_operators_allowed,
 		};

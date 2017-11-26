@@ -69,6 +69,6 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>copy $(TargetPath) $(SolutionDir)CoinFlip\bin\$(ConfigurationName)\bots\</PostBuildEvent>
+    <PostBuildEvent>py.exe $(SolutionDir)post_build_bot.py $(TargetPath) $(SolutionDir) $(ConfigurationName)</PostBuildEvent>
   </PropertyGroup>
 </Project>

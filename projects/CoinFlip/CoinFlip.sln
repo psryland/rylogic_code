@@ -1,13 +1,14 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.27004.2006
+VisualStudioVersion = 15.0.27004.2009
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoinFlip", "CoinFlip\CoinFlip.csproj", "{E3A96A1B-8314-4A17-891D-B7DE878A6D13}"
 	ProjectSection(ProjectDependencies) = postProject
 		{F4A1B209-47CA-4F5D-A80E-87004C91D52E} = {F4A1B209-47CA-4F5D-A80E-87004C91D52E}
 		{28DCBB2C-9BB5-4046-9A77-9E7FB311A1B8} = {28DCBB2C-9BB5-4046-9A77-9E7FB311A1B8}
 		{D7D4C042-9CD3-4C17-9B0A-BEEE451F9CF7} = {D7D4C042-9CD3-4C17-9B0A-BEEE451F9CF7}
+		{31186C4C-111F-4390-A6AA-E3EFB8BB767C} = {31186C4C-111F-4390-A6AA-E3EFB8BB767C}
 		{363D015B-B545-4623-A5CE-61245C9BF1F8} = {363D015B-B545-4623-A5CE-61245C9BF1F8}
 		{4707D4A0-FA1A-4BC2-ABB3-4D61B933741E} = {4707D4A0-FA1A-4BC2-ABB3-4D61B933741E}
 		{5ABF24C9-2A01-4A50-BABE-447C9E0FEC02} = {5ABF24C9-2A01-4A50-BABE-447C9E0FEC02}
@@ -31,6 +32,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Items", "Items", "{EDAC592F-AF43-4DD7-BC8F-06D125E3A9C1}"
 	ProjectSection(SolutionItems) = preProject
 		deploy_coinflip.py = deploy_coinflip.py
+		post_build_bot.py = post_build_bot.py
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "view3d", "..\..\build\view3d.vcxproj", "{363D015B-B545-4623-A5CE-61245C9BF1F8}"
@@ -51,6 +53,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bot.LoopFinder", "Bot.LoopFinder\Bot.LoopFinder.csproj", "{4707D4A0-FA1A-4BC2-ABB3-4D61B933741E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bot.ReturnToMean", "Bot.ReturnToMean\Bot.ReturnToMean.csproj", "{28DCBB2C-9BB5-4046-9A77-9E7FB311A1B8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bot.Portfolio", "Bot.Portfolio\Bot.Portfolio.csproj", "{31186C4C-111F-4390-A6AA-E3EFB8BB767C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -230,6 +234,18 @@ Global
 		{28DCBB2C-9BB5-4046-9A77-9E7FB311A1B8}.Release|x64.Build.0 = Release|Any CPU
 		{28DCBB2C-9BB5-4046-9A77-9E7FB311A1B8}.Release|x86.ActiveCfg = Release|Any CPU
 		{28DCBB2C-9BB5-4046-9A77-9E7FB311A1B8}.Release|x86.Build.0 = Release|Any CPU
+		{31186C4C-111F-4390-A6AA-E3EFB8BB767C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{31186C4C-111F-4390-A6AA-E3EFB8BB767C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{31186C4C-111F-4390-A6AA-E3EFB8BB767C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{31186C4C-111F-4390-A6AA-E3EFB8BB767C}.Debug|x64.Build.0 = Debug|Any CPU
+		{31186C4C-111F-4390-A6AA-E3EFB8BB767C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{31186C4C-111F-4390-A6AA-E3EFB8BB767C}.Debug|x86.Build.0 = Debug|Any CPU
+		{31186C4C-111F-4390-A6AA-E3EFB8BB767C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{31186C4C-111F-4390-A6AA-E3EFB8BB767C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{31186C4C-111F-4390-A6AA-E3EFB8BB767C}.Release|x64.ActiveCfg = Release|Any CPU
+		{31186C4C-111F-4390-A6AA-E3EFB8BB767C}.Release|x64.Build.0 = Release|Any CPU
+		{31186C4C-111F-4390-A6AA-E3EFB8BB767C}.Release|x86.ActiveCfg = Release|Any CPU
+		{31186C4C-111F-4390-A6AA-E3EFB8BB767C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -409,7 +409,7 @@ namespace Bot.PriceSwing
 				return;
 
 			// Draw all of the unmatched trade records
-			args.RemoveObjects(Id);
+			args.Window.RemoveObjects(new[] { Id }, 1, 0);
 			foreach (var tr in TradeRecords)
 			{
 				if (tr.Gfx == null) continue;
@@ -526,13 +526,6 @@ namespace Bot.PriceSwing
 				PriceChangeFrac  = 0;
 				VolumeFrac       = 0;
 			}
-			//public SettingsData(SettingsData rhs)
-			//	:base(rhs)
-			//{
-			//	PairWithExchange = rhs.PairWithExchange;
-			//	PriceChangeFrac  = rhs.PriceChangeFrac;
-			//	VolumeFrac       = rhs.VolumeFrac;
-			//}
 			public SettingsData(XElement node)
 				:base(node)
 			{}
@@ -569,9 +562,9 @@ namespace Bot.PriceSwing
 			}
 
 			/// <summary>True if the settings are valid</summary>
-			public override bool Valid
+			public override bool Valid(IBot bot)
 			{
-				get { return PairWithExchange.HasValue() && PriceChangeFrac > 0 && VolumeFrac > 0; }
+				return PairWithExchange.HasValue() && PriceChangeFrac > 0 && VolumeFrac > 0;
 			}
 
 			/// <summary>If 'Valid' is false, this is a text description of why</summary>

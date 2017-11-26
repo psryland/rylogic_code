@@ -123,7 +123,6 @@ namespace CoinFlip
 			this.m_tb_password.PasswordChar = '*';
 			this.m_tb_password.Size = new System.Drawing.Size(194, 20);
 			this.m_tb_password.TabIndex = 3;
-			this.m_tb_password.Text = "password";
 			// 
 			// m_btn_cancel
 			// 

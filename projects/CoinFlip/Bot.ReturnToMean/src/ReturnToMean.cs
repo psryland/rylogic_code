@@ -70,14 +70,7 @@ namespace Bot.ReturnToMean
 		/// <summary>The exchange to trade on</summary>
 		public Exchange Exchange
 		{
-			get
-			{
-				if (m_exch == null)
-				{
-					m_exch = Model.TradingExchanges.FirstOrDefault(x => x.Name == Settings.Exchange);
-				}
-				return m_exch;
-			}
+			get { return m_exch ?? (m_exch = Model.GetExchange(Settings.Exchange)); }
 			private set
 			{
 				Debug.Assert(value == null);

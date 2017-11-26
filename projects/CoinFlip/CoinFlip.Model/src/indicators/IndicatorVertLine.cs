@@ -13,12 +13,12 @@ using pr.view3d;
 
 namespace CoinFlip
 {
-	public class IndicatorHorzLine :Indicator
+	public class IndicatorVertLine :Indicator
 	{
-		public IndicatorHorzLine(SettingsData settings = null)
-			:base(Guid.NewGuid(), "HorzLine", settings ?? new SettingsData())
+		public IndicatorVertLine(SettingsData settings = null)
+			:base(Guid.NewGuid(), "VertLine", settings ?? new SettingsData())
 		{}
-		public IndicatorHorzLine(XElement node)
+		public IndicatorVertLine(XElement node)
 			:base(node)
 		{}
 		protected override void Dispose(bool disposing)
@@ -33,14 +33,14 @@ namespace CoinFlip
 			[DebuggerStepThrough] get { return (SettingsData)SettingsInternal; }
 		}
 
-		/// <summary>The price level that the line is at</summary>
-		public decimal Price
+		/// <summary>The fractional candle index that the line is at</summary>
+		public double FIndex
 		{
-			get { return Settings.Price; }
+			get { return Settings.FIndex; }
 			set
 			{
-				if (Price == value) return;
-				Settings.Price = value;
+				if (FIndex == value) return;
+				Settings.FIndex = value;
 				Invalidate();
 			}
 		}
@@ -72,27 +72,27 @@ namespace CoinFlip
 		{
 			var line_colour   = (Selected ? Settings.Colour      .Lerp(Color.Gray, 0.5f) : Settings.Colour      ).ToArgbU();
 			var region_colour = (Selected ? Settings.RegionColour.Lerp(Color.Gray, 0.5f) : Settings.RegionColour).ToArgbU();
-			var region_height = Settings.RegionWidth;
-			var width         = (float)Chart.XAxis.Span;
+			var region_size   = Settings.RegionSize;
+			var height        = (float)Chart.YAxis.Span;
 
-			// Create graphics for the horizontal line
-			m_vbuf.Resize(2 + (region_height != 0 ? 4 : 0));
-			m_ibuf.Resize(2 + (region_height != 0 ? 6 : 0));
-			m_nbuf.Resize(1 + (region_height != 0 ? 1 : 0));
+			// Create graphics for the vertical line
+			m_vbuf.Resize(2 + (region_size != 0 ? 4 : 0));
+			m_ibuf.Resize(2 + (region_size != 0 ? 6 : 0));
+			m_nbuf.Resize(1 + (region_size != 0 ? 1 : 0));
 
 			m_vbuf[0] = new View3d.Vertex(new v4(0, 0, 0, 1), line_colour);
-			m_vbuf[1] = new View3d.Vertex(new v4(width, 0, 0, 1), line_colour);
+			m_vbuf[1] = new View3d.Vertex(new v4(0, height, 0, 1), line_colour);
 			m_ibuf[0] = 0;
 			m_ibuf[1] = 1;
 			m_nbuf[0] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert|View3d.EGeom.Colr, 0, 2, 0, 2);
 
-			if (region_height != 0)
+			if (region_size != 0)
 			{
-				var half_height = (float)(region_height / (2.0 * Chart.YAxis.Span));
-				m_vbuf[2] = new View3d.Vertex(new v4(0    , -half_height, 0, 1), region_colour);
-				m_vbuf[3] = new View3d.Vertex(new v4(width, -half_height, 0, 1), region_colour);
-				m_vbuf[4] = new View3d.Vertex(new v4(0    , +half_height, 0, 1), region_colour);
-				m_vbuf[5] = new View3d.Vertex(new v4(width, +half_height, 0, 1), region_colour);
+				var half_width = (float)(region_size / (2.0 * Chart.XAxis.Span));
+				m_vbuf[2] = new View3d.Vertex(new v4(-half_width, 0     , 0, 1), region_colour);
+				m_vbuf[3] = new View3d.Vertex(new v4(-half_width, height, 0, 1), region_colour);
+				m_vbuf[4] = new View3d.Vertex(new v4(+half_width, 0     , 0, 1), region_colour);
+				m_vbuf[5] = new View3d.Vertex(new v4(+half_width, height, 0, 1), region_colour);
 				m_ibuf[2] = 2;
 				m_ibuf[3] = 3;
 				m_ibuf[4] = 5;
@@ -117,8 +117,8 @@ namespace CoinFlip
 			// Add to the scene
 			if (Visible)
 			{
-				// Graphics are created at the origin, position at XAxis.Min
-				Gfx.O2P = m4x4.Translation((float)Chart.XAxis.Min, (float)Price, ZOrder.Indicators);
+				// Graphics are created at the origin, position at YAxis.Min
+				Gfx.O2P = m4x4.Translation((float)FIndex, (float)Chart.YAxis.Min, ZOrder.Indicators);
 				window.AddObject(Gfx);
 			}
 			else
@@ -132,11 +132,11 @@ namespace CoinFlip
 		{
 			// Find the nearest point to 'client_point' on the line
 			var chart_pt  = chart_point;
-			var client_pt = Chart.ChartToClient(new PointF(chart_pt.X, (float)Price));
+			var client_pt = Chart.ChartToClient(new PointF((float)FIndex, chart_pt.Y));
 
 			// If clicked within 'tolerance' of the line
-			if (Math.Abs(client_pt.Y - client_point.Y) < Chart.Options.MinSelectionDistance)
-				return new ChartControl.HitTestResult.Hit(this, new PointF(chart_pt.X, (float)Price), null);
+			if (Math.Abs(client_pt.X - client_point.X) < Chart.Options.MinSelectionDistance)
+				return new ChartControl.HitTestResult.Hit(this, new PointF((float)FIndex, chart_pt.Y), null);
 
 			return null;
 		}
@@ -151,8 +151,8 @@ namespace CoinFlip
 		/// <summary>A mouse operation for dragging the horizontal line around</summary>
 		public class DragLine :ChartControl.MouseOp
 		{
-			private readonly IndicatorHorzLine m_line;
-			public DragLine(IndicatorHorzLine line)
+			private readonly IndicatorVertLine m_line;
+			public DragLine(IndicatorVertLine line)
 				:base(line.Chart)
 			{
 				m_line = line;
@@ -166,7 +166,7 @@ namespace CoinFlip
 			public override void MouseMove(MouseEventArgs e)
 			{
 				var chart_pt = m_chart.ClientToChart(e.Location);
-				m_line.Settings.Price = (decimal)chart_pt.Y;
+				m_line.Settings.FIndex = chart_pt.X;
 				m_chart.Invalidate();
 				m_chart.Update();
 			}
@@ -178,21 +178,21 @@ namespace CoinFlip
 		{
 			public SettingsData()
 			{
-				Price        = 0m;
+				FIndex       = 0f;
 				Width        = 1.0;
 				Colour       = Color.DarkBlue;
 				RegionColour = Color.LightBlue.Alpha(0.5f);
-				RegionWidth  = 0;
+				RegionSize   = 0;
 			}
 			public SettingsData(XElement node)
 				:base(node)
 			{}
 
-			/// <summary>The Y value of this line</summary>
-			public decimal Price
+			/// <summary>The X value of this line</summary>
+			public double FIndex
 			{
-				get { return get<decimal>(nameof(Price)); }
-				set { set(nameof(Price), value); }
+				get { return get<double>(nameof(FIndex)); }
+				set { set(nameof(FIndex), value); }
 			}
 
 			/// <summary>The width of the line</summary>
@@ -217,10 +217,10 @@ namespace CoinFlip
 			}
 
 			/// <summary>The size of the region area</summary>
-			public double RegionWidth
+			public double RegionSize
 			{
-				get { return get<double>(nameof(RegionWidth)); }
-				set { set(nameof(RegionWidth), value); }
+				get { return get<double>(nameof(RegionSize)); }
+				set { set(nameof(RegionSize), value); }
 			}
 
 			private class TyConv :GenericTypeConverter<SettingsData> {}

@@ -65,6 +65,7 @@
     <Compile Include="src\indicators\IndicatorHorzLine.cs" />
     <Compile Include="src\indicators\IndicatorMA.cs" />
     <Compile Include="src\indicators\IndicatorTrendLine.cs" />
+    <Compile Include="src\indicators\IndicatorVertLine.cs" />
     <Compile Include="src\Misc.cs" />
     <Compile Include="src\model\Account.cs" />
     <Compile Include="src\model\APIKeys.cs" />

@@ -171,7 +171,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="bots\ReadMe.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="money.ico" />
     <Content Include="post_build.py" />

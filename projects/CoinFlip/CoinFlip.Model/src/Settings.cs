@@ -202,7 +202,7 @@ namespace CoinFlip
 				set { set(nameof(UILayout), value); }
 			}
 
-			/// <summary>The layout of tool bars</summary>
+			/// <summary>The layout of main window tool bars</summary>
 			public ToolStripLocations ToolStripLayout
 			{
 				get { return get<ToolStripLocations>(nameof(ToolStripLayout)); }
@@ -426,6 +426,7 @@ namespace CoinFlip
 				m_show_trade_history = null;
 				m_show_market_depth  = null;
 				Indicators           = null;
+				ToolStripLayout      = null;
 			}
 			public ChartSettings(ChartSettings rhs)
 			{
@@ -439,6 +440,7 @@ namespace CoinFlip
 				m_show_trade_history = rhs.m_show_trade_history;
 				m_show_market_depth  = rhs.m_show_market_depth;
 				Indicators           = new XElement(rhs.Indicators);
+				ToolStripLayout      = new ToolStripLocations(rhs.ToolStripLayout);
 			}
 			public ChartSettings(XElement node)
 			{
@@ -451,6 +453,7 @@ namespace CoinFlip
 				m_show_trade_history = node.Element(nameof(ShowTradeHistory)).As(m_show_trade_history);
 				m_show_market_depth  = node.Element(nameof(ShowMarketDepth )).As(m_show_market_depth );
 				Indicators           = node.Element(nameof(Indicators      )).As(Indicators          );
+				ToolStripLayout      = node.Element(nameof(ToolStripLayout )).As(ToolStripLayout     );
 			}
 			public XElement ToXml(XElement node)
 			{
@@ -463,6 +466,7 @@ namespace CoinFlip
 				node.Add2(nameof(ShowTradeHistory), m_show_trade_history , false);
 				node.Add2(nameof(ShowMarketDepth ), m_show_market_depth  , false);
 				node.Add2(Indicators);
+				node.Add2(ToolStripLayout);
 				return node;
 			}
 
@@ -499,10 +503,20 @@ namespace CoinFlip
 			private ChartSettings m_inherit;
 
 			/// <summary>The symbol code for the chart these settings are for</summary>
-			public string SymbolCode { get; set; }
+			public string SymbolCode
+			{
+				get { return m_symbol_code; }
+				set { SetProp(ref m_symbol_code, value, nameof(SymbolCode)); }
+			}
+			private string m_symbol_code;
 
 			/// <summary>The time frame displayed</summary>
-			public ETimeFrame TimeFrame { get; set; }
+			public ETimeFrame TimeFrame
+			{
+				get { return m_time_frame; }
+				set { SetProp(ref m_time_frame, value, nameof(TimeFrame)); }
+			}
+			private ETimeFrame m_time_frame;
 
 			/// <summary>Chart style options</summary>
 			public ChartControl.RdrOptions Style
@@ -566,7 +580,20 @@ namespace CoinFlip
 			private bool? m_show_market_depth;
 
 			/// <summary>Indicators on this chart</summary>
-			public XElement Indicators { get; set; }
+			public XElement Indicators
+			{
+				get { return m_indicators; }
+				set { SetProp(ref m_indicators, value, nameof(Indicators)); }
+			}
+			private XElement m_indicators;
+
+			/// <summary>The layout of main window tool bars</summary>
+			public ToolStripLocations ToolStripLayout
+			{
+				get { return m_ts_layout; }
+				set { SetProp(ref m_ts_layout, value, nameof(ToolStripLayout)); }
+			}
+			private ToolStripLocations m_ts_layout;
 
 			/// <summary>Helper for setting inherited fields</summary>
 			private void SetProp<T>(string field, T value, T def, string prop_name)
@@ -600,6 +627,13 @@ namespace CoinFlip
 					else
 						fi.SetValue(this, value);
 				}
+				PropertyChanged.Raise(this, new PropertyChangedEventArgs(prop_name));
+			}
+			private void SetProp<T>(ref T field, T value, string prop_name)
+			{
+				// This one is for non-inherited properties
+				if (Equals(field, value)) return;
+				field = value;
 				PropertyChanged.Raise(this, new PropertyChangedEventArgs(prop_name));
 			}
 			public event PropertyChangedEventHandler PropertyChanged;

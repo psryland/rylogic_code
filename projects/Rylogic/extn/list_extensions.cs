@@ -403,28 +403,47 @@ namespace pr.extn
 			return e - s;
 		}
 
-		/// <summary>Add items from 'set' to this collection. Items not already in the collection are added to the end</summary>
-		public static void Merge<T>(this IList<T> list, IEnumerable<T> set)
-		{
-			Merge(list, set.ToHashSet());
-		}
-		public static void Merge(this IList list, IEnumerable set)
-		{
-			Merge(list, set.Cast<object>().ToHashSet());
-		}
-
-		/// <summary>Add items from 'set' to this collection. Items not already in the collection are added to the end. On return, 'set' contains the new items that were added</summary>
-		public static void Merge<T>(this IList<T> list, HashSet<T> set)
+		/// <summary>
+		/// Remove items from this list that are not in 'set'. <para/>
+		/// Add items from 'set' that are not already in this list. (to the end).
+		/// On return, 'set' contains the items that were added.</summary>
+		public static void Sync<T>(this IList<T> list, HashSet<T> set)
 		{
 			list.RemoveIf(x => !set.Contains(x));
 			list.ForEach(x => set.Remove(x));
 			list.AddRange(set);
 		}
-		public static void Merge(this IList list, HashSet<object> set)
+		public static void Sync(this IList list, HashSet<object> set)
 		{
 			list.RemoveIf<object>(x => !set.Contains(x));
 			list.ForEach<object>(x => set.Remove(x));
 			list.AddRange(set);
+		}
+		public static void Sync<T>(this IList<T> list, IEnumerable<T> set)
+		{
+			Sync(list, set.ToHashSet());
+		}
+		public static void Sync(this IList list, IEnumerable set)
+		{
+			Sync(list, set.Cast<object>().ToHashSet());
+		}
+
+		/// <summary>Add items from 'set' to this collection. Items not already in the collection are added to the end. On return, 'set' contains the new items that were added</summary>
+		[Obsolete("Use Sync instead")] public static void Merge<T>(this IList<T> list, HashSet<T> set)
+		{
+			Sync<T>(list, set);
+		}
+		[Obsolete("Use Sync instead")] public static void Merge(this IList list, HashSet<object> set)
+		{
+			Sync(list, set);
+		}
+		[Obsolete("Use Sync instead")] public static void Merge<T>(this IList<T> list, IEnumerable<T> set)
+		{
+			Sync(list, set.ToHashSet());
+		}
+		[Obsolete("Use Sync instead")] public static void Merge(this IList list, IEnumerable set)
+		{
+			Sync(list, set.Cast<object>().ToHashSet());
 		}
 
 		/// <summary>Remove elements from the start of this list that satisfy 'pred'</summary>

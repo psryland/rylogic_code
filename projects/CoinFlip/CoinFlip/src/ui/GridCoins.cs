@@ -147,7 +147,7 @@ namespace CoinFlip
 				var opt = cmenu.Items.Add2(new ToolStripMenuItem("Delete"));
 				cmenu.Opening += (s,a) =>
 				{
-					opt.Enabled = SelectedRows.Count != 0;
+					opt.Enabled = this.SelectedRowCount(1) != 0;
 				};
 				opt.Click += (s,a) =>
 				{

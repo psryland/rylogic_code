@@ -101,7 +101,7 @@ namespace CoinFlip
 			}
 
 			e.CellStyle.ForeColor = Color.Black;
-			e.CellStyle.BackColor = bot.Settings.Valid ? Color.White : Color.LightSalmon;
+			e.CellStyle.BackColor = bot.Valid ? Color.White : Color.LightSalmon;
 			e.CellStyle.SelectionForeColor = e.CellStyle.ForeColor;
 			e.CellStyle.SelectionBackColor = e.CellStyle.BackColor.Lerp(Color.Gray, 0.5f);
 		}
@@ -112,7 +112,7 @@ namespace CoinFlip
 				return;
 
 			var bot = Model.Bots[e.RowIndex];
-			if (bot.Settings.Valid)
+			if (bot.Valid)
 				return;
 
 			e.ToolTipText = bot.Settings.ErrorDescription;

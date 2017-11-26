@@ -13,7 +13,7 @@ namespace CoinFlip
 		/// <summary>Return the key/secret for this exchange</summary>
 		private bool LoadAPIKeys(User user, string exch, out string key, out string secret)
 		{
-			var crypto = new AesCryptoServiceProvider();
+			var crypto = new AesCryptoServiceProvider{ Padding = PaddingMode.PKCS7 };
 
 			// Get the key file name. This is an encrypted XML file
 			var key_file = Misc.ResolveUserPath($"{user.Username}.keys");
@@ -42,10 +42,46 @@ namespace CoinFlip
 			return true;
 		}
 
+		/// <summary>Write the key/secret pair to the keys file for 'user'</summary>
+		private void SaveAPIKeys(User user, string exch, string key, string secret)
+		{
+			var crypto = new AesCryptoServiceProvider{ Padding = PaddingMode.PKCS7 };
+
+			// Get the key file name. This is an encrypted XML file
+			var key_file = Misc.ResolveUserPath($"{user.Username}.keys");
+
+			// If there is an existing keys file, decrypt and the XML content, otherwise create from new
+			var root = (XElement)null;
+			if (Path_.FileExists(key_file))
+			{
+				// Read the file contents to memory and decrypt it
+				var decryptor = crypto.CreateDecryptor(user.Cred, InitVector(user, crypto.BlockSize));
+				using (var fs = new FileStream(key_file, FileMode.Open, FileAccess.Read, FileShare.Read))
+				using (var cs = new CryptoStream(fs, decryptor, CryptoStreamMode.Read))
+				using (var sr = new StreamReader(cs))
+					root = XDocument.Parse(sr.ReadToEnd(), LoadOptions.None).Root;
+			}
+			if (root == null)
+				root = new XElement("root");
+
+			// Add/replace the element for this exchange
+			root.RemoveNodes(exch);
+			var exch_xml = root.Add2(new XElement(exch));
+			exch_xml.Add2(XmlTag.APIKey, key, false);
+			exch_xml.Add2(XmlTag.APISecret, secret, false);
+			var keys_xml = root.ToString(SaveOptions.None);
+
+			// Write the keys file back to disk (encrypted)
+			var encryptor = crypto.CreateEncryptor(user.Cred, InitVector(user, crypto.BlockSize));
+			using (var fs = new FileStream(key_file, FileMode.Create, FileAccess.Write, FileShare.None))
+			using (var cs = new CryptoStream(fs, encryptor, CryptoStreamMode.Write))
+			using (var sw = new StreamWriter(cs))
+				sw.Write(keys_xml);
+		}
+
 		/// <summary>Create or replace API keys for this exchange</summary>
 		private bool CreateAPIKeys(User user, string exch, out string key, out string secret)
 		{
-			var crypto = new AesCryptoServiceProvider();
 			key    = null;
 			secret = null;
 
@@ -63,43 +99,8 @@ namespace CoinFlip
 			};
 			using (dlg)
 			{
-				if (dlg.ShowDialog(UI) != DialogResult.OK)
-					return false;
-
-				key    = dlg.APIKey;
-				secret = dlg.APISecret;
-
-				// Get the key file name. This is an encrypted XML file
-				var key_file = Misc.ResolveUserPath($"{user.Username}.keys");
-
-				// If there is an existing keys file, decrypt and the XML content, otherwise create from new
-				var root = (XElement)null;
-				if (Path_.FileExists(key_file))
-				{
-					// Read the file contents to memory and decrypt it
-					var decryptor = crypto.CreateDecryptor(user.Cred, InitVector(user, crypto.BlockSize));
-					using (var fs = new FileStream(key_file, FileMode.Open, FileAccess.Read, FileShare.Read))
-					using (var cs = new CryptoStream(fs, decryptor, CryptoStreamMode.Read))
-					using (var sr = new StreamReader(cs))
-						root = XDocument.Parse(sr.ReadToEnd(), LoadOptions.None).Root;
-				}
-				if (root == null)
-					root = new XElement("root");
-
-				// Add/replace the element for this exchange
-				root.RemoveNodes(exch);
-				var exch_xml = root.Add2(new XElement(exch));
-				exch_xml.Add2(XmlTag.APIKey, key, false);
-				exch_xml.Add2(XmlTag.APISecret, secret, false);
-				var keys_xml = root.ToString(SaveOptions.None);
-
-				// Write the keys file back to disk (encrypted)
-				var encryptor = crypto.CreateEncryptor(user.Cred, InitVector(user, crypto.BlockSize));
-				using (var fs = new FileStream(key_file, FileMode.Create, FileAccess.Write, FileShare.None))
-				using (var cs = new CryptoStream(fs, encryptor, CryptoStreamMode.Write))
-				using (var sw = new StreamWriter(cs))
-					sw.Write(keys_xml);
-
+				if (dlg.ShowDialog(UI) != DialogResult.OK) return false;
+				SaveAPIKeys(user, exch, dlg.APIKey, dlg.APISecret);
 				return true;
 			}
 		}
@@ -128,15 +129,18 @@ namespace CoinFlip
 							$"\"{Misc.ResolveUserPath($"{User.Username}.keys")}\""+
 							$"\r\n"+
 							$"Changing API Keys will require restarting",
+					APIKey = key,
+					APISecret = secret,
 				};
 				using (dlg)
 				{
 					if (dlg.ShowDialog(UI) != DialogResult.OK)
 						return;
 
-					// Check if the Keys have changed
+					// Save if the keys have changed
 					if (dlg.APIKey != key || dlg.APISecret != secret)
 					{
+						SaveAPIKeys(User, exch.Name, dlg.APIKey, dlg.APISecret);
 						var res = MsgBox.Show(UI,
 							"A restart is required to use the new API keys.\r\n"+
 							"\r\n"+

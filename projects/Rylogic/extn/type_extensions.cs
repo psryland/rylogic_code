@@ -196,10 +196,15 @@ namespace pr.extn
 	public static class int_
 	{
 		/// <summary>Enumerate ints in the range [beg, end)</summary>
-		public static IEnumerable<int> Range(int beg, int end)
+		public static IEnumerable<int> Range(int beg, int end, bool inclusive = false)
 		{
-			for (;beg != end;)
+			// Handle forward and backward iteration
+			for (;beg < end;)
 				yield return beg++;
+			for (;beg > end;)
+				yield return beg--;
+			if (inclusive)
+				yield return end;
 		}
 
 		/// <summary>Enumerate ints in the range [0, count)</summary>

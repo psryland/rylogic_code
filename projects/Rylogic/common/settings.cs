@@ -765,12 +765,11 @@ namespace pr.common
 			if (m_data.TryGetValue(key, out var value))
 				return (Value)value;
 
-			var ty = typeof(T);
-			var pi = ty.GetProperty(key, BindingFlags.Instance|BindingFlags.Public);
-			if (pi != null)
-				return (Value)pi.GetValue(Default);
+			if (Default.m_data.TryGetValue(key, out value))
+				return (Value)value;
 
-			throw new KeyNotFoundException("Unknown setting '"+key+"'.\r\n"+
+			throw new KeyNotFoundException(
+				$"Unknown setting '{key}'.\r\n"+
 				"This is probably because there is no default value set "+
 				"in the constructor of the derived settings class");
 		}

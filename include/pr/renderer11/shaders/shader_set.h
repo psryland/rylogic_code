@@ -139,9 +139,9 @@ namespace pr
 				return true;
 			}
 			friend bool operator != (ShaderMap const& lhs, ShaderMap const& rhs)
-		{
-			return !(lhs == rhs);
-		}
+		    {
+			    return !(lhs == rhs);
+		    }
 		};
 	}
 }

@@ -46,6 +46,7 @@ def Deploy():
 	Tools.Copy(targetdir + "\\CoinFlip.exe.config" , dstdir + "\\")
 	Tools.Copy(targetdir + "\\*.dll"               , dstdir + "\\")
 	Tools.Copy(targetdir + "\\lib"                 , dstdir + "\\lib\\")
+	Tools.Copy(targetdir + "\\bots"                , dstdir + "\\bots\\")
 
 	# Build the installer
 	#print("\nBuilding installer...")

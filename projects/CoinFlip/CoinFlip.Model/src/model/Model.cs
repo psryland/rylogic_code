@@ -268,6 +268,13 @@ namespace CoinFlip
 		/// <summary>The special case cross exchange</summary>
 		public CrossExchange CrossExchange { get; private set; }
 
+		/// <summary>Get an exchange by name</summary>
+		public Exchange GetExchange(string name)
+		{
+			if (!name.HasValue()) return null;
+			return Exchanges.FirstOrDefault(x => x.Name == name);
+		}
+
 		/// <summary>Meta data for the known coins</summary>
 		public CoinDataTable Coins
 		{
@@ -594,7 +601,7 @@ namespace CoinFlip
 							pairs.AddRange(exch.Pairs.Values.Where(x => coi.Contains(x.Base) && coi.Contains(x.Quote)));
 
 						// Update the collection of pairs in the model
-						Pairs.Merge(pairs);
+						Pairs.Sync(pairs);
 
 						// Done
 						Log.Write(ELogLevel.Info, $"Trading pairs updated ... ({Pairs.Count} pairs, taking {sw.Elapsed.TotalSeconds} seconds)");

@@ -223,6 +223,7 @@ namespace pr.extn
 		/// <summary>Imports location data for this tool strip container</summary>
 		public static void LoadLocations(this ToolStripContainer cont, ToolStripLocations data)
 		{
+			if (data == null) return;
 			using (cont.MarkAsLoading())
 				data.Apply(cont);
 		}
@@ -795,6 +796,14 @@ namespace pr.extn
 			m_left      = new ControlLocations();
 			m_right     = new ControlLocations();
 			m_bottom    = new ControlLocations();
+		}
+		public ToolStripLocations(ToolStripLocations rhs)
+		{
+			m_name   = rhs.m_name;
+			m_top    = new ControlLocations(rhs.m_top);
+			m_left   = new ControlLocations(rhs.m_left);
+			m_right  = new ControlLocations(rhs.m_right);
+			m_bottom = new ControlLocations(rhs.m_bottom);
 		}
 		public ToolStripLocations(ToolStripContainer cont)
 		{

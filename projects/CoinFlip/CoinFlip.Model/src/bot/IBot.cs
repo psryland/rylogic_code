@@ -22,11 +22,13 @@ namespace CoinFlip
 		// - Create a Class library project called 'Bot.<BotName>'
 		// - Add references to 'CoinFlip.Model' and 'Rylogic'
 		// - Set the framework version to 4.5.2
-		// - Set the post build event to: @"copy $(TargetPath) $(SolutionDir)CoinFlip\bin\$(ConfigurationName)\bots\"
-		// - Add a class with the Plugin attribute: @"[Plugin(typeof(IBot))]"
+		// - Set the post build event to:
+		//   @"   py.exe $(SolutionDir)post_build_bot.py $(TargetPath) $(SolutionDir) $(ConfigurationName)   "
+		// - Add a class that inherits 'IBot' and with the Plugin attribute: @"[Plugin(typeof(IBot))]"
 		// - Add a constructor like this: @"public MyBot(Model model, XElement settings_xml) :base("my_bot", model, new SettingsData(settings_xml)) {}"
-		//   'SettingsData' is type that inherits 'SettingsBase<SettingsData>'
+		// - Add a nested class called 'SettingsData' that inherits 'SettingsBase<SettingsData>'
 		// - Add a build dependency on 'CoinFlip' for the new bot
+		// - Compile and run CoinFlip, right click in the bots area, and add your new bot
 		//
 		// Bots can be clock-based, and run at a fixed rate by overriding the 'Step()' method, or they can be
 		// event-driven by subscribing to the 'OnDataChanged' event for the instruments they care about.
@@ -91,7 +93,7 @@ namespace CoinFlip
 					Debug.Assert(Model.AssertMainThread());
 
 					// Don't allow activation with invalid settings
-					if (value && !Settings.Valid)
+					if (value && !Valid)
 						return;
 
 					// Start/Stop
@@ -300,6 +302,12 @@ namespace CoinFlip
 			}
 		}
 
+		/// <summary>True if this bot have a valid configuration</summary>
+		public bool Valid
+		{
+			get { return Settings.Valid(this); }
+		}
+
 		/// <summary>A log for this bot instance</summary>
 		public Logger Log
 		{
@@ -399,7 +407,7 @@ namespace CoinFlip
 			decimal FundAllocation { get; set; }
 
 			/// <summary>True if the settings are valid</summary>
-			bool Valid { get; }
+			bool Valid(IBot bot);
 
 			/// <summary>If 'Valid' is false, this is a text description of why</summary>
 			string ErrorDescription { get; }
@@ -437,10 +445,10 @@ namespace CoinFlip
 				set { set(nameof(FundAllocation), value); }
 			}
 
-			/// <summary></summary>
-			public virtual bool Valid
+			/// <summary>Returns true if the settings are valid</summary>
+			public virtual bool Valid(IBot bot)
 			{
-				get { return true; }
+				return true;
 			}
 
 			/// <summary>If 'Valid' is false, this is a text description of why</summary>

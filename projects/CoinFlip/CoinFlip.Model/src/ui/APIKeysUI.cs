@@ -22,6 +22,7 @@ namespace CoinFlip
 			InitializeComponent();
 			SetupUI();
 			UpdateUI();
+			CreateHandle();
 		}
 		protected override void Dispose(bool disposing)
 		{

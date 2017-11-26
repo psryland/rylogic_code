@@ -288,7 +288,7 @@ namespace CoinFlip
 		protected override void UpdateSceneCore(View3d.Window window)
 		{
 			// Remove graphics
-			window.RemoveObjects(Id);
+			window.RemoveObjects(new[] { Id }, 1, 0);
 
 			// Add the graphics pieces over the visible range
 			if (m_data.Count != 0 && Visible)

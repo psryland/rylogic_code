@@ -3700,6 +3700,13 @@ namespace pr.gui
 					Debug.Assert(CheckConsistency());
 					break;
 				}
+			case ListChg.ItemPreRemove:
+				{
+					elem.Selected = false;
+					elem.Hovered = false;
+					Debug.Assert(CheckConsistency());
+					break;
+				}
 			case ListChg.ItemRemoved:
 				{
 					elem.SetChartInternal(null, false);
