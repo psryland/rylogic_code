@@ -671,7 +671,11 @@ namespace pr
 
 			// If NoZWrite
 			if (AllSet(obj->m_flags, ELdrFlags::NoZWrite))
+			{
+				// Don't write to Z and draw behind all objects
 				obj->m_dsb.Set(rdr::EDS::DepthWriteMask, D3D11_DEPTH_WRITE_MASK_ZERO);
+				obj->m_sko.Group(rdr::ESortGroup::PreOpaques);
+			}
 
 			// If flagged as screen space rendering mode
 			if (obj->m_screen_space)
@@ -4816,6 +4820,7 @@ LR"(// *************************************************************************
 			// We want parenting to be unaffected by the event handlers.
 			auto i2w = *p2w * m_o2p * m_anim.Step(time_s);
 			m_i2w = i2w;
+			PR_ASSERT(PR_DBG, FEql(m_i2w.w.w, 1.0f), "Invalid instance transform");
 
 			// Allow the object to change it's transform just before rendering
 			OnAddToScene(*this, scene);
@@ -4906,8 +4911,9 @@ LR"(// *************************************************************************
 		{
 			Apply([&](LdrObject* o)
 			{
+				assert(pr::FEql(o2p.w.w, 1.0f) && "Invalid instance transform");
+				assert(pr::IsFinite(o2p) && "Invalid instance transform");
 				o->m_o2p = o2p;
-				assert(pr::FEql(o->m_o2p.w.w, 1.0f) && "Invalid instance transform");
 				return true;
 			}, name);
 		}
@@ -4920,11 +4926,7 @@ LR"(// *************************************************************************
 		}
 		void LdrObject::Visible(bool visible, char const* name)
 		{
-			Apply([=](LdrObject* o)
-			{
-				o->m_flags = SetBits(o->m_flags, ELdrFlags::Hidden, !visible);
-				return true;
-			}, name);
+			Flags(ELdrFlags::Hidden, !visible, name);
 		}
 
 		// Get/Set the render mode for this object or child objects matching 'name' (see Apply)
@@ -4935,13 +4937,7 @@ LR"(// *************************************************************************
 		}
 		void LdrObject::Wireframe(bool wireframe, char const* name)
 		{
-			Apply([=](LdrObject* o)
-			{
-				o->m_flags = SetBits(o->m_flags, ELdrFlags::Wireframe, wireframe);
-				if (wireframe) o->m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME);
-				else           o->m_rsb.Clear(ERS::FillMode);
-				return true;
-			}, name);
+			Flags(ELdrFlags::Wireframe, wireframe, name);
 		}
 
 		// Get/Set screen space rendering mode for this object and all child objects
@@ -5014,6 +5010,51 @@ LR"(// *************************************************************************
 			{
 				// Apply flag changes
 				o->m_flags = SetBits(o->m_flags, flags, state);
+
+				// Hidden
+				if (AllSet(o->m_flags, ELdrFlags::Hidden))
+				{
+				}
+				else
+				{
+				}
+
+				// Wireframe
+				if (AllSet(o->m_flags, ELdrFlags::Wireframe))
+				{
+					o->m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME);
+				}
+				else
+				{
+					o->m_rsb.Clear(ERS::FillMode);
+				}
+
+				// No Z Test
+				if (AllSet(o->m_flags, ELdrFlags::NoZTest))
+				{
+					// Don't test against Z, and draw above all objects
+					o->m_dsb.Set(rdr::EDS::DepthEnable, FALSE);
+					o->m_sko.Group(rdr::ESortGroup::PostAlpha);
+				}
+				else
+				{
+					o->m_dsb.Set(rdr::EDS::DepthEnable, TRUE);
+					o->m_sko = SKOverride();
+				}
+
+				// If NoZWrite
+				if (AllSet(o->m_flags, ELdrFlags::NoZWrite))
+				{
+					// Don't write to Z and draw behind all objects
+					o->m_dsb.Set(rdr::EDS::DepthWriteMask, D3D11_DEPTH_WRITE_MASK_ZERO);
+					o->m_sko.Group(rdr::ESortGroup::PreOpaques);
+				}
+				else
+				{
+					o->m_dsb.Set(rdr::EDS::DepthWriteMask, D3D11_DEPTH_WRITE_MASK_ALL);
+					o->m_sko = SKOverride();
+				}
+
 				return true;
 			}, name);
 		}

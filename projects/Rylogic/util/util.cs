@@ -187,6 +187,20 @@ namespace pr.util
 			~GCThreadGrabber() { m_gc_thread = Thread.CurrentThread; }
 		}
 
+		/// <summary>Replacement for Debug.Assert that doesn't run off into infinite loops trying to display a dialog</summary>
+		[Conditional("DEBUG")] public static void Assert(bool condition, string msg = null)
+		{
+			if (condition || m_assert_visible) return;
+			using (Scope.Create(() => m_assert_visible = true, v => m_assert_visible = v))
+			{
+				if (msg == null)
+					Debug.Assert(condition);
+				else
+					Debug.Assert(condition, msg);
+			}
+		}
+		private static bool m_assert_visible;
+
 		/// <summary>Stop in the debugger if 'condition' is true. For when assert dialogs cause problems with threading</summary>
 		[Conditional("DEBUG")] public static void BreakIf(bool condition, string msg = null)
 		{

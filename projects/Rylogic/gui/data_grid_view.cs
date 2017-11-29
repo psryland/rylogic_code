@@ -26,6 +26,10 @@ namespace pr.gui
 			m_fi_trackRowEdge           = typeof(System.Windows.Forms.DataGridView).GetField("trackRowEdge"             , BindingFlags.NonPublic|BindingFlags.Instance|BindingFlags.DeclaredOnly);
 			m_fi_trackRowAnchor         = typeof(System.Windows.Forms.DataGridView).GetField("trackRowAnchor"           , BindingFlags.NonPublic|BindingFlags.Instance|BindingFlags.DeclaredOnly);
 		}
+		protected override void OnDataError(bool displayErrorDialogIfNoHandler, DataGridViewDataErrorEventArgs e)
+		{
+			base.OnDataError(false, e);
+		}
 		protected override void OnSelectionChanged(EventArgs e)
 		{
 			// Whenever the selection changes, and is a single cell selection, update the anchor location

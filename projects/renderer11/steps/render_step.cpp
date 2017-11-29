@@ -71,6 +71,7 @@ namespace pr
 
 			// Check the instance transform is valid
 			PR_ASSERT(PR_DBG_RDR, FEql(GetO2W(inst).w.w, 1.0f), "Invalid instance transform");
+			PR_ASSERT(PR_DBG_RDR, IsFinite(GetO2W(inst)), "Invalid instance transform");
 
 			// Add to the derived objects drawlist
 			AddNuggets(inst, nuggets);

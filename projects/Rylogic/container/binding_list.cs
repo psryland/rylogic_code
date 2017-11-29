@@ -61,9 +61,13 @@ namespace pr.container
 		private void InternalHandleListChanged(object sender, ListChangedEventArgs a)
 		{
 			if (a.ListChangedType == ListChangedType.Reset)
+			{
 				ListChanging.Raise(this, new ListChgEventArgs<T>(this, ListChg.Reset, -1, default(T)));
+			}
 			if (a.ListChangedType == ListChangedType.ItemChanged)
+			{
 				ListChanging.Raise(this, new ListChgEventArgs<T>(this, ListChg.ItemReset, a.NewIndex, this[a.NewIndex]));
+			}
 		}
 
 		/// <summary>Get/Set readonly for this list</summary>
@@ -87,8 +91,8 @@ namespace pr.container
 		/// <summary>Raised whenever items are added or about to be removed from the list</summary>
 		public event EventHandler<ListChgEventArgs<T>> ListChanging;
 
-		/// <summary>Raised whenever an element in the list is changed</summary>
-		public event EventHandler<ItemChgEventArgs<T>> ItemChanged;
+		/// <summary>Raised whenever an element in the list is replaced (i.e. by SetItem)</summary>
+		[Obsolete("This is badly defined, stop using it")] public event EventHandler<ItemChgEventArgs<T>> ItemChanged;
 
 		/// <summary>Removes all items from the list</summary>
 		protected override void ClearItems()

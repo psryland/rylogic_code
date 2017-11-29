@@ -2225,7 +2225,7 @@ namespace pr.gui
 					// Grid nugget
 					nuggets[0] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert|View3d.EGeom.Colr);
 					var gridlines = new View3d.Object(name, 0xFFFFFFFF, verts.Length, indices.Length, nuggets.Length, verts, indices, nuggets, ChartTools.Id);
-					gridlines.FlagsSet(View3d.EFlags.SceneBoundsExclude, true);
+					gridlines.FlagsSet(View3d.EFlags.SceneBoundsExclude|View3d.EFlags.NoZWrite, true);
 					return gridlines;
 				}
 
@@ -2255,16 +2255,16 @@ namespace pr.gui
 				/// <summary>Default value to text conversion</summary>
 				public string DefaultTickText(double x, double step)
 				{
-					// Quantise 'x' scaled by the Axis span.
 					// This solves the rounding problem for values near zero when the axis span could be anything
-					return !Maths.FEql(x / Span, 0.0) ? Maths.RoundSF(x, 4).ToString("G8") : "0";
+					return !Maths.FEql(x / Span, 0.0) ? Maths.RoundSF(x, 5).ToString("G8") : "0";
 				}
 
 				/// <summary>Default tick text measurement</summary>
 				public float DefaultMeasureTickText(Graphics gfx, bool width)
 				{
-					var area = gfx.MeasureString("0.000E+00", Options.TickFont);
-					return width ? area.Width : area.Height;
+					var sz0 = gfx.MeasureString(TickText(Min, 0.0), Options.TickFont);
+					var sz1 = gfx.MeasureString(TickText(Max, 0.0), Options.TickFont);
+					return width ? Math.Max(sz0.Width, sz1.Width) : Math.Max(sz0.Height, sz1.Height);
 				}
 
 				/// <summary>Friendly string view</summary>

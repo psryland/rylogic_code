@@ -30,6 +30,7 @@ namespace pr
 		// Define sort groups
 		enum class ESortGroup
 		{
+			PreOpaques  = 63, // 
 			Default     = 64, // Make opaques the middle group
 			Skybox          , // Sky-box after opaques
 			PostOpaques     , // 

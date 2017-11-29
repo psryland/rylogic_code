@@ -491,7 +491,7 @@ namespace pr.unittests
 			Assert.True(v0 <= 0.123m._("A"));
 			Assert.True(v1 >= 0.456m._("A"));
 
-#if UNITS_ENABLED
+			#if UNITS_ENABLED
 			Assert.Throws<Exception>(() => { var b = 0.123._("A") == 0.123._("B"); });
 			Assert.Throws<Exception>(() => { var b = 0.123._("A") != 0.123._("B"); });
 			Assert.Throws<Exception>(() => { var b = v0 < v2; });
@@ -502,7 +502,7 @@ namespace pr.unittests
 			// Cast between units
 			var v3 = v0._("C");
 			Assert.Throws<Exception>(() => { var b = v0 == v3; });
-#endif
+			#endif
 		}
 		[Test] public void CombineUnits()
 		{

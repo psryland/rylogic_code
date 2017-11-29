@@ -1391,6 +1391,7 @@ namespace ldr
 			/// <summary>Add an object to the window</summary>
 			public void AddObject(Object obj)
 			{
+				Debug.Assert(Maths.FEql(obj.O2P.w.w, 1f), "Invalid instance transform");
 				View3D_WindowAddObject(m_handle, obj.m_handle);
 			}
 
@@ -1412,7 +1413,7 @@ namespace ldr
 			public void AddObjects(IEnumerable<Object> objects)
 			{
 				foreach (var obj in objects)
-					View3D_WindowAddObject(m_handle, obj.m_handle);
+					AddObject(obj);
 			}
 
 			/// <summary>Remove an object from the window</summary>
@@ -1427,19 +1428,19 @@ namespace ldr
 				View3D_WindowRemoveGizmo(m_handle, giz.m_handle);
 			}
 
+			/// <summary>Remove a collection of objects from the window</summary>
+			public void RemoveObjects(IEnumerable<Object> objects)
+			{
+				foreach (var obj in objects)
+					RemoveObject(obj);
+			}
+
 			/// <summary>Remove multiple objects, filtered by 'context_ids'</summary>
 			public void RemoveObjects(Guid[] context_ids, int include_count, int exclude_count)
 			{
 				Debug.Assert(include_count + exclude_count == context_ids.Length);
 				using (var ids = Marshal_.Pin(context_ids))
 					View3D_WindowRemoveObjectsById(m_handle, ids.Pointer, include_count, exclude_count);
-			}
-
-			/// <summary>Remove a collection of objects from the window</summary>
-			public void RemoveObjects(IEnumerable<Object> objects)
-			{
-				foreach (var obj in objects)
-					View3D_WindowRemoveObject(m_handle, obj.m_handle);
 			}
 
 			/// <summary>Remove all instances from the window</summary>
@@ -2274,6 +2275,7 @@ namespace ldr
 				set
 				{
 					Util.BreakIf(value.w.w != 1.0f, "Invalid object transform");
+					Util.BreakIf(!Maths.IsFinite(value), "Invalid object transform");
 					View3D_ObjectO2PSet(m_handle, ref value, null);
 				}
 			}
