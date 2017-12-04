@@ -28,17 +28,21 @@ namespace CoinFlip
 			Coins                         = new CoinData[0];
 			Charts                        = new ChartSettings[0];
 			Bots                          = new BotData[0];
+			Funds                         = new FundData[1] { new FundData(Fund.Main, new FundData.ExchData[0]) };
 			UI                            = new UISettings();
 			Cryptopia                     = new CrypotopiaSettings();
 			Poloniex                      = new PoloniexSettings();
 			Bittrex                       = new BittrexSettings();
 			CrossExchange                 = new CrossExchangeSettings();
-			AutoSaveOnChanges             = true;
+
+			// Leave this disabled till everything has been set up (i.e. the Model enables it)
+			AutoSaveOnChanges = false;
 		}
 		public Settings(string filepath)
 			:base(filepath)
 		{
-			AutoSaveOnChanges = true;
+			// Leave this disabled till everything has been set up (i.e. the Model enables it)
+			AutoSaveOnChanges = false;
 		}
 		protected override string Version
 		{
@@ -125,6 +129,13 @@ namespace CoinFlip
 		{
 			get { return get<BotData[]>(nameof(Bots)); }
 			set { set(nameof(Bots), value); }
+		}
+
+		/// <summary>The partitions of user funds</summary>
+		public FundData[] Funds
+		{
+			get { return get<FundData[]>(nameof(Funds)); }
+			set { set(nameof(Funds), value); }
 		}
 
 		/// <summary>UI settings</summary>
@@ -224,6 +235,94 @@ namespace CoinFlip
 			private class TyConv :GenericTypeConverter<UISettings> {}
 		}
 
+		/// <summary>A balance partition, a.k.a fund</summary>
+		[Serializable]
+		[TypeConverter(typeof(TyConv))]
+		[DebuggerDisplay("{Id}")]
+		public class FundData :SettingsXml<FundData>
+		{
+			public FundData()
+				:this(string.Empty, new ExchData[0])
+			{}
+			public FundData(string id, ExchData[] exch_data)
+			{
+				Id = id ?? string.Empty;
+				Exchanges = exch_data;
+			}
+			public FundData(XElement node)
+				:base(node)
+			{}
+
+			/// <summary>The unique id for this fund</summary>
+			public string Id
+			{
+				get { return get<string>(nameof(Id)); }
+				set { set(nameof(Id), value); }
+			}
+
+			/// <summary>The balances on each exchange</summary>
+			public ExchData[] Exchanges
+			{
+				get { return get<ExchData[]>(nameof(Exchanges)); }
+				set { set(nameof(Exchanges), value); }
+			}
+
+			/// <summary>The balances assigned to this fund within each exchange</summary>
+			[DebuggerDisplay("{Name}")]
+			public class ExchData
+			{
+				public ExchData(string name, BalData[] bal_data)
+				{
+					Name = name;
+					Balances = bal_data;
+				}
+				public ExchData(XElement node)
+				{
+					Name = node.Element(nameof(Name)).OrDefault(Name);
+					Balances = node.Element(nameof(Balances)).OrDefault(Balances);
+				}
+				public XElement ToXml(XElement node)
+				{
+					node.Add2(nameof(Name), Name, false);
+					node.Add2(nameof(Balances), Balances, false);
+					return node;
+				}
+
+				/// <summary>The name of the exchange</summary>
+				public string Name { get; set; }
+
+				/// <summary>Balances for each currency on this exchange in this fund</summary>
+				public BalData[] Balances { get; set; }
+			}
+			[DebuggerDisplay("{Symbol} {Total}")]
+			public class BalData
+			{
+				public BalData(string sym, decimal total)
+				{
+					Symbol = sym;
+					Total  = total;
+				}
+				public BalData(XElement node)
+				{
+					Symbol = node.Element(nameof(Symbol)).OrDefault(Symbol);
+					Total  = node.Element(nameof(Total )).OrDefault(Total);
+				}
+				public XElement ToXml(XElement node)
+				{
+					node.Add2(nameof(Symbol), Symbol, false);
+					node.Add2(nameof(Total), Total, false);
+					return node;
+				}
+
+				/// <summary>The currency that this balance is for</summary>
+				public string Symbol { get; set; }
+
+				/// <summary>The total amount of 'Symbol' from this exchange in this fund</summary>
+				public decimal Total { get; set; }
+			}
+			private class TyConv :GenericTypeConverter<FundData> {}
+		}
+
 		/// <summary>Settings associated with the Repo connection</summary>
 		[Serializable]
 		[TypeConverter(typeof(TyConv))]
@@ -301,6 +400,7 @@ namespace CoinFlip
 			{
 				Symbol = symbol;
 				AssignedValue = value;
+				Order = 0;
 				OfInterest = false;
 				AutoTradingLimit = 1m;
 				LivePriceSymbols = "USDT";
@@ -323,6 +423,13 @@ namespace CoinFlip
 			{
 				get { return get<decimal>(nameof(AssignedValue)); }
 				set { set(nameof(AssignedValue), value); }
+			}
+
+			/// <summary>The order to display the coins in</summary>
+			public int Order
+			{
+				get { return get<int>(nameof(Order)); }
+				set { set(nameof(Order), value); }
 			}
 
 			/// <summary>True if coins of this type should be included in loops</summary>
@@ -372,11 +479,13 @@ namespace CoinFlip
 			{
 				BotType = string.Empty;
 				Config = null;
+				Load = false;
 			}
 			public BotData(IBot bot)
 			{
 				BotType = bot.GetType().FullName;
 				Config = bot.Settings.ToXml(nameof(Config), true);
+				Load = true;
 			}
 			public BotData(XElement node)
 				:base(node)
@@ -387,6 +496,13 @@ namespace CoinFlip
 			{
 				get { return get<string>(nameof(BotType)); }
 				set { set(nameof(BotType), value); }
+			}
+
+			/// <summary>True if this bot should be loaded at startup</summary>
+			public bool Load
+			{
+				get { return get<bool>(nameof(Load)); }
+				set { set(nameof(Load), value); }
 			}
 
 			/// <summary>Configuration data for the bot instance</summary>

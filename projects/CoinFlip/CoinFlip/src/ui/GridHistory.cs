@@ -1,6 +1,7 @@
-﻿using System.Drawing;
+﻿using System;
 using System.Windows.Forms;
 using pr.common;
+using pr.container;
 using pr.extn;
 using pr.gui;
 
@@ -14,6 +15,7 @@ namespace CoinFlip
 		{
 			m_dummy_row = new string[1];
 			ReadOnly = true;
+			VirtualMode = true;
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
 				HeaderText = "Order/Trade Id",
@@ -86,125 +88,123 @@ namespace CoinFlip
 				DataPropertyName = nameof(PositionFill.TradeCount),
 				FillWeight = 0.1f,
 			});
-			DataSource = Model.History;
 		}
 		protected override void SetModelCore(Model model)
 		{
 			if (Model != null)
 			{
-				Model.SimRunningChanged -= HandleSimRunning;
+				Model.History.ListChanging -= HandleHistoryListChanging;
 			}
 			base.SetModelCore(model);
 			if (Model != null)
 			{
-				Model.SimRunningChanged += HandleSimRunning;
+				Model.History.ListChanging += HandleHistoryListChanging;
 			}
 
 			// Handlers
-			void HandleSimRunning(object sender, PrePostEventArgs e)
+			void HandleHistoryListChanging(object sender, ListChgEventArgs<PositionFill> e)
 			{
-				// Disable the data source while the simulation is running, for performance reasons
-				if (e.Before && !Model.SimRunning)
+				switch (e.ChangeType)
 				{
-					DataSource = m_dummy_row;
-				}
-				if (e.After && !Model.SimRunning)
-				{
-					DataSource = Model.History;
+				case ListChg.Reset:
+				case ListChg.ItemAdded:
+				case ListChg.ItemRemoved:
+					RowCount = Model.History.Count;
+					break;
 				}
 			}
 		}
 		protected override void OnMouseDown(MouseEventArgs e)
 		{
 			base.OnMouseDown(e);
-
-			// Show column visibility menu
-			DataGridView_.ColumnVisibility(this, e);
-
-			// Show a item context menu
 			if (e.Button == MouseButtons.Right)
 			{
+				// Show a item context menu
 				var hit = this.HitTestEx(e.X, e.Y);
+				if (hit.Type == DataGridView_.HitTestInfo.EType.ColumnHeader)
+					DataGridView_.ColumnVisibilityContextMenu(this, e.Location);
 				if (hit.Type == DataGridView_.HitTestInfo.EType.Cell)
 					CreateCMenu().Show(this, e.X, e.Y);
 			}
 		}
-		protected override void OnCellFormatting(DataGridViewCellFormattingEventArgs a)
+		protected override void OnCellFormatting(DataGridViewCellFormattingEventArgs e)
 		{
-			base.OnCellFormatting(a);
-			if (!this.Within(a.ColumnIndex, a.RowIndex, out DataGridViewColumn col, out DataGridViewCell cell))
-				return;
-
-			// Display a message while the simulation is running
-			if (DataSource == m_dummy_row)
+			base.OnCellFormatting(e);
+			DataGridView_.HalfBrightSelection(this, e);
+		}
+		protected override void OnCellValueNeeded(DataGridViewCellValueEventArgs e)
+		{
+			base.OnCellValueNeeded(e);
+			if (this.Within(e.ColumnIndex, e.RowIndex, out DataGridViewColumn col) &&
+				e.RowIndex.Within(0, Model.History.Count))
 			{
-				a.Value = a.ColumnIndex == 0 && a.RowIndex == 0 ? "... Simulation Running ..." : string.Empty;
-				a.FormattingApplied = true;
-				return;
-			}
+				// Display a message while the simulation is running
+				if (Model.SimRunning)
+				{
+					e.Value = e.ColumnIndex == 0 && e.RowIndex == 0 ? "... Simulation Running ..." : string.Empty;
+					return;
+				}
 
-			// Can happen during the change over from dummy row back to a data source
-			var fill = (PositionFill)cell.OwningRow.DataBoundItem;
-			if (fill == null)
-				return;
-
-			// Format cells
-			switch (col.DataPropertyName)
-			{
-			case nameof(PositionFill.Created):
+				// Otherwise provide the cell values
+				var fill = Model.History[e.RowIndex];
+				switch (col.DataPropertyName)
 				{
-					a.Value = fill.Created.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss");
-					a.FormattingApplied = true;
-					break;
-				}
-			case nameof(PositionFill.TradeType):
-				{
-					a.Value =
-						fill.TradeType == ETradeType.Q2B ? $"{fill.Pair.Quote}→{fill.Pair.Base} ({fill.TradeType})" :
-						fill.TradeType == ETradeType.B2Q ? $"{fill.Pair.Base}→{fill.Pair.Quote} ({fill.TradeType})" :
-						"---";
-					a.FormattingApplied = true;
-					break;
-				}
-			case nameof(PositionFill.Pair):
-				{
-					a.Value = fill.Pair.Name;
-					a.FormattingApplied = true;
-					break;
-				}
-			case nameof(PositionFill.PriceQ2B):
-				{
-					a.Value = fill.PriceQ2B.ToString("G8",true);
-					a.FormattingApplied = true;
-					break;
-				}
-			case nameof(PositionFill.VolumeIn):
-				{
-					a.Value = fill.VolumeIn.ToString("G8",true);
-					a.FormattingApplied = true;
-					break;
-				}
-			case nameof(PositionFill.VolumeOut):
-				{
-					a.Value = fill.VolumeOut.ToString("G8",true);
-					a.FormattingApplied = true;
-					break;
-				}
-			case nameof(PositionFill.VolumeNett):
-				{
-					a.Value = fill.VolumeNett.ToString("G8",true);
-					a.FormattingApplied = true;
-					break;
-				}
-			case nameof(PositionFill.Commission):
-				{
-					a.Value = fill.Commission.ToString("G10",true);
-					a.FormattingApplied = true;
-					break;
+				default: throw new Exception("Unknown column");
+				case nameof(PositionFill.OrderId):
+					{
+						e.Value = fill.OrderId.ToString();
+						break;
+					}
+				case nameof(PositionFill.Created):
+					{
+						e.Value = fill.Created.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss");
+						break;
+					}
+				case nameof(PositionFill.TradeType):
+					{
+						e.Value =
+							fill.TradeType == ETradeType.Q2B ? $"{fill.Pair.Quote}→{fill.Pair.Base} ({fill.TradeType})" :
+							fill.TradeType == ETradeType.B2Q ? $"{fill.Pair.Base}→{fill.Pair.Quote} ({fill.TradeType})" :
+							"---";
+						break;
+					}
+				case nameof(PositionFill.Pair):
+					{
+						e.Value = fill.Pair.Name;
+						break;
+					}
+				case nameof(PositionFill.PriceQ2B):
+					{
+						e.Value = fill.PriceQ2B.ToString("G8",true);
+						break;
+					}
+				case nameof(PositionFill.VolumeIn):
+					{
+						e.Value = fill.VolumeIn.ToString("G8",true);
+						break;
+					}
+				case nameof(PositionFill.VolumeOut):
+					{
+						e.Value = fill.VolumeOut.ToString("G8",true);
+						break;
+					}
+				case nameof(PositionFill.VolumeNett):
+					{
+						e.Value = fill.VolumeNett.ToString("G8",true);
+						break;
+					}
+				case nameof(PositionFill.Commission):
+					{
+						e.Value = fill.Commission.ToString("G10",true);
+						break;
+					}
+				case nameof(PositionFill.TradeCount):
+					{
+						e.Value = fill.TradeCount.ToString();
+						break;
+					}
 				}
 			}
-			a.CellStyle.SelectionBackColor = a.CellStyle.BackColor.Lerp(Color.Gray, 0.5f);
-			a.CellStyle.SelectionForeColor = a.CellStyle.ForeColor;
 		}
 
 		/// <summary>Create the context menu for the grid</summary>
@@ -227,83 +227,4 @@ namespace CoinFlip
 			return cmenu;
 		}
 	}
-#if false
-	public class GridHistory :TreeBase
-	{
-		protected override void Dispose(bool disposing)
-		{
-			DataSource = null;
-			base.Dispose(disposing);
-		}
-
-		/// <summary>The data source for the tree</summary>
-		public new BindingSource<PositionFill> DataSource
-		{
-			get { return m_data_source; }
-			set
-			{
-				if (m_data_source == value) return;
-				if (m_data_source != null)
-				{
-					m_data_source.ListChanging -= HandleListChanging;
-				}
-				m_data_source = value;
-				if (m_data_source != null)
-				{
-					m_data_source.ListChanging += HandleListChanging;
-				}
-			}
-		}
-		private BindingSource<PositionFill> m_data_source;
-
-		/// <summary>Update the tree grid when the source data changes</summary>
-		private void HandleListChanging(object sender, ListChgEventArgs<PositionFill> e)
-		{
-			switch (e.ChangeType)
-			{
-			case ListChg.PreReset:
-				{
-					Nodes.Clear();
-					break;
-				}
-			case ListChg.Reset:
-				{
-					foreach (var fill in DataSource)
-					{
-						var node = Nodes.Bind(fill);
-						foreach (var trade in fill.Trades.Values)
-							node.Nodes.Bind(trade);
-					}
-					break;
-				}
-			case ListChg.ItemAdded:
-				{
-					var node = Nodes.Bind(e.Item);
-					foreach (var trade in e.Item.Trades.Values)
-						node.Nodes.Bind(trade);
-
-					break;
-				}
-			case ListChg.ItemPreRemove:
-				{
-					Nodes.RemoveIf(x => x.DataBoundItem == e.Item);
-					break;
-				}
-			case ListChg.ItemPreReset:
-				{
-					var node = Nodes.First(x => x.DataBoundItem == e.Item);
-					node.Nodes.Clear();
-					break;
-				}
-			case ListChg.ItemReset:
-				{
-					var node = Nodes.First(x => x.DataBoundItem == e.Item);
-					foreach (var trade in e.Item.Trades.Values)
-						node.Nodes.Bind(trade);
-					break;
-				}
-			}
-		}
-	}
-#endif
 }

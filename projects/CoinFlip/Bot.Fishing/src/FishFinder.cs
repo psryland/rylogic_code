@@ -108,7 +108,7 @@ namespace Bot.Fishing
 				void HandleFisherPropertyChanged(object sender, PropertyChangedEventArgs e)
 				{
 					if (e.PropertyName == nameof(Fisher.Active))
-						RaisePropertyChanged(new PropertyChangedEventArgs(nameof(FishFinder.Active)));
+						RaisePropertyChanged(nameof(FishFinder.Active));
 				}
 			}
 		}

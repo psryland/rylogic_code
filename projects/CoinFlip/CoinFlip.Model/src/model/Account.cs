@@ -18,7 +18,7 @@ namespace CoinFlip
 					foreach (var bal in exch.Balance.Values)
 					{
 						if (!Coins[bal.Coin].OfInterest) continue;
-						worth += bal.Coin.ValueOf(bal.Total);
+						worth += bal.Coin.ValueOf(bal.NettTotal);
 					}
 				}
 				return worth;
@@ -35,7 +35,7 @@ namespace CoinFlip
 				{
 					foreach (var bal in exch.Balance.Values)
 					{
-						var amount = bal.Total;
+						var amount = bal.NettTotal;
 						sum += amount;
 					}
 				}
@@ -50,7 +50,7 @@ namespace CoinFlip
 			foreach (var exch in TradingExchanges)
 			{
 				var coin = exch.Coins[sym];
-				sum += coin?.Balance.Total ?? 0;
+				sum += coin?.Balances.NettTotal ?? 0;
 			}
 			return sum;
 		}
@@ -62,7 +62,7 @@ namespace CoinFlip
 			foreach (var exch in TradingExchanges)
 			{
 				var coin = exch.Coins[sym];
-				sum += coin?.Balance.Available ?? 0;
+				sum += coin?.Balances.NettAvailable ?? 0;
 			}
 			return sum;
 		}

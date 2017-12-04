@@ -46,6 +46,7 @@ namespace CoinFlip
 				Balance = new BalanceCollection(this);
 				Positions = new PositionsCollection(this);
 				History = new HistoryCollection(this);
+				OrderIdtoFundId = new OrderIdtoFundIdMap();
 				Transfers = new TransfersCollection(this);
 				Shutdown = CancellationTokenSource.CreateLinkedTokenSource(Model.Shutdown.Token);
 				m_update_thread_step = new AutoResetEvent(false);
@@ -105,13 +106,15 @@ namespace CoinFlip
 				{
 					if (UpdateThreadActive) throw new Exception("Should not be nulling 'Model' when the thread is running");
 					m_model.BackTestingChanging -= HandleBackTestingChanged;
-					m_model.SimReset -= HandleSimReset;
+					m_model.SimReset            -= HandleSimReset;
+					m_model.Funds.ListChanging  -= HandleFundsListChanging;
 				}
 				m_model = value;
 				if (m_model != null)
 				{
+					m_model.Funds.ListChanging  += HandleFundsListChanging;
+					m_model.SimReset            += HandleSimReset;
 					m_model.BackTestingChanging += HandleBackTestingChanged;
-					m_model.SimReset += HandleSimReset;
 				}
 
 				// Handlers
@@ -152,6 +155,19 @@ namespace CoinFlip
 				{
 					// Reset the trade history DB when the sim resets
 					InitTradeHistoryDB();
+				}
+				void HandleFundsListChanging(object sender, ListChgEventArgs<Fund> e)
+				{
+					// When the funds container changes, update all balances
+					switch (e.ChangeType)
+					{
+					case ListChg.Reset:
+					case ListChg.ItemAdded:
+					case ListChg.ItemRemoved:
+						foreach (var bal in Balance.Values)
+							bal.UpdateBalancePartitions();
+						break;
+					}
 				}
 			}
 		}
@@ -384,7 +400,7 @@ namespace CoinFlip
 			get
 			{
 				if (this is CrossExchange) return 0m;
-				return Balance.Values.Sum(x => (decimal)x.Coin.ValueOf(x.Total));
+				return Balance.Values.Sum(x => (decimal)x.Coin.ValueOf(x.NettTotal));
 			}
 		}
 
@@ -427,45 +443,14 @@ namespace CoinFlip
 		/// <summary>Trade history on this exchange, keyed on order ID</summary>
 		public HistoryCollection History { get; private set; }
 
-		/// <summary>Place an order to convert 'volume' (base currency) to quote currency at 'price' (Quote/Base)</summary>
-		public TradeResult CreateB2QOrder(TradePair pair, Unit<decimal> volume_base, Unit<decimal>? price = null)
-		{
-			// Check units
-			if (volume_base < 0m._(pair.Base))
-				throw new Exception("Invalid trade volume: {0}".Fmt(volume_base));
-			if (price != null && price <= 0m._(pair.Quote)/1m._(pair.Base))
-				throw new Exception("Invalid exchange rate: {0}".Fmt(price.Value));
-
-			// If the price isn't given, get it from the pair.
-			// We're selling base currency, at the most competitive asking price.
-			price = price ?? pair.QuoteToBase(0m._(pair.Quote)).Price;
-
-			// Place the order on the exchange.
-			// Exchanges buy/sell base currency, so B2Q is a sell of base currency
-			return CreateOrder(ETradeType.B2Q, pair, volume_base, price.Value);
-		}
-
-		/// <summary>Place an order to convert 'volume' (quote currency) to base currency at 'price' (Base/Quote)</summary>
-		public TradeResult CreateQ2BOrder(TradePair pair, Unit<decimal> volume_quote, Unit<decimal>? price = null)
-		{
-			// Check units
-			if (volume_quote < 0m._(pair.Quote))
-				throw new Exception("Invalid trade volume: {0}".Fmt(volume_quote));
-			if (price != null && price <= 0m._(pair.Base)/1m._(pair.Quote))
-				throw new Exception("Invalid exchange rate: {0}".Fmt(price.Value));
-
-			// If the price isn't given, get it from the pair.
-			// We're making a bid to buy base currency, at the most competitive bid price.
-			price = price ?? (1m / pair.B2Q.FirstOrDefault().Price);
-
-			// Place the order on the exchange.
-			// Exchanges buy/sell base currency, so Q2B is a buy of base currency
-			return CreateOrder(ETradeType.Q2B, pair, volume_quote, price.Value);
-		}
+		/// <summary>A map from order id to the context id that created the order</summary>
+		public OrderIdtoFundIdMap OrderIdtoFundId { get; private set; }
 
 		/// <summary>Place an order on the exchange to buy/sell 'volume' (currency depends on 'tt')</summary>
-		public TradeResult CreateOrder(ETradeType tt, TradePair pair, Unit<decimal> volume_, Unit<decimal> price_)
+		public TradeResult CreateOrder(string fund_id, ETradeType tt, TradePair pair, Unit<decimal> volume_, Unit<decimal> price_)
 		{
+			// 'fund_id' is the context id of the entity creating the trade
+
 			// Sanity checks
 			if (pair.Exchange != this)
 			{
@@ -477,8 +462,8 @@ namespace CoinFlip
 					throw new Exception($"Invalid trade volume: {volume_}");
 				if (price_ <= 0m._(pair.Quote)/1m._(pair.Base))
 					throw new Exception($"Invalid exchange rate: {price_}");
-				if (volume_ > Balance[pair.Base].Available)
-					throw new Exception($"Order volume is greater than the current balance: {Balance[pair.Base].Available}");
+				if (volume_ > Balance[pair.Base][fund_id].Available)
+					throw new Exception($"Order volume is greater than the current balance: {Balance[pair.Base][fund_id].Available}");
 			}
 			if (tt == ETradeType.Q2B)
 			{
@@ -486,8 +471,8 @@ namespace CoinFlip
 					throw new Exception($"Invalid trade volume: {volume_}");
 				if (price_ <= 0m._(pair.Base)/1m._(pair.Quote))
 					throw new Exception($"Invalid exchange rate: {price_}");
-				if (volume_ > Balance[pair.Quote].Available)
-					throw new Exception($"Order volume is greater than the current balance: {Balance[pair.Quote].Available}");
+				if (volume_ > Balance[pair.Quote][fund_id].Available)
+					throw new Exception($"Order volume is greater than the current balance: {Balance[pair.Quote][fund_id].Available}");
 			}
 
 			// Fake positions when not back testing and not live trading.
@@ -504,7 +489,7 @@ namespace CoinFlip
 			// Only reduce balances, don't assume the trade has completed.
 			// If we're live trading, remove the balance until the next balance update is received.
 			// If not live trading, hold the balance until the fake order is removed (hold is updated below)
-			var bal = tt.CoinIn(pair).Balance;
+			var bal = tt.CoinIn(pair).Balances[fund_id];
 			var hold = tt.VolumeIn(volume, price);
 			var hold_id = bal.Hold(hold);
 
@@ -521,12 +506,15 @@ namespace CoinFlip
 			// Log the event
 			Model.Log.Write(ELogLevel.Info, $"{Name}: (id={order_result.OrderId}) {volume_.ToString("G6",true)} → {(volume_ * price_).ToString("G6",true)} @ {price.ToString("G6",true)}");
 
+			// Save a mapping from order id to context id. This records who was responsible for creating the order.
+			OrderIdtoFundId[order_result.OrderId] = fund_id;
+
 			// Add the position to the Positions collection so that there is no race condition
 			// between placing an order and checking 'Positions' for the order just placed.
 			if (!order_result.Filled)
 			{
 				// Add a 'Position' to the collection, this will be overwritten when UpdatePositions() is called.
-				var pos = new Position(order_result.OrderId, pair, tt, price, volume, volume, now, now, fake:fake);
+				var pos = new Position(fund_id, order_result.OrderId, pair, tt, price, volume, volume, now, now, fake:fake);
 				Positions[order_result.OrderId] = pos;
 
 				// Update the hold with a 'StillNeeded' function
@@ -892,11 +880,6 @@ namespace CoinFlip
 				Debug.Assert(Model.AssertMarketDataRead());
 				return TryGetValue(sym, out var coin) ? coin : null;
 			}
-			set
-			{
-				Debug.Assert(Model.AssertMarketDataWrite());
-				base[sym] = value;
-			}
 		}
 	}
 	public class PairCollection :CollectionBase<string, TradePair>
@@ -974,7 +957,7 @@ namespace CoinFlip
 			throw new Exception("Don't replace existing pairs, references are being held");
 		}
 	}
-	public class BalanceCollection :CollectionBase<Coin, Balance>
+	public class BalanceCollection :CollectionBase<Coin, Balances>
 	{
 		public BalanceCollection(Exchange exch)
 			:base(exch)
@@ -987,36 +970,40 @@ namespace CoinFlip
 		{}
 
 		/// <summary>Get or add a coin type that there is a balance for on the exchange</summary>
-		public Balance GetOrAdd(Coin coin)
+		public Balances GetOrAdd(Coin coin)
 		{
 			Debug.Assert(Model.AssertMarketDataWrite());
-			return this.GetOrAdd(coin, x => new Balance(x, Model.UtcNow));
+			return this.GetOrAdd(coin, x => new Balances(x, Model.UtcNow));
 		}
 
 		/// <summary>Get/Set the balance for the given coin. Returns zero balance for unknown coins</summary>
-		public override Balance this[Coin coin]
+		public override Balances this[Coin coin]
 		{
 			get
 			{
 				Debug.Assert(Model.AssertMarketDataRead());
 				if (coin.Exchange != Exch && !(Exch is CrossExchange)) throw new Exception("Currency not associated with this exchange");
-				return TryGetValue(coin, out var bal) ? bal : new Balance(coin, Model.UtcNow);
+				return TryGetValue(coin, out var bal) ? bal : new Balances(coin, Model.UtcNow);
 			}
 			set
 			{
 				Debug.Assert(Model.AssertMarketDataWrite());
-				Debug.Assert(value.AssertValid());
-				if (coin.Exchange != Exch && !(Exch is CrossExchange)) throw new Exception("Currency not associated with this exchange");
-				if (TryGetValue(coin, out var bal) && bal.TimeStamp > value.TimeStamp) return; // Ignore out of date data
-				if (bal != null)
-					bal.Update(value);
-				else
+				Debug.Assert(value != null && value.AssertValid());
+
+				if (coin.Exchange != Exch && !(Exch is CrossExchange))
+					throw new Exception("Currency not associated with this exchange");
+				if (TryGetValue(coin, out var balances) && balances.LastUpdated > value.LastUpdated)
+					return; // Ignore out of date data
+
+				if (balances == null)
 					base[coin] = value;
+				else
+					balances.Update(value[Model.Funds[Fund.Main]]);
 			}
 		}
 
 		/// <summary>Get the balance by coin symbol name</summary>
-		public Balance Get(string sym)
+		public Balances Get(string sym)
 		{
 			// Don't provide this, the Coin implicit cast is favoured over the overloaded method
 			//@"public Balance this[string sym]"
@@ -1110,5 +1097,58 @@ namespace CoinFlip
 			}
 		}
 	}
+	public class OrderIdtoFundIdMap
+	{
+		private readonly Dictionary<ulong, string> m_map;
+		public OrderIdtoFundIdMap()
+		{
+			m_map = new Dictionary<ulong, string>();
+		}
+		public string this[ulong order_id]
+		{
+			get { return m_map.TryGetValue(order_id, out var ctx_id) ? ctx_id : Fund.Main; }
+			set { m_map[order_id] = value; }
+		}
+	}
 	#endregion
 }
+
+
+
+		///// <summary>Place an order to convert 'volume' (base currency) to quote currency at 'price' (Quote/Base)</summary>
+		//public TradeResult CreateB2QOrder(Guid ctx_id, TradePair pair, Unit<decimal> volume_base, Unit<decimal>? price = null)
+		//{
+		//	// Check units
+		//	if (volume_base < 0m._(pair.Base))
+		//		throw new Exception("Invalid trade volume: {0}".Fmt(volume_base));
+		//	if (price != null && price <= 0m._(pair.Quote)/1m._(pair.Base))
+		//		throw new Exception("Invalid exchange rate: {0}".Fmt(price.Value));
+
+		//	// If the price isn't given, get it from the pair.
+		//	// We're selling base currency, at the most competitive asking price.
+		//	price = price ?? pair.QuoteToBase(ctx_id, 0m._(pair.Quote)).Price;
+
+		//	// Place the order on the exchange.
+		//	// Exchanges buy/sell base currency, so B2Q is a sell of base currency
+		//	return CreateOrder(ctx_id, ETradeType.B2Q, pair, volume_base, price.Value);
+		//}
+
+		///// <summary>Place an order to convert 'volume' (quote currency) to base currency at 'price' (Base/Quote)</summary>
+		//public TradeResult CreateQ2BOrder(Guid ctx_id, TradePair pair, Unit<decimal> volume_quote, Unit<decimal>? price = null)
+		//{
+		//	// Check units
+		//	if (volume_quote < 0m._(pair.Quote))
+		//		throw new Exception("Invalid trade volume: {0}".Fmt(volume_quote));
+		//	if (price != null && price <= 0m._(pair.Base)/1m._(pair.Quote))
+		//		throw new Exception("Invalid exchange rate: {0}".Fmt(price.Value));
+
+		//	// If the price isn't given, get it from the pair.
+		//	// We're making a bid to buy base currency, at the most competitive bid price.
+		//	price = price ?? pair.SpotPrice(
+				
+		//		(1m / pair.BaseToQuote(ctx_id, 0m._(pair.Base)).Price);
+
+		//	// Place the order on the exchange.
+		//	// Exchanges buy/sell base currency, so Q2B is a buy of base currency
+		//	return CreateOrder(ctx_id, ETradeType.Q2B, pair, volume_quote, price.Value);
+		//}

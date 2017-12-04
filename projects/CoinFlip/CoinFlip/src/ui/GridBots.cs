@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
@@ -30,11 +31,15 @@ namespace CoinFlip
 				DataPropertyName = nameof(IBot.Name),
 				FillWeight = 1.0f,
 			});
-			Columns.Add(new DataGridViewTextBoxColumn
+			Columns.Add(new DataGridViewComboBoxColumn
 			{
-				HeaderText = "Funding (%)",
-				Name = nameof(IBot.FundAllocationPC),
-				DataPropertyName = nameof(IBot.FundAllocationPC),
+				HeaderText = "Fund",
+				Name = nameof(IBot.Fund),
+				DataPropertyName = nameof(IBot.Fund),
+				DataSource = Model.Funds,
+				ValueMember = nameof(Fund.This),
+				DisplayMember = nameof(Fund.Id),
+				DisplayStyle = DataGridViewComboBoxDisplayStyle.Nothing,
 				FillWeight = 1.0f,
 				ToolTipText = "The fraction of the current balances allocated to this bot",
 			});
@@ -60,10 +65,6 @@ namespace CoinFlip
 		{
 			Bots = null;
 			base.Dispose(disposing);
-		}
-		protected override void OnDataSourceChanged(EventArgs e)
-		{
-			base.OnDataSourceChanged(e);
 		}
 		protected override void OnMouseDown(MouseEventArgs e)
 		{
@@ -102,8 +103,7 @@ namespace CoinFlip
 
 			e.CellStyle.ForeColor = Color.Black;
 			e.CellStyle.BackColor = bot.Valid ? Color.White : Color.LightSalmon;
-			e.CellStyle.SelectionForeColor = e.CellStyle.ForeColor;
-			e.CellStyle.SelectionBackColor = e.CellStyle.BackColor.Lerp(Color.Gray, 0.5f);
+			DataGridView_.HalfBrightSelection(this,e);
 		}
 		protected override void OnCellToolTipTextNeeded(DataGridViewCellToolTipTextNeededEventArgs e)
 		{
@@ -116,6 +116,17 @@ namespace CoinFlip
 				return;
 
 			e.ToolTipText = bot.Settings.ErrorDescription;
+		}
+		protected override void SetModelCore(Model model)
+		{
+			if (Model != null)
+			{
+
+			}
+			base.SetModelCore(model);
+			if (Model != null)
+			{
+			}
 		}
 
 		/// <summary>The data source for this grid</summary>

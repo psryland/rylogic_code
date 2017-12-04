@@ -32,6 +32,12 @@ namespace CoinFlip
 		/// <summary>Trade pairs involving this coin</summary>
 		public HashSet<TradePair> Pairs { get; private set; }
 
+		/// <summary>The display order of the coin</summary>
+		public int Order
+		{
+			get { return Meta.Order; }
+		}
+
 		/// <summary>True if this coin type is of interest</summary>
 		public bool OfInterest
 		{
@@ -39,7 +45,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Return the balance for this coin on its associated exchange</summary>
-		public Balance Balance
+		public Balances Balances
 		{
 			get { return Exchange.Balance[this]; }
 		}

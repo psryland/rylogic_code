@@ -129,7 +129,7 @@ namespace CoinFlip
 			{
 				foreach (var pos in exch.Positions.Values.Where(x => x.Fake).ToArray())
 				{
-					var trade = pos.Pair.MakeTrade(pos.TradeType, pos.VolumeIn);
+					var trade = pos.Pair.MakeTrade(pos.FundId, pos.TradeType, pos.VolumeIn);
 					if (Math.Sign(pos.PriceQ2B - trade.PriceQ2B) == pos.TradeType.Sign())
 						pos.FillFakeOrder();
 				}
@@ -139,8 +139,8 @@ namespace CoinFlip
 		/// <summary>Remove the fake cash from all exchange balances</summary>
 		private void ResetFakeCash()
 		{
-			foreach (var bal in Exchanges.SelectMany(x => x.Balance.Values))
-				bal.FakeCash.Clear();
+			//foreach (var bal in Exchanges.SelectMany(x => x.Balance.Values))
+			//	bal.FakeCash.Clear();
 		}
 	}
 }

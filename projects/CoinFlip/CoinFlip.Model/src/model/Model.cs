@@ -39,15 +39,16 @@ namespace CoinFlip
 			WinLog = new Logger(Application.ProductName, new LogToFile(Misc.ResolveUserPath("Logs\\win_log.txt"), append:true));
 
 			// Create collections
-			Exchanges     = new BindingSource<Exchange>     { DataSource = new BindingListEx<Exchange>(), PerItem = true };
+			Exchanges     = new ExchangeContainer(this);
 			Pairs         = new BindingSource<TradePair>    { DataSource = new BindingListEx<TradePair>() };
-			Bots          = new BindingSource<IBot>         { DataSource = new BindingListEx<IBot>() };
-			Balances      = new BindingSource<Balance>      { DataSource = null, AllowNoCurrent = true };
+			Bots          = new BindingSource<IBot>         { DataSource = new BindingListEx<IBot>(), PerItem = true };
+			Balances      = new BindingSource<Balances>     { DataSource = null, AllowNoCurrent = true };
 			Positions     = new BindingSource<Position>     { DataSource = null, AllowNoCurrent = true };
 			History       = new BindingSource<PositionFill> { DataSource = null, AllowNoCurrent = true };
 			MarketUpdates = new BlockingCollection<Action>();
 			Coins         = new CoinDataTable(this);
 			PriceData     = new PriceDataMap(this);
+			Funds         = new FundContainer(this);
 
 			// Add exchanges
 			string key, secret;
@@ -57,12 +58,22 @@ namespace CoinFlip
 			Exchanges.Add(CrossExchange = new CrossExchange(this));
 			//Exchanges.Add(new TestExchange(this));
 
-			// Update the available pairs
-			TriggerPairsUpdate();
+			// Run these steps after construction is complete
+			RunOnGuiThread(() =>
+			{
+				// Update the available pairs
+				UpdatePairs();
 
-			// Create Bots listed in the settings
-			RunOnGuiThread(() => CreateBotsFromSettings());
+				// Create the funds given in the settings
+				CreateFundsFromSettings();
+
+				// Create Bots listed in the settings
+				CreateBotsFromSettings();
  
+				// Enable settings auto save after everything is up and running
+				Settings.AutoSaveOnChanges = true;
+			});
+
 			// Run the main loop
 			MainLoopRunning = true;
 		}
@@ -212,23 +223,28 @@ namespace CoinFlip
 					// Update the bot settings just prior to a save
 					if (!m_suspend_saving_bots)
 					{
-						var bot_settings = Settings.Bots.ToList();
-						foreach (var bot in Bots)
+						// Save the settings of the active bots
+						var bots = Bots.Select(x => new Settings.BotData(x)).ToList();
+
+						// Keep settings from old bot instances
+						foreach (var bd in Settings.Bots)
 						{
-							var s = new Settings.BotData(bot);
-							var idx = bot_settings.IndexOf(x => x.BotType == s.BotType);
-							if (idx >= 0)
-								bot_settings[idx] = s;
-							else
-								bot_settings.Add(s);
+							if (bots.Any(x => x.BotType == bd.BotType)) continue;
+							bd.Load = false;
+							bots.Add(bd);
 						}
-						Settings.Bots = bot_settings.ToArray();
+
+						// Update the settings
+						Settings.Bots = bots.ToArray();
 					}
+
+					// Update the fund settings just prior to a save
+					Settings.Funds = Funds.Select(x => x.Export()).ToArray();
 				}
 			}
 		}
-		private bool m_suspend_saving_bots;
 		private Settings m_settings;
+		private bool m_suspend_saving_bots;
 
 		/// <summary>The logged on user</summary>
 		public User User { get; private set; }
@@ -268,13 +284,6 @@ namespace CoinFlip
 		/// <summary>The special case cross exchange</summary>
 		public CrossExchange CrossExchange { get; private set; }
 
-		/// <summary>Get an exchange by name</summary>
-		public Exchange GetExchange(string name)
-		{
-			if (!name.HasValue()) return null;
-			return Exchanges.FirstOrDefault(x => x.Name == name);
-		}
-
 		/// <summary>Meta data for the known coins</summary>
 		public CoinDataTable Coins
 		{
@@ -282,6 +291,7 @@ namespace CoinFlip
 			private set
 			{
 				if (m_coins == value) return;
+				Util.Dispose(ref m_coins);
 				m_coins = value;
 			}
 		}
@@ -300,8 +310,21 @@ namespace CoinFlip
 		}
 		private PriceDataMap m_price_data;
 
+		/// <summary>Funds (balance partitions)</summary>
+		public FundContainer Funds
+		{
+			get { return m_funds; }
+			private set
+			{
+				if (m_funds == value) return;
+				Util.Dispose(ref m_funds);
+				m_funds = value;
+			}
+		}
+		private FundContainer m_funds;
+
 		/// <summary>The exchanges</summary>
-		public BindingSource<Exchange> Exchanges
+		public ExchangeContainer Exchanges
 		{
 			[DebuggerStepThrough] get { return m_exchanges; }
 			private set
@@ -362,7 +385,7 @@ namespace CoinFlip
 				}
 			}
 		}
-		private BindingSource<Exchange> m_exchanges;
+		private ExchangeContainer m_exchanges;
 
 		/// <summary>The trade pairs associated with the coins of interest. Note: the model does not own the pairs, the exchanges do</summary>
 		public BindingSource<TradePair> Pairs
@@ -392,7 +415,7 @@ namespace CoinFlip
 		private BindingSource<TradePair> m_pairs;
 
 		/// <summary>The balances on the current exchange</summary>
-		public BindingSource<Balance> Balances
+		public BindingSource<Balances> Balances
 		{
 			get { return m_balances; }
 			private set
@@ -405,7 +428,7 @@ namespace CoinFlip
 				}
 			}
 		}
-		private BindingSource<Balance> m_balances;
+		private BindingSource<Balances> m_balances;
 
 		/// <summary>The positions on the current exchange</summary>
 		public BindingSource<Position> Positions
@@ -620,11 +643,11 @@ namespace CoinFlip
 		}
 
 		/// <summary>Raised when the trading pairs are updated</summary>
+		public event EventHandler PairsUpdated;
 		private void OnPairsUpdated()
 		{
 			PairsUpdated.Raise(this);
 		}
-		public event EventHandler PairsUpdated;
 
 		/// <summary>Find the pair with the given name on 'exch' (or return null if not available)</summary>
 		public TradePair FindPairOnExchange(string pair_name, Exchange exch)
@@ -706,6 +729,67 @@ namespace CoinFlip
 			History.DataSource = exch?.History;
 		}
 
+		/// <summary>Create a new bot instance</summary>
+		private void CreateBotInstance(Type bot_type, XElement settings_xml)
+		{
+			try
+			{
+				// Look for settings data for this bot type
+				if (settings_xml == null)
+					settings_xml = Settings.Bots.FirstOrDefault(x => x.BotType == bot_type.FullName)?.Config;
+
+				// Create a new instance of the bot
+				var bot = (IBot)Activator.CreateInstance(bot_type, new object[] { this, settings_xml });
+				Bots.Add(bot);
+			}
+			catch (Exception ex)
+			{
+				Log.Write(ELogLevel.Error, ex, $"Failed to create an instance of Bot '{bot_type.Name}'");
+				MsgBox.Show(UI, $"Failed to create an instance of Bot '{bot_type.Name}'\r\n{ex.MessageFull()}", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+			}
+		}
+
+		/// <summary>Create the fund instances from the settings</summary>
+		private void CreateFundsFromSettings()
+		{
+			foreach (var fund_data in Settings.Funds)
+			{
+				// Create the fund instances from the settings.
+				// Balances are initialised when each 'FundBalance' is created.
+				if (fund_data.Id == Fund.Main) continue;
+				Funds.Add2(new Fund(this, fund_data.Id));
+			}
+		}
+
+		/// <summary>Create the bots given in the settings</summary>
+		private void CreateBotsFromSettings()
+		{
+			using (Scope.Create(() => m_suspend_saving_bots = true, () => m_suspend_saving_bots = false))
+			{
+				var available_bots = Plugins<IBot>.Enumerate(Misc.BotDirectory, SearchOption.TopDirectoryOnly, Misc.BotRegexFilter).ToArray();
+				foreach (var bot_data in Settings.Bots.Where(x => x.Load))
+				{
+					var bot = available_bots.FirstOrDefault(x => x.Type.FullName == bot_data.BotType);
+					if (bot != null)
+						CreateBotInstance(bot.Type, bot_data.Config);
+					else
+						Log.Write(ELogLevel.Warn, $"Could not load Bot type {bot_data.BotType}. The plugin is no longer available");
+				}
+			}
+		}
+
+		/// <summary>Show the UI for creating a fund</summary>
+		public void ShowAddFundUI()
+		{
+			using (var dlg = new PromptUI { Title = "New Fund", PromptText = "Set a name for the fund" })
+			{
+				dlg.ValueType = typeof(string);
+				dlg.ValidateValue = t => t.HasValue() && Funds.All(x => x.Id != t);
+				if (dlg.ShowDialog(UI) != DialogResult.OK) return;
+				Funds.Add(new Fund(this, (string)dlg.Value));
+			}
+		}
+
 		/// <summary>Show a list of bots to choose from</summary>
 		public void ShowAddBotUI()
 		{
@@ -740,39 +824,6 @@ namespace CoinFlip
 
 				// Create the bot
 				CreateBotInstance(plugin.Type, null);
-			}
-		}
-
-		/// <summary>Create a new bot instance</summary>
-		private void CreateBotInstance(Type bot_type, XElement settings_xml)
-		{
-			try
-			{
-				// Create a new instance of the bot
-				var bot = (IBot)Activator.CreateInstance(bot_type, new object[] { this, settings_xml });
-				Bots.Add(bot);
-			}
-			catch (Exception ex)
-			{
-				Log.Write(ELogLevel.Error, ex, $"Failed to create an instance of Bot '{bot_type.Name}'");
-				MsgBox.Show(UI, $"Failed to create an instance of Bot '{bot_type.Name}'\r\n{ex.MessageFull()}", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
-			}
-		}
-
-		/// <summary>Create the bots given in the settings</summary>
-		private void CreateBotsFromSettings()
-		{
-			using (Scope.Create(() => m_suspend_saving_bots = true, () => m_suspend_saving_bots = false))
-			{
-				var available_bots = Plugins<IBot>.Enumerate(Misc.BotDirectory, SearchOption.TopDirectoryOnly, Misc.BotRegexFilter).ToArray();
-				foreach (var bot_data in Settings.Bots)
-				{
-					var bot = available_bots.FirstOrDefault(x => x.Type.FullName == bot_data.BotType);
-					if (bot != null)
-						CreateBotInstance(bot.Type, bot_data.Config);
-					else
-						Log.Write(ELogLevel.Warn, $"Could not load Bot type {bot_data.BotType}. The plugin is no longer available");
-				}
 			}
 		}
 
@@ -868,7 +919,7 @@ namespace CoinFlip
 		public CoinDataTable(Model model)
 		{
 			Model = model;
-			DataSource = new BindingListEx<Settings.CoinData>(Model.Settings.Coins.ToList());
+			DataSource = new BindingListEx<Settings.CoinData>(Model.Settings.Coins.OrderBy(x => x.Order).ToList());
 		}
 		public Settings.CoinData this[string sym]
 		{
@@ -882,6 +933,11 @@ namespace CoinFlip
 		{
 			if (args.IsDataChanged)
 			{
+				// Update the order by values
+				int i = 0;
+				foreach (var cd in this)
+					cd.Order = i++;
+
 				// Record the coins in the settings
 				Model.Settings.Coins = this.ToArray();
 
@@ -927,6 +983,52 @@ namespace CoinFlip
 			}
 		}
 	}
+	public class FundContainer :BindingSource<Fund>
+	{
+		private readonly Model Model;
+		public FundContainer(Model model)
+		{
+			Model = model;
+			DataSource = new BindingListEx<Fund>{ new Fund(Model, Fund.Main) };
+		}
+
+		/// <summary>Return the fund associated with 'fund_id' (or null)</summary>
+		public Fund this[string fund_id]
+		{
+			get
+			{
+				var idx = this.IndexOf(x => x.Id == fund_id);
+				return idx >= 0 ? this[idx] : null;
+			}
+			set
+			{
+				var idx = this.IndexOf(x => x.Id == fund_id);
+				if (idx >= 0) this[idx] = value;
+				else Add(value);
+			}
+		}
+	}
+	public class ExchangeContainer :BindingSource<Exchange>
+	{
+		private readonly Model Model;
+		public ExchangeContainer(Model model)
+		{
+			Model = model;
+			DataSource = new BindingListEx<Exchange>();
+			PerItem = true;
+		}
+
+		/// <summary>Return an exchange by name (or null)</summary>
+		public Exchange this[string name]
+		{
+			get
+			{
+				var idx = this.IndexOf(x => x.Name == name);
+				return idx >= 0 ? this[idx] : null;
+			}
+		}
+	}
+
 	#endregion
 
 	#region EventArgs

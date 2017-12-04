@@ -136,7 +136,8 @@ namespace CoinFlip
 				var b = ChartBeg;
 				var e = ChartEnd;
 				var d = e - b;
-				if (Settings.Extrapolate)
+				var degenerate = d.Length2Sq < Maths.TinyF;
+				if (Settings.Extrapolate && !degenerate)
 				{
 					// X bound, else Y bound
 					var scale = d.x * Chart.YAxis.Span > d.y * Chart.XAxis.Span
@@ -148,7 +149,7 @@ namespace CoinFlip
 	
 				// Create the transform
 				Gfx.O2P = new m4x4(
-					(!Maths.FEql(d.Length2Sq,0) ? m3x4.Rotation(v4.XAxis, new v4(d,0,0)) : m3x4.Identity) *
+					(degenerate ? m3x4.Identity : m3x4.Rotation(v4.XAxis, new v4(d,0,0))) *
 					m3x4.Scale(d.Length2,1,1),
 					new v4(b, ZOrder.Indicators, 1f));
 

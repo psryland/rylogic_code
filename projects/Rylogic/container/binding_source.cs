@@ -405,7 +405,7 @@ namespace pr.container
 			}
 		}
 
-		/// <summary>Gets or sets the column names used for sorting, and the sort order for viewing the rows in the data source.</summary>
+		/// <summary>Gets or sets the column names used for sorting, and the sort order for viewing the rows in the data source. Note: this reorders the underlying data</summary>
 		/// <returns>A case-sensitive string containing the column name followed by "ASC" (for ascending) or "DESC" (for descending). The default is null.</returns>
 		[DefaultValue(null)]
 		public string SortColumn
@@ -1335,6 +1335,21 @@ namespace pr.container
 						m_bl.ResetBindings();
 						UpdateView();
 					}
+
+					// Handlers
+					void HandleViewChanging(object sender, ListChgEventArgs<int> e)
+					{
+						// Raise the ListChanging event on this view
+						// Translate the changing Index collection to a changing item
+						var item = e.Index != -1 ? BindingSource[e.Item] : default(TItem);
+						ListChanging.Raise(this, new ListChgEventArgs<TItem>(this, e.ChangeType, e.Index, item));
+					}
+					void HandleViewChanged(object sender, ListChangedEventArgs e)
+					{
+						// Handle the IBindingList changed events
+						if (ListChanged == null) return;
+						ListChanged(this, e);
+					}
 				}
 			}
 			private BindingListEx<int> m_bl;
@@ -1374,6 +1389,26 @@ namespace pr.container
 						m_bs.Disposed += HandleBindingSourceDisposed;
 					}
 					UpdateView();
+
+					// Handlers
+					void HandleSourceChanging(object sender, ListChgEventArgs<TItem> e)
+					{
+						// Handle the underlying binding source changing
+						UpdateView(e.ChangeType, e.Index, e.Item);
+					}
+					void HandleSourcePositionChanged(object sender, PositionChgEventArgs e)
+					{
+						// Report position changed in the underlying binding source
+						// Convert the binding source position into a position in this view
+						var old = SrcToViewIndex(e.OldIndex);
+						var neu = SrcToViewIndex(e.NewIndex);
+						PositionChanged.Raise(this, new PositionChgEventArgs(old, neu));
+					}
+					void HandleBindingSourceDisposed(object sender, EventArgs e)
+					{
+						// If the owning binding source is disposed, dispose this view as well
+						Dispose();
+					}
 				}
 			}
 			private BindingSource<TItem> m_bs;
@@ -1415,11 +1450,9 @@ namespace pr.container
 			/// <summary>Update the list of items in this view</summary>
 			public void UpdateView()
 			{
-				HandleSourceChanging(this, new ListChgEventArgs<TItem>(this, ListChg.Reset, -1, default(TItem)));
+				UpdateView(ListChg.Reset, -1, default(TItem));
 			}
-
-			/// <summary>Handle the underlying binding source changing</summary>
-			private void HandleSourceChanging(object sender, ListChgEventArgs<TItem> e)
+			public void UpdateView(ListChg change_type, int index, TItem item)
 			{
 				// No source, no view
 				if (BindingSource == null)
@@ -1429,7 +1462,7 @@ namespace pr.container
 				}
 
 				// See if the change to the binding source affects this view
-				switch (e.ChangeType)
+				switch (change_type)
 				{
 				default:
 					{
@@ -1457,9 +1490,9 @@ namespace pr.container
 				case ListChg.ItemPreReset:
 					{
 						// Before an item is reset, retest whether it belongs in the view
-						var idx = SrcToViewIndex(e.Index);
-						if (idx >= 0 && !Predicate(e.Item)) Index.RemoveAt(idx);
-						if (idx <  0 &&  Predicate(e.Item)) Index.Insert(~idx, e.Index);
+						var idx = SrcToViewIndex(index);
+						if (idx >= 0 && !Predicate(item)) Index.RemoveAt(idx);
+						if (idx <  0 &&  Predicate(item)) Index.Insert(~idx, index);
 						break;
 					}
 				case ListChg.ItemReset:
@@ -1470,7 +1503,7 @@ namespace pr.container
 				case ListChg.ItemPreRemove:
 					{
 						// Before an item is removed from the source, remove it from the view
-						var idx = SrcToViewIndex(e.Index);
+						var idx = SrcToViewIndex(index);
 						if (idx >= 0) Index.RemoveAt(idx);
 						if (idx < 0) idx = ~idx;
 						for (var i = idx; i < Index.Count; ++i) --Index[i];
@@ -1489,44 +1522,14 @@ namespace pr.container
 				case ListChg.ItemAdded:
 					{
 						// After an item is added, see if it should be added to the view
-						var idx = SrcToViewIndex(e.Index);
+						var idx = SrcToViewIndex(index);
 						if (idx < 0) idx = ~idx;
-						if (Predicate(e.Item)) Index.Insert(idx, e.Index);
+						if (Predicate(item)) Index.Insert(idx, index);
 						for (var i = idx + 1; i < Index.Count; ++i) ++Index[i];
 						Debug.Assert(SanityCheck());
 						break;
 					}
 				}
-			}
-
-			/// <summary>Report position changed in the underlying binding source</summary>
-			private void HandleSourcePositionChanged(object sender, PositionChgEventArgs e)
-			{
-				// Convert the binding source position into a position in this view
-				var old = SrcToViewIndex(e.OldIndex);
-				var neu = SrcToViewIndex(e.NewIndex);
-				PositionChanged.Raise(this, new PositionChgEventArgs(old, neu));
-			}
-
-			/// <summary>Raise the ListChanging event on this view</summary>
-			private void HandleViewChanging(object sender, ListChgEventArgs<int> e)
-			{
-				// Translate the changing Index collection to a changing item
-				var item = e.Index != -1 ? BindingSource[e.Item] : default(TItem);
-				ListChanging.Raise(this, new ListChgEventArgs<TItem>(this, e.ChangeType, e.Index, item));
-			}
-
-			/// <summary>Handle the IBindingList changed events</summary>
-			private void HandleViewChanged(object sender, ListChangedEventArgs e)
-			{
-				if (ListChanged == null) return;
-				ListChanged(this, e);
-			}
-
-			/// <summary>If the owning binding source is disposed, dispose this view as well</summary>
-			private void HandleBindingSourceDisposed(object sender, EventArgs e)
-			{
-				Dispose();
 			}
 
 			#region IEnumerable

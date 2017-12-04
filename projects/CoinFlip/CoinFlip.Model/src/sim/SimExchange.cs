@@ -18,12 +18,13 @@ namespace CoinFlip
 		//  - During 'Step' the SimExchange copies data from the Dictionaries to the Collection members,
 		//    emulating the behaviour of the 'Exchange.UpdateThreadEntryPoint' function which makes HTTP
 		//    requests, storing/overwriting the results in the collection members.
+		//  - SimExchange balances only use the 'NoCtx' balance context because real exchanges don't have balance contexts
 
 		private readonly LazyDictionary<TradePair, PriceData> m_src;
 		private readonly LazyDictionary<TradePair, MarketDepth> m_depth;
 		private readonly LazyDictionary<ulong, Position> m_pos;
 		private readonly LazyDictionary<ulong, PositionFill> m_his;
-		private readonly LazyDictionary<Coin, Balance> m_bal;
+		private readonly LazyDictionary<Coin, FundBalance> m_bal;
 		private readonly LazyDictionary<string, Unit<decimal>> m_initial_bal;
 		private Random m_rng;
 		private ulong m_position_id;
@@ -42,7 +43,7 @@ namespace CoinFlip
 				m_depth = new LazyDictionary<TradePair, MarketDepth>(k => new MarketDepth(k.Base, k.Quote));
 				m_pos   = new LazyDictionary<ulong, Position>(k => null);
 				m_his   = new LazyDictionary<ulong, PositionFill>(k => null);
-				m_bal   = new LazyDictionary<Coin, Balance>(k => new Balance(k, m_initial_bal[k], Sim.Clock));
+				m_bal   = new LazyDictionary<Coin, FundBalance>(k => new FundBalance(Fund.Main, k, m_initial_bal[k], 0m._(k)));
 				m_rng   = null;
 
 				// Take a copy of the initial balances (for performance)
@@ -170,8 +171,8 @@ namespace CoinFlip
 				}
 				foreach (var coin in Coins.Values)
 				{
-					m_bal.Add(coin, new Balance(coin, m_initial_bal[coin], Sim.Clock));
-					Balance.Add(coin, new Balance(coin, m_initial_bal[coin], Sim.Clock));
+					m_bal.Add(coin, new FundBalance(Fund.Main, coin, m_initial_bal[coin], 0m._(coin)));
+					Balance.Add(coin, new Balances(coin, m_initial_bal[coin], Sim.Clock));
 				}
 			}
 
@@ -303,7 +304,7 @@ namespace CoinFlip
 					foreach (var bal in m_bal.Values)
 					{
 						if (Equals(bal, Balance[bal.Coin])) continue;
-						Balance[bal.Coin] = new Balance(bal);
+						Balance[bal.Coin].Update(bal);
 					}
 				}
 
@@ -377,7 +378,7 @@ namespace CoinFlip
 			Debug.Assert(current_volume == remaining + filled.Sum(x => x.VolumeBase));
 
 			// The order is partially or wholly filled...
-			pos = remaining != 0              ? new Position(order_id, pair, tt, price, initial_volume, remaining, Model.UtcNow, Model.UtcNow) : null;
+			pos = remaining != 0              ? new Position(Fund.Main, order_id, pair, tt, price, initial_volume, remaining, Model.UtcNow, Model.UtcNow) : null;
 			his = remaining != current_volume ? new PositionFill(order_id, tt, pair) : null;
 			foreach (var fill in filled)
 				his.Trades.Add(new Historic(order_id, ++m_history_id, pair, tt, fill.Price, fill.VolumeBase, Exch.Fee * fill.VolumeQuote, Model.UtcNow, Model.UtcNow));
@@ -393,14 +394,12 @@ namespace CoinFlip
 				{
 					{// Debt from CoinIn
 						var bal0 = m_bal[fill.CoinIn];
-						var bal = new Balance(fill.CoinIn, bal0.Total - fill.VolumeIn, bal0.HeldForTrades, Model.UtcNow, bal0.Unconfirmed, bal0.PendingWithdraw);
-						m_bal[fill.CoinIn] = bal;
+						bal0.Update(Model.UtcNow, total: bal0.Total - fill.VolumeIn);
 						coins.Add(fill.CoinIn);
 					}
 					{// Credit to CoinOut
 						var bal0 = m_bal[fill.CoinOut];
-						var bal = new Balance(fill.CoinOut, bal0.Total + fill.VolumeNett, bal0.HeldForTrades, Model.UtcNow, bal0.Unconfirmed, bal0.PendingWithdraw);
-						m_bal[fill.CoinOut] = bal;
+						bal0.Update(Model.UtcNow, total: bal0.Total + fill.VolumeNett);
 						coins.Add(fill.CoinOut);
 					}
 				}
@@ -409,8 +408,7 @@ namespace CoinFlip
 			{
 				// Hold for trade
 				var bal0 = m_bal[pos.CoinIn];
-				var bal = new Balance(pos.CoinIn, bal0.Total, bal0.HeldForTrades + pos.Remaining, Model.UtcNow, bal0.Unconfirmed, bal0.PendingWithdraw);
-				m_bal[pos.CoinIn] = bal;
+				bal0.Update(Model.UtcNow, held_on_exch: bal0.HeldOnExch + pos.Remaining);
 				coins.Add(pos.CoinIn);
 			}
 		}
@@ -419,9 +417,7 @@ namespace CoinFlip
 		private void ReverseBalance(Position pos)
 		{
 			var bal0 = m_bal[pos.CoinIn];
-			var bal = new Balance(pos.CoinIn, bal0.Total, bal0.HeldForTrades - pos.Remaining, Model.UtcNow, bal0.Unconfirmed, bal0.PendingWithdraw);
-			Debug.Assert(bal.AssertValid());
-			m_bal[pos.CoinIn] = bal;
+			bal0.Update(Model.UtcNow, held_on_exch: bal0.HeldOnExch - pos.Remaining);
 		}
 
 		/// <summary>Generate fake market depth for 'pair', using 'latest' as the reference for the current spot price</summary>

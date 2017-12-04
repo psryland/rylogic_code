@@ -906,6 +906,10 @@ namespace pr.extn
 		{
 			return (T)As(elem, typeof(T), optional_default, factory);
 		}
+		public static T OrDefault<T>(this XElement elem, T def)
+		{
+			return (T)As(elem, typeof(T), def, null);
+		}
 
 		/// <summary>Read all elements with name 'elem_name' into 'list' constructing them using 'factory' and optionally overwriting duplicates.</summary>
 		public static void As<T>(this XElement parent, IList<T> list, string elem_name, T optional_default, Func<T,T,bool> is_duplicate = null, Func<Type,object> factory = null)

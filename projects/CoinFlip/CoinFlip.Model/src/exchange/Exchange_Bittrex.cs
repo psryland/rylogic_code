@@ -202,7 +202,7 @@ namespace CoinFlip
 			try
 			{
 				// Record the time just before the query to the server
-				var timestamp = DateTimeOffset.Now;
+				var last_updated = DateTimeOffset.Now;
 
 				// Request the account data
 				var msg = Api.GetBalances(cancel:Shutdown.Token);
@@ -219,13 +219,11 @@ namespace CoinFlip
 						var coin = Coins.GetOrAdd(b.Symbol);
 
 						// Update the balance
-						var bal = new Balance(coin, b.Total._(coin), (b.Total - b.Available)._(coin), timestamp, b.Pending._(coin), 0m._(coin));
-						Debug.Assert(bal.AssertValid());
-						Balance[coin] = bal;
+						Balance[coin] = new Balances(coin, b.Total._(coin), (b.Total - b.Available)._(coin), last_updated);
 					}
 
 					// Notify updated
-					Balance.LastUpdated = timestamp;
+					Balance.LastUpdated = last_updated;
 				});
 			}
 			catch (Exception ex)
@@ -358,12 +356,13 @@ namespace CoinFlip
 		{
 			// Get the associated trade pair (add the pair if it doesn't exist)
 			var order_id = ToIdPair(order.OrderId).OrderId;
+			var fund_id = OrderIdtoFundId[order_id];
 			var pair = Pairs.GetOrAdd(order.Pair.Base, order.Pair.Quote);
 			var price = order.Limit._(pair.RateUnits);
 			var volume = order.VolumeBase._(pair.Base);
 			var remaining = order.RemainingBase._(pair.Base);
 			var created = order.Created;
-			return new Position(order_id, pair, Misc.TradeType(order.Type), price, volume, remaining, created, updated);
+			return new Position(fund_id, order_id, pair, Misc.TradeType(order.Type), price, volume, remaining, created, updated);
 		}
 
 		/// <summary>Convert a Cryptopia trade history result into a position object</summary>

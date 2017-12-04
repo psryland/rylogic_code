@@ -1,14 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using pr.container;
 using pr.extn;
-using pr.gui;
 using pr.util;
 
 namespace CoinFlip
@@ -32,20 +28,18 @@ namespace CoinFlip
 		}
 		protected override void OnCellFormatting(DataGridViewCellFormattingEventArgs e)
 		{
-			e.CellStyle.SelectionForeColor = e.CellStyle.ForeColor;
-			e.CellStyle.SelectionBackColor = e.CellStyle.BackColor.Lerp(Color.Gray, 0.5f);
+			DataGridView_.HalfBrightSelection(this, e);
 			base.OnCellFormatting(e);
 		}
 		protected override void OnCellPainting(DataGridViewCellPaintingEventArgs e)
 		{
 			if (this.Within(e.ColumnIndex, e.RowIndex, out DataGridViewColumn col, out DataGridViewCell cell))
 			{
-				var row = Rows[e.RowIndex];
 				var parts = e.PaintParts;
 				e.Graphics.SmoothingMode = SmoothingMode.HighQuality;
 
 				// Paint the background
-				e.PaintBackground(e.CellBounds, e.State.HasFlag(DataGridViewElementStates.Selected));
+				e.PaintBackground(e.ClipBounds, e.State.HasFlag(DataGridViewElementStates.Selected));
 				parts ^= DataGridViewPaintParts.Background | DataGridViewPaintParts.ContentBackground;
 
 				var pair_name = ((IList<string>)DataSource)[e.RowIndex];
@@ -65,12 +59,12 @@ namespace CoinFlip
 					if (pair != null)
 					{
 						{// Q2B
-							var q2b_spot = pair.QuoteToBase(0m._(pair.Quote)).PriceQ2B.ToString("G6");
+							var q2b_spot = pair.SpotPrice(ETradeType.Q2B).ToString("G6");
 							var sz = e.Graphics.MeasureString(q2b_spot, e.CellStyle.Font);
 							e.Graphics.DrawString(q2b_spot, e.CellStyle.Font, Brushes.DarkGreen, e.CellBounds.Left + (e.CellBounds.Width - sz.Width)*0.5f, e.CellBounds.Top + (e.CellBounds.Height/2 - sz.Height)*0.5f);
 						}
 						{// B2Q
-							var b2q_spot = pair.BaseToQuote(0m._(pair.Base)).PriceQ2B.ToString("G6");
+							var b2q_spot = pair.SpotPrice(ETradeType.B2Q).ToString("G6");
 							var sz = e.Graphics.MeasureString(b2q_spot, e.CellStyle.Font);
 							e.Graphics.DrawString(b2q_spot, e.CellStyle.Font, Brushes.DarkRed, e.CellBounds.Left + (e.CellBounds.Width - sz.Width)*0.5f, e.CellBounds.Top + e.CellBounds.Height/2 - (e.CellBounds.Height/2 - sz.Height)*0.5f);
 						}

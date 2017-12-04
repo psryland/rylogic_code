@@ -120,7 +120,7 @@ namespace CoinFlip
 				{
 					m_chart_settings.PropertyChanged -= HandleSettingChanged;
 				}
-				m_chart_settings = value ?? Model.Settings.ChartTemplate;
+				m_chart_settings = value;
 				if (m_chart_settings != null)
 				{
 					// Apply new settings
@@ -471,7 +471,7 @@ namespace CoinFlip
 			#region Chart Graphics
 			GfxAsk = new View3d.Object($"*Line Ask {ChartSettings.AskColour.ToArgbU():X8} {{ 0 0 0 1 0 0 }}", false, CtxId, null);
 			GfxBid = new View3d.Object($"*Line Ask {ChartSettings.BidColour.ToArgbU():X8} {{ 0 0 0 1 0 0 }}", false, CtxId, null);
-			GfxUpdatingText = new View3d.Object("*Text { \"...updating...\" *ScreenSpace *Anchor {+1 +1} *Font{*Colour{FF000000}} *o2w{*pos{+1, +1, 0}} }", false, CtxId, null);
+			GfxUpdatingText = new View3d.Object("*Text { *Font{*Colour{FF000000}} \"...updating...\" *ScreenSpace *Anchor {+1 +1} *o2w{*pos{+1, +1, 0}} *NoZTest }", false, CtxId, null);
 			#endregion
 	
 			// Persist tool bar locations
@@ -698,9 +698,8 @@ namespace CoinFlip
 			if (Instrument == null)
 				return string.Empty;
 
-			var str = new StringBuilder(Math.Round(x, 5, MidpointRounding.AwayFromZero).ToString("F5"));
-			for (; str.Length > 6 && str[str.Length-1] == '0';) str.Length--;
-			return str.ToString();
+			// This solves the rounding problem for values near zero when the axis span could be anything
+			return !Maths.FEql(x / ChartCtrl.YAxis.Span, 0.0) ? Maths.RoundSF(x, 5).ToString("G8") : "0";
 		}
 
 		/// <summary>Measure the size of the y axis text</summary>
@@ -858,7 +857,7 @@ namespace CoinFlip
 						if (pair != null)
 						{
 							{// Buy base currency (Q2B)
-								var trade = new Trade(ETradeType.Q2B, pair, click_price);
+								var trade = new Trade(Fund.Main, ETradeType.Q2B, pair, click_price);
 								var opt = e.Menu.Items.Insert2(idx++, new ToolStripMenuItem($"{OrderType(trade)} at {trade.PriceQ2B.ToString("G6")}") { ForeColor = ChartSettings.AskColour });
 								opt.Click += (s,a) =>
 								{
@@ -866,7 +865,7 @@ namespace CoinFlip
 								};
 							}
 							{// Buy quote currency (B2Q)
-								var trade = new Trade(ETradeType.B2Q, pair, click_price);
+								var trade = new Trade(Fund.Main, ETradeType.B2Q, pair, click_price);
 								var opt = e.Menu.Items.Insert2(idx++, new ToolStripMenuItem($"{OrderType(trade)} at {trade.PriceQ2B.ToString("G6")}") { ForeColor = ChartSettings.BidColour });
 								opt.Click += (s,a) =>
 								{

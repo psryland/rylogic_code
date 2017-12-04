@@ -190,14 +190,15 @@ namespace Bot.ReturnToMean
 			m_tb_average_holding.ValidateText = t =>
 			{
 				if (Bot.Coin == null) return false;
-				var vol = Misc.InterpretVolume(t, Bot.Coin);
-				if (vol == null) return false;
-				return vol.Value.WithinInclusive(0, Bot.Coin.Balance.Available);
+				var avail = Bot.Coin.Balances[Bot.Fund].Available;
+				var vol = Misc.InterpretVolume(t, Bot.Coin, avail);
+				return vol != null && vol.Value.WithinInclusive(0, avail);
 			};
 			m_tb_average_holding.TextToValue = t =>
 			{
 				if (Bot.Coin == null) return 0m;
-				var vol = Misc.InterpretVolume(t, Bot.Coin);
+				var avail = Bot.Coin.Balances[Bot.Fund].Available;
+				var vol = Misc.InterpretVolume(t, Bot.Coin, avail);
 				return (decimal)vol.Value;
 			};
 			m_tb_average_holding.ValueToText = v =>
@@ -219,16 +220,18 @@ namespace Bot.ReturnToMean
 			m_tb_holding_change.ValidateText = t =>
 			{
 				if (Bot.Coin == null) return false;
-				var vol = Misc.InterpretVolume(t, Bot.Coin);
-				if (vol == null) return false;
+				var avail = Bot.Coin.Balances[Bot.Fund].Available;
+				var vol = Misc.InterpretVolume(t, Bot.Coin, avail);
 				return
-					(Bot.Settings.AverageHolding + vol.Value).WithinInclusive(0, Bot.Coin.Balance.Available) &&
-					(Bot.Settings.AverageHolding - vol.Value).WithinInclusive(0, Bot.Coin.Balance.Available);
+					vol != null &&
+					(Bot.Settings.AverageHolding + vol.Value).WithinInclusive(0, avail) &&
+					(Bot.Settings.AverageHolding - vol.Value).WithinInclusive(0, avail);
 			};
 			m_tb_holding_change.TextToValue = t =>
 			{
 				if (Bot.Coin == null) return 0m;
-				var vol = Misc.InterpretVolume(t, Bot.Coin);
+				var avail = Bot.Coin.Balances[Bot.Fund].Available;
+				var vol = Misc.InterpretVolume(t, Bot.Coin, avail);
 				return (decimal)vol.Value;
 			};
 			m_tb_holding_change.ValueToText = v =>

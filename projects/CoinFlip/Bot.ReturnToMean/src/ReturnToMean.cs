@@ -33,10 +33,10 @@ namespace Bot.ReturnToMean
 			MA = null;
 			base.Dispose(disposing);
 		}
-		protected override void HandleSettingChanged(object sender, SettingChangedEventArgs args)
+		protected override void OnSettingChanged(SettingChangedEventArgs args)
 		{
-			base.HandleSettingChanged(sender, args);
 			switch (args.Key) {
+			default: base.OnSettingChanged(args); return;
 			case nameof(SettingsData.Exchange): Exchange = null; return;
 			case nameof(SettingsData.Pair):     Pair = null; return;
 			case nameof(SettingsData.Currency): Coin = null; return;
@@ -70,7 +70,7 @@ namespace Bot.ReturnToMean
 		/// <summary>The exchange to trade on</summary>
 		public Exchange Exchange
 		{
-			get { return m_exch ?? (m_exch = Model.GetExchange(Settings.Exchange)); }
+			get { return m_exch ?? (m_exch = Model.Exchanges[Settings.Exchange]); }
 			private set
 			{
 				Debug.Assert(value == null);
@@ -258,7 +258,7 @@ namespace Bot.ReturnToMean
 						var vol_in = (decimal)(int)(decimal)(holding_diff / HoldingChange) * HoldingChange;
 
 						// Create a trade to sell 'vol_in' at 'spot'
-						trade = new Trade(tt, Pair, spot, tt.VolumeBase(spot, volume_in:vol_in));
+						trade = new Trade(Fund.Id, tt, Pair, spot, tt.VolumeBase(spot, volume_in:vol_in));
 					}
 					else
 					{
@@ -269,7 +269,7 @@ namespace Bot.ReturnToMean
 						var vol_out = (decimal)(int)(decimal)(-holding_diff / HoldingChange) * HoldingChange;
 
 						// Create a trade to buy 'vol_out' at 'spot'
-						trade = new Trade(tt, Pair, spot, tt.VolumeBase(spot, volume_out:vol_out));
+						trade = new Trade(Fund.Id, tt, Pair, spot, tt.VolumeBase(spot, volume_out:vol_out));
 					}
 
 					// Place the trade

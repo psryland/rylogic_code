@@ -290,16 +290,15 @@ namespace CoinFlip
 				{
 					// Invalidate the live price data 
 					m_grid_exchanges.InvalidateColumn(m_grid_exchanges.Columns[nameof(Exchange.NettWorth)].Index);
-					m_grid_balances .InvalidateColumn(m_grid_balances.Columns[nameof(Balance.Available)].Index);
-					m_grid_balances .InvalidateColumn(m_grid_balances.Columns[nameof(Balance.Total)].Index);
-					m_grid_balances .InvalidateColumn(m_grid_balances.Columns[nameof(Balance.Value)].Index);
 					m_grid_positions.InvalidateColumn(m_grid_positions.Columns[nameof(GridPositions.ColumnNames.LivePrice)].Index);
 					m_grid_positions.InvalidateColumn(m_grid_positions.Columns[nameof(GridPositions.ColumnNames.PriceDist)].Index);
 					m_grid_coins    .InvalidateColumn(m_grid_coins.Columns[nameof(GridCoins.ColumnNames.Total)].Index);
 					m_grid_coins    .InvalidateColumn(m_grid_coins.Columns[nameof(GridCoins.ColumnNames.Available)].Index);
 					m_grid_coins    .InvalidateColumn(m_grid_coins.Columns[nameof(GridCoins.ColumnNames.Value)].Index);
 					m_grid_coins    .InvalidateColumn(m_grid_coins.Columns[nameof(GridCoins.ColumnNames.Balance)].Index);
+					m_grid_balances .Invalidate();
 					m_grid_arbitrage.Invalidate();
+					m_grid_bots     .Invalidate();
 
 					// Update the back-testing clock
 					if (Model.BackTesting)
@@ -997,7 +996,7 @@ namespace CoinFlip
 					}
 					else
 					{
-						// Find the order instance and bring it to the front
+						// Find the other instance and bring it to the front
 						//todo
 					}
 				}

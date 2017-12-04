@@ -285,7 +285,7 @@ namespace CoinFlip
 				var exchanges = ExchangesToConsider.ToList();
 				var coins = exchanges.SelectMany(x => x.CoinsOfInterest).ToList();
 				var transfers = exchanges.SelectMany(x => x.Transfers.Values).ToList();
-				var balances = coins.ToAccumulator(x => x.Symbol, x => (double)(decimal)x.Balance.Total);
+				var balances = coins.ToAccumulator(x => x.Symbol, x => (double)(decimal)x.Balances.NettTotal);
 				var assigned_values = Model.Settings.Coins.ToDictionary(x => x.Symbol, x => (double)x.AssignedValue);
 				var use_assigned_values = UseAssignedValues;
 				var time_scale = TimeScale;

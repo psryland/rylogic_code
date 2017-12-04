@@ -359,7 +359,7 @@ namespace Bot.LoopFinder
 				OrderBook b2q, q2b;
 				using (Model.LockMarketData())
 				{
-					bal = FundAllocation * coin.Balance.Available;
+					bal = coin.Balances[Fund].Available;
 					b2q = new OrderBook(pair.B2Q);
 					q2b = new OrderBook(pair.Q2B);
 				}
@@ -417,8 +417,8 @@ namespace Bot.LoopFinder
 				// Calculate the result of the trade
 				var new_coin = pair.OtherCoin(coin);
 				var trade = pair.Base == coin
-					? pair.BaseToQuote(volume)
-					: pair.QuoteToBase(volume);
+					? pair.BaseToQuote(Fund.Id, volume)
+					: pair.QuoteToBase(Fund.Id, volume);
 
 				// Record the trade amount.
 				trades.Add(trade);
@@ -453,7 +453,7 @@ namespace Bot.LoopFinder
 				// Get the balance available for this trade and determine a trade scaling factor.
 				// Increase the required volume to allow for the fee
 				// Reduce the available balance slightly to deal with rounding errors
-				var bal = FundAllocation * trade.CoinIn.Balance.Available * 0.999m;
+				var bal = trade.CoinIn.Balances[Fund].Available * 0.999m;
 				var req = trade.VolumeIn * (1 + pair.Fee);
 				var scale = Maths.Clamp((decimal)(bal / req), 0m, 1m);
 				if (scale < loop.TradeScale)
@@ -582,7 +582,7 @@ namespace Bot.LoopFinder
 					var new_volume = 0m._(new_coin);
 					if (pair.Base == coin)
 					{
-						var trade = pair.BaseToQuote(volume);
+						var trade = pair.BaseToQuote(Fund.Id, volume);
 						trade.CreateOrder();
 						new_volume = trade.VolumeOut;
 
@@ -591,7 +591,7 @@ namespace Bot.LoopFinder
 					}
 					else
 					{
-						var trade = pair.QuoteToBase(volume);
+						var trade = pair.QuoteToBase(Fund.Id, volume);
 						trade.CreateOrder();
 						new_volume = trade.VolumeOut;
 

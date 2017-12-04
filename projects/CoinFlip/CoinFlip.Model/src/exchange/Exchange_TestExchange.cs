@@ -67,9 +67,9 @@ namespace CoinFlip
 			// Set the balances
 			#region Balance
 			{
-				Balance[Coins["LTC"]] = new Balance(Coins["LTC"], 1m._(Coins["LTC"]), Model.UtcNow);
-				Balance[Coins["BTC"]] = new Balance(Coins["BTC"], 1m._(Coins["BTC"]), Model.UtcNow);
-				Balance[Coins["ETC"]] = new Balance(Coins["ETC"], 1m._(Coins["ETC"]), Model.UtcNow);
+				Balance[Coins["LTC"]] = new Balances(Coins["LTC"], 1m._(Coins["LTC"]), Model.UtcNow);
+				Balance[Coins["BTC"]] = new Balances(Coins["BTC"], 1m._(Coins["BTC"]), Model.UtcNow);
+				Balance[Coins["ETC"]] = new Balances(Coins["ETC"], 1m._(Coins["ETC"]), Model.UtcNow);
 			}
 			#endregion
 		}

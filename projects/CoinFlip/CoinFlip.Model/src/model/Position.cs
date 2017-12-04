@@ -7,8 +7,9 @@ namespace CoinFlip
 	[DebuggerDisplay("{Description,nq}")]
 	public class Position
 	{
-		public Position(ulong order_id, TradePair pair, ETradeType tt, Unit<decimal> price_q2b, Unit<decimal> volume_base, Unit<decimal> remaining_base, DateTimeOffset? created, DateTimeOffset updated, bool fake = false)
+		public Position(string fund_id, ulong order_id, TradePair pair, ETradeType tt, Unit<decimal> price_q2b, Unit<decimal> volume_base, Unit<decimal> remaining_base, DateTimeOffset? created, DateTimeOffset updated, bool fake = false)
 		{
+			FundId        = fund_id;
 			OrderId       = order_id;
 			UniqueKey     = Guid.NewGuid();
 			Pair          = pair;
@@ -21,7 +22,7 @@ namespace CoinFlip
 			Fake          = fake;
 		}
 		public Position(Position rhs)
-			:this(rhs.OrderId, rhs.Pair, rhs.TradeType, rhs.PriceQ2B, rhs.VolumeBase, rhs.RemainingBase, rhs.Created, rhs.Updated, rhs.Fake)
+			:this(rhs.FundId, rhs.OrderId, rhs.Pair, rhs.TradeType, rhs.PriceQ2B, rhs.VolumeBase, rhs.RemainingBase, rhs.Created, rhs.Updated, rhs.Fake)
 		{}
 
 		/// <summary>App logic</summary>
@@ -32,6 +33,9 @@ namespace CoinFlip
 
 		/// <summary>The pair being traded</summary>
 		public TradePair Pair { get; private set; }
+
+		/// <summary>The fund associated with this position</summary>
+		public string FundId { get; private set; }
 
 		/// <summary>Unique Id for the open position on an exchange</summary>
 		public ulong OrderId { get; private set; }

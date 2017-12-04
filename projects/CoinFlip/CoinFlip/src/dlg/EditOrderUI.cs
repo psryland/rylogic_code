@@ -147,14 +147,16 @@ namespace CoinFlip
 			[DebuggerStepThrough] get { return Trade.CoinOut; }
 		}
 
-		/// <summary>Return the available balance if currency to sell (including the 'm_initial.VolumeIn' for trade modifies)</summary>
+		/// <summary>Return the available balance of currency to sell. Includes the 'm_initial.VolumeIn' when modifying 'Trade'</summary>
 		public Unit<decimal> AvailableIn
 		{
-			get { return Exchange.Balance[CoinIn].Available + AdditionalIn; }
+			get { return Exchange.Balance[CoinIn][Trade.FundId].Available + AdditionalIn; }
 		}
+
+		/// <summary>Return the available balance of currency to buy. Includes the 'm_initial.VolumeIn' when modifying 'Trade'</summary>
 		public Unit<decimal> AvailableOut
 		{
-			get { return Exchange.Balance[CoinOut].Available; }
+			get { return Exchange.Balance[CoinOut][Trade.FundId].Available; }
 		}
 		private Unit<decimal> AdditionalIn
 		{
@@ -506,7 +508,8 @@ namespace CoinFlip
 					$"  *Line gripper {col} {{ {1f - GripperWidthFrac} 0 0  1 0 0 *Width {{{GripperHeight}}} }}",
 					$"  *Line level {col} {{0 0 0 1 0 0}}",
 					$"  *Line halo {col.Alpha(0.25f)} {{0 0 0 1 0 0 *Width {{{GripperHeight * 0.75f}}} *Hidden }}",
-					$"  *Text price {{ \"{price.ToString("G8",false)}\" *Billboard *Anchor {{+1 0}} *Font{{*Name{{\"tahoma\"}} *Size{{8}} *Weight{{500}} *Colour{{FFFFFFFF}}}} *BackColour {{{col}}} *o2w{{*pos{{1 0 0}}}} *Format {{NoZTest}} }}",
+					$"  *Font{{*Name{{\"tahoma\"}} *Size{{8}} *Weight{{500}} *Colour{{FFFFFFFF}}}}", 
+					$"  *Text price {{ \"{price.ToString("G8",false)}\" *Billboard *Anchor {{+1 0}} *BackColour {{{col}}} *o2w{{*pos{{1 0 0}}}} *NoZTest }}",
 					$"}}");
 
 				Gfx = new View3d.Object(ldr, false, Id, null);

@@ -232,6 +232,9 @@ namespace Bot.Fishing
 		/// <summary>The trading pair that we have an order waiting to be taken on</summary>
 		public TradePair Pair1 { [DebuggerStepThrough] get; private set; }
 
+		/// <summary>The context Id for this bot</summary>
+		public Fund Fund { [DebuggerStepThrough] get { return FishFinder.Fund; } }
+
 		/// <summary>A window showing the log for this fishing instance only</summary>
 		public FishingDetailsUI DetailsUI
 		{
@@ -304,25 +307,25 @@ namespace Bot.Fishing
 					Pair1.B2Q.Orders.Count != 0)
 				{
 					// Find the available balances on each exchange (reduced to allow for fees and rounding)
-					var availableQ = Maths.Min(FishFinder.FundAllocation * Pair0.Quote.Balance.Available * (1m - Pair0.Fee) * 0.99999m, Pair0.Quote.AutoTradeLimit);
-					var availableB = Maths.Min(FishFinder.FundAllocation * Pair1.Base .Balance.Available * (1m - Pair1.Fee) * 0.99999m, Pair1.Base .AutoTradeLimit);
+					var availableQ = Maths.Min(Pair0.Quote.Balances[Fund].Available * (1m - Pair0.Fee) * 0.99999m, Pair0.Quote.AutoTradeLimit);
+					var availableB = Maths.Min(Pair1.Base .Balances[Fund].Available * (1m - Pair1.Fee) * 0.99999m, Pair1.Base .AutoTradeLimit);
 
 					// Determine the market price on Exch0 for converting Quote to Base (this will be the match order)
 					// This tells us the equivalent volume of base currency we would get on Exch0.
-					var trade = Pair0.QuoteToBase(availableQ);
+					var trade = Pair0.QuoteToBase(Fund.Id, availableQ);
 
 					// Choose the volume of base currency to trade as the minimum of the volume on Exch0 and our available on Exch1
 					var volumeB = Maths.Min(trade.VolumeOut, availableB);
 
 					// Find the market price on Exch1 for trading Base to Quote.
-					var market_price = Pair1.QuoteToBase(availableQ);
+					var market_price = Pair1.QuoteToBase(Fund.Id, availableQ);
 					var min = trade.PriceInv * (1m + Settings.PriceOffset);
 					var def = trade.PriceInv * (1m + Settings.PriceOffset * 1.5m);
 					var price = market_price.PriceInv > min ? market_price.PriceInv : def;
 
 					// Create trade objects to represent the trades we intend to make
-					var trade0 = new Trade(ETradeType.Q2B, Pair0, trade.PriceQ2B, volumeB); // Match
-					var trade1 = new Trade(ETradeType.B2Q, Pair1, price, volumeB); // Bait
+					var trade0 = new Trade(Fund.Id, ETradeType.Q2B, Pair0, trade.PriceQ2B, volumeB); // Match
+					var trade1 = new Trade(Fund.Id, ETradeType.B2Q, Pair1, price, volumeB); // Bait
 
 					BaitB2Q = CreateBaitOrder(trade0, trade1, m_suppress_not_created_b2q);
 					m_suppress_not_created_b2q = BaitB2Q == null;
@@ -345,26 +348,26 @@ namespace Bot.Fishing
 					Pair1.Q2B.Orders.Count != 0)
 				{
 					// Find the available balances each exchange (reduced to allow for fees and rounding)
-					var availableB = Maths.Min(FishFinder.FundAllocation * Pair0.Base.Balance.Available  * (1m - Pair0.Fee) * 0.99999m, Pair0.Base .AutoTradeLimit);
-					var availableQ = Maths.Min(FishFinder.FundAllocation * Pair1.Quote.Balance.Available * (1m - Pair1.Fee) * 0.99999m, Pair1.Quote.AutoTradeLimit);
+					var availableB = Maths.Min(Pair0.Base .Balances[Fund].Available  * (1m - Pair0.Fee) * 0.99999m, Pair0.Base .AutoTradeLimit);
+					var availableQ = Maths.Min(Pair1.Quote.Balances[Fund].Available * (1m - Pair1.Fee) * 0.99999m, Pair1.Quote.AutoTradeLimit);
 
 					// Determine the current price on Exch0 for converting Base to Quote
 					// This tells us the equivalent volume of quote currency we would get on Exch0.
-					var trade = Pair0.BaseToQuote(availableB);
+					var trade = Pair0.BaseToQuote(Fund.Id, availableB);
 
 					// Choose the volume of quote currency to trade as the minimum of this and our available on Exch1
 					var volumeQ = Maths.Min(trade.VolumeOut, availableQ);
 
 					// Find the spot price on Exch1 for trading Quote to Base.
 					// If the price is within the price offset range, use this price, otherwise use the middle of the offset range
-					var market_price = Pair1.BaseToQuote(availableB);
+					var market_price = Pair1.BaseToQuote(Fund.Id, availableB);
 					var min = trade.PriceInv * (1m + Settings.PriceOffset);
 					var def = trade.PriceInv * (1m + Settings.PriceOffset * 1.5m);
 					var price = market_price.PriceInv > min ? market_price.PriceInv : def;
 
 					// Create trade objects to represent the trades we intend to make
-					var trade0 = new Trade(ETradeType.B2Q, Pair0, trade.PriceQ2B, volumeQ/trade.PriceQ2B);
-					var trade1 = new Trade(ETradeType.Q2B, Pair1, price, volumeQ/price);
+					var trade0 = new Trade(Fund.Id, ETradeType.B2Q, Pair0, trade.PriceQ2B, volumeQ/trade.PriceQ2B);
+					var trade1 = new Trade(Fund.Id, ETradeType.Q2B, Pair1, price, volumeQ/price);
 
 					BaitQ2B = CreateBaitOrder(trade0, trade1, m_suppress_not_created_q2b);
 					m_suppress_not_created_q2b = BaitQ2B == null;
@@ -436,7 +439,7 @@ namespace Bot.Fishing
 			}
 			public void Dispose()
 			{
-				Trade0.CoinIn.Balance.Release(m_balance_hold);
+				Trade0.CoinIn.Balances[m_fisher.Fund].Release(m_balance_hold);
 				Debug.Assert(Done);
 			}
 	
@@ -480,6 +483,12 @@ namespace Bot.Fishing
 				get { return m_fisher.Exch1; }
 			}
 
+			/// <summary>The fund id for the bot</summary>
+			public Fund Fund
+			{
+				get { return m_fisher.Fund; }
+			}
+
 			/// <summary>The offset from the reference price to the bait price</summary>
 			public decimal PriceOffset
 			{
@@ -514,7 +523,7 @@ namespace Bot.Fishing
 			public void Start()
 			{
 				// Reserve funds for 'trade0' until the bait order is taken. (enough to cover the transaction fee as well)
-				m_balance_hold = Trade0.CoinIn.Balance.Hold(Trade0.VolumeIn * (1m + Pair0.Fee), b => !Done);
+				m_balance_hold = Trade0.CoinIn.Balances[Fund].Hold(Trade0.VolumeIn * (1m + Pair0.Fee), b => !Done);
 
 				// Create the bait order
 				var order_result = Trade1.CreateOrder();
@@ -599,13 +608,13 @@ namespace Bot.Fishing
 
 								// Get the current price for trading on Exch0
 								Trade0 = Trade0.TradeType == ETradeType.B2Q
-									? Pair0.BaseToQuote(Trade0.VolumeIn)
-									: Pair0.QuoteToBase(Trade0.VolumeIn);
+									? Pair0.BaseToQuote(Fund.Id, Trade0.VolumeIn)
+									: Pair0.QuoteToBase(Fund.Id, Trade0.VolumeIn);
 
 								// Find the current price that we could fill Trade1 at
 								var current_best_price = Trade1.TradeType == ETradeType.B2Q
-									? Pair1.BaseToQuote(Trade1.VolumeIn).PriceQ2B
-									: Pair1.QuoteToBase(Trade1.VolumeIn).PriceQ2B;
+									? Pair1.BaseToQuote(Fund.Id, Trade1.VolumeIn).PriceQ2B
+									: Pair1.QuoteToBase(Fund.Id, Trade1.VolumeIn).PriceQ2B;
 
 								// Determine the price to reference price ratio.
 								var sign = pos.TradeType == ETradeType.B2Q ? +1 : -1;
@@ -684,7 +693,7 @@ namespace Bot.Fishing
 								Trade0 = MatchVolumeFrac == 1m ? Trade0 : new Trade(Trade0, MatchVolumeFrac);
 
 								// Release the hold on the balance we had reserved for 'Trade0'
-								Trade0.CoinIn.Balance.Release(m_balance_hold);
+								Trade0.CoinIn.Balances[Fund].Release(m_balance_hold);
 
 								// Match any partial trade
 								var validation0 = Trade0.Validate();

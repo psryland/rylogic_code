@@ -104,8 +104,8 @@ namespace CoinFlip
 					// Update the Balances data
 					foreach (var pair in Pairs.Values)
 					{
-						Balance[pair.Base ] = pair.Base.Balance;
-						Balance[pair.Quote] = pair.Quote.Balance;
+						Balance[pair.Base ] = pair.Base.Balances;
+						Balance[pair.Quote] = pair.Quote.Balances;
 					}
 
 					// Notify updated

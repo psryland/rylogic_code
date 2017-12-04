@@ -2431,6 +2431,9 @@ namespace pr.gui
 			base.OnMouseWheel(e);
 
 			var scene_bounds = SceneBounds;
+			var perp_z = Options.PerpendicularZTranslation != (ModifierKeys == Keys.Alt);
+			var chart_pt = ClientToChart(e.Location);
+
 			if (scene_bounds.Contains(e.Location))
 			{
 				// If there is a mouse op in progress, ignore the wheel
@@ -2439,8 +2442,7 @@ namespace pr.gui
 				{
 					// Translate the camera along a ray through 'point'
 					var loc = Control_.MapPoint(this, Scene, e.Location);
-					var along_ray = Options.PerpendicularZTranslation == (ModifierKeys == Keys.Alt);
-					Scene.Window.MouseNavigateZ(loc, e.Button, e.Delta, along_ray);
+					Scene.Window.MouseNavigateZ(loc, e.Button, e.Delta, !perp_z);
 					Invalidate();
 				}
 			}
@@ -2451,8 +2453,9 @@ namespace pr.gui
 				if (ModifierKeys.HasFlag(Keys.Alt  )) scale *= 0.01f;
 				var delta = Maths.Clamp(e.Delta * scale, -0.999f, 0.999f);
 
-				// Change the aspect ratio by zooming on the XAxis
 				var chg = false;
+
+				// Change the aspect ratio by zooming on the XAxis
 				var xaxis_bounds = Rectangle.FromLTRB(scene_bounds.Left, scene_bounds.Bottom, scene_bounds.Right, ClientSize.Height);
 				if (xaxis_bounds.Contains(e.Location) && !XAxis.LockRange)
 				{
@@ -2463,9 +2466,13 @@ namespace pr.gui
 					}
 					if (ModifierKeys != Keys.Control && XAxis.AllowZoom)
 					{
-						XAxis.Span *= (1.0f - delta);
+						var x = perp_z ? XAxis.Centre : chart_pt.X;
+						var left = (XAxis.Min - x) * (1f - delta);
+						var rite = (XAxis.Max - x) * (1f - delta);
+						XAxis.Set(chart_pt.X + left, chart_pt.X + rite);
 						if (Options.LockAspect != null)
-							YAxis.Span *= (1.0f - delta);
+							YAxis.Span *= (1f - delta);
+
 						chg = true;
 					}
 				}
@@ -2481,9 +2488,13 @@ namespace pr.gui
 					}
 					if (ModifierKeys != Keys.Control && YAxis.AllowZoom)
 					{
-						YAxis.Span *= (1.0f - delta);
+						var y = perp_z ? YAxis.Centre : chart_pt.Y;
+						var left = (YAxis.Min - y) * (1f - delta);
+						var rite = (YAxis.Max - y) * (1f - delta);
+						YAxis.Set(chart_pt.Y + left, chart_pt.Y + rite);
 						if (Options.LockAspect != null)
-							XAxis.Span *= (1.0f - delta);
+							XAxis.Span *= (1f - delta);
+
 						chg = true;
 					}
 				}
@@ -2593,9 +2604,6 @@ namespace pr.gui
 			var c2w = Scene.Camera.O2W;
 			c2w.pos += c2w.x * (gs_point.X - dst.X) + c2w.y * (gs_point.Y - dst.Y);
 			Scene.Camera.O2W = c2w;
-			//XAxis.Shift(gs_point.X - dst.X);
-			//YAxis.Shift(gs_point.Y - dst.Y);
-			//SetCameraFromRange();
 			Invalidate();
 		}
 

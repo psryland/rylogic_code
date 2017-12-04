@@ -251,9 +251,7 @@ namespace CoinFlip
 						var coin = Coins.GetOrAdd(b.Key);
 
 						// Update the balance
-						var bal = new Balance(coin, (b.Value.HeldForTrades+b.Value.Available)._(coin), b.Value.HeldForTrades._(coin), timestamp);
-						Debug.Assert(bal.AssertValid());
-						Balance[coin] = bal;
+						Balance[coin] = new Balances(coin, (b.Value.HeldForTrades + b.Value.Available)._(coin), b.Value.HeldForTrades._(coin), timestamp);
 					}
 
 					// Notify updated
@@ -378,12 +376,13 @@ namespace CoinFlip
 		private Position PositionFrom(global::Poloniex.API.Position pos, DateTimeOffset updated)
 		{
 			var order_id = pos.OrderId;
+			var fund_id  = OrderIdtoFundId[order_id];
 			var tt       = Misc.TradeType(pos.Type);
 			var pair     = Pairs.GetOrAdd(pos.Pair.Base, pos.Pair.Quote);
 			var price    = pos.Price._(pair.RateUnits);
 			var volume   = pos.VolumeBase._(pair.Base);
 			var created  = pos.Created;
-			return new Position(order_id, pair, tt, price, volume, volume, created, updated);
+			return new Position(fund_id, order_id, pair, tt, price, volume, volume, created, updated);
 		}
 
 		/// <summary>Convert a Poloniex trade history result into a position object</summary>

@@ -36,13 +36,13 @@ namespace Bot.Fishing
 		private Label m_lbl_info;
 		#endregion
 
-		public EditFishingUI(Model model)
-			:this(model, new FishFinder.FishingData(string.Empty, string.Empty, string.Empty, 0.005m, ETradeDirection.Both), false)
+		public EditFishingUI(FishFinder ff)
+			:this(ff, new FishFinder.FishingData(string.Empty, string.Empty, string.Empty, 0.005m, ETradeDirection.Both), false)
 		{ }
-		public EditFishingUI(Model model, FishFinder.FishingData fishing_data, bool active)
+		public EditFishingUI(FishFinder ff, FishFinder.FishingData fishing_data, bool active)
 		{
 			InitializeComponent();
-			Model = model;
+			Bot = ff;
 
 			m_fishing = new FishFinder.FishingData(fishing_data);
 			m_fishing_active = active;
@@ -52,22 +52,28 @@ namespace Bot.Fishing
 		}
 		protected override void Dispose(bool disposing)
 		{
-			Model = null;
+			Bot = null;
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
 
+		/// <summary>The owning bot instance</summary>
+		public FishFinder Bot
+		{
+			get { return m_bot; }
+			private set
+			{
+				if (m_bot == value) return;
+				m_bot = value;
+			}
+		}
+		private FishFinder m_bot;
+
 		/// <summary>App logic</summary>
 		public Model Model
 		{
-			get { return m_model; }
-			private set
-			{
-				if (m_model == value) return;
-				m_model = value;
-			}
+			get { return Bot.Model; }
 		}
-		private Model m_model;
 
 		/// <summary>The Fishing instance</summary>
 		public FishFinder.FishingData FishingData
@@ -231,12 +237,12 @@ namespace Bot.Fishing
 				var pair = TradePair.Parse(Pair);
 				m_tb_balances0.Text = Str.Build(
 					$"{Exch0.Name}\r\n",
-					$"   {Exch0.Balance.Get(pair.Base)?.Available ?? 0m} {pair.Base}\r\n",
-					$"   {Exch0.Balance.Get(pair.Quote)?.Available ?? 0m} {pair.Quote}");
+					$"   {Exch0.Balance.Get(pair.Base)[Bot.Fund]?.Available ?? 0m} {pair.Base}\r\n",
+					$"   {Exch0.Balance.Get(pair.Quote)[Bot.Fund]?.Available ?? 0m} {pair.Quote}");
 				m_tb_balances1.Text = Str.Build(
 					$"{Exch1.Name}\r\n",
-					$"   {Exch1.Balance.Get(pair.Base)?.Available ?? 0m} {pair.Base}\r\n",
-					$"   {Exch1.Balance.Get(pair.Quote)?.Available ?? 0m} {pair.Quote}");
+					$"   {Exch1.Balance.Get(pair.Base)[Bot.Fund]?.Available ?? 0m} {pair.Base}\r\n",
+					$"   {Exch1.Balance.Get(pair.Quote)[Bot.Fund]?.Available ?? 0m} {pair.Quote}");
 
 				// Update Max volume limits
 				m_lbl_volume_limit_base.Text = $"Max {pair.Base}:";

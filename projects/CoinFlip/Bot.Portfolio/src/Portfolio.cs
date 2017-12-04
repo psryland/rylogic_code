@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
@@ -62,31 +63,16 @@ namespace Bot.Portfolio
 		public Portfolio(Model model, XElement settings_xml)
 			:base("Portfolio", model, new SettingsData(settings_xml))
 		{
-			Folios = new BindingListEx<Folio>();
-			UI = new PortfolioUI(this);
-			Exchange = Model.GetExchange(Settings.Exchange);
+			Currencies = new BindingListEx<Folio>();
+			UI         = new PortfolioUI(this);
+			Exchange   = Model.Exchanges[Settings.Exchange];
 		}
 		protected override void Dispose(bool disposing)
 		{
 			UI = null;
+			Exchange = null;
+			Currencies = null;
 			base.Dispose(disposing);
-		}
-		protected override void HandleSettingChanged(object sender, SettingChangedEventArgs args)
-		{
-			base.HandleSettingChanged(sender, args);
-			switch (args.Key) {
-			case nameof(SettingsData.Exchange):
-				{
-					Exchange = Model.GetExchange(Settings.Exchange);
-					return;
-				}
-			case nameof(SettingsData.Portfolio):
-				{
-					// Synchronise the 'Folios' collection with the settings
-					Folios.Sync(Settings.Portfolio.ToHashSet(x => new Folio(Exchange, x)));
-					return;
-				}
-			}
 		}
 
 		/// <summary>Settings for this strategy</summary>
@@ -117,20 +103,45 @@ namespace Bot.Portfolio
 				if (m_exch == value) return;
 				if (m_exch != null)
 				{
-					Folios.Clear();
+					Currencies.Clear();
+					Settings.Exchange = string.Empty;
 				}
 				m_exch = value;
 				if (m_exch != null)
 				{
-					// Repopulate the Folios collection
-					Folios.AddRange(Settings.Portfolio.Select(x => new Folio(m_exch, x)));
+					Settings.Exchange = m_exch.Name;
+					Currencies.AddRange(Settings.Currencies.Select(x => new Folio(m_exch, x.Currency, x.Weight)));
 				}
 			}
 		}
 		private Exchange m_exch;
 
-		/// <summary>The folios in this portfolio</summary>
-		public BindingListEx<Folio> Folios { get; private set; }
+		/// <summary>The currencies in this portfolio</summary>
+		public BindingListEx<Folio> Currencies
+		{
+			get { return m_currencies; }
+			private set
+			{
+				if (m_currencies == value) return;
+				if (m_currencies != null)
+				{
+					m_currencies.ListChanging -= HandleListChanging;
+				}
+				m_currencies = value;
+				if (m_currencies != null)
+				{
+					m_currencies.ListChanging += HandleListChanging;
+				}
+
+				// Handlers
+				void HandleListChanging(object sender, ListChgEventArgs<Folio> e)
+				{
+					if (e.ChangeType == ListChg.ItemReset)
+						UpdateSettings();
+				}
+			}
+		}
+		private BindingListEx<Folio> m_currencies;
 
 		/// <summary>Add a currency to the portfolio</summary>
 		public void AddCurrency(string sym = null)
@@ -146,18 +157,20 @@ namespace Bot.Portfolio
 			}
 
 			// Check the currency is not already in the portfolio
-			if (Settings.Portfolio.Any(x => x.Currency == sym))
+			if (Currencies.Any(x => x.Currency == sym))
 				return;
 
 			// Add the currency to the port folio
-			Settings.Portfolio = Settings.Portfolio.Concat(new SettingsData.Folio(sym, 0.0)).ToArray();
+			Currencies.Add(new Folio(Exchange, sym, 0.0));
+			UpdateSettings();
 		}
 
 		/// <summary>Remove a currency from the portfolio</summary>
 		public void RemoveCurrency(string sym)
 		{
 			// Remove 'sym'
-			Settings.Portfolio = Settings.Portfolio.Where(x => x.Currency != sym).ToArray();
+			Currencies.RemoveIf(x => x.Currency == sym);
+			UpdateSettings();
 		}
 
 		/// <summary>Start the bot</summary>
@@ -191,11 +204,11 @@ namespace Bot.Portfolio
 		{
 			// Get the current balances of each of the folio currencies
 			// and calculate the total value using the live prices.
-			var total_value = Folios.Sum(x => x.Coin.ValueOf(x.Coin.Balance.Total * Settings.FundAllocation));
+			var total_value = Currencies.Sum(x => x.Coin.ValueOf(x.Coin.Balances[Fund].Total));
 
 			// Determine what the new holdings should be given the current total value.
-			var weight_total = Folios.Sum(x => x.Weight);
-			var targets = Folios.Select(x => total_value * (decimal)(x.Weight / weight_total)).ToArray();
+			var weight_total = Currencies.Sum(x => x.Weight);
+			var targets = Currencies.Select(x => total_value * (decimal)(x.Weight / weight_total)).ToArray();
 
 			// Get all the pairs on 'Exchange' where both currencies are in the portfolio
 
@@ -205,37 +218,54 @@ namespace Bot.Portfolio
 			// Place the trades, and monitor them
 		}
 
-		///<summary>One entry in the portfolio</summary>
-		public class Folio
+		/// <summary>Replace the 'currencies' in the settings data</summary>
+		private void UpdateSettings()
 		{
-			private readonly SettingsData.Folio m_folio;
-			public Folio(Exchange exch, SettingsData.Folio folio)
+			Settings.Currencies = Currencies.Select(x => new SettingsData.Folio(x.Currency, x.Weight)).ToArray();
+		}
+
+		///<summary>One entry in the portfolio</summary>
+		public class Folio :INotifyPropertyChanged
+		{
+			public Folio(Exchange exch, string currency, double weight)
 			{
 				Exchange = exch;
-				m_folio = folio;
-			}
-
-			/// <summary>The currency that is part of the portfolio</summary>
-			public string Currency
-			{
-				get { return m_folio.Currency; }
-				set { m_folio.Currency = value; }
-			}
-
-			/// <summary>The weighting value of this currency</summary>
-			public double Weight
-			{
-				get { return m_folio.Weight; }
-				set { m_folio.Weight = value; }
+				Currency = currency;
+				Weight = weight;
 			}
 
 			/// <summary>The exchange that provides trading for the currency</summary>
 			public Exchange Exchange { get; private set; }
 
+			/// <summary>The currency that is part of the portfolio</summary>
+			public string Currency
+			{
+				[DebuggerStepThrough] get { return m_currency; }
+				set { SetProp(ref m_currency, value, nameof(Currency)); }
+			}
+			private string m_currency;
+
+			/// <summary>The weighting value of this currency</summary>
+			public double Weight
+			{
+				[DebuggerStepThrough] get { return m_weight; }
+				set { SetProp(ref m_weight, value, nameof(Weight)); }
+			}
+			private double m_weight;
+
 			/// <summary>The coin on 'Exchange' associated with 'Currency'</summary>
 			public Coin Coin
 			{
 				get { return Exchange.Coins[Currency]; }
+			}
+
+			/// <summary>Notify property changed</summary>
+			public event PropertyChangedEventHandler PropertyChanged;
+			private void SetProp<T>(ref T prop, T value, string prop_name)
+			{
+				if (Equals(prop, value)) return;
+				prop = value;
+				PropertyChanged.Raise(this, new PropertyChangedEventArgs(prop_name));
 			}
 
 			#region Equals
@@ -254,14 +284,14 @@ namespace Bot.Portfolio
 			#endregion
 		}
 
-		/// <summary>Data needed to save a fishing instance in the settings</summary>
+		/// <summary>Data needed to save a portfolio instance in the settings</summary>
 		[TypeConverter(typeof(TyConv))]
 		public class SettingsData :SettingsBase<SettingsData>
 		{
 			public SettingsData()
 			{
 				Exchange  = string.Empty;
-				Portfolio = new Folio[0];
+				Currencies = new Folio[0];
 			}
 			public SettingsData(XElement node)
 				:base(node)
@@ -275,10 +305,10 @@ namespace Bot.Portfolio
 			}
 
 			/// <summary>The currencies and their weightings</summary>
-			public Folio[] Portfolio
+			public Folio[] Currencies
 			{
-				get { return get<Folio[]>(nameof(Portfolio)); }
-				set { set(nameof(Portfolio), value); }
+				get { return get<Folio[]>(nameof(Currencies)); }
+				set { set(nameof(Currencies), value); }
 			}
 
 			/// <summary></summary>
@@ -287,31 +317,52 @@ namespace Bot.Portfolio
 				var pf = (Portfolio)bot;
 
 				// Valid if the exchange exists, and has pairs for trading each currency
-				var exch = pf.Model.GetExchange(Exchange);
+				var exch = pf.Model.Exchanges[Exchange];
 				if (exch == null)
-					return false;
-
-				// The currencies in the portfolio
-				var currencies = Portfolio.Select(x => x.Currency).ToList();
-				if (currencies.Count < 2)
-					return false;
-				
-				// Must be at least one non-zero weight
-				if (Portfolio.Sum(x => x.Weight) == 0.0)
-					return false;
-
-				// Make sure we can trade each currency with at least one other in the portfolio
-				foreach (var folio in Portfolio)
 				{
-					// If there aren't any pairs with other currencies in the portfolio, then settings are invalid.
-					if (!currencies.Except(folio.Currency).Any(x => exch.Pairs[folio.Currency, x] != null))
-						return false;
+					ErrorDescription = "No exchange selected";
+					return false;
 				}
 
+				// The currencies in the portfolio
+				var currencies = Currencies.Select(x => x.Currency).ToList();
+				if (currencies.Count < 2)
+				{
+					ErrorDescription = "Two or more currencies required";
+					return false;
+				}
+				
+				// Must be at least one non-zero weight
+				if (Currencies.Sum(x => x.Weight) == 0.0)
+				{
+					ErrorDescription = "Portfolio weightings are invalid";
+					return false;
+				}
+
+				// Make sure we can trade each currency with at least one other in the portfolio
+				foreach (var folio in Currencies)
+				{
+					// If there aren't any pairs with other currencies in the portfolio, then settings are invalid.
+					var others = currencies.Except(folio.Currency);
+					if (!others.Any(x => exch.Pairs[folio.Currency, x] != null))
+					{
+						ErrorDescription = $"Currency {folio.Currency} cannot be traded with other portfolio currencies";
+						return false;
+					}
+				}
+
+				ErrorDescription = string.Empty;
 				return true;
 			}
 
-			/// <summary>A currency and weighting</summary>
+			/// <summary>If 'Valid' is false, this is a text description of why</summary>
+			public override string ErrorDescription
+			{
+				get;
+				protected set;
+			}
+
+			/// <summary>A single entry in a portfolio of currencies</summary>
 			public class Folio
 			{
 				public Folio()

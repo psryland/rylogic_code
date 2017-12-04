@@ -196,6 +196,31 @@ namespace pr.gui
 		}
 	}
 
+	#region
+
+	/// <summary>Combo box cells</summary>
+	public class DataGridViewComboBoxColumn :System.Windows.Forms.DataGridViewComboBoxColumn
+	{
+		public DataGridViewComboBoxColumn()
+			:base()
+		{}
+
+		/// <summary>The data source for the combo box items. Remember to set 'ValueMember' and 'DisplayMember' if not using strings</summary>
+		public new object DataSource
+		{
+			// Notes:
+			// Binding to DGV combo box is fuct for anything other than strings.
+			// For non-strings, you need to set 3 members: DataSource, ValueMember, and DisplayMember
+			//  Set 'DataSource' to the IList of 'Thing's.
+			//  Set 'DisplayMember' to 'nameof(Thing.Name)'
+			//  Set 'ValueMember' to 'nameof(Thing.This)' where 'This' is a property such as "public Thing This { get { return this; } }"
+			// The reason is basically because the DGV combo box cell is a broken implementation.
+			get { return base.DataSource; }
+			set { base.DataSource = value; }
+		}
+	}
+	#endregion
+
 	#region Rich Text Box Cell/Column
 
 	/// <summary>A user control for editing rich text box cells</summary>

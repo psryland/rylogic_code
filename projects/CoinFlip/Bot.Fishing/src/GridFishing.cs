@@ -119,7 +119,7 @@ namespace Bot.Fishing
 				var opt = cmenu.Items.Add2(new ToolStripMenuItem("Go Fish"));
 				opt.Click += (s,a) =>
 				{
-					using (var dlg = new EditFishingUI(Model))
+					using (var dlg = new EditFishingUI(Bot))
 					{
 						if (dlg.ShowDialog(this) != DialogResult.OK) return;
 						Fishers.Add(new Fisher(Bot, dlg.FishingData));
@@ -169,7 +169,7 @@ namespace Bot.Fishing
 				opt.Click += (s,a) =>
 				{
 					var fisher = (Fisher)SelectedRows[0].DataBoundItem;
-					using (var dlg = new EditFishingUI(Model, fisher.Settings, fisher.Active))
+					using (var dlg = new EditFishingUI(Bot, fisher.Settings, fisher.Active))
 					{
 						if (dlg.ShowDialog(this) != DialogResult.OK) return;
 						fisher.Settings = dlg.FishingData;

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using pr.container;
 using pr.extn;
 using pr.gui;
 using pr.maths;
@@ -27,6 +28,7 @@ namespace Bot.Portfolio
 		public PortfolioUI(Portfolio bot)
 		{
 			InitializeComponent();
+			Currencies = new BindingSource<Portfolio.Folio>();
 			Bot = bot;
 
 			// Support for dock container controls
@@ -37,9 +39,12 @@ namespace Bot.Portfolio
 			};
 
 			SetupUI();
+
+			UpdateTimer = true;
 		}
 		protected override void Dispose(bool disposing)
 		{
+			UpdateTimer = false;
 			DockControl = null;
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
@@ -56,10 +61,12 @@ namespace Bot.Portfolio
 				{
 					m_bot.ActiveChanged -= HandleActiveChanged;
 					m_bot.PropertyChanged -= HandleBotPropertyChanged;
+					Currencies.DataSource = null;
 				}
 				m_bot = value;
 				if (m_bot != null)
 				{
+					Currencies.DataSource = m_bot.Currencies;
 					m_bot.PropertyChanged += HandleBotPropertyChanged;
 					m_bot.ActiveChanged += HandleActiveChanged;
 				}
@@ -71,9 +78,10 @@ namespace Bot.Portfolio
 				}
 				void HandleBotPropertyChanged(object sender, PropertyChangedEventArgs e)
 				{
-					//if (e.PropertyName == nameof(Portfolio.Pair))
+					//if (e.PropertyName == nameof(Portfolio.Settings))
 					//{
-					//	UpdateUI();
+					//	m_grid_portfolio.Invalidate();
+					//	m_grid_status.Invalidate();
 					//}
 				}
 			}
@@ -95,17 +103,47 @@ namespace Bot.Portfolio
 		}
 		private DockControl m_dock_control;
 
+		/// <summary>The currencies that make up the portfolio</summary>
+		private BindingSource<Portfolio.Folio> Currencies { get; set; }
+
+		/// <summary>UI update timer</summary>
+		private bool UpdateTimer
+		{
+			get { return m_update_timer != null; }
+			set
+			{
+				if (UpdateTimer == value) return;
+				if (m_update_timer != null)
+				{
+					m_update_timer.Tick -= HandlerTick;
+					m_update_timer.Stop();
+				}
+				m_update_timer = value ? new Timer() : null;
+				if (m_update_timer != null)
+				{
+					m_update_timer.Interval = 200;
+					m_update_timer.Tick += HandlerTick;
+					m_update_timer.Start();
+				}
+
+				// Handlers
+				void HandlerTick(object sender, EventArgs e)
+				{
+					m_grid_status.InvalidateColumn(0);
+				}
+			}
+		}
+		private Timer m_update_timer;
+
 		/// <summary>Set up UI elements</summary>
 		private void SetupUI()
 		{
 			void PopulateExchangeCombo(object sender = null, EventArgs args = null)
 			{
-				using (m_cb_exchange.PreserveSelectedItem())
-				{
-					m_cb_exchange.Items.Clear();
-					m_cb_exchange.Items.Add(None);
-					m_cb_exchange.Items.AddRange(Bot.Model.TradingExchanges.Select(x => x.Name).OrderBy(x => x));
-				}
+				m_cb_exchange.Items.Clear();
+				m_cb_exchange.Items.Add(None);
+				m_cb_exchange.Items.AddRange(Bot.Model.TradingExchanges.Select(x => x.Name).OrderBy(x => x));
+				m_cb_exchange.SelectedItem = Bot.Settings.Exchange;
 			}
 
 			#region Exchange Combo
@@ -141,14 +179,15 @@ namespace Bot.Portfolio
 				HeaderText = "Normalised",
 				Name = EColPortfolio.Normalised.ToString(),
 				DataPropertyName = EColPortfolio.Normalised.ToString(),
+				ReadOnly = true,
 			});
 			m_grid_portfolio.CellFormatting += (s,a) =>
 			{
 				if (!m_grid_portfolio.Within(a.ColumnIndex, a.RowIndex, out DataGridViewColumn col, out DataGridViewCell cell) ||
-					!a.RowIndex.Within(0, Bot.Folios.Count))
+					!a.RowIndex.Within(0, Bot.Currencies.Count))
 					return;
 
-				var folio = Bot.Folios[a.RowIndex];
+				var folio = Bot.Currencies[a.RowIndex];
 
 				// Highlight currencies that aren't available on the selected exchange
 				if (Bot.Exchange.Coins[folio.Currency] == null)
@@ -157,7 +196,7 @@ namespace Bot.Portfolio
 				// Normalised column
 				if (col.DataPropertyName == EColPortfolio.Normalised.ToString())
 				{
-					a.Value = Maths.Div(folio.Weight, Bot.Folios.Sum(x => x.Weight), 0).ToString();
+					a.Value = Maths.Div(folio.Weight, Bot.Currencies.Sum(x => x.Weight), 0).ToString();
 					a.FormattingApplied = true;
 				}
 
@@ -171,7 +210,7 @@ namespace Bot.Portfolio
 			};
 			m_grid_portfolio.MouseDown += DataGridView_.DragDrop_DragRow;
 			m_grid_portfolio.ContextMenuStrip = CreateCMenu();
-			m_grid_portfolio.DataSource = Bot.Folios;
+			m_grid_portfolio.DataSource = Currencies;
 			ContextMenuStrip CreateCMenu()
 			{
 				var cmenu = new ContextMenuStrip();
@@ -180,7 +219,6 @@ namespace Bot.Portfolio
 					opt.Click += (s,a) =>
 					{
 						Bot.AddCurrency();
-						m_grid_portfolio.DataSource = Bot.Folios;
 						m_grid_portfolio.Invalidate();
 					};
 				}
@@ -200,7 +238,6 @@ namespace Bot.Portfolio
 							Bot.RemoveCurrency(sym);
 
 						m_grid_portfolio.CurrentCell = null;
-						m_grid_portfolio.DataSource = Bot.Folios;
 						m_grid_portfolio.Invalidate();
 					};
 				}
@@ -219,23 +256,23 @@ namespace Bot.Portfolio
 			m_grid_status.CellFormatting += (s,a) =>
 			{
 				if (!m_grid_status.Within(a.ColumnIndex, a.RowIndex, out DataGridViewColumn col) ||
-					!a.RowIndex.Within(0, Bot.Folios.Count))
+					!a.RowIndex.Within(0, Bot.Currencies.Count))
 					return;
 
-				var folio = Bot.Folios[a.RowIndex];
+				var folio = Bot.Currencies[a.RowIndex];
 
 				// Currency weighting
 				if (col.DataPropertyName == EColStatus.CurrentWeighting.ToString())
 				{
-					var val = (decimal)folio.Coin.ValueOf(folio.Coin.Balance.Total);
-					var tot = Bot.Folios.Sum(x => (decimal)x.Coin.ValueOf(x.Coin.Balance.Total));
+					var val = (decimal)folio.Coin.ValueOf(folio.Coin.Balances[Bot.Fund].Total);
+					var tot = Bot.Currencies.Sum(x => (decimal)x.Coin.ValueOf(x.Coin.Balances[Bot.Fund].Total));
 					a.Value = Maths.Div(val, tot, 0).ToString("G3");
 					a.FormattingApplied = true;
 				}
 
 				DataGridView_.HalfBrightSelection(s,a);
 			};
-			m_grid_status.DataSource = Bot.Folios;
+			m_grid_status.DataSource = Currencies;
 			#endregion
 
 			var dd = new DragDrop(m_grid_portfolio);

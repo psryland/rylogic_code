@@ -367,7 +367,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Interpret a string as a value of 'coin'</summary>
-		public static Unit<decimal>? InterpretVolume(string text, Coin coin, Unit<decimal>? available = null)
+		public static Unit<decimal>? InterpretVolume(string text, Coin coin, Unit<decimal> available)
 		{
 			text = text.Trim();
 			var sym = coin.Symbol;
@@ -379,10 +379,7 @@ namespace CoinFlip
 			{
 				text = text.Substring(0, text.Length - 1);
 				if (decimal.TryParse(text, out var value))
-				{
-					var avail = available ?? coin.Balance.Available;
-					return avail * value * 0.01m;
-				}
+					return available * value * 0.01m;
 			}
 			// If the text value is a number followed by the currency symbol
 			// just remove the currency symbol and return the number

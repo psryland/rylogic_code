@@ -96,12 +96,6 @@ namespace CoinFlip
 			#endregion
 		}
 
-		/// <summary>Update UI elements</summary>
-		private void UpdateUI(object sender = null, EventArgs args = null)
-		{
-			
-		}
-
 		#region Windows Form Designer generated code
 		private System.ComponentModel.IContainer components = null;
 		private void InitializeComponent()

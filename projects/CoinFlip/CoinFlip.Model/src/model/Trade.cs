@@ -19,7 +19,7 @@ namespace CoinFlip
 		//    with the order book to calculate the best price for trading 'volume_in'.
 
 		/// <summary>Create a trade on 'pair' at 'price_q2b' using 'volume_base' or the default for CoinIn if not given</summary>
-		public Trade(ETradeType tt, TradePair pair, Unit<decimal> price_q2b, Unit<decimal>? volume_base = null)
+		public Trade(string fund_id, ETradeType tt, TradePair pair, Unit<decimal> price_q2b, Unit<decimal>? volume_base = null)
 		{
 			// Check trade volumes and units
 			var vol_base = volume_base ?? tt.DefaultTradeVolumeBase(pair, price_q2b);
@@ -30,6 +30,7 @@ namespace CoinFlip
 			if (vol_base * price_q2b < 0m._(pair.Quote))
 				throw new Exception("Invalid trade volume (quote)");
 
+			FundId     = fund_id;
 			TradeType  = tt;
 			Pair       = pair;
 			PriceQ2B   = price_q2b;
@@ -37,13 +38,13 @@ namespace CoinFlip
 		}
 
 		/// <summary>Create a trade on 'pair' to convert 'volume_in' of 'coin_in' to 'volume_out'</summary>
-		public Trade(TradePair pair, Coin coin_in, Unit<decimal> vol_in, Unit<decimal> vol_out)
+		public Trade(string fund_id, TradePair pair, Coin coin_in, Unit<decimal> vol_in, Unit<decimal> vol_out)
 		{
+			FundId = fund_id;
 			TradeType =
 				pair.Base == coin_in ? ETradeType.B2Q :
 				pair.Quote == coin_in ? ETradeType.Q2B :
 				throw new Exception($"Currency {coin_in} is not one of {pair.Name}");
-
 			Pair       = pair;
 			PriceQ2B   = TradeType.PriceQ2B(vol_out / vol_in);
 			VolumeBase = TradeType.VolumeBase(PriceQ2B, volume_in:vol_in);
@@ -52,6 +53,7 @@ namespace CoinFlip
 		/// <summary>Copy construct a trade, with the volume scaled by 'scale'</summary>
 		public Trade(Trade rhs, decimal scale = 1m)
 		{
+			FundId     = rhs.FundId;
 			TradeType  = rhs.TradeType;
 			Pair       = rhs.Pair;
 			PriceQ2B   = rhs.PriceQ2B;
@@ -60,12 +62,12 @@ namespace CoinFlip
 
 		/// <summary>Create a trade based on an existing position</summary>
 		public Trade(Position pos)
-			:this(pos.TradeType, pos.Pair, pos.PriceQ2B, pos.VolumeBase)
+			:this(pos.FundId, pos.TradeType, pos.Pair, pos.PriceQ2B, pos.VolumeBase)
 		{}
 
 		/// <summary>Copy constructor</summary>
 		public Trade(Trade rhs)
-			:this(rhs.TradeType, rhs.Pair, rhs.PriceQ2B, rhs.VolumeBase)
+			:this(rhs.FundId, rhs.TradeType, rhs.Pair, rhs.PriceQ2B, rhs.VolumeBase)
 		{}
 
 		/// <summary>Access the app model</summary>
@@ -74,6 +76,9 @@ namespace CoinFlip
 			get { return Pair.Exchange.Model; }
 		}
 
+		/// <summary>The fund associated with this trade</summary>
+		public string FundId { get; private set; }
+			
 		/// <summary>The trade type</summary>
 		public ETradeType TradeType
 		{
@@ -105,7 +110,7 @@ namespace CoinFlip
 		{
 			get
 			{
-				var market_price_q2b = Pair.MakeTrade(TradeType, VolumeIn).PriceQ2B;
+				var market_price_q2b = Pair.MakeTrade(FundId, TradeType, VolumeIn).PriceQ2B;
 				if (TradeType == ETradeType.Q2B)
 				{
 					return
@@ -252,7 +257,7 @@ namespace CoinFlip
 			else if (!Pair.PriceRange.Contains(PriceQ2B))
 				result |= EValidation.PriceOutOfRange;
 
-			var bal = TradeType.CoinIn(Pair).Balance;
+			var bal = TradeType.CoinIn(Pair).Balances[FundId];
 			var available = bal.Available;
 			if (reserved_balance_in != null) available += bal.Reserved(reserved_balance_in.Value);
 			if (additional_balance_in != null) available += additional_balance_in.Value;
@@ -280,7 +285,7 @@ namespace CoinFlip
 		/// <summary>Create this trade on the Exchange that owns 'Pair'</summary>
 		public TradeResult CreateOrder()
 		{
-			return Pair.Exchange.CreateOrder(TradeType, Pair, VolumeIn, Price);
+			return Pair.Exchange.CreateOrder(FundId, TradeType, Pair, VolumeIn, Price);
 		}
 
 		#region Equals

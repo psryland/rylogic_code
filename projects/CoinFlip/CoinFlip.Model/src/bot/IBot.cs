@@ -38,17 +38,28 @@ namespace CoinFlip
 
 		public IBot(string name, Model model, ISettingsData settings)
 		{
-			Name = name;
-			Model = model;
-			Settings = settings;
-			Shutdown = CancellationTokenSource.CreateLinkedTokenSource(Model.Shutdown.Token);
-			MonitoredTrades = new List<TradeResult>();
+			try
+			{
+				Name = name;
+				Model = model;
+				Settings = settings;
+				Shutdown = CancellationTokenSource.CreateLinkedTokenSource(Model.Shutdown.Token);
+				MonitoredTrades = new List<TradeResult>();
 
-			// Initialise the log for this bot instance
-			var logpath = Misc.ResolveUserPath($"Logs\\{Name}\\log.txt");
-			Path_.CreateDirs(Path_.Directory(logpath));
-			Log = new Logger(Name, new LogToFile(logpath, append:false), Model.Log);
-			Log.TimeZero = Log.TimeZero - Log.TimeZero.TimeOfDay;
+				// Initialise the log for this bot instance
+				var logpath = Misc.ResolveUserPath($"Logs\\{Name}\\log.txt");
+				Path_.CreateDirs(Path_.Directory(logpath));
+				Log = new Logger(Name, new LogToFile(logpath, append:false), Model.Log);
+				Log.TimeZero = Log.TimeZero - Log.TimeZero.TimeOfDay;
+
+				// Find the fund to use for this bot.
+				Fund = Model.Funds[Settings.FundId] ?? Model.Funds[Fund.Main];
+			}
+			catch
+			{
+				Dispose();
+				throw;
+			}
 		}
 		public void Dispose()
 		{
@@ -96,7 +107,7 @@ namespace CoinFlip
 					if (value && !Valid)
 						return;
 
-					// Start/Stop
+					// Stop
 					if (!value)
 					{
 						// Signal exit
@@ -115,6 +126,7 @@ namespace CoinFlip
 						// The bot is now inactive
 						Log.Write(ELogLevel.Debug, $"Bot '{Name}' stopped");
 					}
+					// Start
 					else
 					{
 						// The bot is now active
@@ -128,7 +140,10 @@ namespace CoinFlip
 						try { started = OnStart(); }
 						catch (Exception ex) { Log.Write(ELogLevel.Error, ex, "Unhandled Bot.OnStart exception"); }
 						if (!started)
+						{
+							//BalanceContext = null;
 							return;
+						}
 
 						// Create a cancel token
 						Shutdown = CancellationTokenSource.CreateLinkedTokenSource(Model.Shutdown.Token);
@@ -138,7 +153,7 @@ namespace CoinFlip
 					}
 				}
 				ActiveChanged.Raise(this);
-				RaisePropertyChanged(new PropertyChangedEventArgs(nameof(Active)));
+				RaisePropertyChanged(nameof(Active));
 			}
 		}
 		private int m_activating;
@@ -203,21 +218,26 @@ namespace CoinFlip
 		/// <summary>A name for the type of bot this is</summary>
 		public string Name { get; private set; }
 
-		/// <summary>The fraction of funds allocated to this bot</summary>
-		public decimal FundAllocation
+		/// <summary>The fund available to this bot</summary>
+		public Fund Fund
 		{
-			get { return Settings.FundAllocation; }
+			get { return m_fund; }
 			set
 			{
-				if (FundAllocation == value) return;
-				Settings.FundAllocation = Maths.Clamp(value, 0m, 1m);
-				RaisePropertyChanged(new PropertyChangedEventArgs(nameof(FundAllocation)));
+				if (m_fund == value) return;
+				m_fund = value;
+				if (m_fund != null)
+				{
+					Settings.FundId = m_fund.Id;
+				}
+				RaisePropertyChanged(nameof(Fund));
 			}
 		}
-		public float FundAllocationPC
+		private Fund m_fund;
+		public string FundId
 		{
-			get { return (float)FundAllocation * 100f; }
-			set { FundAllocation = (decimal)(value * 0.01f); }
+			get;
+			set;
 		}
 
 		/// <summary>The step rate of the main loop for this bot</summary>
@@ -228,7 +248,7 @@ namespace CoinFlip
 			{
 				if (StepRate == value) return;
 				Settings.StepRateMS = (int)(value * 1000);
-				RaisePropertyChanged(new PropertyChangedEventArgs(nameof(StepRate)));
+				RaisePropertyChanged(nameof(StepRate));
 			}
 		}
 
@@ -290,15 +310,22 @@ namespace CoinFlip
 				{
 					m_settings.SettingChanged += HandleSettingChanged;
 				}
+
+				// Handlers
+				void HandleSettingChanged(object sender, SettingChangedEventArgs args)
+				{
+					OnSettingChanged(args);
+					Model.Bots.ResetItem(this, ignore_missing:true);
+				}
 			}
 		}
 		private ISettingsData m_settings;
-		protected virtual void HandleSettingChanged(object sender, SettingChangedEventArgs args)
+		protected virtual void OnSettingChanged(SettingChangedEventArgs args)
 		{
 			switch (args.Key) {
-			default: RaisePropertyChanged(new PropertyChangedEventArgs(nameof(Settings))); break;
-			case nameof(ISettingsData.StepRateMS):     RaisePropertyChanged(new PropertyChangedEventArgs(nameof(StepRate))); break;
-			case nameof(ISettingsData.FundAllocation): RaisePropertyChanged(new PropertyChangedEventArgs(nameof(FundAllocation))); break;
+			default:                               RaisePropertyChanged(nameof(Settings)); break;
+			case nameof(ISettingsData.StepRateMS): RaisePropertyChanged(nameof(StepRate)); break;
+			case nameof(ISettingsData.FundId):     RaisePropertyChanged(nameof(Fund)); break;
 			}
 		}
 
@@ -323,9 +350,9 @@ namespace CoinFlip
 
 		/// <summary>Property changed notification</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
-		protected void RaisePropertyChanged(PropertyChangedEventArgs args)
+		protected void RaisePropertyChanged(string prop_name)
 		{
-			PropertyChanged.Raise(this, args);
+			PropertyChanged.Raise(this, new PropertyChangedEventArgs(prop_name));
 		}
 
 		/// <summary>Called when the bot is activated</summary>
@@ -403,8 +430,8 @@ namespace CoinFlip
 			/// <summary>The main loop step rate (approx)</summary>
 			int StepRateMS { get; set; }
 
-			/// <summary>The percentage of the balance for each currency available to this bot</summary>
-			decimal FundAllocation { get; set; }
+			/// <summary>The fund available to this bot</summary>
+			string FundId { get; set; }
 
 			/// <summary>True if the settings are valid</summary>
 			bool Valid(IBot bot);
@@ -419,13 +446,13 @@ namespace CoinFlip
 		{
 			public SettingsBase()
 			{
-				StepRateMS     = 1000;
-				FundAllocation = 0m;
+				StepRateMS = 1000;
+				FundId     = Fund.Main;
 			}
 			public SettingsBase(SettingsBase<T> rhs)
 			{
-				StepRateMS     = rhs.StepRateMS;
-				FundAllocation = rhs.FundAllocation;
+				StepRateMS = rhs.StepRateMS;
+				FundId     = rhs.FundId;
 			}
 			public SettingsBase(XElement node)
 				:base(node)
@@ -438,11 +465,11 @@ namespace CoinFlip
 				set { set(nameof(StepRateMS), value); }
 			}
 
-			/// <summary>The percentage of the balance for each currency available to this bot</summary>
-			public decimal FundAllocation
+			/// <summary>The fund available to this bot</summary>
+			public string FundId
 			{
-				get { return get<decimal>(nameof(FundAllocation)); }
-				set { set(nameof(FundAllocation), value); }
+				get { return get<string>(nameof(FundId)); }
+				set { set(nameof(FundId), value); }
 			}
 
 			/// <summary>Returns true if the settings are valid</summary>
@@ -455,6 +482,7 @@ namespace CoinFlip
 			public virtual string ErrorDescription
 			{
 				get { return string.Empty; }
+				protected set { }
 			}
 		}
 	}

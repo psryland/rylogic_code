@@ -218,13 +218,13 @@ namespace CoinFlip
 		/// If there is insufficient liquidity, returns the amount traded from what was available.
 		/// Also returns the price at which the conversion would happen.
 		/// Use 'volume' = 0 to get the spot price</summary>
-		public Trade BaseToQuote(Unit<decimal> volume)
+		public Trade BaseToQuote(string fund_id, Unit<decimal> volume)
 		{
 			if (volume < 0m._(Base))
 				throw new Exception("Invalid volume");
 
 			// Determine the best price and volume in quote currency.
-			var trade = new Trade(ETradeType.B2Q, this, 0m._(RateUnits), 0m._(Base));
+			var trade = new Trade(fund_id, ETradeType.B2Q, this, 0m._(RateUnits), 0m._(Base));
 			foreach (var x in B2Q)
 			{
 				if (x.VolumeBase > volume)
@@ -250,7 +250,7 @@ namespace CoinFlip
 		/// If there is insufficient liquidity, returns the amount traded from what was available.
 		/// Also returns the price at which the conversion would happen.
 		/// Use 'volume' = 0 to get the spot price</summary>
-		public Trade QuoteToBase(Unit<decimal> volume)
+		public Trade QuoteToBase(string fund_id, Unit<decimal> volume)
 		{
 			if (volume < 0m._(Quote))
 				throw new Exception("Invalid volume");
@@ -258,7 +258,7 @@ namespace CoinFlip
 			// Determine the best price and volume in base currency
 			// Note, the units are not the typical units for an order because
 			// I'm just using 'Order' to pass back a price and volume pair.
-			var trade = new Trade(ETradeType.Q2B, this, 0m._(RateUnits), 0m._(Base));
+			var trade = new Trade(fund_id, ETradeType.Q2B, this, 0m._(RateUnits), 0m._(Base));
 			foreach (var x in Q2B)
 			{
 				if (x.Price * x.VolumeBase > volume)
@@ -280,11 +280,11 @@ namespace CoinFlip
 		}
 
 		/// <summary>Convert a volume of currency using the available orders. e.g. Q2B => 'volume' in Quote, out in 'Base'</summary>
-		public Trade MakeTrade(ETradeType tt, Unit<decimal> volume)
+		public Trade MakeTrade(string fund_id, ETradeType tt, Unit<decimal> volume)
 		{
 			return
-				tt == ETradeType.Q2B ? QuoteToBase(volume) :
-				tt == ETradeType.B2Q ? BaseToQuote(volume) :
+				tt == ETradeType.Q2B ? QuoteToBase(fund_id, volume) :
+				tt == ETradeType.B2Q ? BaseToQuote(fund_id, volume) :
 				throw new Exception("Unknown trade type");
 		}
 

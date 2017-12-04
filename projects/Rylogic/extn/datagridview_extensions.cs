@@ -1391,9 +1391,9 @@ namespace pr.extn
 					StartPosition = FormStartPosition.Manual;
 					ShowInTaskbar = false;
 					Size = new Size(10,10);
-					Ofs = new Size(10, 5);
+					Ofs = new Size(0, 5);
 					Owner = owner;
-					Region = Gfx_.MakeRegion(0,0, Ofs.Width,Ofs.Height, 0,Ofs.Height*2);
+					Region = Gfx_.MakeRegion(Size.Width,Size.Height,  Ofs.Width,Ofs.Height,  Size.Width,0);
 					CreateHandle();
 				}
 				protected override CreateParams CreateParams
@@ -1403,7 +1403,7 @@ namespace pr.extn
 						var cp = base.CreateParams;
 						cp.ClassStyle |= Win32.CS_DROPSHADOW;
 						cp.Style &= ~Win32.WS_VISIBLE;
-						cp.ExStyle |= Win32.WS_EX_NOACTIVATE;// | Win32.WS_EX_LAYERED | Win32.WS_EX_TRANSPARENT;
+						cp.ExStyle |= Win32.WS_EX_NOACTIVATE;
 						return cp;
 					}
 				}

@@ -92,7 +92,7 @@ namespace Bot.PriceSwing
 				{
 					Settings.PairWithExchange = m_pair.NameWithExchange;
 				}
-				RaisePropertyChanged(new PropertyChangedEventArgs(nameof(Pair)));
+				RaisePropertyChanged(nameof(Pair));
 			}
 		}
 		private TradePair m_pair;
@@ -201,7 +201,7 @@ namespace Bot.PriceSwing
 					var dprice = threshold;
 					foreach (var r in trade_records)
 					{
-						var dp = Pair.MakeTrade(tt, r.VolumeOut).Price - r.PriceInv;
+						var dp = Pair.MakeTrade(Fund.Id, tt, r.VolumeOut).Price - r.PriceInv;
 						if (dp < dprice) continue;
 						dprice = dp;
 						rec = r;
@@ -222,13 +222,15 @@ namespace Bot.PriceSwing
 					return;
 
 				// Get the volume to trade (reduced to allow for fees and rounding)
+				var base_avail  = Pair.Base .Balances[Fund].Available * (1m - Pair.Fee) * 0.99999m;
+				var quote_avail = Pair.Quote.Balances[Fund].Available * (1m - Pair.Fee) * 0.99999m;
 				var vol = 
-					tt == ETradeType.B2Q ? Maths.Min((decimal)Settings.VolumeFrac * Settings.FundAllocation * Pair.Base .Balance.Available * (1m - Pair.Fee) * 0.99999m, Pair.Base .AutoTradeLimit) :
-					tt == ETradeType.Q2B ? Maths.Min((decimal)Settings.VolumeFrac * Settings.FundAllocation * Pair.Quote.Balance.Available * (1m - Pair.Fee) * 0.99999m, Pair.Quote.AutoTradeLimit) :
+					tt == ETradeType.B2Q ? Maths.Min((decimal)Settings.VolumeFrac * base_avail , Pair.Base .AutoTradeLimit) :
+					tt == ETradeType.Q2B ? Maths.Min((decimal)Settings.VolumeFrac * quote_avail, Pair.Quote.AutoTradeLimit) :
 					0;
 
 				// Get the price that we can trade 'vol' in the direction of 'tt' for
-				var trade = Pair.MakeTrade(tt, vol);
+				var trade = Pair.MakeTrade(Fund.Id, tt, vol);
 
 				// Determine the required price distance from other existing or pending trades
 				var threshold = spot.Value * (decimal)Settings.PriceChangeFrac;
@@ -264,8 +266,8 @@ namespace Bot.PriceSwing
 		{
 			// Create the matching trade
 			var trade =
-				rec.TradeType == ETradeType.B2Q ? Pair.QuoteToBase(rec.VolumeOut) :
-				rec.TradeType == ETradeType.Q2B ? Pair.BaseToQuote(rec.VolumeOut) :
+				rec.TradeType == ETradeType.B2Q ? Pair.QuoteToBase(Fund.Id, rec.VolumeOut) :
+				rec.TradeType == ETradeType.Q2B ? Pair.BaseToQuote(Fund.Id, rec.VolumeOut) :
 				(Trade)null;
 
 			// Place the trade
