@@ -41,6 +41,8 @@ namespace CoinFlip
 		private ToolStripButton m_btn_vert_line;
 		private ToolStripButton m_chk_show_trade_history;
 		private ImageList m_il_toolbar_btns;
+		private ToolStripLabel m_lbl_exchange;
+		private ToolStripComboBox m_cb_exchange;
 		private ToolStripButton m_btn_trend_line;
 		#endregion
 
@@ -310,6 +312,19 @@ namespace CoinFlip
 		{
 			#region Instrument Tool bar
 			
+			// Combo for choosing the exchange providing the source data
+			UpdateAvailableExchanges();
+			m_cb_exchange.ToolTipText = "Select the exchange to receive chart data from";
+			m_cb_exchange.ComboBox.DisplayProperty = nameof(Exchange.Name);
+			m_cb_exchange.ComboBox.DropDown += (s,a) =>
+			{
+				UpdateAvailableExchanges();
+			};
+			m_cb_exchange.ComboBox.DropDownClosed += (s,a) =>
+			{
+				UpdateAvailablePairs();
+			};
+
 			// Combo for choosing the pair to display
 			UpdateAvailablePairs();
 			m_cb_pair.ToolTipText = "Select the currency pair to display";
@@ -516,10 +531,34 @@ namespace CoinFlip
 			}
 		}
 
-		/// <summary>The pairs with chart data available</summary>
+		/// <summary>The exchanges that provide chart data</summary>
+		private IEnumerable<Exchange> AvailableExchanges
+		{
+			get { return Model.TradingExchanges.Where(x => x.EnumAvailableCandleData().Any()); }
+		}
+		private void UpdateAvailableExchanges()
+		{
+			using (m_cb_exchange.ComboBox.PreserveSelectedItem())
+			using (Scope.Create(() => ++m_in_update_available_exchanges, () => --m_in_update_available_exchanges))
+			{
+				m_cb_exchange.ComboBox.Items.Sync(AvailableExchanges);
+				m_cb_exchange.ComboBox.Items.Sort();
+			}
+			if (Instrument != null && m_cb_exchange.ComboBox.SelectedItem == null)
+				m_cb_exchange.ComboBox.SelectedItem = Instrument.Exchange;
+		}
+		private int m_in_update_available_exchanges;
+
+		/// <summary>The pairs on the selected exchange with chart data available</summary>
 		private IEnumerable<TradePair> AvailablePairs
 		{
-			get { return Model.Pairs.Where(x => x.Exchange.CandleDataAvailable(x).Any()); }
+			get
+			{
+				var exch = m_cb_exchange.SelectedItem as Exchange;
+				if (exch == null) yield break;
+				foreach (var cd in exch.EnumAvailableCandleData())
+					yield return cd.Pair;
+			}
 		}
 		private void UpdateAvailablePairs()
 		{
@@ -539,12 +578,12 @@ namespace CoinFlip
 		{
 			get
 			{
+				var exch = m_cb_exchange.SelectedItem as Exchange;
 				var pair = m_cb_pair.SelectedItem as TradePair;
-				var exch = pair?.Exchange;
 				yield return ETimeFrame.None;
-				if (exch == null) yield break;
-				foreach (var tf in exch.CandleDataAvailable(pair))
-					yield return tf;
+				if (exch == null || pair == null) yield break;
+				foreach (var cd in exch.EnumAvailableCandleData(pair))
+					yield return cd.TimeFrame;
 			}
 		}
 		private void UpdateAvailableTimeFrames()
@@ -555,13 +594,13 @@ namespace CoinFlip
 				m_cb_time_frame.ComboBox.Items.Sync(AvailableTimeFrames);
 				m_cb_time_frame.ComboBox.Items.Sort();
 			}
-			if (Instrument != null && (ETimeFrame)m_cb_time_frame.ComboBox.SelectedItem == ETimeFrame.None)
+			if (Instrument != null && (ETimeFrame?)m_cb_time_frame.ComboBox.SelectedItem == ETimeFrame.None)
 				m_cb_time_frame.ComboBox.SelectedItem = Instrument.TimeFrame;
 		}
 		private int m_in_update_time_frames;
 
 		/// <summary>Get positions on the instrument displayed in this chart</summary>
-		private IEnumerable<Position> AllPositions
+		private IEnumerable<Order> AllPositions
 		{
 			get
 			{
@@ -572,7 +611,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Get history on the instrument displayed in this chart</summary>
-		private IEnumerable<PositionFill> AllHistory
+		private IEnumerable<OrderFill> AllHistory
 		{
 			get
 			{
@@ -583,7 +622,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Get positions on the instrument displayed in this chart</summary>
-		private IEnumerable<Position> VisiblePositions
+		private IEnumerable<Order> VisiblePositions
 		{
 			get
 			{
@@ -603,7 +642,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Get history on the instrument displayed in this chart</summary>
-		private IEnumerable<PositionFill> VisibleHistory
+		private IEnumerable<OrderFill> VisibleHistory
 		{
 			get
 			{
@@ -1636,7 +1675,7 @@ namespace CoinFlip
 			}
 
 			/// <summary>Get the graphics for the given position</summary>
-			public View3d.Object Get(Position pos)
+			public View3d.Object Get(Order pos)
 			{
 				var instrument = m_chart.Instrument;
 
@@ -1675,7 +1714,7 @@ namespace CoinFlip
 			}
 
 			/// <summary>Get the graphics for the given position fill</summary>
-			public View3d.Object Get(PositionFill his)
+			public View3d.Object Get(OrderFill his)
 			{
 				var instrument = m_chart.Instrument;
 
@@ -1829,6 +1868,11 @@ namespace CoinFlip
 			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ChartUI));
 			this.m_tsc = new pr.gui.ToolStripContainer();
+			this.m_ts_drawing = new System.Windows.Forms.ToolStrip();
+			this.m_lbl_drawing_tools = new System.Windows.Forms.ToolStripLabel();
+			this.m_btn_horz_line = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_vert_line = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_trend_line = new System.Windows.Forms.ToolStripButton();
 			this.m_ts = new System.Windows.Forms.ToolStrip();
 			this.m_lbl_pair = new System.Windows.Forms.ToolStripLabel();
 			this.m_cb_pair = new pr.gui.ToolStripComboBox();
@@ -1839,16 +1883,13 @@ namespace CoinFlip
 			this.m_chk_show_positions = new System.Windows.Forms.ToolStripButton();
 			this.m_chk_show_trade_history = new System.Windows.Forms.ToolStripButton();
 			this.m_chk_show_depth = new System.Windows.Forms.ToolStripButton();
-			this.m_ts_drawing = new System.Windows.Forms.ToolStrip();
-			this.m_lbl_drawing_tools = new System.Windows.Forms.ToolStripLabel();
-			this.m_btn_horz_line = new System.Windows.Forms.ToolStripButton();
-			this.m_btn_vert_line = new System.Windows.Forms.ToolStripButton();
-			this.m_btn_trend_line = new System.Windows.Forms.ToolStripButton();
 			this.m_il_toolbar_btns = new System.Windows.Forms.ImageList(this.components);
+			this.m_lbl_exchange = new System.Windows.Forms.ToolStripLabel();
+			this.m_cb_exchange = new pr.gui.ToolStripComboBox();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();
-			this.m_ts.SuspendLayout();
 			this.m_ts_drawing.SuspendLayout();
+			this.m_ts.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// m_tsc
@@ -1856,7 +1897,7 @@ namespace CoinFlip
 			// 
 			// m_tsc.ContentPanel
 			// 
-			this.m_tsc.ContentPanel.Size = new System.Drawing.Size(766, 711);
+			this.m_tsc.ContentPanel.Size = new System.Drawing.Size(766, 686);
 			this.m_tsc.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_tsc.Location = new System.Drawing.Point(0, 0);
 			this.m_tsc.Name = "m_tsc";
@@ -1866,13 +1907,61 @@ namespace CoinFlip
 			// 
 			// m_tsc.TopToolStripPanel
 			// 
-			this.m_tsc.TopToolStripPanel.Controls.Add(this.m_ts_drawing);
 			this.m_tsc.TopToolStripPanel.Controls.Add(this.m_ts);
+			this.m_tsc.TopToolStripPanel.Controls.Add(this.m_ts_drawing);
+			// 
+			// m_ts_drawing
+			// 
+			this.m_ts_drawing.Dock = System.Windows.Forms.DockStyle.None;
+			this.m_ts_drawing.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_lbl_drawing_tools,
+            this.m_btn_horz_line,
+            this.m_btn_vert_line,
+            this.m_btn_trend_line});
+			this.m_ts_drawing.Location = new System.Drawing.Point(32, 0);
+			this.m_ts_drawing.Name = "m_ts_drawing";
+			this.m_ts_drawing.Size = new System.Drawing.Size(118, 25);
+			this.m_ts_drawing.TabIndex = 1;
+			// 
+			// m_lbl_drawing_tools
+			// 
+			this.m_lbl_drawing_tools.Name = "m_lbl_drawing_tools";
+			this.m_lbl_drawing_tools.Size = new System.Drawing.Size(37, 22);
+			this.m_lbl_drawing_tools.Text = "Draw:";
+			// 
+			// m_btn_horz_line
+			// 
+			this.m_btn_horz_line.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_horz_line.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_horz_line.Image")));
+			this.m_btn_horz_line.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_horz_line.Name = "m_btn_horz_line";
+			this.m_btn_horz_line.Size = new System.Drawing.Size(23, 22);
+			this.m_btn_horz_line.Text = "Horizontal Line";
+			// 
+			// m_btn_vert_line
+			// 
+			this.m_btn_vert_line.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_vert_line.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_vert_line.Image")));
+			this.m_btn_vert_line.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_vert_line.Name = "m_btn_vert_line";
+			this.m_btn_vert_line.Size = new System.Drawing.Size(23, 22);
+			this.m_btn_vert_line.Text = "Vertical Line";
+			// 
+			// m_btn_trend_line
+			// 
+			this.m_btn_trend_line.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.m_btn_trend_line.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_trend_line.Image")));
+			this.m_btn_trend_line.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_trend_line.Name = "m_btn_trend_line";
+			this.m_btn_trend_line.Size = new System.Drawing.Size(23, 22);
+			this.m_btn_trend_line.Text = "Trend Line";
 			// 
 			// m_ts
 			// 
 			this.m_ts.Dock = System.Windows.Forms.DockStyle.None;
 			this.m_ts.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_lbl_exchange,
+            this.m_cb_exchange,
             this.m_lbl_pair,
             this.m_cb_pair,
             this.m_sep0,
@@ -1882,9 +1971,9 @@ namespace CoinFlip
             this.m_chk_show_positions,
             this.m_chk_show_trade_history,
             this.m_chk_show_depth});
-			this.m_ts.Location = new System.Drawing.Point(3, 0);
+			this.m_ts.Location = new System.Drawing.Point(3, 25);
 			this.m_ts.Name = "m_ts";
-			this.m_ts.Size = new System.Drawing.Size(387, 26);
+			this.m_ts.Size = new System.Drawing.Size(599, 26);
 			this.m_ts.TabIndex = 0;
 			// 
 			// m_lbl_pair
@@ -1958,52 +2047,6 @@ namespace CoinFlip
 			this.m_chk_show_depth.Size = new System.Drawing.Size(23, 23);
 			this.m_chk_show_depth.Text = "Show Market Depth";
 			// 
-			// m_ts_drawing
-			// 
-			this.m_ts_drawing.Dock = System.Windows.Forms.DockStyle.None;
-			this.m_ts_drawing.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_lbl_drawing_tools,
-            this.m_btn_horz_line,
-            this.m_btn_vert_line,
-            this.m_btn_trend_line});
-			this.m_ts_drawing.Location = new System.Drawing.Point(391, 0);
-			this.m_ts_drawing.Name = "m_ts_drawing";
-			this.m_ts_drawing.Size = new System.Drawing.Size(149, 25);
-			this.m_ts_drawing.TabIndex = 1;
-			// 
-			// m_lbl_drawing_tools
-			// 
-			this.m_lbl_drawing_tools.Name = "m_lbl_drawing_tools";
-			this.m_lbl_drawing_tools.Size = new System.Drawing.Size(37, 22);
-			this.m_lbl_drawing_tools.Text = "Draw:";
-			// 
-			// m_btn_horz_line
-			// 
-			this.m_btn_horz_line.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_horz_line.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_horz_line.Image")));
-			this.m_btn_horz_line.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.m_btn_horz_line.Name = "m_btn_horz_line";
-			this.m_btn_horz_line.Size = new System.Drawing.Size(23, 22);
-			this.m_btn_horz_line.Text = "Horizontal Line";
-			// 
-			// m_btn_vert_line
-			// 
-			this.m_btn_vert_line.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_vert_line.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_vert_line.Image")));
-			this.m_btn_vert_line.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.m_btn_vert_line.Name = "m_btn_vert_line";
-			this.m_btn_vert_line.Size = new System.Drawing.Size(23, 22);
-			this.m_btn_vert_line.Text = "Vertical Line";
-			// 
-			// m_btn_trend_line
-			// 
-			this.m_btn_trend_line.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_trend_line.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_trend_line.Image")));
-			this.m_btn_trend_line.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.m_btn_trend_line.Name = "m_btn_trend_line";
-			this.m_btn_trend_line.Size = new System.Drawing.Size(23, 22);
-			this.m_btn_trend_line.Text = "Trend Line";
-			// 
 			// m_il_toolbar_btns
 			// 
 			this.m_il_toolbar_btns.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("m_il_toolbar_btns.ImageStream")));
@@ -2014,6 +2057,22 @@ namespace CoinFlip
 			this.m_il_toolbar_btns.Images.SetKeyName(3, "clock_back_1.png");
 			this.m_il_toolbar_btns.Images.SetKeyName(4, "clock_back_all.png");
 			// 
+			// m_lbl_exchange
+			// 
+			this.m_lbl_exchange.Name = "m_lbl_exchange";
+			this.m_lbl_exchange.Size = new System.Drawing.Size(60, 23);
+			this.m_lbl_exchange.Text = "Exchange:";
+			// 
+			// m_cb_exchange
+			// 
+			this.m_cb_exchange.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+			this.m_cb_exchange.FlatStyle = System.Windows.Forms.FlatStyle.Standard;
+			this.m_cb_exchange.Name = "m_cb_exchange";
+			this.m_cb_exchange.SelectedIndex = -1;
+			this.m_cb_exchange.SelectedItem = null;
+			this.m_cb_exchange.SelectedText = "";
+			this.m_cb_exchange.Size = new System.Drawing.Size(121, 23);
+			// 
 			// ChartUI
 			// 
 			this.Controls.Add(this.m_tsc);
@@ -2023,10 +2082,10 @@ namespace CoinFlip
 			this.m_tsc.TopToolStripPanel.PerformLayout();
 			this.m_tsc.ResumeLayout(false);
 			this.m_tsc.PerformLayout();
-			this.m_ts.ResumeLayout(false);
-			this.m_ts.PerformLayout();
 			this.m_ts_drawing.ResumeLayout(false);
 			this.m_ts_drawing.PerformLayout();
+			this.m_ts.ResumeLayout(false);
+			this.m_ts.PerformLayout();
 			this.ResumeLayout(false);
 
 		}

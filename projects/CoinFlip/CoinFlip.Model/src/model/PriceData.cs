@@ -18,7 +18,7 @@ namespace CoinFlip
 		// - PriceData represents a single pair and TimeFrame on an exchange.
 		// - It reads candle data from the exchange (or from the DB in back testing)
 		//   and writes it into a DB.
-		// - Use 'Instrument' to view these data
+		// - Use an 'Instrument' to view these data
 
 		public PriceData(Model model, TradePair pair, ETimeFrame time_frame)
 		{
@@ -283,7 +283,7 @@ namespace CoinFlip
 				if (value && Model.BackTesting)
 					throw new Exception("Update thread should not be activated while back-testing");
 
-				if (UpdateThreadActive)
+				if (m_update_thread != null)
 				{
 					m_update_thread_exit.Set();
 					m_update_thread_cancel.Cancel();
@@ -293,24 +293,17 @@ namespace CoinFlip
 					Util.Dispose(ref m_update_thread_exit);
 					Util.Dispose(ref m_update_thread_cancel);
 				}
-
-				// Create the worker thread
-				m_update_thread = null;
-				if (value)
+				var parms = new UpdateThreadData
 				{
-					var x = new UpdateThreadData
-					{
-						Pair = Pair,
-						Exchange = Pair.Exchange,
-						TimeFrame = TimeFrame,
-						StartTimestamp = Count != 0 ? Newest.Timestamp : DateTimeOffset_.UnixEpoch.Ticks,
-						UpdatePeriod = TimeSpan.FromMilliseconds(Model.Settings.PriceDataUpdatePeriodMS),
-						Cancel = m_update_thread_cancel = CancellationTokenSource.CreateLinkedTokenSource(Model.Shutdown.Token),
-					};
-					m_update_thread = new Thread(() => UpdateThreadEntryPoint(x));
-				}
-
-				if (UpdateThreadActive)
+					Pair = Pair,
+					Exchange = Pair.Exchange,
+					TimeFrame = TimeFrame,
+					StartTimestamp = Count != 0 ? Newest.Timestamp : DateTimeOffset_.UnixEpoch.Ticks,
+					UpdatePeriod = TimeSpan.FromMilliseconds(Model.Settings.PriceDataUpdatePeriodMS),
+					Cancel = m_update_thread_cancel = CancellationTokenSource.CreateLinkedTokenSource(Model.Shutdown.Token),
+				};
+				m_update_thread = value ? new Thread(() => UpdateThreadEntryPoint(parms)) : null;
+				if (m_update_thread != null)
 				{
 					m_update_thread_exit = new ManualResetEvent(false);
 					m_update_thread.Start();
@@ -327,39 +320,36 @@ namespace CoinFlip
 						Thread.CurrentThread.Name = $"{SymbolCode} PriceData Update";
 						Model.Log.Write(ELogLevel.Debug, $"PriceData {SymbolCode} update thread started");
 
-						using (var db = new Sqlite.Database(DBFilepath))
+						var end = args.StartTimestamp;
+						for (;;)
 						{
-							var end = args.StartTimestamp;
-							for (; !m_update_thread_exit.IsSignalled(); )
+							if (m_update_thread_exit.WaitOne(args.UpdatePeriod))
+								break;
+
+							// Query for chart data
+							var data = args.Exchange.CandleData(args.Pair, args.TimeFrame, end, DateTimeOffset.Now.Ticks, args.Cancel.Token);
+							if (data == null || data.Count == 0)
+								continue;
+
+							// Update the end time range to include the returned data
+							end = data.Back().Timestamp;
+
+							// Add the received data to the database
+							Model.RunOnGuiThread(() =>
 							{
-								if (m_update_thread_exit.WaitOne(args.UpdatePeriod))
-									continue;
+								if (!UpdateThreadActive)
+									return;
 
-								// Query for chart data
-								var data = args.Exchange.CandleData(args.Pair, args.TimeFrame, end, DateTimeOffset.Now.Ticks, args.Cancel.Token);
-								if (data == null || data.Count == 0)
-									continue;
+								var data_syncing = DataSyncing;
+								if (data.Count == 1)
+									Add(args.TimeFrame, data[0]);
+								else
+									Add(args.TimeFrame, data);
 
-								// Update the end time range to include the returned data
-								end = data.Back().Timestamp;
-
-								// Add the received data to the database
-								Model.RunOnGuiThread(() =>
-								{
-									if (!UpdateThreadActive)
-										return;
-
-									var data_syncing = DataSyncing;
-									if (data.Count == 1)
-										Add(args.TimeFrame, data[0]);
-									else
-										Add(args.TimeFrame, data);
-
-									// Raise the event if 'DataSyncing' has changed
-									if (data_syncing != DataSyncing)
-										DataSyncingChanged.Raise(this);
-								});
-							}
+								// Raise the event if 'DataSyncing' has changed
+								if (data_syncing != DataSyncing)
+									DataSyncingChanged.Raise(this);
+							});
 						}
 						Model.Log.Write(ELogLevel.Debug, $"PriceData {SymbolCode} update thread stopped");
 					}

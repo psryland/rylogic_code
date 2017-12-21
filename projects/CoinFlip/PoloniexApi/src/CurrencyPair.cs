@@ -8,8 +8,8 @@ namespace Poloniex.API
 	{
 		public CurrencyPair(string base_, string quote)
 		{
-			Base = base_;
-			Quote = quote;
+			Base  = base_.ToUpperInvariant();
+			Quote = quote.ToUpperInvariant();
 		}
 
 		/// <summary>The base currency</summary>

@@ -391,7 +391,7 @@ namespace CoinFlip
 				var exch = res.Pair.Exchange;
 
 				// Check that the position still exists on the exchange.
-				var pos = exch.Positions[res.OrderId];
+				var pos = exch.Orders[res.OrderId];
 				if (pos != null)
 					continue;
 
@@ -415,7 +415,7 @@ namespace CoinFlip
 				MonitoredTrades.Remove(res);
 			}
 		}
-		protected virtual void OnPositionFilled(ulong order_id, PositionFill his)
+		protected virtual void OnPositionFilled(ulong order_id, OrderFill his)
 		{
 			Log.Write(ELogLevel.Debug, $"Order filled. id={order_id} {his?.Description ?? string.Empty}");
 		}

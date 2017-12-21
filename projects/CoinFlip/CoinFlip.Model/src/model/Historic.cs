@@ -28,7 +28,7 @@ namespace CoinFlip
 			Created         = created;
 			Updated         = updated;
 		}
-		public Historic(ulong trade_id, Position pos, DateTimeOffset updated)
+		public Historic(ulong trade_id, Order pos, DateTimeOffset updated)
 			:this(pos.OrderId, trade_id, pos.Pair, pos.TradeType, pos.PriceQ2B, pos.VolumeBase, pos.VolumeQuote * pos.Exchange.Fee, pos.Created.Value, updated)
 		{}
 		public Historic(Historic rhs)

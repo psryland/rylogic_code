@@ -31,7 +31,7 @@ namespace CoinFlip
 		public OrderBook Q2B { [DebuggerStepThrough] get; private set; }
 
 		/// <summary>Update the list of buy/sell orders</summary>
-		public void UpdateOrderBook(IEnumerable<Order> b2q, IEnumerable<Order> q2b)
+		public void UpdateOrderBook(IEnumerable<OrderBook.Offer> b2q, IEnumerable<OrderBook.Offer> q2b)
 		{
 			using (B2Q.Orders.SuspendEvents(reset_bindings_on_resume: true))
 			{
@@ -86,11 +86,11 @@ namespace CoinFlip
 
 	/// <summary>Depth of market (one side, buy or sell). The available trades ordered by price. (Increasing for Ask, Decreasing for Bid).</summary>
 	[DebuggerDisplay("{Description,nq}")]
-	public class OrderBook :IEnumerable<Order>
+	public class OrderBook :IEnumerable<OrderBook.Offer>
 	{
 		public OrderBook(Coin base_, Coin quote, ETradeType tt)
 		{
-			Orders = new BindingListEx<Order>();
+			Orders = new BindingListEx<Offer>();
 			Base = base_;
 			Quote = quote;
 			TradeType = tt;
@@ -99,7 +99,7 @@ namespace CoinFlip
 		{
 			Base = rhs.Base;
 			Quote = rhs.Quote;
-			Orders = new BindingListEx<Order>((IEnumerable<Order>)rhs.Orders);
+			Orders = new BindingListEx<Offer>((IEnumerable<Offer>)rhs.Orders);
 			TradeType = rhs.TradeType;
 		}
 
@@ -110,7 +110,7 @@ namespace CoinFlip
 		public Coin Quote { get; private set; }
 
 		/// <summary>The buy/sell offers</summary>
-		public BindingListEx<Order> Orders { get; private set; }
+		public BindingListEx<Offer> Orders { get; private set; }
 
 		/// <summary>The trade direction of offer in this order book. E.g. B2Q means offers to convert Base to Quote</summary>
 		public ETradeType TradeType { get; private set; }
@@ -130,16 +130,16 @@ namespace CoinFlip
 			Orders.Clear();
 		}
 
-		/// <summary>Add an order to the depth of market</summary>
-		public void Add(Order order, bool validate = true)
+		/// <summary>Add an offer to the depth of market</summary>
+		public void Add(Offer offer, bool validate = true)
 		{
-			Debug.Assert(!validate || order.VolumeBase != 0m._(Base));
-			Debug.Assert(!validate || order.VolumeBase * order.Price != 0m._(Quote));
-			Orders.Add(order);
+			Debug.Assert(!validate || offer.VolumeBase != 0m._(Base));
+			Debug.Assert(!validate || offer.VolumeBase * offer.Price != 0m._(Quote));
+			Orders.Add(offer);
 		}
 
 		/// <summary>Array access</summary>
-		public Order this[int index]
+		public Offer this[int index]
 		{
 			get { return Orders[index]; }
 		}
@@ -148,7 +148,7 @@ namespace CoinFlip
 		/// Consume orders up to 'price' or 'volume' (simulating them being filled).
 		/// 'pair' is the trade pair that this OrderBook is associated with.
 		/// Returns the orders that were consumed. 'volume_remaining' is what remains unfilled</summary>
-		public IList<Order> Consume(TradePair pair, Unit<decimal> price, Unit<decimal> volume, out Unit<decimal> volume_remaining)
+		public IList<Offer> Consume(TradePair pair, Unit<decimal> price, Unit<decimal> volume, out Unit<decimal> volume_remaining)
 		{
 			// Note: Have to be careful not to leave behind volumes that are less than the allowable limits for 'pair'
 			volume_remaining = volume;
@@ -184,8 +184,8 @@ namespace CoinFlip
 				var rem = Orders[0].VolumeBase - volume_remaining;
 				if (pair.VolumeRangeBase.Contains(rem) && pair.VolumeRangeQuote.Contains(rem * Orders[0].Price))
 				{
-					consumed.Add(new Order(Orders[0].Price, volume_remaining));
-					Orders[0] = new Order(Orders[0].Price, rem);
+					consumed.Add(new Offer(Orders[0].Price, volume_remaining));
+					Orders[0] = new Offer(Orders[0].Price, rem);
 					volume_remaining = 0m._(volume);
 				}
 			}
@@ -210,7 +210,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Enumerable Orders</summary>
-		public IEnumerator<Order> GetEnumerator()
+		public IEnumerator<Offer> GetEnumerator()
 		{
 			return Orders.GetEnumerator();
 		}
@@ -218,46 +218,46 @@ namespace CoinFlip
 		{
 			return GetEnumerator();
 		}
-	}
 
-	/// <summary>A single trade offer</summary>
-	[DebuggerDisplay("Price={Price} Vol={VolumeBase}")]
-	public struct Order :IComparable<Order>
-	{
-		public Order(Unit<decimal> price, Unit<decimal> volume)
+		/// <summary>A single trade offer</summary>
+		[DebuggerDisplay("Price={Price} Vol={VolumeBase}")]
+		public struct Offer :IComparable<Offer>
 		{
-			Price = price;
-			VolumeBase = volume;
-		}
+			public Offer(Unit<decimal> price, Unit<decimal> volume)
+			{
+				Price = price;
+				VolumeBase = volume;
+			}
 
-		/// <summary>The price (to buy or sell) (in Quote/Base)</summary>
-		public Unit<decimal> Price { get; set; }
+			/// <summary>The price (to buy or sell) (in Quote/Base)</summary>
+			public Unit<decimal> Price { get; set; }
 
-		/// <summary>The volume (in base currency)</summary>
-		public Unit<decimal> VolumeBase { get; set; }
+			/// <summary>The volume (in base currency)</summary>
+			public Unit<decimal> VolumeBase { get; set; }
 
-		/// <summary>The volume (in quote currency)</summary>
-		public Unit<decimal> VolumeQuote { get { return VolumeBase * Price; } }
+			/// <summary>The volume (in quote currency)</summary>
+			public Unit<decimal> VolumeQuote { get { return VolumeBase * Price; } }
 
-		/// <summary>Orders are compared by price</summary>
-		public int CompareTo(Order rhs)
-		{
-			return Price.CompareTo(rhs.Price);
-		}
+			/// <summary>Orders are compared by price</summary>
+			public int CompareTo(Offer rhs)
+			{
+				return Price.CompareTo(rhs.Price);
+			}
 
-		/// <summary>Check this order against the limits given in 'pair'</summary>
-		public bool Validate(TradePair pair)
-		{
-			if (Price <= 0m)
-				return false;
+			/// <summary>Check this order against the limits given in 'pair'</summary>
+			public bool Validate(TradePair pair)
+			{
+				if (Price <= 0m)
+					return false;
 
-			if (!pair.VolumeRangeBase.Contains(VolumeBase))
-				return false;
+				if (!pair.VolumeRangeBase.Contains(VolumeBase))
+					return false;
 
-			if (!pair.VolumeRangeQuote.Contains(VolumeQuote))
-				return false;
+				if (!pair.VolumeRangeQuote.Contains(VolumeQuote))
+					return false;
 
-			return true;
+				return true;
+			}
 		}
 	}
 }

@@ -22,8 +22,8 @@ namespace CoinFlip
 
 		private readonly LazyDictionary<TradePair, PriceData> m_src;
 		private readonly LazyDictionary<TradePair, MarketDepth> m_depth;
-		private readonly LazyDictionary<ulong, Position> m_pos;
-		private readonly LazyDictionary<ulong, PositionFill> m_his;
+		private readonly LazyDictionary<ulong, Order> m_pos;
+		private readonly LazyDictionary<ulong, OrderFill> m_his;
 		private readonly LazyDictionary<Coin, FundBalance> m_bal;
 		private readonly LazyDictionary<string, Unit<decimal>> m_initial_bal;
 		private Random m_rng;
@@ -41,8 +41,8 @@ namespace CoinFlip
 				Exch    = exch;
 				m_src   = new LazyDictionary<TradePair, PriceData>(k => null);
 				m_depth = new LazyDictionary<TradePair, MarketDepth>(k => new MarketDepth(k.Base, k.Quote));
-				m_pos   = new LazyDictionary<ulong, Position>(k => null);
-				m_his   = new LazyDictionary<ulong, PositionFill>(k => null);
+				m_pos   = new LazyDictionary<ulong, Order>(k => null);
+				m_his   = new LazyDictionary<ulong, OrderFill>(k => null);
 				m_bal   = new LazyDictionary<Coin, FundBalance>(k => new FundBalance(Fund.Main, k, m_initial_bal[k], 0m._(k)));
 				m_rng   = null;
 
@@ -91,7 +91,7 @@ namespace CoinFlip
 		private BalanceCollection Balance { get { return Exch.Balance; } }
 
 		/// <summary>Positions by order id</summary>
-		private PositionsCollection Positions { get { return Exch.Positions; } }
+		private OrdersCollection Positions { get { return Exch.Orders; } }
 
 		/// <summary>Trade history on this exchange, keyed on order ID</summary>
 		private HistoryCollection History { get { return Exch.History; } }
@@ -179,7 +179,7 @@ namespace CoinFlip
 			// Reset the order books of the pairs
 			m_depth.Clear();
 			foreach (var pair in Pairs.Values)
-				pair.MarketDepth.UpdateOrderBook(Enumerable.Empty<Order>(), Enumerable.Empty<Order>());
+				pair.MarketDepth.UpdateOrderBook(Enumerable.Empty<OrderBook.Offer>(), Enumerable.Empty<OrderBook.Offer>());
 		}
 
 		/// <summary>Step the exchange</summary>
@@ -270,7 +270,7 @@ namespace CoinFlip
 					foreach (var pos in m_pos.Values)
 					{
 						if (Equals(pos, Positions[pos.OrderId])) continue;
-						var position = new Position(pos);
+						var position = new Order(pos);
 						Positions[pos.OrderId] = position;
 					}
 				}
@@ -282,7 +282,7 @@ namespace CoinFlip
 					foreach (var his in m_his.Values)
 					{
 						if (Equals(his, History[his.OrderId])) continue;
-						var fill = new PositionFill(his);
+						var fill = new OrderFill(his);
 						History[his.OrderId] = fill;
 						Exch.AddToTradeHistory(fill);
 					}
@@ -368,7 +368,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Attempt to make a trade on 'pair' for the given 'price' and base 'volume'</summary>
-		private void TryFillOrder(TradePair pair, ulong order_id, ETradeType tt, Unit<decimal> price, Unit<decimal> initial_volume, Unit<decimal> current_volume, out Position pos, out PositionFill his)
+		private void TryFillOrder(TradePair pair, ulong order_id, ETradeType tt, Unit<decimal> price, Unit<decimal> initial_volume, Unit<decimal> current_volume, out Order pos, out OrderFill his)
 		{
 			// The order can be filled immediately, filled partially, or not filled and remain as a 'Position'
 			var orders = m_depth[pair][tt];
@@ -378,14 +378,14 @@ namespace CoinFlip
 			Debug.Assert(current_volume == remaining + filled.Sum(x => x.VolumeBase));
 
 			// The order is partially or wholly filled...
-			pos = remaining != 0              ? new Position(Fund.Main, order_id, pair, tt, price, initial_volume, remaining, Model.UtcNow, Model.UtcNow) : null;
-			his = remaining != current_volume ? new PositionFill(order_id, tt, pair) : null;
+			pos = remaining != 0              ? new Order(Fund.Main, order_id, pair, tt, price, initial_volume, remaining, Model.UtcNow, Model.UtcNow) : null;
+			his = remaining != current_volume ? new OrderFill(order_id, tt, pair) : null;
 			foreach (var fill in filled)
 				his.Trades.Add(new Historic(order_id, ++m_history_id, pair, tt, fill.Price, fill.VolumeBase, Exch.Fee * fill.VolumeQuote, Model.UtcNow, Model.UtcNow));
 		}
 
 		/// <summary>Apply the implied changes to the current balance by the given position and position fill</summary>
-		private void ApplyToBalance(Position pos, PositionFill his)
+		private void ApplyToBalance(Order pos, OrderFill his)
 		{
 			var coins = new HashSet<Coin>();
 			if (his != null)
@@ -414,7 +414,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Reverse the balance changes due to 'pos'</summary>
-		private void ReverseBalance(Position pos)
+		private void ReverseBalance(Order pos)
 		{
 			var bal0 = m_bal[pos.CoinIn];
 			bal0.Update(Model.UtcNow, held_on_exch: bal0.HeldOnExch - pos.Remaining);
@@ -460,7 +460,7 @@ namespace CoinFlip
 			return md;
 
 			// Create an order
-			Order CreateRandomOrder(Unit<decimal>? price_ = null)
+			OrderBook.Offer CreateRandomOrder(Unit<decimal>? price_ = null)
 			{
 				Debug.Assert(price_ == null || price_.Value <= best_b2q || price_.Value >= best_q2b);
 				for (;;)
@@ -477,7 +477,7 @@ namespace CoinFlip
 					var volume = Maths.Div(value, scale, value)._(pair.Base);
 
 					// If the generated order is valid, return it otherwise, try again.
-					var order = new Order(price, volume);
+					var order = new OrderBook.Offer(price, volume);
 					if (order.Validate(pair))
 						return order;
 				}

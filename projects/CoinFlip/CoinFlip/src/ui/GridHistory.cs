@@ -19,73 +19,73 @@ namespace CoinFlip
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
 				HeaderText = "Order/Trade Id",
-				Name = nameof(PositionFill.OrderId),
-				DataPropertyName = nameof(PositionFill.OrderId),
+				Name = nameof(OrderFill.OrderId),
+				DataPropertyName = nameof(OrderFill.OrderId),
 				SortMode = DataGridViewColumnSortMode.Automatic,
 				FillWeight = 0.6f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
 				HeaderText = "Date",
-				Name = nameof(PositionFill.Created),
-				DataPropertyName = nameof(PositionFill.Created),
+				Name = nameof(OrderFill.Created),
+				DataPropertyName = nameof(OrderFill.Created),
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
 				HeaderText = "Type",
-				Name = nameof(PositionFill.TradeType),
-				DataPropertyName = nameof(PositionFill.TradeType),
+				Name = nameof(OrderFill.TradeType),
+				DataPropertyName = nameof(OrderFill.TradeType),
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
 				HeaderText = "Pair",
-				Name = nameof(PositionFill.Pair),
-				DataPropertyName = nameof(PositionFill.Pair),
+				Name = nameof(OrderFill.Pair),
+				DataPropertyName = nameof(OrderFill.Pair),
 				FillWeight = 0.5f,
 				Visible = false,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
 				HeaderText = "Price",
-				Name = nameof(PositionFill.PriceQ2B),
-				DataPropertyName = nameof(PositionFill.PriceQ2B),
+				Name = nameof(OrderFill.PriceQ2B),
+				DataPropertyName = nameof(OrderFill.PriceQ2B),
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
 				HeaderText = "Volume In",
-				Name = nameof(PositionFill.VolumeIn),
-				DataPropertyName = nameof(PositionFill.VolumeIn),
+				Name = nameof(OrderFill.VolumeIn),
+				DataPropertyName = nameof(OrderFill.VolumeIn),
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
 				HeaderText = "Volume Out",
-				Name = nameof(PositionFill.VolumeOut),
-				DataPropertyName = nameof(PositionFill.VolumeOut),
+				Name = nameof(OrderFill.VolumeOut),
+				DataPropertyName = nameof(OrderFill.VolumeOut),
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
 				HeaderText = "Volume Nett",
-				Name = nameof(PositionFill.VolumeNett),
-				DataPropertyName = nameof(PositionFill.VolumeNett),
+				Name = nameof(OrderFill.VolumeNett),
+				DataPropertyName = nameof(OrderFill.VolumeNett),
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
 				HeaderText = "Commission",
-				Name = nameof(PositionFill.Commission),
-				DataPropertyName = nameof(PositionFill.Commission),
+				Name = nameof(OrderFill.Commission),
+				DataPropertyName = nameof(OrderFill.Commission),
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
 				HeaderText = "Trade Count",
-				Name = nameof(PositionFill.TradeCount),
-				DataPropertyName = nameof(PositionFill.TradeCount),
+				Name = nameof(OrderFill.TradeCount),
+				DataPropertyName = nameof(OrderFill.TradeCount),
 				FillWeight = 0.1f,
 			});
 		}
@@ -102,7 +102,7 @@ namespace CoinFlip
 			}
 
 			// Handlers
-			void HandleHistoryListChanging(object sender, ListChgEventArgs<PositionFill> e)
+			void HandleHistoryListChanging(object sender, ListChgEventArgs<OrderFill> e)
 			{
 				switch (e.ChangeType)
 				{
@@ -150,17 +150,17 @@ namespace CoinFlip
 				switch (col.DataPropertyName)
 				{
 				default: throw new Exception("Unknown column");
-				case nameof(PositionFill.OrderId):
+				case nameof(OrderFill.OrderId):
 					{
 						e.Value = fill.OrderId.ToString();
 						break;
 					}
-				case nameof(PositionFill.Created):
+				case nameof(OrderFill.Created):
 					{
 						e.Value = fill.Created.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss");
 						break;
 					}
-				case nameof(PositionFill.TradeType):
+				case nameof(OrderFill.TradeType):
 					{
 						e.Value =
 							fill.TradeType == ETradeType.Q2B ? $"{fill.Pair.Quote}→{fill.Pair.Base} ({fill.TradeType})" :
@@ -168,37 +168,37 @@ namespace CoinFlip
 							"---";
 						break;
 					}
-				case nameof(PositionFill.Pair):
+				case nameof(OrderFill.Pair):
 					{
 						e.Value = fill.Pair.Name;
 						break;
 					}
-				case nameof(PositionFill.PriceQ2B):
+				case nameof(OrderFill.PriceQ2B):
 					{
 						e.Value = fill.PriceQ2B.ToString("G8",true);
 						break;
 					}
-				case nameof(PositionFill.VolumeIn):
+				case nameof(OrderFill.VolumeIn):
 					{
 						e.Value = fill.VolumeIn.ToString("G8",true);
 						break;
 					}
-				case nameof(PositionFill.VolumeOut):
+				case nameof(OrderFill.VolumeOut):
 					{
 						e.Value = fill.VolumeOut.ToString("G8",true);
 						break;
 					}
-				case nameof(PositionFill.VolumeNett):
+				case nameof(OrderFill.VolumeNett):
 					{
 						e.Value = fill.VolumeNett.ToString("G8",true);
 						break;
 					}
-				case nameof(PositionFill.Commission):
+				case nameof(OrderFill.Commission):
 					{
 						e.Value = fill.Commission.ToString("G10",true);
 						break;
 					}
-				case nameof(PositionFill.TradeCount):
+				case nameof(OrderFill.TradeCount):
 					{
 						e.Value = fill.TradeCount.ToString();
 						break;

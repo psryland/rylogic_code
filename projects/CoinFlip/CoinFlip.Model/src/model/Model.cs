@@ -23,59 +23,69 @@ namespace CoinFlip
 	{
 		public Model(Form main_ui, Settings settings, User user)
 		{
-			UI = main_ui;
-			Settings = settings;
-			User = user;
-			m_dispatcher = Dispatcher.CurrentDispatcher;
-			Shutdown = new CancellationTokenSource();
-			MarketDataLock = new Mutex();
-
-			// Start the log
-			Log = new Logger(Application.ProductName, new LogToFile(Misc.ResolveUserPath("Logs\\log.txt"), append:false));
-			Log.TimeZero = Log.TimeZero - Log.TimeZero.TimeOfDay;
-			Log.Write(ELogLevel.Debug, "<<< Started >>>");
-
-			// Start the win log
-			WinLog = new Logger(Application.ProductName, new LogToFile(Misc.ResolveUserPath("Logs\\win_log.txt"), append:true));
-
-			// Create collections
-			Exchanges     = new ExchangeContainer(this);
-			Pairs         = new BindingSource<TradePair>    { DataSource = new BindingListEx<TradePair>() };
-			Bots          = new BindingSource<IBot>         { DataSource = new BindingListEx<IBot>(), PerItem = true };
-			Balances      = new BindingSource<Balances>     { DataSource = null, AllowNoCurrent = true };
-			Positions     = new BindingSource<Position>     { DataSource = null, AllowNoCurrent = true };
-			History       = new BindingSource<PositionFill> { DataSource = null, AllowNoCurrent = true };
-			MarketUpdates = new BlockingCollection<Action>();
-			Coins         = new CoinDataTable(this);
-			PriceData     = new PriceDataMap(this);
-			Funds         = new FundContainer(this);
-
-			// Add exchanges
-			string key, secret;
-			if (LoadAPIKeys(user, nameof(Poloniex ), out key, out secret)) Exchanges.Add(new Poloniex(this, key, secret));
-			if (LoadAPIKeys(user, nameof(Bittrex  ), out key, out secret)) Exchanges.Add(new Bittrex(this, key, secret));
-			if (LoadAPIKeys(user, nameof(Cryptopia), out key, out secret)) Exchanges.Add(new Cryptopia(this, key, secret));
-			Exchanges.Add(CrossExchange = new CrossExchange(this));
-			//Exchanges.Add(new TestExchange(this));
-
-			// Run these steps after construction is complete
-			RunOnGuiThread(() =>
+			try
 			{
+				UI = main_ui;
+				Settings = settings;
+				User = user;
+				m_dispatcher = Dispatcher.CurrentDispatcher;
+				Shutdown = new CancellationTokenSource();
+				MarketDataLock = new Mutex();
+
+				// Start the log
+				Log = new Logger(Application.ProductName, new LogToFile(Misc.ResolveUserPath("Logs\\log.txt"), append:false));
+				Log.TimeZero = Log.TimeZero - Log.TimeZero.TimeOfDay;
+				Log.Write(ELogLevel.Debug, "<<< Started >>>");
+
+				// Start the win log
+				WinLog = new Logger(Application.ProductName, new LogToFile(Misc.ResolveUserPath("Logs\\win_log.txt"), append:true));
+
+				// Create collections
+				Exchanges     = new ExchangeContainer(this);
+				Pairs         = new BindingSource<TradePair>    { DataSource = new BindingListEx<TradePair>() };
+				Bots          = new BindingSource<IBot>         { DataSource = new BindingListEx<IBot>(), PerItem = true };
+				Balances      = new BindingSource<Balances>     { DataSource = null, AllowNoCurrent = true };
+				Positions     = new BindingSource<Order>     { DataSource = null, AllowNoCurrent = true };
+				History       = new BindingSource<OrderFill> { DataSource = null, AllowNoCurrent = true };
+				MarketUpdates = new BlockingCollection<Action>();
+				Coins         = new CoinDataTable(this);
+				PriceData     = new PriceDataMap(this);
+				Funds         = new FundContainer(this);
+
+				// Add exchanges
+				string key, secret;
+				if (LoadAPIKeys(user, nameof(Bitfinex ), out key, out secret)) Exchanges.Add(new Bitfinex (this, key, secret));
+				if (LoadAPIKeys(user, nameof(Poloniex ), out key, out secret)) Exchanges.Add(new Poloniex (this, key, secret));
+				if (LoadAPIKeys(user, nameof(Bittrex  ), out key, out secret)) Exchanges.Add(new Bittrex  (this, key, secret));
+				if (LoadAPIKeys(user, nameof(Cryptopia), out key, out secret)) Exchanges.Add(new Cryptopia(this, key, secret));
+				Exchanges.Add(CrossExchange = new CrossExchange(this));
+				//Exchanges.Add(new TestExchange(this));
+
 				// Update the available pairs
-				UpdatePairs();
+				TriggerPairsUpdate();
 
-				// Create the funds given in the settings
-				CreateFundsFromSettings();
+				// Run these steps after construction is complete
+				RunOnGuiThread(() =>
+				{
+					// Create the funds given in the settings
+					CreateFundsFromSettings();
 
-				// Create Bots listed in the settings
-				CreateBotsFromSettings();
+					// Create Bots listed in the settings
+					CreateBotsFromSettings();
  
-				// Enable settings auto save after everything is up and running
-				Settings.AutoSaveOnChanges = true;
-			});
+					// Enable settings auto save after everything is up and running
+					Settings.AutoSaveOnChanges = true;
+				});
 
-			// Run the main loop
-			MainLoopRunning = true;
+				// Run the main loop
+				MainLoopRunning = true;
+			}
+			catch
+			{
+				Shutdown?.Cancel();
+				Dispose();
+				throw;
+			}
 		}
 		public virtual void Dispose()
 		{
@@ -98,7 +108,7 @@ namespace CoinFlip
 		/// <summary>A cancellation token for graceful shutdown</summary>
 		public CancellationTokenSource Shutdown
 		{
-			get { return m_shutdown; }
+			[DebuggerStepThrough] get { return m_shutdown; }
 			private set
 			{
 				if (m_shutdown == value) return;
@@ -431,7 +441,7 @@ namespace CoinFlip
 		private BindingSource<Balances> m_balances;
 
 		/// <summary>The positions on the current exchange</summary>
-		public BindingSource<Position> Positions
+		public BindingSource<Order> Positions
 		{
 			get { return m_positions; }
 			private set
@@ -444,10 +454,10 @@ namespace CoinFlip
 				}
 			}
 		}
-		private BindingSource<Position> m_positions;
+		private BindingSource<Order> m_positions;
 
 		/// <summary>The historic trades on the current exchange</summary>
-		public BindingSource<PositionFill> History
+		public BindingSource<OrderFill> History
 		{
 			get { return m_history; }
 			private set
@@ -463,7 +473,7 @@ namespace CoinFlip
 				}
 			}
 		}
-		private BindingSource<PositionFill> m_history;
+		private BindingSource<OrderFill> m_history;
 
 		/// <summary>Bot instances</summary>
 		public BindingSource<IBot> Bots
@@ -725,7 +735,7 @@ namespace CoinFlip
 		{
 			var exch = Exchanges.Current;
 			Balances.DataSource = exch?.Balance;
-			Positions.DataSource = exch?.Positions;
+			Positions.DataSource = exch?.Orders;
 			History.DataSource = exch?.History;
 		}
 
@@ -843,7 +853,7 @@ namespace CoinFlip
 		{
 			OnEditTrade.Raise(this, new EditTradeEventArgs(trade, existing_order_id));
 		}
-		public void EditTrade(Position pos)
+		public void EditTrade(Order pos)
 		{
 			EditTrade(new Trade(pos), pos.OrderId);
 		}

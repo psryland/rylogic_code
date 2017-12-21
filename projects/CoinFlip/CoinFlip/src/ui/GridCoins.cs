@@ -38,6 +38,7 @@ namespace CoinFlip
 				Name = nameof(ColumnNames.Available),
 				DataPropertyName = nameof(ColumnNames.Available),
 				FillWeight = 1.0f,
+				Visible = false,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{

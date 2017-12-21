@@ -566,14 +566,14 @@ namespace Bot.Fishing
 					case EResult.Fishing:
 						{
 							// Check that the position still exists, if not, then it may have been filled.
-							var pos = Exch1.Positions[BaitId];
+							var pos = Exch1.Orders[BaitId];
 							if (pos == null)
 							{
 								// Update the volume to be matched (only if the trade was filled)
 								if (Exch1.TradeHistoryUseful)
 								{
 									// Ensure the trade history is up to date
-									Debug.Assert(Exch1.History.LastUpdated >= Exch1.Positions.LastUpdated);
+									Debug.Assert(Exch1.History.LastUpdated >= Exch1.Orders.LastUpdated);
 									//await Exch1.WaitForTradeHistoryUpdate();
 
 									// If there is a historic trade matching the bait order then the order has been filled.
@@ -673,7 +673,7 @@ namespace Bot.Fishing
 					case EResult.Cancel:
 						{
 							// Close the bait trade (if it still exists)
-							var pos = Exch1.Positions[BaitId];
+							var pos = Exch1.Orders[BaitId];
 							if (pos != null)
 							{
 								Exch1.CancelOrder(Pair1, BaitId);
@@ -719,13 +719,13 @@ namespace Bot.Fishing
 						{
 							// The bait trade was filled and a matching trade has been created.
 							// Wait for the matching trade to be filled
-							var pos = Exch0.Positions[MatchId];
+							var pos = Exch0.Orders[MatchId];
 							if (pos == null)
 							{
 								if (Exch0.TradeHistoryUseful)
 								{
 									// Ensure the trade history is up to date
-									Debug.Assert(Exch1.History.LastUpdated >= Exch1.Positions.LastUpdated);
+									Debug.Assert(Exch1.History.LastUpdated >= Exch1.Orders.LastUpdated);
 									//await Exch0.WaitForTradeHistoryUpdate();
 
 									// If there is a historic trade matching the match order then the order has been filled.

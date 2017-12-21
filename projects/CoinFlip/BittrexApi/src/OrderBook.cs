@@ -23,7 +23,7 @@ namespace Bittrex.API
 		{
 			/// <summary></summary>
 			[JsonProperty("Rate")]
-			public decimal Price { get; internal	set; }
+			public decimal Price { get; internal set; }
 
 			/// <summary></summary>
 			[JsonProperty("Quantity")]

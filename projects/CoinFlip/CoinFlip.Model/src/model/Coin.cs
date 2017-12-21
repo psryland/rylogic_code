@@ -60,7 +60,7 @@ namespace CoinFlip
 		public Unit<decimal> ValueOf(decimal amount)
 		{
 			// Live price is only available for coins of interest
-			if (Model.Settings.ShowLivePrices/* && Meta.OfInterest*/)
+			if (Model.Settings.ShowLivePrices)
 			{
 				var coin = this;
 				var valid = true;
@@ -117,8 +117,11 @@ namespace CoinFlip
 
 					// Find the pair to convert 'coin' to 'sym'
 					var pair = Exchange.Pairs[coin, sym];
-					available = pair != null;
-					if (!available) break;
+					available = pair != null && (
+						(coin == pair.Base  && pair.SpotPrice(ETradeType.B2Q) != null) ||
+						(coin == pair.Quote && pair.SpotPrice(ETradeType.Q2B) != null));
+					if (!available)
+						break;
 
 					coin = pair.OtherCoin(coin);
 				}

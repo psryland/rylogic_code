@@ -14,11 +14,10 @@ namespace Bittrex.API
 	public class BittrexApi :IDisposable
 	{
 		private string UrlBaseAddress;
-		private HttpClient m_client;
-		private JsonSerializer m_json;
-		private CancellationToken m_cancel_token;
 		private readonly string m_key;
 		private readonly string m_secret;
+		private JsonSerializer m_json;
+		private CancellationToken m_cancel_token;
 
 		public BittrexApi(CancellationToken cancel_token, string base_address = "https://bittrex.com/")
 			:this(null, null, cancel_token, base_address)
@@ -30,7 +29,7 @@ namespace Bittrex.API
 			UrlBaseAddress = base_address;
 			ServerRequestRateLimit = 10;
 			m_cancel_token = cancel_token;
-			m_client = new HttpClient { BaseAddress = new Uri(UrlBaseAddress), Timeout = TimeSpan.FromSeconds(10) };
+			Client = new HttpClient();
 			m_json = new JsonSerializer { NullValueHandling = NullValueHandling.Ignore };
 			Hasher = m_secret != null ? new HMACSHA512(Encoding.ASCII.GetBytes(m_secret)) : null;
 			m_request_sw = new Stopwatch();
@@ -38,11 +37,7 @@ namespace Bittrex.API
 		}
 		public virtual void Dispose()
 		{
-			if (m_client != null)
-			{
-				m_client.Dispose();
-				m_client = null;
-			}
+			Client = null;
 		}
 
 		/// <summary>The maximum number of requests per second to the exchange server</summary>
@@ -51,7 +46,28 @@ namespace Bittrex.API
 		/// <summary>Hasher</summary>
 		private HMACSHA512 Hasher { get; set; }
 
-		#region REST API Functions
+		#region REST API
+
+		/// <summary>The Http client for RESTful requests</summary>
+		private HttpClient Client
+		{
+			get { return m_client; }
+			set
+			{
+				if (m_client == value) return;
+				if (m_client != null)
+				{
+					m_client.Dispose();
+				}
+				m_client = value;
+				if (m_client != null)
+				{
+					m_client.BaseAddress = new Uri(UrlBaseAddress);
+					m_client.Timeout = TimeSpan.FromSeconds(10);
+				}
+			}
+		}
+		private HttpClient m_client;
 
 		private static class Method
 		{
@@ -108,11 +124,24 @@ namespace Bittrex.API
 			return GetData<BalanceResponse>(Method.Account, "getbalances", cancel);
 		}
 
+		/// <summary>Return the orders currently opened</summary>
+		public OrdersResponse GetOpenOrders(CancellationToken? cancel = null)
+		{
+			// https://bittrex.com/api/v1.1/market/getopenorders?apikey=API_KEY
+			return GetData<OrdersResponse>(Method.Market, "getopenorders", cancel);
+		}
+		public OrdersResponse GetOpenOrders(CurrencyPair pair, CancellationToken? cancel = null)
+		{
+			// https://bittrex.com/api/v1.1/market/getopenorders?apikey=API_KEY&market=BTC-LTC
+			return GetData<OrdersResponse>(Method.Market, "getopenorders", cancel,
+				new KV("market", pair.Id));
+		}
+		
 		/// <summary>Return the history of trades made on the account</summary>
-		public PositionHistoryResponse GetTradeHistory(CancellationToken? cancel = null)
+		public TradeHistoryResponse GetTradeHistory(CancellationToken? cancel = null)
 		{
 			// https://bittrex.com/api/v1.1/account/getorderhistory
-			return GetData<PositionHistoryResponse>(Method.Account, "getorderhistory", cancel);
+			return GetData<TradeHistoryResponse>(Method.Account, "getorderhistory", cancel);
 		}
 
 		/// <summary>Get the history of deposits</summary>
@@ -137,31 +166,6 @@ namespace Bittrex.API
 			return GetData<TransferHistoryResponse>(Method.Account, "getwithdrawalhistory", cancel, parms.ToArray());
 		}
 
-		#endregion
-
-		#region Market
-
-		/// <summary>Return the orders currently opened</summary>
-		public PositionsResponse GetOpenOrders(CancellationToken? cancel = null)
-		{
-			// https://bittrex.com/api/v1.1/market/getopenorders?apikey=API_KEY
-			return GetData<PositionsResponse>(Method.Market, "getopenorders", cancel);
-		}
-		public PositionsResponse GetOpenOrders(CurrencyPair pair, CancellationToken? cancel = null)
-		{
-			// https://bittrex.com/api/v1.1/market/getopenorders?apikey=API_KEY&market=BTC-LTC
-			return GetData<PositionsResponse>(Method.Market, "getopenorders", cancel,
-				new KV("market", pair.Id));
-		}
-		
-		/// <summary>Cancel an order</summary>
-		public CancelTradeResponse CancelTrade(CurrencyPair pair, Guid uuid, CancellationToken? cancel = null)
-		{
-			// https://bittrex.com/api/v1.1/market/cancel?apikey=API_KEY&uuid=ORDER_UUID    
-			return GetData<CancelTradeResponse>(Method.Market, "cancel", cancel,
-				new KV("uuid", uuid));
-		}
-
 		/// <summary>Create an order to buy/sell. Returns a unique order ID</summary>
 		public SubmitTradeResponse SubmitTrade(CurrencyPair pair, EOrderType type, decimal price_per_coin, decimal volume_base, CancellationToken? cancel = null)
 		{
@@ -173,6 +177,13 @@ namespace Bittrex.API
 				new KV("quantity", volume_base));
 		}
 
+		/// <summary>Cancel an order</summary>
+		public CancelTradeResponse CancelTrade(CurrencyPair pair, Guid uuid, CancellationToken? cancel = null)
+		{
+			// https://bittrex.com/api/v1.1/market/cancel?apikey=API_KEY&uuid=ORDER_UUID    
+			return GetData<CancelTradeResponse>(Method.Market, "cancel", cancel,
+				new KV("uuid", uuid));
+		}
 
 		#endregion
 
@@ -188,9 +199,7 @@ namespace Bittrex.API
 				using (m_lock.Lock(cancel_token))
 				{
 					// Limit requests to the required rate
-					var request_period_ms = 1000 / ServerRequestRateLimit;
-					for (; m_request_sw.ElapsedMilliseconds - m_last_request_ms < request_period_ms; Thread.Yield()) { }
-					m_last_request_ms = m_request_sw.ElapsedMilliseconds;
+					RequestThrottle();
 
 					// Add the API key for non-public methods
 					var kv = new List<KV>();
@@ -213,7 +222,7 @@ namespace Bittrex.API
 					}
 
 					// Submit the request
-					var response = m_client.SendAsync(req, cancel_token).Result;
+					var response = Client.SendAsync(req, cancel_token).Result;
 					if (!response.IsSuccessStatusCode)
 						throw new HttpException((int)response.StatusCode, response.ReasonPhrase);
 
@@ -225,9 +234,22 @@ namespace Bittrex.API
 			}
 		}
 		private SemaphoreSlim m_lock = new SemaphoreSlim(1,1);
+		private int m_blocked_count;
+
+		/// <summary>Blocking method for throttling requests</summary>
+		private void RequestThrottle()
+		{
+			var request_period_ms = 1000 / ServerRequestRateLimit;
+			for (;;)
+			{
+				var delta = m_request_sw.ElapsedMilliseconds - m_last_request_ms;
+				if (delta < 0 || delta > request_period_ms) break;
+				Thread.Sleep((int)(request_period_ms - delta));
+			}
+			m_last_request_ms = m_request_sw.ElapsedMilliseconds;
+		}
 		private Stopwatch m_request_sw;
 		private long m_last_request_ms;
-		private int m_blocked_count;
 
 		#endregion
 	}

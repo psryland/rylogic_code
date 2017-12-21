@@ -462,6 +462,16 @@ namespace CoinFlip
 			}
 		}
 
+		/// <summary>Convert a Bitfinex trade type to ETradeType</summary>
+		public static ETradeType TradeType(global::Bitfinex.API.EOrderType order_type)
+		{
+			switch (order_type) {
+			default: throw new Exception("Unknown trade type string");
+			case global::Bitfinex.API.EOrderType.Buy: return ETradeType.Q2B;
+			case global::Bitfinex.API.EOrderType.Sell: return ETradeType.B2Q;
+			}
+		}
+
 		/// <summary>Convert this trade type to the Cryptopia definition of a trade type</summary>
 		public static global::Cryptopia.API.EOrderType ToCryptopiaTT(this ETradeType trade_type)
 		{
@@ -525,8 +535,9 @@ namespace CoinFlip
 			case ETimeFrame.Day1   : return new TimeSpan(time_in_ticks).TotalDays;
 			case ETimeFrame.Day2   : return new TimeSpan(time_in_ticks).TotalDays / 2.0;
 			case ETimeFrame.Day3   : return new TimeSpan(time_in_ticks).TotalDays / 3.0;
-			case ETimeFrame.Weekly : return new TimeSpan(time_in_ticks).TotalDays / 7.0;
-			case ETimeFrame.Monthly: return new TimeSpan(time_in_ticks).TotalDays / 30.0;
+			case ETimeFrame.Week1  : return new TimeSpan(time_in_ticks).TotalDays / 7.0;
+			case ETimeFrame.Week2  : return new TimeSpan(time_in_ticks).TotalDays / 14.0;
+			case ETimeFrame.Month1 : return new TimeSpan(time_in_ticks).TotalDays / 30.0;
 			}
 		}
 		public static double TimeSpanToTimeFrame(TimeSpan ts, ETimeFrame time_frame)
@@ -568,8 +579,9 @@ namespace CoinFlip
 			case ETimeFrame.Day1   : return TimeSpan.FromDays(units).Ticks;
 			case ETimeFrame.Day2   : return TimeSpan.FromDays(units * 2.0).Ticks;
 			case ETimeFrame.Day3   : return TimeSpan.FromDays(units * 3.0).Ticks;
-			case ETimeFrame.Weekly : return TimeSpan.FromDays(units * 7.0).Ticks;
-			case ETimeFrame.Monthly: return TimeSpan.FromDays(units * 30.0).Ticks;
+			case ETimeFrame.Week1  : return TimeSpan.FromDays(units * 7.0).Ticks;
+			case ETimeFrame.Week2  : return TimeSpan.FromDays(units * 14.0).Ticks;
+			case ETimeFrame.Month1 : return TimeSpan.FromDays(units * 30.0).Ticks;
 			}
 		}
 		public static TimeSpan TimeFrameToTimeSpan(double units, ETimeFrame time_frame)

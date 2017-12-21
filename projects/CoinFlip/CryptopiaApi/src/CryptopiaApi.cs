@@ -17,11 +17,10 @@ namespace Cryptopia.API
 	public class CryptopiaApi :IDisposable
 	{
 		private string UrlBaseAddress;
-		private HttpClient m_client;
-		private JsonSerializer m_json;
-		private CancellationToken m_cancel_token;
 		private readonly string m_key;
 		private readonly string m_secret;
+		private JsonSerializer m_json;
+		private CancellationToken m_cancel_token;
 
 		public CryptopiaApi(CancellationToken cancel_token, string base_address = "https://www.cryptopia.co.nz/")
 			:this(null, null, cancel_token, base_address)
@@ -33,7 +32,7 @@ namespace Cryptopia.API
 			m_cancel_token = cancel_token;
 			UrlBaseAddress = base_address;
 			ServerRequestRateLimit = 10;
-			m_client = new HttpClient { BaseAddress = new Uri(UrlBaseAddress), Timeout = TimeSpan.FromSeconds(10) };
+			Client = new HttpClient();
 			m_json = new JsonSerializer { NullValueHandling = NullValueHandling.Ignore };
 			Hasher = m_secret != null ? new HMACSHA256(Convert.FromBase64String(m_secret)) : null;
 			m_request_sw = new Stopwatch();
@@ -41,11 +40,7 @@ namespace Cryptopia.API
 		}
 		public virtual void Dispose()
 		{
-			if (m_client != null)
-			{
-				m_client.Dispose();
-				m_client = null;
-			}
+			Client = null;
 		}
 
 		/// <summary>The maximum number of requests per second to the exchange server</summary>
@@ -55,6 +50,27 @@ namespace Cryptopia.API
 		private HMACSHA256 Hasher { get; set; }
 
 		#region REST API Functions
+
+		/// <summary>The Http client for RESTful requests</summary>
+		private HttpClient Client
+		{
+			get { return m_client; }
+			set
+			{
+				if (m_client == value) return;
+				if (m_client != null)
+				{
+					m_client.Dispose();
+				}
+				m_client = value;
+				if (m_client != null)
+				{
+					m_client.BaseAddress = new Uri(UrlBaseAddress);
+					m_client.Timeout = TimeSpan.FromSeconds(10);
+				}
+			}
+		}
+		private HttpClient m_client;
 
 		#region Public
 
@@ -338,9 +354,7 @@ namespace Cryptopia.API
 				using (m_lock.Lock(cancel_token))
 				{
 					// Limit requests to the required rate
-					var request_period_ms = 1000 / ServerRequestRateLimit;
-					for (; m_request_sw.ElapsedMilliseconds - m_last_request_ms < request_period_ms; Thread.Yield()) { }
-					m_last_request_ms = m_request_sw.ElapsedMilliseconds;
+					RequestThrottle();
 
 					// Create the URL for the command + parameters
 					var url = $"{UrlBaseAddress}api/{command}";
@@ -372,7 +386,7 @@ namespace Cryptopia.API
 
 						// Create the signature
 						var uri = HttpUtility.UrlEncode(req.RequestUri.AbsoluteUri.ToLower());
-						var signature = string.Concat(m_key, "POST", uri, nonce, content_hash_b64);
+						var signature = $"{m_key}POST{uri}{nonce}{content_hash_b64}";
 						var signature_bytes = Encoding.UTF8.GetBytes(signature);
 						var signature_hash = Hasher.ComputeHash(signature_bytes);
 
@@ -381,7 +395,7 @@ namespace Cryptopia.API
 					}
 
 					// Submit the request
-					var response = m_client.SendAsync(req, cancel_token).Result;
+					var response = Client.SendAsync(req, cancel_token).Result;
 					if (!response.IsSuccessStatusCode)
 						throw new HttpException((int)response.StatusCode, response.ReasonPhrase);
 
@@ -393,9 +407,22 @@ namespace Cryptopia.API
 			}
 		}
 		private SemaphoreSlim m_lock = new SemaphoreSlim(1,1);
+		private int m_blocked_count;
+
+		/// <summary>Blocking method for throttling requests</summary>
+		private void RequestThrottle()
+		{
+			var request_period_ms = 1000 / ServerRequestRateLimit;
+			for (;;)
+			{
+				var delta = m_request_sw.ElapsedMilliseconds - m_last_request_ms;
+				if (delta < 0 || delta > request_period_ms) break;
+				Thread.Sleep((int)(request_period_ms - delta));
+			}
+			m_last_request_ms = m_request_sw.ElapsedMilliseconds;
+		}
 		private Stopwatch m_request_sw;
 		private long m_last_request_ms;
-		private int m_blocked_count;
 
 		#endregion
 	}

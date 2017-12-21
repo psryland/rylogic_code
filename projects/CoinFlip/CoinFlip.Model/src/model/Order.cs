@@ -5,9 +5,9 @@ using pr.util;
 namespace CoinFlip
 {
 	[DebuggerDisplay("{Description,nq}")]
-	public class Position
+	public class Order
 	{
-		public Position(string fund_id, ulong order_id, TradePair pair, ETradeType tt, Unit<decimal> price_q2b, Unit<decimal> volume_base, Unit<decimal> remaining_base, DateTimeOffset? created, DateTimeOffset updated, bool fake = false)
+		public Order(string fund_id, ulong order_id, TradePair pair, ETradeType tt, Unit<decimal> price_q2b, Unit<decimal> volume_base, Unit<decimal> remaining_base, DateTimeOffset? created, DateTimeOffset updated, bool fake = false)
 		{
 			FundId        = fund_id;
 			OrderId       = order_id;
@@ -21,7 +21,7 @@ namespace CoinFlip
 			Updated       = updated;
 			Fake          = fake;
 		}
-		public Position(Position rhs)
+		public Order(Order rhs)
 			:this(rhs.FundId, rhs.OrderId, rhs.Pair, rhs.TradeType, rhs.PriceQ2B, rhs.VolumeBase, rhs.RemainingBase, rhs.Created, rhs.Updated, rhs.Fake)
 		{}
 
@@ -142,7 +142,7 @@ namespace CoinFlip
 		}
 
 		#region Equals
-		public bool Equals(Position rhs)
+		public bool Equals(Order rhs)
 		{
 			return
 				rhs        != null &&
@@ -152,7 +152,7 @@ namespace CoinFlip
 		}
 		public override bool Equals(object obj)
 		{
-			return Equals(obj as Position);
+			return Equals(obj as Order);
 		}
 		public override int GetHashCode()
 		{

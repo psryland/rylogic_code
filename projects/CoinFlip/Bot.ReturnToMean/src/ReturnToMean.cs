@@ -290,7 +290,7 @@ namespace Bot.ReturnToMean
 		private bool m_suppress_not_created;
 
 		/// <summary>When a monitored order is filled, adjust the CurrentHolding</summary>
-		protected override void OnPositionFilled(ulong order_id, PositionFill his)
+		protected override void OnPositionFilled(ulong order_id, OrderFill his)
 		{
 			base.OnPositionFilled(order_id, his);
 			if (Coin == his.CoinIn)

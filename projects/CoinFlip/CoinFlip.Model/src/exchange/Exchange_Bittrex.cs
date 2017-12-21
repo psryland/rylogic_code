@@ -96,7 +96,7 @@ namespace CoinFlip
 				// and we don't want updating pairs to be interrupted by the update thread stopping
 				var msg = Api.GetMarkets(cancel:Model.Shutdown.Token);
 				if (!msg.Success)
-					throw new Exception("Bittrex: Failed to read market data. {0}".Fmt(msg.Message));
+					throw new Exception($"Bittrex: Failed to read market data. {msg.Message}");
 
 				// Add an action to integrate the data
 				Model.MarketUpdates.Add(() =>
@@ -181,8 +181,8 @@ namespace CoinFlip
 							continue;
 
 						// Update the depth of market data
-						var buys  = orders.BuyOrders .Select(x => new Order(x.Price._(pair.RateUnits), x.VolumeBase._(pair.Base))).ToArray();
-						var sells = orders.SellOrders.Select(x => new Order(x.Price._(pair.RateUnits), x.VolumeBase._(pair.Base))).ToArray();
+						var buys  = orders.BuyOrders .Select(x => new OrderBook.Offer(x.Price._(pair.RateUnits), x.VolumeBase._(pair.Base))).ToArray();
+						var sells = orders.SellOrders.Select(x => new OrderBook.Offer(x.Price._(pair.RateUnits), x.VolumeBase._(pair.Base))).ToArray();
 						pair.MarketDepth.UpdateOrderBook(buys, sells);
 					}
 
@@ -262,10 +262,10 @@ namespace CoinFlip
 					// Update the collection of existing orders
 					foreach (var order in positions.Data)
 					{
-						// Add the position to the collection
-						var pos = PositionFrom(order, timestamp);
-						Positions[pos.OrderId] = pos;
-						order_ids.Add(pos.OrderId);
+						// Add the order to the collection
+						var odr = OrderFrom(order, timestamp);
+						Orders[odr.OrderId] = odr;
+						order_ids.Add(odr.OrderId);
 						pairs.Add(order.Pair);
 					}
 					foreach (var order in history.Data)
@@ -289,7 +289,7 @@ namespace CoinFlip
 
 					// Notify updated
 					History.LastUpdated = timestamp;
-					Positions.LastUpdated = timestamp;
+					Orders.LastUpdated = timestamp;
 				});
 			}
 			catch (Exception ex)
@@ -351,22 +351,23 @@ namespace CoinFlip
 			Api.ServerRequestRateLimit = limit;
 		}
 
-		/// <summary>Convert a Cryptopia open order result into a position object</summary>
-		private Position PositionFrom(global::Bittrex.API.Position order, DateTimeOffset updated)
+		/// <summary>Convert a Cryptopia open order result into an order</summary>
+		private Order OrderFrom(global::Bittrex.API.Order order, DateTimeOffset updated)
 		{
 			// Get the associated trade pair (add the pair if it doesn't exist)
 			var order_id = ToIdPair(order.OrderId).OrderId;
 			var fund_id = OrderIdtoFundId[order_id];
+			var tt = Misc.TradeType(order.Type);
 			var pair = Pairs.GetOrAdd(order.Pair.Base, order.Pair.Quote);
 			var price = order.Limit._(pair.RateUnits);
 			var volume = order.VolumeBase._(pair.Base);
 			var remaining = order.RemainingBase._(pair.Base);
 			var created = order.Created;
-			return new Position(fund_id, order_id, pair, Misc.TradeType(order.Type), price, volume, remaining, created, updated);
+			return new Order(fund_id, order_id, pair, tt, price, volume, remaining, created, updated);
 		}
 
 		/// <summary>Convert a Cryptopia trade history result into a position object</summary>
-		private Historic HistoricFrom(global::Bittrex.API.Historic his, DateTimeOffset updated)
+		private Historic HistoricFrom(global::Bittrex.API.Trade his, DateTimeOffset updated)
 		{
 			// Get the associated trade pair (add the pair if it doesn't exist)
 			// Bittrex doesn't use trade ids. Make them up using the Remaining

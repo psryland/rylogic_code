@@ -191,7 +191,7 @@ namespace CoinFlip
 		/// <summary>Returns the time frames for which candle data is available for this pair</summary>
 		public IEnumerable<ETimeFrame> CandleDataAvailable
 		{
-			get { return Exchange.CandleDataAvailable(this); }
+			get { return Exchange.EnumAvailableCandleData(this).Select(x => x.TimeFrame); }
 		}
 
 		/// <summary>Return the spot price (Quote/Base) for the given trade type</summary>

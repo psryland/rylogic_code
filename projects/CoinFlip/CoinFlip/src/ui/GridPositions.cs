@@ -19,32 +19,32 @@ namespace CoinFlip
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
 				HeaderText = "Order Id",
-				Name = nameof(Position.OrderId),
-				DataPropertyName = nameof(Position.OrderId),
+				Name = nameof(Order.OrderId),
+				DataPropertyName = nameof(Order.OrderId),
 				SortMode = DataGridViewColumnSortMode.Automatic,
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
 				HeaderText = "Date",
-				Name = nameof(Position.Created),
-				DataPropertyName = nameof(Position.Created),
+				Name = nameof(Order.Created),
+				DataPropertyName = nameof(Order.Created),
 				SortMode = DataGridViewColumnSortMode.Automatic,
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
 				HeaderText = "Type",
-				Name = nameof(Position.TradeType),
-				DataPropertyName = nameof(Position.TradeType),
+				Name = nameof(Order.TradeType),
+				DataPropertyName = nameof(Order.TradeType),
 				SortMode = DataGridViewColumnSortMode.Automatic,
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
 				HeaderText = "Pair",
-				Name = nameof(Position.Pair),
-				DataPropertyName = nameof(Position.Pair),
+				Name = nameof(Order.Pair),
+				DataPropertyName = nameof(Order.Pair),
 				SortMode = DataGridViewColumnSortMode.Automatic,
 				FillWeight = 0.5f,
 				Visible = false,
@@ -52,8 +52,8 @@ namespace CoinFlip
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
 				HeaderText = "Price",
-				Name = nameof(Position.PriceQ2B),
-				DataPropertyName = nameof(Position.PriceQ2B),
+				Name = nameof(Order.PriceQ2B),
+				DataPropertyName = nameof(Order.PriceQ2B),
 				SortMode = DataGridViewColumnSortMode.NotSortable,
 				FillWeight = 1.0f,
 			});
@@ -76,24 +76,24 @@ namespace CoinFlip
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
 				HeaderText = "Volume (Base)",
-				Name = nameof(Position.VolumeBase),
-				DataPropertyName = nameof(Position.VolumeBase),
+				Name = nameof(Order.VolumeBase),
+				DataPropertyName = nameof(Order.VolumeBase),
 				SortMode = DataGridViewColumnSortMode.NotSortable,
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
 				HeaderText = "Volume (Quote)",
-				Name = nameof(Position.VolumeQuote),
-				DataPropertyName = nameof(Position.VolumeQuote),
+				Name = nameof(Order.VolumeQuote),
+				DataPropertyName = nameof(Order.VolumeQuote),
 				SortMode = DataGridViewColumnSortMode.NotSortable,
 				FillWeight = 1.0f,
 			});
 			Columns.Add(new DataGridViewTextBoxColumn
 			{
 				HeaderText = "Remaining (%)",
-				Name = nameof(Position.RemainingBase),
-				DataPropertyName = nameof(Position.RemainingBase),
+				Name = nameof(Order.RemainingBase),
+				DataPropertyName = nameof(Order.RemainingBase),
 				SortMode = DataGridViewColumnSortMode.NotSortable,
 				FillWeight = 1.0f,
 			});
@@ -146,20 +146,20 @@ namespace CoinFlip
 			}
 
 			// Can happen during the change over from dummy row back to a data source
-			var pos= (Position)cell.OwningRow.DataBoundItem;
+			var pos= (Order)cell.OwningRow.DataBoundItem;
 			if (pos== null)
 				return;
 
 			// Format cells
 			switch (col.Name)
 			{
-			case nameof(Position.Created):
+			case nameof(Order.Created):
 				{
 					a.Value = pos.Created?.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss") ?? string.Empty;
 					a.FormattingApplied = true;
 					break;
 				}
-			case nameof(Position.TradeType):
+			case nameof(Order.TradeType):
 				{
 					a.Value =
 						pos.TradeType == ETradeType.Q2B ? $"{pos.Pair.Quote}→{pos.Pair.Base} ({pos.TradeType})" :
@@ -168,7 +168,7 @@ namespace CoinFlip
 					a.FormattingApplied = true;
 					break;
 				}
-			case nameof(Position.PriceQ2B):
+			case nameof(Order.PriceQ2B):
 				{
 					a.Value = pos.PriceQ2B.ToString("G8",true);
 					a.FormattingApplied = true;
@@ -193,19 +193,19 @@ namespace CoinFlip
 					a.FormattingApplied = true;
 					break;
 				}
-			case nameof(Position.VolumeBase):
+			case nameof(Order.VolumeBase):
 				{
 					a.Value = pos.VolumeBase.ToString("G8", true);
 					a.FormattingApplied = true;
 					break;
 				}
-			case nameof(Position.VolumeQuote):
+			case nameof(Order.VolumeQuote):
 				{
 					a.Value = pos.VolumeQuote.ToString("G8",true);
 					a.FormattingApplied = true;
 					break;
 				}
-			case nameof(Position.RemainingBase):
+			case nameof(Order.RemainingBase):
 				{
 					a.Value = $"{100m * Maths.Div((decimal)pos.RemainingBase, (decimal)pos.VolumeBase, 0m):G4} %";
 					a.FormattingApplied = true;
@@ -222,7 +222,7 @@ namespace CoinFlip
 				return;
 
 			// Can happen during the change over from dummy row back to a data source
-			var pos = (Position)cell.OwningRow.DataBoundItem;
+			var pos = (Order)cell.OwningRow.DataBoundItem;
 			if (pos== null)
 				return;
 
@@ -242,7 +242,7 @@ namespace CoinFlip
 				};
 				opt.Click += (s,a) =>
 				{
-					var pos = SelectedRows.Cast<DataGridViewRow>().Select(x => (Position)x.DataBoundItem).First();
+					var pos = SelectedRows.Cast<DataGridViewRow>().Select(x => (Order)x.DataBoundItem).First();
 					pos.CancelOrder();
 				};
 			}
@@ -251,13 +251,13 @@ namespace CoinFlip
 				var opt = cmenu.Items.Add2(new ToolStripMenuItem("\"Fill\" order"));
 				cmenu.Opening += (s,a) =>
 				{
-					var pos = SelectedRows.Cast<DataGridViewRow>().Select(x => (Position)x.DataBoundItem).FirstOrDefault();
+					var pos = SelectedRows.Cast<DataGridViewRow>().Select(x => (Order)x.DataBoundItem).FirstOrDefault();
 					opt.Visible = pos != null && pos.Fake;
 				};
 				opt.Click += (s,a) =>
 				{
 					// Cancel the order and create a fake history entry to simulate the fake order being filled
-					var pos = SelectedRows.Cast<DataGridViewRow>().Select(x => (Position)x.DataBoundItem).First();
+					var pos = SelectedRows.Cast<DataGridViewRow>().Select(x => (Order)x.DataBoundItem).First();
 					pos.FillFakeOrder();
 				};
 			}
@@ -270,7 +270,7 @@ namespace CoinFlip
 				};
 				opt.Click += (s,a) =>
 				{
-					var pos = SelectedRows.Cast<DataGridViewRow>().Select(x => (Position)x.DataBoundItem).First();
+					var pos = SelectedRows.Cast<DataGridViewRow>().Select(x => (Order)x.DataBoundItem).First();
 					Model.EditTrade(pos);
 				};
 			}

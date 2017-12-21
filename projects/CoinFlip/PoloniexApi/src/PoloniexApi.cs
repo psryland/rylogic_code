@@ -19,11 +19,10 @@ namespace Poloniex.API
 	{
 		private string UrlBaseAddress;
 		private string UrlWssAddress;
-		private HttpClient m_client;
-		private JsonSerializer m_json;
-		private CancellationToken m_cancel_token;
 		private readonly string m_key;
 		private readonly string m_secret;
+		private JsonSerializer m_json;
+		private CancellationToken m_cancel_token;
 
 		public PoloniexApi(string key, string secret, CancellationToken cancel_token, string base_address = "https://poloniex.com/", string wss_address = "wss://api.poloniex.com/")
 		{
@@ -37,8 +36,7 @@ namespace Poloniex.API
 			ActiveSubscriptions = new Dictionary<string, Subscription>();
 			Hasher = new HMACSHA512(Encoding.ASCII.GetBytes(m_secret));
 			m_json = new JsonSerializer { NullValueHandling = NullValueHandling.Ignore };
-			m_client = new HttpClient { BaseAddress = new Uri(UrlBaseAddress + "tradingApi"), Timeout = TimeSpan.FromSeconds(10) };
-			m_client.DefaultRequestHeaders.Add("Key", m_key);
+			Client = new HttpClient();
 			m_request_sw = new Stopwatch();
 			m_request_sw.Start();
 		}
@@ -47,11 +45,7 @@ namespace Poloniex.API
 			Debug.Assert(m_cancel_token.IsCancellationRequested, "Cancel should have been signalled before here");
 
 			Stop();
-			if (m_client != null)
-			{
-				m_client.Dispose();
-				m_client = null;
-			}
+			Client = null;
 		}
 
 		/// <summary>The maximum number of requests per second to the exchange server</summary>
@@ -272,6 +266,28 @@ namespace Poloniex.API
 
 		#region REST API Functions
 
+		/// <summary>The Http client for RESTful requests</summary>
+		private HttpClient Client
+		{
+			get { return m_client; }
+			set
+			{
+				if (m_client == value) return;
+				if (m_client != null)
+				{
+					m_client.Dispose();
+				}
+				m_client = value;
+				if (m_client != null)
+				{
+					m_client.BaseAddress = new Uri(UrlBaseAddress + "tradingApi");
+					m_client.Timeout = TimeSpan.FromSeconds(10);
+					m_client.DefaultRequestHeaders.Add("Key", m_key);
+				}
+			}
+		}
+		private HttpClient m_client;
+
 		#region Public
 
 		/// <summary>Return all available trading pairs and their latest price data</summary>
@@ -325,11 +341,11 @@ namespace Poloniex.API
 		}
 
 		/// <summary></summary>
-		public List<MarketChartData> GetChartData(CurrencyPair pair, MarketPeriod period, DateTimeOffset time_beg, DateTimeOffset time_end, CancellationToken? cancel = null)
+		public List<MarketChartData> GetChartData(CurrencyPair pair, EMarketPeriod period, DateTimeOffset time_beg, DateTimeOffset time_end, CancellationToken? cancel = null)
 		{
 			return GetChartData(pair, period, time_beg.Ticks, time_end.Ticks, cancel);
 		}
-		public List<MarketChartData> GetChartData(CurrencyPair pair, MarketPeriod period, long time_beg, long time_end, CancellationToken? cancel = null)
+		public List<MarketChartData> GetChartData(CurrencyPair pair, EMarketPeriod period, long time_beg, long time_end, CancellationToken? cancel = null)
 		{
 			return GetData<List<MarketChartData>>("returnChartData", cancel,
 				new KV("currencyPair", pair.Id),
@@ -348,7 +364,26 @@ namespace Poloniex.API
 			return PostData<Dictionary<string, Balance>>("returnCompleteBalances", cancel);
 		}
 
-		/// <summary>Get the trade history for all markets</summary>
+		/// <summary>Get currently open orders</summary>
+		public Dictionary<string, List<Order>> GetOpenOrders(CancellationToken? cancel = null)
+		{
+			var positions = PostData<Dictionary<string, List<Order>>>("returnOpenOrders", cancel,
+				new KV("currencyPair", "all"));
+			foreach (var pos in positions)
+				foreach (var p in pos.Value)
+					p.Pair = CurrencyPair.Parse(pos.Key);
+
+			return positions;
+		}
+		public List<Order> GetOpenOrders(CurrencyPair pair, CancellationToken? cancel = null)
+		{
+			var positions = PostData<List<Order>>("returnOpenOrders", cancel,
+				new KV("currencyPair", pair.Id));
+			foreach (var pos in positions) pos.Pair = pair;
+			return positions;
+		}
+
+		/// <summary>Get the trade history</summary>
 		public Dictionary<string, List<Historic>> GetTradeHistory(DateTimeOffset? beg = null, DateTimeOffset? end = null, CancellationToken? cancel = null)
 		{
 			var parms = new List<KV>(){ new KV("currencyPair", "all") };
@@ -365,8 +400,6 @@ namespace Poloniex.API
 
 			return history;
 		}
-
-		/// <summary>Get the trade history for the given market</summary>
 		public List<Historic> GetTradeHistory(CurrencyPair pair, DateTimeOffset? beg = null, DateTimeOffset? end = null, CancellationToken? cancel = null)
 		{
 			var parms = new List<KV>(){ new KV("currencyPair", pair.Id) };
@@ -392,29 +425,13 @@ namespace Poloniex.API
 			return PostData<FundsTransfer>("returnDepositsWithdrawals", cancel, parms.ToArray());
 		}
 
-		#endregion
-
-		#region Market
-
-		/// <summary>Get all currently open orders</summary>
-		public Dictionary<string, List<Position>> GetOpenOrders(CancellationToken? cancel = null)
+		/// <summary>Create an order to buy/sell. Returns a unique order ID</summary>
+		public TradeResult SubmitTrade(CurrencyPair pair, EOrderType type, decimal price_per_coin, decimal volume_base, CancellationToken? cancel = null)
 		{
-			var positions = PostData<Dictionary<string, List<Position>>>("returnOpenOrders", cancel,
-				new KV("currencyPair", "all"));
-			foreach (var pos in positions)
-				foreach (var p in pos.Value)
-					p.Pair = CurrencyPair.Parse(pos.Key);
-
-			return positions;
-		}
-
-		/// <summary>Get the currently open orders for 'pair'</summary>
-		public List<Position> GetOpenOrders(CurrencyPair pair, CancellationToken? cancel = null)
-		{
-			var positions = PostData<List<Position>>("returnOpenOrders", cancel,
-				new KV("currencyPair", pair.Id));
-			foreach (var pos in positions) pos.Pair = pair;
-			return positions;
+			return PostData<TradeResult>(Misc.ToString(type), cancel,
+				new KV("currencyPair", pair.Id),
+				new KV("rate", price_per_coin),
+				new KV("amount", volume_base));
 		}
 
 		/// <summary>Cancel an order</summary>
@@ -425,15 +442,6 @@ namespace Poloniex.API
 				new KV("orderNumber", order_id));
 
 			return res.Value<byte>("success") == 1;
-		}
-
-		/// <summary>Create an order to buy/sell. Returns a unique order ID</summary>
-		public TradeResult SubmitTrade(CurrencyPair pair, EOrderType type, decimal price_per_coin, decimal volume_base, CancellationToken? cancel = null)
-		{
-			return PostData<TradeResult>(Misc.ToString(type), cancel,
-				new KV("currencyPair", pair.Id),
-				new KV("rate", price_per_coin),
-				new KV("amount", volume_base));
 		}
 
 		#endregion
@@ -457,9 +465,7 @@ namespace Poloniex.API
 					cancel_token.ThrowIfCancellationRequested();
 
 					// Limit requests to the required rate
-					var request_period_ms = 1000 / ServerRequestRateLimit;
-					for (; m_request_sw.ElapsedMilliseconds - m_last_request_ms < request_period_ms; Thread.Yield()) { }
-					m_last_request_ms = m_request_sw.ElapsedMilliseconds;
+					RequestThrottle();
 
 					// Add the command to the parameters
 					var kv = new List<KV>();
@@ -470,7 +476,7 @@ namespace Poloniex.API
 					var url = $"{UrlBaseAddress}public{Misc.UrlEncode(kv)}";
 
 					// Submit the request
-					var response = m_client.GetAsync(url, cancel_token).Result;
+					var response = Client.GetAsync(url, cancel_token).Result;
 					if (!response.IsSuccessStatusCode)
 						throw new HttpException((int)response.StatusCode, response.ReasonPhrase);
 
@@ -496,9 +502,7 @@ namespace Poloniex.API
 				using (m_lock.Lock(cancel_token))
 				{
 					// Limit requests to the required rate
-					var request_period_ms = 1000 / ServerRequestRateLimit;
-					for (; m_request_sw.ElapsedMilliseconds - m_last_request_ms < request_period_ms; Thread.Yield()) { }
-					m_last_request_ms = m_request_sw.ElapsedMilliseconds;
+					RequestThrottle();
 
 					// Add the command parameter
 					var kv = new List<KV>();
@@ -520,7 +524,7 @@ namespace Poloniex.API
 					//  - 422 Un-processable Entity:
 					//    Status code is directly reported by Poloniex server. It means the server understands the content type of the request entity,
 					//    and the syntax of the request entity is correct, but was unable to process the contained instructions.
-					var response = m_client.PostAsync(m_client.BaseAddress, content, cancel_token).Result;
+					var response = Client.PostAsync(Client.BaseAddress, content, cancel_token).Result;
 					if (!response.IsSuccessStatusCode)
 						throw new Exception(response.ReasonPhrase);
 
@@ -531,8 +535,6 @@ namespace Poloniex.API
 			}
 		}
 		private SemaphoreSlim m_lock = new SemaphoreSlim(1,1);
-		private Stopwatch m_request_sw;
-		private long m_last_request_ms;
 		private int m_blocked_count;
 
 		/// <summary>Interpret a JSON reply that may be empty, an error, or valid data</summary>
@@ -549,6 +551,22 @@ namespace Poloniex.API
 				return m_json.Deserialize<T>(tr);
 			}
 		}
+
+		/// <summary>Blocking method for throttling requests</summary>
+		private void RequestThrottle()
+		{
+			var request_period_ms = 1000 / ServerRequestRateLimit;
+			for (;;)
+			{
+				var delta = m_request_sw.ElapsedMilliseconds - m_last_request_ms;
+				if (delta < 0 || delta > request_period_ms) break;
+				Thread.Sleep((int)(request_period_ms - delta));
+			}
+			m_last_request_ms = m_request_sw.ElapsedMilliseconds;
+		}
+		private Stopwatch m_request_sw;
+		private long m_last_request_ms;
+		
 		#endregion
 	}
 

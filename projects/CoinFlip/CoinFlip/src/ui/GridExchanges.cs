@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using pr.extn;
 using pr.gui;
@@ -65,7 +66,6 @@ namespace CoinFlip
 				ImageLayout = DataGridViewImageCellLayout.Normal,
 				FillWeight = 0.1f,
 			});
-			ContextMenuStrip = CreateCMenu();
 			DataSource = model.Exchanges;
 		}
 		protected override void OnCellClick(DataGridViewCellEventArgs a)
@@ -118,43 +118,53 @@ namespace CoinFlip
 				}
 			}
 		}
-
-		/// <summary>Create the context menu for the grid</summary>
-		private ContextMenuStrip CreateCMenu()
+		protected override void OnMouseClick(MouseEventArgs e)
 		{
-			var cmenu = new ContextMenuStrip();
+			base.OnMouseClick(e);
+			if (e.Button == MouseButtons.Right)
 			{
-				var opt = cmenu.Items.Add2(new ToolStripMenuItem("API Keys"));
-				cmenu.Opening += (s,a) =>
+				var hit = this.HitTestEx(e.Location);
+				if (hit.Type == DataGridView_.HitTestInfo.EType.Cell)
 				{
-					opt.Enabled = SelectedRows.Count == 1;
-				};
-				opt.Click += (s,a) =>
-				{
-					var exch = (Exchange)SelectedRows[0].DataBoundItem;
-					Model.ChangeAPIKeys(exch);
-				};
-			}
-			{
-				var opt = cmenu.Items.Add2(new ToolStripMenuItem("Server Request Rate..."));
-				cmenu.Opening += (s,a) =>
-				{
-					opt.Enabled = SelectedRows.Count == 1;
-				};
-				opt.Click += (s,a) =>
-				{
-					var exch = (Exchange)SelectedRows[0].DataBoundItem;
-					using (var dlg = new PromptUI { Title = $"{exch.Name} Server Request Limit", PromptText = "The maximum number of requests posted\r\nto the exchange server per second" })
+					var cmenu = new ContextMenuStrip();
 					{
-						dlg.ValueType = typeof(float);
-						dlg.Value = exch.ServerRequestRateLimit;
-						dlg.ValidateValue = t => float.TryParse(t, out var x) && x > 0;
-						if (dlg.ShowDialog(Model.UI) != DialogResult.OK) return;
-						exch.ServerRequestRateLimit = (float)dlg.Value;
+						var opt = cmenu.Items.Add2(new ToolStripMenuItem("Update Pairs"));
+						opt.Enabled = SelectedRows.Count == 1;
+						opt.Click += (s,a) =>
+						{
+							var exch = (Exchange)SelectedRows[0].DataBoundItem;
+							var coi = Model.Coins.Where(x => x.OfInterest).ToHashSet(x => x.Symbol);
+							exch.UpdatePairs(coi);
+						};
 					}
-				};
+					{
+						var opt = cmenu.Items.Add2(new ToolStripMenuItem("API Keys"));
+						opt.Enabled = SelectedRows.Count == 1;
+						opt.Click += (s,a) =>
+						{
+							var exch = (Exchange)SelectedRows[0].DataBoundItem;
+							Model.ChangeAPIKeys(exch);
+						};
+					}
+					{
+						var opt = cmenu.Items.Add2(new ToolStripMenuItem("Server Request Rate..."));
+						opt.Enabled = SelectedRows.Count == 1;
+						opt.Click += (s,a) =>
+						{
+							var exch = (Exchange)SelectedRows[0].DataBoundItem;
+							using (var dlg = new PromptUI { Title = $"{exch.Name} Server Request Limit", PromptText = "The maximum number of requests posted\r\nto the exchange server per second" })
+							{
+								dlg.ValueType = typeof(float);
+								dlg.Value = exch.ServerRequestRateLimit;
+								dlg.ValidateValue = t => float.TryParse(t, out var x) && x > 0;
+								if (dlg.ShowDialog(Model.UI) != DialogResult.OK) return;
+								exch.ServerRequestRateLimit = (float)dlg.Value;
+							}
+						};
+					}
+					cmenu.Show(this, e.Location);
+				}
 			}
-			return cmenu;
 		}
 	}
 }

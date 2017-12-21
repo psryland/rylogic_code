@@ -96,13 +96,13 @@ namespace CoinFlip
 		}
 
 		/// <summary>Return all positions on the given pair across all exchanges</summary>
-		public IEnumerable<Position> AllPositions(string pair_name)
+		public IEnumerable<Order> AllPositions(string pair_name)
 		{
-			return TradingExchanges.SelectMany(x => x.Positions.Values).Where(x => x.Pair.Name == pair_name);
+			return TradingExchanges.SelectMany(x => x.Orders.Values).Where(x => x.Pair.Name == pair_name);
 		}
 
 		/// <summary>Return all historic trades on the given pair across all exchanges</summary>
-		public IEnumerable<PositionFill> AllHistory(string pair_name)
+		public IEnumerable<OrderFill> AllHistory(string pair_name)
 		{
 			return TradingExchanges.SelectMany(x => x.History.Values).Where(x => x.Pair.Name == pair_name);
 		}

@@ -33,6 +33,7 @@ namespace CoinFlip
 			Cryptopia                     = new CrypotopiaSettings();
 			Poloniex                      = new PoloniexSettings();
 			Bittrex                       = new BittrexSettings();
+			Bitfinex                      = new BitfinexSettings();
 			CrossExchange                 = new CrossExchangeSettings();
 
 			// Leave this disabled till everything has been set up (i.e. the Model enables it)
@@ -179,6 +180,17 @@ namespace CoinFlip
 			{
 				if (value == null) throw new ArgumentNullException();
 				set(nameof(Bittrex), value);
+			}
+		}
+
+		/// <summary>Bittrex exchange settings</summary>
+		public BitfinexSettings Bitfinex
+		{
+			get { return get<BitfinexSettings>(nameof(Bitfinex)); }
+			set
+			{
+				if (value == null) throw new ArgumentNullException();
+				set(nameof(Bitfinex), value);
 			}
 		}
 
@@ -369,6 +381,22 @@ namespace CoinFlip
 				ServerRequestRateLimit = 10f;
 			}
 			private class TyConv :GenericTypeConverter<BittrexSettings> {}
+		}
+
+		/// <summary>Settings associated with the Repo connection</summary>
+		[Serializable]
+		[TypeConverter(typeof(TyConv))]
+		public class BitfinexSettings :ExchangeSettings<BitfinexSettings>
+		{
+			public BitfinexSettings()
+			{
+				Active = true;
+				PollPeriod = 500;
+				TransactionFee = 0.0025m;
+				MarketDepth = 20;
+				ServerRequestRateLimit = 10f;
+			}
+			private class TyConv :GenericTypeConverter<BitfinexSettings> {}
 		}
 
 		/// <summary>Settings associated with the Repo connection</summary>

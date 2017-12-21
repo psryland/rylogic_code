@@ -166,8 +166,8 @@ namespace CoinFlip
 							continue;
 
 						// Update the depth of market data
-						var buys  = orders.Buy .Select(x => new Order(x.Price._(pair.RateUnits), x.Volume._(pair.Base))).ToArray();
-						var sells = orders.Sell.Select(x => new Order(x.Price._(pair.RateUnits), x.Volume._(pair.Base))).ToArray();
+						var buys  = orders.Buy .Select(x => new OrderBook.Offer(x.Price._(pair.RateUnits), x.Volume._(pair.Base))).ToArray();
+						var sells = orders.Sell.Select(x => new OrderBook.Offer(x.Price._(pair.RateUnits), x.Volume._(pair.Base))).ToArray();
 						pair.MarketDepth.UpdateOrderBook(buys, sells);
 					}
 
@@ -248,13 +248,13 @@ namespace CoinFlip
 					// Update the collection of existing orders
 					foreach (var order in position.Data)
 					{
-						// Convert from a Cryptopia position to a CoinFlip position
-						var pos = PositionFrom(order, timestamp);
+						// Convert from a Cryptopia position to a CoinFlip order
+						var odr = OrderFrom(order, timestamp);
 
 						// Add the position to the collection
-						Positions[pos.OrderId] = pos;
-						order_ids.Add(pos.OrderId);
-						pairs.Add(pos.Pair.TradePairId.Value);
+						Orders[odr.OrderId] = odr;
+						order_ids.Add(odr.OrderId);
+						pairs.Add(odr.Pair.TradePairId.Value);
 					}
 					foreach (var order in history.Data)
 					{
@@ -277,7 +277,7 @@ namespace CoinFlip
 
 					// Notify updated
 					History.LastUpdated = timestamp;
-					Positions.LastUpdated = timestamp;
+					Orders.LastUpdated = timestamp;
 				});
 			}
 			catch (Exception ex)
@@ -339,19 +339,20 @@ namespace CoinFlip
 			Api.ServerRequestRateLimit = limit;
 		}
 
-		/// <summary>Convert a Cryptopia open order result into a position object</summary>
-		private Position PositionFrom(OpenOrder order, DateTimeOffset updated)
+		/// <summary>Convert a Cryptopia open order result into an order</summary>
+		private Order OrderFrom(OpenOrder order, DateTimeOffset updated)
 		{
 			// Get the associated trade pair (add the pair if it doesn't exist)
 			var order_id = unchecked((ulong)order.OrderId);
 			var fund_id = OrderIdtoFundId[order_id];
 			var sym = order.Market.Split('/');
+			var tt = Misc.TradeType(order.Type);
 			var pair = Pairs.GetOrAdd(sym[0], sym[1], trade_pair_id:order.TradePairId);
 			var rate = order.Rate._(pair.RateUnits);
 			var volume = order.Amount._(pair.Base);
 			var remaining = order.Remaining._(pair.Base);
 			var created = order.TimeStamp.As(DateTimeKind.Utc);
-			return new Position(fund_id, order_id, pair, Misc.TradeType(order.Type), rate, volume, remaining, created, updated);
+			return new Order(fund_id, order_id, pair, tt, rate, volume, remaining, created, updated);
 		}
 
 		/// <summary>Convert a Cryptopia trade history result into a position object</summary>

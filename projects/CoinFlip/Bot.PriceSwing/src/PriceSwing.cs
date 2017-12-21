@@ -323,7 +323,7 @@ namespace Bot.PriceSwing
 		}
 
 		/// <summary>Handle a monitored trade being filled</summary>
-		protected override void OnPositionFilled(ulong order_id, PositionFill his)
+		protected override void OnPositionFilled(ulong order_id, OrderFill his)
 		{
 			// If the position that was filled is a 'MatchTradeId' in
 			// an existing trade record then remove the trade record.

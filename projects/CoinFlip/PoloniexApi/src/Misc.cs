@@ -20,7 +20,7 @@ namespace Poloniex.API
 	}
 
 	/// <summary>Represents a time frame of a market.</summary>
-	public enum MarketPeriod
+	public enum EMarketPeriod
 	{
 		None = 0,
 

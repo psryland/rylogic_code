@@ -79,8 +79,8 @@ namespace CoinFlip
 
 						// Each order book as one entry for infinite volume.
 						// Available balance is applied after the loop is identified.
-						var buys  = new[]{ new Order(1m._(), decimal.MaxValue._(coin0)) };
-						var sells = new[]{ new Order(1m._(), decimal.MaxValue._(coin1)) };
+						var buys  = new[]{ new OrderBook.Offer(1m._(), decimal.MaxValue._(coin0)) };
+						var sells = new[]{ new OrderBook.Offer(1m._(), decimal.MaxValue._(coin1)) };
 						pair.MarketDepth.UpdateOrderBook(buys, sells);
 
 						// Notify updated

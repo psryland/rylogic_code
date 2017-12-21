@@ -10,7 +10,7 @@ namespace CoinFlip
 {
 	/// <summary>
 	/// A 'Trade' is a description of a trade that could be placed. It is different
-	/// to a 'Position' which is live on an exchange, waiting to be filled.</summary>
+	/// to an 'Order' which is live on an exchange, waiting to be filled.</summary>
 	[DebuggerDisplay("{Description,nq}")]
 	public class Trade
 	{
@@ -61,8 +61,8 @@ namespace CoinFlip
 		}
 
 		/// <summary>Create a trade based on an existing position</summary>
-		public Trade(Position pos)
-			:this(pos.FundId, pos.TradeType, pos.Pair, pos.PriceQ2B, pos.VolumeBase)
+		public Trade(Order odr)
+			:this(odr.FundId, odr.TradeType, odr.Pair, odr.PriceQ2B, odr.VolumeBase)
 		{}
 
 		/// <summary>Copy constructor</summary>

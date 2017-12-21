@@ -89,17 +89,31 @@ namespace CoinFlip
 			}
 		}
 
-		/// <summary>True if this exchange supports retrieving chart data</summary>
-		protected override IEnumerable<ETimeFrame> CandleDataAvailableInternal(TradePair pair)
+		/// <summary>Enumerate all candle data and time frames provided by this exchange</summary>
+		protected override IEnumerable<PairAndTF> EnumAvailableCandleDataInternal(TradePair pair)
 		{
-			return Enum<MarketPeriod>.Values.Select(x => ToTimeFrame(x));
+			if (pair != null)
+			{
+				var cp = new CurrencyPair(pair.Base, pair.Quote);
+				if (!Pairs.ContainsKey(pair.UniqueKey)) yield break;
+				foreach (var mp in Enum<EMarketPeriod>.Values)
+					yield return new PairAndTF(pair, ToTimeFrame(mp));
+			}
+			else
+			{
+				foreach (var p in Pairs.Values)
+					foreach (var mp in Enum<EMarketPeriod>.Values)
+						yield return new PairAndTF(p, ToTimeFrame(mp));
+			}
 		}
 
 		/// <summary>Return the chart data for a given pair, over a given time range</summary>
-		protected override List<Candle> CandleDataInternal(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end, CancellationToken? cancel)
+		protected override List<Candle> CandleDataInternal(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end, CancellationToken? cancel) // Worker thread context
 		{
+			var cp = new CurrencyPair(pair.Base, pair.Quote);
+
 			// Get the chart data
-			var data = Api.GetChartData(new CurrencyPair(pair.Base, pair.Quote), ToMarketPeriod(timeframe), time_beg, time_end, cancel);
+			var data = Api.GetChartData(cp, ToMarketPeriod(timeframe), time_beg, time_end, cancel);
 
 			// Convert it to candles (yes, Polo gets the base/quote backwards for 'Volume')
 			var candles = data.Select(x => new Candle(x.Time.Ticks, (double)x.Open, (double)x.High, (double)x.Low, (double)x.Close, (double)x.WeightedAverage, (double)x.VolumeQuote)).ToList();
@@ -107,14 +121,15 @@ namespace CoinFlip
 		}
 
 		/// <summary>Return the order book for 'pair' to a depth of 'count'</summary>
-		protected override MarketDepth MarketDepthInternal(TradePair pair, int depth)
+		protected override MarketDepth MarketDepthInternal(TradePair pair, int depth) // Worker thread context
 		{
-			var orders = Api.GetOrderBook(new CurrencyPair(pair.Base, pair.Quote), depth, cancel:Shutdown.Token);
+			var cp = new CurrencyPair(pair.Base, pair.Quote);
+			var orders = Api.GetOrderBook(cp, depth, cancel:Shutdown.Token);
 
 			// Update the depth of market data
 			var market_depth = new MarketDepth(pair.Base, pair.Quote);
-			var buys  = orders.BuyOrders .Select(x => new Order(x.Price._(pair.RateUnits), x.VolumeBase._(pair.Base))).ToArray();
-			var sells = orders.SellOrders.Select(x => new Order(x.Price._(pair.RateUnits), x.VolumeBase._(pair.Base))).ToArray();
+			var buys  = orders.BuyOrders .Select(x => new OrderBook.Offer(x.Price._(pair.RateUnits), x.VolumeBase._(pair.Base))).ToArray();
+			var sells = orders.SellOrders.Select(x => new OrderBook.Offer(x.Price._(pair.RateUnits), x.VolumeBase._(pair.Base))).ToArray();
 			market_depth.UpdateOrderBook(buys, sells);
 			return market_depth;
 		}
@@ -212,8 +227,8 @@ namespace CoinFlip
 							continue;
 
 						// Update the depth of market data
-						var buys  = orders.BuyOrders .Select(x => new Order(x.Price._(pair.RateUnits), x.VolumeBase._(pair.Base))).ToArray();
-						var sells = orders.SellOrders.Select(x => new Order(x.Price._(pair.RateUnits), x.VolumeBase._(pair.Base))).ToArray();
+						var buys  = orders.BuyOrders .Select(x => new OrderBook.Offer(x.Price._(pair.RateUnits), x.VolumeBase._(pair.Base))).ToArray();
+						var sells = orders.SellOrders.Select(x => new OrderBook.Offer(x.Price._(pair.RateUnits), x.VolumeBase._(pair.Base))).ToArray();
 						pair.MarketDepth.UpdateOrderBook(buys, sells);
 					}
 
@@ -290,10 +305,10 @@ namespace CoinFlip
 					// Update the collection of existing orders
 					foreach (var order in existing_orders.Values.Where(x => x.Count != 0).SelectMany(x => x))
 					{
-						// Add the position to the collection
-						var pos = PositionFrom(order, timestamp);
-						Positions[pos.OrderId] = pos;
-						order_ids.Add(pos.OrderId);
+						// Add the order to the collection
+						var odr = OrderFrom(order, timestamp);
+						Orders[odr.OrderId] = odr;
+						order_ids.Add(odr.OrderId);
 						pairs.Add(order.Pair);
 					}
 					foreach (var order in history.Values.SelectMany(x => x))
@@ -316,7 +331,7 @@ namespace CoinFlip
 
 					// Notify updated
 					History.LastUpdated = timestamp;
-					Positions.LastUpdated = timestamp;
+					Orders.LastUpdated = timestamp;
 				});
 			}
 			catch (Exception ex)
@@ -372,17 +387,17 @@ namespace CoinFlip
 			Api.ServerRequestRateLimit = limit;
 		}
 
-		/// <summary>Convert a Poloniex order into a position</summary>
-		private Position PositionFrom(global::Poloniex.API.Position pos, DateTimeOffset updated)
+		/// <summary>Convert a Poloniex order into an order</summary>
+		private Order OrderFrom(global::Poloniex.API.Order odr, DateTimeOffset updated)
 		{
-			var order_id = pos.OrderId;
+			var order_id = odr.OrderId;
 			var fund_id  = OrderIdtoFundId[order_id];
-			var tt       = Misc.TradeType(pos.Type);
-			var pair     = Pairs.GetOrAdd(pos.Pair.Base, pos.Pair.Quote);
-			var price    = pos.Price._(pair.RateUnits);
-			var volume   = pos.VolumeBase._(pair.Base);
-			var created  = pos.Created;
-			return new Position(fund_id, order_id, pair, tt, price, volume, volume, created, updated);
+			var tt       = Misc.TradeType(odr.Type);
+			var pair     = Pairs.GetOrAdd(odr.Pair.Base, odr.Pair.Quote);
+			var price    = odr.Price._(pair.RateUnits);
+			var volume   = odr.VolumeBase._(pair.Base);
+			var created  = odr.Created;
+			return new Order(fund_id, order_id, pair, tt, price, volume, volume, created, updated);
 		}
 
 		/// <summary>Convert a Poloniex trade history result into a position object</summary>
@@ -446,7 +461,7 @@ namespace CoinFlip
 
 			// Create the order
 			var ty = args.Update.Order.Type;
-			var order = new Order(args.Update.Order.Price._(pair.RateUnits), args.Update.Order.VolumeBase._(pair.Base));
+			var order = new OrderBook.Offer(args.Update.Order.Price._(pair.RateUnits), args.Update.Order.VolumeBase._(pair.Base));
 
 			// Get the orders that the update applies to
 			var book = (OrderBook)null;
@@ -487,13 +502,28 @@ namespace CoinFlip
 			Debug.Assert(pair.AssertOrdersValid());
 		}
 
+		/// <summary>Convert a market period to a time frame</summary>
+		private ETimeFrame ToTimeFrame(EMarketPeriod mp)
+		{
+			switch (mp)
+			{
+			default:                     return ETimeFrame.None;
+			case EMarketPeriod.Minutes5:  return ETimeFrame.Min5;
+			case EMarketPeriod.Minutes15: return ETimeFrame.Min15;
+			case EMarketPeriod.Minutes30: return ETimeFrame.Min30;
+			case EMarketPeriod.Hours2:    return ETimeFrame.Hour2;
+			case EMarketPeriod.Hours4:    return ETimeFrame.Hour4;
+			case EMarketPeriod.Day:       return ETimeFrame.Day1;
+			}
+		}
+
 		/// <summary>Convert a time frame to the nearest market period</summary>
-		private MarketPeriod ToMarketPeriod(ETimeFrame tf)
+		private EMarketPeriod ToMarketPeriod(ETimeFrame tf)
 		{
 			switch (tf)
 			{
 			default:
-				return MarketPeriod.None;
+				return EMarketPeriod.None;
 			case ETimeFrame.Tick1:
 			case ETimeFrame.Min1:
 			case ETimeFrame.Min2:
@@ -504,44 +534,30 @@ namespace CoinFlip
 			case ETimeFrame.Min7:
 			case ETimeFrame.Min8:
 			case ETimeFrame.Min9:
-				return MarketPeriod.Minutes5;
+				return EMarketPeriod.Minutes5;
 			case ETimeFrame.Min10:
 			case ETimeFrame.Min15:
-				return MarketPeriod.Minutes15;
+				return EMarketPeriod.Minutes15;
 			case ETimeFrame.Min20:
 			case ETimeFrame.Min30:
 			case ETimeFrame.Min45:
-				return MarketPeriod.Minutes30;
+				return EMarketPeriod.Minutes30;
 			case ETimeFrame.Hour1:
 			case ETimeFrame.Hour2:
-				return MarketPeriod.Hours2;
+				return EMarketPeriod.Hours2;
 			case ETimeFrame.Hour3:
 			case ETimeFrame.Hour4:
 			case ETimeFrame.Hour6:
 			case ETimeFrame.Hour8:
-				return MarketPeriod.Hours4;
+				return EMarketPeriod.Hours4;
 			case ETimeFrame.Hour12:
 			case ETimeFrame.Day1:
 			case ETimeFrame.Day2:
 			case ETimeFrame.Day3:
-			case ETimeFrame.Weekly:
-			case ETimeFrame.Monthly:
-				return MarketPeriod.Day;
-			}
-		}
-
-		/// <summary>Convert a market period to a time frame</summary>
-		private ETimeFrame ToTimeFrame(MarketPeriod mp)
-		{
-			switch (mp)
-			{
-			default:                     return ETimeFrame.None;
-			case MarketPeriod.Minutes5:  return ETimeFrame.Min5;
-			case MarketPeriod.Minutes15: return ETimeFrame.Min15;
-			case MarketPeriod.Minutes30: return ETimeFrame.Min30;
-			case MarketPeriod.Hours2:    return ETimeFrame.Hour2;
-			case MarketPeriod.Hours4:    return ETimeFrame.Hour4;
-			case MarketPeriod.Day:       return ETimeFrame.Day1;
+			case ETimeFrame.Week1:
+			case ETimeFrame.Week2:
+			case ETimeFrame.Month1:
+				return EMarketPeriod.Day;
 			}
 		}
 

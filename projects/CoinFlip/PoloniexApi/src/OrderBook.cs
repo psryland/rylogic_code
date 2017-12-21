@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.Linq;
 using Newtonsoft.Json;
 
 namespace Poloniex.API
@@ -58,6 +57,37 @@ namespace Poloniex.API
 			}
 			return output;
 		}
+
+		/// <summary>A trade offer</summary>
+		[DebuggerDisplay("Price={Price} Vol={VolumeBase}")]
+		public class Order
+		{
+			internal Order()
+			{}
+			internal Order(EOrderType type, decimal price, decimal volume)
+			{
+				Type = type;
+				Price = price;
+				VolumeBase = volume;
+			}
+
+			/// <summary>A buy or sell order</summary>
+			public EOrderType Type { get; private set; }
+
+			/// <summary>The trade price (in quote currency)</summary>
+			[JsonProperty("rate")]
+			public decimal Price { get; private set; }
+
+			/// <summary>The trade volume (in base currency)</summary>
+			[JsonProperty("amount")]
+			public decimal VolumeBase { get; private set; }
+
+			/// <summary>The trade volume (in quote currency)</summary>
+			public decimal VolumeQuote
+			{
+				get { return VolumeBase * Price; }
+			}
+		}
 	}
 
 	/// <summary>Data type received from the WAMP order book and trade update channel</summary>
@@ -87,37 +117,6 @@ namespace Poloniex.API
 
 		/// <summary>The updated volume at the given rate</summary>
 		[JsonProperty("data")]
-		public Order Order { get; internal set; }
-	}
-
-	/// <summary>A trade offer</summary>
-	[DebuggerDisplay("Price={Price} Vol={VolumeBase}")]
-	public class Order
-	{
-		internal Order()
-		{}
-		internal Order(EOrderType type, decimal price, decimal volume)
-		{
-			Type = type;
-			Price = price;
-			VolumeBase = volume;
-		}
-
-		/// <summary>A buy or sell order</summary>
-		public EOrderType Type { get; private set; }
-
-		/// <summary>The trade price (in quote currency)</summary>
-		[JsonProperty("rate")]
-		public decimal Price { get; private set; }
-
-		/// <summary>The trade volume (in base currency)</summary>
-		[JsonProperty("amount")]
-		public decimal VolumeBase { get; private set; }
-
-		/// <summary>The trade volume (in quote currency)</summary>
-		public decimal VolumeQuote
-		{
-			get { return VolumeBase * Price; }
-		}
+		public OrderBook.Order Order { get; internal set; }
 	}
 }

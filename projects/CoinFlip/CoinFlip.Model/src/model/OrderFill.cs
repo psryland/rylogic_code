@@ -10,9 +10,9 @@ namespace CoinFlip
 {
 	/// <summary>A collection of trades associated with filling an order</summary>
 	[DebuggerDisplay("{Description,nq}")]
-	public class PositionFill :INotifyPropertyChanged
+	public class OrderFill :INotifyPropertyChanged
 	{
-		public PositionFill(ulong order_id, ETradeType tt, TradePair pair)
+		public OrderFill(ulong order_id, ETradeType tt, TradePair pair)
 		{
 			OrderId   = order_id;
 			UniqueKey = Guid.NewGuid();
@@ -20,7 +20,7 @@ namespace CoinFlip
 			Pair      = pair;
 			Trades    = new HistoryCollection(this);
 		}
-		public PositionFill(PositionFill rhs)
+		public OrderFill(OrderFill rhs)
 			:this(rhs.OrderId, rhs.TradeType, rhs.Pair)
 		{
 			foreach (var fill in rhs.Trades.Values)
@@ -132,8 +132,8 @@ namespace CoinFlip
 		public HistoryCollection Trades { get; private set; }
 		public class HistoryCollection :BindingDict<ulong, Historic>
 		{
-			private readonly PositionFill m_fill;
-			public HistoryCollection(PositionFill fill)
+			private readonly OrderFill m_fill;
+			public HistoryCollection(OrderFill fill)
 			{
 				m_fill = fill;
 				KeyFrom = x => x.TradeId;
@@ -167,7 +167,7 @@ namespace CoinFlip
 		}
 
 		#region Equals
-		public bool Equals(PositionFill rhs)
+		public bool Equals(OrderFill rhs)
 		{
 			return
 				rhs        != null &&
@@ -178,7 +178,7 @@ namespace CoinFlip
 		}
 		public override bool Equals(object obj)
 		{
-			return Equals(obj as PositionFill);
+			return Equals(obj as OrderFill);
 		}
 		public override int GetHashCode()
 		{

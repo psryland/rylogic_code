@@ -32,7 +32,7 @@ namespace CoinFlip
 
 	/// <summary>Base class for exchanges</summary>
 	[DebuggerDisplay("{Name,nq}")]
-	public abstract class Exchange :IDisposable ,INotifyPropertyChanged
+	public abstract class Exchange :IDisposable ,INotifyPropertyChanged ,IComparable<Exchange> ,IComparable
 	{
 		public Exchange(Model model, IExchangeSettings settings)
 		{
@@ -44,7 +44,7 @@ namespace CoinFlip
 				Coins = new CoinCollection(this);
 				Pairs = new PairCollection(this);
 				Balance = new BalanceCollection(this);
-				Positions = new PositionsCollection(this);
+				Orders = new OrdersCollection(this);
 				History = new HistoryCollection(this);
 				OrderIdtoFundId = new OrderIdtoFundIdMap();
 				Transfers = new TransfersCollection(this);
@@ -283,7 +283,7 @@ namespace CoinFlip
 
 							// Update positions/history
 							const int PositionUpdatePeriodMS = 1000;
-							if (PositionUpdateRequired || (Model.UtcNow - Positions.LastUpdated).TotalMilliseconds > PositionUpdatePeriodMS)
+							if (PositionUpdateRequired || (Model.UtcNow - Orders.LastUpdated).TotalMilliseconds > PositionUpdatePeriodMS)
 							{
 								PositionUpdateRequired = false;
 								UpdatePositionsAndHistory();
@@ -310,7 +310,7 @@ namespace CoinFlip
 		}
 		private Thread m_update_thread;
 		private AutoResetEvent m_update_thread_step;
-		private bool m_update_thread_exit;
+		private volatile bool m_update_thread_exit;
 
 		/// <summary>The rate that 'Heart' beats at</summary>
 		public int PollPeriod
@@ -434,8 +434,8 @@ namespace CoinFlip
 		/// <summary>The balance of the given coin on this exchange</summary>
 		public BalanceCollection Balance { get; private set; }
 
-		/// <summary>Open positions held on this exchange, keyed on order ID</summary>
-		public PositionsCollection Positions { get; private set; }
+		/// <summary>Open orders held on this exchange, keyed on order ID</summary>
+		public OrdersCollection Orders { get; private set; }
 
 		/// <summary>Funds transfers on this exchange</summary>
 		public TransfersCollection Transfers { get; private set; }
@@ -514,12 +514,12 @@ namespace CoinFlip
 			if (!order_result.Filled)
 			{
 				// Add a 'Position' to the collection, this will be overwritten when UpdatePositions() is called.
-				var pos = new Position(fund_id, order_result.OrderId, pair, tt, price, volume, volume, now, now, fake:fake);
-				Positions[order_result.OrderId] = pos;
+				var pos = new Order(fund_id, order_result.OrderId, pair, tt, price, volume, volume, now, now, fake:fake);
+				Orders[order_result.OrderId] = pos;
 
 				// Update the hold with a 'StillNeeded' function
 				if (fake)
-					bal.Hold(hold_id, b => Positions[order_result.OrderId] != null);
+					bal.Hold(hold_id, b => Orders[order_result.OrderId] != null);
 			}
 
 			// The order may have also been completed or partially filled. Add the filled orders to the trade history.
@@ -552,7 +552,7 @@ namespace CoinFlip
 				true;
 
 			// Remove the position from the Positions collection so that there is no race condition
-			Positions.RemoveIf(x => x.Pair == pair && x.OrderId == order_id);
+			Orders.RemoveIf(x => x.Pair == pair && x.OrderId == order_id);
 
 			// Trigger a positions and balances update
 			PositionUpdateRequired = true;
@@ -561,22 +561,21 @@ namespace CoinFlip
 		}
 		protected abstract bool CancelOrderInternal(TradePair pair, ulong order_id);
 
-		/// <summary>Returns the time frames for which candle data is available for 'pair'</summary>
-		public IEnumerable<ETimeFrame> CandleDataAvailable(TradePair pair)
+		/// <summary>Enumerate all candle data and time frames provided by this exchange</summary>
+		public IEnumerable<PairAndTF> EnumAvailableCandleData(TradePair pair = null)
 		{
-			if (pair.Exchange != this)
+			if (pair != null && pair.Exchange != this)
 				throw new Exception($"Trade pair {pair.NameWithExchange} is not provided by this exchange ({Name})");
 
-			// Back-testing sim exchanges provide the same time frames as the real exchanges
-			return CandleDataAvailableInternal(pair);
+			return EnumAvailableCandleDataInternal(pair);
 		}
-		protected virtual IEnumerable<ETimeFrame> CandleDataAvailableInternal(TradePair pair)
+		protected virtual IEnumerable<PairAndTF> EnumAvailableCandleDataInternal(TradePair pair)
 		{
 			yield break;
 		}
 
 		/// <summary>Return the candle data for a given pair, over a given time range</summary>
-		public List<Candle> CandleData(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end, CancellationToken? cancel)
+		public List<Candle> CandleData(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end, CancellationToken? cancel) // Worker thread context
 		{
 			try
 			{
@@ -590,20 +589,20 @@ namespace CoinFlip
 				return null;
 			}
 		}
-		protected virtual List<Candle> CandleDataInternal(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end, CancellationToken? cancel)
+		protected virtual List<Candle> CandleDataInternal(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end, CancellationToken? cancel) // Worker thread context
 		{
 			return new List<Candle>();
 		}
 		public bool CandleDataUpdateInProgress { get; private set; }
 
 		/// <summary>Return the order book for 'pair' to a depth of 'depth'</summary>
-		public MarketDepth MarketDepth(TradePair pair, int depth)
+		public MarketDepth MarketDepth(TradePair pair, int depth) // Worker thread context
 		{
 			return Model.BackTesting
 				? Model.Simulation[this].MarketDepthInternal(pair, depth)
 				: MarketDepthInternal(pair, depth);
 		}
-		protected virtual MarketDepth MarketDepthInternal(TradePair pair, int count)
+		protected virtual MarketDepth MarketDepthInternal(TradePair pair, int count) // Worker thread context
 		{
 			return new MarketDepth(pair.Base, pair.Quote);
 		}
@@ -639,7 +638,7 @@ namespace CoinFlip
 			// Do history and positions together so there's no change of a position being
 			// filled without it appearing in the history
 			History.LastUpdated = Model.UtcNow;
-			Positions.LastUpdated = Model.UtcNow;
+			Orders.LastUpdated = Model.UtcNow;
 		}
 
 		/// <summary>Update all deposits and withdrawals made on this exchange</summary>
@@ -677,11 +676,11 @@ namespace CoinFlip
 		protected void RemovePositionsNotIn(HashSet<ulong> order_ids, DateTimeOffset timestamp)
 		{
 			// Remove any positions that are no longer valid.
-			foreach (var pos in Positions.Values.Where(x => !order_ids.Contains(x.OrderId)).ToArray())
+			foreach (var pos in Orders.Values.Where(x => !order_ids.Contains(x.OrderId)).ToArray())
 			{
 				if (pos.Created >= timestamp) continue;
 				if (Model.AllowTrades == false && pos.OrderId < 100) continue; // Hack for fake positions
-				Positions.Remove(pos.OrderId);
+				Orders.Remove(pos.OrderId);
 			}
 		}
 
@@ -756,7 +755,7 @@ namespace CoinFlip
 		private HashSet<ulong> TradeHistoryTradeIds { get; set; }
 
 		/// <summary>Add a new or modified PositionFill to the trade history DB</summary>
-		public void AddToTradeHistory(PositionFill fill)
+		public void AddToTradeHistory(OrderFill fill)
 		{
 			// Notes:
 			// - This doesn't happen when 'Model.History' is accessed/added to by derived exchanges
@@ -810,6 +809,28 @@ namespace CoinFlip
 		public override string ToString()
 		{
 			return GetType().Name;
+		}
+
+		/// <summary></summary>
+		public int CompareTo(Exchange other)
+		{
+			return Name.CompareTo(other.Name);
+		}
+		public int CompareTo(object obj)
+		{
+			return CompareTo((Exchange)obj);
+		}
+
+		/// <summary>Tuple of 'Pair' and 'TimeFrame'</summary>
+		public struct PairAndTF
+		{
+			public PairAndTF(TradePair pair, ETimeFrame tf)
+			{
+				Pair = pair;
+				TimeFrame = tf;
+			}
+			public TradePair Pair;
+			public ETimeFrame TimeFrame;
 		}
 
 		#region Colours
@@ -1011,19 +1032,19 @@ namespace CoinFlip
 			return this[coin];
 		}
 	}
-	public class PositionsCollection :CollectionBase<ulong, Position>
+	public class OrdersCollection :CollectionBase<ulong, Order>
 	{
-		public PositionsCollection(Exchange exch)
+		public OrdersCollection(Exchange exch)
 			:base(exch)
 		{
 			KeyFrom = x => x.OrderId;
 		}
-		public PositionsCollection(PositionsCollection rhs)
+		public OrdersCollection(OrdersCollection rhs)
 			:base(rhs)
 		{}
 
 		/// <summary>Get/Set a position by order id</summary>
-		public override Position this[ulong key]
+		public override Order this[ulong key]
 		{
 			get
 			{
@@ -1038,7 +1059,7 @@ namespace CoinFlip
 			}
 		}
 	}
-	public class HistoryCollection :CollectionBase<ulong, PositionFill>
+	public class HistoryCollection :CollectionBase<ulong, OrderFill>
 	{
 		public HistoryCollection(Exchange exch)
 			:base(exch)
@@ -1050,14 +1071,14 @@ namespace CoinFlip
 		{}
 
 		/// <summary>Get or Add a history entry with order id 'key' for 'pair'</summary>
-		public PositionFill GetOrAdd(ulong key, ETradeType tt, TradePair pair)
+		public OrderFill GetOrAdd(ulong key, ETradeType tt, TradePair pair)
 		{
 			Debug.Assert(Model.AssertMarketDataWrite());
-			return this.GetOrAdd(key, x => new PositionFill(key, tt, pair));
+			return this.GetOrAdd(key, x => new OrderFill(key, tt, pair));
 		}
 
 		/// <summary>Get/Set a history entry by order id. Returns null if 'key' is not in the collection</summary>
-		public override PositionFill this[ulong key]
+		public override OrderFill this[ulong key]
 		{
 			get
 			{

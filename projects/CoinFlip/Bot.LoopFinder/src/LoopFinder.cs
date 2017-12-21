@@ -351,7 +351,7 @@ namespace Bot.LoopFinder
 			var dir = forward ? +1 : -1;
 			var coin = forward ? src_loop.Beg : src_loop.End;
 			var tt = forward ? ETradeType.B2Q : ETradeType.Q2B;
-			var obk = new OrderBook(coin, coin, tt){ new Order(1m, decimal.MaxValue._(coin.Symbol)) };
+			var obk = new OrderBook(coin, coin, tt){ new OrderBook.Offer(1m, decimal.MaxValue._(coin.Symbol)) };
 			foreach (var pair in src_loop.EnumPairs(dir))
 			{
 				// Limit the volume calculated, there's no point in calculating large volumes if we can't trade them
@@ -527,7 +527,7 @@ namespace Bot.LoopFinder
 				var vol1 = vol0 * price;
 
 				// Record the volume and the combined rate
-				ret.Add(new Order(rate.Price * price, vol1), validate:false);
+				ret.Add(new OrderBook.Offer(rate.Price * price, vol1), validate:false);
 
 				// Move to the next order in the set with the lowest accumulative volume.
 				// If the same accumulative volume is in both sets, move to the next order in both sets.

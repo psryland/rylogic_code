@@ -56,6 +56,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bot.ReturnToMean", "Bot.Ret
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bot.Portfolio", "Bot.Portfolio\Bot.Portfolio.csproj", "{31186C4C-111F-4390-A6AA-E3EFB8BB767C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitfinexApi", "BitfinexApi\BitfinexApi.csproj", "{11863E14-7143-4228-B861-FC8318C870F2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -246,6 +248,18 @@ Global
 		{31186C4C-111F-4390-A6AA-E3EFB8BB767C}.Release|x64.Build.0 = Release|Any CPU
 		{31186C4C-111F-4390-A6AA-E3EFB8BB767C}.Release|x86.ActiveCfg = Release|Any CPU
 		{31186C4C-111F-4390-A6AA-E3EFB8BB767C}.Release|x86.Build.0 = Release|Any CPU
+		{11863E14-7143-4228-B861-FC8318C870F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{11863E14-7143-4228-B861-FC8318C870F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{11863E14-7143-4228-B861-FC8318C870F2}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{11863E14-7143-4228-B861-FC8318C870F2}.Debug|x64.Build.0 = Debug|Any CPU
+		{11863E14-7143-4228-B861-FC8318C870F2}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{11863E14-7143-4228-B861-FC8318C870F2}.Debug|x86.Build.0 = Debug|Any CPU
+		{11863E14-7143-4228-B861-FC8318C870F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{11863E14-7143-4228-B861-FC8318C870F2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{11863E14-7143-4228-B861-FC8318C870F2}.Release|x64.ActiveCfg = Release|Any CPU
+		{11863E14-7143-4228-B861-FC8318C870F2}.Release|x64.Build.0 = Release|Any CPU
+		{11863E14-7143-4228-B861-FC8318C870F2}.Release|x86.ActiveCfg = Release|Any CPU
+		{11863E14-7143-4228-B861-FC8318C870F2}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

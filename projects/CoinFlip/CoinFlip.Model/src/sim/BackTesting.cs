@@ -127,7 +127,7 @@ namespace CoinFlip
 		{
 			foreach (var exch in Exchanges)
 			{
-				foreach (var pos in exch.Positions.Values.Where(x => x.Fake).ToArray())
+				foreach (var pos in exch.Orders.Values.Where(x => x.Fake).ToArray())
 				{
 					var trade = pos.Pair.MakeTrade(pos.FundId, pos.TradeType, pos.VolumeIn);
 					if (Math.Sign(pos.PriceQ2B - trade.PriceQ2B) == pos.TradeType.Sign())

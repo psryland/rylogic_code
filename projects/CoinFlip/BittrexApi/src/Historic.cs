@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 
 namespace Bittrex.API
 {
-	public class Historic
+	public class Trade
 	{
 		/// <summary>Globally unique identifier for the order</summary>
 		public Guid OrderId { get; private set; }
@@ -87,7 +87,7 @@ namespace Bittrex.API
 		public string ConditionTarget { get; internal set; }
 	}
 
-	public class PositionHistoryResponse
+	public class TradeHistoryResponse
 	{
 		/// <summary></summary>
 		[JsonProperty("success")]
@@ -99,6 +99,6 @@ namespace Bittrex.API
 
 		/// <summary></summary>
 		[JsonProperty("result")]
-		public List<Historic> Data { get; internal set; }
+		public List<Trade> Data { get; internal set; }
 	}
 }

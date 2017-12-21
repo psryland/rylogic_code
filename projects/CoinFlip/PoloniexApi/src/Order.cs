@@ -7,11 +7,11 @@ namespace Poloniex.API
 {
 	/// <summary>A trade offer</summary>
 	[DebuggerDisplay("{Type} Price={Price} Vol={VolumeBase}")]
-	public class Position
+	public class Order
 	{
-		internal Position()
+		internal Order()
 		{}
-		internal Position(EOrderType order_type, decimal price, decimal volume)
+		internal Order(EOrderType order_type, decimal price, decimal volume)
 		{
 			Type = order_type;
 			Price = price;

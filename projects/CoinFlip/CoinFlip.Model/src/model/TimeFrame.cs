@@ -32,8 +32,9 @@ namespace CoinFlip
 		[Description("D1 ")]     Day1   ,
 		[Description("D2 ")]     Day2   ,
 		[Description("D3 ")]     Day3   ,
-		[Description("Weekly")]  Weekly ,
-		[Description("Monthly")] Monthly,
+		[Description("W1 ")]     Week1  ,
+		[Description("W2 ")]     Week2  ,
+		[Description("Month1")]  Month1 ,
 	}
 
 	/// <summary>A time value in multiples of time frame units</summary>
