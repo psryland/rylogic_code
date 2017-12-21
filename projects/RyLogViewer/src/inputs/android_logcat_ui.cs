@@ -11,6 +11,7 @@ using pr.common;
 using pr.extn;
 using pr.gui;
 using pr.util;
+using DataGridViewComboBoxColumn = pr.gui.DataGridViewComboBoxColumn;
 
 namespace RyLogViewer
 {

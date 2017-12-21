@@ -318,8 +318,8 @@ namespace pr.common
 				//content = WebUtility.HtmlEncode(content);
 			}
 
-			if (m_elems.Count != 0 && m_elems.Back() is Str)
-				m_elems.Back().As<Str>().Content.Append(content);
+			if (m_elems.Count != 0 && m_elems.Back() is Str str)
+				str.Content.Append(content);
 			else
 				Add(new Str(content));
 			return this;

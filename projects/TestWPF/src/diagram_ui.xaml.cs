@@ -51,8 +51,8 @@ namespace TestWPF
 			
 			var combo = new System.Windows.Forms.ComboBox{DataSource = new[]{"Paul","Was","Here"}};
 			node4.EditControl = new DiagramControl.EditingControl(combo
-				,(elem,form) => combo.SelectedItem = elem.As<DiagramControl.Node>().Text
-				,elem => elem.As<DiagramControl.Node>().Text = combo.SelectedItem.As<string>());
+				,(elem,form) => combo.SelectedItem = ((DiagramControl.Node)elem).Text
+				,elem => ((DiagramControl.Node)elem).Text = (string)combo.SelectedItem);
 			
 			var conn4 = new DiagramControl.Connector(node4, node2){Type = conn_type};
 			var conn5 = new DiagramControl.Connector(node5, node4){Type = conn_type};

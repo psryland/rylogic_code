@@ -113,7 +113,7 @@ namespace pr.gui
 				if (Title.HasValue())
 					dialog.SetTitle(Title);
 				if (Description.HasValue())
-					dialog.As<IFileDialogCustomize>().AddText(0, m_desc);
+					((IFileDialogCustomize)dialog).AddText(0, m_desc);
 
 				if (SelectedPath.HasValue())
 				{

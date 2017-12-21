@@ -94,7 +94,7 @@ namespace pr.gui
 		/// <summary>The items displayed in the list box</summary>
 		public IEnumerable<object> Items
 		{
-			get { return m_bs_items.DataSource.As<IEnumerable<object>>(); }
+			get { return (IEnumerable<object>)m_bs_items.DataSource; }
 			set
 			{
 				m_bs_items.DataSource = value;

@@ -55,12 +55,10 @@ namespace pr.gui
 				Notes           = new List<Note>();
 				m_snap          = new Snapshot();
 				m_tmp           = new Snapshot();
-				m_rdr_thread    = null;
 
 				m_grab_location = PointF.Empty;
 				m_selection     = Rectangle.Empty;
 				m_tooltip       = new ToolTip{ShowAlways = false, UseAnimation = false, UseFading = false, Tag = false};
-				m_mutex_snap    = new object();
 				m_plot_area     = Rectangle.Empty;
 
 				MouseNavigation = true;
@@ -86,10 +84,8 @@ namespace pr.gui
 		}
 		protected override void Dispose(bool disposing)
 		{
-			m_rdr_cancel = true;
-			if (m_rdr_thread != null)
-				m_rdr_thread.Join();
-
+			// Cancel any running background renders
+			++m_rdr_issue;
 			Legend = Util.Dispose(Legend);
 			Util.Dispose(ref m_tooltip);
 			base.Dispose(disposing);
@@ -1661,14 +1657,8 @@ namespace pr.gui
 		}
 		private bool m_impl_dirty;
 
-		/// <summary>A background thread used to render the plot</summary>
-		private Thread m_rdr_thread;
-
-		/// <summary>Atomic flag for cancelling rendering (yes, bool is atomic in C#)</summary>
-		private volatile bool m_rdr_cancel;
-
-		/// <summary>Mutex that synchronises access to the Snapshot objects</summary>
-		private object m_mutex_snap;
+		/// <summary>Issue counter for rendering</summary>
+		private volatile int m_rdr_issue;
 
 		/// <summary>The screen space size of the plot part of the control</summary>
 		private Rectangle m_plot_area;
@@ -1678,7 +1668,7 @@ namespace pr.gui
 		{
 			plot_area = PlotArea(gfx, area);
 			RenderGraphFrame(gfx, area, plot_area);
-			RenderData(gfx, plot_area);
+			RenderData(gfx, plot_area, m_rdr_issue);
 		}
 		public void RenderGraph(Graphics gfx, Rectangle area)
 		{
@@ -1766,9 +1756,8 @@ namespace pr.gui
 				// If the graph is dirty, begin an asynchronous render of the plot into 'm_tmp'
 				if (Dirty)
 				{
-					m_rdr_cancel = true;
-					if (m_rdr_thread != null) m_rdr_thread.Join();
-					m_rdr_cancel = false;
+					++m_rdr_issue;
+					m_impl_dirty = false;
 
 					// Make sure the temporary bitmap and the snapshot bitmap are the correct size
 					var plot_size = m_plot_area.Size;
@@ -1782,49 +1771,52 @@ namespace pr.gui
 
 					// Plot rendering (done in a background thread).
 					// This thread renders the plot into the bitmap in 'm_tmp' using readonly access to the series data.
-					m_rdr_thread = new Thread(() =>
+					ThreadPool.QueueUserWorkItem(x =>
 					{
+						// Check the issue number
+						var rdr_issue = (int)x;
+						if (rdr_issue != m_rdr_issue)
+							return;
+
 						// Hold the rendering CS. Clients should hold this if they want to
 						// modify the data while the graph is potentially rendering
 						// Render the plot into 'm_tmp'
 						lock (MutexRendering)
 						{
 							var g = Graphics.FromImage(m_tmp.m_bm);
-							RenderData(g, m_tmp.Rect);
+							RenderData(g, m_tmp.Rect, rdr_issue);
 						}
 
-						// If the render was cancelled, ignore the result
-						if (m_rdr_cancel)
-							return;
+						// Swap the bitmaps on the GUI thread
+						this.BeginInvoke(() =>
+						{
+							// If the render was cancelled, ignore the result
+							if (rdr_issue != m_rdr_issue)
+								return;
 
-						// Otherwise get the main thread to do something with the plot bitmap
-						lock (m_mutex_snap)
+							// Otherwise get the main thread to do something with the plot bitmap
 							Util.Swap(ref m_snap, ref m_tmp);
 
-						// Cause a refresh
-						Invalidate();
-					});
-					m_rdr_thread.Start();
-
-					m_impl_dirty = false;
+							// Cause a refresh
+							Refresh();
+						});
+					}, m_rdr_issue);
 				}
 
 				// In the mean time, compose the graph in 'm_bm' by rendering the frame
 				// synchronously and copy the last snapshot into the plot area
 				RenderGraphFrame(gfx, area, m_plot_area);
 
+				// Paint the plot area bitmap
 				gfx.SetClip(m_plot_area.Shifted(1,1).Inflated(0,0,-1,-1));
 				gfx.SmoothingMode = SmoothingMode.HighQuality;
-				lock (m_mutex_snap)
+				if (m_snap.m_bm != null)
 				{
-					if (m_snap.m_bm != null)
-					{
-						var tl = GraphToPoint(new PointF((float)m_snap.m_xrange.Beg, (float)m_snap.m_yrange.End));
-						var br = GraphToPoint(new PointF((float)m_snap.m_xrange.End, (float)m_snap.m_yrange.Beg));
-						var dst_rect = Rectangle.FromLTRB((int)tl.X, (int)tl.Y, (int)br.X, (int)br.Y);
-						var src_rect = m_snap.Rect;
-						gfx.DrawImage(m_snap.m_bm, dst_rect, (int)src_rect.X, (int)src_rect.Y, (int)src_rect.Width, (int)src_rect.Height, GraphicsUnit.Pixel);
-					}
+					var tl = GraphToPoint(new PointF((float)m_snap.m_xrange.Beg, (float)m_snap.m_yrange.End));
+					var br = GraphToPoint(new PointF((float)m_snap.m_xrange.End, (float)m_snap.m_yrange.Beg));
+					var dst_rect = Rectangle.FromLTRB((int)tl.X, (int)tl.Y, (int)br.X, (int)br.Y);
+					var src_rect = m_snap.Rect;
+					gfx.DrawImage(m_snap.m_bm, dst_rect, (int)src_rect.X, (int)src_rect.Y, (int)src_rect.Width, (int)src_rect.Height, GraphicsUnit.Pixel);
 				}
 
 				// Allow clients to draw on the graph
@@ -2086,7 +2078,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Render the series data into the graph (within 'area')</summary>
-		private void RenderData(Graphics gfx, Rectangle plot_area)
+		private void RenderData(Graphics gfx, Rectangle plot_area, int rdr_issue)
 		{
 			try
 			{
@@ -2105,7 +2097,8 @@ namespace pr.gui
 				// Plot each series
 				foreach (var series in Data)
 				{
-					if (m_rdr_cancel)
+					// Give up if there's a newer DoPaint call
+					if (rdr_issue != m_rdr_issue)
 						break;
 
 					var opts = series.Options;
@@ -2123,7 +2116,8 @@ namespace pr.gui
 						var indices = s.Indices(XAxis.Min, XAxis.Max);
 						for (var iter = indices.GetIterator(); !iter.AtEnd;)
 						{
-							if (m_rdr_cancel)
+							// Give up if there's a newer DoPaint call
+							if (rdr_issue != m_rdr_issue)
 								break;
 
 							// Get the next data point

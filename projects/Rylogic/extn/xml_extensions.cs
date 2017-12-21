@@ -1290,8 +1290,8 @@ namespace pr.extn
 					#region XElement
 					if (i.Current is XElement)
 					{
-						var ni = i.Current.As<XElement>();
-						var nj = j.Current.As<XElement>();
+						var ni = (XElement)i.Current;
+						var nj = (XElement)j.Current;
 
 						// Only change XElements if they have the same name, otherwise treat them as different nodes
 						if (ni.Name == nj.Name)
@@ -1328,8 +1328,8 @@ namespace pr.extn
 					#region XCData
 					else if (i.Current is XCData)
 					{
-						var ni = i.Current.As<XCData>();
-						var nj = j.Current.As<XCData>();
+						var ni = (XCData)i.Current;
+						var nj = (XCData)j.Current;
 						if (ni.Value != nj.Value)
 						{
 							var op = diff.Add2(new XElement(EOpType.Value.Desc(), new XCData(nj.Value)));
@@ -1344,8 +1344,8 @@ namespace pr.extn
 					#region XText
 					else if (i.Current is XText)
 					{
-						var ni = i.Current.As<XText>();
-						var nj = j.Current.As<XText>();
+						var ni = (XText)i.Current;
+						var nj = (XText)j.Current;
 						if (ni.Value != nj.Value)
 						{
 							var op = diff.Add2(new XElement(EOpType.Value.Desc(), nj.Value));
@@ -1360,8 +1360,8 @@ namespace pr.extn
 					#region XComment
 					else if (i.Current is XComment)
 					{
-						var ni = i.Current.As<XComment>();
-						var nj = j.Current.As<XComment>();
+						var ni = (XComment)i.Current;
+						var nj = (XComment)j.Current;
 						if (ni.Value != nj.Value)
 						{
 							var op = diff.Add2(new XElement(EOpType.Value.Desc(), nj.Value));
@@ -1376,24 +1376,24 @@ namespace pr.extn
 					#region XDocumentType
 					else if (i.Current is XDocumentType)
 					{
-						var ni = i.Current.As<XDocumentType>();
-						var nj = j.Current.As<XDocumentType>();
+						var ni = (XDocumentType)i.Current;
+						var nj = (XDocumentType)j.Current;
 						throw new NotImplementedException();
 					}
 					#endregion
 					#region XProcessingInstruction
 					else if (i.Current is XProcessingInstruction)
 					{
-						var ni = i.Current.As<XProcessingInstruction>();
-						var nj = j.Current.As<XProcessingInstruction>();
+						var ni = (XProcessingInstruction)i.Current;
+						var nj = (XProcessingInstruction)j.Current;
 						throw new NotImplementedException();
 					}
 					#endregion
 					#region XDocument
 					else if (i.Current is XDocument)
 					{
-						var ni = i.Current.As<XDocument>();
-						var nj = j.Current.As<XDocument>();
+						var ni = (XDocument)i.Current;
+						var nj = (XDocument)j.Current;
 
 						// Recursively find the differences in the child trees.
 						var op = new XElement(EOpType.Change.Desc());
@@ -1425,7 +1425,7 @@ namespace pr.extn
 							return false;
 
 						// Both are XElements, but the names are different, not changeable
-						if (l is XElement && l.As<XElement>().Name != r.As<XElement>().Name)
+						if (l is XElement && ((XElement)l).Name != ((XElement)r).Name)
 							return false;
 
 						// Same type => changeable
@@ -1487,10 +1487,10 @@ namespace pr.extn
 					{
 						// If 'tree' contains no 'XText' node
 						var child = op.FindChild(tree);
-						if      (child == null)     tree.Insert(op.Index, new XText(op.Value));
-						else if (child is XText   ) child.As<XText   >().Value = op.Value;
-						else if (child is XElement) child.As<XElement>().Value = op.Value;
-						else if (child is XComment) child.As<XComment>().Value = op.Value;
+						if      (child == null) tree.Insert(op.Index, new XText(op.Value));
+						else if (child is XText    xt) xt.Value = op.Value;
+						else if (child is XElement xe) xe.Value = op.Value;
+						else if (child is XComment xc) xc.Value = op.Value;
 						else throw new Exception("Cannot change value on node type {0}".Fmt(child.NodeType));
 						break;
 					}
@@ -1499,8 +1499,8 @@ namespace pr.extn
 				case EOpType.Remove:
 					{
 						var child = op.FindChild(tree);
-						if (op.Name.HasValue() && child is XElement && child.As<XElement>().Name != op.Name)
-							throw new Exception("Name mismatch for remove operation. Expected: {0}  Actual: {1}".Fmt(op.Name, child.As<XElement>().Name));
+						if (op.Name.HasValue() && child is XElement xe && xe.Name != op.Name)
+							throw new Exception("Name mismatch for remove operation. Expected: {0}  Actual: {1}".Fmt(op.Name, xe.Name));
 						child.Remove();
 						break;
 					}
@@ -1518,7 +1518,7 @@ namespace pr.extn
 							throw new NotSupportedException("XmlDiff insert node type {0} has not been implemented".Fmt(op.NodeType));
 						case XmlNodeType.Element:
 							{
-								var node = tree.Insert(op.Index, new XElement(op.Name)).As<XContainer>();
+								var node = (XContainer)tree.Insert(op.Index, new XElement(op.Name));
 								node.Patch(op_elem);
 								break;
 							}
@@ -1536,9 +1536,9 @@ namespace pr.extn
 				case EOpType.Change:
 					{
 						// Find the child node
-						var child = op.FindChild(tree).As<XContainer>();
-						if (op.Name.HasValue() && child is XElement && child.As<XElement>().Name != op.Name)
-							throw new Exception("Name mismatch for change operation. Expected: {0}  Actual: {1}".Fmt(op.Name, child.As<XElement>().Name));
+						var child = (XContainer)op.FindChild(tree);
+						if (op.Name.HasValue() && child is XElement xe && xe.Name != op.Name)
+							throw new Exception("Name mismatch for change operation. Expected: {0}  Actual: {1}".Fmt(op.Name, xe.Name));
 
 						child.Patch(op_elem);
 						break;
@@ -1548,7 +1548,7 @@ namespace pr.extn
 				case EOpType.Attr:
 					{
 						// SetAttributeValue 
-						tree.As<XElement>().SetAttributeValue(op.Name, op.Value);
+						((XElement)tree).SetAttributeValue(op.Name, op.Value);
 						break;
 					}
 				}
@@ -1616,8 +1616,8 @@ namespace pr.extn
 		{
 			var op = new XElement(EOpType.Remove.Desc());
 			op.SetAttributeValue(Attr.Idx, output_node_index);
-			if (node is XElement) // Name the removed element, for sanity checking
-				op.SetAttributeValue(Attr.Name, node.As<XElement>().Name);
+			if (node is XElement xe) // Name the removed element, for sanity checking
+				op.SetAttributeValue(Attr.Name, xe.Name);
 
 			// Don't need to increment 'output_node_index'
 			// as we're always removing from the same index position
@@ -1627,35 +1627,35 @@ namespace pr.extn
 		/// <summary>Return an insert operation</summary>
 		private static XElement InsertOp(XNode node, ref int output_node_index, Mode mode)
 		{
-			if (node is XText)
+			if (node is XText xt)
 			{
-				var op = new XElement(EOpType.Value.Desc(), node.As<XText>().Value);
+				var op = new XElement(EOpType.Value.Desc(), xt.Value);
 				op.SetAttributeValue(Attr.Idx, output_node_index++);
 				return op;
 			}
-			if (node is XElement)
+			if (node is XElement xe)
 			{
 				var op = new XElement(EOpType.Insert.Desc());
 				op.SetAttributeValue(Attr.Idx, output_node_index++);
 				op.SetAttributeValue(Attr.NodeType, XmlNodeType.Element);
-				op.SetAttributeValue(Attr.Name, node.As<XElement>().Name);
+				op.SetAttributeValue(Attr.Name, xe.Name);
 
 				// Add the attributes from 'node'
-				var attrs = node.As<XElement>().Attributes();
+				var attrs = xe.Attributes();
 				attrs.ForEach(a => op.Add2(AttrOp(a.Name, a.Value)));
 
 				// Recursively add operations for the children of j.Current
-				if (node.As<XElement>().Nodes().Any())
-					new XElement("dummy").Diff(node.As<XElement>(), op, mode);
+				if (xe.Nodes().Any())
+					new XElement("dummy").Diff(xe, op, mode);
 
 				return op;
 			}
-			if (node is XComment)
+			if (node is XComment xc)
 			{
 				var op = new XElement(EOpType.Insert.Desc());
 				op.SetAttributeValue(Attr.Idx, output_node_index++);
 				op.SetAttributeValue(Attr.NodeType, XmlNodeType.Comment);
-				op.Add2(new XElement(EOpType.Value.Desc(), node.As<XComment>().Value));
+				op.Add2(new XElement(EOpType.Value.Desc(), xc.Value));
 				return op;
 			}
 			throw new NotImplementedException();

@@ -841,24 +841,24 @@ namespace RyLogViewer
 						 return;
 
 					var patns = Settings.Patterns;
-					if (set.Highlights.As<IFeatureTreeItem>().Allowed)
+					if (((IFeatureTreeItem)set.Highlights).Allowed)
 					{
-						foreach (var hl in set.Highlights.Where(x => x.As<IFeatureTreeItem>().Allowed))
+						foreach (var hl in set.Highlights.Where(x => ((IFeatureTreeItem)x).Allowed))
 							patns.Highlights.AddIfUnique(hl);
 					}
-					if (set.Filters.As<IFeatureTreeItem>().Allowed)
+					if (((IFeatureTreeItem)set.Filters).Allowed)
 					{
-						foreach (var ft in set.Filters.Where(x => x.As<IFeatureTreeItem>().Allowed))
+						foreach (var ft in set.Filters.Where(x => ((IFeatureTreeItem)x).Allowed))
 							patns.Filters.AddIfUnique(ft);
 					}
-					if (set.Transforms.As<IFeatureTreeItem>().Allowed)
+					if (((IFeatureTreeItem)set.Transforms).Allowed)
 					{
-						foreach (var tx in set.Transforms.Where(x => x.As<IFeatureTreeItem>().Allowed))
+						foreach (var tx in set.Transforms.Where(x => ((IFeatureTreeItem)x).Allowed))
 							patns.Transforms.AddIfUnique(tx);
 					}
-					if (set.Actions.As<IFeatureTreeItem>().Allowed)
+					if (((IFeatureTreeItem)set.Actions).Allowed)
 					{
-						foreach (var ac in set.Actions.Where(x => x.As<IFeatureTreeItem>().Allowed))
+						foreach (var ac in set.Actions.Where(x => ((IFeatureTreeItem)x).Allowed))
 							patns.Actions.AddIfUnique(ac);
 					}
 					Settings.Save();

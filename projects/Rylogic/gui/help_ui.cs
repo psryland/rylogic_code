@@ -138,7 +138,7 @@ namespace pr.gui
 			default: throw new Exception("Unknown content type");
 			case EContent.Text:
 				{
-					var txt = TextCtrl.As<TextBox>();
+					var txt = (TextBox)TextCtrl;
 					txt.Text = Content;
 					txt.Select(0,0);
 					Win32.HideCaret(txt.Handle);
@@ -146,7 +146,7 @@ namespace pr.gui
 				}
 			case EContent.Rtf:
 				{
-					var rtf = TextCtrl.As<System.Windows.Forms.RichTextBox>();
+					var rtf = (System.Windows.Forms.RichTextBox)TextCtrl;
 					rtf.Rtf = Content;
 					rtf.Select(0,0);
 					Win32.HideCaret(rtf.Handle);
@@ -154,7 +154,7 @@ namespace pr.gui
 				}
 			case EContent.Html:
 				{
-					var web = TextCtrl.As<WebBrowser>();
+					var web = (WebBrowser)TextCtrl;
 					web.Reload();
 					break;
 				}
@@ -209,7 +209,7 @@ namespace pr.gui
 				}
 			case EContent.Html:
 				{
-					var web = TextCtrl.As<BrowserCtrl>();
+					var web = (BrowserCtrl)TextCtrl;
 					if (!web.GoBack())
 						RenderContent();
 					break;
@@ -237,7 +237,7 @@ namespace pr.gui
 				}
 			case EContent.Html:
 				{
-					var web = TextCtrl.As<BrowserCtrl>();
+					var web = (BrowserCtrl)TextCtrl;
 					if (!web.GoForward())
 						RenderContent();
 					break;

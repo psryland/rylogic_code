@@ -147,7 +147,6 @@
     <Compile Include="common\range.cs" />
     <Compile Include="common\settings.cs" />
     <Compile Include="common\singleton.cs" />
-    <Compile Include="common\tuple.cs" />
     <Compile Include="common\weak_delegate.cs" />
     <Compile Include="container\list_map.cs" />
     <Compile Include="container\ring_buffer.cs" />

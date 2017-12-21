@@ -333,7 +333,7 @@ namespace pr.gui
 		}
 		protected override Rectangle GetContentBounds(Graphics graphics, DataGridViewCellStyle cellStyle, int rowIndex)
 		{
-			var rtf = DataGridView.Rows[rowIndex].DataBoundItem.As<string>();
+			var rtf = (string)DataGridView.Rows[rowIndex].DataBoundItem;
 			try   { Rtb.Rtf  = rtf; }
 			catch { Rtb.Text = rtf; }
 			return new Rectangle(Point.Empty, Rtb.PreferredSize);
@@ -412,7 +412,7 @@ namespace pr.gui
 			get { return Tuple.Create(ConvertT0(m_value0.Text), ConvertT1(m_value1.Text)); }
 			set
 			{
-				var pair = value.As<Tuple<T0,T1>>();
+				var pair = (Tuple<T0,T1>)value;
 				m_value0.Text = pair.Item1.ToString();
 				m_value1.Text = pair.Item2.ToString();
 			}
@@ -605,7 +605,7 @@ namespace pr.gui
 		protected override void Paint(Graphics gfx, Rectangle clip_bounds, Rectangle cell_bounds, int row_index, DataGridViewElementStates cell_state, object value, object formatted_value, string error_text, DataGridViewCellStyle cell_style, DataGridViewAdvancedBorderStyle advanced_border_style, DataGridViewPaintParts paint_parts)
 		{
 			var pair = (Tuple<T0,T1>)value;
-			var col = OwningColumn.As<DataGridViewValuePairColumn<T0,T1>>();
+			var col = (DataGridViewValuePairColumn<T0,T1>)OwningColumn;
 
 			// Paint the cell background
 			if (paint_parts.HasFlag(DataGridViewPaintParts.Background))
@@ -673,7 +673,7 @@ namespace pr.gui
 		protected override void Paint(Graphics gfx, Rectangle clip_bounds, Rectangle cell_bounds, int row_index, DataGridViewElementStates cell_state, object value, object formatted_value, string error_text, DataGridViewCellStyle cell_style, DataGridViewAdvancedBorderStyle advanced_border_style, DataGridViewPaintParts paint_parts)
 		{
 			var chk = (bool)value;
-			var col = OwningColumn.As<DataGridViewCheckMarkColumn>();
+			var col = (DataGridViewCheckMarkColumn)OwningColumn;
 			var sel = cell_state.HasFlag(DataGridViewElementStates.Selected);
 
 			// Paint the cell background
@@ -941,7 +941,7 @@ namespace pr.gui
 		/// <summary>Set the initial state of the editing control</summary>
 		protected override void SetInitialValue(DataGridViewTrackBarEditCtrl ctrl, object formatted_value)
 		{
-			var col = OwningColumn.As<DataGridViewTrackBarColumn>();
+			var col = (DataGridViewTrackBarColumn)OwningColumn;
 			ctrl.Init((int)formatted_value, MinValue, MaxValue, col.LiveUpdate ? this : null);
 		}
 		protected override void Paint(Graphics gfx, Rectangle clip_bounds, Rectangle cell_bounds, int row_index, DataGridViewElementStates cell_state, object value, object formatted_value, string error_text, DataGridViewCellStyle cell_style, DataGridViewAdvancedBorderStyle advanced_border_style, DataGridViewPaintParts paint_parts)

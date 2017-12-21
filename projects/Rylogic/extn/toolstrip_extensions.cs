@@ -261,8 +261,8 @@ namespace pr.extn
 				var item = cont[i];
 				if (keys.Contains(item.Name))
 					cont.RemoveAt(i);
-				else if (item is ToolStripMenuItem && recursive)
-					item.As<ToolStripMenuItem>().DropDownItems.RemoveByKey(keys, recursive);
+				else if (item is ToolStripMenuItem mi && recursive)
+					mi.DropDownItems.RemoveByKey(keys, recursive);
 			}
 		}
 		public static void RemoveByKey(this ToolStripItemCollection cont, string key, bool recursive)
@@ -553,14 +553,19 @@ namespace pr.extn
 
 			// Ensure the status has tag data
 			if (status.Tag == null)
+			{
 				new StatusTagData(status);
-			else if (!(status.Tag is StatusTagData))
+			}
+			else if (status.Tag is StatusTagData data)
+			{
+				if (msg      != null) data.m_idle_msg = msg;
+				if (fr_color != null) data.m_idle_fr_colour = fr_color.Value;
+				if (bk_color != null) data.m_idle_bk_colour = bk_color.Value;
+			}
+			else
+			{
 				throw new Exception("Tag property already used for non-status data");
-
-			var data = status.Tag.As<StatusTagData>();
-			if (msg      != null) data.m_idle_msg = msg;
-			if (fr_color != null) data.m_idle_fr_colour = fr_color.Value;
-			if (bk_color != null) data.m_idle_bk_colour = bk_color.Value;
+			}
 		}
 
 		/// <summary>
@@ -629,15 +634,16 @@ namespace pr.extn
 			public ToolStripLayout(ToolStripItem item)
 			{
 				m_item = item;
-				m_children = item is ToolStripDropDownItem
-					? item.As<ToolStripDropDownItem>().DropDownItems.Cast<ToolStripItem>().Select(x => new ToolStripLayout(x)).ToList()
+				m_children = item is ToolStripDropDownItem ddi
+					? ddi.DropDownItems.Cast<ToolStripItem>().Select(x => new ToolStripLayout(x)).ToList()
 					: new List<ToolStripLayout>();
 			}
 			public override string ToString()
 			{
-				return m_item is ToolStrip
-					? m_item.As<ToolStrip>().Name
-					: "{0} idx:{1}".Fmt(m_item.As<ToolStripItem>().Text, m_item.As<ToolStripItem>().MergeIndex);
+				return
+					m_item is ToolStrip ts ? ts.Name :
+					m_item is ToolStripItem tsi ? $"{tsi.Text} idx:{tsi.MergeIndex}" :
+					throw new Exception("m_item is not a tool strip or tool strip item");
 			}
 			/// <summary>Rebuilds 'm_item' to the stored layout</summary>
 			public void Rebuild()
@@ -647,17 +653,15 @@ namespace pr.extn
 			private static void Rebuild(ToolStripLayout item)
 			{
 				item.m_children.ForEach(Rebuild);
-				var dd = item.m_item as ToolStripDropDownItem;
-				if (dd != null)
+				if (item.m_item is ToolStripDropDownItem ddi)
 				{
-					dd.DropDownItems.Clear();
-					item.m_children.ForEach(c => dd.DropDownItems.Add(c.m_item.As<ToolStripItem>()));
+					ddi.DropDownItems.Clear();
+					item.m_children.ForEach(c => ddi.DropDownItems.Add((ToolStripItem)c.m_item));
 				}
-				var ts = item.m_item as ToolStrip;
-				if (ts != null)
+				if (item.m_item is ToolStrip ts)
 				{
 					ts.Items.Clear();
-					item.m_children.ForEach(c => ts.Items.Add(c.m_item.As<ToolStripItem>()));
+					item.m_children.ForEach(c => ts.Items.Add((ToolStripItem)c.m_item));
 				}
 			}
 		}
@@ -890,10 +894,10 @@ namespace pr.unittests
 			Assert.True(m0.Items[1].Text == "i1");
 			Assert.True(m0.Items[2].Text == "i2");
 			Assert.True(m0.Items[3].Text == "i3");
-			Assert.True(m0.Items[1].As<ToolStripMenuItem>().DropDownItems.Count == 3);
-			Assert.True(m0.Items[1].As<ToolStripMenuItem>().DropDownItems[0].Text == "i10");
-			Assert.True(m0.Items[1].As<ToolStripMenuItem>().DropDownItems[1].Text == "i11");
-			Assert.True(m0.Items[1].As<ToolStripMenuItem>().DropDownItems[2].Text == "i12");
+			Assert.True(((ToolStripMenuItem)m0.Items[1]).DropDownItems.Count == 3);
+			Assert.True(((ToolStripMenuItem)m0.Items[1]).DropDownItems[0].Text == "i10");
+			Assert.True(((ToolStripMenuItem)m0.Items[1]).DropDownItems[1].Text == "i11");
+			Assert.True(((ToolStripMenuItem)m0.Items[1]).DropDownItems[2].Text == "i12");
 
 			m0.UnMerge();
 			Assert.True(m0.Text == "m0");
@@ -901,9 +905,9 @@ namespace pr.unittests
 			Assert.True(m0.Items[0].Text == "i0");
 			Assert.True(m0.Items[1].Text == "i1");
 			Assert.True(m0.Items[2].Text == "i2");
-			Assert.True(m0.Items[1].As<ToolStripMenuItem>().DropDownItems.Count == 2);
-			Assert.True(m0.Items[1].As<ToolStripMenuItem>().DropDownItems[0].Text == "i10");
-			Assert.True(m0.Items[1].As<ToolStripMenuItem>().DropDownItems[1].Text == "i12");
+			Assert.True(((ToolStripMenuItem)m0.Items[1]).DropDownItems.Count == 2);
+			Assert.True(((ToolStripMenuItem)m0.Items[1]).DropDownItems[0].Text == "i10");
+			Assert.True(((ToolStripMenuItem)m0.Items[1]).DropDownItems[1].Text == "i12");
 		}
 	}
 }

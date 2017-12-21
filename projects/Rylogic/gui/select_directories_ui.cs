@@ -86,12 +86,12 @@ namespace pr.gui
 				};
 		}
 
-		/// <summary>Setup the listbox</summary>
+		/// <summary>Set up the list box</summary>
 		private void SetupList()
 		{
 			m_listbox.DoubleClick += (s,a) =>
 				{
-					var path = m_listbox.SelectedItem.As<Path>();
+					var path = (Path)m_listbox.SelectedItem;
 					m_tree.SelectedNode = m_tree.GetNode(path.Name);
 					m_tree.SelectedNode.EnsureVisible();
 				};
@@ -252,7 +252,7 @@ namespace pr.gui
 				}
 			}
 
-			// Update the checkboxes
+			// Update the check boxes
 			UpdateTree();
 		}
 
@@ -303,7 +303,7 @@ namespace pr.gui
 		/// <summary>Update the StateImageIndex for all nodes in the tree</summary>
 		private void UpdateTree()
 		{
-			// Prevent reentry
+			// Prevent re-entry
 			if (m_updating_check_marks != null) return;
 			using (Scope.Create(() => m_updating_check_marks = this, () => m_updating_check_marks = null))
 			using (Scope.Create(() => m_tree.BeginUpdate(), () => m_tree.EndUpdate()))
@@ -313,7 +313,7 @@ namespace pr.gui
 
 				foreach (var path in Paths)
 				{
-					var node = m_tree.GetNode(path.Name).As<TreeNode>();
+					var node = (TreeNode)m_tree.GetNode(path.Name);
 					node.TriState = TreeNode.ETriState.Checked;
 				}
 			}
@@ -416,7 +416,7 @@ namespace pr.gui
 			}
 
 			/// <summary>
-			/// Return the node corresponding to the given path. Uses the tree's path separater as the delimiter.
+			/// Return the node corresponding to the given path. Uses the tree's path separator as the delimiter.
 			/// 'ignore_case' ignores case differences between the parts of 'fullpath' and the node.Name's.
 			/// If 'add_nodes' is true, child nodes are added where necessary.</summary>
 			public TreeNode GetNode(string fullpath)
@@ -433,7 +433,7 @@ namespace pr.gui
 					if (node == null) throw new Exception("Node path {0} does not exist".Fmt(fullpath));
 
 					if (node.Nodes.Count == 0)
-						NodesNeeded.Raise(this, new NodesNeededEventArgs(node.As<TreeNode>()));
+						NodesNeeded.Raise(this, new NodesNeededEventArgs((TreeNode)node));
 
 					nodes = node.Nodes;
 				}
@@ -441,7 +441,7 @@ namespace pr.gui
 			}
 
 			/// <summary>
-			/// Expands branches of the tree down to 'path'. Uses the tree's path separater as the delimiter.
+			/// Expands branches of the tree down to 'path'. Uses the tree's path separator as the delimiter.
 			/// 'ignore_case' ignores case differences between the parts of 'fullpath' and the node.Name's.</summary>
 			public void Expand(string fullpath)
 			{
@@ -462,13 +462,13 @@ namespace pr.gui
 			/// <summary>Get the owning tree</summary>
 			public new TreeView TreeView
 			{
-				get { return base.TreeView.As<TreeView>(); }
+				get { return (TreeView)base.TreeView; }
 			}
 
 			/// <summary>Get the parent node</summary>
 			public new TreeNode Parent
 			{
-				get { return base.Parent.As<TreeNode>(); }
+				get { return (TreeNode)base.Parent; }
 			}
 
 			/// <summary>Node check box state</summary>

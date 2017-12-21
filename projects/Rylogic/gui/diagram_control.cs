@@ -805,22 +805,22 @@ namespace pr.gui
 				get
 				{
 					var tb = new TextBox
-						{
-							Multiline = true,
-							BorderStyle = BorderStyle.None,
-							Margin = Padding.Empty,
-							ScrollBars = ScrollBars.Both,
-						};
+					{
+						Multiline = true,
+						BorderStyle = BorderStyle.None,
+						Margin = Padding.Empty,
+						ScrollBars = ScrollBars.Both,
+					};
 					Action<Element,Form> init = (elem,form) =>
-						{
-							tb.Text = elem.As<Node>().Text;
-							form.ClientSize = tb.PreferredSize;
-							form.Height += 16;
-						};
+					{
+						tb.Text = ((Node)elem).Text;
+						form.ClientSize = tb.PreferredSize;
+						form.Height += 16;
+					};
 					Action<Element> commit = elem =>
-						{
-							elem.As<Node>().Text = tb.Text.Trim();
-						};
+					{
+						((Node)elem).Text = tb.Text.Trim();
+					};
 					return new EditingControl(tb, init, commit);
 				}
 			}
@@ -1517,7 +1517,7 @@ namespace pr.gui
 				set
 				{
 					Debug.Assert(value != null);
-					Node0 = value.Elem.As<Node>();
+					Node0 = (Node)value.Elem;
 					m_anc0.Location = value.Location;
 					m_anc0.Normal = value.Normal;
 				}
@@ -1531,7 +1531,7 @@ namespace pr.gui
 				set
 				{
 					Debug.Assert(value != null);
-					Node1 = value.Elem.As<Node>();
+					Node1 = (Node)value.Elem;
 					m_anc1.Location = value.Location;
 					m_anc1.Normal = value.Normal;
 				}
@@ -1559,7 +1559,7 @@ namespace pr.gui
 			/// <summary>The 'from' node. Nodes can be null, implying the connector is connected to the diagram</summary>
 			public Node Node0
 			{
-				get { return Anc0.Elem.As<Node>(); }
+				get { return (Node)Anc0.Elem; }
 				set
 				{
 					// Allowing this now
@@ -1584,7 +1584,7 @@ namespace pr.gui
 			/// <summary>The 'to' node. Nodes can be null, implying the connector is connected to the diagram</summary>
 			public Node Node1
 			{
-				get { return Anc1.Elem.As<Node>(); }
+				get { return (Node)Anc1.Elem; }
 				set
 				{
 					// Allowing this now
@@ -2938,7 +2938,7 @@ namespace pr.gui
 				
 				// Look for the first hit enabled node, if none, first any-state node
 				var hit = hits.FirstOrDefault(x => x.Element.Enabled) ?? hits.FirstOrDefault();
-				var target = hit != null ? hit.Element.As<Node>() : null;
+				var target = hit != null ? (Node)hit.Element : null;
 				
 				if (target != null)
 					Cancelled = m_diag.RaiseDiagramChanged(new DiagramChangedLinkEventArgs(EDiagramChangeType.LinkMoving, m_conn, m_fixed, target)).Cancel;
@@ -2962,7 +2962,7 @@ namespace pr.gui
 			{
 				// Find the node to make the link with
 				var hit = HitTestNode(e.Location).FirstOrDefault(x => x.Element.Enabled);
-				var target = hit != null ? hit.Element.As<Node>() : null;
+				var target = hit != null ? (Node)hit.Element : null;
 
 				// No node to link to? Just revert the link
 				if (target == null)
@@ -3034,7 +3034,7 @@ namespace pr.gui
 				// Find the node to start the link from. If the mouse
 				// down did not start on a node cancel the create link op.
 				var hit = m_hit_result.Hits.FirstOrDefault(x => x.Entity == Entity.Node);
-				m_fixed = hit != null ? hit.Element.As<Node>() : null;
+				m_fixed = hit != null ? (Node)hit.Element : null;
 				if (m_fixed == null)
 				{
 					Revert();
@@ -5165,9 +5165,9 @@ namespace pr.gui
 						foreach (var elem in Selected.ToArray())
 						{
 							if (elem.Entity == Entity.Node)
-								elem.As<Node>().Style = m_node_styles[Guid.Empty];
+								((Node)elem).Style = m_node_styles[Guid.Empty];
 							if (elem.Entity == Entity.Connector)
-								elem.As<Connector>().Style = m_connector_styles[Guid.Empty];
+								((Connector)elem).Style = m_connector_styles[Guid.Empty];
 						}
 						Invalidate();
 					};
@@ -5355,11 +5355,11 @@ namespace pr.gui
 			// Note, visibility of items in the edit tool-bar should not be changed
 			// as callers may set the visibility to suit their needs
 
-			var btn_node = m_toolstrip_edit.Items[EditTools.Node.Key].As<ToolStripSplitButtonCheckable>();
+			var btn_node = (ToolStripSplitButtonCheckable)m_toolstrip_edit.Items[EditTools.Node.Key];
 			btn_node.Checked = m_mouse_op.Pending(1) is MouseOpCreateNode;
 			btn_node.Enabled = AllowEditing;
 
-			var btn_conn = m_toolstrip_edit.Items[EditTools.Conn.Key].As<ToolStripSplitButtonCheckable>();
+			var btn_conn = (ToolStripSplitButtonCheckable)m_toolstrip_edit.Items[EditTools.Conn.Key];
 			btn_conn.Checked = m_mouse_op.Pending(1) is MouseOpCreateLink;
 			btn_conn.Enabled = AllowEditing;
 		}

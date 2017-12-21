@@ -90,14 +90,14 @@ namespace pr.container
 			set
 			{
 				if (m_data_source == value) return;
-				if (m_data_source is INotifyPropertyChanged)
+				if (m_data_source is INotifyPropertyChanged npc0)
 				{
-					m_data_source.As<INotifyPropertyChanged>().PropertyChanged -= ResetBindings;
+					npc0.PropertyChanged -= ResetBindings;
 				}
 				m_data_source = value;
-				if (m_data_source is INotifyPropertyChanged)
+				if (m_data_source is INotifyPropertyChanged npc1)
 				{
-					m_data_source.As<INotifyPropertyChanged>().PropertyChanged += ResetBindings;
+					npc1.PropertyChanged += ResetBindings;
 				}
 				ResetBindings();
 			}

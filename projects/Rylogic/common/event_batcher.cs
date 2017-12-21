@@ -199,8 +199,8 @@ namespace pr.common
 			m_in_progress = m_issue;
 		}
 
-		private int m_issue;
-		private int m_in_progress;
+		private volatile int m_issue;
+		private volatile int m_in_progress;
 	}
 }
 

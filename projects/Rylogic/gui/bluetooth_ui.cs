@@ -191,7 +191,7 @@ namespace pr.gui
 			// Found devices
 			m_lb_devices.SelectedIndexChanged += (s,a) =>
 			{
-				Device = m_lb_devices.SelectedItem.As<Bluetooth.Device>();
+				Device = (Bluetooth.Device)m_lb_devices.SelectedItem;
 			};
 			m_lb_devices.DrawItem += (s,a) =>
 			{
@@ -348,7 +348,7 @@ namespace pr.gui
 		private void DrawBtDevice(DrawItemEventArgs a)
 		{
 			if (a.Index < 0 || a.Index >= m_lb_devices.Items.Count) return;
-			var device = m_lb_devices.Items[a.Index].As<Bluetooth.Device>();
+			var device = (Bluetooth.Device)m_lb_devices.Items[a.Index];
 			var x = a.Bounds.Left + 1;
 			var y = a.Bounds.Top + 1;
 

@@ -109,13 +109,13 @@ namespace pr.gui
 					};
 				item.Click += (s,a) =>
 					{
-						var menu = s.As<ToolStripMenuItem>();
+						var menu = (ToolStripMenuItem)s;
 						Add(menu.Text, false);
 						m_on_click(menu.Text);
 					};
 				item.MouseDown += (s,a) =>
 					{
-						var menu = s.As<ToolStripMenuItem>();
+						var menu = (ToolStripMenuItem)s;
 						if (a.Button != MouseButtons.Right) return;
 						var dd = (ToolStripDropDown)menu.GetCurrentParent();
 						dd.AutoClose = false;

@@ -139,26 +139,27 @@ namespace TestCS
 			// Clear and reset the data source without first chance exceptions
 			m_cb.DataSource = null;
 			m_lb.DataSource = null;
-			m_ts.Items[0].As<pr.gui.ToolStripComboBox>().ComboBox.DataSource = null;
+			((pr.gui.ToolStripComboBox)m_ts.Items[0]).ComboBox.DataSource = null;
 
 			m_bs.DataSource = m_bs.DataSource == m_bl0 ? m_bl1 : m_bl0;
 
 			m_cb.DataSource = m_bs;
 			m_lb.DataSource = m_bs;
-			m_ts.Items[0].As<pr.gui.ToolStripComboBox>().ComboBox.DataSource = m_bs;
+			((pr.gui.ToolStripComboBox)m_ts.Items[0]).ComboBox.DataSource = m_bs;
 		}
 
 		private void DateTimeValueChanged(object sender, EventArgs e)
 		{
-			var dtp = sender is pr.gui.ToolStripDateTimePicker
-				? sender.As<pr.gui.ToolStripDateTimePicker>().DateTimePicker
-				: sender.As<pr.gui.DateTimePicker>();
+			var dtp =
+				sender is ToolStripDateTimePicker tsdtp ? tsdtp.DateTimePicker :
+				sender is pr.gui.DateTimePicker prdtp ? prdtp :
+				throw new Exception("Not a date time picker control");
 
 			if (dtp.Value.Kind != DateTimeKind.Utc)
 				throw new Exception("Kind is wrong");
 
 			m_dtp.Value = dtp.Value;
-			m_ts.Items[1].As<pr.gui.ToolStripDateTimePicker>().DateTimePicker.Value = dtp.Value;
+			((ToolStripDateTimePicker)m_ts.Items[1]).DateTimePicker.Value = dtp.Value;
 		}
 
 		/// <summary>Binding type</summary>

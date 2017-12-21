@@ -10,6 +10,7 @@ using pr.extn;
 using pr.gfx;
 using pr.gui;
 using RichTextBox = pr.gui.RichTextBox;
+using DataGridViewComboBoxColumn = pr.gui.DataGridViewComboBoxColumn;
 
 namespace RyLogViewer
 {

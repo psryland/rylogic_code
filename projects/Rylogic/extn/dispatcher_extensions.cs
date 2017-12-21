@@ -29,7 +29,7 @@ namespace pr.extn
 			else
 				new DispatcherTimer(delay, priority, (s,a) =>
 				{
-					var dt = s.As<DispatcherTimer>();
+					var dt = (DispatcherTimer)s;
 					dt.Stop();
 					action();
 				}, dis).Start();

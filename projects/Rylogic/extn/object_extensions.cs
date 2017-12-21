@@ -10,17 +10,6 @@ namespace pr.extn
 {
 	public static class ObjectExtensions
 	{
-		/// <summary>Static cast this object to type 'T'</summary>
-		[DebuggerStepThrough] public static T As<T>(this object obj) where T : class
-		{
-			// Don't use 'To' because that implies conversion.
-			// Can't use 'Cast' because clashes with IEnumerable extensions
-			// 'As' sounds like 'as' but it's safer than 'as' so doesn't matter
-			// 'T' must be a reference type, because casting between boxed value types doesn't work
-			// i.e.   3.As<short>() fails
-			return (T)obj;
-		}
-
 		/// <summary>Overload ToString with options for transforming the string</summary>
 		[DebuggerStepThrough] public static string ToString(this object obj, Str.ECapitalise word_start = Str.ECapitalise.DontChange, Str.ECapitalise word_case = Str.ECapitalise.DontChange, Str.ESeparate word_sep = Str.ESeparate.DontChange, string sep = " ")
 		{
@@ -240,11 +229,6 @@ namespace pr.unittests
 				if (d == null || d.m_derived_field != m_derived_field) return false;
 				return base.Equal(rhs);
 			}
-		}
-		[Test] public void Casts()
-		{
-			object i = new NotSupportedException();
-			var s = i.As<Exception>();
 		}
 		[Test] public void ShallowCopy()
 		{

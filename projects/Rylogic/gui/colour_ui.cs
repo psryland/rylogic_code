@@ -83,7 +83,7 @@ namespace pr.gui
 			set { m_wheel.Colour = value; ReadColourFieldsFromWheel(); }
 		}
 
-		/// <summary>Setup the basic colours grid</summary>
+		/// <summary>Set up the basic colours grid</summary>
 		private void SetupBasicColourTable()
 		{
 			m_table_basic.Controls.AddRange(
@@ -96,25 +96,25 @@ namespace pr.gui
 								BorderStyle = BorderStyle.None,
 								Margin = new Padding(1)
 							};
-						panel.Click += (s,a) => m_wheel.Colour = s.As<Panel>().BackColor;
+						panel.Click += (s,a) => m_wheel.Colour = ((Panel)s).BackColor;
 						return panel;
 					}).Cast<Control>().ToArray());
 		}
 
-		/// <summary>Setup the recent colours grid</summary>
+		/// <summary>Set up the recent colours grid</summary>
 		private void SetupRecentColourTable()
 		{
 			m_table_recent.Controls.AddRange(
 			m_recent.Select(x =>
 				{
 					var panel = new Panel
-						{
-							Dock = DockStyle.Fill,
-							BackColor = x,
-							BorderStyle = BorderStyle.None,
-							Margin = new Padding(1)
-						};
-					panel.Click += (s,a) => m_wheel.Colour = s.As<Panel>().BackColor;
+					{
+						Dock = DockStyle.Fill,
+						BackColor = x,
+						BorderStyle = BorderStyle.None,
+						Margin = new Padding(1)
+					};
+					panel.Click += (s,a) => m_wheel.Colour = ((Panel)s).BackColor;
 					return panel;
 				}).Cast<Control>().ToArray());
 		}
@@ -128,15 +128,14 @@ namespace pr.gui
 				};
 		}
 
-		/// <summary>Setup the text box fields</summary>
+		/// <summary>Set up the text box fields</summary>
 		private void SetupFields()
 		{
 			// Validation
 			CancelEventHandler Validating = (s,a) =>
-				{
-					byte dummy;
-					a.Cancel = !byte.TryParse(s.As<TextBox>().Text, out dummy);
-				};
+			{
+				a.Cancel = !byte.TryParse(((TextBox)s).Text, out var dummy);
+			};
 			m_edit_red  .Validating += Validating;
 			m_edit_green.Validating += Validating;
 			m_edit_blue .Validating += Validating;
@@ -147,37 +146,36 @@ namespace pr.gui
 
 			// Accept value
 			Action<byte?,byte?,byte?,byte?> SetARGB = (a,r,g,b) =>
-				{
-					var c = m_wheel.Colour;
-					m_wheel.Colour = Color.FromArgb(a ?? c.A, r ?? c.R, g ?? c.G, b ?? c.B);
-				};
+			{
+				var c = m_wheel.Colour;
+				m_wheel.Colour = Color.FromArgb(a ?? c.A, r ?? c.R, g ?? c.G, b ?? c.B);
+			};
 			Action<float?,float?,float?,float?> SetAHSV = (a,h,s,v) =>
-				{
-					var c = m_wheel.HSVColour;
-					if (a.HasValue) a = Maths.Clamp(a.Value / 255f, 0f, 1f);
-					if (h.HasValue) h = Maths.Clamp(h.Value / 255f, 0f, 1f);
-					if (s.HasValue) s = Maths.Clamp(s.Value / 255f, 0f, 1f);
-					if (v.HasValue) v = Maths.Clamp(v.Value / 255f, 0f, 1f);
-					m_wheel.HSVColour = HSV.FromAHSV(a ?? c.A, h ?? c.H, s ?? c.S, v ?? c.V);
-				};
-			m_edit_alpha.Validated += (s,a) => SetARGB(byte.Parse(s.As<TextBox>().Text), null, null, null);
-			m_edit_red  .Validated += (s,a) => SetARGB(null, byte.Parse(s.As<TextBox>().Text), null, null);
-			m_edit_green.Validated += (s,a) => SetARGB(null, null, byte.Parse(s.As<TextBox>().Text), null);
-			m_edit_blue .Validated += (s,a) => SetARGB(null, null, null, byte.Parse(s.As<TextBox>().Text));
-			m_edit_hue  .Validated += (s,a) => SetAHSV(null, byte.Parse(s.As<TextBox>().Text), null, null);
-			m_edit_sat  .Validated += (s,a) => SetAHSV(null, null, byte.Parse(s.As<TextBox>().Text), null);
-			m_edit_lum  .Validated += (s,a) => SetAHSV(null, null, null, byte.Parse(s.As<TextBox>().Text));
+			{
+				var c = m_wheel.HSVColour;
+				if (a.HasValue) a = Maths.Clamp(a.Value / 255f, 0f, 1f);
+				if (h.HasValue) h = Maths.Clamp(h.Value / 255f, 0f, 1f);
+				if (s.HasValue) s = Maths.Clamp(s.Value / 255f, 0f, 1f);
+				if (v.HasValue) v = Maths.Clamp(v.Value / 255f, 0f, 1f);
+				m_wheel.HSVColour = HSV.FromAHSV(a ?? c.A, h ?? c.H, s ?? c.S, v ?? c.V);
+			};
+			m_edit_alpha.Validated += (s,a) => SetARGB(byte.Parse(((TextBox)s).Text), null, null, null);
+			m_edit_red  .Validated += (s,a) => SetARGB(null, byte.Parse(((TextBox)s).Text), null, null);
+			m_edit_green.Validated += (s,a) => SetARGB(null, null, byte.Parse(((TextBox)s).Text), null);
+			m_edit_blue .Validated += (s,a) => SetARGB(null, null, null, byte.Parse(((TextBox)s).Text));
+			m_edit_hue  .Validated += (s,a) => SetAHSV(null, byte.Parse(((TextBox)s).Text), null, null);
+			m_edit_sat  .Validated += (s,a) => SetAHSV(null, null, byte.Parse(((TextBox)s).Text), null);
+			m_edit_lum  .Validated += (s,a) => SetAHSV(null, null, null, byte.Parse(((TextBox)s).Text));
 
 			m_edit_hex.Validating += (s,a) =>
-				{
-					uint dummy;
-					a.Cancel = !uint.TryParse(s.As<TextBox>().Text, NumberStyles.HexNumber, null, out dummy);
-				};
+			{
+				a.Cancel = !uint.TryParse(((TextBox)s).Text, NumberStyles.HexNumber, null, out var dummy);
+			};
 			m_edit_hex.Validated += (s,a) =>
-				{
-					var argb = uint.Parse(s.As<TextBox>().Text, NumberStyles.HexNumber);
-					unchecked { m_wheel.Colour = Color.FromArgb((int)argb); }
-				};
+			{
+				var argb = uint.Parse(((TextBox)s).Text, NumberStyles.HexNumber);
+				unchecked { m_wheel.Colour = Color.FromArgb((int)argb); }
+			};
 		}
 
 		/// <summary>Setup the Initial and Selected colour panels</summary>

@@ -78,7 +78,7 @@ namespace pr.gui
 			foreach (var b in m_items.OfType<ToolStripButton>())
 				b.Checked = ReferenceEquals(b, sender);
 
-			Selected = sender.As<ToolStripButton>();
+			Selected = (ToolStripButton)sender;
 		}
 	}
 }

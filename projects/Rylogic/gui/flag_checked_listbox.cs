@@ -49,7 +49,7 @@ namespace pr.gui
 				{
 					// Allow indeterminate to used as disabled
 					if (GetItemCheckState(i) != CheckState.Checked) continue;
-					mask |= Items[i].As<FlagCheckedListBoxItem>().Value;
+					mask |= ((FlagCheckedListBoxItem)Items[i]).Value;
 				}
 				return mask;
 			}
@@ -97,7 +97,7 @@ namespace pr.gui
 		/// <summary>Handle items in the list being checked or unchecked</summary>
 		protected override void OnItemCheck(ItemCheckEventArgs e)
 		{
-			var item = Items[e.Index].As<FlagCheckedListBoxItem>();
+			var item = (FlagCheckedListBoxItem)Items[e.Index];
 			e.NewValue = item.Enabled ? e.NewValue : CheckState.Indeterminate;
 
 			// While 'UpdateCheckedItems' is in progress, we need to buffer the

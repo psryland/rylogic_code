@@ -20,8 +20,8 @@ namespace pr.util
 		public T Value            { get { return m_has_value ? m_result : m_result = m_func(); } }
 		public bool HasValue      { get { return m_has_value; } }
 		
-		// Values are implicitly convertable to Lazy<T> but the Lazy(T) constructor
-		// is private to prevent accidently use such as: Lazy.New(ExpensiveFunction())
+		// Values are implicitly convertible to Lazy<T> but the Lazy(T) constructor
+		// is private to prevent accidentally use such as: Lazy.New(ExpensiveFunction())
 		public static implicit operator Lazy<T>(T value) { return new Lazy<T>(value); }
 		public static implicit operator T(Lazy<T> value) { return value.Value; }
 	}

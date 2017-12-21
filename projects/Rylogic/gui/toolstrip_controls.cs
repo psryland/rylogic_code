@@ -328,7 +328,7 @@ namespace pr.gui
 		protected override void OnDropDownItemClicked(ToolStripItemClickedEventArgs e)
 		{
 			DefaultItem = e.ClickedItem;
-			DropDown.As<ToolStripDropDownSingleSelect>().Selected = e.ClickedItem;
+			((ToolStripDropDownSingleSelect)DropDown).Selected = e.ClickedItem;
 			base.OnDropDownItemClicked(e);
 		}
 		protected override void OnButtonClick(System.EventArgs e)

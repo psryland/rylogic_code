@@ -495,7 +495,7 @@ namespace pr.extn
 
 			grid.ColumnHeaderMouseClick += (s,a) =>
 			{
-				var dgv = s.As<DataGridView>();
+				var dgv = (DataGridView)s;
 				if (a.Button == MouseButtons.Left && Control.ModifierKeys == Keys.None)
 				{
 					// Reset the sort glyph for the other columns

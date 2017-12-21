@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using pr.extn;
+using pr.util;
 
 namespace pr.maths
 {
@@ -69,14 +70,14 @@ namespace pr.maths
 		{
 			get
 			{
-				Debug.Assert(row >= 0 && row < Rows);
-				Debug.Assert(col >= 0 && col < Cols);
+				Util.Assert(row >= 0 && row < Rows);
+				Util.Assert(col >= 0 && col < Cols);
 				return m_data[row * Cols + col];
 			}
 			set
 			{
-				Debug.Assert(row >= 0 && row < Rows);
-				Debug.Assert(col >= 0 && col < Cols);
+				Util.Assert(row >= 0 && row < Rows);
+				Util.Assert(col >= 0 && col < Cols);
 				m_data[row * Cols + col] = value;
 			}
 		}
@@ -716,8 +717,8 @@ namespace pr.maths
 			{
 				get
 				{
-					Debug.Assert(row >= 0 && row < m_mat[0].Rows);
-					Debug.Assert(col >= 0 && col < m_mat[0].Cols);
+					Util.Assert(row >= 0 && row < m_mat[0].Rows);
+					Util.Assert(col >= 0 && col < m_mat[0].Cols);
 					return row > col ? m_mat[0][row, col] : row == col ? 1 : 0;
 				}
 			}
@@ -736,8 +737,8 @@ namespace pr.maths
 			{
 				get
 				{
-					Debug.Assert(row >= 0 && row < m_mat[0].Rows);
-					Debug.Assert(col >= 0 && col < m_mat[0].Cols);
+					Util.Assert(row >= 0 && row < m_mat[0].Rows);
+					Util.Assert(col >= 0 && col < m_mat[0].Cols);
 					return row <= col ? m_mat[0][row, col] : 0;
 				}
 			}
@@ -825,7 +826,7 @@ namespace pr.maths
 		/// <summary>Return the inverse of matrix 'm'</summary>
 		public static Matrix Invert(MatrixLU lu)
 		{
-			Debug.Assert(IsInvertable(lu), "Matrix has no inverse");
+			Util.Assert(IsInvertable(lu), "Matrix has no inverse");
 
 			var inv = new Matrix(lu.m_rows, lu.m_cols);
 			var elem = new Matrix(lu.m_rows, 1);

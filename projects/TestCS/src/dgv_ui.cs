@@ -7,6 +7,7 @@ using pr.gui;
 using pr.util;
 using ListBox = pr.gui.ListBox;
 using DataGridView = pr.gui.DataGridView;
+using DataGridViewComboBoxColumn = pr.gui.DataGridViewComboBoxColumn;
 
 namespace TestCS
 {
@@ -228,7 +229,7 @@ namespace TestCS
 			m_events.ContextMenuStrip.Items.Add2("Log DGV events", null, (s,a) =>
 			{
 				m_grid.List = m_grid.List == null ? m_events : null;
-				s.As<ToolStripMenuItem>().Checked = m_grid.List != null;
+				((ToolStripMenuItem)s).Checked = m_grid.List != null;
 			});
 
 			m_grid.AllowDrop = true;

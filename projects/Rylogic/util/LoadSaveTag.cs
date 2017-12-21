@@ -19,7 +19,7 @@ namespace pr.util
 		{
 			return Scope.Create(
 				() => ctrl.Tag = new LoadSaveTag{OriginalTag = ctrl.Tag, Loading = true},
-				() => ctrl.Tag = ctrl.Tag.As<LoadSaveTag>().OriginalTag);
+				() => ctrl.Tag = ((LoadSaveTag)ctrl.Tag).OriginalTag);
 		}
 
 		/// <summary>
@@ -29,19 +29,19 @@ namespace pr.util
 		{
 			return Scope.Create(
 				() => ctrl.Tag = new LoadSaveTag{OriginalTag = ctrl.Tag, Loading = false},
-				() => ctrl.Tag = ctrl.Tag.As<LoadSaveTag>().OriginalTag);
+				() => ctrl.Tag = ((LoadSaveTag)ctrl.Tag).OriginalTag);
 		}
 
 		/// <summary>True while this control is marked as loading</summary>
 		public static bool IsLoading(this Control ctrl)
 		{
-			return ctrl.Tag is LoadSaveTag && ctrl.Tag.As<LoadSaveTag>().Loading;
+			return ctrl.Tag is LoadSaveTag && ((LoadSaveTag)ctrl.Tag).Loading;
 		}
 
 		/// <summary>True while this control is marked as saving</summary>
 		public static bool IsSaving(this Control ctrl)
 		{
-			return ctrl.Tag is LoadSaveTag && ctrl.Tag.As<LoadSaveTag>().Loading == false;
+			return ctrl.Tag is LoadSaveTag && ((LoadSaveTag)ctrl.Tag).Loading == false;
 		}
 	}
 }

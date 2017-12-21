@@ -24,8 +24,7 @@ namespace pr.util
 		{
 			get
 			{
-				object value;
-				return m_store.TryGetValue(id, out value) ? value : null;
+				return m_store.TryGetValue(id, out var value) ? value : null;
 			}
 			set
 			{

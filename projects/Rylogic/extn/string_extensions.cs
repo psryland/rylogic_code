@@ -651,9 +651,9 @@ namespace pr.extn
 			for (int i = 0, iend = i + m_length; i != iend; ++i)
 				yield return this[i];
 		}
-		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+		IEnumerator IEnumerable.GetEnumerator()
 		{
-			return this.As<IEnumerable<char>>().GetEnumerator();
+			return ((IEnumerable<char>)this).GetEnumerator();
 		}
 
 		public static implicit operator string(IString s)        { return s.ToString(); }
