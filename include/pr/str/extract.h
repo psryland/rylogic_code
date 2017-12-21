@@ -70,7 +70,7 @@ namespace pr
 		};
 
 		// Buffer characters for a number (real or int) from 'src'
-		// Format: [delim][{+|-}][0[{x|X|b|B}]][digits][.digits][{d|D|e|E}[{+|-}]digits][U][L][L]
+		// Format: [delim][{+|-}][0[{x|X|b|B}]][digits][.digits][{d|D|e|E|p|P}[{+|-}]digits][U][L][L]
 		// [out] 'num' = the extracted value
 		// [in] 'radix' = the base of the number to read.
 		// [in] 'type' = the number style to read.
@@ -125,9 +125,9 @@ namespace pr
 			{
 				++wsrc;
 				auto digit_required = false;
-				if (*wsrc == 'x' || *wsrc == 'X') { radix = 16; ++wsrc; digit_required = true; }
-				if (*wsrc == 'o' || *wsrc == 'O') { radix =  8; ++wsrc; digit_required = true; }
-				if (*wsrc == 'b' || *wsrc == 'B') { radix =  2; ++wsrc; digit_required = true; }
+				if      (*wsrc == 'x' || *wsrc == 'X') { radix = 16; ++wsrc; digit_required = true; }
+				else if (*wsrc == 'o' || *wsrc == 'O') { radix =  8; ++wsrc; digit_required = true; }
+				else if (*wsrc == 'b' || *wsrc == 'B') { radix =  2; ++wsrc; digit_required = true; }
 
 				// Check for the required integer
 				if (digit_required)
@@ -136,6 +136,15 @@ namespace pr
 					{
 						len = 0;
 						return;
+					}
+					else if (radix == 16)
+					{
+						if (!append('0')) return;
+						if (!append('x')) return;
+					}
+					else if (radix == 8)
+					{
+						if (!append('0')) return;
 					}
 				}
 				else
@@ -199,7 +208,7 @@ namespace pr
 			}
 
 			// Read an optional exponent
-			if (allow_fp && (*wsrc == 'e' || *wsrc == 'E' || *wsrc == 'd' || *wsrc == 'D'))
+			if (allow_fp && (*wsrc == 'e' || *wsrc == 'E' || *wsrc == 'd' || *wsrc == 'D' || (*wsrc == 'p' && radix == 16) || (*wsrc == 'P' && radix == 16)))
 			{
 				if (!append(*wsrc)) return;
 				++wsrc;
@@ -829,7 +838,7 @@ namespace pr
 				PR_CHECK(ExtractNumberC(num, "0923.0"  ), true); PR_CHECK(FEql(num.db(), 0923.0), true);
 				PR_CHECK(ExtractNumberC(num, "0199"    ), true); PR_CHECK(num.ll(), 01); // because it's octal
 				PR_CHECK(ExtractNumberC(num, "0199", 10), true); PR_CHECK(num.ll(), 199);
-				PR_CHECK(ExtractNumberC(num, "0x1.f"   ), true); PR_CHECK(FEql(num.db(), 0x1.0), true);
+				PR_CHECK(ExtractNumberC(num, "0x1.0p1" ), true); PR_CHECK(FEql(num.db(), 0x1.0p1), true);
 
 				PR_CHECK(ExtractNumberC(num, "0x.0"), false);
 				PR_CHECK(ExtractNumberC(num, ".x0"), false);

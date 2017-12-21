@@ -1,3 +1,6 @@
+Pip Install:
+	Go to the D:\Python34\ directory and run '.\pip.cmd install <package>'
+
 Import the element tree module:
   import xml.etree.ElementTree as ET
 

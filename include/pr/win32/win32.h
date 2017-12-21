@@ -170,7 +170,7 @@ namespace pr
 			wchar_t* p;
 			auto hr = ::SHGetKnownFolderPath(folder_id, flags, token, &p);
 			if (pr::Failed(hr))
-				return false;
+				return hr;
 
 			path = p;
 			::CoTaskMemFree(p);

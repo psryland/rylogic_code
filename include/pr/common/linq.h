@@ -21,12 +21,19 @@ namespace pr
 		template <typename T> T&& operator()(T&& x) const { return std::forward<T>(x); }
 	};
 
+	#define PR_LINQ_TODO 0
+	#if PR_LINQ_TODO // Needs work... basically works
+
 	// A helper for providing LinQ-type expressions
-	template <typename IterType, typename ValueType, typename Pred = AlwaysTrue, typename Adapt = Unchanged>
-	struct Linq :std::iterator<std::input_iterator_tag, ValueType>
+	template <typename IterType, typename Pred = AlwaysTrue, typename Adapt = Unchanged>
+	struct Linq
 	{
-		using iter_type = IterType;
-		using value_type = ValueType;
+		using iter_type         = IterType;
+		using value_type        = typename std::iterator_traits<IterType>::value_type;
+		using iterator_category = typename std::input_iterator_tag;
+		//using difference_type   = std::iterator_traits<iter_type>::difference_type;
+		//using pointer           = std::iterator_traits<iter_type>::pointer;
+		//using reference         = std::iterator_traits<iter_type>::reference;
 
 		iter_type m_beg;
 		iter_type m_end;
@@ -42,7 +49,7 @@ namespace pr
 			seek();
 		}
 
-		// Seek to the first value iterator position
+		// Seek to the first valid iterator position
 		Linq& seek()
 		{
 			for (; !(m_beg == m_end) && !m_pred(*m_beg); ++m_beg) {}
@@ -88,19 +95,23 @@ namespace pr
 		// Return the range as a vector
 		std::vector<value_type> to_vector() const
 		{
-			return std::vector<value_type>(begin(), end());
+			std::vector<value_type> vec;
+			for (auto& v : *this)
+				vec.push_back(v);
+			return vec;
+			//return std::vector<value_type>(begin(), end());
 		}
 
 		// Where: [](value_type const& v) { return true; }
-		template <typename Pred2> Linq<Linq, ValueType, Pred2, Adapt> where(Pred2 pred) const
+		template <typename Pred2> Linq<Linq, Pred2, Adapt> where(Pred2 pred) const
 		{
-			return Linq<Linq, ValueType, Pred2, Adapt>(begin(), end(), pred, m_adapt);
+			return Linq<Linq, Pred2, Adapt>(begin(), end(), pred, m_adapt);
 		}
 
 		// Select: [](value_type const& v) { return v.other; }
-		template <typename Adapt2> auto select(Adapt2 adapt) const -> Linq<Linq, decltype(adapt(std::declval<ValueType>())), AlwaysTrue, Adapt2>
+		template <typename Adapt2> auto select(Adapt2 adapt) const -> Linq<Linq, AlwaysTrue, Adapt2>
 		{
-			return Linq<Linq, decltype(adapt(std::declval<ValueType>())), AlwaysTrue, Adapt2>(begin(), end(), AlwaysTrue(), adapt);
+			return Linq<Linq, AlwaysTrue, Adapt2>(begin(), end(), AlwaysTrue(), adapt);
 		}
 
 		// True if 'any' in the linQ expression return true for 'pred'
@@ -112,10 +123,10 @@ namespace pr
 	};
 
 	// Create a LinQ wrapper instance from an iterator range
-	template <typename IterType, typename ValueType = std::iterator_traits<IterType>::value_type>
-	inline Linq<IterType, ValueType> linq(IterType beg, IterType end)
+	template <typename IterType>
+	inline Linq<IterType> linq(IterType beg, IterType end)
 	{
-		return Linq<IterType, ValueType>(beg, end);
+		return Linq<IterType>(beg, end);
 	}
 
 	// Create a LinQ wrapper instance from a container
@@ -124,6 +135,8 @@ namespace pr
 	{
 		return linq(std::begin(cont), std::end(cont));
 	}
+
+	#endif
 }
 
 #if PR_UNITTESTS
@@ -135,6 +148,7 @@ namespace pr
 	{
 		PRUnitTest(pr_common_linq)
 		{
+			#if PR_LINQ_TODO
 			using namespace pr;
 
 			{ // Simple array
@@ -178,6 +192,7 @@ namespace pr
 
 				PR_CHECK(result, true);
 			}
+			#endif
 		}
 	}
 }

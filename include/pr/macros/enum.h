@@ -392,8 +392,7 @@ namespace pr
 			{
 				volatile int i = 4;
 				Enum<TestEnum3>::From(i); // invalid conversion, 4 is not an enum value
-			},
-			std::exception);
+			}, std::exception);
 
 			char const* names[] = {"A","B","C"};
 			TestEnum1 values[] = {TestEnum1::A, TestEnum1::B, TestEnum1::C};

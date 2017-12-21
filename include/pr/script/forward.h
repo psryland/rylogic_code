@@ -6,11 +6,11 @@
 #pragma once
 
 #include <string>
+#include <memory>
 #include <fstream>
 #include <unordered_map>
 #include <type_traits>
 #include <locale>
-#include <codecvt>
 #include <cassert>
 #include "pr/common/exception.h"
 #include "pr/common/fmt.h"

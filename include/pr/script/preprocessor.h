@@ -118,8 +118,10 @@ namespace pr
 
 					// This must be a compiler bug:
 					// '--m_emit' causes a buffer overrun error on x64 release builds
-					// 'm_emit.assign(int(m_emit) - 1);' doesn't...
-					m_emit.assign(int(m_emit) - 1); //--m_emit;
+					// 'm_emit.assign(int(m_emit) - 1);' so does this
+					if (m_emit.m_value > 0)
+						--m_emit.m_value;
+
 					return *this;
 				}
 
@@ -199,7 +201,7 @@ namespace pr
 
 			// The stack of input streams. Streams are pushed/popped from
 			// the stack as files are opened, or macros are evaluated.
-			using SourceStack = pr::vector<PPSource>;
+			using SourceStack = pr::vector<PPSource, 4>;
 			SourceStack m_stack;
 
 			// A stack recording the 'inclusion' state of nested #if/#endif blocks
@@ -1203,7 +1205,7 @@ namespace pr
 					;
 
 				Includes inc;
-				Preprocessor pp(str_in, &inc, nullptr, [](auto){ return make_unique<EmbeddedLua>(); });
+				Preprocessor pp(str_in, &inc, nullptr, [](auto){ return std::make_unique<EmbeddedLua>(); });
 				for (;*pp && *str_out; ++pp, ++str_out)
 				{
 					if (*pp == *str_out) continue;

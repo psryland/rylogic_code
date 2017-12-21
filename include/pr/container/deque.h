@@ -35,18 +35,18 @@ namespace pr
 			// Map of pointers to blocks
 			template <typename Type, std::size_t BlockSize, typename Allocator> struct BlockPtrMap
 			{
-				typedef typename Allocator::template rebind<Type*>::other PtrsAlloc;
-				typedef typename std::allocator_traits<Allocator> alloc_traits;
-				typedef Allocator      allocator_type;
-				typedef std::size_t    size_type;
-				typedef std::ptrdiff_t difference_type;
-				typedef Type           value_type;
-				typedef Type const*    const_pointer;
-				typedef Type*          pointer;
-				typedef Type const&    const_reference;
-				typedef Type&          reference;
-				typedef Type           block[BlockSize];
-				typedef unsigned char  byte;
+				using alloc_traits    = typename std::allocator_traits<Allocator>;
+				using PtrsAlloc       = typename alloc_traits::template rebind_alloc<Type*>;
+				using allocator_type  = Allocator;
+				using size_type       = std::size_t;
+				using difference_type = std::ptrdiff_t;
+				using value_type      = Type;
+				using const_pointer   = Type const*;
+				using pointer         = Type*;
+				using const_reference = Type const&;
+				using reference       = Type&;
+				using byte            = unsigned char;
+				using block           = Type[BlockSize];
 
 				enum { CountPerBlock = BlockSize };
 
@@ -353,19 +353,19 @@ namespace pr
 	class deque
 	{
 	public:
-		typedef deque<Type,BlockSize,Allocator> type;
-		typedef pr::impl::deque::BlockPtrMap<Type, BlockSize, Allocator> BlockPtrMap;
-		typedef pr::impl::deque::citer<Type, BlockSize, Allocator> const_iterator;
-		typedef pr::impl::deque::miter<Type, BlockSize, Allocator> iterator;
-		typedef typename BlockPtrMap::alloc_traits alloc_traits;
-		typedef typename BlockPtrMap::allocator_type allocator_type;
-		typedef typename BlockPtrMap::value_type value_type;
-		typedef typename BlockPtrMap::size_type size_type;
-		typedef typename BlockPtrMap::difference_type difference_type;
-		typedef typename BlockPtrMap::const_pointer const_pointer;
-		typedef typename BlockPtrMap::pointer pointer;
-		typedef typename BlockPtrMap::const_reference const_reference;
-		typedef typename BlockPtrMap::reference reference;
+		using type            = deque<Type,BlockSize,Allocator>;
+		using BlockPtrMap     = impl::deque::BlockPtrMap<Type, BlockSize, Allocator>;
+		using const_iterator  = impl::deque::citer<Type, BlockSize, Allocator>;
+		using iterator        = impl::deque::miter<Type, BlockSize, Allocator>;
+		using alloc_traits    = typename BlockPtrMap::alloc_traits;
+		using allocator_type  = typename BlockPtrMap::allocator_type;
+		using value_type      = typename BlockPtrMap::value_type;
+		using size_type       = typename BlockPtrMap::size_type;
+		using difference_type = typename BlockPtrMap::difference_type;
+		using const_pointer   = typename BlockPtrMap::const_pointer;
+		using pointer         = typename BlockPtrMap::pointer;
+		using const_reference = typename BlockPtrMap::const_reference;
+		using reference       = typename BlockPtrMap::reference;
 
 		static_assert(((BlockSize - 1) & BlockSize) == 0, "BlockSize must be a power of two");
 		static bool const TypeIsPod               = std::is_pod<Type>::value;
@@ -405,7 +405,12 @@ namespace pr
 			static void destruct_range(Allocator& alloc, iterator first, size_type count)              { for (;count--; ++first) destruct(alloc, &*first, 1); }
 			static void fill_constr(Allocator& alloc, Type* first, size_type count, Type const& val)   { for (; count--;) { copy_constr(alloc, first++, &val, 1); } }
 			static void fill_assign(                  Type* first, size_type count, Type const& val)   { for (; count--;) { copy_assign(first++, &val, 1); } }
-			template <class... Args> static void constr(Allocator& alloc, Type* first, Args&&... args) { alloc.construct(first, std::forward<Args>(args)...); }
+			
+			// construct at 'first'
+			template <class... Args> static void constr(Allocator& alloc, Type* first, Args&&... args)
+			{
+				alloc_traits::construct(alloc, first, std::forward<Args>(args)...);
+			}
 
 			// move [first, last) to [dest, ...)
 			static iterator move(const_iterator first, const_iterator last, iterator dest)

@@ -186,9 +186,9 @@ namespace pr
 		// A file char source
 		struct FileSrc :Src
 		{
-			enum class EEncoding { ascii, utf8, utf16, utf16_be, auto_detect };
+			enum class EEncoding { ascii, utf8, ucs2, ucs2_be, auto_detect };
 
-			// Conversion from UTF encoded files to wchar_t streams using wistream::imbue is very slow.
+			// Conversion from UTF encoded files to UCS-2 streams using wistream::imbue is very slow.
 			// It uses 'std::string' internally. Instead, treat the file as a binary stream and convert
 			// characters as needed.
 
@@ -238,8 +238,8 @@ namespace pr
 					std::ifstream file(filepath, std::ios::binary);
 					auto read = file.good() ? file.read(reinterpret_cast<char*>(&bom[0]), sizeof(bom)).gcount() : 0;
 					if      (read >= 3 && bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF) { m_enc = EEncoding::utf8;        bom_size = 3; }
-					else if (read >= 2 && bom[0] == 0xFE && bom[1] == 0xFF)                   { m_enc = EEncoding::utf16_be;    bom_size = 2; }
-					else if (read >= 2 && bom[0] == 0xFF && bom[1] == 0xFE)                   { m_enc = EEncoding::utf16;       bom_size = 2; }
+					else if (read >= 2 && bom[0] == 0xFE && bom[1] == 0xFF)                   { m_enc = EEncoding::ucs2_be;     bom_size = 2; }
+					else if (read >= 2 && bom[0] == 0xFF && bom[1] == 0xFE)                   { m_enc = EEncoding::ucs2;        bom_size = 2; }
 					else                                                                      { m_enc = EEncoding::auto_detect; bom_size = 0; } // If no valid bomb is found, assume ASCII until an UTF-8 is found
 				}
 
@@ -338,7 +338,7 @@ namespace pr
 				case EEncoding::utf8:
 					{
 						// Interpret a multi byte character
-						static std::codecvt_utf8_utf16<wchar_t> f;
+						std::codecvt_utf8_utf16<wchar_t> f;
 						for (auto mb = std::mbstate_t{};;)
 						{
 							char const* in_end; wchar_t* out_end;
@@ -350,13 +350,13 @@ namespace pr
 						}
 						break;
 					}
-				case EEncoding::utf16:
+				case EEncoding::ucs2:
 					{
 						m_ch_len = 2;
 						m_ch = wchar_t((m_ptr[1] << 8) | m_ptr[0]);
 						break;
 					}
-				case EEncoding::utf16_be:
+				case EEncoding::ucs2_be:
 					{
 						m_ch_len = 2;
 						m_ch = wchar_t((m_ptr[0] << 8) | m_ptr[1]);
@@ -914,6 +914,9 @@ namespace pr
 			using namespace pr::str;
 			using namespace pr::script;
 
+			wchar_t const* script_utf = L"script_utf.txt";
+			auto cleanup = pr::CreateScope([]{}, [&]{ pr::filesys::EraseFile(script_utf); });
+
 			{// Simple buffering
 				char const str[] = "123abc";
 				PtrA ptr(str);
@@ -943,11 +946,10 @@ namespace pr
 				Buffer<> buf(ESrcType::Buffered, "abcd1234");
 				PR_CHECK(buf.match(L"abcd1234") != 0, true);
 			}
-			wchar_t const* script_utf = L"script_utf.txt";
 			{// UTF8 big endian File source
 
 				// UTF-16be data (if host system is little-endian)
-				unsigned char data[] = {0xef, 0xbb, 0xbf, 0xe4, 0xbd, 0xa0, 0xe5, 0xa5, 0xbd}; //' ni hao (chinesse)
+				unsigned char data[] = {0xef, 0xbb, 0xbf, 0xe4, 0xbd, 0xa0, 0xe5, 0xa5, 0xbd}; //' ni hao
 				wchar_t str[] = {0x4f60, 0x597d};
 
 				{// Create the file
@@ -962,7 +964,7 @@ namespace pr
 			{// UTF 16 little endian File source
 
 				// UTF-16le data (if host system is little-endian)
-				unsigned short data[] = {0xfeff, 0x4f60, 0x597d}; //' ni hao (chinesse)
+				unsigned short data[] = {0xfeff, 0x4f60, 0x597d}; //' ni hao
 				wchar_t str[] = {0x4f60, 0x597d};
 
 				{// Create the file
@@ -977,7 +979,7 @@ namespace pr
 			{// UTF 16 big endian File source
 
 				// UTF-16be data (if host system is little-endian)
-				unsigned short data[] = {0xfffe, 0x604f, 0x7d59}; //' ni hao (chinesse)
+				unsigned short data[] = {0xfffe, 0x604f, 0x7d59}; //' ni hao
 				wchar_t str[] = {0x4f60, 0x597d};
 
 				{// Create the file
@@ -989,7 +991,6 @@ namespace pr
 				PR_CHECK(*file, str[0]); ++file;
 				PR_CHECK(*file, str[1]); ++file;
 			}
-			pr::filesys::EraseFile(script_utf);
 		}
 	}
 }

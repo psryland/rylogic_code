@@ -222,12 +222,12 @@ namespace pr
 			}
 			template <typename Ty, typename = pod32<Ty>> inline HashValue HashPod(Ty const& x)
 			{
-				if ((sizeof(Ty) & 3) == 0)
+				if constexpr ((sizeof(Ty)&3) == 0)
 				{
 					auto ptr = reinterpret_cast<uint32_t const*>(&x);
 					return Hash(ptr, ptr + sizeof(Ty)/sizeof(uint32_t));
 				}
-				else if ((sizeof(Ty) & 1) == 0)
+				else if constexpr ((sizeof(Ty) & 1) == 0)
 				{
 					auto ptr = reinterpret_cast<uint16_t const*>(&x);
 					return Hash(ptr, ptr + sizeof(Ty)/sizeof(uint16_t));
@@ -253,12 +253,12 @@ namespace pr
 			{
 				auto h = static_cast<uint32_t>(HashPod(std::forward<Args>(args)...));
 
-				if ((sizeof(Ty) & 3) == 0)
+				if constexpr ((sizeof(Ty) & 3) == 0)
 				{
 					auto ptr = reinterpret_cast<uint32_t const*>(&x);
 					return Hash(ptr, ptr + sizeof(Ty)/sizeof(uint32_t), h);
 				}
-				else if ((sizeof(Ty) & 1) == 0)
+				else if constexpr ((sizeof(Ty) & 1) == 0)
 				{
 					auto ptr = reinterpret_cast<uint16_t const*>(&x);
 					return Hash(ptr, ptr + sizeof(Ty)/sizeof(uint16_t), h);

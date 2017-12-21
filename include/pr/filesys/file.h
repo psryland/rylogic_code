@@ -80,7 +80,7 @@ namespace pr
 			case EFileData::Utf8:
 				{
 					if      (buf_enc == EFileData::Ucs2)     { static std::locale locale(global_locale, new std::codecvt_utf8<Elem>); loc = &locale; }
-					else if (buf_enc == EFileData::Utf16)    { throw std::exception("todo"); }
+					else if (buf_enc == EFileData::Utf16)    { static std::locale locale(global_locale, new std::codecvt_utf8_utf16<Elem>); loc = &locale; }
 					else if (buf_enc == EFileData::Utf16_be) { throw std::exception("todo"); }
 					break;
 				}
@@ -181,12 +181,11 @@ namespace pr
 			}
 
 			std::locale* loc = nullptr;
-			static std::locale global_locale;
 			switch (file_enc)
 			{
 			case EFileData::Utf8:
 				{
-					if      (buf_enc == EFileData::Ucs2)     { static std::locale locale(global_locale, new std::codecvt_utf8<char>); loc = &locale; }
+					if      (buf_enc == EFileData::Ucs2)     { static std::locale locale(file.getloc(), new std::codecvt_utf8<char>); loc = &locale; }
 					else if (buf_enc == EFileData::Utf16_be) { throw std::exception("todo"); }
 					else if (buf_enc == EFileData::Utf16)    { throw std::exception("todo"); }
 					break;
@@ -276,7 +275,7 @@ namespace pr
 				}
 			}
 			{// Write UTF-8 text
-				unsigned char utf8[] = {0xe4, 0xbd, 0xa0, 0xe5, 0xa5, 0xbd, '\n', 0xe4, 0xbd, 0xa0, 0xe5, 0xa5, 0xbd}; // 'ni hao (chinesse)'
+				unsigned char utf8[] = {0xe4, 0xbd, 0xa0, 0xe5, 0xa5, 0xbd, '\n', 0xe4, 0xbd, 0xa0, 0xe5, 0xa5, 0xbd}; // 'ni hao'
 				wchar_t ucs2[] = {0x4f60, 0x597d, '\n', 0x4f60, 0x597d};
 
 				BufferToFile(utf8, 0, _countof(utf8), filepath, EFileData::Utf8, EFileData::Utf8, false, true);
@@ -315,4 +314,3 @@ namespace pr
 	}
 }
 #endif
-

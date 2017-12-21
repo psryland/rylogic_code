@@ -431,14 +431,14 @@ namespace pr
 		{
 			size_t i, len = Length(str);
 			auto begin = BeginC(str);
-			if ( add && (len >= 2 && *begin == Char('\"') && *(begin + len - 1) == Char('\"'))) return str; // already quoted
-			if (!add && (len <  2 || *begin != Char('\"') || *(begin + len - 1) != Char('\"'))) return str; // already not quoted
+			if ( add && (len >= 2 && *begin == '\"' && *(begin + len - 1) == '\"')) return str; // already quoted
+			if (!add && (len <  2 || *begin != '\"' || *(begin + len - 1) != '\"')) return str; // already not quoted
 			if (add)
 			{
 				Resize(str, len+2);
-				str[len+1] = Char('\"');
+				str[len+1] = '\"';
 				for (i = len; i-- != 0;) str[i+1] = str[i];
-				str[0] = Char('\"');
+				str[0] = '\"';
 			}
 			else
 			{
@@ -508,18 +508,26 @@ namespace pr
 			// Insert separators into buf
 			if (sep != 0)
 			{
+				// Calculate the new string length
 				// length, minus decimal point, minus digits after dp,
 				// shifted by 1 because 'sep' inserted at zero-based character
 				// index 3,6,9, div 3 digits per separator
 				auto sep_count = (len - 1 - dp - 1) / 3;
-				buf[len + sep_count] = 0;
+				auto new_length = len + sep_count;
+				if (new_length >= _countof(buf))
+					throw std::exception("PrettyNumber failed");
 
-				// Expand buf, inserting separators
-				for (int in = len, out = len + sep_count, i = -dp - 1; in != out; ++i)
+				if (new_length >= 0)
 				{
-					buf[--out] = buf[--in];
-					if ((i%3) == 2)
-						buf[--out] = sep;
+					buf[new_length] = 0;
+
+					// Expand buf, inserting separators
+					for (int in = len, out = new_length, i = -dp - 1; in != out; ++i)
+					{
+						buf[--out] = buf[--in];
+						if ((i%3) == 2)
+							buf[--out] = sep;
+					}
 				}
 			}
 			return buf;

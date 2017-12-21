@@ -68,7 +68,7 @@ namespace pr
 		// An include handler that tries to open include files from resources, search paths, or a string table
 		struct Includes :IIncludeHandler
 		{
-			using Paths = pr::vector<string>;
+			using Paths = pr::vector<string, 4>;
 			using Modules = pr::vector<HMODULE>;
 			using StrMap = std::unordered_map<string, std::string>;
 

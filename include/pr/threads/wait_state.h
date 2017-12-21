@@ -16,7 +16,11 @@ namespace pr
 			T m_state;
 
 		public:
-			WaitState(T initial_state = T()) :m_mutex() ,m_cv() ,m_state(initial_state) {}
+			WaitState(T initial_state = T())
+				:m_mutex()
+				,m_cv()
+				,m_state(initial_state)
+			{}
 
 			// Block the thread until the internal state becomes 'state' (or timeout)
 			bool Wait(T state, int timeout_ms = ~0) const

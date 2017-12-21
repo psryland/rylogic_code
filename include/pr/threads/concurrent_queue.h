@@ -18,20 +18,28 @@ namespace pr
 {
 	namespace threads
 	{
-		// Base class for concurrent queues
-		struct IConcurrentQueue
+		// Base class for concurrent queues.
+		// Allows the mutex to be provided externally.
+		struct ConcurrentQueueBase
 		{
-			typedef std::unique_lock<std::mutex> MLock;
+			using MLock = std::unique_lock<std::mutex>;
 
 		protected:
+
 			std::mutex& m_mutex;
 			std::condition_variable m_cv_added;
 			std::condition_variable m_cv_empty;
 			bool m_last;
 
-			IConcurrentQueue(std::mutex& mutex) :m_mutex(mutex) ,m_cv_added() ,m_cv_empty() ,m_last(false) {}
-			IConcurrentQueue(IConcurrentQueue const&);
-			IConcurrentQueue& operator=(IConcurrentQueue const&);
+			ConcurrentQueueBase(std::mutex& mutex)
+				:m_mutex(mutex)
+				,m_cv_added()
+				,m_cv_empty()
+				,m_last(false)
+			{}
+
+			ConcurrentQueueBase(ConcurrentQueueBase const&) = delete;
+			ConcurrentQueueBase& operator=(ConcurrentQueueBase const&) = delete;
 
 			// Call this after the last item has been added to the queue.
 			// Queueing anything after 'm_last' has been set throws an exception
@@ -46,18 +54,19 @@ namespace pr
 
 		// Concurrent queue implementation.
 		// Caller provides the mutex on which the queue is synchronised
-		template <typename T> struct ConcurrentQueue2 :IConcurrentQueue
+		template <typename T> struct ConcurrentQueue2 :ConcurrentQueueBase
 		{
 		protected:
 
 			std::deque<T> m_queue;
 
-			ConcurrentQueue2(ConcurrentQueue2 const&);
-			ConcurrentQueue2& operator=(ConcurrentQueue2 const&);
-
 		public:
 
-			explicit ConcurrentQueue2(std::mutex& mutex) :IConcurrentQueue(mutex) {}
+			explicit ConcurrentQueue2(std::mutex& mutex)
+				:ConcurrentQueueBase(mutex)
+			{}
+			ConcurrentQueue2(ConcurrentQueue2 const&) = delete;
+			ConcurrentQueue2& operator=(ConcurrentQueue2 const&) = delete;
 
 			// A scope object for locking the queue
 			// Allows enumeration methods while locked
@@ -71,12 +80,10 @@ namespace pr
 			class Lock
 			{
 				ConcurrentQueue2<T>& m_owner;
-				IConcurrentQueue::MLock m_lock;
-
-				Lock(Lock const&);
-				Lock& operator=(Lock const&);
+				ConcurrentQueueBase::MLock m_lock;
 
 			public:
+
 				std::deque<T>& m_queue;
 
 				explicit Lock(ConcurrentQueue2<T>& queue)
@@ -84,6 +91,8 @@ namespace pr
 					,m_lock(m_owner.m_mutex)
 					,m_queue(m_owner.m_queue)
 				{}
+				Lock(Lock const&) = delete;
+				Lock& operator=(Lock const&) = delete;
 			};
 
 			// Tests if the LastAdded flag is set and the queue is empty
@@ -97,7 +106,7 @@ namespace pr
 			// Queueing anything after 'm_last' has been set throws an exception
 			void LastAdded()
 			{
-				IConcurrentQueue::LastAdded();
+				ConcurrentQueueBase::LastAdded();
 			}
 
 			// Dequeue blocks until data is available in the queue
@@ -197,7 +206,9 @@ namespace pr
 		template <typename T> struct ConcurrentQueue :ConcurrentQueue2<T>
 		{
 			std::mutex m_mutex;
-			ConcurrentQueue() :ConcurrentQueue2<T>(m_mutex) {}
+			ConcurrentQueue()
+				:ConcurrentQueue2<T>(m_mutex)
+			{}
 		};
 	}
 }

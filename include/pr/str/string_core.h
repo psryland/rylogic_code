@@ -320,9 +320,7 @@ namespace pr
 		}
 		template <typename Char, size_t N> inline size_t Length(Char (&str)[N])
 		{
-			auto len = Length(&str[0]);
-			assert(len < N && "Fixed array buffer exceeded");
-			return len;
+			return char_traits<Char>::strnlen(str, N);
 		}
 		#pragma endregion
 
@@ -683,18 +681,18 @@ namespace pr
 			for (; i < iend; ++i) *i = Char1(ch);
 			str[new_size] = 0;
 		}
-		template <typename Char1, size_t N, typename Char2 = char> inline void Resize(Char1 (&str)[N], size_t new_size, Char2 ch)
-		{
-			assert(new_size < N && "Fixed array buffer exceeded");
-			Resize(&str[0], new_size, ch);
-		}
 		template <typename Str, typename = std::enable_if_t<std::is_pointer<Str>::value>> inline void Resize(Str str, size_t new_size)
 		{
 			str[new_size] = 0;
 		}
+		template <typename Char1, size_t N, typename Char2 = char> inline void Resize(Char1 (&str)[N], size_t new_size, Char2 ch)
+		{
+			if (new_size >= N) throw std::exception("Fixed array buffer exceeded");
+			Resize(&str[0], new_size, ch);
+		}
 		template <typename Char1, size_t N> inline void Resize(Char1 (&str)[N], size_t new_size)
 		{
-			assert(new_size < N && "Fixed array buffer exceeded");
+			if (new_size >= N) throw std::exception("Fixed array buffer exceeded");
 			Resize(&str[0], new_size);
 		}
 		#pragma endregion

@@ -883,7 +883,7 @@ namespace pr
 	// Return the dot product of two vectors
 	template <typename Real> inline Real Dot(Matrix<Real> const& lhs, Matrix<Real> const& rhs)
 	{
-		assert("Dot product is between column vectors" && lhs.cols() == 1 && lhs.cols() == 1);
+		assert("Dot product is between column vectors" && lhs.cols() == 1 && rhs.cols() == 1);
 		assert("Dot product must be between vectors of the same length" && lhs.rows() == rhs.rows());
 
 		Real dp = 0;
