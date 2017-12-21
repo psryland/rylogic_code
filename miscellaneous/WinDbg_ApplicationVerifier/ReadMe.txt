@@ -3,7 +3,7 @@ http://www.codeproject.com/Articles/6084/Windows-Debuggers-Part-A-WinDbg-Tutoria
 Use the Application Verifier to set the program you want debugged
  -might need to install Debugging Tools for Windows
 
-Run WinDbg, open exe, hit F5
+Run WinDbg (a GUI program), open exe, hit F5
 
 Set Symbol Paths:
   SRV*P:\local\symbols*http://msdl.microsoft.com/download/symbols;P:\obj

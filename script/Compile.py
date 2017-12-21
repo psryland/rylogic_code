@@ -57,6 +57,7 @@ DefaultDefines = [
 	"WIN32_LEAN_AND_MEAN",
 	"_CRT_SECURE_NO_WARNINGS",
 	"_SCL_SECURE_NO_WARNINGS",
+	"_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING",
 	"NOMINMAX",
 	]
 	
@@ -74,7 +75,7 @@ PrLibs = [
 	UserVars.root+"\\lib\\$(platform)\\$(config)",
 	] + DefaultLibs
 PrDefines = [
-	"PR_UNITTESTS=1",
+	"PR_UNITTESTS=0",
 	"PR_MATHS_USE_INTRINSICS=1",
 	] + DefaultDefines
 	
