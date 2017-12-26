@@ -14,15 +14,15 @@ using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
 using System.Xml.Linq;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.maths;
-using pr.util;
-using pr.win32;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
+using Rylogic.Windows32;
 using Matrix = System.Drawing.Drawing2D.Matrix;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	/// <summary>Custom control for rendering a graph</summary>
 	public class GraphControl :UserControl
@@ -264,7 +264,7 @@ namespace pr.gui
 			public GraphValue(double x, double y, double y_lo, double y_hi) :this(x, y, y_lo, y_hi, null) {}
 			public GraphValue(double x, double y, double y_lo, double y_hi, object tag)
 			{
-				Debug.Assert(Maths.IsFinite(x) && Maths.IsFinite(y));
+				Debug.Assert(Math_.IsFinite(x) && Math_.IsFinite(y));
 				this.x     = x;
 				this.y     = y;
 				this.ylo   = y_lo;
@@ -1234,8 +1234,8 @@ namespace pr.gui
 				public void Set(double min, double max)
 				{
 					if (min >= max) throw new Exception("Range must be positive and non-zero");
-					var zoomed = !Maths.FEql(max - min, m_max - m_min);
-					var scroll = !Maths.FEql((max + min)*0.5, (m_max + m_min)*0.5);
+					var zoomed = !Math_.FEql(max - min, m_max - m_min);
+					var scroll = !Math_.FEql((max + min)*0.5, (m_max + m_min)*0.5);
 
 					m_min = min;
 					m_max = max;
@@ -1377,13 +1377,13 @@ namespace pr.gui
 			set
 			{
 				// Limit zoom amount
-				value = Maths.Clamp(value, ZoomMin, ZoomMax);
+				value = Math_.Clamp(value, ZoomMin, ZoomMax);
 
 				// If both axes allow zoom, maintain the aspect ratio
 				if (XAxis.AllowZoom && YAxis.AllowZoom)
 				{
 					var aspect = (YAxis.Span * BaseRangeX.Size) / (BaseRangeY.Size * XAxis.Span);
-					aspect = Maths.Clamp(Maths.IsFinite(aspect) ? aspect : 1.0, 0.001, 1000);
+					aspect = Math_.Clamp(Math_.IsFinite(aspect) ? aspect : 1.0, 0.001, 1000);
 					XAxis.Span = BaseRangeX.Size * value         ;
 					YAxis.Span = BaseRangeY.Size * value * aspect;
 				}
@@ -1497,7 +1497,7 @@ namespace pr.gui
 				return;
 
 			var point = PointToGraph(e.Location);
-			var delta = Maths.Clamp(e.Delta, -999, 999);
+			var delta = Math_.Clamp(e.Delta, -999, 999);
 			Zoom *= (1.0f - delta * 0.001f);
 			PositionGraph(e.Location, point);
 			Dirty = true;
@@ -1897,8 +1897,8 @@ namespace pr.gui
 			{
 				var tick_text = YAxis.TickText(YAxis.Min, 0.0);
 				var sz = gfx.MeasureString(tick_text, YAxis.Options.TickFont);
-				rect.X     += Maths.Max(sz.Width, YAxis.Options.MinTickSize);
-				rect.Width -= Maths.Max(sz.Width, YAxis.Options.MinTickSize);
+				rect.X     += Math_.Max(sz.Width, YAxis.Options.MinTickSize);
+				rect.Width -= Math_.Max(sz.Width, YAxis.Options.MinTickSize);
 			}
 
 			return new Rectangle((int)rect.X, (int)rect.Y, (int)rect.Width, (int)rect.Height);
@@ -3553,7 +3553,7 @@ namespace pr.gui
 				{
 					if (e.RowIndex == -1)
 					{
-						m_ofs = Drawing_.Subtract(MousePosition, TopLevelControl.Location);
+						m_ofs = Point_.Subtract(MousePosition, TopLevelControl.Location);
 						Capture = true;
 					}
 					base.OnCellMouseDown(e);

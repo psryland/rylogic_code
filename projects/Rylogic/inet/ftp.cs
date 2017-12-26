@@ -6,12 +6,11 @@ using System.Net.Sockets;
 using System.IO;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
-using pr.common;
-using pr.inet;
-using pr.stream;
-using pr.util;
+using Rylogic.Streams;
+using Rylogic.Utility;
+using Rylogic.Extn;
 
-namespace pr.inet
+namespace Rylogic.INet
 {
 	/// <summary>
 	/// A class for creating FTP/FTPS connections.
@@ -167,7 +166,7 @@ namespace pr.inet
 		/// <summary>An event that is called to trace the behaviour of the ftp connection. Mainly for debugging</summary>
 		public event TraceEvent TraceMessage;
 		public delegate void TraceEvent(string message, params object[] args);
-		private void Trace(util.Lazy<string> message, params object[] args) { if (TraceMessage != null) TraceMessage("[FTPConnection] " + message, args); }
+		private void Trace(Rylogic.Utility.Lazy<string> message, params object[] args) { if (TraceMessage != null) TraceMessage("[FTPConnection] " + message, args); }
 
 		/// <summary>The stream over which ftp commands are sent</summary>
 		private Stream m_cmd;
@@ -629,8 +628,10 @@ namespace pr.inet
 }
 
 #if PR_UNITTESTS
-namespace pr.unittests
+namespace Rylogic.UnitTests
 {
+	using INet;
+
 	[TestFixture] public class TestFtp
 	{
 		//hack[Test]
@@ -638,7 +639,7 @@ namespace pr.unittests
 		{
 			try
 			{
-				FTPConnection.Settings settings = new FTPConnection.Settings
+				var settings = new FTPConnection.Settings
 				{
 					RemoteHost = "192.168.0.150",
 					RemotePort = 21,
@@ -646,7 +647,7 @@ namespace pr.unittests
 					Password = "37awatea",
 					UseSSL = false
 				};
-				using(FTPConnection ftp = new FTPConnection())
+				using(var ftp = new FTPConnection())
 				{
 					ftp.TraceMessage += (s,a)=>{ System.Diagnostics.Debug.Write(string.Format(s,a)); };
 					ftp.Login(settings);

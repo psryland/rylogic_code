@@ -7,12 +7,12 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
-using pr.gfx;
-using pr.gui;
-using pr.maths;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Graphix;
+using Rylogic.Gui;
+using Rylogic.Maths;
+using Rylogic.Utility;
 using RyLogViewer.Properties;
 
 namespace RyLogViewer
@@ -339,7 +339,7 @@ namespace RyLogViewer
 			m_spinner_web_proxy_port.ToolTip(m_tt, "The port number of the web proxy server");
 			m_spinner_web_proxy_port.Minimum = Constants.PortNumberMin;
 			m_spinner_web_proxy_port.Maximum = Constants.PortNumberMax;
-			m_spinner_web_proxy_port.Value = Maths.Clamp(Settings.WebProxyPort, Constants.PortNumberMin, Constants.PortNumberMax);
+			m_spinner_web_proxy_port.Value = Math_.Clamp(Settings.WebProxyPort, Constants.PortNumberMin, Constants.PortNumberMax);
 			m_spinner_web_proxy_port.ValueChanged += (s,a)=>
 			{
 				Settings.WebProxyPort = (int)m_spinner_web_proxy_port.Value;
@@ -374,7 +374,7 @@ namespace RyLogViewer
 			m_spinner_column_count.ToolTip(m_tt, "The number of columns to display in the grid.\r\nUsed when the column delimiter is not blank");
 			m_spinner_column_count.Minimum = Constants.ColumnCountMin;
 			m_spinner_column_count.Maximum = Constants.ColumnCountMax;
-			m_spinner_column_count.Value = Maths.Clamp(Settings.ColumnCount, Constants.ColumnCountMin, Constants.ColumnCountMax);
+			m_spinner_column_count.Value = Math_.Clamp(Settings.ColumnCount, Constants.ColumnCountMin, Constants.ColumnCountMax);
 			m_spinner_column_count.ValueChanged += (s,a) =>
 			{
 				Settings.ColumnCount = (int)m_spinner_column_count.Value;
@@ -394,7 +394,7 @@ namespace RyLogViewer
 			m_spinner_line_cache_count.ToolTip(m_tt, "The number of lines to scan into memory around the currently selected line");
 			m_spinner_line_cache_count.Minimum = Constants.LineCacheCountMin;
 			m_spinner_line_cache_count.Maximum = Constants.LineCacheCountMax;
-			m_spinner_line_cache_count.Value = Maths.Clamp(Settings.LineCacheCount, (int)m_spinner_line_cache_count.Minimum, (int)m_spinner_line_cache_count.Maximum);
+			m_spinner_line_cache_count.Value = Math_.Clamp(Settings.LineCacheCount, (int)m_spinner_line_cache_count.Minimum, (int)m_spinner_line_cache_count.Maximum);
 			m_spinner_line_cache_count.ValueChanged += (s,a)=>
 			{
 				Settings.LineCacheCount = (int)m_spinner_line_cache_count.Value;
@@ -405,7 +405,7 @@ namespace RyLogViewer
 			m_spinner_max_mem_range.ToolTip(m_tt, "The maximum number of bytes to scan when finding lines around the currently selected row (in MB).");
 			m_spinner_max_mem_range.Minimum = Constants.FileBufSizeMin / Constants.OneMB;
 			m_spinner_max_mem_range.Maximum = Constants.FileBufSizeMax / Constants.OneMB;
-			m_spinner_max_mem_range.Value = Maths.Clamp(Settings.FileBufSize / Constants.OneMB, (int)m_spinner_max_mem_range.Minimum, (int)m_spinner_max_mem_range.Maximum);
+			m_spinner_max_mem_range.Value = Math_.Clamp(Settings.FileBufSize / Constants.OneMB, (int)m_spinner_max_mem_range.Minimum, (int)m_spinner_max_mem_range.Maximum);
 			m_spinner_max_mem_range.ValueChanged += (s,a)=>
 			{
 				Settings.FileBufSize = (int)m_spinner_max_mem_range.Value * Constants.OneMB;
@@ -416,7 +416,7 @@ namespace RyLogViewer
 			m_spinner_max_line_length.ToolTip(m_tt, "The maximum length of a line in the log file.\r\nIf the log contains lines longer than this an error will be reported when loading the file");
 			m_spinner_max_line_length.Minimum = Constants.MaxLineLengthMin / Constants.OneKB;
 			m_spinner_max_line_length.Maximum = Constants.MaxLineLengthMax / Constants.OneKB;
-			m_spinner_max_line_length.Value = Maths.Clamp(Settings.MaxLineLength / Constants.OneKB, (int)m_spinner_max_line_length.Minimum, (int)m_spinner_max_line_length.Maximum);
+			m_spinner_max_line_length.Value = Math_.Clamp(Settings.MaxLineLength / Constants.OneKB, (int)m_spinner_max_line_length.Minimum, (int)m_spinner_max_line_length.Maximum);
 			m_spinner_max_line_length.ValueChanged += (s,a)=>
 			{
 				Settings.MaxLineLength = (int)m_spinner_max_line_length.Value * Constants.OneKB;
@@ -546,7 +546,7 @@ namespace RyLogViewer
 			m_spinner_row_height.ToolTip(m_tt, "The height of each row in the log view");
 			m_spinner_row_height.Minimum = Constants.RowHeightMinHeight;
 			m_spinner_row_height.Maximum = Constants.RowHeightMaxHeight;
-			m_spinner_row_height.Value = Maths.Clamp(Settings.RowHeight, (int)m_spinner_row_height.Minimum, (int)m_spinner_row_height.Maximum);
+			m_spinner_row_height.Value = Math_.Clamp(Settings.RowHeight, (int)m_spinner_row_height.Minimum, (int)m_spinner_row_height.Maximum);
 			m_spinner_row_height.ValueChanged += (s,a)=>
 				{
 					Settings.RowHeight = (int)m_spinner_row_height.Value;
@@ -581,7 +581,7 @@ namespace RyLogViewer
 			m_spinner_tabsize.ToolTip(m_tt, "The width to display tab characters measured in spaces");
 			m_spinner_tabsize.Minimum = 0;
 			m_spinner_tabsize.Maximum = 100;
-			m_spinner_tabsize.Value = Maths.Clamp(Settings.TabSizeInSpaces, (int)m_spinner_tabsize.Minimum, (int)m_spinner_tabsize.Maximum);
+			m_spinner_tabsize.Value = Math_.Clamp(Settings.TabSizeInSpaces, (int)m_spinner_tabsize.Minimum, (int)m_spinner_tabsize.Maximum);
 			m_spinner_tabsize.ValueChanged += (s,a) =>
 				{
 					Settings.TabSizeInSpaces = (int)m_spinner_tabsize.Value;
@@ -592,7 +592,7 @@ namespace RyLogViewer
 			m_spinner_file_scroll_width.ToolTip(m_tt, "The width of the scroll bar that shows the current position within the log file");
 			m_spinner_file_scroll_width.Minimum = Constants.FileScrollMinWidth;
 			m_spinner_file_scroll_width.Maximum = Constants.FileScrollMaxWidth;
-			m_spinner_file_scroll_width.Value = Maths.Clamp(Settings.FileScrollWidth, (int)m_spinner_file_scroll_width.Minimum, (int)m_spinner_file_scroll_width.Maximum);
+			m_spinner_file_scroll_width.Value = Math_.Clamp(Settings.FileScrollWidth, (int)m_spinner_file_scroll_width.Minimum, (int)m_spinner_file_scroll_width.Maximum);
 			m_spinner_file_scroll_width.ValueChanged += (s,a)=>
 				{
 					Settings.FileScrollWidth = (int)m_spinner_file_scroll_width.Value;
@@ -1275,7 +1275,7 @@ namespace RyLogViewer
 			this.m_lbl_web_proxy_port = new System.Windows.Forms.Label();
 			this.m_lbl_web_proxy_host = new System.Windows.Forms.Label();
 			this.m_spinner_web_proxy_port = new System.Windows.Forms.NumericUpDown();
-			this.m_tb_web_proxy_host = new pr.gui.ValueBox();
+			this.m_tb_web_proxy_host = new Rylogic.Gui.ValueBox();
 			this.m_chk_use_web_proxy = new System.Windows.Forms.CheckBox();
 			this.m_chk_c4u = new System.Windows.Forms.CheckBox();
 			this.m_chk_show_totd = new System.Windows.Forms.CheckBox();
@@ -1298,9 +1298,9 @@ namespace RyLogViewer
 			this.m_lbl_column_count = new System.Windows.Forms.Label();
 			this.m_spinner_column_count = new System.Windows.Forms.NumericUpDown();
 			this.m_chk_ignore_blank_lines = new System.Windows.Forms.CheckBox();
-			this.m_tb_col_delims = new pr.gui.ValueBox();
+			this.m_tb_col_delims = new Rylogic.Gui.ValueBox();
 			this.m_lbl_col_delims = new System.Windows.Forms.Label();
-			this.m_tb_line_ends = new pr.gui.ValueBox();
+			this.m_tb_line_ends = new Rylogic.Gui.ValueBox();
 			this.m_lbl_line_ends = new System.Windows.Forms.Label();
 			this.m_tab_logview = new System.Windows.Forms.TabPage();
 			this.m_table_appearance0 = new System.Windows.Forms.TableLayoutPanel();
@@ -1333,13 +1333,13 @@ namespace RyLogViewer
 			this.m_lbl_file_scroll_width = new System.Windows.Forms.Label();
 			this.m_tab_highlight = new System.Windows.Forms.TabPage();
 			this.m_split_hl = new System.Windows.Forms.SplitContainer();
-			this.m_pattern_hl = new pr.gui.PatternUI();
+			this.m_pattern_hl = new Rylogic.Gui.PatternUI();
 			this.m_table_hl = new System.Windows.Forms.TableLayoutPanel();
 			this.m_grid_highlight = new RyLogViewer.DataGridView();
 			this.label2 = new System.Windows.Forms.Label();
 			this.m_tab_filter = new System.Windows.Forms.TabPage();
 			this.m_split_ft = new System.Windows.Forms.SplitContainer();
-			this.m_pattern_ft = new pr.gui.PatternUI();
+			this.m_pattern_ft = new Rylogic.Gui.PatternUI();
 			this.m_table_ft = new System.Windows.Forms.TableLayoutPanel();
 			this.m_lbl_ft_grid_desc = new System.Windows.Forms.Label();
 			this.m_grid_filter = new RyLogViewer.DataGridView();
@@ -1352,7 +1352,7 @@ namespace RyLogViewer
 			this.m_grid_transform = new RyLogViewer.DataGridView();
 			this.m_tab_action = new System.Windows.Forms.TabPage();
 			this.m_split_ac = new System.Windows.Forms.SplitContainer();
-			this.m_pattern_ac = new pr.gui.PatternUI();
+			this.m_pattern_ac = new Rylogic.Gui.PatternUI();
 			this.m_table_ac = new System.Windows.Forms.TableLayoutPanel();
 			this.label5 = new System.Windows.Forms.Label();
 			this.m_grid_action = new RyLogViewer.DataGridView();

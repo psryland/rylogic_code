@@ -1,11 +1,11 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	public class PatternFilter :UserControl
 	{
@@ -117,7 +117,7 @@ namespace pr.gui
 		private void InitializeComponent()
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(PatternFilter));
-			this.m_cb_pattern = new pr.gui.ComboBox();
+			this.m_cb_pattern = new Rylogic.Gui.ComboBox();
 			this.m_btn_patn_detail = new System.Windows.Forms.Button();
 			this.SuspendLayout();
 			// 

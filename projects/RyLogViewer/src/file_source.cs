@@ -1,13 +1,12 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
-using pr.extn;
-using pr.stream;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Streams;
+using Rylogic.Utility;
 
 namespace RyLogViewer
 {

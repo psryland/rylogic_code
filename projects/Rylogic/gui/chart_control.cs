@@ -13,19 +13,18 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
 using System.Xml.Linq;
-using pr.attrib;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.gfx;
-using pr.ldr;
-using pr.maths;
-using pr.util;
-using pr.view3d;
-using pr.win32;
+using Rylogic.Attrib;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Graphix;
+using Rylogic.LDraw;
+using Rylogic.Maths;
+using Rylogic.Utility;
+using Rylogic.Windows32;
 using Matrix = System.Drawing.Drawing2D.Matrix;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	/// <summary>A view 3d based chart control</summary>
 	public class ChartControl :UserControl
@@ -2085,8 +2084,8 @@ namespace pr.gui
 				public void Set(double min, double max)
 				{
 					Debug.Assert(min < max, "Range must be positive and non-zero");
-					var zoomed = !Maths.FEql(max - min, m_max - m_min);
-					var scroll = !Maths.FEql((max + min)*0.5, (m_max + m_min)*0.5);
+					var zoomed = !Math_.FEql(max - min, m_max - m_min);
+					var scroll = !Math_.FEql((max + min)*0.5, (m_max + m_min)*0.5);
 
 					m_min = min;
 					m_max = max;
@@ -2256,15 +2255,17 @@ namespace pr.gui
 				public string DefaultTickText(double x, double step)
 				{
 					// This solves the rounding problem for values near zero when the axis span could be anything
-					return !Maths.FEql(x / Span, 0.0) ? Maths.RoundSF(x, 5).ToString("G8") : "0";
+					return !Math_.FEql(x / Span, 0.0) ? Math_.RoundSF(x, 5).ToString("G8") : "0";
 				}
 
 				/// <summary>Default tick text measurement</summary>
 				public float DefaultMeasureTickText(Graphics gfx, bool width)
 				{
-					var sz0 = gfx.MeasureString(TickText(Min, 0.0), Options.TickFont);
-					var sz1 = gfx.MeasureString(TickText(Max, 0.0), Options.TickFont);
-					return width ? Math.Max(sz0.Width, sz1.Width) : Math.Max(sz0.Height, sz1.Height);
+					// Can't use 'GridLines' here because creates an infinite recursion.
+					// Using TickText(Min/Max, 0.0) causes the axes to jump around.
+					// The best option is to use one fixed length string.
+					var size = gfx.MeasureString("-9.99999", Options.TickFont);
+					return width ? size.Width : size.Height;
 				}
 
 				/// <summary>Friendly string view</summary>
@@ -2451,7 +2452,7 @@ namespace pr.gui
 				var scale = 0.001f;
 				if (ModifierKeys.HasFlag(Keys.Shift)) scale *= 0.1f;
 				if (ModifierKeys.HasFlag(Keys.Alt  )) scale *= 0.01f;
-				var delta = Maths.Clamp(e.Delta * scale, -0.999f, 0.999f);
+				var delta = Math_.Clamp(e.Delta * scale, -0.999f, 0.999f);
 
 				var chg = false;
 
@@ -2831,7 +2832,7 @@ namespace pr.gui
 				if (!m_is_click) return false;
 				var grab = v2.From(m_grab_client);
 				var diff = v2.From(location) - grab;
-				return m_is_click = diff.Length2Sq < Maths.Sqr(m_chart.Options.MinDragPixelDistance);
+				return m_is_click = diff.Length2Sq < Math_.Sqr(m_chart.Options.MinDragPixelDistance);
 			}
 
 			/// <summary>Called on mouse down</summary>
@@ -2896,7 +2897,7 @@ namespace pr.gui
 				{
 					// If the drag operation started on a selected element then drag the
 					// selected elements within the diagram.
-					var delta = Drawing_.Subtract(m_chart.ClientToChart(e.Location), m_grab_chart);
+					var delta = Point_.Subtract(m_chart.ClientToChart(e.Location), m_grab_chart);
 					m_chart.DragSelected(v2.From(delta), false);
 				}
 				else if (m_chart.Options.NavigationMode == ENavMode.Chart2D)
@@ -2964,7 +2965,7 @@ namespace pr.gui
 					// If an element was selected, drag it around
 					if (m_hit_selected != null && m_chart.AllowEditing)
 					{
-						var delta = Drawing_.Subtract(m_chart.ClientToChart(e.Location), m_grab_chart);
+						var delta = Point_.Subtract(m_chart.ClientToChart(e.Location), m_grab_chart);
 						m_chart.DragSelected(delta, true);
 					}
 					else if (m_chart.Options.NavigationMode == ENavMode.Chart2D)
@@ -3567,7 +3568,7 @@ namespace pr.gui
 				get { return m_impl_position; }
 				set
 				{
-					if (Maths.FEql(m_impl_position, value)) return;
+					if (Math_.FEql(m_impl_position, value)) return;
 					SetPosition(value);
 				}
 			}
@@ -3812,7 +3813,7 @@ namespace pr.gui
 			var r = new BBox(new v4(rect.Centre(), 0f, 1f), new v4(v2.Abs(v2.From(rect.Size))*0.5f, 1f, 0f));
 
 			// If the area of selection is less than the min drag distance, assume click selection
-			var is_click = r.DiametreSq < Maths.Sqr(Options.MinDragPixelDistance);
+			var is_click = r.DiametreSq < Math_.Sqr(Options.MinDragPixelDistance);
 			if (is_click)
 			{
 				var pt = ChartToClient(rect.Location).ToPoint();
@@ -5645,7 +5646,7 @@ namespace pr.gui
 							return m_map.GetOrAdd(style, s =>
 							{
 								var sz = 128U;
-								var h0 = 0.5f * sz * (float)Math.Tan(Maths.DegreesToRadians(60));
+								var h0 = 0.5f * sz * (float)Math.Tan(Math_.DegreesToRadians(60));
 								var h1 = 0.5f * (sz - h0);
 								var tex = new View3d.Texture(sz,sz);
 								using (var surf = tex.LockSurface(true))
@@ -5917,7 +5918,7 @@ namespace pr.gui
 		//	var elem_point = Drawing_.Subtract(client_point, area.TopLeft()).ToPointF();
 		//
 		//	// Determine which series was hit
-		//	var idx = (int)Maths.Frac(Padding.Top, elem_point.Y, area.Height - Padding.Bottom) * m_series.Count;
+		//	var idx = (int)Math_.Frac(Padding.Top, elem_point.Y, area.Height - Padding.Bottom) * m_series.Count;
 		//	if (idx < 0 || idx >= m_series.Count)
 		//		return null;
 		//

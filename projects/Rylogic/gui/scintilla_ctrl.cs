@@ -5,14 +5,14 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
-using pr.gfx;
-using pr.scintilla;
-using pr.util;
-using pr.win32;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Graphix;
+using Rylogic.Scintilla;
+using Rylogic.Utility;
+using Rylogic.Windows32;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	/// <summary>A win forms wrapper of the scintilla control</summary>
 	public class ScintillaCtrl :Control
@@ -303,7 +303,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Handle notification from the native scintilla control</summary>
-		protected virtual void HandleSCNotification(ref Win32.NMHDR nmhdr, ref Scintilla.Scintilla.SCNotification notif)
+		protected virtual void HandleSCNotification(ref Win32.NMHDR nmhdr, ref global::Scintilla.Scintilla.SCNotification notif)
 		{
 			switch (notif.nmhdr.code)
 			{
@@ -416,7 +416,7 @@ namespace pr.gui
 				return string.Empty;
 
 			var bytes = new byte[len];
-			using (var h = GCHandleEx.Alloc(bytes, GCHandleType.Pinned))
+			using (var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned))
 			{
 				var num = Cmd(Sci.SCI_GETTEXT, len + 1, h.Handle.AddrOfPinnedObject());
 				return Encoding.UTF8.GetString(bytes, 0, num);
@@ -432,7 +432,7 @@ namespace pr.gui
 			{
 				// Convert the string to UTF-8
 				var bytes = Encoding.UTF8.GetBytes(text);
-				using (var h = GCHandleEx.Alloc(bytes, GCHandleType.Pinned))
+				using (var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned))
 					Cmd(Sci.SCI_SETTEXT, 0, h.Handle.AddrOfPinnedObject());
 			}
 
@@ -453,7 +453,7 @@ namespace pr.gui
 		{
 			var len = LineLength(line);
 			var bytes = new byte[len];
-			using (var h = GCHandleEx.Alloc(bytes, GCHandleType.Pinned))
+			using (var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned))
 			{
 				var num = Cmd(Sci.SCI_GETLINE, line, h.Handle.AddrOfPinnedObject());
 				return Encoding.UTF8.GetString(bytes, 0, num);
@@ -482,7 +482,7 @@ namespace pr.gui
 		{
 			// Convert the string to UTF-8
 			var bytes = Encoding.UTF8.GetBytes(text);
-			using (var h = GCHandleEx.Alloc(bytes, GCHandleType.Pinned))
+			using (var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned))
 				Cmd(Sci.SCI_APPENDTEXT, bytes.Length, h.Handle.AddrOfPinnedObject());
 		}
 
@@ -498,7 +498,7 @@ namespace pr.gui
 		{
 			// Ensure null termination
 			var bytes = Encoding.UTF8.GetBytes(text + "\0");
-			using (var h = GCHandleEx.Alloc(bytes, GCHandleType.Pinned))
+			using (var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned))
 				Cmd(Sci.SCI_INSERTTEXT, pos, h.Handle.AddrOfPinnedObject());
 		}
 
@@ -507,7 +507,7 @@ namespace pr.gui
 		{
 			// Ensure null termination
 			var bytes = Encoding.UTF8.GetBytes(text + "\0");
-			using (var h = GCHandleEx.Alloc(bytes, GCHandleType.Pinned))
+			using (var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned))
 				Cmd(Sci.SCI_REPLACESEL, 0, h.Handle.AddrOfPinnedObject());
 		}
 
@@ -515,7 +515,7 @@ namespace pr.gui
 		public void AddText(string text)
 		{
 			var bytes = Encoding.UTF8.GetBytes(text);
-			using (var h = GCHandleEx.Alloc(bytes, GCHandleType.Pinned))
+			using (var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned))
 				Cmd(Sci.SCI_ADDTEXT, bytes.Length, h.Handle.AddrOfPinnedObject());
 		}
 
@@ -523,7 +523,7 @@ namespace pr.gui
 		public void AddStyledText(string text)
 		{
 			var bytes = Encoding.UTF8.GetBytes(text);
-			using (var h = GCHandleEx.Alloc(bytes, GCHandleType.Pinned))
+			using (var h = GCHandle_.Alloc(bytes, GCHandleType.Pinned))
 				Cmd(Sci.SCI_ADDSTYLEDTEXT, bytes.Length, h.Handle.AddrOfPinnedObject());
 		}
 
@@ -681,7 +681,7 @@ namespace pr.gui
 		{
 			var len = Cmd(Sci.SCI_GETSELTEXT);
 			var buf = new byte[len];
-			using (var t = GCHandleEx.Alloc(buf, GCHandleType.Pinned))
+			using (var t = GCHandle_.Alloc(buf, GCHandleType.Pinned))
 			{
 				len = Cmd(Sci.SCI_GETSELTEXT, 0, t.Handle.AddrOfPinnedObject());
 				return Encoding.UTF8.GetString(buf, 0, len);
@@ -693,7 +693,7 @@ namespace pr.gui
 		{
 			var len = Cmd(Sci.SCI_GETCURLINE);
 			var buf = new byte[len];
-			using (var t = GCHandleEx.Alloc(buf, GCHandleType.Pinned))
+			using (var t = GCHandle_.Alloc(buf, GCHandleType.Pinned))
 			{
 				caret_offset = Cmd(Sci.SCI_GETCURLINE, buf.Length, t.Handle.AddrOfPinnedObject());
 				return Encoding.UTF8.GetString(buf, 0, len);
@@ -860,7 +860,7 @@ namespace pr.gui
 		public int TextWidth(int style, string text)
 		{
 			var text_bytes = Encoding.UTF8.GetBytes(text);
-			using (var t = GCHandleEx.Alloc(text_bytes, GCHandleType.Pinned))
+			using (var t = GCHandle_.Alloc(text_bytes, GCHandleType.Pinned))
 				return Cmd(Sci.SCI_TEXTWIDTH, style, t.Handle.AddrOfPinnedObject());
 		}
 
@@ -1290,7 +1290,7 @@ namespace pr.gui
 		public void StyleSetFont(int idx, string font_name)
 		{
 			var bytes = Encoding.UTF8.GetBytes(font_name);
-			using (var handle = GCHandleEx.Alloc(bytes, GCHandleType.Pinned))
+			using (var handle = GCHandle_.Alloc(bytes, GCHandleType.Pinned))
 				Cmd(Sci.SCI_STYLESETFONT, idx, handle.Handle.AddrOfPinnedObject());
 		}
 
@@ -2133,7 +2133,7 @@ namespace pr.gui
 		public void LexerLanguage(string language)
 		{
 			var bytes = Encoding.UTF8.GetBytes(language);
-			using (var handle = GCHandleEx.Alloc(bytes, GCHandleType.Pinned))
+			using (var handle = GCHandle_.Alloc(bytes, GCHandleType.Pinned))
 				Cmd(Sci.SCI_SETLEXERLANGUAGE, 0, handle.Handle.AddrOfPinnedObject());
 		}
 
@@ -2141,7 +2141,7 @@ namespace pr.gui
 		public void LoadLexerLibrary(string path)
 		{
 			var bytes = Encoding.UTF8.GetBytes(path);
-			using (var handle = GCHandleEx.Alloc(bytes, GCHandleType.Pinned))
+			using (var handle = GCHandle_.Alloc(bytes, GCHandleType.Pinned))
 				Cmd(Sci.SCI_LOADLEXERLIBRARY, 0, handle.Handle.AddrOfPinnedObject());
 		}
 
@@ -2155,11 +2155,11 @@ namespace pr.gui
 		public string Property(string key)
 		{
 			var key_bytes = Encoding.UTF8.GetBytes(key);
-			using (var k = GCHandleEx.Alloc(key_bytes, GCHandleType.Pinned))
+			using (var k = GCHandle_.Alloc(key_bytes, GCHandleType.Pinned))
 			{
 				var len = Cmd(Sci.SCI_GETPROPERTY, k.Handle.AddrOfPinnedObject(), IntPtr.Zero);
 				var buf = new byte[len + 1];
-				using (var b = GCHandleEx.Alloc(buf, GCHandleType.Pinned))
+				using (var b = GCHandle_.Alloc(buf, GCHandleType.Pinned))
 				{
 					len = Cmd(Sci.SCI_GETPROPERTY, k.Handle.AddrOfPinnedObject(), b.Handle.AddrOfPinnedObject());
 					return Encoding.UTF8.GetString(buf, 0, len);
@@ -2170,8 +2170,8 @@ namespace pr.gui
 		{
 			var key_bytes = Encoding.UTF8.GetBytes(key);
 			var val_bytes = Encoding.UTF8.GetBytes(value);
-			using (var k = GCHandleEx.Alloc(key_bytes, GCHandleType.Pinned))
-			using (var v = GCHandleEx.Alloc(val_bytes, GCHandleType.Pinned))
+			using (var k = GCHandle_.Alloc(key_bytes, GCHandleType.Pinned))
+			using (var v = GCHandle_.Alloc(val_bytes, GCHandleType.Pinned))
 				Cmd(Sci.SCI_SETPROPERTY, k.Handle.AddrOfPinnedObject(), v.Handle.AddrOfPinnedObject());
 		}
 		public string PropertyExpanded(string key)

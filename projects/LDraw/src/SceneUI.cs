@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
@@ -7,15 +6,13 @@ using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
 using System.Xml.Linq;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.gfx;
-using pr.gui;
-using pr.maths;
-using pr.util;
-using pr.view3d;
-using pr.win32;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Graphix;
+using Rylogic.Gui;
+using Rylogic.Maths;
+using Rylogic.Utility;
+using Rylogic.Windows32;
 
 namespace LDraw
 {
@@ -437,7 +434,7 @@ namespace LDraw
 					args.Effect = shift_down ? DragDropEffects.Copy : DragDropEffects.Move;
 
 					// 'mode' == 'DragDrop.EDrop.Drop' when the item is actually dropped
-					if (mode == pr.util.DragDrop.EDrop.Drop)
+					if (mode == Rylogic.Gui.DragDrop.EDrop.Drop)
 					{
 						var add = shift_down;
 						foreach (var file in files)

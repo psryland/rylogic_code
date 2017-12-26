@@ -34,11 +34,11 @@
 			</li>
 			<li>
 				<div class="content">
-					Create a class that implements the <i>ICustomLogDataSource</i> interface, and mark it with the <i>pr.common.Plugin</i>
+					Create a class that implements the <i>ICustomLogDataSource</i> interface, and mark it with the <i>Rylogic.Common.Plugin</i>
 					attribute. This attribute is what RyLogViewer uses to find the plugin implementation.
 <pre class="cscode">
 <code><span class="com">/// &lt;summary&gt;A data source that reads a file as hex formatted text&lt;/summary&gt;</span>
-[pr.common.Plugin(<span class="key">typeof</span>(ICustomLogDataSource))]
+[Rylogic.Common.Plugin(<span class="key">typeof</span>(ICustomLogDataSource))]
 <span class="key">public</span> <span class="key">class</span> ExampleDataSource :ICustomLogDataSource
 </code></pre>
 				</div>
@@ -124,11 +124,11 @@
 			</li>
 			<li>
 				<div class="content">
-					Create a class that implements the <i>ITransformSubstitution</i> interface, and mark it with the <i>pr.common.Plugin</i>
+					Create a class that implements the <i>ITransformSubstitution</i> interface, and mark it with the <i>Rylogic.Common.Plugin</i>
 					attribute. This attribute is what RyLogViewer uses to find the plugin implementation.
 <pre class="cscode">
 <code><span class="com">/// &lt;summary&gt;>A text transform substitution, accessed via the Options-&gt;Transforms tab&lt;/summary&gt;</span>
-[pr.common.Plugin(<span class="key">typeof</span>(ITransformSubstitution))]
+[Rylogic.Common.Plugin(<span class="key">typeof</span>(ITransformSubstitution))]
 <span class="key">public</span> <span class="key">class</span> ExampleSubstitution :ITransformSubstitution
 </code></pre>
 				</div>

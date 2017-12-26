@@ -1,14 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using System.Text;
 
-namespace pr.win32
+namespace Rylogic.Windows32
 {
 	public static partial class Win32
 	{
 		public const int RmRebootReasonNone = 0;
-		public const int CCH_RM_SESSION_KEY = 16 + 1; // The returned session key is a wchar GUID with a null terminator
+		public const int CCH_RM_SESSION_KEY = 16 + 1; // The returned session key is a 'wchar_t' GUID with a null terminator
 		public const int CCH_RM_MAX_APP_NAME = 255;
 		public const int CCH_RM_MAX_SVC_NAME = 63;
 

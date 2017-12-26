@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using System.Text;
 
-namespace pr.win32
+namespace Rylogic.Windows32
 {
 	#region COM Interfaces
 

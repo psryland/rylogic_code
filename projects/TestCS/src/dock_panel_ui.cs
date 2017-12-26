@@ -1,9 +1,9 @@
 ﻿using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
-using pr.extn;
-using pr.gui;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Utility;
 
 namespace TestCS
 {
@@ -112,7 +112,7 @@ namespace TestCS
 		private System.ComponentModel.IContainer components = null;
 		private void InitializeComponent()
 		{
-			this.m_dock = new pr.gui.DockContainer();
+			this.m_dock = new Rylogic.Gui.DockContainer();
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.SuspendLayout();
 			// 

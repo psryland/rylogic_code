@@ -15,7 +15,7 @@
 using System;
 using System.Text;
 
-namespace pr.crypt
+namespace Rylogic.Crypt
 {
 	/// <summary>
 	/// Implements AES-128, AES-192, AES-256.
@@ -1466,12 +1466,11 @@ namespace pr.crypt
 }
 
 #if PR_UNITTESTS
-namespace pr.unittests
+namespace Rylogic.UnitTests
 {
 	using System.Linq;
-	using pr.crypt;
-	using pr.extn;
-	using pr.util;
+	using Crypt;
+	using Extn;
 
 	[TestFixture] public class TestRijndael
 	{

@@ -4,19 +4,15 @@ using System.ComponentModel;
 using System.Drawing;
 using System.Globalization;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Xml.Linq;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
-using pr.util;
+using System.Xml.Linq;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
-	/// <summary>A collection of types for perform android-style gui layout</summary>
+	/// <summary>A collection of types for perform android-style GUI layout</summary>
 	public static class Layout
 	{
 		// Notes:
@@ -283,7 +279,7 @@ namespace pr.gui
 				// For each attribute
 				// Does it have [id] tags in it?
 				// Yes, create a dependency that:
-				//	watches propertychanged on the referenced elems
+				//	watches PropertyChanged on the referenced elements
 				//  updates the appropriate property on this elem based on the result of the expression
 			}
 
@@ -462,7 +458,7 @@ namespace pr.gui
 			}
 		}
 
-		/// <summary>A textbox</summary>
+		/// <summary>A text box</summary>
 		public class TBox :Elem
 		{
 			public TBox(IElemDescription desc) :base(desc)

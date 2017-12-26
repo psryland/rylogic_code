@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
-using pr.extn;
-using pr.maths;
-using pr.win32;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Windows32;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	/// <summary>Provides resizing to a control</summary>
 	public class BorderResizer :IDisposable ,IMessageFilter
@@ -85,11 +85,11 @@ namespace pr.gui
 						{
 							var mn = Target.MinimumSize;
 							var mx = Target.MaximumSize != Size.Empty ? Target.MaximumSize : new Size(int.MaxValue, int.MaxValue);
-							var delta = Drawing_.Subtract(pt, m_grab.Value);
-							if ((m_mask & EBoxZone.Right)  != 0) { Target.Width  = Maths.Clamp(m_size.Width  + delta.Width , mn.Width , mx.Width ); }
-							if ((m_mask & EBoxZone.Bottom) != 0) { Target.Height = Maths.Clamp(m_size.Height + delta.Height, mn.Height, mx.Height); }
-							if ((m_mask & EBoxZone.Left)   != 0) { Target.Width  = Maths.Clamp(m_size.Width  - delta.Width , mn.Width , mx.Width ); Target.Left = m_loc.X + m_size.Width  - Target.Width;  }
-							if ((m_mask & EBoxZone.Top )   != 0) { Target.Height = Maths.Clamp(m_size.Height - delta.Height, mn.Height, mx.Height); Target.Top  = m_loc.Y + m_size.Height - Target.Height; }
+							var delta = Point_.Subtract(pt, m_grab.Value);
+							if ((m_mask & EBoxZone.Right)  != 0) { Target.Width  = Math_.Clamp(m_size.Width  + delta.Width , mn.Width , mx.Width ); }
+							if ((m_mask & EBoxZone.Bottom) != 0) { Target.Height = Math_.Clamp(m_size.Height + delta.Height, mn.Height, mx.Height); }
+							if ((m_mask & EBoxZone.Left)   != 0) { Target.Width  = Math_.Clamp(m_size.Width  - delta.Width , mn.Width , mx.Width ); Target.Left = m_loc.X + m_size.Width  - Target.Width;  }
+							if ((m_mask & EBoxZone.Top )   != 0) { Target.Height = Math_.Clamp(m_size.Height - delta.Height, mn.Height, mx.Height); Target.Top  = m_loc.Y + m_size.Height - Target.Height; }
 							return true;
 						}
 						else if (!Win32.IsChild(Target.Handle, m.HWnd))
@@ -136,7 +136,8 @@ namespace pr.gui
 		private EBoxZone Mask(Point screen_pt)
 		{
 			var pt = Target.PointToClient(screen_pt);
-			return Drawing_.GetBoxZone(Target.ClientRectangle.Inflated(-BorderWidth,-BorderWidth,-BorderWidth,-BorderWidth), pt);
+			var rect = Target.ClientRectangle.Inflated(-BorderWidth,-BorderWidth,-BorderWidth,-BorderWidth);
+			return rect.GetBoxZone(pt);
 		}
 	}
 }

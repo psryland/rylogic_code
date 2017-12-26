@@ -4,9 +4,9 @@ using System.Diagnostics;
 using System.Linq;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
-using pr.common;
-using pr.extn;
-using pr.maths;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Maths;
 
 namespace Rylogic.VSExtension
 {
@@ -119,7 +119,7 @@ namespace Rylogic.VSExtension
 				SLine = snapshot.GetLineFromLineNumber(Lines.Begi);
 				ELine = snapshot.GetLineFromLineNumber(Lines.Endi);
 
-				CaretPos = Maths.Clamp(caret.Position.BufferPosition, SLine.Start.Position, ELine.End.Position);
+				CaretPos = Math_.Clamp(caret.Position.BufferPosition, SLine.Start.Position, ELine.End.Position);
 				CaretLineNumber = snapshot.GetLineNumberFromPosition(CaretPos);
 
 				Debug.Assert(Pos.Size >= 0);

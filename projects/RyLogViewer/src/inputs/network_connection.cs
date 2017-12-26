@@ -4,11 +4,10 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.Serialization;
 using System.Windows.Forms;
-using RyLogViewer.Properties;
-using pr.extn;
-using pr.gui;
-using pr.inet;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.INet;
+using Rylogic.Utility;
 
 namespace RyLogViewer
 {

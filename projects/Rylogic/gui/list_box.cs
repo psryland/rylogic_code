@@ -3,10 +3,9 @@ using System.ComponentModel;
 using System.Drawing;
 using System.Reflection;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
+using Rylogic.Extn;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	/// <summary>Replacement for the forms list box that doesn't throw a first chance exception when the data source is empty</summary>
 	public class ListBox :System.Windows.Forms.ListBox

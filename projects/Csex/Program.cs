@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
+using Rylogic.Common;
+using Rylogic.Extn;
 
 namespace Csex
 {

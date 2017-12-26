@@ -4,11 +4,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using pr.common;
-using pr.db;
-using pr.extn;
+using Rylogic.Common;
+using Rylogic.Db;
+using Rylogic.Extn;
 
-namespace pr.container
+namespace Rylogic.Container
 {
 	/// <summary>Provides a BindingSource-like interface to a DB table</summary>
 	public class BindingSourceDbTable<Type> :IEnumerable<Type> ,IEnumerable ,IList<Type>
@@ -59,7 +59,7 @@ namespace pr.container
 				if (m_db == value) return;
 
 				// Notify of the pending reset of the binding source table
-				ListChanging.Raise(this, new ListChgEventArgs<Type>(this, ListChg.PreReset, -1, default(Type)));
+				ListChanging?.Invoke(this, new ListChgEventArgs<Type>(this, ListChg.PreReset, -1, default(Type)));
 
 				if (m_db != null)
 				{
@@ -80,7 +80,7 @@ namespace pr.container
 				Update(raise_events:false);
 
 				// Notify of the new data
-				ListChanging.Raise(this, new ListChgEventArgs<Type>(this, ListChg.Reset, -1, default(Type)));
+				ListChanging?.Invoke(this, new ListChgEventArgs<Type>(this, ListChg.Reset, -1, default(Type)));
 			}
 		}
 		private Sqlite.Database m_db;
@@ -119,7 +119,7 @@ namespace pr.container
 			{
 				if (m_impl_filter == value) return;
 				m_impl_filter = value;
-				FilterChanged.Raise(this);
+				FilterChanged?.Invoke(this, EventArgs.Empty);
 				if (DB != null) Invalidate();
 			}
 		}
@@ -181,18 +181,18 @@ namespace pr.container
 		public void Clear()
 		{
 			// Notify of the pending reset of the binding source table
-			ListChanging.Raise(this, new ListChgEventArgs<Type>(this, ListChg.PreReset, -1, default(Type)));
+			ListChanging?.Invoke(this, new ListChgEventArgs<Type>(this, ListChg.PreReset, -1, default(Type)));
 
 			Count = 0;
 
 			// Notify of binding source data reset
-			ListChanging.Raise(this, new ListChgEventArgs<Type>(this, ListChg.Reset, -1, default(Type)));
+			ListChanging?.Invoke(this, new ListChgEventArgs<Type>(this, ListChg.Reset, -1, default(Type)));
 		}
 
 		/// <summary>Flag the table as out of date</summary>
 		public void Invalidate(object sender = null, EventArgs args = null)
 		{
-			if (!UpdateRequired) Invalidated.Raise();
+			if (!UpdateRequired) Invalidated?.Invoke(this, EventArgs.Empty);
 			UpdateRequired = true;
 		}
 
@@ -245,7 +245,7 @@ namespace pr.container
 
 			// Notify of the pending reset of the binding source table
 			if (raise_events)
-				ListChanging.Raise(this, new ListChgEventArgs<Type>(this, ListChg.PreReset, -1, default(Type)));
+				ListChanging?.Invoke(this, new ListChgEventArgs<Type>(this, ListChg.PreReset, -1, default(Type)));
 
 			// Drop the old table and rename the temporary table to the new binding source table
 			using (var t = DB.NewTransaction())
@@ -261,7 +261,7 @@ namespace pr.container
 
 			// Notify of binding source data reset
 			if (raise_events)
-				ListChanging.Raise(this, new ListChgEventArgs<Type>(this, ListChg.Reset, -1, default(Type)));
+				ListChanging?.Invoke(this, new ListChgEventArgs<Type>(this, ListChg.Reset, -1, default(Type)));
 		}
 
 		/// <summary>Returns the number of items available</summary>
@@ -345,7 +345,7 @@ namespace pr.container
 		/// <summary>Called when the current position is changed</summary>
 		protected virtual void OnPositionChanged(PositionChgEventArgs args)
 		{
-			PositionChanged.Raise(this, args);
+			PositionChanged?.Invoke(this, args);
 		}
 
 		#region IEnumerable

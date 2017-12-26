@@ -1,18 +1,16 @@
 ﻿using System;
 using System.Drawing;
-using System.IO;
-using System.Text;
 using System.Windows.Forms;
-using pr.extn;
-using pr.util;
-using pr.win32;
-using BrowserCtrl = pr.gui.WebBrowser;
+using Rylogic.Extn;
+using Rylogic.Utility;
+using Rylogic.Windows32;
+using BrowserCtrl = Rylogic.Gui.WebBrowser;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	public class HelpUI :ToolForm
 	{
-		/// <summary>Show a modal help dialog from plain text, rtf, or html</summary>
+		/// <summary>Show a modal help dialog from plain text, RTF, or html</summary>
 		public static DialogResult ShowDialog(Control parent, EContent type, string title, string content, Point? ofs = null, Size? size = null, EPin pin = EPin.TopRight)
 		{
 			using (var ui = new HelpUI(parent, type, title, content, ofs, size, pin, true))
@@ -193,7 +191,7 @@ namespace pr.gui
 		protected virtual void OnBack(object sender, EventArgs args)
 		{
 			// Default implementation just resets back to the current content
-			// for text,rtf views. Html views support navigation by default
+			// for text, RTF views. Html views support navigation by default
 			switch (Type)
 			{
 			default: throw new Exception("Unknown content type");
@@ -221,7 +219,7 @@ namespace pr.gui
 		protected virtual void OnForward(object sender, EventArgs args)
 		{
 			// Default implementation just resets back to the current content
-			// for text,rtf views. Html views support navigation by default
+			// for text, RTF views. Html views support navigation by default
 			switch (Type)
 			{
 			default: throw new Exception("Unknown content type");

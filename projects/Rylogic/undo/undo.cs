@@ -6,9 +6,9 @@
 using System;
 using System.Collections.Generic;
 
-namespace pr.undo
+namespace Rylogic.Undo
 {
-	// Base class for a single reversable change
+	// Base class for a single reversible change
 	public abstract class Change
 	{
 		// Applies the reverse of the change and
@@ -23,7 +23,7 @@ namespace pr.undo
 	// forwards and backwards.
 	public class Transaction :Change ,IDisposable
 	{
-		// The list of reversable changes and our current position in the list
+		// The list of reversible changes and our current position in the list
 		// <  m_index = undo's
 		// >= m_index = redo's
 		private readonly List<Change> m_changes = new List<Change>();
@@ -72,14 +72,14 @@ namespace pr.undo
 			return this;
 		}
 
-		// Move the index back to the first change, undo'ing along the way
+		// Move the index back to the first change, undo-ing along the way
 		public void Rollback()
 		{
 			for (;m_index-- > 0;)
 				m_changes[m_index].Reverse();
 		}
 
-		// Move the index to the last change, redo'ing along the way
+		// Move the index to the last change, redo-ing along the way
 		public void Rollforward()
 		{
 			for (; m_index < m_changes.Count; ++m_index)
@@ -92,7 +92,7 @@ namespace pr.undo
 			m_changes.RemoveRange(m_index, m_changes.Count - m_index);
 		}
 
-		// Unless 'End()' has been called, rollback all changes
+		// Unless 'End()' has been called, roll back all changes
 		public void Dispose()
 		{
 			if (Current == Parent) return;

@@ -8,7 +8,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Linq.Expressions;
 
-namespace pr.container
+namespace Rylogic.Container
 {
 	/// <summary>
 	/// Provides a generic collection that supports data binding and additionally supports sorting.
@@ -16,7 +16,7 @@ namespace pr.container
 	/// If the elements are IComparable it uses that; otherwise compares the ToString()
 	/// </summary>
 	/// <typeparam name="T">The type of elements in the list.</typeparam>
-	public class SortableBindingList<T> : BindingList<T> where T : class
+	[Obsolete("Just use normal BindingListEX")]public class SortableBindingList<T> : BindingList<T> where T : class
 	{
 		private PropertyDescriptor m_sort_property;
 		private ListSortDirection  m_sort_direction = ListSortDirection.Ascending;

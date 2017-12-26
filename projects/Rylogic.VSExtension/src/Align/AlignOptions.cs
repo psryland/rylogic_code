@@ -5,9 +5,9 @@ using System.Windows.Forms;
 using System.Xml.Linq;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.Win32;
-using pr.common;
-using pr.extn;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace Rylogic.VSExtension
 {

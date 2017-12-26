@@ -67,8 +67,10 @@ namespace Rylogic.Maths
 }
 
 #if PR_UNITTESTS
-namespace pr.unittests
+namespace Rylogic.UnitTests
 {
+	using Maths;
+
 <#foreach (var ty in types){#>
 	[TestFixture] public class UnitTestVector_<#=ty.m_name#>
 	{

@@ -1,7 +1,7 @@
 using System;
 using System.IO;
-using pr.crypt;
-using pr.extn;
+using Rylogic.Crypt;
+using Rylogic.Extn;
 
 namespace Csex
 {

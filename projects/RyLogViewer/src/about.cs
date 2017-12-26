@@ -4,11 +4,11 @@ using System.IO;
 using System.Reflection;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
-using pr.common;
-using pr.extn;
-using pr.gui;
-using pr.util;
-using RichTextBox = pr.gui.RichTextBox;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Utility;
+using RichTextBox = Rylogic.Gui.RichTextBox;
 
 namespace RyLogViewer
 {
@@ -137,7 +137,7 @@ namespace RyLogViewer
 			this.m_lbl_info = new System.Windows.Forms.Label();
 			this.m_lbl_licence = new System.Windows.Forms.Label();
 			this.m_btn_version_history = new System.Windows.Forms.Button();
-			this.m_edit_licence = new pr.gui.RichTextBox();
+			this.m_edit_licence = new Rylogic.Gui.RichTextBox();
 			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
 			this.SuspendLayout();
 			// 

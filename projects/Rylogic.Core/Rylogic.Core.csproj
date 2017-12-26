@@ -3,10 +3,10 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <RootNamespace>Rylogic</RootNamespace>
-    <ApplicationIcon />
-    <OutputType>Exe</OutputType>
-    <StartupObject>Rylogic.Program</StartupObject>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <ApplicationIcon>SmilingGekko140x110.ico</ApplicationIcon>
+    <OutputType>Library</OutputType>
+    <StartupObject></StartupObject>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <None Remove="post_build.py" />
+    <None Remove="SmilingGekko140x110.ico" />
     <None Remove="src\maths\vector.tt" />
   </ItemGroup>
 
@@ -34,6 +35,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="SmilingGekko140x110.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="src\container\csv_data.cs">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Update="src\maths\vector.cs">
       <DependentUpon>vector.tt</DependentUpon>
       <DesignTime>True</DesignTime>

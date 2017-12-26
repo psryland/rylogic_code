@@ -4,11 +4,11 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.Serialization;
-using pr.common;
-using pr.extn;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
-namespace pr.container
+namespace Rylogic.Container
 {
 	/// <summary>Extension to BindingList that notifies *before* an item is removed</summary>
 	[DataContract] public class BindingListEx<T> :BindingList<T>, IEnumerable<T>, IListChanging<T>, IItemChanged<T>, IBatchChanges
@@ -62,11 +62,11 @@ namespace pr.container
 		{
 			if (a.ListChangedType == ListChangedType.Reset)
 			{
-				ListChanging.Raise(this, new ListChgEventArgs<T>(this, ListChg.Reset, -1, default(T)));
+				ListChanging?.Invoke(this, new ListChgEventArgs<T>(this, ListChg.Reset, -1, default(T)));
 			}
 			if (a.ListChangedType == ListChangedType.ItemChanged)
 			{
-				ListChanging.Raise(this, new ListChgEventArgs<T>(this, ListChg.ItemReset, a.NewIndex, this[a.NewIndex]));
+				ListChanging?.Invoke(this, new ListChgEventArgs<T>(this, ListChg.ItemReset, a.NewIndex, this[a.NewIndex]));
 			}
 		}
 
@@ -100,7 +100,7 @@ namespace pr.container
 			if (RaiseListChangedEvents)
 			{
 				var args = new ListChgEventArgs<T>(this, ListChg.PreReset, -1, default(T));
-				ListChanging.Raise(this, args);
+				ListChanging?.Invoke(this, args);
 				if (args.Cancel)
 					return;
 			}
@@ -124,7 +124,7 @@ namespace pr.container
 			if (RaiseListChangedEvents)
 			{
 				var args = new ListChgEventArgs<T>(this, ListChg.ItemPreAdd, index, item);
-				ListChanging.Raise(this, args);
+				ListChanging?.Invoke(this, args);
 				if (args.Cancel)
 					return;
 
@@ -141,7 +141,7 @@ namespace pr.container
 			IsSorted = false;
 	
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<T>(this, ListChg.ItemAdded, index, item));
+				ListChanging?.Invoke(this, new ListChgEventArgs<T>(this, ListChg.ItemAdded, index, item));
 		}
 
 		/// <summary>Removes the item at the specified index.</summary>
@@ -151,7 +151,7 @@ namespace pr.container
 			if (RaiseListChangedEvents)
 			{
 				var args = new ListChgEventArgs<T>(this, ListChg.ItemPreRemove, index, item);
-				ListChanging.Raise(this, args);
+				ListChanging?.Invoke(this, args);
 				if (args.Cancel)
 					return;
 			}
@@ -161,7 +161,7 @@ namespace pr.container
 			IsSorted = false;
 	
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<T>(this, ListChg.ItemRemoved, -1, item));
+				ListChanging?.Invoke(this, new ListChgEventArgs<T>(this, ListChg.ItemRemoved, -1, item));
 		}
 		
 		/// <summary>Replaces the item at the specified index with the specified item.</summary>
@@ -172,14 +172,14 @@ namespace pr.container
 			if (RaiseListChangedEvents)
 			{
 				var args = new ListChgEventArgs<T>(this, ListChg.ItemPreRemove, index, old);
-				ListChanging.Raise(this, args);
+				ListChanging?.Invoke(this, args);
 				if (args.Cancel)
 					return;
 			}
 			if (RaiseListChangedEvents)
 			{
 				var args = new ListChgEventArgs<T>(this, ListChg.ItemPreAdd, index, item);
-				ListChanging.Raise(this, args);
+				ListChanging?.Invoke(this, args);
 				if (args.Cancel)
 					return;
 			}
@@ -188,12 +188,12 @@ namespace pr.container
 			IsSorted = false;
 
 			if (RaiseListChangedEvents)
-				ItemChanged.Raise(this, new ItemChgEventArgs<T>(index, old, item));
+				ItemChanged?.Invoke(this, new ItemChgEventArgs<T>(index, old, item));
 
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<T>(this, ListChg.ItemRemoved, index, old));
+				ListChanging?.Invoke(this, new ListChgEventArgs<T>(this, ListChg.ItemRemoved, index, old));
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<T>(this, ListChg.ItemAdded, index, item));
+				ListChanging?.Invoke(this, new ListChgEventArgs<T>(this, ListChg.ItemAdded, index, item));
 		}
 
 		/// <summary>Optimised 'Contains'</summary>
@@ -270,7 +270,7 @@ namespace pr.container
 			if (RaiseListChangedEvents)
 			{
 				var args = new ListChgEventArgs<T>(this, ListChg.PreReset, -1, default(T));
-				ListChanging.Raise(this, args);
+				ListChanging?.Invoke(this, args);
 				if (args.Cancel)
 					return;
 			}
@@ -294,7 +294,7 @@ namespace pr.container
 			base.ResetBindings();
 
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<T>(this, ListChg.Reset, -1, default(T)));
+				ListChanging?.Invoke(this, new ListChgEventArgs<T>(this, ListChg.Reset, -1, default(T)));
 		}
 
 		/// <summary>Removes any sort applied with ApplySortCore()</summary>
@@ -311,7 +311,7 @@ namespace pr.container
 			if (RaiseListChangedEvents)
 			{
 				var args = new ListChgEventArgs<T>(this, ListChg.PreReset, -1, default(T));
-				ListChanging.Raise(this, args);
+				ListChanging?.Invoke(this, args);
 				if (args.Cancel)
 					return;
 			}
@@ -326,7 +326,7 @@ namespace pr.container
 			if (RaiseListChangedEvents)
 			{
 				var args = new ListChgEventArgs<T>(this, ListChg.ItemPreReset, position, this[position]);
-				ListChanging.Raise(this, args);
+				ListChanging?.Invoke(this, args);
 				if (args.Cancel)
 					return;
 			}
@@ -372,17 +372,17 @@ namespace pr.container
 		public Scope BatchChange()
 		{
 			return Scope.Create(
-				() => BatchChanges.Raise(this, new PrePostEventArgs(after:false)),
-				() => BatchChanges.Raise(this, new PrePostEventArgs(after:true)));
+				() => BatchChanges?.Invoke(this, new PrePostEventArgs(after:false)),
+				() => BatchChanges?.Invoke(this, new PrePostEventArgs(after:true)));
 		}
 	}
 }
 
 #if PR_UNITTESTS
-namespace pr.unittests
+namespace Rylogic.UnitTests
 {
 	using System.Linq;
-	using container;
+	using Container;
 
 	[TestFixture] public class TestBindingListEx
 	{

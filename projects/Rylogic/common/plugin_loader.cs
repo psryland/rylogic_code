@@ -7,11 +7,11 @@ using System.Reflection;
 using System.Text;
 using System.Windows.Forms;
 using System.Windows.Threading;
-using pr.extn;
-using pr.gui;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Utility;
 
-namespace pr.common
+namespace Rylogic.Common
 {
 	/// <summary>Scans a directory for assemblies that contain public types with the 'PluginAttribute' attribute that implement 'TInterface'.</summary>
 	public class Plugins<TInterface> where TInterface:class
@@ -40,7 +40,7 @@ namespace pr.common
 		public static IEnumerable<PluginFile> Enumerate(string directory, SearchOption search, string regex_filter = DefaultRegexPattern)
 		{
 			// Build a list of assemblies to check
-			var filedata = Path_.EnumFileSystem(directory, search, regex_filter)
+			var filedata = Shell_.EnumFileSystem(directory, search, regex_filter)
 				.Where(x => !x.IsDirectory)
 				.ToList();
 
@@ -163,7 +163,7 @@ namespace pr.common
 		public Assembly Ass;
 
 		/// <summary>The filepath of the assembly containing 'Type'</summary>
-		public Path_.FileData FileData;
+		public Shell_.FileData FileData;
 
 		/// <summary>True if only one instance of the plugin at a time is allowed</summary>
 		public bool Unique;

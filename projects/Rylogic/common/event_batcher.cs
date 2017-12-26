@@ -6,9 +6,9 @@
 using System;
 using System.Threading;
 using System.Windows.Threading;
-using pr.extn;
+using Rylogic.Extn;
 
-namespace pr.common
+namespace Rylogic.Common
 {
 	/// <summary>Batch events by time</summary>
 	public class EventBatcher :IDisposable
@@ -205,9 +205,9 @@ namespace pr.common
 }
 
 #if PR_UNITTESTS
-namespace pr.unittests
+namespace Rylogic.UnitTests
 {
-	using common;
+	using Common;
 
 	[TestFixture] public class TestEventBatcher
 	{

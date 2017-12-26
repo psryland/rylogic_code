@@ -2,14 +2,14 @@
 using System.IO;
 using System.Windows.Forms;
 using System.Xml.Linq;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.gui;
-using pr.util;
-using pr.win32;
-using ToolStripComboBox = pr.gui.ToolStripComboBox;
-using ToolStripContainer = pr.gui.ToolStripContainer;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Utility;
+using Rylogic.Windows32;
+using ToolStripComboBox = Rylogic.Gui.ToolStripComboBox;
+using ToolStripContainer = Rylogic.Gui.ToolStripContainer;
 
 namespace LDraw
 {
@@ -236,7 +236,7 @@ namespace LDraw
 			// Prompt for a filepath if not given
 			if (!filepath.HasValue())
 			{
-				using (var dlg = new OpenFileDialog { Title = "Load Script", Filter = Util.FileDialogFilter("Script Files", "*.ldr") })
+				using (var dlg = new OpenFileDialog { Title = "Load Script", Filter = Util2.FileDialogFilter("Script Files", "*.ldr") })
 				{
 					if (dlg.ShowDialog(Model.Owner) != DialogResult.OK) return;
 					filepath = dlg.FileName;
@@ -261,7 +261,7 @@ namespace LDraw
 			// Prompt for a filepath if not given
 			if (!filepath.HasValue())
 			{
-				using (var dlg = new SaveFileDialog { Title = "Save Script", Filter = Util.FileDialogFilter("Script Files", "*.ldr") })
+				using (var dlg = new SaveFileDialog { Title = "Save Script", Filter = Util2.FileDialogFilter("Script Files", "*.ldr") })
 				{
 					if (dlg.ShowDialog(Model.Owner) != DialogResult.OK) return;
 					filepath = dlg.FileName;
@@ -382,7 +382,7 @@ namespace LDraw
 		{
 			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ScriptUI));
-			this.m_tsc = new pr.gui.ToolStripContainer();
+			this.m_tsc = new Rylogic.Gui.ToolStripContainer();
 			this.m_ts = new System.Windows.Forms.ToolStrip();
 			this.m_btn_save = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
@@ -390,7 +390,7 @@ namespace LDraw
 			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_btn_clear = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_cb_scene = new pr.gui.ToolStripComboBox();
+			this.m_cb_scene = new Rylogic.Gui.ToolStripComboBox();
 			this.m_il_toolbar = new System.Windows.Forms.ImageList(this.components);
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();

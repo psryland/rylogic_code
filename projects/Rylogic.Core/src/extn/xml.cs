@@ -17,7 +17,7 @@ using System.Xml;
 using System.Xml.Linq;
 using Rylogic.Attrib;
 using Rylogic.Common;
-using Rylogic.Gfx;
+using Rylogic.Graphix;
 using Rylogic.Maths;
 
 namespace Rylogic.Extn
@@ -38,7 +38,8 @@ namespace Rylogic.Extn
 	/// <summary>XML helper methods</summary>
 	public static class Xml_
 	{
-		private const string TypeAttr = "ty";
+		public static readonly char[] WhiteSpace = new[]{' ','\t','\r','\n','\v'};
+		public const string TypeAttr = "ty";
 
 		#region ToXml Binding
 
@@ -60,22 +61,22 @@ namespace Rylogic.Extn
 					node.Add(obj);
 					return node;
 				};
-				this[typeof(string         )] = ToXmlDefault;
-				this[typeof(bool           )] = ToXmlDefault;
-				this[typeof(byte           )] = ToXmlDefault;
-				this[typeof(sbyte          )] = ToXmlDefault;
-				this[typeof(char           )] = ToXmlDefault;
-				this[typeof(short          )] = ToXmlDefault;
-				this[typeof(ushort         )] = ToXmlDefault;
-				this[typeof(int            )] = ToXmlDefault;
-				this[typeof(uint           )] = ToXmlDefault;
-				this[typeof(long           )] = ToXmlDefault;
-				this[typeof(ulong          )] = ToXmlDefault;
-				this[typeof(float          )] = ToXmlDefault;
-				this[typeof(double         )] = ToXmlDefault;
-				this[typeof(decimal        )] = ToXmlDefault;
-				this[typeof(Enum           )] = ToXmlDefault;
-				this[typeof(Guid           )] = ToXmlDefault;
+				this[typeof(string)] = ToXmlDefault;
+				this[typeof(bool)] = ToXmlDefault;
+				this[typeof(byte)] = ToXmlDefault;
+				this[typeof(sbyte)] = ToXmlDefault;
+				this[typeof(char)] = ToXmlDefault;
+				this[typeof(short)] = ToXmlDefault;
+				this[typeof(ushort)] = ToXmlDefault;
+				this[typeof(int)] = ToXmlDefault;
+				this[typeof(uint)] = ToXmlDefault;
+				this[typeof(long)] = ToXmlDefault;
+				this[typeof(ulong)] = ToXmlDefault;
+				this[typeof(float)] = ToXmlDefault;
+				this[typeof(double)] = ToXmlDefault;
+				this[typeof(decimal)] = ToXmlDefault;
+				this[typeof(Enum)] = ToXmlDefault;
+				this[typeof(Guid)] = ToXmlDefault;
 				this[typeof(DateTimeOffset)] = (obj, node) =>
 				{
 					var dto = (DateTimeOffset)obj;
@@ -385,7 +386,6 @@ namespace Rylogic.Extn
 		private static readonly AsBinding m_impl_AsMap = new AsBinding();
 		public class AsBinding :Dictionary<Type, AsFunc>
 		{
-			private readonly char[] WhiteSpace = new[]{' ','\t','\r','\n','\v'};
 			public AsBinding()
 			{
 				this[typeof(XElement)] = (elem, type, ctor) =>

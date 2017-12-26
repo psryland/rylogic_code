@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel;
 using System.Runtime.InteropServices;
-using pr.extn;
+using Rylogic.Extn;
 
-namespace pr.win32
+namespace Rylogic.Windows32
 {
 	public static partial class Win32
 	{

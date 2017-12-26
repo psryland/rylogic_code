@@ -7,14 +7,14 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
-using pr.win32;
+using Rylogic.Windows32;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	// To use:
-	//  m_hoverscroll = new HoverScroll();
-	//  Application.AddMessageFilter(m_hoverscroll);
-	//  Application.RemoveMessageFilter(m_hoverscroll);
+	//  m_hover_scroll = new HoverScroll();
+	//  Application.AddMessageFilter(m_hover_scroll);
+	//  Application.RemoveMessageFilter(m_hover_scroll);
 	public class HoverScroll :IMessageFilter ,IDisposable
 	{
 		// P/Invoke declarations

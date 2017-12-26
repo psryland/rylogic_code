@@ -5,10 +5,8 @@ using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
-using pr.extn;
-using pr.util;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	/// <summary>A panel that covers a form and contains a bitmap of the form contents</summary>
 	public sealed class Overlay :Panel

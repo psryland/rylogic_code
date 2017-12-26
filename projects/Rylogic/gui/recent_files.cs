@@ -7,13 +7,13 @@ using System;
 using System.ComponentModel;
 using System.Text;
 using System.Windows.Forms;
-using pr.extn;
+using Rylogic.Extn;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	// Usage:
 	//	Create a Properties.Settings instance
-	//	Create a pr.gui.RecentFiles instance
+	//	Create a Rylogic.Gui.RecentFiles instance
 	//	Add a menu item 'm_menu_file_recent'
 	// e.g.
 	//	private readonly Settings m_app_settings;

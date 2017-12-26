@@ -1,13 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using pr.maths;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	public class DpiScale96
 	{

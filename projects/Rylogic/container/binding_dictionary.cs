@@ -3,11 +3,11 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using pr.common;
-using pr.extn;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
-namespace pr.container
+namespace Rylogic.Container
 {
 	[DebuggerDisplay("Count={Count}")]
 	public class BindingDict<TKey, TValue>
@@ -769,10 +769,10 @@ namespace pr.container
 }
 
 #if PR_UNITTESTS
-namespace pr.unittests
+namespace Rylogic.UnitTests
 {
 	using System.Collections.Generic;
-	using container;
+	using Container;
 
 	[TestFixture] public class TestBindingDictionary
 	{

@@ -6,8 +6,8 @@ using System.Data;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
-using pr.util;
-using pr.gui;
+using Rylogic.Utility;
+using Rylogic.Gui;
 
 namespace Csex
 {

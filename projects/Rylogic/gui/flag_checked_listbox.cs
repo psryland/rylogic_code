@@ -10,11 +10,11 @@ using System.Drawing.Design;
 using System.Linq;
 using System.Windows.Forms;
 using System.Windows.Forms.Design;
-using pr.attrib;
-using pr.extn;
-using pr.util;
+using Rylogic.Attrib;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	/// <summary>A Checked list box set up for enum flags</summary>
 	public class FlagCheckedListBox :CheckedListBox

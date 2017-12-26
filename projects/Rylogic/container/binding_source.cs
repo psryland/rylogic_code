@@ -10,12 +10,12 @@ using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
-using pr.maths;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
-namespace pr.container
+namespace Rylogic.Container
 {
 	/// <summary>Type-safe version of BindingSource</summary>
 	public class BindingSource<TItem>
@@ -317,7 +317,7 @@ namespace pr.container
 				// Handlers
 				void HandleBatchChanges(object sender, PrePostEventArgs args)
 				{
-					BatchChanges.Raise(this, args);
+					BatchChanges?.Invoke(this, args);
 				}
 			}
 		}
@@ -925,7 +925,7 @@ namespace pr.container
 		{
 			return Scope.Create(
 				() => Position,
-				p => Position = Count != 0 ? Maths.Clamp(p, 0, Count-1) : -1);
+				p => Position = Count != 0 ? Math_.Clamp(p, 0, Count-1) : -1);
 		}
 
 		/// <summary>RAII object to restore the current item (if still available)</summary>
@@ -947,7 +947,7 @@ namespace pr.container
 		public event EventHandler<ListChgEventArgs<TItem>> ListChanging;
 		protected virtual void OnListChanging(object sender, ListChgEventArgs<TItem> args)
 		{
-			ListChanging.Raise(sender, args);
+			ListChanging?.Invoke(sender, args);
 		}
 		private void RaiseListChanging(object sender, ListChgEventArgs<TItem> args)
 		{
@@ -973,7 +973,7 @@ namespace pr.container
 		public event EventHandler<ItemChgEventArgs<TItem>> ItemChanged;
 		protected virtual void OnItemChanged(object sender, ItemChgEventArgs<TItem> args)
 		{
-			ItemChanged.Raise(sender, args);
+			ItemChanged?.Invoke(sender, args);
 		}
 		private void RaiseItemChanged(object sender, ItemChgEventArgs<TItem> args)
 		{
@@ -984,7 +984,7 @@ namespace pr.container
 		public event EventHandler<PositionChgEventArgs> PositionChanged;
 		protected virtual void OnPositionChanged(object sender, PositionChgEventArgs args)
 		{
-			PositionChanged.Raise(this, args);
+			PositionChanged?.Invoke(this, args);
 		}
 		private void RaisePositionChanged(object sender, PositionChgEventArgs args)
 		{
@@ -996,8 +996,8 @@ namespace pr.container
 		public Scope BatchChange()
 		{
 			return Scope.Create(
-				() => BatchChanges.Raise(this, new PrePostEventArgs(after:false)),
-				() => BatchChanges.Raise(this, new PrePostEventArgs(after:true)));
+				() => BatchChanges?.Invoke(this, new PrePostEventArgs(after:false)),
+				() => BatchChanges?.Invoke(this, new PrePostEventArgs(after:true)));
 		}
 
 		public override string ToString()
@@ -1188,7 +1188,7 @@ namespace pr.container
 		private event EventHandler<ListChgEventArgs> m_list_changing_0;
 		private void HandleListChanging0(object sender, ListChgEventArgs<TItem> e)
 		{
-			m_list_changing_0.Raise(sender, new ListChgEventArgs(this, e.ChangeType, e.Index, e.Item));
+			m_list_changing_0?.Invoke(sender, new ListChgEventArgs(this, e.ChangeType, e.Index, e.Item));
 		}
 		#endregion
 
@@ -1209,7 +1209,7 @@ namespace pr.container
 		private event EventHandler<ItemChgEventArgs> m_item_changed_0;
 		private void HandleItemChanged0(object sender, ItemChgEventArgs<TItem> e)
 		{
-			m_item_changed_0.Raise(sender, new ItemChgEventArgs(e.Index, e.OldItem, e.NewItem));
+			m_item_changed_0?.Invoke(sender, new ItemChgEventArgs(e.Index, e.OldItem, e.NewItem));
 		}
 		#endregion
 
@@ -1304,7 +1304,7 @@ namespace pr.container
 			}
 			public void Dispose()
 			{
-				Disposed.Raise(this);
+				Disposed?.Invoke(this, EventArgs.Empty);
 				BindingSource = null;
 				Predicate = null;
 				Index = null;
@@ -1342,7 +1342,7 @@ namespace pr.container
 						// Raise the ListChanging event on this view
 						// Translate the changing Index collection to a changing item
 						var item = e.Index != -1 ? BindingSource[e.Item] : default(TItem);
-						ListChanging.Raise(this, new ListChgEventArgs<TItem>(this, e.ChangeType, e.Index, item));
+						ListChanging?.Invoke(this, new ListChgEventArgs<TItem>(this, e.ChangeType, e.Index, item));
 					}
 					void HandleViewChanged(object sender, ListChangedEventArgs e)
 					{
@@ -1402,7 +1402,7 @@ namespace pr.container
 						// Convert the binding source position into a position in this view
 						var old = SrcToViewIndex(e.OldIndex);
 						var neu = SrcToViewIndex(e.NewIndex);
-						PositionChanged.Raise(this, new PositionChgEventArgs(old, neu));
+						PositionChanged?.Invoke(this, new PositionChgEventArgs(old, neu));
 					}
 					void HandleBindingSourceDisposed(object sender, EventArgs e)
 					{
@@ -1849,11 +1849,11 @@ namespace pr.container
 }
 
 #if PR_UNITTESTS
-namespace pr.unittests
+namespace Rylogic.UnitTests
 {
 	using System.Collections.Generic;
 	using System.Linq;
-	using container;
+	using Container;
 
 	[TestFixture] public class TestBindingSource
 	{

@@ -8,13 +8,13 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.gui;
-using pr.scintilla;
-using pr.util;
-using ToolStripContainer = pr.gui.ToolStripContainer;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Scintilla;
+using Rylogic.Utility;
+using ToolStripContainer = Rylogic.Gui.ToolStripContainer;
 
 namespace CppPad
 {
@@ -62,7 +62,7 @@ namespace CppPad
 			Sci.LoadDll(".\\lib\\$(platform)\\$(config)");
 			InitializeComponent();
 
-			Settings = new Settings(Path_.CombinePath(Util.AppDirectory, "settings.xml"));
+			Settings = new Settings(Path_.CombinePath(Util2.AppDirectory, "settings.xml"));
 			Model    = new Model(Settings, this);
 
 			SetupUI();
@@ -315,7 +315,7 @@ namespace CppPad
 				{
 					var old = filepath;
 					var nue = Path_.CombinePath(Model.ProjectDirectory, Path_.FileName(filepath));
-					Path_.ShellCopy(Handle, old, nue);
+					Shell_.ShellCopy(Handle, old, nue);
 					filepath = nue;
 				}
 
@@ -382,10 +382,10 @@ namespace CppPad
 		private void InitializeComponent()
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainUI));
-			this.m_tsc = new pr.gui.ToolStripContainer();
+			this.m_tsc = new Rylogic.Gui.ToolStripContainer();
 			this.m_ss = new System.Windows.Forms.StatusStrip();
 			this.m_status = new System.Windows.Forms.ToolStripStatusLabel();
-			this.m_dock = new pr.gui.DockContainer();
+			this.m_dock = new Rylogic.Gui.DockContainer();
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_new_project = new System.Windows.Forms.ToolStripMenuItem();

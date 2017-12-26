@@ -4,9 +4,9 @@ using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
-using pr.gfx;
+using Rylogic.Graphix;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	public class ViewImageControl :UserControl
 	{
@@ -40,7 +40,6 @@ namespace pr.gui
 			}
 		}
 
-		private readonly IContainer components = null;  // Required designer variable.
 		private Image          m_error_bitmap;          // The bitmap to display when no bitmap is set
 		private Image          m_bitmap;                // The image we're displaying
 		private Point          m_centre;                // The position of the centre of the view
@@ -79,7 +78,6 @@ namespace pr.gui
 		// Constructor
 		public ViewImageControl()
 		{
-			components = new Container();
 			AutoScaleMode = AutoScaleMode.Font;
 			
 			// ReSharper disable DoNotCallOverridableMethodsInConstructor
@@ -98,6 +96,10 @@ namespace pr.gui
 			MouseWheel += OnMouseWheel;
 			MouseDown  += OnMouseDown;
 			MouseUp    += OnMouseUp;
+		}
+		protected override void Dispose(bool disposing)
+		{
+			base.Dispose(disposing);
 		}
 
 		/// <summary>Enable/Disable double buffering for the control</summary>
@@ -401,16 +403,6 @@ namespace pr.gui
 			m_min_zoom = Math.Min(m_min_zoom, 1f);
 			m_max_zoom = Math.Max(m_max_zoom, 1f);
 			Zoom = Zoom;
-		}
-
-		/// <summary>Clean up any resources being used.</summary>
-		protected override void Dispose(bool disposing)
-		{
-			if( disposing && (components != null) )
-			{
-				components.Dispose();
-			}
-			base.Dispose(disposing);
 		}
 	}
 }

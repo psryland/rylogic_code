@@ -1,11 +1,11 @@
 ﻿using System.ComponentModel;
 using System.Windows.Forms;
-using pr.util;
-using pr.gui;
+using Rylogic.Utility;
+using Rylogic.Gui;
 using System.IO;
 using System;
-using pr.common;
-using pr.extn;
+using Rylogic.Common;
+using Rylogic.Extn;
 using System.Diagnostics;
 
 namespace CppPad

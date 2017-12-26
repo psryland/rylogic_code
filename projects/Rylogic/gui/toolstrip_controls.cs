@@ -5,10 +5,10 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
+using Rylogic.Common;
+using Rylogic.Extn;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	#region ToolStripValueBox
 	public class ToolStripValueBox :ToolStripControlHost

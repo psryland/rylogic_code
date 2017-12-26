@@ -2,11 +2,11 @@
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	public class FindUI :ToolForm
 	{
@@ -52,7 +52,7 @@ namespace pr.gui
 						m_pat.PatnType = EPattern.RegularExpression;
 				};
 
-			// Seach options
+			// Search options
 			m_chk_ignore_case.CheckedChanged += (s,a) =>
 				{
 					m_pat.IgnoreCase = m_chk_ignore_case.Checked;
@@ -182,7 +182,7 @@ namespace pr.gui
 		{
 			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FindUI));
-			this.m_cb_pattern = new pr.gui.ComboBox();
+			this.m_cb_pattern = new Rylogic.Gui.ComboBox();
 			this.m_btn_find_prev = new System.Windows.Forms.Button();
 			this.m_il = new System.Windows.Forms.ImageList(this.components);
 			this.m_btn_find_next = new System.Windows.Forms.Button();

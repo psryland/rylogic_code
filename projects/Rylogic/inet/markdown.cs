@@ -54,7 +54,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace pr.inet
+namespace Rylogic.INet
 {
 	public class Markdown
 	{
@@ -90,7 +90,7 @@ namespace pr.inet
 		/// Static constructor
 		/// </summary>
 		/// <remarks>
-		/// In the static constuctor we'll initialize what stays the same across all transforms.
+		/// In the static constructor we'll initialize what stays the same across all transforms.
 		/// </remarks>
 		static Markdown()
 		{
@@ -154,7 +154,7 @@ namespace pr.inet
 			text = Detab(text);
 			
 			// Strip any lines consisting only of spaces and tabs.
-			// This makes subsequent regexen easier to write, because we can
+			// This makes subsequent regex-en easier to write, because we can
 			// match consecutive blank lines with /\n+/ instead of something
 			// contorted like /[ \t]*\n+/ .
 			text = Regex.Replace(text, @"^[ \t]+$", string.Empty, RegexOptions.Multiline);

@@ -2,12 +2,12 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
-using pr.audio;
-using pr.db;
-using pr.extn;
-using pr.gui;
-using pr.scintilla;
-using pr.view3d;
+using Rylogic.Audio;
+using Rylogic.Db;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Scintilla;
+using Rylogic.Graphix;
 
 namespace TestCS
 {

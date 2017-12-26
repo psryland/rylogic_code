@@ -1,7 +1,7 @@
 #region license
 
 /*
-pr.directshow - Provide access to DirectShow interfaces via .NET
+Rylogic.DirectShow - Provide access to DirectShow interfaces via .NET
 Copyright (C) 2007
 http://sourceforge.net/projects/directshownet/
 
@@ -23,12 +23,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #endregion
 
 using System;
-using System.Drawing;
 using System.Runtime.InteropServices;
 
-namespace pr.directshow
+namespace Rylogic.DirectShow
 {
-    #region Declarations
+	#region Declarations
 
 #if ALLOW_UNTESTED_INTERFACES
 
@@ -100,9 +99,9 @@ namespace pr.directshow
 
 #endif
 
-    #endregion
+	#endregion
 
-    #region Interfaces
+	#region Interfaces
 
 #if ALLOW_UNTESTED_INTERFACES
 
@@ -224,7 +223,7 @@ namespace pr.directshow
     InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IFullScreenVideoEx : IFullScreenVideo
     {
-        #region IFullScreenVideo methods
+	#region IFullScreenVideo methods
 
         [PreserveSig]
         new int CountModes(out int pModes);
@@ -276,7 +275,7 @@ namespace pr.directshow
 
         [PreserveSig]
         new int SetDefault();
-        #endregion
+	#endregion
 
         [PreserveSig]
         int SetAcceleratorTable(IntPtr hwnd, IntPtr hAccel); // HACCEL
@@ -320,7 +319,7 @@ namespace pr.directshow
 
 #endif
 
-    [ComImport, System.Security.SuppressUnmanagedCodeSecurity,
+	[ComImport, System.Security.SuppressUnmanagedCodeSecurity,
     Guid("1bd0ecb0-f8e2-11ce-aac6-0020af0b99a3"),
     InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IQualProp

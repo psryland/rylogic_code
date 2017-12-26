@@ -28,7 +28,7 @@
 		/// </summary>
 		private void InitializeComponent()
 		{
-			this.m_pattern_ui = new pr.gui.PatternUI();
+			this.m_pattern_ui = new Rylogic.Gui.PatternUI();
 			this.m_edit_comment = new System.Windows.Forms.TextBox();
 			this.SuspendLayout();
 			// 
@@ -75,7 +75,7 @@
 
 		#endregion
 
-		private pr.gui.PatternUI m_pattern_ui;
+		private Rylogic.Gui.PatternUI m_pattern_ui;
 		private System.Windows.Forms.TextBox m_edit_comment;
 	}
 }

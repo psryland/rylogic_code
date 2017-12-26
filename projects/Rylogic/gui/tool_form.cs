@@ -3,14 +3,14 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
-using pr.gfx;
-using pr.maths;
-using pr.util;
-using pr.win32;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Graphix;
+using Rylogic.Maths;
+using Rylogic.Utility;
+using Rylogic.Windows32;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	/// <summary>A base class for (typically non-modal) tool-windows that move with their parent</summary>
 	public class ToolForm :Form
@@ -327,7 +327,7 @@ namespace pr.gui
 
 			var rad = 5;
 			var d = Math.Sqrt(Geometry.DistanceSq(v2.From(PointToClient(MousePosition)), BRect.From(ClientRectangle.Inflated(-rad))));
-			Opacity = Maths.Lerp(FadeRange.End, FadeRange.Beg, Maths.Clamp(d / rad, 0.0, 1.0));
+			Opacity = Math_.Lerp(FadeRange.End, FadeRange.Beg, Math_.Clamp(d / rad, 0.0, 1.0));
 		}
 
 		/// <summary>Get/Set the owning form</summary>
@@ -407,7 +407,7 @@ namespace pr.gui
 			case EPin.Centre:       Location = new Point((frame.Left+frame.Right)/2 , (frame.Top+frame.Bottom)/2) + m_ofs.ToSize(); break;
 			case EPin.CentreRight:  Location = new Point(frame.Right                , (frame.Top+frame.Bottom)/2) + m_ofs.ToSize(); break;
 			}
-			Location = Util.OnScreen(Location, Size);
+			Location = Util2.OnScreen(Location, Size);
 		}
 
 		/// <summary>Update the check mark next to the Pin Window menu option</summary>
@@ -429,7 +429,7 @@ namespace pr.gui
 			int snap_dist = m_snapped ? 2 : 5;
 			
 			// Snap to frame left edge
-			if (Math.Abs(Right - frame.Left) < snap_dist && Maths.Clamp(Top, frame.Top, frame.Bottom) == Top)
+			if (Math.Abs(Right - frame.Left) < snap_dist && Math_.Clamp(Top, frame.Top, frame.Bottom) == Top)
 			{
 				Location = new Point(frame.Left - Bounds.Width, Top);
 				m_snapped = true;
@@ -437,7 +437,7 @@ namespace pr.gui
 			}
 
 			// Snap to frame right edge
-			if (Math.Abs(Left - frame.Right) < snap_dist && Maths.Clamp(Top, frame.Top, frame.Bottom) == Top)
+			if (Math.Abs(Left - frame.Right) < snap_dist && Math_.Clamp(Top, frame.Top, frame.Bottom) == Top)
 			{
 				Location = new Point(frame.Right, Top);
 				m_snapped = true;
@@ -445,7 +445,7 @@ namespace pr.gui
 			}
 
 			// Snap to frame top edge
-			if (Math.Abs(Bottom - frame.Top) < snap_dist && Maths.Clamp(Left, frame.Left, frame.Right) == Left)
+			if (Math.Abs(Bottom - frame.Top) < snap_dist && Math_.Clamp(Left, frame.Left, frame.Right) == Left)
 			{
 				Location = new Point(Left, frame.Top - Bounds.Height);
 				m_snapped = true;
@@ -453,7 +453,7 @@ namespace pr.gui
 			}
 
 			// Snap to frame bottom edge
-			if (Math.Abs(Top - frame.Bottom) < snap_dist && Maths.Clamp(Left, frame.Left, frame.Right) == Left)
+			if (Math.Abs(Top - frame.Bottom) < snap_dist && Math_.Clamp(Left, frame.Left, frame.Right) == Left)
 			{
 				Location = new Point(Left, frame.Bottom);
 				m_snapped = true;

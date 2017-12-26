@@ -3,12 +3,12 @@ using System.Drawing;
 using System.Drawing.Printing;
 using System.Linq;
 using System.Runtime.InteropServices;
-using pr.common;
-using pr.extn;
-using pr.util;
-using pr.win32;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Utility;
+using Rylogic.Windows32;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	/// <summary>Subclass WinForms RichTextBox to get RICHEDIT5.0 instead of 2.0!</summary>
 	public class RichTextBox :System.Windows.Forms.RichTextBox

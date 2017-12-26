@@ -5,11 +5,10 @@ using System.Drawing;
 using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
-using pr.extn;
-using pr.maths;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	public class DataGridView :System.Windows.Forms.DataGridView
 	{
@@ -216,19 +215,19 @@ namespace pr.gui
 		//	public void Shift(Point delta, int col_count, int row_count)
 		//	{
 		//		SelectionAnchorCell = new Point(
-		//			Maths.Clamp(SelectionAnchorCell.X + delta.X, 0, col_count-1),
-		//			Maths.Clamp(SelectionAnchorCell.Y + delta.Y, 0, row_count-1));
+		//			Math_.Clamp(SelectionAnchorCell.X + delta.X, 0, col_count-1),
+		//			Math_.Clamp(SelectionAnchorCell.Y + delta.Y, 0, row_count-1));
 
 		//		MouseDownCell = new Point(
-		//			Maths.Clamp(MouseDownCell.X + delta.X, 0, col_count-1),
-		//			Maths.Clamp(MouseDownCell.Y + delta.Y, 0, row_count-1));
+		//			Math_.Clamp(MouseDownCell.X + delta.X, 0, col_count-1),
+		//			Math_.Clamp(MouseDownCell.Y + delta.Y, 0, row_count-1));
 
-		//		TrackColumn         = Maths.Clamp(TrackColumn       + delta.X, 0, col_count-1);
-		//		TrackColumnEdge     = Maths.Clamp(TrackColumnEdge   + delta.X, 0, col_count-1);
-		//		TrackColumnAnchor   = Maths.Clamp(TrackColumnAnchor + delta.X, 0, col_count-1);
-		//		TrackRow            = Maths.Clamp(TrackRow          + delta.Y, 0, row_count-1);
-		//		TrackRowEdge        = Maths.Clamp(TrackRowEdge      + delta.Y, 0, row_count-1);
-		//		TrackRowAnchor      = Maths.Clamp(TrackRowAnchor    + delta.Y, 0, row_count-1);
+		//		TrackColumn         = Math_.Clamp(TrackColumn       + delta.X, 0, col_count-1);
+		//		TrackColumnEdge     = Math_.Clamp(TrackColumnEdge   + delta.X, 0, col_count-1);
+		//		TrackColumnAnchor   = Math_.Clamp(TrackColumnAnchor + delta.X, 0, col_count-1);
+		//		TrackRow            = Math_.Clamp(TrackRow          + delta.Y, 0, row_count-1);
+		//		TrackRowEdge        = Math_.Clamp(TrackRowEdge      + delta.Y, 0, row_count-1);
+		//		TrackRowAnchor      = Math_.Clamp(TrackRowAnchor    + delta.Y, 0, row_count-1);
 		//	}
 		//}
 	}

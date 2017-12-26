@@ -2,12 +2,12 @@
 using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
-using pr.extn;
-using pr.maths;
-using pr.util;
-using pr.win32;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
+using Rylogic.Windows32;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	/// <summary>Progress bar that allows text overlay</summary>
 	public class TextProgressBar :ProgressBar
@@ -117,7 +117,7 @@ namespace pr.gui
 			if (Value != Minimum)
 			{
 				const int pad = 3;
-				var frac = Maths.Frac(Minimum, Value, Maximum);
+				var frac = Math_.Frac(Minimum, Value, Maximum);
 				var clip = new Rectangle(rect.X + pad, rect.Y + pad, (int)(frac * (rect.Width - 2*pad)), rect.Height - 2*pad);
 				if (visual_styles_enabled)
 					ProgressBarRenderer.DrawHorizontalChunks(gfx, clip);

@@ -2,16 +2,13 @@
 using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
-using pr.attrib;
-using pr.extn;
-using pr.gfx;
-using pr.gui;
-using pr.maths;
-using pr.util;
-using ComboBox = pr.gui.ComboBox;
-using DataGridView = pr.gui.DataGridView;
+using Rylogic.Attrib;
+using Rylogic.Extn;
+using Rylogic.Graphix;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
-namespace pr.view3d
+namespace Rylogic.Gui
 {
 	public class MeasurementUI :UserControl
 	{
@@ -718,7 +715,7 @@ namespace pr.view3d
 		private System.ComponentModel.IContainer components = null;
 		private void InitializeComponent()
 		{
-			this.m_tb_snap_distance = new pr.gui.ValueBox();
+			this.m_tb_snap_distance = new Rylogic.Gui.ValueBox();
 			this.m_lbl_snap_distance = new System.Windows.Forms.Label();
 			this.m_chk_verts = new System.Windows.Forms.CheckBox();
 			this.m_chk_edges = new System.Windows.Forms.CheckBox();
@@ -730,8 +727,8 @@ namespace pr.view3d
 			this.m_panel_spot_colour = new System.Windows.Forms.Panel();
 			this.m_lbl_spot_colour = new System.Windows.Forms.Label();
 			this.m_panel1 = new System.Windows.Forms.Panel();
-			this.m_cb_space = new pr.gui.ComboBox();
-			this.m_grid_measurement = new pr.gui.DataGridView();
+			this.m_cb_space = new Rylogic.Gui.ComboBox();
+			this.m_grid_measurement = new Rylogic.Gui.DataGridView();
 			this.m_lbl_measurements = new System.Windows.Forms.Label();
 			this.m_table0.SuspendLayout();
 			this.m_panel0.SuspendLayout();
@@ -959,9 +956,12 @@ namespace pr.view3d
 		}
 		#endregion
 	}
+}
+namespace Rylogic.Graphix
+{
 	public partial class View3d
 	{
-		public class MeasurementUI :view3d.MeasurementUI
+		public class MeasurementUI :Gui.MeasurementUI
 		{ }
 	}
 }

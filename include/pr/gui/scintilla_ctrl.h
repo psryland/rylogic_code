@@ -20,7 +20,7 @@ namespace pr
 			// Notes:
 			// - Remember to call pr::win32::LoadDll<struct Scintilla>(L"scintilla.dll");
 			//   before creating an instance of this control
-			// - There is a C# port of this control called pr.gui.ScintillaCtrl. Try to
+			// - There is a C# port of this control called Rylogic.Gui.ScintillaCtrl. Try to
 			//   keep these in sync
 
 			enum { DefW = 50, DefH = 50 };

@@ -1,20 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
-using System.Drawing;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using Microsoft.Win32;
-using pr.extn;
+using Rylogic.Extn;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	using BrowserCtrl = System.Windows.Forms.WebBrowser;
 
-	/// <summary>A control that makes a webbrowser behaviour as much like a text (or RTB) as possible</summary>
+	/// <summary>A control that makes a web browser behaviour as much like a text (or RTB) as possible</summary>
 	public class HtmlTextBox :BrowserCtrl
 	{
 		#region IE Version

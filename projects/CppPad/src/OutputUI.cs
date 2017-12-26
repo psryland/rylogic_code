@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Windows.Forms;
-using pr.util;
-using pr.gui;
+using Rylogic.Utility;
+using Rylogic.Gui;
 
 namespace CppPad
 {

@@ -1,7 +1,7 @@
 #region license
 
 /*
-pr.directshow - Provide access to DirectShow interfaces via .NET
+Rylogic.DirectShow - Provide access to DirectShow interfaces via .NET
 Copyright (C) 2007
 http://sourceforge.net/projects/directshownet/
 
@@ -24,7 +24,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 using System.Runtime.InteropServices;
 
-namespace pr.directshow
+namespace Rylogic.DirectShow
 {
     #region Declarations
 

@@ -3,14 +3,14 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
-using pr.extn;
-using pr.gfx;
-using pr.maths;
-using pr.util;
-using pr.win32;
-using RichTextBox = pr.gui.RichTextBox;
+using Rylogic.Extn;
+using Rylogic.Graphix;
+using Rylogic.Maths;
+using Rylogic.Utility;
+using Rylogic.Windows32;
+using RichTextBox = Rylogic.Gui.RichTextBox;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	/// <summary>A tooltip form that doesn't suck</summary>
 	public class HintBalloon :Form
@@ -433,12 +433,12 @@ namespace pr.gui
 			GraphicsPath path;
 			if (TipLength == 0 || TipBaseWidth == 0)
 			{
-				path = Gfx.RoundedRectanglePath(new RectangleF(0, 0, width, height), cr);
+				path = Gdi.RoundedRectanglePath(new RectangleF(0, 0, width, height), cr);
 			}
 			else
 			{
 				var tip_length = TipLength;
-				var tip_width = Maths.Clamp(width - 2 * (tip_length + cr), Math.Min(5,TipBaseWidth), TipBaseWidth);
+				var tip_width = Math_.Clamp(width - 2 * (tip_length + cr), Math.Min(5,TipBaseWidth), TipBaseWidth);
 
 				// Find the corner to start from
 				path = new GraphicsPath();
@@ -575,9 +575,9 @@ namespace pr.gui
 }
 
 #if PR_UNITTESTS
-namespace pr.unittests
+namespace Rylogic.UnitTests
 {
-	using gui;
+	using Gui;
 
 	[TestFixture] public class TestTooltip
 	{

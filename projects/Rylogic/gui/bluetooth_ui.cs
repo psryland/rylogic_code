@@ -6,13 +6,13 @@ using System.Drawing.Drawing2D;
 using System.Globalization;
 using System.Linq;
 using System.Windows.Forms;
-using pr.attrib;
-using pr.common;
-using pr.extn;
-using pr.maths;
-using pr.util;
+using Rylogic.Attrib;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	public class BluetoothUI :Form
 	{
@@ -353,7 +353,7 @@ namespace pr.gui
 			var y = a.Bounds.Top + 1;
 
 			// Get the image index for the device type
-			var img_index = Maths.Clamp(GetDeviceImageIndex != null
+			var img_index = Math_.Clamp(GetDeviceImageIndex != null
 				? GetDeviceImageIndex(device)
 				: device.ClassOfDeviceMajor.Assoc<int>("img"),
 				0, DeviceImageList.Images.Count);
@@ -475,7 +475,7 @@ namespace pr.gui
 			this.m_lb_devices = new System.Windows.Forms.ListBox();
 			this.m_btn_show_bt_cpl = new System.Windows.Forms.Button();
 			this.m_timer = new System.Windows.Forms.Timer(this.components);
-			this.m_cb_radio = new pr.gui.ComboBox();
+			this.m_cb_radio = new Rylogic.Gui.ComboBox();
 			this.SuspendLayout();
 			// 
 			// m_btn_cancel

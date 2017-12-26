@@ -9,16 +9,15 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using System.Xml.Linq;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.gfx;
-using pr.ldr;
-using pr.maths;
-using pr.util;
-using pr.view3d;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Graphix;
+using Rylogic.LDraw;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	/// <summary>A control for drawing box and line diagrams</summary>
 	public class DiagramControl :UserControl ,ISupportInitialize
@@ -353,7 +352,7 @@ namespace pr.gui
 				get { return m_impl_position; }
 				set
 				{
-					if (Maths.FEql(m_impl_position, value)) return;
+					if (Math_.FEql(m_impl_position, value)) return;
 					SetPosition(value);
 				}
 			}
@@ -966,7 +965,7 @@ namespace pr.gui
 			public override HitTestResult.Hit HitTest(v2 point, View3d.Camera cam)
 			{
 				var pt = point - Centre;
-				if (pt.Length2Sq > Maths.Sqr(Bounds.Diametre/2f))
+				if (pt.Length2Sq > Math_.Sqr(Bounds.Diametre/2f))
 					return null;
 
 				var hit = new HitTestResult.Hit(this, pt);
@@ -1133,7 +1132,7 @@ namespace pr.gui
 
 				for (int i = 0; i != divx; ++i)
 				{
-					var dx = Maths.Lerp(0f, hsx, (i+1f) / divx);
+					var dx = Math_.Lerp(0f, hsx, (i+1f) / divx);
 					yield return new AnchorPoint(this, new v4(0-dx, -y, z, 1), -v4.YAxis);
 					yield return new AnchorPoint(this, new v4(0-dx, +y, z, 1), +v4.YAxis);
 					yield return new AnchorPoint(this, new v4(0+dx, -y, z, 1), -v4.YAxis);
@@ -1141,7 +1140,7 @@ namespace pr.gui
 				}
 				for (int i = 0; i != divy; ++i)
 				{
-					var dy = Maths.Lerp(0f, hsy, (i+1f) / divy);
+					var dy = Math_.Lerp(0f, hsy, (i+1f) / divy);
 					yield return new AnchorPoint(this, new v4(-x, 0-dy, z, 1), -v4.XAxis);
 					yield return new AnchorPoint(this, new v4(+x, 0-dy, z, 1), +v4.XAxis);
 					yield return new AnchorPoint(this, new v4(-x, 0+dy, z, 1), -v4.XAxis);
@@ -1156,11 +1155,11 @@ namespace pr.gui
 				if (!pt_in_element_space)
 					point = m4x4.InvertFast(Position) * point;
 
-				float bias_distance_sq = Maths.Sqr(Diagram != null ? Diagram.Options.Node.AnchorSharingBias : 150f);
+				float bias_distance_sq = Math_.Sqr(Diagram != null ? Diagram.Options.Node.AnchorSharingBias : 150f);
 
 				// Select the nearest anchor, but bias the anchor points that are already used
 				var used = Connectors.Where(x => x != existing).Select(x => x.Anc(this).Location).ToArray();
-				return AnchorPoints().MinBy(x => (x.Location - point).Length2Sq + (used.Any(v => Maths.FEql(v.xy, x.Location.xy)) ? bias_distance_sq : 0));
+				return AnchorPoints().MinBy(x => (x.Location - point).Length2Sq + (used.Any(v => Math_.FEql(v.xy, x.Location.xy)) ? bias_distance_sq : 0));
 			}
 
 			/// <summary>Update the graphics and object transforms associated with this element</summary>
@@ -2629,8 +2628,8 @@ namespace pr.gui
 
 			public MouseOps()
 			{
-				m_ops     = int_.Range(Util.MouseButtonCount).ToDictionary(k => k, k => (MouseOp)null);
-				m_pending = int_.Range(Util.MouseButtonCount).ToDictionary(k => k, k => (MouseOp)null);
+				m_ops     = int_.Range(Util2.MouseButtonCount).ToDictionary(k => k, k => (MouseOp)null);
+				m_pending = int_.Range(Util2.MouseButtonCount).ToDictionary(k => k, k => (MouseOp)null);
 			}
 
 			/// <summary>The currently active mouse op</summary>
@@ -3131,8 +3130,8 @@ namespace pr.gui
 				{
 					elem.Elem.PositionXY = elem.InitialPosition + (delta/2)*m_grabber.Direction;
 					elem.Elem.Size = new v2(
-						Maths.Max(10, elem.InitialSize.x + delta * Math.Abs(m_grabber.Direction.x)),
-						Maths.Max(10, elem.InitialSize.y + delta * Math.Abs(m_grabber.Direction.y)));
+						Math_.Max(10, elem.InitialSize.x + delta * Math.Abs(m_grabber.Direction.x)),
+						Math_.Max(10, elem.InitialSize.y + delta * Math.Abs(m_grabber.Direction.y)));
 				}
 
 				m_diag.Invalidate();
@@ -4258,8 +4257,8 @@ namespace pr.gui
 			var bounds = ContentBounds;
 			if (bounds.IsValid)
 				bounds = bounds.Inflate(
-					Maths.Max(ResetMinBounds.SizeX - bounds.SizeX, 0),
-					Maths.Max(ResetMinBounds.SizeY - bounds.SizeY, 0));
+					Math_.Max(ResetMinBounds.SizeX - bounds.SizeX, 0),
+					Math_.Max(ResetMinBounds.SizeY - bounds.SizeY, 0));
 			else
 				bounds = ResetMinBounds;
 
@@ -4267,7 +4266,7 @@ namespace pr.gui
 			{
 				float dist0 = 0.5f * bounds.SizeX / (float)Math.Tan(m_camera.FovX * 0.5f);
 				float dist1 = 0.5f * bounds.SizeY / (float)Math.Tan(m_camera.FovY * 0.5f);
-				m_camera.FocusDist = Maths.Max(dist0, dist1);
+				m_camera.FocusDist = Math_.Max(dist0, dist1);
 			}
 			if (reset_position)
 			{
@@ -5252,7 +5251,7 @@ namespace pr.gui
 						btn.DropDownItems.Add2(new ToolStripMenuItem
 						{
 							CheckOnClick = true,
-							Image        = global::pr.Resources.boxes,
+							Image        = Resources.boxes,
 							Name         = EditTools.Node.BoxNode,
 							Size         = new Size(78, 22),
 							AutoSize     = true,
@@ -5269,7 +5268,7 @@ namespace pr.gui
 					{
 						CheckOnClicked      = true,
 						DisplayStyle        = ToolStripItemDisplayStyle.Image,
-						Image               = pr.Resources.connector1,
+						Image               = Resources.connector1,
 						Name                = EditTools.Conn.Key,
 						AutoSize            = true,
 						ImageScaling        = ToolStripItemImageScaling.SizeToFit,
@@ -5291,7 +5290,7 @@ namespace pr.gui
 						btn.DropDownItems.Add2(new ToolStripMenuItem
 						{
 							CheckOnClick = true,
-							Image        = global::pr.Resources.connector1,
+							Image        = Resources.connector1,
 							Name         = EditTools.Conn.Line,
 							Size         = new Size(108, 22),
 							AutoSize     = true,
@@ -5304,7 +5303,7 @@ namespace pr.gui
 						btn.DropDownItems.Add2(new ToolStripMenuItem
 						{
 							CheckOnClick = true,
-							Image        = global::pr.Resources.connector2,
+							Image        = Resources.connector2,
 							Name         = EditTools.Conn.Forward,
 							Size         = new Size(129, 22),
 							AutoSize     = true,
@@ -5317,7 +5316,7 @@ namespace pr.gui
 						btn.DropDownItems.Add2(new ToolStripMenuItem
 						{
 							CheckOnClick = true,
-							Image        = global::pr.Resources.connector3,
+							Image        = Resources.connector3,
 							Name         = EditTools.Conn.Back,
 							Size         = new Size(137, 22),
 							AutoSize     = true,
@@ -5330,7 +5329,7 @@ namespace pr.gui
 						btn.DropDownItems.Add2(new ToolStripMenuItem
 						{
 							CheckOnClick = true,
-							Image        = global::pr.Resources.connector4,
+							Image        = Resources.connector4,
 							Name         = EditTools.Conn.Bidir,
 							Size         = new Size(152, 22),
 							AutoSize            = true,

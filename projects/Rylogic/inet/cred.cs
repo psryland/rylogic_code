@@ -4,10 +4,10 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
-using pr.util;
-using pr.win32;
+using Rylogic.Utility;
+using Rylogic.Windows32;
 
-namespace pr.inet
+namespace Rylogic.INet
 {
 	/// <summary>Encapsulates dialog functionality from the Credential Management API.</summary>
 	public sealed class CredentialsDialog
@@ -17,22 +17,22 @@ namespace pr.inet
 		/// <summary>The only valid bitmap width (in pixels) of a user-defined banner.</summary>
 		private const int ValidBannerWidth = 320;
         
-		/// <summary>Initializes a new instance of the <see cref="T:pr.inet.CredentialsDialog"/> class with the specified target.</summary>
+		/// <summary>Initializes a new instance of the <see cref="T:Rylogic.INet.CredentialsDialog"/> class with the specified target.</summary>
 		/// <param name="target">The name of the target for the credentials, typically a server name.</param>
 		public CredentialsDialog(string target) : this(target, null)
 		{ }
-		/// <summary>Initializes a new instance of the <see cref="T:pr.inet.CredentialsDialog"/> class with the specified target and caption.</summary>
+		/// <summary>Initializes a new instance of the <see cref="T:Rylogic.INet.CredentialsDialog"/> class with the specified target and caption.</summary>
 		/// <param name="target">The name of the target for the credentials, typically a server name.</param>
 		/// <param name="caption">The caption of the dialog (null will cause a system default title to be used).</param>
 		public CredentialsDialog(string target, string caption) : this(target, caption, null)
 		{ }
-		/// <summary>Initializes a new instance of the <see cref="T:pr.inet.CredentialsDialog"/> class with the specified target, caption and message.</summary>
+		/// <summary>Initializes a new instance of the <see cref="T:Rylogic.INet.CredentialsDialog"/> class with the specified target, caption and message.</summary>
 		/// <param name="target">The name of the target for the credentials, typically a server name.</param>
 		/// <param name="caption">The caption of the dialog (null will cause a system default title to be used).</param>
 		/// <param name="message">The message of the dialog (null will cause a system default message to be used).</param>
 		public CredentialsDialog(string target, string caption, string message) : this(target, caption, message, null)
 		{ }
-		/// <summary>Initializes a new instance of the <see cref="T:pr.inet.CredentialsDialog"/> class with the specified target, caption, message and banner.</summary>
+		/// <summary>Initializes a new instance of the <see cref="T:Rylogic.INet.CredentialsDialog"/> class with the specified target, caption, message and banner.</summary>
 		/// <param name="target">The name of the target for the credentials, typically a server name.</param>
 		/// <param name="caption">The caption of the dialog (null will cause a system default title to be used).</param>
 		/// <param name="message">The message of the dialog (null will cause a system default message to be used).</param>

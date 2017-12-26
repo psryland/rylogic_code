@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
 
-namespace pr.container
+namespace Rylogic.Container
 {
 	public enum DictChg
 	{
@@ -38,13 +35,13 @@ namespace pr.container
 
 		/// <summary>
 		/// The Key of the item in the collection, or where it will be in the collection.
-		/// Writable to allow PreAdd to change the key, note however that when
+		/// Write-able to allow PreAdd to change the key, note however that when
 		/// events are suspended PreAdd will not be called.</summary>
 		public TKey Key { get; set; }
 
 		/// <summary>
 		/// The item added/removed.
-		/// Writable to allow PreAdd to change the item, note however that when
+		/// Write-able to allow PreAdd to change the item, note however that when
 		/// events are suspended PreAdd will not be called.</summary>
 		public TValue Value { get; set; }
 

@@ -7,11 +7,11 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
-using pr.gui;
-using pr.util;
-using DataGridViewComboBoxColumn = pr.gui.DataGridViewComboBoxColumn;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Utility;
+using DataGridViewComboBoxColumn = Rylogic.Gui.DataGridViewComboBoxColumn;
 
 namespace RyLogViewer
 {
@@ -316,7 +316,7 @@ namespace RyLogViewer
 							return !s.CancelPending;
 						};
 
-						foreach (var fi in Path_.EnumFileSystem(path, SearchOption.AllDirectories, regex_filter:@"adb\.exe", progress:progress))
+						foreach (var fi in Shell_.EnumFileSystem(path, SearchOption.AllDirectories, regex_filter:@"adb\.exe", progress:progress))
 						{
 							// Found one!
 							adb_path = fi.FullPath;

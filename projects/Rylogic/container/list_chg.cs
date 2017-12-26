@@ -2,10 +2,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using pr.common;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Utility;
 
-namespace pr.container
+namespace Rylogic.Container
 {
 	public enum ListChg
 	{

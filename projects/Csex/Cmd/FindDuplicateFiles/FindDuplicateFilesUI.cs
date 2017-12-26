@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
+﻿using System.Data;
 using System.Linq;
-using System.Text;
 using System.Windows.Forms;
-using pr.extn;
-using pr.gui;
-using pr.util;
-using ToolStripContainer = pr.gui.ToolStripContainer;
+using Rylogic.Gui;
+using Rylogic.Utility;
+using ToolStripContainer = Rylogic.Gui.ToolStripContainer;
 
 namespace Csex
 {

@@ -6,17 +6,15 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using System.Windows.Threading;
 using System.Xml.Linq;
-using pr.common;
-using pr.extn;
-using pr.gfx;
-using pr.maths;
-using pr.util;
-using pr.win32;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
+using Rylogic.Windows32;
 using HContext = System.IntPtr;
 using HGizmo = System.IntPtr;
 using HMODULE = System.IntPtr;
@@ -25,7 +23,7 @@ using HTexture = System.IntPtr;
 using HWindow = System.IntPtr;
 using HWND = System.IntPtr;
 
-namespace pr.view3d
+namespace Rylogic.Graphix
 {
 	/// <summary>.NET wrapper for View3D.dll</summary>
 	public partial class View3d :IDisposable
@@ -954,7 +952,7 @@ namespace pr.view3d
 			if (m_thread_id != Thread.CurrentThread.ManagedThreadId)
 				m_dispatcher.BeginInvoke(m_error_cb, ctx, msg);
 			else
-				Error.Raise(this, new MessageEventArgs(msg));
+				Error?.Invoke(this, new MessageEventArgs(msg));
 		}
 
 		/// <summary>Progress update when a file is being parsed</summary>
@@ -962,7 +960,7 @@ namespace pr.view3d
 		private bool HandleAddFileProgress(IntPtr ctx, ref Guid context_id, string filepath, long foffset, bool complete)
 		{
 			var args = new AddFileProgressEventArgs(context_id, filepath, foffset, complete);
-			AddFileProgress.Raise(this, args);
+			AddFileProgress?.Invoke(this, args);
 			return args.Cancel;
 		}
 
@@ -973,7 +971,7 @@ namespace pr.view3d
 			if (m_thread_id != Thread.CurrentThread.ManagedThreadId)
 				m_dispatcher.BeginInvoke(m_sources_changed_cb, ctx, reason, before);
 			else
-				OnSourcesChanged.Raise(this, new SourcesChangedEventArgs(reason, before));
+				OnSourcesChanged?.Invoke(this, new SourcesChangedEventArgs(reason, before));
 		}
 
 		/// <summary>Handle embedded C# in ldr script</summary>
@@ -988,6 +986,7 @@ namespace pr.view3d
 				var src =
 				#region Embedded C# Source
 $@"//
+//Assembly: netstandard.dll
 //Assembly: System.dll
 //Assembly: System.Drawing.dll
 //Assembly: System.IO.dll
@@ -995,18 +994,19 @@ $@"//
 //Assembly: System.Windows.Forms.dll
 //Assembly: System.Xml.dll
 //Assembly: System.Xml.Linq.dll
+//Assembly: Rylogic.Core.dll
 //Assembly: Rylogic.dll
 using System;
 using System.Drawing;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.ldr;
-using pr.maths;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.LDraw;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace ldr
 {{
@@ -1127,7 +1127,7 @@ namespace ldr
 		public class Window :IDisposable
 		{
 			private readonly View3d m_view;
-			private readonly WindowOptions m_opts;              // The options used to create the window (contains references to the user provided error cb)
+			private readonly WindowOptions m_opts;              // The options used to create the window (contains references to the user provided error call back)
 			private readonly ReportErrorCB m_error_cb;          // A reference to prevent the GC from getting it
 			private readonly SettingsChangedCB m_settings_cb;   // A local reference to prevent the callback being garbage collected
 			private readonly RenderCB m_render_cb;              // A local reference to prevent the callback being garbage collected
@@ -1148,19 +1148,19 @@ namespace ldr
 
 				// Attach the global error handler
 				View3D_WindowErrorCBSet(m_handle, m_error_cb = HandleError, IntPtr.Zero, true);
-				void HandleError(IntPtr ctx, string msg) { Error.Raise(this, new ErrorEventArgs(msg)); }
+				void HandleError(IntPtr ctx, string msg) { Error?.Invoke(this, new ErrorEventArgs(msg)); }
 
 				// Set up a callback for when settings are changed
 				View3D_WindowSettingsChangedCB(m_handle, m_settings_cb = HandleSettingsChanged, IntPtr.Zero, true);
-				void HandleSettingsChanged(IntPtr ctx, HWindow wnd) { OnSettingsChanged.Raise(this, EventArgs.Empty); }
+				void HandleSettingsChanged(IntPtr ctx, HWindow wnd) { OnSettingsChanged?.Invoke(this, EventArgs.Empty); }
 
 				// Set up a callback for when a render is about to happen
 				View3D_WindowRenderingCB(m_handle, m_render_cb = HandleRendering, IntPtr.Zero, true);
-				void HandleRendering(IntPtr ctx, HWindow wnd) { OnRendering.Raise(this, EventArgs.Empty); }
+				void HandleRendering(IntPtr ctx, HWindow wnd) { OnRendering?.Invoke(this, EventArgs.Empty); }
 
 				// Set up a callback for when the object store for this window changes
 				View3d_WindowSceneChangedCB(m_handle, m_scene_changed_cb = HandleSceneChanged, IntPtr.Zero, true);
-				void HandleSceneChanged(IntPtr ctx, HWindow wnd, ref View3DSceneChanged args) { OnSceneChanged.Raise(this, new SceneChangedEventArgs(args)); }
+				void HandleSceneChanged(IntPtr ctx, HWindow wnd, ref View3DSceneChanged args) { OnSceneChanged?.Invoke(this, new SceneChangedEventArgs(args)); }
 
 				// Set up the light source
 				SetLightSource(v4.Origin, -v4.ZAxis, true);
@@ -1245,7 +1245,7 @@ namespace ldr
 					// Notify of navigating, allowing client code to make
 					// changes or optionally handle the mouse event.
 					var args = new MouseNavigateEventArgs(point, btns, nav_op, nav_beg_or_end);
-					MouseNavigating.Raise(this, args);
+					MouseNavigating?.Invoke(this, args);
 					if (args.Handled)
 						return false;
 
@@ -1274,7 +1274,7 @@ namespace ldr
 					// Notify of navigating, allowing client code to make
 					// changes or optionally handle the mouse event.
 					var args = new MouseNavigateEventArgs(point, btns, delta, along_ray);
-					MouseNavigating.Raise(this, args);
+					MouseNavigating?.Invoke(this, args);
 					if (args.Handled)
 						return false;
 
@@ -1391,7 +1391,7 @@ namespace ldr
 			/// <summary>Add an object to the window</summary>
 			public void AddObject(Object obj)
 			{
-				Debug.Assert(Maths.FEql(obj.O2P.w.w, 1f), "Invalid instance transform");
+				Debug.Assert(Math_.FEql(obj.O2P.w.w, 1f), "Invalid instance transform");
 				View3D_WindowAddObject(m_handle, obj.m_handle);
 			}
 
@@ -2275,7 +2275,7 @@ namespace ldr
 				set
 				{
 					Util.BreakIf(value.w.w != 1.0f, "Invalid object transform");
-					Util.BreakIf(!Maths.IsFinite(value), "Invalid object transform");
+					Util.BreakIf(!Math_.IsFinite(value), "Invalid object transform");
 					View3D_ObjectO2PSet(m_handle, ref value, null);
 				}
 			}
@@ -2608,7 +2608,7 @@ namespace ldr
 			private void HandleGizmoMoved(HGizmo ctx, ref Evt_Gizmo args)
 			{
 				if (args.m_gizmo != m_handle) throw new Exception("Gizmo move event from a different gizmo instance received");
-				Moved.Raise(this, new MovedEventArgs(args.m_state));
+				Moved?.Invoke(this, new MovedEventArgs(args.m_state));
 			}
 
 			/// <summary>Callback function type and data from the native gizmo object</summary>
@@ -2934,15 +2934,15 @@ namespace ldr
 			/// <summary>The inner spot light cone angle (in degrees)</summary>
 			public float InnerAngle
 			{
-				get { return (float)Maths.RadiansToDegrees(Math.Acos(m_info.m_inner_cos_angle)); }
-				set { SetProp(ref m_info.m_inner_cos_angle, (float)Math.Cos(Maths.DegreesToRadians(value)), nameof(InnerAngle)); }
+				get { return (float)Math_.RadiansToDegrees(Math.Acos(m_info.m_inner_cos_angle)); }
+				set { SetProp(ref m_info.m_inner_cos_angle, (float)Math.Cos(Math_.DegreesToRadians(value)), nameof(InnerAngle)); }
 			}
 
 			/// <summary>The outer spot light cone angle (in degrees)</summary>
 			public float OuterAngle
 			{
-				get { return (float)Maths.RadiansToDegrees(Math.Acos(m_info.m_outer_cos_angle)); }
-				set { SetProp(ref m_info.m_outer_cos_angle, (float)Math.Cos(Maths.DegreesToRadians(value)), nameof(OuterAngle)); }
+				get { return (float)Math_.RadiansToDegrees(Math.Acos(m_info.m_outer_cos_angle)); }
+				set { SetProp(ref m_info.m_outer_cos_angle, (float)Math.Cos(Math_.DegreesToRadians(value)), nameof(OuterAngle)); }
 			}
 
 			/// <summary>The range of the light</summary>
@@ -2986,7 +2986,7 @@ namespace ldr
 			{
 				if (Equals(prop, value)) return;
 				prop = value;
-				PropertyChanged.Raise(this, new PropertyChangedEventArgs(name));
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 			}
 
 			/// <summary>Implicit conversion to the value type</summary>

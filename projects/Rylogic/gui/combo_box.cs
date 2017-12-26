@@ -6,12 +6,12 @@ using System.Drawing;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
-using pr.util;
-using pr.win32;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Utility;
+using Rylogic.Windows32;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	[Serializable]
 	[DebuggerDisplay("Value={Value} Text={Text} Valid={Valid}")]
@@ -694,13 +694,15 @@ namespace pr.gui
 }
 
 #if PR_UNITTESTS
-namespace pr.unittests
+namespace Rylogic.UnitTests
 {
+	using Gui;
+
 	[TestFixture] public class TestComboBox
 	{
 		[Test] public void DataBinding()
 		{
-			var cb = new pr.gui.ComboBox();
+			var cb = new Rylogic.Gui.ComboBox();
 			var arr = new[]{ "Hello","World" };
 
 			{// Test the data source works even when the window handle hasn't been created

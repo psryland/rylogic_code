@@ -4,11 +4,11 @@ using System.IO;
 using System.Threading;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
-using pr.common;
-using pr.extn;
-using pr.gui;
-using pr.maths;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace RyLogViewer
 {
@@ -169,7 +169,7 @@ namespace RyLogViewer
 					int last_progress = -1;
 					d.progress = (scanned, length) =>
 					{
-						int progress = (int)(100 * Maths.Frac(0, scanned, length!=0?length:1));
+						int progress = (int)(100 * Math_.Frac(0, scanned, length!=0?length:1));
 						if (progress != last_progress)
 						{
 							cb(new ProgressForm.UserState { FractionComplete = progress * 0.01f });
@@ -222,7 +222,7 @@ namespace RyLogViewer
 			foreach (var rng in ranges)
 			{
 				// Find the start of a line (grow the range if necessary)
-				var r = new Range(Maths.Clamp(rng.Beg, 0, d.file.Stream.Length), Maths.Clamp(rng.End, 0, d.file.Stream.Length));
+				var r = new Range(Math_.Clamp(rng.Beg, 0, d.file.Stream.Length), Math_.Clamp(rng.End, 0, d.file.Stream.Length));
 				r.Beg = FindLineStart(d.file, r.Beg, r.End, d.row_delim, d.encoding, buf);
 
 				// Read lines and write them to the export file

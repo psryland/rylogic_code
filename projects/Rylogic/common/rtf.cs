@@ -1,5 +1,5 @@
 ﻿//***************************************************
-// Rtf string builder
+// RTF string builder
 //  Copyright (c) Rylogic Ltd 2012
 //***************************************************
 
@@ -13,9 +13,9 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using pr.extn;
+using Rylogic.Extn;
 
-namespace pr.common
+namespace Rylogic.Common
 {
 	/// <summary>Namespace for RTF string generation</summary>
 	public static class Rtf
@@ -1589,9 +1589,9 @@ namespace pr.common
 }
 
 #if PR_UNITTESTS
-namespace pr.unittests
+namespace Rylogic.UnitTests
 {
-	using common;
+	using Common;
 
 	[TestFixture] public class TestRtf
 	{
@@ -1712,8 +1712,8 @@ namespace pr.unittests
 			rtf.TextStyle = Rtf.TextStyle.Default;
 			rtf.Append("This is the last line").AppendLine();
 
-			var str = rtf.ToString();
-			File.WriteAllText("tmp.rtf", str);
+			//var str = rtf.ToString();
+			//File.WriteAllText("tmp.rtf", str);
 		}
 	}
 }

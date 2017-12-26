@@ -4,8 +4,8 @@ using System.Globalization;
 using System.IO.Ports;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
-using pr.extn;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace RyLogViewer
 {

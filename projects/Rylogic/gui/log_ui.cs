@@ -9,13 +9,13 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using System.Xml.Linq;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.maths;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	public class LogUI :UserControl ,IDockable
 	{
@@ -775,8 +775,8 @@ namespace pr.gui
 			this.components = new System.ComponentModel.Container();
 			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(LogUI));
-			this.m_tsc = new pr.gui.ToolStripContainer();
-			this.m_view = new pr.gui.DataGridView();
+			this.m_tsc = new Rylogic.Gui.ToolStripContainer();
+			this.m_view = new Rylogic.Gui.DataGridView();
 			this.m_ts = new System.Windows.Forms.ToolStrip();
 			this.m_btn_log_filepath = new System.Windows.Forms.ToolStripButton();
 			this.m_tb_log_filepath = new System.Windows.Forms.ToolStripTextBox();
@@ -855,7 +855,7 @@ namespace pr.gui
 			// m_btn_log_filepath
 			// 
 			this.m_btn_log_filepath.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_log_filepath.Image = global::pr.Resources.folder;
+			this.m_btn_log_filepath.Image = global::Rylogic.Resources.folder;
 			this.m_btn_log_filepath.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_log_filepath.Name = "m_btn_log_filepath";
 			this.m_btn_log_filepath.Size = new System.Drawing.Size(23, 22);

@@ -5,6 +5,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Drawing;
 
 namespace Rylogic.Maths
 {
@@ -249,6 +250,12 @@ namespace Rylogic.Maths
 			return  Math.Abs(lhs.m_centre.x - rhs.m_centre.x) <= (lhs.m_radius.x + rhs.m_radius.x) &&
 					Math.Abs(lhs.m_centre.y - rhs.m_centre.y) <= (lhs.m_radius.y + rhs.m_radius.y) &&
 					Math.Abs(lhs.m_centre.z - rhs.m_centre.z) <= (lhs.m_radius.z + rhs.m_radius.z);
+		}
+
+		/// <summary>Create a RectangleF from the X,Y axes of this bounding box</summary>
+		public RectangleF ToRectXY()
+		{
+			return new RectangleF(MinX, MinY, SizeX, SizeY);
 		}
 	}
 }

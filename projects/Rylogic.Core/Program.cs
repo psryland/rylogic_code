@@ -1,20 +1,18 @@
 using System;
+using System.Diagnostics;
+using System.Reflection;
 using Rylogic.UnitTests;
 
-namespace Rylogic
+namespace Rylogic.Core
 {
 	public static class Program
 	{
 		/// <summary>The main entry point for the application.</summary>
-		static void Main(string[] args)
+		[STAThread] public static int Main()
 		{
-			Environment.ExitCode = UnitTest.RunLocalTests() ? 0 : 1;
-		}
-
-		public static void RunTestsOrThrow()
-		{
-			if (!UnitTest.RunLocalTests())
-				throw new Exception("Unit tests failed");
+			var ass = Assembly.GetExecutingAssembly();
+			Debug.WriteLine($"{ass.GetName().Name} running as a {(Environment.Is64BitProcess ? "64bit" : "32bit")} process");
+			return Environment.ExitCode = UnitTest.RunTests(ass) ? 0 : 1;
 		}
 	}
 }

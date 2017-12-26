@@ -1,7 +1,7 @@
 #region license
 
 /*
-pr.directshow - Provide access to DirectShow interfaces via .NET
+Rylogic.DirectShow - Provide access to DirectShow interfaces via .NET
 Copyright (C) 2007
 http://sourceforge.net/projects/directshownet/
 
@@ -27,7 +27,7 @@ using System.Text;
 using System.Runtime.InteropServices;
 using System.Security;
 
-namespace pr.directshow.DMO
+namespace Rylogic.DirectShow.DMO
 {
     #region Declarations
 
@@ -241,7 +241,7 @@ namespace pr.directshow.DMO
 
         [DllImport("msdmo.dll", ExactSpelling = true), SuppressUnmanagedCodeSecurity]
         public static extern int MoInitMediaType(
-            [Out] pr.directshow.AMMediaType pmt,
+            [Out] AMMediaType pmt,
             int i
             );
 

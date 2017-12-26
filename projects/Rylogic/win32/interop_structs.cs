@@ -8,7 +8,7 @@ using WORD     = System.UInt16;
 using DWORD    = System.UInt32;
 using COLORREF = System.UInt32;
 
-namespace pr.win32
+namespace Rylogic.Windows32
 {
 	public static partial class Win32
 	{

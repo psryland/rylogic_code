@@ -4,10 +4,10 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
-using pr.extn;
-using pr.gfx;
-using pr.gui;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Graphix;
+using Rylogic.Gui;
+using Rylogic.Utility;
 
 namespace RyLogViewer
 {
@@ -283,7 +283,7 @@ namespace RyLogViewer
 			using (gfx.SaveState())
 			{
 				gfx.SetClip(highlight_rect, CombineMode.Exclude);
-				using (var b = Gfx.CreateRadialGradientBrush(highlight_rect.Centre(), 500, 500, Color.FromArgb(0xA0, Color.DarkBlue), Color.FromArgb(0x10, Color.LightSkyBlue)))
+				using (var b = Gdi.CreateRadialGradientBrush(highlight_rect.Centre(), 500, 500, Color.FromArgb(0xA0, Color.DarkBlue), Color.FromArgb(0x10, Color.LightSkyBlue)))
 					gfx.FillRectangle(b, win_rect);
 			}
 
@@ -334,7 +334,7 @@ namespace RyLogViewer
 				m_main.m_grid.TryScrollToRowIndex(0);
 				m_overlay.Attachee = m_main;
 
-				var path = Util.ResolveAppPath(ExampleFiles.LogFile);
+				var path = Util2.ResolveAppPath(ExampleFiles.LogFile);
 				m_main.SetLineEnding(ELineEnding.Detect);
 				m_main.SetEncoding(null);
 				m_main.OpenSingleLogFile(path, false);

@@ -1,7 +1,7 @@
 ﻿<Window x:Class="TestWPF.View3dUI"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-		xmlns:pr="clr-namespace:pr.view3d;assembly=Rylogic"
+		xmlns:pr="clr-namespace:Rylogic.Gui;assembly=Rylogic"
         Title="view3d_ui" Height="415" Width="543">
 	<Grid>
 		<WindowsFormsHost>

@@ -3,10 +3,9 @@ using System.IO;
 using System.Linq;
 using System.Security;
 using System.Security.Cryptography;
-using pr.crypt;
-using pr.util;
+using Rylogic.Utility;
 
-namespace pr.crypt
+namespace Rylogic.Crypt
 {
 	public static class Crypt
 	{
@@ -16,9 +15,28 @@ namespace pr.crypt
 		/// <summary>Generates a public/private key pair as xml strings</summary>
 		public static void GenerateRSAKeyPair(out string pub, out string priv, int key_size = 1024)
 		{
-			var rsa = new RSACryptoServiceProvider(key_size);
-			pub  = rsa.ToXmlString(false);
-			priv = rsa.ToXmlString(true);
+			// Todo: .NET Core 2.0 uses 'Cng' for cryptography. 
+			// This needs updating to use this.
+			// e.g.
+			//  Create keys like this:
+			//  Nuget: System.Security.Cryptography.Cng
+			//  var parms = new CngKeyCreationParameters
+			//  {
+			//  	ExportPolicy = CngExportPolicies.AllowPlaintextExport,
+			//  	KeyCreationOptions = CngKeyCreationOptions.None,
+			//  	KeyUsage = CngKeyUsages.AllUsages,
+			//  	Parameters = { new CngProperty("Length", BitConverter.GetBytes(key_size), CngPropertyOptions.None) },
+			//  };
+			//  using (var rsa = CngKey.Create(CngAlgorithm.Rsa, null, parms))
+			//  {
+			//  	pub = Convert.ToBase64String(rsa.Export(CngKeyBlobFormat.GenericPublicBlob));
+			//  	priv = Convert.ToBase64String(rsa.Export(CngKeyBlobFormat.GenericPrivateBlob));
+			//  }
+			using (var rsa = new RSACryptoServiceProvider(key_size))
+			{
+				pub  = rsa.ToXmlString(false);
+				priv = rsa.ToXmlString(true);
+			}
 		}
 
 		/// <summary>Attaches a signature to the end of a file</summary>
@@ -111,43 +129,50 @@ namespace pr.crypt
 }
 
 #if PR_UNITTESTS
-namespace pr.unittests
+namespace Rylogic.UnitTests
 {
+	using Crypt;
+
     [TestFixture] public class TestCrypt
     {
         [Test] public void SignFile()
         {
 			// These would normally be stored as files and read into
 			// a string using File.ReadAllText()
-			string pub,prv;
-			Crypt.GenerateRSAKeyPair(out pub, out prv);
+			Crypt.GenerateRSAKeyPair(out var pub, out var prv);
 
 			const string filepath = "tmp.bin";
 			var data = new byte[]{0,1,2,3,4,5,6,7,8,9};
+			try
+			{
+				// Create a file to sign
+				using (var fs = new FileStream(filepath, FileMode.Create, FileAccess.Write))
+					fs.Write(data, 0, data.Length);
 
-			// Create a file to sign
-			using (var fs = new FileStream(filepath, FileMode.Create, FileAccess.Write))
-				fs.Write(data, 0, data.Length);
+				// Sign the file
+				Crypt.SignFile(filepath, prv);
 
-			// Sign the file
-			Crypt.SignFile(filepath, prv);
+				// Check that the start of the file is the same
+				var buf1 = File.ReadAllBytes(filepath);
+				Assert.True(Util.Compare(buf1, 0, data.Length, data, 0, data.Length) == 0);
 
-			// Check that the start of the file is the same
-			var buf1 = File.ReadAllBytes(filepath);
-			Assert.True(Util.Compare(buf1, 0, data.Length, data, 0, data.Length) == 0);
+				// Verify the signed file using the public key
+				Assert.True(Crypt.Validate(filepath, pub));
 
-			// Verify the signed file using the public key
-			Assert.True(Crypt.Validate(filepath, pub));
+				// Sign it again to make sure the function handles the case that the signature is already there
+				Crypt.SignFile(filepath, prv);
 
-			// Sign it again to make sure the function handles the case that the signature is already there
-			Crypt.SignFile(filepath, prv);
+				// Check that the whole file is the same
+				var buf2 = File.ReadAllBytes(filepath);
+				Assert.True(Util.Compare(buf2, 0, buf2.Length, buf1, 0, buf1.Length) == 0);
 
-			// Check that the whole file is the same
-			var buf2 = File.ReadAllBytes(filepath);
-			Assert.True(Util.Compare(buf2, 0, buf2.Length, buf1, 0, buf1.Length) == 0);
-
-			// Verify the signed file using the public key
-			Assert.True(Crypt.Validate(filepath, pub));
+				// Verify the signed file using the public key
+				Assert.True(Crypt.Validate(filepath, pub));
+			}
+			finally
+			{
+				File.Delete(filepath);
+			}
 		}
 	}
 }

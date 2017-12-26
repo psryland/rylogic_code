@@ -1,7 +1,7 @@
 #region license
 
 /*
-pr.directshow - Provide access to DirectShow interfaces via .NET
+Rylogic.DirectShow - Provide access to DirectShow interfaces via .NET
 Copyright (C) 2007
 http://sourceforge.net/projects/directshownet/
 
@@ -30,7 +30,7 @@ using System.Runtime.InteropServices.ComTypes;
 
 #endif
 
-namespace pr.directshow.BDA
+namespace Rylogic.DirectShow.BDA
 {
     #region Declarations
 

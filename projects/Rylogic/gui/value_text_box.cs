@@ -3,12 +3,12 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
-using pr.util;
-using pr.win32;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Utility;
+using Rylogic.Windows32;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	// Notes:
 	//  ComboBox is very similar to this class, maintain both.
@@ -44,7 +44,7 @@ namespace pr.gui
 		// Uses:
 		// - A field that displays a value, but can also be edited and used to update a value
 		//   m_tb.Value = MyValue;
-		//   m_tb.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0 && v.Value < Maths.TauBy2; };
+		//   m_tb.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0 && v.Value < Math_.TauBy2; };
 		//   m_tb.ValueChanged += (s,a) =>
 		//   {
 		//       if (!m_tb.Focused) return;

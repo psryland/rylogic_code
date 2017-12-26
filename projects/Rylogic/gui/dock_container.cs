@@ -50,15 +50,15 @@ using System.Security.Permissions;
 using System.Text;
 using System.Windows.Forms;
 using System.Xml.Linq;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.maths;
-using pr.util;
-using pr.win32;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
+using Rylogic.Windows32;
 using Matrix = System.Drawing.Drawing2D.Matrix;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	/// <summary>Locations in the dock container where dock panes or trees of dock panes, can be docked.</summary>
 	public enum EDockSite
@@ -169,7 +169,7 @@ namespace pr.gui
 
 				Root = null;
 				m_all_content.Clear();
-				m_floaters = Util.DisposeAll(m_floaters);
+				m_floaters = Util2.DisposeAll(m_floaters);
 				m_auto_hide = Util.DisposeAll(m_auto_hide);
 			}
 
@@ -372,11 +372,8 @@ namespace pr.gui
 		/// <summary>Remove a dockable from this dock container</summary>
 		public void Remove(DockControl dc)
 		{
-			if (dc == null)
-				throw new ArgumentNullException(nameof(dc), "'dockable' or 'dockable.DockControl' cannot be 'null'");
-
 			// Idempotent remove
-			if (dc.DockContainer == null)
+			if (dc?.DockContainer == null)
 				return;
 
 			// Throw if 'dc' is not in this container
@@ -549,7 +546,7 @@ namespace pr.gui
 		{
 			var menu = new ToolStripMenuItem(menu_name);
 			var sep = new ToolStripSeparator();
-			var filter = Util.FileDialogFilter("Layout Files","*.xml");
+			var filter = Util2.FileDialogFilter("Layout Files","*.xml");
 
 			// Load layout from disk
 			var load = new ToolStripMenuItem("Load Layout", null, (s,a) =>
@@ -662,7 +659,7 @@ namespace pr.gui
 				var fw = container as FloatingWindow;
 				if (fw != null)
 				{
-					fw.Bounds = Util.OnScreen(fw.Bounds);
+					fw.Bounds = Util2.OnScreen(fw.Bounds);
 					fw.Visible = true;
 					fw.BringToFront();
 					if (fw.WindowState == FormWindowState.Minimized)
@@ -952,7 +949,7 @@ namespace pr.gui
 					var pane = DockPane(location.First(), location.Skip(1));
 
 					// Add the content
-					index = Maths.Clamp(index, 0, pane.Content.Count);
+					index = Math_.Clamp(index, 0, pane.Content.Count);
 					pane.Content.Insert(index, dc);
 					return pane;
 				}
@@ -3859,7 +3856,7 @@ namespace pr.gui
 
 					// Clamp the position within the allowed range
 					var max = Orientation == Orientation.Vertical ? Area.Width : Area.Height;
-					m_impl_pos = Maths.Clamp(value, 0, max);
+					m_impl_pos = Math_.Clamp(value, 0, max);
 
 					// Update the bounds of the splitter within the parent (if not dragging)
 					if (m_drag_bar == null)
@@ -3989,7 +3986,7 @@ namespace pr.gui
 
 				// Don't let the user drag less than the min size
 				if (max > 2 * MinPaneSize)
-					Position = Maths.Clamp(pos, MinPaneSize, max - MinPaneSize);
+					Position = Math_.Clamp(pos, MinPaneSize, max - MinPaneSize);
 			}
 
 			/// <summary>Paint the splitter</summary>
@@ -4146,7 +4143,7 @@ namespace pr.gui
 				get
 				{
 					var opts = TabStripOpts;
-					var tabh = opts.TabPadding.Top + Maths.Max(opts.InactiveFont.Height, opts.ActiveFont.Height, opts.IconSize) + opts.TabPadding.Bottom;
+					var tabh = opts.TabPadding.Top + Math_.Max(opts.InactiveFont.Height, opts.ActiveFont.Height, opts.IconSize) + opts.TabPadding.Bottom;
 					return opts.StripPadding.Top + tabh + opts.StripPadding.Bottom;
 				}
 			}
@@ -4292,7 +4289,7 @@ namespace pr.gui
 
 					var width = xend - xbeg;
 					var min_width = opts.MinWidth;
-					var max_width = Maths.Clamp(width/TabCount, opts.MinWidth, opts.MaxWidth);
+					var max_width = Math_.Clamp(width/TabCount, opts.MinWidth, opts.MaxWidth);
 
 					using (var gfx = CreateGraphics())
 					{
@@ -4497,7 +4494,7 @@ namespace pr.gui
 				// Calculate the bounding rectangle that would contain this Tab in tab strip space.
 				var sz = gfx.MeasureString(Text, font, max_width, FmtFlags);
 				var w = opts.TabPadding.Left + (Icon != null ? opts.IconSize + opts.IconToTextSpacing : 0) + (int)sz.Width + 1 + opts.TabPadding.Right; // +1 so '...' isn't added to tab text due to rounding error
-				var width = Maths.Clamp(w, min_width, max_width);
+				var width = Math_.Clamp(w, min_width, max_width);
 				var above = strip.StripLocation == EDockSite.Top || strip.StripLocation == EDockSite.Right;
 				var top = above ? opts.StripPadding.Top : opts.StripPadding.Bottom;
 				var bot = above ? opts.StripPadding.Bottom : opts.StripPadding.Top;
@@ -4804,7 +4801,7 @@ namespace pr.gui
 							using (dockpane.SuspendLayout(layout_on_resume:false))
 							using (target.SuspendLayout(layout_on_resume:false))
 							{
-								var index = Maths.Clamp(DropIndex, 0, dockpane.Content.Count);
+								var index = Math_.Clamp(DropIndex, 0, dockpane.Content.Count);
 								foreach (var c in dockpane.Content.Reversed().ToArray())
 									target.Content.Insert(index, c);
 
@@ -5164,7 +5161,7 @@ namespace pr.gui
 							if (DropIndex != -1)
 							{
 								var strip = pane.TabStripCtrl;
-								var visible_index = Maths.Min(DropIndex, strip.TabCount - 1) - strip.FirstVisibleTabIndex;
+								var visible_index = Math_.Min(DropIndex, strip.TabCount - 1) - strip.FirstVisibleTabIndex;
 								var ghost_tab = strip.VisibleTabs.Skip(visible_index).FirstOrDefault();
 								if (ghost_tab != null)
 								{
@@ -5659,7 +5656,7 @@ namespace pr.gui
 					// If 'PinWindow' is set, then the bounds are relative to the parent window
 					var bnds = bounds.Value;
 					if (PinWindow) bnds = bnds.Shifted(TargetFrame.Left, TargetFrame.Top);
-					Bounds = Util.OnScreen(bnds);
+					Bounds = Util2.OnScreen(bnds);
 				}
 
 				// Update the tree layout

@@ -10,15 +10,15 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using LDraw.Properties;
-using pr.common;
-using pr.extn;
-using pr.gui;
-using pr.maths;
-using pr.scintilla;
-using pr.util;
-using pr.view3d;
-using pr.win32;
-using ToolStripContainer = pr.gui.ToolStripContainer;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Maths;
+using Rylogic.Scintilla;
+using Rylogic.Utility;
+using Rylogic.Graphix;
+using Rylogic.Windows32;
+using ToolStripContainer = Rylogic.Gui.ToolStripContainer;
 
 namespace LDraw
 {
@@ -186,7 +186,7 @@ namespace LDraw
 		public MainUI()
 		{
 			#if DEBUG
-			pr.util.Util.WaitForDebugger();
+			Util2.WaitForDebugger();
 			#endif
 
 			// Load dlls
@@ -206,6 +206,7 @@ namespace LDraw
 			InitializeComponent();
 			KeyPreview = true;
 
+			Xml.SupportWinFormsTypes();
 			Settings = new Settings(Util.ResolveUserDocumentsPath(Application.CompanyName, Application.ProductName, "settings.xml")){ ReadOnly = true };
 			DockContainer = new DockContainer();
 			Model = new Model(this);
@@ -380,7 +381,7 @@ namespace LDraw
 					--m_anim_steps;
 
 				// Advance the clock
-				AnimClock += m_anim_dir * (float)Maths.Sqr(2.0f * m_tr_speed.TrackBar.ValueFrac()) * 0.05f;
+				AnimClock += m_anim_dir * (float)Math_.Sqr(2.0f * m_tr_speed.TrackBar.ValueFrac()) * 0.05f;
 			}
 
 			// Update the animation time in each scene
@@ -922,7 +923,7 @@ namespace LDraw
 			// Prompt for a filepath if this is an 'open' operation
 			if (prompt && !filepath.HasValue())
 			{
-				using (var dlg = new OpenFileDialog { Title = "Edit Ldr Script file", Filter = Util.FileDialogFilter("Ldr Script","*.ldr") })
+				using (var dlg = new OpenFileDialog { Title = "Edit Ldr Script file", Filter = Util2.FileDialogFilter("Ldr Script","*.ldr") })
 				{
 					if (dlg.ShowDialog(this) != DialogResult.OK) return;
 					filepath = dlg.FileName;
@@ -942,7 +943,7 @@ namespace LDraw
 		{
 			if (!filepath.HasValue())
 			{
-				using (var dlg = new OpenFileDialog { Title = "Open Ldr Script file", Filter = Util.FileDialogFilter("Ldr Script","*.ldr", "Comma Separated Values","*.csv", "Binary Model File","*.p3d", "All Files","*.*") })
+				using (var dlg = new OpenFileDialog { Title = "Open Ldr Script file", Filter = Util2.FileDialogFilter("Ldr Script","*.ldr", "Comma Separated Values","*.csv", "Binary Model File","*.p3d", "All Files","*.*") })
 				{
 					if (dlg.ShowDialog(this) != DialogResult.OK) return;
 					filepath = dlg.FileName;
@@ -974,7 +975,7 @@ namespace LDraw
 			{
 				// Get the save location
 				var filepath = (string)null;
-				using (var dlg = new SaveFileDialog { Title = "Save Script", Filter = Util.FileDialogFilter("Script Files", "*.ldr") })
+				using (var dlg = new SaveFileDialog { Title = "Save Script", Filter = Util2.FileDialogFilter("Script Files", "*.ldr") })
 				{
 					// Don't allow saving to the temporary script folder
 					dlg.FileOk += (s,a) => a.Cancel = Path_.IsSubPath(Model.TempScriptsDirectory, filepath);
@@ -1077,7 +1078,7 @@ namespace LDraw
 			else
 			{
 				StartPosition = FormStartPosition.Manual;
-				Bounds = Util.OnScreen(Settings.UI.WindowPosition);
+				Bounds = Util2.OnScreen(Settings.UI.WindowPosition);
 				WindowState = Settings.UI.WindowMaximised ? FormWindowState.Maximized : FormWindowState.Normal;
 			}
 		}
@@ -1110,7 +1111,7 @@ namespace LDraw
 			if (progress != null)
 			{
 				var finfo = new FileInfo(progress.Filepath);
-				m_pb_loading.ValueFrac(finfo.Length != 0 ? Maths.Clamp((float)progress.FileOffset / finfo.Length, 0f, 1f) : 1f);
+				m_pb_loading.ValueFrac(finfo.Length != 0 ? Math_.Clamp((float)progress.FileOffset / finfo.Length, 0f, 1f) : 1f);
 			}
 		}
 
@@ -1128,7 +1129,7 @@ namespace LDraw
 		private void InitializeComponent()
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainUI));
-			this.m_tsc = new pr.gui.ToolStripContainer();
+			this.m_tsc = new Rylogic.Gui.ToolStripContainer();
 			this.m_ss = new System.Windows.Forms.StatusStrip();
 			this.m_status = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_lbl_loading = new System.Windows.Forms.ToolStripStatusLabel();
@@ -1226,7 +1227,7 @@ namespace LDraw
 			this.m_btn_step_fwd = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_run = new System.Windows.Forms.ToolStripButton();
 			this.m_lbl_step_rate = new System.Windows.Forms.ToolStripLabel();
-			this.m_tr_speed = new pr.gui.ToolStripTrackBar();
+			this.m_tr_speed = new Rylogic.Gui.ToolStripTrackBar();
 			this.m_lbl_anim_clock = new System.Windows.Forms.ToolStripLabel();
 			this.m_tb_clock = new System.Windows.Forms.ToolStripTextBox();
 			this.m_ts_multiview = new System.Windows.Forms.ToolStrip();

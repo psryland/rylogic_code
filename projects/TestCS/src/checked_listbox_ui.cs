@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
-using pr.extn;
-using pr.gui;
+using Rylogic.Extn;
+using Rylogic.Gui;
 
 namespace TestCS
 {
@@ -72,7 +72,7 @@ namespace TestCS
 		/// </summary>
 		private void InitializeComponent()
 		{
-			this.m_chklist = new pr.gui.FlagCheckedListBox();
+			this.m_chklist = new Rylogic.Gui.FlagCheckedListBox();
 			this.SuspendLayout();
 			//
 			// m_chklist

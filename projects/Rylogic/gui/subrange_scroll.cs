@@ -5,15 +5,15 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
-using pr.gfx;
-using pr.maths;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Graphix;
+using Rylogic.Maths;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	/// <summary>
-	/// A vertical scroll bar replacement that shows a subrange within a larger range.
+	/// A vertical scroll bar replacement that shows a sub range within a larger range.
 	/// This class cannot inherit from VScrollBar because the OS does fancy stuff rendering it</summary>
 	public sealed class SubRangeScroll :Control
 	{
@@ -36,7 +36,7 @@ namespace pr.gui
 		}
 
 		/// <summary>The total size of the represented range</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("The total size of the represented range")]
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behaviour"), Description("The total size of the represented range")]
 		public Range TotalRange
 		{
 			get { return m_total_range; }
@@ -53,7 +53,7 @@ namespace pr.gui
 		private Range m_total_range;
 
 		/// <summary>The range of the thumb relative to TotalRange</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("The size of the thumb within TotalRange")]
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behaviour"), Description("The size of the thumb within TotalRange")]
 		public Range ThumbRange
 		{
 			get { return m_thumb_range; }
@@ -69,37 +69,37 @@ namespace pr.gui
 		private Range m_thumb_range;
 
 		/// <summary>The minimum size to let the thumb get</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("The minimum size to let the thumb get")]
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behaviour"), Description("The minimum size to let the thumb get")]
 		public int MinThumbSize { get; set; }
 
 		/// <summary>The colour of the track</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("The colour of the track")]
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behaviour"), Description("The colour of the track")]
 		public Color TrackColor { get; set; }
 
 		/// <summary>The colour of the thumb</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("The colour of the thumb")]
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behaviour"), Description("The colour of the thumb")]
 		public Color ThumbColor { get; set; }
 
 		/// <summary>The number of steps to move on page down/up</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("The number of steps to move on page down/up")]
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behaviour"), Description("The number of steps to move on page down/up")]
 		public long LargeChange
 		{
 			get { return m_large_change; }
-			set { m_large_change = Maths.Clamp(value, 1, TotalRange.Size); Invalidate(); }
+			set { m_large_change = Math_.Clamp(value, 1, TotalRange.Size); Invalidate(); }
 		}
 		private long m_large_change;
 
 		/// <summary>The number of steps to move on arrow down/up</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("The number of steps to move on arrow down/up")]
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behaviour"), Description("The number of steps to move on arrow down/up")]
 		public long SmallChange
 		{
 			get { return m_small_change; }
-			set { m_small_change = Maths.Clamp(value, 1, TotalRange.Size); Invalidate(); }
+			set { m_small_change = Math_.Clamp(value, 1, TotalRange.Size); Invalidate(); }
 		}
 		private long m_small_change;
 
 		/// <summary>The ranges to draw on the scroll bar</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("The indicator ranges to draw on the scroll bar")]
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behaviour"), Description("The indicator ranges to draw on the scroll bar")]
 		public IEnumerable<ISubRange> IndicatorRanges
 		{
 			// Not exposing the list as the ranges need to clamped within TotalRange
@@ -146,7 +146,7 @@ namespace pr.gui
 		protected override void OnSizeChanged(EventArgs e)
 		{
 			base.OnSizeChanged(e);
-			Region = new Region(Gfx.RoundedRectanglePath(ClientRectangle, m_corner_radius)); // Set the clip boundary
+			Region = new Region(Gdi.RoundedRectanglePath(ClientRectangle, m_corner_radius)); // Set the clip boundary
 		}
 		protected override void OnKeyDown(KeyEventArgs e)
 		{
@@ -197,8 +197,8 @@ namespace pr.gui
 			// Create rectangles for the highlight ranges
 			foreach (var r in m_indicator_ranges)
 			{
-				int sy = (int)(Maths.Frac(total.Beg, r.Range.Beg, total.End) * bounds.Height);
-				int ey = (int)(Maths.Frac(total.Beg, r.Range.End, total.End) * bounds.Height);
+				int sy = (int)(Math_.Frac(total.Beg, r.Range.Beg, total.End) * bounds.Height);
+				int ey = (int)(Math_.Frac(total.Beg, r.Range.End, total.End) * bounds.Height);
 				r.m_rect = new Rectangle(bounds.X, bounds.Y + sy, bounds.Width, Math.Max(ey - sy, 1));
 			}
 
@@ -245,11 +245,6 @@ namespace pr.gui
 
 			// Borders
 			gfx.DrawRectangleRounded(SystemPens.ControlDarkDark, bounds, m_corner_radius);
-			//using (var pen = new Pen(Color.FromArgb(255, VisibleRangeColor)))
-			//    gfx.DrawRectangle(pen, vis_rect);
-			//using (var pen = new Pen(Color.FromArgb(255, SelectedRangeColor)))
-			//    gfx.DrawRectangle(pen, sel_rect);
-			//gfx.DrawRectangleRounded(SystemPens.ControlDarkDark, thumb_rect, m_corner_radius);
 		}
 
 		/// <summary>Reset the collection of indicator ranges</summary>
@@ -270,7 +265,7 @@ namespace pr.gui
 		private void ScrollThumbPos(int y)
 		{
 			Range thm = ThumbRange;
-			thm.Mid = TotalRange.Beg + (long)(Maths.Frac(0, y, Height) * TotalRange.Size);
+			thm.Mid = TotalRange.Beg + (long)(Math_.Frac(0, y, Height) * TotalRange.Size);
 			ThumbRange = thm;
 		}
 
@@ -281,8 +276,8 @@ namespace pr.gui
 			var thm    = ThumbRange;
 			var total  = TotalRange;
 
-			int sy = (int)(Maths.Frac(total.Beg, thm.Beg, total.End) * bounds.Height);
-			int ey = (int)(Maths.Frac(total.Beg, thm.End, total.End) * bounds.Height);
+			int sy = (int)(Math_.Frac(total.Beg, thm.Beg, total.End) * bounds.Height);
+			int ey = (int)(Math_.Frac(total.Beg, thm.End, total.End) * bounds.Height);
 			var r = new Rectangle(bounds.X, bounds.Y + sy, bounds.Width, ey - sy);
 
 			// Apply the minimum thumb size constraint
@@ -298,52 +293,3 @@ namespace pr.gui
 		}
 	}
 }
-
-		///// <summary>Return the current centre position of the slider relative to TotalRange.</summary>
-		//public long RangeCentrePos
-		//{
-		//    get { return (long)(TotalRange * Maths.Lerp(ThumbSize*0.5, 1.0 - ThumbSize*0.5, Fraction)); }
-		//}
-		///// <summary>The thumb size as a fraction of the total range</summary>
-		//public double ThumbSize
-		//{
-		//    get { return m_thumbsize; }
-		//    set { m_thumbsize = Maths.Clamp(value, 0.05, 1.0); Invalidate(); }
-		//}
-
-		///// <summary>The size of the thumb in control space</summary>
-		//private int ThumbSizeCS
-		//{
-		//    get { return (int)(m_thumbsize * Height); }
-		//}
-
-		///// <summary>The normalised position of the thumb</summary>
-		//[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("The normalised position of the thumb")]
-		//public double Fraction
-		//{
-		//    get { return m_frac; }
-		//    set { m_frac = Maths.Clamp(value, 0.0, 1.0); RaiseValueChanged(); Invalidate(); }
-		//}
-
-		//var thumb_rect = new Rectangle(bounds.X, bounds.Y + thm_centre - thm_hheight, bounds.Width, 2 * thm_hheight); thumb_rect.Inflate(-2,0);
-
-		//[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("Minimum")]
-		//public int Minimum
-		//{
-		//    get { return m_minimum; }
-		//    set { m_minimum = value; Value = Value; Invalidate(); }
-		//}
-
-		//[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("Maximum")]
-		//public int Maximum
-		//{
-		//    get { return m_maximum; }
-		//    set { m_maximum = value; Value = Value; Invalidate(); }
-		//}
-
-		//[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("Value")]
-		//public int Value
-		//{
-		//    get { return (int)Maths.Lerp(Minimum, Maximum, (float)Fraction); }
-		//    set { Fraction = Maths.Ratio(Minimum, value, Maximum); RaiseValueChanged(); Invalidate(); }
-		//}

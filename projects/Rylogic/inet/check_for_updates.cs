@@ -3,7 +3,7 @@ using System.Net;
 using System.Threading;
 using System.Xml.Linq;
 
-namespace pr.inet
+namespace Rylogic.INet
 {
 	public static partial class INet
 	{

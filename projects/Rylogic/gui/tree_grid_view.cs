@@ -14,12 +14,12 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Windows.Forms;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	[ComplexBindingProperties]
 	[Docking(DockingBehavior.Ask)]
@@ -1777,9 +1777,9 @@ namespace pr.gui
 }
 
 #if PR_UNITTESTS
-namespace pr.unittests
+namespace Rylogic.UnitTests
 {
-	using gui;
+	using Gui;
 
 	[TestFixture] public class TestTreeGridView
 	{

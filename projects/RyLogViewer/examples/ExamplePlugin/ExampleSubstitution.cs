@@ -4,7 +4,7 @@ using RyLogViewer;
 namespace RyLogViewer.ExamplePlugin
 {
 	/// <summary>A example transform substitution, accessed via the Options->Transforms tab</summary>
-	[pr.common.Plugin(typeof(ITransformSubstitution))]
+	[Rylogic.Common.Plugin(typeof(ITransformSubstitution))]
 	public class ExampleSubstitution :TransformSubstitutionBase
 	{
 		/// <summary>

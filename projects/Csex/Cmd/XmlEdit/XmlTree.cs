@@ -7,10 +7,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using pr.gui;
-using pr.util;
-using pr.common;
-using pr.extn;
+using Rylogic.Gui;
+using Rylogic.Utility;
+using Rylogic.Common;
+using Rylogic.Extn;
 using System.Xml.Linq;
 
 namespace Csex

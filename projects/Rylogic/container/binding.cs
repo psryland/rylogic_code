@@ -4,10 +4,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using pr.extn;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
-namespace pr.container
+namespace Rylogic.Container
 {
 	/// <summary>
 	/// Represents a connection between a property on a data source object and
@@ -178,7 +178,7 @@ namespace pr.container
 		{
 			var value = Value;
 			m_bound.ForEach(x => x.Set(value));
-			ValueChanged.Raise(this, EventArgs.Empty);
+			ValueChanged?.Invoke(this, EventArgs.Empty);
 		}
 
 		/// <summary>
@@ -200,10 +200,10 @@ namespace pr.container
 
 
 #if PR_UNITTESTS
-namespace pr.unittests
+namespace Rylogic.UnitTests
 {
 	using System.Windows.Forms;
-	using container;
+	using Container;
 
 	[TestFixture] public class TestBinding
 	{

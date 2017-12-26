@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Windows.Forms;
 using Microsoft.VisualStudio.DebuggerVisualizers;
-using pr.extn;
+using Rylogic.Extn;
 
-namespace pr
+namespace Rylogic
 {
 	/// <summary>Base class for a visualiser</summary>
 	public abstract class VisualiserBase<TType, TForm> :DialogDebuggerVisualizer where TForm : Control

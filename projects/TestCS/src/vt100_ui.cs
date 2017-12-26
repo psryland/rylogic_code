@@ -1,7 +1,7 @@
 ﻿using System.Windows.Forms;
-using pr.gui;
-using pr.scintilla;
-using pr.util;
+using Rylogic.Gui;
+using Rylogic.Scintilla;
+using Rylogic.Utility;
 
 namespace TestCS
 {

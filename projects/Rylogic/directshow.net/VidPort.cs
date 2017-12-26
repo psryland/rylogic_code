@@ -1,7 +1,7 @@
 #region license
 
 /*
-pr.directshow - Provide access to DirectShow interfaces via .NET
+Rylogic.DirectShow - Provide access to DirectShow interfaces via .NET
 Copyright (C) 2007
 http://sourceforge.net/projects/directshownet/
 
@@ -23,12 +23,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #endregion
 
 using System;
-using System.Drawing;
 using System.Runtime.InteropServices;
 
-namespace pr.directshow
+namespace Rylogic.DirectShow
 {
-    #region Declarations
+	#region Declarations
 
 #if ALLOW_UNTESTED_INTERFACES
 
@@ -91,10 +90,10 @@ namespace pr.directshow
 
 #endif
 
-    /// <summary>
-    /// From AMVP_MODE
-    /// </summary>
-    public enum AMVP_Mode
+	/// <summary>
+	/// From AMVP_MODE
+	/// </summary>
+	public enum AMVP_Mode
     {
         Weave,
         BobInterleaved,

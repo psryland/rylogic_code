@@ -1,9 +1,9 @@
 ﻿using System.Drawing;
 using System.Windows.Forms;
-using pr.container;
-using pr.extn;
-using pr.util;
-using ComboBox = pr.gui.ComboBox;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Utility;
+using ComboBox = Rylogic.Gui.ComboBox;
 
 namespace TestCS
 {
@@ -60,7 +60,7 @@ namespace TestCS
 		private System.ComponentModel.IContainer components = null;
 		private void InitializeComponent()
 		{
-			this.m_cb0 = new pr.gui.ComboBox();
+			this.m_cb0 = new Rylogic.Gui.ComboBox();
 			this.m_lbl_cb0 = new System.Windows.Forms.Label();
 			this.m_lbl_selected_item = new System.Windows.Forms.Label();
 			this.m_tb_selected_item = new System.Windows.Forms.TextBox();

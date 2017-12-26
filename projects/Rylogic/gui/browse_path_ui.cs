@@ -2,12 +2,11 @@
 using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
-using pr.maths;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	public class BrowsePathUI :Control
 	{
@@ -88,7 +87,7 @@ namespace pr.gui
 				if (m_path == value) return;
 				m_path = m_cb_path.Text = value;
 				AddPathToHistory();
-				PathChanged.Raise(this);
+				PathChanged?.Invoke(this, EventArgs.Empty);
 			}
 		}
 		private string m_path;
@@ -210,7 +209,7 @@ namespace pr.gui
 			using (this.SuspendLayout(false))
 			{
 				var r = ClientRectangle;
-				var x = Maths.Min(r.Height, r.Width, 28);
+				var x = Math_.Min(r.Height, r.Width, 28);
 
 				m_btn_browse.Size     = new Size(x,x);
 				m_btn_browse.Location = new Point(r.Right - m_btn_browse.Width, (r.Height - m_btn_browse.Height)/2);

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 
-namespace pr.attrib
+namespace Rylogic.Attrib
 {
 	public class AbstractControlDescriptionProvider<TAbstract, TBase> :TypeDescriptionProvider
 	{

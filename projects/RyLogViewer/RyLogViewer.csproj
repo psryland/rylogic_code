@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>RyLogViewer</RootNamespace>
     <AssemblyName>RyLogViewer</AssemblyName>
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <TargetFrameworkProfile>
     </TargetFrameworkProfile>
     <FileAlignment>512</FileAlignment>
@@ -247,12 +247,12 @@
     <None Include="docs\docs\overview.htm" />
     <None Include="docs\docs\pattern_editor.htm" />
     <None Include="docs\docs\welcome.htm" />
-    <Content Include="docs\docs\export.htm" />
-    <Content Include="docs\docs\options_actions.htm" />
-    <Content Include="docs\docs\plugins.htm" />
-    <Content Include="docs\docs\ReadMe.txt" />
-    <Content Include="docs\docs\support.htm" />
-    <Content Include="docs\docs\transform_editor.htm" />
+    <None Include="docs\docs\export.htm" />
+    <None Include="docs\docs\options_actions.htm" />
+    <None Include="docs\docs\plugins.htm" />
+    <None Include="docs\docs\ReadMe.txt" />
+    <None Include="docs\docs\support.htm" />
+    <None Include="docs\docs\transform_editor.htm" />
     <Content Include="docs\help.htm" />
     <None Include="docs\inc\auto_refresh.include.htm" />
     <PyScript Include="docs\res\firstrun.htm">
@@ -263,7 +263,7 @@
     <Content Include="docs\inc\css.include.htm" />
     <Content Include="docs\inc\help_css.include.htm" />
     <Content Include="docs\inc\options_dialog.include.htm" />
-    <Content Include="docs\docs\RylogicSingleUserLicence.htm" />
+    <None Include="docs\docs\RylogicSingleUserLicence.htm" />
     <Content Include="docs\res\ReadMe.txt" />
     <Content Include="post_build.py" />
     <Content Include="project_howto.txt" />
@@ -443,6 +443,10 @@
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj">
+      <Project>{37a4f319-2052-404d-ae7f-f882cfa33c1b}</Project>
+      <Name>Rylogic.Core</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Rylogic\Rylogic.csproj">
       <Project>{1735c773-5477-45e6-9cbf-5f2b6dc707ef}</Project>
       <Name>Rylogic</Name>

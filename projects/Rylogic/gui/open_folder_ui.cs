@@ -1,16 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Windows.Forms;
-using pr.extn;
-using pr.util;
-using pr.win32;
+using Rylogic.Extn;
+using Rylogic.Utility;
+using Rylogic.Windows32;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	/// <summary>Select a folder using the vista style dialog</summary>
 	public sealed class OpenFolderUI : CommonDialog

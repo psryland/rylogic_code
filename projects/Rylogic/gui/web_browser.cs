@@ -4,11 +4,11 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
-using pr.container;
-using pr.extn;
-using pr.util;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	/// <remarks>
 	/// The standard win forms WebBrowser control is basically unusable except for
@@ -90,7 +90,7 @@ namespace pr.gui
 		/// <summary>Reload the current visit</summary>
 		public void Reload()
 		{
-			// If there's no url history, load 'blank'
+			// If there's no URL history, load 'blank'
 			if (UrlHistory.Current == null)
 				Navigate(AboutBlankUrl, true);
 			else

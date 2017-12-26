@@ -9,19 +9,17 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
-using pr.util;
-using pr.win32;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Scintilla;
+using Rylogic.Utility;
+using Rylogic.Windows32;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	using Timer = System.Windows.Forms.Timer;
 
-	/// <summary>
-	/// VT terminal emulation
-	/// see: http://ascii-table.com/ansi-escape-sequences.php
-	/// </summary>
+	/// <summary>VT terminal emulation. see: http://ascii-table.com/ansi-escape-sequences.php </summary>
 	public static class VT100
 	{
 		/// <summary>Terminal behaviour setting</summary>
@@ -1320,7 +1318,7 @@ namespace pr.gui
 
 				// Don't clamp x, the vt100 doesn't know what our buffer size is
 				// so we need to maintain a virtual space that might be outside our buffer
-				//x = Maths.Clamp(x, 0, Settings.TerminalWidth);
+				//x = Math_.Clamp(x, 0, Settings.TerminalWidth);
 				var loc = new Point(x, y);
 				return loc;
 			}
@@ -1478,19 +1476,19 @@ namespace pr.gui
 		/// <summary>A control that displays the VT100 buffer</summary>
 		public class Display :ScintillaCtrl
 		{
-			private static readonly string FileFilters = Util.FileDialogFilter("Text Files","*.txt","Log Files","*.log","All Files","*.*");
+			private static readonly string FileFilters = Util2.FileDialogFilter("Text Files","*.txt","Log Files","*.log","All Files","*.*");
 
 			private HoverScroll m_hs;
 			private EventBatcher m_eb;
 			private Dictionary<Style, byte> m_sty; // map from vt100 style to scintilla style index
-			private pr.scintilla.Sci.CellBuf m_cells;
+			private Sci.CellBuf m_cells;
 
 			public Display(Buffer buf)
 			{
 				m_hs = new HoverScroll(Handle);
 				m_eb = new EventBatcher(UpdateText, TimeSpan.FromMilliseconds(1)){TriggerOnFirst = true};
 				m_sty = new Dictionary<Style,byte>();
-				m_cells = new pr.scintilla.Sci.CellBuf();
+				m_cells = new Sci.CellBuf();
 				ContextMenuStrip = new CMenu(this);
 				
 				BlinkTimer = new Timer{Interval = 1000, Enabled = false};
@@ -1678,8 +1676,8 @@ namespace pr.gui
 					if (line_count < region.Bottom)
 					{
 						var pad = new byte[region.Bottom - line_count].Memset(0x0a);
-						using (var p = GCHandleEx.Alloc(pad, GCHandleType.Pinned))
-							Cmd(pr.scintilla.Sci.SCI_APPENDTEXT, pad.Length, p.Handle.AddrOfPinnedObject());
+						using (var p = GCHandle_.Alloc(pad, GCHandleType.Pinned))
+							Cmd(Sci.SCI_APPENDTEXT, pad.Length, p.Handle.AddrOfPinnedObject());
 					}
 
 					// Update the text in the control from the invalid buffer region
@@ -2188,9 +2186,9 @@ namespace pr.gui
 }
 
 #if PR_UNITTESTS
-namespace pr.unittests
+namespace Rylogic.UnitTests
 {
-	using gui;
+	using Gui;
 
 	[TestFixture] public class TestVT100
 	{

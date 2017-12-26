@@ -2,10 +2,10 @@
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
-using pr.extn;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	/// <summary>A helper dialog for prompting for a single line of user input</summary>
 	public class MsgBox :Form
@@ -201,7 +201,7 @@ namespace pr.gui
 				var owner = Owner;
 				for (; owner != null && !owner.Visible; owner = owner.Owner) {}
 				if (owner != null)
-					Location = Drawing_.Subtract(owner.DesktopBounds.Centre(), Drawing_.Scaled(Size, 0.5f));
+					Location = Point_.Subtract(owner.DesktopBounds.Centre(), Size.Scaled(0.5f));
 				else
 					CenterToScreen();
 			}
@@ -478,7 +478,7 @@ namespace pr.gui
 			this.m_btn_positive = new System.Windows.Forms.Button();
 			this.m_image = new System.Windows.Forms.PictureBox();
 			this.m_panel = new System.Windows.Forms.Panel();
-			this.m_message = new pr.gui.RichTextBox();
+			this.m_message = new Rylogic.Gui.RichTextBox();
 			this.m_panel_btns = new System.Windows.Forms.Panel();
 			((System.ComponentModel.ISupportInitialize)(this.m_image)).BeginInit();
 			this.m_panel.SuspendLayout();
@@ -595,7 +595,7 @@ namespace pr.gui
 }
 
 #if PR_UNITTESTS
-namespace pr.unittests
+namespace Rylogic.UnitTests
 {
 	[TestFixture] public class TestMsgBox
 	{

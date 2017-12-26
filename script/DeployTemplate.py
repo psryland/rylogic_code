@@ -52,8 +52,8 @@ try:
 	print("Copying files to " + dst)
 	Tools.Copy(bindir + r"\csex.exe", dst + r"\csex.exe")
 	Tools.Copy(bindir + r"\csex.pdb", sym + r"\csex.pdb")
-	Tools.Copy(bindir + r"\pr.dll"  , dst + r"\pr.dll"  )
-	Tools.Copy(bindir + r"\pr.pdb"  , sym + r"\pr.pdb"  )
+	Tools.Copy(bindir + r"\Rylogic.dll"  , dst + r"\Rylogic.dll"  )
+	Tools.Copy(bindir + r"\Rylogic.pdb"  , sym + r"\Rylogic.pdb"  )
 
 	Tools.OnSuccess()
 

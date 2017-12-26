@@ -5,12 +5,11 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Windows.Forms;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.INet;
+using Rylogic.Utility;
 using RyLogViewer.Properties;
-using pr.common;
-using pr.extn;
-using pr.gui;
-using pr.inet;
-using pr.util;
 
 namespace RyLogViewer
 {
@@ -103,7 +102,7 @@ namespace RyLogViewer
 				,MessageBoxIcon.Error);
 			if (res == DialogResult.Yes)
 			{
-				var dg = new SaveFileDialog{Title = "Save Crash Report", FileName = Application.ProductName+"CrashReport", Filter = Util.FileDialogFilter("Crash Report Files","*.txt", "All files","*.*"), DefaultExt = "txt", CheckPathExists = true};
+				var dg = new SaveFileDialog{Title = "Save Crash Report", FileName = Application.ProductName+"CrashReport", Filter = Util2.FileDialogFilter("Crash Report Files","*.txt", "All files","*.*"), DefaultExt = "txt", CheckPathExists = true};
 				if (dg.ShowDialog() == DialogResult.OK)
 				{
 					var settings = "Settings filepath unknown";

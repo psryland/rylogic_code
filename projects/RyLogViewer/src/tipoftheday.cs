@@ -4,9 +4,9 @@ using System.Diagnostics;
 using System.Linq;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
-using pr.extn;
-using pr.script;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Script;
+using Rylogic.Utility;
 
 namespace RyLogViewer
 {
@@ -225,7 +225,7 @@ namespace RyLogViewer
 				case Cmd.open_example_logfile:
 					Main.SetLineEnding(ELineEnding.Detect);
 					Main.SetEncoding(null);
-					Main.OpenSingleLogFile(Util.ResolveAppPath(ExampleFiles.LogFile), false);
+					Main.OpenSingleLogFile(Util2.ResolveAppPath(ExampleFiles.LogFile), false);
 					Close();
 					break;
 				case Cmd.show_column_delimiter_options:

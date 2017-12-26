@@ -3,11 +3,11 @@ using System.Drawing;
 using System.Linq;
 using System.Collections.Generic;
 using System.Windows.Forms;
-using pr.container;
-using pr.extn;
-using pr.util;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	/// <summary>A helper dialog for display a simple list of items for a user to select from</summary>
 	public class ListUI :Form
@@ -181,7 +181,7 @@ namespace pr.gui
 			this.m_lbl_info = new System.Windows.Forms.Label();
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_btn_cancel = new System.Windows.Forms.Button();
-			this.m_list = new pr.gui.ListBox();
+			this.m_list = new Rylogic.Gui.ListBox();
 			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
 			this.m_table = new System.Windows.Forms.TableLayoutPanel();
 			this.m_panel_btns = new System.Windows.Forms.Panel();

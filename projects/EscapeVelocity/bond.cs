@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using pr.extn;
-using pr.maths;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace EscapeVelocity
 {
@@ -44,7 +44,7 @@ namespace EscapeVelocity
 			var shareable = Shareable(elem1, elem2);
 
 			// Constant to make the strength reasonable numbers
-			var scaler = 1e11 * consts.CoulombConstant * Maths.Sqr(consts.ElectronCharge) / Maths.Sqr(10e-12);
+			var scaler = 1e11 * consts.CoulombConstant * Math_.Sqr(consts.ElectronCharge) / Math_.Sqr(10e-12);
 
 			// Assume these electrons sit between the two atoms, calculate the electro-static
 			// force between the electrons and each element
@@ -62,14 +62,14 @@ namespace EscapeVelocity
 					break;
 
 				// Accumulate the attractive forces
-				strength += scaler * charge1 * 1.0 / Maths.Sqr(elem1.ValenceOrbitalRadius);
-				strength += scaler * charge2 * 1.0 / Maths.Sqr(elem2.ValenceOrbitalRadius);
+				strength += scaler * charge1 * 1.0 / Math_.Sqr(elem1.ValenceOrbitalRadius);
+				strength += scaler * charge2 * 1.0 / Math_.Sqr(elem2.ValenceOrbitalRadius);
 				++Order;
 			}
 			{// Remove the effective charge repulsive force
 				var charge1 = elem1.EffectiveCharge(consts, elem1.AtomicNumber + Order);
 				var charge2 = elem2.EffectiveCharge(consts, elem2.AtomicNumber + Order);
-				strength -= scaler * charge1 * charge2 / Maths.Sqr(elem1.ValenceOrbitalRadius + elem2.ValenceOrbitalRadius);
+				strength -= scaler * charge1 * charge2 / Math_.Sqr(elem1.ValenceOrbitalRadius + elem2.ValenceOrbitalRadius);
 			}
 
 			// Scale the strength by 'Order'

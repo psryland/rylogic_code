@@ -1,7 +1,7 @@
 #region license
 
 /*
-pr.directshow - Provide access to DirectShow interfaces via .NET
+Rylogic.DirectShow - Provide access to DirectShow interfaces via .NET
 Copyright (C) 2007
 http://sourceforge.net/projects/directshownet/
 
@@ -26,7 +26,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace pr.directshow.SBE
+namespace Rylogic.DirectShow.SBE
 {
     #region Declarations
 

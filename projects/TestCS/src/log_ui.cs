@@ -1,11 +1,11 @@
 ﻿using System.Windows.Forms;
-using pr.util;
+using Rylogic.Utility;
 
 namespace TestCS
 {
 	public class LogUI :Form
 	{
-		private pr.gui.LogUI m_log_ui;
+		private Rylogic.Gui.LogUI m_log_ui;
 		public LogUI()
 		{
 			InitializeComponent();
@@ -20,7 +20,7 @@ namespace TestCS
 		private System.ComponentModel.IContainer components = null;
 		private void InitializeComponent()
 		{
-			this.m_log_ui = new pr.gui.LogUI();
+			this.m_log_ui = new Rylogic.Gui.LogUI();
 			this.SuspendLayout();
 			// 
 			// m_log_ui

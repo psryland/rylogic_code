@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace pr.win32
+namespace Rylogic.Windows32
 {
 	public static partial class Win32
 	{

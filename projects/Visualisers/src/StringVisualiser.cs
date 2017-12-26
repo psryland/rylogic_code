@@ -6,22 +6,23 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.VisualStudio.DebuggerVisualizers;
-using pr.gui;
+using Rylogic.Gui;
+using RichTextBox = Rylogic.Gui.RichTextBox;
 
 [assembly: System.Diagnostics.DebuggerVisualizer(
-	typeof(pr.StringVisualiser.Visualiser),
-	typeof(pr.StringVisualiser.Source),
+	typeof(Rylogic.StringVisualiser.Visualiser),
+	typeof(Rylogic.StringVisualiser.Source),
 	Target = typeof(System.String),
 	Description = "Rylogic String Visualiser")]
 
-namespace pr
+namespace Rylogic
 {
 	public class StringVisualiser :ToolForm
 	{
 		public class Visualiser :VisualiserBase<string, StringVisualiser> {}
 		public class Source     :VisualiserObjectSourceBase<string> {}
 
-		private gui.RichTextBox m_rtb;
+		private RichTextBox m_rtb;
 	
 		public StringVisualiser(string obj)
 		{
@@ -32,7 +33,7 @@ namespace pr
 		private void InitializeComponent()
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(StringVisualiser));
-			this.m_rtb = new pr.gui.RichTextBox();
+			this.m_rtb = new Rylogic.Gui.RichTextBox();
 			this.SuspendLayout();
 			// 
 			// m_rtb

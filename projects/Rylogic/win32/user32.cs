@@ -2,15 +2,14 @@
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
+using Rylogic.Utility;
+using HRGN = System.IntPtr;
+using HWND = System.IntPtr;
+using LPARAM = System.IntPtr;
+using WPARAM = System.IntPtr;
 
-namespace pr.win32
+namespace Rylogic.Windows32
 {
-	using UINT = System.UInt32;
-	using HWND = System.IntPtr;
-	using HRGN = System.IntPtr;
-	using WPARAM = System.IntPtr;
-	using LPARAM = System.IntPtr;
-	using util;
 
 	public static partial class Win32
 	{

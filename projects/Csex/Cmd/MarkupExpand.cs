@@ -1,7 +1,7 @@
 using System;
 using System.IO;
-using pr.extn;
-using pr.script;
+using Rylogic.Extn;
+using Rylogic.Script;
 
 namespace Csex
 {

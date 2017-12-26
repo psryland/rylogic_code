@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Text;
 using System.Windows.Forms;
 using System.Xml.Linq;
-using pr.common;
-using pr.extn;
+using Rylogic.Common;
+using Rylogic.Extn;
 
 namespace RyLogViewer
 {

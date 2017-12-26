@@ -3,9 +3,9 @@ using System.Diagnostics;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using pr.util;
+using Rylogic.Utility;
 
-namespace pr.common
+namespace Rylogic.Common
 {
 	public static class ActivationCode
 	{
@@ -46,10 +46,10 @@ namespace pr.common
 }
 
 #if PR_UNITTESTS
-namespace pr.unittests
+namespace Rylogic.UnitTests
 {
-	using common;
-	using crypt;
+	using Common;
+	using Crypt;
 	
 	[TestFixture] public class TestActivationCode
 	{

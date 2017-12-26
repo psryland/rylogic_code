@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
-using pr.maths;
-using pr.util;
-using pr.win32;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
+using Rylogic.Windows32;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	/// <summary>A base class with default implementations of a cell edit control.</summary>
 	public abstract class DataGridViewCellEditBase :Control ,IDataGridViewEditingControl
@@ -744,7 +744,7 @@ namespace pr.gui
 			get { return m_impl_value; }
 			set
 			{
-				value = (int)Maths.Clamp(value, Range.Beg, Range.End);
+				value = (int)Math_.Clamp(value, Range.Beg, Range.End);
 				if (Equals(m_impl_value, value) || m_in_set_position) return;
 				using (Scope.Create(() => m_in_set_position = true, () => m_in_set_position = false))
 				{
@@ -815,14 +815,14 @@ namespace pr.gui
 		/// <summary>Return the value at pixel position 'x'</summary>
 		private int ReadValueAt(int x)
 		{
-			var frac = Maths.Clamp(Maths.Frac(m_btn_width/2, x, Width - m_btn_width/2), 0f, 1f);
-			return Maths.Lerp(Range.Begi, Range.Endi, frac);
+			var frac = Math_.Clamp(Math_.Frac(m_btn_width/2, x, Width - m_btn_width/2), 0f, 1f);
+			return Math_.Lerp(Range.Begi, Range.Endi, frac);
 		}
 
 		/// <summary>Paint the track bar</summary>
 		public static void PaintTrackBar(Graphics gfx, Rectangle cell_bounds, double pos, double min_pos, double max_pos)
 		{
-			var frac = (float)Maths.Clamp(Maths.Frac(min_pos, pos, max_pos), 0f, 1f);
+			var frac = (float)Math_.Clamp(Math_.Frac(min_pos, pos, max_pos), 0f, 1f);
 
 			// Draw the track
 			RectangleF track_rect = cell_bounds;

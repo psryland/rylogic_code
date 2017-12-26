@@ -4,11 +4,11 @@ using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
 using System.Windows.Threading;
-using pr.extn;
-using pr.maths;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	public sealed class ProgressForm :Form
 	{
@@ -269,7 +269,7 @@ namespace pr.gui
 			var do_layout = us.ForceLayout != null && us.ForceLayout.Value;
 
 			if (us.FractionComplete != null)
-				m_progress.Value = (int)Maths.Lerp(m_progress.Minimum, m_progress.Maximum, Maths.Clamp(us.FractionComplete.Value,0f,1f));
+				m_progress.Value = (int)Math_.Lerp(m_progress.Minimum, m_progress.Maximum, Math_.Clamp(us.FractionComplete.Value,0f,1f));
 
 			if (us.Title != null)
 				Text = us.Title;

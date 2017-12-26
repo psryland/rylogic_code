@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Windows.Forms;
-using pr.extn;
-using pr.maths;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace RyLogViewer
 {
@@ -96,8 +96,8 @@ namespace RyLogViewer
 			set
 			{
 				if (Math.Abs(m_alpha - value) < float.Epsilon) return;
-				m_alpha = Maths.Clamp(value, 0f, 1f);
-				m_trk_opacity.Value = (int)Maths.Clamp(m_alpha * 100f, m_trk_opacity.Minimum, m_trk_opacity.Maximum);
+				m_alpha = Math_.Clamp(value, 0f, 1f);
+				m_trk_opacity.Value = (int)Math_.Clamp(m_alpha * 100f, m_trk_opacity.Minimum, m_trk_opacity.Maximum);
 			}
 		}
 		private float m_alpha;

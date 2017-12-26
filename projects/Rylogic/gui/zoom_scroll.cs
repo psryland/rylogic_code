@@ -7,12 +7,12 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
-using pr.gfx;
-using pr.maths;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Graphix;
+using Rylogic.Maths;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	public class ZoomScroll :Control
 	{
@@ -20,8 +20,8 @@ namespace pr.gui
 		private readonly HoverScroll m_hoverscroll = new HoverScroll();
 		private bool m_dragging = false;
 
-		/// <summary>The total unzoomed size of the represented range</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("The total unzoomed size of the represented range")]
+		/// <summary>The total un-zoomed size of the represented range</summary>
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behaviour"), Description("The total un-zoomed size of the represented range")]
 		public Range TotalRange
 		{
 			get { return m_total_range; }
@@ -38,7 +38,7 @@ namespace pr.gui
 		private Range m_total_range;
 
 		/// <summary>The size of the total range after zooming</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("The size of the total range after zooming")]
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behaviour"), Description("The size of the total range after zooming")]
 		public Range ZoomedRange
 		{
 			get { return m_zoomed_range; }
@@ -54,7 +54,7 @@ namespace pr.gui
 		private Range m_zoomed_range;
 
 		/// <summary>The size of the visible region of the represented range</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("The size of the visible region of the represented range")]
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behaviour"), Description("The size of the visible region of the represented range")]
 		public Range VisibleRange
 		{
 			get { return m_visible_range; }
@@ -70,46 +70,46 @@ namespace pr.gui
 		private Range m_visible_range;
 
 		/// <summary>Effectively the maximum zoom allowed = TotalRange.Size / MinimumVisibleRangeSize</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("Effectively the maximum zoom allowed = TotalRange.Size / MinimumVisibleRangeSize")]
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behaviour"), Description("Effectively the maximum zoom allowed = TotalRange.Size / MinimumVisibleRangeSize")]
 		public int MinimumVisibleRangeSize { get; set; }
 
 		/// <summary>The number of steps to move on page down/up</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("The number of steps to move on page down/up")]
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behaviour"), Description("The number of steps to move on page down/up")]
 		public long LargeChange
 		{
 			get { return m_large_change; }
-			set { m_large_change = Maths.Clamp(value, 1, TotalRange.Size); Invalidate(); }
+			set { m_large_change = Math_.Clamp(value, 1, TotalRange.Size); Invalidate(); }
 		}
 		private long m_large_change;
 
 		/// <summary>The number of steps to move on arrow down/up</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("The number of steps to move on arrow down/up")]
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behaviour"), Description("The number of steps to move on arrow down/up")]
 		public long SmallChange
 		{
 			get { return m_small_change; }
-			set { m_small_change = Maths.Clamp(value, 1, TotalRange.Size); Invalidate(); }
+			set { m_small_change = Math_.Clamp(value, 1, TotalRange.Size); Invalidate(); }
 		}
 		private long m_small_change;
 
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("The colour of the highlight showing the visible region")]
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behaviour"), Description("The colour of the highlight showing the visible region")]
 		public Color VisibleRangeColor { get; set; }
 
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("The border colour that delimits the visible region")]
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behaviour"), Description("The border colour that delimits the visible region")]
 		public Color VisibleRangeBorderColor { get; set; }
 
-		/// <summary>The background colour of the scroller</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("TrackColor")]
+		/// <summary>The background colour of the scroll control</summary>
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behaviour"), Description("TrackColor")]
 		public Color TrackColor { get; set; }
 
 		/// <summary>The zoom factor</summary>
-		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behavior"), Description("The zoom factor")]
+		[EditorBrowsable(EditorBrowsableState.Always), Browsable(true), Category("Behaviour"), Description("The zoom factor")]
 		public float Zoom
 		{
 			get { return m_total_range.Size / (float)m_zoomed_range.Size; }
 			set
 			{
 				if (Math.Abs(value - Zoom) < float.Epsilon) return;
-				value = Maths.Clamp(value, 1.0f, 1000000.0f);
+				value = Math_.Clamp(value, 1.0f, 1000000.0f);
 				var sz = Math.Max((int)(m_total_range.Size / value), MinimumVisibleRangeSize);
 				var r = new Range(0, sz){Mid = ZoomedRange.Mid};
 				if (r.Beg > VisibleRange.Beg) r = r.Shift(VisibleRange.Beg - r.Beg);
@@ -168,7 +168,7 @@ namespace pr.gui
 		protected override void OnSizeChanged(EventArgs e)
 		{
 			base.OnSizeChanged(e);
-			Region = new Region(Gfx.RoundedRectanglePath(ClientRectangle, m_corner_radius)); // Set the clip boundary
+			Region = new Region(Gdi.RoundedRectanglePath(ClientRectangle, m_corner_radius)); // Set the clip boundary
 		}
 		protected override void OnKeyDown(KeyEventArgs e)
 		{
@@ -242,8 +242,8 @@ namespace pr.gui
 			// Draw the visible range
 			if (bounds.Width > 2)
 			{
-				int sy = (int)(Maths.Frac(total.Beg, VisibleRange.Beg, total.End) * bounds.Height);
-				int ey = (int)(Maths.Frac(total.Beg, VisibleRange.End, total.End) * bounds.Height);
+				int sy = (int)(Math_.Frac(total.Beg, VisibleRange.Beg, total.End) * bounds.Height);
+				int ey = (int)(Math_.Frac(total.Beg, VisibleRange.End, total.End) * bounds.Height);
 				var r = new Rectangle(bounds.X+1, bounds.Y + sy, bounds.Width-2, ey - sy);
 				using (var bsh = new SolidBrush(VisibleRangeColor))
 				{
@@ -265,7 +265,7 @@ namespace pr.gui
 		private void CentreVisible(int y)
 		{
 			var vis = VisibleRange;
-			vis.Mid = ZoomedRange.Beg + (long)(Maths.Frac(0, y, Height) * ZoomedRange.Size);
+			vis.Mid = ZoomedRange.Beg + (long)(Math_.Frac(0, y, Height) * ZoomedRange.Size);
 			VisibleRange = vis;
 		}
 	}

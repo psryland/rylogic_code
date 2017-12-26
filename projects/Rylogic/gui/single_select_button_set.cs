@@ -3,9 +3,9 @@ using System.ComponentModel;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
-using pr.extn;
+using Rylogic.Extn;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	/// <summary>A helper for creating sets of buttons for which only one can be checked</summary>
 	public class SingleSelectButtonSet :Component ,IDisposable

@@ -1,7 +1,7 @@
 ﻿using System;
-using pr.extn;
+using Rylogic.Extn;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	/// <summary>DateTimePicker with support for UTC/Local</summary>
 	public class DateTimePicker :System.Windows.Forms.DateTimePicker

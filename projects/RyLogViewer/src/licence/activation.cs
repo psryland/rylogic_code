@@ -1,14 +1,9 @@
 ﻿using System;
 using System.Drawing;
-using System.IO;
-using System.Net.Mail;
-using System.Text.RegularExpressions;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
-using pr.gui;
-using pr.inet;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Utility;
 
 namespace RyLogViewer
 {

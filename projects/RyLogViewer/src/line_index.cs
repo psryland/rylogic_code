@@ -7,11 +7,11 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
-using pr.maths;
-using pr.stream;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Streams;
+using Rylogic.Utility;
 
 namespace RyLogViewer
 {
@@ -74,8 +74,8 @@ namespace RyLogViewer
 			get
 			{
 				if (m_line_index.Count == 0) return Range.Zero;
-				int b = Maths.Clamp(m_grid.FirstDisplayedScrollingRowIndex, 0, m_line_index.Count - 1);
-				int e = Maths.Clamp(b + m_grid.DisplayedRowCount(true), 0, m_line_index.Count - 1);
+				int b = Math_.Clamp(m_grid.FirstDisplayedScrollingRowIndex, 0, m_line_index.Count - 1);
+				int e = Math_.Clamp(b + m_grid.DisplayedRowCount(true), 0, m_line_index.Count - 1);
 				return new Range(m_line_index[b].Beg, m_line_index[e].End);
 			}
 		}
@@ -146,7 +146,7 @@ namespace RyLogViewer
 				// exception but oh well...
 				file               = file_source.NewInstance().Open();
 				fileend            = Math.Min(file.Stream.Length, fileend_);
-				filepos            = Maths.Clamp(filepos_, 0, fileend);
+				filepos            = Math_.Clamp(filepos_, 0, fileend);
 				filepos_line_index = LineIndex(main.m_line_index, filepos);
 
 				max_line_length    = main.Settings.MaxLineLength;
@@ -353,7 +353,7 @@ namespace RyLogViewer
 						{
 							scan_backward = true;
 							scan_range = Lrange;
-							bwd_lines -=  Maths.Clamp(d.filepos_line_index - 0, 0, bwd_lines);
+							bwd_lines -=  Math_.Clamp(d.filepos_line_index - 0, 0, bwd_lines);
 							fwd_lines = 0;
 						}
 						else if (dir > 0)
@@ -361,7 +361,7 @@ namespace RyLogViewer
 							scan_backward = false;
 							scan_range = Rrange;
 							bwd_lines = 0;
-							fwd_lines -= Maths.Clamp(d.line_index_count - d.filepos_line_index - 1, 0, fwd_lines);
+							fwd_lines -= Math_.Clamp(d.line_index_count - d.filepos_line_index - 1, 0, fwd_lines);
 						}
 						else if (dir == 0)
 						{
@@ -419,7 +419,7 @@ namespace RyLogViewer
 
 						// Scan twice, starting in the direction of the smallest range so that any
 						// unused cache space is used by the search in the other direction
-						var scan_from = Maths.Clamp(d.filepos, scan_range.Beg, scan_range.End);
+						var scan_from = Math_.Clamp(d.filepos, scan_range.Beg, scan_range.End);
 						for (int a = 0; a != 2; ++a, scan_backward = !scan_backward)
 						{
 							if (BuildCancelled(d.build_issue)) return;

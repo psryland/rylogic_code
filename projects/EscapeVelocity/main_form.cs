@@ -2,9 +2,9 @@
 using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
-using pr.gui;
-using pr.util;
-using pr.win32;
+using Rylogic.Gui;
+using Rylogic.Utility;
+using Rylogic.Windows32;
 
 namespace EscapeVelocity
 {

@@ -2,10 +2,10 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
-using pr.extn;
-using pr.gfx;
+using Rylogic.Extn;
+using Rylogic.Graphix;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	/// <summary>Fancy switch like windows 10 uses</summary>
 	public class SwitchCheckBox :Button
@@ -94,7 +94,7 @@ namespace pr.gui
 
 			// Set the region for the control
 			var r = ClientSize.Width < ClientSize.Height * 2 ? ClientSize.Width / 8f : ClientSize.Height / 4f;
-			Region = new Region(Gfx.RoundedRectanglePath(new RectangleF(0,0,8*r,4*r), 2*r));
+			Region = new Region(Gdi.RoundedRectanglePath(new RectangleF(0,0,8*r,4*r), 2*r));
 		}
 		protected override void OnPaintBackground(PaintEventArgs pevent)
 		{

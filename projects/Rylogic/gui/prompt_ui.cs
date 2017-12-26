@@ -3,11 +3,11 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
-using pr.extn;
-using pr.maths;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	/// <summary>A helper dialog for prompting for a single line of user input</summary>
 	public class PromptUI :Form
@@ -65,8 +65,8 @@ namespace pr.gui
 					// Minimum size needed for the text label
 					var sz_info = m_lbl_info.PreferredSize;
 
-					var w = Maths.Max(sz_client.Width, 2*x_10px + w_btns, 2*x_10px + sz_info.Width) ;
-					var h = Maths.Max(sz_client.Height, y_10px + sz_info.Height + y_10px + ctrl.Height + y_10px + btns[0].Height + y_10px);
+					var w = Math_.Max(sz_client.Width, 2*x_10px + w_btns, 2*x_10px + sz_info.Width) ;
+					var h = Math_.Max(sz_client.Height, y_10px + sz_info.Height + y_10px + ctrl.Height + y_10px + btns[0].Height + y_10px);
 					ClientSize = new Size(w,h);
 				}
 
@@ -318,8 +318,8 @@ namespace pr.gui
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_btn_cancel = new System.Windows.Forms.Button();
 			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
-			this.m_cb_value = new pr.gui.ComboBox();
-			this.m_tb_value = new pr.gui.ValueBox();
+			this.m_cb_value = new Rylogic.Gui.ComboBox();
+			this.m_tb_value = new Rylogic.Gui.ValueBox();
 			this.SuspendLayout();
 			// 
 			// m_lbl_info

@@ -6,10 +6,10 @@ using System.Threading;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using RyLogViewer.Properties;
-using pr.common;
-using pr.extn;
-using pr.gui;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Utility;
 
 namespace RyLogViewer
 {
@@ -39,7 +39,7 @@ namespace RyLogViewer
 
 				// Perform the signing test
 				m_signing_last_tested = Environment.TickCount;
-				if (pr.crypt.Crypt.Validate(Application.ExecutablePath, Resources.public_key, false))
+				if (Rylogic.Crypt.Crypt.Validate(Application.ExecutablePath, Resources.public_key, false))
 					return;
 
 				// Notify if it fails
@@ -221,7 +221,7 @@ namespace RyLogViewer
 		/// <summary>True if the licence is valid with itself</summary>
 		public bool ValidActivationCode
 		{
-			get { return pr.common.ActivationCode.Validate(UserDetails, m_activation_code, Resources.public_key); }
+			get { return Rylogic.Common.ActivationCode.Validate(UserDetails, m_activation_code, Resources.public_key); }
 		}
 
 		/// <summary>True if the version in the licence covers this version of the app</summary>

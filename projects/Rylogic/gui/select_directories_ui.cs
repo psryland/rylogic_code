@@ -6,12 +6,12 @@ using System.Text;
 using System.Security;
 using System.Security.Permissions;
 using System.Windows.Forms;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	public class SelectDirectoriesUI :Form
 	{
@@ -90,13 +90,13 @@ namespace pr.gui
 		private void SetupList()
 		{
 			m_listbox.DoubleClick += (s,a) =>
-				{
-					var path = (Path)m_listbox.SelectedItem;
-					m_tree.SelectedNode = m_tree.GetNode(path.Name);
-					m_tree.SelectedNode.EnsureVisible();
-				};
-			m_listbox.KeyDown += ListBoxExtensions.SelectAll;
-			m_listbox.KeyDown += ListBoxExtensions.Copy;
+			{
+				var path = (Path)m_listbox.SelectedItem;
+				m_tree.SelectedNode = m_tree.GetNode(path.Name);
+				m_tree.SelectedNode.EnsureVisible();
+			};
+			m_listbox.KeyDown += ListBox_.SelectAll;
+			m_listbox.KeyDown += ListBox_.Copy;
 		}
 
 		/// <summary>Initialise the list of directories to search</summary>
@@ -231,7 +231,7 @@ namespace pr.gui
 			{
 				p.Length -= parts[i].Length + 1;
 				if (p.Length == 0 ||
-					!Path_.EnumFileSystem(p.ToString(), SearchOption.TopDirectoryOnly)
+					!Shell_.EnumFileSystem(p.ToString(), SearchOption.TopDirectoryOnly)
 					.Where(x => x.IsDirectory)
 					.All(x => Paths.BinarySearch(x.FullPath, Path.Compare) >= 0))
 					break; // Not all child paths of 'p' are in 'Paths'
@@ -287,7 +287,7 @@ namespace pr.gui
 				// Add the child paths for the ancestral siblings of 'path'
 				for (++part_idx; part_idx != parts.Length; ++part_idx)
 				{
-					foreach (var sib in Path_.EnumFileSystem(path.Text.Substring(0, p.Length), SearchOption.TopDirectoryOnly).Where(x => x.IsDirectory))
+					foreach (var sib in Shell_.EnumFileSystem(path.Text.Substring(0, p.Length), SearchOption.TopDirectoryOnly).Where(x => x.IsDirectory))
 					{
 						if (string.CompareOrdinal(parts[part_idx], sib.FileName.ToLowerInvariant()) == 0) continue;
 						Paths.AddOrdered(sib.FullPath, Path.Compare);
@@ -335,7 +335,7 @@ namespace pr.gui
 		private static IEnumerable<TreeNode> GetChildNodes(TreeNode node)
 		{
 			var path = new Path(node.FullPath);
-			return Path_.EnumFileSystem(path.Name, SearchOption.TopDirectoryOnly)
+			return Shell_.EnumFileSystem(path.Name, SearchOption.TopDirectoryOnly)
 				.Where(fi => fi.IsDirectory)
 				.Select(fi => new TreeNode(fi.FileName, node.TriState));
 		}
@@ -491,7 +491,7 @@ namespace pr.gui
 					// Update all child nodes (recursively)
 					if (m_tristate != TreeNode.ETriState.Indeterminate)
 					{
-						foreach (var c in this.AllNodes(TreeViewExtensions.ERecursionOrder.DepthFirst).Cast<TreeNode>())
+						foreach (var c in this.AllNodes(TreeView_.ERecursionOrder.DepthFirst).Cast<TreeNode>())
 							c.SetTriStateInternal(m_tristate);
 					}
 				}
@@ -526,7 +526,7 @@ namespace pr.gui
 			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SelectDirectoriesUI));
 			this.m_btn_ok = new System.Windows.Forms.Button();
-			this.m_tree = new pr.gui.SelectDirectoriesUI.TreeView();
+			this.m_tree = new Rylogic.Gui.SelectDirectoriesUI.TreeView();
 			this.m_listbox = new ListBox();
 			this.m_split = new System.Windows.Forms.SplitContainer();
 			((System.ComponentModel.ISupportInitialize)(this.m_split)).BeginInit();

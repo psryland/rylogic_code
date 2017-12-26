@@ -1,14 +1,14 @@
 ﻿using System.Drawing;
 using System.Windows.Forms;
-using pr.extn;
-using pr.maths;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace TestCS
 {
 	public class ListBoxUI :Form
 	{
-		private pr.gui.ListBox m_lb;
+		private Rylogic.Gui.ListBox m_lb;
 
 		public ListBoxUI()
 		{
@@ -35,7 +35,7 @@ namespace TestCS
 		private System.ComponentModel.IContainer components = null;
 		private void InitializeComponent()
 		{
-			this.m_lb = new pr.gui.ListBox();
+			this.m_lb = new Rylogic.Gui.ListBox();
 			this.SuspendLayout();
 			// 
 			// listBox1

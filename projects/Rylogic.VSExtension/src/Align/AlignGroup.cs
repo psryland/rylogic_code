@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel;
-using pr.extn;
+using Rylogic.Extn;
 
 namespace Rylogic.VSExtension
 {

@@ -2,9 +2,9 @@
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Text;
-using pr.win32;
+using Rylogic.Windows32;
 
-namespace pr.inet
+namespace Rylogic.INet
 {
 	public static partial class INet
 	{
@@ -103,7 +103,7 @@ namespace pr.inet
 			out IntPtr out_auth_buffer,              // The address of a pointer that, on output, specifies the credential BLOB. For Kerberos, NTLM, or Negotiate credentials, call the CredUnPackAuthenticationBuffer function to convert this BLOB to string representations of the credentials.
 			out uint out_auth_buffer_size,           // The size, in bytes, of the ppvOutAuthBuffer buffer.
 			ref bool fSave,                          // A pointer to a Boolean value that, on input, specifies whether the Save check box is selected in the dialog box that this function displays. On output, the value of this parameter specifies whether the Save check box was selected when the user clicks the Submit button in the dialog box. Set this parameter to NULL to ignore the Save check box.
-			PromptForWindowsCredentialsFlags flags); // A value that specifies behavior for this function. This value can be a bitwise-OR combination of one or more of the following values.
+			PromptForWindowsCredentialsFlags flags); // A value that specifies behaviour for this function. This value can be a bitwise-OR combination of one or more of the following values.
 
 		[DllImport("credui.dll", CharSet = CharSet.Auto)]
 		private static extern bool CredUnPackAuthenticationBuffer(

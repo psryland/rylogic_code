@@ -3,22 +3,19 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.gfx;
-using pr.gui;
-using pr.util;
-using pr.view3d;
-using DataGridView = pr.gui.DataGridView;
-using ToolStripComboBox = pr.gui.ToolStripComboBox;
-using ToolStripContainer = pr.gui.ToolStripContainer;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Graphix;
+using Rylogic.Gui;
+using Rylogic.Utility;
+using DataGridView = Rylogic.Gui.DataGridView;
+using ToolStripContainer = Rylogic.Gui.ToolStripContainer;
 
 namespace LDraw
 {
-	//TODO move this to pr.view3d
+	//TODO move this to Rylogic.Graphix
 	public class ObjectManagerUI :ToolForm
 	{
 		// Notes:
@@ -695,17 +692,17 @@ namespace LDraw
 			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ObjectManagerUI));
 			this.m_split0 = new System.Windows.Forms.SplitContainer();
-			this.m_tree = new pr.gui.TreeGridView();
+			this.m_tree = new Rylogic.Gui.TreeGridView();
 			this.m_btn_bong = new System.Windows.Forms.Button();
-			this.m_grid = new pr.gui.DataGridView();
+			this.m_grid = new Rylogic.Gui.DataGridView();
 			this.m_il_buttons = new System.Windows.Forms.ImageList(this.components);
 			this.m_ss = new System.Windows.Forms.StatusStrip();
 			this.m_status = new System.Windows.Forms.ToolStripStatusLabel();
-			this.m_tsc = new pr.gui.ToolStripContainer();
+			this.m_tsc = new Rylogic.Gui.ToolStripContainer();
 			this.m_ts = new System.Windows.Forms.ToolStrip();
 			this.m_btn_expand_all = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_collapse_all = new System.Windows.Forms.ToolStripButton();
-			this.m_ts_filter = new pr.gui.ToolStripPatternFilter();
+			this.m_ts_filter = new Rylogic.Gui.ToolStripPatternFilter();
 			((System.ComponentModel.ISupportInitialize)(this.m_split0)).BeginInit();
 			this.m_split0.Panel1.SuspendLayout();
 			this.m_split0.Panel2.SuspendLayout();

@@ -2,11 +2,11 @@
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
-using pr.extn;
-using pr.gui;
-using pr.maths;
-using pr.util;
-using pr.view3d;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Maths;
+using Rylogic.Utility;
+using Rylogic.Graphix;
 
 namespace LDraw
 {
@@ -157,12 +157,12 @@ namespace LDraw
 
 			// FovX
 			m_tb_fovX.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0 && v.Value < 180f; };
-			m_tb_fovX.Value = Maths.RadiansToDegrees(Camera.FovX);
+			m_tb_fovX.Value = Math_.RadiansToDegrees(Camera.FovX);
 			m_tb_fovX.ValueChanged += (s,a) =>
 			{
 				if (!m_tb_fovX.Focused) return;
 
-				var fov = Maths.DegreesToRadians((float)m_tb_fovX.Value);
+				var fov = Math_.DegreesToRadians((float)m_tb_fovX.Value);
 				if (m_chk_preserve_aspect.Checked)
 					Camera.FovX = fov;
 				else
@@ -173,12 +173,12 @@ namespace LDraw
 
 			// FovY
 			m_tb_fovY.ValidateText = s => { var v = float_.TryParse(s); return v != null && v.Value > 0 && v.Value < 180f; };
-			m_tb_fovY.Value = Maths.RadiansToDegrees(Camera.FovY);
+			m_tb_fovY.Value = Math_.RadiansToDegrees(Camera.FovY);
 			m_tb_fovY.ValueChanged += (s,a) =>
 			{
 				if (!m_tb_fovY.Focused) return;
 
-				var fov = Maths.DegreesToRadians((float)m_tb_fovY.Value);
+				var fov = Math_.DegreesToRadians((float)m_tb_fovY.Value);
 				if (m_chk_preserve_aspect.Checked)
 					Camera.FovY = fov;
 				else
@@ -218,8 +218,8 @@ namespace LDraw
 			Update(m_tb_zoom, Camera.Zoom);
 			Update(m_tb_near, Camera.NearPlane);
 			Update(m_tb_far, Camera.FarPlane);
-			Update(m_tb_fovX, Maths.RadiansToDegrees(Camera.FovX));
-			Update(m_tb_fovY, Maths.RadiansToDegrees(Camera.FovY));
+			Update(m_tb_fovX, Math_.RadiansToDegrees(Camera.FovX));
+			Update(m_tb_fovY, Math_.RadiansToDegrees(Camera.FovY));
 			Update(m_tb_aspect, Camera.Aspect);
 		}
 
@@ -237,20 +237,20 @@ namespace LDraw
 			this.m_lbl_focus_dist = new System.Windows.Forms.Label();
 			this.m_timer = new System.Windows.Forms.Timer(this.components);
 			this.m_btn_bong = new System.Windows.Forms.Button();
-			this.m_tb_focus_dist = new pr.gui.ValueBox();
-			this.m_tb_fovX = new pr.gui.ValueBox();
-			this.m_tb_fovY = new pr.gui.ValueBox();
-			this.m_tb_camera_fwd = new pr.gui.ValueBox();
-			this.m_tb_camera_up = new pr.gui.ValueBox();
-			this.m_tb_focus_point = new pr.gui.ValueBox();
+			this.m_tb_focus_dist = new Rylogic.Gui.ValueBox();
+			this.m_tb_fovX = new Rylogic.Gui.ValueBox();
+			this.m_tb_fovY = new Rylogic.Gui.ValueBox();
+			this.m_tb_camera_fwd = new Rylogic.Gui.ValueBox();
+			this.m_tb_camera_up = new Rylogic.Gui.ValueBox();
+			this.m_tb_focus_point = new Rylogic.Gui.ValueBox();
 			this.m_chk_preserve_aspect = new System.Windows.Forms.CheckBox();
 			this.m_lbl_aspect_ratio = new System.Windows.Forms.Label();
-			this.m_tb_aspect = new pr.gui.ValueBox();
-			this.m_tb_zoom = new pr.gui.ValueBox();
+			this.m_tb_aspect = new Rylogic.Gui.ValueBox();
+			this.m_tb_zoom = new Rylogic.Gui.ValueBox();
 			this.m_lbl_zoom = new System.Windows.Forms.Label();
-			this.m_tb_near = new pr.gui.ValueBox();
+			this.m_tb_near = new Rylogic.Gui.ValueBox();
 			this.m_lbl_near = new System.Windows.Forms.Label();
-			this.m_tb_far = new pr.gui.ValueBox();
+			this.m_tb_far = new Rylogic.Gui.ValueBox();
 			this.m_lbl_far = new System.Windows.Forms.Label();
 			this.SuspendLayout();
 			// 

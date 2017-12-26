@@ -2,13 +2,13 @@ using System;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Threading;
-using pr.common;
-using pr.extn;
-using pr.util;
-using pr.win32;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Utility;
+using Rylogic.Windows32;
 using HContext = System.IntPtr;
 
-namespace pr.audio
+namespace Rylogic.Audio
 {
 	public class Audio :IDisposable
 	{

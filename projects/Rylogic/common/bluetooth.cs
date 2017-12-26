@@ -4,13 +4,13 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
-using pr.attrib;
-using pr.extn;
-using pr.maths;
-using pr.util;
-using pr.win32;
+using Rylogic.Attrib;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
+using Rylogic.Windows32;
 
-namespace pr.common
+namespace Rylogic.Common
 {
 	public static class Bluetooth
 	{
@@ -301,13 +301,13 @@ namespace pr.common
 			/// <summary>The time that the device was last detected</summary>
 			public DateTimeOffset LastSeen
 			{
-				get { return DateTimeOffset_.FromSystemTime(m_info.stLastSeen); }
+				get { return Win32.ToDateTimeOffset(m_info.stLastSeen); }
 			}
 
 			/// <summary>Last time the device was used for other than RNR, inquiry, or SDP</summary>
 			public DateTimeOffset LastUsed
 			{
-				get { return DateTimeOffset_.FromSystemTime(m_info.stLastUsed); }
+				get { return Win32.ToDateTimeOffset(m_info.stLastUsed); }
 			}
 
 			/// <summary>Pair this device to the PC</summary>
@@ -439,7 +439,7 @@ namespace pr.common
 			var find = IntPtr.Zero;
 
 			var search_params = BLUETOOTH_DEVICE_SEARCH_PARAMS.New();
-			search_params.cTimeoutMultiplier = (byte)Maths.Clamp((timeout_ms + TimeoutQuantumMS - 1) / TimeoutQuantumMS, 0, 48);
+			search_params.cTimeoutMultiplier = (byte)Math_.Clamp((timeout_ms + TimeoutQuantumMS - 1) / TimeoutQuantumMS, 0, 48);
 			if (opts.HasFlag(EOptions.ReturnAuthenticated)) search_params.fReturnAuthenticated = true;
 			if (opts.HasFlag(EOptions.ReturnRemembered))    search_params.fReturnRemembered = true;
 			if (opts.HasFlag(EOptions.ReturnUnknown))       search_params.fReturnUnknown = true;
@@ -711,9 +711,9 @@ namespace pr.common
 }
 
 #if PR_UNITTESTS
-namespace pr.unittests
+namespace Rylogic.UnitTests
 {
-	using common;
+	using Common;
 
 	[TestFixture] public class TestBluetooth
 	{

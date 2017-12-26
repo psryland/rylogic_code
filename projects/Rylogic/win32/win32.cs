@@ -14,13 +14,13 @@ using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using System.Windows.Input;
-using pr.common;
-using pr.extn;
-using pr.maths;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
 using HWND = System.IntPtr;
 
-namespace pr.win32
+namespace Rylogic.Windows32
 {
 	/// <summary>Win32 wrapper</summary>
 	[System.Security.SuppressUnmanagedCodeSecurity] // We won't use this maliciously
@@ -1253,7 +1253,7 @@ namespace pr.win32
 			return (int)HiWord((uint)dword);
 		}
 
-		/// <summary>Returns the lower 16bits of a 32bit dword such as LPARAM or WPARAM</summary>
+		/// <summary>Returns the lower 16bits of a 32bit DWORD such as LPARAM or WPARAM</summary>
 		public static uint LoWord(uint dword)
 		{
 			return dword & 0xFFFF;
@@ -1265,6 +1265,16 @@ namespace pr.win32
 		public static int LoWord(IntPtr dword)
 		{
 			return (int)LoWord((uint)dword);
+		}
+
+		/// <summary>Convert a win32 system time to a date time offset</summary>
+		public static DateTimeOffset ToDateTimeOffset(SYSTEMTIME st)
+		{
+			var ft = new FILETIME();
+			if (!SystemTimeToFileTime(ref st, out ft))
+				throw new Exception("Failed to convert system time to file time");
+
+			return DateTimeOffset.FromFileTime(ft.value);
 		}
 
 		// System.Windows.Forms.EKeys is the same as the win32 VK_ macros
@@ -1316,7 +1326,7 @@ namespace pr.win32
 		}
 
 		/// <summary>
-		/// Convert a 'Keys' key value to a unicode char using the keyboard state of the last message.
+		/// Convert a 'Keys' key value to a UNICODE char using the keyboard state of the last message.
 		/// This can be called from WM_KEYDOWN to provide the actual character, instead of waiting for WM_CHAR
 		/// Returns true if 'vkey' can be converted and 'ch' is valid, false if not</summary>
 		public static bool CharFromVKey(Keys vkey, out char ch)

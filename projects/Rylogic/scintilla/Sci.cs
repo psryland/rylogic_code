@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using pr.common;
-using pr.util;
-using pr.win32;
+using Rylogic.Common;
+using Rylogic.Utility;
+using Rylogic.Windows32;
 
-namespace pr.scintilla
+namespace Rylogic.Scintilla
 {
-	/// <summary>Typedef Scintilla.Scintilla to 'pr.gui.Sci' and add pr specific features</summary>
-	public class Sci :Scintilla.Scintilla
+	/// <summary>Typedef Scintilla.Scintilla to 'Rylogic.Gui.Sci' and add pr specific features</summary>
+	public class Sci :global::Scintilla.Scintilla
 	{
 		#region Enumerations
 		public enum EEndOfLineMode
@@ -112,10 +112,10 @@ namespace pr.scintilla
 
 			public class BufPtr :IDisposable
 			{
-				private GCHandleScope m_scope;
+				private GCHandle_.Scope m_scope;
 				public BufPtr(Cell[] cells, int ofs, int length)
 				{
-					m_scope = GCHandleEx.Alloc(cells, GCHandleType.Pinned);
+					m_scope = GCHandle_.Alloc(cells, GCHandleType.Pinned);
 					Pointer = m_scope.Handle.AddrOfPinnedObject() + ofs * R<Cell>.SizeOf;
 					SizeInBytes = length * R<Cell>.SizeOf;
 				}

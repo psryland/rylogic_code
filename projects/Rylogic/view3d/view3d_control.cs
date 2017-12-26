@@ -4,14 +4,14 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
-using pr.extn;
-using pr.gui;
-using pr.maths;
-using pr.util;
-using pr.win32;
-using ToolStripComboBox = pr.gui.ToolStripComboBox;
+using Rylogic.Extn;
+using Rylogic.Graphix;
+using Rylogic.Maths;
+using Rylogic.Utility;
+using Rylogic.Windows32;
+using ToolStripComboBox = Rylogic.Gui.ToolStripComboBox;
 
-namespace pr.view3d
+namespace Rylogic.Gui
 {
 	// Notes:
 	//  Keyboard events:
@@ -303,9 +303,9 @@ namespace pr.view3d
 						align_options.Items.Add("Z");
 
 						var axis = Camera.AlignAxis;
-						if      (Maths.FEql(axis, v4.XAxis)) align_options.SelectedIndex = 1;
-						else if (Maths.FEql(axis, v4.YAxis)) align_options.SelectedIndex = 2;
-						else if (Maths.FEql(axis, v4.ZAxis)) align_options.SelectedIndex = 3;
+						if      (Math_.FEql(axis, v4.XAxis)) align_options.SelectedIndex = 1;
+						else if (Math_.FEql(axis, v4.YAxis)) align_options.SelectedIndex = 2;
+						else if (Math_.FEql(axis, v4.ZAxis)) align_options.SelectedIndex = 3;
 						else                                 align_options.SelectedIndex = 0;
 						align_options.SelectedIndexChanged += delegate
 						{

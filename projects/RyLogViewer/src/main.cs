@@ -14,14 +14,14 @@ using System.Text;
 using System.Windows.Forms;
 using System.Windows.Forms.VisualStyles;
 using System.Xml.Linq;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.gui;
-using pr.inet;
-using pr.maths;
-using pr.util;
-using pr.win32;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.INet;
+using Rylogic.Maths;
+using Rylogic.Utility;
+using Rylogic.Windows32;
 using RyLogViewer.Properties;
 using Timer = System.Windows.Forms.Timer;
 
@@ -103,7 +103,7 @@ namespace RyLogViewer
 		private System.Windows.Forms.ToolStripMenuItem m_menu_encoding_detect;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
 		private System.Windows.Forms.ToolStripStatusLabel m_status_encoding;
-		private pr.gui.SubRangeScroll m_scroll_file;
+		private Rylogic.Gui.SubRangeScroll m_scroll_file;
 		private System.Windows.Forms.TableLayoutPanel m_table;
 		private System.Windows.Forms.ToolStripButton m_btn_watch;
 		private System.Windows.Forms.ContextMenuStrip m_cmenu_grid;
@@ -1394,7 +1394,7 @@ namespace RyLogViewer
 
 			// Set the new selected row from the mouse up position
 			var pt = m_scroll_file.PointToClient(MousePosition);
-			var sel_pos = (long)(Maths.Frac(1, pt.Y, m_scroll_file.Height - 1) * FileByteRange.Size);
+			var sel_pos = (long)(Math_.Frac(1, pt.Y, m_scroll_file.Height - 1) * FileByteRange.Size);
 			BuildLineIndex(pos, false, () => { SelectRowByAddr(sel_pos); });
 		}
 
@@ -1776,7 +1776,7 @@ namespace RyLogViewer
 			const string HelpStartPage = @"docs\help.html";
 			try
 			{
-				var path = Util.ResolveAppPath(HelpStartPage);
+				var path = Util2.ResolveAppPath(HelpStartPage);
 				Process.Start(path);
 			}
 			catch (Exception ex)
@@ -2102,7 +2102,7 @@ namespace RyLogViewer
 							var pt = new Point(m_grid.RightToLeft == RightToLeft.Yes ? m_grid.Width-1 : 1, m_grid.PointToClient(MousePosition).Y);
 
 							// Adjust the anchor row
-							var anchor_y = Maths.Clamp(anchor.Y + row_delta, 0, count-1);
+							var anchor_y = Math_.Clamp(anchor.Y + row_delta, 0, count-1);
 
 							// Find the row under the mouse (or nearest to it)
 							var hti = m_grid.HitTestEx(pt);
@@ -2138,7 +2138,7 @@ namespace RyLogViewer
 						// Restore the first visible row after setting the current selected row, because
 						// changing the 'CurrentCell' also changes the scroll position
 						if (first_vis != -1)
-							m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(first_vis + row_delta, 0, m_grid.RowCount - 1);
+							m_grid.FirstDisplayedScrollingRowIndex = Math_.Clamp(first_vis + row_delta, 0, m_grid.RowCount - 1);
 					}
 				}
 
@@ -2180,7 +2180,7 @@ namespace RyLogViewer
 						// For some reason, cell.GetPreferredSize or col.GetPreferredWidth don't return correct values
 						var cell = row.Cells[i];
 						var sz = gfx.MeasureString((string)cell.Value, cell.InheritedStyle.Font);
-						var w = Maths.Clamp(sz.Width + 10, 30, 64000); // DGV throws if width is greater than 65535
+						var w = Math_.Clamp(sz.Width + 10, 30, 64000); // DGV throws if width is greater than 65535
 						col_widths[i] = Math.Max(col_widths[i], w);
 					}
 				}
@@ -2188,7 +2188,7 @@ namespace RyLogViewer
 			var total_width = Math.Max(col_widths.Sum(), 1);
 
 			// Resize columns. If the total width is less than the control width use the control width instead
-			var scale = Maths.Max(grid_width / total_width, 1f);
+			var scale = Math_.Max(grid_width / total_width, 1f);
 			foreach (DataGridViewColumn col in m_grid.Columns)
 				col.Width = (int)(col_widths[col.Index] * scale);
 		}
@@ -2254,7 +2254,7 @@ namespace RyLogViewer
 			}
 
 			// Grid
-			int col_count = Settings.ColDelimiter.Length != 0 ? Maths.Clamp(Settings.ColumnCount, 1, 255) : 1;
+			int col_count = Settings.ColDelimiter.Length != 0 ? Math_.Clamp(Settings.ColumnCount, 1, 255) : 1;
 			var col_count_changed = m_grid.ColumnCount != col_count;
 			m_grid.Font = Settings.Font;
 			m_grid.ColumnHeadersVisible = col_count > 1;
@@ -2358,7 +2358,7 @@ namespace RyLogViewer
 			else
 			{
 				m_status_progress.Visible = true;
-				m_status_progress.Value = (int)(Maths.Frac(0, current, total) * 100);
+				m_status_progress.Value = (int)(Math_.Frac(0, current, total) * 100);
 			}
 		}
 
@@ -2626,7 +2626,7 @@ namespace RyLogViewer
 			this.toolStripSeparator14 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_cmenu_toggle_bookmark = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_grid = new RyLogViewer.DataGridView();
-			this.m_scroll_file = new pr.gui.SubRangeScroll();
+			this.m_scroll_file = new Rylogic.Gui.SubRangeScroll();
 			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
 			this.m_status_selection = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_toolstrip.SuspendLayout();

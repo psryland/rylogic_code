@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.gui;
-using pr.maths;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace RyLogViewer
 {
@@ -151,7 +151,7 @@ namespace RyLogViewer
 					int last_progress = 0;
 					d.progress = (scanned, length) =>
 					{
-						int progress = (int)(100 * Maths.Frac(0,scanned,length!=0?length:1));
+						int progress = (int)(100 * Math_.Frac(0,scanned,length!=0?length:1));
 						if (progress != last_progress)
 						{
 							cb(new ProgressForm.UserState{FractionComplete = progress * 0.01f});
@@ -206,7 +206,7 @@ namespace RyLogViewer
 					int last_progress = 0;
 					d.progress = (scanned, length) =>
 					{
-						int progress = (int)(100 * Maths.Frac(0,scanned,length!=0?length:1));
+						int progress = (int)(100 * Math_.Frac(0,scanned,length!=0?length:1));
 						if (progress != last_progress)
 						{
 							cb(new ProgressForm.UserState{FractionComplete = progress * 0.01f});

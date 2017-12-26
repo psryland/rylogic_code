@@ -6,12 +6,12 @@ using System.Drawing;
 using System.Globalization;
 using System.Linq;
 using System.Windows.Forms;
-using pr.extn;
-using pr.gfx;
-using pr.maths;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Graphix;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	public class ColourUI :Form
 	{
@@ -153,10 +153,10 @@ namespace pr.gui
 			Action<float?,float?,float?,float?> SetAHSV = (a,h,s,v) =>
 			{
 				var c = m_wheel.HSVColour;
-				if (a.HasValue) a = Maths.Clamp(a.Value / 255f, 0f, 1f);
-				if (h.HasValue) h = Maths.Clamp(h.Value / 255f, 0f, 1f);
-				if (s.HasValue) s = Maths.Clamp(s.Value / 255f, 0f, 1f);
-				if (v.HasValue) v = Maths.Clamp(v.Value / 255f, 0f, 1f);
+				if (a.HasValue) a = Math_.Clamp(a.Value / 255f, 0f, 1f);
+				if (h.HasValue) h = Math_.Clamp(h.Value / 255f, 0f, 1f);
+				if (s.HasValue) s = Math_.Clamp(s.Value / 255f, 0f, 1f);
+				if (v.HasValue) v = Math_.Clamp(v.Value / 255f, 0f, 1f);
 				m_wheel.HSVColour = HSV.FromAHSV(a ?? c.A, h ?? c.H, s ?? c.S, v ?? c.V);
 			};
 			m_edit_alpha.Validated += (s,a) => SetARGB(byte.Parse(((TextBox)s).Text), null, null, null);
@@ -205,9 +205,9 @@ namespace pr.gui
 			m_edit_green.Text = rgb.G.ToString(CultureInfo.InvariantCulture);
 			m_edit_blue .Text = rgb.B.ToString(CultureInfo.InvariantCulture);
 			m_edit_alpha.Text = rgb.A.ToString(CultureInfo.InvariantCulture);
-			m_edit_hue  .Text = Maths.Clamp((int)(255f*hsv.H),0,255).ToString(CultureInfo.InvariantCulture);
-			m_edit_sat  .Text = Maths.Clamp((int)(255f*hsv.S),0,255).ToString(CultureInfo.InvariantCulture);
-			m_edit_lum  .Text = Maths.Clamp((int)(255f*hsv.V),0,255).ToString(CultureInfo.InvariantCulture);
+			m_edit_hue  .Text = Math_.Clamp((int)(255f*hsv.H),0,255).ToString(CultureInfo.InvariantCulture);
+			m_edit_sat  .Text = Math_.Clamp((int)(255f*hsv.S),0,255).ToString(CultureInfo.InvariantCulture);
+			m_edit_lum  .Text = Math_.Clamp((int)(255f*hsv.V),0,255).ToString(CultureInfo.InvariantCulture);
 
 			unchecked
 			{
@@ -284,7 +284,7 @@ namespace pr.gui
 			this.m_panel_initial = new System.Windows.Forms.Panel();
 			this.m_panel_selected = new System.Windows.Forms.Panel();
 			this.m_lbl_selected = new System.Windows.Forms.Label();
-			this.m_wheel = new pr.gui.ColourWheel();
+			this.m_wheel = new Rylogic.Gui.ColourWheel();
 			this.SuspendLayout();
 			//
 			// m_lbl_red
@@ -531,11 +531,11 @@ namespace pr.gui
 			this.m_wheel.Colour = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(255)))), ((int)(((byte)(255)))));
 			this.m_wheel.Location = new System.Drawing.Point(194, 12);
 			this.m_wheel.Name = "m_wheel";
-			this.m_wheel.Parts = ((pr.gui.ColourWheel.EParts)((((((pr.gui.ColourWheel.EParts.Wheel | pr.gui.ColourWheel.EParts.VSlider)
-            | pr.gui.ColourWheel.EParts.ASlider)
-            | pr.gui.ColourWheel.EParts.ColourSelection)
-            | pr.gui.ColourWheel.EParts.VSelection)
-            | pr.gui.ColourWheel.EParts.ASelection)));
+			this.m_wheel.Parts = ((Rylogic.Gui.ColourWheel.EParts)((((((Rylogic.Gui.ColourWheel.EParts.Wheel | Rylogic.Gui.ColourWheel.EParts.VSlider)
+            | Rylogic.Gui.ColourWheel.EParts.ASlider)
+            | Rylogic.Gui.ColourWheel.EParts.ColourSelection)
+            | Rylogic.Gui.ColourWheel.EParts.VSelection)
+            | Rylogic.Gui.ColourWheel.EParts.ASelection)));
 			this.m_wheel.Size = new System.Drawing.Size(203, 138);
 			this.m_wheel.SliderWidth = 20;
 			this.m_wheel.TabIndex = 0;

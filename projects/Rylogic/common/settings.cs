@@ -9,10 +9,10 @@ using System.Reflection;
 using System.Windows.Forms;
 using System.Windows.Threading;
 using System.Xml.Linq;
-using pr.common;
-using pr.extn;
-using pr.gui;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Utility;
 
 // Example use of settings
 #if false
@@ -41,7 +41,7 @@ public class Settings :SettingsBase<Settings>
 }
 #endif
 
-namespace pr.common
+namespace Rylogic.Common
 {
 	public enum ESettingsEvent
 	{
@@ -319,7 +319,11 @@ namespace pr.common
 		{
 			Debug.Assert(!string.IsNullOrEmpty(filepath));
 			Filepath = filepath;
-			Reload(read_only);
+			try { Reload(read_only); return; }
+			catch (Exception ex) { SettingsEvent(ESettingsEvent.LoadFailed, ex, $"Failed to load settings from {filepath}"); }
+
+			// Fall back to default values
+			ResetToDefaults();
 		}
 
 		/// <summary>Returns the directory in which to store app settings</summary>
@@ -343,7 +347,7 @@ namespace pr.common
 		/// <summary>Returns a filepath for storing settings in the same directory as the application executable</summary>
 		public static string DefaultLocalFilepath
 		{
-			get { return Util.ResolveAppPath("settings.xml"); }
+			get { return Util2.ResolveAppPath("settings.xml"); }
 		}
 
 		/// <summary>The settings version, used to detect when 'Upgrade' is needed</summary>
@@ -858,9 +862,9 @@ namespace pr.common
 }
 
 #if PR_UNITTESTS
-namespace pr.unittests
+namespace Rylogic.UnitTests
 {
-	using extn;
+	using Extn;
 
 	[TestFixture] public class TestSettings
 	{
@@ -919,6 +923,10 @@ namespace pr.unittests
 			public object[]       Things { get { return get<object[]      >(nameof(Things)); } set { set(nameof(Things) , value); } }
 		}
 
+		[TestFixtureSetUp] public void Setup()
+		{
+			Xml.SupportWinFormsTypes();
+		}
 		[Test] public void TestSettings1()
 		{
 			var s = new Settings();

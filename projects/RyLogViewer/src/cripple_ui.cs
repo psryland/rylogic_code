@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Windows.Forms;
-using pr.util;
+using Rylogic.Utility;
 
 namespace RyLogViewer
 {
@@ -33,7 +33,7 @@ namespace RyLogViewer
 					}
 
 					// Otherwise, handle links to the documentation
-					var exe_dir = Util.ResolveAppPath();
+					var exe_dir = Util2.ResolveAppPath();
 					var uri = new UriBuilder();
 					uri.Scheme = Uri.UriSchemeFile;
 					uri.Host = string.Empty;

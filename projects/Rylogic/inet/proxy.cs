@@ -7,11 +7,11 @@ using System.Text;
 using System.Net.Sockets;
 using System.Threading;
 
-namespace pr.inet
+namespace Rylogic.INet
 {
 	// Usage:
-	// Proxy proxy = Proxy.Create(EType.Http, "localhost", 6588);
-	// TcpClient tcp = proxy.Connect("www.rylogic.co.nz", 80);
+	//  var proxy = Proxy.Create(EType.Http, "localhost", 6588);
+	//  var tcp = proxy.Connect("www.rylogic.co.nz", 80);
 	
 	/// <summary>Proxy base class</summary>
 	public abstract class Proxy

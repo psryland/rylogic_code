@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
-using pr.common;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Utility;
 
 namespace TestCS
 {
@@ -25,7 +25,7 @@ namespace TestCS
 		private void PlainText(object sender, EventArgs e)
 		{
 			var content = "This is a Plain text dialog";
-			pr.gui.HelpUI.ShowDialog(this, pr.gui.HelpUI.EContent.Text, "Plain Text Help", content);
+			Rylogic.Gui.HelpUI.ShowDialog(this, Rylogic.Gui.HelpUI.EContent.Text, "Plain Text Help", content);
 		}
 		private void RichText(object sender, EventArgs e)
 		{
@@ -43,7 +43,7 @@ namespace TestCS
 			rtf.Append("More Rtf text");
 
 			var content = rtf.ToString();
-			pr.gui.HelpUI.ShowDialog(this, pr.gui.HelpUI.EContent.Rtf, "RTF Help", content);
+			Rylogic.Gui.HelpUI.ShowDialog(this, Rylogic.Gui.HelpUI.EContent.Rtf, "RTF Help", content);
 		}
 		private void HtmlText(object sender, EventArgs e)
 		{
@@ -53,7 +53,7 @@ namespace TestCS
 				<p>paragraph paragraph paragraph</p>
 				<a href='http://www.google.com'>Link to Google</a>
 			</html>";
-			pr.gui.HelpUI.ShowDialog(this, pr.gui.HelpUI.EContent.Html, "Html Help", content);
+			Rylogic.Gui.HelpUI.ShowDialog(this, Rylogic.Gui.HelpUI.EContent.Html, "Html Help", content);
 		}
 
 		private Button m_btn_plaintext;

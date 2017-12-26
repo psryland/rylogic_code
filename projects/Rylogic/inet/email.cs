@@ -5,10 +5,10 @@ using System.Net;
 using System.Net.Mail;
 using System.Runtime.InteropServices;
 using System.Text;
-using pr.common;
-using pr.extn;
+using Rylogic.Common;
+using Rylogic.Extn;
 
-namespace pr.inet
+namespace Rylogic.INet
 {
 	// Note: there is a standard .NET assembly for this, it's probably better to use that.
 	// Use System.Net.Mail, and System.Net;
@@ -327,11 +327,11 @@ namespace pr.inet
 }
 
 #if PR_UNITTESTS
-namespace pr.unittests
+namespace Rylogic.UnitTests
 {
 	using System.Net;
 	using System.Net.Mail;
-	using inet;
+	using INet;
 
 	[TestFixture] public class TestEmail
 	{

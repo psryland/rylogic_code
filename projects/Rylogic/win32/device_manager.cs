@@ -7,7 +7,7 @@ using System.Security;
 using System.Text;
 using Microsoft.Win32.SafeHandles;
 
-namespace pr.win32
+namespace Rylogic.Windows32
 {
 	// The following classes and GUIDs are defined by the operating system. Unless otherwise noted, these classes
 	// and GUIDs can be used to install devices (or drivers) on Windows 2000 and later versions of Windows:

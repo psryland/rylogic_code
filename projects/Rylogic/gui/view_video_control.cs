@@ -2,12 +2,12 @@
 using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
-using pr.extn;
-using pr.gfx;
-using pr.maths;
+using Rylogic.Extn;
+using Rylogic.Graphix;
+using Rylogic.Maths;
 using Timer = System.Windows.Forms.Timer;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	public class ViewVideoControl :UserControl
 	{
@@ -267,7 +267,7 @@ namespace pr.gui
 			
 			// Fade out, then disable
 			float dt = unchecked((int)timer.Tag - Environment.TickCount);
-			m_remote.Opacity = Maths.Clamp(dt/RemoteAutoHideSpeed, 0f, 1f);
+			m_remote.Opacity = Math_.Clamp(dt/RemoteAutoHideSpeed, 0f, 1f);
 			
 			if (dt <= 0) m_remote.Hide();
 		}

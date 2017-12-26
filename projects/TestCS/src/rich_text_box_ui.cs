@@ -1,9 +1,9 @@
 ﻿using System.Windows.Forms;
-using pr.util;
+using Rylogic.Utility;
 
 namespace TestCS
 {
-	using RichTextBox = pr.gui.RichTextBox;
+	using RichTextBox = Rylogic.Gui.RichTextBox;
 
 	public class RichTextBoxUI :Form
 	{

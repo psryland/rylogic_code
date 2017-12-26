@@ -77,7 +77,7 @@ using System.Windows.Threading;
 //  are issues with multi-threading. An SQL statement cannot be created on
 //  one thread and released on another.
 
-namespace pr.db
+namespace Rylogic.Db
 {
 	public static class Sqlite
 	{
@@ -3265,7 +3265,7 @@ namespace pr.db
 			public static void LoadDll(string dir)
 			{
 				if (ModuleLoaded) return;
-				m_module = pr.win32.Win32.LoadDll(Dll+".dll", dir);
+				m_module = Rylogic.Windows32.Win32.LoadDll(Dll+".dll", dir);
 			}
 
 			/// <summary>Base class for wrappers of native sqlite handles</summary>
@@ -3786,11 +3786,11 @@ namespace pr.db
 }
 
 #if PR_UNITTESTS
-namespace pr.unittests
+namespace Rylogic.UnitTests
 {
 	using System.IO;
 	using System.Text.RegularExpressions;
-	using db;
+	using Db;
 
 	[TestFixture] public class TestSqlite3
 	{

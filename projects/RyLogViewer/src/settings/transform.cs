@@ -6,10 +6,10 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using System.Xml.Linq;
-using pr.common;
-using pr.extn;
-using pr.gui;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Utility;
 
 namespace RyLogViewer
 {
@@ -101,9 +101,9 @@ namespace RyLogViewer
 					{ var s = new SubCodeLookup(); m_substitutors.Add(s); }
 
 					// Loads dlls from the plugins directory looking for transform substitutions
-					if (!Util.InDesignMode)
+					if (!Util2.InDesignMode)
 					{
-						var plugins = Plugins<ITransformSubstitution>.LoadWithUI(null, Util.ResolveAppPath("plugins"), null, SearchOption.AllDirectories);
+						var plugins = Plugins<ITransformSubstitution>.LoadWithUI(null, Util2.ResolveAppPath("plugins"), null, SearchOption.AllDirectories);
 						foreach (var sub in plugins.Instances)
 							m_substitutors.Add(sub);
 					}
@@ -394,7 +394,7 @@ namespace RyLogViewer
 }
 
 #if PR_UNITTESTS
-namespace pr.unittests
+namespace Rylogic.UnitTests
 {
 	using RyLogViewer;
 

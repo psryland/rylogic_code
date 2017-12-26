@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Windows.Forms;
 
-namespace pr.undo
+namespace Rylogic.Undo
 {
 	// Abandoned...
 	//  It should be possible to write a differencing multiple undo history

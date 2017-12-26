@@ -1,6 +1,6 @@
 ﻿using System.Linq;
 using System.Windows.Forms;
-using pr.util;
+using Rylogic.Utility;
 
 namespace TestCS
 {
@@ -43,7 +43,7 @@ namespace TestCS
 			base.Dispose(disposing);
 		}
 
-		private pr.gui.WebBrowser m_web;
+		private Rylogic.Gui.WebBrowser m_web;
 		private Button m_btn_forward;
 		private Button m_btn_back;
 
@@ -58,7 +58,7 @@ namespace TestCS
 		/// </summary>
 		private void InitializeComponent()
 		{
-			this.m_web = new pr.gui.WebBrowser();
+			this.m_web = new Rylogic.Gui.WebBrowser();
 			this.m_btn_forward = new System.Windows.Forms.Button();
 			this.m_btn_back = new System.Windows.Forms.Button();
 			this.SuspendLayout();

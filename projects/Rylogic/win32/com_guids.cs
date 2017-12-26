@@ -1,7 +1,4 @@
-﻿using System;
-using System.Text;
-
-namespace pr.win32
+﻿namespace Rylogic.Windows32
 {
 	public static class IIDGuid
 	{

@@ -5,13 +5,11 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
-using pr.util;
-using RichTextBox = pr.gui.RichTextBox;
-using DataGridView = pr.gui.DataGridView;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	/// <summary>A user control for editing 'Patterns'</summary>
 	public class PatternUI :PatternUIImpl, IPatternUI
@@ -290,7 +288,7 @@ namespace pr.gui
 			this.m_image_list = new System.Windows.Forms.ImageList(this.components);
 			this.m_lbl_match = new System.Windows.Forms.Label();
 			this.m_edit_match = new System.Windows.Forms.TextBox();
-			this.m_edit_test = new pr.gui.RichTextBox();
+			this.m_edit_test = new Rylogic.Gui.RichTextBox();
 			this.m_btn_regex_help = new System.Windows.Forms.Button();
 			this.m_radio_substring = new System.Windows.Forms.RadioButton();
 			this.m_radio_wildcard = new System.Windows.Forms.RadioButton();
@@ -298,7 +296,7 @@ namespace pr.gui
 			this.m_panel_patntype = new System.Windows.Forms.Panel();
 			this.m_lbl_match_type = new System.Windows.Forms.Label();
 			this.m_split = new System.Windows.Forms.SplitContainer();
-			this.m_grid_grps = new pr.gui.DataGridView();
+			this.m_grid_grps = new Rylogic.Gui.DataGridView();
 			this.m_lbl_groups = new System.Windows.Forms.Label();
 			this.m_check_whole_line = new System.Windows.Forms.CheckBox();
 			this.m_panel_flags = new System.Windows.Forms.Panel();
@@ -692,7 +690,7 @@ namespace pr.gui
 		public event EventHandler Commit;
 		protected void RaiseCommitEvent()
 		{
-			Commit.Raise(this);
+			Commit?.Invoke(this, EventArgs.Empty);
 		}
 
 		/// <summary>Access to the test text field</summary>

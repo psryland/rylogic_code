@@ -1,5 +1,5 @@
 ﻿using System.Windows.Forms;
-using pr.gui;
+using Rylogic.Gui;
 
 namespace TestCS
 {
@@ -44,7 +44,7 @@ namespace TestCS
 		/// </summary>
 		private void InitializeComponent()
 		{
-			this.m_wheel = new pr.gui.ColourWheel();
+			this.m_wheel = new Rylogic.Gui.ColourWheel();
 			this.m_btn_dlg = new System.Windows.Forms.Button();
 			this.SuspendLayout();
 			// 
@@ -54,11 +54,11 @@ namespace TestCS
 			this.m_wheel.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_wheel.Location = new System.Drawing.Point(0, 0);
 			this.m_wheel.Name = "m_wheel";
-			this.m_wheel.Parts = ((pr.gui.ColourWheel.EParts)((((((pr.gui.ColourWheel.EParts.Wheel | pr.gui.ColourWheel.EParts.VSlider) 
-            | pr.gui.ColourWheel.EParts.ASlider) 
-            | pr.gui.ColourWheel.EParts.ColourSelection) 
-            | pr.gui.ColourWheel.EParts.VSelection) 
-            | pr.gui.ColourWheel.EParts.ASelection)));
+			this.m_wheel.Parts = ((Rylogic.Gui.ColourWheel.EParts)((((((Rylogic.Gui.ColourWheel.EParts.Wheel | Rylogic.Gui.ColourWheel.EParts.VSlider) 
+            | Rylogic.Gui.ColourWheel.EParts.ASlider) 
+            | Rylogic.Gui.ColourWheel.EParts.ColourSelection) 
+            | Rylogic.Gui.ColourWheel.EParts.VSelection) 
+            | Rylogic.Gui.ColourWheel.EParts.ASelection)));
 			this.m_wheel.Size = new System.Drawing.Size(182, 188);
 			this.m_wheel.SliderWidth = 20;
 			this.m_wheel.TabIndex = 0;

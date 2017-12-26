@@ -4,10 +4,10 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using pr.extn;
-using pr.maths;
+using Rylogic.Extn;
+using Rylogic.Maths;
 
-namespace pr.audio
+namespace Rylogic.Audio
 {
 	public static class Midi
 	{
@@ -39,7 +39,7 @@ namespace pr.audio
 			// Expected forms: C2, C#-2, A#10, etc
 			var name = char.ToUpperInvariant(note[0]);
 			var sharp = note[1] == '#' ? 1 : 0;
-			var octave = Maths.Clamp(int.Parse(note.Substring(1 + sharp)) + 2, 0, 8);
+			var octave = Math_.Clamp(int.Parse(note.Substring(1 + sharp)) + 2, 0, 8);
 			switch (name)
 			{
 			default: throw new Exception($"Invalid MIDI note name {name}");
@@ -339,7 +339,7 @@ namespace pr.audio
 			public float VelocityN
 			{
 				get { return (float)Velocity / 0x7F; }
-				set { Velocity = (byte)Maths.Clamp(value * 0x7F, 0, 0x7F); }
+				set { Velocity = (byte)Math_.Clamp(value * 0x7F, 0, 0x7F); }
 			}
 
 			/// <summary>The controller that the event is for (e.g. pedal, levers, etc) [0,119]. For [120,127] use 'EControlModeMessage'</summary>
@@ -425,8 +425,8 @@ namespace pr.audio
 			/// <summary>Pitch bend value normalised to [-1, +1]</summary>
 			public float PitchBendN
 			{
-				get { return Maths.Frac((float)PitchBend, -0x2000, 0x1fff) * 2f - 1f; }
-				set { PitchBend = (short)Maths.Lerp(-0x2000, 0x1fff, Maths.Clamp(value * 0.5f + 1f, 0f, 1f)); }
+				get { return Math_.Frac((float)PitchBend, -0x2000, 0x1fff) * 2f - 1f; }
+				set { PitchBend = (short)Math_.Lerp(-0x2000, 0x1fff, Math_.Clamp(value * 0.5f + 1f, 0f, 1f)); }
 			}
 
 			/// <summary>True if this is a control mode message</summary>

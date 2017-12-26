@@ -2,10 +2,10 @@
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
-using pr.extn;
-using pr.gui;
-using pr.maths;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace TestCS
 {
@@ -23,7 +23,7 @@ namespace TestCS
 			Add("Sine Wave", 1000
 				,i =>
 					{
-						var x = i * Maths.Tau / 1000.0;
+						var x = i * Math_.Tau / 1000.0;
 						var y = Math.Sin(x);
 						return new { X = x, Y = y, ErrLo = 0, ErrHi = 0 };
 					}
@@ -38,7 +38,7 @@ namespace TestCS
 			Add("Cosine Wave", 1000
 				,i =>
 					{
-						var x = i * Maths.Tau / 1000.0;
+						var x = i * Math_.Tau / 1000.0;
 						var y = Math.Cos(x);
 						return new { X = x, Y = y, ErrLo = 0, ErrHi = 0 };
 					}
@@ -53,10 +53,10 @@ namespace TestCS
 			Add("Points", 1000
 				,i =>
 					{
-						var x = i * Maths.Tau / 1000.0;
+						var x = i * Math_.Tau / 1000.0;
 						var y = Math.Cos(x) * Math.Sin(x);
-						var errlo = Math.Abs(0.1 * Math.Cos(x - Maths.TauBy16));
-						var errhi = Math.Abs(0.1 * Math.Cos(x + Maths.TauBy16));
+						var errlo = Math.Abs(0.1 * Math.Cos(x - Math_.TauBy16));
+						var errhi = Math.Abs(0.1 * Math.Cos(x + Math_.TauBy16));
 						return new { X = x, Y = y, ErrLo = -errlo, ErrHi = +errhi };
 					}
 				,new GraphControl.Series.RdrOptions
@@ -70,7 +70,7 @@ namespace TestCS
 				,i =>
 					{
 						var x = i + 10;
-						var y = i;// * Math.Sin(i * Maths.Tau / 1000.0);
+						var y = i;// * Math.Sin(i * Math_.Tau / 1000.0);
 						return new { X = x, Y = y, ErrLo = 0, ErrHi = 0 };
 					}
 				,new GraphControl.Series.RdrOptions
@@ -123,7 +123,7 @@ namespace TestCS
 		private void InitializeComponent()
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(GraphControlUI));
-			this.m_graph = new pr.gui.GraphControl();
+			this.m_graph = new Rylogic.Gui.GraphControl();
 			this.SuspendLayout();
 			//
 			// m_graph

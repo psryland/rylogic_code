@@ -2,9 +2,9 @@
 using System.IO;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
-using pr.extn;
-using pr.maths;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace RyLogViewer
 {

@@ -4,11 +4,11 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Windows.Forms;
-using pr.extn;
-using pr.gfx;
-using pr.maths;
+using Rylogic.Extn;
+using Rylogic.Graphix;
+using Rylogic.Maths;
 
-namespace pr.gui
+namespace Rylogic.Gui
 {
 	public class ColourWheel :UserControl
 	{
@@ -32,14 +32,14 @@ namespace pr.gui
 				ControlStyles.UserPaint, true);
 		}
 
-		/// <summary>The currently selected colour (rgb)</summary>
+		/// <summary>The currently selected colour (RGB)</summary>
 		public Color Colour
 		{
 			get { return HSVColour.ToColor(); }
 			set { HSVColour = HSV.FromColor(value, HSVColour.H); }
 		}
 
-		/// <summary>The currently selected colour (hsv)</summary>
+		/// <summary>The currently selected colour (HSV)</summary>
 		public HSV HSVColour
 		{
 			get { return m_hsv_colour; }
@@ -218,8 +218,8 @@ namespace pr.gui
 		{
 			var dim = LayoutDimensions;
 			return new PointF(
-				dim.Centre.X + (float)(dim.Radius * colour.S * Math.Cos(Maths.Tau * colour.H)),
-				dim.Centre.Y + (float)(dim.Radius * colour.S * Math.Sin(Maths.Tau * colour.H)));
+				dim.Centre.X + (float)(dim.Radius * colour.S * Math.Cos(Math_.Tau * colour.H)),
+				dim.Centre.Y + (float)(dim.Radius * colour.S * Math.Sin(Math_.Tau * colour.H)));
 		}
 
 		/// <summary>Set the hue and saturation based on point X,Y relative to the wheel centre</summary>
@@ -237,8 +237,8 @@ namespace pr.gui
 			if (dim.Empty || dim.VSlider.IsEmpty) return;
 			
 			var v = VerticalLayout
-				? Maths.Clamp(Maths.Frac(dim.VSlider.Left, x, dim.VSlider.Right), 0f, 1f)
-				: Maths.Clamp(Maths.Frac(dim.VSlider.Bottom, y, dim.VSlider.Top), 0f, 1f);
+				? Math_.Clamp(Math_.Frac(dim.VSlider.Left, x, dim.VSlider.Right), 0f, 1f)
+				: Math_.Clamp(Math_.Frac(dim.VSlider.Bottom, y, dim.VSlider.Top), 0f, 1f);
 
 			HSVColour = HSV.FromAHSV(HSVColour.A, HSVColour.H, HSVColour.S, v);
 		}
@@ -250,8 +250,8 @@ namespace pr.gui
 			if (dim.Empty || dim.ASlider.IsEmpty) return;
 
 			var a = VerticalLayout
-				? Maths.Clamp(Maths.Frac(dim.ASlider.Left, x, dim.ASlider.Right), 0f, 1f)
-				: Maths.Clamp(Maths.Frac(dim.ASlider.Bottom, y, dim.ASlider.Top), 0f, 1f);
+				? Math_.Clamp(Math_.Frac(dim.ASlider.Left, x, dim.ASlider.Right), 0f, 1f)
+				: Math_.Clamp(Math_.Frac(dim.ASlider.Bottom, y, dim.ASlider.Top), 0f, 1f);
 
 			HSVColour = HSV.FromAHSV(a, HSVColour.H, HSVColour.S, HSVColour.V);
 		}
@@ -283,8 +283,8 @@ namespace pr.gui
 				for (int i = 0; i != ColourCount; ++i)
 				{
 					points[i] = new PointF(
-						(float)(dim.Centre.X + dim.Radius * Math.Cos(i * Maths.Tau / ColourCount)),
-						(float)(dim.Centre.Y + dim.Radius * Math.Sin(i * Maths.Tau / ColourCount)));
+						(float)(dim.Centre.X + dim.Radius * Math.Cos(i * Math_.Tau / ColourCount)),
+						(float)(dim.Centre.Y + dim.Radius * Math.Sin(i * Math_.Tau / ColourCount)));
 				
 					colours[i] = HSV.ToColor(1f, (float)i / ColourCount, 1f, 1f);
 				}
@@ -404,8 +404,8 @@ namespace pr.gui
 				if ((Parts & EParts.VSelection) != 0)
 				{
 					var v = VerticalLayout
-						? Maths.Lerp(dim.VSlider.Left, dim.VSlider.Right, HSVColour.V)
-						: Maths.Lerp(dim.VSlider.Bottom, dim.VSlider.Top, HSVColour.V);
+						? Math_.Lerp(dim.VSlider.Left, dim.VSlider.Right, HSVColour.V)
+						: Math_.Lerp(dim.VSlider.Bottom, dim.VSlider.Top, HSVColour.V);
 					var pts = SliderSelector(v, dim.VSlider, VerticalLayout);
 					gfx.DrawLines(Pens.Black, pts);
 				}
@@ -430,8 +430,8 @@ namespace pr.gui
 				if ((Parts & EParts.ASelection) != 0)
 				{
 					var v = VerticalLayout
-						? Maths.Lerp(dim.ASlider.Left, dim.ASlider.Right, HSVColour.A)
-						: Maths.Lerp(dim.ASlider.Bottom, dim.ASlider.Top, HSVColour.A);
+						? Math_.Lerp(dim.ASlider.Left, dim.ASlider.Right, HSVColour.A)
+						: Math_.Lerp(dim.ASlider.Bottom, dim.ASlider.Top, HSVColour.A);
 					var pts = SliderSelector(v, dim.ASlider, VerticalLayout);
 					gfx.DrawLines(Pens.Black, pts);
 				}

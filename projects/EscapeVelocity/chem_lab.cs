@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using pr.container;
-using pr.maths;
+using Rylogic.Container;
+using Rylogic.Maths;
 
 namespace EscapeVelocity
 {
@@ -166,7 +166,7 @@ m.CommonName = "common";
 		public void DumpElements()
 		{
 			var csv = new CSVData();
-			var header = new pr.container.CSVData.Row();
+			var header = new Rylogic.Container.CSVData.Row();
 			header.Add("Name").Add("AtomicNumber").Add("ValenceElectrons").Add("ValenceHoles").Add("ValenceOrbitalRadius").Add("MolarMass").Add("Electronegativity").Add("Melting Point").Add("Boiling Point").Add("SolidDensity");
 			csv.Add(header);
 			foreach (var e in m_elements)
