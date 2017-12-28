@@ -25,7 +25,10 @@ def BuildEverything():
 
 if __name__ == "__main__":
 	try:
+		print(" *** Rylogic Repo - Build Everything *** ")
+		print("\n")
 		BuildEverything()
+		
 	except Exception as ex:
 		print(str(ex))
 		sys.exit(-1)
