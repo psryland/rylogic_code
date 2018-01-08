@@ -94,8 +94,8 @@ namespace RyLogViewer
 			catch (OperationCanceledException) {}
 			catch (Exception ex)
 			{
-				Log.Exception(this, ex, "Failed to connect {0} -> {1}".Fmt(conn.PipeAddr, conn.OutputFilepath));
-				Misc.ShowMessage(this, "Failed to connect to {0}.".Fmt(conn.PipeAddr), Application.ProductName, MessageBoxIcon.Error, ex);
+				Log.Exception(this, ex, $"Failed to connect {conn.PipeAddr} -> {conn.OutputFilepath}");
+				Misc.ShowMessage(this, $"Failed to connect to {conn.PipeAddr}.", Application.ProductName, MessageBoxIcon.Error, ex);
 			}
 			finally
 			{
@@ -126,7 +126,7 @@ namespace RyLogViewer
 			{
 				lock (m_lock)
 				{
-					Log.Info(this, "Disposing named pipe connection {0}".Fmt(m_conn.PipeName));
+					Log.Info(this, $"Disposing named pipe connection {m_conn.PipeName}");
 					m_pipe.Dispose();
 					m_pipe = null;
 				}

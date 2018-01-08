@@ -152,8 +152,8 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Log.Exception(this, ex, "Custom data source failed: {0} -> {1}".Fmt(src.ShortName, launch.OutputFilepath));
-				Misc.ShowMessage(this, "Failed to launch {0}.".Fmt(src.ShortName), "Data Source Failed", MessageBoxIcon.Error, ex);
+				Log.Exception(this, ex, $"Custom data source failed: {src.ShortName} -> {launch.OutputFilepath}");
+				Misc.ShowMessage(this, $"Failed to launch {src.ShortName}.", "Data Source Failed", MessageBoxIcon.Error, ex);
 			}
 			finally
 			{
@@ -191,7 +191,7 @@ namespace RyLogViewer
 		/// <summary>Start collecting log data asynchronously</summary>
 		public void Start()
 		{
-			Log.Info(this, "Data Source {0} started".Fmt(m_src.ShortName));
+			Log.Info(this, $"Data Source {m_src.ShortName} started");
 
 			m_src.Start();
 			m_src.BeginRead(m_buf, 0, m_buf.Length, DataRecv, new AsyncData(m_src, m_buf));

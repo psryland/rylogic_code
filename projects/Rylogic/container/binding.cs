@@ -130,7 +130,7 @@ namespace Rylogic.Container
 			{
 				// Property type must match the bound value type
 				if (!prop.PropertyType.IsAssignableFrom(typeof(TValue)))
-					throw new Exception("Property type mismatch. Binding source type {0} is not assignable to a property with type {1}.".Fmt(typeof(TValue).Name, prop.PropertyType.Name));
+					throw new Exception($"Property type mismatch. Binding source type {typeof(TValue).Name} is not assignable to a property with type {prop.PropertyType.Name}.");
 
 				// Add the binding
 				var set = prop.GetSetMethod();
@@ -149,7 +149,7 @@ namespace Rylogic.Container
 				// Method must take a single parameter that is the property
 				var parms = meth.GetParameters();
 				if (parms.Length != 1 || !parms[0].ParameterType.IsAssignableFrom(typeof(TValue)))
-					throw new Exception("Method signature mismatch. The bound method must take a single parameter of type {0}.".Fmt(typeof(TValue).Name));
+					throw new Exception($"Method signature mismatch. The bound method must take a single parameter of type {typeof(TValue).Name}.");
 
 				// Add the binding
 				var bind = new Link(obj, meth);
@@ -160,7 +160,7 @@ namespace Rylogic.Container
 				return this;
 			}
 
-			throw new Exception("Property or Method '{0}' not found on object type {1}".Fmt(property_or_method_name, ty.Name));
+			throw new Exception($"Property or Method '{property_or_method_name}' not found on object type {ty.Name}");
 		}
 		public Binding<TSrc, TValue> Add<U,Ret>(U obj, Expression<Func<U,Ret>> expression, BindingFlags flags = BindingFlags.Public|BindingFlags.Instance)
 		{

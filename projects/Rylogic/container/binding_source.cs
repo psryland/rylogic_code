@@ -1002,7 +1002,7 @@ namespace Rylogic.Container
 
 		public override string ToString()
 		{
-			return "{0} Current: {1}".Fmt(Count, Current);
+			return $"{Count} Current: {Current}";
 		}
 
 		#region IList<TItem>

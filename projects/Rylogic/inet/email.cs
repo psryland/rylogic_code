@@ -233,7 +233,7 @@ namespace Rylogic.INet
 				{
 					// HTTP POST web request
 					var req = HttpWebRequest.Create("https://api.sendgrid.com/api/mail.send.json");
-					req.Headers.Add(HttpRequestHeader.Authorization, "Bearer {0}".Fmt(AuthString));
+					req.Headers.Add(HttpRequestHeader.Authorization, $"Bearer {AuthString}");
 					req.ContentType = "application/x-www-form-urlencoded";
 					req.Method = "POST";
 

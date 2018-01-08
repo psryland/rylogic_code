@@ -92,7 +92,10 @@ namespace Rylogic.Common
 						{
 							// Report delegates that have been added
 							if (added.Count != 0)
-								throw new Exception("Event {0} has had handlers added:\n{1}".Fmt(type.Name + "." + evt.Key.Name, string.Join("\n", added.Select(x => x.Target.ToString() + "." + x.Method.Name))));
+							{
+								var added_names = string.Join("\n", added.Select(x => $"{x.Target}.{x.Method.Name}"));
+								throw new Exception($"Event {type.Name}.{evt.Key.Name} has had handlers added:\n{added_names}");
+							}
 						}
 						else
 						{
@@ -113,7 +116,10 @@ namespace Rylogic.Common
 						{
 							// Report delegates that have been removed
 							if (removed.Count != 0)
-								throw new Exception("Event {0} has had handlers removed:\n{1}".Fmt(type.Name + "." + evt.Key.Name, string.Join("\n", removed.Select(x => x.Target.ToString() + "." + x.Method.Name))));
+							{
+								var removed_names = string.Join("\n", removed.Select(x => $"{x.Target.ToString()}.{x.Method.Name}"));
+								throw new Exception($"Event {type.Name}.{evt.Key.Name} has had handlers removed:\n{removed_names}");
+							}
 						}
 						else
 						{

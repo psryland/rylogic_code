@@ -48,7 +48,7 @@ namespace CppPad
 			get { return get<MSVCCompilerSettings>(nameof(MSVC)); }
 			set
 			{
-				if (value == null) throw new ArgumentNullException("Setting '{0}' cannot be null".Fmt(nameof(Settings.MSVC)));
+				if (value == null) throw new ArgumentNullException($"Setting '{nameof(MSVC)}' cannot be null");
 				set(nameof(MSVC), value);
 			}
 		}

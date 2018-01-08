@@ -10,13 +10,12 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using LDraw.Properties;
-using Rylogic.Common;
 using Rylogic.Extn;
+using Rylogic.Graphix;
 using Rylogic.Gui;
 using Rylogic.Maths;
 using Rylogic.Scintilla;
 using Rylogic.Utility;
-using Rylogic.Graphix;
 using Rylogic.Windows32;
 using ToolStripContainer = Rylogic.Gui.ToolStripContainer;
 
@@ -152,7 +151,7 @@ namespace LDraw
 			try {
 			#endif
 
-				Debug.WriteLine("{0} is a {1}bit process".Fmt(Application.ExecutablePath, Environment.Is64BitProcess?"64":"32"));
+				Debug.WriteLine($"{Application.ExecutablePath} is a {(Environment.Is64BitProcess?"64":"32")}bit process");
 				Application.EnableVisualStyles();
 				Application.SetCompatibleTextRenderingDefault(false);
 				Application.Run(new MainUI());

@@ -113,7 +113,7 @@ namespace Rylogic.Gui
 			{
 				switch (m_pin)
 				{
-				default: throw new Exception("Unknown pin location '%d'".Fmt(m_pin));
+				default: throw new Exception($"Unknown pin location '{m_pin}'");
 				case EPin.TopLeft:      m_ofs = new Point(-Size.Width   , 0); break;
 				case EPin.TopCentre:    m_ofs = new Point(-Size.Width/2 , 0); break;
 				case EPin.TopRight:     m_ofs = new Point(0             , 0); break;
@@ -376,7 +376,7 @@ namespace Rylogic.Gui
 			var frame = TargetFrame;
 			switch (Pin)
 			{
-			default: throw new Exception("Unknown pin location '%d'".Fmt(Pin));
+			default: throw new Exception($"Unknown pin location '{Pin}'");
 			case EPin.TopLeft:      m_ofs = new Point(Location.X - frame.Left                 , Location.Y - frame.Top   ); break;
 			case EPin.TopCentre:    m_ofs = new Point(Location.X - (frame.Left+frame.Right)/2 , Location.Y - frame.Top   ); break;
 			case EPin.TopRight:     m_ofs = new Point(Location.X - frame.Right                , Location.Y - frame.Top   ); break;
@@ -396,7 +396,7 @@ namespace Rylogic.Gui
 			var frame = TargetFrame;
 			switch (Pin)
 			{
-			default: throw new Exception("Unknown pin location '%d'".Fmt(Pin));
+			default: throw new Exception($"Unknown pin location '{Pin}'");
 			case EPin.TopLeft:      Location = new Point(frame.Left                 , frame.Top   ) + m_ofs.ToSize(); break;
 			case EPin.TopCentre:    Location = new Point((frame.Left+frame.Right)/2 , frame.Top   ) + m_ofs.ToSize(); break;
 			case EPin.TopRight:     Location = new Point(frame.Right                , frame.Top   ) + m_ofs.ToSize(); break;

@@ -123,7 +123,7 @@ namespace RyLogViewer
 			foreach (var x in Action.CaptureGroupNames)
 			{
 				var group_name = x;
-				menu.Items.Add("Capture Group: {0}".Fmt(group_name), null, (ss,aa) => edit.SelectedText = "{"+group_name+"}");
+				menu.Items.Add($"Capture Group: {group_name}", null, (ss,aa) => edit.SelectedText = "{"+group_name+"}");
 			}
 			if (menu.Items.Count != 0) menu.Items.Add(new ToolStripSeparator());
 			menu.Items.Add("Current file full path" , null, (ss,aa) => edit.SelectedText = "{" + SpecialTags.FilePath  + "}");

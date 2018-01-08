@@ -21,7 +21,7 @@ namespace Rylogic.Extn
 			if (obj == null) return "null";
 			var type = obj.GetType();
 			return
-				"{0}:\n".Fmt(type.Name) +
+				$"{type.Name}:\n" +
 				string.Join("\n", type.GetProperties().Select(p => p.Name + ":  " + p.GetValue(obj, null)))+
 				"\n";
 		}

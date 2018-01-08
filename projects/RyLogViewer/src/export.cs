@@ -81,7 +81,7 @@ namespace RyLogViewer
 					{
 						Environment.ExitCode = 1;
 						if (!startup_options.Silent)
-							Console.WriteLine("Export failed.\r\n{0}".Fmt(ex.Message));
+							Console.WriteLine($"Export failed.\r\n{ex.Message}");
 					}
 				}
 			}

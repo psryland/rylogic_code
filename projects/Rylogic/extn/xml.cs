@@ -32,7 +32,7 @@ namespace Rylogic.Extn
 			Xml_.ToMap[typeof(Padding)] = (obj, node) =>
 			{
 				var p = (Padding)obj;
-				node.SetValue("{0} {1} {2} {3}".Fmt(p.Left, p.Top, p.Right, p.Bottom));
+				node.SetValue($"{p.Left} {p.Top} {p.Right} {p.Bottom}");
 				return node;
 			};
 			Xml_.ToMap[typeof(Font)] = (obj, node) =>

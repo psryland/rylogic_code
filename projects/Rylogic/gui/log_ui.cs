@@ -654,7 +654,7 @@ namespace Rylogic.Gui
 			}
 			catch (Exception ex)
 			{
-				AddMessage("Log Error: {0}".Fmt(ex.Message));
+				AddMessage($"Log Error: {ex.Message}");
 			}
 			return true;
 		}

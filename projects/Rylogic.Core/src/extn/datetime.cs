@@ -21,7 +21,7 @@ namespace Rylogic.Extn
 		public static DateTime To(this DateTime dt, DateTimeKind kind)
 		{
 			// Prefer calling this method instead of 'ToLocalTime' or 'ToUniversalTime' directly
-			if (dt.Kind == DateTimeKind.Unspecified) throw new Exception("Cannot convert an unspecified DateTime to {0}".Fmt(kind));
+			if (dt.Kind == DateTimeKind.Unspecified) throw new Exception($"Cannot convert an unspecified DateTime to {kind}");
 			if (kind == DateTimeKind.Local) return dt.ToLocalTime();
 			if (kind == DateTimeKind.Utc) return dt.ToUniversalTime();
 			return dt.As(DateTimeKind.Unspecified);
@@ -227,7 +227,7 @@ namespace Rylogic.Extn
 				{
 					switch (default_units)
 					{
-					default: throw new Exception("unknown time units {0}".Fmt(default_units));
+					default: throw new Exception($"unknown time units {default_units}");
 					case ETimeUnits.Milliseconds: return TimeSpan.FromMilliseconds(x);
 					case ETimeUnits.Seconds:      return TimeSpan.FromSeconds(x);
 					case ETimeUnits.Minutes:      return TimeSpan.FromMinutes(x);
@@ -256,13 +256,13 @@ namespace Rylogic.Extn
 					@"(?:$|\s)";             // End of the string or followed by whitespace
 
 				// Extract parts
-				var msec  = val.SubstringRegex(num_patn.Fmt("msecs|msec|ms"), RegexOptions.IgnoreCase).FirstOrDefault(); // A decimal value followed by 'msecs', 'msec', or 'ms'
-				var sec   = val.SubstringRegex(num_patn.Fmt("secs|sec|s"   ), RegexOptions.IgnoreCase).FirstOrDefault(); // A decimal value followed by 'secs', 'sec', or 's'
-				var min   = val.SubstringRegex(num_patn.Fmt("mins|min|m"   ), RegexOptions.IgnoreCase).FirstOrDefault(); // A decimal value followed by 'mins', 'min', or 'm'
-				var hrs   = val.SubstringRegex(num_patn.Fmt("hrs|hr|h"     ), RegexOptions.IgnoreCase).FirstOrDefault(); // A decimal value followed by 'hrs', 'hr', 'h'
-				var days  = val.SubstringRegex(num_patn.Fmt("days|day|d"   ), RegexOptions.IgnoreCase).FirstOrDefault(); // A decimal value followed by 'days', 'day', 'd'
-				var weeks = val.SubstringRegex(num_patn.Fmt("weeks|week|w" ), RegexOptions.IgnoreCase).FirstOrDefault(); // A decimal value followed by 'weeks', 'week', 'w'
-				var years = val.SubstringRegex(num_patn.Fmt("years|year|y" ), RegexOptions.IgnoreCase).FirstOrDefault(); // A decimal value followed by 'years', 'year', 'y'
+				var msec  = val.SubstringRegex(string.Format(num_patn, "msecs|msec|ms"), RegexOptions.IgnoreCase).FirstOrDefault(); // A decimal value followed by 'msecs', 'msec', or 'ms'
+				var sec   = val.SubstringRegex(string.Format(num_patn, "secs|sec|s"   ), RegexOptions.IgnoreCase).FirstOrDefault(); // A decimal value followed by 'secs', 'sec', or 's'
+				var min   = val.SubstringRegex(string.Format(num_patn, "mins|min|m"   ), RegexOptions.IgnoreCase).FirstOrDefault(); // A decimal value followed by 'mins', 'min', or 'm'
+				var hrs   = val.SubstringRegex(string.Format(num_patn, "hrs|hr|h"     ), RegexOptions.IgnoreCase).FirstOrDefault(); // A decimal value followed by 'hrs', 'hr', 'h'
+				var days  = val.SubstringRegex(string.Format(num_patn, "days|day|d"   ), RegexOptions.IgnoreCase).FirstOrDefault(); // A decimal value followed by 'days', 'day', 'd'
+				var weeks = val.SubstringRegex(string.Format(num_patn, "weeks|week|w" ), RegexOptions.IgnoreCase).FirstOrDefault(); // A decimal value followed by 'weeks', 'week', 'w'
+				var years = val.SubstringRegex(string.Format(num_patn, "years|year|y" ), RegexOptions.IgnoreCase).FirstOrDefault(); // A decimal value followed by 'years', 'year', 'y'
 				if (msec == null && sec == null && min == null && hrs == null && days == null && weeks == null && years == null)
 					return null;
 
@@ -327,23 +327,23 @@ namespace Rylogic.Extn
 			var show_f = (min_unit <= ETimeUnits.Milliseconds && ETimeUnits.Milliseconds <= max_unit) && (f != 0 || leading_zeros || (trailing_zeros && show_s) || (min_unit == ETimeUnits.Milliseconds && (long)ts.TotalMilliseconds   == 0));
 
 			return Str.Build(
-				show_y ? "{0}{1} ".Fmt(y, unit_y) : string.Empty,
-				show_w ? "{0}{1} ".Fmt(w, unit_w) : string.Empty,
-				show_d ? "{0}{1} ".Fmt(d, unit_d) : string.Empty,
-				show_h ? "{0}{1} ".Fmt(h, unit_h) : string.Empty,
-				show_m ? "{0}{1} ".Fmt(m, unit_m) : string.Empty,
-				show_s ? "{0}{1} ".Fmt(s, unit_s) : string.Empty,
-				show_f ? "{0}{1} ".Fmt(f, unit_f) : string.Empty).TrimEnd(' ');
+				show_y ? $"{y}{unit_y} " : string.Empty,
+				show_w ? $"{w}{unit_w} " : string.Empty,
+				show_d ? $"{d}{unit_d} " : string.Empty,
+				show_h ? $"{h}{unit_h} " : string.Empty,
+				show_m ? $"{m}{unit_m} " : string.Empty,
+				show_s ? $"{s}{unit_s} " : string.Empty,
+				show_f ? $"{f}{unit_f} " : string.Empty).TrimEnd(' ');
 		}
 
 		/// <summary>Return the approximate time for this time span using the least number of characters possible</summary>
 		public static string ToMinimalString(this TimeSpan ts)
 		{
-			if (ts.TotalDays    > 1) return "{0}d".Fmt((int)ts.TotalDays);
-			if (ts.TotalHours   > 1) return "{0}h".Fmt((int)ts.TotalHours);
-			if (ts.TotalMinutes > 1) return "{0}m".Fmt((int)ts.TotalMinutes);
-			if (ts.TotalSeconds > 1) return "{0}s".Fmt((int)ts.TotalSeconds);
-			return "{0}ms".Fmt((int)ts.TotalMilliseconds);
+			if (ts.TotalDays    > 1) return $"{(int)ts.TotalDays   }d";
+			if (ts.TotalHours   > 1) return $"{(int)ts.TotalHours  }h";
+			if (ts.TotalMinutes > 1) return $"{(int)ts.TotalMinutes}m";
+			if (ts.TotalSeconds > 1) return $"{(int)ts.TotalSeconds}s";
+			return $"{(int)ts.TotalMilliseconds}ms";
 		}
 	}
 }

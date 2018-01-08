@@ -237,8 +237,8 @@ namespace Rylogic.Utility
 			var attr = Attrs(member_name).OfType<AssocAttribute>().FirstOrDefault(x => x.AssocItem is Ret && x.Name == name);
 			if (attr == null)
 			{
-				var with_name = name != null ? " with name {0}".Fmt(name) : string.Empty;
-				throw new Exception("Member does not have the AssocAttribute for type {0}{1}".Fmt(typeof(Ret).Name, with_name));
+				var with_name = name != null ? $" with name {name}" : string.Empty;
+				throw new Exception($"Member does not have the AssocAttribute for type {typeof(Ret).Name}{with_name}");
 			}
 			return (Ret)attr.AssocItem;
 		}
@@ -250,8 +250,8 @@ namespace Rylogic.Utility
 			var attr = Attrs(expression).OfType<AssocAttribute>().FirstOrDefault(x => x.AssocItem is Ret && x.Name == name);
 			if (attr == null)
 			{
-				var with_name = name != null ? " with name {0}".Fmt(name) : string.Empty;
-				throw new Exception("Member does not have the AssocAttribute for type {0}".Fmt(typeof(Ret).Name, with_name));
+				var with_name = name != null ? $" with name {name}" : string.Empty;
+				throw new Exception($"Member does not have the AssocAttribute for type {typeof(Ret).Name}{with_name}");
 			}
 			return (Ret)attr.AssocItem;
 		}
@@ -263,8 +263,8 @@ namespace Rylogic.Utility
 			var attr = Attrs(expression).OfType<AssocAttribute>().FirstOrDefault(x => x.AssocItem is Ret && x.Name == name);
 			if (attr == null)
 			{
-				var with_name = name != null ? " with name {0}".Fmt(name) : string.Empty;
-				throw new Exception("Member does not have the AssocAttribute for type {0}".Fmt(typeof(Ret).Name, with_name));
+				var with_name = name != null ? $" with name {name}" : string.Empty;
+				throw new Exception($"Member does not have the AssocAttribute for type {typeof(Ret).Name}{with_name}");
 			}
 			return (Ret)attr.AssocItem;
 		}

@@ -59,7 +59,7 @@ namespace Rylogic.Utility
 			// Have to use 'AllFields' because GetField doesn't find private members in base classes
 			var fi_evt = type.AllFields(BindingFlags.Static|BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).FirstOrDefault(x => x.Name == evt);
 			if (fi_evt == null || fi_evt.FieldType.BaseType != typeof(MulticastDelegate))
-				throw new Exception("Object {0} has no event called {1}".Fmt(type.Name, evt));
+				throw new Exception($"Object {type.Name} has no event called {evt}");
 
 			// Get the instance of the multicast delegate from 'owner'
 			var multicast_delegate = (MulticastDelegate)fi_evt.GetValue(owner);

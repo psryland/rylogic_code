@@ -555,7 +555,7 @@ namespace RyLogViewer
 
 			// Font
 			m_text_font.ToolTip(m_tt, "The font used to display the log file data");
-			m_text_font.Text = "{0}, {1}pt".Fmt(Settings.Font.Name ,Settings.Font.Size);
+			m_text_font.Text = $"{Settings.Font.Name}, {Settings.Font.Size}pt";
 			m_text_font.Font = Settings.Font;
 
 			// Font button
@@ -565,7 +565,7 @@ namespace RyLogViewer
 					var dg = new FontDialog{Font = Settings.Font};
 					if (dg.ShowDialog(this) != DialogResult.OK) return;
 					m_text_font.Font = dg.Font;
-					m_text_font.Text = "{0}, {1}pt".Fmt(dg.Font.Name ,dg.Font.Size);
+					m_text_font.Text = $"{dg.Font.Name}, {dg.Font.Size}pt";
 					Settings.Font = dg.Font;
 				};
 
@@ -863,7 +863,7 @@ namespace RyLogViewer
 		{
 			if (pattern_ui.HasUnsavedChanges)
 			{
-				var res = MsgBox.Show(this, "{0} pattern contains unsaved changes.\r\n\r\nSave changes?".Fmt(text),"Unsaved Changes",MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
+				var res = MsgBox.Show(this, $"{text} pattern contains unsaved changes.\r\n\r\nSave changes?","Unsaved Changes",MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
 				if (res == DialogResult.Cancel) { args.Cancel = true; return; }
 				if (res == DialogResult.No)     { pattern_ui.NewPattern(new TPattern()); return; }
 				if (!pattern_ui.CommitEnabled)  { args.Cancel = true; return; }

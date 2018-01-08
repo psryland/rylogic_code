@@ -239,11 +239,11 @@ namespace Rylogic.Container
 							str.Append((char)ch);
 						}
 						if (ch >= 0) ch = next(); // Consume the closing quote
-						else throw new Exception("Quoted CSV element not closed starting at line {0}, element {1}".Fmt(line, elem));
+						else throw new Exception($"Quoted CSV element not closed starting at line {line}, element {elem}");
 
 						// Expect the next character to be delimiter or EOF
 						if (ch != ',' && ch != '\n' && ch >= 0)
-							throw new Exception("Unexpected character following quoted CSV element at line {0}, element {1}".Fmt(line, elem));
+							throw new Exception($"Unexpected character following quoted CSV element at line {line}, element {elem}");
 					}
 					// Otherwise, if not a row or element delimiter, assume this is an un-quoted element, consume to the next delimiter
 					else if (ch != ',' && ch != '\n')

@@ -69,7 +69,7 @@ namespace Rylogic.Common
 
 				public override string ToString()
 				{
-					return "{0} Count: {1}".Fmt(Name, Count);
+					return $"{Name} Count: {Count}";
 				}
 			}
 
@@ -124,7 +124,7 @@ namespace Rylogic.Common
 			protected override void ValidParent(Html parent)
 			{
 				if (parent is Head) return;
-				throw new Exception("{0} elements can not be parented to {1} elements".Fmt(GetType().Name, parent.GetType().Name));
+				throw new Exception($"{GetType().Name} elements can not be parented to {parent.GetType().Name} elements");
 			}
 
 			/// <summary>True if this element has child content</summary>
@@ -178,7 +178,7 @@ namespace Rylogic.Common
 			{
 				if (parent is Body) return;
 				if (parent is Div) return;
-				throw new Exception("{0} elements can not be parented to {1} elements".Fmt(GetType().Name, parent.GetType().Name));
+				throw new Exception($"{GetType().Name} elements can not be parented to {parent.GetType().Name} elements");
 			}
 		}
 		#endregion
@@ -193,7 +193,7 @@ namespace Rylogic.Common
 					protected override void ValidParent(Html parent)
 					{
 						if (parent is Row) return;
-						throw new Exception("{0} elements can not be parented to {1} elements".Fmt(GetType().Name, parent.GetType().Name));
+						throw new Exception($"{GetType().Name} elements can not be parented to {parent.GetType().Name} elements");
 					}
 				}
 				public class Data :Html
@@ -202,7 +202,7 @@ namespace Rylogic.Common
 					protected override void ValidParent(Html parent)
 					{
 						if (parent is Row) return;
-						throw new Exception("{0} elements can not be parented to {1} elements".Fmt(GetType().Name, parent.GetType().Name));
+						throw new Exception($"{GetType().Name} elements can not be parented to {parent.GetType().Name} elements");
 					}
 				}
 
@@ -210,7 +210,7 @@ namespace Rylogic.Common
 				protected override void ValidParent(Html parent)
 				{
 					if (parent is Table) return;
-					throw new Exception("{0} elements can not be parented to {1} elements".Fmt(GetType().Name, parent.GetType().Name));
+					throw new Exception($"{GetType().Name} elements can not be parented to {parent.GetType().Name} elements");
 				}
 			}
 			public Table(string class_ = null) :base("table", class_) {}
@@ -218,7 +218,7 @@ namespace Rylogic.Common
 			{
 				if (parent is Body) return;
 				if (parent is Div) return;
-				throw new Exception("{0} elements can not be parented to {1} elements".Fmt(GetType().Name, parent.GetType().Name));
+				throw new Exception($"{GetType().Name} elements can not be parented to {parent.GetType().Name} elements");
 			}
 			protected override void GenerateTagOpen(StringBuilder sb, ref int indent)
 			{

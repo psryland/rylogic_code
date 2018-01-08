@@ -34,7 +34,7 @@ namespace Csex
 			RowTemplate.Height                     = 20;
 			
 			XmlName = Path_.FileTitle(filename);
-			DockControl = new DockControl(this, "XmlFile-{0}".Fmt(XmlName)) { TabText = XmlName, TabCMenu = new ContextMenuStrip() };
+			DockControl = new DockControl(this, $"XmlFile-{XmlName}") { TabText = XmlName, TabCMenu = new ContextMenuStrip() };
 			DockControl.TabCMenu.Items.Add2("Close", null, (s,a) => Dispose());
 
 			Root = XDocument.Load(filename).Root;

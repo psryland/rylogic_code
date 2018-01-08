@@ -187,7 +187,7 @@ namespace CppPad
 			if (Settings.UILayout != null)
 			{
 				try { m_dock.LoadLayout(Settings.UILayout); }
-				catch (Exception ex) { Debug.WriteLine("Failed to restore UI Layout: {0}".Fmt(ex.Message)); }
+				catch (Exception ex) { Debug.WriteLine($"Failed to restore UI Layout: {ex.Message}"); }
 			}
 			else
 			{
@@ -238,7 +238,7 @@ namespace CppPad
 			}
 			catch (Exception ex)
 			{
-				m_status.SetStatusMessage(msg:"Create file failed: {0}".Fmt(ex.Message), fr_color:Color.Red, display_time:TimeSpan.FromSeconds(5));
+				m_status.SetStatusMessage(msg:$"Create file failed: {ex.Message}", fr_color:Color.Red, display_time:TimeSpan.FromSeconds(5));
 			}
 		}
 
@@ -291,7 +291,7 @@ namespace CppPad
 			}
 			catch (Exception ex)
 			{
-				m_status.SetStatusMessage(msg:"Load project failed: {0}".Fmt(ex.Message), fr_color:Color.Red, display_time:TimeSpan.FromSeconds(5));
+				m_status.SetStatusMessage(msg:$"Load project failed: {ex.Message}", fr_color:Color.Red, display_time:TimeSpan.FromSeconds(5));
 			}
 		}
 
@@ -341,7 +341,7 @@ namespace CppPad
 			}
 			catch (Exception ex)
 			{
-				m_status.SetStatusMessage(msg:"Load file failed: {0}".Fmt(ex.Message), fr_color:Color.Red, display_time:TimeSpan.FromSeconds(5));
+				m_status.SetStatusMessage(msg:$"Load file failed: {ex.Message}", fr_color:Color.Red, display_time:TimeSpan.FromSeconds(5));
 			}
 		}
 
@@ -366,7 +366,7 @@ namespace CppPad
 				return;
 
 			// Update the app title
-			Text = "Cpp Pad - {0}".Fmt(Settings.LastProject);
+			Text = $"Cpp Pad - {Settings.LastProject}";
 
 			//// Enable menu items
 			//m_menu_file_new_project.Enabled = true;

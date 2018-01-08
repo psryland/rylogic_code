@@ -490,7 +490,7 @@ namespace Rylogic.Gui
 			/// <summary>ToString</summary>
 			public override string ToString()
 			{
-				return "{0} - count:{1}".Fmt(Name, m_data.Count);
+				return $"{Name} - count:{m_data.Count}";
 			}
 
 			/// <summary>Plot colour generator</summary>
@@ -2570,7 +2570,7 @@ namespace Rylogic.Gui
 							}
 							if (nearest != null)
 							{
-								var opt = note_menu.DropDownItems.Add2(new ToolStripMenuItem("Delete '{0}'".Fmt(nearest.m_msg.Summary(12))));
+								var opt = note_menu.DropDownItems.Add2(new ToolStripMenuItem($"Delete '{nearest.m_msg.Summary(12)}'"));
 								opt.Click += (s,e) =>
 								{
 									Notes.Remove(nearest);

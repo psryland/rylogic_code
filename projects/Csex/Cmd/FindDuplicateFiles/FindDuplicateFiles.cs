@@ -104,7 +104,7 @@ namespace Csex
 					if (existing.TryGetValue(finfo.Key, out original))
 					{
 						if (m_show_dups)
-							Console.WriteLine("{0} is a duplicate of {1}".Fmt(finfo.Value.FullPath, original.FullPath));
+							Console.WriteLine($"{finfo.Value.FullPath} is a duplicate of {original.FullPath}");
 
 						if (lst != null)
 							lst.WriteLine(finfo.Value.FullPath);
@@ -156,7 +156,7 @@ namespace Csex
 					Shell_.FileData existing = map.TryGetValue(k, out existing) ? existing : null;
 					if (existing != null)
 					{
-						Console.WriteLine("Existing duplicate found:\n  {0}\n  {1}\n".Fmt(finfo.FullPath, existing.FullPath));
+						Console.WriteLine($"Existing duplicate found:\n  {finfo.FullPath}\n  {existing.FullPath}\n");
 						continue;
 					}
 
@@ -165,8 +165,8 @@ namespace Csex
 				}
 				catch (Exception ex)
 				{
-					Console.WriteLine("Failed to add {0} to the map".Fmt(finfo.FullPath));
-					Console.WriteLine("Reason: {0}".Fmt(ex.Message));
+					Console.WriteLine($"Failed to add {finfo.FullPath} to the map");
+					Console.WriteLine($"Reason: {ex.Message}");
 				}
 			}
 

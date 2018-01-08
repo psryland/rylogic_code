@@ -41,7 +41,7 @@ namespace RyLogViewer
 			{
 				MsgBox.Show(null,
 					"There is an error in the startup options provided.\r\n"+
-					"Error Details:\r\n{0}".Fmt(err.Message)
+					$"Error Details:\r\n{err.Message}"
 					, "Command Line Error"
 					, MessageBoxButtons.OK
 					, MessageBoxIcon.Error);
@@ -119,7 +119,7 @@ namespace RyLogViewer
 						.AppendLine(settings)
 						.AppendLine()
 						.AppendLine("[General]")
-						.AppendLine("Application Version: {0}".Fmt(Util.AssemblyVersion()))
+						.AppendLine($"Application Version: {Util.AssemblyVersion()}")
 						.AppendLine(Environment.OSVersion.VersionString)
 						.AppendLine(StartupOptions?.Dump() ?? string.Empty)
 						.AppendLine()

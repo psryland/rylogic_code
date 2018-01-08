@@ -216,7 +216,7 @@ namespace Rylogic.Gui
 			}
 			public override string ToString()
 			{
-				return "col: {0} sty: {1}".Fmt(m_col, m_sty);
+				return $"col: {m_col} sty: {m_sty}";
 			}
 		}
 
@@ -416,7 +416,7 @@ namespace Rylogic.Gui
 				}
 				public override string ToString()
 				{
-					return "{0} {1}".Fmt(pos.ToString(), style);
+					return $"{pos} {style}";
 				}
 			}
 
@@ -1469,7 +1469,7 @@ namespace Rylogic.Gui
 			protected virtual void ReportUnsupportedEscapeSequence(StringBuilder seq)
 			{
 				if (ReportUnsupportedEscapeSequences)
-					Debug.WriteLine("Unsupported VT100 escape sequence: {0}".Fmt(seq.ToString()));
+					Debug.WriteLine($"Unsupported VT100 escape sequence: {seq}");
 			}
 		}
 
@@ -1623,7 +1623,7 @@ namespace Rylogic.Gui
 						}
 						catch (Exception ex)
 						{
-							MessageBox.Show(this, "Capture to file could not start\r\n{0}".Fmt(ex.Message), "Capture To File", MessageBoxButtons.OK, MessageBoxIcon.Error);
+							MessageBox.Show(this, $"Capture to file could not start\r\n{ex.Message}", "Capture To File", MessageBoxButtons.OK, MessageBoxIcon.Error);
 						}
 					}
 				}

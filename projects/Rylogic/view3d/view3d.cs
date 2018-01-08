@@ -423,7 +423,7 @@ namespace Rylogic.Graphix
 			public Vertex(v4 vert)                            { m_pos = vert; m_col = ~0U; m_norm = v4.Zero; m_uv = v2.Zero; pad = 0; }
 			public Vertex(v4 vert, uint col)                  { m_pos = vert; m_col = col; m_norm = v4.Zero; m_uv = v2.Zero; pad = 0; }
 			public Vertex(v4 vert, v4 norm, uint col, v2 tex) { m_pos = vert; m_col = col; m_norm = norm;    m_uv = tex;     pad = 0; }
-			public override string ToString()                 { return "V:<{0}> C:<{1}>".Fmt(m_pos, m_col.ToString("X8")); }
+			public override string ToString()                 { return $"V:<{m_pos}> C:<{m_col.ToString("X8")}>"; }
 		}
 
 		[Serializable, StructLayout(LayoutKind.Sequential)]
@@ -2160,7 +2160,7 @@ namespace ldr
 				var ctx = context_id ?? Guid.NewGuid();
 				m_handle = View3D_ObjectCreateLdr(ldr_script, file, ref ctx, ref inc);
 				if (m_handle == HObject.Zero)
-					throw new Exception("Failed to create object from script\r\n{0}".Fmt(ldr_script.Summary(100)));
+					throw new Exception($"Failed to create object from script\r\n{ldr_script.Summary(100)}");
 			}
 
 			/// <summary>Create from buffer</summary>
@@ -2175,7 +2175,7 @@ namespace ldr
 				using (var nbuf = Marshal_.ArrayToPtr(nuggets))
 				{
 					m_handle = View3D_ObjectCreate(name, colour, vcount, icount, ncount, vbuf.Pointer, ibuf.Pointer, nbuf.Value.Ptr, ref ctx);
-					if (m_handle == HObject.Zero) throw new System.Exception("Failed to create object '{0}' from provided buffers".Fmt(name));
+					if (m_handle == HObject.Zero) throw new System.Exception($"Failed to create object '{name}' from provided buffers");
 				}
 			}
 
@@ -2185,7 +2185,7 @@ namespace ldr
 				m_owned = true;
 				var ctx = context_id ?? Guid.NewGuid();
 				m_handle = View3D_ObjectCreateEditCB(name, colour, vcount, icount, ncount, edit_cb, IntPtr.Zero, ref ctx);
-				if (m_handle == HObject.Zero) throw new Exception("Failed to create object '{0}' via edit callback".Fmt(name));
+				if (m_handle == HObject.Zero) throw new Exception($"Failed to create object '{name}' via edit callback");
 			}
 
 			/// <summary>Attach to an existing object handle</summary>
@@ -2669,7 +2669,7 @@ namespace ldr
 			{
 				m_owned = true;
 				Handle = View3D_TextureCreate(width, height, data, data_size, ref options);
-				if (Handle == HTexture.Zero) throw new Exception("Failed to create {0}x{1} texture".Fmt(width,height));
+				if (Handle == HTexture.Zero) throw new Exception($"Failed to create {width}x{height} texture");
 				
 				View3D_TextureGetInfo(Handle, out Info);
 				View3D_TextureSetFilterAndAddrMode(Handle, options.Filter, options.AddrU, options.AddrV);
@@ -2689,7 +2689,7 @@ namespace ldr
 			{
 				m_owned = true;
 				Handle = View3D_TextureCreateFromFile(tex_filepath, width, height, ref options);
-				if (Handle == HTexture.Zero) throw new Exception("Failed to create texture from {0}".Fmt(tex_filepath));
+				if (Handle == HTexture.Zero) throw new Exception($"Failed to create texture from {tex_filepath}");
 				View3D_TextureGetInfo(Handle, out Info);
 				View3D_TextureSetFilterAndAddrMode(Handle, options.Filter, options.AddrU, options.AddrV);
 			}

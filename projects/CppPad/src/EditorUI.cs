@@ -181,7 +181,7 @@ namespace CppPad
 		{
 			var cmenu = new ContextMenuStrip();
 			{
-				var opt = cmenu.Items.Add2(new ToolStripMenuItem("Save {0}".Fmt(Path_.FileName(Filepath))));
+				var opt = cmenu.Items.Add2(new ToolStripMenuItem($"Save {Path_.FileName(Filepath)}"));
 				cmenu.Opening += (s,a) => opt.Enabled = SaveNeeded;
 				opt.Click += (s,a) => Save(Filepath);
 			} {
@@ -205,7 +205,7 @@ namespace CppPad
 		/// <summary>Update the UI</summary>
 		private void UpdateUI(object sender = null, EventArgs args = null)
 		{
-			DockControl.TabText = "{0}{1}".Fmt(Path_.FileName(Filepath), SaveNeeded ? "*" : string.Empty);
+			DockControl.TabText = $"{Path_.FileName(Filepath)}{(SaveNeeded ? "*" : string.Empty)}";
 		}
 
 		#region Component Designer generated code

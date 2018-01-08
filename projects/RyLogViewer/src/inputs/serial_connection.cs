@@ -92,8 +92,8 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Log.Exception(this, ex, "Failed to connect {0}:{1} -> {2}".Fmt(conn.CommPort, conn.BaudRate, conn.OutputFilepath));
-				Misc.ShowMessage(this, "Failed to connect to {0}:{1}.".Fmt(conn.CommPort,conn.BaudRate), Application.ProductName, MessageBoxIcon.Error, ex);
+				Log.Exception(this, ex, $"Failed to connect {conn.CommPort}:{conn.BaudRate} -> {conn.OutputFilepath}");
+				Misc.ShowMessage(this, $"Failed to connect to {conn.CommPort}:{conn.BaudRate}.", Application.ProductName, MessageBoxIcon.Error, ex);
 			}
 			finally
 			{
@@ -129,14 +129,14 @@ namespace RyLogViewer
 			{
 				lock (m_lock)
 				{
-					Log.Info(this, "Disposing serial port connection {0}".Fmt(m_conn.CommPort));
+					Log.Info(this, $"Disposing serial port connection {m_conn.CommPort}");
 					m_port.Dispose();
 					m_port = null;
 				}
 			}
 		}
 
-		/// <summary>Start asynchronously reading from the tcp client</summary>
+		/// <summary>Start asynchronously reading from the TCP client</summary>
 		public void Start()
 		{
 			m_port.Open();

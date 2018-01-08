@@ -200,7 +200,7 @@ namespace TestCS
 			}
 			public override string ToString()
 			{
-				return "{0} {1} {2} {3} {4}".Fmt(Name, Value, Option, FValue, Checked);
+				return $"{Name} {Value} {Option} {FValue} {Checked}";
 			}
 		}
 

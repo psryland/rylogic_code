@@ -723,7 +723,7 @@ namespace Rylogic.Gui
 			double min, max, step;
 			XAxis.GridLines(out min, out max, out step); var xtick = XAxis.TickText(pt.X, step);
 			YAxis.GridLines(out min, out max, out step); var ytick = YAxis.TickText(pt.Y, step);
-			return "{0} , {1}".Fmt(xtick, ytick);
+			return $"{xtick} , {ytick}";
 		}
 
 		/// <summary>Return the current mouse pointer location as a string</summary>
@@ -2271,7 +2271,7 @@ namespace Rylogic.Gui
 				/// <summary>Friendly string view</summary>
 				public override string ToString()
 				{
-					return "{0} - [{1}:{2}]".Fmt(Label, Min, Max);
+					return $"{Label} - [{Min}:{Max}]";
 				}
 
 				#region Equals
@@ -3034,10 +3034,10 @@ namespace Rylogic.Gui
 				m_chart.Tools.TapeMeasure.O2P = m4x4.OriFromDir(delta, AxisId.PosZ, pt0) * m4x4.Scale(1f, 1f, delta.Length3, v4.Origin);
 				m_tape_measure_balloon.Location = m_chart.PointToScreen(e.Location);
 				m_tape_measure_balloon.Text = Str.Build(
-					"dX: {0}\r\n".Fmt(delta.x),
-					"dY: {0}\r\n".Fmt(delta.y),
-					"dZ: {0}\r\n".Fmt(delta.z),
-					"Len: {0}\r\n".Fmt(delta.Length3));
+					$"dX:  {delta.x}\r\n",
+					$"dY:  {delta.y}\r\n",
+					$"dZ:  {delta.z}\r\n",
+					$"Len: {delta.Length3}\r\n");
 
 				// Show the tape measure graphic (after the text has been initialised)
 				if (!m_tape_measure_graphic_added)
@@ -4863,14 +4863,14 @@ namespace Rylogic.Gui
 			for (int i = 0; i < elements.Length - 1; ++i)
 			{
 				if (!Equals(elements[i].Id, elements[i+1].Id)) continue;
-				throw new Exception("Element {0} is in the Elements collection more than once".Fmt(elements[i].ToString()));
+				throw new Exception($"Element {elements[i]} is in the Elements collection more than once");
 			}
 
 			// All elements in the chart should have their Chart property set to this chart
 			foreach (var elem in Elements)
 			{
 				if (elem.Chart == this) continue;
-				throw new Exception("Element {0} is in the Elements collection but does not have its Chart property set correctly".Fmt(elem.ToString()));
+				throw new Exception($"Element {elem} is in the Elements collection but does not have its Chart property set correctly");
 			}
 
 			// The selected collection contains all that is selected and no more
@@ -4884,7 +4884,7 @@ namespace Rylogic.Gui
 				throw new Exception("Elements collection and Element Id lookup table don't match");
 			foreach (var elem in Elements)
 				if (ElemIds.GetOrDefault(elem.Id) != elem)
-					throw new Exception("Element {0} is not in the Element Id lookup table".Fmt(elem.ToString()));
+					throw new Exception($"Element {elem} is not in the Element Id lookup table");
 
 			// Check the consistency of all elements
 			foreach (var elem in Elements)

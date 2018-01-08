@@ -648,7 +648,7 @@ namespace Rylogic.Utility
 				// Set the callback to call when it's time to output
 				OutputCB = output_cb ?? new Action<CallFreq>(s =>
 				{
-					Debug.WriteLine("{0}: {1}hz {2}s".Fmt(s.Name, s.Freq, s.Period));
+					Debug.WriteLine($"{s.Name}: {s.Freq}hz {s.Period}s");
 				});
 			}
 

@@ -36,7 +36,7 @@ namespace RyLogViewer
 					switch (version)
 					{
 					default:
-						throw new Exception("Version {0} Pattern Set is not supported".Fmt(version));
+						throw new Exception($"Version {version} Pattern Set is not supported");
 					case "v1.0":
 						// Latest
 						break;
@@ -298,7 +298,7 @@ namespace RyLogViewer
 		public static PatternSet Load(string filepath)
 		{
 			if (!Path_.FileExists(filepath))
-				throw new Exception("Pattern set file '{0}' does not exist".Fmt(filepath));
+				throw new Exception($"Pattern set file '{filepath}' does not exist");
 
 			var root = XDocument.Load(filepath).Root;
 			if (root == null)

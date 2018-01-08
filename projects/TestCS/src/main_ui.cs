@@ -50,7 +50,7 @@ namespace TestCS
 		{
 			// Note! Running this in the debugger causes this to be run as a 32bit
 			// process regardless of the selected solution platform
-			Debug.WriteLine("\n    {0} is a {1}bit process\n".Fmt(Application.ExecutablePath, Environment.Is64BitProcess ? "64" : "32"));
+			Debug.WriteLine($"\n    {Application.ExecutablePath} is a {(Environment.Is64BitProcess?"64":"32")}bit process\n");
 
 			Sci.LoadDll();
 			Sqlite.LoadDll();

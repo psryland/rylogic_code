@@ -126,7 +126,7 @@ namespace RyLogViewer
 			catch (Exception ex)
 			{
 				Log.Exception(this, ex, "Auto updated did not complete");
-				MsgBox.Show(this, "Automatic updated failed\r\nReason: {0}".Fmt(ex.MessageFull()), "Update Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				MsgBox.Show(this, $"Automatic updated failed\r\nReason: {ex.MessageFull()}", "Update Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
 

@@ -1,29 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
-using Rylogic.Extn;
 using Rylogic.Maths;
-using Rylogic.Utility;
 
 namespace EscapeVelocity
 {
 	public class Bond
 	{
-		/// <summary>The permutation identifier assocated with the bond (one of EPerm2/4)</summary>
+		/// <summary>The permutation identifier associated with the bond (one of EPerm2/4)</summary>
 		public int Perm { get; private set; }
 
 		/// <summary>The base single-bond strength</summary>
 		public double BaseStrength { get; private set; }
 
-		/// <summary>The number of electrons shared in the bond ie. single bond, double bond, etc</summary>
+		/// <summary>The number of electrons shared in the bond i.e. single bond, double bond, etc</summary>
 		public int Order { get; private set; }
 
-		/// <summary>The difference in electronegativity between the bonded elements</summary>
+		/// <summary>The difference in electro-negativity between the bonded elements</summary>
 		public double Ionicity { get; private set; }
 
 		/// <summary>The number of bonds of this permutation (per order)</summary>
 		public int[] Count { get; private set; }
 
-		public override string ToString() { return "[Bond] Perm:{0} BaseStrength:{1} Order:{2} Counts:({3}) Ionicity:{4} Enthalpy:{5}".Fmt(EPerm.ToString(Perm),BaseStrength,Order,string.Join(",",Count),Ionicity,Enthalpy); }
+		public override string ToString()
+		{
+			return $"[Bond] Perm:{EPerm.ToString(Perm)} BaseStrength:{BaseStrength} Order:{Order} Counts:({string.Join(",",Count)}) Ionicity:{Ionicity} Enthalpy:{Enthalpy}";
+		}
 
 		public Bond() { Count = new int[0]; }
 		public Bond(int perm, Element elem1, Element elem2, GameConstants consts)

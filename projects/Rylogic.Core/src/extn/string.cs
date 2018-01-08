@@ -73,7 +73,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Treats this string as a format string</summary>
-		[DebuggerStepThrough] public static string Fmt(this string fmt, params object[] args)
+		[Obsolete("Use in-fix strings instead")] public static string Fmt(this string fmt, params object[] args)
 		{
 			return string.Format(fmt, args);
 		}

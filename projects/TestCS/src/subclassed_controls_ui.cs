@@ -89,7 +89,7 @@ namespace TestCS
 				if (m_pb.Value < m_pb.Maximum)
 				{
 					++m_pb.Value;
-					m_pb.Text = "{0}".Fmt(m_pb.Value);
+					m_pb.Text = $"{m_pb.Value}";
 				}
 				else
 					m_timer.Enabled = false;
@@ -174,7 +174,7 @@ namespace TestCS
 			}
 			private string m_name;
 
-			public override string ToString() { return "Thing: {0}".Fmt(Name); }
+			public override string ToString() { return $"Thing: {Name}"; }
 		}
 
 		#region Windows Form Designer generated code

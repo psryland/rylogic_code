@@ -105,10 +105,9 @@ namespace RyLogViewer
 				return;
 
 			var start = from_start ? FileByteRange.Beg : SelectedRowByteRange.End;
-			Log.Info(this, "FindNext starting from {0}".Fmt(start));
+			Log.Info(this, $"FindNext starting from {start}");
 
-			long found;
-			if (Find(FindUI.Pattern, start, false, out found) && found == -1)
+			if (Find(FindUI.Pattern, start, false, out var found) && found == -1)
 				SetTransientStatusMessage("End of file", Color.Azure, Color.Blue);
 		}
 
@@ -119,7 +118,7 @@ namespace RyLogViewer
 				return;
 
 			var start = from_end ? FileByteRange.End : SelectedRowByteRange.Beg;
-			Log.Info(this, "FindPrev starting from {0}".Fmt(start));
+			Log.Info(this, $"FindPrev starting from {start}");
 
 			long found;
 			if (Find(FindUI.Pattern, start, true, out found) && found == -1)

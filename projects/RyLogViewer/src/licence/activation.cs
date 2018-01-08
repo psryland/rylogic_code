@@ -119,8 +119,8 @@ namespace RyLogViewer
 							// Prompt if about to override an existing valid licence
 							var res = MsgBox.Show(this, Str.Build(
 								"An existing valid licence already exists:\r\n",
-								"Licence Holder: {0}\r\n".Fmt(existing_lic.LicenceHolder),
-								"Email Address: {0}\r\n".Fmt(existing_lic.EmailAddress),
+								$"Licence Holder: {existing_lic.LicenceHolder}\r\n",
+								$"Email Address: {existing_lic.EmailAddress}\r\n",
 								"\r\n",
 								"Do you want to replace this licence?"),
 								Application.ProductName, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
@@ -178,7 +178,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				MsgBox.Show(this, "Failed to locate and import a valid licence file\r\n{0}".Fmt(ex.Message), Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+				MsgBox.Show(this, $"Failed to locate and import a valid licence file\r\n{ex.Message}", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
 

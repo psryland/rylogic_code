@@ -82,7 +82,10 @@ namespace EscapeVelocity
 		/// <summary>The properties of any element currently able to be measured</summary>
 		public static EElemProp KnownElementProperties { get; set; }
 
-		public override string ToString() { return "({0}) {1}".Fmt(AtomicNumber, Name.Fullname); }
+		public override string ToString()
+		{
+			return $"({AtomicNumber}) {Name.Fullname}";
+		}
 
 		// The stuff that all materials are made of
 		public Element()

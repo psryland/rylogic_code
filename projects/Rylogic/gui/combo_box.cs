@@ -409,7 +409,7 @@ namespace Rylogic.Gui
 
 			// Check the assigned value has the correct type
 			if (value != null && !ValueType.IsAssignableFrom(value.GetType()))
-				throw new ArgumentException("Cannot assign to 'Value', argument has the wrong type. Expected: {0}  Received: {1}".Fmt(ValueType.Name, value.GetType().Name));
+				throw new ArgumentException($"Cannot assign to 'Value', argument has the wrong type. Expected: {ValueType.Name}  Received: {value.GetType().Name}");
 
 			// Assign the value
 			m_value = value;

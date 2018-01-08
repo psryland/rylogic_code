@@ -198,7 +198,7 @@ namespace Rylogic.Gui
 				m_fwd_or_back = false;
 			}
 
-			System.Diagnostics.Debug.WriteLine("{0} : {1}".Fmt(UrlHistory.Position, string.Join("->", UrlHistory.Select(x => x.Url.ToString()))));
+			System.Diagnostics.Debug.WriteLine($"{UrlHistory.Position} : {string.Join("->", UrlHistory.Select(x => x.Url.ToString()))}");
 		}
 		private bool m_rdr_content;
 		private bool m_fwd_or_back;

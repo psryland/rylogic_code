@@ -64,7 +64,7 @@ namespace RyLogViewer
 			}
 			set
 			{
-				Log.Info(this, "Row {0} selected".Fmt(value));
+				Log.Info(this, $"Row {value} selected");
 				using (m_suspend_grid_events.Scope())
 					m_grid.SelectSingleRow(value);
 

@@ -241,7 +241,7 @@ namespace Rylogic.Gui
 				{
 					var parent = new Path(path.Text.Substring(0, p.Length));
 					var idx = Paths.BinarySearch(parent, Path.Compare);
-					if (idx < 0) idx = ~idx; else throw new Exception("Paths contains {0} and {1}. {1} should not be in 'Paths' as it's covered by {0}".Fmt(parent, Paths[idx]));
+					if (idx < 0) idx = ~idx; else throw new Exception($"Paths contains {parent} and {Paths[idx]}. {Paths[idx]} should not be in 'Paths' as it's covered by {parent}");
 
 					// Remove all children of 'parent'
 					var count = Paths.Skip(idx).Count(x => x.Name.StartsWith(parent.Name));
@@ -430,7 +430,7 @@ namespace Rylogic.Gui
 					if      (part == ".") continue;
 					else if (part == ".." && node != null) node = node.Parent;
 					else node = nodes.Cast<TreeNode>().FirstOrDefault(x => string.Compare(x.Name, part) == 0);
-					if (node == null) throw new Exception("Node path {0} does not exist".Fmt(fullpath));
+					if (node == null) throw new Exception($"Node path {fullpath} does not exist");
 
 					if (node.Nodes.Count == 0)
 						NodesNeeded.Raise(this, new NodesNeededEventArgs((TreeNode)node));

@@ -358,7 +358,7 @@ namespace Rylogic.Utility
 			Decompose(rhs, divide ? -1 : +1);
 
 			// Helper for converting the power of a unit to a string
-			Func<int,string> power_value = i => i == 1 ? "" : i == 2 ? "²" : i == 3 ? "³" : "^{0}".Fmt(i);
+			Func<int,string> power_value = i => i == 1 ? "" : i == 2 ? "²" : i == 3 ? "³" : $"^{i}";
 
 			// Recompose the powers back into a unit string
 			var numer = new StringBuilder();

@@ -40,8 +40,8 @@ namespace Rylogic.Extn
 			var read = src.Read(buffer, 0, buffer.Length);
 			if (read == buffer.Length) return buffer;
 			var msg = src.CanSeek
-				? "Incomplete read. Expected {0} bytes at stream position {1} (of {2})".Fmt(buffer.Length, src.Position - read, src.Length)
-				: "Incomplete read. Expected {0} bytes from stream".Fmt(buffer.Length);
+				? $"Incomplete read. Expected {buffer.Length} bytes at stream position {src.Position - read} (of {src.Length})"
+				: $"Incomplete read. Expected {buffer.Length} bytes from stream";
 			throw new Exception(msg);
 		}
 
@@ -56,7 +56,7 @@ namespace Rylogic.Extn
 			}
 			catch (Exception ex)
 			{
-				throw new Exception("Failed to read type {0}.\r\n{1}".Fmt(typeof(T).Name, ex.Message));
+				throw new Exception($"Failed to read type {typeof(T).Name}.\r\n{ex.Message}");
 			}
 		}
 	}

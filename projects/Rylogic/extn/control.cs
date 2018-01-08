@@ -459,7 +459,7 @@ namespace Rylogic.Extn
 		{
 			var ancestors = new List<string>();
 			for (var p = ctrl; p != null; p = p.Parent)
-				ancestors.Add("{0}({1})".Fmt(p.Name, p.GetType().Name));
+				ancestors.Add($"{p.Name}({p.GetType().Name})");
 			ancestors.Reverse();
 			return string.Join("->", ancestors);
 		}
@@ -835,7 +835,7 @@ namespace Rylogic.Extn
 				if (node == null && add_node != null)
 					node = add_node(part);
 				if (node == null)
-					throw new Exception("Node path {0} does not exist".Fmt(fullpath));
+					throw new Exception($"Node path {fullpath} does not exist");
 
 				nodes = node.Nodes;
 			}
@@ -1062,7 +1062,7 @@ namespace Rylogic.Extn
 			}
 			catch (Exception ex)
 			{
-				Debug.WriteLine("DataGridView select all operation failed: {0}".Fmt(ex.MessageFull()));
+				Debug.WriteLine($"DataGridView select all operation failed: {ex.MessageFull()}");
 			}
 		}
 
@@ -1093,7 +1093,7 @@ namespace Rylogic.Extn
 			}
 			catch (Exception ex)
 			{
-				Debug.WriteLine("DataGridView copy operation failed: {0}".Fmt(ex.MessageFull()));
+				Debug.WriteLine($"DataGridView copy operation failed: {ex.MessageFull()}");
 			}
 		}
 
@@ -1129,7 +1129,7 @@ namespace Rylogic.Extn
 			}
 			catch (Exception ex)
 			{
-				Debug.WriteLine("DataGridView cut operation failed: {0}".Fmt(ex.MessageFull()));
+				Debug.WriteLine($"DataGridView cut operation failed: {ex.MessageFull()}");
 			}
 		}
 
@@ -1170,7 +1170,7 @@ namespace Rylogic.Extn
 			}
 			catch (Exception ex)
 			{
-				Debug.WriteLine("DataGridView delete operation failed: {0}".Fmt(ex.MessageFull()));
+				Debug.WriteLine($"DataGridView delete operation failed: {ex.MessageFull()}");
 			}
 		}
 
@@ -1298,7 +1298,7 @@ namespace Rylogic.Extn
 			}
 			catch (Exception ex)
 			{
-				Debug.WriteLine("DataGridView paste (replace) operation failed: {0}".Fmt(ex.MessageFull()));
+				Debug.WriteLine($"DataGridView paste (replace) operation failed: {ex.MessageFull()}");
 			}
 		}
 
@@ -1358,7 +1358,7 @@ namespace Rylogic.Extn
 			}
 			catch (Exception ex)
 			{
-				Debug.WriteLine("DataGridView paste (grow) operation failed: {0}".Fmt(ex.MessageFull()));
+				Debug.WriteLine($"DataGridView paste (grow) operation failed: {ex.MessageFull()}");
 			}
 		}
 
@@ -2680,7 +2680,7 @@ namespace Rylogic.Extn
 					//if (dgv.RowCount != 0 && dgv.Rows[0].DataBoundItem != null)
 					//	return dgv.Rows[0].DataBoundItem.GetType();
 
-					throw new Exception("Could not determine the element type for the data source type {0}".Fmt(original_src.GetType().Name));
+					throw new Exception($"Could not determine the element type for the data source type {original_src.GetType().Name}");
 				}
 
 				/// <summary>Create a view of the data from the binding source using the given filter</summary>
@@ -3848,9 +3848,9 @@ namespace Rylogic.Extn
 			if (ReferenceEquals(lhs_owner, rhs_owner))
 				throw new Exception("Merge menus failed. Cannot merge menu items belonging to the same menu");
 			if (lhs.Cast<ToolStripItem>().Any(x => x.Owner != lhs_owner))
-				throw new Exception("Merge menus failed. All items in the collection must belong to {0}".Fmt(lhs_owner.ToString()));
+				throw new Exception($"Merge menus failed. All items in the collection must belong to {lhs_owner}");
 			if (rhs.Cast<ToolStripItem>().Any(x => x.Owner != rhs_owner))
-				throw new Exception("Merge menus failed. All items in the collection must belong to {0}".Fmt(rhs_owner.ToString()));
+				throw new Exception($"Merge menus failed. All items in the collection must belong to {rhs_owner}");
 
 			// Replace the -1 merge indices by their index position
 			// In 'lhs', set the merge index of all items (including separators) because
@@ -4030,7 +4030,7 @@ namespace Rylogic.Extn
 			var name = UniqueName(ctrl, 0, 0);
 			if (m_name != name)
 			{
-				System.Diagnostics.Debug.WriteLine("Control locations ignored due to name mismatch.\nControl Name {0} != Layout Data Name {1}".Fmt(name, m_name));
+				Debug.WriteLine($"Control locations ignored due to name mismatch.\nControl Name {name} != Layout Data Name {m_name}");
 				return;
 			}
 
@@ -4069,12 +4069,12 @@ namespace Rylogic.Extn
 			// Position the control
 			ctrl.Location = m_location;
 			if (ctrl.Dock == DockStyle.None && ctrl.Location != m_location && !(ctrl is MenuStrip && ctrl.AutoSize))
-				System.Diagnostics.Debug.WriteLine("ControlLayout: Control {0} location is {1} instead of {2}".Fmt(ctrl.Name, ctrl.Location, m_location));
+				Debug.WriteLine($"ControlLayout: Control {ctrl.Name} location is {ctrl.Location} instead of {m_location}");
 
 			// Set the control size
 			ctrl.Size = m_size;
 			if (!ctrl.AutoSize && ctrl.Size != m_size)
-				System.Diagnostics.Debug.WriteLine("ControlLayout: Control {0} size is {1} instead of {2}".Fmt(ctrl.Name, ctrl.Size, m_size));
+				Debug.WriteLine($"ControlLayout: Control {ctrl.Name} size is {ctrl.Size} instead of {m_size}");
 
 			// Set the bounds of the child controls
 			for (var i = 0; i != ctrl.Controls.Count; ++i)
@@ -4091,12 +4091,12 @@ namespace Rylogic.Extn
 		/// <summary>Generates a unique name for 'ctrl'</summary>
 		private string UniqueName(Control ctrl, int level, int index)
 		{
-			return "{0}({1},{2})".Fmt(ctrl.Name.HasValue() ? ctrl.Name : ctrl.GetType().Name, level, index);
+			return $"{(ctrl.Name.HasValue() ? ctrl.Name : ctrl.GetType().Name)}({level},{index})";
 		}
 
 		public override string ToString()
 		{
-			return "{0} (child count: {1})".Fmt(m_name, m_children.Count);
+			return $"{m_name} (child count: {m_children.Count})";
 		}
 	}
 
@@ -4170,7 +4170,7 @@ namespace Rylogic.Extn
 			// If these locations are for a different container, don't apply.
 			if (m_name != cont.Name)
 			{
-				System.Diagnostics.Debug.WriteLine("ToolStripContainer locations ignored due to name mismatch - ToolStripContainer Name {0} != Layout Data Name {1}".Fmt(cont.Name, m_name));
+				Debug.WriteLine($"ToolStripContainer locations ignored due to name mismatch - ToolStripContainer Name {cont.Name} != Layout Data Name {m_name}");
 				return;
 			}
 

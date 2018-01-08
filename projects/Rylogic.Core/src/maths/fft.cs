@@ -280,7 +280,7 @@ namespace Rylogic.UnitTests
 					var s_out = new StringBuilder();
 					var freq_range = dft.FreqRange;
 					for (double x = freq_range.Beg; x < freq_range.End; x += 0.1)
-						s_out.AppendLine("{0}, {1}".Fmt(x, dft.Power(x)));
+						s_out.AppendLine($"{x}, {dft.Power(x)}");
 
 					File.WriteAllText("P:\\dump\\frequencies2.csv", s_out.ToString());
 				}

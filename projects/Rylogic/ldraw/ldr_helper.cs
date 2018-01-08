@@ -47,7 +47,7 @@ namespace Rylogic.LDraw
 			}
 			catch (Exception ex)
 			{
-				Debug.WriteLine("Failed to write Ldr script to '{0}'. {1}".Fmt(filepath, ex.Message));
+				Debug.WriteLine($"Failed to write Ldr script to '{filepath}'. {ex.Message}");
 			}
 		}
 
@@ -55,27 +55,27 @@ namespace Rylogic.LDraw
 		public static string Vec2(v2 vec)
 		{
 			Debug.Assert(Math_.IsFinite(vec));
-			return "{0} {1}".Fmt(vec.x,vec.y);
+			return $"{vec.x} {vec.y}";
 		}
 		public static string Vec3(v2 vec)
 		{
 			Debug.Assert(Math_.IsFinite(vec));
-			return "{0} {1} 0".Fmt(vec.x,vec.y);
+			return $"{vec.x} {vec.y} 0";
 		}
 		public static string Vec3(v4 vec)
 		{
 			Debug.Assert(Math_.IsFinite(vec));
-			return "{0} {1} {2}".Fmt(vec.x,vec.y,vec.z);
+			return $"{vec.x} {vec.y} {vec.z}";
 		}
 		public static string Vec4(v4 vec)
 		{
 			Debug.Assert(Math_.IsFinite(vec));
-			return "{0} {1} {2} {3}".Fmt(vec.x,vec.y,vec.z,vec.w);
+			return $"{vec.x} {vec.y} {vec.z} {vec.w}";
 		}
 		public static string Mat4x4(m4x4 mat)
 		{
 			Debug.Assert(Math_.IsFinite(mat));
-			return "{0} {1} {2} {3}".Fmt(Vec4(mat.x),Vec4(mat.y),Vec4(mat.z),Vec4(mat.w));
+			return $"{Vec4(mat.x)} {Vec4(mat.y)} {Vec4(mat.z)} {Vec4(mat.w)}";
 		}
 
 		// Ldr element helpers
@@ -128,15 +128,15 @@ namespace Rylogic.LDraw
 		}
 		public static string Width(int width)
 		{
-			return width != 0 ? "*Width {{{0}}}".Fmt(width) : string.Empty;
+			return width != 0 ? $"*Width {{{width}}}" : string.Empty;
 		}
 		public static string Facets(int facets)
 		{
-			return "*Facets {{{0}}}".Fmt(facets);
+			return $"*Facets {{{facets}}}";
 		}
 		public static string CornerRadius(float rad)
 		{
-			return "*CornerRadius {{{0}}}".Fmt(rad);
+			return $"*CornerRadius {{{rad}}}";
 		}
 
 		// Ldr single string
@@ -326,14 +326,14 @@ namespace Rylogic.LDraw
 		public void Line(string name, Colour32 colour, int width, bool smooth, IEnumerable<v4> points)
 		{
 			if (!points.Any()) return;
-			var w = width != 0 ? "*Width {{{0}}}".Fmt(width) : string.Empty;
+			var w = width != 0 ? $"*Width {{{width}}}" : string.Empty;
 			var s = smooth ? "*Smooth " : string.Empty;
 			Append("*LineStrip ", name, " ", colour, " {", w, s, points.Select(x => Ldr.Vec3(x)), "}\n");
 		}
 		public void Line(string name, Colour32 colour, int width, bool smooth, Func<int,v4?> points)
 		{
 			int idx = 0;
-			var w = width != 0 ? "*Width {{{0}}}".Fmt(width) : string.Empty;
+			var w = width != 0 ? $"*Width {{{width}}}" : string.Empty;
 			var s = smooth ? "*Smooth " : string.Empty;
 			Append("*LineStrip ", name, " ", colour, " {", w, s);
 			for (v4? pt; (pt = points(idx++)) != null;) Append(Ldr.Vec3(pt.Value));
@@ -345,7 +345,7 @@ namespace Rylogic.LDraw
 		}
 		public void LineD(string name, Colour32 colour, v4 start, v4 direction, int width)
 		{
-			var w = width != 0 ? "*Width {{{0}}} ".Fmt(width) : string.Empty;
+			var w = width != 0 ? $"*Width {{{width}}} " : string.Empty;
 			Append("*LineD ",name," ",colour," {",w,start," ",direction,"}");
 		}
 

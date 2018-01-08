@@ -246,9 +246,9 @@ namespace RyLogViewer
 			{
 				var ch = (int)m.Groups[0].Value[0];
 				return
-					ch > 0xFFFF ? "\\u{0:x6}".Fmt(ch) :
-					ch > 0xFF   ? "\\u{0:x4}".Fmt(ch) :
-					"\\u{0:x2}".Fmt(ch);
+					ch > 0xFFFF ? $"\\u{ch:x6}" :
+					ch > 0xFF   ? $"\\u{ch:x4}" :
+					$"\\u{ch:x2}";
 			}));
 			return str;
 		}

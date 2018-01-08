@@ -171,12 +171,12 @@ namespace Rylogic.UnitTests
 		[Test] public void TestExpandHtml()
 		{
 			var template =
-				"<root>\r\n" +
-				"\t\t <!--#include file=\"{0}\"-->\r\n".Fmt(IncludeFile) +
-				"<!--#var name=\"MyVar\" file=\"{0}\" value=\"text\\s+(?<value>\\w+)\"-->\r\n".Fmt(IncludeFile) +
-				"  <!--#value name=\"MyVar\"-->\r\n"+
-				"    <!--#value name=\"MyVar\"-->\r\n"+
-				"</root>\r\n";
+				$"<root>\r\n" +
+				$"\t\t <!--#include file=\"{IncludeFile}\"-->\r\n" +
+				$"<!--#var name=\"MyVar\" file=\"{IncludeFile}\" value=\"text\\s+(?<value>\\w+)\"-->\r\n" +
+				$"  <!--#value name=\"MyVar\"-->\r\n"+
+				$"    <!--#value name=\"MyVar\"-->\r\n"+
+				$"</root>\r\n";
 			const string result =
 				"<root>\r\n" +
 				"\t\t include file\r\n" +

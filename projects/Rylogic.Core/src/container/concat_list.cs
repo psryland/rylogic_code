@@ -193,9 +193,9 @@ namespace Rylogic.Container
 			if (array == null)
 				throw new ArgumentNullException(nameof(array));
 			if (arrayIndex >= array.Length)
-				throw new ArgumentOutOfRangeException(nameof(arrayIndex), "Array index is out of range [0,{0})".Fmt(array.Length));
+				throw new ArgumentOutOfRangeException(nameof(arrayIndex), $"Array index is out of range [0,{array.Length})");
 			if (array.Length - arrayIndex < Count)
-				throw new ArgumentException("The number of elements in this ConcatList ({0}) exceeds the available space ({1} - {2})".Fmt(Count, array.Length, arrayIndex), nameof(array));
+				throw new ArgumentException($"The number of elements in this ConcatList ({Count}) exceeds the available space ({array.Length} - {arrayIndex})", nameof(array));
 
 			foreach (var list in Lists)
 			{

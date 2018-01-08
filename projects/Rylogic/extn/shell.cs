@@ -40,7 +40,7 @@ namespace Rylogic.Extn
 			else if (src.Contains('*') || src.Contains('?'))
 				files = EnumFileSystem(src, SearchOption.AllDirectories, new Pattern(EPattern.Wildcard, src).RegexString).Select(x => x.FullPath).ToArray();
 			else if (!ignore_non_existing)
-				throw new FileNotFoundException("ERROR: {0} does not exist".Fmt(src));
+				throw new FileNotFoundException($"ERROR: {src} does not exist");
 
 			// If the 'src' represents multiple files, 'dst' must be a directory
 			if (src_is_dir || files.Length > 1)
@@ -51,7 +51,7 @@ namespace Rylogic.Extn
 
 				// or if it does exist, check that it is actually a directory
 				else if (!dst_is_dir)
-					throw new FileNotFoundException("ERROR: {0} is not a valid directory".Fmt(dst));
+					throw new FileNotFoundException($"ERROR: {dst} is not a valid directory");
 			}
 
 			// Ensure that 'dstdir' exists. (Canonicalise fixes the case where 'dst' is a drive, e.g. 'C:\')
@@ -78,7 +78,7 @@ namespace Rylogic.Extn
 				if (Path_.IsDirectory(srcfile))
 				{
 					if (!dst_is_dir)
-						throw new Exception("ERROR: {0} is not a directory".Fmt(dst));
+						throw new Exception($"ERROR: {dst} is not a directory");
 
 					// Create the directory at the destination
 					if (!Path_.DirExists(dstfile)) System.IO.Directory.CreateDirectory(dstfile);
@@ -112,7 +112,7 @@ namespace Rylogic.Extn
 			{
 				m_find_data = new Win32.WIN32_FIND_DATA();
 				using (var handle = FindFirstFile(dir, ref m_find_data))
-					if (handle.IsInvalid) throw new FileNotFoundException("Failed to get WIN32_FIND_Data for {0}".Fmt(dir));
+					if (handle.IsInvalid) throw new FileNotFoundException($"Failed to get WIN32_FIND_Data for {dir}");
 				FullPath = dir;
 			}
 			public FileData(string dir, ref Win32.WIN32_FIND_DATA find_data, Match regex_match = null)
@@ -270,7 +270,7 @@ namespace Rylogic.Extn
 			// Begin a session. Only 64 of these can exist at any one time
 			int res = Win32.RmStartSession(out var handle, 0, Guid.NewGuid().ToString());
 			if (res != 0)
-				throw new Exception("Could not begin restart session. Unable to determine file locker.\nError Code {0}".Fmt(res));
+				throw new Exception($"Could not begin restart session. Unable to determine file locker.\nError Code {res}");
 
 			// Create an array to store the retrieved processes in (have an initial guess at the required size)
 			var process_info = new Win32.RM_PROCESS_INFO[16];
@@ -282,7 +282,7 @@ namespace Rylogic.Extn
 				// Register the filepaths we're interested in
 				res = Win32.RmRegisterResources(handle, (uint)filepaths.Length, filepaths, 0, null, 0, null);
 				if (res != 0)
-					throw new Exception("Could not register resource.\nError Code {0}".Fmt(res));
+					throw new Exception($"Could not register resource.\nError Code {res}");
 
 				// Get the list of processes/services holding locks on 'filepaths'
 				for (;;)
@@ -290,7 +290,7 @@ namespace Rylogic.Extn
 					uint size_needed, reboot_reasons = Win32.RmRebootReasonNone;
 					res = Win32.RmGetList(handle, out size_needed, ref process_count, process_info, ref reboot_reasons);
 					if (res == 0) break;
-					if (res != Win32.ERROR_MORE_DATA) throw new Exception("Failed to retrieve list of processes holding file locks\r\nError Code: {0}".Fmt(Win32.ErrorCodeToString(res)));
+					if (res != Win32.ERROR_MORE_DATA) throw new Exception($"Failed to retrieve list of processes holding file locks\r\nError Code: {Win32.ErrorCodeToString(res)}");
 					process_info = new Win32.RM_PROCESS_INFO[size_needed];
 					process_count = (uint)process_info.Length;
 				}
@@ -318,7 +318,7 @@ namespace Rylogic.Extn
 					if (files.Length != 0)
 					{
 						if (!opts.HasFlag(EDelTreeOpts.FilesOnly) && !opts.HasFlag(EDelTreeOpts.EvenIfNotEmpty))
-							throw new IOException("Cannot delete {0}, directory still contains {1} files".Fmt(root, files.Length));
+							throw new IOException($"Cannot delete {root}, directory still contains {files.Length} files");
 
 						// Check for processes holding locks on the files
 						for (;;)
@@ -328,7 +328,7 @@ namespace Rylogic.Extn
 							if (!lockers.Any()) break;
 
 							// Prompt the user, Abort, Retry or Ignore
-							var msg = "The following processes hold locks on files within {0}:\r\n\t{1}".Fmt(root, string.Join("\r\n\t", lockers.Select(x => x.ProcessName)));
+							var msg = $"The following processes hold locks on files within {root}:\r\n\t{string.Join("\r\n\t", lockers.Select(x => x.ProcessName))}";
 							var r = MsgBox.Show(parent, msg, "Locked Files Detected", MessageBoxButtons.AbortRetryIgnore, MessageBoxIcon.Information);
 							if (r == DialogResult.Abort || r == DialogResult.Cancel)
 								return false;
@@ -380,7 +380,7 @@ namespace Rylogic.Extn
 				}
 				catch (Exception ex)
 				{
-					var msg = "Failed to delete directory '{0}'\r\n{1}\r\n".Fmt(root, ex.Message);
+					var msg = $"Failed to delete directory '{root}'\r\n{ex.Message}\r\n";
 					var res = MsgBox.Show(parent, msg, "Deleting Directory", MessageBoxButtons.AbortRetryIgnore, MessageBoxIcon.Error);
 					if (res == DialogResult.Abort)
 						return false;
@@ -631,7 +631,7 @@ namespace Rylogic.Extn
 					Thread.Sleep((int)(a * back_off)); // Back off delay
 				}
 			}
-			throw new Exception("Failed to lock file: '{0}'".Fmt(filepath));
+			throw new Exception($"Failed to lock file: '{filepath}'");
 		}
 	}
 }

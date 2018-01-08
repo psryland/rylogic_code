@@ -389,8 +389,8 @@ namespace EscapeVelocity
 			else if (e1_known || e2_known)
 			{
 				var elem  = e1_known ? Elem1 : Elem2;
-				ScientificName = "{0}-??".Fmt(elem.Name.Fullname);
-				SymbolicName = "{0}-??".Fmt(elem.Name.Symbol);
+				ScientificName = $"{elem.Name.Fullname}-??";
+				SymbolicName   = $"{elem.Name.Symbol}-??";
 			}
 			else
 			{

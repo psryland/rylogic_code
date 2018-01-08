@@ -53,15 +53,15 @@ namespace TestCS
 
 			m_dock.ActiveContentChanged += (s,a) =>
 			{
-				Debug.WriteLine("ActiveContentChanged: {0} -> {1}".Fmt(a.ContentOld?.DockControl.PersistName, a.ContentNew?.DockControl.PersistName));
+				Debug.WriteLine($"ActiveContentChanged: {a.ContentOld?.DockControl.PersistName} -> {a.ContentNew?.DockControl.PersistName}");
 			};
 			m_dock.ActivePaneChanged += (s,a) =>
 			{
-				Debug.WriteLine("ActivePaneChanged: {0} -> {1}".Fmt(a.PaneOld?.CaptionText, a.PaneNew?.CaptionText));
+				Debug.WriteLine($"ActivePaneChanged: {a.PaneOld?.CaptionText} -> {a.PaneNew?.CaptionText}");
 			};
 			m_dock.DockableMoved += (s,a) =>
 			{
-				Debug.WriteLine("DockableMoved: {0} {1}".Fmt(a.Action, a.Dockable.DockControl.PersistName));
+				Debug.WriteLine($"DockableMoved: {a.Action} {a.Dockable.DockControl.PersistName}");
 			};
 
 			var bs = BorderStyle.None;//FixedSingle;

@@ -253,13 +253,13 @@ namespace Rylogic.Gui
 					m_btn_pair.Enabled = true;
 					if (Device.IsConnected)
 					{
-						m_btn_pair.ToolTip(m_tt, "Disconnect from {0}".Fmt(Device.Name));
+						m_btn_pair.ToolTip(m_tt, $"Disconnect from {Device.Name}");
 						m_btn_pair.Text = PairBtn.Disconnect;
 						m_btn_pair.Visible = true;
 					}
 					else if (!Device.IsPaired)
 					{
-						m_btn_pair.ToolTip(m_tt, "Pair with {0}".Fmt(Device.Name));
+						m_btn_pair.ToolTip(m_tt, $"Pair with {Device.Name}");
 						m_btn_pair.Text = PairBtn.Pair;
 						m_btn_pair.Visible = true;
 					}
@@ -398,11 +398,11 @@ namespace Rylogic.Gui
 			// Last used/seen
 			using (var font = m_lb_devices.Font.Dup(em_size: 8f))
 			{
-				var s = "Last Used: {0}".Fmt(device.LastUsed.ToString("G", CultureInfo.CurrentCulture));
+				var s = $"Last Used: {device.LastUsed.ToString("G", CultureInfo.CurrentCulture)}";
 				a.Graphics.DrawString(s, font, Brushes.Gray, new Point(x, y));
 				y += font.Height;
 
-				s = "Last Seen: {0}".Fmt(device.LastSeen.ToString("G", CultureInfo.CurrentCulture));
+				s = $"Last Seen: {device.LastSeen.ToString("G", CultureInfo.CurrentCulture)}";
 				a.Graphics.DrawString(s, font, Brushes.Gray, new Point(x, y));
 				y += font.Height;
 			}
@@ -421,7 +421,7 @@ namespace Rylogic.Gui
 			}
 			catch (Exception ex)
 			{
-				MsgBox.Show(this, "Pairing Failed\r\n{0}".Fmt(ex.Message), "Bluetooth Pairing", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				MsgBox.Show(this, $"Pairing Failed\r\n{ex.Message}", "Bluetooth Pairing", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
 

@@ -329,13 +329,13 @@ namespace Rylogic.Gui
 			{
 				get
 				{
-					if (i < 0) throw new IndexOutOfRangeException("Character index {0} out of range".Fmt(i));
+					if (i < 0) throw new IndexOutOfRangeException($"Character index {i} out of range");
 					if (i >= Count) return '\0';
 					return Text[i];
 				}
 				set
 				{
-					if (i < 0) throw new IndexOutOfRangeException("Character index {0} out of range".Fmt(i));
+					if (i < 0) throw new IndexOutOfRangeException($"Character index {i} out of range");
 					using (m_rtb.SelectionScope())
 					{
 						var count = CountNoNL;
@@ -348,7 +348,7 @@ namespace Rylogic.Gui
 			/// <summary>Insert 'text[ofs,ofs+length)' into this line at 'i'</summary>
 			public void Insert(int i, IString text, int ofs = 0, int length = int.MaxValue)
 			{
-				if (i < 0) throw new IndexOutOfRangeException("Character index {0} out of range".Fmt(i));
+				if (i < 0) throw new IndexOutOfRangeException($"Character index {i} out of range");
 				length = Math.Min(length, text.Length - ofs);
 				using (m_rtb.SelectionScope())
 				{
@@ -361,7 +361,7 @@ namespace Rylogic.Gui
 			/// <summary>Erase [i, i+length) from this line</summary>
 			public void Erase(int i, int length = int.MaxValue)
 			{
-				if (i < 0) throw new IndexOutOfRangeException("Character index {0} out of range".Fmt(i));
+				if (i < 0) throw new IndexOutOfRangeException($"Character index {i} out of range");
 				using (m_rtb.SelectionScope())
 				{
 					Select(i, length);
@@ -373,7 +373,7 @@ namespace Rylogic.Gui
 			/// <summary>Overwrite text in this line with 'text[ofs,ofs+length)' at 'i'</summary>
 			public void Replace(int i, IString text, int ofs = 0, int length = int.MaxValue)
 			{
-				if (i < 0) throw new IndexOutOfRangeException("Character index {0} out of range".Fmt(i));
+				if (i < 0) throw new IndexOutOfRangeException($"Character index {i} out of range");
 				length = Math.Min(length, text.Length - ofs);
 				using (m_rtb.SelectionScope())
 				{

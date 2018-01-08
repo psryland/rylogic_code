@@ -403,7 +403,7 @@ namespace Rylogic.Gui
 		{
 			if (index == 0) try { Convert.ChangeType(value, typeof(T0)); return true; } catch { return false; }
 			if (index == 1) try { Convert.ChangeType(value, typeof(T1)); return true; } catch { return false; }
-			throw new Exception("Unknown value index '{0}' in ValuePairEditCtrl.Validate()".Fmt(index));
+			throw new Exception($"Unknown value index '{index}' in ValuePairEditCtrl.Validate()");
 		}
 
 		/// <summary>Returns the current editor value</summary>

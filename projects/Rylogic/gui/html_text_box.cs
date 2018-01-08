@@ -43,7 +43,7 @@ namespace Rylogic.Gui
 			{
 				if (key == null)
 				{
-					Debug.WriteLine("Registry key '{0}' not found".Fmt(BrowserEmulationKey));
+					Debug.WriteLine($"Registry key '{BrowserEmulationKey}' not found");
 					return EBrowserEmulationVersion.Default;
 				}
 
@@ -54,7 +54,7 @@ namespace Rylogic.Gui
 				var value = key.GetValue(app_name, null);
 				if (value == null)
 				{
-					Debug.WriteLine("No registry value for BrowserEmulationVersion for {0}".Fmt(app_name));
+					Debug.WriteLine($"No registry value for BrowserEmulationVersion for {app_name}");
 					return EBrowserEmulationVersion.Default;
 				}
 
@@ -71,10 +71,10 @@ namespace Rylogic.Gui
 		{
 			using (var Regkey = Registry.LocalMachine.OpenSubKey(BrowserEmulationKey, true))
 			{
-				// If the path is not correct or if user's have priviledges to access registry 
+				// If the path is not correct or if user's have privileges to access registry 
 				if (Regkey == null)
 				{
-					Debug.WriteLine("Registry key '{0}' not found".Fmt(BrowserEmulationKey));
+					Debug.WriteLine($"Registry key '{BrowserEmulationKey}' not found");
 					return false;
 				}
 

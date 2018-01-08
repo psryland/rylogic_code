@@ -102,7 +102,7 @@ namespace Rylogic.Common
 		public static Plugins<TInterface> LoadWithUI(Form parent, string directory, object[] args, SearchOption search, string regex_filter = DefaultRegexPattern, int delay = 500, string title = null, string desc = null, Icon icon = null)
 		{
 			if (title == null) title = "Loading Plugins";
-			if (desc == null) desc = "Scanning for implementations of {0}".Fmt(typeof(TInterface).Name);
+			if (desc == null) desc = $"Scanning for implementations of {typeof(TInterface).Name}";
 
 			var dis = Dispatcher.CurrentDispatcher;
 
@@ -124,9 +124,9 @@ namespace Rylogic.Common
 				var msg = new StringBuilder("The following plugins failed to load:\r\n");
 				foreach (var x in plugins.Failures)
 				{
-					msg.AppendLine("{0}".Fmt(x.Item1));
+					msg.AppendLine($"{x.Item1}");
 					msg.AppendLine("Reason:");
-					msg.AppendLine("   {0}".Fmt(x.Item2.Message));
+					msg.AppendLine($"   {x.Item2.Message}");
 					msg.AppendLine();
 				}
 

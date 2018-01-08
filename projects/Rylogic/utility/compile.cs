@@ -26,7 +26,7 @@ namespace Rylogic.Utility
 		public static RuntimeAssembly FromFile(string inst_name, string file)
 		{
 			if (!Path_.FileExists(file))
-				throw new FileNotFoundException("File {0} not found".Fmt(file));
+				throw new FileNotFoundException($"File {file} not found");
 
 			return FromString(inst_name, File.ReadAllText(file));
 		}

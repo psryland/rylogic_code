@@ -62,7 +62,7 @@ namespace Csex
 			if (m_filepath.HasValue())
 			{
 				if (!Path_.FileExists(m_filepath))
-					throw new Exception("File '{0}' doesn't exist".Fmt(m_filepath));
+					throw new Exception($"File '{m_filepath}' doesn't exist");
 
 				m_data = File.ReadAllText(m_filepath);
 			}
@@ -73,7 +73,7 @@ namespace Csex
 
 			// No private key?
 			if (!m_pk.HasValue() || !Path_.FileExists(m_pk))
-				throw new Exception("Private key '{0}' doesn't exist".Fmt(m_pk));
+				throw new Exception($"Private key '{m_pk}' doesn't exist");
 
 			var priv = File.ReadAllText(m_pk);
 			var code = ActivationCode.Generate(m_data, priv);

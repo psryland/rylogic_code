@@ -121,10 +121,10 @@ namespace Rylogic.Utility
 			string failures = string.Empty;
 			CheckAutoScaling(root, mode_, dim_, c =>
 			{
-				failures += "{0} {1}\r\n".Fmt(c.GetType().Name, c.Name);
+				failures += $"{c.GetType().Name} {c.Name}\r\n";
 				return false; // Find them all...
 			});
-			Debug.Assert(failures.Length == 0, "Auto scaling properties not set correctly\r\n{0}".Fmt(failures));
+			Debug.Assert(failures.Length == 0, $"Auto scaling properties not set correctly\r\n{failures}");
 		}
 
 		/// <summary>Replace the AutoScaleMode and AutoScaleDimensions for all container controls below 'root'</summary>
@@ -199,7 +199,7 @@ namespace Rylogic.Utility
 			dst_filepath = Path.GetFullPath(dst_filepath);
 			if (!overwrite && Path_.FileExists(dst_filepath))
 			{
-				Log.Info(null, "LibCopy: Not copying {0} as {1} already exists".Fmt(src_filepath, dst_filepath));
+				Log.Info(null, $"LibCopy: Not copying {src_filepath} as {dst_filepath} already exists");
 				return ELibCopyResult.DestExists;
 			}
 
@@ -223,12 +223,12 @@ namespace Rylogic.Utility
 				}
 
 				// Can't find 'src_filepath'
-				Log.Info(null, "LibCopy: Not copying {0}, file not found".Fmt(src_filepath));
+				Log.Info(null, $"LibCopy: Not copying {src_filepath}, file not found");
 				return ELibCopyResult.SrcNotFound;
 			}
 
 			// Copy the file
-			Log.Info(null, "LibCopy: {0} -> {1}".Fmt(src_filepath, dst_filepath));
+			Log.Info(null, $"LibCopy: {src_filepath} -> {dst_filepath}");
 			File.Copy(src_filepath, dst_filepath, true);
 			return ELibCopyResult.Success;
 		}

@@ -45,15 +45,15 @@ namespace RyLogViewer
 				{
 					// Create a new instance of the appropriate transform and populate it with instance specific data
 					var sub = Substitutors.FirstOrDefault(x => string.Compare(x.Guid.ToString(), guid.ToString(), StringComparison.OrdinalIgnoreCase) == 0);
-					if (sub == null) throw new Exception("Text transform '{0}' (unique id: {1}) was not found\r\nThis text transform will not behaviour correctly".Fmt(name, guid));
+					if (sub == null) throw new Exception($"Text transform '{name}' (unique id: {guid}) was not found\r\nThis text transform will not behaviour correctly");
 					sub = (ITransformSubstitution)Activator.CreateInstance(sub.GetType());
 					sub.FromXml(s.Element(XmlTag.SubData));
 					Subs.Add(tag, sub);
 				}
 				catch (Exception ex)
 				{
-					Log.Warn(this, ex, "Text transform '{0}' ({1}) failed to load".Fmt(name, guid));
-					Misc.ShowMessage(null, "Text transform '{0}' ({1}) failed to load\r\n{2}".Fmt(name, guid, ex.Message),Application.ProductName, MessageBoxIcon.Information);
+					Log.Warn(this, ex, $"Text transform '{name}' ({guid}) failed to load");
+					Misc.ShowMessage(null, $"Text transform '{name}' ({guid}) failed to load\r\n{ex.Message}",Application.ProductName, MessageBoxIcon.Information);
 					Subs.Add(tag, new SubNoChange());
 				}
 			}

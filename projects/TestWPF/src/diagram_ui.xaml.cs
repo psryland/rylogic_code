@@ -118,7 +118,7 @@ namespace TestWPF
 				{
 					var mouse = Mouse.GetPosition(this);
 					var pt = m_diag.ClientToDiagram(new System.Drawing.Point((int)mouse.X,(int)mouse.Y));
-					m_status_mouse_pos.Text = "Pos: {0} {1}".Fmt(pt.x.ToString("F3"), pt.y.ToString("F3"));
+					m_status_mouse_pos.Text = $"Pos: {pt.x.ToString("F3")} {pt.y.ToString("F3")}";
 				}
 				break;
 			}

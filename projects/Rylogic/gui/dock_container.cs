@@ -555,7 +555,7 @@ namespace Rylogic.Gui
 				{
 					if (fd.ShowDialog(this) != DialogResult.OK) return;
 					try { LoadLayout(XDocument.Load(fd.FileName).Root); }
-					catch (Exception ex) { MsgBox.Show(this, "Layout could not be loaded\r\n{0}".Fmt(ex.Message), "Load Layout Failed", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+					catch (Exception ex) { MsgBox.Show(this, $"Layout could not be loaded\r\n{ex.Message}", "Load Layout Failed", MessageBoxButtons.OK, MessageBoxIcon.Error); }
 				}
 			});
 
@@ -566,7 +566,7 @@ namespace Rylogic.Gui
 				{
 					if (fd.ShowDialog(this) != DialogResult.OK) return;
 					try { SaveLayout().Save(fd.FileName); }
-					catch (Exception ex) { MsgBox.Show(this, "Layout could not be saved\r\n{0}".Fmt(ex.Message), "Save Layout Failed", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+					catch (Exception ex) { MsgBox.Show(this, $"Layout could not be saved\r\n{ex.Message}", "Save Layout Failed", MessageBoxButtons.OK, MessageBoxIcon.Error); }
 				}
 			});
 
@@ -625,7 +625,7 @@ namespace Rylogic.Gui
 		public void FindAndShow(DockControl dc)
 		{
 			if (dc.DockContainer != this)
-				throw new Exception("Cannot show content '{0}', it is not managed by this DockContainer".Fmt(dc.TabText));
+				throw new Exception($"Cannot show content '{dc.TabText}', it is not managed by this DockContainer");
 
 			// Find the window that contains 'content'
 			var pane = dc.DockPane;
@@ -636,7 +636,7 @@ namespace Rylogic.Gui
 				Add(dc, int.MaxValue, address);
 				pane = dc.DockPane;
 				if (pane == null)
-					throw new Exception("Cannot show content '{0}'. Could not add it to a visible dock pane".Fmt(dc.TabText));
+					throw new Exception($"Cannot show content '{dc.TabText}'. Could not add it to a visible dock pane");
 			}
 
 			// Make the selected item the visible item on the pane
@@ -709,7 +709,7 @@ namespace Rylogic.Gui
 			// Get the initial rectangle for the dock site assuming no other docked children
 			var r = Rectangle.Empty;
 			switch (location) {
-			default: throw new Exception("No bounds value for dock zone {0}".Fmt(location));
+			default: throw new Exception($"No bounds value for dock zone {location}");
 			case EDockSite.Centre: r = rect; break;
 			case EDockSite.Left:   r = new Rectangle(rect.Left, rect.Top, area.Left, rect.Height); break;
 			case EDockSite.Right:  r = new Rectangle(rect.Right - area.Right, rect.Top, area.Right, rect.Height); break;
@@ -1514,9 +1514,9 @@ namespace Rylogic.Gui
 				sb.Append(' ', indent).Append("{").AppendLine();
 				foreach (var c in Child)
 				{
-					if      (c.Ctrl is Branch  ) c.Branch  .DumpTree(sb, indent + 4, "{0,-6} = ".Fmt(c.DockSite));
-					else if (c.Ctrl is DockPane) c.DockPane.DumpTree(sb, indent + 4, "{0,-6} = ".Fmt(c.DockSite));
-					else sb.Append(' ', indent + 4).Append("{0,-6} = <null>".Fmt(c.DockSite)).AppendLine();
+					if      (c.Ctrl is Branch  ) c.Branch  .DumpTree(sb, indent + 4, $"{c.DockSite,-6} = ");
+					else if (c.Ctrl is DockPane) c.DockPane.DumpTree(sb, indent + 4, $"{c.DockSite,-6} = ");
+					else sb.Append(' ', indent + 4).Append($"{c.DockSite,-6} = <null>").AppendLine();
 				}
 				sb.Append(' ', indent).Append("}").AppendLine();
 			}
@@ -1560,13 +1560,13 @@ namespace Rylogic.Gui
 				var t = Child[EDockSite.Top   ];
 				var r = Child[EDockSite.Right ];
 				var b = Child[EDockSite.Bottom];
-				return "Branch Lvl={0}  C=[{1}] L=[{2}] T=[{3}] R=[{4}] B=[{5}]".Fmt(
-					lvl == 0 && Parent != null ? Parent.GetType().Name : lvl.ToString(),
-					c.Branch != null ? "Branch" : c.DockPane?.DumpDesc() ?? "null",
-					l.Branch != null ? "Branch" : l.DockPane?.DumpDesc() ?? "null",
-					t.Branch != null ? "Branch" : t.DockPane?.DumpDesc() ?? "null",
-					r.Branch != null ? "Branch" : r.DockPane?.DumpDesc() ?? "null",
-					b.Branch != null ? "Branch" : b.DockPane?.DumpDesc() ?? "null");
+				return
+					$"Branch Lvl={(lvl == 0 && Parent != null ? Parent.GetType().Name : lvl.ToString())}  "+
+					$"C=[{(c.Branch != null ? "Branch" : c.DockPane?.DumpDesc() ?? "null")}] "+
+					$"L=[{(l.Branch != null ? "Branch" : l.DockPane?.DumpDesc() ?? "null")}] "+
+					$"T=[{(t.Branch != null ? "Branch" : t.DockPane?.DumpDesc() ?? "null")}] "+
+					$"R=[{(r.Branch != null ? "Branch" : r.DockPane?.DumpDesc() ?? "null")}] "+
+					$"B=[{(b.Branch != null ? "Branch" : b.DockPane?.DumpDesc() ?? "null")}]";
 			}
 		}
 
@@ -1657,9 +1657,9 @@ namespace Rylogic.Gui
 					{
 						// Only content that is in this pane can be made active for this pane
 						if (value != null && !Content.Contains(value))
-							throw new Exception("Dockable item '{0}' has not been added to this pane so can not be made the active content.".Fmt(value.TabText));
+							throw new Exception($"Dockable item '{value.TabText}' has not been added to this pane so can not be made the active content.");
 						if (value != null && value.Owner.Dock != DockStyle.None)
-							throw new Exception("Dockable item '{0}' has its 'Dock' property set to {1}. Dockable items should use DockStyle.None because the dock container manages their size".Fmt(value.TabText, value.Owner.Dock));
+							throw new Exception($"Dockable item '{value.TabText}' has its 'Dock' property set to {value.Owner.Dock}. Dockable items should use DockStyle.None because the dock container manages their size");
 
 						// Ensure 'value' is the current item in the Content collection
 						Content.Current = value;
@@ -2117,7 +2117,7 @@ namespace Rylogic.Gui
 			/// <summary>A string description of the pane</summary>
 			public string DumpDesc()
 			{
-				return "Count={0} Active={1}".Fmt(Content.Count, Content.Count != 0 ? CaptionText : "<empty pane>");
+				return $"Count={Content.Count} Active={(Content.Count != 0 ? CaptionText : "<empty pane>")}";
 			}
 
 			/// <summary>A custom control for drawing the title bar, including text, close button and pin button</summary>
@@ -3541,7 +3541,7 @@ namespace Rylogic.Gui
 				}
 				public override string ToString()
 				{
-					return "{0} -> {1}".Fmt(Beg.Name, End.Name);
+					return $"{Beg.Name} -> {End.Name}";
 				}
 
 				/// <summary>The start colour for the gradient</summary>
@@ -3633,9 +3633,9 @@ namespace Rylogic.Gui
 			public override string ToString()
 			{
 				var addr = string.Join(",", Address);
-				if (FloatingWindowId != null) return "Floating Window {0}: {1} (Index:{2})".Fmt(FloatingWindowId.Value, addr, Index);
-				if (AutoHide != null) return "Auto Hide {0}: {1} (Index:{2})".Fmt(AutoHide.Value, addr, Index);
-				return "Dock Container: {0} (Index:{1})".Fmt(addr, Index);
+				if (FloatingWindowId != null) return $"Floating Window {FloatingWindowId.Value}: {addr} (Index:{Index})";
+				if (AutoHide != null) return $"Auto Hide {AutoHide.Value}: {addr} (Index:{Index})";
+				return $"Dock Container: {addr} (Index:{Index})";
 			}
 
 			/// <summary>Implicit conversion from array of dock sites to a doc location</summary>
@@ -3770,7 +3770,7 @@ namespace Rylogic.Gui
 
 				// Return the size of the requested site
 				switch (location) {
-				default: throw new Exception("No size value for dock zone {0}".Fmt(location));
+				default: throw new Exception($"No size value for dock zone {location}");
 				case EDockSite.Centre: return 0;
 				case EDockSite.Left:   return area.Left;
 				case EDockSite.Right:  return area.Right;
@@ -3784,7 +3784,7 @@ namespace Rylogic.Gui
 			{
 				// Assign a fractional value for the dock site size
 				switch (location) {
-				default: throw new Exception("No size value for dock zone {0}".Fmt(location));
+				default: throw new Exception($"No size value for dock zone {location}");
 				case EDockSite.Centre: break;
 				case EDockSite.Left:   Left   = value / (Left   >= 1f ? 1f : rect.Width); break;
 				case EDockSite.Right:  Right  = value / (Right  >= 1f ? 1f : rect.Width); break;

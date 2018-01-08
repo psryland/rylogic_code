@@ -87,7 +87,7 @@ namespace RyLogViewer
 			catch (Exception ex)
 			{
 				MsgBox.Show(this
-					,"An error occurred while attempting to view '{0}'\n{1}".Fmt(Constants.StoreLink, ex.Message)
+					,$"An error occurred while attempting to view '{Constants.StoreLink}'\n{ex.Message}"
 					,"Visit Web Site"
 					,MessageBoxButtons.OK
 					,MessageBoxIcon.Information);
@@ -215,7 +215,7 @@ namespace RyLogViewer
 		private string UserDetails
 		{
 			// This combination of user details is duplicated in the key gen script
-			get { return "{0}\n{1}\n{2}\n{3}\n{4}".Fmt(LicenceHolder,EmailAddress,Company,VersionMask,"Rylogic Limited Is Awesome"); }
+			get { return $"{LicenceHolder}\n{EmailAddress}\n{Company}\n{VersionMask}\nRylogic Limited Is Awesome"; }
 		}
 
 		/// <summary>True if the licence is valid with itself</summary>

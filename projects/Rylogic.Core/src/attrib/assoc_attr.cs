@@ -88,8 +88,8 @@ namespace Rylogic.Attrib
 			var attr = Get<T>(mi, name);
 			if (attr != null) return (T)attr.AssocItem;
 			throw name == null
-				? new Exception("Member {0} does not have an unnamed AssocAttribute<{1}>".Fmt(mi.Name, typeof(T).Name))
-				: new Exception("Member {0} does not have an AssocAttribute<{1}> with name {2}".Fmt(mi.Name, typeof(T).Name, name));
+				? new Exception($"Member {mi.Name} does not have an unnamed AssocAttribute<{typeof(T).Name}>")
+				: new Exception($"Member {mi.Name} does not have an AssocAttribute<{typeof(T).Name}> with name {name}");
 		}
 
 		/// <summary>Returns the AssocItem instance associated with a property or field</summary>

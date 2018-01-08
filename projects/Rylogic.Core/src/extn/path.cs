@@ -248,12 +248,12 @@ namespace Rylogic.Extn
 			var dfound = FileExists(rhs);
 			if (!sfound)
 			{
-				if (trace != null) trace("Content different, '{0}' not found".Fmt(lhs));
+				if (trace != null) trace($"Content different, '{lhs}' not found");
 				return true;
 			}
 			if (!dfound)
 			{
-				if (trace != null) trace("Content different, '{0}' not found".Fmt(rhs));
+				if (trace != null) trace($"Content different, '{rhs}' not found");
 				return true;
 			}
 
@@ -262,7 +262,7 @@ namespace Rylogic.Extn
 			var infoR = new FileInfo(rhs);
 			if (infoL.Length != infoR.Length)
 			{
-				if (trace != null) trace("Content different, '{0}' and '{1}' have different sizes".Fmt(lhs, rhs));
+				if (trace != null) trace($"Content different, '{lhs}' and '{rhs}' have different sizes");
 				return true;
 			}
 
@@ -281,11 +281,11 @@ namespace Rylogic.Extn
 					{
 						if (trace != null)
 						{
-							trace("Content different, '{0}' and '{1}' have different content".Fmt(lhs, rhs));
+							trace($"Content different, '{lhs}' and '{rhs}' have different content");
 							for (var i = 0; i != Math.Min(readL, readR); ++i)
 							{
 								if (bufL[i] == bufR[i]) continue;
-								trace("diff at byte {0}: {1} != {2}".Fmt(i, bufL[i], bufR[i]));
+								trace($"diff at byte {i}: {bufL[i]} != {bufR[i]}");
 								break;
 							}
 						}
@@ -293,7 +293,7 @@ namespace Rylogic.Extn
 					}
 				}
 			}
-			if (trace != null) trace("'{0}' and '{1}' are identical".Fmt(lhs,rhs));
+			if (trace != null) trace($"'{lhs}' and '{rhs}' are identical");
 			return false;
 		}
 	}

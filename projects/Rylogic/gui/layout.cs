@@ -135,10 +135,10 @@ namespace Rylogic.Gui
 			}
 			public override string ToString()
 			{
- 				return "{0} (id:{1})".Fmt(GetType().Name, Id);
+ 				return $"{GetType().Name} (id:{Id})";
 			}
 
-			/// <summary>Implicit conversion to winforms control</summary>
+			/// <summary>Implicit conversion to WinForms control</summary>
 			public static implicit operator Control(Elem elem)
 			{
 				return elem.Ctrl;
@@ -150,7 +150,7 @@ namespace Rylogic.Gui
 			/// <summary>The string id for the element</summary>
 			public string Id { get; private set; }
 
-			/// <summary>The winforms control for the element</summary>
+			/// <summary>The WinForms control for the element</summary>
 			public Control Ctrl { get; protected set; }
 
 			/// <summary>Occurs when the 'Value' property in this element changes</summary>
@@ -292,23 +292,23 @@ namespace Rylogic.Gui
 			/// <summary>Convert an auto size to a string</summary>
 			protected static string SizeStr(Size sz)
 			{
-				return "{0},{1}".Fmt(
-					sz.Width  == ESize.Auto ? "auto" : sz.Width  == ESize.Fill ? "fill" : sz.Width.ToString(),
-					sz.Height == ESize.Auto ? "auto" : sz.Height == ESize.Fill ? "fill" : sz.Height.ToString());
+				return
+					$"{(sz.Width  == ESize.Auto ? "auto" : sz.Width  == ESize.Fill ? "fill" : sz.Width.ToString())},"+
+					$"{(sz.Height == ESize.Auto ? "auto" : sz.Height == ESize.Fill ? "fill" : sz.Height.ToString())}";
 			}
 
 			/// <summary>Convert a colour to a string</summary>
 			protected static string ColorStr(Color col)
 			{
-				return col.IsKnownColor ? col.ToKnownColor().ToString() : "#{0}".Fmt(col.ToArgb());
+				return col.IsKnownColor ? col.ToKnownColor().ToString() : $"#{col.ToArgb()}";
 			}
 
 			/// <summary>Convert a padding object to a string</summary>
 			protected static string PaddingStr(Padding pad)
 			{
-				if (pad.Left == pad.Top && pad.Left == pad.Right && pad.Left == pad.Bottom) return "{0}".Fmt(pad.Left);
-				if (pad.Left == pad.Right && pad.Top == pad.Bottom) return "{0},{1}".Fmt(pad.Left, pad.Top);
-				return "{0},{1},{2},{3}".Fmt(pad.Left, pad.Top, pad.Right, pad.Bottom);
+				if (pad.Left == pad.Top && pad.Left == pad.Right && pad.Left == pad.Bottom) return $"{pad.Left}";
+				if (pad.Left == pad.Right && pad.Top == pad.Bottom) return $"{pad.Left},{pad.Top}";
+				return $"{pad.Left},{pad.Top},{pad.Right},{pad.Bottom}";
 			}
 
 			/// <summary>Read the visibility</summary>
@@ -392,7 +392,7 @@ namespace Rylogic.Gui
 				case 4: return new Padding(pad[0], pad[1], pad[2], pad[3]);
 				case 2: return new Padding(pad[0], pad[1], pad[0], pad[1]);
 				case 1: return new Padding(pad[0], pad[0], pad[0], pad[0]);
-				default: throw new Exception("{0} attribute has the wrong number of values".Fmt(tag));
+				default: throw new Exception($"{tag} attribute has the wrong number of values");
 				}
 			}
 

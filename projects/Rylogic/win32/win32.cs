@@ -1196,9 +1196,9 @@ namespace Rylogic.Windows32
 				
 					var msg = GetLastErrorString();
 					throw new Exception(
-						"Found dependent library '{0}' but it failed to load.\r\n".Fmt(path)+
-						"This is likely to be because a library that '{0}' is dependent on failed to load.\r\n".Fmt(path)+
-						"Last Error: {0}".Fmt(msg));
+						$"Found dependent library '{path}' but it failed to load.\r\n"+
+						$"This is likely to be because a library that '{path}' is dependent on failed to load.\r\n"+
+						$"Last Error: {msg}");
 				};
 
 			var searched = new List<string>();
@@ -1236,7 +1236,7 @@ namespace Rylogic.Windows32
 					return TryLoad(dll_path);
 			}
 
-			throw new DllNotFoundException("Could not find dependent library '{0}'\r\nLocations searched:\r\n{1}".Fmt(dllname, string.Join("\r\n", searched.ToArray())));
+			throw new DllNotFoundException($"Could not find dependent library '{dllname}'\r\nLocations searched:\r\n{string.Join("\r\n", searched.ToArray())}");
 		}
 
 		/// <summary>Returns the upper 16bits of a 32bit DWORD such as LPARAM or WPARAM</summary>
@@ -1469,7 +1469,7 @@ namespace Rylogic.Windows32
 					if (msg_str.HasValue())
 					{
 						for (int i = 1; i != m_wnd_proc_nest; ++i) Debug.Write("\t");
-						Debug.WriteLine("{0:d5}|{1}|{2}".Fmt(m_msg_idx, name, msg_str));
+						Debug.WriteLine($"{m_msg_idx:d5}|{name}|{msg_str}");
 					}
 					if (m_msg_idx == 0)
 						Debugger.Break();
@@ -1494,60 +1494,51 @@ namespace Rylogic.Windows32
 			var lparam_lo = LoWord(lparam);
 			var lparam_hi = HiWord(lparam);
 
-			var hdr = "{0}(0x{1:X4}):".Fmt(MsgIdToString(msg), msg);
-			var wnd = " hwnd: 0x{0:X8}".Fmt(hwnd);
-			var wp  = "wparam: {0:X8}({1:X4},{2:X4})".Fmt(wparam, wparam_hi, wparam_lo);
-			var lp  = "lparam: {0:X8}({1:X4},{2:X4})".Fmt(lparam, lparam_hi, lparam_lo);
+			var hdr = $"{MsgIdToString(msg)}(0x{msg:X4}):";
+			var wnd = $" hwnd: 0x{hwnd:X8}";
+			var wp  = $"wparam: {wparam:X8}({wparam_hi:X4},{wparam_lo:X4})";
+			var lp  = $"lparam: {lparam:X8}({lparam_hi:X4},{lparam_lo:X4})";
 
 			switch (msg)
 			{
 			default:
-				return "{0} {1} {2} {3}".Fmt(hdr ,wnd ,wp ,lp);
+				return $"{hdr} {wnd} {wp} {lp}";
 			case WM_KEYDOWN:
 			case WM_KEYUP:
 			case WM_CHAR:
-				return "{0} '{1}'({2})  repeats:{3}  state:{4}  transition:{5}{6}"
-					.Fmt(hdr
-					,msg == WM_CHAR ? new string((char)wparam,1) : Enum<Keys>.ToString(wparam)
-					,wparam
-					,(lparam&0xffff)
-					,(lparam & (1 << 29)) != 0 ? "ALT " : string.Empty
-					,(lparam & (1 << 30)) != 0 ? "1" : "0"
-					,(lparam & (1 << 31)) != 0 ? "0" : "1");
+				return
+					$"{hdr} " +
+					$"'{(msg == WM_CHAR ? new string((char)wparam,1) : Enum<Keys>.ToString(wparam))}'({wparam})  " +
+					$"repeats:{(lparam&0xffff)}  " +
+					$"state:{((lparam & (1 << 29)) != 0 ? "ALT " : string.Empty)}  " +
+					$"transition:{((lparam & (1 << 30)) != 0 ? "1" : "0")}{((lparam & (1 << 31)) != 0 ? "0" : "1")}";
 			case WM_LBUTTONDOWN:
-				return "{0} button state = {1}{2}{3}{4}{5}{6}{7}  x,y=({8},{9})"
-					.Fmt(hdr
-					,((wparam&MK_CONTROL ) != 0 ?"|Ctrl" :"")
-					,((wparam&MK_LBUTTON ) != 0 ?"|LBtn" :"")
-					,((wparam&MK_MBUTTON ) != 0 ?"|MBtn" :"")
-					,((wparam&MK_RBUTTON ) != 0 ?"|RBtn" :"")
-					,((wparam&MK_SHIFT   ) != 0 ?"|Shift":"")
-					,((wparam&MK_XBUTTON1) != 0 ?"|XBtn1":"")
-					,((wparam&MK_XBUTTON2) != 0 ?"|XBtn2":"")
-					,lparam_lo ,lparam_hi);
+				return
+					$"{hdr} button state = " +
+					$"{((wparam&MK_CONTROL ) != 0 ?"|Ctrl" :"")}" +
+					$"{((wparam&MK_LBUTTON ) != 0 ?"|LBtn" :"")}" +
+					$"{((wparam&MK_MBUTTON ) != 0 ?"|MBtn" :"")}" +
+					$"{((wparam&MK_RBUTTON ) != 0 ?"|RBtn" :"")}" +
+					$"{((wparam&MK_SHIFT   ) != 0 ?"|Shift":"")}" +
+					$"{((wparam&MK_XBUTTON1) != 0 ?"|XBtn1":"")}" +
+					$"{((wparam&MK_XBUTTON2) != 0 ?"|XBtn2":"")}  " +
+					$"x,y=({lparam_lo},{lparam_hi})";
 			case WM_ACTIVATEAPP:
-				return "{0} {1} Other Thread: {2}".Fmt(hdr ,(wparam!=0?"ACTIVE":"INACTIVE") ,lparam);
+				return $"{hdr} {(wparam!=0?"ACTIVE":"INACTIVE")} Other Thread: {lparam}";
 			case WM_ACTIVATE:
-				return "{0} {1} Other Window: {2}".Fmt(hdr ,(LoWord(wparam)==WA_ACTIVE?"ACTIVE":LoWord(wparam)==WA_INACTIVE?"INACTIVE":"Click ACTIVE") ,lparam);
+				return $"{hdr} {(LoWord(wparam)==WA_ACTIVE?"ACTIVE":LoWord(wparam)==WA_INACTIVE?"INACTIVE":"Click ACTIVE")} Other Window: {lparam}";
 			case WM_NCACTIVATE:
-				return "{0} {1} {2}".Fmt(hdr ,(wparam!=0?"ACTIVE":"INACTIVE") ,lp);
+				return $"{hdr} {(wparam!=0?"ACTIVE":"INACTIVE")} {lp}";
 			case WM_MOUSEACTIVATE:
-				return "{0} top level parent window = {1}  {2}".Fmt(hdr ,wparam ,lp);
+				return $"{hdr} top level parent window = {wparam}  {lp}";
 			case WM_SHOWWINDOW:
-				return "{0} {1} {2}"
-					.Fmt(hdr
-					,(wparam!=0?"VISIBLE":"HIDDEN")
-					,(lparam==SW_OTHERUNZOOM?"OtherUnzoom":
-					  lparam==SW_PARENTCLOSING?"ParentClosing":
-					  lparam==SW_OTHERZOOM?"OtherZoom":
-					  lparam==SW_PARENTOPENING?"ParentOpening":
-					  "ShowWindow called"));
+				return $"{hdr} {(wparam!=0?"VISIBLE":"HIDDEN")} {(lparam==SW_OTHERUNZOOM?"OtherUnzoom":lparam==SW_PARENTCLOSING?"ParentClosing":lparam==SW_OTHERZOOM?"OtherZoom":lparam==SW_PARENTOPENING?"ParentOpening":"ShowWindow called")}";
 			case WM_WINDOWPOSCHANGING:
 			case WM_WINDOWPOSCHANGED:
 				{
 					var wpos = Marshal_.PtrToStructure<WINDOWPOS>((IntPtr)lparam);
-					return "{0} x,y=({1},{2}) size=({3},{4}) after={5} flags={6}{7}{8}{9}{10}{11}{12}{13}{14}{15}{16}{17}{18}"
-						.Fmt(hdr
+					return string.Format("{0} x,y=({1},{2}) size=({3},{4}) after={5} flags={6}{7}{8}{9}{10}{11}{12}{13}{14}{15}{16}{17}{18}"
+						,hdr
 						,wpos.x ,wpos.y
 						,wpos.cx ,wpos.cy
 						,wpos.hwndInsertAfter
@@ -1566,7 +1557,7 @@ namespace Rylogic.Windows32
 						,(wpos.flags&SWP_SHOWWINDOW    )!=0 ?"|SWP_SHOWWINDOW"    :"");
 				}
 			case WM_KILLFOCUS:
-				return "{0} Focused Window: {1}".Fmt(hdr ,wparam);
+				return $"{hdr} Focused Window: {wparam}";
 			case WM_NOTIFY:
 				{
 					var notify_type = "unknown";
@@ -1596,8 +1587,8 @@ namespace Rylogic.Windows32
 					if (nmhdr.code == LVN_HOTTRACK)
 						return "";
 
-					return "{0} SourceCtrlId = {1}  from_hWnd: {2}  from_id: {3}  code: {4}:{5}"
-						.Fmt(hdr
+					return string.Format("{0} SourceCtrlId = {1}  from_hWnd: {2}  from_id: {3}  code: {4}:{5}"
+						,hdr
 						,wparam
 						,nmhdr.hwndFrom
 						,nmhdr.idFrom
@@ -1609,26 +1600,19 @@ namespace Rylogic.Windows32
 					string details;
 					switch (LoWord(wparam))
 					{
-					default:             details = "Unexpected event. {0}".Fmt(HiWord(wparam)); break;
-					case WM_CREATE:      details = "Child Id:{0} hwnd:{1}".Fmt(HiWord(wparam), LParamToPoint(lparam)); break;
-					case WM_DESTROY:     details = "Child Id:{0} hwnd:{1}".Fmt(HiWord(wparam), LParamToPoint(lparam)); break;
-					case WM_LBUTTONDOWN: details = "LButton {0}".Fmt(LParamToPoint(lparam)); break;
-					case WM_MBUTTONDOWN: details = "MButton {0}".Fmt(LParamToPoint(lparam)); break;
-					case WM_RBUTTONDOWN: details = "RButton {0}".Fmt(LParamToPoint(lparam)); break;
-					case WM_XBUTTONDOWN: details = "XButton btn:{0} {1}".Fmt(HiWord(wparam), LParamToPoint(lparam)); break;
-					case WM_POINTERDOWN: details = "Pointer Down ptr:{0}".Fmt(HiWord(wparam)); break;
+					default:             details = $"Unexpected event. {HiWord(wparam)}"; break;
+					case WM_CREATE:      details = $"Child Id:{HiWord(wparam)} hwnd:{LParamToPoint(lparam)}"; break;
+					case WM_DESTROY:     details = $"Child Id:{HiWord(wparam)} hwnd:{LParamToPoint(lparam)}"; break;
+					case WM_LBUTTONDOWN: details = $"LButton {LParamToPoint(lparam)}"; break;
+					case WM_MBUTTONDOWN: details = $"MButton {LParamToPoint(lparam)}"; break;
+					case WM_RBUTTONDOWN: details = $"RButton {LParamToPoint(lparam)}"; break;
+					case WM_XBUTTONDOWN: details = $"XButton btn:{HiWord(wparam)} {LParamToPoint(lparam)}"; break;
+					case WM_POINTERDOWN: details = $"Pointer Down ptr:{HiWord(wparam)}"; break;
 					}
-					return "{0} evt: {1} {2}"
-						.Fmt(hdr
-						,MsgIdToString((int)LoWord(wparam))
-						,details);
+					return $"{hdr} evt: {MsgIdToString((int)LoWord(wparam))} {details}";
 				}
 			case WM_SYSKEYDOWN:
-				return "{0} vk_key = {1} ({2})  Repeats: {3}  lParam: {4}"
-					.Fmt(hdr
-					,wparam ,Enum<Keys>.ToString((int)wparam)
-					,lparam_lo
-					,lparam);
+				return $"{hdr} vk_key = {wparam} ({Enum<Keys>.ToString((int)wparam)})  Repeats: {lparam_lo}  lParam: {lparam}";
 			case WM_PAINT:
 				//{
 				//	RECT r;

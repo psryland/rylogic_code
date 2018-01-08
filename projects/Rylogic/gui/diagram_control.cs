@@ -894,7 +894,7 @@ namespace Rylogic.Gui
 				foreach (var conn in Connectors)
 				{
 					if (conn.Node0 != this && conn.Node1 != this)
-						throw new Exception("Node {0} contains connector {1} but is not referenced by the connector".Fmt(ToString(), conn.ToString()));
+						throw new Exception($"Node {ToString()} contains connector {conn} but is not referenced by the connector");
 					
 					// Allow the connectors to be connected to this node at both ends
 					//if (conn.Node0 == this && conn.Node1 == this)
@@ -905,7 +905,7 @@ namespace Rylogic.Gui
 				if (Diagram != null)
 				{
 					if (!Diagram.m_node_styles.ContainsKey(Style.Id))
-						throw new Exception("Node {0} style is not in the diagram's style cache".Fmt(ToString()));
+						throw new Exception($"Node {ToString()} style is not in the diagram's style cache");
 				}
 				return base.CheckConsistency();
 			}
@@ -1620,7 +1620,7 @@ namespace Rylogic.Gui
 			{
 				if (Node0 == node) return Node1;
 				if (Node1 == node) return Node0;
-				throw new Exception("{0} is not connected to {1}".Fmt(ToString(), node.ToString()));
+				throw new Exception($"{ToString()} is not connected to {node}");
 			}
 
 			/// <summary>Get/Set the 'to' or 'from' end of the connector</summary>
@@ -1900,7 +1900,7 @@ namespace Rylogic.Gui
 				if (node == null) throw new ArgumentNullException("node");
 				if (Node0 == node) { Node0 = null; Invalidate(); return; }
 				if (Node1 == node) { Node1 = null; Invalidate(); return; }
-				throw new Exception("Connector '{0}' is not connected to node {0}".Fmt(ToString(), node.ToString()));
+				throw new Exception($"Connector '{ToString()}' is not connected to node {node}");
 			}
 
 			/// <summary>Update the node anchors</summary>
@@ -1998,15 +1998,15 @@ namespace Rylogic.Gui
 
 				// The connected nodes should contain a reference to this connector
 				if (Node0 != null && Node0.Connectors.FirstOrDefault(x => x.Id == Id) == null)
-					throw new Exception("Connector {0} is connected to node {0}, but that node does not contain a reference to this connector".Fmt(ToString(), Node0.ToString()));
+					throw new Exception($"Connector {ToString()} is connected to node {Node0}, but that node does not contain a reference to this connector");
 				if (Node1 != null && Node1.Connectors.FirstOrDefault(x => x.Id == Id) == null)
-					throw new Exception("Connector {0} is connected to node {0}, but that node does not contain a reference to this connector".Fmt(ToString(), Node1.ToString()));
+					throw new Exception($"Connector {ToString()} is connected to node {Node1}, but that node does not contain a reference to this connector");
 
 				// The style should be known to the diagram
 				if (Diagram != null)
 				{
 					if (!Diagram.m_connector_styles.ContainsKey(Style.Id))
-						throw new Exception("Connector {0} style is not in the diagram's style cache".Fmt(ToString()));
+						throw new Exception($"Connector {ToString()} style is not in the diagram's style cache");
 				}
 
 				return base.CheckConsistency();
@@ -5445,21 +5445,21 @@ namespace Rylogic.Gui
 			for (int i = 0; i < elements.Length - 1; ++i)
 			{
 				if (!Equals(elements[i].Id, elements[i+1].Id)) continue;
-				throw new Exception("Element {0} is in the Elements collection more than once".Fmt(elements[i].ToString()));
+				throw new Exception($"Element {elements[i]} is in the Elements collection more than once");
 			}
 
 			// All elements in the diagram should have their Diagram property set to this diagram
 			foreach (var elem in Elements)
 			{
 				if (elem.Diagram == this) continue;
-				throw new Exception("Element {0} is in the Elements collection but does not have its Diagram property set correctly".Fmt(elem.ToString()));
+				throw new Exception($"Element {elem} is in the Elements collection but does not have its Diagram property set correctly");
 			}
 
 			// All "dirty" elements should belong to this diagram
 			foreach (var elem in m_dirty)
 			{
 				if (elem.Diagram == this) continue;
-				throw new Exception("Element {0} is in the dirty list but is not associated with this diagram".Fmt(elem.ToString()));
+				throw new Exception($"Element {elem} is in the dirty list but is not associated with this diagram");
 			}
 
 			// The selected collection contains all that is selected and no more
@@ -5473,7 +5473,7 @@ namespace Rylogic.Gui
 				throw new Exception("Elements collection and Element Id lookup table don't match");
 			foreach (var elem in Elements)
 				if (ElemIds.GetOrDefault(elem.Id) != elem)
-					throw new Exception("Element {0} is not in the Element Id lookup table".Fmt(elem.ToString()));
+					throw new Exception($"Element {elem} is not in the Element Id lookup table");
 
 			// Check the consistency of all elements
 			foreach (var elem in Elements)

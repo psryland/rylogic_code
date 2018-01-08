@@ -935,10 +935,10 @@ namespace Rylogic.Utility
 				int midx = 0;
 				foreach (var m in Regex.Matches(str, pattern, opts).Cast<Match>())
 				{
-					sb.AppendLine("Match: {0}".Fmt(midx++));
+					sb.AppendLine($"Match: {midx++}");
 					int gidx = 0;
 					foreach (var g in m.Groups.Cast<Group>())
-						sb.Append("\t Group {0}: ".Fmt(gidx++)).Append(g.Value).AppendLine();
+						sb.Append($"\t Group {gidx++}: ").Append(g.Value).AppendLine();
 					sb.AppendLine();
 				}
 			}

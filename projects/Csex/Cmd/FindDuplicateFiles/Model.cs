@@ -112,7 +112,7 @@ namespace Csex
 					if (d != dir)
 					{
 						dir = d;
-						progress(new ProgressForm.UserState{Description = "Scanning files...\r\n{0}".Fmt(dir)});
+						progress(new ProgressForm.UserState{Description = $"Scanning files...\r\n{dir}"});
 					}
 
 					try
@@ -136,7 +136,7 @@ namespace Csex
 					}
 					catch (Exception ex)
 					{
-						Errors.Add("Failed to add {0} to the map. {1}".Fmt(fi.FullPath, ex.Message));
+						Errors.Add($"Failed to add {fi.FullPath} to the map. {ex.Message}");
 					}
 				}
 			}

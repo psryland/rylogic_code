@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel;
 using System.Runtime.InteropServices;
-using Rylogic.Extn;
 
 namespace Rylogic.Windows32
 {
@@ -1464,7 +1463,7 @@ namespace Rylogic.Windows32
 		public static string ErrorCodeToString(int error_code)
 		{
 			var err = new Win32Exception(error_code);
-			return "({0}): {1}".Fmt(err.NativeErrorCode, err.Message);
+			return $"({err.NativeErrorCode}): {err.Message}";
 		}
 
 		/// <summary>Returns the last error set by the last called native function with the "SetLastError" attribute</summary>

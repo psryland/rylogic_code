@@ -116,7 +116,7 @@ namespace Csex
 		/// <summary>The name to display on the tab for this table</summary>
 		public string TabName
 		{
-			get { return "{2}{0}: {1}".Fmt(BaseName, string.Join("/", Element.AncestorsAndSelf().Reversed().Select(x => x.Name.LocalName)), Modified ? "*" : ""); }
+			get { return $"{(Modified?"*":"")}{BaseName}: {string.Join("/", Element.AncestorsAndSelf().Reversed().Select(x => x.Name.LocalName))}"; }
 		}
 
 		/// <summary>True if elements have been added/removed/modified</summary>

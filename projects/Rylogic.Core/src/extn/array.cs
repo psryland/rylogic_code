@@ -225,7 +225,7 @@ namespace Rylogic.Extn
 			if (typeof(T) == typeof(bool  )) return (T)(object)AsBool  (arr);
 			if (typeof(T) == typeof(char  )) return (T)(object)AsChar  (arr);
 
-			Debug.Assert(arr.Length >= Marshal.SizeOf(typeof(T)), "As<T>: Insufficient data. Expected {0}, got {1}".Fmt(Marshal.SizeOf(typeof(T)), arr.Length));
+			Debug.Assert(arr.Length >= Marshal.SizeOf(typeof(T)), $"As<T>: Insufficient data. Expected {Marshal.SizeOf(typeof(T))}, got {arr.Length}");
 			using (var handle = GCHandle_.Alloc(arr, GCHandleType.Pinned))
 				return (T)Marshal.PtrToStructure(handle.Handle.AddrOfPinnedObject(), typeof(T));
 		}

@@ -206,7 +206,7 @@ namespace Rylogic.Common
 				set
 				{
 					var r = BluetoothEnableIncomingConnections(Handle, value);
-					if (r) Debug.WriteLine("Bluetooth radios {0} incoming connections".Fmt(value ? "listening for" : "ignoring"));
+					if (r) Debug.WriteLine($"Bluetooth radios {(value ? "listening for" : "ignoring")} incoming connections");
 					else   Debug.WriteLine("Bluetooth connectivity unchanged");
 				}
 			}
@@ -219,7 +219,7 @@ namespace Rylogic.Common
 				{
 					if (value) Connectable = true;
 					var r = BluetoothEnableDiscovery(Handle, value);
-					if (r) Debug.WriteLine("Bluetooth discovery {0}".Fmt(value ? "enabled" : "disabled"));
+					if (r) Debug.WriteLine($"Bluetooth discovery {(value ? "enabled" : "disabled")}");
 					else   Debug.WriteLine("Bluetooth discovery unchanged");
 				}
 			}
@@ -344,7 +344,7 @@ namespace Rylogic.Common
 				{
 				default:
 					{
-						throw new Exception("Unknown authentication method {0}".Fmt(parms.AuthenticationMethod));
+						throw new Exception($"Unknown authentication method {parms.AuthenticationMethod}");
 					}
 				case EAuthenticationMethod.Legacy:
 					{
@@ -490,7 +490,7 @@ namespace Rylogic.Common
 			set
 			{
 				var r = BluetoothEnableIncomingConnections(IntPtr.Zero, value);
-				if (r) Debug.WriteLine("Bluetooth radios {0} incoming connections".Fmt(value ? "listening for" : "ignoring"));
+				if (r) Debug.WriteLine($"Bluetooth radios {(value ? "listening for" : "ignoring")} incoming connections");
 				else   Debug.WriteLine("Bluetooth connectivity unchanged");
 			}
 		}
@@ -502,7 +502,7 @@ namespace Rylogic.Common
 			set
 			{
 				var r = BluetoothEnableDiscovery(IntPtr.Zero, value);
-				if (r) Debug.WriteLine("Bluetooth discovery {0}".Fmt(value ? "enabled" : "disabled"));
+				if (r) Debug.WriteLine($"Bluetooth discovery {(value ? "enabled" : "disabled")}");
 				else   Debug.WriteLine("Bluetooth discovery unchanged");
 			}
 		}

@@ -99,7 +99,7 @@ namespace Rylogic.Gui
 
 					ClearSelection();
 					if (e.NewIndex < 0 || e.NewIndex >= RowCount)
-						throw new Exception("Current data source position {0} is not a valid row in the grid (%d rows)".Fmt(e.NewIndex, RowCount));
+						throw new Exception($"Current data source position {e.NewIndex} is not a valid row in the grid ({RowCount} rows)");
 					Rows[e.NewIndex].Selected = true;
 				}
 				else
@@ -141,7 +141,7 @@ namespace Rylogic.Gui
 		public virtual object ColumnValue(DataGridViewColumn column, Type item)
 		{
 			var pi = item.GetType().GetProperty(column.DataPropertyName);
-			if (pi == null) throw new Exception("Unknown column {0}.{1}".Fmt(item.GetType().Name, column.DataPropertyName ?? string.Empty));
+			if (pi == null) throw new Exception($"Unknown column {item.GetType().Name}.{column.DataPropertyName ?? string.Empty}");
 			return pi.GetValue(item, null);
 		}
 
@@ -168,7 +168,7 @@ namespace Rylogic.Gui
 				val is Color         ? ((Color )val).ToArgb().ToString() :
 				val is double        ? ((double)val).ToString() :
 				val.GetType().IsEnum ? ((int   )val).ToString() :
-				"'{0}'".Fmt(val);
+				$"'{val}'";
 		}
 
 		/// <summary>Respond to a left click on the grid</summary>

@@ -74,7 +74,7 @@ namespace Csex
 			}
 			catch (Exception ex)
 			{
-				MsgBox.Show(this, "Failed to load XML file {0}\r\n{1}".Fmt(filepath, ex.Message), "Load XML File Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				MsgBox.Show(this, $"Failed to load XML file {filepath}\r\n{ex.Message}", "Load XML File Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
 

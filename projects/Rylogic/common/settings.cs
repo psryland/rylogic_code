@@ -192,7 +192,7 @@ namespace Rylogic.Common
 					var key_elem = setting.Element("key");
 					var val_elem = setting.Element("value");
 					if (key_elem == null || val_elem == null)
-						throw new Exception("Invalid setting element found: {0}".Fmt(setting));
+						throw new Exception($"Invalid setting element found: {setting}");
 
 					key = key_elem.As<string>();
 					var val = val_elem.ToObject();
@@ -448,7 +448,7 @@ namespace Rylogic.Common
 				ResetToDefaults();
 
 				// Notify of load failure
-				SettingsEvent(ESettingsEvent.LoadFailed, ex, "Failed to load settings from {0}".Fmt(Filepath));
+				SettingsEvent(ESettingsEvent.LoadFailed, ex, $"Failed to load settings from {Filepath}");
 
 				// Parse the exception up
 				throw;
@@ -493,15 +493,15 @@ namespace Rylogic.Common
 		{
 			if (!Path_.FileExists(filepath))
 			{
-				SettingsEvent(ESettingsEvent.FileNotFound, null, "Settings file {0} not found, using defaults".Fmt(filepath));
+				SettingsEvent(ESettingsEvent.FileNotFound, null, $"Settings file {filepath} not found, using defaults");
 				Reset();
 				return; // Reset will recursively call Load again
 			}
 
-			SettingsEvent(ESettingsEvent.LoadingSettings, null, "Loading settings file {0}".Fmt(filepath));
+			SettingsEvent(ESettingsEvent.LoadingSettings, null, $"Loading settings file {filepath}");
 
 			var settings = XDocument.Load(filepath).Root;
-			if (settings == null) throw new Exception("Invalidate settings file ({0})".Fmt(filepath));
+			if (settings == null) throw new Exception($"Invalidate settings file ({filepath})");
 
 			// Set the filepath before loading so that it's valid for the SettingsLoaded event
 			Filepath = filepath;
@@ -559,7 +559,7 @@ namespace Rylogic.Common
 				if (SettingsSaving != null) SettingsSaving(this, args);
 				if (args.Cancel) return;
 
-				SettingsEvent(ESettingsEvent.SavingSettings, null, "Saving settings to file {0}".Fmt(filepath));
+				SettingsEvent(ESettingsEvent.SavingSettings, null, $"Saving settings to file {filepath}");
 
 				// Ensure the save directory exists
 				filepath = Path.GetFullPath(filepath);
@@ -575,7 +575,7 @@ namespace Rylogic.Common
 				}
 				catch (Exception ex)
 				{
-					SettingsEvent(ESettingsEvent.SaveFailed, ex, "Failed to save settings to file {0}".Fmt(filepath));
+					SettingsEvent(ESettingsEvent.SaveFailed, ex, $"Failed to save settings to file {filepath}");
 				}
 			}
 		}
@@ -623,7 +623,7 @@ namespace Rylogic.Common
 		/// <summary>Called when loading settings from an earlier version</summary>
 		public virtual void Upgrade(XElement old_settings, string from_version)
 		{
-			throw new NotSupportedException("Settings file version is {0}. Latest version is {1}. Upgrading from this version is not supported".Fmt(from_version, Version));
+			throw new NotSupportedException($"Settings file version is {from_version}. Latest version is {Version}. Upgrading from this version is not supported");
 		}
 
 		/// <summary>Perform validation on the loaded settings</summary>
@@ -654,7 +654,7 @@ namespace Rylogic.Common
 			case ESettingsEvent.SaveFailed:
 				// By default, show an error message box. User code can prevent this by replacing
 				// the SettingsEvent action, or overriding OnSettingsEvent
-				MsgBox.Show(null, "An error occurred that prevented settings being saved.\r\n\r\n{0}\r\n{1}".Fmt(msg, ex.Message), "Save Settings", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				MsgBox.Show(null, $"An error occurred that prevented settings being saved.\r\n\r\n{msg}\r\n{ex.Message}", "Save Settings", MessageBoxButtons.OK, MessageBoxIcon.Error);
 				break;
 			}
 		}

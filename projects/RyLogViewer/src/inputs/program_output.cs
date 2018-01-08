@@ -89,8 +89,8 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Log.Exception(this, ex, "Failed to launch child process {0} {1} -> {2}".Fmt(conn.Executable, conn.Arguments, conn.OutputFilepath));
-				Misc.ShowMessage(this, string.Format("Failed to launch child process {0}.",conn.Executable), Application.ProductName, MessageBoxIcon.Error, ex);
+				Log.Exception(this, ex, $"Failed to launch child process {conn.Executable} {conn.Arguments} -> {conn.OutputFilepath}");
+				Misc.ShowMessage(this, $"Failed to launch child process {conn.Executable}.", Application.ProductName, MessageBoxIcon.Error, ex);
 			}
 			finally
 			{
@@ -129,7 +129,7 @@ namespace RyLogViewer
 			m_process = new Process{StartInfo = info};
 			m_process.Exited += (s,a) =>
 			{
-				Log.Info(this, "Process {0} exited".Fmt(launch.Executable));
+				Log.Info(this, $"Process {launch.Executable} exited");
 				RaiseConnectionDropped();
 			};
 		}
@@ -140,7 +140,7 @@ namespace RyLogViewer
 			{
 				lock (m_lock)
 				{
-					Log.Info(this, "Disposing process {0}".Fmt(m_process.StartInfo.FileName));
+					Log.Info(this, $"Disposing process {m_process.StartInfo.FileName}");
 
 					// HasExited can throw, Dispose() should be all that's needed anyway
 					//if (!m_process.HasExited)
@@ -156,7 +156,7 @@ namespace RyLogViewer
 		public void Start()
 		{
 			m_process.Start();
-			Log.Info(this, "Process {0} started".Fmt(m_process.StartInfo.FileName));
+			Log.Info(this, $"Process {m_process.StartInfo.FileName} started");
 
 			// Attach to the window console so we can forward received data to it
 			if (m_launch.ShowWindow)

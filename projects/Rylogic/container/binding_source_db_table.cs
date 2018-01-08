@@ -94,7 +94,7 @@ namespace Rylogic.Container
 			get
 			{
 				var meta = Sqlite.TableMetaData.GetMetaData<Type>();
-				return BaseTableName.HasValue() ? "{0}.{1}".Fmt(BaseTableName, meta.Pks[0].NameBracketed) : meta.Pks[0].NameBracketed;
+				return BaseTableName.HasValue() ? $"{BaseTableName}.{meta.Pks[0].NameBracketed}" : meta.Pks[0].NameBracketed;
 			}
 		}
 
@@ -135,7 +135,7 @@ namespace Rylogic.Container
 				m_impl_sort_column = value;
 
 				if (DB != null && value != null && !Sqlite.TableMetaData.GetMetaData<Type>().Columns.Any(x => x.Name == value))
-					throw new Exception("No column called {0}".Fmt(value));
+					throw new Exception($"No column called {value}");
 
 				if (DB != null)
 					Invalidate();
@@ -159,7 +159,7 @@ namespace Rylogic.Container
 		/// <summary>The order by expression implied by 'SortColumn' and 'SortAscending'</summary>
 		public string OrderBy
 		{
-			get { return SortColumn.HasValue() ? "{0}.[{1}] {2}".Fmt(BaseTableName, SortColumn, SortAscending ? string.Empty : "desc") : string.Empty; }
+			get { return SortColumn.HasValue() ? $"{BaseTableName}.[{SortColumn}] {(SortAscending ? string.Empty : "desc")}" : string.Empty; }
 		}
 		
 		/// <summary>Raised whenever the collection is marked as invalid</summary>
@@ -273,7 +273,7 @@ namespace Rylogic.Container
 			get
 			{
 				// Check you are passing the array index into the filtered table, not the primary key of the item you want
-				if (idx >= Count) throw new IndexOutOfRangeException("Index {0} is out of Range [0,{1})".Fmt(idx, Count));
+				if (idx >= Count) throw new IndexOutOfRangeException($"Index {idx} is out of Range [0,{Count})");
 
 				// Don't use the indexer to update the table, Update() can change the value of 'Count'
 				if (UpdateRequired) throw new Exception("Table is out of date, call Update()");
@@ -399,7 +399,7 @@ namespace Rylogic.Container
 		}
 		public void CopyTo(Type[] array, int arrayIndex)
 		{
-			if (array.Length - arrayIndex < Count) throw new Exception("array too small in {0}.CopyTo".Fmt(GetType().Name));
+			if (array.Length - arrayIndex < Count) throw new Exception($"array too small in {GetType().Name}.CopyTo");
 			foreach (var x in this)
 				array[arrayIndex++] = x;
 		}

@@ -186,7 +186,7 @@ namespace TestCS
 					if (m_form.m_diag != null)
 					{
 						var pt = m_form.m_diag.ClientToDiagram(m_form.m_diag.PointToClient(MousePosition));
-						m_form.m_status_mouse_pos.Text = "Pos: {0} {1}".Fmt(pt.x.ToString("F3"), pt.y.ToString("F3"));
+						m_form.m_status_mouse_pos.Text = $"Pos: {pt.x.ToString("F3")} {pt.y.ToString("F3")}";
 					}
 					break;
 				}

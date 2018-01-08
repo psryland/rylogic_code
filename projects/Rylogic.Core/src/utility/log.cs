@@ -380,7 +380,7 @@ namespace Rylogic.Utility
 			if (entry_delimiter != '\0')        { Str.Build(sb, entry_delimiter); }
 			if (evt.File.HasValue())            { Str.Append(sb, evt.File); pre = " "; }
 			if (evt.Line != null)               { Str.Append(sb, "(", evt.Line.Value, "):"); pre = " "; }
-			if (evt.Tag.HasValue())         { Str.Append(sb, pre, "{0:8}".Fmt(evt.Tag)); pre = "|"; }
+			if (evt.Tag.HasValue())             { Str.Append(sb, pre, $"{evt.Tag:8}"); pre = "|"; }
 			if (evt.Level != ELogLevel.NoLevel) { Str.Append(sb, pre, evt.Level); pre = "|"; }
 			if (timestamp)                      { Str.Append(sb, pre, evt.Timestamp.ToString("c")); pre = "|"; }
 			Str.Append(sb, pre, evt.Message);
@@ -512,7 +512,7 @@ namespace Rylogic.Utility
 				}
 				catch (Exception ex)
 				{
-					Debug.Assert(false, "Unknown exception in log thread: {0}".Fmt(ex.Message));
+					Debug.Assert(false, $"Unknown exception in log thread: {ex.Message}");
 				}
 			}
 			private Thread m_thread;
