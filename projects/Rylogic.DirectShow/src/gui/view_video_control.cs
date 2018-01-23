@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
-using Rylogic.Extn;
 using Rylogic.Graphix;
 using Rylogic.Maths;
 using Timer = System.Windows.Forms.Timer;
@@ -152,7 +151,7 @@ namespace Rylogic.Gui
 				vol_track.ValueChanged += (o,a)=>{ video.Volume = vol_track.Value; };
 				vol.ShowDialog(remote);
 				int new_volume = video.Volume;
-				if (new_volume != volume) VolumeChanged.Raise(this, new_volume);
+				if (new_volume != volume) VolumeChanged?.Invoke(this, new_volume);
 			};
 			remote.Controls.Add(btn_volume);
 
@@ -187,7 +186,7 @@ namespace Rylogic.Gui
 			remote.Controls.Add(lbl_time);
 
 			remote.ResumeLayout(false);
-			remote.VisibleChanged += (s,e)=>{ timer.Enabled = remote.Visible; if (remote.Visible) remote.BringToFront(); RemoteVisibleChanged.Raise(this, remote.Visible); };
+			remote.VisibleChanged += (s,e)=>{ timer.Enabled = remote.Visible; if (remote.Visible) remote.BringToFront(); RemoteVisibleChanged?.Invoke(this, remote.Visible); };
 			remote.FormClosing    += (s,e)=>{ if (e.CloseReason == CloseReason.UserClosing) {m_remote.Hide(); e.Cancel = true;} };
 			return remote;
 		}

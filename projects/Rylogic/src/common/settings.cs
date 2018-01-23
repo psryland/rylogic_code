@@ -623,6 +623,31 @@ namespace Rylogic.Common
 		/// <summary>Called when loading settings from an earlier version</summary>
 		public virtual void Upgrade(XElement old_settings, string from_version)
 		{
+			// Boiler-plate
+			//for (; from_version != Version; )
+			//{
+			//	switch (from_version)
+			//	{
+			//	default:
+			//		{
+			//			base.Upgrade(old_settings, from_version);
+			//			return;
+			//		}
+			//	case "v1.1":
+			//		{
+			//			#region Change description
+			//			{
+			//				// Modify the XML document using hard-coded element names.
+			//				// Note: don't use constants for the element names because they
+			//				// may get changed in the future. This is one case where magic
+			//				// strings is actually the correct thing to do!
+			//			}
+			//			#endregion
+			//			from_version = "v1.2";
+			//			break;
+			//		}
+			//	}
+			//}
 			throw new NotSupportedException($"Settings file version is {from_version}. Latest version is {Version}. Upgrading from this version is not supported");
 		}
 
