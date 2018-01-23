@@ -156,16 +156,16 @@ namespace Rylogic.Common
 		/// <summary>Grow the bounds of this range to include 'x'</summary>
 		public void Encompass(long value)
 		{
-			Beg = Math.Min(Beg , value);
-			End   = Math.Max(End   , value + 1);
+			Beg = Math.Min(Beg, value);
+			End = Math.Max(End, value + 1);
 		}
 
 		/// <summary>Grow the bounds of this range to include 'range'</summary>
 		public void Encompass(Range rng)
 		{
 			Debug.Assert(rng.Size >= 0, "'rng' is inside out");
-			Beg = Math.Min(Beg ,rng.Beg);
-			End   = Math.Max(End   ,rng.End  );
+			Beg = Math.Min(Beg, rng.Beg);
+			End = Math.Max(End, rng.End);
 		}
 
 		/// <summary>Returns a range scaled by 'scale'. Begin and End are changed, the mid point of the range is unchanged</summary>
@@ -186,8 +186,8 @@ namespace Rylogic.Common
 
 		/// <summary>
 		/// Returns the intersection of this range with 'rng'.
-		/// If there is no intersection, returns [b,b) or [e,e). Note: this means
-		/// A.Intersect(B) != B.Intersect(A)</summary>
+		/// If there is no intersection, returns [b,b) or [e,e) of *this* range.
+		/// Note: this means A.Intersect(B) != B.Intersect(A)</summary>
 		public Range Intersect(Range rng)
 		{
 			Debug.Assert(Size >= 0, "this range is inside out");
@@ -215,7 +215,7 @@ namespace Rylogic.Common
 		public static Range Constrain(Range x, Range range)
 		{
 			if (x.Beg < range.Beg) x = x.Shift(range.Beg - x.Beg);
-			if (x.End   > range.End  ) x = x.Shift(range.End - x.End);
+			if (x.End > range.End) x = x.Shift(range.End - x.End);
 			if (x.Beg < range.Beg) x.Beg = range.Beg;
 			return x;
 		}
@@ -237,9 +237,7 @@ namespace Rylogic.Common
 		}
 		public override bool Equals(object obj)
 		{
-			if (ReferenceEquals(null, obj)) return false;
-			if (obj.GetType() != typeof(Range)) return false;
-			return Equals((Range)obj);
+			return obj is Range && Equals((Range)obj);
 		}
 		public bool Equals(Range other)
 		{
@@ -764,7 +762,6 @@ namespace Rylogic.Common
 }
 
 #if PR_UNITTESTS
-
 namespace Rylogic.UnitTests
 {
 	using Common;

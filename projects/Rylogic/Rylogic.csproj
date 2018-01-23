@@ -97,279 +97,231 @@
     <Compile Include="..\..\sdk\scintilla\include\Scintilla.cs">
       <Link>scintilla\Scintilla.cs</Link>
     </Compile>
-    <Compile Include="attrib\abstract_base_desc_provider.cs" />
-    <Compile Include="audio\audio.cs" />
-    <Compile Include="audio\midi.cs" />
-    <Compile Include="common\bluetooth.cs" />
-    <Compile Include="common\rtf.cs" />
-    <Compile Include="common\settings.cs" />
-    <Compile Include="container\sqlite3.cs" />
-    <Compile Include="container\binding.cs" />
-    <Compile Include="container\binding_dictionary.cs" />
-    <Compile Include="container\binding_source.cs">
+    <Compile Include="src\attrib\abstract_base_desc_provider.cs" />
+    <Compile Include="src\audio\audio.cs" />
+    <Compile Include="src\audio\midi.cs" />
+    <Compile Include="src\common\bluetooth.cs" />
+    <Compile Include="src\common\rtf.cs" />
+    <Compile Include="src\common\settings.cs" />
+    <Compile Include="src\container\sqlite3.cs" />
+    <Compile Include="src\container\binding.cs" />
+    <Compile Include="src\container\binding_dictionary.cs" />
+    <Compile Include="src\container\binding_source.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="common\plugin_loader.cs" />
-    <Compile Include="container\binding_list.cs" />
-    <Compile Include="container\binding_source_db_table.cs" />
-    <Compile Include="container\dict_chg.cs" />
-    <Compile Include="container\list_chg.cs" />
-    <Compile Include="container\sortable_binding_list.cs" />
-    <Compile Include="crypt\activation_code.cs" />
-    <Compile Include="crypt\crypt.cs" />
-    <Compile Include="crypt\rijndael.cs" />
-    <Compile Include="directshow.net\amstream.cs" />
-    <Compile Include="directshow.net\amvideo.cs" />
-    <Compile Include="directshow.net\atscpsipparser.cs" />
-    <Compile Include="directshow.net\austream.cs" />
-    <Compile Include="directshow.net\AxCore.cs" />
-    <Compile Include="directshow.net\AXExtend.cs" />
-    <Compile Include="directshow.net\BDAIface.cs" />
-    <Compile Include="directshow.net\Bdatif.cs" />
-    <Compile Include="directshow.net\BDATypes.cs" />
-    <Compile Include="directshow.net\DES.cs" />
-    <Compile Include="directshow.net\DevEnum.cs" />
-    <Compile Include="directshow.net\DMODShow.cs" />
-    <Compile Include="directshow.net\dsattrib.cs" />
-    <Compile Include="directshow.net\DsUtils.cs" />
-    <Compile Include="directshow.net\dvbsiparser.cs" />
-    <Compile Include="directshow.net\DVDIf.cs" />
-    <Compile Include="directshow.net\DynGraph.cs" />
-    <Compile Include="directshow.net\encdec.cs" />
-    <Compile Include="directshow.net\EvCode.cs" />
-    <Compile Include="directshow.net\IL21Dec.cs" />
-    <Compile Include="directshow.net\MediaControl.cs" />
-    <Compile Include="directshow.net\MediaObj.cs" />
-    <Compile Include="directshow.net\MediaParam.cs" />
-    <Compile Include="directshow.net\Misc.cs" />
-    <Compile Include="directshow.net\Mixerocx.cs" />
-    <Compile Include="directshow.net\mmstream.cs" />
-    <Compile Include="directshow.net\mpconfig.cs" />
-    <Compile Include="directshow.net\Mpeg2Data.cs" />
-    <Compile Include="directshow.net\mpeg2psiparser.cs" />
-    <Compile Include="directshow.net\Mpeg2Structs.cs" />
-    <Compile Include="directshow.net\other.cs" />
-    <Compile Include="directshow.net\PlayList.cs" />
-    <Compile Include="directshow.net\QEdit.cs" />
-    <Compile Include="directshow.net\qnetwork.cs" />
-    <Compile Include="directshow.net\RegBag.cs" />
-    <Compile Include="directshow.net\Sbe.cs" />
-    <Compile Include="directshow.net\Tuner.cs" />
-    <Compile Include="directshow.net\TvRatings.cs" />
-    <Compile Include="directshow.net\Uuids.cs" />
-    <Compile Include="directshow.net\Vidcap.cs" />
-    <Compile Include="directshow.net\VidPort.cs" />
-    <Compile Include="directshow.net\Vmr9.cs" />
-    <Compile Include="directshow.net\VmRender.cs" />
-    <Compile Include="extn\binding_source.cs" />
-    <Compile Include="extn\control.cs" />
-    <Compile Include="extn\datetime_picker.cs" />
-    <Compile Include="extn\dispatcher.cs" />
-    <Compile Include="extn\drawing.cs" />
-    <Compile Include="extn\event_handler.cs" />
-    <Compile Include="extn\graphics.cs" />
-    <Compile Include="extn\shell.cs" />
-    <Compile Include="extn\xml.cs" />
-    <Compile Include="graphix\gfx.cs" />
-    <Compile Include="utility\compile.cs" />
-    <Compile Include="view3d\view3d.cs" />
-    <Compile Include="gui\bluetooth_ui.cs">
+    <Compile Include="src\common\plugin_loader.cs" />
+    <Compile Include="src\container\binding_list.cs" />
+    <Compile Include="src\container\binding_source_db_table.cs" />
+    <Compile Include="src\container\dict_chg.cs" />
+    <Compile Include="src\container\list_chg.cs" />
+    <Compile Include="src\container\sortable_binding_list.cs" />
+    <Compile Include="src\crypt\activation_code.cs" />
+    <Compile Include="src\crypt\crypt.cs" />
+    <Compile Include="src\crypt\rijndael.cs" />
+    <Compile Include="src\extn\binding_source.cs" />
+    <Compile Include="src\extn\control.cs" />
+    <Compile Include="src\extn\datetime_picker.cs" />
+    <Compile Include="src\extn\dispatcher.cs" />
+    <Compile Include="src\extn\drawing.cs" />
+    <Compile Include="src\extn\event_handler.cs" />
+    <Compile Include="src\extn\graphics.cs" />
+    <Compile Include="src\extn\shell.cs" />
+    <Compile Include="src\extn\xml.cs" />
+    <Compile Include="src\graphix\gfx.cs" />
+    <Compile Include="src\utility\compile.cs" />
+    <Compile Include="src\view3d\view3d.cs" />
+    <Compile Include="src\gui\bluetooth_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="gui\browse_path_ui.cs">
+    <Compile Include="src\gui\browse_path_ui.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\chart_control.cs">
+    <Compile Include="src\gui\chart_control.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="gui\checkbox_switch.cs">
+    <Compile Include="src\gui\checkbox_switch.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\checked_groupbox.cs">
+    <Compile Include="src\gui\checked_groupbox.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\combo_box.cs">
+    <Compile Include="src\gui\combo_box.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\data_grid_view_db_table.cs">
+    <Compile Include="src\gui\data_grid_view_db_table.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\data_grid_view.cs">
+    <Compile Include="src\gui\data_grid_view.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\date_time_picker.cs">
+    <Compile Include="src\gui\date_time_picker.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\dock_container.cs">
+    <Compile Include="src\gui\dock_container.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\dpi_scale.cs" />
-    <Compile Include="gui\feature_tree_ui.cs">
+    <Compile Include="src\gui\dpi_scale.cs" />
+    <Compile Include="src\gui\feature_tree_ui.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\find_ui.cs">
+    <Compile Include="src\gui\find_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="gui\anim_button.cs">
+    <Compile Include="src\gui\anim_button.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\layout.cs" />
-    <Compile Include="gui\help_ui.cs">
+    <Compile Include="src\gui\layout.cs" />
+    <Compile Include="src\gui\help_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="gui\list_box.cs">
+    <Compile Include="src\gui\list_box.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\log_ui.cs">
+    <Compile Include="src\gui\log_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="gui\open_folder_ui.cs">
+    <Compile Include="src\gui\open_folder_ui.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\pattern_filter.cs">
+    <Compile Include="src\gui\pattern_filter.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="gui\progress_ctrl.cs">
+    <Compile Include="src\gui\progress_ctrl.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\rich_text_box.cs">
+    <Compile Include="src\gui\rich_text_box.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\scintilla_ctrl.cs">
+    <Compile Include="src\gui\scintilla_ctrl.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\select_directories_ui.cs">
+    <Compile Include="src\gui\select_directories_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="gui\single_select_button_set.cs">
+    <Compile Include="src\gui\single_select_button_set.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\toolstripcontainer.cs">
+    <Compile Include="src\gui\toolstripcontainer.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\toolstrip_controls.cs">
+    <Compile Include="src\gui\toolstrip_controls.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\value_text_box.cs">
+    <Compile Include="src\gui\value_text_box.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="view3d\view3d_measurement_ui.cs">
+    <Compile Include="src\view3d\view3d_measurement_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="gui\vt100.cs" />
-    <Compile Include="gui\colour_ui.cs">
+    <Compile Include="src\gui\vt100.cs" />
+    <Compile Include="src\gui\colour_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="gui\colour_wheel.cs">
+    <Compile Include="src\gui\colour_wheel.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="gui\dgv_custom_columns.cs">
+    <Compile Include="src\gui\dgv_custom_columns.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\diagram_control.cs">
+    <Compile Include="src\gui\diagram_control.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="gui\list_ui.cs">
+    <Compile Include="src\gui\list_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="gui\message_box.cs">
+    <Compile Include="src\gui\message_box.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="gui\overlay.cs">
+    <Compile Include="src\gui\overlay.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\pattern_ui.cs">
+    <Compile Include="src\gui\pattern_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="gui\subrange_scroll.cs">
+    <Compile Include="src\gui\subrange_scroll.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\graph_control.cs">
+    <Compile Include="src\gui\graph_control.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="gui\hover_scroll.cs">
+    <Compile Include="src\gui\hover_scroll.cs">
     </Compile>
-    <Compile Include="gui\progress_form.cs">
+    <Compile Include="src\gui\progress_form.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="gui\prompt_ui.cs">
+    <Compile Include="src\gui\prompt_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="gui\recent_files.cs" />
-    <Compile Include="graphix\video.cs">
-    </Compile>
-    <Compile Include="gui\hint_balloon.cs">
+    <Compile Include="src\gui\recent_files.cs" />
+    <Compile Include="src\gui\hint_balloon.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="gui\tool_form.cs">
+    <Compile Include="src\gui\tool_form.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="gui\tree_grid_view.cs">
+    <Compile Include="src\gui\tree_grid_view.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="view3d\view3d_control.cs">
+    <Compile Include="src\view3d\view3d_control.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="gui\view_image_control.cs">
+    <Compile Include="src\gui\view_image_control.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="gui\view_video_control.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="gui\html_text_box.cs">
+    <Compile Include="src\gui\html_text_box.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\web_browser.cs">
+    <Compile Include="src\gui\web_browser.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\zoom_scroll.cs">
+    <Compile Include="src\gui\zoom_scroll.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="inet\check_for_updates.cs" />
-    <Compile Include="inet\cred.cs" />
-    <Compile Include="inet\email.cs" />
-    <Compile Include="inet\ftp.cs" />
-    <Compile Include="inet\inet.cs" />
-    <Compile Include="inet\markdown.cs" />
-    <Compile Include="inet\proxy.cs" />
-    <Compile Include="ldraw\ldr_helper.cs" />
-    <Compile Include="Program.cs" />
+    <Compile Include="src\inet\check_for_updates.cs" />
+    <Compile Include="src\inet\cred.cs" />
+    <Compile Include="src\inet\email.cs" />
+    <Compile Include="src\inet\ftp.cs" />
+    <Compile Include="src\inet\inet.cs" />
+    <Compile Include="src\inet\markdown.cs" />
+    <Compile Include="src\inet\proxy.cs" />
+    <Compile Include="src\ldraw\ldr_helper.cs" />
+    <Compile Include="src\Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="scintilla\Sci.cs" />
-    <Compile Include="undo\text_undo.cs" />
-    <Compile Include="gui\border_resizer.cs" />
-    <Compile Include="win32\crt.cs" />
-    <Compile Include="gui\drag_drop.cs" />
-    <Compile Include="common\event_batcher.cs" />
-    <Compile Include="gui\flag_checked_listbox.cs">
+    <Compile Include="src\scintilla\Sci.cs" />
+    <Compile Include="src\undo\text_undo.cs" />
+    <Compile Include="src\gui\border_resizer.cs" />
+    <Compile Include="src\win32\crt.cs" />
+    <Compile Include="src\gui\drag_drop.cs" />
+    <Compile Include="src\common\event_batcher.cs" />
+    <Compile Include="src\gui\flag_checked_listbox.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="utility\Dynamic.cs" />
-    <Compile Include="utility\file_watch.cs" />
-    <Compile Include="utility\generic_type_converter.cs" />
-    <Compile Include="utility\mouse_keyboard_hook.cs" />
-    <Compile Include="undo\undo.cs" />
-    <Compile Include="win32\com_guids.cs" />
-    <Compile Include="win32\device_manager.cs" />
-    <Compile Include="win32\error_codes.cs" />
-    <Compile Include="win32\gdi32.cs" />
-    <Compile Include="win32\interop_structs.cs" />
-    <Compile Include="win32\kernel32.cs" />
-    <Compile Include="win32\msvcrt.cs" />
-    <Compile Include="win32\ole32.cs" />
-    <Compile Include="win32\rstrtmgr.cs" />
-    <Compile Include="win32\shell32.cs" />
-    <Compile Include="win32\user32.cs" />
-    <Compile Include="win32\win32.cs" />
-    <Compile Include="win32\windows.cs" />
-    <Compile Include="utility\util.cs" />
-    <Compile Include="win32\winmm.cs" />
-    <Compile Include="win32\hwnd.cs" />
+    <Compile Include="src\utility\Dynamic.cs" />
+    <Compile Include="src\utility\file_watch.cs" />
+    <Compile Include="src\utility\generic_type_converter.cs" />
+    <Compile Include="src\utility\mouse_keyboard_hook.cs" />
+    <Compile Include="src\undo\undo.cs" />
+    <Compile Include="src\win32\com_guids.cs" />
+    <Compile Include="src\win32\device_manager.cs" />
+    <Compile Include="src\win32\error_codes.cs" />
+    <Compile Include="src\win32\gdi32.cs" />
+    <Compile Include="src\win32\interop_structs.cs" />
+    <Compile Include="src\win32\kernel32.cs" />
+    <Compile Include="src\win32\msvcrt.cs" />
+    <Compile Include="src\win32\ole32.cs" />
+    <Compile Include="src\win32\rstrtmgr.cs" />
+    <Compile Include="src\win32\shell32.cs" />
+    <Compile Include="src\win32\user32.cs" />
+    <Compile Include="src\win32\win32.cs" />
+    <Compile Include="src\win32\windows.cs" />
+    <Compile Include="src\utility\util.cs" />
+    <Compile Include="src\win32\winmm.cs" />
+    <Compile Include="src\win32\hwnd.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
@@ -404,62 +356,59 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="gui\anim_button.resx">
+    <EmbeddedResource Include="src\gui\anim_button.resx">
       <DependentUpon>anim_button.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="gui\bluetooth_ui.resx">
+    <EmbeddedResource Include="src\gui\bluetooth_ui.resx">
       <DependentUpon>bluetooth_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="gui\browse_path_ui.resx">
+    <EmbeddedResource Include="src\gui\browse_path_ui.resx">
       <DependentUpon>browse_path_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="gui\colour_ui.resx">
+    <EmbeddedResource Include="src\gui\colour_ui.resx">
       <DependentUpon>colour_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="gui\colour_wheel.resx">
+    <EmbeddedResource Include="src\gui\colour_wheel.resx">
       <DependentUpon>colour_wheel.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="gui\data_grid_view_db_table.resx">
+    <EmbeddedResource Include="src\gui\data_grid_view_db_table.resx">
       <DependentUpon>data_grid_view_db_table.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="gui\diagram_control.resx">
+    <EmbeddedResource Include="src\gui\diagram_control.resx">
       <DependentUpon>diagram_control.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="gui\find_ui.resx">
+    <EmbeddedResource Include="src\gui\find_ui.resx">
       <DependentUpon>find_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="gui\help_ui.resx">
+    <EmbeddedResource Include="src\gui\help_ui.resx">
       <DependentUpon>help_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="gui\list_ui.resx">
+    <EmbeddedResource Include="src\gui\list_ui.resx">
       <DependentUpon>list_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="gui\log_ui.resx">
+    <EmbeddedResource Include="src\gui\log_ui.resx">
       <DependentUpon>log_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="gui\message_box.resx">
+    <EmbeddedResource Include="src\gui\message_box.resx">
       <DependentUpon>message_box.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="gui\pattern_filter.resx">
+    <EmbeddedResource Include="src\gui\pattern_filter.resx">
       <DependentUpon>pattern_filter.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="gui\pattern_ui.resx">
+    <EmbeddedResource Include="src\gui\pattern_ui.resx">
       <DependentUpon>pattern_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="gui\prompt_ui.resx">
+    <EmbeddedResource Include="src\gui\prompt_ui.resx">
       <DependentUpon>prompt_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="gui\hint_balloon.resx">
+    <EmbeddedResource Include="src\gui\hint_balloon.resx">
       <DependentUpon>hint_balloon.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="gui\select_directories_ui.resx">
+    <EmbeddedResource Include="src\gui\select_directories_ui.resx">
       <DependentUpon>select_directories_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="view3d\view3d_measurement_ui.resx">
+    <EmbeddedResource Include="src\view3d\view3d_measurement_ui.resx">
       <DependentUpon>view3d_measurement_ui.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="gui\view_video_control.resx">
-      <DependentUpon>view_video_control.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>PublicResXFileCodeGenerator</Generator>
@@ -479,12 +428,12 @@
     <None Include="Rylogic.pfx" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="resources\licence.txt" />
+    <None Include="res\licence.txt" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="deploy_rylogic.py" />
     <Content Include="post_build.py" />
-    <Content Include="resources\regex_quick_ref.html" />
+    <Content Include="res\regex_quick_ref.html" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj">
@@ -504,7 +453,7 @@
   <PropertyGroup>
     <PreBuildEvent>
     </PreBuildEvent>
-    <PostBuildEvent>$(ProjectDir)post_build.py $(ProjectDir) $(TargetDir) $(PlatformName) $(ConfigurationName)
+    <PostBuildEvent>py $(ProjectDir)post_build.py $(ProjectDir) $(TargetDir) $(PlatformName) $(ConfigurationName)
 </PostBuildEvent>
   </PropertyGroup>
 </Project>

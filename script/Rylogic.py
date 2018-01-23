@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*- 
+
 import sys, os, time, shutil, glob, subprocess, threading, re, enum, socket, zipfile, ctypes, hashlib
 import xml.etree.ElementTree as xml
 import xml.dom.minidom as minidom
@@ -93,8 +96,8 @@ def ShellDelete(path, wait_time_ms = 100):
 			raise Exception("Failed to delete '"+path+"'. Check for locked files")
 
 # Change the file extension on 'path'. 'extn' should include the dot
-def ChgExtn(path:str, extn:str):
-	dir_fname,ext = os.path.splitext(path)
+def ChgExtn(filepath:str, extn:str):
+	dir_fname,ext = os.path.splitext(filepath)
 	return dir_fname + extn
 
 # Enumerate recursively through a directory

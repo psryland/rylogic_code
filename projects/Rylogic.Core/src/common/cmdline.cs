@@ -107,7 +107,7 @@ namespace Rylogic.Common
 				{
 					int j = i;
 					for (++j; j != iend && !char.IsWhiteSpace(cmd_line[j]); ++j) {}
-					yield return cmd_line.Substring(i + 1, j - i - 1);
+					yield return cmd_line.Substring(i, j - i);
 					if (j == iend) yield break;
 					i = j;
 				}
@@ -119,6 +119,7 @@ namespace Rylogic.Common
 #if PR_UNITTESTS
 namespace Rylogic.UnitTests
 {
+	using System.Linq;
 	using Common;
 
 	[TestFixture] public class TestCmdLine
@@ -212,6 +213,18 @@ namespace Rylogic.UnitTests
 			Assert.AreEqual("C", t.OptionArg2);
 			Assert.AreEqual("D", t.Data1);
 			Assert.AreEqual("E", t.Data2);
+		}
+		[Test] public void TestTokenise()
+		{
+			var cmd_line = "thing.exe -a \"Hello World\" -b data.txt output";
+			var r = CmdLine.Tokenise(cmd_line).ToArray();
+			Assert.True(r.Length == 6);
+			Assert.AreEqual(r[0], "thing.exe");
+			Assert.AreEqual(r[1], "-a");
+			Assert.AreEqual(r[2], "Hello World");
+			Assert.AreEqual(r[3], "-b");
+			Assert.AreEqual(r[4], "data.txt");
+			Assert.AreEqual(r[5], "output");
 		}
 	}
 }
