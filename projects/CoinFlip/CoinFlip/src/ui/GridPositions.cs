@@ -1,10 +1,10 @@
 ﻿using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
-using pr.maths;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {
@@ -207,7 +207,7 @@ namespace CoinFlip
 				}
 			case nameof(Order.RemainingBase):
 				{
-					a.Value = $"{100m * Maths.Div((decimal)pos.RemainingBase, (decimal)pos.VolumeBase, 0m):G4} %";
+					a.Value = $"{100m * Math_.Div((decimal)pos.RemainingBase, (decimal)pos.VolumeBase, 0m):G4} %";
 					a.FormattingApplied = true;
 					break;
 				}

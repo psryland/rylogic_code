@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
-using pr.common;
-using pr.maths;
+using Rylogic.Common;
+using Rylogic.Maths;
 
 namespace CoinFlip
 {
@@ -91,7 +91,7 @@ namespace CoinFlip
 			var age_ticks = instr.Model.UtcNow.Ticks - Timestamp;
 			if (age_ticks < 0) return 0.0;
 			if (age_ticks > one) return 1.0;
-			return Maths.Frac(0.0, age_ticks, one);
+			return Math_.Frac(0.0, age_ticks, one);
 		}
 
 		/// <summary>Return the High or Low of this candle, based on 'sign'</summary>
@@ -203,10 +203,10 @@ namespace CoinFlip
 			// Bullish candles, return: Open, Low, High, Close
 			// Bearish candles, return: Open, High, Low, Close
 			var close = Bullish
-				? Maths.Lerp(t, Open, Low, High, Close)
-				: Maths.Lerp(t, Open, High, Low, Close);
+				? Math_.Lerp(t, Open, Low, High, Close)
+				: Math_.Lerp(t, Open, High, Low, Close);
 
-			return new Candle(Timestamp, Open, High, Low, close, Median, Maths.Lerp(t, 0.0, Volume));
+			return new Candle(Timestamp, Open, High, Low, close, Median, Math_.Lerp(t, 0.0, Volume));
 		}
 
 		/// <summary>Debugging check for self consistency</summary>

@@ -1098,15 +1098,15 @@ namespace Rylogic.Extn
 						var name = (string)elem.Attribute(Attr.Name);
 						if (name != null)
 						{
-							if (sb.Length != 1) Str.Append(sb, "/");
-							Str.Append(sb, name);
+							if (sb.Length != 1) sb.Append("/");
+							sb.Append(name);
 						}
 					}
 				}
 				else
 				{
 					sb.Length = 0;
-					Str.Append(sb, "/");
+					sb.Append("/");
 				}
 
 				return sb;
@@ -1326,11 +1326,8 @@ namespace Rylogic.Extn
 					}
 					#endregion
 					#region XDocument
-					else if (i.Current is XDocument)
+					else if (i.Current is XDocument ni && j.Current is XDocument nj)
 					{
-						var ni = (XDocument)i.Current;
-						var nj = (XDocument)j.Current;
-
 						// Recursively find the differences in the child trees.
 						var op = new XElement(EOpType.Change.Desc());
 						if (ni.Nodes().Any() || nj.Nodes().Any())
@@ -1511,21 +1508,21 @@ namespace Rylogic.Extn
 				// Replace the Value for the element
 				case EOpType.Value:
 					{
-						Str.Append(sb,"'",op.FullName,"': value changed to '",op.Value,"'\n");
+						sb.Append($"'{op.FullName}': value changed to '{op.Value}'\n");
 						break;
 					}
 
 				// 'Remove' the child node
 				case EOpType.Remove:
 					{
-						Str.Append(sb,"'",op.FullName,"': ",op.NodeType," removed\n");
+						sb.Append($"'{op.FullName}': {op.NodeType} removed\n");
 						break;
 					}
 
 				// 'Insert' an element at the given index position
 				case EOpType.Insert:
 					{
-						Str.Append(sb,"'",op.FullName,"': ",op.NodeType," inserted\n");
+						sb.Append($"'{op.FullName}': {op.NodeType} inserted\n");
 						break;
 					}
 
@@ -1540,7 +1537,7 @@ namespace Rylogic.Extn
 				case EOpType.Attr:
 					{
 						// SetAttributeValue 
-						Str.Append(sb,"'",op.FullName,"': Attribute '",op.Name,"' value changed to '",op.Value,"'\n");
+						sb.Append($"'{op.FullName}': Attribute '{op.Name}' value changed to '{op.Value}'\n");
 						break;
 					}
 				}
@@ -1614,7 +1611,6 @@ namespace Rylogic.UnitTests
 {
 	using System.Drawing;
 	using Extn;
-	using Utility;
 
 	[TestFixture] public class TestXml
 	{
@@ -1637,7 +1633,7 @@ namespace Rylogic.UnitTests
 			private bool Equals(Elem1 other)     { return m_uint == other.m_uint; }
 			public override bool Equals(object obj)
 			{
-				if (ReferenceEquals(null, obj)) return false;
+				if (obj is null) return false;
 				if (ReferenceEquals(this, obj)) return true;
 				if (obj.GetType() != GetType()) return false;
 				return Equals((Elem1)obj);
@@ -1656,7 +1652,7 @@ namespace Rylogic.UnitTests
 			private bool Equals(Elem2 other)   { return m_int == other.m_int && string.Equals(m_string, other.m_string); }
 			public override bool Equals(object obj)
 			{
-				if (ReferenceEquals(null, obj)) return false;
+				if (obj is null) return false;
 				if (ReferenceEquals(this, obj)) return true;
 				if (obj.GetType() != GetType()) return false;
 				return Equals((Elem2)obj);
@@ -1675,7 +1671,7 @@ namespace Rylogic.UnitTests
 			private bool Equals(Elem3 other)   { return m_int == other.m_int && string.Equals(m_string,other.m_string); }
 			public override bool Equals(object obj)
 			{
-				if (ReferenceEquals(null,obj)) return false;
+				if (obj is null) return false;
 				if (ReferenceEquals(this,obj)) return true;
 				if (obj.GetType() != GetType()) return false;
 				return Equals((Elem3)obj);
@@ -1862,17 +1858,13 @@ namespace Rylogic.UnitTests
 				Assert.True(Equals(kv, KV));
 			}
 			{
-				var list = new List<string>();
-				list.Add("one");
-				list.Add("two");
+				var list = new List<string>{"one","two"};
 				var node = list.ToXml("list", false);
 				var LIST = node.As<List<string>>();
 				Assert.True(list.SequenceEqual(LIST));
 			}
 			{
-				var dic = new Dictionary<int, float>();
-				dic[1] = 1.1f;
-				dic[2] = 2.2f;
+				var dic = new Dictionary<int, float>{[1] = 1.1f, [2] = 2.2f};
 				var node = dic.ToXml("dic", false);
 				var DIC = node.As<Dictionary<int,float>>();
 				Assert.True(dic.SequenceEqualUnordered(DIC));

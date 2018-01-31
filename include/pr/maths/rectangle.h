@@ -321,8 +321,8 @@ namespace pr
 	}
 
 	// Return 'point' scaled by the transform that maps 'rect' to the square (bottom left:-1,-1)->(top right:1,1) 
-	// 'xsign' should be -1 if the rect origin is on the right, false if on the left
-	// 'ysign' should be -1 if the rect origin is at the top, false if at the bottom
+	// 'xsign' should be -1 if the rect origin is on the right, +1 if on the left
+	// 'ysign' should be -1 if the rect origin is at the top, +1 if at the bottom
 	// Inverse of 'ScalePoint'
 	template <typename V> inline v2 NormalisePoint(Rectangle<V> const& rect, v2 const& point, float xsign, float ysign)
 	{
@@ -332,8 +332,8 @@ namespace pr
 	}
 
 	// Scales a normalised 'point' by the transform that maps the square (bottom left:-1,-1)->(top right:1,1) to 'rect'
-	// 'xsign' should be -1 if the rect origin is on the right, false if on the left
-	// 'ysign' should be -1 if the rect origin is at the top, false if at the bottom
+	// 'xsign' should be -1 if the rect origin is on the right, +1 if on the left
+	// 'ysign' should be -1 if the rect origin is at the top, +1 if at the bottom
 	// Inverse of 'NormalisedPoint'
 	template <typename V> inline v2 ScalePoint(Rectangle<V> const& rect, v2 const& point, float xsign, float ysign)
 	{

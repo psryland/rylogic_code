@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using CoinFlip;
-using pr.extn;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace Bot.LoopFinder
 {

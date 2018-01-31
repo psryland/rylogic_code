@@ -662,9 +662,9 @@ namespace Rylogic.Gui
 			// Only allow selection setting for editable combo box styles
 			if (DropDownStyle != ComboBoxStyle.DropDownList)
 			{
-				//System.Diagnostics.Trace.WriteLine("Restoring Selection: [{0},{1}]".Fmt(selection.Begi, selection.Sizei));
+				//System.Diagnostics.Trace.WriteLine($"Restoring Selection: [{selection.Begi},{ selection.Sizei}]");
 				Select(selection.Begi, selection.Sizei);
-				//System.Diagnostics.Trace.WriteLine("Selection is now: [{0},{1}]".Fmt(SelectionStart, SelectionLength));
+				//System.Diagnostics.Trace.WriteLine($"Selection is now: [{SelectionStart},{ SelectionLength}]");
 			}
 		}
 

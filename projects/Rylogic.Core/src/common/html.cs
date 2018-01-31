@@ -380,7 +380,7 @@ namespace Rylogic.Common
 		protected virtual void ValidParent(Html parent)
 		{
 			// Default to no checking...
-			//throw new Exception("{0} elements can not be parented to {1} elements".Fmt(GetType().Name, parent.GetType().Name));
+			//throw new Exception($"{GetType().Name} elements can not be parented to {parent.GetType().Name} elements");
 		}
 
 		/// <summary>True if this element has child content</summary>

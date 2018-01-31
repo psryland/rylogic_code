@@ -4,11 +4,11 @@ using System.Diagnostics;
 using System.Linq;
 using System.Windows.Forms;
 using CoinFlip;
-using pr.attrib;
-using pr.extn;
-using pr.gui;
-using pr.maths;
-using pr.util;
+using Rylogic.Attrib;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace Bot.Fishing
 {
@@ -130,7 +130,7 @@ namespace Bot.Fishing
 				{
 					var price0 = fisher.Trade0.PriceQ2B;
 					var price1 = fisher.Trade1.PriceQ2B;
-					var ratio = Math.Abs(1m - Maths.Div(price1, price0));
+					var ratio = Math.Abs(1m - Math_.Div(price1, price0));
 
 					m_tb_b2q_match_trade.Text      = $"{fisher.Trade0.Description}";
 					m_tb_b2q_bait_trade.Text       = $"{fisher.Trade1.Description}";
@@ -163,7 +163,7 @@ namespace Bot.Fishing
 				{
 					var price0 = fisher.Trade0.PriceQ2B;
 					var price1 = fisher.Trade1.PriceQ2B;
-					var ratio = Math.Abs(1m - Maths.Div(price1, price0));
+					var ratio = Math.Abs(1m - Math_.Div(price1, price0));
 
 					m_tb_q2b_match_trade.Text      = $"{fisher.Trade0.Description}";
 					m_tb_q2b_bait_trade.Text       = $"{fisher.Trade1.Description}";
@@ -197,7 +197,7 @@ namespace Bot.Fishing
 		private System.ComponentModel.IContainer components = null;
 		private void InitializeComponent()
 		{
-			this.m_log_ui = new pr.gui.LogUI();
+			this.m_log_ui = new Rylogic.Gui.LogUI();
 			this.m_table0 = new System.Windows.Forms.TableLayoutPanel();
 			this.m_panel1 = new System.Windows.Forms.Panel();
 			this.m_tb_q2b_order_book_index = new System.Windows.Forms.TextBox();

@@ -1,7 +1,7 @@
 ﻿using System.Windows.Forms;
-using pr.extn;
-using pr.gui;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {
@@ -9,16 +9,16 @@ namespace CoinFlip
 	{
 		#region UI Elements
 		private Label m_lbl_region_colour;
-		private pr.gui.ColourWheel m_colour_region;
+		private ColourWheel m_colour_region;
 		private Label m_lbl_line_width;
 		private Label m_lbl_line_colour;
-		private pr.gui.ColourWheel m_colour_line;
+		private ColourWheel m_colour_line;
 		private Label m_lbl_region_height;
 		private Label m_lbl_price;
 		private Button m_btn_delete;
-		private pr.gui.ValueBox m_tb_price_level;
-		private pr.gui.ValueBox m_tb_region_size;
-		private pr.gui.ValueBox m_tb_line_width;
+		private ValueBox m_tb_price_level;
+		private ValueBox m_tb_region_size;
+		private ValueBox m_tb_line_width;
 		private ToolTip m_tt;
 		private Button m_btn_ok;
 		#endregion
@@ -106,17 +106,17 @@ namespace CoinFlip
 		{
 			this.components = new System.ComponentModel.Container();
 			this.m_lbl_region_colour = new System.Windows.Forms.Label();
-			this.m_colour_region = new pr.gui.ColourWheel();
+			this.m_colour_region = new Rylogic.Gui.ColourWheel();
 			this.m_lbl_line_width = new System.Windows.Forms.Label();
 			this.m_lbl_line_colour = new System.Windows.Forms.Label();
-			this.m_colour_line = new pr.gui.ColourWheel();
+			this.m_colour_line = new Rylogic.Gui.ColourWheel();
 			this.m_lbl_region_height = new System.Windows.Forms.Label();
 			this.m_lbl_price = new System.Windows.Forms.Label();
 			this.m_btn_delete = new System.Windows.Forms.Button();
 			this.m_btn_ok = new System.Windows.Forms.Button();
-			this.m_tb_price_level = new pr.gui.ValueBox();
-			this.m_tb_region_size = new pr.gui.ValueBox();
-			this.m_tb_line_width = new pr.gui.ValueBox();
+			this.m_tb_price_level = new Rylogic.Gui.ValueBox();
+			this.m_tb_region_size = new Rylogic.Gui.ValueBox();
+			this.m_tb_line_width = new Rylogic.Gui.ValueBox();
 			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
 			this.SuspendLayout();
 			// 
@@ -134,11 +134,11 @@ namespace CoinFlip
 			this.m_colour_region.Colour = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(255)))), ((int)(((byte)(255)))));
 			this.m_colour_region.Location = new System.Drawing.Point(96, 160);
 			this.m_colour_region.Name = "m_colour_region";
-			this.m_colour_region.Parts = ((pr.gui.ColourWheel.EParts)((((((pr.gui.ColourWheel.EParts.Wheel | pr.gui.ColourWheel.EParts.VSlider) 
-            | pr.gui.ColourWheel.EParts.ASlider) 
-            | pr.gui.ColourWheel.EParts.ColourSelection) 
-            | pr.gui.ColourWheel.EParts.VSelection) 
-            | pr.gui.ColourWheel.EParts.ASelection)));
+			this.m_colour_region.Parts = ((Rylogic.Gui.ColourWheel.EParts)((((((Rylogic.Gui.ColourWheel.EParts.Wheel | Rylogic.Gui.ColourWheel.EParts.VSlider) 
+            | Rylogic.Gui.ColourWheel.EParts.ASlider) 
+            | Rylogic.Gui.ColourWheel.EParts.ColourSelection) 
+            | Rylogic.Gui.ColourWheel.EParts.VSelection) 
+            | Rylogic.Gui.ColourWheel.EParts.ASelection)));
 			this.m_colour_region.Size = new System.Drawing.Size(120, 63);
 			this.m_colour_region.SliderWidth = 20;
 			this.m_colour_region.TabIndex = 38;
@@ -167,11 +167,11 @@ namespace CoinFlip
 			this.m_colour_line.Colour = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(255)))), ((int)(((byte)(255)))));
 			this.m_colour_line.Location = new System.Drawing.Point(96, 91);
 			this.m_colour_line.Name = "m_colour_line";
-			this.m_colour_line.Parts = ((pr.gui.ColourWheel.EParts)((((((pr.gui.ColourWheel.EParts.Wheel | pr.gui.ColourWheel.EParts.VSlider) 
-            | pr.gui.ColourWheel.EParts.ASlider) 
-            | pr.gui.ColourWheel.EParts.ColourSelection) 
-            | pr.gui.ColourWheel.EParts.VSelection) 
-            | pr.gui.ColourWheel.EParts.ASelection)));
+			this.m_colour_line.Parts = ((Rylogic.Gui.ColourWheel.EParts)((((((Rylogic.Gui.ColourWheel.EParts.Wheel | Rylogic.Gui.ColourWheel.EParts.VSlider) 
+            | Rylogic.Gui.ColourWheel.EParts.ASlider) 
+            | Rylogic.Gui.ColourWheel.EParts.ColourSelection) 
+            | Rylogic.Gui.ColourWheel.EParts.VSelection) 
+            | Rylogic.Gui.ColourWheel.EParts.ASelection)));
 			this.m_colour_line.Size = new System.Drawing.Size(120, 63);
 			this.m_colour_line.SliderWidth = 20;
 			this.m_colour_line.TabIndex = 34;

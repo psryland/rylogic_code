@@ -117,12 +117,12 @@ namespace RyLogViewer
 						if (existing_lic != null && existing_lic.Valid)
 						{
 							// Prompt if about to override an existing valid licence
-							var res = MsgBox.Show(this, Str.Build(
-								"An existing valid licence already exists:\r\n",
-								$"Licence Holder: {existing_lic.LicenceHolder}\r\n",
-								$"Email Address: {existing_lic.EmailAddress}\r\n",
-								"\r\n",
-								"Do you want to replace this licence?"),
+							var res = MsgBox.Show(this,
+								$"An existing valid licence already exists:\r\n"+
+								$"Licence Holder: {existing_lic.LicenceHolder}\r\n"+
+								$"Email Address: {existing_lic.EmailAddress}\r\n"+
+								"\r\n"+
+								"Do you want to replace this licence?",
 								Application.ProductName, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 							if (res != DialogResult.Yes)
 								return;

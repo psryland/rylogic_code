@@ -167,18 +167,18 @@ namespace LDraw
 			if (unhandled != null)
 			{
 				var crash_dump_file = Util.ResolveAppDataPath("Rylogic", "LDraw", "crash_report.txt");
-				var crash_report = Str.Build(
-					"Unhandled exception: ",unhandled.GetType().Name,"\r\n",
-					"Message: ",unhandled.MessageFull(),"\r\n",
-					"Date: ",DateTimeOffset.Now,"\r\n",
-					"Stack:\r\n", unhandled.StackTrace);
+				var crash_report =
+					$"Unhandled exception: {unhandled.GetType().Name}\r\n"+
+					$"Message: {unhandled.MessageFull()}\r\n"+
+					$"Date: {DateTimeOffset.Now}\r\n"+
+					$"Stack:\r\n{unhandled.StackTrace}";
 
 				File.WriteAllText(crash_dump_file, crash_report);
-				var res = MessageBox.Show(Str.Build(
-					"Shutting down due to an unhandled exception.\n",
-					unhandled.MessageFull(),"\n\n",
-					"A crash report has been generated here:\n",
-					crash_dump_file,"\n\n"),
+				var res = MessageBox.Show(
+					$"Shutting down due to an unhandled exception.\n"+
+					$"{unhandled.MessageFull()}\n\n"+
+					$"A crash report has been generated here:\n"+
+					$"{crash_dump_file}\n\n",
 					"Unexpected Shutdown", MessageBoxButtons.OK);
 			}
 		}

@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.maths;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {
@@ -123,7 +123,7 @@ namespace CoinFlip
 				{
 					// Look for price data from a different exchange
 					var pair_name = pair.Name.Replace('/','_');
-					var fd = Path_.EnumFileSystem(Path_.Directory(db_filepath), regex_filter:$@"{pair_name}\s*-\s*(?<exchange>.*)\.db").FirstOrDefault();
+					var fd = Shell_.EnumFileSystem(Path_.Directory(db_filepath), regex_filter:$@"{pair_name}\s*-\s*(?<exchange>.*)\.db").FirstOrDefault();
 					if (fd == null)
 						continue;
 
@@ -467,14 +467,14 @@ namespace CoinFlip
 				{
 					// Generate a price if not given
 					var mean = (double)(decimal)(best_q2b + best_b2q) / 2.0;
-					var price = price_ ?? ((decimal)Math.Max(m_rng.GaussianDouble(mean, mean/100.0), Maths.TinyD))._(pair.RateUnits);
+					var price = price_ ?? ((decimal)Math.Max(m_rng.GaussianDouble(mean, mean/100.0), Math_.TinyD))._(pair.RateUnits);
 					if (price > best_b2q && price < best_q2b)
 						continue; // Invalid price, try again
 
 					// Generate a volume to trade. Convert a value in USD to Base currency using it's approximate value
 					var value = (decimal)Math.Abs(m_rng.Double(m_order_value_range.Beg, m_order_value_range.End));
 					var scale = pair.Base.AssignedValue;
-					var volume = Maths.Div(value, scale, value)._(pair.Base);
+					var volume = Math_.Div(value, scale, value)._(pair.Base);
 
 					// If the generated order is valid, return it otherwise, try again.
 					var order = new OrderBook.Offer(price, volume);

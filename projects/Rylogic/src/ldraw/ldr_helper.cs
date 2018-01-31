@@ -11,7 +11,6 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
-using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Graphix;
 using Rylogic.Maths;
@@ -142,41 +141,41 @@ namespace Rylogic.LDraw
 		// Ldr single string
 		public static string GroupStart(string name)
 		{
-			return Str.Build("*Group ",name,"\n{\n");
+			return $"*Group {name}\n{{\n";
 		}
 		public static string GroupStart(string name, Colour32 colour)
 		{
-			return Str.Build("*Group ",name," ",colour,"\n{\n");
+			return $"*Group {name} {colour}\n{{\n";
 		}
 		public static string GroupEnd(m4x4? o2w = null, v4? pos = null)
 		{
-			return Str.Build(Transform(o2w, pos, newline:true), "}\n");
+			return $"{Transform(o2w, pos, newline:true)}}}\n";
 		}
 		public static string Line(string name, Colour32 colour, v4 start, v4 end, m4x4? o2w = null, v4? pos = null)
 		{
-			return Str.Build("*Line ",name," ",colour," {",Vec3(start)," ",Vec3(end)," ",Transform(o2w, pos),"}\n");
+			return $"*Line {name} {colour} {{{Vec3(start)} {Vec3(end)} {Transform(o2w, pos)}}}\n";
 		}
 		public static string LineD(string name, Colour32 colour, v4 start, v4 direction, m4x4? o2w = null, v4? pos = null)
 		{
-			return Str.Build("*LineD ",name," ",colour," {",Vec3(start)," ",Vec3(direction)," ",Transform(o2w, pos),"}\n");
+			return $"*LineD {name} {colour} {{{Vec3(start)} {Vec3(direction)} {Transform(o2w, pos)}}}\n";
 		}
 		public static string LineStrip(string name, Colour32 colour, int width, IEnumerable<v4> points, m4x4? o2w = null, v4? pos = null)
 		{
 			var w = Width(width);
 			var pts = points.Select(x => " "+Vec3(x));
-			return Str.Build("*LineStrip ",name," ",colour," {",w," ",pts," ",Transform(o2w, pos),"}");
+			return $"*LineStrip {name} {colour} {{{w} {pts} {Transform(o2w, pos)}}}";
 		}
 		public static string Ellipse(string name, Colour32 colour, int axis_id, float rx, float ry, m4x4? o2w = null, v4? pos = null)
 		{
-			return Str.Build("*Ellipse ",name," ",colour," {",axis_id," ",rx," ",ry," ",Transform(o2w, pos),"}\n");
+			return $"*Ellipse {name} {colour} {{{axis_id} {rx} {ry} {Transform(o2w, pos)}}}\n";
 		}
 		public static string Rect(string name, Colour32 colour, int axis_id, float w, float h, bool solid, m4x4? o2w = null, v4? pos = null)
 		{
-			return Str.Build("*Rect ",name," ",colour," {",axis_id," ",w," ",h," ",Solid(solid)," ",Transform(o2w, pos),"}\n");
+			return $"*Rect {name} {colour} {{{axis_id} {w} {h} {Solid(solid)} {Transform(o2w, pos)}}}\n";
 		}
 		public static string Axis(string name, Colour32 colour, m4x4 basis, float size = 1f)
 		{
-			return Str.Build("*Matrix3x3 ",name," ",colour," {",Vec3(basis.x)," ",Vec3(basis.y)," ",Vec3(basis.z)," ",Position(basis.pos),"}\n");
+			return $"*Matrix3x3 {name} {colour} {{{Vec3(basis.x)} {Vec3(basis.y)} {Vec3(basis.z)} {Position(basis.pos)}}}\n";
 		}
 		public static string Axis(string name, Colour32 colour, quat basis, v4 pos, float size = 1f)
 		{
@@ -184,19 +183,19 @@ namespace Rylogic.LDraw
 		}
 		public static string Box(string name, Colour32 colour, float size, m4x4? o2w = null, v4? pos = null)
 		{
-			return Str.Build("*Box ",name," ",colour," {",size," ",Transform(o2w, pos),"}\n");
+			return $"*Box {name} {colour} {{{size} {Transform(o2w, pos)}}}\n";
 		}
 		public static string Box(string name, Colour32 colour, v4 dim, m4x4? o2w = null, v4? pos = null)
 		{
-			return Str.Build("*Box ",name," ",colour," {",dim.x," ",dim.y," ",dim.z," ",Transform(o2w, pos),"}\n");
+			return $"*Box {name} {colour} {{{dim.x} {dim.y} {dim.z} {Transform(o2w, pos)}}}\n";
 		}
 		public static string Sphere(string name, Colour32 colour, float radius, m4x4? o2w = null, v4? pos = null)
 		{
-			return Str.Build("*Sphere ",name," ",colour," {",radius," ",Transform(o2w, pos),"}\n");
+			return $"*Sphere {name} {colour} {{{radius} {Transform(o2w, pos)}}}\n";
 		}
 		public static string Grid(string name, Colour32 colour, float dimx, float dimy, int divx, int divy, m4x4? o2w = null, v4? pos = null)
 		{
-			return Str.Build("*GridWH ",name," ",colour," {",dimx," ",dimy," ",divx," ",divy," ",Transform(o2w, pos),"}\n");
+			return $"*GridWH {name} {colour} {{{dimx} {dimy} {divx} {divy} {Transform(o2w, pos)}}}\n";
 		}
 	}
 

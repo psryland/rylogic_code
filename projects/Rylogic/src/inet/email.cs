@@ -238,15 +238,15 @@ namespace Rylogic.INet
 					req.Method = "POST";
 
 					// Parameters
-					var data = Str.Build(
-						"api_key="  , APIKey      ?? string.Empty,
-						"&to="      , ToAddress   ?? string.Empty,
-						"&from="    , FromAddress ?? string.Empty,
-						"&subject=" , Subject     ?? string.Empty,
-						"&text="    , Body        ?? string.Empty,
-						"");
-					if (ToAddressName   != null) data += Str.Build("&toname=", ToAddressName);
-					if (FromAddressName != null) data += Str.Build("&fromname=", FromAddressName);
+					var data =
+						$"api_key={APIKey ?? string.Empty}"+
+						$"&to={ToAddress ?? string.Empty}"+
+						$"&from={FromAddress ?? string.Empty}"+
+						$"&subject={Subject ?? string.Empty}"+
+						$"&text={Body ?? string.Empty}"+
+						"";
+					if (ToAddressName   != null) data += $"&toname={ToAddressName}";
+					if (FromAddressName != null) data += $"&fromname={FromAddressName}";
 					var data_bytes = Encoding.UTF8.GetBytes(data);
 					req.GetRequestStream().Write2(data_bytes, 0, data_bytes.Length).Close();
 
@@ -305,12 +305,12 @@ namespace Rylogic.INet
 					req.Method = "POST";
 
 					// Parameters
-					var data = Str.Build(
-						"&to="      , ToAddress   ?? string.Empty,
-						"&from="    , FromAddress ?? string.Empty,
-						"&subject=" , Subject     ?? string.Empty,
-						"&text="    , Body        ?? string.Empty,
-						"");
+					var data =
+						$"&to={ToAddress ?? string.Empty}"+
+						$"&from={FromAddress ?? string.Empty}"+
+						$"&subject={Subject ?? string.Empty}"+
+						$"&text={Body ?? string.Empty}"+
+						$"";
 					var data_bytes = Encoding.UTF8.GetBytes(data);
 					req.GetRequestStream().Write2(data_bytes, 0, data_bytes.Length).Close();
 

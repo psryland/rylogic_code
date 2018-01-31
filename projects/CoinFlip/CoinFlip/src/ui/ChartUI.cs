@@ -4,21 +4,18 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using System.Xml.Linq;
-using pr.attrib;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.gfx;
-using pr.gui;
-using pr.maths;
-using pr.util;
-using pr.view3d;
-using ToolStripComboBox = pr.gui.ToolStripComboBox;
-using ToolStripContainer = pr.gui.ToolStripContainer;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Graphix;
+using Rylogic.Gui;
+using Rylogic.Maths;
+using Rylogic.Utility;
+using ToolStripComboBox = Rylogic.Gui.ToolStripComboBox;
+using ToolStripContainer = Rylogic.Gui.ToolStripContainer;
 
 namespace CoinFlip
 {
@@ -738,7 +735,7 @@ namespace CoinFlip
 				return string.Empty;
 
 			// This solves the rounding problem for values near zero when the axis span could be anything
-			return !Maths.FEql(x / ChartCtrl.YAxis.Span, 0.0) ? Maths.RoundSF(x, 5).ToString("G8") : "0";
+			return !Math_.FEql(x / ChartCtrl.YAxis.Span, 0.0) ? Math_.RoundSF(x, 5).ToString("G8") : "0";
 		}
 
 		/// <summary>Measure the size of the y axis text</summary>
@@ -1867,7 +1864,7 @@ namespace CoinFlip
 		{
 			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ChartUI));
-			this.m_tsc = new pr.gui.ToolStripContainer();
+			this.m_tsc = new Rylogic.Gui.ToolStripContainer();
 			this.m_ts_drawing = new System.Windows.Forms.ToolStrip();
 			this.m_lbl_drawing_tools = new System.Windows.Forms.ToolStripLabel();
 			this.m_btn_horz_line = new System.Windows.Forms.ToolStripButton();
@@ -1875,17 +1872,17 @@ namespace CoinFlip
 			this.m_btn_trend_line = new System.Windows.Forms.ToolStripButton();
 			this.m_ts = new System.Windows.Forms.ToolStrip();
 			this.m_lbl_pair = new System.Windows.Forms.ToolStripLabel();
-			this.m_cb_pair = new pr.gui.ToolStripComboBox();
+			this.m_cb_pair = new Rylogic.Gui.ToolStripComboBox();
 			this.m_sep0 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_lbl_time_frame = new System.Windows.Forms.ToolStripLabel();
-			this.m_cb_time_frame = new pr.gui.ToolStripComboBox();
+			this.m_cb_time_frame = new Rylogic.Gui.ToolStripComboBox();
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_chk_show_positions = new System.Windows.Forms.ToolStripButton();
 			this.m_chk_show_trade_history = new System.Windows.Forms.ToolStripButton();
 			this.m_chk_show_depth = new System.Windows.Forms.ToolStripButton();
 			this.m_il_toolbar_btns = new System.Windows.Forms.ImageList(this.components);
 			this.m_lbl_exchange = new System.Windows.Forms.ToolStripLabel();
-			this.m_cb_exchange = new pr.gui.ToolStripComboBox();
+			this.m_cb_exchange = new Rylogic.Gui.ToolStripComboBox();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();
 			this.m_ts_drawing.SuspendLayout();

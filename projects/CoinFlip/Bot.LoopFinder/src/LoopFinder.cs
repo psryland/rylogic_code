@@ -8,11 +8,11 @@ using System.Threading;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using CoinFlip;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.maths;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace Bot.LoopFinder
 {
@@ -455,10 +455,10 @@ namespace Bot.LoopFinder
 				// Reduce the available balance slightly to deal with rounding errors
 				var bal = trade.CoinIn.Balances[Fund].Available * 0.999m;
 				var req = trade.VolumeIn * (1 + pair.Fee);
-				var scale = Maths.Clamp((decimal)(bal / req), 0m, 1m);
+				var scale = Math_.Clamp((decimal)(bal / req), 0m, 1m);
 				if (scale < loop.TradeScale)
 				{
-					loop.TradeScale = Maths.Clamp(scale, 0, loop.TradeScale);
+					loop.TradeScale = Math_.Clamp(scale, 0, loop.TradeScale);
 					loop.LimitingCoin = trade.CoinIn;
 				}
 			}
@@ -557,15 +557,15 @@ namespace Bot.LoopFinder
 		{
 			try
 			{
-				Log.Write(ELogLevel.Warn, "Executing Loop: {0}  Profit Ratio: {1:G6}".Fmt(loop.Description, loop.ProfitRatio));
+				Log.Write(ELogLevel.Warn, $"Executing Loop: {loop.Description}  Profit Ratio: {loop.ProfitRatio:G6}");
 
 				// Output a description of what would happen
 				var sb = new StringBuilder();
 				 sb.AppendLine(loop.CoinsString(loop.Direction));
 
 				// Add notes about the scaling
-				sb.Append("Trade Scale: {0:N8}".Fmt(loop.TradeScale));
-				if (loop.LimitingCoin != null) sb.Append(" (due to {0})".Fmt(loop.LimitingCoin.SymbolWithExchange));
+				sb.Append($"Trade Scale: {loop.TradeScale:N8}");
+				if (loop.LimitingCoin != null) sb.Append($" (due to {loop.LimitingCoin.SymbolWithExchange})");
 				sb.AppendLine();
 
 				// Calculate the effective fee in initial coin currency.
@@ -587,7 +587,7 @@ namespace Bot.LoopFinder
 						new_volume = trade.VolumeOut;
 
 						// Trade 'coin' to 'Quote'
-						sb.AppendLine("   Trade {0} {1} => {2} {3} @ {4}".Fmt(volume.ToString("G6"), coin, new_volume.ToString("G6"), new_coin, trade.Price.ToString("G6")));
+						sb.AppendLine($"   Trade {volume.ToString("G6")} {coin} => {new_volume.ToString("G6")} {new_coin} @ {trade.Price.ToString("G6")}");
 					}
 					else
 					{
@@ -596,7 +596,7 @@ namespace Bot.LoopFinder
 						new_volume = trade.VolumeOut;
 
 						// Trade 'coin' to 'Base'
-						sb.AppendLine("   Trade {0} {1} => {2} {3} @ {4}".Fmt(volume.ToString("G6"), coin, new_volume.ToString("G6"), new_coin, trade.Price.ToString("G6")));
+						sb.AppendLine($"   Trade {volume.ToString("G6")} {coin} => {new_volume.ToString("G6")} {new_coin} @ {trade.Price.ToString("G6")}");
 					}
 
 					// Convert the fee to the new coin using the effective rate, and add on the fee
@@ -609,9 +609,9 @@ namespace Bot.LoopFinder
 
 				// Return the nett profit
 				var gross = volume - initial_volume;
-				sb.AppendLine(" Gross: {0} {1}.".Fmt(gross.ToString("G6"), coin));
-				sb.AppendLine(" Fee:   {0} {1}.".Fmt((-fee).ToString("G6"), coin));
-				sb.AppendLine(" Nett:  {0} {1}.".Fmt((gross - fee).ToString("G6"), coin));
+				sb.AppendLine($" Gross: {gross.ToString("G6")} {coin}.");
+				sb.AppendLine($" Fee:   {(-fee).ToString("G6")} {coin}.");
+				sb.AppendLine($" Nett:  {(gross - fee).ToString("G6")} {coin}.");
 
 				// Log the trades
 				Log.Write(ELogLevel.Info, sb.ToString());

@@ -21,10 +21,10 @@ using Rylogic.Maths;
 using Rylogic.Utility;
 using Rylogic.Windows32;
 using ComboBox = System.Windows.Forms.ComboBox;
-using ListBox = System.Windows.Forms.ListBox;
 using DataGridView = System.Windows.Forms.DataGridView;
-using ToolStripContainer = System.Windows.Forms.ToolStripContainer;
+using ListBox = System.Windows.Forms.ListBox;
 using ToolStripComboBox = System.Windows.Forms.ToolStripComboBox;
+using ToolStripContainer = System.Windows.Forms.ToolStripContainer;
 
 namespace Rylogic.Extn
 {

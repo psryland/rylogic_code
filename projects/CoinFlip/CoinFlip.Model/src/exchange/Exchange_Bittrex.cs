@@ -3,10 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Bittrex.API;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {
@@ -162,7 +161,7 @@ namespace CoinFlip
 				foreach (var ob in order_books)
 				{
 					if (!ob.Success)
-						throw new Exception("Bittrex: Failed to update trading pairs. {0}".Fmt(ob.Message));
+						throw new Exception($"Bittrex: Failed to update trading pairs. {ob.Message}");
 				}
 
 				// Queue integration of the market data
@@ -207,7 +206,7 @@ namespace CoinFlip
 				// Request the account data
 				var msg = Api.GetBalances(cancel:Shutdown.Token);
 				if (!msg.Success)
-					throw new Exception("Bittrex: Failed to read account balances. {0}".Fmt(msg.Message));
+					throw new Exception($"Bittrex: Failed to read account balances. {msg.Message}");
 
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
@@ -243,12 +242,12 @@ namespace CoinFlip
 				// Request the existing orders
 				var positions = Api.GetOpenOrders(cancel:Shutdown.Token);
 				if (!positions.Success)
-					throw new Exception("Bittrex: Failed to read open orders. {0}".Fmt(positions.Message));
+					throw new Exception($"Bittrex: Failed to read open orders. {positions.Message}");
 
 				// Request the history
 				var history = Api.GetTradeHistory(cancel:Shutdown.Token);
 				if (!history.Success)
-					throw new Exception("Cryptopia: Failed to received trade history. {0}".Fmt(history.Message));
+					throw new Exception($"Bittrex: Failed to received trade history. {history.Message}");
 
 				// Record the time that history has been updated to
 				m_history_last = timestamp;
@@ -308,11 +307,11 @@ namespace CoinFlip
 				// Request the transfers data
 				var deposits = Api.GetDeposits(cancel:Shutdown.Token);
 				if (!deposits.Success)
-					throw new Exception("Bittrex: Failed to update deposits history. {0}".Fmt(deposits.Message));
+					throw new Exception($"Bittrex: Failed to update deposits history. {deposits.Message}");
 
 				var withdrawals = Api.GetWithdrawals(cancel:Shutdown.Token);
 				if (!withdrawals.Success)
-					throw new Exception("Bittrex: Failed to update withdrawals history. {0}".Fmt(withdrawals.Message));
+					throw new Exception($"Bittrex: Failed to update withdrawals history. {withdrawals.Message}");
 
 				// Record the time that transfer history has been updated to
 				m_transfers_last = timestamp;

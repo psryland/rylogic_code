@@ -2,10 +2,9 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using pr.common;
-using pr.extn;
-using pr.maths;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {
@@ -41,7 +40,7 @@ namespace CoinFlip
 			{
 				Debug.Assert(held_on_exch >= -decimal_.Epsilon);
 				Debug.Assert(held_on_exch <= total + decimal_.Epsilon);
-				held_on_exch = Maths.Clamp(held_on_exch, 0m._(held_on_exch), total);
+				held_on_exch = Math_.Clamp(held_on_exch, 0m._(held_on_exch), total);
 			}
 			
 			Coin = coin;
@@ -286,7 +285,7 @@ namespace CoinFlip
 
 				// Calculate the available funds
 				var avail = Total - HeldForTrades;
-				return Maths.Max(0m._(Coin), avail);
+				return Math_.Max(0m._(Coin), avail);
 			}
 		}
 

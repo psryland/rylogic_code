@@ -7,11 +7,11 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Web;
-using pr.common;
-using pr.container;
-using pr.db;
-using pr.extn;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Db;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {
@@ -946,10 +946,8 @@ namespace CoinFlip
 			get
 			{
 				Debug.Assert(Model.AssertMarketDataRead());
-
-				TradePair pair;
-				if (TryGetValue(TradePair.MakeKey(sym0, sym1), out pair)) return pair;
-				if (TryGetValue(TradePair.MakeKey(sym1, sym0), out pair)) return pair;
+				if (TryGetValue(TradePair.MakeKey(sym0, sym1), out var pair0)) return pair0;
+				if (TryGetValue(TradePair.MakeKey(sym1, sym0), out var pair1)) return pair1;
 				return null;
 			}
 		}
@@ -960,10 +958,8 @@ namespace CoinFlip
 			get
 			{
 				Debug.Assert(Model.AssertMarketDataRead());
-
-				TradePair pair;
-				if (TryGetValue(TradePair.MakeKey(sym, sym, exch0, exch1), out pair)) return pair;
-				if (TryGetValue(TradePair.MakeKey(sym, sym, exch1, exch0), out pair)) return pair;
+				if (TryGetValue(TradePair.MakeKey(sym, sym, exch0, exch1), out var pair0)) return pair0;
+				if (TryGetValue(TradePair.MakeKey(sym, sym, exch1, exch0), out var pair1)) return pair1;
 				return null;
 			}
 		}

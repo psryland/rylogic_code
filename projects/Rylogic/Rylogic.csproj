@@ -92,10 +92,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\sdk\scintilla\include\SciLexer.cs">
-      <Link>scintilla\SciLexer.cs</Link>
+      <Link>src\scintilla\SciLexer.cs</Link>
     </Compile>
     <Compile Include="..\..\sdk\scintilla\include\Scintilla.cs">
-      <Link>scintilla\Scintilla.cs</Link>
+      <Link>src\scintilla\Scintilla.cs</Link>
     </Compile>
     <Compile Include="src\attrib\abstract_base_desc_provider.cs" />
     <Compile Include="src\audio\audio.cs" />

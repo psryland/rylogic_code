@@ -3,13 +3,13 @@
 // Copyright (C) Rylogic Ltd 2016
 //***************************************************
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using System.Xml.Linq;
@@ -719,10 +719,10 @@ namespace Rylogic.Gui
 		public string LocationText(Point location)
 		{
 			var pt = ClientToChart(location);
-
-			double min, max, step;
-			XAxis.GridLines(out min, out max, out step); var xtick = XAxis.TickText(pt.X, step);
-			YAxis.GridLines(out min, out max, out step); var ytick = YAxis.TickText(pt.Y, step);
+			XAxis.GridLines(out var minx, out var maxx, out var stepx);
+			YAxis.GridLines(out var miny, out var maxy, out var stepy);
+			var xtick = XAxis.TickText(pt.X, stepx);
+			var ytick = YAxis.TickText(pt.Y, stepy);
 			return $"{xtick} , {ytick}";
 		}
 
@@ -816,7 +816,7 @@ namespace Rylogic.Gui
 					{
 						using (var bsh = new SolidBrush(opts.TitleColour))
 						{
-							var r = bmp.MeasureString(title, opts.TitleFont);
+							var r = dims.TitleSize;
 							var x = (size.Width - r.Width) * 0.5f;
 							var y = (0 + opts.Margin.Top) * 1f;
 							bmp.TranslateTransform(x, y);
@@ -829,7 +829,7 @@ namespace Rylogic.Gui
 					{
 						using (var bsh = new SolidBrush(xaxis.Options.LabelColour))
 						{
-							var r = bmp.MeasureString(xaxis.Label, xaxis.Options.LabelFont);
+							var r = dims.XLabelSize;
 							var x = (size.Width - r.Width) * 0.5f;
 							var y = (size.Height - opts.Margin.Bottom - r.Height) * 1f;
 							bmp.TranslateTransform(x, y);
@@ -842,7 +842,7 @@ namespace Rylogic.Gui
 					{
 						using (var bsh = new SolidBrush(yaxis.Options.LabelColour))
 						{
-							var r = bmp.MeasureString(yaxis.Label, yaxis.Options.LabelFont);
+							var r = dims.YLabelSize;
 							var x = (0 + opts.Margin.Left) * 1f;
 							var y = (size.Height + r.Width) * 0.5f;
 							bmp.TranslateTransform(x, y);
@@ -856,19 +856,17 @@ namespace Rylogic.Gui
 					// Tick marks and labels
 					if (opts.ShowAxes)
 					{
-						var lblx = (float)(chart_area.Left - yaxis.Options.TickLength - 1);
-						var lbly = (float)(chart_area.Top + chart_area.Height + xaxis.Options.TickLength + 1);
 						if (xaxis.Options.DrawTickLabels || xaxis.Options.DrawTickMarks)
 						{
 							using (var pen = new Pen(xaxis.Options.TickColour))
 							using (var bsh = new SolidBrush(xaxis.Options.TickColour))
 							{
+								var lbly = (float)(chart_area.Top + chart_area.Height + xaxis.Options.TickLength + 1);
 								xaxis.GridLines(out var min, out var max, out var step);
 								for (var x = min; x < max; x += step)
 								{
 									var X = (int)(chart_area.Left + x * chart_area.Width / xaxis.Span);
 									var s = xaxis.TickText(x + xaxis.Min, step);
-									var r = bmp.MeasureString(s, xaxis.Options.TickFont);
 									if (xaxis.Options.DrawTickLabels)
 										bmp.DrawString(s, xaxis.Options.TickFont, bsh, new PointF(X, lbly), new StringFormat{Alignment = StringAlignment.Center});
 									if (xaxis.Options.DrawTickMarks)
@@ -881,14 +879,16 @@ namespace Rylogic.Gui
 							using (var pen = new Pen(yaxis.Options.TickColour))
 							using (var bsh = new SolidBrush(yaxis.Options.TickColour))
 							{
+								var lblx = (float)(chart_area.Left - yaxis.Options.TickLength - 1);
 								yaxis.GridLines(out var min, out var max, out var step);
 								for (var y = min; y < max; y += step)
 								{
 									var Y = (int)(chart_area.Top + chart_area.Height - y * chart_area.Height / yaxis.Span);
 									var s = yaxis.TickText(y + yaxis.Min, step);
-									var r = bmp.MeasureString(s, yaxis.Options.TickFont);
 									if (yaxis.Options.DrawTickLabels)
-										bmp.DrawString(s, yaxis.Options.TickFont, bsh, new PointF(lblx - r.Width, Y), new StringFormat{LineAlignment = StringAlignment.Center});
+										bmp.DrawString(s, yaxis.Options.TickFont, bsh,
+											new RectangleF(lblx - dims.YTickLabelSize.Width, Y - dims.YTickLabelSize.Height*0.5f, dims.YTickLabelSize.Width, dims.YTickLabelSize.Height),
+											new StringFormat{Alignment = StringAlignment.Far});
 									if (yaxis.Options.DrawTickMarks)
 										bmp.DrawLine(pen, chart_area.Left - yaxis.Options.TickLength, Y, chart_area.Left, Y);
 								}
@@ -945,11 +945,13 @@ namespace Rylogic.Gui
 
 					m_owner = owner;
 					m_view3d = View3d.Create();
-					m_window = new View3d.Window(m_view3d, Handle, opts);
-					m_window.LightProperties = View3d.LightInfo.Directional(-v4.ZAxis, Colour32.Zero, Colour32.Gray, Colour32.Zero, 0f, 0f);
-					m_window.FocusPointVisible = false;
-					m_window.OriginPointVisible = false;
-					m_window.Orthographic = true;
+					m_window = new View3d.Window(m_view3d, Handle, opts)
+					{
+						LightProperties = View3d.LightInfo.Directional(-v4.ZAxis, Colour32.Zero, Colour32.Gray, Colour32.Zero, 0f, 0f),
+						FocusPointVisible = false,
+						OriginPointVisible = false,
+						Orthographic = true,
+					};
 					m_camera = m_window.Camera;
 					m_camera.Orthographic = true;
 					m_camera.SetPosition(new v4(0, 0, 10, 1), v4.Origin, v4.YAxis);
@@ -1094,6 +1096,11 @@ namespace Rylogic.Gui
 					var r = SizeF.Empty;
 
 					Area = rect.ToRect();
+					TitleSize = SizeF.Empty;
+					XLabelSize = SizeF.Empty;
+					YLabelSize = SizeF.Empty;
+					XTickLabelSize = SizeF.Empty;
+					YTickLabelSize = SizeF.Empty;
 
 					// Add margins
 					rect.X      += chart.Options.Margin.Left;
@@ -1107,6 +1114,7 @@ namespace Rylogic.Gui
 						r = gfx.MeasureString(chart.Title, chart.Options.TitleFont);
 						rect.Y      += r.Height;
 						rect.Height -= r.Height;
+						TitleSize = r;
 					}
 
 					// Add space for the axes
@@ -1128,12 +1136,14 @@ namespace Rylogic.Gui
 						{
 							r = gfx.MeasureString(chart.XAxis.Label, chart.XAxis.Options.LabelFont);
 							rect.Height -= r.Height;
+							XLabelSize = r;
 						}
 						if (chart.YAxis.Label.HasValue())
 						{
-							r = gfx.MeasureString(chart.Range.YAxis.Label, chart.YAxis.Options.LabelFont);
+							r = gfx.MeasureString(chart.YAxis.Label, chart.YAxis.Options.LabelFont);
 							rect.X     += r.Height; // will be rotated by 90deg
 							rect.Width -= r.Height;
+							YLabelSize = r;
 						}
 
 						// Add space for the tick labels
@@ -1142,15 +1152,17 @@ namespace Rylogic.Gui
 						if (chart.XAxis.Options.DrawTickLabels)
 						{
 							// Measure the height of the tick text
-							var h = Math.Max(chart.XAxis.MeasureTickText(gfx, false), chart.XAxis.Options.MinTickSize);
-							rect.Height -= h;
+							r = chart.XAxis.MeasureTickText(gfx, false);//Math.Max(, chart.XAxis.Options.MinTickSize);
+							rect.Height -= r.Height;
+							XTickLabelSize = r;
 						}
 						if (chart.YAxis.Options.DrawTickLabels)
 						{
 							// Measure the width of the tick text
-							var w = Math.Max(chart.YAxis.MeasureTickText(gfx, true), chart.YAxis.Options.MinTickSize);
-							rect.X     += w;
-							rect.Width -= w;
+							r = chart.YAxis.MeasureTickText(gfx, true);//Math.Max(, chart.YAxis.Options.MinTickSize);
+							rect.X     += r.Width;
+							rect.Width -= r.Width;
+							YTickLabelSize = r;
 						}
 					}
 
@@ -1168,6 +1180,21 @@ namespace Rylogic.Gui
 
 			/// <summary>The area of the view3d part of the chart</summary>
 			public Rectangle ChartArea { get; private set; }
+
+			/// <summary>The measured size of the chart title</summary>
+			public SizeF TitleSize { get; private set; }
+
+			/// <summary>The measured size of the X axis label</summary>
+			public SizeF XLabelSize { get; private set; }
+
+			/// <summary>The measured size of the Y axis label</summary>
+			public SizeF YLabelSize { get; private set; }
+
+			/// <summary>The measured size of the X axis tick labels</summary>
+			public SizeF XTickLabelSize { get; private set; }
+
+			/// <summary>The measured size of the Y axis tick labels</summary>
+			public SizeF YTickLabelSize { get; private set; }
 		}
 
 		/// <summary>The client space area of the XAxis area of the chart</summary>
@@ -2077,8 +2104,8 @@ namespace Rylogic.Gui
 				/// <summary>Convert the axis value to a string. "string TickText(double tick_value, double step_size)" </summary>
 				public Func<double, double, string> TickText;
 
-				/// <summary>Return the width/height to reserve for the tick text. "float MeasureTickText(Graphics gfx, bool width)"</summary>
-				public Func<Graphics, bool, float> MeasureTickText;
+				/// <summary>Return the width/height to reserve for the tick text. "SizeF MeasureTickText(Graphics gfx, bool width)"</summary>
+				public Func<Graphics, bool, SizeF> MeasureTickText;
 
 				/// <summary>Set the range without risk of an assert if 'min' is greater than 'Max' or visa versa</summary>
 				public void Set(double min, double max)
@@ -2151,8 +2178,7 @@ namespace Rylogic.Gui
 				{
 					get
 					{
-						double min, max, step;
-						GridLines(out min, out max, out step);
+						GridLines(out var min, out var max, out var step);
 						for (var x = min; x < max; x += step)
 							yield return x;
 					}
@@ -2259,13 +2285,12 @@ namespace Rylogic.Gui
 				}
 
 				/// <summary>Default tick text measurement</summary>
-				public float DefaultMeasureTickText(Graphics gfx, bool width)
+				public SizeF DefaultMeasureTickText(Graphics gfx, bool width)
 				{
 					// Can't use 'GridLines' here because creates an infinite recursion.
 					// Using TickText(Min/Max, 0.0) causes the axes to jump around.
 					// The best option is to use one fixed length string.
-					var size = gfx.MeasureString("-9.99999", Options.TickFont);
-					return width ? size.Width : size.Height;
+					return gfx.MeasureString("-9.99999", Options.TickFont);
 				}
 
 				/// <summary>Friendly string view</summary>
@@ -3033,11 +3058,11 @@ namespace Rylogic.Gui
 				var delta = pt1 - pt0;
 				m_chart.Tools.TapeMeasure.O2P = m4x4.OriFromDir(delta, AxisId.PosZ, pt0) * m4x4.Scale(1f, 1f, delta.Length3, v4.Origin);
 				m_tape_measure_balloon.Location = m_chart.PointToScreen(e.Location);
-				m_tape_measure_balloon.Text = Str.Build(
-					$"dX:  {delta.x}\r\n",
-					$"dY:  {delta.y}\r\n",
-					$"dZ:  {delta.z}\r\n",
-					$"Len: {delta.Length3}\r\n");
+				m_tape_measure_balloon.Text =
+					$"dX:  {delta.x}\r\n"+
+					$"dY:  {delta.y}\r\n"+
+					$"dZ:  {delta.z}\r\n"+
+					$"Len: {delta.Length3}\r\n";
 
 				// Show the tape measure graphic (after the text has been initialised)
 				if (!m_tape_measure_graphic_added)
@@ -5855,25 +5880,26 @@ namespace Rylogic.Gui
 			if (m_series.Count != 0)
 			{
 				// Create the legend graphics object
-				Str.Build(
-					$"*Text legend {{\n",
-					$"*ScreenSpace\n",
-					$"*BackColour {{{BackColour}}}\n",
-					$"*Anchor {{{Anchor.x} {Anchor.y}}}\n",
-					$"*Padding{{{Padding.Left} {Padding.Top} {Padding.Right} {Padding.Bottom}}}\n",
+				var sb = new StringBuilder();
+				sb.Append(
+					$"*Text legend {{\n"+
+					$"*ScreenSpace\n"+
+					$"*BackColour {{{BackColour}}}\n"+
+					$"*Anchor {{{Anchor.x} {Anchor.y}}}\n"+
+					$"*Padding{{{Padding.Left} {Padding.Top} {Padding.Right} {Padding.Bottom}}}\n"+
 					$"*Font{{ *Name{{\"{Font.Name}\"}} *Size{{{Font.SizeInPoints}}} }}\n");
 
 				bool newline = false;
 				foreach (var s in m_series)
 				{
-					if (newline) Str.Append("*NewLine\n");
-					Str.Append("*Font {*Colour {",(s.Visible ? s.Options.Colour : Colour32.Gray),"} }\n");
-					Str.Append($"\"{s.Name}\"\n");
+					if (newline) sb.Append("*NewLine\n");
+					sb.Append($"*Font {{*Colour {(s.Visible ? s.Options.Colour : Colour32.Gray)} }}\n");
+					sb.Append($"\"{s.Name}\"\n");
 					newline = true;
 				}
 
-				Str.Append("}");
-				Gfx = new View3d.Object(Str.Text, false, Id);
+				sb.Append("}");
+				Gfx = new View3d.Object(sb.ToString(), false, Id);
 			}
 		}
 

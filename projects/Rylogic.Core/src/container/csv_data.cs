@@ -372,11 +372,11 @@ namespace Rylogic.UnitTests
 		}
 		[Test] public void CSVRaw()
 		{
-			var csv_string = Str.Build(
-				"One,Two,Three\n",
-				"\"Quoted\",,\r\n",
-				"# Comment Line\r",
-				"Four,# Not a Comment,\"# Also\r\n# Not,\n# A\r\n# Comment\"");
+			var csv_string =
+				"One,Two,Three\n" +
+				"\"Quoted\",,\r\n" +
+				"# Comment Line\r"+ 
+				"Four,# Not a Comment,\"# Also\r\n# Not,\n# A\r\n# Comment\"";
 			using (var ms = new MemoryStream(Encoding.UTF8.GetBytes(csv_string), false))
 			{
 				var load = CSVData.Load(ms, ignore_comment_rows:true);

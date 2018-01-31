@@ -22,35 +22,35 @@ namespace Rylogic.Extn
 		//    is cached. I guess the compiler is optimising the interpolated strings better.
 
 		/// <summary>Get the text of the cached string builder'</summary>
-		public static string Text
+		[Obsolete] public static string Text
 		{
 			[DebuggerStepThrough] get { return CachedSB.ToString(); }
 		}
 
 		/// <summary>A thread local string builder, cached for better memory performance</summary>
-		public static StringBuilder CachedSB { get { return m_cached_sb ?? (m_cached_sb = new StringBuilder()); } }
+		[Obsolete] public static StringBuilder CachedSB { get { return m_cached_sb ?? (m_cached_sb = new StringBuilder()); } }
 		[ThreadStatic] private static StringBuilder m_cached_sb; // no initialised for thread statics
 
 		/// <summary>Reset the cached string builder'</summary>
-		[DebuggerStepThrough] public static void Reset()
+		[DebuggerStepThrough] [Obsolete()] public static void Reset()
 		{
 			CachedSB.Clear();
 		}
 
 		/// <summary>A helper for gluing strings together</summary>
-		[DebuggerStepThrough] public static string Build(params object[] parts)
+		[DebuggerStepThrough] [Obsolete()] public static string Build(params object[] parts)
 		{
 			return Build(CachedSB, parts);
 		}
 
 		/// <summary>Append object.ToString()s to 'sb'</summary>
-		[DebuggerStepThrough] public static void Append(params object[] parts)
+		[DebuggerStepThrough] [Obsolete()] public static void Append(params object[] parts)
 		{
 			Append(CachedSB, parts);
 		}
 
 		/// <summary>A helper for gluing strings together</summary>
-		[DebuggerStepThrough] public static string Build(StringBuilder sb, params object[] parts)
+		[DebuggerStepThrough] [Obsolete()] public static string Build(StringBuilder sb, params object[] parts)
 		{
 			sb.Length = 0;
 			Append(sb, parts);
@@ -58,14 +58,14 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Append object.ToString()s to 'sb'</summary>
-		[DebuggerStepThrough] public static void Append(StringBuilder sb, object part)
+		[DebuggerStepThrough] [Obsolete()] public static void Append(StringBuilder sb, object part)
 		{
 			// Do not change this to automatically add white space,
 			if      (part is string     ) sb.Append((string)part);
 			else if (part is IEnumerable) foreach (var x in (IEnumerable)part) Append(sb, x);
 			else if (part != null       ) sb.Append(part.ToString());
 		}
-		[DebuggerStepThrough] public static void Append(StringBuilder sb, params object[] parts)
+		[DebuggerStepThrough] [Obsolete()] public static void Append(StringBuilder sb, params object[] parts)
 		{
 			// Do not change this to automatically add white space,
 			foreach (var part in parts)

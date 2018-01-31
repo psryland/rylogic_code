@@ -3,9 +3,9 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Windows.Forms;
-using pr.container;
-using pr.extn;
-using pr.util;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {

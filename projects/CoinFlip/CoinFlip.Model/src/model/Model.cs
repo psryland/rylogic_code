@@ -10,12 +10,12 @@ using System.Threading;
 using System.Windows.Forms;
 using System.Windows.Threading;
 using System.Xml.Linq;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.gui;
-using pr.maths;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {
@@ -362,7 +362,7 @@ namespace CoinFlip
 					{
 					case ListChg.ItemAdded:
 						{
-							Log.Write(ELogLevel.Info, "Exchange Added: {0}".Fmt(e.Item.Name));
+							Log.Write(ELogLevel.Info, $"Exchange Added: {e.Item.Name}");
 							e.Item.PropertyChanged += HandleExchangePropertyChanged;
 							break;
 						}
@@ -375,7 +375,7 @@ namespace CoinFlip
 						}
 					case ListChg.ItemRemoved:
 						{
-							Log.Write(ELogLevel.Info, "Exchange Removed: {0}".Fmt(e.Item.Name));
+							Log.Write(ELogLevel.Info, $"Exchange Removed: {e.Item.Name}");
 							Util.Dispose(e.Item);
 							break;
 						}
@@ -692,7 +692,7 @@ namespace CoinFlip
 			{
 				Debug.Assert(available.IsOrdered());
 				var idx = available.BinarySearch(x => x.CompareTo(time_frame), find_insert_position:true);
-				time_frame_out = available[Maths.Clamp(idx, 0, available.Length-1)];
+				time_frame_out = available[Math_.Clamp(idx, 0, available.Length-1)];
 			}
 
 			return pair_out != null && time_frame_out != ETimeFrame.None;

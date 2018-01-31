@@ -377,13 +377,13 @@ namespace Rylogic.Utility
 		public static string DefaultSerialise(StringBuilder sb, LogEvent evt, char entry_delimiter, bool timestamp)
 		{
 			var pre = string.Empty;
-			if (entry_delimiter != '\0')        { Str.Build(sb, entry_delimiter); }
-			if (evt.File.HasValue())            { Str.Append(sb, evt.File); pre = " "; }
-			if (evt.Line != null)               { Str.Append(sb, "(", evt.Line.Value, "):"); pre = " "; }
-			if (evt.Tag.HasValue())             { Str.Append(sb, pre, $"{evt.Tag:8}"); pre = "|"; }
-			if (evt.Level != ELogLevel.NoLevel) { Str.Append(sb, pre, evt.Level); pre = "|"; }
-			if (timestamp)                      { Str.Append(sb, pre, evt.Timestamp.ToString("c")); pre = "|"; }
-			Str.Append(sb, pre, evt.Message);
+			if (entry_delimiter != '\0')        { sb.Clear(); sb.Append(entry_delimiter); }
+			if (evt.File.HasValue())            { sb.Append(evt.File); pre = " "; }
+			if (evt.Line != null)               { sb.Append($"({evt.Line.Value}):"); pre = " "; }
+			if (evt.Tag.HasValue())             { sb.Append($"{pre}{evt.Tag:8}"); pre = "|"; }
+			if (evt.Level != ELogLevel.NoLevel) { sb.Append($"{pre}{evt.Level}"); pre = "|"; }
+			if (timestamp)                      { sb.Append($"{pre}{evt.Timestamp.ToString("c")}"); pre = "|"; }
+			sb.Append(pre).Append(evt.Message);
 			return sb.ToString();
 		}
 

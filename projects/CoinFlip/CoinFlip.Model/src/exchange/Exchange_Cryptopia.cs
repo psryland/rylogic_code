@@ -4,9 +4,9 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Cryptopia.API;
-using pr.common;
-using pr.extn;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {
@@ -83,7 +83,7 @@ namespace CoinFlip
 				// and we don't want updating pairs to be interrupted by the update thread stopping
 				var msg = Api.GetTradePairs(cancel:Model.Shutdown.Token);
 				if (!msg.Success)
-					throw new Exception("Cryptopia: Failed to read available trading pairs. {0}".Fmt(msg.Error));
+					throw new Exception($"Cryptopia: Failed to read available trading pairs. {msg.Error}");
 
 				// Add an action to add/update the pairs,coins
 				Model.MarketUpdates.Add(() =>
@@ -150,7 +150,7 @@ namespace CoinFlip
 					// Process the order book data and update the pairs
 					var msg = order_book;
 					if (!msg.Success)
-						throw new Exception("Cryptopia: Failed to update trading pairs. {0}".Fmt(msg?.Error ?? string.Empty));
+						throw new Exception($"Cryptopia: Failed to update trading pairs. {msg?.Error}");
 
 					// Update the market orders
 					foreach (var orders in msg.Data)
@@ -192,7 +192,7 @@ namespace CoinFlip
 				// Request the account data
 				var msg = Api.GetBalances(cancel:Shutdown.Token);
 				if (!msg.Success)
-					throw new Exception("Cryptopia: Failed to update account balances. {0}".Fmt(msg.Error));
+					throw new Exception($"Cryptopia: Failed to update account balances. {msg.Error}");
 
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
@@ -296,11 +296,11 @@ namespace CoinFlip
 				// Request the transfers data
 				var deposits = Api.GetDeposits(cancel:Shutdown.Token);
 				if (!deposits.Success)
-					throw new Exception("Cryptopia: Failed to update deposits history. {0}".Fmt(deposits.Error));
+					throw new Exception($"Cryptopia: Failed to update deposits history. {deposits.Error}");
 
 				var withdrawals = Api.GetWithdrawals(cancel:Shutdown.Token);
 				if (!withdrawals.Success)
-					throw new Exception("Cryptopia: Failed to update withdrawals history. {0}".Fmt(withdrawals.Error));
+					throw new Exception($"Cryptopia: Failed to update withdrawals history. {withdrawals.Error}");
 
 				// Record the time that transfer history has been updated to
 				m_transfers_last = timestamp;

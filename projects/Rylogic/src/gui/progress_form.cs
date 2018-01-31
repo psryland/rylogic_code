@@ -187,9 +187,8 @@ namespace Rylogic.Gui
 			if (CancelSignal != null)
 			{
 				// Save the result based on whether cancel was selected
-				DialogResult = CancelSignal.WaitOne(0)
-					? DialogResult.Cancel
-					: DialogResult.OK;
+				if (CancelSignal.WaitOne(0))
+					DialogResult = DialogResult.Cancel;
 			}
 
 			base.OnFormClosing(e);

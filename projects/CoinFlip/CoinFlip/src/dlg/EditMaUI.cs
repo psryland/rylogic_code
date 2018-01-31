@@ -1,16 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using pr.extn;
-using pr.gui;
-using pr.maths;
-using pr.util;
+﻿using System.Windows.Forms;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {
@@ -135,17 +126,17 @@ namespace CoinFlip
 			this.m_lbl_window_size = new System.Windows.Forms.Label();
 			this.m_lbl_width = new System.Windows.Forms.Label();
 			this.m_spinner_width = new System.Windows.Forms.NumericUpDown();
-			this.m_colour_ema = new pr.gui.ColourWheel();
+			this.m_colour_ema = new Rylogic.Gui.ColourWheel();
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_lbl_bollinger_bands = new System.Windows.Forms.Label();
 			this.m_spinner_bollinger_band_stddev = new System.Windows.Forms.NumericUpDown();
-			this.m_colour_bollinger = new pr.gui.ColourWheel();
+			this.m_colour_bollinger = new Rylogic.Gui.ColourWheel();
 			this.m_lbl_main_colour = new System.Windows.Forms.Label();
 			this.m_lbl_bollinger_bands_colour = new System.Windows.Forms.Label();
 			this.m_btn_delete = new System.Windows.Forms.Button();
-			this.m_spinner_bollinger_bands = new pr.gui.ValueBox();
+			this.m_spinner_bollinger_bands = new Rylogic.Gui.ValueBox();
 			this.m_chk_exponential_ma = new System.Windows.Forms.CheckBox();
-			this.m_grp_bollinger_bands = new pr.gui.CheckedGroupBox();
+			this.m_grp_bollinger_bands = new Rylogic.Gui.CheckedGroupBox();
 			this.m_lbl_x_offset = new System.Windows.Forms.Label();
 			this.m_spinner_xoffset = new System.Windows.Forms.NumericUpDown();
 			((System.ComponentModel.ISupportInitialize)(this.m_spinner_window_size)).BeginInit();
@@ -192,11 +183,11 @@ namespace CoinFlip
 			this.m_colour_ema.Colour = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(255)))), ((int)(((byte)(255)))));
 			this.m_colour_ema.Location = new System.Drawing.Point(144, 53);
 			this.m_colour_ema.Name = "m_colour_ema";
-			this.m_colour_ema.Parts = ((pr.gui.ColourWheel.EParts)((((((pr.gui.ColourWheel.EParts.Wheel | pr.gui.ColourWheel.EParts.VSlider) 
-            | pr.gui.ColourWheel.EParts.ASlider) 
-            | pr.gui.ColourWheel.EParts.ColourSelection) 
-            | pr.gui.ColourWheel.EParts.VSelection) 
-            | pr.gui.ColourWheel.EParts.ASelection)));
+			this.m_colour_ema.Parts = ((Rylogic.Gui.ColourWheel.EParts)((((((Rylogic.Gui.ColourWheel.EParts.Wheel | Rylogic.Gui.ColourWheel.EParts.VSlider) 
+            | Rylogic.Gui.ColourWheel.EParts.ASlider) 
+            | Rylogic.Gui.ColourWheel.EParts.ColourSelection) 
+            | Rylogic.Gui.ColourWheel.EParts.VSelection) 
+            | Rylogic.Gui.ColourWheel.EParts.ASelection)));
 			this.m_colour_ema.Size = new System.Drawing.Size(120, 63);
 			this.m_colour_ema.SliderWidth = 20;
 			this.m_colour_ema.TabIndex = 5;
@@ -240,11 +231,11 @@ namespace CoinFlip
 			this.m_colour_bollinger.Colour = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(255)))), ((int)(((byte)(255)))));
 			this.m_colour_bollinger.Location = new System.Drawing.Point(132, 32);
 			this.m_colour_bollinger.Name = "m_colour_bollinger";
-			this.m_colour_bollinger.Parts = ((pr.gui.ColourWheel.EParts)((((((pr.gui.ColourWheel.EParts.Wheel | pr.gui.ColourWheel.EParts.VSlider) 
-            | pr.gui.ColourWheel.EParts.ASlider) 
-            | pr.gui.ColourWheel.EParts.ColourSelection) 
-            | pr.gui.ColourWheel.EParts.VSelection) 
-            | pr.gui.ColourWheel.EParts.ASelection)));
+			this.m_colour_bollinger.Parts = ((Rylogic.Gui.ColourWheel.EParts)((((((Rylogic.Gui.ColourWheel.EParts.Wheel | Rylogic.Gui.ColourWheel.EParts.VSlider) 
+            | Rylogic.Gui.ColourWheel.EParts.ASlider) 
+            | Rylogic.Gui.ColourWheel.EParts.ColourSelection) 
+            | Rylogic.Gui.ColourWheel.EParts.VSelection) 
+            | Rylogic.Gui.ColourWheel.EParts.ASelection)));
 			this.m_colour_bollinger.Size = new System.Drawing.Size(120, 63);
 			this.m_colour_bollinger.SliderWidth = 20;
 			this.m_colour_bollinger.TabIndex = 9;

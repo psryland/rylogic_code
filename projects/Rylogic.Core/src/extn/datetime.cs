@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Rylogic.Extn
@@ -86,8 +87,7 @@ namespace Rylogic.Extn
 		/// <summary>Try to parse 'val' as a date time using 'format', returns null on parse failure</summary>
 		public static DateTime? TryParse(string val, string format, DateTimeStyles style = DateTimeStyles.AllowWhiteSpaces|DateTimeStyles.AssumeUniversal)
 		{
-			DateTime result;
-			return DateTime.TryParseExact(val, format, null, style, out result) ? (DateTime?)result : null;
+			return DateTime.TryParseExact(val, format, null, style, out var result) ? (DateTime?)result : null;
 		}
 	}
 
@@ -204,13 +204,11 @@ namespace Rylogic.Extn
 		/// <summary>Parse a timespan from a string</summary>
 		public static TimeSpan? TryParse(string s)
 		{
-			TimeSpan ts;
-			return TimeSpan.TryParse(s, out ts) ? (TimeSpan?)ts : null;
+			return TimeSpan.TryParse(s, out var ts) ? (TimeSpan?)ts : null;
 		}
 		public static TimeSpan? TryParseExact(string s, string fmt)
 		{
-			TimeSpan ts;
-			return TimeSpan.TryParseExact(s, fmt, null, out ts) ? (TimeSpan?)ts : null;
+			return TimeSpan.TryParseExact(s, fmt, null, out var ts) ? (TimeSpan?)ts : null;
 		}
 
 		/// <summary>
@@ -222,19 +220,18 @@ namespace Rylogic.Extn
 			try
 			{
 				// If the value parses as a double, treat the number as 'default_units'
-				double x;
-				if (double.TryParse(val, out x))
+				if (double.TryParse(val, out var x))
 				{
 					switch (default_units)
 					{
 					default: throw new Exception($"unknown time units {default_units}");
 					case ETimeUnits.Milliseconds: return TimeSpan.FromMilliseconds(x);
-					case ETimeUnits.Seconds:      return TimeSpan.FromSeconds(x);
-					case ETimeUnits.Minutes:      return TimeSpan.FromMinutes(x);
-					case ETimeUnits.Hours:        return TimeSpan.FromHours(x);
-					case ETimeUnits.Days:         return TimeSpan.FromDays(x);
-					case ETimeUnits.Weeks:        return TimeSpan.FromDays(x*7);
-					case ETimeUnits.Years:        return TimeSpan.FromDays(x*365);
+					case ETimeUnits.Seconds: return TimeSpan.FromSeconds(x);
+					case ETimeUnits.Minutes: return TimeSpan.FromMinutes(x);
+					case ETimeUnits.Hours: return TimeSpan.FromHours(x);
+					case ETimeUnits.Days: return TimeSpan.FromDays(x);
+					case ETimeUnits.Weeks: return TimeSpan.FromDays(x*7);
+					case ETimeUnits.Years: return TimeSpan.FromDays(x*365);
 					}
 				}
 
@@ -326,14 +323,15 @@ namespace Rylogic.Extn
 			var show_s = (min_unit <= ETimeUnits.Seconds      && ETimeUnits.Seconds      <= max_unit) && (s != 0 || leading_zeros || (trailing_zeros && show_m) || (min_unit == ETimeUnits.Seconds      && (long)ts.TotalSeconds        == 0));
 			var show_f = (min_unit <= ETimeUnits.Milliseconds && ETimeUnits.Milliseconds <= max_unit) && (f != 0 || leading_zeros || (trailing_zeros && show_s) || (min_unit == ETimeUnits.Milliseconds && (long)ts.TotalMilliseconds   == 0));
 
-			return Str.Build(
-				show_y ? $"{y}{unit_y} " : string.Empty,
-				show_w ? $"{w}{unit_w} " : string.Empty,
-				show_d ? $"{d}{unit_d} " : string.Empty,
-				show_h ? $"{h}{unit_h} " : string.Empty,
-				show_m ? $"{m}{unit_m} " : string.Empty,
-				show_s ? $"{s}{unit_s} " : string.Empty,
-				show_f ? $"{f}{unit_f} " : string.Empty).TrimEnd(' ');
+			var sb = new StringBuilder();
+			if (show_y) sb.Append($"{y}{unit_y} ");
+			if (show_w) sb.Append($"{w}{unit_w} ");
+			if (show_d) sb.Append($"{d}{unit_d} ");
+			if (show_h) sb.Append($"{h}{unit_h} ");
+			if (show_m) sb.Append($"{m}{unit_m} ");
+			if (show_s) sb.Append($"{s}{unit_s} ");
+			if (show_f) sb.Append($"{f}{unit_f} ");
+			return sb.ToString().TrimEnd(' ');
 		}
 
 		/// <summary>Return the approximate time for this time span using the least number of characters possible</summary>

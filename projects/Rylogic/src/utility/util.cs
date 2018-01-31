@@ -4,22 +4,15 @@
 //***************************************************
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
-using System.Xml;
 using Rylogic.Container;
 using Rylogic.Extn;
 using Rylogic.Gui;
@@ -324,8 +317,6 @@ namespace Rylogic.Utility
 #if PR_UNITTESTS
 namespace Rylogic.UnitTests
 {
-	using Utility;
-
 	[TestFixture] public class TestUtils
 	{
 		[Test] public void ToDo()

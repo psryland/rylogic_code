@@ -2,9 +2,9 @@
 using System.Diagnostics;
 using System.Xml.Linq;
 using CoinFlip;
-using pr.extn;
-using pr.util;
-using pr.view3d;
+using Rylogic.Extn;
+using Rylogic.Graphix;
+using Rylogic.Utility;
 
 namespace Bot.PriceSwing
 {

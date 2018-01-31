@@ -3,15 +3,15 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.gui;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {
-	public class GridBase :pr.gui.DataGridView, IDockable
+	public class GridBase :Rylogic.Gui.DataGridView, IDockable
 	{
 		public GridBase(Model model, string title, string name)
 		{

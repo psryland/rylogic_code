@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Xml.Linq;
-using pr.common;
-using pr.extn;
-using pr.gui;
-using pr.maths;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Maths;
 
 namespace CoinFlip
 {

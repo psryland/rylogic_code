@@ -1,17 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Diagnostics;
-using System.Drawing;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using pr.container;
-using pr.extn;
-using pr.gui;
-using pr.util;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Utility;
+using ComboBox = Rylogic.Gui.ComboBox;
+using DataGridView = Rylogic.Gui.DataGridView;
 
 namespace CoinFlip
 {
@@ -20,8 +16,8 @@ namespace CoinFlip
 		#region UI Elements
 		private TableLayoutPanel m_table0;
 		private TableLayoutPanel m_table1;
-		private pr.gui.DataGridView m_grid_sells;
-		private pr.gui.DataGridView m_grid_buys;
+		private DataGridView m_grid_sells;
+		private DataGridView m_grid_buys;
 		private Panel m_panel0;
 		private TextBox m_tb_exchange1;
 		private TextBox m_tb_exchange0;
@@ -31,8 +27,8 @@ namespace CoinFlip
 		private Label m_lbl_buy_orders;
 		private Label m_lbl_sell_orders;
 		private Label m_lbl_exch;
-		private pr.gui.ComboBox m_cb_exchange;
-		private pr.gui.ComboBox m_cb_pair;
+		private ComboBox m_cb_exchange;
+		private ComboBox m_cb_pair;
 		#endregion
 
 		public PairsUI(Model model, Control parent)
@@ -163,11 +159,11 @@ namespace CoinFlip
 						m_tb_exchange0.Text = pair.Base.Exchange.Name;
 						m_tb_exchange1.Text = pair.Quote.Exchange.Name;
 
-						m_grid_sells.Columns[nameof(OrderBook.Offer.VolumeBase )].HeaderText = "Volume ({0})".Fmt(pair.Base);
-						m_grid_sells.Columns[nameof(OrderBook.Offer.VolumeQuote)].HeaderText = "Volume ({0})".Fmt(pair.Quote);
+						m_grid_sells.Columns[nameof(OrderBook.Offer.VolumeBase )].HeaderText = $"Volume ({pair.Base})";
+						m_grid_sells.Columns[nameof(OrderBook.Offer.VolumeQuote)].HeaderText = $"Volume ({pair.Quote})";
 
-						m_grid_buys.Columns[nameof(OrderBook.Offer.VolumeBase )].HeaderText = "Volume ({0})".Fmt(pair.Base);
-						m_grid_buys.Columns[nameof(OrderBook.Offer.VolumeQuote)].HeaderText = "Volume ({0})".Fmt(pair.Quote);
+						m_grid_buys.Columns[nameof(OrderBook.Offer.VolumeBase )].HeaderText = $"Volume ({pair.Base})";
+						m_grid_buys.Columns[nameof(OrderBook.Offer.VolumeQuote)].HeaderText = $"Volume ({pair.Quote})";
 
 						Sells.DataSource = pair.Q2B.Orders;
 						Buys.DataSource = pair.B2Q.Orders;
@@ -291,18 +287,18 @@ namespace CoinFlip
 			this.m_table0 = new System.Windows.Forms.TableLayoutPanel();
 			this.m_table1 = new System.Windows.Forms.TableLayoutPanel();
 			this.m_lbl_buy_orders = new System.Windows.Forms.Label();
-			this.m_grid_buys = new pr.gui.DataGridView();
-			this.m_grid_sells = new pr.gui.DataGridView();
+			this.m_grid_buys = new Rylogic.Gui.DataGridView();
+			this.m_grid_sells = new Rylogic.Gui.DataGridView();
 			this.m_lbl_sell_orders = new System.Windows.Forms.Label();
 			this.m_panel0 = new System.Windows.Forms.Panel();
 			this.m_lbl_exch = new System.Windows.Forms.Label();
-			this.m_cb_exchange = new pr.gui.ComboBox();
+			this.m_cb_exchange = new Rylogic.Gui.ComboBox();
 			this.m_lbl_quote_exchange = new System.Windows.Forms.Label();
 			this.m_tb_exchange1 = new System.Windows.Forms.TextBox();
 			this.m_tb_exchange0 = new System.Windows.Forms.TextBox();
 			this.m_lbl_exchanges = new System.Windows.Forms.Label();
 			this.m_lbl_pair = new System.Windows.Forms.Label();
-			this.m_cb_pair = new pr.gui.ComboBox();
+			this.m_cb_pair = new Rylogic.Gui.ComboBox();
 			this.m_table0.SuspendLayout();
 			this.m_table1.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_buys)).BeginInit();

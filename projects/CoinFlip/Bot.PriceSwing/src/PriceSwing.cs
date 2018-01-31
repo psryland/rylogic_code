@@ -6,14 +6,13 @@ using System.Linq;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using CoinFlip;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.gfx;
-using pr.gui;
-using pr.maths;
-using pr.util;
-using pr.view3d;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Graphix;
+using Rylogic.Gui;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace Bot.PriceSwing
 {
@@ -178,11 +177,10 @@ namespace Bot.PriceSwing
 				// - Get the volume that was previously traded
 				// - Get the current price to trade this volume
 				// - Maximise by nett profit
-				TradeRecord record;
-				if (MaxPriceDiff(TradeRecords.Where(x => x.TradeType == ETradeType.Q2B), ETradeType.B2Q, out record))
-					MatchTrade(record);
-				if (MaxPriceDiff(TradeRecords.Where(x => x.TradeType == ETradeType.B2Q), ETradeType.Q2B, out record))
-					MatchTrade(record);
+				if (MaxPriceDiff(TradeRecords.Where(x => x.TradeType == ETradeType.Q2B), ETradeType.B2Q, out var  record0))
+					MatchTrade(record0);
+				if (MaxPriceDiff(TradeRecords.Where(x => x.TradeType == ETradeType.B2Q), ETradeType.Q2B, out var record1))
+					MatchTrade(record1);
 
 				// Find the most profitable trade record
 				bool MaxPriceDiff(IEnumerable<TradeRecord> trade_records, ETradeType tt, out TradeRecord rec)
@@ -225,8 +223,8 @@ namespace Bot.PriceSwing
 				var base_avail  = Pair.Base .Balances[Fund].Available * (1m - Pair.Fee) * 0.99999m;
 				var quote_avail = Pair.Quote.Balances[Fund].Available * (1m - Pair.Fee) * 0.99999m;
 				var vol = 
-					tt == ETradeType.B2Q ? Maths.Min((decimal)Settings.VolumeFrac * base_avail , Pair.Base .AutoTradeLimit) :
-					tt == ETradeType.Q2B ? Maths.Min((decimal)Settings.VolumeFrac * quote_avail, Pair.Quote.AutoTradeLimit) :
+					tt == ETradeType.B2Q ? Math_.Min((decimal)Settings.VolumeFrac * base_avail , Pair.Base .AutoTradeLimit) :
+					tt == ETradeType.Q2B ? Math_.Min((decimal)Settings.VolumeFrac * quote_avail, Pair.Quote.AutoTradeLimit) :
 					0;
 
 				// Get the price that we can trade 'vol' in the direction of 'tt' for
@@ -289,15 +287,15 @@ namespace Bot.PriceSwing
 		private bool NearbyTrades(Unit<decimal> price_q2b, Unit<decimal> threshold)
 		{
 			// Check the pending trades
-			if (PendingTradeRecords.Any(x =>  Maths.Abs(x.PriceQ2B - price_q2b) <= threshold))
+			if (PendingTradeRecords.Any(x =>  Math_.Abs(x.PriceQ2B - price_q2b) <= threshold))
 				return false;
 			
 			// Check the trade records
 			Debug.Assert(TradeRecords.IsOrdered((l,r) => l.PriceQ2B <= r.PriceQ2B), "TradeRecords should be ordered");
 			var idx = TradeRecords.BinarySearch(x => x.PriceQ2B.CompareTo(price_q2b), find_insert_position:true);
 
-			if ((idx >                  0 && Maths.Abs(TradeRecords[idx-1].PriceQ2B - price_q2b) <= threshold) ||
-				(idx < TradeRecords.Count && Maths.Abs(TradeRecords[idx  ].PriceQ2B - price_q2b) <= threshold))
+			if ((idx >                  0 && Math_.Abs(TradeRecords[idx-1].PriceQ2B - price_q2b) <= threshold) ||
+				(idx < TradeRecords.Count && Math_.Abs(TradeRecords[idx  ].PriceQ2B - price_q2b) <= threshold))
 				return false;
 
 			return true;
@@ -339,16 +337,15 @@ namespace Bot.PriceSwing
 				var value1 = his.CoinIn.ValueOf(nett1);
 				var sum = value0 + value1;
 
-				var msg = Str.Build(
-					(Model.AllowTrades ? "!Profit!\n" : "!Virtual Profit!\n")
-					,$" On {Pair.Exchange.Name}:\n"
-					,$"   Initial order: {rec.Description}\n"
-					,$"   Matched by: {his.Description}\n"
-					,$"\n"
-					,$"  Nett: {nett0.ToString("G8",true)}  ({value0:C})\n"
-					,$"  Nett: {nett1.ToString("G8",true)}  ({value1:C})\n"
-					,$"  Total: {sum:C}"
-					);
+				var msg =
+					(Model.AllowTrades ? "!Profit!\n" : "!Virtual Profit!\n")+
+					$" On {Pair.Exchange.Name}:\n"+
+					$"   Initial order: {rec.Description}\n"+
+					$"   Matched by: {his.Description}\n"+
+					$"\n"+
+					$"  Nett: {nett0.ToString("G8",true)}  ({value0:C})\n"+
+					$"  Nett: {nett1.ToString("G8",true)}  ({value1:C})\n"+
+					$"  Total: {sum:C}";
 				Log.Write(ELogLevel.Warn, msg);
 				Model.WinLog.Write(ELogLevel.Info, msg);
 				Res.Coins.Play();

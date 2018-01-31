@@ -1,14 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Reflection;
 using System.Xml.Linq;
-using pr.common;
-using pr.extn;
-using pr.gui;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {

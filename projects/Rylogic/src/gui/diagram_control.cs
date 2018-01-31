@@ -898,7 +898,7 @@ namespace Rylogic.Gui
 					
 					// Allow the connectors to be connected to this node at both ends
 					//if (conn.Node0 == this && conn.Node1 == this)
-					//	throw new Exception("Node {0} contains connector {1} that is attached to it at both ends".Fmt(ToString(), conn.ToString()));
+					//	throw new Exception($"Node {ToString()} contains connector { conn.ToString(} that is attached to it at both ends"));
 				}
 
 				// The style should be known to the diagram

@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using pr.container;
-using pr.extn;
+using Rylogic.Container;
+using Rylogic.Extn;
 
 namespace CoinFlip
 {

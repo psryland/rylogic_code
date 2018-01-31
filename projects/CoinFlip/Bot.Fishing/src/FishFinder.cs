@@ -3,11 +3,11 @@ using System.Diagnostics;
 using System.Linq;
 using System.Xml.Linq;
 using CoinFlip;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.gui;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Utility;
 
 namespace Bot.Fishing
 {
@@ -26,8 +26,7 @@ namespace Bot.Fishing
 				Fishers.Add(new Fisher(this, fisher));
 
 			// Create a grid to display the fisher instances in
-			m_grid_fishing = new GridFishing(this, "Fishing", nameof(m_grid_fishing));
-			m_grid_fishing.DataSource = Fishers;
+			m_grid_fishing = new GridFishing(this, "Fishing", nameof(m_grid_fishing)){ DataSource = Fishers };
 			Model.AddToUI(m_grid_fishing, new[] { EDockSite.Right, EDockSite.Bottom });
 		}
 		protected override void Dispose(bool disposing)
@@ -230,11 +229,11 @@ namespace Bot.Fishing
 			{
 				get
 				{
-					return Str.Build(
-						Exch0 == Exch1                    ? "Exchanges are the same\r\n"          : string.Empty,
-						!Pair.HasValue()                  ? "No trading pair\r\n"                 : string.Empty,
-						PriceOffset <= 0                  ? "Price offset invalid\r\n"            : string.Empty,
-						Direction == ETradeDirection.None ? "No trading direction\r\n"            : string.Empty);
+					return
+						(Exch0 == Exch1                    ? "Exchanges are the same\r\n" : string.Empty)+
+						(!Pair.HasValue()                  ? "No trading pair\r\n"        : string.Empty)+
+						(PriceOffset <= 0                  ? "Price offset invalid\r\n"   : string.Empty)+
+						(Direction == ETradeDirection.None ? "No trading direction\r\n"   : string.Empty);
 				}
 			}
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Drawing;
+using System.Text;
 using System.Windows.Forms;
 using Rylogic.Attrib;
 using Rylogic.Extn;
@@ -593,39 +594,40 @@ namespace Rylogic.Gui
 					var dist_z = Math.Abs(pt1.z - pt0.z);
 					var dist   = (pt1 - pt0).Length3;
 
-					Str.Build(
-						$"*Group Measurement \n",
-						$"{{ \n",
+					var sb = new StringBuilder();
+					sb.Append(
+						$"*Group Measurement \n"+
+						$"{{ \n"+
 						$"	*Font {{*Colour{{FFFFFFFF}}}}\n");
-					if (dist_x != 0) Str.Append(
-						$"	*Line dist_x FFFF0000\n",
-						$"	{{\n",
-						$"		{pt0.x} {pt0.y} {pt0.z} {pt1.x} {pt0.y} {pt0.z}\n",
-						$"		*Text lbl_x {{ \"{dist_x}\" *Billboard *BackColour{{FF800000}} *NoZTest *o2w{{*pos{{{(pt0.x+pt1.x)/2} {pt0.y} {pt0.z}}}}} }}\n",
+					if (dist_x != 0) sb.Append(
+						$"	*Line dist_x FFFF0000\n"+
+						$"	{{\n"+
+						$"		{pt0.x} {pt0.y} {pt0.z} {pt1.x} {pt0.y} {pt0.z}\n"+
+						$"		*Text lbl_x {{ \"{dist_x}\" *Billboard *BackColour{{FF800000}} *NoZTest *o2w{{*pos{{{(pt0.x+pt1.x)/2} {pt0.y} {pt0.z}}}}} }}\n"+
 						$"	}}\n");
-					if (dist_y != 0) Str.Append(
-						$"	*Line dist_y FF00FF00\n",
-						$"	{{\n",
-						$"		{pt1.x} {pt0.y} {pt0.z} {pt1.x} {pt1.y} {pt0.z}\n",
-						$"		*Text lbl_y {{ \"{dist_y}\" *Billboard *BackColour{{FF006000}} *NoZTest *o2w{{*pos{{{pt1.x} {(pt0.y+pt1.y)/2} {pt0.z}}}}} }}\n",
+					if (dist_y != 0) sb.Append(
+						$"	*Line dist_y FF00FF00\n"+
+						$"	{{\n"+
+						$"		{pt1.x} {pt0.y} {pt0.z} {pt1.x} {pt1.y} {pt0.z}\n"+
+						$"		*Text lbl_y {{ \"{dist_y}\" *Billboard *BackColour{{FF006000}} *NoZTest *o2w{{*pos{{{pt1.x} {(pt0.y+pt1.y)/2} {pt0.z}}}}} }}\n"+
 						$"	}}\n");
-					if (dist_z != 0) Str.Append(
-						$"	*Line dist_z FF0000FF\n",
-						$"	{{\n",
-						$"		{pt1.x} {pt1.y} {pt0.z} {pt1.xyz}\n",
-						$"		*Text lbl_z {{ \"{dist_z}\" *Billboard *BackColour{{FF000080}} *NoZTest *o2w{{*pos{{{pt1.x} {pt1.y} {(pt0.z+pt1.z)/2}}}}} }}\n",
+					if (dist_z != 0) sb.Append(
+						$"	*Line dist_z FF0000FF\n"+
+						$"	{{\n"+
+						$"		{pt1.x} {pt1.y} {pt0.z} {pt1.xyz}\n"+
+						$"		*Text lbl_z {{ \"{dist_z}\" *Billboard *BackColour{{FF000080}} *NoZTest *o2w{{*pos{{{pt1.x} {pt1.y} {(pt0.z+pt1.z)/2}}}}} }}\n"+
 						$"	}}\n");
-					if (dist != 0) Str.Append(
-						$"	*Line dist FF000000\n",
-						$"	{{\n",
-						$"		{pt0.xyz} {pt1.xyz}\n",
-						$"		*Text lbl_d {{ \"{dist}\" *Billboard *BackColour{{FF000000}} *NoZTest *o2w{{*pos{{{((pt0+pt1)/2).xyz}}}}} }}\n",
+					if (dist != 0) sb.Append(
+						$"	*Line dist FF000000\n"+
+						$"	{{\n"+
+						$"		{pt0.xyz} {pt1.xyz}\n"+
+						$"		*Text lbl_d {{ \"{dist}\" *Billboard *BackColour{{FF000000}} *NoZTest *o2w{{*pos{{{((pt0+pt1)/2).xyz}}}}} }}\n"+
 						$"	}}\n");
-					Str.Append(
-						$"	*o2w{{*m4x4{{{r2w}}}}}\n",
+					sb.Append(
+						$"	*o2w{{*m4x4{{{r2w}}}}}\n"+
 						$"}}");
 
-					GfxMeasure = new View3d.Object(Str.Text, false, CtxId){ Flags = View3d.EFlags.HitTestExclude };
+					GfxMeasure = new View3d.Object(sb.ToString(), false, CtxId){ Flags = View3d.EFlags.HitTestExclude };
 					m_gfx_measure_valid = true;
 				}
 				return m_gfx_measure;

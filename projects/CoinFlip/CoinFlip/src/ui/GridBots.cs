@@ -1,11 +1,10 @@
-﻿using System;
-using System.ComponentModel;
-using System.Drawing;
-using System.Linq;
+﻿using System.Drawing;
 using System.Windows.Forms;
-using pr.container;
-using pr.extn;
-using pr.util;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Utility;
+using DataGridViewComboBoxColumn = Rylogic.Gui.DataGridViewComboBoxColumn;
 
 namespace CoinFlip
 {

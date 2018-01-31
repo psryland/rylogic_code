@@ -77,8 +77,8 @@ namespace pr
 			RotY           = 1 << 4,
 			RotZ           = 1 << 5,
 			Zoom           = 1 << 6,
-			CameraRelative = 1 << 7,
 			All            = (1 << 7) - 1, // Not including camera relative
+			CameraRelative = 1 << 7,
 			_bitwise_operators_allowed,
 		};
 
@@ -303,7 +303,7 @@ namespace pr
 		void Aspect(float aspect_w_by_h)
 		{
 			PR_ASSERT(PR_DBG, aspect_w_by_h > 0.0f && pr::IsFinite(aspect_w_by_h), "");
-			m_moved = aspect_w_by_h != m_aspect;
+			m_moved |= aspect_w_by_h != m_aspect;
 			m_aspect = aspect_w_by_h;
 		}
 
@@ -331,7 +331,7 @@ namespace pr
 			PR_ASSERT(PR_DBG, fovY >= 0.0f && fovY < maths::tau_by_2 && pr::IsFinite(fovY), "");
 			
 			fovY = Clamp(fovY, maths::tiny, float(maths::tau_by_2));
-			m_moved = fovY != m_fovY;
+			m_moved |= fovY != m_fovY;
 			m_base_fovY = m_fovY = fovY;
 		}
 
@@ -422,8 +422,9 @@ namespace pr
 			// N*F == (m_near * dist) * (m_far * dist) < float_max
 			//     == m_near * m_far * dist^2 < float_max
 			// => dist < sqrt(float_max) / (m_near * m_far)
-			PR_ASSERT(PR_DBG, m_near * m_far > 0, "");
-			return Sqrt(maths::float_max) / (m_near * m_far);
+			assert(m_near * m_far > 0);
+			float const sqrt_float_max = 1.84467435239537E+19f;
+			return sqrt_float_max / (m_near * m_far);
 		}
 
 		// Return the minimum allowed value for 'FocusDist'
@@ -433,14 +434,14 @@ namespace pr
 			// Abs(N - F) == Abs((m_near * dist) - (m_far * dist)) > float_min
 			//       == dist * Abs(m_near - m_far) > float_min
 			//       == dist > float_min / Abs(m_near - m_far);
-			PR_ASSERT(PR_DBG, m_near < m_far, "");
+			assert(m_near < m_far);
 			return maths::float_min / Min(Abs(m_near - m_far), 1.0f);
 		}
 
 		// Set the distance to the focus point
 		void FocusDist(float dist)
 		{
-			PR_ASSERT(PR_DBG, pr::IsFinite(dist) && dist >= 0.0f, "'dist' should not be negative");
+			assert("'dist' should not be negative" && pr::IsFinite(dist) && dist >= 0.0f);
 			m_moved |= dist != m_focus_dist;
 			m_base_focus_dist = m_focus_dist = Clamp(dist, FocusDistMin(), FocusDistMax());
 		}
