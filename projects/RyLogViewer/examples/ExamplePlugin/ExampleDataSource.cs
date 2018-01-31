@@ -11,7 +11,7 @@ using RyLogViewer;
 namespace RyLogViewer.ExamplePlugin
 {
 	/// <summary>A data source that reads a file as hex formatted text</summary>
-	[pr.common.Plugin(typeof(ICustomLogDataSource))]
+	[Rylogic.Common.Plugin(typeof(ICustomLogDataSource))]
 	public class ExampleDataSource :ICustomLogDataSource
 	{
 		private const int TextBytesPerFileByte = 3; // Each byte is represented as 'XX '

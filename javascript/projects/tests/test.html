@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+<head>
+	<title>Rylogic Test</title>
+	<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+	<script src="..\..\lib\rylogic.js" type="text/javascript"></script>
+	<script type="text/javascript">
+
+		function Run()
+		{
+			// Get the document element to draw on
+			let canvas1 = document.getElementById("canvas");
+			let canvas2 = canvas1.cloneNode(false);
+			canvas1.parentNode.insertBefore(canvas2, canvas1);
+			canvas2.style.position = "absolute";
+			canvas2.style.left = canvas1.style.left;
+			canvas2.style.top = canvas1.style.top;
+
+			var gfx1 = canvas1.getContext("2d");
+			var gfx2 = canvas2.getContext("2d");
+			
+			var func = function (c)
+			{
+				if (c === undefined)
+					console.log("undef");
+			}
+			func.get5 = function() { return 5; };
+
+			func();
+			console.log(func.get5());
+		};
+</script>
+</head>
+<body onload="Run();">
+	<canvas width="1000" height="500" id="canvas" style="border: none;"></canvas>
+</body>
+</html>

@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{599D9118-2445-476A-9877-060417FE5FA5}</ProjectGuid>
     <RootNamespace>scintilla</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -92,16 +92,17 @@
     </Lib>
     <PreBuildEvent>
       <Command>cd $(ProjectDir)scripts
-$(ProjectDir)scripts\LexGen.py
-$(ProjectDir)scripts\HFacer.py
+py $(ProjectDir)scripts\LexGen.py
+py $(ProjectDir)scripts\HFacer.py
 </Command>
     </PreBuildEvent>
     <PostBuildEvent />
     <Link>
       <AdditionalDependencies>imm32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent />
     <PostBuildEvent>
-      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
+      <Command>py ..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -119,16 +120,17 @@ $(ProjectDir)scripts\HFacer.py
     </Lib>
     <PreBuildEvent>
       <Command>cd $(ProjectDir)scripts
-$(ProjectDir)scripts\LexGen.py
-$(ProjectDir)scripts\HFacer.py
+py $(ProjectDir)scripts\LexGen.py
+py $(ProjectDir)scripts\HFacer.py
 </Command>
     </PreBuildEvent>
     <PostBuildEvent />
     <Link>
       <AdditionalDependencies>imm32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent />
     <PostBuildEvent>
-      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
+      <Command>py ..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -143,8 +145,8 @@ $(ProjectDir)scripts\HFacer.py
     <PostBuildEvent />
     <PreBuildEvent>
       <Command>cd $(ProjectDir)scripts
-$(ProjectDir)scripts\LexGen.py
-$(ProjectDir)scripts\HFacer.py
+py $(ProjectDir)scripts\LexGen.py
+py $(ProjectDir)scripts\HFacer.py
 </Command>
     </PreBuildEvent>
     <PostBuildEvent />
@@ -154,8 +156,9 @@ $(ProjectDir)scripts\HFacer.py
     <Link>
       <AdditionalDependencies>imm32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent />
     <PostBuildEvent>
-      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
+      <Command>py ..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -170,16 +173,17 @@ $(ProjectDir)scripts\HFacer.py
     <PostBuildEvent />
     <PreBuildEvent>
       <Command>cd $(ProjectDir)scripts
-$(ProjectDir)scripts\LexGen.py
-$(ProjectDir)scripts\HFacer.py
+py $(ProjectDir)scripts\LexGen.py
+py $(ProjectDir)scripts\HFacer.py
 </Command>
     </PreBuildEvent>
     <PostBuildEvent />
     <Link>
       <AdditionalDependencies>imm32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent />
     <PostBuildEvent>
-      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
+      <Command>py ..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

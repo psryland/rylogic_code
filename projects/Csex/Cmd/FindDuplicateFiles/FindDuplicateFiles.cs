@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
-using pr.common;
-using pr.extn;
-using pr.gfx;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Graphix;
 
 namespace Csex
 {
@@ -67,7 +67,7 @@ namespace Csex
 			if (!m_interactive)
 				return RunCmdline();
 
-			pr.win32.Win32.FreeConsole();
+			Rylogic.Windows32.Win32.FreeConsole();
 			using (var dlg = new FindDuplicateFilesUI())
 				dlg.ShowDialog();
 
@@ -100,11 +100,11 @@ namespace Csex
 				Console.WriteLine("Finding Duplicates");
 				foreach (var finfo in newfiles)
 				{
-					Path_.FileData original;
+					Shell_.FileData original;
 					if (existing.TryGetValue(finfo.Key, out original))
 					{
 						if (m_show_dups)
-							Console.WriteLine("{0} is a duplicate of {1}".Fmt(finfo.Value.FullPath, original.FullPath));
+							Console.WriteLine($"{finfo.Value.FullPath} is a duplicate of {original.FullPath}");
 
 						if (lst != null)
 							lst.WriteLine(finfo.Value.FullPath);
@@ -131,12 +131,12 @@ namespace Csex
 		}
 
 		/// <summary>Build a map of the files in 'root'</summary>
-		private Dictionary<string,Path_.FileData> BuildMap(string root, string ignore_patn)
+		private Dictionary<string, Shell_.FileData> BuildMap(string root, string ignore_patn)
 		{
 			var dir = root.ToLowerInvariant();
 
-			var map = new Dictionary<string,Path_.FileData>();
-			foreach (var finfo in Path_.EnumFileSystem(root, search_flags:SearchOption.AllDirectories))
+			var map = new Dictionary<string, Shell_.FileData>();
+			foreach (var finfo in Shell_.EnumFileSystem(root, search_flags:SearchOption.AllDirectories))
 			{
 				var d = (Path.GetDirectoryName(finfo.FullPath) ?? string.Empty).ToLowerInvariant();
 				if (d != dir)
@@ -153,10 +153,10 @@ namespace Csex
 				{
 					var k = MakeKey(finfo);
 
-					Path_.FileData existing = map.TryGetValue(k, out existing) ? existing : null;
+					Shell_.FileData existing = map.TryGetValue(k, out existing) ? existing : null;
 					if (existing != null)
 					{
-						Console.WriteLine("Existing duplicate found:\n  {0}\n  {1}\n".Fmt(finfo.FullPath, existing.FullPath));
+						Console.WriteLine($"Existing duplicate found:\n  {finfo.FullPath}\n  {existing.FullPath}\n");
 						continue;
 					}
 
@@ -165,19 +165,19 @@ namespace Csex
 				}
 				catch (Exception ex)
 				{
-					Console.WriteLine("Failed to add {0} to the map".Fmt(finfo.FullPath));
-					Console.WriteLine("Reason: {0}".Fmt(ex.Message));
+					Console.WriteLine($"Failed to add {finfo.FullPath} to the map");
+					Console.WriteLine($"Reason: {ex.Message}");
 				}
 			}
 
 			return map;
 		}
 
-		private string MakeKey(Path_.FileData finfo)
+		private string MakeKey(Shell_.FileData finfo)
 		{
 			var fname = finfo.FileName.ToLowerInvariant();
 
-			// Special case jpgs
+			// Special case JPGs
 			if (m_jpg_date_taken && Exif.IsJpgFile(finfo.FullPath))
 			{
 				using (var fs = new FileStream(finfo.FullPath, FileMode.Open, FileAccess.Read, FileShare.Read))

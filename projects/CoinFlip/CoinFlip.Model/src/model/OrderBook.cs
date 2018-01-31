@@ -3,9 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using pr.container;
-using pr.extn;
-using pr.util;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {

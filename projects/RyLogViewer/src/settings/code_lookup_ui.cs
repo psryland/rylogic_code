@@ -5,9 +5,9 @@ using System.Linq;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using RyLogViewer.Properties;
-using pr.extn;
-using pr.gui;
-using pr.container;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Container;
 
 namespace RyLogViewer
 {

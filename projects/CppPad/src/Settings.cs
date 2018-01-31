@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Xml.Linq;
-using pr.common;
-using pr.extn;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace CppPad
 {
@@ -48,7 +48,7 @@ namespace CppPad
 			get { return get<MSVCCompilerSettings>(nameof(MSVC)); }
 			set
 			{
-				if (value == null) throw new ArgumentNullException("Setting '{0}' cannot be null".Fmt(nameof(Settings.MSVC)));
+				if (value == null) throw new ArgumentNullException($"Setting '{nameof(MSVC)}' cannot be null");
 				set(nameof(MSVC), value);
 			}
 		}

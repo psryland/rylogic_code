@@ -245,7 +245,7 @@ namespace Rylogic.Common
 			get
 			{
 				var ex = ValidateExpr();
-				return ex == null ? Regex.ToString() : "Expression invalid - {0}".Fmt(ex.Message);
+				return ex == null ? Regex.ToString() : $"Expression invalid - {ex.Message}";
 			}
 		}
 
@@ -387,7 +387,7 @@ namespace Rylogic.Common
 		/// <summary>Expression</summary>
 		public override string ToString()
 		{
-			return "{0}: {1}".Fmt(PatnType, Expr);
+			return $"{PatnType}: {Expr}";
 		}
 
 		#region Equals

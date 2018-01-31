@@ -343,7 +343,7 @@
     <ProjectGuid>{64F62186-4F86-4CD6-AE3A-3C0E311BB2A6}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>unittests</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -429,10 +429,10 @@
       </Outputs>
     </CustomBuildStep>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\projects\unittests\pre_build.py $(ProjectDir)..\projects\unittests $(PlatformTarget) $(Configuration)</Command>
+      <Command>py $(ProjectDir)..\projects\unittests\pre_build.py $(ProjectDir)..\projects\unittests $(PlatformTarget) $(Configuration)</Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>$(ProjectDir)..\projects\unittests\run_tests.py $(TargetPath)</Command>
+      <Command>py $(ProjectDir)..\projects\unittests\run_tests.py $(TargetPath)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -450,7 +450,7 @@
     </Link>
     <PostBuildEvent />
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\projects\unittests\pre_build.py $(ProjectDir)..\projects\unittests $(PlatformTarget) $(Configuration)</Command>
+      <Command>py $(ProjectDir)..\projects\unittests\pre_build.py $(ProjectDir)..\projects\unittests $(PlatformTarget) $(Configuration)</Command>
     </PreBuildEvent>
     <CustomBuildStep>
       <Command>
@@ -463,7 +463,7 @@
       </Outputs>
     </CustomBuildStep>
     <PostBuildEvent>
-      <Command>$(ProjectDir)..\projects\unittests\run_tests.py $(TargetPath)</Command>
+      <Command>py $(ProjectDir)..\projects\unittests\run_tests.py $(TargetPath)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -492,10 +492,10 @@
       </Outputs>
     </CustomBuildStep>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\projects\unittests\pre_build.py $(ProjectDir)..\projects\unittests $(PlatformTarget) $(Configuration)</Command>
+      <Command>py $(ProjectDir)..\projects\unittests\pre_build.py $(ProjectDir)..\projects\unittests $(PlatformTarget) $(Configuration)</Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>$(ProjectDir)..\projects\unittests\run_tests.py $(TargetPath)</Command>
+      <Command>py $(ProjectDir)..\projects\unittests\run_tests.py $(TargetPath)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -524,10 +524,10 @@
       </Outputs>
     </CustomBuildStep>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\projects\unittests\pre_build.py $(ProjectDir)..\projects\unittests $(PlatformTarget) $(Configuration)</Command>
+      <Command>py $(ProjectDir)..\projects\unittests\pre_build.py $(ProjectDir)..\projects\unittests $(PlatformTarget) $(Configuration)</Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>$(ProjectDir)..\projects\unittests\run_tests.py $(TargetPath)</Command>
+      <Command>py $(ProjectDir)..\projects\unittests\run_tests.py $(TargetPath)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

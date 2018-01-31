@@ -5,13 +5,13 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using System.Windows.Threading;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.gui;
-using pr.maths;
-using pr.util;
-using pr.view3d;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Maths;
+using Rylogic.Utility;
+using Rylogic.Graphix;
 
 namespace LDraw
 {

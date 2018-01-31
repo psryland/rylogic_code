@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Windows.Forms;
-using pr.extn;
+using Rylogic.Extn;
 
 namespace Rylogic.VSExtension
 {

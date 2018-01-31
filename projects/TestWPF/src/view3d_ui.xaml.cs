@@ -2,9 +2,9 @@
 using System.Drawing;
 using System.Windows;
 using System.Windows.Forms;
-using pr.maths;
-using pr.util;
-using pr.view3d;
+using Rylogic.Maths;
+using Rylogic.Utility;
+using Rylogic.Graphix;
 
 namespace TestWPF
 {

@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using pr.common;
-using pr.maths;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {
@@ -165,7 +165,7 @@ namespace CoinFlip
 		/// <summary>The inverse of the price to make the trade at (in CoinIn/CoinOut)</summary>
 		public Unit<decimal> PriceInv
 		{
-			get { return Maths.Div(1m._(), Price, 0m / 1m._(Price)); }
+			get { return Math_.Div(1m._(), Price, 0m / 1m._(Price)); }
 		}
 
 		/// <summary>The effective price of this trade after fees (in Quote/Base)</summary>
@@ -295,8 +295,8 @@ namespace CoinFlip
 				rhs != null &&
 				TradeType == rhs.TradeType &&
 				Pair == rhs.Pair &&
-				Maths.Abs(PriceQ2B - rhs.PriceQ2B) < Misc.PriceEpsilon._(PriceQ2B) &&
-				Maths.Abs(VolumeBase - rhs.VolumeBase) < Misc.VolumeEpsilon._(VolumeBase);
+				Math_.Abs(PriceQ2B - rhs.PriceQ2B) < Misc.PriceEpsilon._(PriceQ2B) &&
+				Math_.Abs(VolumeBase - rhs.VolumeBase) < Misc.VolumeEpsilon._(VolumeBase);
 		}
 		public override bool Equals(object obj)
 		{

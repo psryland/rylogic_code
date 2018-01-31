@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
+using Rylogic.Common;
+using Rylogic.Extn;
 
 namespace Csex
 {
@@ -63,48 +63,48 @@ namespace Csex
 			else
 			{
 				if (ex != null) Console.WriteLine("Error parsing command line: {0}", ex.Message);
-				Console.WriteLine(Str.Build(
-				"***********************************************************\n",
-				" --- Commandline Extensions - Copyright (c) Rylogic 2012 --- \n",
-				"***********************************************************\n",
-				"                                         Version: "+VersionString+"\n",
-				"  Syntax: Csex -command [parameters]\n",
-				"\n",
-				"  Commands:\n",
-				"    -gencode\n",
-				"        Generates an activation code\n",
-				"\n",
-				"    -signfile\n",
-				"        Sign a file using RSA\n",
-				"\n",
-				"    -find_assembly_conflicts\n",
-				"        Recursively checks assemblies for version conflicts in their dependent assemblies\n",
-				"\n",
-				"    -expand_template\n",
-				"       Expand specific comments in a markup language (xml,html) file\n",
-				"\n",
-				"    -PatternUI\n",
-				"       Show the Regex pattern testing ui\n",
-				"\n",
-				"    -find_duplicate_files\n",
-				"       Find duplicate files within a directory tree\n",
-				"\n",
-				"    -showexif\n",
-				"       Display Exif info for a jpg file\n",
-				"\n",
-				"    -showtree\n",
-				"       Display a tree grid view of a text file containing whitespace indenting\n",
-				"\n",
-				"    -showbase64\n",
-				"       Display a tool for encoding/decoding base64 text\n",
-				"\n",
-				"    -xmledit\n",
-				"       Display a tool for editing XML files\n",
-				"\n",
+				Console.WriteLine(
+				"***********************************************************\n"+
+				" --- Commandline Extensions - Copyright (c) Rylogic 2012 --- \n"+
+				"***********************************************************\n"+
+				"                                         Version: "+VersionString+"\n"+
+				"  Syntax: Csex -command [parameters]\n"+
+				"\n"+
+				"  Commands:\n"+
+				"    -gencode\n"+
+				"        Generates an activation code\n"+
+				"\n"+
+				"    -signfile\n"+
+				"        Sign a file using RSA\n"+
+				"\n"+
+				"    -find_assembly_conflicts\n"+
+				"        Recursively checks assemblies for version conflicts in their dependent assemblies\n"+
+				"\n"+
+				"    -expand_template\n"+
+				"       Expand specific comments in a markup language (xml,html) file\n"+
+				"\n"+
+				"    -PatternUI\n"+
+				"       Show the Regex pattern testing ui\n"+
+				"\n"+
+				"    -find_duplicate_files\n"+
+				"       Find duplicate files within a directory tree\n"+
+				"\n"+
+				"    -showexif\n"+
+				"       Display Exif info for a jpg file\n"+
+				"\n"+
+				"    -showtree\n"+
+				"       Display a tree grid view of a text file containing whitespace indenting\n"+
+				"\n"+
+				"    -showbase64\n"+
+				"       Display a tool for encoding/decoding base64 text\n"+
+				"\n"+
+				"    -xmledit\n"+
+				"       Display a tool for editing XML files\n"+
+				"\n"+
 				// NEW_COMMAND - add a help string
-				"\n",
-				"  Type Cex -command -help for help on a particular command\n",
-				""));
+				"\n"+
+				"  Type Cex -command -help for help on a particular command\n"+
+				"");
 			}
 		}
 

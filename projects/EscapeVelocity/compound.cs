@@ -5,10 +5,10 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
-using pr.container;
-using pr.extn;
-using pr.maths;
-using pr.util;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace EscapeVelocity
 {
@@ -160,8 +160,8 @@ namespace EscapeVelocity
 			// those combinations will have a higher enthalpy and are created by calling Compound(e1,e1,consts) or Compound(e2,e2,consts).
 
 			// This is the ratio of elements needed to create a stable molecule
-			Count1 = Elem2.ValenceHoles     / Maths.GreatestCommonFactor(Elem1.ValenceElectrons, Elem2.ValenceHoles);
-			Count2 = Elem1.ValenceElectrons / Maths.GreatestCommonFactor(Elem1.ValenceElectrons, Elem2.ValenceHoles);
+			Count1 = Elem2.ValenceHoles     / Math_.GreatestCommonFactor(Elem1.ValenceElectrons, Elem2.ValenceHoles);
+			Count2 = Elem1.ValenceElectrons / Math_.GreatestCommonFactor(Elem1.ValenceElectrons, Elem2.ValenceHoles);
 			int common = Math.Min(Count1, Count2);
 
 			// The valence electrons to be used
@@ -307,9 +307,9 @@ namespace EscapeVelocity
 			// -Stronger bonds = higher density
 			// -More Ionic = higher density
 			// -Smaller atomic radii = higher density
-			var norm_ionicity = Maths.Frac(consts.MinElectronegativity, Ionicity, consts.MaxElectronegativity);
+			var norm_ionicity = Math_.Frac(consts.MinElectronegativity, Ionicity, consts.MaxElectronegativity);
 
-			var mass_adj = Maths.Frac(1, MolarMass / (Count1+Count2), consts.MaxMolarMass); // normalised average molar mass
+			var mass_adj = Math_.Frac(1, MolarMass / (Count1+Count2), consts.MaxMolarMass); // normalised average molar mass
 			var ionicity_adj = 1.0 + 0.5 * Math.Pow(norm_ionicity, 8); // no significant ionicity until about 0.7
 			//var bond_adj = dominant_bond.Strength;
 			//var radii = Elem1.ValenceOrbitalRadius + Elem2.ValenceOrbitalRadius;
@@ -317,12 +317,12 @@ namespace EscapeVelocity
 			var scaler = mass_adj * ionicity_adj;
 
 			Debug.Assert(scaler >= 0 && scaler < 10);
-			m_solid_density = Maths.Lerp(consts.MinSolidMaterialDensity, consts.MaxSolidMaterialDensity, scaler);
+			m_solid_density = Math_.Lerp(consts.MinSolidMaterialDensity, consts.MaxSolidMaterialDensity, scaler);
 			
 
 			// The liquid_density0 value can only be lower than the solid density when
 			// the Compound is strongly ionic such that it forms a crystals
-			var ionicity_solid_density_scaler = 0.1 * Maths.Max(0, norm_ionicity - 0.75);
+			var ionicity_solid_density_scaler = 0.1 * Math_.Max(0, norm_ionicity - 0.75);
 			m_liquid_density0 = m_solid_density * rnd.Double(1.0,1.0-ionicity_solid_density_scaler);
 			m_liquid_density1 = m_liquid_density0 * rnd.DoubleC(0.8,0.0); // at boiling point, density is roughly 20% less
 			
@@ -389,8 +389,8 @@ namespace EscapeVelocity
 			else if (e1_known || e2_known)
 			{
 				var elem  = e1_known ? Elem1 : Elem2;
-				ScientificName = "{0}-??".Fmt(elem.Name.Fullname);
-				SymbolicName = "{0}-??".Fmt(elem.Name.Symbol);
+				ScientificName = $"{elem.Name.Fullname}-??";
+				SymbolicName   = $"{elem.Name.Symbol}-??";
 			}
 			else
 			{
@@ -415,8 +415,8 @@ namespace EscapeVelocity
 			case EPhase.Gas: return 0.0;
 			case EPhase.Solid: return m_solid_density;
 			case EPhase.Liquid:
-				var f = Maths.Frac(MeltingPoint, temperature, BoilingPoint);
-				return Maths.Lerp(m_liquid_density0, m_liquid_density1, f);
+				var f = Math_.Frac(MeltingPoint, temperature, BoilingPoint);
+				return Math_.Lerp(m_liquid_density0, m_liquid_density1, f);
 			}
 		}
 

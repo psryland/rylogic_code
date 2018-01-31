@@ -3,12 +3,12 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
-using pr.extn;
-using pr.gfx;
-using pr.gui;
-using pr.maths;
-using pr.util;
-using pr.view3d;
+using Rylogic.Extn;
+using Rylogic.Graphix;
+using Rylogic.Gui;
+using Rylogic.Maths;
+using Rylogic.Utility;
+using ComboBox = Rylogic.Gui.ComboBox;
 
 namespace CoinFlip
 {
@@ -32,7 +32,7 @@ namespace CoinFlip
 		private ValueBox m_tb_volume_out;
 		private Label m_lbl_desc_in;
 		private Label m_lbl_exchange;
-		private pr.gui.ComboBox m_cb_exchange;
+		private ComboBox m_cb_exchange;
 		private Label m_lbl_available_volume_in;
 		private Button m_btn_all_in;
 		private Label m_lbl_order_type;
@@ -45,7 +45,7 @@ namespace CoinFlip
 		private Panel m_panel_row3_left;
 		private Panel m_panel_row4;
 		private Panel m_panel_row1;
-		private pr.gui.ComboBox m_cb_trade_direction;
+		private ComboBox m_cb_trade_direction;
 		private Label m_lbl_trade_type;
 		private Label m_lbl_desc_out;
 		private Label m_lbl_desc_errors;
@@ -294,7 +294,7 @@ namespace CoinFlip
 		{
 			var available_in = AvailableIn;
 			var validate = Trade.Validate(additional_balance_in:AdditionalIn);
-			var vol_in_pc = Maths.Clamp(Maths.Div((decimal)Trade.VolumeIn * 100m, (decimal)available_in, 0m), 0m, 100m);
+			var vol_in_pc = Math_.Clamp(Math_.Div((decimal)Trade.VolumeIn * 100m, (decimal)available_in, 0m), 0m, 100m);
 
 			// Update fields
 			m_tb_price_q2b.Value = (decimal)Trade.PriceQ2B;
@@ -502,15 +502,15 @@ namespace CoinFlip
 					m_ui.Trade.TradeType == ETradeType.B2Q ? m_ui.Chart.ChartSettings.BidColour :
 					throw new Exception("Unknown trade type"));
 
-				var ldr = Str.Build(
-					$"*Group trade ",
-					$"{{",
-					$"  *Line gripper {col} {{ {1f - GripperWidthFrac} 0 0  1 0 0 *Width {{{GripperHeight}}} }}",
-					$"  *Line level {col} {{0 0 0 1 0 0}}",
-					$"  *Line halo {col.Alpha(0.25f)} {{0 0 0 1 0 0 *Width {{{GripperHeight * 0.75f}}} *Hidden }}",
-					$"  *Font{{*Name{{\"tahoma\"}} *Size{{8}} *Weight{{500}} *Colour{{FFFFFFFF}}}}", 
-					$"  *Text price {{ \"{price.ToString("G8",false)}\" *Billboard *Anchor {{+1 0}} *BackColour {{{col}}} *o2w{{*pos{{1 0 0}}}} *NoZTest }}",
-					$"}}");
+				var ldr =
+					$"*Group trade "+
+					$"{{"+
+					$"  *Line gripper {col} {{ {1f - GripperWidthFrac} 0 0  1 0 0 *Width {{{GripperHeight}}} }}"+
+					$"  *Line level {col} {{0 0 0 1 0 0}}"+
+					$"  *Line halo {col.Alpha(0.25f)} {{0 0 0 1 0 0 *Width {{{GripperHeight * 0.75f}}} *Hidden }}"+
+					$"  *Font{{*Name{{\"tahoma\"}} *Size{{8}} *Weight{{500}} *Colour{{FFFFFFFF}}}}"+
+					$"  *Text price {{ \"{price.ToString("G8",false)}\" *Billboard *Anchor {{+1 0}} *BackColour {{{col}}} *o2w{{*pos{{1 0 0}}}} *NoZTest }}"+
+					$"}}";
 
 				Gfx = new View3d.Object(ldr, false, Id, null);
 			}
@@ -546,7 +546,7 @@ namespace CoinFlip
 				var client_pt = Chart.ChartToClient(new PointF(chart_pt.X, price));
 
 				// If the point is within tolerance of the gripper
-				if (Maths.Frac(Chart.XAxis.Min, chart_pt.X, Chart.XAxis.Max) > 1.0f - GripperWidthFrac &&
+				if (Math_.Frac(Chart.XAxis.Min, chart_pt.X, Chart.XAxis.Max) > 1.0f - GripperWidthFrac &&
 					Math.Abs(client_pt.Y - client_point.Y) < GripperHeight)
 					return new ChartControl.HitTestResult.Hit(this, new PointF(chart_pt.X, price), null);
 
@@ -604,23 +604,23 @@ namespace CoinFlip
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_il_buttons = new System.Windows.Forms.ImageList(this.components);
 			this.m_btn_cancel = new System.Windows.Forms.Button();
-			this.m_tb_price_q2b = new pr.gui.ValueBox();
+			this.m_tb_price_q2b = new Rylogic.Gui.ValueBox();
 			this.m_lbl_order_price = new System.Windows.Forms.Label();
 			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
 			this.m_lbl_volume_in = new System.Windows.Forms.Label();
-			this.m_tb_volume_in = new pr.gui.ValueBox();
+			this.m_tb_volume_in = new Rylogic.Gui.ValueBox();
 			this.m_lbl_volume_out = new System.Windows.Forms.Label();
-			this.m_tb_volume_out = new pr.gui.ValueBox();
+			this.m_tb_volume_out = new Rylogic.Gui.ValueBox();
 			this.m_lbl_desc_in = new System.Windows.Forms.Label();
 			this.m_lbl_exchange = new System.Windows.Forms.Label();
-			this.m_cb_exchange = new pr.gui.ComboBox();
+			this.m_cb_exchange = new Rylogic.Gui.ComboBox();
 			this.m_lbl_available_volume_in = new System.Windows.Forms.Label();
 			this.m_btn_all_in = new System.Windows.Forms.Button();
 			this.m_lbl_order_type = new System.Windows.Forms.Label();
 			this.m_tb_order_type = new System.Windows.Forms.TextBox();
 			this.m_table0 = new System.Windows.Forms.TableLayoutPanel();
 			this.m_panel_row1 = new System.Windows.Forms.Panel();
-			this.m_cb_trade_direction = new pr.gui.ComboBox();
+			this.m_cb_trade_direction = new Rylogic.Gui.ComboBox();
 			this.m_lbl_trade_type = new System.Windows.Forms.Label();
 			this.m_panel_row3_right = new System.Windows.Forms.Panel();
 			this.m_panel_row2_right = new System.Windows.Forms.Panel();

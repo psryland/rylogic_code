@@ -40,6 +40,33 @@ namespace Rylogic.Extn
 		/// <summary>Resolve a type name to a type</summary>
 		public static Type Resolve(string name, bool throw_on_error = true)
 		{
+			// Temporary conversion from namespace 'pr' to namespace 'Rylogic'
+			if (name.StartsWith("pr."))
+			{
+				name = Replace("pr.attrib."    , "Rylogic.Attrib."   );
+				name = Replace("pr.audio."     , "Rylogic.Audio."    );
+				name = Replace("pr.common."    , "Rylogic.Common."   );
+				name = Replace("pr.container." , "Rylogic.Container.");
+				name = Replace("pr.crypt."     , "Rylogic.Crypt."    );
+				name = Replace("pr.db."        , "Rylogic.Db."       );
+				name = Replace("pr.extn."      , "Rylogic.Extn."     );
+				name = Replace("pr.gfx."       , "Rylogic.Graphix."  );
+				name = Replace("pr.gui."       , "Rylogic.Gui."      );
+				name = Replace("pr.inet."      , "Rylogic.INet."     );
+				name = Replace("pr.ldr."       , "Rylogic.LDraw."    );
+				name = Replace("pr.maths."     , "Rylogic.Maths."    );
+				name = Replace("pr.scintilla." , "Rylogic.Scintilla.");
+				name = Replace("pr.stream."    , "Rylogic.Streams."  );
+				name = Replace("pr.util."      , "Rylogic.Utility."  );
+				name = Replace("pr.view3d."    , "Rylogic.Graphix."  );
+				name = Replace("pr.win32."     , "Rylogic.Windows32.");
+				string Replace(string old , string nue)
+				{
+					return name.StartsWith(old) ? name.Replace(old, nue) : name;
+				}
+			}
+			// End temporary
+
 			return Type.GetType(name, null
 				,(assembly,type_name,ignore_case) =>
 					{

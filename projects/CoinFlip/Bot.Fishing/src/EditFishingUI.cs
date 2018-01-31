@@ -2,11 +2,10 @@
 using System.Linq;
 using System.Windows.Forms;
 using CoinFlip;
-using pr.common;
-using pr.extn;
-using pr.gui;
-using pr.util;
-using ComboBox = pr.gui.ComboBox;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Utility;
+using ComboBox = Rylogic.Gui.ComboBox;
 
 namespace Bot.Fishing
 {
@@ -235,14 +234,14 @@ namespace Bot.Fishing
 			{
 				// Show balances
 				var pair = TradePair.Parse(Pair);
-				m_tb_balances0.Text = Str.Build(
-					$"{Exch0.Name}\r\n",
-					$"   {Exch0.Balance.Get(pair.Base)[Bot.Fund]?.Available ?? 0m} {pair.Base}\r\n",
-					$"   {Exch0.Balance.Get(pair.Quote)[Bot.Fund]?.Available ?? 0m} {pair.Quote}");
-				m_tb_balances1.Text = Str.Build(
-					$"{Exch1.Name}\r\n",
-					$"   {Exch1.Balance.Get(pair.Base)[Bot.Fund]?.Available ?? 0m} {pair.Base}\r\n",
-					$"   {Exch1.Balance.Get(pair.Quote)[Bot.Fund]?.Available ?? 0m} {pair.Quote}");
+				m_tb_balances0.Text =
+					$"{Exch0.Name}\r\n"+
+					$"   {Exch0.Balance.Get(pair.Base)[Bot.Fund]?.Available ?? 0m} {pair.Base}\r\n"+
+					$"   {Exch0.Balance.Get(pair.Quote)[Bot.Fund]?.Available ?? 0m} {pair.Quote}";
+				m_tb_balances1.Text =
+					$"{Exch1.Name}\r\n"+
+					$"   {Exch1.Balance.Get(pair.Base)[Bot.Fund]?.Available ?? 0m} {pair.Base}\r\n"+
+					$"   {Exch1.Balance.Get(pair.Quote)[Bot.Fund]?.Available ?? 0m} {pair.Quote}";
 
 				// Update Max volume limits
 				m_lbl_volume_limit_base.Text = $"Max {pair.Base}:";
@@ -282,14 +281,14 @@ namespace Bot.Fishing
 				VolumeLimitB >= 0 &&
 				VolumeLimitQ >= 0 &&
 				PriceOffset >= min_price_offset;
-			m_lbl_info.Text = Str.Build(
-				!m_tb_price_offset.Valid       ? "Price offset is invalid\r\n" : string.Empty,
-				!m_tb_volume_limit_base.Valid  ? "Base volume limit is invalid\r\n" : string.Empty,
-				!m_tb_volume_limit_quote.Valid ? "Quote volume limit is invalid\r\n" : string.Empty,
-				!FishingData.Valid             ? FishingData.ReasonInvalid : string.Empty,
-				VolumeLimitB < 0               ? "Volume limit (base) is invalid\r\n"  : string.Empty,
-				VolumeLimitQ < 0               ? "Volume limit (quote) is invalid\r\n" : string.Empty,
-				PriceOffset < min_price_offset ? $"Price offset is less than the sum of transaction fees ({min_price_offset})\r\n" : string.Empty);
+			m_lbl_info.Text =
+				(!m_tb_price_offset.Valid       ? "Price offset is invalid\r\n" : string.Empty)+
+				(!m_tb_volume_limit_base.Valid  ? "Base volume limit is invalid\r\n" : string.Empty)+
+				(!m_tb_volume_limit_quote.Valid ? "Quote volume limit is invalid\r\n" : string.Empty)+
+				(!FishingData.Valid             ? FishingData.ReasonInvalid : string.Empty)+
+				(VolumeLimitB < 0               ? "Volume limit (base) is invalid\r\n"  : string.Empty)+
+				(VolumeLimitQ < 0               ? "Volume limit (quote) is invalid\r\n" : string.Empty)+
+				(PriceOffset < min_price_offset ? $"Price offset is less than the sum of transaction fees ({min_price_offset})\r\n" : string.Empty);
 		}
 
 		/// <summary>Handle the exchanges being changed</summary>
@@ -326,22 +325,22 @@ namespace Bot.Fishing
 			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(EditFishingUI));
 			this.m_lbl_exch0 = new System.Windows.Forms.Label();
-			this.m_cb_exch0 = new pr.gui.ComboBox();
+			this.m_cb_exch0 = new Rylogic.Gui.ComboBox();
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_btn_cancel = new System.Windows.Forms.Button();
 			this.m_lbl_exch1 = new System.Windows.Forms.Label();
-			this.m_cb_exch1 = new pr.gui.ComboBox();
+			this.m_cb_exch1 = new Rylogic.Gui.ComboBox();
 			this.m_lbl_buy = new System.Windows.Forms.Label();
-			this.m_cb_pair = new pr.gui.ComboBox();
+			this.m_cb_pair = new Rylogic.Gui.ComboBox();
 			this.m_tb_balances0 = new System.Windows.Forms.TextBox();
 			this.m_tb_balances1 = new System.Windows.Forms.TextBox();
 			this.m_table1 = new System.Windows.Forms.TableLayoutPanel();
-			this.m_tb_price_offset = new pr.gui.ValueBox();
+			this.m_tb_price_offset = new Rylogic.Gui.ValueBox();
 			this.m_lbl_price_offset = new System.Windows.Forms.Label();
 			this.m_lbl_volume_limit_base = new System.Windows.Forms.Label();
 			this.m_lbl_volume_limit_quote = new System.Windows.Forms.Label();
-			this.m_tb_volume_limit_base = new pr.gui.ValueBox();
-			this.m_tb_volume_limit_quote = new pr.gui.ValueBox();
+			this.m_tb_volume_limit_base = new Rylogic.Gui.ValueBox();
+			this.m_tb_volume_limit_quote = new Rylogic.Gui.ValueBox();
 			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
 			this.m_chk_b2q = new System.Windows.Forms.CheckBox();
 			this.m_chk_q2b = new System.Windows.Forms.CheckBox();

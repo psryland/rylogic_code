@@ -1400,7 +1400,7 @@ namespace Rylogic.UnitTests
 
 				var sb = new StringBuilder();
 				foreach (var x in double_.Range(pd.XRange, 0.1))
-					sb.AppendLine("{0},{1}".Fmt(x, pd[x]));
+					sb.AppendLine($"{x},{pd[x]}");
 				sb.ToFile(@"P:\dump\test.csv");
 
 				{

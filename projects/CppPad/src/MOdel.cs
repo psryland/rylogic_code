@@ -6,10 +6,9 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.util;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace CppPad
 {
@@ -20,9 +19,9 @@ namespace CppPad
 		public const string SourceFilePattern = @"(^.*\.cpp$)|(^.*\.c$)";
 		public const string HeaderFilePattern = @"(^.*\.h$)";
 
-		public readonly static string CodeFileFilter   = Util.FileDialogFilter("C++ Source Files", "*.cpp", "C Source Files", "*.c", "Header Files", "*.h");
-		public readonly static string SourceFileFilter = Util.FileDialogFilter("C++ Source Files", "*.cpp", "C Source Files", "*.c");
-		public readonly static string HeaderFileFilter = Util.FileDialogFilter("Header Files", "*.h");
+		public readonly static string CodeFileFilter   = Util2.FileDialogFilter("C++ Source Files", "*.cpp", "C Source Files", "*.c", "Header Files", "*.h");
+		public readonly static string SourceFileFilter = Util2.FileDialogFilter("C++ Source Files", "*.cpp", "C Source Files", "*.c");
+		public readonly static string HeaderFileFilter = Util2.FileDialogFilter("Header Files", "*.h");
 
 		public Model(Settings settings, MainUI owner)
 		{
@@ -136,7 +135,7 @@ namespace CppPad
 			using (compiler)
 			{
 				// Read the source files from the project directory
-				var files = Path_.EnumFileSystem(ProjectDirectory, SearchOption.TopDirectoryOnly, SourceFilePattern, RegexOptions.IgnoreCase)
+				var files = Shell_.EnumFileSystem(ProjectDirectory, SearchOption.TopDirectoryOnly, SourceFilePattern, RegexOptions.IgnoreCase)
 					.Select(x => x.FullPath).ToArray();
 
 				// Nothing to build, done...

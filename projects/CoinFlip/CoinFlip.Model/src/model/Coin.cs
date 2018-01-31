@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using pr.util;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {

@@ -6,9 +6,9 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Xml.Linq;
-using pr.common;
-using pr.extn;
-using pr.gui;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Gui;
 
 namespace RyLogViewer
 {

@@ -3,14 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Bitfinex.API;
-using pr.common;
-using pr.extn;
-using pr.maths;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {

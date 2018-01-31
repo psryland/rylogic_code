@@ -1,9 +1,9 @@
 ﻿using System;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.maths;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace RyLogViewer
 {

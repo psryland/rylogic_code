@@ -1,6 +1,6 @@
 ﻿using System.Drawing;
 using System.Windows.Forms;
-using pr.gui;
+using Rylogic.Gui;
 
 namespace RyLogViewer
 {
@@ -77,8 +77,8 @@ namespace RyLogViewer
 			this.m_lbl_example = new System.Windows.Forms.Label();
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_btn_cancel = new System.Windows.Forms.Button();
-			this.m_colour_fore = new pr.gui.ColourWheel();
-			this.m_colour_back = new pr.gui.ColourWheel();
+			this.m_colour_fore = new Rylogic.Gui.ColourWheel();
+			this.m_colour_back = new Rylogic.Gui.ColourWheel();
 			this.m_lbl_foreground = new System.Windows.Forms.Label();
 			this.m_lbl_background = new System.Windows.Forms.Label();
 			this.SuspendLayout();
@@ -118,9 +118,9 @@ namespace RyLogViewer
 			this.m_colour_fore.Colour = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(255)))), ((int)(((byte)(255)))));
 			this.m_colour_fore.Location = new System.Drawing.Point(12, 33);
 			this.m_colour_fore.Name = "m_colour_fore";
-			this.m_colour_fore.Parts = ((pr.gui.ColourWheel.EParts)((((pr.gui.ColourWheel.EParts.Wheel | pr.gui.ColourWheel.EParts.VSlider) 
-            | pr.gui.ColourWheel.EParts.ColourSelection) 
-            | pr.gui.ColourWheel.EParts.VSelection)));
+			this.m_colour_fore.Parts = ((Rylogic.Gui.ColourWheel.EParts)((((Rylogic.Gui.ColourWheel.EParts.Wheel | Rylogic.Gui.ColourWheel.EParts.VSlider) 
+            | Rylogic.Gui.ColourWheel.EParts.ColourSelection) 
+            | Rylogic.Gui.ColourWheel.EParts.VSelection)));
 			this.m_colour_fore.Size = new System.Drawing.Size(128, 94);
 			this.m_colour_fore.SliderWidth = 20;
 			this.m_colour_fore.TabIndex = 0;
@@ -131,11 +131,11 @@ namespace RyLogViewer
 			this.m_colour_back.Colour = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(255)))), ((int)(((byte)(255)))));
 			this.m_colour_back.Location = new System.Drawing.Point(138, 33);
 			this.m_colour_back.Name = "m_colour_back";
-			this.m_colour_back.Parts = ((pr.gui.ColourWheel.EParts)((((((pr.gui.ColourWheel.EParts.Wheel | pr.gui.ColourWheel.EParts.VSlider) 
-            | pr.gui.ColourWheel.EParts.ASlider) 
-            | pr.gui.ColourWheel.EParts.ColourSelection) 
-            | pr.gui.ColourWheel.EParts.VSelection) 
-            | pr.gui.ColourWheel.EParts.ASelection)));
+			this.m_colour_back.Parts = ((Rylogic.Gui.ColourWheel.EParts)((((((Rylogic.Gui.ColourWheel.EParts.Wheel | Rylogic.Gui.ColourWheel.EParts.VSlider) 
+            | Rylogic.Gui.ColourWheel.EParts.ASlider) 
+            | Rylogic.Gui.ColourWheel.EParts.ColourSelection) 
+            | Rylogic.Gui.ColourWheel.EParts.VSelection) 
+            | Rylogic.Gui.ColourWheel.EParts.ASelection)));
 			this.m_colour_back.Size = new System.Drawing.Size(156, 94);
 			this.m_colour_back.SliderWidth = 20;
 			this.m_colour_back.TabIndex = 1;

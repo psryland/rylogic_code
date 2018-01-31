@@ -6,10 +6,10 @@ using System.Threading;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using RyLogViewer.Properties;
-using pr.common;
-using pr.extn;
-using pr.gui;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Utility;
 
 namespace RyLogViewer
 {
@@ -39,7 +39,7 @@ namespace RyLogViewer
 
 				// Perform the signing test
 				m_signing_last_tested = Environment.TickCount;
-				if (pr.crypt.Crypt.Validate(Application.ExecutablePath, Resources.public_key, false))
+				if (Rylogic.Crypt.Crypt.Validate(Application.ExecutablePath, Resources.public_key, false))
 					return;
 
 				// Notify if it fails
@@ -87,7 +87,7 @@ namespace RyLogViewer
 			catch (Exception ex)
 			{
 				MsgBox.Show(this
-					,"An error occurred while attempting to view '{0}'\n{1}".Fmt(Constants.StoreLink, ex.Message)
+					,$"An error occurred while attempting to view '{Constants.StoreLink}'\n{ex.Message}"
 					,"Visit Web Site"
 					,MessageBoxButtons.OK
 					,MessageBoxIcon.Information);
@@ -215,13 +215,13 @@ namespace RyLogViewer
 		private string UserDetails
 		{
 			// This combination of user details is duplicated in the key gen script
-			get { return "{0}\n{1}\n{2}\n{3}\n{4}".Fmt(LicenceHolder,EmailAddress,Company,VersionMask,"Rylogic Limited Is Awesome"); }
+			get { return $"{LicenceHolder}\n{EmailAddress}\n{Company}\n{VersionMask}\nRylogic Limited Is Awesome"; }
 		}
 
 		/// <summary>True if the licence is valid with itself</summary>
 		public bool ValidActivationCode
 		{
-			get { return pr.common.ActivationCode.Validate(UserDetails, m_activation_code, Resources.public_key); }
+			get { return Rylogic.Common.ActivationCode.Validate(UserDetails, m_activation_code, Resources.public_key); }
 		}
 
 		/// <summary>True if the version in the licence covers this version of the app</summary>

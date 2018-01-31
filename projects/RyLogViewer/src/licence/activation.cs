@@ -1,14 +1,9 @@
 ﻿using System;
 using System.Drawing;
-using System.IO;
-using System.Net.Mail;
-using System.Text.RegularExpressions;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
-using pr.gui;
-using pr.inet;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Utility;
 
 namespace RyLogViewer
 {
@@ -122,12 +117,12 @@ namespace RyLogViewer
 						if (existing_lic != null && existing_lic.Valid)
 						{
 							// Prompt if about to override an existing valid licence
-							var res = MsgBox.Show(this, Str.Build(
-								"An existing valid licence already exists:\r\n",
-								"Licence Holder: {0}\r\n".Fmt(existing_lic.LicenceHolder),
-								"Email Address: {0}\r\n".Fmt(existing_lic.EmailAddress),
-								"\r\n",
-								"Do you want to replace this licence?"),
+							var res = MsgBox.Show(this,
+								$"An existing valid licence already exists:\r\n"+
+								$"Licence Holder: {existing_lic.LicenceHolder}\r\n"+
+								$"Email Address: {existing_lic.EmailAddress}\r\n"+
+								"\r\n"+
+								"Do you want to replace this licence?",
 								Application.ProductName, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 							if (res != DialogResult.Yes)
 								return;
@@ -183,7 +178,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				MsgBox.Show(this, "Failed to locate and import a valid licence file\r\n{0}".Fmt(ex.Message), Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+				MsgBox.Show(this, $"Failed to locate and import a valid licence file\r\n{ex.Message}", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
 

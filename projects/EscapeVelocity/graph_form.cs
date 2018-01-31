@@ -1,6 +1,6 @@
 ﻿using System.Windows.Forms;
-using pr.gui;
-using pr.maths;
+using Rylogic.Gui;
+using Rylogic.Maths;
 
 namespace EscapeVelocity
 {

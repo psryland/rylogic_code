@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
-using pr.maths;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace RyLogViewer
 {
@@ -64,7 +64,7 @@ namespace RyLogViewer
 			}
 			set
 			{
-				Log.Info(this, "Row {0} selected".Fmt(value));
+				Log.Info(this, $"Row {value} selected");
 				using (m_suspend_grid_events.Scope())
 					m_grid.SelectSingleRow(value);
 

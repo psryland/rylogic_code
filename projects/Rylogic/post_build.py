@@ -11,11 +11,12 @@ import UserVars
 try:
 	Tools.AssertVersion(1);
 
-	projdir   = sys.argv[1].rstrip("\\") if len(sys.argv) > 1 else UserVars.root + "\\projects\\Rylogic"
-	targetdir = sys.argv[2].rstrip("\\") if len(sys.argv) > 2 else UserVars.root + "\\projects\\Rylogic\\bin\\Debug"
+	assembly = "Rylogic"
+	projdir   = sys.argv[1].rstrip("\\") if len(sys.argv) > 1 else UserVars.root + "\\projects\\"+assembly
+	targetdir = sys.argv[2].rstrip("\\") if len(sys.argv) > 2 else UserVars.root + "\\projects\\"+assembly+"\\bin\\Debug"
 	platform  = sys.argv[3]              if len(sys.argv) > 3 else "AnyCPU"
 	config    = sys.argv[4]              if len(sys.argv) > 4 else "Debug"
-	platform = platform if platform != "AnyCPU" else "x86"
+	#platform = platform if platform != "AnyCPU" else "x86"
 
 	# Ensure directories exist
 	os.makedirs(targetdir, exist_ok=True);
@@ -27,22 +28,35 @@ try:
 	# Set this to false to disable running tests on compiling
 	RunTests = True
 
-	dll = targetdir + "\\Rylogic.dll"
-	exe = targetdir + "\\Rylogic.exe"
+	dll = targetdir + "\\"+assembly+".dll"
+	exe = targetdir + "\\"+assembly+".exe"
+	target = dll if os.path.exists(dll) else exe
 
 	# Run unit tests
 	if RunTests:
-		target = dll if os.path.exists(dll) else exe
-		if os.path.exists(target):
-			# Use the power shell to run the unit tests
-			powershell = UserVars.powershell64 if platform == "x64" else UserVars.powershell32
-			res,outp = Tools.Run([powershell, "-noninteractive", "-noprofile", "-sta", "-nologo", "-command", "[Reflection.Assembly]::LoadFile('"+target+"')|Out-Null;exit [pr.Program]::Main();"])
-			outp = re.sub(r"Attempting to perform the InitializeDefaultDrives operation on the 'FileSystem' provider failed.\n(.*)", r"\1", outp)
-			print(outp)
-			if not res:
-				raise Exception("   **** Unit tests failed ****   ")
+		if not os.path.exists(target):
+			print(assembly + " assembly not found.   **** Unit tests skipped ****")
 		else:
-			print("Rylogic assembly not found.   **** Unit tests skipped ****")
+			if target == dll:
+				# Use the PowerShell to run the unit tests
+				powershell = UserVars.powershell64 if platform == "x64" else UserVars.powershell32
+				command = (
+					"& {\n"+
+					"Set-Location "+targetdir+";\n"+
+					"[Reflection.Assembly]::LoadFile('"+targetdir+"\\Rylogic.Core.dll')|Out-Null;\n"+
+					"[Reflection.Assembly]::LoadFile('"+target+"')|Out-Null;\n"+
+					"Exit ["+assembly+".Program]::Main();\n"+
+					"}")
+				res,outp = Tools.Run([powershell, "-NonInteractive", "-NoProfile", "-STA", "-NoLogo", "-Command", command])
+				print(outp)
+				if not res:
+					raise Exception("   **** Unit tests failed ****   ")
+			elif target == exe:
+				# Run the exe directly
+				res,outp = Tools.Run([target])
+				print(outp)
+				if not res:
+					raise Exception("   **** Unit tests failed ****   ")
 
 	# Copy to the lib directory
 	if os.path.exists(dll):

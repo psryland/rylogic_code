@@ -3,11 +3,11 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using pr.common;
-using pr.db;
-using pr.extn;
-using pr.maths;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Db;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {
@@ -283,7 +283,7 @@ namespace CoinFlip
 				if (m_count == null)
 				{
 					if (TimeFrame == ETimeFrame.None) throw new Exception("Invalid time frame");
-					var sql = Str.Build("select count(*) from ",TimeFrame," where [",nameof(Candle.Timestamp),"] <= ?");
+					var sql = $"select count(*) from {TimeFrame} where [{nameof(Candle.Timestamp)}] <= ?";
 					using (var db = new Sqlite.Database(PriceData.DBFilepath))
 						m_count = db.ExecuteScalar(sql, 1, new object[] { Model.UtcNow.Ticks });
 				}
@@ -436,8 +436,8 @@ namespace CoinFlip
 		public Range IndexRange(int idx_min, int idx_max)
 		{
 			Debug.Assert(idx_min <= idx_max);
-			var min = Maths.Clamp(idx_min, 0, Count);
-			var max = Maths.Clamp(idx_max, min, Count);
+			var min = Math_.Clamp(idx_min, 0, Count);
+			var max = Math_.Clamp(idx_max, min, Count);
 			return new Range(min, max);
 		}
 

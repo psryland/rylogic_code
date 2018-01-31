@@ -13,24 +13,15 @@ namespace Rylogic.Extn
 		/// <summary>Returns a message that includes the messages from any inner exceptions as well</summary>
 		public static string MessageFull(this Exception e)
 		{
-			var sb = new StringBuilder(e.Message);
-			for (;(e = e.InnerException) != null;)
-			{
-				sb.AppendLine();
-				sb.Append(e.Message);
-			}
-			return sb.ToString();
-		}
-
-		/// <summary>Returns a message that includes the messages from any inner exceptions as well</summary>
-		public static string MessageFull(this AggregateException e)
-		{
-			e = e.Flatten();
+			if (e is AggregateException ae)
+				e = ae.Flatten();
+			
 			var sb = new StringBuilder();
-			for (int i = 0, iend = e.InnerExceptions.Count; i != iend; ++i)
+			for (;e != null; e = e.InnerException)
 			{
-				sb.Append(e.InnerExceptions[i].MessageFull());
-				if (i+1 != iend) sb.AppendLine();
+				if (e is AggregateException) continue;
+				if (sb.Length != 0) sb.AppendLine();
+				sb.Append(e.Message);
 			}
 			return sb.ToString();
 		}

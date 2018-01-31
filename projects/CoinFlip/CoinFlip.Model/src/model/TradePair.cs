@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using pr.common;
-using pr.extn;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {
@@ -198,7 +198,7 @@ namespace CoinFlip
 		public Unit<decimal>? SpotPrice(ETradeType tt)
 		{
 			switch (tt) {
-			default: throw new Exception("Unknown trade type: {0}".Fmt(tt));
+			default: throw new Exception($"Unknown trade type: {tt}");
 			case ETradeType.Q2B: return B2Q.Orders.Count != 0 ? B2Q.Orders[0].Price : (Unit<decimal>?)null;
 			case ETradeType.B2Q: return Q2B.Orders.Count != 0 ? Q2B.Orders[0].Price : (Unit<decimal>?)null;
 			}

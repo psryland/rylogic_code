@@ -7,10 +7,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using pr.extn;
-using pr.gui;
-using pr.util;
-using ToolStripContainer = pr.gui.ToolStripContainer;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Utility;
+using ToolStripContainer = Rylogic.Gui.ToolStripContainer;
 
 namespace Csex
 {
@@ -62,7 +62,7 @@ namespace Csex
 			{
 				if (!filepath.HasValue())
 				{
-					using (var fd = new OpenFileDialog { Title = "Open an XML File", Filter = Util.FileDialogFilter("Extensible Mark-Up Language", "*.xml") })
+					using (var fd = new OpenFileDialog { Title = "Open an XML File", Filter = Util2.FileDialogFilter("Extensible Mark-Up Language", "*.xml") })
 					{
 						if (fd.ShowDialog(this) != DialogResult.OK) return;
 						filepath = fd.FileName;
@@ -74,7 +74,7 @@ namespace Csex
 			}
 			catch (Exception ex)
 			{
-				MsgBox.Show(this, "Failed to load XML file {0}\r\n{1}".Fmt(filepath, ex.Message), "Load XML File Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				MsgBox.Show(this, $"Failed to load XML file {filepath}\r\n{ex.Message}", "Load XML File Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
 
@@ -83,8 +83,8 @@ namespace Csex
 		private void InitializeComponent()
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(XmlEditUI));
-			this.m_tsc = new pr.gui.ToolStripContainer();
-			this.m_dock = new pr.gui.DockContainer();
+			this.m_tsc = new Rylogic.Gui.ToolStripContainer();
+			this.m_dock = new Rylogic.Gui.DockContainer();
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_open = new System.Windows.Forms.ToolStripMenuItem();

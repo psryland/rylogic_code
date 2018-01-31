@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Globalization;
-using pr.extn;
-using pr.maths;
+using Rylogic.Extn;
+using Rylogic.Maths;
 
 namespace EscapeVelocity
 {
@@ -82,7 +82,10 @@ namespace EscapeVelocity
 		/// <summary>The properties of any element currently able to be measured</summary>
 		public static EElemProp KnownElementProperties { get; set; }
 
-		public override string ToString() { return "({0}) {1}".Fmt(AtomicNumber, Name.Fullname); }
+		public override string ToString()
+		{
+			return $"({AtomicNumber}) {Name.Fullname}";
+		}
 
 		// The stuff that all materials are made of
 		public Element()
@@ -110,8 +113,8 @@ namespace EscapeVelocity
 			Name         = GameConstants.ElementNames[AtomicNumber - 1];
 			MolarMass    = AtomicNumber != 1 ? 2*AtomicNumber*rnd.DoubleC(1.01,0.1) : 1;  // Roughly double the atomic number
 			Period       = CalcPeriod(consts, atomic_number);
-			TableX       = Maths.Frac(consts.ValenceLevels[Period-1] + 1, atomic_number, consts.ValenceLevels[Period]);
-			TableY       = Maths.Frac(1.0, Period, 7.0);
+			TableX       = Math_.Frac(consts.ValenceLevels[Period-1] + 1, atomic_number, consts.ValenceLevels[Period]);
+			TableY       = Math_.Frac(1.0, Period, 7.0);
 			CalcValency(consts);
 			CalcElectronegativity(consts);
 			CalcSolidDensity(consts);
@@ -177,7 +180,7 @@ namespace EscapeVelocity
 	
 			// Create an orbital radius for this element
 			// Orbital radii decreases from bottom left to top right of the periodic table, i.e He is the smallest atom, Cs the biggest
-			ValenceOrbitalRadius = Maths.Lerp(consts.OrbitalRadii[Period].Max, consts.OrbitalRadii[Period].Min, Maths.Sqrt(TableX));
+			ValenceOrbitalRadius = Math_.Lerp(consts.OrbitalRadii[Period].Max, consts.OrbitalRadii[Period].Min, Math_.Sqrt(TableX));
 		}
 
 		/// <summary>Sets the electro negativity</summary>
@@ -185,7 +188,7 @@ namespace EscapeVelocity
 		{
 			if (AtomicNumber == 1)
 			{
-				Electronegativity = Maths.Lerp(consts.MinElectronegativity, consts.MaxElectronegativity, 0.5);
+				Electronegativity = Math_.Lerp(consts.MinElectronegativity, consts.MaxElectronegativity, 0.5);
 				return;
 			}
 
@@ -195,19 +198,19 @@ namespace EscapeVelocity
 
 			// Electronegativity increases from bottom left to top right of the
 			// periodic table with a minor peak in the centre
-			var frac = 0.03 * Period * Math.Sin(Math.Pow(x,Maths.Root2) * Maths.Tau) + x; // A normalised scaler with a hump in the middle that gets bigger for higher periods
-			var min = consts.MinElectronegativity * Maths.Lerp(1.5,1.0,TableY);
-			var max = consts.MaxElectronegativity* Maths.Lerp(1.15,0.45,TableY);
-			Electronegativity = Maths.Lerp(min, max, frac);
+			var frac = 0.03 * Period * Math.Sin(Math.Pow(x,Math_.Root2) * Math_.Tau) + x; // A normalised scaler with a hump in the middle that gets bigger for higher periods
+			var min = consts.MinElectronegativity * Math_.Lerp(1.5,1.0,TableY);
+			var max = consts.MaxElectronegativity* Math_.Lerp(1.15,0.45,TableY);
+			Electronegativity = Math_.Lerp(min, max, frac);
 		}
 
 		/// <summary>Sets the density of the element in the solid state (assumed constant)</summary>
 		private void CalcSolidDensity(GameConstants consts)
 		{
-			var frac = Math.Sin(TableX * 0.48 * Maths.Tau);
-			var min = consts.MinSolidMaterialDensity * Maths.Lerp(1.0, 3.5, TableY);
-			var max = consts.MaxSolidMaterialDensity * Maths.Lerp(0.015, 1.0, TableY);
-			SolidDensity = Maths.Lerp(min, max, frac);
+			var frac = Math.Sin(TableX * 0.48 * Math_.Tau);
+			var min = consts.MinSolidMaterialDensity * Math_.Lerp(1.0, 3.5, TableY);
+			var max = consts.MaxSolidMaterialDensity * Math_.Lerp(0.015, 1.0, TableY);
+			SolidDensity = Math_.Lerp(min, max, frac);
 		}
 
 		/// <summary>Sets the melting / boiling point for the element</summary>

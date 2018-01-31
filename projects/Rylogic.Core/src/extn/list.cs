@@ -337,13 +337,18 @@ namespace Rylogic.Extn
 				list.RemoveAt(start + i);
 		}
 
-		/// <summary>Remove the range of elements from [startIndex, list.Count)</summary>
-		public static IList<T> RemoveToEnd<T>(this IList<T> list, int startIndex)
+		/// <summary>Remove the range of elements from [start_index, list.Count)</summary>
+		public static IList<T> RemoveToEnd<T>(this IList<T> list, int start_index)
 		{
-			var diff = list.Count - startIndex;
-			if (diff > 0) list.RemoveRange(startIndex, diff);
+			for (var i = list.Count; i-- > start_index;)
+				list.RemoveAt(start_index);
 			return list;
 		}
+		//{
+		//	var diff = list.Count - startIndex;
+		//	if (diff > 0) list.RemoveRange(startIndex, diff);
+		//	return list;
+		//}
 
 		/// <summary>Remove all items in 'set' from this list. (More efficient that removing one at a time if 'set' is a large fraction of this list)</summary>
 		public static void RemoveAll<T>(this IList<T> list, IEnumerable<T> set)
@@ -782,7 +787,18 @@ namespace Rylogic.UnitTests
 				Assert.True(count == 2);
 				Assert.True(list0.SequenceEqual(list1));
 			}
-
+			{
+				var list0 = new List<int>(new[] { 1, 2, 3, 3, 2, 4, 5, 2, 1, 5, 4 });
+				var list1 = new List<int>(new[] { 1, 2, 3, 3, 5, 4 });
+				list0.RemoveRange(4, 5);
+				Assert.True(list0.SequenceEqual(list1));
+			}
+			{
+				var list0 = new List<int>(new[] { 1, 2, 3, 3, 2, 4, 5, 2, 1, 5, 4 });
+				var list1 = new List<int>(new[] { 1, 2, 3, 3, 2 });
+				list0.RemoveToEnd(5);
+				Assert.True(list0.SequenceEqual(list1));
+			}
 		}
 		[Test] public void ListQuickSort()
 		{

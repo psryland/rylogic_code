@@ -7,8 +7,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using pr.gui;
-using pr.util;
+using Rylogic.Gui;
+using Rylogic.Utility;
 
 namespace RyLogViewer
 {
@@ -67,7 +67,7 @@ namespace RyLogViewer
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(PatternSetUI));
 			this.m_btn_cancel = new System.Windows.Forms.Button();
 			this.m_btn_ok = new System.Windows.Forms.Button();
-			this.m_tree = new pr.gui.FeatureTree();
+			this.m_tree = new Rylogic.Gui.FeatureTree();
 			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
 			this.SuspendLayout();
 			// 

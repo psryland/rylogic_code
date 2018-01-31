@@ -7,12 +7,11 @@ using System.Threading;
 using System.Windows.Forms;
 using System.Windows.Threading;
 using System.Xml.Linq;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.gui;
-using pr.maths;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {
@@ -23,7 +22,7 @@ namespace CoinFlip
 		// - Add references to 'CoinFlip.Model' and 'Rylogic'
 		// - Set the framework version to 4.5.2
 		// - Set the post build event to:
-		//   @"   py.exe $(SolutionDir)post_build_bot.py $(TargetPath) $(SolutionDir) $(ConfigurationName)   "
+		//   @"   py $(ProjectDir)..\post_build_bot.py $(TargetPath) $(SolutionDir) $(ConfigurationName)   "
 		// - Add a class that inherits 'IBot' and with the Plugin attribute: @"[Plugin(typeof(IBot))]"
 		// - Add a constructor like this: @"public MyBot(Model model, XElement settings_xml) :base("my_bot", model, new SettingsData(settings_xml)) {}"
 		// - Add a nested class called 'SettingsData' that inherits 'SettingsBase<SettingsData>'

@@ -6,10 +6,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using pr.extn;
-using pr.gui;
-using pr.maths;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace LDraw
 {

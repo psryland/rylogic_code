@@ -5,11 +5,11 @@ using System.Linq;
 using System.Threading;
 using System.Windows.Threading;
 using CoinFlip;
-using pr.attrib;
-using pr.common;
-using pr.extn;
-using pr.maths;
-using pr.util;
+using Rylogic.Attrib;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace Bot.Fishing
 {
@@ -307,15 +307,15 @@ namespace Bot.Fishing
 					Pair1.B2Q.Orders.Count != 0)
 				{
 					// Find the available balances on each exchange (reduced to allow for fees and rounding)
-					var availableQ = Maths.Min(Pair0.Quote.Balances[Fund].Available * (1m - Pair0.Fee) * 0.99999m, Pair0.Quote.AutoTradeLimit);
-					var availableB = Maths.Min(Pair1.Base .Balances[Fund].Available * (1m - Pair1.Fee) * 0.99999m, Pair1.Base .AutoTradeLimit);
+					var availableQ = Math_.Min(Pair0.Quote.Balances[Fund].Available * (1m - Pair0.Fee) * 0.99999m, Pair0.Quote.AutoTradeLimit);
+					var availableB = Math_.Min(Pair1.Base .Balances[Fund].Available * (1m - Pair1.Fee) * 0.99999m, Pair1.Base .AutoTradeLimit);
 
 					// Determine the market price on Exch0 for converting Quote to Base (this will be the match order)
 					// This tells us the equivalent volume of base currency we would get on Exch0.
 					var trade = Pair0.QuoteToBase(Fund.Id, availableQ);
 
 					// Choose the volume of base currency to trade as the minimum of the volume on Exch0 and our available on Exch1
-					var volumeB = Maths.Min(trade.VolumeOut, availableB);
+					var volumeB = Math_.Min(trade.VolumeOut, availableB);
 
 					// Find the market price on Exch1 for trading Base to Quote.
 					var market_price = Pair1.QuoteToBase(Fund.Id, availableQ);
@@ -348,15 +348,15 @@ namespace Bot.Fishing
 					Pair1.Q2B.Orders.Count != 0)
 				{
 					// Find the available balances each exchange (reduced to allow for fees and rounding)
-					var availableB = Maths.Min(Pair0.Base .Balances[Fund].Available  * (1m - Pair0.Fee) * 0.99999m, Pair0.Base .AutoTradeLimit);
-					var availableQ = Maths.Min(Pair1.Quote.Balances[Fund].Available * (1m - Pair1.Fee) * 0.99999m, Pair1.Quote.AutoTradeLimit);
+					var availableB = Math_.Min(Pair0.Base .Balances[Fund].Available  * (1m - Pair0.Fee) * 0.99999m, Pair0.Base .AutoTradeLimit);
+					var availableQ = Math_.Min(Pair1.Quote.Balances[Fund].Available * (1m - Pair1.Fee) * 0.99999m, Pair1.Quote.AutoTradeLimit);
 
 					// Determine the current price on Exch0 for converting Base to Quote
 					// This tells us the equivalent volume of quote currency we would get on Exch0.
 					var trade = Pair0.BaseToQuote(Fund.Id, availableB);
 
 					// Choose the volume of quote currency to trade as the minimum of this and our available on Exch1
-					var volumeQ = Maths.Min(trade.VolumeOut, availableQ);
+					var volumeQ = Math_.Min(trade.VolumeOut, availableQ);
 
 					// Find the spot price on Exch1 for trading Quote to Base.
 					// If the price is within the price offset range, use this price, otherwise use the middle of the offset range
@@ -532,11 +532,11 @@ namespace Bot.Fishing
 				BaitId = order_result.OrderId;
 
 				// Log the fishing order
-				Log.Write(ELogLevel.Info, Str.Build(
-					$"Bait order (id={order_result.OrderId}) on {Exch1.Name} created for {Trade1.TradeType}.\n",
-					$"  Match: {Trade0.Description} \n",
-					$"   Bait: {Trade1.Description} \n",
-					$"  Ratio: {(100m * Math.Abs(1m - Trade1.PriceQ2B/Trade0.PriceQ2B)):G4}%"));
+				Log.Write(ELogLevel.Info,
+					$"Bait order (id={order_result.OrderId}) on {Exch1.Name} created for {Trade1.TradeType}.\n"+
+					$"  Match: {Trade0.Description} \n"+
+					$"   Bait: {Trade1.Description} \n"+
+					$"  Ratio: {(100m * Math.Abs(1m - Trade1.PriceQ2B/Trade0.PriceQ2B)):G4}%");
 			}
 
 			/// <summary>Cancel this fishing trade</summary>
@@ -618,8 +618,8 @@ namespace Bot.Fishing
 
 								// Determine the price to reference price ratio.
 								var sign = pos.TradeType == ETradeType.B2Q ? +1 : -1;
-								var fishing_ratio = sign * Maths.Div((decimal)(         pos.PriceQ2B - Trade0.PriceQ2B), (decimal)Trade0.PriceQ2B, 0m);
-								var current_ratio = sign * Maths.Div((decimal)(current_best_price - Trade0.PriceQ2B), (decimal)Trade0.PriceQ2B, 0m);
+								var fishing_ratio = sign * Math_.Div((decimal)(         pos.PriceQ2B - Trade0.PriceQ2B), (decimal)Trade0.PriceQ2B, 0m);
+								var current_ratio = sign * Math_.Div((decimal)(current_best_price - Trade0.PriceQ2B), (decimal)Trade0.PriceQ2B, 0m);
 								var validation0 = Trade0.Validate(m_balance_hold);
 
 								// If an update fails, and Trade0.PriceQ2B becomes zero, because the order books are empty, abort
@@ -765,14 +765,14 @@ namespace Bot.Fishing
 							var effective_price1 = (decimal)Trade1.PriceQ2BNett;
 							var ratio = Math.Abs(effective_price0 - effective_price1) / effective_price0;
 
-							var msg = Str.Build(
-								(Model.AllowTrades ? "!Profit!\n" : "!Virtual Profit!\n"),
-								$"  Bait order on {Exch1.Name}: {Trade1.Description} (After Fees: {out1:G6} @ {effective_price1:G6})\n",
-								$" Match order on {Exch0.Name}: {Trade0.Description} (After Fees: {out0:G6} @ {effective_price0:G6})\n",
-								$"\n",
-								$"  Nett {Trade0.CoinOut}: {nett0:G8}  ({value0:C})\n",
-								$"  Nett {Trade1.CoinOut}: {nett1:G8}  ({value1:C})\n",
-								$"  Total: {sum:C}  Ratio: {100*ratio:G6}%");
+							var msg =
+								(Model.AllowTrades ? "!Profit!\n" : "!Virtual Profit!\n")+
+								$"  Bait order on {Exch1.Name}: {Trade1.Description} (After Fees: {out1:G6} @ {effective_price1:G6})\n"+
+								$" Match order on {Exch0.Name}: {Trade0.Description} (After Fees: {out0:G6} @ {effective_price0:G6})\n"+
+								$"\n"+
+								$"  Nett {Trade0.CoinOut}: {nett0:G8}  ({value0:C})\n"+
+								$"  Nett {Trade1.CoinOut}: {nett1:G8}  ({value1:C})\n"+
+								$"  Total: {sum:C}  Ratio: {100*ratio:G6}%";
 							Log.Write(ELogLevel.Warn, msg);
 							WinLog.Write(ELogLevel.Info, msg);
 

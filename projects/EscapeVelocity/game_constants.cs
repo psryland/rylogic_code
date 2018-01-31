@@ -1,6 +1,6 @@
 ﻿using System;
-using pr.extn;
-using pr.maths;
+using Rylogic.Extn;
+using Rylogic.Maths;
 
 namespace EscapeVelocity
 {
@@ -246,11 +246,11 @@ namespace EscapeVelocity
 			StarDistance = rnd.Double(sun_to_mercury, sun_to_mars);
 
 			// The acceleration due to the star's gravity at the given distance
-			m_star_gravitational_acceleration = m_gravitational_constant * StarMass / Maths.Sqr(StarDistance);
+			m_star_gravitational_acceleration = m_gravitational_constant * StarMass / Math_.Sqr(StarDistance);
 
 			// Calculate the required escape velocity (speed)
 			// Escape Velocity = Sqrt(2 * G * M / r), G = 6.67x10^-11 m³kg^-1s^-2, M = star mass, r = distance from star
-			EscapeVelocity = Maths.Sqrt(2.0 * m_gravitational_constant * StarMass / StarDistance);
+			EscapeVelocity = Math_.Sqrt(2.0 * m_gravitational_constant * StarMass / StarDistance);
 
 			// Set up per passenger constants
 			AveragePassengerWeight = rnd.DoubleC(80.0, 10.0);

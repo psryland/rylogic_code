@@ -1,8 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Windows.Forms;
-using pr.common;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace RyLogViewer
 {
@@ -11,7 +11,7 @@ namespace RyLogViewer
 		/// <summary>Load and parse the startup options</summary>
 		public StartupOptions(string[] args)
 		{
-			var exe_dir = Util.ResolveAppPath();
+			var exe_dir = Util2.ResolveAppPath();
 			if (!Directory.Exists(exe_dir))
 				throw new ArgumentException("Cannot determine the current executable directory");
 

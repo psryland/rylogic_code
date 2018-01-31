@@ -8,11 +8,11 @@ using System.Text;
 using System.Windows.Forms;
 using System.Threading;
 using System.Threading.Tasks;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.gfx;
-using pr.gui;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Graphix;
+using Rylogic.Gui;
 
 namespace Csex
 {
@@ -32,9 +32,9 @@ namespace Csex
 		public Settings Settings { get; private set; }
 
 		/// <summary>Data for a file</summary>
-		public class FileInfo :Path_.FileData
+		public class FileInfo :Shell_.FileData
 		{
-			public FileInfo(Path_.FileData fi) :base(fi)
+			public FileInfo(Shell_.FileData fi) :base(fi)
 			{
 				Key = MakeKey(this);
 				Duplicates = new BindingListEx<FileInfo>();
@@ -103,7 +103,7 @@ namespace Csex
 			foreach (var path in Settings.SearchPaths)
 			{
 				if (dlg.CancelPending) break;
-				foreach (var fi in Path_.EnumFileSystem(path, search_flags:SearchOption.AllDirectories).Where(x => !x.IsDirectory))
+				foreach (var fi in Shell_.EnumFileSystem(path, search_flags:SearchOption.AllDirectories).Where(x => !x.IsDirectory))
 				{
 					if (dlg.CancelPending) break;
 
@@ -112,7 +112,7 @@ namespace Csex
 					if (d != dir)
 					{
 						dir = d;
-						progress(new ProgressForm.UserState{Description = "Scanning files...\r\n{0}".Fmt(dir)});
+						progress(new ProgressForm.UserState{Description = $"Scanning files...\r\n{dir}"});
 					}
 
 					try
@@ -136,7 +136,7 @@ namespace Csex
 					}
 					catch (Exception ex)
 					{
-						Errors.Add("Failed to add {0} to the map. {1}".Fmt(fi.FullPath, ex.Message));
+						Errors.Add($"Failed to add {fi.FullPath} to the map. {ex.Message}");
 					}
 				}
 			}

@@ -1,13 +1,13 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Windows.Forms;
-using pr.container;
-using pr.extn;
-using pr.gui;
-using pr.util;
-using ListBox = pr.gui.ListBox;
-using DataGridView = pr.gui.DataGridView;
-using DataGridViewComboBoxColumn = pr.gui.DataGridViewComboBoxColumn;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Utility;
+using ListBox = Rylogic.Gui.ListBox;
+using DataGridView = Rylogic.Gui.DataGridView;
+using DataGridViewComboBoxColumn = Rylogic.Gui.DataGridViewComboBoxColumn;
 
 namespace TestCS
 {
@@ -200,7 +200,7 @@ namespace TestCS
 			}
 			public override string ToString()
 			{
-				return "{0} {1} {2} {3} {4}".Fmt(Name, Value, Option, FValue, Checked);
+				return $"{Name} {Value} {Option} {FValue} {Checked}";
 			}
 		}
 
@@ -297,7 +297,7 @@ namespace TestCS
 		private void InitializeComponent()
 		{
 			this.m_split = new System.Windows.Forms.SplitContainer();
-			this.m_events = new pr.gui.ListBox();
+			this.m_events = new Rylogic.Gui.ListBox();
 			this.m_grid = new TestCS.DgvUI.DGV();
 			((System.ComponentModel.ISupportInitialize)(this.m_split)).BeginInit();
 			this.m_split.Panel1.SuspendLayout();

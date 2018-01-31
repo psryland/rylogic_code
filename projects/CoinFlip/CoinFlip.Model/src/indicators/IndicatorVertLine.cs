@@ -4,12 +4,12 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Xml.Linq;
-using pr.common;
-using pr.extn;
-using pr.gui;
-using pr.maths;
-using pr.util;
-using pr.view3d;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Graphix;
+using Rylogic.Gui;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {

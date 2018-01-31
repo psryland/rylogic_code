@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Rylogic.CustomTool.HtmlExpander</RootNamespace>
     <AssemblyName>Rylogic.CustomTool.HtmlExpander</AssemblyName>
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -40,34 +40,31 @@
     <AssemblyOriginatorKeyFile>Rylogic Limited Key File.pfx</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.VisualStudio.OLE.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
-    <Reference Include="Microsoft.VisualStudio.Shell.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
-    <Reference Include="Microsoft.VisualStudio.TextTemplating.VSHost.12.0, Version=12.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Rylogic\script\buffer.cs">
+    <Compile Include="..\Rylogic.Core\src\script\buffer.cs">
       <Link>src\buffer.cs</Link>
     </Compile>
-    <Compile Include="..\Rylogic\script\html_expander.cs">
+    <Compile Include="..\Rylogic.Core\src\script\html_expander.cs">
       <Link>src\html_expander.cs</Link>
     </Compile>
-    <Compile Include="..\Rylogic\script\loc.cs">
+    <Compile Include="..\Rylogic.Core\src\script\loc.cs">
       <Link>src\loc.cs</Link>
     </Compile>
-    <Compile Include="..\Rylogic\script\src.cs">
+    <Compile Include="..\Rylogic.Core\src\script\src.cs">
       <Link>src\src.cs</Link>
     </Compile>
-    <Compile Include="..\Rylogic\script\src_stack.cs">
+    <Compile Include="..\Rylogic.Core\src\script\src_stack.cs">
       <Link>src\src_stack.cs</Link>
     </Compile>
-    <Compile Include="..\Rylogic\script\src_type.cs">
+    <Compile Include="..\Rylogic.Core\src\script\src_type.cs">
       <Link>src\src_type.cs</Link>
     </Compile>
-    <Compile Include="..\Rylogic\script\template_replacer.cs">
+    <Compile Include="..\Rylogic.Core\src\script\template_replacer.cs">
       <Link>src\template_replacer.cs</Link>
     </Compile>
     <Compile Include="src\HtmlExpander.cs" />
@@ -81,6 +78,20 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="deploy.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.VisualStudio.OLE.Interop">
+      <Version>7.10.6071</Version>
+    </PackageReference>
+    <PackageReference Include="Microsoft.VisualStudio.Shell.Interop.15.3.DesignTime">
+      <Version>15.0.26929</Version>
+    </PackageReference>
+    <PackageReference Include="Microsoft.VisualStudio.TextTemplating.VSHost.15.0">
+      <Version>15.5.27130</Version>
+    </PackageReference>
+    <PackageReference Include="Microsoft.VisualStudio.Threading">
+      <Version>15.5.24</Version>
+    </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

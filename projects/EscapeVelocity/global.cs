@@ -1,4 +1,4 @@
-﻿using pr.maths;
+﻿using Rylogic.Maths;
 
 namespace EscapeVelocity
 {
@@ -8,7 +8,7 @@ namespace EscapeVelocity
 		/// <summary>The distance from x1,y1 to x2,y2</summary>
 		public static double Distance(double x1, double y1, double x2, double y2)
 		{
-			return Maths.Sqrt(Maths.Sqr(x2 - x1) + Maths.Sqr(y2 - y1));
+			return Math_.Sqrt(Math_.Sqr(x2 - x1) + Math_.Sqr(y2 - y1));
 		}
 	}
 

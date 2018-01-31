@@ -7,18 +7,18 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
-using pr.common;
-using pr.container;
-using pr.db;
-using pr.extn;
-using pr.gui;
-using pr.maths;
-using pr.scintilla;
-using pr.util;
-using pr.view3d;
-using pr.win32;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Db;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Maths;
+using Rylogic.Scintilla;
+using Rylogic.Utility;
+using Rylogic.Graphix;
+using Rylogic.Windows32;
 using Timer = System.Windows.Forms.Timer;
-using ToolStripContainer = pr.gui.ToolStripContainer;
+using ToolStripContainer = Rylogic.Gui.ToolStripContainer;
 
 namespace CoinFlip
 {
@@ -98,6 +98,7 @@ namespace CoinFlip
 			}
 			catch (Exception)
 			{
+				Model.Shutdown?.Cancel();
 				Dispose();
 				throw;
 			}
@@ -453,7 +454,7 @@ namespace CoinFlip
 
 				var max_steps = Settings.BackTesting.MaxSteps;
 				m_trk_sim_time.ToolTip(m_tt, "Set the starting point to run the back testing from");
-				m_trk_sim_time.TrackBar.Set(Maths.Clamp(max_steps - Settings.BackTesting.Steps, 0, max_steps), 0, max_steps);
+				m_trk_sim_time.TrackBar.Set(Math_.Clamp(max_steps - Settings.BackTesting.Steps, 0, max_steps), 0, max_steps);
 				m_trk_sim_time.TrackBar.ValueChanged += (s,a) =>
 				{
 					var steps = m_trk_sim_time.TrackBar.Maximum - m_trk_sim_time.TrackBar.Value;
@@ -596,7 +597,7 @@ namespace CoinFlip
 			{
 				// Ensure the Bounds are at least partially within the desktop
 				StartPosition  = FormStartPosition.Manual;
-				Bounds         = Util.OnScreen(Settings.UI.WindowPosition);;
+				Bounds         = Util2.OnScreen(Settings.UI.WindowPosition);;
 				WindowState    = Settings.UI.WindowMaximised ? FormWindowState.Maximized : FormWindowState.Normal;
 			}
 		}
@@ -607,10 +608,10 @@ namespace CoinFlip
 		{
 			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainUI));
-			this.m_tsc = new pr.gui.ToolStripContainer();
+			this.m_tsc = new Rylogic.Gui.ToolStripContainer();
 			this.m_ss = new System.Windows.Forms.StatusStrip();
 			this.m_status = new System.Windows.Forms.ToolStripStatusLabel();
-			this.m_dc = new pr.gui.DockContainer();
+			this.m_dc = new Rylogic.Gui.DockContainer();
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_new_chart = new System.Windows.Forms.ToolStripMenuItem();
@@ -636,7 +637,7 @@ namespace CoinFlip
 			this.m_btn_backtesting_step1 = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_backtesting_run_to_trade = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_backtesting_run = new System.Windows.Forms.ToolStripButton();
-			this.m_trk_sim_time = new pr.gui.ToolStripTrackBar();
+			this.m_trk_sim_time = new Rylogic.Gui.ToolStripTrackBar();
 			this.m_cb_sim_timeframe = new System.Windows.Forms.ToolStripComboBox();
 			this.m_tb_sim_time = new System.Windows.Forms.ToolStripTextBox();
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
@@ -975,7 +976,7 @@ namespace CoinFlip
 			try
 			{
 				// Create an event handle to prevent multiple instances
-				Debug.WriteLine("ClipFlip is running as a {0}bit process".Fmt(Environment.Is64BitProcess ? 64 : 32));
+				Debug.WriteLine($"ClipFlip is running as a {(Environment.Is64BitProcess ? 64 : 32)}bit process");
 				using (var app_running = new EventWaitHandle(true, EventResetMode.AutoReset, "CoinFlip", out var was_created))
 				{
 					// Only run the app if we created the event handle

@@ -6,10 +6,10 @@ using System.Data;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
-using pr.container;
-using pr.gui;
-using pr.util;
-using DataGridView = pr.gui.DataGridView;
+using Rylogic.Container;
+using Rylogic.Gui;
+using Rylogic.Utility;
+using DataGridView = Rylogic.Gui.DataGridView;
 
 namespace Csex
 {
@@ -43,12 +43,12 @@ namespace Csex
 			m_grid_details.DataSource = m_copies;
 
 			m_dups.PositionChanged += (s,a) =>
-				{
-					if (m_dups.Current != null)
-						m_copies.DataSource = m_dups.Current.Duplicates;
-					else
-						m_copies.DataSource = null;
-				};
+			{
+				if (m_dups.Current != null)
+					m_copies.DataSource = m_dups.Current.Duplicates;
+				else
+					m_copies.DataSource = null;
+			};
 		}
 		protected override void Dispose(bool disposing)
 		{
@@ -71,8 +71,8 @@ namespace Csex
 		private void InitializeComponent()
 		{
 			this.m_split = new System.Windows.Forms.SplitContainer();
-			this.m_grid_details = new pr.gui.DataGridView();
-			this.m_grid_dups = new pr.gui.DataGridView();
+			this.m_grid_details = new Rylogic.Gui.DataGridView();
+			this.m_grid_dups = new Rylogic.Gui.DataGridView();
 			((System.ComponentModel.ISupportInitialize)(this.m_split)).BeginInit();
 			this.m_split.Panel1.SuspendLayout();
 			this.m_split.Panel2.SuspendLayout();

@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Windows.Forms;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.gui;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Gui;
 
 namespace CoinFlip
 {

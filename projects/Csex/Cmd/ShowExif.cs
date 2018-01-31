@@ -1,8 +1,8 @@
 ﻿using System;
 using System.IO;
-using pr.common;
-using pr.extn;
-using pr.gfx;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Graphix;
 
 namespace Csex
 {
@@ -47,7 +47,7 @@ namespace Csex
 			{
 				if (!Exif.IsJpgFile(m_jpg_filepath))
 				{
-					Console.WriteLine(" {0} - Not a valid Jpg file".Fmt(m_jpg_filepath));
+					Console.WriteLine($" {m_jpg_filepath} - Not a valid JPG file");
 					return 1;
 				}
 
@@ -61,7 +61,7 @@ namespace Csex
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine(" Error: {0}".Fmt(ex.Message));
+				Console.WriteLine($" Error: {ex.Message}");
 				return -1;
 			}
 		}

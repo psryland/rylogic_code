@@ -3,12 +3,12 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Xml.Linq;
-using pr.common;
-using pr.extn;
-using pr.gui;
-using pr.maths;
-using pr.util;
-using pr.view3d;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Maths;
+using Rylogic.Utility;
+using Rylogic.Graphix;
 
 namespace LDraw
 {
@@ -120,7 +120,7 @@ namespace LDraw
 			get { return get<UISettings>(nameof(UI)); }
 			set
 			{
-				if (value == null) throw new ArgumentNullException("Setting '{0}' cannot be null".Fmt(nameof(UI)));
+				if (value == null) throw new ArgumentNullException($"Setting '{nameof(UI)}' cannot be null");
 				set(nameof(UI), value);
 			}
 		}
@@ -239,7 +239,7 @@ namespace LDraw
 			get { return get<CameraSettings>(nameof(Camera)); }
 			set
 			{
-				if (value == null) throw new ArgumentNullException("Setting '{0}' cannot be null".Fmt(nameof(Camera)));
+				if (value == null) throw new ArgumentNullException($"Setting '{nameof(Camera)}' cannot be null");
 				set(nameof(Camera), value);
 			}
 		}

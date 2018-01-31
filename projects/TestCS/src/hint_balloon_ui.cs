@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
-using pr.gui;
-using RichTextBox = pr.gui.RichTextBox;
+using Rylogic.Gui;
+using RichTextBox = Rylogic.Gui.RichTextBox;
 
 namespace TestCS
 {

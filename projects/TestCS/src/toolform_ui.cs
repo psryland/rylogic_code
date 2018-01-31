@@ -1,12 +1,12 @@
 ﻿using System.Linq;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
-using pr.maths;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Maths;
 
 namespace TestCS
 {
-	public class ToolFormUI :pr.gui.ToolForm
+	public class ToolFormUI :Rylogic.Gui.ToolForm
 	{
 		public ToolFormUI(Control owner) :base(owner, EPin.TopRight)
 		{
@@ -29,7 +29,7 @@ namespace TestCS
 			m_track_autofade.Value = m_track_autofade.Maximum;
 			m_track_autofade.ValueChanged += (s,a) =>
 			{
-				FadeRange = new RangeF(Maths.Frac(m_track_autofade.Minimum, m_track_autofade.Value, m_track_autofade.Maximum), 1f);
+				FadeRange = new RangeF(Math_.Frac(m_track_autofade.Minimum, m_track_autofade.Value, m_track_autofade.Maximum), 1f);
 			};
 
 			m_cb_form_border.Items.AddRange(Enum<FormBorderStyle>.ValuesArray);

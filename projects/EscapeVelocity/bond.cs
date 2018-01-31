@@ -1,29 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
-using pr.extn;
-using pr.maths;
-using pr.util;
+using Rylogic.Maths;
 
 namespace EscapeVelocity
 {
 	public class Bond
 	{
-		/// <summary>The permutation identifier assocated with the bond (one of EPerm2/4)</summary>
+		/// <summary>The permutation identifier associated with the bond (one of EPerm2/4)</summary>
 		public int Perm { get; private set; }
 
 		/// <summary>The base single-bond strength</summary>
 		public double BaseStrength { get; private set; }
 
-		/// <summary>The number of electrons shared in the bond ie. single bond, double bond, etc</summary>
+		/// <summary>The number of electrons shared in the bond i.e. single bond, double bond, etc</summary>
 		public int Order { get; private set; }
 
-		/// <summary>The difference in electronegativity between the bonded elements</summary>
+		/// <summary>The difference in electro-negativity between the bonded elements</summary>
 		public double Ionicity { get; private set; }
 
 		/// <summary>The number of bonds of this permutation (per order)</summary>
 		public int[] Count { get; private set; }
 
-		public override string ToString() { return "[Bond] Perm:{0} BaseStrength:{1} Order:{2} Counts:({3}) Ionicity:{4} Enthalpy:{5}".Fmt(EPerm.ToString(Perm),BaseStrength,Order,string.Join(",",Count),Ionicity,Enthalpy); }
+		public override string ToString()
+		{
+			return $"[Bond] Perm:{EPerm.ToString(Perm)} BaseStrength:{BaseStrength} Order:{Order} Counts:({string.Join(",",Count)}) Ionicity:{Ionicity} Enthalpy:{Enthalpy}";
+		}
 
 		public Bond() { Count = new int[0]; }
 		public Bond(int perm, Element elem1, Element elem2, GameConstants consts)
@@ -44,7 +45,7 @@ namespace EscapeVelocity
 			var shareable = Shareable(elem1, elem2);
 
 			// Constant to make the strength reasonable numbers
-			var scaler = 1e11 * consts.CoulombConstant * Maths.Sqr(consts.ElectronCharge) / Maths.Sqr(10e-12);
+			var scaler = 1e11 * consts.CoulombConstant * Math_.Sqr(consts.ElectronCharge) / Math_.Sqr(10e-12);
 
 			// Assume these electrons sit between the two atoms, calculate the electro-static
 			// force between the electrons and each element
@@ -62,14 +63,14 @@ namespace EscapeVelocity
 					break;
 
 				// Accumulate the attractive forces
-				strength += scaler * charge1 * 1.0 / Maths.Sqr(elem1.ValenceOrbitalRadius);
-				strength += scaler * charge2 * 1.0 / Maths.Sqr(elem2.ValenceOrbitalRadius);
+				strength += scaler * charge1 * 1.0 / Math_.Sqr(elem1.ValenceOrbitalRadius);
+				strength += scaler * charge2 * 1.0 / Math_.Sqr(elem2.ValenceOrbitalRadius);
 				++Order;
 			}
 			{// Remove the effective charge repulsive force
 				var charge1 = elem1.EffectiveCharge(consts, elem1.AtomicNumber + Order);
 				var charge2 = elem2.EffectiveCharge(consts, elem2.AtomicNumber + Order);
-				strength -= scaler * charge1 * charge2 / Maths.Sqr(elem1.ValenceOrbitalRadius + elem2.ValenceOrbitalRadius);
+				strength -= scaler * charge1 * charge2 / Math_.Sqr(elem1.ValenceOrbitalRadius + elem2.ValenceOrbitalRadius);
 			}
 
 			// Scale the strength by 'Order'

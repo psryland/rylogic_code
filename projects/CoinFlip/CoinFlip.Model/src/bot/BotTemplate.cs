@@ -1,9 +1,9 @@
 ﻿using System.ComponentModel;
 using System.Xml.Linq;
 using CoinFlip;
-using pr.common;
-using pr.gui;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Gui;
+using Rylogic.Utility;
 
 namespace Bot.Template
 {

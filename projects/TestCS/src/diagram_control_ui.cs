@@ -2,15 +2,15 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using System.Xml.Linq;
-using pr.extn;
-using pr.gui;
-using pr.maths;
-using pr.scintilla;
-using pr.util;
-using pr.view3d;
-using pr.win32;
-using ComboBox = pr.gui.ComboBox;
-using ToolStripContainer = pr.gui.ToolStripContainer;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Maths;
+using Rylogic.Scintilla;
+using Rylogic.Utility;
+using Rylogic.Graphix;
+using Rylogic.Windows32;
+using ComboBox = Rylogic.Gui.ComboBox;
+using ToolStripContainer = Rylogic.Gui.ToolStripContainer;
 
 namespace TestCS
 {
@@ -153,7 +153,7 @@ namespace TestCS
 			}
 			//protected override void RefreshInternal()
 			//{
-			//	var ldr = new pr.ldr.LdrBuilder();
+			//	var ldr = new Rylogic.LDraw.LdrBuilder();
 			//	ldr.Append("*Box b FF00FF00 {20}");
 			//	m_gfx.UpdateModel(ldr.ToString(), View3d.EUpdateObject.All ^ View3d.EUpdateObject.Transform);
 			//	m_gfx.O2P = Position;
@@ -186,7 +186,7 @@ namespace TestCS
 					if (m_form.m_diag != null)
 					{
 						var pt = m_form.m_diag.ClientToDiagram(m_form.m_diag.PointToClient(MousePosition));
-						m_form.m_status_mouse_pos.Text = "Pos: {0} {1}".Fmt(pt.x.ToString("F3"), pt.y.ToString("F3"));
+						m_form.m_status_mouse_pos.Text = $"Pos: {pt.x.ToString("F3")} {pt.y.ToString("F3")}";
 					}
 					break;
 				}
@@ -207,9 +207,9 @@ namespace TestCS
 		/// </summary>
 		private void InitializeComponent()
 		{
-			pr.gui.DiagramControl.DiagramOptions diagramOptions1 = new pr.gui.DiagramControl.DiagramOptions();
-			pr.gui.DiagramControl.DiagramOptions.NodeOptions nodeOptions1 = new pr.gui.DiagramControl.DiagramOptions.NodeOptions();
-			pr.gui.DiagramControl.DiagramOptions.ScatterOptions scatterOptions1 = new pr.gui.DiagramControl.DiagramOptions.ScatterOptions();
+			Rylogic.Gui.DiagramControl.DiagramOptions diagramOptions1 = new Rylogic.Gui.DiagramControl.DiagramOptions();
+			Rylogic.Gui.DiagramControl.DiagramOptions.NodeOptions nodeOptions1 = new Rylogic.Gui.DiagramControl.DiagramOptions.NodeOptions();
+			Rylogic.Gui.DiagramControl.DiagramOptions.ScatterOptions scatterOptions1 = new Rylogic.Gui.DiagramControl.DiagramOptions.ScatterOptions();
 			this.statusStrip1 = new System.Windows.Forms.StatusStrip();
 			this.m_status_mouse_pos = new System.Windows.Forms.ToolStripStatusLabel();
 			this.menuStrip1 = new System.Windows.Forms.MenuStrip();
@@ -221,7 +221,7 @@ namespace TestCS
 			this.m_menu_tools_load_options = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools_allowediting = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_toolstripcont = new ToolStripContainer();
-			this.m_diag = new pr.gui.DiagramControl();
+			this.m_diag = new Rylogic.Gui.DiagramControl();
 			this.statusStrip1.SuspendLayout();
 			this.menuStrip1.SuspendLayout();
 			this.m_toolstripcont.BottomToolStripPanel.SuspendLayout();

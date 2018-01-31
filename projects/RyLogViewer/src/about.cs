@@ -4,11 +4,11 @@ using System.IO;
 using System.Reflection;
 using System.Windows.Forms;
 using RyLogViewer.Properties;
-using pr.common;
-using pr.extn;
-using pr.gui;
-using pr.util;
-using RichTextBox = pr.gui.RichTextBox;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Utility;
+using RichTextBox = Rylogic.Gui.RichTextBox;
 
 namespace RyLogViewer
 {
@@ -73,10 +73,10 @@ namespace RyLogViewer
 
 				rtf.Append(new Rtf.TextStyle(rtf.TextStyle){ForeColourIndex = rtf.ColourIndex(m_licence.Valid ? Color.Green : Color.Red)});
 				rtf.Append("Installed for: ");
-				if (d             != 0) rtf.Append(" {0} days".Fmt(d));
-				if (d + h         != 0) rtf.Append(" {0} hours".Fmt(h));
-				if (d + h + m     != 0) rtf.Append(" {0} minutes".Fmt(m));
-				if (d + h + m + s != 0) rtf.Append(" {0} seconds".Fmt(s));
+				if (d             != 0) rtf.Append($" {d} days"   );
+				if (d + h         != 0) rtf.Append($" {h} hours"  );
+				if (d + h + m     != 0) rtf.Append($" {m} minutes");
+				if (d + h + m + s != 0) rtf.Append($" {s} seconds");
 				rtf.AppendLine();
 			}
 
@@ -137,7 +137,7 @@ namespace RyLogViewer
 			this.m_lbl_info = new System.Windows.Forms.Label();
 			this.m_lbl_licence = new System.Windows.Forms.Label();
 			this.m_btn_version_history = new System.Windows.Forms.Button();
-			this.m_edit_licence = new pr.gui.RichTextBox();
+			this.m_edit_licence = new Rylogic.Gui.RichTextBox();
 			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
 			this.SuspendLayout();
 			// 

@@ -5,13 +5,12 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Xml.Linq;
-using pr.common;
-using pr.extn;
-using pr.gfx;
-using pr.gui;
-using pr.maths;
-using pr.util;
-using pr.view3d;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Graphix;
+using Rylogic.Gui;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {
@@ -314,7 +313,7 @@ namespace CoinFlip
 				return null;
 
 			// Test the distance to the MA over the selection distance
-			var dist_sq = Maths.Sqr(Chart.Options.MinSelectionDistance);
+			var dist_sq = Math_.Sqr(Chart.Options.MinSelectionDistance);
 			var idx_range = new Range(
 				m_data.BinarySearch(pt => pt.CandleIndex.CompareTo(chart_point.X - Chart.Options.MinSelectionDistance/2f), find_insert_position:true),
 				m_data.BinarySearch(pt => pt.CandleIndex.CompareTo(chart_point.X + Chart.Options.MinSelectionDistance/2f), find_insert_position:true));
@@ -328,7 +327,7 @@ namespace CoinFlip
 				foreach (var y in yofs)
 				{
 					var pt = Chart.ChartToClient(new PointF((float)ma.CandleIndex, (float)(ma.Value + y * ma.StdDev)));
-					if (Drawing_.Subtract(client_point, pt).Length2Sq() < dist_sq)
+					if (Point_.Subtract(client_point, pt).Length2Sq() < dist_sq)
 						return new ChartControl.HitTestResult.Hit(this, pt, null);
 				}
 			}
@@ -517,7 +516,7 @@ namespace CoinFlip
 			public int WindowSize
 			{
 				get { return get<int>(nameof(WindowSize)); }
-				set { set(nameof(WindowSize), Maths.Clamp(value, 1, MaxWindowSize)); }
+				set { set(nameof(WindowSize), Math_.Clamp(value, 1, MaxWindowSize)); }
 			}
 			public const int MaxWindowSize = 500;
 
@@ -525,7 +524,7 @@ namespace CoinFlip
 			public int Width
 			{
 				get { return get<int>(nameof(Width)); }
-				set { set(nameof(Width), Maths.Clamp(value, 1, 50)); }
+				set { set(nameof(Width), Math_.Clamp(value, 1, 50)); }
 			}
 
 			/// <summary>True to use an exponential moving average</summary>
@@ -553,7 +552,7 @@ namespace CoinFlip
 			public float BollingerBandsStdDev
 			{
 				get { return get<float>(nameof(BollingerBandsStdDev)); }
-				set { set(nameof(BollingerBandsStdDev), Maths.Clamp(value, 0, 5.0f)); }
+				set { set(nameof(BollingerBandsStdDev), Math_.Clamp(value, 0, 5.0f)); }
 			}
 
 			/// <summary>The line colour for the Bollinger Bands</summary>

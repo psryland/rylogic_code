@@ -7,11 +7,11 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
-using pr.gui;
-using pr.util;
-using DataGridViewComboBoxColumn = pr.gui.DataGridViewComboBoxColumn;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Utility;
+using DataGridViewComboBoxColumn = Rylogic.Gui.DataGridViewComboBoxColumn;
 
 namespace RyLogViewer
 {
@@ -299,7 +299,7 @@ namespace RyLogViewer
 			try
 			{
 				// Search for 'adb.exe'
-				var find_adb = new ProgressForm("Locating 'adb.exe'...", msg.Fmt(string.Empty), Icon, ProgressBarStyle.Marquee, (s,a,cb) =>
+				var find_adb = new ProgressForm("Locating 'adb.exe'...", string.Format(msg, string.Empty), Icon, ProgressBarStyle.Marquee, (s,a,cb) =>
 				{
 					foreach (var path in search_paths)
 					{
@@ -309,14 +309,14 @@ namespace RyLogViewer
 						if (path == null || !Directory.Exists(path))
 							continue;
 
-						cb(new ProgressForm.UserState{Description = msg.Fmt(path), ForceLayout = false});
+						cb(new ProgressForm.UserState{Description = string.Format(msg, path), ForceLayout = false});
 						Func<string,bool> progress = dir =>
 						{
 							cb(ProgressForm.UserState.Empty);
 							return !s.CancelPending;
 						};
 
-						foreach (var fi in Path_.EnumFileSystem(path, SearchOption.AllDirectories, regex_filter:@"adb\.exe", progress:progress))
+						foreach (var fi in Shell_.EnumFileSystem(path, SearchOption.AllDirectories, regex_filter:@"adb\.exe", progress:progress))
 						{
 							// Found one!
 							adb_path = fi.FullPath;
@@ -365,7 +365,7 @@ namespace RyLogViewer
 		private string Adb(string args)
 		{
 			var result = string.Empty;
-			var desc = "Executing:\r\n\r\n{0} {1}".Fmt(m_edit_adb_fullpath.Text, args);
+			var desc = $"Executing:\r\n\r\n{m_edit_adb_fullpath.Text} {args}";
 
 			try
 			{
@@ -406,7 +406,7 @@ namespace RyLogViewer
 
 						// If the command completed, read the output
 						if (proc.ExitCode < 0)
-							throw new Exception("Error code: {0}\r\nResult:\r\n{1}".Fmt(proc.ExitCode, sb_err.ToString()));
+							throw new Exception($"Error code: {proc.ExitCode}\r\nResult:\r\n{sb_err}");
 
 						proc.Close();
 
@@ -421,7 +421,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				MsgBox.Show(this, "Adb returned an error.\r\n{0}".Fmt(ex.InnerException.MessageFull()), "Adb Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				MsgBox.Show(this, $"Adb returned an error.\r\n{ex.InnerException.MessageFull()}", "Adb Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 				return string.Empty;
 			}
 		}

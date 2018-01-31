@@ -2,8 +2,8 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows.Forms;
-using pr.extn;
-using pr.gui;
+using Rylogic.Extn;
+using Rylogic.Gui;
 
 namespace Rylogic.VSExtension
 {

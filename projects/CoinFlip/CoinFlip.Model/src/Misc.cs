@@ -4,12 +4,12 @@ using System.Media;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
-using pr.common;
-using pr.crypt;
-using pr.extn;
-using pr.gui;
-using pr.maths;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Crypt;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {
@@ -175,7 +175,7 @@ namespace CoinFlip
 		/// <summary>The location of where to look for bot plugin dlls</summary>
 		public static string BotDirectory
 		{
-			get { return Util.ResolveAppPath("bots"); }
+			get { return Util2.ResolveAppPath("bots"); }
 		}
 		
 		/// <summary>Regex filter pattern for Bot dlls</summary>
@@ -318,7 +318,7 @@ namespace CoinFlip
 		{
 			return
 				tt == ETradeType.B2Q ? price_q2b :
-				tt == ETradeType.Q2B ? Maths.Div(1m._(), price_q2b, 0m / 1m._(price_q2b)) :
+				tt == ETradeType.Q2B ? Math_.Div(1m._(), price_q2b, 0m / 1m._(price_q2b)) :
 				throw new Exception("Unknown trade type");
 		}
 
@@ -704,39 +704,37 @@ namespace CoinFlip
 		/// <summary>Create a table of candles for a time frame</summary>
 		public static string CandleTable(ETimeFrame time_frame)
 		{
-			return Str.Build(
-				"create table if not exists ",time_frame," (\n",
-				"[",nameof(Candle.Timestamp),"] integer unique,\n",
-				"[",nameof(Candle.Open     ),"] real,\n",
-				"[",nameof(Candle.High     ),"] real,\n",
-				"[",nameof(Candle.Low      ),"] real,\n",
-				"[",nameof(Candle.Close    ),"] real,\n",
-				"[",nameof(Candle.Median   ),"] real,\n",
-				"[",nameof(Candle.Volume   ),"] real)"
-				);
+			return
+				$"create table if not exists {time_frame} (\n"+
+				$"[{nameof(Candle.Timestamp)}] integer unique,\n"+
+				$"[{nameof(Candle.Open     )}] real,\n"+
+				$"[{nameof(Candle.High     )}] real,\n"+
+				$"[{nameof(Candle.Low      )}] real,\n"+
+				$"[{nameof(Candle.Close    )}] real,\n"+
+				$"[{nameof(Candle.Median   )}] real,\n"+
+				$"[{nameof(Candle.Volume   )}] real)";
 		}
 
 		/// <summary>Insert or replace a candle in table 'time_frame'</summary>
 		public static string InsertCandle(ETimeFrame time_frame)
 		{
-			return Str.Build(
-				"insert or replace into ",time_frame," (",
-				"[",nameof(Candle.Timestamp),"],",
-				"[",nameof(Candle.Open     ),"],",
-				"[",nameof(Candle.High     ),"],",
-				"[",nameof(Candle.Low      ),"],",
-				"[",nameof(Candle.Close    ),"],",
-				"[",nameof(Candle.Median   ),"],",
-				"[",nameof(Candle.Volume   ),"])",
-				" values (",
-				"?,", // Timestamp
-				"?,", // Open     
-				"?,", // High     
-				"?,", // Low      
-				"?,", // Close    
-				"?,", // Median   
-				"?)"  // Volume   
-				);
+			return
+				$"insert or replace into {time_frame} ("+
+				$"[{nameof(Candle.Timestamp)}],"+
+				$"[{nameof(Candle.Open     )}],"+
+				$"[{nameof(Candle.High     )}],"+
+				$"[{nameof(Candle.Low      )}],"+
+				$"[{nameof(Candle.Close    )}],"+
+				$"[{nameof(Candle.Median   )}],"+
+				$"[{nameof(Candle.Volume   )}])"+
+				$" values ("+
+				$"?,"+ // Timestamp
+				$"?,"+ // Open     
+				$"?,"+ // High     
+				$"?,"+ // Low      
+				$"?,"+ // Close    
+				$"?,"+ // Median   
+				$"?)"; // Volume   
 		}
 
 		/// <summary>Return the properties of a candle to match an InsertCandle sql statement</summary>
@@ -762,42 +760,40 @@ namespace CoinFlip
 		/// <summary>Create a table of historic trades</summary>
 		public static string HistoryTable()
 		{
-			return Str.Build(
-				$"create table if not exists {TradeHistory} (\n",
-				"[",nameof(TradeRecord.TradeId        ),"] integer unique,\n",
-				"[",nameof(TradeRecord.OrderId        ),"] integer,\n",
-				"[",nameof(TradeRecord.Timestamp      ),"] integer,\n",
-				"[",nameof(TradeRecord.PairName       ),"] text,\n",
-				"[",nameof(TradeRecord.TradeType      ),"] text,\n",
-				"[",nameof(TradeRecord.PriceQ2B       ),"] real,\n",
-				"[",nameof(TradeRecord.VolumeBase     ),"] real,\n",
-				"[",nameof(TradeRecord.CommissionQuote),"] real)"
-				);
+			return
+				$"create table if not exists {TradeHistory} (\n"+
+				$"[{nameof(TradeRecord.TradeId        )}] integer unique,\n"+
+				$"[{nameof(TradeRecord.OrderId        )}] integer,\n"+
+				$"[{nameof(TradeRecord.Timestamp      )}] integer,\n"+
+				$"[{nameof(TradeRecord.PairName       )}] text,\n"+
+				$"[{nameof(TradeRecord.TradeType      )}] text,\n"+
+				$"[{nameof(TradeRecord.PriceQ2B       )}] real,\n"+
+				$"[{nameof(TradeRecord.VolumeBase     )}] real,\n"+
+				$"[{nameof(TradeRecord.CommissionQuote)}] real)";
 		}
 
 		/// <summary>Insert or replace a historic trade</summary>
 		public static string InsertHistoric()
 		{
-			return Str.Build(
-				$"insert or replace into {TradeHistory} (",
-				"[",nameof(TradeRecord.TradeId        ),"],",
-				"[",nameof(TradeRecord.OrderId        ),"],",
-				"[",nameof(TradeRecord.Timestamp      ),"],",
-				"[",nameof(TradeRecord.PairName       ),"],",
-				"[",nameof(TradeRecord.TradeType      ),"],",
-				"[",nameof(TradeRecord.PriceQ2B       ),"],",
-				"[",nameof(TradeRecord.VolumeBase     ),"],",
-				"[",nameof(TradeRecord.CommissionQuote),"])",
-				" values (",
-				"?,", // TradeId        
-				"?,", // OrderId        
-				"?,", // Timestamp      
-				"?,", // PairName       
-				"?,", // TradeType      
-				"?,", // PriceQ2B       
-				"?,", // VolumeBase     
-				"?)"  // CommissionQuote
-				);
+			return
+				$"insert or replace into {TradeHistory} ("+
+				$"[{nameof(TradeRecord.TradeId        )}],"+
+				$"[{nameof(TradeRecord.OrderId        )}],"+
+				$"[{nameof(TradeRecord.Timestamp      )}],"+
+				$"[{nameof(TradeRecord.PairName       )}],"+
+				$"[{nameof(TradeRecord.TradeType      )}],"+
+				$"[{nameof(TradeRecord.PriceQ2B       )}],"+
+				$"[{nameof(TradeRecord.VolumeBase     )}],"+
+				$"[{nameof(TradeRecord.CommissionQuote)}])"+
+				$" values ("+
+				$"?,"+ // TradeId        
+				$"?,"+ // OrderId        
+				$"?,"+ // Timestamp      
+				$"?,"+ // PairName       
+				$"?,"+ // TradeType      
+				$"?,"+ // PriceQ2B       
+				$"?,"+ // VolumeBase     
+				$"?)"; // CommissionQuote
 		}
 			
 		/// <summary>Return the properties of a 'Historic' to match an InsertHistoric sql statement</summary>

@@ -2,10 +2,8 @@
 using System.ComponentModel;
 using System.Linq;
 using System.Windows.Forms;
-using Rylogic.VSExtension.Properties;
-using pr.extn;
-using pr.maths;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Maths;
 
 namespace Rylogic.VSExtension
 {
@@ -69,7 +67,7 @@ namespace Rylogic.VSExtension
 			base.OnCurrentCellChanged(e);
 			var row = CurrentRow;
 			if (row != null && Data.Count != 0)
-				Data.Position = Maths.Clamp(row.Index, 0, Data.Count -  1);
+				Data.Position = Math_.Clamp(row.Index, 0, Data.Count -  1);
 		}
 
 		/// <summary>Supply cell values</summary>

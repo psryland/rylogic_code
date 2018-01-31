@@ -4,9 +4,9 @@ using System.Diagnostics;
 using System.Linq;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
-using pr.common;
-using pr.extn;
-using pr.maths;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Maths;
 
 namespace Rylogic.VSExtension
 {
@@ -89,7 +89,7 @@ namespace Rylogic.VSExtension
 
 			public override string ToString()
 			{
-				return "Line: {0} Grp: {1} Patn: {2} Span: {3}".Fmt(LineNumber, Grp, Patn, Span);
+				return $"Line: {LineNumber} Grp: {Grp} Patn: {Patn} Span: {Span}";
 			}
 		}
 
@@ -119,7 +119,7 @@ namespace Rylogic.VSExtension
 				SLine = snapshot.GetLineFromLineNumber(Lines.Begi);
 				ELine = snapshot.GetLineFromLineNumber(Lines.Endi);
 
-				CaretPos = Maths.Clamp(caret.Position.BufferPosition, SLine.Start.Position, ELine.End.Position);
+				CaretPos = Math_.Clamp(caret.Position.BufferPosition, SLine.Start.Position, ELine.End.Position);
 				CaretLineNumber = snapshot.GetLineNumberFromPosition(CaretPos);
 
 				Debug.Assert(Pos.Size >= 0);
@@ -132,7 +132,7 @@ namespace Rylogic.VSExtension
 			public readonly int Column; // The column index to align to
 			public readonly Range Span; // The range of characters around the align column
 			public AlignPos(int column, Range span) { Column = column; Span = span; }
-			public override string ToString() { return "Col {0} {1}".Fmt(Column, Span); }
+			public override string ToString() { return $"Col {Column} {Span}"; }
 		}
 
 		private readonly List<AlignGroup> m_groups;

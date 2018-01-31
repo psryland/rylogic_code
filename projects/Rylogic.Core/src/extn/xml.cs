@@ -17,7 +17,7 @@ using System.Xml;
 using System.Xml.Linq;
 using Rylogic.Attrib;
 using Rylogic.Common;
-using Rylogic.Gfx;
+using Rylogic.Graphix;
 using Rylogic.Maths;
 
 namespace Rylogic.Extn
@@ -38,7 +38,8 @@ namespace Rylogic.Extn
 	/// <summary>XML helper methods</summary>
 	public static class Xml_
 	{
-		private const string TypeAttr = "ty";
+		public static readonly char[] WhiteSpace = new[]{' ','\t','\r','\n','\v'};
+		public const string TypeAttr = "ty";
 
 		#region ToXml Binding
 
@@ -60,22 +61,22 @@ namespace Rylogic.Extn
 					node.Add(obj);
 					return node;
 				};
-				this[typeof(string         )] = ToXmlDefault;
-				this[typeof(bool           )] = ToXmlDefault;
-				this[typeof(byte           )] = ToXmlDefault;
-				this[typeof(sbyte          )] = ToXmlDefault;
-				this[typeof(char           )] = ToXmlDefault;
-				this[typeof(short          )] = ToXmlDefault;
-				this[typeof(ushort         )] = ToXmlDefault;
-				this[typeof(int            )] = ToXmlDefault;
-				this[typeof(uint           )] = ToXmlDefault;
-				this[typeof(long           )] = ToXmlDefault;
-				this[typeof(ulong          )] = ToXmlDefault;
-				this[typeof(float          )] = ToXmlDefault;
-				this[typeof(double         )] = ToXmlDefault;
-				this[typeof(decimal        )] = ToXmlDefault;
-				this[typeof(Enum           )] = ToXmlDefault;
-				this[typeof(Guid           )] = ToXmlDefault;
+				this[typeof(string)] = ToXmlDefault;
+				this[typeof(bool)] = ToXmlDefault;
+				this[typeof(byte)] = ToXmlDefault;
+				this[typeof(sbyte)] = ToXmlDefault;
+				this[typeof(char)] = ToXmlDefault;
+				this[typeof(short)] = ToXmlDefault;
+				this[typeof(ushort)] = ToXmlDefault;
+				this[typeof(int)] = ToXmlDefault;
+				this[typeof(uint)] = ToXmlDefault;
+				this[typeof(long)] = ToXmlDefault;
+				this[typeof(ulong)] = ToXmlDefault;
+				this[typeof(float)] = ToXmlDefault;
+				this[typeof(double)] = ToXmlDefault;
+				this[typeof(decimal)] = ToXmlDefault;
+				this[typeof(Enum)] = ToXmlDefault;
+				this[typeof(Guid)] = ToXmlDefault;
 				this[typeof(DateTimeOffset)] = (obj, node) =>
 				{
 					var dto = (DateTimeOffset)obj;
@@ -109,49 +110,49 @@ namespace Rylogic.Extn
 				this[typeof(Size)] = (obj, node) =>
 				{
 					var sz = (Size)obj;
-					node.SetValue("{0} {1}".Fmt(sz.Width, sz.Height));
+					node.SetValue($"{sz.Width} {sz.Height}");
 					return node;
 				};
 				this[typeof(SizeF)] = (obj, node) =>
 				{
 					var sz = (SizeF)obj;
-					node.SetValue("{0} {1}".Fmt(sz.Width, sz.Height));
+					node.SetValue($"{sz.Width} {sz.Height}");
 					return node;
 				};
 				this[typeof(Point)] = (obj, node) =>
 				{
 					var pt = (Point)obj;
-					node.SetValue("{0} {1}".Fmt(pt.X, pt.Y));
+					node.SetValue($"{pt.X} {pt.Y}");
 					return node;
 				};
 				this[typeof(PointF)] = (obj, node) =>
 				{
 					var pt = (PointF)obj;
-					node.SetValue("{0} {1}".Fmt(pt.X, pt.Y));
+					node.SetValue($"{pt.X} {pt.Y}");
 					return node;
 				};
 				this[typeof(Rectangle)] = (obj, node) =>
 				{
 					var rc = (Rectangle)obj;
-					node.SetValue("{0} {1} {2} {3}".Fmt(rc.X, rc.Y, rc.Width, rc.Height));
+					node.SetValue($"{rc.X} {rc.Y} {rc.Width} {rc.Height}");
 					return node;
 				};
 				this[typeof(RectangleF)] = (obj, node) =>
 				{
 					var rc = (RectangleF)obj;
-					node.SetValue("{0} {1} {2} {3}".Fmt(rc.X, rc.Y, rc.Width, rc.Height));
+					node.SetValue($"{rc.X} {rc.Y} {rc.Width} {rc.Height}");
 					return node;
 				};
 				this[typeof(Range)] = (obj, node) =>
 				{
 					var r = (Range)obj;
-					node.SetValue("{0} {1}".Fmt(r.Beg, r.End));
+					node.SetValue($"{r.Beg} {r.End}");
 					return node;
 				};
 				this[typeof(RangeF)] = (obj, node) =>
 				{
 					var r = (RangeF)obj;
-					node.SetValue("{0} {1}".Fmt(r.Beg, r.End));
+					node.SetValue($"{r.Beg} {r.End}");
 					return node;
 				};
 				this[typeof(v2)] = (obj, node) =>
@@ -286,7 +287,7 @@ namespace Rylogic.Extn
 					var dca = type.GetCustomAttributes(typeof(DataContractAttribute), true).FirstOrDefault();
 					if (dca != null) { func = this[type] = ToXmlDataContract; break; }
 
-					throw new NotSupportedException("There is no 'ToXml' binding for type {0}".Fmt(type.Name));
+					throw new NotSupportedException($"There is no 'ToXml' binding for type {type.Name}");
 				}
 				return func(obj, node);
 			}
@@ -312,7 +313,7 @@ namespace Rylogic.Extn
 			// Find the native method on the type
 			var type = obj.GetType();
 			var mi = type.GetMethods(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).FirstOrDefault(IsToXmlFunc);
-			if (mi == null) throw new NotSupportedException("{0} does not have a 'ToXml' method".Fmt(type.Name));
+			if (mi == null) throw new NotSupportedException($"{type.Name} does not have a 'ToXml' method");
 
 			// Replace the mapping with a call directly to that method
 			ToMap[type] = (o,n) => (XElement)mi.Invoke(o, new object[]{n});
@@ -326,7 +327,7 @@ namespace Rylogic.Extn
 
 			// Look for the DataContract attribute
 			var dca = type.GetCustomAttributes(typeof(DataContractAttribute), true).FirstOrDefault();
-			if (dca == null) throw new NotSupportedException("{0} does not have the DataContractAttribute".Fmt(type.Name));
+			if (dca == null) throw new NotSupportedException($"{type.Name} does not have the DataContractAttribute");
 
 			// Find all fields and properties with the DataMember attribute
 			var members =
@@ -385,7 +386,6 @@ namespace Rylogic.Extn
 		private static readonly AsBinding m_impl_AsMap = new AsBinding();
 		public class AsBinding :Dictionary<Type, AsFunc>
 		{
-			private readonly char[] WhiteSpace = new[]{' ','\t','\r','\n','\v'};
 			public AsBinding()
 			{
 				this[typeof(XElement)] = (elem, type, ctor) =>
@@ -746,7 +746,7 @@ namespace Rylogic.Extn
 		{
 			// Look for the DataContract attribute
 			var dca = type.GetCustomAttributes(typeof(DataContractAttribute), true).FirstOrDefault();
-			if (dca == null) throw new NotSupportedException("{0} does not have the DataContractAttribute".Fmt(type.Name));
+			if (dca == null) throw new NotSupportedException($"{type.Name} does not have the DataContractAttribute");
 
 			// Find all fields and properties with the DataMember attribute
 			var members =
@@ -764,7 +764,7 @@ namespace Rylogic.Extn
 
 					// This will always de-serialise as a default object ignoring the elements
 					if (members.Count == 0 && el.HasElements)
-						throw new Exception("{0} has the DataContract attribute, but no DataMembers.".Fmt(ty.Name));
+						throw new Exception($"{ty.Name} has the DataContract attribute, but no DataMembers.");
 
 					// Read nodes from the XML, and populate any members with matching names
 					object obj = new_inst(ty);
@@ -924,7 +924,7 @@ namespace Rylogic.Extn
 		{
 			var child_count = parent.ChildCount();
 			if (index < 0 || index > child_count)
-				throw new Exception("XML insert node. Index {0} out of range [0,{1}]".Fmt(index, child_count));
+				throw new Exception($"XML insert node. Index {index} out of range [0,{child_count}]");
 
 			if      (index == 0)           parent.AddFirst(child);
 			else if (index == child_count) parent.LastNode.AddAfterSelf(child);
@@ -1098,15 +1098,15 @@ namespace Rylogic.Extn
 						var name = (string)elem.Attribute(Attr.Name);
 						if (name != null)
 						{
-							if (sb.Length != 1) Str.Append(sb, "/");
-							Str.Append(sb, name);
+							if (sb.Length != 1) sb.Append("/");
+							sb.Append(name);
 						}
 					}
 				}
 				else
 				{
 					sb.Length = 0;
-					Str.Append(sb, "/");
+					sb.Append("/");
 				}
 
 				return sb;
@@ -1139,7 +1139,7 @@ namespace Rylogic.Extn
 			/// <summary>Debugging string</summary>
 			public override string ToString()
 			{
-				return "OpType: {0}  Idx: {1}  Name: {2}  Value: {3}".Fmt(OpType, Index, Name, Value);
+				return $"OpType: {OpType}  Idx: {Index}  Name: {Name}  Value: {Value}";
 			}
 		}
 
@@ -1178,7 +1178,7 @@ namespace Rylogic.Extn
 					{
 						switch (mode)
 						{
-						default: throw new System.Exception("Unknown XmlDiff mode: {0}".Fmt(mode));
+						default: throw new System.Exception($"Unknown XmlDiff mode: {mode}");
 						case Mode.Transform:
 							{
 								// Remove the remaining i elements
@@ -1205,7 +1205,7 @@ namespace Rylogic.Extn
 					{
 						switch (mode)
 						{
-						default: throw new System.Exception("Unknown XmlDiff mode: {0}".Fmt(mode));
+						default: throw new System.Exception($"Unknown XmlDiff mode: {mode}");
 						case Mode.Transform:
 						case Mode.Merge:
 							{
@@ -1326,11 +1326,8 @@ namespace Rylogic.Extn
 					}
 					#endregion
 					#region XDocument
-					else if (i.Current is XDocument)
+					else if (i.Current is XDocument ni && j.Current is XDocument nj)
 					{
-						var ni = (XDocument)i.Current;
-						var nj = (XDocument)j.Current;
-
 						// Recursively find the differences in the child trees.
 						var op = new XElement(EOpType.Change.Desc());
 						if (ni.Nodes().Any() || nj.Nodes().Any())
@@ -1376,7 +1373,7 @@ namespace Rylogic.Extn
 				{
 					switch (mode)
 					{
-					default: throw new System.Exception("Unknown XmlDiff mode: {0}".Fmt(mode));
+					default: throw new System.Exception($"Unknown XmlDiff mode: {mode}");
 					case Mode.Transform:
 						{
 							diff.Add2(RemoveOp(i.Current, ref output_node_index));
@@ -1395,7 +1392,7 @@ namespace Rylogic.Extn
 				{
 					switch (mode)
 					{
-					default: throw new System.Exception("Unknown XmlDiff mode: {0}".Fmt(mode));
+					default: throw new System.Exception($"Unknown XmlDiff mode: {mode}");
 					case Mode.Transform:
 					case Mode.Merge:
 						{
@@ -1427,7 +1424,7 @@ namespace Rylogic.Extn
 						else if (child is XText    xt) xt.Value = op.Value;
 						else if (child is XElement xe) xe.Value = op.Value;
 						else if (child is XComment xc) xc.Value = op.Value;
-						else throw new Exception("Cannot change value on node type {0}".Fmt(child.NodeType));
+						else throw new Exception($"Cannot change value on node type {child.NodeType}");
 						break;
 					}
 
@@ -1436,7 +1433,7 @@ namespace Rylogic.Extn
 					{
 						var child = op.FindChild(tree);
 						if (op.Name.HasValue() && child is XElement xe && xe.Name != op.Name)
-							throw new Exception("Name mismatch for remove operation. Expected: {0}  Actual: {1}".Fmt(op.Name, xe.Name));
+							throw new Exception($"Name mismatch for remove operation. Expected: {op.Name}  Actual: {xe.Name}");
 						child.Remove();
 						break;
 					}
@@ -1446,12 +1443,12 @@ namespace Rylogic.Extn
 					{
 						// Insert a new node, and apply any child operations to it
 						if (op.Index < 0 || op.Index > tree.ChildCount())
-							throw new Exception("Insert node at invalid index position. Given: {0}  Valid range: [0,{1}]".Fmt(op.Index, tree.ChildCount()));
+							throw new Exception($"Insert node at invalid index position. Given: {op.Index}  Valid range: [0,{tree.ChildCount()}]");
 
 						switch (op.NodeType)
 						{
 						default:
-							throw new NotSupportedException("XmlDiff insert node type {0} has not been implemented".Fmt(op.NodeType));
+							throw new NotSupportedException($"XmlDiff insert node type {op.NodeType} has not been implemented");
 						case XmlNodeType.Element:
 							{
 								var node = (XContainer)tree.Insert(op.Index, new XElement(op.Name));
@@ -1474,7 +1471,7 @@ namespace Rylogic.Extn
 						// Find the child node
 						var child = (XContainer)op.FindChild(tree);
 						if (op.Name.HasValue() && child is XElement xe && xe.Name != op.Name)
-							throw new Exception("Name mismatch for change operation. Expected: {0}  Actual: {1}".Fmt(op.Name, xe.Name));
+							throw new Exception($"Name mismatch for change operation. Expected: {op.Name}  Actual: {xe.Name}");
 
 						child.Patch(op_elem);
 						break;
@@ -1511,21 +1508,21 @@ namespace Rylogic.Extn
 				// Replace the Value for the element
 				case EOpType.Value:
 					{
-						Str.Append(sb,"'",op.FullName,"': value changed to '",op.Value,"'\n");
+						sb.Append($"'{op.FullName}': value changed to '{op.Value}'\n");
 						break;
 					}
 
 				// 'Remove' the child node
 				case EOpType.Remove:
 					{
-						Str.Append(sb,"'",op.FullName,"': ",op.NodeType," removed\n");
+						sb.Append($"'{op.FullName}': {op.NodeType} removed\n");
 						break;
 					}
 
 				// 'Insert' an element at the given index position
 				case EOpType.Insert:
 					{
-						Str.Append(sb,"'",op.FullName,"': ",op.NodeType," inserted\n");
+						sb.Append($"'{op.FullName}': {op.NodeType} inserted\n");
 						break;
 					}
 
@@ -1540,7 +1537,7 @@ namespace Rylogic.Extn
 				case EOpType.Attr:
 					{
 						// SetAttributeValue 
-						Str.Append(sb,"'",op.FullName,"': Attribute '",op.Name,"' value changed to '",op.Value,"'\n");
+						sb.Append($"'{op.FullName}': Attribute '{op.Name}' value changed to '{op.Value}'\n");
 						break;
 					}
 				}
@@ -1614,7 +1611,6 @@ namespace Rylogic.UnitTests
 {
 	using System.Drawing;
 	using Extn;
-	using Utility;
 
 	[TestFixture] public class TestXml
 	{
@@ -1637,7 +1633,7 @@ namespace Rylogic.UnitTests
 			private bool Equals(Elem1 other)     { return m_uint == other.m_uint; }
 			public override bool Equals(object obj)
 			{
-				if (ReferenceEquals(null, obj)) return false;
+				if (obj is null) return false;
 				if (ReferenceEquals(this, obj)) return true;
 				if (obj.GetType() != GetType()) return false;
 				return Equals((Elem1)obj);
@@ -1656,7 +1652,7 @@ namespace Rylogic.UnitTests
 			private bool Equals(Elem2 other)   { return m_int == other.m_int && string.Equals(m_string, other.m_string); }
 			public override bool Equals(object obj)
 			{
-				if (ReferenceEquals(null, obj)) return false;
+				if (obj is null) return false;
 				if (ReferenceEquals(this, obj)) return true;
 				if (obj.GetType() != GetType()) return false;
 				return Equals((Elem2)obj);
@@ -1675,7 +1671,7 @@ namespace Rylogic.UnitTests
 			private bool Equals(Elem3 other)   { return m_int == other.m_int && string.Equals(m_string,other.m_string); }
 			public override bool Equals(object obj)
 			{
-				if (ReferenceEquals(null,obj)) return false;
+				if (obj is null) return false;
 				if (ReferenceEquals(this,obj)) return true;
 				if (obj.GetType() != GetType()) return false;
 				return Equals((Elem3)obj);
@@ -1862,17 +1858,13 @@ namespace Rylogic.UnitTests
 				Assert.True(Equals(kv, KV));
 			}
 			{
-				var list = new List<string>();
-				list.Add("one");
-				list.Add("two");
+				var list = new List<string>{"one","two"};
 				var node = list.ToXml("list", false);
 				var LIST = node.As<List<string>>();
 				Assert.True(list.SequenceEqual(LIST));
 			}
 			{
-				var dic = new Dictionary<int, float>();
-				dic[1] = 1.1f;
-				dic[2] = 2.2f;
+				var dic = new Dictionary<int, float>{[1] = 1.1f, [2] = 2.2f};
 				var node = dic.ToXml("dic", false);
 				var DIC = node.As<Dictionary<int,float>>();
 				Assert.True(dic.SequenceEqualUnordered(DIC));

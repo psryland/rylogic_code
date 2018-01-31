@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Windows.Forms;
-using pr.extn;
-using pr.gui;
-using pr.maths;
-using pr.util;
-using pr.view3d;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Maths;
+using Rylogic.Utility;
+using Rylogic.Graphix;
 
 namespace TestCS
 {
@@ -29,7 +29,7 @@ namespace TestCS
 			using (var lk = m_series.Lock())
 			{
 				for (int i = 0; i != 100000; ++i)
-					lk.Data.Add(new ChartDataSeries.Pt(0.01*i, Math.Sin(0.01*i*Maths.Tau)));
+					lk.Data.Add(new ChartDataSeries.Pt(0.01*i, Math.Sin(0.01*i*Math_.Tau)));
 			}
 			m_series.Options.PlotType = ChartDataSeries.EPlotType.Bar;
 			m_series.Options.PointStyle = ChartDataSeries.EPointStyle.Triangle;

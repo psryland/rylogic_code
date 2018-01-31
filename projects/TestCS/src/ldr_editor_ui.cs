@@ -1,7 +1,7 @@
 ﻿using System.Windows.Forms;
-using pr.scintilla;
-using pr.util;
-using pr.view3d;
+using Rylogic.Scintilla;
+using Rylogic.Utility;
+using Rylogic.Graphix;
 
 namespace TestCS
 {
@@ -9,7 +9,7 @@ namespace TestCS
 	{
 		private View3d m_view3d;
 		private StatusStrip m_status_strip;
-		private pr.gui.ScintillaCtrl m_sci;
+		private Rylogic.Gui.ScintillaCtrl m_sci;
 		private ToolStripStatusLabel m_status;
 
 		static LdrEditorUI()
@@ -42,7 +42,7 @@ namespace TestCS
 		{
 			this.m_status_strip = new System.Windows.Forms.StatusStrip();
 			this.m_status = new System.Windows.Forms.ToolStripStatusLabel();
-			this.m_sci = new pr.gui.ScintillaCtrl();
+			this.m_sci = new Rylogic.Gui.ScintillaCtrl();
 			this.m_status_strip.SuspendLayout();
 			this.SuspendLayout();
 			// 

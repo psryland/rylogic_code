@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-using pr.common;
-using pr.db;
-using pr.extn;
-using pr.maths;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Db;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {
@@ -195,7 +195,7 @@ namespace CoinFlip
 				if (m_total == null)
 				{
 					if (TimeFrame == ETimeFrame.None) throw new Exception("Invalid time frame");
-					var sql = Str.Build("select count(*) from ",TimeFrame);
+					var sql = $"select count(*) from {TimeFrame}";
 					m_total = DB.ExecuteScalar(sql);
 				}
 				return m_total.Value;
@@ -210,7 +210,7 @@ namespace CoinFlip
 			{
 				if (m_newest == null)
 				{
-					var sql = Str.Build("select * from ",TimeFrame," order by [",nameof(Candle.Timestamp),"] desc limit 1");
+					var sql = $"select * from {TimeFrame} order by [{nameof(Candle.Timestamp)}] desc limit 1";
 					m_newest = DB.EnumRows<Candle>(sql).FirstOrDefault();
 				}
 				return m_newest ?? Candle.Default;
@@ -225,7 +225,7 @@ namespace CoinFlip
 			{
 				if (m_oldest == null)
 				{
-					var sql = Str.Build("select * from ",TimeFrame," order by [",nameof(Candle.Timestamp),"] asc limit 1");
+					var sql = $"select * from {TimeFrame} order by [{nameof(Candle.Timestamp)}] asc limit 1";
 					m_oldest = DB.EnumRows<Candle>(sql).FirstOrDefault();
 				}
 				return m_oldest ?? Candle.Default;
@@ -240,15 +240,14 @@ namespace CoinFlip
 			{
 				if (m_current == null)
 				{
-					var ts = $"[{nameof(Candle.Timestamp)}]";
-					var sql = Str.Build("select * from ",TimeFrame," where ",ts," <= ? order by ",ts," desc limit 1");
+					var sql = $"select * from {TimeFrame} where [{nameof(Candle.Timestamp)}] <= ? order by [{nameof(Candle.Timestamp)}] desc limit 1";
 					m_current = DB.EnumRows<Candle>(sql, 1, new object[] { Model.UtcNow.Ticks }).FirstOrDefault();
 				}
 				if (m_current != null && Model.BackTesting)
 				{
 					// Interpolate the latest candle to determine the spot price
-					var t = Maths.Frac(m_current.Timestamp, Model.UtcNow.Ticks, m_current.Timestamp + Misc.TimeFrameToTicks(1.0, TimeFrame));
-					return m_current.SubCandle(Maths.Clamp(t, 0.0, 1.0));
+					var t = Math_.Frac(m_current.Timestamp, Model.UtcNow.Ticks, m_current.Timestamp + Misc.TimeFrameToTicks(1.0, TimeFrame));
+					return m_current.SubCandle(Math_.Clamp(t, 0.0, 1.0));
 				}
 				return m_current ?? Candle.Default;
 			}

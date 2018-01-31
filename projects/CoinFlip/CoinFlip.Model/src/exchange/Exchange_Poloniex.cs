@@ -5,9 +5,9 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Poloniex.API;
-using pr.common;
-using pr.extn;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {

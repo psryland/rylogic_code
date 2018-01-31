@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
-using pr.extn;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace RyLogViewer
 {
@@ -98,7 +98,7 @@ namespace RyLogViewer
 				catch (Exception ex)
 				{
 					var type = GetType().DeclaringType;
-					Log.Exception(this, ex, "[{0}] Data receive exception".Fmt(type != null ? type.Name : ""));
+					Log.Exception(this, ex, $"[{(type != null ? type.Name : "")}] Data receive exception");
 				}
 				RaiseConnectionDropped();
 			}

@@ -1,13 +1,12 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
-using pr.extn;
-using pr.stream;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Streams;
+using Rylogic.Utility;
 
 namespace RyLogViewer
 {
@@ -88,7 +87,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Log.Warn(this, "Failed to set log file '{0}'s length to zero.\nReason: {1}".Fmt(m_filepath, ex.Message));
+				Log.Warn(this, $"Failed to set log file '{m_filepath}'s length to zero.\nReason: {ex.Message}");
 				err = ex;
 			}
 
@@ -103,7 +102,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Log.Warn(this, "Failed to replace file {0} with an empty file.\nReason: {1}".Fmt(m_filepath, ex.Message));
+				Log.Warn(this, $"Failed to replace file {m_filepath} with an empty file.\nReason: {ex.Message}");
 				err = ex;
 			}
 

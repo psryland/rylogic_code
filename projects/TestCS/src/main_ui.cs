@@ -2,12 +2,12 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
-using pr.audio;
-using pr.db;
-using pr.extn;
-using pr.gui;
-using pr.scintilla;
-using pr.view3d;
+using Rylogic.Audio;
+using Rylogic.Db;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Scintilla;
+using Rylogic.Graphix;
 
 namespace TestCS
 {
@@ -50,7 +50,7 @@ namespace TestCS
 		{
 			// Note! Running this in the debugger causes this to be run as a 32bit
 			// process regardless of the selected solution platform
-			Debug.WriteLine("\n    {0} is a {1}bit process\n".Fmt(Application.ExecutablePath, Environment.Is64BitProcess ? "64" : "32"));
+			Debug.WriteLine($"\n    {Application.ExecutablePath} is a {(Environment.Is64BitProcess?"64":"32")}bit process\n");
 
 			Sci.LoadDll();
 			Sqlite.LoadDll();

@@ -5,12 +5,11 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Windows.Forms;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.INet;
+using Rylogic.Utility;
 using RyLogViewer.Properties;
-using pr.common;
-using pr.extn;
-using pr.gui;
-using pr.inet;
-using pr.util;
 
 namespace RyLogViewer
 {
@@ -42,7 +41,7 @@ namespace RyLogViewer
 			{
 				MsgBox.Show(null,
 					"There is an error in the startup options provided.\r\n"+
-					"Error Details:\r\n{0}".Fmt(err.Message)
+					$"Error Details:\r\n{err.Message}"
 					, "Command Line Error"
 					, MessageBoxButtons.OK
 					, MessageBoxIcon.Error);
@@ -84,26 +83,24 @@ namespace RyLogViewer
 		/// <summary>Handle unhandled exceptions</summary>
 		private static void HandleTheUnhandled(Exception ex)
 		{
-			var res = MsgBox.Show(null, Str.Build(
-				Application.ProductName, " has shutdown with the following error.\r\n",
-				"Error: ", ex.GetType().Name, "\r\n",
-				"\r\n",
-				"Deleting the applications settings file, '", StartupOptions?.SettingsPath ?? Path_.FileName(Settings.Default.Filepath), "', might prevent this problem.\r\n",
-				"\r\n",
-				"Generating a report and sending it to ", Util.GetAssemblyAttribute<AssemblyCompanyAttribute>().Company, " will aid in the resolution of this issue. ",
-				"The generated report is a plain text file that you can review before sending.\r\n",
-				"\r\n",
-				"Would you like to generate the report?\r\n",
-				"\r\n",
-				"Alternatively, please contact ", Constants.SupportEmail, " with information about this error so that it can be fixed.\r\n",
-				"\r\n",
-				"Apologies for any inconvenience caused.\r\n")
-				,"Unexpected Termination"
-				,MessageBoxButtons.YesNo
-				,MessageBoxIcon.Error);
+			var res = MsgBox.Show(null,
+				$"{Application.ProductName} has shutdown with the following error.\r\n"+
+				$"Error: {ex.GetType().Name}\r\n"+
+				$"\r\n"+
+				$"Deleting the applications settings file, '{StartupOptions?.SettingsPath ?? Path_.FileName(Settings.Default.Filepath)}', might prevent this problem.\r\n"+
+				$"\r\n"+
+				$"Generating a report and sending it to {Util.GetAssemblyAttribute<AssemblyCompanyAttribute>().Company} will aid in the resolution of this issue. "+
+				$"The generated report is a plain text file that you can review before sending.\r\n"+
+				$"\r\n"+
+				$"Would you like to generate the report?\r\n"+
+				$"\r\n"+
+				$"Alternatively, please contact {Constants.SupportEmail} with information about this error so that it can be fixed.\r\n"+
+				$"\r\n"+
+				$"Apologies for any inconvenience caused.\r\n",
+				"Unexpected Termination", MessageBoxButtons.YesNo, MessageBoxIcon.Error);
 			if (res == DialogResult.Yes)
 			{
-				var dg = new SaveFileDialog{Title = "Save Crash Report", FileName = Application.ProductName+"CrashReport", Filter = Util.FileDialogFilter("Crash Report Files","*.txt", "All files","*.*"), DefaultExt = "txt", CheckPathExists = true};
+				var dg = new SaveFileDialog{Title = "Save Crash Report", FileName = Application.ProductName+"CrashReport", Filter = Util2.FileDialogFilter("Crash Report Files","*.txt", "All files","*.*"), DefaultExt = "txt", CheckPathExists = true};
 				if (dg.ShowDialog() == DialogResult.OK)
 				{
 					var settings = "Settings filepath unknown";
@@ -120,7 +117,7 @@ namespace RyLogViewer
 						.AppendLine(settings)
 						.AppendLine()
 						.AppendLine("[General]")
-						.AppendLine("Application Version: {0}".Fmt(Util.AssemblyVersion()))
+						.AppendLine($"Application Version: {Util.AssemblyVersion()}")
 						.AppendLine(Environment.OSVersion.VersionString)
 						.AppendLine(StartupOptions?.Dump() ?? string.Empty)
 						.AppendLine()

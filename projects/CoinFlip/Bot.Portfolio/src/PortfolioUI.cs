@@ -4,13 +4,13 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
-using pr.container;
-using pr.extn;
-using pr.gui;
-using pr.maths;
-using pr.util;
-using ComboBox = pr.gui.ComboBox;
-using DataGridView = pr.gui.DataGridView;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Maths;
+using Rylogic.Utility;
+using ComboBox = Rylogic.Gui.ComboBox;
+using DataGridView = Rylogic.Gui.DataGridView;
 
 namespace Bot.Portfolio
 {
@@ -196,7 +196,7 @@ namespace Bot.Portfolio
 				// Normalised column
 				if (col.DataPropertyName == EColPortfolio.Normalised.ToString())
 				{
-					a.Value = Maths.Div(folio.Weight, Bot.Currencies.Sum(x => x.Weight), 0).ToString();
+					a.Value = Math_.Div(folio.Weight, Bot.Currencies.Sum(x => x.Weight), 0).ToString();
 					a.FormattingApplied = true;
 				}
 
@@ -266,7 +266,7 @@ namespace Bot.Portfolio
 				{
 					var val = (decimal)folio.Coin.ValueOf(folio.Coin.Balances[Bot.Fund].Total);
 					var tot = Bot.Currencies.Sum(x => (decimal)x.Coin.ValueOf(x.Coin.Balances[Bot.Fund].Total));
-					a.Value = Maths.Div(val, tot, 0).ToString("G3");
+					a.Value = Math_.Div(val, tot, 0).ToString("G3");
 					a.FormattingApplied = true;
 				}
 
@@ -289,11 +289,11 @@ namespace Bot.Portfolio
 		{
 			this.components = new System.ComponentModel.Container();
 			this.m_panel0 = new System.Windows.Forms.Panel();
-			this.m_grid_portfolio = new pr.gui.DataGridView();
-			this.m_cb_exchange = new pr.gui.ComboBox();
+			this.m_grid_portfolio = new Rylogic.Gui.DataGridView();
+			this.m_cb_exchange = new Rylogic.Gui.ComboBox();
 			this.m_lbl_exchange = new System.Windows.Forms.Label();
 			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
-			this.m_grid_status = new pr.gui.DataGridView();
+			this.m_grid_status = new Rylogic.Gui.DataGridView();
 			this.m_panel0.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_portfolio)).BeginInit();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_status)).BeginInit();

@@ -2,10 +2,10 @@
 using System.Linq;
 using System.Windows.Forms;
 using CoinFlip;
-using pr.container;
-using pr.extn;
-using pr.gui;
-using pr.util;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Utility;
 
 namespace Bot.Fishing
 {

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.Windows.Forms;
 using System.Xml.Linq;
-using pr.extn;
+using Rylogic.Extn;
 
 namespace RyLogViewer
 {
@@ -18,7 +18,7 @@ namespace RyLogViewer
 		public override Guid Guid { get { return new Guid("47BF0EAE-35FE-49E6-8E5B-3927BD9B07C3"); } }
 
 		/// <summary>
-		/// The name that appears in the transform column dropdown
+		/// The name that appears in the transform column drop-down
 		/// for this text transformation.</summary>
 		public override string DropDownName { get { return "Code Lookup"; } }
 
@@ -26,7 +26,7 @@ namespace RyLogViewer
 		public override bool Configurable { get { return true; } }
 
 		/// <summary>A summary of the configuration for this transform substitution</summary>
-		public override string ConfigSummary { get { return m_values.Count != 0 ? "{0} lookup codes".Fmt(m_values.Count) : null; } }
+		public override string ConfigSummary { get { return m_values.Count != 0 ? $"{m_values.Count} lookup codes" : null; } }
 
 		/// <summary>
 		/// Called when a user selects to edit the configuration for this transform.

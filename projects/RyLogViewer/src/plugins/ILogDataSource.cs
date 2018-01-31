@@ -11,7 +11,7 @@ namespace RyLogViewer
 		// -This interface represents the contract for a complete custom
 		//  data source, including any UI interaction needed for configuration.
 		//  To create a custom data source, create a class that implements this
-		//  interface and mark it with [pr.common.PluginAttribute(typeof(ICustomLogDataSource))].
+		//  interface and mark it with [Rylogic.Common.PluginAttribute(typeof(ICustomLogDataSource))].
 		// -RyLogViewer loads plugins using a background thread, however, Start(),
 		//  BeginRead(), EndRead(), and Dispose() are all called from the main thread.
 

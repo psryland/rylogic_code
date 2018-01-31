@@ -5,9 +5,9 @@ using System.IO;
 using System.Net;
 using System.Threading;
 using System.Windows.Forms;
-using pr.extn;
-using pr.gui;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Utility;
 
 namespace RyLogViewer
 {
@@ -126,7 +126,7 @@ namespace RyLogViewer
 			catch (Exception ex)
 			{
 				Log.Exception(this, ex, "Auto updated did not complete");
-				MsgBox.Show(this, "Automatic updated failed\r\nReason: {0}".Fmt(ex.MessageFull()), "Update Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				MsgBox.Show(this, $"Automatic updated failed\r\nReason: {ex.MessageFull()}", "Update Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
 

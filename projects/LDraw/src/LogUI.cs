@@ -3,13 +3,13 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
-using pr.gui;
-using pr.scintilla;
-using pr.util;
-using pr.win32;
-using ToolStripContainer = pr.gui.ToolStripContainer;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Scintilla;
+using Rylogic.Utility;
+using Rylogic.Windows32;
+using ToolStripContainer = Rylogic.Gui.ToolStripContainer;
 
 namespace LDraw
 {
@@ -95,7 +95,7 @@ namespace LDraw
 
 				// Create styles for the log levels
 				var fontname = Encoding.UTF8.GetBytes("tahoma");
-				using (var fonth = GCHandleEx.Alloc(fontname, GCHandleType.Pinned))
+				using (var fonth = GCHandle_.Alloc(fontname, GCHandleType.Pinned))
 				{
 					Cmd(Sci.SCI_STYLESETFONT, 0, fonth.Handle.AddrOfPinnedObject());
 					Cmd(Sci.SCI_STYLESETFORE, 0, Color.Black.ToAbgr() & 0x00FFFFFF);
@@ -236,7 +236,7 @@ namespace LDraw
 		private void InitializeComponent()
 		{
 			this.components = new System.ComponentModel.Container();
-			this.m_tsc = new pr.gui.ToolStripContainer();
+			this.m_tsc = new Rylogic.Gui.ToolStripContainer();
 			this.m_il_toolbar = new System.Windows.Forms.ImageList(this.components);
 			this.m_tsc.SuspendLayout();
 			this.SuspendLayout();

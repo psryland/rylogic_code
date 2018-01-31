@@ -14,14 +14,14 @@ using System.Text;
 using System.Windows.Forms;
 using System.Windows.Forms.VisualStyles;
 using System.Xml.Linq;
-using pr.common;
-using pr.container;
-using pr.extn;
-using pr.gui;
-using pr.inet;
-using pr.maths;
-using pr.util;
-using pr.win32;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.INet;
+using Rylogic.Maths;
+using Rylogic.Utility;
+using Rylogic.Windows32;
 using RyLogViewer.Properties;
 using Timer = System.Windows.Forms.Timer;
 
@@ -103,7 +103,7 @@ namespace RyLogViewer
 		private System.Windows.Forms.ToolStripMenuItem m_menu_encoding_detect;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
 		private System.Windows.Forms.ToolStripStatusLabel m_status_encoding;
-		private pr.gui.SubRangeScroll m_scroll_file;
+		private Rylogic.Gui.SubRangeScroll m_scroll_file;
 		private System.Windows.Forms.TableLayoutPanel m_table;
 		private System.Windows.Forms.ToolStripButton m_btn_watch;
 		private System.Windows.Forms.ContextMenuStrip m_cmenu_grid;
@@ -186,7 +186,7 @@ namespace RyLogViewer
 		public Main(StartupOptions startup_options)
 		{
 			Log.Register(startup_options.LogFilePath, false);
-			Log.Info(this, "App Startup: {0}".Fmt(DateTime.Now));
+			Log.Info(this, $"App Startup: {DateTime.Now}");
 			InitializeComponent();
 
 			StartupOptions        = startup_options;
@@ -301,7 +301,7 @@ namespace RyLogViewer
 		}
 		private void HandleSettingsChanged(object sender, SettingChangedEventArgs args)
 		{
-			Log.Info(this, "Setting {0} changed from {1} to {2}".Fmt(args.Key,args.OldValue,args.NewValue));
+			Log.Info(this, $"Setting {args.Key} changed from {args.OldValue} to {args.NewValue}");
 		}
 
 		/// <summary>The options provided at startup</summary>
@@ -616,7 +616,7 @@ namespace RyLogViewer
 			if (m_in_update_ui != 0) return;
 			using (Scope.Create(() => ++m_in_update_ui, () => --m_in_update_ui))
 			{
-				Log.Info(this, "UpdateUI. Row delta {0}".Fmt(row_delta));
+				Log.Info(this, $"UpdateUI. Row delta {row_delta}");
 				using (m_grid.SuspendRedraw(true))
 				{
 					// Configure the grid
@@ -714,7 +714,7 @@ namespace RyLogViewer
 				try { Settings.Patterns = PatternSet.Load(StartupOptions.PatternSetFilepath); }
 				catch (Exception ex)
 				{
-					Misc.ShowMessage(this, "Could not load highlight pattern set {0}.".Fmt(StartupOptions.PatternSetFilepath), Application.ProductName, MessageBoxIcon.Error, ex);
+					Misc.ShowMessage(this, $"Could not load highlight pattern set {StartupOptions.PatternSetFilepath}.", Application.ProductName, MessageBoxIcon.Error, ex);
 				}
 			}
 		}
@@ -789,7 +789,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				MsgBox.Show(this, "Could not load pattern set.\r\n{0}".Fmt(ex.Message), Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+				MsgBox.Show(this, $"Could not load pattern set.\r\n{ex.Message}", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
 
@@ -814,7 +814,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				MsgBox.Show(this, "Could not create a pattern set from the current patterns.\r\n{0}".Fmt(ex.Message), Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+				MsgBox.Show(this, $"Could not create a pattern set from the current patterns.\r\n{ex.Message}", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
 
@@ -866,7 +866,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				MsgBox.Show(this, "Failed to import patterns\r\n{0}".Fmt(ex.Message), Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+				MsgBox.Show(this, $"Failed to import patterns\r\n{ex.Message}", Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
 
@@ -887,13 +887,13 @@ namespace RyLogViewer
 				{
 					if (m_recent_logfiles.IsInRecents(file))
 					{
-						var res = MsgBox.Show(this, "File path '{0}' is invalid or does not exist\r\n\r\nRemove from recent files list?".Fmt(file), Application.ProductName, MessageBoxButtons.YesNo,MessageBoxIcon.Error);
+						var res = MsgBox.Show(this, $"File path '{file}' is invalid or does not exist\r\n\r\nRemove from recent files list?", Application.ProductName, MessageBoxButtons.YesNo,MessageBoxIcon.Error);
 						if (res == DialogResult.Yes)
 							m_recent_logfiles.Remove(file, true);
 					}
 					else
 					{
-						MsgBox.Show(this, "File path '{0}' is invalid or does not exist".Fmt(file), Application.ProductName, MessageBoxButtons.OK,MessageBoxIcon.Error);
+						MsgBox.Show(this, $"File path '{file}' is invalid or does not exist", Application.ProductName, MessageBoxButtons.OK,MessageBoxIcon.Error);
 					}
 					return false;
 				}
@@ -930,7 +930,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Misc.ShowMessage(this, "Failed to open file {0} due to an error.".Fmt(filepath), Application.ProductName, MessageBoxIcon.Error, ex);
+				Misc.ShowMessage(this, $"Failed to open file {filepath} due to an error.", Application.ProductName, MessageBoxIcon.Error, ex);
 				Src = null;
 			}
 		}
@@ -949,7 +949,7 @@ namespace RyLogViewer
 			}
 			catch (Exception ex)
 			{
-				Misc.ShowMessage(this, "Failed to open aggregate log files due to an error.", Application.ProductName, MessageBoxIcon.Error, ex);
+				Misc.ShowMessage(this, $"Failed to open aggregate log files due to an error.", Application.ProductName, MessageBoxIcon.Error, ex);
 				Src = null;
 			}
 		}
@@ -975,7 +975,7 @@ namespace RyLogViewer
 		private void OnFileChanged()
 		{
 			long len = Src.Stream.Length;
-			Log.Info(this, "File {0} changed. File length: {1}".Fmt(Src.Name, len));
+			Log.Info(this, $"File {Src.Name} changed. File length: {len}");
 			long filepos = AutoScrollTail ? Src.Stream.Length : m_filepos;
 			bool reload  = Src.Stream.Length < m_fileend || !Settings.FileChangesAdditive;
 			BuildLineIndex(filepos, reload);
@@ -1390,11 +1390,11 @@ namespace RyLogViewer
 			// Find the new centre position of the thumb
 			var range = m_scroll_file.ThumbRange;
 			long pos = (range.Beg == 0) ? 0 : (range.End == m_fileend) ? m_fileend : range.Mid;
-			Log.Info(this, "file scroll to {0}".Fmt(pos));
+			Log.Info(this, $"file scroll to {pos}");
 
 			// Set the new selected row from the mouse up position
 			var pt = m_scroll_file.PointToClient(MousePosition);
-			var sel_pos = (long)(Maths.Frac(1, pt.Y, m_scroll_file.Height - 1) * FileByteRange.Size);
+			var sel_pos = (long)(Math_.Frac(1, pt.Y, m_scroll_file.Height - 1) * FileByteRange.Size);
 			BuildLineIndex(pos, false, () => { SelectRowByAddr(sel_pos); });
 		}
 
@@ -1776,14 +1776,14 @@ namespace RyLogViewer
 			const string HelpStartPage = @"docs\help.html";
 			try
 			{
-				var path = Util.ResolveAppPath(HelpStartPage);
+				var path = Util2.ResolveAppPath(HelpStartPage);
 				Process.Start(path);
 			}
 			catch (Exception ex)
 			{
 				MsgBox.Show(this,
 					"Unable to display the help documentation.\r\n" +
-					"Error Message: {0}\r\n".Fmt(ex.Message) +
+					$"Error Message: {ex.Message}\r\n" +
 					"\r\n" +
 					"The expected location of the main documentation file is:\r\n" +
 					"  <install directory>\\"+HelpStartPage,
@@ -1823,7 +1823,7 @@ namespace RyLogViewer
 				if (Settings.UseWebProxy && !Settings.WebProxyHost.HasValue())
 				{
 					try { proxy =  new WebProxy(Settings.WebProxyHost, Settings.WebProxyPort); }
-					catch (Exception ex) { Log.Exception(this, ex, "Failed to create web proxy for {0}:{1}".Fmt(Settings.WebProxyHost, Settings.WebProxyPort)); }
+					catch (Exception ex) { Log.Exception(this, ex, $"Failed to create web proxy for {Settings.WebProxyHost}:{Settings.WebProxyPort}"); }
 				}
 				return proxy;
 			}
@@ -1989,7 +1989,7 @@ namespace RyLogViewer
 			int displayed_rows = m_grid.DisplayedRowCount(false);
 			int first_row = Math.Max(0, m_grid.RowCount - displayed_rows);
 			m_grid.TryScrollToRowIndex(first_row);
-			Log.Info(this, "Showing last row. First({0}) + Displayed({1}) = {2}. RowCount = {3}".Fmt(first_row, displayed_rows, first_row + displayed_rows, m_grid.RowCount));
+			Log.Info(this, $"Showing last row. First({first_row}) + Displayed({displayed_rows}) = {first_row + displayed_rows}. RowCount = {m_grid.RowCount}");
 		}
 
 		/// <summary>Returns true if grid event handlers should process grid events</summary>
@@ -2062,8 +2062,8 @@ namespace RyLogViewer
 			bool auto_scroll_tail = AutoScrollTail;
 			if (m_grid.RowCount != count || row_delta != 0)
 			{
-				Log.Info(this, "RowCount changed {0} -> {1}.".Fmt(m_grid.RowCount, count));
-				Log.Info(this, "Row delta {0}.".Fmt(row_delta));
+				Log.Info(this, $"RowCount changed {m_grid.RowCount} -> {count}.");
+				Log.Info(this, $"Row delta {row_delta}.");
 
 				// Record data so that we can preserve the selected rows and first visible rows
 				var selected_rows = m_grid.SelectedRowIndices().ToArray();
@@ -2102,7 +2102,7 @@ namespace RyLogViewer
 							var pt = new Point(m_grid.RightToLeft == RightToLeft.Yes ? m_grid.Width-1 : 1, m_grid.PointToClient(MousePosition).Y);
 
 							// Adjust the anchor row
-							var anchor_y = Maths.Clamp(anchor.Y + row_delta, 0, count-1);
+							var anchor_y = Math_.Clamp(anchor.Y + row_delta, 0, count-1);
 
 							// Find the row under the mouse (or nearest to it)
 							var hti = m_grid.HitTestEx(pt);
@@ -2138,7 +2138,7 @@ namespace RyLogViewer
 						// Restore the first visible row after setting the current selected row, because
 						// changing the 'CurrentCell' also changes the scroll position
 						if (first_vis != -1)
-							m_grid.FirstDisplayedScrollingRowIndex = Maths.Clamp(first_vis + row_delta, 0, m_grid.RowCount - 1);
+							m_grid.FirstDisplayedScrollingRowIndex = Math_.Clamp(first_vis + row_delta, 0, m_grid.RowCount - 1);
 					}
 				}
 
@@ -2180,7 +2180,7 @@ namespace RyLogViewer
 						// For some reason, cell.GetPreferredSize or col.GetPreferredWidth don't return correct values
 						var cell = row.Cells[i];
 						var sz = gfx.MeasureString((string)cell.Value, cell.InheritedStyle.Font);
-						var w = Maths.Clamp(sz.Width + 10, 30, 64000); // DGV throws if width is greater than 65535
+						var w = Math_.Clamp(sz.Width + 10, 30, 64000); // DGV throws if width is greater than 65535
 						col_widths[i] = Math.Max(col_widths[i], w);
 					}
 				}
@@ -2188,7 +2188,7 @@ namespace RyLogViewer
 			var total_width = Math.Max(col_widths.Sum(), 1);
 
 			// Resize columns. If the total width is less than the control width use the control width instead
-			var scale = Maths.Max(grid_width / total_width, 1f);
+			var scale = Math_.Max(grid_width / total_width, 1f);
 			foreach (DataGridViewColumn col in m_grid.Columns)
 				col.Width = (int)(col_widths[col.Index] * scale);
 		}
@@ -2254,7 +2254,7 @@ namespace RyLogViewer
 			}
 
 			// Grid
-			int col_count = Settings.ColDelimiter.Length != 0 ? Maths.Clamp(Settings.ColumnCount, 1, 255) : 1;
+			int col_count = Settings.ColDelimiter.Length != 0 ? Math_.Clamp(Settings.ColumnCount, 1, 255) : 1;
 			var col_count_changed = m_grid.ColumnCount != col_count;
 			m_grid.Font = Settings.Font;
 			m_grid.ColumnHeadersVisible = col_count > 1;
@@ -2320,27 +2320,27 @@ namespace RyLogViewer
 			}
 			else
 			{
-				Text = "{0} - {1}".Fmt(Settings.FullPathInTitle ? Src.PsuedoFilepath : Src.Name, Application.ProductName);
+				Text = $"{(Settings.FullPathInTitle ? Src.PsuedoFilepath : Src.Name)} - {Application.ProductName}";
 				m_status_spring.Text = string.Empty;
 
 				// Get current file position / selection
 				var r = SelectedRowIndex;
 				var pos = (r != -1) ? m_line_index[r].Beg : 0;
-				m_status_filesize.Text = "Position: {0:N0} / {1:N0} bytes".Fmt(pos, FileByteRange.End);
+				m_status_filesize.Text = $"Position: {pos:N0} / {FileByteRange.End:N0} bytes";
 				m_status_filesize.Visible = true;
 
 				// Selection
 				var sel_range = m_grid.SelectedRowIndexRange();
 				var rg = (r != -1) ? new Range(m_line_index[sel_range.Begi].Beg, m_line_index[sel_range.Endi].End) : SelectedRowByteRange;
-				m_status_selection.Text = "Selection: [{0:N0} - {1:N0}] ({2} bytes)".Fmt(rg.Beg, rg.End, rg.Size);
+				m_status_selection.Text = $"Selection: [{rg.Beg:N0} - {rg.End:N0}] ({rg.Size} bytes)";
 				m_status_selection.Visible = true;
 
 				// Line ending characters
-				m_status_line_end.Text = "Line Ending: {0}".Fmt(m_row_delim == null ? "unknown" : Misc.Humanise(m_encoding.GetString(m_row_delim)));
+				m_status_line_end.Text = $"Line Ending: {(m_row_delim == null ? "unknown" : Misc.Humanise(m_encoding.GetString(m_row_delim)))}";
 				m_status_line_end.Visible = true;
 
 				// Encoding characters
-				m_status_encoding.Text = "Encoding: {0}".Fmt(m_encoding.EncodingName);
+				m_status_encoding.Text = $"Encoding: {m_encoding.EncodingName}";
 				m_status_encoding.Visible = true;
 			}
 
@@ -2358,7 +2358,7 @@ namespace RyLogViewer
 			else
 			{
 				m_status_progress.Visible = true;
-				m_status_progress.Value = (int)(Maths.Frac(0, current, total) * 100);
+				m_status_progress.Value = (int)(Math_.Frac(0, current, total) * 100);
 			}
 		}
 
@@ -2367,7 +2367,7 @@ namespace RyLogViewer
 		{
 			Range range = LineIndexRange;
 			if (!range.Equals(m_scroll_file.ThumbRange))
-				Log.Info(this, "File scroll set to [{0},{1}) within file [{2},{3})".Fmt(range.Beg, range.End, FileByteRange.Beg, FileByteRange.End));
+				Log.Info(this, $"File scroll set to [{range.Beg},{range.End}) within file [{FileByteRange.Beg},{FileByteRange.End})");
 
 			m_scroll_file.TotalRange = FileByteRange;
 			m_scroll_file.ThumbRange = range;
@@ -2626,7 +2626,7 @@ namespace RyLogViewer
 			this.toolStripSeparator14 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_cmenu_toggle_bookmark = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_grid = new RyLogViewer.DataGridView();
-			this.m_scroll_file = new pr.gui.SubRangeScroll();
+			this.m_scroll_file = new Rylogic.Gui.SubRangeScroll();
 			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
 			this.m_status_selection = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_toolstrip.SuspendLayout();

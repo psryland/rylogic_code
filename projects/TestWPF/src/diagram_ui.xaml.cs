@@ -3,12 +3,12 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Xml.Linq;
-using pr.extn;
-using pr.gui;
-using pr.maths;
-using pr.util;
-using pr.view3d;
-using pr.win32;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Maths;
+using Rylogic.Utility;
+using Rylogic.Graphix;
+using Rylogic.Windows32;
 
 namespace TestWPF
 {
@@ -118,7 +118,7 @@ namespace TestWPF
 				{
 					var mouse = Mouse.GetPosition(this);
 					var pt = m_diag.ClientToDiagram(new System.Drawing.Point((int)mouse.X,(int)mouse.Y));
-					m_status_mouse_pos.Text = "Pos: {0} {1}".Fmt(pt.x.ToString("F3"), pt.y.ToString("F3"));
+					m_status_mouse_pos.Text = $"Pos: {pt.x.ToString("F3")} {pt.y.ToString("F3")}";
 				}
 				break;
 			}
@@ -134,7 +134,7 @@ namespace TestWPF
 			}
 			//protected override void RefreshInternal()
 			//{
-			//	var ldr = new pr.ldr.LdrBuilder();
+			//	var ldr = new Rylogic.LDraw.LdrBuilder();
 			//	ldr.Append("*Box b FF00FF00 {20}");
 			//	m_gfx.UpdateModel(ldr.ToString(), View3d.EUpdateObject.All ^ View3d.EUpdateObject.Transform);
 			//	m_gfx.O2P = Position;

@@ -4,8 +4,8 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
-using pr.extn;
-using pr.gui;
+using Rylogic.Extn;
+using Rylogic.Gui;
 
 namespace Csex
 {

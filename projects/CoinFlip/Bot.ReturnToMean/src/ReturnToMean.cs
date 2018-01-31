@@ -5,11 +5,10 @@ using System.Linq;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using CoinFlip;
-using pr.common;
-using pr.extn;
-using pr.gui;
-using pr.maths;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace Bot.ReturnToMean
 {
@@ -234,7 +233,7 @@ namespace Bot.ReturnToMean
 						current_holding += pos.VolumeOutNett;
 
 					var holding_diff = current_holding - ideal_holding;
-					if (Maths.Abs(holding_diff) > HoldingChange)
+					if (Math_.Abs(holding_diff) > HoldingChange)
 					{
 						// Cancel the order, we need a larger or smaller order
 						Exchange.CancelOrder(Pair, res.OrderId);
@@ -245,7 +244,7 @@ namespace Bot.ReturnToMean
 			{
 				// Only change the holding when the ideal holding differs by more than the holding change amount
 				var holding_diff = CurrentHolding - ideal_holding;
-				if (Maths.Abs(holding_diff) > HoldingChange)
+				if (Math_.Abs(holding_diff) > HoldingChange)
 				{
 					// Increase or decrease holding
 					Trade trade;

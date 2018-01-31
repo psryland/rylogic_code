@@ -7,11 +7,11 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
-using pr.common;
-using pr.extn;
-using pr.maths;
-using pr.stream;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Streams;
+using Rylogic.Utility;
 
 namespace RyLogViewer
 {
@@ -74,8 +74,8 @@ namespace RyLogViewer
 			get
 			{
 				if (m_line_index.Count == 0) return Range.Zero;
-				int b = Maths.Clamp(m_grid.FirstDisplayedScrollingRowIndex, 0, m_line_index.Count - 1);
-				int e = Maths.Clamp(b + m_grid.DisplayedRowCount(true), 0, m_line_index.Count - 1);
+				int b = Math_.Clamp(m_grid.FirstDisplayedScrollingRowIndex, 0, m_line_index.Count - 1);
+				int e = Math_.Clamp(b + m_grid.DisplayedRowCount(true), 0, m_line_index.Count - 1);
 				return new Range(m_line_index[b].Beg, m_line_index[e].End);
 			}
 		}
@@ -128,7 +128,7 @@ namespace RyLogViewer
 		/// <summary>Cause a currently running BuildLineIndex call to be cancelled</summary>
 		private void CancelBuildLineIndex()
 		{
-			Log.Info(this, "build (id {0}) cancelled".Fmt(m_build_issue));
+			Log.Info(this, $"build (id {m_build_issue}) cancelled");
 			Interlocked.Increment(ref m_build_issue);
 			UpdateStatusProgress(1, 1);
 		}
@@ -146,7 +146,7 @@ namespace RyLogViewer
 				// exception but oh well...
 				file               = file_source.NewInstance().Open();
 				fileend            = Math.Min(file.Stream.Length, fileend_);
-				filepos            = Maths.Clamp(filepos_, 0, fileend);
+				filepos            = Math_.Clamp(filepos_, 0, fileend);
 				filepos_line_index = LineIndex(main.m_line_index, filepos);
 
 				max_line_length    = main.Settings.MaxLineLength;
@@ -274,7 +274,7 @@ namespace RyLogViewer
 
 				// Cause any existing builds to stop by changing the issue number
 				Interlocked.Increment(ref m_build_issue);
-				Log.Info(this, "build start request (id {0}, reload: {1})\n{2}".Fmt(m_build_issue, reload, string.Empty));//new StackTrace(0,true)));
+				Log.Info(this, $"build start request (id {m_build_issue}, reload: {reload})\n{string.Empty}");//new StackTrace(0,true)));
 				ReloadInProgress = reload;
 
 				// Make copies of variables for thread safety
@@ -310,7 +310,7 @@ namespace RyLogViewer
 			// cached data probably overlaps the range we want loaded.
 			try
 			{
-				Log.Info("BLIAsync", "build started. (id {0}, reload {1})".Fmt(d.build_issue, d.reload));
+				Log.Info("BLIAsync", $"build started. (id {d.build_issue}, reload {d.reload})");
 				if (BuildCancelled(d.build_issue)) return;
 				using (d.file)
 				{
@@ -353,7 +353,7 @@ namespace RyLogViewer
 						{
 							scan_backward = true;
 							scan_range = Lrange;
-							bwd_lines -=  Maths.Clamp(d.filepos_line_index - 0, 0, bwd_lines);
+							bwd_lines -=  Math_.Clamp(d.filepos_line_index - 0, 0, bwd_lines);
 							fwd_lines = 0;
 						}
 						else if (dir > 0)
@@ -361,7 +361,7 @@ namespace RyLogViewer
 							scan_backward = false;
 							scan_range = Rrange;
 							bwd_lines = 0;
-							fwd_lines -= Maths.Clamp(d.line_index_count - d.filepos_line_index - 1, 0, fwd_lines);
+							fwd_lines -= Math_.Clamp(d.line_index_count - d.filepos_line_index - 1, 0, fwd_lines);
 						}
 						else if (dir == 0)
 						{
@@ -419,7 +419,7 @@ namespace RyLogViewer
 
 						// Scan twice, starting in the direction of the smallest range so that any
 						// unused cache space is used by the search in the other direction
-						var scan_from = Maths.Clamp(d.filepos, scan_range.Beg, scan_range.End);
+						var scan_from = Math_.Clamp(d.filepos, scan_range.Beg, scan_range.End);
 						for (int a = 0; a != 2; ++a, scan_backward = !scan_backward)
 						{
 							if (BuildCancelled(d.build_issue)) return;
@@ -478,7 +478,7 @@ namespace RyLogViewer
 				}
 				else if (error is FileNotFoundException)
 				{
-					SetStaticStatusMessage("Error reading {0}".Fmt(Path.GetFileName(d.file.Name)), Color.White, Color.DarkRed);
+					SetStaticStatusMessage($"Error reading {Path.GetFileName(d.file.Name)}", Color.White, Color.DarkRed);
 				}
 				else
 				{
@@ -518,7 +518,7 @@ namespace RyLogViewer
 				EnableWatch(false);
 				Misc.ShowHint(m_btn_watch, "File watching disabled due to error.");
 			}
-			Log.Exception(this, err, "Failed to build index list for {0}".Fmt(Src.Name));
+			Log.Exception(this, err, $"Failed to build index list for {Src.Name}");
 			if (err is NoLinesException)
 			{
 				Misc.ShowMessage(this, err.Message, "Scanning file terminated", MessageBoxIcon.Information);
@@ -602,7 +602,7 @@ namespace RyLogViewer
 
 			count -= file.Stream.Position - pos;
 			int read = file.Stream.Read(buf, 0, (int)Math.Min(count, buf.Length));
-			if (read != count) throw new IOException("failed to read file over range [{0},{1}) ({2} bytes). Read {3}/{2} bytes.".Fmt(pos, pos + count, count, read));
+			if (read != count) throw new IOException($"Failed to read file over range [{pos},{pos + count}) ({count} bytes). Read {read}/{count} bytes.");
 			if (backward) file.Stream.Seek(-read, SeekOrigin.Current);
 			return read;
 		}
@@ -765,7 +765,7 @@ namespace RyLogViewer
 					row_delta = intersect.Beg == old_rng.End ? -line_index.Count : line_index.Count;
 				}
 
-				Log.Info(this, "Replacing results. Results contain {0} lines about file position {1}/{2}".Fmt(line_index.Count, filepos, fileend));
+				Log.Info(this, $"Replacing results. Results contain {line_index.Count} lines about file position {filepos}/{fileend}");
 				m_line_index.Assign(line_index);
 
 				// Invalidate cached lines
@@ -775,7 +775,7 @@ namespace RyLogViewer
 			// The new range is to the left of the old range
 			else if (new_rng.Beg < old_rng.Beg && new_rng.End <= old_rng.End)
 			{
-				Log.Info(this, "Merging results front. Results contain {0} lines. File position {1}/{2}".Fmt(line_index.Count, filepos, fileend));
+				Log.Info(this, $"Merging results front. Results contain {line_index.Count} lines. File position {filepos}/{fileend}");
 
 				// Make sure there's no overlap by removing data from 'm_line_index'
 				var trim = 0; for (; trim != m_line_index.Count && m_line_index[trim].Beg < new_rng.End; ++trim) {}
@@ -797,7 +797,7 @@ namespace RyLogViewer
 			// The new range is to the right of the old range
 			else if (new_rng.Beg >= old_rng.Beg && new_rng.End > old_rng.End)
 			{
-				Log.Info(this, "Merging results back. Results contain {0} lines. File position {1}/{2}".Fmt(line_index.Count, filepos, fileend));
+				Log.Info(this, $"Merging results back. Results contain {line_index.Count} lines. File position {filepos}/{fileend}");
 
 				// Make sure there's no overlap by removing data from 'm_line_index'
 				var trim = 0; for (; trim != m_line_index.Count && m_line_index.Back(trim).End > new_rng.Beg; ++trim) {}

@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Xml.Linq;
-using pr.common;
-using pr.extn;
-using pr.gui;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Gui;
 
 namespace RyLogViewer
 {

@@ -1,9 +1,9 @@
-﻿using pr.maths;
+﻿using Rylogic.Maths;
 
 namespace RyLogViewer
 {
 	/// <summary>Subclass the DataGridView to add missing features</summary>
-	public sealed class DataGridView :pr.gui.DataGridView
+	public sealed class DataGridView :Rylogic.Gui.DataGridView
 	{
 		public DataGridView()
 		{
@@ -18,7 +18,7 @@ namespace RyLogViewer
 		{
 			ClearSelection();
 
-			row_index = Maths.Clamp(row_index, -1, RowCount-1);
+			row_index = Math_.Clamp(row_index, -1, RowCount-1);
 			if (row_index == -1)
 			{
 				CurrentCell = null;
@@ -38,7 +38,7 @@ namespace RyLogViewer
 		}
 	}
 
-	public sealed class ComboBox :pr.gui.ComboBox
+	public sealed class ComboBox :Rylogic.Gui.ComboBox
 	{
 //		public override int SelectedIndex
 //		{
@@ -48,7 +48,7 @@ namespace RyLogViewer
 //		}
 	}
 
-	public sealed class ListBox :pr.gui.ListBox
+	public sealed class ListBox :Rylogic.Gui.ListBox
 	{
 //		public override int SelectedIndex
 //		{

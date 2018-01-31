@@ -2,8 +2,8 @@
 using System.Drawing;
 using System.Globalization;
 using System.Windows.Forms;
-using pr.extn;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace RyLogViewer
 {

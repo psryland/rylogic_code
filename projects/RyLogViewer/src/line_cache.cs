@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
-using pr.common;
-using pr.extn;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace RyLogViewer
 {
@@ -29,7 +29,7 @@ namespace RyLogViewer
 		/// <summary>Returns the line data for the line in the m_line_index at position 'row'</summary>
 		private Line ReadLine(int row)
 		{
-			if (row < 0 || row >= m_line_index.Count) throw new Exception("Row index {0} is not within the line index range [0,{1})".Fmt(row, m_line_index.Count));
+			if (row < 0 || row >= m_line_index.Count) throw new Exception($"Row index {row} is not within the line index range [0,{m_line_index.Count})");
 			return ReadLine(m_line_index[row]);
 		}
 
@@ -50,7 +50,7 @@ namespace RyLogViewer
 				Src.Stream.Seek(rng.Beg, SeekOrigin.Begin);
 				m_line_buf = rng.Size <= m_line_buf.Length ? m_line_buf : new byte[rng.Size];
 				int read = Src.Stream.Read(m_line_buf, 0, (int)rng.Size);
-				if (read != rng.Size) throw new IOException("failed to read file over range [{0},{1}) ({2} bytes). Read {3}/{2} bytes.".Fmt(rng.Beg, rng.End, rng.Size, read));
+				if (read != rng.Size) throw new IOException($"Failed to read file over range [{rng.Beg},{rng.End}) ({rng.Size} bytes). Read {read}/{rng.Size} bytes.");
 
 				// Cache data for the line
 				line.Read(rng.Beg, m_line_buf, 0, read, m_encoding, m_col_delim, m_highlights, m_transforms);

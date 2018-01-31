@@ -1,7 +1,7 @@
 ﻿using System.Drawing;
 using System.Windows.Forms;
-using pr.extn;
-using pr.gui;
+using Rylogic.Extn;
+using Rylogic.Gui;
 
 namespace TestCS
 {
@@ -69,7 +69,7 @@ namespace TestCS
 		{
 			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(TreeGridUI));
-			this.m_tree_grid = new pr.gui.TreeGridView();
+			this.m_tree_grid = new Rylogic.Gui.TreeGridView();
 			this.m_image_list = new System.Windows.Forms.ImageList(this.components);
 			((System.ComponentModel.ISupportInitialize)(this.m_tree_grid)).BeginInit();
 			this.SuspendLayout();

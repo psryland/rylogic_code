@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel;
-using pr.extn;
-using pr.maths;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace EscapeVelocity
 {
@@ -55,11 +55,11 @@ namespace EscapeVelocity
 				double xs_area = ContainmentPressure / TankCompound.Strength;
 
 				// The inner radius of the spherical container: v = 2/3τr³ => r = ³root(3v/2τ)
-				double inner = Maths.SphereRadius(fuel_volume);
+				double inner = Math_.SphereRadius(fuel_volume);
 
 				// The cross sectional area is a cross section through the spherical container
 				// so the area = 0.5τ(r1² - r0²). r0 = inner container radius => r1 = sqrt(2a/τ + r0²)
-				double outer = Maths.Sqrt(2.0 * xs_area / Maths.Tau + Maths.Sqr(inner));
+				double outer = Math_.Sqrt(2.0 * xs_area / Math_.Tau + Math_.Sqr(inner));
 
 				// The difference is the wall thickness
 				return outer - inner;
@@ -69,16 +69,16 @@ namespace EscapeVelocity
 			public double TankMass(double fuel_volume, WorldState world)
 			{
 				// v = 2/3 τ(r1³ - r0³)
-				var inner = Maths.SphereRadius(fuel_volume);
+				var inner = Math_.SphereRadius(fuel_volume);
 				var outer = inner + TankWallThickness(fuel_volume);
-				var volume = (2.0/3.0) * Maths.Tau * (Maths.Cubed(outer) - Maths.Cubed(inner));
+				var volume = (2.0/3.0) * Math_.Tau * (Math_.Cubed(outer) - Math_.Cubed(inner));
 				return volume * TankCompound.Density(world.AverageLocalTemperature, 0.0);
 			}
 
 			/// <summary>Returns the volume of the tank including the fuel</summary>
 			public double TankAndFuelVolume(double fuel_volume, WorldState world)
 			{
-				return Maths.SphereRadius(fuel_volume) + TankWallThickness(fuel_volume);
+				return Math_.SphereRadius(fuel_volume) + TankWallThickness(fuel_volume);
 			}
 
 			public FuelSpec()

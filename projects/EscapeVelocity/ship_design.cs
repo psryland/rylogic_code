@@ -1,4 +1,4 @@
-﻿using pr.maths;
+﻿using Rylogic.Maths;
 
 namespace EscapeVelocity
 {
@@ -72,9 +72,9 @@ namespace EscapeVelocity
 
 			// Assume the ship is a spherical ball housing the passengers only
 			double xs_area = Consts.CabinPressure / Spec.HullCompound.Strength;
-;			double ship_inner = Maths.SphereRadius(passenger_volume);
-			double ship_outer = Maths.Sqrt(2.0 * xs_area / Maths.Tau + Maths.Sqr(ship_inner));
-			var hull_volume = (2.0/3.0) * Maths.Tau * (Maths.Cubed(ship_outer) - Maths.Cubed(ship_inner));
+;			double ship_inner = Math_.SphereRadius(passenger_volume);
+			double ship_outer = Math_.Sqrt(2.0 * xs_area / Math_.Tau + Math_.Sqr(ship_inner));
+			var hull_volume = (2.0/3.0) * Math_.Tau * (Math_.Cubed(ship_outer) - Math_.Cubed(ship_inner));
 
 			HullMass         = hull_volume * Spec.HullCompound.Density(World.AverageLocalTemperature, 0.0);
 			TotalVolume      = hull_volume + tank_volume;

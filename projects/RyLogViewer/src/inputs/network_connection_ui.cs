@@ -2,10 +2,9 @@
 using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Windows.Forms;
-using RyLogViewer.Properties;
-using pr.extn;
-using pr.inet;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.INet;
+using Rylogic.Utility;
 
 namespace RyLogViewer
 {
@@ -88,7 +87,7 @@ namespace RyLogViewer
 				};
 
 			// Proxy host
-			tt = "The hostname of the proxy server";
+			tt = "The host name of the proxy server";
 			m_lbl_proxy_hostname.ToolTip(m_tt, tt);
 			m_edit_proxy_hostname.ToolTip(m_tt, tt);
 			m_edit_proxy_hostname.Text = Conn.ProxyHostname;

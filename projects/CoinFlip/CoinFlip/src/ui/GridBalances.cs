@@ -4,11 +4,11 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Windows.Forms;
-using pr.container;
-using pr.extn;
-using pr.gui;
-using pr.maths;
-using pr.util;
+using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {
@@ -358,7 +358,7 @@ namespace CoinFlip
 				m_hit = hit;
 				m_main = Grid.Balances[hit.RowIndex][Fund.Main];
 				m_fund = Grid.Balances[hit.RowIndex][hit.Column.Name];
-				m_limit = Maths.Min(m_fund.Total + m_main.Total, m_fund.Total + m_main.Available);
+				m_limit = Math_.Min(m_fund.Total + m_main.Total, m_fund.Total + m_main.Available);
 				m_initial = m_fund.Total;
 				m_mouse_down = hit.GridPoint;
 			}
@@ -371,7 +371,7 @@ namespace CoinFlip
 				// Get the division point for allocating funds
 				const decimal MaxRangeX = 100m;
 				var t_init = (decimal)(m_initial / m_limit);
-				var t = Maths.Clamp(t_init + sign * Maths.Frac(0, Math.Abs(dx), +MaxRangeX), 0, 1);
+				var t = Math_.Clamp(t_init + sign * Math_.Frac(0, Math.Abs(dx), +MaxRangeX), 0, 1);
 
 				var now = m_main.Model.UtcNow;
 				m_fund.Update(now, total: (    t) * m_limit);

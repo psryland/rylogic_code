@@ -1,20 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.Linq;
-using pr.common;
-using pr.extn;
-using pr.gfx;
-using pr.gui;
-using pr.maths;
-using pr.util;
-using pr.view3d;
+using Rylogic.Common;
+using Rylogic.Graphix;
+using Rylogic.Gui;
+using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {
@@ -108,13 +102,13 @@ namespace CoinFlip
 		protected override void UpdateGfxCore()
 		{
 			var line_colour = Settings.Colour;
-			var ldr = Str.Build(
-				$"*Group {Name} ",
-				$"{{",
-				$"  *Line line {line_colour} {{0 0 0  1 0 0}}\n",
-				$"  *Line halo {line_colour.Alpha(0.25f)} {{0 0 0  1 0 0 *Width {{{16}}} }}\n",
-				$"  *Point grab {line_colour} {{ 0 0 0  1 0 0  *Width {{{20}}} *Style{{Circle}} }}\n",
-				$"}}\n");
+			var ldr =
+				$"*Group {Name} "+
+				$"{{"+
+				$"  *Line line {line_colour} {{0 0 0  1 0 0}}\n"+
+				$"  *Line halo {line_colour.Alpha(0.25f)} {{0 0 0  1 0 0 *Width {{{16}}} }}\n"+
+				$"  *Point grab {line_colour} {{ 0 0 0  1 0 0  *Width {{{20}}} *Style{{Circle}} }}\n"+
+				$"}}\n";
 
 			Gfx = new View3d.Object(ldr, false, Id);
 		}
@@ -136,7 +130,7 @@ namespace CoinFlip
 				var b = ChartBeg;
 				var e = ChartEnd;
 				var d = e - b;
-				var degenerate = d.Length2Sq < Maths.TinyF;
+				var degenerate = d.Length2Sq < Math_.TinyF;
 				if (Settings.Extrapolate && !degenerate)
 				{
 					// X bound, else Y bound
@@ -200,7 +194,7 @@ namespace CoinFlip
 
 			// Find the closest point, on the line 'b->e' to 'p'.
 			var t = Geometry.ClosestPoint(b, e, p);
-			t = Maths.Clamp(t, 0f, Settings.Extrapolate ? t : 1f);
+			t = Math_.Clamp(t, 0f, Settings.Extrapolate ? t : 1f);
 			dist = (b + t*(e - b) - p).Length2;
 			return t;
 		}

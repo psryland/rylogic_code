@@ -4,11 +4,10 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.Serialization;
 using System.Windows.Forms;
-using RyLogViewer.Properties;
-using pr.extn;
-using pr.gui;
-using pr.inet;
-using pr.util;
+using Rylogic.Extn;
+using Rylogic.Gui;
+using Rylogic.INet;
+using Rylogic.Utility;
 
 namespace RyLogViewer
 {
@@ -95,8 +94,8 @@ namespace RyLogViewer
 			catch (OperationCanceledException) {}
 			catch (Exception ex)
 			{
-				Log.Exception(this, ex, "Failed to connect {0}:{1} -> {2}".Fmt(conn.Hostname, conn.Port, conn.OutputFilepath));
-				Misc.ShowMessage(this, "Failed to connect to {0}:{1}.".Fmt(conn.Hostname,conn.Port), Application.ProductName, MessageBoxIcon.Error, ex);
+				Log.Exception(this, ex, $"Failed to connect {conn.Hostname}:{conn.Port} -> {conn.OutputFilepath}");
+				Misc.ShowMessage(this, $"Failed to connect to {conn.Hostname}:{conn.Port}.", Application.ProductName, MessageBoxIcon.Error, ex);
 			}
 			finally
 			{
@@ -142,8 +141,8 @@ namespace RyLogViewer
 			catch (OperationCanceledException) {}
 			catch (Exception ex)
 			{
-				Log.Exception(this, ex, "Failed to open connection {0}:{1} -> {2}".Fmt(conn.Hostname, conn.Port, conn.OutputFilepath));
-				Misc.ShowMessage(this, "Failed to open connected to {0}:{1}.".Fmt(conn.Hostname,conn.Port), Application.ProductName, MessageBoxIcon.Error, ex);
+				Log.Exception(this, ex, $"Failed to open connection {conn.Hostname}:{conn.Port} -> {conn.OutputFilepath}");
+				Misc.ShowMessage(this, $"Failed to open connected to {conn.Hostname}:{conn.Port}.", Application.ProductName, MessageBoxIcon.Error, ex);
 			}
 			finally
 			{
@@ -172,7 +171,7 @@ namespace RyLogViewer
 			{
 				lock (m_lock)
 				{
-					Log.Info(this, "Disposing TCP client {0}".Fmt(m_conn.Hostname));
+					Log.Info(this, $"Disposing TCP client {m_conn.Hostname}");
 					m_client.Close();
 					m_client = null;
 				}
@@ -191,7 +190,7 @@ namespace RyLogViewer
 		/// <summary>Start a TCP client that connects to a server that is producing log data</summary>
 		private void StartClient(Main parent)
 		{
-			var connect = new ProgressForm("Connecting...","Connecting to remote host: {0}:{1}".Fmt(m_conn.Hostname, m_conn.Port), parent.Icon, ProgressBarStyle.Marquee, (s,a,cb)=>
+			var connect = new ProgressForm("Connecting...", $"Connecting to remote host: {m_conn.Hostname}:{m_conn.Port}", parent.Icon, ProgressBarStyle.Marquee, (s,a,cb)=>
 			{
 				cb(new ProgressForm.UserState{ProgressBarVisible = false, Icon = parent.Icon});
 
@@ -224,7 +223,7 @@ namespace RyLogViewer
 		/// <summary>Start a TCP server that listens for incoming connections from clients</summary>
 		private void StartListener(Main parent)
 		{
-			var connect = new ProgressForm("Listening...", "Waiting for connections on port: {0}".Fmt(m_conn.Port), parent.Icon, ProgressBarStyle.Marquee, (s,a,cb) =>
+			var connect = new ProgressForm("Listening...", $"Waiting for connections on port: {m_conn.Port}", parent.Icon, ProgressBarStyle.Marquee, (s,a,cb) =>
 			{
 				cb(new ProgressForm.UserState{ProgressBarVisible = false, Icon = parent.Icon});
 
@@ -286,7 +285,7 @@ namespace RyLogViewer
 			{
 				lock (m_lock)
 				{
-					Log.Info(this, "Disposing UDP client {0}".Fmt(m_conn.Hostname));
+					Log.Info(this, $"Disposing UDP client {m_conn.Hostname}");
 					m_udp.Close();
 					m_udp = null;
 				}
@@ -343,7 +342,7 @@ namespace RyLogViewer
 				catch (Exception ex)
 				{
 					var type = GetType().DeclaringType;
-					Log.Exception(this, ex, "[{0}] Data receive exception".Fmt(type != null ? type.Name : ""));
+					Log.Exception(this, ex, $"[{(type != null ? type.Name : "")}] Data receive exception");
 				}
 			}
 		}

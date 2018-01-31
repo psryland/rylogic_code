@@ -5,13 +5,13 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
-using pr.common;
-using pr.container;
-using pr.db;
-using pr.extn;
-using pr.gfx;
-using pr.gui;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Container;
+using Rylogic.Db;
+using Rylogic.Extn;
+using Rylogic.Graphix;
+using Rylogic.Gui;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {
@@ -34,25 +34,33 @@ namespace CoinFlip
 		private EquityUI() {}
 		public EquityUI(Model model, string name)
 		{
-			InitializeComponent();
-
-			Model = model;
-			DockControl = new DockControl(this, name) { TabText = name };
-			XAxisLabelMode = EXAxisLabelMode.LocalTime;
-			Legend = new ChartDataLegend{ Chart = m_chart };
-			Data = new EquityMap(this);
-			m_auto_range = true;
-
-			SeriesOptionsTemplate = new ChartDataSeries.OptionsData
+			try
 			{
-				Colour = Colour32.Blue,
-				PlotType = ChartDataSeries.EPlotType.Line,
-				PointSize = 5f,
-				PointsOnLinePlot = true,
-				LineWidth = 2f,
-			};
+				InitializeComponent();
 
-			SetupUI();
+				Model = model;
+				DockControl = new DockControl(this, name) { TabText = name };
+				XAxisLabelMode = EXAxisLabelMode.LocalTime;
+				Legend = new ChartDataLegend{ Chart = m_chart };
+				Data = new EquityMap(this);
+				m_auto_range = true;
+
+				SeriesOptionsTemplate = new ChartDataSeries.OptionsData
+				{
+					Colour = Colour32.Blue,
+					PlotType = ChartDataSeries.EPlotType.Line,
+					PointSize = 5f,
+					PointsOnLinePlot = true,
+					LineWidth = 2f,
+				};
+
+				SetupUI();
+			}
+			catch
+			{
+				Dispose();
+				throw;
+			}
 		}
 		protected override void Dispose(bool disposing)
 		{
@@ -484,10 +492,10 @@ namespace CoinFlip
 		{
 			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(EquityUI));
-			pr.gui.ChartControl.RdrOptions rdrOptions1 = new pr.gui.ChartControl.RdrOptions();
+			Rylogic.Gui.ChartControl.RdrOptions rdrOptions1 = new Rylogic.Gui.ChartControl.RdrOptions();
 			System.Drawing.Drawing2D.Matrix matrix1 = new System.Drawing.Drawing2D.Matrix();
 			this.m_table0 = new System.Windows.Forms.TableLayoutPanel();
-			this.m_chart = new pr.gui.ChartControl();
+			this.m_chart = new Rylogic.Gui.ChartControl();
 			this.m_ts = new System.Windows.Forms.ToolStrip();
 			this.m_lbl_exchange = new System.Windows.Forms.ToolStripLabel();
 			this.m_cb_exchange = new System.Windows.Forms.ToolStripComboBox();
@@ -519,7 +527,7 @@ namespace CoinFlip
 			// 
 			this.m_chart.AllowEditing = false;
 			this.m_chart.AllowSelection = false;
-			this.m_chart.AreaSelectMode = pr.gui.ChartControl.EAreaSelectMode.Zoom;
+			this.m_chart.AreaSelectMode = Rylogic.Gui.ChartControl.EAreaSelectMode.Zoom;
 			this.m_chart.BackColor = System.Drawing.SystemColors.ControlDarkDark;
 			this.m_chart.CrossHairLocation = ((System.Drawing.PointF)(resources.GetObject("m_chart.CrossHairLocation")));
 			this.m_chart.CrossHairVisible = false;
@@ -531,19 +539,17 @@ namespace CoinFlip
 			rdrOptions1.AntiAliasing = true;
 			rdrOptions1.BkColour = System.Drawing.SystemColors.Control;
 			rdrOptions1.ChartBkColour = System.Drawing.Color.White;
-			rdrOptions1.CullMode = pr.view3d.View3d.ECullMode.Back;
-			rdrOptions1.FillMode = pr.view3d.View3d.EFillMode.Solid;
+			rdrOptions1.CullMode = Rylogic.Graphix.View3d.ECullMode.Back;
+			rdrOptions1.FillMode = Rylogic.Graphix.View3d.EFillMode.Solid;
 			rdrOptions1.GridZOffset = 0.001F;
 			rdrOptions1.LockAspect = null;
 			rdrOptions1.Margin = new System.Windows.Forms.Padding(3);
 			rdrOptions1.MinDragPixelDistance = 5F;
 			rdrOptions1.MinSelectionDistance = 10F;
-			rdrOptions1.NavigationMode = pr.gui.ChartControl.ENavMode.Chart2D;
+			rdrOptions1.NavigationMode = Rylogic.Gui.ChartControl.ENavMode.Chart2D;
 			rdrOptions1.NoteFont = new System.Drawing.Font("Tahoma", 8F);
 			rdrOptions1.Orthographic = false;
 			rdrOptions1.PerpendicularZTranslation = false;
-			rdrOptions1.ResetForward = ((pr.maths.v4)(resources.GetObject("rdrOptions1.ResetForward")));
-			rdrOptions1.ResetUp = ((pr.maths.v4)(resources.GetObject("rdrOptions1.ResetUp")));
 			rdrOptions1.SelectionColour = System.Drawing.Color.FromArgb(((int)(((byte)(128)))), ((int)(((byte)(169)))), ((int)(((byte)(169)))), ((int)(((byte)(169)))));
 			rdrOptions1.ShowAxes = true;
 			rdrOptions1.ShowGridLines = true;

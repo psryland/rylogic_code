@@ -8,10 +8,10 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
-using pr.common;
-using pr.gui;
-using pr.extn;
-using pr.util;
+using Rylogic.Common;
+using Rylogic.Gui;
+using Rylogic.Extn;
+using Rylogic.Utility;
 using System.Globalization;
 
 namespace RyLogViewer
@@ -26,11 +26,11 @@ namespace RyLogViewer
 		public const string StoreLink               = "http://www.rylogic.co.nz/rylogviewer/index.php";
 
 		public const string PatternSetVersion            = "v1.0";
-		public static readonly string LogFileFilter      = Util.FileDialogFilter("Text Files","*.txt","*.log","*.csv", "All files", "*.*");
-		public static readonly string SettingsFileFilter = Util.FileDialogFilter("Settings Files","*.xml", "All files","*.*");
-		public static readonly string XmlOrCsvFileFilter = Util.FileDialogFilter("XML Files","*.xml", "CSV Files","*.csv");
-		public static readonly string PatternSetFilter   = Util.FileDialogFilter("Pattern Set Files", "*.pattern_set");
-		public static readonly string ExecutablesFilter  = Util.FileDialogFilter("Executables","*.exe","*.bat","*.cmd","*.com", "All files","*.*");
+		public static readonly string LogFileFilter      = Util2.FileDialogFilter("Text Files","*.txt","*.log","*.csv", "All files", "*.*");
+		public static readonly string SettingsFileFilter = Util2.FileDialogFilter("Settings Files","*.xml", "All files","*.*");
+		public static readonly string XmlOrCsvFileFilter = Util2.FileDialogFilter("XML Files","*.xml", "CSV Files","*.csv");
+		public static readonly string PatternSetFilter   = Util2.FileDialogFilter("Pattern Set Files", "*.pattern_set");
+		public static readonly string ExecutablesFilter  = Util2.FileDialogFilter("Executables","*.exe","*.bat","*.cmd","*.com", "All files","*.*");
 
 		public const int MaxHistoryDefault          = 10;
 		public const int PortNumberMin              = 0;
@@ -246,9 +246,9 @@ namespace RyLogViewer
 			{
 				var ch = (int)m.Groups[0].Value[0];
 				return
-					ch > 0xFFFF ? "\\u{0:x6}".Fmt(ch) :
-					ch > 0xFF   ? "\\u{0:x4}".Fmt(ch) :
-					"\\u{0:x2}".Fmt(ch);
+					ch > 0xFFFF ? $"\\u{ch:x6}" :
+					ch > 0xFF   ? $"\\u{ch:x4}" :
+					$"\\u{ch:x2}";
 			}));
 			return str;
 		}
