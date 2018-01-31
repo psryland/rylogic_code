@@ -1,0 +1,454 @@
+<!doctype html>
+<html>
+<head>
+	<title>Learning WebGL � lesson 1</title>
+	<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+	<script src="..\..\lib\rylogic.min.js" type="text/javascript"></script>
+	<script id="shader-vs" type="x-shader/x-vertex">
+		attribute vec3 position;
+		attribute vec3 normal;
+		attribute vec4 colour;
+		attribute vec2 texcoord;
+
+		uniform mat4 o2w;
+		uniform mat4 c2s;
+
+		varying vec4 ps_colour;
+		varying vec2 ps_texcoord;
+
+		void main(void)
+		{
+			gl_Position = c2s * o2w * vec4(position, 1.0);
+			ps_colour = colour;
+			ps_texcoord = texcoord;
+		}
+	</script>
+	<script id="shader-ps" type="x-shader/x-fragment">
+		precision mediump float;
+
+		varying vec4 ps_colour;
+		varying vec2 ps_texcoord;
+
+		uniform int has_tex_diffuse;
+		uniform sampler2D sampler_diffuse;
+
+		void main(void)
+		{
+			vec4 diff = ps_colour;
+			
+			if (has_tex_diffuse != 0)
+				gl_FragColor = texture2D(sampler_diffuse, ps_texcoord);
+			else
+				gl_FragColor = diff;
+		}
+	</script>
+	<script type="text/javascript">
+
+		// Entry point
+		function WebGLStart()
+		{
+			try
+			{
+				// Set up WebGL
+				let gl = InitWebGL(document.getElementById("canvas"));
+
+				// Create the instances
+				let instances = InitInstances(gl);
+
+				// Main loop
+				let last_ms = null;
+				requestAnimationFrame(function run(clock_ms)
+				{
+					requestAnimationFrame(run);
+					if (last_ms != null) 
+					{
+						let elapsed_ms = clock_ms - last_ms;
+						Run(elapsed_ms, gl, instances);
+					}
+					last_ms = clock_ms;
+				});
+			}
+			catch (ex)
+			{
+				alert("Failed to initialise WebGL: " + ex.message);
+			}
+		}
+
+		// Main loop
+		function Run(elapsed_ms, gl, instances)
+		{
+			for (inst of instances)
+			{
+				m4x4.Rotate(inst.o2w, maths.Tau * elapsed_ms / 4000, [1, 1, 1], inst.o2w);
+			}
+
+			// Render the scene
+			DrawScene(gl, instances);
+		}
+
+		// Initialise WebGL
+		function InitWebGL(canvas)
+		{
+			let gl = canvas.getContext("experimental-webgl");
+			if (!gl)
+				throw "webgl not available";
+
+			gl.ViewportWidth = canvas.width;
+			gl.ViewportHeight = canvas.height;
+			return gl;
+		}
+
+		// Create the model buffers
+		function InitInstances(gl)
+		{
+			let instances = []
+
+			// Create a shader for rendering simple geometry
+			let shader = CreateShader(gl);
+
+			{ // Pyramid
+				let model = CreateModel(gl,
+					[// verts
+						{ pos: [+0.0, +1.0, +0.0], col: [1, 0, 0, 1], uv: [0.50, 1] },
+						{ pos: [-1.0, -1.0, -1.0], col: [0, 1, 0, 1], uv: [0.00, 0] },
+						{ pos: [+1.0, -1.0, -1.0], col: [0, 0, 1, 1], uv: [0.25, 0] },
+						{ pos: [+1.0, -1.0, +1.0], col: [1, 1, 0, 1], uv: [0.50, 0] },
+						{ pos: [-1.0, -1.0, +1.0], col: [0, 1, 1, 1], uv: [0.75, 0] },
+					],
+					[// indices
+						0, 1, 2,
+						0, 2, 3,
+						0, 3, 4,
+						0, 4, 1,
+						4, 3, 2,
+						2, 1, 4,
+					],
+					[// nuggets
+						{ topo: gl.TRIANGLES, shader: shader, tex_diffuse: CreateTexture(gl, ".\\logo.png") }	
+					]);
+
+				let o2w = m4x4.Translation([-1.5, 0, -7.0]);
+				let inst = CreateInstance("pyramid", model, o2w);
+				instances.push(inst);
+			}
+
+			{ // Cube
+				let model = CreateModel(gl,
+					[// verts
+						{ pos: [-1.0, -1.0, -1.0], col: [0.2, 0.2, 0.2, 1] }, 
+						{ pos: [+1.0, -1.0, -1.0], col: [1, 0, 0, 1] },
+						{ pos: [+1.0, +1.0, -1.0], col: [0, 1, 0, 1] },
+						{ pos: [-1.0, +1.0, -1.0], col: [1, 1, 0, 1] },
+						{ pos: [-1.0, -1.0, +1.0], col: [0, 0, 1, 1] },
+						{ pos: [+1.0, -1.0, +1.0], col: [1, 0, 1, 1] },
+						{ pos: [+1.0, +1.0, +1.0], col: [0, 1, 1, 1] },
+						{ pos: [-1.0, +1.0, +1.0], col: [1, 1, 1, 1] },
+					],
+					[// indices
+						0, 3, 2,  2, 1, 0,  // back
+						4, 5, 6,  6, 7, 4,  // front
+						0, 4, 7,  7, 3, 0,  // left
+						1, 2, 6,  6, 5, 1,  // right
+						2, 3, 7,  7, 6, 2,  // top
+						0, 1, 5,  5, 4, 0,  // bottom
+					],
+					[// nuggets
+						{ topo: gl.TRIANGLES, shader: shader }
+					]);
+
+				let o2w = m4x4.Translation([+1.5, 0, -7.0]);
+				let inst = CreateInstance("cube", model, o2w);
+				instances.push(inst);
+			}
+
+			return instances;
+		}
+
+		// Create simple geometry shaders
+		function CreateShader(gl)
+		{
+			// Read a shader from the DOM
+			function GetShader(gl, id)
+			{
+				// Find the shader element
+				let shader_elem = document.getElementById(id);
+				if (!shader_elem)
+					throw "Shader element " + str(id) + " not found";
+
+				let str = "";
+				for (let k = shader_elem.firstChild; k; k = k.nextSibling)
+				{
+					if (k.nodeType != 3) continue;
+					str += k.textContent;
+				}
+
+				// Create a shader instance
+				let shader =
+					shader_elem.type == "x-shader/x-fragment" ? gl.createShader(gl.FRAGMENT_SHADER) :
+					shader_elem.type == "x-shader/x-vertex" ? gl.createShader(gl.VERTEX_SHADER) :
+					null;
+
+				// Compile the shader
+				gl.shaderSource(shader, str);
+				gl.compileShader(shader);
+				if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS))
+					throw gl.getShaderInfoLog(shader);
+
+				return shader;
+			}
+
+			// Get the compiled shaders
+			let ps = GetShader(gl, "shader-ps");
+			let vs = GetShader(gl, "shader-vs");
+
+			// Compile into a shader 'program'
+			let shader = gl.createProgram();
+			gl.attachShader(shader, vs);
+			gl.attachShader(shader, ps);
+			gl.linkProgram(shader);
+			if (!gl.getProgramParameter(shader, gl.LINK_STATUS))
+				throw "Failed to initialise shaders";
+
+			// Read variables from the shaders and save them in 'shader'
+			shader.c2s = gl.getUniformLocation(shader, "c2s");
+			shader.o2w = gl.getUniformLocation(shader, "o2w");
+			shader.position = gl.getAttribLocation(shader, "position");
+			shader.normal = gl.getAttribLocation(shader, "normal");
+			shader.colour = gl.getAttribLocation(shader, "colour");
+			shader.texcoord = gl.getAttribLocation(shader, "texcoord");
+			shader.has_tex_diffuse = gl.getUniformLocation(shader, "has_tex_diffuse");
+			shader.sampler_diffuse = gl.getUniformLocation(shader, "sampler_diffuse");
+
+			// Return the shader
+			return shader;
+		}
+
+		// Create a diffuse texture from a file
+		function CreateTexture(gl, filepath)
+		{
+			let tex = gl.createTexture();
+			tex.image = new Image();
+			tex.image.onload = function()
+			{
+				gl.bindTexture(gl.TEXTURE_2D, tex);
+				gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+				gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex.image);
+				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+			  	gl.generateMipmap(gl.TEXTURE_2D);
+ 				gl.bindTexture(gl.TEXTURE_2D, null);
+			}
+			tex.image.src = filepath;
+			return tex;
+		}
+
+		// Create a model
+		function CreateModel(gl, verts, indices, nuggets)
+		{
+			let model = new Object();
+			model.vbuffer = null;
+			model.nbuffer = null;
+			model.cbuffer = null;
+			model.tbuffer = null;
+			model.ibuffer = null;
+			model.gbuffer = [];
+
+			// Fill verts buffer
+			if (verts != null && verts.length > 0)
+			{
+				// Verts have position data
+				if (verts[0].hasOwnProperty("pos"))
+				{
+					let pos = [];
+					verts.map(function(x){ pos = pos.concat(x.pos); });
+
+					model.vbuffer = gl.createBuffer();
+					model.vbuffer.stride = 3;
+					model.vbuffer.count = pos.length / model.vbuffer.stride;
+					gl.bindBuffer(gl.ARRAY_BUFFER, model.vbuffer);
+					gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pos), gl.STATIC_DRAW);
+				}
+
+				// Verts have normals data
+				if (verts[0].hasOwnProperty("norm"))
+				{
+					let norm = []
+					verts.map(function(x){ norms = norms.concat(x.norm); });
+
+					model.nbuffer = gl.createBuffer();
+					model.nbuffer.stride = 3;
+					model.nbuffer.count = norm.length / model.nbuffer.stride;
+					gl.bindBuffer(gl.ARRAY_BUFFER, model.nbuffer);
+					gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(norm), gl.STATIC_DRAW);
+				}
+
+				// Verts have colour data
+				if (verts[0].hasOwnProperty("col"))
+				{
+					let col = [];
+					verts.map(function(x){ col = col.concat(x.col); });
+
+					model.cbuffer = gl.createBuffer();
+					model.cbuffer.stride = 4;
+					model.cbuffer.count = col.length / model.cbuffer.stride;
+					gl.bindBuffer(gl.ARRAY_BUFFER, model.cbuffer);
+					gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(col), gl.STATIC_DRAW);
+				}
+
+				// Verts have texture coords
+				if (verts[0].hasOwnProperty("uv"))
+				{
+					let uvs = [];
+					 verts.map(function(x){ uvs = uvs.concat(x.uv); });
+
+					model.tbuffer = gl.createBuffer();
+					model.tbuffer.stride = 2;
+					model.tbuffer.count = uvs.length / model.tbuffer.stride;
+					gl.bindBuffer(gl.ARRAY_BUFFER, model.tbuffer);
+					gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uvs), gl.STATIC_DRAW);
+				}
+			}
+
+			// Fill the index buffer
+			if (indices != null && indices.length > 0)
+			{
+				model.ibuffer = gl.createBuffer();
+				model.ibuffer.count = indices.length;
+				gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, model.ibuffer);
+				gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+			}
+
+			// Fill the nuggets buffer
+			if (nuggets != null && nuggets.length > 0)
+			{
+				if (!nuggets[0].hasOwnProperty("topo"))
+					throw "Nuggets must include a topology field";
+				if (!nuggets[0].hasOwnProperty("shader"))
+					throw "Nuggets must include a shader field";
+
+				//[{ topo: gl.TRIANGLES, shader: null, tex_diffuse: null, irange:{ofs:0, count:indices.length}, vrange:{ofs:0, count:verts.length} }]
+				model.gbuffer = nuggets;
+			}
+
+			return model;
+		}
+
+		// Create an instance of a model
+		function CreateInstance(name, model, o2w)
+		{
+			return { name: name, model: model, o2w: o2w };
+		}
+
+		// Render the scene
+		function DrawScene(gl, instances)
+		{
+			// Set the viewport
+			gl.viewport(0, 0, gl.ViewportWidth, gl.ViewportHeight);
+			
+			// Clear the back/depth buffer
+			gl.clearColor(0, 0, 0, 1);
+			gl.enable(gl.DEPTH_TEST);
+			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+			// Render each instance
+			for (inst of instances)
+			{
+				// Render each nugget for each instance
+				for (nug of inst.model.gbuffer)
+				{
+					// Bind the shader to the gfx card
+					gl.useProgram(nug.shader);
+
+					// Bind the diffuse texture (if present)
+					if (nug.hasOwnProperty("tex_diffuse"))
+					{
+						gl.activeTexture(gl.TEXTURE0);
+						gl.bindTexture(gl.TEXTURE_2D, nug.tex_diffuse);
+						gl.uniform1i(nug.shader.sampler_diffuse, 0);
+						gl.uniform1i(nug.shader.has_tex_diffuse, 1);
+					}
+					else
+					{
+						gl.uniform1i(nug.shader.has_tex_diffuse, 0);
+					}
+				
+					// Get the buffer range to render
+					let vrange = nug.hasOwnProperty("vrange") ? nug.vrange : {ofs: 0, count: inst.model.vbuffer.count};
+					let irange = nug.hasOwnProperty("irange") ? nug.irange : {ofs: 0, count: inst.model.ibuffer.count};
+
+					// Assign buffers to the shader input streams
+					if (inst.model.vbuffer != null)
+					{
+						gl.bindBuffer(gl.ARRAY_BUFFER, inst.model.vbuffer);
+						gl.vertexAttribPointer(nug.shader.position, inst.model.vbuffer.stride, gl.FLOAT, false, 0, 0);
+						gl.enableVertexAttribArray(nug.shader.position);
+					}
+					else if (nug.shader.position != -1)
+					{
+						gl.disableVertexAttribArray(nug.shader.position);
+					}
+					if (inst.model.nbuffer != null)
+					{
+						gl.bindBuffer(gl.ARRAY_BUFFER, inst.model.nbuffer);
+						gl.vertexAttribPointer(nug.shader.normal, inst.model.nbuffer.stride, gl.FLOAT, false, 0, 0);
+						gl.enableVertexAttribArray(nug.shader.normal);
+					}
+					else if (nug.shader.normal != -1)
+					{
+						gl.disableVertexAttribArray(nug.shader.normal);
+					}
+					if (inst.model.cbuffer != null)
+					{
+						gl.bindBuffer(gl.ARRAY_BUFFER, inst.model.cbuffer);
+						gl.vertexAttribPointer(nug.shader.colour, inst.model.cbuffer.stride, gl.FLOAT, false, 0, 0);
+						gl.enableVertexAttribArray(nug.shader.colour);
+					}
+					else if (nug.shader.colour != -1)
+					{
+						gl.disableVertexAttribArray(nug.shader.colour);
+					}
+					if (inst.model.tbuffer != null)
+					{
+						gl.bindBuffer(gl.ARRAY_BUFFER, inst.model.tbuffer);
+						gl.vertexAttribPointer(nug.shader.texcoord, inst.model.tbuffer.stride, gl.FLOAT, false, 0, 0);
+						gl.enableVertexAttribArray(nug.shader.texcoord);
+					}
+					else if (nug.shader.texcoord != -1)
+					{
+						gl.disableVertexAttribArray(nug.shader.texcoord);
+					}
+
+					// Set the camera matrix
+					let c2s = nug.hasOwnProperty("c2s") ? nug.c2s : m4x4.ProjectionPerspectiveFOV(maths.TauBy8, gl.ViewportWidth / gl.ViewportHeight, 0.01, 100.0, true);
+					gl.uniformMatrix4fv(nug.shader.c2s, false, c2s);
+
+					// Set the o2w transform
+					gl.uniformMatrix4fv(nug.shader.o2w, false, inst.o2w);
+
+					// Render the nugget
+					if (inst.model.ibuffer != null)
+					{
+						gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, inst.model.ibuffer);
+						gl.drawElements(nug.topo, irange.count, gl.UNSIGNED_SHORT, irange.ofs);
+					}
+					else
+					{
+						gl.drawArrays(nug.topo, vrange.ofs, vrange.count);
+					}
+
+					// Clean up
+					gl.bindTexture(gl.TEXTURE_2D, null);
+					gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+					gl.bindBuffer(gl.ARRAY_BUFFER, null);
+				}
+			}
+		}
+
+	</script>
+</head>
+<body onload="WebGLStart();">
+	<canvas width="500" height="500" id="canvas" style="border: none;"></canvas>
+</body>
+</html>

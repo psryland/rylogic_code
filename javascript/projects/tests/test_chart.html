@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+<head>
+	<title>Rylogic WebGL Chart</title>
+	<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+	<script src="..\..\lib\rylogic.js" type="text/javascript"></script>
+	<script type="text/javascript">
+
+		// Entry point
+		function Run()
+		{
+			try
+			{
+				// Get the document element to draw on
+				let canvas = document.getElementById("canvas");
+
+				// Turn the canvas into a chart
+				let chart = new Chart.Create(canvas);
+
+				// Render the chart
+				chart.Render();
+
+				// Create a data series
+				//let series = new Chart.CreateDataSeries("MyData");
+				//for (let i = 0; i != 100000; ++i)
+				//	series.data.push({x: 0.01*i, y: Math.sin(0.01*i*Maths.Tau)});
+				//chart.data.push(series);
+			}
+			catch (ex)
+			{
+				alert("Failed to initialise WebGL: " + ex.message);
+			}
+		}
+	</script>
+</head>
+<body onload="Run();">
+	<canvas width="1000" height="500" id="canvas" style="border: none;"></canvas>
+</body>
+</html>

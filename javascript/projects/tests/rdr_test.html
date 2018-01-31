@@ -1,0 +1,197 @@
+<!doctype html>
+<html>
+<head>
+	<title>Rylogic WebGL</title>
+	<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+	<script src="..\..\lib\rylogic.js" type="text/javascript"></script>
+	<script type="text/javascript">
+
+		// Entry point
+		function WebGLStart()
+		{
+			try
+			{
+				// Get the document element to draw on
+				let canvas = document.getElementById("canvas");
+
+				// Set up the renderer
+				let rdr = Rdr.Create(canvas);
+
+				// Set up the keyboard input handler
+				let keys = InitKeyStateHandler();
+				keys.KeyUp.push(function(ks)
+				{
+				});
+
+				// Set up mouse input handling
+				let mouse = InitMouseHandler(canvas);
+				
+				// Set up the camera
+				let camera = Rdr.Camera.Create(Maths.TauBy8, canvas.width/canvas.height);
+
+				// Create a global light
+				let global_light = new Rdr.Light.Create(Rdr.ELight.Directional, v4.create(), v4.make(-0.5,-0.5,-1.0, 0), [0,0,0], [0.2,0.8,0.1], [0.5,0.5,0.5], 10);
+
+				// Create the instances
+				let instances = InitInstances(rdr);
+
+				// Main loop
+				var last_ms = null;
+				requestAnimationFrame(function run(clock_ms)
+				{
+					if (last_ms != null) 
+					{
+						let elapsed_ms = clock_ms - last_ms;
+
+						// Rotate objects
+						for (let i = 0; i != instances.length; ++i)
+						{
+							let inst = instances[i];
+							m4x4.Rotate(inst.o2w, Maths.Tau * elapsed_ms / 4000, [1, 1, 1], inst.o2w);
+						}
+			
+						// Render the scene
+						Rdr.Render(rdr, instances, camera, global_light);
+					}
+					last_ms = clock_ms;
+					requestAnimationFrame(run);
+				});
+			}
+			catch (ex)
+			{
+				alert("Failed to initialise WebGL: " + ex.message);
+			}
+		}
+
+		// Initialise handling keyboard input
+		function InitKeyStateHandler()
+		{
+			let keystates = {}
+			let key = function(key_code)
+			{
+				return keystates[key_code] || (keystates[key_code] =
+				{
+					down: false,
+					down_at: 0
+				});
+			};
+
+			document.onkeydown = function(ev)
+			{
+				let ks = key(ev.keyCode);
+				ks.down = true;
+				ks.down_at = ks.down_at || Date.now();
+				
+				for (let i = 0; i != key.KeyDown.length; ++i)
+					key.KeyDown[i](ks);
+			};
+			document.onkeyup = function(ev)
+			{
+				let ks = key(ev.keyCode);
+				ks.down = false;
+				ks.down_at = null;
+
+				for (let i = 0; i != key.KeyUp.length; ++i)
+					key.KeyUp[i](ks);
+			};
+
+			// Arrays for callbacks
+			key.KeyDown = [];
+			key.KeyUp = [];
+			return key;
+		}
+
+		// Initialise handling mouse input
+		function InitMouseHandler(canvas)
+		{
+			let mouse = function(point, btns, nav_op, nav_beg_or_end)
+			{
+			};
+			
+			canvas.onmousedown = function(ev)
+			{
+				console.log("Mouse down on canvas");
+			};
+			document.onmouseup = function(ev)
+			{
+				console.log(ev);
+			};
+			document.onmousemove = function(ev)
+			{
+			};
+
+			return mouse;
+		}
+
+		// Create the model buffers
+		function InitInstances(rdr)
+		{
+			let instances = []
+
+			// Use the standard forward render shader
+			let shader = rdr.shader_programs['forward'];
+
+			{ // Pyramid
+				let model = Rdr.Model.Create(rdr,
+				[// verts
+					{ pos: [+0.0, +1.0, +0.0], col: [1, 0, 0, 1], tex0: [0.50, 1] },
+					{ pos: [-1.0, -1.0, -1.0], col: [0, 1, 0, 1], tex0: [0.00, 0] },
+					{ pos: [+1.0, -1.0, -1.0], col: [0, 0, 1, 1], tex0: [0.25, 0] },
+					{ pos: [+1.0, -1.0, +1.0], col: [1, 1, 0, 1], tex0: [0.50, 0] },
+					{ pos: [-1.0, -1.0, +1.0], col: [0, 1, 1, 1], tex0: [0.75, 0] },
+				],
+				[// indices
+					0, 1, 2,
+					0, 2, 3,
+					0, 3, 4,
+					0, 4, 1,
+					4, 3, 2,
+					2, 1, 4,
+				],
+				[// nuggets
+					{ topo: rdr.TRIANGLES, shader: shader, tex_diffuse: Rdr.Texture.Create(rdr, ".\\logo.png") }
+				]);
+
+				let o2w = m4x4.Translation([-1.5, 0, -7.0, 1]);
+				let inst = Rdr.Instance.Create("pyramid", model, o2w);
+				instances.push(inst);
+			}
+
+			{ // Cube
+				let model = Rdr.Model.Create(rdr,
+				[// verts
+					{ pos: [-1.0, -1.0, -1.0], norm: [-0.57, -0.57, -0.57] },
+					{ pos: [+1.0, -1.0, -1.0], norm: [+0.57, -0.57, -0.57] },
+					{ pos: [+1.0, +1.0, -1.0], norm: [+0.57, +0.57, -0.57] },
+					{ pos: [-1.0, +1.0, -1.0], norm: [-0.57, +0.57, -0.57] },
+					{ pos: [-1.0, -1.0, +1.0], norm: [-0.57, -0.57, +0.57] },
+					{ pos: [+1.0, -1.0, +1.0], norm: [+0.57, -0.57, +0.57] },
+					{ pos: [+1.0, +1.0, +1.0], norm: [+0.57, +0.57, +0.57] },
+					{ pos: [-1.0, +1.0, +1.0], norm: [-0.57, +0.57, +0.57] },
+				],
+				[// indices
+					0, 3, 2,  2, 1, 0,  // back
+					4, 5, 6,  6, 7, 4,  // front
+					0, 4, 7,  7, 3, 0,  // left
+					1, 2, 6,  6, 5, 1,  // right
+					2, 3, 7,  7, 6, 2,  // top
+					0, 1, 5,  5, 4, 0,  // bottom
+				],
+				[// nuggets
+					{ topo: rdr.TRIANGLES, shader: shader }
+				]);
+
+				let o2w = m4x4.Translation([+1.5, 0, -7.0, 1]);
+				let inst = Rdr.Instance.Create("cube", model, o2w);
+				instances.push(inst);
+			}
+
+			return instances;
+		}
+
+	</script>
+</head>
+<body onload="WebGLStart();">
+	<canvas width="1000" height="500" id="canvas" style="border: none;"></canvas>
+</body>
+</html>

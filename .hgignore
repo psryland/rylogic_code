@@ -33,11 +33,13 @@ Debug/
 Release/
 __pycache__/*
 .vs/
+.vscode/
 .hg/
 .git/
 .svn/
 .metadata/
 .nuget/
+node_modules/
 packages/
 TestResults/
 media/
@@ -48,6 +50,8 @@ tools/ResEdit/ResEdit.xml
 projects/vs2012/pr_applog.log
 projects/RyLogViewer/Resources/*.html
 projects/RyLogViewer/docs/*.html
+javascript/lib/
+javascript/*/dist/
 symbol_cache/*
 script/UserVars.py
 $RECYCLE.BIN*
