@@ -114,6 +114,9 @@
 			<Component Id="Cmp_Rylogic" Directory="INSTALLFOLDER" Guid="*">
 				<File Id="File_Rylogic" Source="$(var.TargetDir)\Rylogic.dll" Vital="yes" KeyPath="yes"/>
 			</Component>
+			<Component Id="Cmp_RylogicCore" Directory="INSTALLFOLDER" Guid="*">
+				<File Id="File_RylogicCore" Source="$(var.TargetDir)\Rylogic.Core.dll" Vital="yes" KeyPath="yes"/>
+			</Component>
 		</ComponentGroup>
 
 		<!-- Properties of the installer dialogs -->

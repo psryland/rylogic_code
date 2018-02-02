@@ -108,7 +108,11 @@ namespace Rylogic.Maths
 		/// <summary>ToString</summary>
 		public override string ToString()
 		{
-			return x + " \n" + y + " \n" + z + " \n";
+			return $"{x} \n{y} \n{z} \n";
+		}
+		public string ToString3x3()
+		{
+			return $"{x.ToString3()} \n{y.ToString3()} \n{z.ToString3()} \n";
 		}
 
 		/// <summary>To flat array</summary>

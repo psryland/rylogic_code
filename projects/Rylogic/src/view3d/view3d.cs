@@ -981,10 +981,8 @@ namespace Rylogic.Graphix
 			result = null;
 			errors = null;
 
-			try
-			{
-				var src =
-				#region Embedded C# Source
+			var src =
+			#region Embedded C# Source
 $@"//
 //Assembly: netstandard.dll
 //Assembly: System.dll
@@ -994,23 +992,29 @@ $@"//
 //Assembly: System.Windows.Forms.dll
 //Assembly: System.Xml.dll
 //Assembly: System.Xml.Linq.dll
-//Assembly: Rylogic.Core.dll
-//Assembly: Rylogic.dll
+//Assembly: .\Rylogic.Core.dll
+//Assembly: .\Rylogic.dll
+//Assembly: .\LDraw.exe
 using System;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Xml;
+using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Container;
 using Rylogic.Extn;
+using Rylogic.Graphix;
+using Rylogic.Gui;
 using Rylogic.LDraw;
 using Rylogic.Maths;
 using Rylogic.Utility;
 
 namespace ldr
 {{
-	public class EmbeddedScriptGen
+	public class Main
 	{{
 		private StringBuilder Out = new StringBuilder();
 		{support}
@@ -1020,21 +1024,28 @@ namespace ldr
 			return Out.ToString();
 		}}
 	}}
+	internal static class Log
+	{{
+		public static void Info(string text) {{ LDraw.ExternalLogHelper.AddMessage(text); }}
+	}}
 }}
 ";
-					#endregion
-
+			#endregion
+			try
+			{
 				// Create a runtime assembly from the embedded code
-				var ass = RuntimeAssembly.FromString("ldr.EmbeddedScriptGen", src);
+				var ass = RuntimeAssembly.FromString("ldr.Main", src, new []{ Util2.ResolveAppPath() });
 				result = ass.Invoke<string>("Execute");
 			}
 			catch (CompileException ex)
 			{
 				errors = ex.ErrorReport();
+				errors += "\r\nGenerated Code:\r\n" + src;
 			}
 			catch (System.Exception ex)
 			{
 				errors = ex.Message;
+				errors += "\r\nGenerated Code:\r\n" + src;
 			}
 			return true;
 		}

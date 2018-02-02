@@ -77,7 +77,6 @@ namespace view3d
 			// Attach the error handler
 			if (opts.m_error_cb != nullptr)
 				OnError += pr::StaticCallBack(opts.m_error_cb, opts.m_error_cb_ctx);
-			
 
 			// Set the initial aspect ratio
 			pr::iv2 client_area = m_wnd.RenderTargetSize();
@@ -467,15 +466,30 @@ namespace view3d
 
 		GuidCont new_guids;
 		auto old_count = m_objects.size();
-		for (auto& src : m_dll->m_sources.Sources())
+		for (auto& src_iter : m_dll->m_sources.Sources())
 		{
-			if (!IncludeFilter(src.second.m_context_id, context_ids, include_count, exclude_count))
+			auto& src = src_iter.second;
+			if (!IncludeFilter(src.m_context_id, context_ids, include_count, exclude_count))
 				continue;
 
 			// Add objects from this source
-			new_guids.push_back(src.second.m_context_id);
-			for (auto& obj : src.second.m_objects)
+			new_guids.push_back(src.m_context_id);
+			for (auto& obj : src.m_objects)
 				m_objects.insert(obj.get());
+
+			// Apply camera settings from this source
+			if (src.m_cam_fields != ECamField::None)
+			{
+				auto& cam = src.m_cam;
+				if (AllSet(src.m_cam_fields, ECamField::C2W     )) m_camera.CameraToWorld(cam.CameraToWorld());
+				if (AllSet(src.m_cam_fields, ECamField::Focus   )) m_camera.LookAt(cam.CameraToWorld().pos, cam.FocusPoint(), cam.CameraToWorld().y);
+				if (AllSet(src.m_cam_fields, ECamField::Align   )) m_camera.Align(cam.m_align);
+				if (AllSet(src.m_cam_fields, ECamField::Aspect  )) m_camera.Aspect(cam.Aspect());
+				if (AllSet(src.m_cam_fields, ECamField::FovY    )) m_camera.FovY(cam.FovY());
+				if (AllSet(src.m_cam_fields, ECamField::Near    )) m_camera.Near(cam.Near(true), true);
+				if (AllSet(src.m_cam_fields, ECamField::Far     )) m_camera.Far(cam.Far(true), true);
+				if (AllSet(src.m_cam_fields, ECamField::Ortho   )) m_camera.Orthographic(cam.Orthographic());
+			}
 		}
 		if (m_objects.size() != old_count)
 		{
@@ -547,6 +561,7 @@ namespace view3d
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
 		pr::array_view<GUID> except_arr(except, except_count);
+		auto pred = [](LdrObject const& ob){ return !pr::AllSet(ob.m_flags, ELdrFlags::SceneBoundsExclude); };
 
 		pr::BBox bbox;
 		switch (bounds)
@@ -565,9 +580,9 @@ namespace view3d
 					bbox = pr::BBoxReset;
 					for (auto& obj : m_objects)
 					{
-						if (pr::AllSet(obj->m_flags, ELdrFlags::SceneBoundsExclude)) continue;
+						if (!pred(*obj)) continue;
 						if (pr::contains(except_arr, obj->m_context_id)) continue;
-						pr::Encompass(bbox, obj->BBoxWS(true));
+						pr::Encompass(bbox, obj->BBoxWS(true, pred));
 					}
 					m_bbox_scene = bbox;
 				}
@@ -579,10 +594,10 @@ namespace view3d
 				bbox = pr::BBoxReset;
 				for (auto& obj : m_objects)
 				{
-					if (pr::AllSet(obj->m_flags, ELdrFlags::SceneBoundsExclude)) continue;
+					if (!pred(*obj)) continue;
 					if (!pr::AllSet(obj->m_flags, ELdrFlags::Selected)) continue;
 					if (pr::contains(except_arr, obj->m_context_id)) continue;
-					pr::Encompass(bbox, obj->BBoxWS(true));
+					pr::Encompass(bbox, obj->BBoxWS(true, pred));
 				}
 				break;
 			}
@@ -591,11 +606,11 @@ namespace view3d
 				bbox = pr::BBoxReset;
 				for (auto& obj : m_objects)
 				{
-					if (pr::AllSet(obj->m_flags, ELdrFlags::SceneBoundsExclude)) continue;
+					if (!pred(*obj)) continue;
 					if (pr::contains(except_arr, obj->m_context_id)) continue;
 					obj->Apply([&](LdrObject* o)
 					{
-						pr::Encompass(bbox, o->BBoxWS(false));
+						pr::Encompass(bbox, o->BBoxWS(false, pred));
 						return true;
 					}, "");
 				}

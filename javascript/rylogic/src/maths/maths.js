@@ -91,6 +91,19 @@ export function FEqlN(a,b)
 }
 
 /**
+ * Compare all elements of 'a' and 'b' for exact equality.
+ * @param {[Number]} a
+ * @param {[Number]} b
+ * @returns {boolean}
+ */
+export function EqlN(a,b)
+{
+	if (a.length != b.length) return false;
+	for (var i = 0; i != a.length && a[i] == b[i]; ++i) {}
+	return i == a.length;
+}
+
+/**
  * IEEERemainder
  */
 export function IEEERemainder(x, y)
@@ -123,14 +136,24 @@ export function IEEERemainder(x, y)
 /**
  * Clamp 'x' to the given inclusive range [min,max]
  * @param {Number} x The value to be clamped
- * @param {Number} min The inclusive minimum value
- * @param {Number} max The inclusive maximum value
+ * @param {Number} mn The inclusive minimum value
+ * @param {Number} mx The inclusive maximum value
  * @returns {Number}
  */
-export function Clamp(x, min, max)
+export function Clamp(x, mn, mx)
 {
 	//assert(mn <= mx, "[min,max] must be a positive range");
 	return (mx < x) ? mx : (x < mn) ? mn : x;
+}
+
+/**
+ * Return the square of 'x'
+ * @param {Number} x
+ * @returns {Number}
+ */
+export function Sqr(x)
+{
+	return x * x;
 }
 
 /**
@@ -177,17 +200,34 @@ export function Normalise(vec, opts)
 }
 
 /**
- * Sum the vectors given as variadic parameters
- * @param {[Number]} vec 
- * @param {[Number]} ...
+ * Return the sum of two vectors: a + b
+ * @param {[Number]} a
+ * @param {[Number]} b
+ * @param {[Number]} out (optional). Where to write the result
  * @returns {[Number]}
  */
-export function AddN(vec)
+export function Add(a,b,out)
 {
-	let sum = vec.slice();
-	for (let i = 0; i != arguments.length; ++i)
-		for (let j = 0; j != sum.length; ++j)
-			sum[j] += arguments[i][j];
+	if (a.length != b.length)
+		throw new Error("Vectors must have the same length");
+
+	out = out || a.slice();
+	for (let i = 0; i != a.length; ++i)
+		out[i] = a[i] + b[i];
+	
+		return out;
+}
+
+/**
+ * Return the sum of a collection of vectors
+ * @param {[[Number]]} vec 
+ * @returns {[Number]}
+ */
+export function AddN(...vec)
+{
+	let sum = vec[0].slice();
+	for (let i = 0; i != vec.length; ++i)
+		Add(sum, vec[i], sum);
 	return sum;
 }
 

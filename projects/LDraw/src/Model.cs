@@ -59,7 +59,7 @@ namespace LDraw
 		/// <summary>The location for temporary script files</summary>
 		public string TempScriptsDirectory
 		{
-			get { return Util.ResolveUserDocumentsPath(Application.CompanyName, Application.ProductName, "Temporary Scripts"); }
+			get { return Path_.CombinePath(MainUI.StartupOptions.UserDataDir, "Temporary Scripts"); }
 		}
 
 		/// <summary>A view3d context reference that lives for the lifetime of the application</summary>
@@ -124,7 +124,6 @@ namespace LDraw
 				if (m_scenes == value) return;
 				if (m_scenes != null)
 				{
-					Util.DisposeAll(m_scenes);
 					m_scenes.Clear();
 					m_scenes.ListChanging -= HandleScenesListChanging;
 				}

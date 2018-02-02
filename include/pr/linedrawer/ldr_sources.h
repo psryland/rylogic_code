@@ -54,21 +54,29 @@ namespace pr
 				pr::Guid             m_context_id; // Id for the group of files that this object is part of
 				filepath_t           m_filepath;   // The filepath of the source (if there is one)
 				pr::script::Includes m_includes;   // Include paths to use with this file
+				pr::Camera           m_cam;        // Camera properties associated with this source
+				ECamField            m_cam_fields; // Bitmask of fields in 'm_cam' that are valid
 
 				Source()
 					:m_context_id(pr::GuidZero)
 					,m_filepath()
 					,m_includes()
+					,m_cam()
+					,m_cam_fields(ECamField::None)
 				{}
 				Source(Guid const& context_id)
 					:m_context_id(context_id)
 					,m_filepath()
 					,m_includes()
+					,m_cam()
+					,m_cam_fields(ECamField::None)
 				{}
 				Source(Guid const& context_id, wchar_t const* filepath, script::Includes const& includes)
 					:m_context_id(context_id)
 					,m_filepath(pr::filesys::Standardise<filepath_t>(filepath))
 					,m_includes(includes)
+					,m_cam()
+					,m_cam_fields(ECamField::None)
 				{
 					if (!m_filepath.empty())
 						m_includes.AddSearchPath(pr::filesys::GetDirectory(m_filepath));
@@ -521,6 +529,8 @@ namespace pr
 					src.m_includes = file.m_includes;
 					src.m_context_id = file.m_context_id;
 					src.m_objects.insert(std::end(src.m_objects), std::begin(out.m_objects), std::end(out.m_objects));
+					src.m_cam = out.m_cam;
+					src.m_cam_fields = out.m_cam_fields;
 
 					// Add to the watcher
 					for (auto& fp : filepaths)

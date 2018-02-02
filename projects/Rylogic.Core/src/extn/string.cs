@@ -132,6 +132,12 @@ namespace Rylogic.Extn
 			return Regex.Replace(str, @"\r\n?|\n", ending);
 		}
 
+		/// <summary>Add a newline to the end of this string, if it doesn't have one already</summary>
+		public static string EnsureNewLine(this string str, string newline = "\r\n")
+		{
+			return str.EndsWith(newline) ? str : (str + newline);
+		}
+
 		/// <summary>Returns a string containing this character repeated 'count' times</summary>
 		public static string Repeat(this char ch, int count)
 		{

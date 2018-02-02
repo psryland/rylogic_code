@@ -16,6 +16,9 @@
 
 				// Turn the canvas into a chart
 				let chart = new Chart.Create(canvas);
+				chart.OnChartClicked.sub(function(s,a){ console.log(a); });
+				//chart.options.bk_colour = "#aaa";
+				//chart.options.yaxis.tick_font = "60px tahoma";
 
 				// Render the chart
 				chart.Render();
@@ -34,6 +37,8 @@
 	</script>
 </head>
 <body onload="Run();">
-	<canvas width="1000" height="500" id="canvas" style="border: none;"></canvas>
+	<div style="position: absolute; left:100px; top:50px;">
+		<canvas width="1000" height="500" id="canvas" style="border: none;"></canvas>
+	</div>
 </body>
 </html>

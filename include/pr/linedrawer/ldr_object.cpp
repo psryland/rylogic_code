@@ -287,7 +287,7 @@ namespace pr
 						pr::m4x4 c2w = pr::m4x4Identity;
 						ParseLdrTransform(reader, c2w);
 						out.m_cam.CameraToWorld(c2w);
-						out.m_cam_fields |= ParseResult::ECamField::C2W;
+						out.m_cam_fields |= ECamField::C2W;
 						break;
 					}
 				case EKeyword::LookAt:
@@ -296,16 +296,16 @@ namespace pr
 						reader.Vector3S(lookat, 1.0f);
 						pr::m4x4 c2w = out.m_cam.CameraToWorld();
 						out.m_cam.LookAt(c2w.pos, lookat, c2w.y);
-						out.m_cam_fields |= ParseResult::ECamField::C2W;
-						out.m_cam_fields |= ParseResult::ECamField::Focus;
+						out.m_cam_fields |= ECamField::C2W;
+						out.m_cam_fields |= ECamField::Focus;
 						break;
 					}
 				case EKeyword::Align:
 					{
 						pr::v4 align;
 						reader.Vector3S(align, 0.0f);
-						out.m_cam.SetAlign(align);
-						out.m_cam_fields |= ParseResult::ECamField::Align;
+						out.m_cam.Align(align);
+						out.m_cam_fields |= ECamField::Align;
 						break;
 					}
 				case EKeyword::Aspect:
@@ -313,7 +313,7 @@ namespace pr
 						float aspect;
 						reader.RealS(aspect);
 						out.m_cam.Aspect(aspect);
-						out.m_cam_fields |= ParseResult::ECamField::Align;
+						out.m_cam_fields |= ECamField::Align;
 						break;
 					}
 				case EKeyword::FovX:
@@ -321,7 +321,7 @@ namespace pr
 						float fovX;
 						reader.RealS(fovX);
 						out.m_cam.FovX(fovX);
-						out.m_cam_fields |= ParseResult::ECamField::FovY;
+						out.m_cam_fields |= ECamField::FovY;
 						break;
 					}
 				case EKeyword::FovY:
@@ -329,7 +329,7 @@ namespace pr
 						float fovY;
 						reader.RealS(fovY);
 						out.m_cam.FovY(fovY);
-						out.m_cam_fields |= ParseResult::ECamField::FovY;
+						out.m_cam_fields |= ECamField::FovY;
 						break;
 					}
 				case EKeyword::Fov:
@@ -337,32 +337,26 @@ namespace pr
 						float fov[2];
 						reader.RealS(fov, 2);
 						out.m_cam.Fov(fov[0], fov[1]);
-						out.m_cam_fields |= ParseResult::ECamField::Aspect;
-						out.m_cam_fields |= ParseResult::ECamField::FovY;
+						out.m_cam_fields |= ECamField::Aspect;
+						out.m_cam_fields |= ECamField::FovY;
 						break;
 					}
 				case EKeyword::Near:
 					{
 						reader.Real(out.m_cam.m_near);
-						out.m_cam_fields |= ParseResult::ECamField::Near;
+						out.m_cam_fields |= ECamField::Near;
 						break;
 					}
 				case EKeyword::Far:
 					{
 						reader.Real(out.m_cam.m_far);
-						out.m_cam_fields |= ParseResult::ECamField::Far;
-						break;
-					}
-				case EKeyword::AbsoluteClipPlanes:
-					{
-						out.m_cam.m_focus_rel_clip = false;
-						out.m_cam_fields |= ParseResult::ECamField::AbsClip;
+						out.m_cam_fields |= ECamField::Far;
 						break;
 					}
 				case EKeyword::Orthographic:
 					{
 						out.m_cam.m_orthographic = true;
-						out.m_cam_fields |= ParseResult::ECamField::Ortho;
+						out.m_cam_fields |= ECamField::Ortho;
 						break;
 					}
 				}
@@ -4058,7 +4052,6 @@ LR"(// *************************************************************************
 	//*Fov {45 45}            // Optional. {Horizontal,Vertical} field of view (deg). Implies aspect ratio.
 	//*Near {0.01}            // Optional. Near clip plane distance
 	//*Far {100.0}            // Optional. Far clip plane distance
-	//*AbsoluteClipPlanes     // Optional. Clip planes are a fixed distance, not relative to the focus point distance
 	//*Orthographic           // Optional. Use an orthographic projection rather than perspective
 }
 
@@ -4676,10 +4669,34 @@ LR"(// A mesh of lines, faces, or tetrahedra.
 	#embedded(lua) return make_boxes() #end
 }
 
-// Embedded C# code can be used also when used via View3D
-// Use 'CSharpImpl' for support code, 'CSharp' for code to execute.
+// Embedded C# code can be used also when used via View3D.
+// Embedded CSharp code is constructed as follows
+//	 namespace ldr
+//	 {
+//	 	public class Main
+//	 	{
+//	 		private StringBuilder Out = new StringBuilder();
+//
+//			#embedded(CSharp,support) code added here.
+//			The 'Main' object exists for the whole script
+//			successive #embedded(CSharp,support) sections are appended.
+//
+//	 		public string Execute()
+//	 		{
+//	 			#embedded(CSharp) code added here
+//				Each #embedded(CSharp) section replaces the previous one.
+//	 		
+//				Add to the StringBuilder object 'Out'
+//	 			return Out.ToString();
+//	 		}
+//	 	}
+//	 }
 #embedded(CSharp,support)
-	Random m_rng = new Random();
+	Random m_rng;
+	public Main()
+	{
+		m_rng = new Random();
+	}
 	m4x4 O2W
 	{
 		get { return m4x4.Random4x4(v4.Origin, 2.0f, m_rng); }
@@ -4690,6 +4707,7 @@ LR"(// A mesh of lines, faces, or tetrahedra.
 {
 	#embedded(CSharp)
 	Out.AppendLine(Ldr.Box("CS_Box", 0xFFFF0080, 0.4f, O2W));
+	Log.Info("You can also write to the log window");
 	#end
 }
 
@@ -4845,7 +4863,7 @@ LR"(// *************************************************************************
 			auto i2w = *p2w * m_o2p * m_anim.Step(time_s);
 
 			// Add the bbox instance to the scene drawlist
-			if (m_model && !AllSet(m_flags, ELdrFlags::Hidden))
+			if (m_model && !AnySet(m_flags, ELdrFlags::Hidden|ELdrFlags::SceneBoundsExclude))
 			{
 				// Find the object to world for the bbox
 				auto o2w = i2w * m4x4::Scale(

@@ -373,7 +373,7 @@ export function CreateDemoScene(rdr)
 export function CreateTestModel(rdr)
 {
 	// Use the standard forward render shader
-	let shader = rdr.shader_programs['forward'];
+	let shader = rdr.shader_programs.forward;
 
 	// Pyramid
 	let model = Rdr.Model.Create(rdr,

@@ -2,6 +2,43 @@ import * as Maths from "../../maths/maths";
 import * as v4 from "../../maths/v4";
 import * as m4x4 from "../../maths/m4x4";
 
+export var ENavOp = Object.freeze(
+{
+	"None": 0,
+	"Translate": 1 << 0,
+	"Rotate": 1 << 1,
+	"Zoom": 1 << 2,
+});
+
+export var ENavKey = Object.freeze(
+{
+	"Left": 0,
+	"Up": 1,
+	"Right": 2,
+	"Down": 3,
+	"In": 4,
+	"Out": 5,
+	"Rotate": 6,     // Key to enable camera rotations, maps translation keys to rotations
+	"TranslateZ": 7, // Key to set In/Out to be z translations rather than zoom
+	"Accurate": 8,
+	"SuperAccurate": 9,
+	"PerpendicularZ": 10,
+});
+
+export var ELockMask = Object.freeze(
+{
+	"None": 0,
+	"TransX": 1 << 0,
+	"TransY": 1 << 1,
+	"TransZ": 1 << 2,
+	"RotX": 1 << 3,
+	"RotY": 1 << 4,
+	"RotZ": 1 << 5,
+	"Zoom": 1 << 6,
+	"All": (1 << 7) - 1, // Not including camera relative
+	"CameraRelative": 1 << 7,
+});
+
 /**
  * Camera matrix class
  */
@@ -22,32 +59,42 @@ export class Camera
 		this.m_base_c2w            = m4x4.create();                            // The starting position during a mouse movement
 		this.m_base_fovY           = this.fovY;                                // The starting FOV during a mouse movement
 		this.m_base_focus_dist     = this.focus_dist;                          // The starting focus distance during a mouse movement
-		this.m_accuracy_scale      = null;                                     // Scale factor for high accuracy control
+		this.m_accuracy_scale      = 0.1;                                      // Scale factor for high accuracy control
 		this.m_Tref                = null;                                     // Movement start reference point for translation
 		this.m_Rref                = null;                                     // Movement start reference point for rotation
 		this.m_Zref                = null;                                     // Movement start reference point for zoom
-		this.m_key                 = null;                                     // Key bindings
 		this.m_lock_mask           = ELockMask.None;                           // Locks on the allowed motion
 		this.m_moved               = null;                                     // Dirty flag for when the camera moves
+		
+		// Default async key state callback function
+		this.KeyDown = function(nav_key)
+		{
+			return false;
+		};
 	}
 
 	/**
 	 * Get/Set the camera to world transform
-	 * @param {boolean} commit (optional)
+	 * @returns {m4x4}
 	 */
 	get c2w()
 	{
 		return this.m_c2w;
 	}
-	set c2w(value)
-	{
-		this.m_c2w = m4x4.clone(value);
-	}
 
+	/**
+	 * Get the world to camera transform
+	 * @returns {m4x4}
+	 */
 	get w2c()
 	{
 		return m4x4.InvertFast(this.m_c2w);
 	}
+
+	/**
+	 * Get the camera to screen transform (i.e. projection transform)
+	 * @returns {m4x4}
+	 */
 	get c2s()
 	{
 		let height = 2.0 * this.m_focus_dist * Math.tan(this.m_fovY * 0.5);
@@ -58,6 +105,7 @@ export class Camera
 
 	/**
 	 * Get/Set the position of the camera in world space
+	 * @returns {m4x4}
 	 */
 	get pos()
 	{
@@ -65,11 +113,14 @@ export class Camera
 	}
 	set pos(value)
 	{
+		this.m_moved |= !v4.Eql(value, m4x4.GetW(this.m_c2w));
 		m4x4.SetW(this.m_c2w, value);
+		m4x4.SetW(this.m_base_c2w, value);
 	}
 
 	/**
 	 * Get/Set the focus distance
+	 * @returns {Number}
 	 */
 	get focus_dist()
 	{
@@ -93,7 +144,7 @@ export class Camera
 		// => dist < sqrt(float_max) / (m_near * m_far)
 		//assert(m_near * m_far > 0);
 		const sqrt_float_max = 1.84467435239537E+19;
-		return sqrt_float_max / (m_near * m_far);
+		return sqrt_float_max / (this.m_near * this.m_far);
 	}
 
 	/**
@@ -107,7 +158,25 @@ export class Camera
 		//       == dist > float_min / Abs(m_near - m_far);
 		//assert(m_near < m_far);
 		const float_min = 1.175494351e-38;
-		return float_min / Math.min(Math.abs(m_near - m_far), 1.0);
+		return float_min / Math.min(Math.abs(this.m_near - this.m_far), 1.0);
+	}
+
+	/**
+	 * Get/Set the world space position of the focus point
+	 * Set maintains the current camera orientation
+	 * @returns {v4}
+	*/
+	get focus_point()
+	{
+		return v4.Sub(this.pos, v4.MulS(m4x4.GetZ(this.m_c2w), this.focus_dist));
+	}
+	set focus_point(value)
+	{
+		// Move the camera position by the difference in focus_point positions
+		let pos = v4.Add(this.pos, v4.Sub(value, this.focus_point));
+		m4x4.SetW(this.m_c2w, pos);
+		m4x4.SetW(this.m_base_c2w, pos);
+		this.m_moved = true;
 	}
 
 	/**
@@ -133,7 +202,16 @@ export class Camera
 	{
 		return (this.m_focus_relative_clip ? this.m_focus_dist : 1) * this.m_far;
 	}
-	
+
+	/**
+	 * Return the current zoom scaling factor.
+	 * @returns {Number}
+	 */
+	get zoom()
+	{
+		return this.m_default_fovY / this.m_fovY;
+	}
+
 	/**
 	 * Get/Set the horizontal field of view (in radians).
 	 */
@@ -179,6 +257,19 @@ export class Camera
 	}
 
 	/**
+	 * Get/Set orthographic projection mode
+	 * @returns {boolean}
+	 */
+	get orthographic()
+	{
+		return this.m_orthographic;
+	}
+	set orthographic(value)
+	{
+		this.m_orthographic = value;
+	}
+
+	/**
 	 * True if the camera has moved (dirty flag for user code)
 	 */
 	get moved()
@@ -193,13 +284,13 @@ export class Camera
 	/**
 	 * Return the size of the perpendicular area visible to the camera at 'dist' (in world space)
 	 * @param {Number} dist (optional) The distance from the camera to calculate the view area. (default: focus_distance)
-	 * @returns {[width,height]} The width/height of the view area
+	 * @returns {[w,h]} The width/height of the view area
 	 */
 	ViewArea(dist)
 	{
-		dist = (!dist || this.m_orthographic) ? this.m_focus_dist : dist;
-		let h = 2.0 * Math.tan(this.m_fovY * 0.5);
-		return {width: dist * h * this.m_aspect, height: dist * h};
+		dist = (!dist || this.orthographic) ? this.focus_dist : dist;
+		let h = 2.0 * Math.tan(this.fovY * 0.5);
+		return [dist * h * this.aspect, dist * h];
 	}
 	
 	/**
@@ -211,8 +302,8 @@ export class Camera
 	 */
 	LookAt(position, focus_point, up, commit)
 	{
-		this.c2w = m4x4.LookAt(position, focus_point, up);
-		this.focus_dist = v4.Length(v4.Sub(focus_point, position));
+		m4x4.LookAt(position, focus_point, up, this.m_c2w);
+		this.m_focus_dist = v4.Length(v4.Sub(focus_point, position));
 
 		// Set the base values
 		if (commit === undefined || commit)
@@ -220,22 +311,72 @@ export class Camera
 	}
 
 	/**
+	 * Modify the camera position based on mouse movement.
+	 * @param {[x,y]} point The normalised screen space mouse position. i.e. x=[-1, -1], y=[-1,1] with (-1,-1) == (left,bottom). i.e. normal Cartesian axes
+	 * @param {ENavOp} nav_op The type of navigation operation to perform
+	 * @param {boolean} ref_point True on the mouse down/up event, false while dragging
+	 * @returns {boolean} True if the camera has moved
+	 */
+	MouseControl(point, nav_op, ref_point)
+	{
+		// Navigation operations
+		let translate = (nav_op & ENavOp.Translate) != 0;
+		let rotate    = (nav_op & ENavOp.Rotate   ) != 0;
+		let zoom      = (nav_op & ENavOp.Zoom     ) != 0;
+
+		if (ref_point)
+		{
+			if ((nav_op & ENavOp.Translate) != 0) this.m_Tref = point.slice();
+			if ((nav_op & ENavOp.Rotate   ) != 0) this.m_Rref = point.slice();
+			if ((nav_op & ENavOp.Zoom     ) != 0) this.m_Zref = point.slice();
+			this.Commit();
+		}
+		if (zoom || (translate && rotate))
+		{
+			if (this.KeyDown(ENavKey.TranslateZ))
+			{
+				// Move in a fraction of the focus distance
+				let delta = zoom ? (point[1] - this.m_Zref[1]) : (point[1] - this.m_Tref[1]);
+				this.Translate(0, 0, delta * 10.0, false);
+			}
+			else
+			{
+				// Zoom the field of view
+				let zm = zoom ? (this.m_Zref[1] - point[1]) : (this.m_Tref[1] - point[1]);
+				this.Zoom(zm, false);
+			}
+		}
+		if (translate && !rotate)
+		{
+			let dx = (this.m_Tref[0] - point[0]) * this.focus_dist * Math.tan(this.fovY * 0.5) * this.aspect;
+			let dy = (this.m_Tref[1] - point[1]) * this.focus_dist * Math.tan(this.fovY * 0.5);
+			this.Translate(dx, dy, 0, false);
+		}
+		if (rotate && !translate)
+		{
+			// If in the roll zone
+			if (Maths.Length(this.m_Rref) < 0.80)
+				this.Rotate((point[1] - this.m_Rref[1]) * Maths.TayBy4, (this.m_Rref[0] - point[0]) * Maths.TauBy4, 0, false);
+			else
+				this.Rotate(0, 0, Math.atan2(this.m_Rref[1], this.m_Rref[0]) - Math.atan2(point[1], point[0]), false);
+		}
+		return this.m_moved;
+	}
+
+	/**
 	 * Modify the camera position in the camera Z direction based on mouse wheel.
 	 * @param {[x,y]} point A point in normalised camera space. i.e. x=[-1, -1], y=[-1,1] with (-1,-1) == (left,bottom). i.e. normal Cartesian axes
 	 * @param {Number} delta The mouse wheel scroll delta value (i.e. 120 = 1 click = 10% of the focus distance)
 	 * @param {boolean} along_ray True if the camera should move along the ray from the camera position to 'point', false to move in the camera z direction.
+	 * @param {boolean} move_focus True if the focus point should be moved along with the camera
 	 * @param {boolean} commit (optional) True to commit the movement
 	 * @returns {boolean} True if the camera has moved
 	 */
-	MouseControlZ(point, delta, along_ray, commit)
+	MouseControlZ(point, dist, along_ray, commit)
 	{
 		// Ignore if Z motion is locked
 		if ((this.m_lock_mask & ELockMask.TransZ) != 0)
 			return false;
-
-		let dist = delta / 120.0;
-		//if (KeyDown(m_key[camera::ENavKey::Accurate])) dist *= 0.1f;
-		//if (KeyDown(m_key[camera::ENavKey::SuperAccurate])) dist *= 0.1f;
 
 		// Scale by the focus distance
 		dist *= this.m_base_focus_dist * 0.1;
@@ -252,15 +393,15 @@ export class Camera
 		}
 		v4.MulS(ray_cs, dist, ray_cs);
 
-		// If the 'TranslateZ' key is down move the focus point too.
+		// If 'move_focus', move the focus point too.
 		// Otherwise move the camera toward or away from the focus point.
-		//if (!KeyDown(m_key[camera::ENavKey::TranslateZ]))
-		//	m_focus_dist = Clamp(m_base_focus_dist + ray_cs.z, FocusDistMin(), FocusDistMax());
+		if (!this.KeyDown(ENavKey.TranslateZ))
+			this.m_focus_dist = Maths.Clamp(this.m_base_focus_dist + ray_cs[2], this.focus_dist_min, this.focus_dist_max);
 
 		// Translate
 		let pos = v4.Add(m4x4.GetW(this.m_base_c2w), m4x4.MulMV(this.m_base_c2w, ray_cs));
 		if (!v4.IsNaN(pos))
-			this.pos = pos;
+			m4x4.SetW(this.m_c2w, pos);
 
 		// Apply non-camera relative locking
 		if (this.m_lock_mask != ELockMask.None && !(this.m_lock_mask & ELockMask.CameraRelative))
@@ -269,6 +410,144 @@ export class Camera
 			if ((m_lock_mask & ELockMask.TransY)) this.m_c2w[13] = this.m_base_c2w[13];
 			if ((m_lock_mask & ELockMask.TransZ)) this.m_c2w[14] = this.m_base_c2w[14];
 		}
+
+		// Set the base values
+		if (commit === undefined || commit)
+			this.Commit();
+
+		this.m_moved = true;
+		return this.m_moved;
+	}
+
+	/**
+	 * Translate by a camera relative amount.
+	 * @param {Number} dx The x distance to move
+	 * @param {Number} dy The y distance to move
+	 * @param {Number} dz The z distance to move
+	 * @param {boolean} commit (optional) True to commit the movement
+	 * @returns {boolean} True if the camera has moved (for consistency with MouseControl)
+	 */
+	Translate(dx, dy, dz, commit)
+	{
+		if (this.m_lock_mask != ELockMask.None && (m_lock_mask & ELockMask.CameraRelative))
+		{
+			if ((this.m_lock_mask & ELockMask.TransX)) dx = 0;
+			if ((this.m_lock_mask & ELockMask.TransY)) dy = 0;
+			if ((this.m_lock_mask & ELockMask.TransZ)) dz = 0;
+		}
+		if (this.KeyDown(ENavKey.Accurate))
+		{
+			dx *= this.m_accuracy_scale;
+			dy *= this.m_accuracy_scale;
+			dz *= this.m_accuracy_scale;
+			if (this.KeyDown(ENavKey.SuperAccurate))
+			{
+				dx *= this.m_accuracy_scale;
+				dy *= this.m_accuracy_scale;
+				dz *= this.m_accuracy_scale;
+			}
+		}
+
+		// Move in a fraction of the focus distance
+		dz = -this.m_base_focus_dist * dz * 0.1;
+		if (!this.KeyDown(ENavKey.TranslateZ))
+			this.m_focus_dist = Maths.Clamp(this.m_base_focus_dist + dz, this.focus_dist_min, this.focus_dist_max);
+
+		// Translate
+		let pos = v4.Add(m4x4.GetW(this.m_base_c2w), m4x4.MulMV(this.m_base_c2w, v4.make(dx, dy, dz, 0)));
+		if (!v4.IsNaN(pos))
+			m4x4.SetW(this.m_c2w, pos);
+
+		// Apply non-camera relative locking
+		if (this.m_lock_mask != ELockMask.None && !(this.m_lock_mask & ELockMask.CameraRelative))
+		{
+			if ((this.m_lock_mask & ELockMaskTransX)) this.m_c2w[12] = this.m_base_c2w[12];
+			if ((this.m_lock_mask & ELockMaskTransY)) this.m_c2w[13] = this.m_base_c2w[13];
+			if ((this.m_lock_mask & ELockMaskTransZ)) this.m_c2w[14] = this.m_base_c2w[14];
+		}
+
+		// Set the base values
+		if (commit === undefined || commit)
+			this.Commit();
+
+		this.m_moved = true;
+		return this.m_moved;
+	}
+
+	/**
+	 * Rotate the camera by Euler angles about the focus point.
+	 * @param {Number} pitch
+	 * @param {Number} yaw
+	 * @param {Number} roll
+	 * @param {boolean} commit (optional) True to commit the movement
+	 * @returns {boolean} True if the camera has moved (for consistency with MouseControl)
+	 */
+	Rotate(pitch, yaw, roll, commit)
+	{
+		if (this.m_lock_mask != ELockMask.None)
+		{
+			if ((this.m_lock_mask & ELockMask.RotX)) pitch	= 0;
+			if ((this.m_lock_mask & ELockMask.RotY)) yaw	= 0;
+			if ((this.m_lock_mask & ELockMask.RotZ)) roll	= 0;
+		}
+		if (this.KeyDown(ENavKey.Accurate))
+		{
+			pitch *= this.m_accuracy_scale;
+			yaw   *= this.m_accuracy_scale;
+			roll  *= this.m_accuracy_scale;
+			if (this.KeyDown(ENavKey.SuperAccurate))
+			{
+				pitch *= this.m_accuracy_scale;
+				yaw   *= this.m_accuracy_scale;
+				roll  *= this.m_accuracy_scale;
+			}
+		}
+
+		// Save the world space position of the focus point
+		let old_focus = this.focus_point;
+
+		// Rotate the camera matrix
+		m4x4.clone(m4x4.MulMM(this.m_base_c2w, m4x4.Euler(pitch, yaw, roll, v4.Origin)), this.m_c2w);
+
+		// Position the camera so that the focus is still in the same position
+		m4x4.SetW(this.m_c2w, v4.Add(old_focus, v4.MulS(m4x4.GetZ(m_c2w), this.focus_dist)));
+
+		// If an align axis is given, align up to it
+		if (this.m_align)
+		{
+			let up = v4.Perpendicular(v4.Sub(this.pos, old_focus), this.m_align);
+			m4x4.LookAt(this.pos, old_focus, up, this.m_c2w);
+		}
+
+		// Set the base values
+		if (commit === undefined || commit)
+			this.Commit();
+
+		this.m_moved = true;
+		return this.m_moved;
+	}
+
+	/**
+	 * Zoom the field of view.
+	 * @param {Number} zoom The amount to zoom. Must be in the range (-1, 1) where negative numbers zoom in, positive out.
+	 * @param {boolean} commit (optional) True to commit the movement
+	 * @returns {boolean} True if the camera has moved (for consistency with MouseControl).
+	 */
+	Zoom(zoom, commit)
+	{
+		if (this.m_lock_mask != ELockMask.None)
+		{
+			if ((this.m_lock_mask & ELockMask.Zoom)) return false;
+		}
+		if (this.KeyDown(ENavKey.Accurate))
+		{
+			zoom *= this.m_accuracy_scale;
+			if (this.KeyDown(ENavKey.SuperAccurate))
+				zoom *= this.m_accuracy_scale;
+		}
+
+		this.m_fovY = (1 + zoom) * this.m_base_fovY;
+		this.m_fovY = Maths.Clamp(this.m_fovY, Maths.Tiny, Maths.TauBy2 - Maths.Tiny);
 
 		// Set the base values
 		if (commit === undefined || commit)
@@ -351,10 +630,10 @@ export class Camera
 	 */
 	Commit()
 	{
+		m4x4.Orthonorm(this.m_c2w, this.m_c2w)
 		m4x4.clone(this.m_c2w, this.m_base_c2w);
 		this.m_base_fovY = this.m_fovY;
 		this.m_base_focus_dist = this.m_focus_dist;
-		m4x4.Orthonorm(this.m_base_c2w, this.m_base_c2w);
 	}
 
 	/**
@@ -384,19 +663,3 @@ export function Create(fovY, aspect, focus_distance, near, far, orthographic)
 	return new Camera(fovY, aspect, focus_distance, near, far, orthographic);
 }
 
-/**
- * Camera navigation lock flags
- */
-export var ELockMask = Object.freeze(
-{
-	"None"           : 0,
-	"TransX"         : 1 << 0,
-	"TransY"         : 1 << 1,
-	"TransZ"         : 1 << 2,
-	"RotX"           : 1 << 3,
-	"RotY"           : 1 << 4,
-	"RotZ"           : 1 << 5,
-	"Zoom"           : 1 << 6,
-	"All"            : (1 << 7) - 1, // Not including camera relative
-	"CameraRelative" : 1 << 7,
-});

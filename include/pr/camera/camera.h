@@ -129,7 +129,6 @@ namespace pr
 		ELockMask      m_lock_mask;         // Locks on the allowed motion
 		bool           m_orthographic;      // True for orthographic camera to screen transforms, false for perspective
 		bool           m_moved;             // Dirty flag for when the camera moves
-		bool           m_focus_rel_clip;    // True if the near/far clip planes should be relative to the focus point
 
 		Camera()
 			:Camera(pr::m4x4Identity)
@@ -157,7 +156,6 @@ namespace pr
 			,m_lock_mask()
 			,m_orthographic(orthographic)
 			,m_moved(false)
-			,m_focus_rel_clip(true)
 		{
 			PR_ASSERT(PR_DBG, pr::IsFinite(m_c2w), "invalid scene view parameters");
 			PR_ASSERT(PR_DBG, pr::IsFinite(m_fovY), "invalid scene view parameters");
@@ -262,44 +260,41 @@ namespace pr
 		}
 
 		// Get/Set the distances to the near and far clip planes
-		v2 ClipPlanes(bool focus_relative_clip)
+		v2 ClipPlanes(bool focus_relative)
 		{
-			return v2(
-				focus_relative_clip ? m_near : Near(),
-				focus_relative_clip ? m_far  : Far());
+			return v2(Near(focus_relative), Far(focus_relative));
 		}
-		void ClipPlanes(float near_, float far_, bool focus_relative_clip)
+		void ClipPlanes(float near_, float far_, bool focus_relative)
 		{
-			m_near = near_;
-			m_far = far_;
-			m_focus_rel_clip = focus_relative_clip;
+			Near(near_, focus_relative);
+			Far(far_, focus_relative);
 		}
 
-		// Returns a distance scaled by the focus distance (if m_focus_rel_clip is enabled)
-		float FocusRelativeDistance(float dist) const
+		// Get/Set the near clip plane (in world space)
+		float Near(bool focus_relative = true) const
 		{
-			return (m_focus_rel_clip ? m_focus_dist : 1) * dist;
+			return (focus_relative ? 1 : m_focus_dist) * m_near;
+		}
+		void Near(float value, bool focus_relative)
+		{
+			m_near = value / (focus_relative ? 1.0f : m_focus_dist);
 		}
 
-		// The near clip plane
-		float Near() const
+		// Get/Set the far clip plane (in world space)
+		float Far(bool focus_relative = true) const
 		{
-			return FocusRelativeDistance(m_near);
+			return (focus_relative ? 1 : m_focus_dist) * m_far;
+		}
+		void Far(float value, bool focus_relative)
+		{
+			m_far = value / (focus_relative ? 1.0f : m_focus_dist);
 		}
 
-		// The far clip plane
-		float Far() const
-		{
-			return FocusRelativeDistance(m_far);
-		}
-
-		// Return the aspect ratio
+		// Get/Set the aspect ratio
 		float Aspect() const
 		{
 			return m_aspect;
 		}
-
-		// Set the aspect ratios
 		void Aspect(float aspect_w_by_h)
 		{
 			PR_ASSERT(PR_DBG, aspect_w_by_h > 0.0f && pr::IsFinite(aspect_w_by_h), "");
@@ -307,25 +302,22 @@ namespace pr
 			m_aspect = aspect_w_by_h;
 		}
 
-		// Return the horizontal field of view (in radians).
+		// Get/Set the horizontal field of view (in radians).
 		float FovX() const
 		{
 			return 2.0f * pr::ATan(pr::Tan(m_fovY * 0.5f) * m_aspect);
 		}
-
-		// Set the XAxis field of view
 		void FovX(float fovX)
 		{
 			FovY(2.0f * pr::ATan(pr::Tan(fovX * 0.5f) / m_aspect));
 		}
 
-		// Return the vertical field of view (in radians).
+		// Get/Set the vertical field of view (in radians).
+		// FOV relationship: tan(fovY/2) * aspect_w_by_h = tan(fovX/2);
 		float FovY() const
 		{
 			return m_fovY;
 		}
-
-		// Set the YAxis field of view. FOV relationship: tan(fovY/2) * aspect_w_by_h = tan(fovX/2);
 		void FovY(float fovY)
 		{
 			PR_ASSERT(PR_DBG, fovY >= 0.0f && fovY < maths::tau_by_2 && pr::IsFinite(fovY), "");
@@ -377,6 +369,40 @@ namespace pr
 			FocusPoint(pt);
 		}
 
+		// Get/Set the axis to align the camera up direction to
+		pr::v4 Align() const
+		{
+			return m_align;
+		}
+		void Align(pr::v4 const& up)
+		{
+			m_align = up;
+			if (Length3Sq(m_align) > maths::tiny)
+			{
+				if (Parallel(m_c2w.z, m_align)) m_c2w = m4x4(m_c2w.y, m_c2w.z, m_c2w.x, m_c2w.w);
+				m_c2w = m4x4::LookAt(m_c2w.pos, FocusPoint(), m_align);
+				m_moved = true;
+				m_base_c2w = m_c2w; // Update the base point
+			}
+		}
+
+		// Return true if the align axis has been set for the camera
+		bool IsAligned() const
+		{
+			return Length3Sq(m_align) > maths::tiny;
+		}
+
+		// Get/Set orthographic projection mode
+		bool Orthographic() const
+		{
+			return m_orthographic;
+		}
+		void Orthographic(bool value)
+		{
+			m_orthographic = value;
+			m_moved = true;
+		}
+
 		// Return the size of the perpendicular area visible to the camera at 'dist' (in world space)
 		pr::v2 ViewArea(float dist) const
 		{
@@ -395,24 +421,28 @@ namespace pr
 			return ViewFrustum(Far());
 		}
 
-		// Return the world space position of the focus point
+		// Get/Set the world space position of the focus point, maintaining the current camera orientation
 		pr::v4 FocusPoint() const
 		{
 			return m_c2w.pos - m_c2w.z * m_focus_dist;
 		}
-
-		// Set the focus point, maintaining the current camera orientation
 		void FocusPoint(pr::v4 const& position)
 		{
-			m_moved = true;
 			m_c2w.pos += position - FocusPoint();
 			m_base_c2w = m_c2w; // Update the base point
+			m_moved = true;
 		}
 
-		// Return the distance to the focus point
+		// Get/Set the distance to the focus point
 		float FocusDist() const
 		{
 			return m_focus_dist;
+		}
+		void FocusDist(float dist)
+		{
+			assert("'dist' should not be negative" && pr::IsFinite(dist) && dist >= 0.0f);
+			m_moved |= dist != m_focus_dist;
+			m_base_focus_dist = m_focus_dist = Clamp(dist, FocusDistMin(), FocusDistMax());
 		}
 
 		// Return the maximum allowed distance for 'FocusDist'
@@ -436,14 +466,6 @@ namespace pr
 			//       == dist > float_min / Abs(m_near - m_far);
 			assert(m_near < m_far);
 			return maths::float_min / Min(Abs(m_near - m_far), 1.0f);
-		}
-
-		// Set the distance to the focus point
-		void FocusDist(float dist)
-		{
-			assert("'dist' should not be negative" && pr::IsFinite(dist) && dist >= 0.0f);
-			m_moved |= dist != m_focus_dist;
-			m_base_focus_dist = m_focus_dist = Clamp(dist, FocusDistMin(), FocusDistMax());
 		}
 
 		// Modify the camera position based on mouse movement.
@@ -685,10 +707,10 @@ namespace pr
 		// Set the current position, FOV, and focus distance as the position reference
 		void Commit()
 		{
+			m_c2w = pr::Orthonorm(m_c2w);
 			m_base_c2w  = m_c2w;
 			m_base_fovY = m_fovY;
 			m_base_focus_dist = m_focus_dist;
-			m_base_c2w = pr::Orthonorm(m_base_c2w);
 		}
 
 		// Revert navigation back to the last commit
@@ -698,25 +720,6 @@ namespace pr
 			m_fovY = m_base_fovY;
 			m_focus_dist = m_base_focus_dist;
 			m_moved = true;
-		}
-
-		// Set the axis to align the camera up axis to
-		void SetAlign(pr::v4 const& up)
-		{
-			m_align = up;
-			if (Length3Sq(m_align) > maths::tiny)
-			{
-				if (Parallel(m_c2w.z, m_align)) m_c2w = m4x4(m_c2w.y, m_c2w.z, m_c2w.x, m_c2w.w);
-				m_c2w = m4x4::LookAt(m_c2w.pos, FocusPoint(), m_align);
-				m_moved = true;
-				m_base_c2w = m_c2w; // Update the base point
-			}
-		}
-
-		// Return true if the align axis has been set for the camera
-		bool IsAligned() const
-		{
-			return Length3Sq(m_align) > maths::tiny;
 		}
 
 		// Position the camera at 'position' looking at 'lookat' with up pointing 'up'

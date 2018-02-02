@@ -27,49 +27,49 @@ namespace RyLogViewer
 			try {
 			#endif
 
-			Environment.ExitCode = 0;
-			Application.EnableVisualStyles();
-			Application.SetCompatibleTextRenderingDefault(false);
-
-			// Start the main app
-			Exception err = null;
-			try { StartupOptions = new StartupOptions(args); }
-			catch (Exception ex) { err = ex; }
-
-			// If there was an error display the error message
-			if (err != null)
-			{
-				MsgBox.Show(null,
-					"There is an error in the startup options provided.\r\n"+
-					$"Error Details:\r\n{err.Message}"
-					, "Command Line Error"
-					, MessageBoxButtons.OK
-					, MessageBoxIcon.Error);
-				HelpUI.ShowDialog(null, HelpUI.EContent.Html, Application.ProductName, Resources.command_line_ref);
-				Environment.ExitCode = 1;
-				return;
-			}
-
-			// If they just want help displayed...
-			if (StartupOptions.ShowHelp)
-			{
-				HelpUI.ShowDialog(null, HelpUI.EContent.Html, Application.ProductName, Resources.command_line_ref);
 				Environment.ExitCode = 0;
-				return;
-			}
+				Application.EnableVisualStyles();
+				Application.SetCompatibleTextRenderingDefault(false);
 
-			// If an export path is given, run as a command line tool doing an export
-			if (StartupOptions.ExportPath != null)
-			{
-				RyLogViewer.Main.ExportToFile(StartupOptions);
-				return;
-			}
+				// Start the main app
+				Exception err = null;
+				try { StartupOptions = new StartupOptions(args); }
+				catch (Exception ex) { err = ex; }
 
-			// Otherwise show the app
-			Application.Run(new Main(StartupOptions));
+				// If there was an error display the error message
+				if (err != null)
+				{
+					MsgBox.Show(null,
+						"There is an error in the startup options provided.\r\n"+
+						$"Error Details:\r\n{err.Message}"
+						, "Command Line Error"
+						, MessageBoxButtons.OK
+						, MessageBoxIcon.Error);
+					HelpUI.ShowDialog(null, HelpUI.EContent.Html, Application.ProductName, Resources.command_line_ref);
+					Environment.ExitCode = 1;
+					return;
+				}
 
-			// To catch any Disposes in the 'GC Finializer' thread
-			GC.Collect();
+				// If they just want help displayed...
+				if (StartupOptions.ShowHelp)
+				{
+					HelpUI.ShowDialog(null, HelpUI.EContent.Html, Application.ProductName, Resources.command_line_ref);
+					Environment.ExitCode = 0;
+					return;
+				}
+
+				// If an export path is given, run as a command line tool doing an export
+				if (StartupOptions.ExportPath != null)
+				{
+					RyLogViewer.Main.ExportToFile(StartupOptions);
+					return;
+				}
+
+				// Otherwise show the app
+				Application.Run(new Main(StartupOptions));
+
+				// To catch any Disposes in the 'GC Finializer' thread
+				GC.Collect();
 
 			#if !DEBUG || TRAP_UNHANDLED_EXCEPTIONS
 			} catch (Exception e) { unhandled = e; }

@@ -23,12 +23,12 @@ namespace Rylogic.Utility
 		/// Use comments such as:<para/>
 		///  //Assembly: System.dll<para/>
 		/// to declare required assembly references </summary>
-		public static RuntimeAssembly FromFile(string inst_name, string file)
+		public static RuntimeAssembly FromFile(string inst_name, string file, IEnumerable<string> include_paths = null)
 		{
 			if (!Path_.FileExists(file))
 				throw new FileNotFoundException($"File {file} not found");
 
-			return FromString(inst_name, File.ReadAllText(file));
+			return FromString(inst_name, File.ReadAllText(file), include_paths);
 		}
 
 		/// <summary>
@@ -37,7 +37,7 @@ namespace Rylogic.Utility
 		///  //Assembly: System.dll<para/>
 		/// to declare required assembly references.
 		/// 'inst_name' is the full name (namespace.classname) of the class in the code to instantiate</summary>
-		public static RuntimeAssembly FromString(string inst_name, string source)
+		public static RuntimeAssembly FromString(string inst_name, string source, IEnumerable<string> include_paths = null)
 		{
 			// Scan the file for Reference Assembles
 			var assemblies = new List<string>();
@@ -47,7 +47,11 @@ namespace Rylogic.Utility
 				if (!line.StartsWith("//")) break;
 				if (!line.StartsWith("//Assembly:")) continue;
 				var ass = line.Substring(11).Trim(' ','\t','\r','\n');
-				if (ass.HasValue()) assemblies.Add(ass);
+				if (ass.HasValue())
+				{
+					if (ass.StartsWith(@".\")) ass = Util2.ResolveAppPath(ass);
+					assemblies.Add(ass);
+				}
 			}
 
 			return new RuntimeAssembly(inst_name, source, assemblies.ToArray());
@@ -62,13 +66,18 @@ namespace Rylogic.Utility
 			m_mi_cache = new Cache<string,MethodInfo>{ ThreadSafe = true };
 
 			var provider = new CSharpCodeProvider(new Dictionary<string, string>{{"CompilerVersion", "v4.0"}});
-			var compilerParams = new CompilerParameters(assemblies)
+			var compiler_params = new CompilerParameters()
 			{
 				GenerateInMemory   = true,
 				GenerateExecutable = false,
+				CompilerOptions = $@"/lib:""{Util2.ResolveAppPath()}""",
 			};
+			foreach (var ass in assemblies)
+			{
+				compiler_params.ReferencedAssemblies.Add(ass);
+			}
 
-			Results = provider.CompileAssemblyFromSource(compilerParams, source);
+			Results = provider.CompileAssemblyFromSource(compiler_params, source);
 			if (Results.Errors.Count != 0)
 				throw new CompileException(Results.Errors);
 

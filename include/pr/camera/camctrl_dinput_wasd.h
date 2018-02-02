@@ -45,7 +45,7 @@ namespace pr
 			,m_pan_speed(0.5f)
 			,m_zoom_speed(0.5f)
 			{
-				m_cam->SetAlign(pr::v4YAxis);
+				m_cam->Align(pr::v4YAxis);
 			}
 			
 			void Step(float dt)

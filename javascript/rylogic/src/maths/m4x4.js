@@ -6,18 +6,6 @@ import * as Maths from "./maths";
 import * as v4 from "./v4";
 
 let FMat = Float32Array;
-//export class FMat extends v4.FVec
-//{
-//	get x() { return v4.FVec.prototype.subarray(this,  0, 4); }
-//	get y() { return v4.FVec.prototype.subarray(this, 16, 32); }
-//	get z() { return v4.FVec.prototype.subarray(this, 32, 48); }
-//	get w() { return v4.FVec.prototype.subarray(this, 48, 64); }
-//	get pos() { return new v4.FVec(this.slice(12,16)); }
-//	set x(v) { this[ 0] = v[0]; this[ 1] = v[1]; this[ 2] = v[2]; this[ 3] = v[3]; }
-//	set y(v) { this[ 4] = v[0]; this[ 5] = v[1]; this[ 6] = v[2]; this[ 7] = v[3]; }
-//	set z(v) { this[ 8] = v[0]; this[ 9] = v[1]; this[10] = v[2]; this[11] = v[3]; }
-//	set w(v) { this[12] = v[0]; this[13] = v[1]; this[14] = v[2]; this[15] = v[3]; }
-//}
 
 /**
  * Create a new 4x4 identity matrix
@@ -507,6 +495,48 @@ export function Invert(mat, out)
 export function Translation(pos)
 {
 	var out = create();
+	out[12] = pos[0];
+	out[13] = pos[1];
+	out[14] = pos[2];
+	return out;
+}
+
+/**
+ * Create a rotation matrix from Euler angles. Order is: roll, pitch, yaw (to match DirectX)
+ * @param {Number} pitch
+ * @param {Number} yaw
+ * @param {Number} roll
+ * @param {v4} pos
+ * @returns {m4x4}
+ */
+export function Euler(pitch, yaw, roll, pos)
+{
+	let cos_p = Math.cos(pitch), sin_p = Math.sin(pitch);
+	let cos_y = Math.cos(yaw  ), sin_y = Math.sin(yaw  );
+	let cos_r = Math.cos(roll ), sin_r = Math.sin(roll );
+	
+	let out = create();
+	out[0] = +cos_y*cos_r + sin_y*sin_p*sin_r ; out[1] = cos_p*sin_r ; out[ 2] = -sin_y*cos_r + cos_y*sin_p*sin_r ; out[ 3] = 0;
+	out[4] = -cos_y*sin_r + sin_y*sin_p*cos_r ; out[5] = cos_p*cos_r ; out[ 6] = +sin_y*sin_r + cos_y*sin_p*cos_r ; out[ 7] = 0;
+	out[8] =  sin_y*cos_p                     ; out[9] = -sin_p      ; out[10] = cos_y*cos_p                      ; out[11] = 0;
+	out[12] = pos[0]                          ; out[13] = pos[1]     ; out[14] = pos[2]                           ; out[15] = 1;
+	return out;
+}
+
+/**
+ * Create a scale matrix
+ * @param {Number} sx 
+ * @param {Number} sy 
+ * @param {Number} sz 
+ * @param {v4} pos 
+ * @returns {m4x4}
+ */
+export function Scale(sx, sy, sz, pos)
+{
+	let out = create();
+	out[ 0] = sx;
+	out[ 5] = sy;
+	out[10] = sz;
 	out[12] = pos[0];
 	out[13] = pos[1];
 	out[14] = pos[2];

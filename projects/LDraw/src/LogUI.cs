@@ -25,6 +25,7 @@ namespace LDraw
 			:base(model, "Log")
 		{
 			InitializeComponent();
+			ExternalLogHelper.LogUI = this;
 			DockControl.DefaultDockLocation = new DockContainer.DockLocation(auto_hide:EDockSite.Right);
 			DockControl.TabColoursActive = new DockContainer.OptionData().TabStrip.ActiveTab;
 			DockControl.ActiveChanged += HandleActiveChanged;
@@ -37,6 +38,7 @@ namespace LDraw
 		}
 		protected override void Dispose(bool disposing)
 		{
+			ExternalLogHelper.LogUI = null;
 			DockControl.ActiveChanged -= HandleActiveChanged;
 			base.Dispose(disposing);
 		}
@@ -48,17 +50,29 @@ namespace LDraw
 		}
 
 		/// <summary>Add text to the log</summary>
-		public void AddErrorMessage(string text)
+		public void AddErrorMessage(string text, bool? popout = null)
 		{
-			m_text.AppendText(text + "\n\n");
-			if (Settings.UI.ShowErrorLogOnNewMessages)
+			m_text.AppendText(text.EnsureNewLine());
+
+			if (popout ?? Settings.UI.ShowErrorLogOnNewMessages)
 			{
 				DockControl.DockContainer.FindAndShow(this);
 			}
-			else
+			DockControl.TabColoursActive.Text = Color.Red;
+			DockControl.InvalidateTab();
+		}
+
+		/// <summary>Add a message to the log</summary>
+		public void AddMessage(string text, bool? popout = null)
+		{
+			if (!IsHandleCreated) return;
+			if (InvokeRequired) { this.BeginInvoke(() => AddMessage(text, popout)); return; }
+
+			m_text.AppendText(text.EnsureNewLine());
+
+			if (popout ?? Settings.UI.ShowErrorLogOnNewMessages)
 			{
-				DockControl.TabColoursActive.Text = Color.Red;
-				DockControl.InvalidateTab();
+				DockControl.DockContainer.FindAndShow(this);
 			}
 		}
 
@@ -271,5 +285,15 @@ namespace LDraw
 
 		}
 		#endregion
+	}
+
+	// A global object to allow embedded CSharp script to write to the LogUI
+	public static class ExternalLogHelper
+	{
+		public static LogUI LogUI { get; set; }
+		public static void AddMessage(string message)
+		{
+			LogUI?.AddMessage(message);
+		}
 	}
 }

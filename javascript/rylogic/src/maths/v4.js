@@ -5,18 +5,6 @@
 import * as Maths from "./maths";
 
 let FVec = Float32Array;
-//export class FVec extends Float32Array
-//{
-//	get x() { return v4.FVec.prototype.subarray(this,  0, 4); }
-//	get y() { return v4.FVec.prototype.subarray(this, 16, 32); }
-//	get z() { return v4.FVec.prototype.subarray(this, 32, 48); }
-//	get w() { return v4.FVec.prototype.subarray(this, 48, 64); }
-//	set x(v) { this[ 0] = v[0]; this[ 1] = v[1]; this[ 2] = v[2]; this[ 3] = v[3]; }
-//	set y(v) { this[ 4] = v[0]; this[ 5] = v[1]; this[ 6] = v[2]; this[ 7] = v[3]; }
-//	set z(v) { this[ 8] = v[0]; this[ 9] = v[1]; this[10] = v[2]; this[11] = v[3]; }
-//	set w(v) { this[12] = v[0]; this[13] = v[1]; this[14] = v[2]; this[15] = v[3]; }
-//}
-
 export const XAxis  = new FVec([1,0,0,0]);
 export const YAxis  = new FVec([0,1,0,0]);
 export const ZAxis  = new FVec([0,0,1,0]);
@@ -89,9 +77,26 @@ export function clone(vec, out)
 }
 
 /**
+ * Exact equality of two 4-vectors
+ * @param {v4} a
+ * @param {v4} b
+ * @returns {boolean}
+ */
+export function Eql(a, b)
+{
+	let eql =
+		a[0] == b[0] &&
+		a[1] == b[1] &&
+		a[2] == b[2] &&
+		a[3] == b[3];
+	return eql;
+}
+
+/**
  * Approximate equality of two 4-vectors
  * @param {v4} a
  * @param {v4} b
+ * @returns {boolean}
  */
 export function FEql(a, b)
 {
@@ -210,7 +215,7 @@ export function Normalise(vec, out, opts)
 {
 	out = out || create();
 	let len = Length(vec);
-	if (len <= 0)
+	if (len == 0)
 	{
 		if (opts && opts.def) out = opts.def;
 		else throw new Error("Cannot normalise a zero vector");
@@ -266,7 +271,7 @@ export function Add(a, b, out)
  * @param {[v4]} arr 
  * @returns {v4} The sum of the given vectors
  */
-export function AddN(arr)
+export function AddN(...arr)
 {
 	let sum = v4.create();
 	for (let i = 0; i != arr.length; ++i)
@@ -321,3 +326,59 @@ export function MulV(a, b, out)
 	out[3] = a[3] * b[3];
 	return out;
 }
+
+/**
+ * Returns true if 'a' and 'b' parallel
+ * @param {v4} v0
+ * @param {v4} v1
+ * @returns {boolean}
+ */
+export function Parallel(v0, v1)
+{
+	return LengthSq(Cross(v0, v1)) < Maths.TinySq;
+}
+
+/**
+ * Returns a vector guaranteed not parallel to 'v'
+ * @param {v4} v
+ * @returns {v4}
+ */
+export function CreateNotParallelTo(v)
+{
+	let x_aligned = Math.abs(v[0]) > Math.abs(v[1]) && Math.abs(v[0]) > Math.abs(v[2]);
+	let out = v4.make(!x_aligned, 0, x_aligned, v[3]);
+}
+
+/**
+ * Returns a vector perpendicular to 'vec' favouring 'previous' as the preferred perpendicular.
+ * @param {v4} vec The vector to be perpendicular to.
+ * @param {v4} previous (optional) The previously used perpendicular, for returning consistent results.
+ * @returns {v4}
+ */
+export function Perpendicular(vec, previous)
+{
+	if (LengthSq(vec) < Maths.Tiny)
+		throw new Error("Cannot make a perpendicular to a zero vector");
+
+	let out = v4.create();
+
+	// If 'previous' is parallel to 'vec', choose a new perpendicular (includes previous == zero)
+	if (!previous || Parallel(vec, previous))
+	{
+		Cross(vec, CreateNotParallelTo(vec), out);
+		MulVS(out, Length(vec) / Length(out), out);
+	}
+	else
+	{
+		// If 'previous' is still perpendicular, keep it
+		if (Maths.FEql(Dot(vec, previous), 0))
+			return previous;
+
+		// Otherwise, make a perpendicular that is close to 'previous'
+		Cross(vec, previous, out);
+		Cross(out, vec, out);
+		Normalise(out, out);
+	}
+	return out;
+}
+

@@ -1012,7 +1012,7 @@ VIEW3D_API void __stdcall View3D_CameraAlignAxisSet(View3DWindow window, View3DV
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		window->m_camera.SetAlign(view3d::To<pr::v4>(axis));
+		window->m_camera.Align(view3d::To<pr::v4>(axis));
 	}
 	CatchAndReport(View3D_CameraAlignAxisSet, window,);
 }

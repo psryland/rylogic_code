@@ -148,7 +148,6 @@ namespace pr
 			x(Fov                  ,= HashI("Fov"                 ))\
 			x(Near                 ,= HashI("Near"                ))\
 			x(Far                  ,= HashI("Far"                 ))\
-			x(AbsoluteClipPlanes   ,= HashI("AbsoluteClipPlanes"  ))\
 			x(Orthographic         ,= HashI("Orthographic"        ))\
 			x(Lock                 ,= HashI("Lock"                ))\
 			x(Coloured             ,= HashI("Coloured"            ))\
@@ -193,6 +192,21 @@ namespace pr
 		#pragma endregion
 
 		#pragma region Enums
+
+		// Camera fields
+		enum class ECamField
+		{
+			None    = 0,
+			C2W     = 1 << 0,
+			Focus   = 1 << 1,
+			Align   = 1 << 2,
+			Aspect  = 1 << 3,
+			FovY    = 1 << 4,
+			Near    = 1 << 5,
+			Far     = 1 << 6,
+			Ortho   = 1 << 7,
+			_bitwise_operators_allowed,
+		};
 
 		// Simple animation styles
 		enum class EAnimStyle
@@ -361,22 +375,6 @@ namespace pr
 		struct ParseResult
 		{
 			using ModelLookup = std::unordered_map<size_t, pr::rdr::ModelPtr>;
-
-			// Bit mask of set camera fields
-			enum class ECamField
-			{
-				None    = 0,
-				C2W     = 1 << 0,
-				Focus   = 1 << 1,
-				Align   = 1 << 2,
-				Aspect  = 1 << 3,
-				FovY    = 1 << 4,
-				Near    = 1 << 5,
-				Far     = 1 << 6,
-				AbsClip = 1 << 7,
-				Ortho   = 1 << 8,
-				_bitwise_operators_allowed,
-			};
 
 			ObjectCont  m_objects;    // Reference to the objects container to fill
 			ModelLookup m_models;     // A lookup map for models based on hashed object name

@@ -19,13 +19,13 @@ namespace pr
 		}
 		SceneView::SceneView(pr::Camera const& cam)
 			:pr::Camera(cam)
-			,m_shadow_zfar(FocusRelativeDistance(3.0f))
-			,m_shadow_max_caster_dist(FocusRelativeDistance(4.0f))
+			,m_shadow_zfar(3.0f * cam.FocusDist())
+			,m_shadow_max_caster_dist(4.0f * cam.FocusDist())
 		{}
 		SceneView::SceneView(m4x4 const& c2w, float fovY, float aspect, float focus_dist, bool orthographic, float near_, float far_)
 			:pr::Camera(c2w, fovY, aspect, focus_dist, orthographic, near_, far_)
-			,m_shadow_zfar(FocusRelativeDistance(3.0f))
-			,m_shadow_max_caster_dist(FocusRelativeDistance(4.0f))
+			,m_shadow_zfar(3.0f * focus_dist)
+			,m_shadow_max_caster_dist(4.0f * focus_dist)
 		{}
 
 		// Return the scene views for the left and right eye in stereoscopic view

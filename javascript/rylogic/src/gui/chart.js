@@ -1,7 +1,57 @@
+/**
+ * @module Chart
+ */
+
+import * as Maths from "../maths/maths";
 import * as m4x4 from "../maths/m4x4";
+import * as v4 from "../maths/v4";
+import * as v2 from "../maths/v2";
 import * as Rect from "../maths/rect";
 import * as Rdr from "../renderer/renderer";
 import * as Util from "../utility/util";
+
+/**
+ * Enumeration of areas on the chart
+ */
+export var EZone = Object.freeze(
+{
+	None: 0,
+	Chart: 1 << 0,
+	XAxis: 1 << 1,
+	YAxis: 1 << 2,
+	Title: 1 << 3,
+});
+
+/**
+ * Mouse button enumeration
+ */
+var EButton = Object.freeze(
+{
+	Left: 0,
+	Middle: 1,
+	Right: 2,
+	Back: 3,
+	Forward: 4,
+});
+
+/**
+ * Chart navigation modes
+ */
+var ENavMode = Object.freeze(
+{
+	Chart2D: 0,
+	Scene3D: 1,
+});
+
+/**
+ * Area selection modes
+ */
+var EAreaSelectMode = Object.freeze(
+{
+	Disabled: 0,
+	SelectElements: 1,
+	Zoom: 2,
+});
 
 export class Chart
 {
@@ -21,7 +71,7 @@ export class Chart
 		this.canvas3d = canvas;
 		this.canvas2d = canvas.cloneNode(false);
 		this.canvas2d.style.position = "absolute";
-		this.canvas2d.style.border = this.canvas3d.style.border;
+		this.canvas2d.style.border = "none";//this.canvas3d.style.border;
 		this.canvas2d.style.left = this.canvas3d.style.left;
 		this.canvas2d.style.top = this.canvas3d.style.top;
 		canvas.parentNode.insertBefore(this.canvas2d, this.canvas3d);
@@ -42,24 +92,27 @@ export class Chart
 			this.redraw_pending = false;
 			this.invalidate = function(){ this.chart_frame = null; };
 		};
-	
-		// The buffer of instances to render on the chart
+
+		// The manager of chart utility graphics
+		this.m_tools = new Tools(chart);
+
+		// The collection of instances to render on the chart
 		this.instances = [];
 	
 		// Initialise the chart camera
 		this.camera = Rdr.Camera.Create(Maths.TauBy8, this.m_rdr.AspectRatio);
 		this.camera.orthographic = true;
-		this.camera.pos = v4.make(0, 0, 10, 1);
+		this.camera.LookAt(v4.make(0, 0, 10, 1), v4.Origin, v4.YAxis);
+		this.camera.KeyDown = function(nav_key)
+		{
+			return false;
+		};
 	
 		// The light source the illuminates the chart
 		this.light = Rdr.Light.Create(Rdr.ELight.Directional, v4.Origin, v4.Neg(v4.ZAxis), null, [0.5,0.5,0.5], null, null);
 	
 		// Navigation
 		this.navigation = new Navigation(chart);
-		chart.canvas2d.onmousedown = function(ev){ chart.navigation.OnMouseDown(ev); }
-		chart.canvas2d.onmousemove = function(ev) { chart.navigation.OnMouseMove(ev); };
-		chart.canvas2d.onmouseup = function(ev) { chart.navigation.OnMouseUp(ev); };
-		chart.canvas2d.onmousewheel = function(ev) { chart.navigation.OnMouseWheel(ev); };
 	
 		// Chart options
 		this.options = new ChartOptions();
@@ -75,20 +128,22 @@ export class Chart
 			this.title_transform = {m00: 1, m01: 0, m10: 0, m11: 1, dx: 0, dy: 0};
 			this.title_padding = 3;
 			this.margin = {left: 3, top: 3, right: 3, bottom: 3};
-			this.axis_thickness = 1;
-			this.navigation_mode = "2d";
+			this.axis_thickness = 0;
+			this.navigation_mode = ENavMode.Chart2D;
 			this.show_grid_lines = true;
 			this.show_axes = true;
 			this.lock_aspect = null;
 			this.perpendicular_z_translation = false;
-			//SelectionColour           = Color.FromArgb(0x80, Color.DarkGray);
-			//GridZOffset               = 0.001f;
+			this.grid_z_offset = 0.001;
+			this.min_drag_pixel_distance = 5;
+			this.allow_editing = true;
+			this.area_select_mode = EAreaSelectMode.Zoom;
+			this.selection_colour = "#80808080";
 			//AntiAliasing              = true;
 			//FillMode                  = View3d.EFillMode.Solid;
 			//CullMode                  = View3d.ECullMode.Back;
 			//Orthographic              = false;
 			//MinSelectionDistance      = 10f;
-			//MinDragPixelDistance      = 5f;
 			//ResetForward              = -v4.ZAxis;
 			//ResetUp                   = +v4.YAxis;
 			this.xaxis = new AxisOptions();
@@ -120,8 +175,12 @@ export class Chart
 		this.xaxis.label = "X Axis";
 		this.yaxis.label = "Y Axis";
 
-		// The plot area of the chart
+		// Layout data for the chart
 		this.dimensions = {};
+
+		// Events
+		this.OnChartClicked = new Util.MulticastDelegate();
+		//this.OnRendering = new Util.MulticastDelegate();
 	}
 
 	/**
@@ -260,15 +319,17 @@ export class Chart
 				{
 					bmp.save();
 					bmp.font = opts.xaxis.tick_font;
+					bmp.textBaseline = 'top';
 					bmp.fillStyle = opts.xaxis.tick_colour;
 					bmp.textAlign = "center";
+					bmp.lineWidth = 0;
 					bmp.beginPath();
 
-					let Y = (dims.chart_area.b + opts.xaxis.tick_length + dims.xtick_label_size.height + 1);
+					let Y = (dims.chart_area.b + opts.xaxis.tick_length + 1);
 					let gl = xaxis.GridLines(dims.chart_area.w, opts.xaxis.pixels_per_tick);
 					for (let x = gl.min; x < gl.max; x += gl.step)
 					{
-						let X = Math.floor(dims.chart_area.l + x * dims.chart_area.w / xaxis.span);
+						let X = dims.chart_area.l + x*dims.chart_area.w/xaxis.span;
 						let s = xaxis.TickText(x + xaxis.min, gl.step);
 						if (opts.xaxis.draw_tick_labels)
 						{
@@ -281,6 +342,7 @@ export class Chart
 						}
 					}
 
+					bmp.imageSmoothingEnabled = false;
 					bmp.stroke();
 					bmp.restore();
 				}
@@ -289,18 +351,20 @@ export class Chart
 					bmp.save();
 					bmp.font = opts.yaxis.tick_font;
 					bmp.fillStyle = opts.yaxis.tick_colour;
+					bmp.textBaseline = 'top';
 					bmp.textAlign = "right";
+					bmp.lineWidth = 0;
 					bmp.beginPath();
 
 					let X = (dims.chart_area.l - opts.yaxis.tick_length - 1);
 					let gl = yaxis.GridLines(dims.chart_area.h, opts.yaxis.pixels_per_tick);
 					for (let y = gl.min; y < gl.max; y += gl.step)
 					{
-						let Y = Math.floor(dims.chart_area.b - y * dims.chart_area.h / yaxis.span);
+						let Y = dims.chart_area.b - y*dims.chart_area.h/yaxis.span;
 						let s = yaxis.TickText(y + yaxis.min, gl.step);
 						if (opts.yaxis.draw_tick_labels)
 						{
-							bmp.fillText(s, X, Y + dims.ytick_label_size.height * 0.5, dims.ytick_label_size.width);
+							bmp.fillText(s, X, Y - dims.ytick_label_size.height*0.5, dims.ytick_label_size.width);
 						}
 						if (opts.yaxis.draw_tick_marks)
 						{
@@ -309,6 +373,7 @@ export class Chart
 						}
 					}
 
+					bmp.imageSmoothingEnabled = false;
 					bmp.stroke();
 					bmp.restore();
 				}
@@ -317,8 +382,8 @@ export class Chart
 					bmp.save();
 					bmp.fillStyle = opts.axis_colour;
 					bmp.lineWidth = opts.axis_thickness;
-					bmp.moveTo(dims.chart_area.l, dims.chart_area.t);
-					bmp.lineTo(dims.chart_area.l, dims.chart_area.b);
+					bmp.moveTo(dims.chart_area.l+1, dims.chart_area.t);
+					bmp.lineTo(dims.chart_area.l+1, dims.chart_area.b);
 					bmp.lineTo(dims.chart_area.r, dims.chart_area.b);
 					bmp.stroke();
 					bmp.restore();
@@ -329,15 +394,19 @@ export class Chart
 				this.m_cache.yaxis_hash = this.yaxis.hash;
 			}
 			bmp.restore();
-
-			// Update the clipping region
-			this.m_gfx.rect(dims.area.l, dims.area.t, dims.area.w, dims.area.h);
-			this.m_gfx.rect(dims.chart_area.l, dims.chart_area.t, dims.chart_area.w, dims.chart_area.h);
-			this.m_gfx.clip();
 		}
 
+		this.m_gfx.save();
+
+		// Update the clipping region
+		this.m_gfx.rect(dims.area.l, dims.area.t, dims.area.w, dims.area.h);
+		this.m_gfx.rect(dims.chart_area.l, dims.chart_area.t, dims.chart_area.w, dims.chart_area.h);
+		this.m_gfx.clip();
+
 		// Blit the cached image to the screen
+		this.m_gfx.imageSmoothingEnabled = false;
 		this.m_gfx.drawImage(this.m_cache.chart_frame, dims.area.l, dims.area.t);
+		this.m_gfx.restore();
 	}
 
 	/**
@@ -354,10 +423,34 @@ export class Chart
 		// Add axis graphics
 		if (this.options.show_grid_lines)
 		{
-			let xlines = this.xaxis.GridLineGfx(this, dims);
-			let ylines = this.yaxis.GridLineGfx(this, dims);
-			this.instances.push(xlines);
-			this.instances.push(ylines);
+			// Position the grid lines so that they line up with the axis tick marks.
+			// Grid lines are modelled from the bottom left corner
+			let wh = this.camera.ViewArea();
+			
+			{// X axis
+				let xlines = this.xaxis.GridLineGfx(this, dims);
+				let gl = this.xaxis.GridLines(dims.chart_area.w, this.options.xaxis.pixels_per_tick);
+
+				let pos = v4.make(wh[0]/2 - gl.min, wh[1]/2, this.options.grid_z_offset, 0);
+				m4x4.MulMV(this.camera.c2w, pos, pos);
+				v4.Sub(this.camera.focus_point, pos, pos);
+
+				m4x4.clone(this.camera.c2w, xlines.o2w);
+				m4x4.SetW(xlines.o2w, pos);
+				this.instances.push(xlines);
+			}
+			{// Y axis
+				let ylines = this.yaxis.GridLineGfx(this, dims);
+				let gl = this.yaxis.GridLines(dims.chart_area.h, this.options.yaxis.pixels_per_tick);
+
+				let pos = v4.make(wh[0]/2, wh[1]/2 - gl.min, this.options.grid_z_offset, 0);
+				m4x4.MulMV(this.camera.c2w, pos, pos);
+				v4.Sub(this.camera.focus_point, pos, pos);
+
+				m4x4.clone(this.camera.c2w, ylines.o2w);
+				m4x4.SetW(ylines.o2w, pos);
+				this.instances.push(ylines);
+			}
 		}
 
 
@@ -366,7 +459,8 @@ export class Chart
 		// Add user graphics
 
 		// Ensure the viewport matches the chart context area
-		this.m_rdr.viewport(dims.chart_area.l, dims.chart_area.t, dims.chart_area.w, dims.chart_area.h);
+		// Webgl viewports have 0,0 in the lower left, but 'dims.chart_area' has 0,0 at top left.
+		this.m_rdr.viewport(dims.chart_area.l - dims.area.l, dims.area.b - dims.chart_area.b, dims.chart_area.w, dims.chart_area.h);
 		
 		// Render the chart
 		Rdr.Render(this.m_rdr, this.instances, this.camera, this.light);
@@ -407,10 +501,10 @@ export class Chart
 		let wh = camera.ViewArea();
 
 		// Set the axes range
-		let xmin = x - wh.width * 0.5;
-		let xmax = x + wh.width * 0.5;
-		let ymin = y - wh.height * 0.5;
-		let ymax = y + wh.height * 0.5;
+		let xmin = x - wh[0] * 0.5;
+		let xmax = x + wh[0] * 0.5;
+		let ymin = y - wh[1] * 0.5;
+		let ymax = y + wh[1] * 0.5;
 		if (xmin < xmax) this.xaxis.Set(xmin, xmax);
 		if (ymin < ymax) this.yaxis.Set(ymin, ymax);
 	}
@@ -420,42 +514,42 @@ export class Chart
 	 */
 	SetCameraFromRange()
 	{
-		let camera = this.camera;
-
 		// Set the aspect ratio from the axis range and scene bounds
-		camera.aspect = (this.xaxis.span / this.yaxis.span);
+		this.camera.aspect = (this.xaxis.span / this.yaxis.span);
 
 		// Find the world space position of the new focus point.
 		// Move the focus point within the focus plane (parallel to the camera XY plane)
 		// and adjust the focus distance so that the view has a width equal to XAxis.Span.
 		// The camera aspect ratio should ensure the YAxis is correct.
-		let c2w = camera.c2w;
-		let focus = v4.AddN([
-			v4.MulS(v4.GetX(c2w), this.xaxis.centre),
-			v4.MulS(v4.GetY(c2w), this.yaxis.centre),
-			v4.MulS(v4.GetZ(c2w), v4.Dot3(camera.focus_point - v4.Origin, v4.GetZ(c2w)))
-			]);
+		let c2w = this.camera.c2w;
+		let focus = v4.AddN(
+			v4.MulS(m4x4.GetX(c2w), this.xaxis.centre),
+			v4.MulS(m4x4.GetY(c2w), this.yaxis.centre),
+			v4.MulS(m4x4.GetZ(c2w), v4.Dot(v4.Sub(this.camera.focus_point, v4.Origin), m4x4.GetZ(c2w)))
+			);
 
 		// Move the camera in the camera Z axis direction so that the width at the focus dist
 		// matches the XAxis range. Tan(FovX/2) = (XAxis.Span/2)/d
-		camera.focus_dist = (this.xaxis.span / (2.0 * Math.tan(camera.fovX / 2.0)));
-		camera.pos = v4.SetW1(v4.Add(focus, v4.MulS(v4.GetZ(c2w), camera.focus_dist)));
+		let focus_dist = (this.xaxis.span / (2.0 * Math.tan(this.camera.fovX / 2.0)));
+		let pos = v4.SetW1(v4.Add(focus, v4.MulS(m4x4.GetZ(c2w), focus_dist)))
 
-		camera.c2w = c2w;
-		camera.Commit();
+		// Set the new camera position and focus distance
+		this.camera.LookAt(pos, focus, m4x4.GetY(c2w), true);
+		Bug Here - 'the focus point is not staying in the XY plane'
 	}
 
 	/**
 	 * Calculate the areas for the chart, and axes
-	 * @returns {{area, chart_area}}
+	 * @returns {ChartDimensions}
 	 */
 	ChartDimensions()
 	{
+		let out = new ChartDimensions();
 		let rect = Rect.make(0, 0, this.canvas2d.width, this.canvas2d.height);
 		let r = {};
 
 		// Save the total chart area
-		this.dimensions.area = Rect.clone(rect);
+		out.area = Rect.clone(rect);
 
 		// Add margins
 		rect.x += this.options.margin.left;
@@ -466,10 +560,10 @@ export class Chart
 		// Add space for the title
 		if (this.title && this.title.length > 0)
 		{
-			r = MeasureString(this.m_gfx, this.title, this.options.title_font);
+			r = Util.MeasureString(this.m_gfx, this.title, this.options.title_font);
 			rect.y += r.height + 2*this.options.title_padding;
 			rect.h -= r.height + 2*this.options.title_padding;
-			this.dimensions.title_size = r;
+			out.title_size = r;
 		}
 
 		// Add space for the axes
@@ -489,16 +583,16 @@ export class Chart
 			// Add space for the axis labels
 			if (this.xaxis.label && this.xaxis.label.length > 0)
 			{
-				r = MeasureString(this.m_gfx, this.xaxis.label, this.options.xaxis.label_font);
+				r = Util.MeasureString(this.m_gfx, this.xaxis.label, this.options.xaxis.label_font);
 				rect.h -= r.height;
-				this.dimensions.xlabel_size = r;
+				out.xlabel_size = r;
 			}
 			if (this.yaxis.label && this.yaxis.label.length > 0)
 			{
-				r = MeasureString(this.m_gfx, this.yaxis.label, this.options.yaxis.label_font);
+				r = Util.MeasureString(this.m_gfx, this.yaxis.label, this.options.yaxis.label_font);
 				rect.x += r.height; // will be rotated by 90deg
 				rect.w -= r.height;
-				this.dimensions.ylabel_size = r;
+				out.ylabel_size = r;
 			}
 
 			// Add space for the tick labels
@@ -509,7 +603,7 @@ export class Chart
 				// Measure the height of the tick text
 				r = this.xaxis.MeasureTickText(this.m_gfx, false);
 				rect.h -= r.height;
-				this.dimensions.xtick_label_size = r;
+				out.xtick_label_size = r;
 			}
 			if (this.options.yaxis.draw_tick_labels)
 			{
@@ -517,16 +611,18 @@ export class Chart
 				r = this.yaxis.MeasureTickText(this.m_gfx, true);
 				rect.x += r.width;
 				rect.w -= r.width;
-				this.dimensions.ytick_label_size = r;
+				out.ytick_label_size = r;
 			}
 		}
 
 		// Save the chart area
 		if (rect.w < 0) rect.w = 0;
 		if (rect.h < 0) rect.h = 0;
-		this.dimensions.chart_area = Rect.clone(rect);
+		out.chart_area = Rect.clone(rect);
 
-		return this.dimensions;
+		// Save the dimensions
+		this.dimensions = out;
+		return out;
 	}
 
 	/**
@@ -609,8 +705,8 @@ export class Chart
 	ChartToCamera(chart_point)
 	{
 		// Remove the camera to origin offset
-		var origin_cs = m4x4.GetW(this.camera.w2c);
-		var pt = [chart_point[0] + origin_cs[0], chart_point[1] + origin_cs[1]];
+		let origin_cs = m4x4.GetW(this.camera.w2c);
+		let pt = [chart_point[0] + origin_cs[0], chart_point[1] + origin_cs[1]];
 		return v4.make(pt[0], pt[1], -this.camera.focus_dist, 1);
 	}
 
@@ -625,11 +721,11 @@ export class Chart
 			throw new Error("Invalidate camera point. Points must be in front of the camera");
 
 		// Project the camera space point onto the focus plane
-		var proj = -this.camera.focus_dist / camera_point[2];
-		var pt = [camera_point[0] * proj, camera_point[1] * proj];
+		let proj = -this.camera.focus_dist / camera_point[2];
+		let pt = [camera_point[0] * proj, camera_point[1] * proj];
 
 		// Add the offset of the camera from the origin
-		var origin_cs = m4x4.GetW(this.camera.w2c);
+		let origin_cs = m4x4.GetW(this.camera.w2c);
 		return [pt[0] - origin_cs[0], pt[1] - origin_cs[1]];
 	}
 
@@ -644,13 +740,13 @@ export class Chart
 	{
 		plot_area = plot_area || this.dimensions.chart_area;
 
-		var scale_x  = +(plot_area.w / this.xaxis.span);
-		var scale_y  = -(plot_area.h / this.yaxis.span);
-		var offset_x = +(plot_area.l - this.xaxis.min * scale_x);
-		var offset_y = +(plot_area.b - this.yaxis.min * scale_y);
+		let scale_x  = +(plot_area.w / this.xaxis.span);
+		let scale_y  = -(plot_area.h / this.yaxis.span);
+		let offset_x = +(plot_area.l - this.xaxis.min * scale_x);
+		let offset_y = +(plot_area.b - this.yaxis.min * scale_y);
 
 		// C = chart, c = client
-		var C2c = m4x4.make(
+		let C2c = m4x4.make(
 			v4.make(scale_x  , 0        , 0, 0),
 			v4.make(0        , scale_y  , 0, 0),
 			v4.make(0        , 0        , 1, 0),
@@ -670,13 +766,13 @@ export class Chart
 	{
 		plot_area = plot_area || this.dimensions.chart_area;
 
-		var scale_x  = +(this.xaxis.span / plot_area.w);
-		var scale_y  = -(this.yaxis.span / plot_area.h);
-		var offset_x = +(this.xaxis.min - plot_area.l * scale_x);
-		var offset_y = +(this.yaxis.min - plot_area.b * scale_y);
+		let scale_x  = +(this.xaxis.span / plot_area.w);
+		let scale_y  = -(this.yaxis.span / plot_area.h);
+		let offset_x = +(this.xaxis.min - plot_area.l * scale_x);
+		let offset_y = +(this.yaxis.min - plot_area.b * scale_y);
 
 		// C = chart, c = client
-		var c2C = m4x4.make(
+		let c2C = m4x4.make(
 			v4.make(scale_x  , 0        , 0, 0),
 			v4.make(0        , scale_y  , 0, 0),
 			v4.make(0        , 0        , 1, 0),
@@ -757,28 +853,34 @@ export class Chart
 		return {x:pt[0], y:pt[1], w:sz[0], h:sz[1]};
 	}
 
-/*
-		/// <summary>Perform a hit test on the chart</summary>
-		public HitTestResult HitTestCS(Point client_point, Keys modifier_keys, Func<Element, bool> pred)
-		{
-			// Determine the hit zone of the control
-			var zone = HitTestResult.EZone.None;
-			if (SceneBounds.Contains(client_point)) zone |= HitTestResult.EZone.Chart;
-			if (XAxisBounds.Contains(client_point)) zone |= HitTestResult.EZone.XAxis;
-			if (YAxisBounds.Contains(client_point)) zone |= HitTestResult.EZone.YAxis;
-			if (TitleBounds.Contains(client_point)) zone |= HitTestResult.EZone.Title;
+	/**
+	 * Perform a hit test on the chart
+	 * @param {[x,y]} client_point The client space point to hit test
+	 * @param {{shift, alt, ctrl}} modifier_keys The state of shift, alt, ctrl keys
+	 * @param {function} pred A predicate function for filtering hit objects
+	 * @returns {HitTestResult}
+	 */
+	HitTestCS(client_point, modifier_keys, pred)
+	{
+		// Determine the hit zone of the control
+		let zone = EZone.None;
+		if (Rect.Contains(this.dimensions.chart_area, client_point)) zone |= EZone.Chart;
+		if (Rect.Contains(this.dimensions.xaxis_area, client_point)) zone |= EZone.XAxis;
+		if (Rect.Contains(this.dimensions.yaxis_area, client_point)) zone |= EZone.YAxis;
+		if (Rect.Contains(this.dimensions.title_area, client_point)) zone |= EZone.Title;
 
-			// The hit test point in chart space
-			var chart_point = ClientToChart(client_point);
+		// The hit test point in chart space
+		let chart_point = this.ClientToChartPoint(client_point);
 
-			// Find elements that overlap 'client_point'
-			var hits = new List<HitTestResult.Hit>();
-			if (zone.HasFlag(HitTestResult.EZone.Chart))
+		// Find elements that overlap 'client_point'
+		let hits = [];
+		/* todo
+			if (zone & EZone.Chart)
 			{
-				var elements = pred != null ? Elements.Where(pred) : Elements;
-				foreach (var elem in elements)
+				let elements = pred != null ? Elements.Where(pred) : Elements;
+				foreach (let elem in elements)
 				{
-					var hit = elem.HitTest(chart_point, client_point, modifier_keys, Scene.Camera);
+					let hit = elem.HitTest(chart_point, client_point, modifier_keys, Scene.Camera);
 					if (hit != null)
 						hits.Add(hit);
 				}
@@ -786,36 +888,39 @@ export class Chart
 				// Sort the results by z order
 				hits.Sort((l,r) => -l.Element.PositionZ.CompareTo(r.Element.PositionZ));
 			}
+		*/
 
-			return new HitTestResult(zone, client_point, chart_point, modifier_keys, hits, Scene.Camera);
-		}
+		return new HitTestResult(zone, client_point, chart_point, modifier_keys, hits, this.camera);
+	}
 
-		/// <summary>Find the default range, then reset to the default range</summary>
-		public void AutoRange(View3d.ESceneBounds who = View3d.ESceneBounds.All)
-		{
+	/**
+	 * Find the default range, then reset to the default range
+	 */
+	AutoRange()
+	{
+		/* todo
 			// Allow the auto range to be handled by event
-			var args = new AutoRangeEventArgs(who);
+			let args = {who:"all", view_bbox:null, handled:false};
 			RaiseOnAutoRanging(args);
-			if (args.Handled && (!args.ViewBBox.IsValid || args.ViewBBox.Radius == v4.Zero))
-				throw new Exception($"Caller provided view bounding box is invalid: {args.ViewBBox}");
+			if (args.handled && (!args.view_bbox.IsValid || args.view_bbox.Radius == v4.Zero))
+				throw new Error("Caller provided view bounding box is invalid: " + args.view_bbox);
 
 			// Get the bounding box to fit into the view
-			var bbox = args.Handled
-				? args.ViewBBox
+			let bbox = args.handled
+				? args.view_bbox
 				: Window.SceneBounds(who, except:new[] { ChartTools.Id });
 
 			// Position the camera to view the bounding box
-			Camera.ResetView(bbox, Options.ResetForward, Options.ResetUp,
-				dist: 0f,
+			this.camera.ResetView(bbox, Options.ResetForward, Options.ResetUp,
+				this.cist: 0,
 				preserve_aspect: LockAspect,
 				commit: true);
+		*/
 
-			// Set the axis range from the camera position
-			SetRangeFromCamera();
-			Invalidate();
-		}
-*/
-
+		// Set the axis range from the camera position
+		this.SetRangeFromCamera();
+		this.Invalidate();
+	}
 }
 
 /**
@@ -841,31 +946,53 @@ export function CreateDataSeries(title)
 }
 
 /**
- * Measure the width and height of 'text'
- * @param {HTMLCanvas2dContext} gfx
- * @param {string} text The text to measure
- * @param {Font} font The font to use to render the text
- * @returns {{width, height}} 
+ * Chart layout data
  */
-function MeasureString(gfx, text, font)
+export class ChartDimensions
 {
-	// Measure width using the 2D canvas API
-	let width = gfx.measureText(text, font).width;
-
-	// Measure height using a hack because the API is missing AFAIK.
-	// Chrome requires the dummy element to be added to the document 
-	// before getComputedStyle works.
-	let elem = document.createElement("div");
-	elem.style.font = font;
-	elem.appendChild(document.createTextNode(text));
-	document.body.appendChild(elem);
-	let cs = window.getComputedStyle(elem,null);
-	let height = parseFloat(cs.getPropertyValue('font-size'));
-	document.body.removeChild(elem);
-
-	return {width: width, height: height};
+	constructor()
+	{
+		this.area = Rect.create();
+		this.chart_area = Rect.create();
+		this.title_size = [0,0];
+		this.xlabel_size = [0,0];
+		this.ylabel_size = [0,0];
+		this.xtick_label_size = [0,0];
+		this.ytick_label_size = [0,0];
+	}
+	get xaxis_area()
+	{
+		return Rect.ltrb(this.chart_area.l, this.chart_area.b, this.chart_area.r, this.area.b);
+	}
+	get yaxis_area()
+	{
+		return Rect.ltrb(0, this.chart_area.t, this.chart_area.l, this.chart_area.b);
+	}
+	get title_area()
+	{
+		return Rect.ltrb(this.chart_area.l, 0, this.chart_area.r, this.chart_area.t);
+	}
 }
 
+/**
+ * Hit test results structure
+ */
+export class HitTestResult
+{
+	constructor(zone, client_point, chart_point, modifier_keys, hits, camera)
+	{
+		this.zone = zone;
+		this.client_point = client_point;
+		this.chart_point = chart_point;
+		this.modifier_keys = modifier_keys;
+		this.hits = hits;
+		this.camera = camera;
+	}	
+}
+
+/**
+ * Chart axis data
+ */
 class Axis
 {
 	constructor(options)
@@ -881,16 +1008,9 @@ class Axis
 		this.TickText = this.TickTextDefault;
 		this.MeasureTickText = this.MeasureTickTextDefault;
 		
-		// OnScroll(sender, event);
-		this.OnScroll =
-		[
-		];
-
-		// OnZoomed(sender, event);
-		this.OnZoomed =
-		[
-			function(s,a){ s.m_geom_lines = null; }
-		];
+		this.OnScroll = new Util.MulticastDelegate();
+		this.OnZoomed = new Util.MulticastDelegate();
+		this.OnZoomed.sub(function(s,a){ s.m_geom_lines = null; });
 	}
 
 	/**
@@ -980,16 +1100,24 @@ class Axis
 
 		if (zoomed)
 		{
-			for (let i = 0; i != this.OnZoomed.length; ++i)
-				this.OnZoomed[i](this, null);
+			this.OnZoomed.invoke(this, null);
 		}
 		if (scroll)
 		{
-			for (let i = 0; i != this.OnScroll.length; ++i)
-				this.OnScroll[i](this, null);
+			this.OnScroll.invoke(this, null);
 		}
 	}
 
+	/**
+	 * Scroll the axis by 'delta'
+	 * @param {Number} delta
+	 */
+	Shift(delta)
+	{
+		if (!allow_scroll) return;
+		centre += delta;
+	}
+	
 	/**
 	 * Default value to text conversion
 	 * @param {Number} x The tick value on the axis
@@ -999,7 +1127,10 @@ class Axis
 	TickTextDefault(x, step)
 	{
 		// This solves the rounding problem for values near zero when the axis span could be anything
-		return !Maths.FEql(x / this.span, 0.0) ? Util.TrimRight(x.toPrecision(5), ['0']) : "0";
+		if (Maths.FEql(x / this.span, 0.0)) return "0";
+		let text = Util.TrimRight(x.toPrecision(5), ['0']);
+		if (text.slice(-1) == '.') text += '0';
+		return text;
 	}
 
 	/**
@@ -1013,7 +1144,7 @@ class Axis
 		// Can't use 'GridLines' here because creates an infinite recursion.
 		// Using TickText(Min/Max, 0.0) causes the axes to jump around.
 		// The best option is to use one fixed length string.
-		return MeasureString(gfx, "-9.99999", this.options.tick_font);
+		return Util.MeasureString(gfx, "-9.99999", this.options.tick_font);
 	}
 
 	/**
@@ -1028,13 +1159,12 @@ class Axis
 		let max_ticks = axis_length / pixels_per_tick;
 
 		// Choose step sizes
-		let span = this.span;
 		let step_base = Math.pow(10.0, Math.floor(Math.log10(this.span))), step = step_base;
 		let quantisations = [0.05, 0.1, 0.2, 0.25, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0];
 		for (let i = 0; i != quantisations.length; ++i)
 		{
 			let s = quantisations[i];
-			if (s * span > max_ticks * step_base) continue;
+			if (s * this.span > max_ticks * step_base) continue;
 			step = step_base / s;
 		}
 
@@ -1072,11 +1202,11 @@ class Axis
 				this === chart.xaxis ? dims.chart_area.w :
 				this === chart.yaxis ? dims.chart_area.h :
 				null;
-			let gl = this.GridLines(axis_length, chart.options.pixels_per_tick);
+			let gl = this.GridLines(axis_length, this.options.pixels_per_tick);
 			let num_lines = Math.floor(2 + (gl.max - gl.min) / gl.step);
 
 			// Create the grid lines at the origin, they get positioned as the camera moves
-			let verts = new Float32Array(num_lines * 2);
+			let verts = new Float32Array(num_lines * 2 * 3);
 			let indices = new Uint16Array(num_lines * 2);
 			let nuggets = [];
 			let name = "";
@@ -1090,8 +1220,8 @@ class Axis
 				let x = 0, y0 = 0, y1 = chart.yaxis.span;
 				for (let l = 0; l != num_lines; ++l)
 				{
-					Util.CopyTo(verts, v, x, y0, 0, 1); v += 4;
-					Util.CopyTo(verts, v, x, y1, 0, 1); v += 4;
+					Util.CopyTo(verts, v, x, y0, 0); v += 3;
+					Util.CopyTo(verts, v, x, y1, 0); v += 3;
 					x += gl.step;
 				}
 			}
@@ -1101,8 +1231,8 @@ class Axis
 				let y = 0, x0 = 0, x1 = chart.xaxis.span;
 				for (let l = 0; l != num_lines; ++l)
 				{
-					Util.CopyTo(verts, v, x0, y, 0, 1); v += 4;
-					Util.CopyTo(verts, v, x1, y, 0, 1); v += 4;
+					Util.CopyTo(verts, v, x0, y, 0); v += 3;
+					Util.CopyTo(verts, v, x1, y, 0); v += 3;
 					y += gl.step;
 				}
 			}
@@ -1115,7 +1245,7 @@ class Axis
 			}
 
 			// Grid nugget
-			nuggets.push({topo: gl.LINES, shader: chart.m_rdr.shader_programs["forward"], tint: Util.ColourToV4(chart.options.grid_colour) });
+			nuggets.push({topo: chart.m_rdr.LINES, shader: chart.m_rdr.shader_programs["forward"], tint: Util.ColourToV4(chart.options.grid_colour) });
 
 			// Create the model
 			let model = Rdr.Model.CreateRaw(chart.m_rdr, verts, null, null, null, indices, nuggets);
@@ -1129,6 +1259,9 @@ class Axis
 	}
 }
 
+/**
+ * Chart naviation
+ */
 class Navigation
 {
 	constructor(chart)
@@ -1136,6 +1269,13 @@ class Navigation
 		this.chart = chart;
 		this.active = null;
 		this.pending = [];
+
+		// Hook up mouse event handlers
+		chart.canvas2d.onpointerdown = function(ev) { chart.navigation.OnMouseDown(ev); }
+		chart.canvas2d.onpointermove = function(ev) { chart.navigation.OnMouseMove(ev); };
+		chart.canvas2d.onpointerup   = function(ev) { chart.navigation.OnMouseUp(ev); };
+		chart.canvas2d.onmousewheel  = function(ev) { chart.navigation.OnMouseWheel(ev); };
+		chart.canvas2d.oncontextmenu = function(ev) { ev.preventDefault(); };
 	}
 
 	/**
@@ -1165,21 +1305,19 @@ class Navigation
 	 */
 	OnMouseDown(ev)
 	{
-		console.log("Mouse Down " + ev);
-
 		// If a mouse op is already active, ignore mouse down
 		if (this.active != null)
 			return;
 
 		// Look for the mouse op to perform
-		if (this.pending[ev.button] == null) //  && DefaultMouseControl
+		if (this.pending[ev.button] == null)
 		{
 			switch (ev.button)
 			{
 			default: return;
-			case 1: this.pending[ev.button] = new MouseOpDefaultLButton(chart); break;
+			case EButton.Left: this.pending[ev.button] = new MouseOpDefaultLButton(this.chart); break;
 			//case MouseButtons.Middle: MouseOperations.SetPending(e.Button, new MouseOpDefaultMButton(this)); break;
-			//case MouseButtons.Right:  MouseOperations.SetPending(e.Button, new MouseOpDefaultRButton(this)); break;
+			case EButton.Right: this.pending[ev.button] = new MouseOpDefaultRButton(this.chart); break;
 			}
 		}
 
@@ -1187,15 +1325,15 @@ class Navigation
 		this.BeginOp(ev.button);
 		
 		// Get the mouse op, save mouse location and hit test data, then call op.MouseDown()
-		var op = this.active;
+		let op = this.active;
 		if (op != null && !op.cancelled)
 		{
 			op.btn_down    = true;
-			op.grab_client = e.Location; // Note: in ChartControl space, not ChartPanel space
-			op.grab_chart  = this.chart.ClientToChart(op.grab_client);
-			op.hit_result  = this.chart.HitTestCS(op.grab_client, ModifierKeys, null);
-			op.MouseDown(e);
-			this.chart.canvas2d.setCapture();
+			op.grab_client = [ev.offsetX, ev.offsetY];
+			op.grab_chart  = this.chart.ClientToChartPoint(op.grab_client);
+			op.hit_result  = this.chart.HitTestCS(op.grab_client, {shift: ev.shiftKey, alt: ev.altKey, ctrl: ev.ctrlKey}, null);
+			op.MouseDown(ev);
+			this.chart.canvas2d.setPointerCapture(ev.pointerId);
 		}
 	}
 	
@@ -1205,35 +1343,35 @@ class Navigation
 	 */
 	OnMouseMove(ev)
 	{
-		console.log("Mouse Move " + ev);
-	/*
 		// Look for the mouse op to perform
-		var op = this.Active;
+		let op = this.active;
 		if (op != null)
 		{
 			if (!op.cancelled)
-				op.MouseMove(e);
+				op.MouseMove(ev);
 		}
 		// Otherwise, provide mouse hover detection
 		else
 		{
-			var hit = HitTestCS(e.Location, ModifierKeys, null);
-			var hovered = hit.Hits.Select(x => x.Element).ToHashSet();
+			let client_point = [ev.offsetX, ev.offsetY];
+			let hit_result = this.chart.HitTestCS(client_point, {shift: ev.shiftKey, alt: ev.altKey, ctrl: ev.ctrlKey}, null);
+			/*
+				let hovered = hit_result.hits.Select(x => x.Element).ToHashSet();
 
-			// Remove elements that are no longer hovered
-			// and remove existing hovered's from the set.
-			for (int i = Hovered.Count; i-- != 0;)
-			{
-				if (hovered.Contains(Hovered[i]))
-					hovered.Remove(Hovered[i]);
-				else
-					Hovered.RemoveAt(i);
-			}
-			
-			// Add elements that are now hovered
-			Hovered.AddRange(hovered);
+				// Remove elements that are no longer hovered
+				// and remove existing hovered's from the set.
+				for (int i = Hovered.Count; i-- != 0;)
+				{
+					if (hovered.Contains(Hovered[i]))
+						hovered.Remove(Hovered[i]);
+					else
+						Hovered.RemoveAt(i);
+				}
+				
+				// Add elements that are now hovered
+				Hovered.AddRange(hovered);
+			*/
 		}
-	*/
 	}
 
 	/**
@@ -1242,19 +1380,16 @@ class Navigation
 	 */
 	OnMouseUp(ev)
 	{
-		console.log("Mouse Up " + ev);
-	/*
 		// Only release the mouse when all buttons are up
-		if (MouseButtons == MouseButtons.None)
-			Capture = false;
+		//if (ev.button == EButton. MouseButtons.None)
+			this.chart.canvas2d.releasePointerCapture(ev.pointerId);
 
 		// Look for the mouse op to perform
-		var op = MouseOperations.Active;
-		if (op != null && !op.Cancelled)
-			op.MouseUp(e);
+		let op = this.active;
+		if (op != null && !op.cancelled)
+			op.MouseUp(ev);
 		
-		MouseOperations.EndOp(e.Button);
-	*/
+		this.EndOp(ev.button);
 	}	
 
 	/**
@@ -1263,72 +1398,78 @@ class Navigation
 	 */
 	OnMouseWheel(ev)
 	{
-		let client_pt = [ev.clientX, ev.clientY];
+		let client_pt = [ev.offsetX, ev.offsetY];
 		let chart_pt = this.chart.ClientToChartPoint(client_pt);
-		let chart_area = this.chart.dimensions.chart_area;
+		let dims = this.chart.dimensions;
 		let perp_z = this.chart.options.perpendicular_z_translation != ev.altKey;
-		if (Rect.Contains(chart_area, client_pt))
+		if (Rect.Contains(dims.chart_area, client_pt))
 		{
 			// If there is a mouse op in progress, ignore the wheel
-			var op = this.active;
+			let op = this.active;
 			if (op == null || op.cancelled)
 			{
+				// Set a scaling factor from the mouse wheel clicks
+				let scale = 1.0 / 120.0;
+				if (ev.shiftKey) scale *= 0.1;
+				if (ev.altKey) scale *= 0.1;
+				let delta = Maths.Clamp(ev.wheelDelta * scale, -100, 100);
+
 				// Convert 'client_pt' to normalised camera space
-				let nss_point = Rect.NormalisePoint(chart_area, client_pt);
+				let nss_point = Rect.NormalisePoint(dims.chart_area, client_pt, +1, -1);
 
 				// Translate the camera along a ray through 'point'
-				this.chart.camera.MouseControlZ(nss_point, ev.wheelDelta, !perp_z);
+				this.chart.camera.MouseControlZ(nss_point, delta, !perp_z);
 				this.chart.Invalidate();
 			}
 		}
 		else if (this.chart.options.show_axes)
 		{
-			var scale = 0.001;
+			let scale = 0.001;
 			if (ev.shiftKey) scale *= 0.1;
 			if (ev.altKey) scale *= 0.01;
-			var delta = Maths.Clamp(e.wheelDelta * scale, -0.999, 0.999);
+			let delta = Maths.Clamp(ev.wheelDelta * scale, -0.999, 0.999);
 
-			var chg = false;
+			let xaxis = this.chart.xaxis;
+			let yaxis = this.chart.yaxis;
+			let chg = false;
 
 			// Change the aspect ratio by zooming on the XAxis
-			var xaxis_bounds = Rect.ltrb(chart_area.l, chart_area.b, chart_area.r, this.chart.dimensions.h);
-			if (Rect.Contains(xaxis_bounds, client_pt) && !this.chart.xaxis.LockRange)
+			if (Rect.Contains(dims.xaxis_area, client_pt) && !xaxis.lock_range)
 			{
-				if (ModifierKeys == Keys.Control && XAxis.AllowScroll)
+				if (ev.ctrlKey && xaxis.allow_scroll)
 				{
-					XAxis.Shift(XAxis.Span * delta);
+					xaxis.Shift(xaxis.span * delta);
 					chg = true;
 				}
-				if (ModifierKeys != Keys.Control && XAxis.AllowZoom)
+				if (!ev.ctrlKey && xaxis.allow_zoom)
 				{
-					var x = perp_z ? XAxis.Centre : chart_pt.X;
-					var left = (XAxis.Min - x) * (1f - delta);
-					var rite = (XAxis.Max - x) * (1f - delta);
-					XAxis.Set(chart_pt.X + left, chart_pt.X + rite);
-					if (Options.LockAspect != null)
-						YAxis.Span *= (1f - delta);
+					let x = perp_z ? xaxis.centre : chart_pt[0];
+					let left = (xaxis.min - x) * (1 - delta);
+					let rite = (xaxis.max - x) * (1 - delta);
+					xaxis.Set(chart_pt[0] + left, chart_pt[0] + rite);
+					if (this.chart.options.lock_aspect != null)
+						yaxis.span *= (1 - delta);
 
 					chg = true;
 				}
 			}
 
 			// Check the aspect ratio by zooming on the YAxis
-			var yaxis_bounds = Rectangle.FromLTRB(0, scene_bounds.Top, scene_bounds.Left, scene_bounds.Bottom);
-			if (yaxis_bounds.Contains(e.Location) && !YAxis.LockRange)
+			if (Rect.Contains(dims.yaxis_area, client_pt) && !yaxis.lock_range)
 			{
-				if (ModifierKeys == Keys.Control && YAxis.AllowScroll)
+				if (ev.ctrlKey && yaxis.allow_scroll)
 				{
-					YAxis.Shift(YAxis.Span * delta);
+					yaxis.Shift(yaxis.span * delta);
 					chg = true;;
 				}
-				if (ModifierKeys != Keys.Control && YAxis.AllowZoom)
+				if (!ev.ctrlKey && yaxis.allow_zoom)
 				{
-					var y = perp_z ? YAxis.Centre : chart_pt.Y;
-					var left = (YAxis.Min - y) * (1f - delta);
-					var rite = (YAxis.Max - y) * (1f - delta);
-					YAxis.Set(chart_pt.Y + left, chart_pt.Y + rite);
-					if (Options.LockAspect != null)
-						XAxis.Span *= (1f - delta);
+					let y = perp_z ? yaxis.centre : chart_pt[1];
+					let left = (yaxis.min - y) * (1 - delta);
+					let rite = (yaxis.max - y) * (1 - delta);
+					yaxis.Set(chart_pt[1] + left, chart_pt[1] + rite);
+					if (this.chart.options.lock_aspect != null)
+						xaxis.span *= (1 - delta);
 
 					chg = true;
 				}
@@ -1337,18 +1478,18 @@ class Navigation
 			// Set the camera position from the Axis ranges
 			if (chg)
 			{
-				SetCameraFromRange();
-				Invalidate();
+				this.chart.SetCameraFromRange();
+				this.chart.Invalidate();
 			}
-			*/
 		}
 	}
+
 	/*
 		protected override void OnKeyDown(KeyEventArgs e)
 		{
 			SetCursor();
 
-			var op = MouseOperations.Active;
+			let op = MouseOperations.Active;
 			if (op != null && !e.Handled)
 				op.OnKeyDown(e);
 
@@ -1365,7 +1506,7 @@ class Navigation
 		{
 			SetCursor();
 
-			var op = MouseOperations.Active;
+			let op = MouseOperations.Active;
 			if (op != null && !e.Handled)
 				op.OnKeyUp(e);
 
@@ -1374,20 +1515,276 @@ class Navigation
 	*/
 };
 
+/**
+ * Mouse operation base class
+ */
 class MouseOp
 {
-	constructor()
+	constructor(chart)
 	{
+		this.chart = chart;
 		this.start_on_mouse_down = true;
 		this.cancelled = false;
 		this.btn_down = false;
 		this.grab_client = null;
 		this.grab_chart = null;
 		this.hit_result = null;
+		this.m_is_click = true;
+	}
+
+	/**
+	 * Test a mouse location as being a click (as apposed to a drag)
+	 * @param {[x,y]} point The mouse pointer location (client space)
+	 * @returns {boolean} True if the distance between 'location' and mouse down should be treated as a click
+	 */
+	IsClick(point)
+	{
+		if (!this.m_is_click) return false;
+		let diff = [point[0] - this.grab_client[0], point[1] - this.grab_client[1]];
+		return this.m_is_click = v2.LengthSq(diff) < Maths.Sqr(this.chart.options.min_drag_pixel_distance);
+	}
+}
+class MouseOpDefaultLButton extends MouseOp
+{
+	constructor(chart)
+	{
+		super(chart);
+		this.hit_selected = null;
+		this.m_selection_graphic_added = false;
+	}
+	MouseDown(ev)
+	{
+		// Look for a selected object that the mouse operation starts on
+		this.m_hit_selected = this.hit_result.hits.find(function(x){ return x.Element.Selected; });
+
+		//// Record the drag start positions for selected objects
+		//foreach (let elem in m_chart.Selected)
+		//	elem.DragStartPosition = elem.Position;
+
+		// For 3D scenes, left mouse rotates if mouse down is within the chart bounds
+		if (this.chart.options.navigation_mode == ENavMode.Scene3D && this.hit_result.zone == EZone.Chart && ev.button == EButton.Left)
+			this.chart.camera.MouseControl(this.grab_client, Rdr.Camera.ENavOp.Rotate, true);
+
+		//// Prevent events while dragging the elements around
+		//m_suspend_scope = m_chart.SuspendChartChanged(raise_on_resume:true);
+	}
+	MouseMove(ev)
+	{
+		let client_point = [ev.offsetX, ev.offsetY];
+
+		// If we haven't dragged, treat it as a click instead (i.e. ignore till it's a drag operation)
+		if (this.IsClick(client_point) && !this.m_selection_graphic_added)
+			return;
+
+		let drag_selected = this.chart.options.allow_editing && this.hit_selected != null;
+		if (drag_selected)
+		{
+			// If the drag operation started on a selected element then drag the
+			// selected elements within the diagram.
+			//let delta = v2.Sub(this.chart.ClientToChartPoint(client_point), this.grab_chart);
+			//this.chart.DragSelected(delta, false);
+		}
+		else if (this.chart.options.navigation_mode == ENavMode.Chart2D)
+		{
+			if (this.chart.options.area_select_mode != EAreaSelectMode.Disabled)
+			{
+				// Otherwise change the selection area
+				if (!this.m_selection_graphic_added)
+				{
+					this.chart.instances.push(this.chart.m_tools.area_select);
+					this.m_selection_graphic_added = true;
+				}
+
+				// Position the selection graphic
+				let area = Rect.bound(this.grab_chart, this.chart.ClientToChartPoint(client_point));
+				m4x4.clone(m4x4.Scale(area.w, area.h, 1, v4.make(area.centre[0], area.centre[1], 0, 1), this.chart.m_tools.area_select.o2w));
+			}
+		}
+		else if (this.chart.options.navigation_mode == ENavMode.Scene3D)
+		{
+			this.chart.camera.MouseControl(client_point, Rdr.Camera.ENavOp.Rotate, false);
+		}
+
+		// Render immediately, for smoother navigation
+		this.chart.Render();
+	}
+	MouseUp(ev)
+	{
+		let client_point = [ev.offsetX, ev.offsetY];
+
+		// If this is a single click...
+		if (this.IsClick(client_point))
+		{
+			// Pass the click event out to users first
+			let args = { hit_result:this.hit_result, handled:false };
+			this.chart.OnChartClicked.invoke(this.chart, args);
+
+			// If a selected element was hit on mouse down, see if it handles the click
+			if (!args.handled && this.hit_selected != null)
+			{
+				//this.hit_selected.Element.HandleClicked(args);
+			}
+
+			// If no selected element was hit, try hovered elements
+			if (!args.handled && this.hit_result.hits.length != 0)
+			{
+				for (let i = 0; i != this.hit_result.hits.length && !args.handled; ++i)
+					this.hit_result.hits[i].Element.HandleClicked(args);
+			}
+
+			// If the click is still unhandled, use the click to try to select something (if within the chart)
+			if (!args.handled && (this.hit_result.zone & EZone.Chart))
+			{
+				let area = Rect.make(this.grab_chart[0], this.grab_chart[1], 0, 0);
+				//this.chart.SelectElements(area, {shift: ev.shiftKey, alt: ev.altKey, ctrl: ev.ctrlKey});
+			}
+		}
+		// Otherwise this is a drag action
+		else
+		{
+			// If an element was selected, drag it around
+			if (this.hit_selected != null && this.chart.options.allow_editing)
+			{
+				let delta = v2.Sub(this.chart.ClientToChartPoint(client_point), this.grab_chart);
+				//this.chart.DragSelected(delta, true);
+			}
+			else if (this.chart.options.navigation_mode == ENavMode.Chart2D)
+			{
+				// Otherwise create an area selection if the click started within the chart
+				if ((this.hit_result.zone & EZone.Chart) && this.chart.options.area_select_mode != EAreaSelectMode.Disabled)
+				{
+					let area = Rect.bound(this.grab_chart, this.chart.ClientToChartPoint(client_point));
+					//m_chart.OnChartAreaSelect(new ChartAreaSelectEventArgs(selection_area));
+				}
+			}
+			else if (this.chart.options.navigation_mode == ENavMode.Scene3D)
+			{
+				// For 3D scenes, left mouse rotates
+				this.chart.camera.MouseControl(client_point, Rdr.Camera.ENavOp.Rotate, true);
+			}
+		}
+
+		// Remove the area selection graphic
+		if (this.m_selection_graphic_added)
+		{
+			let idx = this.chart.instances.indexOf(this.chart.m_tools.area_select);
+			if (idx != -1) this.chart.instances.splice(idx, 1);
+		}
+
+		//this.chart.Cursor = Cursors.Default;
+		this.chart.Invalidate();
+	}
+}
+class MouseOpDefaultRButton extends MouseOp
+{
+	constructor(chart)
+	{
+		super(chart);
+	}
+	MouseDown(ev)
+	{
+		// Convert 'grab_client' to normalised camera space
+		let nss_point = Rect.NormalisePoint(this.chart.dimensions.chart_area, this.grab_client, +1, -1);
+
+		// Right mouse translates for 2D and 3D scene
+		this.chart.camera.MouseControl(nss_point, Rdr.Camera.ENavOp.Translate, true);
+	}
+	MouseMove(ev)
+	{
+		let client_point = [ev.offsetX, ev.offsetY];
+
+		// If we haven't dragged, treat it as a click instead (i.e. ignore till it's a drag operation)
+		if (this.IsClick(client_point))
+			return;
+
+		// Change the cursor once dragging
+		//this.chart.Cursor = Cursors.SizeAll;
+
+		// Limit the drag direction
+		let drop_loc = Rect.NormalisePoint(this.chart.dimensions.chart_area, client_point, +1, -1);
+		let grab_loc = Rect.NormalisePoint(this.chart.dimensions.chart_area, this.grab_client, +1, -1);
+		if ((this.hit_result.zone & EZone.YAxis) || this.chart.xaxis.lock_range) drop_loc[0] = grab_loc[0];
+		if ((this.hit_result.zone & EZone.XAxis) || this.chart.yaxis.lock_range) drop_loc[1] = grab_loc[1];
+
+		this.chart.camera.MouseControl(drop_loc, Rdr.Camera.ENavOp.Translate, false);
+		this.chart.SetRangeFromCamera();
+		this.chart.Invalidate();
+	}
+	MouseUp(ev)
+	{
+		let client_point = [ev.offsetX, ev.offsetY];
+
+		//this.chart.Cursor = Cursors.Default;
+
+		// If we haven't dragged, treat it as a click instead
+		if (this.IsClick(client_point))
+		{
+			var args = {hit_result:this.hit_result, handled:false};
+			//m_chart.OnChartClicked(args);
+
+			if (!args.handled)
+			{
+				// Show the context menu on right click
+				if (ev.button == EButton.Right)
+				{
+					//if (this.hit_result.Zone & EZone.Chart)
+					//	this.chart.ShowContextMenu(client_point, this.hit_result);
+					//else if (m_hit_result.Zone.HasFlag(HitTestResult.EZone.XAxis))
+					//	m_chart.XAxis.ShowContextMenu(args.Location, args.HitResult);
+					//else if (m_hit_result.Zone.HasFlag(HitTestResult.EZone.YAxis))
+					//	m_chart.YAxis.ShowContextMenu(args.Location, args.HitResult);
+				}
+			}
+			this.chart.Invalidate();
+		}
+		else
+		{
+			// Limit the drag direction
+			let drop_loc = Rect.NormalisePoint(this.chart.dimensions.chart_area, client_point, +1, -1);
+			let grab_loc = Rect.NormalisePoint(this.chart.dimensions.chart_area, this.grab_client, +1, -1);
+			if ((this.hit_result.zone & EZone.YAxis) || this.chart.xaxis.lock_range) drop_loc[0] = grab_loc[0];
+			if ((this.hit_result.zone & EZone.XAxis) || this.chart.yaxis.lock_range) drop_loc[1] = grab_loc[1];
+	
+			this.chart.camera.MouseControl(drop_loc, Rdr.Camera.ENavOp.None, true);
+			this.chart.SetRangeFromCamera();
+			this.chart.Invalidate();
+		}
 	}
 }
 
 
+/**
+ * Chart utility graphics
+ */
+class Tools
+{
+	constructor(chart)
+	{
+		this.chart = chart;
+		this.m_area_select = null;
+	}
 
-
+	get area_select()
+	{
+		if (!this.m_area_select)
+		{
+			let model = Rdr.Model.Create(this.chart.m_rdr,
+			[// Verts
+				{ pos: [+0.0, +0.0, +0.0] },
+				{ pos: [+0.0, +1.0, +0.0] },
+				{ pos: [+1.0, +1.0, +0.0] },
+				{ pos: [+1.0, +0.0, +0.0] },
+			],
+			[// Indices
+				0, 1, 2,
+				0, 2, 3,
+			],
+			[// Nuggets
+				{ topo:this.chart.m_rdr.TRIANGLES, shader:this.chart.m_rdr.shader_programs.forward, tint:this.chart.options.selection_colour }
+			]);
+			this.m_area_select = Rdr.Instance.Create("area_select", model, m4x4.create(), Rdr.EFlags.SceneBoundsExclude|Rdr.EFlags.NoZWrite|Rdr.EFlags.NoZTest);
+		}
+		return this.m_area_select;
+	}
+}
 

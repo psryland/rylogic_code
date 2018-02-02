@@ -144,7 +144,7 @@ namespace LDraw
 		#endregion
 
 		/// <summary>The main entry point for the application.</summary>
-		[STAThread] static void Main()
+		[STAThread] static void Main(string[] args)
 		{
 			var unhandled = (Exception)null;
 			#if !DEBUG || TRAP_UNHANDLED_EXCEPTIONS
@@ -154,6 +154,39 @@ namespace LDraw
 				Debug.WriteLine($"{Application.ExecutablePath} is a {(Environment.Is64BitProcess?"64":"32")}bit process");
 				Application.EnableVisualStyles();
 				Application.SetCompatibleTextRenderingDefault(false);
+
+
+				// Parse the command line
+				Exception err = null;
+				try { StartupOptions = new StartupOptions(args); }
+				catch (Exception ex) { err = ex; }
+
+				// If there was an error display the error message
+				if (err != null)
+				{
+					MsgBox.Show(null,
+						"There is an error in the startup options provided.\r\n"+
+						$"{err.Message}"
+						, "Command Line Error"
+						, MessageBoxButtons.OK
+						, MessageBoxIcon.Error);
+					Environment.ExitCode = 1;
+					return;
+				}
+
+				// If they just want help displayed...
+				if (StartupOptions.ShowHelp)
+				{
+					MsgBox.Show(null,
+						CmdLine.Help,
+						Application.ProductName,
+						MessageBoxButtons.OK,
+						MessageBoxIcon.Information);
+					Environment.ExitCode = 0;
+					return;
+				}
+
+				// Otherwise show the app
 				Application.Run(new MainUI());
 
 				// To catch any Disposes in the 'GC Finializer' thread
@@ -206,7 +239,7 @@ namespace LDraw
 			KeyPreview = true;
 
 			Xml.SupportWinFormsTypes();
-			Settings = new Settings(Util.ResolveUserDocumentsPath(Application.CompanyName, Application.ProductName, "settings.xml")){ ReadOnly = true };
+			Settings = new Settings(StartupOptions.SettingsPath){ ReadOnly = true };
 			DockContainer = new DockContainer();
 			Model = new Model(this);
 			AnimTimer = new Timer{ Interval = 1, Enabled = false };
@@ -246,7 +279,11 @@ namespace LDraw
 		{
 			// Create a default scene if one has not been created from the settings
 			if (Model.Scenes.Count == 0)
-				Model.AddNewScene();
+				Model.CurrentScene = Model.AddNewScene();
+
+			// Load files from the command line
+			foreach (var file in StartupOptions.FilesToLoad)
+				OpenFile(file, true);
 
 			base.OnShown(e);
 		}
@@ -271,6 +308,9 @@ namespace LDraw
 			}
 			base.OnKeyDown(e);
 		}
+
+		/// <summary>Start up options</summary>
+		public static StartupOptions StartupOptions { get; private set; }
 
 		/// <summary>App settings</summary>
 		public Settings Settings

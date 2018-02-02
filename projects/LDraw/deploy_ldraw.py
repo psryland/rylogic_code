@@ -36,14 +36,15 @@ def Deploy():
 
 	# Build the project
 	print("\nBuilding...")
-	Tools.MSBuild(sln, ["scintilla", "sqlite3", "renderer11", "view3d"], ["x86","x64"], ["release"], False, True)
-	Tools.MSBuild(sln, ["LDraw"], ["Any CPU"], ["release"], False, True)
+	Tools.MSBuild(sln, ["Rylogic\\scintilla", "Rylogic\\sqlite3", "Rylogic\\renderer11", "Rylogic\\view3d"], ["x86","x64"], ["release"], False, True)
+	Tools.MSBuild(sln, ["LDraw\\LDraw"], ["Any CPU"], ["release"], False, True)
 
 	# Copy build products to the output directory
 	print("\nCopying files to " + dstdir + "...")
-	Tools.Copy(targetdir + "\\LDraw.exe"   , dstdir + "\\")
-	Tools.Copy(targetdir + "\\Rylogic.dll" , dstdir + "\\")
-	Tools.Copy(targetdir + "\\lib"         , dstdir + "\\lib")
+	Tools.Copy(targetdir + "\\LDraw.exe"        , dstdir + "\\")
+	Tools.Copy(targetdir + "\\Rylogic.Core.dll" , dstdir + "\\")
+	Tools.Copy(targetdir + "\\Rylogic.dll"      , dstdir + "\\")
+	Tools.Copy(targetdir + "\\lib"              , dstdir + "\\lib")
 
 	# Build the installer
 	print("\nBuilding installer...")

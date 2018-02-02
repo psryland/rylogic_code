@@ -69,16 +69,23 @@ export function Trim(str, chars)
  */
 export function ColourToUint(colour)
 {
-	if (colour.length == 7 && colour[0] == '#')
+	if (colour[0] == '#')
 	{
-		return (0xFF000000 | parseInt(colour.substr(1), 16));
-	}
-	if (colour.length == 4 && colour[0] == '#')
-	{
-		let g = parseInt(colour[1], 16) * 0xff / 0x0f;
-		let r = parseInt(colour[2], 16) * 0xff / 0x0f;
-		let b = parseInt(colour[3], 16) * 0xff / 0x0f;
-		return 0xFF000000 | (r << 16) | (g << 8) | (b);
+		if (colour.length == 9) // #aarrggbb
+		{
+			return parseInt(colour.substr(1), 16);
+		}
+		if (colour.length == 7) // #rrggbb
+		{
+			return (0xFF000000 | parseInt(colour.substr(1), 16));
+		}
+		if (colour.length == 4) // #rgb
+		{
+			let g = parseInt(colour[1], 16) * 0xff / 0x0f;
+			let r = parseInt(colour[2], 16) * 0xff / 0x0f;
+			let b = parseInt(colour[3], 16) * 0xff / 0x0f;
+			return 0xFF000000 | (r << 16) | (g << 8) | (b);
+		}
 	}
 	switch (colour.toLowerCase())
 	{
@@ -98,19 +105,30 @@ export function ColourToUint(colour)
  */
 export function ColourToV4(colour)
 {
-	if (colour.length == 7 && colour[0] == '#')
+	if (colour[0] == '#')
 	{
-		let r = parseInt(colour.substr(1,2), 16) / 0xff;
-		let g = parseInt(colour.substr(3,2), 16) / 0xff;
-		let b = parseInt(colour.substr(5,2), 16) / 0xff;
-		return v4.make(1, r, g, b);
-	}
-	if (colour.length == 4 && colour[0] == '#')
-	{
-		let g = parseInt(colour[1], 16) / 0x0f;
-		let r = parseInt(colour[2], 16) / 0x0f;
-		let b = parseInt(colour[3], 16) / 0x0f;
-		return v4.make(1, r, g, b);
+		if (colour.length == 9) // #aarrggbb
+		{
+			let a = parseInt(colour.substr(1,2), 16) / 0xff;
+			let r = parseInt(colour.substr(3,2), 16) / 0xff;
+			let g = parseInt(colour.substr(5,2), 16) / 0xff;
+			let b = parseInt(colour.substr(7,2), 16) / 0xff;
+			return v4.make(r, g, b, a);
+		}
+		if (colour.length == 7) // #rrggbb
+		{
+			let r = parseInt(colour.substr(1,2), 16) / 0xff;
+			let g = parseInt(colour.substr(3,2), 16) / 0xff;
+			let b = parseInt(colour.substr(5,2), 16) / 0xff;
+			return v4.make(r, g, b, 1);
+		}
+		if (colour.length == 4) // #rgb
+		{
+			let g = parseInt(colour[1], 16) / 0x0f;
+			let r = parseInt(colour[2], 16) / 0x0f;
+			let b = parseInt(colour[3], 16) / 0x0f;
+			return v4.make(r, g, b, 1);
+		}
 	}
 	switch (colour.toLowerCase())
 	{
@@ -121,4 +139,84 @@ export function ColourToV4(colour)
 		case 'blue': return v4.make(0,0,1,1);
 	}
 	throw new Error("Unsupported colour format");
+}
+
+
+/**
+ * Measure the width and height of 'text'
+ * @param {CanvasRenderingContext2D} gfx
+ * @param {string} text The text to measure
+ * @param {Font} font The font to use to render the text
+ * @returns {{width, height}} 
+ */
+export function MeasureString(gfx, text, font)
+{
+	// Measure width using the 2D canvas API
+	let width = gfx.measureText(text, font).width;
+
+	// Get the font height
+	let height = font_height_cache[font] || (function()
+	{
+		let height = 0;
+
+		// Create an off-screen canvas
+		let cv = gfx.canvas.cloneNode(false);
+		let ctx = cv.getContext("2d");
+
+		// Measure the width of 'M' and resize the canvas
+		ctx.font = font;
+		cv.width = ctx.measureText("M", font).width;
+		cv.height = cv.width*2;
+		if (cv.width != 0)
+		{
+			// Draw 'M'and 'p' onto the canvas so we can measure the height.
+			// Changing the width/height means the properties need setting again.
+			ctx.fillRect(0, 0, cv.width, cv.height);
+			ctx.imageSmoothingEnabled = false;
+			ctx.textBaseline = 'top';
+			ctx.fillStyle = 'white';
+			ctx.font = font;
+			ctx.fillText("M", 0, 0);
+			ctx.fillText("p", 0, 0);
+			
+			// Scan for white pixels
+			// Record the last row to have any non-black pixels
+			let pixels = ctx.getImageData(0, 0, cv.width, cv.height).data;
+			for (let y = 0; y != cv.height; ++y)
+			{
+				let i = y*cv.height, iend = i + cv.width;
+				for (; i != iend && pixels[i] == 0; ++i) {}
+				if (i != iend) height = y;
+			}
+		}
+		return font_height_cache[font] = height;
+	}());
+	return {width: width, height: height};
+}
+var font_height_cache = {}
+
+/**
+ * A C#-isk event type
+ */
+export class MulticastDelegate
+{
+	constructor()
+	{
+		this.m_handlers = [];
+	}
+	sub(handler)
+	{
+		let idx = this.m_handlers.indexOf(handler);
+		this.m_handlers.push(handler);
+	}
+	unsub(handler)
+	{
+		let idx = this.m_handlers.indexOf(handler);
+		if (idx != -1) this.m_handlers.splice(idx,1);
+	}
+	invoke(sender, args)
+	{
+		for (let i = 0; i != this.m_handlers.length; ++i)
+			this.m_handlers[i](sender, args)
+	}
 }

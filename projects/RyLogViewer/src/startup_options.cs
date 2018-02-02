@@ -29,7 +29,7 @@ namespace RyLogViewer
 				}
 
 				// Helper for comparing option strings
-				Func<string, bool> IsOption = opt => string.CompareOrdinal(arg, 0, opt, 0, opt.Length) == 0;
+				bool IsOption(string opt) => string.CompareOrdinal(arg, 0, opt, 0, opt.Length) == 0;
 
 				// (order these by longest option first)
 				if      (IsOption(CmdLineOption.RDelim       )) { RowDelim = arg.Substring(CmdLineOption.RDelim.Length); }
@@ -47,7 +47,7 @@ namespace RyLogViewer
 			}
 
 			// Determine whether to run the app in portable mode
-			PortableMode = Path_.FileExists(Path.Combine(exe_dir, "portable"));
+			PortableMode |= Path_.FileExists(Path.Combine(exe_dir, "portable"));
 
 			// Set the UserDataDir based on whether we're running in portable mode or not
 			UserDataDir = Path.GetFullPath(PortableMode ? exe_dir : Util.ResolveUserDocumentsPath(Application.CompanyName, Application.ProductName));

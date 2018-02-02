@@ -102,6 +102,10 @@ namespace Rylogic.Maths
 		{
 			return $"{x} \n{y} \n{z} \n{w} \n";
 		}
+		public string ToString3x4()
+		{
+			return $"{x.ToString3()} \n{y.ToString3()} \n{z.ToString3()} \n{w.ToString3()} \n";
+		}
 
 		/// <summary>To flat array</summary>
 		public float[] ToArray()
