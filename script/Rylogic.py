@@ -46,7 +46,7 @@ def AssertMachineName(machine):
 # Validate an array of paths for existence.
 # Intended for use at the start of a script to validate UserVars.py
 def AssertPathsExist(paths):
-	missing = [];
+	missing = []
 	for path in paths:
 		if not os.path.exists(path):
 			missing.append(path)
@@ -78,7 +78,7 @@ def NormaliseFilepath(filepath):
 # Ask for user input with a timeout. Returns [True, input] on success, or [False, ""] on timeout
 def InputWithTimeout(msg, timeout_s):
 	res = [False, ""]
-	e = threading.Event();
+	e = threading.Event()
 	def prompt(r):
 		r[1] = input(msg)
 		r[0] = True
@@ -97,13 +97,13 @@ def ShellDelete(path, wait_time_ms = 100):
 
 # Change the file extension on 'path'. 'extn' should include the dot
 def ChgExtn(filepath:str, extn:str):
-	dir_fname,ext = os.path.splitext(filepath)
+	dir_fname,_ = os.path.splitext(filepath)
 	return dir_fname + extn
 
 # Enumerate recursively through a directory
 # 'filter' can be a regex: e.g. EnumFiles(dir, filter=r".*(?<!include)\.htm$", flags=re.IGNORECASE):
 def EnumFiles(root, filter:str=None, flags=0):
-	for dirname, dirnames, filenames in os.walk(root):
+	for dirname, _, filenames in os.walk(root):
 		# Return the files
 		# We could remove entries from 'dirnames' to
 		# prevent recursion into those folders...
@@ -113,7 +113,7 @@ def EnumFiles(root, filter:str=None, flags=0):
 
 # Enumerate recursively through a directory
 def EnumDirs(root, filter:str=None, flags=0):
-	for dirname, dirnames, filenames in os.walk(root):
+	for dirname, dirnames, _ in os.walk(root):
 		# Return the directories
 		for dir in dirnames:
 			if filter and not re.match(filter, dir, flags): continue
@@ -161,14 +161,14 @@ def DiffContent(src, dst, trace=False, blocksize = 65536):
 		return True
 	with open(src,'rb') as s:
 		with open(dst,'rb') as d:
-			sd = s.read(blocksize);
-			dd = d.read(blocksize);
-			blk = 0;
+			sd = s.read(blocksize)
+			dd = d.read(blocksize)
+			blk = 0
 			while len(sd) > 0 or len(dd) > 0:
-				if sd != dd: break;
-				sd = s.read(blocksize);
-				dd = d.read(blocksize);
-				blk += 1;
+				if sd != dd: break
+				sd = s.read(blocksize)
+				dd = d.read(blocksize)
+				blk += 1
 			
 			if len(sd) != 0 or len(dd) != 0:
 				if trace:
@@ -410,7 +410,7 @@ def UpdateFileByLine(filepath:str, regex:str, repl:str, all=False):
 				if not m: outf.write(line)
 				else:
 					outf.write(pat.sub(repl, line))
-					if not all: break;
+					if not all: break
 			for line in inf:
 				outf.write(line)
 	os.unlink(filepath)
@@ -427,7 +427,7 @@ def UpdateFile(filepath:str, regex:str, repl:str, regex_flags=re.DOTALL):
 # Tests if this script is being run with admin rights, if not restarts the script elevated
 def RunAsAdmin(expected_return_code=0, working_dir=".\\", show_arguments=False):
 	try:
-		if "elevated" in sys.argv: return;
+		if "elevated" in sys.argv: return
 		subprocess.check_output(["net", "session"], stderr=subprocess.STDOUT)
 		print("Admin rights available")
 		return
@@ -436,7 +436,7 @@ def RunAsAdmin(expected_return_code=0, working_dir=".\\", show_arguments=False):
 	
 	try:
 		AssertPathsExist([UserVars.elevate])
-		args = [UserVars.elevate, sys.executable] + sys.argv + ["elevated"];
+		args = [UserVars.elevate, sys.executable] + sys.argv + ["elevated"]
 		if show_arguments: print(args)
 		subprocess.check_call(args, cwd=working_dir)
 	except Exception as ex:
@@ -445,7 +445,7 @@ def RunAsAdmin(expected_return_code=0, working_dir=".\\", show_arguments=False):
 
 # Touch a file to change it's timestamp
 def TouchFile(fname, times=None):
-	with open(fname, mode='a') as f:
+	with open(fname, mode='a'):
 		os.utime(fname, times=times)
 
 # Check the time stamps of a list of filepaths.
@@ -500,7 +500,7 @@ def MSBuild(sln_or_proj_file, projects, platforms, configs, parallel=False, same
 # Create a zip of a directory
 def ZipDirectory(zip_path, root_dir):
 	zipf = zipfile.ZipFile(zip_path, 'w')
-	for root, dirs, files in os.walk(root_dir):
+	for root,_,files in os.walk(root_dir):
 		for file in files:
 			filepath = os.path.join(root, file)
 			arcpath  = os.path.relpath(filepath, root_dir)

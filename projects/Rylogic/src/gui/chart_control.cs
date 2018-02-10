@@ -638,7 +638,7 @@ namespace Rylogic.Gui
 			// matches the XAxis range. Tan(FovX/2) = (XAxis.Span/2)/d
 			Scene.Camera.FocusDist = (float)(XAxis.Span / (2.0 * Math.Tan(Scene.Camera.FovX / 2.0)));
 			c2w.pos = focus.w1 + Scene.Camera.FocusDist * c2w.z;
-			
+
 			Scene.Camera.O2W = c2w;
 			Scene.Camera.Commit();
 		}
@@ -866,11 +866,15 @@ namespace Rylogic.Gui
 								for (var x = min; x < max; x += step)
 								{
 									var X = (int)(chart_area.Left + x * chart_area.Width / xaxis.Span);
-									var s = xaxis.TickText(x + xaxis.Min, step);
 									if (xaxis.Options.DrawTickLabels)
+									{
+										var s = xaxis.TickText(x + xaxis.Min, step);
 										bmp.DrawString(s, xaxis.Options.TickFont, bsh, new PointF(X, lbly), new StringFormat{Alignment = StringAlignment.Center});
+									}
 									if (xaxis.Options.DrawTickMarks)
+									{
 										bmp.DrawLine(pen, X, chart_area.Top + chart_area.Height, X, chart_area.Top + chart_area.Height + xaxis.Options.TickLength);
+									}
 								}
 							}
 						}
@@ -884,13 +888,17 @@ namespace Rylogic.Gui
 								for (var y = min; y < max; y += step)
 								{
 									var Y = (int)(chart_area.Top + chart_area.Height - y * chart_area.Height / yaxis.Span);
-									var s = yaxis.TickText(y + yaxis.Min, step);
 									if (yaxis.Options.DrawTickLabels)
+									{
+										var s = yaxis.TickText(y + yaxis.Min, step);
 										bmp.DrawString(s, yaxis.Options.TickFont, bsh,
 											new RectangleF(lblx - dims.YTickLabelSize.Width, Y - dims.YTickLabelSize.Height*0.5f, dims.YTickLabelSize.Width, dims.YTickLabelSize.Height),
 											new StringFormat{Alignment = StringAlignment.Far});
+									}
 									if (yaxis.Options.DrawTickMarks)
+									{
 										bmp.DrawLine(pen, chart_area.Left - yaxis.Options.TickLength, Y, chart_area.Left, Y);
+									}
 								}
 							}
 						}
@@ -1152,14 +1160,14 @@ namespace Rylogic.Gui
 						if (chart.XAxis.Options.DrawTickLabels)
 						{
 							// Measure the height of the tick text
-							r = chart.XAxis.MeasureTickText(gfx, false);//Math.Max(, chart.XAxis.Options.MinTickSize);
+							r = chart.XAxis.MeasureTickText(gfx);
 							rect.Height -= r.Height;
 							XTickLabelSize = r;
 						}
 						if (chart.YAxis.Options.DrawTickLabels)
 						{
 							// Measure the width of the tick text
-							r = chart.YAxis.MeasureTickText(gfx, true);//Math.Max(, chart.YAxis.Options.MinTickSize);
+							r = chart.YAxis.MeasureTickText(gfx);
 							rect.X     += r.Width;
 							rect.Width -= r.Width;
 							YTickLabelSize = r;
@@ -2104,8 +2112,8 @@ namespace Rylogic.Gui
 				/// <summary>Convert the axis value to a string. "string TickText(double tick_value, double step_size)" </summary>
 				public Func<double, double, string> TickText;
 
-				/// <summary>Return the width/height to reserve for the tick text. "SizeF MeasureTickText(Graphics gfx, bool width)"</summary>
-				public Func<Graphics, bool, SizeF> MeasureTickText;
+				/// <summary>Return the width/height to reserve for the tick text. "SizeF MeasureTickText(Graphics gfx)"</summary>
+				public Func<Graphics, SizeF> MeasureTickText;
 
 				/// <summary>Set the range without risk of an assert if 'min' is greater than 'Max' or visa versa</summary>
 				public void Set(double min, double max)
@@ -2285,7 +2293,7 @@ namespace Rylogic.Gui
 				}
 
 				/// <summary>Default tick text measurement</summary>
-				public SizeF DefaultMeasureTickText(Graphics gfx, bool width)
+				public SizeF DefaultMeasureTickText(Graphics gfx)
 				{
 					// Can't use 'GridLines' here because creates an infinite recursion.
 					// Using TickText(Min/Max, 0.0) causes the axes to jump around.
@@ -5893,7 +5901,7 @@ namespace Rylogic.Gui
 				foreach (var s in m_series)
 				{
 					if (newline) sb.Append("*NewLine\n");
-					sb.Append($"*Font {{*Colour {(s.Visible ? s.Options.Colour : Colour32.Gray)} }}\n");
+					sb.Append($"*Font {{*Colour {{{(s.Visible ? s.Options.Colour : Colour32.Gray)}}} }}\n");
 					sb.Append($"\"{s.Name}\"\n");
 					newline = true;
 				}

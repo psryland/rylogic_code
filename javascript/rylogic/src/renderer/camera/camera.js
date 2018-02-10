@@ -46,25 +46,24 @@ export class Camera
 {
 	constructor(fovY, aspect, focus_distance, near, far, orthographic)
 	{
-		this.m_c2w                 = m4x4.create();                            // Camera to world transform
-		this.m_fovY                = fovY || Maths.TauBy8;                     // Field of view in the Y direction
-		this.m_aspect              = aspect || 1.0;                            // Aspect ratio = width/height
-		this.m_focus_dist          = focus_distance || 1.0;                    // Distance from the c2w position to the focus, down the z axis
-		this.m_align               = null;                                     // The direction to align 'up' to, or v4Zero
-		this.m_focus_relative_clip = true;                                     // True if the near/far clip planes should be relative to the focus point
-		this.m_orthographic        = orthographic || false;                    // True for orthographic camera to screen transforms, false for perspective
-		this.m_default_fovY        = this.fovY                                 // The default field of view
-		this.m_near                = near ? (near / this.focus_dist) : 0.01;   // The near plane as a multiple of the focus distance
-		this.m_far                 = far  ? (far  / this.focus_dist) : 100.0;  // The near plane as a multiple of the focus distance
-		this.m_base_c2w            = m4x4.create();                            // The starting position during a mouse movement
-		this.m_base_fovY           = this.fovY;                                // The starting FOV during a mouse movement
-		this.m_base_focus_dist     = this.focus_dist;                          // The starting focus distance during a mouse movement
-		this.m_accuracy_scale      = 0.1;                                      // Scale factor for high accuracy control
-		this.m_Tref                = null;                                     // Movement start reference point for translation
-		this.m_Rref                = null;                                     // Movement start reference point for rotation
-		this.m_Zref                = null;                                     // Movement start reference point for zoom
-		this.m_lock_mask           = ELockMask.None;                           // Locks on the allowed motion
-		this.m_moved               = null;                                     // Dirty flag for when the camera moves
+		this.m_c2w                 = m4x4.create();           // Camera to world transform
+		this.m_fovY                = fovY || Maths.TauBy8;    // Field of view in the Y direction
+		this.m_aspect              = aspect || 1.0;           // Aspect ratio = width/height
+		this.m_focus_dist          = focus_distance || 1.0;   // Distance from the c2w position to the focus, down the z axis
+		this.m_align               = null;                    // The direction to align 'up' to, or v4Zero
+		this.m_orthographic        = orthographic || false;   // True for orthographic camera to screen transforms, false for perspective
+		this.m_default_fovY        = this.fovY                // The default field of view
+		this.m_near                = near ? near : 0.01;      // The near plane as a multiple of the focus distance
+		this.m_far                 = far  ? far  : 100.0;     // The near plane as a multiple of the focus distance
+		this.m_base_c2w            = m4x4.create();           // The starting position during a mouse movement
+		this.m_base_fovY           = this.fovY;               // The starting FOV during a mouse movement
+		this.m_base_focus_dist     = this.focus_dist;         // The starting focus distance during a mouse movement
+		this.m_accuracy_scale      = 0.1;                     // Scale factor for high accuracy control
+		this.m_Tref                = null;                    // Movement start reference point for translation
+		this.m_Rref                = null;                    // Movement start reference point for rotation
+		this.m_Zref                = null;                    // Movement start reference point for zoom
+		this.m_lock_mask           = ELockMask.None;          // Locks on the allowed motion
+		this.m_moved               = null;                    // Dirty flag for when the camera moves
 		
 		// Default async key state callback function
 		this.KeyDown = function(nav_key)
@@ -97,10 +96,10 @@ export class Camera
 	 */
 	get c2s()
 	{
-		let height = 2.0 * this.m_focus_dist * Math.tan(this.m_fovY * 0.5);
-		return this.m_orthographic
-			? m4x4.ProjectionOrthographic(height*this.m_aspect, height, this.m_near, this.m_far, true)
-			: m4x4.ProjectionPerspectiveFOV(this.m_fovY, this.m_aspect, this.m_near, this.m_far, true);
+		let height = 2.0 * this.focus_dist * Math.tan(this.fovY * 0.5);
+		return this.orthographic
+			? m4x4.ProjectionOrthographic(height*this.m_aspect, height, this.near(false), this.far(false), true)
+			: m4x4.ProjectionPerspectiveFOV(this.m_fovY, this.m_aspect, this.near(false), this.far(false), true);
 	}
 
 	/**
@@ -189,18 +188,22 @@ export class Camera
 
 	/**
 	 * Get the near plane distance (in world space)
+	 * @param {boolean} focus_relative True to return the focus relative value
+	 * @returns {Number}
 	 */
-	get near()
+	near(focus_relative)
 	{
-		return (this.m_focus_relative_clip ? this.m_focus_dist : 1) * this.m_near;
+		return (focus_relative ? 1 : this.m_focus_dist) * this.m_near;
 	}
 	
 	/**
 	 * Get the far plane distance  (in world space)
+	 * @param {boolean} focus_relative True to return the focus relative value
+	 * @returns {Number}
 	 */
-	get far()
+	far(focus_relative)
 	{
-		return (this.m_focus_relative_clip ? this.m_focus_dist : 1) * this.m_far;
+		return (focus_relative ? 1 : this.m_focus_dist) * this.m_far;
 	}
 
 	/**
@@ -292,7 +295,132 @@ export class Camera
 		let h = 2.0 * Math.tan(this.fovY * 0.5);
 		return [dist * h * this.aspect, dist * h];
 	}
-	
+
+	/**
+	 * Position the camera so that all of 'bbox' is visible to the camera when looking 'forward' and 'up'.
+	 * @param {BBox} bbox The bounding box to view
+	 * @param {v4} forward The forward direction of the camera
+	 * @param {v4} up The up direction of the camera
+	 * @param {Number} focus_dist (optional, default = 0)
+	 * @param {boolean} preserve_aspect (optional, default = true)
+	 * @param {boolean} commit (optional) True to commit the movement
+	 */
+	ViewBBox(bbox_, forward, up, focus_dist, preserve_aspect, commit)
+	{
+		if (!bbox_.is_valid)
+			throw new Error("Camera: Cannot view an invalid bounding box");
+		if (bbox_.is_point)
+			return;
+
+		// Handle degenerate bounding boxes
+		let bbox = bbox_;
+		if (Maths.FEql(bbox.radius[0], 0)) bbox.radius[0] = 0.001 * v4.Length(bbox.radius);
+		if (Maths.FEql(bbox.radius[1], 0)) bbox.radius[1] = 0.001 * v4.Length(bbox.radius);
+		if (Maths.FEql(bbox.radius[2], 0)) bbox.radius[2] = 0.001 * v4.Length(bbox.radius);
+
+		// This code projects 'bbox' onto a plane perpendicular to 'forward' and
+		// at the nearest point of the bbox to the camera. It then ensures a circle
+		// with radius of the projected 2D bbox fits within the view.
+		let bbox_centre = bbox.centre;
+		let bbox_radius = bbox.radius;
+
+		// Get the distance from the centre of the bbox to the point nearest the camera
+		let sizez = Number.MAX_VALUE;
+		sizez = Math.min(sizez, Math.abs(v4.Dot(forward, v4.make( bbox_radius[0],  bbox_radius[1],  bbox_radius[2], 0))));
+		sizez = Math.min(sizez, Math.abs(v4.Dot(forward, v4.make(-bbox_radius[0],  bbox_radius[1],  bbox_radius[2], 0))));
+		sizez = Math.min(sizez, Math.abs(v4.Dot(forward, v4.make( bbox_radius[0], -bbox_radius[1],  bbox_radius[2], 0))));
+		sizez = Math.min(sizez, Math.abs(v4.Dot(forward, v4.make( bbox_radius[0],  bbox_radius[1], -bbox_radius[2], 0))));
+
+		// 'focus_dist' is the focus distance (chosen, or specified) from the centre of the bbox
+		// to the camera. Since 'size' is the size to fit at the nearest point of the bbox,
+		// the focus distance needs to be 'dist' + 'sizez'.
+		focus_dist = focus_dist || 0;
+		preserve_aspect = preserve_aspect === undefined || preserve_aspect;
+		commit = commit === undefined || commit;
+
+		// If not preserving the aspect ratio, determine the width
+		// and height of the bbox as viewed from the camera.
+		if (!preserve_aspect)
+		{
+			// Get the camera orientation matrix
+			let c2w = m4x4.make(v4.Cross(up, forward), up, forward, v4.Origin);
+			let w2c = m4x4.InvertFast(c2w);
+
+			// Transform the bounding box to camera space
+			let bbox_cs = m4x4.MulMB(w2c, bbox);
+
+			// Get the dimensions
+			let bbox_cs_size = bbox_cs.size;
+			let width  = bbox_cs_size[0];
+			let height = bbox_cs_size[1];
+			//assert(width != 0 && height != 0);
+
+			// Choose the fields of view. If 'focus_dist' is given, then that determines
+			// the X,Y field of view. If not, choose a focus distance based on a view size
+			// equal to the average of 'width' and 'height' using the default FOV.
+			if (focus_dist == 0)
+			{
+				let size = (width + height) / 2;
+				focus_dist = (0.5 * size) / Math.tan(0.5 * this.m_default_fovY);
+			}
+
+			// Set the aspect ratio
+			let aspect = width / height;
+			let d = focus_dist - sizez;
+
+			// Set the aspect and FOV based on the view of the bbox
+			this.aspect = aspect;
+			this.fovY = 2 * Math.atan(0.5 * height / d);
+		}
+		else
+		{
+			// 'size' is the *radius* (i.e. not the full height) of the bounding box projected onto the 'forward' plane.
+			let size = Math.sqrt(Maths.Clamp(v4.LengthSq(bbox_radius) - Maths.Sqr(sizez), 0, Number.MAX_VALUE));
+
+			// Choose the focus distance if not given
+			if (focus_dist == 0 || focus_dist < sizez)
+			{
+				let d = size / (Math.tan(0.5 * this.fovY) * this.aspect);
+				focus_dist = sizez + d;
+			}
+			// Otherwise, set the FOV
+			else
+			{
+				let d = focus_dist - sizez;
+				this.fovY = 2 * Math.atan(size * this.aspect / d);
+			}
+		}
+
+		// The distance from camera to bbox_centre is 'dist + sizez'
+		this.LookAt(v4.Sub(bbox_centre, v4.MulS(forward, focus_dist)), bbox_centre, up, commit);
+	}
+
+	/**
+	 * Set the camera fields of view so that a rectangle with dimensions 'width'/'height' exactly fits the view at 'dist'.
+	 * @param {Number} width The width of the rectangle to view
+	 * @param {Number} height The height of the rectangle to view
+	 * @param {Number} focus_dist (Optional, default = 0)
+	 */
+	ViewRect(width, height, focus_dist)
+	{
+		//PR_ASSERT(PR_DBG, width > 0 && height > 0 && focus_dist >= 0, "");
+
+		// This works for orthographic mode as well so long as we set FOV
+		this.aspect = width / height;
+
+		// If 'focus_dist' is given, choose FOV so that the view exactly fits
+		if (focus_dist != 0)
+		{
+			this.fovY = 2 * Math.atan(0.5 * height / focus_dist);
+			this.focus_dist = focus_dist;
+		}
+		// Otherwise, choose a focus distance that preserves FOV
+		else
+		{
+			this.focus_dist = 0.5 * height / Math.tan(0.5 * this.fovY);
+		}
+	}
+
 	/**
 	 * Position the camera at 'position' looking at 'lookat' with up pointing 'up'.
 	 * @param {v4} position The world space position of the camera

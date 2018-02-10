@@ -310,7 +310,7 @@ export function Render(rdr, instances, camera, global_light)
 				// Get the buffer range to render
 				let irange = nug.hasOwnProperty("irange") ? nug.irange : {ofs: 0, count: model.ibuffer.count};
 				rdr.bindBuffer(rdr.ELEMENT_ARRAY_BUFFER, model.ibuffer);
-				rdr.drawElements(nug.topo, irange.count, rdr.UNSIGNED_SHORT, irange.ofs);
+				rdr.drawElements(nug.topo, irange.count, rdr.UNSIGNED_SHORT, irange.ofs * 2); // offset in bytes
 			}
 			else
 			{

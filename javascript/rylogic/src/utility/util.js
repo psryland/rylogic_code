@@ -1,4 +1,22 @@
 /**
+ * @module Util
+ */
+
+import * as v4 from "../maths/v4"
+import * as DF from "./date_format"
+
+export var DateFormat = DF.DateFormat;
+
+/**
+ * Invoke a function on the next message
+ * @param {function} func 
+ */
+export function BeginInvoke(func)
+{
+	setTimeout(func, 0);
+}
+
+/**
  * Copy a range of objects from one array to another
  * @param {Array} dst 
  * @param {Number} dst_index 
@@ -14,6 +32,7 @@ export function MemCopy(dst, dst_index, src, src_index, count)
 
 /**
  * Variadic function that copies objects into 'dst'
+ * Use: CopyTo(my_array, 0, thing1, thing2, thing3, ...)
  * @param {Array} dst 
  * @param {Number} dst_index 
  * @returns {Array} Returns 'dst'
@@ -141,7 +160,6 @@ export function ColourToV4(colour)
 	throw new Error("Unsupported colour format");
 }
 
-
 /**
  * Measure the width and height of 'text'
  * @param {CanvasRenderingContext2D} gfx
@@ -154,6 +172,19 @@ export function MeasureString(gfx, text, font)
 	// Measure width using the 2D canvas API
 	let width = gfx.measureText(text, font).width;
 
+	// Get the font height
+	let height = FontHeight(gfx, font);
+
+	return {width: width, height: height};
+}
+
+/**
+ * Measure the height of a font
+ * @param {CanvasRenderingContext2D} gfx
+ * @param {*} font 
+ */
+export function FontHeight(gfx, font)
+{
 	// Get the font height
 	let height = font_height_cache[font] || (function()
 	{
@@ -191,7 +222,7 @@ export function MeasureString(gfx, text, font)
 		}
 		return font_height_cache[font] = height;
 	}());
-	return {width: width, height: height};
+	return height;
 }
 var font_height_cache = {}
 
@@ -220,3 +251,47 @@ export class MulticastDelegate
 			this.m_handlers[i](sender, args)
 	}
 }
+
+"#if UNITTEST"
+import * as UT from "./unittests";
+{
+	{// Boundary cases
+		let arr = [];
+		let d = Partition(arr, function(x){ return x%2 == 0; }, false);
+		UT.Assert(d == 0);
+		UT.Assert(UT.EqlN(arr, []))
+
+		arr = [1];
+		d = Partition(arr, function(x){ return x%2 == 0; }, false);
+		UT.Assert(d == 0)
+		UT.Assert(UT.EqlN(arr, [1]))
+
+		arr = [2];
+		d = Partition(arr, function(x){ return x%2 == 0; }, false);
+		UT.Assert(d == 1)
+		UT.Assert(UT.EqlN(arr, [2]))
+
+		arr = [1,3,5,7];
+		d = Partition(arr, function(x){ return x%2 == 0; }, false);
+		UT.Assert(d == 0)
+		UT.Assert(UT.EqlN(arr, [1,3,5,7]))
+
+		arr = [2,4,6,8];
+		d = Partition(arr, function(x){ return x%2 == 0; }, false);
+		UT.Assert(d == 4)
+		UT.Assert(UT.EqlN(arr, [2,4,6,8]))
+	}
+	{// Unstable partition
+		let arr = [1,2,3,4,0,9,8,7,6,5,5,4,4];
+		let d = Partition(arr, function(x){ return x%2 == 0; }, false);
+		UT.Assert(d == 7)
+		UT.Assert(UT.EqlN(arr, [2,4,0,8,6,4,4,7,3,5,5,9,1]))
+	}
+	{// Stable partition
+		let arr = [1,2,3,4,0,9,8,7,6,5,5,4,4];
+		let d= Partition(arr, function(x){ return x%2 == 0; }, true);
+		UT.Assert(d == 7)
+		UT.Assert(UT.EqlN(arr, [2,4,0,8,6,4,4,1,3,9,7,5,5]))
+	}
+}
+"#endif"

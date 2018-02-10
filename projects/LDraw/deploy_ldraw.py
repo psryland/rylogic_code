@@ -1,6 +1,5 @@
 ﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
-#
 
 import sys, os, shutil, re
 sys.path.append(re.sub(r"^(.*\\pr\\).*", r"\1script", sys.path[0]))

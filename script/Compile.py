@@ -50,7 +50,7 @@ DefaultSwitches = [
 	]
 DefaultIncludes = [
 	]
-DefaultLibs = [
+DefaultLibPaths = [
 	]
 DefaultDefines = [
 	"_WIN32_WINNT=_WIN32_WINNT_WIN7",
@@ -60,27 +60,32 @@ DefaultDefines = [
 	"_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING",
 	"NOMINMAX",
 	]
-	
+
 PrSwitches = [
-	] + DefaultSwitches
+	]
 PrIncludes = [
-	Tools.AssertPath(UserVars.root + r"\projects"),
-	Tools.AssertPath(UserVars.root + r"\include"),
-	Tools.AssertPath(UserVars.root + r"\sdk"),
-	Tools.AssertPath(UserVars.root + r"\sdk\sqlite\include"),
-	Tools.AssertPath(UserVars.root + r"\sdk\lua\lua\src"),
-	Tools.AssertPath(UserVars.root + r"\sdk\lua"),
-	] + DefaultIncludes
-PrLibs = [
+	Tools.AssertPath(UserVars.root + "\\projects"),
+	Tools.AssertPath(UserVars.root + "\\include"),
+	Tools.AssertPath(UserVars.root + "\\sdk"),
+	Tools.AssertPath(UserVars.root + "\\sdk\\sqlite\\include"),
+	Tools.AssertPath(UserVars.root + "\\sdk\\lua\\lua\\src"),
+	Tools.AssertPath(UserVars.root + "\\sdk\\lua"),
+	]
+PrLibPaths = [
 	UserVars.root+"\\lib\\$(platform)\\$(config)",
-	] + DefaultLibs
+	]
 PrDefines = [
 	"PR_UNITTESTS=0",
 	"PR_MATHS_USE_INTRINSICS=1",
-	] + DefaultDefines
-	
+	]
+
+EnvIs32Bit = False
+
 # Set environment variables needed for cl.exe to work
-def SetupVCEnvironment(_32bit = True):
+def SetupVCEnvironment(_32bit:bool):
+	global EnvIs32Bit
+	EnvIs32Bit = _32bit
+
 	os.environ["INCLUDE"] = (
 		Tools.AssertPath(UserVars.vs_platform_dir + "\\include") + ";" +
 		Tools.AssertPath(UserVars.winsdk_include)                + ";" +
@@ -150,8 +155,8 @@ def ExtractFileOptions(filepath:str):
 	debug = None # Debug mode by default
 	with open(filepath, encoding="utf-8") as f:
 		for line in f:
-			if len(line) == 0: continue;
-			if line[0] == '#': break;
+			if len(line) == 0: continue
+			if line[0] == '#': break
 			if line.startswith("//@"):
 				sw += shlex.split(line[3:])
 			if line.startswith("//Copy"):
@@ -160,48 +165,81 @@ def ExtractFileOptions(filepath:str):
 				debug = True
 			if line.startswith("//RELEASE"):
 				debug = False
-	return sw, copy, debug;
+	return sw, copy, debug
 
 # Return the full path to 'cl.exe' for 32 or 64 bit
-def CompilerPath(_32bit:bool):
-	path = UserVars.vs_compiler32 if _32bit else UserVars.vs_compiler64
+def CompilerPath():
+	path = UserVars.vs_compiler32 if EnvIs32Bit else UserVars.vs_compiler64
 	return Tools.AssertPath(path)
 
 # Return the full path to 'link.exe' for 32 or 64 bit
-def LinkerPath(_32bit:bool):
-	path = UserVars.vs_linker32 if _32bit else UserVars.vs_linker64
+def LinkerPath():
+	path = UserVars.vs_linker32 if EnvIs32Bit else UserVars.vs_linker64
 	return Tools.AssertPath(path)
 
-# Compile the given C++ file
-# The source file can specify additional compiler switches by having special
+# Link object files together
+# Use this if you don't use 'create_exe' in the 'Compile' function
+def Link(
+	obj_files:[],
+	bin_name:str,
+	libpaths:[]
+	):
+
+	# Get the linker path
+	link = LinkerPath()
+
+	args = []
+	args += ["/OUT:"+bin_name]
+	args += ["/LIBPATH:"+l for l in libpaths]
+	
+	# Link the object files together
+	Tools.Exec([link] + args + obj_files)
+
+	# Return the binary name
+	return bin_name
+
+# Compile the given C++ files
+# The first source file can specify additional compiler switches by having special
 # comments (//@) before the first preprocessor command
 # Returns the name of the executable file if generated
 def Compile(
-	filepath:str,
-	_32bit     = False,
+	files:[],
 	create_exe = False,
 	debug      = False,
 	outdir     = "",
-	sw         = DefaultSwitches,
-	includes   = DefaultIncludes,
-	defines    = DefaultDefines,
+	sw         = [],
+	defines    = [],
+	includes   = [],
+	libpaths   = [],
 	):
 
 	# Get the compiler path
-	cl = CompilerPath(_32bit)
+	cl = CompilerPath()
+	sw += DefaultSwitches
+	defines += DefaultDefines
+	includes += DefaultIncludes
+	libpaths += DefaultLibPaths
+
+	# Convert all files to full paths
+	files = [os.path.abspath(f) for f in files]
+
+	# Check the paths exist
+	for f in files:
+		if os.path.exists(f): continue
+		raise FileNotFoundError("ERROR: "+f+" does not exist")
 
 	# Pull the filepath apart
-	dir, file = os.path.split(filepath)
-	fname, extn = os.path.splitext(file)
+	dir, file = os.path.split(files[0])
+	fname = os.path.splitext(file)[0]
 
 	# Default the output directory to the same path as the input file
-	outdir = outdir if len(outdir) != 0 else dir
+	outdir = os.path.abspath(outdir) if len(outdir) != 0 else dir + "\\obj"
 	outdir = os.path.normpath(outdir)
 	if not os.path.exists(outdir): os.mkdir(outdir)
 	os.chdir(outdir)
 
 	# Extract info from the file 
-	additional_sw, copy, dbg = ExtractFileOptions(src_file)
+	additional_sw, copy, dbg = ExtractFileOptions(files[0])
 
 	# Adjust switches for debug/release
 	if dbg != None: debug = dbg
@@ -235,11 +273,8 @@ def Compile(
 	args = list(set(args))
 	args.sort()
 
-	# Set up the VC environment variables
-	SetupVCEnvironment(_32bit)
-
 	# Compile 
-	Tools.Exec([cl] + args + [filepath])
+	Tools.Exec([cl] + args + files)
 
 	# Post-build copy commands
 	for cp in copy:
@@ -248,42 +283,28 @@ def Compile(
 	# If the /c switch is given, then no exe is produced
 	if "/c" in args:
 		return ""
-	
-	# Return the name of the executable
+
+	# Generate a name for the exe
 	exe = outdir + "\\" + fname + ".exe"
+
+	# Link the exe
+	Link([outdir + "\\" + os.path.splitext(os.path.split(f)[1])[0] + ".obj" for f in files], exe, libpaths)
+
+	# Return the name of the executable
 	return exe
-
-# Link object files together
-# Use this if you don't use 'create_exe' in the 'Compile' function
-def Link(
-	obj_files:[],
-	bin_name:str,
-	_32bit = False,
-	):
-
-	# Get the linker path
-	link = LinkerPath(_32bit)
-
-	args = []
-	args += ["/OUT:"+bin_name]
-
-	# Link the object files together
-	Tools.Exec([link] + args + obj_files)
-
-	# Return the binary name
-	return bin_name
 	
 # Compile a C++ source file using standard pr includes, compiler switches
 def CompilePR(
-	filepath:str,
-	_32bit     = False,
+	files:[],
 	create_exe = False,
 	debug      = False,
 	outdir     = "",
 	sw         = PrSwitches,
+	defines    = PrDefines,
 	includes   = PrIncludes,
-	defines    = PrDefines):
-	return Compile(filepath, _32bit, create_exe, debug, outdir, sw, includes, defines)
+	libpaths   = PrLibPaths
+	):
+	return Compile(files, create_exe, debug, outdir, sw, defines, includes, libpaths)
 
 # Compile and execute
 if __name__ == "__main__":
@@ -295,10 +316,12 @@ if __name__ == "__main__":
 		src_file = sys.argv[1] if len(sys.argv) > 1 else input("Source File: ")
 		out_dir  = sys.argv[2] if len(sys.argv) > 2 else ""
 
+		# Set up the VC environment variables
+		SetupVCEnvironment(_32bit=False)
+
 		# Compile the executable
 		exepath = CompilePR(
-			filepath   = src_file,
-			_32bit     = True,
+			files      = [src_file],
 			create_exe = True,
 			debug      = True,
 			outdir     = out_dir)

@@ -18,12 +18,35 @@ namespace TestCS
 		{
 			InitializeComponent();
 			m_chart = Controls.Add2(new ChartControl { Dock = DockStyle.Fill });
+			m_chart.Options.Orthographic = true;
 
-			//m_obj0 = new View3d.Object("*box nice_box FF00FF00 { 0.3 0.2 0.4 }", false);
-			//m_chart.ChartRendering += (s,a) =>
-			//{
-			//	a.AddToScene(m_obj0);
-			//};
+			m_obj0 = new View3d.Object(
+				"test_object", 0xFFFFFFFF, 5, 18, 1,
+				new View3d.Vertex[]
+				{
+					new View3d.Vertex(new v4(+0, +1, +0, 1), new v4(+0.00f, +1.00f, +0.00f, 0), 0xffff0000, new v2(0.50f, 1)),
+					new View3d.Vertex(new v4(-1, -1, -1, 1), new v4(-0.57f, -0.57f, -0.57f, 0), 0xff00ff00, new v2(0.00f, 0)),
+					new View3d.Vertex(new v4(+1, -1, -1, 1), new v4(+0.57f, -0.57f, -0.57f, 0), 0xff0000ff, new v2(0.25f, 0)),
+					new View3d.Vertex(new v4(+1, -1, +1, 1), new v4(+0.57f, -0.57f, +0.57f, 0), 0xffff00ff, new v2(0.50f, 0)),
+					new View3d.Vertex(new v4(-1, -1, +1, 1), new v4(-0.57f, -0.57f, +0.57f, 0), 0xff00ffff, new v2(0.75f, 0)),
+				},
+				new ushort[]
+				{
+					0, 1, 2,
+					0, 2, 3,
+					0, 3, 4,
+					0, 4, 1,
+					4, 3, 2,
+					2, 1, 4,
+				},
+				new View3d.Nugget[]
+				{
+					new View3d.Nugget(View3d.EPrim.TriList, View3d.EGeom.Vert|View3d.EGeom.Norm|View3d.EGeom.Colr, false),
+				}, null);
+			m_chart.ChartRendering += (s,a) =>
+			{
+				a.AddToScene(m_obj0);
+			};
 
 			m_series = new ChartDataSeries("waves");
 			using (var lk = m_series.Lock())

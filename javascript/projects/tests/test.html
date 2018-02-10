@@ -13,7 +13,7 @@
 
 		function Run()
 		{
-			// Get the document element to draw on
+			/*// Get the document element to draw on
 			canvas1 = document.getElementById("canvas");
 			canvas2 = canvas1.cloneNode(false);
 			canvas1.parentNode.insertBefore(canvas2, canvas1);
@@ -23,15 +23,28 @@
 
 			gfx1 = canvas1.getContext("2d");
 			gfx2 = canvas2.getContext("2d");
+			*/
+			
+			//ReadData();
+			//let instrument;
 
-			let func = function(s,a){ console.log(a); };
-
-			let on_thing = new Util.MulticastDelegate();
-			on_thing.sub(func);
-			on_thing.invoke("me", {handled:false});
-			on_thing.unsub(func);
-			on_thing.invoke("me", {handled:false});
+			//let s = PadStart("Hello", 10, "x");
+			//console.log(s);
 		}
+		// function ReadData()
+		// {
+		// 	var request = new XMLHttpRequest();
+		// 	request.open("GET", "https://api.bitfinex.com/v2/candles/trade:1h:tBTCUSD/hist");
+		// 	request.onreadystatechange = function()
+		// 	{
+		// 		if (request.readyState == 4)
+		// 		{
+		// 			let data = JSON.parse(request.responseText);
+		// 			console.log(data);
+		// 		}
+		// 	}
+		// 	request.send();
+		// }
 
 </script>
 </head>

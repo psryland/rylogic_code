@@ -312,6 +312,7 @@ namespace CoinFlip
 			// Combo for choosing the exchange providing the source data
 			UpdateAvailableExchanges();
 			m_cb_exchange.ToolTipText = "Select the exchange to receive chart data from";
+			m_cb_exchange.ComboBox.ValueType = typeof(Exchange);
 			m_cb_exchange.ComboBox.DisplayProperty = nameof(Exchange.Name);
 			m_cb_exchange.ComboBox.DropDown += (s,a) =>
 			{
@@ -325,6 +326,7 @@ namespace CoinFlip
 			// Combo for choosing the pair to display
 			UpdateAvailablePairs();
 			m_cb_pair.ToolTipText = "Select the currency pair to display";
+			m_cb_pair.ComboBox.ValueType = typeof(TradePair);
 			m_cb_pair.ComboBox.DisplayProperty = nameof(TradePair.NameWithExchange);
 			m_cb_pair.ComboBox.DropDown += (s,a) =>
 			{
@@ -334,14 +336,15 @@ namespace CoinFlip
 			{
 				if (IsChartLocked || m_in_update_available_pairs != 0) return;
 				UpdateAvailableTimeFrames();
-				var tp = (TradePair)m_cb_pair.ComboBox.SelectedItem;
-				var tf = (ETimeFrame)m_cb_time_frame.ComboBox.SelectedItem;
+				var tp = (TradePair)m_cb_pair.ComboBox.Value;
+				var tf = (ETimeFrame)m_cb_time_frame.ComboBox.Value;
 				SetInstrument(tp, tf);
 			};
 
 			// Combo for choosing the time frame
 			UpdateAvailableTimeFrames();
 			m_cb_time_frame.ToolTipText = "Select the time frame to display";
+			m_cb_time_frame.ComboBox.ValueType = typeof(ETimeFrame);
 			m_cb_time_frame.SelectedItem = ETimeFrame.None;
 			m_cb_time_frame.ComboBox.DropDown += (s,a) =>
 			{
@@ -350,8 +353,8 @@ namespace CoinFlip
 			m_cb_time_frame.ComboBox.SelectedIndexChanged += (s,a) =>
 			{
 				if (IsChartLocked || m_in_update_time_frames != 0) return;
-				var tp = (TradePair)m_cb_pair.ComboBox.SelectedItem;
-				var tf = (ETimeFrame)m_cb_time_frame.ComboBox.SelectedItem;
+				var tp = (TradePair)m_cb_pair.ComboBox.Value;
+				var tf = (ETimeFrame)m_cb_time_frame.ComboBox.Value;
 				SetInstrument(tp, tf);
 			};
 
@@ -460,7 +463,6 @@ namespace CoinFlip
 			ChartCtrl.YAxis.Options.MinTickSize = 50;
 			ChartCtrl.YAxis.Options.TickFont = new Font("tahoma", 7f, FontStyle.Regular, GraphicsUnit.Point);
 			ChartCtrl.YAxis.TickText = HandleChartYAxisTickText;
-			ChartCtrl.YAxis.MeasureTickText = HandleChartYAxisMeasureTickText;
 
 			ChartCtrl.ChartMoved          += HandleChartMoved;
 			ChartCtrl.ChartRendering      += HandleChartRendering;
@@ -736,14 +738,6 @@ namespace CoinFlip
 
 			// This solves the rounding problem for values near zero when the axis span could be anything
 			return !Math_.FEql(x / ChartCtrl.YAxis.Span, 0.0) ? Math_.RoundSF(x, 5).ToString("G8") : "0";
-		}
-
-		/// <summary>Measure the size of the y axis text</summary>
-		private float HandleChartYAxisMeasureTickText(Graphics gfx, bool width)
-		{
-			var sz0 = gfx.MeasureString(HandleChartYAxisTickText(ChartCtrl.YAxis.Min, 0.0), ChartCtrl.YAxis.Options.TickFont);
-			var sz1 = gfx.MeasureString(HandleChartYAxisTickText(ChartCtrl.YAxis.Max, 0.0), ChartCtrl.YAxis.Options.TickFont);
-			return width ? Math.Max(sz0.Width, sz1.Width) : Math.Max(sz0.Height, sz1.Height);
 		}
 
 		/// <summary>Handle chart mouse down</summary>

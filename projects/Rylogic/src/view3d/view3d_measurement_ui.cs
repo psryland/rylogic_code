@@ -491,6 +491,21 @@ namespace Rylogic.Gui
 								a.Value = MeasurementValid ? Math.Abs(pt1.z - pt0.z).ToString() : "---";
 								break;
 							}
+						case EQuantity.AngleXY:
+							{
+								a.Value = MeasurementValid ? Math_.RadiansToDegrees(Math.Atan2(Math.Abs(pt1.y - pt0.y), Math.Abs(pt1.x - pt0.x))).ToString() : "---";
+								break;
+							}
+						case EQuantity.AngleXZ:
+							{
+								a.Value = MeasurementValid ? Math_.RadiansToDegrees(Math.Atan2(Math.Abs(pt1.z - pt0.z), Math.Abs(pt1.x - pt0.x))).ToString() : "---";
+								break;
+							}
+						case EQuantity.AngleYZ:
+							{
+								a.Value = MeasurementValid ? Math_.RadiansToDegrees(Math.Atan2(Math.Abs(pt1.z - pt0.z), Math.Abs(pt1.y - pt0.y))).ToString() : "---";
+								break;
+							}
 						case EQuantity.Instance0:
 							{
 								a.Value = Hit0.IsValid ? Hit0.Obj.Name : "---";
@@ -703,6 +718,9 @@ namespace Rylogic.Gui
 			[Desc("X Distance")] DistanceX,
 			[Desc("Y Distance")] DistanceY,
 			[Desc("Z Distance")] DistanceZ,
+			[Desc("XY Angle")] AngleXY,
+			[Desc("XZ Angle")] AngleXZ,
+			[Desc("YZ Angle")] AngleYZ,
 			[Desc("Object 1")] Instance0,
 			[Desc("Object 2")] Instance1,
 		}

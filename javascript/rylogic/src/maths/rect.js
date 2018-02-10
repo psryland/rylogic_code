@@ -4,7 +4,9 @@
 
 import * as Maths from "./maths";
 
-let FVec = Float32Array;
+/**
+ * Constants
+ */
 const Invalid = make(0,0,-1,-1);
 
 /**
@@ -71,7 +73,7 @@ export function bound(...points)
 {
 	var br = clone(Invalid);
 	for (let i = 0; i != points.length; ++i)
-		Encompass(br, points[i], br);
+		EncompassPoint(br, points[i], br);
 	return br;
 }
 
@@ -165,12 +167,29 @@ export function ScalePoint(rect, point, xsign, ysign)
  * @param {Rect} out (optional) where to write the expanded rect to
  * @returns {Rect}
  */
-export function Encompass(rect, point, out)
+export function EncompassPoint(rect, point, out)
 {
 	out = out || create();
 	out.x = rect.w >= 0 ? Math.min(rect.x, point[0]) : point[0];
 	out.y = rect.h >= 0 ? Math.min(rect.y, point[1]) : point[1];
 	out.w = rect.w >= 0 ? Math.max(rect.w, point[0] - rect.l, rect.r - point[0]) : 0;
 	out.h = rect.h >= 0 ? Math.max(rect.h, point[1] - rect.t, rect.b - point[1]) : 0;
+	return out;
+}
+
+/**
+ * Expand 'rect' to include 'rhs'
+ * @param {Rect} rect The initial rectangle. (Start with Rect.Invalid when finding a bounding rect)
+ * @param {Rect} rhs The rectangle to encompass with 'rect'
+ * @param {Rect} out (optional) where to write the expanded rect to
+ * @returns {Rect}
+ */
+export function EncompassRect(rect, rhs, out)
+{
+	out = out || create();
+	out.x = rect.w >= 0 ? Math.min(rect.x, rhs.x) : rhs.x;
+	out.y = rect.h >= 0 ? Math.min(rect.y, rhs.y) : rhs.y;
+	out.w = rect.w >= 0 ? Math.max(rect.w, rhs.r - rect.l, rect.r - rhs.l) : 0;
+	out.h = rect.h >= 0 ? Math.max(rect.h, rhs.b - rect.t, rect.b - rhs.t) : 0;
 	return out;
 }

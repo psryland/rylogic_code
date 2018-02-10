@@ -197,11 +197,11 @@ namespace pr
 		}
 		pr::m4x4 CameraToScreen(float aspect, float fovY, float focus_dist) const
 		{
-			return CameraToScreen(Near(), Far(), aspect, fovY, focus_dist);
+			return CameraToScreen(Near(false), Far(false), aspect, fovY, focus_dist);
 		}
 		pr::m4x4 CameraToScreen() const
 		{
-			return CameraToScreen(Near(), Far());
+			return CameraToScreen(Near(false), Far(false));
 		}
 
 		// Return a point in world space corresponding to a normalised screen space point.
@@ -270,8 +270,8 @@ namespace pr
 			Far(far_, focus_relative);
 		}
 
-		// Get/Set the near clip plane (in world space)
-		float Near(bool focus_relative = true) const
+		// Get/Set the near clip plane
+		float Near(bool focus_relative) const
 		{
 			return (focus_relative ? 1 : m_focus_dist) * m_near;
 		}
@@ -281,7 +281,7 @@ namespace pr
 		}
 
 		// Get/Set the far clip plane (in world space)
-		float Far(bool focus_relative = true) const
+		float Far(bool focus_relative) const
 		{
 			return (focus_relative ? 1 : m_focus_dist) * m_far;
 		}
@@ -418,7 +418,7 @@ namespace pr
 		}
 		Frustum ViewFrustum() const
 		{
-			return ViewFrustum(Far());
+			return ViewFrustum(Far(false));
 		}
 
 		// Get/Set the world space position of the focus point, maintaining the current camera orientation

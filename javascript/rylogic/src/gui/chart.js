@@ -7,6 +7,7 @@ import * as m4x4 from "../maths/m4x4";
 import * as v4 from "../maths/v4";
 import * as v2 from "../maths/v2";
 import * as Rect from "../maths/rect";
+import * as BBox from "../maths/bbox";
 import * as Rdr from "../renderer/renderer";
 import * as Util from "../utility/util";
 
@@ -20,6 +21,20 @@ export var EZone = Object.freeze(
 	XAxis: 1 << 1,
 	YAxis: 1 << 2,
 	Title: 1 << 3,
+});
+
+/**
+ * Chart movement types
+ */
+export var EMove = Object.freeze(
+{
+	None: 0,
+	XZoomed: 1 << 0,
+	YZoomed: 1 << 1,
+	Zoomed: 0x3 << 0,
+	XScroll: 1 << 2,
+	YScroll: 1 << 3,
+	Scroll: 0x3 << 2,
 });
 
 /**
@@ -53,6 +68,7 @@ var EAreaSelectMode = Object.freeze(
 	Zoom: 2,
 });
 
+
 export class Chart
 {
 	/**
@@ -62,7 +78,7 @@ export class Chart
 	 */
 	constructor(canvas)
 	{
-		let chart = this;
+		let This = this;
 
 		// Hold a reference to the element we're drawing on
 		// Create a duplicate canvas to draw 2d stuff on, and position it
@@ -94,7 +110,7 @@ export class Chart
 		};
 
 		// The manager of chart utility graphics
-		this.m_tools = new Tools(chart);
+		this.m_tools = new Tools(This);
 
 		// The collection of instances to render on the chart
 		this.instances = [];
@@ -112,7 +128,7 @@ export class Chart
 		this.light = Rdr.Light.Create(Rdr.ELight.Directional, v4.Origin, v4.Neg(v4.ZAxis), null, [0.5,0.5,0.5], null, null);
 	
 		// Navigation
-		this.navigation = new Navigation(chart);
+		this.navigation = new Navigation(This);
 	
 		// Chart options
 		this.options = new ChartOptions();
@@ -144,8 +160,8 @@ export class Chart
 			//CullMode                  = View3d.ECullMode.Back;
 			//Orthographic              = false;
 			//MinSelectionDistance      = 10f;
-			//ResetForward              = -v4.ZAxis;
-			//ResetUp                   = +v4.YAxis;
+			this.reset_forward = v4.Neg(v4.ZAxis);
+			this.reset_up = v4.clone(v4.YAxis);
 			this.xaxis = new AxisOptions();
 			this.yaxis = new AxisOptions();
 		};
@@ -162,25 +178,54 @@ export class Chart
 			this.pixels_per_tick = 30;
 			this.label_transform = {m00: 1, m01: 0, m10: 0, m11: 1, dx: 0, dy: 0};
 		};
+
+		// Events
+		this.OnChartMoved = new Util.MulticastDelegate();
+		this.OnChartClicked = new Util.MulticastDelegate();
+		this.OnRendering = new Util.MulticastDelegate();
+		this.OnAutoRange = new Util.MulticastDelegate();
 	
 		// Chart title
-		this.title = "MyChart";
+		this.title = "";
 	
 		// The data series
 		this.data = [];
 	
 		// Initialise Axis data
-		this.xaxis = new Axis(this.options.xaxis);
-		this.yaxis = new Axis(this.options.yaxis);
-		this.xaxis.label = "X Axis";
-		this.yaxis.label = "Y Axis";
+		this.xaxis = new Axis(this, this.options.xaxis, "");
+		this.yaxis = new Axis(this, this.options.yaxis, "");
+		this.xaxis.OnScroll.sub((s,a) => This._RaiseChartMoved(EMove.XScroll));
+		this.xaxis.OnZoomed.sub((s,a) => This._RaiseChartMoved(EMove.XZoomed));
+		this.yaxis.OnScroll.sub((s,a) => This._RaiseChartMoved(EMove.YScroll));
+		this.yaxis.OnZoomed.sub((s,a) => This._RaiseChartMoved(EMove.YZoomed));
 
 		// Layout data for the chart
-		this.dimensions = {};
+		this.dimensions = this.ChartDimensions();
+	}
 
-		// Events
-		this.OnChartClicked = new Util.MulticastDelegate();
-		//this.OnRendering = new Util.MulticastDelegate();
+	/**
+	 * Get the renderer instance created by this chart
+	 */
+	get rdr()
+	{
+		return this.m_rdr;
+	}
+
+	/**
+	 * Get/Set whether the aspect ratio is locked to the current value
+	 * @returns {boolean}
+	 */
+	get lock_aspect()
+	{
+		return this.options.lock_aspect != null;
+	}
+	set lock_aspect(value)
+	{
+		if (this.lock_aspect == value) return;
+		if (value)
+			this.options.lock_aspect = (this.xaxis.span * this.dimensions.h) / (this.yaxis.span * this.dimensions.w);
+		else
+			this.options.lock_aspect = null;
 	}
 
 	/**
@@ -196,13 +241,13 @@ export class Chart
 		this.SetRangeFromCamera();
 
 		// Calculate the chart dimensions
-		let dims = this.ChartDimensions();
+		this.dimensions = this.ChartDimensions();
 
 		// Draw the chart frame
-		this.RenderChartFrame(dims);
+		this.RenderChartFrame(this.dimensions);
 
 		// Draw the chart content
-		this.RenderChartContent(dims);
+		this.RenderChartContent(this.dimensions);
 	}
 
 	/**
@@ -255,8 +300,8 @@ export class Chart
 			// This is not enforced in the axis.Min/Max accessors because it's useful
 			// to be able to change the min/max independently of each other, set them
 			// to float max etc. It's only invalid to render a chart with a negative range
-			//Debug.Assert(xaxis.span > 0, "Negative x range");
-			//Debug.Assert(yaxis.span > 0, "Negative y range");
+			//assert(xaxis.span > 0, "Negative x range");
+			//assert(yaxis.span > 0, "Negative y range");
 
 			bmp.save();
 			bmp.clearRect(0, 0, buffer.width, buffer.height);
@@ -325,15 +370,17 @@ export class Chart
 					bmp.lineWidth = 0;
 					bmp.beginPath();
 
+					let fh = Util.FontHeight(bmp, bmp.font);
 					let Y = (dims.chart_area.b + opts.xaxis.tick_length + 1);
 					let gl = xaxis.GridLines(dims.chart_area.w, opts.xaxis.pixels_per_tick);
 					for (let x = gl.min; x < gl.max; x += gl.step)
 					{
 						let X = dims.chart_area.l + x*dims.chart_area.w/xaxis.span;
-						let s = xaxis.TickText(x + xaxis.min, gl.step);
 						if (opts.xaxis.draw_tick_labels)
 						{
-							bmp.fillText(s, X, Y, dims.xtick_label_size.width);
+							let s = xaxis.TickText(x + xaxis.min, gl.step).split('\n');
+							for (let i = 0; i != s.length; ++i)
+								bmp.fillText(s[i], X, Y+i*fh, dims.xtick_label_size.width);
 						}
 						if (opts.xaxis.draw_tick_marks)
 						{
@@ -356,15 +403,17 @@ export class Chart
 					bmp.lineWidth = 0;
 					bmp.beginPath();
 
+					let fh = Util.FontHeight(bmp, bmp.font);
 					let X = (dims.chart_area.l - opts.yaxis.tick_length - 1);
 					let gl = yaxis.GridLines(dims.chart_area.h, opts.yaxis.pixels_per_tick);
 					for (let y = gl.min; y < gl.max; y += gl.step)
 					{
 						let Y = dims.chart_area.b - y*dims.chart_area.h/yaxis.span;
-						let s = yaxis.TickText(y + yaxis.min, gl.step);
 						if (opts.yaxis.draw_tick_labels)
 						{
-							bmp.fillText(s, X, Y - dims.ytick_label_size.height*0.5, dims.ytick_label_size.width);
+							let s = yaxis.TickText(y + yaxis.min, gl.step).split('\n');
+							for (let i = 0; i != s.length; ++i)
+								bmp.fillText(s[i], X, Y+i*fh - dims.ytick_label_size.height*0.5, dims.ytick_label_size.width);
 						}
 						if (opts.yaxis.draw_tick_marks)
 						{
@@ -416,9 +465,6 @@ export class Chart
 	RenderChartContent(dims)
 	{
 		this.instances.length = 0;
-		
-		this.test_object = this.test_object || Rdr.CreateTestModel(this.m_rdr);
-		this.instances.push(this.test_object);
 
 		// Add axis graphics
 		if (this.options.show_grid_lines)
@@ -453,10 +499,10 @@ export class Chart
 			}
 		}
 
-
 		// Add chart elements
 
 		// Add user graphics
+		this.OnRendering.invoke(this, {});
 
 		// Ensure the viewport matches the chart context area
 		// Webgl viewports have 0,0 in the lower left, but 'dims.chart_area' has 0,0 at top left.
@@ -534,8 +580,9 @@ export class Chart
 		let pos = v4.SetW1(v4.Add(focus, v4.MulS(m4x4.GetZ(c2w), focus_dist)))
 
 		// Set the new camera position and focus distance
-		this.camera.LookAt(pos, focus, m4x4.GetY(c2w), true);
-		Bug Here - 'the focus point is not staying in the XY plane'
+		this.camera.focus_dist = focus_dist;
+		m4x4.SetW(c2w, pos);
+		this.camera.Commit();
 	}
 
 	/**
@@ -601,14 +648,14 @@ export class Chart
 			if (this.options.xaxis.draw_tick_labels)
 			{
 				// Measure the height of the tick text
-				r = this.xaxis.MeasureTickText(this.m_gfx, false);
+				r = this.xaxis.MeasureTickText(this.m_gfx);
 				rect.h -= r.height;
 				out.xtick_label_size = r;
 			}
 			if (this.options.yaxis.draw_tick_labels)
 			{
 				// Measure the width of the tick text
-				r = this.yaxis.MeasureTickText(this.m_gfx, true);
+				r = this.yaxis.MeasureTickText(this.m_gfx);
 				rect.x += r.width;
 				rect.w -= r.width;
 				out.ytick_label_size = r;
@@ -620,8 +667,6 @@ export class Chart
 		if (rect.h < 0) rect.h = 0;
 		out.chart_area = Rect.clone(rect);
 
-		// Save the dimensions
-		this.dimensions = out;
 		return out;
 	}
 
@@ -898,28 +943,53 @@ export class Chart
 	 */
 	AutoRange()
 	{
-		/* todo
-			// Allow the auto range to be handled by event
-			let args = {who:"all", view_bbox:null, handled:false};
-			RaiseOnAutoRanging(args);
-			if (args.handled && (!args.view_bbox.IsValid || args.view_bbox.Radius == v4.Zero))
-				throw new Error("Caller provided view bounding box is invalid: " + args.view_bbox);
+		// Allow the auto range to be handled by event
+		let args = {who:"all", view_bbox:BBox.create(), dims:this.dimensions, handled:false};
+		this.OnAutoRange.invoke(this, args);
 
-			// Get the bounding box to fit into the view
-			let bbox = args.handled
-				? args.view_bbox
-				: Window.SceneBounds(who, except:new[] { ChartTools.Id });
+		// For now, auto ranging must be done by user code since the chart
+		// doesn't know about what's in the scene.
+		if (!args.handled)
+			return;
 
-			// Position the camera to view the bounding box
-			this.camera.ResetView(bbox, Options.ResetForward, Options.ResetUp,
-				this.cist: 0,
-				preserve_aspect: LockAspect,
-				commit: true);
-		*/
+		// If user code handled the auto ranging, sanity check
+		if (args.handled && (args.view_bbox == null || !args.view_bbox.is_valid || v4.LengthSq(args.view_bbox.radius) == 0))
+			throw new Error("Caller provided view bounding box is invalid: " + args.view_bbox);
+
+		// Get the bounding box to fit into the view
+		let bbox = args.view_bbox;//args.handled ? args.view_bbox : Window.SceneBounds(who, except:new[] { ChartTools.Id });
+
+		// Position the camera to view the bounding box
+		this.camera.ViewBBox(bbox,
+			this.options.reset_forward,
+			this.options.reset_up,
+			0, this.lock_aspect, true);
 
 		// Set the axis range from the camera position
 		this.SetRangeFromCamera();
 		this.Invalidate();
+	}
+
+	/**
+	 * Raise the OnChartMoved event on the next message.
+	 * This method is designed to be called several times within one thread message.
+	 * @param {EMove} move_type The movement type that occurred
+	 */
+	_RaiseChartMoved(move_type)
+	{
+		if (move_type & EMove.Zoomed) this.xaxis.InvalidateGfx();
+		if (move_type & EMove.Zoomed) this.yaxis.InvalidateGfx();
+
+		if (!this.m_chart_moved_args)
+		{
+			this.m_chart_moved_args = {move_type: EMove.None};
+			Util.BeginInvoke(() =>
+			{
+				this.OnChartMoved.invoke(this, this.m_chart_moved_args);
+				this.m_chart_moved_args = null;
+			});
+		}
+		this.m_chart_moved_args.move_type |= move_type;
 	}
 }
 
@@ -995,11 +1065,12 @@ export class HitTestResult
  */
 class Axis
 {
-	constructor(options)
+	constructor(chart, options, label)
 	{
 		this.min = 0;
 		this.max = 1;
-		this.label = "";
+		this.chart = chart;
+		this.label = label;
 		this.options = options;
 		this.m_geom_lines = null;
 		this.m_allow_scroll = true;
@@ -1010,7 +1081,6 @@ class Axis
 		
 		this.OnScroll = new Util.MulticastDelegate();
 		this.OnZoomed = new Util.MulticastDelegate();
-		this.OnZoomed.sub(function(s,a){ s.m_geom_lines = null; });
 	}
 
 	/**
@@ -1025,7 +1095,7 @@ class Axis
 	{
 		if (this.span == value) return;
 		if (value <= 0) throw new Error("Invalid axis span: " + value);
-		Set(this.centre - 0.5*value, this.centre + 0.5*value);
+		this.Set(this.centre - 0.5*value, this.centre + 0.5*value);
 	}
 
 	/**
@@ -1038,7 +1108,7 @@ class Axis
 	set centre(value)
 	{
 		if (this.centre == value) return;
-		Set(this.min + value - this.centre, this.max + value - this.centre);
+		this.Set(this.min + value - this.centre, this.max + value - this.centre);
 	}
 
 	/**
@@ -1100,11 +1170,11 @@ class Axis
 
 		if (zoomed)
 		{
-			this.OnZoomed.invoke(this, null);
+			this.OnZoomed.invoke(this, {});
 		}
 		if (scroll)
 		{
-			this.OnScroll.invoke(this, null);
+			this.OnScroll.invoke(this, {});
 		}
 	}
 
@@ -1114,8 +1184,8 @@ class Axis
 	 */
 	Shift(delta)
 	{
-		if (!allow_scroll) return;
-		centre += delta;
+		if (!this.allow_scroll) return;
+		this.centre += delta;
 	}
 	
 	/**
@@ -1128,18 +1198,23 @@ class Axis
 	{
 		// This solves the rounding problem for values near zero when the axis span could be anything
 		if (Maths.FEql(x / this.span, 0.0)) return "0";
-		let text = Util.TrimRight(x.toPrecision(5), ['0']);
-		if (text.slice(-1) == '.') text += '0';
+
+		// Use 5dp of precision
+		let text = x.toPrecision(5);
+		if (text.indexOf('.') != -1)
+		{
+			text = Util.TrimRight(text, ['0']);
+			if (text.slice(-1) == '.') text += '0';
+		}		
 		return text;
 	}
 
 	/**
 	 * Measure the tick text width
 	 * @param {Canvas2dContext} gfx 
-	 * @param {boolean} width True if the width should be returned, false for height
-	 * @returns {Number}
+	 * @returns {{width, height}}
 	 */
-	MeasureTickTextDefault(gfx, width)
+	MeasureTickTextDefault(gfx)
 	{
 		// Can't use 'GridLines' here because creates an infinite recursion.
 		// Using TickText(Min/Max, 0.0) causes the axes to jump around.
@@ -1256,6 +1331,14 @@ class Axis
 
 		// Return the graphics model
 		return this.m_geom_lines;
+	}
+
+	/**
+	 * Invalidate the graphics, causing them to be recreated next time they're needed
+	 */
+	InvalidateGfx()
+	{
+		this.m_geom_lines = null;
 	}
 }
 
@@ -1410,8 +1493,6 @@ class Navigation
 			{
 				// Set a scaling factor from the mouse wheel clicks
 				let scale = 1.0 / 120.0;
-				if (ev.shiftKey) scale *= 0.1;
-				if (ev.altKey) scale *= 0.1;
 				let delta = Maths.Clamp(ev.wheelDelta * scale, -100, 100);
 
 				// Convert 'client_pt' to normalised camera space
@@ -1425,8 +1506,6 @@ class Navigation
 		else if (this.chart.options.show_axes)
 		{
 			let scale = 0.001;
-			if (ev.shiftKey) scale *= 0.1;
-			if (ev.altKey) scale *= 0.01;
 			let delta = Maths.Clamp(ev.wheelDelta * scale, -0.999, 0.999);
 
 			let xaxis = this.chart.xaxis;
@@ -1436,12 +1515,12 @@ class Navigation
 			// Change the aspect ratio by zooming on the XAxis
 			if (Rect.Contains(dims.xaxis_area, client_pt) && !xaxis.lock_range)
 			{
-				if (ev.ctrlKey && xaxis.allow_scroll)
+				if (ev.altKey && xaxis.allow_scroll)
 				{
 					xaxis.Shift(xaxis.span * delta);
 					chg = true;
 				}
-				if (!ev.ctrlKey && xaxis.allow_zoom)
+				if (!ev.altKey && xaxis.allow_zoom)
 				{
 					let x = perp_z ? xaxis.centre : chart_pt[0];
 					let left = (xaxis.min - x) * (1 - delta);
@@ -1457,12 +1536,12 @@ class Navigation
 			// Check the aspect ratio by zooming on the YAxis
 			if (Rect.Contains(dims.yaxis_area, client_pt) && !yaxis.lock_range)
 			{
-				if (ev.ctrlKey && yaxis.allow_scroll)
+				if (ev.altKey && yaxis.allow_scroll)
 				{
 					yaxis.Shift(yaxis.span * delta);
-					chg = true;;
+					chg = true;
 				}
-				if (!ev.ctrlKey && yaxis.allow_zoom)
+				if (!ev.altKey && yaxis.allow_zoom)
 				{
 					let y = perp_z ? yaxis.centre : chart_pt[1];
 					let left = (yaxis.min - y) * (1 - delta);
@@ -1555,7 +1634,7 @@ class MouseOpDefaultLButton extends MouseOp
 	MouseDown(ev)
 	{
 		// Look for a selected object that the mouse operation starts on
-		this.m_hit_selected = this.hit_result.hits.find(function(x){ return x.Element.Selected; });
+		//this.m_hit_selected = this.hit_result.hits.find(function(x){ return x.Element.Selected; });
 
 		//// Record the drag start positions for selected objects
 		//foreach (let elem in m_chart.Selected)

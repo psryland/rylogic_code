@@ -3,8 +3,11 @@
 <head>
 	<title>Rylogic WebGL Chart</title>
 	<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
-	<script src="..\..\lib\rylogic.js" type="text/javascript"></script>
+	<script src=".\dist\trading_chart.js" type="text/javascript"></script>
+	<!-- <script src=".\btc_usdt.js"></script> -->
 	<script type="text/javascript">
+
+		var chart;
 
 		// Entry point
 		function Run()
@@ -14,29 +17,43 @@
 				// Get the document element to draw on
 				let canvas = document.getElementById("canvas");
 
+				// Use candle data from bitfinex
+				let instrument = Instrument.Create("BTCUSD", ETimeFrame.Hour1);
+
 				// Turn the canvas into a chart
-				let chart = Chart.Create(canvas);
-				chart.OnChartClicked.sub(function(s,a){ console.log(a); });
-				//chart.options.bk_colour = "#aaa";
-				//chart.options.yaxis.tick_font = "60px tahoma";
+				chart = TradingChart.Create(canvas, instrument);
 
 				// Render the chart
 				chart.Render();
 
-				// Create a data series
-				//let series = new Chart.CreateDataSeries("MyData");
-				//for (let i = 0; i != 100000; ++i)
-				//	series.data.push({x: 0.01*i, y: Math.sin(0.01*i*Maths.Tau)});
-				//chart.data.push(series);
+				// Loop to update latest candle data
+				var last_ms = null;
+				requestAnimationFrame(function run(clock_ms)
+				{
+					if (last_ms != null) Step(clock_ms - last_ms);
+					last_ms = clock_ms;
+					requestAnimationFrame(run);
+				});
 			}
 			catch (ex)
 			{
 				alert("Failed to initialise WebGL: " + ex.message);
 			}
 		}
+
+
+		//
+		function Step(elapsed_ms)
+		{
+			// Poll for the latest candle every N seconds
+		}
+
 	</script>
 </head>
 <body onload="Run();">
+	<div>
+		<button onclick="chart.AutoRange();">Auto Range</button>
+	</div>
 	<div style="position: absolute; left:100px; top:50px;">
 		<canvas width="1000" height="500" id="canvas" style="border: none;"></canvas>
 	</div>

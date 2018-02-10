@@ -4,7 +4,9 @@
 
 import * as Maths from "./maths";
 
-let FVec = Float32Array;
+var FVec = Float32Array;
+
+export const Zero   = new FVec([0,0,0,0]);
 export const XAxis  = new FVec([1,0,0,0]);
 export const YAxis  = new FVec([0,1,0,0]);
 export const ZAxis  = new FVec([0,0,1,0]);
@@ -23,7 +25,7 @@ export function create()
 
 /**
  * Construct from components.
- * If only 'x' is given, then the returned vector is equivalent to v4.make(x,x,x,x)
+ * If only 'x' is given, then the returned vector is equivalent to make(x,x,x,x)
  * @param {Number} x 
  * @param {Number} y 
  * @param {Number} z 
@@ -273,7 +275,7 @@ export function Add(a, b, out)
  */
 export function AddN(...arr)
 {
-	let sum = v4.create();
+	let sum = create();
 	for (let i = 0; i != arr.length; ++i)
 		Add(arr[i], sum, sum);
 	return sum;
@@ -346,7 +348,7 @@ export function Parallel(v0, v1)
 export function CreateNotParallelTo(v)
 {
 	let x_aligned = Math.abs(v[0]) > Math.abs(v[1]) && Math.abs(v[0]) > Math.abs(v[2]);
-	let out = v4.make(!x_aligned, 0, x_aligned, v[3]);
+	let out = make(!x_aligned, 0, x_aligned, v[3]);
 }
 
 /**
@@ -360,7 +362,7 @@ export function Perpendicular(vec, previous)
 	if (LengthSq(vec) < Maths.Tiny)
 		throw new Error("Cannot make a perpendicular to a zero vector");
 
-	let out = v4.create();
+	let out = create();
 
 	// If 'previous' is parallel to 'vec', choose a new perpendicular (includes previous == zero)
 	if (!previous || Parallel(vec, previous))

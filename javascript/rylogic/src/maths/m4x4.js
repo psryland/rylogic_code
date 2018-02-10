@@ -4,6 +4,7 @@
 
 import * as Maths from "./maths";
 import * as v4 from "./v4";
+import * as BBox from "./bbox";
 
 let FMat = Float32Array;
 
@@ -198,6 +199,34 @@ export function SetW(mat, vec)
 }
 
 /**
+ * Get the ith vector from 'mat'
+ * @param {m4x4} mat The matrix to read the vector from
+ * @param {Number} i The index of the vector to return
+ * @returns {v4}
+ */
+export function GetI(mat, i)
+{
+	i *= 4;
+	return v4.make(mat[i+0], mat[i+1], mat[i+2], mat[i+3]);
+}
+
+/**
+ * Set the ith vector in 'mat'
+ * @param {m4x4} mat the matrix to read the vector from
+ * @param {Number} i The index of the vector to set
+ * @param {v4} vec The value to set the ith vector to
+ * @returns {v4}
+ */
+export function SetI(mat, i, vec)
+{
+	i *= 4;
+	mat[i+0] = vec[0];
+	mat[i+1] = vec[1];
+	mat[i+2] = vec[2];
+	mat[i+3] = vec[3];
+}
+
+/**
  * Multiply a 4-vector by a 4x4 matrix
  * @param {m4x4} m
  * @param {v4} v 
@@ -256,6 +285,26 @@ export function MulMM(a, b, out)
 	out[14] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
 	out[15] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
 
+	return out;
+}
+
+/**
+ * Multiply a bounding box by a transformation matrix
+ * @param {m4x4} a The matrix
+ * @param {BBox} b The bounding box
+ * @param {BBox} out (optional) where to write the result
+ * @returns {BBox} a x b
+ */
+export function MulMB(m, rhs, out)
+{
+	//assert("Transforming an invalid bounding box" && rhs.valid());
+	out = out || BBox.create();//	BBox bb(m.pos, v4Zero);
+	let mT = Transpose3x3(m);
+	for (let i = 0; i != 3; ++i)
+	{
+		out.centre[i] += v4.Dot(       GetI(mT,i) , rhs.centre);
+		out.radius[i] += v4.Dot(v4.Abs(GetI(mT,i)), rhs.radius);
+	}
 	return out;
 }
 

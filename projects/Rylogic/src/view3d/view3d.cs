@@ -942,6 +942,8 @@ namespace Rylogic.Graphix
 				m_windows[0].Dispose();
 
 			View3D_Shutdown(m_context);
+			m_singleton = null;
+
 			GC.SuppressFinalize(this);
 		}
 

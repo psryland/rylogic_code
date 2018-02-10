@@ -1,9 +1,17 @@
+/**
+ * @module Maths
+ */
+
+import * as v2 from "./v2";
 import * as v4 from "./v4";
 import * as m4x4 from "./m4x4";
+import * as Range from "./range";
+import * as Rect from "./rect";
+import * as BBox from "./bbox";
 
 "use strict";
 
-export { v4, m4x4 };
+export { v2, v4, m4x4, Range, Rect, BBox };
 
 // Epsilon
 export const Tiny      = 1.00000007e-05;
@@ -78,29 +86,34 @@ export function FEql(a, b)
 }
 
 /**
- * Compare all elements of 'a' and 'b' for approximate equality.
- * @param {[Number]} a
- * @param {[Number]} b
- * @returns {boolean}
- */
-export function FEqlN(a,b)
-{
-	if (a.length != b.length) return false;
-	for (var i = 0; i != a.length && FEql(a[i], b[i]); ++i) {}
-	return i == a.length;
-}
-
-/**
  * Compare all elements of 'a' and 'b' for exact equality.
- * @param {[Number]} a
- * @param {[Number]} b
+ * @param {[Number]} a The array to compare with 'b'
+ * @param {[Number]} b The array to compare with 'a'
+ * @param {[Number]} start (optional) The index of the element to begin comparing from
+ * @param {[Number]} count (optional) The index of the element to begin comparing from
  * @returns {boolean}
  */
-export function EqlN(a,b)
+export function EqlN(a,b,start,count)
 {
-	if (a.length != b.length) return false;
-	for (var i = 0; i != a.length && a[i] == b[i]; ++i) {}
-	return i == a.length;
+	if (start === undefined)
+	{
+		if (a.length != b.length) return false;
+		let i = 0, iend = a.length;
+		for (; i != iend && a[i] == b[i]; ++i) {}
+		return i == iend;
+	}
+	else
+	{
+		if (count === undefined)
+			count = Math.max(a.length - start, b.length - start);
+		if (a.length < start + count)
+			return false;
+		if (b.length < start + count)
+			return false;
+		let i = start, iend = start + count;
+		for (; i != iend && a[i] == b[i]; ++i) {}
+		return i == iend;
+	}
 }
 
 /**
@@ -121,7 +134,7 @@ export function IEEERemainder(x, y)
 	{
 		let div = x / y;
 		let div_rounded = Math.round(div);
-		if (Math.Abs(div_rounded) > Math.Abs(div))
+		if (Math.abs(div_rounded) > Math.abs(div))
 			return alt_mod;
 
 		return mod;
