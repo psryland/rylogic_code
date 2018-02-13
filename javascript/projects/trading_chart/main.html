@@ -18,34 +18,19 @@
 				let canvas = document.getElementById("canvas");
 
 				// Use candle data from bitfinex
-				let instrument = Instrument.Create("BTCUSD", ETimeFrame.Hour1);
+				let instrument = Instrument.Create("BTCUSD", ETimeFrame.Hour1, new Date(2009,1,1).valueOf());
 
 				// Turn the canvas into a chart
 				chart = TradingChart.Create(canvas, instrument);
+				//chart.options.xaxis_label_mode = TradingChart.EXAxisLabelMode.CandleIndex;
 
 				// Render the chart
 				chart.Render();
-
-				// Loop to update latest candle data
-				var last_ms = null;
-				requestAnimationFrame(function run(clock_ms)
-				{
-					if (last_ms != null) Step(clock_ms - last_ms);
-					last_ms = clock_ms;
-					requestAnimationFrame(run);
-				});
 			}
 			catch (ex)
 			{
 				alert("Failed to initialise WebGL: " + ex.message);
 			}
-		}
-
-
-		//
-		function Step(elapsed_ms)
-		{
-			// Poll for the latest candle every N seconds
 		}
 
 	</script>
@@ -55,7 +40,7 @@
 		<button onclick="chart.AutoRange();">Auto Range</button>
 	</div>
 	<div style="position: absolute; left:100px; top:50px;">
-		<canvas width="1000" height="500" id="canvas" style="border: none;"></canvas>
+		<canvas width="1200" height="1000" id="canvas" style="border: none;"></canvas>
 	</div>
 </body>
 </html>

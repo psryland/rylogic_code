@@ -1,8 +1,6 @@
 /**
- * @module Algorithm
+ * @module algorithm
  */
-
-import * as v4 from "../maths/v4"
 
 /**
  * Swap elements 'i' and 'j' in an array
@@ -110,7 +108,7 @@ export function EraseIf(arr, pred, stable)
  * Binary search for an element using only a predicate function.
  * Returns the index of the element if found or the 2s-complement of the first.
  * @param {Array} arr The array to search
- * @param {Function} cmp Comparison function, return -1 if T is less than the target, +1 if greater, or 0 if equal
+ * @param {Function} cmp Comparison function, return <0 if T is less than the target, >0 if greater, or ==0 if equal
  * @param {boolean} insert_position (optional, default = false) True to always return positive indices (i.e. when searching to find insert position)
  * @returns {Number} The index of the element if found or the 2s-complement of the first element larger than the one searched for.
  */

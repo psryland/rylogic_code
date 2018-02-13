@@ -171,3 +171,34 @@ export function EncompassRange(range0, range1)
 	range0.beg = Math.min(range0.beg, range1.beg);
 	range0.end = Math.max(range0.end, range1.end);
 }
+
+/**
+ * Returns a range that is the union of 'lhs' with 'rhs'
+ * (basically the same as 'Encompass' except 'lhs' isn't modified.
+ * @param {Range} lhs
+ * @param {Range} rhs
+ * @returns {Range}
+ */
+export function Union(lhs, rhs)
+{
+	//Debug.Assert(Size >= 0, "this range is inside out");
+	//Debug.Assert(rng.Size >= 0, "'rng' is inside out");
+	return make(Math.min(lhs.beg, rhs.beg), Math.max(lhs.end, rhs.end));
+}
+
+/**
+ * Returns the intersection of 'lhs' with 'rhs'.
+ * If there is no intersection, returns [lhs.beg, lhs.beg) or [lhs.end,lhs.end).
+ * Note: this means A.Intersect(B) != B.Intersect(A)
+ * @param {Range} lhs
+ * @param {Range} rhs
+ * @returns {Range}
+ */
+export function Intersect(lhs, rhs)
+{
+	//Debug.Assert(Size >= 0, "this range is inside out");
+	//Debug.Assert(rng.Size >= 0, "'rng' is inside out");
+	if (rhs.end <= lhs.beg) return make(lhs.beg, lhs.beg);
+	if (rhs.beg >= lhs.end) return make(lhs.end, lhs.end);
+	return make(Math.max(lhs.beg, rhs.beg), Math.min(lhs.end, rhs.end));
+}

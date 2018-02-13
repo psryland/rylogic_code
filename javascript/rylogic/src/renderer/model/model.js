@@ -181,7 +181,7 @@ export function CreateRaw(rdr, pos, norm, col, tex0, indices, nuggets, opts)
 		if (!nuggets[0].hasOwnProperty("shader"))
 			throw new Error("Nuggets must include a shader field");
 
-		model.gbuffer = nuggets;
+		model.gbuffer = nuggets.slice();
 	}
 
 	return model;

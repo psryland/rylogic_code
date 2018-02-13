@@ -98,6 +98,7 @@ export class Chart
 		// Initialise WebGL
 		this.m_rdr = Rdr.Create(this.canvas3d);
 		this.m_rdr.back_colour = v4.make(1,1,1,1);
+		this.m_redraw_pending = false;
 	
 		// Create an area for storing cached data
 		this.m_cache = new function()
@@ -105,7 +106,6 @@ export class Chart
 			this.chart_frame = null;
 			this.xaxis_hash = null;
 			this.yaxis_hash = null;
-			this.redraw_pending = false;
 			this.invalidate = function(){ this.chart_frame = null; };
 		};
 
@@ -201,6 +201,12 @@ export class Chart
 
 		// Layout data for the chart
 		this.dimensions = this.ChartDimensions();
+
+		window.requestAnimationFrame(function loop()
+		{
+			if (This.m_redraw_pending) This.Render();
+			window.requestAnimationFrame(loop);
+		});
 	}
 
 	/**
@@ -235,7 +241,7 @@ export class Chart
 	Render()
 	{
 		// Clear the redraw pending flag
-		this.m_cache.redraw_pending = false;
+		this.m_redraw_pending = false;
 
 		// Navigation moves the camera and axis ranges are derived from the camera position/view
 		this.SetRangeFromCamera();
@@ -518,15 +524,14 @@ export class Chart
 	Invalidate()
 	{
 		this.m_cache.invalidate();
-		if (this.m_cache.redraw_pending)
+		if (this.m_redraw_pending)
 			return;
 
 		// Set a flag to indicate redraw pending
-		this.m_cache.redraw_pending = true;
+		this.m_redraw_pending = true;
 
-		// Set a timer to redraw the chart
-		let chart = this;
-		setTimeout(function(){ chart.Render(); }, 10);
+	//	let This = this;
+	//	setTimeout(function() { This.Render(); }, 10);
 	}
 
 	/**
@@ -977,11 +982,15 @@ export class Chart
 	 */
 	_RaiseChartMoved(move_type)
 	{
-		if (move_type & EMove.Zoomed) this.xaxis.InvalidateGfx();
-		if (move_type & EMove.Zoomed) this.yaxis.InvalidateGfx();
+		if (move_type & EMove.Zoomed) this.xaxis._InvalidateGfx();
+		if (move_type & EMove.Zoomed) this.yaxis._InvalidateGfx();
 
 		if (!this.m_chart_moved_args)
 		{
+			// Trigger a redraw of the chart
+			this.Invalidate();
+
+			// Notify of the chart moving
 			this.m_chart_moved_args = {move_type: EMove.None};
 			Util.BeginInvoke(() =>
 			{
@@ -989,6 +998,8 @@ export class Chart
 				this.m_chart_moved_args = null;
 			});
 		}
+
+		// Accumulate the moved flags until 'OnChartMoved' has been called.
 		this.m_chart_moved_args.move_type |= move_type;
 	}
 }
@@ -1336,7 +1347,7 @@ class Axis
 	/**
 	 * Invalidate the graphics, causing them to be recreated next time they're needed
 	 */
-	InvalidateGfx()
+	_InvalidateGfx()
 	{
 		this.m_geom_lines = null;
 	}

@@ -3343,12 +3343,9 @@ exports.Partition = Partition;
 exports.Erase = Erase;
 exports.EraseIf = EraseIf;
 exports.BinarySearch = BinarySearch;
-
-var _v = __webpack_require__(1);
-
-var v4 = _interopRequireWildcard(_v);
-
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+/**
+ * @module algorithm
+ */
 
 /**
  * Swap elements 'i' and 'j' in an array
@@ -3369,10 +3366,6 @@ function Swap(arr, i, j) {
  * @param {boolean} stable True if the order of 'arr' must be preserved. Note: the front half of the array is always stable, only the moved elements may not be stable
  * @returns {Number} Returns the index of the first element not satisfying 'pred'
  */
-/**
- * @module Algorithm
- */
-
 function Partition(arr, pred, stable) {
 	var first = 0,
 	    last = arr.length;
@@ -3447,7 +3440,7 @@ function EraseIf(arr, pred, stable) {
  * Binary search for an element using only a predicate function.
  * Returns the index of the element if found or the 2s-complement of the first.
  * @param {Array} arr The array to search
- * @param {Function} cmp Comparison function, return -1 if T is less than the target, +1 if greater, or 0 if equal
+ * @param {Function} cmp Comparison function, return <0 if T is less than the target, >0 if greater, or ==0 if equal
  * @param {boolean} insert_position (optional, default = false) True to always return positive indices (i.e. when searching to find insert position)
  * @returns {Number} The index of the element if found or the 2s-complement of the first element larger than the one searched for.
  */
@@ -3500,6 +3493,8 @@ exports.ContainsInclusive = ContainsInclusive;
 exports.Compare = Compare;
 exports.Encompass = Encompass;
 exports.EncompassRange = EncompassRange;
+exports.Union = Union;
+exports.Intersect = Intersect;
 
 var _maths = __webpack_require__(0);
 
@@ -3678,6 +3673,35 @@ function Encompass(range, value) {
 function EncompassRange(range0, range1) {
 	range0.beg = Math.min(range0.beg, range1.beg);
 	range0.end = Math.max(range0.end, range1.end);
+}
+
+/**
+ * Returns a range that is the union of 'lhs' with 'rhs'
+ * (basically the same as 'Encompass' except 'lhs' isn't modified.
+ * @param {Range} lhs
+ * @param {Range} rhs
+ * @returns {Range}
+ */
+function Union(lhs, rhs) {
+	//Debug.Assert(Size >= 0, "this range is inside out");
+	//Debug.Assert(rng.Size >= 0, "'rng' is inside out");
+	return make(Math.min(lhs.beg, rhs.beg), Math.max(lhs.end, rhs.end));
+}
+
+/**
+ * Returns the intersection of 'lhs' with 'rhs'.
+ * If there is no intersection, returns [lhs.beg, lhs.beg) or [lhs.end,lhs.end).
+ * Note: this means A.Intersect(B) != B.Intersect(A)
+ * @param {Range} lhs
+ * @param {Range} rhs
+ * @returns {Range}
+ */
+function Intersect(lhs, rhs) {
+	//Debug.Assert(Size >= 0, "this range is inside out");
+	//Debug.Assert(rng.Size >= 0, "'rng' is inside out");
+	if (rhs.end <= lhs.beg) return make(lhs.beg, lhs.beg);
+	if (rhs.beg >= lhs.end) return make(lhs.end, lhs.end);
+	return make(Math.max(lhs.beg, rhs.beg), Math.min(lhs.end, rhs.end));
 }
 
 /***/ }),
@@ -3859,7 +3883,7 @@ function CreateRaw(rdr, pos, norm, col, tex0, indices, nuggets, opts) {
 		if (!nuggets[0].hasOwnProperty("topo")) throw new Error("Nuggets must include a topology field");
 		if (!nuggets[0].hasOwnProperty("shader")) throw new Error("Nuggets must include a shader field");
 
-		model.gbuffer = nuggets;
+		model.gbuffer = nuggets.slice();
 	}
 
 	return model;
@@ -5099,13 +5123,13 @@ var Chart = exports.Chart = function () {
 		// Initialise WebGL
 		this.m_rdr = Rdr.Create(this.canvas3d);
 		this.m_rdr.back_colour = v4.make(1, 1, 1, 1);
+		this.m_redraw_pending = false;
 
 		// Create an area for storing cached data
 		this.m_cache = new function () {
 			this.chart_frame = null;
 			this.xaxis_hash = null;
 			this.yaxis_hash = null;
-			this.redraw_pending = false;
 			this.invalidate = function () {
 				this.chart_frame = null;
 			};
@@ -5208,6 +5232,11 @@ var Chart = exports.Chart = function () {
 
 		// Layout data for the chart
 		this.dimensions = this.ChartDimensions();
+
+		window.requestAnimationFrame(function loop() {
+			if (This.m_redraw_pending) This.Render();
+			window.requestAnimationFrame(loop);
+		});
 	}
 
 	/**
@@ -5225,7 +5254,7 @@ var Chart = exports.Chart = function () {
    */
 		value: function Render() {
 			// Clear the redraw pending flag
-			this.m_cache.redraw_pending = false;
+			this.m_redraw_pending = false;
 
 			// Navigation moves the camera and axis ranges are derived from the camera position/view
 			this.SetRangeFromCamera();
@@ -5499,16 +5528,13 @@ var Chart = exports.Chart = function () {
 		key: "Invalidate",
 		value: function Invalidate() {
 			this.m_cache.invalidate();
-			if (this.m_cache.redraw_pending) return;
+			if (this.m_redraw_pending) return;
 
 			// Set a flag to indicate redraw pending
-			this.m_cache.redraw_pending = true;
+			this.m_redraw_pending = true;
 
-			// Set a timer to redraw the chart
-			var chart = this;
-			setTimeout(function () {
-				chart.Render();
-			}, 10);
+			//	let This = this;
+			//	setTimeout(function() { This.Render(); }, 10);
 		}
 
 		/**
@@ -5962,16 +5988,22 @@ var Chart = exports.Chart = function () {
 		value: function _RaiseChartMoved(move_type) {
 			var _this = this;
 
-			if (move_type & EMove.Zoomed) this.xaxis.InvalidateGfx();
-			if (move_type & EMove.Zoomed) this.yaxis.InvalidateGfx();
+			if (move_type & EMove.Zoomed) this.xaxis._InvalidateGfx();
+			if (move_type & EMove.Zoomed) this.yaxis._InvalidateGfx();
 
 			if (!this.m_chart_moved_args) {
+				// Trigger a redraw of the chart
+				this.Invalidate();
+
+				// Notify of the chart moving
 				this.m_chart_moved_args = { move_type: EMove.None };
 				Util.BeginInvoke(function () {
 					_this.OnChartMoved.invoke(_this, _this.m_chart_moved_args);
 					_this.m_chart_moved_args = null;
 				});
 			}
+
+			// Accumulate the moved flags until 'OnChartMoved' has been called.
 			this.m_chart_moved_args.move_type |= move_type;
 		}
 	}, {
@@ -6292,8 +6324,8 @@ var Axis = function () {
    */
 
 	}, {
-		key: "InvalidateGfx",
-		value: function InvalidateGfx() {
+		key: "_InvalidateGfx",
+		value: function _InvalidateGfx() {
 			this.m_geom_lines = null;
 		}
 	}, {
@@ -7532,6 +7564,9 @@ var Chart = function () {
 		this.chart.OnAutoRange.sub(function (s, a) {
 			This._HandleAutoRange(a);
 		});
+		this.chart.OnChartMoved.sub(function (s, a) {
+			This._HandleChartMoved(a);
+		});
 		this.chart.OnChartClicked.sub(function (s, a) {
 			console.log(a);
 		});
@@ -7579,11 +7614,12 @@ var Chart = function () {
 			// Add candle graphics for the displayed range
 			var instances = this.chart.instances;
 			this.candles.Get(this.xaxis.min - 1, this.xaxis.max + 1, function (gfx) {
-				instances.push(gfx);
-			});
+				if (gfx.inst == null) return;
 
-			//test_object = test_object || Rdr.CreateTestModel(s.rdr);
-			//s.instances.push(test_object);
+				// Position the graphics
+				gfx.inst.o2w = m4x4.Translation([gfx.candle_range.beg, 0, 0, 1]);
+				instances.push(gfx.inst);
+			});
 		}
 
 		/**
@@ -7616,6 +7652,30 @@ var Chart = function () {
 		}
 
 		/**
+   * Handle the chart zooming or scrolling
+   * @param {Args} a 
+   */
+
+	}, {
+		key: "_HandleChartMoved",
+		value: function _HandleChartMoved(a) {
+			// See if the displayed X axis range is available in
+			// the chart data. If not, request it in the instrument.
+			if (this.instrument.count != 0) {
+				var first = this.instrument.candle(0);
+				var latest = this.instrument.latest;
+
+				// Request data for the missing regions.
+				if (this.chart.xaxis.min < 0) {
+					// Request candles before 'first'
+					var num = Math.max(0 - this.chart.xaxis.min, this.candles.BatchSize * 10);
+					var period_ms = TF.TimeFrameToUnixMS(num, this.instrument.time_frame);
+					this.instrument.RequestData(first.ts - period_ms, first.ts);
+				}
+			}
+		}
+
+		/**
    * Convert the XAxis values into pretty datetime strings
    */
 
@@ -7627,7 +7687,7 @@ var Chart = function () {
 			// Use 'Instrument.TimeToIndexRange' to convert time values to X Axis values.
 
 			// Draw the X Axis labels as indices instead of time stamps
-			if (this.options.xaxis_label_mode == TradingChart.EXAxisLabelMode.CandleIndex) return x.ToString();
+			if (this.options.xaxis_label_mode == TradingChart.EXAxisLabelMode.CandleIndex) return this.chart.xaxis.TickTextDefault(x, step);
 			if (this.instrument == null || this.instrument.count == 0) return "";
 
 			// If the ticks are within the range of instrument data, use the actual time stamp.
@@ -7678,7 +7738,17 @@ var Chart = function () {
 	}, {
 		key: "_HandleCandleDataChanged",
 		value: function _HandleCandleDataChanged(args) {
+			// Invalidate the graphics for the candles over the range
 			this.candles.InvalidateRange(args.beg, args.end);
+
+			// Shift the xaxis range so that the chart doesn't jump
+			if (this.chart.xaxis.max > args.beg) {
+				this.chart.xaxis.Shift(args.ofs);
+				this.chart.SetCameraFromRange();
+			}
+
+			// Invalidate the chart
+			this.chart.Invalidate();
 		}
 	}, {
 		key: "xaxis",
@@ -7725,12 +7795,9 @@ var CandleCache = function () {
 			var idx1 = Math.floor(end / this.BatchSize);
 			for (var i = idx0; i <= idx1; ++i) {
 				// Get the graphics model at 'i'
+				if (i < 0) continue;
 				var gfx = this.At(i);
-				if (gfx.inst == null) continue;
-
-				// Position the graphics object
-				gfx.inst.o2w = m4x4.Translation([gfx.candle_range.beg, 0, 0, 1]);
-				cb(gfx.inst);
+				cb(gfx);
 			}
 		}
 
@@ -7785,7 +7852,7 @@ var CandleCache = function () {
 
 			// Create the geometry
 			for (var candle_idx = 0; candle_idx != count;) {
-				var candle = instrument.candle(candle_idx);
+				var candle = instrument.candle(candle_range.beg + candle_idx);
 
 				// Create the graphics with the first candle at x == 0
 				var x = candle_idx++;
@@ -7834,7 +7901,8 @@ var CandleCache = function () {
 			// Create the graphics
 			var model = Ry.Rdr.Model.Create(rdr, this.m_vbuf, this.m_ibuf, this.m_nbuf);
 			var inst = Ry.Rdr.Instance.Create("Candles-[" + candle_range.beg + "," + candle_range.end + ")", model);
-			return this.cache[cache_idx] = new CandleGfx(inst, candle_range);
+			var candle_graphics = new CandleGfx(inst, candle_range);
+			return this.cache[cache_idx] = candle_graphics;
 
 			// Cache element
 			function CandleGfx(inst, candle_range) {
@@ -7893,25 +7961,40 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+var Range = Ry.Maths.Range;
+
 /**
  * Create an instrument based on 'currency_pair'
  * @param {String} currency_pair The current pair, e.g. BTCUSD
  * @param {ETimeFrame} time_frame The period of each candle
+ * @param {Number} epoch_time The time of the first data for the currency pair
  * @returns {Instrument}
  */
-function Create(currency_pair, time_frame) {
+function Create(currency_pair, time_frame, epoch_time) {
 	return new (function () {
 		function _class() {
 			_classCallCheck(this, _class);
 
 			this.currency_pair = currency_pair;
+			this.epoch_time = epoch_time;
 			this.time_frame = time_frame;
 			this.data = [];
 
 			this.OnDataChanged = new Ry.Util.MulticastDelegate();
 
 			var now = Date.now();
-			RequestData(now - TF.TimeFrameToUnixMS(1000, this.time_frame), now);
+			this.m_request = null;
+			this.m_request_time = now;
+			this.m_requested_ranges = [];
+			this.RequestData(now - TF.TimeFrameToUnixMS(1000, this.time_frame), now);
+
+			// Poll for data requests
+			var This = this;
+			window.requestAnimationFrame(function poll() {
+				This._SubmitRequestData();
+				This._PollLatestCandle();
+				window.requestAnimationFrame(poll);
+			});
 		}
 
 		/**
@@ -7965,26 +8048,133 @@ function Create(currency_pair, time_frame) {
 				if (end_time_ms == null) end_time_ms = beg_time_ms ? beg_time_ms + TF.TimeFrameToUnixMS(100, this.time_frame) : Date.now();
 				if (beg_time_ms == null) beg_time_ms = end_time_ms ? end_time_ms - TF.TimeFrameToUnixMS(100, this.time_frame) : Date.now();
 
-				// Request the initiqal data from bitfinex
-				var url = "https://api.bitfinex.com/v2/candles/trade:" + TimeFrame.ToBitfinexTimeFrame(this.time_frame) + ":t" + this.currency_pair + "/hist?start=" + beg_time_ms + "&end=" + end_time_ms;
+				// Clip to the valid time range
+				var latest = this.latest;
+				beg_time_ms = Math.max(beg_time_ms, this.epoch_time);
+				end_time_ms = Math.min(end_time_ms, latest ? latest.ts : Date.now());
 
-				var request = new XMLHttpRequest();
-				request.open("GET", url);
-				request.onreadystatechange = function () {
+				// Trim the request range by the existing pending requests
+				for (var i = 0; i != this.m_requested_ranges.length; ++i) {
+					var rng = this.m_requested_ranges[i];
+					if (rng.end >= end_time_ms) end_time_ms = Math.min(end_time_ms, rng.beg);
+					if (rng.beg <= beg_time_ms) beg_time_ms = Math.max(beg_time_ms, rng.end);
+				}
+
+				// If the request is already covered by pending requests, then no need to request again
+				if (beg_time_ms >= end_time_ms) return;
+
+				// Queue the data request
+				this.m_requested_ranges.push(Range.make(beg_time_ms, end_time_ms));
+			}
+
+			/**
+    * Returns true if it's too soon to send another data request
+    * @returns {boolean}
+   */
+
+		}, {
+			key: "_LimitRequestRate",
+			value: function _LimitRequestRate() {
+				// Request in flight?
+				if (this.m_request != null) return true;
+
+				// Too soon since the last request?
+				var seconds_per_request = 3;
+				if (Date.now() - this.m_request_time < seconds_per_request * 1000) return true;
+
+				return false;
+			}
+
+			/**
+    * Read the updated data for the latest candle
+   */
+
+		}, {
+			key: "_PollLatestCandle",
+			value: function _PollLatestCandle() {
+				// Allowed to send another request?
+				if (this._LimitRequestRate()) return;
+
+				// Request the last candle from bitfinex
+				var url = "https://api.bitfinex.com/v2/candles/trade:" + TimeFrame.ToBitfinexTimeFrame(this.time_frame) + ":t" + this.currency_pair + "/last";
+
+				// Make the request
+				this._SendRequest(url, false);
+			}
+
+			/**
+    * Submit requests for data
+    */
+
+		}, {
+			key: "_SubmitRequestData",
+			value: function _SubmitRequestData() {
+				// Allowed to send another request?
+				if (this._LimitRequestRate()) return;
+
+				// No requests pending?
+				if (this.m_requested_ranges.length == 0) return;
+
+				// Get the next pending request
+				var range = this.m_requested_ranges[0];
+
+				// Request the data from bitfinex
+				var url = "https://api.bitfinex.com/v2/candles/trade:" + TimeFrame.ToBitfinexTimeFrame(this.time_frame) + ":t" + this.currency_pair + "/hist?start=" + range.beg + "&end=" + range.end;
+
+				// Make the request
+				this._SendRequest(url, true);
+			}
+
+			/**
+    * Create and send a request
+    * @param {string} url The REST API url
+    * @param {boolean} history True if this is a history request
+    */
+
+		}, {
+			key: "_SendRequest",
+			value: function _SendRequest(url, history) {
+				var This = this;
+
+				// Make the request
+				this.m_request = new XMLHttpRequest();
+				this.m_request.open("GET", url);
+				this.m_request.ontimeout = function () {
+					This.m_request = null;
+					This.m_request_time = Date.now();
+
+					// Remove from the pending request list
+					if (history) This.m_requested_ranges.shift();
+				};
+				this.m_request.onreadystatechange = function () {
 					// Not ready yet?
-					if (request.readyState != 4) return;
+					if (this.readyState != 4) return;
 
-					// Read and sort the data by time
-					var data = JSON.parse(request.responseText);
+					This.m_request = null;
+					This.m_request_time = Date.now();
+
+					// Remove from the pending request list
+					if (history) This.m_requested_ranges.shift();
+
+					// Null or empty response...
+					if (this.responseText == null || this.responseText.length == 0) return;
+
+					// Read the data
+					var data = JSON.parse(this.responseText);
+					if (!history) data = [data];
+					if (data.length == 0) return;
+
+					// Sort by time
 					data.sort(function (l, r) {
 						return l[0] - r[0];
 					});
-					if (data.length == 0) return;
 
 					// Add the data to the instrument
-					this._MergeData(data);
+					This._MergeData(data);
 				};
-				request.send();
+
+				// Send the request
+				this.m_request.send();
 			}
 
 			/**
@@ -7999,10 +8189,10 @@ function Create(currency_pair, time_frame) {
 				var beg = data[0];
 				var end = data[data.length - 1];
 				var ibeg = Ry.Alg.BinarySearch(this.data, function (x) {
-					return beg[0] - x[0];
+					return x[0] - beg[0];
 				}, true);
 				var iend = Ry.Alg.BinarySearch(this.data, function (x) {
-					return end[0] - x[0];
+					return x[0] - end[0];
 				}, true);
 				for (; ibeg > 0 && this.data[ibeg - 1][0] >= beg[0]; --ibeg) {}
 				for (; iend < this.data.length && this.data[iend + 0][0] <= end[0]; ++iend) {}
@@ -8012,12 +8202,24 @@ function Create(currency_pair, time_frame) {
 
 				// Notify of the changed data range.
 				// All indices from 'ibeg' to the end are changed
-				this.OnDataChanged.invoke(this, { beg: ibeg, end: this.data.length });
+				this.OnDataChanged.invoke(this, { beg: ibeg, end: this.data.length, ofs: data.length - (iend - ibeg) });
 			}
 		}, {
 			key: "count",
 			get: function get() {
 				return this.data.length;
+			}
+
+			/**
+    * Return the latest candle
+    * @returns {Candle}
+    */
+
+		}, {
+			key: "latest",
+			get: function get() {
+				var count = this.count;
+				return count != 0 ? this.candle(count - 1) : null;
 			}
 		}]);
 

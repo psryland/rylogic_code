@@ -46,6 +46,7 @@ class Chart
 		this.chart.xaxis.TickText = function(x,step){ return This._HandleChartXAxisLabels(x,step); };
 		this.chart.OnRendering.sub(function(s,a){ This._HandleRendering(); });
 		this.chart.OnAutoRange.sub(function(s,a){ This._HandleAutoRange(a); });
+		this.chart.OnChartMoved.sub(function(s,a){ This._HandleChartMoved(a); });
 		this.chart.OnChartClicked.sub(function(s,a){ console.log(a); });
 
 		// Create a candle graphics cache
@@ -94,11 +95,13 @@ class Chart
 		let instances = this.chart.instances;
 		this.candles.Get(this.xaxis.min - 1, this.xaxis.max + 1, function(gfx)
 		{
-			instances.push(gfx);
-		});
+			if (gfx.inst == null)
+				return;
 
-		//test_object = test_object || Rdr.CreateTestModel(s.rdr);
-		//s.instances.push(test_object);
+			// Position the graphics
+			gfx.inst.o2w = m4x4.Translation([gfx.candle_range.beg, 0, 0, 1]);
+			instances.push(gfx.inst);
+		});
 	}
 
 	/**
@@ -132,6 +135,30 @@ class Chart
 	}
 
 	/**
+	 * Handle the chart zooming or scrolling
+	 * @param {Args} a 
+	 */
+	_HandleChartMoved(a)
+	{
+		// See if the displayed X axis range is available in
+		// the chart data. If not, request it in the instrument.
+		if (this.instrument.count != 0)
+		{
+			let first = this.instrument.candle(0);
+			let latest = this.instrument.latest;
+
+			// Request data for the missing regions.
+			if (this.chart.xaxis.min < 0)
+			{
+				// Request candles before 'first'
+				let num = Math.max(0 - this.chart.xaxis.min, this.candles.BatchSize*10);
+				let period_ms = TF.TimeFrameToUnixMS(num, this.instrument.time_frame);
+				this.instrument.RequestData(first.ts - period_ms, first.ts);
+			}
+		}
+	}
+
+	/**
 	 * Convert the XAxis values into pretty datetime strings
 	 */
 	_HandleChartXAxisLabels(x, step)
@@ -142,7 +169,7 @@ class Chart
 
 		// Draw the X Axis labels as indices instead of time stamps
 		if (this.options.xaxis_label_mode == TradingChart.EXAxisLabelMode.CandleIndex)
-			return x.ToString();
+			return this.chart.xaxis.TickTextDefault(x, step);
 		if (this.instrument == null || this.instrument.count == 0)
 			return "";
 
@@ -199,7 +226,18 @@ class Chart
 	 */
 	_HandleCandleDataChanged(args)
 	{
+		// Invalidate the graphics for the candles over the range
 		this.candles.InvalidateRange(args.beg, args.end);
+
+		// Shift the xaxis range so that the chart doesn't jump
+		if (this.chart.xaxis.max > args.beg)
+		{
+			this.chart.xaxis.Shift(args.ofs);
+			this.chart.SetCameraFromRange();
+		}
+
+		// Invalidate the chart
+		this.chart.Invalidate();
 	}
 }
 
@@ -231,13 +269,9 @@ class CandleCache
 		for (let i = idx0; i <= idx1; ++i)
 		{
 			// Get the graphics model at 'i'
+			if (i < 0) continue;
 			let gfx = this.At(i);
-			if (gfx.inst == null)
-				continue;
-
-			// Position the graphics object
-			gfx.inst.o2w = m4x4.Translation([gfx.candle_range.beg, 0, 0, 1]);
-			cb(gfx.inst);
+			cb(gfx);
 		}
 	}
 
@@ -292,7 +326,7 @@ class CandleCache
 		// Create the geometry
 		for (let candle_idx = 0; candle_idx != count;)
 		{
-			let candle = instrument.candle(candle_idx);
+			let candle = instrument.candle(candle_range.beg + candle_idx);
 
 			// Create the graphics with the first candle at x == 0
 			let x = candle_idx++;
@@ -344,7 +378,8 @@ class CandleCache
 		// Create the graphics
 		let model = Ry.Rdr.Model.Create(rdr, this.m_vbuf, this.m_ibuf, this.m_nbuf);
 		let inst = Ry.Rdr.Instance.Create("Candles-["+candle_range.beg+","+candle_range.end+")", model);
-		return this.cache[cache_idx] = new CandleGfx(inst, candle_range);
+		let candle_graphics = new CandleGfx(inst, candle_range);
+		return this.cache[cache_idx] = candle_graphics;
 
 		// Cache element
 		function CandleGfx(inst, candle_range)

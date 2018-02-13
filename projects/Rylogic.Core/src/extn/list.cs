@@ -472,7 +472,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>
-		/// Binary search using for an element using only a predicate function.
+		/// Binary search for an element using only a predicate function.
 		/// Returns the index of the element if found or the 2s-complement of the first
 		/// element larger than the one searched for.
 		/// 'cmp' should return -1 if T is less than the target, +1 if greater, or 0 if equal
