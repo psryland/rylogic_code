@@ -139,6 +139,24 @@ namespace Rylogic.Container
 			return Add(new Row(values));
 		}
 
+		/// <summary>Insert a row in the csv data</summary>
+		public Row Insert(int index, Row row)
+		{
+			return m_data.Insert2(index, row);
+		}
+		
+		/// <summary>Insert a row in the csv data</summary>
+		public Row Insert(int index, IEnumerable<object> values)
+		{
+			return m_data.Insert2(index, new Row(values));
+		}
+
+		/// <summary>Append a row to the CSV data</summary>
+		public Row Insert(int index, params object[] values)
+		{
+			return m_data.Insert2(index, new Row(values));
+		}
+
 		/// <summary>Add a comment row to the CSV data</summary>
 		public CommentRow AddComment(string comment = null)
 		{

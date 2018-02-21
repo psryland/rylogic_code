@@ -7,6 +7,12 @@
     <OutputType>Library</OutputType>
     <StartupObject></StartupObject>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <Authors>P Ryland</Authors>
+    <Company>Rylogic</Company>
+    <Description>A toolbox of extension methods, data structures, and helper classes used in tools created by Rylogic.</Description>
+    <Copyright>Copyright (c) Rylogic 2007-2018</Copyright>
+    <PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
+    <PackageIconUrl></PackageIconUrl>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

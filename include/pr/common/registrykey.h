@@ -297,7 +297,7 @@ namespace pr
 	{
 		PRUnitTest(pr_common_registrykey)
 		{
-			char const* subkey = "Software\\Rylogic Limited\\unittest\\";
+			char const* subkey = "Software\\Rylogic\\unittest\\";
 
 			{// Create a dummy key
 				auto rkey = pr::RegistryKey(HKEY_CURRENT_USER, subkey, pr::registry::EAccess::KeyWrite);

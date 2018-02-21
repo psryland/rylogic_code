@@ -1,4 +1,4 @@
-(C) Copyright 2002-2013 Paul Ryland / Rylogic Limited
+Copyright (c) 2002-2018 Paul Ryland / Rylogic
     All Rights Reserved
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:

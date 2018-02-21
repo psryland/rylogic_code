@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("Rylogic.VSExtension")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Rylogic Limited")]
+[assembly: AssemblyCompany("Rylogic")]
 [assembly: AssemblyProduct("Rylogic.VSExtension")]
 [assembly: AssemblyCopyright("")]
 [assembly: AssemblyTrademark("")]

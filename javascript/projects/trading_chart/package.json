@@ -1,5 +1,5 @@
 {
-    "name": "TradingChart",
+    "name": "trading_chart",
     "description": "",
     "version": "1.0.0",
     "main": "dist/trading_chart.js",

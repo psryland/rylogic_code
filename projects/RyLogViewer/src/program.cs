@@ -30,6 +30,7 @@ namespace RyLogViewer
 				Environment.ExitCode = 0;
 				Application.EnableVisualStyles();
 				Application.SetCompatibleTextRenderingDefault(false);
+				Xml.SupportWinFormsTypes();
 
 				// Start the main app
 				Exception err = null;

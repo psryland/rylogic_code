@@ -511,7 +511,8 @@ namespace pr
 			}
 			if (rotate && !translate)
 			{
-				// If in the roll zone
+				// If in the roll zone. 'm_Rref' is a point in normalised space[-1, +1] x [-1, +1].
+				// So the roll zone is a radial distance from the centre of the screen
 				if (Length2(m_Rref) < 0.80f) Rotate((point.y - m_Rref.y) * float(maths::tau_by_4), (m_Rref.x - point.x) * float(maths::tau_by_4), 0.0f, false);
 				else                         Rotate(0.0f, 0.0f, ATan2(m_Rref.y, m_Rref.x) - ATan2(point.y, point.x), false);
 			}

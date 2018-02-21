@@ -15,7 +15,7 @@ def Deploy():
 	print(
 		"*************************************************************************\n"
 		"CoinFlip Deploy\n"
-		"Copyright (C) Rylogic Limited 2017\n"
+		"Copyright (c) Rylogic 2017\n"
 		"*************************************************************************")
 
 	# Check tools paths are valid

@@ -1,6 +1,6 @@
 //**************************************************************
 // FindFiles
-//  (c)opyright Rylogic Limited 2010
+//  Copyright (c) Rylogic 2010
 //**************************************************************
 // Scoped wrapper around the FindFirstFile/FindNextFile API
 // Usage:

@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("RyLogViewer")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Rylogic Limited")]
+[assembly: AssemblyCompany("Rylogic")]
 [assembly: AssemblyProduct("RyLogViewer")]
 [assembly: AssemblyCopyright("Copyright (c)  2017")]
 [assembly: AssemblyTrademark("")]

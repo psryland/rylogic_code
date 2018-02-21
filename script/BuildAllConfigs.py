@@ -11,7 +11,7 @@ try:
 	print(
 		"*************************************************************************\n"
 		"Build All Configs\n"
-		"Copyright Rylogic Limited 2013\n"
+		"Copyright (c) Rylogic 2013\n"
 		"*************************************************************************")
 
 	Tools.AssertVersion(1)

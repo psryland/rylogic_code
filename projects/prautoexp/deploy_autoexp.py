@@ -9,7 +9,7 @@ try:
 	print(
 		"*************************************************************************\n"
 		"pr::AutoExp Deploy\n"
-		"Copyright (C) Rylogic Limited 2014\n"
+		"Copyright (c) Rylogic 2014\n"
 		"*************************************************************************")
 
 	Tools.AssertVersion(1)

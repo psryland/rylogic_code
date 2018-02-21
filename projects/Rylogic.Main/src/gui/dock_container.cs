@@ -1,6 +1,6 @@
 ﻿//**********************************************************************
 // DockContainer
-//  Copyright (c) Rylogic Limited 2015
+//  Copyright (c) Rylogic 2015
 //**********************************************************************
 // Use:
 //   Add a dock container to a form.

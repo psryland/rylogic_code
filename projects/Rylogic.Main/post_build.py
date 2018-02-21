@@ -11,7 +11,7 @@ import UserVars
 try:
 	Tools.AssertVersion(1);
 
-	assembly = "Rylogic"
+	assembly = "Rylogic.Main"
 	projdir   = sys.argv[1].rstrip("\\") if len(sys.argv) > 1 else UserVars.root + "\\projects\\"+assembly
 	targetdir = sys.argv[2].rstrip("\\") if len(sys.argv) > 2 else UserVars.root + "\\projects\\"+assembly+"\\bin\\Debug"
 	platform  = sys.argv[3]              if len(sys.argv) > 3 else "AnyCPU"
@@ -44,8 +44,8 @@ try:
 					"& {\n"+
 					"Set-Location "+targetdir+";\n"+
 					"[Reflection.Assembly]::LoadFile('"+targetdir+"\\Rylogic.Core.dll')|Out-Null;\n"+
-					"[Reflection.Assembly]::LoadFile('"+target+"')|Out-Null;\n"+
-					"Exit ["+assembly+".Program]::Main();\n"+
+					"[Reflection.Assembly]::LoadFile('"+targetdir+"\\Rylogic.Main.dll')|Out-Null;\n"+
+					"Exit [Rylogic.Program]::Main();\n"+
 					"}")
 				res,outp = Tools.Run([powershell, "-NonInteractive", "-NoProfile", "-STA", "-NoLogo", "-Command", command])
 				print(outp)

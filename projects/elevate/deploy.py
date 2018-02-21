@@ -9,7 +9,7 @@ try:
 	print(
 		"*************************************************************************\n"
 		"  Elevate Deploy\n"
-		"    Copyright (C) Rylogic Limited 2013\n"
+		"    Copyright (c) Rylogic 2013\n"
 		"*************************************************************************")
 
 	Tools.AssertVersion(1)

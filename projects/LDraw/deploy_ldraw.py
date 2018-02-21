@@ -11,7 +11,7 @@ def Deploy():
 	print(
 		"*************************************************************************\n"
 		" LDraw Deploy\n"
-		"  Copyright Rylogic Limited 2002\n"
+		"  Copyright (c) Rylogic 2002\n"
 		"*************************************************************************")
 
 	Tools.AssertVersion(1)

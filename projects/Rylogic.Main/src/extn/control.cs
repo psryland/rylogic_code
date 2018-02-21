@@ -1262,9 +1262,10 @@ namespace Rylogic.Extn
 
 					try
 					{
+						// Find the corresponding clipboard data for 'cell'
 						var row = Math.Min(cell.RowIndex    - min.Y, cells.Length      - 1);
 						var col = Math.Min(cell.ColumnIndex - min.X, cells[row].Length - 1);
-						if (cells[row][col].Length != 0)
+						if (row >= 0 && col >= 0 && cells[row][col].Length != 0)
 						{
 							cell.Value = Convert.ChangeType(cells[row][col], cell.ValueType);
 							grid.InvalidateCell(cell);

@@ -15,7 +15,7 @@ def Deploy():
 	print(
 		"*************************************************************************\n"
 		"RyLogViewer Deploy\n"
-		"Copyright (C) Rylogic Limited 2017\n"
+		"Copyright (C) Rylogic 2017\n"
 		"*************************************************************************")
 
 	# Check tools paths are valid

@@ -1,6 +1,6 @@
 //**************************************************************
 // FindBTDevices
-//  Copyright (c) Rylogic Limited 2015
+//  Copyright (c) Rylogic 2015
 //**************************************************************
 // Scoped wrapper around the BluetoothFindFirstRadio/BluetoothFindNextRadio  API
 // Usage:

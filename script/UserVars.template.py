@@ -52,6 +52,9 @@ vs_vers = "15.0"
 powershell64 = "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
 powershell32 = "C:\\Windows\\SysWOW64\\WindowsPowerShell\\v1.0\\powershell.exe"
 
+# Nuget package manager
+nuget = root + "\\tools\\nuget\\nuget.exe"
+
 # Text editor path
 # Note: scripts expect notepad++, so they probably won't work if you use a different tool
 textedit = "C:\\Program Files (x86)\\Notepad++\\notepad++.exe"
@@ -87,7 +90,7 @@ wix_light = root + "\\tools\\WiX\\light.exe"
 wix_heat = root + "\\tools\\WiX\\heat.exe"
 
 # Web site root
-wwwroot = "Z:\\WWW\\rylogic.co.nz"
+wwwroot = "Z:\\www\\rylogic.co.nz"
 
 # Location for temporary files
 dumpdir = "P:\\dump"

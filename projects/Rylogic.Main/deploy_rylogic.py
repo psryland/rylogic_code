@@ -10,7 +10,7 @@ try:
 	print(
 		"*************************************************************************\n"
 		"Rylogic Class Library Deploy\n"
-		"Copyright Rylogic Limited 2013\n"
+		"Copyright (c) Rylogic 2013\n"
 		"*************************************************************************")
 
 	Tools.AssertVersion(1)
@@ -36,10 +36,11 @@ try:
 	print("Building...")
 
 	if config == "debug" or config == "both":
-		Tools.Exec([UserVars.msbuild, UserVars.msbuild_props, proj, "/t:Rebuild", "/p:Configuration=Debug", "/verbosity:minimal", "/nologo"])
+		Tools.Exec([UserVars.msbuild, proj, "/t:Build", "/p:Configuration=Debug", "/verbosity:minimal", "/nologo"])
 
 	if config == "release" or config == "both":
-		Tools.Exec([UserVars.msbuild, UserVars.msbuild_props, proj, "/t:Rebuild", "/p:Configuration=Release", "/verbosity:minimal", "/nologo"])
+		Tools.Exec([UserVars.msbuild, proj, "/t:Build", "/p:Configuration=Release", "/verbosity:minimal", "/nologo"])
+		Tools.Exec([UserVars.nuget, "pack", srcdir + "\\package.nuspec", "-OutputDirectory", srcdir + "\\bin\\release" ])
 
 	Tools.OnSuccess(pause_time_seconds=1)
 

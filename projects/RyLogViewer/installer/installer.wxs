@@ -64,7 +64,7 @@
 		<!-- Directory structures -->
 		<Directory Id="TARGETDIR" Name="SourceDir">
 			
-			<!-- The install directory, in C:\program files (x86)\Rylogic Limited\RyLogViewer-->
+			<!-- The install directory, in C:\program files (x86)\Rylogic\RyLogViewer-->
 			<Directory Id="ProgramFilesFolder">
 				<Directory Id="ManufacturerDir" Name="$(var.Manufacturer)">
 					<Directory Id="INSTALLFOLDER" Name="$(var.ProductName)"/>

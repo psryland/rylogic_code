@@ -49,7 +49,7 @@ namespace RyLogViewer
 						"WARNING! This executable has been tampered with!\r\n" +
 						"Using this program may compromise your computer.\r\n" +
 						"\r\n" +
-						"Please contact Rylogic Limited ("+Constants.SupportEmail+") with " +
+						"Please contact ("+Application.CompanyName+") ("+Constants.SupportEmail+") with " +
 						"information about where you received this copy of the application."
 						,"Tampered Executable Detected!"
 						,MessageBoxButtons.OK
