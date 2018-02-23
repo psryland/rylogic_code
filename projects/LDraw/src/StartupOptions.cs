@@ -50,7 +50,7 @@ namespace LDraw
 			if (PortableMode)
 			{
 				if (!Path_.DirExists(UserDataDir) || (new DirectoryInfo(UserDataDir).Attributes & FileAttributes.ReadOnly) == FileAttributes.ReadOnly)
-					throw new IOException("Unable to run in portable mode as the directory ('"+UserDataDir+"') is readonly.");
+					throw new IOException($"Unable to run in portable mode as the directory ('{UserDataDir}') is readonly.");
 			}
 			// If not in portable mode, check the UserDataDir directory exists (or can be created)
 			else

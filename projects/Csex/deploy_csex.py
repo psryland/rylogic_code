@@ -38,8 +38,9 @@ try:
 
 	#Copy build products to dst
 	print("Copying files to " + dst)
-	Tools.Copy(bindir + r"\csex.exe"    , dst)
-	Tools.Copy(bindir + r"\rylogic.dll" , dst)
+	Tools.Copy(bindir + r"\Csex.exe"         , dst)
+	Tools.Copy(bindir + r"\Rylogic.Core.dll" , dst)
+	Tools.Copy(bindir + r"\Rylogic.Main.dll" , dst)
 	
 	Tools.OnSuccess()
 

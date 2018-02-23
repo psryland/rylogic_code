@@ -1684,9 +1684,9 @@ namespace Rylogic.UnitTests
 			var test_image_path = string.Empty;
 			{
 				var dir = Environment.CurrentDirectory;
-				var idx = dir.IndexOf("Rylogic");
+				var idx = dir.IndexOf("Rylogic.Main");
 				if (idx != -1)
-					test_image_path = Path.Combine(dir.Substring(0, idx), "Rylogic\\res\\smiling gekko 150x121.jpg");
+					test_image_path = Path.Combine(dir.Substring(0, idx), "Rylogic.Main\\res\\smiling gekko 150x121.jpg");
 			}
 			using (var bm = Image.FromFile(test_image_path))
 			{

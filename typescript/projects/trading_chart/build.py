@@ -8,6 +8,10 @@ proj  = root + "\\projects\\trading_chart"
 built = proj + "\\built"
 dist  = proj + "\\dist"
 
+# Install if not installed yet
+if not os.path.exists(proj + "\\node_modules"):
+	subprocess.check_call(["npm", "install"], cwd=proj, shell=True)
+
 # Clean
 if os.path.exists(dist):
 	shutil.rmtree(dist)

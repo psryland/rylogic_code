@@ -569,7 +569,7 @@ namespace Rylogic.Utility
 		/// <summary>Read a text file embedded resource returning it as a string</summary>
 		public static string TextResource(string resource_name, Assembly ass)
 		{
-			ass = ass ?? Assembly.GetExecutingAssembly(); // this will look in Rylogic.dll for resources.. probably not what's wanted
+			ass = ass ?? Assembly.GetExecutingAssembly(); // this will look in Rylogic.Main.dll for resources.. probably not what's wanted
 			var stream = ass.GetManifestResourceStream(resource_name);
 			if (stream == null) throw new IOException("No resource with name "+resource_name+" found");
 			using (var src = new StreamReader(stream))

@@ -4707,7 +4707,7 @@ LR"(// A mesh of lines, faces, or tetrahedra.
 {
 	#embedded(CSharp)
 	Out.AppendLine(Ldr.Box("CS_Box", 0xFFFF0080, 0.4f, O2W));
-	Log.Info("You can also write to the log window");
+	Log.Info("You can also write to the log window (when used in LDraw) ");
 	#end
 }
 

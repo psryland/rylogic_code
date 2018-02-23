@@ -29,7 +29,9 @@ ResEdit.layout
 dump/
 obj/
 bin/
+lib/
 dist/
+built/
 Debug/
 Release/
 __pycache__/*

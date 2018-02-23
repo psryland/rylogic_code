@@ -850,9 +850,9 @@ namespace Rylogic.Graphix
 
 		/// <summary>Edit object callback</summary>
 		public delegate void EditObjectCB(IntPtr ctx, int vcount, int icount, int ncount,
-			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=0)][Out] Vertex[] verts,
-			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=1)][Out] ushort[] indices,
-			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=2)][Out] Nugget[] nuggets,
+			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=1)][Out] Vertex[] verts,
+			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=2)][Out] ushort[] indices,
+			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=3)][Out] Nugget[] nuggets,
 			out int new_vcount, out int new_icount, out int new_ncount);
 
 		/// <summary>Embedded code handler callback</summary>
@@ -995,7 +995,7 @@ $@"//
 //Assembly: System.Xml.dll
 //Assembly: System.Xml.Linq.dll
 //Assembly: .\Rylogic.Core.dll
-//Assembly: .\Rylogic.dll
+//Assembly: .\Rylogic.Main.dll
 //Assembly: .\LDraw.exe
 using System;
 using System.Drawing;
@@ -1028,7 +1028,11 @@ namespace ldr
 	}}
 	internal static class Log
 	{{
-		public static void Info(string text) {{ LDraw.ExternalLogHelper.AddMessage(text); }}
+		public static void Info(string text)
+		{{
+			//todo LDraw isn't always available..
+			//LDraw.ExternalLogHelper.AddMessage(text);
+		}}
 	}}
 }}
 ";

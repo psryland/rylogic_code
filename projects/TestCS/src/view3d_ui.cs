@@ -20,6 +20,7 @@ namespace TestCS
 		private View3d.Texture m_tex0;
 		private View3d.Texture m_tex2;
 		private View3d.Gizmo m_giz;
+		private Guid m_demo_objs;
 
 		#region UI Elements
 		private ToolStrip m_ts;
@@ -45,6 +46,7 @@ namespace TestCS
 				Dock        = DockStyle.Fill
 			};
 			Controls.Add(m_view3d);
+			m_demo_objs = m_view3d.Window.CreateDemoScene();
 
 			m_view3d.Camera.ResetView();
 			m_view3d.Camera.SetPosition(new v4(10f,10f,5f,1f), v4.Origin, v4.YAxis);
@@ -136,6 +138,9 @@ namespace TestCS
 		}
 		protected override void Dispose(bool disposing)
 		{
+			if (m_view3d != null)
+				m_view3d.View3d.DeleteObjects(new[]{ m_demo_objs }, 1, 0);
+
 			Util.Dispose(ref m_giz   );
 			Util.Dispose(ref m_tex0  );
 			Util.Dispose(ref m_tex2  );

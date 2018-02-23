@@ -49,7 +49,12 @@ namespace Rylogic.Utility
 				var ass = line.Substring(11).Trim(' ','\t','\r','\n');
 				if (ass.HasValue())
 				{
-					if (ass.StartsWith(@".\")) ass = Util2.ResolveAppPath(ass);
+					if (ass.StartsWith(@".\"))
+					{
+						ass = Util2.ResolveAppPath(ass);
+						if (!Path_.FileExists(ass))
+							continue;
+					}
 					assemblies.Add(ass);
 				}
 			}

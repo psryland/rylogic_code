@@ -13,6 +13,9 @@
     <Copyright>Copyright (c) Rylogic 2007-2018</Copyright>
     <PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
     <PackageIconUrl></PackageIconUrl>
+	  <Version>1.0.1</Version>
+	  <FileVersion>1.0.1</FileVersion>
+	  <AssemblyVersion>1.0.1</AssemblyVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -27,17 +30,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="post_build.py" />
     <None Remove="SmilingGekko140x110.ico" />
-    <None Remove="src\maths\vector.tt" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="post_build.py" />
-    <Content Include="src\maths\vector.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>vector.cs</LastGenOutput>
-    </Content>
   </ItemGroup>
 
   <ItemGroup>
@@ -62,6 +55,10 @@
   <ItemGroup>
     <None Update="Rylogic.Core.runtimeconfig.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="src\maths\vector.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>vector.cs</LastGenOutput>
     </None>
   </ItemGroup>
 

@@ -108,8 +108,11 @@
 					<Shortcut Id="Lnk_DesktopProjName" Directory="DesktopFolder" Name="$(var.ProductName)" Description="$(var.ProductDescription)" Icon="icon.ico" WorkingDirectory="INSTALLFOLDER" Advertise="yes" />
 				</File>
 			</Component>
-			<Component Id="Cmp_Rylogic" Directory="INSTALLFOLDER" Guid="*">
-				<File Id="File_Rylogic" Source="$(var.TargetDir)\Rylogic.dll" Vital="yes" KeyPath="yes"/>
+			<Component Id="Cmp_Rylogic_Core" Directory="INSTALLFOLDER" Guid="*">
+				<File Id="File_Rylogic_Core" Source="$(var.TargetDir)\Rylogic.Core.dll" Vital="yes" KeyPath="yes"/>
+			</Component>
+			<Component Id="Cmp_Rylogic_Main" Directory="INSTALLFOLDER" Guid="*">
+				<File Id="File_Rylogic_Main" Source="$(var.TargetDir)\Rylogic.Main.dll" Vital="yes" KeyPath="yes"/>
 			</Component>
 			<Component Id="Cmp_RyLogViewerExtensions" Directory="INSTALLFOLDER" Guid="*">
 				<File Id="File_RyLogViewerExtensions" Source="$(var.TargetDir)\RyLogViewer.Extensions.dll" Vital="yes" KeyPath="yes" />

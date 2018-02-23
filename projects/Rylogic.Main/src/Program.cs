@@ -14,7 +14,7 @@ namespace Rylogic
 			Application.SetCompatibleTextRenderingDefault(false);
 
 			// PowerShell CommandLine:
-			// PowerShell -NonInteractive -NoProfile -STA -NoLogo -Command "[Reflection.Assembly]::LoadFile('P:\projects\Rylogic\bin\Debug\Rylogic.dll')|Out-Null;exit [Rylogic.Program]::Main();"
+			// PowerShell -NonInteractive -NoProfile -STA -NoLogo -Command "[Reflection.Assembly]::LoadFile('P:\projects\Rylogic\bin\Debug\Rylogic.Main.dll')|Out-Null;exit [Rylogic.Program]::Main();"
 			// Note: You can't use $(TargetPath) in debugging command line options, it doesn't get expanded
 			var ass = Assembly.GetExecutingAssembly();
 			Debug.WriteLine($"{ass.GetName().Name} running as a {(Environment.Is64BitProcess ? "64bit" : "32bit")} process");

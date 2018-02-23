@@ -462,7 +462,7 @@ def CheckDependencies(deps, touch_file):
 # Solution file usage:
 #   sln_or_proj_file = "C:\path\mysolution.sln"
 #	projects = ["project_name","\"folder\proj_name:Rebuild\""]
-#	platforms = ["x64","x86","AnyCPU"]
+#	platforms = ["x64","x86","Any CPU"]
 #	configs = ["release","debug"]
 #	Tools.MSBuild(sln_or_proj_file, projects, platforms, configs, True, True)
 # Project file usage:
@@ -475,9 +475,16 @@ def MSBuild(sln_or_proj_file, projects, platforms, configs, parallel=False, same
 	
 	# Build the arguments list
 	AssertPath(UserVars.msbuild)
-	args_base = [UserVars.msbuild, msbuild_props, sln_or_proj_file, "/m", "/verbosity:minimal", "/nologo"]
-	if len(projects) != 0: args_base += ["/t:" + ";".join(projects)]
-	
+	args_base = [UserVars.msbuild] + msbuild_props + [sln_or_proj_file, "/m", "/verbosity:minimal", "/nologo"]
+
+	# Set the targets to build
+	# Targets should be the names as shown in the solution explorer (i.e. Folder\Project.Name)
+	if len(projects) != 0:
+		# Replace '.' in the project name with '_'
+		projects_cleaned = [proj.replace('.','_') for proj in projects]
+		args_base += ["/t:" + ";".join(projects_cleaned)]
+
+	# Set the platform/config
 	procs = []
 	for platform in platforms:
 		for config in configs:
@@ -496,6 +503,26 @@ def MSBuild(sln_or_proj_file, projects, platforms, configs, parallel=False, same
 	
 	print("\n")
 	return not errors
+
+# Create a nuget package from the given project file
+# Expects a file called 'package.nuspec' in the same directory as 'proj'
+# The resulting package will be in UserVars.root\lib\packages
+def NugetPackage(proj:str):
+
+	nuspec = os.path.split(proj)[0] + "\\package.nuspec"
+
+	# Read the version numbers from the spec file and project file
+	vers0 = Extract(nuspec, r"<version>(?P<vers>.*)</version>").group("vers")
+	vers1 = Extract(proj, r"<Version>(?P<vers>.*)</Version>").group("vers")
+	vers2 = Extract(proj, r"<FileVersion>(?P<vers>.*)</FileVersion>").group("vers")
+
+	# Compare it to the versions in the project file
+	if vers0 != vers1 or vers0 != vers2:
+		raise Exception("Version number mismatch between project file ("+proj+") and nuspec file ("+nuspec+")")
+
+	# Build the nuget package directly in the lib\packages folder
+	Exec([UserVars.nuget, "pack", nuspec, "-OutputDirectory", UserVars.root+"\\lib\\packages"])
+	return
 
 # Create a zip of a directory
 def ZipDirectory(zip_path, root_dir):

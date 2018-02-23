@@ -14,7 +14,7 @@ try:
 	assembly = "Rylogic.Main"
 	projdir   = sys.argv[1].rstrip("\\") if len(sys.argv) > 1 else UserVars.root + "\\projects\\"+assembly
 	targetdir = sys.argv[2].rstrip("\\") if len(sys.argv) > 2 else UserVars.root + "\\projects\\"+assembly+"\\bin\\Debug"
-	platform  = sys.argv[3]              if len(sys.argv) > 3 else "AnyCPU"
+	platform  = sys.argv[3]              if len(sys.argv) > 3 else "Any CPU"
 	config    = sys.argv[4]              if len(sys.argv) > 4 else "Debug"
 	#platform = platform if platform != "AnyCPU" else "x86"
 

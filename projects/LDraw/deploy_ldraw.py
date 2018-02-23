@@ -42,7 +42,7 @@ def Deploy():
 	print("\nCopying files to " + dstdir + "...")
 	Tools.Copy(targetdir + "\\LDraw.exe"        , dstdir + "\\")
 	Tools.Copy(targetdir + "\\Rylogic.Core.dll" , dstdir + "\\")
-	Tools.Copy(targetdir + "\\Rylogic.dll"      , dstdir + "\\")
+	Tools.Copy(targetdir + "\\Rylogic.Main.dll" , dstdir + "\\")
 	Tools.Copy(targetdir + "\\lib"              , dstdir + "\\lib")
 
 	# Build the installer
@@ -62,7 +62,7 @@ def Deploy():
 	# Publish to WWW
 	if publish:
 		print("\nPublishing to web site...")
-		Tools.Copy(msi, UserVars.wwwroot + "\\ldraw\\")
+		Tools.Copy(msi, UserVars.wwwroot + "\\files\\ldraw\\")
 
 	return
 
