@@ -1,0 +1,20 @@
+{
+	"name": "test",
+	"version": "1.0.0",
+	"description": "Typescript test",
+	"license": "MIT",
+	"main": "./dist/test.bundle.js",
+	"repository": {
+		"type": "hg",
+		"url": "https://bitbucket.org/psryland/rylogic_code"
+	},
+	"devDependencies": {
+		"source-map-loader": "^0.2.3",
+		"ts-loader": "^3.5.0",
+		"typescript": "^2.7.1",
+		"webpack": "^3.11.0"
+	},
+	"scripts": {
+		"build": "webpack"
+	}
+}

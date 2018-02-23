@@ -1,0 +1,26 @@
+{
+	"name": "trading_chart",
+	"version": "1.0.0",
+	"description": "A currency trading chart",
+	"license": "MIT",
+	"main": "./dist/trading_chart.bundle.js",
+	"module": "./dist/trading_chart.bundle.js",
+	"types": "./dist/trading_chart.bundle.d.js",
+	"repository": {
+		"type": "hg",
+		"url": "https://bitbucket.org/psryland/rylogic_code"
+	},
+	"devDependencies": {
+		"node-libs-browser": "^2.1.0",
+		"source-map-loader": "^0.2.3",
+		"ts-loader": "^3.5.0",
+		"typescript": "^2.7.2",
+		"uglifyjs-webpack-plugin": "^1.2.0",
+		"webpack": "^3.11.0"
+	},
+	"scripts": {
+		"build": "webpack",
+		"build-min": "webpack --config webpack.config.min.js",
+		"build-all": "webpack && webpack --config webpack.config.min.js"
+	}
+}

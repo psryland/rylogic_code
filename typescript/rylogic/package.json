@@ -1,0 +1,26 @@
+{
+	"name": "rylogic",
+	"version": "1.0.0",
+	"description": "Typescript implementation of Rylogic utility library",
+	"license": "MIT",
+	"main": "./dist/rylogic.bundle.js",
+	"module": "./dist/rylogic.bundle.js",
+	"types": "./dist/rylogic.bundle.d.js",
+	"repository": {
+		"type": "hg",
+		"url": "https://bitbucket.org/psryland/rylogic_code"
+	},
+	"devDependencies": {
+		"node-libs-browser": "^2.1.0",
+		"source-map-loader": "^0.2.3",
+		"ts-loader": "^3.5.0",
+		"typescript": "^2.7.2",
+		"uglifyjs-webpack-plugin": "^1.1.6",
+		"webpack": "^3.11.0"
+	},
+	"scripts": {
+		"build": "webpack",
+		"build-min": "webpack --config webpack.config.min.js",
+		"build-all": "webpack && webpack --config webpack.config.min.js"
+	}
+}

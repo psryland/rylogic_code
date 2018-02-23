@@ -1,0 +1,27 @@
+{
+	"compileOnSave": true,
+	"compilerOptions": {
+		"module": "commonjs",
+		"target": "es5",
+		"declaration": true,
+		"outDir": "./built",
+		"noFallthroughCasesInSwitch": true,
+		"noImplicitAny": true,
+		"noImplicitThis": true,
+		"noImplicitReturns": true,
+		"noEmitOnError": true,
+		"noErrorTruncation": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"strict": true,
+		"sourceMap": false
+	},
+	"include": [
+		"./src/**/*"
+	],
+	"exclude": [
+		"node_modules",
+		"built",
+		"dist"
+	]
+}
