@@ -201,7 +201,7 @@ namespace Rylogic.Gui
 					if (!Visible) return;
 					if (ActiveHit == null) return;
 					if (e.Button == MouseButtons.Left)
-						m_is_drag |= (v2.From(e.Location) - m_mouse_down_at).Length2 > 5;
+						m_is_drag |= (v2.From(e.Location) - m_mouse_down_at).Length > 5;
 
 					DoHitTest(e.Location);
 				}
@@ -473,7 +473,7 @@ namespace Rylogic.Gui
 							}
 						case EQuantity.Distance:
 							{
-								a.Value = MeasurementValid ? (pt1 - pt0).Length3.ToString() : "---";
+								a.Value = MeasurementValid ? (pt1 - pt0).Length.ToString() : "---";
 								break;
 							}
 						case EQuantity.DistanceX:
@@ -607,7 +607,7 @@ namespace Rylogic.Gui
 					var dist_x = Math.Abs(pt1.x - pt0.x);
 					var dist_y = Math.Abs(pt1.y - pt0.y);
 					var dist_z = Math.Abs(pt1.z - pt0.z);
-					var dist   = (pt1 - pt0).Length3;
+					var dist   = (pt1 - pt0).Length;
 
 					var sb = new StringBuilder();
 					sb.Append(

@@ -1,0 +1,155 @@
+﻿// LDraw RPC Interface definition
+//
+// To extend this interface:
+//  1) Model the View3d.cs API
+//  2) Add the new API function
+//  3) Run 'BuildProto.py' to generate the LDraw.cs and LDrawGrpc.cs code
+//  4) Edit 'GrpcService.LDrawService' and override the new API function (care with threading contexts)
+//  5) Build LDraw (and LDraw.API by dependency)
+//  6) Edit 'LDraw.API.Ldr' to wrap the new API call
+
+syntax = "proto3";
+option csharp_namespace = "LDraw.API";
+package LDrawAPI;
+
+service LDrawService
+{
+	// Windows *************************************
+
+	// Get the current window (SceneUI)
+	rpc WindowCurrentGet(WindowCurrentGetRequest) returns (WindowCurrentGetReply) {}
+
+	// Add an object to a window
+	rpc WindowAddObject(WindowAddObjectRequest) returns (WindowAddObjectReply) {}
+
+	// Render the current scene
+	rpc WindowRender(WindowRenderRequest) returns (WindowRenderReply) {}
+
+	// Objects *************************************
+
+	// Create LDraw objects from LDraw script
+	rpc ObjectCreateLdr(ObjectCreateLdrRequest) returns (ObjectCreateLdrReply) {}
+
+	// Create a clone of an LDraw object
+	rpc ObjectCreateInstance(ObjectCreateInstanceRequest) returns (ObjectCreateInstanceReply) {}
+
+	// Delete an LDraw object
+	rpc ObjectDelete(ObjectDeleteRequest) returns (ObjectDeleteReply) {}
+
+	// Set the object to world transform for an LDraw object
+	rpc ObjectO2WSet(ObjectO2WSetRequest) returns (ObjectO2WSetReply) {}
+
+	// Set the object to parent transform for an LDraw object
+	rpc ObjectO2PSet(ObjectO2PSetRequest) returns (ObjectO2PSetReply) {}
+}
+
+// Windows *************************************
+
+message WindowCurrentGetRequest
+{
+}
+message WindowCurrentGetReply
+{
+	fixed64 handle = 1;
+}
+
+message WindowAddObjectRequest
+{
+	fixed64 window_handle = 1;
+	fixed64 object_handle = 2;
+}
+message WindowAddObjectReply
+{
+}
+
+// Window Render
+message WindowRenderRequest
+{
+	// The handle of the window to render
+	fixed64 handle = 1;
+}
+message WindowRenderReply
+{
+}
+
+// Objects *************************************
+
+// Object Create
+message ObjectCreateLdrRequest
+{
+	// The LDraw script or filepath containing LDraw script
+	string ldr_script = 1;
+
+	// True if 'ldr_script' is a filepath
+	bool is_file = 2;
+
+	// The context id to assign to the created LDraw objects
+	string context_id = 3;
+
+	// A comma or semi-colon separated list of include paths
+	string includes = 4;
+}
+message ObjectCreateLdrReply
+{
+	// The handle to the created object
+	fixed64 handle = 1;
+
+	// The context id that the object was assigned to
+	string context_id = 2;
+}
+
+// Object Create Instance
+message ObjectCreateInstanceRequest
+{
+	// The object handle of the object to be cloned
+	fixed64 handle = 1;
+}
+message ObjectCreateInstanceReply
+{
+	// The object handle of the newly created cloned instance
+	fixed64 handle = 1;
+}
+
+// Object Delete
+message ObjectDeleteRequest
+{
+	// The handle of the object to delete
+	fixed64 handle = 1;
+}
+message ObjectDeleteReply
+{
+}
+
+// ObjectO2WSet
+message ObjectO2WSetRequest
+{
+	fixed64 handle = 1;
+	M4x4 o2w = 2;
+	string name = 3; // optional
+}
+message ObjectO2WSetReply
+{
+}
+
+// ObjectO2PSet
+message ObjectO2PSetRequest
+{
+	fixed64 handle = 1;
+	M4x4 o2p = 2;
+	string name = 3; // optional
+}
+message ObjectO2PSetReply
+{
+}
+
+// 4x4 matrix
+message M4x4
+{
+	repeated float m = 1;
+}
+
+// 4-vector
+message Vec4
+{
+	repeated float m = 1;
+}

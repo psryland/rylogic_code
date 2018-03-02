@@ -18,9 +18,7 @@ try:
 	dstdir = UserVars.root + "\\bin"
 	srcdir = UserVars.root + "\\projects\\Rylogic.VSExtension"
 	manifest = srcdir + "\\source.extension.vsixmanifest"
-	proj   = srcdir + "\\Rylogic.VSExtension.sln"
-	config = "release"
-	bindir = srcdir + "\\bin\\" + config
+	bindir = srcdir + "\\bin\\Release"
 
 	vers_patn = r'Id="1d697591-233a-4a5b-bf85-2fccc769dfe3" Version="(?P<vers>.*?)"'
 	match_version = Tools.Extract(manifest, vers_patn)
@@ -35,7 +33,6 @@ try:
 		"Deploy Settings:\n"
 		"         Source: " + srcdir + "\n"
 		"    Destination: " + dstdir + "\n"
-		"  Configuration: " + config + "\n"
 		"        Version: " + version + "\n"
 		"Press enter to continue")
 
@@ -45,7 +42,7 @@ try:
 
 	#Invoke MSBuild
 	print("Building...")
-	Tools.Exec([UserVars.msbuild, UserVars.msbuild_props, proj, "/t:Rebuild", "/p:Configuration="+config, "/p:Platform=Any CPU"])
+	Tools.MSBuild(UserVars.rylogic_sln, ["VSExtensions\\Rylogic.VSExtension"], ["Any CPU"], ["Release"])
 
 	#Copy build products to dst
 	print("Copying files to " + dstdir)

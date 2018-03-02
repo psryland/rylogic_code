@@ -1590,7 +1590,8 @@ VIEW3D_API char const*  __stdcall View3D_ObjectTypeGet(View3DObject object)
 // Get/Set the object to world transform for this object or the first child object that matches 'name'.
 // If 'name' is null, then the state of the root object is returned
 // If 'name' begins with '#' then the remainder of the name is treated as a regular expression
-// Note, setting the o2w for a child object results in a transform that is relative to it's immediate parent
+// Note, setting the o2w for a child object positions the object in world space rather than parent space
+// (internally the appropriate O2P transform is calculated to put the object at the given O2W location)
 VIEW3D_API View3DM4x4 __stdcall View3D_ObjectO2WGet(View3DObject object, char const* name)
 {
 	try

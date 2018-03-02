@@ -905,14 +905,14 @@ namespace Rylogic.Extn
 		/// Add 'child' to this element and return child. Useful for the syntax: "var element = root.Add2("name", child);"
 		/// WARNING: returns the *child* object added, *not* parent.
 		/// 'type_attr' is needed when the type of 'child' is not known at load time.</summary>
-		public static XElement Add2(this XContainer parent, string name, object child, bool type_attr = false)
+		public static XElement Add2(this XContainer parent, string name, object child, bool type_attr)
 		{
 			var elem = child.ToXml(name, type_attr);
 			return parent.Add2(elem);
 		}
 
 		/// <summary>Adds a list of elements of type 'T' each with name 'elem_name' within an element called 'name'</summary>
-		public static XElement Add2<T>(this XContainer parent, string list_name, string elem_name, IEnumerable<T> list, bool type_attr = false)
+		public static XElement Add2<T>(this XContainer parent, string list_name, string elem_name, IEnumerable<T> list, bool type_attr)
 		{
 			var list_elem = parent.Add2(new XElement(list_name));
 			foreach (var item in list) list_elem.Add2(elem_name, item, type_attr);

@@ -30,10 +30,11 @@ import UserVars
 #  dbg - debugging
 def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, trace=False, dbg=False):
 
+	fxc = UserVars.winsdk_bin + "\\x64\\fxc.exe"
+
 	Tools.AssertVersion(1)
-	Tools.AssertPathsExist([UserVars.root, UserVars.winsdk, UserVars.textedit])
+	Tools.AssertPathsExist([UserVars.root, UserVars.winsdk, UserVars.textedit, fxc])
 	Tools.AssertLatestWinSDK()
-	fxc = UserVars.winsdk + r"\bin\x86\fxc.exe"
 
 	# Enable compiled shader objects in debug, for debugging and runtime shaders
 	if dbg: obj = True;

@@ -56,7 +56,6 @@ namespace LDraw
 		private ToolStripMenuItem m_menu_data_object_manager;
 		private ToolStripMenuItem m_menu_window;
 		private ToolStripMenuItem m_menu_file_new;
-		private ToolStripSeparator toolStripSeparator8;
 		private ToolStripMenuItem m_menu_nav_reset_view_all;
 		private ToolStripMenuItem m_menu_nav_reset_view_selected;
 		private ToolStripMenuItem m_menu_nav_reset_view_visible;
@@ -140,6 +139,9 @@ namespace LDraw
 		private ToolStrip m_ts_tools;
 		private ToolStripLabel m_lbl_tools;
 		private ToolStripButton m_btn_measure;
+		private ToolStripSeparator toolStripSeparator19;
+		private ToolStripMenuItem m_menu_data_rpc_service;
+		private ToolStripSeparator toolStripSeparator8;
 		private ToolStripMenuItem m_menu_file_save_as;
 		#endregion
 
@@ -633,6 +635,11 @@ namespace LDraw
 			{
 				Model.CurrentScene?.Clear(delete_objects:true);
 			};
+			m_menu_data_rpc_service.Click += (s, a) =>
+			{
+				m_menu_data_rpc_service.Checked = !m_menu_data_rpc_service.Checked;
+				Model.RPCService.Active = m_menu_data_rpc_service.Checked;
+			};
 			m_menu_data_create_demo_scene.Click += (s,a) =>
 			{
 				Model.CreateDemoScene();
@@ -899,6 +906,7 @@ namespace LDraw
 				m_menu_data_auto_refresh     .Enabled = true;
 				m_menu_data_clear_all_scenes .Enabled = true;
 				m_menu_data_clear_scene      .Enabled = scene_active;
+				m_menu_data_rpc_service      .Enabled = scene_active;
 				m_menu_data_create_demo_scene.Enabled = scene_active;
 				m_menu_data_object_manager   .Enabled = scene_active;
 
@@ -1178,7 +1186,7 @@ namespace LDraw
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_new = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_edit_script = new System.Windows.Forms.ToolStripMenuItem();
-			this.toolStripSeparator8 = new System.Windows.Forms.ToolStripSeparator();
+			this.toolStripSeparator19 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_file_open = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_open_additional = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_save = new System.Windows.Forms.ToolStripMenuItem();
@@ -1282,6 +1290,8 @@ namespace LDraw
 			this.m_ts_tools = new System.Windows.Forms.ToolStrip();
 			this.m_lbl_tools = new System.Windows.Forms.ToolStripLabel();
 			this.m_btn_measure = new System.Windows.Forms.ToolStripButton();
+			this.m_menu_data_rpc_service = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator8 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_tsc.BottomToolStripPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();
@@ -1374,7 +1384,7 @@ namespace LDraw
 			this.m_menu_file.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_menu_file_new,
             this.m_menu_file_edit_script,
-            this.toolStripSeparator8,
+            this.toolStripSeparator19,
             this.m_menu_file_open,
             this.m_menu_file_open_additional,
             this.m_menu_file_save,
@@ -1403,10 +1413,10 @@ namespace LDraw
 			this.m_menu_file_edit_script.Size = new System.Drawing.Size(236, 22);
 			this.m_menu_file_edit_script.Text = "&Edit Script";
 			// 
-			// toolStripSeparator8
+			// toolStripSeparator19
 			// 
-			this.toolStripSeparator8.Name = "toolStripSeparator8";
-			this.toolStripSeparator8.Size = new System.Drawing.Size(233, 6);
+			this.toolStripSeparator19.Name = "toolStripSeparator19";
+			this.toolStripSeparator19.Size = new System.Drawing.Size(233, 6);
 			// 
 			// m_menu_file_open
 			// 
@@ -1717,6 +1727,8 @@ namespace LDraw
             this.m_menu_data_clear_all_scenes,
             this.m_menu_data_clear_scene,
             this.toolStripSeparator2,
+            this.m_menu_data_rpc_service,
+            this.toolStripSeparator8,
             this.m_menu_data_create_demo_scene,
             this.toolStripSeparator3,
             this.m_menu_data_object_manager});
@@ -2147,7 +2159,7 @@ namespace LDraw
             this.m_btn_measure});
 			this.m_ts_tools.Location = new System.Drawing.Point(3, 78);
 			this.m_ts_tools.Name = "m_ts_tools";
-			this.m_ts_tools.Size = new System.Drawing.Size(104, 25);
+			this.m_ts_tools.Size = new System.Drawing.Size(73, 25);
 			this.m_ts_tools.TabIndex = 3;
 			// 
 			// m_lbl_tools
@@ -2164,6 +2176,17 @@ namespace LDraw
 			this.m_btn_measure.Name = "m_btn_measure";
 			this.m_btn_measure.Size = new System.Drawing.Size(23, 22);
 			this.m_btn_measure.Text = "Measure Tool";
+			// 
+			// m_menu_data_rpc_service
+			// 
+			this.m_menu_data_rpc_service.Name = "m_menu_data_rpc_service";
+			this.m_menu_data_rpc_service.Size = new System.Drawing.Size(177, 22);
+			this.m_menu_data_rpc_service.Text = "&RPC Service";
+			// 
+			// toolStripSeparator8
+			// 
+			this.toolStripSeparator8.Name = "toolStripSeparator8";
+			this.toolStripSeparator8.Size = new System.Drawing.Size(174, 6);
 			// 
 			// MainUI
 			// 

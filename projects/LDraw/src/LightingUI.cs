@@ -104,7 +104,7 @@ namespace LDraw
 			m_tb_direction.ValidateText = t => v4.TryParse3(t, out var v, 0f) && !Math_.FEql(v, v4.Zero);
 			m_tb_direction.ValueToText = v => ((v4)v).ToString3();
 			m_tb_direction.TextToValue = t => v4.Parse3(t, 0f);
-			m_tb_direction.ValueChanged += (s,a) => Light.Direction = v4.Normalise3((v4)m_tb_direction.Value, -v4.ZAxis);
+			m_tb_direction.ValueChanged += (s,a) => Light.Direction = Math_.Normalise((v4)m_tb_direction.Value, -v4.ZAxis);
 
 			// Camera relative
 			m_chk_camera_relative.CheckedChanged += (s,a) => Light.CameraRelative = m_chk_camera_relative.Checked;

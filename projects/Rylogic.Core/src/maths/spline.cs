@@ -117,14 +117,14 @@ namespace Rylogic.Maths
 		{
 			var lhs = new Spline();
 			var rhs = new Spline();
-			lhs.m.x = m.x;                          // P0
-			lhs.m.y = v4.Lerp(m.x, m.y, t);         // P4
-			v4 P5   = v4.Lerp(m.y, m.z, t);         // P5
-			rhs.m.z = v4.Lerp(m.z, m.w, t);         // P6
-			rhs.m.w = m.w;                          // P3
-			lhs.m.z = v4.Lerp(lhs.m.y, P5, t);      // P7
-			rhs.m.y = v4.Lerp(P5, rhs.m.z, t);      // P8
-			rhs.m.x = v4.Lerp(lhs.m.z, rhs.m.y, t); // P9
+			lhs.m.x = m.x;                             // P0
+			lhs.m.y = Math_.Lerp(m.x, m.y, t);         // P4
+			var P5  = Math_.Lerp(m.y, m.z, t);         // P5
+			rhs.m.z = Math_.Lerp(m.z, m.w, t);         // P6
+			rhs.m.w = m.w;                             // P3
+			lhs.m.z = Math_.Lerp(lhs.m.y, P5, t);      // P7
+			rhs.m.y = Math_.Lerp(P5, rhs.m.z, t);      // P8
+			rhs.m.x = Math_.Lerp(lhs.m.z, rhs.m.y, t); // P9
 			lhs.m.w = rhs.m.x;
 			return Tuple.Create(lhs,rhs);
 		}
@@ -136,8 +136,8 @@ namespace Rylogic.Maths
 			Func<Spline,float,float> Len = null;
 			Len = (s,t) =>
 				{
-					float poly_length  = (s.m.y - s.m.x).Length3 + (s.m.z - s.m.y).Length3 + (s.m.w - s.m.z).Length3;
-					float chord_length = (s.m.w - s.m.x).Length3;
+					float poly_length  = (s.m.y - s.m.x).Length + (s.m.z - s.m.y).Length + (s.m.w - s.m.z).Length;
+					float chord_length = (s.m.w - s.m.x).Length;
 					if (poly_length - chord_length < tol)
 						return (poly_length + chord_length) * 0.5f;
 

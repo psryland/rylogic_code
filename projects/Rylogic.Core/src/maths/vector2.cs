@@ -74,11 +74,19 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Length</summary>
-		public float Length2Sq
+		public float LengthSq
 		{
 			get { return x * x + y * y; }
 		}
-		public float Length2
+		public float Length
+		{
+			get { return (float)Math.Sqrt(LengthSq); }
+		}
+		[Obsolete] public float Length2Sq
+		{
+			get { return x * x + y * y; }
+		}
+		[Obsolete] public float Length2
 		{
 			get { return (float)Math.Sqrt(Length2Sq); }
 		}
@@ -150,13 +158,13 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Return a vector containing the minimum components</summary>
-		public static v2 Min(v2 lhs, v2 rhs)
+		[Obsolete] public static v2 Min(v2 lhs, v2 rhs)
 		{
 			 return new v2(
 				 Math.Min(lhs.x, rhs.x),
 				 Math.Min(lhs.y, rhs.y));
 		}
-		public static v2 Min(v2 x, params v2[] vecs)
+		[Obsolete] public static v2 Min(v2 x, params v2[] vecs)
 		{
 			foreach (var v in vecs)
 				x = Min(x,v);
@@ -164,13 +172,13 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Return a vector containing the maximum components</summary>
-		public static v2 Max(v2 lhs, v2 rhs)
+		[Obsolete] public static v2 Max(v2 lhs, v2 rhs)
 		{
 			 return new v2(
 				 Math.Max(lhs.x, rhs.x),
 				 Math.Max(lhs.y, rhs.y));
 		}
-		public static v2 Max(v2 x, params v2[] vecs)
+		[Obsolete] public static v2 Max(v2 x, params v2[] vecs)
 		{
 			foreach (var v in vecs)
 				x = Max(x,v);
@@ -178,7 +186,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Clamp the components of 'vec' within the ranges of 'min' and 'max'</summary>
-		public static v2 Clamp(v2 vec, v2 min, v2 max)
+		[Obsolete] public static v2 Clamp(v2 vec, v2 min, v2 max)
 		{
 			return new v2(
 				Math_.Clamp(vec.x, min.x, max.x),
@@ -186,23 +194,23 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Component absolute value</summary>
-		public static v2 Abs(v2 vec)
+		[Obsolete] public static v2 Abs(v2 vec)
 		{
 			return new v2(Math.Abs(vec.x), Math.Abs(vec.y));
 		}
 
 		/// <summary>Normalise 'vec' by the length of the XY components</summary>
-		public static v2 Normalise2(v2 vec)
+		[Obsolete] public static v2 Normalise2(v2 vec)
 		{
-			return vec / vec.Length2;
+			return vec / vec.Length;
 		}
-		public static v2 Normalise2(ref v2 vec)
+		[Obsolete] public static v2 Normalise2(ref v2 vec)
 		{
-			return vec /= vec.Length2;
+			return vec /= vec.Length;
 		}
 
 		/// <summary>Normalise 'vec' by the length of the XY components or return 'def' if zero</summary>
-		public static v2 Normalise2(v2 vec, v2 def)
+		[Obsolete] public static v2 Normalise2(v2 vec, v2 def)
 		{
 			if (vec == Zero) return def;
 			var norm = Normalise2(vec);
@@ -210,45 +218,45 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Dot product of XYZ components</summary>
-		public static float Dot2(v2 lhs, v2 rhs)
+		[Obsolete] public static float Dot2(v2 lhs, v2 rhs)
 		{
 			return lhs.x * rhs.x + lhs.y * rhs.y;
 		}
 
 		/// <summary>Cross product: Dot2(Rotate90CW(lhs), rhs)</summary>
-		public static float Cross2(v2 lhs, v2 rhs)
+		[Obsolete] public static float Cross2(v2 lhs, v2 rhs)
 		{
 			return lhs.y * rhs.x - lhs.x * rhs.y;
 		}
 
 		/// <summary>True if 'lhs' and 'rhs' are parallel</summary>
-		public static bool Parallel(v2 lhs, v2 rhs)
+		[Obsolete] public static bool Parallel(v2 lhs, v2 rhs)
 		{
 			return Math_.FEql(Cross2(lhs, rhs), 0);
 		}
 
 		/// <summary>Linearly interpolate between two vectors</summary>
-		public static v2 Lerp(v2 lhs, v2 rhs, float frac)
+		[Obsolete] public static v2 Lerp(v2 lhs, v2 rhs, float frac)
 		{
 			return lhs * (1f - frac) + rhs * (frac);
 		}
 
 		/// <summary>Returns a vector guaranteed to not be parallel to 'vec'</summary>
-		public static v2 CreateNotParallelTo(v2 vec)
+		[Obsolete] public static v2 CreateNotParallelTo(v2 vec)
 		{
 			bool x_aligned = Math_.Abs(vec.x) > Math_.Abs(vec.y);
 			return new v2(Math_.SignF(!x_aligned), Math_.SignF(x_aligned));
 		}
 
 		/// <summary>Returns a vector perpendicular to 'vec'</summary>
-		public static v2 Perpendicular(v2 vec)
+		[Obsolete] public static v2 Perpendicular(v2 vec)
 		{
 			Debug.Assert(!Math_.FEql(vec, Zero), "Cannot make a perpendicular to a zero vector");
 			return RotateCCW(vec);
 		}
 
 		/// <summary>Returns a vector perpendicular to 'vec' favouring 'previous' as the preferred perpendicular</summary>
-		public static v2 Perpendicular(v2 vec, v2 previous)
+		[Obsolete] public static v2 Perpendicular(v2 vec, v2 previous)
 		{
 			Debug.Assert(!Math_.FEql(vec, Zero), "Cannot make a perpendicular to a zero vector");
 
@@ -261,39 +269,39 @@ namespace Rylogic.Maths
 				return Perpendicular(vec);
 
 			// Otherwise, make a perpendicular that is close to 'previous'
-			var v = previous - (Dot2(vec,previous) / vec.Length2Sq) * vec;
-			v *= (float)Math.Sqrt(vec.Length2Sq / v.Length2Sq);
+			var v = previous - (Dot2(vec,previous) / vec.LengthSq) * vec;
+			v *= (float)Math.Sqrt(vec.LengthSq / v.LengthSq);
 			return v;
 		}
 
 		/// <summary>Return the cosine of the angle between two vectors</summary>
-		public static float CosAngle2(v2 lhs, v2 rhs)
+		[Obsolete] public static float CosAngle2(v2 lhs, v2 rhs)
 		{
 			// Return the cosine of the angle between two vectors
-			Debug.Assert(lhs.Length2Sq != 0 && rhs.Length2Sq != 0, "CosAngle undefined for zero vectors");
-			return Math_.Clamp(Dot2(lhs,rhs) / (float)Math.Sqrt(lhs.Length2Sq * rhs.Length2Sq), -1f, 1f);
+			Debug.Assert(lhs.LengthSq != 0 && rhs.LengthSq != 0, "CosAngle undefined for zero vectors");
+			return Math_.Clamp(Dot2(lhs,rhs) / (float)Math.Sqrt(lhs.LengthSq * rhs.LengthSq), -1f, 1f);
 		}
 
 		/// <summary>Return the angle between two vectors</summary>
-		public static float Angle2(v2 lhs, v2 rhs)
+		[Obsolete] public static float Angle2(v2 lhs, v2 rhs)
 		{
 			return (float)Math.Acos(CosAngle2(lhs, rhs));
 		}
 
 		/// <summary>Rotate 'vec' counter clockwise</summary>
-		public static v2 RotateCCW(v2 vec)
+		[Obsolete] public static v2 RotateCCW(v2 vec)
 		{
 			return new v2(-vec.y, vec.x);
 		}
 
 		/// <summary>Rotate 'vec' clockwise</summary>
-		public static v2 RotateCW(v2 vec)
+		[Obsolete] public static v2 RotateCW(v2 vec)
 		{
 			return new v2(vec.y, -vec.x);
 		}
 
 		/// <summary>Return a point on the unit circle at 'ang' (radians) from the X axis</summary>
-		public static v2 UnitCircle(float ang)
+		[Obsolete] public static v2 UnitCircle(float ang)
 		{
 			return new v2((float)Math.Cos(ang), (float)Math.Sin(ang));
 		}
@@ -402,15 +410,15 @@ namespace Rylogic.Maths
 		public static v2 Random2(float rad, Random r)
 		{
 			var rad_sq = rad*rad;
-			v2 v; for (; (v = Random2(-rad, rad, r)).Length2Sq > rad_sq;) { }
+			v2 v; for (; (v = Random2(-rad, rad, r)).LengthSq > rad_sq;) { }
 			return v;
 		}
 
 		/// <summary>Return a random vector on the unit 2D sphere</summary>
 		public static v2 Random2N(Random r)
 		{
-			v2 v; for (; Math_.FEql(v = Random2(1.0f, r), Zero);) { }
-			return Normalise2(v);
+			v2 v; for (; Math_.FEql(v = Random2(1, r), Zero);) { }
+			return Math_.Normalise(v);
 		}
 
 		#endregion
@@ -449,19 +457,7 @@ namespace Rylogic.Maths
 			return FEqlRelative(lhs.x, rhs.x, TinyF);
 		}
 
-		public static v2 Min(v2 lhs, v2 rhs)
-		{
-			return v2.Min(lhs,rhs);
-		}
-		public static v2 Max(v2 lhs, v2 rhs)
-		{
-			return v2.Max(lhs,rhs);
-		}
-		public static v2 Clamp(v2 vec, v2 min, v2 max)
-		{
-			return v2.Clamp(vec, min, max);
-		}
-
+		/// <summary>Return true if all components of 'vec' are finite</summary>
 		public static bool IsFinite(v2 vec)
 		{
 			return IsFinite(vec.x) && IsFinite(vec.y);
@@ -471,6 +467,157 @@ namespace Rylogic.Maths
 		public static v2 Div(v2 a, v2 b, v2 def)
 		{
 			return b != v2.Zero ? a / b : def;
+		}
+
+		/// <summary>Return a vector containing the minimum components</summary>
+		public static v2 Min(v2 lhs, v2 rhs)
+		{
+			 return new v2(
+				 Math.Min(lhs.x, rhs.x),
+				 Math.Min(lhs.y, rhs.y));
+		}
+		public static v2 Min(v2 x, params v2[] vecs)
+		{
+			foreach (var v in vecs)
+				x = Min(x,v);
+			return x;
+		}
+
+		/// <summary>Return a vector containing the maximum components</summary>
+		public static v2 Max(v2 lhs, v2 rhs)
+		{
+			 return new v2(
+				 Math.Max(lhs.x, rhs.x),
+				 Math.Max(lhs.y, rhs.y));
+		}
+		public static v2 Max(v2 x, params v2[] vecs)
+		{
+			foreach (var v in vecs)
+				x = Max(x,v);
+			return x;
+		}
+
+		/// <summary>Clamp the components of 'vec' within the ranges of 'min' and 'max'</summary>
+		public static v2 Clamp(v2 vec, v2 min, v2 max)
+		{
+			return new v2(
+				Clamp(vec.x, min.x, max.x),
+				Clamp(vec.y, min.y, max.y));
+		}
+
+		/// <summary>Component absolute value</summary>
+		public static v2 Abs(v2 vec)
+		{
+			return new v2(
+				Math.Abs(vec.x),
+				Math.Abs(vec.y));
+		}
+
+		/// <summary>Normalise 'vec' by the length of the XY components</summary>
+		public static v2 Normalise(v2 vec)
+		{
+			return vec / vec.Length;
+		}
+		public static v2 Normalise(ref v2 vec)
+		{
+			return vec /= vec.Length;
+		}
+
+		/// <summary>Normalise 'vec' by the length of the XY components or return 'def' if zero</summary>
+		public static v2 Normalise(v2 vec, v2 def)
+		{
+			if (vec == v2.Zero) return def;
+			var norm = Normalise(vec);
+			return norm != v2.Zero ? norm : def;
+		}
+
+		/// <summary>Dot product of XYZ components</summary>
+		public static float Dot(v2 lhs, v2 rhs)
+		{
+			return lhs.x * rhs.x + lhs.y * rhs.y;
+		}
+
+		/// <summary>Cross product: Dot(Rotate90CW(lhs), rhs)</summary>
+		public static float Cross(v2 lhs, v2 rhs)
+		{
+			return lhs.y * rhs.x - lhs.x * rhs.y;
+		}
+
+		/// <summary>True if 'lhs' and 'rhs' are parallel</summary>
+		public static bool Parallel(v2 lhs, v2 rhs)
+		{
+			return FEql(Cross(lhs, rhs), 0);
+		}
+
+		/// <summary>Linearly interpolate between two vectors</summary>
+		public static v2 Lerp(v2 lhs, v2 rhs, float frac)
+		{
+			return lhs * (1f - frac) + rhs * (frac);
+		}
+
+		/// <summary>Returns a vector guaranteed to not be parallel to 'vec'</summary>
+		public static v2 CreateNotParallelTo(v2 vec)
+		{
+			bool x_aligned = Abs(vec.x) > Abs(vec.y);
+			return new v2(SignF(!x_aligned), SignF(x_aligned));
+		}
+
+		/// <summary>Returns a vector perpendicular to 'vec'</summary>
+		public static v2 Perpendicular(v2 vec)
+		{
+			Debug.Assert(!FEql(vec, v2.Zero), "Cannot make a perpendicular to a zero vector");
+			return RotateCCW(vec);
+		}
+
+		/// <summary>Returns a vector perpendicular to 'vec' favouring 'previous' as the preferred perpendicular</summary>
+		public static v2 Perpendicular(v2 vec, v2 previous)
+		{
+			Debug.Assert(!FEql(vec, v2.Zero), "Cannot make a perpendicular to a zero vector");
+
+			// If 'previous' is still perpendicular, keep it
+			if (FEql(Dot(vec, previous), 0))
+				return previous;
+
+			// If 'previous' is parallel to 'vec', choose a new perpendicular
+			if (Parallel(vec, previous))
+				return Perpendicular(vec);
+
+			// Otherwise, make a perpendicular that is close to 'previous'
+			var v = previous - (Dot(vec,previous) / vec.LengthSq) * vec;
+			v *= (float)Math.Sqrt(vec.LengthSq / v.LengthSq);
+			return v;
+		}
+
+		/// <summary>Return the cosine of the angle between two vectors</summary>
+		public static float CosAngle(v2 lhs, v2 rhs)
+		{
+			// Return the cosine of the angle between two vectors
+			Debug.Assert(lhs.LengthSq != 0 && rhs.LengthSq != 0, "CosAngle undefined for zero vectors");
+			return Clamp(Dot(lhs,rhs) / (float)Math.Sqrt(lhs.LengthSq * rhs.LengthSq), -1f, 1f);
+		}
+
+		/// <summary>Return the angle between two vectors</summary>
+		public static float Angle(v2 lhs, v2 rhs)
+		{
+			return (float)Math.Acos(CosAngle(lhs, rhs));
+		}
+
+		/// <summary>Rotate 'vec' counter clockwise</summary>
+		public static v2 RotateCCW(v2 vec)
+		{
+			return new v2(-vec.y, vec.x);
+		}
+
+		/// <summary>Rotate 'vec' clockwise</summary>
+		public static v2 RotateCW(v2 vec)
+		{
+			return new v2(vec.y, -vec.x);
+		}
+
+		/// <summary>Return a point on the unit circle at 'ang' (radians) from the X axis</summary>
+		public static v2 UnitCircle(float ang)
+		{
+			return new v2((float)Math.Cos(ang), (float)Math.Sin(ang));
 		}
 	}
 }
@@ -492,28 +639,28 @@ namespace Rylogic.UnitTests
 		{
 			var a = new v2(3,-1);
 			var b = new v2(-2,-1);
-			Assert.True(v2.Max(a,b) == new v2(3,-1));
-			Assert.True(v2.Min(a,b) == new v2(-2,-1));
+			Assert.True(Math_.Max(a,b) == new v2(3,-1));
+			Assert.True(Math_.Min(a,b) == new v2(-2,-1));
 		}
 		[Test] public void Length()
 		{
 			var a = new v2(3,-1);
 
-			Assert.True(Math_.FEql(a.Length2Sq, a.x*a.x + a.y*a.y));
-			Assert.True(Math_.FEql(a.Length2  , (float)Math.Sqrt(a.Length2Sq)));
+			Assert.True(Math_.FEql(a.LengthSq, a.x*a.x + a.y*a.y));
+			Assert.True(Math_.FEql(a.Length  , (float)Math.Sqrt(a.LengthSq)));
 		}
 		[Test] public void Normals()
 		{
 			var a = new v2(3,-1);
-			var b = v2.Normalise2(a);
-			Assert.True(Math_.FEql(b.Length2, 1.0f));
-			Assert.True(Math_.FEql(a.Length2, 1.0f) == false);
+			var b = Math_.Normalise(a);
+			Assert.True(Math_.FEql(b.Length, 1.0f));
+			Assert.True(Math_.FEql(a.Length, 1.0f) == false);
 		}
 		[Test] public void DotProduct()
 		{
 			var a = new v2(-2,  4);
 			var b = new v2( 3, -5);
-			Assert.True(Math_.FEql(v2.Dot2(a,b), -26f));
+			Assert.True(Math_.FEql(Math_.Dot(a,b), -26f));
 		}
 	}
 }

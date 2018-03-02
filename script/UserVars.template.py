@@ -24,8 +24,9 @@ root = "P:\\pr"
 # The full path to the windows sdk
 winsdkvers = "10.0.16299.0"
 winsdk            = "C:\\Program Files (x86)\\Windows Kits\\10"
-winsdk_include    = winsdk + "\\Include\\"    + winsdkvers
+winsdk_bin        = winsdk + "\\Bin\\"        + winsdkvers
 winsdk_lib        = winsdk + "\\Lib\\"        + winsdkvers
+winsdk_include    = winsdk + "\\Include\\"    + winsdkvers
 winsdk_references = winsdk + "\\References\\" + winsdkvers
 
 # The root of the .NET framework directory
@@ -57,29 +58,29 @@ nuget = root + "\\tools\\nuget\\nuget.exe"
 
 # Text editor path
 # Note: scripts expect notepad++, so they probably won't work if you use a different tool
-textedit = "C:\\Program Files (x86)\\Notepad++\\notepad++.exe"
+textedit = "C:\\Program Files\\Notepad++\\notepad++.exe"
 
 # Merge tool path
 # Note: scripts expect araxis merge, so they probably won't work if you use a different tool
 mergetool = "D:\\Program Files\\Araxis\\Araxis Merge\\Merge.exe"
 
 # Linqpad
-linqpad = "D:\\Program Files (x86)\\LinqPad4\\LINQPad.exe"
+linqpad = "C:\\Program Files\\LinqPad5\\LINQPad.exe"
 
 # Text templating
-ttbuild = "C:\\Program Files (x86)\\Common Files\\Microsoft Shared\\TextTemplating\\12.0\\TextTransform.exe"
+ttbuild = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\Common7\\IDE\\TextTransform.exe"
 
 # The full path to the android SDK
-android_sdkdir = "D:\\android\\android-sdk"
-adb = android_sdkdir + "\\platform-tools\\adb.exe"
+android_sdkdir = None#"D:\\android\\android-sdk"
+adb = None#android_sdkdir + "\\platform-tools\\adb.exe"
 
 # The full path the the java sdk
-java_sdkdir = "D:\\Program Files\\Java\\jdk1.8.0_20"
+java_sdkdir = None#"D:\\Program Files\\Java\\jdk1.8.0_20"
 
 # The Digital Mars D compiler install path
-dmdroot = root + "\\dlang\\latest\\dmd2"
-dmd = dmdroot + "\\windows\\bin\\dmd.exe"
-rdmd = dmdroot + "\\windows\\bin\\rdmd.exe"
+#dmdroot = root + "\\dlang\\latest\\dmd2"
+#dmd = dmdroot + "\\windows\\bin\\dmd.exe"
+#rdmd = dmdroot + "\\windows\\bin\\rdmd.exe"
 
 # Rylogic code tools
 csex = root + "\\bin\\csex\\csex.exe"

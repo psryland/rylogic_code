@@ -48,18 +48,20 @@ namespace Rylogic.Maths
 			xy = xy_;
 			zw = zw_;
 		}
-		public v4(float[] arr) :this()
+		public v4(float[] arr, int start = 0)
+			:this()
 		{
-			x = arr[0];
-			y = arr[1];
-			z = arr[2];
-			w = arr[3];
+			x = arr[start + 0];
+			y = arr[start + 1];
+			z = arr[start + 2];
+			w = arr[start + 3];
 		}
-		public v4(float[] arr, float w_) :this()
+		public v4(float[] arr, float w_, int start = 0)
+			:this()
 		{
-			x = arr[0];
-			y = arr[1];
-			z = arr[2];
+			x = arr[start + 0];
+			y = arr[start + 1];
+			z = arr[start + 2];
 			w = w_;
 		}
 
@@ -112,27 +114,35 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Length</summary>
-		public float Length2Sq
-		{
-			get { return x * x + y * y; }
-		}
-		public float Length3Sq
-		{
-			get { return x * x + y * y + z * z; }
-		}
-		public float Length4Sq
+		public float LengthSq
 		{
 			get { return x * x + y * y + z * z + w * w; }
 		}
-		public float Length2
+		public float Length
+		{
+			get { return (float)Math.Sqrt(LengthSq); }
+		}
+		[Obsolete] public float Length2Sq
+		{
+			get { return x * x + y * y; }
+		}
+		[Obsolete] public float Length3Sq
+		{
+			get { return x * x + y * y + z * z; }
+		}
+		[Obsolete] public float Length4Sq
+		{
+			get { return x * x + y * y + z * z + w * w; }
+		}
+		[Obsolete] public float Length2
 		{
 			get { return (float)Math.Sqrt(Length2Sq); }
 		}
-		public float Length3
+		[Obsolete] public float Length3
 		{
 			get { return (float)Math.Sqrt(Length3Sq); }
 		}
-		public float Length4
+		[Obsolete] public float Length4
 		{
 			get { return (float)Math.Sqrt(Length4Sq); }
 		}
@@ -235,93 +245,73 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Return a vector containing the minimum components</summary>
-		public static v4 Min(v4 lhs, v4 rhs)
+		[Obsolete] public static v4 Min(v4 lhs, v4 rhs)
 		{
-			 return new v4(
-				 Math.Min(lhs.x, rhs.x),
-				 Math.Min(lhs.y, rhs.y),
-				 Math.Min(lhs.z, rhs.z),
-				 Math.Min(lhs.w, rhs.w));
+			return Math_.Min(lhs, rhs);
 		}
-		public static v4 Min(v4 x, params v4[] vecs)
+		[Obsolete] public static v4 Min(v4 x, params v4[] vecs)
 		{
-			foreach (var v in vecs)
-				x = Min(x,v);
-			return x;
+			return Math_.Min(x, vecs);
 		}
 
 		/// <summary>Return a vector containing the maximum components</summary>
-		public static v4 Max(v4 lhs, v4 rhs)
+		[Obsolete] public static v4 Max(v4 lhs, v4 rhs)
 		{
-			 return new v4(
-				 Math.Max(lhs.x, rhs.x),
-				 Math.Max(lhs.y, rhs.y),
-				 Math.Max(lhs.z, rhs.z),
-				 Math.Max(lhs.w, rhs.w));
+			return Math_.Max(lhs, rhs);
 		}
-		public static v4 Max(v4 x, params v4[] vecs)
+		[Obsolete] public static v4 Max(v4 x, params v4[] vecs)
 		{
-			foreach (var v in vecs)
-				x = Max(x,v);
-			return x;
+			return Math_.Max(x, vecs);
 		}
 
 		/// <summary>Clamp the components of 'vec' within the ranges of 'min' and 'max'</summary>
-		public static v4 Clamp3(v4 vec, v4 min, v4 max)
-		{
-			return new v4(
-				Math_.Clamp(vec.x, min.x, max.x),
-				Math_.Clamp(vec.y, min.y, max.y),
-				Math_.Clamp(vec.z, min.z, max.z),
-				vec.w);
-		}
-		public static v4 Clamp4(v4 vec, v4 min, v4 max)
-		{
-			return new v4(
-				Math_.Clamp(vec.x, min.x, max.x),
-				Math_.Clamp(vec.y, min.y, max.y),
-				Math_.Clamp(vec.z, min.z, max.z),
-				Math_.Clamp(vec.w, min.w, max.w));
-		}
+		//[Obsolete] public static v4 Clamp3(v4 vec, v4 min, v4 max)
+		//{
+		//	return Math_.Clamp3(vec, min, max);
+		//}
+		//[Obsolete] public static v4 Clamp4(v4 vec, v4 min, v4 max)
+		//{
+		//	return Math_.Clamp4(vec, min, max);
+		//}
 
 		/// <summary>Component absolute value</summary>
-		public static v4 Abs(v4 vec)
+		[Obsolete] public static v4 Abs(v4 vec)
 		{
-			return new v4(Math.Abs(vec.x), Math.Abs(vec.y), Math.Abs(vec.z), Math.Abs(vec.w));
+			return Math_.Abs(vec);
 		}
 
 		/// <summary>Normalise 'vec' by the length of the XY components</summary>
-		public static v4 Normalise2(v4 vec)
+		[Obsolete] public static v4 Normalise2(v4 vec)
 		{
 			return vec / vec.Length2;
 		}
-		public static v4 Normalise2(ref v4 vec)
+		[Obsolete] public static v4 Normalise2(ref v4 vec)
 		{
 			return vec /= vec.Length2;
 		}
 
 		/// <summary>Normalise 'vec' by the length of the XYZ components</summary>
-		public static v4 Normalise3(v4 vec)
+		[Obsolete] public static v4 Normalise3(v4 vec)
 		{
 			return vec / vec.Length3;
 		}
-		public static v4 Normalise3(ref v4 vec)
+		[Obsolete] public static v4 Normalise3(ref v4 vec)
 		{
 			return vec /= vec.Length3;
 		}
 
 		/// <summary>Normalise 'vec' by the length of the XYZW components</summary>
-		public static v4 Normalise4(v4 vec)
+		[Obsolete] public static v4 Normalise4(v4 vec)
 		{
 			return vec / vec.Length4;
 		}
-		public static v4 Normalise4(ref v4 vec)
+		[Obsolete] public static v4 Normalise4(ref v4 vec)
 		{
 			return vec /= vec.Length4;
 		}
 
 		/// <summary>Normalise 'vec' by the length of the XY components or return 'def' if zero</summary>
-		public static v4 Normalise2(v4 vec, v4 def)
+		[Obsolete] public static v4 Normalise2(v4 vec, v4 def)
 		{
 			if (vec.xy == v2.Zero) return def;
 			var norm = Normalise2(vec);
@@ -329,7 +319,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Normalise 'vec' by the length of the XYZ components or return 'def' if zero</summary>
-		public static v4 Normalise3(v4 vec, v4 def)
+		[Obsolete] public static v4 Normalise3(v4 vec, v4 def)
 		{
 			if (vec.xyz == v3.Zero) return def;
 			var norm = Normalise3(vec);
@@ -337,7 +327,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Normalise 'vec' by the length of the XYZW components or return 'def' if zero</summary>
-		public static v4 Normalise4(v4 vec, v4 def)
+		[Obsolete] public static v4 Normalise4(v4 vec, v4 def)
 		{
 			if (vec == v4.Zero) return def;
 			var norm = Normalise4(vec);
@@ -345,50 +335,50 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Dot product of XYZ components</summary>
-		public static float Dot3(v4 lhs, v4 rhs)
+		[Obsolete] public static float Dot3(v4 lhs, v4 rhs)
 		{
 			return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z;
 		}
 
 		/// <summary>Dot product of XYZW components</summary>
-		public static float Dot4(v4 lhs, v4 rhs)
+		[Obsolete] public static float Dot4(v4 lhs, v4 rhs)
 		{
 			return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z + lhs.w * rhs.w;
 		}
 
 		/// <summary>Cross product of XYZ components</summary>
-		public static v4 Cross3(v4 lhs, v4 rhs)
+		[Obsolete] public static v4 Cross3(v4 lhs, v4 rhs)
 		{
 			return new v4(lhs.y * rhs.z - lhs.z * rhs.y, lhs.z * rhs.x - lhs.x * rhs.z, lhs.x * rhs.y - lhs.y * rhs.x, 0.0f);
 		}
 
 		/// <summary>Triple product (a . (b x c)) of XYZ components</summary>
-		public static float Triple3(v4 a, v4 b, v4 c)
+		[Obsolete] public static float Triple3(v4 a, v4 b, v4 c)
 		{
 			return Dot3(a, Cross3(b, c));
 		}
 
 		/// <summary>True if 'lhs' and 'rhs' are parallel</summary>
-		public static bool Parallel(v4 lhs, v4 rhs)
+		[Obsolete] public static bool Parallel(v4 lhs, v4 rhs)
 		{
 			return Math_.FEql(Cross3(lhs, rhs).Length3Sq, 0);
 		}
 
 		/// <summary>Linearly interpolate between two vectors</summary>
-		public static v4 Lerp(v4 lhs, v4 rhs, float frac)
+		[Obsolete] public static v4 Lerp(v4 lhs, v4 rhs, float frac)
 		{
 			return lhs * (1f - frac) + rhs * (frac);
 		}
 
 		/// <summary>Returns a vector guaranteed to not be parallel to 'vec'</summary>
-		public static v4 CreateNotParallelTo(v4 vec)
+		[Obsolete] public static v4 CreateNotParallelTo(v4 vec)
 		{
 			bool x_aligned = Math_.Abs(vec.x) > Math_.Abs(vec.y) && Math_.Abs(vec.x) > Math_.Abs(vec.z);
 			return new v4(Math_.SignF(!x_aligned), 0.0f, Math_.SignF(x_aligned), vec.w);
 		}
 
 		/// <summary>Returns a vector perpendicular to 'vec'</summary>
-		public static v4 Perpendicular(v4 vec)
+		[Obsolete] public static v4 Perpendicular(v4 vec)
 		{
 			Debug.Assert(vec != Zero, "Cannot make a perpendicular to a zero vector");
 			var v = Cross3(vec, CreateNotParallelTo(vec));
@@ -397,7 +387,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Returns a vector perpendicular to 'vec' favouring 'previous' as the preferred perpendicular</summary>
-		public static v4 Perpendicular(v4 vec, v4 previous)
+		[Obsolete] public static v4 Perpendicular(v4 vec, v4 previous)
 		{
 			Debug.Assert(!Math_.FEql(vec, Zero), "Cannot make a perpendicular to a zero vector");
 
@@ -416,36 +406,27 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Returns a 3 bit bitmask of the octant the vector is in where X = 0x1, Y = 0x2, Z = 0x4</summary>
-		public static uint Octant(v4 vec)
+		[Obsolete] public static uint Octant(v4 vec)
 		{
-			return (uint)(((int)Math_.SignF(vec.x >= 0.0f)) | ((int)Math_.SignF(vec.y >= 0.0f) << 1) | ((int)Math_.SignF(vec.z >= 0.0f) << 2));
+			return Math_.Octant(vec);
 		}
 
 		/// <summary>Return the cosine of the angle between two vectors</summary>
-		public static float CosAngle3(v4 lhs, v4 rhs)
+		[Obsolete] public static float CosAngle3(v4 lhs, v4 rhs)
 		{
-			Debug.Assert(lhs.Length3Sq != 0 && rhs.Length3Sq != 0, "CosAngle undefined for zero vectors");
-			return Math_.Clamp(Dot3(lhs,rhs) / (float)Math.Sqrt(lhs.Length3Sq * rhs.Length3Sq), -1f, 1f);
+			return Math_.CosAngle(lhs, rhs);
 		}
 
 		/// <summary>Return the angle between two vectors</summary>
-		public static float Angle3(v4 lhs, v4 rhs)
+		[Obsolete] public static float Angle3(v4 lhs, v4 rhs)
 		{
-			return (float)Math.Acos(CosAngle3(lhs, rhs));
+			return Math_.Angle(lhs, rhs);
 		}
 
 		/// <summary>Return the average of a collection of vectors</summary>
-		public static v4 Average(IEnumerable<v4> vecs)
+		[Obsolete] public static v4 Average(IEnumerable<v4> vecs)
 		{
-			var acc = Zero;
-			var count = 0;
-			foreach (var v in vecs)
-			{
-				acc += v;
-				++count;
-			}
-			if (count == 0) throw new Exception("Cannot average zero items");
-			return acc / count;
+			return Math_.Average(vecs);
 		}
 
 		#region Parse
@@ -495,82 +476,114 @@ namespace Rylogic.Maths
 		/// <summary>Return a random vector with components within the interval [min,max]</summary>
 		public static v4 Random4(float min, float max, Random r)
 		{
-			return new v4(r.Float(min, max), r.Float(min, max), r.Float(min, max), r.Float(min, max));
+			return new v4(
+				r.Float(min, max),
+				r.Float(min, max),
+				r.Float(min, max),
+				r.Float(min, max));
 		}
 
 		/// <summary>Return a random vector with components within the intervals given by each component of min and max</summary>
 		public static v4 Random4(v4 min, v4 max, Random r)
 		{
-			return new v4(r.Float(min.x, max.x), r.Float(min.y, max.y), r.Float(min.z, max.z), r.Float(min.w, max.w));
+			return new v4(
+				r.Float(min.x, max.x),
+				r.Float(min.y, max.y),
+				r.Float(min.z, max.z),
+				r.Float(min.w, max.w));
 		}
 		
 		/// <summary>Return a random vector within a 4D sphere of radius 'rad' (Note: *not* on the sphere)</summary>
 		public static v4 Random4(float rad, Random r)
 		{
 			var rad_sq = rad*rad;
-			v4 v; for (; (v = Random4(-rad, rad, r)).Length4Sq > rad_sq;) { }
+			v4 v; for (; (v = Random4(-rad, rad, r)).LengthSq > rad_sq;) { }
 			return v;
 		}
 
 		/// <summary>Return a random vector on the unit 4D sphere</summary>
 		public static v4 Random4N(Random r)
 		{
-			v4 v; for (; Math_.FEql(v = Random4(1.0f, r), Zero); ) { }
-			return Normalise4(v);
+			v4 v; for (; Math_.FEql(v = Random4(1f, r), Zero); ) { }
+			return Math_.Normalise(v);
 		}
 
 		/// <summary>Return a random vector with components within the interval [min,max]</summary>
 		public static v4 Random3(float min, float max, float w, Random r)
 		{
-			return new v4(r.Float(min, max), r.Float(min, max), r.Float(min, max), w);
+			return new v4(
+				r.Float(min, max),
+				r.Float(min, max),
+				r.Float(min, max),
+				w);
 		}
 
 		/// <summary>Return a random vector with components within the intervals given by each component of min and max</summary>
 		public static v4 Random3(v4 min, v4 max, float w, Random r)
 		{
-			return new v4(r.Float(min.x, max.x), r.Float(min.y, max.y), r.Float(min.z, max.z), w);
+			return new v4(
+				r.Float(min.x, max.x),
+				r.Float(min.y, max.y),
+				r.Float(min.z, max.z),
+				w);
 		}
 
 		/// <summary>Return a random vector within a 3D sphere of radius 'rad' (Note: *not* on a sphere)</summary>
 		public static v4 Random3(float rad, float w, Random r)
 		{
 			var rad_sq = rad*rad;
-			v4 v; for (; (v = Random3(-rad, rad, w, r)).Length3Sq > rad_sq; ){}
+			v4 v; for (; (v = Random3(-rad, rad, 0, r)).LengthSq > rad_sq; ){}
+			v.w = w;
 			return v;
 		}
 
 		/// <summary>Return a random vector on the unit 3D sphere</summary>
 		public static v4 Random3N(float w, Random r)
 		{
-			v4 v; for (; Math_.FEql(v = Random3(1.0f, w, r), Zero); ) { }
-			return Normalise3(v);
+			v4 v; for (; Math_.FEql(v = Random3(1, 0, r), Zero); ) { }
+			v = Math_.Normalise(v);
+			v.w = w;
+			return v;
 		}
 
 		/// <summary>Return a random vector with components within the interval [min,max]</summary>
 		public static v4 Random2(float min, float max, float z, float w, Random r)
 		{
-			return new v4(r.Float(min, max), r.Float(min, max), z, w);
+			return new v4(
+				r.Float(min, max),
+				r.Float(min, max),
+				z,
+				w);
 		}
 
 		/// <summary>Return a random vector with components within the intervals given by each component of min and max</summary>
 		public static v4 Random2(v4 min, v4 max, float z, float w, Random r)
 		{
-			return new v4(r.Float(min.x, max.x), r.Float(min.y, max.y), z, w);
+			return new v4(
+				r.Float(min.x, max.x),
+				r.Float(min.y, max.y),
+				z,
+				w);
 		}
 
 		/// <summary>Return a random vector on the unit 2D sphere</summary>
 		public static v4 Random2(float rad, float z, float w, Random r)
 		{
 			var rad_sq = rad*rad;
-			v4 v; for (; (v = Random2(-rad, rad, z, w, r)).Length2Sq > rad_sq;) { }
+			v4 v; for (; (v = Random2(-rad, rad, 0, 0, r)).LengthSq > rad_sq;) { }
+			v.z = z;
+			v.w = w;
 			return v;
 		}
 
 		/// <summary>Return a random vector on the unit 2D sphere</summary>
 		public static v4 Random2N(float z, float w, Random r)
 		{
-			v4 v; for (; Math_.FEql(v = Random2(1.0f, z, w, r), Zero);) { }
-			return Normalise2(v);
+			v4 v; for (; Math_.FEql(v = Random2(1, 0, 0, r), Zero);) { }
+			v = Math_.Normalise(v);
+			v.z = z;
+			v.w = w;
+			return v;
 		}
 
 		#endregion
@@ -614,19 +627,61 @@ namespace Rylogic.Maths
 				FEql(lhs.z, rhs.z) &&
 				FEql(lhs.w, rhs.w);
 		}
+
+
+		/// <summary>Return a vector containing the minimum components</summary>
 		public static v4 Min(v4 lhs, v4 rhs)
 		{
-			return v4.Min(lhs,rhs);
+			return new v4(
+				Math.Min(lhs.x, rhs.x),
+				Math.Min(lhs.y, rhs.y),
+				Math.Min(lhs.z, rhs.z),
+				Math.Min(lhs.w, rhs.w));
 		}
-		public static v4 Max(v4 lhs, v4 rhs)
+		public static v4 Min(v4 x, params v4[] vecs)
 		{
-			return v4.Max(lhs,rhs);
-		}
-		public static v4 Clamp(v4 vec, v4 min, v4 max)
-		{
-			return v4.Clamp4(vec, min, max);
+			foreach (var v in vecs)
+				x = Min(x, v);
+			return x;
 		}
 
+		/// <summary>Return a vector containing the maximum components</summary>
+		public static v4 Max(v4 lhs, v4 rhs)
+		{
+			return new v4(
+				Math.Max(lhs.x, rhs.x),
+				Math.Max(lhs.y, rhs.y),
+				Math.Max(lhs.z, rhs.z),
+				Math.Max(lhs.w, rhs.w));
+		}
+		public static v4 Max(v4 x, params v4[] vecs)
+		{
+			foreach (var v in vecs)
+				x = Max(x, v);
+			return x;
+		}
+
+		/// <summary>Clamp the components of 'vec' within the ranges of 'min' and 'max'</summary>
+		public static v4 Clamp(v4 vec, v4 min, v4 max)
+		{
+			return new v4(
+				Clamp(vec.x, min.x, max.x),
+				Clamp(vec.y, min.y, max.y),
+				Clamp(vec.z, min.z, max.z),
+				Clamp(vec.w, min.w, max.w));
+		}
+
+		/// <summary>Component-wise absolute value</summary>
+		public static v4 Abs(v4 vec)
+		{
+			return new v4(
+				Math.Abs(vec.x),
+				Math.Abs(vec.y),
+				Math.Abs(vec.z),
+				Math.Abs(vec.w));
+		}
+
+		/// <summary>Return true if all components of 'vec' are finite</summary>
 		public static bool IsFinite(v4 vec)
 		{
 			return IsFinite(vec.x) && IsFinite(vec.y) && IsFinite(vec.z) && IsFinite(vec.w);
@@ -636,6 +691,122 @@ namespace Rylogic.Maths
 		public static v4 Div(v4 a, v4 b, v4 def)
 		{
 			return b != v4.Zero ? a / b : def;
+		}
+
+		/// <summary>Normalise 'vec' by the length of the XYZW components</summary>
+		public static v4 Normalise(v4 vec)
+		{
+			return vec / vec.Length;
+		}
+		public static v4 Normalise(ref v4 vec)
+		{
+			return vec /= vec.Length;
+		}
+
+		/// <summary>Normalise 'vec' by the length of the XYZW components or return 'def' if zero</summary>
+		public static v4 Normalise(v4 vec, v4 def)
+		{
+			if (vec == v4.Zero) return def;
+			var norm = Normalise(vec);
+			return norm != v4.Zero ? norm : def;
+		}
+
+		/// <summary>Dot product of XYZW components</summary>
+		public static float Dot(v4 lhs, v4 rhs)
+		{
+			return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z + lhs.w * rhs.w;
+		}
+
+		/// <summary>Cross product of XYZ components</summary>
+		public static v4 Cross(v4 lhs, v4 rhs)
+		{
+			return new v4(lhs.y * rhs.z - lhs.z * rhs.y, lhs.z * rhs.x - lhs.x * rhs.z, lhs.x * rhs.y - lhs.y * rhs.x, 0.0f);
+		}
+
+		/// <summary>Triple product (a . (b x c)) of XYZ components</summary>
+		public static float Triple(v4 a, v4 b, v4 c)
+		{
+			return Dot(a, Cross(b, c));
+		}
+
+		/// <summary>True if 'lhs' and 'rhs' are parallel</summary>
+		public static bool Parallel(v4 lhs, v4 rhs)
+		{
+			return FEql(Cross(lhs, rhs).LengthSq, 0);
+		}
+
+		/// <summary>Linearly interpolate between two vectors</summary>
+		public static v4 Lerp(v4 lhs, v4 rhs, float frac)
+		{
+			return lhs * (1f - frac) + rhs * (frac);
+		}
+
+		/// <summary>Returns a vector guaranteed to not be parallel to 'vec'</summary>
+		public static v4 CreateNotParallelTo(v4 vec)
+		{
+			bool x_aligned = Abs(vec.x) > Abs(vec.y) && Abs(vec.x) > Abs(vec.z);
+			return new v4(SignF(!x_aligned), 0.0f, SignF(x_aligned), vec.w);
+		}
+
+		/// <summary>Returns a vector perpendicular to 'vec'</summary>
+		public static v4 Perpendicular(v4 vec)
+		{
+			Debug.Assert(vec != v4.Zero, "Cannot make a perpendicular to a zero vector");
+			var v = Cross(vec, CreateNotParallelTo(vec));
+			v *= (float)Math.Sqrt(vec.LengthSq / v.LengthSq);
+			return v;
+		}
+
+		/// <summary>Returns a vector perpendicular to 'vec' favouring 'previous' as the preferred perpendicular</summary>
+		public static v4 Perpendicular(v4 vec, v4 previous)
+		{
+			Debug.Assert(!FEql(vec, v4.Zero), "Cannot make a perpendicular to a zero vector");
+
+			// If 'previous' is parallel to 'vec', choose a new perpendicular (includes previous == zero)
+			if (Parallel(vec, previous))
+				return Perpendicular(vec);
+
+			// If 'previous' is still perpendicular, keep it
+			if (FEql(Dot(vec, previous), 0))
+				return previous;
+
+			// Otherwise, make a perpendicular that is close to 'previous'
+			var v = Cross(Cross(vec, previous), vec);
+			v *= (float)Math.Sqrt(vec.LengthSq / v.LengthSq);
+			return v;
+		}
+
+		/// <summary>Returns a 3 bit bitmask of the octant the vector is in where X = 0x1, Y = 0x2, Z = 0x4</summary>
+		public static uint Octant(v4 vec)
+		{
+			return (uint)(((int)SignF(vec.x >= 0.0f)) | ((int)SignF(vec.y >= 0.0f) << 1) | ((int)SignF(vec.z >= 0.0f) << 2));
+		}
+
+		/// <summary>Return the cosine of the angle between two vectors</summary>
+		public static float CosAngle(v4 lhs, v4 rhs)
+		{
+			Debug.Assert(lhs.LengthSq != 0 && rhs.LengthSq != 0, "CosAngle undefined for zero vectors");
+			return Clamp(Dot(lhs, rhs) / (float)Math.Sqrt(lhs.LengthSq * rhs.LengthSq), -1f, 1f);
+		}
+
+		/// <summary>Return the angle between two vectors</summary>
+		public static float Angle(v4 lhs, v4 rhs)
+		{
+			return (float)Math.Acos(CosAngle(lhs, rhs));
+		}
+
+		/// <summary>Return the average of a collection of vectors</summary>
+		public static v4 Average(IEnumerable<v4> vecs)
+		{
+			var acc = v4.Zero;
+			var count = 0;
+			foreach (var v in vecs)
+			{
+				acc += v;
+				++count;
+			}
+			if (count == 0) throw new Exception("Cannot average zero items");
+			return acc / count;
 		}
 	}
 }
@@ -659,39 +830,32 @@ namespace Rylogic.UnitTests
 		{
 			var a = new v4(3,-1,2,-4);
 			var b = new v4(-2,-1,4,2);
-			Assert.True(v4.Max(a,b) == new v4(3,-1,4,2));
-			Assert.True(v4.Min(a,b) == new v4(-2,-1,2,-4));
+			Assert.True(Math_.Max(a,b) == new v4(3,-1,4,2));
+			Assert.True(Math_.Min(a,b) == new v4(-2,-1,2,-4));
 		}
 		[Test] public void Length()
 		{
 			var a = new v4(3,-1,2,-4);
-
-			Assert.True(Math_.FEql(a.Length2Sq, a.x*a.x + a.y*a.y));
-			Assert.True(Math_.FEql(a.Length2  , (float)Math.Sqrt(a.Length2Sq)));
-			Assert.True(Math_.FEql(a.Length3Sq, a.x*a.x + a.y*a.y + a.z*a.z));
-			Assert.True(Math_.FEql(a.Length3  , (float)Math.Sqrt(a.Length3Sq)));
-			Assert.True(Math_.FEql(a.Length4Sq, a.x*a.x + a.y*a.y + a.z*a.z + a.w*a.w));
-			Assert.True(Math_.FEql(a.Length4  , (float)Math.Sqrt(a.Length4Sq)));
+			Assert.True(Math_.FEql(a.LengthSq, a.x*a.x + a.y*a.y + a.z*a.z + a.w*a.w));
+			Assert.True(Math_.FEql(a.Length, (float)Math.Sqrt(a.LengthSq)));
+			Assert.True(Math_.FEql(a.xyz.LengthSq, a.x*a.x + a.y*a.y + a.z*a.z));
+			Assert.True(Math_.FEql(a.xyz.Length  , (float)Math.Sqrt(a.xyz.LengthSq)));
+			Assert.True(Math_.FEql(a.xy.LengthSq, a.x*a.x + a.y*a.y));
+			Assert.True(Math_.FEql(a.xy.Length  , (float)Math.Sqrt(a.xy.LengthSq)));
 		}
 		[Test] public void Normals()
 		{
 			var a = new v4(3,-1,2,-4);
-			var b = v4.Normalise3(a);
-			var c = v4.Normalise4(a);
-			Assert.True(Math_.FEql(b.Length3, 1.0f));
-			Assert.True(Math_.FEql(b.w, a.w / a.Length3));
-			Assert.True(Math_.FEql((float)Math.Sqrt(c.x*c.x + c.y*c.y + c.z*c.z + c.w*c.w), 1.0f));
-			Assert.True(Math_.FEql(a.Length3, 1.0f) == false);
-			Assert.True(Math_.FEql(a.Length4, 1.0f) == false);
-			Assert.True(Math_.FEql(b.Length3, 1.0f));
-			Assert.True(Math_.FEql(c.Length4, 1.0f));
+			var b = Math_.Normalise(a);
+			Assert.True(Math_.FEql((float)Math.Sqrt(b.x*b.x + b.y*b.y + b.z*b.z + b.w*b.w), 1.0f));
+			Assert.True(Math_.FEql(a.Length, 1.0f) == false);
+			Assert.True(Math_.FEql(b.Length, 1.0f) == true);
 		}
 		[Test] public void DotProduct()
 		{
 			var a = new v4(-2,  4,  2,  6);
 			var b = new v4( 3, -5,  2, -4);
-			Assert.True(Math_.FEql(v4.Dot4(a,b), -46f));
-			Assert.True(Math_.FEql(v4.Dot3(a,b), -22f));
+			Assert.True(Math_.FEql(Math_.Dot(a,b), -46f));
 		}
 	}
 }

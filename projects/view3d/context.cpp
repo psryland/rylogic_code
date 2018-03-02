@@ -138,7 +138,7 @@ namespace view3d
 		auto count = iter != std::end(srcs) ? iter->second.m_objects.size() : 0U;
 
 		// Load the ldr script
-		LoadScript(ldr_script, file != 0, &id, includes);
+		LoadScript(ldr_script, file, &id, includes);
 
 		// Return the first object. expecting 'ldr_script' to define one object only.
 		// It doesn't matter if more are defined however, they're just created as part of the context

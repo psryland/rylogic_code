@@ -17,43 +17,70 @@ namespace Rylogic.Maths
 		private v4 m_radius;
 
 		// Constructors
-		public BBox(v4 centre, v4 radius)        { m_centre = centre; m_radius = radius; }
-		public void  reset()                     { this = Reset; }
-		public void  unit()                      { this = Unit; }
-		public void  set(v4 centre, v4 radius)   { m_centre = centre; m_radius = radius; }
-		public override string ToString()        { return "Centre=" + m_centre.ToString3() + " Radius=" + m_radius.ToString3(); }
+		public BBox(v4 centre, v4 radius)
+		{
+			m_centre = centre;
+			m_radius = radius;
+		}
+		public void reset()
+		{
+			this = Reset;
+		}
+		public void unit()
+		{
+			this = Unit;
+		}
+		public void set(v4 centre, v4 radius)
+		{
+			m_centre = centre;
+			m_radius = radius;
+		}
+		public override string ToString()
+		{
+			return $"Centre={m_centre.ToString3()} Radius={m_radius.ToString3()}";
+		}
 
-		public static BBox From(v4 min, v4 max)  { return new BBox((max + min) * 0.5f, v4.Abs(max - min) * 0.5f); }
+		// Construct from
+		public static BBox From(v4 min, v4 max)
+		{
+			return new BBox((max + min) * 0.5f, Math_.Abs(max - min) * 0.5f);
+		}
 
 		// Static v4 types
 		private readonly static BBox m_unit = new BBox(v4.Origin, new v4(0.5f, 0.5f, 0.5f, 0));
 		private readonly static BBox m_reset = new BBox(v4.Origin, new v4(-1, -1, -1, 0));
-		public static BBox Unit  { get { return m_unit; } }
-		public static BBox Reset { get { return m_reset; } }
+		public static BBox Unit
+		{
+			get { return m_unit; }
+		}
+		public static BBox Reset
+		{
+			get { return m_reset; }
+		}
 
 		// Binary operators
-		public static BBox operator + (BBox lhs, v4 offset)    { lhs.m_centre += offset; return lhs; }
-		public static BBox operator - (BBox lhs, v4 offset)    { lhs.m_centre -= offset; return lhs; }
-		public static BBox operator * (BBox lhs, float s)      { lhs.m_radius *= s; return lhs; }
-		public static BBox operator / (BBox lhs, float s)      { lhs.m_radius /= s; return lhs; }
-		public static BBox operator * (m4x4 m, BBox rhs)
+		public static BBox operator +(BBox lhs, v4 offset) { lhs.m_centre += offset; return lhs; }
+		public static BBox operator -(BBox lhs, v4 offset) { lhs.m_centre -= offset; return lhs; }
+		public static BBox operator *(BBox lhs, float s) { lhs.m_radius *= s; return lhs; }
+		public static BBox operator /(BBox lhs, float s) { lhs.m_radius /= s; return lhs; }
+		public static BBox operator *(m4x4 m, BBox rhs)
 		{
 			Debug.Assert(rhs.IsValid, "Transforming an invalid bounding box");
 			BBox bb = new BBox(m.pos, v4.Zero);
 			m4x4 mat = m4x4.Transpose3x3(m);
 			for (int i = 0; i != 3; ++i)
 			{
-				bb.m_centre[i] += v4.Dot4(       mat[i] , rhs.m_centre);
-				bb.m_radius[i] += v4.Dot4(v4.Abs(mat[i]), rhs.m_radius);
+				bb.m_centre[i] += Math_.Dot(mat[i], rhs.m_centre);
+				bb.m_radius[i] += Math_.Dot(Math_.Abs(mat[i]), rhs.m_radius);
 			}
 			return bb;
 		}
 
 		// Equality operators
-		public static bool operator == (BBox lhs, BBox rhs) { return lhs.m_centre == rhs.m_centre; }
-		public static bool operator != (BBox lhs, BBox rhs) { return !(lhs == rhs); }
-		public override bool Equals(object o)               { return o is BBox && (BBox)o == this; }
-		public override int GetHashCode()                   { unchecked { return m_centre.GetHashCode() ^ m_radius.GetHashCode(); } }
+		public static bool operator ==(BBox lhs, BBox rhs) { return lhs.m_centre == rhs.m_centre; }
+		public static bool operator !=(BBox lhs, BBox rhs) { return !(lhs == rhs); }
+		public override bool Equals(object o) { return o is BBox && (BBox)o == this; }
+		public override int GetHashCode() { unchecked { return m_centre.GetHashCode() ^ m_radius.GetHashCode(); } }
 
 		/// <summary>Returns true if the bounding box represents a point or volume</summary>
 		public bool IsValid
@@ -162,7 +189,7 @@ namespace Rylogic.Maths
 		/// <summary>Gets the squared length of the diagonal of the bounding box</summary>
 		public float DiametreSq
 		{
-			get { return 4.0f * m_radius.Length3Sq; }
+			get { return 4.0f * m_radius.LengthSq; }
 		}
 
 		/// <summary>Gets the length of the diagonal of the bounding box</summary>
