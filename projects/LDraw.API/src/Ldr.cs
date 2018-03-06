@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Grpc.Core;
 using Rylogic.Maths;
 using Rylogic.Utility;
@@ -37,10 +39,36 @@ namespace LDraw.API
 			/// <summary>The window handle</summary>
 			public HWindow Handle;
 
-			/// <summary>Add an object to this scene</summary>
-			public void AddObject(Object obj)
+			/// <summary>Add objects to this scene</summary>
+			public void AddObjects(params Object[] objs)
 			{
-				m_ldr.WindowAddObject(new WindowAddObjectRequest { WindowHandle = (ulong)Handle, ObjectHandle = (ulong)obj.Handle });
+				var req = new WindowAddObjectsRequest { WindowHandle = (ulong)Handle };
+				req.ObjectHandles.AddRange(objs.Select(x => (ulong)x.Handle));
+				m_ldr.WindowAddObjects(req);
+			}
+
+			/// <summary>Add objects belonging to a context id to this scene</summary>
+			public void AddObjects(params Guid[] context_ids)
+			{
+				var req = new WindowAddObjectsRequest { WindowHandle = (ulong)Handle };
+				req.ContextIds.AddRange(context_ids.Select(x => x.ToString()));
+				m_ldr.WindowAddObjects(req);
+			}
+
+			/// <summary>Remove objects to this scene</summary>
+			public void RemoveObjects(params Object[] objs)
+			{
+				var req = new WindowRemoveObjectsRequest { WindowHandle = (ulong)Handle };
+				req.ObjectHandles.AddRange(objs.Select(x => (ulong)x.Handle));
+				m_ldr.WindowRemoveObjects(req);
+			}
+
+			/// <summary>Remove objects belonging to a context id from this scene</summary>
+			public void RemoveObjects(params Guid[] context_ids)
+			{
+				var req = new WindowRemoveObjectsRequest { WindowHandle = (ulong)Handle };
+				req.ContextIds.AddRange(context_ids.Select(x => x.ToString()));
+				m_ldr.WindowRemoveObjects(req);
 			}
 
 			/// <summary>Render the current scene</summary>
@@ -62,11 +90,12 @@ namespace LDraw.API
 				var reply = m_ldr.ObjectCreateLdr(new ObjectCreateLdrRequest
 				{
 					LdrScript = ldr_script,
-					IsFile = true,
+					IsFile = is_file,
 					ContextId = context_id?.ToString() ?? string.Empty,
 					Includes = includes ?? string.Empty
 				});
 				Handle = (HObject)reply.Handle;
+				ContextId = Guid.Parse(reply.ContextId);
 				Owned = true;
 			}
 			public Object(Ldr ldr, HObject handle, bool owned)
@@ -79,7 +108,7 @@ namespace LDraw.API
 			{
 				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finaliser thread");
 				if (Handle == HObject.Zero) return;
-				if (Owned) m_ldr.ObjectDelete(new ObjectDeleteRequest{ Handle = (ulong)Handle });
+				if (Owned) m_ldr.ObjectDelete(new ObjectDeleteRequest { Handle = (ulong)Handle });
 				Handle = HObject.Zero;
 			}
 
@@ -95,7 +124,7 @@ namespace LDraw.API
 				get { return m4x4.Zero; }
 				set
 				{
-					m_ldr.ObjectO2WSet(new ObjectO2WSetRequest{ Handle = (ulong)Handle, O2W = value.ToM4x4() });
+					m_ldr.ObjectO2WSet(new ObjectO2WSetRequest { Handle = (ulong)Handle, O2W = value.ToM4x4() });
 				}
 			}
 
@@ -109,11 +138,24 @@ namespace LDraw.API
 				}
 			}
 
+			/// <summary>The context id of this object</summary>
+			public Guid ContextId
+			{
+				get { return m_context_id ?? (ContextId = Guid.Parse(m_ldr.ObjectContextId(new ObjectContextIdRequest { Handle = (ulong)Handle }).ContextId)); }
+				set { m_context_id = value; }
+			}
+			private Guid? m_context_id;
+
 			/// <summary>Create a new Object that shares the model (but not transform) of this object</summary>
 			public Object CreateInstance()
 			{
-				var reply = m_ldr.ObjectCreateInstance(new ObjectCreateInstanceRequest { Handle = (ulong)Handle });
-				return new Object(m_ldr, (HObject)reply.Handle, true);
+				var reply = m_ldr.ObjectCreateInstances(new ObjectCreateInstancesRequest { Handle = (ulong)Handle, Count = 1 });
+				return new Object(m_ldr, (HObject)reply.Handle[0], true);
+			}
+			public Object[] CreateInstances(int count)
+			{
+				var reply = m_ldr.ObjectCreateInstances(new ObjectCreateInstancesRequest { Handle = (ulong)Handle, Count = count });
+				return reply.Handle.Select(x => new Object(m_ldr, (HObject)x, true)).ToArray();
 			}
 		}
 	}

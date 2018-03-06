@@ -5,6 +5,16 @@
 // Original file comments:
 // LDraw RPC Interface definition
 //
+// To extend this interface:
+//  1) Model the View3d.cs API
+//  2) Add the new API function
+//  3) Run 'BuildProto.py' to generate the LDraw.cs and LDrawGrpc.cs code
+//  4) Edit 'GrpcService.LDrawService' and override the new API function (care with threading contexts)
+//  5) Build LDraw (and LDraw.API by dependency)
+//  6) Edit 'LDraw.API.Ldr' to wrap the new API call
+//  7) Build LDraw.API again.
+//  8) Use new API in third party progra
+//
 #pragma warning disable 1591
 #region Designer generated code
 
@@ -23,16 +33,20 @@ namespace LDraw.API {
 
     static readonly grpc::Marshaller<global::LDraw.API.WindowCurrentGetRequest> __Marshaller_WindowCurrentGetRequest = grpc::Marshallers.Create((arg) => global::Google.Protobuf.MessageExtensions.ToByteArray(arg), global::LDraw.API.WindowCurrentGetRequest.Parser.ParseFrom);
     static readonly grpc::Marshaller<global::LDraw.API.WindowCurrentGetReply> __Marshaller_WindowCurrentGetReply = grpc::Marshallers.Create((arg) => global::Google.Protobuf.MessageExtensions.ToByteArray(arg), global::LDraw.API.WindowCurrentGetReply.Parser.ParseFrom);
-    static readonly grpc::Marshaller<global::LDraw.API.WindowAddObjectRequest> __Marshaller_WindowAddObjectRequest = grpc::Marshallers.Create((arg) => global::Google.Protobuf.MessageExtensions.ToByteArray(arg), global::LDraw.API.WindowAddObjectRequest.Parser.ParseFrom);
-    static readonly grpc::Marshaller<global::LDraw.API.WindowAddObjectReply> __Marshaller_WindowAddObjectReply = grpc::Marshallers.Create((arg) => global::Google.Protobuf.MessageExtensions.ToByteArray(arg), global::LDraw.API.WindowAddObjectReply.Parser.ParseFrom);
+    static readonly grpc::Marshaller<global::LDraw.API.WindowAddObjectsRequest> __Marshaller_WindowAddObjectsRequest = grpc::Marshallers.Create((arg) => global::Google.Protobuf.MessageExtensions.ToByteArray(arg), global::LDraw.API.WindowAddObjectsRequest.Parser.ParseFrom);
+    static readonly grpc::Marshaller<global::LDraw.API.WindowAddObjectsReply> __Marshaller_WindowAddObjectsReply = grpc::Marshallers.Create((arg) => global::Google.Protobuf.MessageExtensions.ToByteArray(arg), global::LDraw.API.WindowAddObjectsReply.Parser.ParseFrom);
+    static readonly grpc::Marshaller<global::LDraw.API.WindowRemoveObjectsRequest> __Marshaller_WindowRemoveObjectsRequest = grpc::Marshallers.Create((arg) => global::Google.Protobuf.MessageExtensions.ToByteArray(arg), global::LDraw.API.WindowRemoveObjectsRequest.Parser.ParseFrom);
+    static readonly grpc::Marshaller<global::LDraw.API.WindowRemoveObjectsReply> __Marshaller_WindowRemoveObjectsReply = grpc::Marshallers.Create((arg) => global::Google.Protobuf.MessageExtensions.ToByteArray(arg), global::LDraw.API.WindowRemoveObjectsReply.Parser.ParseFrom);
     static readonly grpc::Marshaller<global::LDraw.API.WindowRenderRequest> __Marshaller_WindowRenderRequest = grpc::Marshallers.Create((arg) => global::Google.Protobuf.MessageExtensions.ToByteArray(arg), global::LDraw.API.WindowRenderRequest.Parser.ParseFrom);
     static readonly grpc::Marshaller<global::LDraw.API.WindowRenderReply> __Marshaller_WindowRenderReply = grpc::Marshallers.Create((arg) => global::Google.Protobuf.MessageExtensions.ToByteArray(arg), global::LDraw.API.WindowRenderReply.Parser.ParseFrom);
     static readonly grpc::Marshaller<global::LDraw.API.ObjectCreateLdrRequest> __Marshaller_ObjectCreateLdrRequest = grpc::Marshallers.Create((arg) => global::Google.Protobuf.MessageExtensions.ToByteArray(arg), global::LDraw.API.ObjectCreateLdrRequest.Parser.ParseFrom);
     static readonly grpc::Marshaller<global::LDraw.API.ObjectCreateLdrReply> __Marshaller_ObjectCreateLdrReply = grpc::Marshallers.Create((arg) => global::Google.Protobuf.MessageExtensions.ToByteArray(arg), global::LDraw.API.ObjectCreateLdrReply.Parser.ParseFrom);
-    static readonly grpc::Marshaller<global::LDraw.API.ObjectCreateInstanceRequest> __Marshaller_ObjectCreateInstanceRequest = grpc::Marshallers.Create((arg) => global::Google.Protobuf.MessageExtensions.ToByteArray(arg), global::LDraw.API.ObjectCreateInstanceRequest.Parser.ParseFrom);
-    static readonly grpc::Marshaller<global::LDraw.API.ObjectCreateInstanceReply> __Marshaller_ObjectCreateInstanceReply = grpc::Marshallers.Create((arg) => global::Google.Protobuf.MessageExtensions.ToByteArray(arg), global::LDraw.API.ObjectCreateInstanceReply.Parser.ParseFrom);
+    static readonly grpc::Marshaller<global::LDraw.API.ObjectCreateInstancesRequest> __Marshaller_ObjectCreateInstancesRequest = grpc::Marshallers.Create((arg) => global::Google.Protobuf.MessageExtensions.ToByteArray(arg), global::LDraw.API.ObjectCreateInstancesRequest.Parser.ParseFrom);
+    static readonly grpc::Marshaller<global::LDraw.API.ObjectCreateInstancesReply> __Marshaller_ObjectCreateInstancesReply = grpc::Marshallers.Create((arg) => global::Google.Protobuf.MessageExtensions.ToByteArray(arg), global::LDraw.API.ObjectCreateInstancesReply.Parser.ParseFrom);
     static readonly grpc::Marshaller<global::LDraw.API.ObjectDeleteRequest> __Marshaller_ObjectDeleteRequest = grpc::Marshallers.Create((arg) => global::Google.Protobuf.MessageExtensions.ToByteArray(arg), global::LDraw.API.ObjectDeleteRequest.Parser.ParseFrom);
     static readonly grpc::Marshaller<global::LDraw.API.ObjectDeleteReply> __Marshaller_ObjectDeleteReply = grpc::Marshallers.Create((arg) => global::Google.Protobuf.MessageExtensions.ToByteArray(arg), global::LDraw.API.ObjectDeleteReply.Parser.ParseFrom);
+    static readonly grpc::Marshaller<global::LDraw.API.ObjectContextIdRequest> __Marshaller_ObjectContextIdRequest = grpc::Marshallers.Create((arg) => global::Google.Protobuf.MessageExtensions.ToByteArray(arg), global::LDraw.API.ObjectContextIdRequest.Parser.ParseFrom);
+    static readonly grpc::Marshaller<global::LDraw.API.ObjectContextIdReply> __Marshaller_ObjectContextIdReply = grpc::Marshallers.Create((arg) => global::Google.Protobuf.MessageExtensions.ToByteArray(arg), global::LDraw.API.ObjectContextIdReply.Parser.ParseFrom);
     static readonly grpc::Marshaller<global::LDraw.API.ObjectO2WSetRequest> __Marshaller_ObjectO2WSetRequest = grpc::Marshallers.Create((arg) => global::Google.Protobuf.MessageExtensions.ToByteArray(arg), global::LDraw.API.ObjectO2WSetRequest.Parser.ParseFrom);
     static readonly grpc::Marshaller<global::LDraw.API.ObjectO2WSetReply> __Marshaller_ObjectO2WSetReply = grpc::Marshallers.Create((arg) => global::Google.Protobuf.MessageExtensions.ToByteArray(arg), global::LDraw.API.ObjectO2WSetReply.Parser.ParseFrom);
     static readonly grpc::Marshaller<global::LDraw.API.ObjectO2PSetRequest> __Marshaller_ObjectO2PSetRequest = grpc::Marshallers.Create((arg) => global::Google.Protobuf.MessageExtensions.ToByteArray(arg), global::LDraw.API.ObjectO2PSetRequest.Parser.ParseFrom);
@@ -45,12 +59,19 @@ namespace LDraw.API {
         __Marshaller_WindowCurrentGetRequest,
         __Marshaller_WindowCurrentGetReply);
 
-    static readonly grpc::Method<global::LDraw.API.WindowAddObjectRequest, global::LDraw.API.WindowAddObjectReply> __Method_WindowAddObject = new grpc::Method<global::LDraw.API.WindowAddObjectRequest, global::LDraw.API.WindowAddObjectReply>(
+    static readonly grpc::Method<global::LDraw.API.WindowAddObjectsRequest, global::LDraw.API.WindowAddObjectsReply> __Method_WindowAddObjects = new grpc::Method<global::LDraw.API.WindowAddObjectsRequest, global::LDraw.API.WindowAddObjectsReply>(
         grpc::MethodType.Unary,
         __ServiceName,
-        "WindowAddObject",
-        __Marshaller_WindowAddObjectRequest,
-        __Marshaller_WindowAddObjectReply);
+        "WindowAddObjects",
+        __Marshaller_WindowAddObjectsRequest,
+        __Marshaller_WindowAddObjectsReply);
+
+    static readonly grpc::Method<global::LDraw.API.WindowRemoveObjectsRequest, global::LDraw.API.WindowRemoveObjectsReply> __Method_WindowRemoveObjects = new grpc::Method<global::LDraw.API.WindowRemoveObjectsRequest, global::LDraw.API.WindowRemoveObjectsReply>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "WindowRemoveObjects",
+        __Marshaller_WindowRemoveObjectsRequest,
+        __Marshaller_WindowRemoveObjectsReply);
 
     static readonly grpc::Method<global::LDraw.API.WindowRenderRequest, global::LDraw.API.WindowRenderReply> __Method_WindowRender = new grpc::Method<global::LDraw.API.WindowRenderRequest, global::LDraw.API.WindowRenderReply>(
         grpc::MethodType.Unary,
@@ -66,12 +87,12 @@ namespace LDraw.API {
         __Marshaller_ObjectCreateLdrRequest,
         __Marshaller_ObjectCreateLdrReply);
 
-    static readonly grpc::Method<global::LDraw.API.ObjectCreateInstanceRequest, global::LDraw.API.ObjectCreateInstanceReply> __Method_ObjectCreateInstance = new grpc::Method<global::LDraw.API.ObjectCreateInstanceRequest, global::LDraw.API.ObjectCreateInstanceReply>(
+    static readonly grpc::Method<global::LDraw.API.ObjectCreateInstancesRequest, global::LDraw.API.ObjectCreateInstancesReply> __Method_ObjectCreateInstances = new grpc::Method<global::LDraw.API.ObjectCreateInstancesRequest, global::LDraw.API.ObjectCreateInstancesReply>(
         grpc::MethodType.Unary,
         __ServiceName,
-        "ObjectCreateInstance",
-        __Marshaller_ObjectCreateInstanceRequest,
-        __Marshaller_ObjectCreateInstanceReply);
+        "ObjectCreateInstances",
+        __Marshaller_ObjectCreateInstancesRequest,
+        __Marshaller_ObjectCreateInstancesReply);
 
     static readonly grpc::Method<global::LDraw.API.ObjectDeleteRequest, global::LDraw.API.ObjectDeleteReply> __Method_ObjectDelete = new grpc::Method<global::LDraw.API.ObjectDeleteRequest, global::LDraw.API.ObjectDeleteReply>(
         grpc::MethodType.Unary,
@@ -79,6 +100,13 @@ namespace LDraw.API {
         "ObjectDelete",
         __Marshaller_ObjectDeleteRequest,
         __Marshaller_ObjectDeleteReply);
+
+    static readonly grpc::Method<global::LDraw.API.ObjectContextIdRequest, global::LDraw.API.ObjectContextIdReply> __Method_ObjectContextId = new grpc::Method<global::LDraw.API.ObjectContextIdRequest, global::LDraw.API.ObjectContextIdReply>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "ObjectContextId",
+        __Marshaller_ObjectContextIdRequest,
+        __Marshaller_ObjectContextIdReply);
 
     static readonly grpc::Method<global::LDraw.API.ObjectO2WSetRequest, global::LDraw.API.ObjectO2WSetReply> __Method_ObjectO2WSet = new grpc::Method<global::LDraw.API.ObjectO2WSetRequest, global::LDraw.API.ObjectO2WSetReply>(
         grpc::MethodType.Unary,
@@ -104,7 +132,7 @@ namespace LDraw.API {
     public abstract partial class LDrawServiceBase
     {
       /// <summary>
-      /// Get the current window
+      /// Get the current window (SceneUI)
       /// </summary>
       /// <param name="request">The request received from the client.</param>
       /// <param name="context">The context of the server-side call handler being invoked.</param>
@@ -115,12 +143,23 @@ namespace LDraw.API {
       }
 
       /// <summary>
-      /// Add an object to a window
+      /// Add objects to a window
       /// </summary>
       /// <param name="request">The request received from the client.</param>
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
-      public virtual global::System.Threading.Tasks.Task<global::LDraw.API.WindowAddObjectReply> WindowAddObject(global::LDraw.API.WindowAddObjectRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::LDraw.API.WindowAddObjectsReply> WindowAddObjects(global::LDraw.API.WindowAddObjectsRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Remove objects from a window
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      public virtual global::System.Threading.Tasks.Task<global::LDraw.API.WindowRemoveObjectsReply> WindowRemoveObjects(global::LDraw.API.WindowRemoveObjectsRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -153,7 +192,7 @@ namespace LDraw.API {
       /// <param name="request">The request received from the client.</param>
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
-      public virtual global::System.Threading.Tasks.Task<global::LDraw.API.ObjectCreateInstanceReply> ObjectCreateInstance(global::LDraw.API.ObjectCreateInstanceRequest request, grpc::ServerCallContext context)
+      public virtual global::System.Threading.Tasks.Task<global::LDraw.API.ObjectCreateInstancesReply> ObjectCreateInstances(global::LDraw.API.ObjectCreateInstancesRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -165,6 +204,17 @@ namespace LDraw.API {
       /// <param name="context">The context of the server-side call handler being invoked.</param>
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       public virtual global::System.Threading.Tasks.Task<global::LDraw.API.ObjectDeleteReply> ObjectDelete(global::LDraw.API.ObjectDeleteRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Get the context Id for an LDraw object
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      public virtual global::System.Threading.Tasks.Task<global::LDraw.API.ObjectContextIdReply> ObjectContextId(global::LDraw.API.ObjectContextIdRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -217,7 +267,7 @@ namespace LDraw.API {
       }
 
       /// <summary>
-      /// Get the current window
+      /// Get the current window (SceneUI)
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
@@ -229,7 +279,7 @@ namespace LDraw.API {
         return WindowCurrentGet(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       /// <summary>
-      /// Get the current window
+      /// Get the current window (SceneUI)
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="options">The options for the call.</param>
@@ -239,7 +289,7 @@ namespace LDraw.API {
         return CallInvoker.BlockingUnaryCall(__Method_WindowCurrentGet, null, options, request);
       }
       /// <summary>
-      /// Get the current window
+      /// Get the current window (SceneUI)
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
@@ -251,7 +301,7 @@ namespace LDraw.API {
         return WindowCurrentGetAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       /// <summary>
-      /// Get the current window
+      /// Get the current window (SceneUI)
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="options">The options for the call.</param>
@@ -261,48 +311,92 @@ namespace LDraw.API {
         return CallInvoker.AsyncUnaryCall(__Method_WindowCurrentGet, null, options, request);
       }
       /// <summary>
-      /// Add an object to a window
+      /// Add objects to a window
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
       /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
-      public virtual global::LDraw.API.WindowAddObjectReply WindowAddObject(global::LDraw.API.WindowAddObjectRequest request, grpc::Metadata headers = null, DateTime? deadline = null, CancellationToken cancellationToken = default(CancellationToken))
+      public virtual global::LDraw.API.WindowAddObjectsReply WindowAddObjects(global::LDraw.API.WindowAddObjectsRequest request, grpc::Metadata headers = null, DateTime? deadline = null, CancellationToken cancellationToken = default(CancellationToken))
       {
-        return WindowAddObject(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+        return WindowAddObjects(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       /// <summary>
-      /// Add an object to a window
+      /// Add objects to a window
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
-      public virtual global::LDraw.API.WindowAddObjectReply WindowAddObject(global::LDraw.API.WindowAddObjectRequest request, grpc::CallOptions options)
+      public virtual global::LDraw.API.WindowAddObjectsReply WindowAddObjects(global::LDraw.API.WindowAddObjectsRequest request, grpc::CallOptions options)
       {
-        return CallInvoker.BlockingUnaryCall(__Method_WindowAddObject, null, options, request);
+        return CallInvoker.BlockingUnaryCall(__Method_WindowAddObjects, null, options, request);
       }
       /// <summary>
-      /// Add an object to a window
+      /// Add objects to a window
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
       /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
-      public virtual grpc::AsyncUnaryCall<global::LDraw.API.WindowAddObjectReply> WindowAddObjectAsync(global::LDraw.API.WindowAddObjectRequest request, grpc::Metadata headers = null, DateTime? deadline = null, CancellationToken cancellationToken = default(CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::LDraw.API.WindowAddObjectsReply> WindowAddObjectsAsync(global::LDraw.API.WindowAddObjectsRequest request, grpc::Metadata headers = null, DateTime? deadline = null, CancellationToken cancellationToken = default(CancellationToken))
       {
-        return WindowAddObjectAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+        return WindowAddObjectsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       /// <summary>
-      /// Add an object to a window
+      /// Add objects to a window
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
-      public virtual grpc::AsyncUnaryCall<global::LDraw.API.WindowAddObjectReply> WindowAddObjectAsync(global::LDraw.API.WindowAddObjectRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::LDraw.API.WindowAddObjectsReply> WindowAddObjectsAsync(global::LDraw.API.WindowAddObjectsRequest request, grpc::CallOptions options)
       {
-        return CallInvoker.AsyncUnaryCall(__Method_WindowAddObject, null, options, request);
+        return CallInvoker.AsyncUnaryCall(__Method_WindowAddObjects, null, options, request);
+      }
+      /// <summary>
+      /// Remove objects from a window
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      public virtual global::LDraw.API.WindowRemoveObjectsReply WindowRemoveObjects(global::LDraw.API.WindowRemoveObjectsRequest request, grpc::Metadata headers = null, DateTime? deadline = null, CancellationToken cancellationToken = default(CancellationToken))
+      {
+        return WindowRemoveObjects(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Remove objects from a window
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      public virtual global::LDraw.API.WindowRemoveObjectsReply WindowRemoveObjects(global::LDraw.API.WindowRemoveObjectsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_WindowRemoveObjects, null, options, request);
+      }
+      /// <summary>
+      /// Remove objects from a window
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      public virtual grpc::AsyncUnaryCall<global::LDraw.API.WindowRemoveObjectsReply> WindowRemoveObjectsAsync(global::LDraw.API.WindowRemoveObjectsRequest request, grpc::Metadata headers = null, DateTime? deadline = null, CancellationToken cancellationToken = default(CancellationToken))
+      {
+        return WindowRemoveObjectsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Remove objects from a window
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      public virtual grpc::AsyncUnaryCall<global::LDraw.API.WindowRemoveObjectsReply> WindowRemoveObjectsAsync(global::LDraw.API.WindowRemoveObjectsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_WindowRemoveObjects, null, options, request);
       }
       /// <summary>
       /// Render the current scene
@@ -400,9 +494,9 @@ namespace LDraw.API {
       /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The response received from the server.</returns>
-      public virtual global::LDraw.API.ObjectCreateInstanceReply ObjectCreateInstance(global::LDraw.API.ObjectCreateInstanceRequest request, grpc::Metadata headers = null, DateTime? deadline = null, CancellationToken cancellationToken = default(CancellationToken))
+      public virtual global::LDraw.API.ObjectCreateInstancesReply ObjectCreateInstances(global::LDraw.API.ObjectCreateInstancesRequest request, grpc::Metadata headers = null, DateTime? deadline = null, CancellationToken cancellationToken = default(CancellationToken))
       {
-        return ObjectCreateInstance(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+        return ObjectCreateInstances(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       /// <summary>
       /// Create a clone of an LDraw object
@@ -410,9 +504,9 @@ namespace LDraw.API {
       /// <param name="request">The request to send to the server.</param>
       /// <param name="options">The options for the call.</param>
       /// <returns>The response received from the server.</returns>
-      public virtual global::LDraw.API.ObjectCreateInstanceReply ObjectCreateInstance(global::LDraw.API.ObjectCreateInstanceRequest request, grpc::CallOptions options)
+      public virtual global::LDraw.API.ObjectCreateInstancesReply ObjectCreateInstances(global::LDraw.API.ObjectCreateInstancesRequest request, grpc::CallOptions options)
       {
-        return CallInvoker.BlockingUnaryCall(__Method_ObjectCreateInstance, null, options, request);
+        return CallInvoker.BlockingUnaryCall(__Method_ObjectCreateInstances, null, options, request);
       }
       /// <summary>
       /// Create a clone of an LDraw object
@@ -422,9 +516,9 @@ namespace LDraw.API {
       /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
       /// <param name="cancellationToken">An optional token for canceling the call.</param>
       /// <returns>The call object.</returns>
-      public virtual grpc::AsyncUnaryCall<global::LDraw.API.ObjectCreateInstanceReply> ObjectCreateInstanceAsync(global::LDraw.API.ObjectCreateInstanceRequest request, grpc::Metadata headers = null, DateTime? deadline = null, CancellationToken cancellationToken = default(CancellationToken))
+      public virtual grpc::AsyncUnaryCall<global::LDraw.API.ObjectCreateInstancesReply> ObjectCreateInstancesAsync(global::LDraw.API.ObjectCreateInstancesRequest request, grpc::Metadata headers = null, DateTime? deadline = null, CancellationToken cancellationToken = default(CancellationToken))
       {
-        return ObjectCreateInstanceAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+        return ObjectCreateInstancesAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       /// <summary>
       /// Create a clone of an LDraw object
@@ -432,9 +526,9 @@ namespace LDraw.API {
       /// <param name="request">The request to send to the server.</param>
       /// <param name="options">The options for the call.</param>
       /// <returns>The call object.</returns>
-      public virtual grpc::AsyncUnaryCall<global::LDraw.API.ObjectCreateInstanceReply> ObjectCreateInstanceAsync(global::LDraw.API.ObjectCreateInstanceRequest request, grpc::CallOptions options)
+      public virtual grpc::AsyncUnaryCall<global::LDraw.API.ObjectCreateInstancesReply> ObjectCreateInstancesAsync(global::LDraw.API.ObjectCreateInstancesRequest request, grpc::CallOptions options)
       {
-        return CallInvoker.AsyncUnaryCall(__Method_ObjectCreateInstance, null, options, request);
+        return CallInvoker.AsyncUnaryCall(__Method_ObjectCreateInstances, null, options, request);
       }
       /// <summary>
       /// Delete an LDraw object
@@ -479,6 +573,50 @@ namespace LDraw.API {
       public virtual grpc::AsyncUnaryCall<global::LDraw.API.ObjectDeleteReply> ObjectDeleteAsync(global::LDraw.API.ObjectDeleteRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_ObjectDelete, null, options, request);
+      }
+      /// <summary>
+      /// Get the context Id for an LDraw object
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      public virtual global::LDraw.API.ObjectContextIdReply ObjectContextId(global::LDraw.API.ObjectContextIdRequest request, grpc::Metadata headers = null, DateTime? deadline = null, CancellationToken cancellationToken = default(CancellationToken))
+      {
+        return ObjectContextId(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Get the context Id for an LDraw object
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      public virtual global::LDraw.API.ObjectContextIdReply ObjectContextId(global::LDraw.API.ObjectContextIdRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_ObjectContextId, null, options, request);
+      }
+      /// <summary>
+      /// Get the context Id for an LDraw object
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      public virtual grpc::AsyncUnaryCall<global::LDraw.API.ObjectContextIdReply> ObjectContextIdAsync(global::LDraw.API.ObjectContextIdRequest request, grpc::Metadata headers = null, DateTime? deadline = null, CancellationToken cancellationToken = default(CancellationToken))
+      {
+        return ObjectContextIdAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Get the context Id for an LDraw object
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      public virtual grpc::AsyncUnaryCall<global::LDraw.API.ObjectContextIdReply> ObjectContextIdAsync(global::LDraw.API.ObjectContextIdRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_ObjectContextId, null, options, request);
       }
       /// <summary>
       /// Set the object to world transform for an LDraw object
@@ -581,11 +719,13 @@ namespace LDraw.API {
     {
       return grpc::ServerServiceDefinition.CreateBuilder()
           .AddMethod(__Method_WindowCurrentGet, serviceImpl.WindowCurrentGet)
-          .AddMethod(__Method_WindowAddObject, serviceImpl.WindowAddObject)
+          .AddMethod(__Method_WindowAddObjects, serviceImpl.WindowAddObjects)
+          .AddMethod(__Method_WindowRemoveObjects, serviceImpl.WindowRemoveObjects)
           .AddMethod(__Method_WindowRender, serviceImpl.WindowRender)
           .AddMethod(__Method_ObjectCreateLdr, serviceImpl.ObjectCreateLdr)
-          .AddMethod(__Method_ObjectCreateInstance, serviceImpl.ObjectCreateInstance)
+          .AddMethod(__Method_ObjectCreateInstances, serviceImpl.ObjectCreateInstances)
           .AddMethod(__Method_ObjectDelete, serviceImpl.ObjectDelete)
+          .AddMethod(__Method_ObjectContextId, serviceImpl.ObjectContextId)
           .AddMethod(__Method_ObjectO2WSet, serviceImpl.ObjectO2WSet)
           .AddMethod(__Method_ObjectO2PSet, serviceImpl.ObjectO2PSet).Build();
     }

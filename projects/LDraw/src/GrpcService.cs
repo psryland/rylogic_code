@@ -130,19 +130,44 @@ namespace LDraw
 				});
 			}
 
-			/// <summary>Add an object to a scene</summary>
-			public override Task<WindowAddObjectReply> WindowAddObject(WindowAddObjectRequest request, ServerCallContext context)
+			/// <summary>Add objects to a scene by context id</summary>
+			public override Task<WindowAddObjectsReply> WindowAddObjects(WindowAddObjectsRequest request, ServerCallContext context)
 			{
-				return InvokeAsync(() =>
+				BeginInvoke(() =>
 				{
 					var scene = FindScene((IntPtr)request.WindowHandle);
 					if (scene != null)
 					{
-						var obj = new View3d.Object((IntPtr)request.ObjectHandle);
-						scene.Window.AddObject(obj);
+						// Add specific objects
+						var objs = request.ObjectHandles.Select(x => new View3d.Object((IntPtr)x, false));
+						scene.Window.AddObjects(objs);
+
+						// Add objects by context id
+						var ids = request.ContextIds.Select(x => Guid.Parse(x)).ToArray();
+						scene.Window.AddObjects(ids, ids.Length, 0);
 					}
-					return new WindowAddObjectReply();
 				});
+				return Task.FromResult(new WindowAddObjectsReply());
+			}
+
+			/// <summary>Remove objects from a scene by context id</summary>
+			public override Task<WindowRemoveObjectsReply> WindowRemoveObjects(WindowRemoveObjectsRequest request, ServerCallContext context)
+			{
+				BeginInvoke(() =>
+				{
+					var scene = FindScene((IntPtr)request.WindowHandle);
+					if (scene != null)
+					{
+						// Remove specific objects
+						var objs = request.ObjectHandles.Select(x => new View3d.Object((IntPtr)x, false));
+						scene.Window.RemoveObjects(objs);
+
+						// Remove objects by context id
+						var ids = request.ContextIds.Select(x => Guid.Parse(x)).ToArray();
+						scene.Window.RemoveObjects(ids, ids.Length, 0);
+					}
+				});
+				return Task.FromResult(new WindowRemoveObjectsReply());
 			}
 
 			/// <summary>Render the current scene</summary>
@@ -159,25 +184,29 @@ namespace LDraw
 			// Objects *************************************
 
 			/// <summary>Create an Ldr object</summary>
-			public override Task<ObjectCreateLdrReply> ObjectCreateLdr(ObjectCreateLdrRequest req, ServerCallContext context)
+			public override Task<ObjectCreateLdrReply> ObjectCreateLdr(ObjectCreateLdrRequest request, ServerCallContext context)
 			{
 				return InvokeAsync(() =>
 				{
-					var context_id = req.ContextId.HasValue() ? new Guid(req.ContextId) : (Guid?)null;
-					var obj = new View3d.Object(req.LdrScript, req.IsFile, context_id, new View3d.View3DIncludes(req.Includes));
-					var result = new ObjectCreateLdrReply { Handle = (ulong)obj.Handle };
+					var context_id = request.ContextId.HasValue() ? new Guid(request.ContextId) : (Guid?)null;
+					var obj = new View3d.Object(request.LdrScript, request.IsFile, context_id, new View3d.View3DIncludes(request.Includes));
+					var result = new ObjectCreateLdrReply { Handle = (ulong)obj.Handle, ContextId = obj.ContextId.ToString() };
 					return result;
 				});
 			}
 
-			/// <summary>Create an instance of an Ldr Object</summary>
-			public override Task<ObjectCreateInstanceReply> ObjectCreateInstance(ObjectCreateInstanceRequest request, ServerCallContext context)
+			/// <summary>Create instances of an Ldr Object</summary>
+			public override Task<ObjectCreateInstancesReply> ObjectCreateInstances(ObjectCreateInstancesRequest request, ServerCallContext context)
 			{
 				return InvokeAsync(() =>
 				{
 					var obj = new View3d.Object((IntPtr)request.Handle);
-					var nue = obj.CreateInstance();
-					var result = new ObjectCreateInstanceReply { Handle = (ulong)nue.Handle };
+					var result = new ObjectCreateInstancesReply();
+					for (int i = 0, iend = Math.Max(1, request.Count); i != iend; ++i)
+					{
+						var nue = obj.CreateInstance();
+						result.Handle.Add((ulong)nue.Handle);
+					};
 					return result;
 				});
 			}
@@ -185,10 +214,21 @@ namespace LDraw
 			/// <summary>Delete an Ldr object</summary>
 			public override Task<ObjectDeleteReply> ObjectDelete(ObjectDeleteRequest request, ServerCallContext context)
 			{
+				BeginInvoke(() =>
+				{
+					var obj = new View3d.Object((IntPtr)request.Handle, true);
+					obj.Dispose();
+				});
+				return Task.FromResult(new ObjectDeleteReply());
+			}
+
+			/// <summary>Return the context id for an object</summary>
+			public override Task<ObjectContextIdReply> ObjectContextId(ObjectContextIdRequest request, ServerCallContext context)
+			{
 				return InvokeAsync(() =>
 				{
-					new View3d.Object((IntPtr)request.Handle, true).Dispose();
-					return new ObjectDeleteReply();
+					var obj = new View3d.Object((IntPtr)request.Handle, false);
+					return new ObjectContextIdReply { ContextId = obj.ContextId.ToString() };
 				});
 			}
 

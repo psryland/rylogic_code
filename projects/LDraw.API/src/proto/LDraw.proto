@@ -7,6 +7,8 @@
 //  4) Edit 'GrpcService.LDrawService' and override the new API function (care with threading contexts)
 //  5) Build LDraw (and LDraw.API by dependency)
 //  6) Edit 'LDraw.API.Ldr' to wrap the new API call
+//  7) Build LDraw.API again.
+//  8) Use new API in third party progra
 
 syntax = "proto3";
 option csharp_namespace = "LDraw.API";
@@ -19,8 +21,11 @@ service LDrawService
 	// Get the current window (SceneUI)
 	rpc WindowCurrentGet(WindowCurrentGetRequest) returns (WindowCurrentGetReply) {}
 
-	// Add an object to a window
-	rpc WindowAddObject(WindowAddObjectRequest) returns (WindowAddObjectReply) {}
+	// Add objects to a window
+	rpc WindowAddObjects(WindowAddObjectsRequest) returns (WindowAddObjectsReply) {}
+
+	// Remove objects from a window
+	rpc WindowRemoveObjects(WindowRemoveObjectsRequest) returns (WindowRemoveObjectsReply) {}
 
 	// Render the current scene
 	rpc WindowRender(WindowRenderRequest) returns (WindowRenderReply) {}
@@ -31,10 +36,13 @@ service LDrawService
 	rpc ObjectCreateLdr(ObjectCreateLdrRequest) returns (ObjectCreateLdrReply) {}
 
 	// Create a clone of an LDraw object
-	rpc ObjectCreateInstance(ObjectCreateInstanceRequest) returns (ObjectCreateInstanceReply) {}
+	rpc ObjectCreateInstances(ObjectCreateInstancesRequest) returns (ObjectCreateInstancesReply) {}
 
 	// Delete an LDraw object
 	rpc ObjectDelete(ObjectDeleteRequest) returns (ObjectDeleteReply) {}
+
+	// Get the context Id for an LDraw object
+	rpc ObjectContextId(ObjectContextIdRequest) returns (ObjectContextIdReply) {}
 
 	// Set the object to world transform for an LDraw object
 	rpc ObjectO2WSet(ObjectO2WSetRequest) returns (ObjectO2WSetReply) {}
@@ -45,6 +53,7 @@ service LDrawService
 
 // Windows *************************************
 
+// Window Current Get
 message WindowCurrentGetRequest
 {
 }
@@ -53,12 +62,35 @@ message WindowCurrentGetReply
 	fixed64 handle = 1;
 }
 
-message WindowAddObjectRequest
+// Window Add Objects
+message WindowAddObjectsRequest
 {
+	// The handle of the window to add the objects to
 	fixed64 window_handle = 1;
-	fixed64 object_handle = 2;
+
+	// The context ids of the objects to add
+	repeated string context_ids = 2;
+
+	// The handles of the object to add
+	repeated fixed64 object_handles = 3;
 }
-message WindowAddObjectReply
+message WindowAddObjectsReply
+{
+}
+
+// Window Remove Objects
+message WindowRemoveObjectsRequest
+{
+	// The handle of the window to remove objects from
+	fixed64 window_handle = 1;
+
+	// The context ids of the objects to remove
+	repeated string context_ids = 2;
+
+	// The handles of the object to remove
+	repeated fixed64 object_handles = 3;
+}
+message WindowRemoveObjectsReply
 {
 }
 
@@ -98,16 +130,19 @@ message ObjectCreateLdrReply
 	string context_id = 2;
 }
 
-// Object Create Instance
-message ObjectCreateInstanceRequest
+// Object Create Instances
+message ObjectCreateInstancesRequest
 {
 	// The object handle of the object to be cloned
 	fixed64 handle = 1;
+
+	// The number of instances to create
+	int32 count = 2; // Optional. Default is 1
 }
-message ObjectCreateInstanceReply
+message ObjectCreateInstancesReply
 {
-	// The object handle of the newly created cloned instance
-	fixed64 handle = 1;
+	// The object handle of the newly created cloned instances
+	repeated fixed64 handle = 1;
 }
 
 // Object Delete
@@ -118,6 +153,16 @@ message ObjectDeleteRequest
 }
 message ObjectDeleteReply
 {
+}
+
+// Object ContextId
+message ObjectContextIdRequest
+{
+	fixed64 handle = 1;
+}
+message ObjectContextIdReply
+{
+	string context_id = 1;
 }
 
 // ObjectO2WSet

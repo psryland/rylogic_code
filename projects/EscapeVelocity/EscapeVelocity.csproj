@@ -51,33 +51,33 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="bond.cs" />
-    <Compile Include="element.cs" />
-    <Compile Include="element_name.cs" />
-    <Compile Include="element_property.cs" />
-    <Compile Include="game_constants.cs" />
-    <Compile Include="game_instance.cs" />
-    <Compile Include="global.cs" />
-    <Compile Include="graph_form.cs">
+    <Compile Include="src\bond.cs" />
+    <Compile Include="src\element.cs" />
+    <Compile Include="src\element_name.cs" />
+    <Compile Include="src\element_property.cs" />
+    <Compile Include="src\game_constants.cs" />
+    <Compile Include="src\game_instance.cs" />
+    <Compile Include="src\global.cs" />
+    <Compile Include="src\graph_form.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="main_form.cs">
+    <Compile Include="src\main_form.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="main_form.Designer.cs">
+    <Compile Include="src\main_form.Designer.cs">
       <DependentUpon>main_form.cs</DependentUpon>
     </Compile>
-    <Compile Include="compound.cs" />
-    <Compile Include="chem_lab.cs" />
-    <Compile Include="permutations.cs" />
-    <Compile Include="Program.cs" />
+    <Compile Include="src\compound.cs" />
+    <Compile Include="src\chem_lab.cs" />
+    <Compile Include="src\permutations.cs" />
+    <Compile Include="src\Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="research_effort.cs" />
-    <Compile Include="ship_design.cs" />
-    <Compile Include="ship_spec.cs" />
-    <Compile Include="stockpile.cs" />
-    <Compile Include="world_state.cs" />
-    <EmbeddedResource Include="main_form.resx">
+    <Compile Include="src\research_effort.cs" />
+    <Compile Include="src\ship_design.cs" />
+    <Compile Include="src\ship_spec.cs" />
+    <Compile Include="src\stockpile.cs" />
+    <Compile Include="src\world_state.cs" />
+    <EmbeddedResource Include="src\main_form.resx">
       <DependentUpon>main_form.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
@@ -104,6 +104,9 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="src\design.txt" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj">
       <Project>{37a4f319-2052-404d-ae7f-f882cfa33c1b}</Project>
       <Name>Rylogic.Core</Name>
@@ -112,9 +115,6 @@
       <Project>{8c1634d9-c32a-4ad6-b2c7-ec17f6bfde01}</Project>
       <Name>Rylogic.Main</Name>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="design.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

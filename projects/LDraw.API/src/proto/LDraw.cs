@@ -24,53 +24,67 @@ namespace LDraw.API {
           string.Concat(
             "CgtMRHJhdy5wcm90bxIITERyYXdBUEkiGQoXV2luZG93Q3VycmVudEdldFJl",
             "cXVlc3QiJwoVV2luZG93Q3VycmVudEdldFJlcGx5Eg4KBmhhbmRsZRgBIAEo",
-            "BiJGChZXaW5kb3dBZGRPYmplY3RSZXF1ZXN0EhUKDXdpbmRvd19oYW5kbGUY",
-            "ASABKAYSFQoNb2JqZWN0X2hhbmRsZRgCIAEoBiIWChRXaW5kb3dBZGRPYmpl",
-            "Y3RSZXBseSIlChNXaW5kb3dSZW5kZXJSZXF1ZXN0Eg4KBmhhbmRsZRgBIAEo",
-            "BiITChFXaW5kb3dSZW5kZXJSZXBseSJjChZPYmplY3RDcmVhdGVMZHJSZXF1",
-            "ZXN0EhIKCmxkcl9zY3JpcHQYASABKAkSDwoHaXNfZmlsZRgCIAEoCBISCgpj",
-            "b250ZXh0X2lkGAMgASgJEhAKCGluY2x1ZGVzGAQgASgJIjoKFE9iamVjdENy",
-            "ZWF0ZUxkclJlcGx5Eg4KBmhhbmRsZRgBIAEoBhISCgpjb250ZXh0X2lkGAIg",
-            "ASgJIi0KG09iamVjdENyZWF0ZUluc3RhbmNlUmVxdWVzdBIOCgZoYW5kbGUY",
-            "ASABKAYiKwoZT2JqZWN0Q3JlYXRlSW5zdGFuY2VSZXBseRIOCgZoYW5kbGUY",
-            "ASABKAYiJQoTT2JqZWN0RGVsZXRlUmVxdWVzdBIOCgZoYW5kbGUYASABKAYi",
-            "EwoRT2JqZWN0RGVsZXRlUmVwbHkiUAoTT2JqZWN0TzJXU2V0UmVxdWVzdBIO",
-            "CgZoYW5kbGUYASABKAYSGwoDbzJ3GAIgASgLMg4uTERyYXdBUEkuTTR4NBIM",
-            "CgRuYW1lGAMgASgJIhMKEU9iamVjdE8yV1NldFJlcGx5IlAKE09iamVjdE8y",
-            "UFNldFJlcXVlc3QSDgoGaGFuZGxlGAEgASgGEhsKA28ycBgCIAEoCzIOLkxE",
-            "cmF3QVBJLk00eDQSDAoEbmFtZRgDIAEoCSITChFPYmplY3RPMlBTZXRSZXBs",
-            "eSIRCgRNNHg0EgkKAW0YASADKAIiEQoEVmVjNBIJCgFtGAEgAygCMrQFCgxM",
-            "RHJhd1NlcnZpY2USWAoQV2luZG93Q3VycmVudEdldBIhLkxEcmF3QVBJLldp",
-            "bmRvd0N1cnJlbnRHZXRSZXF1ZXN0Gh8uTERyYXdBUEkuV2luZG93Q3VycmVu",
-            "dEdldFJlcGx5IgASVQoPV2luZG93QWRkT2JqZWN0EiAuTERyYXdBUEkuV2lu",
-            "ZG93QWRkT2JqZWN0UmVxdWVzdBoeLkxEcmF3QVBJLldpbmRvd0FkZE9iamVj",
-            "dFJlcGx5IgASTAoMV2luZG93UmVuZGVyEh0uTERyYXdBUEkuV2luZG93UmVu",
-            "ZGVyUmVxdWVzdBobLkxEcmF3QVBJLldpbmRvd1JlbmRlclJlcGx5IgASVQoP",
-            "T2JqZWN0Q3JlYXRlTGRyEiAuTERyYXdBUEkuT2JqZWN0Q3JlYXRlTGRyUmVx",
-            "dWVzdBoeLkxEcmF3QVBJLk9iamVjdENyZWF0ZUxkclJlcGx5IgASZAoUT2Jq",
-            "ZWN0Q3JlYXRlSW5zdGFuY2USJS5MRHJhd0FQSS5PYmplY3RDcmVhdGVJbnN0",
-            "YW5jZVJlcXVlc3QaIy5MRHJhd0FQSS5PYmplY3RDcmVhdGVJbnN0YW5jZVJl",
-            "cGx5IgASTAoMT2JqZWN0RGVsZXRlEh0uTERyYXdBUEkuT2JqZWN0RGVsZXRl",
-            "UmVxdWVzdBobLkxEcmF3QVBJLk9iamVjdERlbGV0ZVJlcGx5IgASTAoMT2Jq",
-            "ZWN0TzJXU2V0Eh0uTERyYXdBUEkuT2JqZWN0TzJXU2V0UmVxdWVzdBobLkxE",
-            "cmF3QVBJLk9iamVjdE8yV1NldFJlcGx5IgASTAoMT2JqZWN0TzJQU2V0Eh0u",
-            "TERyYXdBUEkuT2JqZWN0TzJQU2V0UmVxdWVzdBobLkxEcmF3QVBJLk9iamVj",
-            "dE8yUFNldFJlcGx5IgBCDKoCCUxEcmF3LkFQSWIGcHJvdG8z"));
+            "BiJdChdXaW5kb3dBZGRPYmplY3RzUmVxdWVzdBIVCg13aW5kb3dfaGFuZGxl",
+            "GAEgASgGEhMKC2NvbnRleHRfaWRzGAIgAygJEhYKDm9iamVjdF9oYW5kbGVz",
+            "GAMgAygGIhcKFVdpbmRvd0FkZE9iamVjdHNSZXBseSJgChpXaW5kb3dSZW1v",
+            "dmVPYmplY3RzUmVxdWVzdBIVCg13aW5kb3dfaGFuZGxlGAEgASgGEhMKC2Nv",
+            "bnRleHRfaWRzGAIgAygJEhYKDm9iamVjdF9oYW5kbGVzGAMgAygGIhoKGFdp",
+            "bmRvd1JlbW92ZU9iamVjdHNSZXBseSIlChNXaW5kb3dSZW5kZXJSZXF1ZXN0",
+            "Eg4KBmhhbmRsZRgBIAEoBiITChFXaW5kb3dSZW5kZXJSZXBseSJjChZPYmpl",
+            "Y3RDcmVhdGVMZHJSZXF1ZXN0EhIKCmxkcl9zY3JpcHQYASABKAkSDwoHaXNf",
+            "ZmlsZRgCIAEoCBISCgpjb250ZXh0X2lkGAMgASgJEhAKCGluY2x1ZGVzGAQg",
+            "ASgJIjoKFE9iamVjdENyZWF0ZUxkclJlcGx5Eg4KBmhhbmRsZRgBIAEoBhIS",
+            "Cgpjb250ZXh0X2lkGAIgASgJIj0KHE9iamVjdENyZWF0ZUluc3RhbmNlc1Jl",
+            "cXVlc3QSDgoGaGFuZGxlGAEgASgGEg0KBWNvdW50GAIgASgFIiwKGk9iamVj",
+            "dENyZWF0ZUluc3RhbmNlc1JlcGx5Eg4KBmhhbmRsZRgBIAMoBiIlChNPYmpl",
+            "Y3REZWxldGVSZXF1ZXN0Eg4KBmhhbmRsZRgBIAEoBiITChFPYmplY3REZWxl",
+            "dGVSZXBseSIoChZPYmplY3RDb250ZXh0SWRSZXF1ZXN0Eg4KBmhhbmRsZRgB",
+            "IAEoBiIqChRPYmplY3RDb250ZXh0SWRSZXBseRISCgpjb250ZXh0X2lkGAEg",
+            "ASgJIlAKE09iamVjdE8yV1NldFJlcXVlc3QSDgoGaGFuZGxlGAEgASgGEhsK",
+            "A28ydxgCIAEoCzIOLkxEcmF3QVBJLk00eDQSDAoEbmFtZRgDIAEoCSITChFP",
+            "YmplY3RPMldTZXRSZXBseSJQChNPYmplY3RPMlBTZXRSZXF1ZXN0Eg4KBmhh",
+            "bmRsZRgBIAEoBhIbCgNvMnAYAiABKAsyDi5MRHJhd0FQSS5NNHg0EgwKBG5h",
+            "bWUYAyABKAkiEwoRT2JqZWN0TzJQU2V0UmVwbHkiEQoETTR4NBIJCgFtGAEg",
+            "AygCIhEKBFZlYzQSCQoBbRgBIAMoAjL0BgoMTERyYXdTZXJ2aWNlElgKEFdp",
+            "bmRvd0N1cnJlbnRHZXQSIS5MRHJhd0FQSS5XaW5kb3dDdXJyZW50R2V0UmVx",
+            "dWVzdBofLkxEcmF3QVBJLldpbmRvd0N1cnJlbnRHZXRSZXBseSIAElgKEFdp",
+            "bmRvd0FkZE9iamVjdHMSIS5MRHJhd0FQSS5XaW5kb3dBZGRPYmplY3RzUmVx",
+            "dWVzdBofLkxEcmF3QVBJLldpbmRvd0FkZE9iamVjdHNSZXBseSIAEmEKE1dp",
+            "bmRvd1JlbW92ZU9iamVjdHMSJC5MRHJhd0FQSS5XaW5kb3dSZW1vdmVPYmpl",
+            "Y3RzUmVxdWVzdBoiLkxEcmF3QVBJLldpbmRvd1JlbW92ZU9iamVjdHNSZXBs",
+            "eSIAEkwKDFdpbmRvd1JlbmRlchIdLkxEcmF3QVBJLldpbmRvd1JlbmRlclJl",
+            "cXVlc3QaGy5MRHJhd0FQSS5XaW5kb3dSZW5kZXJSZXBseSIAElUKD09iamVj",
+            "dENyZWF0ZUxkchIgLkxEcmF3QVBJLk9iamVjdENyZWF0ZUxkclJlcXVlc3Qa",
+            "Hi5MRHJhd0FQSS5PYmplY3RDcmVhdGVMZHJSZXBseSIAEmcKFU9iamVjdENy",
+            "ZWF0ZUluc3RhbmNlcxImLkxEcmF3QVBJLk9iamVjdENyZWF0ZUluc3RhbmNl",
+            "c1JlcXVlc3QaJC5MRHJhd0FQSS5PYmplY3RDcmVhdGVJbnN0YW5jZXNSZXBs",
+            "eSIAEkwKDE9iamVjdERlbGV0ZRIdLkxEcmF3QVBJLk9iamVjdERlbGV0ZVJl",
+            "cXVlc3QaGy5MRHJhd0FQSS5PYmplY3REZWxldGVSZXBseSIAElUKD09iamVj",
+            "dENvbnRleHRJZBIgLkxEcmF3QVBJLk9iamVjdENvbnRleHRJZFJlcXVlc3Qa",
+            "Hi5MRHJhd0FQSS5PYmplY3RDb250ZXh0SWRSZXBseSIAEkwKDE9iamVjdE8y",
+            "V1NldBIdLkxEcmF3QVBJLk9iamVjdE8yV1NldFJlcXVlc3QaGy5MRHJhd0FQ",
+            "SS5PYmplY3RPMldTZXRSZXBseSIAEkwKDE9iamVjdE8yUFNldBIdLkxEcmF3",
+            "QVBJLk9iamVjdE8yUFNldFJlcXVlc3QaGy5MRHJhd0FQSS5PYmplY3RPMlBT",
+            "ZXRSZXBseSIAQgyqAglMRHJhdy5BUEliBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::LDraw.API.WindowCurrentGetRequest), global::LDraw.API.WindowCurrentGetRequest.Parser, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::LDraw.API.WindowCurrentGetReply), global::LDraw.API.WindowCurrentGetReply.Parser, new[]{ "Handle" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::LDraw.API.WindowAddObjectRequest), global::LDraw.API.WindowAddObjectRequest.Parser, new[]{ "WindowHandle", "ObjectHandle" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::LDraw.API.WindowAddObjectReply), global::LDraw.API.WindowAddObjectReply.Parser, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::LDraw.API.WindowAddObjectsRequest), global::LDraw.API.WindowAddObjectsRequest.Parser, new[]{ "WindowHandle", "ContextIds", "ObjectHandles" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::LDraw.API.WindowAddObjectsReply), global::LDraw.API.WindowAddObjectsReply.Parser, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::LDraw.API.WindowRemoveObjectsRequest), global::LDraw.API.WindowRemoveObjectsRequest.Parser, new[]{ "WindowHandle", "ContextIds", "ObjectHandles" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::LDraw.API.WindowRemoveObjectsReply), global::LDraw.API.WindowRemoveObjectsReply.Parser, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::LDraw.API.WindowRenderRequest), global::LDraw.API.WindowRenderRequest.Parser, new[]{ "Handle" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::LDraw.API.WindowRenderReply), global::LDraw.API.WindowRenderReply.Parser, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::LDraw.API.ObjectCreateLdrRequest), global::LDraw.API.ObjectCreateLdrRequest.Parser, new[]{ "LdrScript", "IsFile", "ContextId", "Includes" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::LDraw.API.ObjectCreateLdrReply), global::LDraw.API.ObjectCreateLdrReply.Parser, new[]{ "Handle", "ContextId" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::LDraw.API.ObjectCreateInstanceRequest), global::LDraw.API.ObjectCreateInstanceRequest.Parser, new[]{ "Handle" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::LDraw.API.ObjectCreateInstanceReply), global::LDraw.API.ObjectCreateInstanceReply.Parser, new[]{ "Handle" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::LDraw.API.ObjectCreateInstancesRequest), global::LDraw.API.ObjectCreateInstancesRequest.Parser, new[]{ "Handle", "Count" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::LDraw.API.ObjectCreateInstancesReply), global::LDraw.API.ObjectCreateInstancesReply.Parser, new[]{ "Handle" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::LDraw.API.ObjectDeleteRequest), global::LDraw.API.ObjectDeleteRequest.Parser, new[]{ "Handle" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::LDraw.API.ObjectDeleteReply), global::LDraw.API.ObjectDeleteReply.Parser, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::LDraw.API.ObjectContextIdRequest), global::LDraw.API.ObjectContextIdRequest.Parser, new[]{ "Handle" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::LDraw.API.ObjectContextIdReply), global::LDraw.API.ObjectContextIdReply.Parser, new[]{ "ContextId" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::LDraw.API.ObjectO2WSetRequest), global::LDraw.API.ObjectO2WSetRequest.Parser, new[]{ "Handle", "O2W", "Name" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::LDraw.API.ObjectO2WSetReply), global::LDraw.API.ObjectO2WSetReply.Parser, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::LDraw.API.ObjectO2PSetRequest), global::LDraw.API.ObjectO2PSetRequest.Parser, new[]{ "Handle", "O2P", "Name" }, null, null, null),
@@ -83,6 +97,9 @@ namespace LDraw.API {
 
   }
   #region Messages
+  /// <summary>
+  /// Window Current Get
+  /// </summary>
   public sealed partial class WindowCurrentGetRequest : pb::IMessage<WindowCurrentGetRequest> {
     private static readonly pb::MessageParser<WindowCurrentGetRequest> _parser = new pb::MessageParser<WindowCurrentGetRequest>(() => new WindowCurrentGetRequest());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -289,10 +306,13 @@ namespace LDraw.API {
 
   }
 
-  public sealed partial class WindowAddObjectRequest : pb::IMessage<WindowAddObjectRequest> {
-    private static readonly pb::MessageParser<WindowAddObjectRequest> _parser = new pb::MessageParser<WindowAddObjectRequest>(() => new WindowAddObjectRequest());
+  /// <summary>
+  /// Window Add Objects
+  /// </summary>
+  public sealed partial class WindowAddObjectsRequest : pb::IMessage<WindowAddObjectsRequest> {
+    private static readonly pb::MessageParser<WindowAddObjectsRequest> _parser = new pb::MessageParser<WindowAddObjectsRequest>(() => new WindowAddObjectsRequest());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<WindowAddObjectRequest> Parser { get { return _parser; } }
+    public static pb::MessageParser<WindowAddObjectsRequest> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
@@ -305,26 +325,30 @@ namespace LDraw.API {
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public WindowAddObjectRequest() {
+    public WindowAddObjectsRequest() {
       OnConstruction();
     }
 
     partial void OnConstruction();
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public WindowAddObjectRequest(WindowAddObjectRequest other) : this() {
+    public WindowAddObjectsRequest(WindowAddObjectsRequest other) : this() {
       windowHandle_ = other.windowHandle_;
-      objectHandle_ = other.objectHandle_;
+      contextIds_ = other.contextIds_.Clone();
+      objectHandles_ = other.objectHandles_.Clone();
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public WindowAddObjectRequest Clone() {
-      return new WindowAddObjectRequest(this);
+    public WindowAddObjectsRequest Clone() {
+      return new WindowAddObjectsRequest(this);
     }
 
     /// <summary>Field number for the "window_handle" field.</summary>
     public const int WindowHandleFieldNumber = 1;
     private ulong windowHandle_;
+    /// <summary>
+    /// The handle of the window to add the objects to
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public ulong WindowHandle {
       get { return windowHandle_; }
@@ -333,24 +357,39 @@ namespace LDraw.API {
       }
     }
 
-    /// <summary>Field number for the "object_handle" field.</summary>
-    public const int ObjectHandleFieldNumber = 2;
-    private ulong objectHandle_;
+    /// <summary>Field number for the "context_ids" field.</summary>
+    public const int ContextIdsFieldNumber = 2;
+    private static readonly pb::FieldCodec<string> _repeated_contextIds_codec
+        = pb::FieldCodec.ForString(18);
+    private readonly pbc::RepeatedField<string> contextIds_ = new pbc::RepeatedField<string>();
+    /// <summary>
+    /// The context ids of the objects to add
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public ulong ObjectHandle {
-      get { return objectHandle_; }
-      set {
-        objectHandle_ = value;
-      }
+    public pbc::RepeatedField<string> ContextIds {
+      get { return contextIds_; }
+    }
+
+    /// <summary>Field number for the "object_handles" field.</summary>
+    public const int ObjectHandlesFieldNumber = 3;
+    private static readonly pb::FieldCodec<ulong> _repeated_objectHandles_codec
+        = pb::FieldCodec.ForFixed64(26);
+    private readonly pbc::RepeatedField<ulong> objectHandles_ = new pbc::RepeatedField<ulong>();
+    /// <summary>
+    /// The handles of the object to add
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public pbc::RepeatedField<ulong> ObjectHandles {
+      get { return objectHandles_; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
-      return Equals(other as WindowAddObjectRequest);
+      return Equals(other as WindowAddObjectsRequest);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public bool Equals(WindowAddObjectRequest other) {
+    public bool Equals(WindowAddObjectsRequest other) {
       if (ReferenceEquals(other, null)) {
         return false;
       }
@@ -358,7 +397,8 @@ namespace LDraw.API {
         return true;
       }
       if (WindowHandle != other.WindowHandle) return false;
-      if (ObjectHandle != other.ObjectHandle) return false;
+      if(!contextIds_.Equals(other.contextIds_)) return false;
+      if(!objectHandles_.Equals(other.objectHandles_)) return false;
       return true;
     }
 
@@ -366,7 +406,8 @@ namespace LDraw.API {
     public override int GetHashCode() {
       int hash = 1;
       if (WindowHandle != 0UL) hash ^= WindowHandle.GetHashCode();
-      if (ObjectHandle != 0UL) hash ^= ObjectHandle.GetHashCode();
+      hash ^= contextIds_.GetHashCode();
+      hash ^= objectHandles_.GetHashCode();
       return hash;
     }
 
@@ -381,10 +422,8 @@ namespace LDraw.API {
         output.WriteRawTag(9);
         output.WriteFixed64(WindowHandle);
       }
-      if (ObjectHandle != 0UL) {
-        output.WriteRawTag(17);
-        output.WriteFixed64(ObjectHandle);
-      }
+      contextIds_.WriteTo(output, _repeated_contextIds_codec);
+      objectHandles_.WriteTo(output, _repeated_objectHandles_codec);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -393,23 +432,21 @@ namespace LDraw.API {
       if (WindowHandle != 0UL) {
         size += 1 + 8;
       }
-      if (ObjectHandle != 0UL) {
-        size += 1 + 8;
-      }
+      size += contextIds_.CalculateSize(_repeated_contextIds_codec);
+      size += objectHandles_.CalculateSize(_repeated_objectHandles_codec);
       return size;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void MergeFrom(WindowAddObjectRequest other) {
+    public void MergeFrom(WindowAddObjectsRequest other) {
       if (other == null) {
         return;
       }
       if (other.WindowHandle != 0UL) {
         WindowHandle = other.WindowHandle;
       }
-      if (other.ObjectHandle != 0UL) {
-        ObjectHandle = other.ObjectHandle;
-      }
+      contextIds_.Add(other.contextIds_);
+      objectHandles_.Add(other.objectHandles_);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -424,8 +461,13 @@ namespace LDraw.API {
             WindowHandle = input.ReadFixed64();
             break;
           }
-          case 17: {
-            ObjectHandle = input.ReadFixed64();
+          case 18: {
+            contextIds_.AddEntriesFrom(input, _repeated_contextIds_codec);
+            break;
+          }
+          case 26:
+          case 25: {
+            objectHandles_.AddEntriesFrom(input, _repeated_objectHandles_codec);
             break;
           }
         }
@@ -434,10 +476,10 @@ namespace LDraw.API {
 
   }
 
-  public sealed partial class WindowAddObjectReply : pb::IMessage<WindowAddObjectReply> {
-    private static readonly pb::MessageParser<WindowAddObjectReply> _parser = new pb::MessageParser<WindowAddObjectReply>(() => new WindowAddObjectReply());
+  public sealed partial class WindowAddObjectsReply : pb::IMessage<WindowAddObjectsReply> {
+    private static readonly pb::MessageParser<WindowAddObjectsReply> _parser = new pb::MessageParser<WindowAddObjectsReply>(() => new WindowAddObjectsReply());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<WindowAddObjectReply> Parser { get { return _parser; } }
+    public static pb::MessageParser<WindowAddObjectsReply> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
@@ -450,28 +492,28 @@ namespace LDraw.API {
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public WindowAddObjectReply() {
+    public WindowAddObjectsReply() {
       OnConstruction();
     }
 
     partial void OnConstruction();
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public WindowAddObjectReply(WindowAddObjectReply other) : this() {
+    public WindowAddObjectsReply(WindowAddObjectsReply other) : this() {
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public WindowAddObjectReply Clone() {
-      return new WindowAddObjectReply(this);
+    public WindowAddObjectsReply Clone() {
+      return new WindowAddObjectsReply(this);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
-      return Equals(other as WindowAddObjectReply);
+      return Equals(other as WindowAddObjectsReply);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public bool Equals(WindowAddObjectReply other) {
+    public bool Equals(WindowAddObjectsReply other) {
       if (ReferenceEquals(other, null)) {
         return false;
       }
@@ -503,7 +545,266 @@ namespace LDraw.API {
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void MergeFrom(WindowAddObjectReply other) {
+    public void MergeFrom(WindowAddObjectsReply other) {
+      if (other == null) {
+        return;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            input.SkipLastField();
+            break;
+        }
+      }
+    }
+
+  }
+
+  /// <summary>
+  /// Window Remove Objects
+  /// </summary>
+  public sealed partial class WindowRemoveObjectsRequest : pb::IMessage<WindowRemoveObjectsRequest> {
+    private static readonly pb::MessageParser<WindowRemoveObjectsRequest> _parser = new pb::MessageParser<WindowRemoveObjectsRequest>(() => new WindowRemoveObjectsRequest());
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<WindowRemoveObjectsRequest> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[4]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public WindowRemoveObjectsRequest() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public WindowRemoveObjectsRequest(WindowRemoveObjectsRequest other) : this() {
+      windowHandle_ = other.windowHandle_;
+      contextIds_ = other.contextIds_.Clone();
+      objectHandles_ = other.objectHandles_.Clone();
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public WindowRemoveObjectsRequest Clone() {
+      return new WindowRemoveObjectsRequest(this);
+    }
+
+    /// <summary>Field number for the "window_handle" field.</summary>
+    public const int WindowHandleFieldNumber = 1;
+    private ulong windowHandle_;
+    /// <summary>
+    /// The handle of the window to remove objects from
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public ulong WindowHandle {
+      get { return windowHandle_; }
+      set {
+        windowHandle_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "context_ids" field.</summary>
+    public const int ContextIdsFieldNumber = 2;
+    private static readonly pb::FieldCodec<string> _repeated_contextIds_codec
+        = pb::FieldCodec.ForString(18);
+    private readonly pbc::RepeatedField<string> contextIds_ = new pbc::RepeatedField<string>();
+    /// <summary>
+    /// The context ids of the objects to remove
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public pbc::RepeatedField<string> ContextIds {
+      get { return contextIds_; }
+    }
+
+    /// <summary>Field number for the "object_handles" field.</summary>
+    public const int ObjectHandlesFieldNumber = 3;
+    private static readonly pb::FieldCodec<ulong> _repeated_objectHandles_codec
+        = pb::FieldCodec.ForFixed64(26);
+    private readonly pbc::RepeatedField<ulong> objectHandles_ = new pbc::RepeatedField<ulong>();
+    /// <summary>
+    /// The handles of the object to remove
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public pbc::RepeatedField<ulong> ObjectHandles {
+      get { return objectHandles_; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as WindowRemoveObjectsRequest);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(WindowRemoveObjectsRequest other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (WindowHandle != other.WindowHandle) return false;
+      if(!contextIds_.Equals(other.contextIds_)) return false;
+      if(!objectHandles_.Equals(other.objectHandles_)) return false;
+      return true;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (WindowHandle != 0UL) hash ^= WindowHandle.GetHashCode();
+      hash ^= contextIds_.GetHashCode();
+      hash ^= objectHandles_.GetHashCode();
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (WindowHandle != 0UL) {
+        output.WriteRawTag(9);
+        output.WriteFixed64(WindowHandle);
+      }
+      contextIds_.WriteTo(output, _repeated_contextIds_codec);
+      objectHandles_.WriteTo(output, _repeated_objectHandles_codec);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (WindowHandle != 0UL) {
+        size += 1 + 8;
+      }
+      size += contextIds_.CalculateSize(_repeated_contextIds_codec);
+      size += objectHandles_.CalculateSize(_repeated_objectHandles_codec);
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(WindowRemoveObjectsRequest other) {
+      if (other == null) {
+        return;
+      }
+      if (other.WindowHandle != 0UL) {
+        WindowHandle = other.WindowHandle;
+      }
+      contextIds_.Add(other.contextIds_);
+      objectHandles_.Add(other.objectHandles_);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            input.SkipLastField();
+            break;
+          case 9: {
+            WindowHandle = input.ReadFixed64();
+            break;
+          }
+          case 18: {
+            contextIds_.AddEntriesFrom(input, _repeated_contextIds_codec);
+            break;
+          }
+          case 26:
+          case 25: {
+            objectHandles_.AddEntriesFrom(input, _repeated_objectHandles_codec);
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
+  public sealed partial class WindowRemoveObjectsReply : pb::IMessage<WindowRemoveObjectsReply> {
+    private static readonly pb::MessageParser<WindowRemoveObjectsReply> _parser = new pb::MessageParser<WindowRemoveObjectsReply>(() => new WindowRemoveObjectsReply());
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<WindowRemoveObjectsReply> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[5]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public WindowRemoveObjectsReply() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public WindowRemoveObjectsReply(WindowRemoveObjectsReply other) : this() {
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public WindowRemoveObjectsReply Clone() {
+      return new WindowRemoveObjectsReply(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as WindowRemoveObjectsReply);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(WindowRemoveObjectsReply other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      return true;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(WindowRemoveObjectsReply other) {
       if (other == null) {
         return;
       }
@@ -533,7 +834,7 @@ namespace LDraw.API {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[4]; }
+      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[6]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -653,7 +954,7 @@ namespace LDraw.API {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[5]; }
+      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[7]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -745,7 +1046,7 @@ namespace LDraw.API {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[6]; }
+      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[8]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -958,7 +1259,7 @@ namespace LDraw.API {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[7]; }
+      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[9]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1103,16 +1404,16 @@ namespace LDraw.API {
   }
 
   /// <summary>
-  /// Object Create Instance
+  /// Object Create Instances
   /// </summary>
-  public sealed partial class ObjectCreateInstanceRequest : pb::IMessage<ObjectCreateInstanceRequest> {
-    private static readonly pb::MessageParser<ObjectCreateInstanceRequest> _parser = new pb::MessageParser<ObjectCreateInstanceRequest>(() => new ObjectCreateInstanceRequest());
+  public sealed partial class ObjectCreateInstancesRequest : pb::IMessage<ObjectCreateInstancesRequest> {
+    private static readonly pb::MessageParser<ObjectCreateInstancesRequest> _parser = new pb::MessageParser<ObjectCreateInstancesRequest>(() => new ObjectCreateInstancesRequest());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<ObjectCreateInstanceRequest> Parser { get { return _parser; } }
+    public static pb::MessageParser<ObjectCreateInstancesRequest> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[8]; }
+      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[10]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1121,20 +1422,21 @@ namespace LDraw.API {
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public ObjectCreateInstanceRequest() {
+    public ObjectCreateInstancesRequest() {
       OnConstruction();
     }
 
     partial void OnConstruction();
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public ObjectCreateInstanceRequest(ObjectCreateInstanceRequest other) : this() {
+    public ObjectCreateInstancesRequest(ObjectCreateInstancesRequest other) : this() {
       handle_ = other.handle_;
+      count_ = other.count_;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public ObjectCreateInstanceRequest Clone() {
-      return new ObjectCreateInstanceRequest(this);
+    public ObjectCreateInstancesRequest Clone() {
+      return new ObjectCreateInstancesRequest(this);
     }
 
     /// <summary>Field number for the "handle" field.</summary>
@@ -1151,13 +1453,27 @@ namespace LDraw.API {
       }
     }
 
+    /// <summary>Field number for the "count" field.</summary>
+    public const int CountFieldNumber = 2;
+    private int count_;
+    /// <summary>
+    /// The number of instances to create
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public override bool Equals(object other) {
-      return Equals(other as ObjectCreateInstanceRequest);
+    public int Count {
+      get { return count_; }
+      set {
+        count_ = value;
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public bool Equals(ObjectCreateInstanceRequest other) {
+    public override bool Equals(object other) {
+      return Equals(other as ObjectCreateInstancesRequest);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(ObjectCreateInstancesRequest other) {
       if (ReferenceEquals(other, null)) {
         return false;
       }
@@ -1165,6 +1481,7 @@ namespace LDraw.API {
         return true;
       }
       if (Handle != other.Handle) return false;
+      if (Count != other.Count) return false;
       return true;
     }
 
@@ -1172,6 +1489,7 @@ namespace LDraw.API {
     public override int GetHashCode() {
       int hash = 1;
       if (Handle != 0UL) hash ^= Handle.GetHashCode();
+      if (Count != 0) hash ^= Count.GetHashCode();
       return hash;
     }
 
@@ -1186,6 +1504,10 @@ namespace LDraw.API {
         output.WriteRawTag(9);
         output.WriteFixed64(Handle);
       }
+      if (Count != 0) {
+        output.WriteRawTag(16);
+        output.WriteInt32(Count);
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1194,16 +1516,22 @@ namespace LDraw.API {
       if (Handle != 0UL) {
         size += 1 + 8;
       }
+      if (Count != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(Count);
+      }
       return size;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void MergeFrom(ObjectCreateInstanceRequest other) {
+    public void MergeFrom(ObjectCreateInstancesRequest other) {
       if (other == null) {
         return;
       }
       if (other.Handle != 0UL) {
         Handle = other.Handle;
+      }
+      if (other.Count != 0) {
+        Count = other.Count;
       }
     }
 
@@ -1219,20 +1547,24 @@ namespace LDraw.API {
             Handle = input.ReadFixed64();
             break;
           }
+          case 16: {
+            Count = input.ReadInt32();
+            break;
+          }
         }
       }
     }
 
   }
 
-  public sealed partial class ObjectCreateInstanceReply : pb::IMessage<ObjectCreateInstanceReply> {
-    private static readonly pb::MessageParser<ObjectCreateInstanceReply> _parser = new pb::MessageParser<ObjectCreateInstanceReply>(() => new ObjectCreateInstanceReply());
+  public sealed partial class ObjectCreateInstancesReply : pb::IMessage<ObjectCreateInstancesReply> {
+    private static readonly pb::MessageParser<ObjectCreateInstancesReply> _parser = new pb::MessageParser<ObjectCreateInstancesReply>(() => new ObjectCreateInstancesReply());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<ObjectCreateInstanceReply> Parser { get { return _parser; } }
+    public static pb::MessageParser<ObjectCreateInstancesReply> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[9]; }
+      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[11]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1241,57 +1573,56 @@ namespace LDraw.API {
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public ObjectCreateInstanceReply() {
+    public ObjectCreateInstancesReply() {
       OnConstruction();
     }
 
     partial void OnConstruction();
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public ObjectCreateInstanceReply(ObjectCreateInstanceReply other) : this() {
-      handle_ = other.handle_;
+    public ObjectCreateInstancesReply(ObjectCreateInstancesReply other) : this() {
+      handle_ = other.handle_.Clone();
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public ObjectCreateInstanceReply Clone() {
-      return new ObjectCreateInstanceReply(this);
+    public ObjectCreateInstancesReply Clone() {
+      return new ObjectCreateInstancesReply(this);
     }
 
     /// <summary>Field number for the "handle" field.</summary>
     public const int HandleFieldNumber = 1;
-    private ulong handle_;
+    private static readonly pb::FieldCodec<ulong> _repeated_handle_codec
+        = pb::FieldCodec.ForFixed64(10);
+    private readonly pbc::RepeatedField<ulong> handle_ = new pbc::RepeatedField<ulong>();
     /// <summary>
-    /// The object handle of the newly created cloned instance
+    /// The object handle of the newly created cloned instances
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public ulong Handle {
+    public pbc::RepeatedField<ulong> Handle {
       get { return handle_; }
-      set {
-        handle_ = value;
-      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
-      return Equals(other as ObjectCreateInstanceReply);
+      return Equals(other as ObjectCreateInstancesReply);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public bool Equals(ObjectCreateInstanceReply other) {
+    public bool Equals(ObjectCreateInstancesReply other) {
       if (ReferenceEquals(other, null)) {
         return false;
       }
       if (ReferenceEquals(other, this)) {
         return true;
       }
-      if (Handle != other.Handle) return false;
+      if(!handle_.Equals(other.handle_)) return false;
       return true;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override int GetHashCode() {
       int hash = 1;
-      if (Handle != 0UL) hash ^= Handle.GetHashCode();
+      hash ^= handle_.GetHashCode();
       return hash;
     }
 
@@ -1302,29 +1633,22 @@ namespace LDraw.API {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public void WriteTo(pb::CodedOutputStream output) {
-      if (Handle != 0UL) {
-        output.WriteRawTag(9);
-        output.WriteFixed64(Handle);
-      }
+      handle_.WriteTo(output, _repeated_handle_codec);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public int CalculateSize() {
       int size = 0;
-      if (Handle != 0UL) {
-        size += 1 + 8;
-      }
+      size += handle_.CalculateSize(_repeated_handle_codec);
       return size;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void MergeFrom(ObjectCreateInstanceReply other) {
+    public void MergeFrom(ObjectCreateInstancesReply other) {
       if (other == null) {
         return;
       }
-      if (other.Handle != 0UL) {
-        Handle = other.Handle;
-      }
+      handle_.Add(other.handle_);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1335,8 +1659,9 @@ namespace LDraw.API {
           default:
             input.SkipLastField();
             break;
+          case 10:
           case 9: {
-            Handle = input.ReadFixed64();
+            handle_.AddEntriesFrom(input, _repeated_handle_codec);
             break;
           }
         }
@@ -1355,7 +1680,7 @@ namespace LDraw.API {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[10]; }
+      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[12]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1475,7 +1800,7 @@ namespace LDraw.API {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[11]; }
+      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[13]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1558,6 +1883,243 @@ namespace LDraw.API {
   }
 
   /// <summary>
+  /// Object ContextId
+  /// </summary>
+  public sealed partial class ObjectContextIdRequest : pb::IMessage<ObjectContextIdRequest> {
+    private static readonly pb::MessageParser<ObjectContextIdRequest> _parser = new pb::MessageParser<ObjectContextIdRequest>(() => new ObjectContextIdRequest());
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<ObjectContextIdRequest> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[14]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public ObjectContextIdRequest() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public ObjectContextIdRequest(ObjectContextIdRequest other) : this() {
+      handle_ = other.handle_;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public ObjectContextIdRequest Clone() {
+      return new ObjectContextIdRequest(this);
+    }
+
+    /// <summary>Field number for the "handle" field.</summary>
+    public const int HandleFieldNumber = 1;
+    private ulong handle_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public ulong Handle {
+      get { return handle_; }
+      set {
+        handle_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as ObjectContextIdRequest);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(ObjectContextIdRequest other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (Handle != other.Handle) return false;
+      return true;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (Handle != 0UL) hash ^= Handle.GetHashCode();
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (Handle != 0UL) {
+        output.WriteRawTag(9);
+        output.WriteFixed64(Handle);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (Handle != 0UL) {
+        size += 1 + 8;
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(ObjectContextIdRequest other) {
+      if (other == null) {
+        return;
+      }
+      if (other.Handle != 0UL) {
+        Handle = other.Handle;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            input.SkipLastField();
+            break;
+          case 9: {
+            Handle = input.ReadFixed64();
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
+  public sealed partial class ObjectContextIdReply : pb::IMessage<ObjectContextIdReply> {
+    private static readonly pb::MessageParser<ObjectContextIdReply> _parser = new pb::MessageParser<ObjectContextIdReply>(() => new ObjectContextIdReply());
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<ObjectContextIdReply> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[15]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public ObjectContextIdReply() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public ObjectContextIdReply(ObjectContextIdReply other) : this() {
+      contextId_ = other.contextId_;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public ObjectContextIdReply Clone() {
+      return new ObjectContextIdReply(this);
+    }
+
+    /// <summary>Field number for the "context_id" field.</summary>
+    public const int ContextIdFieldNumber = 1;
+    private string contextId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public string ContextId {
+      get { return contextId_; }
+      set {
+        contextId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as ObjectContextIdReply);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(ObjectContextIdReply other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (ContextId != other.ContextId) return false;
+      return true;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (ContextId.Length != 0) hash ^= ContextId.GetHashCode();
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (ContextId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ContextId);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (ContextId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ContextId);
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(ObjectContextIdReply other) {
+      if (other == null) {
+        return;
+      }
+      if (other.ContextId.Length != 0) {
+        ContextId = other.ContextId;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            input.SkipLastField();
+            break;
+          case 10: {
+            ContextId = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
+  /// <summary>
   /// ObjectO2WSet
   /// </summary>
   public sealed partial class ObjectO2WSetRequest : pb::IMessage<ObjectO2WSetRequest> {
@@ -1567,7 +2129,7 @@ namespace LDraw.API {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[12]; }
+      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[16]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1749,7 +2311,7 @@ namespace LDraw.API {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[13]; }
+      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[17]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1841,7 +2403,7 @@ namespace LDraw.API {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[14]; }
+      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[18]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2023,7 +2585,7 @@ namespace LDraw.API {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[15]; }
+      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[19]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2115,7 +2677,7 @@ namespace LDraw.API {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[16]; }
+      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[20]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2228,7 +2790,7 @@ namespace LDraw.API {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[17]; }
+      get { return global::LDraw.API.LDrawReflection.Descriptor.MessageTypes[21]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]

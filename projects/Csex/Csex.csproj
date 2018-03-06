@@ -96,16 +96,6 @@
     <Content Include="Smiling gekko 140x110.ico" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj">
-      <Project>{37a4f319-2052-404d-ae7f-f882cfa33c1b}</Project>
-      <Name>Rylogic.Core</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Rylogic.Main\Rylogic.Main.csproj">
-      <Project>{8c1634d9-c32a-4ad6-b2c7-ec17f6bfde01}</Project>
-      <Name>Rylogic.Main</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <EmbeddedResource Include="Cmd\FindDuplicateFiles\DuplicateResults.resx">
       <DependentUpon>DuplicateResults.cs</DependentUpon>
     </EmbeddedResource>
@@ -118,6 +108,16 @@
     <EmbeddedResource Include="Cmd\XmlEdit\XmlEditUI.resx">
       <DependentUpon>XmlEditUI.cs</DependentUpon>
     </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj">
+      <Project>{37a4f319-2052-404d-ae7f-f882cfa33c1b}</Project>
+      <Name>Rylogic.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Rylogic.Main\Rylogic.Main.csproj">
+      <Project>{8c1634d9-c32a-4ad6-b2c7-ec17f6bfde01}</Project>
+      <Name>Rylogic.Main</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
