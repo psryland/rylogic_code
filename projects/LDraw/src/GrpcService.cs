@@ -26,7 +26,6 @@ namespace LDraw
 		public virtual void Dispose()
 		{
 			Active = false;
-			Scene = null;
 			Model = null;
 		}
 
@@ -45,21 +44,8 @@ namespace LDraw
 		/// <summary>The scene to add objects to</summary>
 		public SceneUI Scene
 		{
-			get { return m_scene; }
-			set
-			{
-				if (m_scene == value) return;
-				if (m_scene != null)
-				{
-
-				}
-				m_scene = value;
-				if (m_scene != null)
-				{
-				}
-			}
+			get { return Model.CurrentScene ?? Model.Scenes.FirstOrDefault(); }
 		}
-		private SceneUI m_scene;
 
 		/// <summary>Enable/Disable the service</summary>
 		public bool Active
@@ -72,15 +58,10 @@ namespace LDraw
 				{
 					m_active.Cancel();
 					m_active = null;
-					Scene = null;
 				}
 				m_active = value ? new CancellationTokenSource() : null;
 				if (m_active != null)
 				{
-					if (Model.CurrentScene == null)
-						throw new Exception("A scene is required to draw RPC objects in");
-
-					Scene = Model.CurrentScene;
 					ActiveConnection(m_active.Token);
 					async void ActiveConnection(CancellationToken shutdown)
 					{
@@ -125,7 +106,7 @@ namespace LDraw
 			{
 				return InvokeAsync(() =>
 				{
-					var handle = m_srv.Scene.Window.Handle;
+					var handle = m_srv.Scene?.Window.Handle ?? IntPtr.Zero;
 					return new WindowCurrentGetReply { Handle = (ulong)handle };
 				});
 			}
