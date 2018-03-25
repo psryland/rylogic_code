@@ -186,6 +186,7 @@ namespace pr
 			x(NoZWrite             ,= HashI("NoZWrite"            ))\
 			x(Billboard            ,= HashI("Billboard"           ))\
 			x(Depth                ,= HashI("Depth"               ))\
+			x(LeftHanded           ,= HashI("LeftHanded"          ))\
 			x(CastShadow           ,= HashI("CastShadow"          ))
 		PR_DEFINE_ENUM2(EKeyword, PR_ENUM);
 		#undef PR_ENUM

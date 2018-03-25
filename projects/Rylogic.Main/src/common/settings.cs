@@ -623,7 +623,16 @@ namespace Rylogic.Common
 		/// <summary>Called when loading settings from an earlier version</summary>
 		public virtual void Upgrade(XElement old_settings, string from_version)
 		{
-			// Boiler-plate
+			// Boiler-plate:
+			//
+			//// Preserve old settings
+			//if (from_version != Version && Filepath.HasValue())
+			//{
+			//	var extn = Path_.Extn(Filepath);
+			//	var backup_filepath = Path.ChangeExtension(Filepath, $"backup_({from_version})_{DateTimeOffset.Now.ToString("yyyyMMdd-HHmmss")}{extn}");
+			//	old_settings.Save(backup_filepath);
+			//}
+			//
 			//for (; from_version != Version; )
 			//{
 			//	switch (from_version)

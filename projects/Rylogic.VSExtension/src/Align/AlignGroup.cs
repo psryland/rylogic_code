@@ -3,13 +3,13 @@ using Rylogic.Extn;
 
 namespace Rylogic.VSExtension
 {
-	/// <summary>Represents a set of patterns at all align</summary>
+	/// <summary>Represents a set of patterns that all align together</summary>
 	internal class AlignGroup
 	{
 		/// <summary>The name of the group</summary>
 		public string Name { get; set; }
 
-		/// <summary>True if the aligned group should have a leading whitespace</summary>
+		/// <summary>The number leading whitespaces the group should have</summary>
 		public int LeadingSpace { get; set; }
 
 		/// <summary>The patterns belonging to the group</summary>

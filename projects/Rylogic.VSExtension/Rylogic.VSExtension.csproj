@@ -204,11 +204,11 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.CoreUtility, Version=15.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\build\packages\Microsoft.VisualStudio.CoreUtility.15.6.27413\lib\net45\Microsoft.VisualStudio.CoreUtility.dll</HintPath>
+      <HintPath>..\..\build\packages\Microsoft.VisualStudio.CoreUtility.15.6.27740\lib\net46\Microsoft.VisualStudio.CoreUtility.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Editor, Version=15.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\build\packages\Microsoft.VisualStudio.Editor.15.6.27413\lib\net45\Microsoft.VisualStudio.Editor.dll</HintPath>
+      <HintPath>..\..\build\packages\Microsoft.VisualStudio.Editor.15.6.27740\lib\net46\Microsoft.VisualStudio.Editor.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.ImageCatalog, Version=15.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
@@ -217,6 +217,11 @@
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Imaging, Version=15.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\..\build\packages\Microsoft.VisualStudio.Imaging.15.6.27413\lib\net45\Microsoft.VisualStudio.Imaging.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.Imaging.Interop.14.0.DesignTime, Version=14.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+      <HintPath>..\..\build\packages\Microsoft.VisualStudio.Imaging.Interop.14.0.DesignTime.14.3.25408\lib\net20\Microsoft.VisualStudio.Imaging.Interop.14.0.DesignTime.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.OLE.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
@@ -263,19 +268,19 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Text.Data, Version=15.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\build\packages\Microsoft.VisualStudio.Text.Data.15.6.27413\lib\net45\Microsoft.VisualStudio.Text.Data.dll</HintPath>
+      <HintPath>..\..\build\packages\Microsoft.VisualStudio.Text.Data.15.6.27740\lib\net46\Microsoft.VisualStudio.Text.Data.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Text.Logic, Version=15.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\build\packages\Microsoft.VisualStudio.Text.Logic.15.6.27413\lib\net45\Microsoft.VisualStudio.Text.Logic.dll</HintPath>
+      <HintPath>..\..\build\packages\Microsoft.VisualStudio.Text.Logic.15.6.27740\lib\net46\Microsoft.VisualStudio.Text.Logic.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Text.UI, Version=15.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\build\packages\Microsoft.VisualStudio.Text.UI.15.6.27413\lib\net45\Microsoft.VisualStudio.Text.UI.dll</HintPath>
+      <HintPath>..\..\build\packages\Microsoft.VisualStudio.Text.UI.15.6.27740\lib\net46\Microsoft.VisualStudio.Text.UI.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Text.UI.Wpf, Version=15.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\build\packages\Microsoft.VisualStudio.Text.UI.Wpf.15.6.27413\lib\net45\Microsoft.VisualStudio.Text.UI.Wpf.dll</HintPath>
+      <HintPath>..\..\build\packages\Microsoft.VisualStudio.Text.UI.Wpf.15.6.27740\lib\net46\Microsoft.VisualStudio.Text.UI.Wpf.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.TextManager.Interop, Version=7.1.40304.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
@@ -287,7 +292,8 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Threading, Version=15.6.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\..\build\packages\Microsoft.VisualStudio.Threading.15.6.44\lib\net46\Microsoft.VisualStudio.Threading.dll</HintPath>
+      <HintPath>..\..\build\packages\Microsoft.VisualStudio.Threading.15.6.46\lib\net46\Microsoft.VisualStudio.Threading.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.VisualStudio.Utilities, Version=15.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\..\build\packages\Microsoft.VisualStudio.Utilities.15.6.27413\lib\net46\Microsoft.VisualStudio.Utilities.dll</HintPath>
@@ -300,6 +306,8 @@
     <Reference Include="Newtonsoft.Json, Version=11.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\..\build\packages\Newtonsoft.Json.11.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
     <Reference Include="stdole, Version=7.0.3300.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
       <EmbedInteropTypes>True</EmbedInteropTypes>
       <HintPath>..\..\build\packages\stdole.7.0.3302\lib\net10\stdole.dll</HintPath>
@@ -309,6 +317,9 @@
       <HintPath>..\..\build\packages\StreamJsonRpc.1.3.23\lib\net45\StreamJsonRpc.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Collections.Immutable, Version=1.2.2.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\build\packages\System.Collections.Immutable.1.4.0\lib\netstandard2.0\System.Collections.Immutable.dll</HintPath>
+    </Reference>
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Design" />
     <Reference Include="System.Drawing" />
@@ -319,7 +330,7 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
-    <Analyzer Include="..\..\build\packages\Microsoft.VisualStudio.Threading.Analyzers.15.6.44\analyzers\cs\Microsoft.VisualStudio.Threading.Analyzers.dll" />
+    <Analyzer Include="..\..\build\packages\Microsoft.VisualStudio.Threading.Analyzers.15.6.46\analyzers\cs\Microsoft.VisualStudio.Threading.Analyzers.dll" />
   </ItemGroup>
   <PropertyGroup>
     <UseCodebase>true</UseCodebase>
@@ -336,9 +347,9 @@
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('..\..\build\packages\Microsoft.VisualStudio.SDK.EmbedInteropTypes.15.0.16\build\Microsoft.VisualStudio.SDK.EmbedInteropTypes.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\build\packages\Microsoft.VisualStudio.SDK.EmbedInteropTypes.15.0.16\build\Microsoft.VisualStudio.SDK.EmbedInteropTypes.targets'))" />
-    <Error Condition="!Exists('..\..\build\packages\Microsoft.VisualStudio.Threading.Analyzers.15.6.44\build\Microsoft.VisualStudio.Threading.Analyzers.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\build\packages\Microsoft.VisualStudio.Threading.Analyzers.15.6.44\build\Microsoft.VisualStudio.Threading.Analyzers.targets'))" />
+    <Error Condition="!Exists('..\..\build\packages\Microsoft.VisualStudio.Threading.Analyzers.15.6.46\build\Microsoft.VisualStudio.Threading.Analyzers.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\build\packages\Microsoft.VisualStudio.Threading.Analyzers.15.6.46\build\Microsoft.VisualStudio.Threading.Analyzers.targets'))" />
   </Target>
-  <Import Project="..\..\build\packages\Microsoft.VisualStudio.Threading.Analyzers.15.6.44\build\Microsoft.VisualStudio.Threading.Analyzers.targets" Condition="Exists('..\..\build\packages\Microsoft.VisualStudio.Threading.Analyzers.15.6.44\build\Microsoft.VisualStudio.Threading.Analyzers.targets')" />
+  <Import Project="..\..\build\packages\Microsoft.VisualStudio.Threading.Analyzers.15.6.46\build\Microsoft.VisualStudio.Threading.Analyzers.targets" Condition="Exists('..\..\build\packages\Microsoft.VisualStudio.Threading.Analyzers.15.6.46\build\Microsoft.VisualStudio.Threading.Analyzers.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
