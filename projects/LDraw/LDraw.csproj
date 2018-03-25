@@ -47,7 +47,7 @@
       <HintPath>..\..\build\packages\Google.Protobuf.3.5.1\lib\net45\Google.Protobuf.dll</HintPath>
     </Reference>
     <Reference Include="Grpc.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=d754f35622e28bad, processorArchitecture=MSIL">
-      <HintPath>..\..\build\packages\Grpc.Core.1.9.0\lib\net45\Grpc.Core.dll</HintPath>
+      <HintPath>..\..\build\packages\Grpc.Core.1.10.0\lib\net45\Grpc.Core.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -187,12 +187,12 @@
   <PropertyGroup>
     <PostBuildEvent>py $(ProjectDir)post_build.py $(ProjectDir) $(TargetDir) $(PlatformName) $(ConfigurationName)</PostBuildEvent>
   </PropertyGroup>
-  <Import Project="..\..\build\packages\Grpc.Core.1.9.0\build\net45\Grpc.Core.targets" Condition="Exists('..\..\build\packages\Grpc.Core.1.9.0\build\net45\Grpc.Core.targets')" />
+  <Import Project="..\..\build\packages\Grpc.Core.1.10.0\build\net45\Grpc.Core.targets" Condition="Exists('..\..\build\packages\Grpc.Core.1.10.0\build\net45\Grpc.Core.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\..\build\packages\Grpc.Core.1.9.0\build\net45\Grpc.Core.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\build\packages\Grpc.Core.1.9.0\build\net45\Grpc.Core.targets'))" />
+    <Error Condition="!Exists('..\..\build\packages\Grpc.Core.1.10.0\build\net45\Grpc.Core.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\build\packages\Grpc.Core.1.10.0\build\net45\Grpc.Core.targets'))" />
   </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
