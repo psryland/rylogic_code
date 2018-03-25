@@ -1,25 +1,29 @@
+const path = require('path')
+
 module.exports =
-	{
-		entry: {
-			rylogic: "./src/rylogic.ts",
-		},
-		output: {
-			filename: "./dist/[name].bundle.js",
-			sourceMapFilename: "./dist/[name].bundle.js.map",
-			libraryTarget: "umd",
-			devtoolLineToLine: true,
-			pathinfo: true
-		},
-		resolve: {
-			extensions: [".ts"]
-		},
-		module: {
-			loaders: [{
-				loader: "ts-loader",
-				exclude: /(built|node_modules|dist|obj|bin)/,
-				options: { transpileOnly: false }
-			}]
-		},
-		//devtool:"source-map",
-		plugins: []
-	}
+{
+	entry: {
+		rylogic: path.resolve(__dirname, "src/rylogic.ts"),
+	},
+	output: {
+		library: "rylogic",
+		path: path.resolve(__dirname,"obj"),
+		filename: "[name].bundle.js",
+		sourceMapFilename: "[name].bundle.js.map",
+		libraryTarget: "umd",
+		devtoolLineToLine: true,
+		pathinfo: true
+	},
+	module: {
+		loaders: [{
+			loader: "ts-loader",
+			exclude: /(bin|node_modules|obj|unittests)/,
+			options: { transpileOnly: false }
+		}]
+	},
+	resolve: {
+		extensions: [".ts"],
+	},
+	//devtool:"source-map",
+	plugins: []
+}
