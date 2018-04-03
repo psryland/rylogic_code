@@ -504,10 +504,10 @@ def MSBuild(sln_or_proj_file, projects, platforms, configs, parallel=False, same
 	print("\n")
 	return not errors
 
-# Create a nuget package from the given project file
+# Create a Nuget package from the given project file
 # Expects a file called 'package.nuspec' in the same directory as 'proj'
 # The resulting package will be in UserVars.root\lib\packages
-def NugetPackage(proj:str):
+def NugetPackage(proj:str, publish:bool):
 
 	nuspec = os.path.split(proj)[0] + "\\package.nuspec"
 
@@ -520,8 +520,14 @@ def NugetPackage(proj:str):
 	if vers0 != vers1 or vers0 != vers2:
 		raise Exception("Version number mismatch between project file ("+proj+") and nuspec file ("+nuspec+")")
 
-	# Build the nuget package directly in the lib\packages folder
+	# Build the Nuget package directly in the lib\packages folder
 	Exec([UserVars.nuget, "pack", nuspec, "-OutputDirectory", UserVars.root+"\\lib\\packages"])
+	
+	# Publish the package
+	if publish:
+		package_name = Extract(nuspec, r"<id>(?P<id>.*)</id>").group("id")
+		package_path = UserVars.root+"\\lib\\packages\\"+package_name+"."+vers0+".nupkg"
+		Exec([UserVars.nuget, "push", package_path, UserVars.nuget_api_key, "-source", "https://api.nuget.org/v3/index.json"])
 	return
 
 # Create a zip of a directory

@@ -221,7 +221,7 @@ namespace CoinFlip
 			m_chart.XAxis.TickText = (double x, double step) =>
 			{
 				// Draw the X Axis labels as indices instead of time stamps
-				if (XAxisLabelMode == EXAxisLabelMode.CandleIndex || TimeScale == ETimeFrame.None || Data.Count == 0)
+				if (XAxisLabelMode == EXAxisLabelMode.CandleIndex || TimeScale == ETimeFrame.None || Data.Count == 0 || Data.TimeRange == Range.Invalid)
 					return x.ToString();
 
 				// Get the times of 'x' and 'x-step'

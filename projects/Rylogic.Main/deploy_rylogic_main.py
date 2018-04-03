@@ -23,13 +23,15 @@ def Deploy(config:str, nowait:bool, trace:bool):
 	configs = [config.lower()] if not config == "both" else ["debug", "release"]
 	sln     = UserVars.root + "\\build\\Rylogic.sln"
 
+	publish = input("Publish to nuget.org? (y/n)")
+
 	# Build
 	print("Building...")
 	Tools.MSBuild(sln, ["Rylogic\\Rylogic.Main"], ["Any CPU"], configs, False, False)
 
 	# Package
 	if "release" in configs:
-		Tools.NugetPackage(proj)
+		Tools.NugetPackage(proj, publish)
 
 	return
 
