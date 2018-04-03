@@ -1,3 +1,117 @@
+Immediate ToDo:
+
+Cryptopia
+	Questions:
+		- Bug? GetTransactions uses a block hash as the parameter when talking to bitcoin, but uses the block index (height) when talking to Ethereum?!
+		- How does Cryptopia manage it's wallet nodes? Which nodes are run locally? What are the addresses?
+		  What test-nets
+		- Some of the methods on 'WalletConnector' are not supported in Proxtopia
+		  e.g. 'GetTxFee', 'GetBlockCount'. Are these just legacy functions that are no longer used?
+		- The NodeJS implementation dumps all transactions to the log (i.e. 1000s of lines of text)
+		  Does this effect the performance on the live system? or is it debug only?
+		- What does ConsolidateAccounts do? When/how is it used?
+		- Where are all the other coins handled? Proxtopia only has 17 'interface's?
+		- What's the 'Proxtopia' folder in the 'Exchange' solution? It seems to contain wallet interfaces but different ones than in the Proxtopia project (except for Eth which is in both?)
+		- Bitcoin has marked accounts within wallets as deprecated. Does that effect Cryptopia?
+		- What happens if filling an order results in a remainder less than the minimum trade volume
+		  (in either order). Can it happen?
+
+	Wish List:
+		- Broadcast data connection rather than polling
+		- Provide chart "candle" data with per-tick updates
+		- Historic trades contain the UID of the trade when it was live => to confirm order filled vs. order cancelled.
+		- Trades filled immediately should still return a valid order id, so that can be matched in the history.
+		- Units on the trade history columns
+	
+	Cardano:
+		- Test wallet phrase: verb fence detail trend flush flat isolate miss agree honey grace coil
+		
+	
+CoinFlip
+	- determine equity in backwards from current balance
+	- pending orders (Stop, OneEnablesOther, )
+	- Make orders glow when hovered
+	- Add more graphics to the positions, so they look better
+	- saving/loading history to/from db
+	- equity plotting
+	- highlight selected positions on graph
+	- remove old positions from charts	
+	- Log view isn't updating when window doesn't have focus
+	- Add S&R lines + other drawing tools
+	- Add pending orders
+	- Line indicators
+	- Fishing - volume based position adjust
+	- Equity graph
+	- retest Fishing bottom
+	- retest Loop finder
+	- MOAR indicators
+	- Equity graph for live account
+
+	Strategy:
+		- Have a budget; B BTC, and a a bias; O
+		- Make holding of BTC above or below budget based on std dev from mean, where 1 s.d. == O BTC
+		- Hysterisis when adjusting position
+		
+LDraw
+	- move ObjectManager to pr.view3d
+	- Auto complete in scripts
+	- Make dock container tabs share the same row when top/bottom left/right tabs meet.
+	- Improve log UI
+	- shift+ctrl jumps back to the start of orientation, make it not do that
+	- Add *Curve, a system for plotting 1D,2D functions of X, Y, or Z
+
+
+RCT/RST
+	- Setup VREX to reply with incorrect sizes message, see why there isn't a log message about corruption
+	- UI to move config between regions (needs an enhancement ticket)
+	- Make reference data filepaths support relative or 'working directory' relative, so that moving configs up and down directories doesn't break file links? (doesn't work for non-repo configs)
+	- Save sets of logon data (url, working dir, user, pass) associated with a url
+	- System for creating graphs of data in session logs
+			
+RexLink
+	- Add stats for comms errors
+
+RAPT
+
+VRex
+	- Add a pre-start up check for the SD card files that Rex needs and warn the user if missing
+	- Fix devices going offline
+	- Fix assert_param macro - threading issues
+	- Add named-pipe RexLink connection type
+
+	
+Physics
+	- debug the ClosestPoint_LineSegmentToBBox
+	- Update the collision shapes and detection functions in pr/collision/
+	- meta code for EShape to Shape type
+	- SupportVertex
+	- SupportFeature
+	- Integrator
+	- Spatial vector/matrices
+	
+WinGUI
+	- OpenFolderUI
+	- Fix MsgBox icon not having a transparent background
+		
+Misc
+	- Merge View3d into the Renderer11 project
+	- Create a 'Dispatcher' in C++ using a HWND_MESSAGE window (see pr::Renderer)
+	- Implement pr::script in C#
+	- Better handling of native Settings
+	- Change ToolForm to have resizable but not NC border
+	- Write a C# version of clicket that is more heuristical, ie.
+		Find window:
+			Constraint: title = "My Window"
+			Constraint: size > 100,100 && size < 300,300
+		Find Child Window:
+			Constraint: text = "OK"
+			Constraint: type (i.e class name contains) = "button"
+		Action:
+			Mouse left click.
+			Type keys
+	- Create a program that continually builds and runs a C++ file displaying the output
+
+Old:
 convert linedrawer all to wingui
 ldr_object_dlg
 measure tool
