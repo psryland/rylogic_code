@@ -618,7 +618,7 @@ namespace CoinFlip
 						exch.UpdatePairs(coi);
 
 					// Update the cross exchange after the other exchanges
-					if (CrossExchange.Enabled)
+					if (CrossExchange != null && CrossExchange.Enabled)
 						CrossExchange.UpdatePairs(coi);
 
 					// Merge the results

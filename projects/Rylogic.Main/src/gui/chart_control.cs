@@ -632,7 +632,7 @@ namespace Rylogic.Gui
 			var focus =
 				c2w.x * (float)XAxis.Centre +
 				c2w.y * (float)YAxis.Centre +
-				c2w.z * v4.Dot3(Scene.Camera.FocusPoint - v4.Origin, c2w.z);
+				c2w.z * Math_.Dot(Scene.Camera.FocusPoint - v4.Origin, c2w.z);
 
 			// Move the camera in the camera Z axis direction so that the width at the focus dist
 			// matches the XAxis range. Tan(FovX/2) = (XAxis.Span/2)/d
@@ -2865,7 +2865,7 @@ namespace Rylogic.Gui
 				if (!m_is_click) return false;
 				var grab = v2.From(m_grab_client);
 				var diff = v2.From(location) - grab;
-				return m_is_click = diff.Length2Sq < Math_.Sqr(m_chart.Options.MinDragPixelDistance);
+				return m_is_click = diff.LengthSq < Math_.Sqr(m_chart.Options.MinDragPixelDistance);
 			}
 
 			/// <summary>Called on mouse down</summary>
@@ -3064,13 +3064,13 @@ namespace Rylogic.Gui
 				var pt0 = m_chart.Camera.O2W * m_chart.ChartToCamera(m_grab_chart);
 				var pt1 = m_chart.Camera.O2W * m_chart.ChartToCamera(m_chart.ClientToChart(e.Location));
 				var delta = pt1 - pt0;
-				m_chart.Tools.TapeMeasure.O2P = m4x4.OriFromDir(delta, AxisId.PosZ, pt0) * m4x4.Scale(1f, 1f, delta.Length3, v4.Origin);
+				m_chart.Tools.TapeMeasure.O2P = m4x4.OriFromDir(delta, AxisId.PosZ, pt0) * m4x4.Scale(1f, 1f, delta.Length, v4.Origin);
 				m_tape_measure_balloon.Location = m_chart.PointToScreen(e.Location);
 				m_tape_measure_balloon.Text =
 					$"dX:  {delta.x}\r\n"+
 					$"dY:  {delta.y}\r\n"+
 					$"dZ:  {delta.z}\r\n"+
-					$"Len: {delta.Length3}\r\n";
+					$"Len: {delta.Length}\r\n";
 
 				// Show the tape measure graphic (after the text has been initialised)
 				if (!m_tape_measure_graphic_added)
@@ -3843,7 +3843,7 @@ namespace Rylogic.Gui
 				return;
 
 			// Normalise the selection
-			var r = new BBox(new v4(rect.Centre(), 0f, 1f), new v4(v2.Abs(v2.From(rect.Size))*0.5f, 1f, 0f));
+			var r = new BBox(new v4(rect.Centre(), 0f, 1f), new v4(Math_.Abs(v2.From(rect.Size))*0.5f, 1f, 0f));
 
 			// If the area of selection is less than the min drag distance, assume click selection
 			var is_click = r.DiametreSq < Math_.Sqr(Options.MinDragPixelDistance);
@@ -4334,22 +4334,22 @@ namespace Rylogic.Gui
 					{
 					case 0:
 						Cursor = Cursors.SizeNESW;
-						Direction = v2.Normalise2(new v2(-1,-1));
+						Direction = Math_.Normalise(new v2(-1,-1));
 						Update = (b,z) => O2P = m4x4.Translation(b.Lower.x, b.Lower.y, z);
 						break;
 					case 1:
 						Cursor = Cursors.SizeNESW;
-						Direction = v2.Normalise2(new v2(+1,+1));
+						Direction = Math_.Normalise(new v2(+1,+1));
 						Update = (b,z) => O2P = m4x4.Translation(b.Upper.x, b.Upper.y, z);
 						break;
 					case 2:
 						Cursor = Cursors.SizeNWSE;
-						Direction = v2.Normalise2(new v2(-1,+1));
+						Direction = Math_.Normalise(new v2(-1,+1));
 						Update = (b,z) => O2P = m4x4.Translation(b.Lower.x, b.Upper.y, z);
 						break;
 					case 3:
 						Cursor = Cursors.SizeNWSE;
-						Direction = v2.Normalise2(new v2(+1,-1));
+						Direction = Math_.Normalise(new v2(+1,-1));
 						Update = (b,z) => O2P = m4x4.Translation(b.Upper.x, b.Lower.y, z);
 						break;
 					case 4:
@@ -4410,7 +4410,7 @@ namespace Rylogic.Gui
 			private View3d.Object m_cross_hair_v;
 			private View3d.Object CreateCrossHair(bool horiz)
 			{
-				var col = Options.ChartBkColour.ToV4().Length3 > 0.5 ? 0xFFFFFFFF : 0xFF000000;
+				var col = Options.ChartBkColour.ToV4().xyz.Length > 0.5 ? 0xFFFFFFFF : 0xFF000000;
 				var str = horiz
 					? Ldr.Line("chart_cross_hair_h", col, new v4(-0.5f, 0, 0, 1f), new v4(+0.5f, 0, 0, 1f))
 					: Ldr.Line("chart_cross_hair_v", col, new v4(0, -0.5f, 0, 1f), new v4(0, +0.5f, 0, 1f));
@@ -4433,7 +4433,7 @@ namespace Rylogic.Gui
 			private View3d.Object m_tape_measure;
 			private View3d.Object CreateTapeMeasure()
 			{
-				var col = Options.ChartBkColour.ToV4().Length3 > 0.5 ? 0xFFFFFFFF : 0xFF000000;
+				var col = Options.ChartBkColour.ToV4().xyz.Length > 0.5 ? 0xFFFFFFFF : 0xFF000000;
 				var str = Ldr.Line("tape_measure", col, new v4(0, 0, 0, 1f), new v4(0, 0, 1f, 1f));
 				var obj = new View3d.Object(str, false, Id, null);
 				obj.FlagsSet(View3d.EFlags.SceneBoundsExclude, true);

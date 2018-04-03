@@ -676,7 +676,7 @@ namespace Rylogic.Graphix
 				{
 					m_type           = ELight.Directional,
 					m_position       = v4.Origin,
-					m_direction      = v4.Normalise3(direction),
+					m_direction      = Math_.Normalise(direction),
 					m_ambient        = ambient,
 					m_diffuse        = diffuse,
 					m_specular       = specular,
@@ -772,29 +772,45 @@ namespace Rylogic.Graphix
 		[StructLayout(LayoutKind.Sequential)]
 		public struct View3DIncludes
 		{
-			/// <summary>A comma or semicolon separated list of search directories</summary>
-			[MarshalAs(UnmanagedType.LPWStr)] public string m_include_paths;
-
-			/// <summary>An array of binary modules that contain resources</summary>
-			[MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)] public IntPtr[] m_modules;
-			public int m_module_count;
-
-			/// <summary>Create an includes object. Remember module == IntPtr.Zero means "this" module</summary>
+			/// <summary>
+			/// Create an includes object.
+			/// 'paths' should be null or a comma or semi colon separated list of directories
+			/// Remember module == IntPtr.Zero means "this" module</summary>
+			public View3DIncludes(string paths)
+				: this(paths, null)
+			{ }
+			public View3DIncludes(HMODULE module, IEnumerable<string> paths = null)
+				: this(paths, new[] { module })
+			{ }
 			public View3DIncludes(IEnumerable<string> paths = null, IEnumerable<HMODULE> modules = null)
+				: this(paths != null ? string.Join(",", paths) : null, modules.Take(16).ToArray())
+			{}
+			public View3DIncludes(string paths, HMODULE[] modules)
 			{
-				m_include_paths = paths != null ? string.Join(",", paths) : null;
+				m_include_paths = paths;
 				m_modules = new HMODULE[16];
 				m_module_count = 0;
 
 				if (modules != null)
 				{
-					foreach (var m in modules.Take(m_modules.Length))
-						m_modules[m_module_count++] = m;
+					Array.Copy(modules, m_modules, modules.Length);
+					m_module_count = modules.Length;
 				}
 			}
-			public View3DIncludes(HMODULE module, IEnumerable<string> paths = null)
-				:this(paths, new[] { module })
-			{}
+
+			/// <summary>A comma or semicolon separated list of search directories</summary>
+			public string IncludePaths
+			{
+				get { return m_include_paths; }
+				set { m_include_paths = value; }
+			}
+			[MarshalAs(UnmanagedType.LPWStr)]
+			public string m_include_paths;
+
+			/// <summary>An array of binary modules that contain resources</summary>
+			[MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
+			public IntPtr[] m_modules;
+			public int m_module_count;
 		}
 
 		[Serializable]
@@ -1189,7 +1205,7 @@ namespace ldr
 				Camera = new Camera(this);
 				Camera.SetPosition(new v4(0f, 0f, -2f, 1f), v4.Origin, v4.YAxis);
 			}
-			public void Dispose()
+			public virtual void Dispose()
 			{
 				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finalizer thread");
 				if (m_handle == HWindow.Zero) return;
@@ -1409,7 +1425,7 @@ namespace ldr
 			public void AddObject(Object obj)
 			{
 				Debug.Assert(Math_.FEql(obj.O2P.w.w, 1f), "Invalid instance transform");
-				View3D_WindowAddObject(m_handle, obj.m_handle);
+				View3D_WindowAddObject(m_handle, obj.Handle);
 			}
 
 			/// <summary>Add a gizmo to the window</summary>
@@ -1436,7 +1452,7 @@ namespace ldr
 			/// <summary>Remove an object from the window</summary>
 			public void RemoveObject(Object obj)
 			{
-				View3D_WindowRemoveObject(m_handle, obj.m_handle);
+				View3D_WindowRemoveObject(m_handle, obj.Handle);
 			}
 
 			/// <summary>Remove a gizmo from the window</summary>
@@ -1475,7 +1491,7 @@ namespace ldr
 			/// <summary>True if 'obj' is a member of this window</summary>
 			public bool HasObject(Object obj, bool search_children)
 			{
-				return View3D_WindowHasObject(m_handle, obj.m_handle, search_children);
+				return View3D_WindowHasObject(m_handle, obj.Handle, search_children);
 			}
 
 			/// <summary>Return a bounding box of the objects in this window</summary>
@@ -1977,7 +1993,7 @@ namespace ldr
 			public void SetPosition(v4 position)
 			{
 				var up = AlignAxis;
-				if (up.Length3Sq == 0f) up = v4.YAxis;
+				if (up.LengthSq == 0f) up = v4.YAxis;
 				SetPosition(position, FocusPoint, up);
 			}
 
@@ -1991,7 +2007,7 @@ namespace ldr
 			public void ResetView()
 			{
 				var up = AlignAxis;
-				if (up.Length3Sq == 0f) up = v4.YAxis;
+				if (up.LengthSq == 0f) up = v4.YAxis;
 				var forward = up.z > up.y ? -v4.YAxis : -v4.ZAxis;
 				ResetView(forward, up);
 			}
@@ -2000,8 +2016,8 @@ namespace ldr
 			public void ResetView(v4 forward)
 			{
 				var up = AlignAxis;
-				if (up.Length3Sq == 0f) up = v4.YAxis;
-				if (v4.Parallel(up, forward)) up = v4.Perpendicular(forward);
+				if (up.LengthSq == 0f) up = v4.YAxis;
+				if (Math_.Parallel(up, forward)) up = Math_.Perpendicular(forward);
 				ResetView(forward, up);
 			}
 
@@ -2151,10 +2167,6 @@ namespace ldr
 		[DebuggerDisplay("{Description}")]
 		public class Object :IDisposable
 		{
-			public HObject m_handle;
-			private bool m_owned;
-			public object Tag { get; set; }
-
 			/// <summary>
 			/// Create objects given in an ldr string or file.
 			/// If multiple objects are created, the handle returned is to the first object only
@@ -2172,18 +2184,18 @@ namespace ldr
 			{}
 			public Object(string ldr_script, bool file, Guid? context_id, View3DIncludes? includes)
 			{
-				m_owned = true;
+				Owned = true;
 				var inc = includes ?? new View3DIncludes();
 				var ctx = context_id ?? Guid.NewGuid();
-				m_handle = View3D_ObjectCreateLdr(ldr_script, file, ref ctx, ref inc);
-				if (m_handle == HObject.Zero)
+				Handle = View3D_ObjectCreateLdr(ldr_script, file, ref ctx, ref inc);
+				if (Handle == HObject.Zero)
 					throw new Exception($"Failed to create object from script\r\n{ldr_script.Summary(100)}");
 			}
 
 			/// <summary>Create from buffer</summary>
 			public Object(string name, uint colour, int vcount, int icount, int ncount, Vertex[] verts, ushort[] indices, Nugget[] nuggets, Guid? context_id)
 			{
-				m_owned = true;
+				Owned = true;
 				var ctx = context_id ?? Guid.NewGuid();
 
 				// Serialise the verts/indices to a memory buffer
@@ -2191,48 +2203,54 @@ namespace ldr
 				using (var ibuf = Marshal_.Pin(indices))
 				using (var nbuf = Marshal_.ArrayToPtr(nuggets))
 				{
-					m_handle = View3D_ObjectCreate(name, colour, vcount, icount, ncount, vbuf.Pointer, ibuf.Pointer, nbuf.Value.Ptr, ref ctx);
-					if (m_handle == HObject.Zero) throw new System.Exception($"Failed to create object '{name}' from provided buffers");
+					Handle = View3D_ObjectCreate(name, colour, vcount, icount, ncount, vbuf.Pointer, ibuf.Pointer, nbuf.Value.Ptr, ref ctx);
+					if (Handle == HObject.Zero) throw new System.Exception($"Failed to create object '{name}' from provided buffers");
 				}
 			}
 
 			/// <summary>Create an object via callback</summary>
 			public Object(string name, uint colour, int vcount, int icount, int ncount, EditObjectCB edit_cb, Guid? context_id)
 			{
-				m_owned = true;
+				Owned = true;
 				var ctx = context_id ?? Guid.NewGuid();
-				m_handle = View3D_ObjectCreateEditCB(name, colour, vcount, icount, ncount, edit_cb, IntPtr.Zero, ref ctx);
-				if (m_handle == HObject.Zero) throw new Exception($"Failed to create object '{name}' via edit callback");
+				Handle = View3D_ObjectCreateEditCB(name, colour, vcount, icount, ncount, edit_cb, IntPtr.Zero, ref ctx);
+				if (Handle == HObject.Zero) throw new Exception($"Failed to create object '{name}' via edit callback");
 			}
 
 			/// <summary>Attach to an existing object handle</summary>
-			public Object(HObject handle)
-				:this(handle, false)
-			{}
-			private Object(HObject handle, bool owned)
+			public Object(HObject handle, bool owned = false)
 			{
-				m_owned = owned;
-				m_handle = handle;
+				Owned = owned;
+				Handle = handle;
 			}
 			public virtual void Dispose()
 			{
 				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finaliser thread");
-				if (m_handle == HObject.Zero) return;
-				if (m_owned) View3D_ObjectDelete(m_handle);
-				m_handle = HObject.Zero;
+				if (Handle == HObject.Zero) return;
+				if (Owned) View3D_ObjectDelete(Handle);
+				Handle = HObject.Zero;
 			}
+
+			/// <summary>The object handle for this object</summary>
+			public HObject Handle;
+
+			/// <summary>True if the view3d object is destroyed when this instance is disposed</summary>
+			public bool Owned;
+
+			/// <summary>User data attached to the object</summary>
+			public object Tag { get; set; }
 
 			/// <summary>Object name</summary>
 			public string Name
 			{
-				get { return View3D_ObjectNameGetBStr(m_handle); }
-				set { View3D_ObjectNameSet(m_handle, value); }
+				get { return View3D_ObjectNameGetBStr(Handle); }
+				set { View3D_ObjectNameSet(Handle, value); }
 			}
 
 			/// <summary>Get the type of Ldr object this is</summary>
 			public string Type
 			{
-				get { return View3D_ObjectTypeGetBStr(m_handle); }
+				get { return View3D_ObjectTypeGetBStr(Handle); }
 			}
 
 			/// <summary>Get/Set the visibility of this object (set applies to all child objects as well)</summary>
@@ -2270,37 +2288,37 @@ namespace ldr
 			/// <summary>The context id that this object belongs to</summary>
 			public Guid ContextId
 			{
-				get { return View3D_ObjectContextIdGet(m_handle); }
+				get { return View3D_ObjectContextIdGet(Handle); }
 			}
 
 			/// <summary>Change the model for this object</summary>
 			public void UpdateModel(string ldr_script, EUpdateObject flags = EUpdateObject.All)
 			{
-				View3D_ObjectUpdate(m_handle, ldr_script, flags);
+				View3D_ObjectUpdate(Handle, ldr_script, flags);
 			}
 
 			/// <summary>Modify the model of this object</summary>
 			public void Edit(EditObjectCB edit_cb)
 			{
-				View3D_ObjectEdit(m_handle, edit_cb, IntPtr.Zero);
+				View3D_ObjectEdit(Handle, edit_cb, IntPtr.Zero);
 			}
 
 			/// <summary>Get/Set the object to parent transform of the root object</summary>
 			public m4x4 O2P
 			{
-				get { return View3D_ObjectO2PGet(m_handle, null); }
+				get { return View3D_ObjectO2PGet(Handle, null); }
 				set
 				{
 					Util.BreakIf(value.w.w != 1.0f, "Invalid object transform");
 					Util.BreakIf(!Math_.IsFinite(value), "Invalid object transform");
-					View3D_ObjectO2PSet(m_handle, ref value, null);
+					View3D_ObjectO2PSet(Handle, ref value, null);
 				}
 			}
 
 			/// <summary>Get the model space bounding box of this object</summary>
 			public BBox BBoxMS(bool include_children)
 			{
-				return View3D_ObjectBBoxMS(m_handle, include_children);
+				return View3D_ObjectBBoxMS(Handle, include_children);
 			}
 
 			/// <summary>Return the object that is the root parent of this object (possibly itself)</summary>
@@ -2308,7 +2326,7 @@ namespace ldr
 			{
 				get
 				{
-					var root = View3D_ObjectGetRoot(m_handle);
+					var root = View3D_ObjectGetRoot(Handle);
 					return root != HObject.Zero ? new Object(root, false) : null;
 				}
 			}
@@ -2318,7 +2336,7 @@ namespace ldr
 			{
 				get
 				{
-					var parent = View3D_ObjectGetParent(m_handle);
+					var parent = View3D_ObjectGetParent(Handle);
 					return parent != HObject.Zero ? new Object(parent, false) : null;
 				}
 			}
@@ -2326,19 +2344,19 @@ namespace ldr
 			/// <summary>Return a child object of this object</summary>
 			public Object Child(string name)
 			{
-				var child = View3D_ObjectGetChildByName(m_handle, name);
+				var child = View3D_ObjectGetChildByName(Handle, name);
 				return child != HObject.Zero ? new Object(child, false) : null;
 			}
 			public Object Child(int index)
 			{
-				var child = View3D_ObjectGetChildByIndex(m_handle, index);
+				var child = View3D_ObjectGetChildByIndex(Handle, index);
 				return child != HObject.Zero ? new Object(child, false) : null;
 			}
 
 			/// <summary>Return the number of child objects of this object</summary>
 			public int ChildCount
 			{
-				get { return View3D_ObjectChildCount(m_handle); }
+				get { return View3D_ObjectChildCount(Handle); }
 			}
 
 			/// <summary>Return a list of all the child objects of this object</summary>
@@ -2346,9 +2364,9 @@ namespace ldr
 			{
 				get
 				{
-					if (m_handle == HObject.Zero) return new Object[0];
+					if (Handle == HObject.Zero) return new Object[0];
 					var objects = new List<Object>(capacity:ChildCount);
-					View3D_ObjectEnumChildren(m_handle, (ctx,obj) => { objects.Add(new Object(obj)); return true; }, IntPtr.Zero);
+					View3D_ObjectEnumChildren(Handle, (ctx,obj) => { objects.Add(new Object(obj)); return true; }, IntPtr.Zero);
 					return objects.ToArray();
 				}
 			}
@@ -2356,7 +2374,7 @@ namespace ldr
 			/// <summary>Create a new Object that shares the model (but not transform) of this object</summary>
 			public Object CreateInstance()
 			{
-				var handle = View3D_ObjectCreateInstance(m_handle);
+				var handle = View3D_ObjectCreateInstance(Handle);
 				if (handle == HObject.Zero)
 					throw new Exception("Failed to create object instance");
 
@@ -2367,14 +2385,15 @@ namespace ldr
 			/// Get/Set the object to world transform for this object or the first child object that matches 'name'.
 			/// If 'name' is null, then the state of the root object is returned
 			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression.
-			/// Note, setting the o2w for a child object results in a transform that is relative to it's immediate parent</summary>
+			/// Note, setting the o2w for a child object positions the object in world space rather than parent space
+			/// (internally the appropriate O2P transform is calculated to put the object at the given O2W location)</summary>
 			public m4x4 O2WGet(string name = null)
 			{
-				return View3D_ObjectO2WGet(m_handle, name);
+				return View3D_ObjectO2WGet(Handle, name);
 			}
 			public void O2WSet(m4x4 o2w, string name = null)
 			{
-				View3D_ObjectO2WSet(m_handle, ref o2w, name);
+				View3D_ObjectO2WSet(Handle, ref o2w, name);
 			}
 
 			/// <summary>
@@ -2385,11 +2404,11 @@ namespace ldr
 			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
 			public m4x4 O2PGet(string name = null)
 			{
-				return View3D_ObjectO2PGet(m_handle, name);
+				return View3D_ObjectO2PGet(Handle, name);
 			}
 			public void O2PSet(m4x4 o2p, string name = null)
 			{
-				View3D_ObjectO2PSet(m_handle, ref o2p, name);
+				View3D_ObjectO2PSet(Handle, ref o2p, name);
 			}
 
 			/// <summary>
@@ -2400,11 +2419,11 @@ namespace ldr
 			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
 			public bool VisibleGet(string name = null)
 			{
-				return View3D_ObjectVisibilityGet(m_handle, name);
+				return View3D_ObjectVisibilityGet(Handle, name);
 			}
 			public void VisibleSet(bool vis, string name = null)
 			{
-				View3D_ObjectVisibilitySet(m_handle, vis, name);
+				View3D_ObjectVisibilitySet(Handle, vis, name);
 			}
 
 			/// <summary>
@@ -2415,11 +2434,11 @@ namespace ldr
 			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
 			public bool WireframeGet(string name = null)
 			{
-				return View3D_ObjectWireframeGet(m_handle, name);
+				return View3D_ObjectWireframeGet(Handle, name);
 			}
 			public void WireframeSet(bool vis, string name = null)
 			{
-				View3D_ObjectWireframeSet(m_handle, vis, name);
+				View3D_ObjectWireframeSet(Handle, vis, name);
 			}
 		
 			/// <summary>
@@ -2427,11 +2446,11 @@ namespace ldr
 			/// See LdrObject::Apply for docs on the format of 'name'</summary>
 			public EFlags FlagsGet(string name = null)
 			{
-				return View3D_ObjectFlagsGet(m_handle, name);
+				return View3D_ObjectFlagsGet(Handle, name);
 			}
 			public void FlagsSet(EFlags flags, bool state, string name = null)
 			{
-				View3D_ObjectFlagsSet(m_handle, flags, state, name);
+				View3D_ObjectFlagsSet(Handle, flags, state, name);
 			}
 
 			/// <summary>
@@ -2439,7 +2458,7 @@ namespace ldr
 			/// 'base_colour', if true returns the objects base colour, if false, returns the current colour</summary>
 			public Colour32 ColourGet(bool base_colour, string name = null)
 			{
-				return View3D_ObjectColourGet(m_handle, base_colour, name);
+				return View3D_ObjectColourGet(Handle, base_colour, name);
 			}
 
 			/// <summary>
@@ -2450,7 +2469,7 @@ namespace ldr
 			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
 			public void ColourSet(Colour32 colour, uint mask, string name = null)
 			{
-				View3D_ObjectColourSet(m_handle, colour, mask, name);
+				View3D_ObjectColourSet(Handle, colour, mask, name);
 			}
 			public void ColourSet(Colour32 colour, string name = null)
 			{
@@ -2465,7 +2484,7 @@ namespace ldr
 			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
 			public void ResetColour(string name = null)
 			{
-				View3D_ObjectResetColour(m_handle, name);
+				View3D_ObjectResetColour(Handle, name);
 			}
 
 			/// <summary>
@@ -2476,7 +2495,7 @@ namespace ldr
 			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
 			public void SetTexture(Texture tex, string name = null)
 			{
-				View3D_ObjectSetTexture(m_handle, tex.Handle, name);
+				View3D_ObjectSetTexture(Handle, tex.Handle, name);
 			}
 
 			/// <summary>String description of the object</summary>
@@ -2500,7 +2519,7 @@ namespace ldr
 			}
 			public bool Equals(Object rhs)
 			{
-				return rhs != null && m_handle == rhs.m_handle;
+				return rhs != null && Handle == rhs.Handle;
 			}
 			public override bool Equals(object rhs)
 			{
@@ -2508,7 +2527,7 @@ namespace ldr
 			}
 			public override int GetHashCode()
 			{
-				return m_handle.GetHashCode();
+				return Handle.GetHashCode();
 			}
 			#endregion
 		}
@@ -2612,13 +2631,13 @@ namespace ldr
 			/// <summary>Attach an object directly to the gizmo that will move with it</summary>
 			public void Attach(Object obj)
 			{
-				View3D_GizmoAttach(m_handle, obj.m_handle);
+				View3D_GizmoAttach(m_handle, obj.Handle);
 			}
 
 			/// <summary>Detach an object from the gizmo</summary>
 			public void Detach(Object obj)
 			{
-				View3D_GizmoDetach(m_handle, obj.m_handle);
+				View3D_GizmoDetach(m_handle, obj.Handle);
 			}
 
 			/// <summary>Handle the callback from the native code for when the gizmo moves</summary>

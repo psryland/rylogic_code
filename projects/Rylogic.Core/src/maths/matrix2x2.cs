@@ -107,18 +107,18 @@ namespace Rylogic.Maths
 		{
 			v2 ans;
 			Transpose(ref lhs);
-			ans.x = v2.Dot2(lhs.x, rhs);
-			ans.y = v2.Dot2(lhs.y, rhs);
+			ans.x = Math_.Dot(lhs.x, rhs);
+			ans.y = Math_.Dot(lhs.y, rhs);
 			return ans;
 		}
 		public static m2x2 operator * (m2x2 lhs, m2x2 rhs)
 		{
 			m2x2 ans;
 			Transpose(ref lhs);
-			ans.x.x = v2.Dot2(lhs.x, rhs.x);
-			ans.x.y = v2.Dot2(lhs.y, rhs.x);
-			ans.y.x = v2.Dot2(lhs.x, rhs.y);
-			ans.y.y = v2.Dot2(lhs.y, rhs.y);
+			ans.x.x = Math_.Dot(lhs.x, rhs.x);
+			ans.x.y = Math_.Dot(lhs.y, rhs.x);
+			ans.y.x = Math_.Dot(lhs.x, rhs.y);
+			ans.y.y = Math_.Dot(lhs.y, rhs.y);
 			return ans;
 		}
 
@@ -176,8 +176,8 @@ namespace Rylogic.Maths
 		/// <summary>Orthonormalise 'm' in-place</summary>
 		public static void Orthonormalise(ref m2x2 m)
 		{
-			m.x = v2.Normalise2(m.x);
-			m.y = v2.Normalise2(m.y - v2.Dot2(m.x,m.y) * m.x);
+			m.x = Math_.Normalise(m.x);
+			m.y = Math_.Normalise(m.y - Math_.Dot(m.x,m.y) * m.x);
 		}
 
 		/// <summary>Return an orthonormalised version of 'm'</summary>
@@ -191,9 +191,9 @@ namespace Rylogic.Maths
 		public static bool IsOrthonormal(m2x2 m)
 		{
 			return
-				Math_.FEql(m.x.Length2Sq, 1f) &&
-				Math_.FEql(m.y.Length2Sq, 1f) &&
-				Math_.FEql(v2.Dot2(m.x, m.y), 0f);
+				Math_.FEql(m.x.LengthSq, 1f) &&
+				Math_.FEql(m.y.LengthSq, 1f) &&
+				Math_.FEql(Math_.Dot(m.x, m.y), 0f);
 		}
 
 		// Permute the rotation vectors in a matrix by 'n'
@@ -210,7 +210,7 @@ namespace Rylogic.Maths
 		public static m2x2 OrientationFromDirection(v2 direction, int axis)
 		{
 			m2x2 ans = Identity;
-			ans.x = v2.Normalise2(direction);
+			ans.x = Math_.Normalise(direction);
 			ans.y = new v2(ans.x.y, -ans.x.x);
 			return PermuteRotation(ans, axis);
 		}

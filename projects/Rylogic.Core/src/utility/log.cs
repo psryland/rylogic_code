@@ -635,6 +635,7 @@ namespace Rylogic.Utility
 		{
 			Filepath = filepath;
 			append &= File.Exists(filepath);
+			Path_.CreateDirs(Path_.Directory(filepath));
 			m_outf = new FileStream(Filepath, append ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
 		}
 		public virtual void Dispose()

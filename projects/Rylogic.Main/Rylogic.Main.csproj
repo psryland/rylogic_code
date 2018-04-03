@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFrameworks>NET471</TargetFrameworks>
+		<TargetFramework>NET471</TargetFramework>
 		<Authors>P Ryland</Authors>
 		<Company>Rylogic</Company>
 		<Description>A toolbox of extension methods, data structures, and helper classes used in tools created by Rylogic.</Description>
@@ -10,9 +10,10 @@
 		<RootNamespace>Rylogic</RootNamespace>
 		<OutputType>Library</OutputType>
 		<StartupObject />
-		<AssemblyVersion>1.1.1</AssemblyVersion>
-		<FileVersion>1.1.1</FileVersion>
-		<Version>1.1.1</Version>
+		<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
+		<AssemblyVersion>1.1.2</AssemblyVersion>
+		<FileVersion>1.1.2</FileVersion>
+		<Version>1.1.2</Version>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
 		<DefineConstants>RELEASE;NET471</DefineConstants>
@@ -39,49 +40,77 @@
 		<ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj" />
 	</ItemGroup>
 	<ItemGroup>
-		<Reference Include="System.Windows.Forms" />
-		<Reference Include="WindowsBase" />
-	</ItemGroup>
-	<ItemGroup>
 		<Compile Update="Properties\Resources.Designer.cs">
 			<DependentUpon>Resources.resx</DependentUpon>
 			<DesignTime>True</DesignTime>
 			<AutoGen>True</AutoGen>
 		</Compile>
-		<Compile Update="src\gui\data_grid_view_db_table.Designer.cs">
-			<DesignTime>True</DesignTime>
-			<AutoGen>True</AutoGen>
-			<DependentUpon>data_grid_view_db_table.resx</DependentUpon>
-		</Compile>
-		<Compile Update="src\gui\help_ui.Designer.cs">
-			<DesignTime>True</DesignTime>
-			<AutoGen>True</AutoGen>
-			<DependentUpon>help_ui.resx</DependentUpon>
-		</Compile>
-		<Compile Update="src\view3d\view3d_measurement_ui.Designer.cs">
-			<DesignTime>True</DesignTime>
-			<AutoGen>True</AutoGen>
-			<DependentUpon>view3d_measurement_ui.resx</DependentUpon>
-		</Compile>
 	</ItemGroup>
 	<ItemGroup>
-		<EmbeddedResource Update="Properties\Resources.resx">
+		<EmbeddedResource Include="src\gui\anim_button.resx">
+			<DependentUpon>anim_button.cs</DependentUpon>
+		</EmbeddedResource>
+		<EmbeddedResource Include="src\gui\bluetooth_ui.resx">
+			<DependentUpon>bluetooth_ui.cs</DependentUpon>
+		</EmbeddedResource>
+		<EmbeddedResource Include="src\gui\browse_path_ui.resx">
+			<DependentUpon>browse_path_ui.cs</DependentUpon>
+		</EmbeddedResource>
+		<EmbeddedResource Include="src\gui\colour_ui.resx">
+			<DependentUpon>colour_ui.cs</DependentUpon>
+		</EmbeddedResource>
+		<EmbeddedResource Include="src\gui\colour_wheel.resx">
+			<DependentUpon>colour_wheel.cs</DependentUpon>
+		</EmbeddedResource>
+		<EmbeddedResource Include="src\gui\data_grid_view_db_table.resx">
+			<DependentUpon>data_grid_view_db_table.cs</DependentUpon>
+		</EmbeddedResource>
+		<EmbeddedResource Include="src\gui\diagram_control.resx">
+			<DependentUpon>diagram_control.cs</DependentUpon>
+		</EmbeddedResource>
+		<EmbeddedResource Include="src\gui\find_ui.resx">
+			<DependentUpon>find_ui.cs</DependentUpon>
+		</EmbeddedResource>
+		<EmbeddedResource Include="src\gui\help_ui.resx">
+			<DependentUpon>help_ui.cs</DependentUpon>
+		</EmbeddedResource>
+		<EmbeddedResource Include="src\gui\list_ui.resx">
+			<DependentUpon>list_ui.cs</DependentUpon>
+		</EmbeddedResource>
+		<EmbeddedResource Include="src\gui\log_ui.resx">
+			<DependentUpon>log_ui.cs</DependentUpon>
+		</EmbeddedResource>
+		<EmbeddedResource Include="src\gui\message_box.resx">
+			<DependentUpon>message_box.cs</DependentUpon>
+		</EmbeddedResource>
+		<EmbeddedResource Include="src\gui\pattern_filter.resx">
+			<DependentUpon>pattern_filter.cs</DependentUpon>
+		</EmbeddedResource>
+		<EmbeddedResource Include="src\gui\pattern_ui.resx">
+			<DependentUpon>pattern_ui.cs</DependentUpon>
+		</EmbeddedResource>
+		<EmbeddedResource Include="src\gui\prompt_ui.resx">
+			<DependentUpon>prompt_ui.cs</DependentUpon>
+		</EmbeddedResource>
+		<EmbeddedResource Include="src\gui\hint_balloon.resx">
+			<DependentUpon>hint_balloon.cs</DependentUpon>
+		</EmbeddedResource>
+		<EmbeddedResource Include="src\gui\select_directories_ui.resx">
+			<DependentUpon>select_directories_ui.cs</DependentUpon>
+		</EmbeddedResource>
+		<EmbeddedResource Include="src\view3d\view3d_measurement_ui.resx">
+			<DependentUpon>view3d_measurement_ui.cs</DependentUpon>
+		</EmbeddedResource>
+		<EmbeddedResource Include="Properties\Resources.resx">
+			<Generator>PublicResXFileCodeGenerator</Generator>
 			<CustomToolNamespace>Rylogic</CustomToolNamespace>
+			<SubType>Designer</SubType>
 			<LastGenOutput>Resources.Designer.cs</LastGenOutput>
-			<Generator>PublicResXFileCodeGenerator</Generator>
 		</EmbeddedResource>
-		<EmbeddedResource Update="src\gui\data_grid_view_db_table.resx">
-			<Generator>PublicResXFileCodeGenerator</Generator>
-			<LastGenOutput>data_grid_view_db_table.Designer.cs</LastGenOutput>
-		</EmbeddedResource>
-		<EmbeddedResource Update="src\gui\help_ui.resx">
-			<Generator>PublicResXFileCodeGenerator</Generator>
-			<LastGenOutput>help_ui.Designer.cs</LastGenOutput>
-		</EmbeddedResource>
-		<EmbeddedResource Update="src\view3d\view3d_measurement_ui.resx">
-			<Generator>PublicResXFileCodeGenerator</Generator>
-			<LastGenOutput>view3d_measurement_ui.Designer.cs</LastGenOutput>
-		</EmbeddedResource>
+	</ItemGroup>
+	<ItemGroup>
+	  <Reference Include="System.Windows.Forms" />
+	  <Reference Include="WindowsBase" />
 	</ItemGroup>
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
 		<Exec Command="py $(ProjectDir)post_build.py $(ProjectDir) $(TargetDir) $(PlatformName) $(ConfigurationName)&#xD;&#xA;" />

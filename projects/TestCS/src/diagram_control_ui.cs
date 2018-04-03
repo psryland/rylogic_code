@@ -160,7 +160,7 @@ namespace TestCS
 			//}
 			public override DiagramControl.HitTestResult.Hit HitTest(v2 point, View3d.Camera cam)
 			{
-				if ((PositionXY - point).Length2 > 20)
+				if ((PositionXY - point).Length > 20)
 					return null;
 
 				point -= PositionXY;

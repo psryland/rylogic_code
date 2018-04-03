@@ -98,7 +98,7 @@ namespace CoinFlip
 			}
 			catch (Exception)
 			{
-				Model.Shutdown?.Cancel();
+				Model?.Shutdown?.Cancel();
 				Dispose();
 				throw;
 			}

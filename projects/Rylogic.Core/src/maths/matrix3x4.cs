@@ -147,32 +147,32 @@ namespace Rylogic.Maths
 		{
 			Transpose(ref lhs);
 			return new v3(
-				v3.Dot3(lhs.x.xyz, rhs),
-				v3.Dot3(lhs.y.xyz, rhs),
-				v3.Dot3(lhs.z.xyz, rhs));
+				Math_.Dot(lhs.x.xyz, rhs),
+				Math_.Dot(lhs.y.xyz, rhs),
+				Math_.Dot(lhs.z.xyz, rhs));
 		}
 		public static v4 operator * (m3x4 lhs, v4 rhs)
 		{
 			Transpose(ref lhs);
 			return new v4(
-				v4.Dot4(lhs.x, rhs),
-				v4.Dot4(lhs.y, rhs),
-				v4.Dot4(lhs.z, rhs),
+				Math_.Dot(lhs.x, rhs),
+				Math_.Dot(lhs.y, rhs),
+				Math_.Dot(lhs.z, rhs),
 				rhs.w);
 		}
 		public static m3x4 operator * (m3x4 lhs, m3x4 rhs)
 		{
 			Transpose(ref lhs);
 			return new m3x4(
-				new v4(v4.Dot4(lhs.x, rhs.x), v4.Dot4(lhs.y, rhs.x), v4.Dot4(lhs.z, rhs.x), 0f),
-				new v4(v4.Dot4(lhs.x, rhs.y), v4.Dot4(lhs.y, rhs.y), v4.Dot4(lhs.z, rhs.y), 0f),
-				new v4(v4.Dot4(lhs.x, rhs.z), v4.Dot4(lhs.y, rhs.z), v4.Dot4(lhs.z, rhs.z), 0f));
+				new v4(Math_.Dot(lhs.x, rhs.x), Math_.Dot(lhs.y, rhs.x), Math_.Dot(lhs.z, rhs.x), 0f),
+				new v4(Math_.Dot(lhs.x, rhs.y), Math_.Dot(lhs.y, rhs.y), Math_.Dot(lhs.z, rhs.y), 0f),
+				new v4(Math_.Dot(lhs.x, rhs.z), Math_.Dot(lhs.y, rhs.z), Math_.Dot(lhs.z, rhs.z), 0f));
 		}
 
 		/// <summary>Return the determinant of 'm'</summary>
 		public static float Determinant(m3x4 m)
 		{
-			return v4.Triple3(m.x, m.y, m.z);
+			return Math_.Triple(m.x, m.y, m.z);
 		}
 
 		/// <summary>Transpose 'm' in-place</summary>
@@ -217,9 +217,9 @@ namespace Rylogic.Maths
 
 			var det = Determinant(m);
 			var tmp = new m3x4(
-				v4.Cross3(m.y, m.z) / det,
-				v4.Cross3(m.z, m.x) / det,
-				v4.Cross3(m.x, m.y) / det);
+				Math_.Cross(m.y, m.z) / det,
+				Math_.Cross(m.z, m.x) / det,
+				Math_.Cross(m.x, m.y) / det);
 
 			return Transpose(tmp);
 		}
@@ -227,9 +227,9 @@ namespace Rylogic.Maths
 		/// <summary>Orthonormalise 'm' in-place</summary>
 		public static void Orthonormalise(ref m3x4 m)
 		{
-			v4.Normalise3(ref m.x);
-			m.y = v4.Normalise3(v4.Cross3(m.z, m.x));
-			m.z = v4.Cross3(m.x, m.y);
+			Math_.Normalise(ref m.x);
+			m.y = Math_.Normalise(Math_.Cross(m.z, m.x));
+			m.z = Math_.Cross(m.x, m.y);
 		}
 
 		/// <summary>Return an orthonormalised version of 'm'</summary>
@@ -243,10 +243,10 @@ namespace Rylogic.Maths
 		public static bool IsOrthonormal(m3x4 m)
 		{
 			return
-				Math_.FEql(m.x.Length3Sq, 1f) &&
-				Math_.FEql(m.y.Length3Sq, 1f) &&
-				Math_.FEql(m.z.Length3Sq, 1f) &&
-				Math_.FEql(v4.Cross3(m.x, m.y) - m.z, v4.Zero);
+				Math_.FEql(m.x.LengthSq, 1f) &&
+				Math_.FEql(m.y.LengthSq, 1f) &&
+				Math_.FEql(m.z.LengthSq, 1f) &&
+				Math_.FEql(Math_.Cross(m.x, m.y) - m.z, v4.Zero);
 		}
 
 		/// <summary>
@@ -277,19 +277,19 @@ namespace Rylogic.Maths
 		public static m3x4 OriFromDir(v4 dir, AxisId axis, v4 up)
 		{
 			// Get the preferred up direction (handling parallel cases)
-			up = v4.Parallel(up, dir) ? v4.Perpendicular(dir) : up;
+			up = Math_.Parallel(up, dir) ? Math_.Perpendicular(dir) : up;
 
 			m3x4 ori = Identity;
-			ori.z = v4.Normalise3(Math_.Sign(axis) * dir);
-			ori.x = v4.Normalise3(v4.Cross3(up, ori.z));
-			ori.y = v4.Cross3(ori.z, ori.x);
+			ori.z = Math_.Normalise(Math_.Sign(axis) * dir);
+			ori.x = Math_.Normalise(Math_.Cross(up, ori.z));
+			ori.y = Math_.Cross(ori.z, ori.x);
 
 			// Permute the column vectors so +Z becomes 'axis'
 			return PermuteRotation(ori, Math.Abs(axis));
 		}
 		public static m3x4 OriFromDir(v4 dir, AxisId axis)
 		{
-			return OriFromDir(dir, axis, v4.Perpendicular(dir));
+			return OriFromDir(dir, axis, Math_.Perpendicular(dir));
 		}
 
 		/// <summary>
@@ -309,7 +309,7 @@ namespace Rylogic.Maths
 		/// <summary>Create a rotation from an axis and angle</summary>
 		public static m3x4 Rotation(v4 axis_norm, v4 axis_sine_angle, float cos_angle)
 		{
-			Debug.Assert(Math_.FEql(axis_norm.Length3Sq, 1f), "'axis_norm' should be normalised");
+			Debug.Assert(Math_.FEql(axis_norm.LengthSq, 1f), "'axis_norm' should be normalised");
 
 			var mat = new m3x4();
 
@@ -339,7 +339,7 @@ namespace Rylogic.Maths
 		/// <summary>Create from an axis and angle. 'axis' should be normalised</summary>
 		public static m3x4 Rotation(v4 axis_norm, float angle)
 		{
-			Debug.Assert(Math_.FEql(axis_norm.Length3Sq, 1f), "'axis_norm' should be normalised");
+			Debug.Assert(Math_.FEql(axis_norm.LengthSq, 1f), "'axis_norm' should be normalised");
 			return Rotation(axis_norm, axis_norm * (float)Math.Sin(angle), (float)Math.Cos(angle));
 		}
 
@@ -347,7 +347,7 @@ namespace Rylogic.Maths
 		public static m3x4 Rotation(v4 angular_displacement)
 		{
 			Debug.Assert(angular_displacement.w == 0, "'angular_displacement' should be a scaled direction vector");
-			var len = angular_displacement.Length3;
+			var len = angular_displacement.Length;
 			return len > Math_.TinyF
 				? Rotation(angular_displacement/len, len)
 				: Identity;
@@ -356,18 +356,18 @@ namespace Rylogic.Maths
 		/// <summary>Create a transform representing the rotation from one vector to another. 'from' and 'to' do not have to be normalised</summary>
 		public static m3x4 Rotation(v4 from, v4 to)
 		{
-			Debug.Assert(!Math_.FEql(from.Length3, 0));
-			Debug.Assert(!Math_.FEql(to.Length3, 0));
-			var len = from.Length3 * to.Length3;
+			Debug.Assert(!Math_.FEql(from.Length, 0));
+			Debug.Assert(!Math_.FEql(to.Length, 0));
+			var len = from.Length * to.Length;
 
 			// Find the cosine of the angle between the vectors
-			var cos_angle = v4.Dot3(from, to) / len;
+			var cos_angle = Math_.Dot(from, to) / len;
 			if (cos_angle >= 1f - Math_.TinyF) return Identity;
-			if (cos_angle <= Math_.TinyF - 1f) return Rotation(v4.Normalise3(v4.Perpendicular(from - to)), (float)Math_.TauBy2);
+			if (cos_angle <= Math_.TinyF - 1f) return Rotation(Math_.Normalise(Math_.Perpendicular(from - to)), (float)Math_.TauBy2);
 
 			// Axis multiplied by sine of the angle
-			var axis_sine_angle = v4.Cross3(from, to) / len;
-			var axis_norm = v4.Normalise3(axis_sine_angle);
+			var axis_sine_angle = Math_.Cross(from, to) / len;
+			var axis_norm = Math_.Normalise(axis_sine_angle);
 
 			return Rotation(axis_norm, axis_sine_angle, cos_angle);
 		}

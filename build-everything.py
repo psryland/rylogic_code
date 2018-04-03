@@ -16,8 +16,16 @@ def BuildEverything():
 	'''
 
 	# Assert UserVars
+	Tools.AssertVersion(1)
+	Tools.AssertPathsExist([
+		UserVars.root,
+		UserVars.winsdk,
+		UserVars.textedit,
+		UserVars.winsdk_bin + "\\x64\\fxc.exe"
+		])
 	Tools.AssertLatestWinSDK()
 
+	
 	# Build the Rylogic solution
 	Tools.MSBuild(UserVars.rylogic_sln, [], ["x64", "x86"], ["Release"])
 

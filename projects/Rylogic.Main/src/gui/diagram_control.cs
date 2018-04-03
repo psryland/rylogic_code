@@ -442,7 +442,7 @@ namespace Rylogic.Gui
 				if (!pt_in_element_space)
 					point = m4x4.InvertFast(Position) * point;
 
-				return AnchorPoints().MinBy(x => (x.Location - point).Length3Sq);
+				return AnchorPoints().MinBy(x => (x.Location - point).LengthSq);
 			}
 
 			/// <summary>Return all the locations that connectors can attach to this node (in node space)</summary>
@@ -965,7 +965,7 @@ namespace Rylogic.Gui
 			public override HitTestResult.Hit HitTest(v2 point, View3d.Camera cam)
 			{
 				var pt = point - Centre;
-				if (pt.Length2Sq > Math_.Sqr(Bounds.Diametre/2f))
+				if (pt.LengthSq > Math_.Sqr(Bounds.Diametre/2f))
 					return null;
 
 				var hit = new HitTestResult.Hit(this, pt);
@@ -1159,7 +1159,7 @@ namespace Rylogic.Gui
 
 				// Select the nearest anchor, but bias the anchor points that are already used
 				var used = Connectors.Where(x => x != existing).Select(x => x.Anc(this).Location).ToArray();
-				return AnchorPoints().MinBy(x => (x.Location - point).Length2Sq + (used.Any(v => Math_.FEql(v.xy, x.Location.xy)) ? bias_distance_sq : 0));
+				return AnchorPoints().MinBy(x => (x.Location - point).LengthSq + (used.Any(v => Math_.FEql(v.xy, x.Location.xy)) ? bias_distance_sq : 0));
 			}
 
 			/// <summary>Update the graphics and object transforms associated with this element</summary>
@@ -1733,7 +1733,7 @@ namespace Rylogic.Gui
 				{
 					var dir = -Anc0.NormalDS;
 					if (dir == v4.Zero) dir = Anc1.NormalDS;
-					if (dir == v4.Zero) dir = v4.Normalise3(Anc0.LocationDS - Anc1.LocationDS, v4.YAxis);
+					if (dir == v4.Zero) dir = Math_.Normalise(Anc0.LocationDS - Anc1.LocationDS, v4.YAxis);
 					var pos = new v4(Anc0.LocationDS.xy, Math.Max(Anc0.LocationDS.z, PositionZ), 1f);
 					m_gfx_bak.O2P = m4x4.Transform(v4.ZAxis, (float)Math.Atan2(dir.y, dir.x), pos + bias) * m4x4.Scale(Style.Width, v4.Origin);
 				}
@@ -1743,7 +1743,7 @@ namespace Rylogic.Gui
 				{
 					var dir = -Anc1.NormalDS;
 					if (dir == v4.Zero) dir = Anc0.NormalDS;
-					if (dir == v4.Zero) dir = v4.Normalise3(Anc1.LocationDS - Anc0.LocationDS, v4.YAxis);
+					if (dir == v4.Zero) dir = Math_.Normalise(Anc1.LocationDS - Anc0.LocationDS, v4.YAxis);
 					var pos = new v4(Anc1.LocationDS.xy, Math.Max(Anc1.LocationDS.z, PositionZ), 1f);
 					m_gfx_fwd.O2P = m4x4.Transform(v4.ZAxis, (float)Math.Atan2(dir.y, dir.x), pos + bias) * m4x4.Scale(Style.Width, v4.Origin);
 				}
@@ -1774,7 +1774,7 @@ namespace Rylogic.Gui
 						// Find the closest point to the spline
 						var t = Geometry.ClosestPoint(spline, new v4(point,0,1));
 						var pt = spline.Position(t);
-						var dsq = (point - pt.xy).Length2Sq;
+						var dsq = (point - pt.xy).LengthSq;
 						if (dsq < dist_sq)
 						{
 							dist_sq = dsq;
@@ -1787,8 +1787,8 @@ namespace Rylogic.Gui
 					for (int i = 0; i < points.Length - 1; ++i)
 					{
 						var t = Geometry.ClosestPoint(points[i], points[i+1], point);
-						var pt = v2.Lerp(points[i], points[i+1], t);
-						var dsq = (point - pt).Length2Sq;
+						var pt = Math_.Lerp(points[i], points[i+1], t);
+						var dsq = (point - pt).LengthSq;
 						if (dsq < dist_sq)
 						{
 							dist_sq = dsq;
@@ -1799,7 +1799,7 @@ namespace Rylogic.Gui
 
 				// Convert separating distance screen space
 				var dist_cs = cam.WSVecToSSVec(closest_pt, point);
-				if (dist_cs.Length2Sq > MinCSSelectionDistanceSq) return null;
+				if (dist_cs.LengthSq > MinCSSelectionDistanceSq) return null;
 				return new HitTestResult.Hit(this, closest_pt - Position.pos.xy);
 			}
 
@@ -1817,12 +1817,12 @@ namespace Rylogic.Gui
 
 					// If the click was at the ends of the connector and diagram editing
 					// is allowed, detach the connector and start a move link mouse op
-					if ((hit_point_cs - anc0_cs).Length2Sq < MinCSSelectionDistanceSq)
+					if ((hit_point_cs - anc0_cs).LengthSq < MinCSSelectionDistanceSq)
 					{
 						Diagram.m_mouse_op.SetPending(1, new MouseOpMoveLink(Diagram, this, false){StartOnMouseDown = false});
 						return true;
 					}
-					if ((hit_point_cs - anc1_cs).Length2Sq < MinCSSelectionDistanceSq)
+					if ((hit_point_cs - anc1_cs).LengthSq < MinCSSelectionDistanceSq)
 					{
 						Diagram.m_mouse_op.SetPending(1, new MouseOpMoveLink(Diagram, this, true){StartOnMouseDown = false});
 						return true;
@@ -1979,11 +1979,11 @@ namespace Rylogic.Gui
 				var dir1 = Anc1.NormalDS.xy;
 				if (dir0 == v2.Zero) dir0 = -dir1;
 				if (dir1 == v2.Zero) dir1 = -dir0;
-				if (dir0 == v2.Zero) dir0 = v2.Normalise2(end - start, v2.Zero);
-				if (dir1 == v2.Zero) dir1 = v2.Normalise2(start - end, v2.Zero);
+				if (dir0 == v2.Zero) dir0 = Math_.Normalise(end - start, v2.Zero);
+				if (dir1 == v2.Zero) dir1 = Math_.Normalise(start - end, v2.Zero);
 
-				var slen = v2.Dot2(centre - start, dir0);
-				var elen = v2.Dot2(centre -   end, dir1);
+				var slen = Math_.Dot(centre - start, dir0);
+				var elen = Math_.Dot(centre -   end, dir1);
 				slen = Style.Smooth ? MinConnectorLen : Math.Max(slen, MinConnectorLen);
 				elen = Style.Smooth ? MinConnectorLen : Math.Max(elen, MinConnectorLen);
 
@@ -2720,7 +2720,7 @@ namespace Rylogic.Gui
 			{
 				var grab = v2.From(m_grab_cs);
 				var diff = v2.From(location) - grab;
-				return diff.Length2Sq < MinDragPixelDistanceSq;
+				return diff.LengthSq < MinDragPixelDistanceSq;
 			}
 
 			/// <summary>Called on mouse down</summary>
@@ -3123,7 +3123,7 @@ namespace Rylogic.Gui
 			{
 				// The resize delta in diagram space
 				var vec_ds = m_diag.m_camera.SSVecToWSVec(m_grab_cs, e.Location);
-				var delta = v2.Dot2(vec_ds.xy, m_grabber.Direction);
+				var delta = Math_.Dot(vec_ds.xy, m_grabber.Direction);
 
 				// Scale all of the resizeable selected elements
 				foreach (var elem in m_resizees)
@@ -3627,22 +3627,22 @@ namespace Rylogic.Gui
 					{
 					case 0:
 						Cursor = Cursors.SizeNESW;
-						Direction = v2.Normalise2(new v2(-1,-1));
+						Direction = Math_.Normalise(new v2(-1,-1));
 						Update = (b,z) => O2P = m4x4.Translation(b.Lower.x, b.Lower.y, z);
 						break;
 					case 1:
 						Cursor = Cursors.SizeNESW;
-						Direction = v2.Normalise2(new v2(+1,+1));
+						Direction = Math_.Normalise(new v2(+1,+1));
 						Update = (b,z) => O2P = m4x4.Translation(b.Upper.x, b.Upper.y, z);
 						break;
 					case 2:
 						Cursor = Cursors.SizeNWSE;
-						Direction = v2.Normalise2(new v2(-1,+1));
+						Direction = Math_.Normalise(new v2(-1,+1));
 						Update = (b,z) => O2P = m4x4.Translation(b.Lower.x, b.Upper.y, z);
 						break;
 					case 3:
 						Cursor = Cursors.SizeNWSE;
-						Direction = v2.Normalise2(new v2(+1,-1));
+						Direction = Math_.Normalise(new v2(+1,-1));
 						Update = (b,z) => O2P = m4x4.Translation(b.Upper.x, b.Lower.y, z);
 						break;
 					case 4:
@@ -4211,8 +4211,8 @@ namespace Rylogic.Gui
 					if (AllowEditing && SelectionResizeable)
 					{
 						var pt_ds = ClientToDiagram(pt_cs);
-						var nearest = m_tools.Resizer.MinBy(x => (x.O2P.pos.xy - pt_ds).Length2Sq);
-						if (m_camera.WSVecToSSVec(pt_ds, nearest.O2P.pos.xy).Length2Sq < MinCSSelectionDistanceSq)
+						var nearest = m_tools.Resizer.MinBy(x => (x.O2P.pos.xy - pt_ds).LengthSq);
+						if (m_camera.WSVecToSSVec(pt_ds, nearest.O2P.pos.xy).LengthSq < MinCSSelectionDistanceSq)
 							return new MouseOpResize(this, nearest);
 					}
 
@@ -4304,7 +4304,7 @@ namespace Rylogic.Gui
 		public Rectangle DiagramToClient(BRect rect)
 		{
 			rect.Centre = v2.From(DiagramToClient(rect.Centre));
-			rect.Radius = v2.Abs(v2.From(DiagramToClient(rect.Radius)) - v2.From(DiagramToClient(v2.Zero)));
+			rect.Radius = Math_.Abs(v2.From(DiagramToClient(rect.Radius)) - v2.From(DiagramToClient(v2.Zero)));
 			return rect.ToRectangle();
 		}
 
@@ -4567,7 +4567,7 @@ namespace Rylogic.Gui
 						// Find the minimum separation and the current separation
 						var vec     = node1.PositionXY - node0.PositionXY;
 						var min_sep = min_separation(vec, node0, node1);
-						var sep     = Math.Max(min_sep, vec.Length2);
+						var sep     = Math.Max(min_sep, vec.Length);
 
 						// Spring force F = -Kx
 						var spring = -Options.Scatter.SpringConstant * (float)Math.Max(0, sep - min_sep);
@@ -4594,7 +4594,7 @@ namespace Rylogic.Gui
 								// Find the minimum separation and the current separation
 								var vec     = node1.PositionXY - node0.PositionXY;
 								var min_sep = min_separation(vec, node0, node1);
-								var sep     = Math.Max(min_sep, vec.Length2);
+								var sep     = Math.Max(min_sep, vec.Length);
 
 								// Coulomb force F = kQq/x²
 								var q1 = 1f + node1.Connectors.Count * Options.Scatter.ConnectorScale;
@@ -4615,10 +4615,10 @@ namespace Rylogic.Gui
 						var frc = force[node];
 						var lst = last[node];
 
-						equilibrium &= (frc - lst).Length2Sq < Options.Scatter.Equilibrium;
+						equilibrium &= (frc - lst).LengthSq < Options.Scatter.Equilibrium;
 
 						// Limit the magnitude of the position change
-						var force_lensq = frc.Length2Sq;
+						var force_lensq = frc.LengthSq;
 						var bound_lensq = node.Bounds.DiametreSq;
 						var frc_limited = force_lensq > bound_lensq
 							? frc * (float)Math.Sqrt(bound_lensq / force_lensq)

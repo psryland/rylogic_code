@@ -7,17 +7,17 @@ export class MulticastDelegate<TSender, TArgs>
 	{
 		this._handlers = [];
 	}
-	sub(handler: Handler<TSender, TArgs>)
+	sub(handler: Handler<TSender, TArgs>): void
 	{
 		let idx = this._handlers.indexOf(handler);
 		if (idx == -1) this._handlers.push(handler);
 	}
-	unsub(handler: Handler<TSender, TArgs>)
+	unsub(handler: Handler<TSender, TArgs>): void
 	{
 		let idx = this._handlers.indexOf(handler);
 		if (idx != -1) this._handlers.splice(idx, 1);
 	}
-	invoke(sender: TSender, args: TArgs)
+	invoke(sender: TSender, args: TArgs): void
 	{
 		for (let i = 0; i != this._handlers.length; ++i)
 			this._handlers[i](sender, args)

@@ -125,11 +125,10 @@ namespace pr
 			}
 			else // border only
 			{
+				// Set lines
+				for (int i = 0; i <= facets; ++i) *i_out++ = checked_cast<VIdx>(2 * i);
+				for (int i = facets; i >= 0; --i) *i_out++ = checked_cast<VIdx>(1+2*i);
 				*i_out++ = 0;
-				for (int i = 0; i != facets; ++i) { *i_out++ = checked_cast<VIdx>(1+2*i); }
-				*i_out++ = 1;
-				*i_out++ = 0;
-				for (int i = facets; i-- != 0;  ) { *i_out++ = checked_cast<VIdx>(0+2*i); }
 			}
 
 			return props;

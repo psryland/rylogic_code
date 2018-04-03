@@ -54,8 +54,14 @@ namespace Rylogic.Maths
 		public override int GetHashCode()                     { unchecked { return m_centre.GetHashCode() ^ m_radius.GetHashCode(); } }
 
 		// Conversion
-		public static implicit operator BRect(RectangleF r) { return new BRect(v2.From(r.Location) + v2.From(r.Size)/2f, v2.Abs(v2.From(r.Size)) / 2f); }
-		public static implicit operator RectangleF(BRect r) { return new RectangleF(r.m_centre.x - r.m_radius.x, r.m_centre.y - r.m_radius.y, 2*r.m_radius.x, 2*r.m_radius.y); }
+		public static implicit operator BRect(RectangleF r)
+		{
+			return new BRect(v2.From(r.Location) + v2.From(r.Size)/2f, Math_.Abs(v2.From(r.Size)) / 2f);
+		}
+		public static implicit operator RectangleF(BRect r)
+		{
+			return new RectangleF(r.m_centre.x - r.m_radius.x, r.m_centre.y - r.m_radius.y, 2*r.m_radius.x, 2*r.m_radius.y);
+		}
 		public Rectangle ToRectangle()
 		{
 			return new Rectangle(
@@ -65,7 +71,10 @@ namespace Rylogic.Maths
 				(int)Math.Round(2*m_radius.y));
 		}
 
-		public static BRect From(Rectangle r) { return new BRect(v2.From(r.Location) + v2.From(r.Size)/2f, v2.Abs(v2.From(r.Size)) / 2f); }
+		public static BRect From(Rectangle r)
+		{
+			return new BRect(v2.From(r.Location) + v2.From(r.Size)/2f, Math_.Abs(v2.From(r.Size)) / 2f);
+		}
 		
 		/// <summary>Return a bounding rect about the given points</summary>
 		public static BRect FromBounds(params v2[] points)
@@ -162,7 +171,7 @@ namespace Rylogic.Maths
 		/// <summary>Gets the squared length of the diagonal of the bounding rectangle</summary>
 		public float DiametreSq
 		{
-			get { return 4.0f * m_radius.Length2Sq; }
+			get { return 4.0f * m_radius.LengthSq; }
 		}
 
 		/// <summary>Gets the length of the diagonal of the bounding rectangle</summary>

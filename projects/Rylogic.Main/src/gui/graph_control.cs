@@ -634,7 +634,7 @@ namespace Rylogic.Gui
 				foreach (var v in s.Values(pt.X - tol, pt.X + tol))
 				{
 					var tmp = new v2((float)v.x, (float)v.y);
-					var d = (tmp - pt).Length2Sq;
+					var d = (tmp - pt).LengthSq;
 					if (d < dist_sq)
 					{
 						dist_sq = d;

@@ -44,6 +44,9 @@ namespace Rylogic.Maths
 			this.rot = new m3x4(q);
 			this.pos = pos;
 		}
+		public m4x4(float[] arr, int start = 0)
+			:this(new v4(arr, 0), new v4(arr, 4), new v4(arr, 8), new v4(arr, 12))
+		{}
 
 		/// <summary>Get/Set columns by index</summary>
 		public v4 this[int c]
@@ -156,19 +159,19 @@ namespace Rylogic.Maths
 		{
 			Transpose4x4(ref lhs);
 			return new v4(
-				v4.Dot4(lhs.x, rhs),
-				v4.Dot4(lhs.y, rhs),
-				v4.Dot4(lhs.z, rhs),
-				v4.Dot4(lhs.w, rhs));
+				Math_.Dot(lhs.x, rhs),
+				Math_.Dot(lhs.y, rhs),
+				Math_.Dot(lhs.z, rhs),
+				Math_.Dot(lhs.w, rhs));
 		}
 		public static m4x4 operator * (m4x4 lhs, m4x4 rhs)
 		{
 			Transpose4x4(ref lhs);
 			return new m4x4(
-				new v4(v4.Dot4(lhs.x, rhs.x), v4.Dot4(lhs.y, rhs.x), v4.Dot4(lhs.z, rhs.x), v4.Dot4(lhs.w, rhs.x)),
-				new v4(v4.Dot4(lhs.x, rhs.y), v4.Dot4(lhs.y, rhs.y), v4.Dot4(lhs.z, rhs.y), v4.Dot4(lhs.w, rhs.y)),
-				new v4(v4.Dot4(lhs.x, rhs.z), v4.Dot4(lhs.y, rhs.z), v4.Dot4(lhs.z, rhs.z), v4.Dot4(lhs.w, rhs.z)),
-				new v4(v4.Dot4(lhs.x, rhs.w), v4.Dot4(lhs.y, rhs.w), v4.Dot4(lhs.z, rhs.w), v4.Dot4(lhs.w, rhs.w)));
+				new v4(Math_.Dot(lhs.x, rhs.x), Math_.Dot(lhs.y, rhs.x), Math_.Dot(lhs.z, rhs.x), Math_.Dot(lhs.w, rhs.x)),
+				new v4(Math_.Dot(lhs.x, rhs.y), Math_.Dot(lhs.y, rhs.y), Math_.Dot(lhs.z, rhs.y), Math_.Dot(lhs.w, rhs.y)),
+				new v4(Math_.Dot(lhs.x, rhs.z), Math_.Dot(lhs.y, rhs.z), Math_.Dot(lhs.z, rhs.z), Math_.Dot(lhs.w, rhs.z)),
+				new v4(Math_.Dot(lhs.x, rhs.w), Math_.Dot(lhs.y, rhs.w), Math_.Dot(lhs.z, rhs.w), Math_.Dot(lhs.w, rhs.w)));
 		}
 
 		/// <summary>Return the 4x4 determinant of the arbitrary transform 'mat'</summary>
@@ -365,7 +368,7 @@ namespace Rylogic.Maths
 		}
 		public static m4x4 OriFromDir(v4 direction, AxisId axis, v4 translation)
 		{
-			return OriFromDir(direction, axis, v4.Perpendicular(direction), translation);
+			return OriFromDir(direction, axis, Math_.Perpendicular(direction), translation);
 		}
 
 		/// <summary>
@@ -438,11 +441,11 @@ namespace Rylogic.Maths
 		{
 			Debug.Assert(eye.w == 1.0f && at.w == 1.0f && up.w == 0.0f, "Invalid position/direction vectors passed to LookAt");
 			Debug.Assert(eye - at != v4.Zero, "LookAt 'eye' and 'at' positions are coincident");
-			Debug.Assert(!v4.Parallel(eye - at, up), "LookAt 'forward' and 'up' axes are aligned");
+			Debug.Assert(!Math_.Parallel(eye - at, up), "LookAt 'forward' and 'up' axes are aligned");
 			var mat = new m4x4{};
-			mat.z = v4.Normalise3(eye - at);
-			mat.x = v4.Normalise3(v4.Cross3(up, mat.z));
-			mat.y = v4.Cross3(mat.z, mat.x);
+			mat.z = Math_.Normalise(eye - at);
+			mat.x = Math_.Normalise(Math_.Cross(up, mat.z));
+			mat.y = Math_.Cross(mat.z, mat.x);
 			mat.pos = eye;
 			return mat;
 		}
@@ -516,7 +519,7 @@ namespace Rylogic.Maths
 			Debug.Assert(IsAffine(rhs));
 
 			var q = quat.Slerp(new quat(lhs.rot), new quat(rhs.rot), frac);
-			var p = v4.Lerp(lhs.pos, rhs.pos, frac);
+			var p = Math_.Lerp(lhs.pos, rhs.pos, frac);
 			return new m4x4(q, p);
 		}
 
@@ -524,7 +527,7 @@ namespace Rylogic.Maths
 		public static m4x4 Average(IEnumerable<m4x4> a2b)
 		{
 			var rot = m3x4.Average(a2b.Select(x => x.rot));
-			var pos = v4.Average(a2b.Select(x => x.pos));
+			var pos = Math_.Average(a2b.Select(x => x.pos));
 			return new m4x4(rot, pos);
 		}
 

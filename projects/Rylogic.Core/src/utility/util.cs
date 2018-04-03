@@ -262,15 +262,23 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>Returns the number to add to pad 'size' up to 'alignment'</summary>
-		public static int Pad(int size, int alignment)
+		public static long Pad(long size, int alignment)
 		{
 			return (alignment - (size % alignment)) % alignment;
 		}
+		public static int Pad(int size, int alignment)
+		{
+			return (int)Pad((long)size, alignment);
+		}
 
 		/// <summary>Returns 'size' rounded up to a multiple of 'alignment'</summary>
-		public static int PadTo(int size, int alignment)
+		public static long PadTo(long size, int alignment)
 		{
 			return size + Pad(size, alignment);
+		}
+		public static int PadTo(int size, int alignment)
+		{
+			return (int)PadTo((long)size, alignment);
 		}
 
 		/// <summary>Helper for returning the number of fields in an enum</summary>
@@ -376,14 +384,15 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>Convert a byte array to a hex string. e.g A3 FF 12 4D etc</summary>
-		public static string ToHexString(byte[] arr, string sep = " ", string line_sep = "\n", int width = 16)
+		public static string ToHexString(byte[] arr, int start = 0, int count = int.MaxValue, string sep = " ", string line_sep = "\n", int width = 16)
 		{
 			var sb = new StringBuilder();
-			for (var i = 0; i != arr.Length; ++i)
+			for (int i = 0, len = Math.Min(arr.Length, count); i != len; ++i)
 			{
 				if (sb.Length != 0)
 					sb.Append((i % width) != 0 ? sep : line_sep);
-				sb.Append(arr[i].ToString("X2"));
+
+				sb.Append(arr[i+start].ToString("X2"));
 			}
 			return sb.ToString();
 		}
@@ -1131,7 +1140,7 @@ namespace Rylogic.UnitTests
 		[Test] public void ToFromHexString()
 		{
 			var data = new byte[]{1,3,5,7,9,10,8,6,4,2,0,255,128};
-			var s = Util.ToHexString(data,",","\r\n",4);
+			var s = Util.ToHexString(data,sep:",",line_sep:"\r\n",width:4);
 			Assert.AreEqual(s, "01,03,05,07\r\n09,0A,08,06\r\n04,02,00,FF\r\n80");
 			var d = Util.FromHexString(s);
 			Assert.True(data.SequenceEqual(d));

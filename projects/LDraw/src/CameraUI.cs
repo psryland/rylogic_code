@@ -109,14 +109,14 @@ namespace LDraw
 
 			// Camera forward
 			m_tb_camera_fwd.ValidateText = s => v4.TryParse3(s, 0f) != null;
-			m_tb_camera_fwd.TextToValue = s => v4.Normalise3(v4.Parse3(s, 0f));
+			m_tb_camera_fwd.TextToValue = s => Math_.Normalise(v4.Parse3(s, 0f));
 			m_tb_camera_fwd.ValueToText = x => x != null ? ((v4)x).ToString3() : string.Empty;
 			m_tb_camera_fwd.Value = -Camera.O2W.z;
 			m_tb_camera_fwd.ReadOnly = true;
 
 			// Camera up
 			m_tb_camera_up.ValidateText = s => v4.TryParse3(s, 0f) != null;
-			m_tb_camera_up.TextToValue = s => v4.Normalise3(v4.Parse3(s, 0f));
+			m_tb_camera_up.TextToValue = s => Math_.Normalise(v4.Parse3(s, 0f));
 			m_tb_camera_up.ValueToText = x => x != null ? ((v4)x).ToString3() : string.Empty;
 			m_tb_camera_up.Value = Camera.O2W.y;
 			m_tb_camera_up.ReadOnly = true;

@@ -53,6 +53,7 @@ namespace Rylogic.VSExtension
 		public object GetService<TService>()
 		{
 			// Note: the return value of 'GetService' is not always cast-able to 'TService'
+			ThreadHelper.ThrowIfNotOnUIThread();
 			return GetService(typeof(TService));
 		}
 

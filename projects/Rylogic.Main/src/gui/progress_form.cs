@@ -50,6 +50,9 @@ namespace Rylogic.Gui
 			public UserState Clone() { return (UserState)MemberwiseClone(); }
 		}
 
+		/// <summary>Progress function delegate</summary>
+		public delegate void WorkerFunc(ProgressForm form, object arg, Progress cb);
+
 		private readonly TextProgressBar m_progress;
 		private readonly Label m_description;
 		private readonly Button m_btn_cancel;
@@ -61,12 +64,12 @@ namespace Rylogic.Gui
 		{
 			using (this.SuspendLayout(true))
 			{
+				// Note: No point in setting DialogResult, ShowDialog resets it to None
 				AutoScaleMode       = AutoScaleMode.Font;
 				AutoScaleDimensions = new SizeF(6F, 13F);
 				AutoSizeMode        = AutoSizeMode.GrowOnly;
 				StartPosition       = FormStartPosition.CenterParent;
 				FormBorderStyle     = FormBorderStyle.FixedDialog;
-				DialogResult        = DialogResult.OK;
 				ClientSize          = new Size(136, 20);
 				HideOnClose         = false;
 
@@ -106,9 +109,6 @@ namespace Rylogic.Gui
 				Controls.Add(m_btn_cancel);
 			}
 		}
-
-		/// <summary>Progress function delegate</summary>
-		public delegate void WorkerFunc(ProgressForm form, object arg, Progress cb);
 
 		/// <summary>Creates a progress form starting a background thread immediately</summary>
 		public ProgressForm(string title, string desc, Icon icon, ProgressBarStyle style, WorkerFunc func, object arg = null, ThreadPriority priority = ThreadPriority.Normal)
@@ -167,6 +167,7 @@ namespace Rylogic.Gui
 		}
 		protected override void OnShown(EventArgs e)
 		{
+			// Don't set DialogResult here, it immediately closes the dialog
 			DoLayout();
 			base.OnShown(e);
 		}
@@ -184,12 +185,12 @@ namespace Rylogic.Gui
 				return;
 			}
 
-			if (CancelSignal != null)
-			{
-				// Save the result based on whether cancel was selected
-				if (CancelSignal.WaitOne(0))
-					DialogResult = DialogResult.Cancel;
-			}
+			// Set the dialog result based on the state of 'CancelSignal'.
+			// Note: can't rely on the state of DialogResult as set by user code
+			// because the Form resets it or changes it internally.
+			DialogResult =
+				CancelPending ? DialogResult.Cancel :
+				DialogResult.OK;
 
 			base.OnFormClosing(e);
 
@@ -199,20 +200,17 @@ namespace Rylogic.Gui
 			{
 				Hide();
 				e.Cancel = true;
-				if (Owner != null)
-					Owner.Focus();
+				Owner?.Focus();
+				return;
 			}
-			// If the form will be disposed and there is a Cancel event, automatically
-			// signal Cancel as a convenience. Worker threads that don't test for
-			// 'CancelPending' will have to prevent the form from closing until finished.
-			else if (CancelSignal != null)
-			{
-				CancelSignal.Set();
-			}
-		}
 
-		/// <summary>An event raised when the task is complete</summary>
-		public ManualResetEvent Done { get; private set; }
+			// If the form will be disposed and there is a Cancel event, automatically
+			// signal Cancel as a convenience for terminating the worker thread.
+			// Worker threads that don't test for 'CancelPending' will have to
+			// prevent the form from closing until finished.
+			if (CancelSignal != null)
+				CancelSignal.Set();
+		}
 
 		/// <summary>Allow/Disallow cancel</summary>
 		public bool AllowCancel
@@ -227,14 +225,20 @@ namespace Rylogic.Gui
 		}
 		private bool m_allow_cancel;
 
-		/// <summary>An event used to signal the other thread to cancel</summary>
-		public ManualResetEvent CancelSignal { get; private set; }
-
-		/// <summary>Tests whether cancel has been signalled. The background thread tests this to see if it should early out</summary>
-		public bool CancelPending { get { return CancelSignal.WaitOne(0); } }
-
 		/// <summary>Controls whether the form closes or just hides</summary>
 		public bool HideOnClose { get; set; }
+
+		/// <summary>Tests whether cancel has been signalled. The background thread tests this to see if it should early out</summary>
+		public bool CancelPending
+		{
+			get { return CancelSignal != null && CancelSignal.WaitOne(0); }
+		}
+
+		/// <summary>An event raised when the task is complete</summary>
+		public ManualResetEvent Done { get; private set; }
+
+		/// <summary>An event used to signal the other thread to cancel</summary>
+		public ManualResetEvent CancelSignal { get; private set; }
 
 		/// <summary>Progress callback function, called from 'func' to update the progress bar</summary>
 		public delegate void Progress(UserState us);
@@ -242,7 +246,9 @@ namespace Rylogic.Gui
 		/// <summary>Show the dialog after a few milliseconds</summary>
 		public DialogResult ShowDialog(Control parent, int delay_ms = 0)
 		{
-			// Show the dialog after the delay
+			// Show the dialog after the delay.
+			// Note: Calling ShowDialog resets the DialogResult to 'None'. Then, if still set to 
+			// 'None', on closing is automatically set to 'Cancel'.
 			var result = DialogResult.OK;
 			if (delay_ms == 0 || !Done.WaitOne(delay_ms)) // not done already?
 				result = base.ShowDialog(parent);

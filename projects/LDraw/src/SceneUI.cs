@@ -344,7 +344,7 @@ namespace LDraw
 			var cam   = focus - fwd * Camera.FocusDist;
 
 			Settings.Camera.ResetForward = fwd;
-			Settings.Camera.ResetUp      = v4.Perpendicular(fwd, Settings.Camera.ResetUp);
+			Settings.Camera.ResetUp      = Math_.Perpendicular(fwd, Settings.Camera.ResetUp);
 			Options.ResetUp              = Settings.Camera.ResetUp;
 			Options.ResetForward         = Settings.Camera.ResetForward;
 
@@ -358,7 +358,7 @@ namespace LDraw
 			Settings.Camera.AlignAxis = axis;
 			if (axis != v4.Zero)
 			{
-				Settings.Camera.ResetForward = v4.Perpendicular(axis, Settings.Camera.ResetForward);
+				Settings.Camera.ResetForward = Math_.Perpendicular(axis, Settings.Camera.ResetForward);
 				Settings.Camera.ResetUp      = axis;
 				Options.ResetUp              = Settings.Camera.ResetUp;
 				Options.ResetForward         = Settings.Camera.ResetForward;

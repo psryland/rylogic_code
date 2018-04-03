@@ -25,6 +25,7 @@ namespace LDraw
 			SavedViews   = new List<SavedView>();
 			Scenes       = new BindingListEx<SceneUI>{ PerItem = true };
 			Scripts      = new BindingListEx<ScriptUI>{ PerItem = true };
+			RPCService   = new GrpcService(this);
 			Log          = new LogUI(this);
 
 			// Apply initial settings
@@ -38,6 +39,7 @@ namespace LDraw
 			CurrentScript = null;
 			CurrentScene = null;
 			Log = null;
+			RPCService = null;
 			Scripts = null;
 			Scenes = null;
 			View3d = null;
@@ -516,6 +518,19 @@ namespace LDraw
 				}
 			}
 		}
+
+		/// <summary>The RPC API for LDraw</summary>
+		public GrpcService RPCService
+		{
+			get { return m_rpc;  }
+			private set
+			{
+				if (m_rpc == value) return;
+				Util.Dispose(ref m_rpc);
+				m_rpc = value;
+			}
+		}
+		private GrpcService m_rpc;
 
 		/// <summary>File loading progress data</summary>
 		public AddFileProgressData AddFileProgress { get; private set; }

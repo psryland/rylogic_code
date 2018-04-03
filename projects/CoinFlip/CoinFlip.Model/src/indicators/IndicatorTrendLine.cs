@@ -130,7 +130,7 @@ namespace CoinFlip
 				var b = ChartBeg;
 				var e = ChartEnd;
 				var d = e - b;
-				var degenerate = d.Length2Sq < Math_.TinyF;
+				var degenerate = d.LengthSq < Math_.TinyF;
 				if (Settings.Extrapolate && !degenerate)
 				{
 					// X bound, else Y bound
@@ -144,7 +144,7 @@ namespace CoinFlip
 				// Create the transform
 				Gfx.O2P = new m4x4(
 					(degenerate ? m3x4.Identity : m3x4.Rotation(v4.XAxis, new v4(d,0,0))) *
-					m3x4.Scale(d.Length2,1,1),
+					m3x4.Scale(d.Length,1,1),
 					new v4(b, ZOrder.Indicators, 1f));
 
 				window.AddObject(Gfx);
@@ -184,18 +184,18 @@ namespace CoinFlip
 			var p = new v2(client_point);
 
 			// Prioritise the end points over the line
-			dist = (e - p).Length2;
+			dist = (e - p).Length;
 			if (dist < Chart.Options.MinSelectionDistance)
 				return 1f;
 
-			dist = (b - p).Length2;
+			dist = (b - p).Length;
 			if (dist < Chart.Options.MinSelectionDistance)
 				return 0f;
 
 			// Find the closest point, on the line 'b->e' to 'p'.
 			var t = Geometry.ClosestPoint(b, e, p);
 			t = Math_.Clamp(t, 0f, Settings.Extrapolate ? t : 1f);
-			dist = (b + t*(e - b) - p).Length2;
+			dist = (b + t*(e - b) - p).Length;
 			return t;
 		}
 

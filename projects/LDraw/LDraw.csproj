@@ -13,6 +13,8 @@
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <TargetFrameworkProfile />
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -41,13 +43,37 @@
     <ApplicationIcon>icon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Google.Protobuf, Version=3.5.1.0, Culture=neutral, PublicKeyToken=a7d26565bac4d604, processorArchitecture=MSIL">
+      <HintPath>..\..\build\packages\Google.Protobuf.3.5.1\lib\net45\Google.Protobuf.dll</HintPath>
+    </Reference>
+    <Reference Include="Grpc.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=d754f35622e28bad, processorArchitecture=MSIL">
+      <HintPath>..\..\build\packages\Grpc.Core.1.10.0\lib\net45\Grpc.Core.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Interactive.Async, Version=3.0.3000.0, Culture=neutral, PublicKeyToken=94bc3704cddfc263, processorArchitecture=MSIL">
+      <HintPath>..\..\build\packages\System.Interactive.Async.3.1.1\lib\net46\System.Interactive.Async.dll</HintPath>
+    </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="WindowsBase" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\LDraw.API\LDraw.API.csproj">
+      <Project>{25f4b180-1c4b-42df-bd5b-dc5c446a3528}</Project>
+      <Name>LDraw.API</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj">
+      <Project>{37a4f319-2052-404d-ae7f-f882cfa33c1b}</Project>
+      <Name>Rylogic.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Rylogic.Main\Rylogic.Main.csproj">
+      <Project>{8c1634d9-c32a-4ad6-b2c7-ec17f6bfde01}</Project>
+      <Name>Rylogic.Main</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\Resources.Designer.cs">
@@ -64,6 +90,7 @@
     <Compile Include="src\CameraUI.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="src\GrpcService.cs" />
     <Compile Include="src\LightingUI.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -125,20 +152,6 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <None Include="App.config" />
-    <None Include="installer\installer.wxs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj">
-      <Project>{37a4f319-2052-404d-ae7f-f882cfa33c1b}</Project>
-      <Name>Rylogic.Core</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Rylogic.Main\Rylogic.Main.csproj">
-      <Project>{8c1634d9-c32a-4ad6-b2c7-ec17f6bfde01}</Project>
-      <Name>Rylogic.Main</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="..\..\lib\x64\Debug\view3d.dll">
       <Link>lib\x64\debug\view3d.dll</Link>
     </None>
@@ -163,14 +176,24 @@
     <None Include="..\..\lib\x86\Release\scintilla.dll">
       <Link>lib\x86\release\scintilla.dll</Link>
     </None>
-    <Content Include="deploy_ldraw.py" />
-    <Content Include="icon.ico" />
-    <Content Include="post_build.py" />
+    <None Include="App.config" />
+    <None Include="installer\installer.wxs" />
+    <None Include="packages.config" />
+    <None Include="deploy_ldraw.py" />
+    <None Include="icon.ico" />
+    <None Include="post_build.py" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>py $(ProjectDir)post_build.py $(ProjectDir) $(TargetDir) $(PlatformName) $(ConfigurationName)</PostBuildEvent>
   </PropertyGroup>
+  <Import Project="..\..\build\packages\Grpc.Core.1.10.0\build\net45\Grpc.Core.targets" Condition="Exists('..\..\build\packages\Grpc.Core.1.10.0\build\net45\Grpc.Core.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\..\build\packages\Grpc.Core.1.10.0\build\net45\Grpc.Core.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\build\packages\Grpc.Core.1.10.0\build\net45\Grpc.Core.targets'))" />
+  </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

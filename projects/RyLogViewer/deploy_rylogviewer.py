@@ -79,7 +79,7 @@ def Deploy():
 	# Publish to WWW
 	if publish:
 		print("\nPublishing to web site...")
-		Tools.Copy(msi, UserVars.wwwroot + "\\rylogviewer\\")
+		Tools.Copy(msi, UserVars.wwwroot + "\\files\\rylogviewer\\")
 
 	return
 

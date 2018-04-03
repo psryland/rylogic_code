@@ -108,18 +108,18 @@ namespace Rylogic.Maths
 		/// <summary>Construct a quaternion representing a rotation from 'from' to 'to'</summary>
 		public quat(v4 from, v4 to) :this()
 		{
-			var d = v4.Dot3(from, to); 
-			var s = (float)Math.Sqrt(from.Length3Sq * to.Length3Sq) + d;
-			var axis = v4.Cross3(from, to);
+			var d = Math_.Dot(from.xyz, to.xyz); 
+			var s = (float)Math.Sqrt(from.xyz.LengthSq * to.xyz.LengthSq) + d;
+			var axis = Math_.Cross(from, to);
 
 			// vectors are 180 degrees apart
-			if (Math_.FEql(s, 0.0f))
+			if (Math_.FEql(s, 0))
 			{
-				axis = v4.Perpendicular(to);
+				axis = Math_.Perpendicular(to);
 				s = 0.0f;
 			}
 
-			xyzw = v4.Normalise4(new v4(axis.x, axis.y, axis.z, s));
+			xyzw = Math_.Normalise(new v4(axis.x, axis.y, axis.z, s));
 		}
 
 		/// <summary>Reinterpret a vector as a quaternion</summary>
@@ -171,7 +171,7 @@ namespace Rylogic.Maths
 		/// <summary>Get the axis component of the quaternion (normalised)</summary>
 		public v4 Axis
 		{
-			get { return v4.Normalise3(xyzw.w0); }
+			get { return Math_.Normalise(xyzw.w0); }
 		}
 
 		// Return the angle of rotation about 'Axis()'
@@ -286,17 +286,17 @@ namespace Rylogic.Maths
 		/// <summary>Normalise a quaternion to unit length</summary>
 		public static quat Normalise(quat q)
 		{
-			return new quat(v4.Normalise4(q.xyzw));
+			return new quat(Math_.Normalise(q.xyzw));
 		}
 		public static quat Normalise(quat q, quat def)
 		{
-			return new quat(v4.Normalise4(q.xyzw, def.xyzw));
+			return new quat(Math_.Normalise(q.xyzw, def.xyzw));
 		}
 
 		// Return the cosine of the angle between two quaternions (i.e. the dot product)
 		public static float CosAngle2(quat a, quat b)
 		{
-			return v4.Dot4(a.xyzw, b.xyzw);
+			return Math_.Dot(a.xyzw, b.xyzw);
 		}
 
 		// Return the angle between two quaternions (in radians)
@@ -333,7 +333,7 @@ namespace Rylogic.Maths
 			angle = (float)(2.0 * Math.Acos(quat.w));
 			var s = (float)Math.Sqrt(1.0f - quat.w * quat.w);
 			axis = Math_.FEql(s, 0.0f)
-				? v4.Normalise3(new v4(quat.x, quat.y, quat.z, 0.0f))
+				? Math_.Normalise(new v4(quat.x, quat.y, quat.z, 0.0f))
 				: new v4(quat.x/s, quat.y/s, quat.z/s, 0.0f);
 		}
 
@@ -368,7 +368,7 @@ namespace Rylogic.Maths
 			// "a" and "b" quaternions are very close, use linear interpolation
 			else
 			{
-				return Normalise(new quat(v4.Lerp(a.xyzw, b_.xyzw, frac)));
+				return Normalise(new quat(Math_.Lerp(a.xyzw, b_.xyzw, frac)));
 			}
 		}
 
@@ -398,7 +398,7 @@ namespace Rylogic.Maths
 
 			// Ensure the quaternions are in the same hemisphere (since q == -q)
 			var first = rotations.First();
-			var avr = v4.Average(rotations.Select(q => v4.Dot4(q.xyzw, first.xyzw) >= 0 ? q.xyzw : -q.xyzw));
+			var avr = Math_.Average(rotations.Select(q => Math_.Dot(q.xyzw, first.xyzw) >= 0 ? q.xyzw : -q.xyzw));
 			return Normalise(new quat(avr));
 		}
 
@@ -517,10 +517,10 @@ namespace Rylogic.UnitTests
 		[Test] public void Average()
 		{
 			var rng = new Random(1);
-			var ideal_mean = new quat(v4.Normalise3(new v4(1,1,1,0)), 0.5f);
+			var ideal_mean = new quat(Math_.Normalise(new v4(1,1,1,0)), 0.5f);
 			var actual_mean = quat.Average(int_.Range(0, 1000).Select(i =>
 			{
-				var axis = v4.Normalise3(ideal_mean.Axis + v4.Random3(0.02f, 0f, rng));
+				var axis = Math_.Normalise(ideal_mean.Axis + v4.Random3(0.02f, 0f, rng));
 				var angle = rng.FloatC(ideal_mean.Angle, 0.02f);
 				var q = new quat(axis, angle);
 				return rng.Bool() ? q : -q;

@@ -16,11 +16,11 @@ namespace Rylogic.Maths
 			v2 ab = b - a;
 
 			// Project 'pt' onto 'ab', but defer divide by 'ab.Length2Sq'
-			float t = v2.Dot2(pt - a, ab);
+			float t = Math_.Dot(pt - a, ab);
 			if (t <= 0.0f)
 				return 0.0f; // 'point' projects outside 'line', clamp to 0.0f
 			
-			float denom = ab.Length2Sq;
+			float denom = ab.LengthSq;
 			if (t >= denom)
 				return 1.0f; // 'point' projects outside 'line', clamp to 1.0f
 			
@@ -78,10 +78,10 @@ namespace Rylogic.Maths
 			v2 line0              = e0 - s0;
 			v2 line1              = e1 - s1;
 			v2 separation         = s0 - s1;
-			float f               = v2.Dot2(line1, separation);
-			float c               = v2.Dot2(line0, separation);
-			float line0_length_sq = line0.Length2Sq;
-			float line1_length_sq = line1.Length2Sq;
+			float f               = Math_.Dot(line1, separation);
+			float c               = Math_.Dot(line0, separation);
+			float line0_length_sq = line0.LengthSq;
+			float line1_length_sq = line1.LengthSq;
 
 			// Check if either or both segments are degenerate
 			if (Math_.FEql(line0_length_sq, 0f) && Math_.FEql(line1_length_sq, 0f)) { t0 = 0.0f; t1 = 0.0f; return; }
@@ -89,7 +89,7 @@ namespace Rylogic.Maths
 			if (Math_.FEql(line1_length_sq, 0f))                                    { t1 = 0.0f; t0 = Math_.Clamp(-c / line0_length_sq, 0.0f, 1.0f); return; }
 
 			// The general nondegenerate case starts here
-			float b = v2.Dot2(line0, line1);
+			float b = Math_.Dot(line0, line1);
 			float denom = line0_length_sq * line1_length_sq - b * b; // Always non-negative
 
 			// If segments not parallel, calculate closest point on infinite line 'line0'
@@ -115,10 +115,10 @@ namespace Rylogic.Maths
 			v4 line0              = e0 - s0;
 			v4 line1              = e1 - s1;
 			v4 separation         = s0 - s1;
-			float f               = v4.Dot3(line1, separation);
-			float c               = v4.Dot3(line0, separation);
-			float line0_length_sq = line0.Length3Sq;
-			float line1_length_sq = line1.Length3Sq;
+			float f               = Math_.Dot(line1, separation);
+			float c               = Math_.Dot(line0, separation);
+			float line0_length_sq = line0.LengthSq;
+			float line1_length_sq = line1.LengthSq;
 
 			// Check if either or both segments are degenerate
 			if (Math_.FEql(line0_length_sq, 0f) && Math_.FEql(line1_length_sq, 0f)) { t0 = 0.0f; t1 = 0.0f; return; }
@@ -126,7 +126,7 @@ namespace Rylogic.Maths
 			if (Math_.FEql(line1_length_sq, 0f))                                    { t1 = 0.0f; t0 = Math_.Clamp(-c / line0_length_sq, 0.0f, 1.0f); return; }
 
 			// The general nondegenerate case starts here
-			float b = v4.Dot3(line0, line1);
+			float b = Math_.Dot(line0, line1);
 			float denom = line0_length_sq * line1_length_sq - b * b; // Always non-negative
 
 			// If segments not parallel, calculate closest point on infinite line 'line0'
@@ -165,7 +165,7 @@ namespace Rylogic.Maths
 				v4 dS  = spline.Velocity(time);
 				v4 ddS = spline.Acceleration(time);
 				v4 R   = pt - S;
-				time += v4.Dot3(R, dS) / (v4.Dot3(dS,dS) - v4.Dot3(R,ddS));
+				time += Math_.Dot(R, dS) / (Math_.Dot(dS,dS) - Math_.Dot(R,ddS));
 				if (bound01 && time <= 0.0f || time >= 1.0f)
 					return Math_.Clamp(time, 0.0f, 1.0f);
 			}
@@ -180,9 +180,9 @@ namespace Rylogic.Maths
 			float t0 = ClosestPoint(spline, pt, 0.0f, bound01, 5);
 			float t1 = ClosestPoint(spline, pt, 0.5f, bound01, 5);
 			float t2 = ClosestPoint(spline, pt, 1.0f, bound01, 5);
-			float d0 = (pt - spline.Position(t0)).Length3Sq;
-			float d1 = (pt - spline.Position(t1)).Length3Sq;
-			float d2 = (pt - spline.Position(t2)).Length3Sq;
+			float d0 = (pt - spline.Position(t0)).LengthSq;
+			float d1 = (pt - spline.Position(t1)).LengthSq;
+			float d2 = (pt - spline.Position(t2)).LengthSq;
 			if (d0 < d1 && d0 < d2) return t0;
 			if (d1 < d0 && d1 < d2) return t1;
 			return t2;

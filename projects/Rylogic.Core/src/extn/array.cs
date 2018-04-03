@@ -277,9 +277,9 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Convert a byte array to a hex string. e.g A3 FF 12 4D etc</summary>
-		public static string ToHexString(this byte[] arr, string sep = " ", string line_sep = "\n", int width = 16)
+		public static string ToHexString(this byte[] arr, int start = 0, int count = int.MaxValue, string sep = " ", string line_sep = "\n", int width = 16)
 		{
-			return Util.ToHexString(arr, sep, line_sep, width);
+			return Util.ToHexString(arr, start, count, sep, line_sep, width);
 		}
 	}
 

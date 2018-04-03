@@ -3,17 +3,24 @@
 	"version": "1.0.0",
 	"description": "Typescript implementation of Rylogic utility library",
 	"license": "MIT",
-	"main": "./dist/rylogic.bundle.js",
-	"module": "./dist/rylogic.bundle.js",
-	"types": "./dist/rylogic.bundle.d.js",
+	"main": "./obj/rylogic.bundle.js",
+	"module": "./obj/rylogic.bundle.js",
+	"types": "./obj/rylogic.bundle.d.js",
 	"repository": {
 		"type": "hg",
 		"url": "https://bitbucket.org/psryland/rylogic_code"
 	},
 	"devDependencies": {
+		"@types/assert": "0.0.31",
+		"@types/chai": "^4.1.2",
+		"@types/mocha": "^2.2.48",
+		"assert": "^1.4.1",
+		"chai": "^4.1.2",
+		"mocha": "^5.0.4",
 		"node-libs-browser": "^2.1.0",
 		"source-map-loader": "^0.2.3",
 		"ts-loader": "^3.5.0",
+		"ts-node": "^5.0.1",
 		"typescript": "^2.7.2",
 		"uglifyjs-webpack-plugin": "^1.1.6",
 		"webpack": "^3.11.0"
@@ -21,6 +28,7 @@
 	"scripts": {
 		"build": "webpack",
 		"build-min": "webpack --config webpack.config.min.js",
-		"build-all": "webpack && webpack --config webpack.config.min.js"
+		"build-all": "webpack && webpack --config webpack.config.min.js",
+		"test": "mocha -r ts-node/register unittests/**/*.ts"
 	}
 }

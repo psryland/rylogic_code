@@ -4,7 +4,7 @@
 		"module": "commonjs",
 		"target": "es5",
 		"declaration": true,
-		"outDir": "./built",
+		"outDir": "./obj",
 		"noFallthroughCasesInSwitch": true,
 		"noImplicitAny": true,
 		"noImplicitThis": true,
@@ -14,14 +14,12 @@
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
 		"strict": true,
-		"sourceMap": false
+		"emitDecoratorMetadata": true,
+		"experimentalDecorators": true,
+		"sourceMap": true,
 	},
 	"include": [
-		"./src/**/*"
+		"./src/**/*",
+		"./unittests/**/*",
 	],
-	"exclude": [
-		"node_modules",
-		"built",
-		"dist"
-	]
 }

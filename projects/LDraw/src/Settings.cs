@@ -26,8 +26,9 @@ namespace LDraw
 			LinkCameras        = ELinkCameras.None;
 			LinkAxes           = ELinkAxes.None;
 			FilterHistory      = new Pattern[0];
-			Scenes             = new SceneSettings[1] { new SceneSettings() };
 			UI                 = new UISettings();
+			Scenes             = new SceneSettings[1] { new SceneSettings() };
+			Connections        = new ConnectionSettings[0];
 
 			AutoSaveOnChanges = true;
 		}
@@ -107,13 +108,6 @@ namespace LDraw
 			set { set(nameof(FilterHistory), value); }
 		}
 
-		/// <summary>Style options for scenes</summary>
-		public SceneSettings[] Scenes
-		{
-			get { return get<SceneSettings[]>(nameof(Scenes)); }
-			set { set(nameof(Scenes), value); }
-		}
-
 		/// <summary>UI settings</summary>
 		public UISettings UI
 		{
@@ -123,6 +117,20 @@ namespace LDraw
 				if (value == null) throw new ArgumentNullException($"Setting '{nameof(UI)}' cannot be null");
 				set(nameof(UI), value);
 			}
+		}
+
+		/// <summary>Style options for scenes</summary>
+		public SceneSettings[] Scenes
+		{
+			get { return get<SceneSettings[]>(nameof(Scenes)); }
+			set { set(nameof(Scenes), value); }
+		}
+
+		/// <summary>Connection settings</summary>
+		public ConnectionSettings[] Connections
+		{
+			get { return get<ConnectionSettings[]>(nameof(Connections)); }
+			set { set(nameof(Connections), value); }
 		}
 
 		/// <summary>Settings version</summary>
@@ -308,5 +316,18 @@ namespace LDraw
 		}
 
 		private class TyConv :GenericTypeConverter<UISettings> {}
+	}
+
+	/// <summary>Connection from an external source</summary>
+	[TypeConverter(typeof(TyConv))]
+	public class ConnectionSettings
+	{
+		public ConnectionSettings()
+		{
+		}
+
+		public string Name { get; set; }
+
+		private class TyConv : GenericTypeConverter<ConnectionSettings> { }
 	}
 }

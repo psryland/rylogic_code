@@ -1983,8 +1983,10 @@ namespace pr
 		// ELdrObject::CoordFrame
 		template <> struct ObjectCreator<ELdrObject::CoordFrame> :IObjectCreatorLine
 		{
+			bool m_rh;
 			ObjectCreator(ParseParams& p)
 				:IObjectCreatorLine(p, false, true)
+				,m_rh(true)
 			{
 				pr::v4       pts[] = { pr::v4Origin, pr::v4XAxis.w1(), pr::v4Origin, pr::v4YAxis.w1(), pr::v4Origin, pr::v4ZAxis.w1() };
 				pr::Colour32 col[] = { pr::Colour32Red, pr::Colour32Red, pr::Colour32Green, pr::Colour32Green, pr::Colour32Blue, pr::Colour32Blue };
@@ -1994,12 +1996,27 @@ namespace pr
 				m_color.insert(m_color.end(), col, col + PR_COUNTOF(col));
 				m_index.insert(m_index.end(), idx, idx + PR_COUNTOF(idx));
 			}
+			bool ParseKeyword(EKeyword kw) override
+			{
+				switch (kw)
+				{
+				default: return IObjectCreatorLine::ParseKeyword(kw);
+				case EKeyword::LeftHanded: m_rh = false; return true;
+				}
+			}
 			void Parse() override
 			{
 				float scale;
 				p.m_reader.Real(scale);
 				for (auto& pt : m_point)
 					pt.xyz *= scale;
+			}
+			void CreateModel(LdrObject* obj) override
+			{
+				if (!m_rh)
+					m_point[3].xyz = -m_point[3].xyz;
+				
+				IObjectCreatorLine::CreateModel(obj);
 			}
 		};
 
@@ -2063,7 +2080,6 @@ namespace pr
 				p.m_reader.Vector2(m_ang);
 				p.m_reader.Vector2(m_rad);
 
-				if (m_ang.x == m_ang.y) m_ang.y += 360.0f;
 				m_ang.x = pr::DegreesToRadians(m_ang.x);
 				m_ang.y = pr::DegreesToRadians(m_ang.y);
 			}
@@ -4349,6 +4365,7 @@ LR"(// A circle or ellipse
 *CoordFrame a2b
 {
 	0.1                                // Optional, scale
+	*LeftHanded                        // Optional, create a left handed coordinate frame
 }
 
 // A list of triangles
