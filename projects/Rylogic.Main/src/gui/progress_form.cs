@@ -12,52 +12,11 @@ namespace Rylogic.Gui
 {
 	public sealed class ProgressForm :Form
 	{
-		public class UserState
-		{
-			public static UserState Empty = new UserState();
-
-			/// <summary>Progress completeness [0f,1f]. Null means unknown</summary>
-			public float? FractionComplete { get; set; }
-
-			/// <summary>Control the visibility of the progress bar. Null means don't change</summary>
-			public bool? ProgressBarVisible { get; set; }
-
-			/// <summary>Control the style of the progress bar. Null means don't change</summary>
-			public ProgressBarStyle? ProgressBarStyle { get; set; }
-
-			/// <summary>Text to display on the progress bar</summary>
-			public string ProgressBarText { get; set; }
-
-			/// <summary>Dialog icon. Null means don't change</summary>
-			public Icon Icon { get; set; }
-
-			/// <summary>Dialog title. Null means don't change</summary>
-			public string Title { get; set; }
-
-			/// <summary>Change the description and re-layout (if ForceLayout is null). Null means don't change</summary>
-			public string Description { get; set; }
-
-			/// <summary>The font to use for the description text. Null means don't change</summary>
-			public Font DescFont { get; set; }
-
-			/// <summary>Force recalculation of the form layout (or not). Null means layout if needed</summary>
-			public bool? ForceLayout { get; set; }
-
-			/// <summary>Set to true to have the dialog close (used by ProgressForm once the task is complete)</summary>
-			public bool CloseDialog { get; set; }
-
-			/// <summary>Duplicate this object</summary>
-			public UserState Clone() { return (UserState)MemberwiseClone(); }
-		}
-
-		/// <summary>Progress function delegate</summary>
-		public delegate void WorkerFunc(ProgressForm form, object arg, Progress cb);
-
 		private readonly TextProgressBar m_progress;
 		private readonly Label m_description;
 		private readonly Button m_btn_cancel;
-		private Thread m_thread;
 		private Exception m_error;
+		private Thread m_thread;
 
 		/// <summary>Create a progress form for external control via the UpdateProgress method</summary>
 		public ProgressForm(string title, string desc, Icon icon, ProgressBarStyle style)
@@ -185,9 +144,11 @@ namespace Rylogic.Gui
 				return;
 			}
 
+			// If the dialog was cancelled, ensure the 'CancelPending' flag is set
+			if (DialogResult == DialogResult.Cancel && CancelSignal != null)
+				CancelSignal.Set();
+
 			// Set the dialog result based on the state of 'CancelSignal'.
-			// Note: can't rely on the state of DialogResult as set by user code
-			// because the Form resets it or changes it internally.
 			DialogResult =
 				CancelPending ? DialogResult.Cancel :
 				DialogResult.OK;
@@ -240,15 +201,12 @@ namespace Rylogic.Gui
 		/// <summary>An event used to signal the other thread to cancel</summary>
 		public ManualResetEvent CancelSignal { get; private set; }
 
-		/// <summary>Progress callback function, called from 'func' to update the progress bar</summary>
-		public delegate void Progress(UserState us);
-
 		/// <summary>Show the dialog after a few milliseconds</summary>
 		public DialogResult ShowDialog(Control parent, int delay_ms = 0)
 		{
 			// Show the dialog after the delay.
 			// Note: Calling ShowDialog resets the DialogResult to 'None'. Then, if still set to 
-			// 'None', on closing is automatically set to 'Cancel'.
+			// 'None' on closing, is automatically set to 'Cancel'.
 			var result = DialogResult.OK;
 			if (delay_ms == 0 || !Done.WaitOne(delay_ms)) // not done already?
 				result = base.ShowDialog(parent);
@@ -307,7 +265,8 @@ namespace Rylogic.Gui
 			{
 				// Don't trigger a layout, we just want to exit
 				m_allow_cancel = true;
-				Close();
+				DialogResult = CancelPending ? DialogResult.Cancel : DialogResult.OK;
+				//Close();
 			}
 		}
 
@@ -354,6 +313,51 @@ namespace Rylogic.Gui
 				m_btn_cancel.Location = new Point(m_progress.Right - m_btn_cancel.Width, m_progress.Bottom + space);
 				m_btn_cancel.Visible = AllowCancel;
 			}
+		}
+
+		/// <summary>Progress callback function, called from 'func' to update the progress bar</summary>
+		public delegate void Progress(UserState us);
+
+		/// <summary>Progress function delegate</summary>
+		public delegate void WorkerFunc(ProgressForm form, object arg, Progress cb);
+
+		/// <summary>UserState data</summary>
+		public class UserState
+		{
+			public static UserState Empty = new UserState();
+
+			/// <summary>Progress completeness [0f,1f]. Null means unknown</summary>
+			public float? FractionComplete { get; set; }
+
+			/// <summary>Control the visibility of the progress bar. Null means don't change</summary>
+			public bool? ProgressBarVisible { get; set; }
+
+			/// <summary>Control the style of the progress bar. Null means don't change</summary>
+			public ProgressBarStyle? ProgressBarStyle { get; set; }
+
+			/// <summary>Text to display on the progress bar</summary>
+			public string ProgressBarText { get; set; }
+
+			/// <summary>Dialog icon. Null means don't change</summary>
+			public Icon Icon { get; set; }
+
+			/// <summary>Dialog title. Null means don't change</summary>
+			public string Title { get; set; }
+
+			/// <summary>Change the description and re-layout (if ForceLayout is null). Null means don't change</summary>
+			public string Description { get; set; }
+
+			/// <summary>The font to use for the description text. Null means don't change</summary>
+			public Font DescFont { get; set; }
+
+			/// <summary>Force recalculation of the form layout (or not). Null means layout if needed</summary>
+			public bool? ForceLayout { get; set; }
+
+			/// <summary>Set to true to have the dialog close (used by ProgressForm once the task is complete)</summary>
+			public bool CloseDialog { get; set; }
+
+			/// <summary>Duplicate this object</summary>
+			public UserState Clone() { return (UserState)MemberwiseClone(); }
 		}
 	}
 }

@@ -86,18 +86,26 @@ namespace Rylogic.Container
 		public class CommentRow :Row
 		{
 			public CommentRow(string comment)
-			{
-				Comment = comment ?? string.Empty;
-			}
-
-			/// <summary>The comment text</summary>
-			public string Comment { get; private set; }
+				:base(comment)
+			{}
+			public CommentRow(IEnumerable<string> comments)
+				:base(comments.Select(x => (object)x))
+			{}
+			public CommentRow(params string[] comments)
+				:base(comments.Select(x => (object)x))
+			{}
 
 			/// <summary>Write this row as a line of CSV data</summary>
 			public override void Save(StreamWriter file, bool quoted)
 			{
 				file.Write("# ");
-				file.Write(Comment);
+				var first = true;
+				foreach (var e in this)
+				{
+					if (!first) file.Write(',');
+					first = false;
+					file.Write(e ?? string.Empty);
+				}
 				file.Write('\n');
 			}
 		}
@@ -158,7 +166,7 @@ namespace Rylogic.Container
 		}
 
 		/// <summary>Add a comment row to the CSV data</summary>
-		public CommentRow AddComment(string comment = null)
+		public CommentRow AddComment(params string[] comment)
 		{
 			return m_data.Add2(new CommentRow(comment));
 		}
