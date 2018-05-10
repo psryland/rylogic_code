@@ -299,11 +299,13 @@ namespace pr
 			template <typename T, std::size_t B, typename A> struct citer // const iterator
 				:iter<T, B, A, T const&, T const*, BlockPtrMap<T,B,A> const*>
 			{
+				using size_type = typename iter<T, B, A, T const&, T const*, BlockPtrMap<T, B, A> const*>::size_type;
 				citer(size_type idx, BlockPtrMap<T,B,A> const& map) :iter(idx, &map) {}
 			};
 			template <typename T, std::size_t B, typename A> struct miter // mutable iterator
 				:iter<T, B, A, T&, T*, BlockPtrMap<T,B,A>*>
 			{
+				using size_type = typename iter<T, B, A, T&, T*, BlockPtrMap<T, B, A>*>::size_type;
 				miter(size_type idx, BlockPtrMap<T,B,A>& map) :iter(idx, &map) {}
 				operator citer<T,B,A>() const { return citer<T,B,A>(m_idx, *m_map); }
 			};

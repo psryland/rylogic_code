@@ -23,10 +23,18 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Helper to construct and start a stop watch</summary>
-		public static Stopwatch Start2(this Stopwatch sw)
+		public static Stopwatch StartNow(this Stopwatch sw)
 		{
 			sw.Start();
 			return sw;
+		}
+
+		/// <summary>Scoped start/stop of this stopwatch</summary>
+		public static Scope Time(this Stopwatch sw)
+		{
+			return Scope.Create(
+				() => sw.Start(),
+				() => sw.Stop());
 		}
 
 		/// <summary>RAII scope lock this semaphore</summary>

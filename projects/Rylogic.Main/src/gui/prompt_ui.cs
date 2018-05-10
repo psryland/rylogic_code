@@ -121,6 +121,13 @@ namespace Rylogic.Gui
 			}
 			base.OnLayout(levent);
 		}
+		protected override void OnFormClosing(FormClosingEventArgs e)
+		{
+			if (DialogResult == DialogResult.OK)
+				m_value = Value;
+
+			base.OnFormClosing(e);
+		}
 
 		/// <summary>The mode for the user interface</summary>
 		public EMode Mode
@@ -169,6 +176,10 @@ namespace Rylogic.Gui
 		{
 			get
 			{
+				// After the dialog is closed, return the saved value
+				if (m_value != null)
+					return m_value;
+
 				switch (Mode)
 				{
 				default: throw new Exception($"No value available in mode {Mode}");
@@ -192,6 +203,7 @@ namespace Rylogic.Gui
 				}
 			}
 		}
+		private object m_value;
 
 		/// <summary>The data source for the options combo box</summary>
 		public object Options

@@ -785,6 +785,7 @@ namespace Rylogic.Maths
 		/// <summary>Return the cosine of the angle between two vectors</summary>
 		public static float CosAngle(v4 lhs, v4 rhs)
 		{
+			Debug.Assert(lhs.w == 0 && rhs.w == 0, "CosAngle is intended for 3-vectors");
 			Debug.Assert(lhs.LengthSq != 0 && rhs.LengthSq != 0, "CosAngle undefined for zero vectors");
 			return Clamp(Dot(lhs, rhs) / (float)Math.Sqrt(lhs.LengthSq * rhs.LengthSq), -1f, 1f);
 		}

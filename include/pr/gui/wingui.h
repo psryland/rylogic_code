@@ -3202,6 +3202,7 @@ namespace pr
 		template <typename TParams = FormParams, typename Derived = void> struct MakeFormParams :MakeCtrlParams<TParams, choose_non_void<Derived, MakeFormParams<>>>
 		{
 			using base = MakeCtrlParams<TParams, choose_non_void<Derived, MakeFormParams<>>>;
+			using This = typename base::This;
 
 			MakeFormParams()
 			{
@@ -6137,6 +6138,8 @@ namespace pr
 			template <typename TParams = LabelParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
+				using This = typename base::This;
+
 				Params() { wndclass(WndClassName()).name("lbl").wh(Auto,Auto).style('=',DefaultStyle).style_ex('=',DefaultStyleEx).margin(3); }
 				operator LabelParams const&() const
 				{
@@ -6199,6 +6202,8 @@ namespace pr
 			template <typename TParams = ButtonParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
+				using This = typename base::This;
+
 				Params() { wndclass(WndClassName()).name("btn").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx).margin(3); }
 				operator ButtonParams const&() const
 				{
@@ -6372,6 +6377,8 @@ namespace pr
 			template <typename TParams = TextBoxParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
+				using This = typename base::This;
+
 				Params() { wndclass(WndClassName()).name("edit").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx).margin(3); }
 				operator TextBoxParams const&() const
 				{
@@ -6536,6 +6543,8 @@ namespace pr
 			template <typename TParams = NumberBoxParams, typename Derived = void> struct Params :TextBox::Params<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = TextBox::Params<TParams, choose_non_void<Derived, Params<>>>;
+				using This = typename base::This;
+
 				Params()
 				{}
 				operator NumberBoxParams const&() const
@@ -6650,6 +6659,8 @@ namespace pr
 			template <typename TParams = ComboBoxParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
+				using This = typename base::This;
+
 				Params() { wndclass(WndClassName()).name("combo").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx).margin(3,3,3,3); }
 				operator ComboBoxParams const&() const
 				{
@@ -6841,6 +6852,8 @@ namespace pr
 			template <typename TParams = ListViewParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
+				using This = typename base::This;
+
 				Params() { wndclass(WndClassName()).name("listview").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx).mode(EViewType::Report).dbl_buffer(); }
 				operator ListViewParams const&() const
 				{
@@ -7503,6 +7516,8 @@ namespace pr
 			template <typename TParams = RichTextBoxParams, typename Derived = void> struct Params :TextBox::Params<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = TextBox::Params<TParams, choose_non_void<Derived, Params<>>>;
+				using This = typename base::This;
+
 				Params() { wndclass(WndClassName()).name("rtb").style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
 				operator RichTextBoxParams const&() const
 				{
@@ -7588,6 +7603,8 @@ namespace pr
 			template <typename TParams = ImageBoxParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
+				using This = typename base::This;
+
 				Params() { wndclass(WndClassName()).name("img").wh(DefW,DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx).margin(3); }
 				operator ImageBoxParams const&() const
 				{
@@ -7681,6 +7698,8 @@ namespace pr
 			template <typename TParams = StatusBarParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
+				using This = typename base::This;
+
 				Params() { wndclass(WndClassName()).name("status").style('=',DefaultStyle).style_ex('=',DefaultStyleEx).anchor(EAnchor::LeftBottomRight).dock(EDock::Bottom); }
 				operator StatusBarParams const&() const
 				{
@@ -8185,6 +8204,8 @@ namespace pr
 			template <typename TParams = SplitterParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
+				using This = typename base::This;
+
 				Params()
 				{
 					wndclass(RegisterWndClass<Splitter>()).name("split").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx);
@@ -8489,6 +8510,8 @@ namespace pr
 			template <typename TParams = ToolTipParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
+				using This = typename base::This;
+
 				Params() { wndclass(WndClassName()).name("tt").wh(DefW,DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
 				operator ToolTipParams const&() const
 				{

@@ -16,8 +16,8 @@ namespace Rylogic.Maths
 	[DebuggerDisplay("{x}  {y}  // Len={Length2}")]
 	public struct v2
 	{
-		[FieldOffset( 0)] public float x;
-		[FieldOffset( 4)] public float y;
+		[FieldOffset(0)] public float x;
+		[FieldOffset(4)] public float y;
 
 		// Constructors
 		public v2(float x_) :this(x_, x_)

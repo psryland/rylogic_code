@@ -65,9 +65,6 @@
     <Filter Include="pr\geometry">
       <UniqueIdentifier>{7f4f044d-7196-421b-b40d-15cba420920e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="pr\container">
-      <UniqueIdentifier>{1d0d510b-a1e0-433f-a636-c6593da59fcf}</UniqueIdentifier>
-    </Filter>
     <Filter Include="pr\collision">
       <UniqueIdentifier>{00177e26-fdc4-451b-84d3-d212e96c0a56}</UniqueIdentifier>
     </Filter>
@@ -97,6 +94,9 @@
     </Filter>
     <Filter Include="pr\sound\ogg">
       <UniqueIdentifier>{230b180e-176e-4b31-b100-d5bd84f3e30a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\container">
+      <UniqueIdentifier>{1d0d510b-a1e0-433f-a636-c6593da59fcf}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

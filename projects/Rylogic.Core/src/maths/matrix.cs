@@ -18,6 +18,8 @@ namespace Rylogic.Maths
 	[DebuggerDisplay("{Description}")]
 	public struct Matrix
 	{
+		// Data stored as contiguous columns,
+		// e.g. [xx xy xz xw][yx yy yz yw][...]
 		private double[] m_data;
 
 		public Matrix(int row_count, int col_count)
@@ -34,6 +36,7 @@ namespace Rylogic.Maths
 			{
 				if (k == m_data.Length)
 					throw new Exception("Excess data when initialising Matrix");
+
 				m_data[k++] = d;
 			}
 			if (k != m_data.Length)
@@ -47,12 +50,12 @@ namespace Rylogic.Maths
 		{
 			data.CopyTo(m_data, 0);
 		}
-		public Matrix(IList<IList<double>> data)
-			:this(data.Count, data.Max(x => x.Count))
-		{
-			for (var j = 0; j != Rows; ++j)
-				data[j].CopyTo(m_data, j * Cols);
-		}
+		//public Matrix(IList<IList<double>> data)
+		//	:this(data.Count, data.Max(x => x.Count))
+		//{
+		//	for (var j = 0; j != Rows; ++j)
+		//		data[j].CopyTo(m_data, j * Cols);
+		//}
 		public Matrix(Matrix rhs)
 			:this(rhs.Rows, rhs.Cols)
 		{
@@ -72,18 +75,18 @@ namespace Rylogic.Maths
 			{
 				Util.Assert(row >= 0 && row < Rows);
 				Util.Assert(col >= 0 && col < Cols);
-				return m_data[row * Cols + col];
+				return m_data[col * Rows + row];
 			}
 			set
 			{
 				Util.Assert(row >= 0 && row < Rows);
 				Util.Assert(col >= 0 && col < Cols);
-				m_data[row * Cols + col] = value;
+				m_data[col * Rows + row] = value;
 			}
 		}
 
 		/// <summary>Access this matrix by row</summary>
-		public RowProxy Row { get { return new RowProxy(this); } }
+		public RowProxy Row => new RowProxy(this);
 		public class RowProxy
 		{
 			private Matrix mat;
@@ -93,22 +96,22 @@ namespace Rylogic.Maths
 				get
 				{
 					var m = new Matrix(1, mat.Cols);
-					for (int i = 0; i != mat.Cols; ++i)
-						m[0, i] = mat[k, i];
+					for (int c = 0; c != mat.Cols; ++c)
+						m[0, c] = mat[k, c];
 
 					return m;
 				}
 				set
 				{
 					if (value.Cols != mat.Cols) throw new Exception("Incorrect number of columns");
-					for (int i = 0; i != mat.Cols; ++i)
-						mat[k, i] = value[0, i];
+					for (int c = 0; c != mat.Cols; ++c)
+						mat[k, c] = value[0, c];
 				}
 			}
 		}
 
 		/// <summary>Access this matrix by column</summary>
-		public ColProxy Col { get { return new ColProxy(this); } }
+		public ColProxy Col => new ColProxy(this);
 		public class ColProxy
 		{
 			private Matrix mat;
@@ -118,16 +121,16 @@ namespace Rylogic.Maths
 				get
 				{
 					var m = new Matrix(mat.Rows, 1);
-					for (int i = 0; i != mat.Rows; ++i)
-						m[i, 0] = mat[i, k];
+					for (int r = 0; r != mat.Rows; ++r)
+						m[r, 0] = mat[r, k];
 
 					return m;
 				}
 				set
 				{
 					if (value.Rows != mat.Rows) throw new Exception("Incorrect number of rows");
-					for (int i = 0; i != mat.Rows; ++i)
-						mat[i, k] = value[i, 0];
+					for (int r = 0; r != mat.Rows; ++r)
+						mat[r, k] = value[r, 0];
 				}
 			}
 		}
@@ -138,11 +141,12 @@ namespace Rylogic.Maths
 			get
 			{
 				var s = new StringBuilder();
-				s.AppendLine($"[{Cols}x{Rows}]");
-				for (int i = 0; i != Rows; ++i)
+				s.AppendLine($"[{Rows}x{Cols}]");
+				for (int r = 0; r != Rows; ++r)
 				{
-					for (int j = 0; j != Cols; ++j)
-						s.Append($"{this[i,j],5:0.00} ");
+					for (int c = 0; c != Cols; ++c)
+						s.Append($"{this[r,c],5:0.00} ");
+
 					s.AppendLine();
 				}
 				return s.ToString();
@@ -225,9 +229,9 @@ namespace Rylogic.Maths
 		public static Matrix Transpose(Matrix m)
 		{
 			var t = new Matrix(m.Cols, m.Rows);
-			for (int i = 0; i < m.Rows; i++)
-				for (int j = 0; j < m.Cols; j++)
-					t[j, i] = m[i, j];
+			for (int r = 0; r < m.Rows; r++)
+				for (int c = 0; c < m.Cols; c++)
+					t[c, r] = m[r, c];
 			return t;
 		}
 
@@ -276,12 +280,12 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Generates the random matrix</summary>
-		public static Matrix Random(int row_count, int col_count, double min, double max, Random r)
+		public static Matrix Random(int row_count, int col_count, double min, double max, Random rng)
 		{
 			var m = new Matrix(row_count, col_count);
-			for (int i = 0; i != row_count; ++i)
-				for (int j = 0; j != col_count; ++j)
-					m[i,j] = r.Double(min, max);
+			for (int r = 0; r != row_count; ++r)
+				for (int c = 0; c != col_count; ++c)
+					m[r,c] = rng.Double(min, max);
 
 			return m;
 		}
@@ -313,11 +317,11 @@ namespace Rylogic.Maths
 			var rows = Regex.Split(s, "\r\n");
 			var nums = rows[0].Split(' ');
 			var m = new Matrix(rows.Length, nums.Length);
-			for (int i = 0; i < rows.Length; i++)
+			for (int r = 0; r < rows.Length; r++)
 			{
-				nums = rows[i].Split(' ');
-				for (int j = 0; j < nums.Length; j++)
-					m[i,j] = double.Parse(nums[j]);
+				nums = rows[r].Split(' ');
+				for (int c = 0; c < nums.Length; c++)
+					m[r,c] = double.Parse(nums[c]);
 			}
 			return m;
 		}
@@ -857,14 +861,14 @@ namespace Rylogic.UnitTests
 			// Compare with m4x4
 			var m = new Matrix(4,4);
 			var M = m4x4.Random4x4(-5, +5, rng);
-			for (int i = 0; i != 4; ++i)
-				for (int j = 0; j != 4; ++j)
-					m[i,j] = M[i,j];
+			for (int c = 0; c != 4; ++c)
+				for (int r = 0; r != 4; ++r)
+					m[r,c] = M[c][r];
 
 			Assert.True(Matrix.FEql(m, M));
 
-			Assert.True(Math_.FEql(M.w.x, m[3,0]));
-			Assert.True(Math_.FEql(M.x.w, m[0,3]));
+			Assert.True(Math_.FEql(M.w.x, m[0,3]));
+			Assert.True(Math_.FEql(M.x.w, m[3,0]));
 			Assert.True(Math_.FEql(M.z.z, m[2,2]));
 
 			Assert.AreEqual(Matrix.IsInvertable(m), m4x4.IsInvertable(M));

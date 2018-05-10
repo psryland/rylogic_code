@@ -606,7 +606,7 @@ namespace CoinFlip
 			// Local copy of shared variables
 			var coi = Coins.Where(x => x.OfInterest).ToHashSet(x => x.Symbol);
 			var exchanges = TradingExchanges.ToList();
-			var sw = new Stopwatch().Start2();
+			var sw = new Stopwatch().StartNow();
 
 			// Query for the pairs data on a worker thread
 			ThreadPool.QueueUserWorkItem(_ =>

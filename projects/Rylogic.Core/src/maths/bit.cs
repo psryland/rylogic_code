@@ -333,6 +333,88 @@ namespace Rylogic.Maths
 		{
 			return ToString(bits, 0);
 		}
+
+		///<summary>Encode an integer value as a variable length int byte array</summary>
+		public static IList<byte> EncodeVarInt(long value)
+		{
+			// VarInt encoding (as used in Google Protobuf).
+			// https://developers.google.com/protocol-buffers/docs/encoding#varints
+			// Algorthm:
+			//  Convert value to unsigned using zig-zap encoding
+			//  Stop consuming bytes if the high bit is set.
+			//  Trim the high bit, then left-side-append bits to form the number.
+			// e.g.
+			//  300 = 0000010 0101100
+			//  Encoded becomes: 10101100 00000010
+			//  Decoding:
+			//   byte[0] = (10101100 & 0x7F) => 0101100
+			//   byte[1] = (00000010 & 0x7F) => 0000010 ++ 0101100 => 100101100
+			//   stop because high bit wasn't set.
+
+			var val = (ulong)((value << 1) ^ (value >> 63));
+			return EncodeVarUInt(val);
+		}
+		public static IList<byte> EncodeVarUInt(ulong value)
+		{
+			var res = new List<byte>();
+			for (;;)
+			{
+				var highbit = value >= 128 ? 0x80UL : 0x00UL;
+				res.Add((byte)(highbit | (value & 0x7f)));
+				if (highbit == 0) break;
+				value >>= 7;
+			}
+			return res;
+		}
+
+		/// <summary>Decode a variable length integer. 'start' is the offset into 'arr'.</summary>
+		public static long DecodeVarInt(IList<byte> arr, int start = 0)
+		{
+			return DecodeVarInt(arr, ref start);
+		}
+		public static ulong DecodeVarUInt(IList<byte> arr, int start = 0)
+		{
+			return DecodeVarUInt(arr, ref start);
+		}
+
+		/// <summary>Decode a variable length integer. 'start' is the offset into 'arr'. 'count' is the number of bytes consumed</summary>
+		public static long DecodeVarInt(IList<byte> arr, int start, out int count)
+		{
+			var index = start;
+			var res = DecodeVarInt(arr, ref index);
+			count = index - start;
+			return res;
+		}
+		public static ulong DecodeVarUInt(IList<byte> arr, int start, out int count)
+		{
+			var index = start;
+			var res = DecodeVarUInt(arr, ref index);
+			count = index - start;
+			return res;
+		}
+
+		/// <summary>Decode a variable length integer. 'index' is the offset into 'arr'. On return, 'index' points to the first byte after the variable length int</summary>
+		public static long DecodeVarInt(IList<byte> arr, ref int index)
+		{
+			var res = DecodeVarUInt(arr, ref index);
+			var val = (long)(res >> 1) ^ (-(long)(res & 1));
+			return val;
+		}
+		public static ulong DecodeVarUInt(IList<byte> arr, ref int index)
+		{
+			if (index < 0 || index >= arr.Count)
+				throw new ArgumentOutOfRangeException($"Index ({index}) out of range");
+
+			var res = 0UL;
+			for (var shift = 0; ;)
+			{
+				res += (ulong)(arr[index] & 0x7F) << shift;
+				if ((arr[index++] & 0x80) == 0) break;
+				if (index == arr.Count) throw new Exception("Invalid VarInt encoding");
+				if ((shift += 7) >= 64) throw new Exception("Encoded VarInt overflows an int64");
+			}
+			return res;
+		}
 	}
 }
 
@@ -424,6 +506,30 @@ namespace Rylogic.UnitTests
 			};
 			var masks = Bit.EnumBitMasks(bits0).ToArray();
 			Assert.True(bitmasks.SequenceEqual(masks));
+		}
+		[Test] public void VarInt()
+		{
+			var values = new[]
+			{
+				+0L, +127L, +128L, +300L, +30_000_000_000_000L, long.MaxValue,
+				-0L, -127L, -128L, -300L, -30_000_000_000_000L, long.MinValue,
+			};
+			foreach (var val in values)
+			{
+				var buf = Bit.EncodeVarInt(val);
+				var res = Bit.DecodeVarInt(buf);
+				Assert.True(res == val);
+			}
+		}
+		[Test] public void VarUInt()
+		{
+			var values = new[] { 0UL, 127UL, 128UL, 300UL, 30_000_000_000_000UL, ulong.MaxValue };
+			foreach (var val in values)
+			{
+				var buf = Bit.EncodeVarUInt(val);
+				var res = Bit.DecodeVarUInt(buf);
+				Assert.True(res == val);
+			}
 		}
 	}
 }

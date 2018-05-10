@@ -43,14 +43,14 @@ namespace Rylogic.Maths
 				throw new ArgumentException("index out of range", "i");
 			}
 		}
-		public v2 this[uint i]
+		public v2 this[uint c]
 		{
-			get { return this[(int)i]; }
-			set { this[(int)i] = value; }
+			get { return this[(int)c]; }
+			set { this[(int)c] = value; }
 		}
 
-		/// <summary>Get/Set components by index</summary>
-		public float this[int c, int r]
+		/// <summary>Get/Set components by index. Note: row,col is standard (i.e. as in Matlab)</summary>
+		public float this[int r, int c]
 		{
 			get { return this[c][r]; }
 			set
@@ -60,7 +60,7 @@ namespace Rylogic.Maths
 				this[c] = vec;
 			}
 		}
-		public float this[uint c, uint r]
+		public float this[uint r, uint c]
 		{
 			get { return this[(int)c][(int)r]; }
 			set
@@ -69,6 +69,16 @@ namespace Rylogic.Maths
 				vec[r] = value;
 				this[c] = vec;
 			}
+		}
+		[Obsolete]
+		public float get(int r, int c)
+		{
+			return this[r, c];
+		}
+		[Obsolete]
+		public void set(int r, int c, float value)
+		{
+			this[r, c] = value;
 		}
 
 		/// <summary>ToString</summary>

@@ -5,12 +5,12 @@ export function Uuidv4(): string
 	{
 		return a
 			?
-			( // if the place holder was passed, return a random number from 0 to 15
-				a ^                                          // unless b is 8,
-				crypto.getRandomValues(new Uint8Array(1))[0] // in which case
-				% 16                                         // a random number from
-				>> a / 4                                     // 8 to 11
-			).toString(16)                                   // in hexadecimal
+			(                                                                // if the place holder was passed, return a random number from 0 to 15
+				a ^                                                          // unless b is 8,
+				(crypto.getRandomValues(new Uint8Array(1)) as Uint8Array)[0] // in which case
+				% 16                                                         // a random number from
+				>> a / 4                                                     // 8 to 11
+			).toString(16)                                                   // in hexadecimal
 			:
 			( // or otherwise a concatenated string:
 				"" +

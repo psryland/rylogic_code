@@ -143,7 +143,7 @@ namespace Bot.LoopFinder
 			var pairs = Model.Pairs.ToList();
 			var x_exch = Model.CrossExchange;
 			var max_loop_count = Settings.MaximumLoopCount;
-			var sw = new Stopwatch().Start2();
+			var sw = new Stopwatch().StartNow();
 
 			// A collection of complete loops
 			var result = new ConcurrentDictionary<int, Loop>();

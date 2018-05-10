@@ -34,6 +34,8 @@ namespace pr
 			template <typename TParams = View3DPanelParams, typename Derived = void> struct Params :Panel::Params<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = Panel::Params<TParams, choose_non_void<Derived, Params<>>>;
+				using This = typename base::This;
+
 				Params()
 				{
 					name("view3d").margin(0).selectable();

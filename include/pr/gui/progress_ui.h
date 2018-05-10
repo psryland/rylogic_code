@@ -95,6 +95,8 @@ namespace pr
 			template <typename TParams = ProgressParams, typename Derived = void> struct Params :MakeDlgParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeDlgParams<TParams, choose_non_void<Derived, Params<>>>;
+				using This = typename base::This;
+
 				Params()
 				{
 					wndclass(RegisterWndClass<ProgressUI>()).name("progress-ui").wh(360,200).start_pos(EStartPosition::CentreParent);

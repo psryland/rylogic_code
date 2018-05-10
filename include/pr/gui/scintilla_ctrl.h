@@ -30,6 +30,8 @@ namespace pr
 			template <typename TParams = CtrlParams, typename Derived = void> struct Params :MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>
 			{
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
+				using This = typename base::This;
+
 				Params() { wndclass(WndClassName()).name("scint").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx); }
 				This& load_dll(wchar_t const* dllname = L"scintilla.dll", wchar_t const* dir = L".\\lib\\$(platform)")
 				{

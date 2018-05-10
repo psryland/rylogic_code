@@ -72,14 +72,14 @@ namespace Rylogic.Maths
 				throw new ArgumentException("index out of range", "i");
 			}
 		}
-		public v4 this[uint i]
+		public v4 this[uint c]
 		{
-			get { return this[(int)i]; }
-			set { this[(int)i] = value; }
+			get { return this[(int)c]; }
+			set { this[(int)c] = value; }
 		}
 
-		/// <summary>Get/Set components by index</summary>
-		public float this[int c, int r]
+		/// <summary>Get/Set components by index. Note: row,col is standard (i.e. as in Matlab)</summary>
+		private float this[int r, int c]
 		{
 			get { return this[c][r]; }
 			set
@@ -89,7 +89,7 @@ namespace Rylogic.Maths
 				this[c] = vec;
 			}
 		}
-		public float this[uint c, uint r]
+		private float this[uint r, uint c]
 		{
 			get { return this[(int)c][(int)r]; }
 			set
@@ -98,6 +98,16 @@ namespace Rylogic.Maths
 				vec[r] = value;
 				this[c] = vec;
 			}
+		}
+		[Obsolete]
+		public float get(int r, int c)
+		{
+			return this[r, c];
+		}
+		[Obsolete]
+		public void set(int r, int c, float value)
+		{
+			this[r, c] = value;
 		}
 
 		/// <summary>ToString()</summary>
@@ -628,9 +638,9 @@ namespace Rylogic.UnitTests
 			var rng = new Random(1);
 			var m = m4x4.Random4x4(-5, +5, rng);
 
-			Assert.True(m.x.x == m[0,0]);
-			Assert.True(m.z.y == m[2,1]);
-			Assert.True(m.w.x == m[3,0]);
+			Assert.True(m.x.x == m[0][0]);
+			Assert.True(m.z.y == m[2][1]);
+			Assert.True(m.w.x == m[3][0]);
 		}
 		[Test] public void Identity()
 		{

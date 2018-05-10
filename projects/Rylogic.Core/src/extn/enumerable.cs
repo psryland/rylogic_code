@@ -578,6 +578,23 @@ namespace Rylogic.Extn
 			var max = source.Max();
 			return source.Select(x => x * to / max);
 		}
+
+		/// <summary>Enumerate with an included index</summary>
+		public static IEnumerable<ItemWithIndex<T>> WithIndex<T>(this IEnumerable<T> source)
+		{
+			int index = 0;
+			foreach (var item in source)
+			{
+				yield return new ItemWithIndex<T> { Item = item, Index = index };
+				++index;
+			}
+		}
+		public struct ItemWithIndex<T>
+		{
+			public T Item;
+			public int Index;
+			public static implicit operator T(ItemWithIndex<T> p) { return p.Item; }
+		}
 	}
 }
 

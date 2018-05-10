@@ -624,12 +624,13 @@ namespace Rylogic.Common
 		public virtual void Upgrade(XElement old_settings, string from_version)
 		{
 			// Boiler-plate:
-			//
 			//// Preserve old settings
 			//if (from_version != Version && Filepath.HasValue())
 			//{
+			//	// Note: Do not save over 'Filepath' just leave the settings upgraded in memory.
+			//	// It's up to the caller whether settings should be saved.
 			//	var extn = Path_.Extn(Filepath);
-			//	var backup_filepath = Path.ChangeExtension(Filepath, $"backup_({from_version})_{DateTimeOffset.Now.ToString("yyyyMMdd-HHmmss")}{extn}");
+			//	var backup_filepath = Path.ChangeExtension(Filepath, $"backup_({from_version}){extn}");
 			//	old_settings.Save(backup_filepath);
 			//}
 			//
@@ -657,6 +658,7 @@ namespace Rylogic.Common
 			//		}
 			//	}
 			//}
+
 			throw new NotSupportedException($"Settings file version is {from_version}. Latest version is {Version}. Upgrading from this version is not supported");
 		}
 

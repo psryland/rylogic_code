@@ -383,36 +383,64 @@ namespace Rylogic.Utility
 			}
 		}
 
-		/// <summary>Convert a byte array to a hex string. e.g A3 FF 12 4D etc</summary>
-		public static string ToHexString(byte[] arr, int start = 0, int count = int.MaxValue, string sep = " ", string line_sep = "\n", int width = 16)
-		{
-			var sb = new StringBuilder();
-			for (int i = 0, len = Math.Min(arr.Length, count); i != len; ++i)
-			{
-				if (sb.Length != 0)
-					sb.Append((i % width) != 0 ? sep : line_sep);
-
-				sb.Append(arr[i+start].ToString("X2"));
-			}
-			return sb.ToString();
-		}
-
 		/// <summary>Returns true if 'x' is a valid hexadecimal character</summary>
 		public static bool IsHexChar(char x)
 		{
 			return (x >= '0' && x <= '9') || (x >= 'a' && x <= 'f') || (x >= 'A' && x <= 'F');			
 		}
 
-		/// <summary>Convert a hex string to a byte array</summary>
-		public static byte[] FromHexString(string hex)
+		/// <summary>Convert a byte array to a hex string. e.g A3 FF 12 4D etc</summary>
+		public static string ToHexString(byte[] arr, int start = 0, int count = int.MaxValue, string sep = " ", string line_sep = "\n", int width = 16)
 		{
-			var str = hex.Strip(x => !IsHexChar(x));
+			count = Math.Min(arr.Length - start, count);
+			if (!sep.HasValue() && !line_sep.HasValue())
+			{
+				var sb = new StringBuilder { Length = 2 * count };
+				for (int i = 0, j = 0; i != count; ++i)
+				{
+					var b = arr[start + i];
+					var h = (b >> 4) & 0xF;
+					var l = (b >> 0) & 0xF;
+					sb[j++] = (char)(h + (h >= 0xA ? 'A' - 0xA : '0'));
+					sb[j++] = (char)(l + (l >= 0xA ? 'A' - 0xA : '0'));
+				}
+				return sb.ToString();
+			}
+			else
+			{
+				var sb = new StringBuilder();
+				for (int i = 0; i != count; ++i)
+				{
+					if (sb.Length != 0)
+						sb.Append((i % width) != 0 ? sep : line_sep);
+
+					var b = arr[start + i];
+					var h = (b >> 4) & 0xF;
+					var l = (b >> 0) & 0xF;
+					sb.Append((char)(h + (h >= 0xA ? 'A' - 0xA : '0')));
+					sb.Append((char)(l + (l >= 0xA ? 'A' - 0xA : '0')));
+				}
+				return sb.ToString();
+			}
+		}
+
+		/// <summary>Convert a hex string to a byte array</summary>
+		public static byte[] FromHexString(string hex, bool sanitise = true)
+		{
+			var str = sanitise ? hex.Strip(x => !IsHexChar(x)) : hex;
 			if ((str.Length & 1) != 0)
 				throw new ArgumentException("Hex string must have each byte represented by 2 characters","hex");
 
+			// A more efficient implementation than calling SubString and byte.Parse
 			var arr = new byte[str.Length/2];
-			for (int i = 0; i != arr.Length; ++i)
-				arr[i] = byte.Parse(str.Substring(i*2, 2), System.Globalization.NumberStyles.HexNumber);
+			for (int i = 0, j = 0; i != arr.Length; ++i)
+			{
+				var h = str[j++];
+				var l = str[j++];
+				arr[i] = (byte)(
+					(h - (h >= 'a' ? 'a' - 0xA : h >= 'A' ? 'A' - 0xA : '0') << 4) |
+					(l - (l >= 'a' ? 'a' - 0xA : l >= 'A' ? 'A' - 0xA : '0') << 0) );
+			}
 			return arr;
 		}
 
