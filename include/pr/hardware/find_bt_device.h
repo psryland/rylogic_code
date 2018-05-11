@@ -13,12 +13,32 @@
 
 #include <string>
 #include <windows.h>
+#include <winerror.h>
 #include <ws2bth.h>
 #include <bthsdpdef.h>
 #include <bluetoothapis.h>
 
 namespace pr
 {
+	namespace impl
+	{
+		namespace bth
+		{
+			// Throw an exception for a win32 error
+			inline void ThrowWin32Exception(char const* msg, int err)
+			{
+				char desc[4096], err_msg[4096];
+				auto result = HRESULT_FROM_WIN32(err);
+				if (FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, result, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), err_msg, DWORD(sizeof(err_msg)), NULL))
+					sprintf_s(desc, "%s: %s", msg, err_msg);
+				else
+					sprintf_s(desc, "%s: 0x%80X", msg, result);
+
+				throw std::exception(desc);
+			}
+		}
+	}
+
 	// Helper for enumerating BT radios
 	struct FindBTRadios
 	{
@@ -40,7 +60,9 @@ namespace pr
 			{
 				auto err = ::GetLastError();
 				switch (err) {
-				default: throw std::exception("Error while enumerating bluetooth radio devices");
+				default:
+					impl::bth::ThrowWin32Exception("Error while enumerating bluetooth radio devices", err);
+					break;
 				case ERROR_NO_MORE_ITEMS:
 					m_more = false;
 					break;
@@ -74,7 +96,9 @@ namespace pr
 				{
 					auto err = ::GetLastError();
 					switch (err) {
-					default: throw std::exception("Error while enumerating bluetooth radio devices");
+					default:
+						impl::bth::ThrowWin32Exception("Error while enumerating bluetooth radio devices", err);
+						break;
 					case ERROR_NO_MORE_ITEMS:
 					case RPC_S_SERVER_UNAVAILABLE:
 						m_more = false;
@@ -122,12 +146,15 @@ namespace pr
 			dwSize = sizeof(BLUETOOTH_DEVICE_INFO_STRUCT);
 
 			// Find the first device on this radio
-			m_find = ::BluetoothFindFirstDevice(&m_search_params, this);
+			m_find = ::BluetoothFindFirstDevice(&m_search_params, static_cast<BLUETOOTH_DEVICE_INFO_STRUCT*>(this));
 			if (m_find == nullptr)
 			{
 				auto err = ::GetLastError();
 				switch (err) {
-				default: throw std::exception("Failed to enumerate devices on bluetooth radio");
+				default:
+					impl::bth::ThrowWin32Exception("Failed to enumerate devices on bluetooth radio", err);
+					break;
+				case ERROR_INVALID_HANDLE:
 				case ERROR_NO_MORE_ITEMS:
 				case RPC_S_SERVER_UNAVAILABLE:
 					m_more = false;
@@ -156,7 +183,9 @@ namespace pr
 				{
 					auto err = ::GetLastError();
 					switch (err) {
-					default: throw std::exception("Failed to enumerate devices on bluetooth radio");
+					default:
+						impl::bth::ThrowWin32Exception("Failed to enumerate devices on bluetooth radio", err);
+						break;
 					case ERROR_NO_MORE_ITEMS:
 						m_more = false;
 						break;
