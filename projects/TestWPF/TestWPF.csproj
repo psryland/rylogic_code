@@ -26,6 +26,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <UseVSHostingProcess>true</UseVSHostingProcess>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -35,19 +36,38 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject>TestWPF.App</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <ApplicationDefinition Include="src\App.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="src\diagram_ui.xaml.cs">
-      <DependentUpon>diagram_ui.xaml</DependentUpon>
+    <Compile Include="src\DockContainerUI.xaml.cs">
+      <DependentUpon>DockContainerUI.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\view3d_ui.xaml.cs">
-      <DependentUpon>view3d_ui.xaml</DependentUpon>
+    <Compile Include="src\ImageButton.xaml.cs">
+      <DependentUpon>ImageButton.xaml</DependentUpon>
     </Compile>
-    <Page Include="src\diagram_ui.xaml">
+    <Compile Include="src\ImageButtonRaw.cs" />
+    <Compile Include="src\DiagramUI.xaml.cs">
+      <DependentUpon>DiagramUI.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\View3dUI.xaml.cs">
+      <DependentUpon>View3dUI.xaml</DependentUpon>
+    </Compile>
+    <Page Include="src\DiagramUI.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\DockContainerUI.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\ImageButton.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -63,7 +83,11 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Page Include="src\view3d_ui.xaml">
+    <Page Include="src\Res.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\View3dUI.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -131,10 +155,21 @@
       <Project>{37a4f319-2052-404d-ae7f-f882cfa33c1b}</Project>
       <Name>Rylogic.Core</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Rylogic.Gui\Rylogic.Gui.csproj">
+      <Project>{846d147a-b7e6-4336-b019-d1add62ff095}</Project>
+      <Name>Rylogic.Gui</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Rylogic.Main\Rylogic.Main.csproj">
       <Project>{8c1634d9-c32a-4ad6-b2c7-ec17f6bfde01}</Project>
       <Name>Rylogic.Main</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="res\pencil.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="res\check_accept.png" />
+    <Resource Include="res\check_reject.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

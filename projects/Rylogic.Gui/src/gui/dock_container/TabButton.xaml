@@ -1,0 +1,24 @@
+﻿<UserControl x:Class="Rylogic.Gui.DockContainerControls.TabButton"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+	xmlns:local="clr-namespace:Rylogic.Gui"
+	xmlns:detail="clr-namespace:Rylogic.Gui.DockContainerControls"
+	mc:Ignorable="d" 
+	d:DesignHeight="30" d:DesignWidth="120">
+
+	<!-- Control Resources -->
+	<UserControl.Resources>
+		<ResourceDictionary>
+			<ResourceDictionary.MergedDictionaries>
+				<ResourceDictionary Source="Styles.xaml"/>
+			</ResourceDictionary.MergedDictionaries>
+		</ResourceDictionary>
+	</UserControl.Resources>
+
+	<DockPanel>
+		<Image Name="m_img_tabicon" Visibility="Visible" DockPanel.Dock="Left" Width="32"/>
+		<TextBlock Name="m_lbl_text" VerticalAlignment="Center" Padding="5 0 0 0">Tab Button</TextBlock>
+	</DockPanel>
+</UserControl>

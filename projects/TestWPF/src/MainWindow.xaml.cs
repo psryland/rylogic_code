@@ -22,18 +22,34 @@ namespace TestWPF
 		{
 			InitializeComponent();
 
-			m_menu_file_close.Click += (s,a) =>
-				{
-					Close();
-				};
-			m_menu_tests_diagram.Click += (s,a) =>
-				{
-					new DiagramUI().Show();
-				};
-			m_menu_tests_view3d.Click += (s,a) =>
-				{
-					new View3dUI().Show();
-				};
+			m_menu_file_close.Click += (s, a) =>
+			{
+				Close();
+			};
+			m_menu_tests_diagram.Click += (s, a) =>
+			{
+				new DiagramUI().Show();
+			};
+			m_menu_tests_view3d.Click += (s, a) =>
+			{
+				new View3dUI().Show();
+			};
+			m_menu_tests_dock_container.Click += (s, a) =>
+			{
+				new DockContainerUI().Show();
+			};
+
+			//var grid = new Canvas();
+			//var btn = new ImageButton
+			//{
+			//	Width = 180,
+			//	Height=40,
+			//	Content = "Push ME!",
+			//	Template = (ControlTemplate)Resources["MyControl"]
+			//};
+
+			//grid.Children.Add(btn);
+			//this.Content = grid;
 		}
 	}
 }

@@ -1,11 +1,15 @@
-﻿<Application x:Class="TestWPF.App"
+﻿<Application x:Class="CoinFlip.UI.App"
 				xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 				xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+				xmlns:local="clr-namespace:CoinFlip.UI"
 				StartupUri="MainWindow.xaml">
 	<Application.Resources>
 		<ResourceDictionary>
+			<BitmapImage x:Key="Money" UriSource="../res/money.png" />
+			<BitmapImage x:Key="EnableTrading" UriSource="../res/money.png" />
+			<BitmapImage x:Key="BackTesting" UriSource="../res/clock.png" />
 			<ResourceDictionary.MergedDictionaries>
-				<ResourceDictionary Source="Res.xaml"/>
+				<ResourceDictionary Source="../themes/Dark.xaml" />
 			</ResourceDictionary.MergedDictionaries>
 		</ResourceDictionary>
 	</Application.Resources>
