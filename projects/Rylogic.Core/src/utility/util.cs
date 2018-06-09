@@ -29,12 +29,13 @@ namespace Rylogic.Utility
 	{
 		#if DEBUG
 		public const bool IsDebug = true;
-		#else
+#else
 		public const bool IsDebug = false;
-		#endif
+#endif
 
 		/// <summary>Convenience disposer</summary>
-		[DebuggerStepThrough] public static void Dispose<T>(ref T doomed, bool gc_ok = false) where T:class, IDisposable
+		[DebuggerStepThrough]
+		public static void Dispose<T>(ref T doomed, bool gc_ok = false) where T : class, IDisposable
 		{
 			// Set 'doomed' to null before disposing to catch accidental
 			// use of 'doomed' in a partially disposed state
@@ -46,51 +47,55 @@ namespace Rylogic.Utility
 
 			junk.Dispose();
 		}
-		[DebuggerStepThrough] public static void DisposeAll<TList,T>(ref TList doomed) where TList:IList<T> where T:class, IDisposable
-		{
-			// Set 'doomed' to null before disposing to catch accidental
-			// use of 'doomed' in a partially disposed state
-			if (doomed == null) return;
-			var junk = doomed;
-			doomed = default(TList);
-
-			// Pop each item from the collection and dispose it
-			for (; junk.Count != 0; )
-			{
-				// We have to remove each item, because the list might be a binding list
-				// that performs some action when items are removed.
-				var j = junk.Back();
-				junk.RemoveAt(junk.Count - 1);
-				Dispose(ref j);
-			}
-		}
 
 		/// <summary>Dispose and return null for one-line disposing, e.g. thing = Util.Dispose(thing);</summary>
-		[DebuggerStepThrough] public static T Dispose<T>(T doomed) where T:class, IDisposable
+		[DebuggerStepThrough]
+		public static T Dispose<T>(T doomed) where T : class, IDisposable
 		{
 			Dispose(ref doomed);
 			return null;
 		}
-		[DebuggerStepThrough] public static TList DisposeAll<TList,T>(TList doomed) where TList :IList<T> where T:class, IDisposable
-		{
-			DisposeAll<TList,T>(ref doomed);
-			return doomed;
-		}
-		[DebuggerStepThrough] public static void DisposeAll<T>(this IEnumerable<T> doomed) where T:class, IDisposable
-		{
-			if (doomed == null) return;
-			foreach (var d in doomed.Where(x => x != null).ToArray())
-				Dispose(d);
-		}
-		[DebuggerStepThrough] public static T[] DisposeAll<T>(T[] doomed) where T:class, IDisposable
+
+		/// <summary>Dispose all items in the 'doomed' array, start at the last item. On return, the array will be full of nulls</summary>
+		[DebuggerStepThrough]
+		public static T[] DisposeAll<T>(T[] doomed) where T : class, IDisposable
 		{
 			if (doomed == null) return null;
-			for (int i = 0; i != doomed.Length; ++i)
+			for (int i = doomed.Length; i-- != 0; )
 				Dispose(ref doomed[i]);
 
 			return null;
 		}
+
+		/// <summary>Disposes items in the 'doomed' list, started at the last item. On return, 'doomed' will be an empty list</summary>
+		[DebuggerStepThrough]
+		public static void DisposeAll<T>(IList<T> doomed) where T : class, IDisposable
+		{
+			// Pop each item from the collection and dispose it
+			if (doomed == null) return;
+			for (int i = doomed.Count; i-- != 0;)
+			{
+				// We have to remove each item, because the list might be a binding list
+				// that performs some action when items are removed.
+				var item = doomed[i];
+				doomed.RemoveAt(i);
+				Dispose(ref item);
+			}
+		}
+
+		/// <summary>Dispose a range of doomed items</summary>
+		[DebuggerStepThrough]
+		public static IEnumerable<T> DisposeRange<T>(this IEnumerable<T> doomed) where T : class, IDisposable
+		{
+			if (doomed == null) return doomed;
+			foreach (var d in doomed.Where(x => x != null).ToList())
+				Dispose(d);
+
+			return doomed;
+		}
+
 		/// <summary>Dispose a range within a collection</summary>
+		[DebuggerStepThrough]
 		public static void DisposeRange(IList doomed, int start, int count)
 		{
 			for (int i = start, iend = start + count; i != iend; ++i)
@@ -986,6 +991,35 @@ namespace Rylogic.Utility
 
 			return sb.ToString();
 		}
+
+		/// <summary>
+		/// Helper for making a file dialog file type filter string.
+		/// Strings starting with *. are assumed to be extensions
+		/// Use: FileDialogFilter("Text Files","*.txt","Bitmaps","*.bmp","*.png"); </summary>
+		public static string FileDialogFilter(params string[] desc)
+		{
+			if (desc.Length == 0) return string.Empty;
+			if (desc[0].StartsWith("*.")) throw new Exception("First string should be a file type description");
+
+			var sb = new StringBuilder();
+			var extn = new List<string>();
+			for (int i = 0; i != desc.Length;)
+			{
+				if (sb.Length != 0) sb.Append("|");
+				sb.Append(desc[i]);
+
+				extn.Clear();
+				for (++i; i != desc.Length && desc[i].StartsWith("*."); ++i)
+					extn.Add(desc[i]);
+
+				if (extn.Count == 0) throw new Exception("Expected file extension patterns to follow description");
+
+				sb.Append(" (").Append(string.Join(",", extn)).Append(")");
+				sb.Append("|").Append(string.Join(";", extn));
+			}
+
+			return sb.ToString();
+		}
 	}
 
 	/// <summary>Type specific utility methods</summary>
@@ -1095,45 +1129,45 @@ namespace Rylogic.UnitTests
 		    byte[] lhs = new byte[]{1,2,3,4,5};
 		    byte[] rhs = new byte[]{3,4,5,6,7};
     
-		    Assert.AreEqual(-1, Util.Compare(lhs, 0, 5, rhs, 0, 5));
-		    Assert.AreEqual( 0, Util.Compare(lhs, 2, 3, rhs, 0, 3));
-		    Assert.AreEqual( 1, Util.Compare(lhs, 3, 2, rhs, 0, 2));
-		    Assert.AreEqual(-1, Util.Compare(lhs, 2, 3, rhs, 0, 4));
-		    Assert.AreEqual( 1, Util.Compare(lhs, 2, 3, rhs, 0, 2));
+		    Assert.Equal(-1, Util.Compare(lhs, 0, 5, rhs, 0, 5));
+		    Assert.Equal( 0, Util.Compare(lhs, 2, 3, rhs, 0, 3));
+		    Assert.Equal( 1, Util.Compare(lhs, 3, 2, rhs, 0, 2));
+		    Assert.Equal(-1, Util.Compare(lhs, 2, 3, rhs, 0, 4));
+		    Assert.Equal( 1, Util.Compare(lhs, 2, 3, rhs, 0, 2));
 	    }
 		[Test] public void Convert()
 	    {
 		    int[] src = {1,2,3,4};
 		    List<int> dst = new List<int>(Util.Conv(src, i=>i*2));
-		    for (int i = 0; i != src.Length; ++i) Assert.AreEqual(dst[i], 2*src[i]);
+		    for (int i = 0; i != src.Length; ++i) Assert.Equal(dst[i], 2*src[i]);
 	    }
 		[Test] public void ToFromByteArray()
 		{
 			const ulong num = 12345678910111213;
 			var bytes = Util.ToBytes(num);
-			Assert.AreEqual(8, bytes.Length);
+			Assert.Equal(8, bytes.Length);
 			var NUM = Util.FromBytes<ulong>(bytes);
-			Assert.AreEqual(num, NUM);
+			Assert.Equal(num, NUM);
 
 			var s = new Struct{m_int = 42, m_byte = 0xab, m_ushort = 0xfedc};
 			bytes = Util.ToBytes(s);
-			Assert.AreEqual(7, bytes.Length);
+			Assert.Equal(7, bytes.Length);
 
 			var S = Util.FromBytes<Struct>(bytes);
-			Assert.AreEqual(s,S);
+			Assert.Equal(s,S);
 
 			var b = Util.FromBytes<byte>(bytes, 4);
-			Assert.AreEqual(s.m_byte, b);
+			Assert.Equal(s.m_byte, b);
 		}
 		[Test] public void ToFromXml()
 		{
 			var x1 = new SerialisableType{Int = 1, String = "2", Point = new Point(3,4), EEnum = SerialisableType.SomeEnum.Two, Data = new[]{1,2,3,4}};
 			var xml = Util<SerialisableType>.ToXml(x1, true);
 			var x2 = Util<SerialisableType>.FromXml(xml);
-			Assert.AreEqual(x1.Int, x2.Int);
-			Assert.AreEqual(x1.String, x2.String);
-			Assert.AreEqual(x1.Point, x2.Point);
-			Assert.AreEqual(x1.EEnum, x2.EEnum);
+			Assert.Equal(x1.Int, x2.Int);
+			Assert.Equal(x1.String, x2.String);
+			Assert.Equal(x1.Point, x2.Point);
+			Assert.Equal(x1.EEnum, x2.EEnum);
 			Assert.True(x1.Data.SequenceEqual(x2.Data));
 		}
 		[Test] public void ToFromBinary()
@@ -1141,35 +1175,35 @@ namespace Rylogic.UnitTests
 			var x1 = new SerialisableType{Int = 1, String = "2", Point = new Point(3,4), EEnum = SerialisableType.SomeEnum.Two, Data = new[]{1,2,3,4}};
 			var xml = Util<SerialisableType>.ToBlob(x1);
 			var x2 = Util<SerialisableType>.FromBlob(xml);
-			Assert.AreEqual(x1.Int, x2.Int);
-			Assert.AreEqual(x1.String, x2.String);
-			Assert.AreEqual(x1.Point, x2.Point);
-			Assert.AreEqual(x1.EEnum, x2.EEnum);
+			Assert.Equal(x1.Int, x2.Int);
+			Assert.Equal(x1.String, x2.String);
+			Assert.Equal(x1.Point, x2.Point);
+			Assert.Equal(x1.EEnum, x2.EEnum);
 			Assert.True(x1.Data.SequenceEqual(x2.Data));
 		}
 		[Test] public void PrettySize()
 		{
 			Func<long,string> pretty = size => { return Util.PrettySize(size, true, 1) + " " + Util.PrettySize(size, false, 1); };
 
-			Assert.AreEqual(      "0B 0iB"      , pretty(0));
-			Assert.AreEqual(     "27B 27iB"     , pretty(27));
-			Assert.AreEqual(    "999B 999iB"    , pretty(999));
-			Assert.AreEqual(   "1.0KB 1000iB"   , pretty(1000));
-			Assert.AreEqual(   "1.0KB 1023iB"   , pretty(1023));
-			Assert.AreEqual(   "1.0KB 1.0KiB"   , pretty(1024));
-			Assert.AreEqual(   "1.7KB 1.7KiB"   , pretty(1728));
-			Assert.AreEqual( "110.6KB 108.0KiB" , pretty(110592));
-			Assert.AreEqual(   "7.1MB 6.8MiB"   , pretty(7077888));
-			Assert.AreEqual( "453.0MB 432.0MiB" , pretty(452984832));
-			Assert.AreEqual(  "29.0GB 27.0GiB"  , pretty(28991029248));
-			Assert.AreEqual(   "1.9TB 1.7TiB"   , pretty(1855425871872));
-			Assert.AreEqual(   "9.2EB 8.0EiB"   , pretty(9223372036854775807));
+			Assert.Equal(      "0B 0iB"      , pretty(0));
+			Assert.Equal(     "27B 27iB"     , pretty(27));
+			Assert.Equal(    "999B 999iB"    , pretty(999));
+			Assert.Equal(   "1.0KB 1000iB"   , pretty(1000));
+			Assert.Equal(   "1.0KB 1023iB"   , pretty(1023));
+			Assert.Equal(   "1.0KB 1.0KiB"   , pretty(1024));
+			Assert.Equal(   "1.7KB 1.7KiB"   , pretty(1728));
+			Assert.Equal( "110.6KB 108.0KiB" , pretty(110592));
+			Assert.Equal(   "7.1MB 6.8MiB"   , pretty(7077888));
+			Assert.Equal( "453.0MB 432.0MiB" , pretty(452984832));
+			Assert.Equal(  "29.0GB 27.0GiB"  , pretty(28991029248));
+			Assert.Equal(   "1.9TB 1.7TiB"   , pretty(1855425871872));
+			Assert.Equal(   "9.2EB 8.0EiB"   , pretty(9223372036854775807));
 		}
 		[Test] public void ToFromHexString()
 		{
 			var data = new byte[]{1,3,5,7,9,10,8,6,4,2,0,255,128};
 			var s = Util.ToHexString(data,sep:",",line_sep:"\r\n",width:4);
-			Assert.AreEqual(s, "01,03,05,07\r\n09,0A,08,06\r\n04,02,00,FF\r\n80");
+			Assert.Equal(s, "01,03,05,07\r\n09,0A,08,06\r\n04,02,00,FF\r\n80");
 			var d = Util.FromHexString(s);
 			Assert.True(data.SequenceEqual(d));
 		}

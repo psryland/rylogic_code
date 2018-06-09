@@ -156,9 +156,9 @@ namespace Rylogic.UnitTests
 				"   Rylogic.UnitTests.TestSherlock+Thing.Handler(System.Object, System.EventArgs)"+Environment.NewLine,
 			};
 			var report = Sherlock.CheckEvents(thing);
-			Assert.AreEqual(expected.Count, report.Count);
+			Assert.Equal(expected.Count, report.Count);
 			for (int i = 0; i != expected.Count; ++i)
-				Assert.AreEqual(expected[i], report[i]);
+				Assert.Equal(expected[i], report[i]);
 		}
 		[Test] public void FindRefs()
 		{

@@ -410,18 +410,18 @@ namespace Rylogic.UnitTests
 			var a0 = new[]{1,2,3,4};
 			var A0 = a0.Dup();
 
-			Assert.AreEqual(typeof(int[]), A0.GetType());
+			Assert.Equal(typeof(int[]), A0.GetType());
 			Assert.True(A0.SequenceEqual(a0));
 
-			Assert.AreEqual(2, A0.IndexOf(3));
-			Assert.AreEqual(-1, A0.IndexOf(5));
+			Assert.Equal(2, A0.IndexOf(3));
+			Assert.Equal(-1, A0.IndexOf(5));
 
 			for (var err = 0; err != 2; ++err)
 			{
 				// 1-Dimensional array value equality
 				var a1 = new [] { 1.0, 2.0, 3.0, 4.0, 5.0, 6.0 };
 				var A1 = new [] { 1.0, 2.0, 3.0, 4.0, 5.0, 6.0 + err };
-				Assert.AreEqual(Array_.Equal(a1, A1), err == 0);
+				Assert.Equal(Array_.Equal(a1, A1), err == 0);
 
 				// 2-Dimensional array value equality
 				var v2 = 0.0;
@@ -434,7 +434,7 @@ namespace Rylogic.UnitTests
 						A2[i,j] = v2 + err;
 						v2 += 1.0;
 					}
-				Assert.AreEqual(Array_.Equal(a2, A2), err == 0);
+				Assert.Equal(Array_.Equal(a2, A2), err == 0);
 
 				// N-Dimensional array value equality
 				var v3 = 0.0;
@@ -448,7 +448,7 @@ namespace Rylogic.UnitTests
 							A3[i,j,k] = v3 + err;
 							v3 += 1.0;
 						}
-				Assert.AreEqual(Array_.Equal(a3, A3), err == 0);
+				Assert.Equal(Array_.Equal(a3, A3), err == 0);
 			}
 		}
 		[Test] public void ByteArrayAs()
@@ -456,27 +456,27 @@ namespace Rylogic.UnitTests
 			var b0 = new byte[]{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
 			var b1 = new byte[]{0x00, 0x00, 0x80, 0x3f};
 			var b2 = new byte[]{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF0, 0x3F};
-			Assert.AreEqual((byte)0x01            ,b0.AsUInt8 ());
-			Assert.AreEqual((ushort)0x0201        ,b0.AsUInt16());
-			Assert.AreEqual((uint)0x04030201U     ,b0.AsUInt32());
-			Assert.AreEqual(0x0807060504030201UL  ,b0.AsUInt64());
-			Assert.AreEqual((sbyte)0x01           ,b0.AsInt8  ());
-			Assert.AreEqual((short)0x0201         ,b0.AsInt16 ());
-			Assert.AreEqual(0x04030201            ,b0.AsInt32 ());
-			Assert.AreEqual(0x0807060504030201L   ,b0.AsInt64 ());
-			Assert.AreEqual(1f                    ,b1.AsFloat ());
-			Assert.AreEqual(1.0                   ,b2.AsDouble());
-			Assert.AreEqual(true                  ,b0.AsBool  ());
-			Assert.AreEqual((char)0x0201          ,b0.AsChar  ());
+			Assert.Equal((byte)0x01            ,b0.AsUInt8 ());
+			Assert.Equal((ushort)0x0201        ,b0.AsUInt16());
+			Assert.Equal((uint)0x04030201U     ,b0.AsUInt32());
+			Assert.Equal(0x0807060504030201UL  ,b0.AsUInt64());
+			Assert.Equal((sbyte)0x01           ,b0.AsInt8  ());
+			Assert.Equal((short)0x0201         ,b0.AsInt16 ());
+			Assert.Equal(0x04030201            ,b0.AsInt32 ());
+			Assert.Equal(0x0807060504030201L   ,b0.AsInt64 ());
+			Assert.Equal(1f                    ,b1.AsFloat ());
+			Assert.Equal(1.0                   ,b2.AsDouble());
+			Assert.Equal(true                  ,b0.AsBool  ());
+			Assert.Equal((char)0x0201          ,b0.AsChar  ());
 		}
 		[Test] public void ByteArrayAsStruct()
 		{
 			var b0 = new byte[]{0x01,0x02,0x03,0x04,0x41,0xAB};
 			var thing = b0.As<Thing>();
 
-			Assert.AreEqual(0x04030201 , thing.m_int );
-			Assert.AreEqual('A'        , thing.m_char);
-			Assert.AreEqual((byte)0xab , thing.m_byte);
+			Assert.Equal(0x04030201 , thing.m_int );
+			Assert.Equal('A'        , thing.m_char);
+			Assert.Equal((byte)0xab , thing.m_byte);
 		}
 	}
 }

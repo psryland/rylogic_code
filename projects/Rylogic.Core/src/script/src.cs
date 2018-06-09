@@ -194,8 +194,8 @@ namespace Rylogic.UnitTests
 			const string str = "This is a stream of characters\n";
 			var src = new StringSrc(str);
 			for (int i = 0; i != str.Length; ++i, src.Next())
-				Assert.AreEqual(str[i], src.Peek);
-			Assert.AreEqual((char)0, src.Peek);
+				Assert.Equal(str[i], src.Peek);
+			Assert.Equal((char)0, src.Peek);
 		}
 		[Test] public void IndentSrc()
 		{
@@ -210,8 +210,8 @@ namespace Rylogic.UnitTests
 
 			var src = new IndentSrc(new StringSrc(str_in), "indent ");
 			for (int i = 0; i != str_out.Length; ++i, src.Next())
-				Assert.AreEqual(str_out[i], src.Peek);
-			Assert.AreEqual((char)0, src.Peek);
+				Assert.Equal(str_out[i], src.Peek);
+			Assert.Equal((char)0, src.Peek);
 		}
 	}
 }

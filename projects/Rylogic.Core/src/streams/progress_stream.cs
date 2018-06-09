@@ -173,15 +173,15 @@ namespace Rylogic.UnitTests
 				
 				// Test reading more that 2*granularity bytes causes only 1 progress update
 				read = stream.Read(buf, 0, chunk);
-				Assert.AreEqual(chunk, read);
-				Assert.AreEqual(expected_steps, steps);
+				Assert.Equal(chunk, read);
+				Assert.Equal(expected_steps, steps);
 
 				expected_steps.Add(44);
 
 				// Test ReportProgress is called when 100% of the data is read
 				read = stream.Read(buf, 0, buf.Length);
-				Assert.AreEqual(str.Length - chunk, read);
-				Assert.AreEqual(expected_steps, steps);
+				Assert.Equal(str.Length - chunk, read);
+				Assert.Equal(expected_steps, steps);
 			}
 			
 			// Test NotifyAllSteps = true
@@ -198,9 +198,9 @@ namespace Rylogic.UnitTests
 				List<long> expected_steps = new List<long>{10,20,30,40,44};
 				
 				// Test there is a progress call for each granularity step plus one for the final 100% of data read
-				Assert.AreEqual(str.Length, read);
-				Assert.AreEqual(expected_call_count, steps.Count);
-				Assert.AreEqual(expected_steps, steps);
+				Assert.Equal(str.Length, read);
+				Assert.Equal(expected_call_count, steps.Count);
+				Assert.Equal(expected_steps, steps);
 			}
 		}
 	}

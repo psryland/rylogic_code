@@ -447,7 +447,7 @@ namespace CoinFlip
 			}
 			public void Dispose()
 			{
-				Util.DisposeAll(m_map.Values);
+				Util.DisposeRange(m_map.Values);
 				m_map.Clear();
 			}
 

@@ -30,10 +30,10 @@ namespace Rylogic.UnitTests
 			acc["Three"] += 4f;
 			acc["Three"] -= 1f;
 			acc["Three"] *= 1f;
-			Assert.AreEqual(acc["One"], 1f);
-			Assert.AreEqual(acc["Two"], 2f);
-			Assert.AreEqual(acc["Three"], 3f);
-			Assert.AreEqual(acc["Four"], 0f);
+			Assert.Equal(acc["One"], 1f);
+			Assert.Equal(acc["Two"], 2f);
+			Assert.Equal(acc["Three"], 3f);
+			Assert.Equal(acc["Four"], 0f);
 		}
 	}
 }

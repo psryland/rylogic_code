@@ -224,7 +224,7 @@ namespace Rylogic.UnitTests
 				}
 
 				// "Back in main(), data = " << data << '\n';
-				Assert.AreEqual(data, "Changed data");
+				Assert.Equal(data, "Changed data");
 
 				worker.Join();
 			}
@@ -242,7 +242,7 @@ namespace Rylogic.UnitTests
 				lock (mutex)
 				{
 					var value = cv.Wait(mutex, x => ready);
-					Assert.AreEqual(value, 1);
+					Assert.Equal(value, 1);
 
 					// after the wait, we own the lock.
 					cv.NotifyOne(mutex, 42);
@@ -267,7 +267,7 @@ namespace Rylogic.UnitTests
 				lock (mutex)
 				{
 					var value = cv.Wait(mutex, x => processed);
-					Assert.AreEqual(value, 42);
+					Assert.Equal(value, 42);
 				}
 
 				worker.Join();

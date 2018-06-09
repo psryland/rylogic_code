@@ -162,14 +162,14 @@ namespace Rylogic.UnitTests
 
 		[Test] public void Units()
 		{
-			Assert.AreEqual("m", Units<Whatsit>.UnitLabel(x => x.Distance));
-			Assert.AreEqual("m/s", Units<Whatsit>.UnitLabel(x => x.Speed));
+			Assert.Equal("m", Units<Whatsit>.UnitLabel(x => x.Distance));
+			Assert.Equal("m/s", Units<Whatsit>.UnitLabel(x => x.Speed));
 				
-			Assert.AreEqual(1.0, Units<Whatsit>.UnitScale(x => x.Distance));
-			Assert.AreEqual(0.001, Units<Whatsit>.UnitScale(x => x.Speed));
+			Assert.Equal(1.0, Units<Whatsit>.UnitScale(x => x.Distance));
+			Assert.Equal(0.001, Units<Whatsit>.UnitScale(x => x.Speed));
 
-			Assert.AreEqual(0, Units<Whatsit>.UnitDP(x => x.Distance));
-			Assert.AreEqual(0, Units<Whatsit>.UnitDP(x => x.Speed));
+			Assert.Equal(0, Units<Whatsit>.UnitDP(x => x.Distance));
+			Assert.Equal(0, Units<Whatsit>.UnitDP(x => x.Speed));
 		}
 	}
 }

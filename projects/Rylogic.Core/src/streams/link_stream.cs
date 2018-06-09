@@ -303,7 +303,7 @@ namespace Rylogic.UnitTests
 			wait.WaitOne();
 			Assert.Null(write_ex);
 			Assert.Null(read_ex);
-			Assert.AreEqual(src, msg);
+			Assert.Equal(src, msg);
 		}
 	}
 }

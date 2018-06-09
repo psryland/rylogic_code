@@ -79,7 +79,7 @@ namespace TestCS
 		{
 			if (!m_tb_wav_filepath.Text.HasValue())
 			{
-				using (var dlg = new OpenFileDialog { Title = "Open WAV file", Filter = Util2.FileDialogFilter("Wave Files", "*.wav") })
+				using (var dlg = new OpenFileDialog { Title = "Open WAV file", Filter = Util.FileDialogFilter("Wave Files", "*.wav") })
 				{
 					if (dlg.ShowDialog(this) != DialogResult.OK) return;
 					m_tb_wav_filepath.Text = dlg.FileName;

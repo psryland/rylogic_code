@@ -966,12 +966,12 @@ namespace Rylogic.UnitTests
 		[Test] public void TestSettings1()
 		{
 			var s = new Settings();
-			Assert.AreEqual(Settings.Default.Str, s.Str);
-			Assert.AreEqual(Settings.Default.Int, s.Int);
-			Assert.AreEqual(Settings.Default.DTO, s.DTO);
-			Assert.AreEqual(Settings.Default.Font, s.Font);
+			Assert.Equal(Settings.Default.Str, s.Str);
+			Assert.Equal(Settings.Default.Int, s.Int);
+			Assert.Equal(Settings.Default.DTO, s.DTO);
+			Assert.Equal(Settings.Default.Font, s.Font);
 			Assert.True(Settings.Default.Floats.SequenceEqual(s.Floats));
-			Assert.AreEqual(Settings.Default.Sub.Field, s.Sub.Field);
+			Assert.Equal(Settings.Default.Sub.Field, s.Sub.Field);
 			Assert.True(Settings.Default.Sub.Buffer.SequenceEqual(s.Sub.Buffer));
 			Assert.True(Settings.Default.Sub2.Name == s.Sub2.Name);
 			Assert.True((int)Settings.Default.Things[0] == 1);
@@ -1002,20 +1002,20 @@ namespace Rylogic.UnitTests
 
 			var S = new Settings(xml);
 
-			Assert.AreEqual(s.Str       , S.Str);
-			Assert.AreEqual(s.Int       , S.Int);
-			Assert.AreEqual(s.DTO       , S.DTO);
-			Assert.AreEqual(s.Font      , S.Font);
+			Assert.Equal(s.Str       , S.Str);
+			Assert.Equal(s.Int       , S.Int);
+			Assert.Equal(s.DTO       , S.DTO);
+			Assert.Equal(s.Font      , S.Font);
 			Assert.True(s.Floats.SequenceEqual(S.Floats));
-			Assert.AreEqual(s.Sub.Field , S.Sub.Field);
+			Assert.Equal(s.Sub.Field , S.Sub.Field);
 			Assert.True(s.Sub.Buffer.SequenceEqual(S.Sub.Buffer));
 			Assert.True((string)s.Things[0] == "Hello");
 			Assert.True((double)s.Things[1] == 6.28);
 
 			var st2 = new SettingsThing(s.Sub2);
-			Assert.AreEqual(st.x, st2.x);
-			Assert.AreEqual(st.y, st2.y);
-			Assert.AreEqual(st.z, st2.z);
+			Assert.Equal(st.x, st2.x);
+			Assert.Equal(st.y, st2.y);
+			Assert.Equal(st.z, st2.z);
 		}
 		[Test] public void TestEvents()
 		{
@@ -1030,28 +1030,28 @@ namespace Rylogic.UnitTests
 			settings.SettingsLoaded  += (s,a) => loading  = ++i;
 
 			settings.Str = "Modified";
-			Assert.AreEqual(1, changing);
-			Assert.AreEqual(2, changed);
-			Assert.AreEqual(0, saving);
-			Assert.AreEqual(0, loading);
+			Assert.Equal(1, changing);
+			Assert.Equal(2, changed);
+			Assert.Equal(0, saving);
+			Assert.Equal(0, loading);
 
 			settings.Sub.Field = 23;
-			Assert.AreEqual(3, changing);
-			Assert.AreEqual(4, changed);
-			Assert.AreEqual(0, saving);
-			Assert.AreEqual(0, loading);
+			Assert.Equal(3, changing);
+			Assert.Equal(4, changed);
+			Assert.Equal(0, saving);
+			Assert.Equal(0, loading);
 
 			settings.Save(file);
-			Assert.AreEqual(3, changing);
-			Assert.AreEqual(4, changed);
-			Assert.AreEqual(5, saving);
-			Assert.AreEqual(0, loading);
+			Assert.Equal(3, changing);
+			Assert.Equal(4, changed);
+			Assert.Equal(5, saving);
+			Assert.Equal(0, loading);
 
 			settings.Load(file);
-			Assert.AreEqual(3, changing);
-			Assert.AreEqual(4, changed);
-			Assert.AreEqual(5, saving);
-			Assert.AreEqual(6, loading);
+			Assert.Equal(3, changing);
+			Assert.Equal(4, changed);
+			Assert.Equal(5, saving);
+			Assert.Equal(6, loading);
 		}
 	}
 }

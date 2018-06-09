@@ -456,32 +456,32 @@ namespace Rylogic.UnitTests
 			var v2 = 0.456m._("B");
 
 			// Unary Operators
-			Assert.AreEqual(+v0, +0.123m._("A"));
-			Assert.AreEqual(-v0, -0.123m._("A"));
+			Assert.Equal(+v0, +0.123m._("A"));
+			Assert.Equal(-v0, -0.123m._("A"));
 
 			// Binary Operators
-			Assert.AreEqual(v0 + 0m, 0.123m._("A"));
-			Assert.AreEqual(0m - v1, -0.456m._("A"));
-			Assert.AreEqual(v0 + 0.456m, 0.579m._("A"));
-			Assert.AreEqual(0.123m + v1, 0.579m._("A"));
-			Assert.AreEqual(v0 + v1, 0.579m._("A"));
+			Assert.Equal(v0 + 0m, 0.123m._("A"));
+			Assert.Equal(0m - v1, -0.456m._("A"));
+			Assert.Equal(v0 + 0.456m, 0.579m._("A"));
+			Assert.Equal(0.123m + v1, 0.579m._("A"));
+			Assert.Equal(v0 + v1, 0.579m._("A"));
 			Assert.Throws<Exception>(() => { var r1 = v0 + v2; });
 
-			Assert.AreEqual(v1 - 0.123m, 0.333m._("A"));
-			Assert.AreEqual(0.456m - v0, 0.333m._("A"));
-			Assert.AreEqual(v1 - v0, 0.333m._("A"));
+			Assert.Equal(v1 - 0.123m, 0.333m._("A"));
+			Assert.Equal(0.456m - v0, 0.333m._("A"));
+			Assert.Equal(v1 - v0, 0.333m._("A"));
 			Assert.Throws<Exception>(() => { var r1 = v2 - v0; });
 
-			Assert.AreEqual(v0 * 5m, (0.123m * 5m)._("A"));
-			Assert.AreEqual(5m * v1, (5m * 0.456m)._("A"));
-			Assert.AreEqual(v0 * v1, (0.123m * 0.456m)._("A²"));
-			Assert.AreEqual(v0 * v2, (0.123m * 0.456m)._("A.B"));
+			Assert.Equal(v0 * 5m, (0.123m * 5m)._("A"));
+			Assert.Equal(5m * v1, (5m * 0.456m)._("A"));
+			Assert.Equal(v0 * v1, (0.123m * 0.456m)._("A²"));
+			Assert.Equal(v0 * v2, (0.123m * 0.456m)._("A.B"));
 
-			Assert.AreEqual(v0 / 5m, (0.123m / 5m)._("A"));
-			Assert.AreEqual(5m / v1, (5m / 0.456m)._("1/A"));
-			Assert.AreEqual(v0 / v1, (0.123m / 0.456m)._(""));
-			Assert.AreEqual(v0 / v2, (0.123m / 0.456m)._("A/B"));
-			Assert.AreEqual(v2 / v0, (0.456m / 0.123m)._("B/A"));
+			Assert.Equal(v0 / 5m, (0.123m / 5m)._("A"));
+			Assert.Equal(5m / v1, (5m / 0.456m)._("1/A"));
+			Assert.Equal(v0 / v1, (0.123m / 0.456m)._(""));
+			Assert.Equal(v0 / v2, (0.123m / 0.456m)._("A/B"));
+			Assert.Equal(v2 / v0, (0.456m / 0.123m)._("B/A"));
 
 			// Comparisons
 			Assert.True(v0 == 0.123m._("A"));
@@ -506,35 +506,35 @@ namespace Rylogic.UnitTests
 		}
 		[Test] public void CombineUnits()
 		{
-			Assert.AreEqual(Unit_.CombineUnits("","", divide:false)                      , ""        );
-			Assert.AreEqual(Unit_.CombineUnits("","", divide:true)                       , ""        );
-			Assert.AreEqual(Unit_.CombineUnits("1","1", divide:false)                    , ""        );
-			Assert.AreEqual(Unit_.CombineUnits("1","1", divide:true)                     , ""        );
-			Assert.AreEqual(Unit_.CombineUnits("1","A", divide:false)                    , "A"       );
-			Assert.AreEqual(Unit_.CombineUnits("1","A", divide:true)                     , "1/A"     );
-			Assert.AreEqual(Unit_.CombineUnits("1","A.B", divide:false)                  , "A.B"     );
-			Assert.AreEqual(Unit_.CombineUnits("1","A.B", divide:true)                   , "1/A.B"   );
-			Assert.AreEqual(Unit_.CombineUnits("A","A", divide:false)                    , "A²"      );
-			Assert.AreEqual(Unit_.CombineUnits("A","A", divide:true)                     , ""        );
-			Assert.AreEqual(Unit_.CombineUnits("A.B","A", divide:false)                  , "A².B"    );
-			Assert.AreEqual(Unit_.CombineUnits("12","12", divide:false)                  , "12²"     );
-			Assert.AreEqual(Unit_.CombineUnits("A.B","A", divide:true)                   , "B"       );
-			Assert.AreEqual(Unit_.CombineUnits("A.B","A.B", divide:false)                , "A².B²"   );
-			Assert.AreEqual(Unit_.CombineUnits("A.B","A.A", divide:true)                 , "B/A"     );
-			Assert.AreEqual(Unit_.CombineUnits("A.B/C","C", divide:false)                , "A.B"     );
-			Assert.AreEqual(Unit_.CombineUnits("A/B.C","B/A", divide:false)              , "1/C"     );
-			Assert.AreEqual(Unit_.CombineUnits("A³.B²/C.D^4","B³.C.D/A².C²", divide:true) , "A^5/B.D^5" );
+			Assert.Equal(Unit_.CombineUnits("","", divide:false)                      , ""        );
+			Assert.Equal(Unit_.CombineUnits("","", divide:true)                       , ""        );
+			Assert.Equal(Unit_.CombineUnits("1","1", divide:false)                    , ""        );
+			Assert.Equal(Unit_.CombineUnits("1","1", divide:true)                     , ""        );
+			Assert.Equal(Unit_.CombineUnits("1","A", divide:false)                    , "A"       );
+			Assert.Equal(Unit_.CombineUnits("1","A", divide:true)                     , "1/A"     );
+			Assert.Equal(Unit_.CombineUnits("1","A.B", divide:false)                  , "A.B"     );
+			Assert.Equal(Unit_.CombineUnits("1","A.B", divide:true)                   , "1/A.B"   );
+			Assert.Equal(Unit_.CombineUnits("A","A", divide:false)                    , "A²"      );
+			Assert.Equal(Unit_.CombineUnits("A","A", divide:true)                     , ""        );
+			Assert.Equal(Unit_.CombineUnits("A.B","A", divide:false)                  , "A².B"    );
+			Assert.Equal(Unit_.CombineUnits("12","12", divide:false)                  , "12²"     );
+			Assert.Equal(Unit_.CombineUnits("A.B","A", divide:true)                   , "B"       );
+			Assert.Equal(Unit_.CombineUnits("A.B","A.B", divide:false)                , "A².B²"   );
+			Assert.Equal(Unit_.CombineUnits("A.B","A.A", divide:true)                 , "B/A"     );
+			Assert.Equal(Unit_.CombineUnits("A.B/C","C", divide:false)                , "A.B"     );
+			Assert.Equal(Unit_.CombineUnits("A/B.C","B/A", divide:false)              , "1/C"     );
+			Assert.Equal(Unit_.CombineUnits("A³.B²/C.D^4","B³.C.D/A².C²", divide:true) , "A^5/B.D^5" );
 		}
 		[Test] public void Parse()
 		{
 			var val = 0.123m._("Spon");
 			var str = val.ToString(true);
 			var VAL = Unit<decimal>.Parse(str);
-			Assert.AreEqual(val, VAL);
+			Assert.Equal(val, VAL);
 
 			var r = Unit<decimal>.TryParse(str, out VAL);
 			Assert.True(r);
-			Assert.AreEqual(val, VAL);
+			Assert.Equal(val, VAL);
 		}
 	}
 }

@@ -115,14 +115,14 @@ namespace Rylogic.UnitTests
 			for (int i = 0; i != 2; ++i)
 			{
 				MemoryStream s = null;
-				Action func = () => { Assert.AreEqual(str.Length, s.Capacity); };
+				Action func = () => { Assert.Equal(str.Length, s.Capacity); };
 				
 				using (s = new MemoryStream(Encoding.ASCII.GetBytes(str)))
 				{
 					Assert.DoesNotThrow(()=>{Assert.True(s.CanRead);});
 					using (var r = new StreamReader(i == 0 ? (Stream)s : new UncloseableStream(s)))
 					{
-						Assert.AreEqual(str, r.ReadToEnd());
+						Assert.Equal(str, r.ReadToEnd());
 					}
 					
 					if (i == 0) Assert.Throws<ObjectDisposedException>(func);

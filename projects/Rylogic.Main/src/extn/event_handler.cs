@@ -412,7 +412,7 @@ namespace Rylogic.UnitTests
 				BooEvent.Raise(2);
 				BooEvent.Raise(3);
 			}
-			Assert.AreEqual(0, boo_raised);
+			Assert.Equal(0, boo_raised);
 		}
 	}
 }

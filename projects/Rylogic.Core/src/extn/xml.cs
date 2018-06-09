@@ -1691,7 +1691,7 @@ namespace Rylogic.UnitTests
 			// Built in types
 			var node = 5.ToXml("five", false);
 			var five = node.As<int>();
-			Assert.AreEqual(5, five);
+			Assert.Equal(5, five);
 		}
 		[Test] public void ToXmlDrawing()
 		{
@@ -1730,12 +1730,12 @@ namespace Rylogic.UnitTests
 			{
 				var dto0 = DateTimeOffset.MinValue;
 				var dto1 = dto0.ToXml("min_time", true).As<DateTimeOffset>();
-				Assert.AreEqual(dto0, dto1);
+				Assert.Equal(dto0, dto1);
 			}
 			{
 				var dto0 = new DateTimeOffset(2015,11,02, 14, 04, 23, 456, TimeSpan.Zero);
 				var dto1 = dto0.ToXml("today", true).As<DateTimeOffset>();
-				Assert.AreEqual(dto0, dto1);
+				Assert.Equal(dto0, dto1);
 			}
 		}
 		[Test] public void ToXmlGuid()
@@ -1743,7 +1743,7 @@ namespace Rylogic.UnitTests
 			var guid = Guid.NewGuid();
 			var node = guid.ToXml("guid", false);
 			var GUID = node.As<Guid>();
-			Assert.AreEqual(guid, GUID);
+			Assert.Equal(guid, GUID);
 		}
 		[Test] public void ToXmlCustomTypes()
 		{
@@ -1751,7 +1751,7 @@ namespace Rylogic.UnitTests
 				// XElement constructible class
 				var node = new Elem1(4).ToXml("four", false);
 				var four = node.As<Elem1>();
-				Assert.AreEqual(4U, four.m_uint);
+				Assert.Equal(4U, four.m_uint);
 			}
 			{
 				var arr = new[]{new Elem2(1,"1"), null, new Elem2(3,"3")};
@@ -1769,14 +1769,14 @@ namespace Rylogic.UnitTests
 				var dc = new Elem2(2,"3");
 				var node = dc.ToXml("dc", false);
 				var DC = node.As<Elem2>(factory:t => new Elem2(0,null));
-				Assert.AreEqual(dc.m_int, DC.m_int);
-				Assert.AreEqual(dc.m_string, DC.m_string);
+				Assert.Equal(dc.m_int, DC.m_int);
+				Assert.Equal(dc.m_string, DC.m_string);
 			}
 			{
 				var e4 = new Elem4{m_int = 3};
 				var node = e4.ToXml("e4", false);
 				var E4 = node.As<Elem4>();
-				Assert.AreEqual(e4.m_int, E4.m_int);
+				Assert.Equal(e4.m_int, E4.m_int);
 			}
 		}
 		[Test] public void ToXmlArrays()
@@ -1905,33 +1905,33 @@ namespace Rylogic.UnitTests
 
 			XElement root = xml.Root;
 			Assert.NotNull(root);
-			Assert.AreEqual(1         ,root.Element("a").As<int>());
-			Assert.AreEqual(2.0f      ,root.Element("b").As<float>());
-			Assert.AreEqual("cat"     ,root.Element("c").As<string>());
-			Assert.AreEqual(EEnum.Dog ,root.Element("d").As<EEnum>());
+			Assert.Equal(1         ,root.Element("a").As<int>());
+			Assert.Equal(2.0f      ,root.Element("b").As<float>());
+			Assert.Equal("cat"     ,root.Element("c").As<string>());
+			Assert.Equal(EEnum.Dog ,root.Element("d").As<EEnum>());
 
 			var ints = new List<int>();
 			root.Element("e").As(ints, "i");
-			Assert.AreEqual(5, ints.Count);
+			Assert.Equal(5, ints.Count);
 			for (int i = 0; i != 4; ++i)
-				Assert.AreEqual(i, ints[i]);
+				Assert.Equal(i, ints[i]);
 
 			var chars = new List<char>();
 			root.Element("e").As(chars, "j");
-			Assert.AreEqual(5, chars.Count);
+			Assert.Equal(5, chars.Count);
 			for (int j = 0; j != 4; ++j)
-			Assert.AreEqual((char)('a' + j), chars[j]);
+			Assert.Equal((char)('a' + j), chars[j]);
 
 			ints.Clear();
 			root.Element("e").As(ints, "i", (lhs,rhs) => lhs == rhs);
-			Assert.AreEqual(4, ints.Count);
+			Assert.Equal(4, ints.Count);
 			for (int i = 0; i != 4; ++i)
-				Assert.AreEqual(i, ints[i]);
+				Assert.Equal(i, ints[i]);
 		}
 		[Test] public void XmlAdd()
 		{
 			var xml  = new XDocument();
-			var cmt  = xml.Add2(new XComment("comments"));  Assert.AreEqual(cmt.Value, "comments");
+			var cmt  = xml.Add2(new XComment("comments"));  Assert.Equal(cmt.Value, "comments");
 			var root = xml.Add2(new XElement("root"));      Assert.AreSame(xml.Root, root);
 
 			var ints = new List<int>{0,1,2,3,4};
@@ -1940,7 +1940,7 @@ namespace Rylogic.UnitTests
 
 			var xint = root.Add2("elem", 42, true);
 			s = root.ToString(SaveOptions.DisableFormatting);
-			Assert.AreEqual(
+			Assert.Equal(
 				"<root>" +
 					"<elem ty=\"System.Int32\">42</elem>" +
 				"</root>"
@@ -1949,7 +1949,7 @@ namespace Rylogic.UnitTests
 
 			var xelem = root.Add2("elem", elems[0], true);
 			s = root.ToString(SaveOptions.DisableFormatting);
-			Assert.AreEqual(
+			Assert.Equal(
 				"<root>" +
 				"<elem ty=\"Rylogic.UnitTests.TestXml+Elem1\">elem_0</elem>" +
 				"</root>"
@@ -1958,7 +1958,7 @@ namespace Rylogic.UnitTests
 
 			var xints = root.Add2("ints", "i", ints, true);
 			s = root.ToString(SaveOptions.DisableFormatting);
-			Assert.AreEqual(
+			Assert.Equal(
 				"<root>" +
 					"<ints>" +
 						"<i ty=\"System.Int32\">0</i>" +
@@ -1973,7 +1973,7 @@ namespace Rylogic.UnitTests
 
 			var xelems = root.Add2("elems", "i", elems, true);
 			s = root.ToString(SaveOptions.DisableFormatting);
-			Assert.AreEqual(
+			Assert.Equal(
 				"<root>" +
 					"<elems>" +
 					"<i ty=\"Rylogic.UnitTests.TestXml+Elem1\">elem_0</i>" +
@@ -2002,7 +2002,7 @@ namespace Rylogic.UnitTests
 				"</root>";
 			var xml = XDocument.Parse(src);
 			var cnt = xml.Root.Elements("one","red").Count();
-			Assert.AreEqual(cnt, 4);
+			Assert.Equal(cnt, 4);
 		}
 		[Test] public void XmlEnumerateLeaves()
 		{

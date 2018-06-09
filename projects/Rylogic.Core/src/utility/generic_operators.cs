@@ -430,48 +430,48 @@ namespace Rylogic.UnitTests
 			Operators<double >.Eql(123, 124);
 			Operators<decimal>.Eql(123, 124);
 
-			Assert.AreEqual(Operators<decimal>.MaxValue, decimal.MaxValue);
-			Assert.AreEqual(Operators<decimal>.MinValue, decimal.MinValue);
+			Assert.Equal(Operators<decimal>.MaxValue, decimal.MaxValue);
+			Assert.Equal(Operators<decimal>.MinValue, decimal.MinValue);
 
-			Assert.AreEqual(Operators<short  >.Plus(412)       , (short)+412 );
-			Assert.AreEqual(Operators<long   >.Neg(512)        , -512L       );
-			Assert.AreEqual(Operators<double >.Add(0.1, 0.3)   , 0.1 + 0.3   );
-			Assert.AreEqual(Operators<decimal>.Sub(0.5m, 0.8m) , 0.5m - 0.8m );
-			Assert.AreEqual(Operators<int    >.Mul(3, 7)       , 3 * 7       );
-			Assert.AreEqual(Operators<float  >.Div(1.2f, 3.4f) , 1.2f / 3.4f );
+			Assert.Equal(Operators<short  >.Plus(412)       , (short)+412 );
+			Assert.Equal(Operators<long   >.Neg(512)        , -512L       );
+			Assert.Equal(Operators<double >.Add(0.1, 0.3)   , 0.1 + 0.3   );
+			Assert.Equal(Operators<decimal>.Sub(0.5m, 0.8m) , 0.5m - 0.8m );
+			Assert.Equal(Operators<int    >.Mul(3, 7)       , 3 * 7       );
+			Assert.Equal(Operators<float  >.Div(1.2f, 3.4f) , 1.2f / 3.4f );
 
-			Assert.AreEqual(Operators<float  >.Eql(1.23f, 1.24f)        , 1.23f == 1.24f );
-			Assert.AreEqual(Operators<float  >.Eql(1.23f, 1.23f)        , 1.23f == 1.23f );
-			Assert.AreEqual(Operators<float  >.NEql(1.23f, 1.24f)       , 1.23f != 1.24f );
-			Assert.AreEqual(Operators<float  >.NEql(1.23f, 1.23f)       , 1.23f != 1.23f );
-			Assert.AreEqual(Operators<float  >.Less(1.23f, 1.24f)       , 1.23f <  1.24f );
-			Assert.AreEqual(Operators<float  >.Less(1.23f, 1.23f)       , 1.23f <  1.23f );
-			Assert.AreEqual(Operators<float  >.Less(1.23f, 1.22f)       , 1.23f <  1.22f );
-			Assert.AreEqual(Operators<float  >.LessEql(1.23f, 1.24f)    , 1.23f <= 1.24f );
-			Assert.AreEqual(Operators<float  >.LessEql(1.23f, 1.23f)    , 1.23f <= 1.23f );
-			Assert.AreEqual(Operators<float  >.LessEql(1.23f, 1.22f)    , 1.23f <= 1.22f );
-			Assert.AreEqual(Operators<float  >.Greater(1.23f, 1.24f)    , 1.23f >  1.24f );
-			Assert.AreEqual(Operators<float  >.Greater(1.23f, 1.23f)    , 1.23f >  1.23f );
-			Assert.AreEqual(Operators<float  >.Greater(1.23f, 1.22f)    , 1.23f >  1.22f );
-			Assert.AreEqual(Operators<float  >.GreaterEql(1.23f, 1.24f) , 1.23f >= 1.24f );
-			Assert.AreEqual(Operators<float  >.GreaterEql(1.23f, 1.23f) , 1.23f >= 1.23f );
-			Assert.AreEqual(Operators<float  >.GreaterEql(1.23f, 1.22f) , 1.23f >= 1.22f );
+			Assert.Equal(Operators<float  >.Eql(1.23f, 1.24f)        , 1.23f == 1.24f );
+			Assert.Equal(Operators<float  >.Eql(1.23f, 1.23f)        , 1.23f == 1.23f );
+			Assert.Equal(Operators<float  >.NEql(1.23f, 1.24f)       , 1.23f != 1.24f );
+			Assert.Equal(Operators<float  >.NEql(1.23f, 1.23f)       , 1.23f != 1.23f );
+			Assert.Equal(Operators<float  >.Less(1.23f, 1.24f)       , 1.23f <  1.24f );
+			Assert.Equal(Operators<float  >.Less(1.23f, 1.23f)       , 1.23f <  1.23f );
+			Assert.Equal(Operators<float  >.Less(1.23f, 1.22f)       , 1.23f <  1.22f );
+			Assert.Equal(Operators<float  >.LessEql(1.23f, 1.24f)    , 1.23f <= 1.24f );
+			Assert.Equal(Operators<float  >.LessEql(1.23f, 1.23f)    , 1.23f <= 1.23f );
+			Assert.Equal(Operators<float  >.LessEql(1.23f, 1.22f)    , 1.23f <= 1.22f );
+			Assert.Equal(Operators<float  >.Greater(1.23f, 1.24f)    , 1.23f >  1.24f );
+			Assert.Equal(Operators<float  >.Greater(1.23f, 1.23f)    , 1.23f >  1.23f );
+			Assert.Equal(Operators<float  >.Greater(1.23f, 1.22f)    , 1.23f >  1.22f );
+			Assert.Equal(Operators<float  >.GreaterEql(1.23f, 1.24f) , 1.23f >= 1.24f );
+			Assert.Equal(Operators<float  >.GreaterEql(1.23f, 1.23f) , 1.23f >= 1.23f );
+			Assert.Equal(Operators<float  >.GreaterEql(1.23f, 1.22f) , 1.23f >= 1.22f );
 
-			Assert.AreEqual(Operators<float,int>.Mul(1.23f, 45), 1.23f * 45);
-			Assert.AreEqual(Operators<float,int>.Div(1.23f, 45), 1.23f / 45);
+			Assert.Equal(Operators<float,int>.Mul(1.23f, 45), 1.23f * 45);
+			Assert.Equal(Operators<float,int>.Div(1.23f, 45), 1.23f / 45);
 
-			Assert.AreEqual(Operators<float>.ToString(1.23f, "C") , 1.23f.ToString("C"));
+			Assert.Equal(Operators<float>.ToString(1.23f, "C") , 1.23f.ToString("C"));
 		}
 		[Test] public void EnumUse()
 		{
 			// Non-flags
-			Assert.AreEqual(Operators<Enum0>.Less(Enum0.One, Enum0.Three), true);
+			Assert.Equal(Operators<Enum0>.Less(Enum0.One, Enum0.Three), true);
 
 			// Flags
-			Assert.AreEqual(Operators<Enum1>.BitwiseOR(Enum1.One, Enum1.Four), Enum1.One|Enum1.Four);
-			Assert.AreEqual(Operators<Enum1>.BitwiseAND(Enum1.Seven, Enum1.Two), Enum1.Two);
-			Assert.AreEqual(Operators<Enum1>.OnesComp(Enum1.Two), ~Enum1.Two);
-			Assert.AreEqual(Operators<Enum1>.Less(Enum1.One, Enum1.Four), true);
+			Assert.Equal(Operators<Enum1>.BitwiseOR(Enum1.One, Enum1.Four), Enum1.One|Enum1.Four);
+			Assert.Equal(Operators<Enum1>.BitwiseAND(Enum1.Seven, Enum1.Two), Enum1.Two);
+			Assert.Equal(Operators<Enum1>.OnesComp(Enum1.Two), ~Enum1.Two);
+			Assert.Equal(Operators<Enum1>.Less(Enum1.One, Enum1.Four), true);
 		}
 	}
 }

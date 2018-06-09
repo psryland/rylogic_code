@@ -201,9 +201,9 @@ namespace Rylogic.UnitTests
 		{
 			var a = new v2(1f,1f);
 			var b = new v2(4f,3f);
-			Assert.AreEqual(0f, Geometry.ClosestPoint(a,b,new v2(0f,0f)));
-			Assert.AreEqual(1f, Geometry.ClosestPoint(a,b,new v2(5f,2f)));
-			Assert.AreEqual(0.5f, Geometry.ClosestPoint(a,b,new v2(2.5f,2f)));
+			Assert.Equal(0f, Geometry.ClosestPoint(a,b,new v2(0f,0f)));
+			Assert.Equal(1f, Geometry.ClosestPoint(a,b,new v2(5f,2f)));
+			Assert.Equal(0.5f, Geometry.ClosestPoint(a,b,new v2(2.5f,2f)));
 		}
 	}
 }

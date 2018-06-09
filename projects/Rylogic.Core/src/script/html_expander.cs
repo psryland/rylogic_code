@@ -186,7 +186,7 @@ namespace Rylogic.UnitTests
 				"    data\r\n" +
 				"</root>\r\n";
 			var r = Expand.Html(new StringSrc(template), Environment.CurrentDirectory);
-			Assert.AreEqual(result, r);
+			Assert.Equal(result, r);
 		}
 	}
 }

@@ -376,18 +376,18 @@ namespace Rylogic.UnitTests
 				var load = CSVData.Load(tmp, ignore_comment_rows:true);
 				csv.Rows.RemoveAt(0); // Delete the comment
 
-				Assert.AreEqual(csv.RowCount, load.RowCount);
+				Assert.Equal(csv.RowCount, load.RowCount);
 				for (var i = 0; i != csv.RowCount; ++i)
 				{
 					var r0 = csv[i];
 					var r1 = load[i];
-					Assert.AreEqual(r0.Count, r1.Count);
+					Assert.Equal(r0.Count, r1.Count);
 
 					for (var j = 0; j != r0.Count; ++j)
 					{
 						var e0 = r0[j];
 						var e1 = r1[j];
-						Assert.AreEqual(e0,e1);
+						Assert.Equal(e0,e1);
 					}
 				}
 			}
@@ -406,7 +406,7 @@ namespace Rylogic.UnitTests
 			using (var ms = new MemoryStream(Encoding.UTF8.GetBytes(csv_string), false))
 			{
 				var load = CSVData.Load(ms, ignore_comment_rows:true);
-				Assert.AreEqual(load.RowCount, 3);
+				Assert.Equal(load.RowCount, 3);
 				Assert.True(load[0].SequenceEqual(new[]{"One","Two","Three"}));
 				Assert.True(load[1].SequenceEqual(new[]{"Quoted","",""}));
 				Assert.True(load[2].SequenceEqual(new[]{"Four","# Not a Comment","# Also\r\n# Not,\n# A\r\n# Comment"}));

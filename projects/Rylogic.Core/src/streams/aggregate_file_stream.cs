@@ -275,19 +275,19 @@ namespace Rylogic.UnitTests
 				Assert.True(f.CanRead);
 				Assert.True(f.CanSeek);
 				Assert.False(f.CanWrite);
-				Assert.AreEqual((long)CombinedContent.Length, f.Length);
+				Assert.Equal((long)CombinedContent.Length, f.Length);
 			}
 		}
 		[Test] public void TestFileIndex()
 		{
 			using (var f = new AggregateFileStream(Files))
 			{
-				Assert.AreEqual(0, f.FileIndexAtOffset(0));
-				Assert.AreEqual(0, f.FileIndexAtOffset(Content0.Length - 1));
-				Assert.AreEqual(1, f.FileIndexAtOffset(Content0.Length));
-				Assert.AreEqual(1, f.FileIndexAtOffset(Content0.Length + Content1.Length - 1));
-				Assert.AreEqual(2, f.FileIndexAtOffset(Content0.Length + Content1.Length));
-				Assert.AreEqual(2, f.FileIndexAtOffset(Content0.Length + Content1.Length + Content2.Length - 1));
+				Assert.Equal(0, f.FileIndexAtOffset(0));
+				Assert.Equal(0, f.FileIndexAtOffset(Content0.Length - 1));
+				Assert.Equal(1, f.FileIndexAtOffset(Content0.Length));
+				Assert.Equal(1, f.FileIndexAtOffset(Content0.Length + Content1.Length - 1));
+				Assert.Equal(2, f.FileIndexAtOffset(Content0.Length + Content1.Length));
+				Assert.Equal(2, f.FileIndexAtOffset(Content0.Length + Content1.Length + Content2.Length - 1));
 			}
 		}
 		[Test] public void TestStream()
@@ -299,7 +299,7 @@ namespace Rylogic.UnitTests
 			}
 
 			var combined = File.ReadAllText("fileN.txt");
-			Assert.AreEqual(CombinedContent, combined);
+			Assert.Equal(CombinedContent, combined);
 		}
 		[Test] public void TestRead()
 		{
@@ -310,23 +310,23 @@ namespace Rylogic.UnitTests
 				var offset = 5; // into 'bytes'
 				int pos = 0;    // file pos
 
-				Assert.AreEqual((long)pos, f.Position);
+				Assert.Equal((long)pos, f.Position);
 				var read = f.Read(bytes, offset, Content0.Length/2);
-				Assert.AreEqual(Content0.Length/2, read);
-				Assert.AreEqual((long)(pos + read), f.Position);
-				Assert.AreEqual(s.Substring(0,offset) + CombinedContent.Substring(pos, read) + s.Substring(offset+read), Encoding.UTF8.GetString(bytes));
+				Assert.Equal(Content0.Length/2, read);
+				Assert.Equal((long)(pos + read), f.Position);
+				Assert.Equal(s.Substring(0,offset) + CombinedContent.Substring(pos, read) + s.Substring(offset+read), Encoding.UTF8.GetString(bytes));
 
 				s = Encoding.UTF8.GetString(bytes);
 
 				pos = CombinedContent.Length / 3;
 				f.Seek(pos, SeekOrigin.Begin);
-				Assert.AreEqual((long)pos, f.Position);
+				Assert.Equal((long)pos, f.Position);
 
 				offset = 11;
 				read = f.Read(bytes, offset, Content1.Length);
-				Assert.AreEqual(Content1.Length, read);
-				Assert.AreEqual((long)(pos + read), f.Position);
-				Assert.AreEqual(s.Substring(0,offset) + CombinedContent.Substring(pos, read) + s.Substring(offset+read), Encoding.UTF8.GetString(bytes));
+				Assert.Equal(Content1.Length, read);
+				Assert.Equal((long)(pos + read), f.Position);
+				Assert.Equal(s.Substring(0,offset) + CombinedContent.Substring(pos, read) + s.Substring(offset+read), Encoding.UTF8.GetString(bytes));
 			}
 		}
 		[Test] public void TestReadByte()
@@ -341,7 +341,7 @@ namespace Rylogic.UnitTests
 					bytes.Add((byte)b);
 				}
 			}
-			Assert.AreEqual(CombinedContent, Encoding.UTF8.GetString(bytes.ToArray()));
+			Assert.Equal(CombinedContent, Encoding.UTF8.GetString(bytes.ToArray()));
 		}
 		[Test] public void TestPosition()
 		{
@@ -353,7 +353,7 @@ namespace Rylogic.UnitTests
 				{
 					var pos = rnd.Next(bytes.Length);
 					f.Position = pos;
-					Assert.AreEqual((int)bytes[pos], f.ReadByte());
+					Assert.Equal((int)bytes[pos], f.ReadByte());
 				}
 			}
 		}

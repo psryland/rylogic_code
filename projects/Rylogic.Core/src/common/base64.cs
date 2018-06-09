@@ -129,14 +129,14 @@ namespace Rylogic.UnitTests
 								"/P3+/w==");
 
 			int len = Base64Encoding.EncodeSize(sbuf.Length);
-			Assert.AreEqual(dbuf.Length, len);
+			Assert.Equal(dbuf.Length, len);
 
 			int dst_length;
 			byte[] dst = new byte[len];
 			Base64Encoding.Encode(sbuf, dst, out dst_length);
-			Assert.AreEqual(dbuf.Length, dst_length);
+			Assert.Equal(dbuf.Length, dst_length);
 			for (int i = 0; i != dbuf.Length; ++i)
-				Assert.AreEqual(dbuf[i], dst[i]);
+				Assert.Equal(dbuf[i], dst[i]);
 		
 			len = Base64Encoding.DecodeSize(dbuf.Length);
 			Assert.True(len >= sbuf.Length);
@@ -144,9 +144,9 @@ namespace Rylogic.UnitTests
 			int src_length;
 			byte[] src = new byte[len];
 			Base64Encoding.Decode(dst, src, out src_length);
-			Assert.AreEqual(sbuf.Length, src_length);
+			Assert.Equal(sbuf.Length, src_length);
 			for (int i = 0; i != sbuf.Length; ++i)
-				Assert.AreEqual(sbuf[i], src[i]);
+				Assert.Equal(sbuf[i], src[i]);
 
 			// Random binary data
 			Random r = new Random();
@@ -155,9 +155,9 @@ namespace Rylogic.UnitTests
 
 			Base64Encoding.Encode(sbuf, dst, out dst_length);
 			Base64Encoding.Decode(dst,  src, out src_length);
-			Assert.AreEqual(sbuf.Length, src_length);
+			Assert.Equal(sbuf.Length, src_length);
 			for (int i = 0; i != sbuf.Length; ++i)
-				Assert.AreEqual(sbuf[i], src[i]);
+				Assert.Equal(sbuf[i], src[i]);
 		}
 	}
 }

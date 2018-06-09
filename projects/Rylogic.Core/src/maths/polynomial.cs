@@ -563,9 +563,9 @@ namespace Rylogic.UnitTests
 			var c = new v2(1.0f, 0.6f);
 
 			var q = Quadratic.FromPoints(a,b,c);
-			Assert.AreEqual(q.F(a.x), a.y, Math_.TinyF);
-			Assert.AreEqual(q.F(b.x), b.y, Math_.TinyF);
-			Assert.AreEqual(q.F(c.x), c.y, Math_.TinyF);
+			Assert.Equal(q.F(a.x), a.y, Math_.TinyF);
+			Assert.Equal(q.F(b.x), b.y, Math_.TinyF);
+			Assert.Equal(q.F(c.x), c.y, Math_.TinyF);
 		}
 		[Test] public void FromLinearRegression()
 		{

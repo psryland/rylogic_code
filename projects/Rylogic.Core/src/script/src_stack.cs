@@ -87,17 +87,17 @@ namespace Rylogic.UnitTests
 			var stack = new SrcStack(src1);
 
 			for (int i = 0; i != 2; ++i, stack.Next())
-				Assert.AreEqual(str1[i], stack.Peek);
+				Assert.Equal(str1[i], stack.Peek);
 
 			stack.Push(src2);
 
 			for (int i = 0; i != 3; ++i, stack.Next())
-				Assert.AreEqual(str2[i], stack.Peek);
+				Assert.Equal(str2[i], stack.Peek);
 
 			for (int i = 2; i != 3; ++i, stack.Next())
-				Assert.AreEqual(str1[i], stack.Peek);
+				Assert.Equal(str1[i], stack.Peek);
 
-			Assert.AreEqual((char)0, stack.Peek);
+			Assert.Equal((char)0, stack.Peek);
 		}
 	}
 }

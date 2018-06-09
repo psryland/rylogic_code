@@ -258,10 +258,10 @@ namespace Rylogic.UnitTests
 
 			// Don't Signal() from this thread, need to test cross-thread support
 
-			Assert.AreEqual(true, mre_eb1.WaitOne(0));
-			Assert.AreEqual(true, mre_eb2.WaitOne(0));
-			Assert.AreEqual(1, count[0]); // !TriggerOnFirst
-			Assert.AreEqual(2, count[1]); //  TriggerOnFirst
+			Assert.Equal(true, mre_eb1.WaitOne(0));
+			Assert.Equal(true, mre_eb2.WaitOne(0));
+			Assert.Equal(1, count[0]); // !TriggerOnFirst
+			Assert.Equal(2, count[1]); //  TriggerOnFirst
 		}
 	}
 }

@@ -797,7 +797,7 @@ namespace Rylogic.UnitTests
 			for (int i = 0; i != 5; ++i)
 				a0.Add(i, i * 1.1);
 
-			Assert.AreEqual(stats.Adds, 5);
+			Assert.Equal(stats.Adds, 5);
 		}
 	}
 }

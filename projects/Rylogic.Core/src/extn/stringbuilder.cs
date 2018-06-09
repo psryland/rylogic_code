@@ -235,50 +235,50 @@ namespace Rylogic.UnitTests
 
 			{// Trim start
 				var sb = new StringBuilder(s);
-				Assert.AreEqual(s.TrimStart(' ', '\t', '\n', 'X'), sb.TrimStart(' ', '\t', '\n', 'X').ToString());
+				Assert.Equal(s.TrimStart(' ', '\t', '\n', 'X'), sb.TrimStart(' ', '\t', '\n', 'X').ToString());
 			}
 			{// Trim end
 				var sb = new StringBuilder(s);
-				Assert.AreEqual(s.TrimEnd(' ', '\t', '\n', 'X'), sb.TrimEnd(' ', '\t', '\n', 'X').ToString());
+				Assert.Equal(s.TrimEnd(' ', '\t', '\n', 'X'), sb.TrimEnd(' ', '\t', '\n', 'X').ToString());
 			}
 			{// Trim
 				var sb = new StringBuilder(s);
-				Assert.AreEqual(s.Trim(' ', '\t', '\n', 'X'), sb.Trim(' ', '\t', '\n', 'X').ToString());
+				Assert.Equal(s.Trim(' ', '\t', '\n', 'X'), sb.Trim(' ', '\t', '\n', 'X').ToString());
 			}
 			{// Substring
 				var sb = new StringBuilder(s);
-				Assert.AreEqual(sb.Substring(6, 6), "string");
-				Assert.AreEqual(sb.Substring(0, 3), "  \t");
-				Assert.AreEqual(sb.Substring(13, sb.Length - 13), "XXX\n  \t  ");
+				Assert.Equal(sb.Substring(6, 6), "string");
+				Assert.Equal(sb.Substring(0, 3), "  \t");
+				Assert.Equal(sb.Substring(13, sb.Length - 13), "XXX\n  \t  ");
 			}
 			{// Remove
 				var sb = new StringBuilder(s);
 				int removed;
 				sb.Remove(' ', out removed);
-				Assert.AreEqual(sb.ToString(), "\t\nAstringXXX\n\t");
-				Assert.AreEqual(removed, 8);
+				Assert.Equal(sb.ToString(), "\t\nAstringXXX\n\t");
+				Assert.Equal(removed, 8);
 			}
 			{// StartsWith
 				var sb = new StringBuilder(s);
-				Assert.AreEqual(sb.StartsWith("  \t\n"), true);
-				Assert.AreEqual(sb.StartsWith("A string", 4), true);
-				Assert.AreEqual(sb.StartsWith("A string  ", 4), false);
+				Assert.Equal(sb.StartsWith("  \t\n"), true);
+				Assert.Equal(sb.StartsWith("A string", 4), true);
+				Assert.Equal(sb.StartsWith("A string  ", 4), false);
 
 				sb.Length = 0;
-				Assert.AreEqual(sb.StartsWith("1"), false);
-				Assert.AreEqual(sb.StartsWith(""), true);
+				Assert.Equal(sb.StartsWith("1"), false);
+				Assert.Equal(sb.StartsWith(""), true);
 			}
 			{// IndexOf
 				var sb = new StringBuilder(s);
-				Assert.AreEqual(sb.IndexOf('a', ignore_case:true), 4);
-				Assert.AreEqual(sb.IndexOf('X', 1, 4), -1);
-				Assert.AreEqual(sb.IndexOf("xx", ignore_case:true), 13);
-				Assert.AreEqual(sb.IndexOf("XXXX"), -1);
-				Assert.AreEqual(sb.IndexOf("XXX", 14, sb.Length - 14), -1);
+				Assert.Equal(sb.IndexOf('a', ignore_case:true), 4);
+				Assert.Equal(sb.IndexOf('X', 1, 4), -1);
+				Assert.Equal(sb.IndexOf("xx", ignore_case:true), 13);
+				Assert.Equal(sb.IndexOf("XXXX"), -1);
+				Assert.Equal(sb.IndexOf("XXX", 14, sb.Length - 14), -1);
 
 				sb.Length = 0;
-				Assert.AreEqual(sb.IndexOf("1"), -1);
-				Assert.AreEqual(sb.IndexOf(""), 0);
+				Assert.Equal(sb.IndexOf("1"), -1);
+				Assert.Equal(sb.IndexOf(""), 0);
 			}
 		}
 	}

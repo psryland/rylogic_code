@@ -403,26 +403,26 @@ namespace Rylogic.UnitTests
 		[Test] public void Average()
 		{
 			var a = Math_.Average(1.0, 4.0, 2.0, 7.0, -3.0);
-			Assert.AreEqual(a, 2.2);
+			Assert.Equal(a, 2.2);
 
 			var m = Math_.Median(1.0, 4.0, 2.0, 7.0, -3.0);
-			Assert.AreEqual(m, 2.0);
+			Assert.Equal(m, 2.0);
 
 			m = Math_.Median(1.0, 4.0, 2.0, 7.0, -3.0, -1.0);
-			Assert.AreEqual(m, 1.5);
+			Assert.Equal(m, 1.5);
 		}
 		[Test] public void Lerp()
 		{
 			var a0 = new[]{ 1.0, 10.0, 2.0, 5.0 };
-			Assert.AreEqual(Math_.Lerp(-0.1, a0), 1.0);
-			Assert.AreEqual(Math_.Lerp( 0.0, a0), 1.0);
-			Assert.AreEqual(Math_.Lerp( 1.0, a0), 5.0);
-			Assert.AreEqual(Math_.Lerp( 1.1, a0), 5.0);
-			Assert.AreEqual(Math_.Lerp(1/2.0, a0), 6.0);
-			Assert.AreEqual(Math_.Lerp(1/3.0, a0), 10.0);
-			Assert.AreEqual(Math_.Lerp(2/3.0, a0), 2.0);
-			Assert.AreEqual(Math_.Lerp(1/6.0, a0), 5.5);
-			Assert.AreEqual(Math_.Lerp(5/6.0, a0), 3.5);
+			Assert.Equal(Math_.Lerp(-0.1, a0), 1.0);
+			Assert.Equal(Math_.Lerp( 0.0, a0), 1.0);
+			Assert.Equal(Math_.Lerp( 1.0, a0), 5.0);
+			Assert.Equal(Math_.Lerp( 1.1, a0), 5.0);
+			Assert.Equal(Math_.Lerp(1/2.0, a0), 6.0);
+			Assert.Equal(Math_.Lerp(1/3.0, a0), 10.0);
+			Assert.Equal(Math_.Lerp(2/3.0, a0), 2.0);
+			Assert.Equal(Math_.Lerp(1/6.0, a0), 5.5);
+			Assert.Equal(Math_.Lerp(5/6.0, a0), 3.5);
 		}
 	}
 }

@@ -653,42 +653,42 @@ namespace Rylogic.UnitTests
 			// 29 - 1 - constructor
 			// 58 - x2 - for the same again in derived
 			var members = typeof(Thing).AllMembers(BindingFlags.Static|BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).ToList();
-			Assert.AreEqual(58, members.Count);
+			Assert.Equal(58, members.Count);
 
 			members = typeof(Thing).AllMembers(BindingFlags.Instance|BindingFlags.Public).ToList();
-			Assert.AreEqual(12, members.Count);
+			Assert.Equal(12, members.Count);
 		}
 		[Test] public void AllFields()
 		{
 			var fields = typeof(Thing).AllFields(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).ToList();
-			Assert.AreEqual(16, fields.Count);
+			Assert.Equal(16, fields.Count);
 
 			fields = typeof(Thing).AllFields(BindingFlags.Instance|BindingFlags.Public).ToList();
-			Assert.AreEqual(2, fields.Count);
+			Assert.Equal(2, fields.Count);
 		}
 		[Test] public void AllProps()
 		{
 			var props = typeof(Thing).AllProps(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).ToList();
-			Assert.AreEqual(8, props.Count);
+			Assert.Equal(8, props.Count);
 
 			props = typeof(Thing).AllProps(BindingFlags.Instance|BindingFlags.Public).ToList();
-			Assert.AreEqual(2, props.Count);
+			Assert.Equal(2, props.Count);
 		}
 		[Test] public void Resolve()
 		{
 			var ty0 = Type_.Resolve("System.String");
-			Assert.AreEqual(typeof(string), ty0);
+			Assert.Equal(typeof(string), ty0);
 
 			var ty1 = Type_.Resolve("Rylogic.Extn.int_");
-			Assert.AreEqual(typeof(Rylogic.Extn.int_), ty1);
+			Assert.Equal(typeof(Rylogic.Extn.int_), ty1);
 		}
 		[Test] public void IntExtn()
 		{
 			var x0 = int_.TryParse("1234");
-			Assert.AreEqual(x0, 1234);
+			Assert.Equal(x0, 1234);
 
 			var x1 = int_.TryParse("abc");
-			Assert.AreEqual(x1, null);
+			Assert.Equal(x1, null);
 
 			var x2 = int_.ParseArray("1  2,3\t\t\t4");
 			Assert.True(x2.SequenceEqual(new[]{1,2,3,4}));

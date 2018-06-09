@@ -207,10 +207,10 @@ namespace Rylogic.UnitTests
 			Test.Event3 += test.Handler;
 			test.RaiseEvents();
 
-			Assert.AreEqual(4, test.Event1HandlerCount);
-			Assert.AreEqual(0, test.Event2HandlerCount);
-			Assert.AreEqual(1, test.Event3HandlerCount);
-			Assert.AreEqual("BBAC--A", Test.Result);
+			Assert.Equal(4, test.Event1HandlerCount);
+			Assert.Equal(0, test.Event2HandlerCount);
+			Assert.Equal(1, test.Event3HandlerCount);
+			Assert.Equal("BBAC--A", Test.Result);
 			Test.Result = string.Empty;
 
 			using (EventsSnapshot.Capture(test, EventsSnapshot.Restore.RemoveAdded))
@@ -221,10 +221,10 @@ namespace Rylogic.UnitTests
 				test.AttachHandlerToEvent2();
 				test.AttachHandlerToEvent3();
 				test.RaiseEvents();
-				Assert.AreEqual(7, test.Event1HandlerCount);
-				Assert.AreEqual(1, test.Event2HandlerCount);
-				Assert.AreEqual(2, test.Event3HandlerCount);
-				Assert.AreEqual("BBACDAB-A-AA", Test.Result);
+				Assert.Equal(7, test.Event1HandlerCount);
+				Assert.Equal(1, test.Event2HandlerCount);
+				Assert.Equal(2, test.Event3HandlerCount);
+				Assert.Equal("BBACDAB-A-AA", Test.Result);
 				Test.Result = string.Empty;
 
 				test.Event1 -= handler;
@@ -232,17 +232,17 @@ namespace Rylogic.UnitTests
 				test.AttachHandlerToEvent2();
 				test.AttachHandlerToEvent3();
 				test.RaiseEvents();
-				Assert.AreEqual(5, test.Event1HandlerCount);
-				Assert.AreEqual(2, test.Event2HandlerCount);
-				Assert.AreEqual(3, test.Event3HandlerCount);
-				Assert.AreEqual("BACDA-AA-AAA", Test.Result);
+				Assert.Equal(5, test.Event1HandlerCount);
+				Assert.Equal(2, test.Event2HandlerCount);
+				Assert.Equal(3, test.Event3HandlerCount);
+				Assert.Equal("BACDA-AA-AAA", Test.Result);
 				Test.Result = string.Empty;
 			}
 			test.RaiseEvents();
-			Assert.AreEqual(3, test.Event1HandlerCount);
-			Assert.AreEqual(0, test.Event2HandlerCount);
-			Assert.AreEqual(1, test.Event3HandlerCount);
-			Assert.AreEqual("BAC--A", Test.Result);
+			Assert.Equal(3, test.Event1HandlerCount);
+			Assert.Equal(0, test.Event2HandlerCount);
+			Assert.Equal(1, test.Event3HandlerCount);
+			Assert.Equal("BAC--A", Test.Result);
 			Test.Result = string.Empty;
 		}
 		[Test] public void TestAddRemoved()
@@ -259,36 +259,36 @@ namespace Rylogic.UnitTests
 			Test.Event3 += test.Handler;
 			test.RaiseEvents();
 
-			Assert.AreEqual(4, test.Event1HandlerCount);
-			Assert.AreEqual(1, test.Event2HandlerCount);
-			Assert.AreEqual(1, test.Event3HandlerCount);
-			Assert.AreEqual("BBAC-A-A", Test.Result);
+			Assert.Equal(4, test.Event1HandlerCount);
+			Assert.Equal(1, test.Event2HandlerCount);
+			Assert.Equal(1, test.Event3HandlerCount);
+			Assert.Equal("BBAC-A-A", Test.Result);
 			Test.Result = string.Empty;
 
 			using (EventsSnapshot.Capture(test, EventsSnapshot.Restore.AddRemoved))
 			{
 				test.ResetHandlers();
 				test.RaiseEvents();
-				Assert.AreEqual(0, test.Event1HandlerCount);
-				Assert.AreEqual(0, test.Event2HandlerCount);
-				Assert.AreEqual(0, test.Event3HandlerCount);
-				Assert.AreEqual("--", Test.Result);
+				Assert.Equal(0, test.Event1HandlerCount);
+				Assert.Equal(0, test.Event2HandlerCount);
+				Assert.Equal(0, test.Event3HandlerCount);
+				Assert.Equal("--", Test.Result);
 				Test.Result = string.Empty;
 
 				test.Event1 += handler;
 				test.RaiseEvents();
-				Assert.AreEqual(1, test.Event1HandlerCount);
-				Assert.AreEqual(0, test.Event2HandlerCount);
-				Assert.AreEqual(0, test.Event3HandlerCount);
-				Assert.AreEqual("B--", Test.Result);
+				Assert.Equal(1, test.Event1HandlerCount);
+				Assert.Equal(0, test.Event2HandlerCount);
+				Assert.Equal(0, test.Event3HandlerCount);
+				Assert.Equal("B--", Test.Result);
 				Test.Result = string.Empty;
 			}
 
 			test.RaiseEvents();
-			Assert.AreEqual(4, test.Event1HandlerCount);
-			Assert.AreEqual(1, test.Event2HandlerCount);
-			Assert.AreEqual(1, test.Event3HandlerCount);
-			Assert.AreEqual("BBAC-A-A", Test.Result);
+			Assert.Equal(4, test.Event1HandlerCount);
+			Assert.Equal(1, test.Event2HandlerCount);
+			Assert.Equal(1, test.Event3HandlerCount);
+			Assert.Equal("BBAC-A-A", Test.Result);
 			Test.Result = string.Empty;
 		}
 		[Test] public void TestBoth()
@@ -304,10 +304,10 @@ namespace Rylogic.UnitTests
 			Test.Event3 += test.Handler;
 			test.RaiseEvents();
 
-			Assert.AreEqual(4, test.Event1HandlerCount);
-			Assert.AreEqual(0, test.Event2HandlerCount);
-			Assert.AreEqual(1, test.Event3HandlerCount);
-			Assert.AreEqual("BBAC--A", Test.Result);
+			Assert.Equal(4, test.Event1HandlerCount);
+			Assert.Equal(0, test.Event2HandlerCount);
+			Assert.Equal(1, test.Event3HandlerCount);
+			Assert.Equal("BBAC--A", Test.Result);
 			Test.Result = string.Empty;
 
 			using (EventsSnapshot.Capture(test, EventsSnapshot.Restore.Both))
@@ -317,28 +317,28 @@ namespace Rylogic.UnitTests
 				test.Event1 += test.Handler;
 				test.Event1 += (s,a) => Test.Result += "D";
 				test.RaiseEvents();
-				Assert.AreEqual(6, test.Event1HandlerCount);
-				Assert.AreEqual(0, test.Event2HandlerCount);
-				Assert.AreEqual(1, test.Event3HandlerCount);
-				Assert.AreEqual("BACAAD--A", Test.Result);
+				Assert.Equal(6, test.Event1HandlerCount);
+				Assert.Equal(0, test.Event2HandlerCount);
+				Assert.Equal(1, test.Event3HandlerCount);
+				Assert.Equal("BACAAD--A", Test.Result);
 				Test.Result = string.Empty;
 
 				test.Event1 += (s,a) => Test.Result += "E";
 				test.AttachHandlerToEvent2();
 				Test.Event3 -= test.Handler;
 				test.RaiseEvents();
-				Assert.AreEqual(7, test.Event1HandlerCount);
-				Assert.AreEqual(1, test.Event2HandlerCount);
-				Assert.AreEqual(0, test.Event3HandlerCount);
-				Assert.AreEqual("BACAADE-A-", Test.Result);
+				Assert.Equal(7, test.Event1HandlerCount);
+				Assert.Equal(1, test.Event2HandlerCount);
+				Assert.Equal(0, test.Event3HandlerCount);
+				Assert.Equal("BACAADE-A-", Test.Result);
 				Test.Result = string.Empty;
 			}
 
 			test.RaiseEvents();
-			Assert.AreEqual(4, test.Event1HandlerCount);
-			Assert.AreEqual(0, test.Event2HandlerCount);
-			Assert.AreEqual(1, test.Event3HandlerCount);
-			Assert.AreEqual("BACB--A", Test.Result);
+			Assert.Equal(4, test.Event1HandlerCount);
+			Assert.Equal(0, test.Event2HandlerCount);
+			Assert.Equal(1, test.Event3HandlerCount);
+			Assert.Equal("BACB--A", Test.Result);
 			Test.Result = string.Empty;
 		}
 	}

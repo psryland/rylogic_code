@@ -970,7 +970,7 @@ namespace LDraw
 			// Prompt for a filepath if this is an 'open' operation
 			if (prompt && !filepath.HasValue())
 			{
-				using (var dlg = new OpenFileDialog { Title = "Edit Ldr Script file", Filter = Util2.FileDialogFilter("Ldr Script","*.ldr") })
+				using (var dlg = new OpenFileDialog { Title = "Edit Ldr Script file", Filter = Util.FileDialogFilter("Ldr Script","*.ldr") })
 				{
 					if (dlg.ShowDialog(this) != DialogResult.OK) return;
 					filepath = dlg.FileName;
@@ -990,7 +990,7 @@ namespace LDraw
 		{
 			if (!filepath.HasValue())
 			{
-				using (var dlg = new OpenFileDialog { Title = "Open Ldr Script file", Filter = Util2.FileDialogFilter("Ldr Script","*.ldr", "Comma Separated Values","*.csv", "Binary Model File","*.p3d", "All Files","*.*") })
+				using (var dlg = new OpenFileDialog { Title = "Open Ldr Script file", Filter = Util.FileDialogFilter("Ldr Script","*.ldr", "Comma Separated Values","*.csv", "Binary Model File","*.p3d", "All Files","*.*") })
 				{
 					if (dlg.ShowDialog(this) != DialogResult.OK) return;
 					filepath = dlg.FileName;
@@ -1022,7 +1022,7 @@ namespace LDraw
 			{
 				// Get the save location
 				var filepath = (string)null;
-				using (var dlg = new SaveFileDialog { Title = "Save Script", Filter = Util2.FileDialogFilter("Script Files", "*.ldr") })
+				using (var dlg = new SaveFileDialog { Title = "Save Script", Filter = Util.FileDialogFilter("Script Files", "*.ldr") })
 				{
 					// Don't allow saving to the temporary script folder
 					dlg.FileOk += (s,a) => a.Cancel = Path_.IsSubPath(Model.TempScriptsDirectory, filepath);

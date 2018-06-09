@@ -511,34 +511,34 @@ namespace Rylogic.UnitTests
 			// just inside quad0 at the root level
 			var w0 = new Watzit(-0.5f*qtree.CellSizeX(15),-0.5f*qtree.CellSizeY(15), 0);
 			var n0 = qtree.Insert(w0, w0.pos, w0.radius);
-			Assert.AreEqual(2, qtree.Nodes.Count);
-			Assert.AreEqual(15U, n0.m_level);
-			Assert.AreEqual(0x4000U - 1, n0.m_x);
-			Assert.AreEqual(0x4000U - 1, n0.m_y);
+			Assert.Equal(2, qtree.Nodes.Count);
+			Assert.Equal(15U, n0.m_level);
+			Assert.Equal(0x4000U - 1, n0.m_x);
+			Assert.Equal(0x4000U - 1, n0.m_y);
 
 			// somewhere in quad3 at the root level
 			var w1 = new Watzit(2.5f, 2.5f, 0.2f);
 			var n1 = qtree.Insert(w1, w1.pos, w1.radius);
-			Assert.AreEqual(3, qtree.Nodes.Count);
-			Assert.AreEqual(4U, n1.m_level);
-			Assert.AreEqual(10U, n1.m_x);
-			Assert.AreEqual(12U, n1.m_y);
+			Assert.Equal(3, qtree.Nodes.Count);
+			Assert.Equal(4U, n1.m_level);
+			Assert.Equal(10U, n1.m_x);
+			Assert.Equal(12U, n1.m_y);
 
 			// Outside the region but within the overhang at level 1
 			var w2 = new Watzit(-14.99f, -7.2499f, 0);
 			var n2 = qtree.Insert(w2, w2.pos, w2.radius);
-			Assert.AreEqual(4, qtree.Nodes.Count);
-			Assert.AreEqual(1U, n2.m_level);
-			Assert.AreEqual(0U, n2.m_x);
-			Assert.AreEqual(0U, n2.m_y);
+			Assert.Equal(4, qtree.Nodes.Count);
+			Assert.Equal(1U, n2.m_level);
+			Assert.Equal(0U, n2.m_x);
+			Assert.Equal(0U, n2.m_y);
 
 			// Outside the region on y but within on x
 			var w3 = new Watzit(6.5f, 7.24449f, 0);
 			var n3 = qtree.Insert(w3, w3.pos, w3.radius);
-			Assert.AreEqual(5, qtree.Nodes.Count);
-			Assert.AreEqual(1U, n3.m_level);
-			Assert.AreEqual(1U, n3.m_x);
-			Assert.AreEqual(1U, n3.m_y);
+			Assert.Equal(5, qtree.Nodes.Count);
+			Assert.Equal(1U, n3.m_level);
+			Assert.Equal(1U, n3.m_x);
+			Assert.Equal(1U, n3.m_y);
 
 			var rand = new Random();
 			Func<float,float,float> fltc = (avr,d) => rand.FloatC(avr, d);
@@ -568,7 +568,7 @@ namespace Rylogic.UnitTests
 				Assert.True(qtree.SanityCheck(node));
 				count += node.m_items.Count;
 			}
-			Assert.AreEqual(qtree.Count, count);
+			Assert.Equal(qtree.Count, count);
 
 			for (int i = 0; i != 100; ++i)
 			{
@@ -587,7 +587,7 @@ namespace Rylogic.UnitTests
 				// All flagged should collide, not flagged should not
 				foreach (var node in qtree.Nodes)
 					foreach (var item in node.m_items)
-						Assert.AreEqual(item.flag, Collide(W, item));
+						Assert.Equal(item.flag, Collide(W, item));
 			}
 		}
 	}

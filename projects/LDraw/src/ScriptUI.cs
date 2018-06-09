@@ -236,7 +236,7 @@ namespace LDraw
 			// Prompt for a filepath if not given
 			if (!filepath.HasValue())
 			{
-				using (var dlg = new OpenFileDialog { Title = "Load Script", Filter = Util2.FileDialogFilter("Script Files", "*.ldr") })
+				using (var dlg = new OpenFileDialog { Title = "Load Script", Filter = Util.FileDialogFilter("Script Files", "*.ldr") })
 				{
 					if (dlg.ShowDialog(Model.Owner) != DialogResult.OK) return;
 					filepath = dlg.FileName;
@@ -261,7 +261,7 @@ namespace LDraw
 			// Prompt for a filepath if not given
 			if (!filepath.HasValue())
 			{
-				using (var dlg = new SaveFileDialog { Title = "Save Script", Filter = Util2.FileDialogFilter("Script Files", "*.ldr") })
+				using (var dlg = new SaveFileDialog { Title = "Save Script", Filter = Util.FileDialogFilter("Script Files", "*.ldr") })
 				{
 					if (dlg.ShowDialog(Model.Owner) != DialogResult.OK) return;
 					filepath = dlg.FileName;

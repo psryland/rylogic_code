@@ -171,7 +171,7 @@ namespace Rylogic.UnitTests
 
 			var ass = RuntimeAssembly.FromString("Food.Main", source);
 			var r = ass.Invoke<System.Drawing.Point>("SayHello");
-			Assert.AreEqual(r, new System.Drawing.Point(1,2));
+			Assert.Equal(r, new System.Drawing.Point(1,2));
 		}
 	}
 }

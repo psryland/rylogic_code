@@ -709,16 +709,16 @@ namespace Rylogic.UnitTests
 				cb.DataSource = arr;
 				cb.SelectedItem = "Hello";
 
-				Assert.AreEqual(cb.SelectedIndex, 0);
-				Assert.AreEqual(cb.SelectedItem, "Hello");
+				Assert.Equal(cb.SelectedIndex, 0);
+				Assert.Equal(cb.SelectedItem, "Hello");
 
 				cb.DataSource = new string[0];
-				Assert.AreEqual(cb.SelectedIndex, -1);
-				Assert.AreEqual(cb.SelectedItem, null);
+				Assert.Equal(cb.SelectedIndex, -1);
+				Assert.Equal(cb.SelectedItem, null);
 
 				cb.DataSource = null;
-				Assert.AreEqual(cb.SelectedIndex, -1);
-				Assert.AreEqual(cb.SelectedItem, null);
+				Assert.Equal(cb.SelectedIndex, -1);
+				Assert.Equal(cb.SelectedItem, null);
 			}
 
 			{// Test the combo box still works when added to a form
@@ -727,12 +727,12 @@ namespace Rylogic.UnitTests
 				cb.DataSource = arr;
 				cb.SelectedItem = "Hello";
 
-				Assert.AreEqual(cb.SelectedIndex, 0);
-				Assert.AreEqual(cb.SelectedItem, "Hello");
+				Assert.Equal(cb.SelectedIndex, 0);
+				Assert.Equal(cb.SelectedItem, "Hello");
 
 				cb.DataSource = null;
-				Assert.AreEqual(cb.SelectedIndex, -1);
-				Assert.AreEqual(cb.SelectedItem, null);
+				Assert.Equal(cb.SelectedIndex, -1);
+				Assert.Equal(cb.SelectedItem, null);
 			}
 		}
 	}

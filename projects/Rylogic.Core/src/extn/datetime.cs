@@ -420,52 +420,52 @@ namespace Rylogic.UnitTests
 			{
 				var ts = TimeSpan.FromSeconds(123456789);
 				var s = ts.ToPrettyString();
-				Assert.AreEqual(s, expr_short);
+				Assert.Equal(s, expr_short);
 
 				var TS = TimeSpan_.TryParseExpr(expr_long);
-				Assert.AreEqual(TS, ts);
+				Assert.Equal(TS, ts);
 			}
 			{
 				var ts = TimeSpan_.TryParseExpr("1d 12Hrs 1min 100secs 5msec");
 				var TS = new TimeSpan(1, 12, 1, 100, 5);
-				Assert.AreEqual(ts, TS);
+				Assert.Equal(ts, TS);
 			}
 			{
 				var ts = TimeSpan_.TryParseExpr("-2mins").Value;
 				var s1 = ts.ToPrettyString();
 				var s2 = ts.ToPrettyString(short_format:false, min_unit:TimeSpan_.ETimeUnits.Milliseconds, trailing_zeros:true);
 				var s3 = ts.ToPrettyString(short_format:false, min_unit:TimeSpan_.ETimeUnits.Milliseconds, trailing_zeros:false);
-				Assert.AreEqual(s1, "-2m 0s");
-				Assert.AreEqual(s2, "-2mins 0secs 0msecs");
-				Assert.AreEqual(s3, "-2mins");
+				Assert.Equal(s1, "-2m 0s");
+				Assert.Equal(s2, "-2mins 0secs 0msecs");
+				Assert.Equal(s3, "-2mins");
 			}
 			{
 				var ts = TimeSpan_.TryParseExpr("0mins").Value;
 				var s1 = ts.ToPrettyString();
-				Assert.AreEqual(s1, "0s");
+				Assert.Equal(s1, "0s");
 			}
 			{
 				var ts = TimeSpan_.TryParseExpr("2ms").Value;
 				var s1 = ts.ToPrettyString();
 				var s2 = ts.ToPrettyString(min_unit:TimeSpan_.ETimeUnits.Milliseconds);
-				Assert.AreEqual(s1, "0s");
-				Assert.AreEqual(s2, "2ms");
+				Assert.Equal(s1, "0s");
+				Assert.Equal(s2, "2ms");
 			}
 			{
 				var ts = TimeSpan_.TryParseExpr("10y 25w 7d").Value;
 				var s1 = ts.ToPrettyString(trailing_zeros:false);
 				var s2 = ts.ToPrettyString(max_unit:TimeSpan_.ETimeUnits.Years, trailing_zeros:false);
 				Assert.True(Math_.FEql(ts.TotalDays, 10*365 + 25*7 + 7));
-				Assert.AreEqual(s1, "3832d");
-				Assert.AreEqual(s2, "10y 26w");
+				Assert.Equal(s1, "3832d");
+				Assert.Equal(s2, "10y 26w");
 			}
 			{
 				var ts = TimeSpan_.TryParseExpr("-10y 25w 7d").Value;
 				var s1 = ts.ToPrettyString(trailing_zeros:false);
 				var s2 = ts.ToPrettyString(max_unit:TimeSpan_.ETimeUnits.Years, trailing_zeros:false);
 				Assert.True(Math_.FEql(ts.TotalDays, -10*365 + 25*7 + 7));
-				Assert.AreEqual(s1, "-3468d");
-				Assert.AreEqual(s2, "-9y -26w -1d");
+				Assert.Equal(s1, "-3468d");
+				Assert.Equal(s2, "-9y -26w -1d");
 			}
 		}
 	}

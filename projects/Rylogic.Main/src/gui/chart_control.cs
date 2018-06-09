@@ -5342,7 +5342,7 @@ namespace Rylogic.Gui
 			/// <summary>Reset the cache</summary>
 			public void Invalidate()
 			{
-				Util.DisposeAll(Pieces);
+				Util.DisposeRange(Pieces);
 				Pieces.Clear();
 			}
 			public void Invalidate(Range x_range)
@@ -5360,7 +5360,7 @@ namespace Rylogic.Gui
 				set
 				{
 					if (m_pieces == value) return;
-					Util.DisposeAll(m_pieces);
+					Util.DisposeRange(m_pieces);
 					m_pieces = value;
 				}
 			}

@@ -145,7 +145,7 @@ namespace Rylogic.UnitTests
 			using (template_replacer)
 			{
 				var result = template_replacer.ReadToEnd();
-				Assert.AreEqual(substituted, result);
+				Assert.Equal(substituted, result);
 			}
 		}
 		[Test] public void SubstitutionWithIncludes()
@@ -171,7 +171,7 @@ namespace Rylogic.UnitTests
 			using (template_replacer)
 			{
 				var result = template_replacer.ReadToEnd();
-				Assert.AreEqual(substituted, result);
+				Assert.Equal(substituted, result);
 			}
 		}
 	}

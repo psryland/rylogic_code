@@ -167,64 +167,64 @@ namespace Rylogic.UnitTests
 			var t = new Thing{CmdLineOptionResult = true, CmdLineDataResult = true};
 			var r  = CmdLine.Parse(t, new[]{"-A","B", "C", "D", "E"});
 			Assert.True(r == CmdLine.Result.Success);
-			Assert.AreEqual(0, t.HelpShownCount);
-			Assert.AreEqual(1, t.ValidateCount);
-			Assert.AreEqual("-a", t.Option);
-			Assert.AreEqual("B", t.OptionArg1);
-			Assert.AreEqual("C", t.OptionArg2);
-			Assert.AreEqual("D", t.Data1);
-			Assert.AreEqual("E", t.Data2);
+			Assert.Equal(0, t.HelpShownCount);
+			Assert.Equal(1, t.ValidateCount);
+			Assert.Equal("-a", t.Option);
+			Assert.Equal("B", t.OptionArg1);
+			Assert.Equal("C", t.OptionArg2);
+			Assert.Equal("D", t.Data1);
+			Assert.Equal("E", t.Data2);
 		}
 		[Test] public void TestParse1()
 		{
 			var t = new Thing{CmdLineOptionResult = true, CmdLineDataResult = false};
 			var r  = CmdLine.Parse(t, new[]{"-A","B", "C", "D", "E"});
 			Assert.True(r == CmdLine.Result.Interrupted);
-			Assert.AreEqual(0, t.HelpShownCount);
-			Assert.AreEqual(0, t.ValidateCount);
-			Assert.AreEqual("-a", t.Option);
-			Assert.AreEqual("B", t.OptionArg1);
-			Assert.AreEqual("C", t.OptionArg2);
-			Assert.AreEqual("D", t.Data1);
-			Assert.AreEqual("E", t.Data2);
+			Assert.Equal(0, t.HelpShownCount);
+			Assert.Equal(0, t.ValidateCount);
+			Assert.Equal("-a", t.Option);
+			Assert.Equal("B", t.OptionArg1);
+			Assert.Equal("C", t.OptionArg2);
+			Assert.Equal("D", t.Data1);
+			Assert.Equal("E", t.Data2);
 		}
 		[Test] public void TestParse2()
 		{
 			var t = new Thing{CmdLineOptionResult = true, CmdLineDataResult = true};
 			var r  = CmdLine.Parse(t, new[]{"-A","B", "C", "D"});
 			Assert.True(r == CmdLine.Result.Failed);
-			Assert.AreEqual(1, t.HelpShownCount);
-			Assert.AreEqual(0, t.ValidateCount);
-			Assert.AreEqual("-a", t.Option);
-			Assert.AreEqual("B", t.OptionArg1);
-			Assert.AreEqual("C", t.OptionArg2);
-			Assert.AreEqual("D", t.Data1);
-			Assert.AreEqual(null, t.Data2);
+			Assert.Equal(1, t.HelpShownCount);
+			Assert.Equal(0, t.ValidateCount);
+			Assert.Equal("-a", t.Option);
+			Assert.Equal("B", t.OptionArg1);
+			Assert.Equal("C", t.OptionArg2);
+			Assert.Equal("D", t.Data1);
+			Assert.Equal(null, t.Data2);
 		}
 		[Test] public void TestParse3()
 		{
 			var t = new Thing{CmdLineOptionResult = true, CmdLineDataResult = true};
 			var r  = CmdLine.Parse(t, new[]{"-A","X", "C", "D", "E"});
 			Assert.True(r == CmdLine.Result.Failed);
-			Assert.AreEqual(1, t.HelpShownCount);
-			Assert.AreEqual(1, t.ValidateCount);
-			Assert.AreEqual("-a", t.Option);
-			Assert.AreEqual("X", t.OptionArg1);
-			Assert.AreEqual("C", t.OptionArg2);
-			Assert.AreEqual("D", t.Data1);
-			Assert.AreEqual("E", t.Data2);
+			Assert.Equal(1, t.HelpShownCount);
+			Assert.Equal(1, t.ValidateCount);
+			Assert.Equal("-a", t.Option);
+			Assert.Equal("X", t.OptionArg1);
+			Assert.Equal("C", t.OptionArg2);
+			Assert.Equal("D", t.Data1);
+			Assert.Equal("E", t.Data2);
 		}
 		[Test] public void TestTokenise()
 		{
 			var cmd_line = "thing.exe -a \"Hello World\" -b data.txt output";
 			var r = CmdLine.Tokenise(cmd_line).ToArray();
 			Assert.True(r.Length == 6);
-			Assert.AreEqual(r[0], "thing.exe");
-			Assert.AreEqual(r[1], "-a");
-			Assert.AreEqual(r[2], "Hello World");
-			Assert.AreEqual(r[3], "-b");
-			Assert.AreEqual(r[4], "data.txt");
-			Assert.AreEqual(r[5], "output");
+			Assert.Equal(r[0], "thing.exe");
+			Assert.Equal(r[1], "-a");
+			Assert.Equal(r[2], "Hello World");
+			Assert.Equal(r[3], "-b");
+			Assert.Equal(r[4], "data.txt");
+			Assert.Equal(r[5], "output");
 		}
 	}
 }

@@ -62,7 +62,7 @@ namespace Csex
 			{
 				if (!filepath.HasValue())
 				{
-					using (var fd = new OpenFileDialog { Title = "Open an XML File", Filter = Util2.FileDialogFilter("Extensible Mark-Up Language", "*.xml") })
+					using (var fd = new OpenFileDialog { Title = "Open an XML File", Filter = Util.FileDialogFilter("Extensible Mark-Up Language", "*.xml") })
 					{
 						if (fd.ShowDialog(this) != DialogResult.OK) return;
 						filepath = fd.FileName;

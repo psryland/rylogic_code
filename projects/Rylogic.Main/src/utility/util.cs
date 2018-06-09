@@ -23,20 +23,20 @@ namespace Rylogic.Utility
 	/// <summary>Utility function container</summary>
 	public static class Util2
 	{
-		[DebuggerStepThrough] public static void DisposeAll<T>(ref BindingSource<T> doomed) where T:class, IDisposable
-		{
-			var doomed_ = (IList<T>)doomed;
-			doomed = null;
-			Util.DisposeAll<IList<T>,T>(ref doomed_);
-		}
-		[DebuggerStepThrough] public static BindingSource<T> DisposeAll<T>(this BindingSource<T> doomed) where T:class, IDisposable
-		{
-			return (BindingSource<T>)Util.DisposeAll<IList<T>, T>(doomed);
-		}
-		[DebuggerStepThrough] public static BindingListEx<T> DisposeAll<T>(this BindingListEx<T> doomed) where T:class, IDisposable
-		{
-			return (BindingListEx<T>)Util.DisposeAll<IList<T>, T>(doomed);
-		}
+		//[DebuggerStepThrough] public static void DisposeAll<T>(ref BindingSource<T> doomed) where T:class, IDisposable
+		//{
+		//	var doomed_ = (IList<T>)doomed;
+		//	doomed = null;
+		//	Util.DisposeAll<IList<T>,T>(ref doomed_);
+		//}
+		//[DebuggerStepThrough] public static BindingSource<T> DisposeAll<T>(this BindingSource<T> doomed) where T:class, IDisposable
+		//{
+		//	return (BindingSource<T>)Util.DisposeAll<IList<T>, T>(doomed);
+		//}
+		//[DebuggerStepThrough] public static BindingListEx<T> DisposeAll<T>(this BindingListEx<T> doomed) where T:class, IDisposable
+		//{
+		//	return (BindingListEx<T>)Util.DisposeAll<IList<T>, T>(doomed);
+		//}
 
 		/// <summary>Blocks until the debugger is attached</summary>
 		public static void WaitForDebugger()
@@ -46,7 +46,18 @@ namespace Rylogic.Utility
 			{
 				try
 				{
-					var mb = new MsgBox("Waiting for Debugger...", "Debugging", MessageBoxButtons.OK, MessageBoxIcon.Information) { PositiveBtnText = "Continue" };
+					var proc = Process.GetCurrentProcess();
+					var mb = new MsgBox(
+						$"Machine Name: {proc.MachineName}\n" +
+						$"Process Name: {proc.ProcessName}\n" +
+						$"Process ID: {proc.Id}\n" +
+						"Waiting for Debugger...",
+						"Debugging",
+						MessageBoxButtons.OK,
+						MessageBoxIcon.Information)
+					{
+						PositiveBtnText = "Continue"
+					};
 					using (mb)
 					{
 						mb.Show(null);
@@ -226,35 +237,6 @@ namespace Rylogic.Utility
 			return ELibCopyResult.Success;
 		}
 		public enum ELibCopyResult { Success, DestExists, SrcNotFound }
-	
-		/// <summary>
-		/// Helper for making a file dialog file type filter string.
-		/// Strings starting with *. are assumed to be extensions
-		/// Use: FileDialogFilter("Text Files","*.txt","Bitmaps","*.bmp","*.png"); </summary>
-		public static string FileDialogFilter(params string[] desc)
-		{
-			if (desc.Length == 0) return string.Empty;
-			if (desc[0].StartsWith("*.")) throw new Exception("First string should be a file type description");
-			
-			var sb = new StringBuilder();
-			var extn = new List<string>();
-			for (int i = 0; i != desc.Length;)
-			{
-				if (sb.Length != 0) sb.Append("|");
-				sb.Append(desc[i]);
-				
-				extn.Clear();
-				for (++i; i != desc.Length && desc[i].StartsWith("*."); ++i)
-					extn.Add(desc[i]);
-				
-				if (extn.Count == 0) throw new Exception("Expected file extension patterns to follow description");
-				
-				sb.Append(" (").Append(string.Join(",", extn)).Append(")");
-				sb.Append("|").Append(string.Join(";", extn));
-			}
-
-			return sb.ToString();
-		}
 
 		/// <summary>
 		/// Attempts to locate an application installation directory on the local machine.

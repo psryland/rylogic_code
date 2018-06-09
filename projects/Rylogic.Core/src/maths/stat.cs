@@ -1283,13 +1283,13 @@ namespace Rylogic.UnitTests
 			for (int i = 0; i != num.Length; ++i)
 				s.Add(num[i]);
 			
-			Assert.AreEqual(num.Length, s.Count);
-			Assert.AreEqual(4.0                               ,s.Sum       ,Math_.TinyD);
-			Assert.AreEqual(1.0/3.0                           ,s.Mean      ,Math_.TinyD);
-			Assert.AreEqual(4.83621                           ,s.PopStdDev ,0.00001);
-			Assert.AreEqual(23.38889                          ,s.PopStdVar ,0.00001);
-			Assert.AreEqual(5.0512524699475787686684767441111 ,s.SamStdDev ,Math_.TinyD);
-			Assert.AreEqual(25.515151515151515151515151515152 ,s.SamStdVar ,Math_.TinyD);
+			Assert.Equal(num.Length, s.Count);
+			Assert.Equal(4.0                               ,s.Sum       ,Math_.TinyD);
+			Assert.Equal(1.0/3.0                           ,s.Mean      ,Math_.TinyD);
+			Assert.Equal(4.83621                           ,s.PopStdDev ,0.00001);
+			Assert.Equal(23.38889                          ,s.PopStdVar ,0.00001);
+			Assert.Equal(5.0512524699475787686684767441111 ,s.SamStdDev ,Math_.TinyD);
+			Assert.Equal(25.515151515151515151515151515152 ,s.SamStdVar ,Math_.TinyD);
 		}
 		[Test] public void MovingWindowAvr()
 		{
@@ -1309,15 +1309,15 @@ namespace Rylogic.UnitTests
 				double sum = 0.0f; for (int j = 0; j != count; ++j) sum += buf[j];
 				double mean = sum / count;
 				s.Add(v);
-				Assert.AreEqual(mean ,s.Mean ,0.00001);
+				Assert.Equal(mean ,s.Mean ,0.00001);
 			}
 		}
 		[Test] public void ExpMovingAvr()
 		{
 			const int BufSz = 13;
 			
-			Random rng = new Random();
-			ExpMovingAvr s = new ExpMovingAvr(BufSz);
+			var rng = new Random();
+			var s = new ExpMovingAvr(BufSz);
 			const double a = 2.0 / (BufSz + 1);
 			double ema = 0;
 			int count = 0;
@@ -1327,7 +1327,7 @@ namespace Rylogic.UnitTests
 				if (count < BufSz) { ++count; ema += (v - ema) / count; }
 				else               { ema = a * v + (1 - a) * ema; }
 				s.Add(v);
-				Assert.AreEqual(ema ,s.Mean ,0.00001);
+				Assert.Equal(ema ,s.Mean ,0.00001);
 			}
 		}
 		[Test] public void ExpMovingAvrMinMax()
@@ -1348,9 +1348,9 @@ namespace Rylogic.UnitTests
 				min = Math.Min(min, v);
 				max = Math.Max(max, v);
 				s.Add(v);
-				Assert.AreEqual(ema ,s.Mean ,0.00001);
-				Assert.AreEqual(min ,s.Min  ,0.00001);
-				Assert.AreEqual(max ,s.Max ,0.00001);
+				Assert.Equal(ema ,s.Mean ,0.00001);
+				Assert.Equal(min ,s.Min  ,0.00001);
+				Assert.Equal(max ,s.Max ,0.00001);
 			}
 		}
 		[Test] public void Correlation()
@@ -1364,22 +1364,22 @@ namespace Rylogic.UnitTests
 				var corr = new Correlation();
 				for (int i = 0; i != arr0.Length; ++i)
 					corr.Add(arr0[i], arr0[i]);
-				Assert.AreEqual(corr.CorrCoeff, 1.0, Math_.TinyD);
+				Assert.Equal(corr.CorrCoeff, 1.0, Math_.TinyD);
 			} {
 				var corr = new Correlation();
 				for (int i = 0; i != arr0.Length; ++i)
 					corr.Add(arr0[i], arr1[i]);
-				Assert.AreEqual(corr.CorrCoeff, 1.0, Math_.TinyD);
+				Assert.Equal(corr.CorrCoeff, 1.0, Math_.TinyD);
 			} {
 				var corr = new Correlation();
 				for (int i = 0; i != arr0.Length; ++i)
 					corr.Add(arr0[i], arr2[i]);
-				Assert.AreEqual(corr.CorrCoeff, -1.0, Math_.TinyD);
+				Assert.Equal(corr.CorrCoeff, -1.0, Math_.TinyD);
 			}{
 				var corr = new Correlation();
 				for (int i = 0; i != arr0.Length; ++i)
 					corr.Add(arr0[i], arr3[i]);
-				Assert.AreEqual(corr.CorrCoeff, 0.0, Math_.TinyD);
+				Assert.Equal(corr.CorrCoeff, 0.0, Math_.TinyD);
 			}
 		}
 		[Test] public void Probability()

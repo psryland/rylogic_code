@@ -4163,13 +4163,13 @@ namespace Rylogic.UnitTests
 
 				// Check the table
 				var table = db.Table<Table0>();
-				Assert.AreEqual(3, table.ColumnCount);
+				Assert.Equal(3, table.ColumnCount);
 
 				// Check the columns
 				var column_names = new[]{"Inc_Key", "Inc_Value", "Inc_Enum"};
 				using (var q = new Sqlite.Query(db, "select * from "+table.Name))
 				{
-					Assert.AreEqual(3, q.ColumnCount);
+					Assert.Equal(3, q.ColumnCount);
 					Assert.True(column_names.Contains(q.ColumnName(0)));
 					Assert.True(column_names.Contains(q.ColumnName(1)));
 					Assert.True(column_names.Contains(q.ColumnName(2)));
@@ -4182,15 +4182,15 @@ namespace Rylogic.UnitTests
 				var obj3 = new Table0(ref key, 7);
 
 				// Insert stuff
-				Assert.AreEqual(1, table.Insert(obj1));
-				Assert.AreEqual(1, table.Insert(obj2));
-				Assert.AreEqual(1, table.Insert(obj3));
-				Assert.AreEqual(3, table.RowCount);
+				Assert.Equal(1, table.Insert(obj1));
+				Assert.Equal(1, table.Insert(obj2));
+				Assert.Equal(1, table.Insert(obj3));
+				Assert.Equal(3, table.RowCount);
 
 				// Check the query string
 				var sql_count = "select count(*) from "+table.Name;
 				using (var q = new Sqlite.Query(db, sql_count))
-					Assert.AreEqual(sql_count, q.SqlString);
+					Assert.Equal(sql_count, q.SqlString);
 			}
 		}
 		[Test] public void AllTypes()
@@ -4205,37 +4205,37 @@ namespace Rylogic.UnitTests
 
 				// Check the table
 				var table = db.Table<Table1>();
-				Assert.AreEqual(25, table.ColumnCount);
+				Assert.Equal(25, table.ColumnCount);
 
 				// Check the columns
 				using (var q = new Sqlite.Query(db, "select * from "+table.Name))
 				{
-					Assert.AreEqual(25, q.ColumnCount);
-					Assert.AreEqual("m_key"       ,q.ColumnName( 0));
-					Assert.AreEqual("m_bool"      ,q.ColumnName( 1));
-					Assert.AreEqual("m_sbyte"     ,q.ColumnName( 2));
-					Assert.AreEqual("m_byte"      ,q.ColumnName( 3));
-					Assert.AreEqual("m_char"      ,q.ColumnName( 4));
-					Assert.AreEqual("m_short"     ,q.ColumnName( 5));
-					Assert.AreEqual("m_ushort"    ,q.ColumnName( 6));
-					Assert.AreEqual("m_int"       ,q.ColumnName( 7));
-					Assert.AreEqual("m_uint"      ,q.ColumnName( 8));
-					Assert.AreEqual("m_int64"     ,q.ColumnName( 9));
-					Assert.AreEqual("m_uint64"    ,q.ColumnName(10));
-					Assert.AreEqual("m_decimal"   ,q.ColumnName(11));
-					Assert.AreEqual("m_float"     ,q.ColumnName(12));
-					Assert.AreEqual("m_double"    ,q.ColumnName(13));
-					Assert.AreEqual("m_string"    ,q.ColumnName(14));
-					Assert.AreEqual("m_buf"       ,q.ColumnName(15));
-					Assert.AreEqual("m_empty_buf" ,q.ColumnName(16));
-					Assert.AreEqual("m_int_buf"   ,q.ColumnName(17));
-					Assert.AreEqual("m_guid"      ,q.ColumnName(18));
-					Assert.AreEqual("m_enum"      ,q.ColumnName(19));
-					Assert.AreEqual("m_nullenum"  ,q.ColumnName(20));
-					Assert.AreEqual("m_dt_offset" ,q.ColumnName(21));
-					Assert.AreEqual("m_custom"    ,q.ColumnName(22));
-					Assert.AreEqual("m_nullint"   ,q.ColumnName(23));
-					Assert.AreEqual("m_nulllong"  ,q.ColumnName(24));
+					Assert.Equal(25, q.ColumnCount);
+					Assert.Equal("m_key"       ,q.ColumnName( 0));
+					Assert.Equal("m_bool"      ,q.ColumnName( 1));
+					Assert.Equal("m_sbyte"     ,q.ColumnName( 2));
+					Assert.Equal("m_byte"      ,q.ColumnName( 3));
+					Assert.Equal("m_char"      ,q.ColumnName( 4));
+					Assert.Equal("m_short"     ,q.ColumnName( 5));
+					Assert.Equal("m_ushort"    ,q.ColumnName( 6));
+					Assert.Equal("m_int"       ,q.ColumnName( 7));
+					Assert.Equal("m_uint"      ,q.ColumnName( 8));
+					Assert.Equal("m_int64"     ,q.ColumnName( 9));
+					Assert.Equal("m_uint64"    ,q.ColumnName(10));
+					Assert.Equal("m_decimal"   ,q.ColumnName(11));
+					Assert.Equal("m_float"     ,q.ColumnName(12));
+					Assert.Equal("m_double"    ,q.ColumnName(13));
+					Assert.Equal("m_string"    ,q.ColumnName(14));
+					Assert.Equal("m_buf"       ,q.ColumnName(15));
+					Assert.Equal("m_empty_buf" ,q.ColumnName(16));
+					Assert.Equal("m_int_buf"   ,q.ColumnName(17));
+					Assert.Equal("m_guid"      ,q.ColumnName(18));
+					Assert.Equal("m_enum"      ,q.ColumnName(19));
+					Assert.Equal("m_nullenum"  ,q.ColumnName(20));
+					Assert.Equal("m_dt_offset" ,q.ColumnName(21));
+					Assert.Equal("m_custom"    ,q.ColumnName(22));
+					Assert.Equal("m_nullint"   ,q.ColumnName(23));
+					Assert.Equal("m_nulllong"  ,q.ColumnName(24));
 				}
 
 				// Create some objects to stick in the table
@@ -4245,10 +4245,10 @@ namespace Rylogic.UnitTests
 				obj2.m_dt_offset = DateTimeOffset.UtcNow;
 
 				// Insert stuff
-				Assert.AreEqual(1, table.Insert(obj1));
-				Assert.AreEqual(1, table.Insert(obj2));
-				Assert.AreEqual(1, table.Insert(obj3));
-				Assert.AreEqual(3, table.RowCount);
+				Assert.Equal(1, table.Insert(obj1));
+				Assert.Equal(1, table.Insert(obj2));
+				Assert.Equal(1, table.Insert(obj3));
+				Assert.Equal(3, table.RowCount);
 
 				// Check Get() throws and Find() returns null if not found
 				Assert.Null(table.Find(0));
@@ -4267,11 +4267,11 @@ namespace Rylogic.UnitTests
 				// Check parameter binding
 				using (var q = new Sqlite.Query(db, Sqlite.Sql("select m_string,m_int from ",table.Name," where m_string = @p1 and m_int = @p2")))
 				{
-					Assert.AreEqual(2, q.ParmCount);
-					Assert.AreEqual("@p1", q.ParmName(1));
-					Assert.AreEqual("@p2", q.ParmName(2));
-					Assert.AreEqual(1, q.ParmIndex("@p1"));
-					Assert.AreEqual(2, q.ParmIndex("@p2"));
+					Assert.Equal(2, q.ParmCount);
+					Assert.Equal("@p1", q.ParmName(1));
+					Assert.Equal("@p2", q.ParmName(2));
+					Assert.Equal(1, q.ParmIndex("@p1"));
+					Assert.Equal(2, q.ParmIndex("@p2"));
 					q.BindParm(1, "string");
 					q.BindParm(2, 12345678);
 
@@ -4279,13 +4279,13 @@ namespace Rylogic.UnitTests
 					Assert.True(q.Step());
 
 					// Read the results
-					Assert.AreEqual(2, q.ColumnCount);
-					Assert.AreEqual(Sqlite.DataType.Text    ,q.ColumnType(0));
-					Assert.AreEqual(Sqlite.DataType.Integer ,q.ColumnType(1));
-					Assert.AreEqual("m_string"              ,q.ColumnName(0));
-					Assert.AreEqual("m_int"                 ,q.ColumnName(1));
-					Assert.AreEqual("string"                ,q.ReadColumn<string>(0));
-					Assert.AreEqual(12345678                ,q.ReadColumn<int>(1));
+					Assert.Equal(2, q.ColumnCount);
+					Assert.Equal(Sqlite.DataType.Text    ,q.ColumnType(0));
+					Assert.Equal(Sqlite.DataType.Integer ,q.ColumnType(1));
+					Assert.Equal("m_string"              ,q.ColumnName(0));
+					Assert.Equal("m_int"                 ,q.ColumnName(1));
+					Assert.Equal("string"                ,q.ReadColumn<string>(0));
+					Assert.Equal(12345678                ,q.ReadColumn<int>(1));
 
 					// There should be 3 rows
 					Assert.True(q.Step());
@@ -4295,7 +4295,7 @@ namespace Rylogic.UnitTests
 
 				// Update stuff
 				obj2.m_string = "I've been modified";
-				Assert.AreEqual(1, table.Update(obj2));
+				Assert.Equal(1, table.Update(obj2));
 
 				// Get the updated stuff and check it's been updated
 				OBJ2 = table.Find(obj2.m_key);
@@ -4303,41 +4303,41 @@ namespace Rylogic.UnitTests
 				Assert.True(obj2.Equals(OBJ2));
 
 				// Delete something and check it's gone
-				Assert.AreEqual(1, table.Delete(obj3));
+				Assert.Equal(1, table.Delete(obj3));
 				OBJ3 = table.Find(obj3.m_key);
 				Assert.Null(OBJ3);
 
 				// Update a single column and check it
 				obj1.m_byte = 55;
-				Assert.AreEqual(1, table.Update("m_byte", obj1.m_byte, 1));
+				Assert.Equal(1, table.Update("m_byte", obj1.m_byte, 1));
 				OBJ1 = table.Get(obj1.m_key);
 				Assert.NotNull(OBJ1);
 				Assert.True(obj1.Equals(OBJ1));
 
 				// Read a single column
 				var val = table.ColumnValue<ushort>("m_ushort", 2);
-				Assert.AreEqual(obj2.m_ushort, val);
+				Assert.Equal(obj2.m_ushort, val);
 
 				// Add something back
-				Assert.AreEqual(1, table.Insert(obj3));
+				Assert.Equal(1, table.Insert(obj3));
 				OBJ3 = table.Get(obj3.m_key);
 				Assert.NotNull(OBJ3);
 				Assert.True(obj3.Equals(OBJ3));
 
 				// Update the column value for all rows
 				obj1.m_byte = obj2.m_byte = obj3.m_byte = 0xAB;
-				Assert.AreEqual(3, table.UpdateAll("m_byte", (byte)0xAB));
+				Assert.Equal(3, table.UpdateAll("m_byte", (byte)0xAB));
 
 				// Enumerate objects
 				var objs = table.Select(x => x).ToArray();
-				Assert.AreEqual(3, objs.Length);
+				Assert.Equal(3, objs.Length);
 				Assert.True(obj1.Equals(objs[0]));
 				Assert.True(obj2.Equals(objs[1]));
 				Assert.True(obj3.Equals(objs[2]));
 
 				// LINQ expressions
 				objs = (from a in table where a.m_string == "I've been modified" select a).ToArray();
-				Assert.AreEqual(1, objs.Length);
+				Assert.Equal(1, objs.Length);
 				Assert.True(obj2.Equals(objs[0]));
 			}
 		}
@@ -4353,12 +4353,12 @@ namespace Rylogic.UnitTests
 
 				// Check the table
 				var table = db.Table<Table2>();
-				Assert.AreEqual(3, table.ColumnCount);
+				Assert.Equal(3, table.ColumnCount);
 				var column_names = new[]{"PK", "UniStr", "Inc_Explicit"};
 				using (var q = new Sqlite.Query(db, "select * from "+table.Name))
 				{
-					Assert.AreEqual(3        ,q.ColumnCount);
-					Assert.AreEqual("PK"     ,q.ColumnName(0));
+					Assert.Equal(3        ,q.ColumnCount);
+					Assert.Equal("PK"     ,q.ColumnName(0));
 					Assert.True(column_names.Contains(q.ColumnName(0)));
 					Assert.True(column_names.Contains(q.ColumnName(1)));
 				}
@@ -4366,9 +4366,9 @@ namespace Rylogic.UnitTests
 				// Insert some stuff and check it stores/reads back ok
 				var obj1 = new Table2("123", "€€€€");
 				var obj2 = new Table2("abc", "⽄畂卧湥敳慈摮敬⡲㐲ㄴ⤷›慃獵摥戠㩹樠癡⹡慬杮吮牨睯扡敬›潣⹭湩牴湡汥洮扯汩扥汵敬⹴牃獡剨灥牯楴杮匫獥楳湯瑓牡䕴捸灥楴湯›敓獳潩⁮瑓牡整㩤眠楚塄婐桹㐰慳扲汬穷䌰㡶啩扁搶睄畎䐱䭡䝭牌夳䉡獁െ");
-				Assert.AreEqual(1, table.Insert(obj1));
-				Assert.AreEqual(1, table.Insert(obj2));
-				Assert.AreEqual(2, table.RowCount);
+				Assert.Equal(1, table.Insert(obj1));
+				Assert.Equal(1, table.Insert(obj2));
+				Assert.Equal(2, table.RowCount);
 				var OBJ1 = table.Get(obj1.PK);
 				var OBJ2 = table.Get(obj2.PK);
 				Assert.True(obj1.Equals(OBJ1));
@@ -4376,7 +4376,7 @@ namespace Rylogic.UnitTests
 
 				// Update Unicode stuff
 				obj2.UniStr = "獁㩹獁";
-				Assert.AreEqual(1, table.Update(obj2));
+				Assert.Equal(1, table.Update(obj2));
 				OBJ2 = table.Get(obj2.PK);
 				Assert.True(obj2.Equals(OBJ2));
 			}
@@ -4393,11 +4393,11 @@ namespace Rylogic.UnitTests
 
 				// Check the table
 				var table = db.Table<Table3>();
-				Assert.AreEqual(9, table.ColumnCount);
+				Assert.Equal(9, table.ColumnCount);
 				using (var q = new Sqlite.Query(db, "select * from "+table.Name))
 				{
 					var cols = q.ColumnNames.ToList();
-					Assert.AreEqual(9, q.ColumnCount);
+					Assert.Equal(9, q.ColumnCount);
 					Assert.True(cols.Contains("Index"));
 					Assert.True(cols.Contains("Key2"));
 					Assert.True(cols.Contains("Key3"));
@@ -4416,11 +4416,11 @@ namespace Rylogic.UnitTests
 				var obj4 = new Table3(2, true , "first");
 
 				// Insert it an check they're there
-				Assert.AreEqual(1, table.Insert(obj1));
-				Assert.AreEqual(1, table.Insert(obj2));
-				Assert.AreEqual(1, table.Insert(obj3));
-				Assert.AreEqual(1, table.Insert(obj4));
-				Assert.AreEqual(4, table.RowCount);
+				Assert.Equal(1, table.Insert(obj1));
+				Assert.Equal(1, table.Insert(obj2));
+				Assert.Equal(1, table.Insert(obj3));
+				Assert.Equal(1, table.Insert(obj4));
+				Assert.Equal(4, table.RowCount);
 
 				Assert.Throws<ArgumentException>(()=>table.Get(obj1.Index, obj1.Key2));
 
@@ -4462,14 +4462,14 @@ namespace Rylogic.UnitTests
 
 				// Update in a multiple PK table
 				obj2.PropA = "I've also been modified";
-				Assert.AreEqual(1, table.Update(obj2));
+				Assert.Equal(1, table.Update(obj2));
 				OBJ2 = table.Get(obj2.Index, obj2.Key2, obj2.Key3);
 				Assert.NotNull(OBJ2);
 				Assert.True(obj2.Equals(OBJ2));
 
 				// Delete in a multiple PK table
 				var keys = Sqlite.PrimaryKeys(obj3);
-				Assert.AreEqual(1, table.DeleteByKey(keys));
+				Assert.Equal(1, table.DeleteByKey(keys));
 				OBJ3 = table.Find(obj3.Index, obj3.Key2, obj3.Key3);
 				Assert.Null(OBJ3);
 			}
@@ -4494,7 +4494,7 @@ namespace Rylogic.UnitTests
 
 				// Check they've been inserted
 				var rows = db.EnumRows<Table0>("select * from Table0").ToList();
-				Assert.AreEqual(3, rows.Count);
+				Assert.Equal(3, rows.Count);
 
 				// Add objects within a transaction that is not committed
 				try
@@ -4511,7 +4511,7 @@ namespace Rylogic.UnitTests
 					}
 				}
 				catch {}
-				Assert.AreEqual(3, table.RowCount);
+				Assert.Equal(3, table.RowCount);
 
 				// Add objects with no call to commit
 				using (db.NewTransaction())
@@ -4521,7 +4521,7 @@ namespace Rylogic.UnitTests
 
 					// No commit
 				}
-				Assert.AreEqual(3, table.RowCount);
+				Assert.Equal(3, table.RowCount);
 
 				// Add object with commit
 				using (var tranny = db.NewTransaction())
@@ -4531,7 +4531,7 @@ namespace Rylogic.UnitTests
 
 					tranny.Commit();
 				}
-				Assert.AreEqual(5, table.RowCount);
+				Assert.Equal(5, table.RowCount);
 
 				// Add objects from a worker thread
 				// In-memory DB's can't have multiple connections
@@ -4552,7 +4552,7 @@ namespace Rylogic.UnitTests
 							mre.Set();
 						});
 						mre.WaitOne();
-						Assert.AreEqual(7, table.RowCount);
+						Assert.Equal(7, table.RowCount);
 					}
 				}
 			}
@@ -4571,10 +4571,10 @@ namespace Rylogic.UnitTests
 				// Create objects
 				var objs = Enumerable.Range(0,10).Select(i => new Table1(i)).ToList();
 				foreach (var x in objs)
-					Assert.AreEqual(1, table.Insert(x)); // insert without compile-time type info
+					Assert.Equal(1, table.Insert(x)); // insert without compile-time type info
 
 				objs[5].m_string = "I am number 5";
-				Assert.AreEqual(1, table.Update(objs[5]));
+				Assert.Equal(1, table.Update(objs[5]));
 
 				var OBJS = table.Cast<Table1>().Select(x => x).ToList();
 				for (int i = 0, iend = objs.Count; i != iend; ++i)
@@ -4593,12 +4593,12 @@ namespace Rylogic.UnitTests
 
 				// Check the table
 				var table3 = db.Table<Table3>();
-				Assert.AreEqual(9, table3.ColumnCount);
+				Assert.Equal(9, table3.ColumnCount);
 				using (var q = new Sqlite.Query(db, "select * from "+table3.Name))
 				{
 					var cols = q.ColumnNames.ToList();
-					Assert.AreEqual(9, q.ColumnCount);
-					Assert.AreEqual(9, cols.Count);
+					Assert.Equal(9, q.ColumnCount);
+					Assert.Equal(9, cols.Count);
 					Assert.True(cols.Contains("Index"));
 					Assert.True(cols.Contains("Key2"));
 					Assert.True(cols.Contains("Key3"));
@@ -4617,11 +4617,11 @@ namespace Rylogic.UnitTests
 				var obj4 = new Table3(2, true , "first");
 
 				// Insert it an check they're there
-				Assert.AreEqual(1, table3.Insert(obj1));
-				Assert.AreEqual(1, table3.Insert(obj2));
-				Assert.AreEqual(1, table3.Insert(obj3));
-				Assert.AreEqual(1, table3.Insert(obj4));
-				Assert.AreEqual(4, table3.RowCount);
+				Assert.Equal(1, table3.Insert(obj1));
+				Assert.Equal(1, table3.Insert(obj2));
+				Assert.Equal(1, table3.Insert(obj3));
+				Assert.Equal(1, table3.Insert(obj4));
+				Assert.Equal(4, table3.RowCount);
 
 				// Rename the table
 				db.DropTable<Table4>();
@@ -4633,12 +4633,12 @@ namespace Rylogic.UnitTests
 
 				// Check the table
 				var table4 = db.Table<Table4>();
-				Assert.AreEqual(6, table4.ColumnCount);
+				Assert.Equal(6, table4.ColumnCount);
 				using (var q = new Sqlite.Query(db, "select * from "+table4.Name))
 				{
 					var cols = q.ColumnNames.ToList();
-					Assert.AreEqual(10, q.ColumnCount);
-					Assert.AreEqual(10, cols.Count);
+					Assert.Equal(10, q.ColumnCount);
+					Assert.Equal(10, cols.Count);
 					Assert.True(cols.Contains("Index"));
 					Assert.True(cols.Contains("Key2"));
 					Assert.True(cols.Contains("Key3"));
@@ -4667,34 +4667,34 @@ namespace Rylogic.UnitTests
 				int key = 0;
 				var values = new[]{4,1,0,5,7,9,6,3,8,2};
 				foreach (var v in values)
-					Assert.AreEqual(1, table.Insert(new Table0(ref key, v)));
-				Assert.AreEqual(10, table.RowCount);
+					Assert.Equal(1, table.Insert(new Table0(ref key, v)));
+				Assert.Equal(10, table.RowCount);
 
 				string sql_count = "select count(*) from "+table.Name;
 				using (var q = new Sqlite.Query(db, sql_count))
-					Assert.AreEqual(sql_count, q.SqlString);
+					Assert.Equal(sql_count, q.SqlString);
 
 				// Do some expression tree queries
 				{// Count clause
 					var q = table.Count(x => (x.Inc_Key % 3) == 0);
-					Assert.AreEqual(3, q);
+					Assert.Equal(3, q);
 				}
 				{// Where clause
 					var q = from x in table where x.Inc_Key % 2 == 1 select x;
 					var list = q.ToList();
-					Assert.AreEqual(5, list.Count);
+					Assert.Equal(5, list.Count);
 				}
 				{// Where clause
 					var q = table.Where(x => ((ITable0)x).Inc_Enum == SomeEnum.One || ((ITable0)x).Inc_Enum == SomeEnum.Three); // Cast needed to test expressions
 					var list = q.ToList();
-					Assert.AreEqual(7, list.Count);
-					Assert.AreEqual(3, list[0].Inc_Key);
-					Assert.AreEqual(4, list[1].Inc_Key);
-					Assert.AreEqual(6, list[2].Inc_Key);
-					Assert.AreEqual(7, list[3].Inc_Key);
-					Assert.AreEqual(8, list[4].Inc_Key);
-					Assert.AreEqual(9, list[5].Inc_Key);
-					Assert.AreEqual(10, list[6].Inc_Key);
+					Assert.Equal(7, list.Count);
+					Assert.Equal(3, list[0].Inc_Key);
+					Assert.Equal(4, list[1].Inc_Key);
+					Assert.Equal(6, list[2].Inc_Key);
+					Assert.Equal(7, list[3].Inc_Key);
+					Assert.Equal(8, list[4].Inc_Key);
+					Assert.Equal(9, list[5].Inc_Key);
+					Assert.Equal(10, list[6].Inc_Key);
 				}
 				{// Where clause with 'like' method calling 'RowCount'
 					//var q = (from x in table where SqlMethods.Like(x.Inc_Value, "5") select x).RowCount;
@@ -4703,140 +4703,140 @@ namespace Rylogic.UnitTests
 				{// Where clause with x => true
 					var q = table.Where(x => true);
 					var list = q.ToList();
-					Assert.AreEqual(10, list.Count);
-					Assert.AreEqual(1, list[0].Inc_Key);
-					Assert.AreEqual(2, list[1].Inc_Key);
-					Assert.AreEqual(3, list[2].Inc_Key);
-					Assert.AreEqual(4, list[3].Inc_Key);
-					Assert.AreEqual(5, list[4].Inc_Key);
-					Assert.AreEqual(6, list[5].Inc_Key);
-					Assert.AreEqual(7, list[6].Inc_Key);
-					Assert.AreEqual(8, list[7].Inc_Key);
-					Assert.AreEqual(9, list[8].Inc_Key);
-					Assert.AreEqual(10, list[9].Inc_Key);
+					Assert.Equal(10, list.Count);
+					Assert.Equal(1, list[0].Inc_Key);
+					Assert.Equal(2, list[1].Inc_Key);
+					Assert.Equal(3, list[2].Inc_Key);
+					Assert.Equal(4, list[3].Inc_Key);
+					Assert.Equal(5, list[4].Inc_Key);
+					Assert.Equal(6, list[5].Inc_Key);
+					Assert.Equal(7, list[6].Inc_Key);
+					Assert.Equal(8, list[7].Inc_Key);
+					Assert.Equal(9, list[8].Inc_Key);
+					Assert.Equal(10, list[9].Inc_Key);
 				}
 				{// Contains clause
 					var set = new[]{"2","4","8"};
 					var q = from x in table where set.Contains(x.Inc_Value) select x;
 					var list = q.ToList();
-					Assert.AreEqual(3, list.Count);
-					Assert.AreEqual(1, list[0].Inc_Key);
-					Assert.AreEqual(9, list[1].Inc_Key);
-					Assert.AreEqual(10, list[2].Inc_Key);
+					Assert.Equal(3, list.Count);
+					Assert.Equal(1, list[0].Inc_Key);
+					Assert.Equal(9, list[1].Inc_Key);
+					Assert.Equal(10, list[2].Inc_Key);
 				}
 				{// NOT Contains clause
 					var set = new List<string>{"2","4","8","5","9"};
 					var q = from x in table where set.Contains(x.Inc_Value) == false select x;
 					var list = q.ToList();
-					Assert.AreEqual(5, list.Count);
-					Assert.AreEqual(2, list[0].Inc_Key);
-					Assert.AreEqual(3, list[1].Inc_Key);
-					Assert.AreEqual(5, list[2].Inc_Key);
-					Assert.AreEqual(7, list[3].Inc_Key);
-					Assert.AreEqual(8, list[4].Inc_Key);
+					Assert.Equal(5, list.Count);
+					Assert.Equal(2, list[0].Inc_Key);
+					Assert.Equal(3, list[1].Inc_Key);
+					Assert.Equal(5, list[2].Inc_Key);
+					Assert.Equal(7, list[3].Inc_Key);
+					Assert.Equal(8, list[4].Inc_Key);
 				}
 				{// NOT Contains clause
 					var set = new List<string>{"2","4","8","5","9"};
 					var q = from x in table where !set.Contains(x.Inc_Value) select x;
 					var list = q.ToList();
-					Assert.AreEqual(5, list.Count);
-					Assert.AreEqual(2, list[0].Inc_Key);
-					Assert.AreEqual(3, list[1].Inc_Key);
-					Assert.AreEqual(5, list[2].Inc_Key);
-					Assert.AreEqual(7, list[3].Inc_Key);
-					Assert.AreEqual(8, list[4].Inc_Key);
+					Assert.Equal(5, list.Count);
+					Assert.Equal(2, list[0].Inc_Key);
+					Assert.Equal(3, list[1].Inc_Key);
+					Assert.Equal(5, list[2].Inc_Key);
+					Assert.Equal(7, list[3].Inc_Key);
+					Assert.Equal(8, list[4].Inc_Key);
 				}
 				{// OrderBy clause
 					var q = from x in table orderby x.Inc_Key descending select x;
 					var list = q.ToList();
-					Assert.AreEqual(10, list.Count);
+					Assert.Equal(10, list.Count);
 					for (int i = 0; i != 10; ++i)
-						Assert.AreEqual(10-i, list[i].Inc_Key);
+						Assert.Equal(10-i, list[i].Inc_Key);
 				}
 				{// Where and OrderBy clause
 					var q = from x in table where x.Inc_Key >= 5 orderby x.Inc_Value select x;
 					var list = q.ToList();
-					Assert.AreEqual(6, list.Count);
-					Assert.AreEqual(10, list[0].Inc_Key);
-					Assert.AreEqual(8, list[1].Inc_Key);
-					Assert.AreEqual(7, list[2].Inc_Key);
-					Assert.AreEqual(5, list[3].Inc_Key);
-					Assert.AreEqual(9, list[4].Inc_Key);
-					Assert.AreEqual(6, list[5].Inc_Key);
+					Assert.Equal(6, list.Count);
+					Assert.Equal(10, list[0].Inc_Key);
+					Assert.Equal(8, list[1].Inc_Key);
+					Assert.Equal(7, list[2].Inc_Key);
+					Assert.Equal(5, list[3].Inc_Key);
+					Assert.Equal(9, list[4].Inc_Key);
+					Assert.Equal(6, list[5].Inc_Key);
 				}
 				{// Skip
 					var q = table.Where(x => x.Inc_Key <= 5).Where(x => x.Inc_Value != "").Skip(2);
 					var list = q.ToList();
-					Assert.AreEqual(3, list.Count);
-					Assert.AreEqual(3, list[0].Inc_Key);
-					Assert.AreEqual(4, list[1].Inc_Key);
-					Assert.AreEqual(5, list[2].Inc_Key);
+					Assert.Equal(3, list.Count);
+					Assert.Equal(3, list[0].Inc_Key);
+					Assert.Equal(4, list[1].Inc_Key);
+					Assert.Equal(5, list[2].Inc_Key);
 				}
 				{// Take
 					var q = table.Where(x => x.Inc_Key >= 5).Take(2);
 					var list = q.ToList();
-					Assert.AreEqual(2, list.Count);
-					Assert.AreEqual(5, list[0].Inc_Key);
-					Assert.AreEqual(6, list[1].Inc_Key);
+					Assert.Equal(2, list.Count);
+					Assert.Equal(5, list[0].Inc_Key);
+					Assert.Equal(6, list[1].Inc_Key);
 				}
 				{// Skip and Take
 					var q = table.Where(x => x.Inc_Key >= 5).Skip(2).Take(2);
 					var list = q.ToList();
-					Assert.AreEqual(2, list.Count);
-					Assert.AreEqual(7, list[0].Inc_Key);
-					Assert.AreEqual(8, list[1].Inc_Key);
+					Assert.Equal(2, list.Count);
+					Assert.Equal(7, list[0].Inc_Key);
+					Assert.Equal(8, list[1].Inc_Key);
 				}
 				{// Null test
 					var q = from x in table where x.Inc_Value != null select x;
 					var list = q.ToList();
-					Assert.AreEqual(10, list.Count);
+					Assert.Equal(10, list.Count);
 				}
 				{// Type conversions
 					var q = from x in table where (float)x.Inc_Key > 2.5f && (float)x.Inc_Key < 7.5f select x;
 					var list = q.ToList();
-					Assert.AreEqual(5, list.Count);
-					Assert.AreEqual(3, list[0].Inc_Key);
-					Assert.AreEqual(4, list[1].Inc_Key);
-					Assert.AreEqual(5, list[2].Inc_Key);
-					Assert.AreEqual(6, list[3].Inc_Key);
-					Assert.AreEqual(7, list[4].Inc_Key);
+					Assert.Equal(5, list.Count);
+					Assert.Equal(3, list[0].Inc_Key);
+					Assert.Equal(4, list[1].Inc_Key);
+					Assert.Equal(5, list[2].Inc_Key);
+					Assert.Equal(6, list[3].Inc_Key);
+					Assert.Equal(7, list[4].Inc_Key);
 				}
 				{// Delete
 					var q = table.Delete(x => x.Inc_Key > 5);
 					var list = table.ToList();
-					Assert.AreEqual(5, q);
-					Assert.AreEqual(5, list.Count);
-					Assert.AreEqual(1, list[0].Inc_Key);
-					Assert.AreEqual(2, list[1].Inc_Key);
-					Assert.AreEqual(3, list[2].Inc_Key);
-					Assert.AreEqual(4, list[3].Inc_Key);
-					Assert.AreEqual(5, list[4].Inc_Key);
+					Assert.Equal(5, q);
+					Assert.Equal(5, list.Count);
+					Assert.Equal(1, list[0].Inc_Key);
+					Assert.Equal(2, list[1].Inc_Key);
+					Assert.Equal(3, list[2].Inc_Key);
+					Assert.Equal(4, list[3].Inc_Key);
+					Assert.Equal(5, list[4].Inc_Key);
 				}
 				{// Select
 					var q = table.Select(x => x.Inc_Key);
 					var list = q.ToList();
-					Assert.AreEqual(5, list.Count);
-					Assert.AreEqual(typeof(List<int>), list.GetType());
-					Assert.AreEqual(1, list[0]);
-					Assert.AreEqual(2, list[1]);
-					Assert.AreEqual(3, list[2]);
-					Assert.AreEqual(4, list[3]);
-					Assert.AreEqual(5, list[4]);
+					Assert.Equal(5, list.Count);
+					Assert.Equal(typeof(List<int>), list.GetType());
+					Assert.Equal(1, list[0]);
+					Assert.Equal(2, list[1]);
+					Assert.Equal(3, list[2]);
+					Assert.Equal(4, list[3]);
+					Assert.Equal(5, list[4]);
 				}
 				{// Select tuple
 					var q = table.Select(x => new{x.Inc_Key, x.Inc_Enum});
 					var list = q.ToList();
-					Assert.AreEqual(5, list.Count);
-					Assert.AreEqual(1, list[0].Inc_Key);
-					Assert.AreEqual(2, list[1].Inc_Key);
-					Assert.AreEqual(3, list[2].Inc_Key);
-					Assert.AreEqual(4, list[3].Inc_Key);
-					Assert.AreEqual(5, list[4].Inc_Key);
-					Assert.AreEqual(SomeEnum.Two   ,list[0].Inc_Enum);
-					Assert.AreEqual(SomeEnum.Two   ,list[1].Inc_Enum);
-					Assert.AreEqual(SomeEnum.One   ,list[2].Inc_Enum);
-					Assert.AreEqual(SomeEnum.Three ,list[3].Inc_Enum);
-					Assert.AreEqual(SomeEnum.Two   ,list[4].Inc_Enum);
+					Assert.Equal(5, list.Count);
+					Assert.Equal(1, list[0].Inc_Key);
+					Assert.Equal(2, list[1].Inc_Key);
+					Assert.Equal(3, list[2].Inc_Key);
+					Assert.Equal(4, list[3].Inc_Key);
+					Assert.Equal(5, list[4].Inc_Key);
+					Assert.Equal(SomeEnum.Two   ,list[0].Inc_Enum);
+					Assert.Equal(SomeEnum.Two   ,list[1].Inc_Enum);
+					Assert.Equal(SomeEnum.One   ,list[2].Inc_Enum);
+					Assert.Equal(SomeEnum.Three ,list[3].Inc_Enum);
+					Assert.Equal(SomeEnum.Two   ,list[4].Inc_Enum);
 				}
 				#pragma warning disable 168
 				{// Check sql strings are correct
@@ -4844,36 +4844,36 @@ namespace Rylogic.UnitTests
 
 					var a = table.Where(x => x.Inc_Key == 3).Select(x => x.Inc_Enum).ToList();
 					sql = table.SqlString;
-					Assert.AreEqual("select Inc_Enum from Table0 where (Inc_Key==?)", sql);
+					Assert.Equal("select Inc_Enum from Table0 where (Inc_Key==?)", sql);
 
 					var b = table.Where(x => x.Inc_Key == 3).Select(x => new{x.Inc_Value,x.Inc_Enum}).ToList();
 					sql = table.SqlString;
-					Assert.AreEqual("select Inc_Value,Inc_Enum from Table0 where (Inc_Key==?)", sql);
+					Assert.Equal("select Inc_Value,Inc_Enum from Table0 where (Inc_Key==?)", sql);
 
 					sql = table.Where(x => (x.Inc_Key & 0x3) == 0x1).GenerateExpression().ResetExpression().SqlString;
-					Assert.AreEqual("select * from Table0 where ((Inc_Key&?)==?)", sql);
+					Assert.Equal("select * from Table0 where ((Inc_Key&?)==?)", sql);
 
 					sql = table.Where(x => x.Inc_Key == 3).GenerateExpression().ResetExpression().SqlString;
-					Assert.AreEqual("select * from Table0 where (Inc_Key==?)", sql);
+					Assert.Equal("select * from Table0 where (Inc_Key==?)", sql);
 
 					sql = table.Where(x => x.Inc_Key == 3).Take(1).GenerateExpression().ResetExpression().SqlString;
-					Assert.AreEqual("select * from Table0 where (Inc_Key==?) limit 1", sql);
+					Assert.Equal("select * from Table0 where (Inc_Key==?) limit 1", sql);
 
 					var t = table.FirstOrDefault(x => x.Inc_Key == 4);
 					sql = table.SqlString;
-					Assert.AreEqual("select * from Table0 where (Inc_Key==?) limit 1", sql);
+					Assert.Equal("select * from Table0 where (Inc_Key==?) limit 1", sql);
 
 					var l = table.Where(x => x.Inc_Key == 4).Take(4).Skip(2).ToList();
 					sql = table.SqlString;
-					Assert.AreEqual("select * from Table0 where (Inc_Key==?) limit 4 offset 2", sql);
+					Assert.Equal("select * from Table0 where (Inc_Key==?) limit 4 offset 2", sql);
 
 					var q = (from x in table where x.Inc_Key == 3 select new {x.Inc_Key, x.Inc_Value}).ToList();
 					sql = table.SqlString;
-					Assert.AreEqual("select Inc_Key,Inc_Value from Table0 where (Inc_Key==?)", sql);
+					Assert.Equal("select Inc_Key,Inc_Value from Table0 where (Inc_Key==?)", sql);
 
 					var w = table.Delete(x => x.Inc_Key == 2);
 					sql = table.SqlString;
-					Assert.AreEqual("delete from Table0 where (Inc_Key==?)", sql);
+					Assert.Equal("delete from Table0 where (Inc_Key==?)", sql);
 				}
 				#pragma warning restore 168
 			}
@@ -4893,29 +4893,29 @@ namespace Rylogic.UnitTests
 				int key = 0;
 				var values = new[]{4,1,0,5,7,9,6,3,8,2};
 				foreach (var v in values)
-					Assert.AreEqual(1, table.Insert(new Table0(ref key, v)));
-				Assert.AreEqual(10, table.RowCount);
+					Assert.Equal(1, table.Insert(new Table0(ref key, v)));
+				Assert.Equal(10, table.RowCount);
 
 				string sql_count = "select count(*) from "+table.Name;
 				using (var q = new Sqlite.Query(db, sql_count))
-					Assert.AreEqual(sql_count, q.SqlString);
+					Assert.Equal(sql_count, q.SqlString);
 
 				// Do some expression tree queries
 				{// Count clause
 					var q = table.Count<Table0>(x => (x.Inc_Key % 3) == 0);
-					Assert.AreEqual(3, q);
+					Assert.Equal(3, q);
 				}
 				{// Where clause
 					var q = table.Where<Table0>(x => ((ITable0)x).Inc_Enum == SomeEnum.One || ((ITable0)x).Inc_Enum == SomeEnum.Three).Cast<ITable0>(); // Cast needed to test expressions
 					var list = q.ToList();
-					Assert.AreEqual(7, list.Count);
-					Assert.AreEqual(3, list[0].Inc_Key);
-					Assert.AreEqual(4, list[1].Inc_Key);
-					Assert.AreEqual(6, list[2].Inc_Key);
-					Assert.AreEqual(7, list[3].Inc_Key);
-					Assert.AreEqual(8, list[4].Inc_Key);
-					Assert.AreEqual(9, list[5].Inc_Key);
-					Assert.AreEqual(10, list[6].Inc_Key);
+					Assert.Equal(7, list.Count);
+					Assert.Equal(3, list[0].Inc_Key);
+					Assert.Equal(4, list[1].Inc_Key);
+					Assert.Equal(6, list[2].Inc_Key);
+					Assert.Equal(7, list[3].Inc_Key);
+					Assert.Equal(8, list[4].Inc_Key);
+					Assert.Equal(9, list[5].Inc_Key);
+					Assert.Equal(10, list[6].Inc_Key);
 				}
 				{// Where clause with 'like' method calling 'RowCount'
 					//var q = table.Where<Table0>(x => SqlMethods.Like(x.Inc_Value, "5")).RowCount;
@@ -4924,136 +4924,136 @@ namespace Rylogic.UnitTests
 				{// Where clause with x => true
 					var q = table.Where<Table0>(x => true).Cast<Table0>();
 					var list = q.ToList();
-					Assert.AreEqual(10, list.Count);
-					Assert.AreEqual(1, list[0].Inc_Key);
-					Assert.AreEqual(2, list[1].Inc_Key);
-					Assert.AreEqual(3, list[2].Inc_Key);
-					Assert.AreEqual(4, list[3].Inc_Key);
-					Assert.AreEqual(5, list[4].Inc_Key);
-					Assert.AreEqual(6, list[5].Inc_Key);
-					Assert.AreEqual(7, list[6].Inc_Key);
-					Assert.AreEqual(8, list[7].Inc_Key);
-					Assert.AreEqual(9, list[8].Inc_Key);
-					Assert.AreEqual(10, list[9].Inc_Key);
+					Assert.Equal(10, list.Count);
+					Assert.Equal(1, list[0].Inc_Key);
+					Assert.Equal(2, list[1].Inc_Key);
+					Assert.Equal(3, list[2].Inc_Key);
+					Assert.Equal(4, list[3].Inc_Key);
+					Assert.Equal(5, list[4].Inc_Key);
+					Assert.Equal(6, list[5].Inc_Key);
+					Assert.Equal(7, list[6].Inc_Key);
+					Assert.Equal(8, list[7].Inc_Key);
+					Assert.Equal(9, list[8].Inc_Key);
+					Assert.Equal(10, list[9].Inc_Key);
 				}
 				{// Contains clause
 					var set = new[]{"2","4","8"};
 					var q = table.Where<Table0>(x => set.Contains(x.Inc_Value)).Cast<Table0>();
 					var list = q.ToList();
-					Assert.AreEqual(3, list.Count);
-					Assert.AreEqual(1, list[0].Inc_Key);
-					Assert.AreEqual(9, list[1].Inc_Key);
-					Assert.AreEqual(10, list[2].Inc_Key);
+					Assert.Equal(3, list.Count);
+					Assert.Equal(1, list[0].Inc_Key);
+					Assert.Equal(9, list[1].Inc_Key);
+					Assert.Equal(10, list[2].Inc_Key);
 				}
 				{// NOT Contains clause
 					var set = new List<string>{"2","4","8","5","9"};
 					var q = table.Where<Table0>(x => set.Contains(x.Inc_Value) == false).Cast<Table0>();
 					var list = q.ToList();
-					Assert.AreEqual(5, list.Count);
-					Assert.AreEqual(2, list[0].Inc_Key);
-					Assert.AreEqual(3, list[1].Inc_Key);
-					Assert.AreEqual(5, list[2].Inc_Key);
-					Assert.AreEqual(7, list[3].Inc_Key);
-					Assert.AreEqual(8, list[4].Inc_Key);
+					Assert.Equal(5, list.Count);
+					Assert.Equal(2, list[0].Inc_Key);
+					Assert.Equal(3, list[1].Inc_Key);
+					Assert.Equal(5, list[2].Inc_Key);
+					Assert.Equal(7, list[3].Inc_Key);
+					Assert.Equal(8, list[4].Inc_Key);
 				}
 				{// NOT Contains clause
 					var set = new List<string>{"2","4","8","5","9"};
 					var q = table.Where<Table0>(x => !set.Contains(x.Inc_Value)).Cast<Table0>();
 					var list = q.ToList();
-					Assert.AreEqual(5, list.Count);
-					Assert.AreEqual(2, list[0].Inc_Key);
-					Assert.AreEqual(3, list[1].Inc_Key);
-					Assert.AreEqual(5, list[2].Inc_Key);
-					Assert.AreEqual(7, list[3].Inc_Key);
-					Assert.AreEqual(8, list[4].Inc_Key);
+					Assert.Equal(5, list.Count);
+					Assert.Equal(2, list[0].Inc_Key);
+					Assert.Equal(3, list[1].Inc_Key);
+					Assert.Equal(5, list[2].Inc_Key);
+					Assert.Equal(7, list[3].Inc_Key);
+					Assert.Equal(8, list[4].Inc_Key);
 				}
 				{// OrderBy clause
 					var q = table.OrderByDescending<Table0,int>(x => x.Inc_Key).Cast<Table0>();
 					var list = q.ToList();
-					Assert.AreEqual(10, list.Count);
+					Assert.Equal(10, list.Count);
 					for (int i = 0; i != 10; ++i)
-						Assert.AreEqual(10-i, list[i].Inc_Key);
+						Assert.Equal(10-i, list[i].Inc_Key);
 				}
 				{// Where and OrderBy clause
 					var q = table.Where<Table0>(x => x.Inc_Key >= 5).OrderBy<Table0,string>(x => x.Inc_Value).Cast<Table0>();
 					var list = q.ToList();
-					Assert.AreEqual(6, list.Count);
-					Assert.AreEqual(10, list[0].Inc_Key);
-					Assert.AreEqual(8, list[1].Inc_Key);
-					Assert.AreEqual(7, list[2].Inc_Key);
-					Assert.AreEqual(5, list[3].Inc_Key);
-					Assert.AreEqual(9, list[4].Inc_Key);
-					Assert.AreEqual(6, list[5].Inc_Key);
+					Assert.Equal(6, list.Count);
+					Assert.Equal(10, list[0].Inc_Key);
+					Assert.Equal(8, list[1].Inc_Key);
+					Assert.Equal(7, list[2].Inc_Key);
+					Assert.Equal(5, list[3].Inc_Key);
+					Assert.Equal(9, list[4].Inc_Key);
+					Assert.Equal(6, list[5].Inc_Key);
 				}
 				{// Skip
 					var q = table.Where<Table0>(x => x.Inc_Key <= 5).Skip(2).Cast<Table0>();
 					var list = q.ToList();
-					Assert.AreEqual(3, list.Count);
-					Assert.AreEqual(3, list[0].Inc_Key);
-					Assert.AreEqual(4, list[1].Inc_Key);
-					Assert.AreEqual(5, list[2].Inc_Key);
+					Assert.Equal(3, list.Count);
+					Assert.Equal(3, list[0].Inc_Key);
+					Assert.Equal(4, list[1].Inc_Key);
+					Assert.Equal(5, list[2].Inc_Key);
 				}
 				{// Take
 					var q = table.Where<Table0>(x => x.Inc_Key >= 5).Take(2).Cast<Table0>();
 					var list = q.ToList();
-					Assert.AreEqual(2, list.Count);
-					Assert.AreEqual(5, list[0].Inc_Key);
-					Assert.AreEqual(6, list[1].Inc_Key);
+					Assert.Equal(2, list.Count);
+					Assert.Equal(5, list[0].Inc_Key);
+					Assert.Equal(6, list[1].Inc_Key);
 				}
 				{// Skip and Take
 					var q = table.Where<Table0>(x => x.Inc_Key >= 5).Skip(2).Take(2).Cast<Table0>();
 					var list = q.ToList();
-					Assert.AreEqual(2, list.Count);
-					Assert.AreEqual(7, list[0].Inc_Key);
-					Assert.AreEqual(8, list[1].Inc_Key);
+					Assert.Equal(2, list.Count);
+					Assert.Equal(7, list[0].Inc_Key);
+					Assert.Equal(8, list[1].Inc_Key);
 				}
 				{// Null test
 					var q = table.Where<Table0>(x => x.Inc_Value != null).Cast<Table0>();
 					var list = q.ToList();
-					Assert.AreEqual(10, list.Count);
+					Assert.Equal(10, list.Count);
 				}
 				{// Type conversions
 					var q = table.Where<Table0>(x => (float) x.Inc_Key > 2.5f && (float) x.Inc_Key < 7.5f).Cast<Table0>();
 					var list = q.ToList();
-					Assert.AreEqual(5, list.Count);
-					Assert.AreEqual(3, list[0].Inc_Key);
-					Assert.AreEqual(4, list[1].Inc_Key);
-					Assert.AreEqual(5, list[2].Inc_Key);
-					Assert.AreEqual(6, list[3].Inc_Key);
-					Assert.AreEqual(7, list[4].Inc_Key);
+					Assert.Equal(5, list.Count);
+					Assert.Equal(3, list[0].Inc_Key);
+					Assert.Equal(4, list[1].Inc_Key);
+					Assert.Equal(5, list[2].Inc_Key);
+					Assert.Equal(6, list[3].Inc_Key);
+					Assert.Equal(7, list[4].Inc_Key);
 				}
 				{// Delete
 					var q = table.Delete<Table0>(x => x.Inc_Key > 5);
 					var list = table.Cast<Table0>().ToList();
-					Assert.AreEqual(5, q);
-					Assert.AreEqual(5, list.Count);
-					Assert.AreEqual(1, list[0].Inc_Key);
-					Assert.AreEqual(2, list[1].Inc_Key);
-					Assert.AreEqual(3, list[2].Inc_Key);
-					Assert.AreEqual(4, list[3].Inc_Key);
-					Assert.AreEqual(5, list[4].Inc_Key);
+					Assert.Equal(5, q);
+					Assert.Equal(5, list.Count);
+					Assert.Equal(1, list[0].Inc_Key);
+					Assert.Equal(2, list[1].Inc_Key);
+					Assert.Equal(3, list[2].Inc_Key);
+					Assert.Equal(4, list[3].Inc_Key);
+					Assert.Equal(5, list[4].Inc_Key);
 				}
 				#pragma warning disable 168
 				{// Check sql strings are correct
 					string sql;
 
 					sql = table.Where<Table0>(x => x.Inc_Key == 3).GenerateExpression().ResetExpression().SqlString;
-					Assert.AreEqual("select * from Table0 where (Inc_Key==?)", sql);
+					Assert.Equal("select * from Table0 where (Inc_Key==?)", sql);
 
 					sql = table.Where<Table0>(x => x.Inc_Key == 3).Take(1).GenerateExpression().ResetExpression().SqlString;
-					Assert.AreEqual("select * from Table0 where (Inc_Key==?) limit 1", sql);
+					Assert.Equal("select * from Table0 where (Inc_Key==?) limit 1", sql);
 
 					var t = table.FirstOrDefault<Table0>(x => x.Inc_Key == 4);
 					sql = table.SqlString;
-					Assert.AreEqual("select * from Table0 where (Inc_Key==?) limit 1", sql);
+					Assert.Equal("select * from Table0 where (Inc_Key==?) limit 1", sql);
 
 					var l = table.Where<Table0>(x => x.Inc_Key == 4).Take(4).Skip(2).Cast<Table0>().ToList();
 					sql = table.SqlString;
-					Assert.AreEqual("select * from Table0 where (Inc_Key==?) limit 4 offset 2", sql);
+					Assert.Equal("select * from Table0 where (Inc_Key==?) limit 4 offset 2", sql);
 
 					var w = table.Delete<Table0>(x => x.Inc_Key == 2);
 					sql = table.SqlString;
-					Assert.AreEqual("delete from Table0 where (Inc_Key==?)", sql);
+					Assert.Equal("delete from Table0 where (Inc_Key==?)", sql);
 				}
 				#pragma warning restore 168
 			}
@@ -5076,79 +5076,79 @@ namespace Rylogic.UnitTests
 				var obj4 = new Table1(4){m_nulllong = 2};
 
 				// Insert stuff
-				Assert.AreEqual(1, table.Insert(obj1));
-				Assert.AreEqual(1, table.Insert(obj2));
-				Assert.AreEqual(1, table.Insert(obj3));
-				Assert.AreEqual(1, table.Insert(obj4));
-				Assert.AreEqual(4, table.RowCount);
+				Assert.Equal(1, table.Insert(obj1));
+				Assert.Equal(1, table.Insert(obj2));
+				Assert.Equal(1, table.Insert(obj3));
+				Assert.Equal(1, table.Insert(obj4));
+				Assert.Equal(4, table.RowCount);
 
 				{// non-null nullable
 					int? nullable = 1;
 					var q = table.Where(x => x.m_nullint == nullable);
 					var list = q.ToList();
-					Assert.AreEqual(1, list.Count);
-					Assert.AreEqual(1, list[0].m_nullint);
+					Assert.Equal(1, list.Count);
+					Assert.Equal(1, list[0].m_nullint);
 				}
 				{// non-null nullable
 					long? nullable = 2;
 					var q = table.Where(x => x.m_nulllong == nullable.Value);
 					var list = q.ToList();
-					Assert.AreEqual(1, list.Count);
-					Assert.AreEqual((long?)2, list[0].m_nulllong);
+					Assert.Equal(1, list.Count);
+					Assert.Equal((long?)2, list[0].m_nulllong);
 				}
 				{// null nullable
 					int? nullable = null;
 					var q = table.Where(x => x.m_nullint == nullable);
 					var list = q.ToList();
-					Assert.AreEqual(1, list.Count);
-					Assert.AreEqual(null, list[0].m_nullint);
+					Assert.Equal(1, list.Count);
+					Assert.Equal(null, list[0].m_nullint);
 				}
 				{// null nullable
 					long? nullable = null;
 					var q = table.Where(x => x.m_nullint == nullable);
 					var list = q.ToList();
-					Assert.AreEqual(1, list.Count);
-					Assert.AreEqual(null, list[0].m_nulllong);
+					Assert.Equal(1, list.Count);
+					Assert.Equal(null, list[0].m_nulllong);
 				}
 				{// expression nullable(not null) == non-nullable
 					const int target = 1;
 					var q = table.Where(x => x.m_nullint == target);
 					var list = q.ToList();
-					Assert.AreEqual(1, list.Count);
-					Assert.AreEqual(1, list[0].m_nullint);
+					Assert.Equal(1, list.Count);
+					Assert.Equal(1, list[0].m_nullint);
 				}
 				{// expression non-nullable == nullable(not null)
 					int? target = 4;
 					var q = table.Where(x => x.m_int == target);
 					var list = q.ToList();
-					Assert.AreEqual(1, list.Count);
-					Assert.AreEqual(4, list[0].m_int);
+					Assert.Equal(1, list.Count);
+					Assert.Equal(4, list[0].m_int);
 				}
 				{// expression nullable(null) == non-nullable
 					const long target = 2;
 					var q = table.Where(x => x.m_nulllong == target);
 					var list = q.ToList();
-					Assert.AreEqual(1, list.Count);
-					Assert.AreEqual((long?)2, list[0].m_nulllong);
+					Assert.Equal(1, list.Count);
+					Assert.Equal((long?)2, list[0].m_nulllong);
 				}
 				{// expression non-nullable == nullable(null)
 					int? target = null;
 					var q = table.Where(x => x.m_int == target);
 					var list = q.ToList();
-					Assert.AreEqual(0, list.Count);
+					Assert.Equal(0, list.Count);
 				}
 				{// Testing members on nullable types
 					var q = table.Where(x => x.m_nullint.HasValue == false);
 					var list = q.ToList();
-					Assert.AreEqual(1, list.Count);
-					Assert.AreEqual(null, list[0].m_nullint);
+					Assert.Equal(1, list.Count);
+					Assert.Equal(null, list[0].m_nullint);
 				}
 				{// Testing members on nullable types
 					var q = table.Where(x => x.m_nullint.HasValue && x.m_nullint.Value == 23);
 					var list = q.ToList();
-					Assert.AreEqual(2, list.Count);
-					Assert.AreEqual(23, list[0].m_nullint);
-					Assert.AreEqual(23, list[1].m_nullint);
+					Assert.Equal(2, list.Count);
+					Assert.Equal(23, list[0].m_nullint);
+					Assert.Equal(23, list[1].m_nullint);
 				}
 			}
 		}
@@ -5164,11 +5164,11 @@ namespace Rylogic.UnitTests
 				var table = db.Table<Table5>();
 
 				var meta = Sqlite.TableMetaData.GetMetaData<Table5>();
-				Assert.AreEqual(2, meta.ColumnCount);
-				Assert.AreEqual(1, meta.Pks.Length);
-				Assert.AreEqual("PK", meta.Pks[0].Name);
-				Assert.AreEqual(1, meta.NonPks.Length);
-				Assert.AreEqual("Data", meta.NonPks[0].Name);
+				Assert.Equal(2, meta.ColumnCount);
+				Assert.Equal(1, meta.Pks.Length);
+				Assert.Equal("PK", meta.Pks[0].Name);
+				Assert.Equal(1, meta.NonPks.Length);
+				Assert.Equal("Data", meta.NonPks[0].Name);
 
 				// Create some objects to stick in the table
 				var obj1 = new Table5{Data = "1"};
@@ -5177,11 +5177,11 @@ namespace Rylogic.UnitTests
 				var obj4 = new Table5{Data = "4"};
 
 				// Insert stuff
-				Assert.AreEqual(1, table.Insert(obj1));
-				Assert.AreEqual(1, table.Insert(obj2));
-				Assert.AreEqual(1, table.Insert(obj3));
-				Assert.AreEqual(1, table.Insert(obj4));
-				Assert.AreEqual(4, table.RowCount);
+				Assert.Equal(1, table.Insert(obj1));
+				Assert.Equal(1, table.Insert(obj2));
+				Assert.Equal(1, table.Insert(obj3));
+				Assert.Equal(1, table.Insert(obj4));
+				Assert.Equal(4, table.RowCount);
 			}
 		}
 		[Test] public void RowChangedEvents()
@@ -5205,25 +5205,25 @@ namespace Rylogic.UnitTests
 
 				// Insert stuff and check the event fires
 				table.Insert(obj1);
-				Assert.AreEqual(Sqlite.ChangeType.Insert ,args.ChangeType);
-				Assert.AreEqual("Table5"                 ,args.TableName);
-				Assert.AreEqual(1L                       ,args.RowId);
+				Assert.Equal(Sqlite.ChangeType.Insert ,args.ChangeType);
+				Assert.Equal("Table5"                 ,args.TableName);
+				Assert.Equal(1L                       ,args.RowId);
 
 				table.Insert(obj2);
-				Assert.AreEqual(Sqlite.ChangeType.Insert ,args.ChangeType);
-				Assert.AreEqual("Table5"                 ,args.TableName);
-				Assert.AreEqual(2L                       ,args.RowId);
+				Assert.Equal(Sqlite.ChangeType.Insert ,args.ChangeType);
+				Assert.Equal("Table5"                 ,args.TableName);
+				Assert.Equal(2L                       ,args.RowId);
 
 				obj1.Data = "Updated";
 				table.Update(obj1);
-				Assert.AreEqual(Sqlite.ChangeType.Update ,args.ChangeType);
-				Assert.AreEqual("Table5"                 ,args.TableName);
-				Assert.AreEqual(1L                       ,args.RowId);
+				Assert.Equal(Sqlite.ChangeType.Update ,args.ChangeType);
+				Assert.Equal("Table5"                 ,args.TableName);
+				Assert.Equal(1L                       ,args.RowId);
 
 				table.Delete(obj2);
-				Assert.AreEqual(Sqlite.ChangeType.Delete ,args.ChangeType);
-				Assert.AreEqual("Table5"                 ,args.TableName);
-				Assert.AreEqual(2L                       ,args.RowId);
+				Assert.Equal(Sqlite.ChangeType.Delete ,args.ChangeType);
+				Assert.Equal("Table5"                 ,args.TableName);
+				Assert.Equal(2L                       ,args.RowId);
 			}
 		}
 

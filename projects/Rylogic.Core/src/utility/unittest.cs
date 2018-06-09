@@ -215,14 +215,22 @@ namespace Rylogic.UnitTests
 		}
 
 		/// <summary>Tests value equality</summary>
-		public static void AreEqual(object lhs, object rhs)
+		public static void Equal(object lhs, object rhs)
 		{
 			if (Equals(lhs, rhs)) return;
 			throw new UnitTestException(VSLink + $"values are not equal\r\n  lhs: {(lhs ?? "null").ToString()}\r\n  rhs: {(rhs ?? "null").ToString()}");
 		}
 
 		/// <summary>Tests value equality</summary>
-		public static void AreEqual(double lhs, double rhs, double tol)
+		public static void Equal<T>(IEnumerable<T> lhs, IEnumerable<T> rhs)
+		{
+			if (ReferenceEquals(lhs, rhs)) return;
+			if (lhs.SequenceEqual(rhs)) return;
+			throw new UnitTestException(VSLink + $"sequences are not equal\r\n  lhs: {(lhs != null ? string.Join(",", lhs) : "null")}\r\n  rhs: {(lhs != null ? string.Join(",", rhs) : "null")}");
+		}
+
+		/// <summary>Tests value equality</summary>
+		public static void Equal(double lhs, double rhs, double tol)
 		{
 			if (Math.Abs(rhs - lhs) < tol) return;
 			throw new UnitTestException(VSLink + $"values are not equal\r\n  lhs: {lhs}\r\n  rhs: {rhs}\r\n  tol: {tol}");

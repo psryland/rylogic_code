@@ -101,7 +101,7 @@ namespace RyLogViewer
 				"Unexpected Termination", MessageBoxButtons.YesNo, MessageBoxIcon.Error);
 			if (res == DialogResult.Yes)
 			{
-				var dg = new SaveFileDialog{Title = "Save Crash Report", FileName = Application.ProductName+"CrashReport", Filter = Util2.FileDialogFilter("Crash Report Files","*.txt", "All files","*.*"), DefaultExt = "txt", CheckPathExists = true};
+				var dg = new SaveFileDialog{Title = "Save Crash Report", FileName = Application.ProductName+"CrashReport", Filter = Util.FileDialogFilter("Crash Report Files","*.txt", "All files","*.*"), DefaultExt = "txt", CheckPathExists = true};
 				if (dg.ShowDialog() == DialogResult.OK)
 				{
 					var settings = "Settings filepath unknown";

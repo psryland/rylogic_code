@@ -99,33 +99,33 @@ namespace Rylogic.UnitTests
 			var src = new StringSrc(str1);
 
 			var buf = new Buffer(src);
-			Assert.AreEqual(true, buf.Empty);
-			Assert.AreEqual('1', buf.Peek);
-			Assert.AreEqual(true, buf.Empty);
-			Assert.AreEqual('1', buf[0]);
-			Assert.AreEqual(1, buf.Length);
-			Assert.AreEqual('2', buf[1]);
-			Assert.AreEqual(2, buf.Length);
-			Assert.AreEqual(true, buf.Match(str1, 4));
-			Assert.AreEqual(4, buf.Length);
+			Assert.Equal(true, buf.Empty);
+			Assert.Equal('1', buf.Peek);
+			Assert.Equal(true, buf.Empty);
+			Assert.Equal('1', buf[0]);
+			Assert.Equal(1, buf.Length);
+			Assert.Equal('2', buf[1]);
+			Assert.Equal(2, buf.Length);
+			Assert.Equal(true, buf.Match(str1, 4));
+			Assert.Equal(4, buf.Length);
 
 			buf.Next();
-			Assert.AreEqual(3, buf.Length);
-			Assert.AreEqual('2', buf.Peek);
-			Assert.AreEqual(3, buf.Length);
-			Assert.AreEqual('2', buf[0]);
-			Assert.AreEqual(3, buf.Length);
-			Assert.AreEqual('3', buf[1]);
-			Assert.AreEqual(3, buf.Length);
-			Assert.AreEqual(true, buf.Match(str1.Substring(1, 4)));
-			Assert.AreEqual(4, buf.Length);
-			Assert.AreEqual(true, !buf.Match("235"));
-			Assert.AreEqual(4, buf.Length);
+			Assert.Equal(3, buf.Length);
+			Assert.Equal('2', buf.Peek);
+			Assert.Equal(3, buf.Length);
+			Assert.Equal('2', buf[0]);
+			Assert.Equal(3, buf.Length);
+			Assert.Equal('3', buf[1]);
+			Assert.Equal(3, buf.Length);
+			Assert.Equal(true, buf.Match(str1.Substring(1, 4)));
+			Assert.Equal(4, buf.Length);
+			Assert.Equal(true, !buf.Match("235"));
+			Assert.Equal(4, buf.Length);
 
 			buf.Next(4);
-			Assert.AreEqual(true, buf.Empty);
-			Assert.AreEqual(true, !buf.Match("6780"));
-			Assert.AreEqual(4, buf.Length);
+			Assert.Equal(true, buf.Empty);
+			Assert.Equal(true, !buf.Match("6780"));
+			Assert.Equal(4, buf.Length);
 		}
 	}
 }

@@ -289,18 +289,18 @@ namespace Rylogic.UnitTests
 
 		[Test] public void MemberName()
 		{
-			Assert.AreEqual("X", R<Point>.Name(p => p.X));
-			Assert.AreEqual("Offset", R<Point>.Name(p => p.Offset(0,0)));
-			Assert.AreEqual("BaseStream", R<StreamWriter>.Name(s => s.BaseStream));
+			Assert.Equal("X", R<Point>.Name(p => p.X));
+			Assert.Equal("Offset", R<Point>.Name(p => p.Offset(0,0)));
+			Assert.Equal("BaseStream", R<StreamWriter>.Name(s => s.BaseStream));
 		}
 		[Test] public void Attrib()
 		{
 			var attr = R<Thing>.Attrs(x => x.Desc()).ToArray();
-			Assert.AreEqual(1, attr.Length);
+			Assert.Equal(1, attr.Length);
 			Assert.True(attr[0] is DescriptionAttribute);
 
 			attr = R<Thing>.Attrs(x => x.Bob).ToArray();
-			Assert.AreEqual(1, attr.Length);
+			Assert.Equal(1, attr.Length);
 			Assert.True(attr[0] is DescAttribute);
 		}
 	}

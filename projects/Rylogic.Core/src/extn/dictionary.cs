@@ -109,9 +109,9 @@ namespace Rylogic.UnitTests
 			d2.Add(3,"free");
 			d0.Merge(d1,d2);
 
-			Assert.AreEqual("one"  , d0[1]);
-			Assert.AreEqual("too"  , d0[2]);
-			Assert.AreEqual("free" , d0[3]);
+			Assert.Equal("one"  , d0[1]);
+			Assert.Equal("too"  , d0[2]);
+			Assert.Equal("free" , d0[3]);
 		}
 		[Test] public void UnorderedEqual()
 		{

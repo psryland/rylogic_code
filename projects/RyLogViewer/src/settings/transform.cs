@@ -405,16 +405,16 @@ namespace Rylogic.UnitTests
 			Assert.True(pat.IsMatch(test));
 			var caps = pat.CaptureGroups(test).ToArray();
 
-			Assert.AreEqual(grp_names.Length, caps.Length);
-			Assert.AreEqual(captures.Length, caps.Length);
+			Assert.Equal(grp_names.Length, caps.Length);
+			Assert.Equal(captures.Length, caps.Length);
 
 			for (int i = 0; i != caps.Length; ++i)
 			{
-				Assert.AreEqual(grp_names[i], caps[i].Key);
-				Assert.AreEqual(captures[i], caps[i].Value);
+				Assert.Equal(grp_names[i], caps[i].Key);
+				Assert.Equal(captures[i], caps[i].Value);
 			}
 
-			Assert.AreEqual(result, pat.Txfm(test));
+			Assert.Equal(result, pat.Txfm(test));
 		}
 		[Test] public void SubStringMatches0()
 		{

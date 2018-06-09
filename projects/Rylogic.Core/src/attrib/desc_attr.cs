@@ -196,20 +196,20 @@ namespace Rylogic.UnitTests
 		public void DescAttr1()
 		{
 			const EType e = EType.Value0;
-			Assert.AreEqual("Value 0",e.Desc());
-			Assert.AreEqual("Value 1",EType.Value1.Desc());
-			Assert.AreEqual(null,((EType)100).Desc());
+			Assert.Equal("Value 0",e.Desc());
+			Assert.Equal("Value 1",EType.Value1.Desc());
+			Assert.Equal(null,((EType)100).Desc());
 			Assert.True(Enum<EType>.Desc.SequenceEqual(new[] { "Value 0","Value 1","Third" }));
 		}
 		[Test]
 		public void DescAttr2()
 		{
 			var c = new C();
-			Assert.AreEqual("Field Desc",c.Desc(nameof(C.m_field)));
-			Assert.AreEqual("Field Desc",R<C>.Desc(x => x.m_field));
-			Assert.AreEqual("Prop Desc",R<C>.Desc(x => x.Prop));
-			Assert.AreEqual(null,c.Desc(x => x.NoAttr));
-			Assert.AreEqual(null,R<C>.Desc(x => x.NoAttr));
+			Assert.Equal("Field Desc",c.Desc(nameof(C.m_field)));
+			Assert.Equal("Field Desc",R<C>.Desc(x => x.m_field));
+			Assert.Equal("Prop Desc",R<C>.Desc(x => x.Prop));
+			Assert.Equal(null,c.Desc(x => x.NoAttr));
+			Assert.Equal(null,R<C>.Desc(x => x.NoAttr));
 		}
 		[Test]
 		public void DescAttr3()

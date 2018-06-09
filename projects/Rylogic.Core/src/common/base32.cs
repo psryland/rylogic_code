@@ -216,18 +216,18 @@ namespace Rylogic.UnitTests
 				var data = new byte[]{0xff};
 				var enc = Base32Encoding.ToString(data);
 				var dec = Base32Encoding.ToBytes(enc);
-				Assert.AreEqual(enc.Length, Base32Encoding.EncodedLength(data.Length));
-				Assert.AreEqual(dec.Length, Base32Encoding.DecodedLength(enc));
-				Assert.AreEqual(0, Util.Compare(data, 0, data.Length, dec, 0, dec.Length));
+				Assert.Equal(enc.Length, Base32Encoding.EncodedLength(data.Length));
+				Assert.Equal(dec.Length, Base32Encoding.DecodedLength(enc));
+				Assert.Equal(0, Util.Compare(data, 0, data.Length, dec, 0, dec.Length));
 			}
 			{
 				var data = new byte[256];
 				for (int i = 0; i != data.Length; ++i) data[i] = (byte)i;
 				var enc = Base32Encoding.ToString(data);
 				var dec = Base32Encoding.ToBytes(enc);
-				Assert.AreEqual(enc.Length, Base32Encoding.EncodedLength(data.Length));
-				Assert.AreEqual(dec.Length, Base32Encoding.DecodedLength(enc));
-				Assert.AreEqual(0, Util.Compare(data, 0, data.Length, dec, 0, dec.Length));
+				Assert.Equal(enc.Length, Base32Encoding.EncodedLength(data.Length));
+				Assert.Equal(dec.Length, Base32Encoding.DecodedLength(enc));
+				Assert.Equal(0, Util.Compare(data, 0, data.Length, dec, 0, dec.Length));
 			}
 			var rand = new Random(42);
 			for (int i = 0; i != 100; ++i)
@@ -236,9 +236,9 @@ namespace Rylogic.UnitTests
 				rand.NextBytes(data);
 				var enc = Base32Encoding.ToString(data);
 				var dec = Base32Encoding.ToBytes(enc);
-				Assert.AreEqual(enc.Length, Base32Encoding.EncodedLength(data.Length));
-				Assert.AreEqual(dec.Length, Base32Encoding.DecodedLength(enc));
-				Assert.AreEqual(0, Util.Compare(data, 0, data.Length, dec, 0, dec.Length));
+				Assert.Equal(enc.Length, Base32Encoding.EncodedLength(data.Length));
+				Assert.Equal(dec.Length, Base32Encoding.DecodedLength(enc));
+				Assert.Equal(0, Util.Compare(data, 0, data.Length, dec, 0, dec.Length));
 			}
 		}
 	}

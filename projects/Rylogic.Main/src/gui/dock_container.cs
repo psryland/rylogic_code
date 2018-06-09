@@ -165,12 +165,12 @@ namespace Rylogic.Gui
 			{
 				if (Options.DisposeContent)
 					using (this.SuspendLayout(false))
-						Util.DisposeAll(m_all_content.Select(x => x.Owner));
+						Util.DisposeRange(m_all_content.Select(x => x.Owner));
 
 				Root = null;
 				m_all_content.Clear();
-				m_floaters = Util2.DisposeAll(m_floaters);
-				m_auto_hide = Util.DisposeAll(m_auto_hide);
+				Util.DisposeAll(m_floaters);
+				Util.DisposeAll(m_auto_hide);
 			}
 
 			base.Dispose(disposing);
@@ -546,7 +546,7 @@ namespace Rylogic.Gui
 		{
 			var menu = new ToolStripMenuItem(menu_name);
 			var sep = new ToolStripSeparator();
-			var filter = Util2.FileDialogFilter("Layout Files","*.xml");
+			var filter = Util.FileDialogFilter("Layout Files","*.xml");
 
 			// Load layout from disk
 			var load = new ToolStripMenuItem("Load Layout", null, (s,a) =>

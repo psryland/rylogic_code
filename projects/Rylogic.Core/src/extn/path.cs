@@ -332,20 +332,20 @@ namespace Rylogic.UnitTests
 			string path;
 
 			path = Path_.RelativePath(@"A:\dir\subdir\file.ext", @"A:\dir");
-			Assert.AreEqual(@".\subdir\file.ext", path);
+			Assert.Equal(@".\subdir\file.ext", path);
 
 			path = Path_.CombinePath(@"A:\", @".\dir\subdir2", @"..\subdir\", "file.ext");
-			Assert.AreEqual(@"A:\dir\subdir\file.ext", path);
+			Assert.Equal(@"A:\dir\subdir\file.ext", path);
 
 			path = Path_.SanitiseFileName("1_path@\"[{+\\!@#$%^^&*()\'/?", "@#$%", "A");
-			Assert.AreEqual("1_pathAA[{+A!AAAA^^&A()'AA", path);
+			Assert.Equal("1_pathAA[{+A!AAAA^^&A()'AA", path);
 
 			const string noquotes   = "C:\\a b\\path.ext";
 			const string withquotes = "\"C:\\a b\\path.ext\"";
-			Assert.AreEqual(withquotes ,Path_.Quote(noquotes, true));
-			Assert.AreEqual(withquotes ,Path_.Quote(withquotes, true));
-			Assert.AreEqual(noquotes   ,Path_.Quote(noquotes, false));
-			Assert.AreEqual(noquotes   ,Path_.Quote(withquotes, false));
+			Assert.Equal(withquotes ,Path_.Quote(noquotes, true));
+			Assert.Equal(withquotes ,Path_.Quote(withquotes, true));
+			Assert.Equal(noquotes   ,Path_.Quote(noquotes, false));
+			Assert.Equal(noquotes   ,Path_.Quote(withquotes, false));
 		}
 	}
 }

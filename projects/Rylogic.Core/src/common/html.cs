@@ -1023,7 +1023,7 @@ namespace Rylogic.UnitTests
 			
 			string html = Html.FromText(s);
 			string text = Html.ToText(html);
-			Assert.AreEqual(s, text);
+			Assert.Equal(s, text);
 		}
 	}
 }

@@ -1409,11 +1409,11 @@ namespace Rylogic.UnitTests
 		{
 			{
 				var exif = Exif.Load(SrcImageWith);
-				Assert.AreEqual(1.0/50.0, exif[Exif.Tag.ExposureTime].AsReal, float.Epsilon);
+				Assert.Equal(1.0/50.0, exif[Exif.Tag.ExposureTime].AsReal, float.Epsilon);
 			}
 			{
 				var exif = Exif.Load(SrcImageWithout);
-				Assert.AreEqual(0, exif.Count);
+				Assert.Equal(0, exif.Count);
 			}
 		}
 		[Test] public void ReadExifFromFile()
@@ -1421,12 +1421,12 @@ namespace Rylogic.UnitTests
 			using (var fs = new FileStream(SrcImageWith, FileMode.Open, FileAccess.Read, FileShare.Read))
 			{
 				var exif = Exif.Read(fs);
-				Assert.AreEqual(1.0/50.0, exif[Exif.Tag.ExposureTime].AsReal);
+				Assert.Equal(1.0/50.0, exif[Exif.Tag.ExposureTime].AsReal);
 			}
 			using (var fs = new FileStream(SrcImageWithout, FileMode.Open, FileAccess.Read, FileShare.Read))
 			{
 				var exif = Exif.Read(fs);
-				Assert.AreEqual(0, exif.Count);
+				Assert.Equal(0, exif.Count);
 			}
 		}
 		[Test] public void WriteExifToFile()
@@ -1442,9 +1442,9 @@ namespace Rylogic.UnitTests
 
 				outf.Position = 0;
 				var exif_out = Exif.Load(outf);
-				Assert.AreEqual(exif_in.Count, exif_out.Count);
-				Assert.AreEqual(exif_in[Exif.Tag.FocalLength ].AsReal, exif_out[Exif.Tag.FocalLength ].AsReal);
-				Assert.AreEqual(exif_in[Exif.Tag.ExposureTime].AsReal, exif_out[Exif.Tag.ExposureTime].AsReal);
+				Assert.Equal(exif_in.Count, exif_out.Count);
+				Assert.Equal(exif_in[Exif.Tag.FocalLength ].AsReal, exif_out[Exif.Tag.FocalLength ].AsReal);
+				Assert.Equal(exif_in[Exif.Tag.ExposureTime].AsReal, exif_out[Exif.Tag.ExposureTime].AsReal);
 			}
 		}
 		[Test] public void AddRemoveFields()
@@ -1453,7 +1453,7 @@ namespace Rylogic.UnitTests
 
 			// Update the field
 			exif.Set(Exif.Tag.Orientation, (ushort)3);
-			Assert.AreEqual(3, exif[Exif.Tag.Orientation].AsInt);
+			Assert.Equal(3, exif[Exif.Tag.Orientation].AsInt);
 
 			// Save to the file
 			using (var inf = new FileStream(SrcImageWith, FileMode.Open, FileAccess.Read, FileShare.Read))
@@ -1464,7 +1464,7 @@ namespace Rylogic.UnitTests
 
 					outf.Position = 0;
 					exif = Exif.Load(outf);
-					Assert.AreEqual(3, exif[Exif.Tag.Orientation].AsInt);
+					Assert.Equal(3, exif[Exif.Tag.Orientation].AsInt);
 				}
 
 				// Remove the field
@@ -1484,7 +1484,7 @@ namespace Rylogic.UnitTests
 
 				// Restore the field
 				exif.Set(Exif.Tag.Orientation, (ushort)1);
-				Assert.AreEqual(1, exif[Exif.Tag.Orientation].AsInt);
+				Assert.Equal(1, exif[Exif.Tag.Orientation].AsInt);
 
 				// Save to file
 				inf.Position = 0;
@@ -1494,7 +1494,7 @@ namespace Rylogic.UnitTests
 
 					outf.Position = 0;
 					exif = Exif.Load(outf);
-					Assert.AreEqual(1, exif[Exif.Tag.Orientation].AsInt);
+					Assert.Equal(1, exif[Exif.Tag.Orientation].AsInt);
 				}
 			}
 		}
@@ -1502,7 +1502,7 @@ namespace Rylogic.UnitTests
 		{
 			// Check the file has none to start with
 			var exif = Exif.Load(SrcImageWithout);
-			Assert.AreEqual(0, exif.Count);
+			Assert.Equal(0, exif.Count);
 
 			// Create a new instance of exif data and add a field
 			exif = Exif.Create();
@@ -1516,7 +1516,7 @@ namespace Rylogic.UnitTests
 				// Read the saved file and check the tag is there
 				outf.Position = 0;
 				exif = Exif.Load(outf);
-				Assert.AreEqual(1, exif[Exif.Tag.Orientation].AsInt);
+				Assert.Equal(1, exif[Exif.Tag.Orientation].AsInt);
 			}
 		}
 		[Test] public void TestCase()

@@ -1476,7 +1476,7 @@ namespace Rylogic.Gui
 		/// <summary>A control that displays the VT100 buffer</summary>
 		public class Display :ScintillaCtrl
 		{
-			private static readonly string FileFilters = Util2.FileDialogFilter("Text Files","*.txt","Log Files","*.log","All Files","*.*");
+			private static readonly string FileFilters = Util.FileDialogFilter("Text Files","*.txt","Log Files","*.log","All Files","*.*");
 
 			private HoverScroll m_hs;
 			private EventBatcher m_eb;

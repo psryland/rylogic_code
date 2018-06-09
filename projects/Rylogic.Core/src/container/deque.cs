@@ -581,7 +581,7 @@ namespace Rylogic.UnitTests
 			var deque = new Deque<int>();
 
 			deque.Clear();
-			Assert.AreEqual(deque.Count, 0);
+			Assert.Equal(deque.Count, 0);
 
 			PopulateDequePushFront(deque);
 			PopulateDequePushBack(deque);
@@ -599,12 +599,12 @@ namespace Rylogic.UnitTests
 			for (int i = 0; i < ElementCount; i++)
 				deque.PushFront(i);
 
-			Assert.AreEqual(deque.Count, ElementCount);
+			Assert.Equal(deque.Count, ElementCount);
 
 			int j = ElementCount - 1;
 			foreach (int i in deque)
 			{
-				Assert.AreEqual(i, j);
+				Assert.Equal(i, j);
 				j--;
 			}
 		}
@@ -614,12 +614,12 @@ namespace Rylogic.UnitTests
 			for (int i = 0; i < ElementCount; i++)
 				deque.PushBack(i);
 
-			Assert.AreEqual(deque.Count, ElementCount);
+			Assert.Equal(deque.Count, ElementCount);
 
 			int j = 0;
 			foreach (int i in deque)
 			{
-				Assert.AreEqual(i, j);
+				Assert.Equal(i, j);
 				j++;
 			}
 		}
@@ -632,9 +632,9 @@ namespace Rylogic.UnitTests
 			for (int i = 0; i < ElementCount; i++)
 			{
 				j = (int)deque.PopFront();
-				Assert.AreEqual(j, i);
+				Assert.Equal(j, i);
 			}
-			Assert.AreEqual(deque.Count, 0);
+			Assert.Equal(deque.Count, 0);
 		}
 		private static void TestPopBack(Deque<int> deque)
 		{
@@ -645,9 +645,9 @@ namespace Rylogic.UnitTests
 			for (int i = 0; i < ElementCount; i++)
 			{
 				j = (int)deque.PopBack();
-				Assert.AreEqual(j, ElementCount - 1 - i);
+				Assert.Equal(j, ElementCount - 1 - i);
 			}
-			Assert.AreEqual(deque.Count, 0);
+			Assert.Equal(deque.Count, 0);
 		}
 		private static void TestContains(Deque<int> deque)
 		{
@@ -668,13 +668,13 @@ namespace Rylogic.UnitTests
 
 			deque.CopyTo(array, 0);
 			foreach (int i in deque)
-				Assert.AreEqual(array[i], i);
+				Assert.Equal(array[i], i);
 
 			array = new int[deque.Count * 2];
 			deque.CopyTo(array, deque.Count);
 
 			foreach (int i in deque)
-				Assert.AreEqual(array[i + deque.Count], i);
+				Assert.Equal(array[i + deque.Count], i);
 
 			array = new int[deque.Count];
 			Assert.Throws(typeof(Exception), () => deque.CopyTo(null, deque.Count));
@@ -702,7 +702,7 @@ namespace Rylogic.UnitTests
 			PopulateDequePushBack(deque);
 
 			var deque2 = (Deque<int>)deque.Clone();
-			Assert.AreEqual(deque.Count, deque2.Count);
+			Assert.Equal(deque.Count, deque2.Count);
 
 			var d2 = deque2.GetEnumerator();
 			d2.MoveNext();

@@ -452,7 +452,7 @@ namespace Rylogic.UnitTests
 			Assert.False(Bit.AllSet(f, Flags.Two));
 
 			var mask = Bit.SetBits(f, Flags.One|Flags.Two|Flags.Three, true);
-			Assert.AreEqual(mask, Flags.One|Flags.Two|Flags.Three);
+			Assert.Equal(mask, Flags.One|Flags.Two|Flags.Three);
 		}
 		[Test] public void BitParse()
 		{
@@ -461,8 +461,8 @@ namespace Rylogic.UnitTests
 
 			var bits0 = Bit.Parse(bitstr0);
 			var bits1 = Bit.Parse(bitstr1);
-			Assert.AreEqual(bitstr0 ,Bit.ToString(bits0));
-			Assert.AreEqual(bitstr1 ,Bit.ToString(bits1, bitstr1.Length));
+			Assert.Equal(bitstr0 ,Bit.ToString(bits0));
+			Assert.Equal(bitstr1 ,Bit.ToString(bits1, bitstr1.Length));
 		}
 		[Test] public void BitAnySet()
 		{
@@ -476,9 +476,9 @@ namespace Rylogic.UnitTests
 		{
 			const string bitstr0 = "100100010100110010110";
 			var bits0 = Bit.Parse(bitstr0);
-			Assert.AreEqual(8  ,Bit.BitIndex(bits0, 4));
-			Assert.AreEqual(13 ,Bit.BitIndex(bits0, 6));
-			Assert.AreEqual(-1 ,Bit.BitIndex(bits0, 11));
+			Assert.Equal(8  ,Bit.BitIndex(bits0, 4));
+			Assert.Equal(13 ,Bit.BitIndex(bits0, 6));
+			Assert.Equal(-1 ,Bit.BitIndex(bits0, 11));
 		}
 		[Test] public void EnumBitIndices()
 		{

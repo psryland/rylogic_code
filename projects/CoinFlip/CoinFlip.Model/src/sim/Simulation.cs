@@ -38,7 +38,7 @@ namespace CoinFlip
 			set
 			{
 				if (m_exchanges == value) return;
-				Util.DisposeAll(m_exchanges?.Values);
+				Util.DisposeRange(m_exchanges?.Values);
 				m_exchanges = value;
 			}
 		}

@@ -263,12 +263,12 @@ namespace Rylogic.UnitTests
 					return l.y < r.y ? -1 : 1;
 				});
 
-			Assert.AreEqual(result.Count, 5);
-			Assert.AreEqual(result[0], new v2(4f,5f));
-			Assert.AreEqual(result[1], new v2(5f,4f));
-			Assert.AreEqual(result[2], new v2(5f,5f));
-			Assert.AreEqual(result[3], new v2(5f,6f));
-			Assert.AreEqual(result[4], new v2(6f,5f));
+			Assert.Equal(result.Count, 5);
+			Assert.Equal(result[0], new v2(4f,5f));
+			Assert.Equal(result[1], new v2(5f,4f));
+			Assert.Equal(result[2], new v2(5f,5f));
+			Assert.Equal(result[3], new v2(5f,6f));
+			Assert.Equal(result[4], new v2(6f,5f));
 		}
 	}
 }

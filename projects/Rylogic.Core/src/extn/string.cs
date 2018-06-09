@@ -742,13 +742,13 @@ namespace Rylogic.UnitTests
 									"is to be word\n"+
 									"wrapped";
 			string r = text.WordWrap(14);
-			Assert.AreEqual(result, r);
+			Assert.Equal(result, r);
 		}
 		[Test] public void TestAppendLines()
 		{
 			const string s = "\n\n\rLine \n Line\n\r";
 			var str = s.LineList(s,s);
-			Assert.AreEqual("\n\n\rLine \n Line"+Environment.NewLine+"Line \n Line"+Environment.NewLine+"Line \n Line"+Environment.NewLine, str);
+			Assert.Equal("\n\n\rLine \n Line"+Environment.NewLine+"Line \n Line"+Environment.NewLine+"Line \n Line"+Environment.NewLine, str);
 		}
 		[Test] public void Substring()
 		{
@@ -758,21 +758,21 @@ namespace Rylogic.UnitTests
 			const string s4 = "first:second";
 			const string s5 = "<32> regex </32>";
 
-			Assert.AreEqual("one", s1.Substring("{","}"));
-			Assert.AreEqual("", s2.Substring("{","}"));
-			Assert.AreEqual("dasd", s3.Substring("Begin "," End"));
-			Assert.AreEqual("first", s4.Substring(null,":"));
-			Assert.AreEqual("second", s4.Substring(":", null));
-			Assert.AreEqual("regex", s5.SubstringRegex(@"<\d+>\s", @"\s</\d+>"));
-			Assert.AreEqual("regex </32>", s5.SubstringRegex(@"<\d+>\s", null));
-			Assert.AreEqual("<32> regex", s5.SubstringRegex(null, @"\s</\d+>"));
+			Assert.Equal("one", s1.Substring("{","}"));
+			Assert.Equal("", s2.Substring("{","}"));
+			Assert.Equal("dasd", s3.Substring("Begin "," End"));
+			Assert.Equal("first", s4.Substring(null,":"));
+			Assert.Equal("second", s4.Substring(":", null));
+			Assert.Equal("regex", s5.SubstringRegex(@"<\d+>\s", @"\s</\d+>"));
+			Assert.Equal("regex </32>", s5.SubstringRegex(@"<\d+>\s", null));
+			Assert.Equal("<32> regex", s5.SubstringRegex(null, @"\s</\d+>"));
 		}
 		[Test] public void Levenshtein()
 		{
 			var str1 = "Paul Rulz";
 			var str2 = "Paul Was Here";
 			var d = str1.LevenshteinDistance(str2);
-			Assert.AreEqual(d, 8);
+			Assert.Equal(d, 8);
 		}
 		[Test] public void StringProxy()
 		{
@@ -782,9 +782,9 @@ namespace Rylogic.UnitTests
 			var s1 = new StringBuilder("Hello World");
 			var s2 = "Hello World".ToCharArray();
 
-			Assert.AreEqual(func(s0, 6), 'W');
-			Assert.AreEqual(func(s1, 6), 'W');
-			Assert.AreEqual(func(s2, 6), 'W');
+			Assert.Equal(func(s0, 6), 'W');
+			Assert.Equal(func(s1, 6), 'W');
+			Assert.Equal(func(s2, 6), 'W');
 		}
 		[Test] public void StringTransform()
 		{
@@ -792,16 +792,16 @@ namespace Rylogic.UnitTests
 			string str;
 
 			str = str0.Txfm(Str.ECapitalise.LowerCase, Str.ECapitalise.LowerCase, Str.ESeparate.Add, "_", "_");
-			Assert.AreEqual("some_string_with_weird_casing_number_03", str);
+			Assert.Equal("some_string_with_weird_casing_number_03", str);
 
 			str = str0.Txfm(Str.ECapitalise.UpperCase, Str.ECapitalise.LowerCase, Str.ESeparate.Remove, null, "_");
-			Assert.AreEqual("SomeStringWithWeirdCasingNumber03", str);
+			Assert.Equal("SomeStringWithWeirdCasingNumber03", str);
 
 			str = str0.Txfm(Str.ECapitalise.UpperCase, Str.ECapitalise.UpperCase, Str.ESeparate.Add, "^ ^", "_");
-			Assert.AreEqual("SOME^ ^STRING^ ^WITH^ ^WEIRD^ ^CASING^ ^NUMBER^ ^03", str);
+			Assert.Equal("SOME^ ^STRING^ ^WITH^ ^WEIRD^ ^CASING^ ^NUMBER^ ^03", str);
 
 			str = "FieldCAPSBlah".Txfm(Str.ECapitalise.UpperCase, Str.ECapitalise.DontChange, Str.ESeparate.Add, " ");
-			Assert.AreEqual("Field CAPS Blah", str);
+			Assert.Equal("Field CAPS Blah", str);
 		}
 		[Test] public void RegexPatterns()
 		{
@@ -967,12 +967,12 @@ namespace Rylogic.UnitTests
 			foreach (var test in tests)
 			{
 				var m = Regex.Match(test.Str, Regex_.FullPathPattern);
-				Assert.AreEqual(m.Success              , test.Valid);
-				Assert.AreEqual(m.Groups[0      ].Value, test.Match0);
-				Assert.AreEqual(m.Groups["drive"].Value, test.Drive);
-				Assert.AreEqual(m.Groups["dir"  ].Value, test.Dir);
-				Assert.AreEqual(m.Groups["file" ].Value, test.File);
-				Assert.AreEqual(m.Groups["q"    ].Value, test.Quote);
+				Assert.Equal(m.Success              , test.Valid);
+				Assert.Equal(m.Groups[0      ].Value, test.Match0);
+				Assert.Equal(m.Groups["drive"].Value, test.Drive);
+				Assert.Equal(m.Groups["dir"  ].Value, test.Dir);
+				Assert.Equal(m.Groups["file" ].Value, test.File);
+				Assert.Equal(m.Groups["q"    ].Value, test.Quote);
 			}
 		}
 	}

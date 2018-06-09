@@ -26,11 +26,11 @@ namespace RyLogViewer
 		public const string StoreLink               = "http://www.rylogic.co.nz/rylogviewer/index.php";
 
 		public const string PatternSetVersion            = "v1.0";
-		public static readonly string LogFileFilter      = Util2.FileDialogFilter("Text Files","*.txt","*.log","*.csv", "All files", "*.*");
-		public static readonly string SettingsFileFilter = Util2.FileDialogFilter("Settings Files","*.xml", "All files","*.*");
-		public static readonly string XmlOrCsvFileFilter = Util2.FileDialogFilter("XML Files","*.xml", "CSV Files","*.csv");
-		public static readonly string PatternSetFilter   = Util2.FileDialogFilter("Pattern Set Files", "*.pattern_set");
-		public static readonly string ExecutablesFilter  = Util2.FileDialogFilter("Executables","*.exe","*.bat","*.cmd","*.com", "All files","*.*");
+		public static readonly string LogFileFilter      = Util.FileDialogFilter("Text Files","*.txt","*.log","*.csv", "All files", "*.*");
+		public static readonly string SettingsFileFilter = Util.FileDialogFilter("Settings Files","*.xml", "All files","*.*");
+		public static readonly string XmlOrCsvFileFilter = Util.FileDialogFilter("XML Files","*.xml", "CSV Files","*.csv");
+		public static readonly string PatternSetFilter   = Util.FileDialogFilter("Pattern Set Files", "*.pattern_set");
+		public static readonly string ExecutablesFilter  = Util.FileDialogFilter("Executables","*.exe","*.bat","*.cmd","*.com", "All files","*.*");
 
 		public const int MaxHistoryDefault          = 10;
 		public const int PortNumberMin              = 0;

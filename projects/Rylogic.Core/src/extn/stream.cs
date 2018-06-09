@@ -75,13 +75,13 @@ namespace Rylogic.UnitTests
 			using (var ms1 = new MemoryStream())
 			{
 				ms0.CopyTo(5, ms1);
-				Assert.AreEqual(8L, ms0.Length);
-				Assert.AreEqual(5L, ms1.Length);
+				Assert.Equal(8L, ms0.Length);
+				Assert.Equal(5L, ms1.Length);
 
 				var b0 = ms0.ToArray();
 				var b1 = ms1.ToArray();
 				for (int i = 0; i != ms1.Length; ++i)
-					Assert.AreEqual(b0[i], b1[i]);
+					Assert.Equal(b0[i], b1[i]);
 			}
 		}
 	}

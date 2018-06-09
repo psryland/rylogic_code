@@ -172,26 +172,26 @@ namespace Rylogic.UnitTests
 		{
 			var w = new Whatsit();
 
-			Assert.AreEqual(EType.A, Assoc<Whatsit,EType>.Get(x => x.Distance));
-			Assert.AreEqual(EType.C, Assoc<Whatsit,EType>.Get(x => x.Speed));
+			Assert.Equal(EType.A, Assoc<Whatsit,EType>.Get(x => x.Distance));
+			Assert.Equal(EType.C, Assoc<Whatsit,EType>.Get(x => x.Speed));
 
-			Assert.AreEqual(5    , Assoc<Whatsit, int   >.Get(x => x.Distance));
-			Assert.AreEqual(0.001, Assoc<Whatsit, double>.Get(x => x.Speed));
+			Assert.Equal(5    , Assoc<Whatsit, int   >.Get(x => x.Distance));
+			Assert.Equal(0.001, Assoc<Whatsit, double>.Get(x => x.Speed));
 
 			// Enum members with the same value still have unique associated values
-			Assert.AreEqual(EType.A.Assoc<int>("#"), 1);
-			Assert.AreEqual(EType.B.Assoc<int>("#"), 2);
-			Assert.AreEqual(EType.C.Assoc<int>("#"), 3);
+			Assert.Equal(EType.A.Assoc<int>("#"), 1);
+			Assert.Equal(EType.B.Assoc<int>("#"), 2);
+			Assert.Equal(EType.C.Assoc<int>("#"), 3);
 
 			// Literal or variable works
 			var e = EType.B;
-			Assert.AreEqual(EType.A.Assoc<int>("#"), 1);
-			Assert.AreEqual(e.Assoc<int>("#"), 2);
+			Assert.Equal(EType.A.Assoc<int>("#"), 1);
+			Assert.Equal(e.Assoc<int>("#"), 2);
 
 			// Associated reflected type
-			Assert.AreEqual(Color.Red  , EType2.R.Assoc<Color>());
-			Assert.AreEqual(Color.Green, EType2.G.Assoc<Color>());
-			Assert.AreEqual(Color.Blue , EType2.B.Assoc<Color>());
+			Assert.Equal(Color.Red  , EType2.R.Assoc<Color>());
+			Assert.Equal(Color.Green, EType2.G.Assoc<Color>());
+			Assert.Equal(Color.Blue , EType2.B.Assoc<Color>());
 		}
 	}
 }

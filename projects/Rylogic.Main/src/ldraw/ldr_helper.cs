@@ -611,7 +611,7 @@ namespace Rylogic.UnitTests
 				"*Box b FF00FF00 {1 }\n"+
 				"*Sphere s FFFF0000 {1 }\n"+
 				"}\n";
-			Assert.AreEqual(expected, ldr.ToString());
+			Assert.Equal(expected, ldr.ToString());
 		}
 	}
 }

@@ -142,8 +142,8 @@ namespace Rylogic.UnitTests
 			var src = new StringSrc(str_in);
 			var strip = new CommentStrip(src);
 			var result = strip.ReadToEnd();
-			Assert.AreEqual(str_out, result);
-			Assert.AreEqual((char)0, strip.Peek);
+			Assert.Equal(str_out, result);
+			Assert.Equal((char)0, strip.Peek);
 		}
 		[Test] public void StripAsmComments()
 		{
@@ -159,8 +159,8 @@ namespace Rylogic.UnitTests
 			var src = new StringSrc(str_in);
 			var strip = new CommentStrip(src, "\r\n", ";", null, null);
 			for (int i = 0; i != str_out.Length; ++i, strip.Next())
-				Assert.AreEqual(str_out[i], strip.Peek);
-			Assert.AreEqual((char)0, strip.Peek);
+				Assert.Equal(str_out[i], strip.Peek);
+			Assert.Equal((char)0, strip.Peek);
 		}
 	}
 }

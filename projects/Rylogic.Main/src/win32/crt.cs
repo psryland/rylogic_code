@@ -44,12 +44,12 @@ namespace Rylogic.UnitTests
 				byte[] block1 = new byte[10];
 				crt.memcpy(block1, block0);
 				for (int i = 0; i != block0.Length; ++i)
-					Assert.AreEqual(block0[i], block1[i]);
+					Assert.Equal(block0[i], block1[i]);
 			}
 			{
 				byte[] block0 = new byte[]{0,1,2,3,4,5,6,7,8,9};
 				byte[] block1 = new byte[]{0,1,2,3,4,5,6,7,8,9};
-				Assert.AreEqual(0, crt.memcmp(block0, block1));
+				Assert.Equal(0, crt.memcmp(block0, block1));
 				block1[3] = 4;
 				Assert.True(crt.memcmp(block0, block1) < 0);
 				Assert.True(crt.memcmp(block1, block0) > 0);

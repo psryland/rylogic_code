@@ -165,7 +165,7 @@ namespace RyLogViewer
 			m_btn_browse.ToolTip(m_tt, "Browse to the location of where to save the file");
 			m_btn_browse.Click += (s,a)=>
 			{
-				var filter = Util2.FileDialogFilter("Text Files","*.txt","Comma Separated Values","*.csv","All Files","*.*");
+				var filter = Util.FileDialogFilter("Text Files","*.txt","Comma Separated Values","*.csv","All Files","*.*");
 				var dg = new SaveFileDialog
 				{
 					Title = "Choose an output file name",

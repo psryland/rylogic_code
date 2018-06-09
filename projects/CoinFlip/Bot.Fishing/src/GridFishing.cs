@@ -137,7 +137,7 @@ namespace Bot.Fishing
 				{
 					var doomed = SelectedRows.Cast<DataGridViewRow>().Select(x => (Fisher)x.DataBoundItem).ToHashSet();
 					Fishers.RemoveAll(doomed);
-					Util.DisposeAll(doomed);
+					Util.DisposeRange(doomed);
 				};
 			}
 			cmenu.Items.AddSeparator();
