@@ -57,7 +57,6 @@ namespace CoinFlip
 		{
 			InitializeComponent();
 			HideOnClose = false;
-			Icon = (trade.Model.UI as Form)?.Icon;
 
 			m_existing_order_id = existing_order_id;
 			m_initial = new Trade(trade);
@@ -172,7 +171,7 @@ namespace CoinFlip
 			m_cb_exchange.DisplayMember = nameof(Exchange.Name);
 			m_cb_exchange.SelectedIndexChanged += (s,a) =>
 			{
-				SetTrade((Exchange)m_cb_exchange.SelectedItem);
+				SetTrade(exch:(Exchange)m_cb_exchange.SelectedItem);
 			};
 			m_cb_exchange.Enabled = m_existing_order_id == null;
 

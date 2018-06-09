@@ -47,6 +47,7 @@ namespace CoinFlip
 				Balances      = new BindingSource<Balances>     { DataSource = null, AllowNoCurrent = true };
 				Positions     = new BindingSource<Order>     { DataSource = null, AllowNoCurrent = true };
 				History       = new BindingSource<OrderFill> { DataSource = null, AllowNoCurrent = true };
+				Portfolio     = new BindingSource<PortfolioData> { DataSource = new BindingListEx<PortfolioData>() };
 				MarketUpdates = new BlockingCollection<Action>();
 				Coins         = new CoinDataTable(this);
 				PriceData     = new PriceDataMap(this);
@@ -503,6 +504,51 @@ namespace CoinFlip
 		}
 		private BindingSource<IBot> m_bots;
 
+		/// <summary>Bot instances</summary>
+		public BindingSource<PortfolioData> Portfolio
+		{
+			get { return m_portfolio; }
+			private set
+			{
+				if (m_portfolio == value) return;
+
+				var portfolio_filepath = Util.ResolveUserDocumentsPath(Application.CompanyName, Application.ProductName, "portfolio.xml");
+
+				if (m_portfolio != null)
+				{
+					m_portfolio.ListChanging -= HandleListChanging;
+					Util.DisposeAll(m_portfolio);
+				}
+				m_portfolio = value;
+				if (m_portfolio != null)
+				{
+					Load();
+					m_portfolio.ListChanging += HandleListChanging;
+				}
+
+				// Handlers
+				void HandleListChanging(object sender, ListChgEventArgs<PortfolioData> e)
+				{
+					if (e.IsDataChanged)
+						Save();
+				}
+				void Save()
+				{
+					var root = new XElement("root");
+					root.Add2("Positions", "Position", m_portfolio, false);
+					root.Save(portfolio_filepath);
+				}
+				void Load()
+				{
+					m_portfolio.Clear();
+					if (!Path_.FileExists(portfolio_filepath)) return;
+					var root = XDocument.Load(portfolio_filepath)?.Root;
+					m_portfolio.AddRange(root.Elements("Positions", "Position").Select(x => x.As<PortfolioData>()));
+				}
+			}
+		}
+		private BindingSource<PortfolioData> m_portfolio;
+
 		/// <summary>Mutex for multi-threaded access to market data</summary>
 		private Mutex MarketDataLock
 		{
@@ -659,9 +705,20 @@ namespace CoinFlip
 			PairsUpdated.Raise(this);
 		}
 
+		/// <summary>Return the exchange with the given name</summary>
+		public Exchange FindExchange(string exchange_name)
+		{
+			return Exchanges.SingleOrDefault(x => x.Name == exchange_name);
+		}
+
 		/// <summary>Find the pair with the given name on 'exch' (or return null if not available)</summary>
 		public TradePair FindPairOnExchange(string pair_name, Exchange exch)
 		{
+			return exch.Pairs.Values.FirstOrDefault(x => x.Name == pair_name);
+		}
+		public TradePair FindPairOnExchange(string pair_name, string exchange_name)
+		{
+			var exch = FindExchange(exchange_name);
 			return exch.Pairs.Values.FirstOrDefault(x => x.Name == pair_name);
 		}
 

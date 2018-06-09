@@ -35,6 +35,7 @@ namespace CoinFlip
 		private GridHistory m_grid_history;
 		private GridBots m_grid_bots;
 		private GridArbitrage m_grid_arbitrage;
+		private GridPortfolio m_grid_portfolio;
 		private MenuStrip m_menu;
 		private ToolStripMenuItem m_menu_file;
 		private ToolStripMenuItem m_menu_file_exit;
@@ -485,6 +486,7 @@ namespace CoinFlip
 				m_grid_history = new GridHistory(Model, "History", nameof(m_grid_history));
 				m_grid_bots = new GridBots(Model, "Bots", nameof(m_grid_bots));
 				m_grid_arbitrage = new GridArbitrage(Model, "Arbitrage", nameof(m_grid_arbitrage));
+				m_grid_portfolio = new GridPortfolio(Model, "Portfolio", nameof(m_grid_portfolio));
 			}
 			#endregion
 
@@ -515,6 +517,7 @@ namespace CoinFlip
 			m_dc.Add(m_win_log, EDockSite.Centre);
 			m_dc.Add(m_grid_positions, EDockSite.Bottom);
 			m_dc.Add(m_grid_history, EDockSite.Bottom);
+			m_dc.Add(m_grid_portfolio, EDockSite.Bottom);
 			m_dc.Add(m_grid_exchanges, EDockSite.Left);
 			m_dc.Add(m_grid_coins, EDockSite.Left);
 			m_dc.Add(m_grid_balances, EDockSite.Left, EDockSite.Bottom);

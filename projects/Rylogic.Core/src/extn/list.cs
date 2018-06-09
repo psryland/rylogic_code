@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using Rylogic.Common;
 
 namespace Rylogic.Extn
@@ -498,6 +499,23 @@ namespace Rylogic.Extn
 		{
 			return list.BinarySearch(x => cmp.Compare(x, item), find_insert_position);
 		}
+		public async static Task<int> BinarySearchAsync<T>(this IList<T> list, Func<T, Task<int>> cmp, bool find_insert_position = false)
+		{
+			var idx = ~0;
+			if (list.Count != 0)
+			{
+				for (int b = 0, e = list.Count; ;)
+				{
+					int m = b + ((e - b) >> 1); // prevent overflow
+					int c = await cmp(list[m]); // <0 means list[m] is less than the target element
+					if (c == 0) { idx = m; break; }
+					if (c < 0) { if (m == b) { idx = ~e; break; } b = m; continue; }
+					if (c > 0) { if (m == b) { idx = ~b; break; } e = m; }
+				}
+			}
+			if (find_insert_position && idx < 0) idx = ~idx;
+			return idx;
+		}
 
 		/// <summary>Binary search for an element in 'list'. Returns the element if found, or default(T) if not.</summary>
 		public static T BinarySearchFind<T>(this IList<T> list, Func<T,int> cmp)
@@ -755,9 +773,11 @@ namespace Rylogic.UnitTests
 	using Extn;
 	using Maths;
 
-	[TestFixture] public class TestListExtns
+	[TestFixture]
+	public class TestListExtns
 	{
-		[Test] public void List()
+		[Test]
+		public void List()
 		{
 			{
 				var list0 = new List<int>(new[] { 1, 2, 3, 3, 2, 4, 5, 2, 1, 5, 4 });
@@ -800,7 +820,8 @@ namespace Rylogic.UnitTests
 				Assert.True(list0.SequenceEqual(list1));
 			}
 		}
-		[Test] public void ListQuickSort()
+		[Test]
+		public void ListQuickSort()
 		{
 			var rng = new Random();
 			var list = new List<int>(99);
@@ -808,11 +829,12 @@ namespace Rylogic.UnitTests
 				list.Add(rng.Next(10));
 
 			list.Sort();
-				
+
 			for (var i = 0; i != list.Count - 1; ++i)
-				Assert.True(list[i] <= list[i+1]);
+				Assert.True(list[i] <= list[i + 1]);
 		}
-		[Test] public void ListUnique()
+		[Test]
+		public void ListUnique()
 		{
 			var rng = new Random();
 			var list = new List<int>(100);
@@ -823,17 +845,18 @@ namespace Rylogic.UnitTests
 
 			int last = list.Unique(0, 50);
 			for (var i = 0; i < last; ++i)
-			for (var j = i+1; j < last; ++j)
-				Assert.AreNotEqual(list[i], list[j]);
+				for (var j = i + 1; j < last; ++j)
+					Assert.AreNotEqual(list[i], list[j]);
 
 			list.Unique();
 			for (var i = 0; i < list.Count; ++i)
-			for (var j = i+1; j < list.Count; ++j)
-				Assert.AreNotEqual(list[i], list[j]);
+				for (var j = i + 1; j < list.Count; ++j)
+					Assert.AreNotEqual(list[i], list[j]);
 
-			Assert.AreEqual(5, list.Add2(5));
+			Assert.Equal(5, list.Add2(5));
 		}
-		[Test] public void Merge()
+		[Test]
+		public void Merge()
 		{
 			var lhs = new[] { 1, 2, 4, 7, 8 };
 			var rhs = new[] { 1, 3, 5, 6, 8, 9, 10 };
@@ -852,7 +875,8 @@ namespace Rylogic.UnitTests
 			var l3 = shl.ToList().Merge(shr, List_.EMergeType.KeepLeft, sign:-1);
 			Assert.True(l3.SequenceEqual(new[] { 10, 9, 8, 7, 6, 5, 4, 3, 2, 1 }));
 		}
-		[Test] public void NthElement()
+		[Test]
+		public void NthElement()
 		{
 			var arr0 = new int[] {0,1,2,3,4,5,6,7,8,9};
 			var arr1 = new int[] {0,1,2,3,4,5,6,7,8,9,10};
@@ -884,6 +908,49 @@ namespace Rylogic.UnitTests
 			Assert.True(arr1.NthElement(0) == 0);
 			Assert.True(arr1.NthElement(5) == 5);
 			Assert.True(arr1.NthElement(8) == 8);
+		}
+		[Test]
+		public void BinarySearch()
+		{
+			var ints = new[]{ 1, 2, 4, 6, 9, 12, 13, 13, 13, 14 };
+			{
+				{
+					var idx = ints.BinarySearch(i => i.CompareTo(4));
+					Assert.Equal(2, idx);
+				}
+				{
+					var idx = ints.BinarySearch(i => i.CompareTo(5));
+					Assert.Equal(-4, idx);
+					Assert.Equal(+3, ~idx);
+				}
+				{
+					var idx = ints.BinarySearch(i => i.CompareTo(13));
+					Assert.True(+6 <= idx && idx <= +8);
+				}
+				{
+					var idx = ints.BinarySearch(i => i.CompareTo(11), find_insert_position:true);
+					Assert.Equal(+5, idx);
+				}
+			}
+			{
+				{
+					var idx = ints.BinarySearchAsync(i => Task.FromResult(i.CompareTo(4))).Result;
+					Assert.Equal(2, idx);
+				}
+				{
+					var idx = ints.BinarySearchAsync(i => Task.FromResult(i.CompareTo(5))).Result;
+					Assert.Equal(-4, idx);
+					Assert.Equal(+3, ~idx);
+				}
+				{
+					var idx = ints.BinarySearchAsync(i => Task.FromResult(i.CompareTo(13))).Result;
+					Assert.True(+6 <= idx && idx <= +8);
+				}
+				{
+					var idx = ints.BinarySearchAsync(i => Task.FromResult(i.CompareTo(11)), find_insert_position:true).Result;
+					Assert.Equal(+5, idx);
+				}
+			}
 		}
 	}
 }

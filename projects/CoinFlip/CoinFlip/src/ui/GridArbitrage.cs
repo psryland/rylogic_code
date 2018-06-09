@@ -91,6 +91,39 @@ namespace CoinFlip
 				Model.Pairs.ListChanging += HandlePairsListChanging;
 				Model.Exchanges.ListChanging += HandleExchangesChanging;
 			}
+
+			// Update the pairs to display prices for
+			void HandlePairsListChanging(object sender = null, ListChgEventArgs<TradePair> e = null)
+			{
+				DataSource = Model.Pairs
+					.Where(x => !(x.Exchange is CrossExchange))
+					.Select(x => x.Name)
+					.Distinct()
+					.OrderBy(x => x)
+					.ToList();
+			}
+
+			// Update the exchanges to display
+			void HandleExchangesChanging(object sender, ListChgEventArgs<Exchange> e)
+			{
+				// Update the columns in the grid, one for each exchange
+				if (!e.IsDataChanged) return;
+
+				// Remove old columns
+				for (; ColumnCount > 1;)
+					Columns.RemoveAt(1);
+
+				// Add new columns
+				foreach (var exch in Model.TradingExchanges)
+				{
+					Columns.Add(new DataGridViewTextBoxColumn
+					{
+						HeaderText = exch.Name,
+						Name = exch.Name,
+						DataPropertyName = exch.Name,
+					});
+				}
+			}
 		}
 
 		/// <summary>Create a context menu for the grid</summary>
@@ -99,39 +132,6 @@ namespace CoinFlip
 			var cmenu = new ContextMenuStrip();
 			{}
 			return cmenu;
-		}
-
-		/// <summary>Update the exchanges to display</summary>
-		private void HandleExchangesChanging(object sender, ListChgEventArgs<Exchange> e)
-		{
-			// Update the columns in the grid, one for each exchange
-			if (!e.IsDataChanged) return;
-
-			// Remove old columns
-			for (;ColumnCount > 1;)
-				Columns.RemoveAt(1);
-
-			// Add new columns
-			foreach (var exch in Model.TradingExchanges)
-			{
-				Columns.Add(new DataGridViewTextBoxColumn
-				{
-					HeaderText = exch.Name,
-					Name = exch.Name,
-					DataPropertyName = exch.Name,
-				});
-			}
-		}
-
-		/// <summary>Update the pairs to display prices for</summary>
-		private void HandlePairsListChanging(object sender = null, ListChgEventArgs<TradePair> e = null)
-		{
-			DataSource = Model.Pairs
-				.Where(x => !(x.Exchange is CrossExchange))
-				.Select(x => x.Name)
-				.Distinct()
-				.OrderBy(x => x)
-				.ToList();
 		}
 
 		/// <summary>Column names</summary>

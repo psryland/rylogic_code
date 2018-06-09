@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Windows.Forms;
 using Rylogic.Container;
 using Rylogic.Extn;
@@ -120,10 +121,24 @@ namespace CoinFlip
 			{
 				// Show a item context menu
 				var hit = this.HitTestEx(e.X, e.Y);
-				if (hit.Type == DataGridView_.HitTestInfo.EType.ColumnHeader)
-					DataGridView_.ColumnVisibilityContextMenu(this, e.Location);
-				if (hit.Type == DataGridView_.HitTestInfo.EType.Cell)
-					CreateCMenu().Show(this, e.X, e.Y);
+				if (hit.Type == DataGridView_.HitTestInfo.EType.ColumnHeader || hit.Type == DataGridView_.HitTestInfo.EType.ColumnDivider)
+				{
+					this.ColumnVisibilityContextMenu(hit.GridPoint);
+				}
+				else
+				{
+					var his = SelectedRows.Cast<DataGridViewRow>().Select(x => (OrderFill)x.DataBoundItem).SingleOrDefault();
+					var cmenu = new ContextMenuStrip();
+					{
+						var opt = cmenu.Items.Add2(new ToolStripMenuItem("Show Trades"));
+						opt.Enabled = his != null;
+						opt.Click += (s, a) =>
+						{
+							MsgBox.Show(this, "TODO");
+						};
+					}
+					cmenu.Show(this, hit.GridPoint);
+				}
 			}
 		}
 		protected override void OnCellFormatting(DataGridViewCellFormattingEventArgs e)
@@ -204,26 +219,6 @@ namespace CoinFlip
 					}
 				}
 			}
-		}
-
-		/// <summary>Create the context menu for the grid</summary>
-		private ContextMenuStrip CreateCMenu()
-		{
-			var cmenu = new ContextMenuStrip();
-			{
-				var opt = cmenu.Items.Add2(new ToolStripMenuItem("Show Trades"));
-				cmenu.Opening += (s,a) =>
-				{
-					opt.Enabled = SelectedRows.Count == 1;
-				};
-				opt.Click += (s,a) =>
-				{
-					MsgBox.Show(this, "TODO");
-					//var pos = SelectedRows.Cast<DataGridViewRow>().Select(x => (Position)x.DataBoundItem).First();
-					//pos.CancelOrder();
-				};
-			}
-			return cmenu;
 		}
 	}
 }

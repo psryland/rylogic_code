@@ -74,6 +74,7 @@
     <Compile Include="src\model\CoinPair.cs" />
     <Compile Include="src\model\Equity.cs" />
     <Compile Include="src\model\Fund.cs" />
+    <Compile Include="src\model\PortfolioData.cs" />
     <Compile Include="src\model\TradeRecord.cs" />
     <Compile Include="src\model\Transfer.cs" />
     <Compile Include="src\sim\BackTesting.cs" />

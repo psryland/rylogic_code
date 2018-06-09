@@ -1542,7 +1542,7 @@ namespace Rylogic.Extn
 
 				// Right mouse on a column header displays a context menu for hiding/showing columns
 				var hit = grid.HitTestEx(args.X, args.Y);
-				if (hit.Type == HitTestInfo.EType.ColumnHeader || hit.Type == HitTestInfo.EType.None)
+				if (hit.Type == HitTestInfo.EType.ColumnHeader || hit.Type == HitTestInfo.EType.ColumnDivider)
 					grid.ColumnVisibilityContextMenu(hit.GridPoint);
 			}
 		}

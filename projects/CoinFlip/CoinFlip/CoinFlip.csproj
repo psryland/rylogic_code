@@ -63,6 +63,9 @@
     <Compile Include="src\dlg\EditTrendLineUI.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="src\dlg\EditPortfolioPositionUI.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="src\dlg\SimulationUI.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -96,6 +99,9 @@
     <Compile Include="src\ui\GridHistory.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="src\ui\GridPortfolio.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="src\ui\GridPositions.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -112,12 +118,16 @@
     <Compile Include="src\ui\TreeBase.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="src\util\ExchPairTimeframeCombos.cs" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
     <EmbeddedResource Include="src\dlg\EditTrendLineUI.resx">
       <DependentUpon>EditTrendLineUI.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\dlg\EditPortfolioPositionUI.resx">
+      <DependentUpon>EditPortfolioPositionUI.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\dlg\SimulationUI.resx">
       <DependentUpon>SimulationUI.cs</DependentUpon>

@@ -41,6 +41,7 @@ namespace CoinFlip
 		private ToolStripLabel m_lbl_exchange;
 		private ToolStripComboBox m_cb_exchange;
 		private ToolStripButton m_btn_trend_line;
+		private ExchPairTimeFrameCombos m_etp_combos;
 		#endregion
 
 		public ChartUI(Model model)
@@ -104,7 +105,7 @@ namespace CoinFlip
 			// Handlers
 			void HandlePairsUpdated(object sender = null, EventArgs args = null)
 			{
-				UpdateAvailablePairs();
+				m_etp_combos.Update();
 			}
 		}
 
@@ -179,8 +180,7 @@ namespace CoinFlip
 				}
 
 				// Refresh the combos
-				UpdateAvailablePairs();
-				UpdateAvailableTimeFrames();
+				m_etp_combos.Update();
 				UpdateUI();
 
 				// Handlers
@@ -308,54 +308,23 @@ namespace CoinFlip
 		private void SetupUI()
 		{
 			#region Instrument Tool bar
-			
-			// Combo for choosing the exchange providing the source data
-			UpdateAvailableExchanges();
+
 			m_cb_exchange.ToolTipText = "Select the exchange to receive chart data from";
-			m_cb_exchange.ComboBox.ValueType = typeof(Exchange);
-			m_cb_exchange.ComboBox.DisplayProperty = nameof(Exchange.Name);
-			m_cb_exchange.ComboBox.DropDown += (s,a) =>
-			{
-				UpdateAvailableExchanges();
-			};
-			m_cb_exchange.ComboBox.DropDownClosed += (s,a) =>
-			{
-				UpdateAvailablePairs();
-			};
-
-			// Combo for choosing the pair to display
-			UpdateAvailablePairs();
 			m_cb_pair.ToolTipText = "Select the currency pair to display";
-			m_cb_pair.ComboBox.ValueType = typeof(TradePair);
-			m_cb_pair.ComboBox.DisplayProperty = nameof(TradePair.NameWithExchange);
-			m_cb_pair.ComboBox.DropDown += (s,a) =>
-			{
-				UpdateAvailablePairs();
-			};
-			m_cb_pair.ComboBox.SelectedIndexChanged += (s,a) =>
-			{
-				if (IsChartLocked || m_in_update_available_pairs != 0) return;
-				UpdateAvailableTimeFrames();
-				var tp = (TradePair)m_cb_pair.ComboBox.Value;
-				var tf = (ETimeFrame)m_cb_time_frame.ComboBox.Value;
-				SetInstrument(tp, tf);
-			};
-
-			// Combo for choosing the time frame
-			UpdateAvailableTimeFrames();
 			m_cb_time_frame.ToolTipText = "Select the time frame to display";
-			m_cb_time_frame.ComboBox.ValueType = typeof(ETimeFrame);
-			m_cb_time_frame.SelectedItem = ETimeFrame.None;
-			m_cb_time_frame.ComboBox.DropDown += (s,a) =>
+			m_etp_combos = new ExchPairTimeFrameCombos(Model, m_cb_exchange.ComboBox, m_cb_pair.ComboBox, m_cb_time_frame.ComboBox)
 			{
-				UpdateAvailableTimeFrames();
+				DefaultExchange = () => Instrument?.Exchange,
+				DefaultPair = () => Instrument?.Pair,
+				DefaultTimeFrame = () => Instrument?.TimeFrame ?? ETimeFrame.None,
+				FilterExchanges = e => e.EnumAvailableCandleData().Any(),
+				FilterPairs = (e, p) => e.EnumAvailableCandleData().Any(x => x.Pair == p),
+				FilterTimeframes = (e, p, t) => e.EnumAvailableCandleData().Any(x => x.Pair == p && x.TimeFrame == t)
 			};
-			m_cb_time_frame.ComboBox.SelectedIndexChanged += (s,a) =>
+			m_etp_combos.OnSelection += (s, a) =>
 			{
-				if (IsChartLocked || m_in_update_time_frames != 0) return;
-				var tp = (TradePair)m_cb_pair.ComboBox.Value;
-				var tf = (ETimeFrame)m_cb_time_frame.ComboBox.Value;
-				SetInstrument(tp, tf);
+				if (IsChartLocked) return;
+				SetInstrument(m_etp_combos.Pair, m_etp_combos.TimeFrame);
 			};
 
 			// Show positions
@@ -529,74 +498,6 @@ namespace CoinFlip
 				AutoRange();
 			}
 		}
-
-		/// <summary>The exchanges that provide chart data</summary>
-		private IEnumerable<Exchange> AvailableExchanges
-		{
-			get { return Model.TradingExchanges.Where(x => x.EnumAvailableCandleData().Any()); }
-		}
-		private void UpdateAvailableExchanges()
-		{
-			using (m_cb_exchange.ComboBox.PreserveSelectedItem())
-			using (Scope.Create(() => ++m_in_update_available_exchanges, () => --m_in_update_available_exchanges))
-			{
-				m_cb_exchange.ComboBox.Items.Sync(AvailableExchanges);
-				m_cb_exchange.ComboBox.Items.Sort();
-			}
-			if (Instrument != null && m_cb_exchange.ComboBox.SelectedItem == null)
-				m_cb_exchange.ComboBox.SelectedItem = Instrument.Exchange;
-		}
-		private int m_in_update_available_exchanges;
-
-		/// <summary>The pairs on the selected exchange with chart data available</summary>
-		private IEnumerable<TradePair> AvailablePairs
-		{
-			get
-			{
-				var exch = m_cb_exchange.SelectedItem as Exchange;
-				if (exch == null) yield break;
-				foreach (var cd in exch.EnumAvailableCandleData())
-					yield return cd.Pair;
-			}
-		}
-		private void UpdateAvailablePairs()
-		{
-			using (m_cb_pair.ComboBox.PreserveSelectedItem())
-			using (Scope.Create(() => ++m_in_update_available_pairs, () => --m_in_update_available_pairs))
-			{
-				m_cb_pair.ComboBox.Items.Sync(AvailablePairs);
-				m_cb_pair.ComboBox.Items.Sort();
-			}
-			if (Instrument != null && m_cb_pair.ComboBox.SelectedItem == null)
-				m_cb_pair.ComboBox.SelectedItem = Instrument.Pair;
-		}
-		private int m_in_update_available_pairs;
-
-		/// <summary>The time frames available for the current instrument</summary>
-		private IEnumerable<ETimeFrame> AvailableTimeFrames
-		{
-			get
-			{
-				var exch = m_cb_exchange.SelectedItem as Exchange;
-				var pair = m_cb_pair.SelectedItem as TradePair;
-				yield return ETimeFrame.None;
-				if (exch == null || pair == null) yield break;
-				foreach (var cd in exch.EnumAvailableCandleData(pair))
-					yield return cd.TimeFrame;
-			}
-		}
-		private void UpdateAvailableTimeFrames()
-		{
-			using (m_cb_time_frame.ComboBox.PreserveSelectedItem())
-			using (Scope.Create(() => ++m_in_update_time_frames, () => --m_in_update_time_frames))
-			{
-				m_cb_time_frame.ComboBox.Items.Sync(AvailableTimeFrames);
-				m_cb_time_frame.ComboBox.Items.Sort();
-			}
-			if (Instrument != null && (ETimeFrame?)m_cb_time_frame.ComboBox.SelectedItem == ETimeFrame.None)
-				m_cb_time_frame.ComboBox.SelectedItem = Instrument.TimeFrame;
-		}
-		private int m_in_update_time_frames;
 
 		/// <summary>Get positions on the instrument displayed in this chart</summary>
 		private IEnumerable<Order> AllPositions

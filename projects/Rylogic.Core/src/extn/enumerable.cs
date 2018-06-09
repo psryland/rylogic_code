@@ -595,6 +595,53 @@ namespace Rylogic.Extn
 			public int Index;
 			public static implicit operator T(ItemWithIndex<T> p) { return p.Item; }
 		}
+
+		/// <summary>Batches items in a collection in groups >= 'batch_size'.</summary>
+		public static IEnumerable<IList<TSource>> Batch<TSource>(this IEnumerable<TSource> source, int batch_size, Func<TSource, bool> filter = null, bool auto_clear = true)
+		{
+			var batch = new List<TSource>();
+			filter = filter ?? (x => true);
+
+			// Read from 'source' and group into 'batch'
+			foreach (var item in source)
+			{
+				if (!filter(item))
+					continue;
+
+				batch.Add(item);
+				if (batch.Count >= batch_size)
+				{
+					yield return batch;
+					if (auto_clear) batch.Clear();
+				}
+			}
+
+			// Return the left overs
+			if (batch.Count != 0)
+				yield return batch;
+		}
+
+		/// <summary>Group into sets where adjacent items satisfy 'selector'</summary>
+		public static IEnumerable<IGrouping<TKey, TSource>> GroupByAdjacent<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector)
+		{
+			var iter = source.GetEnumerator();
+			if (!iter.MoveNext())
+				yield break;
+
+			for (var more = true; more;)
+			{
+				var grp = new GroupByAdjacentCollection<TKey, TSource>(selector(iter.Current)) { iter.Current };
+				for (; (more = iter.MoveNext()) && grp.Key.Equals(selector(iter.Current));)
+					grp.Add(iter.Current);
+
+				yield return grp;
+			}
+		}
+		private class GroupByAdjacentCollection<TKey, TElement> :List<TElement>, IGrouping<TKey, TElement>
+		{
+			public GroupByAdjacentCollection(TKey key) { Key = key; }
+			public TKey Key { get; private set; }
+		}
 	}
 }
 
@@ -612,12 +659,12 @@ namespace Rylogic.UnitTests
 			foreach (var pair in ints.InPairs())
 				sums.Add(pair.Item1 + pair.Item2);
 
-			Assert.AreEqual(5  ,sums.Count);
-			Assert.AreEqual(3  ,sums[0]);
-			Assert.AreEqual(7  ,sums[1]);
-			Assert.AreEqual(11 ,sums[2]);
-			Assert.AreEqual(15 ,sums[3]);
-			Assert.AreEqual(9  ,sums[4]);
+			Assert.Equal(5  ,sums.Count);
+			Assert.Equal(3  ,sums[0]);
+			Assert.Equal(7  ,sums[1]);
+			Assert.Equal(11 ,sums[2]);
+			Assert.Equal(15 ,sums[3]);
+			Assert.Equal(9  ,sums[4]);
 		}
 		[Test] public void Zip()
 		{
@@ -648,21 +695,21 @@ namespace Rylogic.UnitTests
 		{
 			var a0 = new[]{4,2,7,1,8,3,4,6,8,9};
 
-			Assert.AreEqual(1, a0.MinBy(x => x));
-			Assert.AreEqual(2, a0.MinBy(x => (x % 2) == 0 ? x : 1000));
-			Assert.AreEqual(9, a0.MinBy(x => 10 - x));
+			Assert.Equal(1, a0.MinBy(x => x));
+			Assert.Equal(2, a0.MinBy(x => (x % 2) == 0 ? x : 1000));
+			Assert.Equal(9, a0.MinBy(x => 10 - x));
 
-			Assert.AreEqual(9, a0.MaxBy(x => x));
-			Assert.AreEqual(8, a0.MaxBy(x => (x % 2) == 0 ? x : -1000));
-			Assert.AreEqual(1, a0.MaxBy(x => 10 - x));
+			Assert.Equal(9, a0.MaxBy(x => x));
+			Assert.Equal(8, a0.MaxBy(x => (x % 2) == 0 ? x : -1000));
+			Assert.Equal(1, a0.MaxBy(x => 10 - x));
 
-			Assert.AreEqual(3, a0.IndexOfMinBy(x => x));
-			Assert.AreEqual(1, a0.IndexOfMinBy(x => (x % 2) == 0 ? x : 1000));
-			Assert.AreEqual(9, a0.IndexOfMinBy(x => 10 - x));
+			Assert.Equal(3, a0.IndexOfMinBy(x => x));
+			Assert.Equal(1, a0.IndexOfMinBy(x => (x % 2) == 0 ? x : 1000));
+			Assert.Equal(9, a0.IndexOfMinBy(x => 10 - x));
 
-			Assert.AreEqual(9, a0.IndexOfMaxBy(x => x));
-			Assert.AreEqual(4, a0.IndexOfMaxBy(x => (x % 2) == 0 ? x : -1000));
-			Assert.AreEqual(3, a0.IndexOfMaxBy(x => 10 - x));
+			Assert.Equal(9, a0.IndexOfMaxBy(x => x));
+			Assert.Equal(4, a0.IndexOfMaxBy(x => (x % 2) == 0 ? x : -1000));
+			Assert.Equal(3, a0.IndexOfMaxBy(x => 10 - x));
 		}
 		[Test] public void ExceptBy()
 		{
@@ -710,6 +757,66 @@ namespace Rylogic.UnitTests
 			Assert.False(s2.IsOrdered());
 			Assert.False(s3.IsOrdered());
 			Assert.True(s4.IsOrdered(ascending:false));
+		}
+		[Test] public void Batch()
+		{
+			var ints = new[]{ 1,2,3,4,5,6,7,8,9 };
+			{
+				var b = ints.Batch(4).GetEnumerator();
+
+				Assert.True(b.MoveNext());
+				Assert.Equal(new[] { 1, 2, 3, 4 }, b.Current);
+
+				Assert.True(b.MoveNext());
+				Assert.Equal(new[] { 5, 6, 7, 8 }, b.Current);
+
+				Assert.True(b.MoveNext());
+				Assert.Equal(new[] { 9 }, b.Current);
+
+				Assert.False(b.MoveNext());
+			}
+			{
+				var b = ints.Batch(5, i => i != 3, auto_clear:false).GetEnumerator();
+
+				Assert.True(b.MoveNext());
+				Assert.Equal(new[] { 1, 2, 4, 5, 6 }, b.Current);
+
+				Assert.True(b.MoveNext());
+				Assert.Equal(new[] { 1, 2, 4, 5, 6, 7 }, b.Current);
+
+				b.Current.Clear();
+
+				Assert.True(b.MoveNext());
+				Assert.Equal(new[] { 8, 9 }, b.Current);
+
+				Assert.False(b.MoveNext());
+			}
+		}
+		[Test] public void GroupByAdjacent()
+		{
+			var ints = new[] { 1, 1, 2, 3, 3, 3, 4, 3, 3, 1, 1, 2 };
+			var iter = ints.GroupByAdjacent(x => x).GetEnumerator();
+
+			Assert.True(iter.MoveNext());
+			Assert.Equal(new[] { 1, 1 }, iter.Current);
+
+			Assert.True(iter.MoveNext());
+			Assert.Equal(new[] { 2 }, iter.Current);
+
+			Assert.True(iter.MoveNext());
+			Assert.Equal(new[] { 3, 3, 3 }, iter.Current);
+
+			Assert.True(iter.MoveNext());
+			Assert.Equal(new[] { 4 }, iter.Current);
+
+			Assert.True(iter.MoveNext());
+			Assert.Equal(new[] { 3, 3 }, iter.Current);
+
+			Assert.True(iter.MoveNext());
+			Assert.Equal(new[] { 1, 1 }, iter.Current);
+
+			Assert.True(iter.MoveNext());
+			Assert.Equal(new[] { 2 }, iter.Current);
 		}
 	}
 }

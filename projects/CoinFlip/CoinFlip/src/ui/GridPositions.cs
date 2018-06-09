@@ -97,7 +97,6 @@ namespace CoinFlip
 				SortMode = DataGridViewColumnSortMode.NotSortable,
 				FillWeight = 1.0f,
 			});
-			ContextMenuStrip = CreateCMenu();
 			DataSource = Model.Positions;
 		}
 		protected override void SetModelCore(Model model)
@@ -129,7 +128,47 @@ namespace CoinFlip
 		protected override void OnMouseDown(MouseEventArgs e)
 		{
 			base.OnMouseDown(e);
-			DataGridView_.ColumnVisibility(this, e);
+			if (e.Button == MouseButtons.Right)
+			{
+				var hit = this.HitTestEx(e.Location);
+				if (hit.Type == DataGridView_.HitTestInfo.EType.ColumnHeader || hit.Type == DataGridView_.HitTestInfo.EType.ColumnDivider)
+				{
+					this.ColumnVisibilityContextMenu(hit.GridPoint);
+				}
+				else
+				{
+					var pos = SelectedRows.Cast<DataGridViewRow>().Select(x => (Order)x.DataBoundItem).SingleOrDefault();
+					var cmenu = new ContextMenuStrip();
+					{
+						var opt = cmenu.Items.Add2(new ToolStripMenuItem("Cancel Order"));
+						opt.Enabled = pos != null;
+						opt.Click += (s, a) =>
+						{
+							pos?.CancelOrder();
+						};
+					}
+					if (!Model.AllowTrades)
+					{
+						// Cancel the order and create a fake history entry to simulate the fake order being filled
+						var opt = cmenu.Items.Add2(new ToolStripMenuItem("\"Fill\" order"));
+						opt.Visible = pos != null && pos.Fake;
+						opt.Click += (s, a) =>
+						{
+							pos?.FillFakeOrder();
+						};
+					}
+					cmenu.Items.AddSeparator();
+					{
+						var opt = cmenu.Items.Add2(new ToolStripMenuItem("Modify"));
+						opt.Enabled = pos != null;
+						opt.Click += (s, a) =>
+						{
+							Model.EditTrade(pos);
+						};
+					}
+					cmenu.Show(this, hit.GridPoint);
+				}
+			}
 		}
 		protected override void OnCellFormatting(DataGridViewCellFormattingEventArgs a)
 		{
@@ -228,53 +267,6 @@ namespace CoinFlip
 
 			// Launch an editor for the trade
 			Model.EditTrade(pos);
-		}
-
-		/// <summary>Create the context menu for the grid</summary>
-		private ContextMenuStrip CreateCMenu()
-		{
-			var cmenu = new ContextMenuStrip();
-			{
-				var opt = cmenu.Items.Add2(new ToolStripMenuItem("Cancel Order"));
-				cmenu.Opening += (s,a) =>
-				{
-					opt.Enabled = SelectedRows.Count == 1;
-				};
-				opt.Click += (s,a) =>
-				{
-					var pos = SelectedRows.Cast<DataGridViewRow>().Select(x => (Order)x.DataBoundItem).First();
-					pos.CancelOrder();
-				};
-			}
-			if (!Model.AllowTrades)
-			{
-				var opt = cmenu.Items.Add2(new ToolStripMenuItem("\"Fill\" order"));
-				cmenu.Opening += (s,a) =>
-				{
-					var pos = SelectedRows.Cast<DataGridViewRow>().Select(x => (Order)x.DataBoundItem).FirstOrDefault();
-					opt.Visible = pos != null && pos.Fake;
-				};
-				opt.Click += (s,a) =>
-				{
-					// Cancel the order and create a fake history entry to simulate the fake order being filled
-					var pos = SelectedRows.Cast<DataGridViewRow>().Select(x => (Order)x.DataBoundItem).First();
-					pos.FillFakeOrder();
-				};
-			}
-			cmenu.Items.AddSeparator();
-			{
-				var opt = cmenu.Items.Add2(new ToolStripMenuItem("Modify"));
-				cmenu.Opening += (s,a) =>
-				{
-					opt.Enabled = SelectedRows.Count == 1;
-				};
-				opt.Click += (s,a) =>
-				{
-					var pos = SelectedRows.Cast<DataGridViewRow>().Select(x => (Order)x.DataBoundItem).First();
-					Model.EditTrade(pos);
-				};
-			}
-			return cmenu;
 		}
 
 		public static class ColumnNames

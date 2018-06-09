@@ -203,7 +203,7 @@ def DiffHash(src,dst,trace=False):
 	return False
 	
 # Copy 'src' to 'dst' optionally if 'src' is newer than 'dst'
-def Copy(src, dst, only_if_modified=True, show_unchanged=False, ignore_non_existing=False, quiet=False):
+def Copy(src, dst, only_if_modified=True, show_unchanged=False, ignore_non_existing=False, quiet=False, filter:str=None, filter_flags=0, follow_symlinks=True):
 
 	src_is_dir = src.endswith("/") or src.endswith("\\")
 	dst_is_dir = dst.endswith("/") or dst.endswith("\\")
@@ -253,18 +253,22 @@ def Copy(src, dst, only_if_modified=True, show_unchanged=False, ignore_non_exist
 
 		# Call recursively for directory copies
 		if os.path.isdir(s):
-			Copy(s, d+"\\", only_if_modified, show_unchanged, ignore_non_existing, quiet)
+			Copy(s, d+"\\", only_if_modified, show_unchanged, ignore_non_existing, quiet, filter, filter_flags, follow_symlinks)
 
 		# Copy the file
 		else:
-			# Copy if modified or always based on the flag
+			# Copy if not excluded by the filter
+			if filter and not re.match(filter, s, filter_flags):
+				continue
+
+				# Copy if modified or always based on the flag
 			if only_if_modified and not DiffContent(s,d):
 				if not quiet and show_unchanged: print(s + " --> unchanged")
 				continue
 
 			# Copy the file
 			if not quiet: print(s + " --> " + d)
-			shutil.copy2(s, d)
+			shutil.copy2(s, d, follow_symlinks=follow_symlinks)
 
 	return
 

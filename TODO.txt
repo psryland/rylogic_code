@@ -1,6 +1,14 @@
 Immediate ToDo:
 
 Cryptopia
+	CEW:
+		- Record the update-from-block-height after an update to speed up "Finding Start height"
+		- Fix progress reporting when Cursor is at the last row of the command prompt buffer
+		- Implement create withdrawal
+		- Build as a docker container for linux
+		
+
+
 	Questions:
 		- Bug? GetTransactions uses a block hash as the parameter when talking to bitcoin, but uses the block index (height) when talking to Ethereum?!
 		- How does Cryptopia manage it's wallet nodes? Which nodes are run locally? What are the addresses?
