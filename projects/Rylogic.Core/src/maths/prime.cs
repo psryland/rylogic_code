@@ -1,16 +1,11 @@
-//*****************************************************************************
-// Maths library
-//  Copyright (c) Rylogic Ltd 2002
-//*****************************************************************************
+﻿using System.Numerics;
 
-#pragma once
-
-namespace pr
+namespace Rylogic.Maths
 {
-	namespace maths
-	{
-		// The first 1000 primes
-		const unsigned int prime[] = 
+	public static partial class Math_
+    {
+		/// <summary>The first 1000 primes</summary>
+		public static readonly int[] Primes =
 		{
 			2    ,3    ,5    ,7    ,11   ,13   ,17   ,19   ,23   ,29   ,
 			31   ,37   ,41   ,43   ,47   ,53   ,59   ,61   ,67   ,71   ,
@@ -113,36 +108,149 @@ namespace pr
 			7727 ,7741 ,7753 ,7757 ,7759 ,7789 ,7793 ,7817 ,7823 ,7829 ,
 			7841 ,7853 ,7867 ,7873 ,7877 ,7879 ,7883 ,7901 ,7907 ,7919
 		};
-		
-		unsigned int prime_table_size = sizeof(prime)/sizeof(prime[0]);
-	}
 
-	// Return true if 'n' is a prime number
-	template <typename T> bool IsPrime(T n)
-	{
-		if (n <= 3) return n > 1;
-		if (n % 2 == 0 || n % 3 == 0) return false;
-		for (auto i = 5; i * i <= n; i += 6)
+		/// <summary>Returns true if 'value' is prime</summary>
+		public static bool IsPrime(long n, bool propable_is_ok = true)
 		{
-			if (n % i == 0 || n % (i + 2) != 0) continue;
-			return false;
+			// This is an optimised deterministic version of the "Miller-Rabin" algorithm.
+			// see https://en.wikipedia.org/wiki/Miller–Rabin_primality_test
+			// and http://rosettacode.org/wiki/Miller–Rabin_primality_test#C.23 (ported from C implementation)
+			// This function is deterministic up to 341,550,071,728,321
+			// Above this value, then the result is probabilistic
+			// if n < 1,373,653, it is enough to test a = 2 and 3;
+			// if n < 9,080,191, it is enough to test a = 31 and 73;
+			// if n < 4,759,123,141, it is enough to test a = 2, 7, and 61;
+			// if n < 1,122,004,669,633, it is enough to test a = 2, 13, 23, and 1662803;
+			// if n < 2,152,302,898,747, it is enough to test a = 2, 3, 5, 7, and 11;
+			// if n < 3,474,749,660,383, it is enough to test a = 2, 3, 5, 7, 11, and 13;
+			// if n < 341,550,071,728,321, it is enough to test a = 2, 3, 5, 7, 11, 13, and 17.
+			// For 1000000 random ints from [0, MaxInt], this method is 20x faster than the 
+			// standard "6k + i" searching method.
+
+			// Test basic divisibility
+			if ((n & 1) == 0) return n == 2;
+			if ((n % 3) == 0) return n == 3;
+			if (n <= 3) return false;
+
+			// Decompose 'value - 1' to the form '2^s * d'
+			long s,d;
+			for (s = 1, d = n / 2; (d & 1) == 0; d /= 2, ++s) {}
+
+			if (n < 1373653)
+				return Witness(n, s, d, 2) && Witness(n, s, d, 3);
+			if (n < 9080191)
+				return Witness(n, s, d, 31) && Witness(n, s, d, 73);
+			if (n < 4759123141)
+				return Witness(n, s, d, 2) && Witness(n, s, d, 7) && Witness(n, s, d, 61);
+			if (n < 1122004669633)
+				return Witness(n, s, d, 2) && Witness(n, s, d, 13) && Witness(n, s, d, 23) && Witness(n, s, d, 1662803);
+			if (n < 2152302898747)
+				return Witness(n, s, d, 2) && Witness(n, s, d, 3) && Witness(n, s, d, 5) && Witness(n, s, d, 7) && Witness(n, s, d, 11);
+			if (n < 3474749660383)
+				return Witness(n, s, d, 2) && Witness(n, s, d, 3) && Witness(n, s, d, 5) && Witness(n, s, d, 7) && Witness(n, s, d, 11) && Witness(n, s, d, 13);
+			if (n < 341550071728321)
+				return Witness(n, s, d, 2) && Witness(n, s, d, 3) && Witness(n, s, d, 5) && Witness(n, s, d, 7) && Witness(n, s, d, 11) && Witness(n, s, d, 13) && Witness(n, s, d, 17);
+
+			// Fall back to probabilistic test
+			var probably_prime = Witness(n, s, d, 2) && Witness(n, s, d, 3) && Witness(n, s, d, 5) && Witness(n, s, d, 7) && Witness(n, s, d, 11) && Witness(n, s, d, 13) && Witness(n, s, d, 17);
+			if (probably_prime == false)
+				return false;
+			if (propable_is_ok)
+				return true;
+			
+			throw new System.Exception($"Cannot deterministically say whether {n} is prime");
+
+			// n − 1 = 2^s * d with d odd by factoring powers of 2 from n−1
+			bool Witness(long N, long S, long D, long A)
+			{
+				var x = BigInteger.ModPow(A, D, N);
+				var y = BigInteger.Zero;
+				for (var i = S; i != 0; --i)
+				{
+					y = (x * x) % N;
+					if (y == 1 && x != 1 && x != N - 1) return false;
+					x = y;
+				}
+				return y == 1;
+			}
 		}
-		return true;
-	}
 
-	// Return a prime number greater than or equal to 'n'
-	template <typename T> T PrimeGtrEq(T n)
-	{
-		if (n <= 2) return 2;
-		for (n |= 1; !IsPrime(n); n += 2) {}
-		return n;
-	}
+		/// <summary>Return true if 'n' is a prime number. Linear complexity O(sqrt(n))</summary>
+		internal static bool IsPrimeSlow(long n)
+		{
+			if (n <= 3) return n > 1;
+			if (n % 2 == 0 || n % 3 == 0) return false;
+			for (var i = 5; i * i <= n; i += 6)
+			{
+				if (n % i != 0 && n % (i + 2) != 0) continue;
+				return false;
+			}
+			return true;
+		}
 
-	// Return a prime number less than or equal to 'n'
-	template <typename T> inline T PrimeLessEq(T n)
-	{
-		if (n <= 2) return 2;
-		for (n -= (n % 2) == 0 ? 1 : 0; !IsPrime(n); n -= 2) {}
-		return n;
+		/// <summary>Return a prime number greater than or equal to 'n'</summary>
+		public static long PrimeGtrEq(long n)
+		{
+			if (n <= 2L) return 2L;
+			for (n |= 1L; !IsPrime(n); n += 2L) { }
+			return n;
+		}
+
+		/// <summary>Return a prime number less than or equal to 'n'</summary>
+		public static long PrimeLessEq(long n)
+		{
+			if (n <= 2L) return 2L;
+			for (n -= (n % 2L) == 0 ? 1L : 0L; !IsPrime(n); n -= 2L) { }
+			return n;
+		}
 	}
 }
+
+#if PR_UNITTESTS
+namespace Rylogic.UnitTests
+{
+	using Maths;
+	using System;
+
+	[TestFixture]
+	public class TestMathsPrime
+	{
+		[Test]
+		public void TestPrimes()
+		{
+			// Test the first 
+			for (int i = 0, j = 0; j != Math_.Primes.Length; ++i)
+			{
+				var is_prime = (i == Math_.Primes[j]);
+				Assert.True(Math_.IsPrime(i) == is_prime);
+				if (is_prime) ++j;
+			}
+
+			// Test some random larger primes
+			var rng = new Random(123);
+			for (int i = 0; i != 10000; ++i)
+			{
+				var value = rng.Next();
+				var prime_gtr = Math_.PrimeGtrEq(value);
+				var prime_lss = Math_.PrimeLessEq(value);
+
+				Assert.True(Math_.IsPrime(prime_gtr));
+				Assert.True(Math_.IsPrime(prime_lss));
+				if (prime_gtr != prime_lss)
+					Assert.True(Math_.IsPrime(value) == false);
+				else
+					Assert.True(value == prime_gtr);
+			}
+
+			// Test some random larger primes
+			Assert.True(Math_.IsPrime(95413) == true);
+			Assert.True(Math_.IsPrime(168987071) == false);
+			Assert.True(Math_.IsPrime(168987079) == true);
+			Assert.True(Math_.IsPrime(161489287071) == false);
+			Assert.True(Math_.IsPrime(161489287081) == true);
+			Assert.True(Math_.IsPrime(341550071728319) == false);
+			Assert.True(Math_.IsPrime(341550071728631) == true);
+		}
+	}
+}
+#endif
