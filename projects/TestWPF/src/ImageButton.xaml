@@ -9,7 +9,7 @@
 	<Grid>
 		<Button HorizontalContentAlignment="Left" Background="Transparent">
 			<StackPanel Orientation="Horizontal">
-				<Image Name="BtnImage" Margin="0 0 10 0" Source="pack://application:,,,/res/check_reject.png"/>
+				<Image Name="BtnImage" Margin="0 0 10 0" Source="{StaticResource check_reject}"/>
 				<TextBlock Name="BtnLabel" VerticalAlignment="Center" FontSize="16" Text="Label"/>
 			</StackPanel>
 		</Button>

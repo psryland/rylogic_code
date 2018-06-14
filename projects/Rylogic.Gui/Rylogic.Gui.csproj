@@ -75,5 +75,35 @@
       <SubType>Designer</SubType>
     </Page>
   </ItemGroup>
+  <ItemGroup>
+    <Resource Include="res\dock_close.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="res\dock_menu.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="res\dock_pinned.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="res\dock_site_bottom.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="res\dock_site_cross_lg.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="res\dock_site_cross_sm.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="res\dock_site_left.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="res\dock_site_right.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="res\dock_site_top.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="res\dock_unpinned.png" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

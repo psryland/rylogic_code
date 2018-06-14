@@ -8,7 +8,13 @@
         xmlns:local="clr-namespace:TestWPF"
         mc:Ignorable="d"
         Title="DockContainerUI" Height="450" Width="800">
-    <Canvas Name="Root">
+
+	<Window.Resources>
+		<ResourceDictionary Source="pack://application:,,,/Rylogic.Gui;component/Themes/Generic.xaml"/>
+	</Window.Resources>
+	
+	<Canvas Name="Root">
+
 		<gui2:DockContainer Name="m_dc" Visibility="Visible" Background="{x:Static SystemColors.ControlDarkBrush}" Width="{Binding ActualWidth, ElementName=Root}" Height="{Binding ActualHeight, ElementName=Root}"/>
 
 		<!--Dock Pane--> 
@@ -39,7 +45,7 @@
 			</StackPanel>
 
 			
-			<Canvas Name="Content"/>
+			<Canvas Name="PaneCentre"/>
 		</DockPanel>
 
 		<!--Dock Container visual tree-->
@@ -129,5 +135,9 @@
 				</Grid>
 			</Canvas>
 		</DockPanel>
+
+		<!-- Dragging indicator -->
+		<!--<Image Source="{StaticResource dock_site_cross_lg}" Width="128" Height="128"/>-->
+
 	</Canvas>
 </Window>

@@ -4790,18 +4790,16 @@ namespace Rylogic.Gui
 					else
 					{
 						// Dock the dragged item
-						var dc = DraggedItem as DockControl;
-						if (dc != null)
+						if (DraggedItem is DockControl dc)
 							DropRootBranch.Add(dc, DropIndex, DropAddress);
 
-						var dockpane = DraggedItem as DockPane;
-						if (dockpane != null)
+						if (DraggedItem is DockPane dockpane)
 						{
 							var target = DropRootBranch.DockPane(DropAddress.First(), DropAddress.Skip(1));
-							using (dockpane.SuspendLayout(layout_on_resume:false))
-							using (target.SuspendLayout(layout_on_resume:false))
+							using (dockpane.SuspendLayout(layout_on_resume: false))
+							using (target.SuspendLayout(layout_on_resume: false))
 							{
-								var index = Math_.Clamp(DropIndex, 0, dockpane.Content.Count);
+								var index = Math_.Clamp(DropIndex, 0, target.Content.Count);
 								foreach (var c in dockpane.Content.Reversed().ToArray())
 									target.Content.Insert(index, c);
 

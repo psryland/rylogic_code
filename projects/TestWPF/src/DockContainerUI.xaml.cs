@@ -63,9 +63,9 @@ namespace TestWPF
 					//TabIcon = SystemIcons.Exclamation.ToBitmap()
 				};
 
-				Children.Add2(new TextBox { Width = 140, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top });
-				Children.Add2(new TextBox { Width = 140, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top });
-				Children.Add2(new TextBox { Width = 140, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top });
+				Children.Add(new TextBox { Width = 140, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top });
+				Children.Add(new TextBox { Width = 140, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top });
+				Children.Add(new TextBox { Width = 140, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top });
 			}
 
 			/// <summary>Implements docking functionality</summary>
