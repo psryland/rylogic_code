@@ -60,7 +60,7 @@ namespace Rylogic.UnitTests
 			// Save the private key somewhere safe, you need that to generate more code numbers for the app
 			string pub, priv;
 			Crypt.GenerateRSAKeyPair(out pub, out priv, 384);
-			Assert.AreNotEqual(pub, priv);
+			Assert.NotEqual(pub, priv);
 
 			// This is the licence issuer
 			var user_data = "Pauls Test Data";

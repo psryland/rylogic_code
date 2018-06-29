@@ -183,6 +183,7 @@ namespace RyLogViewer
 			// Find combo
 			m_cb_pattern.DataSource = History;
 			m_cb_pattern.DisplayMember = nameof(Pattern.Expr);
+			m_cb_pattern.TextToValue = t => new Pattern(EPattern.Substring, t);
 			m_cb_pattern.DropDownClosed += (s,a)=>
 			{
 				var p = (Pattern)m_cb_pattern.SelectedItem;

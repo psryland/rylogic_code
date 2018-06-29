@@ -215,31 +215,31 @@ namespace Rylogic.UnitTests
 		}
 
 		/// <summary>Tests value equality</summary>
-		public static void Equal(object lhs, object rhs)
+		public static void Equal(object expected, object result)
 		{
-			if (Equals(lhs, rhs)) return;
-			throw new UnitTestException(VSLink + $"values are not equal\r\n  lhs: {(lhs ?? "null").ToString()}\r\n  rhs: {(rhs ?? "null").ToString()}");
+			if (Equals(expected, result)) return;
+			throw new UnitTestException(VSLink + $"values are not equal\r\n  expected: {(expected ?? "null").ToString()}\r\n  result: {(result ?? "null").ToString()}");
 		}
 
 		/// <summary>Tests value equality</summary>
-		public static void Equal<T>(IEnumerable<T> lhs, IEnumerable<T> rhs)
+		public static void Equal<T>(IEnumerable<T> expected, IEnumerable<T> result)
 		{
-			if (ReferenceEquals(lhs, rhs)) return;
-			if (lhs.SequenceEqual(rhs)) return;
-			throw new UnitTestException(VSLink + $"sequences are not equal\r\n  lhs: {(lhs != null ? string.Join(",", lhs) : "null")}\r\n  rhs: {(lhs != null ? string.Join(",", rhs) : "null")}");
+			if (ReferenceEquals(expected, result)) return;
+			if (expected.SequenceEqual(result)) return;
+			throw new UnitTestException(VSLink + $"sequences are not equal\r\n  expected: {(expected != null ? string.Join(",", expected) : "null")}\r\n  result: {(result != null ? string.Join(",", result) : "null")}");
 		}
 
 		/// <summary>Tests value equality</summary>
-		public static void Equal(double lhs, double rhs, double tol)
+		public static void Equal(double expected, double result, double tol)
 		{
-			if (Math.Abs(rhs - lhs) < tol) return;
-			throw new UnitTestException(VSLink + $"values are not equal\r\n  lhs: {lhs}\r\n  rhs: {rhs}\r\n  tol: {tol}");
+			if (Math.Abs(result - expected) < tol) return;
+			throw new UnitTestException(VSLink + $"values are not equal\r\n  expected: {expected}\r\n  result: {result}\r\n  tol: {tol}");
 		}
 
 		/// <summary>Tests value inequality</summary>
-		public static void AreNotEqual(object lhs, object rhs)
+		public static void NotEqual(object expected, object result)
 		{
-			if (!Equals(lhs, rhs)) return;
+			if (!Equals(expected, result)) return;
 			throw new UnitTestException(VSLink + "values are equal");
 		}
 

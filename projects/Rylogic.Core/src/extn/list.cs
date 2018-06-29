@@ -345,11 +345,6 @@ namespace Rylogic.Extn
 				list.RemoveAt(start_index);
 			return list;
 		}
-		//{
-		//	var diff = list.Count - startIndex;
-		//	if (diff > 0) list.RemoveRange(startIndex, diff);
-		//	return list;
-		//}
 
 		/// <summary>Remove all items in 'set' from this list. (More efficient that removing one at a time if 'set' is a large fraction of this list)</summary>
 		public static void RemoveAll<T>(this IList<T> list, IEnumerable<T> set)
@@ -846,12 +841,12 @@ namespace Rylogic.UnitTests
 			int last = list.Unique(0, 50);
 			for (var i = 0; i < last; ++i)
 				for (var j = i + 1; j < last; ++j)
-					Assert.AreNotEqual(list[i], list[j]);
+					Assert.NotEqual(list[i], list[j]);
 
 			list.Unique();
 			for (var i = 0; i < list.Count; ++i)
 				for (var j = i + 1; j < list.Count; ++j)
-					Assert.AreNotEqual(list[i], list[j]);
+					Assert.NotEqual(list[i], list[j]);
 
 			Assert.Equal(5, list.Add2(5));
 		}

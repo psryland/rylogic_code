@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System;
+using System.Numerics;
 
 namespace Rylogic.Maths
 {
@@ -110,7 +111,7 @@ namespace Rylogic.Maths
 		};
 
 		/// <summary>Returns true if 'value' is prime</summary>
-		public static bool IsPrime(long n, bool propable_is_ok = true)
+		public static bool IsPrime(long n, bool probable_is_ok = true)
 		{
 			// This is an optimised deterministic version of the "Miller-Rabin" algorithm.
 			// see https://en.wikipedia.org/wiki/Miller–Rabin_primality_test
@@ -155,7 +156,7 @@ namespace Rylogic.Maths
 			var probably_prime = Witness(n, s, d, 2) && Witness(n, s, d, 3) && Witness(n, s, d, 5) && Witness(n, s, d, 7) && Witness(n, s, d, 11) && Witness(n, s, d, 13) && Witness(n, s, d, 17);
 			if (probably_prime == false)
 				return false;
-			if (propable_is_ok)
+			if (probable_is_ok)
 				return true;
 			
 			throw new System.Exception($"Cannot deterministically say whether {n} is prime");
@@ -191,7 +192,7 @@ namespace Rylogic.Maths
 		/// <summary>Return a prime number greater than or equal to 'n'</summary>
 		public static long PrimeGtrEq(long n)
 		{
-			if (n <= 2L) return 2L;
+			if (n <= 2) return 2;
 			for (n |= 1L; !IsPrime(n); n += 2L) { }
 			return n;
 		}
@@ -199,7 +200,8 @@ namespace Rylogic.Maths
 		/// <summary>Return a prime number less than or equal to 'n'</summary>
 		public static long PrimeLessEq(long n)
 		{
-			if (n <= 2L) return 2L;
+			if (n == 2) return 2L;
+			if (n < 2) throw new Exception($"There are no primes less than {n}");
 			for (n -= (n % 2L) == 0 ? 1L : 0L; !IsPrime(n); n -= 2L) { }
 			return n;
 		}
@@ -218,7 +220,7 @@ namespace Rylogic.UnitTests
 		[Test]
 		public void TestPrimes()
 		{
-			// Test the first 
+			// Test the first 1000 or so primes and not-primes
 			for (int i = 0, j = 0; j != Math_.Primes.Length; ++i)
 			{
 				var is_prime = (i == Math_.Primes[j]);

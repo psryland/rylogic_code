@@ -286,6 +286,27 @@ namespace Rylogic.Maths
 			return (a*b) / GreatestCommonFactor(a,b);
 		}
 
+		/// <summary>Returns true if 'value' is a single digit integer multiple of a power of ten. (e.g. 2000, 300, 1, 90000. Not 1200, 234)</summary>
+		public static bool IsIntegerPowerOfTen(long x)
+		{
+			x = Math.Abs(x);
+			if (x == 0) return true;
+			var log = Math.Log10(x);
+			var exp = (long)Math.Pow(10, Math.Floor(log));
+			return x == (long)Math.Floor((double)x / exp) * exp;
+		}
+
+		/// <summary>Return the exponents of 'value' in base 'radix' (starting at exponent 0)</summary>
+		public static IEnumerable<long> Exponentiate(long value, int radix = 10)
+		{
+			for (long e = 1; value != 0; value /= radix, e *= radix)
+			{
+				var val = value % radix;
+				if (val != 0)
+					yield return val * e;
+			}
+		}
+
 		/// <summary>Returns the radius of a sphere with the given volume</summary>
 		public static double SphereRadius(double volume)
 		{
@@ -400,7 +421,7 @@ namespace Rylogic.UnitTests
 
 	[TestFixture] public class TestMathsScalar
 	{
-		[Test] public void Average()
+		[Test] public void TestAverage()
 		{
 			var a = Math_.Average(1.0, 4.0, 2.0, 7.0, -3.0);
 			Assert.Equal(a, 2.2);
@@ -411,7 +432,7 @@ namespace Rylogic.UnitTests
 			m = Math_.Median(1.0, 4.0, 2.0, 7.0, -3.0, -1.0);
 			Assert.Equal(m, 1.5);
 		}
-		[Test] public void Lerp()
+		[Test] public void TestLerp()
 		{
 			var a0 = new[]{ 1.0, 10.0, 2.0, 5.0 };
 			Assert.Equal(Math_.Lerp(-0.1, a0), 1.0);
@@ -423,6 +444,29 @@ namespace Rylogic.UnitTests
 			Assert.Equal(Math_.Lerp(2/3.0, a0), 2.0);
 			Assert.Equal(Math_.Lerp(1/6.0, a0), 5.5);
 			Assert.Equal(Math_.Lerp(5/6.0, a0), 3.5);
+		}
+		[Test] public void TestExponentiate()
+		{
+			Assert.True(Math_.IsIntegerPowerOfTen(+0));
+			Assert.True(Math_.IsIntegerPowerOfTen(-0));
+			Assert.True(Math_.IsIntegerPowerOfTen(-1));
+			Assert.True(Math_.IsIntegerPowerOfTen(+4));
+			Assert.True(Math_.IsIntegerPowerOfTen(+20));
+			Assert.True(Math_.IsIntegerPowerOfTen(-40));
+			Assert.True(Math_.IsIntegerPowerOfTen(+90000000000000L));
+			Assert.True(Math_.IsIntegerPowerOfTen(-90000000000000L));
+
+			Assert.False(Math_.IsIntegerPowerOfTen(+21));
+			Assert.False(Math_.IsIntegerPowerOfTen(-42));
+			Assert.False(Math_.IsIntegerPowerOfTen(+90000000000001L));
+			Assert.False(Math_.IsIntegerPowerOfTen(-90000000000002L));
+
+			Assert.Equal(new long[] { 80, 100, 20000, 400000, 7000000, 10000000 }, Math_.Exponentiate(17420180));
+			Assert.Equal(new long[] { 200000 }, Math_.Exponentiate(200000));
+			Assert.Equal(new long[] { -400 }, Math_.Exponentiate(-400));
+
+			Assert.Equal(new long[] { 0xa0, 0xf00, 0x1000 }, Math_.Exponentiate(0x1fa0, 16));
+			Assert.Equal(new long[] { 0b10, 0b1000, 0b10000, 0b1000000 }, Math_.Exponentiate(0x5a, 2));
 		}
 	}
 }

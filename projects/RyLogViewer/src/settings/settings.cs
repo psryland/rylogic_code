@@ -78,7 +78,7 @@ namespace RyLogViewer
 			AutoSaveOnChanges = true;
 		}
 		public Settings(string filepath)
-			:base(filepath)
+			:base(filepath, throw_on_error: false)
 		{
 			AutoSaveOnChanges = true;
 		}

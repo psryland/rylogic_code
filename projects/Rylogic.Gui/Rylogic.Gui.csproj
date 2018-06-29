@@ -30,10 +30,16 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Microsoft.Toolkit.Win32.UI.Controls, Version=3.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\build\packages\Microsoft.Toolkit.Win32.UI.Controls.3.0.0\lib\net462\Microsoft.Toolkit.Win32.UI.Controls.dll</HintPath>
+    </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Design" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xaml" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Xml" />
@@ -41,15 +47,21 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Resource.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resource.resx</DependentUpon>
+    </Compile>
     <Compile Include="src\gui\DockPanelSplitter.cs" />
-    <Compile Include="src\gui\dock_container\DockContainer.cs" />
+    <Compile Include="src\gui\DockContainer.cs" />
     <Compile Include="src\gui\Gui.cs" />
-    <Compile Include="src\gui\dock_container\TabButton.xaml.cs">
-      <DependentUpon>TabButton.xaml</DependentUpon>
+    <Compile Include="src\gui\PatternEditor.xaml.cs">
+      <DependentUpon>PatternEditor.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\gui\dock_container\DockPane.xaml.cs">
-      <DependentUpon>DockPane.xaml</DependentUpon>
-    </Compile>
+    <Compile Include="src\gui\RichTextBox.cs" />
+    <Compile Include="src\gui\TriggerTracing.cs" />
+    <Compile Include="src\utility\Converters.cs" />
+    <Compile Include="src\utility\MethodBinding.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj">
@@ -58,17 +70,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Page Include="src\gui\dock_container\Styles.xaml">
-      <SubType>Designer</SubType>
+    <Page Include="src\gui\PatternEditor.xaml">
       <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="src\gui\dock_container\TabButton.xaml">
       <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="src\gui\dock_container\DockPane.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Themes\Generic.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -104,6 +108,24 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="res\dock_unpinned.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="res\edit_add.png" />
+    <Resource Include="res\edit_save.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="res\regex_quick_ref.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Properties\Resource.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resource.Designer.cs</LastGenOutput>
+      <CustomToolNamespace>Rylogic.Gui2</CustomToolNamespace>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

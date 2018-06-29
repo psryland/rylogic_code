@@ -38,7 +38,10 @@ namespace TestWPF
 			{
 				new DockContainerUI().Show();
 			};
-
+			m_menu_tests_pattern_editor.Click += (s, a) =>
+			{
+				new PatternEditorUI().Show();
+			};
 			//var grid = new Canvas();
 			//var btn = new ImageButton
 			//{

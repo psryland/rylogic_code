@@ -5,7 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 
-namespace Rylogic.Gui
+namespace Rylogic.Gui2
 {
 	public class DockPanelSplitter : Control
 	{

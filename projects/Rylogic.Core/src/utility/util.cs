@@ -29,9 +29,9 @@ namespace Rylogic.Utility
 	{
 		#if DEBUG
 		public const bool IsDebug = true;
-#else
+		#else
 		public const bool IsDebug = false;
-#endif
+		#endif
 
 		/// <summary>Convenience disposer</summary>
 		[DebuggerStepThrough]

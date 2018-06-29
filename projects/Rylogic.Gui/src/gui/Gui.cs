@@ -1,14 +1,65 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Linq;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using Rylogic.Extn;
 
-namespace Rylogic.Gui
+namespace Rylogic.Gui2
 {
 	public static class Gui_
 	{
+		/// <summary>Wrapper for DependencyProperty.Register that uses reflection to look for changed or coerce handlers</summary>
+		public static DependencyProperty DPRegister<T>(string prop_name, object def = null)
+		{
+			// Use:
+			//  In your class with property 'prop_name':
+			//  Define:
+			//    <prop_name>_Changed() or,
+			//    <prop_name>_Changed(<prop_type> new_value) or,
+			//    <prop_name>_Changed(<prop_type> old_value, <prop_type> new_value)
+			//    to have that method called when the property changes
+			//  Define:
+			//    <prop_type> <prop_name>_Coerce(<prop_type> value)
+			//    to have values coerced.
+
+			// Don't set 'DefaultValue' unless 'def' is non-null, because the property type
+			// may not be a reference type, and 'null' may not be a valid default value.
+			var meta = new PropertyMetadata();
+			if (def != null) meta.DefaultValue = def;
+
+			// If the type defines a Changed handler, add a callback
+			var changed_handler = typeof(T).GetMethod($"{prop_name}_Changed", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+			if (changed_handler != null)
+			{
+				var param_count = changed_handler.GetParameters().Length;
+				switch (param_count)
+				{
+				default: throw new Exception($"Incorrect function signature for handler {prop_name}_Changed");
+				case 2: meta.PropertyChangedCallback = (d, e) => changed_handler.Invoke(d, new object[] { e.OldValue, e.NewValue }); break;
+				case 1: meta.PropertyChangedCallback = (d, e) => changed_handler.Invoke(d, new object[] { e.NewValue }); break;
+				case 0: meta.PropertyChangedCallback = (d, e) => changed_handler.Invoke(d, null); break;
+				}
+			}
+
+			// If the type defines a Validate handle, add a callback
+			var coerce_handler = typeof(T).GetMethod($"{prop_name}_Coerce", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+			if (coerce_handler != null)
+			{
+				var param_count = coerce_handler.GetParameters().Length;
+				switch (param_count)
+				{
+				default: throw new Exception($"Incorrect function signature for handler {prop_name}_Coerce");
+				case 1: meta.CoerceValueCallback = (d, v) => coerce_handler.Invoke(d, new object[] { v }); break;
+				}
+			}
+
+			var prop_type = typeof(T).GetProperty(prop_name).PropertyType;
+			return DependencyProperty.Register(prop_name, prop_type, typeof(T), meta);
+		}
+
 		/// <summary>Move a screen-space rectangle so that it is within the virtual screen</summary>
 		public static Rect OnScreen(Rect rect)
 		{

@@ -17,9 +17,6 @@ namespace Rylogic.Common
 
 	public interface IPattern :ICloneable
 	{
-		/// <summary>Returns true if the pattern is active</summary>
-		bool Active { get; set; }
-
 		/// <summary>True if the pattern is a regular expression, false if it's just a substring</summary>
 		EPattern PatnType { get; set; }
 
@@ -40,6 +37,33 @@ namespace Rylogic.Common
 
 		/// <summary>Returns true if the pattern is valid</summary>
 		bool IsValid { get; }
+
+		/// <summary>Returns true if the pattern is active</summary>
+		bool Active { get; set; }
+
+		/// <summary>Returns the capture groups captured when applying this pattern to 'text'</summary>
+		IEnumerable<KeyValuePair<string, string>> CaptureGroups(string text);
+
+		/// <summary>
+		/// Return the first range of 'text' that matches this pattern.
+		/// Note, the first returned span will be the string that matches the entire pattern.
+		/// Any subsequent strings will be the capture groups from within the regex pattern.
+		/// i.e.<para/>
+		///  if your expression is @"x" you get one group when matched on "xox" equal to [0,1]<para/>
+		///  if your expression is @"(x)" you get two groups, [0,1] for the whole expression,
+		///  then [0,1] for the sub-expression<para/>
+		/// Note, only the first match is returned, [2,1] is not returned by this method.</summary>
+		IEnumerable<Range> Match(string text, int start = 0, int length = -1);
+
+		/// <summary>
+		/// Returns all occurrences of matches within 'text'.
+		/// i.e.<para/>
+		///   AllMatches(@"(x)", "xoxox") returns [0,1], [2,1], [4,1]<para/>
+		/// Note, this method doesn't return capture groups, only whole expression matches.</summary>
+		IEnumerable<Range> AllMatches(string text);
+
+		/// <summary>Returns true if this pattern matches a substring in 'text'</summary>
+		bool IsMatch(string text);
 	}
 
 	/// <summary>A handy regex helper that converts wildcard and substring searches into regex's as well</summary>
@@ -356,7 +380,14 @@ namespace Rylogic.Common
 				}
 			}
 			catch (ArgumentException) {}
-			if (Invert) x.Add(text.Length);
+			if (Invert)
+			{
+				x.Add(text.Length);
+
+				// Add the global match
+				x.Insert(0, text.Length);
+				x.Insert(0, 0);
+			}
 
 			for (int i = 0; i != x.Count; i += 2)
 				yield return new Range(x[i], x[i+1]);

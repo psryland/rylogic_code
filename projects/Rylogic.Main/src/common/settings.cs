@@ -291,39 +291,57 @@ namespace Rylogic.Common
 		protected SettingsBase(SettingsBase<T> rhs, bool read_only = false)
 			:this(rhs.ToXml(new XElement("root")), read_only)
 		{}
-		protected SettingsBase(XElement node, bool read_only = false)
+		protected SettingsBase(XElement node, bool throw_on_error, bool read_only = false)
 			:this()
 		{
 			if (node != null)
 			{
-				try { FromXml(node, read_only); return; }
-				catch (Exception ex) { SettingsEvent(ESettingsEvent.LoadFailed, ex, "Failed to load settings from XML data"); }
+				try
+				{
+					FromXml(node, read_only);
+					return;
+				}
+				catch (Exception ex)
+				{
+					SettingsEvent(ESettingsEvent.LoadFailed, ex, "Failed to load settings from XML data");
+					if (throw_on_error) throw;
+					ResetToDefaults(); // Fall back to default values
+				}
 			}
-
-			// Fall back to default values
-			ResetToDefaults();
 		}
-		protected SettingsBase(Stream stream, bool read_only = false)
+		protected SettingsBase(Stream stream, bool throw_on_error, bool read_only = false)
 			:this()
 		{
 			if (stream != null)
 			{
-				try { Load(stream, read_only); return; }
-				catch (Exception ex) { SettingsEvent(ESettingsEvent.LoadFailed, ex, "Failed to load settings from stream"); }
+				try
+				{
+					Load(stream, read_only);
+					return;
+				}
+				catch (Exception ex)
+				{
+					SettingsEvent(ESettingsEvent.LoadFailed, ex, "Failed to load settings from stream");
+					if (throw_on_error) throw;
+					ResetToDefaults(); // Fall back to default values
+				}
 			}
-
-			// Fall back to default values
-			ResetToDefaults();
 		}
-		protected SettingsBase(string filepath, bool read_only = false) :this()
+		protected SettingsBase(string filepath, bool throw_on_error, bool read_only = false) :this()
 		{
 			Debug.Assert(!string.IsNullOrEmpty(filepath));
 			Filepath = filepath;
-			try { Reload(read_only); return; }
-			catch (Exception ex) { SettingsEvent(ESettingsEvent.LoadFailed, ex, $"Failed to load settings from {filepath}"); }
-
-			// Fall back to default values
-			ResetToDefaults();
+			try
+			{
+				Reload(read_only);
+				return;
+			}
+			catch (Exception ex)
+			{
+				SettingsEvent(ESettingsEvent.LoadFailed, ex, $"Failed to load settings from {filepath}");
+				if (throw_on_error) throw;
+				ResetToDefaults(); // Fall back to default values
+			}
 		}
 
 		/// <summary>Returns the directory in which to store app settings</summary>
@@ -946,8 +964,8 @@ namespace Rylogic.UnitTests
 				Sub2   = new XElement("external");
 				Things = new object[] { 1, 2.3f, "hello" };
 			}
-			public Settings(string filepath) :base(filepath) {}
-			public Settings(XElement node) : base(node) {}
+			public Settings(string filepath) :base(filepath, throw_on_error:false) {}
+			public Settings(XElement node) : base(node, throw_on_error: false) {}
 
 			public string         Str    { get { return get<string        >(nameof(Str   )); } set { set(nameof(Str   ) , value); } }
 			public int            Int    { get { return get<int           >(nameof(Int   )); } set { set(nameof(Int   ) , value); } }

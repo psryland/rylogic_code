@@ -17,6 +17,20 @@
 
 		<gui2:DockContainer Name="m_dc" Visibility="Visible" Background="{x:Static SystemColors.ControlDarkBrush}" Width="{Binding ActualWidth, ElementName=Root}" Height="{Binding ActualHeight, ElementName=Root}"/>
 
+		<DockPanel Visibility="Collapsed" Width="{Binding ActualWidth, ElementName=Root}" Height="{Binding ActualHeight, ElementName=Root}">
+			<StackPanel Name="ts" DockPanel.Dock="Right" Orientation="Horizontal" Background="Beige">
+				<StackPanel.LayoutTransform>
+					<RotateTransform Angle="90"/>
+				</StackPanel.LayoutTransform>
+
+				<Button Content="Words" Margin="5"></Button>
+				<Button Content="Words" Margin="5"></Button>
+				<Button Content="Words" Margin="5"></Button>
+				<Button Content="Words" Margin="5"></Button>
+			</StackPanel>
+			<Grid></Grid>
+		</DockPanel>
+
 		<!--Dock Pane--> 
 		<DockPanel Visibility="Collapsed" Name="DockPane" Background="SteelBlue" Width ="200" Height="300">
 
@@ -109,16 +123,16 @@
 
 					<!--Each dock panel will be a dock pane-->
 					<DockPanel Name="DockPaneLeft" DockPanel.Dock="Left" Background="Aqua" Width="80"/>
-					<gui:DockPanelSplitter Name="SplitterLeft" DockPanel.Dock="Left" Thickness="10" ProportionalResize="False" Background="Red"/>
+					<gui2:DockPanelSplitter Name="SplitterLeft" DockPanel.Dock="Left" Thickness="10" ProportionalResize="False" Background="Red"/>
 
 					<DockPanel Name="DockPaneRight" DockPanel.Dock="Right" Background="Aqua" Width="200"/>
-					<gui:DockPanelSplitter  Name="SplitterRight" DockPanel.Dock="Right" Thickness="10" />
+					<gui2:DockPanelSplitter  Name="SplitterRight" DockPanel.Dock="Right" Thickness="10" />
 
 					<DockPanel Name="DockPaneTop" DockPanel.Dock="Top" Background="Aqua" Height="60"/>
-					<gui:DockPanelSplitter  Name="SplitterTop" DockPanel.Dock="Top" Thickness="10" />
+					<gui2:DockPanelSplitter  Name="SplitterTop" DockPanel.Dock="Top" Thickness="10" />
 
 					<DockPanel Name="DockPaneBottom" DockPanel.Dock="Bottom" Background="Aqua" Height="80"/>
-					<gui:DockPanelSplitter Name="SplitterBottom" DockPanel.Dock="Bottom" Thickness="10" />
+					<gui2:DockPanelSplitter Name="SplitterBottom" DockPanel.Dock="Bottom" Thickness="10" />
 
 					<DockPanel Name="DockPaneCentre" Background="LightSteelBlue"/>
 				</DockPanel>

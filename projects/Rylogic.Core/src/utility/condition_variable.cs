@@ -175,26 +175,28 @@ namespace Rylogic.UnitTests
 	using Extn;
 	using Utility;
 
-	[TestFixture] public class TestCV
+	[TestFixture]
+	public class TestCV
 	{
-		[Test] public void Test0()
+		[Test]
+		public void Test0()
 		{
 			var mutex = new object();
 			var cv = new ConditionVariable();
 			var data = (string)null;
 			bool ready = false;
 			bool processed = false;
- 
+
 			Action worker_thread = () =>
 			{
 				lock (mutex)
 				{
 					// Wait until main() sends data
 					cv.Wait(mutex, () => ready);
- 
+
 					// after the wait, we own the lock.
 					data = "Changed data";
- 
+
 					// Send data back to main()
 					processed = true;
 
@@ -203,11 +205,11 @@ namespace Rylogic.UnitTests
 					cv.NotifyOne(mutex);
 				}
 			};
- 
+
 			// Main
 			{
 				var worker = new Thread(new ThreadStart(worker_thread)).Run();
- 
+
 				data = "Example data";
 
 				// send data to the worker thread
@@ -229,13 +231,15 @@ namespace Rylogic.UnitTests
 				worker.Join();
 			}
 		}
-		[Test] public void Test1()
+
+		[Test]
+		public void Test1()
 		{
 			var mutex = new object();
 			var cv = new ConditionVariable<int>();
 			bool ready = false;
 			bool processed = false;
- 
+
 			Action worker_thread = () =>
 			{
 				// Wait until main() sends data
@@ -246,12 +250,12 @@ namespace Rylogic.UnitTests
 
 					// after the wait, we own the lock.
 					cv.NotifyOne(mutex, 42);
- 
+
 					// Send data back to main()
 					processed = true;
 				}
 			};
- 
+
 			// Main
 			{
 				var worker = new Thread(new ThreadStart(worker_thread)).Run();

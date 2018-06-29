@@ -15,6 +15,7 @@
 				<MenuItem Name="m_menu_tests_diagram" Header="_Diagram" HorizontalAlignment="Left" />
 				<MenuItem Name="m_menu_tests_view3d" Header="_View3D" HorizontalAlignment="Left" />
 				<MenuItem Name="m_menu_tests_dock_container" Header="_Dock Container" HorizontalAlignment="Left" />
+				<MenuItem Name="m_menu_tests_pattern_editor" Header="_Pattern Editor" HorizontalAlignment="Left" />
 			</MenuItem>
 		</Menu>
 		<local:ImageButton

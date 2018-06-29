@@ -79,7 +79,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Get/Set components by index. Note: row,col is standard (i.e. as in Matlab)</summary>
-		private float this[int r, int c]
+		public float this[int r, int c]
 		{
 			get { return this[c][r]; }
 			set
@@ -89,7 +89,7 @@ namespace Rylogic.Maths
 				this[c] = vec;
 			}
 		}
-		private float this[uint r, uint c]
+		public float this[uint r, uint c]
 		{
 			get { return this[(int)c][(int)r]; }
 			set

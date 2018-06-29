@@ -8,22 +8,29 @@ namespace Rylogic
 	public class DistinctRandomSequence
 	{
 		// Notes:
-		// Based on 'preshing.com/20121224/how-to-generate-a-sequence-of-unique-random-integers/'
+		// Based on quadratic residues. See 'http://preshing.com/20121224/how-to-generate-a-sequence-of-unique-random-integers/'
 		private readonly int m_prime;
 		private readonly int m_max;
 		private int m_index;
 		private int m_offset;
+
+		// because this is the largest signed int prime value
+		public const int MaxValue = 2147483629;
 
 		/// <summary>
 		/// Generates a non-repeating pseudo random sequence of numbers in the range [0,max).
 		/// After 'max' values have been returned, the sequence repeats, outputting the same sequence.
 		/// 'seed' is the random generator seed.
 		/// 'offset' is the offset into the cyclic sequence of numbers</summary>
+		public DistinctRandomSequence(int max)
+			: this(max, new Random().Next())
+		{ }
 		public DistinctRandomSequence(int max, int seed)
 		{
+			if (max > MaxValue)
+				throw new ArgumentException($"{nameof(max)} must be <= {MaxValue}", nameof(max));
+
 			m_max = max;
-			if (max > 2147483629) // because this is the largest signed int prime value
-				throw new ArgumentException($"{nameof(max)} must be less than {2147483629}", nameof(max));
 
 			// Select a prime greater than 'max' that is equivalent to "3 % 4"
 			m_prime = (int)Math_.PrimeGtrEq(max);
@@ -69,7 +76,7 @@ namespace Rylogic.UnitTests
 	public class TestMathsDRS
 	{
 		[Test]
-		public void Primes()
+		public void TestDistinctRandomSequence()
 		{
 			foreach (var sz in new[] { 10, 100, 1000, 64, 13 })
 			{
@@ -78,7 +85,7 @@ namespace Rylogic.UnitTests
 				for (int i = 0; i != buf.Length; ++i)
 				{
 					var x = drs.Next();
-					Assert.True(buf[x]);
+					Assert.False(buf[x]);
 					buf[x] = true;
 				}
 				Assert.True(buf.All(x => x));

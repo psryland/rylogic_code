@@ -9,19 +9,21 @@ using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Xml.Linq;
 using Microsoft.Win32;
 using Rylogic.Extn;
-using Rylogic.Gui;
 using Rylogic.Maths;
 using Rylogic.Utility;
 using Geometry = System.Windows.Media.Geometry;
 
 namespace Rylogic.Gui2
 {
+	using DockContainerDetail;
+
 	/// <summary>Locations in the dock container where dock panes or trees of dock panes, can be docked.</summary>
 	public enum EDockSite
 	{
@@ -61,16 +63,16 @@ namespace Rylogic.Gui2
 		DockContainer DockContainer { get; }
 
 		/// <summary>The root of the tree of dock panes</summary>
-		DockContainer.Branch Root { get; }
+		Branch Root { get; }
 
 		/// <summary>The dockable that is active on the container</summary>
-		DockContainer.DockControl ActiveContent { get; set; }
+		DockControl ActiveContent { get; set; }
 
 		/// <summary>The pane that contains the active content on the container</summary>
-		DockContainer.DockPane ActivePane { get; set; }
+		DockPane ActivePane { get; set; }
 
 		/// <summary>Add a dockable instance to this branch at the position described by 'location'. 'index' is the index within the destination dock pane</summary>
-		DockContainer.DockPane Add(IDockable dockable, int index, params EDockSite[] location);
+		DockPane Add(IDockable dockable, int index, params EDockSite[] location);
 	}
 
 	/// <summary>A dock container is the parent control that manages docking of controls that implement IDockable.</summary>
@@ -86,31 +88,26 @@ namespace Rylogic.Gui2
 			m_all_content = new HashSet<DockControl>();
 			m_active_content = new ActiveContentImpl(this);
 
-			// Create the auto hide tab strips
-			m_auto_hide_tabs = new TabStrip[DockSiteCount];
-			for (var i = (int)EDockSite.Left; i != m_auto_hide_tabs.Length; ++i)
-			{
-				m_auto_hide_tabs[i] = Children.Add2(new TabStrip((EDockSite)i, Options));
-				SetDock(m_auto_hide_tabs[i], ToDock(m_auto_hide_tabs[i].StripLocation));
-			}
-
 			// The auto hide tab strips dock around the edge of the main dock container
 			// but remain hidden unless there are auto hide panels with content.
 			// The rest of the docking area is within 'centre' which contains the 
 			// root branch (filling the canvas) and four AutoHidePanels.
 
 			// Add a Canvas for the centre area and add the root branch (filling the canvas)
-			var centre = Children.Add2(new Canvas { Name = "DockContainerCentre" });
-			Root = centre.Children.Add2(new Branch(this, DockSizeData.Quarters));
-			Root.SetBinding(Branch.WidthProperty, new Binding(nameof(Canvas.ActualWidth)) { Source = centre });
-			Root.SetBinding(Branch.HeightProperty, new Binding(nameof(Canvas.ActualHeight)) { Source = centre });
-			Root.PruneBranches(); // Ensure the default centre pane exists
+			var centre = new Canvas { Name = "DockContainerCentre" };
 
 			// Create the auto hide panels
 			AutoHidePanels = new AutoHidePanelCollection(this, centre);
 
 			// Create a collection for floating windows
 			FloatingWindows = new FloatingWindowCollection(this);
+
+			// Add the centre content
+			Children.Add2(centre);
+			Root = centre.Children.Add2(new Branch(this, DockSizeData.Quarters));
+			Root.SetBinding(Branch.WidthProperty, new Binding(nameof(Canvas.ActualWidth)) { Source = centre });
+			Root.SetBinding(Branch.HeightProperty, new Binding(nameof(Canvas.ActualHeight)) { Source = centre });
+			Root.PruneBranches(); // Ensure the default centre pane exists
 
 			// Create Commands
 			CmdLoadLayout = new LoadLayoutCommand(this);
@@ -236,7 +233,7 @@ namespace Rylogic.Gui2
 		}
 
 		/// <summary>The root of the tree in this dock container</summary>
-		private Branch Root
+		internal Branch Root
 		{
 			[DebuggerStepThrough]
 			get { return m_root; }
@@ -396,7 +393,7 @@ namespace Rylogic.Gui2
 		}
 
 		/// <summary>Initiate dragging of a pane or content</summary>
-		private static void DragBegin(object draggee, Point ss_start_pt)
+		internal static void DragBegin(object draggee, Point ss_start_pt)
 		{
 			var dc = (DockContainer)null;
 			if      (draggee is DockPane p) dc = p.DockContainer;
@@ -407,9 +404,6 @@ namespace Rylogic.Gui2
 			using (var drop_handler = new DragHandler(dc, draggee, ss_start_pt))
 				drop_handler.ShowDialog();
 		}
-
-		/// <summary>The tab strips containing the tabs of the content on the auto hide panels</summary>
-		private TabStrip[] m_auto_hide_tabs;
 
 		/// <summary>The floating windows associated with this dock container</summary>
 		public FloatingWindowCollection FloatingWindows { get; private set; }
@@ -483,16 +477,28 @@ namespace Rylogic.Gui2
 			{
 				m_auto_hide = new AutoHidePanel[DockSiteCount];
 				for (var i = (int)EDockSite.Left; i != m_auto_hide.Length; ++i)
-					m_auto_hide[i] = centre.Children.Add2(new AutoHidePanel(dc, (EDockSite)i));
+				{
+					var ds = (EDockSite)i;
+					var ah = new AutoHidePanel(dc, ds);
 
-				// Position the auto handle panels within 'centre'
+					// Add the auto hide panel to the centre canvas
+					m_auto_hide[i] = centre.Children.Add2(ah);
+
+					// Add the associated tab strip to the top-level dock panel
+					dc.Children.Add2(ah.TabStrip);
+					DockContainer.SetDock(ah.TabStrip, DockContainer.ToDock(ds));
+
+					// Position the auto hide panels within 'centre'
+					ah.SetBinding(AutoHidePanel.WidthProperty, new Binding(nameof(Canvas.ActualWidth)) { Source = centre });
+					ah.SetBinding(AutoHidePanel.HeightProperty, new Binding(nameof(Canvas.ActualHeight)) { Source = centre });
+				}
 				Canvas.SetLeft(m_auto_hide[(int)EDockSite.Left], 0);
-				Canvas.SetTop(m_auto_hide[(int)EDockSite.Left], 0);
+				Canvas.SetTop (m_auto_hide[(int)EDockSite.Left], 0);
 				Canvas.SetLeft(m_auto_hide[(int)EDockSite.Top], 0);
-				Canvas.SetTop(m_auto_hide[(int)EDockSite.Top], 0);
+				Canvas.SetTop (m_auto_hide[(int)EDockSite.Top], 0);
 				Canvas.SetRight(m_auto_hide[(int)EDockSite.Right], 0);
-				Canvas.SetTop(m_auto_hide[(int)EDockSite.Right], 0);
-				Canvas.SetLeft(m_auto_hide[(int)EDockSite.Bottom], 0);
+				Canvas.SetTop  (m_auto_hide[(int)EDockSite.Right], 0);
+				Canvas.SetLeft  (m_auto_hide[(int)EDockSite.Bottom], 0);
 				Canvas.SetBottom(m_auto_hide[(int)EDockSite.Bottom], 0);
 			}
 			public void Dispose()
@@ -532,85 +538,6 @@ namespace Rylogic.Gui2
 
 		/// <summary>A command to reset the UI layout</summary>
 		public ICommand CmdResetLayout { get; private set; }
-
-		public class CommandBase : ICommand
-		{
-			protected readonly DockContainer m_dc;
-			public CommandBase(DockContainer dc)
-			{
-				m_dc = dc;
-			}
-			public Window Wnd
-			{
-				get { return Window.GetWindow(m_dc);  }
-			}
-			public string LayoutFileFilter
-			{
-				get { return Util.FileDialogFilter("Layout Files", "*.xml"); }
-			}
-			public virtual void Execute(object _)
-			{
-			}
-			public virtual bool CanExecute(object _)
-			{
-				return true;
-			}
-			public event EventHandler CanExecuteChanged { add { } remove { } }
-		}
-		public class LoadLayoutCommand : CommandBase
-		{
-			public LoadLayoutCommand(DockContainer dc)
-				: base(dc)
-			{ }
-
-			/// <summary>Load the UI layout</summary>
-			public override void Execute(object _)
-			{
-				// Prompt for a layout file
-				var fd = new OpenFileDialog { Title = "Load layout", Filter = LayoutFileFilter };
-				if (fd.ShowDialog(Wnd) != true)
-					return;
-
-				// Load the layout
-				try { m_dc.LoadLayout(XDocument.Load(fd.FileName).Root); }
-				catch (Exception ex)
-				{
-					MessageBox.Show(Wnd, $"Layout could not be loaded\r\n{ex.Message}", "Load Layout Failed", MessageBoxButton.OK, MessageBoxImage.Error);
-				}
-			}
-		}
-		public class SaveLayoutCommand : CommandBase
-		{
-			public SaveLayoutCommand(DockContainer dc)
-				: base(dc)
-			{}
-
-			/// <summary>Save the UI layout</summary>
-			public override void Execute(object _)
-			{
-				var fd = new SaveFileDialog { Title = "Save layout", Filter = LayoutFileFilter, FileName = "Layout.xml", DefaultExt = "XML" };
-				if (fd.ShowDialog(Wnd) != true)
-					return;
-
-				try { m_dc.SaveLayout().Save(fd.FileName); }
-				catch (Exception ex)
-				{
-					MessageBox.Show(Wnd, $"Layout could not be saved\r\n{ex.Message}", "Save Layout Failed", MessageBoxButton.OK, MessageBoxImage.Error);
-				}
-			}
-		}
-		public class ResetLayoutCommand : CommandBase
-		{
-			public ResetLayoutCommand(DockContainer dc)
-				: base(dc)
-			{}
-
-			/// <summary>Reset the UI layout back to defaults</summary>
-			public override void Execute(object _)
-			{
-				m_dc.ResetLayout();
-			}
-		}
 
 		/// <summary>Creates an instance of a menu with options to select specific content</summary>
 		public MenuItem WindowsMenu(string menu_name = "Windows")
@@ -718,7 +645,7 @@ namespace Rylogic.Gui2
 		}
 
 		/// <summary>Get the bounds of a dock site. 'rect' is the available area. 'docked_mask' are the </summary>
-		private static Rect DockSiteBounds(EDockSite location, Rect rect, EDockMask docked_mask, DockSizeData dock_site_sizes)
+		internal static Rect DockSiteBounds(EDockSite location, Rect rect, EDockMask docked_mask, DockSizeData dock_site_sizes)
 		{
 			var area = dock_site_sizes.GetSizesForRect(rect, docked_mask);
 
@@ -751,7 +678,7 @@ namespace Rylogic.Gui2
 		}
 
 		/// <summary>Convert a dock site to a dock panel dock location</summary>
-		private static Dock ToDock(EDockSite ds)
+		internal static Dock ToDock(EDockSite ds)
 		{
 			switch (ds)
 			{
@@ -870,646 +797,714 @@ namespace Rylogic.Gui2
 			return sb.ToString();
 		}
 
-		/// <summary>Self consistency check (for debugging)</summary>
-		public bool ValidateTree()
+		#region Commands
+		public class CommandBase : ICommand
 		{
-			try
+			protected readonly DockContainer m_dc;
+			public CommandBase(DockContainer dc)
 			{
-				Root.ValidateTree();
+				m_dc = dc;
+			}
+			public Window Wnd
+			{
+				get { return Window.GetWindow(m_dc); }
+			}
+			public string LayoutFileFilter
+			{
+				get { return Util.FileDialogFilter("Layout Files", "*.xml"); }
+			}
+			public virtual void Execute(object _)
+			{
+			}
+			public virtual bool CanExecute(object _)
+			{
 				return true;
 			}
-			catch (Exception ex)
+			public event EventHandler CanExecuteChanged { add { } remove { } }
+		}
+		public class LoadLayoutCommand : CommandBase
+		{
+			public LoadLayoutCommand(DockContainer dc)
+				: base(dc)
+			{ }
+
+			/// <summary>Load the UI layout</summary>
+			public override void Execute(object _)
 			{
-				Debug.WriteLine(ex.MessageFull());
-				return false;
+				// Prompt for a layout file
+				var fd = new OpenFileDialog { Title = "Load layout", Filter = LayoutFileFilter };
+				if (fd.ShowDialog(Wnd) != true)
+					return;
+
+				// Load the layout
+				try { m_dc.LoadLayout(XDocument.Load(fd.FileName).Root); }
+				catch (Exception ex)
+				{
+					MessageBox.Show(Wnd, $"Layout could not be loaded\r\n{ex.Message}", "Load Layout Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+				}
+			}
+		}
+		public class SaveLayoutCommand : CommandBase
+		{
+			public SaveLayoutCommand(DockContainer dc)
+				: base(dc)
+			{ }
+
+			/// <summary>Save the UI layout</summary>
+			public override void Execute(object _)
+			{
+				var fd = new SaveFileDialog { Title = "Save layout", Filter = LayoutFileFilter, FileName = "Layout.xml", DefaultExt = "XML" };
+				if (fd.ShowDialog(Wnd) != true)
+					return;
+
+				try { m_dc.SaveLayout().Save(fd.FileName); }
+				catch (Exception ex)
+				{
+					MessageBox.Show(Wnd, $"Layout could not be saved\r\n{ex.Message}", "Save Layout Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+				}
+			}
+		}
+		public class ResetLayoutCommand : CommandBase
+		{
+			public ResetLayoutCommand(DockContainer dc)
+				: base(dc)
+			{ }
+
+			/// <summary>Reset the UI layout back to defaults</summary>
+			public override void Execute(object _)
+			{
+				m_dc.ResetLayout();
+			}
+		}
+		#endregion
+	}
+
+	/// <summary>
+	/// Provides the implementation of the docking functionality.
+	/// Classes that implement IDockable have one of these as a public property.</summary>
+	[DebuggerDisplay("DockControl {TabText}")]
+	public class DockControl : IDisposable
+	{
+		// Cut'n'Paste Boilerplate
+		// Inherit:
+		//   IDockable
+		//
+		// Constructor:
+		//  DockControl = new DockControl(this, name)
+		//  {
+		//  	TabText = name, // optional
+		//  	ShowTitle = false, // optional
+		//  	DefaultDockLocation = new DockContainer.DockLocation(new[]{EDockSite.Centre}, 1), // optional
+		//  	TabCMenu = CreateTabCMenu(), // optional
+		//  };
+		//
+		// Destructor:
+		//  DockControl = null;
+		//
+		// Property:
+		//  /// <summary>Provides support for the DockContainer</summary>
+		//  [Browsable(false)]
+		//  [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		//  public DockControl DockControl
+		//  {
+		//  	[DebuggerStepThrough] get { return m_dock_control; }
+		//  	private set
+		//  	{
+		//  		if (m_dock_control == value) return;
+		//  		Util.Dispose(ref m_dock_control);
+		//  		m_dock_control = value;
+		//  	}
+		//  }
+		//  private DockControl m_dock_control;
+
+		/// <summary>Create the docking functionality helper.</summary>
+		/// <param name="owner">The control that docking is being provided for</param>
+		/// <param name="persist_name">The name to use for this instance when saving the layout to XML</param>
+		public DockControl(FrameworkElement owner, string persist_name)
+		{
+			if (!(owner is IDockable))
+				throw new Exception("'owner' must implement IDockable");
+
+			Owner = owner;
+			PersistName = persist_name;
+			DefaultDockLocation = new DockLocation();
+			TabText = null;
+			TabIcon = null;
+			TabCMenu = DefaultTabCMenu();
+
+			DockAddresses = new Dictionary<Branch, EDockSite[]>();
+		}
+		public virtual void Dispose()
+		{
+			DockPane = null;
+			DockContainer = null;
+		}
+
+		/// <summary>Get the control we're providing docking functionality for</summary>
+		public UIElement Owner { [DebuggerStepThrough] get; private set; }
+
+		/// <summary>Get/Set the dock container that manages this content.</summary>
+		public DockContainer DockContainer
+		{
+			[DebuggerStepThrough]
+			get { return m_dc; }
+			set
+			{
+				if (m_dc == value) return;
+				var old = m_dc;
+				var nue = value;
+				if (m_dc != null)
+				{
+					m_dc.ActiveContentChanged -= HandleActiveContentChanged;
+					m_dc.Forget(this);
+				}
+				m_dc = value;
+				if (m_dc != null)
+				{
+					m_dc.Remember(this);
+					m_dc.ActiveContentChanged += HandleActiveContentChanged;
+				}
+				DockContainerChanged?.Invoke(this, new DockContainerChangedEventArgs(old, nue));
+
+				// Handlers
+				void HandleActiveContentChanged(object sender, ActiveContentChangedEventArgs e)
+				{
+					if (e.ContentNew == Owner || e.ContentOld == Owner)
+						ActiveChanged?.Invoke(this, e);
+				}
+			}
+		}
+		private DockContainer m_dc;
+
+		/// <summary>Raised when this DockControl is assigned to a dock container (or possibly to null)</summary>
+		public event EventHandler<DockContainerChangedEventArgs> DockContainerChanged;
+
+		/// <summary>Remove this DockControl from whatever dock container it is in</summary>
+		public void Remove()
+		{
+			DockPane = null;
+			DockContainer = null;
+		}
+
+		/// <summary>The dock container, auto-hide panel, or floating window that this content is docked within</summary>
+		internal ITreeHost TreeHost
+		{
+			get { return DockPane?.TreeHost; }
+		}
+
+		/// <summary>Gets 'Owner' as an IDockable</summary>
+		public IDockable Dockable
+		{
+			[DebuggerStepThrough]
+			get { return (IDockable)Owner; }
+		}
+
+		/// <summary>Get/Set the pane that this content resides within.</summary>
+		public DockPane DockPane
+		{
+			[DebuggerStepThrough]
+			get { return m_pane; }
+			set
+			{
+				if (m_pane == value) return;
+				if (m_pane != null)
+				{
+					m_pane.Content.Remove(this);
+				}
+				SetDockPaneInternal(value);
+				if (m_pane != null)
+				{
+					m_pane.Content.Add(this);
+				}
+				PaneChanged?.Invoke(this, EventArgs.Empty);
+			}
+		}
+		private DockPane m_pane;
+		internal void SetDockPaneInternal(DockPane pane)
+		{
+			// Calling 'DockControl.set_DockPane' changes the Content list in the DockPane
+			// which calls this method to change the DockPane on the content without recursively
+			// changing the content list.
+			m_pane = pane;
+
+			// Record the dock container that 'pane' belongs to
+			if (pane != null)
+				DockContainer = pane.DockContainer;
+
+			// If a pane is given, save the dock address for the root branch (if the pane is within a tree)
+			if (pane != null && pane.ParentBranch != null)
+				DockAddresses[m_pane.RootBranch] = DockAddress;
+		}
+
+		/// <summary>Raised when the pane this dockable is on is changing (possibly to null)</summary>
+		public event EventHandler PaneChanged;
+
+		/// <summary>Raised when the dockable is not in a pane (i.e. when DockPane becomes null)</summary>
+		public event EventHandler Closed;
+
+		/// <summary>Raised when this becomes the active content</summary>
+		public event EventHandler<ActiveContentChangedEventArgs> ActiveChanged;
+
+		/// <summary>Raised during 'ToXml' to allow clients to add extra data to the XML data for this object</summary>
+		public event EventHandler<DockContainerSavingLayoutEventArgs> SavingLayout;
+
+		/// <summary>The name to use for this instance when saving layout to XML</summary>
+		public string PersistName { get; private set; }
+
+		/// <summary>The dock location to use if not otherwise given</summary>
+		public DockLocation DefaultDockLocation { get; set; }
+
+		/// <summary>Get the current dock location</summary>
+		public DockLocation CurrentDockLocation
+		{
+			get
+			{
+				if (TreeHost is FloatingWindow fw)
+					return new DockLocation(DockAddress, ContentIndex, float_window_id: fw.Id);
+
+				if (TreeHost is AutoHidePanel ah)
+					return new DockLocation(DockAddress, ContentIndex, auto_hide: ah.DockSite);
+
+				return new DockLocation(DockAddress, ContentIndex);
 			}
 		}
 
-		/// <summary>
-		/// Represents a node in the tree of dock panes.
-		/// Each node has 5 children; Centre, Left, Right, Top, Bottom.
-		/// A root branch can be hosted in a dock container, floating window, or auto hide window</summary>
-		[DebuggerDisplay("{DumpDesc()}")]
-		internal class Branch : DockPanel, IPaneOrBranch, IDisposable
+		/// <summary>Get/Set the dock site within the branch that contains 'DockPane'</summary>
+		public EDockSite DockSite
 		{
-			public Branch(DockContainer dc, DockSizeData dock_sizes)
+			get { return DockPane?.DockSite ?? EDockSite.Centre; }
+			set
 			{
-				DockContainer = dc;
-				DockSizes = new DockSizeData(dock_sizes) { Owner = this };
+				if (DockSite == value) return;
 
-				// Create the collection to hold the five child controls (DockPanes or Branches)
-				Descendants = new DescendantCollection(this);
+				// Must have an existing pane
+				if (DockPane == null || DockPane.ParentBranch == null)
+					throw new Exception("Can only change the dock site of this item after it has been added to a dock container");
+
+				// Move this content to a different dock site within 'branch'
+				var branch = DockPane.ParentBranch;
+				var pane = branch.DockPane(value);
+				pane.Content.Add(this);
 			}
-			public virtual void Dispose()
+		}
+
+		/// <summary>The full location of this content in the tree of docked windows from Root branch to 'DockPane'</summary>
+		public EDockSite[] DockAddress
+		{
+			get { return DockPane != null ? DockPane.DockAddress : new[] { EDockSite.None }; }
+		}
+
+		/// <summary>The index of this dockable within the content of 'DockPane'</summary>
+		public int ContentIndex
+		{
+			get { return DockPane?.Content.IndexOf(this) ?? int.MaxValue; }
+		}
+
+		/// <summary>Get/Set whether this content is in a floating window</summary>
+		public bool IsFloating
+		{
+			get { return TreeHost is FloatingWindow; }
+			set
 			{
-				Util.Dispose(Descendants);
-				DockContainer = null;
-			}
+				if (IsFloating == value) return;
 
-			/// <summary>The dock container that this pane belongs too</summary>
-			public DockContainer DockContainer { [DebuggerStepThrough] get; private set; }
+				//// Record properties of the Pane we're currently in, so we can
+				//// set them on new pane that will host this content 
+				//var strip_location = DockPane?.TabStripCtrl.StripLocation;
 
-			/// <summary>The branch that is the immediate parent of this branch (null if root)</summary>
-			public Branch ParentBranch
-			{
-				[DebuggerStepThrough]
-				get { return Parent as Branch; }
-			}
-
-			/// <summary>The branch at the top of the tree that contains this pane</summary>
-			public Branch RootBranch
-			{
-				[DebuggerStepThrough]
-				get
+				// Float this dockable
+				if (value)
 				{
-					var b = this;
-					for (; b.Parent is Branch; b = (Branch)b.Parent) { }
-					return b;
-				}
-			}
+					// Get a floating window (preferably one that has hosted this item before)
+					var fw = DockContainer.FloatingWindows.GetOrAdd(x => DockAddresses.ContainsKey(x.Root));
 
-			/// <summary>The main dock container, auto hide panel, or floating window that hosts this branch</summary>
-			internal ITreeHost TreeHost
-			{
-				[DebuggerStepThrough]
-				get
-				{
-					var p = Parent;
-					for (; p != null && !(p is ITreeHost) && p is FrameworkElement fe; p = fe.Parent) {}
-					return p as ITreeHost;
-				}
-			}
+					// Get the dock address associated with this floating window
+					var hs = DockAddressFor(fw);
 
-			/// <summary>The sizes of the child controls</summary>
-			public DockSizeData DockSizes { get; private set; }
+					// Add this dockable to the floating window
+					fw.Add(Dockable, hs);
 
-			/// <summary>Add a dockable instance to this tree at the position described by 'location'.</summary>
-			public DockPane Add(DockControl dc, int index, params EDockSite[] location)
-			{
-				if (dc == null)
-					throw new ArgumentNullException(nameof(dc), "Cannot add 'null' content");
-				if (location.Length == 0)
-					throw new ArgumentException("A valid tree location is required", nameof(location));
-
-				// If already on a pane, remove first (raising events)
-				// Removing panes causes PruneBranches to be called, so this must be called before
-				// DockPane(...) otherwise the newly added pane/branches will be deleted.
-				dc.DockPane = null;
-
-				// Find the dock pane for this dock site, growing the tree as necessary
-				var pane = DockPane(location.First(), location.Skip(1));
-
-				// Add the content
-				index = Math_.Clamp(index, 0, pane.Content.Count);
-				pane.Content.Insert(index, dc);
-				pane.ContentView.MoveCurrentToPosition(index);
-				return pane;
-			}
-
-			/// <summary>Remove branches without any content to reduce the size of the tree</summary>
-			internal void PruneBranches()
-			{
-				// Depth-first recursive
-				foreach (var b in Descendants.Select(x => x.Item as Branch).NotNull())
-					b.PruneBranches();
-
-				// If any of the child branches only have a single child, replace the branch with it's child
-				foreach (var c in Descendants.Where(x => x.Item is Branch).NotNull())
-				{
-					var b = (Branch)c.Item;
-
-					// The child must, itself, have only one child
-					if (b.Descendants.Count != 1)
-						continue;
-
-					// Replace the branch with it's single child
-					var nue = b.Descendants[0].Item;
-					var old = c.Item;
-					c.Item = nue;
-					Util.Dispose(ref old);
+					// Ensure the floating window is visible
+					if (!fw.IsVisible)
+						fw.Show();
 				}
 
-				// If any of L,R,T,B contain empty panes, prune them. Don't prune
-				// 'C', we need to leave somewhere for content to be dropped.
-				foreach (var c in Descendants.Where(x => x.Item is DockPane))
-				{
-					var p = (DockPane)c.Item;
-
-					if (p.Content.Count == 0 && c.DockSite != EDockSite.Centre)
-					{
-						// Dispose the pane
-						c.Item = null;
-						Util.Dispose(ref p);
-					}
-				}
-
-				// If the branch has only one child, ensure it's in the Centre position
-				if (Descendants.Count == 1 && Descendants[EDockSite.Centre].Item == null)
-				{
-					var ctrl = Descendants[0].Item;
-					Descendants[0].Item = null;
-					Descendants[EDockSite.Centre].Item = ctrl;
-				}
-
-				// Ensure there is always a centre pane
-				if (Descendants[EDockSite.Centre].Item == null)
-					Descendants[EDockSite.Centre].Item = new DockPane(DockContainer);
-
-				// Check all the logic is correct
-				Debug.Assert(DockContainer.ValidateTree());
-			}
-
-			/// <summary>Add branches to the tree until 'rest' is empty.</summary>
-			private Branch GrowBranches(EDockSite ds, IEnumerable<EDockSite> rest, out EDockSite last_ds)
-			{
-				Debug.Assert(ds >= EDockSite.Centre && ds < EDockSite.None, "Invalid dock site");
-
-				// Note: When rest is empty, the site at 'ds' does not have a branch added.
-				// This is deliberate so that dock addresses (arrays of EDockSite) can be
-				// used to grow the tree to the point where a dock pane should be added.
-				if (!rest.Any())
-				{
-					// If we've reached the end of the dock address, but there are still branches
-					// keep going down the centre dock site until a null or dock pane is reached
-					var b = this;
-					for (; b.Descendants[ds].Item is Branch cb; b = cb, ds = EDockSite.Centre) { }
-
-					Debug.Assert(DockContainer.ValidateTree());
-
-					last_ds = ds;
-					return b;
-				}
-
-				// No child at 'ds' add a branch
-				if (Descendants[ds].Item == null)
-				{
-					var new_branch = new Branch(DockContainer, ds == EDockSite.Centre ? DockSizeData.Quarters : DockSizeData.Halves);
-					Descendants[ds].Item = new_branch;
-					return new_branch.GrowBranches(rest.First(), rest.Skip(1), out last_ds);
-				}
-
-				// A dock pane at 'ds'? Swap it with a branch
-				// containing the dock pane as the centre child
-				if (Descendants[ds].Item is DockPane)
-				{
-					var new_branch = new Branch(DockContainer, DockSizeData.Halves);
-					new_branch.Descendants[EDockSite.Centre].Item = Descendants[ds].Item;
-					Descendants[ds].Item = new_branch;
-					return new_branch.GrowBranches(rest.First(), rest.Skip(1), out last_ds);
-				}
+				// Dock this content back in the dock container
 				else
 				{
-					// Existing branch, recursive call into it
-					var branch = Descendants[ds].Item as Branch;
-					return branch.GrowBranches(rest.First(), rest.Skip(1), out last_ds);
+					// Get the dock address associated with the dock container
+					var hs = DockAddressFor(DockContainer);
+
+					// Return this content to the dock container
+					DockContainer.Add(Dockable, hs);
 				}
-			}
 
-			/// <summary>Get the pane at 'location', adding branches to the tree if necessary</summary>
-			public DockPane DockPane(EDockSite ds, IEnumerable<EDockSite> rest)
-			{
-				// Grow the tree
-				var branch = GrowBranches(ds, rest, out ds);
-
-				// No child at 'ds'? Add a dock pane.
-				if (branch.Descendants[ds].Item == null)
-					branch.Descendants[ds].Item = new DockPane(DockContainer);
-
-				// Existing pane at 'ds'
-				Debug.Assert(branch.Descendants[ds].Item is DockPane);
-				return branch.Descendants[ds].Item as DockPane;
-			}
-			public DockPane DockPane(EDockSite ds)
-			{
-				return DockPane(ds, Enumerable.Empty<EDockSite>());
-			}
-
-			/// <summary>Get the child at 'location' or null if the given location is not a valid location in the tree</summary>
-			public DescentantData DescendantAt(IEnumerable<EDockSite> location)
-			{
-				var b = this;
-				var c = (DescentantData)null;
-				foreach (var ds in location)
+				// Copy pane state to the new pane
+				if (DockPane != null)
 				{
-					if (b == null) return null;
-					c = b.Descendants[ds];
-					b = c.Item as Branch;
+					//if (strip_location != null)
+					//	DockPane.TabStripCtrl.StripLocation = strip_location.Value;
 				}
-				return c;
-			}
-
-			/// <summary>Returns a reference to the dock sizes at a given level in the tree</summary>
-			public DockSizeData GetDockSizes(IEnumerable<EDockSite> location)
-			{
-				var b = this;
-				foreach (var ds in location)
-				{
-					if (b == null) return null;
-					b = b.Descendants[ds].Item as Branch;
-				}
-				return b?.DockSizes;
-			}
-
-			/// <summary>The dock panes or branches of this branch (5 per branch)</summary>
-			internal DescendantCollection Descendants { [DebuggerStepThrough] get; private set; }
-			internal class DescendantCollection : IDisposable, IEnumerable<DescentantData>
-			{
-				/// <summary>The child controls (dock panes or branches) of this branch</summary>
-				private readonly Branch m_branch;
-				private DescentantData[] m_descendants;
-
-				public DescendantCollection(Branch branch)
-				{
-					m_branch = branch;
-
-					// Create an array to hold the five child controls (DockPanes or Branches)
-					m_descendants = new DescentantData[DockSiteCount];
-					for (var i = 0; i != m_descendants.Length; ++i)
-						m_descendants[i] = new DescentantData(m_branch, (EDockSite)i);
-				}
-				public virtual void Dispose()
-				{
-					Util.DisposeRange(m_descendants.Select(x => x.Item));
-				}
-
-				/// <summary>The number of non-null children in this collection</summary>
-				public int Count
-				{
-					get { return m_descendants.Count(x => x.Item != null); }
-				}
-
-				/// <summary>Access the non-null children in this collection</summary>
-				public DescentantData this[int index]
-				{
-					get { return m_descendants.Where(x => x.Item != null).ElementAt(index); }
-				}
-
-				/// <summary>Get a child control in a given dock site</summary>
-				public DescentantData this[EDockSite ds]
-				{
-					[DebuggerStepThrough]
-					get { return m_descendants[(int)ds]; }
-				}
-
-				/// <summary>Enumerate the controls in the collection</summary>
-				public IEnumerator<DescentantData> GetEnumerator()
-				{
-					foreach (var c in m_descendants)
-						yield return c;
-				}
-				IEnumerator IEnumerable.GetEnumerator()
-				{
-					return GetEnumerator();
-				}
-			}
-
-			/// <summary>Wrapper of a pane or branch</summary>
-			[DebuggerDisplay("{DockSite} {Item}")]
-			internal class DescentantData
-			{
-				public DescentantData(Branch branch, EDockSite ds)
-				{
-					ParentBranch = branch;
-					DockSite = ds;
-				}
-				public void Dispose()
-				{}
-
-				/// <summary>The branch this is descendant from</summary>
-				public Branch ParentBranch { get; private set; }
-
-				/// <summary>The site that this child represents</summary>
-				public EDockSite DockSite { get; private set; }
-
-				/// <summary>A dock pane or branch</summary>
-				public IPaneOrBranch Item
-				{
-					get { return m_item; }
-					set
-					{
-						if (m_item == value) return;
-						if (m_item != null)
-						{
-							// Remove the pane or branch descendant
-							// Note: do not dispose the pane or branch because this could be a reassignment to a different dock site
-							ParentBranch.Children.Remove(m_item as UIElement);
-							ParentBranch.Children.Remove(m_splitter);
-
-							// Notify of the tree change
-							ParentBranch.OnTreeChanged(new TreeChangedEventArgs(TreeChangedEventArgs.EAction.Removed, pane: m_item as DockPane, branch: m_item as Branch));
-
-							m_item = null;
-							m_splitter = null;
-						}
-						m_item = value;
-						if (m_item != null)
-						{
-							// Add the pane or branch as the descendant.
-							// Note: the order of children is important. DockPanel assumes the last child is the "un-docked" child.
-							// Also, the child elements are docked/clipped in reverse order, so Children[0] will have the smallest available area.
-							// Also, the dock panel splitters operate on their immediate prior sibling.
-							if (DockSite == EDockSite.Centre)
-							{
-								ParentBranch.Children.Add(m_item as UIElement);
-							}
-							else
-							{
-								// Always have Left/Right bigger than Top/Bottom or allow dock order to control layout?
-								//// Find the insert index
-								//var index = 0;
-								//for (; index != ParentBranch.Children.Count; ++index)
-								//{
-								//	var child = ParentBranch.Children[index];
-								//	if (child is Branch || child is
-								//}
-
-								// Dock 'item'
-								var item = ParentBranch.Children.Insert2(0, m_item as UIElement);
-								DockPanel.SetDock(item, ToDock(DockSite));
-
-								// Add a splitter control for non-centre items
-								m_splitter = ParentBranch.Children.Insert2(1, new DockPanelSplitter { Thickness = 5.0, ProportionalResize = true, Background = SystemColors.ControlBrush });
-								DockPanel.SetDock(m_splitter, ToDock(DockSite));
-							}
-
-							// Notify of the tree change
-							ParentBranch.OnTreeChanged(new TreeChangedEventArgs(TreeChangedEventArgs.EAction.Added, pane: m_item as DockPane, branch: m_item as Branch));
-						}
-					}
-				}
-				private IPaneOrBranch m_item;
-				private DockPanelSplitter m_splitter;
-			}
-
-			/// <summary>Get the dock site for this branch within a parent branch.</summary>
-			internal EDockSite DockSite
-			{
-				get { return (Parent as Branch)?.Descendants.Single(x => x.Item == this).DockSite ?? EDockSite.None; }
-			}
-
-			/// <summary>Get the dock sites, from top to bottom, describing where this branch is located in the tree </summary>
-			internal EDockSite[] DockAddress
-			{
-				get
-				{
-					var s = new Stack<EDockSite>();
-					for (var b = this; b != null && b.Parent is Branch; b = b.Parent as Branch)
-						s.Push(b.DockSite);
-					return s.ToArray();
-				}
-			}
-
-			/// <summary>A bitmap of the dock sites that have something docked</summary>
-			internal EDockMask DockedMask
-			{
-				get
-				{
-					var mask = EDockMask.None;
-					foreach (var c in Descendants.Where(x => x.Item != null))
-						mask |= (EDockMask)(1 << (int)c.DockSite);
-					return mask;
-				}
-			}
-
-			/// <summary>True if the tree contains no content</summary>
-			public bool Empty
-			{
-				get { return !AllContent.Any(); }
-			}
-
-			/// <summary>Enumerates the branches in this sub-tree (breadth first, order = order of EDockSite)</summary>
-			private IEnumerable<Branch> AllBranches
-			{
-				get
-				{
-					var queue = new Queue<Branch>();
-					for (queue.Enqueue(this); queue.Count != 0;)
-					{
-						var b = queue.Dequeue();
-						foreach (var c in b.Descendants.Select(x => x.Item as Branch).NotNull())
-							queue.Enqueue(c);
-
-						yield return b;
-					}
-				}
-			}
-
-			/// <summary>Enumerate the panes (leaves) in this sub-tree (breadth first, order = order of EDockSite)</summary>
-			public IEnumerable<DockPane> AllPanes
-			{
-				get
-				{
-					foreach (var b in AllBranches)
-						foreach (var c in b.Descendants.Select(x => x.Item as DockPane).NotNull())
-							yield return c;
-				}
-			}
-
-			/// <summary>Enumerate the dockables in this sub-tree (breadth first, order = order of EDockSite)</summary>
-			public IEnumerable<DockControl> AllContent
-			{
-				get
-				{
-					foreach (var p in AllPanes)
-						foreach (var c in p.Content)
-							yield return c;
-				}
-			}
-
-			/// <summary>Get/Set the size for a dock site in this branch (in pixels)</summary>
-			public double ChildSize(EDockSite location)
-			{
-				return DockSizes.GetSize(location, DisplayRectangle, DockedMask);
-			}
-			public void ChildSize(EDockSite location, int value)
-			{
-				DockSizes.SetSize(location, DisplayRectangle, value);
-			}
-
-			/// <summary>Get the bounds of a dock site in parent (DockContainer or containing Branch) space</summary>
-			public Rect ChildBounds(EDockSite location)
-			{
-				var display_rect = new Rect(RenderSize);
-				display_rect.Width = Math.Max(0, display_rect.Width);
-				display_rect.Height = Math.Max(0, display_rect.Height);
-				return DockSiteBounds(location, display_rect, DockedMask, DockSizes);
-			}
-
-			/// <summary>Return the child element relative to this sub-tree</summary>
-			internal UIElement ChildAt(EDockSite[] address)
-			{
-				var c = (UIElement)this;
-				foreach (var ds in address)
-				{
-					if (c is Branch b)
-						c = (UIElement)b.Descendants[ds].Item;
-					else
-						throw new Exception($"Invalid child address");
-				}
-				return c;
-			}
-
-			/// <summary>Return the area that the control should cover when rendered</summary>
-			private Rect DisplayRectangle
-			{
-				get { return new Rect(RenderSize); }
-			}
-
-			/// <summary>Raised whenever a child (pane or branch) is added to or removed from this sub tree</summary>
-			public event EventHandler<TreeChangedEventArgs> TreeChanged;
-			private void RaiseTreeChanged(TreeChangedEventArgs args)
-			{
-				TreeChanged?.Invoke(this, args);
-				(Parent as Branch)?.OnTreeChanged(args);
-			}
-			internal void OnTreeChanged(TreeChangedEventArgs args)
-			{
-				RaiseTreeChanged(args);
-			}
-
-#if false
-			/// <summary>Position the child controls</summary>
-			protected override void OnLayout(LayoutEventArgs levent)
-			{
-				if (Child != null && !IsDisposed)
-				{
-					using (this.SuspendLayout(false))
-					{
-						// Position the child controls at each dock site
-						foreach (var c in Child)
-							c.Layout();
-					}
-				}
-				base.OnLayout(levent);
-			}
-#endif
-			/// <summary>Record the layout of the tree</summary>
-			public XElement ToXml(XElement node)
-			{
-				// Record the pane sizes
-				node.Add2(XmlTag.DockSizes, DockSizes, false);
-
-				// Recursively add the sub trees
-				foreach (var ch in Descendants)
-				{
-					if (ch.Item is DockPane p)
-					{
-						var n = node.Add2(XmlTag.Pane, p, false);
-						n.SetAttributeValue(XmlTag.Location, ch.DockSite);
-					}
-					if (ch.Item is Branch b)
-					{
-						var n = node.Add2(XmlTag.Tree, b, false);
-						n.SetAttributeValue(XmlTag.Location, ch.DockSite);
-					}
-				}
-				return node;
-			}
-
-			/// <summary>Apply layout to this tree</summary>
-			public void ApplyState(XElement node)
-			{
-				foreach (var child_node in node.Elements())
-				{
-					switch (child_node.Name.LocalName)
-					{
-					case XmlTag.DockSizes:
-						{
-							var dock_sizes = child_node.As<DockSizeData>();
-							DockSizes.Left = dock_sizes.Left;
-							DockSizes.Top = dock_sizes.Top;
-							DockSizes.Right = dock_sizes.Right;
-							DockSizes.Bottom = dock_sizes.Bottom;
-							break;
-						}
-					case XmlTag.Tree:
-						{
-							var ds = Enum<EDockSite>.Parse(child_node.Attribute(XmlTag.Location).Value);
-							if (Descendants[ds].Item is Branch b)
-								b.ApplyState(child_node);
-							break;
-						}
-					case XmlTag.Pane:
-						{
-							var ds = Enum<EDockSite>.Parse(child_node.Attribute(XmlTag.Location).Value);
-							if (Descendants[ds].Item is DockPane p)
-								p.ApplyState(child_node);
-							break;
-						}
-					}
-				}
-			}
-
-			/// <summary>Output the tree structure as a string (Recursion method, call 'DockContainer.DumpTree()')</summary>
-			public void DumpTree(StringBuilder sb, int indent, string prefix)
-			{
-				sb.Append(' ', indent).Append(prefix).Append("Branch: ").AppendLine();
-				sb.Append(' ', indent).Append("{").AppendLine();
-				foreach (var c in Descendants)
-				{
-					if      (c.Item is Branch b) b.DumpTree(sb, indent + 4, $"{c.DockSite,-6} = ");
-					else if (c.Item is DockPane p) p.DumpTree(sb, indent + 4, $"{c.DockSite,-6} = ");
-					else sb.Append(' ', indent + 4).Append($"{c.DockSite,-6} = <null>").AppendLine();
-				}
-				sb.Append(' ', indent).Append("}").AppendLine();
-			}
-
-			/// <summary>Self consistency check (Recursion method, call 'DockContainer.ValidateTree()')</summary>
-			public void ValidateTree()
-			{
-				if (DockContainer == null)
-					throw new ObjectDisposedException("This branch has been disposed");
-
-				// Check each child
-				foreach (var child in Descendants)
-				{
-					if (child.Item == null)
-						continue;
-
-					if (Descendants[child.DockSite] != child)
-						throw new Exception("This child is not in it's appropriate child slot");
-
-					if (Descendants.Count(x => x == child) != 1)
-						throw new Exception("This child is in more than one slot");
-
-					if (Descendants.Count(x => x.Item == child.Item) != 1)
-						throw new Exception("This child's control is in more than one slot");
-
-					// Recursive check children
-					if (child.Item is Branch b)
-						b.ValidateTree();
-					if (child.Item is DockPane p)
-						p.ValidateTree();
-				}
-			}
-
-			/// <summary>String description of the branch for debugging</summary>
-			public string DumpDesc()
-			{
-				var lvl = 0;
-				for (var p = this; p != null && p.Parent is Branch; p = (Branch)p.Parent) ++lvl;
-				var c = Descendants[EDockSite.Centre];
-				var l = Descendants[EDockSite.Left];
-				var t = Descendants[EDockSite.Top];
-				var r = Descendants[EDockSite.Right];
-				var b = Descendants[EDockSite.Bottom];
-				return
-					$"Branch Lvl={(lvl == 0 ? TreeHost.GetType()?.Name : lvl.ToString())}  " +
-					$"C=[{(c.Item as DockPane)?.DumpDesc() ?? (c.Item is Branch ? "Branch" : "null")}] " +
-					$"L=[{(l.Item as DockPane)?.DumpDesc() ?? (l.Item is Branch ? "Branch" : "null")}] " +
-					$"T=[{(t.Item as DockPane)?.DumpDesc() ?? (t.Item is Branch ? "Branch" : "null")}] " +
-					$"R=[{(r.Item as DockPane)?.DumpDesc() ?? (r.Item is Branch ? "Branch" : "null")}] " +
-					$"B=[{(b.Item as DockPane)?.DumpDesc() ?? (b.Item is Branch ? "Branch" : "null")}]";
 			}
 		}
 
+		///// <summary>The floating window that hosts this content (if on a floating window, otherwise null)</summary>
+		//public FloatingWindow HostFloatingWindow
+		//{
+		//	get { return TreeHost as FloatingWindow; }
+		//}
+
+		/// <summary>Get/Set whether this content is in an auto-hide panel</summary>
+		public bool IsAutoHide
+		{
+			get { return TreeHost is AutoHidePanel; }
+			set
+			{
+				if (IsAutoHide == value) return;
+
+				// Auto hide this dockable
+				if (value)
+				{
+					// If currently docked in the centre, don't allow auto hide
+					var side = DockPane?.AutoHideSide ?? EDockSite.Centre;
+					if (side == EDockSite.Centre)
+						throw new Exception("Cannot auto hide this dockable. It is either not within a pane, or the pane is docked in the centre dock site");
+
+					// Get the auto-hide panel associated with this dock site
+					var ah = DockContainer.AutoHidePanels[side];
+
+					// Add this dockable to the auto-hide panel
+					ah.Add(Dockable);
+				}
+
+				// Dock this content back in the dock container
+				else
+				{
+					var old_host = TreeHost as AutoHidePanel;
+
+					// Get the dock address associated with the dock container
+					var hs = DockAddressFor(DockContainer);
+
+					// Return this content to the dock container
+					DockContainer.Add(Dockable, hs);
+
+					// Hide the auto hide panel so that it doesn't obscure the now pinned content
+					if (old_host != null)
+						old_host.PoppedOut = false;
+				}
+			}
+		}
+
+		/// <summary>A record of where this pane was located in a dock container, auto hide window, or floating window</summary>
+		internal EDockSite[] DockAddressFor(ITreeHost tree)
+		{
+			return DockAddresses.GetOrAdd(tree.Root, x =>
+			{
+				if (DefaultDockLocation.FloatingWindowId != null)
+				{
+					// If the default dock location is a floating window, and 'root' is
+					// the root branch of that floating window, then return the default address.
+					// Otherwise, return sensible defaults appropriate for 'root'
+					var fw = DockContainer.FloatingWindows.Get(DefaultDockLocation.FloatingWindowId.Value);
+					if (fw != null)
+					{
+						if (fw.Root == tree.Root) return DefaultDockLocation.Address;
+						return new[] { EDockSite.Centre };
+					}
+				}
+				else if (DefaultDockLocation.AutoHide != null)
+				{
+					// If the default dock location is an auto hide window, and 'root' is
+					// the root branch of that auto hide window, then return the default address.
+					// If 'root' is a floating window, return Centre
+					// If 'root' is the dock container, return the edge site that matches the auto hide panel's dock site
+					var ah = DockContainer.AutoHidePanels[DefaultDockLocation.AutoHide.Value];
+					if (ah != null)
+					{
+						if (ah.Root == tree.Root) return DefaultDockLocation.Address;
+						if (tree is FloatingWindow) return new[] { EDockSite.Centre };
+						return new[] { ah.DockSite };
+					}
+				}
+				else if (DockContainer.Root == tree.Root)
+				{
+					// If the default dock location is the dock container and 'root' is
+					// the root branch of the dock container, then return the default address
+					return DefaultDockLocation.Address;
+				}
+				// Otherwise, default to the centre dock site
+				return new[] { EDockSite.Centre };
+			});
+		}
+		private Dictionary<Branch, EDockSite[]> DockAddresses { get; set; }
+
+		/// <summary>Get/Set whether the dock pane title control is visible while this content is active. Null means inherit default</summary>
+		public bool? ShowTitle { get; set; }
+
+		/// <summary>Get/Set whether the location of the tab strip control while this content is active. Null means inherit default</summary>
+		public EDockSite? TabStripLocation { get; set; }
+
+		/// <summary>The text to display on the tab. Defaults to 'Owner.Text'</summary>
+		public string TabText
+		{
+			get { return m_tab_text ?? (Owner as Window)?.Title; }
+			set
+			{
+				if (m_tab_text == value) return;
+
+				// Have to invalidate the whole tab strip, because the text length
+				// will change causing the other tabs to move.
+				m_tab_text = value;
+				InvalidateTitle();
+				InvalidateTabStrip();
+			}
+		}
+		private string m_tab_text;
+
+		/// <summary>The icon to display on the tab. Defaults to '(Owner as Window)?.Icon'</summary>
+		public ImageSource TabIcon
+		{
+			get
+			{
+				// Note: not using Icon as the type for TabIcon because GDI+ doesn't support
+				// drawing icons. The DrawIcon function calls the win API function DrawIconEx
+				// which doesn't handle transforms properly
+
+				// If an icon image has been specified, return that
+				// If the content is a Window and it has an icon, use that
+				return m_icon ?? (Owner as Window)?.Icon;
+			}
+			set
+			{
+				if (m_icon == value) return;
+				m_icon = value;
+				InvalidateTabStrip();
+			}
+		}
+		private ImageSource m_icon;
+#if false
+			/// <summary>The colour to use for this tab's text. If null, defaults to the colour set of the containing TabStrip</summary>
+			public OptionData.ColourSet TabColoursActive
+			{
+				get { return m_tab_colours_active; }
+				set
+				{
+					if (m_tab_colours_active == value) return;
+					m_tab_colours_active = value;
+					InvalidateTab();
+				}
+			}
+			private OptionData.ColourSet m_tab_colours_active;
+
+			/// <summary>The colour to use for this tab's text. If null, defaults to the colour set of the containing TabStrip</summary>
+			public OptionData.ColourSet TabColoursInactive
+			{
+				get { return m_tab_colours_inactive; }
+				set
+				{
+					if (m_tab_colours_inactive == value) return;
+					m_tab_colours_inactive = value;
+					InvalidateTab();
+				}
+			}
+			private OptionData.ColourSet m_tab_colours_inactive;
+
+			/// <summary>The font to use for the active tab. If null, defaults to the fonts of the containing TabStrip</summary>
+			public Font TabFontActive
+			{
+				get { return m_tab_font_active; }
+				set
+				{
+					if (m_tab_font_active == value) return;
+
+					// Changing the font can effect the size of the tab, and therefore
+					// the layout of the whole tab strip
+					m_tab_font_active = value;
+					InvalidateTabStrip();
+				}
+			}
+			private Font m_tab_font_active;
+
+			/// <summary>The font used on the inactive tabs. If null, defaults to the fonts of the containing TabStrip</summary>
+			public Font TabFontInactive
+			{
+				get { return m_tab_font_inactive; }
+				set
+				{
+					if (m_tab_font_inactive == value) return;
+
+					// Changing the font can effect the size of the tab, and therefore
+					// the layout of the whole tab strip
+					m_tab_font_inactive = value;
+					InvalidateTabStrip();
+				}
+			}
+			private Font m_tab_font_inactive;
+#endif
+		/// <summary>A tool tip to display when the mouse hovers over the tab for this content</summary>
+		public string TabToolTip
+		{
+			get { return m_impl_tab_tt ?? TabText; }
+			set { m_impl_tab_tt = value; }
+		}
+		private string m_impl_tab_tt;
+
+		/// <summary>A context menu to display when the tab for this content is right clicked</summary>
+		public ContextMenu TabCMenu
+		{
+			get { return m_impl_tab_cmenu; }
+			set { m_impl_tab_cmenu = value; }
+		}
+		private ContextMenu m_impl_tab_cmenu;
+
+		/// <summary>Creates a default context menu for the tab. Use: TabCMenu = DefaultTabCMenu()</summary>
+		public ContextMenu DefaultTabCMenu()
+		{
+			var cmenu = new ContextMenu();
+			{
+				var opt = cmenu.Items.Add2(new MenuItem { Header = "Close" });
+				opt.Click += (s, a) =>
+				{
+					DockPane = null;
+					Closed?.Invoke(this, EventArgs.Empty);
+				};
+			}
+			return cmenu;
+		}
+
+		/// <summary>True if this content is the active content within the owning dock container</summary>
+		public bool IsActiveContent
+		{
+			get { return DockContainer?.ActiveContent == this; }
+			set
+			{
+				if (value && DockContainer != null)
+					DockContainer.ActiveContent = this;
+			}
+		}
+
+		/// <summary>True if this content is the active content within its containing dock pane</summary>
+		public bool IsActiveContentInPane
+		{
+			get { return DockPane?.ContentView.CurrentItem == this; }
+			set
+			{
+				if (!value || DockPane == null) return;
+				DockPane.ContentView.MoveCurrentTo(this);
+			}
+		}
+
+		/// <summary>Save/Restore the control (possibly child control) that had input focus when the content was last active</summary>
+		internal void SaveFocus()
+		{
+			m_kb_focus = Owner.IsKeyboardFocusWithin ? Keyboard.FocusedElement : null;
+		}
+		internal void RestoreFocus()
+		{
+			// Only restore focus if 'm_kb_focus' is still a child of 'Owner'
+			if (m_kb_focus is DependencyObject dep && Owner.IsVisualDescendant(dep))
+				Keyboard.Focus(m_kb_focus);
+
+			m_kb_focus = null;
+		}
+		private IInputElement m_kb_focus;
+
+		/// <summary>Save to XML</summary>
+		public XElement ToXml(XElement node)
+		{
+			// Allow clients to add extra data that will be provided in LoadLayout
+			var user = new XElement(XmlTag.UserData);
+			SavingLayout?.Invoke(this, new DockContainerSavingLayoutEventArgs(user));
+
+			// Add the name to identify the content
+			node.Add2(XmlTag.Name, PersistName, false);
+			node.Add2(XmlTag.Type, Owner.GetType().FullName, false);
+			CurrentDockLocation.ToXml(node);
+			node.Add2(user);
+
+			return node;
+		}
+
+		/// <summary>Invalidate the tab that represents this content</summary>
+		public void InvalidateTab()
+		{
+			if (DockPane == null) return;
+			//var tab = DockPane.TabStripCtrl.VisibleTabs.FirstOrDefault(x => x.Content == this);
+			//if (tab != null)
+			//	DockPane.TabStripCtrl.Invalidate(tab.DisplayBounds);
+			//else
+			//	InvalidateTabStrip();
+		}
+
+		/// <summary>Invalidate the tab strip that contains the tab for this content</summary>
+		public void InvalidateTabStrip()
+		{
+			if (DockPane == null) return;
+			//DockPane.TabStripCtrl.Invalidate();
+		}
+
+		/// <summary>Invalidate the title that represents this content</summary>
+		public void InvalidateTitle()
+		{
+			if (DockPane == null) return;
+			//DockPane.TitleCtrl.Invalidate();
+		}
+
+		/// <summary></summary>
+		//public override string ToString()
+		//{
+		//	if (TabText.HasValue()) return TabText;
+		//	if (PersistName.HasValue()) return PersistName;
+		//	if (Owner is FrameworkElement fe && fe.Name.HasValue()) return fe.Name;
+		//	return Owner.GetType().Name;
+		//}
+	}
+
+	/// <summary>A wrapper control that hosts a control and implements IDockable</summary>
+	public class Dockable : DockPanel, IDockable
+	{
+		public Dockable(Control hostee, string persist_name, DockLocation location = null)
+		{
+			MinWidth = hostee.MinWidth;
+			MinHeight = hostee.MinHeight;
+			MaxWidth = hostee.MaxWidth;
+			MaxHeight = hostee.MaxHeight;
+			Children.Add(hostee);
+
+			DockControl = new DockControl(this, persist_name) { TabText = persist_name };
+			if (location != null)
+				DockControl.DefaultDockLocation = location;
+		}
+		public virtual void Dispose()
+		{
+			DockControl = null;
+		}
+
+		/// <summary>Provides support for the DockContainer</summary>
+		[Browsable(false)]
+		public DockControl DockControl
+		{
+			get { return m_dock_control; }
+			private set
+			{
+				if (m_dock_control == value) return;
+				Util.Dispose(ref m_dock_control);
+				m_dock_control = value;
+			}
+		}
+		private DockControl m_dock_control;
+	}
+
+	/// <summary>Dock container classes</summary>
+	namespace DockContainerDetail
+	{
 		/// <summary>
 		/// A pane groups a set of IDockable items together. Only one IDockable is displayed at a time in the pane,
-		/// but tabs for all dockable items are displayed along the top, bottom, left, or right.</summary>
+		/// but tabs for all dockable items are displayed in the tab strip along the top, bottom, left, or right.</summary>
 		[DebuggerDisplay("{DumpDesc()}")]
-		public class DockPane :DockPanel, IPaneOrBranch, IDisposable
+		public class DockPane : DockPanel, IPaneOrBranch, IDisposable
 		{
-			public DockPane(DockContainer owner)
+			internal DockPane(DockContainer owner, bool show_pin = true, bool show_close = true)
 			{
 				DockContainer = owner ?? throw new ArgumentNullException("The owning dock container cannot be null");
 				ApplyToVisibleContentOnly = false;
@@ -1518,7 +1513,7 @@ namespace Rylogic.Gui2
 				Content = new ObservableCollection<DockControl>();
 
 				// Add the title bar
-				TitleBar = Children.Add2(new TitleBar(this, DockContainer.Options));
+				TitleBar = Children.Add2(new TitleBar(this, DockContainer.Options) { ShowPin = show_pin, ShowClose = show_close });
 				DockPanel.SetDock(TitleBar, Dock.Top);
 
 				// Add the tab strip
@@ -1538,6 +1533,15 @@ namespace Rylogic.Gui2
 
 			/// <summary>The owning dock container</summary>
 			public DockContainer DockContainer { [DebuggerStepThrough] get; private set; }
+
+			/// <summary>The title bar control for the pane</summary>
+			public TitleBar TitleBar { get; private set; }
+
+			/// <summary>The tab strip for the pane (visibility controlled adding buttons to the tab strip)</summary>
+			public TabStrip TabStrip { get; private set; }
+
+			/// <summary>The panel that displays the visible content</summary>
+			public Panel Centre { get; private set; }
 
 			/// <summary>The control that hosts the dock pane and branch tree</summary>
 			internal ITreeHost TreeHost
@@ -1576,19 +1580,11 @@ namespace Rylogic.Gui2
 				get { return ParentBranch.DockAddress.Concat(DockSite).ToArray(); }
 			}
 
-			/// <summary>The title bar control for the pane</summary>
-			public TitleBar TitleBar { get; private set; }
-
-			/// <summary>The tab strip for the pane</summary>
-			public TabStrip TabStrip { get; private set; }
-
-			/// <summary>The panel that displays the visible content</summary>
-			public Panel Centre { get; private set; }
-
 			/// <summary>The content hosted by this pane</summary>
 			public ObservableCollection<DockControl> Content
 			{
-				[DebuggerStepThrough] get { return m_content; }
+				[DebuggerStepThrough]
+				get { return m_content; }
 				private set
 				{
 					if (m_content == value) return;
@@ -1717,8 +1713,8 @@ namespace Rylogic.Gui2
 							// Clear the title bar
 							TitleBar.Title = string.Empty;
 
-//							// Clear the scroll offset
-//							AutoScrollPosition = Point.Empty;
+							//							// Clear the scroll offset
+							//							AutoScrollPosition = Point.Empty;
 						}
 
 						// Note: 'm_visible_content' is of type 'DockControl' rather than 'IDockable' because when the DockControl is Disposed
@@ -1738,8 +1734,8 @@ namespace Rylogic.Gui2
 							m_visible_content.RestoreFocus();
 						}
 
-//						// Ensure the tab for the active content is visible
-//						TabStripCtrl.MakeTabVisible(ContentView.CurrentPosition);
+						//						// Ensure the tab for the active content is visible
+						//						TabStripCtrl.MakeTabVisible(ContentView.CurrentPosition);
 
 						// Raise the active content changed event on this pane.
 						OnVisibleContentChanged(new ActiveContentChangedEventArgs(prev?.Dockable, value?.Dockable));
@@ -1782,14 +1778,14 @@ namespace Rylogic.Gui2
 
 					// Record properties of this pane so we can set them on the new pane
 					// (this pane will be disposed if empty after the content has changed floating state)
-//					var strip_location = TabStripCtrl.StripLocation;
+					//					var strip_location = TabStripCtrl.StripLocation;
 
 					// Change the state of the active content
 					content.IsFloating = value;
 
 					// Copy properties form this pane to the new pane that hosts 'content'
 					var pane = content.DockPane;
-//					pane.TabStripCtrl.StripLocation = strip_location;
+					//					pane.TabStripCtrl.StripLocation = strip_location;
 
 					// Add the remaining content to the same pane that 'content' is now in
 					if (!ApplyToVisibleContentOnly)
@@ -1861,9 +1857,10 @@ namespace Rylogic.Gui2
 			{
 				get
 				{
-					// Find the highest, non-centre position, ancestor of this pane
 					var side = DockSite;
-					for (var b = ParentBranch; b != null; b = b.ParentBranch)
+
+					// Find the highest, non-centre position, ancestor of this pane
+					for (var b = ParentBranch; side == EDockSite.Centre && b != null; b = b.ParentBranch)
 					{
 						if (b.DockSite == EDockSite.Centre) continue;
 						side = b.DockSite;
@@ -1871,49 +1868,6 @@ namespace Rylogic.Gui2
 					return side;
 				}
 			}
-
-#if false
-			/// <summary>Get the virtual display area of the control.</summary>
-			public Rect DisplayRectangle
-			{
-				get
-				{
-					// Determine the minimum display rect
-					var min = new Size(0,0);
-
-					// Add the title bar height
-					if (TitleBar != null && TitleBar.IsVisible)
-						min.Height += TitleBar.ActualHeight;
-
-					// Add the tab strip height
-					if (TabStrip != null && TabStrip.IsVisible)
-						min.Height += TabStrip.StripSize;
-
-					// Increase the minimum size by the minimum size of the content
-					if (VisibleContent?.Owner is FrameworkElement fe)
-					{
-						min.Width += fe.MinWidth;
-						min.Height += fe.MinHeight;
-					}
-
-					// By default, the display area is the client area of the pane
-					var rect = new Rect(0, 0, ActualWidth, ActualHeight);
-
-					// If the scroll bars are visible, they will have been subtracted from the client rect.
-					// Add that area back on for the purposes of determining the virtual display rect
-					if (VisibleContent?.Owner is ScrollViewer sv)
-					{
-						if (sv.ComputedVerticalScrollBarVisibility != Visibility.Collapsed) rect.Width += SystemParameters.VerticalScrollBarWidth;
-						if (sv.ComputedHorizontalScrollBarVisibility != Visibility.Collapsed) rect.Height += SystemParameters.HorizontalScrollBarHeight;
-					}
-
-					// Clamp to the minimum display rect of the visible content
-					if (rect.Width < min.Width) rect.Width = min.Width;
-					if (rect.Height < min.Height) rect.Height = min.Height;
-					return rect;
-				}
-			}
-#endif
 #if false
 			/// <summary>Layout the pane</summary>
 			protected override void OnLayout(LayoutEventArgs e)
@@ -1984,9 +1938,9 @@ namespace Rylogic.Gui2
 				if (VisibleContent != null)
 					node.Add2(XmlTag.Visible, VisibleContent.PersistName, false);
 
-//				// Save the strip location
-//				if (TabStripCtrl != null)
-//					node.Add2(XmlTag.StripLocation, TabStripCtrl.StripLocation, false);
+				//				// Save the strip location
+				//				if (TabStripCtrl != null)
+				//					node.Add2(XmlTag.StripLocation, TabStripCtrl.StripLocation, false);
 
 				return node;
 			}
@@ -2003,10 +1957,10 @@ namespace Rylogic.Gui2
 						VisibleContent = content;
 				}
 
-//				// Restore the strip location
-//				var strip_location = node.Element(XmlTag.StripLocation)?.As<EDockSite>();
-//				if (strip_location != null)
-//					TabStripCtrl.StripLocation = strip_location.Value;
+				//				// Restore the strip location
+				//				var strip_location = node.Element(XmlTag.StripLocation)?.As<EDockSite>();
+				//				if (strip_location != null)
+				//					TabStripCtrl.StripLocation = strip_location.Value;
 			}
 
 			/// <summary>Output the tree structure as a string. (Recursion method, call 'DockContainer.DumpTree()')</summary>
@@ -2522,557 +2476,623 @@ namespace Rylogic.Gui2
 		}
 
 		/// <summary>
-		/// Provides the implementation of the docking functionality.
-		/// Classes that implement IDockable have one of these as a public property.</summary>
-		[DebuggerDisplay("DockControl {TabText}")]
-		public class DockControl : IDisposable
+		/// Represents a node in the tree of dock panes.
+		/// Each node has 5 children; Centre, Left, Right, Top, Bottom.
+		/// A root branch can be hosted in a dock container, floating window, or auto hide window</summary>
+		[DebuggerDisplay("{DumpDesc()}")]
+		internal class Branch : DockPanel, IPaneOrBranch, IDisposable
 		{
-			/// <summary>Create the docking functionality helper.</summary>
-			/// <param name="owner">The control that docking is being provided for</param>
-			/// <param name="persist_name">The name to use for this instance when saving the layout to XML</param>
-			public DockControl(FrameworkElement owner, string persist_name)
+			public const int DockSiteCount = 5;
+
+			public Branch(DockContainer dc, DockSizeData dock_sizes)
 			{
-				if (!(owner is IDockable))
-					throw new Exception("'owner' must implement IDockable");
+				DockContainer = dc;
+				DockSizes = new DockSizeData(dock_sizes) { Owner = this };
 
-				Owner = owner;
-				PersistName = persist_name;
-				DefaultDockLocation = new DockLocation();
-				TabText = null;
-				TabIcon = null;
-				TabCMenu = DefaultTabCMenu();
-
-				DockAddresses = new Dictionary<Branch, EDockSite[]>();
+				// Create the collection to hold the five child controls (DockPanes or Branches)
+				Descendants = new DescendantCollection(this);
 			}
 			public virtual void Dispose()
 			{
-				DockPane = null;
+				Util.Dispose(Descendants);
 				DockContainer = null;
 			}
 
-			/// <summary>Get/Set the dock container that manages this content.</summary>
-			public DockContainer DockContainer
+			/// <summary>The dock container that this pane belongs too</summary>
+			public DockContainer DockContainer { [DebuggerStepThrough] get; private set; }
+
+			/// <summary>The branch that is the immediate parent of this branch (null if root)</summary>
+			public Branch ParentBranch
 			{
 				[DebuggerStepThrough]
-				get { return m_dc; }
-				set
+				get { return Parent as Branch; }
+			}
+
+			/// <summary>The branch at the top of the tree that contains this pane</summary>
+			public Branch RootBranch
+			{
+				[DebuggerStepThrough]
+				get
 				{
-					if (m_dc == value) return;
-					var old = m_dc;
-					var nue = value;
-					if (m_dc != null)
-					{
-						m_dc.ActiveContentChanged -= HandleActiveContentChanged;
-						m_dc.Forget(this);
-					}
-					m_dc = value;
-					if (m_dc != null)
-					{
-						m_dc.Remember(this);
-						m_dc.ActiveContentChanged += HandleActiveContentChanged;
-					}
-					DockContainerChanged?.Invoke(this, new DockContainerChangedEventArgs(old, nue));
+					var b = this;
+					for (; b.Parent is Branch; b = (Branch)b.Parent) { }
+					return b;
 				}
 			}
-			private DockContainer m_dc;
 
-			/// <summary>Raised when this DockControl is assigned to a dock container (or possibly to null)</summary>
-			public event EventHandler<DockContainerChangedEventArgs> DockContainerChanged;
-
-			/// <summary>Remove this DockControl from whatever dock container it is in</summary>
-			public void Remove()
-			{
-				DockPane = null;
-				DockContainer = null;
-			}
-
-			/// <summary>The dock container, auto-hide panel, or floating window that this content is docked within</summary>
+			/// <summary>The main dock container, auto hide panel, or floating window that hosts this branch</summary>
 			internal ITreeHost TreeHost
 			{
-				get { return DockPane?.TreeHost; }
-			}
-
-			/// <summary>Get the control we're providing docking functionality for</summary>
-			public UIElement Owner { [DebuggerStepThrough] get; private set; }
-
-			/// <summary>Gets 'Owner' as an IDockable</summary>
-			public IDockable Dockable
-			{
 				[DebuggerStepThrough]
-				get { return (IDockable)Owner; }
-			}
-
-			/// <summary>Get/Set the pane that this content resides within.</summary>
-			public DockPane DockPane
-			{
-				[DebuggerStepThrough]
-				get { return m_pane; }
-				set
+				get
 				{
-					if (m_pane == value) return;
-					if (m_pane != null)
-					{
-						m_pane.Content.Remove(this);
-					}
-					SetDockPaneInternal(value);
-					if (m_pane != null)
-					{
-						m_pane.Content.Add(this);
-					}
-					PaneChanged?.Invoke(this, EventArgs.Empty);
+					var p = Parent;
+					for (; p != null && !(p is ITreeHost) && p is FrameworkElement fe; p = fe.Parent) { }
+					return p as ITreeHost;
 				}
 			}
-			private DockPane m_pane;
-			internal void SetDockPaneInternal(DockPane pane)
+
+			/// <summary>The sizes of the child controls</summary>
+			public DockSizeData DockSizes { get; private set; }
+
+			/// <summary>Add a dockable instance to this tree at the position described by 'location'.</summary>
+			public DockPane Add(DockControl dc, int index, params EDockSite[] location)
 			{
-				// Calling 'DockControl.set_DockPane' changes the Content list in the DockPane
-				// which calls this method to change the DockPane on the content without recursively
-				// changing the content list.
-				m_pane = pane;
+				if (dc == null)
+					throw new ArgumentNullException(nameof(dc), "Cannot add 'null' content");
+				if (location.Length == 0)
+					throw new ArgumentException("A valid tree location is required", nameof(location));
 
-				// Record the dock container that 'pane' belongs to
-				if (pane != null)
-					DockContainer = pane.DockContainer;
+				// If already on a pane, remove first (raising events)
+				// Removing panes causes PruneBranches to be called, so this must be called before
+				// DockPane(...) otherwise the newly added pane/branches will be deleted.
+				dc.DockPane = null;
 
-				// If a pane is given, save the dock address for the root branch (if the pane is within a tree)
-				if (pane != null && pane.ParentBranch != null)
-					DockAddresses[m_pane.RootBranch] = DockAddress;
+				// Find the dock pane for this dock site, growing the tree as necessary
+				var pane = DockPane(location.First(), location.Skip(1));
+
+				// Add the content
+				index = Math_.Clamp(index, 0, pane.Content.Count);
+				pane.Content.Insert(index, dc);
+				pane.ContentView.MoveCurrentToPosition(index);
+				return pane;
 			}
 
-			/// <summary>Raised when the pane this dockable is on is changing (possibly to null)</summary>
-			public event EventHandler PaneChanged;
-
-			/// <summary>Raised when the dockable is not in a pane (i.e. when DockPane becomes null)</summary>
-			public event EventHandler Closed;
-
-			/// <summary>Raised when this becomes the active content</summary>
-			public event EventHandler<ActiveContentChangedEventArgs> ActiveChanged;
-			private void HandleActiveContentChanged(object sender, ActiveContentChangedEventArgs e)
+			/// <summary>Remove branches without any content to reduce the size of the tree</summary>
+			internal void PruneBranches()
 			{
-				if (e.ContentNew == Owner || e.ContentOld == Owner)
-					ActiveChanged?.Invoke(this, e);
+				// Depth-first recursive
+				foreach (var b in Descendants.Select(x => x.Item as Branch).NotNull())
+					b.PruneBranches();
+
+				// If any of the child branches only have a single child, replace the branch with it's child
+				foreach (var c in Descendants.Where(x => x.Item is Branch).NotNull())
+				{
+					var b = (Branch)c.Item;
+
+					// The child must, itself, have only one child
+					if (b.Descendants.Count != 1)
+						continue;
+
+					// Replace the branch with it's single child
+					var nue = b.Descendants[0].Item;
+					var old = c.Item;
+					c.Item = nue;
+					Util.Dispose(ref old);
+				}
+
+				// If any of L,R,T,B contain empty panes, prune them. Don't prune
+				// 'C', we need to leave somewhere for content to be dropped.
+				foreach (var c in Descendants.Where(x => x.Item is DockPane))
+				{
+					var p = (DockPane)c.Item;
+
+					if (p.Content.Count == 0 && c.DockSite != EDockSite.Centre)
+					{
+						// Dispose the pane
+						c.Item = null;
+						Util.Dispose(ref p);
+					}
+				}
+
+				// If the branch has only one child, ensure it's in the Centre position
+				if (Descendants.Count == 1 && Descendants[EDockSite.Centre].Item == null)
+				{
+					var ctrl = Descendants[0].Item;
+					Descendants[0].Item = null;
+					Descendants[EDockSite.Centre].Item = ctrl;
+				}
+
+				// Ensure there is always a centre pane
+				if (Descendants[EDockSite.Centre].Item == null)
+					Descendants[EDockSite.Centre].Item = new DockPane(DockContainer, show_pin:false);
+
+				// Check all the logic is correct
+				Debug.Assert(ValidateTree());
 			}
 
-			/// <summary>Raised during 'ToXml' to allow clients to add extra data to the XML data for this object</summary>
-			public event EventHandler<DockContainerSavingLayoutEventArgs> SavingLayout;
+			/// <summary>Add branches to the tree until 'rest' is empty.</summary>
+			private Branch GrowBranches(EDockSite ds, IEnumerable<EDockSite> rest, out EDockSite last_ds)
+			{
+				Debug.Assert(ds >= EDockSite.Centre && ds < EDockSite.None, "Invalid dock site");
 
-			/// <summary>The name to use for this instance when saving layout to XML</summary>
-			public string PersistName { get; private set; }
+				// Note: When rest is empty, the site at 'ds' does not have a branch added.
+				// This is deliberate so that dock addresses (arrays of EDockSite) can be
+				// used to grow the tree to the point where a dock pane should be added.
+				if (!rest.Any())
+				{
+					// If we've reached the end of the dock address, but there are still branches
+					// keep going down the centre dock site until a null or dock pane is reached
+					var b = this;
+					for (; b.Descendants[ds].Item is Branch cb; b = cb, ds = EDockSite.Centre) { }
 
-			/// <summary>The dock location to use if not otherwise given</summary>
-			public DockLocation DefaultDockLocation { get; set; }
+					Debug.Assert(ValidateTree());
 
-			/// <summary>Get the current dock location</summary>
-			public DockLocation CurrentDockLocation
+					last_ds = ds;
+					return b;
+				}
+
+				// No child at 'ds' add a branch
+				if (Descendants[ds].Item == null)
+				{
+					var new_branch = new Branch(DockContainer, ds == EDockSite.Centre ? DockSizeData.Quarters : DockSizeData.Halves);
+					Descendants[ds].Item = new_branch;
+					return new_branch.GrowBranches(rest.First(), rest.Skip(1), out last_ds);
+				}
+
+				// A dock pane at 'ds'? Swap it with a branch
+				// containing the dock pane as the centre child
+				if (Descendants[ds].Item is DockPane)
+				{
+					var new_branch = new Branch(DockContainer, DockSizeData.Halves);
+					new_branch.Descendants[EDockSite.Centre].Item = Descendants[ds].Item;
+					Descendants[ds].Item = new_branch;
+					return new_branch.GrowBranches(rest.First(), rest.Skip(1), out last_ds);
+				}
+				else
+				{
+					// Existing branch, recursive call into it
+					var branch = Descendants[ds].Item as Branch;
+					return branch.GrowBranches(rest.First(), rest.Skip(1), out last_ds);
+				}
+			}
+
+			/// <summary>Get the pane at 'location', adding branches to the tree if necessary</summary>
+			public DockPane DockPane(EDockSite ds, IEnumerable<EDockSite> rest)
+			{
+				// Grow the tree
+				var branch = GrowBranches(ds, rest, out ds);
+
+				// No child at 'ds'? Add a dock pane.
+				if (branch.Descendants[ds].Item == null)
+				{
+					var pane = new DockPane(DockContainer, show_pin: ds.IsEdge());
+					branch.Descendants[ds].Item = pane;
+				}
+
+				// Existing pane at 'ds'
+				Debug.Assert(branch.Descendants[ds].Item is DockPane);
+				return branch.Descendants[ds].Item as DockPane;
+			}
+			public DockPane DockPane(EDockSite ds)
+			{
+				return DockPane(ds, Enumerable.Empty<EDockSite>());
+			}
+
+			/// <summary>Get the child at 'location' or null if the given location is not a valid location in the tree</summary>
+			public DescentantData DescendantAt(IEnumerable<EDockSite> location)
+			{
+				var b = this;
+				var c = (DescentantData)null;
+				foreach (var ds in location)
+				{
+					if (b == null) return null;
+					c = b.Descendants[ds];
+					b = c.Item as Branch;
+				}
+				return c;
+			}
+
+			/// <summary>Returns a reference to the dock sizes at a given level in the tree</summary>
+			public DockSizeData GetDockSizes(IEnumerable<EDockSite> location)
+			{
+				var b = this;
+				foreach (var ds in location)
+				{
+					if (b == null) return null;
+					b = b.Descendants[ds].Item as Branch;
+				}
+				return b?.DockSizes;
+			}
+
+			/// <summary>The dock panes or branches of this branch (5 per branch)</summary>
+			internal DescendantCollection Descendants { [DebuggerStepThrough] get; private set; }
+			internal class DescendantCollection : IDisposable, IEnumerable<DescentantData>
+			{
+				/// <summary>The child controls (dock panes or branches) of this branch</summary>
+				private readonly Branch m_branch;
+				private DescentantData[] m_descendants;
+
+				public DescendantCollection(Branch branch)
+				{
+					m_branch = branch;
+
+					// Create an array to hold the five child controls (DockPanes or Branches)
+					m_descendants = new DescentantData[DockSiteCount];
+					for (var i = 0; i != m_descendants.Length; ++i)
+						m_descendants[i] = new DescentantData(m_branch, (EDockSite)i);
+				}
+				public virtual void Dispose()
+				{
+					Util.DisposeRange(m_descendants.Select(x => x.Item));
+				}
+
+				/// <summary>The number of non-null children in this collection</summary>
+				public int Count
+				{
+					get { return m_descendants.Count(x => x.Item != null); }
+				}
+
+				/// <summary>Access the non-null children in this collection</summary>
+				public DescentantData this[int index]
+				{
+					get { return m_descendants.Where(x => x.Item != null).ElementAt(index); }
+				}
+
+				/// <summary>Get a child control in a given dock site</summary>
+				public DescentantData this[EDockSite ds]
+				{
+					[DebuggerStepThrough]
+					get { return m_descendants[(int)ds]; }
+				}
+
+				/// <summary>Enumerate the controls in the collection</summary>
+				public IEnumerator<DescentantData> GetEnumerator()
+				{
+					foreach (var c in m_descendants)
+						yield return c;
+				}
+				IEnumerator IEnumerable.GetEnumerator()
+				{
+					return GetEnumerator();
+				}
+			}
+
+			/// <summary>Wrapper of a pane or branch</summary>
+			[DebuggerDisplay("{DockSite} {Item}")]
+			internal class DescentantData
+			{
+				public DescentantData(Branch branch, EDockSite ds)
+				{
+					ParentBranch = branch;
+					DockSite = ds;
+				}
+				public void Dispose()
+				{ }
+
+				/// <summary>The branch this is descendant from</summary>
+				public Branch ParentBranch { get; private set; }
+
+				/// <summary>The site that this child represents</summary>
+				public EDockSite DockSite { get; private set; }
+
+				/// <summary>A dock pane or branch</summary>
+				public IPaneOrBranch Item
+				{
+					get { return m_item; }
+					set
+					{
+						if (m_item == value) return;
+						if (m_item != null)
+						{
+							// Remove the pane or branch descendant
+							// Note: do not dispose the pane or branch because this could be a reassignment to a different dock site
+							ParentBranch.Children.Remove(m_item as UIElement);
+							ParentBranch.Children.Remove(m_splitter);
+
+							// Notify of the tree change
+							ParentBranch.OnTreeChanged(new TreeChangedEventArgs(TreeChangedEventArgs.EAction.Removed, pane: m_item as DockPane, branch: m_item as Branch));
+
+							m_item = null;
+							m_splitter = null;
+						}
+						m_item = value;
+						if (m_item != null)
+						{
+							// Add the pane or branch as the descendant.
+							// Note: the order of children is important. DockPanel assumes the last child is the "un-docked" child.
+							// Also, the child elements are docked/clipped in reverse order, so Children[0] will have the smallest available area.
+							// Also, the dock panel splitters operate on their immediate prior sibling.
+							if (DockSite == EDockSite.Centre)
+							{
+								ParentBranch.Children.Add(m_item as UIElement);
+							}
+							else
+							{
+								// Always have Left/Right bigger than Top/Bottom or allow dock order to control layout?
+								//// Find the insert index
+								//var index = 0;
+								//for (; index != ParentBranch.Children.Count; ++index)
+								//{
+								//	var child = ParentBranch.Children[index];
+								//	if (child is Branch || child is
+								//}
+
+								// Dock 'item'
+								var item = ParentBranch.Children.Insert2(0, m_item as UIElement);
+								DockPanel.SetDock(item, DockContainer.ToDock(DockSite));
+
+								// Add a splitter control for non-centre items
+								m_splitter = ParentBranch.Children.Insert2(1, new DockPanelSplitter { Thickness = 5.0, ProportionalResize = true, Background = SystemColors.ControlBrush });
+								DockPanel.SetDock(m_splitter, DockContainer.ToDock(DockSite));
+							}
+
+							// Notify of the tree change
+							ParentBranch.OnTreeChanged(new TreeChangedEventArgs(TreeChangedEventArgs.EAction.Added, pane: m_item as DockPane, branch: m_item as Branch));
+						}
+					}
+				}
+				private IPaneOrBranch m_item;
+				private DockPanelSplitter m_splitter;
+			}
+
+			/// <summary>Get the dock site for this branch within a parent branch.</summary>
+			internal EDockSite DockSite
+			{
+				get { return ParentBranch?.Descendants.Single(x => x.Item == this).DockSite ?? EDockSite.Centre; }
+			}
+
+			/// <summary>Get the dock sites, from top to bottom, describing where this branch is located in the tree </summary>
+			internal EDockSite[] DockAddress
 			{
 				get
 				{
-					if (TreeHost is FloatingWindow fw)
-						return new DockLocation(DockAddress, ContentIndex, float_window_id: fw.Id);
-
-					if (TreeHost is AutoHidePanel ah)
-						return new DockLocation(DockAddress, ContentIndex, auto_hide: ah.DockSite);
-
-					return new DockLocation(DockAddress, ContentIndex);
+					var s = new Stack<EDockSite>();
+					for (var b = this; b != null && b.Parent is Branch; b = b.Parent as Branch)
+						s.Push(b.DockSite);
+					return s.ToArray();
 				}
 			}
 
-			/// <summary>Get/Set the dock site within the branch that contains 'DockPane'</summary>
-			public EDockSite DockSite
-			{
-				get { return DockPane?.DockSite ?? EDockSite.Centre; }
-				set
-				{
-					if (DockSite == value) return;
-
-					// Must have an existing pane
-					if (DockPane == null || DockPane.ParentBranch == null)
-						throw new Exception("Can only change the dock site of this item after it has been added to a dock container");
-
-					// Move this content to a different dock site within 'branch'
-					var branch = DockPane.ParentBranch;
-					var pane = branch.DockPane(value);
-					pane.Content.Add(this);
-				}
-			}
-
-			/// <summary>The full location of this content in the tree of docked windows from Root branch to 'DockPane'</summary>
-			public EDockSite[] DockAddress
-			{
-				get { return DockPane != null ? DockPane.DockAddress : new[] { EDockSite.None }; }
-			}
-
-			/// <summary>The index of this dockable within the content of 'DockPane'</summary>
-			public int ContentIndex
-			{
-				get { return DockPane?.Content.IndexOf(this) ?? int.MaxValue; }
-			}
-
-			/// <summary>Get/Set whether this content is in a floating window</summary>
-			public bool IsFloating
-			{
-				get { return TreeHost is FloatingWindow; }
-				set
-				{
-					if (IsFloating == value) return;
-
-//					// Record properties of the Pane we're currently in, so we can
-//					// set them on new pane that will host this content 
-//					var strip_location = DockPane?.TabStripCtrl.StripLocation;
-
-					// Float this dockable
-					if (value)
-					{
-						// Get a floating window (preferably one that has hosted this item before)
-						var fw = DockContainer.FloatingWindows.GetOrAdd(x => DockAddresses.ContainsKey(x.Root));
-
-						// Get the dock address associated with this floating window
-						var hs = DockAddressFor(fw);
-
-						// Add this dockable to the floating window
-						fw.Add(Dockable, hs);
-
-						// Ensure the floating window is visible
-						if (!fw.IsVisible)
-							fw.Show();
-					}
-
-					// Dock this content back in the dock container
-					else
-					{
-						// Get the dock address associated with the dock container
-						var hs = DockAddressFor(DockContainer);
-
-						// Return this content to the dock container
-						DockContainer.Add(Dockable, hs);
-					}
-
-					// Copy pane state to the new pane
-					if (DockPane != null)
-					{
-//						if (strip_location != null)
-//							DockPane.TabStripCtrl.StripLocation = strip_location.Value;
-					}
-				}
-			}
-
-			/// <summary>The floating window that hosts this content (if on a floating window, otherwise null)</summary>
-			public FloatingWindow HostFloatingWindow
-			{
-				get { return TreeHost as FloatingWindow; }
-			}
-
-			/// <summary>Get/Set whether this content is in an auto-hide panel</summary>
-			public bool IsAutoHide
-			{
-				get { return TreeHost is AutoHidePanel; }
-				set
-				{
-					if (IsAutoHide == value) return;
-
-					// Auto hide this dockable
-					if (value)
-					{
-						// If currently docked in the centre, don't allow auto hide
-						var side = DockPane?.AutoHideSide ?? EDockSite.Centre;
-						if (side == EDockSite.Centre)
-							throw new Exception("Cannot auto hide this dockable. It is either not within a pane, or the pane is docked in the centre dock site");
-
-						// Get the auto-hide panel associated with this dock site
-						var ah = DockContainer.AutoHidePanels[side];
-
-						// Add this dockable to the auto-hide panel
-						ah.Add(Dockable);
-					}
-
-					// Dock this content back in the dock container
-					else
-					{
-						var old_host = TreeHost as AutoHidePanel;
-
-						// Get the dock address associated with the dock container
-						var hs = DockAddressFor(DockContainer);
-
-						// Return this content to the dock container
-						DockContainer.Add(Dockable, hs);
-
-						// Hide the auto hide panel so that it doesn't obscure the now pinned content
-						if (old_host != null)
-							old_host.PoppedOut = false;
-					}
-				}
-			}
-
-			/// <summary>A record of where this pane was located in a dock container, auto hide window, or floating window</summary>
-			internal EDockSite[] DockAddressFor(ITreeHost tree)
-			{
-				return DockAddresses.GetOrAdd(tree.Root, x =>
-				{
-					if (DefaultDockLocation.FloatingWindowId != null)
-					{
-						// If the default dock location is a floating window, and 'root' is
-						// the root branch of that floating window, then return the default address.
-						// Otherwise, return sensible defaults appropriate for 'root'
-						var fw = DockContainer.FloatingWindows.Get(DefaultDockLocation.FloatingWindowId.Value);
-						if (fw != null)
-						{
-							if (fw.Root == tree.Root) return DefaultDockLocation.Address;
-							return new[] { EDockSite.Centre };
-						}
-					}
-					else if (DefaultDockLocation.AutoHide != null)
-					{
-						// If the default dock location is an auto hide window, and 'root' is
-						// the root branch of that auto hide window, then return the default address.
-						// If 'root' is a floating window, return Centre
-						// If 'root' is the dock container, return the edge site that matches the auto hide panel's dock site
-						var ah = DockContainer.AutoHidePanels[DefaultDockLocation.AutoHide.Value];
-						if (ah != null)
-						{
-							if (ah.Root == tree.Root) return DefaultDockLocation.Address;
-							if (tree is FloatingWindow) return new[] { EDockSite.Centre };
-							return new[] { ah.DockSite };
-						}
-					}
-					else if (DockContainer.Root == tree.Root)
-					{
-						// If the default dock location is the dock container and 'root' is
-						// the root branch of the dock container, then return the default address
-						return DefaultDockLocation.Address;
-					}
-					// Otherwise, default to the centre dock site
-					return new[] { EDockSite.Centre };
-				});
-			}
-			private Dictionary<Branch, EDockSite[]> DockAddresses { get; set; }
-
-			/// <summary>Get/Set whether the dock pane title control is visible while this content is active. Null means inherit default</summary>
-			public bool? ShowTitle
-			{
-				get;
-				set;
-			}
-
-			/// <summary>Get/Set whether the location of the tab strip control while this content is active. Null means inherit default</summary>
-			public EDockSite? TabStripLocation
-			{
-				get;
-				set;
-			}
-
-			/// <summary>The text to display on the tab. Defaults to 'Owner.Text'</summary>
-			public string TabText
-			{
-				get { return m_tab_text ?? (Owner as Window)?.Title; }
-				set
-				{
-					if (m_tab_text == value) return;
-
-					// Have to invalidate the whole tab strip, because the text length
-					// will change causing the other tabs to move.
-					m_tab_text = value;
-					InvalidateTitle();
-					InvalidateTabStrip();
-				}
-			}
-			private string m_tab_text;
-
-			/// <summary>The icon to display on the tab. Defaults to '(Owner as Window)?.Icon'</summary>
-			public ImageSource TabIcon
+			/// <summary>A bitmap of the dock sites that have something docked</summary>
+			internal EDockMask DockedMask
 			{
 				get
 				{
-					// Note: not using Icon as the type for TabIcon because GDI+ doesn't support
-					// drawing icons. The DrawIcon function calls the win API function DrawIconEx
-					// which doesn't handle transforms properly
-
-					// If an icon image has been specified, return that
-					// If the content is a Window and it has an icon, use that
-					return m_icon ?? (Owner as Window)?.Icon;
-				}
-				set
-				{
-					if (m_icon == value) return;
-					m_icon = value;
-					InvalidateTabStrip();
+					var mask = EDockMask.None;
+					foreach (var c in Descendants.Where(x => x.Item != null))
+						mask |= (EDockMask)(1 << (int)c.DockSite);
+					return mask;
 				}
 			}
-			private ImageSource m_icon;
-#if false
-			/// <summary>The colour to use for this tab's text. If null, defaults to the colour set of the containing TabStrip</summary>
-			public OptionData.ColourSet TabColoursActive
+
+			/// <summary>True if the tree contains no content</summary>
+			public bool Empty
 			{
-				get { return m_tab_colours_active; }
-				set
+				get { return !AllContent.Any(); }
+			}
+
+			/// <summary>Enumerates the branches in this sub-tree (breadth first, order = order of EDockSite)</summary>
+			private IEnumerable<Branch> AllBranches
+			{
+				get
 				{
-					if (m_tab_colours_active == value) return;
-					m_tab_colours_active = value;
-					InvalidateTab();
-				}
-			}
-			private OptionData.ColourSet m_tab_colours_active;
-
-			/// <summary>The colour to use for this tab's text. If null, defaults to the colour set of the containing TabStrip</summary>
-			public OptionData.ColourSet TabColoursInactive
-			{
-				get { return m_tab_colours_inactive; }
-				set
-				{
-					if (m_tab_colours_inactive == value) return;
-					m_tab_colours_inactive = value;
-					InvalidateTab();
-				}
-			}
-			private OptionData.ColourSet m_tab_colours_inactive;
-
-			/// <summary>The font to use for the active tab. If null, defaults to the fonts of the containing TabStrip</summary>
-			public Font TabFontActive
-			{
-				get { return m_tab_font_active; }
-				set
-				{
-					if (m_tab_font_active == value) return;
-
-					// Changing the font can effect the size of the tab, and therefore
-					// the layout of the whole tab strip
-					m_tab_font_active = value;
-					InvalidateTabStrip();
-				}
-			}
-			private Font m_tab_font_active;
-
-			/// <summary>The font used on the inactive tabs. If null, defaults to the fonts of the containing TabStrip</summary>
-			public Font TabFontInactive
-			{
-				get { return m_tab_font_inactive; }
-				set
-				{
-					if (m_tab_font_inactive == value) return;
-
-					// Changing the font can effect the size of the tab, and therefore
-					// the layout of the whole tab strip
-					m_tab_font_inactive = value;
-					InvalidateTabStrip();
-				}
-			}
-			private Font m_tab_font_inactive;
-#endif
-			/// <summary>A tool tip to display when the mouse hovers over the tab for this content</summary>
-			public string TabToolTip
-			{
-				get { return m_impl_tab_tt ?? TabText; }
-				set { m_impl_tab_tt = value; }
-			}
-			private string m_impl_tab_tt;
-
-			/// <summary>A context menu to display when the tab for this content is right clicked</summary>
-			public ContextMenu TabCMenu
-			{
-				get { return m_impl_tab_cmenu; }
-				set { m_impl_tab_cmenu = value; }
-			}
-			private ContextMenu m_impl_tab_cmenu;
-
-			/// <summary>Creates a default context menu for the tab. Use: TabCMenu = DefaultTabCMenu()</summary>
-			public ContextMenu DefaultTabCMenu()
-			{
-				var cmenu = new ContextMenu();
-				{
-					var opt = cmenu.Items.Add2(new MenuItem { Header = "Close" });
-					opt.Click += (s, a) =>
+					var queue = new Queue<Branch>();
+					for (queue.Enqueue(this); queue.Count != 0;)
 					{
-						DockPane = null;
-						Closed?.Invoke(this, EventArgs.Empty);
-					};
+						var b = queue.Dequeue();
+						foreach (var c in b.Descendants.Select(x => x.Item as Branch).NotNull())
+							queue.Enqueue(c);
+
+						yield return b;
+					}
 				}
-				return cmenu;
 			}
 
-			/// <summary>True if this content is the active content within the owning dock container</summary>
-			public bool IsActiveContent
+			/// <summary>Enumerate the panes (leaves) in this sub-tree (breadth first, order = order of EDockSite)</summary>
+			public IEnumerable<DockPane> AllPanes
 			{
-				get { return DockContainer?.ActiveContent == this; }
-				set
+				get
 				{
-					if (value && DockContainer != null)
-						DockContainer.ActiveContent = this;
+					foreach (var b in AllBranches)
+						foreach (var c in b.Descendants.Select(x => x.Item as DockPane).NotNull())
+							yield return c;
 				}
 			}
 
-			/// <summary>True if this content is the active content within its containing dock pane</summary>
-			public bool IsActiveContentInPane
+			/// <summary>Enumerate the dockables in this sub-tree (breadth first, order = order of EDockSite)</summary>
+			public IEnumerable<DockControl> AllContent
 			{
-				get { return DockPane?.ContentView.CurrentItem == this; }
-				set
+				get
 				{
-					if (!value || DockPane == null) return;
-					DockPane.ContentView.MoveCurrentTo(this);
+					foreach (var p in AllPanes)
+						foreach (var c in p.Content)
+							yield return c;
 				}
 			}
 
-			/// <summary>Save/Restore the control (possibly child control) that had input focus when the content was last active</summary>
-			internal void SaveFocus()
+			/// <summary>Get/Set the size for a dock site in this branch (in pixels)</summary>
+			public double ChildSize(EDockSite location)
 			{
-				m_kb_focus = Owner.IsKeyboardFocusWithin ? Keyboard.FocusedElement : null;
+				return DockSizes.GetSize(location, DisplayRectangle, DockedMask);
 			}
-			internal void RestoreFocus()
+			public void ChildSize(EDockSite location, int value)
 			{
-				// Only restore focus if 'm_kb_focus' is still a child of 'Owner'
-				if (m_kb_focus is DependencyObject dep && Owner.IsVisualDescendant(dep))
-					Keyboard.Focus(m_kb_focus);
-
-				m_kb_focus = null;
+				DockSizes.SetSize(location, DisplayRectangle, value);
 			}
-			private IInputElement m_kb_focus;
 
-			/// <summary>Save to XML</summary>
+			/// <summary>Get the bounds of a dock site in parent (DockContainer or containing Branch) space</summary>
+			public Rect ChildBounds(EDockSite location)
+			{
+				var display_rect = new Rect(RenderSize);
+				display_rect.Width = Math.Max(0, display_rect.Width);
+				display_rect.Height = Math.Max(0, display_rect.Height);
+				return DockContainer.DockSiteBounds(location, display_rect, DockedMask, DockSizes);
+			}
+
+			/// <summary>Return the child element relative to this sub-tree</summary>
+			internal UIElement ChildAt(EDockSite[] address)
+			{
+				var c = (UIElement)this;
+				foreach (var ds in address)
+				{
+					if (c is Branch b)
+						c = (UIElement)b.Descendants[ds].Item;
+					else
+						throw new Exception($"Invalid child address");
+				}
+				return c;
+			}
+
+			/// <summary>Return the area that the control should cover when rendered</summary>
+			private Rect DisplayRectangle
+			{
+				get { return new Rect(RenderSize); }
+			}
+
+			/// <summary>Raised whenever a child (pane or branch) is added to or removed from this sub tree</summary>
+			public event EventHandler<TreeChangedEventArgs> TreeChanged;
+			private void RaiseTreeChanged(TreeChangedEventArgs args)
+			{
+				TreeChanged?.Invoke(this, args);
+				ParentBranch?.OnTreeChanged(args);
+			}
+			internal void OnTreeChanged(TreeChangedEventArgs args)
+			{
+				RaiseTreeChanged(args);
+			}
+
+			/// <summary>Record the layout of the tree</summary>
 			public XElement ToXml(XElement node)
 			{
-				// Allow clients to add extra data that will be provided in LoadLayout
-				var user = new XElement(XmlTag.UserData);
-				SavingLayout?.Invoke(this, new DockContainerSavingLayoutEventArgs(user));
+				// Record the pane sizes
+				node.Add2(XmlTag.DockSizes, DockSizes, false);
 
-				// Add the name to identify the content
-				node.Add2(XmlTag.Name, PersistName, false);
-				node.Add2(XmlTag.Type, Owner.GetType().FullName, false);
-				CurrentDockLocation.ToXml(node);
-				node.Add2(user);
-
+				// Recursively add the sub trees
+				foreach (var ch in Descendants)
+				{
+					if (ch.Item is DockPane p)
+					{
+						var n = node.Add2(XmlTag.Pane, p, false);
+						n.SetAttributeValue(XmlTag.Location, ch.DockSite);
+					}
+					if (ch.Item is Branch b)
+					{
+						var n = node.Add2(XmlTag.Tree, b, false);
+						n.SetAttributeValue(XmlTag.Location, ch.DockSite);
+					}
+				}
 				return node;
 			}
 
-			/// <summary>Invalidate the tab that represents this content</summary>
-			public void InvalidateTab()
+			/// <summary>Apply layout to this tree</summary>
+			public void ApplyState(XElement node)
 			{
-				if (DockPane == null) return;
-//				var tab = DockPane.TabStripCtrl.VisibleTabs.FirstOrDefault(x => x.Content == this);
-//				if (tab != null)
-//					DockPane.TabStripCtrl.Invalidate(tab.DisplayBounds);
-//				else
-//					InvalidateTabStrip();
+				foreach (var child_node in node.Elements())
+				{
+					switch (child_node.Name.LocalName)
+					{
+					case XmlTag.DockSizes:
+						{
+							var dock_sizes = child_node.As<DockSizeData>();
+							DockSizes.Left = dock_sizes.Left;
+							DockSizes.Top = dock_sizes.Top;
+							DockSizes.Right = dock_sizes.Right;
+							DockSizes.Bottom = dock_sizes.Bottom;
+							break;
+						}
+					case XmlTag.Tree:
+						{
+							var ds = Enum<EDockSite>.Parse(child_node.Attribute(XmlTag.Location).Value);
+							if (Descendants[ds].Item is Branch b)
+								b.ApplyState(child_node);
+							break;
+						}
+					case XmlTag.Pane:
+						{
+							var ds = Enum<EDockSite>.Parse(child_node.Attribute(XmlTag.Location).Value);
+							if (Descendants[ds].Item is DockPane p)
+								p.ApplyState(child_node);
+							break;
+						}
+					}
+				}
 			}
 
-			/// <summary>Invalidate the tab strip that contains the tab for this content</summary>
-			public void InvalidateTabStrip()
+			/// <summary>Output the tree structure as a string (Recursion method, call 'DockContainer.DumpTree()')</summary>
+			public void DumpTree(StringBuilder sb, int indent, string prefix)
 			{
-				if (DockPane == null) return;
-//				DockPane.TabStripCtrl.Invalidate();
+				sb.Append(' ', indent).Append(prefix).Append("Branch: ").AppendLine();
+				sb.Append(' ', indent).Append("{").AppendLine();
+				foreach (var c in Descendants)
+				{
+					if (c.Item is Branch b) b.DumpTree(sb, indent + 4, $"{c.DockSite,-6} = ");
+					else if (c.Item is DockPane p) p.DumpTree(sb, indent + 4, $"{c.DockSite,-6} = ");
+					else sb.Append(' ', indent + 4).Append($"{c.DockSite,-6} = <null>").AppendLine();
+				}
+				sb.Append(' ', indent).Append("}").AppendLine();
 			}
 
-			/// <summary>Invalidate the title that represents this content</summary>
-			public void InvalidateTitle()
+			/// <summary>Self consistency check (for debugging)</summary>
+			public bool ValidateTree()
 			{
-				if (DockPane == null) return;
-//				DockPane.TitleCtrl.Invalidate();
+				try
+				{
+					ValidateTree(this);
+					return true;
+				}
+				catch (Exception ex)
+				{
+					Debug.WriteLine(ex.MessageFull());
+					return false;
+				}
+
+				void ValidateTree(Branch branch)
+				{
+					if (branch.DockContainer == null)
+						throw new ObjectDisposedException("This branch has been disposed");
+
+					// Check each child
+					foreach (var child in branch.Descendants)
+					{
+						if (child.Item == null)
+							continue;
+
+						if (branch.Descendants[child.DockSite] != child)
+							throw new Exception("This child is not in it's appropriate child slot");
+
+						if (branch.Descendants.Count(x => x == child) != 1)
+							throw new Exception("This child is in more than one slot");
+
+						if (branch.Descendants.Count(x => x.Item == child.Item) != 1)
+							throw new Exception("This child's control is in more than one slot");
+
+						// Recursive check children
+						if (child.Item is Branch b)
+							ValidateTree(b);
+						if (child.Item is DockPane p)
+							p.ValidateTree();
+					}
+				}
 			}
 
-			/// <summary></summary>
-			public override string ToString()
+			/// <summary>String description of the branch for debugging</summary>
+			public string DumpDesc()
 			{
-				if (TabText.HasValue()) return TabText;
-				if (PersistName.HasValue()) return PersistName;
-				if (Owner is FrameworkElement fe && fe.Name.HasValue()) return fe.Name;
-				return Owner.GetType().Name;
+				var lvl = 0;
+				for (var p = this; p != null && p.Parent is Branch; p = (Branch)p.Parent) ++lvl;
+				var c = Descendants[EDockSite.Centre];
+				var l = Descendants[EDockSite.Left];
+				var t = Descendants[EDockSite.Top];
+				var r = Descendants[EDockSite.Right];
+				var b = Descendants[EDockSite.Bottom];
+				return
+					$"Branch Lvl={(lvl == 0 ? TreeHost.GetType()?.Name : lvl.ToString())}  " +
+					$"C=[{(c.Item as DockPane)?.DumpDesc() ?? (c.Item is Branch ? "Branch" : "null")}] " +
+					$"L=[{(l.Item as DockPane)?.DumpDesc() ?? (l.Item is Branch ? "Branch" : "null")}] " +
+					$"T=[{(t.Item as DockPane)?.DumpDesc() ?? (t.Item is Branch ? "Branch" : "null")}] " +
+					$"R=[{(r.Item as DockPane)?.DumpDesc() ?? (r.Item is Branch ? "Branch" : "null")}] " +
+					$"B=[{(b.Item as DockPane)?.DumpDesc() ?? (b.Item is Branch ? "Branch" : "null")}]";
 			}
 		}
 
@@ -3361,36 +3381,39 @@ namespace Rylogic.Gui2
 		[DebuggerDisplay("AutoHidePanel {DockSite}")]
 		public class AutoHidePanel : Grid, ITreeHost, IDisposable
 		{
-			// An auto hide panel looks like a tab strip joined to a panel that can pop out.
-			// The strip part of the control is visible when 'StripSize != 0' and other sibling
-			// controls should be aligned around it. When popped out, the panel part of the control
-			// renders over the other sibling controls.
-			// - Each tab is a dockable item
-			// - 'Root' only uses the centre dock site
-			// - Clicking a tab makes that dockable the active content
-			// - The tab strip is hidden in the active pane
-			// - Click pin on the pane only pins the active content
+			// An auto hide panel is a panel that pops out from the edges of the dock container.
+			// It is basically a root branch with a single centre dock pane. The tab strip from the
+			// dock pane is used for the auto-hide tab strip displayed around the edges of the control.
+			// Other behaviours:
+			//  - Click pin on the pane only pins the active content
+			//  - Clicking a tab makes that dockable the active content
+			//  - 'Root' only uses the centre dock site
 
 			public AutoHidePanel(DockContainer dc, EDockSite ds)
 			{
 				DockContainer = dc;
+				DockSite = ds;
 				PoppedOut = false;
-				var splitter_size = 5.0;
+				Visibility = Visibility.Collapsed;
 
-				switch (ds)
+				// Create a grid to container the root branch and the splitter
+				var splitter_size = 5.0;
+				switch (DockSite)
 				{
 				default: throw new Exception($"Auto hide panels cannot be docked to {ds}");
 				case EDockSite.Left:
 				case EDockSite.Right:
 					{
 						// Vertical auto hide panel
-						ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0, GridUnitType.Star) });
+						var gut0 = DockSite == EDockSite.Left ? GridUnitType.Pixel : GridUnitType.Star;
+						var gut2 = DockSite == EDockSite.Left ? GridUnitType.Star : GridUnitType.Pixel;
+						ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0, gut0), MinWidth = 10 });
 						ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0, GridUnitType.Auto) });
-						ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0, GridUnitType.Star) });
+						ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0, gut2), MinWidth = 10 });
 
 						// Add the root branch to the appropriate column
 						Root = Children.Add2(new Branch(dc, DockSizeData.Quarters));
-						Grid.SetColumn(Root, ds == EDockSite.Left ? 0 : 2);
+						Grid.SetColumn(Root, DockSite == EDockSite.Left ? 0 : 2);
 
 						// Add the splitter to the centre column
 						var splitter = Children.Add2(new GridSplitter { Width = splitter_size, HorizontalAlignment = HorizontalAlignment.Stretch });
@@ -3400,13 +3423,16 @@ namespace Rylogic.Gui2
 				case EDockSite.Top:
 				case EDockSite.Bottom:
 					{
-						RowDefinitions.Add(new RowDefinition { Height = new GridLength(0, GridUnitType.Star) });
+						// Horizontal auto hide panel
+						var gut0 = DockSite == EDockSite.Top ? GridUnitType.Pixel : GridUnitType.Star;
+						var gut2 = DockSite == EDockSite.Bottom ? GridUnitType.Star : GridUnitType.Pixel;
+						RowDefinitions.Add(new RowDefinition { Height = new GridLength(0, gut0), MinHeight = 10 });
 						RowDefinitions.Add(new RowDefinition { Height = new GridLength(0, GridUnitType.Auto) });
-						RowDefinitions.Add(new RowDefinition { Height = new GridLength(0, GridUnitType.Star) });
+						RowDefinitions.Add(new RowDefinition { Height = new GridLength(0, gut2), MinHeight = 10 });
 
 						// Add the root branch to the appropriate row
 						Root = Children.Add2(new Branch(dc, DockSizeData.Quarters));
-						Grid.SetRow(Root, ds == EDockSite.Top ? 0 : 2);
+						Grid.SetRow(Root, DockSite == EDockSite.Top ? 0 : 2);
 
 						// Add the splitter to the centre row
 						var splitter = Children.Add2(new GridSplitter { Height = splitter_size, VerticalAlignment = VerticalAlignment.Stretch });
@@ -3414,33 +3440,56 @@ namespace Rylogic.Gui2
 						break;
 					}
 				}
+
+				// Create an empty dock pane in the root branch
+				var pane = Root.DockPane(EDockSite.Centre);
+
+				// Remove the tab strip from the dock pane children so we can use
+				// it as the auto hide tab strip for this auto hide panel
+				pane.Children.Remove(pane.TabStrip);
+				pane.TabStrip.StripLocation = ds;
 			}
 			public virtual void Dispose()
 			{
 				Root = null;
 				DockContainer = null;
 			}
-			protected override void OnVisualParentChanged(DependencyObject oldParent)
-			{
-				base.OnVisualParentChanged(oldParent);
-				Root.Width = 0.25 * (Parent as FrameworkElement)?.Width ?? 50.0;
-			}
+			//protected override void OnVisualParentChanged(DependencyObject oldParent)
+			//{
+			//	base.OnVisualParentChanged(oldParent);
+			//	switch (DockSite)
+			//	{
+			//	default: throw new Exception($"Auto hide panels cannot be docked to {DockSite}");
+			//	case EDockSite.Left:
+			//	case EDockSite.Right:
+			//		{
+			//			Root.Width = 0.25 * (Parent as FrameworkElement)?.ActualWidth ?? 50.0;
+			//			break;
+			//		}
+			//	case EDockSite.Top:
+			//	case EDockSite.Bottom:
+			//		{
+			//			Root.Height = 0.25 * (Parent as FrameworkElement)?.ActualHeight ?? 50.0;
+			//			break;
+			//		}
+			//	}
+			//}
 
 			/// <summary>The dock container that owns this auto hide window</summary>
 			public DockContainer DockContainer
 			{
-				get { return m_impl_dc; }
+				get { return m_dc; }
 				private set
 				{
-					if (m_impl_dc == value) return;
-					if (m_impl_dc != null)
+					if (m_dc == value) return;
+					if (m_dc != null)
 					{
-						m_impl_dc.ActiveContentChanged -= HandleActiveContentChanged;
+						m_dc.ActiveContentChanged -= HandleActiveContentChanged;
 					}
-					m_impl_dc = value;
-					if (m_impl_dc != null)
+					m_dc = value;
+					if (m_dc != null)
 					{
-						m_impl_dc.ActiveContentChanged += HandleActiveContentChanged;
+						m_dc.ActiveContentChanged += HandleActiveContentChanged;
 					}
 
 					/// <summary>Handler for when the active content changes</summary>
@@ -3452,11 +3501,11 @@ namespace Rylogic.Gui2
 					}
 				}
 			}
-			private DockContainer m_impl_dc;
 			DockContainer ITreeHost.DockContainer
 			{
 				get { return DockContainer; }
 			}
+			private DockContainer m_dc;
 
 			/// <summary>The root level branch of the tree in this auto hide window</summary>
 			internal Branch Root
@@ -3477,26 +3526,27 @@ namespace Rylogic.Gui2
 						m_root.TreeChanged += HandleTreeChanged;
 					}
 
-					/// <summary>Handler for when panes are added/removed from the tree</summary>
+					/// <summary>Handler for when the tree in this auto hide panel changes</summary>
 					void HandleTreeChanged(object sender, TreeChangedEventArgs args)
 					{
 						switch (args.Action)
 						{
 						case TreeChangedEventArgs.EAction.ActiveContent:
 							{
-								// Quirk: when the first content is added to the auto hide panel, the 'ActiveContent' event
-								// occurs before the 'Added' event. This is because the binding list, that the dockable is added
-								// to, updates its current position before raising the ItemAdded event.
-								//									InvalidateArrange();
+								if (args.DockPane == DockPane)
+									PoppedOut = true;
+
 								break;
 							}
 						case TreeChangedEventArgs.EAction.Added:
 							{
-								// When the first pane is added to the window, update the layout of the dock container
-								// because the tab strip for this auto hide panel is now visible
-								//									InvalidateArrange();
+								// When the first content is added, 
 								if (Root.AllContent.CountAtMost(2) == 1)
 								{
+									// Ensure the tab strip is visible
+									TabStrip.Visibility = Visibility.Visible;
+
+									// Make the first pane active
 									ActivePane = Root.AllPanes.First();
 								}
 
@@ -3508,11 +3558,10 @@ namespace Rylogic.Gui2
 							}
 						case TreeChangedEventArgs.EAction.Removed:
 							{
-								// When the last content is removed, update the layout of the dock container
-								// because the tab strip for this auto hide panel is now hidden
-								//									InvalidateArrange();
+								// When the last content is removed, hide the panel and the tab strip
 								if (!Root.AllContent.Any())
 								{
+									TabStrip.Visibility = Visibility.Collapsed;
 									PoppedOut = false;
 								}
 								break;
@@ -3521,18 +3570,26 @@ namespace Rylogic.Gui2
 					}
 				}
 			}
-			private Branch m_root;
 			Branch ITreeHost.Root
 			{
 				get { return Root; }
 			}
+			private Branch m_root;
+
+			/// <summary>Return the single dock pane for the auto-hide panel</summary>
+			private DockPane DockPane
+			{
+				get { return Root.DockPane(EDockSite.Centre); }
+			}
+
+			/// <summary>The tab strip associated with this auto hide panel</summary>
+			public TabStrip TabStrip
+			{
+				get { return Root.DockPane(EDockSite.Centre).TabStrip; }
+			}
 
 			/// <summary>The site that this auto hide panel hides to</summary>
-			public EDockSite DockSite
-			{
-				//				get { return StripLocation; }
-				get; set;
-			}
+			public EDockSite DockSite { get; private set; }
 
 			/// <summary>
 			/// Get/Set the active content on this floating window. This will cause the pane that the content is on to also become active.
@@ -3550,12 +3607,6 @@ namespace Rylogic.Gui2
 				set { DockContainer.ActivePane = value; }
 			}
 
-			//			/// <summary>Get the content that we're showing tabs for</summary>
-			//			public override IEnumerable<DockControl> Content
-			//			{
-			//				get { return Root.AllContent; }
-			//			}
-
 			/// <summary>Get/Set the popped out state of the auto hide panel</summary>
 			public bool PoppedOut
 			{
@@ -3565,8 +3616,8 @@ namespace Rylogic.Gui2
 					if (m_popped_out == value) return;
 					m_popped_out = value;
 
-					// Force a layout of the dock container
-					((DockContainer)Parent)?.InvalidateArrange();
+					// Show/Hide the panel
+					Visibility = m_popped_out ? Visibility.Visible : Visibility.Collapsed;
 
 					// When no longer popped out, make the last active content active again
 					if (!m_popped_out)
@@ -3588,121 +3639,6 @@ namespace Rylogic.Gui2
 				return Add(dockable, int.MaxValue);
 			}
 
-			//			/// <summary>The size of the tab strip part of this auto hide panel</summary>
-			//			public override int StripSize
-			//			{
-			//				get { return Root.AllContent.Any() ? base.StripSize : 0; }
-			//				set { base.StripSize = value; }
-			//			}
-
-			/// <summary>Remove area due to the other auto hide strips</summary>
-			private Rect TrimArea(Rect rect)
-			{
-				var r = rect;
-				foreach (var p in DockContainer.AutoHidePanels.Where(x => x != this))
-				{
-					//					switch (p.DockSite)
-					//					{
-					//					case EDockSite.Left: r.Left += p.StripSize; break;
-					//					case EDockSite.Right: r.Right -= p.StripSize; break;
-					//					case EDockSite.Top: r.Top += p.StripSize; break;
-					//					case EDockSite.Bottom: r.Bottom -= p.StripSize; break;
-					//					}
-				}
-				return r;
-			}
-#if false
-			/// <summary>
-			/// Returns the bounds of this auto hide control given the available display area.
-			/// Note however, that the parent control should align other controls assuming the size of this
-			/// control is 'StripHeight', the panel part of the control draws over other controls.</summary>
-			public override Rect CalcBounds(Rect display_area)
-			{
-				var size = StripSize + (PoppedOut ? PoppedOutSizePx : 0);
-				if (size == 0)
-					return Rect.Empty;
-
-				// Remove area due to the other auto hide strips
-				var r = TrimArea(display_area);
-				switch (DockSite)
-				{
-				case EDockSite.Left: r.Width = size; break;
-				case EDockSite.Right: r.X = r.Right - size; break;
-				case EDockSite.Top: r.Height = size; break;
-				case EDockSite.Bottom: r.Y = r.Bottom - size; break;
-				}
-
-				return r;
-			}
-#endif
-#if false
-			/// <summary>Layout the panel</summary>
-			protected override void OnLayout(LayoutEventArgs levent)
-			{
-				// Remember the Splitter is parented to this AutoHidePanel even
-				// thought it's Area is set to the area of the DockContainer.
-				var rect = DisplayRectangle;
-				if (rect.Area() > 0 && Root != null)
-				{
-					using (this.SuspendLayout(false))
-					{
-						// Calculate the area available for the main tree in the dock container.
-						// Can't use 'DockContainer.Root.Bounds' yet because it isn't set until
-						// after the auto hide panels have been laid out.
-						var prect = new RectangleRef(TrimArea(DockContainer.DisplayRectangle));
-
-						// Set the visibility of the child controls.
-						// All content in auto hide panels should be in the centre dock site.
-						// We don't need the pane tab strip because the auto hide tab strip handles selecting content
-						Root.Visible = Split.Visible = PoppedOut;
-						if (Root.Child[EDockSite.Centre].DockPane != null)
-							Root.Child[EDockSite.Centre].DockPane.TabStripCtrl.Visible = false;
-
-						// Set the area that the splitter can move within and the size of the displayed Pane
-						if (PoppedOut)
-						{
-							// Note: the area is the area of the dock container, but in Parent space (where Parent is this auto hide panel)
-							switch (StripLocation)
-							{
-							case EDockSite.Left:
-								{
-									var dc_area = Rectangle.FromLTRB(prect.Left + StripSize, prect.Top, prect.Right, prect.Bottom);
-									Split.Area = RectangleToClient(DockContainer.RectangleToScreen(dc_area));
-									Split.Position = rect.Width - StripSize - Split.BarWidth / 2;
-									Root.Bounds = Split.BoundsLT;
-									break;
-								}
-							case EDockSite.Right:
-								{
-									var dc_area = Rectangle.FromLTRB(prect.Left, prect.Top, prect.Right - StripSize, prect.Bottom);
-									Split.Area = RectangleToClient(DockContainer.RectangleToScreen(dc_area));
-									Split.Position = Split.Area.Width - (rect.Width - StripSize - Split.BarWidth / 2);
-									Root.Bounds = Split.BoundsRB;
-									break;
-								}
-							case EDockSite.Top:
-								{
-									var dc_area = Rectangle.FromLTRB(prect.Left, prect.Top + StripSize, prect.Right, prect.Bottom);
-									Split.Area = RectangleToClient(DockContainer.RectangleToScreen(dc_area));
-									Split.Position = rect.Height - StripSize - Split.BarWidth / 2;
-									Root.Bounds = Split.BoundsLT;
-									break;
-								}
-							case EDockSite.Bottom:
-								{
-									var dc_area = Rectangle.FromLTRB(prect.Left, prect.Top, prect.Right, prect.Bottom - StripSize);
-									Split.Area = RectangleToClient(DockContainer.RectangleToScreen(dc_area));
-									Split.Position = Split.Area.Height - (rect.Height - StripSize - Split.BarWidth / 2);
-									Root.Bounds = Split.BoundsRB;
-									break;
-								}
-							}
-						}
-					}
-				}
-				base.OnLayout(levent);
-			}
-#endif
 #if false
 			/// <summary>Handle mouse clicks on a tab</summary>
 			protected override void OnTabClick(TabClickEventArgs e)
@@ -3718,18 +3654,10 @@ namespace Rylogic.Gui2
 				}
 			}
 #endif
-
-#if false
-			/// <summary>Handle double click on a tab</summary>
-			protected override void OnTabDblClick(TabClickEventArgs e)
-			{
-				// Do nothing for double clicks on auto hide panel tabs
-			}
-#endif
 		}
 
 		/// <summary>Handles all docking operations</summary>
-		private class DragHandler : Window, IDisposable
+		internal class DragHandler : Window, IDisposable
 		{
 			// Notes:
 			// This works by displaying an invisible modal window while the drag operation is in process.
@@ -4189,7 +4117,7 @@ namespace Rylogic.Gui2
 						// If there is one more dock site in the address, then the drop target is a child area within the content area of 'pane'.
 						if (ds.MoveNext())
 						{
-							var rect = DockSiteBounds((EDockSite)ds.Current, pane.Centre.RenderArea(pane), (EDockMask)(1 << (int)ds.Current), DockSizeData.Halves);
+							var rect = DockContainer.DockSiteBounds((EDockSite)ds.Current, pane.Centre.RenderArea(pane), (EDockMask)(1 << (int)ds.Current), DockSizeData.Halves);
 							bounds = pane.RectToScreen(pane.RenderArea());
 							clip = new RectangleGeometry(rect);
 						}
@@ -4230,7 +4158,7 @@ namespace Rylogic.Gui2
 						var docksite = DropAddress.Back();
 
 						var area = branch.DockPane(docksite).RenderArea();
-						var rect = DockSiteBounds(docksite, area, branch.DockedMask | (EDockMask)(1 << (int)docksite), branch.DockSizes);
+						var rect = DockContainer.DockSiteBounds(docksite, area, branch.DockedMask | (EDockMask)(1 << (int)docksite), branch.DockSizes);
 						bounds = branch.RectToScreen(rect);
 						clip = new RectangleGeometry(rect);
 					}
@@ -4769,9 +4697,9 @@ namespace Rylogic.Gui2
 				var existsB = docked_mask.HasFlag(EDockMask.Bottom);
 
 				// Get the size of each area
-				var l = existsL ? (Left   >= 1f ? Left   : rect.Width * Left   ) : 0.0;
-				var r = existsR ? (Right  >= 1f ? Right  : rect.Width * Right  ) : 0.0;
-				var t = existsT ? (Top    >= 1f ? Top    : rect.Height * Top   ) : 0.0;
+				var l = existsL ? (Left >= 1f ? Left : rect.Width * Left) : 0.0;
+				var r = existsR ? (Right >= 1f ? Right : rect.Width * Right) : 0.0;
+				var t = existsT ? (Top >= 1f ? Top : rect.Height * Top) : 0.0;
 				var b = existsB ? (Bottom >= 1f ? Bottom : rect.Height * Bottom) : 0.0;
 
 				// If opposite zones overlap, reduce the sizes
@@ -4819,9 +4747,9 @@ namespace Rylogic.Gui2
 				{
 				default: throw new Exception($"No size value for dock zone {location}");
 				case EDockSite.Centre: break;
-				case EDockSite.Left:   Left   = value / (Left   >= 1 ? 1.0 : rect.Width); break;
-				case EDockSite.Right:  Right  = value / (Right  >= 1 ? 1.0 : rect.Width); break;
-				case EDockSite.Top:    Top    = value / (Top    >= 1 ? 1.0 : rect.Height); break;
+				case EDockSite.Left: Left = value / (Left >= 1 ? 1.0 : rect.Width); break;
+				case EDockSite.Right: Right = value / (Right >= 1 ? 1.0 : rect.Width); break;
+				case EDockSite.Top: Top = value / (Top >= 1 ? 1.0 : rect.Height); break;
 				case EDockSite.Bottom: Bottom = value / (Bottom >= 1 ? 1.0 : rect.Height); break;
 				}
 			}
@@ -4835,6 +4763,9 @@ namespace Rylogic.Gui2
 		{
 			private OptionData m_opts;
 			private TextBlock m_title;
+			private PinButton m_pin;
+			private CloseButton m_close;
+
 			public TitleBar(DockPane owner, OptionData opts)
 			{
 				m_opts = opts;
@@ -4846,16 +4777,16 @@ namespace Rylogic.Gui2
 				ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0, GridUnitType.Auto) });
 
 				// Add the Title text
-				m_title = Children.Add2(new TextBlock { Text = "Title", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(3,0,0,0) });
+				m_title = Children.Add2(new TextBlock { Text = "Title", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(3, 0, 0, 0) });
 				Grid.SetColumn(m_title, 0);
 
 				// Add the pin button
-				var pin = Children.Add2(new PinButton(DockPane) { Visibility = owner.DockSite == EDockSite.Centre ? Visibility.Collapsed : Visibility.Visible });
-				Grid.SetColumn(pin, 1);
+				m_pin = Children.Add2(new PinButton(DockPane));
+				Grid.SetColumn(m_pin, 1);
 
 				// Add the close button
-				var close = Children.Add2(new CloseButton(DockPane));
-				Grid.SetColumn(close, 2);
+				m_close = Children.Add2(new CloseButton(DockPane));
+				Grid.SetColumn(m_close, 2);
 			}
 			protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
 			{
@@ -4879,7 +4810,7 @@ namespace Rylogic.Gui2
 				{
 					m_dragging |= Point.Subtract(m_mouse_down_at.Value, e.GetPosition(this)).Length > m_opts.DragThresholdInPixels;
 					if (m_dragging)
-						DragBegin(DockPane, PointToScreen(e.GetPosition(this)));
+						DockContainer.DragBegin(DockPane, PointToScreen(e.GetPosition(this)));
 				}
 			}
 			protected override void OnPreviewMouseUp(MouseButtonEventArgs e)
@@ -4900,6 +4831,20 @@ namespace Rylogic.Gui2
 				get { return m_title.Text; }
 				set { m_title.Text = value ?? string.Empty; }
 			}
+
+			/// <summary>Show/Hide the pin button</summary>
+			public bool ShowPin
+			{
+				get { return m_pin.Visibility == Visibility.Visible; }
+				set { m_pin.Visibility = value ? Visibility.Visible : Visibility.Collapsed; }
+			}
+
+			/// <summary>Show/Hide the close button</summary>
+			public bool ShowClose
+			{
+				get { return m_close.Visibility == Visibility.Visible; }
+				set { m_close.Visibility = value ? Visibility.Visible : Visibility.Collapsed; }
+			}
 		}
 
 		/// <summary>A button for moving a dock pane to/from an auto hide panel</summary>
@@ -4907,30 +4852,23 @@ namespace Rylogic.Gui2
 		{
 			public PinButton(DockPane pane)
 			{
-				Padding = new Thickness(5, 0, 5, 0);
-				Margin = new Thickness(3);
-				BorderThickness = new Thickness(0);
 				DockPane = pane;
-				Content = new Image { Source = PinImage };
+				Content = IsPinned ? "P" : "d";
+			}
+			protected override void OnClick()
+			{
+				base.OnClick();
+				IsPinned = !IsPinned;
 			}
 
 			/// <summary>The dock pane to be pinned/unpinned</summary>
-			public DockPane DockPane
-			{
-				get { return m_pane; }
-				private set
-				{
-					if (m_pane == value) return;
-					//if (m_pane != null)
-					m_pane = value;
-				}
-			}
-			private DockPane m_pane;
+			public DockPane DockPane { get; private set; }
 
-			/// <summary>Return the image resource for the current pinned state</summary>
-			private ImageSource PinImage
+			/// <summary>True when displaying the 'pinned' state</summary>
+			public bool IsPinned
 			{
-				get { return DockPane.IsAutoHide ? (ImageSource)Resources["dock_unpinned"] : (ImageSource)Resources["dock_pinned"]; }
+				get { return !DockPane.IsAutoHide; }
+				set { DockPane.IsAutoHide = !value; }
 			}
 		}
 
@@ -4939,17 +4877,17 @@ namespace Rylogic.Gui2
 		{
 			public CloseButton(DockPane pane)
 			{
-				Padding = new Thickness(5, 0, 5, 0);
-				Margin = new Thickness(3);
-				BorderThickness = new Thickness(0);
-				Content = new Image { Source = CloseImage };
+				DockPane = pane;
+				Content = "X";
+			}
+			protected override void OnClick()
+			{
+				base.OnClick();
 			}
 
-			/// <summary>Return the image resource for the close button</summary>
-			private ImageSource CloseImage
-			{
-				get { return (ImageSource)Resources["dock_close"]; }
-			}
+			/// <summary>The dock pane to be pinned/unpinned</summary>
+			public DockPane DockPane { get; private set; }
+
 		}
 
 		/// <summary>A strip of tab buttons</summary>
@@ -4963,31 +4901,12 @@ namespace Rylogic.Gui2
 
 			public TabStrip(EDockSite ds, OptionData opts)
 			{
+				// All tab strips are horizontal with a layout transform for vertical strips
 				m_opts = opts;
 				m_tt = new ToolTip { StaysOpen = true, HasDropShadow = true };
+				Orientation = Orientation.Horizontal;
 				Buttons = new ObservableCollection<TabButton>();
 				StripLocation = ds;
-			}
-			protected override void OnVisualParentChanged(DependencyObject oldParent)
-			{
-				base.OnVisualParentChanged(oldParent);
-
-				// Reapply the strip location when the parent changes
-				var ds = StripLocation;
-				StripLocation = EDockSite.None;
-				StripLocation = ds;
-			}
-			protected override void OnVisualChildrenChanged(DependencyObject visualAdded, DependencyObject visualRemoved)
-			{
-				// Apply a rotation to child elements in vertical strips
-				if (Orientation == Orientation.Vertical && visualAdded is UIElement elem)
-				{
-					elem.RenderTransform =
-						StripLocation == EDockSite.Left ? new RotateTransform(-90.0) :
-						StripLocation == EDockSite.Right ? new RotateTransform(+90.0) :
-						Transform.Identity;
-				}
-				base.OnVisualChildrenChanged(visualAdded, visualRemoved);
 			}
 			protected override void OnMouseDown(MouseButtonEventArgs e)
 			{
@@ -5004,9 +4923,9 @@ namespace Rylogic.Gui2
 				// Display a tab specific context menu on right click
 				if (e.RightButton == MouseButtonState.Pressed)
 				{
-//					var hit = HitTestTabButton(e.GetPosition(this));
-//					if (hit?.TabCMenu != null)
-//						hit.TabCMenu.Show(this, e.GetPosition(this));
+					//					var hit = HitTestTabButton(e.GetPosition(this));
+					//					if (hit?.TabCMenu != null)
+					//						hit.TabCMenu.Show(this, e.GetPosition(this));
 				}
 			}
 			protected override void OnMouseMove(MouseEventArgs e)
@@ -5020,7 +4939,7 @@ namespace Rylogic.Gui2
 					if (hit != null)
 					{
 						m_mouse_down_at = null;
-						DragBegin(hit, PointToScreen(e.GetPosition(this)));
+						DockContainer.DragBegin(hit, PointToScreen(e.GetPosition(this)));
 					}
 				}
 
@@ -5028,18 +4947,18 @@ namespace Rylogic.Gui2
 				if (e.LeftButton == MouseButtonState.Released)
 				{
 					var hit = HitTestTabButton(loc);
-//					if (hit != m_hovered_tab)
+					//					if (hit != m_hovered_tab)
 					{
-//						m_hovered_tab = hit;
-//						var tt = string.Empty;
-//						if (hit != null)
-//						{
-//							// If the tool tip has been set explicitly, or the tab content is clipped, set the tool tip string
-//							var tabbtn = VisibleTabs.First(x => x.Content == hit);
-//							if (tabbtn.Clipped || !ReferenceEquals(hit.TabToolTip, hit.TabText))
-//								tt = hit.TabToolTip;
-//						}
-//						this.ToolTip(m_tt, tt);
+						//						m_hovered_tab = hit;
+						//						var tt = string.Empty;
+						//						if (hit != null)
+						//						{
+						//							// If the tool tip has been set explicitly, or the tab content is clipped, set the tool tip string
+						//							var tabbtn = VisibleTabs.First(x => x.Content == hit);
+						//							if (tabbtn.Clipped || !ReferenceEquals(hit.TabToolTip, hit.TabText))
+						//								tt = hit.TabToolTip;
+						//						}
+						//						this.ToolTip(m_tt, tt);
 					}
 				}
 
@@ -5057,17 +4976,17 @@ namespace Rylogic.Gui2
 			//	m_mouse_down_at = null;
 			//	base.OnMouseUp(e);
 			//}
-//			protected override void OnMouseDoubleClick(MouseEventArgs e)
-//			{
-//				base.OnMouseDoubleClick(e);
-//
-//				// Toggle floating when double clicked
-//				var hit = HitTestTabButton(e.GetPosition(this));
-//				OnTabDblClick(new TabClickEventArgs(hit, e));
-//			}
+			//			protected override void OnMouseDoubleClick(MouseEventArgs e)
+			//			{
+			//				base.OnMouseDoubleClick(e);
+			//
+			//				// Toggle floating when double clicked
+			//				var hit = HitTestTabButton(e.GetPosition(this));
+			//				OnTabDblClick(new TabClickEventArgs(hit, e));
+			//			}
 
-			/// <summary>The location of the tab strip within the dock pane, Only L,T,R,B are valid</summary>
-			public virtual EDockSite StripLocation
+			/// <summary>The location of the tab strip. Only L,T,R,B are valid</summary>
+			public EDockSite StripLocation
 			{
 				get { return m_strip_loc; }
 				set
@@ -5077,17 +4996,28 @@ namespace Rylogic.Gui2
 
 					if (m_strip_loc != EDockSite.None)
 					{
-						// Set the stack panel orientation
-						Orientation =
-							m_strip_loc == EDockSite.Left || m_strip_loc == EDockSite.Right ? Orientation.Vertical :
-							m_strip_loc == EDockSite.Top || m_strip_loc == EDockSite.Bottom ? Orientation.Horizontal :
-							throw new Exception("Invalid tab strip location");
+						switch (m_strip_loc)
+						{
+						default: throw new Exception("Invalid tab strip location");
+						case EDockSite.Left:
+						case EDockSite.Right:
+							{
+								LayoutTransform = new RotateTransform(90);
+								break;
+							}
+						case EDockSite.Top:
+						case EDockSite.Bottom:
+							{
+								LayoutTransform = Transform.Identity;
+								break;
+							}
+						}
 
 						// Update the dock location on the parent
 						if (Parent is DockPanel dp)
 						{
-							Name = $"AutoHideTabStrip{m_strip_loc}";
-							DockPanel.SetDock(this, ToDock(m_strip_loc));
+							Name = $"TabStrip{m_strip_loc}";
+							DockPanel.SetDock(this, DockContainer.ToDock(m_strip_loc));
 						}
 					}
 					else
@@ -5099,7 +5029,7 @@ namespace Rylogic.Gui2
 			}
 			private EDockSite m_strip_loc;
 
-			///// <summary>The size of the tab strip</summary>
+			/// <summary>The size of the tab strip</summary>
 			public double StripSize
 			{
 				get
@@ -5110,26 +5040,6 @@ namespace Rylogic.Gui2
 						throw new Exception("Orientation unknown");
 				}
 			}
-			//public virtual double StripSize
-			//{
-			//	get { return m_strip_size; }
-			//	set
-			//	{
-			//		if (m_strip_size == value) return;
-			//		m_strip_size = value;
-			//		if (Orientation == Orientation.Horizontal)
-			//		{
-			//			Width = double.NaN;
-			//			Height = m_strip_size;
-			//		}
-			//		else
-			//		{
-			//			Width = m_strip_size;
-			//			Height = double.NaN;
-			//		}
-			//	}
-			//}
-			//private double m_strip_size;
 
 			/// <summary>The tab buttons in this tab strip</summary>
 			public ObservableCollection<TabButton> Buttons
@@ -5172,7 +5082,7 @@ namespace Rylogic.Gui2
 									Children.Remove(btn);
 								}
 
-								if (Buttons.Count == 0)
+								if (Buttons.Count == 0 || (Buttons.Count == 1 && !m_opts.AlwaysShowTabs))
 									Visibility = Visibility.Collapsed;
 
 								break;
@@ -5195,87 +5105,6 @@ namespace Rylogic.Gui2
 			{
 				get { return Buttons.Select(x => x.DockControl); }
 			}
-
-			///// <summary>Return the tabs corresponding to the content in 'DockPane' (in tab strip space, starting at 'FirstVisibleTabIndex', assuming horizontal layout)</summary>
-			//public IEnumerable<TabBtn> VisibleTabs
-			//{
-			//	get
-			//	{
-			//		if (TabCount == 0)
-			//			yield break;
-
-			//		var opts = TabStripOpts;
-
-			//		// The range along the tab strip in which tab buttons are allowed
-			//		var xbeg = opts.StripPadding.Left;
-			//		var xend = (Horizontal ? Width : Height) - opts.StripPadding.Right;
-
-			//		var width = xend - xbeg;
-			//		var min_width = opts.MinWidth;
-			//		var max_width = Math_.Clamp(width / TabCount, opts.MinWidth, opts.MaxWidth);
-
-			//		using (var gfx = CreateGraphics())
-			//		{
-			//			// Iterate over the visible tabs
-			//			var x = xbeg;
-			//			var tab_index = FirstVisibleTabIndex;
-			//			foreach (var content in Content.Skip(tab_index))
-			//			{
-			//				// Create a tab to represent the content
-			//				var tab = new TabBtn(this, content, tab_index, gfx, x, min_width, max_width);
-
-			//				// Hand out the tab
-			//				yield return tab;
-
-			//				// Advance to the next tab position
-			//				x += tab.Bounds.Width + opts.TabSpacing;
-			//				++tab_index;
-			//				if (x > xend) break;
-			//			}
-			//		}
-			//	}
-			//}
-
-			///// <summary>The index of the first tab to display</summary>
-			//public int FirstVisibleTabIndex { get; set; }
-
-			///// <summary>Ensure the tab with index value 'idx' is visible in the tab strip</summary>
-			//public void MakeTabVisible(int idx)
-			//{ }
-
-			///// <summary>Paint the TabStrip control</summary>
-			//protected override void OnPaint(PaintEventArgs e)
-			//{
-			//	base.OnPaint(e);
-
-			//	if (DisplayRectangle.Area() > 0)
-			//	{
-			//		var gfx = e.Graphics;
-
-			//		// Rotate to draw left/right strips
-			//		gfx.Transform = Transform;
-
-			//		// Draw each tab
-			//		foreach (var tab in VisibleTabs)
-			//		{
-			//			// Draw the tab
-			//			tab.Paint(gfx);
-
-			//			// Exclude the tab from the clip region
-			//			gfx.ExcludeClip(tab.Bounds);
-			//		}
-
-			//		// Rotate to draw left/right strips
-			//		gfx.ResetTransform();
-
-			//		// Paint the background
-			//		// If the owner pane is activated, draw the 'active' strip background otherwise draw the inactive one
-			//		var opts = TabStripOpts;
-			//		var cols = IsActivated ? opts.ActiveStrip : opts.InactiveStrip;
-			//		using (var brush = new LinearGradientBrush(ClientRectangle, cols.Beg, cols.End, cols.Mode) { Blend = cols.Blend })
-			//			gfx.FillRectangle(brush, e.ClipRectangle);
-			//	}
-			//}
 		}
 
 		/// <summary>A tab that displays within a tab strip</summary>
@@ -5324,6 +5153,9 @@ namespace Rylogic.Gui2
 				TreeHost = tree_host;
 			}
 
+			/// <summary>The root of the tree in this dock container</summary>
+			private ITreeHost TreeHost { [DebuggerStepThrough] get; set; }
+
 			/// <summary>
 			/// Get/Set the active content. This will cause the pane that the content is on to also become active.
 			/// To change the active content in a pane without making the pane active, assign to the pane's ActiveContent property</summary>
@@ -5349,25 +5181,25 @@ namespace Rylogic.Gui2
 			/// <summary>Get/Set the active pane. Note, this pane may be within the dock container, a floating window, or an auto hide window</summary>
 			public DockPane ActivePane
 			{
-				get { return m_impl_active_pane; }
+				get { return m_active_pane; }
 				set
 				{
-					if (m_impl_active_pane == value) return;
-					var old_pane = m_impl_active_pane;
+					if (m_active_pane == value) return;
+					var old_pane = m_active_pane;
 					var old_content = ActiveContent;
 
 					// Change the pane
-					if (m_impl_active_pane != null)
+					if (m_active_pane != null)
 					{
-						m_impl_active_pane.VisibleContentChanged -= HandleActiveContentChanged;
-						m_impl_active_pane.VisibleContent?.SaveFocus();
+						m_active_pane.VisibleContentChanged -= HandleActiveContentChanged;
+						m_active_pane.VisibleContent?.SaveFocus();
 					}
-					m_prev_pane = new WeakReference<DockPane>(m_impl_active_pane);
-					m_impl_active_pane = value;
-					if (m_impl_active_pane != null)
+					m_prev_pane = new WeakReference<DockPane>(m_active_pane);
+					m_active_pane = value;
+					if (m_active_pane != null)
 					{
-						m_impl_active_pane.VisibleContent?.RestoreFocus();
-						m_impl_active_pane.VisibleContentChanged += HandleActiveContentChanged;
+						m_active_pane.VisibleContent?.RestoreFocus();
+						m_active_pane.VisibleContentChanged += HandleActiveContentChanged;
 					}
 
 					// Notify observers of each pane about activation changed
@@ -5375,11 +5207,19 @@ namespace Rylogic.Gui2
 					value?.OnActivatedChanged();
 
 					// Notify that the active pane has changed and therefore the active content too
-					OnActivePaneChanged(new ActivePaneChangedEventArgs(old_pane, value));
-					OnActiveContentChanged(new ActiveContentChangedEventArgs(old_content?.Dockable, ActiveContent?.Dockable));
+					if (old_pane != value)
+						RaiseActivePaneChanged(new ActivePaneChangedEventArgs(old_pane, value));
+					if (old_content?.Dockable != ActiveContent?.Dockable)
+						RaiseActiveContentChanged(new ActiveContentChangedEventArgs(old_content?.Dockable, ActiveContent?.Dockable));
+
+					/// <summary>Watch for the content in the active pane changing</summary>
+					void HandleActiveContentChanged(object sender, ActiveContentChangedEventArgs e)
+					{
+						RaiseActiveContentChanged(e);
+					}
 				}
 			}
-			private DockPane m_impl_active_pane;
+			private DockPane m_active_pane;
 			private WeakReference<DockPane> m_prev_pane;
 
 			/// <summary>Make the previously active dock pane the active pane</summary>
@@ -5392,25 +5232,26 @@ namespace Rylogic.Gui2
 
 			/// <summary>Raised whenever the active pane changes in the dock container</summary>
 			public event EventHandler<ActivePaneChangedEventArgs> ActivePaneChanged;
-			public void OnActivePaneChanged(ActivePaneChangedEventArgs args)
+			internal void RaiseActivePaneChanged(ActivePaneChangedEventArgs args)
 			{
 				ActivePaneChanged?.Invoke(TreeHost, args);
 			}
 
 			/// <summary>Raised whenever the active content for the dock container changes</summary>
 			public event EventHandler<ActiveContentChangedEventArgs> ActiveContentChanged;
-			public void OnActiveContentChanged(ActiveContentChangedEventArgs args)
+			internal void RaiseActiveContentChanged(ActiveContentChangedEventArgs args)
 			{
 				ActiveContentChanged?.Invoke(TreeHost, args);
 			}
+		}
 
-			/// <summary>The root of the tree in this dock container</summary>
-			private ITreeHost TreeHost { [DebuggerStepThrough] get; set; }
-
-			/// <summary>Watch for the content in the active pane changing</summary>
-			private void HandleActiveContentChanged(object sender, ActiveContentChangedEventArgs e)
+		/// <summary>Extension method helpers</summary>
+		internal static class Extn
+		{
+			/// <summary>True if this dock site is a edge</summary>
+			public static bool IsEdge(this EDockSite ds)
 			{
-				OnActiveContentChanged(e);
+				return ds == EDockSite.Left || ds == EDockSite.Top || ds == EDockSite.Right || ds == EDockSite.Bottom;
 			}
 		}
 
@@ -5445,7 +5286,7 @@ namespace Rylogic.Gui2
 		}
 
 		/// <summary>Marker interface for DockPanes and Branches</summary>
-		internal interface IPaneOrBranch: IDisposable
+		internal interface IPaneOrBranch : IDisposable
 		{
 			/// <summary>The parent of this dock pane or branch</summary>
 			Branch ParentBranch { get; }
@@ -5462,204 +5303,126 @@ namespace Rylogic.Gui2
 			Left = 1 << EDockSite.Left,
 			Right = 1 << EDockSite.Right,
 		}
-	}
 
-	/// <summary>Provides the implementation of the docking functionality</summary>
-	public class DockControl : DockContainer.DockControl
-	{
-		/// <summary>Create the docking functionality helper.</summary>
-		/// <param name="owner">The control that docking is being provided for</param>
-		/// <param name="persist_name">The name to use for this instance when saving the layout to XML</param>
-		public DockControl(FrameworkElement owner, string persist_name)
-			: base(owner, persist_name)
-		{ }
+		#region Event Args
 
-		// Cut'n'Paste
-		// Inherit:
-		//   IDockable
-		//
-		// Constructor:
-		//  DockControl = new DockControl(this, name)
-		//  {
-		//  	TabText = name, // optional
-		//  	ShowTitle = false, // optional
-		//  	DefaultDockLocation = new DockContainer.DockLocation(new[]{EDockSite.Centre}, 1), // optional
-		//  	TabCMenu = CreateTabCMenu(), // optional
-		//  };
-		//
-		// Destructor:
-		//  DockControl = null;
-		//
-		// Property:
-		//  /// <summary>Provides support for the DockContainer</summary>
-		//  [Browsable(false)]
-		//  [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		//  public DockControl DockControl
-		//  {
-		//  	[DebuggerStepThrough] get { return m_dock_control; }
-		//  	private set
-		//  	{
-		//  		if (m_dock_control == value) return;
-		//  		Util.Dispose(ref m_dock_control);
-		//  		m_dock_control = value;
-		//  	}
-		//  }
-		//  private DockControl m_dock_control;
-	}
-
-	/// <summary>A wrapper control that hosts a control and implements IDockable</summary>
-	public class Dockable : DockPanel, IDockable
-	{
-		public Dockable(Control hostee, string persist_name, DockContainer.DockLocation location = null)
+		/// <summary>Args for when the active content on the dock container or dock pane changes</summary>
+		public class ActiveContentChangedEventArgs : EventArgs
 		{
-			MinWidth = hostee.MinWidth;
-			MinHeight = hostee.MinHeight;
-			MaxWidth = hostee.MaxWidth;
-			MaxHeight = hostee.MaxHeight;
-			Children.Add(hostee);
-
-			DockControl = new DockControl(this, persist_name) { TabText = persist_name };
-			if (location != null)
-				DockControl.DefaultDockLocation = location;
-		}
-		public virtual void Dispose()
-		{
-			DockControl = null;
-		}
-
-		/// <summary>Provides support for the DockContainer</summary>
-		[Browsable(false)]
-		public DockControl DockControl
-		{
-			get { return m_dock_control; }
-			private set
+			public ActiveContentChangedEventArgs(IDockable old, IDockable nue)
 			{
-				if (m_dock_control == value) return;
-				Util.Dispose(ref m_dock_control);
-				m_dock_control = value;
+				ContentOld = old;
+				ContentNew = nue;
 			}
+
+			/// <summary>The content that was active</summary>
+			public IDockable ContentOld { get; private set; }
+
+			/// <summary>The content that is becoming active</summary>
+			public IDockable ContentNew { get; private set; }
 		}
-		private DockControl m_dock_control;
+
+		/// <summary>Args for when the active content on the dock container or dock pane changes</summary>
+		public class ActivePaneChangedEventArgs : EventArgs
+		{
+			public ActivePaneChangedEventArgs(DockPane old, DockPane nue)
+			{
+				PaneOld = old;
+				PaneNew = nue;
+			}
+
+			/// <summary>The pane that was active</summary>
+			public DockPane PaneOld { get; private set; }
+
+			/// <summary>The pane that is becoming active</summary>
+			public DockPane PaneNew { get; private set; }
+		}
+
+		/// <summary>Args for when dockables are moved within the dock container</summary>
+		public class DockableMovedEventArgs : EventArgs
+		{
+			public DockableMovedEventArgs(EAction action, IDockable who)
+			{
+				Action = action;
+				Dockable = who;
+			}
+
+			/// <summary>What happened to the dockable</summary>
+			public EAction Action { get; private set; }
+			public enum EAction
+			{
+				Added = TreeChangedEventArgs.EAction.Added,
+				Removed = TreeChangedEventArgs.EAction.Removed,
+			}
+
+			/// <summary>The dockable that is being added or removed</summary>
+			public IDockable Dockable { get; private set; }
+		}
+
+		/// <summary>Args for when the DockContainer is changed on a DockControl</summary>
+		public class DockContainerChangedEventArgs : EventArgs
+		{
+			public DockContainerChangedEventArgs(DockContainer old, DockContainer nue)
+			{
+				Previous = old;
+				Current = nue;
+			}
+
+			/// <summary>The old dock container</summary>
+			public DockContainer Previous { get; private set; }
+
+			/// <summary>The new dock container</summary>
+			public DockContainer Current { get; private set; }
+		}
+
+		/// <summary>Args for when layout is being saved</summary>
+		public class DockContainerSavingLayoutEventArgs : EventArgs
+		{
+			public DockContainerSavingLayoutEventArgs(XElement node)
+			{
+				Node = node;
+			}
+
+			/// <summary>The XML element to add data to</summary>
+			public XElement Node { get; private set; }
+		}
+
+		/// <summary>Args for when panes or branches are added to a tree</summary>
+		internal class TreeChangedEventArgs : EventArgs
+		{
+			public enum EAction
+			{
+				/// <summary>The non-null Dockable, DockPane, or Branch was added to the tree</summary>
+				Added,
+
+				/// <summary>The non-null Dockable, DockPane, or Branch was removed from the tree</summary>
+				Removed,
+
+				/// <summary>The Dockable that has became active within DockPane in the tree</summary>
+				ActiveContent,
+			}
+
+			public TreeChangedEventArgs(EAction action, DockControl dockcontrol = null, DockPane pane = null, Branch branch = null)
+			{
+				Action = action;
+				DockControl = dockcontrol;
+				DockPane = pane;
+				Branch = branch;
+			}
+
+			/// <summary>The type of change that occurred</summary>
+			public EAction Action { get; private set; }
+
+			/// <summary>Non-null if it was a dockable that was added or removed</summary>
+			public DockControl DockControl { get; private set; }
+
+			/// <summary>Non-null if it was a dock pane that was added or removed</summary>
+			public DockPane DockPane { get; private set; }
+
+			/// <summary>Non-null if it was a branch that was added or removed</summary>
+			public Branch Branch { get; private set; }
+		}
+
+		#endregion
 	}
-
-	#region Event Args
-
-	/// <summary>Args for when the active content on the dock container or dock pane changes</summary>
-	public class ActiveContentChangedEventArgs : EventArgs
-	{
-		public ActiveContentChangedEventArgs(IDockable old, IDockable nue)
-		{
-			ContentOld = old;
-			ContentNew = nue;
-		}
-
-		/// <summary>The content that was active</summary>
-		public IDockable ContentOld { get; private set; }
-
-		/// <summary>The content that is becoming active</summary>
-		public IDockable ContentNew { get; private set; }
-	}
-
-	/// <summary>Args for when the active content on the dock container or dock pane changes</summary>
-	public class ActivePaneChangedEventArgs : EventArgs
-	{
-		public ActivePaneChangedEventArgs(DockContainer.DockPane old, DockContainer.DockPane nue)
-		{
-			PaneOld = old;
-			PaneNew = nue;
-		}
-
-		/// <summary>The pane that was active</summary>
-		public DockContainer.DockPane PaneOld { get; private set; }
-
-		/// <summary>The pane that is becoming active</summary>
-		public DockContainer.DockPane PaneNew { get; private set; }
-	}
-
-	/// <summary>Args for when dockables are moved within the dock container</summary>
-	public class DockableMovedEventArgs : EventArgs
-	{
-		public DockableMovedEventArgs(EAction action, IDockable who)
-		{
-			Action = action;
-			Dockable = who;
-		}
-
-		/// <summary>What happened to the dockable</summary>
-		public EAction Action { get; private set; }
-		public enum EAction
-		{
-			Added = TreeChangedEventArgs.EAction.Added,
-			Removed = TreeChangedEventArgs.EAction.Removed,
-		}
-
-		/// <summary>The dockable that is being added or removed</summary>
-		public IDockable Dockable { get; private set; }
-	}
-
-	/// <summary>Args for when the DockContainer is changed on a DockControl</summary>
-	public class DockContainerChangedEventArgs : EventArgs
-	{
-		public DockContainerChangedEventArgs(DockContainer old, DockContainer nue)
-		{
-			Previous = old;
-			Current = nue;
-		}
-
-		/// <summary>The old dock container</summary>
-		public DockContainer Previous { get; private set; }
-
-		/// <summary>The new dock container</summary>
-		public DockContainer Current { get; private set; }
-	}
-
-	/// <summary>Args for when layout is being saved</summary>
-	public class DockContainerSavingLayoutEventArgs : EventArgs
-	{
-		public DockContainerSavingLayoutEventArgs(XElement node)
-		{
-			Node = node;
-		}
-
-		/// <summary>The XML element to add data to</summary>
-		public XElement Node { get; private set; }
-	}
-
-	/// <summary>Args for when panes or branches are added to a tree</summary>
-	internal class TreeChangedEventArgs : EventArgs
-	{
-		public enum EAction
-		{
-			/// <summary>The non-null Dockable, DockPane, or Branch was added to the tree</summary>
-			Added,
-
-			/// <summary>The non-null Dockable, DockPane, or Branch was removed from the tree</summary>
-			Removed,
-
-			/// <summary>The Dockable that has became active within DockPane in the tree</summary>
-			ActiveContent,
-		}
-
-		public TreeChangedEventArgs(EAction action, DockContainer.DockControl dockcontrol = null, DockContainer.DockPane pane = null, DockContainer.Branch branch = null)
-		{
-			Action = action;
-			DockControl = dockcontrol;
-			DockPane = pane;
-			Branch = branch;
-		}
-
-		/// <summary>The type of change that occurred</summary>
-		public EAction Action { get; private set; }
-
-		/// <summary>Non-null if it was a dockable that was added or removed</summary>
-		public DockContainer.DockControl DockControl { get; private set; }
-
-		/// <summary>Non-null if it was a dock pane that was added or removed</summary>
-		public DockContainer.DockPane DockPane { get; private set; }
-
-		/// <summary>Non-null if it was a branch that was added or removed</summary>
-		public DockContainer.Branch Branch { get; private set; }
-	}
-
-	#endregion
 }

@@ -50,6 +50,32 @@ namespace Rylogic.Common
 			return new Range(centre - radius, centre + radius);
 		}
 
+		/// <summary>Return the range of values selected by 'selector'</summary>
+		public static Range From<T>(IEnumerable<T> items, Func<T, long> selector)
+		{
+			var range = Invalid;
+			foreach (var item in items)
+				range.Encompass(selector(item));
+
+			return range;
+		}
+		public static Range From(IEnumerable<int> items)
+		{
+			var range = Invalid;
+			foreach (var item in items)
+				range.Encompass(item);
+
+			return range;
+		}
+		public static Range From(IEnumerable<long> items)
+		{
+			var range = Invalid;
+			foreach (var item in items)
+				range.Encompass(item);
+
+			return range;
+		}
+
 		/// <summary>Construct from a range</summary>
 		public Range(long begin, long end)
 		{
@@ -304,6 +330,32 @@ namespace Rylogic.Common
 			return new RangeF(centre - radius, centre + radius);
 		}
 
+		/// <summary>Return the range of values selected by 'selector'</summary>
+		public static RangeF From<T>(IEnumerable<T> items, Func<T, double> selector)
+		{
+			var range = Invalid;
+			foreach (var item in items)
+				range.Encompass(selector(item));
+
+			return range;
+		}
+		public static RangeF From(IEnumerable<float> items)
+		{
+			var range = Invalid;
+			foreach (var item in items)
+				range.Encompass(item);
+
+			return range;
+		}
+		public static RangeF From(IEnumerable<double> items)
+		{
+			var range = Invalid;
+			foreach (var item in items)
+				range.Encompass(item);
+
+			return range;
+		}
+
 		/// <summary>Construct from a range</summary>
 		public RangeF(double begin, double end)
 		{
@@ -545,6 +597,24 @@ namespace Rylogic.Common
 			return new RangeF<T>(Operators<T>.Sub(centre, radius), Operators<T>.Add(centre, radius));
 		}
 
+		/// <summary>Return the range of values selected by 'selector'</summary>
+		public static RangeF<T> From<U>(IEnumerable<U> items, Func<U, T> selector)
+		{
+			var range = Invalid;
+			foreach (var item in items)
+				range.Encompass(selector(item));
+
+			return range;
+		}
+		public static RangeF<T> From(IEnumerable<T> items)
+		{
+			var range = Invalid;
+			foreach (var item in items)
+				range.Encompass(item);
+
+			return range;
+		}
+
 		/// <summary>Construct from a range</summary>
 		public RangeF(T begin, T end)
 		{
@@ -764,27 +834,44 @@ namespace Rylogic.UnitTests
 {
 	using Common;
 
-	[TestFixture] public class TestRange
+	[TestFixture]
+	public class TestRange
 	{
-		[Test] public void Intersect()
+		[Test]
+		public void TestFrom()
+		{
+			{
+				var r = Range.From(new[] { 1, 4, -2, 5, 7, -3 });
+				Assert.Equal(r, new Range(-3, 8));
+			}
+			{
+				var r = RangeF.From(new[] { 1f, 4f, -2f, 5f, 7f, -3f });
+				Assert.Equal(r, new RangeF(-3f, 7f));
+			}
+		}
+
+		[Test]
+		public void Intersect()
 		{
 			var a = new Range(-4, -1);
-			var b = new Range(-1,  3);
-			var c = new Range( 0,  5);
-			var d = new Range( 7, 12);
+			var b = new Range(-1, 3);
+			var c = new Range(0, 5);
+			var d = new Range(7, 12);
 
 			// Intersect
-			Assert.Equal(a               , a.Intersect(a));
-			Assert.Equal(new Range(-1,-1), a.Intersect(b));
-			Assert.Equal(new Range(-1,-1), a.Intersect(c));
-			Assert.Equal(new Range(-1,-1), b.Intersect(a));
-			Assert.Equal(new Range( 0, 3), b.Intersect(c));
-			Assert.Equal(new Range( 3, 3), b.Intersect(d));
-			Assert.Equal(new Range( 0, 0), c.Intersect(a));
-			Assert.Equal(new Range( 0, 3), c.Intersect(b));
-			Assert.Equal(new Range( 5, 5), c.Intersect(d));
+			Assert.Equal(a, a.Intersect(a));
+			Assert.Equal(new Range(-1, -1), a.Intersect(b));
+			Assert.Equal(new Range(-1, -1), a.Intersect(c));
+			Assert.Equal(new Range(-1, -1), b.Intersect(a));
+			Assert.Equal(new Range(0, 3), b.Intersect(c));
+			Assert.Equal(new Range(3, 3), b.Intersect(d));
+			Assert.Equal(new Range(0, 0), c.Intersect(a));
+			Assert.Equal(new Range(0, 3), c.Intersect(b));
+			Assert.Equal(new Range(5, 5), c.Intersect(d));
 		}
-		[Test] public void Encompass()
+
+		[Test]
+		public void Encompass()
 		{
 			var r = Range.Invalid;
 			r.Encompass(4);
@@ -794,47 +881,51 @@ namespace Rylogic.UnitTests
 
 			r.Encompass(-2);
 			Assert.Equal(-2L, r.Beg);
-			Assert.Equal( 5L, r.End);
+			Assert.Equal(5L, r.End);
 			Assert.True(r.Contains(-2));
 			Assert.True(r.Contains(4));
 
-			r.Encompass(new Range(1,7));
+			r.Encompass(new Range(1, 7));
 			Assert.Equal(-2L, r.Beg);
-			Assert.Equal( 7L, r.End);
+			Assert.Equal(7L, r.End);
 			Assert.True(r.Contains(-2));
 			Assert.False(r.Contains(7));
 
-			var r2 = r.Union(new Range(-3,2));
+			var r2 = r.Union(new Range(-3, 2));
 			Assert.Equal(-2L, r.Beg);
-			Assert.Equal( 7L, r.End);
+			Assert.Equal(7L, r.End);
 			Assert.Equal(-3L, r2.Beg);
-			Assert.Equal( 7L, r2.End);
+			Assert.Equal(7L, r2.End);
 
-			var r3 = r.Intersect(new Range(1,10));
+			var r3 = r.Intersect(new Range(1, 10));
 			Assert.Equal(-2L, r.Beg);
-			Assert.Equal( 7L, r.End);
-			Assert.Equal( 1L, r3.Beg);
-			Assert.Equal( 7L, r3.End);
+			Assert.Equal(7L, r.End);
+			Assert.Equal(1L, r3.Beg);
+			Assert.Equal(7L, r3.End);
 		}
-		[Test] public void IntersectF()
+
+		[Test]
+		public void IntersectF()
 		{
 			var a = new RangeF(-4.0, -1.0);
-			var b = new RangeF(-1.0,  3.0);
-			var c = new RangeF( 0.0,  5.0);
-			var d = new RangeF( 7.0, 12.0);
+			var b = new RangeF(-1.0, 3.0);
+			var c = new RangeF(0.0, 5.0);
+			var d = new RangeF(7.0, 12.0);
 
 			// Intersect
-			Assert.Equal(a                    , a.Intersect(a));
-			Assert.Equal(new RangeF(-1.0,-1.0), a.Intersect(b));
-			Assert.Equal(new RangeF(-1.0,-1.0), a.Intersect(c));
-			Assert.Equal(new RangeF(-1.0,-1.0), b.Intersect(a));
-			Assert.Equal(new RangeF( 0.0, 3.0), b.Intersect(c));
-			Assert.Equal(new RangeF( 3.0, 3.0), b.Intersect(d));
-			Assert.Equal(new RangeF( 0.0, 0.0), c.Intersect(a));
-			Assert.Equal(new RangeF( 0.0, 3.0), c.Intersect(b));
-			Assert.Equal(new RangeF( 5.0, 5.0), c.Intersect(d));
+			Assert.Equal(a, a.Intersect(a));
+			Assert.Equal(new RangeF(-1.0, -1.0), a.Intersect(b));
+			Assert.Equal(new RangeF(-1.0, -1.0), a.Intersect(c));
+			Assert.Equal(new RangeF(-1.0, -1.0), b.Intersect(a));
+			Assert.Equal(new RangeF(0.0, 3.0), b.Intersect(c));
+			Assert.Equal(new RangeF(3.0, 3.0), b.Intersect(d));
+			Assert.Equal(new RangeF(0.0, 0.0), c.Intersect(a));
+			Assert.Equal(new RangeF(0.0, 3.0), c.Intersect(b));
+			Assert.Equal(new RangeF(5.0, 5.0), c.Intersect(d));
 		}
-		[Test] public void EncompassF()
+
+		[Test]
+		public void EncompassF()
 		{
 			var r = RangeF.Invalid;
 			r.Encompass(4);
@@ -843,43 +934,47 @@ namespace Rylogic.UnitTests
 
 			r.Encompass(-2);
 			Assert.Equal(-2.0, r.Beg);
-			Assert.Equal( 4.0, r.End);
+			Assert.Equal(4.0, r.End);
 
-			r.Encompass(new RangeF(1,7));
+			r.Encompass(new RangeF(1, 7));
 			Assert.Equal(-2.0, r.Beg);
-			Assert.Equal( 7.0, r.End);
+			Assert.Equal(7.0, r.End);
 
-			var r2 = r.Union(new RangeF(-3,2));
+			var r2 = r.Union(new RangeF(-3, 2));
 			Assert.Equal(-2.0, r.Beg);
-			Assert.Equal( 7.0, r.End);
+			Assert.Equal(7.0, r.End);
 			Assert.Equal(-3.0, r2.Beg);
-			Assert.Equal( 7.0, r2.End);
+			Assert.Equal(7.0, r2.End);
 
-			var r3 = r.Intersect(new RangeF(1,10));
+			var r3 = r.Intersect(new RangeF(1, 10));
 			Assert.Equal(-2.0, r.Beg);
-			Assert.Equal( 7.0, r.End);
-			Assert.Equal( 1.0, r3.Beg);
-			Assert.Equal( 7.0, r3.End);
+			Assert.Equal(7.0, r.End);
+			Assert.Equal(1.0, r3.Beg);
+			Assert.Equal(7.0, r3.End);
 		}
-		[Test] public void IntersectFGen()
+
+		[Test]
+		public void IntersectFGen()
 		{
 			var a = new RangeF<decimal>(-4.0m, -1.0m);
-			var b = new RangeF<decimal>(-1.0m,  3.0m);
-			var c = new RangeF<decimal>( 0.0m,  5.0m);
-			var d = new RangeF<decimal>( 7.0m, 12.0m);
+			var b = new RangeF<decimal>(-1.0m, 3.0m);
+			var c = new RangeF<decimal>(0.0m, 5.0m);
+			var d = new RangeF<decimal>(7.0m, 12.0m);
 
 			// Intersect
-			Assert.Equal(a                    , a.Intersect(a));
-			Assert.Equal(new RangeF<decimal>(-1.0m,-1.0m), a.Intersect(b));
-			Assert.Equal(new RangeF<decimal>(-1.0m,-1.0m), a.Intersect(c));
-			Assert.Equal(new RangeF<decimal>(-1.0m,-1.0m), b.Intersect(a));
-			Assert.Equal(new RangeF<decimal>( 0.0m, 3.0m), b.Intersect(c));
-			Assert.Equal(new RangeF<decimal>( 3.0m, 3.0m), b.Intersect(d));
-			Assert.Equal(new RangeF<decimal>( 0.0m, 0.0m), c.Intersect(a));
-			Assert.Equal(new RangeF<decimal>( 0.0m, 3.0m), c.Intersect(b));
-			Assert.Equal(new RangeF<decimal>( 5.0m, 5.0m), c.Intersect(d));
+			Assert.Equal(a, a.Intersect(a));
+			Assert.Equal(new RangeF<decimal>(-1.0m, -1.0m), a.Intersect(b));
+			Assert.Equal(new RangeF<decimal>(-1.0m, -1.0m), a.Intersect(c));
+			Assert.Equal(new RangeF<decimal>(-1.0m, -1.0m), b.Intersect(a));
+			Assert.Equal(new RangeF<decimal>(0.0m, 3.0m), b.Intersect(c));
+			Assert.Equal(new RangeF<decimal>(3.0m, 3.0m), b.Intersect(d));
+			Assert.Equal(new RangeF<decimal>(0.0m, 0.0m), c.Intersect(a));
+			Assert.Equal(new RangeF<decimal>(0.0m, 3.0m), c.Intersect(b));
+			Assert.Equal(new RangeF<decimal>(5.0m, 5.0m), c.Intersect(d));
 		}
-		[Test] public void EncompassFGen()
+
+		[Test]
+		public void EncompassFGen()
 		{
 			var r = RangeF<decimal>.Invalid;
 			r.Encompass(4);
@@ -888,23 +983,23 @@ namespace Rylogic.UnitTests
 
 			r.Encompass(-2);
 			Assert.Equal(-2.0m, r.Beg);
-			Assert.Equal( 4.0m, r.End);
+			Assert.Equal(4.0m, r.End);
 
-			r.Encompass(new RangeF<decimal>(1m,7m));
+			r.Encompass(new RangeF<decimal>(1m, 7m));
 			Assert.Equal(-2.0m, r.Beg);
-			Assert.Equal( 7.0m, r.End);
+			Assert.Equal(7.0m, r.End);
 
-			var r2 = r.Union(new RangeF<decimal>(-3,2));
+			var r2 = r.Union(new RangeF<decimal>(-3, 2));
 			Assert.Equal(-2.0m, r.Beg);
-			Assert.Equal( 7.0m, r.End);
+			Assert.Equal(7.0m, r.End);
 			Assert.Equal(-3.0m, r2.Beg);
-			Assert.Equal( 7.0m, r2.End);
+			Assert.Equal(7.0m, r2.End);
 
-			var r3 = r.Intersect(new RangeF<decimal>(1,10));
+			var r3 = r.Intersect(new RangeF<decimal>(1, 10));
 			Assert.Equal(-2.0m, r.Beg);
-			Assert.Equal( 7.0m, r.End);
-			Assert.Equal( 1.0m, r3.Beg);
-			Assert.Equal( 7.0m, r3.End);
+			Assert.Equal(7.0m, r.End);
+			Assert.Equal(1.0m, r3.Beg);
+			Assert.Equal(7.0m, r3.End);
 		}
 	}
 }

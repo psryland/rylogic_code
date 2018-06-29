@@ -39,7 +39,7 @@ namespace CoinFlip
 			AutoSaveOnChanges = false;
 		}
 		public Settings(string filepath)
-			:base(filepath)
+			:base(filepath, throw_on_error: false)
 		{
 			// Leave this disabled till everything has been set up (i.e. the Model enables it)
 			AutoSaveOnChanges = false;
