@@ -45,7 +45,7 @@ namespace Rylogic.VSExtension
 		}
 		protected override void Dispose(bool disposing)
 		{
-			Util.Dispose(ref components);
+			components.Dispose();
 			base.Dispose(disposing);
 		}
 

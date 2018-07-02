@@ -67,7 +67,7 @@ namespace Rylogic.VSExtension
 		{
 			Util.Dispose(m_bs_groups);
 			Util.Dispose(m_bs_patterns);
-			Util.Dispose(ref components);
+			components.Dispose();
 			base.Dispose(disposing);
 		}
 
@@ -272,6 +272,7 @@ namespace Rylogic.VSExtension
 			this.m_btn_move_up = new System.Windows.Forms.Button();
 			this.m_btn_move_down = new System.Windows.Forms.Button();
 			this.m_panel = new System.Windows.Forms.Panel();
+			this.m_btn_donate = new System.Windows.Forms.Button();
 			this.m_btn_help_groups = new System.Windows.Forms.Button();
 			this.m_btn_reset = new System.Windows.Forms.Button();
 			this.m_lbl_alignment_group = new System.Windows.Forms.Label();
@@ -279,7 +280,6 @@ namespace Rylogic.VSExtension
 			this.m_grid_patterns = new Rylogic.VSExtension.PatternGrid();
 			this.m_lbl_alignment_patterns = new System.Windows.Forms.Label();
 			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
-			this.m_btn_donate = new System.Windows.Forms.Button();
 			((System.ComponentModel.ISupportInitialize)(this.m_split)).BeginInit();
 			this.m_split.Panel1.SuspendLayout();
 			this.m_split.Panel2.SuspendLayout();
@@ -337,6 +337,7 @@ namespace Rylogic.VSExtension
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_grid_groups.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
 			this.m_grid_groups.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+			this.m_grid_groups.Data = null;
 			this.m_grid_groups.Location = new System.Drawing.Point(0, 23);
 			this.m_grid_groups.Margin = new System.Windows.Forms.Padding(0);
 			this.m_grid_groups.MultiSelect = false;
@@ -431,12 +432,23 @@ namespace Rylogic.VSExtension
 			this.m_panel.Size = new System.Drawing.Size(621, 23);
 			this.m_panel.TabIndex = 2;
 			// 
+			// m_btn_donate
+			// 
+			this.m_btn_donate.BackColor = System.Drawing.Color.LightGreen;
+			this.m_btn_donate.Dock = System.Windows.Forms.DockStyle.Right;
+			this.m_btn_donate.Location = new System.Drawing.Point(385, 0);
+			this.m_btn_donate.Name = "m_btn_donate";
+			this.m_btn_donate.Size = new System.Drawing.Size(66, 23);
+			this.m_btn_donate.TabIndex = 11;
+			this.m_btn_donate.Text = "Donate";
+			this.m_btn_donate.UseVisualStyleBackColor = false;
+			// 
 			// m_btn_help_groups
 			// 
 			this.m_btn_help_groups.Dock = System.Windows.Forms.DockStyle.Right;
-			this.m_btn_help_groups.Location = new System.Drawing.Point(414, 0);
+			this.m_btn_help_groups.Location = new System.Drawing.Point(451, 0);
 			this.m_btn_help_groups.Name = "m_btn_help_groups";
-			this.m_btn_help_groups.Size = new System.Drawing.Size(103, 23);
+			this.m_btn_help_groups.Size = new System.Drawing.Size(66, 23);
 			this.m_btn_help_groups.TabIndex = 5;
 			this.m_btn_help_groups.Text = "Help";
 			this.m_btn_help_groups.UseVisualStyleBackColor = true;
@@ -502,17 +514,6 @@ namespace Rylogic.VSExtension
 			this.m_lbl_alignment_patterns.TabIndex = 3;
 			this.m_lbl_alignment_patterns.Text = "Alignment Patterns:";
 			this.m_lbl_alignment_patterns.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-			// 
-			// m_btn_donate
-			// 
-			this.m_btn_donate.BackColor = System.Drawing.Color.LightGreen;
-			this.m_btn_donate.Dock = System.Windows.Forms.DockStyle.Right;
-			this.m_btn_donate.Location = new System.Drawing.Point(311, 0);
-			this.m_btn_donate.Name = "m_btn_donate";
-			this.m_btn_donate.Size = new System.Drawing.Size(103, 23);
-			this.m_btn_donate.TabIndex = 11;
-			this.m_btn_donate.Text = "Donate";
-			this.m_btn_donate.UseVisualStyleBackColor = false;
 			// 
 			// AlignOptionsControl
 			// 

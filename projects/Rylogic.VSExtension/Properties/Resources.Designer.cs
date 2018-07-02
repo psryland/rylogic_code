@@ -161,11 +161,35 @@ namespace Rylogic.VSExtension {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to {\rtf1\ansi\ansicpg1252\deff0\nouicompat\deflang2057{\fonttbl{\f0\fnil\fcharset0 Consolas;}{\f1\fnil Consolas;}{\f2\fnil\fcharset0 Calibri;}{\f3\fnil\fcharset2 Symbol;}}
+        ///{\colortbl ;\red0\green0\blue0;\red0\green0\blue255;}
+        ///{\*\generator Riched20 10.0.17134}\viewkind4\uc1 
+        ///\pard\sl276\slmult1\cf1\b\f0\fs19\lang5129 Alignment Groups:\b0\f1\lang9\par
+        ///
+        ///\pard{\pntext\f3\&apos;B7\tab}{\*\pn\pnlvlblt\pnf3\pnindent0{\pntxtb\&apos;B7}}\fi-360\li720\sl276\slmult1 Each group contains patterns that are all considered equiv [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string help {
+            get {
+                return ResourceManager.GetString("help", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
         internal static System.Drawing.Bitmap outline_code {
             get {
                 object obj = ResourceManager.GetObject("outline_code", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap paypal_donate_logo {
+            get {
+                object obj = ResourceManager.GetObject("paypal_donate_logo", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
