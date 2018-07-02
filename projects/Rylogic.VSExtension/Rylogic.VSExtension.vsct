@@ -77,10 +77,10 @@
 
 	<Symbols>
 		<!-- This is the package guid. -->
-		<GuidSymbol name="Rylogic_VSExtensionPkg" value="{1d697591-233a-4a5b-bf85-2fccc769dfe3}"/>
+		<GuidSymbol name="Rylogic_VSExtensionPkg" value="{DF402917-6013-40CA-A4C6-E1640DA86B90}"/>
 
 		<!-- This is the guid used to group the menu commands together -->
-		<GuidSymbol name="guidRylogic_VSExtensionCmdSet" value="{7154f9e3-6324-4957-8da6-2dfa88ccf58a}">
+		<GuidSymbol name="guidRylogic_VSExtensionCmdSet" value="{E695E21D-48BB-4B3E-B442-DF64253991A5}">
 			<IDSymbol name="RylogicMenuGroup" value="0x1020"/>
 			<IDSymbol name="cmdidAlign" value="0x0100"/>
 			<IDSymbol name="cmdidOutlineCodeOnly" value="0x0101"/>

@@ -1,9 +1,5 @@
 # Rylogic Text Aligner
 
-## Requirements
-
-- Visual Studio 2015+
-
 ## Overview
 
 Rylogic Text Aligner is an extension that adds a command to the edit menu for vertically aligning text. More than simply satisfying the obsessive compulsives out there, vertical text alignment is a powerful productivity aid when used in combination with column selection. Vertically aligned text also leverages your subconscious ability to spot patterns, making pattern-breaking bugs much easier to spot. Notice how much easier it is to spot the bug in the second of the following two code examples:

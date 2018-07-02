@@ -1,9 +1,11 @@
 ﻿using System;
-using System.Runtime.InteropServices;
+using System.ComponentModel.Composition;
 using System.ComponentModel.Design;
+using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Shell;
-using System.ComponentModel.Composition;
 using Microsoft.VisualStudio.Text.Outlining;
 
 namespace Rylogic.VSExtension
@@ -17,12 +19,12 @@ namespace Rylogic.VSExtension
 	/// IVsPackage interface and uses the registration attributes defined in the framework to
 	/// register itself and its components with the shell.
 	/// </summary>
-	[PackageRegistration(UseManagedResourcesOnly = true)] // This attribute tells the PkgDef creation utility (CreatePkgDef.exe) that this class is a package.
-	[InstalledProductRegistration("#110", "#112", "1.0", IconResourceID = 400)] // This attribute is used to register the information needed to show this package in the Help/About dialog of Visual Studio.
+	[PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)] // This attribute tells the PkgDef creation utility (CreatePkgDef.exe) that this class is a package.
+	[InstalledProductRegistration("Rylogic.VSExtension", "Rylogic extensions", "1.1", IconResourceID = 400)] // This attribute is used to register the information needed to show this package in the Help/About dialog of Visual Studio.
 	[ProvideMenuResource("Menus.ctmenu", 1)] // This attribute is needed to let the shell know that this package exposes some menus.
 	[ProvideOptionPage(typeof(AlignOptions), "Rylogic", "Align Options", 0, 0, true)]
 	[Guid(GuidList.guidRylogic_VSExtensionPkgString)]
-	public sealed class Rylogic_VSExtensionPackage :Package ,IOleCommandTarget
+	public sealed class Rylogic_VSExtensionPackage :AsyncPackage ,IOleCommandTarget
 	{
 		/// <summary>
 		/// Default constructor of the package.
@@ -36,13 +38,12 @@ namespace Rylogic.VSExtension
 		/// <summary>
 		/// Initialization of the package; this method is called right after the package is sited, so this is the place
 		/// where you can put all the initialization code that rely on services provided by VisualStudio.</summary>
-		protected override void Initialize()
+		protected async override System.Threading.Tasks.Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
 		{
-			base.Initialize();
+			await base.InitializeAsync(cancellationToken, progress);
 
 			// Add our command handlers for menu (commands must exist in the .vsct file)
-			var mcs = GetService<IMenuCommandService>() as OleMenuCommandService;
-			if (mcs != null)
+			if (await GetServiceAsync(typeof(IMenuCommandService)) is OleMenuCommandService mcs)
 			{
 				mcs.AddCommand(new AlignMenuCommand(this));
 				mcs.AddCommand(new OutlineCodeCommand(this));

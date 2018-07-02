@@ -7,11 +7,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Rylogic.VSExtension")]
+[assembly: AssemblyTitle("Rylogic.TextAligner")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Rylogic")]
-[assembly: AssemblyProduct("VSExtension")]
+[assembly: AssemblyProduct("TextAligner")]
 [assembly: AssemblyCopyright("Copyright (c) 2002-2018 Rylogic")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]   

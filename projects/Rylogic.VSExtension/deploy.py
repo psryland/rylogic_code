@@ -19,6 +19,7 @@ try:
 	srcdir = UserVars.root + "\\projects\\Rylogic.VSExtension"
 	manifest = srcdir + "\\source.extension.vsixmanifest"
 	bindir = srcdir + "\\bin\\Release"
+	extn_name = "Rylogic.TextAligner.vsix"
 
 	vers_patn = r'Id="1d697591-233a-4a5b-bf85-2fccc769dfe3" Version="(?P<vers>.*?)"'
 	match_version = Tools.Extract(manifest, vers_patn)
@@ -46,15 +47,15 @@ try:
 
 	#Copy build products to dst
 	print("Copying files to " + dstdir)
-	Tools.Copy(bindir + "\\Rylogic.VSExtension.vsix", dstdir)
+	Tools.Copy(bindir + "\\" + extn_name, dstdir)
 
 	#Ask to install
-	dstfile = dstdir + "\\Rylogic.VSExtension.vsix"
+	dstfile = dstdir + "\\" + extn_name
 	install = input("Install " + dstfile + " (y/n)? ")
 	if install == 'y':
 		try:
 			print("Uninstalling previous versions...")
-			Tools.Exec(["cmd", "/C", UserVars.vs_dir + "\\Common7\\IDE\\VSIXInstaller.exe", "/q", "/a", "/u:Rylogic.VSExtension"])
+			Tools.Exec(["cmd", "/C", UserVars.vs_dir + "\\Common7\\IDE\\VSIXInstaller.exe", "/q", "/a", "/u:"+extn_name])
 		except: pass
 		print("Installing...")
 		Tools.Exec(["cmd", "/C", dstfile])

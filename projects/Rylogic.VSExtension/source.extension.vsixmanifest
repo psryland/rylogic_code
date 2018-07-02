@@ -1,9 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
     <Metadata>
-        <Identity Id="1d697591-233a-4a5b-bf85-2fccc769dfe3" Version="1.06" Language="en-US" Publisher="Rylogic"/>
-        <DisplayName>Rylogic.VSExtension</DisplayName>
-        <Description xml:space="preserve">Visual Studio Extensions by Rylogic</Description>
+        <Identity Id="DF402917-6013-40CA-A4C6-E1640DA86B90" Version="1.07" Language="en-US" Publisher="Rylogic"/>
+        <DisplayName>Rylogic.TextAligner</DisplayName>
+        <Description xml:space="preserve">Text aligning extension for Visual Studio by Rylogic</Description>
         <License>licence.txt</License>
         <Icon>icon.png</Icon>
     </Metadata>
