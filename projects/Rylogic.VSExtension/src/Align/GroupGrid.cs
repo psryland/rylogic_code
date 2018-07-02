@@ -25,34 +25,27 @@ namespace Rylogic.VSExtension
 			if (this.IsInDesignMode()) return;
 			VirtualMode = true;
 			AutoGenerateColumns = false;
-			Columns.Add(new DataGridViewTextBoxColumn{Tag = EGroupColumns.Name        , HeaderText = EGroupColumns.Name        .ToStringFast(), FillWeight = 100});
-			Columns.Add(new DataGridViewTextBoxColumn{Tag = EGroupColumns.LeadingSpace, HeaderText = EGroupColumns.LeadingSpace.ToStringFast(), FillWeight = 30});
+			//m_data = new BindingSource();
+
+			Columns.Add(new DataGridViewTextBoxColumn
+			{
+				HeaderText = "Name",
+				Tag = EGroupColumns.Name,
+				FillWeight = 100
+			});
+			Columns.Add(new DataGridViewTextBoxColumn
+			{
+				HeaderText = "Leading Space",
+				Tag = EGroupColumns.LeadingSpace,
+				FillWeight = 30
+			});
 		}
 
-		/// <summary>The data source</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		[EditorBrowsable(EditorBrowsableState.Never)]
+		/// <summary>Alignment group data source</summary>
 		public BindingSource Data
 		{
-			get { return m_data; }
-			set
-			{
-				if (ReferenceEquals(m_data, value)) return;
-				ListChangedEventHandler OnDataChanged = (s,a) => Refresh();
-				m_data.ListChanged -= OnDataChanged;
-				m_data = value ?? new BindingSource();
-				m_data.ListChanged += OnDataChanged;
-				Refresh();
-			}
-		}
-		private BindingSource m_data = new BindingSource();
-
-		/// <summary>Forces the control to invalidate its client area and immediately redraw itself and any child controls.</summary>
-		public override void Refresh()
-		{
-			RowCount = Data.Count + (AllowUserToAddRows ? 1 : 0);
-			base.Refresh();
+			get { return (BindingSource)DataSource; }
+			set { DataSource = value; }
 		}
 
 		/// <summary>Called when the current cell is changed</summary>
@@ -132,21 +125,23 @@ namespace Rylogic.VSExtension
 			}
 		}
 
-		//protected override void OnEditingControlShowing(DataGridViewEditingControlShowingEventArgs e)
-		//{
-		//	base.OnEditingControlShowing(e);
-		//	var tb = e.Control as TextBox;
-		//	if (tb != null)
-		//	{
-		//		tb.AcceptsReturn = true;
-		//		tb.PreviewKeyDown += (s,a) =>
-		//			{
-		//				if (a.KeyCode == Keys.Enter)
-		//				{
-		//					a.IsInputKey = false;
-		//				}
-		//			};
-		//	}
-		//}
+		/// <summary>Cell tool tips</summary>
+		protected override void OnCellToolTipTextNeeded(DataGridViewCellToolTipTextNeededEventArgs e)
+		{
+			base.OnCellToolTipTextNeeded(e);
+			if (e.ColumnIndex < 0 || e.ColumnIndex >= ColumnCount) return;
+			if (e.RowIndex == -1)
+			{
+				switch ((EGroupColumns)e.ColumnIndex)
+				{
+				case EGroupColumns.Name:
+					e.ToolTipText = "The name of the alignment group";
+					break;
+				case EGroupColumns.LeadingSpace:
+					e.ToolTipText = "The number of white space characters added in front of the aligned text";
+					break;
+				}
+			}
+		}
 	}
 }

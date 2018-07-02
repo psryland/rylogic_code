@@ -1,9 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Drawing;
 using System.Windows.Forms;
 using Rylogic.Extn;
 using Rylogic.Gui;
+using Rylogic.Utility;
 
 namespace Rylogic.VSExtension
 {
@@ -12,22 +14,28 @@ namespace Rylogic.VSExtension
 		private readonly AlignOptions m_options;
 		private readonly BindingSource m_bs_groups;
 		private readonly BindingSource m_bs_patterns;
-		private readonly Dictionary<AlignPattern, EditPatternDlg> m_edit_windows;
-		private readonly HintBalloon m_hint_balloon;
-		private readonly ToolTip m_tt;
+		private readonly Dictionary<AlignPattern, EditPatternUI> m_edit_windows;
+		
+		#region UI Elements
 		private SplitContainer m_split;
+		private TableLayoutPanel m_table1;
+		private TableLayoutPanel m_table2;
+		private FlowLayoutPanel m_flow;
+		private Panel m_panel;
 		private GroupGrid m_grid_groups;
+		private PatternGrid m_grid_patterns;
 		private Label m_lbl_alignment_group;
 		private Label m_lbl_alignment_patterns;
 		private Button m_btn_help_groups;
 		private Button m_btn_new;
 		private Button m_btn_move_down;
-		private ImageList m_image_list;
 		private Button m_btn_move_up;
 		private Button m_btn_del;
-		private Button m_btn_help_patterns;
 		private Button m_btn_reset;
-		private PatternGrid m_grid_patterns;
+		private ImageList m_image_list;
+		private Button m_btn_donate;
+		private ToolTip m_tt;
+		#endregion
 
 		public AlignOptionsControl(AlignOptions options)
 		{
@@ -36,42 +44,37 @@ namespace Rylogic.VSExtension
 			m_options = options;
 			m_bs_groups = new BindingSource{DataSource = m_options.Groups};
 			m_bs_patterns = new BindingSource{DataSource = null};
-			m_edit_windows = new Dictionary<AlignPattern,EditPatternDlg>();
-			m_hint_balloon = new HintBalloon{ShowDelay = 0, PreferredTipCorner = HintBalloon.ETipCorner.BottomLeft};
-			m_tt = new ToolTip();
+			m_edit_windows = new Dictionary<AlignPattern,EditPatternUI>();
 
 			options.Deactivating += (s,a) =>
-				{
-					if (m_grid_groups.IsCurrentCellInEditMode  ) { m_grid_groups  .EndEdit(); a.Cancel = true; }
-					if (m_grid_patterns.IsCurrentCellInEditMode) { m_grid_patterns.EndEdit(); a.Cancel = true; }
-				};
+			{
+				if (m_grid_groups.IsCurrentCellInEditMode  ) { m_grid_groups  .EndEdit(); a.Cancel = true; }
+				if (m_grid_patterns.IsCurrentCellInEditMode) { m_grid_patterns.EndEdit(); a.Cancel = true; }
+			};
 
 			options.Saving += (s,a) =>
-				{
-					// Grab focus to take grids out of edit mode
-					Focus();
-				};
+			{
+				// Grab focus to take grids out of edit mode
+				Focus();
+			};
 
-			SetupGroupsGrid();
-			SetupPatternsGrid();
+			SetupUI();
+
 			SetPatternsDataSource();
+			UpdateButtonStates();
 		}
 		protected override void Dispose(bool disposing)
 		{
-			m_bs_groups.Dispose();
-			m_bs_patterns.Dispose();
-			m_hint_balloon.Dispose();
-
-			if (disposing && (components != null))
-			{
-				components.Dispose();
-			}
+			Util.Dispose(m_bs_groups);
+			Util.Dispose(m_bs_patterns);
+			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
 
-		/// <summary>Set up the grid of alignment groups</summary>
-		private void SetupGroupsGrid()
+		/// <summary>Set up UI elements</summary>
+		private void SetupUI()
 		{
+			// Set up the grid of alignment groups
 			m_grid_groups.Data = m_bs_groups;
 
 			// When the selected item in the groups grid changes, update the data source of the pattern grid
@@ -112,17 +115,18 @@ namespace Rylogic.VSExtension
 				m_grid_groups.SelectSingleRow(x + 1);
 			};
 
-			// Set up the help button for groups
-			m_btn_help_groups.Click += (s,a) =>
+			// Set up the donate button
+			m_btn_donate.ToolTip(m_tt, "Buy me a beer!");
+			m_btn_donate.Click += (s, a) =>
 			{
-				const string tt1 =
-					"Each group contains patterns that are all considered equivalent. " +
-					"Select a group to show its patterns in the table below. " +
-					"The order of groups defines the preferred order when looking for " +
-					"potential alignment candidates. Change the order by selecting a group " +
-					"and clicking the up/down arrows. 'LeadingSpace' is the number of white " +
-					"space characters added in front of the aligned text.";
-				m_hint_balloon.Show(m_grid_groups, m_grid_groups.ClientRectangle.TopLeft().Shifted(10,10), tt1, 10000);
+				ShowDonate();
+			};
+
+			// Set up the help button
+			m_btn_help_groups.ToolTip(m_tt, "Display a window containing help information");
+			m_btn_help_groups.Click += (s, a) =>
+			{
+				ShowHelp();
 			};
 
 			// Set up reset button
@@ -137,26 +141,10 @@ namespace Rylogic.VSExtension
 				m_bs_patterns.ResetBindings(false);
 			};
 
-			UpdateButtonStates();
-		}
-
-		/// <summary>Set up the grid of patterns</summary>
-		private void SetupPatternsGrid()
-		{
-			m_grid_patterns.Data                = m_bs_patterns;
-			m_grid_patterns.ShowEditPatternDlg  = ShowEditPatternDlg;
+			// Set up the grid of patterns
+			m_grid_patterns.Data = m_bs_patterns;
+			m_grid_patterns.ShowEditPatternDlg = ShowEditPatternDlg;
 			m_grid_patterns.CloseEditPatternDlg = CloseEditPatternDlg;
-
-			// Set up the help button for patterns
-			m_btn_help_patterns.Click += (s,a) =>
-			{
-				const string tt2 =
-					"A pattern can be a simple substring or a regular expression. " +
-					"The 'Offset' column controls the relative position of matching text " +
-					"to the other patterns in the group. The 'MinWidth' column controls " +
-					"how much extra padding is added after the matching text.";
-				m_hint_balloon.Show(m_grid_patterns, m_grid_patterns.ClientRectangle.TopLeft().Shifted(10,10), tt2, 10000);
-			};
 		}
 
 		/// <summary>Update the enabled states of the group buttons</summary>
@@ -183,136 +171,209 @@ namespace Rylogic.VSExtension
 		/// <summary>Display an instance of the edit pattern dialog</summary>
 		private void ShowEditPatternDlg(AlignPattern pat)
 		{
-			EditPatternDlg dlg;
-			if (pat != null && m_edit_windows.TryGetValue(pat, out dlg))
+			if (pat != null && m_edit_windows.TryGetValue(pat, out var dlg))
 			{
 				dlg.Visible = true;
 				dlg.BringToFront();
 				dlg.Focus();
 				return;
 			}
-
 			if (pat == null)
 			{
 				pat = new AlignPattern();
 				m_bs_patterns.Add(pat);
 			}
 
-			dlg = new EditPatternDlg(pat);
+			dlg = new EditPatternUI(pat)
+			{
+				StartPosition = FormStartPosition.CenterScreen,
+			};
 			dlg.Shown += (s,a) =>
-				{
-					m_edit_windows.Add(pat, dlg);
-				};
+			{
+				m_edit_windows.Add(pat, dlg);
+			};
 			dlg.Closed += (s,a) =>
-				{
-					m_edit_windows.Remove(pat);
-					SetPatternsDataSource();
-				};
+			{
+				m_edit_windows.Remove(pat);
+				SetPatternsDataSource();
+			};
 			dlg.Commit += (s,a) =>
-				{
-					var ui = (PatternUI)s;
-					Debug.Assert(!ui.IsNew);
-					var list = (BindingList<AlignPattern>)m_bs_patterns.DataSource;
-					list.Replace((AlignPattern)ui.Original, (AlignPattern)ui.Pattern);
-					dlg.Close();
-				};
-			dlg.Show(this);
+			{
+				var ui = (PatternUI)s;
+				Debug.Assert(!ui.IsNew);
+				var list = (BindingList<AlignPattern>)m_bs_patterns.DataSource;
+				list.Replace((AlignPattern)ui.Original, (AlignPattern)ui.Pattern);
+				dlg.Close();
+			};
+			dlg.Show();
 		}
 
 		/// <summary>Close any edit pattern dialogs that reference 'pat'</summary>
 		private void CloseEditPatternDlg(AlignPattern pat)
 		{
 			// If the deleted row is currently being edited, close the editor first
-			EditPatternDlg dlg;
-			if (m_edit_windows.TryGetValue(pat, out dlg))
+			if (m_edit_windows.TryGetValue(pat, out var dlg))
 				dlg.Close();
 		}
 
+		/// <summary>Display a help dialog</summary>
+		private void ShowHelp()
+		{
+			if (_help_ui == null)
+			{
+				var text = new Gui.RichTextBox
+				{
+					Multiline = true,
+					Dock = DockStyle.Fill,
+					ReadOnly = true,
+					Rtf = Resources.help,
+					BackColor = SystemColors.Control,
+				};
+				_help_ui = new Form
+				{
+					Text = "Alignment Help",
+					ShowIcon = false,
+					BackColor = SystemColors.Control,
+					Padding = new Padding(8),
+					Size = new Size(520, 400),
+					ShowInTaskbar = false,
+					StartPosition = FormStartPosition.CenterParent,
+				};
+				_help_ui.FormClosed += (s, a) =>
+				{
+					Util.Dispose(ref _help_ui);
+				};
+				_help_ui.Controls.Add(text);
+			}
+			_help_ui.Show(TopLevelControl);
+		}
+		private Form _help_ui;
+
+		/// <summary>Show the donate button</summary>
+		private void ShowDonate()
+		{
+			using (var dlg = new DonateUI(this))
+				dlg.ShowDialog();
+		}
+		
 		#region Component Designer generated code
-
-		/// <summary>Required designer variable.</summary>
 		private System.ComponentModel.IContainer components = null;
-
-		/// <summary>
-		/// Required method for Designer support - do not modify
-		/// the contents of this method with the code editor.
-		/// </summary>
 		private void InitializeComponent()
 		{
 			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(AlignOptionsControl));
 			this.m_split = new System.Windows.Forms.SplitContainer();
-			this.m_btn_reset = new System.Windows.Forms.Button();
-			this.m_btn_move_down = new System.Windows.Forms.Button();
-			this.m_image_list = new System.Windows.Forms.ImageList(this.components);
-			this.m_btn_move_up = new System.Windows.Forms.Button();
-			this.m_btn_del = new System.Windows.Forms.Button();
-			this.m_btn_new = new System.Windows.Forms.Button();
-			this.m_btn_help_groups = new System.Windows.Forms.Button();
-			this.m_lbl_alignment_group = new System.Windows.Forms.Label();
+			this.m_table1 = new System.Windows.Forms.TableLayoutPanel();
 			this.m_grid_groups = new Rylogic.VSExtension.GroupGrid();
-			this.m_btn_help_patterns = new System.Windows.Forms.Button();
-			this.m_lbl_alignment_patterns = new System.Windows.Forms.Label();
+			this.m_flow = new System.Windows.Forms.FlowLayoutPanel();
+			this.m_btn_new = new System.Windows.Forms.Button();
+			this.m_image_list = new System.Windows.Forms.ImageList(this.components);
+			this.m_btn_del = new System.Windows.Forms.Button();
+			this.m_btn_move_up = new System.Windows.Forms.Button();
+			this.m_btn_move_down = new System.Windows.Forms.Button();
+			this.m_panel = new System.Windows.Forms.Panel();
+			this.m_btn_help_groups = new System.Windows.Forms.Button();
+			this.m_btn_reset = new System.Windows.Forms.Button();
+			this.m_lbl_alignment_group = new System.Windows.Forms.Label();
+			this.m_table2 = new System.Windows.Forms.TableLayoutPanel();
 			this.m_grid_patterns = new Rylogic.VSExtension.PatternGrid();
+			this.m_lbl_alignment_patterns = new System.Windows.Forms.Label();
+			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
+			this.m_btn_donate = new System.Windows.Forms.Button();
 			((System.ComponentModel.ISupportInitialize)(this.m_split)).BeginInit();
 			this.m_split.Panel1.SuspendLayout();
 			this.m_split.Panel2.SuspendLayout();
 			this.m_split.SuspendLayout();
+			this.m_table1.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_groups)).BeginInit();
+			this.m_flow.SuspendLayout();
+			this.m_panel.SuspendLayout();
+			this.m_table2.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_patterns)).BeginInit();
 			this.SuspendLayout();
-			//
+			// 
 			// m_split
-			//
+			// 
 			this.m_split.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_split.Location = new System.Drawing.Point(0, 0);
 			this.m_split.Name = "m_split";
 			this.m_split.Orientation = System.Windows.Forms.Orientation.Horizontal;
-			//
+			// 
 			// m_split.Panel1
-			//
+			// 
 			this.m_split.Panel1.AutoScroll = true;
-			this.m_split.Panel1.Controls.Add(this.m_btn_reset);
-			this.m_split.Panel1.Controls.Add(this.m_btn_move_down);
-			this.m_split.Panel1.Controls.Add(this.m_btn_move_up);
-			this.m_split.Panel1.Controls.Add(this.m_btn_del);
-			this.m_split.Panel1.Controls.Add(this.m_btn_new);
-			this.m_split.Panel1.Controls.Add(this.m_btn_help_groups);
-			this.m_split.Panel1.Controls.Add(this.m_lbl_alignment_group);
-			this.m_split.Panel1.Controls.Add(this.m_grid_groups);
-			//
+			this.m_split.Panel1.Controls.Add(this.m_table1);
+			// 
 			// m_split.Panel2
-			//
-			this.m_split.Panel2.Controls.Add(this.m_btn_help_patterns);
-			this.m_split.Panel2.Controls.Add(this.m_lbl_alignment_patterns);
-			this.m_split.Panel2.Controls.Add(this.m_grid_patterns);
-			this.m_split.Size = new System.Drawing.Size(445, 288);
-			this.m_split.SplitterDistance = 142;
+			// 
+			this.m_split.Panel2.Controls.Add(this.m_table2);
+			this.m_split.Size = new System.Drawing.Size(655, 563);
+			this.m_split.SplitterDistance = 277;
 			this.m_split.TabIndex = 1;
-			//
-			// m_btn_reset
-			//
-			this.m_btn_reset.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_reset.Location = new System.Drawing.Point(312, -1);
-			this.m_btn_reset.Name = "m_btn_reset";
-			this.m_btn_reset.Size = new System.Drawing.Size(104, 20);
-			this.m_btn_reset.TabIndex = 10;
-			this.m_btn_reset.Text = "Reset to Defaults";
-			this.m_btn_reset.UseVisualStyleBackColor = true;
-			//
-			// m_btn_move_down
-			//
-			this.m_btn_move_down.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_move_down.ImageKey = "green_down.png";
-			this.m_btn_move_down.ImageList = this.m_image_list;
-			this.m_btn_move_down.Location = new System.Drawing.Point(419, 98);
-			this.m_btn_move_down.Name = "m_btn_move_down";
-			this.m_btn_move_down.Size = new System.Drawing.Size(26, 26);
-			this.m_btn_move_down.TabIndex = 9;
-			this.m_btn_move_down.UseVisualStyleBackColor = true;
-			//
+			// 
+			// m_table1
+			// 
+			this.m_table1.ColumnCount = 2;
+			this.m_table1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+			this.m_table1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
+			this.m_table1.Controls.Add(this.m_grid_groups, 0, 1);
+			this.m_table1.Controls.Add(this.m_flow, 1, 1);
+			this.m_table1.Controls.Add(this.m_panel, 0, 0);
+			this.m_table1.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_table1.Location = new System.Drawing.Point(0, 0);
+			this.m_table1.Name = "m_table1";
+			this.m_table1.RowCount = 2;
+			this.m_table1.RowStyles.Add(new System.Windows.Forms.RowStyle());
+			this.m_table1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+			this.m_table1.Size = new System.Drawing.Size(655, 277);
+			this.m_table1.TabIndex = 11;
+			// 
+			// m_grid_groups
+			// 
+			this.m_grid_groups.AllowUserToAddRows = false;
+			this.m_grid_groups.AllowUserToResizeRows = false;
+			this.m_grid_groups.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_grid_groups.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+			this.m_grid_groups.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+			this.m_grid_groups.Location = new System.Drawing.Point(0, 23);
+			this.m_grid_groups.Margin = new System.Windows.Forms.Padding(0);
+			this.m_grid_groups.MultiSelect = false;
+			this.m_grid_groups.Name = "m_grid_groups";
+			this.m_grid_groups.RowHeadersWidth = 24;
+			this.m_grid_groups.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
+			this.m_grid_groups.Size = new System.Drawing.Size(621, 254);
+			this.m_grid_groups.TabIndex = 0;
+			this.m_grid_groups.VirtualMode = true;
+			// 
+			// m_flow
+			// 
+			this.m_flow.Controls.Add(this.m_btn_new);
+			this.m_flow.Controls.Add(this.m_btn_del);
+			this.m_flow.Controls.Add(this.m_btn_move_up);
+			this.m_flow.Controls.Add(this.m_btn_move_down);
+			this.m_flow.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_flow.FlowDirection = System.Windows.Forms.FlowDirection.TopDown;
+			this.m_flow.Location = new System.Drawing.Point(621, 23);
+			this.m_flow.Margin = new System.Windows.Forms.Padding(0);
+			this.m_flow.Name = "m_flow";
+			this.m_flow.Size = new System.Drawing.Size(34, 254);
+			this.m_flow.TabIndex = 1;
+			// 
+			// m_btn_new
+			// 
+			this.m_btn_new.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_btn_new.ImageKey = "edit_add.png";
+			this.m_btn_new.ImageList = this.m_image_list;
+			this.m_btn_new.Location = new System.Drawing.Point(3, 3);
+			this.m_btn_new.Name = "m_btn_new";
+			this.m_btn_new.Size = new System.Drawing.Size(26, 26);
+			this.m_btn_new.TabIndex = 6;
+			this.m_btn_new.UseVisualStyleBackColor = true;
+			// 
 			// m_image_list
-			//
+			// 
 			this.m_image_list.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("m_image_list.ImageStream")));
 			this.m_image_list.TransparentColor = System.Drawing.Color.Transparent;
 			this.m_image_list.Images.SetKeyName(0, "edit_add.png");
@@ -322,134 +383,158 @@ namespace Rylogic.VSExtension
 			this.m_image_list.Images.SetKeyName(4, "green_tick.png");
 			this.m_image_list.Images.SetKeyName(5, "gray_cross.png");
 			this.m_image_list.Images.SetKeyName(6, "pencil.png");
-			//
-			// m_btn_move_up
-			//
-			this.m_btn_move_up.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_move_up.ImageKey = "green_up.png";
-			this.m_btn_move_up.ImageList = this.m_image_list;
-			this.m_btn_move_up.Location = new System.Drawing.Point(419, 72);
-			this.m_btn_move_up.Name = "m_btn_move_up";
-			this.m_btn_move_up.Size = new System.Drawing.Size(26, 26);
-			this.m_btn_move_up.TabIndex = 8;
-			this.m_btn_move_up.UseVisualStyleBackColor = true;
-			//
+			// 
 			// m_btn_del
-			//
+			// 
 			this.m_btn_del.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_del.ImageKey = "red_x.png";
 			this.m_btn_del.ImageList = this.m_image_list;
-			this.m_btn_del.Location = new System.Drawing.Point(419, 46);
+			this.m_btn_del.Location = new System.Drawing.Point(3, 35);
 			this.m_btn_del.Name = "m_btn_del";
 			this.m_btn_del.Size = new System.Drawing.Size(26, 26);
 			this.m_btn_del.TabIndex = 7;
 			this.m_btn_del.UseVisualStyleBackColor = true;
-			//
-			// m_btn_new
-			//
-			this.m_btn_new.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_new.ImageKey = "edit_add.png";
-			this.m_btn_new.ImageList = this.m_image_list;
-			this.m_btn_new.Location = new System.Drawing.Point(419, 20);
-			this.m_btn_new.Name = "m_btn_new";
-			this.m_btn_new.Size = new System.Drawing.Size(26, 26);
-			this.m_btn_new.TabIndex = 6;
-			this.m_btn_new.UseVisualStyleBackColor = true;
-			//
+			// 
+			// m_btn_move_up
+			// 
+			this.m_btn_move_up.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_btn_move_up.ImageKey = "green_up.png";
+			this.m_btn_move_up.ImageList = this.m_image_list;
+			this.m_btn_move_up.Location = new System.Drawing.Point(3, 67);
+			this.m_btn_move_up.Name = "m_btn_move_up";
+			this.m_btn_move_up.Size = new System.Drawing.Size(26, 29);
+			this.m_btn_move_up.TabIndex = 8;
+			this.m_btn_move_up.UseVisualStyleBackColor = true;
+			// 
+			// m_btn_move_down
+			// 
+			this.m_btn_move_down.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_btn_move_down.ImageKey = "green_down.png";
+			this.m_btn_move_down.ImageList = this.m_image_list;
+			this.m_btn_move_down.Location = new System.Drawing.Point(3, 102);
+			this.m_btn_move_down.Name = "m_btn_move_down";
+			this.m_btn_move_down.Size = new System.Drawing.Size(26, 30);
+			this.m_btn_move_down.TabIndex = 9;
+			this.m_btn_move_down.UseVisualStyleBackColor = true;
+			// 
+			// m_panel
+			// 
+			this.m_panel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_panel.Controls.Add(this.m_btn_donate);
+			this.m_panel.Controls.Add(this.m_btn_help_groups);
+			this.m_panel.Controls.Add(this.m_btn_reset);
+			this.m_panel.Controls.Add(this.m_lbl_alignment_group);
+			this.m_panel.Location = new System.Drawing.Point(0, 0);
+			this.m_panel.Margin = new System.Windows.Forms.Padding(0);
+			this.m_panel.Name = "m_panel";
+			this.m_panel.Size = new System.Drawing.Size(621, 23);
+			this.m_panel.TabIndex = 2;
+			// 
 			// m_btn_help_groups
-			//
-			this.m_btn_help_groups.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_help_groups.Location = new System.Drawing.Point(425, -1);
+			// 
+			this.m_btn_help_groups.Dock = System.Windows.Forms.DockStyle.Right;
+			this.m_btn_help_groups.Location = new System.Drawing.Point(414, 0);
 			this.m_btn_help_groups.Name = "m_btn_help_groups";
-			this.m_btn_help_groups.Size = new System.Drawing.Size(20, 20);
+			this.m_btn_help_groups.Size = new System.Drawing.Size(103, 23);
 			this.m_btn_help_groups.TabIndex = 5;
-			this.m_btn_help_groups.Text = "?";
+			this.m_btn_help_groups.Text = "Help";
 			this.m_btn_help_groups.UseVisualStyleBackColor = true;
-			//
+			// 
+			// m_btn_reset
+			// 
+			this.m_btn_reset.Dock = System.Windows.Forms.DockStyle.Right;
+			this.m_btn_reset.Location = new System.Drawing.Point(517, 0);
+			this.m_btn_reset.Name = "m_btn_reset";
+			this.m_btn_reset.Size = new System.Drawing.Size(104, 23);
+			this.m_btn_reset.TabIndex = 10;
+			this.m_btn_reset.Text = "Reset to Defaults";
+			this.m_btn_reset.UseVisualStyleBackColor = true;
+			// 
 			// m_lbl_alignment_group
-			//
-			this.m_lbl_alignment_group.AutoSize = true;
-			this.m_lbl_alignment_group.Location = new System.Drawing.Point(0, 3);
+			// 
+			this.m_lbl_alignment_group.Dock = System.Windows.Forms.DockStyle.Left;
+			this.m_lbl_alignment_group.Location = new System.Drawing.Point(0, 0);
 			this.m_lbl_alignment_group.Name = "m_lbl_alignment_group";
-			this.m_lbl_alignment_group.Size = new System.Drawing.Size(93, 13);
+			this.m_lbl_alignment_group.Size = new System.Drawing.Size(93, 23);
 			this.m_lbl_alignment_group.TabIndex = 2;
 			this.m_lbl_alignment_group.Text = "Alignment Groups:";
-			//
-			// m_grid_groups
-			//
-			this.m_grid_groups.AllowUserToAddRows = false;
-			this.m_grid_groups.AllowUserToResizeRows = false;
-			this.m_grid_groups.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_grid_groups.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
-			this.m_grid_groups.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-			this.m_grid_groups.Location = new System.Drawing.Point(0, 22);
-			this.m_grid_groups.Margin = new System.Windows.Forms.Padding(0);
-			this.m_grid_groups.MultiSelect = false;
-			this.m_grid_groups.Name = "m_grid_groups";
-			this.m_grid_groups.RowHeadersWidth = 24;
-			this.m_grid_groups.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_groups.Size = new System.Drawing.Size(416, 120);
-			this.m_grid_groups.TabIndex = 0;
-			this.m_grid_groups.VirtualMode = true;
-			//
-			// m_btn_help_patterns
-			//
-			this.m_btn_help_patterns.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_help_patterns.Location = new System.Drawing.Point(425, -1);
-			this.m_btn_help_patterns.Name = "m_btn_help_patterns";
-			this.m_btn_help_patterns.Size = new System.Drawing.Size(20, 20);
-			this.m_btn_help_patterns.TabIndex = 6;
-			this.m_btn_help_patterns.Text = "?";
-			this.m_btn_help_patterns.UseVisualStyleBackColor = true;
-			//
-			// m_lbl_alignment_patterns
-			//
-			this.m_lbl_alignment_patterns.AutoSize = true;
-			this.m_lbl_alignment_patterns.Location = new System.Drawing.Point(0, 3);
-			this.m_lbl_alignment_patterns.Name = "m_lbl_alignment_patterns";
-			this.m_lbl_alignment_patterns.Size = new System.Drawing.Size(98, 13);
-			this.m_lbl_alignment_patterns.TabIndex = 3;
-			this.m_lbl_alignment_patterns.Text = "Alignment Patterns:";
-			//
+			this.m_lbl_alignment_group.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			// 
+			// m_table2
+			// 
+			this.m_table2.ColumnCount = 1;
+			this.m_table2.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+			this.m_table2.Controls.Add(this.m_grid_patterns, 0, 1);
+			this.m_table2.Controls.Add(this.m_lbl_alignment_patterns, 0, 0);
+			this.m_table2.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_table2.Location = new System.Drawing.Point(0, 0);
+			this.m_table2.Name = "m_table2";
+			this.m_table2.RowCount = 2;
+			this.m_table2.RowStyles.Add(new System.Windows.Forms.RowStyle());
+			this.m_table2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+			this.m_table2.Size = new System.Drawing.Size(655, 282);
+			this.m_table2.TabIndex = 7;
+			// 
 			// m_grid_patterns
-			//
+			// 
 			this.m_grid_patterns.AllowUserToResizeRows = false;
-			this.m_grid_patterns.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
+			this.m_grid_patterns.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_grid_patterns.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
 			this.m_grid_patterns.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-			this.m_grid_patterns.Location = new System.Drawing.Point(0, 20);
+			this.m_grid_patterns.Location = new System.Drawing.Point(0, 21);
 			this.m_grid_patterns.Margin = new System.Windows.Forms.Padding(0);
 			this.m_grid_patterns.MultiSelect = false;
 			this.m_grid_patterns.Name = "m_grid_patterns";
 			this.m_grid_patterns.RowHeadersWidth = 24;
 			this.m_grid_patterns.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-			this.m_grid_patterns.Size = new System.Drawing.Size(445, 122);
+			this.m_grid_patterns.Size = new System.Drawing.Size(655, 261);
 			this.m_grid_patterns.TabIndex = 0;
 			this.m_grid_patterns.VirtualMode = true;
-			//
+			// 
+			// m_lbl_alignment_patterns
+			// 
+			this.m_lbl_alignment_patterns.Location = new System.Drawing.Point(3, 0);
+			this.m_lbl_alignment_patterns.Name = "m_lbl_alignment_patterns";
+			this.m_lbl_alignment_patterns.Size = new System.Drawing.Size(98, 21);
+			this.m_lbl_alignment_patterns.TabIndex = 3;
+			this.m_lbl_alignment_patterns.Text = "Alignment Patterns:";
+			this.m_lbl_alignment_patterns.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			// 
+			// m_btn_donate
+			// 
+			this.m_btn_donate.BackColor = System.Drawing.Color.LightGreen;
+			this.m_btn_donate.Dock = System.Windows.Forms.DockStyle.Right;
+			this.m_btn_donate.Location = new System.Drawing.Point(311, 0);
+			this.m_btn_donate.Name = "m_btn_donate";
+			this.m_btn_donate.Size = new System.Drawing.Size(103, 23);
+			this.m_btn_donate.TabIndex = 11;
+			this.m_btn_donate.Text = "Donate";
+			this.m_btn_donate.UseVisualStyleBackColor = false;
+			// 
 			// AlignOptionsControl
-			//
+			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.AutoSize = true;
 			this.Controls.Add(this.m_split);
 			this.Name = "AlignOptionsControl";
-			this.Size = new System.Drawing.Size(445, 288);
+			this.Size = new System.Drawing.Size(655, 563);
 			this.m_split.Panel1.ResumeLayout(false);
-			this.m_split.Panel1.PerformLayout();
 			this.m_split.Panel2.ResumeLayout(false);
-			this.m_split.Panel2.PerformLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_split)).EndInit();
 			this.m_split.ResumeLayout(false);
+			this.m_table1.ResumeLayout(false);
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_groups)).EndInit();
+			this.m_flow.ResumeLayout(false);
+			this.m_panel.ResumeLayout(false);
+			this.m_table2.ResumeLayout(false);
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_patterns)).EndInit();
 			this.ResumeLayout(false);
-		}
 
+		}
 		#endregion
 	}
 }

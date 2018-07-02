@@ -39,18 +39,14 @@ namespace Rylogic.VSExtension
 				// http://msdn.microsoft.com/en-us/library/dd884850.aspx
 				var txtMgr = Package.GetService<VsTextManagerClass>() as IVsTextManager;
 
-				IVsTextView text_view = null;
-				txtMgr.GetActiveView(fMustHaveFocus: 1, pBuffer: null, ppView: out text_view);
-				var user_data = text_view as IVsUserData;
-				if (user_data == null)
-					return null;
-
-				Guid guidViewHost = DefGuidList.guidIWpfTextViewHost;
-
-				object holder;
-				user_data.GetData(ref guidViewHost, out holder);
-				var view_host = (IWpfTextViewHost)holder;
-				return view_host;
+				txtMgr.GetActiveView(fMustHaveFocus: 1, pBuffer: null, ppView: out var text_view);
+				if (text_view is IVsUserData user_data)
+				{
+					var guidViewHost = DefGuidList.guidIWpfTextViewHost;
+					user_data.GetData(ref guidViewHost, out var holder);
+					return (IWpfTextViewHost)holder;
+				}
+				return null;
 			}
 		}
 	}

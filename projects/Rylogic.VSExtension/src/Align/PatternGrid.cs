@@ -28,11 +28,43 @@ namespace Rylogic.VSExtension
 			// The patterns grid is virtual mode so that we can draw images and handle edits
 			AutoGenerateColumns = false;
 			AllowUserToAddRows = true;
-			Columns.Add(new DataGridViewImageColumn   {Tag = EPatternColumns.Active   ,HeaderText = EPatternColumns.Active   .ToStringFast() ,FillWeight = 25  ,ReadOnly = true ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
-			Columns.Add(new DataGridViewTextBoxColumn {Tag = EPatternColumns.Pattern  ,HeaderText = EPatternColumns.Pattern  .ToStringFast() ,FillWeight = 100 ,ReadOnly = true });
-			Columns.Add(new DataGridViewTextBoxColumn {Tag = EPatternColumns.Offset   ,HeaderText = EPatternColumns.Offset   .ToStringFast() ,FillWeight = 30 });
-			Columns.Add(new DataGridViewTextBoxColumn {Tag = EPatternColumns.MinWidth ,HeaderText = EPatternColumns.MinWidth .ToStringFast() ,FillWeight = 30 });
-			Columns.Add(new DataGridViewImageColumn   {Tag = EPatternColumns.Edit     ,HeaderText = EPatternColumns.Edit     .ToStringFast() ,FillWeight = 15  ,ReadOnly = true ,AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader ,ImageLayout = DataGridViewImageCellLayout.Zoom});
+			Columns.Add(new DataGridViewImageColumn
+			{
+				HeaderText = "Active",
+				Tag = EPatternColumns.Active,
+				AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader,
+				ImageLayout = DataGridViewImageCellLayout.Zoom,
+				FillWeight = 25,
+				ReadOnly = true,
+			});
+			Columns.Add(new DataGridViewTextBoxColumn
+			{
+				HeaderText = "Pattern",
+				Tag = EPatternColumns.Pattern,
+				FillWeight = 100,
+				ReadOnly = true
+			});
+			Columns.Add(new DataGridViewTextBoxColumn
+			{
+				HeaderText = "Offset",
+				Tag = EPatternColumns.Offset,
+				FillWeight = 30,
+			});
+			Columns.Add(new DataGridViewTextBoxColumn
+			{
+				HeaderText = "MinWidth",
+				Tag = EPatternColumns.MinWidth,
+				FillWeight = 30,
+			});
+			Columns.Add(new DataGridViewImageColumn
+			{
+				HeaderText = "Edit",
+				Tag = EPatternColumns.Edit,
+				AutoSizeMode = DataGridViewAutoSizeColumnMode.ColumnHeader,
+				ImageLayout = DataGridViewImageCellLayout.Zoom,
+				FillWeight = 15,
+				ReadOnly = true,
+			});
 
 			// Clear the 'X' null image
 			foreach (var col in Columns.OfType<DataGridViewImageColumn>())
@@ -183,16 +215,38 @@ namespace Rylogic.VSExtension
 		protected override void OnCellToolTipTextNeeded(DataGridViewCellToolTipTextNeededEventArgs e)
 		{
 			base.OnCellToolTipTextNeeded(e);
-			if (e.RowIndex    < 0 || e.RowIndex    >= Data.Count) return;
 			if (e.ColumnIndex < 0 || e.ColumnIndex >= ColumnCount) return;
-
-			var pat = (AlignPattern)Data[e.RowIndex];
-			switch ((EPatternColumns)Columns[e.ColumnIndex].Tag)
+			if (e.RowIndex == -1)
 			{
-			default: return;
-			case EPatternColumns.Pattern:
-				e.ToolTipText= pat.Comment;
-				break;
+				switch ((EPatternColumns)e.ColumnIndex)
+				{
+				case EPatternColumns.Active:
+					e.ToolTipText = "Enable/Disable the pattern within the group";
+					break;
+				case EPatternColumns.Pattern:
+					e.ToolTipText = "The pattern text";
+					break;
+				case EPatternColumns.Offset:
+					e.ToolTipText = "The relative position of matching text relative to the other patterns in the group";
+					break;
+				case EPatternColumns.MinWidth:
+					e.ToolTipText = "Matched text will be padded with whitespace characters up to the minimum width";
+					break;
+				case EPatternColumns.Edit:
+					e.ToolTipText = "Edit the pattern";
+					break;
+				}
+			}
+			else if (e.RowIndex >= 0 && e.RowIndex < Data.Count)
+			{
+				var pat = (AlignPattern)Data[e.RowIndex];
+				switch ((EPatternColumns)Columns[e.ColumnIndex].Tag)
+				{
+				default: return;
+				case EPatternColumns.Pattern:
+					e.ToolTipText = pat.Comment;
+					break;
+				}
 			}
 		}
 

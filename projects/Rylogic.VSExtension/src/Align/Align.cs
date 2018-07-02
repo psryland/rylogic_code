@@ -12,137 +12,14 @@ namespace Rylogic.VSExtension
 {
 	internal class Align
 	{
-		private class Token
-		{
-			/// <summary>The align group corresponding to GrpIndex</summary>
-			public AlignGroup Grp { get; private set; }
-
-			/// <summary>The index position of the pattern in the priority list</summary>
-			public int GrpIndex { get; private set; }
-
-			/// <summary>The pattern that this token matches</summary>
-			public AlignPattern Patn { get; private set; }
-
-			/// <summary>The line that this token is on</summary>
-			public ITextSnapshotLine Line { get; private set; }
-
-			/// <summary>The line number that the token is on</summary>
-			public int LineNumber { get; private set; }
-
-			/// <summary>The character range of the matched pattern on the line</summary>
-			public Range Span { get; private set; }
-
-			/// <summary>The minimum distance of this token from 'caret_pos'</summary>
-			public int Distance(int caret_pos) { return (int)(Span.Contains(caret_pos) ? 0 : Math.Min(Math.Abs(Span.Beg - caret_pos), Math.Abs(Span.End - caret_pos))); }
-
-			/// <summary>The minimum character index that this token can be left shifted to</summary>
-			public int MinCharIndex { get; private set; }
-
-			/// <summary>The minimum column index that this token can be left shifted to</summary>
-			public int MinColumnIndex { get; private set; }
-
-			/// <summary>The current char index of the token</summary>
-			public int CurrentCharIndex { get; private set; }
-
-			/// <summary>The current column index of the token</summary>
-			public int CurrentColumnIndex { get; private set; }
-
-			public Token(AlignGroup grp, int grp_index, int patn_index, ITextSnapshotLine line, int line_number, Range span, int tab_size)
-			{
-				Grp        = grp;
-				GrpIndex   = grp_index;
-				Patn       = grp.Patterns[patn_index];
-				Span       = span;
-				Line       = line;
-				LineNumber = line_number;
-
-				var line_text  = Line.GetText();
-				int i; for (i = (int)(Span.Beg - 1); i >= 0 && char.IsWhiteSpace(line_text[i]); --i) {} ++i;
-
-				MinCharIndex       = i;
-				MinColumnIndex     = CharIndexToColumnIndex(line_text, MinCharIndex, tab_size);
-				CurrentCharIndex   = (int)Span.Beg;
-				CurrentColumnIndex = CharIndexToColumnIndex(line_text, (int)Span.Beg, tab_size);
-			}
-
-			/// <summary>Set this edit so that it cannot be moved to the left</summary>
-			public void SetNoLeftShift()
-			{
-				MinCharIndex = CurrentCharIndex;
-				MinColumnIndex = CurrentColumnIndex;
-			}
-
-			/// <summary>Converts a char index into a column index for the given line</summary>
-			private int CharIndexToColumnIndex(string line, int char_index, int tab_size)
-			{
-				// Careful, columns != char index because of tabs
-				// Also, Surrogate pairs are pairs of char's that only take up one column
-				var col = 0;
-				for (var i = 0; i != char_index; ++i)
-				{
-					col += line[i] == '\t' ? tab_size - (col % tab_size) : 1;
-					if (i < line.Length-1 && char.IsSurrogatePair(line[i], line[i+1]))
-						++i;
-				}
-				return col;
-			}
-
-			public override string ToString()
-			{
-				return $"Line: {LineNumber} Grp: {Grp} Patn: {Patn} Span: {Span}";
-			}
-		}
-
-		private struct Selection
-		{
-			public readonly Range Pos;               // The buffer position range of the selected characters [First,Last)
-			public readonly Range Lines;             // The lines contained in the selection [First,Last)
-			public readonly ITextSnapshotLine SLine; // The line containing the first selected character
-			public readonly ITextSnapshotLine ELine; // The line containing the last selected character
-			public readonly int CaretPos;            // The buffer position of the caret
-			public readonly int CaretLineNumber;     // The line that the caret is on
-			public bool IsEmpty      { get { return Pos.Empty; } }
-			public bool IsSingleLine { get { return Lines.Empty; } }
-			public bool IsWholeLines { get { return Pos.Begi == SLine.Start.Position && Pos.Endi >= ELine.End.Position; } } // >= because ELine.End.Position doesn't include the newline
-
-			public Selection(IWpfTextView view)
-			{
-				var snapshot  = view.TextSnapshot;
-				var selection = view.Selection;
-				var caret     = view.Caret;
-
-				Pos   = new Range(selection.Start.Position, selection.End.Position);
-				Lines = new Range(
-					snapshot.GetLineNumberFromPosition(Pos.Begi),
-					snapshot.GetLineNumberFromPosition(Pos.Empty ? Pos.Begi : Pos.Endi - 1));
-
-				SLine = snapshot.GetLineFromLineNumber(Lines.Begi);
-				ELine = snapshot.GetLineFromLineNumber(Lines.Endi);
-
-				CaretPos = Math_.Clamp(caret.Position.BufferPosition, SLine.Start.Position, ELine.End.Position);
-				CaretLineNumber = snapshot.GetLineNumberFromPosition(CaretPos);
-
-				Debug.Assert(Pos.Size >= 0);
-				Debug.Assert(Lines.Size >= 0);
-			}
-		}
-
-		private struct AlignPos
-		{
-			public readonly int Column; // The column index to align to
-			public readonly Range Span; // The range of characters around the align column
-			public AlignPos(int column, Range span) { Column = column; Span = span; }
-			public override string ToString() { return $"Col {Column} {Span}"; }
-		}
-
-		private readonly List<AlignGroup> m_groups;
 		private readonly IWpfTextView m_view;
 		private readonly ITextSnapshot m_snapshot;
+		private readonly List<AlignGroup> m_groups;
 
 		public Align(IEnumerable<AlignGroup> groups, IWpfTextView view)
 		{
-			m_groups   = groups.ToList();
 			m_view     = view;
+			m_groups   = groups.ToList();
 			m_snapshot = m_view.TextSnapshot;
 
 			// Get the current line number, line, line position, and selection
@@ -400,6 +277,162 @@ namespace Rylogic.VSExtension
 						text.Insert(edit.Line.Start.Position + edit.MinCharIndex, new string(' ', ws_head));
 				}
 				text.Apply();
+			}
+		}
+
+		/// <summary></summary>
+		private class Token
+		{
+			public Token(AlignGroup grp, int grp_index, int patn_index, ITextSnapshotLine line, int line_number, Range span, int tab_size)
+			{
+				Grp = grp;
+				GrpIndex = grp_index;
+				Patn = grp.Patterns[patn_index];
+				Span = span;
+				Line = line;
+				LineNumber = line_number;
+
+				var line_text = Line.GetText();
+				int i; for (i = (int)(Span.Beg - 1); i >= 0 && char.IsWhiteSpace(line_text[i]); --i) { }
+				++i;
+
+				MinCharIndex = i;
+				MinColumnIndex = CharIndexToColumnIndex(line_text, MinCharIndex, tab_size);
+				CurrentCharIndex = (int)Span.Beg;
+				CurrentColumnIndex = CharIndexToColumnIndex(line_text, (int)Span.Beg, tab_size);
+			}
+
+			/// <summary>The align group corresponding to GrpIndex</summary>
+			public AlignGroup Grp { get; private set; }
+
+			/// <summary>The index position of the pattern in the priority list</summary>
+			public int GrpIndex { get; private set; }
+
+			/// <summary>The pattern that this token matches</summary>
+			public AlignPattern Patn { get; private set; }
+
+			/// <summary>The line that this token is on</summary>
+			public ITextSnapshotLine Line { get; private set; }
+
+			/// <summary>The line number that the token is on</summary>
+			public int LineNumber { get; private set; }
+
+			/// <summary>The character range of the matched pattern on the line</summary>
+			public Range Span { get; private set; }
+
+			/// <summary>The minimum distance of this token from 'caret_pos'</summary>
+			public int Distance(int caret_pos)
+			{
+				return Span.Contains(caret_pos) ? 0 
+					: (int)Math.Min(Math.Abs(Span.Beg - caret_pos), Math.Abs(Span.End - caret_pos));
+			}
+
+			/// <summary>The minimum character index that this token can be left shifted to</summary>
+			public int MinCharIndex { get; private set; }
+
+			/// <summary>The minimum column index that this token can be left shifted to</summary>
+			public int MinColumnIndex { get; private set; }
+
+			/// <summary>The current char index of the token</summary>
+			public int CurrentCharIndex { get; private set; }
+
+			/// <summary>The current column index of the token</summary>
+			public int CurrentColumnIndex { get; private set; }
+
+			/// <summary>Set this edit so that it cannot be moved to the left</summary>
+			public void SetNoLeftShift()
+			{
+				MinCharIndex = CurrentCharIndex;
+				MinColumnIndex = CurrentColumnIndex;
+			}
+
+			/// <summary>Converts a char index into a column index for the given line</summary>
+			private int CharIndexToColumnIndex(string line, int char_index, int tab_size)
+			{
+				// Careful, columns != char index because of tabs
+				// Also, Surrogate pairs are pairs of char's that only take up one column
+				var col = 0;
+				for (var i = 0; i != char_index; ++i)
+				{
+					col += line[i] == '\t' ? tab_size - (col % tab_size) : 1;
+					if (i < line.Length - 1 && char.IsSurrogatePair(line[i], line[i + 1]))
+						++i;
+				}
+				return col;
+			}
+
+			/// <summary></summary>
+			public override string ToString()
+			{
+				return $"Line: {LineNumber} Grp: {Grp} Patn: {Patn} Span: {Span}";
+			}
+		}
+
+		/// <summary></summary>
+		private struct Selection
+		{
+			public readonly Range Pos;               // The buffer position range of the selected characters [First,Last)
+			public readonly Range Lines;             // The lines contained in the selection [First,Last)
+			public readonly ITextSnapshotLine SLine; // The line containing the first selected character
+			public readonly ITextSnapshotLine ELine; // The line containing the last selected character
+			public readonly int CaretPos;            // The buffer position of the caret
+			public readonly int CaretLineNumber;     // The line that the caret is on
+
+			public Selection(IWpfTextView view)
+			{
+				var snapshot = view.TextSnapshot;
+				var selection = view.Selection;
+				var caret = view.Caret;
+
+				Pos = new Range(selection.Start.Position, selection.End.Position);
+				Lines = new Range(
+					snapshot.GetLineNumberFromPosition(Pos.Begi),
+					snapshot.GetLineNumberFromPosition(Pos.Empty ? Pos.Begi : Pos.Endi - 1));
+
+				SLine = snapshot.GetLineFromLineNumber(Lines.Begi);
+				ELine = snapshot.GetLineFromLineNumber(Lines.Endi);
+
+				CaretPos = Math_.Clamp(caret.Position.BufferPosition, SLine.Start.Position, ELine.End.Position);
+				CaretLineNumber = snapshot.GetLineNumberFromPosition(CaretPos);
+
+				Debug.Assert(Pos.Size >= 0);
+				Debug.Assert(Lines.Size >= 0);
+			}
+
+			public bool IsEmpty
+			{
+				get { return Pos.Empty; }
+			}
+			public bool IsSingleLine
+			{
+				get { return Lines.Empty; }
+			}
+			public bool IsWholeLines
+			{
+				// >= because ELine.End.Position doesn't include the newline
+				get { return Pos.Begi == SLine.Start.Position && Pos.Endi >= ELine.End.Position; }
+			}
+		}
+
+		/// <summary></summary>
+		private struct AlignPos
+		{
+			public AlignPos(int column, Range span)
+			{
+				Column = column;
+				Span = span;
+			}
+
+			/// <summary>The column index to align to</summary>
+			public readonly int Column;
+
+			/// <summary>The range of characters around the align column</summary>
+			public readonly Range Span;
+
+			/// <summary></summary>
+			public override string ToString()
+			{
+				return $"Col {Column} {Span}";
 			}
 		}
 	}
