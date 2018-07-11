@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 
-import sys, os, time, shutil, glob, subprocess, threading, re, enum, socket, zipfile, ctypes, hashlib
+import sys, os, time, shutil, glob, subprocess, threading, re, enum, socket, zipfile, ctypes, hashlib, urllib.request
 import xml.etree.ElementTree as xml
 import xml.dom.minidom as minidom
 import UserVars
@@ -543,6 +543,52 @@ def ZipDirectory(zip_path, root_dir):
 			arcpath  = os.path.relpath(filepath, root_dir)
 			zipf.write(filepath, arcpath)
 	zipf.close()
+
+# Download a file from 'url' and save it to 'filepath'
+def DownloadFile(url:str, filepath:str, show_progress:bool):
+	
+	# Open the file to write to
+	with open(filepath, 'wb') as f:
+		
+		# Open the URL
+		resp = urllib.request.urlopen(url)
+
+		if show_progress:
+
+			# See if the header includes a content length. If a length is given, give process feedback
+			length = resp.getheader('content-length')
+			blocksize = 65536
+			size = 0
+			if length:
+				length = int(length)
+				print("Downloading " + str(length) + " bytes ["+(" "*50)+"]", end='', flush=True)
+				while True:
+					buf = resp.read(blocksize)
+					if not buf: break
+					f.write(buf)
+					size += len(buf)
+					progress = int(50 * size / length)
+					print(("\b"*52) + "["+("#"*progress)+(" "*(50-progress))+"]", end='', flush=True)
+				print()
+
+			# Otherwise give number of bytes downloaded so far
+			else:
+				progress = str(size) + " bytes"
+				print("Downloaded "+progress, end='', flush=True)
+				while True:
+					buf = resp.read(blocksize)
+					if not buf: break
+					f.write(buf)
+					size += len(buf)
+					print("\b"*len(progress), end='')
+					progress = str(size) + " bytes"
+					print(progress, end='', flush=True)
+				print()
+
+		else:
+			# Otherwise, download silently
+			f.write(resp.read())
+	return
 
 # Write XML to a file with decent formatting.
 # For some reason this is glaringly missing from the built in XML support
