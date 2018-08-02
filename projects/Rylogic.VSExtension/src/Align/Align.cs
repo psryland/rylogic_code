@@ -60,7 +60,7 @@ namespace Rylogic.VSExtension
 			if (pattern_selection)
 			{
 				var s = selection.Pos.Begi - selection.SLine.Start.Position;
-				var e = selection.Pos.Endi   - selection.SLine.Start.Position;
+				var e = selection.Pos.Endi - selection.SLine.Start.Position;
 				var text = selection.SLine.GetText();
 				var expr = text.Substring(s, Math.Min(e - s, text.Length - s));
 				var ofs = expr.TakeWhile(char.IsWhiteSpace).Count(); // Count leading whitespace

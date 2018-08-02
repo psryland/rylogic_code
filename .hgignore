@@ -67,3 +67,4 @@ build/*.ldr
 */Rylobot/net/Data/*
 */Rylobot/net/Model/*
 *Sample*
+typescript/**/out/*

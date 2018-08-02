@@ -544,6 +544,24 @@ def ZipDirectory(zip_path, root_dir):
 			zipf.write(filepath, arcpath)
 	zipf.close()
 
+# Extract a zip file with progress feedback
+def ExtractZip(filepath:str, destination:str, show_progress:bool):
+	with zipfile.ZipFile(filepath, "r") as zf:
+		if show_progress:
+
+			length = sum(file.file_size for file in zf.infolist())
+			size = 0
+			print(f"Extracting "+str(length)+" bytes ["+(" "*50)+"]", end='', flush=True)
+			for file in zf.infolist():
+				size += file.file_size
+				progress = int(50 * size / length)
+				print(("\b"*52) + "["+("#"*progress)+(" "*(50-progress))+"]", end='', flush=True)
+				zf.extract(file, path=destination)
+			print()
+		else:
+			zf.extractall(destination)
+	return
+
 # Download a file from 'url' and save it to 'filepath'
 def DownloadFile(url:str, filepath:str, show_progress:bool):
 	
@@ -677,6 +695,32 @@ def MsgBox(msg:str, title:str, btns=EMsgBoxBtns.Ok):
 	ctypes.windll.user32.MessageBoxW(0, msg, title, btns
 	)
 
+# Support symlink on windows
+# On windows, the os.symlink function throws an error when the user doesn't have
+# privileges, or when the OS is too old. From windows 10 creator's update onward
+# it's possible to create symlinks without admin rights. Prior to that you needed
+# to be admin.
+if sys.platform == "win32":
+	import ctypes
+	csl = ctypes.windll.kernel32.CreateSymbolicLinkW
+	csl.argtypes = (ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint32)
+	csl.restype = ctypes.c_ubyte
+
+	def CreateSymLink(src:str, dst:str, is_dir:bool):
+		# SYMBOLIC_LINK_FLAG_DIRECTORY = 1
+		# SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE = 2
+		flags = 2 | (1 if src != None and is_dir else 0)
+		r = csl(dst, src, flags)
+		if r == 0: raise ctypes.WinError()
+
+	global os
+	os.symlink = CreateSymLink
+
 # Testing
 if __name__ == "__main__":
-	pass
+	try:
+		ExtractZip("C:\\temp\\boost_1_66_0.zip", "C:\\temp\\test", True)
+	except KeyboardInterrupt:
+		pass
+	except Exception as ex:
+		print(str(ex))

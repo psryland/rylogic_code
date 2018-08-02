@@ -1,0 +1,124 @@
+{
+    "name": "rylogic.textaligner",
+    "version": "0.0.1",
+    "description": "Commands that align code vertically at common characters",
+    "license": "MIT",
+    "main": ".\\out\\projects\\Rylogic.TextAligner\\src\\extension",
+    "displayName": "Rylogic.TextAligner",
+    "publisher": "Rylogic",
+    "engines": {
+        "vscode": "^1.20.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [
+        "onCommand:extension.Align"
+    ],
+    "contributes": {
+        "commands": [
+            {
+                "command": "extension.Align",
+                "title": "Align"
+            }
+		],
+		"keybindings":[
+			{
+				"command": "extension.Align",
+				"key": "ctrl+shift+]",
+				"when": "editorTextFocus"
+			}
+		],
+		"configuration": {
+			"title": "Alignment Groups",
+			"type": "object",
+			"properties": {
+				"textaligner.groups": {
+					"type": "array",
+					"description": "Groups of patterns that are considered equivalent for alignment",
+					"items": {
+						"type": "object",
+						"properties": {
+							"name": {
+								"type": "string",
+								"description": "A name for the group"
+							},
+							"leading_space": {
+								"type": "number",
+								"description": "The number of white space characters added in front of the aligned text"
+							},
+							"patterns": {
+								"type": "array",
+								"description": "Regex patterns used to match text to be aligned",
+								"items": {
+									"type": "object",
+									"properties": {
+										"pattern": {
+											"type":"string",
+											"description": "The regular expression used to match text",
+											"default": ""
+										},
+										"offset": {
+											"type": "number",
+											"description": "The relative position of matching text relative to the other patterns in the group",
+											"default": 0
+										},										
+										"minimum_width": {
+											"type": "number",
+											"description": "Matched text will be padded with whitespace characters up to the minimum width",
+											"default": 0
+										},
+										"Comment": {
+											"type": "string",
+											"decription": "A description of the meaning of the pattern",
+											"default": ""
+										}							
+									}									
+								}
+							}
+						}
+					},
+					"default": [{
+						"name": "Assignments",
+						 "leading_space": 1,
+						 "patterns": [
+							 {
+								"pattern": "(?<![+\\-*/%^~&|!=<>])=(?![=<>])",
+								"offset": 0,
+								"minimum_width": 1,
+								"Comment": "Assignment not preceded by: +,-,*,/,%,^,~,&,|,!,=,<,> and not followed by: =,<,>"
+							 },
+							 {
+								 "pattern": "(?<![&|])[+\\-*/%^~&|]={1}",
+								 "offset": -1,
+								 "minimum_width": 2,
+								 "Comment": "Assignment preceded by: +,-,*,/,%,^,~,&,| but not preceded by &&,||"
+							 },
+							 {
+								 "pattern": "&&=|\\|\\|=",
+								 "offset": -2,
+								 "minimum_width": 3,
+								 "Comment": "Assignments &&= and ||="
+							 }
+						 ]
+
+					}]
+				}
+			}
+		}
+    },
+    "devDependencies": {
+        "typescript": "^2.6.1",
+        "vscode": "^1.1.6",
+        "tslint": "^5.8.0",
+        "@types/node": "^7.0.43",
+        "@types/mocha": "^2.2.42"
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "postinstall": "node ./node_modules/vscode/bin/install",
+        "test": "npm run compile && node ./node_modules/vscode/bin/test"
+    }
+}

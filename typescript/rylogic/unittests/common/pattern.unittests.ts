@@ -5,7 +5,7 @@ import 'mocha'
 describe('Pattern Helper', function()
 {
 	// /** Matches 'pat' to 'test' and checks the results agree with 'captures' */
-	// function Check(pat:Pattern, test:string, captures?:string[]): boolean
+	   // function Check(pat:Pattern, test:string, captures?:string[]): boolean
 	// {
 	// 	if (captures === undefined)
 	// 		return pat.IsMatch(test) == false;
