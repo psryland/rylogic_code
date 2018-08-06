@@ -184,8 +184,9 @@ export class Aligner
 		// The first edit is the line that the aligning is based on, if the
 		// token we're aligning to is the first thing on the line don't align
 		// to column zero, leave the leading whitespace as is
+		let first_on_line :string|undefined = undefined
 		if (edits[0].MinColumnIndex == 0)
-			edits[0].SetNoLeftShift();
+			first_on_line = edits[0].line.text.substr(0, edits[0].line.firstNonWhitespaceCharacterIndex)
 
 		// Sort in descending line order
 		edits.sort((l,r) => r.line.lineNumber - l.line.lineNumber);
@@ -193,7 +194,6 @@ export class Aligner
 		// Find the column to align to
 		let pos = this.FindAlignColumn(edits);
 		let col = pos.column - pos.span.begi;
-		//Debug.Assert(pos.Span.Begi <= 0, "0 should be included in the span");
 
 		// Create an undo scope
 		editor.edit(ed =>
@@ -206,22 +206,30 @@ export class Aligner
 				let ws_tail = Math.max(0, pos.span.endi - (edit.pattern.offset + edit.span.count));
 				if (ws_tail > 0)
 				{
-					let p = edit.line.range.start.translate(undefined, edit.span.endi);
+					let p = edit.line.range.start.translate(0, edit.span.endi);
 					ed.insert(p, ' '.repeat(ws_tail));
 				}
 
 				// Delete all preceding whitespace
 				let ws_remove = new vscode.Range(
-					edit.line.range.start.translate(undefined, edit.MinCharIndex),
-					edit.line.range.start.translate(undefined, edit.span.begi - edit.MinCharIndex));
+					edit.line.range.start.translate(0, edit.MinCharIndex),
+					edit.line.range.start.translate(0, edit.span.begi));
 				ed.delete(ws_remove);
 
 				// Insert whitespace to align
-				let ws_head = col - edit.MinColumnIndex + edit.pattern.offset;
-				if (ws_head > 0)
+				if (first_on_line)
 				{
-					let p = edit.line.range.start.translate(undefined, edit.MinCharIndex);
-					ed.insert(p, ' '.repeat(ws_head));
+					let p = edit.line.range.start;
+					ed.insert(p, first_on_line);
+				}
+				else
+				{
+					let ws_head = col - edit.MinColumnIndex + edit.pattern.offset;
+					if (ws_head > 0)
+					{
+						let p = edit.line.range.start.translate(0, edit.MinCharIndex);
+						ed.insert(p, ' '.repeat(ws_head));
+					}
 				}
 			}
 			

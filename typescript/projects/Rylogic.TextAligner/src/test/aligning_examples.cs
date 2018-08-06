@@ -12,3 +12,21 @@ code // aligner
 characters   // worx
 other stuff 	// yay
 
+/* Aligning assignment expressions, but not equality expressions, or visa versa */
+assign += ment
+ass -= ignment
+assignm *= ent
+assi /= gnment
+as %= signment
+assignme ^= nt
+assignm ~= ent
+assi &= gnment
+ass |= ignment
+assi ||= gnment
+as &&= signment
+equ == ality
+inequ != ality
+inequal <= ity
+in >= equality
+ineq < uality
+inequa > lity

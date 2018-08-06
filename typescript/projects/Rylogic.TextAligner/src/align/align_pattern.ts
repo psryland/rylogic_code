@@ -3,17 +3,15 @@ export class AlignPattern
 {
 	// WARNING: this type is loaded from JSON which doesn't call the constructor.
 	// That means functions and properties will be 'undefined'
-	constructor(patn:string, opt:{ offset?:number, min_width?:number, comment?:string})
-	constructor(obj:AlignPattern|any = {} as any)
+	constructor(pattern:string, opt:{ offset?:number, min_width?:number, comment?:string})
 	{
 		let {
-			patn = ".",
 			offset = 0,
 			min_width = 0,
 			comment = "",
-		} = obj;
+		} = opt;
 
-		this.pattern = patn;
+		this.pattern = pattern ? pattern : ".";
 		this.offset = offset;
 		this.minimum_width = min_width;
 		this.comment = comment;
