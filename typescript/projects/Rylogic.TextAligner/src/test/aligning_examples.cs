@@ -13,20 +13,22 @@ characters   // worx
 other stuff 	// yay
 
 /* Aligning assignment expressions, but not equality expressions, or visa versa */
+lamb => da
 assign += ment
-ass -= ignment
+ass-= ignment
 assignm *= ent
-assi /= gnment
+assi/= gnment
 as %= signment
 assignme ^= nt
-assignm ~= ent
+assignm~= ent
 assi &= gnment
 ass |= ignment
 assi ||= gnment
 as &&= signment
 equ == ality
-inequ != ality
-inequal <= ity
+inequ!= ality
+inequal<= ity
 in >= equality
-ineq < uality
+ineq< uality
 inequa > lity
+lamb => da
