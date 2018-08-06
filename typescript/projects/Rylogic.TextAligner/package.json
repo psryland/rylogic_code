@@ -62,7 +62,7 @@
 											"type": "number",
 											"description": "The relative position of matching text relative to the other patterns in the group",
 											"default": 0
-										},										
+										},
 										"minimum_width": {
 											"type": "number",
 											"description": "Matched text will be padded with whitespace characters up to the minimum width",
@@ -72,37 +72,50 @@
 											"type": "string",
 											"decription": "A description of the meaning of the pattern",
 											"default": ""
-										}							
-									}									
+										}
+									}
 								}
 							}
 						}
 					},
-					"default": [{
-						"name": "Assignments",
-						 "leading_space": 1,
-						 "patterns": [
-							 {
-								"pattern": "(?<![+\\-*/%^~&|!=<>])=(?![=<>])",
-								"offset": 0,
-								"minimum_width": 1,
-								"Comment": "Assignment not preceded by: +,-,*,/,%,^,~,&,|,!,=,<,> and not followed by: =,<,>"
-							 },
-							 {
-								 "pattern": "(?<![&|])[+\\-*/%^~&|]={1}",
-								 "offset": -1,
-								 "minimum_width": 2,
-								 "Comment": "Assignment preceded by: +,-,*,/,%,^,~,&,| but not preceded by &&,||"
-							 },
-							 {
-								 "pattern": "&&=|\\|\\|=",
-								 "offset": -2,
-								 "minimum_width": 3,
-								 "Comment": "Assignments &&= and ||="
-							 }
-						 ]
-
-					}]
+					"default": [
+						{
+							"name": "Assignments",
+							"leading_space": 1,
+							"patterns": [
+								{
+									"pattern": "(?![+\\-*/%^~&|!=<>]).=(?![=<>])",
+									"offset": 0,
+									"minimum_width": 1,
+									"Comment": "Assignment not preceded by: +,-,*,/,%,^,~,&,|,!,=,<,> and not followed by: =,<,>"
+								},
+								{
+									"pattern": "&&=|\\|\\|=",
+									"offset": -2,
+									"minimum_width": 3,
+									"Comment": "Assignments &&= and ||="
+								},
+								{
+									"pattern": "(?=[+\\-*/%^~&|!=<>]).=",
+									"offset": -1,
+									"minimum_width": 2,
+									"Comment": "Assignment preceded by: +,-,*,/,%,^,~,&,|"
+								}
+							]
+						},
+						{
+							"name": "Line Comments",
+							"leading_space": 1,
+							"patterns": [
+								{
+									"pattern": "/{2,}",
+									"offset": 0,
+									"minimum_width": 0,
+									"Comment": "Two or more '/' characters"
+								}
+							]
+						}
+					]
 				}
 			}
 		}

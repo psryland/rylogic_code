@@ -25,8 +25,8 @@ namespace Rylogic.VSExtension
 			// Get the current line number, line, line position, and selection
 			var selection = new Selection(m_view);
 
-			// Get the pattern groups to align on
-			var grps = ChoosePatterns(selection);
+			// Prioritise the pattern groups to align on
+			var grps = PrioritisePatterns(selection);
 
 			// Find the edits to make
 			var edits = FindAlignments(selection, grps);
@@ -52,7 +52,7 @@ namespace Rylogic.VSExtension
 		}
 
 		/// <summary>Return a list of alignment patterns in priority order.</summary>
-		private List<AlignGroup> ChoosePatterns(Selection selection)
+		private List<AlignGroup> PrioritisePatterns(Selection selection)
 		{
 			// If there is a selection, see if we should use the selected text at the align pattern
 			// Only use single line, non-whole-line selections on the same line as the caret

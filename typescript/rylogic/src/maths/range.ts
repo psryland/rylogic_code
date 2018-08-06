@@ -60,8 +60,8 @@ export function create(beg?: number, end?: number): Range
 /**
  * Set the components of a range
  * @param range
- * @param beg 
- * @param end 
+ * @param beg
+ * @param end
  */
 export function set(range: Range, beg: number, end: number): Range
 {

@@ -44,16 +44,16 @@ export interface M4x4
 }
 export interface Range
 {
-	/** The inclusive first value in the range */
+	/** The inclusive first value in the range (possibly a float)*/
 	beg: number;
 
-	/** The exclusive last value in the range */
+	/** The exclusive last value in the range (possibly a float) */
 	end: number;
 
 	/** The centre value in the range */
 	centre: number;
 
-	/** The size of the range: end - beg */
+	/** The size of the range: end - beg (float value, use 'count' for integer values)*/
 	size: number;
 
 	/** The inclusive first value in the range as an integer. i.e. floor(beg) */
