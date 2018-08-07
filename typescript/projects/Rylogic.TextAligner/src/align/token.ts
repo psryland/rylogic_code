@@ -1,4 +1,4 @@
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
 import * as Math_ from "../../../../rylogic/src/maths/maths";
 import * as Range_ from "../../../../rylogic/src/maths/range";
 import { AlignGroup } from './align_group';

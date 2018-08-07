@@ -5,19 +5,19 @@ export class AlignGroup
 {
 	// WARNING: this type is loaded from JSON which doesn't call the constructor.
 	// That means functions and properties will be 'undefined'
-	constructor(name: string = "", leading_space: number = 1, ...patterns:AlignPattern[])
+	constructor(name: string = "", leading_space: number = 0, ...patterns:AlignPattern[])
 	{
 		this.name = name;
 		this.leading_space = leading_space;
-		this.patterns = patterns;
+		this.patterns = patterns || [];
 	}
 
 	/** The name of the group */
-	public name :string;
+	public readonly name :string;
 
 	/** The number leading whitespaces the group should have */
-	public leading_space: number;
+	public readonly leading_space: number;
 
 	/** Patterns belonging to the align group */
-	public patterns: AlignPattern[];
+	public readonly patterns: AlignPattern[];
 }

@@ -1,28 +1,28 @@
 {
-    "name": "rylogic.textaligner",
-    "version": "0.0.1",
-    "description": "Commands that align code vertically at common characters",
-    "license": "MIT",
-    "main": ".\\out\\projects\\Rylogic.TextAligner\\src\\extension",
-    "displayName": "Rylogic.TextAligner",
-    "publisher": "Rylogic",
-    "engines": {
-        "vscode": "^1.20.0"
-    },
-    "categories": [
-        "Other"
-    ],
-    "activationEvents": [
-        "onCommand:extension.Align"
-    ],
-    "contributes": {
-        "commands": [
-            {
-                "command": "extension.Align",
-                "title": "Align"
-            }
+	"name": "rylogic.textaligner",
+	"version": "0.0.1",
+	"description": "Commands that align code vertically at common characters",
+	"license": "MIT",
+	"main": ".\\out\\projects\\Rylogic.TextAligner\\src\\extension",
+	"displayName": "Rylogic.TextAligner",
+	"publisher": "Rylogic",
+	"engines": {
+		"vscode": "^1.20.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"activationEvents": [
+		"onCommand:extension.Align"
+	],
+	"contributes": {
+		"commands": [
+			{
+				"command": "extension.Align",
+				"title": "Align"
+			}
 		],
-		"keybindings":[
+		"keybindings": [
 			{
 				"command": "extension.Align",
 				"key": "ctrl+shift+]",
@@ -35,17 +35,19 @@
 			"properties": {
 				"textaligner.groups": {
 					"type": "array",
-					"description": "Groups of patterns that are considered equivalent for alignment",
+					"description": "Groups of patterns that are considered equivalent for alignment. Note: javascript's regular expression engine is quite basic (e.g. no look-behind assertions or location information for capture groups). Order patterns within a group from most to least specific. Some of these patterns are not specific enough. Once es2018 RegExp is supported in VSCode they can be updated",
 					"items": {
 						"type": "object",
 						"properties": {
 							"name": {
 								"type": "string",
-								"description": "A name for the group"
+								"description": "A name for the group",
+								"default": "Align Pattern Name"
 							},
 							"leading_space": {
 								"type": "number",
-								"description": "The number of white space characters added in front of the aligned text"
+								"description": "The number of white space characters added in front of the aligned text. Defaults to 0 if omitted.",
+								"default": 0
 							},
 							"patterns": {
 								"type": "array",
@@ -54,21 +56,21 @@
 									"type": "object",
 									"properties": {
 										"pattern": {
-											"type":"string",
+											"type": "string",
 											"description": "The regular expression used to match text",
 											"default": ""
 										},
 										"offset": {
 											"type": "number",
-											"description": "The relative position of matching text relative to the other patterns in the group",
+											"description": "The relative position of matching text relative to the other patterns in the group. Defaults to 0 if omitted.",
 											"default": 0
 										},
 										"minimum_width": {
 											"type": "number",
-											"description": "Matched text will be padded with whitespace characters up to the minimum width",
+											"description": "Matched text will be padded with whitespace characters up to the minimum width. Defaults to 0 if omitted.",
 											"default": 0
 										},
-										"Comment": {
+										"comment": {
 											"type": "string",
 											"decription": "A description of the meaning of the pattern",
 											"default": ""
@@ -84,34 +86,169 @@
 							"leading_space": 1,
 							"patterns": [
 								{
-									"pattern": "(?![+\\-*/%^~&|!=<>]).=(?![=<>])",
-									"offset": 0,
-									"minimum_width": 1,
-									"Comment": "Assignment not preceded by: +,-,*,/,%,^,~,&,|,!,=,<,> and not followed by: =,<,>"
-								},
-								{
 									"pattern": "&&=|\\|\\|=",
 									"offset": -2,
 									"minimum_width": 3,
-									"Comment": "Assignments &&= and ||="
+									"comment": "Assignments &&= and ||="
 								},
 								{
-									"pattern": "(?=[+\\-*/%^~&|!=<>]).=",
+									"pattern": "[+\\-*/%^~&|]=",
 									"offset": -1,
 									"minimum_width": 2,
-									"Comment": "Assignment preceded by: +,-,*,/,%,^,~,&,|"
+									"comment": "Assignment preceded by: +,-,*,/,%,^,~,&,|"
+								},
+								{
+									"pattern": "=(?![=<>])",
+									"offset": 0,
+									"minimum_width": 1,
+									"comment": "Assignment not followed by: =,<,>"
 								}
 							]
 						},
 						{
-							"name": "Line Comments",
+							"name": "Comparisons",
+							"leading_space": 1,
+							"patterns": [
+								{
+									"pattern": "(==|!=|<=|>=)",
+									"offset": 0,
+									"minimum_width": 2,
+									"comment": "2 character comparisons"
+								},
+								{
+									"pattern": "(?:<|>)(?!=)",
+									"offset": 1,
+									"minimum_width": 1,
+									"comment": "< or > not preceded or followed by ="
+								}
+							]
+						},
+						{
+							"name": "Lambda operators",
+							"leading_space": 1,
+							"patterns": [
+								{
+									"pattern": "=>",
+									"offset": 0,
+									"minimum_width": 2,
+									"comment": ""
+								}
+							]
+						},
+						{
+							"name": "Boolean operators",
+							"leading_space": 1,
+							"patterns": [
+								{
+									"pattern": "(&&|\\|\\|)",
+									"offset": 0,
+									"minimum_width": 2,
+									"comment": ""
+								}
+							]
+						},
+						{
+							"name": "Line comments",
 							"leading_space": 1,
 							"patterns": [
 								{
 									"pattern": "/{2,}",
 									"offset": 0,
-									"minimum_width": 0,
-									"Comment": "Two or more '/' characters"
+									"minimum_width": 2,
+									"comment": "Two or more '/' characters"
+								}
+							]
+						},
+						{
+							"name": "Open brackets",
+							"leading_space": 0,
+							"patterns": [
+								{
+									"pattern": "\\(",
+									"offset": 0,
+									"minimum_width": 1,
+									"comment": ""
+								}
+							]
+						},
+						{
+							"name": "Close brackets",
+							"leading_space": 0,
+							"patterns": [
+								{
+									"pattern": "\\)"
+								}
+							]
+						},
+						{
+							"name": "Scope start",
+							"leading_space": 0,
+							"patterns": [
+								{
+									"pattern": "{"
+								}
+							]
+						},
+						{
+							"name": "Scope end",
+							"leading_space": 1,
+							"patterns": [
+								{
+									"pattern": "}"
+								}
+							]
+						},
+						{
+							"name": "Increment / Decrement",
+							"leading_space": 1,
+							"patterns": [
+								{
+									"pattern": "(\\+\\+|--)"
+								}
+							]
+						},
+						{
+							"name": "Plus / Minus",
+							"leading_space": 1,
+							"patterns": [
+								{
+									"pattern": "[^+](\\+)(?!\\+)",
+									"offset": 0,
+									"minimum_width": 1,
+									"comment": "Matches '+' but not '++'"
+								},
+								{
+									"pattern": "[^-](\\-)(?!\\-)",
+									"offset": 0,
+									"minimum_width": 1,
+									"comment": "Matches '-' but not '--'"
+								}
+							]
+						},
+						{
+							"name": "Comma delimiter",
+							"leading_space": 1,
+							"patterns": [
+								{
+									"pattern": ","
+								}
+							]
+						},
+						{
+							"name": "Members",
+							"leading_space": 0,
+							"patterns": [
+								{
+									"pattern": "(?:^|\\s)(m_[0-9a-zA-Z_]*)",
+									"offset": 0,
+									"minimum_width": 1,
+									"comment": "Matches class members that being with 'm_'"
+								},
+								{
+									"pattern": "(?:^|\\s)(_[0-9a-zA-Z_]*)",
+									"offset": 0,
+									"minimum_width": 1,
+									"comment": "Matches class members that being with '_'"
 								}
 							]
 						}
@@ -119,19 +256,20 @@
 				}
 			}
 		}
-    },
-    "devDependencies": {
-        "typescript": "^2.6.1",
-        "vscode": "^1.1.6",
-        "tslint": "^5.8.0",
-        "@types/node": "^7.0.43",
-        "@types/mocha": "^2.2.42"
-    },
-    "scripts": {
-        "vscode:prepublish": "npm run compile",
-        "compile": "tsc -p ./",
-        "watch": "tsc -watch -p ./",
-        "postinstall": "node ./node_modules/vscode/bin/install",
-        "test": "npm run compile && node ./node_modules/vscode/bin/test"
-    }
+	},
+	"devDependencies": {
+		"@types/mocha": "^2.2.42",
+		"@types/node": "^7.0.69",
+		"tslint": "^5.11.0",
+		"typescript": "^3.0.1",
+		"vscode": "^1.1.18"
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./",
+		"postinstall": "node ./node_modules/vscode/bin/install",
+		"test": "npm run compile && node ./node_modules/vscode/bin/test"
+	},
+	"dependencies": {}
 }

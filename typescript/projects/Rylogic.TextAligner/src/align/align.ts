@@ -11,16 +11,10 @@ export class Aligner
 {
 	constructor()
 	{
-		this.groups = vscode.workspace.getConfiguration('textaligner').get('groups') || [];
-		this.tab_size = vscode.workspace.getConfiguration('editor').get('tabSize') || 4;
-		this.ValidatePatterns();
-
-		vscode.workspace.onDidChangeConfiguration(() =>
-		{
-			this.groups = vscode.workspace.getConfiguration('textaligner').get('groups') || [];
-			this.tab_size = vscode.workspace.getConfiguration('editor').get('tabSize') || 4;
-			this.ValidatePatterns();
-		});
+		this.groups = [];
+		this.tab_size = 4;
+		this.ValidateSettings();
+		vscode.workspace.onDidChangeConfiguration(() => this.ValidateSettings());
 	}
 	
 	/** The alignment sets */
@@ -55,8 +49,8 @@ export class Aligner
 			let expr = doc.getText(selection);
 			let ofs = expr.search(/\S|$/); // Count leading whitespace
 			expr = expr.substring(ofs);    // Strip leading whitespace
-			expr = expr.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'); // Escape the string 
-			return [new AlignGroup("Selection", 0, new AlignPattern(expr, {offset: ofs}))];
+			expr = expr.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')// Escape the string 
+			return [new AlignGroup("Selection", 0, new AlignPattern(new RegExp(expr, 'g'), {offset: ofs}))];
 		}
 
 		// Make a copy of the alignment groups from settings
@@ -80,8 +74,7 @@ export class Aligner
 			{
 				for (let p of g.patterns)
 				{
-					let patn = new RegExp(p.pattern,'g');
-					for (let m; m = patn.exec(line_text);)
+					for (let m; m = p.pattern.exec(line_text);)
 					{
 						let beg = m.index;
 						let end = m.index + m[0].length;
@@ -91,11 +84,11 @@ export class Aligner
 							spanning = g;
 
 						// Matches to the right separated only by whitespace are the next highest priority
-						if (beg >= column && line_text.substr(column, beg - column).trim())
+						if (beg >= column && !line_text.substr(column, beg - column).trim())
 							rightof = g;
 
 						// Matches to the left separated only by whitespace are next
-						if (end <= column && line_text.substr(end, column - end).trim())
+						if (end <= column && !line_text.substr(end, column - end).trim())
 							leftof = g;
 					}
 				}
@@ -289,8 +282,7 @@ export class Aligner
 			for (let p of g.patterns)
 			{
 				++patn_index;
-				let patn = new RegExp(p.pattern,'g');
-				for (let m; m = patn.exec(line_text);)
+				for (let m; m = p.pattern.exec(line_text);)
 				{
 					let span = Range_.create(m.index, m.index + m[0].length);
 					tokens.push(new Token(g, grp_index, patn_index, line, span, this.tab_size));
@@ -328,21 +320,34 @@ export class Aligner
 	}
 
 	/** Check that all patterns are valid RegExp's */
-	ValidatePatterns(): void
+	ValidateSettings(): void
 	{
-		let err: string = "";
-		for (let g of this.groups)
+		this.tab_size = vscode.workspace.getConfiguration('editor').get('tabSize') || 4;
+		let groups:any[] = vscode.workspace.getConfiguration('textaligner').get('groups') || [];
+
+		let err: string[] = [];
+		for (let g of groups)
 		{
+			let grp = new AlignGroup(g.name, g.leading_space);
 			for (let p of g.patterns)
 			{
-				try { new RegExp(p.pattern, 'g'); }
-				catch (error) { err += `${error.toString()}\n`; }
+				try
+				{
+					let re = new RegExp(p.pattern, 'g');
+					let patn = new AlignPattern(re, { offset: p.offset, min_width: p.minimum_width, comment: p.comment });
+					grp.patterns.push(patn);
+				}
+				catch (error)
+				{
+					err.push(error);
+				}
 			}
+			this.groups.push(grp);
 		}
 		if (err.length == 0)
 			return;
 
 		// Toast message
-		vscode.window.showWarningMessage(`Invalid regular expressions in 'textaligner.groups'\n${err}`);
+		vscode.window.showWarningMessage("Invalid regular expressions in 'textaligner.groups'", "" + err);
 	}
 }

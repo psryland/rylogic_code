@@ -3,22 +3,23 @@ export class AlignPattern
 {
 	// WARNING: this type is loaded from JSON which doesn't call the constructor.
 	// That means functions and properties will be 'undefined'
-	constructor(pattern:string, opt:{ offset?:number, min_width?:number, comment?:string})
+	constructor(pattern:RegExp, opt:{ offset?:number, min_width?:number, comment?:string })
 	{
-		let {
+		let
+		{
 			offset = 0,
 			min_width = 0,
 			comment = "",
 		} = opt;
 
-		this.pattern = pattern ? pattern : ".";
+		this.pattern = pattern ? pattern : /./g;
 		this.offset = offset;
 		this.minimum_width = min_width;
 		this.comment = comment;
 	}
 
 	/** The pattern used to match text */
-	public readonly pattern: string;
+	public readonly pattern: RegExp;
 
 	/** The amount that matching text is offset from the ideal alignment column*/
 	public readonly offset: number;
