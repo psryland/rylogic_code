@@ -1,11 +1,13 @@
 {
-	"name": "rylogic.textaligner",
-	"version": "0.0.1",
-	"description": "Commands that align code vertically at common characters",
-	"license": "MIT",
-	"main": ".\\out\\projects\\Rylogic.TextAligner\\src\\extension",
+	"name": "rylogic-textaligner-vscode",
 	"displayName": "Rylogic.TextAligner",
+	"version": "1.0.0",
 	"publisher": "Rylogic",
+	"description": "Text aligning extension for Visual Studio Code by Rylogic",
+	"license": "MIT",
+	
+	"main": ".\\out\\projects\\Rylogic.TextAligner\\src\\extension",
+	"icon": "images/icon.png",
 	"engines": {
 		"vscode": "^1.20.0"
 	},
@@ -212,13 +214,13 @@
 							"leading_space": 1,
 							"patterns": [
 								{
-									"pattern": "[^+](\\+)(?!\\+)",
+									"pattern": "\\+(?!\\+)",
 									"offset": 0,
 									"minimum_width": 1,
 									"comment": "Matches '+' but not '++'"
 								},
 								{
-									"pattern": "[^-](\\-)(?!\\-)",
+									"pattern": "\\-(?!\\-)",
 									"offset": 0,
 									"minimum_width": 1,
 									"comment": "Matches '-' but not '--'"
@@ -256,6 +258,9 @@
 				}
 			}
 		}
+	},
+	"bugs": {
+		"email": "support@rylogic.co.nz"
 	},
 	"devDependencies": {
 		"@types/mocha": "^2.2.42",

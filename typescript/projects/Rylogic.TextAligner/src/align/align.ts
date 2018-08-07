@@ -107,7 +107,6 @@ export class Aligner
 	FindAlignments(doc: vscode.TextDocument, selection: vscode.Selection, grps: AlignGroup[]) :Token[]
 	{
 		let edits:Token[] = [];
-		let caret = selection.active.character;
 
 		// If the selection spans multiple lines, limit the aligning to those lines.
 		// If a whole single line is selected, treat that like multiple selected lines.
@@ -120,20 +119,16 @@ export class Aligner
 		// Get the align boundaries on the current line
 		let boundaries = this.FindAlignBoundariesOnLine(doc, selection.active.line, grps);
 
-		// Sort the boundaries by pattern priority, then by distance from the caret
+		// Sort the boundaries by pattern priority, then by distance from column 0
 		boundaries.sort((l,r) =>
 		{
 			if (l.grp_index !== r.grp_index) return l.grp_index - r.grp_index;
-			return l.Distance(caret) - r.Distance(caret);
+			return l.CurrentCharIndex - r.CurrentCharIndex;
 		});
 
 		// Find the first boundary that can be aligned
 		for (let align of boundaries)
 		{
-			// Each time we come round, the previous 'align' should have resulted in nothing
-			// to align so edits should always be empty here
-			//Debug.Assert(edits.Count == 0);
-
 			// Find the index of 'align' within 'boundaries' for 'align's pattern type
 			let token_index :number = 0;
 			for (let b of boundaries)
@@ -155,8 +150,10 @@ export class Aligner
 			// If there are edits but they are all already aligned at the
 			// correct column, then move on to the next candidate.
 			let pos = this.FindAlignColumn(edits);
-			let col = pos.column - pos.span.begi;
-			if (edits.every(x => x.CurrentColumnIndex - x.pattern.offset == col))
+			let all_first_on_line = edits.every(x => x.MinColumnIndex == 0);
+			let col = all_first_on_line ? align.CurrentColumnIndex - align.pattern.offset : pos.column - pos.span.begi;
+			let already_aligned = edits.every(x => x.CurrentColumnIndex - x.pattern.offset == col);
+			if (already_aligned)
 			{
 				edits = [];
 				continue;

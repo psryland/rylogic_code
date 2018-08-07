@@ -44,8 +44,8 @@ namespace Rylogic.VSExtension
 			foreach (var tok in toks)
 			{
 				span.Encompass(tok.Patn.Position);
-				min_column  = Math.Max(min_column, tok.MinColumnIndex);
-				leading_ws |= Math.Max(leading_ws, tok.Grp.LeadingSpace);
+				min_column = Math.Max(min_column, tok.MinColumnIndex);
+				leading_ws = Math.Max(leading_ws, tok.Grp.LeadingSpace);
 			}
 			if (min_column != 0) min_column += leading_ws; // Add leading whitespace, unless at column 0
 			return new AlignPos(min_column, span);
@@ -160,7 +160,7 @@ namespace Rylogic.VSExtension
 			var boundaries = FindAlignBoundariesOnLine(selection.CaretLineNumber, grps);
 
 			// Sort the boundaries by pattern priority, then by distance from the caret
-			var ordered = boundaries.OrderBy(x => x.GrpIndex).ThenBy(x => x.Distance(caret));
+			var ordered = boundaries.OrderBy(x => x.GrpIndex).ThenBy(x => x.CurrentCharIndex);
 
 			var edits = new List<Token>();
 
@@ -192,8 +192,10 @@ namespace Rylogic.VSExtension
 				// If there are edits but they are all already aligned at the
 				// correct column, then move on to the next candidate.
 				var pos = FindAlignColumn(edits);
-				var col = pos.Column - pos.Span.Begi;
-				if (edits.All(x => x.CurrentColumnIndex - x.Patn.Offset == col))
+				var all_first_on_line = edits.All(x => x.MinColumnIndex == 0);
+				var col = all_first_on_line ? align.CurrentColumnIndex - align.Patn.Offset : pos.Column - pos.Span.Begi;
+				var already_aligned = edits.All(x => x.CurrentColumnIndex - x.Patn.Offset == col);
+				if (already_aligned)
 				{
 					edits.Clear();
 					continue;
