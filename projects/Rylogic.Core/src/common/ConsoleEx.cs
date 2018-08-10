@@ -209,7 +209,7 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Async read a line from the console, with auto-complete and history support</summary>
-		public async Task<string> ReadAsync(CancellationToken cancel = default(CancellationToken), bool include_newline = true)
+		public async Task<string> ReadAsync(CancellationToken cancel = default(CancellationToken), bool newline_on_enter = true)
 		{
 			// Read up to the enter key being pressed
 			var input = (string)null;
@@ -258,8 +258,8 @@ namespace Rylogic.Common
 							AddToHistory(input);
 
 							// Optionally include the newline character
-							if (include_newline)
-								input += Environment.NewLine;
+							if (newline_on_enter)
+								WriteLine();
 
 							break;
 						}
