@@ -280,6 +280,8 @@ namespace Rylogic.Common
 	[Serializable]
 	public abstract class SettingsBase<T> :SettingsSet<T> where T:SettingsBase<T>, new()
 	{
+		public const string VersionKey = "__SettingsVersion";
+
 		protected SettingsBase()
 		{
 			m_filepath = "";
@@ -369,11 +371,13 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>The settings version, used to detect when 'Upgrade' is needed</summary>
-		protected virtual string Version
+		public virtual string Version
 		{
 			get { return "v1.0"; }
 		}
-		public const string VersionKey = "__SettingsVersion";
+
+		/// <summary>The version number that was loaded (and possibly upgraded from)</summary>
+		public string LoadedVersion { get; private set; }
 
 		/// <summary>Returns the filepath for the persisted settings file. Settings cannot be saved until this property has a valid filepath</summary>
 		public string Filepath
@@ -476,7 +480,7 @@ namespace Rylogic.Common
 		/// <summary>Load the settings from XML</summary>
 		public override void FromXml(XElement node)
 		{
-			// Upgrade old settings
+			// Read the settings version
 			var vers = node.Element(VersionKey);
 			if (vers == null)
 			{
@@ -485,6 +489,10 @@ namespace Rylogic.Common
 				return; // Reset will recursively call Load again
 			}
 
+			// Save the loaded version number
+			LoadedVersion = vers.Value;
+
+			// Upgrade old settings
 			vers.Remove();
 			if (vers.Value != Version)
 				Upgrade(node, vers.Value);

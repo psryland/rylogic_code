@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
 using Rylogic.Common;
 using Rylogic.Db;
 using Rylogic.Extn;
@@ -16,7 +15,7 @@ namespace Rylogic.Container
 		// Expected use:
 		//  - An instance of this class can exist longer than the DB and table it's based on
 		//    (just like a binding source exists longer than its DataSource).
-		//  - Clients set the DataSource (which is a db connection and base table)
+		//  - Clients set the DataSource (which is a DB connection and base table)
 		//  - This class provides functionality to sort, filter, and access the data.
 		//  - The interface is an array-like interface, with 'Count' and 'this[idx]'
 		//    methods providing array-like access.
@@ -44,13 +43,13 @@ namespace Rylogic.Container
 		public string BaseTableName { get; private set; }
 
 		/// <summary>The name of the table containing indices of filtered/sorted/etc entries in BaseTableName</summary>
-		private string TableName
+		public string TableName
 		{
 			get { return BaseTableName + TableNameExtn; }
 		}
 		private const string TableNameExtn = "_BS";
 
-		/// <summary>The db connection</summary>
+		/// <summary>The DB connection</summary>
 		public Sqlite.Database DB
 		{
 			get { return m_db; }
@@ -68,12 +67,12 @@ namespace Rylogic.Container
 				m_db = value;
 				if (m_db != null)
 				{
-					// Note: Don't use the db callback function to detect db changes, they occur
+					// Note: Don't use the DB callback function to detect DB changes, they occur
 					// too frequently. Instead, use direct updating. At points in the code that
-					// cause the db to be invalidated, call Update().
+					// cause the DB to be invalidated, call Update().
 
 					// Ensure there is no existing binding source table
-					m_db.Execute(Sqlite.Sql("drop table if exists ",TableName));
+					m_db.Execute($"drop table if exists {TableName}");
 				}
 
 				// Update the binding source table
@@ -213,6 +212,7 @@ namespace Rylogic.Container
 			if (!UpdateRequired) Invalidate();
 			UpdateRequired = false;
 
+			// No data source, no update
 			if (DB == null)
 			{
 				Count = 0;
@@ -220,25 +220,31 @@ namespace Rylogic.Container
 				return;
 			}
 
-			Debug.Assert(DB.AssertCorrectThread());
-
+			// Check for threading issues
 			// TODO: this can take a long time. It needs to be asynchronous somehow
+			Debug.Assert(DB.AssertCorrectThread());
 
 			// Generate the new binding source table in a temp table allowing use
 			// of the previous table while the 'Filtering' is happening.
 			var tmp_table = TableName + "_TMP";
 
 			// Create the temporary table
-			using (var t = DB.NewAsyncTransaction())
+			using (var t = DB.NewTransaction())
 			{
-				t.DB.Execute(Sqlite.Sql("drop table if exists ",tmp_table));
-				t.DB.Execute(Sqlite.Sql("create table ",tmp_table," ([Idx] integer primary key autoincrement, [Key] integer)"));
+				t.DB.Execute($"drop table if exists {tmp_table}");
+				t.DB.Execute(
+					$"create table {tmp_table} (\n"+
+					"  [Idx] integer primary key autoincrement,\n"+
+					"  [Key] integer\n" +
+					")");
 
-				var sql = Sqlite.Sql("insert into ",tmp_table," ([Key]) select ",Pk," from ",BaseTableName);
-				if (Join   .HasValue()) { sql += Sqlite.Sql(" join ", Join); }
-				if (Filter .HasValue()) { sql += Sqlite.Sql(sql.Contains(" where ") ? " and " : " where ", Filter); }
-				if (OrderBy.HasValue()) { sql += Sqlite.Sql(" order by ",OrderBy); }
-				t.DB.Execute(sql);
+				// Populate from the base table using the filters
+				t.DB.Execute(
+					$"insert into {tmp_table} ([Key])\n"+
+					$"select {Pk} from {BaseTableName}\n"+
+					(Join   .HasValue() ? $" join {Join}" : "") +
+					(Filter .HasValue() ? $"{(Join.Contains(" where ") ? " and " : " where ")} {Filter}" : "") +
+					(OrderBy.HasValue() ? $" order by {OrderBy}" : ""));
 
 				t.Commit();
 			}
@@ -250,13 +256,13 @@ namespace Rylogic.Container
 			// Drop the old table and rename the temporary table to the new binding source table
 			using (var t = DB.NewTransaction())
 			{
-				t.DB.Execute(Sqlite.Sql("drop table if exists ",TableName));
-				t.DB.Execute(Sqlite.Sql("alter table ",tmp_table," rename to ",TableName));
+				t.DB.Execute($"drop table if exists {TableName}");
+				t.DB.Execute($"alter table {tmp_table} rename to {TableName}");
 				t.Commit();
 			}
 
 			// Get the new table count
-			Count = DB.ExecuteScalar(Sqlite.Sql("select count(*) from ", TableName));
+			Count = DB.ExecuteScalar($"select count(*) from {TableName}");
 			Cache.Flush();
 
 			// Notify of binding source data reset
@@ -273,10 +279,12 @@ namespace Rylogic.Container
 			get
 			{
 				// Check you are passing the array index into the filtered table, not the primary key of the item you want
-				if (idx >= Count) throw new IndexOutOfRangeException($"Index {idx} is out of Range [0,{Count})");
+				if (idx >= Count)
+					throw new IndexOutOfRangeException($"Index {idx} is out of Range [0,{Count})");
 
 				// Don't use the indexer to update the table, Update() can change the value of 'Count'
-				if (UpdateRequired) throw new Exception("Table is out of date, call Update()");
+				if (UpdateRequired)
+					throw new Exception("Table is out of date, call Update()");
 
 				// Sanity checks - expensive...
 				//#if DEBUG
@@ -291,13 +299,13 @@ namespace Rylogic.Container
 				if (!Cache.IsCached(idx))
 				{
 					int from = Math.Max(idx - 250, 0), count = 1000;
-					var sql = Sqlite.Sql("select ",BaseTableName,".* from ",TableName," join ",BaseTableName," on [Key] = ",Pk," limit ?,?");
+					var sql = $"select {BaseTableName}.* from {TableName} join {BaseTableName} on [Key] = {Pk} limit ?,?";
 					Cache.Add(Enumerable.Range(from,count), DB.EnumRows<Type>(sql, 1, new object[]{from,count}));
 				}
 
 				return Cache.Get(idx, k =>
 				{
-					var sql = Sqlite.Sql("select ",BaseTableName,".* from ",TableName," join ",BaseTableName," on [Key] = ",Pk," where [Idx] = ?");
+					var sql = $"select {BaseTableName}.* from {TableName} join {BaseTableName} on [Key] = {Pk} where [Idx] = ?";
 					var item = DB.EnumRows<Type>(sql, 1, new object[]{k+1}).First();
 					return item;
 				});
@@ -305,7 +313,7 @@ namespace Rylogic.Container
 			set
 			{
 				// Update the item in the base table
-				// This will result in an ItemReset event when the change happens in the db
+				// This will result in an ItemReset event when the change happens in the DB
 				// It will also invalidate the cache for that item
 				DB.Table<Type>().Update(value);
 			}
@@ -321,7 +329,7 @@ namespace Rylogic.Container
 		/// <summary>Get the currently selected item</summary>
 		public Type Current
 		{
-			// No set, because we can't search the db for a ReferenceEquals(value)
+			// No set, because we can't search the DB for a ReferenceEquals(value)
 			get { return Position >= 0 && Position < Count ? this[Position] : default(Type); }
 		}
 

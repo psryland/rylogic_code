@@ -20,7 +20,7 @@ using System.Windows.Threading;
 // Notes/Usage:
 //  Use Case 1:
 //   Create a type that defines the columns of a table (using the Sqlite attributes).
-//   Use CreateTable, DropTable, etc to create the table in the db.
+//   Use CreateTable, DropTable, etc to create the table in the DB.
 //   Use db.Table<Type>() to get an instance of the table interface.
 //   Use table.Insert/Get/Update/etc to access rows in the table.
 //
@@ -69,7 +69,7 @@ using System.Windows.Threading;
 //
 // Thread Safety:
 //  Sqlite is thread safe if the dll has been built with SQLITE_THREADSAFE
-//  defined != 0 and the db connection is opened with OpenFlags.FullMutex.
+//  defined != 0 and the DB connection is opened with OpenFlags.FullMutex.
 //  For performance however, sqlite should be used in a single-threaded way.
 //
 // Caching:
@@ -547,11 +547,12 @@ namespace Rylogic.Db
 			/// <summary>The filepath of the database file</summary>
 			public string Filepath { get; private set; }
 
-			// The Id of the thread that created this db handle.
-			// For asynchronous access to the database, create 'Database' instances for each thread.
+			///<summary>
+			/// The Id of the thread that created this DB handle.
+			/// For asynchronous access to the database, create 'Database' instances for each thread.</summary>
 			public int OwningThreadId { get; private set; }
 
-			/// <summary>Returns the db handle after asserting it's validity</summary>
+			/// <summary>Returns the DB handle after asserting it's validity</summary>
 			public sqlite3 Handle
 			{
 				get
@@ -583,7 +584,7 @@ namespace Rylogic.Db
 				Debug.Assert(AssertCorrectThread());
 				if (m_db.IsClosed) return;
 
-				// Release the db handle
+				// Release the DB handle
 				m_db.Close();
 				if (m_db.CloseResult == Result.Busy)
 					throw new SqliteException(m_db.CloseResult, "Could not close database handle, there are still prepared statements that haven't been 'finalized' or blob handles that haven't been closed.");
@@ -760,7 +761,7 @@ namespace Rylogic.Db
 					meta.Name = new_name;
 			}
 
-			/// <summary>Return the interface to a table for type 'T'</summary>
+			/// <summary>Return an interface to a table for type 'T'</summary>
 			public Table<T> Table<T>()
 			{
 				return new Table<T>(this);
@@ -782,7 +783,7 @@ namespace Rylogic.Db
 			public Transaction NewTransaction()
 			{
 				if (m_transaction_in_progress != null)
-					throw new SqliteException("Nested transactions on a single db connection are not allowed");
+					throw new SqliteException("Nested transactions on a single DB connection are not allowed");
 
 				return m_transaction_in_progress = new Transaction(this, () => m_transaction_in_progress = null);
 			}
@@ -798,7 +799,7 @@ namespace Rylogic.Db
 				return new Transaction(db, db.Dispose);
 			}
 
-			/// <summary>Returns free db pages to the OS reducing the db file size</summary>
+			/// <summary>Returns free DB pages to the OS reducing the DB file size</summary>
 			public void Vacuum()
 			{
 				Execute("vacuum");
@@ -836,19 +837,22 @@ namespace Rylogic.Db
 			{
 				// Mark with [MonoTouch.MonoPInvokeCallbackAttribute(typeof(UpdateHookCB))] for MONOTOUCH
 
-				// 'db_name' is always "main". sqlite doesn't allow renaming of the db
+				// 'db_name' is always "main". sqlite doesn't allow renaming of the DB
 				var h = GCHandle.FromIntPtr(ctx);
 				var db = (Database)h.Target;
 				db.RaiseDataChangedEvent((ChangeType)change_type, table_name, row_id);
 			}
 
+			/// <summary>Throw if called from a different thread than the one that created this connection</summary>
 			public bool AssertCorrectThread()
 			{
-				// This is not strictly correct but is probably good enough.
-				// If ConfigOption.SingleThreaded is used, all access must be from the thread that opened the db connection.
-				// If ConfigOption.MultiThreaded is used, only one thread at a time can use the db connection.
+				// Sqlite can actually support multi-thread access via the same DB connection but it is
+				// not recommended. In this ORM, I'm enforcing one thread per connection.
+				// From the Sqlite Docs, these are the requirements:
+				// If ConfigOption.SingleThreaded is used, all access must be from the thread that opened the DB connection.
+				// If ConfigOption.MultiThreaded is used, only one thread at a time can use the DB connection.
 				// If ConfigOption.Serialized is used, it's open session for any threads
-				if (OwningThreadId != Thread.CurrentThread.ManagedThreadId && !NativeDll.ThreadSafe)
+				if (OwningThreadId != Thread.CurrentThread.ManagedThreadId)
 				{
 					throw new SqliteException(Result.Misuse, string.Format("Cross-thread use of Sqlite ORM.\n{0}", new StackTrace()));
 				}
@@ -872,7 +876,7 @@ namespace Rylogic.Db
 			{
 				Debug.Assert(db.AssertCorrectThread());
 				if (db.Handle.IsInvalid)
-					throw new ArgumentNullException("db", "Invalid database handle");
+					throw new ArgumentNullException(nameof(db), "Invalid database handle");
 
 				MetaData = TableMetaData.GetMetaData(type);
 				DB = db;
@@ -3068,7 +3072,7 @@ namespace Rylogic.Db
 				IntPtr ptr; int len;
 				NativeDll.ColumnBlob(stmt, idx, out ptr, out len);
 
-				// Copy the blob out of the db
+				// Copy the blob out of the DB
 				byte[] blob = new byte[len];
 				if (len != 0) Marshal.Copy(ptr, blob, 0, blob.Length);
 				return blob;
@@ -3080,7 +3084,7 @@ namespace Rylogic.Db
 				if ((len % sizeof(int)) != 0)
 					throw new SqliteException(Result.Corrupt, "Blob data is not an even multiple of Int32s");
 
-				// Copy the blob out of the db
+				// Copy the blob out of the DB
 				int[] blob = new int[len / sizeof(int)];
 				if (len != 0) Marshal.Copy(ptr, blob, 0, blob.Length);
 				return blob;
@@ -3092,7 +3096,7 @@ namespace Rylogic.Db
 				if ((len % sizeof(long)) != 0)
 					throw new SqliteException(Result.Corrupt, "Blob data is not an even multiple of Int64s");
 
-				// Copy the blob out of the db
+				// Copy the blob out of the DB
 				long[] blob = new long[len / sizeof(long)];
 				if (len != 0) Marshal.Copy(ptr, blob, 0, blob.Length);
 				return blob;
@@ -3318,7 +3322,7 @@ namespace Rylogic.Db
 						var msg = string.Format("Sqlite handle ({0}) released from a different thread to the one it was created on\r\n", m_sqlite_handle_id);
 						if (m_stack_at_creation != null) msg += "Handle was created here:\r\n" + m_stack_at_creation.ToString();
 
-						// Add the stack dump of where the owning db handle was created
+						// Add the stack dump of where the owning DB handle was created
 						// If this is the garbage collector thread, it's possible the owner has been disposed already
 						var stmt = this as NativeSqlite3StmtHandle;
 						if (stmt != null)
@@ -3369,7 +3373,7 @@ namespace Rylogic.Db
 			private class NativeSqlite3StmtHandle :SQLiteHandle, sqlite3_stmt
 			{
 				#if SQLITE_HANDLES
-				public NativeSqlite3Handle m_db; // The owner db handle
+				public NativeSqlite3Handle m_db; // The owner DB handle
 				#endif
 
 				public NativeSqlite3StmtHandle()
@@ -3409,7 +3413,7 @@ namespace Rylogic.Db
 			[DllImport(Dll, EntryPoint = "sqlite3_sourceid", CallingConvention = CallingConvention.Cdecl)]
 			private static extern IntPtr sqlite3_sourceid();
 
-			/// <summary>True if asynchronous support is enabled (via the same db connection. If not, use separate db connections)</summary>
+			/// <summary>True if asynchronous support is enabled (via the same DB connection. If not, use separate DB connections)</summary>
 			public static bool ThreadSafe
 			{
 				get { return sqlite3_threadsafe() != 0 && m_config_option != ConfigOption.SingleThread; }
@@ -3466,7 +3470,7 @@ namespace Rylogic.Db
 			[DllImport(Dll, EntryPoint = "sqlite3_open_v2", CallingConvention=CallingConvention.Cdecl)]
 			private static extern Result sqlite3_open_v2(string filepath, out NativeSqlite3Handle db, int flags, IntPtr zvfs);
 
-			/// <summary>Set the busy wait timeout on the db</summary>
+			/// <summary>Set the busy wait timeout on the DB</summary>
 			public static void BusyTimeout(sqlite3 db, int milliseconds)
 			{
 				var r = sqlite3_busy_timeout((NativeSqlite3Handle)db, milliseconds);
@@ -4137,7 +4141,7 @@ namespace Rylogic.UnitTests
 			// Use single threading
 			Sqlite.Configure(Sqlite.ConfigOption.SingleThread);
 
-			// Use an in-memory db for normal unit tests,
+			// Use an in-memory DB for normal unit tests,
 			// use an actual file when debugging
 			FilePath = Sqlite.DBInMemory;
 			//FilePath = new FileInfo("tmpDB.db").FullName;

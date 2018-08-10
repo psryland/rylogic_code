@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Rylogic.Maths;
 
-namespace Rylogic
+namespace Rylogic.Common
 {
 	public class ConsoleEx
 	{
@@ -141,9 +141,7 @@ namespace Rylogic
 		/// <summary>Write a string to the console</summary>
 		public void Write(string msg)
 		{
-			// Breaks 'msg' into lines (without allocating the whole string again)
-			// If about to write text starting at CursorLeft == 0, then insert the
-			// indent first.
+			// Breaks 'msg' into lines (without allocating the whole string again, a.k.a Split)
 			for (int s = 0, e = 0; s != msg.Length; s = e != msg.Length ? e + 1 : e)
 			{
 				// Find the line end
@@ -151,9 +149,12 @@ namespace Rylogic
 				var line = msg.Substring(s, e - s);
 
 				// Add indent
-				if (Console.CursorLeft == 0)
+				if (Console.CursorLeft <= IndentLevel * IndentString.Length)
+				{
+					Console.CursorLeft = 0;
 					for (int k = 0; k != IndentLevel; ++k)
 						Console.Write(IndentString);
+				}
 
 				// Output the line
 				if (e != msg.Length)
@@ -170,6 +171,17 @@ namespace Rylogic
 		public void WriteLine()
 		{
 			WriteLine(string.Empty);
+		}
+
+		/// <summary>Display a prompt</summary>
+		public void Prompt(string prompt)
+		{
+			// Move to the next line if not at the start of a new line
+			if (AutoNewLine && Location.X > IndentLevel * IndentString.Length)
+				WriteLine();
+
+			// Display the prompt
+			Write(prompt);
 		}
 
 		/// <summary>The next character from the input stream, or negative one (-1) if there are currently no more characters to be read.</summary>
@@ -191,30 +203,34 @@ namespace Rylogic
 		}
 
 		/// <summary>Read a line from the console, with auto-complete and history support</summary>
-		public string Read(string prompt)
+		public string Read()
 		{
-			return ReadAsync(prompt, CancellationToken.None).Result;
+			return ReadAsync(CancellationToken.None).Result;
 		}
 
 		/// <summary>Async read a line from the console, with auto-complete and history support</summary>
-		public async Task<string> ReadAsync(string prompt, CancellationToken cancel, bool include_newline = true)
+		public async Task<string> ReadAsync(CancellationToken cancel = default(CancellationToken), bool include_newline = true)
 		{
-			// Move to the next line if not at the start of a new line
-			if (AutoNewLine && Location.X != 0)
-				WriteLine();
-
-			// Display the prompt
-			Write(prompt);
-
 			// Read up to the enter key being pressed
 			var input = (string)null;
 			for (var buf = new Buffer(this); input == null;)
 			{
+				// Record the cursor location before waiting for a key.
+				var loc0 = Location;
+
 				// Read a key from the user
 				var key = await Task.Run(() => ReadKey(true), cancel);
 
-				// Check for auto complete completion
-				if (AutoCompleteCommit(buf, key))
+				// If the cursor moves while waiting, apply the offset to the user input.
+				var loc1 = Location;
+				if (loc0 != loc1)
+				{
+					Prompt(string.Empty);
+					buf.Origin = Location;
+				}
+
+				// Do auto completion
+				if (DoAutoComplete(buf, key))
 					continue;
 
 				switch (key.Key)
@@ -236,14 +252,15 @@ namespace Rylogic
 						// Complete the user input
 						else
 						{
-							// Optionally include the newline character
-							if (include_newline)
-								buf.Write(key.KeyChar);
-
 							input = buf.ToString();
 
 							// Add the input to the history buffer
 							AddToHistory(input);
+
+							// Optionally include the newline character
+							if (include_newline)
+								input += Environment.NewLine;
+
 							break;
 						}
 					}
@@ -251,11 +268,6 @@ namespace Rylogic
 					{
 						// Clear user input
 						buf.Assign(0, string.Empty, true);
-						break;
-					}
-				case ConsoleKey.Tab:
-					{
-						DoAutoComplete(buf, key.Modifiers != ConsoleModifiers.Shift ? +1 : -1);
 						break;
 					}
 				case ConsoleKey.Backspace:
@@ -341,19 +353,15 @@ namespace Rylogic
 		private int _history_index;
 
 		/// <summary>Handle auto complete behaviour</summary>
-		private void DoAutoComplete(Buffer buf, int cycle_direction)
+		private bool DoAutoComplete(Buffer buf, ConsoleKeyInfo key)
 		{
-			if (AutoComplete == null)
-				return;
+			// No auto complete, or control is pressed meaning ignore auto completion
+			bool key_handled = false;
+			if (AutoComplete == null || (key.Key == ConsoleKey.Tab && key.Modifiers == ConsoleModifiers.Control))
+				return key_handled;
 
-			// If we already have suggestions cycle to the next suggestion
-			if (_suggestions != null && _suggestions.Length != 0)
-			{
-				// Tab cycles forward, Shift+Tab cycles backward through the suggestions
-				_auto_complete_index = (_auto_complete_index + _suggestions.Length + cycle_direction) % _suggestions.Length;
-			}
 			// If there are no suggestions yet, query them from the callback
-			else if (_suggestions == null)
+			if (key.Key == ConsoleKey.Tab && _suggestions == null)
 			{
 				// Read the index for the start of the current word
 				_word_bounding_index = buf.Insert + buf.WordBoundaryOffset(-1);
@@ -361,90 +369,112 @@ namespace Rylogic
 				// Get the suggestions and result the index
 				_suggestions = AutoComplete.Suggestions(buf.ToString(), _word_bounding_index, buf.Insert);
 				_auto_complete_index = 0;
+				key_handled = true;
+			}
+			// If auto complete is active cycle to the next suggestion
+			else if (key.Key == ConsoleKey.Tab && _suggestions?.Length > 1)
+			{
+				// Tab cycles forward, Shift+Tab cycles backward through the suggestions
+				var cycle_direction = key.Modifiers != ConsoleModifiers.Shift ? +1 : -1;
+				_auto_complete_index = (_auto_complete_index + _suggestions.Length + cycle_direction) % _suggestions.Length;
+				key_handled = true;
 			}
 
 			// Update 'buf' with the suggestion
-			if (_suggestions.Length != 0)
+			if (_suggestions?.Length > 0)
 			{
 				switch (AutoComplete.CompletionMode)
 				{
 				default: throw new Exception($"Unknown completion mode: {AutoComplete.CompletionMode}");
 				case ECompletionMode.FullText:
 					{
-						// Replace the full user input text
-						buf.Assign(0, _suggestions[_auto_complete_index], true);
+						// Cancel
+						if (key.Key == ConsoleKey.Escape)
+						{
+							buf.Assign(0, string.Empty, true);
+							key_handled = true;
+							_suggestions = null;
+						}
+						// Cycle completions
+						else if (key.Key == ConsoleKey.Tab)
+						{
+							// Replace the full user input text
+							buf.Assign(0, _suggestions[_auto_complete_index], true);
+							key_handled = true;
+						}
+						// Commit
+						else
+						{
+							buf.Assign(0, _suggestions[_auto_complete_index], true);
+							key_handled = key.Key == ConsoleKey.RightArrow;
+							_suggestions = null;
+						}
 						break;
 					}
 				case ECompletionMode.Word:
 					{
-						// Replace only the current word
-						buf.Assign(_word_bounding_index, _suggestions[_auto_complete_index], false);
+						// Cancel
+						if (key.Key == ConsoleKey.Escape)
+						{
+							buf.Assign(buf.Insert, string.Empty, true);
+							key_handled = true;
+							_suggestions = null;
+						}
+						// Cycle completions
+						else if (key.Key == ConsoleKey.Tab)
+						{
+							// Replace only the current word
+							buf.Assign(_word_bounding_index, _suggestions[_auto_complete_index], false);
+							key_handled = true;
+						}
+						// Commit
+						else if (key.Key == ConsoleKey.Spacebar || key.Key == ConsoleKey.RightArrow || key.Key == ConsoleKey.End || key.Key == ConsoleKey.Enter)
+						{
+							buf.Assign(_word_bounding_index, _suggestions[_auto_complete_index], true);
+							key_handled = true;
+							_suggestions = null;
+						}
+						// Continue to match
+						else if (!char.IsControl(key.KeyChar))
+						{
+							// Save the current suggestion
+							var suggestion = _suggestions[_auto_complete_index];
+
+							// Add the character to the user input
+							buf.Write(key.KeyChar);
+							key_handled = true;
+
+							// Look for new suggestions
+							_suggestions = AutoComplete.Suggestions(buf.ToString(), _word_bounding_index, buf.Insert);
+
+							// Look for the previous suggestion in the new list
+							if (_suggestions?.Length > 0)
+							{
+								var idx = Array.IndexOf(_suggestions, suggestion);
+								_auto_complete_index = idx != -1 ? idx : 0;
+								buf.Assign(_word_bounding_index, _suggestions[_auto_complete_index], false);
+							}
+							else
+							{
+								// Revert the user input to just what they've typed
+								buf.Assign(buf.Insert, string.Empty, false);
+								_suggestions = null;
+							}
+						}
 						break;
 					}
 				}
 			}
-			else
-			{
-				// Deactivation auto complete if there are no suggestions
+
+			// Deactivation auto complete if there are no suggestions
+			if (_suggestions?.Length == 0)
 				_suggestions = null;
-			}
+
+			return key_handled;
 		}
 		private string[] _suggestions;
 		private int _word_bounding_index;
 		private int _auto_complete_index;
-
-		/// <summary>Check for auto complete completion. Returns true if 'key' is handled by this method</summary>
-		private bool AutoCompleteCommit(Buffer buf, ConsoleKeyInfo key)
-		{
-			if (AutoComplete == null || _suggestions == null)
-				return false;
-
-			// Cancel on escape or no suggestions
-			var cancel = key.Key == ConsoleKey.Escape;
-			var commit = key.Key != ConsoleKey.Tab && !cancel;
-			if (!commit && !cancel)
-				return false;
-
-			// Commit the suggestion into the user input
-			var key_handled = true;
-			switch (AutoComplete.CompletionMode)
-			{
-			default: throw new Exception($"Unknown completion mode: {AutoComplete.CompletionMode}");
-			case ECompletionMode.FullText:
-				{
-					if (commit)
-					{
-						buf.Assign(0, _suggestions[_auto_complete_index], true);
-						key_handled = false;
-					}
-					if (cancel)
-					{
-						buf.Assign(0, string.Empty, true);
-						key_handled = true;
-					}
-					break;
-				}
-			case ECompletionMode.Word:
-				{
-					if (commit)
-					{
-						buf.Assign(_word_bounding_index, _suggestions[_auto_complete_index], true);
-						key_handled = false;
-					}
-					if (cancel)
-					{
-						buf.Assign(buf.Insert, string.Empty, true);
-						key_handled = true;
-					}
-					break;
-				}
-			}
-
-			// Make auto complete inactive
-			_suggestions = null;
-			_auto_complete_index = 0;
-			return key_handled;
-		}
 
 		/// <summary>Helper for tracking the input string within the console buffer</summary>
 		private class Buffer
@@ -526,6 +556,12 @@ namespace Rylogic
 				_line.Insert(Insert++, c);
 				Update();
 			}
+			public void Write(string text)
+			{
+				_line.Insert(Insert, text);
+				Insert += text.Length;
+				Update();
+			}
 
 			/// <summary>Delete characters from the input buffer. Use negative numbers to delete backward, positive to delete forward</summary>
 			public void Delete(int direction_and_count)
@@ -546,6 +582,19 @@ namespace Rylogic
 
 				// Shift the cursor location
 				_console.Location = _console.NormaliseLocation(_console.Location, diff, 0);
+			}
+
+			/// <summary>Get/Set a new origin position</summary>
+			internal Point Origin
+			{
+				get { return _origin; }
+				set
+				{
+					_console.Clear(_origin, _end, false);
+					_origin = value;
+					_end = _origin;
+					Update();
+				}
 			}
 
 			/// <summary>Write the user input into the console and update the cursor location</summary>
@@ -682,10 +731,12 @@ namespace Rylogic
 #if PR_UNITTESTS
 namespace Rylogic.UnitTests
 {
+	using Common;
+
 	[TestFixture]
 	public class TestConsoleEx
 	{
-		[Test]
+		//[Test]
 		public async void Run()
 		{
 			var Console = new ConsoleEx
@@ -711,7 +762,8 @@ namespace Rylogic.UnitTests
 
 			for (; ; )
 			{
-				var cmd_line = await Console.ReadAsync(">", CancellationToken.None);
+				Console.Prompt(">");
+				var cmd_line = await Console.ReadAsync(CancellationToken.None);
 				if (cmd_line.ToLower() == "exit")
 					break;
 			}

@@ -34,6 +34,12 @@ namespace Rylogic.UnitTests
 			Assert.Equal(acc["Two"], 2f);
 			Assert.Equal(acc["Three"], 3f);
 			Assert.Equal(acc["Four"], 0f);
+
+			var acc2 = new Accumulator<string, int>();
+			acc2["One"]++;
+			acc2["One"]++;
+			acc2["One"]++;
+			Assert.Equal(acc2["One"], 3);
 		}
 	}
 }
