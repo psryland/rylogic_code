@@ -39,7 +39,7 @@ namespace Rylogic.Common
 		public int IndentLevel { get; set; }
 
 		/// <summary>Command line history</summary>
-		public List<string> History { get; private set; }
+		public IList<string> History { get; private set; }
 
 		/// <summary>The maximum length of the history buffer</summary>
 		public int HistoryMaxLength { get; set; }
@@ -71,7 +71,7 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>RAII scope for indenting output</summary>
-		public IDisposable Indent()
+		public IDisposable PreserveIndent()
 		{
 			return new IndentSave(this);
 		}

@@ -160,7 +160,7 @@ namespace Rylogic.Container
 		{
 			get { return SortColumn.HasValue() ? $"{BaseTableName}.[{SortColumn}] {(SortAscending ? string.Empty : "desc")}" : string.Empty; }
 		}
-		
+
 		/// <summary>Raised whenever the collection is marked as invalid</summary>
 		public event EventHandler Invalidated;
 
@@ -231,15 +231,15 @@ namespace Rylogic.Container
 			// Create the temporary table
 			using (var t = DB.NewTransaction())
 			{
-				t.DB.Execute($"drop table if exists {tmp_table}");
-				t.DB.Execute(
+				DB.Execute($"drop table if exists {tmp_table}");
+				DB.Execute(
 					$"create table {tmp_table} (\n"+
 					"  [Idx] integer primary key autoincrement,\n"+
 					"  [Key] integer\n" +
 					")");
 
 				// Populate from the base table using the filters
-				t.DB.Execute(
+				DB.Execute(
 					$"insert into {tmp_table} ([Key])\n"+
 					$"select {Pk} from {BaseTableName}\n"+
 					(Join   .HasValue() ? $" join {Join}" : "") +
@@ -256,8 +256,8 @@ namespace Rylogic.Container
 			// Drop the old table and rename the temporary table to the new binding source table
 			using (var t = DB.NewTransaction())
 			{
-				t.DB.Execute($"drop table if exists {TableName}");
-				t.DB.Execute($"alter table {tmp_table} rename to {TableName}");
+				DB.Execute($"drop table if exists {TableName}");
+				DB.Execute($"alter table {tmp_table} rename to {TableName}");
 				t.Commit();
 			}
 

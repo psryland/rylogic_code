@@ -147,7 +147,7 @@ namespace Rylogic.Common
 			get { return m_capacity; }
 			set
 			{
-				using (Lock)
+				using (Lock())
 				{
 					m_capacity = value;
 					LimitCacheSize();
@@ -166,7 +166,7 @@ namespace Rylogic.Common
 		/// <summary>Returns true if an object with a key matching 'key' is currently in the cache</summary>
 		public bool IsCached(TKey key)
 		{
-			using (Lock)
+			using (Lock())
 				return m_lookup.ContainsKey(key);
 		}
 
@@ -176,7 +176,7 @@ namespace Rylogic.Common
 			if (Capacity == 0)
 				return false;
 
-			using (Lock)
+			using (Lock())
 			{
 				// Create a new node and add to the cache
 				var node = m_cache.AddFirst(new Entry{Key = key, Item = item});
@@ -192,7 +192,7 @@ namespace Rylogic.Common
 			if (Capacity == 0)
 				return false;
 
-			using (Lock)
+			using (Lock())
 			{
 				var k = keys.GetIterator();
 				var i = items.GetIterator();
@@ -212,10 +212,13 @@ namespace Rylogic.Common
 		{
 			// Use the lookup map to find the node in the cache
 			LinkedListNode<Entry> node;
-			using (Lock) m_lookup.TryGetValue(key, out node);
-			if (node == null) return false;
+			using (Lock())
+				m_lookup.TryGetValue(key, out node);
 
-			using (Lock)
+			if (node == null)
+				return false;
+
+			using (Lock())
 				DeleteCachedItem(node, false);
 
 			return true;
@@ -236,7 +239,8 @@ namespace Rylogic.Common
 
 			// Use the lookup map to find the node in the cache
 			LinkedListNode<Entry> node = null;
-			using (Lock) m_lookup.TryGetValue(key, out node);
+			using (Lock())
+				m_lookup.TryGetValue(key, out node);
 			if (node != null)
 			{
 				// Found!
@@ -244,7 +248,7 @@ namespace Rylogic.Common
 
 				// For standard caches, move the item to the head of the cache list.
 				// For object pools, remove the item from the cache before returning it.
-				using (Lock)
+				using (Lock())
 				{
 					switch (Mode)
 					{
@@ -282,7 +286,7 @@ namespace Rylogic.Common
 				{
 				default: throw new Exception("Unknown cache mode");
 				case CacheMode.StandardCache:
-					using (Lock)
+					using (Lock())
 					{
 						// Check again if 'key' is not in the cache, it might have been
 						// added by another thread while we weren't holding the lock.
@@ -315,10 +319,9 @@ namespace Rylogic.Common
 			if (Capacity == 0)
 				return;
 
-			using (Lock)
+			using (Lock())
 			{
-				LinkedListNode<Entry> node;
-				if (m_lookup.TryGetValue(key, out node))
+				if (m_lookup.TryGetValue(key, out var node))
 					DeleteCachedItem(node, true);
 			}
 		}
@@ -326,7 +329,7 @@ namespace Rylogic.Common
 		/// <summary>Delete (i.e. Dispose) and remove all items from the cache</summary>
 		public void Flush()
 		{
-			using (Lock)
+			using (Lock())
 			{
 				int cap = Capacity;
 				Capacity = 0;
@@ -337,7 +340,7 @@ namespace Rylogic.Common
 		/// <summary>Reduces the size of the cache to 'MaxCachedItemsCount' items</summary>
 		private void LimitCacheSize()
 		{
-			using (Lock)
+			using (Lock())
 			{
 				while (m_cache.Count > Capacity)
 					DeleteCachedItem(m_cache.Last, true);
@@ -360,15 +363,12 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Create a synchronisation lock</summary>
-		private Scope Lock
+		private Scope Lock()
 		{
-			get
-			{
-				Debug.Assert(ThreadSafe || m_thread_id == Thread.CurrentThread.ManagedThreadId, "Cross thread use of non-thread safe cache");
-				return ThreadSafe
-					? Scope.Create(() => Monitor.Enter(m_lock), () => Monitor.Exit(m_lock))
-					: Scope.Create(()=>{},()=>{});
-			}
+			Debug.Assert(ThreadSafe || m_thread_id == Thread.CurrentThread.ManagedThreadId, "Cross thread use of non-thread safe cache");
+			return ThreadSafe
+				? Scope.Create(() => Monitor.Enter(m_lock), () => Monitor.Exit(m_lock))
+				: Scope.Create(()=>{},()=>{});
 		}
 	}
 

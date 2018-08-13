@@ -30,7 +30,7 @@ try:
 	#	"TextFormatter",
 	#	"prautoexp",
 	#	"Rylogic",
-	#	"Rylogic.VSExtension",
+	#	"Rylogic.TextAligner",
 	#	"Csex_vs2012",
 	#	"RylogViewer",
 	#	"TestCS"

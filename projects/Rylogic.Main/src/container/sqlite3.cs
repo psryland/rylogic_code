@@ -1,4 +1,4 @@
-﻿//#define SQLITE_HANDLES
+﻿#define SQLITE_HANDLES
 #define COMPILED_LAMBDAS
 
 using System;
@@ -788,16 +788,6 @@ namespace Rylogic.Db
 				return m_transaction_in_progress = new Transaction(this, () => m_transaction_in_progress = null);
 			}
 			private Transaction m_transaction_in_progress;
-
-			/// <summary>
-			/// Factory method for creating a 'Transaction' for a different thread.
-			/// Call this from the new thread context.</summary>
-			public Transaction NewAsyncTransaction(int busy_timeout = 10000)
-			{
-				// Create a database handle for this thread
-				var db = new Database(this){ BusyTimeout = busy_timeout };
-				return new Transaction(db, db.Dispose);
-			}
 
 			/// <summary>Returns free DB pages to the OS reducing the DB file size</summary>
 			public void Vacuum()
@@ -2092,7 +2082,7 @@ namespace Rylogic.Db
 			}
 
 			/// <summary>The database connection</summary>
-			public Database DB { get; private set; }
+			private Database DB { get; set; }
 
 			/// <summary>Commit changes to the database</summary>
 			public void Commit()
@@ -4545,9 +4535,10 @@ namespace Rylogic.UnitTests
 					{
 						ThreadPool.QueueUserWorkItem(_ =>
 						{
-							using (var tranny = db.NewAsyncTransaction())
+							using (var conn = new Sqlite.Database(db))
+							using (var tranny = conn.NewTransaction())
 							{
-								var table_ = tranny.DB.Table<Table0>();
+								var table_ = conn.Table<Table0>();
 								foreach (var x in objs.Take(7))
 									table_.Insert(x, Sqlite.OnInsertConstraint.Replace);
 

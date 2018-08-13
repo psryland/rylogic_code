@@ -43,7 +43,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "physics", "physics.vcxproj"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "elevate", "elevate.vcxproj", "{50944CED-7FC2-4B57-95E6-7CE85BADB08E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylogic.VSExtension", "..\projects\Rylogic.VSExtension\Rylogic.VSExtension.csproj", "{852C66A1-A9AA-4BD9-A762-C94B61838F96}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylogic.TextAligner", "..\projects\Rylogic.TextAligner\Rylogic.TextAligner.csproj", "{852C66A1-A9AA-4BD9-A762-C94B61838F96}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestCS", "..\projects\TestCS\TestCS.csproj", "{9B271143-7D07-4E5F-85F7-0F0F1D8F4BF5}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -169,7 +169,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylogic.Gui", "..\projects\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoinFlip.UI", "..\projects\CoinFlip\CoinFlip.UI\CoinFlip.UI.csproj", "{39697B29-5C06-4545-966C-80C148EEA2C6}"
 EndProject
-Project("{9092AA53-FB77-4645-B42D-1CCCA6BD08BD}") = "Rylogic.TextAligner", "..\typescript\projects\vscode-alignextension\Rylogic.TextAligner.njsproj", "{AD48CF54-1609-4609-BDBD-1D1900069A92}"
+Project("{9092AA53-FB77-4645-B42D-1CCCA6BD08BD}") = "Rylogic.TextAligner", "..\typescript\projects\Rylogic.TextAligner\Rylogic.TextAligner.njsproj", "{AD48CF54-1609-4609-BDBD-1D1900069A92}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestConsoleCS", "..\projects\TestConsoleCS\TestConsoleCS.csproj", "{968B57EC-5AEB-42AE-AB8B-BD1DAEC6E7BF}"
 EndProject
