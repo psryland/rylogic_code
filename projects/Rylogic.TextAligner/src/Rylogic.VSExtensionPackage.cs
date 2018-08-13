@@ -8,7 +8,7 @@ using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text.Outlining;
 
-namespace Rylogic.VSExtension
+namespace Rylogic.TextAligner
 {
 	/// <summary>
 	/// This is the class that implements the package exposed by this assembly.
@@ -20,11 +20,11 @@ namespace Rylogic.VSExtension
 	/// register itself and its components with the shell.
 	/// </summary>
 	[PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)] // This attribute tells the PkgDef creation utility (CreatePkgDef.exe) that this class is a package.
-	[InstalledProductRegistration("Rylogic.VSExtension", "Rylogic extensions", "1.1", IconResourceID = 400)] // This attribute is used to register the information needed to show this package in the Help/About dialog of Visual Studio.
+	[InstalledProductRegistration("Rylogic.TextAligner", "Rylogic extensions", "1.1", IconResourceID = 400)] // This attribute is used to register the information needed to show this package in the Help/About dialog of Visual Studio.
 	[ProvideMenuResource("Menus.ctmenu", 1)] // This attribute is needed to let the shell know that this package exposes some menus.
 	[ProvideOptionPage(typeof(AlignOptions), "Rylogic", "Align Options", 0, 0, true)]
-	[Guid(GuidList.guidRylogic_VSExtensionPkgString)]
-	public sealed class Rylogic_VSExtensionPackage :AsyncPackage ,IOleCommandTarget
+	[Guid(GuidList.guidRylogicTextAlignerPkgString)]
+	public sealed class RylogicTextAlignerPackage :AsyncPackage ,IOleCommandTarget
 	{
 		/// <summary>
 		/// Default constructor of the package.
@@ -32,7 +32,7 @@ namespace Rylogic.VSExtension
 		/// any Visual Studio service because at this point the package object is created but
 		/// not sited yet inside Visual Studio environment. The place to do all the other
 		/// initialization is the Initialize method.</summary>
-		public Rylogic_VSExtensionPackage()
+		public RylogicTextAlignerPackage()
 		{}
 
 		/// <summary>
@@ -46,7 +46,6 @@ namespace Rylogic.VSExtension
 			if (await GetServiceAsync(typeof(IMenuCommandService)) is OleMenuCommandService mcs)
 			{
 				mcs.AddCommand(new AlignMenuCommand(this));
-				mcs.AddCommand(new OutlineCodeCommand(this));
 			}
 		}
 

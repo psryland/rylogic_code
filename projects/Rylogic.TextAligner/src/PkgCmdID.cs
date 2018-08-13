@@ -2,7 +2,7 @@
 // MUST match PkgCmdID.h
 using System;
 
-namespace Rylogic.VSExtension
+namespace Rylogic.TextAligner
 {
     static class PkgCmdIDList
     {

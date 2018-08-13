@@ -26,7 +26,7 @@
 
 	<!--The Commands section is where we the commands, menus and menu groups are defined.
 		This section uses a Guid to identify the package that provides the command defined inside it. -->
-	<Commands package="Rylogic_VSExtensionPkg">
+	<Commands package="RylogicTextAlignerPkg">
 		<!-- Inside this section we have different sub-sections: one for the menus, another
 		for the menu groups, one for the buttons (the actual commands), one for the combos
 		and the last one for the bitmaps used. Each element is identified by a command id that
@@ -40,7 +40,7 @@
 		group as the part of a menu contained between two lines. The parent of a group
 		must be a menu.-->
 		<!--<Groups>
-			<Group guid="guidRylogic_VSExtensionCmdSet" id="RylogicMenuGroup" priority="0xF000">
+			<Group guid="guidRylogicTextAlignerCmdSet" id="RylogicMenuGroup" priority="0xF000">
 				<Parent guid ="guidSHLMainMenu" id="IDM_VS_MENU_EDIT"/>
 			</Group>
 		</Groups>-->
@@ -48,7 +48,7 @@
 		<!--Buttons section. -->
 		<!--This section defines the elements the user can interact with, like a menu command or a button or combo box in a tool bar. -->
 		<Buttons>
-			<Button guid="guidRylogic_VSExtensionCmdSet" id="cmdidAlign" priority="0x0100" type="Button">
+			<Button guid="guidRylogicTextAlignerCmdSet" id="cmdidAlign" priority="0x0100" type="Button">
 				<Parent guid="guidStdEditor" id="IDG_VS_EDITOR_ADVANCED_CMDS"/>
 				<Icon guid="guidAlignIcon" id="bmpBtn"/>
 				<Strings>
@@ -57,7 +57,7 @@
 					<ButtonText>&amp;Align</ButtonText>
 				</Strings>
 			</Button>
-			<Button guid="guidRylogic_VSExtensionCmdSet" id="cmdidOutlineCodeOnly" priority="0x0100" type="Button">
+			<Button guid="guidRylogicTextAlignerCmdSet" id="cmdidOutlineCodeOnly" priority="0x0100" type="Button">
 				<Parent guid="guidStdEditor" id="IDG_VS_EDITOR_OUTLINING_CMDS"/>
 				<Icon guid="guidOutlineCodeIcon" id="bmpBtn"/>
 				<Strings>
@@ -77,10 +77,10 @@
 
 	<Symbols>
 		<!-- This is the package guid. -->
-		<GuidSymbol name="Rylogic_VSExtensionPkg" value="{DF402917-6013-40CA-A4C6-E1640DA86B90}"/>
+		<GuidSymbol name="RylogicTextAlignerPkg" value="{DF402917-6013-40CA-A4C6-E1640DA86B90}"/>
 
 		<!-- This is the guid used to group the menu commands together -->
-		<GuidSymbol name="guidRylogic_VSExtensionCmdSet" value="{E695E21D-48BB-4B3E-B442-DF64253991A5}">
+		<GuidSymbol name="guidRylogicTextAlignerCmdSet" value="{E695E21D-48BB-4B3E-B442-DF64253991A5}">
 			<IDSymbol name="RylogicMenuGroup" value="0x1020"/>
 			<IDSymbol name="cmdidAlign" value="0x0100"/>
 			<IDSymbol name="cmdidOutlineCodeOnly" value="0x0101"/>

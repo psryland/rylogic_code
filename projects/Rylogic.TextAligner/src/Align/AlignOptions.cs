@@ -10,7 +10,7 @@ using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Utility;
 
-namespace Rylogic.VSExtension
+namespace Rylogic.TextAligner
 {
 	[ClassInterface(ClassInterfaceType.AutoDual)]
 	[Guid("C0392BF9-56C7-4D4E-9669-5C4B2B38366C")]
@@ -24,7 +24,7 @@ namespace Rylogic.VSExtension
 		/// <summary>The location on disk of where the settings are saved</summary>
 		public string SettingsFilepath
 		{
-			get { return Util.ResolveAppDataPath("Rylogic", "VSExtension", "align_patterns.xml"); }
+			get { return Util.ResolveAppDataPath("Rylogic", "TextAligner", "align_patterns.xml"); }
 		}
 
 		/// <summary>The groups of alignment patterns</summary>

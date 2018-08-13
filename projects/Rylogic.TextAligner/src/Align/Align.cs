@@ -8,7 +8,7 @@ using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Maths;
 
-namespace Rylogic.VSExtension
+namespace Rylogic.TextAligner
 {
 	internal class Align
 	{

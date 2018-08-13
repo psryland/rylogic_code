@@ -2,7 +2,7 @@
 using Rylogic.Common;
 using Rylogic.Extn;
 
-namespace Rylogic.VSExtension
+namespace Rylogic.TextAligner
 {
 	/// <summary>A pattern representing an alignment candidate</summary>
 	internal class AlignPattern :Pattern

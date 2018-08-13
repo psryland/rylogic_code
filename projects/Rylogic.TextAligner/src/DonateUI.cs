@@ -5,7 +5,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using Rylogic.Utility;
 
-namespace Rylogic.VSExtension
+namespace Rylogic.TextAligner
 {
 	public class DonateUI : Form
 	{

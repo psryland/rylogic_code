@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Rylogic.VSExtension {
+namespace Rylogic.TextAligner {
     using System;
     
     
@@ -39,7 +39,7 @@ namespace Rylogic.VSExtension {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Rylogic.VSExtension.VSPackage", typeof(VSPackage).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Rylogic.TextAligner.VSPackage", typeof(VSPackage).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
@@ -61,7 +61,7 @@ namespace Rylogic.VSExtension {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Rylogic.VSExtension.
+        ///   Looks up a localized string similar to Rylogic.TextAligner.
         /// </summary>
         internal static string _110 {
             get {

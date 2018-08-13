@@ -7,7 +7,7 @@ using Rylogic.Extn;
 using Rylogic.Gui;
 using Rylogic.Utility;
 
-namespace Rylogic.VSExtension
+namespace Rylogic.TextAligner
 {
 	internal class AlignOptionsControl :UserControl
 	{
@@ -264,7 +264,7 @@ namespace Rylogic.VSExtension
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(AlignOptionsControl));
 			this.m_split = new System.Windows.Forms.SplitContainer();
 			this.m_table1 = new System.Windows.Forms.TableLayoutPanel();
-			this.m_grid_groups = new Rylogic.VSExtension.GroupGrid();
+			this.m_grid_groups = new Rylogic.TextAligner.GroupGrid();
 			this.m_flow = new System.Windows.Forms.FlowLayoutPanel();
 			this.m_btn_new = new System.Windows.Forms.Button();
 			this.m_image_list = new System.Windows.Forms.ImageList(this.components);
@@ -277,7 +277,7 @@ namespace Rylogic.VSExtension
 			this.m_btn_reset = new System.Windows.Forms.Button();
 			this.m_lbl_alignment_group = new System.Windows.Forms.Label();
 			this.m_table2 = new System.Windows.Forms.TableLayoutPanel();
-			this.m_grid_patterns = new Rylogic.VSExtension.PatternGrid();
+			this.m_grid_patterns = new Rylogic.TextAligner.PatternGrid();
 			this.m_lbl_alignment_patterns = new System.Windows.Forms.Label();
 			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
 			((System.ComponentModel.ISupportInitialize)(this.m_split)).BeginInit();

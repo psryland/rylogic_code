@@ -5,7 +5,7 @@ using System.Windows.Forms;
 using Rylogic.Extn;
 using Rylogic.Maths;
 
-namespace Rylogic.VSExtension
+namespace Rylogic.TextAligner
 {
 	[DesignerCategory("Code")]
 	[ComplexBindingProperties]

@@ -3,7 +3,7 @@ using System.Linq;
 using System.Xml.Linq;
 using Rylogic.Extn;
 
-namespace Rylogic.VSExtension
+namespace Rylogic.TextAligner
 {
 	/// <summary>Represents a set of patterns that all align together</summary>
 	internal class AlignGroup

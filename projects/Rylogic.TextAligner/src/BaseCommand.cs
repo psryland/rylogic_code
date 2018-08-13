@@ -4,19 +4,19 @@ using Microsoft.VisualStudio.Editor;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
 
-namespace Rylogic.VSExtension
+namespace Rylogic.TextAligner
 {
 	/// <summary>Base class for MenuCommands</summary>
 	public class BaseCommand :MenuCommand
 	{
-		public BaseCommand(Rylogic_VSExtensionPackage package, int cmd_id)
-			:base(RunCommand, new CommandID(GuidList.guidRylogic_VSExtensionCmdSet, cmd_id))
+		public BaseCommand(RylogicTextAlignerPackage package, int cmd_id)
+			:base(RunCommand, new CommandID(GuidList.guidRylogicTextAlignerCmdSet, cmd_id))
 		{
 			Package = package;
 		}
 
 		/// <summary>The owning package instance</summary>
-		protected Rylogic_VSExtensionPackage Package { get; private set; }
+		protected RylogicTextAlignerPackage Package { get; private set; }
 
 		/// <summary></summary>
 		private static void RunCommand(object sender, EventArgs e)

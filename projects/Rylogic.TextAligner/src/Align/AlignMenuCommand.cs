@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Rylogic.VSExtension
+namespace Rylogic.TextAligner
 {
 	public sealed class AlignMenuCommand :BaseCommand
 	{
-		public AlignMenuCommand(Rylogic_VSExtensionPackage package)
+		public AlignMenuCommand(RylogicTextAlignerPackage package)
 			:base(package, PkgCmdIDList.cmdidAlign)
 		{}
 

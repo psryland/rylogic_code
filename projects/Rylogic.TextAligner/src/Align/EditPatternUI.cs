@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Windows.Forms;
 
-namespace Rylogic.VSExtension
+namespace Rylogic.TextAligner
 {
 	internal class EditPatternUI :Form
 	{
