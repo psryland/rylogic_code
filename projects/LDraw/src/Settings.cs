@@ -37,6 +37,10 @@ namespace LDraw
 		{
 			AutoSaveOnChanges = true;
 		}
+		public override string Version
+		{
+			get { return "v1.0"; }
+		}
 
 		/// <summary>Recently loaded files</summary>
 		public string RecentFiles
@@ -131,12 +135,6 @@ namespace LDraw
 		{
 			get { return get<ConnectionSettings[]>(nameof(Connections)); }
 			set { set(nameof(Connections), value); }
-		}
-
-		/// <summary>Settings version</summary>
-		protected override string Version
-		{
-			get { return "v1.0"; }
 		}
 	}
 

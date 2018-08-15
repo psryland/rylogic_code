@@ -148,6 +148,7 @@
   <ItemGroup>
     <VSCTCompile Include="Rylogic.TextAligner.vsct">
       <ResourceName>Menus.ctmenu</ResourceName>
+      <SubType>Designer</SubType>
     </VSCTCompile>
   </ItemGroup>
   <ItemGroup>

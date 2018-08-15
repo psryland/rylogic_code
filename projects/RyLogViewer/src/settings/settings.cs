@@ -87,9 +87,7 @@ namespace RyLogViewer
 		{
 			AutoSaveOnChanges = true;
 		}
-
-		/// <summary>The settings version, used to detect when 'Upgrade' is needed</summary>
-		protected override string Version
+		public override string Version
 		{
 			get { return "v1.3"; }
 		}

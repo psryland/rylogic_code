@@ -18,7 +18,7 @@ namespace Rylogic.Common
 			IndentLevel = 0;
 			History = new List<string>();
 			HistoryMaxLength = 1000;
-			IsWordChar = c => char.IsLetterOrDigit(c) || c == '_';
+			IsWordChar = IsWordCharDefault;
 			AutoComplete = null;
 		}
 
@@ -46,6 +46,7 @@ namespace Rylogic.Common
 
 		/// <summary>Defines characters that are considered word characters (e.g. for Ctrl+Backspace)</summary>
 		public Func<char, bool> IsWordChar { get; set; }
+		public static bool IsWordCharDefault(char c) { return char.IsLetterOrDigit(c) || c == '_'; }
 
 		/// <summary>Auto complete handler</summary>
 		public IAutoComplete AutoComplete { get; set; }

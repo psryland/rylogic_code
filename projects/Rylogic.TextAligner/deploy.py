@@ -21,12 +21,12 @@ try:
 	bindir = srcdir + "\\bin\\Release"
 	extn_name = "Rylogic.TextAligner.vsix"
 
-	vers_patn = r'Id="1d697591-233a-4a5b-bf85-2fccc769dfe3" Version="(?P<vers>.*?)"'
+	vers_patn = r'Id="DF402917-6013-40CA-A4C6-E1640DA86B90" Version="(?P<vers>.*?)"'
 	match_version = Tools.Extract(manifest, vers_patn)
 	if match_version == None: Tools.OnError("ERROR: failed to extract version number from:\r\n " + manifest)
 	version = input("Current version is: " + match_version.group("vers") + "\r\nEnter version number (default is unchanged): ")
 	if version == "": version = match_version.group("vers")
-	vers_sub  = r'Id="1d697591-233a-4a5b-bf85-2fccc769dfe3" Version="'+version+'"'
+	vers_sub  = r'Id="DF402917-6013-40CA-A4C6-E1640DA86B90" Version="'+version+'"'
 	min_released_version = "1.07"
 	if version <= min_released_version: Tools.OnError("ERROR: Can't use that version number, it's less than what's already been released");
 

@@ -44,7 +44,7 @@ namespace CoinFlip
 			// Leave this disabled till everything has been set up (i.e. the Model enables it)
 			AutoSaveOnChanges = false;
 		}
-		protected override string Version
+		public override string Version
 		{
 			get { return "v1.0"; }
 		}
