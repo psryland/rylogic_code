@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*- 
+# -*- coding: utf-8 -*-
 
 import sys, os, shutil, subprocess
 
@@ -21,5 +21,5 @@ os.chdir(proj)
 subprocess.check_call(["npm", "run", "build-all"], cwd=proj, shell=True)
 
 # Deploy
-shutil.copy2(dist+"\\trading_chart.bundle.js", root+"\\lib\\")
-shutil.copy2(dist+"\\trading_chart.bundle.min.js", root+"\\lib\\")
+shutil.copy2(os.path.join(dist ,"trading_chart.bundle.min.js") , os.path.join(root, "lib"))
+shutil.copy2(os.path.join(dist ,"trading_chart.bundle.js"    ) , os.path.join(root, "lib"))

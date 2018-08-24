@@ -1805,14 +1805,17 @@ export class Navigation
 	 */
 	OnMouseUp(ev: PointerEvent): void
 	{
-		this.chart.canvas2d.releasePointerCapture(ev.pointerId);
+		try {
+			this.chart.canvas2d.releasePointerCapture(ev.pointerId);
 
-		// Look for the mouse op to perform
-		let op = this.active;
-		if (op != null && !op.cancelled)
-			op.MouseUp(ev);
-		
-		this.EndOp(ev.button);
+			// Look for the mouse op to perform
+			let op = this.active;
+			if (op != null && !op.cancelled)
+				op.MouseUp(ev);
+		}
+		finally {
+			this.EndOp(ev.button);
+		}
 	}
 
 	/**
