@@ -58,6 +58,7 @@ namespace Rylogic.Gui
 
 					m_btn_cancel.Text = "Cancelling...";
 					m_btn_cancel.Enabled = false;
+					Enabled = false;
 				};
 
 				Text = title ?? string.Empty;

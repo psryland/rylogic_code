@@ -456,17 +456,17 @@ namespace pr
 					switch (buf.dwOfs)
 					{
 					default: PR_ASSERT(PR_DBG_DINPUT, false, "");
-					case offsetof(DIMOUSESTATE, lX): m_curr->lX = buf.dwData; break;
-					case offsetof(DIMOUSESTATE, lY): m_curr->lY = buf.dwData; break;
-					case offsetof(DIMOUSESTATE, lZ): m_curr->lZ = buf.dwData; break;
-					case offsetof(DIMOUSESTATE, rgbButtons) + 0: m_curr->rgbButtons[0] = (BYTE)buf.dwData; break;
-					case offsetof(DIMOUSESTATE, rgbButtons) + 1: m_curr->rgbButtons[1] = (BYTE)buf.dwData; break;
-					case offsetof(DIMOUSESTATE, rgbButtons) + 2: m_curr->rgbButtons[2] = (BYTE)buf.dwData; break;
-					case offsetof(DIMOUSESTATE, rgbButtons) + 3: m_curr->rgbButtons[3] = (BYTE)buf.dwData; break;
-					case offsetof(DIMOUSESTATE2, rgbButtons) + 4: m_curr->rgbButtons[4] = (BYTE)buf.dwData; break;
-					case offsetof(DIMOUSESTATE2, rgbButtons) + 5: m_curr->rgbButtons[5] = (BYTE)buf.dwData; break;
-					case offsetof(DIMOUSESTATE2, rgbButtons) + 6: m_curr->rgbButtons[6] = (BYTE)buf.dwData; break;
-					case offsetof(DIMOUSESTATE2, rgbButtons) + 7: m_curr->rgbButtons[7] = (BYTE)buf.dwData; break;
+					case DIMOFS_X:       m_curr->lX = buf.dwData; break;
+					case DIMOFS_Y:       m_curr->lY = buf.dwData; break;
+					case DIMOFS_Z:       m_curr->lZ = buf.dwData; break;
+					case DIMOFS_BUTTON0: m_curr->rgbButtons[0] = (BYTE)buf.dwData; break;
+					case DIMOFS_BUTTON1: m_curr->rgbButtons[1] = (BYTE)buf.dwData; break;
+					case DIMOFS_BUTTON2: m_curr->rgbButtons[2] = (BYTE)buf.dwData; break;
+					case DIMOFS_BUTTON3: m_curr->rgbButtons[3] = (BYTE)buf.dwData; break;
+					case DIMOFS_BUTTON4: m_curr->rgbButtons[4] = (BYTE)buf.dwData; break;
+					case DIMOFS_BUTTON5: m_curr->rgbButtons[5] = (BYTE)buf.dwData; break;
+					case DIMOFS_BUTTON6: m_curr->rgbButtons[6] = (BYTE)buf.dwData; break;
+					case DIMOFS_BUTTON7: m_curr->rgbButtons[7] = (BYTE)buf.dwData; break;
 					}
 					if (events)
 					{

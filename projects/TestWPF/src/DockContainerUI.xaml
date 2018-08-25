@@ -15,6 +15,7 @@
 	
 	<Canvas Name="Root">
 
+		<!-- The DockContainer control -->
 		<gui2:DockContainer Name="m_dc" Visibility="Visible" Background="{x:Static SystemColors.ControlDarkBrush}" Width="{Binding ActualWidth, ElementName=Root}" Height="{Binding ActualHeight, ElementName=Root}"/>
 
 		<DockPanel Visibility="Collapsed" Width="{Binding ActualWidth, ElementName=Root}" Height="{Binding ActualHeight, ElementName=Root}">

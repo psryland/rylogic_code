@@ -3110,7 +3110,7 @@ namespace Rylogic.Gui2
 				//Text = string.Empty;
 				//ShowIcon = false;
 				Owner = GetWindow(dc);
-				Content = m_content = new Canvas();
+				Content = m_content = new DockPanel { LastChildFill = true };
 
 				DockContainer = dc;
 				Root = new Branch(dc, DockSizeData.Quarters);

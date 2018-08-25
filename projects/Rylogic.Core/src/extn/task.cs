@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Rylogic.Utility;
@@ -63,5 +64,45 @@ namespace Rylogic.Extn
 				() => semaphore.WaitAsync(),
 				() => semaphore.Release());
 		}
+
+		/// <summary>Allows CancellationToken to be await-able.</summary>
+		public static CancellationTokenAwaiter GetAwaiter(this CancellationToken token)
+		{
+			// Awaiting cancellation token is considered not good practise
+			// because sometimes cancels are never signalled.
+			return new CancellationTokenAwaiter(token);
+		}
+
+		public struct CancellationTokenAwaiter : INotifyCompletion
+		{
+			private readonly CancellationToken _token;
+			public CancellationTokenAwaiter(CancellationToken token)
+			{
+				_token = token;
+			}
+			public bool IsCompleted => _token.IsCancellationRequested;
+			public void OnCompleted(Action continuation) => _token.Register(continuation);
+			public void GetResult() => _token.WaitHandle.WaitOne();
+		}
 	}
 }
+
+#if PR_UNITTESTS
+namespace Rylogic.UnitTests
+{
+	using Extn;
+
+	[TestFixture]
+	public class TestTaskExtns
+	{
+		[Test]
+		public async void AwaitTest()
+		{
+			var cts = new CancellationTokenSource();
+			var token = cts.Token;
+			ThreadPool.QueueUserWorkItem(_ => { Thread.Sleep(100); cts.Cancel(); });
+			await token;
+		}
+	}
+}
+#endif

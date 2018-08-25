@@ -239,7 +239,8 @@ namespace Rylogic.Common
 				default:
 					{
 						// Add a character to the user input buffer
-						buf.Write(key.KeyChar);
+						if (!char.IsControl(key.KeyChar))
+							buf.Write(key.KeyChar);
 						break;
 					}
 				case ConsoleKey.Enter:

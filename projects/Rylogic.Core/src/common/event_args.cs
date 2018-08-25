@@ -54,4 +54,17 @@ namespace Rylogic.Common
 		/// <summary>True if this event is logically "after" something has happened</summary>
 		public bool After { get; private set; }
 	}
+
+	/// <summary>Event signalling a changed value, providing both the old and new values</summary>
+	public class ValueChangedEventArgs<T> : EventArgs
+	{
+		public ValueChangedEventArgs(T nue, T old)
+		{
+			New = nue;
+			Old = old;
+		}
+
+		public T New { get; private set; }
+		public T Old { get; private set; }
+	}
 }
