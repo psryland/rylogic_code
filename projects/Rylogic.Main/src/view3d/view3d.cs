@@ -1056,7 +1056,7 @@ namespace ldr
 			try
 			{
 				// Create a runtime assembly from the embedded code
-				var ass = RuntimeAssembly.FromString("ldr.Main", src, new []{ Util2.ResolveAppPath() });
+				var ass = RuntimeAssembly.FromString("ldr.Main", src, new []{ Util.ResolveAppPath() });
 				result = ass.Invoke<string>("Execute");
 			}
 			catch (CompileException ex)

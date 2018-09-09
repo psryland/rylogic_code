@@ -22,6 +22,9 @@
 		<DefineConstants>TRACE;DEBUG;NET471;PR_UNITTESTS</DefineConstants>
 	</PropertyGroup>
 	<ItemGroup>
+	  <Compile Remove="src\common\settings.cs" />
+	</ItemGroup>
+	<ItemGroup>
 		<None Remove="SmilingGekko140x110.ico" />
 	</ItemGroup>
 	<ItemGroup>
@@ -111,6 +114,9 @@
 	<ItemGroup>
 	  <Reference Include="System.Windows.Forms" />
 	  <Reference Include="WindowsBase" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="src\crypt\" />
 	</ItemGroup>
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
 		<Exec Command="py $(ProjectDir)post_build.py $(ProjectDir) $(TargetDir) $(PlatformName) $(ConfigurationName)&#xD;&#xA;" />

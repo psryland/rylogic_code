@@ -1,0 +1,163 @@
+<UserControl x:Class="Rylogic.Gui.WPF.PatternEditor"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+	xmlns:gui2="clr-namespace:Rylogic.Gui.WPF"
+	xmlns:common="clr-namespace:Rylogic.Common;assembly=Rylogic.Core"
+	mc:Ignorable="d" 
+	d:DesignHeight="250"
+	d:DesignWidth="450"
+	>
+	<UserControl.Resources>
+		<ResourceDictionary>
+			<BitmapImage x:Key="edit_add" UriSource="../../res/edit_add.png"/>
+			<BitmapImage x:Key="edit_save" UriSource="../../res/edit_save.png"/>
+			<gui2:RadioBtnConverter x:Key="RadioBtnConverter"/>
+		</ResourceDictionary>
+	</UserControl.Resources>
+
+	<Grid Name="m_root" Background="{x:Static SystemColors.ControlBrush}" MinWidth="376" MinHeight="120">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="auto"/>
+			<RowDefinition/>
+		</Grid.RowDefinitions>
+		<Grid Grid.Row="0">
+			<Grid.RowDefinitions>
+				<RowDefinition Height="auto"/>
+				<RowDefinition Height="auto"/>
+				<RowDefinition/>
+			</Grid.RowDefinitions>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition/>
+				<ColumnDefinition Width="auto"/>
+			</Grid.ColumnDefinitions>
+			<StackPanel Grid.Row="0" Orientation="Horizontal" >
+				<TextBlock MinWidth="50" TextAlignment="Right" VerticalAlignment="Center" Margin="2" Padding="0,0,2,2" FontSize="11">Type:</TextBlock>
+				<RadioButton
+						Content="Substring"
+						IsChecked="{Binding PatnType, Converter={StaticResource RadioBtnConverter}, ConverterParameter={x:Static common:EPattern.Substring}}"
+						VerticalAlignment="Center" Margin="2" FontSize="11" TabIndex="1"/>
+				<RadioButton
+						Content="Wildcard"
+						IsChecked="{Binding PatnType, Converter={StaticResource RadioBtnConverter}, ConverterParameter={x:Static common:EPattern.Wildcard}}"
+						VerticalAlignment="Center" Margin="2" FontSize="11" TabIndex="2"/>
+				<RadioButton
+						Content="Regular Expression"
+						IsChecked="{Binding PatnType, Converter={StaticResource RadioBtnConverter}, ConverterParameter={x:Static common:EPattern.RegularExpression}}"
+						VerticalAlignment="Center" Margin="2" FontSize="11" TabIndex="3"/>
+			</StackPanel>
+			<DockPanel Grid.Row="1" LastChildFill="True">
+				<TextBlock DockPanel.Dock="Left" MinWidth="50" TextAlignment="Right" VerticalAlignment="Center" Margin="2" Padding="0,0,2,2" FontSize="11">Pattern:</TextBlock>
+				<Button
+						DockPanel.Dock="Right"
+						Content="?"
+						Width="18" Height="18"
+						VerticalAlignment="Center" Padding="0,0,0,3" TabIndex="7"
+						Click="{gui2:MethodBinding ShowHelp}"/>
+				<TextBox
+						Text="{Binding PatternExpr, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+						HorizontalAlignment="Stretch"
+						Margin="2"
+						TabIndex="4">
+					<TextBox.Style>
+						<Style TargetType="TextBox">
+							<Style.Triggers>
+								<DataTrigger Binding="{Binding CommitEnabled}" Value="True">
+									<Setter Property="Background" Value="{x:Static Brushes.LightGreen}"/>
+								</DataTrigger>
+								<DataTrigger Binding="{Binding CommitEnabled}" Value="False">
+									<Setter Property="Background" Value="{x:Static Brushes.LightSalmon}"/>
+								</DataTrigger>
+							</Style.Triggers>
+						</Style>
+					</TextBox.Style>
+				</TextBox>
+			</DockPanel>
+			<DockPanel Grid.Row="2" Grid.ColumnSpan="2" >
+				<TextBlock DockPanel.Dock="Left" MinWidth="50" TextAlignment="Right" VerticalAlignment="Center" Margin="2" Padding="0,0,2,2" FontSize="11">Flags:</TextBlock>
+				<CheckBox
+						Content="Ignore Case" 
+						IsChecked="{Binding IgnoreCase, Mode=TwoWay}"
+						DockPanel.Dock="Left" VerticalAlignment="Center" Margin="2" FontSize="11" TabIndex="5"/>
+				<CheckBox
+						Content="Whole Line"
+						IsChecked="{Binding WholeLine, Mode=TwoWay}"
+						DockPanel.Dock="Left" VerticalAlignment="Center" Margin="2" FontSize="11" TabIndex="6"/>
+				<CheckBox
+						Content="Invert Match"
+						IsChecked="{Binding Invert, Mode=TwoWay}"
+						DockPanel.Dock="Left" VerticalAlignment="Center" Margin="2" FontSize="11" TabIndex="6"/>
+				<TextBlock DockPanel.Dock="Right" MinWidth="50" TextAlignment="Right" VerticalAlignment="Bottom" Margin="2" Padding="0,0,2,0" FontSize="10">Capture Groups</TextBlock>
+			</DockPanel>
+			<Button
+					Grid.Row="0"
+					Grid.RowSpan="2"
+					Grid.Column="1"
+					IsEnabled="{Binding CommitEnabled}"
+					Width="48" Height="48" Margin="2" TabIndex="8"
+					Click="{gui2:MethodBinding RaiseCommitEvent}">
+				<Image>
+					<Image.Style>
+						<Style TargetType="{x:Type Image}">
+							<Style.Triggers>
+								<DataTrigger Binding="{Binding HasUnsavedChanges}" Value="True">
+									<Setter Property="Source" Value="{StaticResource edit_save}"/>
+								</DataTrigger>
+								<DataTrigger Binding="{Binding HasUnsavedChanges}" Value="False">
+									<Setter Property="Source" Value="{StaticResource edit_add}"/>
+								</DataTrigger>
+							</Style.Triggers>
+						</Style>
+					</Image.Style>
+				</Image>
+			</Button>
+		</Grid>
+		<Grid Grid.Row="1">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition MinWidth="10"/>
+				<ColumnDefinition Width="auto"/>
+				<ColumnDefinition MinWidth="10"/>
+			</Grid.ColumnDefinitions>
+			<RichTextBox
+					Grid.Column="0"
+					Name="m_rtb"
+					Background="{x:Static SystemColors.WindowBrush}"
+					AcceptsReturn="True"
+					IsHitTestVisible="True"
+					BorderThickness="1"
+					Margin="2,2,0,2"
+					TabIndex="9"
+					ToolTip="An area for testing your pattern.&#x0a;Add any text you like here"
+					SelectionChanged="{gui2:MethodBinding UpdateCaptureGroups}"/>
+			<DataGrid
+					Grid.Column="2"
+					ItemsSource="{Binding CaptureGroups, Mode=OneWay}"
+					Background="{x:Static SystemColors.WindowBrush}"
+					AutoGenerateColumns="False"
+					RowHeaderWidth="0"
+					BorderThickness="1"
+					BorderBrush="{x:Static SystemColors.ActiveBorderBrush}"
+					GridLinesVisibility="None"
+					IsReadOnly="True"
+					Margin="0,2,2,2"
+					FontSize="11"
+					ToolTip="Displays the capture groups and their values for the current&#x0a;line in the test text area.">
+				<DataGrid.Columns>
+					<DataGridTextColumn
+							Header="Tag"
+							Binding="{Binding Tag}"
+							CanUserResize="True" Width="30*"/>
+					<DataGridTextColumn
+							Header="Value"
+							Binding="{Binding Value}"
+							CanUserResize="True" Width="70*"/>
+				</DataGrid.Columns>
+			</DataGrid>
+			<GridSplitter
+				Grid.Column="1"
+				Width="3"
+				HorizontalAlignment="Center" VerticalAlignment="Stretch" ShowsPreview="True"/>
+		</Grid>
+	</Grid>
+</UserControl>

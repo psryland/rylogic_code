@@ -65,6 +65,19 @@ namespace Rylogic.Common
 			set { Console.SetBufferSize(value.Width, value.Height); }
 		}
 
+		/// <summary>The display area of the console</summary>
+		public Rectangle DisplayRect
+		{
+			get { return new Rectangle(Console.WindowLeft, Console.WindowTop, Console.WindowWidth, Console.WindowHeight); }
+			set
+			{
+				Console.WindowWidth = value.Width;
+				Console.WindowHeight = value.Height;
+				Console.WindowLeft = value.Left;
+				Console.WindowTop = value.Top;
+			}
+		}
+
 		/// <summary>RAII object for preserving the caret location</summary>
 		public IDisposable PreserveLocation()
 		{
@@ -75,6 +88,20 @@ namespace Rylogic.Common
 		public IDisposable PreserveIndent()
 		{
 			return new IndentSave(this);
+		}
+
+		/// <summary>Return the number of columns and rows needed to display 'msg'</summary>
+		public Size MeasureText(string msg)
+		{
+			int x = 0, y = 0, maxx = 0;
+			foreach (var ch in msg)
+			{
+				if (ch == '\n') { ++y; x = 0; }
+				else if (ch == '\t') x += 4;
+				else ++x;
+				maxx = Math.Max(x, maxx);
+			}
+			return new Size(maxx, y);
 		}
 
 		/// <summary>Given a buffer location plus 'dx' and 'dy', return the normalised buffer location</summary>
@@ -172,6 +199,27 @@ namespace Rylogic.Common
 		public void WriteLine()
 		{
 			WriteLine(string.Empty);
+		}
+
+		/// <summary>Write a string at a given position in the console</summary>
+		public void WriteAt(Point loc, string msg)
+		{
+			var pt = loc;
+			using (PreserveLocation())
+			{
+				// Breaks 'msg' into lines (without allocating the whole string again, a.k.a Split)
+				for (int s = 0, e = 0; s != msg.Length; s = e != msg.Length ? e + 1 : e)
+				{
+					// Find the line end
+					for (e = s; e != msg.Length && msg[e] != '\n'; ++e) { }
+					var line = msg.Substring(s, e - s);
+
+					Location = pt;
+					Write(line);
+
+					++pt.Y;
+				}
+			}
 		}
 
 		/// <summary>Display a prompt</summary>
@@ -342,7 +390,7 @@ namespace Rylogic.Common
 		private void AddToHistory(string input)
 		{
 			// Don't add duplicates to the last history entry
-			if (History.Count == 0 || History[History.Count - 1] != input)
+			if (!string.IsNullOrEmpty(input) && (History.Count == 0 || History[History.Count - 1] != input))
 				History.Add(input);
 
 			// Limit the history length

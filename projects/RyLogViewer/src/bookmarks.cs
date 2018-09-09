@@ -69,18 +69,19 @@ namespace RyLogViewer
 				{
 					m_bookmarks.PositionChanged += HandleBookmarkPositionChanged;
 				}
+
+				// Handlers
+				void HandleBookmarkPositionChanged(object sender, PositionChgEventArgs e)
+				{
+					SelectBookmark(Bookmarks.Position);
+				}
 			}
 		}
 		private BindingSource<Bookmark> m_bookmarks;
-		private void HandleBookmarkPositionChanged(object sender, PositionChgEventArgs e)
-		{
-			SelectBookmark(Bookmarks.Position);
-		}
 
 		/// <summary>Set up the app's bookmark support</summary>
 		private void SetupBookmarks()
 		{
-			
 			BookmarksUI.NextBookmark    += NextBookmark;
 			BookmarksUI.PrevBookmark    += PrevBookmark;
 			m_batch_refresh_bkmks.Action   += RefreshBookmarks;

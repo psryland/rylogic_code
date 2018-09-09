@@ -13,7 +13,7 @@ namespace LDraw
 		{
 			FilesToLoad = new List<string>();
 
-			var exe_dir = Util2.ResolveAppPath();
+			var exe_dir = Util.ResolveAppPath();
 			if (!Directory.Exists(exe_dir))
 				throw new ArgumentException("Cannot determine the current executable directory");
 

@@ -51,7 +51,7 @@ namespace Rylogic.Utility
 				{
 					if (ass.StartsWith(@".\"))
 					{
-						ass = Util2.ResolveAppPath(ass);
+						ass = Util.ResolveAppPath(ass);
 						if (!Path_.FileExists(ass))
 							continue;
 					}
@@ -75,7 +75,7 @@ namespace Rylogic.Utility
 			{
 				GenerateInMemory   = true,
 				GenerateExecutable = false,
-				CompilerOptions = $@"/lib:""{Util2.ResolveAppPath()}""",
+				CompilerOptions = $@"/lib:""{Util.ResolveAppPath()}""",
 			};
 			foreach (var ass in assemblies)
 			{

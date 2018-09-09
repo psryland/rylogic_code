@@ -8,21 +8,6 @@ using Rylogic.Utility;
 
 namespace RyLogViewer
 {
-	public enum EIfMatch
-	{
-		Keep,
-		Reject,
-	}
-
-	public interface IFilter
-	{
-		/// <summary>Defines what a match with this filter means</summary>
-		EIfMatch IfMatch { get; }
-
-		/// <summary>Returns true if this pattern matches a substring in 'text'</summary>
-		bool IsMatch(string text);
-	}
-
 	public class Filter :Pattern, IFilter, IFeatureTreeItem
 	{
 		/// <summary>A static instance of a 'KeepAll' filter</summary>

@@ -41,6 +41,9 @@
   <PropertyGroup>
     <StartupObject>TestWPF.App</StartupObject>
   </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>money.ico</ApplicationIcon>
+  </PropertyGroup>
   <ItemGroup>
     <ApplicationDefinition Include="src\App.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -169,9 +172,9 @@
       <Project>{37a4f319-2052-404d-ae7f-f882cfa33c1b}</Project>
       <Name>Rylogic.Core</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Rylogic.Gui\Rylogic.Gui.csproj">
+    <ProjectReference Include="..\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj">
       <Project>{846d147a-b7e6-4336-b019-d1add62ff095}</Project>
-      <Name>Rylogic.Gui</Name>
+      <Name>Rylogic.Gui.WPF</Name>
     </ProjectReference>
     <ProjectReference Include="..\Rylogic.Main\Rylogic.Main.csproj">
       <Project>{8c1634d9-c32a-4ad6-b2c7-ec17f6bfde01}</Project>
@@ -184,6 +187,9 @@
   <ItemGroup>
     <Resource Include="res\check_accept.png" />
     <Resource Include="res\check_reject.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="money.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

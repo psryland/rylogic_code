@@ -302,25 +302,26 @@ namespace CoinFlip
 				if (m_settings == value) return;
 				if (m_settings != null)
 				{
-					m_settings.SettingChanged -= HandleSettingChanged;
+					m_settings.SettingChange -= HandleSettingChange;
 				}
 				m_settings = value;
 				if (m_settings != null)
 				{
-					m_settings.SettingChanged += HandleSettingChanged;
+					m_settings.SettingChange += HandleSettingChange;
 				}
 
 				// Handlers
-				void HandleSettingChanged(object sender, SettingChangedEventArgs args)
+				void HandleSettingChange(object sender, SettingChangeEventArgs args)
 				{
-					OnSettingChanged(args);
+					OnSettingChange(args);
 					Model.Bots.ResetItem(this, ignore_missing:true);
 				}
 			}
 		}
 		private ISettingsData m_settings;
-		protected virtual void OnSettingChanged(SettingChangedEventArgs args)
+		protected virtual void OnSettingChange(SettingChangeEventArgs args)
 		{
+			if (args.Before) return;
 			switch (args.Key) {
 			default:                               RaisePropertyChanged(nameof(Settings)); break;
 			case nameof(ISettingsData.StepRateMS): RaisePropertyChanged(nameof(StepRate)); break;
@@ -439,7 +440,7 @@ namespace CoinFlip
 			string ErrorDescription { get; }
 
 			/// <summary>Notification that a setting has changed</summary>
-			event EventHandler<SettingChangedEventArgs> SettingChanged;
+			event EventHandler<SettingChangeEventArgs> SettingChange;
 		}
 		public class SettingsBase<T> :SettingsXml<T> ,ISettingsData where T:SettingsXml<T>, ISettingsData, new()
 		{

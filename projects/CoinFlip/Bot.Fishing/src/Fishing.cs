@@ -173,27 +173,30 @@ namespace Bot.Fishing
 				if (m_settings == value) return;
 				if (m_settings != null)
 				{
-					m_settings.SettingChanged -= HandleSettingChanged;
+					m_settings.SettingChange -= HandleSettingChange;
 				}
 				m_settings = value;
 				if (m_settings != null)
 				{
-					m_settings.SettingChanged += HandleSettingChanged;
+					m_settings.SettingChange += HandleSettingChange;
+				}
+
+				// Handler
+				void HandleSettingChange(object sender, SettingChangeEventArgs args)
+				{
+					if (args.Before) return;
+					switch (args.Key) {
+					case nameof(FishFinder.FishingData.Name):
+					case nameof(FishFinder.FishingData.Pair):
+					case nameof(FishFinder.FishingData.Exch0):
+					case nameof(FishFinder.FishingData.Exch1):
+						PropertyChanged.Raise(this, new PropertyChangedEventArgs(args.Key));
+						break;
+					}
 				}
 			}
 		}
 		private FishFinder.FishingData m_settings;
-		private void HandleSettingChanged(object sender, SettingChangedEventArgs args)
-		{
-			switch (args.Key) {
-			case nameof(FishFinder.FishingData.Name):
-			case nameof(FishFinder.FishingData.Pair):
-			case nameof(FishFinder.FishingData.Exch0):
-			case nameof(FishFinder.FishingData.Exch1):
-				PropertyChanged.Raise(this, new PropertyChangedEventArgs(args.Key));
-				break;
-			}
-		}
 
 		/// <summary>A log for this fishing instance</summary>
 		public Logger Log

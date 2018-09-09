@@ -33,7 +33,7 @@ namespace RyLogViewer
 					}
 
 					// Otherwise, handle links to the documentation
-					var exe_dir = Util2.ResolveAppPath();
+					var exe_dir = Util.ResolveAppPath();
 					var uri = new UriBuilder();
 					uri.Scheme = Uri.UriSchemeFile;
 					uri.Host = string.Empty;

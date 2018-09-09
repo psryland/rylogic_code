@@ -3,14 +3,13 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:gui2="clr-namespace:Rylogic.Gui2;assembly=Rylogic.Gui"
-        xmlns:gui="clr-namespace:Rylogic.Gui;assembly=Rylogic.Gui"
+        xmlns:gui2="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
         xmlns:local="clr-namespace:TestWPF"
         mc:Ignorable="d"
         Title="DockContainerUI" Height="450" Width="800">
 
 	<Window.Resources>
-		<ResourceDictionary Source="pack://application:,,,/Rylogic.Gui;component/Themes/Generic.xaml"/>
+		<ResourceDictionary Source="pack://application:,,,/Rylogic.Gui.WPF;component/Themes/Generic.xaml"/>
 	</Window.Resources>
 	
 	<Canvas Name="Root">

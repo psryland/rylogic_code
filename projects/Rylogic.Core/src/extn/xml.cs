@@ -7,7 +7,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
@@ -15,7 +14,6 @@ using System.Runtime.Serialization;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
-using Rylogic.Attrib;
 using Rylogic.Common;
 using Rylogic.Graphix;
 using Rylogic.Maths;
@@ -35,6 +33,10 @@ namespace Rylogic.Extn
 	//      +- XText
 	//         +- XCData
 
+	/// <summary>Marker type for fluent API configuration extension methods</summary>
+	public class XmlConfig
+	{};
+
 	/// <summary>XML helper methods</summary>
 	public static class Xml_
 	{
@@ -50,8 +52,7 @@ namespace Rylogic.Extn
 		/// A map from type to 'ToXml' method
 		/// User ToXml functions can be added to this map.
 		/// Note, they are only needed if ToBinding.Convert() method fails</summary>
-		public static ToBinding ToMap { [DebuggerStepThrough] get { return m_impl_ToMap; } }
-		private static readonly ToBinding m_impl_ToMap = new ToBinding();
+		public static ToBinding ToMap { [DebuggerStepThrough] get; private set; } = new ToBinding();
 		public class ToBinding :Dictionary<Type, ToFunc>
 		{
 			public ToBinding()
@@ -93,94 +94,6 @@ namespace Rylogic.Extn
 				{
 					var ts = (TimeSpan)obj;
 					node.SetValue(ts.Ticks);
-					return node;
-				};
-				this[typeof(Color)] = (obj, node) =>
-				{
-					var col = ((Color)obj).ToArgb().ToString("X8");
-					node.SetValue(col);
-					return node;
-				};
-				this[typeof(Colour32)] = (obj, node) =>
-				{
-					var col = ((Colour32)obj).ARGB.ToString("X8");
-					node.SetValue(col);
-					return node;
-				};
-				this[typeof(Size)] = (obj, node) =>
-				{
-					var sz = (Size)obj;
-					node.SetValue($"{sz.Width} {sz.Height}");
-					return node;
-				};
-				this[typeof(SizeF)] = (obj, node) =>
-				{
-					var sz = (SizeF)obj;
-					node.SetValue($"{sz.Width} {sz.Height}");
-					return node;
-				};
-				this[typeof(Point)] = (obj, node) =>
-				{
-					var pt = (Point)obj;
-					node.SetValue($"{pt.X} {pt.Y}");
-					return node;
-				};
-				this[typeof(PointF)] = (obj, node) =>
-				{
-					var pt = (PointF)obj;
-					node.SetValue($"{pt.X} {pt.Y}");
-					return node;
-				};
-				this[typeof(Rectangle)] = (obj, node) =>
-				{
-					var rc = (Rectangle)obj;
-					node.SetValue($"{rc.X} {rc.Y} {rc.Width} {rc.Height}");
-					return node;
-				};
-				this[typeof(RectangleF)] = (obj, node) =>
-				{
-					var rc = (RectangleF)obj;
-					node.SetValue($"{rc.X} {rc.Y} {rc.Width} {rc.Height}");
-					return node;
-				};
-				this[typeof(Range)] = (obj, node) =>
-				{
-					var r = (Range)obj;
-					node.SetValue($"{r.Beg} {r.End}");
-					return node;
-				};
-				this[typeof(RangeF)] = (obj, node) =>
-				{
-					var r = (RangeF)obj;
-					node.SetValue($"{r.Beg} {r.End}");
-					return node;
-				};
-				this[typeof(v2)] = (obj, node) =>
-				{
-					var vec = (v2)obj;
-					node.SetValue(vec.ToString());
-					return node;
-				};
-				this[typeof(v3)] = (obj, node) =>
-				{
-					var vec = (v3)obj;
-					node.SetValue(vec.ToString());
-					return node;
-				};
-				this[typeof(v4)] = (obj, node) =>
-				{
-					var vec = (v4)obj;
-					node.SetValue(vec.ToString4());
-					return node;
-				};
-				this[typeof(m4x4)] = (obj, node) =>
-				{
-					var mat = (m4x4)obj;
-					node.Add(
-						mat.x.ToXml(nameof(m4x4.x), false),
-						mat.y.ToXml(nameof(m4x4.y), false),
-						mat.z.ToXml(nameof(m4x4.z), false),
-						mat.w.ToXml(nameof(m4x4.w), false));
 					return node;
 				};
 				this[typeof(KeyValuePair<,>)] = (obj, node) =>
@@ -287,7 +200,7 @@ namespace Rylogic.Extn
 					var dca = type.GetCustomAttributes(typeof(DataContractAttribute), true).FirstOrDefault();
 					if (dca != null) { func = this[type] = ToXmlDataContract; break; }
 
-					throw new NotSupportedException($"There is no 'ToXml' binding for type {type.Name}");
+					throw new NotSupportedException($"There is no 'ToXml' binding for type {type.FullName}");
 				}
 				return func(obj, node);
 			}
@@ -382,8 +295,7 @@ namespace Rylogic.Extn
 		/// A map from type to 'As' method
 		/// User conversion functions can be added to this map
 		/// Note, they are only needed if AsBinding.Convert() method fails</summary>
-		public static AsBinding AsMap { [DebuggerStepThrough] get { return m_impl_AsMap; } }
-		private static readonly AsBinding m_impl_AsMap = new AsBinding();
+		public static AsBinding AsMap { [DebuggerStepThrough] get; private set; } = new AsBinding();
 		public class AsBinding :Dictionary<Type, AsFunc>
 		{
 			public AsBinding()
@@ -475,72 +387,6 @@ namespace Rylogic.Extn
 				this[typeof(TimeSpan)] = (elem, type, ctor) =>
 				{
 					return TimeSpan.FromTicks(long.Parse(elem.Value));
-				};
-				this[typeof(Color)] = (elem, type, ctor) =>
-				{
-					return Color_.FromArgb(uint.Parse(elem.Value, NumberStyles.HexNumber));
-				};
-				this[typeof(Colour32)] = (elem, type, ctor) =>
-				{
-					return new Colour32(uint.Parse(elem.Value, NumberStyles.HexNumber));
-				};
-				this[typeof(Size)] = (elem, type, ctor) =>
-				{
-					var wh = elem.Value.Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
-					return new Size(int.Parse(wh[0]), int.Parse(wh[1]));
-				};
-				this[typeof(SizeF)] = (elem, type, ctor) =>
-				{
-					var wh = elem.Value.Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
-					return new SizeF(float.Parse(wh[0]), float.Parse(wh[1]));
-				};
-				this[typeof(Point)] = (elem, type, ctor) =>
-				{
-					var xy = elem.Value.Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
-					return new Point(int.Parse(xy[0]), int.Parse(xy[1]));
-				};
-				this[typeof(PointF)] = (elem, type, ctor) =>
-				{
-					var xy = elem.Value.Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
-					return new PointF(float.Parse(xy[0]), float.Parse(xy[1]));
-				};
-				this[typeof(Rectangle)] = (elem, type, ctor) =>
-				{
-					var xywh = elem.Value.Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
-					return new Rectangle(int.Parse(xywh[0]), int.Parse(xywh[1]), int.Parse(xywh[2]), int.Parse(xywh[3]));
-				};
-				this[typeof(RectangleF)] = (elem, type, ctor) =>
-				{
-					var xywh = elem.Value.Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
-					return new RectangleF(float.Parse(xywh[0]), float.Parse(xywh[1]), float.Parse(xywh[2]), float.Parse(xywh[3]));
-				};
-				this[typeof(Range)] = (elem, type, instance) =>
-				{
-					return Range.Parse(elem.Value);
-				};
-				this[typeof(RangeF)] = (elem, type, instance) =>
-				{
-					return RangeF.Parse(elem.Value);
-				};
-				this[typeof(v2)] = (elem, type, instance) =>
-				{
-					return v2.Parse2(elem.Value);
-				};
-				this[typeof(v3)] = (elem, type, instance) =>
-				{
-					return v3.Parse3(elem.Value);
-				};
-				this[typeof(v4)] = (elem, type, instance) =>
-				{
-					return v4.Parse4(elem.Value);
-				};
-				this[typeof(m4x4)] = (elem, type, instance) =>
-				{
-					var x = elem.Element(nameof(m4x4.x)).As<v4>();
-					var y = elem.Element(nameof(m4x4.y)).As<v4>();
-					var z = elem.Element(nameof(m4x4.z)).As<v4>();
-					var w = elem.Element(nameof(m4x4.w)).As<v4>();
-					return new m4x4(x,y,z,w);
 				};
 				this[typeof(KeyValuePair<,>)] = (elem, type, instance) =>
 				{
@@ -880,6 +726,13 @@ namespace Rylogic.Extn
 
 		#endregion
 
+		/// <summary>Configuration object</summary>
+		public static readonly XmlConfig Config = new XmlConfig()
+			.SupportRylogicCommonTypes()
+			.SupportRylogicMathsTypes()
+			.SupportRylogicGraphicsTypes()
+			;
+
 		/// <summary>Returns the number of child nodes in this node (by counting them linearly)</summary>
 		public static int ChildCount(this XContainer node)
 		{
@@ -1046,19 +899,19 @@ namespace Rylogic.Extn
 		private enum EOpType
 		{
 			/// <summary>Replace the value text of an element</summary>
-			[Desc("value")] Value,
+			Value,
 
 			/// <summary>Remove an element</summary>
-			[Desc("remove")] Remove,
+			Remove,
 
 			/// <summary>Insert an element</summary>
-			[Desc("insert")] Insert,
+			Insert,
 
 			/// <summary>Represents a group of changes to an element</summary>
-			[Desc("change")] Change,
+			Change,
 
 			/// <summary>Add, Replace, or Remove an attribute</summary>
-			[Desc("attr")] Attr,
+			Attr,
 		}
 
 		/// <summary>Operation element attributes</summary>
@@ -1232,7 +1085,7 @@ namespace Rylogic.Extn
 						// Only change XElements if they have the same name, otherwise treat them as different nodes
 						if (ni.Name == nj.Name)
 						{
-							var op = new XElement(EOpType.Change.Desc());
+							var op = new XElement(nameof(EOpType.Change));
 
 							// Compare the attributes of the nodes
 							var cmp_names  = Eql<XAttribute>.From((l,r) => l.Name == r.Name);
@@ -1268,7 +1121,7 @@ namespace Rylogic.Extn
 						var nj = (XCData)j.Current;
 						if (ni.Value != nj.Value)
 						{
-							var op = diff.Add2(new XElement(EOpType.Value.Desc(), new XCData(nj.Value)));
+							var op = diff.Add2(new XElement(nameof(EOpType.Value), new XCData(nj.Value)));
 							op.SetAttributeValue(Attr.Idx, output_node_index);
 						}
 						i.MoveNext();
@@ -1284,7 +1137,7 @@ namespace Rylogic.Extn
 						var nj = (XText)j.Current;
 						if (ni.Value != nj.Value)
 						{
-							var op = diff.Add2(new XElement(EOpType.Value.Desc(), nj.Value));
+							var op = diff.Add2(new XElement(nameof(EOpType.Value), nj.Value));
 							op.SetAttributeValue(Attr.Idx, output_node_index);
 						}
 						i.MoveNext();
@@ -1300,7 +1153,7 @@ namespace Rylogic.Extn
 						var nj = (XComment)j.Current;
 						if (ni.Value != nj.Value)
 						{
-							var op = diff.Add2(new XElement(EOpType.Value.Desc(), nj.Value));
+							var op = diff.Add2(new XElement(nameof(EOpType.Value), nj.Value));
 							op.SetAttributeValue(Attr.Idx, output_node_index);
 						}
 						i.MoveNext();
@@ -1329,7 +1182,7 @@ namespace Rylogic.Extn
 					else if (i.Current is XDocument ni && j.Current is XDocument nj)
 					{
 						// Recursively find the differences in the child trees.
-						var op = new XElement(EOpType.Change.Desc());
+						var op = new XElement(nameof(EOpType.Change));
 						if (ni.Nodes().Any() || nj.Nodes().Any())
 							ni.Diff(nj, op, mode);
 
@@ -1457,7 +1310,7 @@ namespace Rylogic.Extn
 							}
 						case XmlNodeType.Comment:
 							{
-								var value = op_elem.Element(EOpType.Value.Desc()).As<string>();
+								var value = op_elem.Element(nameof(EOpType.Value)).As<string>();
 								var node = tree.Insert(op.Index, new XComment(value));
 								break;
 							}
@@ -1547,7 +1400,7 @@ namespace Rylogic.Extn
 		/// <summary>Return a remove operation XML element</summary>
 		private static XElement RemoveOp(XNode node, ref int output_node_index)
 		{
-			var op = new XElement(EOpType.Remove.Desc());
+			var op = new XElement(nameof(EOpType.Remove));
 			op.SetAttributeValue(Attr.Idx, output_node_index);
 			if (node is XElement xe) // Name the removed element, for sanity checking
 				op.SetAttributeValue(Attr.Name, xe.Name);
@@ -1562,13 +1415,13 @@ namespace Rylogic.Extn
 		{
 			if (node is XText xt)
 			{
-				var op = new XElement(EOpType.Value.Desc(), xt.Value);
+				var op = new XElement(nameof(EOpType.Value), xt.Value);
 				op.SetAttributeValue(Attr.Idx, output_node_index++);
 				return op;
 			}
 			if (node is XElement xe)
 			{
-				var op = new XElement(EOpType.Insert.Desc());
+				var op = new XElement(nameof(EOpType.Insert));
 				op.SetAttributeValue(Attr.Idx, output_node_index++);
 				op.SetAttributeValue(Attr.NodeType, XmlNodeType.Element);
 				op.SetAttributeValue(Attr.Name, xe.Name);
@@ -1585,10 +1438,10 @@ namespace Rylogic.Extn
 			}
 			if (node is XComment xc)
 			{
-				var op = new XElement(EOpType.Insert.Desc());
+				var op = new XElement(nameof(EOpType.Insert));
 				op.SetAttributeValue(Attr.Idx, output_node_index++);
 				op.SetAttributeValue(Attr.NodeType, XmlNodeType.Comment);
-				op.Add2(new XElement(EOpType.Value.Desc(), xc.Value));
+				op.Add2(new XElement(nameof(EOpType.Value), xc.Value));
 				return op;
 			}
 			throw new NotImplementedException();
@@ -1598,7 +1451,7 @@ namespace Rylogic.Extn
 		private static XElement AttrOp(XName name, string value)
 		{
 			// 'value' == null will remove the attribute
-			var op = new XElement(EOpType.Attr.Desc());
+			var op = new XElement(nameof(EOpType.Attr));
 			op.SetAttributeValue(Attr.Name, name);
 			if (value != null) op.Value = value;
 			return op;
@@ -2116,41 +1969,41 @@ namespace Rylogic.UnitTests
 				#region patch xml
 @"<?xml version=""1.0"" encoding=""utf-8""?>
 <root>
-	<value idx='0'>
+	<Value idx='0'>
 	text0
-	</value>
-	<change idx='2' name='two'>
-		<remove idx='0' name='has_child' />
-	</change>
-	<insert idx='3' node_type='Element' name='added'>
-		<attr name='ty'>string</attr>
-		<insert idx='0' node_type='Element' name='red' />
-		<insert idx='1' node_type='Element' name='blue'>
-			<value idx='0'>BLUE</value>
-		</insert>
-	</insert>
-	<insert idx='4' node_type='Element' name='added1'>
-		<attr name='ty'>fish</attr>
-		<insert idx='0' node_type='Element' name='green'>
-			<value idx='0'>GREEN</value>
-		</insert>
-	</insert>
-	<change idx='5' name='changed0'>
-		<insert idx='0' node_type='Element' name='red' />
-		<remove idx='2' name='red' />
-	</change>
-	<change idx='6' name='changed1'>
-		<attr name='old' />
-		<attr name='new'>fred</attr>
-		<attr name='ty'>boat</attr>
-	</change>
-	<insert idx='7' node_type='Element' name='added2'>
-		<value idx='0'>hamburger</value>
-	</insert>
-	<insert idx='8' node_type='Comment'>
-		<value> A comment </value>
-	</insert>
-	<remove idx='10' name='removed' />
+	</Value>
+	<Change idx='2' name='two'>
+		<Remove idx='0' name='has_child' />
+	</Change>
+	<Insert idx='3' node_type='Element' name='added'>
+		<Attr name='ty'>string</Attr>
+		<Insert idx='0' node_type='Element' name='red' />
+		<Insert idx='1' node_type='Element' name='blue'>
+			<Value idx='0'>BLUE</Value>
+		</Insert>
+	</Insert>
+	<Insert idx='4' node_type='Element' name='added1'>
+		<Attr name='ty'>fish</Attr>
+		<Insert idx='0' node_type='Element' name='green'>
+			<Value idx='0'>GREEN</Value>
+		</Insert>
+	</Insert>
+	<Change idx='5' name='changed0'>
+		<Insert idx='0' node_type='Element' name='red' />
+		<Remove idx='2' name='red' />
+	</Change>
+	<Change idx='6' name='changed1'>
+		<Attr name='old' />
+		<Attr name='new'>fred</Attr>
+		<Attr name='ty'>boat</Attr>
+	</Change>
+	<Insert idx='7' node_type='Element' name='added2'>
+		<Value idx='0'>hamburger</Value>
+	</Insert>
+	<Insert idx='8' node_type='Comment'>
+		<Value> A comment </Value>
+	</Insert>
+	<Remove idx='10' name='removed' />
 </root>";
 				#endregion
 
@@ -2202,20 +2055,20 @@ namespace Rylogic.UnitTests
 				#region patch xml
 @"<?xml version=""1.0"" encoding=""utf-8""?>
 <root>
-  <change idx='1' name='one'>
-    <value idx='0'>1</value>
-  </change>
-  <change idx='2' name='two'>
-    <insert idx='1' node_type='Element' name='child'>
-      <value idx='0'>c</value>
-    </insert>
-  </change>
-  <insert idx='4' node_type='Element' name='four'>
-    <attr name='ty'>string</attr>
-    <value idx='0'>
+  <Change idx='1' name='one'>
+    <Value idx='0'>1</Value>
+  </Change>
+  <Change idx='2' name='two'>
+    <Insert idx='1' node_type='Element' name='child'>
+      <Value idx='0'>c</Value>
+    </Insert>
+  </Change>
+  <Insert idx='4' node_type='Element' name='four'>
+    <Attr name='ty'>string</Attr>
+    <Value idx='0'>
 		four
-	</value>
-  </insert>
+	</Value>
+  </Insert>
 </root>";
 			#endregion
 			const string xml_result = 

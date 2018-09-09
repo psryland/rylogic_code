@@ -38,10 +38,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="src\container\csv_data.cs">
+    <Compile Update="src\Container\csv_data.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Update="src\maths\vector.cs">
+    <Compile Update="src\Maths\vector.cs">
       <DependentUpon>vector.tt</DependentUpon>
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
@@ -56,7 +56,7 @@
     <None Update="Rylogic.Core.runtimeconfig.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="src\maths\vector.tt">
+    <None Update="src\Maths\vector.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>vector.cs</LastGenOutput>
     </None>

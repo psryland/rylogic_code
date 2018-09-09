@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -295,6 +296,70 @@ namespace Rylogic.Extn
 			}
 			if (trace != null) trace($"'{lhs}' and '{rhs}' are identical");
 			return false;
+		}
+
+		/// <summary>Gets file system info for all files/directories in a directory that match a specific filter including all sub directories. 'regex_filter' is a filter on the filename, not the full path</summary>
+		public static IEnumerable<FileSystemInfo> EnumFileSystem(string path, SearchOption search_flags = SearchOption.TopDirectoryOnly, string regex_filter = null, RegexOptions regex_options = RegexOptions.IgnoreCase, FileAttributes exclude = FileAttributes.Hidden, Func<string, bool> progress = null, Func<string, Exception, bool> error = null)
+		{
+			// Default callbacks
+			progress = progress ?? (s => true);
+			error = error ?? ((s, e) => true);
+
+			// File/Directory name filter
+			var filter = regex_filter != null ? new Regex(regex_filter, regex_options) : null;
+
+			// For drive letters, add a \, 'FileIOPermission' needs it
+			if (path.EndsWith(":"))
+				path += "\\";
+
+			// Sanity check
+			if (!DirExists(path))
+				throw new Exception($"Attempting to enumerate an invalid directory path: {path}");
+
+			// If excluding directories, use the enumerate files function
+			var entries = (exclude & FileAttributes.Directory) != 0
+				? System.IO.Directory.EnumerateFiles(path, "*", search_flags)
+				: System.IO.Directory.EnumerateFileSystemEntries(path, "*", search_flags);
+
+			foreach (var entry in entries)
+			{
+				var attr = FileAttributes.Normal;
+				var exception = (Exception)null;
+				try
+				{
+					attr = File.GetAttributes(entry);
+
+					// Report progress on directories
+					if ((attr & FileAttributes.Directory) != 0 && !progress(entry))
+						break;
+
+					// Exclude files/folders by attribute
+					if ((attr & exclude) != 0)
+						continue;
+
+					// Filter if provided
+					if (filter != null)
+					{
+						var m = filter.Match(entry);
+						if (!m.Success)
+							continue;
+					}
+				}
+				catch (Exception ex) { exception = ex; }
+
+				// Report errors, then skip
+				if (exception != null)
+				{
+					if (!error(entry, exception)) break;
+					continue;
+				}
+				
+				// Yield the file/directory path
+				if ((attr & FileAttributes.Directory) != 0)
+					yield return new DirectoryInfo(entry);
+				else
+					yield return new FileInfo(entry);
+			}
 		}
 	}
 }

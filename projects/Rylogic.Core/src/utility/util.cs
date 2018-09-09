@@ -608,6 +608,43 @@ namespace Rylogic.Utility
 			get { return AssemblyCompany(); }
 		}
 
+		/// <summary>Return the product name string from an assembly</summary>
+		public static string AssemblyProductName(Assembly ass)
+		{
+			ass = ass ?? MainAssembly;
+			return ass.CustomAttributes.First(x => x.AttributeType == typeof(AssemblyProductAttribute)).ConstructorArguments[0].Value.ToString();
+		}
+		public static string AssemblyProductName(Type type)
+		{
+			return AssemblyProductName(Assembly.GetAssembly(type));
+		}
+		public static string AssemblyProductName()
+		{
+			return AssemblyProductName((Assembly)null);
+		}
+		public static string AppProductName
+		{
+			get { return AssemblyProductName(); }
+		}
+
+		/// <summary>The full path of the executable</summary>
+		public static string ExecutablePath
+		{
+			get { return MainAssembly.Location; }
+		}
+
+		/// <summary>The directory that this application executable is in</summary>
+		public static string AppDirectory
+		{
+			get { return Path_.Directory(ExecutablePath); }
+		}
+
+		/// <summary>Returns the full path to a file or directory relative to the app executable</summary>
+		public static string ResolveAppPath(string relative_path = "")
+		{
+			return Path_.CombinePath(AppDirectory, relative_path);
+		}
+
 		/// <summary>Read a text file embedded resource returning it as a string</summary>
 		public static string TextResource(string resource_name, Assembly ass)
 		{

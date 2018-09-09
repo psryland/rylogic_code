@@ -76,18 +76,19 @@ namespace CoinFlip
 				if (ReferenceEquals(m_settings, value)) return;
 				if (m_settings != null)
 				{
-					m_settings.SettingChanged -= HandleSettingChanged;
+					m_settings.SettingChange -= HandleSettingChange;
 				}
 				m_settings = value;
 				if (m_settings != null)
 				{
-					m_settings.SettingChanged += HandleSettingChanged;
+					m_settings.SettingChange += HandleSettingChange;
 				}
 			}
 		}
 		private ISettingsSet m_settings;
-		protected virtual void HandleSettingChanged(object sender, SettingChangedEventArgs e)
+		protected virtual void HandleSettingChange(object sender, SettingChangeEventArgs e)
 		{
+			if (e.Before) return;
 			Invalidate();
 			InvalidateChart();
 		}

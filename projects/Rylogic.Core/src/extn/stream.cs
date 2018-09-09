@@ -59,6 +59,14 @@ namespace Rylogic.Extn
 				throw new Exception($"Failed to read type {typeof(T).Name}.\r\n{ex.Message}");
 			}
 		}
+
+		/// <summary>Return an RAII object to preserve the current stream position</summary>
+		public static Scope PreservePosition(this Stream src)
+		{
+			return Scope.Create(
+				() => src.Position,
+				sp => src.Position = sp);
+		}
 	}
 }
 

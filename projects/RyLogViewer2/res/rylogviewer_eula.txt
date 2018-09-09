@@ -1,0 +1,39 @@
+RyLogViewer End User License Agreement
+======================================
+
+Rylogic Limited (the “licensor”) grants you (the “licensee”) a nonexclusive license to
+use RyLogViewer for personal and/or commercial use. The licensor retains all intellectual
+ownership of RyLogViewer.
+
+1) Redistribution
+
+Redistribution of RyLogViewer is permitted provided that the following conditions are met:
+  - Only the complete, unmodified RyLogViewer application and all associated files may be
+    distributed, excluding the licensee's 'licence.xml' file.
+  - This end user licence agreement is included with the distribution,
+
+2) Collection of Information
+
+RyLogViewer can automatically contact a web server for the following purposes:
+  - licence validation,
+  - application update detection and notification,
+  - usage statistics,
+  - report feedback, bug reports, feature suggestions,
+  - application diagnostic reports,
+
+*RyLogViewer will not automatically send any personally identifiable information for these
+purposes without explicit user consent.*
+
+3) Disclaimer
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS
+OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+RyLogViewer © Rylogic Limited 2007-2014
+All rights reserved

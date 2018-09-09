@@ -245,25 +245,27 @@ namespace CoinFlip
 		}
 
 		/// <summary>Handle settings changing</summary>
-		protected override void HandleSettingChanged(object sender, SettingChangedEventArgs e)
+		protected override void HandleSettingChange(object sender, SettingChangeEventArgs e)
 		{
 			// If the setting affects the underlying data, reset
-			switch (e.Key)
+			if (e.After)
 			{
-			case nameof(SettingsData.WindowSize):
-			case nameof(SettingsData.ExponentialMA):
-				ResetRequired = true;
-				break;
-			case nameof(SettingsData.Width):
-			case nameof(SettingsData.ColourMA):
-			case nameof(SettingsData.ShowBollingerBands):
-			case nameof(SettingsData.BollingerBandsStdDev):
-			case nameof(SettingsData.ColourBollingerBands):	
-				Cache.Invalidate();
-				break;
+				switch (e.Key)
+				{
+				case nameof(SettingsData.WindowSize):
+				case nameof(SettingsData.ExponentialMA):
+					ResetRequired = true;
+					break;
+				case nameof(SettingsData.Width):
+				case nameof(SettingsData.ColourMA):
+				case nameof(SettingsData.ShowBollingerBands):
+				case nameof(SettingsData.BollingerBandsStdDev):
+				case nameof(SettingsData.ColourBollingerBands):
+					Cache.Invalidate();
+					break;
+				}
 			}
-
-			base.HandleSettingChanged(sender, e);
+			base.HandleSettingChange(sender, e);
 		}
 
 		/// <summary>Invalidate if the chart moves beyond the range of the graphics</summary>

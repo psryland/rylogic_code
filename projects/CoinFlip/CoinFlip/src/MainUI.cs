@@ -166,7 +166,7 @@ namespace CoinFlip
 					m_model.AllowTradesChanging     -= UpdateUI;
 					m_model.BackTestingChanging     -= HandleBackTestingChanged;
 					m_model.SimRunningChanged       -= UpdateUI;
-					m_model.Settings.SettingChanged -= HandleSettingsChanged;
+					m_model.Settings.SettingChange  -= HandleSettingsChange;
 					m_model.Pairs.ListChanging      -= HandlePairsChanging;
 					m_model.Coins.ListChanging      -= HandleCoinsListChanging;
 					m_model.Exchanges.ListChanging  -= HandleExchangesChanging;
@@ -182,15 +182,16 @@ namespace CoinFlip
 					m_model.Exchanges.ListChanging  += HandleExchangesChanging;
 					m_model.Coins.ListChanging      += HandleCoinsListChanging;
 					m_model.Pairs.ListChanging      += HandlePairsChanging;
-					m_model.Settings.SettingChanged += HandleSettingsChanged;
+					m_model.Settings.SettingChange  += HandleSettingsChange;
 					m_model.SimRunningChanged       += UpdateUI;
 					m_model.BackTestingChanging     += HandleBackTestingChanged;
 					m_model.AllowTradesChanging     += UpdateUI;
 				}
 
 				// Handlers
-				void HandleSettingsChanged(object sender, SettingChangedEventArgs e)
+				void HandleSettingsChange(object sender, SettingChangeEventArgs e)
 				{
+					if (e.Before) return;
 					switch (e.Key)
 					{
 					case nameof(Settings.ShowLivePrices):

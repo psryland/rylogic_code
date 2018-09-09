@@ -52,10 +52,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="src\plugins\AssemblyInfo.cs" />
-    <Compile Include="src\plugins\ILogDataSource.cs" />
-    <Compile Include="src\plugins\IMainUI.cs" />
-    <Compile Include="src\plugins\ITransformSubstitution.cs" />
+    <Compile Include="src\Interfaces\IFilter.cs" />
+    <Compile Include="src\Plugins\AssemblyInfo.cs" />
+    <Compile Include="src\Interfaces\ILogDataSource.cs" />
+    <Compile Include="src\Interfaces\ILogDataRow.cs" />
+    <Compile Include="src\Interfaces\ILogDataElement.cs" />
+    <Compile Include="src\Interfaces\ICustomLogDataSource.cs" />
+    <Compile Include="src\Plugins\LogDataSource.cs" />
+    <Compile Include="src\Interfaces\IMainUI.cs" />
+    <Compile Include="src\Interfaces\ITransformSubstitution.cs" />
+    <Compile Include="src\Plugins\TransformSubstitution.cs" />
     <Compile Include="Version.cs" />
   </ItemGroup>
   <ItemGroup>

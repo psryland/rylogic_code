@@ -238,7 +238,7 @@ namespace LDraw
 			InitializeComponent();
 			KeyPreview = true;
 
-			Xml.SupportWinFormsTypes();
+			Xml_.Config.SupportWinFormsTypes();
 			Settings = new Settings(StartupOptions.SettingsPath){ ReadOnly = true };
 			DockContainer = new DockContainer();
 			Model = new Model(this);

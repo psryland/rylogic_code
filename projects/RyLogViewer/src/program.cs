@@ -13,7 +13,7 @@ using RyLogViewer.Properties;
 
 namespace RyLogViewer
 {
-	static class program
+	static class Program
 	{
 		private static StartupOptions StartupOptions;
 
@@ -30,7 +30,7 @@ namespace RyLogViewer
 				Environment.ExitCode = 0;
 				Application.EnableVisualStyles();
 				Application.SetCompatibleTextRenderingDefault(false);
-				Xml.SupportWinFormsTypes();
+				Xml_.Config.SupportWinFormsTypes();
 
 				// Start the main app
 				Exception err = null;

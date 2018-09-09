@@ -14,6 +14,7 @@ using Rylogic.Utility;
 namespace Rylogic.Common
 {
 	/// <summary>Scans a directory for assemblies that contain public types with the 'PluginAttribute' attribute that implement 'TInterface'.</summary>
+	[Obsolete("Use Rylogic.Plugin instead")]
 	public class Plugins<TInterface> where TInterface:class
 	{
 		// Notes:

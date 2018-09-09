@@ -26,7 +26,7 @@ namespace RyLogViewer
 		public SizeF TextSize { get; set; }
 
 		/// <summary>The columns for this row of log data</summary>
-		IEnumerable<ILogDataElement> ILogDataRow.Columns { get { return Column; } }
+		IEnumerable<ILogDataElement> ILogDataRow.Columns => Column;
 
 		/// <summary>The column values for this line</summary>
 		public List<Col> Column { get; private set; }

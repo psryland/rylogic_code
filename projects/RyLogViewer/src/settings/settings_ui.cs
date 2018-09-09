@@ -208,12 +208,17 @@ namespace RyLogViewer
 				if (m_main == value) return;
 				if (m_main != null)
 				{
-					m_main.Settings.SettingChanged -= UpdateUI;
+					m_main.Settings.SettingChange -= HandleSettingChange;
 				}
 				m_main = value;
 				if (m_main != null)
 				{
-					m_main.Settings.SettingChanged += UpdateUI;
+					m_main.Settings.SettingChange += HandleSettingChange;
+				}
+				void HandleSettingChange(object sender, SettingChangeEventArgs e)
+				{
+					if (e.Before) return;
+					UpdateUI();
 				}
 			}
 		}

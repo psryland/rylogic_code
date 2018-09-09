@@ -334,7 +334,7 @@ namespace RyLogViewer
 				m_main.m_grid.TryScrollToRowIndex(0);
 				m_overlay.Attachee = m_main;
 
-				var path = Util2.ResolveAppPath(ExampleFiles.LogFile);
+				var path = Util.ResolveAppPath(ExampleFiles.LogFile);
 				m_main.SetLineEnding(ELineEnding.Detect);
 				m_main.SetEncoding(null);
 				m_main.OpenSingleLogFile(path, false);

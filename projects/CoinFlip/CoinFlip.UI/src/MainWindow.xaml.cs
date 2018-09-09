@@ -1,4 +1,4 @@
-﻿using Rylogic.Gui2;
+﻿using Rylogic.Gui.WPF;
 using System;
 using System.Collections.Generic;
 using System.Linq;

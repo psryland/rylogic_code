@@ -121,7 +121,7 @@ namespace LDraw
 				if (m_model == value) return;
 				if (m_model != null)
 				{
-					m_model.Settings.SettingChanged -= HandleSettingChanged;
+					m_model.Settings.SettingChange -= HandleSettingChange;
 					Scene.View3d.OnSourcesChanged -= HandleSourcesChanged;
 					Scene.Window.OnSceneChanged -= HandleSceneChanged;
 				}
@@ -130,7 +130,7 @@ namespace LDraw
 				{
 					Scene.Window.OnSceneChanged += HandleSceneChanged;
 					Scene.View3d.OnSourcesChanged += HandleSourcesChanged;
-					m_model.Settings.SettingChanged += HandleSettingChanged;
+					m_model.Settings.SettingChange += HandleSettingChange;
 				}
 
 				// Handlers
@@ -148,8 +148,9 @@ namespace LDraw
 							AutoRange(View3d.ESceneBounds.All);
 					}
 				}
-				void HandleSettingChanged(object sender, SettingChangedEventArgs args)
+				void HandleSettingChange(object sender, SettingChangeEventArgs args)
 				{
+					if (args.Before) return;
 					switch (args.Key)
 					{
 					case nameof(LDraw.Settings.FocusPointVisible):

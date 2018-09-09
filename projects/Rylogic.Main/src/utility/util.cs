@@ -146,12 +146,14 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>The directory that this application executable is in</summary>
+		[Obsolete("Use the Util version")]
 		public static string AppDirectory
 		{
 			get { return Path_.Directory(Application.ExecutablePath); }
 		}
 
 		/// <summary>Returns the full path to a file or directory relative to the app executable</summary>
+		[Obsolete("Use the Util version")]
 		public static string ResolveAppPath(string relative_path = "")
 		{
 			return Path_.CombinePath(AppDirectory, relative_path);

@@ -31,13 +31,13 @@
     <BootstrapperEnabled>true</BootstrapperEnabled>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\build\</SolutionDir>
     <RestorePackages>true</RestorePackages>
-	  <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationIcon>RyLog.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup>
-    <StartupObject>RyLogViewer.program</StartupObject>
+    <StartupObject>RyLogViewer.Program</StartupObject>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>false</SignAssembly>
@@ -84,7 +84,8 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="src\about.cs">
+    <Compile Include="src\Model\NoLinesException.cs" />
+    <Compile Include="src\UI\AboutUI.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="src\bookmarks.cs" />
@@ -94,10 +95,10 @@
     <Compile Include="src\colour_picker_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\controls\output_filepath_ui.cs">
+    <Compile Include="src\UI\OutputFilepathUI.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="src\controls\control_subclasses.cs">
+    <Compile Include="src\UI\ControlSubclasses.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="src\cripple_ui.cs">
@@ -113,33 +114,33 @@
     <Compile Include="src\first_run_tutorial.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\inputs\aggregate_files_ui.cs">
+    <Compile Include="src\UI\AggregateFilesUI.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\inputs\android_logcat.cs" />
-    <Compile Include="src\inputs\android_logcat_ui.cs">
+    <Compile Include="src\Inputs\AndroidLogcat.cs" />
+    <Compile Include="src\UI\AndroidLogcatUI.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\inputs\android_logcat_ui.Designer.cs">
-      <DependentUpon>android_logcat_ui.cs</DependentUpon>
+    <Compile Include="src\UI\AndroidLogcatUI.Designer.cs">
+      <DependentUpon>AndroidLogcatUI.cs</DependentUpon>
     </Compile>
-    <Compile Include="src\inputs\android_connect_device_ui.cs">
+    <Compile Include="src\Inputs\AndroidConnectDeviceUI.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\inputs\log_data_source.cs">
+    <Compile Include="src\Inputs\log_data_source.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\inputs\named_pipe.cs" />
-    <Compile Include="src\inputs\network_connection.cs" />
-    <Compile Include="src\inputs\program_output.cs" />
-    <Compile Include="src\inputs\serial_connection.cs" />
+    <Compile Include="src\Inputs\named_pipe.cs" />
+    <Compile Include="src\Inputs\network_connection.cs" />
+    <Compile Include="src\Inputs\program_output.cs" />
+    <Compile Include="src\Inputs\serial_connection.cs" />
     <Compile Include="src\jumpto_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\licence\activation.cs">
+    <Compile Include="src\Licence\activation.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\licence\licence.cs">
+    <Compile Include="src\Licence\licence.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="src\licensed_features.cs">
@@ -153,32 +154,32 @@
     <Compile Include="src\selection.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\settings\clkaction.cs" />
-    <Compile Include="src\settings\clkaction_ui.cs">
+    <Compile Include="src\Settings\clkaction.cs" />
+    <Compile Include="src\Settings\clkaction_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\settings\swizzle.cs" />
-    <Compile Include="src\settings\swizzle_ui.cs">
+    <Compile Include="src\Settings\swizzle.cs" />
+    <Compile Include="src\Settings\swizzle_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\settings\swizzle_ui.Designer.cs">
+    <Compile Include="src\Settings\swizzle_ui.Designer.cs">
       <DependentUpon>swizzle_ui.cs</DependentUpon>
     </Compile>
-    <Compile Include="src\settings\transform_subs.cs">
+    <Compile Include="src\Settings\transform_subs.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="src\startup_options.cs" />
     <Compile Include="src\export_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\settings\filter.cs" />
+    <Compile Include="src\Settings\filter.cs" />
     <Compile Include="src\find_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\monitor_mode_ui.cs">
+    <Compile Include="src\UI\MonitorModeUI.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\settings\highlight.cs" />
+    <Compile Include="src\Settings\highlight.cs" />
     <Compile Include="src\line_cache.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -186,52 +187,52 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="src\misc.cs" />
-    <Compile Include="src\inputs\named_pipe_ui.cs">
+    <Compile Include="src\Inputs\named_pipe_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\inputs\named_pipe_ui.Designer.cs">
+    <Compile Include="src\Inputs\named_pipe_ui.Designer.cs">
       <DependentUpon>named_pipe_ui.cs</DependentUpon>
     </Compile>
     <Compile Include="src\new_version_form.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\main.cs">
+    <Compile Include="src\Model\Main.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\program.cs" />
-    <Compile Include="src\inputs\program_output_ui.cs">
+    <Compile Include="src\Program.cs" />
+    <Compile Include="src\Inputs\program_output_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\inputs\program_output_ui.Designer.cs">
+    <Compile Include="src\Inputs\program_output_ui.Designer.cs">
       <DependentUpon>program_output_ui.cs</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="src\inputs\serial_connection_ui.cs">
+    <Compile Include="src\Inputs\serial_connection_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\inputs\serial_connection_ui.Designer.cs">
+    <Compile Include="src\Inputs\serial_connection_ui.Designer.cs">
       <DependentUpon>serial_connection_ui.cs</DependentUpon>
     </Compile>
-    <Compile Include="src\settings\settings.cs" />
-    <Compile Include="src\settings\settings_ui.cs">
+    <Compile Include="src\Settings\settings.cs" />
+    <Compile Include="src\Settings\settings_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\inputs\stream_buffering.cs" />
-    <Compile Include="src\inputs\network_connection_ui.cs">
+    <Compile Include="src\BufferedStream.cs" />
+    <Compile Include="src\Inputs\network_connection_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\inputs\network_connection_ui.Designer.cs">
+    <Compile Include="src\Inputs\network_connection_ui.Designer.cs">
       <DependentUpon>network_connection_ui.cs</DependentUpon>
     </Compile>
-    <Compile Include="src\settings\code_lookup.cs" />
-    <Compile Include="src\settings\code_lookup_ui.cs">
+    <Compile Include="src\Settings\code_lookup.cs" />
+    <Compile Include="src\Settings\code_lookup_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\tipoftheday.cs">
+    <Compile Include="src\UI\TipOfTheDayUI.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\settings\transform.cs" />
-    <Compile Include="src\settings\transform_ui.cs">
+    <Compile Include="src\Settings\transform.cs" />
+    <Compile Include="src\Settings\transform_ui.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="Version.cs" />
@@ -321,8 +322,8 @@
       <Generator>..\..\script\HtmlExpand.py</Generator>
       <CustomToolNamespace>..\..\res\</CustomToolNamespace>
     </PyScript>
-    <EmbeddedResource Include="src\about.resx">
-      <DependentUpon>about.cs</DependentUpon>
+    <EmbeddedResource Include="src\UI\AboutUI.resx">
+      <DependentUpon>AboutUI.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\bookmarks_ui.resx">
       <DependentUpon>bookmarks_ui.cs</DependentUpon>
@@ -330,8 +331,8 @@
     <EmbeddedResource Include="src\colour_picker_ui.resx">
       <DependentUpon>colour_picker_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\controls\output_filepath_ui.resx">
-      <DependentUpon>output_filepath_ui.cs</DependentUpon>
+    <EmbeddedResource Include="src\UI\OutputFilepathUI.resx">
+      <DependentUpon>OutputFilepathUI.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\cripple_ui.resx">
       <DependentUpon>cripple_ui.cs</DependentUpon>
@@ -348,26 +349,26 @@
     <EmbeddedResource Include="src\jumpto_ui.resx">
       <DependentUpon>jumpto_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\monitor_mode_ui.resx">
-      <DependentUpon>monitor_mode_ui.cs</DependentUpon>
+    <EmbeddedResource Include="src\UI\MonitorModeUI.resx">
+      <DependentUpon>MonitorModeUI.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\inputs\aggregate_files_ui.resx">
-      <DependentUpon>aggregate_files_ui.cs</DependentUpon>
+    <EmbeddedResource Include="src\UI\AggregateFilesUI.resx">
+      <DependentUpon>AggregateFilesUI.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\inputs\android_logcat_ui.resx">
-      <DependentUpon>android_logcat_ui.cs</DependentUpon>
+    <EmbeddedResource Include="src\UI\AndroidLogcatUI.resx">
+      <DependentUpon>AndroidLogcatUI.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\inputs\android_connect_device_ui.resx">
-      <DependentUpon>android_connect_device_ui.cs</DependentUpon>
+    <EmbeddedResource Include="src\Inputs\AndroidConnectDeviceUI.resx">
+      <DependentUpon>AndroidConnectDeviceUI.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\licence\activation.resx">
+    <EmbeddedResource Include="src\Licence\activation.resx">
       <DependentUpon>activation.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\main.resx">
-      <DependentUpon>main.cs</DependentUpon>
+    <EmbeddedResource Include="src\Model\Main.resx">
+      <DependentUpon>Main.cs</DependentUpon>
       <SubType>Designer</SubType>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\inputs\named_pipe_ui.resx">
+    <EmbeddedResource Include="src\Inputs\named_pipe_ui.resx">
       <DependentUpon>named_pipe_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\new_version_form.resx">
@@ -376,10 +377,10 @@
     <EmbeddedResource Include="src\pattern_set_ui.resx">
       <DependentUpon>pattern_set_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\settings\clkaction_ui.resx">
+    <EmbeddedResource Include="src\Settings\clkaction_ui.resx">
       <DependentUpon>clkaction_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\inputs\program_output_ui.resx">
+    <EmbeddedResource Include="src\Inputs\program_output_ui.resx">
       <DependentUpon>program_output_ui.cs</DependentUpon>
       <SubType>Designer</SubType>
     </EmbeddedResource>
@@ -388,25 +389,25 @@
       <SubType>Designer</SubType>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\inputs\serial_connection_ui.resx">
+    <EmbeddedResource Include="src\Inputs\serial_connection_ui.resx">
       <DependentUpon>serial_connection_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\settings\settings_ui.resx">
+    <EmbeddedResource Include="src\Settings\settings_ui.resx">
       <DependentUpon>settings_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\inputs\network_connection_ui.resx">
+    <EmbeddedResource Include="src\Inputs\network_connection_ui.resx">
       <DependentUpon>network_connection_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\settings\code_lookup_ui.resx">
+    <EmbeddedResource Include="src\Settings\code_lookup_ui.resx">
       <DependentUpon>code_lookup_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\settings\swizzle_ui.resx">
+    <EmbeddedResource Include="src\Settings\swizzle_ui.resx">
       <DependentUpon>swizzle_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\tipoftheday.resx">
-      <DependentUpon>tipoftheday.cs</DependentUpon>
+    <EmbeddedResource Include="src\UI\TipOfTheDayUI.resx">
+      <DependentUpon>TipOfTheDayUI.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\settings\transform_ui.resx">
+    <EmbeddedResource Include="src\Settings\transform_ui.resx">
       <DependentUpon>transform_ui.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
@@ -437,7 +438,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Rylogic Limited Key File.pfx" />
-    <None Include="src\licence\private_key.xml" />
+    <None Include="src\Licence\private_key.xml" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
@@ -457,7 +458,9 @@
       <Name>RyLogViewer.Extensions</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="src\Interfaces\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(ProjectDir)..\..\build\props\python_script.targets" />
   <PropertyGroup>

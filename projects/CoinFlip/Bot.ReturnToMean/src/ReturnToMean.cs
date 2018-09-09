@@ -32,14 +32,17 @@ namespace Bot.ReturnToMean
 			MA = null;
 			base.Dispose(disposing);
 		}
-		protected override void OnSettingChanged(SettingChangedEventArgs args)
+		protected override void OnSettingChange(SettingChangeEventArgs args)
 		{
-			switch (args.Key) {
-			default: base.OnSettingChanged(args); return;
-			case nameof(SettingsData.Exchange): Exchange = null; return;
-			case nameof(SettingsData.Pair):     Pair = null; return;
-			case nameof(SettingsData.Currency): Coin = null; return;
+			if (args.After)
+			{
+				switch (args.Key) {
+				case nameof(SettingsData.Exchange): Exchange = null; return;
+				case nameof(SettingsData.Pair): Pair = null; return;
+				case nameof(SettingsData.Currency): Coin = null; return;
+				}
 			}
+			base.OnSettingChange(args);
 		}
 		protected override void HandlePairsUpdated(object sender, EventArgs e)
 		{

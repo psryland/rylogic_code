@@ -175,7 +175,7 @@ namespace CoinFlip
 		/// <summary>The location of where to look for bot plugin dlls</summary>
 		public static string BotDirectory
 		{
-			get { return Util2.ResolveAppPath("bots"); }
+			get { return Util.ResolveAppPath("bots"); }
 		}
 		
 		/// <summary>Regex filter pattern for Bot dlls</summary>

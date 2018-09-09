@@ -13,8 +13,16 @@ namespace Rylogic.Streams
 	/// <summary>Combines multiple files into a stream that looks like a single file</summary>
 	public sealed class AggregateFileStream :Stream
 	{
-		/// <summary>Info about the referenced files</summary>
-		private readonly List<FileInfo> m_files;
+		public AggregateFileStream(IEnumerable<string> filepaths, FileShare file_share = FileShare.None, int buffer_size = 0x1000, FileOptions file_options = FileOptions.None)
+		{
+			FileShare      = file_share;
+			FileBufferSize = buffer_size;
+			FileOptions    = file_options;
+			Files          = new List<FileInfo>();
+			m_boundary     = new List<long>();
+
+			SetFiles(filepaths);
+		}
 
 		/// <summary>The byte offset boundaries between each file</summary>
 		private readonly List<long> m_boundary;
@@ -40,31 +48,20 @@ namespace Rylogic.Streams
 		/// <summary>Additional options when opening files</summary>
 		public FileOptions FileOptions { get; set; }
 
-		public AggregateFileStream(IEnumerable<string> filepaths, FileShare file_share = FileShare.None, int buffer_size = 0x1000, FileOptions file_options = FileOptions.None)
-		{
-			FileShare      = file_share;
-			FileBufferSize = buffer_size;
-			FileOptions    = file_options;
-			m_files        = new List<FileInfo>();
-			m_boundary     = new List<long>();
-
-			SetFiles(filepaths);
-		}
-
 		/// <summary>Get the files that make up this aggregate file stream</summary>
-		public List<FileInfo> Files { get { return m_files; } }
+		public List<FileInfo> Files { get; private set; }
 
 		/// <summary>Updates the collection of files</summary>
 		public void SetFiles(IEnumerable<string> filepaths)
 		{
-			m_files.Clear();
+			Files.Clear();
 			foreach (var f in filepaths)
-				m_files.Add(new FileInfo(f));
+				Files.Add(new FileInfo(f));
 
 			// Determine the combined file length
 			m_total_length = 0;
 			m_boundary.Clear();
-			foreach (var f in m_files)
+			foreach (var f in Files)
 			{
 				m_total_length += f.Length;
 				m_boundary.Add(m_total_length);
@@ -92,20 +89,20 @@ namespace Rylogic.Streams
 			if (m_fs != null) m_fs.Dispose();
 
 			m_fs_index = fidx;
-			System.Diagnostics.Debug.Assert(m_fs_index >= -1 && m_fs_index <= m_files.Count);
+			System.Diagnostics.Debug.Assert(m_fs_index >= -1 && m_fs_index <= Files.Count);
 
-			if (m_fs_index < 0 || m_files.Count == 0)
+			if (m_fs_index < 0 || Files.Count == 0)
 			{
 				m_fs = null;
 			}
-			else if (m_fs_index >= m_files.Count)
+			else if (m_fs_index >= Files.Count)
 			{
-				m_fs = new FileStream(m_files[m_files.Count-1].FullName, FileMode.Open, FileAccess.Read, FileShare, FileBufferSize, FileOptions);
+				m_fs = new FileStream(Files[Files.Count-1].FullName, FileMode.Open, FileAccess.Read, FileShare, FileBufferSize, FileOptions);
 				m_fs.Position = m_fs.Length;
 			}
 			else
 			{
-				m_fs = new FileStream(m_files[m_fs_index].FullName, FileMode.Open, FileAccess.Read, FileShare, FileBufferSize, FileOptions);
+				m_fs = new FileStream(Files[m_fs_index].FullName, FileMode.Open, FileAccess.Read, FileShare, FileBufferSize, FileOptions);
 				Position = Position;
 			}
 			return m_fs;
