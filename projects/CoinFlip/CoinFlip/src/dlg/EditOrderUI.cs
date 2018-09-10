@@ -4,11 +4,12 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using Rylogic.Extn;
-using Rylogic.Graphix;
-using Rylogic.Gui;
+using Rylogic.Gfx;
+using Rylogic.Gui.WinForms;
 using Rylogic.Maths;
 using Rylogic.Utility;
-using ComboBox = Rylogic.Gui.ComboBox;
+using ComboBox = Rylogic.Gui.WinForms.ComboBox;
+using Util = Rylogic.Utility.Util;
 
 namespace CoinFlip
 {
@@ -603,23 +604,23 @@ namespace CoinFlip
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_il_buttons = new System.Windows.Forms.ImageList(this.components);
 			this.m_btn_cancel = new System.Windows.Forms.Button();
-			this.m_tb_price_q2b = new Rylogic.Gui.ValueBox();
+			this.m_tb_price_q2b = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_lbl_order_price = new System.Windows.Forms.Label();
 			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
 			this.m_lbl_volume_in = new System.Windows.Forms.Label();
-			this.m_tb_volume_in = new Rylogic.Gui.ValueBox();
+			this.m_tb_volume_in = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_lbl_volume_out = new System.Windows.Forms.Label();
-			this.m_tb_volume_out = new Rylogic.Gui.ValueBox();
+			this.m_tb_volume_out = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_lbl_desc_in = new System.Windows.Forms.Label();
 			this.m_lbl_exchange = new System.Windows.Forms.Label();
-			this.m_cb_exchange = new Rylogic.Gui.ComboBox();
+			this.m_cb_exchange = new Rylogic.Gui.WinForms.ComboBox();
 			this.m_lbl_available_volume_in = new System.Windows.Forms.Label();
 			this.m_btn_all_in = new System.Windows.Forms.Button();
 			this.m_lbl_order_type = new System.Windows.Forms.Label();
 			this.m_tb_order_type = new System.Windows.Forms.TextBox();
 			this.m_table0 = new System.Windows.Forms.TableLayoutPanel();
 			this.m_panel_row1 = new System.Windows.Forms.Panel();
-			this.m_cb_trade_direction = new Rylogic.Gui.ComboBox();
+			this.m_cb_trade_direction = new Rylogic.Gui.WinForms.ComboBox();
 			this.m_lbl_trade_type = new System.Windows.Forms.Label();
 			this.m_panel_row3_right = new System.Windows.Forms.Panel();
 			this.m_panel_row2_right = new System.Windows.Forms.Panel();

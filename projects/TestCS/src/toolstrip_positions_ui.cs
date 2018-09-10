@@ -1,6 +1,8 @@
 ﻿using System.Linq;
 using System.Windows.Forms;
-using Rylogic.Extn;
+using Rylogic.Gui.WinForms;
+using ToolStripComboBox = Rylogic.Gui.WinForms.ToolStripComboBox;
+using ToolStripContainer = Rylogic.Gui.WinForms.ToolStripContainer;
 
 namespace TestCS
 {
@@ -71,10 +73,10 @@ namespace TestCS
 		private void InitializeComponent()
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ToolStripPositionsUI));
-			this.m_toolstripcont = new System.Windows.Forms.ToolStripContainer();
+			this.m_toolstripcont = new Rylogic.Gui.WinForms.ToolStripContainer();
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.menuToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-			this.toolStripComboBox1 = new System.Windows.Forms.ToolStripComboBox();
+			this.toolStripComboBox1 = new Rylogic.Gui.WinForms.ToolStripComboBox();
 			this.toolStrip1 = new System.Windows.Forms.ToolStrip();
 			this.toolStripButton1 = new System.Windows.Forms.ToolStripButton();
 			this.m_toolstrip1 = new System.Windows.Forms.ToolStripLabel();

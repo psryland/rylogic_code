@@ -1,16 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using Rylogic.Extn;
-using Rylogic.Gui;
-using Rylogic.Utility;
-using ToolStripContainer = Rylogic.Gui.ToolStripContainer;
+using Rylogic.Gui.WinForms;
+using ToolStripContainer = Rylogic.Gui.WinForms.ToolStripContainer;
+using Util = Rylogic.Utility.Util;
 
 namespace Csex
 {
@@ -83,8 +76,8 @@ namespace Csex
 		private void InitializeComponent()
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(XmlEditUI));
-			this.m_tsc = new Rylogic.Gui.ToolStripContainer();
-			this.m_dock = new Rylogic.Gui.DockContainer();
+			this.m_tsc = new Rylogic.Gui.WinForms.ToolStripContainer();
+			this.m_dock = new Rylogic.Gui.WinForms.DockContainer();
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_open = new System.Windows.Forms.ToolStripMenuItem();

@@ -3,9 +3,10 @@ using System.Drawing;
 using System.Windows.Forms;
 using CoinFlip;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 using Rylogic.Utility;
-using DataGridView = Rylogic.Gui.DataGridView;
+using DataGridView = Rylogic.Gui.WinForms.DataGridView;
+using Util = Rylogic.Utility.Util;
 
 namespace Bot.LoopFinder
 {
@@ -157,7 +158,7 @@ namespace Bot.LoopFinder
 		private void InitializeComponent()
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(LoopsUI));
-			this.m_grid_loops = new Rylogic.Gui.DataGridView();
+			this.m_grid_loops = new Rylogic.Gui.WinForms.DataGridView();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_loops)).BeginInit();
 			this.SuspendLayout();
 			// 

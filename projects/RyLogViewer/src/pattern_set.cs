@@ -6,7 +6,7 @@ using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Container;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 
 namespace RyLogViewer
 {
@@ -181,7 +181,7 @@ namespace RyLogViewer
 		public event EventHandler Changed;
 		protected virtual void OnChanged()
 		{
-			Changed.Raise(this);
+			Changed?.Invoke(this, EventArgs.Empty);
 		}
 		private void HandleCollectionChanged<T>(object sender, ListChgEventArgs<T> e)
 		{

@@ -4,8 +4,9 @@ using System.Windows.Forms;
 using CoinFlip;
 using Rylogic.Container;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 using Rylogic.Utility;
+using Util = Rylogic.Utility.Util;
 
 namespace Bot.Fishing
 {

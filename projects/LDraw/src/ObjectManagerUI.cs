@@ -7,11 +7,12 @@ using System.Windows.Forms;
 using Rylogic.Common;
 using Rylogic.Container;
 using Rylogic.Extn;
-using Rylogic.Graphix;
-using Rylogic.Gui;
+using Rylogic.Gfx;
+using Rylogic.Gui.WinForms;
 using Rylogic.Utility;
-using DataGridView = Rylogic.Gui.DataGridView;
-using ToolStripContainer = Rylogic.Gui.ToolStripContainer;
+using DataGridView = Rylogic.Gui.WinForms.DataGridView;
+using ToolStripContainer = Rylogic.Gui.WinForms.ToolStripContainer;
+using Util = Rylogic.Utility.Util;
 
 namespace LDraw
 {
@@ -222,7 +223,7 @@ namespace LDraw
 				case nameof(View3d.Object.Colour):
 					{
 						a.Graphics.CompositingMode = System.Drawing.Drawing2D.CompositingMode.SourceOver;
-						using (var b0 = Gfx_.CheckerBrush(8, 8, 0xFFFFFFFF, 0xFFA0A0A0U))
+						using (var b0 = Gdi.CheckerBrush(8, 8, 0xFFFFFFFF, 0xFFA0A0A0U))
 						using (var b1 = new SolidBrush(obj.Colour))
 						{
 							a.Graphics.FillRectangle(b0, a.CellBounds);
@@ -692,17 +693,17 @@ namespace LDraw
 			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ObjectManagerUI));
 			this.m_split0 = new System.Windows.Forms.SplitContainer();
-			this.m_tree = new Rylogic.Gui.TreeGridView();
+			this.m_tree = new Rylogic.Gui.WinForms.TreeGridView();
 			this.m_btn_bong = new System.Windows.Forms.Button();
-			this.m_grid = new Rylogic.Gui.DataGridView();
+			this.m_grid = new Rylogic.Gui.WinForms.DataGridView();
 			this.m_il_buttons = new System.Windows.Forms.ImageList(this.components);
 			this.m_ss = new System.Windows.Forms.StatusStrip();
 			this.m_status = new System.Windows.Forms.ToolStripStatusLabel();
-			this.m_tsc = new Rylogic.Gui.ToolStripContainer();
+			this.m_tsc = new Rylogic.Gui.WinForms.ToolStripContainer();
 			this.m_ts = new System.Windows.Forms.ToolStrip();
 			this.m_btn_expand_all = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_collapse_all = new System.Windows.Forms.ToolStripButton();
-			this.m_ts_filter = new Rylogic.Gui.ToolStripPatternFilter();
+			this.m_ts_filter = new Rylogic.Gui.WinForms.ToolStripPatternFilter();
 			((System.ComponentModel.ISupportInitialize)(this.m_split0)).BeginInit();
 			this.m_split0.Panel1.SuspendLayout();
 			this.m_split0.Panel2.SuspendLayout();

@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Windows.Forms;
-using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 using Rylogic.Utility;
-using ComboBox = Rylogic.Gui.ComboBox;
+using ComboBox = Rylogic.Gui.WinForms.ComboBox;
+using Util = Rylogic.Utility.Util;
 
 namespace CoinFlip
 {
@@ -126,18 +126,18 @@ namespace CoinFlip
 			this.m_table0 = new System.Windows.Forms.TableLayoutPanel();
 			this.m_panel_volume = new System.Windows.Forms.Panel();
 			this.m_lbl_volume = new System.Windows.Forms.Label();
-			this.m_tb_volume = new Rylogic.Gui.ValueBox();
+			this.m_tb_volume = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_panel_pair = new System.Windows.Forms.Panel();
-			this.m_cb_pair = new Rylogic.Gui.ComboBox();
+			this.m_cb_pair = new Rylogic.Gui.WinForms.ComboBox();
 			this.m_lbl_pair = new System.Windows.Forms.Label();
 			this.m_panel_notes = new System.Windows.Forms.Panel();
 			this.m_tb_notes = new System.Windows.Forms.TextBox();
 			this.m_panel_exchange = new System.Windows.Forms.Panel();
-			this.m_cb_exchange = new Rylogic.Gui.ComboBox();
+			this.m_cb_exchange = new Rylogic.Gui.WinForms.ComboBox();
 			this.m_lbl_exchange = new System.Windows.Forms.Label();
 			this.m_panel_price = new System.Windows.Forms.Panel();
 			this.m_lbl_price = new System.Windows.Forms.Label();
-			this.m_tb_price_q2b = new Rylogic.Gui.ValueBox();
+			this.m_tb_price_q2b = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_panel_btns = new System.Windows.Forms.Panel();
 			this.m_btn_cancel = new System.Windows.Forms.Button();
 			this.m_il_buttons = new System.Windows.Forms.ImageList(this.components);

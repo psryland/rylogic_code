@@ -6,8 +6,9 @@ using System.Net;
 using System.Threading;
 using System.Windows.Forms;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 using Rylogic.Utility;
+using Util = Rylogic.Utility.Util;
 
 namespace RyLogViewer
 {
@@ -236,7 +237,7 @@ namespace RyLogViewer
 			// 
 			// m_pic
 			// 
-			this.m_pic.BackgroundImage = global::RyLogViewer.Properties.Resources.important;
+			this.m_pic.BackgroundImage = global::RyLogViewer.Resources.important;
 			this.m_pic.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
 			this.m_pic.ErrorImage = null;
 			this.m_pic.InitialImage = null;

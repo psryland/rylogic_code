@@ -10,12 +10,13 @@ using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Container;
 using Rylogic.Extn;
-using Rylogic.Graphix;
-using Rylogic.Gui;
+using Rylogic.Gfx;
+using Rylogic.Gui.WinForms;
 using Rylogic.Maths;
 using Rylogic.Utility;
-using ToolStripComboBox = Rylogic.Gui.ToolStripComboBox;
-using ToolStripContainer = Rylogic.Gui.ToolStripContainer;
+using ToolStripComboBox = Rylogic.Gui.WinForms.ToolStripComboBox;
+using ToolStripContainer = Rylogic.Gui.WinForms.ToolStripContainer;
+using Util = Rylogic.Utility.Util;
 
 namespace CoinFlip
 {
@@ -1002,7 +1003,7 @@ namespace CoinFlip
 			#endregion
 
 			// Put the call out so others can draw on this chart
-			Rendering.Raise(this, args);
+			Rendering?.Invoke(this, args);
 		}
 
 		/// <summary>Allow others to draw on this chart</summary>
@@ -1060,7 +1061,7 @@ namespace CoinFlip
 				var x = Bounds.Right - p - Sz;
 				var pt = Owner.PointToClient(MousePosition);
 				if (pt.X.Within(x, x + Sz) && pt.Y.Within(y, y + Sz))
-					CrossClicked.Raise(this, EventArgs.Empty);
+					CrossClicked?.Invoke(this, EventArgs.Empty);
 				else
 					base.OnClick(e);
 			}
@@ -1693,7 +1694,7 @@ namespace CoinFlip
 				if (m_drag != null)
 					m_drag.MouseUp(e);
 
-				m_on_complete.Raise();
+				m_on_complete?.Invoke();
 				base.MouseUp(e);
 			}
 
@@ -1740,7 +1741,7 @@ namespace CoinFlip
 						this.BeginInvoke(() =>
 						{
 							if (IsChartLocked) return;
-							ChartUnlocked.Raise();
+							ChartUnlocked?.Invoke(this, EventArgs.Empty);
 						});
 					}
 				});
@@ -1759,7 +1760,7 @@ namespace CoinFlip
 		{
 			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ChartUI));
-			this.m_tsc = new Rylogic.Gui.ToolStripContainer();
+			this.m_tsc = new Rylogic.Gui.WinForms.ToolStripContainer();
 			this.m_ts_drawing = new System.Windows.Forms.ToolStrip();
 			this.m_lbl_drawing_tools = new System.Windows.Forms.ToolStripLabel();
 			this.m_btn_horz_line = new System.Windows.Forms.ToolStripButton();
@@ -1767,17 +1768,17 @@ namespace CoinFlip
 			this.m_btn_trend_line = new System.Windows.Forms.ToolStripButton();
 			this.m_ts = new System.Windows.Forms.ToolStrip();
 			this.m_lbl_pair = new System.Windows.Forms.ToolStripLabel();
-			this.m_cb_pair = new Rylogic.Gui.ToolStripComboBox();
+			this.m_cb_pair = new Rylogic.Gui.WinForms.ToolStripComboBox();
 			this.m_sep0 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_lbl_time_frame = new System.Windows.Forms.ToolStripLabel();
-			this.m_cb_time_frame = new Rylogic.Gui.ToolStripComboBox();
+			this.m_cb_time_frame = new Rylogic.Gui.WinForms.ToolStripComboBox();
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_chk_show_positions = new System.Windows.Forms.ToolStripButton();
 			this.m_chk_show_trade_history = new System.Windows.Forms.ToolStripButton();
 			this.m_chk_show_depth = new System.Windows.Forms.ToolStripButton();
 			this.m_il_toolbar_btns = new System.Windows.Forms.ImageList(this.components);
 			this.m_lbl_exchange = new System.Windows.Forms.ToolStripLabel();
-			this.m_cb_exchange = new Rylogic.Gui.ToolStripComboBox();
+			this.m_cb_exchange = new Rylogic.Gui.WinForms.ToolStripComboBox();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();
 			this.m_ts_drawing.SuspendLayout();

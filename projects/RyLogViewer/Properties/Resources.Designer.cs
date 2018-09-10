@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace RyLogViewer.Properties {
+namespace RyLogViewer {
     using System;
     
     

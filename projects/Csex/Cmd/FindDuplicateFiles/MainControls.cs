@@ -1,13 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Drawing;
-using System.Data;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms;
-using Rylogic.Utility;
-using Rylogic.Gui;
+﻿using System.Windows.Forms;
+using Rylogic.Gui.WinForms;
+using Util = Rylogic.Utility.Util;
 
 namespace Csex
 {

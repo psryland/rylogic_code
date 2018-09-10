@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Windows.Forms;
-using RyLogViewer.Properties;
-using Rylogic.Extn;
-using Rylogic.Gui;
-using Rylogic.Utility;
+using Rylogic.Gui.WinForms;
+using Util = Rylogic.Utility.Util;
 
 namespace RyLogViewer
 {

@@ -4,13 +4,11 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
-using RyLogViewer.Properties;
 using Rylogic.Common;
-using Rylogic.Extn;
-using Rylogic.Graphix;
-using Rylogic.Gui;
-using RichTextBox = Rylogic.Gui.RichTextBox;
-using DataGridViewComboBoxColumn = Rylogic.Gui.DataGridViewComboBoxColumn;
+using Rylogic.Gfx;
+using Rylogic.Gui.WinForms;
+using DataGridViewComboBoxColumn = Rylogic.Gui.WinForms.DataGridViewComboBoxColumn;
+using RichTextBox = Rylogic.Gui.WinForms.RichTextBox;
 
 namespace RyLogViewer
 {
@@ -266,7 +264,7 @@ namespace RyLogViewer
 			{
 			case ColumnNames.Tag:
 				e.CellStyle.BackColor = Constants.BkColors[e.RowIndex % Constants.BkColors.Length];
-				e.CellStyle.SelectionBackColor = Gfx.Blend(e.CellStyle.BackColor, Color.Black, 0.2f);
+				e.CellStyle.SelectionBackColor = Gfx_.Blend(e.CellStyle.BackColor, Color.Black, 0.2f);
 				break;
 			}
 		}
@@ -449,8 +447,8 @@ namespace RyLogViewer
 			this.m_btn_regex_help = new System.Windows.Forms.Button();
 			this.m_btn_add = new System.Windows.Forms.Button();
 			this.m_image_list = new System.Windows.Forms.ImageList(this.components);
-			this.m_edit_test = new Rylogic.Gui.RichTextBox();
-			this.m_edit_result = new Rylogic.Gui.RichTextBox();
+			this.m_edit_test = new Rylogic.Gui.WinForms.RichTextBox();
+			this.m_edit_result = new Rylogic.Gui.WinForms.RichTextBox();
 			this.m_lbl_replace = new System.Windows.Forms.Label();
 			this.m_edit_replace = new System.Windows.Forms.TextBox();
 			this.m_check_ignore_case = new System.Windows.Forms.CheckBox();

@@ -3,9 +3,10 @@ using System.Linq;
 using System.Windows.Forms;
 using CoinFlip;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 using Rylogic.Utility;
-using ComboBox = Rylogic.Gui.ComboBox;
+using ComboBox = Rylogic.Gui.WinForms.ComboBox;
+using Util = Rylogic.Utility.Util;
 
 namespace Bot.Fishing
 {
@@ -325,22 +326,22 @@ namespace Bot.Fishing
 			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(EditFishingUI));
 			this.m_lbl_exch0 = new System.Windows.Forms.Label();
-			this.m_cb_exch0 = new Rylogic.Gui.ComboBox();
+			this.m_cb_exch0 = new Rylogic.Gui.WinForms.ComboBox();
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_btn_cancel = new System.Windows.Forms.Button();
 			this.m_lbl_exch1 = new System.Windows.Forms.Label();
-			this.m_cb_exch1 = new Rylogic.Gui.ComboBox();
+			this.m_cb_exch1 = new Rylogic.Gui.WinForms.ComboBox();
 			this.m_lbl_buy = new System.Windows.Forms.Label();
-			this.m_cb_pair = new Rylogic.Gui.ComboBox();
+			this.m_cb_pair = new Rylogic.Gui.WinForms.ComboBox();
 			this.m_tb_balances0 = new System.Windows.Forms.TextBox();
 			this.m_tb_balances1 = new System.Windows.Forms.TextBox();
 			this.m_table1 = new System.Windows.Forms.TableLayoutPanel();
-			this.m_tb_price_offset = new Rylogic.Gui.ValueBox();
+			this.m_tb_price_offset = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_lbl_price_offset = new System.Windows.Forms.Label();
 			this.m_lbl_volume_limit_base = new System.Windows.Forms.Label();
 			this.m_lbl_volume_limit_quote = new System.Windows.Forms.Label();
-			this.m_tb_volume_limit_base = new Rylogic.Gui.ValueBox();
-			this.m_tb_volume_limit_quote = new Rylogic.Gui.ValueBox();
+			this.m_tb_volume_limit_base = new Rylogic.Gui.WinForms.ValueBox();
+			this.m_tb_volume_limit_quote = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
 			this.m_chk_b2q = new System.Windows.Forms.CheckBox();
 			this.m_chk_q2b = new System.Windows.Forms.CheckBox();

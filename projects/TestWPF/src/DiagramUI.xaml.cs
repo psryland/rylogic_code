@@ -4,11 +4,11 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Xml.Linq;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gfx;
+using Rylogic.Gui.WinForms;
+using Rylogic.Interop.Win32;
 using Rylogic.Maths;
-using Rylogic.Utility;
-using Rylogic.Graphix;
-using Rylogic.Windows32;
+using Util = Rylogic.Utility.Util;
 
 namespace TestWPF
 {

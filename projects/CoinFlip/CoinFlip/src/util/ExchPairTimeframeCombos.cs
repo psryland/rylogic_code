@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Rylogic.Extn;
+using Rylogic.Gui.WinForms;
 using Rylogic.Utility;
-using ComboBox = Rylogic.Gui.ComboBox;
+using ComboBox = Rylogic.Gui.WinForms.ComboBox;
 
 namespace CoinFlip
 {

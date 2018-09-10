@@ -57,7 +57,7 @@ namespace Rylogic.UnitTests
 						catch (Exception ex)
 						{
 							if (ex is TargetInvocationException) ex = ex.InnerException;
-							outp.WriteLine($"{fixture.Name} - Failed to create an instance of test fixture\n{ex.MessageFull()}\n{Util.FormatForOutputWindow(ex.StackTrace,file_pattern)}");
+							outp.WriteLine($"Unit Testing:  {fixture.Name} - Failed to create an instance of test fixture\n{ex.MessageFull()}\n{Util.FormatForOutputWindow(ex.StackTrace,file_pattern)}");
 							outp.Flush();
 							++failed;
 							continue;
@@ -72,7 +72,7 @@ namespace Rylogic.UnitTests
 						catch (Exception ex)
 						{
 							if (ex is TargetInvocationException) ex = ex.InnerException;
-							outp.WriteLine($"{fixture.Name} - Test fixture set up function threw\n{ex.MessageFull()}\n{Util.FormatForOutputWindow(ex.StackTrace,file_pattern)}");
+							outp.WriteLine($"Unit Testing:  {fixture.Name} - Test fixture set up function threw\n{ex.MessageFull()}\n{Util.FormatForOutputWindow(ex.StackTrace,file_pattern)}");
 							outp.Flush();
 							++failed;
 							continue;
@@ -104,7 +104,10 @@ namespace Rylogic.UnitTests
 							catch (Exception ex)
 							{
 								if (ex is TargetInvocationException) ex = ex.InnerException;
-								outp.WriteLine($"\r\nTest {test.Name} Failed\n{ex.MessageFull()}\n{Util.FormatForOutputWindow(ex.StackTrace,file_pattern)}");
+								outp.WriteLine();
+								outp.WriteLine($"Unit Testing:  Test {test.Name} Failed");
+								outp.WriteLine($"{ex.MessageFull()}");
+								outp.WriteLine($"{Util.FormatForOutputWindow(ex.StackTrace,file_pattern)}");
 								outp.Flush();
 								++failed;
 							}
@@ -119,7 +122,9 @@ namespace Rylogic.UnitTests
 						catch (Exception ex)
 						{
 							if (ex is TargetInvocationException) ex = ex.InnerException;
-							outp.WriteLine($"{fixture.Name} - Test fixture clean up function threw\n{ex.MessageFull()}\n{Util.FormatForOutputWindow(ex.StackTrace,file_pattern)}");
+							outp.WriteLine($"Unit Testing:  {fixture.Name} - Test fixture clean up function threw");
+							outp.WriteLine($"{ex.MessageFull()}");
+							outp.WriteLine($"{Util.FormatForOutputWindow(ex.StackTrace,file_pattern)}");
 							outp.Flush();
 							++failed;
 							continue;
@@ -130,12 +135,12 @@ namespace Rylogic.UnitTests
 
 					if (test_fixtures.Count == 0)
 					{
-						outp.WriteLine($"\r\n *** No unit tests found in assembly {ass.FullName} *** \r\n");
+						outp.WriteLine($"Unit Testing:  No unit tests found in assembly {ass.FullName}");
 						outp.Flush();
 					}
 					else if (failed == 0 && passed > 0)
 					{
-						outp.WriteLine($"\r\n *** All {passed} unit tests passed *** \r\n");
+						outp.WriteLine($"Unit Testing:  *** All {passed} unit tests passed ***");
 						outp.Flush();
 					}
 					return failed == 0;
@@ -143,7 +148,7 @@ namespace Rylogic.UnitTests
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Unhandled exception running unit tests: {ex.Message}");
+				Console.WriteLine($"Unit Testing:  Unhandled exception running unit tests: {ex.Message}");
 				return false;
 			}
 		}

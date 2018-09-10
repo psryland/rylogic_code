@@ -4,6 +4,7 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Threading;
 using System.Xml.Linq;
+using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Gui.WPF;
 using Rylogic.Utility;

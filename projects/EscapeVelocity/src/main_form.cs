@@ -2,9 +2,8 @@
 using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
-using Rylogic.Gui;
-using Rylogic.Utility;
-using Rylogic.Windows32;
+using Rylogic.Gui.WinForms;
+using Rylogic.Interop.Win32;
 
 namespace EscapeVelocity
 {
@@ -118,8 +117,7 @@ namespace EscapeVelocity
 		{
 			Func<bool> IsIdle = () =>
 				{
-					Message msg;
-					return !Win32.PeekMessage(out msg, IntPtr.Zero, 0, 0, 0);
+					return !Win32.PeekMessage(out var msg, IntPtr.Zero, 0, 0, 0);
 				};
 
 			while (IsIdle())

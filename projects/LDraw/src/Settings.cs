@@ -5,10 +5,10 @@ using System.Drawing;
 using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gfx;
+using Rylogic.Gui.WinForms;
 using Rylogic.Maths;
 using Rylogic.Utility;
-using Rylogic.Graphix;
 
 namespace LDraw
 {

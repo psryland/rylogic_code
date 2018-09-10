@@ -8,7 +8,7 @@ using System.Text;
 using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 
 namespace RyLogViewer
 {

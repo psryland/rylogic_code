@@ -9,6 +9,7 @@ using System.Threading;
 using System.Windows.Forms;
 using Rylogic.Common;
 using Rylogic.Extn;
+using Rylogic.Gui.WinForms;
 using Rylogic.Maths;
 using Rylogic.Streams;
 using Rylogic.Utility;

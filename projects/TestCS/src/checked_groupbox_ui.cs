@@ -1,5 +1,6 @@
 ﻿using System.Windows.Forms;
-using Rylogic.Utility;
+using Rylogic.Gui.WinForms;
+using Util = Rylogic.Utility.Util;
 
 namespace TestCS
 {
@@ -15,16 +16,16 @@ namespace TestCS
 			base.Dispose(disposing);
 		}
 
-		private Rylogic.Gui.CheckedGroupBox m_chkgrp0;
+		private CheckedGroupBox m_chkgrp0;
 		private TextBox textBox1;
 		private Button button1;
-		private Rylogic.Gui.CheckedGroupBox m_chkgrp1;
+		private CheckedGroupBox m_chkgrp1;
 		private TextBox textBox2;
 		private Button button2;
-		private Rylogic.Gui.CheckedGroupBox m_chkgrp2;
+		private CheckedGroupBox m_chkgrp2;
 		private TextBox textBox3;
 		private Button button3;
-		private Rylogic.Gui.CheckedGroupBox m_chkgrp3;
+		private CheckedGroupBox m_chkgrp3;
 		private TextBox textBox4;
 		private Button button4;
 
@@ -41,16 +42,16 @@ namespace TestCS
 		/// </summary>
 		private void InitializeComponent()
 		{
-			this.m_chkgrp0 = new Rylogic.Gui.CheckedGroupBox();
+			this.m_chkgrp0 = new Rylogic.Gui.WinForms.CheckedGroupBox();
 			this.textBox1 = new System.Windows.Forms.TextBox();
 			this.button1 = new System.Windows.Forms.Button();
-			this.m_chkgrp1 = new Rylogic.Gui.CheckedGroupBox();
+			this.m_chkgrp1 = new Rylogic.Gui.WinForms.CheckedGroupBox();
 			this.textBox2 = new System.Windows.Forms.TextBox();
 			this.button2 = new System.Windows.Forms.Button();
-			this.m_chkgrp2 = new Rylogic.Gui.CheckedGroupBox();
+			this.m_chkgrp2 = new Rylogic.Gui.WinForms.CheckedGroupBox();
 			this.textBox3 = new System.Windows.Forms.TextBox();
 			this.button3 = new System.Windows.Forms.Button();
-			this.m_chkgrp3 = new Rylogic.Gui.CheckedGroupBox();
+			this.m_chkgrp3 = new Rylogic.Gui.WinForms.CheckedGroupBox();
 			this.textBox4 = new System.Windows.Forms.TextBox();
 			this.button4 = new System.Windows.Forms.Button();
 			this.m_chkgrp0.SuspendLayout();
@@ -71,10 +72,10 @@ namespace TestCS
 			this.m_chkgrp0.Location = new System.Drawing.Point(12, 12);
 			this.m_chkgrp0.Name = "m_chkgrp0";
 			this.m_chkgrp0.Size = new System.Drawing.Size(260, 85);
-			this.m_chkgrp0.Style = Rylogic.Gui.CheckedGroupBox.EStyle.Basic;
+			this.m_chkgrp0.Style = Rylogic.Gui.WinForms.CheckedGroupBox.EStyle.Basic;
 			this.m_chkgrp0.TabIndex = 0;
 			this.m_chkgrp0.TabStop = false;
-			this.m_chkgrp0.Text = "Pauls Checked GroupBox";
+			this.m_chkgrp0.Text = "Paul'sChecked GroupBox";
 			// 
 			// textBox1
 			// 
@@ -105,10 +106,10 @@ namespace TestCS
 			this.m_chkgrp1.Location = new System.Drawing.Point(12, 103);
 			this.m_chkgrp1.Name = "m_chkgrp1";
 			this.m_chkgrp1.Size = new System.Drawing.Size(260, 83);
-			this.m_chkgrp1.Style = Rylogic.Gui.CheckedGroupBox.EStyle.CheckBox;
+			this.m_chkgrp1.Style = Rylogic.Gui.WinForms.CheckedGroupBox.EStyle.CheckBox;
 			this.m_chkgrp1.TabIndex = 3;
 			this.m_chkgrp1.TabStop = false;
-			this.m_chkgrp1.Text = "Pauls Checked GroupBox";
+			this.m_chkgrp1.Text = "Paul'sChecked GroupBox";
 			// 
 			// textBox2
 			// 
@@ -139,10 +140,10 @@ namespace TestCS
 			this.m_chkgrp2.Location = new System.Drawing.Point(12, 192);
 			this.m_chkgrp2.Name = "m_chkgrp2";
 			this.m_chkgrp2.Size = new System.Drawing.Size(260, 83);
-			this.m_chkgrp2.Style = Rylogic.Gui.CheckedGroupBox.EStyle.RadioBtn;
+			this.m_chkgrp2.Style = Rylogic.Gui.WinForms.CheckedGroupBox.EStyle.RadioBtn;
 			this.m_chkgrp2.TabIndex = 5;
 			this.m_chkgrp2.TabStop = false;
-			this.m_chkgrp2.Text = "Pauls Checked GroupBox";
+			this.m_chkgrp2.Text = "Paul'sChecked GroupBox";
 			// 
 			// textBox3
 			// 
@@ -173,10 +174,10 @@ namespace TestCS
 			this.m_chkgrp3.Location = new System.Drawing.Point(12, 281);
 			this.m_chkgrp3.Name = "m_chkgrp3";
 			this.m_chkgrp3.Size = new System.Drawing.Size(260, 83);
-			this.m_chkgrp3.Style = Rylogic.Gui.CheckedGroupBox.EStyle.RadioBtn;
+			this.m_chkgrp3.Style = Rylogic.Gui.WinForms.CheckedGroupBox.EStyle.RadioBtn;
 			this.m_chkgrp3.TabIndex = 5;
 			this.m_chkgrp3.TabStop = false;
-			this.m_chkgrp3.Text = "Pauls Checked GroupBox";
+			this.m_chkgrp3.Text = "Paul'sChecked GroupBox";
 			// 
 			// textBox4
 			// 

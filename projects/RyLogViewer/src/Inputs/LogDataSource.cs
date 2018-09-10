@@ -4,9 +4,10 @@ using System.Drawing;
 using System.IO;
 using System.Net.Sockets;
 using System.Windows.Forms;
-using Rylogic.Common;
-using Rylogic.Extn;
+using Rylogic.Gui.WinForms;
+using Rylogic.Plugin;
 using Rylogic.Utility;
+using Util = Rylogic.Utility.Util;
 
 namespace RyLogViewer
 {
@@ -26,7 +27,7 @@ namespace RyLogViewer
 					m_custom_data_sources = new List<ICustomLogDataSource>();
 
 					// Loads dlls from the plugins directory looking for transform substitutions
-					var plugins = Plugins<ICustomLogDataSource>.LoadWithUI(this, Util.ResolveAppPath("plugins"), null, SearchOption.AllDirectories);
+					var plugins = new Plugins<ICustomLogDataSource>().LoadWithUI(this, Util.ResolveAppPath("plugins"), null, SearchOption.AllDirectories);
 					foreach (var sub in plugins.Instances)
 						m_custom_data_sources.Add(sub);
 				}

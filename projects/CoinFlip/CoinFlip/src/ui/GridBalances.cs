@@ -6,7 +6,7 @@ using System.Linq;
 using System.Windows.Forms;
 using Rylogic.Container;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 using Rylogic.Maths;
 using Rylogic.Utility;
 

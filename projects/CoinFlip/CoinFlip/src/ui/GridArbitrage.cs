@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows.Forms;
 using Rylogic.Container;
 using Rylogic.Extn;
+using Rylogic.Gui.WinForms;
 using Rylogic.Utility;
 
 namespace CoinFlip

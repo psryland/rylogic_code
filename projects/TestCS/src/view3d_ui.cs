@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
-using Rylogic.Extn;
+using Rylogic.Gfx;
+using Rylogic.Gui.WinForms;
 using Rylogic.Maths;
 using Rylogic.Scintilla;
-using Rylogic.Utility;
-using Rylogic.Graphix;
-using Rylogic.Gui;
+using Util = Rylogic.Utility.Util;
 
 namespace TestCS
 {

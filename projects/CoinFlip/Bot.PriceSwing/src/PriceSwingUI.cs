@@ -6,10 +6,11 @@ using System.Linq;
 using System.Windows.Forms;
 using CoinFlip;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 using Rylogic.Utility;
-using ComboBox = Rylogic.Gui.ComboBox;
-using DataGridView = Rylogic.Gui.DataGridView;
+using ComboBox = Rylogic.Gui.WinForms.ComboBox;
+using DataGridView = Rylogic.Gui.WinForms.DataGridView;
+using Util = Rylogic.Utility.Util;
 
 namespace Bot.PriceSwing
 {
@@ -320,13 +321,13 @@ namespace Bot.PriceSwing
 		{
 			this.components = new System.ComponentModel.Container();
 			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
-			this.m_grid_trade_record = new Rylogic.Gui.DataGridView();
+			this.m_grid_trade_record = new Rylogic.Gui.WinForms.DataGridView();
 			this.m_lbl_pair = new System.Windows.Forms.Label();
-			this.m_cb_pair = new Rylogic.Gui.ComboBox();
+			this.m_cb_pair = new Rylogic.Gui.WinForms.ComboBox();
 			this.m_lbl_profit = new System.Windows.Forms.Label();
-			this.m_tb_profit = new Rylogic.Gui.ValueBox();
+			this.m_tb_profit = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_lbl_volume_frac = new System.Windows.Forms.Label();
-			this.m_tb_volume_frac = new Rylogic.Gui.ValueBox();
+			this.m_tb_volume_frac = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_panel0 = new System.Windows.Forms.Panel();
 			this.m_table0 = new System.Windows.Forms.TableLayoutPanel();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_trade_record)).BeginInit();

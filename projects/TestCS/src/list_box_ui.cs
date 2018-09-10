@@ -8,7 +8,7 @@ namespace TestCS
 {
 	public class ListBoxUI :Form
 	{
-		private Rylogic.Gui.ListBox m_lb;
+		private Rylogic.Gui.WinForms.ListBox m_lb;
 
 		public ListBoxUI()
 		{
@@ -35,7 +35,7 @@ namespace TestCS
 		private System.ComponentModel.IContainer components = null;
 		private void InitializeComponent()
 		{
-			this.m_lb = new Rylogic.Gui.ListBox();
+			this.m_lb = new Rylogic.Gui.WinForms.ListBox();
 			this.SuspendLayout();
 			// 
 			// listBox1

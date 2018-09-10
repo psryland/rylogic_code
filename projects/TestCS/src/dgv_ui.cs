@@ -3,11 +3,11 @@ using System.ComponentModel;
 using System.Windows.Forms;
 using Rylogic.Container;
 using Rylogic.Extn;
-using Rylogic.Gui;
-using Rylogic.Utility;
-using ListBox = Rylogic.Gui.ListBox;
-using DataGridView = Rylogic.Gui.DataGridView;
-using DataGridViewComboBoxColumn = Rylogic.Gui.DataGridViewComboBoxColumn;
+using Rylogic.Gui.WinForms;
+using DataGridView = Rylogic.Gui.WinForms.DataGridView;
+using DataGridViewComboBoxColumn = Rylogic.Gui.WinForms.DataGridViewComboBoxColumn;
+using ListBox = Rylogic.Gui.WinForms.ListBox;
+using Util = Rylogic.Utility.Util;
 
 namespace TestCS
 {
@@ -297,7 +297,7 @@ namespace TestCS
 		private void InitializeComponent()
 		{
 			this.m_split = new System.Windows.Forms.SplitContainer();
-			this.m_events = new Rylogic.Gui.ListBox();
+			this.m_events = new Rylogic.Gui.WinForms.ListBox();
 			this.m_grid = new TestCS.DgvUI.DGV();
 			((System.ComponentModel.ISupportInitialize)(this.m_split)).BeginInit();
 			this.m_split.Panel1.SuspendLayout();

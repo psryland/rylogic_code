@@ -1,29 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
-using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Net;
-using System.Reflection;
 using System.Text;
 using System.Windows.Forms;
 using System.Windows.Forms.VisualStyles;
-using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Container;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 using Rylogic.INet;
+using Rylogic.Interop.Win32;
 using Rylogic.Maths;
 using Rylogic.Utility;
-using Rylogic.Windows32;
-using RyLogViewer.Properties;
 using Timer = System.Windows.Forms.Timer;
+using Util = Rylogic.Utility.Util;
 
 namespace RyLogViewer
 {
@@ -103,7 +98,7 @@ namespace RyLogViewer
 		private System.Windows.Forms.ToolStripMenuItem m_menu_encoding_detect;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
 		private System.Windows.Forms.ToolStripStatusLabel m_status_encoding;
-		private Rylogic.Gui.SubRangeScroll m_scroll_file;
+		private Rylogic.Gui.WinForms.SubRangeScroll m_scroll_file;
 		private System.Windows.Forms.TableLayoutPanel m_table;
 		private System.Windows.Forms.ToolStripButton m_btn_watch;
 		private System.Windows.Forms.ContextMenuStrip m_cmenu_grid;
@@ -2632,7 +2627,7 @@ namespace RyLogViewer
 			this.toolStripSeparator14 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_cmenu_toggle_bookmark = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_grid = new RyLogViewer.DataGridView();
-			this.m_scroll_file = new Rylogic.Gui.SubRangeScroll();
+			this.m_scroll_file = new Rylogic.Gui.WinForms.SubRangeScroll();
 			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
 			this.m_status_selection = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_toolstrip.SuspendLayout();
@@ -2679,7 +2674,7 @@ namespace RyLogViewer
 			// 
 			this.m_btn_open_log.AutoSize = false;
 			this.m_btn_open_log.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_open_log.Image = global::RyLogViewer.Properties.Resources.folder_with_file;
+			this.m_btn_open_log.Image = global::RyLogViewer.Resources.folder_with_file;
 			this.m_btn_open_log.ImageTransparentColor = System.Drawing.Color.Transparent;
 			this.m_btn_open_log.Margin = new System.Windows.Forms.Padding(0);
 			this.m_btn_open_log.Name = "m_btn_open_log";
@@ -2689,7 +2684,7 @@ namespace RyLogViewer
 			// m_btn_refresh
 			// 
 			this.m_btn_refresh.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_refresh.Image = global::RyLogViewer.Properties.Resources.Refresh;
+			this.m_btn_refresh.Image = global::RyLogViewer.Resources.Refresh;
 			this.m_btn_refresh.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_refresh.Name = "m_btn_refresh";
 			this.m_btn_refresh.Size = new System.Drawing.Size(28, 28);
@@ -2699,7 +2694,7 @@ namespace RyLogViewer
 			// 
 			this.m_btn_quick_filter.CheckOnClick = true;
 			this.m_btn_quick_filter.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_quick_filter.Image = global::RyLogViewer.Properties.Resources.quick_filter;
+			this.m_btn_quick_filter.Image = global::RyLogViewer.Resources.quick_filter;
 			this.m_btn_quick_filter.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_quick_filter.Name = "m_btn_quick_filter";
 			this.m_btn_quick_filter.Size = new System.Drawing.Size(28, 28);
@@ -2714,7 +2709,7 @@ namespace RyLogViewer
 			// 
 			this.m_btn_highlights.CheckOnClick = true;
 			this.m_btn_highlights.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_highlights.Image = global::RyLogViewer.Properties.Resources.highlight;
+			this.m_btn_highlights.Image = global::RyLogViewer.Resources.highlight;
 			this.m_btn_highlights.ImageTransparentColor = System.Drawing.Color.Transparent;
 			this.m_btn_highlights.Name = "m_btn_highlights";
 			this.m_btn_highlights.Size = new System.Drawing.Size(28, 28);
@@ -2724,7 +2719,7 @@ namespace RyLogViewer
 			// 
 			this.m_btn_filters.CheckOnClick = true;
 			this.m_btn_filters.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_filters.Image = global::RyLogViewer.Properties.Resources.filter;
+			this.m_btn_filters.Image = global::RyLogViewer.Resources.filter;
 			this.m_btn_filters.ImageTransparentColor = System.Drawing.Color.Transparent;
 			this.m_btn_filters.Name = "m_btn_filters";
 			this.m_btn_filters.Size = new System.Drawing.Size(28, 28);
@@ -2734,7 +2729,7 @@ namespace RyLogViewer
 			// 
 			this.m_btn_transforms.CheckOnClick = true;
 			this.m_btn_transforms.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_transforms.Image = global::RyLogViewer.Properties.Resources.exchange;
+			this.m_btn_transforms.Image = global::RyLogViewer.Resources.exchange;
 			this.m_btn_transforms.ImageTransparentColor = System.Drawing.Color.Transparent;
 			this.m_btn_transforms.Name = "m_btn_transforms";
 			this.m_btn_transforms.Size = new System.Drawing.Size(28, 28);
@@ -2744,7 +2739,7 @@ namespace RyLogViewer
 			// 
 			this.m_btn_actions.CheckOnClick = true;
 			this.m_btn_actions.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_actions.Image = global::RyLogViewer.Properties.Resources.execute;
+			this.m_btn_actions.Image = global::RyLogViewer.Resources.execute;
 			this.m_btn_actions.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_actions.Name = "m_btn_actions";
 			this.m_btn_actions.Size = new System.Drawing.Size(28, 28);
@@ -2758,7 +2753,7 @@ namespace RyLogViewer
 			// m_btn_find
 			// 
 			this.m_btn_find.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_find.Image = global::RyLogViewer.Properties.Resources.find_search;
+			this.m_btn_find.Image = global::RyLogViewer.Resources.find_search;
 			this.m_btn_find.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_find.Name = "m_btn_find";
 			this.m_btn_find.Size = new System.Drawing.Size(28, 28);
@@ -2767,7 +2762,7 @@ namespace RyLogViewer
 			// m_btn_bookmarks
 			// 
 			this.m_btn_bookmarks.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_bookmarks.Image = global::RyLogViewer.Properties.Resources.bookmark;
+			this.m_btn_bookmarks.Image = global::RyLogViewer.Resources.bookmark;
 			this.m_btn_bookmarks.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_bookmarks.Name = "m_btn_bookmarks";
 			this.m_btn_bookmarks.Size = new System.Drawing.Size(28, 28);
@@ -2781,7 +2776,7 @@ namespace RyLogViewer
 			// m_btn_jump_to_start
 			// 
 			this.m_btn_jump_to_start.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_jump_to_start.Image = global::RyLogViewer.Properties.Resources.green_up;
+			this.m_btn_jump_to_start.Image = global::RyLogViewer.Resources.green_up;
 			this.m_btn_jump_to_start.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_jump_to_start.Name = "m_btn_jump_to_start";
 			this.m_btn_jump_to_start.Size = new System.Drawing.Size(28, 28);
@@ -2791,7 +2786,7 @@ namespace RyLogViewer
 			// m_btn_jump_to_end
 			// 
 			this.m_btn_jump_to_end.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_jump_to_end.Image = global::RyLogViewer.Properties.Resources.green_down;
+			this.m_btn_jump_to_end.Image = global::RyLogViewer.Resources.green_down;
 			this.m_btn_jump_to_end.ImageTransparentColor = System.Drawing.Color.Transparent;
 			this.m_btn_jump_to_end.Name = "m_btn_jump_to_end";
 			this.m_btn_jump_to_end.Size = new System.Drawing.Size(28, 28);
@@ -2802,7 +2797,7 @@ namespace RyLogViewer
 			// 
 			this.m_btn_tail.CheckOnClick = true;
 			this.m_btn_tail.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_tail.Image = global::RyLogViewer.Properties.Resources.bottom;
+			this.m_btn_tail.Image = global::RyLogViewer.Resources.bottom;
 			this.m_btn_tail.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_tail.Name = "m_btn_tail";
 			this.m_btn_tail.Size = new System.Drawing.Size(28, 28);
@@ -2817,7 +2812,7 @@ namespace RyLogViewer
 			// 
 			this.m_btn_watch.CheckOnClick = true;
 			this.m_btn_watch.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_watch.Image = global::RyLogViewer.Properties.Resources.Eyeball;
+			this.m_btn_watch.Image = global::RyLogViewer.Resources.Eyeball;
 			this.m_btn_watch.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_watch.Name = "m_btn_watch";
 			this.m_btn_watch.Size = new System.Drawing.Size(28, 28);
@@ -2827,7 +2822,7 @@ namespace RyLogViewer
 			// 
 			this.m_btn_additive.CheckOnClick = true;
 			this.m_btn_additive.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_additive.Image = global::RyLogViewer.Properties.Resources.edit_add;
+			this.m_btn_additive.Image = global::RyLogViewer.Resources.edit_add;
 			this.m_btn_additive.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_additive.Name = "m_btn_additive";
 			this.m_btn_additive.Size = new System.Drawing.Size(28, 28);

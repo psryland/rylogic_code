@@ -23,13 +23,11 @@
 	</PropertyGroup>
 	<ItemGroup>
 	  <Compile Remove="src\common\settings.cs" />
+	  <Compile Remove="src\utility\Dynamic.cs" />
+	  <Compile Remove="src\utility\util.cs" />
 	</ItemGroup>
 	<ItemGroup>
 		<None Remove="SmilingGekko140x110.ico" />
-	</ItemGroup>
-	<ItemGroup>
-		<Compile Include="..\..\sdk\scintilla\include\SciLexer.cs" Link="src\scintilla\SciLexer.cs" />
-		<Compile Include="..\..\sdk\scintilla\include\Scintilla.cs" Link="src\scintilla\Scintilla.cs" />
 	</ItemGroup>
 	<ItemGroup>
 		<Content Include="Rylogic.Main.targets">
@@ -41,6 +39,7 @@
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj" />
+		<ProjectReference Include="..\Rylogic.View3d\Rylogic.View3d.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<Compile Update="Properties\Resources.Designer.cs">
@@ -50,60 +49,6 @@
 		</Compile>
 	</ItemGroup>
 	<ItemGroup>
-		<EmbeddedResource Include="src\gui\anim_button.resx">
-			<DependentUpon>anim_button.cs</DependentUpon>
-		</EmbeddedResource>
-		<EmbeddedResource Include="src\gui\bluetooth_ui.resx">
-			<DependentUpon>bluetooth_ui.cs</DependentUpon>
-		</EmbeddedResource>
-		<EmbeddedResource Include="src\gui\browse_path_ui.resx">
-			<DependentUpon>browse_path_ui.cs</DependentUpon>
-		</EmbeddedResource>
-		<EmbeddedResource Include="src\gui\colour_ui.resx">
-			<DependentUpon>colour_ui.cs</DependentUpon>
-		</EmbeddedResource>
-		<EmbeddedResource Include="src\gui\colour_wheel.resx">
-			<DependentUpon>colour_wheel.cs</DependentUpon>
-		</EmbeddedResource>
-		<EmbeddedResource Include="src\gui\data_grid_view_db_table.resx">
-			<DependentUpon>data_grid_view_db_table.cs</DependentUpon>
-		</EmbeddedResource>
-		<EmbeddedResource Include="src\gui\diagram_control.resx">
-			<DependentUpon>diagram_control.cs</DependentUpon>
-		</EmbeddedResource>
-		<EmbeddedResource Include="src\gui\find_ui.resx">
-			<DependentUpon>find_ui.cs</DependentUpon>
-		</EmbeddedResource>
-		<EmbeddedResource Include="src\gui\help_ui.resx">
-			<DependentUpon>help_ui.cs</DependentUpon>
-		</EmbeddedResource>
-		<EmbeddedResource Include="src\gui\list_ui.resx">
-			<DependentUpon>list_ui.cs</DependentUpon>
-		</EmbeddedResource>
-		<EmbeddedResource Include="src\gui\log_ui.resx">
-			<DependentUpon>log_ui.cs</DependentUpon>
-		</EmbeddedResource>
-		<EmbeddedResource Include="src\gui\message_box.resx">
-			<DependentUpon>message_box.cs</DependentUpon>
-		</EmbeddedResource>
-		<EmbeddedResource Include="src\gui\pattern_filter.resx">
-			<DependentUpon>pattern_filter.cs</DependentUpon>
-		</EmbeddedResource>
-		<EmbeddedResource Include="src\gui\pattern_ui.resx">
-			<DependentUpon>pattern_ui.cs</DependentUpon>
-		</EmbeddedResource>
-		<EmbeddedResource Include="src\gui\prompt_ui.resx">
-			<DependentUpon>prompt_ui.cs</DependentUpon>
-		</EmbeddedResource>
-		<EmbeddedResource Include="src\gui\hint_balloon.resx">
-			<DependentUpon>hint_balloon.cs</DependentUpon>
-		</EmbeddedResource>
-		<EmbeddedResource Include="src\gui\select_directories_ui.resx">
-			<DependentUpon>select_directories_ui.cs</DependentUpon>
-		</EmbeddedResource>
-		<EmbeddedResource Include="src\view3d\view3d_measurement_ui.resx">
-			<DependentUpon>view3d_measurement_ui.cs</DependentUpon>
-		</EmbeddedResource>
 		<EmbeddedResource Include="Properties\Resources.resx">
 			<Generator>PublicResXFileCodeGenerator</Generator>
 			<CustomToolNamespace>Rylogic</CustomToolNamespace>
@@ -116,7 +61,9 @@
 	  <Reference Include="WindowsBase" />
 	</ItemGroup>
 	<ItemGroup>
-	  <Folder Include="src\crypt\" />
+	  <Folder Include="src\attrib\" />
+	  <Folder Include="src\common\" />
+	  <Folder Include="src\utility\" />
 	</ItemGroup>
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
 		<Exec Command="py $(ProjectDir)post_build.py $(ProjectDir) $(TargetDir) $(PlatformName) $(ConfigurationName)&#xD;&#xA;" />

@@ -2,17 +2,15 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
-using System.IO;
-using System.Linq;
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
 using Rylogic.Common;
-using Rylogic.Gui;
 using Rylogic.Extn;
-using Rylogic.Utility;
-using System.Globalization;
+using Rylogic.Gui.WinForms;
+using Util = Rylogic.Utility.Util;
 
 namespace RyLogViewer
 {

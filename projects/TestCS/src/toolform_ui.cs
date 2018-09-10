@@ -6,7 +6,7 @@ using Rylogic.Maths;
 
 namespace TestCS
 {
-	public class ToolFormUI :Rylogic.Gui.ToolForm
+	public class ToolFormUI :Rylogic.Gui.WinForms.ToolForm
 	{
 		public ToolFormUI(Control owner) :base(owner, EPin.TopRight)
 		{

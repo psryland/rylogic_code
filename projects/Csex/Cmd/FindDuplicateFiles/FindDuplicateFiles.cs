@@ -4,7 +4,8 @@ using System.IO;
 using System.Text.RegularExpressions;
 using Rylogic.Common;
 using Rylogic.Extn;
-using Rylogic.Graphix;
+using Rylogic.Gfx;
+using Rylogic.Interop.Win32;
 
 namespace Csex
 {
@@ -67,7 +68,7 @@ namespace Csex
 			if (!m_interactive)
 				return RunCmdline();
 
-			Rylogic.Windows32.Win32.FreeConsole();
+			Win32.FreeConsole();
 			using (var dlg = new FindDuplicateFilesUI())
 				dlg.ShowDialog();
 
@@ -100,20 +101,19 @@ namespace Csex
 				Console.WriteLine("Finding Duplicates");
 				foreach (var finfo in newfiles)
 				{
-					Shell_.FileData original;
-					if (existing.TryGetValue(finfo.Key, out original))
+					if (existing.TryGetValue(finfo.Key, out var original))
 					{
 						if (m_show_dups)
-							Console.WriteLine($"{finfo.Value.FullPath} is a duplicate of {original.FullPath}");
+							Console.WriteLine($"{finfo.Value.FullName} is a duplicate of {original.FullName}");
 
 						if (lst != null)
-							lst.WriteLine(finfo.Value.FullPath);
+							lst.WriteLine(finfo.Value.FullName);
 
 						if (m_mv_dir != null)
 						{
-							var dstfile = Path.Combine(m_mv_dir, finfo.Value.FileName);
+							var dstfile = Path.Combine(m_mv_dir, finfo.Value.Name);
 							if (File.Exists(dstfile)) File.Delete(dstfile);
-							File.Move(finfo.Value.FullPath, dstfile);
+							File.Move(finfo.Value.FullName, dstfile);
 						}
 					}
 				}
@@ -131,14 +131,14 @@ namespace Csex
 		}
 
 		/// <summary>Build a map of the files in 'root'</summary>
-		private Dictionary<string, Shell_.FileData> BuildMap(string root, string ignore_patn)
+		private Dictionary<string, FileSystemInfo> BuildMap(string root, string ignore_patn)
 		{
 			var dir = root.ToLowerInvariant();
 
-			var map = new Dictionary<string, Shell_.FileData>();
-			foreach (var finfo in Shell_.EnumFileSystem(root, search_flags:SearchOption.AllDirectories))
+			var map = new Dictionary<string, FileSystemInfo>();
+			foreach (var finfo in Path_.EnumFileSystem(root, search_flags:SearchOption.AllDirectories))
 			{
-				var d = (Path.GetDirectoryName(finfo.FullPath) ?? string.Empty).ToLowerInvariant();
+				var d = (Path.GetDirectoryName(finfo.FullName) ?? string.Empty).ToLowerInvariant();
 				if (d != dir)
 				{
 					Console.WriteLine(d);
@@ -146,26 +146,22 @@ namespace Csex
 				}
 
 				// If the file matches the ignore pattern, skip it
-				if (ignore_patn != null && Regex.IsMatch(finfo.FullPath, ignore_patn, RegexOptions.IgnoreCase))
+				if (ignore_patn != null && Regex.IsMatch(finfo.FullName, ignore_patn, RegexOptions.IgnoreCase))
 					continue;
 
 				try
 				{
 					var k = MakeKey(finfo);
-
-					Shell_.FileData existing = map.TryGetValue(k, out existing) ? existing : null;
-					if (existing != null)
+					if (map.TryGetValue(k, out var existing))
 					{
-						Console.WriteLine($"Existing duplicate found:\n  {finfo.FullPath}\n  {existing.FullPath}\n");
+						Console.WriteLine($"Existing duplicate found:\n  {finfo.FullName}\n  {existing.FullName}\n");
 						continue;
 					}
-
-
 					map.Add(k, finfo);
 				}
 				catch (Exception ex)
 				{
-					Console.WriteLine($"Failed to add {finfo.FullPath} to the map");
+					Console.WriteLine($"Failed to add {finfo.FullName} to the map");
 					Console.WriteLine($"Reason: {ex.Message}");
 				}
 			}
@@ -173,14 +169,14 @@ namespace Csex
 			return map;
 		}
 
-		private string MakeKey(Shell_.FileData finfo)
+		private string MakeKey(FileSystemInfo finfo)
 		{
-			var fname = finfo.FileName.ToLowerInvariant();
+			var fname = finfo.Name.ToLowerInvariant();
 
 			// Special case JPGs
-			if (m_jpg_date_taken && Exif.IsJpgFile(finfo.FullPath))
+			if (m_jpg_date_taken && Exif.IsJpgFile(finfo.FullName))
 			{
-				using (var fs = new FileStream(finfo.FullPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+				using (var fs = new FileStream(finfo.FullName, FileMode.Open, FileAccess.Read, FileShare.Read))
 				{
 					var exif = Exif.Read(fs, false);
 					if (exif != null && exif.HasTag(Exif.Tag.DateTimeOriginal))
@@ -193,7 +189,10 @@ namespace Csex
 			}
 
 			// Include the file size in the key
-			return finfo.FileSize +  "-" + fname;
+			if (finfo is FileInfo fi)
+				return fi.Length +  "-" + fname;
+			else
+				return fname;
 		}
 	}
 }

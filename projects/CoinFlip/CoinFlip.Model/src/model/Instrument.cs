@@ -337,7 +337,7 @@ namespace CoinFlip
 		public event EventHandler<DataEventArgs> DataChanged;
 		protected virtual void OnDataChanged(DataEventArgs args)
 		{
-			DataChanged.Raise(this, args);
+			DataChanged?.Invoke(this, args);
 		}
 
 		/// <summary>True when the price data is out of date</summary>
@@ -350,7 +350,7 @@ namespace CoinFlip
 		public event EventHandler DataSyncingChanged;
 		protected virtual void OnDataSyncingChanged()
 		{
-			DataSyncingChanged.Raise();
+			DataSyncingChanged?.Invoke(this, EventArgs.Empty);
 		}
 
 		/// <summary>The price units (in Q2B)</summary>

@@ -13,9 +13,11 @@ using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Container;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 using Rylogic.Maths;
+using Rylogic.Plugin;
 using Rylogic.Utility;
+using Util = Rylogic.Utility.Util;
 
 namespace CoinFlip
 {
@@ -188,7 +190,7 @@ namespace CoinFlip
 				return;
 
 			// Notify about to change allow trades
-			AllowTradesChanging.Raise(this, new PrePostEventArgs(after:false));
+			AllowTradesChanging?.Invoke(this, new PrePostEventArgs(after:false));
 
 			// Stop any running bots
 			foreach (var bot in Bots)
@@ -202,7 +204,7 @@ namespace CoinFlip
 			Log.Write(ELogLevel.Debug, enabled ? "Live trades allowed" : "Live trades disabled");
 
 			// Notify allow trades changed
-			AllowTradesChanging.Raise(this, new PrePostEventArgs(after:true));
+			AllowTradesChanging?.Invoke(this, new PrePostEventArgs(after:true));
 		}
 
 		/// <summary>Raised before and after 'AllowTrades' is changed</summary>
@@ -587,7 +589,7 @@ namespace CoinFlip
 				return;
 
 			// Notify market data updating
-			MarketDataChanging.Raise(this, new MarketDataChangingEventArgs(done:false));
+			MarketDataChanging?.Invoke(this, new MarketDataChangingEventArgs(done:false));
 
 			// Lock the data while we're changing it
 			using (LockMarketData())
@@ -613,7 +615,7 @@ namespace CoinFlip
 			}
 
 			// Notify market data updating
-			MarketDataChanging.Raise(this, new MarketDataChangingEventArgs(done:true));
+			MarketDataChanging?.Invoke(this, new MarketDataChangingEventArgs(done:true));
 		}
 		private int m_in_integrate_market_updates;
 
@@ -621,7 +623,7 @@ namespace CoinFlip
 		public event EventHandler TradeHistoryChanged;
 		public void RaiseTradeHistoryChanged()
 		{
-			TradeHistoryChanged.Raise(this);
+			TradeHistoryChanged?.Invoke(this, EventArgs.Empty);
 		}
 
 		/// <summary>Call to kick-off an update of the pairs</summary>
@@ -702,7 +704,7 @@ namespace CoinFlip
 		public event EventHandler PairsUpdated;
 		private void OnPairsUpdated()
 		{
-			PairsUpdated.Raise(this);
+			PairsUpdated?.Invoke(this, EventArgs.Empty);
 		}
 
 		/// <summary>Return the exchange with the given name</summary>
@@ -897,18 +899,18 @@ namespace CoinFlip
 		/// <summary>Add a dockable to the UI</summary>
 		public void AddToUI(IDockable content, DockContainer.DockLocation site = null)
 		{
-			OnAddToUI.Raise(this, new AddToUIEventArgs(content, site));
+			OnAddToUI?.Invoke(this, new AddToUIEventArgs(content, site));
 		}
 		public void AddToUI(ToolStrip ts)
 		{
-			OnAddToUI.Raise(this, new AddToUIEventArgs(ts));
+			OnAddToUI?.Invoke(this, new AddToUIEventArgs(ts));
 		}
 		public event EventHandler<AddToUIEventArgs> OnAddToUI;
 
 		/// <summary>Launch UI to edit a trade</summary>
 		public void EditTrade(Trade trade, ulong? existing_order_id)
 		{
-			OnEditTrade.Raise(this, new EditTradeEventArgs(trade, existing_order_id));
+			OnEditTrade?.Invoke(this, new EditTradeEventArgs(trade, existing_order_id));
 		}
 		public void EditTrade(Order pos)
 		{

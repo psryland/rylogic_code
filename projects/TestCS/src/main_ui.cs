@@ -5,9 +5,9 @@ using System.Windows.Forms;
 using Rylogic.Audio;
 using Rylogic.Db;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gfx;
+using Rylogic.Gui.WinForms;
 using Rylogic.Scintilla;
-using Rylogic.Graphix;
 
 namespace TestCS
 {

@@ -1,6 +1,6 @@
 ﻿using System.Globalization;
 using System.Windows.Controls;
-using Rylogic.Extn;
+using Rylogic.Common;
 
 namespace RyLogViewer
 {

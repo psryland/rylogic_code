@@ -308,7 +308,7 @@ namespace CoinFlip
 					m_update_thread.Start();
 
 					// Raise the data syncing event to set the initial state
-					DataSyncingChanged.Raise(this);
+					DataSyncingChanged?.Invoke(this, EventArgs.Empty);
 				}
 
 				/// <summary>Thread entry point for the instrument update thread</summary>
@@ -347,7 +347,7 @@ namespace CoinFlip
 
 								// Raise the event if 'DataSyncing' has changed
 								if (data_syncing != DataSyncing)
-									DataSyncingChanged.Raise(this);
+									DataSyncingChanged?.Invoke(this, EventArgs.Empty);
 							});
 						}
 						Model.Log.Write(ELogLevel.Debug, $"PriceData {SymbolCode} update thread stopped");
@@ -461,7 +461,7 @@ namespace CoinFlip
 		public event EventHandler<DataEventArgs> DataChanged;
 		protected virtual void OnDataChanged(DataEventArgs args)
 		{
-			DataChanged.Raise(this, args);
+			DataChanged?.Invoke(this, args);
 		}
 
 		/// <summary>Indicates that the data is out of date and is being updated. False when UtcNow is within [Newest.Timestamp, Newest.Timestamp + TimeFrame)</summary>

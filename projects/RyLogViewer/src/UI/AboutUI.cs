@@ -4,11 +4,10 @@ using System.IO;
 using System.Reflection;
 using System.Windows.Forms;
 using Rylogic.Common;
-using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 using Rylogic.Utility;
-using RyLogViewer.Properties;
-using RichTextBox = Rylogic.Gui.RichTextBox;
+using RichTextBox = Rylogic.Gui.WinForms.RichTextBox;
+using Util = Rylogic.Utility.Util;
 
 namespace RyLogViewer
 {
@@ -125,7 +124,7 @@ namespace RyLogViewer
 			this.m_lbl_info = new System.Windows.Forms.Label();
 			this.m_lbl_licence = new System.Windows.Forms.Label();
 			this.m_btn_version_history = new System.Windows.Forms.Button();
-			this.m_edit_licence = new Rylogic.Gui.RichTextBox();
+			this.m_edit_licence = new Rylogic.Gui.WinForms.RichTextBox();
 			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
 			this.SuspendLayout();
 			// 
@@ -158,7 +157,7 @@ namespace RyLogViewer
 			// 
 			// pictureBox1
 			// 
-			this.pictureBox1.Image = global::RyLogViewer.Properties.Resources.book;
+			this.pictureBox1.Image = global::RyLogViewer.Resources.book;
 			this.pictureBox1.Location = new System.Drawing.Point(12, 11);
 			this.pictureBox1.Name = "pictureBox1";
 			this.pictureBox1.Size = new System.Drawing.Size(48, 48);

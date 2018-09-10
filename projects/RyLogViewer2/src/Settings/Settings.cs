@@ -1,7 +1,7 @@
 ﻿using System.Windows.Media;
 using System.Xml.Linq;
 using Rylogic.Common;
-using Rylogic.Gui.WPF.Extn;
+using Rylogic.Gui.WPF;
 using Rylogic.Utility;
 
 namespace RyLogViewer.Options

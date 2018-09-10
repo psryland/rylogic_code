@@ -44,7 +44,7 @@ namespace CoinFlip
 				Q2B.Orders.AddRange(q2b);
 			}
 			Debug.Assert(AssertOrdersValid());
-			OrderBookChanged.Raise(this);
+			OrderBookChanged?.Invoke(this, EventArgs.Empty);
 		}
 
 		/// <summary>Raised when the order book for this pair is updated</summary>

@@ -107,13 +107,21 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj">
+      <Project>{76ef3a15-6e9f-4348-bcc2-e39f14b2a2b4}</Project>
+      <Name>Rylogic.Core.Windows</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\Rylogic.Core\Rylogic.Core.csproj">
       <Project>{37a4f319-2052-404d-ae7f-f882cfa33c1b}</Project>
       <Name>Rylogic.Core</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\Rylogic.Main\Rylogic.Main.csproj">
-      <Project>{8c1634d9-c32a-4ad6-b2c7-ec17f6bfde01}</Project>
-      <Name>Rylogic.Main</Name>
+    <ProjectReference Include="..\..\Rylogic.Gui.WinForms\Rylogic.Gui.WinForms.csproj">
+      <Project>{dfed22ae-d2d5-4901-9947-393c4648b381}</Project>
+      <Name>Rylogic.Gui.WinForms</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Rylogic.View3d\Rylogic.View3d.csproj">
+      <Project>{0fcb5434-407b-415e-9f11-6216f44d4377}</Project>
+      <Name>Rylogic.View3d</Name>
     </ProjectReference>
     <ProjectReference Include="..\BitfinexApi\BitfinexApi.csproj">
       <Project>{11863e14-7143-4228-b861-fc8318c870f2}</Project>

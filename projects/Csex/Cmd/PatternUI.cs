@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
-using System.Text;
 using System.Windows.Forms;
-using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 
 namespace Csex
 {
@@ -37,7 +33,7 @@ namespace Csex
 
 		public override int Run()
 		{
-			new Rylogic.Gui.PatternUI().FormWrap(title:"Edit Pattern", sz:new Size(1024,768), start_pos:FormStartPosition.CenterScreen).ShowDialog();
+			new Rylogic.Gui.WinForms.PatternUI().FormWrap(title:"Edit Pattern", sz:new Size(1024,768), start_pos:FormStartPosition.CenterScreen).ShowDialog();
 			return 0;
 		}
 	}

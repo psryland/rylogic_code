@@ -3,9 +3,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO.Ports;
 using System.Windows.Forms;
-using RyLogViewer.Properties;
-using Rylogic.Extn;
-using Rylogic.Utility;
+using Rylogic.Gui.WinForms;
+using Util = Rylogic.Utility.Util;
 
 namespace RyLogViewer
 {

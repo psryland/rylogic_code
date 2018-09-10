@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 using Rylogic.Maths;
 
 namespace CoinFlip

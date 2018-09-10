@@ -9,9 +9,9 @@ using System.Windows.Threading;
 using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Container;
-using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 using Rylogic.Utility;
+using Util = Rylogic.Utility.Util;
 
 namespace CoinFlip
 {
@@ -151,7 +151,7 @@ namespace CoinFlip
 						SetActiveInternal(value);
 					}
 				}
-				ActiveChanged.Raise(this);
+				ActiveChanged?.Invoke(this, EventArgs.Empty);
 				RaisePropertyChanged(nameof(Active));
 			}
 		}
@@ -352,7 +352,7 @@ namespace CoinFlip
 		public event PropertyChangedEventHandler PropertyChanged;
 		protected void RaisePropertyChanged(string prop_name)
 		{
-			PropertyChanged.Raise(this, new PropertyChangedEventArgs(prop_name));
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 		}
 
 		/// <summary>Called when the bot is activated</summary>

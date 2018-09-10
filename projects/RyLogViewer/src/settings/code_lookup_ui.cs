@@ -4,10 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using System.Xml.Linq;
-using RyLogViewer.Properties;
-using Rylogic.Extn;
-using Rylogic.Gui;
 using Rylogic.Container;
+using Rylogic.Gui.WinForms;
 
 namespace RyLogViewer
 {

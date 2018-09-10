@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
-using Rylogic.Container;
-using Rylogic.Extn;
-using Rylogic.Gui;
-using Rylogic.Utility;
+using Rylogic.Gui.WinForms;
+using Util = Rylogic.Utility.Util;
 
 namespace RyLogViewer
 {
@@ -57,14 +55,14 @@ namespace RyLogViewer
 		public event Action NextBookmark;
 		public void RaiseNextBookmark()
 		{
-			NextBookmark.Raise();
+			NextBookmark?.Invoke();
 		}
 
 		/// <summary>An event called whenever the dialog gets a FindPrev command</summary>
 		public event Action PrevBookmark;
 		public void RaisePrevBookmark()
 		{
-			PrevBookmark.Raise();
+			PrevBookmark?.Invoke();
 		}
 
 		/// <summary>Set up UI elements</summary>

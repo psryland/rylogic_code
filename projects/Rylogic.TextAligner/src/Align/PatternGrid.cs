@@ -2,8 +2,9 @@
 using System.ComponentModel;
 using System.Linq;
 using System.Windows.Forms;
-using Rylogic.Extn;
 using Rylogic.Maths;
+using Rylogic.Gui.WinForms;
+using DataGridView = Rylogic.Gui.WinForms.DataGridView;
 
 namespace Rylogic.TextAligner
 {
@@ -23,7 +24,8 @@ namespace Rylogic.TextAligner
 
 		public PatternGrid()
 		{
-			if (this.IsInDesignMode()) return;
+			if (this.IsInDesignMode())
+				return;
 
 			// The patterns grid is virtual mode so that we can draw images and handle edits
 			AutoGenerateColumns = false;

@@ -3,8 +3,9 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 using Rylogic.Utility;
+using Util = Rylogic.Utility.Util;
 
 namespace CoinFlip
 {

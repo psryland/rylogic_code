@@ -1,13 +1,10 @@
 ﻿using System;
-using System.IO;
+using System.Drawing;
 using System.Windows.Forms;
-using RyLogViewer.Properties;
 using Rylogic.Common;
 using Rylogic.Extn;
-using Rylogic.Gui;
-using Rylogic.Utility;
-using Rylogic.Maths;
-using System.Drawing;
+using Rylogic.Gui.WinForms;
+using Util = Rylogic.Utility.Util;
 
 namespace RyLogViewer
 {
@@ -297,7 +294,7 @@ namespace RyLogViewer
 			this.m_btn_range_to_start = new System.Windows.Forms.Button();
 			this.m_image_list = new System.Windows.Forms.ImageList(this.components);
 			this.m_btn_range_to_end = new System.Windows.Forms.Button();
-			this.m_tb_output_filepath = new Rylogic.Gui.ValueBox();
+			this.m_tb_output_filepath = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_btn_browse = new System.Windows.Forms.Button();
 			this.m_lbl_output_file = new System.Windows.Forms.Label();
 			this.m_lbl_line_ending = new System.Windows.Forms.Label();
@@ -306,8 +303,8 @@ namespace RyLogViewer
 			this.m_lbl_col_delim = new System.Windows.Forms.Label();
 			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
 			this.m_lbl_status = new System.Windows.Forms.Label();
-			this.m_tb_range_min = new Rylogic.Gui.ValueBox();
-			this.m_tb_range_max = new Rylogic.Gui.ValueBox();
+			this.m_tb_range_min = new Rylogic.Gui.WinForms.ValueBox();
+			this.m_tb_range_max = new Rylogic.Gui.WinForms.ValueBox();
 			this.SuspendLayout();
 			// 
 			// m_lbl_desc

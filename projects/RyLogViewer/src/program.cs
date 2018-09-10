@@ -2,14 +2,14 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Net.Mail;
 using System.Reflection;
 using System.Text;
 using System.Windows.Forms;
+using Rylogic.Common;
 using Rylogic.Extn;
-using Rylogic.Gui;
-using Rylogic.INet;
-using Rylogic.Utility;
-using RyLogViewer.Properties;
+using Rylogic.Gui.WinForms;
+using Util = Rylogic.Utility.Util;
 
 namespace RyLogViewer
 {
@@ -135,22 +135,27 @@ namespace RyLogViewer
 					try
 					{
 						// Try to create an email with the attachment ready to go
-						var email = new Email();
-						email.AddRecipient(Constants.SupportEmail, Email.MAPIRecipient.To);
-						email.Subject = Application.ProductName + " crash report";
-						email.Body = string.Format(
-							"To {0},\r\n" +
-							"\r\n" +
-							"Attached is a crash report generated on {1}\r\n" +
-							"A brief description of how the application was being used at the time follows:\r\n" +
-							"\r\n\r\n\r\n\r\n" +
-							"Regards,\r\n" +
-							"A Helpful User"
-							,Application.CompanyName
-							,DateTime.Now);
-						email.Attachments.Add(dg.FileName);
-						email.Send();
-					} catch {}
+						var email = new MailMessage();
+						email.From = new MailAddress(Constants.SupportEmail);
+						email.To.Add(Constants.SupportEmail);
+						email.Subject = $"{Util.AppProductName} crash report";
+						email.Priority = MailPriority.Normal;
+						email.IsBodyHtml = false;
+						email.Body =
+							$"To {Util.AppCompany},\r\n" +
+							$"\r\n" +
+							$"Attached is a crash report generated on {DateTime.Now}.\r\n" +
+							$"A brief description of how the application was being used at the time follows:\r\n" +
+							$"\r\n\r\n\r\n\r\n" +
+							$"Regards,\r\n" +
+							$"A Helpful User";
+						email.Attachments.Add(new Attachment(dg.FileName));
+
+						// Try to send it
+						var smtp = new SmtpClient();
+						smtp.Send(email);
+					}
+					catch {}
 				}
 			}
 			Environment.ExitCode = 1;

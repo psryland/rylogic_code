@@ -2,7 +2,7 @@
 using System.ComponentModel;
 using System.Windows;
 using Microsoft.Win32;
-using Rylogic.Extn;
+using Rylogic.Common;
 using Rylogic.Gui.WPF;
 using RyLogViewer.Options;
 

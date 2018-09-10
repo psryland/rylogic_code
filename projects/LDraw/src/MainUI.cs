@@ -9,15 +9,15 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
-using LDraw.Properties;
+using Rylogic.Common;
 using Rylogic.Extn;
-using Rylogic.Graphix;
-using Rylogic.Gui;
+using Rylogic.Gfx;
+using Rylogic.Gui.WinForms;
+using Rylogic.Interop.Win32;
 using Rylogic.Maths;
 using Rylogic.Scintilla;
-using Rylogic.Utility;
-using Rylogic.Windows32;
-using ToolStripContainer = Rylogic.Gui.ToolStripContainer;
+using ToolStripContainer = Rylogic.Gui.WinForms.ToolStripContainer;
+using Util = Rylogic.Gui.WinForms.Util;
 
 namespace LDraw
 {
@@ -218,7 +218,7 @@ namespace LDraw
 		public MainUI()
 		{
 			#if DEBUG
-			Util2.WaitForDebugger();
+			Util.WaitForDebugger();
 			#endif
 
 			// Load dlls
@@ -1125,7 +1125,7 @@ namespace LDraw
 			else
 			{
 				StartPosition = FormStartPosition.Manual;
-				Bounds = Util2.OnScreen(Settings.UI.WindowPosition);
+				Bounds = Util.OnScreen(Settings.UI.WindowPosition);
 				WindowState = Settings.UI.WindowMaximised ? FormWindowState.Maximized : FormWindowState.Normal;
 			}
 		}
@@ -1176,7 +1176,7 @@ namespace LDraw
 		private void InitializeComponent()
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainUI));
-			this.m_tsc = new Rylogic.Gui.ToolStripContainer();
+			this.m_tsc = new Rylogic.Gui.WinForms.ToolStripContainer();
 			this.m_ss = new System.Windows.Forms.StatusStrip();
 			this.m_status = new System.Windows.Forms.ToolStripStatusLabel();
 			this.m_lbl_loading = new System.Windows.Forms.ToolStripStatusLabel();
@@ -1274,7 +1274,7 @@ namespace LDraw
 			this.m_btn_step_fwd = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_run = new System.Windows.Forms.ToolStripButton();
 			this.m_lbl_step_rate = new System.Windows.Forms.ToolStripLabel();
-			this.m_tr_speed = new Rylogic.Gui.ToolStripTrackBar();
+			this.m_tr_speed = new Rylogic.Gui.WinForms.ToolStripTrackBar();
 			this.m_lbl_anim_clock = new System.Windows.Forms.ToolStripLabel();
 			this.m_tb_clock = new System.Windows.Forms.ToolStripTextBox();
 			this.m_ts_multiview = new System.Windows.Forms.ToolStrip();
@@ -1991,7 +1991,7 @@ namespace LDraw
 			// m_btn_reset
 			// 
 			this.m_btn_reset.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_reset.Image = global::LDraw.Properties.Resources.media_stop;
+			this.m_btn_reset.Image = global::LDraw.Resources.media_stop;
 			this.m_btn_reset.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_reset.Name = "m_btn_reset";
 			this.m_btn_reset.Size = new System.Drawing.Size(24, 24);
@@ -2001,7 +2001,7 @@ namespace LDraw
 			// m_btn_step_bck
 			// 
 			this.m_btn_step_bck.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_step_bck.Image = global::LDraw.Properties.Resources.media_step_back;
+			this.m_btn_step_bck.Image = global::LDraw.Resources.media_step_back;
 			this.m_btn_step_bck.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_step_bck.Name = "m_btn_step_bck";
 			this.m_btn_step_bck.Size = new System.Drawing.Size(24, 24);
@@ -2011,7 +2011,7 @@ namespace LDraw
 			// m_btn_step_fwd
 			// 
 			this.m_btn_step_fwd.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_step_fwd.Image = global::LDraw.Properties.Resources.media_step_forward;
+			this.m_btn_step_fwd.Image = global::LDraw.Resources.media_step_forward;
 			this.m_btn_step_fwd.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_step_fwd.Name = "m_btn_step_fwd";
 			this.m_btn_step_fwd.Size = new System.Drawing.Size(24, 24);
@@ -2021,7 +2021,7 @@ namespace LDraw
 			// m_btn_run
 			// 
 			this.m_btn_run.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_run.Image = global::LDraw.Properties.Resources.media_play;
+			this.m_btn_run.Image = global::LDraw.Resources.media_play;
 			this.m_btn_run.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_run.Name = "m_btn_run";
 			this.m_btn_run.Size = new System.Drawing.Size(24, 24);
@@ -2083,7 +2083,7 @@ namespace LDraw
 			// 
 			this.m_btn_link_camera_left_right.CheckOnClick = true;
 			this.m_btn_link_camera_left_right.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_link_camera_left_right.Image = global::LDraw.Properties.Resources.green_left_right;
+			this.m_btn_link_camera_left_right.Image = global::LDraw.Resources.green_left_right;
 			this.m_btn_link_camera_left_right.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_link_camera_left_right.Name = "m_btn_link_camera_left_right";
 			this.m_btn_link_camera_left_right.Size = new System.Drawing.Size(24, 24);
@@ -2093,7 +2093,7 @@ namespace LDraw
 			// 
 			this.m_btn_link_camera_up_down.CheckOnClick = true;
 			this.m_btn_link_camera_up_down.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_link_camera_up_down.Image = global::LDraw.Properties.Resources.green_up_down;
+			this.m_btn_link_camera_up_down.Image = global::LDraw.Resources.green_up_down;
 			this.m_btn_link_camera_up_down.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_link_camera_up_down.Name = "m_btn_link_camera_up_down";
 			this.m_btn_link_camera_up_down.Size = new System.Drawing.Size(24, 24);
@@ -2102,7 +2102,7 @@ namespace LDraw
 			// 
 			this.m_btn_link_camera_in_out.CheckOnClick = true;
 			this.m_btn_link_camera_in_out.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_link_camera_in_out.Image = global::LDraw.Properties.Resources.green_in_out;
+			this.m_btn_link_camera_in_out.Image = global::LDraw.Resources.green_in_out;
 			this.m_btn_link_camera_in_out.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_link_camera_in_out.Name = "m_btn_link_camera_in_out";
 			this.m_btn_link_camera_in_out.Size = new System.Drawing.Size(24, 24);
@@ -2111,7 +2111,7 @@ namespace LDraw
 			// 
 			this.m_btn_link_camera_rotate.CheckOnClick = true;
 			this.m_btn_link_camera_rotate.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_link_camera_rotate.Image = global::LDraw.Properties.Resources.green_rotate;
+			this.m_btn_link_camera_rotate.Image = global::LDraw.Resources.green_rotate;
 			this.m_btn_link_camera_rotate.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_link_camera_rotate.Name = "m_btn_link_camera_rotate";
 			this.m_btn_link_camera_rotate.Size = new System.Drawing.Size(24, 24);
@@ -2131,7 +2131,7 @@ namespace LDraw
 			// 
 			this.m_btn_link_xaxis.CheckOnClick = true;
 			this.m_btn_link_xaxis.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_link_xaxis.Image = global::LDraw.Properties.Resources.XAxis;
+			this.m_btn_link_xaxis.Image = global::LDraw.Resources.XAxis;
 			this.m_btn_link_xaxis.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_link_xaxis.Name = "m_btn_link_xaxis";
 			this.m_btn_link_xaxis.Size = new System.Drawing.Size(24, 24);
@@ -2141,7 +2141,7 @@ namespace LDraw
 			// 
 			this.m_btn_link_yaxis.CheckOnClick = true;
 			this.m_btn_link_yaxis.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_link_yaxis.Image = global::LDraw.Properties.Resources.YAxis;
+			this.m_btn_link_yaxis.Image = global::LDraw.Resources.YAxis;
 			this.m_btn_link_yaxis.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_link_yaxis.Name = "m_btn_link_yaxis";
 			this.m_btn_link_yaxis.Size = new System.Drawing.Size(24, 24);

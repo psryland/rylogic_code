@@ -163,7 +163,7 @@ namespace CoinFlip
 		}
 		private void RaisePropertyChanged(string name)
 		{
-			PropertyChanged.Raise(this, new PropertyChangedEventArgs(name));
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 		}
 
 		#region Equals

@@ -1,15 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Drawing;
-using System.Data;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms;
-using Rylogic.Container;
-using Rylogic.Gui;
-using Rylogic.Utility;
-using DataGridView = Rylogic.Gui.DataGridView;
+﻿using System.Windows.Forms;
+using Rylogic.Gui.WinForms;
+using DataGridView = Rylogic.Gui.WinForms.DataGridView;
+using Util = Rylogic.Utility.Util;
 
 namespace Csex
 {
@@ -32,14 +24,14 @@ namespace Csex
 			m_copies = new BindingSource<Model.FileInfo>();
 
 			m_grid_dups.AutoGenerateColumns = false;
-			m_grid_dups.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="Duplicates", FillWeight=1f, DataPropertyName=nameof(Model.FileInfo.FileName)});
+			m_grid_dups.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="Duplicates", FillWeight=1f, DataPropertyName=nameof(Model.FileInfo.Name)});
 			m_grid_dups.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="Copies"    , FillWeight=1f, DataPropertyName=nameof(Model.FileInfo.CopyCount)});
 			m_grid_dups.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="Key"       , FillWeight=1f, DataPropertyName=nameof(Model.FileInfo.Key)});
 			m_grid_dups.DataSource = m_dups;
 
 			m_grid_details.AutoGenerateColumns = false;
-			m_grid_details.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="Location", FillWeight=4f, DataPropertyName=nameof(Model.FileInfo.FullPath)});
-			m_grid_details.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="File Size" , FillWeight=1f, DataPropertyName=nameof(Model.FileInfo.FileSize)});
+			m_grid_details.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="Location", FillWeight=4f, DataPropertyName=nameof(Model.FileInfo.FullName)});
+			m_grid_details.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="File Size" , FillWeight=1f, DataPropertyName=nameof(Model.FileInfo.Length)});
 			m_grid_details.DataSource = m_copies;
 
 			m_dups.PositionChanged += (s,a) =>
@@ -71,8 +63,8 @@ namespace Csex
 		private void InitializeComponent()
 		{
 			this.m_split = new System.Windows.Forms.SplitContainer();
-			this.m_grid_details = new Rylogic.Gui.DataGridView();
-			this.m_grid_dups = new Rylogic.Gui.DataGridView();
+			this.m_grid_details = new Rylogic.Gui.WinForms.DataGridView();
+			this.m_grid_dups = new Rylogic.Gui.WinForms.DataGridView();
 			((System.ComponentModel.ISupportInitialize)(this.m_split)).BeginInit();
 			this.m_split.Panel1.SuspendLayout();
 			this.m_split.Panel2.SuspendLayout();

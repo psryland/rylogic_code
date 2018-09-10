@@ -2,7 +2,7 @@
 using System.IO;
 using System.Windows.Input;
 using Microsoft.Win32;
-using Rylogic.Extn;
+using Rylogic.Common;
 using RyLogViewer.Options;
 
 namespace RyLogViewer

@@ -8,11 +8,12 @@ using System.Windows.Forms;
 using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Extn;
-using Rylogic.Graphix;
-using Rylogic.Gui;
+using Rylogic.Gfx;
+using Rylogic.Gui.WinForms;
 using Rylogic.Maths;
 using Rylogic.Utility;
-using Rylogic.Windows32;
+using Rylogic.Interop.Win32;
+using Util = Rylogic.Utility.Util;
 
 namespace LDraw
 {
@@ -136,7 +137,7 @@ namespace LDraw
 				// Handlers
 				void HandleSceneChanged(object sender, View3d.SceneChangedEventArgs args)
 				{
-					SceneChanged.Raise(this, args);
+					SceneChanged?.Invoke(this, args);
 					Invalidate();
 				}
 				void HandleSourcesChanged(object sender, View3d.SourcesChangedEventArgs args)
@@ -435,7 +436,7 @@ namespace LDraw
 					args.Effect = shift_down ? DragDropEffects.Copy : DragDropEffects.Move;
 
 					// 'mode' == 'DragDrop.EDrop.Drop' when the item is actually dropped
-					if (mode == Rylogic.Gui.DragDrop.EDrop.Drop)
+					if (mode == Rylogic.Gui.WinForms.DragDrop.EDrop.Drop)
 					{
 						var add = shift_down;
 						foreach (var file in files)
@@ -523,7 +524,7 @@ namespace LDraw
 				HideOnClose = false;
 				Text = "Measure";
 
-				Controls.Add2(new View3d.MeasurementUI
+				Controls.Add2(new View3dMeasurementUI
 				{
 					Dock = DockStyle.Fill,
 					CtxId = ChartTools.Id,

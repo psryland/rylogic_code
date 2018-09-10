@@ -1,10 +1,8 @@
 ﻿using System.Collections.Generic;
-using System.Runtime.Serialization;
 using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Extn;
-using Rylogic.Gui;
-using Rylogic.Utility;
+using Rylogic.Gui.WinForms;
 
 namespace RyLogViewer
 {

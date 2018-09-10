@@ -3,7 +3,7 @@ using Rylogic.Utility;
 
 namespace TestCS
 {
-	using RichTextBox = Rylogic.Gui.RichTextBox;
+	using RichTextBox = Rylogic.Gui.WinForms.RichTextBox;
 
 	public class RichTextBoxUI :Form
 	{

@@ -1,5 +1,5 @@
 ﻿using System.IO;
-using Rylogic.Extn;
+using Rylogic.Common;
 using RyLogViewer.Options;
 
 namespace RyLogViewer

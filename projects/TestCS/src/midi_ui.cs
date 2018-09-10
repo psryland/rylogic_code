@@ -3,8 +3,8 @@ using System.Threading;
 using System.Windows.Forms;
 using Rylogic.Audio;
 using Rylogic.Extn;
-using Rylogic.Gui;
-using Rylogic.Utility;
+using Rylogic.Gui.WinForms;
+using Util = Rylogic.Utility.Util;
 
 namespace TestCS
 {
@@ -19,7 +19,7 @@ namespace TestCS
 		private Button m_btn_play;
 		private TextBox m_tb_wav_filepath;
 		private Button m_btn_make_instrument;
-		private Rylogic.Gui.LogUI m_log_ui;
+		private Rylogic.Gui.WinForms.LogUI m_log_ui;
 		#endregion
 
 		public MidiUI()
@@ -145,7 +145,7 @@ namespace TestCS
 		private void InitializeComponent()
 		{
 			this.m_lbl_version = new System.Windows.Forms.Label();
-			this.m_log_ui = new Rylogic.Gui.LogUI();
+			this.m_log_ui = new Rylogic.Gui.WinForms.LogUI();
 			this.m_btn_play = new System.Windows.Forms.Button();
 			this.m_tb_wav_filepath = new System.Windows.Forms.TextBox();
 			this.m_btn_make_instrument = new System.Windows.Forms.Button();

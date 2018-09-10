@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace LDraw.Properties {
+namespace LDraw {
     using System;
     
     

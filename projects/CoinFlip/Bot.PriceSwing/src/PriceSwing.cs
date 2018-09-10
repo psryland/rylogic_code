@@ -9,10 +9,12 @@ using CoinFlip;
 using Rylogic.Common;
 using Rylogic.Container;
 using Rylogic.Extn;
-using Rylogic.Graphix;
-using Rylogic.Gui;
+using Rylogic.Gfx;
+using Rylogic.Gui.WinForms;
 using Rylogic.Maths;
+using Rylogic.Plugin;
 using Rylogic.Utility;
+using Util = Rylogic.Utility.Util;
 
 namespace Bot.PriceSwing
 {
@@ -255,7 +257,7 @@ namespace Bot.PriceSwing
 			}
 			#endregion
 
-			Stepped.Raise(this);
+			Stepped?.Invoke(this, EventArgs.Empty);
 		}
 		public event EventHandler Stepped;
 

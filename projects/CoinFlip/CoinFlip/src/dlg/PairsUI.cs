@@ -4,10 +4,10 @@ using System.Linq;
 using System.Windows.Forms;
 using Rylogic.Container;
 using Rylogic.Extn;
-using Rylogic.Gui;
-using Rylogic.Utility;
-using ComboBox = Rylogic.Gui.ComboBox;
-using DataGridView = Rylogic.Gui.DataGridView;
+using Rylogic.Gui.WinForms;
+using ComboBox = Rylogic.Gui.WinForms.ComboBox;
+using DataGridView = Rylogic.Gui.WinForms.DataGridView;
+using Util = Rylogic.Utility.Util;
 
 namespace CoinFlip
 {
@@ -287,18 +287,18 @@ namespace CoinFlip
 			this.m_table0 = new System.Windows.Forms.TableLayoutPanel();
 			this.m_table1 = new System.Windows.Forms.TableLayoutPanel();
 			this.m_lbl_buy_orders = new System.Windows.Forms.Label();
-			this.m_grid_buys = new Rylogic.Gui.DataGridView();
-			this.m_grid_sells = new Rylogic.Gui.DataGridView();
+			this.m_grid_buys = new Rylogic.Gui.WinForms.DataGridView();
+			this.m_grid_sells = new Rylogic.Gui.WinForms.DataGridView();
 			this.m_lbl_sell_orders = new System.Windows.Forms.Label();
 			this.m_panel0 = new System.Windows.Forms.Panel();
 			this.m_lbl_exch = new System.Windows.Forms.Label();
-			this.m_cb_exchange = new Rylogic.Gui.ComboBox();
+			this.m_cb_exchange = new Rylogic.Gui.WinForms.ComboBox();
 			this.m_lbl_quote_exchange = new System.Windows.Forms.Label();
 			this.m_tb_exchange1 = new System.Windows.Forms.TextBox();
 			this.m_tb_exchange0 = new System.Windows.Forms.TextBox();
 			this.m_lbl_exchanges = new System.Windows.Forms.Label();
 			this.m_lbl_pair = new System.Windows.Forms.Label();
-			this.m_cb_pair = new Rylogic.Gui.ComboBox();
+			this.m_cb_pair = new Rylogic.Gui.WinForms.ComboBox();
 			this.m_table0.SuspendLayout();
 			this.m_table1.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_buys)).BeginInit();

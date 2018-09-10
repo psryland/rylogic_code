@@ -2,8 +2,8 @@
 using System.Diagnostics;
 using System.Windows.Forms;
 using System.Xml.Linq;
-using Rylogic.Graphix;
-using Rylogic.Gui;
+using Rylogic.Gfx;
+using Rylogic.Gui.WinForms;
 using Rylogic.Maths;
 
 namespace LDraw
@@ -254,29 +254,29 @@ namespace LDraw
 			this.m_radio_spot = new System.Windows.Forms.RadioButton();
 			this.m_radio_point = new System.Windows.Forms.RadioButton();
 			this.m_radio_directional = new System.Windows.Forms.RadioButton();
-			this.m_tb_position = new Rylogic.Gui.ValueBox();
+			this.m_tb_position = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_lbl_position = new System.Windows.Forms.Label();
 			this.m_lbl_direction = new System.Windows.Forms.Label();
-			this.m_tb_direction = new Rylogic.Gui.ValueBox();
+			this.m_tb_direction = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_chk_camera_relative = new System.Windows.Forms.CheckBox();
 			this.m_lbl_range = new System.Windows.Forms.Label();
-			this.m_tb_range = new Rylogic.Gui.ValueBox();
+			this.m_tb_range = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_lbl_falloff = new System.Windows.Forms.Label();
-			this.m_tb_falloff = new Rylogic.Gui.ValueBox();
+			this.m_tb_falloff = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_lbl_shadow_range = new System.Windows.Forms.Label();
-			this.m_tb_shadow_range = new Rylogic.Gui.ValueBox();
+			this.m_tb_shadow_range = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_lbl_ambient = new System.Windows.Forms.Label();
-			this.m_tb_ambient = new Rylogic.Gui.ValueBox();
+			this.m_tb_ambient = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_lbl_diffuse = new System.Windows.Forms.Label();
-			this.m_tb_diffuse = new Rylogic.Gui.ValueBox();
+			this.m_tb_diffuse = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_lbl_specular = new System.Windows.Forms.Label();
-			this.m_tb_specular = new Rylogic.Gui.ValueBox();
+			this.m_tb_specular = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_lbl_specular_power = new System.Windows.Forms.Label();
-			this.m_tb_specular_power = new Rylogic.Gui.ValueBox();
+			this.m_tb_specular_power = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_lbl_spot_angle_inner = new System.Windows.Forms.Label();
-			this.m_tb_spot_angle_inner = new Rylogic.Gui.ValueBox();
+			this.m_tb_spot_angle_inner = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_lbl_spot_angle_outer = new System.Windows.Forms.Label();
-			this.m_tb_spot_angle_outer = new Rylogic.Gui.ValueBox();
+			this.m_tb_spot_angle_outer = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.SuspendLayout();
 			// 

@@ -5,6 +5,7 @@ using System.Windows.Forms;
 using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Extn;
+using Rylogic.Plugin;
 
 namespace RyLogViewer
 {
@@ -20,7 +21,7 @@ namespace RyLogViewer
 		{
 			public enum ECase { NoChange, ToLower, ToUpper };
 
-			/// <summary>The char (in lowercase) of the char block</summary>
+			/// <summary>The char (in lower case) of the char block</summary>
 			public char Char;
 
 			/// <summary>The case changes to make</summary>
@@ -113,7 +114,7 @@ namespace RyLogViewer
 		public override Guid Guid { get { return new Guid("2F45569D-EFAF-4B0F-B41B-6756D4E9C56D"); } }
 
 		/// <summary>
-		/// The name that appears in the transform column dropdown
+		/// The name that appears in the transform column drop down
 		/// for this text transformation.</summary>
 		public override string DropDownName { get { return "Swizzle"; } }
 

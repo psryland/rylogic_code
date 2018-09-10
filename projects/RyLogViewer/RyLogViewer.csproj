@@ -92,7 +92,7 @@
     <Compile Include="src\bookmarks_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="src\colour_picker_ui.cs">
+    <Compile Include="src\ColourPickerUI.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="src\UI\OutputFilepathUI.cs">
@@ -328,8 +328,8 @@
     <EmbeddedResource Include="src\bookmarks_ui.resx">
       <DependentUpon>bookmarks_ui.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\colour_picker_ui.resx">
-      <DependentUpon>colour_picker_ui.cs</DependentUpon>
+    <EmbeddedResource Include="src\ColourPickerUI.resx">
+      <DependentUpon>ColourPickerUI.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\UI\OutputFilepathUI.resx">
       <DependentUpon>OutputFilepathUI.cs</DependentUpon>
@@ -388,6 +388,7 @@
       <Generator>PublicResXFileCodeGenerator</Generator>
       <SubType>Designer</SubType>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <CustomToolNamespace>RyLogViewer</CustomToolNamespace>
     </EmbeddedResource>
     <EmbeddedResource Include="src\Inputs\SerialConnectionUI.resx">
       <DependentUpon>SerialConnectionUI.cs</DependentUpon>
@@ -445,13 +446,17 @@
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj">
+      <Project>{76ef3a15-6e9f-4348-bcc2-e39f14b2a2b4}</Project>
+      <Name>Rylogic.Core.Windows</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj">
       <Project>{37a4f319-2052-404d-ae7f-f882cfa33c1b}</Project>
       <Name>Rylogic.Core</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Rylogic.Main\Rylogic.Main.csproj">
-      <Project>{8c1634d9-c32a-4ad6-b2c7-ec17f6bfde01}</Project>
-      <Name>Rylogic.Main</Name>
+    <ProjectReference Include="..\Rylogic.Gui.WinForms\Rylogic.Gui.WinForms.csproj">
+      <Project>{dfed22ae-d2d5-4901-9947-393c4648b381}</Project>
+      <Name>Rylogic.Gui.WinForms</Name>
     </ProjectReference>
     <ProjectReference Include="RyLogViewer.Extensions.csproj">
       <Project>{8aa5340a-5c36-4c9d-a6a4-b035aabd3547}</Project>

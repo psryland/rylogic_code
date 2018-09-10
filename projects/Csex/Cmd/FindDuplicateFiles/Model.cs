@@ -1,18 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Concurrent;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Windows.Forms;
-using System.Threading;
-using System.Threading.Tasks;
 using Rylogic.Common;
 using Rylogic.Container;
 using Rylogic.Extn;
-using Rylogic.Graphix;
-using Rylogic.Gui;
+using Rylogic.Gfx;
+using Rylogic.Gui.WinForms;
 
 namespace Csex
 {
@@ -30,54 +26,6 @@ namespace Csex
 
 		/// <summary>Application settings</summary>
 		public Settings Settings { get; private set; }
-
-		/// <summary>Data for a file</summary>
-		public class FileInfo :Shell_.FileData
-		{
-			public FileInfo(Shell_.FileData fi) :base(fi)
-			{
-				Key = MakeKey(this);
-				Duplicates = new BindingListEx<FileInfo>();
-			}
-
-			/// <summary>A unique identifier for this file</summary>
-			public string Key { get; private set; }
-
-			/// <summary>The number of copies of this file</summary>
-			public int CopyCount { get { return Duplicates.Count; } }
-
-			/// <summary>Other files that are duplicates of this one</summary>
-			public BindingListEx<FileInfo> Duplicates { get; private set; }
-
-			/// <summary>Create a key for 'fi'</summary>
-			public static string MakeKey(FileInfo fi)
-			{
-				// Generate a key for the file
-				var fname = fi.FileName.ToLowerInvariant();
-
-				// Special case jpgs
-				if (Exif.IsJpgFile(fi.FullPath))
-				{
-					using (var fs = new FileStream(fi.FullPath, FileMode.Open, FileAccess.Read, FileShare.Read))
-					{
-						var exif = Exif.Read(fs, false);
-						if (exif != null && exif.HasTag(Exif.Tag.DateTimeOriginal))
-						{
-							var dat = exif[Exif.Tag.DateTimeOriginal];
-							var ts = dat.AsString;
-							return ts + "-" + fname;
-						}
-					}
-				}
-
-				// Include the file size in the key
-				return fi.FileSize +  "-" + fname;
-			}
-
-			/// <summary>FileInfo comparer</summary>
-			public static Cmp<FileInfo> Compare = Cmp<FileInfo>.From((l,r) => string.CompareOrdinal(l.Key,r.Key));
-		}
-		public class FileInfoMap :Dictionary<string,FileInfo> {}
 
 		/// <summary>A map of file info for the found files</summary>
 		public FileInfoMap FInfoMap { get; private set; }
@@ -103,12 +51,12 @@ namespace Csex
 			foreach (var path in Settings.SearchPaths)
 			{
 				if (dlg.CancelPending) break;
-				foreach (var fi in Shell_.EnumFileSystem(path, search_flags:SearchOption.AllDirectories).Where(x => !x.IsDirectory))
+				foreach (var fi in Path_.EnumFileSystem(path, search_flags:SearchOption.AllDirectories, exclude:FileAttributes.Directory).Cast<System.IO.FileInfo>())
 				{
 					if (dlg.CancelPending) break;
 
 					// Report progress whenever the directory changes
-					var d = Path.GetDirectoryName(fi.FullPath) ?? string.Empty;
+					var d = Path_.Directory(fi.FullName) ?? string.Empty;
 					if (d != dir)
 					{
 						dir = d;
@@ -136,11 +84,70 @@ namespace Csex
 					}
 					catch (Exception ex)
 					{
-						Errors.Add($"Failed to add {fi.FullPath} to the map. {ex.Message}");
+						Errors.Add($"Failed to add {fi.FullName} to the map. {ex.Message}");
 					}
 				}
 			}
 		}
+
+		/// <summary>Data for a file</summary>
+		public class FileInfo
+		{
+			private readonly System.IO.FileInfo m_finfo;
+			public FileInfo(System.IO.FileInfo fi)
+			{
+				m_finfo = fi;
+				Key = MakeKey(this);
+				Duplicates = new BindingListEx<FileInfo>();
+			}
+
+			/// <summary></summary>
+			public string Name => m_finfo.Name;
+
+			/// <summary></summary>
+			public string FullName => m_finfo.FullName;
+
+			/// <summary></summary>
+			public long Length => m_finfo.Length;
+
+			/// <summary>A unique identifier for this file</summary>
+			public string Key { get; private set; }
+
+			/// <summary>The number of copies of this file</summary>
+			public int CopyCount { get { return Duplicates.Count; } }
+
+			/// <summary>Other files that are duplicates of this one</summary>
+			public BindingListEx<FileInfo> Duplicates { get; private set; }
+
+			/// <summary>Create a key for 'fi'</summary>
+			public static string MakeKey(FileInfo fi)
+			{
+				// Generate a key for the file
+				var fname = fi.Name.ToLowerInvariant();
+
+				// Special case JPGs
+				if (Exif.IsJpgFile(fi.FullName))
+				{
+					using (var fs = new FileStream(fi.FullName, FileMode.Open, FileAccess.Read, FileShare.Read))
+					{
+						var exif = Exif.Read(fs, false);
+						if (exif != null && exif.HasTag(Exif.Tag.DateTimeOriginal))
+						{
+							var dat = exif[Exif.Tag.DateTimeOriginal];
+							var ts = dat.AsString;
+							return ts + "-" + fname;
+						}
+					}
+				}
+
+				// Include the file size in the key
+				return fi.Length + "-" + fname;
+			}
+
+			/// <summary>FileInfo comparer</summary>
+			public static Cmp<FileInfo> Compare = Cmp<FileInfo>.From((l, r) => string.CompareOrdinal(l.Key, r.Key));
+		}
+		public class FileInfoMap : Dictionary<string, FileInfo> { }
 	}
 }
 

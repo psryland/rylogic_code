@@ -5,10 +5,11 @@ using System.Drawing;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using Rylogic.Common;
-using Rylogic.Graphix;
-using Rylogic.Gui;
+using Rylogic.Gfx;
+using Rylogic.Gui.WinForms;
 using Rylogic.Maths;
 using Rylogic.Utility;
+using Util = Rylogic.Utility.Util;
 
 namespace CoinFlip
 {

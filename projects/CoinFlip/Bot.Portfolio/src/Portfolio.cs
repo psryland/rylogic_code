@@ -4,11 +4,12 @@ using System.Linq;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using CoinFlip;
-using Rylogic.Common;
 using Rylogic.Container;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
+using Rylogic.Plugin;
 using Rylogic.Utility;
+using Util = Rylogic.Utility.Util;
 
 namespace Bot.Portfolio
 {
@@ -262,7 +263,7 @@ namespace Bot.Portfolio
 			{
 				if (Equals(prop, value)) return;
 				prop = value;
-				PropertyChanged.Raise(this, new PropertyChangedEventArgs(prop_name));
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 			}
 
 			#region Equals

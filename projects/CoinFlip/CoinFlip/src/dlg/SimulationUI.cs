@@ -1,8 +1,9 @@
 ﻿using System.Windows.Forms;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 using Rylogic.Utility;
-using DataGridView = Rylogic.Gui.DataGridView;
+using DataGridView = Rylogic.Gui.WinForms.DataGridView;
+using Util = Rylogic.Utility.Util;
 
 namespace CoinFlip
 {
@@ -101,17 +102,17 @@ namespace CoinFlip
 		private void InitializeComponent()
 		{
 			this.components = new System.ComponentModel.Container();
-			this.m_tb_max_steps = new Rylogic.Gui.ValueBox();
+			this.m_tb_max_steps = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_lbl_max_steps = new System.Windows.Forms.Label();
-			this.m_tb_step_rate = new Rylogic.Gui.ValueBox();
+			this.m_tb_step_rate = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_lbl_step_rate = new System.Windows.Forms.Label();
 			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_lbl_spread = new System.Windows.Forms.Label();
-			this.m_tb_spread = new Rylogic.Gui.ValueBox();
+			this.m_tb_spread = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_tab_ctrl = new System.Windows.Forms.TabControl();
 			this.m_tab_funds = new System.Windows.Forms.TabPage();
-			this.m_grid_funds = new Rylogic.Gui.DataGridView();
+			this.m_grid_funds = new Rylogic.Gui.WinForms.DataGridView();
 			this.m_tab_ctrl.SuspendLayout();
 			this.m_tab_funds.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid_funds)).BeginInit();

@@ -4,19 +4,19 @@ using System.Drawing;
 using System.Windows.Forms;
 using Rylogic.Container;
 using Rylogic.Extn;
-using Rylogic.Gui;
-using Rylogic.Utility;
+using Rylogic.Gui.WinForms;
+using Util = Rylogic.Utility.Util;
 
 namespace TestCS
 {
 	public class SubclassedControlsUI :Form
 	{
 		private ToolStrip m_ts;
-		private Rylogic.Gui.ComboBox m_cb;
-		private Rylogic.Gui.ListBox m_lb;
-		private Rylogic.Gui.DateTimePicker m_dtp;
-		private Rylogic.Gui.RichTextBox m_rtb;
-		private Rylogic.Gui.TextProgressBar m_pb;
+		private Rylogic.Gui.WinForms.ComboBox m_cb;
+		private Rylogic.Gui.WinForms.ListBox m_lb;
+		private Rylogic.Gui.WinForms.DateTimePicker m_dtp;
+		private Rylogic.Gui.WinForms.RichTextBox m_rtb;
+		private Rylogic.Gui.WinForms.TextProgressBar m_pb;
 		private Button m_btn_test;
 		private Timer m_timer;
 
@@ -48,12 +48,12 @@ namespace TestCS
 			m_bl1.Add(new Thing { Name = "Cucumber" });
 	
 			// Tool strip combo box
-			var tscb = new Rylogic.Gui.ToolStripComboBox();
+			var tscb = new Rylogic.Gui.WinForms.ToolStripComboBox();
 			tscb.ComboBox.DisplayProperty = nameof(Thing.Name);
 			m_ts.Items.Add(tscb);
 
 			// Tool strip date time picker
-			var tsdtp = new Rylogic.Gui.ToolStripDateTimePicker();
+			var tsdtp = new Rylogic.Gui.WinForms.ToolStripDateTimePicker();
 			tsdtp.Format = DateTimePickerFormat.Custom;
 			tsdtp.CustomFormat = "yyyy-MM-dd HH:mm:ss";
 			tsdtp.DateTimePicker.Kind = DateTimeKind.Utc;
@@ -77,8 +77,8 @@ namespace TestCS
 
 			// Date time picker
 			m_dtp.Kind = DateTimeKind.Utc;
-			m_dtp.MinDate = Rylogic.Gui.DateTimePicker.MinimumDateTime.As(DateTimeKind.Utc);
-			m_dtp.MaxDate = Rylogic.Gui.DateTimePicker.MaximumDateTime.As(DateTimeKind.Utc);
+			m_dtp.MinDate = Rylogic.Gui.WinForms.DateTimePicker.MinimumDateTime.As(DateTimeKind.Utc);
+			m_dtp.MaxDate = Rylogic.Gui.WinForms.DateTimePicker.MaximumDateTime.As(DateTimeKind.Utc);
 			m_dtp.Value = DateTime.UtcNow;
 			m_dtp.ValueChanged += DateTimeValueChanged;
 
@@ -139,20 +139,20 @@ namespace TestCS
 			// Clear and reset the data source without first chance exceptions
 			m_cb.DataSource = null;
 			m_lb.DataSource = null;
-			((Rylogic.Gui.ToolStripComboBox)m_ts.Items[0]).ComboBox.DataSource = null;
+			((Rylogic.Gui.WinForms.ToolStripComboBox)m_ts.Items[0]).ComboBox.DataSource = null;
 
 			m_bs.DataSource = m_bs.DataSource == m_bl0 ? m_bl1 : m_bl0;
 
 			m_cb.DataSource = m_bs;
 			m_lb.DataSource = m_bs;
-			((Rylogic.Gui.ToolStripComboBox)m_ts.Items[0]).ComboBox.DataSource = m_bs;
+			((Rylogic.Gui.WinForms.ToolStripComboBox)m_ts.Items[0]).ComboBox.DataSource = m_bs;
 		}
 
 		private void DateTimeValueChanged(object sender, EventArgs e)
 		{
 			var dtp =
 				sender is ToolStripDateTimePicker tsdtp ? tsdtp.DateTimePicker :
-				sender is Rylogic.Gui.DateTimePicker prdtp ? prdtp :
+				sender is Rylogic.Gui.WinForms.DateTimePicker prdtp ? prdtp :
 				throw new Exception("Not a date time picker control");
 
 			if (dtp.Value.Kind != DateTimeKind.Utc)
@@ -170,7 +170,7 @@ namespace TestCS
 			public string Name
 			{
 				get { return m_name; }
-				set { m_name = value; PropertyChanged.Raise(this, new PropertyChangedEventArgs("Name")); }
+				set { m_name = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs("Name")); }
 			}
 			private string m_name;
 
@@ -188,16 +188,16 @@ namespace TestCS
 			this.m_btn_test = new System.Windows.Forms.Button();
 			this.m_timer = new System.Windows.Forms.Timer(this.components);
 			this.m_lbl_vb_value = new System.Windows.Forms.Label();
-			this.m_vb_value = new Rylogic.Gui.ValueBox();
-			this.m_browse_path = new Rylogic.Gui.BrowsePathUI();
-			this.m_pb = new Rylogic.Gui.TextProgressBar();
-			this.m_rtb = new Rylogic.Gui.RichTextBox();
-			this.m_lb = new Rylogic.Gui.ListBox();
-			this.m_dtp = new Rylogic.Gui.DateTimePicker();
-			this.m_cb = new Rylogic.Gui.ComboBox();
-			this.m_abtn_switch = new Rylogic.Gui.AnimCheckBox();
+			this.m_vb_value = new Rylogic.Gui.WinForms.ValueBox();
+			this.m_browse_path = new Rylogic.Gui.WinForms.BrowsePathUI();
+			this.m_pb = new Rylogic.Gui.WinForms.TextProgressBar();
+			this.m_rtb = new Rylogic.Gui.WinForms.RichTextBox();
+			this.m_lb = new Rylogic.Gui.WinForms.ListBox();
+			this.m_dtp = new Rylogic.Gui.WinForms.DateTimePicker();
+			this.m_cb = new Rylogic.Gui.WinForms.ComboBox();
+			this.m_abtn_switch = new Rylogic.Gui.WinForms.AnimCheckBox();
 			this.m_abtn_images = new System.Windows.Forms.ImageList(this.components);
-			this.m_pattern_filter = new Rylogic.Gui.PatternFilter();
+			this.m_pattern_filter = new Rylogic.Gui.WinForms.PatternFilter();
 			this.SuspendLayout();
 			// 
 			// m_ts
@@ -254,7 +254,7 @@ namespace TestCS
 			this.m_browse_path.Size = new System.Drawing.Size(356, 32);
 			this.m_browse_path.TabIndex = 7;
 			this.m_browse_path.Title = "Choose a file";
-			this.m_browse_path.Type = Rylogic.Gui.BrowsePathUI.EType.OpenFile;
+			this.m_browse_path.Type = Rylogic.Gui.WinForms.BrowsePathUI.EType.OpenFile;
 			// 
 			// m_pb
 			// 

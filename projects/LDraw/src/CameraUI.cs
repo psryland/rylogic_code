@@ -3,10 +3,10 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gfx;
+using Rylogic.Gui.WinForms;
 using Rylogic.Maths;
-using Rylogic.Utility;
-using Rylogic.Graphix;
+using Util = Rylogic.Utility.Util;
 
 namespace LDraw
 {
@@ -237,20 +237,20 @@ namespace LDraw
 			this.m_lbl_focus_dist = new System.Windows.Forms.Label();
 			this.m_timer = new System.Windows.Forms.Timer(this.components);
 			this.m_btn_bong = new System.Windows.Forms.Button();
-			this.m_tb_focus_dist = new Rylogic.Gui.ValueBox();
-			this.m_tb_fovX = new Rylogic.Gui.ValueBox();
-			this.m_tb_fovY = new Rylogic.Gui.ValueBox();
-			this.m_tb_camera_fwd = new Rylogic.Gui.ValueBox();
-			this.m_tb_camera_up = new Rylogic.Gui.ValueBox();
-			this.m_tb_focus_point = new Rylogic.Gui.ValueBox();
+			this.m_tb_focus_dist = new Rylogic.Gui.WinForms.ValueBox();
+			this.m_tb_fovX = new Rylogic.Gui.WinForms.ValueBox();
+			this.m_tb_fovY = new Rylogic.Gui.WinForms.ValueBox();
+			this.m_tb_camera_fwd = new Rylogic.Gui.WinForms.ValueBox();
+			this.m_tb_camera_up = new Rylogic.Gui.WinForms.ValueBox();
+			this.m_tb_focus_point = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_chk_preserve_aspect = new System.Windows.Forms.CheckBox();
 			this.m_lbl_aspect_ratio = new System.Windows.Forms.Label();
-			this.m_tb_aspect = new Rylogic.Gui.ValueBox();
-			this.m_tb_zoom = new Rylogic.Gui.ValueBox();
+			this.m_tb_aspect = new Rylogic.Gui.WinForms.ValueBox();
+			this.m_tb_zoom = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_lbl_zoom = new System.Windows.Forms.Label();
-			this.m_tb_near = new Rylogic.Gui.ValueBox();
+			this.m_tb_near = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_lbl_near = new System.Windows.Forms.Label();
-			this.m_tb_far = new Rylogic.Gui.ValueBox();
+			this.m_tb_far = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_lbl_far = new System.Windows.Forms.Label();
 			this.SuspendLayout();
 			// 

@@ -6,9 +6,10 @@ using System.Windows.Forms;
 using CoinFlip;
 using Rylogic.Attrib;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 using Rylogic.Maths;
 using Rylogic.Utility;
+using Util = Rylogic.Utility.Util;
 
 namespace Bot.Fishing
 {
@@ -197,7 +198,7 @@ namespace Bot.Fishing
 		private System.ComponentModel.IContainer components = null;
 		private void InitializeComponent()
 		{
-			this.m_log_ui = new Rylogic.Gui.LogUI();
+			this.m_log_ui = new Rylogic.Gui.WinForms.LogUI();
 			this.m_table0 = new System.Windows.Forms.TableLayoutPanel();
 			this.m_panel1 = new System.Windows.Forms.Panel();
 			this.m_tb_q2b_order_book_index = new System.Windows.Forms.TextBox();

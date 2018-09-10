@@ -2,9 +2,10 @@
 using System.Windows.Forms;
 using Rylogic.Container;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 using Rylogic.Utility;
-using DataGridViewComboBoxColumn = Rylogic.Gui.DataGridViewComboBoxColumn;
+using DataGridViewComboBoxColumn = Rylogic.Gui.WinForms.DataGridViewComboBoxColumn;
+using Util = Rylogic.Utility.Util;
 
 namespace CoinFlip
 {

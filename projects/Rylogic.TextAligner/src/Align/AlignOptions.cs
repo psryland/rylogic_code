@@ -138,7 +138,7 @@ namespace Rylogic.TextAligner
 		/// <summary>Save changes when the dialog page loses focus</summary>
 		protected override void OnDeactivate(CancelEventArgs e)
 		{
-			Deactivating.Raise(this, e);
+			Deactivating?.Invoke(this, e);
 			if (e.Cancel) return;
 
 			SaveSettingsToStorage();

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows.Forms;
-using RyLogViewer.Properties;
 using Rylogic.Extn;
 using Rylogic.Script;
 using Rylogic.Utility;

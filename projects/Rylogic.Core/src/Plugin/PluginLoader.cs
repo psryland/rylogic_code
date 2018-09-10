@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using Rylogic.Common;
 using Rylogic.Extn;
 
 namespace Rylogic.Plugin
@@ -46,12 +47,12 @@ namespace Rylogic.Plugin
 		/// <summary>Create an instance of 'ty' named 'name'</summary>
 		public Plugins<TInterface> Load(string name, Type ty, object[] args = null, Func<Type, object[], TInterface> factory = null)
 		{
+			// Create all plugins using the factory callback
+			// This allows plugins to be created on a dispatcher thread using Dispatcher.Invoke
+			factory = factory ?? ((t, a) => (TInterface)Activator.CreateInstance(t, a));
+
 			try
 			{
-				// Create all plugins using the factory callback
-				// This allows plugins to be created on a dispatcher thread using Dispatcher.Invoke
-				factory = factory ?? ((t, a) => (TInterface)Activator.CreateInstance(t, a));
-
 				// An exception here means the constructor for the type being created has thrown.
 				Instances.Add(factory(ty, args));
 			}

@@ -11,14 +11,15 @@ using Rylogic.Common;
 using Rylogic.Container;
 using Rylogic.Db;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 using Rylogic.Maths;
 using Rylogic.Scintilla;
 using Rylogic.Utility;
-using Rylogic.Graphix;
-using Rylogic.Windows32;
+using Rylogic.Gfx;
+using Rylogic.Interop.Win32;
 using Timer = System.Windows.Forms.Timer;
-using ToolStripContainer = Rylogic.Gui.ToolStripContainer;
+using ToolStripContainer = Rylogic.Gui.WinForms.ToolStripContainer;
+using Util = Rylogic.Gui.WinForms.Util;
 
 namespace CoinFlip
 {
@@ -601,7 +602,7 @@ namespace CoinFlip
 			{
 				// Ensure the Bounds are at least partially within the desktop
 				StartPosition  = FormStartPosition.Manual;
-				Bounds         = Util2.OnScreen(Settings.UI.WindowPosition);;
+				Bounds         = Util.OnScreen(Settings.UI.WindowPosition);;
 				WindowState    = Settings.UI.WindowMaximised ? FormWindowState.Maximized : FormWindowState.Normal;
 			}
 		}
@@ -612,10 +613,10 @@ namespace CoinFlip
 		{
 			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainUI));
-			this.m_tsc = new Rylogic.Gui.ToolStripContainer();
+			this.m_tsc = new Rylogic.Gui.WinForms.ToolStripContainer();
 			this.m_ss = new System.Windows.Forms.StatusStrip();
 			this.m_status = new System.Windows.Forms.ToolStripStatusLabel();
-			this.m_dc = new Rylogic.Gui.DockContainer();
+			this.m_dc = new Rylogic.Gui.WinForms.DockContainer();
 			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_new_chart = new System.Windows.Forms.ToolStripMenuItem();
@@ -641,7 +642,7 @@ namespace CoinFlip
 			this.m_btn_backtesting_step1 = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_backtesting_run_to_trade = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_backtesting_run = new System.Windows.Forms.ToolStripButton();
-			this.m_trk_sim_time = new Rylogic.Gui.ToolStripTrackBar();
+			this.m_trk_sim_time = new Rylogic.Gui.WinForms.ToolStripTrackBar();
 			this.m_cb_sim_timeframe = new System.Windows.Forms.ToolStripComboBox();
 			this.m_tb_sim_time = new System.Windows.Forms.ToolStripTextBox();
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();

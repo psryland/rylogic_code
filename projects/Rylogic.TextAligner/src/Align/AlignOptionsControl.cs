@@ -4,8 +4,8 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using Rylogic.Extn;
-using Rylogic.Gui;
-using Rylogic.Utility;
+using Rylogic.Gui.WinForms;
+using Util = Rylogic.Utility.Util;
 
 namespace Rylogic.TextAligner
 {
@@ -221,7 +221,7 @@ namespace Rylogic.TextAligner
 		{
 			if (_help_ui == null)
 			{
-				var text = new Gui.RichTextBox
+				var text = new Gui.WinForms.RichTextBox
 				{
 					Multiline = true,
 					Dock = DockStyle.Fill,

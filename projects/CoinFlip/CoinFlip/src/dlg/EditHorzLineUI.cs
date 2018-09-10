@@ -1,7 +1,6 @@
 ﻿using System.Windows.Forms;
-using Rylogic.Extn;
-using Rylogic.Gui;
-using Rylogic.Utility;
+using Rylogic.Gui.WinForms;
+using Util = Rylogic.Utility.Util;
 
 namespace CoinFlip
 {
@@ -106,17 +105,17 @@ namespace CoinFlip
 		{
 			this.components = new System.ComponentModel.Container();
 			this.m_lbl_region_colour = new System.Windows.Forms.Label();
-			this.m_colour_region = new Rylogic.Gui.ColourWheel();
+			this.m_colour_region = new Rylogic.Gui.WinForms.ColourWheel();
 			this.m_lbl_line_width = new System.Windows.Forms.Label();
 			this.m_lbl_line_colour = new System.Windows.Forms.Label();
-			this.m_colour_line = new Rylogic.Gui.ColourWheel();
+			this.m_colour_line = new Rylogic.Gui.WinForms.ColourWheel();
 			this.m_lbl_region_height = new System.Windows.Forms.Label();
 			this.m_lbl_price = new System.Windows.Forms.Label();
 			this.m_btn_delete = new System.Windows.Forms.Button();
 			this.m_btn_ok = new System.Windows.Forms.Button();
-			this.m_tb_price_level = new Rylogic.Gui.ValueBox();
-			this.m_tb_region_size = new Rylogic.Gui.ValueBox();
-			this.m_tb_line_width = new Rylogic.Gui.ValueBox();
+			this.m_tb_price_level = new Rylogic.Gui.WinForms.ValueBox();
+			this.m_tb_region_size = new Rylogic.Gui.WinForms.ValueBox();
+			this.m_tb_line_width = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
 			this.SuspendLayout();
 			// 
@@ -134,11 +133,11 @@ namespace CoinFlip
 			this.m_colour_region.Colour = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(255)))), ((int)(((byte)(255)))));
 			this.m_colour_region.Location = new System.Drawing.Point(96, 160);
 			this.m_colour_region.Name = "m_colour_region";
-			this.m_colour_region.Parts = ((Rylogic.Gui.ColourWheel.EParts)((((((Rylogic.Gui.ColourWheel.EParts.Wheel | Rylogic.Gui.ColourWheel.EParts.VSlider) 
-            | Rylogic.Gui.ColourWheel.EParts.ASlider) 
-            | Rylogic.Gui.ColourWheel.EParts.ColourSelection) 
-            | Rylogic.Gui.ColourWheel.EParts.VSelection) 
-            | Rylogic.Gui.ColourWheel.EParts.ASelection)));
+			this.m_colour_region.Parts = ((Rylogic.Gui.WinForms.ColourWheel.EParts)((((((Rylogic.Gui.WinForms.ColourWheel.EParts.Wheel | Rylogic.Gui.WinForms.ColourWheel.EParts.VSlider) 
+            | Rylogic.Gui.WinForms.ColourWheel.EParts.ASlider) 
+            | Rylogic.Gui.WinForms.ColourWheel.EParts.ColourSelection) 
+            | Rylogic.Gui.WinForms.ColourWheel.EParts.VSelection) 
+            | Rylogic.Gui.WinForms.ColourWheel.EParts.ASelection)));
 			this.m_colour_region.Size = new System.Drawing.Size(120, 63);
 			this.m_colour_region.SliderWidth = 20;
 			this.m_colour_region.TabIndex = 38;
@@ -167,11 +166,11 @@ namespace CoinFlip
 			this.m_colour_line.Colour = System.Drawing.Color.FromArgb(((int)(((byte)(255)))), ((int)(((byte)(255)))), ((int)(((byte)(255)))));
 			this.m_colour_line.Location = new System.Drawing.Point(96, 91);
 			this.m_colour_line.Name = "m_colour_line";
-			this.m_colour_line.Parts = ((Rylogic.Gui.ColourWheel.EParts)((((((Rylogic.Gui.ColourWheel.EParts.Wheel | Rylogic.Gui.ColourWheel.EParts.VSlider) 
-            | Rylogic.Gui.ColourWheel.EParts.ASlider) 
-            | Rylogic.Gui.ColourWheel.EParts.ColourSelection) 
-            | Rylogic.Gui.ColourWheel.EParts.VSelection) 
-            | Rylogic.Gui.ColourWheel.EParts.ASelection)));
+			this.m_colour_line.Parts = ((Rylogic.Gui.WinForms.ColourWheel.EParts)((((((Rylogic.Gui.WinForms.ColourWheel.EParts.Wheel | Rylogic.Gui.WinForms.ColourWheel.EParts.VSlider) 
+            | Rylogic.Gui.WinForms.ColourWheel.EParts.ASlider) 
+            | Rylogic.Gui.WinForms.ColourWheel.EParts.ColourSelection) 
+            | Rylogic.Gui.WinForms.ColourWheel.EParts.VSelection) 
+            | Rylogic.Gui.WinForms.ColourWheel.EParts.ASelection)));
 			this.m_colour_line.Size = new System.Drawing.Size(120, 63);
 			this.m_colour_line.SliderWidth = 20;
 			this.m_colour_line.TabIndex = 34;

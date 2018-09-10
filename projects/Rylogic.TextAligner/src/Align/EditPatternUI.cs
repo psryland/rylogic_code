@@ -1,14 +1,15 @@
 ﻿using System;
 using System.Windows.Forms;
+using Rylogic.Gui.WinForms;
 
 namespace Rylogic.TextAligner
 {
 	internal class EditPatternUI :Form
 	{
 		#region UI Elements
-		private Rylogic.Gui.PatternUI m_pattern_ui;
+		private PatternUI m_pattern_ui;
 		private SplitContainer m_split;
-		private System.Windows.Forms.TextBox m_edit_comment;
+		private TextBox m_edit_comment;
 		#endregion
 
 		public EditPatternUI(AlignPattern pat)
@@ -63,7 +64,7 @@ namespace Rylogic.TextAligner
 		private System.ComponentModel.IContainer components = null;
 		private void InitializeComponent()
 		{
-			this.m_pattern_ui = new Rylogic.Gui.PatternUI();
+			this.m_pattern_ui = new Rylogic.Gui.WinForms.PatternUI();
 			this.m_edit_comment = new System.Windows.Forms.TextBox();
 			this.m_split = new System.Windows.Forms.SplitContainer();
 			((System.ComponentModel.ISupportInitialize)(this.m_split)).BeginInit();

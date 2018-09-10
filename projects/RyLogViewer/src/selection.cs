@@ -4,8 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Windows.Forms;
 using Rylogic.Common;
-using Rylogic.Extn;
-using Rylogic.Maths;
+using Rylogic.Gui.WinForms;
 using Rylogic.Utility;
 
 namespace RyLogViewer
@@ -31,7 +30,7 @@ namespace RyLogViewer
 		private void RaiseSelectionChanged()
 		{
 			var args = new SelectionEventArgs(this);
-			SelectionChanged.Raise(this, args);
+			SelectionChanged?.Invoke(this, args);
 		}
 
 		/// <summary>Select the row in the file that contains the byte offset 'addr'</summary>

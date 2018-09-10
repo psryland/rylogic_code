@@ -23,7 +23,7 @@ namespace CoinFlip
 					return;
 
 				// Notify about to change back testing mode
-				BackTestingChanging.Raise(this, new PrePostEventArgs(after:false));
+				BackTestingChanging?.Invoke(this, new PrePostEventArgs(after:false));
 
 				// Stop all bots before enabling/disabling back testing
 				foreach (var bot in Bots)
@@ -52,7 +52,7 @@ namespace CoinFlip
 
 				// Notify back testing changed
 				Log.Write(ELogLevel.Debug, value ? "Back testing enabled" : "Back testing disabled");
-				BackTestingChanging.Raise(this, new PrePostEventArgs(after:true));
+				BackTestingChanging?.Invoke(this, new PrePostEventArgs(after:true));
 
 				// Reset after back-testing starts
 				if (value)
@@ -93,15 +93,15 @@ namespace CoinFlip
 				// Handlers
 				void HandleSimRunningChanged(object sender, PrePostEventArgs e)
 				{
-					SimRunningChanged.Raise(sender, e);
+					SimRunningChanged?.Invoke(sender, e);
 				}
 				void HandleSimStep(object sender, SimStepEventArgs e)
 				{
-					SimStep.Raise(sender, e);
+					SimStep?.Invoke(sender, e);
 				}
 				void HandleSimReset(object sender, SimResetEventArgs e)
 				{
-					SimReset.Raise(sender, e);
+					SimReset?.Invoke(sender, e);
 				}
 			}
 		}

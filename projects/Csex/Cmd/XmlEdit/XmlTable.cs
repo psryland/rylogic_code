@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Drawing;
-using System.Data;
 using System.Linq;
 using System.Windows.Forms;
-using Rylogic.Gui;
 using System.Xml.Linq;
-using Rylogic.Extn;
 using Rylogic.Container;
+using Rylogic.Extn;
+using Rylogic.Gui.WinForms;
 using Rylogic.Utility;
-using DataGridView = Rylogic.Gui.DataGridView;
+using DataGridView = Rylogic.Gui.WinForms.DataGridView;
 
 namespace Csex
 {

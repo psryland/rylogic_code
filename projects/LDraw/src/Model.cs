@@ -8,10 +8,11 @@ using System.Windows.Threading;
 using Rylogic.Common;
 using Rylogic.Container;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gfx;
+using Rylogic.Gui.WinForms;
 using Rylogic.Maths;
 using Rylogic.Utility;
-using Rylogic.Graphix;
+using Util = Rylogic.Utility.Util;
 
 namespace LDraw
 {

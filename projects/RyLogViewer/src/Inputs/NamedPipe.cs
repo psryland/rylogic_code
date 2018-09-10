@@ -3,9 +3,7 @@ using System.Drawing;
 using System.IO.Pipes;
 using System.Runtime.Serialization;
 using System.Windows.Forms;
-using RyLogViewer.Properties;
-using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 using Rylogic.Utility;
 
 namespace RyLogViewer

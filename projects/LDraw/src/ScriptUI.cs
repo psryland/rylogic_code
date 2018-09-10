@@ -3,13 +3,12 @@ using System.IO;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using Rylogic.Common;
-using Rylogic.Container;
 using Rylogic.Extn;
-using Rylogic.Gui;
-using Rylogic.Utility;
-using Rylogic.Windows32;
-using ToolStripComboBox = Rylogic.Gui.ToolStripComboBox;
-using ToolStripContainer = Rylogic.Gui.ToolStripContainer;
+using Rylogic.Gui.WinForms;
+using Rylogic.Interop.Win32;
+using ToolStripComboBox = Rylogic.Gui.WinForms.ToolStripComboBox;
+using ToolStripContainer = Rylogic.Gui.WinForms.ToolStripContainer;
+using Util = Rylogic.Utility.Util;
 
 namespace LDraw
 {
@@ -77,13 +76,13 @@ namespace LDraw
 		{
 			switch (Win32.ToVKey(m.WParam))
 			{
-			case Keys.F5:
+			case KeyCodes.F5:
 				m_btn_render.PerformClick();
 				break;
-			case Keys.F7:
+			case KeyCodes.F7:
 				Scene?.AutoRange();
 				break;
-			case Keys.ControlKey | Keys.D:
+			case KeyCodes.ControlKey | KeyCodes.D:
 				m_btn_clear.PerformClick();
 				break;
 			}
@@ -382,7 +381,7 @@ namespace LDraw
 		{
 			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ScriptUI));
-			this.m_tsc = new Rylogic.Gui.ToolStripContainer();
+			this.m_tsc = new Rylogic.Gui.WinForms.ToolStripContainer();
 			this.m_ts = new System.Windows.Forms.ToolStrip();
 			this.m_btn_save = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
@@ -390,7 +389,7 @@ namespace LDraw
 			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_btn_clear = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_cb_scene = new Rylogic.Gui.ToolStripComboBox();
+			this.m_cb_scene = new Rylogic.Gui.WinForms.ToolStripComboBox();
 			this.m_il_toolbar = new System.Windows.Forms.ImageList(this.components);
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();

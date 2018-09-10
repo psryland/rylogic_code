@@ -9,9 +9,10 @@ using Rylogic.Common;
 using Rylogic.Container;
 using Rylogic.Db;
 using Rylogic.Extn;
-using Rylogic.Graphix;
-using Rylogic.Gui;
+using Rylogic.Gfx;
+using Rylogic.Gui.WinForms;
 using Rylogic.Utility;
+using Util = Rylogic.Utility.Util;
 
 namespace CoinFlip
 {
@@ -492,10 +493,10 @@ namespace CoinFlip
 		{
 			this.components = new System.ComponentModel.Container();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(EquityUI));
-			Rylogic.Gui.ChartControl.RdrOptions rdrOptions1 = new Rylogic.Gui.ChartControl.RdrOptions();
+			Rylogic.Gui.WinForms.ChartControl.RdrOptions rdrOptions1 = new Rylogic.Gui.WinForms.ChartControl.RdrOptions();
 			System.Drawing.Drawing2D.Matrix matrix1 = new System.Drawing.Drawing2D.Matrix();
 			this.m_table0 = new System.Windows.Forms.TableLayoutPanel();
-			this.m_chart = new Rylogic.Gui.ChartControl();
+			this.m_chart = new Rylogic.Gui.WinForms.ChartControl();
 			this.m_ts = new System.Windows.Forms.ToolStrip();
 			this.m_lbl_exchange = new System.Windows.Forms.ToolStripLabel();
 			this.m_cb_exchange = new System.Windows.Forms.ToolStripComboBox();
@@ -527,7 +528,7 @@ namespace CoinFlip
 			// 
 			this.m_chart.AllowEditing = false;
 			this.m_chart.AllowSelection = false;
-			this.m_chart.AreaSelectMode = Rylogic.Gui.ChartControl.EAreaSelectMode.Zoom;
+			this.m_chart.AreaSelectMode = Rylogic.Gui.WinForms.ChartControl.EAreaSelectMode.Zoom;
 			this.m_chart.BackColor = System.Drawing.SystemColors.ControlDarkDark;
 			this.m_chart.CrossHairLocation = ((System.Drawing.PointF)(resources.GetObject("m_chart.CrossHairLocation")));
 			this.m_chart.CrossHairVisible = false;
@@ -539,14 +540,14 @@ namespace CoinFlip
 			rdrOptions1.AntiAliasing = true;
 			rdrOptions1.BkColour = System.Drawing.SystemColors.Control;
 			rdrOptions1.ChartBkColour = System.Drawing.Color.White;
-			rdrOptions1.CullMode = Rylogic.Graphix.View3d.ECullMode.Back;
-			rdrOptions1.FillMode = Rylogic.Graphix.View3d.EFillMode.Solid;
+			rdrOptions1.CullMode = Rylogic.Gfx.View3d.ECullMode.Back;
+			rdrOptions1.FillMode = Rylogic.Gfx.View3d.EFillMode.Solid;
 			rdrOptions1.GridZOffset = 0.001F;
 			rdrOptions1.LockAspect = null;
 			rdrOptions1.Margin = new System.Windows.Forms.Padding(3);
 			rdrOptions1.MinDragPixelDistance = 5F;
 			rdrOptions1.MinSelectionDistance = 10F;
-			rdrOptions1.NavigationMode = Rylogic.Gui.ChartControl.ENavMode.Chart2D;
+			rdrOptions1.NavigationMode = Rylogic.Gui.WinForms.ChartControl.ENavMode.Chart2D;
 			rdrOptions1.NoteFont = new System.Drawing.Font("Tahoma", 8F);
 			rdrOptions1.Orthographic = false;
 			rdrOptions1.PerpendicularZTranslation = false;

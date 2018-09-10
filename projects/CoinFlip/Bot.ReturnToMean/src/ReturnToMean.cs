@@ -7,8 +7,11 @@ using System.Xml.Linq;
 using CoinFlip;
 using Rylogic.Common;
 using Rylogic.Extn;
+using Rylogic.Gui.WinForms;
 using Rylogic.Maths;
+using Rylogic.Plugin;
 using Rylogic.Utility;
+using Util = Rylogic.Utility.Util;
 
 namespace Bot.ReturnToMean
 {

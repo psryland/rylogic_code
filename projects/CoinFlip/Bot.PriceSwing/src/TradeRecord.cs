@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Xml.Linq;
 using CoinFlip;
 using Rylogic.Extn;
-using Rylogic.Graphix;
+using Rylogic.Gfx;
 using Rylogic.Utility;
 
 namespace Bot.PriceSwing

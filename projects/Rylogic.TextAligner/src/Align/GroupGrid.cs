@@ -4,7 +4,8 @@ using System.Globalization;
 using System.Windows.Forms;
 using Rylogic.Extn;
 using Rylogic.Maths;
-using Rylogic.Utility;
+using Rylogic.Gui.WinForms;
+using DataGridView = Rylogic.Gui.WinForms.DataGridView;
 
 namespace Rylogic.TextAligner
 {
@@ -22,7 +23,9 @@ namespace Rylogic.TextAligner
 		/// <summary>Can't do this in the constructor because the designer screws it up</summary>
 		public GroupGrid()
 		{
-			if (this.IsInDesignMode()) return;
+			if (this.IsInDesignMode())
+				return;
+
 			VirtualMode = true;
 			AutoGenerateColumns = false;
 			//m_data = new BindingSource();

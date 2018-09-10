@@ -3,7 +3,7 @@
 namespace RyLogViewer
 {
 	/// <summary>Subclass the DataGridView to add missing features</summary>
-	public sealed class DataGridView :Rylogic.Gui.DataGridView
+	public sealed class DataGridView :Rylogic.Gui.WinForms.DataGridView
 	{
 		public DataGridView()
 		{
@@ -38,7 +38,7 @@ namespace RyLogViewer
 		}
 	}
 
-	public sealed class ComboBox :Rylogic.Gui.ComboBox
+	public sealed class ComboBox :Rylogic.Gui.WinForms.ComboBox
 	{
 //		public override int SelectedIndex
 //		{
@@ -48,7 +48,7 @@ namespace RyLogViewer
 //		}
 	}
 
-	public sealed class ListBox :Rylogic.Gui.ListBox
+	public sealed class ListBox :Rylogic.Gui.WinForms.ListBox
 	{
 //		public override int SelectedIndex
 //		{

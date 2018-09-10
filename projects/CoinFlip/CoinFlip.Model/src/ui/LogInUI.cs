@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Windows.Forms;
+using Rylogic.Common;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 using Rylogic.Utility;
+using Util = Rylogic.Utility.Util;
 
 namespace CoinFlip
 {
@@ -68,7 +70,7 @@ namespace CoinFlip
 		private void InitializeComponent()
 		{
 			this.m_lbl_username = new System.Windows.Forms.Label();
-			this.m_tb_username = new Rylogic.Gui.ValueBox();
+			this.m_tb_username = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_lbl_password = new System.Windows.Forms.Label();
 			this.m_tb_password = new System.Windows.Forms.TextBox();
 			this.m_btn_cancel = new System.Windows.Forms.Button();

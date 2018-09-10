@@ -3,14 +3,14 @@ using System.Linq;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gfx;
+using Rylogic.Gui.WinForms;
+using Rylogic.Interop.Win32;
 using Rylogic.Maths;
 using Rylogic.Scintilla;
-using Rylogic.Utility;
-using Rylogic.Graphix;
-using Rylogic.Windows32;
-using ComboBox = Rylogic.Gui.ComboBox;
-using ToolStripContainer = Rylogic.Gui.ToolStripContainer;
+using ComboBox = Rylogic.Gui.WinForms.ComboBox;
+using ToolStripContainer = Rylogic.Gui.WinForms.ToolStripContainer;
+using Util = Rylogic.Utility.Util;
 
 namespace TestCS
 {
@@ -207,9 +207,9 @@ namespace TestCS
 		/// </summary>
 		private void InitializeComponent()
 		{
-			Rylogic.Gui.DiagramControl.DiagramOptions diagramOptions1 = new Rylogic.Gui.DiagramControl.DiagramOptions();
-			Rylogic.Gui.DiagramControl.DiagramOptions.NodeOptions nodeOptions1 = new Rylogic.Gui.DiagramControl.DiagramOptions.NodeOptions();
-			Rylogic.Gui.DiagramControl.DiagramOptions.ScatterOptions scatterOptions1 = new Rylogic.Gui.DiagramControl.DiagramOptions.ScatterOptions();
+			Rylogic.Gui.WinForms.DiagramControl.DiagramOptions diagramOptions1 = new Rylogic.Gui.WinForms.DiagramControl.DiagramOptions();
+			Rylogic.Gui.WinForms.DiagramControl.DiagramOptions.NodeOptions nodeOptions1 = new Rylogic.Gui.WinForms.DiagramControl.DiagramOptions.NodeOptions();
+			Rylogic.Gui.WinForms.DiagramControl.DiagramOptions.ScatterOptions scatterOptions1 = new Rylogic.Gui.WinForms.DiagramControl.DiagramOptions.ScatterOptions();
 			this.statusStrip1 = new System.Windows.Forms.StatusStrip();
 			this.m_status_mouse_pos = new System.Windows.Forms.ToolStripStatusLabel();
 			this.menuStrip1 = new System.Windows.Forms.MenuStrip();
@@ -221,7 +221,7 @@ namespace TestCS
 			this.m_menu_tools_load_options = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools_allowediting = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_toolstripcont = new ToolStripContainer();
-			this.m_diag = new Rylogic.Gui.DiagramControl();
+			this.m_diag = new Rylogic.Gui.WinForms.DiagramControl();
 			this.statusStrip1.SuspendLayout();
 			this.menuStrip1.SuspendLayout();
 			this.m_toolstripcont.BottomToolStripPanel.SuspendLayout();

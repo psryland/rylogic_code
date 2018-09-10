@@ -1,7 +1,8 @@
 ﻿using System.Windows.Forms;
-using Rylogic.Gui;
+using Rylogic.Common;
+using Rylogic.Gui.WinForms;
 using Rylogic.Scintilla;
-using Rylogic.Utility;
+using Util = Rylogic.Utility.Util;
 
 namespace TestCS
 {
@@ -15,7 +16,7 @@ namespace TestCS
 
 			var settings = new VT100.Settings();
 			var buffer = new VT100.Buffer(settings);
-			var term = new VT100.Display(buffer) {Dock = DockStyle.Fill};
+			var term = new VT100Display(buffer) {Dock = DockStyle.Fill};
 
 			buffer.Output(VT100.Buffer.TestConsoleString0);
 			buffer.Output(VT100.Buffer.TestConsoleString1);

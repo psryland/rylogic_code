@@ -1,5 +1,6 @@
 ﻿using System;
 using Rylogic.Extn;
+using Rylogic.Interop.Win32;
 
 namespace Csex
 {
@@ -35,7 +36,7 @@ namespace Csex
 		/// <summary>Run the command</summary>
 		public override int Run()
 		{
-			Rylogic.Windows32.Win32.FreeConsole();
+			Win32.FreeConsole();
 			using (var dlg = new XmlEditUI())
 			{
 				if (m_filepath.HasValue()) dlg.OpenFile(m_filepath);

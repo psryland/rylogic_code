@@ -3,14 +3,12 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
-using RyLogViewer.Properties;
 using Rylogic.Extn;
-using Rylogic.Graphix;
-using Rylogic.Gui;
-using Rylogic.Utility;
+using Rylogic.Gui.WinForms;
 
 namespace RyLogViewer
 {
+	using Util = Rylogic.Utility.Util;
 	using WebBrowser = System.Windows.Forms.WebBrowser;
 
 	public sealed class FirstRunTutorial :ToolForm

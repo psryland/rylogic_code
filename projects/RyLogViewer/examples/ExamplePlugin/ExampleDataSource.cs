@@ -6,12 +6,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Threading;
-using RyLogViewer;
+using Rylogic.Plugin;
 
 namespace RyLogViewer.ExamplePlugin
 {
 	/// <summary>A data source that reads a file as hex formatted text</summary>
-	[Rylogic.Common.Plugin(typeof(ICustomLogDataSource))]
+	[Plugin(typeof(ICustomLogDataSource))]
 	public class ExampleDataSource :ICustomLogDataSource
 	{
 		private const int TextBytesPerFileByte = 3; // Each byte is represented as 'XX '

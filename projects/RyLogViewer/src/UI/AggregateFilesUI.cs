@@ -1,12 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
-using Rylogic.Extn;
-using Rylogic.Utility;
-using System;
 using Rylogic.Container;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
+using Util = Rylogic.Utility.Util;
 
 namespace RyLogViewer
 {
@@ -149,7 +148,7 @@ namespace RyLogViewer
 				return false;
 
 			args.Effect = DragDropEffects.Copy;
-			if (mode != Rylogic.Gui.DragDrop.EDrop.Drop)
+			if (mode != Rylogic.Gui.WinForms.DragDrop.EDrop.Drop)
 				return true;
 
 			var filepaths = (string[])args.Data.GetData(DataFormats.FileDrop);

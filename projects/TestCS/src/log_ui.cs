@@ -5,7 +5,7 @@ namespace TestCS
 {
 	public class LogUI :Form
 	{
-		private Rylogic.Gui.LogUI m_log_ui;
+		private Rylogic.Gui.WinForms.LogUI m_log_ui;
 		public LogUI()
 		{
 			InitializeComponent();
@@ -16,11 +16,16 @@ namespace TestCS
 			base.Dispose(disposing);
 		}
 
+		public void AddMessage(string msg)
+		{
+			m_log_ui.AddMessage(msg);
+		}
+
 		#region Windows Form Designer generated code
 		private System.ComponentModel.IContainer components = null;
 		private void InitializeComponent()
 		{
-			this.m_log_ui = new Rylogic.Gui.LogUI();
+			this.m_log_ui = new Rylogic.Gui.WinForms.LogUI();
 			this.SuspendLayout();
 			// 
 			// m_log_ui

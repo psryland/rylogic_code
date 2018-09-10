@@ -83,7 +83,7 @@ namespace Bot.Fishing
 						BaitB2Q?.Cancel();
 						BaitQ2B?.Cancel();
 
-						Updated.Raise(this);
+						Updated?.Invoke(this, EventArgs.Empty);
 					}
 					catch (Exception ex)
 					{
@@ -132,7 +132,7 @@ namespace Bot.Fishing
 				}
 
 				// Notify changed
-				PropertyChanged.Raise(this, new PropertyChangedEventArgs(nameof(Active)));
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Active)));
 
 				// Handlers
 				void HandleTick(object sender, EventArgs args)
@@ -144,7 +144,7 @@ namespace Bot.Fishing
 						Update();
 
 						// Notify updated
-						Updated.Raise(this);
+						Updated?.Invoke(this, EventArgs.Empty);
 					}
 					catch (Exception ex)
 					{
@@ -190,7 +190,7 @@ namespace Bot.Fishing
 					case nameof(FishFinder.FishingData.Pair):
 					case nameof(FishFinder.FishingData.Exch0):
 					case nameof(FishFinder.FishingData.Exch1):
-						PropertyChanged.Raise(this, new PropertyChangedEventArgs(args.Key));
+						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(args.Key));
 						break;
 					}
 				}

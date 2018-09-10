@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
-using RyLogViewer.Properties;
-using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 
 namespace RyLogViewer
 {

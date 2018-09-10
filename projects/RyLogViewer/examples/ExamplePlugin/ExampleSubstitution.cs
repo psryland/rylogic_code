@@ -1,10 +1,10 @@
 ﻿using System;
-using RyLogViewer;
+using Rylogic.Plugin;
 
 namespace RyLogViewer.ExamplePlugin
 {
 	/// <summary>A example transform substitution, accessed via the Options->Transforms tab</summary>
-	[Rylogic.Common.Plugin(typeof(ITransformSubstitution))]
+	[Plugin(typeof(ITransformSubstitution))]
 	public class ExampleSubstitution :TransformSubstitutionBase
 	{
 		/// <summary>

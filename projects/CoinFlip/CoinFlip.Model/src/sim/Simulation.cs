@@ -53,17 +53,18 @@ namespace CoinFlip
 				if (m_model == value) return;
 				if (m_model != null)
 				{
-					m_model.Settings.BackTesting.SettingChanged -= HandleSettingChanged;
+					m_model.Settings.BackTesting.SettingChange -= HandleSettingChange;
 				}
 				m_model = value;
 				if (m_model != null)
 				{
-					m_model.Settings.BackTesting.SettingChanged += HandleSettingChanged;
+					m_model.Settings.BackTesting.SettingChange += HandleSettingChange;
 				}
 
 				// Handlers
-				void HandleSettingChanged(object sender, SettingChangedEventArgs args)
+				void HandleSettingChange(object sender, SettingChangeEventArgs args)
 				{
+					if (args.Before) return;
 					switch (args.Key)
 					{
 					case nameof(Settings.TimeFrame):
@@ -156,7 +157,7 @@ namespace CoinFlip
 				bot.Active = true;
 
 			// Notify of reset
-			SimReset.Raise(this, new SimResetEventArgs(Settings.Steps, Settings.TimeFrame, StartTime));
+			SimReset?.Invoke(this, new SimResetEventArgs(Settings.Steps, Settings.TimeFrame, StartTime));
 		}
 
 		/// <summary>Advance the simulation forward by one step</summary>
@@ -197,7 +198,7 @@ namespace CoinFlip
 				if (Running == value) return;
 				Debug.Assert(Model.AssertMainThread());
 
-				SimRunningChanged.Raise(this, new PrePostEventArgs(after:false));
+				SimRunningChanged?.Invoke(this, new PrePostEventArgs(after:false));
 				if (Running)
 				{
 					m_main_loop_sw.Stop();
@@ -210,7 +211,7 @@ namespace CoinFlip
 					m_main_loop_sw.Start();
 					m_max_ticks_per_step =  Misc.TimeFrameToTicks(1.0 / Settings.StepsPerCandle, Settings.TimeFrame);
 				}
-				SimRunningChanged.Raise(this, new PrePostEventArgs(after:true));
+				SimRunningChanged?.Invoke(this, new PrePostEventArgs(after:true));
 
 				// Handlers
 				void HandleTick(object sender, EventArgs args)
@@ -252,7 +253,7 @@ namespace CoinFlip
 					m_main_loop_last_step += m_max_ticks_per_step;
 
 					// Notify the sim step. This causes PriceData's to "add" candles
-					SimStep.Raise(this, new SimStepEventArgs(Clock));
+					SimStep?.Invoke(this, new SimStepEventArgs(Clock));
 
 					// Run the required number of steps
 					if (RunMode == ERunMode.StepOne)

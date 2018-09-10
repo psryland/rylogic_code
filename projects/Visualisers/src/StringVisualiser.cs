@@ -1,13 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using Microsoft.VisualStudio.DebuggerVisualizers;
-using Rylogic.Gui;
-using RichTextBox = Rylogic.Gui.RichTextBox;
+﻿using Rylogic.Gui.WinForms;
+using RichTextBox = Rylogic.Gui.WinForms.RichTextBox;
 
 [assembly: System.Diagnostics.DebuggerVisualizer(
 	typeof(Rylogic.StringVisualiser.Visualiser),
@@ -33,7 +25,7 @@ namespace Rylogic
 		private void InitializeComponent()
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(StringVisualiser));
-			this.m_rtb = new Rylogic.Gui.RichTextBox();
+			this.m_rtb = new Rylogic.Gui.WinForms.RichTextBox();
 			this.SuspendLayout();
 			// 
 			// m_rtb

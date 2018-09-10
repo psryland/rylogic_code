@@ -6,7 +6,7 @@ using System.Reflection;
 using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 using Rylogic.Utility;
 
 namespace CoinFlip
@@ -770,14 +770,14 @@ namespace CoinFlip
 					else
 						fi.SetValue(this, value);
 				}
-				PropertyChanged.Raise(this, new PropertyChangedEventArgs(prop_name));
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 			}
 			private void SetProp<T>(ref T field, T value, string prop_name)
 			{
 				// This one is for non-inherited properties
 				if (Equals(field, value)) return;
 				field = value;
-				PropertyChanged.Raise(this, new PropertyChangedEventArgs(prop_name));
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 			}
 			public event PropertyChangedEventHandler PropertyChanged;
 

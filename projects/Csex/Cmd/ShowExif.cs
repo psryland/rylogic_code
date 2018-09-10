@@ -1,8 +1,6 @@
 ﻿using System;
-using System.IO;
-using Rylogic.Common;
 using Rylogic.Extn;
-using Rylogic.Graphix;
+using Rylogic.Gfx;
 
 namespace Csex
 {

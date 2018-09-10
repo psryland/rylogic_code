@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Windows.Forms;
-using Rylogic.Extn;
+using Rylogic.Common;
 using Rylogic.Utility;
 
 namespace RyLogViewer

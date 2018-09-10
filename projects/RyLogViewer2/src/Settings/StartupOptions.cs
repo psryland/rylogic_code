@@ -1,6 +1,6 @@
 ﻿using System;
 using System.IO;
-using Rylogic.Extn;
+using Rylogic.Common;
 using Rylogic.Utility;
 
 namespace RyLogViewer

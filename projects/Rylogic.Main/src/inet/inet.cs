@@ -2,9 +2,9 @@
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Text;
-using Rylogic.Windows32;
+using Rylogic.Interop.Win32;
 
-namespace Rylogic.INet
+namespace Rylogic.Gui.WinForms
 {
 	public static partial class INet
 	{

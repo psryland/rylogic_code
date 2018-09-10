@@ -3,9 +3,9 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 using Rylogic.Maths;
-using Rylogic.Utility;
+using Util = Rylogic.Utility.Util;
 
 namespace TestCS
 {
@@ -123,7 +123,7 @@ namespace TestCS
 		private void InitializeComponent()
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(GraphControlUI));
-			this.m_graph = new Rylogic.Gui.GraphControl();
+			this.m_graph = new Rylogic.Gui.WinForms.GraphControl();
 			this.SuspendLayout();
 			//
 			// m_graph

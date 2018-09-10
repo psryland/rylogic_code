@@ -4,7 +4,7 @@
 //***************************************************
 
 using System.Drawing;
-using Rylogic.Graphix;
+using Rylogic.Gfx;
 using Rylogic.Maths;
 
 namespace Rylogic.Extn

@@ -4,7 +4,7 @@ using System.Windows;
 using System.Windows.Forms;
 using Rylogic.Maths;
 using Rylogic.Utility;
-using Rylogic.Graphix;
+using Rylogic.Gfx;
 
 namespace TestWPF
 {

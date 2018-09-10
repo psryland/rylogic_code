@@ -2,11 +2,11 @@
 using System.Drawing;
 using System.Windows.Forms;
 using Rylogic.Common;
-using Rylogic.Container;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 using Rylogic.Maths;
 using Rylogic.Utility;
+using Util = Rylogic.Utility.Util;
 
 namespace RyLogViewer
 {

@@ -802,7 +802,7 @@ namespace CoinFlip
 		public event PropertyChangedEventHandler PropertyChanged;
 		protected void RaisePropertyChanged(PropertyChangedEventArgs args)
 		{
-			PropertyChanged.Raise(this, args);
+			PropertyChanged?.Invoke(this, args);
 		}
 
 		/// <summary></summary>

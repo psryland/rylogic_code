@@ -5,10 +5,9 @@ using System.IO;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Windows.Forms;
-using RyLogViewer.Properties;
-using Rylogic.Extn;
+using Rylogic.Interop.Win32;
 using Rylogic.Utility;
-using Rylogic.Windows32;
+
 
 namespace RyLogViewer
 {

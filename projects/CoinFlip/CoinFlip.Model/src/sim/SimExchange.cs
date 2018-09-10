@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Rylogic.Common;
 using Rylogic.Container;
 using Rylogic.Extn;
@@ -123,12 +124,13 @@ namespace CoinFlip
 				{
 					// Look for price data from a different exchange
 					var pair_name = pair.Name.Replace('/','_');
-					var fd = Shell_.EnumFileSystem(Path_.Directory(db_filepath), regex_filter:$@"{pair_name}\s*-\s*(?<exchange>.*)\.db").FirstOrDefault();
+					var pattern = $@"{pair_name}\s*-\s*(?<exchange>.*)\.db";
+					var fd = Path_.EnumFileSystem(Path_.Directory(db_filepath), regex_filter:pattern).FirstOrDefault();
 					if (fd == null)
 						continue;
 
 					// Find the corresponding pair on the exchange that the database file is for
-					var exch_name = fd.RegexMatch.Groups["exchange"].Value;
+					var exch_name = Regex.Match(fd.Name, pattern).Groups["exchange"].Value;
 					var src_exch = Model.TradingExchanges.FirstOrDefault(x => x.Name == exch_name);
 					if (src_exch == null)
 						continue;

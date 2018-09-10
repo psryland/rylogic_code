@@ -5,11 +5,10 @@ using System.Text;
 using System.Windows.Forms;
 using Rylogic.Common;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
+using Rylogic.Interop.Win32;
 using Rylogic.Scintilla;
-using Rylogic.Utility;
-using Rylogic.Windows32;
-using ToolStripContainer = Rylogic.Gui.ToolStripContainer;
+using ToolStripContainer = Rylogic.Gui.WinForms.ToolStripContainer;
 
 namespace LDraw
 {
@@ -192,11 +191,11 @@ namespace LDraw
 						var vk = Win32.ToVKey(m.WParam);
 
 						// Allow navigation keys through
-						if (vk == Keys.Up || vk == Keys.Down || vk == Keys.Left || vk == Keys.Right)
+						if (vk == KeyCodes.Up || vk == KeyCodes.Down || vk == KeyCodes.Left || vk == KeyCodes.Right)
 							break;
 
 						// Handle the copy keyboard shortcut
-						if (Win32.KeyDown(Keys.ControlKey) && vk == Keys.C)
+						if (Win32.KeyDown(KeyCodes.ControlKey) && vk == KeyCodes.C)
 							Cmd(Sci.SCI_COPY);
 
 						return;
@@ -250,7 +249,7 @@ namespace LDraw
 		private void InitializeComponent()
 		{
 			this.components = new System.ComponentModel.Container();
-			this.m_tsc = new Rylogic.Gui.ToolStripContainer();
+			this.m_tsc = new Rylogic.Gui.WinForms.ToolStripContainer();
 			this.m_il_toolbar = new System.Windows.Forms.ImageList(this.components);
 			this.m_tsc.SuspendLayout();
 			this.SuspendLayout();

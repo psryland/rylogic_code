@@ -6,6 +6,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using Rylogic.Common;
 
 namespace Rylogic.Extn
 {

@@ -5,11 +5,11 @@ using System.IO;
 using System.Threading;
 using System.Windows.Forms;
 using System.Xml.Linq;
-using RyLogViewer.Properties;
 using Rylogic.Common;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 using Rylogic.Utility;
+using Util = Rylogic.Utility.Util;
 
 namespace RyLogViewer
 {
@@ -203,7 +203,7 @@ namespace RyLogViewer
 		{
 			if (Equals(prop,value)) return;
 			prop = value;
-			OnChanged.Raise(this, EventArgs.Empty);
+			OnChanged?.Invoke(this, EventArgs.Empty);
 			Changed = true;
 		}
 

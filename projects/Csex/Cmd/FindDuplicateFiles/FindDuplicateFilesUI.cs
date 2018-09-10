@@ -1,9 +1,8 @@
-﻿using System.Data;
-using System.Linq;
+﻿using System.Linq;
 using System.Windows.Forms;
-using Rylogic.Gui;
-using Rylogic.Utility;
-using ToolStripContainer = Rylogic.Gui.ToolStripContainer;
+using Rylogic.Gui.WinForms;
+using ToolStripContainer = Rylogic.Gui.WinForms.ToolStripContainer;
+using Util = Rylogic.Utility.Util;
 
 namespace Csex
 {

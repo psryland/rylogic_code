@@ -17,7 +17,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;PR_UNITTESTS</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
@@ -25,7 +25,7 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>TRACE;PR_UNITTESTS</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
@@ -37,8 +37,6 @@
     <Reference Include="PresentationFramework" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Design" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Xaml" />
     <Reference Include="System.Xml.Linq" />
@@ -68,14 +66,23 @@
     <Compile Include="src\Gui\ToolBar.cs" />
     <Compile Include="src\Gui\TriggerTracing.cs" />
     <Compile Include="src\Plugin\Extensions.cs" />
+    <Compile Include="src\Program.cs" />
     <Compile Include="src\Utility\Converters.cs" />
     <Compile Include="src\Utility\MethodBinding.cs" />
     <Compile Include="src\Utility\RecentFiles.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj">
+      <Project>{76ef3a15-6e9f-4348-bcc2-e39f14b2a2b4}</Project>
+      <Name>Rylogic.Core.Windows</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj">
       <Project>{37a4f319-2052-404d-ae7f-f882cfa33c1b}</Project>
       <Name>Rylogic.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Rylogic.View3d\Rylogic.View3d.csproj">
+      <Project>{0fcb5434-407b-415e-9f11-6216f44d4377}</Project>
+      <Name>Rylogic.View3d</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
@@ -140,6 +147,11 @@
       <SubType>Designer</SubType>
     </EmbeddedResource>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <None Include="post_build.py" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>py $(ProjectDir)post_build.py $(ProjectDir) $(TargetDir) $(PlatformName) $(ConfigurationName)</PostBuildEvent>
+  </PropertyGroup>
 </Project>

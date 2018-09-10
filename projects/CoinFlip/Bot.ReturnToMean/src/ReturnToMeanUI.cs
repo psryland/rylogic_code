@@ -5,9 +5,10 @@ using System.Linq;
 using System.Windows.Forms;
 using CoinFlip;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 using Rylogic.Utility;
-using ComboBox = Rylogic.Gui.ComboBox;
+using ComboBox = Rylogic.Gui.WinForms.ComboBox;
+using Util = Rylogic.Utility.Util;
 
 namespace Bot.ReturnToMean
 {
@@ -277,16 +278,16 @@ namespace Bot.ReturnToMean
 		{
 			this.components = new System.ComponentModel.Container();
 			this.m_panel0 = new System.Windows.Forms.Panel();
-			this.m_tb_holding_change = new Rylogic.Gui.ValueBox();
+			this.m_tb_holding_change = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_lbl_holding_change = new System.Windows.Forms.Label();
-			this.m_cb_exchange = new Rylogic.Gui.ComboBox();
+			this.m_cb_exchange = new Rylogic.Gui.WinForms.ComboBox();
 			this.m_lbl_exchange = new System.Windows.Forms.Label();
-			this.m_tb_average_holding = new Rylogic.Gui.ValueBox();
+			this.m_tb_average_holding = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_lbl_mean_holding = new System.Windows.Forms.Label();
-			this.m_cb_pair = new Rylogic.Gui.ComboBox();
+			this.m_cb_pair = new Rylogic.Gui.WinForms.ComboBox();
 			this.m_lbl_trade_pair = new System.Windows.Forms.Label();
 			this.m_tt = new System.Windows.Forms.ToolTip(this.components);
-			this.m_cb_coins = new Rylogic.Gui.ComboBox();
+			this.m_cb_coins = new Rylogic.Gui.WinForms.ComboBox();
 			this.m_lbl_hold_currency = new System.Windows.Forms.Label();
 			this.m_panel0.SuspendLayout();
 			this.SuspendLayout();

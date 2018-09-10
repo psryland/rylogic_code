@@ -11,8 +11,11 @@ using CoinFlip;
 using Rylogic.Common;
 using Rylogic.Container;
 using Rylogic.Extn;
+using Rylogic.Gui.WinForms;
 using Rylogic.Maths;
+using Rylogic.Plugin;
 using Rylogic.Utility;
+using Util = Rylogic.Utility.Util;
 
 namespace Bot.LoopFinder
 {
@@ -121,11 +124,11 @@ namespace Bot.LoopFinder
 		public void TriggerLoopsUpdate()
 		{
 			// If an update is already pending, ignore
-			if (m_rebuild_loops.Pending) return;
-			m_rebuild_loops.Signal();
+			if (m_rebuild_loops_pending) return;
+			m_rebuild_loops_pending = true;
 			Model.RunOnGuiThread(FindLoops);
 		}
-		private Trigger m_rebuild_loops;
+		private bool m_rebuild_loops_pending;
 
 		/// <summary>Find the available trade loops</summary>
 		private void FindLoops()
@@ -134,8 +137,8 @@ namespace Bot.LoopFinder
 
 			// Record the update issue number
 			Log.Write(ELogLevel.Info, "Rebuilding loops ...");
-			m_rebuild_loops.Actioned();
-			bool Abort() { return m_rebuild_loops.Pending || Shutdown.IsCancellationRequested; }
+			m_rebuild_loops_pending = false;
+			bool Abort() => m_rebuild_loops_pending || Shutdown.IsCancellationRequested;
 			if (Abort())
 				return;
 

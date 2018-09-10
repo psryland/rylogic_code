@@ -15,7 +15,7 @@ using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 using Rylogic.Common;
-using Rylogic.Graphix;
+using Rylogic.Gfx;
 using Rylogic.Maths;
 
 namespace Rylogic.Extn

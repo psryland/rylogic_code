@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Windows.Forms;
-using Rylogic.Extn;
+using Rylogic.Gui.WinForms;
 using Rylogic.INet;
-using Rylogic.Utility;
+using Util = Rylogic.Utility.Util;
 
 namespace RyLogViewer
 {

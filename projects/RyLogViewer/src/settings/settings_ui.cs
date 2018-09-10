@@ -5,15 +5,14 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
-using System.Linq;
 using System.Windows.Forms;
 using Rylogic.Common;
 using Rylogic.Extn;
-using Rylogic.Graphix;
-using Rylogic.Gui;
+using Rylogic.Gfx;
+using Rylogic.Gui.WinForms;
 using Rylogic.Maths;
 using Rylogic.Utility;
-using RyLogViewer.Properties;
+using Util = Rylogic.Utility.Util;
 
 namespace RyLogViewer
 {
@@ -1037,7 +1036,7 @@ namespace RyLogViewer
 				break;
 			case ColumnNames.Colours:
 				e.Value = "Click to change colours";
-				cell.Style.BackColor = cell.Style.SelectionBackColor = hl != null ? Gfx.Blend(Color.FromArgb(255, hl.BackColour), Color.White, 1f - hl.BackColour.A/255f) : Color.White;
+				cell.Style.BackColor = cell.Style.SelectionBackColor = hl != null ? Gfx_.Blend(Color.FromArgb(255, hl.BackColour), Color.White, 1f - hl.BackColour.A/255f) : Color.White;
 				cell.Style.ForeColor = cell.Style.SelectionForeColor = hl != null ? hl.ForeColour : Color.White;
 				break;
 			case ColumnNames.Behaviour:
@@ -1280,7 +1279,7 @@ namespace RyLogViewer
 			this.m_lbl_web_proxy_port = new System.Windows.Forms.Label();
 			this.m_lbl_web_proxy_host = new System.Windows.Forms.Label();
 			this.m_spinner_web_proxy_port = new System.Windows.Forms.NumericUpDown();
-			this.m_tb_web_proxy_host = new Rylogic.Gui.ValueBox();
+			this.m_tb_web_proxy_host = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_chk_use_web_proxy = new System.Windows.Forms.CheckBox();
 			this.m_chk_c4u = new System.Windows.Forms.CheckBox();
 			this.m_chk_show_totd = new System.Windows.Forms.CheckBox();
@@ -1303,9 +1302,9 @@ namespace RyLogViewer
 			this.m_lbl_column_count = new System.Windows.Forms.Label();
 			this.m_spinner_column_count = new System.Windows.Forms.NumericUpDown();
 			this.m_chk_ignore_blank_lines = new System.Windows.Forms.CheckBox();
-			this.m_tb_col_delims = new Rylogic.Gui.ValueBox();
+			this.m_tb_col_delims = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_lbl_col_delims = new System.Windows.Forms.Label();
-			this.m_tb_line_ends = new Rylogic.Gui.ValueBox();
+			this.m_tb_line_ends = new Rylogic.Gui.WinForms.ValueBox();
 			this.m_lbl_line_ends = new System.Windows.Forms.Label();
 			this.m_tab_logview = new System.Windows.Forms.TabPage();
 			this.m_table_appearance0 = new System.Windows.Forms.TableLayoutPanel();
@@ -1338,13 +1337,13 @@ namespace RyLogViewer
 			this.m_lbl_file_scroll_width = new System.Windows.Forms.Label();
 			this.m_tab_highlight = new System.Windows.Forms.TabPage();
 			this.m_split_hl = new System.Windows.Forms.SplitContainer();
-			this.m_pattern_hl = new Rylogic.Gui.PatternUI();
+			this.m_pattern_hl = new Rylogic.Gui.WinForms.PatternUI();
 			this.m_table_hl = new System.Windows.Forms.TableLayoutPanel();
 			this.m_grid_highlight = new RyLogViewer.DataGridView();
 			this.label2 = new System.Windows.Forms.Label();
 			this.m_tab_filter = new System.Windows.Forms.TabPage();
 			this.m_split_ft = new System.Windows.Forms.SplitContainer();
-			this.m_pattern_ft = new Rylogic.Gui.PatternUI();
+			this.m_pattern_ft = new Rylogic.Gui.WinForms.PatternUI();
 			this.m_table_ft = new System.Windows.Forms.TableLayoutPanel();
 			this.m_lbl_ft_grid_desc = new System.Windows.Forms.Label();
 			this.m_grid_filter = new RyLogViewer.DataGridView();
@@ -1357,7 +1356,7 @@ namespace RyLogViewer
 			this.m_grid_transform = new RyLogViewer.DataGridView();
 			this.m_tab_action = new System.Windows.Forms.TabPage();
 			this.m_split_ac = new System.Windows.Forms.SplitContainer();
-			this.m_pattern_ac = new Rylogic.Gui.PatternUI();
+			this.m_pattern_ac = new Rylogic.Gui.WinForms.PatternUI();
 			this.m_table_ac = new System.Windows.Forms.TableLayoutPanel();
 			this.label5 = new System.Windows.Forms.Label();
 			this.m_grid_action = new RyLogViewer.DataGridView();

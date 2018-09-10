@@ -6,12 +6,13 @@ using System.Windows.Forms;
 using Rylogic.Common;
 using Rylogic.Container;
 using Rylogic.Extn;
-using Rylogic.Gui;
+using Rylogic.Gui.WinForms;
 using Rylogic.Utility;
+using Util = Rylogic.Utility.Util;
 
 namespace CoinFlip
 {
-	public class GridBase :Rylogic.Gui.DataGridView, IDockable
+	public class GridBase :Rylogic.Gui.WinForms.DataGridView, IDockable
 	{
 		public GridBase(Model model, string title, string name)
 		{
