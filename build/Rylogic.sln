@@ -150,12 +150,13 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylogic.Gui.WinForms", "..\projects\Rylogic.Gui.WinForms\Rylogic.Gui.WinForms.csproj", "{DFED22AE-D2D5-4901-9947-393C4648B381}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylogic.View3d", "..\projects\Rylogic.View3d\Rylogic.View3d.csproj", "{0FCB5434-407B-415E-9F11-6216F44D4377}"
+	ProjectSection(ProjectDependencies) = postProject
+		{363D015B-B545-4623-A5CE-61245C9BF1F8} = {363D015B-B545-4623-A5CE-61245C9BF1F8}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylogic.Scintilla", "..\projects\Rylogic.Scintilla\Rylogic.Scintilla.csproj", "{A96E213D-5566-4248-84E4-803981967B6F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylogic.Core.Windows", "..\projects\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj", "{76EF3A15-6E9F-4348-BCC2-E39F14B2A2B4}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_Items", "_Items", "{5EC6BCB0-2AD6-42EF-AF64-81F89EC7840E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

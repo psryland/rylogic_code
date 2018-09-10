@@ -1,0 +1,34 @@
+﻿<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+	<metadata>
+		<id>Rylogic.Scintilla</id>
+		<version>1.0.0</version>
+		<authors>Rylogic</authors>
+		<owners>Rylogic</owners>
+		<copyright>Copyright © Rylogic 2007-2018</copyright>
+		<licenseUrl>http://opensource.org/licenses/MS-PL</licenseUrl>
+		<projectUrl>http://www.rylogic.co.nz/rylogic.html</projectUrl>
+		<iconUrl>http://www.rylogic.co.nz/images/icon.png</iconUrl>
+		<requireLicenseAcceptance>false</requireLicenseAcceptance>
+		<description>A toolbox of extension methods, data structures, and helper classes used in tools created by Rylogic.</description>
+		<releaseNotes>
+			Initial Release
+		</releaseNotes>
+		<tags>Rylogic Scintilla</tags>
+		<dependencies>
+			<group targetFramework=".NETFramework4.7.1">
+				<dependency id="Rylogic.Core" version="1.0.2" exclude="Build,Analyzers"/>
+				<dependency id="Rylogic.Core.Windows" version="1.0.0" exclude="Build,Analyzers"/>
+			</group>
+		</dependencies>
+		<frameworkAssemblies>
+			<frameworkAssembly assemblyName="WindowsBase" targetFramework=".NETFramework4.7.1" />
+		</frameworkAssemblies>
+	</metadata>
+	<files>
+		<file src="..\..\lib\x64\release\scintilla.dll" target="build\x64\scintilla.dll" />
+		<file src="..\..\lib\x86\release\scintilla.dll" target="build\x86\scintilla.dll" />
+		<file src="Rylogic.Scintilla.targets" target="build\Rylogic.Scintilla.targets" />
+		<file src="bin\release\net471\Rylogic.Scintilla.dll" target="lib\net471\Rylogic.Scintilla.dll" />
+	</files>
+</package>

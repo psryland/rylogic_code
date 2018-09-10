@@ -1,69 +1,55 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <RootNamespace>Rylogic</RootNamespace>
-    <ApplicationIcon>SmilingGekko140x110.ico</ApplicationIcon>
-    <OutputType>Library</OutputType>
-    <StartupObject></StartupObject>
-    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-    <Authors>P Ryland</Authors>
-    <Company>Rylogic</Company>
-    <Description>A toolbox of extension methods, data structures, and helper classes used in tools created by Rylogic.</Description>
-    <Copyright>Copyright (c) Rylogic 2007-2018</Copyright>
-    <PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
-    <PackageIconUrl></PackageIconUrl>
-	  <Version>1.0.1</Version>
-	  <FileVersion>1.0.1</FileVersion>
-	  <AssemblyVersion>1.0.1</AssemblyVersion>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<RootNamespace>Rylogic</RootNamespace>
+		<ApplicationIcon>icon_128x128.ico</ApplicationIcon>
+		<OutputType>Library</OutputType>
+		<StartupObject></StartupObject>
+		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+		<Authors>P Ryland</Authors>
+		<Company>Rylogic</Company>
+		<Description>A toolbox of extension methods, data structures, and helper classes used in tools created by Rylogic.</Description>
+		<Copyright>Copyright (c) Rylogic 2007-2018</Copyright>
+		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
+		<PackageIconUrl></PackageIconUrl>
+		<Version>1.0.2</Version>
+		<FileVersion>1.0.2</FileVersion>
+		<AssemblyVersion>1.0.2</AssemblyVersion>
+	</PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DefineConstants>TRACE;DEBUG;NETSTANDARD2_0;PR_UNITTESTS</DefineConstants>
-    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <OutputPath>bin\Debug\</OutputPath>
-  </PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+		<DefineConstants>RELEASE;NETSTANDARD2_0</DefineConstants>
+	</PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <OutputPath>bin\Release\</OutputPath>
-  </PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+		<DefineConstants>TRACE;DEBUG;NETSTANDARD2_0;PR_UNITTESTS</DefineConstants>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <None Remove="SmilingGekko140x110.ico" />
-  </ItemGroup>
+	<ItemGroup>
+		<Compile Update="src\Maths\vector.cs">
+			<DependentUpon>vector.tt</DependentUpon>
+			<DesignTime>True</DesignTime>
+			<AutoGen>True</AutoGen>
+		</Compile>
+	</ItemGroup>
 
-  <ItemGroup>
-    <EmbeddedResource Include="SmilingGekko140x110.ico" />
-  </ItemGroup>
+	<ItemGroup>
+		<Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <Compile Update="src\Container\csv_data.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Update="src\Maths\vector.cs">
-      <DependentUpon>vector.tt</DependentUpon>
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-    </Compile>
-  </ItemGroup>
+	<ItemGroup>
+		<None Update="Rylogic.Core.runtimeconfig.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="src\Maths\vector.tt">
+			<Generator>TextTemplatingFileGenerator</Generator>
+			<LastGenOutput>vector.cs</LastGenOutput>
+		</None>
+	</ItemGroup>
 
-  <ItemGroup>
-    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="Rylogic.Core.runtimeconfig.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="src\Maths\vector.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>vector.cs</LastGenOutput>
-    </None>
-  </ItemGroup>
-
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="py $(ProjectDir)post_build.py $(ProjectDir) $(TargetDir) $(PlatformName) $(ConfigurationName)" />
-  </Target>
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+		<Exec Command="py $(ProjectDir)post_build.py $(ProjectDir) $(TargetDir) $(PlatformName) $(ConfigurationName)" />
+	</Target>
 
 </Project>

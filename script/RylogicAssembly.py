@@ -59,3 +59,35 @@ def PostBuild(assembly:str, projdir:str, targetdir:str, platform:str, config:str
 		DeployLib.DeployLib(dll, "AnyCPU", config)
 
 	return
+
+# Nuget deploy a Rylogic Assembly
+def Deploy(assembly:str, config:str, publish:bool):
+	
+	Tools.AssertVersion(1)
+	Tools.AssertPathsExist([UserVars.root, UserVars.msbuild])
+	Tools.AssertPathsExist([UserVars.root, UserVars.nuget])
+
+	sln     = os.path.join(UserVars.root, "build", "Rylogic.sln")
+	srcdir  = os.path.join(UserVars.root, "projects", assembly)
+	proj    = os.path.join(srcdir, f"{assembly}.csproj")
+	configs = [config.lower()] if not config == "both" else ["debug", "release"]
+
+	# Build
+	Tools.MSBuild(sln, [f"Rylogic\\{assembly}"], ["Any CPU"], configs, False, False)
+
+	# Package
+	if "release" in configs:
+		Tools.NugetPackage(proj, publish)
+
+	return
+
+# Deploy all Rylogic assemblies
+def DeployAll(config:str, publish:bool):
+	Deploy("Rylogic.Core", config, publish)
+	Deploy("Rylogic.Core.Windows", config, publish)
+	Deploy("Rylogic.View3d", config, publish)
+	Deploy("Rylogic.Scintilla", config, publish)
+	Deploy("Rylogic.Gui.WinForms", config, publish)
+	Deploy("Rylogic.Gui.WPF", config, publish)
+	Deploy("Rylogic.DirectShow", config, publish)
+	return

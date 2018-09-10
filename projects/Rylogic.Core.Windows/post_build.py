@@ -4,7 +4,7 @@
 #  post_build.py $(ProjectDir) $(TargetDir) $(PlatformName) $(ConfigurationName)
 import sys, os, shutil, re
 sys.path.append(re.sub(r"^(.*\\pr\\).*", r"\1script", sys.path[0]))
-import RylogicAssemblyPostBuild as PostBuild
+import RylogicAssembly as RA
 import Rylogic as Tools
 import UserVars
 
@@ -20,7 +20,7 @@ try:
 		"Rylogic.Core.dll"
 		]
 
-	PostBuild.PostBuild(assembly, projdir, targetdir, platform, config, deps)
+	RA.PostBuild(assembly, projdir, targetdir, platform, config, deps)
 
 except Exception as ex:
 	Tools.OnException(ex)
