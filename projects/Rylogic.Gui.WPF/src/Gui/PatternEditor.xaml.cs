@@ -359,7 +359,7 @@ namespace Rylogic.Gui.WPF
 				};
 				_help_ui.Loaded += (s, a) =>
 				{
-					browser.NavigateToString(Resource.regex_quick_ref);
+					browser.NavigateToString(WPF.Resources.regex_quick_ref);
 				};
 				_help_ui.Closed += (s, a) =>
 				{

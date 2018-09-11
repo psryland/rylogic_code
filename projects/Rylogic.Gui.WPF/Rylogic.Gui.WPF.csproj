@@ -1,163 +1,50 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
-  <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{846D147A-B7E6-4336-B019-D1ADD62FF095}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Rylogic.Gui.WPF</RootNamespace>
-    <AssemblyName>Rylogic.Gui.WPF</AssemblyName>
-    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;PR_UNITTESTS</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE;PR_UNITTESTS</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup>
-    <ApplicationIcon>icon_128x128.ico</ApplicationIcon>
-  </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="Microsoft.Toolkit.Win32.UI.Controls, Version=3.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\build\packages\Microsoft.Toolkit.Win32.UI.Controls.3.0.0\lib\net462\Microsoft.Toolkit.Win32.UI.Controls.dll</HintPath>
-    </Reference>
-    <Reference Include="PresentationCore" />
-    <Reference Include="PresentationFramework" />
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Drawing" />
-    <Reference Include="System.Xaml" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Xml" />
-    <Reference Include="WindowsBase" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Properties\Resource.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>Resource.resx</DependentUpon>
-    </Compile>
-    <Compile Include="src\Extn\Dispatcher.cs" />
-    <Compile Include="src\Extn\Extensions.cs" />
-    <Compile Include="src\Extn\Xml.cs" />
-    <Compile Include="src\Gui\DockPanelSplitter.cs" />
-    <Compile Include="src\Gui\DockContainer.cs" />
-    <Compile Include="src\Gui\Gui.cs" />
-    <Compile Include="src\Gui\MsgBox.xaml.cs">
-      <DependentUpon>MsgBox.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="src\Gui\PatternEditor.xaml.cs">
-      <DependentUpon>PatternEditor.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="src\Gui\RichTextBox.cs" />
-    <Compile Include="src\Gui\ToolBar.cs" />
-    <Compile Include="src\Gui\TriggerTracing.cs" />
-    <Compile Include="src\Plugin\Extensions.cs" />
-    <Compile Include="src\Program.cs" />
-    <Compile Include="src\Utility\Converters.cs" />
-    <Compile Include="src\Utility\MethodBinding.cs" />
-    <Compile Include="src\Utility\RecentFiles.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj">
-      <Project>{76ef3a15-6e9f-4348-bcc2-e39f14b2a2b4}</Project>
-      <Name>Rylogic.Core.Windows</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj">
-      <Project>{37a4f319-2052-404d-ae7f-f882cfa33c1b}</Project>
-      <Name>Rylogic.Core</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Rylogic.View3d\Rylogic.View3d.csproj">
-      <Project>{0fcb5434-407b-415e-9f11-6216f44d4377}</Project>
-      <Name>Rylogic.View3d</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Page Include="src\Gui\MsgBox.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="src\Gui\PatternEditor.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Themes\Generic.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="res\dock_close.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="res\dock_menu.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="res\dock_pinned.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="res\dock_site_bottom.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="res\dock_site_cross_lg.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="res\dock_site_cross_sm.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="res\dock_site_left.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="res\dock_site_right.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="res\dock_site_top.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="res\dock_unpinned.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="res\edit_add.png" />
-    <Resource Include="res\edit_save.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="res\regex_quick_ref.html" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Properties\Resource.resx">
-      <Generator>PublicResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resource.Designer.cs</LastGenOutput>
-      <CustomToolNamespace>Rylogic.Gui2</CustomToolNamespace>
-      <SubType>Designer</SubType>
-    </EmbeddedResource>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="post_build.py" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="icon_128x128.ico" />
-  </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <PropertyGroup>
-    <PostBuildEvent>py $(ProjectDir)post_build.py $(ProjectDir) $(TargetDir) $(PlatformName) $(ConfigurationName)</PostBuildEvent>
-  </PropertyGroup>
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>NET471</TargetFramework>
+		<Authors>P Ryland</Authors>
+		<Company>Rylogic</Company>
+		<Description>A toolbox of extension methods, data structures, and helper classes used in tools created by Rylogic.</Description>
+		<Copyright>Copyright (c) Rylogic 2007-2018</Copyright>
+		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
+		<ApplicationIcon>icon_128x128.ico</ApplicationIcon>
+		<RootNamespace>Rylogic.Gui.WPF</RootNamespace>
+		<OutputType>Library</OutputType>
+		<StartupObject />
+		<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
+		<AssemblyVersion>1.0.0</AssemblyVersion>
+		<FileVersion>1.0.0</FileVersion>
+		<Version>1.0.0</Version>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+		<DefineConstants>RELEASE;NET471</DefineConstants>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|NET471|AnyCPU'">
+		<DefineConstants>TRACE;DEBUG;NET471;PR_UNITTESTS</DefineConstants>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Page Include="src\**\*.xaml" Exclude="src\App.xaml">
+			<SubType>Designer</SubType>
+			<Generator>MSBuild:Compile</Generator>
+		</Page>
+		<Compile Update="src\**\*.xaml.cs" SubType="Code" DependentUpon="%(Filename)" />
+
+		<Compile Update="Properties\Resources.Designer.cs" DependentUpon="Resources.resx" DesignTime="True" AutoGen="True" />
+		<EmbeddedResource Include="Properties\Resources.resx" Generator="PublicResXFileCodeGenerator" CustomToolNamespace="Rylogic.Gui.WPF" SubType="Designer" LastGenOutput="Resources.Designer.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="Microsoft.Toolkit.Win32.UI.Controls" Version="4.0.1" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj" />
+		<ProjectReference Include="..\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj" />
+		<ProjectReference Include="..\Rylogic.Scintilla\Rylogic.Scintilla.csproj" />
+		<ProjectReference Include="..\Rylogic.View3d\Rylogic.View3d.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+		<Reference Include="PresentationCore" />
+		<Reference Include="PresentationFramework" />
+		<Reference Include="WindowsBase" />
+	</ItemGroup>
 </Project>

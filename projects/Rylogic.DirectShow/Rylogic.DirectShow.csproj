@@ -1,106 +1,31 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
-  <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{78CF6159-7F86-4D23-A15A-C325FED8E7AC}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Rylogic.DirectShow</RootNamespace>
-    <AssemblyName>Rylogic.DirectShow</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;PR_UNITTESTS</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE;PR_UNITTESTS</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup>
-    <ApplicationIcon>icon_128x128.ico</ApplicationIcon>
-  </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Drawing" />
-    <Reference Include="System.Windows.Forms" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="src\DirectShow\amstream.cs" />
-    <Compile Include="src\DirectShow\amvideo.cs" />
-    <Compile Include="src\DirectShow\atscpsipparser.cs" />
-    <Compile Include="src\DirectShow\austream.cs" />
-    <Compile Include="src\DirectShow\AxCore.cs" />
-    <Compile Include="src\DirectShow\AXExtend.cs" />
-    <Compile Include="src\DirectShow\BDAIface.cs" />
-    <Compile Include="src\DirectShow\Bdatif.cs" />
-    <Compile Include="src\DirectShow\BDATypes.cs" />
-    <Compile Include="src\DirectShow\DES.cs" />
-    <Compile Include="src\DirectShow\DevEnum.cs" />
-    <Compile Include="src\DirectShow\DMODShow.cs" />
-    <Compile Include="src\DirectShow\dsattrib.cs" />
-    <Compile Include="src\DirectShow\DsUtils.cs" />
-    <Compile Include="src\DirectShow\dvbsiparser.cs" />
-    <Compile Include="src\DirectShow\DVDIf.cs" />
-    <Compile Include="src\DirectShow\DynGraph.cs" />
-    <Compile Include="src\DirectShow\encdec.cs" />
-    <Compile Include="src\DirectShow\EvCode.cs" />
-    <Compile Include="src\DirectShow\IL21Dec.cs" />
-    <Compile Include="src\DirectShow\MediaControl.cs" />
-    <Compile Include="src\DirectShow\MediaObj.cs" />
-    <Compile Include="src\DirectShow\MediaParam.cs" />
-    <Compile Include="src\DirectShow\Misc.cs" />
-    <Compile Include="src\DirectShow\Mixerocx.cs" />
-    <Compile Include="src\DirectShow\mmstream.cs" />
-    <Compile Include="src\DirectShow\mpconfig.cs" />
-    <Compile Include="src\DirectShow\Mpeg2Data.cs" />
-    <Compile Include="src\DirectShow\mpeg2psiparser.cs" />
-    <Compile Include="src\DirectShow\Mpeg2Structs.cs" />
-    <Compile Include="src\DirectShow\other.cs" />
-    <Compile Include="src\DirectShow\PlayList.cs" />
-    <Compile Include="src\DirectShow\QEdit.cs" />
-    <Compile Include="src\DirectShow\qnetwork.cs" />
-    <Compile Include="src\DirectShow\RegBag.cs" />
-    <Compile Include="src\DirectShow\Sbe.cs" />
-    <Compile Include="src\DirectShow\Tuner.cs" />
-    <Compile Include="src\DirectShow\TvRatings.cs" />
-    <Compile Include="src\DirectShow\Uuids.cs" />
-    <Compile Include="src\DirectShow\Vidcap.cs" />
-    <Compile Include="src\DirectShow\VidPort.cs" />
-    <Compile Include="src\DirectShow\Vmr9.cs" />
-    <Compile Include="src\DirectShow\VmRender.cs" />
-    <Compile Include="src\Gfx\Video.cs" />
-    <Compile Include="src\Gui\ViewVideoControl.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="src\Gui\ViewVideoControl.resx">
-      <DependentUpon>ViewVideoControl.cs</DependentUpon>
-    </EmbeddedResource>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj">
-      <Project>{37a4f319-2052-404d-ae7f-f882cfa33c1b}</Project>
-      <Name>Rylogic.Core</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="icon_128x128.ico" />
-  </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>NET471</TargetFramework>
+		<Authors>P Ryland</Authors>
+		<Company>Rylogic</Company>
+		<Description>A toolbox of extension methods, data structures, and helper classes used in tools created by Rylogic.</Description>
+		<Copyright>Copyright (c) Rylogic 2007-2018</Copyright>
+		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
+		<ApplicationIcon>icon_128x128.ico</ApplicationIcon>
+		<RootNamespace>Rylogic.DirectShow</RootNamespace>
+		<OutputType>Library</OutputType>
+		<StartupObject />
+		<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
+		<AssemblyVersion>1.0.0</AssemblyVersion>
+		<FileVersion>1.0.0</FileVersion>
+		<Version>1.0.0</Version>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+		<DefineConstants>RELEASE;NET471</DefineConstants>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|NET471|AnyCPU'">
+		<DefineConstants>TRACE;DEBUG;NET471;PR_UNITTESTS</DefineConstants>
+	</PropertyGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+		<Reference Include="System.Windows.Forms" />
+		<Reference Include="WindowsBase" />
+	</ItemGroup>
 </Project>
