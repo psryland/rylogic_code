@@ -27,6 +27,7 @@
 			<SubType>Designer</SubType>
 			<Generator>MSBuild:Compile</Generator>
 		</Page>
+		<None Remove="src\Gui\ColourWheel.xaml" />
 		<Compile Update="src\**\*.xaml.cs" SubType="Code" DependentUpon="%(Filename)" />
 
 		<Compile Update="Properties\Resources.Designer.cs" DependentUpon="Resources.resx" DesignTime="True" AutoGen="True" />
@@ -45,6 +46,7 @@
 	<ItemGroup>
 		<Reference Include="PresentationCore" />
 		<Reference Include="PresentationFramework" />
+		<Reference Include="System.Xaml" />
 		<Reference Include="WindowsBase" />
 	</ItemGroup>
 </Project>

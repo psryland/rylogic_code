@@ -12,9 +12,10 @@ using Rylogic.Gui.WPF;
 using Rylogic.Utility;
 using RyLogViewer.Options;
 
+[assembly: ThemeInfo(ResourceDictionaryLocation.SourceAssembly, ResourceDictionaryLocation.SourceAssembly)]
+
 namespace RyLogViewer
 {
-
 	/// <summary>Interaction logic for App.xaml</summary>
 	public partial class App : Application
 	{

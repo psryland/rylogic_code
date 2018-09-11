@@ -5,35 +5,43 @@
 		xmlns:local="clr-namespace:TestWPF"
         Title="MainWindow" Height="350" Width="525">
 
-	<StackPanel>
-		<Menu HorizontalAlignment="Left" VerticalAlignment="Top" Width="517">
-			<MenuItem Name="m_menu_file" Header="_File">
-				<MenuItem Name="m_menu_file_open" Header="_Open" HorizontalAlignment="Left" Width="140"/>
-				<Separator/>
-				<gui2:RecentFilesMenuItem Name="m_recent_files" Header="_Recent Files"/>
-				<Separator/>
-				<MenuItem Name="m_menu_file_close" Header="_Close" HorizontalAlignment="Left" Width="140"/>
-			</MenuItem>
-			<MenuItem Header="_Tests">
-				<MenuItem Name="m_menu_tests_diagram" Header="_Diagram" HorizontalAlignment="Left" />
-				<MenuItem Name="m_menu_tests_view3d" Header="_View3D" HorizontalAlignment="Left" />
-				<MenuItem Name="m_menu_tests_dock_container" Header="_Dock Container" HorizontalAlignment="Left" />
-				<MenuItem Name="m_menu_tests_pattern_editor" Header="_Pattern Editor" HorizontalAlignment="Left" />
-			</MenuItem>
-		</Menu>
-		<local:ImageButton
-			Text="Hello World?"
-			Source="pack://application:,,,/res/pencil.png"
-			Height="32"
-			Background="{x:Static Brushes.Aqua}"/>
-		<local:ImageButtonRaw
-			Text="Roar!"
-			Source="pack://application:,,,/res/check_accept.png"
-			Height="32"
-			Background="{x:Static Brushes.Beige}"/>
-		<Button
-			Name="m_btn_msgbox"
-			Content="MsgBox"
-			/>
-	</StackPanel>
+	<ScrollViewer
+		VerticalScrollBarVisibility="Auto"
+		>
+		<StackPanel>
+			<Menu HorizontalAlignment="Left" VerticalAlignment="Top" Width="517">
+				<MenuItem Name="m_menu_file" Header="_File">
+					<MenuItem Name="m_menu_file_open" Header="_Open" HorizontalAlignment="Left" Width="140"/>
+					<Separator/>
+					<gui2:RecentFilesMenuItem Name="m_recent_files" Header="_Recent Files"/>
+					<Separator/>
+					<MenuItem Name="m_menu_file_close" Header="_Close" HorizontalAlignment="Left" Width="140"/>
+				</MenuItem>
+				<MenuItem Header="_Tests">
+					<MenuItem Name="m_menu_tests_diagram" Header="_Diagram" HorizontalAlignment="Left" />
+					<MenuItem Name="m_menu_tests_view3d" Header="_View3D" HorizontalAlignment="Left" />
+					<MenuItem Name="m_menu_tests_dock_container" Header="_Dock Container" HorizontalAlignment="Left" />
+					<MenuItem Name="m_menu_tests_pattern_editor" Header="_Pattern Editor" HorizontalAlignment="Left" />
+				</MenuItem>
+			</Menu>
+			<local:ImageButton
+				Text="Hello World?"
+				Source="pack://application:,,,/res/pencil.png"
+				Height="32"
+				Background="{x:Static Brushes.Aqua}"/>
+			<local:ImageButtonRaw
+				Text="Roar!"
+				Source="pack://application:,,,/res/check_accept.png"
+				Height="32"
+				Background="{x:Static Brushes.Beige}"/>
+			<gui2:ColourWheel
+				Margin="3"
+				Orientation="Horizontal"
+				/>
+			<Button
+				Name="m_btn_msgbox"
+				Content="MsgBox"
+				/>
+		</StackPanel>
+	</ScrollViewer>
 </Window>

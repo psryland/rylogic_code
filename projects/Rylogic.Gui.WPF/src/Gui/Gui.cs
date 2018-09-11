@@ -10,6 +10,9 @@ namespace Rylogic.Gui.WPF
 {
 	public static class Gui_
 	{
+		/// <summary>Infinite size</summary>
+		public static readonly Size SizeInfinity = new Size(double.PositiveInfinity, double.PositiveInfinity);
+
 		/// <summary>Wrapper for DependencyProperty.Register that uses reflection to look for changed or coerce handlers</summary>
 		public static DependencyProperty DPRegister<T>(string prop_name, object def = null)
 		{

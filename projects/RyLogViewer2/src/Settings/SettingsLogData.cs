@@ -15,6 +15,7 @@ namespace RyLogViewer.Options
 			FileBufSize = Constants.FileBufSizeDefault;
 			MaxLineLength = Constants.MaxLineLengthDefault;
 			OpenAtEnd = true;
+			FileChangesAdditive = true;
 			IgnoreBlankLines = false;
 		}
 
@@ -44,6 +45,13 @@ namespace RyLogViewer.Options
 		{
 			get { return get<bool>(nameof(OpenAtEnd)); }
 			set { set(nameof(OpenAtEnd), value); }
+		}
+
+		/// <summary></summary>
+		public bool FileChangesAdditive
+		{
+			get { return get<bool>(nameof(FileChangesAdditive)); }
+			set { set(nameof(FileChangesAdditive), value); }
 		}
 
 		/// <summary></summary>

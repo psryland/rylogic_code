@@ -1,0 +1,478 @@
+﻿using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using Rylogic.Gfx;
+using Rylogic.Maths;
+
+namespace Rylogic.Gui.WPF
+{
+	/// <summary>Interaction logic for ColourWheel.xaml</summary>
+	public class ColourWheel : UserControl
+	{
+		private const string ValueLabel = "V";
+		private const string AlphaLabel = "A";
+		private EParts m_selected_part;
+
+		static ColourWheel()
+		{
+			PartsProperty = Gui_.DPRegister<ColourWheel>(nameof(Parts), EParts.All);
+			OrientationProperty = Gui_.DPRegister<ColourWheel>(nameof(Orientation), Orientation.Horizontal);
+			SliderWidthProperty = Gui_.DPRegister<ColourWheel>(nameof(SliderWidth), 20.0);
+			SelectionIndicatorSizeProperty = Gui_.DPRegister<ColourWheel>(nameof(SelectionIndicatorSize), 6.0);
+			HSVColourProperty = Gui_.DPRegister<ColourWheel>(nameof(HSVColour), new HSV(1f, 0f, 0f, 1f));
+		}
+		public ColourWheel()
+		{}
+		protected override void OnMouseDown(MouseButtonEventArgs e)
+		{
+			base.OnMouseDown(e);
+
+			var pt = e.GetPosition(this);
+			m_selected_part = PartHitTest(pt.X, pt.Y);
+			if (m_selected_part == EParts.None)
+				return;
+
+			ColourSelection?.Invoke(this, e);
+			switch (m_selected_part)
+			{
+			case EParts.Wheel:   SelectHueAndSaturation(pt); break;
+			case EParts.VSlider: SelectBrightness(pt); break;
+			case EParts.ASlider: SelectAlpha(pt); break;
+			}
+
+			CaptureMouse();
+		}
+		protected override void OnMouseMove(MouseEventArgs e)
+		{
+			base.OnMouseMove(e);
+
+			var pt = e.GetPosition(this);
+			switch (m_selected_part)
+			{
+			case EParts.Wheel: SelectHueAndSaturation(pt); break;
+			case EParts.VSlider: SelectBrightness(pt); break;
+			case EParts.ASlider: SelectAlpha(pt); break;
+			}
+		}
+		protected override void OnMouseUp(MouseButtonEventArgs e)
+		{
+			base.OnMouseUp(e);
+
+			var pt = e.GetPosition(this);
+			ReleaseMouseCapture();
+			switch (m_selected_part)
+			{
+			case EParts.Wheel: SelectHueAndSaturation(pt); break;
+			case EParts.VSlider: SelectBrightness(pt); break;
+			case EParts.ASlider: SelectAlpha(pt); break;
+			}
+
+			ColourSelection?.Invoke(this, e);
+			m_selected_part = EParts.None;
+		}
+		protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
+		{
+			base.OnRenderSizeChanged(sizeInfo);
+			LayoutDimensions = null;
+		}
+		protected override Size MeasureOverride(Size constraint)
+		{
+			var meas = CalcMeasurements(constraint);
+			return new Size(meas.Width, meas.Height);
+		}
+		protected override void OnRender(DrawingContext gfx)
+		{
+			var size = new Size(ActualWidth, ActualHeight);
+			if (size.IsEmpty)
+			{
+				base.OnRender(gfx);
+				return;
+			}
+
+			var meas = LayoutDimensions;
+			var vertical = Orientation == Orientation.Vertical;
+
+			// Draw the wheel
+			if ((Parts & EParts.Wheel) != 0)
+			{
+				var bm = WheelBitmap(meas.Centre, meas.Wheel.Size, meas.Radius);
+				gfx.PushClip(new EllipseGeometry(meas.WheelInner));
+				gfx.DrawImage(bm, meas.Wheel);
+				gfx.Pop();
+
+				// Draw the colour selection
+				if ((Parts & EParts.ColourSelection) != 0)
+					RenderColourSelection(gfx, WheelPoint(HSVColour));
+			}
+
+			// Draw the VSlider
+			if ((Parts & EParts.VSlider) != 0)
+			{
+				gfx.DrawText(this.ToFormattedText(ValueLabel), meas.VLabel.TopLeft);
+				if (!meas.VSlider.IsEmpty)
+				{
+					RenderSlider(gfx, vertical, meas.VSlider);
+
+					// Draw the brightness selection
+					if ((Parts & EParts.VSelection) != 0)
+						RenderSliderSelector(gfx, vertical, meas.VSlider, HSVColour.V);
+				}
+			}
+
+			// Draw the ASlider
+			if ((Parts & EParts.ASlider) != 0)
+			{
+				gfx.DrawText(this.ToFormattedText(AlphaLabel), meas.ALabel.TopLeft);
+				if (!meas.ASlider.IsEmpty)
+				{
+					RenderSlider(gfx, vertical, meas.ASlider);
+
+					// Draw the alpha selection
+					if ((Parts & EParts.ASelection) != 0)
+						RenderSliderSelector(gfx, vertical, meas.ASlider, HSVColour.A);
+				}
+			}
+		}
+
+		/// <summary>
+		/// An event raised whenever the act of selecting a colour begins or ends.
+		/// Use the button state to tell. Occurs before the first colour change, or after the last colour change</summary>
+		public event EventHandler<MouseButtonEventArgs> ColourSelection;
+
+		/// <summary>An event raised whenever the selected colour is changed</summary>
+		public event EventHandler<ColourEventArgs> ColourChanged;
+
+		/// <summary>Control orientation</summary>
+		public Orientation Orientation
+		{
+			get { return (Orientation)GetValue(OrientationProperty); }
+			set
+			{
+				SetValue(OrientationProperty, value);
+				LayoutDimensions = null;
+			}
+		}
+		public static readonly DependencyProperty OrientationProperty;
+
+		/// <summary>The parts of the control to draw</summary>
+		public EParts Parts
+		{
+			get { return (EParts)GetValue(PartsProperty); }
+			set
+			{
+				SetValue(PartsProperty, value);
+				LayoutDimensions = null;
+			}
+		}
+		public static readonly DependencyProperty PartsProperty;
+
+		/// <summary>The width of the slider bars</summary>
+		public double SliderWidth
+		{
+			get { return (double)GetValue(SliderWidthProperty); }
+			set
+			{
+				SetValue(SliderWidthProperty, value);
+				LayoutDimensions = null;
+			}
+		}
+		public static readonly DependencyProperty SliderWidthProperty;
+
+		/// <summary>The radius of the selector dot</summary>
+		public double SelectionIndicatorSize
+		{
+			get { return (double)GetValue(SelectionIndicatorSizeProperty); }
+			set { SetValue(SelectionIndicatorSizeProperty, value); }
+		}
+		public static readonly DependencyProperty SelectionIndicatorSizeProperty;
+
+		/// <summary>The currently selected colour (HSV)</summary>
+		public HSV HSVColour
+		{
+			get { return (HSV)GetValue(HSVColourProperty); }
+			set
+			{
+				SetValue(HSVColourProperty, value);
+				ColourChanged?.Invoke(this, new ColourEventArgs(Colour));
+				InvalidateVisual();
+			}
+		}
+		public static readonly DependencyProperty HSVColourProperty;
+
+		/// <summary>The currently selected colour (RGB)</summary>
+		public Color Colour
+		{
+			get
+			{
+				var c = HSVColour.ToColor();
+				return Color.FromArgb(c.A, c.R, c.G, c.B);
+			}
+			set
+			{
+				var c = System.Drawing.Color.FromArgb(value.A, value.R, value.G, value.B);
+				HSVColour = HSV.FromColor(c, HSVColour.H);
+			}
+		}
+
+		/// <summary>Wheel point based on the current dimensions</summary>
+		private Point WheelPoint(HSV colour)
+		{
+			var meas = LayoutDimensions;
+			return new Point(
+				meas.Centre.X + (meas.Radius * colour.S * Math.Cos(Math_.Tau * colour.H)),
+				meas.Centre.Y + (meas.Radius * colour.S * Math.Sin(Math_.Tau * colour.H)));
+		}
+
+		/// <summary>Set the hue and saturation based on point X,Y relative to the wheel centre</summary>
+		private void SelectHueAndSaturation(Point pt)
+		{
+			var dim = LayoutDimensions;
+			if (dim.Empty)
+				return;
+
+			HSVColour = HSV.FromRadial(
+				(float)((pt.X - dim.Centre.X) / dim.Radius),
+				(float)((pt.Y - dim.Centre.Y) / dim.Radius),
+				HSVColour.V, HSVColour.A);
+		}
+
+		/// <summary>Set the brightness based on point x,y relative to the VSlider</summary>
+		private void SelectBrightness(Point pt)
+		{
+			var dim = LayoutDimensions;
+			if (dim.Empty || dim.VSlider.IsEmpty)
+				return;
+
+			var v = Orientation == Orientation.Vertical
+				? Math_.Clamp(Math_.Frac(dim.VSlider.Left, pt.X, dim.VSlider.Right), 0f, 1f)
+				: Math_.Clamp(Math_.Frac(dim.VSlider.Bottom, pt.Y, dim.VSlider.Top), 0f, 1f);
+
+			HSVColour = HSV.FromAHSV(HSVColour.A, HSVColour.H, HSVColour.S, (float)v);
+		}
+
+		/// <summary>Set the alpha based on point x,y relative to the VSlider</summary>
+		private void SelectAlpha(Point pt)
+		{
+			var dim = LayoutDimensions;
+			if (dim.Empty || dim.ASlider.IsEmpty)
+				return;
+
+			var a = Orientation == Orientation.Vertical
+				? Math_.Clamp(Math_.Frac(dim.ASlider.Left, pt.X, dim.ASlider.Right), 0f, 1f)
+				: Math_.Clamp(Math_.Frac(dim.ASlider.Bottom, pt.Y, dim.ASlider.Top), 0f, 1f);
+
+			HSVColour = HSV.FromAHSV((float)a, HSVColour.H, HSVColour.S, HSVColour.V);
+		}
+
+		/// <summary>Measure the control layout</summary>
+		private Measurements LayoutDimensions
+		{
+			get { return m_measurements ?? (m_measurements = CalcMeasurements(new Size(ActualWidth, ActualHeight))); }
+			set { m_measurements = value; }
+		}
+		private Measurements m_measurements;
+
+		/// <summary>Returns the part hit at location x,y</summary>
+		private EParts PartHitTest(double x, double y)
+		{
+			var dim = LayoutDimensions;
+			if (dim.Empty) return EParts.None;
+			if (dim.Wheel.Contains(x, y)) return EParts.Wheel;
+			if (dim.VSlider.Contains(x, y)) return EParts.VSlider;
+			if (dim.ASlider.Contains(x, y)) return EParts.ASlider;
+			return EParts.None;
+		}
+
+		/// <summary>Get/Create the bitmap of the colour wheel</summary>
+		private ImageSource WheelBitmap(Point centre, Size size, double radius)
+		{
+			if (size.IsEmpty)
+				throw new Exception($"Invalid bitmap size");
+
+			// Cached version already the right size? return it
+			if (m_bm != null && m_bm.Width == size.Width && m_bm.Height == size.Height)
+				return m_bm;
+
+			// Allocate the bitmap, if needed
+			var w = (int)Math.Ceiling(size.Width);
+			var h = (int)Math.Ceiling(size.Height);
+			var bm = new System.Drawing.Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+
+			// Silly radius? ignore
+			if (radius >= 10)
+			{
+				// Generate the points and colours for the wheel
+				const int ColourCount = 60;
+				var points = new System.Drawing.PointF[ColourCount];
+				var colours = new System.Drawing.Color[ColourCount];
+				for (int i = 0; i != ColourCount; ++i)
+				{
+					points[i] = new System.Drawing.PointF(
+						(float)(centre.X + radius * Math.Cos(i * Math_.Tau / ColourCount)),
+						(float)(centre.Y + radius * Math.Sin(i * Math_.Tau / ColourCount)));
+
+					colours[i] = HSV.ToColor(1f, (float)i / ColourCount, 1f, 1f);
+				}
+
+				// Generate a wheel bitmap
+				using (var gfx = System.Drawing.Graphics.FromImage(bm))
+				using (var pgb = new System.Drawing.Drawing2D.PathGradientBrush(points))
+				{
+					gfx.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+
+					// Set the various properties. Note the SurroundColors property, which contains an array of points, 
+					// in a one-to-one relationship with the points that created the gradient.
+					pgb.CenterColor = System.Drawing.Color.White;
+					pgb.CenterPoint = new System.Drawing.PointF((float)centre.X, (float)centre.Y);
+					pgb.SurroundColors = colours;
+
+					var r = new System.Drawing.RectangleF((float)(centre.X - w*0.5), (float)(centre.Y - h*0.5), w, h);
+					gfx.FillEllipse(pgb, r);
+					gfx.DrawEllipse(System.Drawing.Pens.Black, r);
+				}
+			}
+			m_bm = bm.ToBitmapSource();
+			return m_bm;
+		}
+		private ImageSource m_bm; // Cached wheel bitmap
+
+		/// <summary>Draw the selected colour indicator</summary>
+		private void RenderColourSelection(DrawingContext gfx, Point pt)
+		{
+			var radius = SelectionIndicatorSize;
+			var b = new SolidColorBrush(Colour);
+			gfx.DrawEllipse(b, new Pen(Brushes.Black, 1), pt, radius, radius);
+		}
+
+		/// <summary>Draw the slider body</summary>
+		private void RenderSlider(DrawingContext gfx, bool vertical, Rect r)
+		{
+			var b = new LinearGradientBrush(Colors.White, Colors.Black,
+				vertical ? new Point(0, 0.5) : new Point(0.5, 0),
+				vertical ? new Point(1, 0.5) : new Point(0.5, 1));
+
+			gfx.DrawRectangle(b, new Pen(Brushes.Black, 0.5), r);
+		}
+
+		/// <summary>Draw the level indicator on a slider</summary>
+		private void RenderSliderSelector(DrawingContext gfx, bool vertical, Rect r, double value)
+		{
+			if (vertical)
+			{
+				var v = Math_.Lerp(r.Left, r.Right, value);
+				gfx.DrawLine(new Pen(Brushes.Black, 1), new Point(v, r.Top), new Point(v, r.Bottom));
+				gfx.DrawEllipse(null, new Pen(Brushes.Black, 1), new Point(v, r.Top - 2), 2, 2);
+				gfx.DrawEllipse(null, new Pen(Brushes.Black, 1), new Point(v, r.Bottom + 2), 2, 2);
+			}
+			else
+			{
+				var v = Math_.Lerp(r.Bottom, r.Top, value);
+				gfx.DrawLine(new Pen(Brushes.Black, 1), new Point(r.Left, v), new Point(r.Right, v));
+				gfx.DrawEllipse(null, new Pen(Brushes.Black, 1), new Point(r.Left - 2, v), 2, 2);
+				gfx.DrawEllipse(null, new Pen(Brushes.Black, 1), new Point(r.Right + 2, v), 2, 2);
+			}
+		}
+
+		/// <summary>Returns the measurements of a ColourWheel that fits in the given width/height/orientation</summary>
+		private Measurements CalcMeasurements(Size size)
+		{
+			var p = SelectionIndicatorSize;
+			var drawv = (Parts & EParts.VSlider) != 0;
+			var drawa = (Parts & EParts.ASlider) != 0;
+			var vertical = Orientation == Orientation.Vertical;
+			var slider_space = 0 + (drawv ? 2*SliderWidth : 0) + (drawa ? 2*SliderWidth : 0);
+			var w = Math.Max(0, size.Width  - (vertical ? 0 : slider_space));
+			var h = Math.Max(0, size.Height - (vertical ? slider_space : 0));
+			var min = Math.Min(w, h);
+
+			var meas = new Measurements();
+			meas.Width  = min + (vertical ? 0 : slider_space);
+			meas.Height = min + (vertical ? slider_space : 0);
+
+			meas.Radius = Math.Max(0, min * 0.5 - p);
+			meas.Centre = new Point(p + Math.Ceiling(meas.Radius), p + Math.Ceiling(meas.Radius));
+			meas.Wheel = new Rect(0, 0, meas.Centre.X * 2, meas.Centre.Y * 2);
+
+			Rect LabelBounds(double x, double y, string label)
+			{
+				var d = new TextBlock { Text = label };
+				d.Measure(Gui_.SizeInfinity);
+				var sz = d.DesiredSize;
+				return new Rect(
+					(x + (vertical ? 0 : (SliderWidth - sz.Width) * 0.5)),
+					(y + (vertical ? (SliderWidth - sz.Height) * 0.5 : 0)),
+					sz.Width, sz.Height);
+			}
+			Rect SliderBounds(double x, double y, Rect label_bounds)
+			{
+				return new Rect(
+					x + (vertical ? label_bounds.Width + 2 : SliderWidth * 0.5),
+					y + (vertical ? SliderWidth * 0.5 : label_bounds.Height + 2),
+					Math.Max(0, vertical ? meas.Width - (label_bounds.Width + 2) : SliderWidth),
+					Math.Max(0, vertical ? SliderWidth : meas.Height - (label_bounds.Height + 2)));
+			}
+
+			var ofs = (vertical ? meas.Wheel.Width : meas.Wheel.Height) + SliderWidth / 5;
+			if ((Parts & EParts.VSlider) != 0)
+			{
+				meas.VLabel = LabelBounds(vertical ? 0 : ofs, vertical ? ofs : 0, ValueLabel);
+				meas.VSlider = SliderBounds(vertical ? 0 : ofs, vertical ? ofs : 0, meas.VLabel);
+				ofs += SliderWidth * 3 / 2;
+			}
+			if ((Parts & EParts.ASlider) != 0)
+			{
+				meas.ALabel = LabelBounds(vertical ? 0 : ofs, vertical ? ofs : 0, AlphaLabel);
+				meas.ASlider = SliderBounds(vertical ? 0 : ofs, vertical ? ofs : 0, meas.ALabel);
+			}
+			return meas;
+		}
+
+		/// <summary>Parts of the control</summary>
+		[Flags] public enum EParts
+		{
+			None = 0,
+			Wheel = 1 << 0,
+			VSlider = 1 << 1,
+			ASlider = 1 << 2,
+			ColourSelection = 1 << 3,
+			VSelection = 1 << 4,
+			ASelection = 1 << 5,
+			All = Wheel | VSlider | ASlider | ColourSelection | VSelection | ASelection,
+		}
+
+		/// <summary>Layout measurement</summary>
+		private class Measurements
+		{
+			public bool Empty => Width == 0 || Height == 0;
+
+			public double Width;   // The total width required for the control
+			public double Height;  // The total height required for the control
+
+			public double Radius; // The radius of the colour wheel
+			public Point Centre;  // The centre of the colour wheel (clamped to a pixel)
+			public Rect Wheel;    // The square area required for the wheel+indicator
+			public Rect WheelInner => new Rect(Centre.X - Radius - 0.5, Centre.Y - Radius - 0.5, 2 * Radius + 1, 2 * Radius + 1);
+
+			public Rect VLabel;  // The area of the 'V' label
+			public Rect VSlider; // The area covered by the VSlider
+
+			public Rect ALabel;  // The area of the 'A' label
+			public Rect ASlider; // The area covered by the ASlider
+		}
+	}
+
+	#region EventArgs
+	public class ColourEventArgs : EventArgs
+	{
+		public ColourEventArgs(Color colour)
+		{
+			Colour = colour;
+		}
+
+		/// <summary>The selected colour</summary>
+		public Color Colour { get; private set; }
+	}
+	#endregion
+}

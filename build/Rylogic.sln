@@ -85,7 +85,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "audio", "audio.vcxproj", "{
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rylogic.Core", "..\projects\Rylogic.Core\Rylogic.Core.csproj", "{37A4F319-2052-404D-AE7F-F882CFA33C1B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylogic.DirectShow", "..\projects\Rylogic.DirectShow\Rylogic.DirectShow.csproj", "{78CF6159-7F86-4D23-A15A-C325FED8E7AC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rylogic.DirectShow", "..\projects\Rylogic.DirectShow\Rylogic.DirectShow.csproj", "{78CF6159-7F86-4D23-A15A-C325FED8E7AC}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CoinFlip", "CoinFlip", "{AB085247-62EB-4A1E-AB4F-877585076E30}"
 	ProjectSection(SolutionItems) = preProject
@@ -137,7 +137,7 @@ Project("{9092AA53-FB77-4645-B42D-1CCCA6BD08BD}") = "trading_chart", "..\typescr
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{62A5725D-DA1E-4B8F-B5B8-83890D694575}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylogic.Gui.WPF", "..\projects\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj", "{846D147A-B7E6-4336-B019-D1ADD62FF095}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rylogic.Gui.WPF", "..\projects\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj", "{846D147A-B7E6-4336-B019-D1ADD62FF095}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoinFlip.UI", "..\projects\CoinFlip\CoinFlip.UI\CoinFlip.UI.csproj", "{39697B29-5C06-4545-966C-80C148EEA2C6}"
 EndProject
@@ -145,18 +145,24 @@ Project("{9092AA53-FB77-4645-B42D-1CCCA6BD08BD}") = "Rylogic.TextAligner", "..\t
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestConsoleCS", "..\projects\TestConsoleCS\TestConsoleCS.csproj", "{968B57EC-5AEB-42AE-AB8B-BD1DAEC6E7BF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RyLogViewer2", "..\projects\RyLogViewer2\RyLogViewer2.csproj", "{0D401487-7A8A-4FCC-92C7-361DB0F79D1A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RyLogViewer2", "..\projects\RyLogViewer2\RyLogViewer2.csproj", "{0D401487-7A8A-4FCC-92C7-361DB0F79D1A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylogic.Gui.WinForms", "..\projects\Rylogic.Gui.WinForms\Rylogic.Gui.WinForms.csproj", "{DFED22AE-D2D5-4901-9947-393C4648B381}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rylogic.Gui.WinForms", "..\projects\Rylogic.Gui.WinForms\Rylogic.Gui.WinForms.csproj", "{DFED22AE-D2D5-4901-9947-393C4648B381}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylogic.View3d", "..\projects\Rylogic.View3d\Rylogic.View3d.csproj", "{0FCB5434-407B-415E-9F11-6216F44D4377}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rylogic.View3d", "..\projects\Rylogic.View3d\Rylogic.View3d.csproj", "{0FCB5434-407B-415E-9F11-6216F44D4377}"
 	ProjectSection(ProjectDependencies) = postProject
 		{363D015B-B545-4623-A5CE-61245C9BF1F8} = {363D015B-B545-4623-A5CE-61245C9BF1F8}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylogic.Scintilla", "..\projects\Rylogic.Scintilla\Rylogic.Scintilla.csproj", "{A96E213D-5566-4248-84E4-803981967B6F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rylogic.Scintilla", "..\projects\Rylogic.Scintilla\Rylogic.Scintilla.csproj", "{A96E213D-5566-4248-84E4-803981967B6F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylogic.Core.Windows", "..\projects\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj", "{76EF3A15-6E9F-4348-BCC2-E39F14B2A2B4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Rylogic.Core.Windows", "..\projects\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj", "{76EF3A15-6E9F-4348-BCC2-E39F14B2A2B4}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_Items", "_Items", "{015BC940-4B39-487B-BF98-86206E61794A}"
+	ProjectSection(SolutionItems) = preProject
+		..\script\Rylogic.py = ..\script\Rylogic.py
+		..\script\RylogicAssembly.py = ..\script\RylogicAssembly.py
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

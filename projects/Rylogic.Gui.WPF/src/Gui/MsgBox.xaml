@@ -14,8 +14,8 @@
 	ShowActivated="True"
 	MinWidth="200"
 	MinHeight="100"
-	Width="{Binding ElementName=m_panel}"
-	Height="{Binding ElementName=m_panel}"
+	Width="{Binding Width, ElementName=m_panel}"
+	Height="{Binding Height, ElementName=m_panel}"
 	>
 
 	<DockPanel
@@ -28,7 +28,7 @@
 			Orientation="Horizontal"
 			FlowDirection="RightToLeft"
 			Background="{x:Static SystemColors.ControlBrush}"
-			Width="{Binding ElementName=m_panel}"
+			Width="{Binding Width, ElementName=m_panel}"
 			>
 			<Button Name="m_btn_negative" Content="Cancel" MinWidth="60" Margin="8" IsCancel="True"/>
 			<Button Name="m_btn_neutral" Content="Retry" MinWidth="60" Margin="8"/>

@@ -3,6 +3,7 @@
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
 		xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+		xmlns:gui2="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
 		xmlns:local="clr-namespace:RyLogViewer"
 		mc:Ignorable="d" 
 		d:DesignWidth="400"
@@ -16,6 +17,7 @@
 	<Window.Resources>
 		<ResourceDictionary>
 			<local:TabPageToInt x:Key="TabPageToInt"/>
+			<gui2:ColourToBrush x:Key="ColourToBrush"/>
 		</ResourceDictionary>
 	</Window.Resources>
 	
@@ -24,7 +26,7 @@
 		VerticalScrollBarVisibility="Auto"
 		>
 		<TabControl
-			SelectedIndex="{Binding SelectedPage, Converter={StaticResource TabPageToInt}, Mode=TwoWay}"
+			SelectedIndex="{Binding SelectedPage, Mode=TwoWay, Converter={StaticResource TabPageToInt}}"
 			>
 			<TabItem Header="General">
 				<WrapPanel
@@ -256,7 +258,7 @@
 							<StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
 								<TextBlock Text="Line Ending:" Margin="2"/>
 								<TextBox
-									Text="{Binding RowDelimiter}"
+									Text="{Binding LineEnding}"
 									ToolTip="Set the line ending characters to expect in the log data.&#x0a;Use &lt;CR&gt; for carriage return, &lt;LF&gt; for line feed, &lt;TAB&gt; for tab characters.&#x0a;Specify UNICODE characters using the form \uXXXX&#x0a;Leave blank to auto detect"
 									MinWidth="80"
 									Margin="2"
@@ -301,8 +303,8 @@
 									Content="Click to modify"
 									ToolTip="Set the selection foreground and back colors in the log view&#x0a;Click here to modify the colors"
 									PreviewMouseLeftButtonDown="HandleEditSelectionColor"
-									Background="{Binding LineSelectBackColour, Mode=TwoWay}"
-									Foreground="{Binding LineSelectForeColour}"
+									Background="{Binding LineSelectBackColour, Mode=TwoWay, Converter={StaticResource ColourToBrush}}"
+									Foreground="{Binding LineSelectForeColour, Mode=TwoWay, Converter={StaticResource ColourToBrush}}"
 									HorizontalContentAlignment="Center"
 									VerticalAlignment="Center"
 									BorderThickness="1"
@@ -317,8 +319,8 @@
 								<Label
 									Content="Click to modify"
 									ToolTip="Set the foreground and background colors in the log view&#x0a;Click here to modify the colors"
-									Background="{Binding LineBackColour1}"
-									Foreground="{Binding LineForeColour1}"
+									Background="{Binding LineBackColour1, Mode=TwoWay, Converter={StaticResource ColourToBrush}}"
+									Foreground="{Binding LineForeColour1, Mode=TwoWay, Converter={StaticResource ColourToBrush}}"
 									HorizontalContentAlignment="Center"
 									VerticalAlignment="Center"
 									BorderThickness="1"
@@ -337,8 +339,8 @@
 								<Label
 									Content="Click to modify"
 									ToolTip="Set the foreground and background colors for odd numbered rows in the log view&#x0a;Click here to modify the colors"
-									Background="{Binding LineBackColour2}"
-									Foreground="{Binding LineForeColour2}"
+									Background="{Binding LineBackColour2, Mode=TwoWay, Converter={StaticResource ColourToBrush}}"
+									Foreground="{Binding LineForeColour2, Mode=TwoWay, Converter={StaticResource ColourToBrush}}"
 									HorizontalContentAlignment="Center"
 									VerticalAlignment="Center"
 									BorderThickness="1"

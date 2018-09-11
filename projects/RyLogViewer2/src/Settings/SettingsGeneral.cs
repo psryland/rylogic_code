@@ -15,7 +15,6 @@ namespace RyLogViewer.Options
 			RestoreScreenLocation = false; // False so that first runs start in the default window position
 			ShowTotD = true;
 			CheckForUpdates = false;
-			FileChangesAdditive = true;
 		}
 
 		/// <summary>Filepath of the settings file</summary>
@@ -78,13 +77,6 @@ namespace RyLogViewer.Options
 		{
 			get { return get<bool>(nameof(CheckForUpdates)); }
 			set { set(nameof(CheckForUpdates), value); }
-		}
-
-		/// <summary></summary>
-		public bool FileChangesAdditive
-		{
-			get { return get<bool>(nameof(FileChangesAdditive)); }
-			set { set(nameof(FileChangesAdditive), value); }
 		}
 
 		/// <summary>Validate settings</summary>

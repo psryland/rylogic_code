@@ -14,10 +14,12 @@
 		<copyright>Copyright © Rylogic 2007-2018</copyright>
 		<tags>rylogic</tags>
 		<dependencies>
-			<id>Rylogic.Core</id>
+			<group targetFramework=".NETFramework4.7.1">
+				<dependency id="Rylogic.Core" version="1.0.2" exclude="Build,Analyzers"/>
+			</group>
 		</dependencies>
 	</metadata>
 	<files>
-		<file src="bin\release\Rylogic.Core.Windows.dll" target="lib\Rylogic.Core.Windows.dll" />
+		<file src="bin\release\net471\Rylogic.Core.Windows.dll" target="lib\net471\Rylogic.Core.Windows.dll" />
 	</files>
 </package>

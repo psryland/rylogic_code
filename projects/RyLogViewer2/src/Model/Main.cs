@@ -250,6 +250,7 @@ namespace RyLogViewer
 		private void LoadPlugins()
 		{
 			var plugin_dir = Util.ResolveAppPath("plugins");
+			Path_.CreateDirs(plugin_dir);
 
 			// Load line formatters
 			m_plugin_formatters = new Plugins<ILineFormatter>()

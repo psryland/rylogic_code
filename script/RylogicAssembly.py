@@ -73,12 +73,14 @@ def Deploy(assembly:str, config:str, publish:bool):
 	configs = [config.lower()] if not config == "both" else ["debug", "release"]
 
 	# Build
+	print(f"Building {assembly}...")
 	Tools.MSBuild(sln, [f"Rylogic\\{assembly}"], ["Any CPU"], configs, False, False)
 
 	# Package
 	if "release" in configs:
 		Tools.NugetPackage(proj, publish)
 
+	print("")
 	return
 
 # Deploy all Rylogic assemblies

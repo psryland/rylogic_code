@@ -8,7 +8,6 @@ using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Gui.WPF;
 using Rylogic.Utility;
-using RyLogViewer.Properties;
 
 namespace RyLogViewer
 {
