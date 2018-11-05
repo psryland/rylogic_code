@@ -1086,6 +1086,57 @@ namespace Rylogic.Utility
 
 			return sb.ToString();
 		}
+
+		/// <summary>Profile a block of code</summary>
+		public static Scope Profile(string name)
+		{
+			var sw = new Stopwatch();
+			return Scope.Create(
+				() => sw.Start(),
+				() =>
+				{
+					sw.Stop();
+					Debug.WriteLine($"{name}: {sw.Elapsed.TotalMilliseconds:N4}ms");
+				});
+		}
+
+		/// <summary>Execute a shell command (as a child process)</summary>
+		public static string ShellCmd(string cmd)
+		{
+			var start_info =
+				RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? new ProcessStartInfo
+				{
+					FileName = "cmd",
+					Arguments = $"/C {cmd}",
+					RedirectStandardOutput = true,
+					UseShellExecute = false,
+					CreateNoWindow = true,
+				} :
+				RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? new ProcessStartInfo
+				{
+					FileName = "/bin/bash",
+					Arguments = $"-c \"{cmd.Replace("\"", "\\\"")}\"",
+					RedirectStandardOutput = true,
+					UseShellExecute = false,
+					CreateNoWindow = true,
+				} :
+				throw new Exception($"Unsupported platform");
+
+			var process = new Process { StartInfo = start_info };
+			process.Start();
+
+			var result = process.StandardOutput.ReadToEnd();
+			process.WaitForExit();
+			return result;
+		}
+
+		///<summary>Random names for testing</summary>
+		public static string[] PeopleNames = new string[]
+		{
+			"Angela", "Boris", "Craig", "Darren", "Elvis", "Frank", "Gerard", "Hermes", "Imogen", "John",
+			"Kaylee", "Luke", "Mormont", "Nigella", "Oscar", "Pavarotti", "Quin", "Russel", "Stan", "Toby",
+			"Ulrick", "Vernon", "William", "Xavior", "Yvonne", "Zack",
+		};
 	}
 
 	/// <summary>Type specific utility methods</summary>

@@ -1,18 +1,25 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace Rylogic.Common
 {
-	public class ConsoleEx
+	/// <summary>A replacement for System.Console with extra features for intending and auto complete</summary>
+	public class ConsoleEx: IDisposable
 	{
+		private IDisposable _suppress_echo;
 		public ConsoleEx()
 		{
+			SynchroniseWrites = false;
 			AutoNewLine = true;
 			IndentString = "  ";
 			IndentLevel = 0;
@@ -20,6 +27,13 @@ namespace Rylogic.Common
 			HistoryMaxLength = 1000;
 			IsWordChar = IsWordCharDefault;
 			AutoComplete = null;
+
+			// Workaround for difference in behaviour of Linux terminals
+			_suppress_echo = SuppressEcho();
+		}
+		public virtual void Dispose()
+		{
+			_suppress_echo.Dispose();
 		}
 
 		/// <summary>Control-C pressed event</summary>
@@ -28,6 +42,13 @@ namespace Rylogic.Common
 			add { Console.CancelKeyPress += value; }
 			remove { Console.CancelKeyPress -= value; }
 		}
+
+		/// <summary>Raised whenever the console buffer is rolled by 1 line</summary>
+		public event EventHandler BufferRolled;
+
+		/// <summary>Synchronise multi-threaded access with locks</summary>
+		public bool SynchroniseWrites { get; set; }
+		private object _write_sync = new object();
 
 		/// <summary>Ensure the prompt is always printed on a new line</summary>
 		public bool AutoNewLine { get; set; }
@@ -46,16 +67,31 @@ namespace Rylogic.Common
 
 		/// <summary>Defines characters that are considered word characters (e.g. for Ctrl+Backspace)</summary>
 		public Func<char, bool> IsWordChar { get; set; }
-		public static bool IsWordCharDefault(char c) { return char.IsLetterOrDigit(c) || c == '_'; }
+		public static bool IsWordCharDefault(char c) => char.IsLetterOrDigit(c) || c == '_';
 
 		/// <summary>Auto complete handler</summary>
 		public IAutoComplete AutoComplete { get; set; }
 
-		/// <summary>Cursor location</summary>
+		/// <summary>Caret location</summary>
 		public Point Location
 		{
 			get { return new Point(Console.CursorLeft, Console.CursorTop); }
-			set { Console.CursorLeft = value.X; Console.CursorTop = value.Y; }
+			set
+			{
+				if (BufferSize.IsEmpty) return;
+				using (SyncWrites())
+				{
+					try
+					{
+						Console.SetCursorPosition(
+							Math_.Clamp(value.X, 0, Console.BufferWidth - 1),
+							Math_.Clamp(value.Y, 0, Console.BufferHeight - 1));
+					}
+					// There is no way to synchronise setting the caret location
+					// with resizing the buffer so we just have to swallow the exceptions.
+					catch (IOException) { }
+				}
+			}
 		}
 
 		/// <summary>The console buffer size</summary>
@@ -64,6 +100,9 @@ namespace Rylogic.Common
 			get { return new Size(Console.BufferWidth, Console.BufferHeight); }
 			set { Console.SetBufferSize(value.Width, value.Height); }
 		}
+
+		/// <summary>The number of characters in the console buffer</summary>
+		public int BufferLength => Console.BufferWidth * Console.BufferHeight;
 
 		/// <summary>The display area of the console</summary>
 		public Rectangle DisplayRect
@@ -90,6 +129,13 @@ namespace Rylogic.Common
 			return new IndentSave(this);
 		}
 
+		/// <summary>RAII scope for acquiring the write lock</summary>
+		public IDisposable SyncWrites()
+		{
+			if (!SynchroniseWrites) return null;
+			return new WriteSync(this);
+		}
+
 		/// <summary>Return the number of columns and rows needed to display 'msg'</summary>
 		public Size MeasureText(string msg)
 		{
@@ -105,44 +151,48 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Given a buffer location plus 'dx' and 'dy', return the normalised buffer location</summary>
-		public Point NormaliseLocation(Point pt, int dx, int dy)
+		public Point NormaliseLocation(Point pt, int dx = 0, int dy = 0)
 		{
-			pt.X += dx;
-			pt.Y += dy;
-
 			var size = BufferSize;
 			if (size == Size.Empty)
 				return Point.Empty;
 
-			for (; pt.X < 0 && pt.Y > 0; pt.X += size.Width, --pt.Y) { }
-			for (; pt.X >= size.Width && pt.Y < size.Height; pt.X -= size.Width, ++pt.Y) { }
-			pt.Y = Math_.Clamp(pt.Y, 0, size.Height - 1);
+			var c = (pt.X + dx) + size.Width * (pt.Y + dy);
 
-			return pt;
+			if (c < 0)
+				return Point.Empty;
+
+			if (c >= size.Width * size.Height)
+				return new Point(size.Width - 1, size.Height - 1);
+
+			return new Point(c % size.Width, c / size.Width);
 		}
 
 		/// <summary>Erase text between 'tl' and 'br'. If 'rectangular' is true, the clear area is a rectangle, otherwise rows are cleared</summary>
 		public void Clear(Point tl, Point br, bool rectangular)
 		{
-			// Normalise the top left, bottom right
-			var x0 = Math.Min(tl.X, br.X);
-			var x1 = Math.Max(tl.X, br.X);
-			var y0 = Math.Min(tl.Y, br.Y);
-			var y1 = Math.Max(tl.Y, br.Y);
+			if (tl == br)
+				return;
 
+			using (SyncWrites())
 			using (PreserveLocation())
 			{
 				// If clearing a single line
-				if (y0 == y1)
+				if (tl.Y == br.Y)
 				{
-					Location = new Point(x0, y0);
-					Console.Write(new string(' ', x1 - x0));
+					Location = new Point(Math.Min(tl.X, br.X), tl.Y);
+					Console.Write(new string(' ', Math.Abs(br.X - tl.X)));
 				}
 				else
 				{
 					// Clear a rectangular area in the buffer
 					if (rectangular)
 					{
+						// Normalise the top left, bottom right
+						var x0 = Math.Min(tl.X, br.X);
+						var x1 = Math.Max(tl.X, br.X);
+						var y0 = Math.Min(tl.Y, br.Y);
+						var y1 = Math.Max(tl.Y, br.Y);
 						for (int y = y0; y != y1; ++y)
 						{
 							Location = new Point(x0, y);
@@ -152,15 +202,15 @@ namespace Rylogic.Common
 					// Clear lines in the buffer
 					else
 					{
-						Location = new Point(x0, y0);
-						Console.Write(new string(' ', Console.BufferWidth - x0));
-						for (int y = y0 + 1; y < y1; ++y)
+						Location = tl;
+						Console.Write(new string(' ', Console.BufferWidth - tl.X));
+						for (int y = tl.Y + 1; y < br.Y; ++y)
 						{
 							Location = new Point(0, y);
 							Console.Write(new string(' ', Console.BufferWidth));
 						}
-						Location = new Point(0, y1);
-						Console.Write(new string(' ', x1));
+						Location = new Point(0, br.Y);
+						Console.Write(new string(' ', br.X));
 					}
 				}
 			}
@@ -169,32 +219,45 @@ namespace Rylogic.Common
 		/// <summary>Write a string to the console</summary>
 		public void Write(string msg)
 		{
-			// Breaks 'msg' into lines (without allocating the whole string again, a.k.a Split)
-			for (int s = 0, e = 0; s != msg.Length; s = e != msg.Length ? e + 1 : e)
+			using (SyncWrites())
 			{
-				// Find the line end
-				for (e = s; e != msg.Length && msg[e] != '\n'; ++e) { }
-				var line = msg.Substring(s, e - s);
-
-				// Add indent
-				if (Console.CursorLeft <= IndentLevel * IndentString.Length)
+				try
 				{
-					Console.CursorLeft = 0;
-					for (int k = 0; k != IndentLevel; ++k)
-						Console.Write(IndentString);
-				}
+					// Breaks 'msg' into lines (without allocating the whole string again, a.k.a Split)
+					for (int s = 0, e = 0; s != msg.Length; s = e != msg.Length ? e + 1 : e)
+					{
+						var y = Console.CursorTop;
 
-				// Output the line
-				if (e != msg.Length)
-					Console.WriteLine(line);
-				else
-					Console.Write(line);
+						// Find the line end
+						for (e = s; e != msg.Length && msg[e] != '\n'; ++e) { }
+						var line = msg.Substring(s, e - s);
+
+						// Add indent
+						if (Console.CursorLeft <= IndentLevel * IndentString.Length)
+						{
+							Console.CursorLeft = 0;
+							for (int k = 0; k != IndentLevel; ++k)
+								Console.Write(IndentString);
+						}
+
+						// Output the line
+						if (e == msg.Length)
+							Console.Write(line);
+						else
+							Console.WriteLine(line);
+
+						// Notify of buffer roll over
+						if (Console.CursorLeft == 0 && y == Console.BufferHeight - 1)
+							BufferRolled?.Invoke(this, EventArgs.Empty);
+					}
+				}
+				// These occur when the console is resized to zero in the middle of a write
+				catch (IOException) { }
 			}
 		}
 		public void WriteLine(string msg)
 		{
-			Write(msg);
-			Write("\n");
+			Write(msg+"\n");
 		}
 		public void WriteLine()
 		{
@@ -202,11 +265,16 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Write a string at a given position in the console</summary>
-		public void WriteAt(Point loc, string msg)
+		public void WriteAt(Point loc, string msg, Size? clear = null)
 		{
 			var pt = loc;
+			using (SyncWrites())
 			using (PreserveLocation())
 			{
+				// Reset the area
+				if (clear != null)
+					Clear(loc, loc + clear.Value, true);
+
 				// Breaks 'msg' into lines (without allocating the whole string again, a.k.a Split)
 				for (int s = 0, e = 0; s != msg.Length; s = e != msg.Length ? e + 1 : e)
 				{
@@ -226,11 +294,10 @@ namespace Rylogic.Common
 		public void Prompt(string prompt)
 		{
 			// Move to the next line if not at the start of a new line
-			if (AutoNewLine && Location.X > IndentLevel * IndentString.Length)
-				WriteLine();
+			var nl = (AutoNewLine && Location.X > IndentLevel * IndentString.Length) ? "\n" : string.Empty;
 
 			// Display the prompt
-			Write(prompt);
+			Write(nl + prompt);
 		}
 
 		/// <summary>The next character from the input stream, or negative one (-1) if there are currently no more characters to be read.</summary>
@@ -239,17 +306,26 @@ namespace Rylogic.Common
 			return Console.Read();
 		}
 
-		/// <summary>Obtains the next character or function key pressed by the user. The pressed key is displayed in the console window.</summary>
-		public ConsoleKeyInfo ReadKey()
+		/// <summary>Obtains the next character or function key pressed by the user. If 'intercept' is true, the pressed key is not displayed in the console window.</summary>
+		public ConsoleKeyInfo ReadKey(bool intercept = false)
 		{
-			return Console.ReadKey();
+			lock (_read_key_lock)
+			{
+				var key = Console.ReadKey(intercept);
+				return key;
+			}
 		}
-
-		/// <summary>An object that describes the System.ConsoleKey constant and Unicode character, if any, that correspond to the pressed console key. The System.ConsoleKeyInfo object also describes, in a bitwise combination of System.ConsoleModifiers values, whether one or more Shift, Alt, or Ctrl modifier keys was pressed simultaneously with the console key.</summary>
-		public ConsoleKeyInfo ReadKey(bool intercept)
+		public bool TryReadKey(out ConsoleKeyInfo key, bool intercept = false)
 		{
-			return Console.ReadKey(intercept);
+			key = default(ConsoleKeyInfo);
+			lock (_read_key_lock)
+			{
+				if (Console.KeyAvailable == false) return false;
+				key = ReadKey(intercept);
+				return true;
+			}
 		}
+		public object _read_key_lock = new object();
 
 		/// <summary>Read a line from the console, with auto-complete and history support</summary>
 		public string Read()
@@ -262,128 +338,169 @@ namespace Rylogic.Common
 		{
 			// Read up to the enter key being pressed
 			var input = (string)null;
-			for (var buf = new Buffer(this); input == null;)
+			using (var buf = new Buffer(this))
 			{
-				// Record the cursor location before waiting for a key.
-				var loc0 = Location;
-
-				// Read a key from the user
-				var key = await Task.Run(() => ReadKey(true), cancel);
-
-				// If the cursor moves while waiting, apply the offset to the user input.
-				var loc1 = Location;
-				if (loc0 != loc1)
+				for (; input == null;)
 				{
-					Prompt(string.Empty);
-					buf.Origin = Location;
-				}
+					var loc0 = Idx(Location);
 
-				// Do auto completion
-				if (DoAutoComplete(buf, key))
-					continue;
+					// Read a key from the user.
+					// This loop prevents output being blocked while waiting for a key (bug on .Net Core for Linux)
+					var key = default(ConsoleKeyInfo);
+					for (; !cancel.IsCancellationRequested && !TryReadKey(out key, true); await Task.Delay(50, cancel)) { }
+					if (cancel.IsCancellationRequested) break;
 
-				switch (key.Key)
-				{
-				default:
-					{
-						// Add a character to the user input buffer
-						if (!char.IsControl(key.KeyChar))
-							buf.Write(key.KeyChar);
-						break;
-					}
-				case ConsoleKey.Enter:
-					{
-						// Insert '\n' into the input buffer if control is pressed
-						if (key.Modifiers == ConsoleModifiers.Control)
-						{
-							buf.Write(key.KeyChar);
-							break;
-						}
-						// Complete the user input
-						else
-						{
-							input = buf.ToString();
+					// If the current caret location moves while waiting for input then something
+					// has been written to the console during collecting the user input. On Linux,
+					// characters are echoed to the terminal in-spite of 'intercept = true' so we
+					// can't use the exact position. Settle for changes in Y only.
+					var loc1 = Idx(Location);
+					buf.MoveToNextLine |= (loc0 != loc1 && key.Key != ConsoleKey.Enter);
 
-							// Add the input to the history buffer
-							AddToHistory(input);
+					// Do auto completion
+					if (DoAutoComplete(buf, key))
+						continue;
 
-							// Optionally include the newline character
-							if (newline_on_enter)
-								WriteLine();
+					switch (key.Key)
+					{
+						default:
+							{
+								// Add a character to the user input buffer
+								if (!char.IsControl(key.KeyChar))
+									buf.Write(key.KeyChar);
+								break;
+							}
+						case ConsoleKey.Enter:
+							{
+								// Insert '\n' into the input buffer if control is pressed
+								if (key.Modifiers == ConsoleModifiers.Control)
+								{
+									buf.Write(key.KeyChar);
+									break;
+								}
+								// Complete the user input
+								else
+								{
+									input = buf.ToString();
 
-							break;
-						}
-					}
-				case ConsoleKey.Escape:
-					{
-						// Clear user input
-						buf.Assign(0, string.Empty, true);
-						break;
-					}
-				case ConsoleKey.Backspace:
-					{
-						var count = -1;
-						if (key.Modifiers == ConsoleModifiers.Control)
-							count = buf.WordBoundaryOffset(count);
+									// Add the input to the history buffer
+									AddToHistory(input);
 
-						buf.Delete(count);
-						break;
-					}
-				case ConsoleKey.Delete:
-					{
-						var count = +1;
-						if (key.Modifiers == ConsoleModifiers.Control)
-							count = buf.WordBoundaryOffset(count);
+									// Optionally include the newline character
+									if (newline_on_enter)
+										WriteLine();
 
-						buf.Delete(count);
-						break;
-					}
-				case ConsoleKey.LeftArrow:
-					{
-						var count = -1;
-						if (key.Modifiers == ConsoleModifiers.Control)
-							count = buf.WordBoundaryOffset(count);
+									break;
+								}
+							}
+						case ConsoleKey.Escape:
+							{
+								// Clear user input
+								buf.Assign(0, string.Empty, true);
+								break;
+							}
+						case ConsoleKey.Backspace:
+							{
+								var count = -1;
+								if (key.Modifiers == ConsoleModifiers.Control)
+									count = buf.WordBoundaryOffset(count);
 
-						buf.Move(count);
-						break;
-					}
-				case ConsoleKey.RightArrow:
-					{
-						var count = +1;
-						if (key.Modifiers == ConsoleModifiers.Control)
-							count = buf.WordBoundaryOffset(count);
+								buf.Delete(count);
+								break;
+							}
+						case ConsoleKey.Delete:
+							{
+								var count = +1;
+								if (key.Modifiers == ConsoleModifiers.Control)
+									count = buf.WordBoundaryOffset(count);
 
-						buf.Move(count);
-						break;
-					}
-				case ConsoleKey.Home:
-					{
-						buf.Move(-buf.Length);
-						break;
-					}
-				case ConsoleKey.End:
-					{
-						buf.Move(+buf.Length);
-						break;
-					}
-				case ConsoleKey.UpArrow:
-					{
-						if (History.Count == 0) break;
-						_history_index = (_history_index + History.Count - 1) % History.Count;
-						buf.Assign(0, History[_history_index], true);
-						break;
-					}
-				case ConsoleKey.DownArrow:
-					{
-						// '_history_index' is the offset from the end of the 'History' collection
-						if (History.Count == 0) break;
-						_history_index = (_history_index + History.Count + 1) % History.Count;
-						buf.Assign(0, History[_history_index], true);
-						break;
+								buf.Delete(count);
+								break;
+							}
+						case ConsoleKey.LeftArrow:
+							{
+								var count = -1;
+								if (key.Modifiers == ConsoleModifiers.Control)
+									count = buf.WordBoundaryOffset(count);
+
+								buf.Move(count);
+								break;
+							}
+						case ConsoleKey.RightArrow:
+							{
+								var count = +1;
+								if (key.Modifiers == ConsoleModifiers.Control)
+									count = buf.WordBoundaryOffset(count);
+
+								buf.Move(count);
+								break;
+							}
+						case ConsoleKey.Home:
+							{
+								buf.Move(-buf.Length);
+								break;
+							}
+						case ConsoleKey.End:
+							{
+								buf.Move(+buf.Length);
+								break;
+							}
+						case ConsoleKey.UpArrow:
+							{
+								if (History.Count == 0) break;
+								_history_index = (_history_index + History.Count - 1) % History.Count;
+								buf.Assign(0, History[_history_index], true);
+								break;
+							}
+						case ConsoleKey.DownArrow:
+							{
+								if (History.Count == 0) break;
+								_history_index = (_history_index + History.Count + 1) % History.Count;
+								buf.Assign(0, History[_history_index], true);
+								break;
+							}
+						case ConsoleKey.PageUp:
+							{
+								if (History.Count == 0) break;
+								_history_index = (_history_index + History.Count - 1) % History.Count;
+								if (buf.Length != 0)
+								{
+									// Search backward in the history for a partial match for 'buf'
+									for (int i = 0; i != History.Count; ++i)
+									{
+										if (History[_history_index].StartsWith(buf.ToString(), StringComparison.InvariantCultureIgnoreCase)) break;
+										_history_index = (_history_index + History.Count - 1) % History.Count;
+									}
+								}
+								buf.Assign(0, History[_history_index], true);
+								break;
+							}
+						case ConsoleKey.PageDown:
+							{
+								if (History.Count == 0) break;
+								_history_index = (_history_index + History.Count + 1) % History.Count;
+								if (buf.Length != 0 && key.Modifiers == ConsoleModifiers.Control)
+								{
+									// Search forward in the history for a partial match for 'buf'
+									for (int i = 0; i != History.Count; ++i)
+									{
+										if (History[_history_index].StartsWith(buf.ToString(), StringComparison.InvariantCultureIgnoreCase)) break;
+										_history_index = (_history_index + History.Count + 1) % History.Count;
+									}
+								}
+								buf.Assign(0, History[_history_index], true);
+								break;
+							}
 					}
 				}
 			}
 			return input;
+		}
+
+		/// <summary>Returns true if the Escape key has been pressed. Flushes console key buffer as a side effect</summary>
+		public bool EscapePressed()
+		{
+			return TryReadKey(out var k) && k.Key == ConsoleKey.Escape;
 		}
 
 		/// <summary>Add 'input' to the history buffer</summary>
@@ -435,84 +552,84 @@ namespace Rylogic.Common
 			{
 				switch (AutoComplete.CompletionMode)
 				{
-				default: throw new Exception($"Unknown completion mode: {AutoComplete.CompletionMode}");
-				case ECompletionMode.FullText:
-					{
-						// Cancel
-						if (key.Key == ConsoleKey.Escape)
+					default: throw new Exception($"Unknown completion mode: {AutoComplete.CompletionMode}");
+					case ECompletionMode.FullText:
 						{
-							buf.Assign(0, string.Empty, true);
-							key_handled = true;
-							_suggestions = null;
-						}
-						// Cycle completions
-						else if (key.Key == ConsoleKey.Tab)
-						{
-							// Replace the full user input text
-							buf.Assign(0, _suggestions[_auto_complete_index], true);
-							key_handled = true;
-						}
-						// Commit
-						else
-						{
-							buf.Assign(0, _suggestions[_auto_complete_index], true);
-							key_handled = key.Key == ConsoleKey.RightArrow;
-							_suggestions = null;
-						}
-						break;
-					}
-				case ECompletionMode.Word:
-					{
-						// Cancel
-						if (key.Key == ConsoleKey.Escape)
-						{
-							buf.Assign(buf.Insert, string.Empty, true);
-							key_handled = true;
-							_suggestions = null;
-						}
-						// Cycle completions
-						else if (key.Key == ConsoleKey.Tab)
-						{
-							// Replace only the current word
-							buf.Assign(_word_bounding_index, _suggestions[_auto_complete_index], false);
-							key_handled = true;
-						}
-						// Commit
-						else if (key.Key == ConsoleKey.Spacebar || key.Key == ConsoleKey.RightArrow || key.Key == ConsoleKey.End || key.Key == ConsoleKey.Enter)
-						{
-							buf.Assign(_word_bounding_index, _suggestions[_auto_complete_index], true);
-							key_handled = true;
-							_suggestions = null;
-						}
-						// Continue to match
-						else if (!char.IsControl(key.KeyChar))
-						{
-							// Save the current suggestion
-							var suggestion = _suggestions[_auto_complete_index];
-
-							// Add the character to the user input
-							buf.Write(key.KeyChar);
-							key_handled = true;
-
-							// Look for new suggestions
-							_suggestions = AutoComplete.Suggestions(buf.ToString(), _word_bounding_index, buf.Insert);
-
-							// Look for the previous suggestion in the new list
-							if (_suggestions?.Length > 0)
+							// Cancel
+							if (key.Key == ConsoleKey.Escape)
 							{
-								var idx = Array.IndexOf(_suggestions, suggestion);
-								_auto_complete_index = idx != -1 ? idx : 0;
-								buf.Assign(_word_bounding_index, _suggestions[_auto_complete_index], false);
-							}
-							else
-							{
-								// Revert the user input to just what they've typed
-								buf.Assign(buf.Insert, string.Empty, false);
+								buf.Assign(0, string.Empty, true);
+								key_handled = true;
 								_suggestions = null;
 							}
+							// Cycle completions
+							else if (key.Key == ConsoleKey.Tab)
+							{
+								// Replace the full user input text
+								buf.Assign(0, _suggestions[_auto_complete_index], true);
+								key_handled = true;
+							}
+							// Commit
+							else
+							{
+								buf.Assign(0, _suggestions[_auto_complete_index], true);
+								key_handled = key.Key == ConsoleKey.RightArrow;
+								_suggestions = null;
+							}
+							break;
 						}
-						break;
-					}
+					case ECompletionMode.Word:
+						{
+							// Cancel
+							if (key.Key == ConsoleKey.Escape)
+							{
+								buf.Assign(buf.Insert, string.Empty, true);
+								key_handled = true;
+								_suggestions = null;
+							}
+							// Cycle completions
+							else if (key.Key == ConsoleKey.Tab)
+							{
+								// Replace only the current word
+								buf.Assign(_word_bounding_index, _suggestions[_auto_complete_index], false);
+								key_handled = true;
+							}
+							// Commit
+							else if (key.Key == ConsoleKey.Spacebar || key.Key == ConsoleKey.RightArrow || key.Key == ConsoleKey.End || key.Key == ConsoleKey.Enter)
+							{
+								buf.Assign(_word_bounding_index, _suggestions[_auto_complete_index], true);
+								key_handled = true;
+								_suggestions = null;
+							}
+							// Continue to match
+							else if (!char.IsControl(key.KeyChar))
+							{
+								// Save the current suggestion
+								var suggestion = _suggestions[_auto_complete_index];
+
+								// Add the character to the user input
+								buf.Write(key.KeyChar);
+								key_handled = true;
+
+								// Look for new suggestions
+								_suggestions = AutoComplete.Suggestions(buf.ToString(), _word_bounding_index, buf.Insert);
+
+								// Look for the previous suggestion in the new list
+								if (_suggestions?.Length > 0)
+								{
+									var idx = Array.IndexOf(_suggestions, suggestion);
+									_auto_complete_index = idx != -1 ? idx : 0;
+									buf.Assign(_word_bounding_index, _suggestions[_auto_complete_index], false);
+								}
+								else
+								{
+									// Revert the user input to just what they've typed
+									buf.Assign(buf.Insert, string.Empty, false);
+									_suggestions = null;
+								}
+							}
+							break;
+						}
 				}
 			}
 
@@ -526,24 +643,68 @@ namespace Rylogic.Common
 		private int _word_bounding_index;
 		private int _auto_complete_index;
 
+		/// <summary>Convert a point to a console buffer index (not normalised)</summary>
+		private static int Idx(Point pt, int? width = null)
+		{
+			return pt.X + pt.Y * (width ?? Console.BufferWidth);
+		}
+
+		/// <summary>Convert a console buffer index to a console point (not normalised)</summary>
+		private static Point Pt(int idx, int? width = null)
+		{
+			// Note: Pt(Idx(pt)) != pt
+			// This is because there is not a unique mapping from 2D points to 1D points (e.g. [0,0], [Width,-1], [2*Width,-2], etc all have index 0)
+			var W = width ?? Console.BufferWidth;
+			return idx >= 0
+				? new Point(idx % W, idx / W)
+				: new Point(-1 + W + (1 + idx) % W, -1 + (1 + idx) / W);
+		}
+
+		/// <summary>Suppress character echo</summary>
+		private Scope SuppressEcho()
+		{
+			if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+			{
+				// Preserve the terminal state
+				_stty = _stty ?? Util.ShellCmd("stty -g");
+				return Scope.Create(
+					() => Util.ShellCmd("stty -echo"),
+					() => Util.ShellCmd($"stty {_stty}"));
+			}
+			return new Scope();
+		}
+		private string _stty;
+
 		/// <summary>Helper for tracking the input string within the console buffer</summary>
-		private class Buffer
+		private class Buffer :IDisposable
 		{
 			private ConsoleEx _console;  // Associated console
 			private StringBuilder _line; // The line of user input
-			private Point _origin;       // The start point in the console buffer for this string
-			private Point _end;          // The end point in the console buffer for this string
-
+			private Size _last_size;     // The size of the console buffer last update
+			private int _last_length;    // The length of '_line' after the last update
+			private int _caret;          // The caret position as a 1D index into the console buffer
+			private int _anchor;         // The position in the user input that should be positioned at '_caret' (= the value of 'Insert' after the last update)
+			
 			public Buffer(ConsoleEx console)
 			{
 				_console = console;
 				_line = new StringBuilder();
-				_origin = _console.Location;
-				_end = _origin;
+				_caret = Idx(_console.Location);
+				_last_size = _console.BufferSize;
+				_last_length = 0;
+			 	_anchor = 0;
 				Insert = 0;
+				_console.BufferRolled += HandleBufferRolled;
+			}
+			public void Dispose()
+			{
+				_console.BufferRolled -= HandleBufferRolled;
 			}
 
-			/// <summary>The current insert position</summary>
+			/// <summary>A flag used to indicate that the user input should be displayed on the next line</summary>
+			public bool MoveToNextLine { get; set; }
+
+			/// <summary>The current insert position into the line buffer</summary>
 			public int Insert { get; private set; }
 
 			/// <summary>The number of characters in the input buffer</summary>
@@ -554,7 +715,7 @@ namespace Rylogic.Common
 				{
 					_line.Length = value;
 					Insert = Math_.Clamp(Insert, 0, _line.Length);
-					Update();
+					Update(false);
 				}
 			}
 
@@ -568,13 +729,14 @@ namespace Rylogic.Common
 				}
 			}
 
-			/// <summary>Append 'text' from 'insert', erasing the rest of the line</summary>
+			/// <summary>Copy 'text' into the input buffer starting at 'index', erasing the rest of the line</summary>
 			public void Assign(int index, string text, bool move_insert)
 			{
+				var redraw = index < Insert;
 				_line.Length = index;
 				_line.Append(text);
 				Insert = Math_.Clamp(move_insert ? _line.Length : Insert, 0, _line.Length);
-				Update();
+				Update(redraw);
 			}
 
 			/// <summary>Returns the offset to a word boundary in the given direction. Going left returns the first character in a word, going right returns the first character of the next word</summary>
@@ -604,70 +766,200 @@ namespace Rylogic.Common
 			public void Write(char c)
 			{
 				_line.Insert(Insert++, c);
-				Update();
+				Update(false);
 			}
 			public void Write(string text)
 			{
 				_line.Insert(Insert, text);
 				Insert += text.Length;
-				Update();
-			}
-
-			/// <summary>Delete characters from the input buffer. Use negative numbers to delete backward, positive to delete forward</summary>
-			public void Delete(int direction_and_count)
-			{
-				var insert = Math_.Clamp(Insert + direction_and_count, 0, _line.Length);
-				_line.Remove(Math.Min(insert, Insert), Math.Abs(Insert - insert));
-				Insert = Math.Min(insert, Insert);
-				Update();
+				Update(false);
 			}
 
 			/// <summary>Move the insert position. Use negative numbers for backward, positive numbers for forward</summary>
 			public void Move(int direction_and_count)
 			{
-				// Measure the amount to move the cursor along the user input.
+				// Measure the amount to move the caret along the user input.
+				// Don't shortcut out of here if 'diff' is 0, the console moves the caret, so we need to move it back
 				var insert = Math_.Clamp(Insert + direction_and_count, 0, _line.Length);
 				var diff = insert - Insert;
+
+				// Move the insert position
 				Insert = insert;
 
-				// Shift the cursor location
-				_console.Location = _console.NormaliseLocation(_console.Location, diff, 0);
-			}
-
-			/// <summary>Get/Set a new origin position</summary>
-			internal Point Origin
-			{
-				get { return _origin; }
-				set
+				// Move the caret position to the insert position
+				using (_console.SyncWrites())
 				{
-					_console.Clear(_origin, _end, false);
-					_origin = value;
-					_end = _origin;
-					Update();
+					// Set the new insert position
+					_caret += diff;
+					_anchor += diff;
+
+					// If the move went beyond the buffer extent, do a full update.
+					// Otherwise, just set the caret to the new location
+					var buf_length = _console.BufferLength;
+					if (_caret < 0 || _caret >= buf_length)
+					{
+						_caret = Math_.Clamp(_caret, 0, _console.BufferLength - 1);
+						Update(true);
+					}
+					else
+					{
+						_console.Location = _console.NormaliseLocation(Pt(_caret));
+					}
 				}
 			}
 
-			/// <summary>Write the user input into the console and update the cursor location</summary>
-			private void Update()
+			/// <summary>Delete characters from the input buffer. Use negative numbers to delete backward, positive to delete forward</summary>
+			public void Delete(int direction_and_count)
 			{
-				// Clear the buffer
-				_console.Clear(_origin, _end, false);
+				// Measure the amount to move the caret along the user input
+				// Don't shortcut out of here if 'diff' is 0, the console moves the caret, so we need to move it back
+				var insert = Math_.Clamp(Insert + direction_and_count, 0, _line.Length);
+				var diff = insert - Insert;
 
-				// Start at '_origin'
-				_console.Location = _origin;
+				// Delete the user input, and move the insert position
+				_line.Remove(Math.Min(insert, Insert), Math.Abs(diff));
+				Insert = Math.Min(insert, Insert);
+				diff = Math.Min(0, diff);
 
-				// Write the user input up to '_insert', then save the cursor location
-				_console.Write(_line.ToString(0, Insert));
-				var loc = _console.Location;
+				// Move the caret position
+				using (_console.SyncWrites())
+				{
+					// Set the new insert position
+					_caret += diff;
+					_anchor += diff;
 
-				// Write the rest of the user input
-				_console.Write(_line.ToString(Insert, _line.Length - Insert));
+					// If the move went beyond the buffer extent, do a full update.
+					// Otherwise, just set the caret to the new location and do a fast update.
+					var buf_length = _console.BufferLength;
+					if (_caret < 0 || _caret >= buf_length)
+					{
+						_caret = Math_.Clamp(_caret, 0, _console.BufferLength - 1);
+						Update(true);
+					}
+					else
+					{
+						_console.Location = _console.NormaliseLocation(Pt(_caret));
+						Update(false);
+					}
+				}
+			}
 
-				// Record the new end point
-				_end = _console.Location;
+			/// <summary>
+			/// Write the user input into the console and update the caret location.
+			/// Set 'redraw' true if everything up to '_caret' is unchanged.</summary>
+			private void Update(bool redraw)
+			{
+				// Notes:
+				//  - It's much easier to treat the console buffer as a 1D array.
+				//  - '_caret' is the position in the console buffer that corresponds to '_anchor'.
+				//    Callers can move the visible portion of the user input by adjusting '_caret' and '_anchor'.
+				//  - The console buffer may get resized.
+				//  - Writing to the console can cause it to roll over.
+				//  - There seems to be a weird Linux-only bug where pasting text that extends past
+				//    the end of the console buffer does not cause it to automatically roll over.
+				//    I haven't found a work-around for this, but it only seems to be a problem for paste,
+				//    and the full string pasted is added to the user input buffer.
+				//
+				// Think of it like this:
+				//                                    _caret
+				//   Console Buffer:    [---------------V------------] (1D array)
+				//   User Input:  (=====================^===I==)       (1D array)
+				//                                   _anchor
 
-				// Set the cursor to the '_insert' position
-				_console.Location = loc;
+				using (_console.SyncWrites())
+				{
+					var buf_length = _console.BufferLength;
+					var buf_size = _console.BufferSize;
+					if (buf_size.IsEmpty)
+						return;
+
+					// Determine if the whole user input needs redrawing
+					var moved = MoveToNextLine;
+					var resized = buf_size != _last_size;
+					redraw |= moved | resized;
+
+					// Erase the previous buffer text.
+					// If 'redraw', clear from the start of the user input.
+					// Otherwise, just erase from the insert position onwards.
+					_console.Clear(
+						_console.NormaliseLocation(Pt(_caret - (redraw ? _anchor : 0))),
+						_console.NormaliseLocation(Pt(_caret + (_last_length - _anchor))),
+						false);
+
+					// If the caret was moved by something else, set '_caret' to the next new line
+					if (resized)
+					{
+						var pt = Pt(_caret, _last_size.Width);
+						_caret = Idx(pt);
+					}
+					if (moved)
+					{
+						var pt0 = Pt(_caret);
+						var pt1 = _console.Location;
+						pt0.Y = Math_.Clamp(pt1.Y + (pt1.X != 0 ? 1 : 0), 0, buf_size.Height - 1);
+						_caret = Idx(pt0);
+					}
+
+					// Write the user input to the console buffer.
+					// Always write up to 'Insert', even if it causes a roll of the buffer.
+					// For text after the insert position, only write up to the end of the buffer.
+					int origin = 0, beg = 0, len = 0;
+					if (redraw)
+					{
+						// Where in the console buffer to start writing to
+						origin = Math_.Clamp(_caret - _anchor, 0, buf_length - 1);
+
+						// Where in the user input to read from
+						beg = Math_.Clamp(_anchor - _caret, 0, _line.Length);
+
+						// The length of user input to write
+						// Clamp to within the console buffer, unless the 'Insert' position extends beyond it.
+						len = Math_.Clamp(_line.Length - beg, 0, buf_length - origin - 1);
+						len = Math.Max(len, Insert - beg);
+					}
+					// Otherwise, just write forwards from '_anchor'
+					else
+					{
+						// Where in the console buffer to start writing to
+						origin = Math_.Clamp(_caret, 0, buf_length - 1);
+
+						// Where in the user input to read from 
+						beg = Math_.Clamp(_anchor, 0, _line.Length);
+
+						// The length of user input to write
+						// Clamp to within the console buffer, unless the 'Insert' position extends beyond it.
+						len = Math_.Clamp(_line.Length - beg, 0, buf_length - origin - 1);
+						len = Math.Max(len, Insert - beg);
+					}
+
+					// Write to the console (this could invalidate 'origin')
+					_console.Location = _console.NormaliseLocation(Pt(origin));
+					_console.Write(_line.ToString(beg, len));
+
+					// Move the caret position to match the 'Insert' position.
+					_caret = Math_.Clamp(_caret + (Insert - _anchor), 0, buf_length - 1);
+					_console.Location = _console.NormaliseLocation(Pt(_caret));
+					MoveToNextLine = false;
+
+					// Save the values used in this update
+					_last_length = _line.Length;
+					_last_size = buf_size;
+					_anchor = Insert;
+				}
+			}
+
+			/// <summary>Handle the console buffer rolling down one line</summary>
+			private void HandleBufferRolled(object sender, EventArgs e)
+			{
+				_caret -= _console.BufferSize.Width;
+			}
+
+			/// <summary>RAII object for handing buffer roll over</summary>
+			private Scope SubscribeBufferRolled(EventHandler handler)
+			{
+				return Scope.Create(
+					() => _console.BufferRolled += handler,
+					() => _console.BufferRolled -= handler);
 			}
 
 			/// <summary>Return the input buffer as a string</summary>
@@ -713,6 +1005,23 @@ namespace Rylogic.Common
 			}
 		}
 
+		/// <summary>RAII object for synchronising writes</summary>
+		private class WriteSync :IDisposable
+		{
+			private readonly object _sync;
+			private readonly bool _release;
+			public WriteSync(object sync)
+			{
+				_release = false;
+				Monitor.Enter(_sync = sync, ref _release);
+			}
+			public void Dispose()
+			{
+				if (!_release) return;
+				Monitor.Exit(_sync);
+			}
+		}
+
 		/// <summary>Completion behaviour</summary>
 		public enum ECompletionMode
 		{
@@ -731,9 +1040,9 @@ namespace Rylogic.Common
 
 			/// <summary>Return the list of possible completions</summary>
 			/// <param name="text">The full line of user input text</param>
-			/// <param name="word_start">The index of the start of the word to the left of the cursor position</param>
-			/// <param name="cursor">The index of the current cursor position</param>
-			string[] Suggestions(string text, int word_start, int cursor);
+			/// <param name="word_start">The index of the start of the word to the left of the caret position</param>
+			/// <param name="caret">The index of the current caret position</param>
+			string[] Suggestions(string text, int word_start, int caret);
 		}
 
 		/// <summary>A simple auto complete handler constructed from a list</summary>
@@ -752,26 +1061,26 @@ namespace Rylogic.Common
 			public IList<string> List { get; private set; }
 
 			/// <summary>Provide the suggestions from 'List'</summary>
-			public string[] Suggestions(string text, int word_start, int cursor)
+			public string[] Suggestions(string text, int word_start, int caret)
 			{
 				switch (CompletionMode)
 				{
-				default:
-					{
-						throw new Exception($"Unknown completion mode: {CompletionMode}");
-					}
-				case ECompletionMode.FullText:
-					{
-						return List
-							.Where(x => string.Compare(x, 0, text, 0, cursor, true) == 0)
-							.ToArray();
-					}
-				case ECompletionMode.Word:
-					{
-						return List
-							.Where(x => string.Compare(x, 0, text, word_start, cursor - word_start, true) == 0)
-							.ToArray();
-					}
+					default:
+						{
+							throw new Exception($"Unknown completion mode: {CompletionMode}");
+						}
+					case ECompletionMode.FullText:
+						{
+							return List
+								.Where(x => string.Compare(x, 0, text, 0, caret, true) == 0)
+								.ToArray();
+						}
+					case ECompletionMode.Word:
+						{
+							return List
+								.Where(x => string.Compare(x, 0, text, word_start, caret - word_start, true) == 0)
+								.ToArray();
+						}
 				}
 			}
 		}

@@ -62,9 +62,9 @@ struct MainUI :Form
 
 //		m_body0.ApplyForceWS(v4XAxis, v4XAxis, v4Zero);
 
-//		// Evolve the bodies
-//		for (auto body : {&m_body0, &m_body1})
-//			Evolve(*body, elapsed_seconds);
+		// Evolve the bodies
+		for (auto body : {&m_body0, &m_body1})
+			Evolve(*body, elapsed_seconds);
 	}
 
 	// Render a frame
