@@ -190,7 +190,9 @@
     <None Include="..\..\lib\x86\Release\scintilla.dll">
       <Link>lib\x86\release\scintilla.dll</Link>
     </None>
-    <None Include="App.config" />
+    <None Include="App.config">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="installer\installer.wxs" />
     <None Include="deploy_ldraw.py" />
     <None Include="icon.ico" />

@@ -821,6 +821,18 @@ namespace pr
 					PR_CHECK(FEqlRelative(inv_m, INV_M, 0.0001f), true);
 				}
 			}
+			{// CPM
+				{
+					auto v = v4(2.0f, -1.0f, 4.0f, 0.0f);
+					auto m = CPM(v);
+
+					auto a0 = Random3(rng, v4Origin, 5.0f, 0.0f);
+					auto A0 = m * a0;
+					auto A1 = Cross(v, a0);
+
+					PR_CHECK(FEql(A0, A1), true);
+				}
+			}
 		}
 	}
 }

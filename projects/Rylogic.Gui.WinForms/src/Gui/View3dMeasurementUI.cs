@@ -462,7 +462,7 @@ namespace Rylogic.Gui.WinForms
 				case 1:
 					{
 						// Convert the points into the selected space
-						var w2rf = m4x4.InvertFast(RefSpaceToWorld);
+						var w2rf = Math_.InvertFast(RefSpaceToWorld);
 						var pt0 = w2rf * Hit0.PointWS;
 						var pt1 = w2rf * Hit1.PointWS;
 						switch (quantity)
@@ -601,7 +601,7 @@ namespace Rylogic.Gui.WinForms
 				if ((m_gfx_measure == null || !m_gfx_measure_valid) && MeasurementValid)
 				{
 					var r2w    = RefSpaceToWorld;
-					var w2r    = m4x4.InvertFast(r2w);
+					var w2r    = Math_.InvertFast(r2w);
 					var pt0    = w2r * Hit0.PointWS;
 					var pt1    = w2r * Hit1.PointWS;
 					var dist_x = Math.Abs(pt1.x - pt0.x);

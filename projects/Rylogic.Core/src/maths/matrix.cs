@@ -871,14 +871,14 @@ namespace Rylogic.UnitTests
 			Assert.True(Math_.FEql(M.x.w, m[3,0]));
 			Assert.True(Math_.FEql(M.z.z, m[2,2]));
 
-			Assert.Equal(Matrix.IsInvertable(m), m4x4.IsInvertable(M));
+			Assert.Equal(Matrix.IsInvertable(m), Math_.IsInvertable(M));
 
 			var m1 = Matrix.Invert(m);
-			var M1 = m4x4.Invert(M);
+			var M1 = Math_.Invert(M);
 			Assert.True(Matrix.FEql(m1, M1));
 
 			var m2 = Matrix.Transpose(m);
-			var M2 = m4x4.Transpose4x4(M);
+			var M2 = Math_.Transpose(M);
 			Assert.True(Matrix.FEql(m2, M2));
 		}
 		[Test] public void MultiplyRoundTrip()

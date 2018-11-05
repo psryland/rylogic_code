@@ -608,7 +608,7 @@ namespace Rylogic.Gui.WinForms
 			// The camera forward vector points at the centre of the grid.
 
 			// Project the camera to world vector into camera space to determine the centre of the X/Y axis. 
-			var w2c = m4x4.InvertFast(Scene.Camera.O2W);
+			var w2c = Math_.InvertFast(Scene.Camera.O2W);
 
 			// The span of the X/Y axis is determined by the FoV and the focus point distance.
 			var wh = Scene.Camera.ViewArea(Scene.Camera.FocusDist);
@@ -3072,7 +3072,7 @@ namespace Rylogic.Gui.WinForms
 				var pt0 = m_chart.Camera.O2W * m_chart.ChartToCamera(m_grab_chart);
 				var pt1 = m_chart.Camera.O2W * m_chart.ChartToCamera(m_chart.ClientToChart(e.Location));
 				var delta = pt1 - pt0;
-				m_chart.Tools.TapeMeasure.O2P = m4x4.OriFromDir(delta, AxisId.PosZ, pt0) * m4x4.Scale(1f, 1f, delta.Length, v4.Origin);
+				m_chart.Tools.TapeMeasure.O2P = Math_.TxfmFromDir(AxisId.PosZ, delta, pt0) * m4x4.Scale(1f, 1f, delta.Length, v4.Origin);
 				m_tape_measure_balloon.Location = m_chart.PointToScreen(e.Location);
 				m_tape_measure_balloon.Text =
 					$"dX:  {delta.x}\r\n"+

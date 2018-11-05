@@ -116,7 +116,7 @@ namespace Rylogic.Maths
 		public static v2 operator * (m2x2 lhs, v2 rhs)
 		{
 			v2 ans;
-			Transpose(ref lhs);
+			Math_.Transpose(ref lhs);
 			ans.x = Math_.Dot(lhs.x, rhs);
 			ans.y = Math_.Dot(lhs.y, rhs);
 			return ans;
@@ -124,105 +124,12 @@ namespace Rylogic.Maths
 		public static m2x2 operator * (m2x2 lhs, m2x2 rhs)
 		{
 			m2x2 ans;
-			Transpose(ref lhs);
+			Math_.Transpose(ref lhs);
 			ans.x.x = Math_.Dot(lhs.x, rhs.x);
 			ans.x.y = Math_.Dot(lhs.y, rhs.x);
 			ans.y.x = Math_.Dot(lhs.x, rhs.y);
 			ans.y.y = Math_.Dot(lhs.y, rhs.y);
 			return ans;
-		}
-
-		/// <summary>Return the determinant of 'm'</summary>
-		public static float Determinant(m2x2 m)
-		{
-			return (float)((double)m.x.x*m.y.y - (double)m.x.y*m.y.x);
-		}
-
-		/// <summary>Transpose 'm' in-place</summary>
-		public static void Transpose(ref m2x2 m)
-		{
-			Math_.Swap(ref m.x.y, ref m.y.x);
-		}
-
-		/// <summary>Return the transpose of 'm'</summary>
-		public static m2x2 Transpose(m2x2 m)
-		{
-			Transpose(ref m);
-			return m;
-		}
-
-		/// <summary>Invert 'm' in place assuming m is orthonormal</summary>
-		public static void InvertFast(ref m2x2 m)
-		{
-			Debug.Assert(IsOrthonormal(m), "Matrix is not orthonormal");
-			Transpose(ref m);
-		}
-
-		/// <summary>Return the inverse of 'm' assuming m is orthonormal</summary>
-		public static m2x2 InvertFast(m2x2 m)
-		{
-			InvertFast(ref m);
-			return m;
-		}
-
-		/// <summary>True if 'm' can be inverted</summary>
-		public static bool IsInvertable(m2x2 m)
-		{
-			return Determinant(m) != 0;
-		}
-
-		/// <summary>Return the inverse of 'm'</summary>
-		public static m2x2 Invert(m2x2 m)
-		{
-			Debug.Assert(IsInvertable(m), "Matrix has no inverse");
-
-			var det = Determinant(m);
-			var tmp = new m2x2(
-				new v2(m.y.y, -m.x.y) / det,
-				new v2(-m.y.x, m.x.x) / det);
-			return tmp;
-		}
-
-		/// <summary>Orthonormalise 'm' in-place</summary>
-		public static void Orthonormalise(ref m2x2 m)
-		{
-			m.x = Math_.Normalise(m.x);
-			m.y = Math_.Normalise(m.y - Math_.Dot(m.x,m.y) * m.x);
-		}
-
-		/// <summary>Return an orthonormalised version of 'm'</summary>
-		public static m2x2 Orthonormalise(m2x2 m)
-		{
-			Orthonormalise(ref m);
-			return m;
-		}
-
-		/// <summary>True if 'm' is orthonormal</summary>
-		public static bool IsOrthonormal(m2x2 m)
-		{
-			return
-				Math_.FEql(m.x.LengthSq, 1f) &&
-				Math_.FEql(m.y.LengthSq, 1f) &&
-				Math_.FEql(Math_.Dot(m.x, m.y), 0f);
-		}
-
-		// Permute the rotation vectors in a matrix by 'n'
-		public static m2x2 PermuteRotation(m2x2 mat, int n)
-		{
-			switch (n%2)
-			{
-			default: return mat;
-			case 1: return new m2x2(mat.y, mat.x);
-			}
-		}
-
-		// Make an orientation matrix from a direction.
-		public static m2x2 OrientationFromDirection(v2 direction, int axis)
-		{
-			m2x2 ans = Identity;
-			ans.x = Math_.Normalise(direction);
-			ans.y = new v2(ans.x.y, -ans.x.x);
-			return PermuteRotation(ans, axis);
 		}
 
 		//// Create a rotation from an axis and angle
@@ -280,9 +187,105 @@ namespace Rylogic.Maths
 			return FEqlRelative(lhs, rhs, TinyF);
 		}
 
+		/// <summary>Finite test of matrix elements</summary>
 		public static bool IsFinite(m2x2 vec)
 		{
-			return IsFinite(vec.x) && IsFinite(vec.y);
+			return
+				IsFinite(vec.x) &&
+				IsFinite(vec.y);
+		}
+
+		/// <summary>Return the determinant of 'm'</summary>
+		public static float Determinant(m2x2 m)
+		{
+			return (float)((double)m.x.x * m.y.y - (double)m.x.y * m.y.x);
+		}
+
+		/// <summary>Transpose 'm' in-place</summary>
+		public static void Transpose(ref m2x2 m)
+		{
+			Swap(ref m.x.y, ref m.y.x);
+		}
+
+		/// <summary>Return the transpose of 'm'</summary>
+		public static m2x2 Transpose(m2x2 m)
+		{
+			Transpose(ref m);
+			return m;
+		}
+
+		/// <summary>Invert 'm' in place assuming m is orthonormal</summary>
+		public static void InvertFast(ref m2x2 m)
+		{
+			Debug.Assert(IsOrthonormal(m), "Matrix is not orthonormal");
+			Transpose(ref m);
+		}
+
+		/// <summary>Return the inverse of 'm' assuming m is orthonormal</summary>
+		public static m2x2 InvertFast(m2x2 m)
+		{
+			InvertFast(ref m);
+			return m;
+		}
+
+		/// <summary>True if 'm' can be inverted</summary>
+		public static bool IsInvertable(m2x2 m)
+		{
+			return Determinant(m) != 0;
+		}
+
+		/// <summary>Return the inverse of 'm'</summary>
+		public static m2x2 Invert(m2x2 m)
+		{
+			Debug.Assert(IsInvertable(m), "Matrix has no inverse");
+
+			var det = Determinant(m);
+			var tmp = new m2x2(
+				new v2(m.y.y, -m.x.y) / det,
+				new v2(-m.y.x, m.x.x) / det);
+			return tmp;
+		}
+
+		/// <summary>Orthonormalise 'm' in-place</summary>
+		public static void Orthonormalise(ref m2x2 m)
+		{
+			m.x = Normalise(m.x);
+			m.y = Normalise(m.y - Dot(m.x, m.y) * m.x);
+		}
+
+		/// <summary>Return an orthonormalised version of 'm'</summary>
+		public static m2x2 Orthonormalise(m2x2 m)
+		{
+			Orthonormalise(ref m);
+			return m;
+		}
+
+		/// <summary>True if 'm' is orthonormal</summary>
+		public static bool IsOrthonormal(m2x2 m)
+		{
+			return
+				FEql(m.x.LengthSq, 1f) &&
+				FEql(m.y.LengthSq, 1f) &&
+				FEql(Dot(m.x, m.y), 0f);
+		}
+
+		// Permute the rotation vectors in a matrix by 'n'
+		public static m2x2 PermuteRotation(m2x2 mat, int n)
+		{
+			switch (n % 2)
+			{
+			default: return mat;
+			case 1: return new m2x2(mat.y, mat.x);
+			}
+		}
+
+		// Make an orientation matrix from a direction.
+		public static m2x2 OrientationFromDirection(v2 direction, int axis)
+		{
+			var ans = m2x2.Identity;
+			ans.x = Normalise(direction);
+			ans.y = new v2(ans.x.y, -ans.x.x);
+			return PermuteRotation(ans, axis);
 		}
 	}
 }
@@ -305,7 +308,7 @@ namespace Rylogic.UnitTests
 			//}
 			{
 				var m = m2x2.Random(rng, -5.0f, +5.0f);
-				var inv_m = m2x2.Invert(m);
+				var inv_m = Math_.Invert(m);
 				var I0 = inv_m * m;
 				var I1 = m * inv_m;
 
@@ -316,7 +319,7 @@ namespace Rylogic.UnitTests
 				var m = new m2x2(
 					new v2(4f, 7f),
 					new v2(2f, 6f));
-				var inv_m = m2x2.Invert(m);
+				var inv_m = Math_.Invert(m);
 
 				var det = 4f*6f - 7f*2f;
 				var INV_M = new m2x2(

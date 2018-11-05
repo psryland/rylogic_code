@@ -440,7 +440,7 @@ namespace Rylogic.Gui.WinForms
 			{
 				var point = new v4(pt, PositionZ, 1f);
 				if (!pt_in_element_space)
-					point = m4x4.InvertFast(Position) * point;
+					point = Math_.InvertFast(Position) * point;
 
 				return AnchorPoints().MinBy(x => (x.Location - point).LengthSq);
 			}
@@ -1153,7 +1153,7 @@ namespace Rylogic.Gui.WinForms
 			{
 				var point = new v4(pt, PositionZ, 1f);
 				if (!pt_in_element_space)
-					point = m4x4.InvertFast(Position) * point;
+					point = Math_.InvertFast(Position) * point;
 
 				float bias_distance_sq = Math_.Sqr(Diagram != null ? Diagram.Options.Node.AnchorSharingBias : 150f);
 

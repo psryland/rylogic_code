@@ -183,7 +183,7 @@ namespace pr
 		return v4(dist_x(rng), dist_y(rng), dist_z(rng), dist_w(rng));
 	}
 
-	// Create a random vector centred on 'centre' with radius 'radius'
+	// Create a random vector centred on 'centre' with radius 'radius'.
 	template <typename Rng = std::default_random_engine> inline v4 Random4(Rng& rng, v4 const& centre, float radius)
 	{
 		return Random4(rng, 0, radius) + centre;

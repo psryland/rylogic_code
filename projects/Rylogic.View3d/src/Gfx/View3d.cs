@@ -1988,7 +1988,7 @@ namespace ldr
 			}
 			public m4x4 W2O
 			{
-				get { return m4x4.InvertFast(O2W); }
+				get { return Math_.InvertFast(O2W); }
 			}
 
 			/// <summary>Set the current O2W transform as the reference point</summary>

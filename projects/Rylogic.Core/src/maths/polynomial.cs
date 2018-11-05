@@ -258,13 +258,13 @@ namespace Rylogic.Maths
 			//' A = |a.x² a.x 1| x = |A| y = |a.y|
 			//'     |b.x² b.x 1|     |B|     |b.y|
 			//'     |c.x² c.x 1|     |C|     |c.y|
-			var M = m3x4.Transpose(new m3x4(
+			var M = Math_.Transpose(new m3x4(
 				new v4(a.x*a.x, a.x, 1, 0),
 				new v4(b.x*b.x, b.x, 1, 0),
 				new v4(c.x*c.x, c.x, 1, 0)));
 
 			var y = new v4(a.y, b.y, c.y, 0);
-			var x = m3x4.Invert(M) * y;
+			var x = Math_.Invert(M) * y;
 
 			return new Quadratic(x.x, x.y, x.z);
 		}
@@ -320,7 +320,7 @@ namespace Rylogic.Maths
 			M.z.y = M.y.z;
 			M.z.z = points.Count;
 
-			var a = m3x4.Invert(M) * b;
+			var a = Math_.Invert(M) * b;
 			return new Quadratic(a.x, a.y, a.z);
 		}
 
@@ -501,14 +501,14 @@ namespace Rylogic.Maths
 			//' A = |a.x² a.x 1| x = |A| y = |a.y|
 			//'     |b.x² b.x 1|     |B|     |b.y|
 			//'     |c.x² c.x 1|     |C|     |c.y|
-			var M = m4x4.Transpose4x4(new m4x4(
+			var M = Math_.Transpose(new m4x4(
 				new v4(a.x*a.x*a.x, a.x*a.x, a.x, 1),
 				new v4(b.x*b.x*b.x, b.x*b.x, b.x, 1),
 				new v4(c.x*c.x*c.x, c.x*c.x, c.x, 1),
 				new v4(d.x*d.x*d.x, d.x*d.x, d.x, 1)));
 
 			var y = new v4(a.y, b.y, c.y, d.y);
-			var x = m4x4.Invert(M) * y;
+			var x = Math_.Invert(M) * y;
 
 			return new Cubic(x.x, x.y, x.z, x.w);
 		}

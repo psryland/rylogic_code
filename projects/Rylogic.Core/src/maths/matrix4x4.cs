@@ -133,18 +133,10 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Static m4x4 types</summary>
-		private readonly static m4x4 m_zero = new m4x4(v4.Zero, v4.Zero, v4.Zero, v4.Zero);
-		private readonly static m4x4 m_identity = new m4x4(v4.XAxis, v4.YAxis, v4.ZAxis, v4.Origin);
-		public static m4x4 Zero
-		{
-			get { return m_zero; }
-		}
-		public static m4x4 Identity
-		{
-			get { return m_identity; }
-		}
+		public readonly static m4x4 Zero = new m4x4(v4.Zero, v4.Zero, v4.Zero, v4.Zero);
+		public readonly static m4x4 Identity = new m4x4(v4.XAxis, v4.YAxis, v4.ZAxis, v4.Origin);
 
-		// Functions
+		// Operators
 		public static m4x4 operator + (m4x4 lhs, m4x4 rhs)
 		{
 			return new m4x4(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w);
@@ -167,7 +159,7 @@ namespace Rylogic.Maths
 		}
 		public static v4   operator * (m4x4 lhs, v4 rhs)
 		{
-			Transpose4x4(ref lhs);
+			Math_.Transpose(ref lhs);
 			return new v4(
 				Math_.Dot(lhs.x, rhs),
 				Math_.Dot(lhs.y, rhs),
@@ -176,221 +168,12 @@ namespace Rylogic.Maths
 		}
 		public static m4x4 operator * (m4x4 lhs, m4x4 rhs)
 		{
-			Transpose4x4(ref lhs);
+			Math_.Transpose(ref lhs);
 			return new m4x4(
 				new v4(Math_.Dot(lhs.x, rhs.x), Math_.Dot(lhs.y, rhs.x), Math_.Dot(lhs.z, rhs.x), Math_.Dot(lhs.w, rhs.x)),
 				new v4(Math_.Dot(lhs.x, rhs.y), Math_.Dot(lhs.y, rhs.y), Math_.Dot(lhs.z, rhs.y), Math_.Dot(lhs.w, rhs.y)),
 				new v4(Math_.Dot(lhs.x, rhs.z), Math_.Dot(lhs.y, rhs.z), Math_.Dot(lhs.z, rhs.z), Math_.Dot(lhs.w, rhs.z)),
 				new v4(Math_.Dot(lhs.x, rhs.w), Math_.Dot(lhs.y, rhs.w), Math_.Dot(lhs.z, rhs.w), Math_.Dot(lhs.w, rhs.w)));
-		}
-
-		/// <summary>Return the 4x4 determinant of the arbitrary transform 'mat'</summary>
-		public static float Determinant4(m4x4 m)
-		{
-			float c1 = (m.z.z * m.w.w) - (m.z.w * m.w.z);
-			float c2 = (m.z.y * m.w.w) - (m.z.w * m.w.y);
-			float c3 = (m.z.y * m.w.z) - (m.z.z * m.w.y);
-			float c4 = (m.z.x * m.w.w) - (m.z.w * m.w.x);
-			float c5 = (m.z.x * m.w.z) - (m.z.z * m.w.x);
-			float c6 = (m.z.x * m.w.y) - (m.z.y * m.w.x);
-			return
-				m.x.x * (m.y.y*c1 - m.y.z*c2 + m.y.w*c3) -
-				m.x.y * (m.y.x*c1 - m.y.z*c4 + m.y.w*c5) +
-				m.x.z * (m.y.x*c2 - m.y.y*c4 + m.y.w*c6) -
-				m.x.w * (m.y.x*c3 - m.y.y*c5 + m.y.z*c6);
-		}
-
-		/// <summary>Transpose the rotation part of an affine transform</summary>
-		public static void Transpose3x3(ref m4x4 m)
-		{
-			m3x4.Transpose(ref m.rot);
-		}
-		public static m4x4 Transpose3x3(m4x4 m)
-		{
-			Transpose3x3(ref m);
-			return m;
-		}
-
-		/// <summary>Transpose the 4x4 matrix</summary>
-		public static void Transpose4x4(ref m4x4 m)
-		{
-			Math_.Swap(ref m.x.y, ref m.y.x);
-			Math_.Swap(ref m.x.z, ref m.z.x);
-			Math_.Swap(ref m.x.w, ref m.w.x);
-			Math_.Swap(ref m.y.z, ref m.z.y);
-			Math_.Swap(ref m.y.w, ref m.w.y);
-			Math_.Swap(ref m.z.w, ref m.w.z);
-		}
-		public static m4x4 Transpose4x4(m4x4 m)
-		{
-			Transpose4x4(ref m);
-			return m;
-		}
-
-		/// <summary>Orthonormalise the rotation part of an affine transform</summary>
-		public static void Orthonormalise(ref m4x4 m)
-		{
-			m3x4.Orthonormalise(ref m.rot);
-		}
-		public static m4x4 Orthonormalise(m4x4 m)
-		{
-			Orthonormalise(ref m);
-			return m;
-		}
-
-		/// <summary>True if the rotation part of this transform is orthonormal</summary>
-		public static bool IsOrthonormal(m4x4 m)
-		{
-			return	m3x4.IsOrthonormal(m.rot);
-		}
-
-		// Return true if 'mat' is an affine transform
-		public static bool IsAffine(m4x4 mat)
-		{
-			return
-				mat.x.w == 0.0f &&
-				mat.y.w == 0.0f &&
-				mat.z.w == 0.0f &&
-				mat.w.w == 1.0f;
-		}
-
-		/// <summary>Invert 'm' in-place (assuming an orthonormal matrix</summary>
-		public static void InvertFast(ref m4x4 m)
-		{
-			Debug.Assert(IsOrthonormal(m), "Matrix is not orthonormal");
-			v4 trans = m.w;
-			Transpose3x3(ref m);
-			m.w.x = -(trans.x * m.x.x + trans.y * m.y.x + trans.z * m.z.x);
-			m.w.y = -(trans.x * m.x.y + trans.y * m.y.y + trans.z * m.z.y);
-			m.w.z = -(trans.x * m.x.z + trans.y * m.y.z + trans.z * m.z.z);
-		}
-		
-		/// <summary>Return 'm' inverted (assuming an orthonormal matrix</summary>
-		public static m4x4 InvertFast(m4x4 m)
-		{
-			InvertFast(ref m);
-			return m;
-		}
-
-		/// <summary>True if 'mat' has an inverse</summary>
-		public static bool IsInvertable(m4x4 m)
-		{
-			return Determinant4(m) != 0;
-		}
-
-		/// <summary>Return 'm' inverted</summary>
-		public static m4x4 Invert(m4x4 m)
-		{
-			Debug.Assert(IsInvertable(m), "Matrix has no inverse");
-
-			var A = Transpose4x4(m); // Take the transpose so that row operations are faster
-			var B = Identity;
-
-			// Loop through columns of 'A'
-			for (int j = 0; j != 4; ++j)
-			{
-				// Select the pivot element: maximum magnitude in this row
-				var pivot = 0; var val = 0f;
-				if (j <= 0 && val < Math.Abs(A.x[j])) { pivot = 0; val = Math.Abs(A.x[j]); }
-				if (j <= 1 && val < Math.Abs(A.y[j])) { pivot = 1; val = Math.Abs(A.y[j]); }
-				if (j <= 2 && val < Math.Abs(A.z[j])) { pivot = 2; val = Math.Abs(A.z[j]); }
-				if (j <= 3 && val < Math.Abs(A.w[j])) { pivot = 3; val = Math.Abs(A.w[j]); }
-				if (val < Math_.TinyF)
-				{
-					Debug.Assert(false, "Matrix has no inverse");
-					return m;
-				}
-
-				// Interchange rows to put pivot element on the diagonal
-				if (pivot != j) // skip if already on diagonal
-				{
-					var a = A[j]; A[j] = A[pivot]; A[pivot] = a;
-					var b = B[j]; B[j] = B[pivot]; B[pivot] = b;
-				}
-
-				// Divide row by pivot element. Pivot element becomes 1.0f
-				var scale = A[j][j];
-				A[j] /= scale;
-				B[j] /= scale;
-
-				// Subtract this row from others to make the rest of column j zero
-				if (j != 0) { scale = A.x[j]; A.x -= scale * A[j]; B.x -= scale * B[j]; }
-				if (j != 1) { scale = A.y[j]; A.y -= scale * A[j]; B.y -= scale * B[j]; }
-				if (j != 2) { scale = A.z[j]; A.z -= scale * A[j]; B.z -= scale * B[j]; }
-				if (j != 3) { scale = A.w[j]; A.w -= scale * A[j]; B.w -= scale * B[j]; }
-			}
-
-			// When these operations have been completed, A should have been transformed to the identity matrix
-			// and B should have been transformed into the inverse of the original A
-			B = Transpose4x4(B);
-			return B;
-		}
-
-		// Return the inverse of 'mat' using double precision floats
-		public static m4x4 InvertPrecise(m4x4 mat)
-		{
-			var inv = new double[4,4];
-			inv[0,0] = 0.0 + mat.y.y * mat.z.z * mat.w.w - mat.y.y * mat.z.w * mat.w.z - mat.z.y * mat.y.z * mat.w.w + mat.z.y * mat.y.w * mat.w.z + mat.w.y * mat.y.z * mat.z.w - mat.w.y * mat.y.w * mat.z.z;
-			inv[0,1] = 0.0 - mat.x.y * mat.z.z * mat.w.w + mat.x.y * mat.z.w * mat.w.z + mat.z.y * mat.x.z * mat.w.w - mat.z.y * mat.x.w * mat.w.z - mat.w.y * mat.x.z * mat.z.w + mat.w.y * mat.x.w * mat.z.z;
-			inv[0,2] = 0.0 + mat.x.y * mat.y.z * mat.w.w - mat.x.y * mat.y.w * mat.w.z - mat.y.y * mat.x.z * mat.w.w + mat.y.y * mat.x.w * mat.w.z + mat.w.y * mat.x.z * mat.y.w - mat.w.y * mat.x.w * mat.y.z;
-			inv[0,3] = 0.0 - mat.x.y * mat.y.z * mat.z.w + mat.x.y * mat.y.w * mat.z.z + mat.y.y * mat.x.z * mat.z.w - mat.y.y * mat.x.w * mat.z.z - mat.z.y * mat.x.z * mat.y.w + mat.z.y * mat.x.w * mat.y.z;
-			inv[1,0] = 0.0 - mat.y.x * mat.z.z * mat.w.w + mat.y.x * mat.z.w * mat.w.z + mat.z.x * mat.y.z * mat.w.w - mat.z.x * mat.y.w * mat.w.z - mat.w.x * mat.y.z * mat.z.w + mat.w.x * mat.y.w * mat.z.z;
-			inv[1,1] = 0.0 + mat.x.x * mat.z.z * mat.w.w - mat.x.x * mat.z.w * mat.w.z - mat.z.x * mat.x.z * mat.w.w + mat.z.x * mat.x.w * mat.w.z + mat.w.x * mat.x.z * mat.z.w - mat.w.x * mat.x.w * mat.z.z;
-			inv[1,2] = 0.0 - mat.x.x * mat.y.z * mat.w.w + mat.x.x * mat.y.w * mat.w.z + mat.y.x * mat.x.z * mat.w.w - mat.y.x * mat.x.w * mat.w.z - mat.w.x * mat.x.z * mat.y.w + mat.w.x * mat.x.w * mat.y.z;
-			inv[1,3] = 0.0 + mat.x.x * mat.y.z * mat.z.w - mat.x.x * mat.y.w * mat.z.z - mat.y.x * mat.x.z * mat.z.w + mat.y.x * mat.x.w * mat.z.z + mat.z.x * mat.x.z * mat.y.w - mat.z.x * mat.x.w * mat.y.z;
-			inv[2,0] = 0.0 + mat.y.x * mat.z.y * mat.w.w - mat.y.x * mat.z.w * mat.w.y - mat.z.x * mat.y.y * mat.w.w + mat.z.x * mat.y.w * mat.w.y + mat.w.x * mat.y.y * mat.z.w - mat.w.x * mat.y.w * mat.z.y;
-			inv[2,1] = 0.0 - mat.x.x * mat.z.y * mat.w.w + mat.x.x * mat.z.w * mat.w.y + mat.z.x * mat.x.y * mat.w.w - mat.z.x * mat.x.w * mat.w.y - mat.w.x * mat.x.y * mat.z.w + mat.w.x * mat.x.w * mat.z.y;
-			inv[2,2] = 0.0 + mat.x.x * mat.y.y * mat.w.w - mat.x.x * mat.y.w * mat.w.y - mat.y.x * mat.x.y * mat.w.w + mat.y.x * mat.x.w * mat.w.y + mat.w.x * mat.x.y * mat.y.w - mat.w.x * mat.x.w * mat.y.y;
-			inv[2,3] = 0.0 - mat.x.x * mat.y.y * mat.z.w + mat.x.x * mat.y.w * mat.z.y + mat.y.x * mat.x.y * mat.z.w - mat.y.x * mat.x.w * mat.z.y - mat.z.x * mat.x.y * mat.y.w + mat.z.x * mat.x.w * mat.y.y;
-			inv[3,0] = 0.0 - mat.y.x * mat.z.y * mat.w.z + mat.y.x * mat.z.z * mat.w.y + mat.z.x * mat.y.y * mat.w.z - mat.z.x * mat.y.z * mat.w.y - mat.w.x * mat.y.y * mat.z.z + mat.w.x * mat.y.z * mat.z.y;
-			inv[3,1] = 0.0 + mat.x.x * mat.z.y * mat.w.z - mat.x.x * mat.z.z * mat.w.y - mat.z.x * mat.x.y * mat.w.z + mat.z.x * mat.x.z * mat.w.y + mat.w.x * mat.x.y * mat.z.z - mat.w.x * mat.x.z * mat.z.y;
-			inv[3,2] = 0.0 - mat.x.x * mat.y.y * mat.w.z + mat.x.x * mat.y.z * mat.w.y + mat.y.x * mat.x.y * mat.w.z - mat.y.x * mat.x.z * mat.w.y - mat.w.x * mat.x.y * mat.y.z + mat.w.x * mat.x.z * mat.y.y;
-			inv[3,3] = 0.0 + mat.x.x * mat.y.y * mat.z.z - mat.x.x * mat.y.z * mat.z.y - mat.y.x * mat.x.y * mat.z.z + mat.y.x * mat.x.z * mat.z.y + mat.z.x * mat.x.y * mat.y.z - mat.z.x * mat.x.z * mat.y.y;
-
-			var det = mat.x.x * inv[0,0] + mat.x.y * inv[1,0] + mat.x.z * inv[2,0] + mat.x.w * inv[3,0];
-			Debug.Assert(det != 0, "matrix has no inverse");
-			var inv_det = 1.0 / det;
-
-			return new m4x4(
-				new v4((float)(inv[0,0] * inv_det), (float)(inv[0,1] * inv_det), (float)(inv[0,2] * inv_det), (float)(inv[0,3] * inv_det)),
-				new v4((float)(inv[1,0] * inv_det), (float)(inv[1,1] * inv_det), (float)(inv[1,2] * inv_det), (float)(inv[1,3] * inv_det)),
-				new v4((float)(inv[2,0] * inv_det), (float)(inv[2,1] * inv_det), (float)(inv[2,2] * inv_det), (float)(inv[2,3] * inv_det)),
-				new v4((float)(inv[3,0] * inv_det), (float)(inv[3,1] * inv_det), (float)(inv[3,2] * inv_det), (float)(inv[3,3] * inv_det)));
-		}
-
-		// Permute the rotation vectors in a matrix by 'n'
-		public static m4x4 Permute(m4x4 mat, int n)
-		{
-			switch (n%3)
-			{
-			default:return mat;
-			case 1: return new m4x4(mat.y, mat.z, mat.x, mat.w);
-			case 2: return new m4x4(mat.z, mat.x, mat.y, mat.w);
-			}
-		}
-
-		// Make an orientation matrix from a direction. Note the rotation around the direction
-		// vector is not defined. 'axis' is the axis that 'direction' will become
-		public static m4x4 OriFromDir(v4 direction, AxisId axis, v4 preferred_up, v4 translation)
-		{
-			Debug.Assert(Math_.FEql(translation.w, 1f), "'translation' must be a position vector");
-			return new m4x4(m3x4.OriFromDir(direction, axis, preferred_up), translation);
-		}
-		public static m4x4 OriFromDir(v4 direction, AxisId axis, v4 translation)
-		{
-			return OriFromDir(direction, axis, Math_.Perpendicular(direction), translation);
-		}
-
-		/// <summary>
-		/// Return the cross product matrix for 'vec'. This matrix can be used to take the cross
-		/// product of another vector: e.g. Cross(v1, v2) == CrossProductMatrix4x4(v1) * v2</summary>
-		public static m4x4 CrossProductMatrix4x4(v4 vec)
-		{
-			return new m4x4(
-				new v4(+0.0f,   vec.z, -vec.y, 0.0f),
-				new v4(-vec.z,   0.0f,  vec.x, 0.0f),
-				new v4(+vec.y, -vec.x,   0.0f, 0.0f),
-				v4.Zero);
 		}
 
 		/// <summary>Create a translation matrix</summary>
@@ -522,25 +305,6 @@ namespace Rylogic.Maths
 			return mat;
 		}
 
-		/// <summary>Spherically interpolate between two affine transforms</summary>
-		public static m4x4 Slerp(m4x4 lhs, m4x4 rhs, float frac)
-		{
-			Debug.Assert(IsAffine(lhs));
-			Debug.Assert(IsAffine(rhs));
-
-			var q = quat.Slerp(new quat(lhs.rot), new quat(rhs.rot), frac);
-			var p = Math_.Lerp(lhs.pos, rhs.pos, frac);
-			return new m4x4(q, p);
-		}
-
-		/// <summary>Return the average of a collection of affine transforms</summary>
-		public static m4x4 Average(IEnumerable<m4x4> a2b)
-		{
-			var rot = m3x4.Average(a2b.Select(x => x.rot));
-			var pos = Math_.Average(a2b.Select(x => x.pos));
-			return new m4x4(rot, pos);
-		}
-
 		#region Random
 
 		// Create a random 4x4 matrix
@@ -613,15 +377,236 @@ namespace Rylogic.Maths
 			return FEqlRelative(lhs, rhs, TinyF);
 		}
 
+		/// <summary>Finite test of matrix elements</summary>
 		public static bool IsFinite(m4x4 vec)
 		{
-			return IsFinite(vec.x) && IsFinite(vec.y) && IsFinite(vec.z) && IsFinite(vec.w);
+			return
+				IsFinite(vec.x) &&
+				IsFinite(vec.y) &&
+				IsFinite(vec.z) &&
+				IsFinite(vec.w);
+		}
+
+		/// <summary>Return the 4x4 determinant of the arbitrary transform 'mat'</summary>
+		public static float Determinant(m4x4 m)
+		{
+			var c1 = (m.z.z * m.w.w) - (m.z.w * m.w.z);
+			var c2 = (m.z.y * m.w.w) - (m.z.w * m.w.y);
+			var c3 = (m.z.y * m.w.z) - (m.z.z * m.w.y);
+			var c4 = (m.z.x * m.w.w) - (m.z.w * m.w.x);
+			var c5 = (m.z.x * m.w.z) - (m.z.z * m.w.x);
+			var c6 = (m.z.x * m.w.y) - (m.z.y * m.w.x);
+			return
+				m.x.x * (m.y.y * c1 - m.y.z * c2 + m.y.w * c3) -
+				m.x.y * (m.y.x * c1 - m.y.z * c4 + m.y.w * c5) +
+				m.x.z * (m.y.x * c2 - m.y.y * c4 + m.y.w * c6) -
+				m.x.w * (m.y.x * c3 - m.y.y * c5 + m.y.z * c6);
+		}
+
+		/// <summary>Transpose the rotation part of an affine transform</summary>
+		public static void Transpose3x3(ref m4x4 m)
+		{
+			Transpose(ref m.rot);
+		}
+		public static m4x4 Transpose3x3(m4x4 m)
+		{
+			Transpose3x3(ref m);
+			return m;
+		}
+
+		/// <summary>Transpose the 4x4 matrix</summary>
+		public static void Transpose(ref m4x4 m)
+		{
+			Swap(ref m.x.y, ref m.y.x);
+			Swap(ref m.x.z, ref m.z.x);
+			Swap(ref m.x.w, ref m.w.x);
+			Swap(ref m.y.z, ref m.z.y);
+			Swap(ref m.y.w, ref m.w.y);
+			Swap(ref m.z.w, ref m.w.z);
+		}
+		public static m4x4 Transpose(m4x4 m)
+		{
+			Transpose(ref m);
+			return m;
+		}
+
+		/// <summary>Orthonormalise the rotation part of an affine transform</summary>
+		public static void Orthonormalise(ref m4x4 m)
+		{
+			Orthonormalise(ref m.rot);
+		}
+		public static m4x4 Orthonormalise(m4x4 m)
+		{
+			Orthonormalise(ref m);
+			return m;
+		}
+
+		/// <summary>True if the rotation part of this transform is orthonormal</summary>
+		public static bool IsOrthonormal(m4x4 m)
+		{
+			return IsOrthonormal(m.rot);
+		}
+
+		// Return true if 'mat' is an affine transform
+		public static bool IsAffine(m4x4 mat)
+		{
+			return
+				mat.x.w == 0.0f &&
+				mat.y.w == 0.0f &&
+				mat.z.w == 0.0f &&
+				mat.w.w == 1.0f;
+		}
+
+		/// <summary>Invert 'm' in-place (assuming an orthonormal matrix</summary>
+		public static void InvertFast(ref m4x4 m)
+		{
+			Debug.Assert(IsOrthonormal(m), "Matrix is not orthonormal");
+			var trans = m.w;
+			Transpose(ref m.rot);
+			m.w.x = -(trans.x * m.x.x + trans.y * m.y.x + trans.z * m.z.x);
+			m.w.y = -(trans.x * m.x.y + trans.y * m.y.y + trans.z * m.z.y);
+			m.w.z = -(trans.x * m.x.z + trans.y * m.y.z + trans.z * m.z.z);
+		}
+
+		/// <summary>Return 'm' inverted (assuming an orthonormal matrix</summary>
+		public static m4x4 InvertFast(m4x4 m)
+		{
+			InvertFast(ref m);
+			return m;
+		}
+
+		/// <summary>True if 'mat' has an inverse</summary>
+		public static bool IsInvertable(m4x4 m)
+		{
+			return Determinant(m) != 0;
+		}
+
+		/// <summary>Return 'm' inverted</summary>
+		public static m4x4 Invert(m4x4 m)
+		{
+			Debug.Assert(IsInvertable(m), "Matrix has no inverse");
+
+			var A = Transpose(m); // Take the transpose so that row operations are faster
+			var B = m4x4.Identity;
+
+			// Loop through columns of 'A'
+			for (int j = 0; j != 4; ++j)
+			{
+				// Select the pivot element: maximum magnitude in this row
+				var pivot = 0; var val = 0f;
+				if (j <= 0 && val < Math.Abs(A.x[j])) { pivot = 0; val = Math.Abs(A.x[j]); }
+				if (j <= 1 && val < Math.Abs(A.y[j])) { pivot = 1; val = Math.Abs(A.y[j]); }
+				if (j <= 2 && val < Math.Abs(A.z[j])) { pivot = 2; val = Math.Abs(A.z[j]); }
+				if (j <= 3 && val < Math.Abs(A.w[j])) { pivot = 3; val = Math.Abs(A.w[j]); }
+				if (val < TinyF)
+				{
+					Debug.Assert(false, "Matrix has no inverse");
+					return m;
+				}
+
+				// Interchange rows to put pivot element on the diagonal
+				if (pivot != j) // skip if already on diagonal
+				{
+					var a = A[j]; A[j] = A[pivot]; A[pivot] = a;
+					var b = B[j]; B[j] = B[pivot]; B[pivot] = b;
+				}
+
+				// Divide row by pivot element. Pivot element becomes 1.0f
+				var scale = A[j][j];
+				A[j] /= scale;
+				B[j] /= scale;
+
+				// Subtract this row from others to make the rest of column j zero
+				if (j != 0) { scale = A.x[j]; A.x -= scale * A[j]; B.x -= scale * B[j]; }
+				if (j != 1) { scale = A.y[j]; A.y -= scale * A[j]; B.y -= scale * B[j]; }
+				if (j != 2) { scale = A.z[j]; A.z -= scale * A[j]; B.z -= scale * B[j]; }
+				if (j != 3) { scale = A.w[j]; A.w -= scale * A[j]; B.w -= scale * B[j]; }
+			}
+
+			// When these operations have been completed, A should have been transformed to the identity matrix
+			// and B should have been transformed into the inverse of the original A
+			B = Transpose(B);
+			return B;
+		}
+
+		// Return the inverse of 'mat' using double precision floats
+		public static m4x4 InvertPrecise(m4x4 mat)
+		{
+			var inv = new double[4, 4];
+			inv[0, 0] = 0.0 + mat.y.y * mat.z.z * mat.w.w - mat.y.y * mat.z.w * mat.w.z - mat.z.y * mat.y.z * mat.w.w + mat.z.y * mat.y.w * mat.w.z + mat.w.y * mat.y.z * mat.z.w - mat.w.y * mat.y.w * mat.z.z;
+			inv[0, 1] = 0.0 - mat.x.y * mat.z.z * mat.w.w + mat.x.y * mat.z.w * mat.w.z + mat.z.y * mat.x.z * mat.w.w - mat.z.y * mat.x.w * mat.w.z - mat.w.y * mat.x.z * mat.z.w + mat.w.y * mat.x.w * mat.z.z;
+			inv[0, 2] = 0.0 + mat.x.y * mat.y.z * mat.w.w - mat.x.y * mat.y.w * mat.w.z - mat.y.y * mat.x.z * mat.w.w + mat.y.y * mat.x.w * mat.w.z + mat.w.y * mat.x.z * mat.y.w - mat.w.y * mat.x.w * mat.y.z;
+			inv[0, 3] = 0.0 - mat.x.y * mat.y.z * mat.z.w + mat.x.y * mat.y.w * mat.z.z + mat.y.y * mat.x.z * mat.z.w - mat.y.y * mat.x.w * mat.z.z - mat.z.y * mat.x.z * mat.y.w + mat.z.y * mat.x.w * mat.y.z;
+			inv[1, 0] = 0.0 - mat.y.x * mat.z.z * mat.w.w + mat.y.x * mat.z.w * mat.w.z + mat.z.x * mat.y.z * mat.w.w - mat.z.x * mat.y.w * mat.w.z - mat.w.x * mat.y.z * mat.z.w + mat.w.x * mat.y.w * mat.z.z;
+			inv[1, 1] = 0.0 + mat.x.x * mat.z.z * mat.w.w - mat.x.x * mat.z.w * mat.w.z - mat.z.x * mat.x.z * mat.w.w + mat.z.x * mat.x.w * mat.w.z + mat.w.x * mat.x.z * mat.z.w - mat.w.x * mat.x.w * mat.z.z;
+			inv[1, 2] = 0.0 - mat.x.x * mat.y.z * mat.w.w + mat.x.x * mat.y.w * mat.w.z + mat.y.x * mat.x.z * mat.w.w - mat.y.x * mat.x.w * mat.w.z - mat.w.x * mat.x.z * mat.y.w + mat.w.x * mat.x.w * mat.y.z;
+			inv[1, 3] = 0.0 + mat.x.x * mat.y.z * mat.z.w - mat.x.x * mat.y.w * mat.z.z - mat.y.x * mat.x.z * mat.z.w + mat.y.x * mat.x.w * mat.z.z + mat.z.x * mat.x.z * mat.y.w - mat.z.x * mat.x.w * mat.y.z;
+			inv[2, 0] = 0.0 + mat.y.x * mat.z.y * mat.w.w - mat.y.x * mat.z.w * mat.w.y - mat.z.x * mat.y.y * mat.w.w + mat.z.x * mat.y.w * mat.w.y + mat.w.x * mat.y.y * mat.z.w - mat.w.x * mat.y.w * mat.z.y;
+			inv[2, 1] = 0.0 - mat.x.x * mat.z.y * mat.w.w + mat.x.x * mat.z.w * mat.w.y + mat.z.x * mat.x.y * mat.w.w - mat.z.x * mat.x.w * mat.w.y - mat.w.x * mat.x.y * mat.z.w + mat.w.x * mat.x.w * mat.z.y;
+			inv[2, 2] = 0.0 + mat.x.x * mat.y.y * mat.w.w - mat.x.x * mat.y.w * mat.w.y - mat.y.x * mat.x.y * mat.w.w + mat.y.x * mat.x.w * mat.w.y + mat.w.x * mat.x.y * mat.y.w - mat.w.x * mat.x.w * mat.y.y;
+			inv[2, 3] = 0.0 - mat.x.x * mat.y.y * mat.z.w + mat.x.x * mat.y.w * mat.z.y + mat.y.x * mat.x.y * mat.z.w - mat.y.x * mat.x.w * mat.z.y - mat.z.x * mat.x.y * mat.y.w + mat.z.x * mat.x.w * mat.y.y;
+			inv[3, 0] = 0.0 - mat.y.x * mat.z.y * mat.w.z + mat.y.x * mat.z.z * mat.w.y + mat.z.x * mat.y.y * mat.w.z - mat.z.x * mat.y.z * mat.w.y - mat.w.x * mat.y.y * mat.z.z + mat.w.x * mat.y.z * mat.z.y;
+			inv[3, 1] = 0.0 + mat.x.x * mat.z.y * mat.w.z - mat.x.x * mat.z.z * mat.w.y - mat.z.x * mat.x.y * mat.w.z + mat.z.x * mat.x.z * mat.w.y + mat.w.x * mat.x.y * mat.z.z - mat.w.x * mat.x.z * mat.z.y;
+			inv[3, 2] = 0.0 - mat.x.x * mat.y.y * mat.w.z + mat.x.x * mat.y.z * mat.w.y + mat.y.x * mat.x.y * mat.w.z - mat.y.x * mat.x.z * mat.w.y - mat.w.x * mat.x.y * mat.y.z + mat.w.x * mat.x.z * mat.y.y;
+			inv[3, 3] = 0.0 + mat.x.x * mat.y.y * mat.z.z - mat.x.x * mat.y.z * mat.z.y - mat.y.x * mat.x.y * mat.z.z + mat.y.x * mat.x.z * mat.z.y + mat.z.x * mat.x.y * mat.y.z - mat.z.x * mat.x.z * mat.y.y;
+
+			var det = mat.x.x * inv[0, 0] + mat.x.y * inv[1, 0] + mat.x.z * inv[2, 0] + mat.x.w * inv[3, 0];
+			Debug.Assert(det != 0, "matrix has no inverse");
+			var inv_det = 1.0 / det;
+
+			return new m4x4(
+				new v4((float)(inv[0, 0] * inv_det), (float)(inv[0, 1] * inv_det), (float)(inv[0, 2] * inv_det), (float)(inv[0, 3] * inv_det)),
+				new v4((float)(inv[1, 0] * inv_det), (float)(inv[1, 1] * inv_det), (float)(inv[1, 2] * inv_det), (float)(inv[1, 3] * inv_det)),
+				new v4((float)(inv[2, 0] * inv_det), (float)(inv[2, 1] * inv_det), (float)(inv[2, 2] * inv_det), (float)(inv[2, 3] * inv_det)),
+				new v4((float)(inv[3, 0] * inv_det), (float)(inv[3, 1] * inv_det), (float)(inv[3, 2] * inv_det), (float)(inv[3, 3] * inv_det)));
+		}
+
+		/// <summary>Permute the rotation vectors in a matrix by 'n'</summary>
+		public static m4x4 Permute(m4x4 mat, int n)
+		{
+			switch (n % 3)
+			{
+			default: return mat;
+			case 1: return new m4x4(mat.y, mat.z, mat.x, mat.w);
+			case 2: return new m4x4(mat.z, mat.x, mat.y, mat.w);
+			}
+		}
+
+		/// <summary>
+		/// Make an orientation matrix from a direction. Note the rotation around the direction
+		/// vector is not defined. 'axis' is the axis that 'direction' will become.</summary>
+		public static m4x4 TxfmFromDir(AxisId axis, v4 direction, v4 translation, v4? up = null)
+		{
+			// Notes: use 'up' = Math_.Perpendicular(direction)
+			Debug.Assert(FEql(translation.w, 1f), "'translation' must be a position vector");
+			return new m4x4(OriFromDir(axis, direction, up), translation);
 		}
 
 		/// <summary>Spherically interpolate between two affine transforms</summary>
 		public static m4x4 Slerp(m4x4 lhs, m4x4 rhs, float frac)
 		{
-			return m4x4.Slerp(lhs, rhs, frac);
+			Debug.Assert(IsAffine(lhs));
+			Debug.Assert(IsAffine(rhs));
+
+			var q = Slerp(new quat(lhs.rot), new quat(rhs.rot), frac);
+			var p = Lerp(lhs.pos, rhs.pos, frac);
+			return new m4x4(q, p);
+		}
+
+		/// <summary>
+		/// Return the cross product matrix for 'vec'. This matrix can be used to take the cross
+		/// product of another vector: e.g. Cross(v1, v2) == CrossProductMatrix4x4(v1) * v2</summary>
+		public static m4x4 CPM(v4 vec, v4 pos)
+		{
+			return new m4x4(CPM(vec), pos);
+		}
+
+		/// <summary>Return the average of a collection of affine transforms</summary>
+		public static m4x4 Average(IEnumerable<m4x4> a2b)
+		{
+			var rot = Average(a2b.Select(x => x.rot));
+			var pos = Average(a2b.Select(x => x.pos));
+			return new m4x4(rot, pos);
 		}
 	}
 }
@@ -661,8 +646,8 @@ namespace Rylogic.UnitTests
 			var V1 = v4.Random3(0.0f, 10.0f, 1.0f, rnd);
 			var a2b = m4x4.Transform(v4.Random3N(0.0f, rnd), rnd.FloatC(0, (float)Math_.TauBy2), v4.Random3(0.0f, 10.0f, 1.0f, rnd));
 			var b2c = m4x4.Transform(v4.Random3N(0.0f, rnd), rnd.FloatC(0, (float)Math_.TauBy2), v4.Random3(0.0f, 10.0f, 1.0f, rnd));
-			Assert.True(m4x4.IsOrthonormal(a2b));
-			Assert.True(m4x4.IsOrthonormal(b2c));
+			Assert.True(Math_.IsOrthonormal(a2b));
+			Assert.True(Math_.IsOrthonormal(b2c));
 
 			var V2  = a2b * V1;
 			var V3  = b2c * V2;
@@ -674,8 +659,8 @@ namespace Rylogic.UnitTests
 		{
 			var m1 = m4x4.Transform(1.0f, 0.5f, 0.7f, v4.Origin);
 			var m2 = new m4x4(new quat(1.0f, 0.5f, 0.7f), v4.Origin);
-			Assert.True(m4x4.IsOrthonormal(m1));
-			Assert.True(m4x4.IsOrthonormal(m2));
+			Assert.True(Math_.IsOrthonormal(m1));
+			Assert.True(Math_.IsOrthonormal(m2));
 			Assert.True(Math_.FEql(m1, m2));
 
 			var rng = new Random(123456879);
@@ -683,8 +668,8 @@ namespace Rylogic.UnitTests
 			var axis = v4.Random3N(0.0f, rng);
 			m1 = m4x4.Transform(axis, ang, v4.Origin);
 			m2 = new m4x4(new quat(axis, ang), v4.Origin);
-			Assert.True(m4x4.IsOrthonormal(m1));
-			Assert.True(m4x4.IsOrthonormal(m2));
+			Assert.True(Math_.IsOrthonormal(m1));
+			Assert.True(Math_.IsOrthonormal(m2));
 			Assert.True(Math_.FEql(m1, m2));
 		}
 		[Test] public void CreateFrom3()
@@ -692,11 +677,11 @@ namespace Rylogic.UnitTests
 			var rng = new Random(123456789);
 			var a2b = m4x4.Transform(v4.Random3N(0.0f, rng), rng.FloatC(0.0f,1.0f), v4.Random3(0.0f, 10.0f, 1.0f, rng));
 
-			var b2a = m4x4.Invert(a2b);
+			var b2a = Math_.Invert(a2b);
 			var a2a = b2a * a2b;
 			Assert.True(Math_.FEql(m4x4.Identity, a2a));
 
-			var b2a_fast = m4x4.InvertFast(a2b);
+			var b2a_fast = Math_.InvertFast(a2b);
 			Assert.True(Math_.FEql(b2a_fast, b2a));
 		}
 		[Test] public void Orthonormalise()
@@ -706,7 +691,7 @@ namespace Rylogic.UnitTests
 			a2b.y = new v4(4.0f  ,-1.0f , 2.0f , 0.0f);
 			a2b.z = new v4(1.0f  ,-2.0f , 4.0f , 0.0f);
 			a2b.w = new v4(1.0f  , 2.0f , 3.0f , 1.0f);
-			Assert.True(m4x4.IsOrthonormal(m4x4.Orthonormalise(a2b)));
+			Assert.True(Math_.IsOrthonormal(Math_.Orthonormalise(a2b)));
 		}
 	}
 }

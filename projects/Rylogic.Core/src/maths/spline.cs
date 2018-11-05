@@ -88,7 +88,7 @@ namespace Rylogic.Maths
 		/// By default, the z axis is aligned to the spline with Y as up.</summary>
 		public m4x4 O2W(float time, int axis, v4 up)
 		{
-			return m4x4.OriFromDir(Velocity(time), axis, up, Position(time));
+			return Math_.TxfmFromDir(axis, Velocity(time), Position(time), up);
 		}
 
 		/// <summary>Implicit conversion to/from m4x4</summary>

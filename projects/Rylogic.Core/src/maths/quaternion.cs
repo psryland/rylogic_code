@@ -69,7 +69,7 @@ namespace Rylogic.Maths
 		/// <summary>Create a quaternion from a rotation matrix</summary>
 		public quat(m3x4 m) :this()
 		{
-			Debug.Assert(m3x4.IsOrthonormal(m), "Only orientation matrices can be converted into quaternions");
+			Debug.Assert(Math_.IsOrthonormal(m), "Only orientation matrices can be converted into quaternions");
 			var trace = m.x.x + m.y.y + m.z.z;
 			if (trace >= 0.0f)
 			{
@@ -264,7 +264,7 @@ namespace Rylogic.Maths
 		public static v4 operator * (quat lhs, v4 rhs)
 		{
 			// Quaternion rotate. Same semantics at matrix multiply
-			return Rotate(lhs, rhs);
+			return Math_.Rotate(lhs, rhs);
 		}
 
 		/// <summary>Component add</summary>
@@ -281,125 +281,6 @@ namespace Rylogic.Maths
 		public quat CompMul(quat lhs, quat rhs)
 		{
 			return new quat(lhs.xyzw * rhs.xyzw);
-		}
-		
-		/// <summary>Normalise a quaternion to unit length</summary>
-		public static quat Normalise(quat q)
-		{
-			return new quat(Math_.Normalise(q.xyzw));
-		}
-		public static quat Normalise(quat q, quat def)
-		{
-			return new quat(Math_.Normalise(q.xyzw, def.xyzw));
-		}
-
-		// Return the cosine of the angle between two quaternions (i.e. the dot product)
-		public static float CosAngle2(quat a, quat b)
-		{
-			return Math_.Dot(a.xyzw, b.xyzw);
-		}
-
-		// Return the angle between two quaternions (in radians)
-		public static float Angle2(quat a, quat b)
-		{
-			return (float)Math.Acos(CosAngle2(a ,b));
-		}
-
-		/// <summary>Scale the rotation by 'x'. i.e. x==2f => double the rotation, x==0.5f => halve the rotation</summary>
-		public static quat Scale(quat q, float frac)
-		{
-			Debug.Assert(Math_.FEql(q.LengthSq, 1.0f), "quaternion isn't normalised");
-
-			// Trig:
-			//' sin²(x) + cos²(x) == 1
-			//' s == sqrt(1 - w²) == sqrt(1 - cos²(x/2))
-			//' s² == 1 - cos²(x/2) == sin²(x/2)
-			//' s == sin(x/2)
-			var w = Math_.Clamp(q.w, -1f, 1f);    // = cos(x/2)
-			var s = (float)Math.Sqrt(1f - Math_.Sqr(w)); // = sin(x/2)
-			var a = frac * (float)Math.Acos(w);          // = scaled half angle
-			var sin_ha = (float)Math.Sin(a);
-			var cos_ha = (float)Math.Cos(a);
-			return new quat(
-				q.x * sin_ha / s,
-				q.y * sin_ha / s,
-				q.z * sin_ha / s,
-				cos_ha);
-		}
-
-		/// <summary>Return the axis and angle from a quaternion</summary>
-		public static void AxisAngle(quat quat, out v4 axis, out float angle)
-		{
-			angle = (float)(2.0 * Math.Acos(quat.w));
-			var s = (float)Math.Sqrt(1.0f - quat.w * quat.w);
-			axis = Math_.FEql(s, 0.0f)
-				? Math_.Normalise(new v4(quat.x, quat.y, quat.z, 0.0f))
-				: new v4(quat.x/s, quat.y/s, quat.z/s, 0.0f);
-		}
-
-		/// <summary>Return possible Euler angles for the quaternion 'q'</summary>
-		public static v4 EulerAngles(quat q)
-		{
-			// From Wikipedia
-			double q0 = q.w, q1 = q.x, q2 = q.y, q3 = q.z;
-			return new v4(
-				(float)Math.Atan2(2.0 * (q0*q1 + q2*q3), 1.0 - 2.0 * (q1*q1 + q2*q2)),
-				(float)Math.Asin (2.0 * (q0*q2 - q3*q1)),
-				(float)Math.Atan2(2.0 * (q0*q3 + q1*q2), 1.0 - 2.0 * (q2*q2 + q3*q3)),
-				0f);
-		}
-
-		/// <summary>Spherically interpolate between quaternions</summary>
-		public static quat Slerp(quat a, quat b, float frac)
-		{
-			// Flip 'b' so that both quaternions are in the same hemisphere (since: q == -q)
-			var cos_angle = CosAngle2(a, b);
-			var b_ = cos_angle >= 0 ? b : -b;
-			cos_angle = Math.Abs(cos_angle);
-		
-			if (cos_angle < 0.95f)
-			{
-				var angle = (float)Math.Acos(cos_angle);
-				var scale0 = (float)Math.Sin((1f - frac) * angle);
-				var scale1 = (float)Math.Sin((     frac) * angle);
-				var sin_angle = (float)Math.Sin(angle);
-				return new quat((a.xyzw * scale0 + b_.xyzw * scale1) / sin_angle);
-			}
-			// "a" and "b" quaternions are very close, use linear interpolation
-			else
-			{
-				return Normalise(new quat(Math_.Lerp(a.xyzw, b_.xyzw, frac)));
-			}
-		}
-
-		/// <summary>Rotate a vector by a quaternion. This is an optimised version of: 'r = q*v*conj(q) for when v.w == 0'</summary>
-		public static v4 Rotate(quat lhs, v4 rhs)
-		{
-			float xx = lhs.x*lhs.x, xy = lhs.x*lhs.y, xz = lhs.x*lhs.z, xw = lhs.x*lhs.w;
-			float                   yy = lhs.y*lhs.y, yz = lhs.y*lhs.z, yw = lhs.y*lhs.w;
-			float                                     zz = lhs.z*lhs.z, zw = lhs.z*lhs.w;
-			float                                                       ww = lhs.w*lhs.w;
-			return new v4(
-				  ww*rhs.x + 2*yw*rhs.z - 2*zw*rhs.y +   xx*rhs.x + 2*xy*rhs.y + 2*xz*rhs.z -   zz*rhs.x - yy*rhs.x,
-				2*xy*rhs.x +   yy*rhs.y + 2*yz*rhs.z + 2*zw*rhs.x -   zz*rhs.y +   ww*rhs.y - 2*xw*rhs.z - xx*rhs.y,
-				2*xz*rhs.x + 2*yz*rhs.y +   zz*rhs.z - 2*yw*rhs.x -   yy*rhs.z + 2*xw*rhs.y -   xx*rhs.z + ww*rhs.z,
-				rhs.w);
-		}
-
-		/// <summary>
-		/// Return the average of a collection of rotations.
-		/// Note: this only really works if all the quaternions are relatively close together.
-		/// For two quaternions, prefer 'Slerp'</summary>
-		public static quat Average(IEnumerable<quat> rotations)
-		{
-			// Nicked from Unity3D
-			// This method is based on a simplified procedure described in this document:
-			// http://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/20070017872_2007014421.pdf
-
-			// Ensure the quaternions are in the same hemisphere (since q == -q)
-			var first = rotations.First();
-			var avr = Math_.Average(rotations.Select(q => Math_.Dot(q.xyzw, first.xyzw) >= 0 ? q.xyzw : -q.xyzw));
-			return Normalise(new quat(avr));
 		}
 
 		#region Random
@@ -456,6 +337,125 @@ namespace Rylogic.Maths
 		public static bool FEql(quat lhs, quat rhs)
 		{
 			return FEqlRelative(lhs, rhs, TinyF);
+		}
+
+		/// <summary>Normalise a quaternion to unit length</summary>
+		public static quat Normalise(quat q)
+		{
+			return new quat(Normalise(q.xyzw));
+		}
+		public static quat Normalise(quat q, quat def)
+		{
+			return new quat(Normalise(q.xyzw, def.xyzw));
+		}
+
+		/// <summary>Return the cosine of the angle between two quaternions (i.e. the dot product)</summary>
+		public static float CosAngle2(quat a, quat b)
+		{
+			return Dot(a.xyzw, b.xyzw);
+		}
+
+		/// <summary>Return the angle between two quaternions (in radians)</summary>
+		public static float Angle2(quat a, quat b)
+		{
+			return (float)Math.Acos(CosAngle2(a, b));
+		}
+
+		/// <summary>Scale the rotation by 'x'. i.e. 'frac' == 2 => double the rotation, 'frac' == 0.5 => halve the rotation</summary>
+		public static quat Scale(quat q, float frac)
+		{
+			Debug.Assert(FEql(q.LengthSq, 1.0f), "quaternion isn't normalised");
+
+			// Trig:
+			//' sin²(x) + cos²(x) == 1
+			//' s == sqrt(1 - w²) == sqrt(1 - cos²(x/2))
+			//' s² == 1 - cos²(x/2) == sin²(x/2)
+			//' s == sin(x/2)
+			var w = Clamp(q.w, -1f, 1f);           // = cos(x/2)
+			var s = (float)Math.Sqrt(1f - Sqr(w)); // = sin(x/2)
+			var a = frac * (float)Math.Acos(w);    // = scaled half angle
+			var sin_ha = (float)Math.Sin(a);
+			var cos_ha = (float)Math.Cos(a);
+			return new quat(
+				q.x * sin_ha / s,
+				q.y * sin_ha / s,
+				q.z * sin_ha / s,
+				cos_ha);
+		}
+
+		/// <summary>Return the axis and angle from a quaternion</summary>
+		public static void AxisAngle(quat quat, out v4 axis, out float angle)
+		{
+			angle = (float)(2.0 * Math.Acos(quat.w));
+			var s = (float)Math.Sqrt(1.0f - quat.w * quat.w);
+			axis = FEql(s, 0.0f)
+				? Normalise(new v4(quat.x, quat.y, quat.z, 0.0f))
+				: new v4(quat.x / s, quat.y / s, quat.z / s, 0.0f);
+		}
+
+		/// <summary>Return possible Euler angles for the quaternion 'q'</summary>
+		public static v4 EulerAngles(quat q)
+		{
+			// From Wikipedia
+			double q0 = q.w, q1 = q.x, q2 = q.y, q3 = q.z;
+			return new v4(
+				(float)Math.Atan2(2.0 * (q0 * q1 + q2 * q3), 1.0 - 2.0 * (q1 * q1 + q2 * q2)),
+				(float)Math.Asin(2.0 * (q0 * q2 - q3 * q1)),
+				(float)Math.Atan2(2.0 * (q0 * q3 + q1 * q2), 1.0 - 2.0 * (q2 * q2 + q3 * q3)),
+				0f);
+		}
+
+		/// <summary>Spherically interpolate between quaternions</summary>
+		public static quat Slerp(quat a, quat b, float frac)
+		{
+			// Flip 'b' so that both quaternions are in the same hemisphere (since: q == -q)
+			var cos_angle = CosAngle2(a, b);
+			var b_ = cos_angle >= 0 ? b : -b;
+			cos_angle = Math.Abs(cos_angle);
+
+			if (cos_angle < 0.95f)
+			{
+				var angle = (float)Math.Acos(cos_angle);
+				var scale0 = (float)Math.Sin((1f - frac) * angle);
+				var scale1 = (float)Math.Sin((frac) * angle);
+				var sin_angle = (float)Math.Sin(angle);
+				return new quat((a.xyzw * scale0 + b_.xyzw * scale1) / sin_angle);
+			}
+			// "a" and "b" quaternions are very close, use linear interpolation
+			else
+			{
+				return Normalise(new quat(Lerp(a.xyzw, b_.xyzw, frac)));
+			}
+		}
+
+		/// <summary>Rotate a vector by a quaternion. This is an optimised version of: 'r = q*v*conj(q) for when v.w == 0'</summary>
+		public static v4 Rotate(quat lhs, v4 rhs)
+		{
+			float xx = lhs.x * lhs.x, xy = lhs.x * lhs.y, xz = lhs.x * lhs.z, xw = lhs.x * lhs.w;
+			float yy = lhs.y * lhs.y, yz = lhs.y * lhs.z, yw = lhs.y * lhs.w;
+			float zz = lhs.z * lhs.z, zw = lhs.z * lhs.w;
+			float ww = lhs.w * lhs.w;
+			return new v4(
+				  ww * rhs.x + 2 * yw * rhs.z - 2 * zw * rhs.y + xx * rhs.x + 2 * xy * rhs.y + 2 * xz * rhs.z - zz * rhs.x - yy * rhs.x,
+				2 * xy * rhs.x + yy * rhs.y + 2 * yz * rhs.z + 2 * zw * rhs.x - zz * rhs.y + ww * rhs.y - 2 * xw * rhs.z - xx * rhs.y,
+				2 * xz * rhs.x + 2 * yz * rhs.y + zz * rhs.z - 2 * yw * rhs.x - yy * rhs.z + 2 * xw * rhs.y - xx * rhs.z + ww * rhs.z,
+				rhs.w);
+		}
+
+		/// <summary>
+		/// Return the average of a collection of rotations.
+		/// Note: this only really works if all the quaternions are relatively close together.
+		/// For two quaternions, prefer 'Slerp'</summary>
+		public static quat Average(IEnumerable<quat> rotations)
+		{
+			// Nicked from Unity3D
+			// This method is based on a simplified procedure described in this document:
+			// http://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/20070017872_2007014421.pdf
+
+			// Ensure the quaternions are in the same hemisphere (since q == -q)
+			var first = rotations.First();
+			var avr = Average(rotations.Select(q => Dot(q.xyzw, first.xyzw) >= 0 ? q.xyzw : -q.xyzw));
+			return Normalise(new quat(avr));
 		}
 	}
 }
@@ -518,7 +518,7 @@ namespace Rylogic.UnitTests
 		{
 			var rng = new Random(1);
 			var ideal_mean = new quat(Math_.Normalise(new v4(1,1,1,0)), 0.5f);
-			var actual_mean = quat.Average(int_.Range(0, 1000).Select(i =>
+			var actual_mean = Math_.Average(int_.Range(0, 1000).Select(i =>
 			{
 				var axis = Math_.Normalise(ideal_mean.Axis + v4.Random3(0.02f, 0f, rng));
 				var angle = rng.FloatC(ideal_mean.Angle, 0.02f);

@@ -28,9 +28,12 @@
 // This means a spatial transform can be created from a normal affine transform.
 //   m4x4 o2w = [o2w.rot                0      ]
 //              [-CPM(o2w.pos)*o2w.rot  o2w.rot] (CPM = cross product matrix)
+// If X is a matrix that transforms a to b for M6 vectors, and X* is a matrix that
+// performs the same transform for F6 vectors, then X* == X^-T (invert then transpose).
 // A spatial transform from A to B for motion vectors = bXa.
 // A spatial transform from A to B for force vectors = bX*a.
 //  bX*a == bXa^-T (invert then transpose)
+// 
 // 
 #pragma once
 

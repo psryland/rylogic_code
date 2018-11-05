@@ -137,10 +137,8 @@ namespace Rylogic.Maths
 		}
 
 		// Static m3x4 types
-		private readonly static m3x4 m_zero = new m3x4(v4.Zero, v4.Zero, v4.Zero);
-		private readonly static m3x4 m_identity = new m3x4(v4.XAxis, v4.YAxis, v4.ZAxis);
-		public static m3x4 Zero     { get { return m_zero; } }
-		public static m3x4 Identity { get { return m_identity; } }
+		public static readonly m3x4 Zero = new m3x4(v4.Zero, v4.Zero, v4.Zero);
+		public static readonly m3x4 Identity = new m3x4(v4.XAxis, v4.YAxis, v4.ZAxis);
 
 		// Operators
 		public override bool Equals(object o)               { return o is m3x4 && (m3x4)o == this; }
@@ -155,7 +153,7 @@ namespace Rylogic.Maths
 		public static bool operator !=(m3x4 lhs, m3x4 rhs)  { return !(lhs == rhs); }
 		public static v3 operator * (m3x4 lhs, v3 rhs)
 		{
-			Transpose(ref lhs);
+			Math_.Transpose(ref lhs);
 			return new v3(
 				Math_.Dot(lhs.x.xyz, rhs),
 				Math_.Dot(lhs.y.xyz, rhs),
@@ -163,7 +161,7 @@ namespace Rylogic.Maths
 		}
 		public static v4 operator * (m3x4 lhs, v4 rhs)
 		{
-			Transpose(ref lhs);
+			Math_.Transpose(ref lhs);
 			return new v4(
 				Math_.Dot(lhs.x, rhs),
 				Math_.Dot(lhs.y, rhs),
@@ -172,134 +170,11 @@ namespace Rylogic.Maths
 		}
 		public static m3x4 operator * (m3x4 lhs, m3x4 rhs)
 		{
-			Transpose(ref lhs);
+			Math_.Transpose(ref lhs);
 			return new m3x4(
 				new v4(Math_.Dot(lhs.x, rhs.x), Math_.Dot(lhs.y, rhs.x), Math_.Dot(lhs.z, rhs.x), 0f),
 				new v4(Math_.Dot(lhs.x, rhs.y), Math_.Dot(lhs.y, rhs.y), Math_.Dot(lhs.z, rhs.y), 0f),
 				new v4(Math_.Dot(lhs.x, rhs.z), Math_.Dot(lhs.y, rhs.z), Math_.Dot(lhs.z, rhs.z), 0f));
-		}
-
-		/// <summary>Return the determinant of 'm'</summary>
-		public static float Determinant(m3x4 m)
-		{
-			return Math_.Triple(m.x, m.y, m.z);
-		}
-
-		/// <summary>Transpose 'm' in-place</summary>
-		public static void Transpose(ref m3x4 m)
-		{
-			Math_.Swap(ref m.x.y, ref m.y.x);
-			Math_.Swap(ref m.x.z, ref m.z.x);
-			Math_.Swap(ref m.y.z, ref m.z.y);
-		}
-
-		/// <summary>Return the transpose of 'm'</summary>
-		public static m3x4 Transpose(m3x4 m)
-		{
-			Transpose(ref m);
-			return m;
-		}
-
-		/// <summary>Invert 'm' in-place assuming m is orthonormal</summary>
-		public static void InvertFast(ref m3x4 m)
-		{
-			Debug.Assert(IsOrthonormal(m), "Matrix is not orthonormal");
-			Transpose(ref m);
-		}
-
-		/// <summary>Return the inverse of 'm' assuming m is orthonormal</summary>
-		public static m3x4 InvertFast(m3x4 m)
-		{
-			InvertFast(ref m);
-			return m;
-		}
-
-		/// <summary>True if 'm' can be inverted</summary>
-		public static bool IsInvertable(m3x4 m)
-		{
-			return Determinant(m) != 0;
-		}
-
-		/// <summary>Invert the matrix 'm'</summary>
-		public static m3x4 Invert(m3x4 m)
-		{
-			Debug.Assert(IsInvertable(m), "Matrix has no inverse");
-
-			var det = Determinant(m);
-			var tmp = new m3x4(
-				Math_.Cross(m.y, m.z) / det,
-				Math_.Cross(m.z, m.x) / det,
-				Math_.Cross(m.x, m.y) / det);
-
-			return Transpose(tmp);
-		}
-
-		/// <summary>Orthonormalise 'm' in-place</summary>
-		public static void Orthonormalise(ref m3x4 m)
-		{
-			Math_.Normalise(ref m.x);
-			m.y = Math_.Normalise(Math_.Cross(m.z, m.x));
-			m.z = Math_.Cross(m.x, m.y);
-		}
-
-		/// <summary>Return an orthonormalised version of 'm'</summary>
-		public static m3x4 Orthonormalise(m3x4 m)
-		{
-			Orthonormalise(ref m);
-			return m;
-		}
-
-		/// <summary>True if 'm' is orthonormal</summary>
-		public static bool IsOrthonormal(m3x4 m)
-		{
-			return
-				Math_.FEql(m.x.LengthSq, 1f) &&
-				Math_.FEql(m.y.LengthSq, 1f) &&
-				Math_.FEql(m.z.LengthSq, 1f) &&
-				Math_.FEql(Math_.Cross(m.x, m.y) - m.z, v4.Zero);
-		}
-
-		/// <summary>
-		/// Permute the vectors in a rotation matrix by 'n'.<para/>
-		/// n == 0 : x  y  z<para/>
-		/// n == 1 : z  x  y<para/>
-		/// n == 2 : y  z  x<para/></summary>
-		public static m3x4 PermuteRotation(m3x4 mat, int n)
-		{
-			switch (n%3)
-			{
-			default:return mat;
-			case 1: return new m3x4(mat.z, mat.x, mat.y);
-			case 2: return new m3x4(mat.y, mat.z, mat.x);
-			}
-		}
-
-		/// <summary>Return possible Euler angles for the rotation matrix 'mat'</summary>
-		public static v4 EulerAngles(m3x4 mat)
-		{
-			var q = new quat(mat);
-			return quat.EulerAngles(q);
-		}
-
-		/// <summary>
-		/// Make an orientation matrix from a direction. Note the rotation around the direction
-		/// vector is not defined. 'axis' is the axis that 'direction' will become.</summary>
-		public static m3x4 OriFromDir(v4 dir, AxisId axis, v4 up)
-		{
-			// Get the preferred up direction (handling parallel cases)
-			up = Math_.Parallel(up, dir) ? Math_.Perpendicular(dir) : up;
-
-			m3x4 ori = Identity;
-			ori.z = Math_.Normalise(Math_.Sign(axis) * dir);
-			ori.x = Math_.Normalise(Math_.Cross(up, ori.z));
-			ori.y = Math_.Cross(ori.z, ori.x);
-
-			// Permute the column vectors so +Z becomes 'axis'
-			return PermuteRotation(ori, Math.Abs(axis));
-		}
-		public static m3x4 OriFromDir(v4 dir, AxisId axis)
-		{
-			return OriFromDir(dir, axis, Math_.Perpendicular(dir));
 		}
 
 		/// <summary>
@@ -409,7 +284,7 @@ namespace Rylogic.Maths
 			case -3: o2t = Rotation(0f, (float)+Math_.TauBy2, 0f); break;
 			case +3: o2t = Identity; break;
 			}
-			return o2t * InvertFast(o2f);
+			return o2t * Math_.InvertFast(o2f);
 		}
 
 		/// <summary>Create a scale matrix</summary>
@@ -422,7 +297,7 @@ namespace Rylogic.Maths
 			return new m3x4(sx*v4.XAxis, sy*v4.YAxis, sz*v4.ZAxis);
 		}
 
-		// Create a shear matrix
+		/// <summary>Create a shear matrix</summary>
 		public static m3x4 Shear(float sxy, float sxz, float syx, float syz, float szx, float szy)
 		{
 			var mat = new m3x4{};
@@ -430,18 +305,6 @@ namespace Rylogic.Maths
 			mat.y = new v4(syx, 1.0f, syz, 0.0f);
 			mat.z = new v4(szx, szy, 1.0f, 0.0f);
 			return mat;
-		}
-
-		/// <summary>Spherically interpolate between two rotations</summary>
-		public static m3x4 Slerp(m3x4 lhs, m3x4 rhs, float frac)
-		{
-			return new m3x4(quat.Slerp(new quat(lhs), new quat(rhs), frac));
-		}
-
-		/// <summary>Return the average of a collection of rotations transforms</summary>
-		public static m3x4 Average(IEnumerable<m3x4> a2b)
-		{
-			return new m3x4(quat.Average(a2b.Select(x => new quat(x))));
 		}
 
 		#region Random
@@ -484,9 +347,150 @@ namespace Rylogic.Maths
 				FEqlRelative(lhs, rhs, TinyF);
 		}
 
-		public static bool IsFinite(m3x4 vec)
+		/// <summary>Finite test of matrix elements</summary>
+		public static bool IsFinite(m3x4 m)
 		{
-			return IsFinite(vec.x) && IsFinite(vec.y) && IsFinite(vec.z);
+			return IsFinite(m.x) && IsFinite(m.y) && IsFinite(m.z);
+		}
+
+		/// <summary>True if 'm' is orthonormal</summary>
+		public static bool IsOrthonormal(m3x4 m)
+		{
+			return
+				FEql(m.x.LengthSq, 1f) &&
+				FEql(m.y.LengthSq, 1f) &&
+				FEql(m.z.LengthSq, 1f) &&
+				FEql(Cross(m.x, m.y) - m.z, v4.Zero);
+		}
+
+		/// <summary>Return the determinant of 'm'</summary>
+		public static float Determinant(m3x4 m)
+		{
+			return Triple(m.x, m.y, m.z);
+		}
+
+		/// <summary>Transpose 'm' in-place</summary>
+		public static void Transpose(ref m3x4 m)
+		{
+			Swap(ref m.x.y, ref m.y.x);
+			Swap(ref m.x.z, ref m.z.x);
+			Swap(ref m.y.z, ref m.z.y);
+		}
+
+		/// <summary>Return the transpose of 'm'</summary>
+		public static m3x4 Transpose(m3x4 m)
+		{
+			Transpose(ref m);
+			return m;
+		}
+
+		/// <summary>Invert 'm' in-place assuming m is orthonormal</summary>
+		public static void InvertFast(ref m3x4 m)
+		{
+			Debug.Assert(IsOrthonormal(m), "Matrix is not orthonormal");
+			Transpose(ref m);
+		}
+
+		/// <summary>Return the inverse of 'm' assuming m is orthonormal</summary>
+		public static m3x4 InvertFast(m3x4 m)
+		{
+			InvertFast(ref m);
+			return m;
+		}
+
+		/// <summary>True if 'm' can be inverted</summary>
+		public static bool IsInvertable(m3x4 m)
+		{
+			return Determinant(m) != 0;
+		}
+
+		/// <summary>Invert the matrix 'm'</summary>
+		public static m3x4 Invert(m3x4 m)
+		{
+			Debug.Assert(IsInvertable(m), "Matrix has no inverse");
+
+			var det = Determinant(m);
+			var tmp = new m3x4(
+				Cross(m.y, m.z) / det,
+				Cross(m.z, m.x) / det,
+				Cross(m.x, m.y) / det);
+
+			return Transpose(tmp);
+		}
+
+		/// <summary>Orthonormalise 'm' in-place</summary>
+		public static void Orthonormalise(ref m3x4 m)
+		{
+			Normalise(ref m.x);
+			m.y = Normalise(Cross(m.z, m.x));
+			m.z = Cross(m.x, m.y);
+		}
+
+		/// <summary>Return an orthonormalised version of 'm'</summary>
+		public static m3x4 Orthonormalise(m3x4 m)
+		{
+			Orthonormalise(ref m);
+			return m;
+		}
+
+		/// <summary>
+		/// Permute the vectors in a rotation matrix by 'n'.<para/>
+		/// n == 0 : x  y  z<para/>
+		/// n == 1 : z  x  y<para/>
+		/// n == 2 : y  z  x<para/></summary>
+		public static m3x4 PermuteRotation(m3x4 mat, int n)
+		{
+			switch (n % 3)
+			{
+			default: return mat;
+			case 1: return new m3x4(mat.z, mat.x, mat.y);
+			case 2: return new m3x4(mat.y, mat.z, mat.x);
+			}
+		}
+
+		/// <summary>Return possible Euler angles for the rotation matrix 'mat'</summary>
+		public static v4 EulerAngles(m3x4 mat)
+		{
+			var q = new quat(mat);
+			return EulerAngles(q);
+		}
+
+		/// <summary>
+		/// Make an orientation matrix from a direction. Note the rotation around the direction
+		/// vector is not defined. 'axis' is the axis that 'direction' will become.</summary>
+		public static m3x4 OriFromDir(AxisId axis, v4 dir, v4? up = null)
+		{
+			// Get the preferred up direction (handling parallel cases)
+			var up_ = up == null || Parallel(up.Value, dir) ? Perpendicular(dir) : up.Value;
+
+			var ori = m3x4.Identity;
+			ori.z = Normalise(Sign(axis) * dir);
+			ori.x = Normalise(Cross(up_, ori.z));
+			ori.y = Cross(ori.z, ori.x);
+
+			// Permute the column vectors so +Z becomes 'axis'
+			return PermuteRotation(ori, Math.Abs(axis));
+		}
+
+		/// <summary>Spherically interpolate between two rotations</summary>
+		public static m3x4 Slerp(m3x4 lhs, m3x4 rhs, float frac)
+		{
+			return new m3x4(Slerp(new quat(lhs), new quat(rhs), frac));
+		}
+
+		/// <summary>Return the average of a collection of rotations transforms</summary>
+		public static m3x4 Average(IEnumerable<m3x4> a2b)
+		{
+			return new m3x4(Average(a2b.Select(x => new quat(x))));
+		}
+
+		/// <summary>Return the cross product matrix for 'vec'</summary>
+		public static m3x4 CPM(v4 vec)
+		{
+			return new m3x4(
+				new v4(    0f, +vec.z, -vec.y, 0f),
+				new v4(-vec.z,     0f, +vec.x, 0f),
+				new v4(+vec.y, -vec.x,     0f, 0f));
 		}
 	}
 }
@@ -502,14 +506,14 @@ namespace Rylogic.UnitTests
 		{
 			var dir = new v4(0,1,0,0);
 			{
-				var ori = m3x4.OriFromDir(dir, AxisId.PosZ, v4.ZAxis);
+				var ori = Math_.OriFromDir(AxisId.PosZ, dir, v4.ZAxis);
 				Assert.True(dir == ori.z);
-				Assert.True(m3x4.IsOrthonormal(ori));
+				Assert.True(Math_.IsOrthonormal(ori));
 			}
 			{
-				var ori = m3x4.OriFromDir(dir, AxisId.NegX);
+				var ori = Math_.OriFromDir(AxisId.NegX, dir);
 				Assert.True(dir == -ori.x);
-				Assert.True(m3x4.IsOrthonormal(ori));
+				Assert.True(Math_.IsOrthonormal(ori));
 			}
 		}
 		[Test] public void TestInversion()
@@ -517,12 +521,12 @@ namespace Rylogic.UnitTests
 			var rng = new Random();
 			{
 				var m = m3x4.Random(rng, v4.Random3N(0, rng), -(float)Math_.Tau, +(float)Math_.Tau);
-				var inv_m0 = m3x4.InvertFast(m);
-				var inv_m1 = m3x4.Invert(m);
+				var inv_m0 = Math_.InvertFast(m);
+				var inv_m1 = Math_.Invert(m);
 				Assert.True(Math_.FEqlRelative(inv_m0, inv_m1, 0.001f));
 			}{
 				var m = m3x4.Random(rng, -5.0f, +5.0f);
-				var inv_m = m3x4.Invert(m);
+				var inv_m = Math_.Invert(m);
 				var I0 = inv_m * m;
 				var I1 = m * inv_m;
 
@@ -538,7 +542,7 @@ namespace Rylogic.UnitTests
 					new v4(-17.0f, 25.0f, -8.0f, 0.0f),
 					new v4(7.0f, -8.333333f, 2.333333f, 0.0f));
 
-				var inv_m = m3x4.Invert(m);
+				var inv_m = Math_.Invert(m);
 				Assert.True(Math_.FEqlRelative(inv_m, INV_M, 0.001f));
 			}
 		}
