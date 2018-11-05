@@ -134,11 +134,14 @@ namespace Rylogic.Gfx
 		/// Use previous value in order to preserve it through the singular points.</summary>
 		public static HSV FromColor(Color rgb, float undef_h = 0f)
 		{
-			var a = rgb.A / 255f;
-			var r = rgb.R / 255f;
-			var g = rgb.G / 255f;
-			var b = rgb.B / 255f;
-
+			return FromColor(rgb.A, rgb.R, rgb.G, rgb.B, undef_h);
+		}
+		public static HSV FromColor(byte a, byte r, byte g, byte b, float undef_h = 0f)
+		{
+			return FromColor(a / 255f, r / 255f, g / 255f, b / 255f, undef_h);
+		}
+		public static HSV FromColor(float a, float r, float g, float b, float undef_h = 0f)
+		{
 			var min = Math.Min(r, Math.Min(g, b));
 			var max = Math.Max(r, Math.Max(g, b));
 			var delta = max - min;
@@ -151,9 +154,9 @@ namespace Rylogic.Gfx
 			hsv.A = a;
 			hsv.S = delta / max;
 			hsv.V = max;
-			if      (r == max) hsv.H = 0f + (g - b) / delta; // between yellow & magenta
+			if (r == max) hsv.H = 0f + (g - b) / delta; // between yellow & magenta
 			else if (g == max) hsv.H = 2f + (b - r) / delta; // between cyan & yellow
-			else               hsv.H = 4f + (r - g) / delta; // between magenta & cyan
+			else hsv.H = 4f + (r - g) / delta; // between magenta & cyan
 			if (hsv.H < 0) hsv.H += 6f;
 			hsv.H /= 6f;
 			return hsv;

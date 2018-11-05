@@ -83,12 +83,13 @@
 	</Style>
 
 	<!-- Grid Styles -->
+	<Style TargetType="{x:Type DataGridCell}">
+		<Setter Property="BorderThickness" Value="0"/>
+	</Style>
 	<Style x:Key="LogDataGridStyle" TargetType="{x:Type DataGrid}">
 		<Setter Property="Background" Value="{StaticResource BackgroundBrush}"/>
 		<Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
-	</Style>
-	<Style TargetType="{x:Type DataGridCell}">
-		<Setter Property="BorderThickness" Value="0"/>
+		<Setter Property="ColumnHeaderHeight" Value="10"/>
 	</Style>
 	<Style x:Key="LogDataGridCellStyle0" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource {x:Type DataGridCell}}">
 		<Setter Property="BorderThickness" Value="0"/>

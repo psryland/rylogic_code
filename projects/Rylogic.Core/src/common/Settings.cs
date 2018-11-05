@@ -56,6 +56,9 @@ namespace Rylogic.Common
 		/// <summary>Parent settings for this settings object</summary>
 		ISettingsSet Parent { get; set; }
 
+		/// <summary>Find the key that corresponds to 'value'</summary>
+		IReadOnlyDictionary<string, object> Data { get; }
+
 		/// <summary>An event raised when a setting is about to change value</summary>
 		event EventHandler<SettingChangeEventArgs> SettingChange;
 
@@ -91,9 +94,17 @@ namespace Rylogic.Common
 		public ISettingsSet Parent
 		{
 			get { return m_parent; }
-			set { m_parent = value; } // could notify of parent changed...
+			set
+			{
+				if (m_parent == value) return;
+				m_parent = value;
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Parent)));
+			}
 		}
 		private ISettingsSet m_parent;
+
+		/// <summary>Find the key that corresponds to 'value'</summary>
+		public IReadOnlyDictionary<string, object> Data => m_data;
 
 		/// <summary>Returns the top-most settings set</summary>
 		public ISettingsSet Root
@@ -145,7 +156,7 @@ namespace Rylogic.Common
 				return;
 
 			// Notify about to change
-			var args0 = new SettingChangeEventArgs(key, old, true);
+			var args0 = new SettingChangeEventArgs(this, key, old, true);
 			OnSettingChange(args0); if (args0.Cancel) return;
 			PropertyChanging?.Invoke(this, new PropertyChangingEventArgs(key));
 
@@ -153,7 +164,7 @@ namespace Rylogic.Common
 			m_data[key] = value;
 
 			// Notify changed
-			var args1 = new SettingChangeEventArgs(key, value, false);
+			var args1 = new SettingChangeEventArgs(this, key, value, false);
 			OnSettingChange(args1);
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(key));
 		}
@@ -221,7 +232,7 @@ namespace Rylogic.Common
 		public void RaiseSettingChanged(string key)
 		{
 			var val = get<object>(key);
-			OnSettingChange(new SettingChangeEventArgs(key, val, false));
+			OnSettingChange(new SettingChangeEventArgs(this, key, val, false));
 		}
 
 		/// <summary>Called before and after a setting changes</summary>
@@ -246,7 +257,7 @@ namespace Rylogic.Common
 			if (nested is ISettingsSet set)
 				set.Parent = this;
 
-			// Of if 'nested' is a collection of settings sets
+			// Or if 'nested' is a collection of settings sets
 			if (nested is IEnumerable<ISettingsSet> sets)
 				sets.ForEach(x => x.Parent = this);
 		}
@@ -758,9 +769,29 @@ namespace Rylogic.Common
 		public ISettingsSet Parent
 		{
 			get { return m_parent; }
-			set { m_parent = value; } // could notify of parent changed...
+			set
+			{
+				if (m_parent == value) return;
+				if (m_parent != null)
+				{
+					ParentKey = null;
+				}
+				m_parent = value;
+				if (m_parent != null)
+				{
+					// Find the key that corresponds to 'this' in the parent
+					ParentKey = m_parent.Data.FirstOrDefault(x => Equals(x.Value, value)).Key;
+				}
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Parent)));
+			}
 		}
 		private ISettingsSet m_parent;
+
+		/// <summary>The key for 'this' in 'Parent'</summary>
+		protected string ParentKey { get; set; }
+
+		/// <summary>Find the key that corresponds to 'value'</summary>
+		public IReadOnlyDictionary<string, object> Data => m_data;
 
 		/// <summary>Raised before and after a setting changes</summary>
 		public event EventHandler<SettingChangeEventArgs> SettingChange;
@@ -814,7 +845,7 @@ namespace Rylogic.Common
 			if (Equals(old_value, value)) return;
 
 			// Notify about to change
-			var args0 = new SettingChangeEventArgs(key, old_value, true);
+			var args0 = new SettingChangeEventArgs(this, key, old_value, true);
 			OnSettingChange(args0); if (args0.Cancel) return;
 			PropertyChanging?.Invoke(this, new PropertyChangingEventArgs(key));
 
@@ -822,7 +853,7 @@ namespace Rylogic.Common
 			m_data[key] = value;
 
 			// Notify changed
-			var arg1 = new SettingChangeEventArgs(key, value, false);
+			var arg1 = new SettingChangeEventArgs(this, key, value, false);
 			OnSettingChange(arg1);
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(key));
 		}
@@ -837,12 +868,30 @@ namespace Rylogic.Common
 	#region Event Args
 	public class SettingChangeEventArgs : EventArgs
 	{
-		public SettingChangeEventArgs(string key, object value, bool before)
+		private readonly ISettingsSet m_ss;
+		public SettingChangeEventArgs(ISettingsSet ss, string key, object value, bool before)
 		{
+			m_ss = ss;
 			Key = key;
 			Value = value;
 			Before = before;
 			Cancel = false;
+		}
+
+		/// <summary>The full address of the key that was changed</summary>
+		public string FullKey
+		{
+			get
+			{
+				var full = Key;
+				var ss = m_ss;
+				for (; ss.Parent != null; ss = ss.Parent)
+				{
+					var pkey = ss.Parent.Data.FirstOrDefault(x => Equals(x.Value, ss)).Key;
+					full = $"{pkey}.{full}";
+				}
+				return full;
+			}
 		}
 
 		/// <summary>The setting key</summary>

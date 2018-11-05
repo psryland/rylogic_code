@@ -23,6 +23,7 @@ namespace RyLogViewer
 			Main = main;
 			m_settings = settings;
 			m_report = report;
+			m_grid.Settings = settings;
 
 			// Initialise from settings
 			m_recent_files.Import(m_settings.RecentFiles);

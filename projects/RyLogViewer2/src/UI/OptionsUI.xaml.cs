@@ -1,6 +1,8 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
 using Microsoft.Win32;
 using Rylogic.Common;
 using Rylogic.Gui.WPF;
@@ -126,7 +128,32 @@ namespace RyLogViewer
 		/// <summary>Handle the mouse event for editing the selection colour</summary>
 		private void HandleEditSelectionColor(object sender, System.Windows.Input.MouseButtonEventArgs e)
 		{
-			MsgBox.Show(this, "todo");
+			e.Handled = true;
+			var dlg = new ColourPickerUI { Owner = this };
+			if (sender == m_lbl_sel_colour)
+			{
+				dlg.TextColour = m_settings.Format.LineSelectForeColour;
+				dlg.BackColour = m_settings.Format.LineSelectBackColour;
+				dlg.ShowDialog();
+				m_settings.Format.LineSelectForeColour = dlg.TextColour;
+				m_settings.Format.LineSelectBackColour = dlg.BackColour;
+			}
+			if (sender == m_lbl_text_colour)
+			{
+				dlg.TextColour = m_settings.Format.LineForeColour1;
+				dlg.BackColour = m_settings.Format.LineBackColour1;
+				dlg.ShowDialog();
+				m_settings.Format.LineForeColour1 = dlg.TextColour;
+				m_settings.Format.LineBackColour1 = dlg.BackColour;
+			}
+			if (sender == m_lbl_back_colour)
+			{
+				dlg.TextColour = m_settings.Format.LineForeColour2;
+				dlg.BackColour = m_settings.Format.LineBackColour2;
+				dlg.ShowDialog();
+				m_settings.Format.LineForeColour2 = dlg.TextColour;
+				m_settings.Format.LineBackColour2 = dlg.BackColour;
+			}
 		}
 	}
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -9,7 +10,7 @@ using Rylogic.Maths;
 namespace Rylogic.Gui.WPF
 {
 	/// <summary>Interaction logic for ColourWheel.xaml</summary>
-	public class ColourWheel : UserControl
+	public class ColourWheel : UserControl, INotifyPropertyChanged
 	{
 		private const string ValueLabel = "V";
 		private const string AlphaLabel = "A";
@@ -21,7 +22,7 @@ namespace Rylogic.Gui.WPF
 			OrientationProperty = Gui_.DPRegister<ColourWheel>(nameof(Orientation), Orientation.Horizontal);
 			SliderWidthProperty = Gui_.DPRegister<ColourWheel>(nameof(SliderWidth), 20.0);
 			SelectionIndicatorSizeProperty = Gui_.DPRegister<ColourWheel>(nameof(SelectionIndicatorSize), 6.0);
-			HSVColourProperty = Gui_.DPRegister<ColourWheel>(nameof(HSVColour), new HSV(1f, 0f, 0f, 1f));
+			ColourProperty = Gui_.DPRegister<ColourWheel>(nameof(Colour), Colors.White);
 		}
 		public ColourWheel()
 		{}
@@ -136,6 +137,9 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 
+		/// <summary></summary>
+		public event PropertyChangedEventHandler PropertyChanged;
+
 		/// <summary>
 		/// An event raised whenever the act of selecting a colour begins or ends.
 		/// Use the button state to tell. Occurs before the first colour change, or after the last colour change</summary>
@@ -152,6 +156,7 @@ namespace Rylogic.Gui.WPF
 			{
 				SetValue(OrientationProperty, value);
 				LayoutDimensions = null;
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Orientation)));
 			}
 		}
 		public static readonly DependencyProperty OrientationProperty;
@@ -164,6 +169,7 @@ namespace Rylogic.Gui.WPF
 			{
 				SetValue(PartsProperty, value);
 				LayoutDimensions = null;
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Parts)));
 			}
 		}
 		public static readonly DependencyProperty PartsProperty;
@@ -176,6 +182,7 @@ namespace Rylogic.Gui.WPF
 			{
 				SetValue(SliderWidthProperty, value);
 				LayoutDimensions = null;
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SliderWidth)));
 			}
 		}
 		public static readonly DependencyProperty SliderWidthProperty;
@@ -184,35 +191,41 @@ namespace Rylogic.Gui.WPF
 		public double SelectionIndicatorSize
 		{
 			get { return (double)GetValue(SelectionIndicatorSizeProperty); }
-			set { SetValue(SelectionIndicatorSizeProperty, value); }
-		}
-		public static readonly DependencyProperty SelectionIndicatorSizeProperty;
-
-		/// <summary>The currently selected colour (HSV)</summary>
-		public HSV HSVColour
-		{
-			get { return (HSV)GetValue(HSVColourProperty); }
 			set
 			{
-				SetValue(HSVColourProperty, value);
-				ColourChanged?.Invoke(this, new ColourEventArgs(Colour));
+				SetValue(SelectionIndicatorSizeProperty, value);
 				InvalidateVisual();
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectionIndicatorSize)));
 			}
 		}
-		public static readonly DependencyProperty HSVColourProperty;
+		public static readonly DependencyProperty SelectionIndicatorSizeProperty;
 
 		/// <summary>The currently selected colour (RGB)</summary>
 		public Color Colour
 		{
+			get { return (Color)GetValue(ColourProperty); }
+			set
+			{
+				SetValue(ColourProperty, value);
+				ColourChanged?.Invoke(this, new ColourEventArgs(Colour));
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Colour)));
+				InvalidateVisual();
+			}
+		}
+		public static readonly DependencyProperty ColourProperty;
+
+		/// <summary>The currently selected colour (HSV)</summary>
+		public HSV HSVColour
+		{
 			get
 			{
-				var c = HSVColour.ToColor();
-				return Color.FromArgb(c.A, c.R, c.G, c.B);
+				var c = Colour;
+				return HSV.FromColor(c.A, c.R, c.G, c.B);
 			}
 			set
 			{
-				var c = System.Drawing.Color.FromArgb(value.A, value.R, value.G, value.B);
-				HSVColour = HSV.FromColor(c, HSVColour.H);
+				var c = value.ToColor();
+				Colour = Color.FromArgb(c.A, c.R, c.G, c.B);
 			}
 		}
 
@@ -330,7 +343,7 @@ namespace Rylogic.Gui.WPF
 
 					var r = new System.Drawing.RectangleF((float)(centre.X - w*0.5), (float)(centre.Y - h*0.5), w, h);
 					gfx.FillEllipse(pgb, r);
-					gfx.DrawEllipse(System.Drawing.Pens.Black, r);
+					//gfx.DrawEllipse(System.Drawing.Pens.Black, r);
 				}
 			}
 			m_bm = bm.ToBitmapSource();
@@ -382,14 +395,14 @@ namespace Rylogic.Gui.WPF
 			var drawv = (Parts & EParts.VSlider) != 0;
 			var drawa = (Parts & EParts.ASlider) != 0;
 			var vertical = Orientation == Orientation.Vertical;
-			var slider_space = 0 + (drawv ? 2*SliderWidth : 0) + (drawa ? 2*SliderWidth : 0);
-			var w = Math.Max(0, size.Width  - (vertical ? 0 : slider_space));
-			var h = Math.Max(0, size.Height - (vertical ? slider_space : 0));
-			var min = Math.Min(w, h);
+			var slider_space = 0 + (drawv ? 2 + SliderWidth + 2 : 0) + (drawa ? 2 + SliderWidth + 2 : 0);
+			var min = Math.Min(
+				Math.Max(0, size.Width - (vertical ? 0 : slider_space)),
+				Math.Max(0, size.Height - (vertical ? slider_space : 0)));
 
 			var meas = new Measurements();
-			meas.Width  = min + (vertical ? 0 : slider_space);
-			meas.Height = min + (vertical ? slider_space : 0);
+			meas.Width  = min;
+			meas.Height = min;
 
 			meas.Radius = Math.Max(0, min * 0.5 - p);
 			meas.Centre = new Point(p + Math.Ceiling(meas.Radius), p + Math.Ceiling(meas.Radius));
@@ -405,27 +418,33 @@ namespace Rylogic.Gui.WPF
 					(y + (vertical ? (SliderWidth - sz.Height) * 0.5 : 0)),
 					sz.Width, sz.Height);
 			}
-			Rect SliderBounds(double x, double y, Rect label_bounds)
+			Rect SliderBounds(double x, double y)
 			{
-				return new Rect(
-					x + (vertical ? label_bounds.Width + 2 : SliderWidth * 0.5),
-					y + (vertical ? SliderWidth * 0.5 : label_bounds.Height + 2),
-					Math.Max(0, vertical ? meas.Width - (label_bounds.Width + 2) : SliderWidth),
-					Math.Max(0, vertical ? SliderWidth : meas.Height - (label_bounds.Height + 2)));
+				return new Rect(x, y,
+					Math.Max(0, vertical ? meas.Width - x : SliderWidth),
+					Math.Max(0, vertical ? SliderWidth : meas.Height - y));
 			}
 
-			var ofs = (vertical ? meas.Wheel.Width : meas.Wheel.Height) + SliderWidth / 5;
+			var ofs = (vertical ? meas.Wheel.Height : meas.Wheel.Width);
 			if ((Parts & EParts.VSlider) != 0)
 			{
+				ofs += 2;
 				meas.VLabel = LabelBounds(vertical ? 0 : ofs, vertical ? ofs : 0, ValueLabel);
-				meas.VSlider = SliderBounds(vertical ? 0 : ofs, vertical ? ofs : 0, meas.VLabel);
-				ofs += SliderWidth * 3 / 2;
+				meas.VSlider = SliderBounds(vertical ? meas.VLabel.Width + 2 : ofs, vertical ? ofs : meas.VLabel.Height + 2);
+				ofs += SliderWidth + 2;
 			}
 			if ((Parts & EParts.ASlider) != 0)
 			{
+				ofs += 2;
 				meas.ALabel = LabelBounds(vertical ? 0 : ofs, vertical ? ofs : 0, AlphaLabel);
-				meas.ASlider = SliderBounds(vertical ? 0 : ofs, vertical ? ofs : 0, meas.ALabel);
+				meas.ASlider = SliderBounds(vertical ? meas.ALabel.Width + 2 : ofs, vertical ? ofs : meas.ALabel.Height + 2);
+				ofs += SliderWidth + 2;
 			}
+			if (vertical)
+				meas.Height = ofs;
+			else
+				meas.Width = ofs;
+
 			return meas;
 		}
 
@@ -445,21 +464,38 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Layout measurement</summary>
 		private class Measurements
 		{
+			/// <summary>True if the control has no area</summary>
 			public bool Empty => Width == 0 || Height == 0;
 
-			public double Width;   // The total width required for the control
-			public double Height;  // The total height required for the control
-
-			public double Radius; // The radius of the colour wheel
-			public Point Centre;  // The centre of the colour wheel (clamped to a pixel)
-			public Rect Wheel;    // The square area required for the wheel+indicator
+			/// <summary>The area covered disk of the colour wheel</summary>
 			public Rect WheelInner => new Rect(Centre.X - Radius - 0.5, Centre.Y - Radius - 0.5, 2 * Radius + 1, 2 * Radius + 1);
 
-			public Rect VLabel;  // The area of the 'V' label
-			public Rect VSlider; // The area covered by the VSlider
+			/// <summary>The total width required for the control</summary>
+			public double Width;
 
-			public Rect ALabel;  // The area of the 'A' label
-			public Rect ASlider; // The area covered by the ASlider
+			/// <summary>The total height required for the control</summary>
+			public double Height;
+
+			/// <summary>The radius of the colour wheel</summary>
+			public double Radius;
+
+			/// <summary>The centre of the colour wheel (clamped to a pixel)</summary>
+			public Point Centre;
+
+			/// <summary>The square area required for the wheel+indicator</summary>
+			public Rect Wheel;
+
+			/// <summary>The area of the 'V' label</summary>
+			public Rect VLabel;
+
+			/// <summary>The area covered by the VSlider</summary>
+			public Rect VSlider;
+
+			/// <summary>The area of the 'A' label</summary>
+			public Rect ALabel;
+
+			/// <summary>The area covered by the ASlider</summary>
+			public Rect ASlider;
 		}
 	}
 

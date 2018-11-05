@@ -37,7 +37,7 @@
 					<GroupBox
 						Name="m_grp_settingsfile"
 						Header="Settings"
-						Width="{Binding ElementName=m_panel_general, Path=ActualWidth}"
+						Width="{Binding ActualWidth, ElementName=m_panel_general}"
 						Padding="4"
 						>
 						<DockPanel LastChildFill="False">
@@ -300,11 +300,12 @@
 							<StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
 								<TextBlock Text="Selection Color:" Margin="4"/>
 								<Label
+									Name="m_lbl_sel_colour"
 									Content="Click to modify"
 									ToolTip="Set the selection foreground and back colors in the log view&#x0a;Click here to modify the colors"
-									PreviewMouseLeftButtonDown="HandleEditSelectionColor"
 									Background="{Binding LineSelectBackColour, Mode=TwoWay, Converter={StaticResource ColourToBrush}}"
 									Foreground="{Binding LineSelectForeColour, Mode=TwoWay, Converter={StaticResource ColourToBrush}}"
+									PreviewMouseLeftButtonDown="HandleEditSelectionColor"
 									HorizontalContentAlignment="Center"
 									VerticalAlignment="Center"
 									BorderThickness="1"
@@ -317,10 +318,12 @@
 							<StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
 								<TextBlock Text="Log Text Color:" Margin="4"/>
 								<Label
+									Name="m_lbl_text_colour"
 									Content="Click to modify"
 									ToolTip="Set the foreground and background colors in the log view&#x0a;Click here to modify the colors"
 									Background="{Binding LineBackColour1, Mode=TwoWay, Converter={StaticResource ColourToBrush}}"
 									Foreground="{Binding LineForeColour1, Mode=TwoWay, Converter={StaticResource ColourToBrush}}"
+									PreviewMouseLeftButtonDown="HandleEditSelectionColor"
 									HorizontalContentAlignment="Center"
 									VerticalAlignment="Center"
 									BorderThickness="1"
@@ -337,10 +340,12 @@
 									Margin="4"
 									/>
 								<Label
+									Name="m_lbl_back_colour"
 									Content="Click to modify"
 									ToolTip="Set the foreground and background colors for odd numbered rows in the log view&#x0a;Click here to modify the colors"
 									Background="{Binding LineBackColour2, Mode=TwoWay, Converter={StaticResource ColourToBrush}}"
 									Foreground="{Binding LineForeColour2, Mode=TwoWay, Converter={StaticResource ColourToBrush}}"
+									PreviewMouseLeftButtonDown="HandleEditSelectionColor"
 									HorizontalContentAlignment="Center"
 									VerticalAlignment="Center"
 									BorderThickness="1"

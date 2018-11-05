@@ -65,11 +65,11 @@
 				</MenuItem>
 			</MenuItem>
 			<MenuItem Header="_Tools">
-				<MenuItem Header="_Options" Command="{Binding ShowOptionsUI}"/>
-				<Separator/>
 				<MenuItem Header="_Export"/>
 				<Separator/>
 				<MenuItem Header="_Pattern Sets"/>
+				<Separator/>
+				<MenuItem Header="_Options" Command="{Binding ShowOptionsUI}"/>
 			</MenuItem>
 			<MenuItem Header="_Help"/>
 			<MenuItem Header="Free Edition" HorizontalAlignment="Right"/>
@@ -163,6 +163,7 @@
 		<local:LogGrid
 			x:Name="m_grid"
 			Style="{StaticResource LogDataGridStyle}"
+			Background="{x:Static SystemColors.ControlDarkBrush}"
 			ItemsSource="{Binding LogData}"
 			/>
 	</DockPanel>
