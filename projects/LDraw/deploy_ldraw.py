@@ -40,10 +40,18 @@ def Deploy():
 
 	# Copy build products to the output directory
 	print("\nCopying files to " + dstdir + "...")
-	Tools.Copy(targetdir + "\\LDraw.exe"        , dstdir + "\\")
-	Tools.Copy(targetdir + "\\Rylogic.Core.dll" , dstdir + "\\")
-	Tools.Copy(targetdir + "\\Rylogic.Main.dll" , dstdir + "\\")
-	Tools.Copy(targetdir + "\\lib"              , dstdir + "\\lib")
+	Tools.Copy(targetdir + "\\LDraw.exe", dstdir + "\\")
+	Tools.Copy(targetdir + "\\LDraw.API.dll", dstdir + "\\")
+	Tools.Copy(targetdir + "\\Rylogic.Core.dll", dstdir + "\\")
+	Tools.Copy(targetdir + "\\Rylogic.Core.Windows.dll", dstdir + "\\")
+	Tools.Copy(targetdir + "\\Rylogic.Gui.WinForms.dll" , dstdir + "\\")
+	Tools.Copy(targetdir + "\\Rylogic.Scintilla.dll" , dstdir + "\\")
+	Tools.Copy(targetdir + "\\Rylogic.View3d.dll" , dstdir + "\\")
+	Tools.Copy(targetdir + "\\Google.Protobuf.dll" , dstdir + "\\")
+	Tools.Copy(targetdir + "\\Grpc.Core.dll" , dstdir + "\\")
+	Tools.Copy(targetdir + "\\grpc_csharp_ext.x64.dll" , dstdir + "\\")
+	Tools.Copy(targetdir + "\\grpc_csharp_ext.x86.dll" , dstdir + "\\")
+	Tools.Copy(targetdir + "\\lib", dstdir + "\\lib")
 
 	# Build the installer
 	print("\nBuilding installer...")

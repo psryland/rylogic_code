@@ -117,6 +117,8 @@ namespace Rylogic.Common
 		/// <summary>True if 'path' represents a file or directory equal to or below 'directory'</summary>
 		public static bool IsSubPath(string directory, string path)
 		{
+			if (string.IsNullOrEmpty(directory)) throw new ArgumentNullException(nameof(directory));
+			if (string.IsNullOrEmpty(path)) throw new ArgumentNullException(nameof(path));
 			var d = Canonicalise(directory, change_case:Case.Lower);
 			var p = Canonicalise(path, change_case:Case.Lower);
 			return p.StartsWith(d);

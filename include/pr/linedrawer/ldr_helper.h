@@ -18,6 +18,7 @@
 #include "pr/maths/maths.h"
 #include "pr/maths/polynomial.h"
 #include "pr/maths/conversion.h"
+#include "pr/maths/spatial.h"
 #include "pr/geometry/closest_point.h"
 
 namespace pr
@@ -361,6 +362,14 @@ namespace pr
 		inline TStr& Axis(TStr& str, typename TStr::value_type const* name, Col colour, m3x4 const& basis)
 		{
 			return Axis(str, name, colour, pr::m4x4(basis, pr::v4Origin));
+		}
+		inline TStr& SpatialVector(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& position, v8 const& vec, float point_radius)
+		{
+			auto g = Group(str, name, colour);
+			LineD(str, "Ang", 0xFF00FFFF, position, vec.ang);
+			LineD(str, "Lin", 0xFFFFFF00, position, vec.lin);
+			Box(str, "", colour, point_radius, position);
+			return str;
 		}
 		template <typename VCont, typename ICont> inline TStr& Mesh(TStr& str, typename TStr::value_type const* name, Col colour, VCont const& verts, ICont const& indices, int indices_per_prim, pr::m4x4 const& o2w)
 		{

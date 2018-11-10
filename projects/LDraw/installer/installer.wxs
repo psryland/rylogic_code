@@ -111,11 +111,35 @@
 					<Shortcut Id="Lnk_DesktopProjName" Directory="DesktopFolder" Name="$(var.ProductName)" Description="$(var.ProductDescription)" Icon="icon.ico" WorkingDirectory="INSTALLFOLDER" Advertise="yes" />
 				</File>
 			</Component>
+			<Component Id="Cmp_LDraw_API" Directory="INSTALLFOLDER" Guid="*">
+				<File Id="File_LDraw_API" Source="$(var.TargetDir)\LDraw.API.dll" Vital="yes" KeyPath="yes"/>
+			</Component>
 			<Component Id="Cmp_Rylogic_Core" Directory="INSTALLFOLDER" Guid="*">
 				<File Id="File_Rylogic_Core" Source="$(var.TargetDir)\Rylogic.Core.dll" Vital="yes" KeyPath="yes"/>
 			</Component>
-			<Component Id="Cmp_Rylogic_Main" Directory="INSTALLFOLDER" Guid="*">
-				<File Id="File_Rylogic_Main" Source="$(var.TargetDir)\Rylogic.Main.dll" Vital="yes" KeyPath="yes"/>
+			<Component Id="Cmp_Rylogic_Core_Windows" Directory="INSTALLFOLDER" Guid="*">
+				<File Id="File_Rylogic_Core_Windows" Source="$(var.TargetDir)\Rylogic.Core.Windows.dll" Vital="yes" KeyPath="yes"/>
+			</Component>
+			<Component Id="Cmp_Rylogic_Gui_WinForms" Directory="INSTALLFOLDER" Guid="*">
+				<File Id="File_Rylogic_Gui_WinForms" Source="$(var.TargetDir)\Rylogic.Gui.WinForms.dll" Vital="yes" KeyPath="yes"/>
+			</Component>
+			<Component Id="Cmp_Rylogic_Scintilla" Directory="INSTALLFOLDER" Guid="*">
+				<File Id="File_Rylogic_Scintilla" Source="$(var.TargetDir)\Rylogic.Scintilla.dll" Vital="yes" KeyPath="yes"/>
+			</Component>
+			<Component Id="Cmp_Rylogic_View3d" Directory="INSTALLFOLDER" Guid="*">
+				<File Id="File_Rylogic_View3d" Source="$(var.TargetDir)\Rylogic.View3d.dll" Vital="yes" KeyPath="yes"/>
+			</Component>
+			<Component Id="Cmp_Google_Protobuf" Directory="INSTALLFOLDER" Guid="*">
+				<File Id="File_Google_Protobuf" Source="$(var.TargetDir)\Google.Protobuf.dll" Vital="yes" KeyPath="yes"/>
+			</Component>
+			<Component Id="Cmp_Grpc_Core" Directory="INSTALLFOLDER" Guid="*">
+				<File Id="File_Grpc_Core" Source="$(var.TargetDir)\Grpc.Core.dll" Vital="yes" KeyPath="yes"/>
+			</Component>
+			<Component Id="Cmp_grpc_csharp_ext_x86" Directory="INSTALLFOLDER" Guid="*">
+				<File Id="File_grpc_csharp_ext_x86" Source="$(var.TargetDir)\grpc_csharp_ext.x86.dll" Vital="yes" KeyPath="yes"/>
+			</Component>
+			<Component Id="Cmp_grpc_csharp_ext_x64" Directory="INSTALLFOLDER" Guid="*">
+				<File Id="File_grpc_csharp_ext_x64" Source="$(var.TargetDir)\grpc_csharp_ext.x64.dll" Vital="yes" KeyPath="yes"/>
 			</Component>
 		</ComponentGroup>
 

@@ -2093,7 +2093,7 @@ namespace pr
 		struct MouseWheelArgs :EmptyArgs
 		{
 			short     m_delta;   // The amount the mouse wheel has turned
-			Point     m_point;   // The screen location of the mouse at the time of the event
+			Point     m_point;   // The client space location of the mouse at the time of the event
 			EMouseKey m_button;  // The state of all mouse buttons and control keys
 			bool      m_handled; // Set to true to prevent further handling of this key event
 
@@ -4848,8 +4848,8 @@ namespace pr
 				case WM_MOUSEWHEEL:
 					#pragma region
 					{
+						auto pt = PointToClient(Point(lparam));
 						auto delta = GET_WHEEL_DELTA_WPARAM(wparam);
-						auto pt = Point(lparam);
 						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey()); 
 						MouseWheelArgs args(delta, pt, keystate);
 						OnMouseWheel(args);
@@ -5043,7 +5043,7 @@ namespace pr
 							return true;
 
 						auto delta = GET_WHEEL_DELTA_WPARAM(wparam);
-						auto pt = Point(lparam);
+						auto pt = PointToClient(Point(lparam));
 						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey()); 
 						MouseWheelArgs args(delta, pt, keystate);
 						OnMouseWheel(args);

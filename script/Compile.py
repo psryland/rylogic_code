@@ -8,6 +8,7 @@
 #    //DEBUG = build in debug mode (default)
 #    //@ /I"P:\include" /W4 /DPR_DBG=0
 #    //Copy lib.dll dst_path\
+#
 #    #include <iostream>
 #    #include "pr/common/expr_eval.h"
 #    void main()
@@ -17,6 +18,18 @@
 #
 # Use /c to compile only, no link
 #
+# To set up in VSCode:
+# - Open a folder
+# - Create a cpp like shown above
+# - Create a launch.json (by hitting F5 and adding a configuration)
+#   Set:
+#       "name": "Python Compile and Run CPP",
+#       "program": "py",
+#       "args": ["P:/pr/script/Compile.py", "${file}"]
+#       "type": "cppvsdbg",
+#       "request": "launch",
+#       "externalConsole": false
+
 import sys, os, re, time, shlex
 import Rylogic as Tools
 import UserVars
@@ -110,17 +123,17 @@ def SetupVCEnvironment(_32bit:bool):
 	os.environ["LIBPATH"] = (
 		Tools.AssertPath(UserVars.dotnet)                                                                        + ";" +
 		Tools.AssertPath(UserVars.winsdk_references)                                                             + ";" +
-		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Foundation.UniversalApiContract\\5.0.0.0")      + ";" +
+		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Foundation.UniversalApiContract\\6.0.0.0")      + ";" +
 		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Foundation.FoundationContract\\3.0.0.0")        + ";" +
-		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Networking.Connectivity.WwanContract\\1.0.0.0") + ";" +
+		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Networking.Connectivity.WwanContract\\2.0.0.0") + ";" +
 		#Tools.AssertPath(UserVars.winsdk + "\\UnionMetadata" + UserVars.winsdkvers)                                             + ";" +
 		#Tools.AssertPath(UserVars.winsdk + "\\ExtensionSDKs\\Microsoft.VCLibs\\14.0\\References\\CommonConfiguration\\neutral") + ";" +
 		"")
 	os.environ["WindowsLibPath"] = (
 		Tools.AssertPath(UserVars.winsdk_references) + ";"                                                       +
-		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Foundation.UniversalApiContract\\5.0.0.0")      + ";" +
+		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Foundation.UniversalApiContract\\6.0.0.0")      + ";" +
 		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Foundation.FoundationContract\\3.0.0.0")        + ";" +
-		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Networking.Connectivity.WwanContract\\1.0.0.0") + ";" +
+		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Networking.Connectivity.WwanContract\\2.0.0.0") + ";" +
 		#Tools.AssertPath(UserVars.winsdk + "\\UnionMetadata\\" + UserVars.winsdkvers) + ";" +
 		"")
 	os.environ["DevEnvDir"         ] = Tools.AssertPath(UserVars.vs_dir + "\\Common7\\IDE\\")
@@ -130,7 +143,7 @@ def SetupVCEnvironment(_32bit:bool):
 	os.environ["FrameworkDIR32"    ] = Tools.AssertPath(UserVars.dotnetdir + "\\")
 	os.environ["FrameworkVersion"  ] = "v4.0.30319"
 	os.environ["FrameworkVersion32"] = "v4.0.30319"
-	os.environ["NETFXSDKDir"        ] = Tools.AssertPath(UserVars.winsdk + "\\..\\NETFXSDK\\4.6\\")
+	os.environ["NETFXSDKDir"        ] = Tools.AssertPath(UserVars.winsdk + "\\..\\NETFXSDK\\4.7.2\\")
 	os.environ["UCRTVersion"        ] = UserVars.winsdkvers
 	os.environ["UniversalCRTSdkDir" ] = Tools.AssertPath(UserVars.winsdk + "\\")
 	os.environ["VCINSTALLDIR"       ] = Tools.AssertPath(UserVars.vs_dir + "\\VC\\")

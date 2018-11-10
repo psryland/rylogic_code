@@ -101,16 +101,28 @@ namespace pr
 			void OnMouseButton(MouseEventArgs& args) override
 			{
 				auto op = View3D_MouseBtnToNavOp(int(args.m_button));
-				View3D_MouseNavigate(m_win, view3d::To<View3DV2>(args.m_point), args.m_down ? op : EView3DNavOp::None, TRUE);
+				if (View3D_MouseNavigate(m_win, view3d::To<View3DV2>(args.m_point), args.m_down ? op : EView3DNavOp::None, TRUE))
+				{
+					Invalidate();
+					UpdateWindow(m_hwnd);
+				}
 			}
 			void OnMouseMove(MouseEventArgs& args) override
 			{
 				auto op = View3D_MouseBtnToNavOp(int(args.m_button));
-				View3D_MouseNavigate(m_win, view3d::To<View3DV2>(args.m_point), op, FALSE);
+				if (View3D_MouseNavigate(m_win, view3d::To<View3DV2>(args.m_point), op, FALSE))
+				{
+					Invalidate();
+					UpdateWindow(m_hwnd);
+				}
 			}
 			void OnMouseWheel(MouseWheelArgs& args) override
 			{
-				View3D_MouseNavigateZ(m_win, view3d::To<View3DV2>(args.m_point), args.m_delta, TRUE);
+				if (View3D_MouseNavigateZ(m_win, view3d::To<View3DV2>(args.m_point), args.m_delta, TRUE))
+				{
+					Invalidate();
+					UpdateWindow(m_hwnd);
+				}
 			}
 
 			// Render the panel

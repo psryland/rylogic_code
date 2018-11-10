@@ -43,8 +43,8 @@ def Id():
 def CreateFileComponent(elem:xml.Element, filepath:str, keypath:bool=True, directory_id:str=None):
 
 	# Get the file title from the full filepath
-	dir,file = os.path.split(filepath);
-	file,ext = os.path.splitext(file);
+	_,file = os.path.split(filepath)
+	file,_ = os.path.splitext(file)
 	file = file.replace(' ','_')
 	uid = Id()
 
@@ -59,7 +59,7 @@ def CreateFileComponent(elem:xml.Element, filepath:str, keypath:bool=True, direc
 	fcp_attr["Id"] = file+"_"+uid
 	fcp_attr["Source"] = filepath
 	if keypath: fcp_attr["KeyPath"] = "yes"
-	fcp = xml.SubElement(cmp, "File", fcp_attr)
+	_ = xml.SubElement(cmp, "File", fcp_attr)
 
 	return
 
@@ -103,10 +103,10 @@ def HarvestDirectory(dir:str, install_dir:str):
 			for dname in dnames:
 				WalkDir(sub, cg, os.path.join(d, dname))
 			break
-		return;
+		return
 
-	WalkDir(dr, cg, dir);
-	return root;
+	WalkDir(dr, cg, dir)
+	return root
 
 # Build an installer .msi file
 # 'projname' is the name of the application (<projname>Installer_v<version>.msi is returned)
@@ -144,7 +144,7 @@ def Build(projname:str, version:str, installer:str, projdir:str, targetdir:str, 
 
 		# Save to a temporary file
 		wxs_file = dir + ".wxs"
-		xml.ElementTree(root).write(objdir + "\\" + wxs_file);
+		xml.ElementTree(root).write(objdir + "\\" + wxs_file)
 
 		# Collect the .wxs files
 		wsx_files += [wxs_file]

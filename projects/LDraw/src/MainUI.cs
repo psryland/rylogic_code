@@ -1025,7 +1025,7 @@ namespace LDraw
 				using (var dlg = new SaveFileDialog { Title = "Save Script", Filter = Util.FileDialogFilter("Script Files", "*.ldr") })
 				{
 					// Don't allow saving to the temporary script folder
-					dlg.FileOk += (s,a) => a.Cancel = Path_.IsSubPath(Model.TempScriptsDirectory, filepath);
+					dlg.FileOk += (s,a) => a.Cancel = Path_.IsSubPath(Model.TempScriptsDirectory, dlg.FileName);
 					if (dlg.ShowDialog(Model.Owner) != DialogResult.OK) return;
 					filepath = dlg.FileName;
 				}
