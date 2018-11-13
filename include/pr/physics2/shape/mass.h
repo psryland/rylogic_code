@@ -15,7 +15,7 @@ namespace pr
 		struct MassProperties
 		{
 			// Normalised object space inertia tensor. Multiply by mass to get the actual mass tensor
-			Inertia m_os_inertia_tensor;
+			m3x4 m_os_inertia_tensor;
 
 			// Offset to the object space centre of mass from the model space origin (note: w = 0)
 			v4 m_centre_of_mass;
@@ -24,7 +24,7 @@ namespace pr
 			kg_t m_mass;
 
 			MassProperties() = default;
-			MassProperties(Inertia const& os_inertia_tensor, v4_cref centre_of_mass, kg_t mass)
+			MassProperties(m3_cref<> os_inertia_tensor, v4_cref<> centre_of_mass, kg_t mass)
 				:m_os_inertia_tensor(os_inertia_tensor)
 				,m_centre_of_mass(centre_of_mass)
 				,m_mass(mass)

@@ -53,31 +53,27 @@ namespace pr
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include <thread>
-
-namespace pr
+namespace pr::threads
 {
-	namespace unittests
+	PRUnitTest(WaitStateTests)
 	{
-		PRUnitTest(pr_threads_wait_state)
+		bool flag = false;
+		pr::threads::WaitState<bool> ws(false);
+
+		std::thread thread([&]
 		{
-			bool flag = false;
-			pr::threads::WaitState<bool> ws(false);
+			ws.Wait(true);
+			flag = true;
+			ws.Set(false);
+		});
 
-			std::thread thread([&]
-			{
-				ws.Wait(true);
-				flag = true;
-				ws.Set(false);
-			});
+		PR_CHECK(flag, false);
 
-			PR_CHECK(flag, false);
+		ws.Set(true);
+		ws.Wait(false);
 
-			ws.Set(true);
-			ws.Wait(false);
-
-			PR_CHECK(flag, true);
-			thread.join();
-		}
+		PR_CHECK(flag, true);
+		thread.join();
 	}
 }
 #endif

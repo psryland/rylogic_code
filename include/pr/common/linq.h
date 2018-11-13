@@ -142,58 +142,53 @@ namespace pr
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include <vector>
-namespace pr
+namespace pr::common
 {
-	namespace unittests
+	PRUnitTest(LinqTests)
 	{
-		PRUnitTest(pr_common_linq)
-		{
-			#if PR_LINQ_TODO
-			using namespace pr;
+		#if PR_LINQ_TODO
+		{ // Simple array
+			int cont[] = {0,1,2,3,4,5,6,7,8,9};
+			auto expr = linq(cont)
+				.where([](int x){ return (x%2) == 1; });
 
-			{ // Simple array
-				int cont[] = {0,1,2,3,4,5,6,7,8,9};
-				auto expr = linq(cont)
-					.where([](int x){ return (x%2) == 1; });
-
-				PR_CHECK(*expr++ == 1, true);
-				PR_CHECK(*expr++ == 3, true);
-				PR_CHECK(*expr++ == 5, true);
-				PR_CHECK(*expr++ == 7, true);
-				PR_CHECK(*expr++ == 9, true);
-			}
-			{ // Container type
-				std::vector<int> cont = {0,1,2,3,4,5,6,7,8,9};
-				auto result = linq(cont)
-					.where([](int i){ return (i%3) == 0; })
-					.to_vector();
-
-				PR_CHECK(result.size(), 4U);
-				PR_CHECK(result[0], 0);
-				PR_CHECK(result[1], 3);
-				PR_CHECK(result[2], 6);
-				PR_CHECK(result[3], 9);
-			}
-			{ // Select
-				int cont[] = {0,1,2,3,4,5};
-				auto result = linq(cont)
-					.where([](int i){ return (i%2) == 0;})
-					.select([](int i){ return i + 0.5f; })
-					.to_vector();
-
-				PR_CHECK(result.size(), 3U);
-				PR_CHECK(result[0], 0.5f);
-				PR_CHECK(result[1], 2.5f);
-				PR_CHECK(result[2], 4.5f);
-			}
-			{ // Any
-				bool cont[] = {false, false, false, true, false};
-				auto result = linq(cont).any([](bool b) { return b; });
-
-				PR_CHECK(result, true);
-			}
-			#endif
+			PR_CHECK(*expr++ == 1, true);
+			PR_CHECK(*expr++ == 3, true);
+			PR_CHECK(*expr++ == 5, true);
+			PR_CHECK(*expr++ == 7, true);
+			PR_CHECK(*expr++ == 9, true);
 		}
+		{ // Container type
+			std::vector<int> cont = {0,1,2,3,4,5,6,7,8,9};
+			auto result = linq(cont)
+				.where([](int i){ return (i%3) == 0; })
+				.to_vector();
+
+			PR_CHECK(result.size(), 4U);
+			PR_CHECK(result[0], 0);
+			PR_CHECK(result[1], 3);
+			PR_CHECK(result[2], 6);
+			PR_CHECK(result[3], 9);
+		}
+		{ // Select
+			int cont[] = {0,1,2,3,4,5};
+			auto result = linq(cont)
+				.where([](int i){ return (i%2) == 0;})
+				.select([](int i){ return i + 0.5f; })
+				.to_vector();
+
+			PR_CHECK(result.size(), 3U);
+			PR_CHECK(result[0], 0.5f);
+			PR_CHECK(result[1], 2.5f);
+			PR_CHECK(result[2], 4.5f);
+		}
+		{ // Any
+			bool cont[] = {false, false, false, true, false};
+			auto result = linq(cont).any([](bool b) { return b; });
+
+			PR_CHECK(result, true);
+		}
+		#endif
 	}
 }
 #endif

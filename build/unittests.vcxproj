@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\projects\unittests\unittests.cpp">
+    <ClCompile Include="..\projects\unittests\src\unittests.cpp">
       <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</PreprocessToFile>
     </ClCompile>
     <ClCompile Include="..\include\pr\lua\lua_core.c" />
@@ -73,6 +73,7 @@
     <ClInclude Include="..\include\pr\common\clipboard.h" />
     <ClInclude Include="..\include\pr\common\colour.h" />
     <ClInclude Include="..\include\pr\common\command_line.h" />
+    <ClInclude Include="..\include\pr\common\compress.h" />
     <ClInclude Include="..\include\pr\common\console.h" />
     <ClInclude Include="..\include\pr\common\crc.h" />
     <ClInclude Include="..\include\pr\common\d3dptr.h" />
@@ -227,13 +228,15 @@
     <ClInclude Include="..\include\pr\maths\bit_fields.h" />
     <ClInclude Include="..\include\pr\maths\bbox.h" />
     <ClInclude Include="..\include\pr\maths\bsphere.h" />
-    <ClInclude Include="..\include\pr\maths\compress.h" />
     <ClInclude Include="..\include\pr\maths\constants.h" />
+    <ClInclude Include="..\include\pr\maths\constants_vector.h" />
     <ClInclude Include="..\include\pr\maths\conversion.h" />
     <ClInclude Include="..\include\pr\maths\convex_hull.h" />
     <ClInclude Include="..\include\pr\maths\fft.h" />
     <ClInclude Include="..\include\pr\maths\forward.h" />
+    <ClInclude Include="..\include\pr\maths\limits.h" />
     <ClInclude Include="..\include\pr\maths\matrix.h" />
+    <ClInclude Include="..\include\pr\maths\matrix6x8.h" />
     <ClInclude Include="..\include\pr\maths\rectangle.h" />
     <ClInclude Include="..\include\pr\maths\frustum.h" />
     <ClInclude Include="..\include\pr\maths\interpolate.h" />
@@ -243,7 +246,7 @@
     <ClInclude Include="..\include\pr\maths\line3.h" />
     <ClInclude Include="..\include\pr\maths\maths.h" />
     <ClInclude Include="..\include\pr\maths\matrix2x2.h" />
-    <ClInclude Include="..\include\pr\maths\matrix3x3.h" />
+    <ClInclude Include="..\include\pr\maths\matrix3x4.h" />
     <ClInclude Include="..\include\pr\maths\matrix4x4.h" />
     <ClInclude Include="..\include\pr\maths\oriented_box.h" />
     <ClInclude Include="..\include\pr\maths\perlin_noise.h" />
@@ -261,6 +264,7 @@
     <ClInclude Include="..\include\pr\maths\vector3.h" />
     <ClInclude Include="..\include\pr\maths\vector4.h" />
     <ClInclude Include="..\include\pr\maths\rand_vector.h" />
+    <ClInclude Include="..\include\pr\maths\vector8.h" />
     <ClInclude Include="..\include\pr\meta\abs.h" />
     <ClInclude Include="..\include\pr\meta\and.h" />
     <ClInclude Include="..\include\pr\meta\constants.h" />
@@ -327,9 +331,9 @@
     <ClInclude Include="..\include\pr\threads\wait_state.h" />
     <ClInclude Include="..\include\pr\win32\win32.h" />
     <ClInclude Include="..\include\pr\win32\windows_com.h" />
-    <ClInclude Include="..\projects\unittests\pp_output.h" />
+    <ClInclude Include="..\projects\unittests\src\pp_output.h" />
     <ClInclude Include="..\include\pr\lua\lua.h" />
-    <ClInclude Include="..\projects\unittests\unittests.h" />
+    <ClInclude Include="..\projects\unittests\src\unittests.h" />
     <ClInclude Include="..\sdk\sqlite\include\sqlite3.h" />
   </ItemGroup>
   <ItemGroup>
@@ -343,29 +347,29 @@
     <ProjectGuid>{64F62186-4F86-4CD6-AE3A-3C0E311BB2A6}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>unittests</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
@@ -374,33 +378,37 @@
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <Import Project="props/app.x86.debug.props" />
+    <Import Project="props\debug.x86.dll.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
-    <Import Project="props/app.x64.debug.props" />
+    <Import Project="props\debug.x64.dll.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <Import Project="props/app.x86.release.props" />
+    <Import Project="props\release.x86.dll.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
-    <Import Project="props/app.x64.release.props" />
+    <Import Project="props\release.x64.dll.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <CustomBuildAfterTargets>
     </CustomBuildAfterTargets>
+    <TargetExt>.dll</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <CustomBuildAfterTargets>
     </CustomBuildAfterTargets>
+    <TargetExt>.dll</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <CustomBuildAfterTargets>
     </CustomBuildAfterTargets>
+    <TargetExt>.dll</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <CustomBuildAfterTargets>
     </CustomBuildAfterTargets>
+    <TargetExt>.dll</TargetExt>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -410,12 +418,13 @@
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <SDLCheck>false</SDLCheck>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
-      <AdditionalIncludeDirectories>..\sdk\vorbis\include;..\sdk\ogg\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VCInstallDir)UnitTest\include;..\sdk\vorbis\include;..\sdk\ogg\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <MapFileName>
       </MapFileName>
+      <AdditionalLibraryDirectories>$(VCInstallDir)UnitTest\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent />
     <CustomBuildStep>
@@ -434,6 +443,7 @@
     <PostBuildEvent>
       <Command>py $(ProjectDir)..\projects\unittests\run_tests.py $(TargetPath)</Command>
     </PostBuildEvent>
+    <ProjectReference />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -441,12 +451,13 @@
       </PrecompiledHeader>
       <PreprocessorDefinitions>PR_UNITTESTS=1;PR_MATHS_USE_INTRINSICS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>..\sdk\vorbis\include;..\sdk\ogg\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VCInstallDir)UnitTest\include;..\sdk\vorbis\include;..\sdk\ogg\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <MapFileName>
       </MapFileName>
+      <AdditionalLibraryDirectories>$(VCInstallDir)UnitTest\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent />
     <PreBuildEvent>
@@ -465,6 +476,7 @@
     <PostBuildEvent>
       <Command>py $(ProjectDir)..\projects\unittests\run_tests.py $(TargetPath)</Command>
     </PostBuildEvent>
+    <ProjectReference />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -473,12 +485,13 @@
       <PreprocessorDefinitions>PR_UNITTESTS=1;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>false</SDLCheck>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
-      <AdditionalIncludeDirectories>..\sdk\vorbis\include;..\sdk\ogg\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VCInstallDir)UnitTest\include;..\sdk\vorbis\include;..\sdk\ogg\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <MapFileName>
       </MapFileName>
+      <AdditionalLibraryDirectories>$(VCInstallDir)UnitTest\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent />
     <CustomBuildStep>
@@ -497,6 +510,7 @@
     <PostBuildEvent>
       <Command>py $(ProjectDir)..\projects\unittests\run_tests.py $(TargetPath)</Command>
     </PostBuildEvent>
+    <ProjectReference />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -504,13 +518,14 @@
       </PrecompiledHeader>
       <PreprocessorDefinitions>PR_UNITTESTS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
-      <AdditionalIncludeDirectories>..\sdk\vorbis\include;..\sdk\ogg\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VCInstallDir)UnitTest\include;..\sdk\vorbis\include;..\sdk\ogg\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <MapFileName>
       </MapFileName>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(VCInstallDir)UnitTest\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent />
     <CustomBuildStep>
@@ -529,6 +544,7 @@
     <PostBuildEvent>
       <Command>py $(ProjectDir)..\projects\unittests\run_tests.py $(TargetPath)</Command>
     </PostBuildEvent>
+    <ProjectReference />
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

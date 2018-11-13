@@ -304,110 +304,107 @@ namespace pr
 #include "pr/common/unittests.h"
 #include "pr/maths/maths.h"
 #include <vector>
-namespace pr
+namespace pr::meta
 {
-	namespace unittests
+	namespace unittests::optional
 	{
-		namespace optional
+		struct Thing
 		{
-			struct Thing
-			{
-				int ref;
-				bool d;
+			int ref;
+			bool d;
 
-				Thing()
-					:ref()
-					,d()
-				{
-					ref = ++ref_count();
-					d = true;
-				}
-				~Thing()
-				{
-					if (d)
-						--ref_count();
-				}
-				Thing(Thing const&)
-				{
-					ref = ++ref_count();
-					d = true;
-				}
-				Thing(Thing&& rhs)
-					:ref()
-					,d()
-				{
-					std::swap(ref, rhs.ref);
-					std::swap(d, rhs.d);
-				}
-				Thing& operator =(Thing const&)
-				{
-					return *this;
-				}
-				Thing& operator =(Thing&& rhs)
-				{
-					std::swap(ref, rhs.ref);
-					std::swap(d, rhs.d);
-					return *this;
-				}
-				static int& ref_count()
-				{
-					static int s_ref_count;
-					return s_ref_count;
-				}
-			};
+			Thing()
+				:ref()
+				,d()
+			{
+				ref = ++ref_count();
+				d = true;
+			}
+			~Thing()
+			{
+				if (d)
+					--ref_count();
+			}
+			Thing(Thing const&)
+			{
+				ref = ++ref_count();
+				d = true;
+			}
+			Thing(Thing&& rhs)
+				:ref()
+				,d()
+			{
+				std::swap(ref, rhs.ref);
+				std::swap(d, rhs.d);
+			}
+			Thing& operator =(Thing const&)
+			{
+				return *this;
+			}
+			Thing& operator =(Thing&& rhs)
+			{
+				std::swap(ref, rhs.ref);
+				std::swap(d, rhs.d);
+				return *this;
+			}
+			static int& ref_count()
+			{
+				static int s_ref_count;
+				return s_ref_count;
+			}
+		};
+	}
+	PRUnitTest(OptionalTests)
+	{
+		using Thing = unittests::optional::Thing;
+
+		{
+			pr::optional<double> a;
+			PR_CHECK(a != 1.0, true);
+			PR_CHECK(a == false, true);
+			PR_CHECK(a == nullptr, true);
+			PR_CHECK(a < -limits<double>::max(), true);
 		}
-		PRUnitTest(pr_meta_optional)
 		{
-			using Thing = pr::unittests::optional::Thing;
+			pr::optional<double> a = 1.0;
+			PR_CHECK(a == 1.0, true);
+			PR_CHECK(bool(a), true);
+			PR_CHECK(a >= 0.0 || a < 0.0, true);
+		}
+		{
+			pr::optional<v4> a = v4Zero;
+			PR_CHECK(a != v4One, true);
+			PR_CHECK(bool(a), true);
+		}
+		{
+			pr::optional<m4x4> a = m4x4Identity;
+			PR_CHECK(maths::is_aligned(&a.value()), true);
+		}
+		{
+			pr::optional<Thing> a;
+			static_assert(sizeof(a) == sizeof(Thing) + sizeof(Thing*), "");
+			PR_CHECK(Thing::ref_count() == 0, true);
 
-			{
-				pr::optional<double> a;
-				PR_CHECK(a != 1.0, true);
-				PR_CHECK(a == false, true);
-				PR_CHECK(a == nullptr, true);
-				PR_CHECK(a < -limits<double>::max(), true);
-			}
-			{
-				pr::optional<double> a = 1.0;
-				PR_CHECK(a == 1.0, true);
-				PR_CHECK(bool(a), true);
-				PR_CHECK(a >= 0.0 || a < 0.0, true);
-			}
-			{
-				pr::optional<v4> a = v4Zero;
-				PR_CHECK(a != v4One, true);
-				PR_CHECK(bool(a), true);
-			}
-			{
-				pr::optional<m4x4> a = m4x4Identity;
-				PR_CHECK(maths::is_aligned(&a.value()), true);
-			}
-			{
-				pr::optional<Thing> a;
-				static_assert(sizeof(a) == sizeof(Thing) + sizeof(Thing*), "");
-				PR_CHECK(Thing::ref_count() == 0, true);
+			a = Thing();
+			PR_CHECK(bool(a), true);
+			PR_CHECK(Thing::ref_count() == 1, true);
 
-				a = Thing();
-				PR_CHECK(bool(a), true);
-				PR_CHECK(Thing::ref_count() == 1, true);
+			auto b = a;
+			PR_CHECK(bool(b), true);
+			PR_CHECK(Thing::ref_count() == 2, true);
 
-				auto b = a;
-				PR_CHECK(bool(b), true);
-				PR_CHECK(Thing::ref_count() == 2, true);
+			a = nullptr;
+			PR_CHECK(Thing::ref_count() == 1, true);
 
-				a = nullptr;
-				PR_CHECK(Thing::ref_count() == 1, true);
+			b = nullptr;
+			PR_CHECK(Thing::ref_count() == 0, true);
 
-				b = nullptr;
-				PR_CHECK(Thing::ref_count() == 0, true);
+			std::vector<pr::optional<Thing>> vec;
+			for (int i = 0; i != 10; ++i) vec.push_back(Thing());
+			PR_CHECK(Thing::ref_count() == 10, true);
 
-				std::vector<pr::optional<Thing>> vec;
-				for (int i = 0; i != 10; ++i) vec.push_back(Thing());
-				PR_CHECK(Thing::ref_count() == 10, true);
-
-				vec.resize(0);
-				PR_CHECK(Thing::ref_count() == 0, true);
-			}
+			vec.resize(0);
+			PR_CHECK(Thing::ref_count() == 0, true);
 		}
 	}
 }

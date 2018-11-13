@@ -17,7 +17,7 @@ namespace pr
 			bool  m_hollow;
 
 			ShapeSphere() = default;
-			ShapeSphere(float radius, m4x4_cref shape_to_model = m4x4Identity, bool hollow = false, MaterialId material_id = 0, Shape::EFlags flags = Shape::EFlags::None)
+			ShapeSphere(float radius, m4_cref<> shape_to_model = m4x4Identity, bool hollow = false, MaterialId material_id = 0, Shape::EFlags flags = Shape::EFlags::None)
 				:m_base(EShape::Sphere, sizeof(ShapeSphere), shape_to_model, material_id, flags)
 				,m_radius(radius)
 				,m_hollow(hollow)
@@ -47,7 +47,7 @@ namespace pr
 		}
 
 		// Return a support vertex for a sphere
-		inline v4 SupportVertex(ShapeSphere const& shape, v4_cref direction, int, int& sup_vert_id)
+		inline v4 SupportVertex(ShapeSphere const& shape, v4_cref<> direction, int, int& sup_vert_id)
 		{
 			// We need to quantise the normal otherwise the iterative algorithms perform badly
 			auto dir = Normalise3(direction);
@@ -62,7 +62,7 @@ namespace pr
 		}
 
 		// Find the nearest point and distance from a point to a shape. 'shape' and 'point' are in the same space
-		inline void ClosestPoint(ShapeSphere const& shape, v4_cref point, float& distance, v4& closest)
+		inline void ClosestPoint(ShapeSphere const& shape, v4_cref<> point, float& distance, v4& closest)
 		{
 			distance  = Length3(point);
 			closest   = ((shape.m_radius / distance) * point).w1();

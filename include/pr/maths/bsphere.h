@@ -8,6 +8,7 @@
 #include "pr/maths/constants.h"
 #include "pr/maths/vector4.h"
 #include "pr/maths/matrix4x4.h"
+#include "pr/maths/constants_vector.h"
 
 namespace pr
 {
@@ -87,13 +88,13 @@ namespace pr
 	inline bool operator >  (BSphere const& lhs, BSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
 	inline bool operator <= (BSphere const& lhs, BSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
 	inline bool operator >= (BSphere const& lhs, BSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
-	inline BSphere& pr_vectorcall operator += (BSphere& lhs, v4_cref offset)
+	inline BSphere& pr_vectorcall operator += (BSphere& lhs, v4_cref<> offset)
 	{
 		assert(offset.w == 0.0f);
 		lhs.m_ctr_rad += offset;
 		return lhs;
 	}
-	inline BSphere& pr_vectorcall operator -= (BSphere& lhs, v4_cref offset)
+	inline BSphere& pr_vectorcall operator -= (BSphere& lhs, v4_cref<> offset)
 	{
 		assert(offset.w == 0.0f);
 		lhs.m_ctr_rad -= offset;
@@ -109,12 +110,12 @@ namespace pr
 		lhs *= (1.0f / s);
 		return lhs;
 	}
-	inline BSphere pr_vectorcall operator + (BSphere_cref bsph, v4_cref offset)
+	inline BSphere pr_vectorcall operator + (BSphere_cref bsph, v4_cref<> offset)
 	{
 		auto bs = bsph;
 		return bs += offset;
 	}
-	inline BSphere pr_vectorcall operator - (BSphere_cref bsph, v4_cref offset)
+	inline BSphere pr_vectorcall operator - (BSphere_cref bsph, v4_cref<> offset)
 	{
 		auto bs = bsph;
 		return bs -= offset;
@@ -129,7 +130,7 @@ namespace pr
 		auto bs = bsph;
 		return bs *= s;
 	}
-	inline BSphere pr_vectorcall operator * (m4x4_cref m, BSphere_cref bsph)
+	inline BSphere pr_vectorcall operator * (m4_cref<> m, BSphere_cref bsph)
 	{
 		return BSphere(m * bsph.Centre(), bsph.m_ctr_rad.w);
 	}
@@ -144,7 +145,7 @@ namespace pr
 	}
 
 	// Encompass 'point' within 'bsphere' and re-centre the centre point.
-	inline BSphere& pr_vectorcall Encompass(BSphere& bsphere, v4_cref point)
+	inline BSphere& pr_vectorcall Encompass(BSphere& bsphere, v4_cref<> point)
 	{
 		if (bsphere.Radius() < 0.0f)
 		{
@@ -167,7 +168,7 @@ namespace pr
 		}
 		return bsphere;
 	}
-	inline BSphere pr_vectorcall Encompass(BSphere const& bsphere, v4_cref point)
+	inline BSphere pr_vectorcall Encompass(BSphere const& bsphere, v4_cref<> point)
 	{
 		auto bsph = bsphere;
 		return Encompass(bsph, point);
@@ -203,7 +204,7 @@ namespace pr
 	}
 
 	// Encompass 'point' within 'bsphere' without moving the centre point.
-	inline BSphere& pr_vectorcall EncompassLoose(BSphere& bsphere, v4_cref point)
+	inline BSphere& pr_vectorcall EncompassLoose(BSphere& bsphere, v4_cref<> point)
 	{
 		if (bsphere.m_ctr_rad.w < 0.0f)
 		{
@@ -217,7 +218,7 @@ namespace pr
 		}
 		return bsphere;
 	}
-	inline BSphere pr_vectorcall EncompassLoose(BSphere const& bsphere, v4_cref point)
+	inline BSphere pr_vectorcall EncompassLoose(BSphere const& bsphere, v4_cref<> point)
 	{
 		auto bsph = bsphere;
 		return EncompassLoose(bsph, point);
@@ -245,7 +246,7 @@ namespace pr
 	}
 
 	// Return true if 'point' is within the bounding sphere
-	inline bool pr_vectorcall IsWithin(BSphere_cref bsphere, v4_cref point, float tol = 0)
+	inline bool pr_vectorcall IsWithin(BSphere_cref bsphere, v4_cref<> point, float tol = 0)
 	{
 		return Length3Sq(point - bsphere.Centre()) <= bsphere.RadiusSq() + tol;
 	}
@@ -265,29 +266,27 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::maths
 {
-	namespace unittests
+	PRUnitTest(BoundingSphereTests)
 	{
-		PRUnitTest(pr_maths_bsphere)
+		v4 pt[] =
 		{
-			v4 pt[] =
-			{
-				{0, 0, 0, 1},
-				{1, 1, 1, 1},
-				{0, 0, 1, 1},
-				{0, 1, 0, 1},
-				{0, 1, 1, 1},
-				{1, 0, 0, 1},
-				{1, 0, 1, 1},
-				{1, 1, 0, 1},
-			};
-			auto bsph = BSphereReset;
-			for (auto& p : pt)
-				pr::Encompass(bsph, p);
-			PR_CHECK(FEql(bsph.Centre(), v4(0.5f, 0.5f, 0.5f, 1)), true);
-			PR_CHECK(FEql(bsph.Radius(), 0.8660254f), true);
-		}
+			{0, 0, 0, 1},
+			{1, 1, 1, 1},
+			{0, 0, 1, 1},
+			{0, 1, 0, 1},
+			{0, 1, 1, 1},
+			{1, 0, 0, 1},
+			{1, 0, 1, 1},
+			{1, 1, 0, 1},
+		};
+		auto bsph = BSphereReset;
+		for (auto& p : pt)
+			pr::Encompass(bsph, p);
+
+		PR_CHECK(FEql(bsph.Centre(), v4(0.5f, 0.5f, 0.5f, 1)), true);
+		PR_CHECK(FEql(bsph.Radius(), 0.8660254f), true);
 	}
 }
 #endif

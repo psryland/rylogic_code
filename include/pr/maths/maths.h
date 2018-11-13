@@ -11,13 +11,14 @@
 
 #include "pr/maths/forward.h"
 #include "pr/maths/constants.h"
+#include "pr/maths/limits.h"
 #include "pr/maths/maths_core.h"
 #include "pr/maths/vector2.h"
 #include "pr/maths/vector3.h"
 #include "pr/maths/vector4.h"
 #include "pr/maths/quaternion.h"
 #include "pr/maths/matrix2x2.h"
-#include "pr/maths/matrix3x3.h"
+#include "pr/maths/matrix3x4.h"
 #include "pr/maths/matrix4x4.h"
 #include "pr/maths/matrix.h"
 #include "pr/maths/ivector2.h"
@@ -34,5 +35,5 @@
 #include "pr/maths/line3.h"
 #include "pr/maths/polynomial.h"
 #include "pr/maths/rand_vector.h"
-#include "pr/maths/compress.h"
+#include "pr/maths/constants_vector.h"
 

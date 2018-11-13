@@ -621,13 +621,11 @@ namespace pr
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 
-namespace pr
+namespace pr::storage
 {
-	namespace unittests
+	PRUnitTest(XmlTests)
 	{
-		PRUnitTest(pr_storage_xml)
-		{
-			char const xml[] =
+		char const xml[] =
 R"(
 <root>
 	<node0>1</node0>
@@ -636,26 +634,25 @@ R"(
 	</child>
 </root>
 )";
-			
-			// XML doesn't accept \0 in the string
-			pr::xml::Node root = pr::xml::Load(xml, sizeof(xml) - 1);
-			PR_CHECK(root.m_child.size(), 2U);
-			PR_CHECK(root.element(L"node0") != nullptr, true);
-			PR_CHECK(root.element(L"child") != nullptr, true);
-			PR_CHECK(root.element(L"boris") == nullptr, true);
 
-			auto& node0 = root.m_child[0];
-			PR_CHECK(node0.m_child.size(), 0U);
-			PR_CHECK(node0.as<int>(), 1);
+		// XML doesn't accept \0 in the string
+		pr::xml::Node root = pr::xml::Load(xml, sizeof(xml) - 1);
+		PR_CHECK(root.m_child.size(), 2U);
+		PR_CHECK(root.element(L"node0") != nullptr, true);
+		PR_CHECK(root.element(L"child") != nullptr, true);
+		PR_CHECK(root.element(L"boris") == nullptr, true);
 
-			auto& child = root.m_child[1];
-			PR_CHECK(child.m_child.size(), 1U);
-			PR_CHECK(child.element(L"node1") != nullptr, true);
+		auto& node0 = root.m_child[0];
+		PR_CHECK(node0.m_child.size(), 0U);
+		PR_CHECK(node0.as<int>(), 1);
 
-			auto& node1 = child.m_child[0];
-			PR_CHECK(node1.m_child.size(), 0U);
-			PR_CHECK(node1.as<std::string>(), "a string");
-		}
+		auto& child = root.m_child[1];
+		PR_CHECK(child.m_child.size(), 1U);
+		PR_CHECK(child.element(L"node1") != nullptr, true);
+
+		auto& node1 = child.m_child[0];
+		PR_CHECK(node1.m_child.size(), 0U);
+		PR_CHECK(node1.as<std::string>(), "a string");
 	}
 }
 #endif

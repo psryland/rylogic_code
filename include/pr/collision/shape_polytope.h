@@ -48,7 +48,7 @@ namespace pr
 			//' Idx  m_nbr[...]
 
 			ShapePolytope() = default;
-			ShapePolytope(int vert_count, int face_count, size_t size_in_bytes, m4x4_cref shape_to_model = m4x4Identity, MaterialId material_id = 0, Shape::EFlags flags = Shape::EFlags::None)
+			ShapePolytope(int vert_count, int face_count, size_t size_in_bytes, m4_cref<> shape_to_model = m4x4Identity, MaterialId material_id = 0, Shape::EFlags flags = Shape::EFlags::None)
 				:m_base(EShape::Polytope, size_in_bytes, shape_to_model, material_id, flags)
 				,m_vert_count(vert_count)
 				,m_face_count(face_count)
@@ -117,7 +117,7 @@ namespace pr
 				auto& a = shape.vertex(f->m_index[0]);
 				auto& b	= shape.vertex(f->m_index[1]);
 				auto& c = shape.vertex(f->m_index[2]);
-				volume += Triple3(a, b, c); // Triple product is volume x 6
+				volume += Triple(a, b, c); // Triple product is volume x 6
 			}
 			return volume / 6.0f;
 		}
@@ -134,7 +134,7 @@ namespace pr
 				auto& a = shape.vertex(f->m_index[0]);
 				auto& b = shape.vertex(f->m_index[1]);
 				auto& c = shape.vertex(f->m_index[2]);
-				auto vol_x6 = Triple3(a, b, c); // Triple product is volume x 6
+				auto vol_x6 = Triple(a, b, c); // Triple product is volume x 6
 				com	+= vol_x6 * (a + b + c);    // Divide by 4 at end
 				volume += vol_x6;
 			}
@@ -154,7 +154,7 @@ namespace pr
 		// Shift the verts of the polytope so they are centred on a new position.
 		// 'shift' should be in 'shape' space. NOTE: This invalidates the inertia matrix.
 		// You will need to translate the inertia matrix by the same shift.
-		inline void ShiftCentre(ShapePolytope& shape, v4_cref shift)
+		inline void ShiftCentre(ShapePolytope& shape, v4_cref<> shift)
 		{
 			assert(shift.w == 0.0f);
 			for (v4 *v = shape.vert_beg(), *vend = shape.vert_end(); v != vend; ++v) *v -= shift;
@@ -162,7 +162,7 @@ namespace pr
 		}
 
 		// Return a support vertex for a polytope
-		inline v4 SupportVertex(ShapePolytope const& shape, v4_cref direction, int hint_vert_id, int& sup_vert_id)
+		inline v4 SupportVertex(ShapePolytope const& shape, v4_cref<> direction, int hint_vert_id, int& sup_vert_id)
 		{
 			assert("Invalid hint vertex index" && hint_vert_id >= 0 && hint_vert_id < shape.m_vert_count);
 			assert("Direction is too short" && Length3(direction) > maths::tiny);
@@ -397,7 +397,7 @@ namespace pr
 					auto& c = shape.vertex(*(f + 2));
 
 					// If 'v' is in front of this face add its edges to the edge list and remove the face
-					if (Triple3(v - a, b - a, c - a) >= 0.0f)
+					if (Triple(v - a, b - a, c - a) >= 0.0f)
 					{
 						// Add the edges of this face to the edge list (remove duplicates)
 						Edge ed = { *(f + 2), *(f + 0) };

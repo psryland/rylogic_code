@@ -18,7 +18,7 @@ try:
 	dir      = sys.argv[1] if len(sys.argv) > 1 else UserVars.root + "\\projects\\unittests"
 	platform = sys.argv[2] if len(sys.argv) > 2 else "any"
 	config   = sys.argv[3] if len(sys.argv) > 3 else "release"
-	outfile  = dir + "\\unittests.h"
+	outfile  = dir + "\\src\\unittests.h"
 	tempdir  = tempfile.gettempdir() + "\\" + platform + "\\" + config
 	tmpfile  = tempdir + "\\unittests.h.tmp"
 	os.makedirs(tempdir, exist_ok=True)

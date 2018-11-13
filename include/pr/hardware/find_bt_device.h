@@ -199,16 +199,13 @@ namespace pr
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include "pr/filesys/filesys.h"
-namespace pr
+namespace pr::hardware
 {
-	namespace unittests
+	PRUnitTest(FindBTDevicesTests)
 	{
-		PRUnitTest(pr_hardware_find_bt_devices)
+		for (pr::FindBTDevices f; !f.done(); f.next())
 		{
-			for (pr::FindBTDevices f; !f.done(); f.next())
-			{
-				OutputDebugStringW(f.szName);
-			}
+			OutputDebugStringW(f.szName);
 		}
 	}
 }

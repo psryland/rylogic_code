@@ -553,137 +553,134 @@ namespace pr
 #if PR_UNITTESTS
 #include <iomanip>
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::common
 {
-	namespace unittests
+	PRUnitTest(DateTimeTests)
 	{
-		PRUnitTest(pr_common_datetime)
+		using namespace std::chrono;
+		using namespace pr::datetime;
+
 		{
-			using namespace std::chrono;
-			using namespace pr::datetime;
+			auto t = seconds(1234);
+			auto s = pr::To<std::string>(t, "%S seconds");
+			PR_CHECK(s, "1234 seconds");
+		}
+		{
+			auto t = hours(1) + minutes(23) + seconds(45) + milliseconds(67);
+			auto s = pr::To<std::string>(t, "%hh:%mm:%ss.%fff");
+			PR_CHECK(s, "01:23:45.067");
+		}
 
-			{
-				auto t = seconds(1234);
-				auto s = pr::To<std::string>(t, "%S seconds");
-				PR_CHECK(s, "1234 seconds");
-			}
-			{
-				auto t = hours(1) + minutes(23) + seconds(45) + milliseconds(67);
-				auto s = pr::To<std::string>(t, "%hh:%mm:%ss.%fff");
-				PR_CHECK(s, "01:23:45.067");
-			}
+		{// Testing DateTime
+			auto dt1 = DateTime::NowUTC();
+			auto dt2 = DateTime::Now();
+			auto ofs1 = dt2 - dt1;
+			PR_CHECK(ofs1.To<seconds>().count() == 0, true);
+			PR_CHECK(duration_cast<hours>(dt2.m_offset - dt1.m_offset).count() == 12, true);
 
-			{// Testing DateTime
-				auto dt1 = DateTime::NowUTC();
-				auto dt2 = DateTime::Now();
-				auto ofs1 = dt2 - dt1;
-				PR_CHECK(ofs1.To<seconds>().count() == 0, true);
-				PR_CHECK(duration_cast<hours>(dt2.m_offset - dt1.m_offset).count() == 12, true);
+			auto dt3 = DateTime(1976,12,29,3,45,0,hours(12));
+			auto dt4 = DateTime(1977,12,8,10,15,0,hours(12));
+			auto ofs2 = dt4 - dt3;
+			PR_CHECK(ofs2.To<seconds>().count() == 29745000, true);
 
-				auto dt3 = DateTime(1976,12,29,3,45,0,hours(12));
-				auto dt4 = DateTime(1977,12,8,10,15,0,hours(12));
-				auto ofs2 = dt4 - dt3;
-				PR_CHECK(ofs2.To<seconds>().count() == 29745000, true);
+			auto ts1 = TimeSpan(days(1) + seconds(5000));
+			PR_CHECK(ts1.To<minutes>().count() == 1523, true);
+		}
 
-				auto ts1 = TimeSpan(days(1) + seconds(5000));
-				PR_CHECK(ts1.To<minutes>().count() == 1523, true);
-			}
+		{ // unit test of chrono-Compatible Low-Level Date Algorithms
+			PR_CHECK(days_from_civil(1970, 1, 1) == 0, true);                    // 1970-01-01 is day 0
+			PR_CHECK(civil_from_days(0) == std::make_tuple(1970, 1, 1), true);   // 1970-01-01 is day 0
+			PR_CHECK(weekday_from_days(days_from_civil(1970, 1, 1)) == 4, true); // 1970-01-01 is a Thursday
 
-			{ // unit test of chrono-Compatible Low-Level Date Algorithms
-				PR_CHECK(days_from_civil(1970, 1, 1) == 0, true);                    // 1970-01-01 is day 0
-				PR_CHECK(civil_from_days(0) == std::make_tuple(1970, 1, 1), true);   // 1970-01-01 is day 0
-				PR_CHECK(weekday_from_days(days_from_civil(1970, 1, 1)) == 4, true); // 1970-01-01 is a Thursday
-
-				auto ystart = -10;// for speed instead of -1000000;
-				auto prev_z = days_from_civil(ystart, 1, 1) - 1;
-				PR_CHECK(prev_z < 0, true);
+			auto ystart = -10;// for speed instead of -1000000;
+			auto prev_z = days_from_civil(ystart, 1, 1) - 1;
+			PR_CHECK(prev_z < 0, true);
 				
-				auto prev_wd = weekday_from_days(prev_z);
-				PR_CHECK(0 <= prev_wd && prev_wd <= 6, true);
+			auto prev_wd = weekday_from_days(prev_z);
+			PR_CHECK(0 <= prev_wd && prev_wd <= 6, true);
 
-				for (auto y = ystart; y <= -ystart; ++y)
+			for (auto y = ystart; y <= -ystart; ++y)
+			{
+				for (auto m = 1; m <= 12; ++m)
 				{
-					for (auto m = 1; m <= 12; ++m)
+					auto e = last_day_of_month(y, m);
+					for (auto d = 1; d <= e; ++d)
 					{
-						auto e = last_day_of_month(y, m);
-						for (auto d = 1; d <= e; ++d)
-						{
-							int z = days_from_civil(y, m, d);
-							PR_CHECK(prev_z < z, true);
-							PR_CHECK(z == prev_z+1, true);
+						int z = days_from_civil(y, m, d);
+						PR_CHECK(prev_z < z, true);
+						PR_CHECK(z == prev_z+1, true);
 
-							int yp; int mp, dp;
-							std::tie(yp, mp, dp) = civil_from_days(z);
-							PR_CHECK(y == yp, true);
-							PR_CHECK(m == mp, true);
-							PR_CHECK(d == dp, true);
+						int yp; int mp, dp;
+						std::tie(yp, mp, dp) = civil_from_days(z);
+						PR_CHECK(y == yp, true);
+						PR_CHECK(m == mp, true);
+						PR_CHECK(d == dp, true);
 
-							auto wd = weekday_from_days(z);
-							PR_CHECK(0 <= wd && wd <= 6, true);
-							PR_CHECK(wd == next_weekday(prev_wd), true);
-							PR_CHECK(prev_wd == prev_weekday(wd), true);
-							prev_z = z;
-							prev_wd = wd;
-						}
+						auto wd = weekday_from_days(z);
+						PR_CHECK(0 <= wd && wd <= 6, true);
+						PR_CHECK(wd == next_weekday(prev_wd), true);
+						PR_CHECK(prev_wd == prev_weekday(wd), true);
+						prev_z = z;
+						prev_wd = wd;
 					}
 				}
-				auto count_days = days_from_civil(1000000, 12, 31) - days_from_civil(-1000000, 1, 1);
-				PR_CHECK(count_days, 730485365);
 			}
-			{// Example of using the datetime functions to avoid C time interfaces
-				long long year; unsigned month; unsigned day;
-				hours h; minutes m; seconds s; microseconds us;
-				std::stringstream ss; std::string str;
-				auto utc_offset = hours(+12);  // my current UTC offset
+			auto count_days = days_from_civil(1000000, 12, 31) - days_from_civil(-1000000, 1, 1);
+			PR_CHECK(count_days, 730485365);
+		}
+		{// Example of using the datetime functions to avoid C time interfaces
+			long long year; unsigned month; unsigned day;
+			hours h; minutes m; seconds s; microseconds us;
+			std::stringstream ss; std::string str;
+			auto utc_offset = hours(+12);  // my current UTC offset
 
-				// Get duration in local units
-				auto now = system_clock::now().time_since_epoch() + utc_offset;
+			// Get duration in local units
+			auto now = system_clock::now().time_since_epoch() + utc_offset;
 
-				// Get duration in days
-				auto today = duration_cast<days>(now);
+			// Get duration in days
+			auto today = duration_cast<days>(now);
 
-				// Convert days into year/month/day
-				std::tie(year, month, day) = civil_from_days(today.count());
+			// Convert days into year/month/day
+			std::tie(year, month, day) = civil_from_days(today.count());
 
-				// Subtract off days, leaving now containing time since local midnight
-				now -= today; h  = duration_cast<hours>(now);
-				now -= h;     m  = duration_cast<minutes>(now);
-				now -= m;     s  = duration_cast<seconds>(now);
-				now -= s;     us = duration_cast<microseconds>(now);
+			// Subtract off days, leaving now containing time since local midnight
+			now -= today; h  = duration_cast<hours>(now);
+			now -= h;     m  = duration_cast<minutes>(now);
+			now -= m;     s  = duration_cast<seconds>(now);
+			now -= s;     us = duration_cast<microseconds>(now);
 
-				ss = std::stringstream{};
-				ss << "Today is "
-					 << year << '-' << std::setw(2) << month << '-' << std::setw(2) << day << " at "
-					 << std::setw(2) << h.count() << ':'
-					 << std::setw(2) << m.count() << ':'
-					 << std::setw(2) << s.count() << '.'
-					 << std::setw(6) << us.count();
-				str = ss.str();
+			ss = std::stringstream{};
+			ss << "Today is "
+					<< year << '-' << std::setw(2) << month << '-' << std::setw(2) << day << " at "
+					<< std::setw(2) << h.count() << ':'
+					<< std::setw(2) << m.count() << ':'
+					<< std::setw(2) << s.count() << '.'
+					<< std::setw(6) << us.count();
+			str = ss.str();
 
-				// Can also go the other way: Specify a date in terms of a year/month/day triple and then convert that into a system_clock::time_point:
-				// Build a time point in local days::hours::minutes and then convert to UTC
-				auto birthdate = system_clock::time_point(days(days_from_civil(1976, 12, 29)) + hours(03) + minutes(45) - utc_offset);
-				ss = std::stringstream{};
-				ss << "Paul is " << duration_cast<seconds>(system_clock::now() - birthdate).count() << " seconds old\n";
-				str = ss.str();
+			// Can also go the other way: Specify a date in terms of a year/month/day triple and then convert that into a system_clock::time_point:
+			// Build a time point in local days::hours::minutes and then convert to UTC
+			auto birthdate = system_clock::time_point(days(days_from_civil(1976, 12, 29)) + hours(03) + minutes(45) - utc_offset);
+			ss = std::stringstream{};
+			ss << "Paul is " << duration_cast<seconds>(system_clock::now() - birthdate).count() << " seconds old\n";
+			str = ss.str();
 
-				// current utc date time
-				now = system_clock::now().time_since_epoch();
-				today = duration_cast<days>(now);
+			// current utc date time
+			now = system_clock::now().time_since_epoch();
+			today = duration_cast<days>(now);
 
-				std::tie(year, month, day) = civil_from_days(today.count());
+			std::tie(year, month, day) = civil_from_days(today.count());
 
-				now -= today; h = duration_cast<hours>(now);
-				now -= h;     m = duration_cast<minutes>(now);
-				now -= m;     s = duration_cast<seconds>(now);
+			now -= today; h = duration_cast<hours>(now);
+			now -= h;     m = duration_cast<minutes>(now);
+			now -= m;     s = duration_cast<seconds>(now);
 
-				ss = std::stringstream{};
-				ss << "Today is " << year << '-' << setw(2) << (unsigned)month << '-' << setw(2) << (unsigned)day << " at "
-					<< setw(2) << h.count() << ':'
-					<< setw(2) << m.count() << ':'
-					<< setw(2) << s.count() << " UTC\n";
-				str = ss.str();
-			}
+			ss = std::stringstream{};
+			ss << "Today is " << year << '-' << std::setw(2) << (unsigned)month << '-' << std::setw(2) << (unsigned)day << " at "
+				<< std::setw(2) << h.count() << ':'
+				<< std::setw(2) << m.count() << ':'
+				<< std::setw(2) << s.count() << " UTC\n";
+			str = ss.str();
 		}
 	}
 }

@@ -177,45 +177,42 @@ namespace pr
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include "pr/maths/maths.h"
-namespace pr
+namespace pr::common
 {
-	namespace unittests
+	PRUnitTest(UserDataTests)
 	{
-		PRUnitTest(pr_common_userdata)
+		struct Blob
 		{
-			struct Blob
-			{
-				char str[20];
-				Blob() :str() {}
-				Blob(char const* s) :str() { strcat(str, s); }
-			};
+			char str[20];
+			Blob() :str() {}
+			Blob(char const* s) :str() { strcat(str, s); }
+		};
 
-			Blob blob("HelloWorld\0");
+		Blob blob("HelloWorld\0");
 
-			pr::UserData udtest;
-			udtest.get<Blob>() = blob;
-			udtest.get<double>() = 3.14;
-			udtest.get<m4x4>(0) = m4x4Identity; // store aligned types
+		pr::UserData udtest;
+		udtest.get<Blob>() = blob;
+		udtest.get<double>() = 3.14;
+		udtest.get<m4x4>(0) = m4x4Identity; // store aligned types
 
-			PR_CHECK(udtest.has<Blob>(), true);
-			PR_CHECK(udtest.has<double>(), true);
-			PR_CHECK(udtest.has<int>(), false);
-			PR_CHECK(udtest.has<m4x4>(), true);
+		PR_CHECK(udtest.has<Blob>(), true);
+		PR_CHECK(udtest.has<double>(), true);
+		PR_CHECK(udtest.has<int>(), false);
+		PR_CHECK(udtest.has<m4x4>(), true);
 
-			PR_CHECK(udtest.get<double>(), 3.14);
-			PR_CHECK(udtest.get<Blob>().str, "HelloWorld\0");
-			PR_CHECK(&udtest.get<Blob>() != &blob, true);
-			PR_CHECK(udtest.get<m4x4>() == m4x4Identity, true);
-			PR_CHECK(&udtest.get<m4x4>() != &m4x4Identity, true);
+		PR_CHECK(udtest.get<double>(), 3.14);
+		PR_CHECK(pr::str::Equal(udtest.get<Blob>().str, "HelloWorld"), true);
+		PR_CHECK(&udtest.get<Blob>() != &blob, true);
+		PR_CHECK(udtest.get<m4x4>() == m4x4Identity, true);
+		PR_CHECK(&udtest.get<m4x4>() != &m4x4Identity, true);
 
-			udtest.get<double>() = 6.28;
-			PR_CHECK(udtest.get<double>(), 6.28);
+		udtest.get<double>() = 6.28;
+		PR_CHECK(udtest.get<double>(), 6.28);
 
-			udtest.erase<double>();
-			udtest.erase<Blob>();
-			PR_CHECK(udtest.has<double>(), false);
-			PR_CHECK(udtest.has<Blob>(), false);
-		}
+		udtest.erase<double>();
+		udtest.erase<Blob>();
+		PR_CHECK(udtest.has<double>(), false);
+		PR_CHECK(udtest.has<Blob>(), false);
 	}
 }
 #endif

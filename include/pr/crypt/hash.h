@@ -442,73 +442,70 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::common
 {
-	namespace unittests
+	PRUnitTest(HashTests)
 	{
-		PRUnitTest(pr_common_hash)
-		{
-			using namespace pr::hash;
+		using namespace pr::hash;
 
-			{// basic hashing
-				auto h0 = Hash("");
-				PR_CHECK(h0 == pr::hash::FNV_offset_basis32, true);
-			}
-			{// Compile time hash vs. std::hash
-				char const data[] = "Paul was here. CrC this, mofo";
-				const auto h0  = sizeof(size_t) == 8 ? Hash64CT(data) : Hash32CT(data);
-				auto h1 = std::hash<std::string>{}(&data[0]);
-				PR_CHECK(h0 == h1, true);
-			}
-			{// Compile time vs. run time
-				char const data[] = "Paul was here. CrC this, mofo";
-				const auto h0 = HashCT(&data[0]);
-				const auto h1 = Hash(&data[0]);
-				PR_CHECK(h0 == h1, true);
+		{// basic hashing
+			auto h0 = Hash("");
+			PR_CHECK(h0 == pr::hash::FNV_offset_basis32, true);
+		}
+		{// Compile time hash vs. std::hash
+			char const data[] = "Paul was here. CrC this, mofo";
+			const auto h0  = sizeof(size_t) == 8 ? Hash64CT(data) : Hash32CT(data);
+			auto h1 = std::hash<std::string>{}(&data[0]);
+			PR_CHECK(h0 == h1, true);
+		}
+		{// Compile time vs. run time
+			char const data[] = "Paul was here. CrC this, mofo";
+			const auto h0 = HashCT(&data[0]);
+			const auto h1 = Hash(&data[0]);
+			PR_CHECK(h0 == h1, true);
 
-				enum { h2 = HashCT("four") };
-				const auto h3 = Hash("four");
-				PR_CHECK(h2 == h3, true);
+			enum { h2 = HashCT("four") };
+			const auto h3 = Hash("four");
+			PR_CHECK(h2 == h3, true);
 
-				char const* five = "five";
-				enum { h4 = HashCT("five") };
-				const auto h5 = Hash(five);
-				PR_CHECK(h4 == h5, true);
-			}
-			{// Hash POD
-				struct POD { int i; char c[4]; float f; };
-				auto pod0 = POD{32,{ 'A','B','C','D' },6.28f};
-				auto pod1 = POD{31,{ 'D','C','B','A' },3.14f};
-				auto pod2 = POD{32,{ 'A','B','C','D' },6.28f};
-				const auto h0 = Hash(pod0);
-				const auto h1 = Hash(pod1);
-				const auto h2 = Hash(pod2);
-				PR_CHECK(h0 != h1, true);
-				PR_CHECK(h0 == h2, true);
-			}
-			{// Case insensitive hash
-				enum E { Blah = HashICT("Blah"), };
-				const auto h0 = HashI("Blah");
-				PR_CHECK(E(h0) == Blah, true);
-			}
-			{ // HsiehHash16
-				char const data[] = "Hsieh hash test!";
-				auto h0 = HsiehHash16(&data[0], sizeof(data));
-				PR_CHECK(h0, int(0xe85f5a90));
-			}
-			{ // MurmurHash
-				char const data[] = "Murmur hash test";
-				auto h0 = MurmurHash2_32(&data[0], sizeof(data));
-				auto h1 = MurmurHash2_64(&data[0], sizeof(data));
+			char const* five = "five";
+			enum { h4 = HashCT("five") };
+			const auto h5 = Hash(five);
+			PR_CHECK(h4 == h5, true);
+		}
+		{// Hash POD
+			struct POD { int i; char c[4]; float f; };
+			auto pod0 = POD{32,{ 'A','B','C','D' },6.28f};
+			auto pod1 = POD{31,{ 'D','C','B','A' },3.14f};
+			auto pod2 = POD{32,{ 'A','B','C','D' },6.28f};
+			const auto h0 = Hash(pod0);
+			const auto h1 = Hash(pod1);
+			const auto h2 = Hash(pod2);
+			PR_CHECK(h0 != h1, true);
+			PR_CHECK(h0 == h2, true);
+		}
+		{// Case insensitive hash
+			enum E { Blah = HashICT("Blah"), };
+			const auto h0 = HashI("Blah");
+			PR_CHECK(E(h0) == Blah, true);
+		}
+		{ // HsiehHash16
+			char const data[] = "Hsieh hash test!";
+			auto h0 = HsiehHash16(&data[0], sizeof(data));
+			PR_CHECK(h0, int(0xe85f5a90));
+		}
+		{ // MurmurHash
+			char const data[] = "Murmur hash test";
+			auto h0 = MurmurHash2_32(&data[0], sizeof(data));
+			auto h1 = MurmurHash2_64(&data[0], sizeof(data));
 
-				PR_CHECK(h0, 0x6bfb39d7);
-				PR_CHECK(h1, 0x52ce8bc5882d9212LL);
-			}
-			{ // Hash arguments
-				char const* s = "was";
-				const auto h0 = Hash("Paul", s, L"here", 1976, 12.29, 1234U);
-				PR_CHECK(h0, HashValue(0xb0167e22));
-			}
+			PR_CHECK(h0, 0x6bfb39d7);
+			PR_CHECK(h1, 0x52ce8bc5882d9212LL);
+		}
+		{ // Hash arguments
+			char const* s = "was";
+			const auto h0 = Hash("Paul", s, L"here", 1976, 12.29, 1234U);
+			PR_CHECK(h0, HashValue(0xb0167e22));
 		}
 	}
 }

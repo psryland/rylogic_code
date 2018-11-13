@@ -11,14 +11,8 @@
 
 namespace pr
 {
-	// Allow anonymous scopes to be returned
-	struct IScope
-	{
-		virtual ~IScope() {}
-	};
-
 	// A scope object
-	template <typename Doit, typename Undo> struct Scope :IScope
+	template <typename Doit, typename Undo> struct Scope
 	{
 		Doit m_doit;
 		Undo m_undo;
@@ -60,11 +54,11 @@ namespace pr
 	// Create a scope object from two lambda functions
 	template <typename Doit, typename Undo> Scope<Doit,Undo> CreateScope(Doit doit, Undo undo)
 	{
-		return std::move(Scope<Doit,Undo>(doit,undo));
+		return Scope<Doit,Undo>(doit,undo);
 	}
 
 	// A scope object with state
-	template <typename State, typename Doit, typename Undo> struct StateScope :IScope
+	template <typename State, typename Doit, typename Undo> struct StateScope
 	{
 		Doit m_doit;
 		Undo m_undo;
@@ -114,34 +108,31 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::common
 {
-	namespace unittests
+	PRUnitTest(ScopeTests)
 	{
-		PRUnitTest(pr_common_scope)
+		bool flag = false;
 		{
-			bool flag = false;
-			{
-				auto s = pr::CreateScope(
-					[&]{ flag = true;  },
-					[&]{ flag = false; });
+			auto s = pr::CreateScope(
+				[&]{ flag = true;  },
+				[&]{ flag = false; });
 
-				PR_CHECK(flag, true);
-			}
-			PR_CHECK(flag, false);
-
-			int value = 1;
-			{
-				auto s = pr::CreateStateScope(
-					[=]{ return value; },
-					[&](int i){ value = i; });
-				PR_CHECK(s.m_state, 1);
-
-				++value;
-				PR_CHECK(value, 2);
-			}
-			PR_CHECK(value, 1);
+			PR_CHECK(flag, true);
 		}
+		PR_CHECK(flag, false);
+
+		int value = 1;
+		{
+			auto s = pr::CreateStateScope(
+				[=]{ return value; },
+				[&](int i){ value = i; });
+			PR_CHECK(s.m_state, 1);
+
+			++value;
+			PR_CHECK(value, 2);
+		}
+		PR_CHECK(value, 1);
 	}
 }
 #endif

@@ -4,13 +4,7 @@
 //*****************************************************************************
 
 #pragma once
-#ifndef PR_MATHS_COMPRESSION_FUNCTIONS_H
-#define PR_MATHS_COMPRESSION_FUNCTIONS_H
-
-#include "pr/maths/forward.h"
-#include "pr/maths/constants.h"
-#include "pr/maths/vector4.h"
-#include "pr/maths/quaternion.h"
+#include "pr/maths/maths.h"
 
 namespace pr
 {
@@ -19,7 +13,7 @@ namespace pr
 	// using: if( idx > 13 ) idx = 26 - idx; Doing so, does not effect the DecompressNormal() function
 	struct Norm5bit
 	{
-		static uint Compress(v4 const& norm)
+		static uint Compress(v4_cref<> norm)
 		{
 			const float cos_67p5 = 0.382683f;
 			uint x = (norm.x > cos_67p5) - (norm.x < -cos_67p5) + 1;
@@ -34,27 +28,27 @@ namespace pr
 			int z = (idx / 9);
 			return renorm
 				? v4::Normal3(x - 1.0f, y - 1.0f, z - 1.0f, 0.0f)
-				: v4(x - 1.0f, y - 1.0f, z - 1.0f, 0.0f);
+				: v4{x - 1.0f, y - 1.0f, z - 1.0f, 0};
 		}
 	};
 
 	// Compress a v2 into a maximum number of bits
-	template <int MaxBits, typename ReturnType> inline ReturnType PackNormV2(const v2& vec)
+	template <int MaxBits, typename ReturnType> inline ReturnType PackNormV2(v2_cref<> vec)
 	{
 		assert(Abs(vec.x) <= 1.0f && Abs(vec.y) <= 1.0f && "Only supports vectors with components in the range -1 to 1");
-		const ReturnType Bits  = MaxBits / 2;
-		const ReturnType Scale = (static_cast<ReturnType>(1) << Bits) / 2 - 1;
-		const ReturnType Mask  = (static_cast<ReturnType>(1) << Bits) - 1;
+		auto Bits  = MaxBits / 2;
+		auto Scale = (static_cast<ReturnType>(1) << Bits) / 2 - 1;
+		auto Mask  = (static_cast<ReturnType>(1) << Bits) - 1;
 
-		ReturnType x = static_cast<ReturnType>((vec.x + 1.0f) * Scale) & Mask;
-		ReturnType y = static_cast<ReturnType>((vec.y + 1.0f) * Scale) & Mask;
+		auto x = static_cast<ReturnType>((vec.x + 1.0f) * Scale) & Mask;
+		auto y = static_cast<ReturnType>((vec.y + 1.0f) * Scale) & Mask;
 		return (x << Bits) | y;
 	}
 	template <int MaxBits, typename PackedType> inline v2 UnpackNormV2(PackedType packed_vec)
 	{
-		const PackedType Bits  = MaxBits / 2;
-		const PackedType Scale = (static_cast<PackedType>(1) << Bits) / 2 - 1;
-		const PackedType Mask  = (static_cast<PackedType>(1) << Bits) - 1;
+		auto Bits  = MaxBits / 2;
+		auto Scale = (static_cast<PackedType>(1) << Bits) / 2 - 1;
+		auto Mask  = (static_cast<PackedType>(1) << Bits) - 1;
 
 		v2 vec =
 		{
@@ -201,33 +195,33 @@ namespace pr
 
 	// Pack a normalised 32bit float into 4 floats assuming each float is stored using 8bit precision
 	// This is mainly used for packing a normalised float value into a Colour32
-	inline pr::v4 EncodeNormalisedF32toV4(float value)
+	inline v4 EncodeNormalisedF32toV4(float value)
 	{
 		assert(value >= 0 && value <= 1 && "Only supports floats in the range [0,1]");
-		pr::v4 const shifts = pr::v4(1.677721e+7f, 6.553599e+4f, 2.559999e+2f, 9.999999e-1f); // 256^3, 256^2, 256, 1
-		pr::v4 packed = pr::Frac(value * shifts);
+		v4 const shifts = v4(1.677721e+7f, 6.553599e+4f, 2.559999e+2f, 9.999999e-1f); // 256^3, 256^2, 256, 1
+		v4 packed = Frac(value * shifts);
 		packed.y -= packed.x / 256.0f;
 		packed.z -= packed.y / 256.0f;
 		packed.w -= packed.z / 256.0f;
 		return packed;
 	}
-	inline float DecodeNormalisedF32(pr::v4 const& value)
+	inline float DecodeNormalisedF32(v4 const& value)
 	{
-		pr::v4 const shifts = pr::v4(5.960464e-8f, 1.525879e-5f, 3.90625e-3f, 1.0f); // 1/256^3, 1/256^2, 1/256, 1
-		return pr::Dot4(value, shifts);
+		v4 const shifts = v4(5.960464e-8f, 1.525879e-5f, 3.90625e-3f, 1.0f); // 1/256^3, 1/256^2, 1/256, 1
+		return Dot4(value, shifts);
 	}
-	inline pr::v2 EncodeNormalisedF32toV2(float value)
+	inline v2 EncodeNormalisedF32toV2(float value)
 	{
 		assert(value >= 0 && value <= 1 && "Only supports floats in the range [0,1]");
-		pr::v2 const shifts = pr::v2(2.559999e2f, 9.999999e-1f);
-		pr::v2 packed = pr::Frac(value * shifts);
+		v2 const shifts = v2(2.559999e2f, 9.999999e-1f);
+		v2 packed = Frac(value * shifts);
 		packed.y -= packed.x / 256.0f;
 		return packed;
 	}
-	inline float DecodeNormalisedF32(pr::v2 const& value)
+	inline float DecodeNormalisedF32(v2 const& value)
 	{
-		pr::v2 const shifts = pr::v2(3.90625e-3f, 1.0f);
-		return pr::Dot2(value, shifts);
+		v2 const shifts = v2(3.90625e-3f, 1.0f);
+		return Dot2(value, shifts);
 	}
 
 	////*****
@@ -439,28 +433,24 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::maths
 {
-	namespace unittests
+	PRUnitTest(CompressionTests)
 	{
-		PRUnitTest(pr_maths_compression)
-		{
-			float const step = 0.05f;
-			{ // Norm5bit
-				float max_error = 0.0f;
-				for (float z = -1.0f; z <= 1.0f; z += step)
-				for (float y = -1.0f; y <= 1.0f; y += step)
-				for (float x = -1.0f; x <= 1.0f; x += step)
-				{
-					v4   in_  = v4::Normal3(x,y,z,0);
-					auto enc  = Norm5bit::Compress(in_);
-					v4   out_ = Norm5bit::Decompress(enc);
-					max_error = std::max(Length3(out_ - in_), max_error);
-				}
-				PR_CHECK(max_error < 0.6f, true);
+		float const step = 0.05f;
+		{ // Norm5bit
+			float max_error = 0.0f;
+			for (float z = -1.0f; z <= 1.0f; z += step)
+			for (float y = -1.0f; y <= 1.0f; y += step)
+			for (float x = -1.0f; x <= 1.0f; x += step)
+			{
+				v4   in_  = v4::Normal3(x,y,z,0);
+				auto enc  = Norm5bit::Compress(in_);
+				v4   out_ = Norm5bit::Decompress(enc);
+				max_error = std::max(Length3(out_ - in_), max_error);
 			}
+			PR_CHECK(max_error < 0.6f, true);
 		}
 	}
 }
-#endif
 #endif

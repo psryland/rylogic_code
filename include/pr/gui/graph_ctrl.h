@@ -1375,8 +1375,8 @@ namespace pr
 			// Plot a moving average curve over the data
 			void PlotMovingAverage(Graphics& gfx, SeriesRdrOptions const& opts, Point const& scale, Series const& series, size_t i0, size_t i1)
 			{
-				pr::ExpMovingAvr<> max(opts.MAWindowSize);
-				pr::ExpMovingAvr<> may(opts.MAWindowSize);
+				pr::maths::ExpMovingAvr<> max(opts.MAWindowSize);
+				pr::maths::ExpMovingAvr<> may(opts.MAWindowSize);
 				Pen ma_pen(opts.MALineColour, opts.MALineWidth);
 
 				bool first = true;

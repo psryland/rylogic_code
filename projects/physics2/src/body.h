@@ -26,6 +26,7 @@ struct Body :pr::physics::RigidBody
 		,m_gfx(View3D_ObjectCreateLdr(Desc(), false, nullptr, nullptr))
 	{
 		O2W(pr::Random4x4(rng(), pr::v4Origin, 10.0f));
+		UpdateGfx();
 	}
 	~Body()
 	{

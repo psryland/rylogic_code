@@ -18,13 +18,13 @@ struct MainUI :Form
 		:Form(MakeFormParams<>().name("main-ui").title(L"Rylogic Physics").padding(0).wndclass(RegisterWndClass<MainUI>()))
 		,m_status(StatusBar::Params<>().parent(this_).dock(EDock::Bottom))
 		,m_view3d(View3DPanel::Params<>().parent(this_).error_cb(ReportErrorCB, this_).dock(EDock::Fill).border().show_focus_point())
+		,m_steps()
 		,m_body0()
 		,m_body1()
 	{
 		View3D_WindowAddObject(m_view3d.m_win, m_body0.m_gfx);
 		View3D_WindowAddObject(m_view3d.m_win, m_body1.m_gfx);
 
-		//View3D_PositionCamera(m_view3d.m_win, View3DV4{1,1,-2,1}, View3DV4{1,1,0,1}, View3DV4{0,1,0,0});
 		Reset();
 
 		m_view3d.Key += [&](Control&, KeyEventArgs const& args)
@@ -43,7 +43,7 @@ struct MainUI :Form
 		m_steps = 0;
 	}
 
-	// Step by the main loop at 120Hz
+	// Step the main loop
 	void Step(double elapsed_seconds)
 	{
 		(void)elapsed_seconds;
@@ -55,12 +55,10 @@ struct MainUI :Form
 		if (r_sq > 0.1_m)
 		{
 			auto force_mag = G * m_body0.Mass() * m_body1.Mass() / r_sq;
-			auto force = v8f(v4Zero, force_mag * sep / Sqrt(r_sq));
-			m_body0.ApplyForceWS(+force);
-			m_body1.ApplyForceWS(-force);
+			auto force = force_mag * sep / Sqrt(r_sq);
+			m_body0.ApplyForceWS(+force, v4Zero, m_body0.O2W().pos);
+			m_body1.ApplyForceWS(-force, v4ZAxis, m_body1.O2W().pos);
 		}
-
-//		m_body0.ApplyForceWS(v4XAxis, v4XAxis, v4Zero);
 
 		// Evolve the bodies
 		for (auto body : {&m_body0, &m_body1})

@@ -306,110 +306,106 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::script
 {
-	namespace unittests
+	PRUnitTest(TokeniserTests)
 	{
-		PRUnitTest(pr_script_tokeniser)
-		{
-			using namespace pr;
-			using namespace pr::script;
+		using namespace pr;
 
-			char const* str_in =
-				"auto double int struct break else long switch case enum register typedef "
-				"char extern return union const float short unsigned continue for signed "
-				"void default goto sizeof volatile do if static while"
-				" \n = ; ~ ! * & + - / % < > | ^ , ? { } [ ] ( ) . : # $ @ ++ -- << >> <= "
-				">= == != && || <<= >>= &= |= ^= += -= *= /= %= ..."
-				;
+		char const* str_in =
+			"auto double int struct break else long switch case enum register typedef "
+			"char extern return union const float short unsigned continue for signed "
+			"void default goto sizeof volatile do if static while"
+			" \n = ; ~ ! * & + - / % < > | ^ , ? { } [ ] ( ) . : # $ @ ++ -- << >> <= "
+			">= == != && || <<= >>= &= |= ^= += -= *= /= %= ..."
+			;
 
-			PtrA src(str_in);
-			Tokeniser tkr(src);
-			PR_CHECK(*tkr == EKeyword::Auto     , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::Double   , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::Int      , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::Struct   , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::Break    , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::Else     , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::Long     , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::Switch   , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::Case     , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::Enum     , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::Register , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::Typedef  , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::Char     , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::Extern   , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::Return   , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::Union    , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::Const    , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::Float    , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::Short    , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::Unsigned , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::Continue , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::For      , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::Signed   , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::Void     , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::Default  , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::Goto     , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::Sizeof   , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::Volatile , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::Do       , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::If       , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::Static   , true); ++tkr;
-			PR_CHECK(*tkr == EKeyword::While    , true); ++tkr;
+		PtrA src(str_in);
+		Tokeniser tkr(src);
+		PR_CHECK(*tkr == EKeyword::Auto     , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::Double   , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::Int      , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::Struct   , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::Break    , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::Else     , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::Long     , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::Switch   , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::Case     , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::Enum     , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::Register , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::Typedef  , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::Char     , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::Extern   , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::Return   , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::Union    , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::Const    , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::Float    , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::Short    , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::Unsigned , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::Continue , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::For      , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::Signed   , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::Void     , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::Default  , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::Goto     , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::Sizeof   , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::Volatile , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::Do       , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::If       , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::Static   , true); ++tkr;
+		PR_CHECK(*tkr == EKeyword::While    , true); ++tkr;
 
-			PR_CHECK(*tkr == ESymbol::NewLine      , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::Assign       , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::SemiColon    , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::Complement   , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::Not          , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::Ptr          , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::AddressOf    , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::Plus         , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::Minus        , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::Divide       , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::Modulus      , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::LessThan     , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::GtrThan      , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::BitOr        , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::BitXor       , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::Comma        , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::Conditional  , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::BraceOpen    , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::BraceClose   , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::BracketOpen  , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::BracketClose , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::ParenthOpen  , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::ParenthClose , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::Dot          , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::Colon        , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::Hash         , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::Dollar       , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::At           , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::Increment    , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::Decrement    , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::ShiftL       , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::ShiftR       , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::LessEql      , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::GtrEql       , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::Equal        , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::NotEqual     , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::LogicalAnd   , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::LogicalOr    , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::ShiftLAssign , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::ShiftRAssign , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::BitAndAssign , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::BitOrAssign  , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::BitXorAssign , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::AddAssign    , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::SubAssign    , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::MulAssign    , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::DivAssign    , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::ModAssign    , true); ++tkr;
-			PR_CHECK(*tkr == ESymbol::Ellipsis     , true); ++tkr;
-			PR_CHECK(*tkr == EToken::EndOfStream   , true); ++tkr;
-			PR_CHECK(*tkr == EToken::EndOfStream   , true); ++tkr;
-		}
+		PR_CHECK(*tkr == ESymbol::NewLine      , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::Assign       , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::SemiColon    , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::Complement   , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::Not          , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::Ptr          , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::AddressOf    , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::Plus         , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::Minus        , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::Divide       , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::Modulus      , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::LessThan     , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::GtrThan      , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::BitOr        , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::BitXor       , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::Comma        , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::Conditional  , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::BraceOpen    , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::BraceClose   , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::BracketOpen  , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::BracketClose , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::ParenthOpen  , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::ParenthClose , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::Dot          , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::Colon        , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::Hash         , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::Dollar       , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::At           , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::Increment    , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::Decrement    , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::ShiftL       , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::ShiftR       , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::LessEql      , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::GtrEql       , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::Equal        , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::NotEqual     , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::LogicalAnd   , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::LogicalOr    , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::ShiftLAssign , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::ShiftRAssign , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::BitAndAssign , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::BitOrAssign  , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::BitXorAssign , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::AddAssign    , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::SubAssign    , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::MulAssign    , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::DivAssign    , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::ModAssign    , true); ++tkr;
+		PR_CHECK(*tkr == ESymbol::Ellipsis     , true); ++tkr;
+		PR_CHECK(*tkr == EToken::EndOfStream   , true); ++tkr;
+		PR_CHECK(*tkr == EToken::EndOfStream   , true); ++tkr;
 	}
 }
 #endif

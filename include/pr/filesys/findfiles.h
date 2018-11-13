@@ -125,31 +125,26 @@ namespace pr
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include "pr/filesys/filesys.h"
-namespace pr
+namespace pr::filesys
 {
-	namespace unittests
+	PRUnitTest(FindFilesTests)
 	{
-		PRUnitTest(pr_filesys_findfiles)
+		auto dir = pr::filesys::GetDirectory<std::string>(__FILE__);
+		auto root = pr::filesys::CombinePath<std::string>(dir, "..\\..\\..\\projects\\unittests\\src");
+		if (!pr::filesys::DirectoryExists(root))
 		{
-			wchar_t curr_dir[MAX_PATH];
-			GetCurrentDirectoryW(_countof(curr_dir), curr_dir);
-
-			auto root = pr::filesys::CombinePath<std::wstring>(curr_dir, L"..\\projects\\unittests");
-			if (!pr::filesys::DirectoryExists(root))
-			{
-				PR_CHECK(false && "FindFiles test failed, root directory not found", true);
-				return;
-			}
-
-			bool found_cpp = false, found_h = false;
-			for (pr::filesys::FindFiles ff(root, L"*.cpp;*.h"); !ff.done(); ff.next())
-			{
-				found_cpp |= pr::filesys::GetExtension(ff.fullpath2()).compare(L"cpp") == 0;
-				found_h   |= pr::filesys::GetExtension(ff.fullpath2()).compare(L"h") == 0;
-			}
-			PR_CHECK(found_cpp,true);
-			PR_CHECK(found_h,true);
+			PR_CHECK(false && "FindFiles test failed, root directory not found", true);
+			return;
 		}
+
+		bool found_cpp = false, found_h = false;
+		for (pr::filesys::FindFiles ff(pr::Widen(root), L"*.cpp;*.h"); !ff.done(); ff.next())
+		{
+			found_cpp |= pr::filesys::GetExtension(ff.fullpath2()).compare(L"cpp") == 0;
+			found_h   |= pr::filesys::GetExtension(ff.fullpath2()).compare(L"h") == 0;
+		}
+		PR_CHECK(found_cpp,true);
+		PR_CHECK(found_h,true);
 	}
 }
 #endif

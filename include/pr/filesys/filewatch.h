@@ -92,7 +92,7 @@ namespace pr
 		pr::MultiCast<std::function<void(FileCont&)>> OnFilesChanged;
 
 		// Synchronise access to the file container
-		struct Lock :Synchronise<FileWatch>
+		struct Lock :threads::Synchronise<FileWatch>
 		{
 			Lock(FileWatch const& fw)
 				:base(fw, fw.m_mutex)

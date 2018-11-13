@@ -11,7 +11,7 @@
 
 namespace pr
 {
-	// template <typename T> - todo: when MS fix the alignment bug for templates
+	template <typename T>
 	struct alignas(16) IVec4
 	{
 		#pragma warning(push)
@@ -19,7 +19,7 @@ namespace pr
 		union
 		{
 			struct { int x, y, z, w; };
-			struct { iv2 xy, zw; };
+			struct { IVec2<T> xy, zw; };
 			struct { int arr[4]; };
 			#if PR_MATHS_USE_INTRINSICS
 			__m128i vec;
@@ -53,19 +53,19 @@ namespace pr
 		{
 			assert(maths::is_aligned(this));
 		}
-		template <typename T, typename = maths::enable_if_v4<T>> IVec4(T const& v)
+		template <typename V4, typename = maths::enable_if_v4<V4>> IVec4(V4 const& v)
 			:IVec4(x_as<int>(v), y_as<int>(v), z_as<int>(v), w_as<int>(v))
 		{}
-		template <typename T, typename = maths::enable_if_v3<T>> IVec4(T const& v, int w_)
+		template <typename V3, typename = maths::enable_if_v3<V3>> IVec4(V3 const& v, int w_)
 			:IVec4(x_as<int>(v), y_as<int>(v), z_as<int>(v), w_)
 		{}
-		template <typename T, typename = maths::enable_if_v2<T>> IVec4(T const& v, int z_, int w_)
+		template <typename V2, typename = maths::enable_if_v2<V2>> IVec4(V2 const& v, int z_, int w_)
 			:IVec4(x_as<int>(v), y_as<int>(v), z_, w_)
 		{}
-		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit IVec4(T const* v)
+		template <typename CP, typename = maths::enable_if_vec_cp<CP>> explicit IVec4(CP const* v)
 			:IVec4(x_as<int>(v), y_as<int>(v), z_as<int>(v), w_as<int>(v))
 		{}
-		template <typename T, typename = maths::enable_if_v4<T>> IVec4& operator = (T const& rhs)
+		template <typename V4, typename = maths::enable_if_v4<V4>> IVec4& operator = (V4 const& rhs)
 		{
 			x = x_as<int>(rhs);
 			y = y_as<int>(rhs);
@@ -97,170 +97,107 @@ namespace pr
 			IVec4 r(x,y,z,1); // LValue because of alignment
 			return r;
 		}
-		iv2 vec2(int i0, int i1) const
+		IVec2<T> vec2(int i0, int i1) const
 		{
-			return iv2(arr[i0], arr[i1]);
+			return IVec2<T>{arr[i0], arr[i1]};
 		}
 	};
-	using iv4 = IVec4;
-	static_assert(maths::is_vec4<iv4>::value, "");
-	static_assert(std::is_pod<iv4>::value, "iv4 must be a pod type");
+	static_assert(maths::is_vec4<IVec4<void>>::value, "");
+	static_assert(std::is_pod<IVec4<void>>::value, "iv4 must be a pod type");
+	#if PR_MATHS_USE_INTRINSICS && !defined(_M_IX86)
+	template <typename T = void> using iv4_cref = IVec4<T> const;
+	#else
+	template <typename T = void> using iv4_cref = IVec4<T> const&;
+	#endif
 
 	// Define component accessors for pointer types
-	inline int x_cp(iv4 const& v) { return v.x; }
-	inline int y_cp(iv4 const& v) { return v.y; }
-	inline int z_cp(iv4 const& v) { return v.z; }
-	inline int w_cp(iv4 const& v) { return v.w; }
-
-	#pragma region Constants
-	static iv4 const iv4Zero   = {0, 0, 0, 0};
-	static iv4 const iv4One    = {1, 1, 1, 1};
-	static iv4 const iv4Min    = {+maths::int_min, +maths::int_min, +maths::int_min, +maths::int_min};
-	static iv4 const iv4Max    = {+maths::int_max, +maths::int_max, +maths::int_max, +maths::int_max};
-	static iv4 const iv4Lowest = {-maths::int_max, -maths::int_max, -maths::int_max, -maths::int_max};
-	static iv4 const iv4XAxis  = {1, 0, 0, 0};
-	static iv4 const iv4YAxis  = {0, 1, 0, 0};
-	static iv4 const iv4ZAxis  = {0, 0, 1, 0};
-	static iv4 const iv4Origin = {0, 0, 0, 1};
-	#pragma endregion
+	template <typename T> inline int pr_vectorcall x_cp(iv4_cref<T> v) { return v.x; }
+	template <typename T> inline int pr_vectorcall y_cp(iv4_cref<T> v) { return v.y; }
+	template <typename T> inline int pr_vectorcall z_cp(iv4_cref<T> v) { return v.z; }
+	template <typename T> inline int pr_vectorcall w_cp(iv4_cref<T> v) { return v.w; }
 
 	#pragma region Operators
-	inline iv4 operator + (iv4 const& vec)
+	template <typename T> inline IVec4<T> pr_vectorcall operator + (iv4_cref<T> vec)
 	{
 		return vec;
 	}
-	inline iv4 operator - (iv4 const& vec)
+	template <typename T> inline IVec4<T> pr_vectorcall operator - (iv4_cref<T> vec)
 	{
-		return iv4(-vec.x, -vec.y, -vec.z, -vec.w);
+		return IVec4<T>{-vec.x, -vec.y, -vec.z, -vec.w};
 	}
-	inline iv4& operator *= (iv4& lhs, int rhs)
+	template <typename T> inline IVec4<T> pr_vectorcall operator * (int lhs, iv4_cref<T> rhs)
 	{
-		lhs.x += rhs;
-		lhs.y += rhs;
-		lhs.z += rhs;
-		lhs.w += rhs;
-		return lhs;
+		return rhs * lhs;
 	}
-	inline iv4& operator /= (iv4& lhs, int rhs)
+	template <typename T> inline IVec4<T> pr_vectorcall operator * (iv4_cref<T> lhs, int rhs)
+	{
+		return IVec4<T>{lhs.x + rhs, lhs.y + rhs, lhs.z + rhs, lhs.w + rhs};
+	}
+	template <typename T> inline IVec4<T> pr_vectorcall operator / (iv4_cref<T> lhs, int rhs)
 	{
 		assert("divide by zero" && rhs != 0);
-		lhs.x /= rhs;
-		lhs.y /= rhs;
-		lhs.z /= rhs;
-		lhs.w /= rhs;
-		return lhs;
+		return IVec4<T>{lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs};
 	}
-	inline iv4& operator %= (iv4& lhs, int rhs)
+	template <typename T> inline IVec4<T> pr_vectorcall operator % (iv4_cref<T> lhs, int rhs)
 	{
 		assert("divide by zero" && rhs != 0);
-		lhs.x %= rhs;
-		lhs.y %= rhs;
-		lhs.z %= rhs;
-		lhs.w %= rhs;
-		return lhs;
+		return IVec4<T>{lhs.x % rhs, lhs.y % rhs, lhs.z % rhs, lhs.w % rhs};
 	}
-	inline iv4& operator += (iv4& lhs, iv4 const& rhs)
+	template <typename T> inline IVec4<T> pr_vectorcall operator + (iv4_cref<T> lhs, iv4_cref<T> rhs)
 	{
-		lhs.x += rhs.x;
-		lhs.y += rhs.y;
-		lhs.z += rhs.z;
-		lhs.w += rhs.w;
-		return lhs;
+		return IVec4<T>{lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w};
 	}
-	inline iv4& operator -= (iv4& lhs, iv4 const& rhs)
+	template <typename T> inline IVec4<T> pr_vectorcall operator - (iv4_cref<T> lhs, iv4_cref<T> rhs)
 	{
-		lhs.x -= rhs.x;
-		lhs.y -= rhs.y;
-		lhs.z -= rhs.z;
-		lhs.w -= rhs.w;
-		return lhs;
+		return IVec4<T>{lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w};
 	}
-	inline iv4& operator *= (iv4& lhs, iv4 const& rhs)
+	template <typename T> inline IVec4<T> pr_vectorcall operator * (iv4_cref<T> lhs, iv4_cref<T> rhs)
 	{
-		lhs.x *= rhs.x;
-		lhs.y *= rhs.y;
-		lhs.z *= rhs.z;
-		lhs.w *= rhs.w;
-		return lhs;
+		return IVec4<T>{lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z, lhs.w * rhs.w};
 	}
-	inline iv4& operator /= (iv4& lhs, iv4 const& rhs)
+	template <typename T> inline IVec4<T> pr_vectorcall operator / (iv4_cref<T> lhs, iv4_cref<T> rhs)
 	{
 		assert("divide by zero" && !Any4(rhs, IsZero<int>));
-		lhs.x /= rhs.x;
-		lhs.y /= rhs.y;
-		lhs.z /= rhs.z;
-		lhs.w /= rhs.w;
-		return lhs;
+		return IVec4<T>{lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z, lhs.w / rhs.w};
 	}
-	inline iv4& operator %= (iv4& lhs, iv4 const& rhs)
+	template <typename T> inline IVec4<T> pr_vectorcall operator % (iv4_cref<T> lhs, iv4_cref<T> rhs)
 	{
 		assert("divide by zero" && !Any4(rhs, IsZero<int>));
-		lhs.x %= rhs.x;
-		lhs.y %= rhs.y;
-		lhs.z %= rhs.z;
-		lhs.w %= rhs.w;
-		return lhs;
+		return IVec4<T>{lhs.x % rhs.x, lhs.y % rhs.y, lhs.z % rhs.z, lhs.w % rhs.w};
 	}
 	#pragma endregion
 
 	#pragma region Functions
 	
 	// Dot product: a . b
-	inline int Dot3(iv4 const& a, iv4 const& b)
+	template <typename T> inline int pr_vectorcall Dot3(iv4_cref<T> a, iv4_cref<T> b)
 	{
 		return a.x * b.x + a.y * b.y + a.z * b.z;
 	}
-	inline int Dot4(iv4 const& a, iv4 const& b)
+	template <typename T> inline int pr_vectorcall Dot4(iv4_cref<T> a, iv4_cref<T> b)
 	{
 		return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 	}
-	inline int Dot(iv4 const& a, iv4 const& b)
+	template <typename T> inline int pr_vectorcall Dot(iv4_cref<T> a, iv4_cref<T> b)
 	{
 		return Dot4(a,b);
 	}
 
 	// Cross product: a x b
-	inline iv4 Cross3(iv4 const& a, iv4 const& b)
+	template <typename T> inline IVec4<T> pr_vectorcall Cross3(iv4_cref<T> a, iv4_cref<T> b)
 	{
-		return iv4(a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x, 0);
+		return IVec4<T>{a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x, 0};
 	}
 
 	#pragma endregion
 }
 
-namespace std
-{
-	#pragma region Numeric limits
-	template <> class numeric_limits<pr::iv4>
-	{
-	public:
-		static pr::iv4 min() throw()     { return pr::iv4Min; }
-		static pr::iv4 max() throw()     { return pr::iv4Max; }
-		static pr::iv4 lowest() throw()  { return pr::iv4Lowest; }
-
-		static const bool is_specialized = true;
-		static const bool is_signed = true;
-		static const bool is_integer = true;
-		static const bool is_exact = true;
-		static const bool has_infinity = false;
-		static const bool has_quiet_NaN = false;
-		static const bool has_signaling_NaN = false;
-		static const bool has_denorm_loss = false;
-		static const float_denorm_style has_denorm = denorm_absent;
-		static const int radix = 10;
-	};
-	#pragma endregion
-}
-
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::maths
 {
-	namespace unittests
+	PRUnitTest(IVector4Tests)
 	{
-		PRUnitTest(pr_maths_ivector4)
-		{
-		}
 	}
 }
 #endif

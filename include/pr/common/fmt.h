@@ -192,104 +192,101 @@ namespace pr
 #include "pr/common/unittests.h"
 #include "pr/str/string.h"
 
-namespace pr
+namespace pr::common
 {
-	namespace unittests
+	PRUnitTest(FmtTests)
 	{
-		PRUnitTest(pr_common_fmt)
+		{// char - simple specifiers
+			auto s0 = FmtS("%c %C %s %S %d %i %u %o %x %X %f %f %e %E %g %G"
+				,'A' ,L'W'
+				,"hello world" ,L"wide str"
+				,0x01234567
+				,0x55555555
+				,0x89abcdef
+				,01234567
+				,0xdeadbeef
+				,0xdeadbeef
+				,6.28f
+				,6.28
+				,6.28f
+				,6.28
+				,6.28f
+				,6.28
+				);
+			#if _MSC_VER >= 1900
+			auto s1 = "A W hello world wide str 19088743 1431655765 2309737967 1234567 deadbeef DEADBEEF 6.280000 6.280000 6.280000e+00 6.280000E+00 6.28 6.28";
+			#else
+			auto s1 = "A W hello world wide str 19088743 1431655765 2309737967 1234567 deadbeef DEADBEEF 6.280000 6.280000 6.280000e+000 6.280000E+000 6.28 6.28";
+			#endif
+			PR_CHECK(s0, s1);
+		}
+		{// wchar_t - simple
+			auto s0 = FmtS(L"%c %C %s %S %d %i %u %o %x %X %f %f %e %E %g %G"
+				,L'A' ,'W'
+				,L"hello world" ,"narrow str"
+				,0x01234567
+				,0x55555555
+				,0x89abcdef
+				,01234567
+				,0xdeadbeef
+				,0xdeadbeef
+				,6.28f
+				,6.28
+				,6.28f
+				,6.28
+				,6.28f
+				,6.28
+				);
+			#if _MSC_VER >= 1900
+			auto s1 = L"A W hello world narrow str 19088743 1431655765 2309737967 1234567 deadbeef DEADBEEF 6.280000 6.280000 6.280000e+00 6.280000E+00 6.28 6.28";
+			#else
+			auto s1 = L"A W hello world narrow str 19088743 1431655765 2309737967 1234567 deadbeef DEADBEEF 6.280000 6.280000 6.280000e+000 6.280000E+000 6.28 6.28";
+			#endif
+
+			PR_CHECK(s0, s1);
+		}
+		{// char - length specifiers
+			auto s0 = FmtS("%hhd %hd %lx %llx %Lf"
+				,signed char(0x7f)
+				,signed short(0x7fff)
+				,long int(0x55555555)
+				,long long int(0x0123456789abcdef)
+				,1000000000000000000.0
+				);
+
+			PR_CHECK(s0, "127 32767 55555555 123456789abcdef 1000000000000000000.000000");
+		}
+		{// wchar_t - length specifiers
+			auto s0 = FmtS(L"%hhd %hd %lx %llx %Lf"
+				,signed char(0x7f)
+				,signed short(0x7fff)
+				,long int(0x55555555)
+				,long long int(0x0123456789abcdef)
+				,1000000000000000000.0
+				);
+
+			PR_CHECK(s0, L"127 32767 55555555 123456789abcdef 1000000000000000000.000000");
+		}
 		{
-			{// char - simple specifiers
-				auto s0 = FmtS("%c %C %s %S %d %i %u %o %x %X %f %f %e %E %g %G"
-					,'A' ,L'W'
-					,"hello world" ,L"wide str"
-					,0x01234567
-					,0x55555555
-					,0x89abcdef
-					,01234567
-					,0xdeadbeef
-					,0xdeadbeef
-					,6.28f
-					,6.28
-					,6.28f
-					,6.28
-					,6.28f
-					,6.28
-					);
-				#if _MSC_VER >= 1900
-				auto s1 = "A W hello world wide str 19088743 1431655765 2309737967 1234567 deadbeef DEADBEEF 6.280000 6.280000 6.280000e+00 6.280000E+00 6.28 6.28";
-				#else
-				auto s1 = "A W hello world wide str 19088743 1431655765 2309737967 1234567 deadbeef DEADBEEF 6.280000 6.280000 6.280000e+000 6.280000E+000 6.28 6.28";
-				#endif
-				PR_CHECK(s0, s1);
-			}
-			{// wchar_t - simple
-				auto s0 = FmtS(L"%c %C %s %S %d %i %u %o %x %X %f %f %e %E %g %G"
-					,L'A' ,'W'
-					,L"hello world" ,"narrow str"
-					,0x01234567
-					,0x55555555
-					,0x89abcdef
-					,01234567
-					,0xdeadbeef
-					,0xdeadbeef
-					,6.28f
-					,6.28
-					,6.28f
-					,6.28
-					,6.28f
-					,6.28
-					);
-				#if _MSC_VER >= 1900
-				auto s1 = L"A W hello world narrow str 19088743 1431655765 2309737967 1234567 deadbeef DEADBEEF 6.280000 6.280000 6.280000e+00 6.280000E+00 6.28 6.28";
-				#else
-				auto s1 = L"A W hello world narrow str 19088743 1431655765 2309737967 1234567 deadbeef DEADBEEF 6.280000 6.280000 6.280000e+000 6.280000E+000 6.28 6.28";
-				#endif
+			std::string s0;
+			pr::Fmt(s0, "String %d", 0);
+			PR_CHECK(s0, "String 0");
 
-				PR_CHECK(s0, s1);
-			}
-			{// char - length specifiers
-				auto s0 = FmtS("%hhd %hd %lx %llx %Lf"
-					,signed char(0x7f)
-					,signed short(0x7fff)
-					,long int(0x55555555)
-					,long long int(0x0123456789abcdef)
-					,1000000000000000000.0
-					);
+			char const* s1 = pr::FmtS("String %d",1);
+			PR_CHECK(s1, "String 1");
 
-				PR_CHECK(s0, "127 32767 55555555 123456789abcdef 1000000000000000000.000000");
-			}
-			{// wchar_t - length specifiers
-				auto s0 = FmtS(L"%hhd %hd %lx %llx %Lf"
-					,signed char(0x7f)
-					,signed short(0x7fff)
-					,long int(0x55555555)
-					,long long int(0x0123456789abcdef)
-					,1000000000000000000.0
-					);
+			auto s2 = pr::FmtS(L"wide string %d", 2);
+			PR_CHECK(s2, L"wide string 2");
 
-				PR_CHECK(s0, L"127 32767 55555555 123456789abcdef 1000000000000000000.000000");
-			}
-			{
-				std::string s0;
-				pr::Fmt(s0, "String %d", 0);
-				PR_CHECK(s0, "String 0");
+			auto s3 = pr::Fmt("std::string %d", 3);
+			PR_CHECK(s3.size(), 13U);
 
-				char const* s1 = pr::FmtS("String %d",1);
-				PR_CHECK(s1, "String 1");
+			auto s4 = pr::Fmt<pr::string<>>("pr::string %d",4);
+			PR_CHECK(s4, "pr::string 4");
+			PR_CHECK(s4.size(), 12U);
 
-				auto s2 = pr::FmtS(L"wide string %d", 2);
-				PR_CHECK(s2, L"wide string 2");
-
-				auto s3 = pr::Fmt("std::string %d", 3);
-				PR_CHECK(s3.size(), 13U);
-
-				auto s4 = pr::Fmt<pr::string<>>("pr::string %d",4);
-				PR_CHECK(s4, "pr::string 4");
-				PR_CHECK(s4.size(), 12U);
-
-				auto s5 = pr::FmtX<struct P, 128>("c-string %d", 5);
-				PR_CHECK(s5, "c-string 5");
-			}
+			auto s5 = pr::FmtX<struct P, 128>("c-string %d", 5);
+			PR_CHECK(s5, "c-string 5");
 		}
 	}
 }

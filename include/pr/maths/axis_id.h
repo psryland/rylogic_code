@@ -36,13 +36,13 @@ namespace pr
 		{
 			//assert(IsValid(*this) && "axis_id must one of ±1, ±2, ±3");
 			switch (value) {
-			default: return  v4Zero;
-			case +1: return  v4XAxis;
-			case -1: return -v4XAxis;
-			case +2: return  v4YAxis;
-			case -2: return -v4YAxis;
-			case +3: return  v4ZAxis;
-			case -3: return -v4ZAxis;
+			default: return v4{};
+			case +1: return v4{+1,0,0,0};
+			case -1: return v4{-1,0,0,0};
+			case +2: return v4{0,+1,0,0};
+			case -2: return v4{0,-1,0,0};
+			case +3: return v4{0,0,+1,0};
+			case -3: return v4{0,0,-1,0};
 			}
 		}
 		static bool IsValid(AxisId axis_id)

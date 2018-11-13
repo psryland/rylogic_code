@@ -1593,63 +1593,59 @@ namespace pr
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 
-namespace pr
+namespace pr::crypt
 {
-	namespace unittests
+	PRUnitTest(RijndealTests)
 	{
-		PRUnitTest(pr_crypt_rijndeal)
-		{
-			using namespace pr::crypt;
-			typedef unsigned char byte;
+		typedef unsigned char byte;
 
-			byte const key[33] = "PaulRulz!!OhYeah!!InYourFacePunk"; // 256bit
-			byte const data[] = {"Paul was here. Here's some data to be encrypted. 1234567890abcde"};
-			byte enc[sizeof(data)] = {};
-			byte dec[sizeof(data)] = {};
+		byte const key[33] = "PaulRulz!!OhYeah!!InYourFacePunk"; // 256bit
+		byte const data[] = {"Paul was here. Here's some data to be encrypted. 1234567890abcde"};
+		byte enc[sizeof(data)] = {};
+		byte dec[sizeof(data)] = {};
 
-			{// Test ECB mode
-				for (auto keysize : {16,24,32})
-				{
-					Rijndael rj(key, keysize);
-					auto len = rj.BlockSize() * (sizeof(data) / rj.BlockSize());
+		{// Test ECB mode
+			for (auto keysize : {16,24,32})
+			{
+				Rijndael rj(key, keysize);
+				auto len = rj.BlockSize() * (sizeof(data) / rj.BlockSize());
 
-					rj.Encrypt(data, enc, len, Rijndael::EMode::ECB);
-					rj.Decrypt(enc, dec, len, Rijndael::EMode::ECB);
-					PR_CHECK(memcmp(data, enc, len) != 0, true);
-					PR_CHECK(memcmp(data, dec, len) == 0, true);
-				}
+				rj.Encrypt(data, enc, len, Rijndael::EMode::ECB);
+				rj.Decrypt(enc, dec, len, Rijndael::EMode::ECB);
+				PR_CHECK(memcmp(data, enc, len) != 0, true);
+				PR_CHECK(memcmp(data, dec, len) == 0, true);
 			}
-			{// Test ECB in-place mode
-				for (auto keysize : {16,24,32})
-				{
-					Rijndael rj(key, keysize);
-					auto len = rj.BlockSize() * (sizeof(data) / rj.BlockSize());
+		}
+		{// Test ECB in-place mode
+			for (auto keysize : {16,24,32})
+			{
+				Rijndael rj(key, keysize);
+				auto len = rj.BlockSize() * (sizeof(data) / rj.BlockSize());
 
-					memcpy(enc, data, sizeof(data));
-					rj.Encrypt(enc, enc, len, Rijndael::EMode::ECB);
-					PR_CHECK(memcmp(data, enc, len) != 0, true);
-					rj.Decrypt(enc, enc, len, Rijndael::EMode::ECB);
-					PR_CHECK(memcmp(data, enc, len) == 0, true);
-				}
+				memcpy(enc, data, sizeof(data));
+				rj.Encrypt(enc, enc, len, Rijndael::EMode::ECB);
+				PR_CHECK(memcmp(data, enc, len) != 0, true);
+				rj.Decrypt(enc, enc, len, Rijndael::EMode::ECB);
+				PR_CHECK(memcmp(data, enc, len) == 0, true);
 			}
-			{// Test CBC and CFB modes
-				for (auto mode : {Rijndael::EMode::CBC, Rijndael::EMode::CFB})
-				for (auto keysize : {16,24,32})
-				{
-					Rijndael rj(key, keysize);
-					auto len = rj.BlockSize() * (sizeof(data) / rj.BlockSize());
+		}
+		{// Test CBC and CFB modes
+			for (auto mode : {Rijndael::EMode::CBC, Rijndael::EMode::CFB})
+			for (auto keysize : {16,24,32})
+			{
+				Rijndael rj(key, keysize);
+				auto len = rj.BlockSize() * (sizeof(data) / rj.BlockSize());
 
-					{
-						Rijndael::Chain chain;
-						rj.Encrypt(data, enc, len, mode, &chain);
-					}
-					{
-						Rijndael::Chain chain;
-						rj.Decrypt(enc, dec, len, mode, &chain);
-					}
-					PR_CHECK(memcmp(data, enc, len) != 0, true);
-					PR_CHECK(memcmp(data, dec, len) == 0, true);
+				{
+					Rijndael::Chain chain;
+					rj.Encrypt(data, enc, len, mode, &chain);
 				}
+				{
+					Rijndael::Chain chain;
+					rj.Decrypt(enc, dec, len, mode, &chain);
+				}
+				PR_CHECK(memcmp(data, enc, len) != 0, true);
+				PR_CHECK(memcmp(data, dec, len) == 0, true);
 			}
 		}
 	}

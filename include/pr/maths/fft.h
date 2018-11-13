@@ -474,85 +474,80 @@ namespace pr
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include "pr/filesys/file.h"
-
-namespace pr
+namespace pr::maths
 {
-	namespace unittests
+	PRUnitTest(DiscreteFourierTransformTests)
 	{
-		PRUnitTest(pr_maths_dft)
+		using BufferR = std::vector<double>;
+		using BufferC = std::vector<std::complex<double>>;
+
+		double const freq0 =   2.0; // hz
+		double const freq1 =  10.0; // hz
+		double const freq2 =  37.0; // hz
+		double const freq3 =  60.0; // hz
+		double const freq4 = 200.0; // hz
+		double const SampFreq = 1000.0;
+
+		// Create a sinusoidal signal
+		BufferR signal(8192);
+		for (int i = 0, iend = int(signal.size()); i != iend; ++i)
 		{
-			using BufferR = std::vector<double>;
-			using BufferC = std::vector<std::complex<double>>;
-
-			double const freq0 =   2.0; // hz
-			double const freq1 =  10.0; // hz
-			double const freq2 =  37.0; // hz
-			double const freq3 =  60.0; // hz
-			double const freq4 = 200.0; // hz
-			double const SampFreq = 1000.0;
-
-			// Create a sinusoidal signal
-			BufferR signal(8192);
-			for (int i = 0, iend = int(signal.size()); i != iend; ++i)
-			{
-				signal[i] =
-					sin(maths::tau * freq0 * i / SampFreq) +
-					sin(maths::tau * freq1 * i / SampFreq) +
-					sin(maths::tau * freq2 * i / SampFreq) +
-					sin(maths::tau * freq3 * i / SampFreq) +
-					sin(maths::tau * freq4 * i / SampFreq);
-			}
-
-			// Naive DFT
-			#if 0 // disabled, cause slow
-			{
-				BufferC naive(signal.size());
-				DFTNaive(signal.data(), naive.data(), int(signal.size()));
-
-				{// Output the frequency response
-					std::string s_out;
-					for (int i = 0, iend = int(naive.size() / 2); i != iend; ++i)
-					{
-						auto x = dft::FreqAt(double(i), SampFreq, naive.size());
-						auto y = Length(naive[i]);
-						s_out.append(pr::FmtS("%f, %f\n", x, y));
-					}
-					pr::BufferToFile(s_out, "P:\\dump\\frequencies0.csv");
-				}
-			}
-			#endif
-			{// Standard DFT
-				auto freq = DFTRadix2(signal.data(), int(signal.size()));
-
-				{// Output the frequency response
-					std::string s_out;
-					for (int i = 0, iend = int(freq.size()/2); i != iend; ++i)
-					{
-						auto x = dft::FreqAt(double(i), SampFreq, int(freq.size()));
-						auto y = Length(freq[i]);
-						s_out.append(pr::FmtS("%f, %f\n", x, y));
-					}
-					pr::BufferToFile(s_out, "P:\\dump\\frequencies1.csv");
-				}
-			}
-			{// Sliding Window DFT
-
-				// Add the signal to the DFT
-				int const window_size = 512;
-				SlidingDFT<double> dft(window_size, SampFreq);
-				for (int i = 0, iend = window_size; i != iend; ++i)
-					dft.Add(signal[i]);
-
-				{// Output the frequency response
-					std::string s_out;
-					auto freq_range = dft.FreqRange();
-					for (double x = freq_range.m_beg; x < freq_range.m_end; x += 0.1)
-						s_out.append(pr::FmtS("%f, %f\n", x, dft.Power(x)));
-					pr::BufferToFile(s_out, "P:\\dump\\frequencies2.csv");
-				}
-			}
+			signal[i] =
+				sin(maths::tau * freq0 * i / SampFreq) +
+				sin(maths::tau * freq1 * i / SampFreq) +
+				sin(maths::tau * freq2 * i / SampFreq) +
+				sin(maths::tau * freq3 * i / SampFreq) +
+				sin(maths::tau * freq4 * i / SampFreq);
 		}
 
+		// Naive DFT
+		#if 0 // disabled, cause slow
+		{
+			BufferC naive(signal.size());
+			DFTNaive(signal.data(), naive.data(), int(signal.size()));
+
+			{// Output the frequency response
+				std::string s_out;
+				for (int i = 0, iend = int(naive.size() / 2); i != iend; ++i)
+				{
+					auto x = dft::FreqAt(double(i), SampFreq, naive.size());
+					auto y = Length(naive[i]);
+					s_out.append(pr::FmtS("%f, %f\n", x, y));
+				}
+				pr::BufferToFile(s_out, "P:\\dump\\frequencies0.csv");
+			}
+		}
+		#endif
+		{// Standard DFT
+			auto freq = DFTRadix2(signal.data(), int(signal.size()));
+
+			{// Output the frequency response
+				std::string s_out;
+				for (int i = 0, iend = int(freq.size()/2); i != iend; ++i)
+				{
+					auto x = dft::FreqAt(double(i), SampFreq, int(freq.size()));
+					auto y = Length(freq[i]);
+					s_out.append(pr::FmtS("%f, %f\n", x, y));
+				}
+				pr::BufferToFile(s_out, "P:\\dump\\frequencies1.csv");
+			}
+		}
+		{// Sliding Window DFT
+
+			// Add the signal to the DFT
+			int const window_size = 512;
+			SlidingDFT<double> dft(window_size, SampFreq);
+			for (int i = 0, iend = window_size; i != iend; ++i)
+				dft.Add(signal[i]);
+
+			{// Output the frequency response
+				std::string s_out;
+				auto freq_range = dft.FreqRange();
+				for (double x = freq_range.m_beg; x < freq_range.m_end; x += 0.1)
+					s_out.append(pr::FmtS("%f, %f\n", x, dft.Power(x)));
+				pr::BufferToFile(s_out, "P:\\dump\\frequencies2.csv");
+			}
+		}
 	}
 }
 #endif

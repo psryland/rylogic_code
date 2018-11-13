@@ -905,92 +905,88 @@ namespace pr
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include "pr/str/string_core.h"
-namespace pr
+namespace pr::script
 {
-	namespace unittests
+	PRUnitTest(CoreTests)
 	{
-		PRUnitTest(pr_script_core)
-		{
-			using namespace pr::str;
-			using namespace pr::script;
+		using namespace pr::str;
 
-			wchar_t const* script_utf = L"script_utf.txt";
-			auto cleanup = pr::CreateScope([]{}, [&]{ pr::filesys::EraseFile(script_utf); });
+		wchar_t const* script_utf = L"script_utf.txt";
+		auto cleanup = pr::CreateScope([]{}, [&]{ pr::filesys::EraseFile(script_utf); });
 
-			{// Simple buffering
-				char const str[] = "123abc";
-				PtrA ptr(str);
-				Buffer<> buf(ptr);
+		{// Simple buffering
+			char const str[] = "123abc";
+			PtrA ptr(str);
+			Buffer<> buf(ptr);
 
-				PR_CHECK(*buf  , L'1');
-				PR_CHECK(buf[5], L'c');
-				PR_CHECK(buf[0], L'1');
+			PR_CHECK(*buf  , L'1');
+			PR_CHECK(buf[5], L'c');
+			PR_CHECK(buf[0], L'1');
 
-				PR_CHECK(*(++buf)   , L'2');
-				PR_CHECK(*(buf += 3), L'b');
-				PR_CHECK(*(++buf)   , L'c');
+			PR_CHECK(*(++buf)   , L'2');
+			PR_CHECK(*(buf += 3), L'b');
+			PR_CHECK(*(++buf)   , L'c');
 
-				PR_CHECK(*(++buf),  0);
+			PR_CHECK(*(++buf),  0);
+		}
+		{// Matching
+			wchar_t const str[] = L"0123456789";
+			PtrW ptr(str);
+			Buffer<> buf(ptr);
+
+			PR_CHECK(buf.match(L"0123") != 0, true);
+			PR_CHECK(buf.match(L"012345678910") != 0, false);
+			buf += 5;
+			PR_CHECK(buf.match(L"567") != 0, true);
+		}
+		{// Preload buffer
+			Buffer<> buf(ESrcType::Buffered, "abcd1234");
+			PR_CHECK(buf.match(L"abcd1234") != 0, true);
+		}
+		{// UTF8 big endian File source
+
+			// UTF-16be data (if host system is little-endian)
+			unsigned char data[] = {0xef, 0xbb, 0xbf, 0xe4, 0xbd, 0xa0, 0xe5, 0xa5, 0xbd}; //' ni hao
+			wchar_t str[] = {0x4f60, 0x597d};
+
+			{// Create the file
+				std::ofstream fout(script_utf, std::ios::binary);
+				fout.write(reinterpret_cast<char const*>(&data[0]), sizeof(data));
 			}
-			{// Matching
-				wchar_t const str[] = L"0123456789";
-				PtrW ptr(str);
-				Buffer<> buf(ptr);
 
-				PR_CHECK(buf.match(L"0123") != 0, true);
-				PR_CHECK(buf.match(L"012345678910") != 0, false);
-				buf += 5;
-				PR_CHECK(buf.match(L"567") != 0, true);
+			FileSrc file(script_utf);
+			PR_CHECK(*file, str[0]); ++file;
+			PR_CHECK(*file, str[1]); ++file;
+		}
+		{// UTF 16 little endian File source
+
+			// UTF-16le data (if host system is little-endian)
+			unsigned short data[] = {0xfeff, 0x4f60, 0x597d}; //' ni hao
+			wchar_t str[] = {0x4f60, 0x597d};
+
+			{// Create the file
+				std::ofstream fout(script_utf, std::ios::binary);
+				fout.write(reinterpret_cast<char const*>(&data[0]), sizeof(data));
 			}
-			{// Preload buffer
-				Buffer<> buf(ESrcType::Buffered, "abcd1234");
-				PR_CHECK(buf.match(L"abcd1234") != 0, true);
+
+			FileSrc file(script_utf);
+			PR_CHECK(*file, str[0]); ++file;
+			PR_CHECK(*file, str[1]); ++file;
+		}
+		{// UTF 16 big endian File source
+
+			// UTF-16be data (if host system is little-endian)
+			unsigned short data[] = {0xfffe, 0x604f, 0x7d59}; //' ni hao
+			wchar_t str[] = {0x4f60, 0x597d};
+
+			{// Create the file
+				std::ofstream fout(script_utf, std::ios::binary);
+				fout.write(reinterpret_cast<char const*>(&data[0]), sizeof(data));
 			}
-			{// UTF8 big endian File source
 
-				// UTF-16be data (if host system is little-endian)
-				unsigned char data[] = {0xef, 0xbb, 0xbf, 0xe4, 0xbd, 0xa0, 0xe5, 0xa5, 0xbd}; //' ni hao
-				wchar_t str[] = {0x4f60, 0x597d};
-
-				{// Create the file
-					std::ofstream fout(script_utf, std::ios::binary);
-					fout.write(reinterpret_cast<char const*>(&data[0]), sizeof(data));
-				}
-
-				FileSrc file(script_utf);
-				PR_CHECK(*file, str[0]); ++file;
-				PR_CHECK(*file, str[1]); ++file;
-			}
-			{// UTF 16 little endian File source
-
-				// UTF-16le data (if host system is little-endian)
-				unsigned short data[] = {0xfeff, 0x4f60, 0x597d}; //' ni hao
-				wchar_t str[] = {0x4f60, 0x597d};
-
-				{// Create the file
-					std::ofstream fout(script_utf, std::ios::binary);
-					fout.write(reinterpret_cast<char const*>(&data[0]), sizeof(data));
-				}
-
-				FileSrc file(script_utf);
-				PR_CHECK(*file, str[0]); ++file;
-				PR_CHECK(*file, str[1]); ++file;
-			}
-			{// UTF 16 big endian File source
-
-				// UTF-16be data (if host system is little-endian)
-				unsigned short data[] = {0xfffe, 0x604f, 0x7d59}; //' ni hao
-				wchar_t str[] = {0x4f60, 0x597d};
-
-				{// Create the file
-					std::ofstream fout(script_utf, std::ios::binary);
-					fout.write(reinterpret_cast<char const*>(&data[0]), sizeof(data));
-				}
-
-				FileSrc file(script_utf);
-				PR_CHECK(*file, str[0]); ++file;
-				PR_CHECK(*file, str[1]); ++file;
-			}
+			FileSrc file(script_utf);
+			PR_CHECK(*file, str[0]); ++file;
+			PR_CHECK(*file, str[1]); ++file;
 		}
 	}
 }

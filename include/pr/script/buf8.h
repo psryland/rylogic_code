@@ -234,42 +234,38 @@ namespace pr
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include "pr/str/string_core.h"
-namespace pr
+namespace pr::script
 {
-	namespace unittests
+	PRUnitTest(Buf8Tests)
 	{
-		PRUnitTest(pr_script_buf8)
-		{
-			using namespace pr::str;
-			using namespace pr::script;
+		using namespace pr::str;
 
-			{// BufW2
-				wchar_t const src[] = L"0123456789";
-				BufW2 buf(src);
-				PR_CHECK(buf[0], L'0');
-				PR_CHECK(buf[1], L'1');
-			}
-			{// BufW4
-				wchar_t* src = L"0123456789";
-				BufW4 buf(src);
-				PR_CHECK(*src, L'4');
-				PR_CHECK(buf[0], L'0');
-				PR_CHECK(buf[1], L'1');
-				PR_CHECK(buf[2], L'2');
-				PR_CHECK(buf[3], L'3');
-				buf.shift(*src++);
-				PR_CHECK(buf[0], L'1');
-				PR_CHECK(buf[1], L'2');
-				PR_CHECK(buf[2], L'3');
-				PR_CHECK(buf[3], L'4');
-			}
-			{// BufW8
-				wchar_t const src[] = L"0123456";
-				PR_CHECK(Equal(BufW8(src).c_str(), src), true);
-				PR_CHECK(BufW8(L"Paul"       ).match(BufW8(L"PaulWasHere")), true);
-				PR_CHECK(BufW8(L"PaulWasHere").match(BufW8(L"Paul"       )), false);
-				PR_CHECK(BufW8(L"ABC") == BufW8(L"ABC"), true);
-			}
+		{// BufW2
+			wchar_t const src[] = L"0123456789";
+			BufW2 buf(src);
+			PR_CHECK(buf[0], L'0');
+			PR_CHECK(buf[1], L'1');
+		}
+		{// BufW4
+			wchar_t* src = L"0123456789";
+			BufW4 buf(src);
+			PR_CHECK(*src, L'4');
+			PR_CHECK(buf[0], L'0');
+			PR_CHECK(buf[1], L'1');
+			PR_CHECK(buf[2], L'2');
+			PR_CHECK(buf[3], L'3');
+			buf.shift(*src++);
+			PR_CHECK(buf[0], L'1');
+			PR_CHECK(buf[1], L'2');
+			PR_CHECK(buf[2], L'3');
+			PR_CHECK(buf[3], L'4');
+		}
+		{// BufW8
+			wchar_t const src[] = L"0123456";
+			PR_CHECK(Equal(BufW8(src).c_str(), src), true);
+			PR_CHECK(BufW8(L"Paul"       ).match(BufW8(L"PaulWasHere")), true);
+			PR_CHECK(BufW8(L"PaulWasHere").match(BufW8(L"Paul"       )), false);
+			PR_CHECK(BufW8(L"ABC") == BufW8(L"ABC"), true);
 		}
 	}
 }

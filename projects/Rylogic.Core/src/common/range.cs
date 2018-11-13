@@ -35,6 +35,9 @@ namespace Rylogic.Common
 		/// <summary>The default empty range</summary>
 		public static readonly Range Zero = new Range{Beg = 0, End = 0};
 
+		/// <summary>The default full range</summary>
+		public static readonly Range Max = new Range { Beg = long.MinValue, End = long.MaxValue };
+
 		/// <summary>An invalid range. Used as an initialiser when finding a bounding range</summary>
 		public static readonly Range Invalid = new Range{Beg = long.MaxValue, End = long.MinValue};
 
@@ -315,6 +318,9 @@ namespace Rylogic.Common
 		/// <summary>The default empty range</summary>
 		public static readonly RangeF Zero = new RangeF{Beg = 0.0, End = 0.0};
 
+		/// <summary>The default full range</summary>
+		public static readonly RangeF Max = new RangeF { Beg = double.MinValue, End = double.MaxValue };
+
 		/// <summary>An invalid range. Used as an initialiser when finding a bounding range</summary>
 		public static readonly RangeF Invalid = new RangeF{Beg = double.MaxValue, End = double.MinValue};
 
@@ -580,6 +586,9 @@ namespace Rylogic.Common
 
 		/// <summary>The default empty range</summary>
 		public static readonly RangeF<T> Zero = new RangeF<T>{Beg = default(T), End = default(T)};
+
+		/// <summary>The default full range</summary>
+		public static readonly RangeF<T> Max = new RangeF<T> { Beg = Operators<T>.MinValue, End = Operators<T>.MaxValue };
 
 		/// <summary>An invalid range. Used as an initialiser when finding a bounding range</summary>
 		public static readonly RangeF<T> Invalid = new RangeF<T>{Beg = Operators<T>.MaxValue, End = Operators<T>.MinValue};

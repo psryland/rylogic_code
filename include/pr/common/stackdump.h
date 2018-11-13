@@ -453,9 +453,9 @@ namespace pr
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 
-namespace pr
+namespace pr::common
 {
-	namespace unittests
+	namespace unittests::stackdump
 	{
 		struct StackDumpTest
 		{
@@ -463,30 +463,29 @@ namespace pr
 			template <typename TOut> static __declspec(noinline) void Func2(TOut out) { Func3(out); }
 			template <typename TOut> static __declspec(noinline) void Func3(TOut out) { DumpStack(out); }
 		};
-
-		PRUnitTest(pr_common_stackdump)
+	}
+	PRUnitTest(StackDumpTests)
+	{
+		#if 0 // not working under VS2017... don't know why yet
+		std::stringstream out;
+		size_t fcount = 0;
+		StackDumpTest::Func1([&](std::string sym, std::string file, int line)
 		{
-			#if 0 // not working under VS2017... don't know why yet
-			std::stringstream out;
-			size_t fcount = 0;
-			StackDumpTest::Func1([&](std::string sym, std::string file, int line)
-			{
-				out << file << "(" << line << "): " << sym << std::endl;
-				++fcount;
-			});
+			out << file << "(" << line << "): " << sym << std::endl;
+			++fcount;
+		});
 
-			PR_CHECK(fcount > 3, true);
+		PR_CHECK(fcount > 3, true);
 
-			// Requires debug symbols...
-			#if !defined(NDEBUG)
-			auto s = out.str();
-			std::string::size_type ofs = 0U;
-			PR_CHECK((ofs = s.find("pr::unittests::StackDumpTest::Func3", ofs)) != std::string::npos, true);
-			PR_CHECK((ofs = s.find("pr::unittests::StackDumpTest::Func2", ofs)) != std::string::npos, true);
-			PR_CHECK((ofs = s.find("pr::unittests::StackDumpTest::Func1", ofs)) != std::string::npos, true);
-			#endif
-			#endif
-		}
+		// Requires debug symbols...
+		#if !defined(NDEBUG)
+		auto s = out.str();
+		std::string::size_type ofs = 0U;
+		PR_CHECK((ofs = s.find("pr::unittests::StackDumpTest::Func3", ofs)) != std::string::npos, true);
+		PR_CHECK((ofs = s.find("pr::unittests::StackDumpTest::Func2", ofs)) != std::string::npos, true);
+		PR_CHECK((ofs = s.find("pr::unittests::StackDumpTest::Func1", ofs)) != std::string::npos, true);
+		#endif
+		#endif
 	}
 }
 #endif

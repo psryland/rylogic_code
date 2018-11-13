@@ -279,99 +279,96 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::maths
 {
-	namespace unittests
+	PRUnitTest(BitFunctionTest)
 	{
-		PRUnitTest(pr_maths_bitfunctions)
 		{
-			{
-				uint hi,lo;
-				BreakLL(0x0123456789abcdef, hi, lo);
-				PR_CHECK(hi, 0x01234567U);
-				PR_CHECK(lo, 0x89abcdefU);
+			uint hi,lo;
+			BreakLL(0x0123456789abcdef, hi, lo);
+			PR_CHECK(hi, 0x01234567U);
+			PR_CHECK(lo, 0x89abcdefU);
 
-				auto ll = MakeLL(hi, lo);
-				PR_CHECK(ll, 0x0123456789abcdefULL);
-			}
-			{
-				char const* mask_str = "1001010011";
-				auto mask = Bits<long long>(mask_str);
-				PR_CHECK(BitStr(mask), mask_str);
+			auto ll = MakeLL(hi, lo);
+			PR_CHECK(ll, 0x0123456789abcdefULL);
+		}
+		{
+			char const* mask_str = "1001010011";
+			auto mask = Bits<long long>(mask_str);
+			PR_CHECK(BitStr(mask), mask_str);
 
-				std::vector<long long> bits;
-				for (auto b : pr::EnumerateBits(mask))
-					bits.push_back(b);
+			std::vector<long long> bits;
+			for (auto b : pr::EnumerateBits(mask))
+				bits.push_back(b);
 
-				PR_CHECK(bits.size(), 5U);
-				PR_CHECK(bits[0], 1U << 0);
-				PR_CHECK(bits[1], 1U << 1);
-				PR_CHECK(bits[2], 1U << 4);
-				PR_CHECK(bits[3], 1U << 6);
-				PR_CHECK(bits[4], 1U << 9);
-			}
-			{
-				char const* mask_str = "1001110010";
-				auto mask = Bits<uint>(mask_str);
-				PR_CHECK(mask, 626U);
-				PR_CHECK(BitStr(mask), mask_str);
-				PR_CHECK(HighBitIndex(mask), 9U);
-				PR_CHECK(LowBitIndex(mask), 1U);
-				PR_CHECK(LowBit(mask), 2U);
-				PR_CHECK(HighBit(mask), 0x200U);
-			}
-			{
-				char const* mask_str = "1111010100010";
-				auto mask = Bits<short>(mask_str);
-				PR_CHECK(mask, 7842);
-				PR_CHECK(HighBitIndex(mask), 12);
-				PR_CHECK(LowBitIndex(mask), 1);
-				PR_CHECK(LowBit(mask), 2);
-				PR_CHECK(HighBit(mask), 0x1000);
-			}
-			{
-				char const* mask_str = "1001001100110010101010010100111010010110010101110110000110100100";
-				auto mask = Bits<unsigned long long>(mask_str);
-				PR_CHECK(mask, 0x9332A94E965761A4ULL);
-				PR_CHECK(HighBitIndex(mask), 63);
-				PR_CHECK(LowBitIndex(mask), 2U);
-				PR_CHECK(LowBit(mask), 4);
-				PR_CHECK(HighBit(mask), 0x8000000000000000ULL);
-			}
-			{
-				PR_CHECK(PowerOfTwoGreaterThan(0x12345678), 0x20000000);
-				PR_CHECK(PowerOfTwoGreaterThan(0x9876543210UL), 0x10000000000UL);
-				PR_CHECK(PowerOfTwoGreaterThan(uint8_t(0x9a)), uint8_t(0x00));
-				PR_CHECK(PowerOfTwoGreaterThan(uint16_t(0x9a)), uint16_t(0x100));
-			}
-			{
-				auto a = uint8(0b10110101);
-				auto b = uint8(0b10101101);
-				auto c = ReverseBits8(a);
-				PR_CHECK(b, c);
-			}
-			{            //01234567890123456789012345678901 32bits
-				auto a = 0b01100011110000011111100000001111U;
+			PR_CHECK(bits.size(), 5U);
+			PR_CHECK(bits[0], 1U << 0);
+			PR_CHECK(bits[1], 1U << 1);
+			PR_CHECK(bits[2], 1U << 4);
+			PR_CHECK(bits[3], 1U << 6);
+			PR_CHECK(bits[4], 1U << 9);
+		}
+		{
+			char const* mask_str = "1001110010";
+			auto mask = Bits<uint>(mask_str);
+			PR_CHECK(mask, 626U);
+			PR_CHECK(BitStr(mask), mask_str);
+			PR_CHECK(HighBitIndex(mask), 9U);
+			PR_CHECK(LowBitIndex(mask), 1U);
+			PR_CHECK(LowBit(mask), 2U);
+			PR_CHECK(HighBit(mask), 0x200U);
+		}
+		{
+			char const* mask_str = "1111010100010";
+			auto mask = Bits<short>(mask_str);
+			PR_CHECK(mask, 7842);
+			PR_CHECK(HighBitIndex(mask), 12);
+			PR_CHECK(LowBitIndex(mask), 1);
+			PR_CHECK(LowBit(mask), 2);
+			PR_CHECK(HighBit(mask), 0x1000);
+		}
+		{
+			char const* mask_str = "1001001100110010101010010100111010010110010101110110000110100100";
+			auto mask = Bits<unsigned long long>(mask_str);
+			PR_CHECK(mask, 0x9332A94E965761A4ULL);
+			PR_CHECK(HighBitIndex(mask), 63);
+			PR_CHECK(LowBitIndex(mask), 2U);
+			PR_CHECK(LowBit(mask), 4);
+			PR_CHECK(HighBit(mask), 0x8000000000000000ULL);
+		}
+		{
+			PR_CHECK(PowerOfTwoGreaterThan(0x12345678), 0x20000000);
+			PR_CHECK(PowerOfTwoGreaterThan(0x9876543210UL), 0x10000000000UL);
+			PR_CHECK(PowerOfTwoGreaterThan(uint8_t(0x9a)), uint8_t(0x00));
+			PR_CHECK(PowerOfTwoGreaterThan(uint16_t(0x9a)), uint16_t(0x100));
+		}
+		{
+			auto a = uint8(0b10110101);
+			auto b = uint8(0b10101101);
+			auto c = ReverseBits8(a);
+			PR_CHECK(b, c);
+		}
+		{            //01234567890123456789012345678901 32bits
+			auto a = 0b01100011110000011111100000001111U;
 
-				auto b = ReverseBits32(a);
-				auto B = 0b11110000000111111000001111000110U;
-				PR_CHECK(b, B);
+			auto b = ReverseBits32(a);
+			auto B = 0b11110000000111111000001111000110U;
+			PR_CHECK(b, B);
 
-				auto c = ReverseBits32(a, 8); // just the lower 8 bits
-				auto C = 0b01100011110000011111100011110000U;
-				PR_CHECK(c, C);
-			}
-			{            //0123456789_123456789_123456789_123456789_123456789_123456879_123 64bits
-				auto a = 0b0110001111000001111110000000111111110000000001111111111000000000ULL;
+			auto c = ReverseBits32(a, 8); // just the lower 8 bits
+			auto C = 0b01100011110000011111100011110000U;
+			PR_CHECK(c, C);
+		}
+		{            //0123456789_123456789_123456789_123456789_123456789_123456879_123 64bits
+			auto a = 0b0110001111000001111110000000111111110000000001111111111000000000ULL;
 
-				auto b = ReverseBits64(a);
-				auto B = 0b0000000001111111111000000000111111110000000111111000001111000110ULL;
-				PR_CHECK(b, B);
+			auto b = ReverseBits64(a);
+			auto B = 0b0000000001111111111000000000111111110000000111111000001111000110ULL;
+			PR_CHECK(b, B);
 
-				auto c = ReverseBits64(a, 12); // just the lower 12 bits
-				auto C = 0b0110001111000001111110000000111111110000000001111111000000000111ULL;
-				PR_CHECK(c, C);
-			}
+			auto c = ReverseBits64(a, 12); // just the lower 12 bits
+			auto C = 0b0110001111000001111110000000111111110000000001111111000000000111ULL;
+			PR_CHECK(c, C);
 		}
 	}
 }

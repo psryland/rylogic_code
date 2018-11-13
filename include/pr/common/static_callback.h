@@ -79,31 +79,28 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::common
 {
-	namespace unittests
+	PRUnitTest(StaticCallbackTests)
 	{
-		PRUnitTest(pr_common_static_callback)
+		struct L
 		{
-			struct L
+			static void __stdcall Func(void* ctx)
 			{
-				static void __stdcall Func(void* ctx)
-				{
-					(void)ctx;
-				}
-			};
+				(void)ctx;
+			}
+		};
 
-			auto cb0 = StaticCallBack(L::Func, (void*)0);
-			auto cb1 = StaticCallBack(L::Func, (void*)0);
-			auto cb2 = StaticCallBack(L::Func, (void*)1);
+		auto cb0 = StaticCallBack(L::Func, (void*)0);
+		auto cb1 = StaticCallBack(L::Func, (void*)0);
+		auto cb2 = StaticCallBack(L::Func, (void*)1);
 
-			PR_CHECK(cb0 == cb1, true);
-			PR_CHECK(cb0 != cb2, true);
-			PR_CHECK(cb0 <  cb2, true);
-			PR_CHECK(cb0 >  cb2, false);
-			PR_CHECK(cb0 <= cb1, true);
-			PR_CHECK(cb0 >= cb2, false);
-		}
+		PR_CHECK(cb0 == cb1, true);
+		PR_CHECK(cb0 != cb2, true);
+		PR_CHECK(cb0 <  cb2, true);
+		PR_CHECK(cb0 >  cb2, false);
+		PR_CHECK(cb0 <= cb1, true);
+		PR_CHECK(cb0 >= cb2, false);
 	}
 }
 #endif

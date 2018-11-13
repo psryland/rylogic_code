@@ -1185,7 +1185,7 @@ namespace Rylogic.Interop.Win32
 		#endregion
 
 		/// <summary>Helper method for loading a dll from a platform specific path. 'dllname' should include the extn</summary>
-		public static IntPtr LoadDll(string dllname, string dir = @".\lib\$(platform)")
+		public static IntPtr LoadDll(string dllname, string dir = @".\lib\$(platform)\$(config)")
 		{
 			Func<string,IntPtr> TryLoad = path =>
 				{

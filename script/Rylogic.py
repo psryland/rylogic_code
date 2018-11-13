@@ -4,7 +4,36 @@
 import sys, os, time, shutil, glob, subprocess, threading, re, enum, socket, zipfile, ctypes, hashlib, urllib.request
 import xml.etree.ElementTree as xml
 import xml.dom.minidom as minidom
+from typing import Callable
 import UserVars
+
+# Support symlink on windows
+# On windows, the os.symlink function throws an error when the user doesn't have
+# privileges, or when the OS is too old. From windows 10 creator's update onward
+# it's possible to create symlinks without admin rights. Prior to that you needed
+# to be admin. This bit of code, replaces the symlink function for windows so that
+# it includes the "create without admin privilege" flag
+if sys.platform == "win32":
+	import ctypes
+	csl = ctypes.windll.kernel32.CreateSymbolicLinkW
+	csl.argtypes = (ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint32)
+	csl.restype = ctypes.c_ubyte
+
+	def CreateSymLink(src:str, dst:str, is_dir:bool):
+		# SYMBOLIC_LINK_FLAG_DIRECTORY = 1
+		# SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE = 2
+		flags = 2 | (1 if src != None and is_dir else 0)
+		r = csl(dst, src, flags)
+		if r == 0: raise ctypes.WinError()
+
+	global os
+	os.symlink = CreateSymLink
+
+# Catch and return an exception
+def Catch(func:Callable):
+	try: func()
+	except Exception as ex: return ex
+	return None
 
 # Terminate the script indicating success
 def OnSuccess(msg = "\nSuccess\n", enter_to_close=False, pause_time_seconds=5, sys_exit=False):
@@ -462,6 +491,33 @@ def CheckDependencies(deps, touch_file):
 	if newer > touch:
 		TouchFile(touch_file)
 		
+# Find the visual studio batch file for setting up a NMake environment
+def SetupVcEnvironment():
+	if sys.platform != "win32": return
+	if 'VISUALSTUDIOVERSION' in os.environ: return
+	print("Initializing VS Environment", flush=True)
+
+	# Find 'vswhere.exe' from the VS installer
+	vswhere = os.path.join(os.environ["ProgramFiles(x86)"], "Microsoft Visual Studio", "Installer", "vswhere.exe")
+	if not os.path.exists(vswhere):
+		raise ValueError(f"vswhere.exe not found at: {vswhere}")
+
+	# Get the VS install path
+	vs_path = subprocess.check_output([vswhere, "-latest", "-property", "installationPath"], universal_newlines=True).rstrip()
+
+	# Get the VcVars batch file
+	vsvars_path = os.path.join(vs_path, "VC", "Auxiliary", "Build", "vcvars64.bat")
+
+	# Run the vcvars batch file, then dump the state of the environment variables
+	env = subprocess.check_output(["cmd", "/C", vsvars_path, "&", "set"], universal_newlines=True)
+
+	# Add/Replace the environment variables in 'os.environ'
+	for line in env.splitlines():
+		m = re.fullmatch("(.+)=(.*)", line)
+		if m: os.environ[m[1]] = m[2]
+
+	return os.environ
+	
 # Invoke MSBuild on a solution or project file.
 # Solution file usage:
 #   sln_or_proj_file = "C:\path\mysolution.sln"
@@ -697,27 +753,6 @@ class EMsgBoxBtns(enum.IntEnum):
 def MsgBox(msg:str, title:str, btns=EMsgBoxBtns.Ok):
 	ctypes.windll.user32.MessageBoxW(0, msg, title, btns
 	)
-
-# Support symlink on windows
-# On windows, the os.symlink function throws an error when the user doesn't have
-# privileges, or when the OS is too old. From windows 10 creator's update onward
-# it's possible to create symlinks without admin rights. Prior to that you needed
-# to be admin.
-if sys.platform == "win32":
-	import ctypes
-	csl = ctypes.windll.kernel32.CreateSymbolicLinkW
-	csl.argtypes = (ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint32)
-	csl.restype = ctypes.c_ubyte
-
-	def CreateSymLink(src:str, dst:str, is_dir:bool):
-		# SYMBOLIC_LINK_FLAG_DIRECTORY = 1
-		# SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE = 2
-		flags = 2 | (1 if src != None and is_dir else 0)
-		r = csl(dst, src, flags)
-		if r == 0: raise ctypes.WinError()
-
-	global os
-	os.symlink = CreateSymLink
 
 # Testing
 if __name__ == "__main__":

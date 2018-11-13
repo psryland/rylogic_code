@@ -18,9 +18,6 @@
 //
 
 #pragma once
-#ifndef PR_COMMON_ENUMERABLE_H
-#define PR_COMMON_ENUMERABLE_H
-
 #include <iterator>
 
 namespace pr
@@ -70,56 +67,48 @@ namespace pr
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include <vector>
-namespace pr
+namespace pr::common
 {
-	namespace unittests
+	namespace unittests::enumerable
 	{
-		namespace enumerable
+		struct Foo
 		{
-			struct Foo
+			typedef std::vector<int> Cont;
+			Cont m_int;
+			Foo()
 			{
-				typedef std::vector<int> Cont;
-				Cont m_int;
-				Foo()
-				{
-					m_int.push_back(1);
-					m_int.push_back(2);
-					m_int.push_back(3);
-				}
-				pr::Enumerable<pr::FilterIter<Cont::iterator, bool(*)(int)>> OddInts()
-				{
-					bool (*pred)(int) = [](int item) { return (item % 2) == 1; };
-					return pr::MakeEnumerable(m_int, pred);
-				}
-			};
+				m_int.push_back(1);
+				m_int.push_back(2);
+				m_int.push_back(3);
+			}
+			pr::Enumerable<pr::FilterIter<Cont::iterator, bool(*)(int)>> OddInts()
+			{
+				bool (*pred)(int) = [](int item) { return (item % 2) == 1; };
+				return pr::MakeEnumerable(m_int, pred);
+			}
+		};
+	}
+	PRUnitTest(EnumerableTests)
+	{
+		using namespace unittests::enumerable;
+
+		{
+			Foo foo;
+			for (auto& i : foo.OddInts())
+				i *= 10;
+			PR_CHECK(foo.m_int[0], 10);
+			PR_CHECK(foo.m_int[1], 2);
+			PR_CHECK(foo.m_int[2], 30);
 		}
-
-		PRUnitTest(pr_common_enumerable)
 		{
-			using namespace pr::unittests::enumerable;
-
-			{
-				Foo foo;
-				for (auto& i : foo.OddInts())
-					i *= 10;
-				PR_CHECK(foo.m_int[0], 10);
-				PR_CHECK(foo.m_int[1], 2);
-				PR_CHECK(foo.m_int[2], 30);
-			}
-			{
-				Foo foo;
-				for (auto& i : pr::MakeEnumerable(foo.m_int, [](int item){ return (item % 2) == 0; }))
-					i *= -10;
+			Foo foo;
+			for (auto& i : pr::MakeEnumerable(foo.m_int, [](int item){ return (item % 2) == 0; }))
+				i *= -10;
 				
-				PR_CHECK(foo.m_int[0], 1);
-				PR_CHECK(foo.m_int[1], -20);
-				PR_CHECK(foo.m_int[2], 3);
-			}
+			PR_CHECK(foo.m_int[0], 1);
+			PR_CHECK(foo.m_int[1], -20);
+			PR_CHECK(foo.m_int[2], 3);
 		}
 	}
 }
 #endif
-
-#endif
-
-

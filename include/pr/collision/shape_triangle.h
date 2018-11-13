@@ -16,7 +16,7 @@ namespace pr
 			m4x4  m_v; // <x,y,z> = verts of the triangle, w = normal. Cross3(w, y-x) should point toward the interior of the triangle
 
 			ShapeTriangle() = default;
-			ShapeTriangle(v4_cref a, v4_cref b, v4_cref c, m4x4_cref shape_to_model = m4x4Identity, MaterialId material_id = 0, Shape::EFlags flags = Shape::EFlags::None)
+			ShapeTriangle(v4_cref<> a, v4_cref<> b, v4_cref<> c, m4_cref<> shape_to_model = m4x4Identity, MaterialId material_id = 0, Shape::EFlags flags = Shape::EFlags::None)
 				:m_base(EShape::Triangle, sizeof(ShapeTriangle), shape_to_model, material_id, flags)
 				,m_v(a, b, c, Normalise3(Cross3(b-a,c-b)))
 			{
@@ -56,7 +56,7 @@ namespace pr
 		}
 
 		// Return a support vertex for a triangle
-		inline v4 SupportVertex(ShapeTriangle const& shape, v4_cref direction, int, int& sup_vert_id)
+		inline v4 SupportVertex(ShapeTriangle const& shape, v4_cref<> direction, int, int& sup_vert_id)
 		{
 			v4 d(Dot3(direction, shape.m_v.x), Dot3(direction, shape.m_v.y), Dot3(direction, shape.m_v.z), 0.0f);
 			sup_vert_id = LargestElement3(d);
@@ -64,7 +64,7 @@ namespace pr
 		}
 
 		// Find the nearest point and distance from a point to a shape. 'shape' and 'point' are in the same space
-		inline void ClosestPoint(ShapeTriangle const& shape, v4_cref point, float& distance, v4& closest)
+		inline void ClosestPoint(ShapeTriangle const& shape, v4_cref<> point, float& distance, v4& closest)
 		{
 			closest = pr::ClosestPoint_PointToTriangle(point, shape.m_v.x, shape.m_v.y, shape.m_v.z);
 			distance = Length3(point - closest);

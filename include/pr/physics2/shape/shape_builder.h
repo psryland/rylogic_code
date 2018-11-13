@@ -222,23 +222,23 @@ namespace pr
 			{
 				auto& model = *m_model;
 
-				model.m_mp.m_os_inertia_tensor = Inertia{};
+				model.m_mp.m_os_inertia_tensor = m3x4{};
 				for (auto& p : model.m_prim_list)
 				{
 					auto& prim = *p;
 					assert("All primitives should be in centre of mass frame" && FEql3(prim.m_mp.m_centre_of_mass, v4Zero));
 
-					auto primitive_inertia  = prim.m_mp.m_mass * prim.m_mp.m_os_inertia_tensor;
+					auto primitive_inertia = InertiaBuilder(prim.m_mp.m_mass * prim.m_mp.m_os_inertia_tensor);
 
 					// Rotate the inertia tensor into object space
 					auto prim_to_model = prim.shape().m_s2p.rot;
 					primitive_inertia  = primitive_inertia.Rotate(prim_to_model);
 
 					// Translate the inertia tensor using the parallel axis theorem
-					primitive_inertia = primitive_inertia.Translate(prim.shape().m_s2p.pos, prim.m_mp.m_mass, Inertia::AwayFromCoM);
+					primitive_inertia = primitive_inertia.Translate(prim.shape().m_s2p.pos, prim.m_mp.m_mass, InertiaBuilder::AwayFromCoM);
 
 					// Add the inertia to the object inertia tensor
-					model.m_mp.m_os_inertia_tensor += primitive_inertia;
+					model.m_mp.m_os_inertia_tensor += primitive_inertia.m;
 				}
 
 				// Assume mass == 1.0f for the model inertia tensor
@@ -258,19 +258,16 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::physics
 {
-	namespace unittests
+	PRUnitTest(ShapeBuilderTests)
 	{
-		PRUnitTest(pr_physics_shape_builder)
-		{
-			using namespace pr::collision;
-			using namespace pr::physics;
+		using namespace pr::collision;
+		using namespace pr::physics;
 
-			ShapeBuilder sb;
-			sb.AddShape(ShapeBox(pr::v4(0.2f, 0.4f, 0.3f, 0), pr::m4x4::Translation(0.0f, 0.0f, 0.3f)));
-			//sb.AddShape(ShapeBox(pr::v4(0.2f, 0.4f, 0.3f, 0), pr::m4x4::Transform()));
-		}
+		ShapeBuilder sb;
+		sb.AddShape(ShapeBox(pr::v4(0.2f, 0.4f, 0.3f, 0), pr::m4x4::Translation(0.0f, 0.0f, 0.3f)));
+		//sb.AddShape(ShapeBox(pr::v4(0.2f, 0.4f, 0.3f, 0), pr::m4x4::Transform()));
 	}
 }
 #endif

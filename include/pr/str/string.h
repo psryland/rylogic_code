@@ -1555,158 +1555,155 @@ namespace std
 #include <string>
 #include "pr/common/unittests.h"
 #include "pr/str/string_core.h"
-namespace pr
+namespace pr::str
 {
-	namespace unittests
+	PRUnitTest(StringTests)
 	{
-		PRUnitTest(pr_str_string)
+		char const*    src = "abcdefghij";
+		wchar_t const* wsrc = L"abcdefghij";
+		std::string s0 = "std::string";
+		std::wstring w0 = L"std::wstring";
+
+		pr::string<> str0;              PR_CHECK(str0.empty(), true);
+		pr::string<> str1 = "Test1";    PR_CHECK(str1, "Test1");
+		pr::string<> str2 = str1;       PR_CHECK(str2, str1);
+		PR_CHECK(str2.c_str() == str1.c_str(), false);
+
+		pr::string<> str3(str1, 2, pr::string<>::npos);
+		PR_CHECK(str3.compare("st1"), 0);
+
+		pr::string<> str4 = s0;
+		PR_CHECK(str4, pr::string<>(s0));
+
+		pr::string<wchar_t> wstr0 = wsrc;
+		PR_CHECK(wstr0.compare(wsrc), 0);
+
+		pr::string<wchar_t> wstr1 = w0;
+		PR_CHECK(wstr1.compare(w0), 0);
+
+		pr::string<wchar_t> wstr2 = L"C++ string";
+		std::wstring        w2    = L"C++ string";
+		PR_CHECK(wstr2 == w2, true);
+		wstr2 = L"pr C++ string";
+		w2    = L"std C++ string";
+		PR_CHECK(wstr2 != w2, true);
+
+		str0.assign(10, 'A');                               PR_CHECK(str0, "AAAAAAAAAA");
+		str1.assign(s0);                                    PR_CHECK(str1, "std::string");
+		str2.assign("Test2");                               PR_CHECK(str2, "Test2");
+		str4.assign(src, src + 6);                          PR_CHECK(str4, "abcdef");
+		str4.assign(s0.begin(), s0.begin() + 5);            PR_CHECK(str4, "std::");
+
+		str0.append(str1, 0, 3);                            PR_CHECK(str0  , "AAAAAAAAAAstd");
+		str1.append(str2);                                  PR_CHECK(str1  , "std::stringTest2");
+		str2.append(3, 'B');                                PR_CHECK(str2  , "Test2BBB");
+		str0.append("Hello", 4);                            PR_CHECK(str0  , "AAAAAAAAAAstdHell");
+		str0.append("o");                                   PR_CHECK(str0  , "AAAAAAAAAAstdHello");
+		str4.append(s0.begin()+7, s0.end());                PR_CHECK(str4  , "std::ring");
+		wstr0.append(4, L'x');                              PR_CHECK(wstr0 , L"abcdefghijxxxx");
+
+		str0.insert(2, 3, 'C');                             PR_CHECK(str0, "AACCCAAAAAAAAstdHello");
+		str1.insert(str1.begin(), 'D');                     PR_CHECK(str1, "Dstd::stringTest2");
+		str2.insert(str2.begin());                          PR_CHECK(str2[0] == 0 && !str2.empty(), true);
+		str3.insert(2, pr::string<>("and"));                PR_CHECK(str3, "stand1");
+
+		str0.erase(0, 13);                                  PR_CHECK(str0, "stdHello");
+		str2.erase(0, 1);                                   PR_CHECK(str2, "Test2BBB");
+		str2.erase(str2.begin()+4);                         PR_CHECK(str2, "TestBBB");
+		str2.erase(str2.begin()+4, str2.begin()+7);         PR_CHECK(str2, "Test");
+		str2 += "2BBB";
+
+		PR_CHECK(str0.compare(1, 2, "te", 2)                       < 0, true);
+		PR_CHECK(str1.compare(1, 5, pr::string<>("Dstd::"), 1, 5) == 0, true);
+		PR_CHECK(str2.compare(pr::string<>("Test2BBB"))           == 0, true);
+		PR_CHECK(str0.compare(0, 2, pr::string<>("sr"))            > 0, true);
+		PR_CHECK(str1.compare("Dstd::string")                      > 0, true);
+		PR_CHECK(str2.compare(5, 3, "BBB")                        == 0, true);
+
+		str0.clear();
+		PR_CHECK(str0.empty() && str0.capacity() == str0.LocalLength - 1, true);
+		PR_CHECK(::size_t(str1.end() - str1.begin()), str1.size());
+		str1.resize(0);                                     PR_CHECK(str1.empty(), true);
+		str1.push_back('E');                                PR_CHECK(str1.size() == 1 && str1[0] == 'E', true);
+
+		str0 = pr::string<>("Test0");                       PR_CHECK(str0, "Test0");
+		str1 = "Test1";                                     PR_CHECK(str1, "Test1");
+		str2 = 'F';                                         PR_CHECK(str2, "F");
+
+		str0 += pr::string<>("Pass");                       PR_CHECK(str0, "Test0Pass");
+		str1 += "Pass";                                     PR_CHECK(str1, "Test1Pass");
+		str2 += 'G';                                        PR_CHECK(str2, "FG");
+
+		str0 = pr::string<>("Jin") + pr::string<>("Jang");  PR_CHECK(str0, "JinJang");
+		str1 = pr::string<>("Purple") + "Monkey";           PR_CHECK(str1, "PurpleMonkey");
+		str2 = pr::string<>("H") + 'I';                     PR_CHECK(str2, "HI");
+
+		wstr0 = L"A";                                       PR_CHECK(wstr0, L"A");
+		wstr0 += L'b';                                      PR_CHECK(wstr0, L"Ab");
+
+		PR_CHECK(pr::string<>("A") == pr::string<>("A") , true);
+		PR_CHECK(pr::string<>("A") != pr::string<>("B") , true);
+		PR_CHECK(pr::string<>("A")  < pr::string<>("B") , true);
+		PR_CHECK(pr::string<>("B")  > pr::string<>("A") , true);
+		PR_CHECK(pr::string<>("A") <= pr::string<>("AB"), true);
+		PR_CHECK(pr::string<>("B") >= pr::string<>("B") , true);
+
+		PR_CHECK(str0.find("Jang", 1, 4)                                         , 3U);
+		PR_CHECK(str0.find(pr::string<>("ang"), 2)                               , 4U);
+		PR_CHECK(str0.find_first_of(pr::string<>("n"), 0)                        , 2U);
+		PR_CHECK(str0.find_first_of("J", 1, 1)                                   , 3U);
+		PR_CHECK(str0.find_first_of("J", 0)                                      , 0U);
+		PR_CHECK(str0.find_first_of('n', 3)                                      , 5U);
+		PR_CHECK(str0.find_last_of(pr::string<>("n"), pr::string<>::npos)        , 5U);
+		PR_CHECK(str0.find_last_of("J", 3, 1)                                    , 3U);
+		PR_CHECK(str0.find_last_of("J", pr::string<>::npos)                      , 3U);
+		PR_CHECK(str0.find_last_of('a', pr::string<>::npos)                      , 4U);
+		PR_CHECK(str0.find_first_not_of(pr::string<>("Jin"), 0)                  , 4U);
+		PR_CHECK(str0.find_first_not_of("ing", 1, 3)                             , 3U);
+		PR_CHECK(str0.find_first_not_of("inJ", 0)                                , 4U);
+		PR_CHECK(str0.find_first_not_of('J', 1)                                  , 1U);
+		PR_CHECK(str0.find_last_not_of(pr::string<>("Jang"), pr::string<>::npos) , 1U);
+		PR_CHECK(str0.find_last_not_of("Jang", 4, 4)                             , 1U);
+		PR_CHECK(str0.find_last_not_of("an", 5)                                  , 3U);
+		PR_CHECK(str0.find_last_not_of('n', 5)                                   , 4U);
+
+		PR_CHECK(str1.substr(6, 4), "Monk");
+
+		str0.resize(0);
+		for (int i = 0; i != 500; ++i)
 		{
-			char const*    src = "abcdefghij";
-			wchar_t const* wsrc = L"abcdefghij";
-			std::string s0 = "std::string";
-			std::wstring w0 = L"std::wstring";
-
-			pr::string<> str0;              PR_CHECK(str0.empty(), true);
-			pr::string<> str1 = "Test1";    PR_CHECK(str1, "Test1");
-			pr::string<> str2 = str1;       PR_CHECK(str2, str1);
-			PR_CHECK(str2.c_str() == str1.c_str(), false);
-
-			pr::string<> str3(str1, 2, pr::string<>::npos);
-			PR_CHECK(str3.compare("st1"), 0);
-
-			pr::string<> str4 = s0;
-			PR_CHECK(str4, pr::string<>(s0));
-
-			pr::string<wchar_t> wstr0 = wsrc;
-			PR_CHECK(wstr0.compare(wsrc), 0);
-
-			pr::string<wchar_t> wstr1 = w0;
-			PR_CHECK(wstr1.compare(w0), 0);
-
-			pr::string<wchar_t> wstr2 = L"C++ string";
-			std::wstring        w2    = L"C++ string";
-			PR_CHECK(wstr2 == w2, true);
-			wstr2 = L"pr C++ string";
-			w2    = L"std C++ string";
-			PR_CHECK(wstr2 != w2, true);
-
-			str0.assign(10, 'A');                               PR_CHECK(str0, "AAAAAAAAAA");
-			str1.assign(s0);                                    PR_CHECK(str1, "std::string");
-			str2.assign("Test2");                               PR_CHECK(str2, "Test2");
-			str4.assign(src, src + 6);                          PR_CHECK(str4, "abcdef");
-			str4.assign(s0.begin(), s0.begin() + 5);            PR_CHECK(str4, "std::");
-
-			str0.append(str1, 0, 3);                            PR_CHECK(str0  , "AAAAAAAAAAstd");
-			str1.append(str2);                                  PR_CHECK(str1  , "std::stringTest2");
-			str2.append(3, 'B');                                PR_CHECK(str2  , "Test2BBB");
-			str0.append("Hello", 4);                            PR_CHECK(str0  , "AAAAAAAAAAstdHell");
-			str0.append("o");                                   PR_CHECK(str0  , "AAAAAAAAAAstdHello");
-			str4.append(s0.begin()+7, s0.end());                PR_CHECK(str4  , "std::ring");
-			wstr0.append(4, L'x');                              PR_CHECK(wstr0 , L"abcdefghijxxxx");
-
-			str0.insert(2, 3, 'C');                             PR_CHECK(str0, "AACCCAAAAAAAAstdHello");
-			str1.insert(str1.begin(), 'D');                     PR_CHECK(str1, "Dstd::stringTest2");
-			str2.insert(str2.begin());                          PR_CHECK(str2[0] == 0 && !str2.empty(), true);
-			str3.insert(2, pr::string<>("and"));                PR_CHECK(str3, "stand1");
-
-			str0.erase(0, 13);                                  PR_CHECK(str0, "stdHello");
-			str2.erase(0, 1);                                   PR_CHECK(str2, "Test2BBB");
-			str2.erase(str2.begin()+4);                         PR_CHECK(str2, "TestBBB");
-			str2.erase(str2.begin()+4, str2.begin()+7);         PR_CHECK(str2, "Test");
-			str2 += "2BBB";
-
-			PR_CHECK(str0.compare(1, 2, "te", 2)                       < 0, true);
-			PR_CHECK(str1.compare(1, 5, pr::string<>("Dstd::"), 1, 5) == 0, true);
-			PR_CHECK(str2.compare(pr::string<>("Test2BBB"))           == 0, true);
-			PR_CHECK(str0.compare(0, 2, pr::string<>("sr"))            > 0, true);
-			PR_CHECK(str1.compare("Dstd::string")                      > 0, true);
-			PR_CHECK(str2.compare(5, 3, "BBB")                        == 0, true);
-
-			str0.clear();
-			PR_CHECK(str0.empty() && str0.capacity() == str0.LocalLength - 1, true);
-			PR_CHECK(::size_t(str1.end() - str1.begin()), str1.size());
-			str1.resize(0);                                     PR_CHECK(str1.empty(), true);
-			str1.push_back('E');                                PR_CHECK(str1.size() == 1 && str1[0] == 'E', true);
-
-			str0 = pr::string<>("Test0");                       PR_CHECK(str0, "Test0");
-			str1 = "Test1";                                     PR_CHECK(str1, "Test1");
-			str2 = 'F';                                         PR_CHECK(str2, "F");
-
-			str0 += pr::string<>("Pass");                       PR_CHECK(str0, "Test0Pass");
-			str1 += "Pass";                                     PR_CHECK(str1, "Test1Pass");
-			str2 += 'G';                                        PR_CHECK(str2, "FG");
-
-			str0 = pr::string<>("Jin") + pr::string<>("Jang");  PR_CHECK(str0, "JinJang");
-			str1 = pr::string<>("Purple") + "Monkey";           PR_CHECK(str1, "PurpleMonkey");
-			str2 = pr::string<>("H") + 'I';                     PR_CHECK(str2, "HI");
-
-			wstr0 = L"A";                                       PR_CHECK(wstr0, L"A");
-			wstr0 += L'b';                                      PR_CHECK(wstr0, L"Ab");
-
-			PR_CHECK(pr::string<>("A") == pr::string<>("A") , true);
-			PR_CHECK(pr::string<>("A") != pr::string<>("B") , true);
-			PR_CHECK(pr::string<>("A")  < pr::string<>("B") , true);
-			PR_CHECK(pr::string<>("B")  > pr::string<>("A") , true);
-			PR_CHECK(pr::string<>("A") <= pr::string<>("AB"), true);
-			PR_CHECK(pr::string<>("B") >= pr::string<>("B") , true);
-
-			PR_CHECK(str0.find("Jang", 1, 4)                                         , 3U);
-			PR_CHECK(str0.find(pr::string<>("ang"), 2)                               , 4U);
-			PR_CHECK(str0.find_first_of(pr::string<>("n"), 0)                        , 2U);
-			PR_CHECK(str0.find_first_of("J", 1, 1)                                   , 3U);
-			PR_CHECK(str0.find_first_of("J", 0)                                      , 0U);
-			PR_CHECK(str0.find_first_of('n', 3)                                      , 5U);
-			PR_CHECK(str0.find_last_of(pr::string<>("n"), pr::string<>::npos)        , 5U);
-			PR_CHECK(str0.find_last_of("J", 3, 1)                                    , 3U);
-			PR_CHECK(str0.find_last_of("J", pr::string<>::npos)                      , 3U);
-			PR_CHECK(str0.find_last_of('a', pr::string<>::npos)                      , 4U);
-			PR_CHECK(str0.find_first_not_of(pr::string<>("Jin"), 0)                  , 4U);
-			PR_CHECK(str0.find_first_not_of("ing", 1, 3)                             , 3U);
-			PR_CHECK(str0.find_first_not_of("inJ", 0)                                , 4U);
-			PR_CHECK(str0.find_first_not_of('J', 1)                                  , 1U);
-			PR_CHECK(str0.find_last_not_of(pr::string<>("Jang"), pr::string<>::npos) , 1U);
-			PR_CHECK(str0.find_last_not_of("Jang", 4, 4)                             , 1U);
-			PR_CHECK(str0.find_last_not_of("an", 5)                                  , 3U);
-			PR_CHECK(str0.find_last_not_of('n', 5)                                   , 4U);
-
-			PR_CHECK(str1.substr(6, 4), "Monk");
-
-			str0.resize(0);
-			for (int i = 0; i != 500; ++i)
-			{
-				str0.insert(str0.begin() ,'A'+(i%24));
-				str0.insert(str0.end()   ,'A'+(i%24));
-				PR_CHECK(str0.size(), size_t((1+i) * 2));
-			}
-
-			str4 = "abcdef";
-			std::string stdstr = str4;     PR_CHECK(pr::str::Equal(stdstr, str4), true);
-			stdstr = str3;                 PR_CHECK(pr::str::Equal(stdstr, str3), true);
-
-			std::string str5 = "ABCDEFG";
-			str5.replace(1, 3, "bcde", 2);
-			PR_CHECK(str5.size(), 6U);
-
-			pr::string<> str6 = "abcdefghij";
-			str6.replace(0, 3, pr::string<>("AB"));              PR_CHECK(str6, "ABdefghij");
-			str6.replace(3, 3, pr::string<>("DEFGHI"), 1, 3);    PR_CHECK(str6, "ABdEFGhij");
-			str6.replace(1, pr::string<>::npos, "bcdefghi", 4);  PR_CHECK(str6, "Abcde");
-			str6.replace(1, pr::string<>::npos, "bcdefghi");     PR_CHECK(str6, "Abcdefghi");
-			str6.replace(4, 20, 3, 'X');                         PR_CHECK(str6, "AbcdXXX");
-
-			// Test move constructor/assignment
-			pr::string<> str7 = "my_string";
-			pr::string<> str8 = std::move(str7);
-			PR_CHECK(str7.empty(), true);
-			PR_CHECK(str8, "my_string");
-
-			pr::string<char,4> str9 = "very long string that has been allocated";
-			pr::string<char,8> str10 = "a different very long string that's been allocated";
-			str10 = std::move(str9);
-			PR_CHECK(str9.empty(), true);
-			PR_CHECK(str10, "very long string that has been allocated");
-			PR_CHECK(str9.c_str() == str10.c_str(), false);
+			str0.insert(str0.begin() ,'A'+(i%24));
+			str0.insert(str0.end()   ,'A'+(i%24));
+			PR_CHECK(str0.size(), size_t((1+i) * 2));
 		}
+
+		str4 = "abcdef";
+		std::string stdstr = str4;     PR_CHECK(pr::str::Equal(stdstr, str4), true);
+		stdstr = str3;                 PR_CHECK(pr::str::Equal(stdstr, str3), true);
+
+		std::string str5 = "ABCDEFG";
+		str5.replace(1, 3, "bcde", 2);
+		PR_CHECK(str5.size(), 6U);
+
+		pr::string<> str6 = "abcdefghij";
+		str6.replace(0, 3, pr::string<>("AB"));              PR_CHECK(str6, "ABdefghij");
+		str6.replace(3, 3, pr::string<>("DEFGHI"), 1, 3);    PR_CHECK(str6, "ABdEFGhij");
+		str6.replace(1, pr::string<>::npos, "bcdefghi", 4);  PR_CHECK(str6, "Abcde");
+		str6.replace(1, pr::string<>::npos, "bcdefghi");     PR_CHECK(str6, "Abcdefghi");
+		str6.replace(4, 20, 3, 'X');                         PR_CHECK(str6, "AbcdXXX");
+
+		// Test move constructor/assignment
+		pr::string<> str7 = "my_string";
+		pr::string<> str8 = std::move(str7);
+		PR_CHECK(str7.empty(), true);
+		PR_CHECK(str8, "my_string");
+
+		pr::string<char,4> str9 = "very long string that has been allocated";
+		pr::string<char,8> str10 = "a different very long string that's been allocated";
+		str10 = std::move(str9);
+		PR_CHECK(str9.empty(), true);
+		PR_CHECK(str10, "very long string that has been allocated");
+		PR_CHECK(str9.c_str() == str10.c_str(), false);
 	}
 }
 #endif

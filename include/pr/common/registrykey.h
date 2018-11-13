@@ -291,60 +291,57 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::common
 {
-	namespace unittests
+	PRUnitTest(RegistryKeyTests)
 	{
-		PRUnitTest(pr_common_registrykey)
-		{
-			char const* subkey = "Software\\Rylogic\\unittest\\";
+		char const* subkey = "Software\\Rylogic\\unittest\\";
 
-			{// Create a dummy key
-				auto rkey = pr::RegistryKey(HKEY_CURRENT_USER, subkey, pr::registry::EAccess::KeyWrite);
+		{// Create a dummy key
+			auto rkey = pr::RegistryKey(HKEY_CURRENT_USER, subkey, pr::registry::EAccess::KeyWrite);
 
-				// Write some values
-				rkey.Write("String", "Paul Was Here");
-				rkey.Write("DWord", 1234U);
-				rkey.Write("Double", 3.14);
-				rkey.Write("Blob", "ABCD", sizeof("ABCD"), REG_BINARY);
-			}
-			{// Check values exist
-				auto rkey = pr::RegistryKey(HKEY_CURRENT_USER, subkey, pr::registry::EAccess::KeyRead);
+			// Write some values
+			rkey.Write("String", "Paul Was Here");
+			rkey.Write("DWord", 1234U);
+			rkey.Write("Double", 3.14);
+			rkey.Write("Blob", "ABCD", sizeof("ABCD"), REG_BINARY);
+		}
+		{// Check values exist
+			auto rkey = pr::RegistryKey(HKEY_CURRENT_USER, subkey, pr::registry::EAccess::KeyRead);
 
-				PR_CHECK(rkey.HasValue("String"), true);
-				PR_CHECK(rkey.HasValue("DWord"), true);
-				PR_CHECK(rkey.HasValue("Double"), true);
-				PR_CHECK(rkey.HasValue("Blob"), true);
+			PR_CHECK(rkey.HasValue("String"), true);
+			PR_CHECK(rkey.HasValue("DWord"), true);
+			PR_CHECK(rkey.HasValue("Double"), true);
+			PR_CHECK(rkey.HasValue("Blob"), true);
 
-				// Read the values
-				PR_CHECK(rkey.Read<std::string>("String") == "Paul Was Here", true);
-				PR_CHECK(rkey.Read<DWORD>("DWord") == 1234U, true);
-				PR_CHECK(FEql(rkey.Read<double>("Double"), 3.14), true);
+			// Read the values
+			PR_CHECK(rkey.Read<std::string>("String") == "Paul Was Here", true);
+			PR_CHECK(rkey.Read<DWORD>("DWord") == 1234U, true);
+			PR_CHECK(FEql(rkey.Read<double>("Double"), 3.14), true);
 
-				char blob[5];
-				rkey.Read("Blob", blob, sizeof(blob), REG_BINARY);
-				PR_CHECK(memcmp(blob, "ABCD", 4) == 0, true);
-			}
-			{// Delete the values
-				auto rkey = pr::RegistryKey(HKEY_CURRENT_USER, subkey, pr::registry::EAccess::KeyWrite);
+			char blob[5];
+			rkey.Read("Blob", blob, sizeof(blob), REG_BINARY);
+			PR_CHECK(memcmp(blob, "ABCD", 4) == 0, true);
+		}
+		{// Delete the values
+			auto rkey = pr::RegistryKey(HKEY_CURRENT_USER, subkey, pr::registry::EAccess::KeyWrite);
 
-				rkey.DeleteValue("String");
-				rkey.DeleteValue("DWord");
-				rkey.DeleteValue("Double");
-				rkey.DeleteValue("Blob");
-			}
-			{// Check values deleted
-				auto rkey = pr::RegistryKey(HKEY_CURRENT_USER, subkey, pr::registry::EAccess::KeyRead);
+			rkey.DeleteValue("String");
+			rkey.DeleteValue("DWord");
+			rkey.DeleteValue("Double");
+			rkey.DeleteValue("Blob");
+		}
+		{// Check values deleted
+			auto rkey = pr::RegistryKey(HKEY_CURRENT_USER, subkey, pr::registry::EAccess::KeyRead);
 
-				PR_CHECK(rkey.HasValue("String"), false);
-				PR_CHECK(rkey.HasValue("DWord"), false);
-				PR_CHECK(rkey.HasValue("Double"), false);
-				PR_CHECK(rkey.HasValue("Blob"), false);
-			}
-			{// Delete the key
-				pr::RegistryKey::Delete(HKEY_CURRENT_USER, subkey);
-				PR_CHECK(pr::RegistryKey::Exists(HKEY_CURRENT_USER, subkey), false);
-			}
+			PR_CHECK(rkey.HasValue("String"), false);
+			PR_CHECK(rkey.HasValue("DWord"), false);
+			PR_CHECK(rkey.HasValue("Double"), false);
+			PR_CHECK(rkey.HasValue("Blob"), false);
+		}
+		{// Delete the key
+			pr::RegistryKey::Delete(HKEY_CURRENT_USER, subkey);
+			PR_CHECK(pr::RegistryKey::Exists(HKEY_CURRENT_USER, subkey), false);
 		}
 	}
 }

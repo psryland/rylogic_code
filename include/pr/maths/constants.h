@@ -75,3 +75,4 @@ namespace pr
 		static_assert(int64(double(max_int_in_double + 1)) != max_int_in_double + 1, "");
 	}
 }
+

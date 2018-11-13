@@ -43,6 +43,12 @@
     <ClInclude Include="..\include\pr\collision\support.h" />
     <ClInclude Include="..\include\pr\gui\view3d_panel.h" />
     <ClInclude Include="..\include\pr\gui\wingui.h" />
+    <ClInclude Include="..\include\pr\maths\maths.h" />
+    <ClInclude Include="..\include\pr\maths\matrix4x4.h" />
+    <ClInclude Include="..\include\pr\maths\spatial.h" />
+    <ClInclude Include="..\include\pr\maths\vector2.h" />
+    <ClInclude Include="..\include\pr\maths\vector3.h" />
+    <ClInclude Include="..\include\pr\maths\vector4.h" />
     <ClInclude Include="..\include\pr\physics2\constants.h" />
     <ClInclude Include="..\include\pr\physics2\forward.h" />
     <ClInclude Include="..\include\pr\physics2\integrater\integrater.h" />
@@ -93,16 +99,16 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <Import Project="props\app.x86.debug.props" />
+    <Import Project="props\debug.x86.app.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <Import Project="props\app.x86.release.props" />
+    <Import Project="props\release.x86.app.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <Import Project="props\app.x64.debug.props" />
+    <Import Project="props\debug.x64.app.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <Import Project="props\app.x64.release.props" />
+    <Import Project="props\release.x64.app.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">

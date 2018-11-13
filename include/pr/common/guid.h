@@ -224,17 +224,14 @@ namespace std
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::common
 {
-	namespace unittests
+	PRUnitTest(GuidTests)
 	{
-		PRUnitTest(pr_common_guid)
-		{
-			PR_CHECK(pr::To<std::string>(pr::GuidInvalid), "00000000-0000-0000-0000-000000000000");
-			PR_CHECK(pr::To<std::wstring>(pr::GuidInvalid), L"00000000-0000-0000-0000-000000000000");
-			PR_CHECK(pr::To<Guid>("00000000-0000-0000-0000-000000000000") == pr::GuidInvalid, true);
-			PR_CHECK(pr::To<Guid>(L"00000000-0000-0000-0000-000000000000") == pr::GuidZero, true);
-		}
+		PR_CHECK(pr::To<std::string>(pr::GuidInvalid), "00000000-0000-0000-0000-000000000000");
+		PR_CHECK(pr::To<std::wstring>(pr::GuidInvalid), L"00000000-0000-0000-0000-000000000000");
+		PR_CHECK(pr::To<Guid>("00000000-0000-0000-0000-000000000000") == pr::GuidInvalid, true);
+		PR_CHECK(pr::To<Guid>(L"00000000-0000-0000-0000-000000000000") == pr::GuidZero, true);
 	}
 }
 #endif

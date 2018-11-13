@@ -237,12 +237,12 @@ ADDIN_API HRESULT WINAPI AddIn_m6x8(DWORD, DbgHelper* pHelper, int, BOOL, char *
 			"{%+g %+g %+g  %+g %+g %+g} \n"
 			"{%+g %+g %+g  %+g %+g %+g} \n"
 			"{%+g %+g %+g  %+g %+g %+g} \n"
-			,mat.m11.x.x ,mat.m11.x.y ,mat.m11.x.z ,mat.m12.x.x ,mat.m12.x.y ,mat.m12.x.z
-			,mat.m11.y.x ,mat.m11.y.y ,mat.m11.y.z ,mat.m12.y.x ,mat.m12.y.y ,mat.m12.y.z
-			,mat.m11.z.x ,mat.m11.z.y ,mat.m11.z.z ,mat.m12.z.x ,mat.m12.z.y ,mat.m12.z.z
-			,mat.m21.x.x ,mat.m21.x.y ,mat.m21.x.z ,mat.m22.x.x ,mat.m22.x.y ,mat.m22.x.z
-			,mat.m21.y.x ,mat.m21.y.y ,mat.m21.y.z ,mat.m22.y.x ,mat.m22.y.y ,mat.m22.y.z
-			,mat.m21.z.x ,mat.m21.z.y ,mat.m21.z.z ,mat.m22.z.x ,mat.m22.z.y ,mat.m22.z.z
+			,mat.m00.x.x ,mat.m00.x.y ,mat.m00.x.z ,mat.m01.x.x ,mat.m01.x.y ,mat.m01.x.z
+			,mat.m00.y.x ,mat.m00.y.y ,mat.m00.y.z ,mat.m01.y.x ,mat.m01.y.y ,mat.m01.y.z
+			,mat.m00.z.x ,mat.m00.z.y ,mat.m00.z.z ,mat.m01.z.x ,mat.m01.z.y ,mat.m01.z.z
+			,mat.m10.x.x ,mat.m10.x.y ,mat.m10.x.z ,mat.m11.x.x ,mat.m11.x.y ,mat.m11.x.z
+			,mat.m10.y.x ,mat.m10.y.y ,mat.m10.y.z ,mat.m11.y.x ,mat.m11.y.y ,mat.m11.y.z
+			,mat.m10.z.x ,mat.m10.z.y ,mat.m10.z.z ,mat.m11.z.x ,mat.m11.z.y ,mat.m11.z.z
 			);
 	return S_OK;
 }

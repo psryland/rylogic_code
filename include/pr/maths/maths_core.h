@@ -9,9 +9,9 @@
 
 namespace pr
 {
-	#pragma region Traits
 	namespace maths
 	{
+		#pragma region Traits
 		template <typename T, int N> struct is_vec<T[N]> :is_vec_cp<T>
 		{
 			using value_type = T;
@@ -23,6 +23,65 @@ namespace pr
 		static_assert(!is_vec<int*  >::value, "");
 		static_assert(is_vec<float[2]>::value, "");
 		static_assert(is_vec<int[2] >::value, "");
+		#pragma endregion
+	}
+	
+	#pragma region Operators
+	template <typename T, typename = maths::enable_if_vN<T>> inline bool operator == (T const& lhs, T const& rhs)
+	{
+		return memcmp(&lhs, &rhs, sizeof(lhs)) == 0;
+	}
+	template <typename T, typename = maths::enable_if_vN<T>> inline bool operator != (T const& lhs, T const& rhs)
+	{
+		return memcmp(&lhs, &rhs, sizeof(lhs)) != 0;
+	}
+	template <typename T, typename = maths::enable_if_vN<T>> inline bool operator <  (T const& lhs, T const& rhs)
+	{
+		return memcmp(&lhs, &rhs, sizeof(lhs)) < 0;
+	}
+	template <typename T, typename = maths::enable_if_vN<T>> inline bool operator >  (T const& lhs, T const& rhs)
+	{
+		return memcmp(&lhs, &rhs, sizeof(lhs)) > 0;
+	}
+	template <typename T, typename = maths::enable_if_vN<T>> inline bool operator <= (T const& lhs, T const& rhs)
+	{
+		return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0;
+	}
+	template <typename T, typename = maths::enable_if_vN<T>> inline bool operator >= (T const& lhs, T const& rhs)
+	{
+		return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0;
+	}
+	template <typename T, typename = maths::enable_if_vN<T>> inline T& operator += (T& lhs, T const& rhs)
+	{
+		return lhs = lhs + rhs;
+	}
+	template <typename T, typename = maths::enable_if_vN<T>> inline T& operator -= (T& lhs, T const& rhs)
+	{
+		return lhs = lhs - rhs;
+	}
+	template <typename T, typename = maths::enable_if_vN<T>> inline T& operator *= (T& lhs, T const& rhs)
+	{
+		return lhs = lhs * rhs;
+	}
+	template <typename T, typename = maths::enable_if_vN<T>> inline T& operator /= (T& lhs, T const& rhs)
+	{
+		return lhs = lhs / rhs;
+	}
+	template <typename T, typename = maths::enable_if_vN<T>> inline T& operator %= (T& lhs, T const& rhs)
+	{
+		return lhs = lhs % rhs;
+	}
+	template <typename T, typename = maths::enable_if_vN<T>> inline T& operator *= (T& lhs, typename maths::is_vec<T>::cp_type rhs)
+	{
+		return lhs = lhs * rhs;
+	}
+	template <typename T, typename = maths::enable_if_vN<T>> inline T& operator /= (T& lhs, typename maths::is_vec<T>::cp_type rhs)
+	{
+		return lhs = lhs / rhs;
+	}
+	template <typename T, typename = maths::enable_if_vN<T>> inline T& operator %= (T& lhs, typename maths::is_vec<T>::cp_type rhs)
+	{
+		return lhs = lhs % rhs;
 	}
 	#pragma endregion
 
@@ -44,16 +103,76 @@ namespace pr
 	template <typename R, typename A> inline R z_as(A const& x) { return static_cast<R>(z_cp(x)); }
 	template <typename R, typename A> inline R w_as(A const& x) { return static_cast<R>(w_cp(x)); }
 
+	// Return true if any element satisfies 'Pred'
+	template <typename T, typename Pred, typename = maths::enable_if_arith<T>> inline bool Any(T value, Pred pred)
+	{
+		return pred(value);
+	}
+	template <typename T, typename Pred, typename = maths::enable_if_v2<T>> inline bool Any2(T const& v, Pred pred)
+	{
+		return
+			pred(x_cp(v)) ||
+			pred(y_cp(v));
+	}
+	template <typename T, typename Pred, typename = maths::enable_if_v3<T>> inline bool Any3(T const& v, Pred pred)
+	{
+		return
+			pred(x_cp(v)) ||
+			pred(y_cp(v)) ||
+			pred(z_cp(v));
+	}
+	template <typename T, typename Pred, typename = maths::enable_if_v4<T>> inline bool Any4(T const& v, Pred pred)
+	{
+		return
+			pred(x_cp(v)) ||
+			pred(y_cp(v)) ||
+			pred(z_cp(v)) ||
+			pred(w_cp(v));
+	}
+	template <typename T, typename Pred, typename = maths::enable_if_vN<T>> inline bool Any(T const& v, Pred pred)
+	{
+		int i = 0, iend = maths::is_vec<T>::dim;
+		for (; i != iend && !Any(v[i], pred); ++i) {}
+		return i != iend;
+	}
+
+	// Return true if all elements satisfy 'Pred'
+	template <typename T, typename Pred, typename = maths::enable_if_arith<T>> inline bool All(T value, Pred pred)
+	{
+		return pred(value);
+	}
+	template <typename T, typename Pred, typename = maths::enable_if_v2<T>> inline bool All2(T const& v, Pred pred)
+	{
+		return
+			pred(x_cp(v)) &&
+			pred(y_cp(v));
+	}
+	template <typename T, typename Pred, typename = maths::enable_if_v3<T>> inline bool All3(T const& v, Pred pred)
+	{
+		return
+			pred(x_cp(v)) &&
+			pred(y_cp(v)) &&
+			pred(z_cp(v));
+	}
+	template <typename T, typename Pred, typename = maths::enable_if_v4<T>> inline bool All4(T const& v, Pred pred)
+	{
+		return
+			pred(x_cp(v)) &&
+			pred(y_cp(v)) &&
+			pred(z_cp(v)) &&
+			pred(w_cp(v));
+	}
+	template <typename T, typename Pred, typename = maths::enable_if_vN<T>> inline bool All(T const& v, Pred pred)
+	{
+		int i = 0, iend = maths::is_vec<T>::dim;
+		for (; i != iend && All(v[i], pred); ++i) {}
+		return i == iend;
+	}
+
 	// Equality
 	template <typename T, typename = maths::enable_if_vec_cp<T>> inline bool Equal(T lhs, T rhs)
 	{
 		return lhs == rhs;
-	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline bool Equal(T const& lhs, T const& rhs)
-	{
-		int i = 0, iend = maths::is_vec<T>::dim;
-		for (; i != iend && Equal(lhs[i], rhs[i]); ++i) {}
-		return i == iend;
 	}
 	template <typename T, typename = maths::enable_if_v2<T>> inline bool Equal2(T const& lhs, T const& rhs)
 	{
@@ -75,6 +194,12 @@ namespace pr
 			y_cp(lhs) == y_cp(rhs) &&
 			z_cp(lhs) == z_cp(rhs) &&
 			w_cp(lhs) == w_cp(rhs);
+	}
+	template <typename T, typename = maths::enable_if_vN<T>> inline bool Equal(T const& lhs, T const& rhs)
+	{
+		int i = 0, iend = maths::is_vec<T>::dim;
+		for (; i != iend && Equal(lhs[i], rhs[i]); ++i) {}
+		return i == iend;
 	}
 
 	#pragma warning (disable:4756) // Constant overflow in floating point arithmetic
@@ -255,33 +380,11 @@ namespace pr
 	{
 		return IsFinite(value) && Abs(value) < max_value;
 	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline bool IsFinite(T const& value, bool any = false) // true = all
+	template <typename T, typename = maths::enable_if_vN<T>> inline bool IsFinite(T const& value, bool any = false)
 	{
-		int i = 0, iend = maths::is_vec<T>::dim;
-		if (any)
-		{
-			for (; i != iend && !IsFinite(value[i]); ++i) {}
-			return i != iend;
-		}
-		else
-		{
-			for (; i != iend && IsFinite(value[i]); ++i) {}
-			return i == iend;
-		}
-	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline bool IsFinite(T const& value, typename maths::is_vec<T>::cp_type max_value, bool any = false) // true = all
-	{
-		int i = 0, iend = maths::is_vec<T>::dim;
-		if (any)
-		{
-			for (; i != iend && !IsFinite(value[i], max_value); ++i) {}
-			return i != iend;
-		}
-		else
-		{
-			for (; i != iend && IsFinite(value[i], max_value); ++i) {}
-			return i == iend;
-		}
+		return any
+			? Any(value, [](auto x){ return IsFinite(x); })
+			: All(value, [](auto x){ return IsFinite(x); });
 	}
 
 	// Absolute value
@@ -424,45 +527,45 @@ namespace pr
 	}
 
 	// Converts bool to +1,-1 (note: no 0 value)
-	inline int SignI(bool positive)
+	constexpr int SignI(bool positive)
 	{
 		return positive ? +1 : -1;
 	}
-	inline float SignF(bool positive)
+	constexpr float SignF(bool positive)
 	{
 		return positive ? +1.0f : -1.0f;
 	}
 
-	// Sign, returns +1 if x >= 0 otherwise -1
-	inline float Sign(float x, bool zero_is_positive = true)
+	// Sign, returns +1 if x >= 0 otherwise -1. If 'zero_is_positive' is false, then 0 in gives 0 out.
+	constexpr float Sign(float x, bool zero_is_positive = true)
 	{
 		return x > 0 ? +1.0f : x < 0 ? -1.0f : 1.0f * int(zero_is_positive);
 	}
-	inline double Sign(double x, bool zero_is_positive = true)
+	constexpr double Sign(double x, bool zero_is_positive = true)
 	{
 		return x > 0 ? +1.0 : x < 0 ? -1.0 : 1.0 * int(zero_is_positive);
 	}
-	inline int Sign(int x, bool zero_is_positive = true)
+	constexpr int Sign(int x, bool zero_is_positive = true)
 	{
 		return x > 0 ? +1 : x < 0 ? -1 : int(zero_is_positive);
 	}
-	inline long Sign(long x, bool zero_is_positive = true)
+	constexpr long Sign(long x, bool zero_is_positive = true)
 	{
 		return x > 0 ? +1 : x < 0 ? -1 : long(zero_is_positive);
 	}
-	inline int64 Sign(int64 x, bool zero_is_positive = true)
+	constexpr int64 Sign(int64 x, bool zero_is_positive = true)
 	{
 		return x > 0 ? +1 : x < 0 ? -1 : int64(zero_is_positive);
 	}
-	inline uint Sign(uint x, bool zero_is_positive = true)
+	constexpr uint Sign(uint x, bool zero_is_positive = true)
 	{
 		return x > 0 ? +1 : uint(zero_is_positive);
 	}
-	inline ulong Sign(ulong x, bool zero_is_positive = true)
+	constexpr ulong Sign(ulong x, bool zero_is_positive = true)
 	{
 		return x > 0 ? +1 : ulong(zero_is_positive);
 	}
-	inline uint64 Sign(uint64 x, bool zero_is_positive = true)
+	constexpr uint64 Sign(uint64 x, bool zero_is_positive = true)
 	{
 		return x > 0 ? +1 : uint64(zero_is_positive);
 	}
@@ -528,25 +631,25 @@ namespace pr
 	}
 
 	// Square a value
-	inline float Sqr(float x)
+	constexpr float Sqr(float x)
 	{
 		return x * x;
 	}
-	inline double Sqr(double x)
+	constexpr double Sqr(double x)
 	{
 		return x * x;
 	}
-	inline long Sqr(long x)
+	constexpr long Sqr(long x)
 	{
 		assert("Overflow" && Abs(x) <= 46340L);
 		return x * x;
 	}
-	inline long long Sqr(long long x)
+	constexpr long long Sqr(long long x)
 	{
 		assert("Overflow" && Abs(x) <= 3037000499LL);
 		return x * x;
 	}
-	template <typename T> inline T Sqr(T const& x)
+	template <typename T> constexpr T Sqr(T const& x)
 	{
 		return x * x;
 	}
@@ -710,70 +813,6 @@ namespace pr
 		return 1 << n;
 	}
 
-	// Test any or all components pass 'Pred'
-	template <typename T, typename Pred, typename = maths::enable_if_arith<T>> inline bool Any(T value, Pred pred)
-	{
-		return pred(value);
-	}
-	template <typename T, typename Pred, typename = maths::enable_if_vN<T>> inline bool Any(T const& v, Pred pred)
-	{
-		int i = 0, iend = maths::is_vec<T>::dim;
-		for (; i != iend && !Any(v[i], pred); ++i) {}
-		return i != iend;
-	}
-	template <typename T, typename Pred, typename = maths::enable_if_v2<T>> inline bool Any2(T const& v, Pred pred)
-	{
-		return
-			pred(x_cp(v)) ||
-			pred(y_cp(v));
-	}
-	template <typename T, typename Pred, typename = maths::enable_if_v3<T>> inline bool Any3(T const& v, Pred pred)
-	{
-		return
-			pred(x_cp(v)) ||
-			pred(y_cp(v)) ||
-			pred(z_cp(v));
-	}
-	template <typename T, typename Pred, typename = maths::enable_if_v4<T>> inline bool Any4(T const& v, Pred pred)
-	{
-		return
-			pred(x_cp(v)) ||
-			pred(y_cp(v)) ||
-			pred(z_cp(v)) ||
-			pred(w_cp(v));
-	}
-	template <typename T, typename Pred, typename = maths::enable_if_arith<T>> inline bool All(T value, Pred pred)
-	{
-		return pred(value);
-	}
-	template <typename T, typename Pred, typename = maths::enable_if_vN<T>> inline bool All(T const& v, Pred pred)
-	{
-		int i = 0, iend = maths::is_vec<T>::dim;
-		for (; i != iend && All(v[i], pred); ++i) {}
-		return i == iend;
-	}
-	template <typename T, typename Pred, typename = maths::enable_if_v2<T>> inline bool All2(T const& v, Pred pred)
-	{
-		return
-			pred(x_cp(v)) &&
-			pred(y_cp(v));
-	}
-	template <typename T, typename Pred, typename = maths::enable_if_v3<T>> inline bool All3(T const& v, Pred pred)
-	{
-		return
-			pred(x_cp(v)) &&
-			pred(y_cp(v)) &&
-			pred(z_cp(v));
-	}
-	template <typename T, typename Pred, typename = maths::enable_if_v4<T>> inline bool All4(T const& v, Pred pred)
-	{
-		return
-			pred(x_cp(v)) &&
-			pred(y_cp(v)) &&
-			pred(z_cp(v)) &&
-			pred(w_cp(v));
-	}
-
 	// Lengths
 	template <typename T> inline T Len2Sq(T x, T y)
 	{
@@ -887,76 +926,6 @@ namespace pr
 	template <typename T, typename... A> inline T Max(T const& x, T const& y, A&&... a)
 	{
 		return Max(Max(x,y), std::forward<A>(a)...);
-	}
-
-	// Operators
-	template <typename T, typename = maths::enable_if_vN<T>> inline bool operator == (T const& lhs, T const& rhs)
-	{
-		return memcmp(&lhs, &rhs, sizeof(lhs)) == 0;
-	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline bool operator != (T const& lhs, T const& rhs)
-	{
-		return memcmp(&lhs, &rhs, sizeof(lhs)) != 0;
-	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline bool operator <  (T const& lhs, T const& rhs)
-	{
-		return memcmp(&lhs, &rhs, sizeof(lhs)) < 0;
-	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline bool operator >  (T const& lhs, T const& rhs)
-	{
-		return memcmp(&lhs, &rhs, sizeof(lhs)) > 0;
-	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline bool operator <= (T const& lhs, T const& rhs)
-	{
-		return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0;
-	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline bool operator >= (T const& lhs, T const& rhs)
-	{
-		return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0;
-	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline T operator + (T const& lhs, T const& rhs)
-	{
-		auto v = lhs;
-		return v += rhs;
-	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline T operator - (T const& lhs, T const& rhs)
-	{
-		auto v = lhs;
-		return v -= rhs;
-	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline T operator * (T const& lhs, T const& rhs)
-	{
-		auto v = lhs;
-		return v *= rhs;
-	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline T operator / (T const& lhs, T const& rhs)
-	{
-		auto v = lhs;
-		return v /= rhs;
-	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline T operator % (T const& lhs, T const& rhs)
-	{
-		auto v = lhs;
-		return v %= rhs;
-	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline T operator * (T const& lhs, typename maths::is_vec<T>::cp_type rhs)
-	{
-		auto v = lhs;
-		return v *= rhs;
-	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline T operator / (T const& lhs, typename maths::is_vec<T>::cp_type rhs)
-	{
-		auto v = lhs;
-		return v /= rhs;
-	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline T operator % (T const& lhs, typename maths::is_vec<T>::cp_type rhs)
-	{
-		auto v = lhs;
-		return v %= rhs;
-	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline T operator * (typename maths::is_vec<T>::cp_type lhs, T const& rhs)
-	{
-		return rhs * lhs;
 	}
 
 	// Normalise - 2,3,4 variants scale all elements in the vector (consistent with DirectX)
@@ -1406,364 +1375,364 @@ namespace std
 }
 
 #if PR_UNITTESTS
-#include "pr/maths/maths.h"
 #include "pr/common/unittests.h"
-namespace pr
+#include "pr/maths/maths.h"
+namespace pr::maths
 {
-	namespace unittests
+	PRUnitTest(MathsCoreTests)
 	{
-		PRUnitTest(pr_maths_maths_core)
-		{
-			{// Floating point compare
-				constexpr float const _6dp = 1.000000111e-6f;
+		{// Floating point compare
+			float const _6dp = 1.000000111e-6f;
 
-				// Regular large numbers - generally not problematic
-				PR_CHECK(FEqlRelative(1000000.0f, 1000001.0f, _6dp), true);
-				PR_CHECK(FEqlRelative(1000001.0f, 1000000.0f, _6dp), true);
-				PR_CHECK(FEqlRelative(1000000.0f, 1000010.0f, _6dp), false);
-				PR_CHECK(FEqlRelative(1000010.0f, 1000000.0f, _6dp), false);
+			// Regular large numbers - generally not problematic
+			PR_CHECK(FEqlRelative(1000000.0f, 1000001.0f, _6dp), true);
+			PR_CHECK(FEqlRelative(1000001.0f, 1000000.0f, _6dp), true);
+			PR_CHECK(FEqlRelative(1000000.0f, 1000010.0f, _6dp), false);
+			PR_CHECK(FEqlRelative(1000010.0f, 1000000.0f, _6dp), false);
 
-				// Negative large numbers
-				PR_CHECK(FEqlRelative(-1000000.0f, -1000001.0f, _6dp), true);
-				PR_CHECK(FEqlRelative(-1000001.0f, -1000000.0f, _6dp), true);
-				PR_CHECK(FEqlRelative(-1000000.0f, -1000010.0f, _6dp), false);
-				PR_CHECK(FEqlRelative(-1000010.0f, -1000000.0f, _6dp), false);
+			// Negative large numbers
+			PR_CHECK(FEqlRelative(-1000000.0f, -1000001.0f, _6dp), true);
+			PR_CHECK(FEqlRelative(-1000001.0f, -1000000.0f, _6dp), true);
+			PR_CHECK(FEqlRelative(-1000000.0f, -1000010.0f, _6dp), false);
+			PR_CHECK(FEqlRelative(-1000010.0f, -1000000.0f, _6dp), false);
 
-				// Numbers around 1
-				PR_CHECK(FEqlRelative(1.0000001f, 1.0000002f, _6dp), true);
-				PR_CHECK(FEqlRelative(1.0000002f, 1.0000001f, _6dp), true);
-				PR_CHECK(FEqlRelative(1.0000020f, 1.0000010f, _6dp), false);
-				PR_CHECK(FEqlRelative(1.0000010f, 1.0000020f, _6dp), false);
+			// Numbers around 1
+			PR_CHECK(FEqlRelative(1.0000001f, 1.0000002f, _6dp), true);
+			PR_CHECK(FEqlRelative(1.0000002f, 1.0000001f, _6dp), true);
+			PR_CHECK(FEqlRelative(1.0000020f, 1.0000010f, _6dp), false);
+			PR_CHECK(FEqlRelative(1.0000010f, 1.0000020f, _6dp), false);
 
-				// Numbers around -1
-				PR_CHECK(FEqlRelative(-1.0000001f, -1.0000002f, _6dp), true);
-				PR_CHECK(FEqlRelative(-1.0000002f, -1.0000001f, _6dp), true);
-				PR_CHECK(FEqlRelative(-1.0000010f, -1.0000020f, _6dp), false);
-				PR_CHECK(FEqlRelative(-1.0000020f, -1.0000010f, _6dp), false);
+			// Numbers around -1
+			PR_CHECK(FEqlRelative(-1.0000001f, -1.0000002f, _6dp), true);
+			PR_CHECK(FEqlRelative(-1.0000002f, -1.0000001f, _6dp), true);
+			PR_CHECK(FEqlRelative(-1.0000010f, -1.0000020f, _6dp), false);
+			PR_CHECK(FEqlRelative(-1.0000020f, -1.0000010f, _6dp), false);
 
-				// Numbers between 1 and 0
-				PR_CHECK(FEqlRelative(0.000000001000001f, 0.000000001000002f, _6dp), true);
-				PR_CHECK(FEqlRelative(0.000000001000002f, 0.000000001000001f, _6dp), true);
-				PR_CHECK(FEqlRelative(0.000000000100002f, 0.000000000100001f, _6dp), false);
-				PR_CHECK(FEqlRelative(0.000000000100001f, 0.000000000100002f, _6dp), false);
+			// Numbers between 1 and 0
+			PR_CHECK(FEqlRelative(0.000000001000001f, 0.000000001000002f, _6dp), true);
+			PR_CHECK(FEqlRelative(0.000000001000002f, 0.000000001000001f, _6dp), true);
+			PR_CHECK(FEqlRelative(0.000000000100002f, 0.000000000100001f, _6dp), false);
+			PR_CHECK(FEqlRelative(0.000000000100001f, 0.000000000100002f, _6dp), false);
 
-				// Numbers between -1 and 0
-				PR_CHECK(FEqlRelative(-0.0000000010000001f, -0.0000000010000002f, _6dp), true);
-				PR_CHECK(FEqlRelative(-0.0000000010000002f, -0.0000000010000001f, _6dp), true);
-				PR_CHECK(FEqlRelative(-0.0000000001000002f, -0.0000000001000001f, _6dp), false);
-				PR_CHECK(FEqlRelative(-0.0000000001000001f, -0.0000000001000002f, _6dp), false);
+			// Numbers between -1 and 0
+			PR_CHECK(FEqlRelative(-0.0000000010000001f, -0.0000000010000002f, _6dp), true);
+			PR_CHECK(FEqlRelative(-0.0000000010000002f, -0.0000000010000001f, _6dp), true);
+			PR_CHECK(FEqlRelative(-0.0000000001000002f, -0.0000000001000001f, _6dp), false);
+			PR_CHECK(FEqlRelative(-0.0000000001000001f, -0.0000000001000002f, _6dp), false);
 
-				// Comparisons involving zero
-				PR_CHECK(FEqlRelative(+0.0f, +0.0f, _6dp), true);
-				PR_CHECK(FEqlRelative(+0.0f, -0.0f, _6dp), true);
-				PR_CHECK(FEqlRelative(-0.0f, -0.0f, _6dp), true);
-				PR_CHECK(FEqlRelative(+0.000001f, +0.0f, _6dp), true);
-				PR_CHECK(FEqlRelative(+0.0f, +0.000001f, _6dp), true);
-				PR_CHECK(FEqlRelative(-0.000001f, +0.0f, _6dp), true);
-				PR_CHECK(FEqlRelative(+0.0f, -0.000001f, _6dp), true);
-				PR_CHECK(FEqlRelative(+0.00001f, +0.0f, _6dp), false);
-				PR_CHECK(FEqlRelative(+0.0f, +0.00001f, _6dp), false);
-				PR_CHECK(FEqlRelative(-0.00001f, +0.0f, _6dp), false);
-				PR_CHECK(FEqlRelative(+0.0f, -0.00001f, _6dp), false);
+			// Comparisons involving zero
+			PR_CHECK(FEqlRelative(+0.0f, +0.0f, _6dp), true);
+			PR_CHECK(FEqlRelative(+0.0f, -0.0f, _6dp), true);
+			PR_CHECK(FEqlRelative(-0.0f, -0.0f, _6dp), true);
+			PR_CHECK(FEqlRelative(+0.000001f, +0.0f, _6dp), true);
+			PR_CHECK(FEqlRelative(+0.0f, +0.000001f, _6dp), true);
+			PR_CHECK(FEqlRelative(-0.000001f, +0.0f, _6dp), true);
+			PR_CHECK(FEqlRelative(+0.0f, -0.000001f, _6dp), true);
+			PR_CHECK(FEqlRelative(+0.00001f, +0.0f, _6dp), false);
+			PR_CHECK(FEqlRelative(+0.0f, +0.00001f, _6dp), false);
+			PR_CHECK(FEqlRelative(-0.00001f, +0.0f, _6dp), false);
+			PR_CHECK(FEqlRelative(+0.0f, -0.00001f, _6dp), false);
 
-				// Comparisons involving extreme values (overflow potential)
-				auto float_hi = maths::float_max;
-				auto float_lo = maths::float_lowest;
-				PR_CHECK(FEqlRelative(float_hi, float_hi, _6dp), true);
-				PR_CHECK(FEqlRelative(float_hi, float_lo, _6dp), false);
-				PR_CHECK(FEqlRelative(float_lo, float_hi, _6dp), false);
-				PR_CHECK(FEqlRelative(float_lo, float_lo, _6dp), true);
-				PR_CHECK(FEqlRelative(float_hi, float_hi / 2, _6dp), false);
-				PR_CHECK(FEqlRelative(float_hi, float_lo / 2, _6dp), false);
-				PR_CHECK(FEqlRelative(float_lo, float_hi / 2, _6dp), false);
-				PR_CHECK(FEqlRelative(float_lo, float_lo / 2, _6dp), false);
+			// Comparisons involving extreme values (overflow potential)
+			auto float_hi = maths::float_max;
+			auto float_lo = maths::float_lowest;
+			PR_CHECK(FEqlRelative(float_hi, float_hi, _6dp), true);
+			PR_CHECK(FEqlRelative(float_hi, float_lo, _6dp), false);
+			PR_CHECK(FEqlRelative(float_lo, float_hi, _6dp), false);
+			PR_CHECK(FEqlRelative(float_lo, float_lo, _6dp), true);
+			PR_CHECK(FEqlRelative(float_hi, float_hi / 2, _6dp), false);
+			PR_CHECK(FEqlRelative(float_hi, float_lo / 2, _6dp), false);
+			PR_CHECK(FEqlRelative(float_lo, float_hi / 2, _6dp), false);
+			PR_CHECK(FEqlRelative(float_lo, float_lo / 2, _6dp), false);
 
-				// Comparisons involving infinities
-				PR_CHECK(FEqlRelative(+maths::float_inf, +maths::float_inf, _6dp), true);
-				PR_CHECK(FEqlRelative(-maths::float_inf, -maths::float_inf, _6dp), true);
-				PR_CHECK(FEqlRelative(-maths::float_inf, +maths::float_inf, _6dp), false);
-				PR_CHECK(FEqlRelative(+maths::float_inf, +maths::float_max, _6dp), false);
-				PR_CHECK(FEqlRelative(-maths::float_inf, -maths::float_max, _6dp), false);
+			// Comparisons involving infinities
+			PR_CHECK(FEqlRelative(+maths::float_inf, +maths::float_inf, _6dp), true);
+			PR_CHECK(FEqlRelative(-maths::float_inf, -maths::float_inf, _6dp), true);
+			PR_CHECK(FEqlRelative(-maths::float_inf, +maths::float_inf, _6dp), false);
+			PR_CHECK(FEqlRelative(+maths::float_inf, +maths::float_max, _6dp), false);
+			PR_CHECK(FEqlRelative(-maths::float_inf, -maths::float_max, _6dp), false);
 
-				// Comparisons involving NaN values
-				PR_CHECK(FEqlRelative(maths::float_nan, maths::float_nan, _6dp), false);
-				PR_CHECK(FEqlRelative(maths::float_nan, +0.0f, _6dp), false);
-				PR_CHECK(FEqlRelative(-0.0f, maths::float_nan, _6dp), false);
-				PR_CHECK(FEqlRelative(maths::float_nan, -0.0f, _6dp), false);
-				PR_CHECK(FEqlRelative(+0.0f, maths::float_nan, _6dp), false);
-				PR_CHECK(FEqlRelative( maths::float_nan, +maths::float_inf, _6dp), false);
-				PR_CHECK(FEqlRelative(+maths::float_inf,  maths::float_nan, _6dp), false);
-				PR_CHECK(FEqlRelative( maths::float_nan, -maths::float_inf, _6dp), false);
-				PR_CHECK(FEqlRelative(-maths::float_inf,  maths::float_nan, _6dp), false);
-				PR_CHECK(FEqlRelative( maths::float_nan, +maths::float_max, _6dp), false);
-				PR_CHECK(FEqlRelative(+maths::float_max,  maths::float_nan, _6dp), false);
-				PR_CHECK(FEqlRelative( maths::float_nan, -maths::float_max, _6dp), false);
-				PR_CHECK(FEqlRelative(-maths::float_max,  maths::float_nan, _6dp), false);
-				PR_CHECK(FEqlRelative( maths::float_nan, +maths::float_min, _6dp), false);
-				PR_CHECK(FEqlRelative(+maths::float_min,  maths::float_nan, _6dp), false);
-				PR_CHECK(FEqlRelative( maths::float_nan, -maths::float_min, _6dp), false);
-				PR_CHECK(FEqlRelative(-maths::float_min,  maths::float_nan, _6dp), false);
+			// Comparisons involving NaN values
+			PR_CHECK(FEqlRelative(maths::float_nan, maths::float_nan, _6dp), false);
+			PR_CHECK(FEqlRelative(maths::float_nan, +0.0f, _6dp), false);
+			PR_CHECK(FEqlRelative(-0.0f, maths::float_nan, _6dp), false);
+			PR_CHECK(FEqlRelative(maths::float_nan, -0.0f, _6dp), false);
+			PR_CHECK(FEqlRelative(+0.0f, maths::float_nan, _6dp), false);
+			PR_CHECK(FEqlRelative( maths::float_nan, +maths::float_inf, _6dp), false);
+			PR_CHECK(FEqlRelative(+maths::float_inf,  maths::float_nan, _6dp), false);
+			PR_CHECK(FEqlRelative( maths::float_nan, -maths::float_inf, _6dp), false);
+			PR_CHECK(FEqlRelative(-maths::float_inf,  maths::float_nan, _6dp), false);
+			PR_CHECK(FEqlRelative( maths::float_nan, +maths::float_max, _6dp), false);
+			PR_CHECK(FEqlRelative(+maths::float_max,  maths::float_nan, _6dp), false);
+			PR_CHECK(FEqlRelative( maths::float_nan, -maths::float_max, _6dp), false);
+			PR_CHECK(FEqlRelative(-maths::float_max,  maths::float_nan, _6dp), false);
+			PR_CHECK(FEqlRelative( maths::float_nan, +maths::float_min, _6dp), false);
+			PR_CHECK(FEqlRelative(+maths::float_min,  maths::float_nan, _6dp), false);
+			PR_CHECK(FEqlRelative( maths::float_nan, -maths::float_min, _6dp), false);
+			PR_CHECK(FEqlRelative(-maths::float_min,  maths::float_nan, _6dp), false);
 
-				// Comparisons of numbers on opposite sides of 0
-				PR_CHECK(FEqlRelative(+1.0f, -1.0f, _6dp), false);
-				PR_CHECK(FEqlRelative(-1.0f, +1.0f, _6dp), false);
-				PR_CHECK(FEqlRelative(+1.000000001f, -1.0f, _6dp), false);
-				PR_CHECK(FEqlRelative(-1.0f, +1.000000001f, _6dp), false);
-				PR_CHECK(FEqlRelative(-1.000000001f, +1.0f, _6dp), false);
-				PR_CHECK(FEqlRelative(+1.0f, -1.000000001f, _6dp), false);
-				PR_CHECK(FEqlRelative(2 * maths::float_min, 0, _6dp), true);
-				PR_CHECK(FEqlRelative(maths::float_min, -maths::float_min, _6dp), false);
+			// Comparisons of numbers on opposite sides of 0
+			PR_CHECK(FEqlRelative(+1.0f, -1.0f, _6dp), false);
+			PR_CHECK(FEqlRelative(-1.0f, +1.0f, _6dp), false);
+			PR_CHECK(FEqlRelative(+1.000000001f, -1.0f, _6dp), false);
+			PR_CHECK(FEqlRelative(-1.0f, +1.000000001f, _6dp), false);
+			PR_CHECK(FEqlRelative(-1.000000001f, +1.0f, _6dp), false);
+			PR_CHECK(FEqlRelative(+1.0f, -1.000000001f, _6dp), false);
+			PR_CHECK(FEqlRelative(2 * maths::float_min, 0, _6dp), true);
+			PR_CHECK(FEqlRelative(maths::float_min, -maths::float_min, _6dp), false);
 
-				// The really tricky part - comparisons of numbers very close to zero.
-				PR_CHECK(FEqlRelative(+maths::float_min, +maths::float_min, _6dp), true);
-				PR_CHECK(FEqlRelative(+maths::float_min, -maths::float_min, _6dp), false);
-				PR_CHECK(FEqlRelative(-maths::float_min, +maths::float_min, _6dp), false);
-				PR_CHECK(FEqlRelative(+maths::float_min, 0, _6dp), true);
-				PR_CHECK(FEqlRelative(0, +maths::float_min, _6dp), true);
-				PR_CHECK(FEqlRelative(-maths::float_min, 0, _6dp), true);
-				PR_CHECK(FEqlRelative(0, -maths::float_min, _6dp), true);
+			// The really tricky part - comparisons of numbers very close to zero.
+			PR_CHECK(FEqlRelative(+maths::float_min, +maths::float_min, _6dp), true);
+			PR_CHECK(FEqlRelative(+maths::float_min, -maths::float_min, _6dp), false);
+			PR_CHECK(FEqlRelative(-maths::float_min, +maths::float_min, _6dp), false);
+			PR_CHECK(FEqlRelative(+maths::float_min, 0, _6dp), true);
+			PR_CHECK(FEqlRelative(0, +maths::float_min, _6dp), true);
+			PR_CHECK(FEqlRelative(-maths::float_min, 0, _6dp), true);
+			PR_CHECK(FEqlRelative(0, -maths::float_min, _6dp), true);
 
-				PR_CHECK(FEqlRelative(0.000000001f, -maths::float_min, _6dp), false);
-				PR_CHECK(FEqlRelative(0.000000001f, +maths::float_min, _6dp), false);
-				PR_CHECK(FEqlRelative(+maths::float_min, 0.000000001f, _6dp), false);
-				PR_CHECK(FEqlRelative(-maths::float_min, 0.000000001f, _6dp), false);
-			}
-			{// Floating point vector compare
-				float arr0[] = {1,2,3,4};
-				float arr1[] = {1,2,3,5};
-				static_assert(maths::is_vec<decltype(arr0)>::value, "");
-				static_assert(maths::is_vec<decltype(arr1)>::value, "");
+			PR_CHECK(FEqlRelative(0.000000001f, -maths::float_min, _6dp), false);
+			PR_CHECK(FEqlRelative(0.000000001f, +maths::float_min, _6dp), false);
+			PR_CHECK(FEqlRelative(+maths::float_min, 0.000000001f, _6dp), false);
+			PR_CHECK(FEqlRelative(-maths::float_min, 0.000000001f, _6dp), false);
+		}
+		{// Floating point vector compare
+			float arr0[] = {1,2,3,4};
+			float arr1[] = {1,2,3,5};
+			static_assert(maths::is_vec<decltype(arr0)>::value, "");
+			static_assert(maths::is_vec<decltype(arr1)>::value, "");
 
-				PR_CHECK(!Equal(arr0, arr1), true);
-				PR_CHECK( Equal2(arr0, arr1), true);
-				PR_CHECK( Equal3(arr0, arr1), true);
-				PR_CHECK(!Equal4(arr0, arr1), true);
+			PR_CHECK(!Equal(arr0, arr1), true);
+			PR_CHECK( Equal2(arr0, arr1), true);
+			PR_CHECK( Equal3(arr0, arr1), true);
+			PR_CHECK(!Equal4(arr0, arr1), true);
 
-				auto t0 = 0.0f;
-				auto t1 = maths::tiny * 0.5f;
-				auto t2 = maths::tiny * 1.5f;
-				float arr2[] = {1.0f + t0, 2.0f + t0, 3.0f + t0, 5.0f + t0};
-				float arr3[] = {1.0f + t1, 2.0f + t1, 3.0f + t1, 4.0f + t1};
-				float arr4[] = {1.0f + t2, 2.0f + t2, 3.0f + t2, 4.0f + t2};
-				PR_CHECK( FEql2(arr2, arr3) && !FEql2(arr2, arr4), true);
-				PR_CHECK( FEql3(arr2, arr3) && !FEql3(arr2, arr4), true);
-				PR_CHECK(!FEql4(arr2, arr3) && !FEql4(arr2, arr4), true);
+			auto t0 = 0.0f;
+			auto t1 = maths::tiny * 0.5f;
+			auto t2 = maths::tiny * 1.5f;
+			float arr2[] = {1.0f + t0, 2.0f + t0, 3.0f + t0, 5.0f + t0};
+			float arr3[] = {1.0f + t1, 2.0f + t1, 3.0f + t1, 4.0f + t1};
+			float arr4[] = {1.0f + t2, 2.0f + t2, 3.0f + t2, 4.0f + t2};
+			PR_CHECK( FEql2(arr2, arr3) && !FEql2(arr2, arr4), true);
+			PR_CHECK( FEql3(arr2, arr3) && !FEql3(arr2, arr4), true);
+			PR_CHECK(!FEql4(arr2, arr3) && !FEql4(arr2, arr4), true);
 
-				float arr5[] = {t0, t0, t0, t0};
-				float arr6[] = {t0, t0, t1, t1};
-				PR_CHECK( IsZero(arr5), true);
-				PR_CHECK(!IsZero(arr6), true);
-				PR_CHECK( IsZero2(arr5), true);
-				PR_CHECK( IsZero2(arr6), true);
-				PR_CHECK( IsZero3(arr5), true);
-				PR_CHECK(!IsZero3(arr6), true);
-				PR_CHECK( IsZero4(arr5), true);
-				PR_CHECK(!IsZero4(arr6), true);
-			}
-			{// Finite
-				volatile auto f0 = 0.0f;
-				volatile auto d0 = 0.0;
-				PR_CHECK( IsFinite(1.0f), true);
-				PR_CHECK( IsFinite(limits<int>::max()), true);
-				PR_CHECK(!IsFinite(1.0f/f0), true);
-				PR_CHECK(!IsFinite(0.0/d0), true);
-				PR_CHECK(!IsFinite(11, 10), true);
+			float arr5[] = {t0, t0, t0, t0};
+			float arr6[] = {t0, t0, t1, t1};
+			PR_CHECK( IsZero(arr5), true);
+			PR_CHECK(!IsZero(arr6), true);
+			PR_CHECK( IsZero2(arr5), true);
+			PR_CHECK( IsZero2(arr6), true);
+			PR_CHECK( IsZero3(arr5), true);
+			PR_CHECK(!IsZero3(arr6), true);
+			PR_CHECK( IsZero4(arr5), true);
+			PR_CHECK(!IsZero4(arr6), true);
+		}
+		{// Finite
+			volatile auto f0 = 0.0f;
+			volatile auto d0 = 0.0;
+			PR_CHECK( IsFinite(1.0f), true);
+			PR_CHECK( IsFinite(limits<int>::max()), true);
+			PR_CHECK(!IsFinite(1.0f/f0), true);
+			PR_CHECK(!IsFinite(0.0/d0), true);
+			PR_CHECK(!IsFinite(11, 10), true);
 
-				v4 arr0(0.0f, 1.0f, 10.0f, 1.0f);
-				v4 arr1(0.0f, 1.0f, 1.0f/f0, 0.0f/f0);
-				PR_CHECK( IsFinite(arr0), true);
-				PR_CHECK(!IsFinite(arr1), true);
-				PR_CHECK(!IsFinite(arr0, 5.0f), true);
+			v4 arr0(0.0f, 1.0f, 10.0f, 1.0f);
+			v4 arr1(0.0f, 1.0f, 1.0f/f0, 0.0f/f0);
+			PR_CHECK( IsFinite(arr0), true);
+			PR_CHECK(!IsFinite(arr1), true);
+			PR_CHECK(!All(arr0, [](float x){ return x < 5.0f; }), true);
+			PR_CHECK( Any(arr0, [](float x){ return x < 5.0f; }), true);
 
-				m4x4 arr2(arr0,arr0,arr0,arr0);
-				m4x4 arr3(arr1,arr1,arr1,arr1);
-				PR_CHECK( IsFinite(arr2), true);
-				PR_CHECK(!IsFinite(arr3), true);
-				PR_CHECK(!IsFinite(arr2, 5.0f), true);
+			m4x4 arr2(arr0,arr0,arr0,arr0);
+			m4x4 arr3(arr1,arr1,arr1,arr1);
+			PR_CHECK( IsFinite(arr2), true);
+			PR_CHECK(!IsFinite(arr3), true);
+			PR_CHECK(!All(arr2, [](float x){ return x < 5.0f; }), true);
+			PR_CHECK( Any(arr2, [](float x){ return x < 5.0f; }), true);
 
-				iv2 arr4(10,1);
-				PR_CHECK( IsFinite(arr4), true);
-				PR_CHECK(!IsFinite(arr4, 5), true);
-			}
-			{// Abs
-				PR_CHECK(Abs(-1.0f) == Abs(-1.0f), true);
-				PR_CHECK(Abs(-1.0f) == Abs(+1.0f), true);
-				PR_CHECK(Abs(+1.0f) == Abs(+1.0f), true);
+			iv2 arr4(10,1);
+			PR_CHECK( IsFinite(arr4), true);
+			PR_CHECK(!All(arr4, [](int x){ return x < 5; }), true);
+			PR_CHECK( Any(arr4, [](int x){ return x < 5; }), true);
+		}
+		{// Abs
+			PR_CHECK(Abs(-1.0f) == Abs(-1.0f), true);
+			PR_CHECK(Abs(-1.0f) == Abs(+1.0f), true);
+			PR_CHECK(Abs(+1.0f) == Abs(+1.0f), true);
 
-				v4 arr0 = {+1,-2,+3,-4};
-				v4 arr1 = {-1,+2,-3,+4};
-				v4 arr2 = {+1,+2,+3,+4};
-				PR_CHECK(Abs(arr0) == Abs(arr1), true);
-				PR_CHECK(Abs(arr0) == Abs(arr2), true);
-				PR_CHECK(Abs(arr1) == Abs(arr2), true);
-			}
-			{// Truncate
-				v4 arr0 = {+1.1f, -1.2f, +2.8f, -2.9f};
-				v4 arr1 = {+1.0f, -1.0f, +2.0f, -2.0f};
-				v4 arr2 = {+1.0f, -1.0f, +3.0f, -3.0f};
-				v4 arr3 = {+0.1f, -0.2f, +0.8f, -0.9f};
+			v4 arr0 = {+1,-2,+3,-4};
+			v4 arr1 = {-1,+2,-3,+4};
+			v4 arr2 = {+1,+2,+3,+4};
+			PR_CHECK(Abs(arr0) == Abs(arr1), true);
+			PR_CHECK(Abs(arr0) == Abs(arr2), true);
+			PR_CHECK(Abs(arr1) == Abs(arr2), true);
+		}
+		{// Truncate
+			v4 arr0 = {+1.1f, -1.2f, +2.8f, -2.9f};
+			v4 arr1 = {+1.0f, -1.0f, +2.0f, -2.0f};
+			v4 arr2 = {+1.0f, -1.0f, +3.0f, -3.0f};
+			v4 arr3 = {+0.1f, -0.2f, +0.8f, -0.9f};
 				
-				PR_CHECK(Trunc(1.9f) == 1.0f, true);
-				PR_CHECK(Trunc(10000000000000.9) == 10000000000000.0, true);
-				PR_CHECK(Trunc(arr0, ETruncType::TowardZero) == arr1, true);
-				PR_CHECK(Trunc(arr0, ETruncType::ToNearest ) == arr2, true);
-				PR_CHECK(FEql(Frac(arr0), arr3), true);
-			}
-			{// Any/All
-				float arr0[] = {1.0f, 2.0f, 0.0f, -4.0f};
-				auto are_zero = [](float x) { return x == 0.0f; };
-				auto not_zero = [](float x) { return x != 0.0f; };
+			PR_CHECK(Trunc(1.9f) == 1.0f, true);
+			PR_CHECK(Trunc(10000000000000.9) == 10000000000000.0, true);
+			PR_CHECK(Trunc(arr0, ETruncType::TowardZero) == arr1, true);
+			PR_CHECK(Trunc(arr0, ETruncType::ToNearest ) == arr2, true);
+			PR_CHECK(FEql(Frac(arr0), arr3), true);
+		}
+		{// Any/All
+			float arr0[] = {1.0f, 2.0f, 0.0f, -4.0f};
+			auto are_zero = [](float x) { return x == 0.0f; };
+			auto not_zero = [](float x) { return x != 0.0f; };
 
-				PR_CHECK(!Any2(arr0, are_zero), true);
-				PR_CHECK( Any3(arr0, are_zero), true);
-				PR_CHECK( Any4(arr0, are_zero), true);
-				PR_CHECK(!All2(arr0, are_zero), true);
-				PR_CHECK(!All3(arr0, are_zero), true);
-				PR_CHECK(!All4(arr0, are_zero), true);
+			PR_CHECK(!Any2(arr0, are_zero), true);
+			PR_CHECK( Any3(arr0, are_zero), true);
+			PR_CHECK( Any4(arr0, are_zero), true);
+			PR_CHECK(!All2(arr0, are_zero), true);
+			PR_CHECK(!All3(arr0, are_zero), true);
+			PR_CHECK(!All4(arr0, are_zero), true);
 
-				PR_CHECK( Any2(arr0, not_zero), true);
-				PR_CHECK( Any3(arr0, not_zero), true);
-				PR_CHECK( Any4(arr0, not_zero), true);
-				PR_CHECK( All2(arr0, not_zero), true);
-				PR_CHECK(!All3(arr0, not_zero), true);
-				PR_CHECK(!All4(arr0, not_zero), true);
-			}
-			{// Lengths
-				PR_CHECK(Len2Sq(3,4) == 25, true);
-				PR_CHECK(Len3Sq(3,4,5) == 50, true);
-				PR_CHECK(Len4Sq(3,4,5,6) == 86, true);
-				PR_CHECK(FEql(Len2(3,4), 5.0f), true);
-				PR_CHECK(FEql(Len3(3,4,5), 7.0710678f), true);
-				PR_CHECK(FEql(Len4(3,4,5,6), 9.2736185f), true);
+			PR_CHECK( Any2(arr0, not_zero), true);
+			PR_CHECK( Any3(arr0, not_zero), true);
+			PR_CHECK( Any4(arr0, not_zero), true);
+			PR_CHECK( All2(arr0, not_zero), true);
+			PR_CHECK(!All3(arr0, not_zero), true);
+			PR_CHECK(!All4(arr0, not_zero), true);
+		}
+		{// Lengths
+			PR_CHECK(Len2Sq(3,4) == 25, true);
+			PR_CHECK(Len3Sq(3,4,5) == 50, true);
+			PR_CHECK(Len4Sq(3,4,5,6) == 86, true);
+			PR_CHECK(FEql(Len2(3,4), 5.0f), true);
+			PR_CHECK(FEql(Len3(3,4,5), 7.0710678f), true);
+			PR_CHECK(FEql(Len4(3,4,5,6), 9.2736185f), true);
 
-				auto arr0 = v4(3,4,5,6);
-				PR_CHECK(FEql(Length2(arr0), 5.0f), true);
-				PR_CHECK(FEql(Length3(arr0), 7.0710678f), true);
-				PR_CHECK(FEql(Length4(arr0), 9.2736185f), true);
-			}
-			{// Min/Max/Clamp
-				PR_CHECK(Min(1,2,-3,4,-5) == -5, true);
-				PR_CHECK(Max(1,2,-3,4,-5) == 4, true);
-				PR_CHECK(Clamp(-1,0,10) == 0, true);
-				PR_CHECK(Clamp(3,0,10) == 3, true);
-				PR_CHECK(Clamp(12,0,10) == 10, true);
+			auto arr0 = v4(3,4,5,6);
+			PR_CHECK(FEql(Length2(arr0), 5.0f), true);
+			PR_CHECK(FEql(Length3(arr0), 7.0710678f), true);
+			PR_CHECK(FEql(Length4(arr0), 9.2736185f), true);
+		}
+		{// Min/Max/Clamp
+			PR_CHECK(Min(1,2,-3,4,-5) == -5, true);
+			PR_CHECK(Max(1,2,-3,4,-5) == 4, true);
+			PR_CHECK(Clamp(-1,0,10) == 0, true);
+			PR_CHECK(Clamp(3,0,10) == 3, true);
+			PR_CHECK(Clamp(12,0,10) == 10, true);
 
-				auto arr0 = v4(+1,-2,+3,-4);
-				auto arr1 = v4(-1,+2,-3,+4);
-				auto arr2 = v4(+0,+0,+0,+0);
-				auto arr3 = v4(+2,+2,+2,+2);
-				PR_CHECK(Min(arr0, arr1, arr2, arr3) == v4(-1,-2,-3,-4), true);
-				PR_CHECK(Max(arr0, arr1, arr2, arr3) == v4(+2,+2,+3,+4), true);
-				PR_CHECK(Clamp(arr0, arr2, arr3) == v4(+1,+0,+2,+0), true);
-			}
-			{// Operators
-				auto arr0 = v4(+1,-2,+3,-4);
-				auto arr1 = v4(-1,+2,-3,+4);
-				PR_CHECK((arr0 == arr1) == !(arr0 != arr1), true);
-				PR_CHECK((arr0 != arr1) == !(arr0 == arr1), true);
-				PR_CHECK((arr0 <  arr1) == !(arr0 >= arr1), true);
-				PR_CHECK((arr0 >  arr1) == !(arr0 <= arr1), true);
-				PR_CHECK((arr0 <= arr1) == !(arr0 >  arr1), true);
-				PR_CHECK((arr0 >= arr1) == !(arr0 <  arr1), true);
+			auto arr0 = v4(+1,-2,+3,-4);
+			auto arr1 = v4(-1,+2,-3,+4);
+			auto arr2 = v4(+0,+0,+0,+0);
+			auto arr3 = v4(+2,+2,+2,+2);
+			PR_CHECK(Min(arr0, arr1, arr2, arr3) == v4(-1,-2,-3,-4), true);
+			PR_CHECK(Max(arr0, arr1, arr2, arr3) == v4(+2,+2,+3,+4), true);
+			PR_CHECK(Clamp(arr0, arr2, arr3) == v4(+1,+0,+2,+0), true);
+		}
+		{// Operators
+			auto arr0 = v4(+1,-2,+3,-4);
+			auto arr1 = v4(-1,+2,-3,+4);
+			PR_CHECK((arr0 == arr1) == !(arr0 != arr1), true);
+			PR_CHECK((arr0 != arr1) == !(arr0 == arr1), true);
+			PR_CHECK((arr0 <  arr1) == !(arr0 >= arr1), true);
+			PR_CHECK((arr0 >  arr1) == !(arr0 <= arr1), true);
+			PR_CHECK((arr0 <= arr1) == !(arr0 >  arr1), true);
+			PR_CHECK((arr0 >= arr1) == !(arr0 <  arr1), true);
 
-				auto arr2 = v4(+3,+4,+5,+6);
-				auto arr3 = v4(+1,+2,+3,+4);
-				PR_CHECK(FEql(arr2 + arr3, v4(4,6,8,10)), true);
-				PR_CHECK(FEql(arr2 - arr3, v4(2,2,2,2)), true);
-				PR_CHECK(FEql(arr2 * 2.0f, v4(6,8,10,12)), true);
-				PR_CHECK(FEql(2.0f * arr2, v4(6,8,10,12)), true);
-				PR_CHECK(FEql(arr2 / 2.0f, v4(1.5f,2,2.5f,3)), true);
-				PR_CHECK(FEql(arr2 % 3.0f, v4(0,1,2,0)), true);
-			}
-			{// Normalise
-				auto arr0 = v4(1,2,3,4);
-				PR_CHECK(FEql(Normalise(v4Zero, arr0), arr0), true);
-				PR_CHECK(FEql(Normalise(arr0), v4(0.1825742f, 0.3651484f, 0.5477226f, 0.7302967f)), true);
-				PR_CHECK(FEql(Normalise2(arr0), v4(0.4472136f, 0.8944272f, 1.3416407f, 1.7888543f)), true);
-				PR_CHECK(FEql(Normalise3(arr0), v4(0.2672612f, 0.5345225f, 0.8017837f, 1.0690449f)), true);
-				PR_CHECK(FEql(Normalise4(arr0), v4(0.1825742f, 0.3651484f, 0.5477226f, 0.7302967f)), true);
+			auto arr2 = v4(+3,+4,+5,+6);
+			auto arr3 = v4(+1,+2,+3,+4);
+			PR_CHECK(FEql(arr2 + arr3, v4(4,6,8,10)), true);
+			PR_CHECK(FEql(arr2 - arr3, v4(2,2,2,2)), true);
+			PR_CHECK(FEql(arr2 * 2.0f, v4(6,8,10,12)), true);
+			PR_CHECK(FEql(2.0f * arr2, v4(6,8,10,12)), true);
+			PR_CHECK(FEql(arr2 / 2.0f, v4(1.5f,2,2.5f,3)), true);
+			PR_CHECK(FEql(arr2 % 3.0f, v4(0,1,2,0)), true);
+		}
+		{// Normalise
+			auto arr0 = v4(1,2,3,4);
+			PR_CHECK(FEql(Normalise(v4Zero, arr0), arr0), true);
+			PR_CHECK(FEql(Normalise(arr0), v4(0.1825742f, 0.3651484f, 0.5477226f, 0.7302967f)), true);
+			PR_CHECK(FEql(Normalise2(arr0), v4(0.4472136f, 0.8944272f, 1.3416407f, 1.7888543f)), true);
+			PR_CHECK(FEql(Normalise3(arr0), v4(0.2672612f, 0.5345225f, 0.8017837f, 1.0690449f)), true);
+			PR_CHECK(FEql(Normalise4(arr0), v4(0.1825742f, 0.3651484f, 0.5477226f, 0.7302967f)), true);
 
-				auto arr1 = v2(1,2);
-				PR_CHECK(FEql(Normalise(v2Zero, arr1), arr1), true);
-				PR_CHECK(FEql(Normalise2(arr1), v2(0.4472136f, 0.8944272f)), true);
+			auto arr1 = v2(1,2);
+			PR_CHECK(FEql(Normalise(v2Zero, arr1), arr1), true);
+			PR_CHECK(FEql(Normalise2(arr1), v2(0.4472136f, 0.8944272f)), true);
 
-				PR_CHECK(IsNormal(Normalise(arr0)), true);
-				PR_CHECK(IsNormal2(Normalise2(arr0)), true);
-				PR_CHECK(IsNormal3(Normalise3(arr0)), true);
-				PR_CHECK(IsNormal4(Normalise4(arr0)), true);
-			}
-			{// Smallest/Largest element
-				int arr0[] = {1,2,3,4,5};
-				int arr1[] = {2,1,3,4,5};
-				int arr2[] = {2,3,1,4,5};
-				int arr3[] = {2,3,4,1,5};
-				int arr4[] = {2,3,4,5,1};
+			PR_CHECK(IsNormal(Normalise(arr0)), true);
+			PR_CHECK(IsNormal2(Normalise2(arr0)), true);
+			PR_CHECK(IsNormal3(Normalise3(arr0)), true);
+			PR_CHECK(IsNormal4(Normalise4(arr0)), true);
+		}
+		{// Smallest/Largest element
+			int arr0[] = {1,2,3,4,5};
+			int arr1[] = {2,1,3,4,5};
+			int arr2[] = {2,3,1,4,5};
+			int arr3[] = {2,3,4,1,5};
+			int arr4[] = {2,3,4,5,1};
 
-				PR_CHECK(SmallestElement(arr0) == 0, true);
-				PR_CHECK(SmallestElement(arr1) == 1, true);
-				PR_CHECK(SmallestElement(arr2) == 2, true);
-				PR_CHECK(SmallestElement(arr3) == 3, true);
-				PR_CHECK(SmallestElement(arr4) == 4, true);
-				PR_CHECK(SmallestElement2(arr1) == 1, true);
-				PR_CHECK(SmallestElement3(arr3) == 0, true);
-				PR_CHECK(SmallestElement4(arr4) == 0, true);
+			PR_CHECK(SmallestElement(arr0) == 0, true);
+			PR_CHECK(SmallestElement(arr1) == 1, true);
+			PR_CHECK(SmallestElement(arr2) == 2, true);
+			PR_CHECK(SmallestElement(arr3) == 3, true);
+			PR_CHECK(SmallestElement(arr4) == 4, true);
+			PR_CHECK(SmallestElement2(arr1) == 1, true);
+			PR_CHECK(SmallestElement3(arr3) == 0, true);
+			PR_CHECK(SmallestElement4(arr4) == 0, true);
 
-				float arr5[] = {1,2,3,4,5};
-				float arr6[] = {1,2,3,5,4};
-				float arr7[] = {2,3,5,1,4};
-				float arr8[] = {2,5,3,4,1};
-				float arr9[] = {5,2,3,4,1};
-				PR_CHECK(LargestElement(arr5) == 4, true);
-				PR_CHECK(LargestElement(arr6) == 3, true);
-				PR_CHECK(LargestElement(arr7) == 2, true);
-				PR_CHECK(LargestElement(arr8) == 1, true);
-				PR_CHECK(LargestElement(arr9) == 0, true);
-				PR_CHECK(LargestElement2(arr5) == 1, true);
-				PR_CHECK(LargestElement3(arr5) == 2, true);
-				PR_CHECK(LargestElement4(arr5) == 3, true);
-			}
-			{// Dot
-				v3 arr0(1,2,3);
-				v3 arr1(2,3,4);
-				iv2 arr2(1,2);
-				iv2 arr3(3,4);
-				PR_CHECK(FEql(Dot(arr0, arr1), 20), true);
-				PR_CHECK(Dot(arr2, arr3) == 11, true);
-			}
-			{// Fraction
-				PR_CHECK(FEql(Frac(-5, 2, 5), 7.0f/10.0f), true);
-			}
-			{// Linear interpolate
-				v4 arr0(1,10,100,1000);
-				v4 arr1(2,20,200,2000);
-				PR_CHECK(FEql(Lerp(arr0, arr1, 0.7f), v4(1.7f, 17, 170, 1700)), true);
-			}
-			{// Spherical linear interpolate
-				PR_CHECK(FEql(Slerp(v4XAxis, 2.0f*v4YAxis, 0.5f), 1.5f*v4::Normal4(0.5f,0.5f,0,0)), true);
-			}
-			{// Quantise
-				v4 arr0(1.0f/3.0f, 0.0f, 2.0f, float(maths::tau));
-				PR_CHECK(FEql(Quantise(arr0, 1024), v4(0.333f, 0.0f, 2.0f, 6.28222f)), true);
-			}
-			{// CosAngle
-				v2 arr0(1,0);
-				v2 arr1(0,1);
-				PR_CHECK(FEql(CosAngle(1.0,1.0,maths::root2) - Cos(DegreesToRadians(90.0)), 0), true);
-				PR_CHECK(FEql(CosAngle(arr0, arr1)           - Cos(DegreesToRadians(90.0f)), 0), true);
-				PR_CHECK(FEql(Angle(1.0,1.0,maths::root2), DegreesToRadians(90.0)), true);
-				PR_CHECK(FEql(Angle(arr0, arr1),           DegreesToRadians(90.0f)), true);
-				PR_CHECK(FEql(Length(1.0f, 1.0f, DegreesToRadians(90.0f)), float(maths::root2)), true);
-			}
-			{// Cube Root (32bit)
-				auto a = 1.23456789123456789f;
-				auto b = Cubert(a * a * a);
-				PR_CHECK(FEqlRelative(a,b,0.000001f), true);
-			}
-			{// Cube Root (64bit)
-				auto a = 1.23456789123456789;
-				auto b = Cubert(a * a * a);
-				PR_CHECK(FEqlRelative(a,b,0.000000000001), true);
-			}
+			float arr5[] = {1,2,3,4,5};
+			float arr6[] = {1,2,3,5,4};
+			float arr7[] = {2,3,5,1,4};
+			float arr8[] = {2,5,3,4,1};
+			float arr9[] = {5,2,3,4,1};
+			PR_CHECK(LargestElement(arr5) == 4, true);
+			PR_CHECK(LargestElement(arr6) == 3, true);
+			PR_CHECK(LargestElement(arr7) == 2, true);
+			PR_CHECK(LargestElement(arr8) == 1, true);
+			PR_CHECK(LargestElement(arr9) == 0, true);
+			PR_CHECK(LargestElement2(arr5) == 1, true);
+			PR_CHECK(LargestElement3(arr5) == 2, true);
+			PR_CHECK(LargestElement4(arr5) == 3, true);
+		}
+		{// Dot
+			v3 arr0(1,2,3);
+			v3 arr1(2,3,4);
+			iv2 arr2(1,2);
+			iv2 arr3(3,4);
+			PR_CHECK(FEql(Dot(arr0, arr1), 20), true);
+			PR_CHECK(Dot(arr2, arr3) == 11, true);
+		}
+		{// Fraction
+			PR_CHECK(FEql(Frac(-5, 2, 5), 7.0f/10.0f), true);
+		}
+		{// Linear interpolate
+			v4 arr0(1,10,100,1000);
+			v4 arr1(2,20,200,2000);
+			PR_CHECK(FEql(Lerp(arr0, arr1, 0.7f), v4(1.7f, 17, 170, 1700)), true);
+		}
+		{// Spherical linear interpolate
+			PR_CHECK(FEql(Slerp(v4XAxis, 2.0f*v4YAxis, 0.5f), 1.5f*v4::Normal4(0.5f,0.5f,0,0)), true);
+		}
+		{// Quantise
+			v4 arr0(1.0f/3.0f, 0.0f, 2.0f, float(maths::tau));
+			PR_CHECK(FEql(Quantise(arr0, 1024), v4(0.333f, 0.0f, 2.0f, 6.28222f)), true);
+		}
+		{// CosAngle
+			v2 arr0(1,0);
+			v2 arr1(0,1);
+			PR_CHECK(FEql(CosAngle(1.0,1.0,maths::root2) - Cos(DegreesToRadians(90.0)), 0), true);
+			PR_CHECK(FEql(CosAngle(arr0, arr1)           - Cos(DegreesToRadians(90.0f)), 0), true);
+			PR_CHECK(FEql(Angle(1.0,1.0,maths::root2), DegreesToRadians(90.0)), true);
+			PR_CHECK(FEql(Angle(arr0, arr1),           DegreesToRadians(90.0f)), true);
+			PR_CHECK(FEql(Length(1.0f, 1.0f, DegreesToRadians(90.0f)), float(maths::root2)), true);
+		}
+		{// Cube Root (32bit)
+			auto a = 1.23456789123456789f;
+			auto b = Cubert(a * a * a);
+			PR_CHECK(FEqlRelative(a,b,0.000001f), true);
+		}
+		{// Cube Root (64bit)
+			auto a = 1.23456789123456789;
+			auto b = Cubert(a * a * a);
+			PR_CHECK(FEqlRelative(a,b,0.000000000001), true);
 		}
 	}
 }

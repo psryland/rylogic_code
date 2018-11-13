@@ -1031,6 +1031,7 @@ namespace LDraw
 				}
 
 				// Move the script to the new location
+				if (Path_.FileExists(filepath)) File.Delete(filepath);
 				File.Move(script.Filepath, filepath);
 
 				// Update the script with the new location

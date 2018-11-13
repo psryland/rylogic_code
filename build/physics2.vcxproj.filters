@@ -29,6 +29,9 @@
     <Filter Include="pr\collision">
       <UniqueIdentifier>{74f19a98-ec3e-4080-af50-742308ee4069}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\maths">
+      <UniqueIdentifier>{b1e41304-46c3-4eb7-ac89-da6455d1835d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\physics2/src\main.cpp">
@@ -140,6 +143,24 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\collision\support.h">
       <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\maths.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\matrix4x4.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\spatial.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\vector2.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\vector3.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\vector4.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

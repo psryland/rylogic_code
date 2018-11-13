@@ -89,9 +89,9 @@ namespace pr
 #include "pr/common/unittests.h"
 #include "pr/meta/alignment_of.h"
 
-namespace pr
+namespace pr::common
 {
-	namespace unittests
+	namespace unittests::new_operator
 	{
 		struct Wotzit :pr::AlignTo<32>
 		{
@@ -99,17 +99,18 @@ namespace pr
 			Wotzit() :m_int() {}
 			Wotzit(int i, int j, int k) :m_int(i+j+k) {}
 		};
+	}
+	PRUnitTest(NewOperatorTests)
+	{
+		using namespace unittests::new_operator;
 
-		PRUnitTest(pr_common_new)
-		{
-			auto p = pr::New<Wotzit>();
-			PR_CHECK(0, p->m_int);
-			PR_CHECK(pr::meta::is_aligned_to<32>(p.get()), true);
+		auto p = pr::New<Wotzit>();
+		PR_CHECK(0, p->m_int);
+		PR_CHECK(pr::meta::is_aligned_to<32>(p.get()), true);
 
-			p = pr::New<Wotzit>(1,2,3);
-			PR_CHECK(6, p->m_int);
-			PR_CHECK(pr::meta::is_aligned_to<32>(p.get()), true);
-		}
+		p = pr::New<Wotzit>(1,2,3);
+		PR_CHECK(6, p->m_int);
+		PR_CHECK(pr::meta::is_aligned_to<32>(p.get()), true);
 	}
 }
 #endif

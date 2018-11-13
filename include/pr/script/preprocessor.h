@@ -932,327 +932,321 @@ namespace pr
 #include "pr/common/unittests.h"
 #include "pr/script/embedded_lua.h"
 
-namespace pr
+namespace pr::script
 {
-	namespace unittests
+	PRUnitTest(InputStackTests)
 	{
-		PRUnitTest(pr_script_input_stack)
-		{
-			using namespace pr::str;
-			using namespace pr::script;
-			
-			char const* src1 = "abcd";
-			wchar_t const* src2 = L"123";
-			pr::string<wchar_t> str1;
+		using namespace pr::str;
 
-			Preprocessor pp(src1);
-			str1.push_back(*pp); ++pp;
-			str1.push_back(*pp); ++pp;
-			pp.Push(src2);
-			str1.push_back(*pp); ++pp;
-			str1.push_back(*pp); ++pp;
-			str1.push_back(*pp); ++pp;
-			str1.push_back(*pp); ++pp;
-			str1.push_back(*pp); ++pp;
-			PR_CHECK(Equal(str1, L"ab123cd"), true);
-			PR_CHECK(*pp, 0);
-		}
-		PRUnitTest(pr_script_preprocessor)
-		{
-			using namespace pr::script;
+		char const* src1 = "abcd";
+		wchar_t const* src2 = L"123";
+		pr::string<wchar_t> str1;
 
-			{// ignored stuff
-				char const* str_in =
-					"\"#if ignore #define this stuff\"\n"
-					;
-				char const* str_out =
-					"\"#if ignore #define this stuff\"\n"
-					;
-
-				Preprocessor pp(str_in);
-				for (;*pp && *str_out; ++pp, ++str_out)
-				{
-					if (*pp == *str_out) continue;
-					PR_CHECK(*pp, *str_out);
-				}
-				PR_CHECK(*str_out == 0 && *pp == 0, true);
-			}
-			{// Line continuation tests line endings
-				char const* str_in =
-					"#define BLAH(x)\\\r\n"
-					"   \\\r\n"
-					"	(x + 1)\r\n"
-					"BLAH(5)\r\n"
-					"#define BOB\\\r\n"
-					"	bob\r\n"
-					"BLAH(bob)\r\n";
-				char const* str_out =
-					"(5 + 1)\r\n"
-					"(bob + 1)\r\n"
+		Preprocessor pp(src1);
+		str1.push_back(*pp); ++pp;
+		str1.push_back(*pp); ++pp;
+		pp.Push(src2);
+		str1.push_back(*pp); ++pp;
+		str1.push_back(*pp); ++pp;
+		str1.push_back(*pp); ++pp;
+		str1.push_back(*pp); ++pp;
+		str1.push_back(*pp); ++pp;
+		PR_CHECK(Equal(str1, L"ab123cd"), true);
+		PR_CHECK(*pp, 0);
+	}
+	PRUnitTest(PreprocessorTests)
+	{
+		{// ignored stuff
+			char const* str_in =
+				"\"#if ignore #define this stuff\"\n"
+				;
+			char const* str_out =
+				"\"#if ignore #define this stuff\"\n"
 				;
 
-				Preprocessor pp(str_in);
-				for (;*pp && *str_out; ++pp, ++str_out)
-				{
-					if (*pp == *str_out) continue;
-					PR_CHECK(*pp, *str_out);
-				}
-				PR_CHECK(*str_out == 0 && *pp == 0, true);
+			Preprocessor pp(str_in);
+			for (;*pp && *str_out; ++pp, ++str_out)
+			{
+				if (*pp == *str_out) continue;
+				PR_CHECK(*pp, *str_out);
 			}
-			{// simple macros
-				char const* str_in =
-					"#  define ONE 1 // ignore me \n"
-					"# define    ONE  1\n" // same definition, allowed
-					"#  define NOT_ONE (!ONE) /*and me*/ \n"
-					"#define TWO\\\n"
-					"   2\n"
-					"ONE\n"
-					"NOT_ONE\n"
-					"TWO\n"
-					;
-				char const* str_out =
-					"1\n"
-					"(!1)\n"
-					"2\n"
-					;
+			PR_CHECK(*str_out == 0 && *pp == 0, true);
+		}
+		{// Line continuation tests line endings
+			char const* str_in =
+				"#define BLAH(x)\\\r\n"
+				"   \\\r\n"
+				"	(x + 1)\r\n"
+				"BLAH(5)\r\n"
+				"#define BOB\\\r\n"
+				"	bob\r\n"
+				"BLAH(bob)\r\n";
+			char const* str_out =
+				"(5 + 1)\r\n"
+				"(bob + 1)\r\n"
+			;
 
-				Preprocessor pp(str_in);
-				for (;*pp && *str_out; ++pp, ++str_out)
-				{
-					if (*pp == *str_out) continue;
-					PR_CHECK(*pp, *str_out);
-				}
-				PR_CHECK(*str_out == 0 && *pp == 0, true);
+			Preprocessor pp(str_in);
+			for (;*pp && *str_out; ++pp, ++str_out)
+			{
+				if (*pp == *str_out) continue;
+				PR_CHECK(*pp, *str_out);
 			}
-			{// Multi-line preprocessor
-				char const* str_in =
-					"#define ml\\\n"
-					"  MULTI\\\n"
-					"LINE\n"
-					"ml";
-				char const* str_out =
-					"MULTILINE";
+			PR_CHECK(*str_out == 0 && *pp == 0, true);
+		}
+		{// simple macros
+			char const* str_in =
+				"#  define ONE 1 // ignore me \n"
+				"# define    ONE  1\n" // same definition, allowed
+				"#  define NOT_ONE (!ONE) /*and me*/ \n"
+				"#define TWO\\\n"
+				"   2\n"
+				"ONE\n"
+				"NOT_ONE\n"
+				"TWO\n"
+				;
+			char const* str_out =
+				"1\n"
+				"(!1)\n"
+				"2\n"
+				;
 
-				Preprocessor pp(str_in);
-				for (;*pp && *str_out; ++pp, ++str_out)
-				{
-					if (*pp == *str_out) continue;
-					PR_CHECK(*pp, *str_out);
-				}
-				PR_CHECK(*str_out == 0 && *pp == 0, true);
+			Preprocessor pp(str_in);
+			for (;*pp && *str_out; ++pp, ++str_out)
+			{
+				if (*pp == *str_out) continue;
+				PR_CHECK(*pp, *str_out);
 			}
-			{// simple macro functions
-				char const* str_in =
-					"#\tdefine PLUS(x,y) \\\n"
-					" (x)+(y) xx 0x _0x  \n"
-					"PLUS  (1,(2,3))\n"
-					;
-				char const* str_out =
-					"(1)+((2,3)) xx 01 _0x\n"
-					;
+			PR_CHECK(*str_out == 0 && *pp == 0, true);
+		}
+		{// Multi-line preprocessor
+			char const* str_in =
+				"#define ml\\\n"
+				"  MULTI\\\n"
+				"LINE\n"
+				"ml";
+			char const* str_out =
+				"MULTILINE";
 
-				Preprocessor pp(str_in);
-				for (;*pp && *str_out; ++pp, ++str_out)
-				{
-					if (*pp == *str_out) continue;
-					PR_CHECK(*pp, *str_out);
-				}
-				PR_CHECK(*str_out == 0 && *pp == 0, true);
+			Preprocessor pp(str_in);
+			for (;*pp && *str_out; ++pp, ++str_out)
+			{
+				if (*pp == *str_out) continue;
+				PR_CHECK(*pp, *str_out);
 			}
-			{// recursive macros
-				char const* str_in =
-					"#define C(x) A(x) B(x) C(x)\n"
-					"#define B(x) C(x)\n"
-					"#define A(x) B(x)\n"
-					"A(1)\n"
-					;
-				char const* str_out =
-					"A(1) B(1) C(1)\n"
-					;
+			PR_CHECK(*str_out == 0 && *pp == 0, true);
+		}
+		{// simple macro functions
+			char const* str_in =
+				"#\tdefine PLUS(x,y) \\\n"
+				" (x)+(y) xx 0x _0x  \n"
+				"PLUS  (1,(2,3))\n"
+				;
+			char const* str_out =
+				"(1)+((2,3)) xx 01 _0x\n"
+				;
 
-				Preprocessor pp(str_in);
-				for (;*pp && *str_out; ++pp, ++str_out)
-				{
-					if (*pp == *str_out) continue;
-					PR_CHECK(*pp, *str_out);
-				}
-				PR_CHECK(*str_out == 0 && *pp == 0, true);
+			Preprocessor pp(str_in);
+			for (;*pp && *str_out; ++pp, ++str_out)
+			{
+				if (*pp == *str_out) continue;
+				PR_CHECK(*pp, *str_out);
 			}
-			{// #eval
-				char const* str_in =
-					"#eval{1+#eval{1+1}}\n"
-					;
-				char const* str_out =
-					"3\n"
-					;
+			PR_CHECK(*str_out == 0 && *pp == 0, true);
+		}
+		{// recursive macros
+			char const* str_in =
+				"#define C(x) A(x) B(x) C(x)\n"
+				"#define B(x) C(x)\n"
+				"#define A(x) B(x)\n"
+				"A(1)\n"
+				;
+			char const* str_out =
+				"A(1) B(1) C(1)\n"
+				;
 
-				Preprocessor pp(str_in);
-				for (;*pp && *str_out; ++pp, ++str_out)
-				{
-					if (*pp == *str_out) continue;
-					PR_CHECK(*pp, *str_out);
-				}
-				PR_CHECK(*str_out == 0 && *pp == 0, true);
+			Preprocessor pp(str_in);
+			for (;*pp && *str_out; ++pp, ++str_out)
+			{
+				if (*pp == *str_out) continue;
+				PR_CHECK(*pp, *str_out);
 			}
-			{// recursive macros/evals
-				char const* str_in =
-					"#define X 3.0\n"
-					"#define Y 4.0\n"
-					"#define Len2 #eval{len2(X,Y)}\n"
-					"#eval{X + Len2}\n";
-				char const* str_out =
-					"8\n";
+			PR_CHECK(*str_out == 0 && *pp == 0, true);
+		}
+		{// #eval
+			char const* str_in =
+				"#eval{1+#eval{1+1}}\n"
+				;
+			char const* str_out =
+				"3\n"
+				;
 
-				Preprocessor pp(str_in);
-				for (;*pp && *str_out; ++pp, ++str_out)
-				{
-					if (*pp == *str_out) continue;
-					PR_CHECK(*pp, *str_out);
-				}
-				PR_CHECK(*str_out == 0 && *pp == 0, true);
+			Preprocessor pp(str_in);
+			for (;*pp && *str_out; ++pp, ++str_out)
+			{
+				if (*pp == *str_out) continue;
+				PR_CHECK(*pp, *str_out);
 			}
-			{// #if/#else/#etc
-				char const* str_in =
-					"#  define ONE 1 // ignore me \n"
-					"#  define NOT_ONE (!ONE) /*and me*/ \n"
-					"#\tdefine PLUS(x,y) (x)+(y) xx 0x _0x  \n"
-					"#ifdef ZERO\n"
-					"	#if NESTED\n"
-					"		not output \"ignore #else\" \n"
-					"	#endif\n"
-					"#elif (!NOT_ONE) && defined(PLUS)\n"
-					"	output\n"
-					"#else\n"
-					"	not output\n"
-					"#endif\n"
-					"#ifndef ZERO\n"
-					"	#if defined(ZERO) || defined(PLUS)\n"
-					"		output this\n"
-					"	#else\n"
-					"		but not this\n"
-					"	#endif\n"
-					"#endif\n"
-					"#undef ONE\n"
-					"#ifdef ONE\n"
-					"	don't output\n"
-					"#endif\n"
-					"#define TWO\n"
-					"#ifdef TWO\n"
-					"	two defined\n"
-					"#endif\n"
-					"#defifndef ONE 1\n"
-					"#defifndef ONE 2\n"
-					"ONE\n"
-					;
-				char const* str_out =
-					"	output\n"
-					"	"//#if defined(ZERO) || ...
-					"		output this\n"
-					"	"//#else\n
-					"	two defined\n"
-					"1\n"
-					;
+			PR_CHECK(*str_out == 0 && *pp == 0, true);
+		}
+		{// recursive macros/evals
+			char const* str_in =
+				"#define X 3.0\n"
+				"#define Y 4.0\n"
+				"#define Len2 #eval{len2(X,Y)}\n"
+				"#eval{X + Len2}\n";
+			char const* str_out =
+				"8\n";
 
-				Preprocessor pp(str_in);
-				for (;*pp && *str_out; ++pp, ++str_out)
-				{
-					if (*pp == *str_out) continue;
-					PR_CHECK(*pp, *str_out);
-				}
-				PR_CHECK(*str_out == 0 && *pp == 0, true);
+			Preprocessor pp(str_in);
+			for (;*pp && *str_out; ++pp, ++str_out)
+			{
+				if (*pp == *str_out) continue;
+				PR_CHECK(*pp, *str_out);
 			}
-			{// includes
-				char const* str_in =
-					"#  define ONE 1 // ignore me \n"
-					"#include \"inc\"\n"
-					;
-				char const* str_out =
-					"included 1\n"
-					;
+			PR_CHECK(*str_out == 0 && *pp == 0, true);
+		}
+		{// #if/#else/#etc
+			char const* str_in =
+				"#  define ONE 1 // ignore me \n"
+				"#  define NOT_ONE (!ONE) /*and me*/ \n"
+				"#\tdefine PLUS(x,y) (x)+(y) xx 0x _0x  \n"
+				"#ifdef ZERO\n"
+				"	#if NESTED\n"
+				"		not output \"ignore #else\" \n"
+				"	#endif\n"
+				"#elif (!NOT_ONE) && defined(PLUS)\n"
+				"	output\n"
+				"#else\n"
+				"	not output\n"
+				"#endif\n"
+				"#ifndef ZERO\n"
+				"	#if defined(ZERO) || defined(PLUS)\n"
+				"		output this\n"
+				"	#else\n"
+				"		but not this\n"
+				"	#endif\n"
+				"#endif\n"
+				"#undef ONE\n"
+				"#ifdef ONE\n"
+				"	don't output\n"
+				"#endif\n"
+				"#define TWO\n"
+				"#ifdef TWO\n"
+				"	two defined\n"
+				"#endif\n"
+				"#defifndef ONE 1\n"
+				"#defifndef ONE 2\n"
+				"ONE\n"
+				;
+			char const* str_out =
+				"	output\n"
+				"	"//#if defined(ZERO) || ...
+				"		output this\n"
+				"	"//#else\n
+				"	two defined\n"
+				"1\n"
+				;
 
-				Includes inc; inc.AddString(L"inc", "included ONE");
-				PtrA src(str_in);
-				Preprocessor pp(&src, false, &inc);
-				for (;*pp && *str_out; ++pp, ++str_out)
-				{
-					if (*pp == *str_out) continue;
-					PR_CHECK(*pp, *str_out);
-				}
-				PR_CHECK(*str_out == 0 && *pp == 0, true);
+			Preprocessor pp(str_in);
+			for (;*pp && *str_out; ++pp, ++str_out)
+			{
+				if (*pp == *str_out) continue;
+				PR_CHECK(*pp, *str_out);
 			}
-			{// miscellaneous
-				char const* str_in =
-					"\"#error this would throw an error\"\n"
-					"#pragma ignore this\n"
-					"#line ignore this\n"
-					"#warning ignore this\n"
-					"#include_path \"some_path\"\n"
-					"lastword"
-					"#define ONE 1\n"
-					"#eval{ONE+2-4+len2(3,4)}\n"
-					"#define EVAL(x) #eval{x+1}\n"
-					"EVAL(1)\n"
-					"#lit Any old ch*rac#ers #if I {feel} #include --cheese like #en#end\n"
-					"#embedded(lua) --lua code\n return \"hello world\" #end\n"
-					;
-				char const* str_out =
-					"\"#error this would throw an error\"\n"
-					"lastword"
-					"4\n"
-					"2\n"
-					"Any old ch*rac#ers #if I {feel} #include --cheese like #en\n"
-					"hello world\n"
-					;
+			PR_CHECK(*str_out == 0 && *pp == 0, true);
+		}
+		{// includes
+			char const* str_in =
+				"#  define ONE 1 // ignore me \n"
+				"#include \"inc\"\n"
+				;
+			char const* str_out =
+				"included 1\n"
+				;
 
-				Includes inc;
-				Preprocessor pp(str_in, &inc, nullptr, [](auto){ return std::make_unique<EmbeddedLua>(); });
-				for (;*pp && *str_out; ++pp, ++str_out)
-				{
-					if (*pp == *str_out) continue;
-					PR_CHECK(*pp, *str_out);
-				}
-				PR_CHECK(*str_out == 0 && *pp == 0, true);
+			Includes inc; inc.AddString(L"inc", "included ONE");
+			PtrA src(str_in);
+			Preprocessor pp(&src, false, &inc);
+			for (;*pp && *str_out; ++pp, ++str_out)
+			{
+				if (*pp == *str_out) continue;
+				PR_CHECK(*pp, *str_out);
 			}
-			{// Using a preloaded buffer
-				char const* str_in =
-					"#define BOB(x) #x\n"
-					"BOB(this is a string)\n"
-					;
-				char const* str_out =
-					"\"this is a string\"\n"
-					;
+			PR_CHECK(*str_out == 0 && *pp == 0, true);
+		}
+		{// miscellaneous
+			char const* str_in =
+				"\"#error this would throw an error\"\n"
+				"#pragma ignore this\n"
+				"#line ignore this\n"
+				"#warning ignore this\n"
+				"#include_path \"some_path\"\n"
+				"lastword"
+				"#define ONE 1\n"
+				"#eval{ONE+2-4+len2(3,4)}\n"
+				"#define EVAL(x) #eval{x+1}\n"
+				"EVAL(1)\n"
+				"#lit Any old ch*rac#ers #if I {feel} #include --cheese like #en#end\n"
+				"#embedded(lua) --lua code\n return \"hello world\" #end\n"
+				;
+			char const* str_out =
+				"\"#error this would throw an error\"\n"
+				"lastword"
+				"4\n"
+				"2\n"
+				"Any old ch*rac#ers #if I {feel} #include --cheese like #en\n"
+				"hello world\n"
+				;
 
-				Buffer<> buf(ESrcType::Buffered, str_in);
-				Preprocessor pp(&buf, false);
-				for (;*pp && *str_out; ++pp, ++str_out)
-				{
-					if (*pp == *str_out) continue;
-					PR_CHECK(*pp, *str_out);
-				}
-				PR_CHECK(*str_out == 0 && *pp == 0, true);
+			Includes inc;
+			Preprocessor pp(str_in, &inc, nullptr, [](auto){ return std::make_unique<EmbeddedLua>(); });
+			for (;*pp && *str_out; ++pp, ++str_out)
+			{
+				if (*pp == *str_out) continue;
+				PR_CHECK(*pp, *str_out);
 			}
-			{// X Macros
-				char const* str_in =
-					"#define LINE(x) x = #x\n"
-					"#define DEFINE(values) values(LINE)\n"
-					"#define Thing(x)\\\n"
-					"	x(One)\\\n"
-					"	x(Two)\\\n"
-					"	x(Three)\n"
-					"DEFINE(Thing)\n"
-					"#undef Thing\n"
-					;
-				char const* str_out =
-					"One = \"One\"	Two = \"Two\"	Three = \"Three\"\n"
-					;
-				Preprocessor pp(str_in);
-				for (;*pp && *str_out; ++pp, ++str_out)
-				{
-					if (*pp == *str_out) continue;
-					PR_CHECK(*pp, *str_out);
-				}
-				PR_CHECK(*str_out == 0 && *pp == 0, true);
+			PR_CHECK(*str_out == 0 && *pp == 0, true);
+		}
+		{// Using a preloaded buffer
+			char const* str_in =
+				"#define BOB(x) #x\n"
+				"BOB(this is a string)\n"
+				;
+			char const* str_out =
+				"\"this is a string\"\n"
+				;
+
+			Buffer<> buf(ESrcType::Buffered, str_in);
+			Preprocessor pp(&buf, false);
+			for (;*pp && *str_out; ++pp, ++str_out)
+			{
+				if (*pp == *str_out) continue;
+				PR_CHECK(*pp, *str_out);
 			}
+			PR_CHECK(*str_out == 0 && *pp == 0, true);
+		}
+		{// X Macros
+			char const* str_in =
+				"#define LINE(x) x = #x\n"
+				"#define DEFINE(values) values(LINE)\n"
+				"#define Thing(x)\\\n"
+				"	x(One)\\\n"
+				"	x(Two)\\\n"
+				"	x(Three)\n"
+				"DEFINE(Thing)\n"
+				"#undef Thing\n"
+				;
+			char const* str_out =
+				"One = \"One\"	Two = \"Two\"	Three = \"Three\"\n"
+				;
+			Preprocessor pp(str_in);
+			for (;*pp && *str_out; ++pp, ++str_out)
+			{
+				if (*pp == *str_out) continue;
+				PR_CHECK(*pp, *str_out);
+			}
+			PR_CHECK(*str_out == 0 && *pp == 0, true);
 		}
 	}
 }

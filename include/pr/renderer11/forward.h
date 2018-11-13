@@ -256,13 +256,10 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::rdr
 {
-	namespace unittests
+	PRUnitTest(ForwardTests)
 	{
-		PRUnitTest(pr_renderer11_forward)
-		{
-		}
 	}
 }
 #endif

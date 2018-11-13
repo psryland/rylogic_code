@@ -91,10 +91,12 @@ namespace Rylogic.Maths
 	[Serializable]
 	[StructLayout(LayoutKind.Sequential)]
 	[DebuggerDisplay("{m00} {m01} {m10} {m11}")]
-	public struct m6x8<T> where T : IVectorSpace
+	public struct m6x8<T,U> where T : IVectorSpace where U : IVectorSpace
 	{
-		public m3x4 m00, m01;
-		public m3x4 m10, m11;
+		public m3x4 m00;
+		public m3x4 m01;
+		public m3x4 m10;
+		public m3x4 m11;
 
 		// Constructors
 		public m6x8(m3x4 m00, m3x4 m01, m3x4 m10, m3x4 m11)
@@ -107,35 +109,36 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Reinterpret cast this matrix</summary>
-		public m6x8<U> Cast<U>() where U: IVectorSpace
+		public m6x8<V,W> Cast<V,W>() where V: IVectorSpace where W:IVectorSpace
 		{
-			return new m6x8<U>(m00, m01, m10, m11);
+			return new m6x8<V,W>(m00, m01, m10, m11);
 		}
 
 		// Operators
-		public static m6x8<T> operator - (m6x8<T> m)
+		public static m6x8<T,U> operator - (m6x8<T, U> m)
 		{
-			return new m6x8<T>(-m.m00, -m.m01, -m.m10, -m.m11);
+			return new m6x8<T, U>(-m.m00, -m.m01, -m.m10, -m.m11);
 		}
-		public static v8<T> operator * (m6x8<T> lhs, v8<T> rhs)
+		public static v8<U> operator * (m6x8<T, U> lhs, v8<T> rhs)
 		{
 			// [m11*a + m12*b] = [m11 m12] [a]
 			// [m21*a + m22*b]   [m21 m22] [b]
-			return new v8<T>(
+			return new v8<U>(
 				lhs.m00 * rhs.ang + lhs.m01 * rhs.lin,
 				lhs.m10 * rhs.ang + lhs.m11 * rhs.lin);
 		}
-		public static m6x8<T> operator * (m6x8<T> lhs, m6x8<T> rhs)
+		public static m6x8<T, U> operator * (m6x8<T, U> lhs, m6x8<T, U> rhs)
 		{
+			// This is only valid if T == U.
 			//' [a11 a12] [b11 b12] = [a11*b11 + a12*b21 a11*b12 + a12*b22]
 			//' [a21 a22] [b21 b22]   [a21*b11 + a22*b21 a21*b12 + a22*b22]
-			return new m6x8<T>(
+			return new m6x8<T,U>(
 				lhs.m00 * rhs.m00 + lhs.m01 * rhs.m10, lhs.m00 * rhs.m01 + lhs.m01 * rhs.m11,
 				lhs.m10 * rhs.m00 + lhs.m11 * rhs.m10, lhs.m10 * rhs.m01 + lhs.m11 * rhs.m11);
 		}
 
 		#region Equals
-		public static bool operator ==(m6x8<T> lhs, m6x8<T> rhs)
+		public static bool operator == (m6x8<T,U> lhs, m6x8<T,U> rhs)
 		{
 			return
 				lhs.m00 == rhs.m00 &&
@@ -143,13 +146,13 @@ namespace Rylogic.Maths
 				lhs.m10 == rhs.m10 &&
 				lhs.m11 == rhs.m11;
 		}
-		public static bool operator !=(m6x8<T> lhs, m6x8<T> rhs)
+		public static bool operator != (m6x8<T,U> lhs, m6x8<T,U> rhs)
 		{
 			return !(lhs == rhs);
 		}
 		public override bool Equals(object o)
 		{
-			return o is m6x8<T> && (m6x8<T>)o == this;
+			return o is m6x8<T,U> && (m6x8<T,U>)o == this;
 		}
 		public override int GetHashCode()
 		{
@@ -236,7 +239,7 @@ namespace Rylogic.Maths
 				FEqlRelative(lhs.ang, rhs.ang, tol) &&
 				FEqlRelative(lhs.lin, rhs.lin, tol);
 		}
-		public static bool FEqlRelative<T>(m6x8<T> lhs, m6x8<T> rhs, float tol) where T : IVectorSpace
+		public static bool FEqlRelative<T,U>(m6x8<T, U> lhs, m6x8<T, U> rhs, float tol) where T : IVectorSpace where U : IVectorSpace
 		{
 			return
 				FEqlRelative(lhs.m00, rhs.m00, tol) &&
@@ -250,7 +253,7 @@ namespace Rylogic.Maths
 				FEql(lhs.ang, rhs.ang) &&
 				FEql(lhs.lin, rhs.lin);
 		}
-		public static bool FEql<T>(m6x8<T> lhs, m6x8<T> rhs) where T : IVectorSpace
+		public static bool FEql<T,U>(m6x8<T, U> lhs, m6x8<T, U> rhs) where T : IVectorSpace where U : IVectorSpace
 		{
 			return
 				FEql(lhs.m00, rhs.m00) &&
@@ -288,26 +291,26 @@ namespace Rylogic.Maths
 
 		/// <summary>
 		/// The spatial cross product matrix for 'a', for use with motion vectors.
-		///' i.e. b = a x m = cpmM(a) * m, where m is a motion vector</summary>
-		public static m6x8<Motion> CPM(v8<Motion> a)
+		///' i.e. b = a x m = CPM(a) * m, where m is a motion vector</summary>
+		public static m6x8<Motion,Motion> CPM(v8<Motion> a)
 		{
 			var cx_ang = CPM(a.ang);
 			var cx_lin = CPM(a.lin);
-			return new m6x8<Motion>(cx_ang, m3x4.Zero, cx_lin, cx_ang);
+			return new m6x8<Motion, Motion>(cx_ang, m3x4.Zero, cx_lin, cx_ang);
 		}
 
 		/// <summary>
 		/// The spatial cross product matrix for 'a', for use with force vectors.
-		/// i.e. b = a x* f = cpmF(a) * f, where f is a force vector</summary>
-		public static m6x8<Force> CPM(v8<Force> a)
+		/// i.e. b = a x* f = CPM(a) * f, where f is a force vector</summary>
+		public static m6x8<Force, Force> CPM(v8<Force> a)
 		{
 			var cx_ang = CPM(a.ang);
 			var cx_lin = CPM(a.lin);
-			return new m6x8<Force>(cx_ang, cx_lin, m3x4.Zero, cx_ang);
+			return new m6x8<Force, Force>(cx_ang, cx_lin, m3x4.Zero, cx_ang);
 		}
 
 		/// <summary>Return the transpose of a spatial matrix</summary>
-		public static void Transpose<T>(ref m6x8<T> m) where T : IVectorSpace
+		public static void Transpose<T, U>(ref m6x8<T, U> m) where T : IVectorSpace where U : IVectorSpace
 		{
 			Transpose(ref m.m00);
 			Transpose(ref m.m01);
@@ -315,7 +318,7 @@ namespace Rylogic.Maths
 			Transpose(ref m.m11);
 			Swap(ref m.m01, ref m.m10);
 		}
-		public static m6x8<T> Transpose<T>(m6x8<T> m) where T : IVectorSpace
+		public static m6x8<T, U> Transpose<T, U>(m6x8<T, U> m) where T : IVectorSpace where U : IVectorSpace
 		{
 			Transpose(ref m);
 			return m;
@@ -364,7 +367,7 @@ namespace Rylogic.UnitTests
 				var m0 = Math_.CPM(v.Cast<Motion>()); // vx
 				var m1 = Math_.CPM(v.Cast<Force>());  // vx*
 				var m2 = Math_.Transpose(m1);
-				var m3 = (-m2).Cast<Motion>();
+				var m3 = (-m2).Cast<Motion,Motion>();
 				Assert.True(Math_.FEql(m0, m3));
 			}
 		}

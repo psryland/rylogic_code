@@ -234,174 +234,170 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::common
 {
-	namespace unittests
+	PRUnitTest(RangeTests)
 	{
-		PRUnitTest(TestName)
 		{
-			using namespace pr;
-			{
-				typedef pr::Range<int> IRange;
-				IRange r0(0,5);
-				IRange r1(5,10);
-				IRange r2(3,7);
-				IRange r3(0,10);
+			typedef pr::Range<int> IRange;
+			IRange r0(0,5);
+			IRange r1(5,10);
+			IRange r2(3,7);
+			IRange r3(0,10);
 
-				PR_CHECK(r0.empty(), false);
-				PR_CHECK(r0.size() , 5);
+			PR_CHECK(r0.empty(), false);
+			PR_CHECK(r0.size() , 5);
 
-				PR_CHECK(IsWithin(r0, -1) , false);
-				PR_CHECK(IsWithin(r0,  0) , true );
-				PR_CHECK(IsWithin(r0,  4) , true );
-				PR_CHECK(IsWithin(r0,  5) , false);
-				PR_CHECK(IsWithin(r0,  6) , false);
+			PR_CHECK(IsWithin(r0, -1) , false);
+			PR_CHECK(IsWithin(r0,  0) , true );
+			PR_CHECK(IsWithin(r0,  4) , true );
+			PR_CHECK(IsWithin(r0,  5) , false);
+			PR_CHECK(IsWithin(r0,  6) , false);
 
-				PR_CHECK(IsWithin(r3, r0), true  );
-				PR_CHECK(IsWithin(r3, r1), true  );
-				PR_CHECK(IsWithin(r3, r2), true  );
-				PR_CHECK(IsWithin(r2, r0), false );
-				PR_CHECK(IsWithin(r2, r1), false );
-				PR_CHECK(IsWithin(r2, r3), false );
-				PR_CHECK(IsWithin(r1, r0), false );
-				PR_CHECK(IsWithin(r0, r1), false );
+			PR_CHECK(IsWithin(r3, r0), true  );
+			PR_CHECK(IsWithin(r3, r1), true  );
+			PR_CHECK(IsWithin(r3, r2), true  );
+			PR_CHECK(IsWithin(r2, r0), false );
+			PR_CHECK(IsWithin(r2, r1), false );
+			PR_CHECK(IsWithin(r2, r3), false );
+			PR_CHECK(IsWithin(r1, r0), false );
+			PR_CHECK(IsWithin(r0, r1), false );
 
-				PR_CHECK(Intersects(r3, r0), true );
-				PR_CHECK(Intersects(r3, r1), true );
-				PR_CHECK(Intersects(r3, r2), true );
-				PR_CHECK(Intersects(r2, r0), true );
-				PR_CHECK(Intersects(r2, r1), true );
-				PR_CHECK(Intersects(r2, r3), true );
-				PR_CHECK(Intersects(r1, r0), false);
-				PR_CHECK(Intersects(r0, r1), false);
+			PR_CHECK(Intersects(r3, r0), true );
+			PR_CHECK(Intersects(r3, r1), true );
+			PR_CHECK(Intersects(r3, r2), true );
+			PR_CHECK(Intersects(r2, r0), true );
+			PR_CHECK(Intersects(r2, r1), true );
+			PR_CHECK(Intersects(r2, r3), true );
+			PR_CHECK(Intersects(r1, r0), false);
+			PR_CHECK(Intersects(r0, r1), false);
 
-				r0.shift(3);
-				r1.shift(-2);
-				PR_CHECK(r0 == r1, true);
+			r0.shift(3);
+			r1.shift(-2);
+			PR_CHECK(r0 == r1, true);
 
-				PR_CHECK(r3.mid() == r2.mid(), true);
+			PR_CHECK(r3.mid() == r2.mid(), true);
 
-				r0.shift(-3);
-				r0.resize(3);
-				PR_CHECK(r0.size(), 3);
+			r0.shift(-3);
+			r0.resize(3);
+			PR_CHECK(r0.size(), 3);
 
-				IRange r4 = IRange::Reset();
-				Encompass(r4, 4);
-				PR_CHECK(4, r4.m_beg);
-				PR_CHECK(5, r4.m_end);
-				PR_CHECK(1, r4.size());
-				PR_CHECK(IsWithin(r4, 4), true);
-			}
-			{//IterRange
-				typedef std::vector<int> Vec;
-				typedef pr::Range<Vec::const_iterator> IRange;
-				Vec vec; for (int i = 0; i != 10; ++i) vec.push_back(i);
+			IRange r4 = IRange::Reset();
+			Encompass(r4, 4);
+			PR_CHECK(4, r4.m_beg);
+			PR_CHECK(5, r4.m_end);
+			PR_CHECK(1, r4.size());
+			PR_CHECK(IsWithin(r4, 4), true);
+		}
+		{//IterRange
+			typedef std::vector<int> Vec;
+			typedef pr::Range<Vec::const_iterator> IRange;
+			Vec vec; for (int i = 0; i != 10; ++i) vec.push_back(i);
 
-				IRange r0(vec.begin(),vec.begin()+5);
-				IRange r1(vec.begin()+5,vec.end());
-				IRange r2(vec.begin()+3,vec.begin()+7);
-				IRange r3(vec.begin(),vec.end());
+			IRange r0(vec.begin(),vec.begin()+5);
+			IRange r1(vec.begin()+5,vec.end());
+			IRange r2(vec.begin()+3,vec.begin()+7);
+			IRange r3(vec.begin(),vec.end());
 
-				PR_CHECK(r0.empty() ,false);
-				PR_CHECK(r0.size()  ,5);
+			PR_CHECK(r0.empty() ,false);
+			PR_CHECK(r0.size()  ,5);
 
-				PR_CHECK(IsWithin(r0, vec.begin()     ) ,true  );
-				PR_CHECK(IsWithin(r0, vec.begin() + 4 ) ,true  );
-				PR_CHECK(IsWithin(r0, vec.begin() + 5 ) ,false );
-				PR_CHECK(IsWithin(r0, vec.end()       ) ,false );
+			PR_CHECK(IsWithin(r0, vec.begin()     ) ,true  );
+			PR_CHECK(IsWithin(r0, vec.begin() + 4 ) ,true  );
+			PR_CHECK(IsWithin(r0, vec.begin() + 5 ) ,false );
+			PR_CHECK(IsWithin(r0, vec.end()       ) ,false );
 
-				PR_CHECK(IsWithin(r3, r0), true  );
-				PR_CHECK(IsWithin(r3, r1), true  );
-				PR_CHECK(IsWithin(r3, r2), true  );
-				PR_CHECK(IsWithin(r2, r0), false );
-				PR_CHECK(IsWithin(r2, r1), false );
-				PR_CHECK(IsWithin(r2, r3), false );
-				PR_CHECK(IsWithin(r1, r0), false );
-				PR_CHECK(IsWithin(r0, r1), false );
+			PR_CHECK(IsWithin(r3, r0), true  );
+			PR_CHECK(IsWithin(r3, r1), true  );
+			PR_CHECK(IsWithin(r3, r2), true  );
+			PR_CHECK(IsWithin(r2, r0), false );
+			PR_CHECK(IsWithin(r2, r1), false );
+			PR_CHECK(IsWithin(r2, r3), false );
+			PR_CHECK(IsWithin(r1, r0), false );
+			PR_CHECK(IsWithin(r0, r1), false );
 
-				PR_CHECK(Intersects(r3, r0), true  );
-				PR_CHECK(Intersects(r3, r1), true  );
-				PR_CHECK(Intersects(r3, r2), true  );
-				PR_CHECK(Intersects(r2, r0), true  );
-				PR_CHECK(Intersects(r2, r1), true  );
-				PR_CHECK(Intersects(r2, r3), true  );
-				PR_CHECK(Intersects(r1, r0), false );
-				PR_CHECK(Intersects(r0, r1), false );
+			PR_CHECK(Intersects(r3, r0), true  );
+			PR_CHECK(Intersects(r3, r1), true  );
+			PR_CHECK(Intersects(r3, r2), true  );
+			PR_CHECK(Intersects(r2, r0), true  );
+			PR_CHECK(Intersects(r2, r1), true  );
+			PR_CHECK(Intersects(r2, r3), true  );
+			PR_CHECK(Intersects(r1, r0), false );
+			PR_CHECK(Intersects(r0, r1), false );
 
-				r0.shift(3);
-				r1.shift(-2);
-				PR_CHECK(r0 == r1, true);
+			r0.shift(3);
+			r1.shift(-2);
+			PR_CHECK(r0 == r1, true);
 
-				PR_CHECK(r3.mid() == r2.mid(), true);
+			PR_CHECK(r3.mid() == r2.mid(), true);
 
-				r0.shift(-3);
-				r0.resize(3);
-				PR_CHECK(r0.size(), 3);
+			r0.shift(-3);
+			r0.resize(3);
+			PR_CHECK(r0.size(), 3);
 
-				IRange r4(vec.end(),vec.begin());
-				Encompass(r4, vec.begin() + 4);
-				PR_CHECK(vec.begin() + 4 == r4.m_beg, true);
-				PR_CHECK(vec.begin() + 5 == r4.m_end, true);
-				PR_CHECK(1, r4.size());
-				PR_CHECK(IsWithin(r4, vec.begin() + 4), true);
-			}
-			{// Floating point range
-				using FRange = pr::Range<float>;
-				FRange r0(0.0f, 5.0f);
-				FRange r1(5.0f, 10.0f);
-				FRange r2(3.0f, 7.0f);
-				FRange r3(0.0f, 10.0f);
+			IRange r4(vec.end(),vec.begin());
+			Encompass(r4, vec.begin() + 4);
+			PR_CHECK(vec.begin() + 4 == r4.m_beg, true);
+			PR_CHECK(vec.begin() + 5 == r4.m_end, true);
+			PR_CHECK(1, r4.size());
+			PR_CHECK(IsWithin(r4, vec.begin() + 4), true);
+		}
+		{// Floating point range
+			using FRange = pr::Range<float>;
+			FRange r0(0.0f, 5.0f);
+			FRange r1(5.0f, 10.0f);
+			FRange r2(3.0f, 7.0f);
+			FRange r3(0.0f, 10.0f);
 
-				PR_CHECK(r0.empty(), false);
-				PR_CHECK(r0.size() , 5.0f);
+			PR_CHECK(r0.empty(), false);
+			PR_CHECK(r0.size() , 5.0f);
 
-				PR_CHECK(IsWithin(r0, -1.0f), false);
-				PR_CHECK(IsWithin(r0, 0.0f) , true );
-				PR_CHECK(IsWithin(r0, 4.0f) , true );
-				PR_CHECK(IsWithin(r0, 5.0f) , true );
-				PR_CHECK(IsWithin(r0, 6.0f) , false);
+			PR_CHECK(IsWithin(r0, -1.0f), false);
+			PR_CHECK(IsWithin(r0, 0.0f) , true );
+			PR_CHECK(IsWithin(r0, 4.0f) , true );
+			PR_CHECK(IsWithin(r0, 5.0f) , true );
+			PR_CHECK(IsWithin(r0, 6.0f) , false);
 
-				PR_CHECK(IsWithin(r3, r0), true  );
-				PR_CHECK(IsWithin(r3, r1), true  );
-				PR_CHECK(IsWithin(r3, r2), true  );
-				PR_CHECK(IsWithin(r2, r0), false );
-				PR_CHECK(IsWithin(r2, r1), false );
-				PR_CHECK(IsWithin(r2, r3), false );
-				PR_CHECK(IsWithin(r1, r0), false );
-				PR_CHECK(IsWithin(r0, r1), false );
+			PR_CHECK(IsWithin(r3, r0), true  );
+			PR_CHECK(IsWithin(r3, r1), true  );
+			PR_CHECK(IsWithin(r3, r2), true  );
+			PR_CHECK(IsWithin(r2, r0), false );
+			PR_CHECK(IsWithin(r2, r1), false );
+			PR_CHECK(IsWithin(r2, r3), false );
+			PR_CHECK(IsWithin(r1, r0), false );
+			PR_CHECK(IsWithin(r0, r1), false );
 
-				PR_CHECK(Intersects(r3, r0), true );
-				PR_CHECK(Intersects(r3, r1), true );
-				PR_CHECK(Intersects(r3, r2), true );
-				PR_CHECK(Intersects(r2, r0), true );
-				PR_CHECK(Intersects(r2, r1), true );
-				PR_CHECK(Intersects(r2, r3), true );
-				PR_CHECK(Intersects(r1, r0), false);
-				PR_CHECK(Intersects(r0, r1), false);
+			PR_CHECK(Intersects(r3, r0), true );
+			PR_CHECK(Intersects(r3, r1), true );
+			PR_CHECK(Intersects(r3, r2), true );
+			PR_CHECK(Intersects(r2, r0), true );
+			PR_CHECK(Intersects(r2, r1), true );
+			PR_CHECK(Intersects(r2, r3), true );
+			PR_CHECK(Intersects(r1, r0), false);
+			PR_CHECK(Intersects(r0, r1), false);
 
-				r0.shift(3.0f);
-				r1.shift(-2.0f);
-				PR_CHECK(r0 == r1, true);
+			r0.shift(3.0f);
+			r1.shift(-2.0f);
+			PR_CHECK(r0 == r1, true);
 
-				PR_CHECK(r3.mid() == r2.mid(), true);
+			PR_CHECK(r3.mid() == r2.mid(), true);
 
-				r0.shift(-3.0f);
-				r0.resize(3.0f);
-				PR_CHECK(r0.size(), 3.0f);
+			r0.shift(-3.0f);
+			r0.resize(3.0f);
+			PR_CHECK(r0.size(), 3.0f);
 
-				FRange r4 = FRange::Reset();
-				Encompass(r4, 4.0f);
-				PR_CHECK(4.0f, r4.m_beg);
-				PR_CHECK(4.0f, r4.m_end);
-				PR_CHECK(0.0f, r4.size());
-				PR_CHECK(IsWithin(r4, 4.0f), true);
-			}
-			{ // Implicit conversion
-				Range<uint16> r0(0, 65535);
-				Range<uint> r1;
-				r1 = r0;
-				PR_CHECK(r1 == Range<uint>(0, 65535), true);
-			}
+			FRange r4 = FRange::Reset();
+			Encompass(r4, 4.0f);
+			PR_CHECK(4.0f, r4.m_beg);
+			PR_CHECK(4.0f, r4.m_end);
+			PR_CHECK(0.0f, r4.size());
+			PR_CHECK(IsWithin(r4, 4.0f), true);
+		}
+		{ // Implicit conversion
+			Range<uint16> r0(0, 65535);
+			Range<uint> r1;
+			r1 = r0;
+			PR_CHECK(r1 == Range<uint>(0, 65535), true);
 		}
 	}
 }

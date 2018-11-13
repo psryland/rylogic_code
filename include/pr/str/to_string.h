@@ -232,53 +232,50 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::str
 {
-	namespace unittests
+	PRUnitTest(ToStringTests)
 	{
-		PRUnitTest(pr_str_tostring)
-		{
-			using std_cstr = std::string;
-			using std_wstr = std::wstring;
-			using pr_cstr  = pr::string<char>;
-			using pr_wstr  = pr::string<wchar_t>;
+		using std_cstr = std::string;
+		using std_wstr = std::wstring;
+		using pr_cstr  = pr::string<char>;
+		using pr_wstr  = pr::string<wchar_t>;
 
-			char     narr[] =  "junk_str_junk";
-			wchar_t  wide[] = L"junk_str_junk";
-			std_cstr scstr  =  "junk_str_junk";
-			std_wstr swstr  = L"junk_str_junk";
-			pr_cstr  pcstr  =  "junk_str_junk";
-			pr_wstr  pwstr  = L"junk_str_junk";
-			std_cstr tau    = "6.28";
+		char     narr[] =  "junk_str_junk";
+		wchar_t  wide[] = L"junk_str_junk";
+		std_cstr scstr  =  "junk_str_junk";
+		std_wstr swstr  = L"junk_str_junk";
+		pr_cstr  pcstr  =  "junk_str_junk";
+		pr_wstr  pwstr  = L"junk_str_junk";
+		std_cstr tau    = "6.28";
 
-			PR_CHECK(pr::To<std::string>(narr), scstr);
-			PR_CHECK(pr::To<std::string>(wide), scstr);
-			PR_CHECK(pr::To<std::string>(scstr), scstr);
-			PR_CHECK(pr::To<std::string>(swstr), scstr);
-			PR_CHECK(pr::To<std::string>(pcstr), scstr);
-			PR_CHECK(pr::To<std::string>(pwstr), scstr);
+		PR_CHECK(pr::To<std::string>(narr), scstr);
+		PR_CHECK(pr::To<std::string>(wide), scstr);
+		PR_CHECK(pr::To<std::string>(scstr), scstr);
+		PR_CHECK(pr::To<std::string>(swstr), scstr);
+		PR_CHECK(pr::To<std::string>(pcstr), scstr);
+		PR_CHECK(pr::To<std::string>(pwstr), scstr);
 
-			PR_CHECK(pr::To<std::wstring>(narr), swstr);
-			PR_CHECK(pr::To<std::wstring>(wide), swstr);
-			PR_CHECK(pr::To<std::wstring>(scstr), swstr);
-			PR_CHECK(pr::To<std::wstring>(swstr), swstr);
-			PR_CHECK(pr::To<std::wstring>(pcstr), swstr);
-			PR_CHECK(pr::To<std::wstring>(pwstr), swstr);
+		PR_CHECK(pr::To<std::wstring>(narr), swstr);
+		PR_CHECK(pr::To<std::wstring>(wide), swstr);
+		PR_CHECK(pr::To<std::wstring>(scstr), swstr);
+		PR_CHECK(pr::To<std::wstring>(swstr), swstr);
+		PR_CHECK(pr::To<std::wstring>(pcstr), swstr);
+		PR_CHECK(pr::To<std::wstring>(pwstr), swstr);
 
-			PR_CHECK(pr::To<std::string>(3.14), "3.14");
-			PR_CHECK(pr::To<std::wstring>(42), L"42");
-			PR_CHECK(pr::To<std_cstr>("literal cstr"), "literal cstr");
-			PR_CHECK(pr::To<std_wstr>("literal cstr"), L"literal cstr");
-			PR_CHECK(pr::To<pr_cstr>("literal cstr"), "literal cstr");
-			PR_CHECK(pr::To<pr_wstr>("literal cstr"), L"literal cstr");
+		PR_CHECK(pr::To<std::string>(3.14), "3.14");
+		PR_CHECK(pr::To<std::wstring>(42), L"42");
+		PR_CHECK(pr::To<std_cstr>("literal cstr"), "literal cstr");
+		PR_CHECK(pr::To<std_wstr>("literal cstr"), L"literal cstr");
+		PR_CHECK(pr::To<pr_cstr>("literal cstr"), "literal cstr");
+		PR_CHECK(pr::To<pr_wstr>("literal cstr"), L"literal cstr");
 
-			PR_CHECK(pr::To<int>("1234"), 1234);
-			PR_CHECK(pr::To<int>("1234", 10), 1234);
-			PR_CHECK(pr::To<int>(L"1234", 10), 1234);
-			PR_CHECK(pr::To<unsigned short>("12345",16), (unsigned short)0x2345);
-			PR_CHECK(pr::To<char>(L"1"), (char)1);
-			PR_CHECK(pr::To<int>(L"1234"), 1234);
-		}
+		PR_CHECK(pr::To<int>("1234"), 1234);
+		PR_CHECK(pr::To<int>("1234", 10), 1234);
+		PR_CHECK(pr::To<int>(L"1234", 10), 1234);
+		PR_CHECK(pr::To<unsigned short>("12345",16), (unsigned short)0x2345);
+		PR_CHECK(pr::To<char>(L"1"), (char)1);
+		PR_CHECK(pr::To<int>(L"1234"), 1234);
 	}
 }
 #endif

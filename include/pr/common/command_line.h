@@ -43,7 +43,8 @@ namespace pr
 
 		// Interface for receiving command line options
 		// Return true for more options
-		template <typename Char = char> struct IOptionReceiver
+		template <typename Char = char>
+		struct IOptionReceiver
 		{
 			using OptionString = std::basic_string<Char>;
 			using TArgs        = std::vector<OptionString>;

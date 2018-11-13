@@ -23,7 +23,7 @@ namespace pr
 		}
 
 		// Return the inertia tensor for the triangle
-		inline Inertia CalcInertiaTensor(ShapeTriangle const& shape)
+		inline m3x4 CalcInertiaTensor(ShapeTriangle const& shape)
 		{
 			m3x4 inertia = m3x4Zero;
 			for (int i = 0; i != 3; ++i)
@@ -42,13 +42,13 @@ namespace pr
 			inertia.y.x = inertia.x.y;
 			inertia.z.x = inertia.x.z;
 			inertia.z.y = inertia.y.z;
-			return Inertia(inertia);
+			return inertia;
 		}
 
 		// Returns the unit inertia tensor for the polytope (i.e. assumes mass = 1.0).
 		// Ensure the polytope is in it's final space before calculating its inertia.
 		// Calling 'ShiftCentre' invalidates the inertia matrix.
-		inline Inertia CalcInertiaTensor(ShapePolytope const& shape)
+		inline m3x4 CalcInertiaTensor(ShapePolytope const& shape)
 		{
 			auto volume   = 0.0f;   // Technically this variable accumulates the volume times 6
 			auto diagonal = v4Zero; // Accumulate matrix main diagonals [x*x, y*y, z*z]
@@ -58,7 +58,7 @@ namespace pr
 				auto& a = shape.vertex(f->m_index[0]);
 				auto& b = shape.vertex(f->m_index[1]);
 				auto& c = shape.vertex(f->m_index[2]);
-				auto vol_x6 = Triple3(a, b, c); // Triple product is volume x 6
+				auto vol_x6 = Triple(a, b, c); // Triple product is volume x 6
 				volume += vol_x6;
 
 				for (int i = 0, j = 1, k = 2; i != 3; ++i, (++j) %= 3, (++k) %= 3)
@@ -90,17 +90,17 @@ namespace pr
 			{
 				auto centre = v4Zero;
 				for (v4 const *v = shape.vert_beg(), *vend = shape.vert_end(); v != vend; ++v) centre += *v;
-				return Inertia::PointAt(centre);
+				return InertiaBuilder::PointAt(centre);
 			}
 
 			// Divide by total volume
 			volume   /= 6.0f;
 			diagonal /= volume * 60.0f;
 			off_diag /= volume * 120.0f;
-			return Inertia(m3x4(
+			return m3x4(
 				v4(diagonal.y + diagonal.z , -off_diag.z             , -off_diag.y           ,0),
 				v4(-off_diag.z             , diagonal.x + diagonal.z , -off_diag.x           ,0),
-				v4(-off_diag.y             , -off_diag.x             , diagonal.x+diagonal.y ,0)));
+				v4(-off_diag.y             , -off_diag.x             , diagonal.x+diagonal.y ,0));
 		}
 
 		// Return the mass properties
@@ -114,7 +114,7 @@ namespace pr
 			MassProperties mp;
 			mp.m_centre_of_mass    = v4Zero;
 			mp.m_mass              = volume * density;
-			mp.m_os_inertia_tensor = Inertia(scale * Sqr(shape.m_radius));
+			mp.m_os_inertia_tensor = InertiaBuilder(scale * Sqr(shape.m_radius));
 			return mp;
 		}
 
@@ -126,7 +126,7 @@ namespace pr
 			MassProperties mp;
 			mp.m_centre_of_mass    = v4Zero;
 			mp.m_mass              = volume * density;
-			mp.m_os_inertia_tensor = Inertia((1.0f / 3.0f) * (Sqr(shape.m_radius.y) + Sqr(shape.m_radius.z))); // (1/12)m(Y^2 + Z^2)
+			mp.m_os_inertia_tensor = InertiaBuilder((1.0f / 3.0f) * (Sqr(shape.m_radius.y) + Sqr(shape.m_radius.z))); // (1/12)m(Y^2 + Z^2)
 			return mp;
 		}
 

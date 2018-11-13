@@ -102,36 +102,33 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::common
 {
-	namespace unittests
+	PRUnitTest(MemStreamTests)
 	{
-		PRUnitTest(pr_memstream)
-		{
-			int data[] = {1,2,3};
-			pr::imemstream strm(data, sizeof(data));
-			PR_CHECK(!!strm, true);
+		int data[] = {1,2,3};
+		pr::imemstream strm(data, sizeof(data));
+		PR_CHECK(!!strm, true);
 
-			int out[3];
-			strm.read((char*)out, sizeof(int)*3);
-			PR_CHECK(memcmp(data,out,sizeof(int)*3) == 0, true);
+		int out[3];
+		strm.read((char*)out, sizeof(int)*3);
+		PR_CHECK(memcmp(data,out,sizeof(int)*3) == 0, true);
 
-			strm.seekg(0);
-			PR_CHECK(!!strm, true);
+		strm.seekg(0);
+		PR_CHECK(!!strm, true);
 			
-			strm.read((char*)out, sizeof(int)*3);
-			PR_CHECK(memcmp(data,out,sizeof(int)*3) == 0, true);
+		strm.read((char*)out, sizeof(int)*3);
+		PR_CHECK(memcmp(data,out,sizeof(int)*3) == 0, true);
 			
-			size_t pos = (size_t)strm.tellg();
-			PR_CHECK(pos, sizeof(int)*3);
+		size_t pos = (size_t)strm.tellg();
+		PR_CHECK(pos, sizeof(int)*3);
 
-			strm.seekg(4);
-			strm.read((char*)out, sizeof(int)*1);
-			PR_CHECK(memcmp(&data[1],out,sizeof(int)*1) == 0, true);
+		strm.seekg(4);
+		strm.read((char*)out, sizeof(int)*1);
+		PR_CHECK(memcmp(&data[1],out,sizeof(int)*1) == 0, true);
 			
-			pos = (size_t)strm.tellg();
-			PR_CHECK(pos, sizeof(int)*2);
-		}
+		pos = (size_t)strm.tellg();
+		PR_CHECK(pos, sizeof(int)*2);
 	}
 }
 #endif

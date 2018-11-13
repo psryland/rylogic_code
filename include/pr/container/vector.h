@@ -961,556 +961,552 @@ namespace pr
 #include "pr/common/refptr.h"
 #include "pr/maths/maths.h"
 
-namespace pr
+namespace pr::container
 {
-	namespace unittests
+	namespace unittests::vector
 	{
-		namespace vector
+		typedef unsigned int uint;
+		inline int& ObjectCount()
 		{
-			typedef unsigned int uint;
-			int& ObjectCount()
+			static int object_count;
+			return object_count;
+		}
+
+		struct Single :pr::RefCount<Single>
+		{
+			static void RefCountZero(RefCount<Single>*) {}
+		};
+		inline Single& Refs()
+		{
+			static Single single;
+			return single;
+		}
+
+		struct Type
+		{
+			int val;
+			pr::RefPtr<Single> ptr;
+
+			Type()
+				:val(0)
+				,ptr(&Refs(), true)
 			{
-				static int object_count;
-				return object_count;
+				++ObjectCount();
 			}
-
-			struct Single :pr::RefCount<Single>
+			Type(int w)
+				:val(w)
+				,ptr(&Refs(), true)
 			{
-				static void RefCountZero(RefCount<Single>*) {}
-			};
-			Single& Refs()
-			{
-				static Single single;
-				return single;
+				++ObjectCount();
 			}
-
-			struct Type
+			Type(Type&& rhs)
+				:Type()
 			{
-				int val;
-				pr::RefPtr<Single> ptr;
-
-				Type()
-					:val(0)
-					,ptr(&Refs(), true)
-				{
-					++ObjectCount();
-				}
-				Type(int w)
-					:val(w)
-					,ptr(&Refs(), true)
-				{
-					++ObjectCount();
-				}
-				Type(Type&& rhs)
-					:Type()
+				std::swap(val, rhs.val);
+				std::swap(ptr, rhs.ptr);
+			}
+			Type(Type const& rhs)
+				:val(rhs.val)
+				,ptr(rhs.ptr)
+			{
+				++ObjectCount();
+			}
+			Type& operator = (Type&& rhs)
+			{
+				if (this != &rhs)
 				{
 					std::swap(val, rhs.val);
 					std::swap(ptr, rhs.ptr);
 				}
-				Type(Type const& rhs)
-					:val(rhs.val)
-					,ptr(rhs.ptr)
-				{
-					++ObjectCount();
-				}
-				Type& operator = (Type&& rhs)
-				{
-					if (this != &rhs)
-					{
-						std::swap(val, rhs.val);
-						std::swap(ptr, rhs.ptr);
-					}
-					return *this;
-				}
-				Type& operator = (Type const& rhs)
-				{
-					if (this != &rhs)
-					{
-						val = rhs.val;
-						ptr = rhs.ptr;
-					}
-					return *this;
-				}
-				virtual ~Type()
-				{
-					--ObjectCount();
-					PR_CHECK(ptr.m_ptr == &Refs(), true); // destructing an invalid Type
-					val = 0xcccccccc;
-				}
-			};
-			static_assert(std::is_move_constructible<Type>::value, "");
-			static_assert(std::is_copy_constructible<Type>::value, "");
-			static_assert(std::is_move_assignable<Type>::value, "");
-			static_assert(std::is_copy_assignable<Type>::value, "");
-
-			struct NonCopyable :Type
+				return *this;
+			}
+			Type& operator = (Type const& rhs)
 			{
-				NonCopyable()
-					:Type()
-				{}
-				NonCopyable(int w)
-					:Type(w)
-				{}
-				NonCopyable(NonCopyable&& rhs)
-					:Type(std::move(rhs))
-				{}
-				NonCopyable& operator = (NonCopyable&& rhs)
+				if (this != &rhs)
 				{
-					if (this == &rhs) return *this;
-					*static_cast<Type*>(this) = std::move(rhs);
-					return *this;
+					val = rhs.val;
+					ptr = rhs.ptr;
 				}
-				NonCopyable(NonCopyable const&) = delete;
-				NonCopyable& operator = (NonCopyable const&) = delete;
-			};
-			inline bool operator == (Type const& lhs, Type const& rhs) { return lhs.val == rhs.val; }
-			static_assert( std::is_move_constructible<NonCopyable>::value, "");
-			static_assert(!std::is_copy_constructible<NonCopyable>::value, "");
-			static_assert( std::is_move_assignable<NonCopyable>::value, "");
-			static_assert(!std::is_copy_assignable<NonCopyable>::value, "");
+				return *this;
+			}
+			virtual ~Type()
+			{
+				--ObjectCount();
+				PR_CHECK(ptr.m_ptr == &Refs(), true); // destructing an invalid Type
+				val = 0xcccccccc;
+			}
+		};
+		static_assert(std::is_move_constructible<Type>::value, "");
+		static_assert(std::is_copy_constructible<Type>::value, "");
+		static_assert(std::is_move_assignable<Type>::value, "");
+		static_assert(std::is_copy_assignable<Type>::value, "");
 
-			using Array0 = pr::vector<Type, 8, false>;
-			using Array1 = pr::vector<Type, 16, true>;
-			using Array2 = pr::vector<NonCopyable, 4, false>;
-		}
-
-		PRUnitTest(pr_container_vector)
+		struct NonCopyable :Type
 		{
-			using namespace pr::unittests::vector;
-			struct Check
+			NonCopyable()
+				:Type()
+			{}
+			NonCopyable(int w)
+				:Type(w)
+			{}
+			NonCopyable(NonCopyable&& rhs)
+				:Type(std::move(rhs))
+			{}
+			NonCopyable& operator = (NonCopyable&& rhs)
 			{
-				int m_count;
-				long m_refs;
+				if (this == &rhs) return *this;
+				*static_cast<Type*>(this) = std::move(rhs);
+				return *this;
+			}
+			NonCopyable(NonCopyable const&) = delete;
+			NonCopyable& operator = (NonCopyable const&) = delete;
+		};
+		inline bool operator == (Type const& lhs, Type const& rhs) { return lhs.val == rhs.val; }
+		static_assert( std::is_move_constructible<NonCopyable>::value, "");
+		static_assert(!std::is_copy_constructible<NonCopyable>::value, "");
+		static_assert( std::is_move_assignable<NonCopyable>::value, "");
+		static_assert(!std::is_copy_assignable<NonCopyable>::value, "");
+
+		using Array0 = pr::vector<Type, 8, false>;
+		using Array1 = pr::vector<Type, 16, true>;
+		using Array2 = pr::vector<NonCopyable, 4, false>;
+	}
+	PRUnitTest(pr_container_vector)
+	{
+		using namespace unittests::vector;
+		struct Check
+		{
+			int m_count;
+			long m_refs;
 				
-				Check()
-					:m_count(ObjectCount())
-					,m_refs(Refs().m_ref_count)
-				{}
-				~Check()
+			Check()
+				:m_count(ObjectCount())
+				,m_refs(Refs().m_ref_count)
+			{}
+			~Check()
+			{
+				PR_CHECK(ObjectCount(), m_count);
+				PR_CHECK(Refs().m_ref_count, m_refs); 
+			}
+		};
+
+		std::vector<Type> ints;
+		for (int i = 0; i != 16; ++i)
+			ints.push_back(Type(i));
+
+		Check global_chk;
+		{// Constructors
+			{
+				Check chk;
 				{
-					PR_CHECK(ObjectCount(), m_count);
-					PR_CHECK(Refs().m_ref_count, m_refs); 
+					Array0 arr;
+					PR_CHECK(arr.empty(), true);
+					PR_CHECK(arr.size(), 0U);
 				}
-			};
-
-			std::vector<Type> ints;
-			for (int i = 0; i != 16; ++i)
-				ints.push_back(Type(i));
-
-			Check global_chk;
-			{// Constructors
+			}{
+				Check chk;
 				{
-					Check chk;
-					{
-						Array0 arr;
-						PR_CHECK(arr.empty(), true);
-						PR_CHECK(arr.size(), 0U);
-					}
-				}{
-					Check chk;
-					{
-						Array1 arr(15);
-						PR_CHECK(!arr.empty(), true);
-						PR_CHECK(arr.size(), 15U);
-					}
-				}{
-					Check chk;
-					{
-						Array0 arr(5U, 3);
-						PR_CHECK(arr.size(), 5U);
-						for (int i = 0; i != 5; ++i)
-							PR_CHECK(arr[i].val, 3);
-					}
-				}{
-					Check chk;
-					{
-						Array0 arr0(5U,3);
-						Array1 arr1(arr0);
-						PR_CHECK(arr1.size(), arr0.size());
-						for (int i = 0; i != int(arr0.size()); ++i)
-							PR_CHECK(arr1[i].val, arr0[i].val);
-					}
-				}{
-					Check chk;
-					{
-						std::vector<int> vec0(4U, 6);
-						Array0 arr1(vec0);
-						PR_CHECK(arr1.size(), vec0.size());
-						for (int i = 0; i != int(vec0.size()); ++i)
-							PR_CHECK(arr1[i].val, vec0[i]);
-					}
+					Array1 arr(15);
+					PR_CHECK(!arr.empty(), true);
+					PR_CHECK(arr.size(), 15U);
+				}
+			}{
+				Check chk;
+				{
+					Array0 arr(5U, 3);
+					PR_CHECK(arr.size(), 5U);
+					for (int i = 0; i != 5; ++i)
+						PR_CHECK(arr[i].val, 3);
+				}
+			}{
+				Check chk;
+				{
+					Array0 arr0(5U,3);
+					Array1 arr1(arr0);
+					PR_CHECK(arr1.size(), arr0.size());
+					for (int i = 0; i != int(arr0.size()); ++i)
+						PR_CHECK(arr1[i].val, arr0[i].val);
+				}
+			}{
+				Check chk;
+				{
+					std::vector<int> vec0(4U, 6);
+					Array0 arr1(vec0);
+					PR_CHECK(arr1.size(), vec0.size());
+					for (int i = 0; i != int(vec0.size()); ++i)
+						PR_CHECK(arr1[i].val, vec0[i]);
 				}
 			}
-			{//Assign
+		}
+		{//Assign
+			Check chk;
+			{
+				Array0 arr0;
+				arr0.assign(3U, 5);
+				PR_CHECK(arr0.size(), 3U);
+				for (int i = 0; i != 3; ++i)
+					PR_CHECK(arr0[i].val, 5);
+
+				Array1 arr1;
+				arr1.assign(&ints[0], &ints[8]);
+				PR_CHECK(arr1.size(), 8U);
+				for (int i = 0; i != 8; ++i)
+					PR_CHECK(arr1[i].val, ints[i].val);
+			}
+		}
+		{//Clear
+			{
+				Check chk;
+				{// Basic clear
+					Array0 arr0(ints.begin(), ints.end());
+					arr0.clear();
+					PR_CHECK(arr0.empty(), true);
+				}
+			}{
+				Check chk;
+				{// Non-copyable clear
+					Array2 arr0;
+					for (auto i : ints) arr0.emplace_back(i.val);
+					arr0.clear();
+					PR_CHECK(arr0.empty(), true);
+				}
+			}
+		}
+		{//Erase
+			{
+				Check chk;
+				{// Erase range, stable order
+					Array0 arr0(ints.begin(), ints.begin() + 8);
+					Array0::const_iterator b = arr0.begin();
+					arr0.erase(b + 3, b + 5);
+					PR_CHECK(arr0.size(), 6U);
+					for (int i = 0; i != 3; ++i) PR_CHECK(arr0[i].val, ints[i]  .val);
+					for (int i = 3; i != 6; ++i) PR_CHECK(arr0[i].val, ints[i+2].val);
+				}
+			}{
+				Check chk;
+				{// Erase single, stable order
+					Array1 arr1(ints.begin(), ints.begin() + 4);
+					arr1.erase(arr1.begin() + 2);
+					PR_CHECK(arr1.size(), 3U);
+					for (int i = 0; i != 2; ++i) PR_CHECK(arr1[i].val, ints[i]  .val);
+					for (int i = 2; i != 3; ++i) PR_CHECK(arr1[i].val, ints[i+1].val);
+				}
+			}{
+				Check chk;
+				{// Erase single, unstable order
+					Array0 arr2(ints.begin(), ints.begin() + 5);
+					arr2.erase_fast(arr2.begin() + 2);
+					PR_CHECK(arr2.size(), 4U);
+					for (int i = 0; i != 2; ++i) PR_CHECK(arr2[i].val, ints[i].val);
+					PR_CHECK(arr2[2].val, ints[4].val);
+					for (int i = 3; i != 4; ++i) PR_CHECK(arr2[i].val, ints[i].val);
+				}
+			}{
+				Check chk;
+				{// Erase non-copyable, stable + unstable order
+					Array2 arr0;
+					arr0.emplace_back(0);
+					arr0.emplace_back(1);
+					arr0.emplace_back(2);
+					arr0.emplace_back(3);
+					arr0.emplace_back(4);
+
+					arr0.erase(std::begin(arr0) + 1);
+					PR_CHECK(arr0.size(), 4U);
+					PR_CHECK(arr0[0].val, 0);
+					PR_CHECK(arr0[1].val, 2);
+					PR_CHECK(arr0[2].val, 3);
+					PR_CHECK(arr0[3].val, 4);
+
+					arr0.erase_fast(std::begin(arr0) + 1);
+					PR_CHECK(arr0.size(), 3U);
+					PR_CHECK(arr0[0].val, 0);
+					PR_CHECK(arr0[1].val, 4);
+					PR_CHECK(arr0[2].val, 3);
+				}
+			}{
+				Check chk;
+				{// Erase range non-copyable, stable order
+					Array2 arr1;
+					arr1.emplace_back(0);
+					arr1.emplace_back(1);
+					arr1.emplace_back(2);
+					arr1.emplace_back(3);
+					arr1.emplace_back(4);
+
+					arr1.erase(std::begin(arr1) + 1, std::begin(arr1) + 3);
+					PR_CHECK(arr1.size(), 3U);
+					PR_CHECK(arr1[0].val, 0);
+					PR_CHECK(arr1[1].val, 3);
+					PR_CHECK(arr1[2].val, 4);
+				}
+			}{
+				Check chk;
+				{// Erase range non-copyable, unstable order
+					Array2 arr2;
+					arr2.emplace_back(0);
+					arr2.emplace_back(1);
+					arr2.emplace_back(2);
+					arr2.emplace_back(3);
+					arr2.emplace_back(4);
+					arr2.emplace_back(5);
+					arr2.emplace_back(6);
+
+					arr2.erase_fast(std::begin(arr2) + 1, std::begin(arr2) + 3);
+					PR_CHECK(arr2.size(), 5U);
+					PR_CHECK(arr2[0].val, 0);
+					PR_CHECK(arr2[1].val, 5);
+					PR_CHECK(arr2[2].val, 6);
+					PR_CHECK(arr2[3].val, 3);
+					PR_CHECK(arr2[4].val, 4);
+				}
+			}
+		}
+		{//Insert
+			{
 				Check chk;
 				{
 					Array0 arr0;
-					arr0.assign(3U, 5);
-					PR_CHECK(arr0.size(), 3U);
+					arr0.insert(arr0.end(), 4U, 9);
+					PR_CHECK(arr0.size(), 4U);
+					for (int i = 0; i != 4; ++i)
+						PR_CHECK(arr0[i].val, 9);
+				}
+			}{
+				Check chk;
+				{
+					Array1 arr1(4U, 6);
+					arr1.insert(arr1.begin() + 2, &ints[2], &ints[7]);
+					PR_CHECK(arr1.size(), 9U);
+					for (int i = 0; i != 2; ++i) PR_CHECK(arr1[i].val, 6);
+					for (int i = 2; i != 7; ++i) PR_CHECK(arr1[i].val, ints[i].val);
+					for (int i = 7; i != 9; ++i) PR_CHECK(arr1[i].val, 6);
+				}
+			}
+		}
+		{//PushPop
+			{
+				Check chk;
+				{
+					Array0 arr;
+					arr.insert(arr.begin(), &ints[0], &ints[4]);
+					arr.pop_back();
+					PR_CHECK(arr.size(), 3U);
 					for (int i = 0; i != 3; ++i)
-						PR_CHECK(arr0[i].val, 5);
+						PR_CHECK(arr[i].val, ints[i].val);
+				}
+			}{
+				Check chk;
+				{
+					Array1 arr;
+					arr.reserve(4);
+					for (int i = 0; i != 4; ++i) arr.push_back_fast(i);
+					for (int i = 4; i != 9; ++i) arr.push_back(i);
+					for (int i = 0; i != 9; ++i)
+						PR_CHECK(arr[i].val, ints[i].val);
+				}
+			}{
+				Check chk;
+				{
+					Array1 arr;
+					arr.insert(arr.begin(), &ints[0], &ints[4]);
+					arr.resize(3);
+					PR_CHECK(arr.size(), 3U);
+					for (int i = 0; i != 3; ++i)
+						PR_CHECK(arr[i].val, ints[i].val);
+					arr.resize(6);
+					PR_CHECK(arr.size(), 6U);
+					for (int i = 0; i != 3; ++i)
+						PR_CHECK(arr[i].val, ints[i].val);
+					for (int i = 3; i != 6; ++i)
+						PR_CHECK(arr[i].val, 0);
+				}
+			}
+		}
+		{//Operators
+			{
+				Check chk;
+				{
+					Array0 arr0(4U, 1);
+					Array0 arr1(3U, 2);
+					arr1 = arr0;
+					PR_CHECK(arr0.size(), 4U);
+					PR_CHECK(arr1.size(), 4U);
+					for (int i = 0; i != 4; ++i)
+						PR_CHECK(arr1[i].val, arr0[i].val);
+				}
+			}{
+				Check chk;
+				{
+					Array0 arr0(4U, 1);
+					Array1 arr2;
+					arr2 = arr0;
+					PR_CHECK(arr0.size(), 4U);
+					PR_CHECK(arr2.size(), 4U);
+					for (int i = 0; i != 4; ++i)
+						PR_CHECK(arr2[i].val, arr0[i].val);
 
-					Array1 arr1;
-					arr1.assign(&ints[0], &ints[8]);
-					PR_CHECK(arr1.size(), 8U);
-					for (int i = 0; i != 8; ++i)
-						PR_CHECK(arr1[i].val, ints[i].val);
+					struct L
+					{
+						static std::vector<Type> Conv(std::vector<Type> v) { return v; }
+					};
+					std::vector<Type> vec0 = L::Conv(arr0);
+					PR_CHECK(vec0.size(), 4U);
+					for (int i = 0; i != 4; ++i)
+						PR_CHECK(vec0[i].val, arr0[i].val);
 				}
 			}
-			{//Clear
+		}
+		{//Mem
+			{
+				Check chk;
 				{
-					Check chk;
-					{// Basic clear
-						Array0 arr0(ints.begin(), ints.end());
-						arr0.clear();
-						PR_CHECK(arr0.empty(), true);
-					}
-				}{
-					Check chk;
-					{// Non-copyable clear
-						Array2 arr0;
-						for (auto i : ints) arr0.emplace_back(i.val);
-						arr0.clear();
-						PR_CHECK(arr0.empty(), true);
-					}
+					Array0 arr0;
+					arr0.reserve(100);
+					for (int i = 0; i != 50; ++i) arr0.push_back(i);
+					PR_CHECK(arr0.capacity(), 100U);
+					arr0.shrink_to_fit();
+					PR_CHECK(arr0.capacity(), 50U);
+					arr0.resize(1);
+					arr0.shrink_to_fit();
+					PR_CHECK(arr0.capacity(), (size_t)arr0.LocalLength);
 				}
 			}
-			{//Erase
+		}
+		{//AlignedTypes
+			{
+				Check chk;
 				{
-					Check chk;
-					{// Erase range, stable order
-						Array0 arr0(ints.begin(), ints.begin() + 8);
-						Array0::const_iterator b = arr0.begin();
-						arr0.erase(b + 3, b + 5);
-						PR_CHECK(arr0.size(), 6U);
-						for (int i = 0; i != 3; ++i) PR_CHECK(arr0[i].val, ints[i]  .val);
-						for (int i = 3; i != 6; ++i) PR_CHECK(arr0[i].val, ints[i+2].val);
-					}
-				}{
-					Check chk;
-					{// Erase single, stable order
-						Array1 arr1(ints.begin(), ints.begin() + 4);
-						arr1.erase(arr1.begin() + 2);
-						PR_CHECK(arr1.size(), 3U);
-						for (int i = 0; i != 2; ++i) PR_CHECK(arr1[i].val, ints[i]  .val);
-						for (int i = 2; i != 3; ++i) PR_CHECK(arr1[i].val, ints[i+1].val);
-					}
-				}{
-					Check chk;
-					{// Erase single, unstable order
-						Array0 arr2(ints.begin(), ints.begin() + 5);
-						arr2.erase_fast(arr2.begin() + 2);
-						PR_CHECK(arr2.size(), 4U);
-						for (int i = 0; i != 2; ++i) PR_CHECK(arr2[i].val, ints[i].val);
-						PR_CHECK(arr2[2].val, ints[4].val);
-						for (int i = 3; i != 4; ++i) PR_CHECK(arr2[i].val, ints[i].val);
-					}
-				}{
-					Check chk;
-					{// Erase non-copyable, stable + unstable order
-						Array2 arr0;
-						arr0.emplace_back(0);
-						arr0.emplace_back(1);
-						arr0.emplace_back(2);
-						arr0.emplace_back(3);
-						arr0.emplace_back(4);
+					std::default_random_engine rng;
+					auto spline = Spline(Random3N(rng, 1.0f), Random3N(rng, 1.0f), Random3N(rng, 1.0f), Random3N(rng, 1.0f));
 
-						arr0.erase(std::begin(arr0) + 1);
-						PR_CHECK(arr0.size(), 4U);
-						PR_CHECK(arr0[0].val, 0);
-						PR_CHECK(arr0[1].val, 2);
-						PR_CHECK(arr0[2].val, 3);
-						PR_CHECK(arr0[3].val, 4);
+					pr::vector<v4> arr0;
+					Raster(spline, arr0, 100);
 
-						arr0.erase_fast(std::begin(arr0) + 1);
-						PR_CHECK(arr0.size(), 3U);
-						PR_CHECK(arr0[0].val, 0);
-						PR_CHECK(arr0[1].val, 4);
-						PR_CHECK(arr0[2].val, 3);
-					}
-				}{
-					Check chk;
-					{// Erase range non-copyable, stable order
-						Array2 arr1;
-						arr1.emplace_back(0);
-						arr1.emplace_back(1);
-						arr1.emplace_back(2);
-						arr1.emplace_back(3);
-						arr1.emplace_back(4);
-
-						arr1.erase(std::begin(arr1) + 1, std::begin(arr1) + 3);
-						PR_CHECK(arr1.size(), 3U);
-						PR_CHECK(arr1[0].val, 0);
-						PR_CHECK(arr1[1].val, 3);
-						PR_CHECK(arr1[2].val, 4);
-					}
-				}{
-					Check chk;
-					{// Erase range non-copyable, unstable order
-						Array2 arr2;
-						arr2.emplace_back(0);
-						arr2.emplace_back(1);
-						arr2.emplace_back(2);
-						arr2.emplace_back(3);
-						arr2.emplace_back(4);
-						arr2.emplace_back(5);
-						arr2.emplace_back(6);
-
-						arr2.erase_fast(std::begin(arr2) + 1, std::begin(arr2) + 3);
-						PR_CHECK(arr2.size(), 5U);
-						PR_CHECK(arr2[0].val, 0);
-						PR_CHECK(arr2[1].val, 5);
-						PR_CHECK(arr2[2].val, 6);
-						PR_CHECK(arr2[3].val, 3);
-						PR_CHECK(arr2[4].val, 4);
-					}
+					PR_CHECK(arr0.capacity() > arr0.LocalLength, true);
+					arr0.resize(5);
+					arr0.shrink_to_fit();
+					PR_CHECK(arr0.size(), 5U);
+					PR_CHECK(arr0.capacity(), size_t(arr0.LocalLength));
 				}
 			}
-			{//Insert
+		}
+		{// Copy
+			{
+				Check chk;
 				{
-					Check chk;
+					Array0 arr0 = {10,20,30};
 					{
-						Array0 arr0;
-						arr0.insert(arr0.end(), 4U, 9);
-						PR_CHECK(arr0.size(), 4U);
-						for (int i = 0; i != 4; ++i)
-							PR_CHECK(arr0[i].val, 9);
+						Array0 arr1 = {0,1,2,3,4,5,6,7,8,9};
+						arr0 = arr1;
 					}
-				}{
-					Check chk;
-					{
-						Array1 arr1(4U, 6);
-						arr1.insert(arr1.begin() + 2, &ints[2], &ints[7]);
-						PR_CHECK(arr1.size(), 9U);
-						for (int i = 0; i != 2; ++i) PR_CHECK(arr1[i].val, 6);
-						for (int i = 2; i != 7; ++i) PR_CHECK(arr1[i].val, ints[i].val);
-						for (int i = 7; i != 9; ++i) PR_CHECK(arr1[i].val, 6);
-					}
+					PR_CHECK(arr0.size(), 10U);
+					for (int i = 0; i != int(arr0.size()); ++i)
+						PR_CHECK(arr0[i].val, i);
 				}
 			}
-			{//PushPop
+		}
+		{// Move
+			{
+				Check chk;
 				{
-					Check chk;
+					// arr0 local, arr1 local
+					Array0 arr0 = {0,10,20,30};
 					{
-						Array0 arr;
-						arr.insert(arr.begin(), &ints[0], &ints[4]);
-						arr.pop_back();
-						PR_CHECK(arr.size(), 3U);
-						for (int i = 0; i != 3; ++i)
-							PR_CHECK(arr[i].val, ints[i].val);
-					}
-				}{
-					Check chk;
-					{
-						Array1 arr;
-						arr.reserve(4);
-						for (int i = 0; i != 4; ++i) arr.push_back_fast(i);
-						for (int i = 4; i != 9; ++i) arr.push_back(i);
-						for (int i = 0; i != 9; ++i)
-							PR_CHECK(arr[i].val, ints[i].val);
-					}
-				}{
-					Check chk;
-					{
-						Array1 arr;
-						arr.insert(arr.begin(), &ints[0], &ints[4]);
-						arr.resize(3);
-						PR_CHECK(arr.size(), 3U);
-						for (int i = 0; i != 3; ++i)
-							PR_CHECK(arr[i].val, ints[i].val);
-						arr.resize(6);
-						PR_CHECK(arr.size(), 6U);
-						for (int i = 0; i != 3; ++i)
-							PR_CHECK(arr[i].val, ints[i].val);
-						for (int i = 3; i != 6; ++i)
-							PR_CHECK(arr[i].val, 0);
-					}
-				}
-			}
-			{//Operators
-				{
-					Check chk;
-					{
-						Array0 arr0(4U, 1);
-						Array0 arr1(3U, 2);
-						arr1 = arr0;
-						PR_CHECK(arr0.size(), 4U);
-						PR_CHECK(arr1.size(), 4U);
-						for (int i = 0; i != 4; ++i)
-							PR_CHECK(arr1[i].val, arr0[i].val);
-					}
-				}{
-					Check chk;
-					{
-						Array0 arr0(4U, 1);
-						Array1 arr2;
-						arr2 = arr0;
-						PR_CHECK(arr0.size(), 4U);
-						PR_CHECK(arr2.size(), 4U);
-						for (int i = 0; i != 4; ++i)
-							PR_CHECK(arr2[i].val, arr0[i].val);
-
-						struct L
-						{
-							static std::vector<Type> Conv(std::vector<Type> v) { return v; }
-						};
-						std::vector<Type> vec0 = L::Conv(arr0);
-						PR_CHECK(vec0.size(), 4U);
-						for (int i = 0; i != 4; ++i)
-							PR_CHECK(vec0[i].val, arr0[i].val);
-					}
-				}
-			}
-			{//Mem
-				{
-					Check chk;
-					{
-						Array0 arr0;
-						arr0.reserve(100);
-						for (int i = 0; i != 50; ++i) arr0.push_back(i);
-						PR_CHECK(arr0.capacity(), 100U);
-						arr0.shrink_to_fit();
-						PR_CHECK(arr0.capacity(), 50U);
-						arr0.resize(1);
-						arr0.shrink_to_fit();
-						PR_CHECK(arr0.capacity(), (size_t)arr0.LocalLength);
-					}
-				}
-			}
-			{//AlignedTypes
-				{
-					Check chk;
-					{
-						std::default_random_engine rng;
-						auto spline = Spline(Random3N(rng, 1.0f), Random3N(rng, 1.0f), Random3N(rng, 1.0f), Random3N(rng, 1.0f));
-
-						pr::vector<v4> arr0;
-						Raster(spline, arr0, 100);
-
-						PR_CHECK(arr0.capacity() > arr0.LocalLength, true);
-						arr0.resize(5);
-						arr0.shrink_to_fit();
-						PR_CHECK(arr0.size(), 5U);
-						PR_CHECK(arr0.capacity(), size_t(arr0.LocalLength));
-					}
-				}
-			}
-			{// Copy
-				{
-					Check chk;
-					{
-						Array0 arr0 = {10,20,30};
-						{
-							Array0 arr1 = {0,1,2,3,4,5,6,7,8,9};
-							arr0 = arr1;
-						}
-						PR_CHECK(arr0.size(), 10U);
-						for (int i = 0; i != int(arr0.size()); ++i)
-							PR_CHECK(arr0[i].val, i);
-					}
-				}
-			}
-			{// Move
-				{
-					Check chk;
-					{
-						// arr0 local, arr1 local
-						Array0 arr0 = {0,10,20,30};
-						{
-							Array0 arr1 = {0,1,2,3,4,5,6};
-							arr0 = std::move(arr1);
-						}
-						PR_CHECK(arr0.size(), 7U);
-						for (int i = 0; i != int(arr0.size()); ++i)
-							PR_CHECK(arr0[i].val, i);
-					}
-				}{
-					Check chk;
-					{
-						// arr0 !local, arr1 local
-						Array0 arr0 = {0,10,20,30,40,50,60,70,80,90};
-						{
-							Array0 arr1 = {0,1,2,3};
-							arr0 = std::move(arr1);
-						}
-						PR_CHECK(arr0.size(), 4U);
-						for (int i = 0; i != int(arr0.size()); ++i)
-							PR_CHECK(arr0[i].val, i);
-					}
-				}{
-					Check chk;
-					{
-						// arr0 local, arr1 !local
-						Array0 arr0 = {0,10,20,30};
-						{
-							Array0 arr1 = {0,1,2,3,4,5,6,7,8,9};
-							arr0 = std::move(arr1);
-						}
-						PR_CHECK(arr0.size(), 10U);
-						for (int i = 0; i != int(arr0.size()); ++i)
-							PR_CHECK(arr0[i].val, i);
-					}
-				}{
-					Check chk;
-					{
-						// arr0 !local, arr1 !local
-						Array0 arr0 = {0,10,20,30,40,50,60,70,80,90};
-						{
-							Array0 arr1 = {0,1,2,3,4,5,6,7,8,9};
-							arr0 = std::move(arr1);
-						}
-						PR_CHECK(arr0.size(), 10U);
-						for (int i = 0; i != int(arr0.size()); ++i)
-							PR_CHECK(arr0[i].val, i);
-					}
-				}
-			}
-			{// Non-copyable types
-				{
-					Check chk;
-					{
-						Array2 arr0;
-						arr0.emplace_back(0);
-						arr0.emplace_back(1);
-						arr0.emplace_back(2);
-						arr0.emplace_back(3);
-						arr0.emplace_back(4);
-
-						PR_CHECK(arr0.size(), 5U);
-						for (int i = 0; i != int(arr0.size()); ++i)
-							PR_CHECK(arr0[i].val, i);
-					}
-				}{
-					Check chk;
-					{
-						Array2 arr0;
-						arr0.emplace(arr0.end(), 2);
-						arr0.emplace(arr0.begin(), 1);
-						arr0.emplace(arr0.end(), 3);
-						Array2 arr1 = std::move(arr0);
-						arr1.emplace(arr1.begin(), 0);
+						Array0 arr1 = {0,1,2,3,4,5,6};
 						arr0 = std::move(arr1);
-
-						PR_CHECK(arr0.size(), 4U);
-						for (int i = 0; i != int(arr0.size()); ++i)
-							PR_CHECK(arr0[i].val, i);
 					}
-				}{
-					Check chk;
+					PR_CHECK(arr0.size(), 7U);
+					for (int i = 0; i != int(arr0.size()); ++i)
+						PR_CHECK(arr0[i].val, i);
+				}
+			}{
+				Check chk;
+				{
+					// arr0 !local, arr1 local
+					Array0 arr0 = {0,10,20,30,40,50,60,70,80,90};
 					{
-						Array2 arr0;
-						arr0.emplace(arr0.end(), 2);
-						arr0.emplace(arr0.begin(), 1);
-						arr0.emplace(arr0.end(), 3);
-
-						Array2 arr1 = std::move(arr0);
-						arr1.emplace(arr1.begin(), 0);
+						Array0 arr1 = {0,1,2,3};
 						arr0 = std::move(arr1);
-
-						PR_CHECK(arr0.size(), 4U);
-						for (int i = 0; i != int(arr0.size()); ++i)
-							PR_CHECK(arr0[i].val, i);
 					}
+					PR_CHECK(arr0.size(), 4U);
+					for (int i = 0; i != int(arr0.size()); ++i)
+						PR_CHECK(arr0[i].val, i);
+				}
+			}{
+				Check chk;
+				{
+					// arr0 local, arr1 !local
+					Array0 arr0 = {0,10,20,30};
+					{
+						Array0 arr1 = {0,1,2,3,4,5,6,7,8,9};
+						arr0 = std::move(arr1);
+					}
+					PR_CHECK(arr0.size(), 10U);
+					for (int i = 0; i != int(arr0.size()); ++i)
+						PR_CHECK(arr0[i].val, i);
+				}
+			}{
+				Check chk;
+				{
+					// arr0 !local, arr1 !local
+					Array0 arr0 = {0,10,20,30,40,50,60,70,80,90};
+					{
+						Array0 arr1 = {0,1,2,3,4,5,6,7,8,9};
+						arr0 = std::move(arr1);
+					}
+					PR_CHECK(arr0.size(), 10U);
+					for (int i = 0; i != int(arr0.size()); ++i)
+						PR_CHECK(arr0[i].val, i);
+				}
+			}
+		}
+		{// Non-copyable types
+			{
+				Check chk;
+				{
+					Array2 arr0;
+					arr0.emplace_back(0);
+					arr0.emplace_back(1);
+					arr0.emplace_back(2);
+					arr0.emplace_back(3);
+					arr0.emplace_back(4);
+
+					PR_CHECK(arr0.size(), 5U);
+					for (int i = 0; i != int(arr0.size()); ++i)
+						PR_CHECK(arr0[i].val, i);
+				}
+			}{
+				Check chk;
+				{
+					Array2 arr0;
+					arr0.emplace(arr0.end(), 2);
+					arr0.emplace(arr0.begin(), 1);
+					arr0.emplace(arr0.end(), 3);
+					Array2 arr1 = std::move(arr0);
+					arr1.emplace(arr1.begin(), 0);
+					arr0 = std::move(arr1);
+
+					PR_CHECK(arr0.size(), 4U);
+					for (int i = 0; i != int(arr0.size()); ++i)
+						PR_CHECK(arr0[i].val, i);
+				}
+			}{
+				Check chk;
+				{
+					Array2 arr0;
+					arr0.emplace(arr0.end(), 2);
+					arr0.emplace(arr0.begin(), 1);
+					arr0.emplace(arr0.end(), 3);
+
+					Array2 arr1 = std::move(arr0);
+					arr1.emplace(arr1.begin(), 0);
+					arr0 = std::move(arr1);
+
+					PR_CHECK(arr0.size(), 4U);
+					for (int i = 0; i != int(arr0.size()); ++i)
+						PR_CHECK(arr0[i].val, i);
 				}
 			}
 		}

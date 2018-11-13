@@ -49,19 +49,19 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="props/fxc_build_rule.props" />
-    <Import Project="props/lib.x86.debug.props" />
+    <Import Project="props/debug.x86.lib.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="props/fxc_build_rule.props" />
-    <Import Project="props/lib.x86.release.props" />
+    <Import Project="props/release.x86.lib.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="props/fxc_build_rule.props" />
-    <Import Project="props/lib.x64.debug.props" />
+    <Import Project="props/debug.x64.lib.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="props/fxc_build_rule.props" />
-    <Import Project="props/lib.x64.release.props" />
+    <Import Project="props/release.x64.lib.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />

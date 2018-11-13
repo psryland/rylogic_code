@@ -100,9 +100,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\projects\unittests\unittests.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\include\pr\lua\lua_core.c">
       <Filter>pr\lua</Filter>
     </ClCompile>
@@ -111,6 +108,9 @@
     </ClCompile>
     <ClCompile Include="..\sdk\sqlite\src\sqlite3.c">
       <Filter>sqlite3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\unittests\src\unittests.cpp">
+      <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -182,9 +182,6 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\common\command_line.h">
       <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\maths\compress.h">
-      <Filter>pr\maths</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\threads\concurrent_queue.h">
       <Filter>pr\threads</Filter>
@@ -342,9 +339,6 @@
     <ClInclude Include="..\include\pr\maths\matrix4x4.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\maths\matrix3x3.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\maths\matrix2x2.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
@@ -473,9 +467,6 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\maths\pr_to_ode.h">
       <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="..\projects\unittests\pp_output.h">
-      <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\threads\process.h">
       <Filter>pr\threads</Filter>
@@ -623,9 +614,6 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\common\stackdump.h">
       <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\projects\unittests\unittests.h">
-      <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\geometry\utility.h">
       <Filter>pr\geometry</Filter>
@@ -864,9 +852,6 @@
     <ClInclude Include="..\include\pr\win32\windows_com.h">
       <Filter>pr\win32</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\maths\spatial.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\physics2\integrater\integrater.h">
       <Filter>pr\physics\integrater</Filter>
     </ClInclude>
@@ -986,6 +971,33 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\macros\enum.h">
       <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\spatial.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\unittests\src\pp_output.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\unittests\src\unittests.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\limits.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\matrix3x4.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\constants_vector.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\compress.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\matrix6x8.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\vector8.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

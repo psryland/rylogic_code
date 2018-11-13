@@ -16,7 +16,7 @@ namespace pr
 			v4    m_radius;
 
 			ShapeBox() = default;
-			ShapeBox(v4_cref dim, m4x4_cref shape_to_model = m4x4Identity, MaterialId material_id = 0, Shape::EFlags flags = Shape::EFlags::None)
+			ShapeBox(v4_cref<> dim, m4_cref<> shape_to_model = m4x4Identity, MaterialId material_id = 0, Shape::EFlags flags = Shape::EFlags::None)
 				:m_base(EShape::Box, sizeof(ShapeBox), shape_to_model, material_id, flags)
 				,m_radius(dim * 0.5f)
 			{
@@ -53,7 +53,7 @@ namespace pr
 		}
 
 		// Return a support vertex for a box shape
-		inline v4 SupportVertex(ShapeBox const& shape, v4_cref direction, int, int& sup_vert_id)
+		inline v4 SupportVertex(ShapeBox const& shape, v4_cref<> direction, int, int& sup_vert_id)
 		{
 			int sign_x = (direction.x > 0.0f);
 			int sign_y = (direction.y > 0.0f);
@@ -68,7 +68,7 @@ namespace pr
 		}
 
 		// Returns the closest point on 'shape' to 'point'. 'shape' and 'point' are in the same space
-		inline void ClosestPoint(ShapeBox const& shape, v4_cref point, float& distance, v4& closest)
+		inline void ClosestPoint(ShapeBox const& shape, v4_cref<> point, float& distance, v4& closest)
 		{
 			closest = point;
 			distance = 0.0f;

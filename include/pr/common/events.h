@@ -260,118 +260,114 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::common
 {
-	namespace unittests
+	namespace unittests::evt
 	{
-		namespace evt
+		inline int& order() { static int order = 0; return order; }
+
+		struct Evt {};
+
+		// Test the priority order of events
+		struct Thing0 :pr::events::IRecv<Evt>
 		{
-			inline int& order() { static int order = 0; return order; }
-
-			struct Evt {};
-
-			// Test the priority order of events
-			struct Thing0 :pr::events::IRecv<Evt>
-			{
-				int m_recv;
-				int m_order;
-				Thing0() :pr::events::IRecv<Evt>(0) ,m_recv() ,m_order() {}
-				void OnEvent(Evt const&) { ++m_recv; m_order = ++order(); }
-			};
-			struct Thing1 :pr::events::IRecv<Evt>
-			{
-				int m_recv;
-				int m_order;
-				Thing1() :pr::events::IRecv<Evt>(2) ,m_recv() ,m_order() {}
-				void OnEvent(Evt const&) { ++m_recv; m_order = ++order(); }
-			};
-
-			// Tests event handler that unsubscribes during the handler
-			struct Once :pr::events::IRecv<Evt>
-			{
-				int m_count;
-				Once() :pr::events::IRecv<Evt>() ,m_count(0) {}
-				void OnEvent(Evt const&) { subscribe(false); ++m_count; }
-				void SignUp()            { subscribe(true); }
-			};
-
-			// Tests changing the event chain during a Send() call
-			struct Swapper :pr::events::IRecv<Evt>
-			{
-				Thing0 m_thing0;
-				Thing1 m_thing1;
-				int m_subbed;
-				Swapper()
-					:pr::events::IRecv<Evt>(1) // in between thing0 and thing1
-				{
-					m_thing0.subscribe(true);
-					m_thing1.subscribe(false);
-					m_subbed = 0;
-				}
-				void OnEvent(Evt const&)
-				{
-					// Swap subscribed objects on the event
-					m_subbed = m_subbed == 0;
-					m_thing0.subscribe(m_subbed == 0);
-					m_thing1.subscribe(m_subbed == 1);
-				}
-			};
-		}
-
-		PRUnitTest(pr_common_events)
+			int m_recv;
+			int m_order;
+			Thing0() :pr::events::IRecv<Evt>(0) ,m_recv() ,m_order() {}
+			void OnEvent(Evt const&) { ++m_recv; m_order = ++order(); }
+		};
+		struct Thing1 :pr::events::IRecv<Evt>
 		{
-			using namespace pr::unittests::evt;
+			int m_recv;
+			int m_order;
+			Thing1() :pr::events::IRecv<Evt>(2) ,m_recv() ,m_order() {}
+			void OnEvent(Evt const&) { ++m_recv; m_order = ++order(); }
+		};
 
-			{// priority
-				{
-					order() = 0;
-					Thing0 thing0;  // sign up 0
-					Thing1 thing1;  // sign up 1
-					pr::events::Send(Evt());
-					PR_CHECK(thing1.m_order, 1); // 1 should receive the event first
-					PR_CHECK(thing0.m_order, 2);
-				}
-				{
-					order() = 0;
-					Thing1 thing1; // sign up 1
-					Thing0 thing0; // sign up 0
-					pr::events::Send(Evt());
-					PR_CHECK(thing1.m_order, 1); // 1 should still receive the event first
-					PR_CHECK(thing0.m_order, 2);
-				}
-				{
-					order() = 0;
-					Thing0 thing0; // sign up 0
-					Thing1 thing1; // sign up 1
-					pr::events::Send(Evt(), false);
-					PR_CHECK(thing0.m_order, 1); // 0 should receive the event first because the send was in reverse order
-					PR_CHECK(thing1.m_order, 2);
-				}
+		// Tests event handler that un-subscribes during the handler
+		struct Once :pr::events::IRecv<Evt>
+		{
+			int m_count;
+			Once() :pr::events::IRecv<Evt>() ,m_count(0) {}
+			void OnEvent(Evt const&) { subscribe(false); ++m_count; }
+			void SignUp()            { subscribe(true); }
+		};
+
+		// Tests changing the event chain during a Send() call
+		struct Swapper :pr::events::IRecv<Evt>
+		{
+			Thing0 m_thing0;
+			Thing1 m_thing1;
+			int m_subbed;
+			Swapper()
+				:pr::events::IRecv<Evt>(1) // in between thing0 and thing1
+			{
+				m_thing0.subscribe(true);
+				m_thing1.subscribe(false);
+				m_subbed = 0;
 			}
-			{// Simple self-removing event handlers
-				Once once;
-				PR_CHECK(once.m_count, 0);
-				pr::events::Send(Evt());
-				PR_CHECK(once.m_count, 1);
-				pr::events::Send(Evt());
-				PR_CHECK(once.m_count, 1);
-				once.SignUp();
-				pr::events::Send(Evt());
-				PR_CHECK(once.m_count, 2);
+			void OnEvent(Evt const&)
+			{
+				// Swap subscribed objects on the event
+				m_subbed = m_subbed == 0;
+				m_thing0.subscribe(m_subbed == 0);
+				m_thing1.subscribe(m_subbed == 1);
 			}
-			{// add/remove during Send
+		};
+	}
+	PRUnitTest(EventsTests)
+	{
+		using namespace unittests::evt;
+
+		{// priority
+			{
 				order() = 0;
-				Swapper swapper; // Every event, thing0 and thing1 swap their subscriptions
+				Thing0 thing0;  // sign up 0
+				Thing1 thing1;  // sign up 1
 				pr::events::Send(Evt());
-				PR_CHECK(swapper.m_thing0.m_recv, 1);
-				PR_CHECK(swapper.m_thing1.m_recv, 0);
-				pr::events::Send(Evt());
-				PR_CHECK(swapper.m_thing0.m_recv, 1);
-				PR_CHECK(swapper.m_thing1.m_recv, 1);
-				pr::events::Send(Evt());
-				PR_CHECK(swapper.m_thing0.m_recv, 2);
-				PR_CHECK(swapper.m_thing1.m_recv, 1);
+				PR_CHECK(thing1.m_order, 1); // 1 should receive the event first
+				PR_CHECK(thing0.m_order, 2);
 			}
+			{
+				order() = 0;
+				Thing1 thing1; // sign up 1
+				Thing0 thing0; // sign up 0
+				pr::events::Send(Evt());
+				PR_CHECK(thing1.m_order, 1); // 1 should still receive the event first
+				PR_CHECK(thing0.m_order, 2);
+			}
+			{
+				order() = 0;
+				Thing0 thing0; // sign up 0
+				Thing1 thing1; // sign up 1
+				pr::events::Send(Evt(), false);
+				PR_CHECK(thing0.m_order, 1); // 0 should receive the event first because the send was in reverse order
+				PR_CHECK(thing1.m_order, 2);
+			}
+		}
+		{// Simple self-removing event handlers
+			Once once;
+			PR_CHECK(once.m_count, 0);
+			pr::events::Send(Evt());
+			PR_CHECK(once.m_count, 1);
+			pr::events::Send(Evt());
+			PR_CHECK(once.m_count, 1);
+			once.SignUp();
+			pr::events::Send(Evt());
+			PR_CHECK(once.m_count, 2);
+		}
+		{// add/remove during Send
+			order() = 0;
+			Swapper swapper; // Every event, thing0 and thing1 swap their subscriptions
+			pr::events::Send(Evt());
+			PR_CHECK(swapper.m_thing0.m_recv, 1);
+			PR_CHECK(swapper.m_thing1.m_recv, 0);
+			pr::events::Send(Evt());
+			PR_CHECK(swapper.m_thing0.m_recv, 1);
+			PR_CHECK(swapper.m_thing1.m_recv, 1);
+			pr::events::Send(Evt());
+			PR_CHECK(swapper.m_thing0.m_recv, 2);
+			PR_CHECK(swapper.m_thing1.m_recv, 1);
 		}
 	}
 }

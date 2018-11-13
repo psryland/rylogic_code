@@ -145,57 +145,54 @@ namespace pr
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 
-namespace pr
+namespace pr::network
 {
-	namespace unittests
+	PRUnitTest(TcpIpTests)
 	{
-		PRUnitTest(pr_network_tcpip)
+		pr::network::Winsock wsa;
 		{
-			pr::network::Winsock wsa;
-			{
-				bool connected = false;
+			bool connected = false;
 
-				pr::network::TCPServer svr(wsa);
-				svr.AllowConnections(54321, [&](SOCKET, sockaddr_in const* client_addr)
-					{
-						connected = client_addr != nullptr;
-					});
+			pr::network::TCPServer svr(wsa);
+			svr.AllowConnections(54321, [&](SOCKET, sockaddr_in const* client_addr)
+				{
+					connected = client_addr != nullptr;
+				});
 
-				pr::network::TCPClient client(wsa);
-				client.Connect("127.0.0.1", 54321);
+			pr::network::TCPClient client(wsa);
+			client.Connect("127.0.0.1", 54321);
 
-				PR_CHECK(svr.WaitForClients(1), true);
-				PR_CHECK(connected, true);
+			PR_CHECK(svr.WaitForClients(1), true);
+			PR_CHECK(connected, true);
 
-				char const data[] = "Test data";
-				PR_CHECK(svr.Send(data, sizeof(data)), true);
+			char const data[] = "Test data";
+			PR_CHECK(svr.Send(data, sizeof(data)), true);
 
-				char result[sizeof(data)] = {};
-				PR_CHECK(client.Recv(result, sizeof(result)), true);
+			char result[sizeof(data)] = {};
+			PR_CHECK(client.Recv(result, sizeof(result)), true);
 
-				PR_CHECK(data, result);
-				svr.StopConnections();
-			}
-			{
-				pr::network::TCPServer svr(wsa);
-				svr.AllowConnections(54321, 10);
+			PR_CHECK(data, result);
+			svr.StopConnections();
+		}
+		{
+			pr::network::TCPServer svr(wsa);
+			svr.AllowConnections(54321, 10);
 
-				pr::network::TCPClient client(wsa);
-				client.Connect("127.0.0.1", 54321);
+			pr::network::TCPClient client(wsa);
+			client.Connect("127.0.0.1", 54321);
 
-				PR_CHECK(svr.WaitForClients(1), true);
+			PR_CHECK(svr.WaitForClients(1), true);
 
-				char const data[] = "Test data";
-				PR_CHECK(client.Send(data, sizeof(data)), true);
+			char const data[] = "Test data";
+			PR_CHECK(client.Send(data, sizeof(data)), true);
 
-				char result[sizeof(data)] = {};
-				PR_CHECK(svr.Recv(result, sizeof(result)), true);
+			char result[sizeof(data)] = {};
+			PR_CHECK(svr.Recv(result, sizeof(result)), true);
 
-				PR_CHECK(data, result);
+			PR_CHECK(data, result);
 
-				client.Disconnect();
-				svr.StopConnections();
-			}
+			client.Disconnect();
+			svr.StopConnections();
 		}
 	}
 }

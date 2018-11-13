@@ -114,7 +114,7 @@ namespace pr
 			size_t m_size;
 
 			Shape() = default;
-			Shape(EShape type, size_t size, m4x4_cref shape_to_model = m4x4Identity, MaterialId material_id = 0, EFlags flags = EFlags::None)
+			Shape(EShape type, size_t size, m4_cref<> shape_to_model = m4x4Identity, MaterialId material_id = 0, EFlags flags = EFlags::None)
 				:m_s2p(shape_to_model)
 				,m_bbox(BBoxReset)
 				,m_type(type)
@@ -223,7 +223,7 @@ namespace pr
 		}
 
 		// Returns the support vertex for 'shape' in 'direction'. 'direction' is in shape space
-		template <typename = void> inline v4 SupportVertex(Shape const& shape, v4_cref direction, int hint_vert_id, int& sup_vert_id)
+		template <typename = void> inline v4 SupportVertex(Shape const& shape, v4_cref<> direction, int hint_vert_id, int& sup_vert_id)
 		{
 			switch (shape.m_type)
 			{
@@ -236,7 +236,7 @@ namespace pr
 		}
 
 		// Returns the closest point on 'shape' to 'point'. 'shape' and 'point' are in the same space
-		template <typename = void> inline void ClosestPoint(Shape const& shape, v4_cref point, float& distance, v4& closest)
+		template <typename = void> inline void ClosestPoint(Shape const& shape, v4_cref<> point, float& distance, v4& closest)
 		{
 			switch (shape.m_type)
 			{

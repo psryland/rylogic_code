@@ -6,7 +6,7 @@
 
 #include <mutex>
 
-namespace pr
+namespace pr::threads
 {
 	// A class for providing thread-safe access to an object
 	template <typename Type, typename Mutex = std::mutex>
@@ -66,62 +66,58 @@ namespace pr
 #include "pr/common/unittests.h"
 #include <thread>
 #include <chrono>
-namespace pr
+namespace pr::threads
 {
-	namespace unittests
+	namespace unittests::synchronise
 	{
-		namespace synchronise
-		{
-			using Ints = int[10];
+		using Ints = int[10];
 
-			// An object to be accessed by multiple threads
-			class Thing
-			{
-				Ints m_values;
-				std::mutex mutable m_mutex;
-				friend struct Lock;
+		// An object to be accessed by multiple threads
+		class Thing
+		{
+			Ints m_values;
+			std::mutex mutable m_mutex;
+			friend struct Lock;
 			
-			public:
+		public:
 
-				struct Lock :Synchronise<Thing>
+			struct Lock :Synchronise<Thing>
+			{
+				Lock(Thing const& t)
+					:base(t, t.m_mutex)
+				{}
+				Ints const& values() const
 				{
-					Lock(Thing const& t)
-						:base(t, t.m_mutex)
-					{}
-					Ints const& values() const
+					return get().m_values;
+				}
+				void set(int value)
+				{
+					for (auto& i : get().m_values)
 					{
-						return get().m_values;
+						i = value;
+						std::this_thread::sleep_for(std::chrono::milliseconds(1));
 					}
-					void set(int value)
-					{
-						for (auto& i : get().m_values)
-						{
-							i = value;
-							std::this_thread::sleep_for(std::chrono::milliseconds(1));
-						}
-					}
-				};
+				}
 			};
+		};
+	}
+	PRUnitTest(SynchroniseTests)
+	{
+		using namespace unittests::synchronise;
 
-		}
-		PRUnitTest(pr_threads_synchronise)
-		{
-			using namespace synchronise;
+		Thing t;
+		std::thread t0([&]{ Thing::Lock lock(t); lock.set(1); });
+		std::thread t1([&]{ Thing::Lock lock(t); lock.set(2); });
+		std::thread t2([&]{ Thing::Lock lock(t); lock.set(3); });
 
-			Thing t;
-			std::thread t0([&]{ Thing::Lock lock(t); lock.set(1); });
-			std::thread t1([&]{ Thing::Lock lock(t); lock.set(2); });
-			std::thread t2([&]{ Thing::Lock lock(t); lock.set(3); });
+		t0.join();
+		t1.join();
+		t2.join();
 
-			t0.join();
-			t1.join();
-			t2.join();
-
-			Thing::Lock lock(t);
-			auto& values = lock.values();
-			for (auto v : values)
-				PR_CHECK(v == values[0], true);
-		}
+		Thing::Lock lock(t);
+		auto& values = lock.values();
+		for (auto v : values)
+			PR_CHECK(v == values[0], true);
 	}
 }
 #endif

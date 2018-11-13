@@ -988,95 +988,92 @@ namespace pr
 #include <fstream>
 #include "pr/common/unittests.h"
 #include "pr/renderer11/renderer.h"
-namespace pr
+namespace pr::geometry
 {
-	namespace unittests
+	PRUnitTest(P3dTests)
 	{
-		PRUnitTest(pr_geometry_p3d)
+		using namespace pr::geometry;
+		p3d::File file;
+		file.m_version = p3d::Version;
+
+		p3d::Texture tex;
+		tex.m_filepath = "filepath";
+		tex.m_tiling = 1;
+
+		p3d::Material mat;
+		mat.m_id = "mat1";
+		mat.m_diffuse = pr::ColourWhite;
+		mat.m_tex_diffuse.push_back(tex);
+
+		file.m_scene.m_materials.push_back(mat);
+
+		p3d::Nugget nug = {};
+		nug.m_topo = EPrim::TriList;
+		nug.m_geom = EGeom::Vert|EGeom::Colr|EGeom::Norm|EGeom::Tex0;
+		nug.m_vrange.first = 0;
+		nug.m_vrange.count = 4;
+		nug.m_irange.first = 0;
+		nug.m_irange.count = 4;
+		nug.m_mat = "mat1";
+
+		p3d::Mesh mesh;
+		mesh.m_name = "mesh";
+		mesh.m_bbox = pr::BBox(v4Origin, v4(1,2,3,0));
+		mesh.m_verts.push_back(p3d::Vert());
+		mesh.m_verts.push_back(p3d::Vert());
+		mesh.m_verts.push_back(p3d::Vert());
+		mesh.m_verts.push_back(p3d::Vert());
+		mesh.m_idx16.push_back(0);
+		mesh.m_idx16.push_back(1);
+		mesh.m_idx16.push_back(2);
+		mesh.m_idx16.push_back(3);
+		mesh.m_nugget.push_back(nug);
+		file.m_scene.m_meshes.push_back(mesh);
+
+		//std::ofstream buf("P:\\dump\\test.p3d", std::ofstream:: binary);
+		//p3d::Write(buf, file);
+
+		//*
+		std::stringstream buf(std::ios_base::in|std::ios_base::out|std::ios_base::binary);
+		p3d::Write(buf, file);
+
+		auto index = p3d::Index(file);
+		PR_CHECK(size_t(buf.tellp()), size_t(index.m_length));
+
+		p3d::File cmp = p3d::Read(buf);
+
+		PR_CHECK(cmp.m_version                  , file.m_version);
+		PR_CHECK(cmp.m_scene.m_materials.size() , file.m_scene.m_materials.size());
+		PR_CHECK(cmp.m_scene.m_meshes.size()    , file.m_scene.m_meshes.size());
+		for (size_t i = 0; i != file.m_scene.m_materials.size(); ++i)
 		{
-			using namespace pr::geometry;
-			p3d::File file;
-			file.m_version = p3d::Version;
-
-			p3d::Texture tex;
-			tex.m_filepath = "filepath";
-			tex.m_tiling = 1;
-
-			p3d::Material mat;
-			mat.m_id = "mat1";
-			mat.m_diffuse = pr::ColourWhite;
-			mat.m_tex_diffuse.push_back(tex);
-
-			file.m_scene.m_materials.push_back(mat);
-
-			p3d::Nugget nug = {};
-			nug.m_topo = EPrim::TriList;
-			nug.m_geom = EGeom::Vert|EGeom::Colr|EGeom::Norm|EGeom::Tex0;
-			nug.m_vrange.first = 0;
-			nug.m_vrange.count = 4;
-			nug.m_irange.first = 0;
-			nug.m_irange.count = 4;
-			nug.m_mat = "mat1";
-
-			p3d::Mesh mesh;
-			mesh.m_name = "mesh";
-			mesh.m_bbox = pr::BBox(v4Origin, v4(1,2,3,0));
-			mesh.m_verts.push_back(p3d::Vert());
-			mesh.m_verts.push_back(p3d::Vert());
-			mesh.m_verts.push_back(p3d::Vert());
-			mesh.m_verts.push_back(p3d::Vert());
-			mesh.m_idx16.push_back(0);
-			mesh.m_idx16.push_back(1);
-			mesh.m_idx16.push_back(2);
-			mesh.m_idx16.push_back(3);
-			mesh.m_nugget.push_back(nug);
-			file.m_scene.m_meshes.push_back(mesh);
-
-			//std::ofstream buf("P:\\dump\\test.p3d", std::ofstream:: binary);
-			//p3d::Write(buf, file);
-
-			//*
-			std::stringstream buf(std::ios_base::in|std::ios_base::out|std::ios_base::binary);
-			p3d::Write(buf, file);
-
-			auto index = p3d::Index(file);
-			PR_CHECK(size_t(buf.tellp()), size_t(index.m_length));
-
-			p3d::File cmp = p3d::Read(buf);
-
-			PR_CHECK(cmp.m_version                  , file.m_version);
-			PR_CHECK(cmp.m_scene.m_materials.size() , file.m_scene.m_materials.size());
-			PR_CHECK(cmp.m_scene.m_meshes.size()    , file.m_scene.m_meshes.size());
-			for (size_t i = 0; i != file.m_scene.m_materials.size(); ++i)
+			auto& m0 = cmp.m_scene.m_materials[i];
+			auto& m1 = file.m_scene.m_materials[i];
+			PR_CHECK(pr::str::Equal(m0.m_id.str, m1.m_id.str), true);
+			PR_CHECK(m0.m_diffuse == m1.m_diffuse, true);
+			PR_CHECK(m0.m_tex_diffuse.size() == m1.m_tex_diffuse.size(), true);
+			for (size_t j = 0; j != m1.m_tex_diffuse.size(); ++j)
 			{
-				auto& m0 = cmp.m_scene.m_materials[i];
-				auto& m1 = file.m_scene.m_materials[i];
-				PR_CHECK(pr::str::Equal(m0.m_id.str, m1.m_id.str), true);
-				PR_CHECK(m0.m_diffuse == m1.m_diffuse, true);
-				PR_CHECK(m0.m_tex_diffuse.size() == m1.m_tex_diffuse.size(), true);
-				for (size_t j = 0; j != m1.m_tex_diffuse.size(); ++j)
-				{
-					auto& t0 = m0.m_tex_diffuse[j];
-					auto& t1 = m1.m_tex_diffuse[j];
-					PR_CHECK(t0.m_filepath , t1.m_filepath);
-					PR_CHECK(t0.m_tiling   , t1.m_tiling);
-				}
+				auto& t0 = m0.m_tex_diffuse[j];
+				auto& t1 = m1.m_tex_diffuse[j];
+				PR_CHECK(t0.m_filepath , t1.m_filepath);
+				PR_CHECK(t0.m_tiling   , t1.m_tiling);
 			}
-			for (size_t i = 0; i != file.m_scene.m_meshes.size(); ++i)
-			{
-				auto& m0 = cmp.m_scene.m_meshes[i];
-				auto& m1 = file.m_scene.m_meshes[i];
-				PR_CHECK(m0.m_name          , m1.m_name);
-				PR_CHECK(m0.m_verts.size()  , m1.m_verts.size());
-				PR_CHECK(m0.m_idx16.size()  , m1.m_idx16.size());
-				PR_CHECK(m0.m_idx32.size()  , m1.m_idx32.size());
-				PR_CHECK(m0.m_nugget.size() , m1.m_nugget.size());
-			}
-			//*/
-			//std::ifstream ifile("P:\\dump\\test2.3ds", std::ifstream::binary);
-			//Read3DSMaterials(ifile, [](max_3ds::Material&&){});
-			//Read3DSModels(ifile, [](max_3ds::Object&&){});
 		}
+		for (size_t i = 0; i != file.m_scene.m_meshes.size(); ++i)
+		{
+			auto& m0 = cmp.m_scene.m_meshes[i];
+			auto& m1 = file.m_scene.m_meshes[i];
+			PR_CHECK(m0.m_name          , m1.m_name);
+			PR_CHECK(m0.m_verts.size()  , m1.m_verts.size());
+			PR_CHECK(m0.m_idx16.size()  , m1.m_idx16.size());
+			PR_CHECK(m0.m_idx32.size()  , m1.m_idx32.size());
+			PR_CHECK(m0.m_nugget.size() , m1.m_nugget.size());
+		}
+		//*/
+		//std::ifstream ifile("P:\\dump\\test2.3ds", std::ifstream::binary);
+		//Read3DSMaterials(ifile, [](max_3ds::Material&&){});
+		//Read3DSModels(ifile, [](max_3ds::Object&&){});
 	}
 }
 #endif

@@ -3,6 +3,7 @@
 // Copyright (C) Rylogic Ltd 2016
 //***************************************************
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -533,18 +534,18 @@ namespace Rylogic.Gui.WinForms
 		public HitTestResult HitTestCS(Point client_point, Keys modifier_keys, Func<Element, bool> pred)
 		{
 			// Determine the hit zone of the control
-			var zone = HitTestResult.EZone.None;
-			if (SceneBounds.Contains(client_point)) zone |= HitTestResult.EZone.Chart;
-			if (XAxisBounds.Contains(client_point)) zone |= HitTestResult.EZone.XAxis;
-			if (YAxisBounds.Contains(client_point)) zone |= HitTestResult.EZone.YAxis;
-			if (TitleBounds.Contains(client_point)) zone |= HitTestResult.EZone.Title;
+			var zone = EZone.None;
+			if (SceneBounds.Contains(client_point)) zone |= EZone.Chart;
+			if (XAxisBounds.Contains(client_point)) zone |= EZone.XAxis;
+			if (YAxisBounds.Contains(client_point)) zone |= EZone.YAxis;
+			if (TitleBounds.Contains(client_point)) zone |= EZone.Title;
 
 			// The hit test point in chart space
 			var chart_point = ClientToChart(client_point);
 
 			// Find elements that overlap 'client_point'
 			var hits = new List<HitTestResult.Hit>();
-			if (zone.HasFlag(HitTestResult.EZone.Chart))
+			if (zone.HasFlag(EZone.Chart))
 			{
 				var elements = pred != null ? Elements.Where(pred) : Elements;
 				foreach (var elem in elements)
@@ -670,7 +671,7 @@ namespace Rylogic.Gui.WinForms
 				Scene.Update();
 
 				// Add user graphics over the chart
-				OnAddOverlaysOnPaint(new AddOverlaysOnPaintEventArgs(gfx, dims, ChartToClientSpace()));
+				OnAddOverlaysOnPaint(new AddOverlaysOnPaintEventArgs(gfx, dims, ChartToClientSpace(), ~EZone.None ^ EZone.Chart));
 			}
 			catch (OverflowException)
 			{
@@ -996,6 +997,15 @@ namespace Rylogic.Gui.WinForms
 				base.OnPaint(e);
 				if (m_render_needed) DoPaint();
 				Present();
+
+				// Add user graphics over the chart. Use a transform to make the
+				// chart area appear in the same space as the non-chart area.
+				using (e.Graphics.SaveState())
+				{
+					var dims = m_owner.ChartDimensions;
+					e.Graphics.TranslateTransform(-dims.ChartArea.Left, -dims.ChartArea.Top);
+					m_owner.OnAddOverlaysOnPaint(new AddOverlaysOnPaintEventArgs(e.Graphics, dims, m_owner.ChartToClientSpace(), EZone.Chart));
+				}
 			}
 			protected override void OnInvalidated(InvalidateEventArgs e)
 			{
@@ -2994,7 +3004,7 @@ namespace Rylogic.Gui.WinForms
 					}
 
 					// If the click is still unhandled, use the click to try to select something (if within the chart)
-					if (!args.Handled && m_hit_result.Zone.HasFlag(HitTestResult.EZone.Chart))
+					if (!args.Handled && m_hit_result.Zone.HasFlag(EZone.Chart))
 					{
 						var selection_area = new BRect(m_grab_chart, v2.Zero);
 						m_chart.SelectElements(selection_area, ModifierKeys);
@@ -3012,7 +3022,7 @@ namespace Rylogic.Gui.WinForms
 					else if (m_chart.Options.NavigationMode == ENavMode.Chart2D)
 					{
 						// Otherwise create an area selection if the click started within the chart
-						if (m_hit_result.Zone.HasFlag(HitTestResult.EZone.Chart) && m_chart.AreaSelectMode != EAreaSelectMode.Disabled)
+						if (m_hit_result.Zone.HasFlag(EZone.Chart) && m_chart.AreaSelectMode != EAreaSelectMode.Disabled)
 						{
 							var selection_area = BBox.From(new v4(m_grab_chart, 0, 1f), new v4(m_chart.ClientToChart(e.Location), 0f, 1f));
 							m_chart.OnChartAreaSelect(new ChartAreaSelectEventArgs(selection_area));
@@ -3104,11 +3114,11 @@ namespace Rylogic.Gui.WinForms
 
 					if (!args.Handled)
 					{
-						if (m_hit_result.Zone.HasFlag(HitTestResult.EZone.Chart))
+						if (m_hit_result.Zone.HasFlag(EZone.Chart))
 						{ }
-						else if (m_hit_result.Zone.HasFlag(HitTestResult.EZone.XAxis))
+						else if (m_hit_result.Zone.HasFlag(EZone.XAxis))
 						{ }
-						else if (m_hit_result.Zone.HasFlag(HitTestResult.EZone.YAxis))
+						else if (m_hit_result.Zone.HasFlag(EZone.YAxis))
 						{ }
 					}
 				}
@@ -3183,11 +3193,11 @@ namespace Rylogic.Gui.WinForms
 						// Show the context menu on right click
 						if (args.Button == MouseButtons.Right)
 						{
-							if (m_hit_result.Zone.HasFlag(HitTestResult.EZone.Chart))
+							if (m_hit_result.Zone.HasFlag(EZone.Chart))
 								m_chart.ShowContextMenu(args.Location, args.HitResult);
-							else if (m_hit_result.Zone.HasFlag(HitTestResult.EZone.XAxis))
+							else if (m_hit_result.Zone.HasFlag(EZone.XAxis))
 								m_chart.XAxis.ShowContextMenu(args.Location, args.HitResult);
-							else if (m_hit_result.Zone.HasFlag(HitTestResult.EZone.YAxis))
+							else if (m_hit_result.Zone.HasFlag(EZone.YAxis))
 								m_chart.YAxis.ShowContextMenu(args.Location, args.HitResult);
 						}
 					}
@@ -4467,6 +4477,17 @@ namespace Rylogic.Gui.WinForms
 
 		#region Nested Classes
 
+		/// <summary>Named parts of the chart</summary>
+		[Flags]
+		public enum EZone
+		{
+			None,
+			Chart = 1 << 0,
+			XAxis = 1 << 1,
+			YAxis = 1 << 2,
+			Title = 1 << 3,
+		}
+
 		/// <summary>Chart change types</summary>
 		public enum EChangeType
 		{
@@ -4506,19 +4527,11 @@ namespace Rylogic.Gui.WinForms
 
 			/// <summary>The zone on the chart that was hit</summary>
 			public EZone Zone { get; private set; }
-			[Flags] public enum EZone
-			{
-				None,
-				Chart = 1 << 0,
-				XAxis = 1 << 1,
-				YAxis = 1 << 2,
-				Title = 1 << 3,
-			}
 
 			/// <summary>The client space location of where the hit test was performed</summary>
 			public Point ClientPoint { get; private set; }
 
-			/// <summary>The chart space location of where the hit test was performed (EZone.Chart only)</summary>
+			/// <summary>The chart space location of where the hit test was performed</summary>
 			public PointF ChartPoint { get; private set; }
 
 			/// <summary>The collection of hit objects</summary>
@@ -4836,11 +4849,12 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Event args for the post-paint add overlays call</summary>
 		public class AddOverlaysOnPaintEventArgs :EventArgs
 		{
-			public AddOverlaysOnPaintEventArgs(Graphics gfx, ChartDims dims, m4x4 chart_to_client)
+			public AddOverlaysOnPaintEventArgs(Graphics gfx, ChartDims dims, m4x4 chart_to_client, EZone zone)
 			{
 				Gfx           = gfx;
 				Dims          = dims;
 				ChartToClient = chart_to_client;
+				Zone          = zone;
 			}
 
 			/// <summary>The device context to draw to</summary>
@@ -4854,6 +4868,9 @@ namespace Rylogic.Gui.WinForms
 
 			/// <summary>Transform from Chart space to client space</summary>
 			public m4x4 ChartToClient { get; private set; }
+
+			/// <summary>The part of the chart being painted</summary>
+			public EZone Zone { get; private set; }
 		}
 
 		/// <summary>Event args for the auto range event</summary>
@@ -4968,26 +4985,29 @@ namespace Rylogic.Gui.WinForms
 	{
 		private PointStyleTextures m_point_textures;
 
-		public ChartDataSeries(string name, OptionsData options = null, int? capacity = null)
-			:this(Guid.NewGuid(), name, options, capacity)
+		public ChartDataSeries(string name, EFormat format, OptionsData options = null, int? capacity = null)
+			:this(Guid.NewGuid(), name, format, options, capacity)
 		{ }
-		public ChartDataSeries(Guid id, string name, OptionsData options = null, int? capacity = null)
+		public ChartDataSeries(Guid id, string name, EFormat format, OptionsData options = null, int? capacity = null)
 			:base(id, m4x4.Identity, name)
 		{
 			Init();
+			Format = format;
 			Options = options ?? new OptionsData();
 		}
 		public ChartDataSeries(XElement node)
 			:base(node)
 		{
 			Init();
-			Options = node.Element(nameof(Options)).As(Options);
+			Format = node.Element(nameof(Format)).As<EFormat>();
+			Options = node.Element(nameof(Options)).As<OptionsData>();
 		}
 		private void Init()
 		{
 			m_data = new List<Pt>();
 			Cache = new GfxCache(CreatePiece);
 			m_point_textures = new PointStyleTextures();
+			m_range_x = RangeF.Invalid;
 		}
 		protected override void Dispose(bool disposing)
 		{
@@ -5017,32 +5037,43 @@ namespace Rylogic.Gui.WinForms
 			get { return m_data.Count; }
 		}
 
+		/// <summary>The format of the plot data</summary>
+		public EFormat Format { get; set; }
+
 		/// <summary>Return the X-Axis range of the data</summary>
 		public RangeF RangeX
 		{
 			get
 			{
-				using (Lock())
+				if (m_range_x == RangeF.Invalid)
 				{
-					// 'Transform' only applies to the graphics
-					if (m_data.Count == 0) return RangeF.Invalid;
-					var beg = m_data.Front();
-					var end = m_data.Back();
-					return new RangeF(beg.xf, end.xf);
+					using (Lock())
+					{
+						// 'Transform' only applies to the graphics
+						if (m_data.Count == 0) return RangeF.Invalid;
+						var beg = m_data.Front();
+						var end = m_data.Back();
+						m_range_x = new RangeF(beg.xf, end.xf);
+					}
 				}
+				return m_range_x;
 			}
 		}
+		private RangeF m_range_x;
 
 		/// <summary>Cause all graphics models to be recreated</summary>
 		public void FlushCachedGraphics()
 		{
 			Cache.Invalidate();
+			m_range_x = RangeF.Invalid;
 		}
 
 		/// <summary>Cause graphics model that intersect 'x_range' to be recreated</summary>
-		public void FlushCachedGraphics(Range x_range)
+		public void FlushCachedGraphics(RangeF x_range)
 		{
 			Cache.Invalidate(x_range);
+			if (m_range_x != RangeF.Invalid)
+				m_range_x.Encompass(x_range);
 		}
 		
 		/// <summary>Update the graphics for this indicator and add it to the scene</summary>
@@ -5066,7 +5097,10 @@ namespace Rylogic.Gui.WinForms
 
 				// Add each graphics piece over the range
 				foreach (var piece in Cache.Get(range))
+				{
+					if (piece.Gfx == null) continue;
 					window.AddObject(piece.Gfx);
+				}
 			}
 		}
 
@@ -5089,6 +5123,8 @@ namespace Rylogic.Gui.WinForms
 				var idx_range = new Range(
 					Math.Max(idx_missing.Beg, idx - PieceBlockSize),
 					Math.Min(idx_missing.End, idx + PieceBlockSize));
+				if (idx_range.Empty)
+					return new GfxPiece(null, missing);
 
 				// Create graphics over the data range 'idx_range'
 				switch (Options.PlotType)
@@ -5128,7 +5164,7 @@ namespace Rylogic.Gui.WinForms
 				var mat = View3d.Material.New();
 				mat.m_diff_tex = m_point_textures[Options.PointStyle]?.Handle ?? IntPtr.Zero;
 				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.PointSpritesGS, new v2(Options.PointSize, Options.PointSize), false);
-				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.PointList, View3d.EGeom.Vert| View3d.EGeom.Colr| View3d.EGeom.Tex0, false, mat);
+				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.PointList, View3d.EGeom.Vert|View3d.EGeom.Colr|View3d.EGeom.Tex0, false, mat);
 			}
 
 			// Create the graphics
@@ -5140,6 +5176,8 @@ namespace Rylogic.Gui.WinForms
 		private GfxPiece CreateLinePlot(Range idx_range)
 		{
 			var n = idx_range.Sizei;
+			if (n == 0)
+				throw new ArgumentException($"{nameof(ChartControl)}.{nameof(CreateLinePlot)} Index range must not be empty");
 
 			// Resize the geometry buffers
 			m_vbuf.Resize(n);
@@ -5150,7 +5188,7 @@ namespace Rylogic.Gui.WinForms
 			int vert = 0, indx = 0;
 			var col = Options.Colour;
 			var x_range = RangeF.Invalid;
-			for (int i = 0, iend = Math.Min(n + 1, m_data.Count - idx_range.Begi); i != iend; ++i)
+			for (int i = 0, iend = Math.Min(n, m_data.Count - idx_range.Begi); i != iend; ++i)
 			{
 				var j = i + idx_range.Begi;
 				var pt = m_data[j];
@@ -5166,7 +5204,7 @@ namespace Rylogic.Gui.WinForms
 			{
 				var mat = View3d.Material.New();
 				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.ThickLineListGS, Options.LineWidth);
-				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert| View3d.EGeom.Colr, false, mat);
+				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert|View3d.EGeom.Colr, false, mat);
 			}
 
 			// Create a nugget for the points (if visible)
@@ -5175,7 +5213,7 @@ namespace Rylogic.Gui.WinForms
 				var mat = View3d.Material.New();
 				mat.m_diff_tex = m_point_textures[Options.PointStyle]?.Handle ?? IntPtr.Zero;
 				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.PointSpritesGS, new v2(Options.PointSize, Options.PointSize), false);
-				m_nbuf[1] = new View3d.Nugget(View3d.EPrim.PointList, View3d.EGeom.Vert| View3d.EGeom.Colr| View3d.EGeom.Tex0, false, true, mat);
+				m_nbuf[1] = new View3d.Nugget(View3d.EPrim.PointList, View3d.EGeom.Vert|View3d.EGeom.Colr|View3d.EGeom.Tex0, false, true, mat);
 			}
 
 			// Create the graphics
@@ -5217,7 +5255,7 @@ namespace Rylogic.Gui.WinForms
 			{
 				var mat = View3d.Material.New();
 				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.ThickLineListGS, Options.LineWidth);
-				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert| View3d.EGeom.Colr, 0, (uint)vert, 0, (uint)indx, false, false, mat);
+				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert|View3d.EGeom.Colr, 0, (uint)vert, 0, (uint)indx, false, false, mat);
 			}
 
 			// Create a nugget for the points (if visible)
@@ -5231,7 +5269,7 @@ namespace Rylogic.Gui.WinForms
 				var mat = View3d.Material.New();
 				mat.m_diff_tex = m_point_textures[Options.PointStyle]?.Handle ?? IntPtr.Zero;
 				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.PointSpritesGS, new v2(Options.PointSize, Options.PointSize), false);
-				m_nbuf[1] = new View3d.Nugget(View3d.EPrim.PointList, View3d.EGeom.Vert| View3d.EGeom.Colr| View3d.EGeom.Tex0, 0, (uint)vert, (uint)i0, (uint)indx, false, false, mat);
+				m_nbuf[1] = new View3d.Nugget(View3d.EPrim.PointList, View3d.EGeom.Vert|View3d.EGeom.Colr|View3d.EGeom.Tex0, 0, (uint)vert, (uint)i0, (uint)indx, false, false, mat);
 			}
 
 			// Create the graphics
@@ -5286,7 +5324,7 @@ namespace Rylogic.Gui.WinForms
 
 			// Create a nugget for the tri list
 			{
-				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.TriList, View3d.EGeom.Vert| View3d.EGeom.Colr, false);
+				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.TriList, View3d.EGeom.Vert|View3d.EGeom.Colr, false);
 			}
 
 			// Create the graphics
@@ -5330,6 +5368,18 @@ namespace Rylogic.Gui.WinForms
 			Triangle,
 		}
 
+		/// <summary>Formats for the plot data</summary>
+		[Flags] public enum EFormat
+		{
+			XIntg = 1 << 0,
+			XReal = 1 << 1,
+			YIntg = 1 << 2,
+			YReal = 1 << 3,
+
+			XIntgYIntg = XIntg | YIntg,
+			XRealYReal = XReal | YReal,
+		}
+
 		/// <summary>A cache of graphics objects that span the X-Axis</summary>
 		public class GfxCache :IDisposable
 		{
@@ -5353,7 +5403,7 @@ namespace Rylogic.Gui.WinForms
 				Util.DisposeRange(Pieces);
 				Pieces.Clear();
 			}
-			public void Invalidate(Range x_range)
+			public void Invalidate(RangeF x_range)
 			{
 				var beg = Pieces.BinarySearch(p => p.Range.CompareTo(x_range.Beg), find_insert_position:true);
 				var end = Pieces.BinarySearch(p => p.Range.CompareTo(x_range.End), find_insert_position:true);
@@ -5454,6 +5504,7 @@ namespace Rylogic.Gui.WinForms
 		public class Pt
 		{
 			// Notes:
+			// - The format of this data is given by 'Format' in the 'ChartDataSeries' owner.
 			// - Not IComparible because we don't know whether to compare 'xf' or 'xi'.
 			//   Use the static 'CompareX?' functions below
 
@@ -5511,18 +5562,27 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>RAII object for synchronising access to the underlying data</summary>
-		public class LockData :IDisposable
+		public class LockData : ICollection<Pt>, IDisposable
 		{
-			private readonly ChartDataSeries m_owner;
+			private RangeF m_changed_data_range;
 			public LockData(ChartDataSeries owner)
 			{
-				m_owner = owner;
-				Monitor.Enter(m_owner.m_data);
+				Owner = owner;
+				m_changed_data_range = RangeF.Invalid;
+				Monitor.Enter(Data);
 			}
 			public void Dispose()
 			{
-				Monitor.Exit(m_owner.m_data);
+				if (m_changed_data_range == RangeF.Max)
+					Owner.FlushCachedGraphics();
+				else if (m_changed_data_range != RangeF.Invalid)
+					Owner.FlushCachedGraphics(m_changed_data_range);
+
+				Monitor.Exit(Data);
 			}
+
+			/// <summary>The data series that this lock is on</summary>
+			public ChartDataSeries Owner { get; private set; }
 
 			/// <summary>The number of elements in the data series</summary>
 			public int Count
@@ -5533,19 +5593,29 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>Reset the collection</summary>
 			public void Clear()
 			{
+				m_changed_data_range = RangeF.Max;
 				Data.Clear();
 			}
 
 			/// <summary>Add a datum point</summary>
 			public Pt Add(Pt point)
 			{
+				m_changed_data_range.Encompass(Format.HasFlag(EFormat.XIntg) ? point.xi : point.xf);
 				Data.Add(point);
 				return point;
+			}
+
+			/// <summary>Remove a datum point</summary>
+			public bool Remove(Pt item)
+			{
+				m_changed_data_range = RangeF.Max;
+				return Data.Remove(item);
 			}
 
 			/// <summary>Insert a datum point</summary>
 			public Pt Insert(int index, Pt point)
 			{
+				m_changed_data_range.Encompass(Format.HasFlag(EFormat.XIntg) ? point.xi : point.xf);
 				Data.Insert(index, point);
 				return point;
 			}
@@ -5554,22 +5624,28 @@ namespace Rylogic.Gui.WinForms
 			public Pt this[int idx]
 			{
 				get { return Data[idx]; }
-				set { Data[idx] = value; }
+				set
+				{
+					m_changed_data_range.Encompass(Format.HasFlag(EFormat.XIntg) ? value.xi : value.xf);
+					Data[idx] = value;
+				}
 			}
 
-			/// <summary>Access the series data</summary>
-			public List<Pt> Data
+			/// <summary>Search for a point</summary>
+			public bool Contains(Pt point)
 			{
-				get { return m_owner.m_data; }
+				return Data.Contains(point);
 			}
 
 			/// <summary>Sort the data series on X values (F = doubles, I = longs)</summary>
 			public void SortF()
 			{
+				m_changed_data_range = RangeF.Max;
 				Data.Sort(Pt.CompareXf);
 			}
 			public void SortI()
 			{
+				m_changed_data_range = RangeF.Max;
 				Data.Sort(Pt.CompareXi);
 			}
 
@@ -5622,6 +5698,20 @@ namespace Rylogic.Gui.WinForms
 				IndexRange(xmin, xmax, out var i0, out var i1);
 				return Enumerable.Range(i0, i1 - i0);
 			}
+
+			/// <summary>The data format</summary>
+			private EFormat Format => Owner.Format;
+
+			/// <summary>Private so that all 'Add' are seen</summary>
+			private List<Pt> Data => Owner.m_data;
+
+			#region ICollection<Pt>
+			void ICollection<Pt>.Add(Pt point) => Add(point);
+			void ICollection<Pt>.CopyTo(Pt[] array, int arrayIndex) => Owner.m_data.CopyTo(array, arrayIndex);
+			public IEnumerator<Pt> GetEnumerator() => Owner.m_data.GetEnumerator();
+			IEnumerator IEnumerable.GetEnumerator() => Owner.m_data.GetEnumerator();
+			bool ICollection<Pt>.IsReadOnly => false;
+			#endregion
 		}
 
 		/// <summary>Plot colour generator</summary>

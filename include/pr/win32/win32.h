@@ -295,15 +295,11 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::win32
 {
-	namespace unittests
+	PRUnitTest(Win32Tests)
 	{
-		PRUnitTest(pr_win32_win32)
-		{
-			using namespace pr::win32;
-			auto a = AppSettingsFilepath(false);
-		}
+		auto a = AppSettingsFilepath(false);
 	}
 }
 #endif

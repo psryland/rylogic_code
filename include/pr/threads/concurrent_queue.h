@@ -219,66 +219,62 @@ namespace pr
 #include <string>
 #include <algorithm>
 
-namespace pr
+namespace pr::threads
 {
-	namespace unittests
+	namespace unittests::threads
 	{
-		namespace threads
+		struct Item
 		{
-			struct Item
-			{
-				std::string m_str;
-				Item(){}
-				Item(char const* name, int idx) :m_str(pr::Fmt("%s%d",name,idx)) {}
-			};
+			std::string m_str;
+			Item(){}
+			Item(char const* name, int idx) :m_str(pr::Fmt("%s%d",name,idx)) {}
+		};
 
-			void Produce(char const* name, pr::threads::ConcurrentQueue<Item>& queue)
-			{
-				for (int i = 0; i != 10; ++i)
-					queue.Enqueue(Item(name, i));
-			}
-			void Consume(pr::threads::ConcurrentQueue<Item>& queue, std::vector<std::string>& items)
-			{
-				Item item;
-				while (queue.Dequeue(item))
-					items.push_back(item.m_str);
-			}
+		void Produce(char const* name, pr::threads::ConcurrentQueue<Item>& queue)
+		{
+			for (int i = 0; i != 10; ++i)
+				queue.Enqueue(Item(name, i));
+		}
+		void Consume(pr::threads::ConcurrentQueue<Item>& queue, std::vector<std::string>& items)
+		{
+			Item item;
+			while (queue.Dequeue(item))
+				items.push_back(item.m_str);
+		}
+	}
+	PRUnitTest(ConcurrentQueueTests)
+	{
+		using namespace unittests::threads;
+
+		ConcurrentQueue<Item> queue;
+		std::vector<std::string> items;
+
+		std::thread t0(Produce, "t0_", std::ref(queue));
+		std::thread t1(Produce, "t1_", std::ref(queue));
+		std::thread t2(Produce, "t2_", std::ref(queue));
+
+		t0.join();
+		t1.join();
+		{
+			pr::threads::ConcurrentQueue<Item>::Lock lock(queue);
+			auto size = lock.m_queue.size() + items.size();
+			PR_CHECK(size >= 20 && size <= 30, true); // since t0,t1 have finished
 		}
 
-		PRUnitTest(pr_threads_concurrent_queue)
-		{
-			using namespace pr::unittests::threads;
+		// Start consuming
+		std::thread t3(Consume, std::ref(queue), std::ref(items));
 
-			pr::threads::ConcurrentQueue<Item> queue;
-			std::vector<std::string> items;
+		// Finish adding
+		t2.join();
+		queue.LastAdded();
 
-			std::thread t0(Produce, "t0_", std::ref(queue));
-			std::thread t1(Produce, "t1_", std::ref(queue));
-			std::thread t2(Produce, "t2_", std::ref(queue));
+		// Finish consuming
+		t3.join();
 
-			t0.join();
-			t1.join();
-			{
-				pr::threads::ConcurrentQueue<Item>::Lock lock(queue);
-				auto size = lock.m_queue.size() + items.size();
-				PR_CHECK(size >= 20 && size <= 30, true); // since t0,t1 have finished
-			}
-
-			// Start consuming
-			std::thread t3(Consume, std::ref(queue), std::ref(items));
-
-			// Finish adding
-			t2.join();
-			queue.LastAdded();
-
-			// Finish consuming
-			t3.join();
-
-			PR_CHECK(items.size(), 30U);
-			std::sort(begin(items),end(items));
-			for (auto i = 0U; i != items.size(); ++i)
-				PR_CHECK(items[i], pr::Fmt("t%d_%d", i/10, i%10));
-		}
+		PR_CHECK(items.size(), 30U);
+		std::sort(begin(items),end(items));
+		for (auto i = 0U; i != items.size(); ++i)
+			PR_CHECK(items[i], pr::Fmt("t%d_%d", i/10, i%10));
 	}
 }
 #endif

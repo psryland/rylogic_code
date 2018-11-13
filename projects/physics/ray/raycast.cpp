@@ -441,10 +441,10 @@ bool pr::ph::RayCastBruteForce(Ray const& ray, ShapePolytope const& shape, RayCa
 	{
 		ShapePolyFace const& face = *f;
 
-		v4 a = shape.vertex(face.m_index[0]);
-		v4 b = shape.vertex(face.m_index[1]);
-		v4 c = shape.vertex(face.m_index[2]);
-		v4 plane = plane::make(a, c, b);	// Outward facing plane
+		auto a = shape.vertex(face.m_index[0]);
+		auto b = shape.vertex(face.m_index[1]);
+		auto c = shape.vertex(face.m_index[2]);
+		auto plane = plane::make(a, c, b);	// Outward facing plane
 		float t_min = result.m_t0;
 		if( !Intersect_LineSegmentToPlane(plane, lineS, lineE, result.m_t0, result.m_t1) )
 			return false;

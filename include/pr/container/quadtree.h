@@ -451,145 +451,141 @@ namespace pr
 #include "pr/common/unittests.h"
 #include "pr/common/fmt.h"
 #include "pr/maths/maths.h"
-namespace pr
+namespace pr::common
 {
-	namespace unittests
+	namespace unittests::quad_tree
 	{
-		namespace quad_tree
+		inline int Id() { static int s_id = 0; return ++s_id; }
+		struct Watzit
 		{
-			inline int Id() { static int s_id = 0; return ++s_id; }
-			struct Watzit
+			float pos[2];
+			float radius;
+			int id;
+			bool flag;
+			Watzit(float x, float y, float r) { pos[0] = x; pos[1] = y; radius = r; id = Id(); flag = false; }
+		};
+		inline bool Collide(Watzit const& lhs, Watzit const& rhs)
+		{
+			float diff[2] = {rhs.pos[0] - lhs.pos[0], rhs.pos[1] - lhs.pos[1]};
+			return pr::Len2(diff[0], diff[1]) < lhs.radius + rhs.radius;
+		}
+	}
+	PRUnitTest(QuadTreeTests)
+	{
+		using namespace unittests::quad_tree;
+
+		std::default_random_engine rng;
+		pr::QuadTree<Watzit, 2> qtree({-10,-5},{20,10});
+
+		// just inside quad0 at the root level
+		Watzit w0(-0.5f*qtree.CellSize(0,15),-0.5f*qtree.CellSize(1,15), 0);
+		auto n0 = qtree.Insert(w0, w0.pos, w0.radius);
+		PR_CHECK(qtree.m_nodes.size(), 2U);
+		PR_CHECK(n0->m_level, 7U);
+		PR_CHECK(n0->m_coord[0], 0x40U - 1);
+		PR_CHECK(n0->m_coord[1], 0x40U - 1);
+
+		// somewhere in quad3 at the root level
+		Watzit w1(2.5f, 2.5f, 0.2f);
+		auto n1 = qtree.Insert(w1, w1.pos, w1.radius);
+		PR_CHECK(qtree.m_nodes.size(), 3U);
+		PR_CHECK(n1->m_level, 4U);
+		PR_CHECK(n1->m_coord[0], 10U);
+		PR_CHECK(n1->m_coord[1], 12U);
+
+		// Outside the region but within the overhang at level 1
+		Watzit w2(-14.99f, -7.2499f, 0);
+		auto n2 = qtree.Insert(w2, w2.pos, w2.radius);
+		PR_CHECK(qtree.m_nodes.size(), 4U);
+		PR_CHECK(n2->m_level, 1U);
+		PR_CHECK(n2->m_coord[0], 0U);
+		PR_CHECK(n2->m_coord[1], 0U);
+
+		// Outside the region on y but within on x
+		Watzit w3(6.5f, 7.24449f, 0);
+		auto n3 = qtree.Insert(w3, w3.pos, w3.radius);
+		PR_CHECK(qtree.m_nodes.size(), 5U);
+		PR_CHECK(n3->m_level, 1U);
+		PR_CHECK(n3->m_coord[0], 1U);
+		PR_CHECK(n3->m_coord[1], 1U);
+
+		for (int i = 0; i != 10000; ++i)
+		{
+			std::uniform_real_distribution<float> dist_x(-qtree.m_size[0], qtree.m_size[0]);
+			std::uniform_real_distribution<float> dist_y(-qtree.m_size[1], qtree.m_size[1]);
+			std::uniform_real_distribution<float> dist_r(0.0f, 0.5f * Len2(qtree.m_size[0], qtree.m_size[1]));
+			Watzit w(dist_x(rng), dist_y(rng), 0.2f * dist_r(rng));
+			auto n = qtree.Insert(w, w.pos, w.radius);
+
+			// the root node can have arbitrarily large objects in it
+			if (n->m_level != 0)
 			{
-				float pos[2];
-				float radius;
-				int id;
-				bool flag;
-				Watzit(float x, float y, float r) { pos[0] = x; pos[1] = y; radius = r; id = Id(); flag = false; }
-			};
-			inline bool Collide(Watzit const& lhs, Watzit const& rhs)
-			{
-				float diff[2] = {rhs.pos[0] - lhs.pos[0], rhs.pos[1] - lhs.pos[1]};
-				return pr::Len2(diff[0], diff[1]) < lhs.radius + rhs.radius;
+				float min[2],max[2];
+				qtree.NodeBounds(*n, true, min, max);
+				PR_CHECK(w.pos[0] - w.radius >= min[0], true);
+				PR_CHECK(w.pos[1] - w.radius >= min[1], true);
+				PR_CHECK(w.pos[0] + w.radius <  max[0], true);
+				PR_CHECK(w.pos[1] + w.radius <  max[1], true);
 			}
 		}
 
-		PRUnitTest(pr_common_quadtree)
+		// Sanity check
+		size_t count = 0;
+		for (auto& node : qtree.m_nodes)
 		{
-			using namespace pr::unittests::quad_tree;
+			PR_CHECK(qtree.SanityCheck(node), true);
+			count += node.m_items.size();
+		}
+		PR_CHECK(count, qtree.m_count);
 
-			std::default_random_engine rng;
-			pr::QuadTree<Watzit, 2> qtree({-10,-5},{20,10});
-
-			// just inside quad0 at the root level
-			Watzit w0(-0.5f*qtree.CellSize(0,15),-0.5f*qtree.CellSize(1,15), 0);
-			auto n0 = qtree.Insert(w0, w0.pos, w0.radius);
-			PR_CHECK(qtree.m_nodes.size(), 2U);
-			PR_CHECK(n0->m_level, 7U);
-			PR_CHECK(n0->m_coord[0], 0x40U - 1);
-			PR_CHECK(n0->m_coord[1], 0x40U - 1);
-
-			// somewhere in quad3 at the root level
-			Watzit w1(2.5f, 2.5f, 0.2f);
-			auto n1 = qtree.Insert(w1, w1.pos, w1.radius);
-			PR_CHECK(qtree.m_nodes.size(), 3U);
-			PR_CHECK(n1->m_level, 4U);
-			PR_CHECK(n1->m_coord[0], 10U);
-			PR_CHECK(n1->m_coord[1], 12U);
-
-			// Outside the region but within the overhang at level 1
-			Watzit w2(-14.99f, -7.2499f, 0);
-			auto n2 = qtree.Insert(w2, w2.pos, w2.radius);
-			PR_CHECK(qtree.m_nodes.size(), 4U);
-			PR_CHECK(n2->m_level, 1U);
-			PR_CHECK(n2->m_coord[0], 0U);
-			PR_CHECK(n2->m_coord[1], 0U);
-
-			// Outside the region on y but within on x
-			Watzit w3(6.5f, 7.24449f, 0);
-			auto n3 = qtree.Insert(w3, w3.pos, w3.radius);
-			PR_CHECK(qtree.m_nodes.size(), 5U);
-			PR_CHECK(n3->m_level, 1U);
-			PR_CHECK(n3->m_coord[0], 1U);
-			PR_CHECK(n3->m_coord[1], 1U);
-
-			for (int i = 0; i != 10000; ++i)
-			{
-				std::uniform_real_distribution<float> dist_x(-qtree.m_size[0], qtree.m_size[0]);
-				std::uniform_real_distribution<float> dist_y(-qtree.m_size[1], qtree.m_size[1]);
-				std::uniform_real_distribution<float> dist_r(0.0f, 0.5f * Len2(qtree.m_size[0], qtree.m_size[1]));
-				Watzit w(dist_x(rng), dist_y(rng), 0.2f * dist_r(rng));
-				auto n = qtree.Insert(w, w.pos, w.radius);
-
-				// the root node can have arbitrarily large objects in it
-				if (n->m_level != 0)
-				{
-					float min[2],max[2];
-					qtree.NodeBounds(*n, true, min, max);
-					PR_CHECK(w.pos[0] - w.radius >= min[0], true);
-					PR_CHECK(w.pos[1] - w.radius >= min[1], true);
-					PR_CHECK(w.pos[0] + w.radius <  max[0], true);
-					PR_CHECK(w.pos[1] + w.radius <  max[1], true);
-				}
-			}
-
-			// Sanity check
-			size_t count = 0;
+		for (int i = 0; i != 100; ++i)
+		{
+			// reset flags
 			for (auto& node : qtree.m_nodes)
+				for (auto& item : node.m_items)
+					item.flag = false;
+
+			std::uniform_real_distribution<float> dist_x(-qtree.m_size[0], qtree.m_size[0]);
+			std::uniform_real_distribution<float> dist_y(-qtree.m_size[1], qtree.m_size[1]);
+			std::uniform_real_distribution<float> dist_r(0.0f, 0.5f * Len2(qtree.m_size[0], qtree.m_size[1]));
+			Watzit W(dist_x(rng), dist_y(rng), 0.2f * dist_r(rng));
+			qtree.Traverse(W.pos, W.radius, [&](Watzit& w, void*)
 			{
-				PR_CHECK(qtree.SanityCheck(node), true);
-				count += node.m_items.size();
-			}
-			PR_CHECK(count, qtree.m_count);
+				w.flag = Collide(W, w);
+				return true;
+			});
 
-			for (int i = 0; i != 100; ++i)
-			{
-				// reset flags
-				for (auto& node : qtree.m_nodes)
-					for (auto& item : node.m_items)
-						item.flag = false;
-
-				std::uniform_real_distribution<float> dist_x(-qtree.m_size[0], qtree.m_size[0]);
-				std::uniform_real_distribution<float> dist_y(-qtree.m_size[1], qtree.m_size[1]);
-				std::uniform_real_distribution<float> dist_r(0.0f, 0.5f * Len2(qtree.m_size[0], qtree.m_size[1]));
-				Watzit W(dist_x(rng), dist_y(rng), 0.2f * dist_r(rng));
-				qtree.Traverse(W.pos, W.radius, [&](Watzit& w, void*)
-				{
-					w.flag = Collide(W, w);
-					return true;
-				});
-
-				// All flagged should collide, not flagged should not
-				for (auto& node : qtree.m_nodes)
-					for (auto& item : node.m_items)
-						PR_CHECK(Collide(W, item), item.flag);
-			}
-
-			/*
-			{// Ldr script for the tree
-				std::ofstream outf("D:\\dump\\quadtree.ldr");
-				float const spread = 2.0f;
-				for (auto& n : qtree.m_nodes)
-				{
-					float min[2], max[2]; qtree.NodeBounds(n, false, min, max);
-					outf << pr::FmtS("*Box b_%d_%d_%d 7F008000 { %f %f 0.05 *o2w { *pos {%f %f %f} } }"
-						,n.m_level ,n.m_x ,n.m_y
-						,qtree.CellSizeX(n.m_level)
-						,qtree.CellSizeY(n.m_level)
-						,(max[0] + min[0]) * 0.5f
-						,(max[1] + min[1]) * 0.5f
-						,n.m_level * spread)
-						<< std::endl;
-
-					//for (auto& item : n.m_items)
-					//	outf << pr::FmtS("*Circle item 7F800000 { 3 %f *o2w { *pos {%f %f %f} } *Solid }"
-					//		,item.radius
-					//		,item.pos[0]
-					//		,item.pos[1]
-					//		,n.m_level * spread)
-					//		<< std::endl;
-				}
-			}//*/
+			// All flagged should collide, not flagged should not
+			for (auto& node : qtree.m_nodes)
+				for (auto& item : node.m_items)
+					PR_CHECK(Collide(W, item), item.flag);
 		}
+
+		/*
+		{// Ldr script for the tree
+			std::ofstream outf("D:\\dump\\quadtree.ldr");
+			float const spread = 2.0f;
+			for (auto& n : qtree.m_nodes)
+			{
+				float min[2], max[2]; qtree.NodeBounds(n, false, min, max);
+				outf << pr::FmtS("*Box b_%d_%d_%d 7F008000 { %f %f 0.05 *o2w { *pos {%f %f %f} } }"
+					,n.m_level ,n.m_x ,n.m_y
+					,qtree.CellSizeX(n.m_level)
+					,qtree.CellSizeY(n.m_level)
+					,(max[0] + min[0]) * 0.5f
+					,(max[1] + min[1]) * 0.5f
+					,n.m_level * spread)
+					<< std::endl;
+
+				//for (auto& item : n.m_items)
+				//	outf << pr::FmtS("*Circle item 7F800000 { 3 %f *o2w { *pos {%f %f %f} } *Solid }"
+				//		,item.radius
+				//		,item.pos[0]
+				//		,item.pos[1]
+				//		,n.m_level * spread)
+				//		<< std::endl;
+			}
+		}//*/
 	}
 }
 #endif

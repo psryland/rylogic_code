@@ -64,7 +64,7 @@ namespace pr
 			memcpy(m_data, data.begin(), cols * rows * sizeof(Real));
 			m_transposed = transposed;
 		}
-		Matrix(m4x4_cref m)
+		Matrix(m4_cref<> m)
 			:m_data(&m_buf[0])
 			,m_cols(0)
 			,m_rows(0)
@@ -843,7 +843,7 @@ namespace pr
 	{
 		return FEqlRelative(lhs, rhs, maths::tiny);
 	}
-	template <typename Real> inline bool FEqlRelative(Matrix<Real> const& lhs, m4x4_cref rhs, Real tol)
+	template <typename Real> inline bool FEqlRelative(Matrix<Real> const& lhs, m4_cref<> rhs, Real tol)
 	{
 		if (lhs.cols() != 4) return false;
 		if (lhs.rows() != 4) return false;
@@ -853,7 +853,7 @@ namespace pr
 			FEqlRelative(float(lhs(2,0)), rhs.z.x, tol) && FEqlRelative(float(lhs(2,1)), rhs.z.y, tol) && FEqlRelative(float(lhs(2,2)), rhs.z.z, tol) && FEqlRelative(float(lhs(2,3)), rhs.z.w, tol) &&
 			FEqlRelative(float(lhs(3,0)), rhs.w.x, tol) && FEqlRelative(float(lhs(3,1)), rhs.w.y, tol) && FEqlRelative(float(lhs(3,2)), rhs.w.z, tol) && FEqlRelative(float(lhs(3,3)), rhs.w.w, tol);
 	}
-	template <typename Real> inline bool FEql(Matrix<Real> const& lhs, m4x4_cref rhs)
+	template <typename Real> inline bool FEql(Matrix<Real> const& lhs, m4_cref<> rhs)
 	{
 		return FEqlRelative(lhs, rhs, maths::tiny);
 	}
@@ -1056,107 +1056,104 @@ namespace pr
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include "pr/maths/matrix4x4.h"
-namespace pr
+namespace pr::maths
 {
-	namespace unittests
+	PRUnitTest(MatrixTests)
 	{
-		PRUnitTest(pr_maths_matrix)
-		{
-			using namespace pr;
-			std::default_random_engine rng(1);
+		using namespace pr;
+		std::default_random_engine rng(1);
 
-			{// Compare with m4x4
-				auto M = Random4x4(rng, -5.0f, +5.0f, v4Origin);
-				Matrix<float> m(M);
+		{// Compare with m4x4
+			auto M = Random4x4(rng, -5.0f, +5.0f, v4Origin);
+			Matrix<float> m(M);
 
-				PR_CHECK(FEql(m, M), true);
-				PR_CHECK(FEql(m(0,3), M.x.w), true);
-				PR_CHECK(FEql(m(3,0), M.w.x), true);
-				PR_CHECK(FEql(m(2,2), M.z.z), true);
+			PR_CHECK(FEql(m, M), true);
+			PR_CHECK(FEql(m(0,3), M.x.w), true);
+			PR_CHECK(FEql(m(3,0), M.w.x), true);
+			PR_CHECK(FEql(m(2,2), M.z.z), true);
 
-				PR_CHECK(IsInvertable(m) == IsInvertable(M), true);
+			PR_CHECK(IsInvertable(m) == IsInvertable(M), true);
 
-				auto m1 = Invert(m);
-				auto M1 = Invert(M);
-				PR_CHECK(FEql(m1, M1), true);
+			auto m1 = Invert(m);
+			auto M1 = Invert(M);
+			PR_CHECK(FEql(m1, M1), true);
 
-				auto m2 = Transpose(m);
-				auto M2 = Transpose4x4(M);
-				PR_CHECK(FEql(m2, M2), true);
-			}
-			{// Multiply round trip
-				std::uniform_real_distribution<float> dist(-5.0f, +5.0f);
-				const int SZ = 100;
-				Matrix<float> m(SZ,SZ);
-				for (int k = 0; k != 10; ++k)
-				{
-					for (int r = 0; r != m.rows(); ++r)
-						for (int c = 0; c != m.cols(); ++c)
-							m(c,r) = dist(rng);
-
-					if (IsInvertable(m))
-					{
-						auto m_inv = Invert(m);
-
-						auto i0 = Matrix<float>::Identity(SZ,SZ);
-						auto i1 = m * m_inv;
-						auto i2 = m_inv * m;
-
-						PR_CHECK(FEqlRelative(i0, i1, 0.0001f), true);
-						PR_CHECK(FEqlRelative(i0, i2, 0.0001f), true);
-
-						break;
-					}
-				}
-			}
-			{// Transpose
-				const int cols = 3, rows = 4;
-				auto m = Matrix<double>::Random(rng, cols, rows, -5.0, 5.0);
-				auto t = Transpose(m);
-
-				PR_CHECK(m.cols(), cols);
-				PR_CHECK(m.rows(), rows);
-				PR_CHECK(t.cols(), rows);
-				PR_CHECK(t.rows(), cols);
-
-				for (int r = 0; r != rows; ++r)
-					for (int c = 0; c != cols; ++c)
-						PR_CHECK(m(c,r) == t(r,c), true);
-			}
-			{// Resizing
-				const int cols = 3, rows = 4, sz = 5;
-				auto M = Matrix<double>::Random(rng, cols, rows, -5.0, 5.0);
-				auto m = M;
-				auto t = Transpose(M);
-
-				// Resizing a normal matrix adds more columns, and preserves data
-				m.resize(sz);
-				PR_CHECK(m.cols(), sz);
-				PR_CHECK(m.rows(), rows);
+			auto m2 = Transpose(m);
+			auto M2 = Transpose4x4(M);
+			PR_CHECK(FEql(m2, M2), true);
+		}
+		{// Multiply round trip
+			std::uniform_real_distribution<float> dist(-5.0f, +5.0f);
+			const int SZ = 100;
+			Matrix<float> m(SZ,SZ);
+			for (int k = 0; k != 10; ++k)
+			{
 				for (int r = 0; r != m.rows(); ++r)
 					for (int c = 0; c != m.cols(); ++c)
-						if (c < cols)
-							PR_CHECK(m(c,r) == M(c,r), true);
-						else
-							PR_CHECK(m(c,r) == 0, true);
+						m(c,r) = dist(rng);
 
-				// Resizing a transposed matrix adds more rows, and preserves data 
-				t.resize(sz);
-				PR_CHECK(t.cols(), rows);
-				PR_CHECK(t.rows(), sz);
-				for (int r = 0; r != t.rows(); ++r)
-					for (int c = 0; c != t.cols(); ++c)
-						if (r < cols)
-							PR_CHECK(t(c,r) == M(r,c), true);
-						else
-							PR_CHECK(t(c,r) == 0, true);
+				if (IsInvertable(m))
+				{
+					auto m_inv = Invert(m);
+
+					auto i0 = Matrix<float>::Identity(SZ,SZ);
+					auto i1 = m * m_inv;
+					auto i2 = m_inv * m;
+
+					PR_CHECK(FEqlRelative(i0, i1, 0.0001f), true);
+					PR_CHECK(FEqlRelative(i0, i2, 0.0001f), true);
+
+					break;
+				}
 			}
-			{// Dot Product
-				auto a = Matrix<float>(1,3,{1.0, 2.0, 3.0});
-				auto b = Matrix<float>(1,3,{3.0, 2.0, 1.0});
-				auto r = Dot(a,b);
-				PR_CHECK(FEql(r, 10.0f), true);
-			}
+		}
+		{// Transpose
+			const int cols = 3, rows = 4;
+			auto m = Matrix<double>::Random(rng, cols, rows, -5.0, 5.0);
+			auto t = Transpose(m);
+
+			PR_CHECK(m.cols(), cols);
+			PR_CHECK(m.rows(), rows);
+			PR_CHECK(t.cols(), rows);
+			PR_CHECK(t.rows(), cols);
+
+			for (int r = 0; r != rows; ++r)
+				for (int c = 0; c != cols; ++c)
+					PR_CHECK(m(c,r) == t(r,c), true);
+		}
+		{// Resizing
+			const int cols = 3, rows = 4, sz = 5;
+			auto M = Matrix<double>::Random(rng, cols, rows, -5.0, 5.0);
+			auto m = M;
+			auto t = Transpose(M);
+
+			// Resizing a normal matrix adds more columns, and preserves data
+			m.resize(sz);
+			PR_CHECK(m.cols(), sz);
+			PR_CHECK(m.rows(), rows);
+			for (int r = 0; r != m.rows(); ++r)
+				for (int c = 0; c != m.cols(); ++c)
+					if (c < cols)
+						PR_CHECK(m(c,r) == M(c,r), true);
+					else
+						PR_CHECK(m(c,r) == 0, true);
+
+			// Resizing a transposed matrix adds more rows, and preserves data 
+			t.resize(sz);
+			PR_CHECK(t.cols(), rows);
+			PR_CHECK(t.rows(), sz);
+			for (int r = 0; r != t.rows(); ++r)
+				for (int c = 0; c != t.cols(); ++c)
+					if (r < cols)
+						PR_CHECK(t(c,r) == M(r,c), true);
+					else
+						PR_CHECK(t(c,r) == 0, true);
+		}
+		{// Dot Product
+			auto a = Matrix<float>(1,3,{1.0, 2.0, 3.0});
+			auto b = Matrix<float>(1,3,{3.0, 2.0, 1.0});
+			auto r = Dot(a,b);
+			PR_CHECK(FEql(r, 10.0f), true);
 		}
 	}
 }

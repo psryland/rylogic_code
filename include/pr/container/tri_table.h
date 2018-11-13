@@ -24,9 +24,7 @@
 //	bool flag[TriTable<10>::SizeInc];
 //	flag[TriTableIndexInc<4, 6>::Index] = true;
 //
-#ifndef PR_COMMON_TRIANGULAR_TABLE_H
-#define PR_COMMON_TRIANGULAR_TABLE_H
-
+#pragma once
 #include "pr/common/assert.h"
 
 namespace pr
@@ -70,27 +68,23 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::common
 {
-	namespace unittests
+	PRUnitTest(TriangularTableTests)
 	{
-		PRUnitTest(pr_common_triangulartable)
-		{
-			using namespace pr::tri_table;
+		using namespace pr::tri_table;
 
-			// Compile time checks
-			static_assert(pr::TriIndex<2,2,Inclusive>::index + 1 == pr::TriTable<3,Inclusive>::size, "");
-			static_assert(pr::TriIndex<2,1,Exclusive>::index + 1 == pr::TriTable<3,Exclusive>::size, "");
-			static_assert(pr::TriIndex<3,3,Inclusive>::index + 1 == pr::TriTable<4,Inclusive>::size, "");
-			static_assert(pr::TriIndex<3,2,Exclusive>::index + 1 == pr::TriTable<4,Exclusive>::size, "");
+		// Compile time checks
+		static_assert(pr::TriIndex<2,2,Inclusive>::index + 1 == pr::TriTable<3,Inclusive>::size, "");
+		static_assert(pr::TriIndex<2,1,Exclusive>::index + 1 == pr::TriTable<3,Exclusive>::size, "");
+		static_assert(pr::TriIndex<3,3,Inclusive>::index + 1 == pr::TriTable<4,Inclusive>::size, "");
+		static_assert(pr::TriIndex<3,2,Exclusive>::index + 1 == pr::TriTable<4,Exclusive>::size, "");
 
-			// Runtime checks
-			PR_CHECK(pr::tri_table::Index<Inclusive>(2,2) + 1, pr::tri_table::Size<Inclusive>(3));
-			PR_CHECK(pr::tri_table::Index<Exclusive>(2,1) + 1, pr::tri_table::Size<Exclusive>(3));
-			PR_CHECK(pr::tri_table::Index<Inclusive>(3,3) + 1, pr::tri_table::Size<Inclusive>(4));
-			PR_CHECK(pr::tri_table::Index<Exclusive>(3,2) + 1, pr::tri_table::Size<Exclusive>(4));
-		}
+		// Runtime checks
+		PR_CHECK(pr::tri_table::Index<Inclusive>(2,2) + 1, pr::tri_table::Size<Inclusive>(3));
+		PR_CHECK(pr::tri_table::Index<Exclusive>(2,1) + 1, pr::tri_table::Size<Exclusive>(3));
+		PR_CHECK(pr::tri_table::Index<Inclusive>(3,3) + 1, pr::tri_table::Size<Inclusive>(4));
+		PR_CHECK(pr::tri_table::Index<Exclusive>(3,2) + 1, pr::tri_table::Size<Exclusive>(4));
 	}
 }
-#endif
 #endif

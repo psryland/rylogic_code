@@ -8,34 +8,34 @@
 #include "pr/maths/constants.h"
 #include "pr/maths/maths_core.h"
 #include "pr/maths/vector4.h"
-#include "pr/maths/matrix3x3.h"
+#include "pr/maths/matrix3x4.h"
 #include "pr/maths/axis_id.h"
 
 namespace pr
 {
-	// template <typename T> - todo: when MS fix the alignment bug for templates
+	template <typename A, typename B> 
 	struct alignas(16) Mat4x4
 	{
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
 		union
 		{
-			struct { v4 x, y, z, w; };
-			struct { m3x4 rot; v4 pos; };
-			struct { v4 arr[4]; };
+			struct { Vec4<void> x, y, z, w; };
+			struct { Mat3x4<A,B> rot; Vec4<void> pos; };
+			struct { Vec4<void> arr[4]; };
 			#if PR_MATHS_USE_INTRINSICS
 			__m128 vec[4];
 			#elif PR_MATHS_USE_DIRECTMATH
 			DirectX::XMVECTOR vec[4];
 			#else
-			struct { v4 vec[4]; };
+			struct { Vec4<void> vec[4]; };
 			#endif
 		};
 		#pragma warning(pop)
 
 		// Construct
 		Mat4x4() = default;
-		Mat4x4(v4 const& x_, v4 const& y_, v4 const& z_, v4 const& w_)
+		Mat4x4(v4_cref<> x_, v4_cref<> y_, v4_cref<> z_, v4_cref<> w_)
 			:x(x_)
 			,y(y_)
 			,z(z_)
@@ -43,7 +43,7 @@ namespace pr
 		{
 			assert(maths::is_aligned(this));
 		}
-		Mat4x4(m3x4 const& rot_, v4 const& pos_)
+		Mat4x4(m3_cref<A,B> rot_, v4_cref<> pos_)
 			:rot(rot_)
 			,pos(pos_)
 		{
@@ -58,13 +58,13 @@ namespace pr
 		{
 			assert(maths::is_aligned(this));
 		}
-		template <typename T, typename = maths::enable_if_v4<T>> Mat4x4(T const& v)
+		template <typename V4, typename = maths::enable_if_v4<V4>> Mat4x4(V4 const& v)
 			:Mat4x4(x_as<v4>(v), y_as<v4>(v), z_as<v4>(v), w_as<v4>(v))
 		{}
-		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit Mat4x4(T const* v)
+		template <typename CP, typename = maths::enable_if_vec_cp<CP>> explicit Mat4x4(CP const* v)
 			:Mat4x4(x_as<v4>(v), y_as<v4>(v), z_as<v4>(v), w_as<v4>(v))
 		{}
-		template <typename T, typename = maths::enable_if_v4<T>> Mat4x4& operator = (T const& rhs)
+		template <typename V4, typename = maths::enable_if_v4<V4>> Mat4x4& operator = (V4 const& rhs)
 		{
 			x = x_as<v4>(rhs);
 			y = y_as<v4>(rhs);
@@ -83,7 +83,7 @@ namespace pr
 		#endif
 
 		// Construct from DirectX::XMMATRIX (if defined)
-		template <typename T, typename = maths::enable_if_dx_mat<T>> Mat4x4(T const& mat, int = 0)
+		template <typename M, typename = maths::enable_if_dx_mat<M>> Mat4x4(M const& mat, int = 0)
 		{
 			static_assert(PR_MATHS_USE_DIRECTMATH, "This function shouldn't be instantiated unless PR_MATHS_USE_DIRECTMATH is defined");
 			vec[0] = mat.r[0];
@@ -91,7 +91,7 @@ namespace pr
 			vec[2] = mat.r[2];
 			vec[3] = mat.r[3];
 		}
-		template <typename T, typename = maths::enable_if_dx_mat<T>> Mat4x4(T const& mat, v4 const& pos_, int = 0)
+		template <typename M, typename = maths::enable_if_dx_mat<M>> Mat4x4(M const& mat, v4_cref<> pos_, int = 0)
 		{
 			static_assert(PR_MATHS_USE_DIRECTMATH, "This function shouldn't be instantiated unless PR_MATHS_USE_DIRECTMATH is defined");
 			vec[0] = mat.r[0];
@@ -101,41 +101,41 @@ namespace pr
 		}
 
 		// Convert this matrix to a DirectX XMMATRIX (if defined)
-		template <typename T = DirectX::XMMATRIX, typename = maths::enable_if_dx_mat<T>> operator DirectX::XMMATRIX const&() const
+		template <typename M = DirectX::XMMATRIX, typename = maths::enable_if_dx_mat<M>> operator DirectX::XMMATRIX const&() const
 		{
 			return *reinterpret_cast<DirectX::XMMATRIX const*>(&vec[0]);
 		}
-		template <typename T = DirectX::XMMATRIX, typename = maths::enable_if_dx_mat<T>> operator DirectX::XMMATRIX&()
+		template <typename M = DirectX::XMMATRIX, typename = maths::enable_if_dx_mat<M>> operator DirectX::XMMATRIX&()
 		{
 			return *reinterpret_cast<DirectX::XMMATRIX*>(&vec[0]);
 		}
 
 		// Array access
-		v4 const& operator [](int i) const
+		v4_cref<> operator [](int i) const
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
-		v4& operator [](int i)
+		Vec4<void>& operator [](int i)
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];
 		}
 
 		// Get/Set by row or column. Note: x,y,z are column vectors
-		v4 col(int i) const
+		Vec4<void> col(int i) const
 		{
 			return arr[i];
 		}
-		v4 row(int i) const
+		Vec4<void> row(int i) const
 		{
-			return v4(x[i], y[i], z[i], w[i]);
+			return Vec4<void>{x[i], y[i], z[i], w[i]};
 		}
-		void col(int i, v4 const& col)
+		void col(int i, v4_cref<> col)
 		{
 			arr[i] = col;
 		}
-		void row(int i, v4 const& row)
+		void row(int i, v4_cref<> row)
 		{
 			x[i] = row.x;
 			y[i] = row.y;
@@ -146,93 +146,93 @@ namespace pr
 		// Create a 4x4 matrix with this matrix as the rotation part
 		Mat4x4 w0() const
 		{
-			return Mat4x4(rot, v4Origin);
+			return Mat4x4{rot, v4Origin};
 		}
-		Mat4x4 w1(v4 const& xyz) const
+		Mat4x4 w1(v4_cref<> xyz) const
 		{
 			assert("'pos' must be a position vector" && xyz.w == 1);
-			return Mat4x4(rot, xyz);
+			return Mat4x4{rot, xyz};
 		}
 
 		// Create a translation matrix
-		static Mat4x4 Translation(v4 const& xyz)
+		static Mat4x4 Translation(v4_cref<> xyz)
 		{
 			assert("translation should be a position vector" && xyz.w == 1.0f);
 			return Mat4x4(m3x4Identity, xyz);
 		}
 		static Mat4x4 Translation(float x, float y, float z)
 		{
-			return Translation(v4(x,y,z,1));
+			return Translation(Vec4<void>{x,y,z,1});
 		}
 
 		// Create a rotation matrix from Euler angles.  Order is: roll, pitch, yaw (to match DirectX)
-		static Mat4x4 Transform(float pitch, float yaw, float roll, v4 const& pos)
+		static Mat4x4 Transform(float pitch, float yaw, float roll, v4_cref<> pos)
 		{
-			return Mat4x4(m3x4::Rotation(pitch, yaw, roll), pos);
+			return Mat4x4(Mat3x4<A,B>::Rotation(pitch, yaw, roll), pos);
 		}
 
 		// Create from an axis and angle. 'axis' should be normalised
-		static Mat4x4 Transform(v4 const& axis, float angle, v4 const& pos)
+		static Mat4x4 Transform(v4_cref<> axis, float angle, v4_cref<> pos)
 		{
 			assert("'axis' should be normalised" && IsNormal3(axis));
 			#if PR_MATHS_USE_DIRECTMATH
 			return Mat4x4(DirectX::XMMatrixRotationNormal(axis.vec, angle), pos);
 			#else
-			return Mat4x4(m3x4::Rotation(axis, angle), pos);
+			return Mat4x4(Mat3x4<A,B>::Rotation(axis, angle), pos);
 			#endif
 		}
 
 		// Create from an angular displacement vector. length = angle(rad), direction = axis
-		static Mat4x4 Transform(v4 const& angular_displacement, v4 const& pos)
+		static Mat4x4 Transform(v4_cref<> angular_displacement, v4_cref<> pos)
 		{
-			return Mat4x4(m3x4::Rotation(angular_displacement), pos);
+			return Mat4x4(Mat3x4<A,B>::Rotation(angular_displacement), pos);
 		}
 
 		// Create from quaternion
-		template <typename = void> static Mat4x4 Transform(Quat const& q, v4 const& pos)
+		static Mat4x4 Transform(Quat<A,B> const& q, v4_cref<> pos)
 		{
 			assert("'q' should be a normalised quaternion" && IsNormal4(q));
 			#if PR_MATHS_USE_DIRECTMATH
 			return Mat4x4(DirectX::XMMatrixRotationQuaternion(q.vec), pos);
 			#else
-			return Mat4x4(m3x4(q), pos);
+			return Mat4x4(Mat3x4<A,B>(q), pos);
 			#endif
 		}
 
 		// Create a transform representing the rotation from one vector to another.
-		static Mat4x4 Transform(v4 const& from, v4 const& to, v4 const& pos)
+		static Mat4x4 Transform(v4_cref<> from, v4_cref<> to, v4_cref<> pos)
 		{
-			return Mat4x4(m3x4::Rotation(from, to), pos);
+			return Mat4x4(Mat3x4<A,B>::Rotation(from, to), pos);
 		}
 
 		// Create a transform from one basis axis to another
-		static Mat4x4 Transform(AxisId from_axis, AxisId to_axis, v4 const& pos)
+		static Mat4x4 Transform(AxisId from_axis, AxisId to_axis, v4_cref<> pos)
 		{
-			return Mat4x4(m3x4::Rotation(from_axis, to_axis), pos);
+			return Mat4x4(Mat3x4<A,B>::Rotation(from_axis, to_axis), pos);
 		}
 
 		// Create a scale matrix
-		static Mat4x4 Scale(float scale, v4 const& pos)
+		static Mat4x4 Scale(float scale, v4_cref<> pos)
 		{
-			return Mat4x4(m3x4::Scale(scale), pos);
+			return Mat4x4(Mat3x4<A,B>::Scale(scale), pos);
 		}
-		static Mat4x4 Scale(float sx, float sy, float sz, v4 const& pos)
+		static Mat4x4 Scale(float sx, float sy, float sz, v4_cref<> pos)
 		{
-			return Mat4x4(m3x4::Scale(sx, sy, sz), pos);
+			return Mat4x4(Mat3x4<A,B>::Scale(sx, sy, sz), pos);
 		}
 
 		// Create a shear matrix
-		static Mat4x4 Shear(float sxy, float sxz, float syx, float syz, float szx, float szy, v4 const& pos)
+		static Mat4x4 Shear(float sxy, float sxz, float syx, float syz, float szx, float szy, v4_cref<> pos)
 		{
-			return Mat4x4(m3x4::Shear(sxy, sxz, syx, syz, szx, szy), pos);
+			return Mat4x4(Mat3x4<A,B>::Shear(sxy, sxz, syx, syz, szx, szy), pos);
 		}
 
 		// Orientation matrix to "look" at a point
-		static Mat4x4 LookAt(v4 const& eye, v4 const& at, v4 const& up)
+		static Mat4x4 LookAt(v4_cref<> eye, v4_cref<> at, v4_cref<> up)
 		{
 			assert("Invalid position/direction vectors passed to LookAt" && eye.w == 1.0f && at.w == 1.0f && up.w == 0.0f);
 			assert("LookAt 'eye' and 'at' positions are coincident" && eye - at != v4Zero);
-			assert("LookAt 'forward' and 'up' axes are aligned" && !pr::Parallel(eye - at, up, 0));
+			assert("LookAt 'forward' and 'up' axes are aligned" && !Parallel(eye - at, up, 0));
 			auto mat = Mat4x4{};
 			mat.z = Normalise3(eye - at);
 			mat.x = Normalise3(Cross3(up, mat.z));
@@ -295,7 +295,7 @@ namespace pr
 			assert("invalid near/far planes" && IsFinite(zn) && IsFinite(zf) && zn > 0 && zf > 0 && (zn - zf) != 0);
 			auto rh = SignF(righthanded);
 			auto mat = Mat4x4{};
-			mat.y.y = 1.0f / pr::Tan(fovY/2);
+			mat.y.y = 1.0f / Tan(fovY/2);
 			mat.x.x = mat.y.y / aspect;
 			mat.z.w = -rh;
 			mat.z.z = rh * zf / (zn - zf);
@@ -303,153 +303,85 @@ namespace pr
 			return mat;
 		}
 	};
-	using m4x4 = Mat4x4;
-	static_assert(maths::is_mat4<m4x4>::value, "");
-	static_assert(std::is_pod<m4x4>::value, "Should be a pod type");
-	static_assert(std::alignment_of<m4x4>::value == 16, "Should be 16 byte aligned");
+	static_assert(maths::is_mat4<Mat4x4<void,void>>::value, "");
+	static_assert(std::is_pod<Mat4x4<void,void>>::value, "Should be a pod type");
+	static_assert(std::alignment_of<Mat4x4<void,void>>::value == 16, "Should be 16 byte aligned");
 	#if PR_MATHS_USE_INTRINSICS && !defined(_M_IX86)
-	using m4x4_cref = m4x4 const;
+	template <typename A = void, typename B = void> using m4_cref = Mat4x4<A,B> const;
 	#else
-	using m4x4_cref = m4x4 const&;
+	template <typename A = void, typename B = void> using m4_cref = Mat4x4<A,B> const&;
 	#endif
 
 	// Define component accessors for pointer types
-	inline v4 const& x_cp(m4x4 const& v) { return v.x; }
-	inline v4 const& y_cp(m4x4 const& v) { return v.y; }
-	inline v4 const& z_cp(m4x4 const& v) { return v.z; }
-	inline v4 const& w_cp(m4x4 const& v) { return v.w; }
-
-	#pragma region Constants
-	static m4x4 const m4x4Zero     = {v4Zero, v4Zero, v4Zero, v4Zero};
-	static m4x4 const m4x4Identity = {v4XAxis, v4YAxis, v4ZAxis, v4Origin};
-	static m4x4 const m4x4One      = {v4One, v4One, v4One, v4One};
-	static m4x4 const m4x4Min      = {+v4Min, +v4Min, +v4Min, +v4Min};
-	static m4x4 const m4x4Max      = {+v4Max, +v4Max, +v4Max, +v4Max};
-	static m4x4 const m4x4Lowest   = {-v4Max, -v4Max, -v4Max, -v4Max};
-	static m4x4 const m4x4Epsilon  = {+v4Epsilon, +v4Epsilon, +v4Epsilon, +v4Epsilon};
-	#pragma endregion
+	template <typename A, typename B> inline v4_cref<> pr_vectorcall x_cp(m4_cref<A,B> v) { return v.x; }
+	template <typename A, typename B> inline v4_cref<> pr_vectorcall y_cp(m4_cref<A,B> v) { return v.y; }
+	template <typename A, typename B> inline v4_cref<> pr_vectorcall z_cp(m4_cref<A,B> v) { return v.z; }
+	template <typename A, typename B> inline v4_cref<> pr_vectorcall w_cp(m4_cref<A,B> v) { return v.w; }
 
 	#pragma region Operators
-	inline m4x4 pr_vectorcall operator + (m4x4_cref mat)
+	template <typename A, typename B> inline Mat4x4<A,B> pr_vectorcall operator + (m4_cref<A,B> mat)
 	{
 		return mat;
 	}
-	inline m4x4 pr_vectorcall operator - (m4x4_cref mat)
+	template <typename A, typename B> inline Mat4x4<A,B> pr_vectorcall operator - (m4_cref<A,B> mat)
 	{
-		return m4x4(-mat.x, -mat.y, -mat.z, -mat.w);
+		return Mat4x4<A,B>{-mat.x, -mat.y, -mat.z, -mat.w};
 	}
-	inline m4x4& pr_vectorcall operator *= (m4x4& lhs, float rhs)
+	template <typename A, typename B> inline Mat4x4<A,B> pr_vectorcall operator * (float lhs, m4_cref<A,B> rhs)
 	{
-		lhs.x *= rhs;
-		lhs.y *= rhs;
-		lhs.z *= rhs;
-		lhs.w *= rhs;
-		return lhs;
+		return rhs * lhs;
 	}
-	inline m4x4& pr_vectorcall operator /= (m4x4& lhs, float rhs)
+	template <typename A, typename B> inline Mat4x4<A,B> pr_vectorcall operator * (m4_cref<A,B> lhs, float rhs)
 	{
-		assert("divide by zero" && rhs != 0);
-		lhs.x /= rhs;
-		lhs.y /= rhs;
-		lhs.z /= rhs;
-		lhs.w /= rhs;
-		return lhs;
+		return Mat4x4<A,B>{lhs.x * rhs, lhs.y * rhs, lhs.z * rhs, lhs.w * rhs};
 	}
-	inline m4x4& pr_vectorcall operator %= (m4x4& lhs, float rhs)
+	template <typename A, typename B> inline Mat4x4<A,B> pr_vectorcall operator / (m4_cref<A,B> lhs, float rhs)
 	{
 		assert("divide by zero" && rhs != 0);
-		lhs.x /= rhs;
-		lhs.y /= rhs;
-		lhs.z /= rhs;
-		lhs.w /= rhs;
-		return lhs;
+		return Mat4x4<A,B>{lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs};
 	}
-	inline m4x4 pr_vectorcall operator * (m4x4 const& lhs, float rhs)
+	template <typename A, typename B> inline Mat4x4<A,B> pr_vectorcall operator % (m4_cref<A,B> lhs, float rhs)
 	{
-		auto x = lhs;
-		return x *= rhs;
+		assert("divide by zero" && rhs != 0);
+		return Mat4x4<A,B>{lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs};
 	}
-	inline m4x4 pr_vectorcall operator / (m4x4 const& lhs, float rhs)
+	template <typename A, typename B> inline Mat4x4<A,B> pr_vectorcall operator + (m4_cref<A,B> lhs, m4_cref<A,B> rhs)
 	{
-		auto x = lhs;
-		return x /= rhs;
+		return Mat4x4<A,B>{lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w};
 	}
-	inline m4x4 pr_vectorcall operator % (m4x4 const& lhs, float rhs)
+	template <typename A, typename B> inline Mat4x4<A,B> pr_vectorcall operator - (m4_cref<A,B> lhs, m4_cref<A,B> rhs)
 	{
-		auto x = lhs;
-		return x %= rhs;
+		return Mat4x4<A,B>{lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w};
 	}
-	inline m4x4& pr_vectorcall operator += (m4x4& lhs, m4x4_cref rhs)
+	template <typename A, typename B> inline Mat4x4<A,B> pr_vectorcall operator + (m4_cref<A,B> lhs, m3_cref<A,B> rhs)
 	{
-		lhs.x += rhs.x;
-		lhs.y += rhs.y;
-		lhs.z += rhs.z;
-		lhs.w += rhs.w;
-		return lhs;
+		return Mat4x4<A,B>{lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z};
 	}
-	inline m4x4& pr_vectorcall operator -= (m4x4& lhs, m4x4_cref rhs)
+	template <typename A, typename B> inline Mat4x4<A,B> pr_vectorcall operator - (m4_cref<A,B> lhs, m3_cref<A,B> rhs)
 	{
-		lhs.x -= rhs.x;
-		lhs.y -= rhs.y;
-		lhs.z -= rhs.z;
-		lhs.w -= rhs.w;
-		return lhs;
+		return Mat4x4<A,B>{lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z};
 	}
-	inline m4x4& pr_vectorcall operator += (m4x4& lhs, m3x4_cref rhs)
-	{
-		lhs.x += rhs.x;
-		lhs.y += rhs.y;
-		lhs.z += rhs.z;
-		return lhs;
-	}
-	inline m4x4& pr_vectorcall operator -= (m4x4& lhs, m3x4_cref rhs)
-	{
-		lhs.x -= rhs.x;
-		lhs.y -= rhs.y;
-		lhs.z -= rhs.z;
-		return lhs;
-	}
-	inline m4x4 pr_vectorcall operator + (m4x4 const& lhs, m4x4_cref rhs)
-	{
-		auto x = lhs;
-		return x += rhs;
-	}
-	inline m4x4 pr_vectorcall operator - (m4x4 const& lhs, m4x4_cref rhs)
-	{
-		auto x = lhs;
-		return x -= rhs;
-	}
-	inline m4x4 pr_vectorcall operator + (m4x4 const& lhs, m3x4_cref rhs)
-	{
-		auto x = lhs;
-		return x += rhs;
-	}
-	inline m4x4 pr_vectorcall operator - (m4x4 const& lhs, m3x4_cref rhs)
-	{
-		auto x = lhs;
-		return x -= rhs;
-	}
-	template <typename = void> inline m4x4 pr_vectorcall operator * (m4x4_cref lhs, m4x4_cref rhs)
+	template <typename A, typename B, typename C> inline Mat4x4<A,C> pr_vectorcall operator * (m4_cref<B,C> lhs, m4_cref<A,B> rhs)
 	{
 		#if PR_MATHS_USE_DIRECTMATH
-		return m4x4(DirectX::XMMatrixMultiply(rhs, lhs));
+		return Mat4x4<A,C>{DirectX::XMMatrixMultiply(rhs, lhs)};
 		#else
-		auto ans = m4x4{};
+		auto ans = Mat4x4<A,C>{};
 		auto lhsT = Transpose4x4(lhs);
-		ans.x = v4(Dot4(lhsT.x, rhs.x), Dot4(lhsT.y, rhs.x), Dot4(lhsT.z, rhs.x), Dot4(lhsT.w, rhs.x));
-		ans.y = v4(Dot4(lhsT.x, rhs.y), Dot4(lhsT.y, rhs.y), Dot4(lhsT.z, rhs.y), Dot4(lhsT.w, rhs.y));
-		ans.z = v4(Dot4(lhsT.x, rhs.z), Dot4(lhsT.y, rhs.z), Dot4(lhsT.z, rhs.z), Dot4(lhsT.w, rhs.z));
-		ans.w = v4(Dot4(lhsT.x, rhs.w), Dot4(lhsT.y, rhs.w), Dot4(lhsT.z, rhs.w), Dot4(lhsT.w, rhs.w));
+		ans.x = Vec4<void>(Dot4(lhsT.x, rhs.x), Dot4(lhsT.y, rhs.x), Dot4(lhsT.z, rhs.x), Dot4(lhsT.w, rhs.x));
+		ans.y = Vec4<void>(Dot4(lhsT.x, rhs.y), Dot4(lhsT.y, rhs.y), Dot4(lhsT.z, rhs.y), Dot4(lhsT.w, rhs.y));
+		ans.z = Vec4<void>(Dot4(lhsT.x, rhs.z), Dot4(lhsT.y, rhs.z), Dot4(lhsT.z, rhs.z), Dot4(lhsT.w, rhs.z));
+		ans.w = Vec4<void>(Dot4(lhsT.x, rhs.w), Dot4(lhsT.y, rhs.w), Dot4(lhsT.z, rhs.w), Dot4(lhsT.w, rhs.w));
 		return ans;
 		#endif
 	}
-	template <typename = void> inline v4 pr_vectorcall operator * (m4x4_cref lhs, v4_cref rhs)
+	template <typename A, typename B> inline Vec4<B> pr_vectorcall operator * (m4_cref<A,B> lhs, v4_cref<A> rhs)
 	{
 		#if PR_MATHS_USE_DIRECTMATH
-		return v4(DirectX::XMVector4Transform(rhs.vec, lhs));
+		return Vec4<B>{DirectX::XMVector4Transform(rhs.vec, lhs)};
 		#else
 		auto lhsT = Transpose4x4(lhs);
-		return v4(Dot4(lhsT.x, rhs), Dot4(lhsT.y, rhs), Dot4(lhsT.z, rhs), Dot4(lhsT.w, rhs));
+		return Vec4<B>{Dot4(lhsT.x, rhs), Dot4(lhsT.y, rhs), Dot4(lhsT.z, rhs), Dot4(lhsT.w, rhs)};
 		#endif
 	}
 	#pragma endregion
@@ -457,7 +389,7 @@ namespace pr
 	#pragma region Functions
 
 	// Return true if 'mat' is an affine transform
-	inline bool IsAffine(m4x4 const& mat)
+	template <typename A, typename B> inline bool pr_vectorcall IsAffine(m4_cref<A,B> mat)
 	{
 		return
 			mat.x.w == 0.0f &&
@@ -467,13 +399,13 @@ namespace pr
 	}
 
 	// Return the determinant of the rotation part of this matrix
-	inline float Determinant3(m4x4 const& mat)
+	template <typename A, typename B> inline float pr_vectorcall Determinant3(m4_cref<A,B> mat)
 	{
-		return Triple3(mat.x, mat.y, mat.z);
+		return Triple(mat.x, mat.y, mat.z);
 	}
 
 	// Return the 4x4 determinant of the affine transform 'mat'
-	inline float DeterminantFast4(m4x4 const& mat)
+	template <typename A, typename B> inline float pr_vectorcall DeterminantFast4(m4_cref<A,B> mat)
 	{
 		assert("'mat' must be an affine transform to use this function" && IsAffine(mat));
 		return
@@ -486,17 +418,17 @@ namespace pr
 	}
 
 	// Return the 4x4 determinant of the arbitrary transform 'mat'
-	inline float Determinant4(pr::m4x4 const& mat)
+	template <typename A, typename B> inline float pr_vectorcall Determinant4(m4_cref<A,B> mat)
 	{
 		#if PR_MATHS_USE_DIRECTMATH
-		return v4(DirectX::XMMatrixDeterminant(mat)).x;
+		return Vec4<void>{DirectX::XMMatrixDeterminant(mat)}.x;
 		#else
-		float c1 = (mat.z.z * mat.w.w) - (mat.z.w * mat.w.z);
-		float c2 = (mat.z.y * mat.w.w) - (mat.z.w * mat.w.y);
-		float c3 = (mat.z.y * mat.w.z) - (mat.z.z * mat.w.y);
-		float c4 = (mat.z.x * mat.w.w) - (mat.z.w * mat.w.x);
-		float c5 = (mat.z.x * mat.w.z) - (mat.z.z * mat.w.x);
-		float c6 = (mat.z.x * mat.w.y) - (mat.z.y * mat.w.x);
+		auto c1 = (mat.z.z * mat.w.w) - (mat.z.w * mat.w.z);
+		auto c2 = (mat.z.y * mat.w.w) - (mat.z.w * mat.w.y);
+		auto c3 = (mat.z.y * mat.w.z) - (mat.z.z * mat.w.y);
+		auto c4 = (mat.z.x * mat.w.w) - (mat.z.w * mat.w.x);
+		auto c5 = (mat.z.x * mat.w.z) - (mat.z.z * mat.w.x);
+		auto c6 = (mat.z.x * mat.w.y) - (mat.z.y * mat.w.x);
 		return
 			mat.x.x * (mat.y.y*c1 - mat.y.z*c2 + mat.y.w*c3) -
 			mat.x.y * (mat.y.x*c1 - mat.y.z*c4 + mat.y.w*c5) +
@@ -506,36 +438,36 @@ namespace pr
 	}
 
 	// Returns the sum of the first 3 diagonal elements of 'mat'
-	inline float Trace3(m4x4 const& mat)
+	template <typename A, typename B> inline float pr_vectorcall Trace3(m4_cref<A,B> mat)
 	{
 		return mat.x.x + mat.y.y + mat.z.z;
 	}
 
 	// Returns the sum of the diagonal elements of 'mat'
-	inline float Trace4(m4x4 const& mat)
+	template <typename A, typename B> inline float pr_vectorcall Trace4(m4_cref<A,B> mat)
 	{
 		return mat.x.x + mat.y.y + mat.z.z + mat.w.w;
 	}
 
 	// The kernel of the matrix
-	inline v4 Kernel(m4x4 const& mat)
+	template <typename A, typename B> inline Vec4<void> pr_vectorcall Kernel(m4_cref<A,B> mat)
 	{
 		return v4(mat.y.y*mat.z.z - mat.y.z*mat.z.y, -mat.y.x*mat.z.z + mat.y.z*mat.z.x, mat.y.x*mat.z.y - mat.y.y*mat.z.x, 0.0f);
 	}
 
 	// Return the cross product matrix for 'vec'.
-	inline m4x4 CPM(v4 const& vec, v4 const& pos)
+	template <typename A> inline Mat4x4<A,A> pr_vectorcall CPM(v4_cref<A> vec, v4_cref<> pos)
 	{
 		// This matrix can be used to take the cross product with
 		// another vector: e.g. Cross4(v1, v2) == Cross4(v1) * v2
-		return m4x4(CPM(vec), pos);
+		return Mat4x4<A,A>{CPM(vec), pos};
 	}
 
 	// Return the 4x4 transpose of 'mat'
-	inline m4x4 Transpose4x4(m4x4 const& mat)
+	template <typename A, typename B> inline Mat4x4<A,B> pr_vectorcall Transpose4x4(m4_cref<A,B> mat)
 	{
 		#if PR_MATHS_USE_DIRECTMATH && 0
-		return m4x4(DirectX::XMMatrixTranspose(mat.vec));
+		return Mat4x4<A,B>{DirectX::XMMatrixTranspose(mat.vec)};
 		#elif PR_MATHS_USE_INTRINSICS
 		auto m = mat;
 		_MM_TRANSPOSE4_PS(m.x.vec, m.y.vec, m.z.vec, m.w.vec);
@@ -553,7 +485,7 @@ namespace pr
 	}
 
 	// Return the 3x3 transpose of 'mat'
-	inline m4x4 Transpose3x3(m4x4 const& mat)
+	template <typename A, typename B> inline Mat4x4<A,B> pr_vectorcall Transpose3x3(m4_cref<A,B> mat)
 	{
 		auto m = mat;
 		std::swap(m.x.y, m.y.x);
@@ -563,7 +495,7 @@ namespace pr
 	}
 
 	// Return true if this matrix is orthonormal
-	inline bool IsOrthonormal(m4x4 const& mat)
+	template <typename A, typename B> inline bool pr_vectorcall IsOrthonormal(m4_cref<A,B> mat)
 	{
 		return
 			FEql(Length3Sq(mat.x), 1.0f) &&
@@ -573,16 +505,16 @@ namespace pr
 	}
 
 	// True if 'mat' has an inverse
-	inline bool IsInvertable(m4x4 const& mat)
+	template <typename A, typename B> inline bool pr_vectorcall IsInvertable(m4_cref<A,B> mat)
 	{
 		return Determinant4(mat) != 0;
 	}
 
 	// Return the inverse of 'mat' (assuming an orthonormal matrix)
-	inline m4x4 InvertFast(m4x4 const& mat)
+	template <typename A, typename B> inline Mat4x4<B,A> pr_vectorcall InvertFast(m4_cref<A,B> mat)
 	{
 		assert("Matrix is not orthonormal" && IsOrthonormal(mat));
-		auto m = Transpose3x3(mat);
+		auto m = Mat4x4<B,A>{Transpose3x3(mat)};
 		m.pos.x = -Dot3(mat.x, mat.pos);
 		m.pos.y = -Dot3(mat.y, mat.pos);
 		m.pos.z = -Dot3(mat.z, mat.pos);
@@ -590,42 +522,42 @@ namespace pr
 	}
 
 	// Return the inverse of 'mat'
-	inline m4x4 Invert(m4x4 const& mat)
+	template <typename A, typename B> inline Mat4x4<B,A> pr_vectorcall Invert(m4_cref<A,B> mat)
 	{
 		#if PR_MATHS_USE_DIRECTMATH
-		v4 det;
-		m4x4 m(DirectX::XMMatrixInverse(&det.vec, mat));
+		Vec4<void> det;
+		Mat4x4<B,A> m{DirectX::XMMatrixInverse(&det.vec, mat)};
 		assert("Matrix has no inverse" && det.x != 0);
 		return m;
 		#elif 1 // This was lifted from MESA implementation of the GLU library
-		pr::m4x4 inv;
-		inv.x = v4(
+		Mat4x4<B,A> inv;
+		inv.x = Vec4<void>{
 			+mat.y.y * mat.z.z * mat.w.w - mat.y.y * mat.z.w * mat.w.z - mat.z.y * mat.y.z * mat.w.w + mat.z.y * mat.y.w * mat.w.z + mat.w.y * mat.y.z * mat.z.w - mat.w.y * mat.y.w * mat.z.z,
 			-mat.x.y * mat.z.z * mat.w.w + mat.x.y * mat.z.w * mat.w.z + mat.z.y * mat.x.z * mat.w.w - mat.z.y * mat.x.w * mat.w.z - mat.w.y * mat.x.z * mat.z.w + mat.w.y * mat.x.w * mat.z.z,
 			+mat.x.y * mat.y.z * mat.w.w - mat.x.y * mat.y.w * mat.w.z - mat.y.y * mat.x.z * mat.w.w + mat.y.y * mat.x.w * mat.w.z + mat.w.y * mat.x.z * mat.y.w - mat.w.y * mat.x.w * mat.y.z,
-			-mat.x.y * mat.y.z * mat.z.w + mat.x.y * mat.y.w * mat.z.z + mat.y.y * mat.x.z * mat.z.w - mat.y.y * mat.x.w * mat.z.z - mat.z.y * mat.x.z * mat.y.w + mat.z.y * mat.x.w * mat.y.z);
-		inv.y = v4(
+			-mat.x.y * mat.y.z * mat.z.w + mat.x.y * mat.y.w * mat.z.z + mat.y.y * mat.x.z * mat.z.w - mat.y.y * mat.x.w * mat.z.z - mat.z.y * mat.x.z * mat.y.w + mat.z.y * mat.x.w * mat.y.z};
+		inv.y = Vec4<void>{
 			-mat.y.x * mat.z.z * mat.w.w + mat.y.x * mat.z.w * mat.w.z + mat.z.x * mat.y.z * mat.w.w - mat.z.x * mat.y.w * mat.w.z - mat.w.x * mat.y.z * mat.z.w + mat.w.x * mat.y.w * mat.z.z,
 			+mat.x.x * mat.z.z * mat.w.w - mat.x.x * mat.z.w * mat.w.z - mat.z.x * mat.x.z * mat.w.w + mat.z.x * mat.x.w * mat.w.z + mat.w.x * mat.x.z * mat.z.w - mat.w.x * mat.x.w * mat.z.z,
 			-mat.x.x * mat.y.z * mat.w.w + mat.x.x * mat.y.w * mat.w.z + mat.y.x * mat.x.z * mat.w.w - mat.y.x * mat.x.w * mat.w.z - mat.w.x * mat.x.z * mat.y.w + mat.w.x * mat.x.w * mat.y.z,
-			+mat.x.x * mat.y.z * mat.z.w - mat.x.x * mat.y.w * mat.z.z - mat.y.x * mat.x.z * mat.z.w + mat.y.x * mat.x.w * mat.z.z + mat.z.x * mat.x.z * mat.y.w - mat.z.x * mat.x.w * mat.y.z);
-		inv.z = v4(
+			+mat.x.x * mat.y.z * mat.z.w - mat.x.x * mat.y.w * mat.z.z - mat.y.x * mat.x.z * mat.z.w + mat.y.x * mat.x.w * mat.z.z + mat.z.x * mat.x.z * mat.y.w - mat.z.x * mat.x.w * mat.y.z};
+		inv.z = Vec4<void>{
 			+mat.y.x * mat.z.y * mat.w.w - mat.y.x * mat.z.w * mat.w.y - mat.z.x * mat.y.y * mat.w.w + mat.z.x * mat.y.w * mat.w.y + mat.w.x * mat.y.y * mat.z.w - mat.w.x * mat.y.w * mat.z.y,
 			-mat.x.x * mat.z.y * mat.w.w + mat.x.x * mat.z.w * mat.w.y + mat.z.x * mat.x.y * mat.w.w - mat.z.x * mat.x.w * mat.w.y - mat.w.x * mat.x.y * mat.z.w + mat.w.x * mat.x.w * mat.z.y,
 			+mat.x.x * mat.y.y * mat.w.w - mat.x.x * mat.y.w * mat.w.y - mat.y.x * mat.x.y * mat.w.w + mat.y.x * mat.x.w * mat.w.y + mat.w.x * mat.x.y * mat.y.w - mat.w.x * mat.x.w * mat.y.y,
-			-mat.x.x * mat.y.y * mat.z.w + mat.x.x * mat.y.w * mat.z.y + mat.y.x * mat.x.y * mat.z.w - mat.y.x * mat.x.w * mat.z.y - mat.z.x * mat.x.y * mat.y.w + mat.z.x * mat.x.w * mat.y.y);
-		inv.w = v4(
+			-mat.x.x * mat.y.y * mat.z.w + mat.x.x * mat.y.w * mat.z.y + mat.y.x * mat.x.y * mat.z.w - mat.y.x * mat.x.w * mat.z.y - mat.z.x * mat.x.y * mat.y.w + mat.z.x * mat.x.w * mat.y.y};
+		inv.w = Vec4<void>{
 			-mat.y.x * mat.z.y * mat.w.z + mat.y.x * mat.z.z * mat.w.y + mat.z.x * mat.y.y * mat.w.z - mat.z.x * mat.y.z * mat.w.y - mat.w.x * mat.y.y * mat.z.z + mat.w.x * mat.y.z * mat.z.y,
 			+mat.x.x * mat.z.y * mat.w.z - mat.x.x * mat.z.z * mat.w.y - mat.z.x * mat.x.y * mat.w.z + mat.z.x * mat.x.z * mat.w.y + mat.w.x * mat.x.y * mat.z.z - mat.w.x * mat.x.z * mat.z.y,
 			-mat.x.x * mat.y.y * mat.w.z + mat.x.x * mat.y.z * mat.w.y + mat.y.x * mat.x.y * mat.w.z - mat.y.x * mat.x.z * mat.w.y - mat.w.x * mat.x.y * mat.y.z + mat.w.x * mat.x.z * mat.y.y,
-			+mat.x.x * mat.y.y * mat.z.z - mat.x.x * mat.y.z * mat.z.y - mat.y.x * mat.x.y * mat.z.z + mat.y.x * mat.x.z * mat.z.y + mat.z.x * mat.x.y * mat.y.z - mat.z.x * mat.x.z * mat.y.y);
+			+mat.x.x * mat.y.y * mat.z.z - mat.x.x * mat.y.z * mat.z.y - mat.y.x * mat.x.y * mat.z.z + mat.y.x * mat.x.z * mat.z.y + mat.z.x * mat.x.y * mat.y.z - mat.z.x * mat.x.z * mat.y.y};
 
 		auto det = mat.x.x * inv.x.x + mat.x.y * inv.y.x + mat.x.z * inv.z.x + mat.x.w * inv.w.x;
 		assert("matrix has no inverse" && det != 0);
 		return inv * (1/det);
 		#else // Reference implementation
-		m4x4 A = Transpose4x4(mat); // Take the transpose so that row operations are faster
-		m4x4 B = m4x4Identity;
+		auto A = Transpose4x4(mat); // Take the transpose so that row operations are faster
+		auto B = static_cast<Mat4x4<B,A>>(m4x4Identity);
 
 		// Loop through columns of 'A'
 		for (int j = 0; j != 4; ++j)
@@ -669,7 +601,7 @@ namespace pr
 	}
 
 	// Return the inverse of 'mat' using double precision floats
-	inline m4x4 InvertPrecise(m4x4 const& mat)
+	template <typename A, typename B> inline Mat4x4<B,A> pr_vectorcall InvertPrecise(m4_cref<A,B> mat)
 	{
 		double inv[4][4];
 		inv[0][0] = 0.0 + mat.y.y * mat.z.z * mat.w.w - mat.y.y * mat.z.w * mat.w.z - mat.z.y * mat.y.z * mat.w.w + mat.z.y * mat.y.w * mat.w.z + mat.w.y * mat.y.z * mat.z.w - mat.w.y * mat.y.w * mat.z.z;
@@ -693,7 +625,7 @@ namespace pr
 		assert("matrix has no inverse" && det != 0);
 		auto inv_det = 1.0 / det;
 
-		pr::m4x4 m;
+		Mat4x4<B,A> m;
 		for (int j = 0; j != 4; ++j)
 			for (int i = 0; i != 4; ++i)
 				m[j][i] = float(inv[j][i] * inv_det);
@@ -701,7 +633,7 @@ namespace pr
 	}
 
 	// Return the square root of a matrix. The square root is the matrix B where B.B = mat.
-	inline m4x4 Sqrt(m4x4 const& mat)
+	template <typename A, typename B> inline Mat4x4<A,B> pr_vectorcall Sqrt(m4_cref<A,B> mat)
 	{
 		// Using 'Denman-Beavers' square root iteration. Should converge quadratically
 		auto A = mat;           // Converges to mat^0.5
@@ -717,7 +649,7 @@ namespace pr
 	}
 
 	// Orthonormalises the rotation component of the matrix
-	inline m4x4 Orthonorm(m4x4 const& mat)
+	template <typename A, typename B> inline Mat4x4<A,B> pr_vectorcall Orthonorm(m4_cref<A,B> mat)
 	{
 		auto m = mat;
 		m.x = Normalise3(m.x);
@@ -728,7 +660,7 @@ namespace pr
 	}
 
 	// Return the axis and angle of a rotation matrix
-	inline void GetAxisAngle(m4x4 const& mat, v4& axis, float& angle)
+	template <typename A, typename B> inline void pr_vectorcall GetAxisAngle(m4_cref<A,B> mat, Vec4<void>& axis, float& angle)
 	{
 		GetAxisAngle(mat.rot, axis, angle);
 	}
@@ -737,143 +669,115 @@ namespace pr
 	// 'dir' is the direction to align the 'axis'th axis to
 	// 'up' is the preferred up direction, however if up is parallel to 'dir'
 	// then a vector perpendicular to 'dir' will be chosen.
-	inline m4x4 OriFromDir(v4 const& dir, int axis, v4 const& up, v4 const& pos)
+	template <typename A = void, typename B = void> inline Mat4x4<A,B> pr_vectorcall OriFromDir(v4_cref<> dir, int axis, v4_cref<> up, v4_cref<> pos)
 	{
-		return m4x4(OriFromDir(dir, axis, up), pos);
+		return Mat4x4<A,B>{OriFromDir(dir, axis, up), pos};
 	}
 
 	// Make a scaled object to world transform from a direction vector and position
 	// Returns a transform for scaling and rotating the 'axis'th axis to 'dir'
-	inline m4x4 ScaledOriFromDir(v4 const& dir, int axis, v4 const& up, v4 const& pos)
+	template <typename A = void, typename B = void> inline Mat4x4<A,B> pr_vectorcall ScaledOriFromDir(v4_cref<> dir, int axis, v4_cref<> up, v4_cref<> pos)
 	{
-		return m4x4(ScaledOriFromDir(dir, axis, up), pos);
+		return Mat4x4<A,B>{ScaledOriFromDir(dir, axis, up), pos};
 	}
 
 	// Return a vector representing the approximate rotation between two orthonormal transforms
-	inline v4 RotationVectorApprox(m4x4 const& from, m4x4 const& to)
+	template <typename A, typename B> inline Vec4<void> pr_vectorcall RotationVectorApprox(m4_cref<A,B> from, m4_cref<A,B> to)
 	{
 		assert(IsOrthonormal(from) && IsOrthonormal(to) && "This only works for orthonormal matrices");
 
-		m4x4 cpm_x_i2wR = to - from;
-		m4x4 w2iR = Transpose3x3(from).w0();
-		m4x4 cpm = cpm_x_i2wR * w2iR;
-		return v4(cpm.y.z, cpm.z.x, cpm.x.y, 0.0f);
+		auto cpm_x_i2wR = to - from;
+		auto w2iR = Transpose3x3(from).w0();
+		auto cpm = cpm_x_i2wR * w2iR;
+		return Vec4<void>{cpm.y.z, cpm.z.x, cpm.x.y, 0};
 	}
 
 	// Spherically interpolate between two affine transforms
-	template <typename = void> inline m4x4 pr_vectorcall Slerp(m4x4_cref lhs, m4x4_cref rhs, float frac)
+	template <typename A, typename B> inline Mat4x4<A,B> pr_vectorcall Slerp(m4_cref<A,B> lhs, m4_cref<A,B> rhs, float frac)
 	{
 		assert(IsAffine(lhs));
 		assert(IsAffine(rhs));
 
-		auto q = Slerp(quat(lhs.rot), quat(rhs.rot), frac);
+		auto q = Slerp(Quat<void>(lhs.rot), Quat<void>(rhs.rot), frac);
 		auto p = Lerp(lhs.pos, rhs.pos, frac);
-		return m4x4(q, p);
+		return Mat4x4<T>{q, p};
 	}
 
-	#pragma endregion
-}
-
-namespace std
-{
-	#pragma region Numeric limits
-	template <> class std::numeric_limits<pr::m4x4>
-	{
-	public:
-		static pr::m4x4 min() throw()     { return pr::m4x4Min; }
-		static pr::m4x4 max() throw()     { return pr::m4x4Max; }
-		static pr::m4x4 lowest() throw()  { return pr::m4x4Lowest; }
-		static pr::m4x4 epsilon() throw() { return pr::m4x4Epsilon; }
-
-		static const bool is_specialized = true;
-		static const bool is_signed = true;
-		static const bool is_integer = false;
-		static const bool is_exact = false;
-		static const bool has_infinity = false;
-		static const bool has_quiet_NaN = false;
-		static const bool has_signaling_NaN = false;
-		static const bool has_denorm_loss = true;
-		static const float_denorm_style has_denorm = denorm_present;
-		static const int radix = 10;
-	};
 	#pragma endregion
 }
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include <directxmath.h>
-namespace pr
+namespace pr::maths
 {
-	namespace unittests
+	PRUnitTest(Matrix4x4Tests)
 	{
-		PRUnitTest(pr_maths_matrix4x4)
+		using namespace pr;
+		std::default_random_engine rng;
 		{
-			using namespace pr;
-			std::default_random_engine rng;
+			m4x4 m1 = m4x4Identity;
+			m4x4 m2 = m4x4Identity;
+			m4x4 m3 = m1 * m2;
+			PR_CHECK(FEql(m3, m4x4Identity), true);
+		}
+		{//m4x4Translation
+			m4x4 m2;
+			m4x4 m1 = m4x4(v4XAxis, v4YAxis, v4ZAxis, v4(1.0f, 2.0f, 3.0f, 1.0f));
+			m2 = m4x4::Translation(v4(1.0f, 2.0f, 3.0f, 1.0f));
+			PR_CHECK(FEql(m1, m2), true);
+		}
+		{//m4x4CreateFrom
+			v4 V1 = Random3(rng, 0.0f, 10.0f, 1.0f);
+			m4x4 a2b = m4x4::Transform(v4::Normal3(+3,-2,-1,0), +1.23f, v4(+4.4f, -3.3f, +2.2f, 1.0f));
+			m4x4 b2c = m4x4::Transform(v4::Normal3(-1,+2,-3,0), -3.21f, v4(-1.1f, +2.2f, -3.3f, 1.0f));
+			PR_CHECK(IsOrthonormal(a2b), true);
+			PR_CHECK(IsOrthonormal(b2c), true);
+			v4 V2 = a2b * V1;
+			v4 V3 = b2c * V2; V3;
+			m4x4 a2c = b2c * a2b;
+			v4 V4 = a2c * V1; V4;
+			PR_CHECK(FEql4(V3, V4), true);
+		}
+		{//m4x4CreateFrom2
+			auto q = quat(1.0f, 0.5f, 0.7f);
+			m4x4 m1 = m4x4::Transform(1.0f, 0.5f, 0.7f, v4Origin);
+			m4x4 m2 = m4x4::Transform(q, v4Origin);
+			PR_CHECK(IsOrthonormal(m1), true);
+			PR_CHECK(IsOrthonormal(m2), true);
+			PR_CHECK(FEql(m1, m2), true);
+
+			std::uniform_real_distribution<float> dist(-1.0f,+1.0f);
+			float ang = dist(rng);
+			v4 axis = Random3N(rng, 0.0f);
+			m1 = m4x4::Transform(axis, ang, v4Origin);
+			m2 = m4x4::Transform(quat(axis, ang), v4Origin);
+			PR_CHECK(IsOrthonormal(m1), true);
+			PR_CHECK(IsOrthonormal(m2), true);
+			PR_CHECK(FEql(m1, m2), true);
+		}
+		{// Invert
+			m4x4 a2b = m4x4::Transform(v4::Normal3(-4,-3,+2,0), -2.15f, v4(-5,+3,+1,1));
+			m4x4 b2a = Invert(a2b);
+			m4x4 a2a = b2a * a2b;
+			PR_CHECK(FEql(m4x4Identity, a2a), true);
 			{
-				m4x4 m1 = m4x4Identity;
-				m4x4 m2 = m4x4Identity;
-				m4x4 m3 = m1 * m2;
-				PR_CHECK(FEql(m3, m4x4Identity), true);
+				#if PR_MATHS_USE_DIRECTMATH
+				auto dx_b2a = m4x4(DirectX::XMMatrixInverse(nullptr, a2b));
+				PR_CHECK(FEql(b2a, dx_b2a), true);
+				#endif
 			}
-			{//m4x4Translation
-				m4x4 m2;
-				m4x4 m1 = m4x4(v4XAxis, v4YAxis, v4ZAxis, v4(1.0f, 2.0f, 3.0f, 1.0f));
-				m2 = m4x4::Translation(v4(1.0f, 2.0f, 3.0f, 1.0f));
-				PR_CHECK(FEql(m1, m2), true);
-			}
-			{//m4x4CreateFrom
-				v4 V1 = Random3(rng, 0.0f, 10.0f, 1.0f);
-				m4x4 a2b = m4x4::Transform(v4::Normal3(+3,-2,-1,0), +1.23f, v4(+4.4f, -3.3f, +2.2f, 1.0f));
-				m4x4 b2c = m4x4::Transform(v4::Normal3(-1,+2,-3,0), -3.21f, v4(-1.1f, +2.2f, -3.3f, 1.0f));
-				PR_CHECK(IsOrthonormal(a2b), true);
-				PR_CHECK(IsOrthonormal(b2c), true);
-				v4 V2 = a2b * V1;
-				v4 V3 = b2c * V2; V3;
-				m4x4 a2c = b2c * a2b;
-				v4 V4 = a2c * V1; V4;
-				PR_CHECK(FEql4(V3, V4), true);
-			}
-			{//m4x4CreateFrom2
-				auto q = quat(1.0f, 0.5f, 0.7f);
-				m4x4 m1 = m4x4::Transform(1.0f, 0.5f, 0.7f, v4Origin);
-				m4x4 m2 = m4x4::Transform(q, v4Origin);
-				PR_CHECK(IsOrthonormal(m1), true);
-				PR_CHECK(IsOrthonormal(m2), true);
-				PR_CHECK(FEql(m1, m2), true);
 
-				std::uniform_real_distribution<float> dist(-1.0f,+1.0f);
-				float ang = dist(rng);
-				v4 axis = Random3N(rng, 0.0f);
-				m1 = m4x4::Transform(axis, ang, v4Origin);
-				m2 = m4x4::Transform(quat(axis, ang), v4Origin);
-				PR_CHECK(IsOrthonormal(m1), true);
-				PR_CHECK(IsOrthonormal(m2), true);
-				PR_CHECK(FEql(m1, m2), true);
-			}
-			{// Invert
-				m4x4 a2b = m4x4::Transform(v4::Normal3(-4,-3,+2,0), -2.15f, v4(-5,+3,+1,1));
-				m4x4 b2a = Invert(a2b);
-				m4x4 a2a = b2a * a2b;
-				PR_CHECK(FEql(m4x4Identity, a2a), true);
-				{
-					#if PR_MATHS_USE_DIRECTMATH
-					auto dx_b2a = m4x4(DirectX::XMMatrixInverse(nullptr, a2b));
-					PR_CHECK(FEql(b2a, dx_b2a), true);
-					#endif
-				}
-
-				m4x4 b2a_fast = InvertFast(a2b);
-				PR_CHECK(FEql(b2a_fast, b2a), true);
-			}
-			{//m4x4Orthonormalise
-				m4x4 a2b;
-				a2b.x = v4(-2.0f, 3.0f, 1.0f, 0.0f);
-				a2b.y = v4(4.0f,-1.0f, 2.0f, 0.0f);
-				a2b.z = v4(1.0f,-2.0f, 4.0f, 0.0f);
-				a2b.w = v4(1.0f, 2.0f, 3.0f, 1.0f);
-				PR_CHECK(IsOrthonormal(Orthonorm(a2b)), true);
-			}
+			m4x4 b2a_fast = InvertFast(a2b);
+			PR_CHECK(FEql(b2a_fast, b2a), true);
+		}
+		{//m4x4Orthonormalise
+			m4x4 a2b;
+			a2b.x = v4(-2.0f, 3.0f, 1.0f, 0.0f);
+			a2b.y = v4(4.0f,-1.0f, 2.0f, 0.0f);
+			a2b.z = v4(1.0f,-2.0f, 4.0f, 0.0f);
+			a2b.w = v4(1.0f, 2.0f, 3.0f, 1.0f);
+			PR_CHECK(IsOrthonormal(Orthonorm(a2b)), true);
 		}
 	}
 }

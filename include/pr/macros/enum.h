@@ -276,141 +276,136 @@ namespace pr
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include "pr/common/flags_enum.h"
-namespace pr
+namespace pr::common
 {
-	namespace unittests
+	namespace unittests::enum2
 	{
-		namespace enum2
+		// Normal enum
+		enum class TestEnum0
 		{
-			// Normal enum
-			enum class TestEnum0
-			{
-				A,
-				B,
-				C,
-			};
-			static_assert(!is_reflected_enum<TestEnum0>::value, "");
+			A,
+			B,
+			C,
+		};
+		static_assert(!is_reflected_enum<TestEnum0>::value, "");
 
-			#define PR_ENUM(x) /*
-				*/x(A)/*
-				*/x(B)/* this is 'B'
-				*/x(C)
-			PR_DEFINE_ENUM1(TestEnum1, PR_ENUM);
-			#undef PR_ENUM
-			static_assert(is_reflected_enum<TestEnum1>::value, "");
+		#define PR_ENUM(x) /*
+			*/x(A)/*
+			*/x(B)/* this is 'B'
+			*/x(C)
+		PR_DEFINE_ENUM1(TestEnum1, PR_ENUM);
+		#undef PR_ENUM
+		static_assert(is_reflected_enum<TestEnum1>::value, "");
 
-			#define PR_ENUM(x) \
-				x(A, = 42)\
-				x(B, = 43) /* this is 'B' */ \
-				x(C, = 44)
-			PR_DEFINE_ENUM2(TestEnum2, PR_ENUM);
-			#undef PR_ENUM
+		#define PR_ENUM(x) \
+			x(A, = 42)\
+			x(B, = 43) /* this is 'B' */ \
+			x(C, = 44)
+		PR_DEFINE_ENUM2(TestEnum2, PR_ENUM);
+		#undef PR_ENUM
 
-			#define PR_ENUM(x) \
-				x(A, "a", = 0x0A)\
-				x(B, "b", = 0x0B)\
-				x(C, "c", = 0x0C)
-			PR_DEFINE_ENUM3(TestEnum3, PR_ENUM);
-			#undef PR_ENUM
+		#define PR_ENUM(x) \
+			x(A, "a", = 0x0A)\
+			x(B, "b", = 0x0B)\
+			x(C, "c", = 0x0C)
+		PR_DEFINE_ENUM3(TestEnum3, PR_ENUM);
+		#undef PR_ENUM
 
-			#define PR_ENUM(x) \
-				x(A, = 1 << 0)\
-				x(B, = 1 << 1)\
-				x(C, = 1 << 2)\
-				x(_bitwise_operators_allowed, )
-			PR_DEFINE_ENUM2(TestEnum4, PR_ENUM);
-			#undef PR_ENUM
+		#define PR_ENUM(x) \
+			x(A, = 1 << 0)\
+			x(B, = 1 << 1)\
+			x(C, = 1 << 2)\
+			x(_bitwise_operators_allowed, )
+		PR_DEFINE_ENUM2(TestEnum4, PR_ENUM);
+		#undef PR_ENUM
 
-			#define PR_ENUM(x) \
-				x(A, "a", = 1 << 0)\
-				x(B, "b", = 1 << 1)\
-				x(C, "c", = 1 << 2 | B)\
-				x(_bitwise_operators_allowed,"",)
-			PR_DEFINE_ENUM3(TestEnum5, PR_ENUM);
-			#undef PR_ENUM
+		#define PR_ENUM(x) \
+			x(A, "a", = 1 << 0)\
+			x(B, "b", = 1 << 1)\
+			x(C, "c", = 1 << 2 | B)\
+			x(_bitwise_operators_allowed,"",)
+		PR_DEFINE_ENUM3(TestEnum5, PR_ENUM);
+		#undef PR_ENUM
+	}
+	PRUnitTest(Enum2Tests)
+	{
+		using namespace unittests::enum2;
+
+		PR_CHECK(Enum<TestEnum1>::NameA(), "TestEnum1");
+		PR_CHECK(Enum<TestEnum2>::NameA(), "TestEnum2");
+		PR_CHECK(Enum<TestEnum3>::NameA(), "TestEnum3");
+		PR_CHECK(Enum<TestEnum4>::NameA(), "TestEnum4");
+		PR_CHECK(Enum<TestEnum5>::NameA(), "TestEnum5");
+
+		PR_CHECK(Enum<TestEnum1>::NumberOf, 3);
+		PR_CHECK(Enum<TestEnum2>::NumberOf, 3);
+		PR_CHECK(Enum<TestEnum3>::NumberOf, 3);
+		PR_CHECK(Enum<TestEnum4>::NumberOf, 4);
+		PR_CHECK(Enum<TestEnum5>::NumberOf, 4);
+
+		PR_CHECK(Enum<TestEnum1>::ToStringA(TestEnum1::A), "A");
+		PR_CHECK(Enum<TestEnum2>::ToStringA(TestEnum2::A), "A");
+		PR_CHECK(Enum<TestEnum3>::ToStringA(TestEnum3::A), "a");
+		PR_CHECK(Enum<TestEnum4>::ToStringA(TestEnum4::A), "A");
+		PR_CHECK(Enum<TestEnum5>::ToStringA(TestEnum5::A), "a");
+
+		PR_CHECK(Enum<TestEnum1>::Parse("A"), TestEnum1::A);
+		PR_CHECK(Enum<TestEnum2>::Parse("A"), TestEnum2::A);
+		PR_CHECK(Enum<TestEnum3>::Parse("a"), TestEnum3::A);
+		PR_CHECK(Enum<TestEnum4>::Parse("A"), TestEnum4::A);
+		PR_CHECK(Enum<TestEnum5>::Parse("a"), TestEnum5::A);
+
+		// Initialisation
+		TestEnum1 a1 = TestEnum1::A;
+		TestEnum2 a2 = TestEnum2::A;
+		TestEnum3 a3 = TestEnum3::A;
+		TestEnum4 a4 = TestEnum4::A;
+		TestEnum5 a5 = TestEnum5::A;
+
+		// Assignment
+		TestEnum1 b1; b1 = TestEnum1::B;
+		TestEnum2 b2; b2 = TestEnum2::B;
+		TestEnum3 b3; b3 = TestEnum3::B;
+		TestEnum4 b4; b4 = TestEnum4::B;
+		TestEnum5 b5; b5 = TestEnum5::B;
+		TestEnum4 b6; b6 = TestEnum4::B; b6 |= TestEnum4::C;
+		TestEnum5 b7; b7 = TestEnum5::B; b7 |= TestEnum5::C;
+
+		{
+			std::stringstream s; s << a1 << a2 << a3 << a4 << a5;
+			PR_CHECK(s.str().c_str(), "AAaAa"); // Stream as a name
+		}
+		{
+			std::stringstream s; s << TestEnum1::A << TestEnum2::A << TestEnum3::A << TestEnum4::A << TestEnum5::A;
+			PR_CHECK(s.str().c_str(), "AAaAa"); // Stream as a name
+		}
+		{
+			std::stringstream s; s << TestEnum1::A;
+			TestEnum1 out; s >> out;
+			PR_CHECK(out, TestEnum1::A);
+		}
+		PR_THROWS([&]()
+		{
+			volatile int i = 4;
+			Enum<TestEnum3>::From(i); // invalid conversion, 4 is not an enum value
+		}, std::exception);
+
+		char const* names[] = {"A","B","C"};
+		TestEnum1 values[] = {TestEnum1::A, TestEnum1::B, TestEnum1::C};
+		for (int i = 0; i != Enum<TestEnum1>::NumberOf; ++i)
+		{
+			PR_CHECK(Enum<TestEnum1>::MemberNameA(i), names[i]); // Access names by index
+			PR_CHECK(Enum<TestEnum1>::Member(i), values[i]);     // Access members by index
 		}
 
-		PRUnitTest(pr_macros_enum2)
+		// Enumerate members
 		{
-			using namespace enum2;
-
-
-			PR_CHECK(Enum<TestEnum1>::NameA(), "TestEnum1");
-			PR_CHECK(Enum<TestEnum2>::NameA(), "TestEnum2");
-			PR_CHECK(Enum<TestEnum3>::NameA(), "TestEnum3");
-			PR_CHECK(Enum<TestEnum4>::NameA(), "TestEnum4");
-			PR_CHECK(Enum<TestEnum5>::NameA(), "TestEnum5");
-
-			PR_CHECK(Enum<TestEnum1>::NumberOf, 3);
-			PR_CHECK(Enum<TestEnum2>::NumberOf, 3);
-			PR_CHECK(Enum<TestEnum3>::NumberOf, 3);
-			PR_CHECK(Enum<TestEnum4>::NumberOf, 4);
-			PR_CHECK(Enum<TestEnum5>::NumberOf, 4);
-
-			PR_CHECK(Enum<TestEnum1>::ToStringA(TestEnum1::A), "A");
-			PR_CHECK(Enum<TestEnum2>::ToStringA(TestEnum2::A), "A");
-			PR_CHECK(Enum<TestEnum3>::ToStringA(TestEnum3::A), "a");
-			PR_CHECK(Enum<TestEnum4>::ToStringA(TestEnum4::A), "A");
-			PR_CHECK(Enum<TestEnum5>::ToStringA(TestEnum5::A), "a");
-
-			PR_CHECK(Enum<TestEnum1>::Parse("A"), TestEnum1::A);
-			PR_CHECK(Enum<TestEnum2>::Parse("A"), TestEnum2::A);
-			PR_CHECK(Enum<TestEnum3>::Parse("a"), TestEnum3::A);
-			PR_CHECK(Enum<TestEnum4>::Parse("A"), TestEnum4::A);
-			PR_CHECK(Enum<TestEnum5>::Parse("a"), TestEnum5::A);
-
-			// Initialisation
-			TestEnum1 a1 = TestEnum1::A;
-			TestEnum2 a2 = TestEnum2::A;
-			TestEnum3 a3 = TestEnum3::A;
-			TestEnum4 a4 = TestEnum4::A;
-			TestEnum5 a5 = TestEnum5::A;
-
-			// Assignment
-			TestEnum1 b1; b1 = TestEnum1::B;
-			TestEnum2 b2; b2 = TestEnum2::B;
-			TestEnum3 b3; b3 = TestEnum3::B;
-			TestEnum4 b4; b4 = TestEnum4::B;
-			TestEnum5 b5; b5 = TestEnum5::B;
-			TestEnum4 b6; b6 = TestEnum4::B; b6 |= TestEnum4::C;
-			TestEnum5 b7; b7 = TestEnum5::B; b7 |= TestEnum5::C;
-
+			int idx = 0;
+			for (auto e : Enum<TestEnum1>::Members())
 			{
-				std::stringstream s; s << a1 << a2 << a3 << a4 << a5;
-				PR_CHECK(s.str().c_str(), "AAaAa"); // Stream as a name
-			}
-			{
-				std::stringstream s; s << TestEnum1::A << TestEnum2::A << TestEnum3::A << TestEnum4::A << TestEnum5::A;
-				PR_CHECK(s.str().c_str(), "AAaAa"); // Stream as a name
-			}
-			{
-				std::stringstream s; s << TestEnum1::A;
-				TestEnum1 out; s >> out;
-				PR_CHECK(out, TestEnum1::A);
-			}
-			PR_THROWS([&]()
-			{
-				volatile int i = 4;
-				Enum<TestEnum3>::From(i); // invalid conversion, 4 is not an enum value
-			}, std::exception);
-
-			char const* names[] = {"A","B","C"};
-			TestEnum1 values[] = {TestEnum1::A, TestEnum1::B, TestEnum1::C};
-			for (int i = 0; i != Enum<TestEnum1>::NumberOf; ++i)
-			{
-				PR_CHECK(Enum<TestEnum1>::MemberNameA(i), names[i]); // Access names by index
-				PR_CHECK(Enum<TestEnum1>::Member(i), values[i]);     // Access members by index
-			}
-
-			// Enumerate members
-			{
-				int idx = 0;
-				for (auto e : Enum<TestEnum1>::Members())
-				{
-					PR_CHECK(e, Enum<TestEnum1>::Member(idx));
-					PR_CHECK(ToStringA(e), Enum<TestEnum1>::MemberNameA(idx));
-					++idx;
-				}
+				PR_CHECK(e, Enum<TestEnum1>::Member(idx));
+				PR_CHECK(ToStringA(e), Enum<TestEnum1>::MemberNameA(idx));
+				++idx;
 			}
 		}
 	}

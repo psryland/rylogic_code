@@ -10,7 +10,8 @@
 
 namespace pr
 {
-	template <typename T> struct IVec2
+	template <typename T>
+	struct IVec2
 	{
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
@@ -30,13 +31,13 @@ namespace pr
 		explicit IVec2(int x_)
 			:IVec2(x_, x_)
 		{}
-		template <typename T, typename = maths::enable_if_v2<T>> IVec2(T const& v)
+		template <typename V2, typename = maths::enable_if_v2<V2>> IVec2(V2 const& v)
 			:IVec2(x_as<int>(v), y_as<int>(v))
 		{}
-		template <typename T, typename = maths::enable_if_vec_cp<T>> explicit IVec2(T const* v)
+		template <typename CP, typename = maths::enable_if_vec_cp<CP>> explicit IVec2(CP const* v)
 			:IVec2(x_as<int>(v), y_as<int>(v))
 		{}
-		template <typename T, typename = maths::enable_if_v2<T>> IVec2& operator = (T const& rhs)
+		template <typename V2, typename = maths::enable_if_v2<V2>> IVec2& operator = (V2 const& rhs)
 		{
 			x = x_as<int>(rhs);
 			y = y_as<int>(rhs);
@@ -55,137 +56,84 @@ namespace pr
 			return arr[i];
 		}
 	};
-	using iv2 = IVec2<void>;
-	static_assert(maths::is_vec2<iv2>::value, "");
-	static_assert(std::is_pod<iv2>::value, "iv2 must be a pod type");
+	static_assert(maths::is_vec2<IVec2<void>>::value, "");
+	static_assert(std::is_pod<IVec2<void>>::value, "iv2 must be a pod type");
+	template <typename T = void> using iv2_cref = IVec2<T> const&;
 
 	// Define component accessors for pointer types
-	inline int x_cp(iv2 const& v) { return v.x; }
-	inline int y_cp(iv2 const& v) { return v.y; }
-	inline int z_cp(iv2 const&)   { return 0; }
-	inline int w_cp(iv2 const&)   { return 0; }
-
-	#pragma region Constants
-	static iv2 const iv2Zero    = {0, 0};
-	static iv2 const iv2One     = {1, 1};
-	static iv2 const iv2Min     = {+maths::int_min, +maths::int_min};
-	static iv2 const iv2Max     = {+maths::int_max, +maths::int_max};
-	static iv2 const iv2Lowest  = {-maths::int_max, -maths::int_max};
-	static iv2 const iv2XAxis   = {1, 0};
-	static iv2 const iv2YAxis   = {0, 1};
-	#pragma endregion
+	template <typename T> inline int x_cp(iv2_cref<T> v) { return v.x; }
+	template <typename T> inline int y_cp(iv2_cref<T> v) { return v.y; }
+	template <typename T> inline int z_cp(iv2_cref<T>)   { return 0; }
+	template <typename T> inline int w_cp(iv2_cref<T>)   { return 0; }
 
 	#pragma region Operators
-	inline iv2 operator + (iv2 const& vec)
+	template <typename T> inline IVec2<T> operator + (iv2_cref<T> vec)
 	{
 		return vec;
 	}
-	inline iv2 operator - (iv2 const& vec)
+	template <typename T> inline IVec2<T> operator - (iv2_cref<T> vec)
 	{
-		return iv2(-vec.x, -vec.y);
+		return IVec2<T>{-vec.x, -vec.y};
 	}
-	inline iv2& operator *= (iv2& lhs, int rhs)
+	template <typename T> inline IVec2<T> operator * (int lhs, iv2_cref<T> rhs)
 	{
-		lhs.x *= rhs;
-		lhs.y *= rhs;
-		return lhs;
+		return rhs * lhs;
 	}
-	inline iv2& operator /= (iv2& lhs, int rhs)
+	template <typename T> inline IVec2<T> operator * (iv2_cref<T> lhs, int rhs)
+	{
+		return IVec2<T>{lhs.x * rhs, lhs.y * rhs};
+	}
+	template <typename T> inline IVec2<T> operator / (iv2_cref<T> lhs, int rhs)
 	{
 		assert("divide by zero" && rhs != 0);
-		lhs.x /= rhs;
-		lhs.y /= rhs;
-		return lhs;
+		return IVec2<T>{lhs.x / rhs, lhs.y / rhs};
 	}
-	inline iv2& operator %= (iv2& lhs, int rhs)
+	template <typename T> inline IVec2<T> operator % (iv2_cref<T> lhs, int rhs)
 	{
 		assert("divide by zero" && rhs != 0);
-		lhs.x %= rhs;
-		lhs.y %= rhs;
-		return lhs;
+		return IVec2<T>{lhs.x % rhs, lhs.y % rhs};
 	}
-	inline iv2& operator += (iv2& lhs, iv2 const& rhs)
+	template <typename T> inline IVec2<T> operator + (iv2_cref<T> lhs, iv2_cref<T> rhs)
 	{
-		lhs.x += rhs.x;
-		lhs.y += rhs.y;
-		return lhs;
+		return IVec2<T>{lhs.x + rhs.x, lhs.y + rhs.y};
 	}
-	inline iv2& operator -= (iv2& lhs, iv2 const& rhs)
+	template <typename T> inline IVec2<T> operator - (iv2_cref<T> lhs, iv2_cref<T> rhs)
 	{
-		lhs.x -= rhs.x;
-		lhs.y -= rhs.y;
-		return lhs;
+		return IVec2<T>{lhs.x - rhs.x, lhs.y - rhs.y};
 	}
-	inline iv2& operator *= (iv2& lhs, iv2 const& rhs)
+	template <typename T> inline IVec2<T> operator * (iv2_cref<T> lhs, iv2_cref<T> rhs)
 	{
-		lhs.x *= rhs.x;
-		lhs.y *= rhs.y;
-		return lhs;
+		return IVec2<T>{lhs.x * rhs.x, lhs.y * rhs.y};
 	}
-	inline iv2& operator /= (iv2& lhs, iv2 const& rhs)
+	template <typename T> inline IVec2<T> operator / (iv2_cref<T> lhs, iv2_cref<T> rhs)
 	{
 		assert("divide by zero" && !Any2(rhs, IsZero<int>));
-		lhs.x /= rhs.x;
-		lhs.y /= rhs.y;
-		return lhs;
+		return IVec2<T>{lhs.x / rhs.x, lhs.y / rhs.y};
 	}
-	inline iv2& operator %= (iv2& lhs, iv2 const& rhs)
+	template <typename T> inline IVec2<T> operator % (iv2_cref<T> lhs, iv2_cref<T> rhs)
 	{
 		assert("divide by zero" && !Any2(rhs, IsZero<int>));
-		lhs.x %= rhs.x;
-		lhs.y %= rhs.y;
-		return lhs;
+		return IVec2<T>{lhs.x % rhs.x, lhs.y % rhs.y};
 	}
 	#pragma endregion
 
 	#pragma region Functions
 
 	// Dot product: a . b
-	inline int Dot2(iv2 const& a, iv2 const& b)
+	template <typename T> inline int Dot(iv2_cref<T> a, iv2_cref<T> b)
 	{
 		return a.x * b.x + a.y * b.y;
 	}
-	inline int Dot(iv2 const& a, iv2 const& b)
-	{
-		return Dot2(a,b);
-	}
 
-	#pragma endregion
-}
-
-namespace std
-{
-	#pragma region Numeric limits
-	template <> class numeric_limits<pr::iv2>
-	{
-	public:
-		static pr::iv2 min() throw()     { return pr::iv2Min; }
-		static pr::iv2 max() throw()     { return pr::iv2Max; }
-		static pr::iv2 lowest() throw()  { return pr::iv2Lowest; }
-
-		static const bool is_specialized = true;
-		static const bool is_signed = true;
-		static const bool is_integer = true;
-		static const bool is_exact = true;
-		static const bool has_infinity = false;
-		static const bool has_quiet_NaN = false;
-		static const bool has_signaling_NaN = false;
-		static const bool has_denorm_loss = false;
-		static const float_denorm_style has_denorm = denorm_absent;
-		static const int radix = 10;
-	};
 	#pragma endregion
 }
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::maths
 {
-	namespace unittests
+	PRUnitTest(IVector2Tests)
 	{
-		PRUnitTest(pr_maths_ivector2)
-		{
-		}
 	}
 }
 #endif

@@ -94,68 +94,66 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::threads
 {
-	namespace unittests
+	namespace unittests::spinlock
 	{
-		namespace spinlock
+		struct Thing
 		{
-			struct Thing
+			typedef pr::threads::SpinLock SpinLock;
+
+			SpinLock m_flag;
+			int m_count;
+			std::atomic_int m_calls;
+
+			Thing()
+				:m_flag()
+				,m_count()
+				,m_calls()
+			{}
+			void Spam()
 			{
-				typedef pr::threads::SpinLock SpinLock;
+				std::lock_guard<SpinLock> lock(m_flag);
+				m_count = m_count + 1;
+				m_count = m_count - 2;
+				m_count = m_count + 1;
+				++m_calls;
+			}
+		};
+	}
+	PRUnitTest(SpinLockTests)
+	{
+		using namespace unittests::spinlock;
 
-				SpinLock m_flag;
-				int m_count;
-				std::atomic_int m_calls;
+		Thing thing;
+		std::atomic_bool exit(false);
 
-				Thing()
-					:m_flag()
-					,m_count()
-					,m_calls()
-				{}
-				void Spam()
-				{
-					std::lock_guard<SpinLock> lock(m_flag);
-					m_count = m_count + 1;
-					m_count = m_count - 2;
-					m_count = m_count + 1;
-					++m_calls;
-				}
-			};
-		}
-
-		PRUnitTest(pr_spinlock)
+		std::thread thd1([&]
 		{
-			spinlock::Thing thing;
-			std::atomic_bool exit(false);
+			while (!exit)
+				thing.Spam();
+		});
+		std::thread thd2([&]
+		{
+			while (!exit)
+				thing.Spam();
+		});
+		std::thread thd3([&]
+		{
+			while (!exit)
+				thing.Spam();
+		});
 
-			std::thread thd1([&]
-			{
-				while (!exit)
-					thing.Spam();
-			});
-			std::thread thd2([&]
-			{
-				while (!exit)
-					thing.Spam();
-			});
-			std::thread thd3([&]
-			{
-				while (!exit)
-					thing.Spam();
-			});
+		while (thing.m_calls.load() < 100)
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
-			while (thing.m_calls.load() < 100)
-				std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		exit.exchange(true);
+		thd1.join();
+		thd2.join();
+		thd3.join();
 
-			exit.exchange(true);
-			thd1.join();
-			thd2.join();
-			thd3.join();
-
-			PR_CHECK(thing.m_count, 0);
-			PR_CHECK(thing.m_calls >= 100, true);
-		}
+		PR_CHECK(thing.m_count, 0);
+		PR_CHECK(thing.m_calls >= 100, true);
 	}
 }
 #endif

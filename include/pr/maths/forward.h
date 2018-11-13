@@ -93,12 +93,14 @@ namespace pr
 	template <typename T> struct Vec2;
 	template <typename T> struct Vec3;
 	template <typename T> struct Vec4;
+	template <typename T> struct Vec8;
 	template <typename T> struct IVec2;
-	struct IVec4;
-	struct Quat;
-	template <typename T> struct Mat2x2;
-	struct Mat3x4;
-	struct Mat4x4;
+	template <typename T> struct IVec4;
+	template <typename A, typename B> struct Mat2x2;
+	template <typename A, typename B> struct Mat3x4;
+	template <typename A, typename B> struct Mat4x4;
+	template <typename A, typename B> struct Mat6x8;
+	template <typename A, typename B> struct Quat;
 	struct BBox;
 	struct BSphere;
 	struct OBox;
@@ -106,18 +108,6 @@ namespace pr
 	struct Line3;
 	struct ISize;
 	struct Frustum;
-
-	// Maths library build options
-	struct MathsBuildOptions
-	{
-		int PrMathsUseIntrinsics;
-		int PrMathsDirectMath;
-
-		MathsBuildOptions()
-			:PrMathsUseIntrinsics(PR_MATHS_USE_INTRINSICS)
-			,PrMathsDirectMath(PR_MATHS_USE_DIRECTMATH)
-		{}
-	};
 
 	namespace maths
 	{
@@ -136,22 +126,22 @@ namespace pr
 			>::type;
 
 		// The 'is_vec' traits means, "Can be converted to a N component vector"
-		// Specialisations should define 'value_type' and 'len'
 		// If true, 'x_cp', 'y_cp', 'z_cp', 'w_cp' is expected to be defined for that type.
-		// Notes:
-		//  Don't specialise this for scalars because that could lead to accidental use of vectors in scalar functions.
+		// Don't specialise this for scalars because that could lead to accidental use of vectors in scalar functions.
 		template <typename T> struct is_vec :std::false_type
 		{
+			// The type of the x,y,z,... elements of the vector
 			using elem_type = void;
+			// The type of the lowest level elements
 			using cp_type = void;
 			static int const dim = 0;
 		};
 		template <typename T> struct is_vec2 :std::integral_constant<bool, is_vec<T>::dim >= 2> {};
 		template <typename T> struct is_vec3 :std::integral_constant<bool, is_vec<T>::dim >= 3> {};
 		template <typename T> struct is_vec4 :std::integral_constant<bool, is_vec<T>::dim >= 4> {};
-		template <typename T> struct is_mat2 :std::integral_constant<bool, is_vec2<T>::value && is_vec2<typename is_vec<T>::elem_type>::value> {};
-		template <typename T> struct is_mat3 :std::integral_constant<bool, is_vec3<T>::value && is_vec4<typename is_vec<T>::elem_type>::value> {};
-		template <typename T> struct is_mat4 :std::integral_constant<bool, is_vec4<T>::value && is_vec4<typename is_vec<T>::elem_type>::value> {};
+		template <typename T> struct is_mat2 :std::integral_constant<bool, is_vec<T>::dim == 2 && is_vec<typename is_vec<T>::elem_type>::value> {};
+		template <typename T> struct is_mat3 :std::integral_constant<bool, is_vec<T>::dim == 3 && is_vec<typename is_vec<T>::elem_type>::value> {};
+		template <typename T> struct is_mat4 :std::integral_constant<bool, is_vec<T>::dim == 4 && is_vec<typename is_vec<T>::elem_type>::value> {};
 
 		// Helper meta functions
 		template <typename T> using enable_if_enum = typename std::enable_if<std::is_enum<T>::value>::type;
@@ -199,37 +189,49 @@ namespace pr
 			using cp_type = float;
 			static int const dim = 4;
 		};
+		template <typename T> struct is_vec<Vec8<T>> :std::true_type
+		{
+			using elem_type = float;
+			using cp_type = float;
+			static int const dim = 8;
+		};
 		template <typename T> struct is_vec<IVec2<T>> :std::true_type
 		{
 			using elem_type = int;
 			using cp_type = int;
 			static int const dim = 2;
 		};
-		template <> struct is_vec<IVec4> :std::true_type
+		template <typename T> struct is_vec<IVec4<T>> :std::true_type
 		{
 			using elem_type = int;
 			using cp_type = int;
 			static int const dim = 4;
 		};
-		template <typename T> struct is_vec<Mat2x2<T>> :std::true_type
+		template <typename A, typename B> struct is_vec<Mat2x2<A,B>> :std::true_type
 		{
 			using elem_type = Vec2<void>;
 			using cp_type = float;
 			static int const dim = 2;
 		};
-		template <> struct is_vec<Mat3x4> :std::true_type
+		template <typename A, typename B> struct is_vec<Mat3x4<A,B>> :std::true_type
 		{
 			using elem_type = Vec4<void>;
 			using cp_type = float;
 			static int const dim = 3;
 		};
-		template <> struct is_vec<Mat4x4> :std::true_type
+		template <typename A, typename B> struct is_vec<Mat4x4<A,B>> :std::true_type
 		{
 			using elem_type = Vec4<void>;
 			using cp_type = float;
 			static int const dim = 4;
 		};
-		template <> struct is_vec<Quat> :std::true_type
+		template <typename A, typename B> struct is_vec<Mat6x8<A,B>> :std::true_type
+		{
+			using elem_type = Vec8<void>;
+			using cp_type = float;
+			static int const dim = 6;
+		};
+		template <typename A, typename B> struct is_vec<Quat<A,B>> :std::true_type
 		{
 			using elem_type = float;
 			using cp_type = float;
@@ -238,9 +240,34 @@ namespace pr
 		#pragma endregion
 	}
 
+	// Common vector types
+	using v2 = Vec2<void>;
+	using v3 = Vec3<void>;
+	using v4 = Vec4<void>;
+	using v8 = Vec8<void>;
+	using m2x2 = Mat2x2<void,void>;
+	using m3x4 = Mat3x4<void,void>;
+	using m4x4 = Mat4x4<void,void>;
+	using m6x8 = Mat6x8<void,void>;
+	using quat = Quat<void,void>;
+	using iv2 = IVec2<void>;
+	using iv4 = IVec4<void>;
+
 	// Default implementations of the component accessors
 	template <typename T, typename = maths::enable_if_v2<T>> inline typename maths::is_vec<T>::elem_type x_cp(T const& v) { return v.x; }
 	template <typename T, typename = maths::enable_if_v2<T>> inline typename maths::is_vec<T>::elem_type y_cp(T const& v) { return v.y; }
 	template <typename T, typename = maths::enable_if_v3<T>> inline typename maths::is_vec<T>::elem_type z_cp(T const& v) { return v.z; }
 	template <typename T, typename = maths::enable_if_v4<T>> inline typename maths::is_vec<T>::elem_type w_cp(T const& v) { return v.w; }
+
+	// Maths library build options
+	struct MathsBuildOptions
+	{
+		int PrMathsUseIntrinsics;
+		int PrMathsDirectMath;
+
+		MathsBuildOptions()
+			:PrMathsUseIntrinsics(PR_MATHS_USE_INTRINSICS)
+			,PrMathsDirectMath(PR_MATHS_USE_DIRECTMATH)
+		{}
+	};
 }

@@ -1668,7 +1668,7 @@ namespace CoinFlip
 			}
 			public override void MouseDown(MouseEventArgs e)
 			{
-				if (m_hit_result.Zone == ChartControl.HitTestResult.EZone.Chart)
+				if (m_hit_result.Zone == ChartControl.EZone.Chart)
 				{
 					// Create the indicator on mouse down
 					Indy = m_chart_ui.Indicators.Add2(m_factory(m_hit_result));

@@ -15,12 +15,13 @@
 #include <limits>
 #include <utility>
 
-namespace pr
+namespace pr::maths
 {
 	// Running Average
 	// 'Type' is typically a floating point type, although this does
 	// work for any type that defines the necessary operators.
-	template <typename Type = double, typename Scaler = double> class Avr
+	template <typename Type = double, typename Scaler = double>
+	class Avr
 	{
 		// let: D(k) = X(k) - avr(k-1)           => X(k) = D(k) + avr(k-1)
 		//  avr(k-1) = SUM{X(k-1)} / (k-1)       => SUM{X(k-1)} = (k-1)*avr(k-1)

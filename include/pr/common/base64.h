@@ -119,79 +119,76 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::common
 {
-	namespace unittests
+	PRUnitTest(Base64Tests)
 	{
-		PRUnitTest(pr_common_base64)
-		{
-			using namespace pr::base64;
-			unsigned char src[1024], dst[1024];
-			unsigned int src_length, dst_length;
-			unsigned int len, dlen;
+		using namespace pr::base64;
+		unsigned char src[1024], dst[1024];
+		unsigned int src_length, dst_length;
+		unsigned int len, dlen;
 
-			// zero length data
-			len = EncodeSize(0);                          PR_CHECK(len        ,0U);
-			Encode("", 0, dst, dst_length);               PR_CHECK(dst_length ,0U);
-			Decode(dst, dst_length, src, src_length);     PR_CHECK(src_length ,0U);
+		// zero length data
+		len = EncodeSize(0);                          PR_CHECK(len        ,0U);
+		Encode("", 0, dst, dst_length);               PR_CHECK(dst_length ,0U);
+		Decode(dst, dst_length, src, src_length);     PR_CHECK(src_length ,0U);
 
-			// one input char
-			len = EncodeSize(1);                          PR_CHECK(len ,4U);
-			Encode("A", 1, dst, dst_length);              PR_CHECK(dst_length == 4 && dst[0]=='Q' && dst[1]=='Q' && dst[2]=='=' && dst[3]=='=', true);
-			Decode(dst, dst_length, src, src_length);     PR_CHECK(src_length == 1 && src[0]=='A', true);
+		// one input char
+		len = EncodeSize(1);                          PR_CHECK(len ,4U);
+		Encode("A", 1, dst, dst_length);              PR_CHECK(dst_length == 4 && dst[0]=='Q' && dst[1]=='Q' && dst[2]=='=' && dst[3]=='=', true);
+		Decode(dst, dst_length, src, src_length);     PR_CHECK(src_length == 1 && src[0]=='A', true);
 
-			// two chars
-			len = EncodeSize(2);                          PR_CHECK(len ,4U);
-			Encode("AB", 2, dst, dst_length);             PR_CHECK(dst_length == 4 && dst[0]=='Q' && dst[1]=='U' && dst[2]=='I' && dst[3]=='=', true);
-			Decode(dst, dst_length, src, src_length);     PR_CHECK(src_length == 2 && src[0]=='A' && src[1]=='B', true);
+		// two chars
+		len = EncodeSize(2);                          PR_CHECK(len ,4U);
+		Encode("AB", 2, dst, dst_length);             PR_CHECK(dst_length == 4 && dst[0]=='Q' && dst[1]=='U' && dst[2]=='I' && dst[3]=='=', true);
+		Decode(dst, dst_length, src, src_length);     PR_CHECK(src_length == 2 && src[0]=='A' && src[1]=='B', true);
 
-			// three chars
-			len = EncodeSize(3);                          PR_CHECK(len ,4U);
-			Encode("ABC", 3, dst, dst_length);            PR_CHECK(dst_length == 4 && dst[0]=='Q' && dst[1]=='U' && dst[2]=='J' && dst[3]=='D', true);
-			Decode(dst, dst_length, src, src_length);     PR_CHECK(src_length == 3 && src[0]=='A' && src[1]=='B' && src[2]=='C', true);
+		// three chars
+		len = EncodeSize(3);                          PR_CHECK(len ,4U);
+		Encode("ABC", 3, dst, dst_length);            PR_CHECK(dst_length == 4 && dst[0]=='Q' && dst[1]=='U' && dst[2]=='J' && dst[3]=='D', true);
+		Decode(dst, dst_length, src, src_length);     PR_CHECK(src_length == 3 && src[0]=='A' && src[1]=='B' && src[2]=='C', true);
 
-			// four chars
-			len = EncodeSize(4);                          PR_CHECK(len ,8U);
-			Encode("ABCD", 4, dst, dst_length);           PR_CHECK(dst_length == 8 && dst[0]=='Q' && dst[1]=='U' && dst[2]=='J' && dst[3]=='D' && dst[4]=='R' && dst[5]=='A', true);
-			Decode(dst, dst_length, src, src_length);     PR_CHECK(src_length == 4 && src[0]=='A' && src[1]=='B' && src[2]=='C' && src[3]=='D', true);
+		// four chars
+		len = EncodeSize(4);                          PR_CHECK(len ,8U);
+		Encode("ABCD", 4, dst, dst_length);           PR_CHECK(dst_length == 8 && dst[0]=='Q' && dst[1]=='U' && dst[2]=='J' && dst[3]=='D' && dst[4]=='R' && dst[5]=='A', true);
+		Decode(dst, dst_length, src, src_length);     PR_CHECK(src_length == 4 && src[0]=='A' && src[1]=='B' && src[2]=='C' && src[3]=='D', true);
 
-			// All bytes from 0 to ff
-			unsigned char sbuf[256]; for (int i = 0; i != 256; ++i) sbuf[i] = (unsigned char)i;
-			unsigned char dbuf[] =	"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIj"
-									"JCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZH"
-									"SElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWpr"
-									"bG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6P"
-									"kJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKz"
-									"tLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX"
-									"2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7"
-									"/P3+/w==";
-			unsigned int ssize = sizeof(sbuf), dsize = sizeof(dbuf) - 1;
+		// All bytes from 0 to ff
+		unsigned char sbuf[256]; for (int i = 0; i != 256; ++i) sbuf[i] = (unsigned char)i;
+		unsigned char dbuf[] =	"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIj"
+								"JCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZH"
+								"SElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWpr"
+								"bG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6P"
+								"kJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKz"
+								"tLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX"
+								"2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7"
+								"/P3+/w==";
+		unsigned int ssize = sizeof(sbuf), dsize = sizeof(dbuf) - 1;
 
-			len = EncodeSize(ssize);
-			PR_CHECK(len, dsize);
+		len = EncodeSize(ssize);
+		PR_CHECK(len, dsize);
 		
-			Encode(sbuf, ssize, dst, dst_length);
-			PR_CHECK(dst_length ,dsize);
-			for (size_t i = 0; i != dsize; ++i)
-				PR_CHECK(dst[i] ,dbuf[i]);
+		Encode(sbuf, ssize, dst, dst_length);
+		PR_CHECK(dst_length ,dsize);
+		for (size_t i = 0; i != dsize; ++i)
+			PR_CHECK(dst[i] ,dbuf[i]);
 		
-			dlen = DecodeSize(len);
-			PR_CHECK(dlen < sizeof(src), true);
-			Decode(dst, dst_length, src, src_length);
-			PR_CHECK(src_length ,ssize);
-			for (size_t i = 0; i != ssize; ++i)
-				PR_CHECK(src[i] ,sbuf[i]);
+		dlen = DecodeSize(len);
+		PR_CHECK(dlen < sizeof(src), true);
+		Decode(dst, dst_length, src, src_length);
+		PR_CHECK(src_length ,ssize);
+		for (size_t i = 0; i != ssize; ++i)
+			PR_CHECK(src[i] ,sbuf[i]);
 
-			// Random binary data
-			for (size_t i = 0; i != ssize; ++i)
-				sbuf[i] = (unsigned char)(::rand() & 0xFF);
+		// Random binary data
+		for (size_t i = 0; i != ssize; ++i)
+			sbuf[i] = (unsigned char)(::rand() & 0xFF);
 
-			Encode(sbuf, ssize, dst, dst_length);
-			Decode(dst, dst_length, src, src_length);
-			PR_CHECK(src_length ,ssize);
-			for (size_t i = 0; i != ssize; ++i)
-				PR_CHECK(src[i] ,sbuf[i]);
-		}
+		Encode(sbuf, ssize, dst, dst_length);
+		Decode(dst, dst_length, src, src_length);
+		PR_CHECK(src_length ,ssize);
+		for (size_t i = 0; i != ssize; ++i)
+			PR_CHECK(src[i] ,sbuf[i]);
 	}
 }
 #endif

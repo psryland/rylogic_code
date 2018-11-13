@@ -21,7 +21,7 @@ namespace pr
 			// TShape[m_num_shapes]
 
 			ShapeArray() = default;
-			ShapeArray(size_t num_shapes, size_t size_in_bytes, m4x4_cref shape_to_model = m4x4Identity, MaterialId material_id = 0, Shape::EFlags flags = Shape::EFlags::None)
+			ShapeArray(size_t num_shapes, size_t size_in_bytes, m4_cref<> shape_to_model = m4x4Identity, MaterialId material_id = 0, Shape::EFlags flags = Shape::EFlags::None)
 				:m_base(EShape::Array, size_in_bytes, shape_to_model, material_id, flags)
 				,m_num_shapes(num_shapes)
 			{

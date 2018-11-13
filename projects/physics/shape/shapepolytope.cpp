@@ -33,7 +33,7 @@ float pr::ph::CalcVolume(ShapePolytope const& shape)
 		v4 const& a = shape.vertex(f->m_index[0]);
 		v4 const& b	= shape.vertex(f->m_index[1]);
 		v4 const& c = shape.vertex(f->m_index[2]);
-		volume += Triple3(a, b, c); // Triple product is volume x 6
+		volume += Triple(a, b, c); // Triple product is volume x 6
 	}
 	if( volume < maths::tiny )
 	{
@@ -53,7 +53,7 @@ v4 pr::ph::CalcCentreOfMass(ShapePolytope const& shape)
 		v4 const& a = shape.vertex(f->m_index[0]);
 		v4 const& b = shape.vertex(f->m_index[1]);
 		v4 const& c = shape.vertex(f->m_index[2]);
-		float vol_x6 = Triple3(a, b, c); // Triple product is volume x 6
+		float vol_x6 = Triple(a, b, c); // Triple product is volume x 6
 		centre_of_mass	+= vol_x6 * (a + b + c);	// Divide by 4 at end
 		volume			+= vol_x6;
 	}
@@ -103,7 +103,7 @@ m3x4 pr::ph::CalcInertiaTensor(ShapePolytope const& shape)
 		v4 const& a = shape.vertex(f->m_index[0]);
 		v4 const& b = shape.vertex(f->m_index[1]);
 		v4 const& c = shape.vertex(f->m_index[2]);
-		float vol_x6 = Triple3(a, b, c); // Triple product is volume x 6
+		float vol_x6 = Triple(a, b, c); // Triple product is volume x 6
 		volume += vol_x6;
 		for( int i=0, j=1, k=2; i!=3; ++i, (++j)%=3, (++k)%=3 )
 		{
@@ -401,7 +401,7 @@ void pr::ph::GenerateFaces(ShapePolytope const& shape, uint* faces, uint* faces_
 			v4 const& c = shape.vertex(*(f + 2));
 
 			// If 'v' is in front of this face add its edges to the edge stack and remove the face
-			if( Triple3(v - a, b - a, c - a) >= 0.0f )
+			if( Triple(v - a, b - a, c - a) >= 0.0f )
 			{
 				// Add the edges of this face to the edge stack (remove duplicates)
 				Edge ed = {*(f + 2), *(f + 0)};

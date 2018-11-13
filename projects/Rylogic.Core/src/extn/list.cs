@@ -157,7 +157,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Add a range of elements to the list</summary>
-		public static IList<T> AddRange<T>(this IList<T> list, IEnumerable<T> items)
+		public static ICollection<T> AddRange<T>(this ICollection<T> list, IEnumerable<T> items)
 		{
 			foreach (var i in items)
 				list.Add(i);
@@ -171,7 +171,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Reset the list with the given items. Equivalent to Clear() followed by AddRange()</summary>
-		public static IList<T> Assign<T>(this IList<T> list, IEnumerable<T> items)
+		public static ICollection<T> Assign<T>(this ICollection<T> list, IEnumerable<T> items)
 		{
 			list.Clear();
 			return list.AddRange(items);

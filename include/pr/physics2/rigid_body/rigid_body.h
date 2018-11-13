@@ -13,16 +13,17 @@ namespace pr
 	{
 		struct RigidBody
 		{
-
 		protected:
 
 			// World space position/orientation of the rigid bodies' centre of mass
 			m4x4 m_o2w;
 
 			// Spatial momentum
-			v8m m_os_momentum;
+			v8f m_os_momentum;
 
-			// The external forces and torques applied to this body (in object space)
+			// The external forces and torques applied to this body (in object space).
+			// This accumulator is reset to zero after each physics step, so forces that
+			// should be constant need to be applied each frame.
 			v8f m_os_force;
 
 			// Mass properties
@@ -38,7 +39,10 @@ namespace pr
 		public:
 
 			// Construct the rigid body with a collision shape
-			template <typename TShape, typename = enable_if_shape<TShape>> RigidBody(TShape const* shape)
+			// Inertia is not automatically derived from the collision shape,
+			// that is left to the caller.
+			template <typename TShape, typename = enable_if_shape<TShape>>
+			RigidBody(TShape const* shape)
 				:m_o2w(m4x4Identity)
 				,m_os_momentum(v4Zero, v4Zero)
 				,m_os_force(v4Zero, v4Zero)
@@ -48,6 +52,13 @@ namespace pr
 				,m_mass_inv(1.0f / m_mass)
 				,m_shape(&shape->m_base)
 			{}
+
+			// Reset the state of the body
+			void UpdateDerivedState()
+			{
+			//	m_ws_bbox = rb.ObjectToWorld() * rb.BBoxOS();
+			//	m_ws_inv_inertia_tensor = InvInertiaTensorWS(rb.Orientation(), rb.m_os_inv_inertia_tensor); //Iw = (o2w * Io * w2o)^-1  =  w2o^-1 * Io^-1 * o2w^-1  =  o2w * Io^-1 * w2o
+			}
 
 			// Get/Set the body object to world transform
 			m4x4 O2W() const
@@ -68,21 +79,21 @@ namespace pr
 			}
 
 			// Get/Set the momentum of the rigid body (in object space)
-			v8m MomentumOS() const
+			v8f MomentumOS() const
 			{
 				return m_os_momentum;
 			}
-			void MomentumOS(v8m const& os_momentum)
+			void MomentumOS(v8f const& os_momentum)
 			{
 				m_os_momentum = os_momentum;
 			}
 
 			// Get/Set the momentum of the rigid body (in world space)
-			v8m MomentumWS() const
+			v8f MomentumWS() const
 			{
 				return m_o2w * MomentumOS();
 			}
-			void MomentumWS(v8m const& ws_momentum)
+			void MomentumWS(v8f const& ws_momentum)
 			{
 				MomentumOS(InvertFast(m_o2w) * ws_momentum);
 			}
@@ -128,7 +139,7 @@ namespace pr
 			void ApplyForceWS(v4 const& force, v4 const& torque, v4 const& at)
 			{
 				auto w2o = InvertFast(m_o2w);
-				ApplyForceOS(w2o * force, w2o * torque, w2o * at);
+				ApplyForceOS(w2o * force, w2o * torque, w2o * (at - m_o2w.pos));
 			}
 
 			// Get the object space inertia
@@ -150,7 +161,7 @@ namespace pr
 			}
 
 			// Returns the object space spatial inertia at the centre of mass
-			m6x8_m2f SpatialInertiaInvWS() const
+			m6x8fm SpatialInertiaInvWS() const
 			{
 				throw std::exception("not implemented");
 			}

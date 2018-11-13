@@ -32,7 +32,7 @@ namespace pr
 			auto r2l_abs = Abs(r2l.rot) + m3x4(maths::tiny);
 
 			// Lambda for returning a separating axis with the correct sign
-			auto sep_axis = [&](v4_cref sa) { return Sign(Dot(r2l.pos, sa)) * sa; };
+			auto sep_axis = [&](v4_cref<> sa) { return Sign(Dot(r2l.pos, sa)) * sa; };
 
 			float ra, rb, sp;
 

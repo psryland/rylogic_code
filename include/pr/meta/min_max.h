@@ -42,34 +42,31 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::meta
 {
-	namespace unittests
+	PRUnitTest(MinMaxTests)
 	{
-		PRUnitTest(pr_meta_min_max)
+		static_assert(pr::meta::min<int,+5,+2>::value == +2, "");
+		static_assert(pr::meta::min<int,-5,+2>::value == -5, "");
+		static_assert(pr::meta::min<int,+5,-2>::value == -2, "");
+		static_assert(pr::meta::min<int,-5,-2>::value == -5, "");
+
+		static_assert(pr::meta::max<int,+5,+2>::value == +5, "");
+		static_assert(pr::meta::max<int,-5,+2>::value == +2, "");
+		static_assert(pr::meta::max<int,+5,-2>::value == +5, "");
+		static_assert(pr::meta::max<int,-5,-2>::value == -2, "");
+
+		static_assert(pr::meta::max<int,-2,3,-1,4>::value == 4, "");
+		static_assert(pr::meta::min<char,-2,3,-1,4>::value == -2, "");
+		static_assert(pr::meta::max<int,-2>::value == -2, "");
+		static_assert(pr::meta::min<char,-2>::value == -2, "");
+
+		enum class EE :__int64
 		{
-			static_assert(pr::meta::min<int,+5,+2>::value == +2, "");
-			static_assert(pr::meta::min<int,-5,+2>::value == -5, "");
-			static_assert(pr::meta::min<int,+5,-2>::value == -2, "");
-			static_assert(pr::meta::min<int,-5,-2>::value == -5, "");
-
-			static_assert(pr::meta::max<int,+5,+2>::value == +5, "");
-			static_assert(pr::meta::max<int,-5,+2>::value == +2, "");
-			static_assert(pr::meta::max<int,+5,-2>::value == +5, "");
-			static_assert(pr::meta::max<int,-5,-2>::value == -2, "");
-
-			static_assert(pr::meta::max<int,-2,3,-1,4>::value == 4, "");
-			static_assert(pr::meta::min<char,-2,3,-1,4>::value == -2, "");
-			static_assert(pr::meta::max<int,-2>::value == -2, "");
-			static_assert(pr::meta::min<char,-2>::value == -2, "");
-
-			enum class EE :__int64
-			{
-				A = 0x10000000000LL,
-				B = -0x10000000000LL,
-			};
-			static_assert(pr::meta::max<EE, EE::A, EE::B>::value == EE::A, "");
-		}
+			A = 0x10000000000LL,
+			B = -0x10000000000LL,
+		};
+		static_assert(pr::meta::max<EE, EE::A, EE::B>::value == EE::A, "");
 	}
 }
 #endif

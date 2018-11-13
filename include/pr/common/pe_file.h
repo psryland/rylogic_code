@@ -209,19 +209,15 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-
-namespace pr
+namespace pr::common
 {
-	namespace unittests
+	PRUnitTest(PeFileTests)
 	{
-		PRUnitTest(pr_common_pefile)
-		{
-			TCHAR name[256];
-			GetModuleFileName(nullptr, name, _countof(name));
-			PEFile file(name, true);
-			auto hdr = file.SectionHeader(".text");
-			PR_CHECK(_stricmp((char const*)hdr->Name, ".text") == 0, true);
-		}
+		TCHAR name[256];
+		GetModuleFileName(nullptr, name, _countof(name));
+		PEFile file(name, true);
+		auto hdr = file.SectionHeader(".text");
+		PR_CHECK(_stricmp((char const*)hdr->Name, ".text") == 0, true);
 	}
 }
 #endif

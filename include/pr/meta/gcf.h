@@ -1,5 +1,4 @@
-#ifndef PR_META_GCF_H
-#define PR_META_GCF_H
+#pragma once
 
 #include "pr/meta/abs.h"
 #include "pr/meta/min_max.h"
@@ -28,23 +27,20 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::meta
 {
-	namespace unittests
+	PRUnitTest(GcfTests)
 	{
-		PRUnitTest(pr_meta_gcf)
-		{
-			static_assert(pr::meta::gcf<int,+20,+12>::value == +4, "");
-			static_assert(pr::meta::gcf<int,+20,-12>::value == +4, "");
-			static_assert(pr::meta::gcf<int,-20,+12>::value == +4, "");
-			static_assert(pr::meta::gcf<int,-20,-12>::value == +4, "");
+		static_assert(pr::meta::gcf<int,+20,+12>::value == +4, "");
+		static_assert(pr::meta::gcf<int,+20,-12>::value == +4, "");
+		static_assert(pr::meta::gcf<int,-20,+12>::value == +4, "");
+		static_assert(pr::meta::gcf<int,-20,-12>::value == +4, "");
 
-			static_assert(pr::meta::gcf<int,+12,+20>::value == +4, "");
-			static_assert(pr::meta::gcf<int,-12,+20>::value == +4, "");
-			static_assert(pr::meta::gcf<int,+12,-20>::value == +4, "");
-			static_assert(pr::meta::gcf<int,-12,-20>::value == +4, "");
-		}
+		static_assert(pr::meta::gcf<int,+12,+20>::value == +4, "");
+		static_assert(pr::meta::gcf<int,-12,+20>::value == +4, "");
+		static_assert(pr::meta::gcf<int,+12,-20>::value == +4, "");
+		static_assert(pr::meta::gcf<int,-12,-20>::value == +4, "");
 	}
 }
 #endif
-#endif
+

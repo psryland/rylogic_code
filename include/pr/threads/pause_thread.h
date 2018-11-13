@@ -154,67 +154,64 @@ namespace pr
 #include "pr/common/unittests.h"
 #include <atomic>
 #include "pr/threads/name_thread.h"
-
-namespace pr
+namespace pr::threads
 {
-	namespace unittests
+	namespace unittests::threads
 	{
-		namespace threads
+		struct PauseTestWorker :private PauseThread
 		{
-			struct PauseTestWorker :private pr::threads::PauseThread
+			std::atomic_bool m_exit_signalled;
+			std::atomic_int m_count;
+
+			PauseTestWorker()
+				:m_exit_signalled()
+				,m_count()
+			{}
+
+			using PauseThread::Pause;
+			using PauseThread::IsPaused;
+
+			void Main()
 			{
-				std::atomic_bool m_exit_signalled;
-				std::atomic_int m_count;
-
-				PauseTestWorker()
-					:m_exit_signalled()
-					,m_count()
-				{}
-
-				using PauseThread::Pause;
-				using PauseThread::IsPaused;
-
-				void Main()
-				{
-					pr::threads::SetCurrentThreadName("PauseTestWorker");
-					for (;!m_exit_signalled && TestPaused(); ++m_count)
-						std::this_thread::yield();
-				}
-			};
-		}
-
-		PRUnitTest(pr_threads_pause_thread)
+				pr::threads::SetCurrentThreadName("PauseTestWorker");
+				for (;!m_exit_signalled && TestPaused(); ++m_count)
+					std::this_thread::yield();
+			}
+		};
+	}
+	PRUnitTest(PauseThreadTests)
+	{
+		using namespace unittests::threads;
+		
+		PauseTestWorker worker;
+		std::thread thread([&]
 		{
-			pr::unittests::threads::PauseTestWorker worker;
-			std::thread thread([&]
-			{
-				worker.Main();
-			});
+			worker.Main();
+		});
 
-			PR_CHECK(thread.joinable(), true);
-			PR_CHECK(worker.IsPaused(), false);
+		PR_CHECK(thread.joinable(), true);
+		PR_CHECK(worker.IsPaused(), false);
 
-			worker.Pause(true);
+		worker.Pause(true);
 
-			PR_CHECK(worker.IsPaused(), true);
+		PR_CHECK(worker.IsPaused(), true);
 
-			int count = worker.m_count;
-			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		int count = worker.m_count;
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
-			PR_CHECK(worker.IsPaused(), true);
-			PR_CHECK(worker.m_count, count);
+		PR_CHECK(worker.IsPaused(), true);
+		PR_CHECK(worker.m_count, count);
 
-			worker.Pause(false);
+		worker.Pause(false);
 
-			PR_CHECK(worker.IsPaused(), false);
+		PR_CHECK(worker.IsPaused(), false);
 
-			for (;worker.m_count == count; std::this_thread::yield()) {}
+		for (;worker.m_count == count; std::this_thread::yield()) {}
 
-			PR_CHECK(worker.m_count > count, true);
+		PR_CHECK(worker.m_count > count, true);
 
-			worker.m_exit_signalled = true;
-			thread.join();
-		}
+		worker.m_exit_signalled = true;
+		thread.join();
 	}
 }
 #endif

@@ -209,93 +209,88 @@
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-
-namespace pr
+namespace pr::common
 {
-	namespace unittests
+	namespace unittests::flag_enum
 	{
-		namespace flag_enum
+		enum class NotFlags
 		{
-			enum class NotFlags
-			{
-				One   = 1,
-				Two   = 2,
-			};
-			static_assert(has_bitwise_operators_allowed<NotFlags>::value == false, "");
+			One   = 1,
+			Two   = 2,
+		};
+		static_assert(has_bitwise_operators_allowed<NotFlags>::value == false, "");
 			
-			enum class Flags
-			{
-				One   = 1 << 0,
-				Two   = 1 << 1,
-				_bitwise_operators_allowed,
-			};
-			static_assert(has_bitwise_operators_allowed<Flags>::value == true, "");
-
-			enum class Numbers
-			{
-				Zero     = 0,
-				Two      = 2,
-				One      = 1,
-				Six      = 6,
-				Three    = 3,
-				MinusTwo = -2,
-
-				_arithmetic_operators_allowed,
-			};
-			static_assert(has_arithmetic_operators_allowed<Numbers>::value == true, "");
-		}
-
-		PRUnitTest(pr_macros_flags_enum)
+		enum class Flags
 		{
-			using namespace pr::unittests::flag_enum;
+			One   = 1 << 0,
+			Two   = 1 << 1,
+			_bitwise_operators_allowed,
+		};
+		static_assert(has_bitwise_operators_allowed<Flags>::value == true, "");
 
-			{// Bitwise
-				using Enum = Flags;
-				//using Enum = NotFlags; // Uncomment to test not-compiling-ness
+		enum class Numbers
+		{
+			Zero     = 0,
+			Two      = 2,
+			One      = 1,
+			Six      = 6,
+			Three    = 3,
+			MinusTwo = -2,
 
-				Enum a =  Enum::One | Enum::Two;
-				Enum b =  Enum::One & Enum::Two;
-				Enum c =  Enum::One ^ Enum::Two;
-				Enum f = ~Enum::One;
+			_arithmetic_operators_allowed,
+		};
+		static_assert(has_arithmetic_operators_allowed<Numbers>::value == true, "");
+	}
+	PRUnitTest(FlagsEnumTests)
+	{
+		using namespace unittests::flag_enum;
 
-				PR_CHECK((int)a, 3);
-				PR_CHECK((int)b, 0);
-				PR_CHECK((int)c, 3);
-				PR_CHECK((int)f, -2);
+		{// Bitwise
+			using Enum = Flags;
+			//using Enum = NotFlags; // Uncomment to test not-compiling-ness
 
-				a |= Enum::Two;
-				b &= Enum::Two;
-				c ^= Enum::Two;
+			Enum a =  Enum::One | Enum::Two;
+			Enum b =  Enum::One & Enum::Two;
+			Enum c =  Enum::One ^ Enum::Two;
+			Enum f = ~Enum::One;
 
-				PR_CHECK((int)a, 3);
-				PR_CHECK((int)b, 0);
-				PR_CHECK((int)c, 1);
-			}
+			PR_CHECK((int)a, 3);
+			PR_CHECK((int)b, 0);
+			PR_CHECK((int)c, 3);
+			PR_CHECK((int)f, -2);
 
-			// Doesn't work for some weird reason :(
-			#define PR_ENABLE_ENUM_ARITHMETIC_OPERATORS 0
-			#if PR_ENABLE_ENUM_ARITHMETIC_OPERATORS 
-			{// Arithmetic
-				using Enum = Numbers;
+			a |= Enum::Two;
+			b &= Enum::Two;
+			c ^= Enum::Two;
 
-				PR_CHECK(+Enum::One == Enum::One, true);
-				PR_CHECK(-Enum::Two == Enum::MinusTwo, true);
-
-				PR_CHECK(Enum::One + Enum::Two == Enum::Three, true);
-				PR_CHECK(Enum::Six - Enum::Three == Enum::Three, true);
-				PR_CHECK(Enum::Two * Enum::Three == Enum::Six, true);
-				PR_CHECK(Enum::Six / Enum::Two == Enum::Three, true);
-
-				PR_CHECK(-2 + Enum::Three == Enum::One, true);
-				PR_CHECK(Enum::Six - 5 == Enum::One, true);
-				PR_CHECK(1 - Enum::Zero == Enum::One, true);
-				PR_CHECK(Enum::MinusTwo * -3 == Enum::Six, true);
-				PR_CHECK(-1 * Enum::Two == Enum::MinusTwo, true);
-				PR_CHECK(Enum::Two / 2 == Enum::One, true);
-				PR_CHECK(6 / Enum::Two == Enum::Three, true);
-			}
-			#endif
+			PR_CHECK((int)a, 3);
+			PR_CHECK((int)b, 0);
+			PR_CHECK((int)c, 1);
 		}
+
+		// Doesn't work for some weird reason :(
+		#define PR_ENABLE_ENUM_ARITHMETIC_OPERATORS 0
+		#if PR_ENABLE_ENUM_ARITHMETIC_OPERATORS 
+		{// Arithmetic
+			using Enum = Numbers;
+
+			PR_CHECK(+Enum::One == Enum::One, true);
+			PR_CHECK(-Enum::Two == Enum::MinusTwo, true);
+
+			PR_CHECK(Enum::One + Enum::Two == Enum::Three, true);
+			PR_CHECK(Enum::Six - Enum::Three == Enum::Three, true);
+			PR_CHECK(Enum::Two * Enum::Three == Enum::Six, true);
+			PR_CHECK(Enum::Six / Enum::Two == Enum::Three, true);
+
+			PR_CHECK(-2 + Enum::Three == Enum::One, true);
+			PR_CHECK(Enum::Six - 5 == Enum::One, true);
+			PR_CHECK(1 - Enum::Zero == Enum::One, true);
+			PR_CHECK(Enum::MinusTwo * -3 == Enum::Six, true);
+			PR_CHECK(-1 * Enum::Two == Enum::MinusTwo, true);
+			PR_CHECK(Enum::Two / 2 == Enum::One, true);
+			PR_CHECK(6 / Enum::Two == Enum::Three, true);
+		}
+		#endif
 	}
 }
 #endif

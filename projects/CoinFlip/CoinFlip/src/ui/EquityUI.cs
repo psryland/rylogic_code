@@ -401,7 +401,7 @@ namespace CoinFlip
 							using (var sym_table = series.Lock())
 							{
 								// Merge the data sets
-								sum = Enumerable_.ZipDistinct(sum, sym_table.Data,
+								sum = Enumerable_.ZipDistinct(sum, sym_table,
 									new ChartDataSeries.Pt(0.0f,0.0f),
 									(l,r) => new ChartDataSeries.Pt(r.xf, l.yf + r.yf),
 									(l,r) => l.xf.CompareTo(r.xf))
@@ -410,7 +410,7 @@ namespace CoinFlip
 						}
 						var nett = equity["Nett"];
 						using (var nett_table = nett.Lock())
-							nett_table.Data.AddRange(sum);
+							nett_table.AddRange(sum);
 
 						// Update the equity data
 						this.BeginInvoke(() =>
@@ -439,7 +439,7 @@ namespace CoinFlip
 				m_ui = ui;
 				m_map = new LazyDictionary<string, ChartDataSeries>(x =>
 				{
-					var s = new ChartDataSeries(x, new ChartDataSeries.OptionsData(m_ui.SeriesOptionsTemplate));
+					var s = new ChartDataSeries(x, ChartDataSeries.EFormat.XRealYReal, new ChartDataSeries.OptionsData(m_ui.SeriesOptionsTemplate));
 					s.Options.Colour = ChartDataSeries.GenerateColour(m_map.Count);
 					s.Options.PlotType = ChartDataSeries.EPlotType.StepLine;
 					return s;

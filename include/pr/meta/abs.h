@@ -3,8 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2013
 //******************************************
 
-#ifndef PR_META_ABS_H
-#define PR_META_ABS_H
+#pragma once
 
 namespace pr
 {
@@ -23,16 +22,12 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::meta
 {
-	namespace unittests
+	PRUnitTest(AbsTests)
 	{
-		PRUnitTest(pr_meta_abs)
-		{
-			static_assert(pr::meta::abs<int,+5>::value == +5, "");
-			static_assert(pr::meta::abs<int,-5>::value == +5, "");
-		}
+		static_assert(pr::meta::abs<int,+5>::value == +5, "");
+		static_assert(pr::meta::abs<int,-5>::value == +5, "");
 	}
 }
-#endif
 #endif

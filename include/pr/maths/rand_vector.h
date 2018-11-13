@@ -13,7 +13,7 @@
 #include "pr/maths/vector3.h"
 #include "pr/maths/vector4.h"
 #include "pr/maths/matrix2x2.h"
-#include "pr/maths/matrix3x3.h"
+#include "pr/maths/matrix3x4.h"
 #include "pr/maths/matrix4x4.h"
 #include "pr/maths/quaternion.h"
 
@@ -298,23 +298,19 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::maths
 {
-	namespace unittests
+	PRUnitTest(RandVectorTests)
 	{
-		PRUnitTest(pr_maths_rand_vector)
-		{
-			using namespace pr;
-			{// Random4
-				auto radius = 10;
-				auto centre = v4{1,1,1,1};
-				auto prev = v4{};
-				for (int i = 0; i != 100; ++i)
-				{
-					auto v = Random4(g_rng(), centre, 10);
-					PR_CHECK(v != prev, true);
-					PR_CHECK(Length4(v - centre) < radius, true);
-				}
+		{// Random4
+			auto radius = 10;
+			auto centre = v4{1,1,1,1};
+			auto prev = v4{};
+			for (int i = 0; i != 100; ++i)
+			{
+				auto v = Random4(g_rng(), centre, 10);
+				PR_CHECK(v != prev, true);
+				PR_CHECK(Length4(v - centre) < radius, true);
 			}
 		}
 	}

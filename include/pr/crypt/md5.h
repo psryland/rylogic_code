@@ -326,20 +326,15 @@ namespace pr
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 
-namespace pr
+namespace pr::hash
 {
-	namespace unittests
+	PRUnitTest(Md5Tests)
 	{
-		PRUnitTest(pr_crypt_md5)
-		{
-			using namespace pr::hash;
-
-			char str0[] = "01234567890";
-			char str1[] = "0123456789a";
-			auto hash1 = Md5Hash(str0, sizeof(str0));
-			auto hash2 = Md5Hash(str1, sizeof(str1));
-			PR_CHECK(hash1 != hash2, true);
-		}
+		char str0[] = "01234567890";
+		char str1[] = "0123456789a";
+		auto hash1 = Md5Hash(str0, sizeof(str0));
+		auto hash2 = Md5Hash(str1, sizeof(str1));
+		PR_CHECK(hash1 != hash2, true);
 	}
 }
 #endif

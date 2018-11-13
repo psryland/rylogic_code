@@ -390,35 +390,31 @@ namespace pr
 #include "pr/common/unittests.h"
 #include "pr/str/string_core.h"
 #include "pr/win32/win32.h"
-namespace pr
+namespace pr::script
 {
-	namespace unittests
+	PRUnitTest(IncludesTests)
 	{
-		PRUnitTest(pr_script_includes)
-		{
-			using namespace pr::str;
-			using namespace pr::script;
-			using string = pr::string<wchar_t>;
+		using namespace pr::str;
+		using string = pr::string<wchar_t>;
 
-			auto script_include = L"script_include.txt";
-			char data[] = "Included";
-			{// Create the file
-				std::ofstream fout(script_include);
-				fout.write(reinterpret_cast<char const*>(&data[0]), sizeof(data));
-			}
-			{
-				Includes inc;
-				inc.AddSearchPath(pr::filesys::GetDirectory(pr::win32::ExePath<string>()));
-				inc.AddSearchPath(pr::filesys::CurrentDirectory<string>());
-
-				auto src_ptr = inc.Open(script_include, IIncludeHandler::EFlags::None);
-				auto& src = *src_ptr;
-
-				std::wstring r; for (;*src; ++src) r.push_back(*src);
-				PR_CHECK(pr::str::Equal(r, data), true);
-			}
-			pr::filesys::EraseFile(script_include);
+		auto script_include = L"script_include.txt";
+		char data[] = "Included";
+		{// Create the file
+			std::ofstream fout(script_include);
+			fout.write(reinterpret_cast<char const*>(&data[0]), sizeof(data));
 		}
+		{
+			Includes inc;
+			inc.AddSearchPath(pr::filesys::GetDirectory(pr::win32::ExePath<string>()));
+			inc.AddSearchPath(pr::filesys::CurrentDirectory<string>());
+
+			auto src_ptr = inc.Open(script_include, IIncludeHandler::EFlags::None);
+			auto& src = *src_ptr;
+
+			std::wstring r; for (;*src; ++src) r.push_back(*src);
+			PR_CHECK(pr::str::Equal(r, data), true);
+		}
+		pr::filesys::EraseFile(script_include);
 	}
 }
 #endif

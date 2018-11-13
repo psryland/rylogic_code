@@ -386,49 +386,43 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-
-namespace pr
+namespace pr::log
 {
-	namespace unittests
+	PRUnitTest(LogTests)
 	{
-		PRUnitTest(pr_common_log)
-		{
-			using namespace pr::log;
+		std::string str;
 
-			std::string str;
+		{// Single instance
+			str.resize(0);
+			Logger log("test", [&](pr::log::Event const& ev)
+			{
+				std::stringstream s;
+				s << To<char const*>(ev.m_level) << "," << ev.m_context << ": " << ev.m_msg << ',' << ev.m_occurrences << std::endl;
+				str += s.str();
+			}, 0);
+			log.Write(ELevel::Debug, "event 1");
+			log.Flush();
+			PR_CHECK(str, "Debug,test: event 1,1\n");
+		}
+		{// Copied instances
+			str.resize(0);
+			Logger log1("log1", [&](pr::log::Event const& ev)
+			{
+				std::stringstream s;
+				s << To<char const*>(ev.m_level) << "," << ev.m_context << ": " << ev.m_msg << ',' << ev.m_occurrences << std::endl;
+				str += s.str();
+			}, 0);
+			Logger log2(log1, "log2");
 
-			{// Single instance
-				str.resize(0);
-				Logger log("test", [&](pr::log::Event const& ev)
-				{
-					std::stringstream s;
-					s << To<char const*>(ev.m_level) << "," << ev.m_context << ": " << ev.m_msg << ',' << ev.m_occurrences << std::endl;
-					str += s.str();
-				}, 0);
-				log.Write(ELevel::Debug, "event 1");
-				log.Flush();
-				PR_CHECK(str, "Debug,test: event 1,1\n");
-			}
-			{// Copied instances
-				str.resize(0);
-				Logger log1("log1", [&](pr::log::Event const& ev)
-				{
-					std::stringstream s;
-					s << To<char const*>(ev.m_level) << "," << ev.m_context << ": " << ev.m_msg << ',' << ev.m_occurrences << std::endl;
-					str += s.str();
-				}, 0);
-				Logger log2(log1, "log2");
-
-				log1.Write(ELevel::Info, "event 1");
-				log2.Write(ELevel::Debug, "event 2");
-				log1.Write(ELevel::Info, "event 3");
-				log1.Flush();
-				PR_CHECK(str,
-					"Info,log1: event 1,1\n"
-					"Debug,log2: event 2,1\n"
-					"Info,log1: event 3,1\n"
-					);
-			}
+			log1.Write(ELevel::Info, "event 1");
+			log2.Write(ELevel::Debug, "event 2");
+			log1.Write(ELevel::Info, "event 3");
+			log1.Flush();
+			PR_CHECK(str,
+				"Info,log1: event 1,1\n"
+				"Debug,log2: event 2,1\n"
+				"Info,log1: event 3,1\n"
+				);
 		}
 	}
 }

@@ -117,81 +117,78 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::common
 {
-	namespace unittests
+	PRUnitTest(RepeaterTests)
 	{
-		PRUnitTest(pr_common_repeater)
 		{
-			{
-				std::vector<int> vec;
-				vec.push_back(0);
-				vec.push_back(1);
-				vec.push_back(2);
+			std::vector<int> vec;
+			vec.push_back(0);
+			vec.push_back(1);
+			vec.push_back(2);
 
-				auto rep = pr::CreateRepeater(begin(vec), int(vec.size()), 6, -1);
-				PR_CHECK(*(rep  ),  0);
-				PR_CHECK(*(++rep),  0);
-				PR_CHECK(*(++rep),  0);
-				PR_CHECK(*(++rep),  1);
-				PR_CHECK(*(++rep),  1);
-				PR_CHECK(*(++rep),  2);
-				PR_CHECK(*(++rep),  2);
-				PR_CHECK(*(++rep),  2);
-				PR_CHECK(*(++rep), -1);
-				PR_CHECK(*(++rep), -1);
-			}
-			{
-				std::vector<float> vec;
-				vec.push_back(0.0f);
-				vec.push_back(0.5f);
-				vec.push_back(1.0f);
+			auto rep = pr::CreateRepeater(begin(vec), int(vec.size()), 6, -1);
+			PR_CHECK(*(rep  ),  0);
+			PR_CHECK(*(++rep),  0);
+			PR_CHECK(*(++rep),  0);
+			PR_CHECK(*(++rep),  1);
+			PR_CHECK(*(++rep),  1);
+			PR_CHECK(*(++rep),  2);
+			PR_CHECK(*(++rep),  2);
+			PR_CHECK(*(++rep),  2);
+			PR_CHECK(*(++rep), -1);
+			PR_CHECK(*(++rep), -1);
+		}
+		{
+			std::vector<float> vec;
+			vec.push_back(0.0f);
+			vec.push_back(0.5f);
+			vec.push_back(1.0f);
 
-				auto rep = pr::CreateLerpRepeater(begin(vec), int(vec.size()), 6, 1.0f);
-				PR_CHECK(*rep++, 0.0f);
-				PR_CHECK(*rep++, 0.2f);
-				PR_CHECK(*rep++, 0.4f);
-				PR_CHECK(*rep++, 0.6f);
-				PR_CHECK(*rep++, 0.8f);
-				PR_CHECK(*rep++, 1.0f);
-				PR_CHECK(*rep++, 1.0f);
-				PR_CHECK(*rep++, 1.0f);
-			}
-			{
-				std::vector<float> vec;
-				vec.push_back(0.0f);
-				vec.push_back(1.0f);
+			auto rep = pr::CreateLerpRepeater(begin(vec), int(vec.size()), 6, 1.0f);
+			PR_CHECK(*rep++, 0.0f);
+			PR_CHECK(*rep++, 0.2f);
+			PR_CHECK(*rep++, 0.4f);
+			PR_CHECK(*rep++, 0.6f);
+			PR_CHECK(*rep++, 0.8f);
+			PR_CHECK(*rep++, 1.0f);
+			PR_CHECK(*rep++, 1.0f);
+			PR_CHECK(*rep++, 1.0f);
+		}
+		{
+			std::vector<float> vec;
+			vec.push_back(0.0f);
+			vec.push_back(1.0f);
 				
-				auto rep = pr::CreateLerpRepeater(begin(vec), int(vec.size()), 6, -1.0f);
-				PR_CHECK(*rep++, 0.0f);
-				PR_CHECK(*rep++, 0.2f);
-				PR_CHECK(*rep++, 0.4f);
-				PR_CHECK(*rep++, 0.6f);
-				PR_CHECK(*rep++, 0.8f);
-				PR_CHECK(*rep++, 1.0f);
-			}
-			{
-				auto rep = pr::CreateRepeater(nullptr, 0, 1, 2.0f);
-				PR_CHECK(*rep++, 2.0f);
-				PR_CHECK(*rep++, 2.0f);
-			}
-			{
-				auto rep = pr::CreateRepeater(nullptr, 0, 4, 2.0f);
-				PR_CHECK(*rep++, 2.0f);
-				PR_CHECK(*rep++, 2.0f);
-				PR_CHECK(*rep++, 2.0f);
-				PR_CHECK(*rep++, 2.0f);
-				PR_CHECK(*rep++, 2.0f);
-			}
-			{
-				float f = 1.0f;
-				auto rep = pr::CreateLerpRepeater(&f, 1, 4, 2.0f);
-				PR_CHECK(*rep++, 1.0f);
-				PR_CHECK(*rep++, 1.0f);
-				PR_CHECK(*rep++, 1.0f);
-				PR_CHECK(*rep++, 1.0f);
-				PR_CHECK(*rep++, 1.0f); // only returns default if no data is provided
-			}
+			auto rep = pr::CreateLerpRepeater(begin(vec), int(vec.size()), 6, -1.0f);
+			PR_CHECK(*rep++, 0.0f);
+			PR_CHECK(*rep++, 0.2f);
+			PR_CHECK(*rep++, 0.4f);
+			PR_CHECK(*rep++, 0.6f);
+			PR_CHECK(*rep++, 0.8f);
+			PR_CHECK(*rep++, 1.0f);
+		}
+		{
+			auto rep = pr::CreateRepeater(nullptr, 0, 1, 2.0f);
+			PR_CHECK(*rep++, 2.0f);
+			PR_CHECK(*rep++, 2.0f);
+		}
+		{
+			auto rep = pr::CreateRepeater(nullptr, 0, 4, 2.0f);
+			PR_CHECK(*rep++, 2.0f);
+			PR_CHECK(*rep++, 2.0f);
+			PR_CHECK(*rep++, 2.0f);
+			PR_CHECK(*rep++, 2.0f);
+			PR_CHECK(*rep++, 2.0f);
+		}
+		{
+			float f = 1.0f;
+			auto rep = pr::CreateLerpRepeater(&f, 1, 4, 2.0f);
+			PR_CHECK(*rep++, 1.0f);
+			PR_CHECK(*rep++, 1.0f);
+			PR_CHECK(*rep++, 1.0f);
+			PR_CHECK(*rep++, 1.0f);
+			PR_CHECK(*rep++, 1.0f); // only returns default if no data is provided
 		}
 	}
 }

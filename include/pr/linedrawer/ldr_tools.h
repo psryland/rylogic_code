@@ -17,44 +17,44 @@ namespace pr
 	namespace ldr
 	{
 		// Callback function for reading a world space point
-		typedef pr::v4 (__stdcall *ReadPointCB)(void* ctx);
+		typedef v4 (__stdcall *ReadPointCB)(void* ctx);
 
 		// A UI for measuring distances within a 3D environment
-		struct LdrMeasureUI :pr::gui::Form ,pr::AlignTo<16>
+		struct LdrMeasureUI :gui::Form ,AlignTo<16>
 		{
 		private:
 			enum { ID_BTN_SET0 = 100, ID_BTN_SET1, ID_TB_VALUES };
 
 			// Members
-			pr::Guid         m_context_id;     // A graphics context Id
-			ReadPointCB      m_read_point_cb;  // The callback for reading a world space point
-			void*            m_read_point_ctx; // Context for the callback function
-			pr::Renderer&    m_rdr;            // Reference to the renderer
-			LdrObjectPtr     m_gfx;            // Graphics created by this tool
-			pr::gui::Button  m_btn_set0;       // Set the start point for measuring
-			pr::gui::Button  m_btn_set1;       // Set the end point for measuring
-			pr::gui::TextBox m_tb_values;      // The measured values
-			pr::v4           m_point0;         // The start of the measurement
-			pr::v4           m_point1;         // The end of the measurement
+			Guid         m_context_id;     // A graphics context Id
+			ReadPointCB  m_read_point_cb;  // The callback for reading a world space point
+			void*        m_read_point_ctx; // Context for the callback function
+			Renderer&    m_rdr;            // Reference to the renderer
+			LdrObjectPtr m_gfx;            // Graphics created by this tool
+			gui::Button  m_btn_set0;       // Set the start point for measuring
+			gui::Button  m_btn_set1;       // Set the end point for measuring
+			gui::TextBox m_tb_values;      // The measured values
+			v4           m_point0;         // The start of the measurement
+			v4           m_point1;         // The end of the measurement
 
 		public:
 
-			LdrMeasureUI(HWND parent, ReadPointCB read_point_cb, void* ctx, pr::Renderer& rdr)
+			LdrMeasureUI(HWND parent, ReadPointCB read_point_cb, void* ctx, Renderer& rdr)
 				:Form(MakeFormParams<>()
 					.parent(parent).name("ldr-measure-ui").title(L"Measure Distances")
 					.wh(300, 150).style_ex('+',WS_EX_TOOLWINDOW)
 					.hide_on_close(true).pin_window(true)
 					.wndclass(RegisterWndClass<LdrMeasureUI>()))
-				,m_context_id(pr::GenerateGUID())
+				,m_context_id(GenerateGUID())
 				,m_read_point_cb(read_point_cb)
 				,m_read_point_ctx(ctx)
 				,m_rdr(rdr)
 				,m_gfx()
-				,m_btn_set0 (pr::gui::Button ::Params<>().parent(this_).name("btn-set0" ).id(ID_BTN_SET0) .xy(0, 0)                                      .anchor(EAnchor::TopLeft).text(L"Set Point 0"))
-				,m_btn_set1 (pr::gui::Button ::Params<>().parent(this_).name("btn-set1" ).id(ID_BTN_SET1) .xy(Left|RightOf|ID_BTN_SET0, 0)               .anchor(EAnchor::TopLeft).text(L"Set Point 1"))
-				,m_tb_values(pr::gui::TextBox::Params<>().parent(this_).name("tb-values").id(ID_TB_VALUES).wh(Fill, Fill).xy(0, Top|BottomOf|ID_BTN_SET0).anchor(EAnchor::All).multiline(true))
-				,m_point0(pr::v4Origin)
-				,m_point1(pr::v4Origin)
+				,m_btn_set0 (gui::Button ::Params<>().parent(this_).name("btn-set0" ).id(ID_BTN_SET0) .xy(0, 0)                                      .anchor(EAnchor::TopLeft).text(L"Set Point 0"))
+				,m_btn_set1 (gui::Button ::Params<>().parent(this_).name("btn-set1" ).id(ID_BTN_SET1) .xy(Left|RightOf|ID_BTN_SET0, 0)               .anchor(EAnchor::TopLeft).text(L"Set Point 1"))
+				,m_tb_values(gui::TextBox::Params<>().parent(this_).name("tb-values").id(ID_TB_VALUES).wh(Fill, Fill).xy(0, Top|BottomOf|ID_BTN_SET0).anchor(EAnchor::All).multiline(true))
+				,m_point0(v4Origin)
+				,m_point1(v4Origin)
 			{
 				CreateHandle();
 				m_btn_set0.Click += std::bind(&LdrMeasureUI::HandleSetPoint, this, _1, _2);
@@ -76,13 +76,13 @@ namespace pr
 			}
 
 			// The context id for graphics objects belonging to this measurement UI
-			pr::Guid GfxContextId() const
+			Guid GfxContextId() const
 			{
 				return m_context_id;
 			}
 
 			// Handle a 'Set Point' button being clicked
-			void HandleSetPoint(pr::gui::Button& btn, pr::gui::EmptyArgs const&)
+			void HandleSetPoint(gui::Button& btn, gui::EmptyArgs const&)
 			{
 				auto dummy = v4{};
 				auto& point =
@@ -100,7 +100,7 @@ namespace pr
 			// Update the text in the measurement details text box
 			void UpdateMeasurementInfo()
 			{
-				using namespace pr::maths;
+				using namespace maths;
 
 				// Remove any existing graphics
 				m_gfx = nullptr;
@@ -108,8 +108,8 @@ namespace pr
 				// Create graphics for the two measurement points
 				if (m_point0 != m_point1)
 				{
-					auto p0 = pr::v4(m_point1.x, m_point0.y, m_point0.z, 1.0f);
-					auto p1 = pr::v4(m_point1.x, m_point1.y, m_point0.z, 1.0f);
+					auto p0 = v4(m_point1.x, m_point0.y, m_point0.z, 1.0f);
+					auto p1 = v4(m_point1.x, m_point1.y, m_point0.z, 1.0f);
 
 					auto str = std::string{};
 					GroupStart(str, "Measurement");
@@ -132,12 +132,12 @@ namespace pr
 				auto dxy  = Len2(dx, dy);
 				auto dyz  = Len2(dy, dz);
 				auto dzx  = Len2(dz, dx);
-				auto angx = dyz > tiny && fabs(dy) > tiny ? pr::RadiansToDegrees(pr::Angle(dyz, fabs(dy), fabs(dz))) : 0.0f;
-				auto angy = dzx > tiny && fabs(dx) > tiny ? pr::RadiansToDegrees(pr::Angle(dzx, fabs(dx), fabs(dz))) : 0.0f;
-				auto angz = dxy > tiny && fabs(dx) > tiny ? pr::RadiansToDegrees(pr::Angle(dxy, fabs(dx), fabs(dy))) : 0.0f;
+				auto angx = dyz > tiny && fabs(dy) > tiny ? RadiansToDegrees(Angle(dyz, fabs(dy), fabs(dz))) : 0.0f;
+				auto angy = dzx > tiny && fabs(dx) > tiny ? RadiansToDegrees(Angle(dzx, fabs(dx), fabs(dz))) : 0.0f;
+				auto angz = dxy > tiny && fabs(dx) > tiny ? RadiansToDegrees(Angle(dxy, fabs(dx), fabs(dy))) : 0.0f;
 
 				// Update the text description
-				m_tb_values.Text(pr::FmtS(
+				m_tb_values.Text(FmtS(
 					L"     sep: %f %f %f  (%f) \r\n"
 					L"xy,yz,zx: %f %f %f \r\n"
 					L" ang (°): %f %f %f \r\n"
@@ -146,54 +146,54 @@ namespace pr
 					,angx ,angy ,angz));
 
 				// Notify the measurement data changed
-				MeasurementChanged(*this, pr::gui::EmptyArgs());
+				MeasurementChanged(*this, gui::EmptyArgs());
 			}
 
 			// Raised when the measurement data changes
 			// MeasurementChanged += [&](LdrMeasureUI&,EmptyArgs const&){}
-			pr::gui::EventHandler<LdrMeasureUI&, pr::gui::EmptyArgs const&> MeasurementChanged;
+			gui::EventHandler<LdrMeasureUI&, gui::EmptyArgs const&> MeasurementChanged;
 		};
 
 		// A UI for measuring angles within a 3D environment
-		struct LdrAngleUI :pr::gui::Form ,pr::AlignTo<16>
+		struct LdrAngleUI :gui::Form ,AlignTo<16>
 		{
 		private:
 			enum { ID_BTN_ORIG = 100, ID_BTN_SET0, ID_BTN_SET1, ID_TB_VALUES };
 
 			// Members
-			pr::Guid         m_context_id;     // A graphics context Id
+			Guid         m_context_id;     // A graphics context Id
 			ReadPointCB      m_read_point_cb;  // The callback for reading a world space point
 			void*            m_read_point_ctx; // Context for the callback function
-			pr::Renderer&    m_rdr;            // Reference to the renderer
+			Renderer&    m_rdr;            // Reference to the renderer
 			LdrObjectPtr     m_gfx;            // Graphics created by this tool
-			pr::gui::Button  m_btn_orig;       // Set the origin for angle measurement
-			pr::gui::Button  m_btn_set0;       // Set the point 0 for angle measurement
-			pr::gui::Button  m_btn_set1;       // Set the point 1 for angle measurement
-			pr::gui::TextBox m_tb_values;      // The measured values
-			pr::v4           m_origin;         // The angle apex
-			pr::v4           m_point0;         // The point0
-			pr::v4           m_point1;         // The end of the measurement
+			gui::Button  m_btn_orig;       // Set the origin for angle measurement
+			gui::Button  m_btn_set0;       // Set the point 0 for angle measurement
+			gui::Button  m_btn_set1;       // Set the point 1 for angle measurement
+			gui::TextBox m_tb_values;      // The measured values
+			v4           m_origin;         // The angle apex
+			v4           m_point0;         // The point0
+			v4           m_point1;         // The end of the measurement
 
 		public:
 
-			LdrAngleUI(HWND parent, ReadPointCB read_point_cb, void* ctx, pr::Renderer& rdr)
+			LdrAngleUI(HWND parent, ReadPointCB read_point_cb, void* ctx, Renderer& rdr)
 				:Form(MakeFormParams<>()
 					.parent(parent).name("ldr-angle-ui").title(L"Measure Angles")
 					.wh(220, 186).style_ex('+',WS_EX_TOOLWINDOW)
 					.hide_on_close(true).pin_window(true)
 					.wndclass(RegisterWndClass<LdrMeasureUI>()))
-				,m_context_id(pr::GenerateGUID())
+				,m_context_id(GenerateGUID())
 				,m_read_point_cb(read_point_cb)
 				,m_read_point_ctx(ctx)
 				,m_rdr(rdr)
 				,m_gfx()
-				,m_btn_orig (pr::gui::Button ::Params<>().parent(this_).name("btn-orig" ).id(ID_BTN_ORIG) .wh(50,20)     .xy(0,0)                        .anchor(EAnchor::TopLeft).text(L"Origin") )
-				,m_btn_set0 (pr::gui::Button ::Params<>().parent(this_).name("btn-set0" ).id(ID_BTN_SET0) .wh(50,20)     .xy(Left|RightOf|ID_BTN_ORIG,0) .anchor(EAnchor::TopLeft).text(L"Point 0"))
-				,m_btn_set1 (pr::gui::Button ::Params<>().parent(this_).name("btn-set1" ).id(ID_BTN_SET1) .wh(50,20)     .xy(Left|RightOf|ID_BTN_SET0,0) .anchor(EAnchor::TopLeft).text(L"Point 1"))
-				,m_tb_values(pr::gui::TextBox::Params<>().parent(this_).name("tb-values").id(ID_TB_VALUES).wh(Fill, Fill).xy(0, Top|BottomOf|ID_BTN_ORIG).anchor(EAnchor::All).multiline(true))
-				,m_origin(pr::v4Origin)
-				,m_point0(pr::v4Origin)
-				,m_point1(pr::v4Origin)
+				,m_btn_orig (gui::Button ::Params<>().parent(this_).name("btn-orig" ).id(ID_BTN_ORIG) .wh(50,20)     .xy(0,0)                        .anchor(EAnchor::TopLeft).text(L"Origin") )
+				,m_btn_set0 (gui::Button ::Params<>().parent(this_).name("btn-set0" ).id(ID_BTN_SET0) .wh(50,20)     .xy(Left|RightOf|ID_BTN_ORIG,0) .anchor(EAnchor::TopLeft).text(L"Point 0"))
+				,m_btn_set1 (gui::Button ::Params<>().parent(this_).name("btn-set1" ).id(ID_BTN_SET1) .wh(50,20)     .xy(Left|RightOf|ID_BTN_SET0,0) .anchor(EAnchor::TopLeft).text(L"Point 1"))
+				,m_tb_values(gui::TextBox::Params<>().parent(this_).name("tb-values").id(ID_TB_VALUES).wh(Fill, Fill).xy(0, Top|BottomOf|ID_BTN_ORIG).anchor(EAnchor::All).multiline(true))
+				,m_origin(v4Origin)
+				,m_point0(v4Origin)
+				,m_point1(v4Origin)
 			{
 				CreateHandle();
 				m_btn_orig.Click += std::bind(&LdrAngleUI::HandleSetPoint, this, _1, _2);
@@ -216,13 +216,13 @@ namespace pr
 			}
 
 			// The context id for graphics objects belonging to this measurement UI
-			pr::Guid GfxContextId() const
+			Guid GfxContextId() const
 			{
 				return m_context_id;
 			}
 
 			// Handle a 'Set Point' button being clicked
-			void HandleSetPoint(pr::gui::Button& btn, pr::gui::EmptyArgs const&)
+			void HandleSetPoint(gui::Button& btn, gui::EmptyArgs const&)
 			{
 				auto dummy = v4{};
 				auto& point =
@@ -241,7 +241,7 @@ namespace pr
 			// Update the text in the measurement details text box
 			void UpdateMeasurementInfo()
 			{
-				using namespace pr::maths;
+				using namespace maths;
 
 				// Remove any existing graphics
 				m_gfx = nullptr;
@@ -265,13 +265,13 @@ namespace pr
 				auto  e0    = m_point0 - m_origin;
 				auto  e1    = m_point1 - m_origin;
 				auto  e2    = m_point1 - m_point0;
-				float edge0 = pr::Length3(e0);
-				float edge1 = pr::Length3(e1);
-				float edge2 = pr::Length3(e2);
-				float ang   = (edge0 < tiny || edge1 < tiny) ? 0.0f : pr::RadiansToDegrees(pr::ACos(pr::Clamp(pr::Dot3(e0,e1) / (edge0 * edge1), -1.0f, 1.0f)));
+				float edge0 = Length3(e0);
+				float edge1 = Length3(e1);
+				float edge2 = Length3(e2);
+				float ang   = (edge0 < tiny || edge1 < tiny) ? 0.0f : RadiansToDegrees(ACos(Clamp(Dot3(e0,e1) / (edge0 * edge1), -1.0f, 1.0f)));
 
 				// Update the text description
-				m_tb_values.Text(pr::FmtS(
+				m_tb_values.Text(FmtS(
 					L"edge0: %f\r\n"
 					L"edge1: %f\r\n"
 					L"edge2: %f\r\n"
@@ -281,12 +281,12 @@ namespace pr
 					));
 
 				// Notify the measurement data changed
-				MeasurementChanged(*this, pr::gui::EmptyArgs());
+				MeasurementChanged(*this, gui::EmptyArgs());
 			}
 
 			// Raised when the measurement data changes
 			// MeasurementChanged += [&](LdrAngleUI&,EmptyArgs const&){}
-			pr::gui::EventHandler<LdrAngleUI&, pr::gui::EmptyArgs const&> MeasurementChanged;
+			gui::EventHandler<LdrAngleUI&, gui::EmptyArgs const&> MeasurementChanged;
 		};
 	}
 }

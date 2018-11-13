@@ -48,11 +48,11 @@ namespace TestCS
 				a.AddToScene(m_obj0);
 			};
 
-			m_series = new ChartDataSeries("waves");
+			m_series = new ChartDataSeries("waves", ChartDataSeries.EFormat.XRealYReal);
 			using (var lk = m_series.Lock())
 			{
 				for (int i = 0; i != 100000; ++i)
-					lk.Data.Add(new ChartDataSeries.Pt(0.01*i, Math.Sin(0.01*i*Math_.Tau)));
+					lk.Add(new ChartDataSeries.Pt(0.01*i, Math.Sin(0.01*i*Math_.Tau)));
 			}
 			m_series.Options.PlotType = ChartDataSeries.EPlotType.Bar;
 			m_series.Options.PointStyle = ChartDataSeries.EPointStyle.Triangle;

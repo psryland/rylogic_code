@@ -477,76 +477,72 @@ namespace pr
 #include "pr/common/unittests.h"
 #include "pr/common/new.h"
 #include "pr/macros/count_of.h"
-namespace pr
+namespace pr::geometry
 {
-	namespace unittests
+	PRUnitTest(GenerateNormalsTests)
 	{
-		PRUnitTest(pr_geometry_utility_generatenormals)
+		struct Vert :pr::AlignTo<16>
 		{
-			using namespace pr::geometry;
-			struct Vert :pr::AlignTo<16>
-			{
-				pr::v4 m_pos;
-				pr::v4 m_norm;
+			pr::v4 m_pos;
+			pr::v4 m_norm;
 
-				Vert(){}
-				Vert(pr::v4 const& pos, pr::v4 const& norm) :m_pos(pos) ,m_norm(norm) {}
-			};
-			Vert verts[] =
-			{
-				Vert(v4(0.0f, 0.0f, 0.0f, 1.0f), pr::v4Zero),
-				Vert(v4(1.0f, 0.0f, 0.0f, 1.0f), pr::v4Zero),
-				Vert(v4(1.0f, 1.0f, 0.0f, 1.0f), pr::v4Zero),
-				Vert(v4(0.0f, 1.0f, 0.0f, 1.0f), pr::v4Zero),
-			};
-			int faces[] =
-			{
-				0, 1, 2,
-				0, 2, 3,
-			};
+			Vert(){}
+			Vert(pr::v4 const& pos, pr::v4 const& norm) :m_pos(pos) ,m_norm(norm) {}
+		};
+		Vert verts[] =
+		{
+			Vert(v4(0.0f, 0.0f, 0.0f, 1.0f), pr::v4Zero),
+			Vert(v4(1.0f, 0.0f, 0.0f, 1.0f), pr::v4Zero),
+			Vert(v4(1.0f, 1.0f, 0.0f, 1.0f), pr::v4Zero),
+			Vert(v4(0.0f, 1.0f, 0.0f, 1.0f), pr::v4Zero),
+		};
+		int faces[] =
+		{
+			0, 1, 2,
+			0, 2, 3,
+		};
 
-			for (int i = 0; i != 2; ++i)
+		for (int i = 0; i != 2; ++i)
+		{
+			switch (i)
 			{
-				switch (i)
+			case 1:
+				// try again with v[2] moved out of the plane
+				verts[2].m_pos.z = 1.0f;
+				break;
+			}
+
+			pr::vector<Vert> vout;
+			pr::vector<int> iout;
+			GenerateNormals(PR_COUNTOF(faces), &faces[0], pr::DegreesToRadians(10.0f)
+				,[&](size_t i)
 				{
-				case 1:
-					// try again with v[2] moved out of the plane
-					verts[2].m_pos.z = 1.0f;
-					break;
+					assert(i < PR_COUNTOF(verts));
+					return verts[i].m_pos;
 				}
-
-				pr::vector<Vert> vout;
-				pr::vector<int> iout;
-				GenerateNormals(PR_COUNTOF(faces), &faces[0], pr::DegreesToRadians(10.0f)
-					,[&](size_t i)
-					{
-						assert(i < PR_COUNTOF(verts));
-						return verts[i].m_pos;
-					}
-					,0
-					,[&](int, int orig_idx, pr::v4 const& norm)
-					{
-						assert(orig_idx < PR_COUNTOF(verts));
-						vout.emplace_back(verts[orig_idx].m_pos, norm);
-					}
-					,[&](int i0, int i1, int i2)
-					{
-						iout.emplace_back(i0);
-						iout.emplace_back(i1);
-						iout.emplace_back(i2);
-					});
-
-				switch (i)
+				,0
+				,[&](int, int orig_idx, pr::v4 const& norm)
 				{
-				case 0:
-					PR_CHECK(vout.size(), 4U);
-					PR_CHECK(iout.size(), 6U);
-					break;
-				case 1:
-					PR_CHECK(vout.size(), 6U);
-					PR_CHECK(iout.size(), 6U);
-					break;
+					assert(orig_idx < PR_COUNTOF(verts));
+					vout.emplace_back(verts[orig_idx].m_pos, norm);
 				}
+				,[&](int i0, int i1, int i2)
+				{
+					iout.emplace_back(i0);
+					iout.emplace_back(i1);
+					iout.emplace_back(i2);
+				});
+
+			switch (i)
+			{
+			case 0:
+				PR_CHECK(vout.size(), 4U);
+				PR_CHECK(iout.size(), 6U);
+				break;
+			case 1:
+				PR_CHECK(vout.size(), 6U);
+				PR_CHECK(iout.size(), 6U);
+				break;
 			}
 		}
 	}

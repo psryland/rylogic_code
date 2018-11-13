@@ -785,210 +785,207 @@ namespace pr
 #include <fstream>
 #include "pr/common/unittests.h"
 #include "pr/common/flags_enum.h"
-namespace pr
+namespace pr::filesys
 {
-	namespace unittests
+	PRUnitTest(FilesysTests)
 	{
-		PRUnitTest(pr_filesys_filesys)
-		{
-			using namespace pr::filesys;
+		using namespace pr::filesys;
 
-			{//Quotes
-				std::string no_quotes = "path\\path\\file.extn";
-				std::string has_quotes = "\"path\\path\\file.extn\"";
-				std::string p = no_quotes;
-				p = RemoveQuotes(p); PR_CHECK(no_quotes , p);
-				p = AddQuotes(p);    PR_CHECK(has_quotes, p);
-				p = AddQuotes(p);    PR_CHECK(has_quotes, p);
-			}
-			{//Slashes
-				std::string has_slashes1 = "\\path\\path\\";
-				std::string has_slashes2 = "/path/path/";
-				std::string no_slashes1 = "path\\path";
-				std::string no_slashes2 = "path/path";
+		{//Quotes
+			std::string no_quotes = "path\\path\\file.extn";
+			std::string has_quotes = "\"path\\path\\file.extn\"";
+			std::string p = no_quotes;
+			p = RemoveQuotes(p); PR_CHECK(no_quotes , p);
+			p = AddQuotes(p);    PR_CHECK(has_quotes, p);
+			p = AddQuotes(p);    PR_CHECK(has_quotes, p);
+		}
+		{//Slashes
+			std::string has_slashes1 = "\\path\\path\\";
+			std::string has_slashes2 = "/path/path/";
+			std::string no_slashes1 = "path\\path";
+			std::string no_slashes2 = "path/path";
 
-				has_slashes1 = RemoveLeadingBackSlash(has_slashes1);
-				has_slashes1 = RemoveLastBackSlash(has_slashes1);
-				PR_CHECK(no_slashes1, has_slashes1);
+			has_slashes1 = RemoveLeadingBackSlash(has_slashes1);
+			has_slashes1 = RemoveLastBackSlash(has_slashes1);
+			PR_CHECK(no_slashes1, has_slashes1);
 
-				has_slashes2 = RemoveLeadingBackSlash(has_slashes2);
-				has_slashes2 = RemoveLastBackSlash(has_slashes2);
-				PR_CHECK(no_slashes2, has_slashes2);
-			}
-			{//Canonicalise
-				std::string p0 = "C:\\path/.././path\\path\\path\\../../../file.ext";
-				std::string P0 = "C:\\file.ext";
-				p0 = Canonicalise(p0);
-				PR_CHECK(P0, p0);
+			has_slashes2 = RemoveLeadingBackSlash(has_slashes2);
+			has_slashes2 = RemoveLastBackSlash(has_slashes2);
+			PR_CHECK(no_slashes2, has_slashes2);
+		}
+		{//Canonicalise
+			std::string p0 = "C:\\path/.././path\\path\\path\\../../../file.ext";
+			std::string P0 = "C:\\file.ext";
+			p0 = Canonicalise(p0);
+			PR_CHECK(P0, p0);
 
-				std::string p1 = ".././path\\path\\path\\../../../file.ext";
-				std::string P1 = "..\\file.ext";
-				p1 = Canonicalise(p1);
-				PR_CHECK(P1, p1);
-			}
-			{//Standardise
-				std::string p0 = "c:\\path/.././Path\\PATH\\path\\../../../PaTH\\File.EXT";
-				std::string P0 = "c:\\path\\file.ext";
-				p0 = Standardise(p0);
-				PR_CHECK(P0, p0);
-			}
-			{//GetDrive
-				std::string p0 = GetDrive<std::string>("drive:/path");
-				std::string P0 = "drive";
-				PR_CHECK(P0, p0);
-			}
-			{//GetPath
-				std::string p0 = GetPath<std::string>("drive:/path0/path1/file.ext");
-				std::string P0 = "path0/path1";
-				PR_CHECK(P0, p0);
-			}
-			{//GetDirectory
-				std::string p0 = GetDirectory<std::string>("drive:/path0/path1/file.ext");
-				std::string P0 = "drive:/path0/path1";
-				PR_CHECK(P0, p0);
-			}
-			{//GetExtension
-				std::string p0 = GetExtension<std::string>("drive:/pa.th0/path1/file.stuff.extn");
-				std::string P0 = "extn";
-				PR_CHECK(P0, p0);
-			}
-			{//GetFilename
-				std::string p0 = GetFilename<std::string>("drive:/pa.th0/path1/file.stuff.extn");
-				std::string P0 = "file.stuff.extn";
-				PR_CHECK(P0, p0);
-			}
-			{//GetFiletitle
-				std::string p0 = GetFiletitle<std::string>("drive:/pa.th0/path1/file.stuff.extn");
-				std::string P0 = "file.stuff";
-				PR_CHECK(P0, p0);
-			}
-			{//RmvDrive
-				std::string p0 = "drive:/pa.th0/path1/file.stuff.extn";
-				std::string P0 = "pa.th0/path1/file.stuff.extn";
-				p0 = RmvDrive(p0);
-				PR_CHECK(P0, p0);
-			}
-			{//RmvPath
-				std::string p0 = "drive:/pa.th0/path1/file.stuff.extn";
-				std::string P0 = "drive:/file.stuff.extn";
-				p0 = RmvPath(p0);
-				PR_CHECK(P0, p0);
-			}
-			{//RmvDirectory
-				std::string p0 = "drive:/pa.th0/path1/file.stuff.extn";
-				std::string P0 = "file.stuff.extn";
-				p0 = RmvDirectory(p0);
-				PR_CHECK(P0, p0);
-			}
-			{//RmvExtension
-				std::string p0 = "drive:/pa.th0/path1/file.stuff.extn";
-				std::string P0 = "drive:/pa.th0/path1/file.stuff";
-				p0 = RmvExtension(p0);
-				PR_CHECK(P0, p0);
-			}
-			{//RmvFilename
-				std::string p0 = "drive:/pa.th0/path1/file.stuff.extn";
-				std::string P0 = "drive:/pa.th0/path1";
-				p0 = RmvFilename(p0);
-				PR_CHECK(P0, p0);
-			}
-			{//RmvFiletitle
-				std::string p0 = "drive:/pa.th0/path1/file.stuff.extn";
-				std::string P0 = "drive:/pa.th0/path1/.extn";
-				p0 = RmvFiletitle(p0);
-				PR_CHECK(P0, p0);
-			}
-			{//Files
-				std::string dir = CurrentDirectory<std::string>();
-				PR_CHECK(DirectoryExists(dir), true);
+			std::string p1 = ".././path\\path\\path\\../../../file.ext";
+			std::string P1 = "..\\file.ext";
+			p1 = Canonicalise(p1);
+			PR_CHECK(P1, p1);
+		}
+		{//Standardise
+			std::string p0 = "c:\\path/.././Path\\PATH\\path\\../../../PaTH\\File.EXT";
+			std::string P0 = "c:\\path\\file.ext";
+			p0 = Standardise(p0);
+			PR_CHECK(P0, p0);
+		}
+		{//GetDrive
+			std::string p0 = GetDrive<std::string>("drive:/path");
+			std::string P0 = "drive";
+			PR_CHECK(P0, p0);
+		}
+		{//GetPath
+			std::string p0 = GetPath<std::string>("drive:/path0/path1/file.ext");
+			std::string P0 = "path0/path1";
+			PR_CHECK(P0, p0);
+		}
+		{//GetDirectory
+			std::string p0 = GetDirectory<std::string>("drive:/path0/path1/file.ext");
+			std::string P0 = "drive:/path0/path1";
+			PR_CHECK(P0, p0);
+		}
+		{//GetExtension
+			std::string p0 = GetExtension<std::string>("drive:/pa.th0/path1/file.stuff.extn");
+			std::string P0 = "extn";
+			PR_CHECK(P0, p0);
+		}
+		{//GetFilename
+			std::string p0 = GetFilename<std::string>("drive:/pa.th0/path1/file.stuff.extn");
+			std::string P0 = "file.stuff.extn";
+			PR_CHECK(P0, p0);
+		}
+		{//GetFiletitle
+			std::string p0 = GetFiletitle<std::string>("drive:/pa.th0/path1/file.stuff.extn");
+			std::string P0 = "file.stuff";
+			PR_CHECK(P0, p0);
+		}
+		{//RmvDrive
+			std::string p0 = "drive:/pa.th0/path1/file.stuff.extn";
+			std::string P0 = "pa.th0/path1/file.stuff.extn";
+			p0 = RmvDrive(p0);
+			PR_CHECK(P0, p0);
+		}
+		{//RmvPath
+			std::string p0 = "drive:/pa.th0/path1/file.stuff.extn";
+			std::string P0 = "drive:/file.stuff.extn";
+			p0 = RmvPath(p0);
+			PR_CHECK(P0, p0);
+		}
+		{//RmvDirectory
+			std::string p0 = "drive:/pa.th0/path1/file.stuff.extn";
+			std::string P0 = "file.stuff.extn";
+			p0 = RmvDirectory(p0);
+			PR_CHECK(P0, p0);
+		}
+		{//RmvExtension
+			std::string p0 = "drive:/pa.th0/path1/file.stuff.extn";
+			std::string P0 = "drive:/pa.th0/path1/file.stuff";
+			p0 = RmvExtension(p0);
+			PR_CHECK(P0, p0);
+		}
+		{//RmvFilename
+			std::string p0 = "drive:/pa.th0/path1/file.stuff.extn";
+			std::string P0 = "drive:/pa.th0/path1";
+			p0 = RmvFilename(p0);
+			PR_CHECK(P0, p0);
+		}
+		{//RmvFiletitle
+			std::string p0 = "drive:/pa.th0/path1/file.stuff.extn";
+			std::string P0 = "drive:/pa.th0/path1/.extn";
+			p0 = RmvFiletitle(p0);
+			PR_CHECK(P0, p0);
+		}
+		{//Files
+			std::string dir = CurrentDirectory<std::string>();
+			PR_CHECK(DirectoryExists(dir), true);
 
-				std::string fn = MakeUniqueFilename<std::string>("test_fileXXXXXX");
-				PR_CHECK(FileExists(fn), false);
+			std::string fn = MakeUniqueFilename<std::string>("test_fileXXXXXX");
+			PR_CHECK(FileExists(fn), false);
 
-				std::string path = CombinePath(dir, fn);
+			std::string path = CombinePath(dir, fn);
 
-				std::ofstream f(path.c_str());
-				f << "Hello World";
-				f.close();
+			std::ofstream f(path.c_str());
+			f << "Hello World";
+			f.close();
 
-				PR_CHECK(FileExists(path), true);
-				std::string fn2 = MakeUniqueFilename<std::string>("test_fileXXXXXX");
-				std::string path2 = GetFullPath(fn2);
+			PR_CHECK(FileExists(path), true);
+			std::string fn2 = MakeUniqueFilename<std::string>("test_fileXXXXXX");
+			std::string path2 = GetFullPath(fn2);
 
-				RenameFile(path, path2);
-				PR_CHECK(FileExists(path2), true);
-				PR_CHECK(FileExists(path), false);
+			RenameFile(path, path2);
+			PR_CHECK(FileExists(path2), true);
+			PR_CHECK(FileExists(path), false);
 
-				CpyFile(path2, path);
-				PR_CHECK(FileExists(path2), true);
-				PR_CHECK(FileExists(path), true);
+			CpyFile(path2, path);
+			PR_CHECK(FileExists(path2), true);
+			PR_CHECK(FileExists(path), true);
 
-				EraseFile(path2);
-				PR_CHECK(FileExists(path2), false);
-				PR_CHECK(FileExists(path), true);
+			EraseFile(path2);
+			PR_CHECK(FileExists(path2), false);
+			PR_CHECK(FileExists(path), true);
 
-				__int64 size = FileLength(path);
-				PR_CHECK(size, 11);
+			__int64 size = FileLength(path);
+			PR_CHECK(size, 11);
 
-				auto attr = GetAttribs(path);
-				auto flags = EAttrib::File|EAttrib::WriteAccess|EAttrib::ReadAccess;
-				PR_CHECK(attr == flags, true);
+			auto attr = GetAttribs(path);
+			auto flags = EAttrib::File|EAttrib::WriteAccess|EAttrib::ReadAccess;
+			PR_CHECK(attr == flags, true);
 
-				attr = GetAttribs(dir);
-				flags = EAttrib::Directory|EAttrib::WriteAccess|EAttrib::ReadAccess|EAttrib::ExecAccess;
-				PR_CHECK(attr == flags, true);
+			attr = GetAttribs(dir);
+			flags = EAttrib::Directory|EAttrib::WriteAccess|EAttrib::ReadAccess|EAttrib::ExecAccess;
+			PR_CHECK(attr == flags, true);
 
-				std::string drive = GetDrive(path);
-				unsigned __int64 disk_free = GetDiskFree(drive[0]);
-				unsigned __int64 disk_size = GetDiskSize(drive[0]);
-				PR_CHECK(disk_size > disk_free, true);
+			std::string drive = GetDrive(path);
+			unsigned __int64 disk_free = GetDiskFree(drive[0]);
+			unsigned __int64 disk_size = GetDiskSize(drive[0]);
+			PR_CHECK(disk_size > disk_free, true);
 
-				EraseFile(path);
-				PR_CHECK(FileExists(path), false);
+			EraseFile(path);
+			PR_CHECK(FileExists(path), false);
+		}
+		{//DirectoryOps
+			{
+				std::string p0 = "C:/path0/../";
+				std::string p1 = "./path4/path5";
+				std::string P  = "C:\\path4\\path5";
+				std::string R  = CombinePath(p0, p1);
+				PR_CHECK(P, R);
 			}
-			{//DirectoryOps
-				{
-					std::string p0 = "C:/path0/../";
-					std::string p1 = "./path4/path5";
-					std::string P  = "C:\\path4\\path5";
-					std::string R  = CombinePath(p0, p1);
-					PR_CHECK(P, R);
-				}
-				{
-					std::string p0 = "C:/path0/path1/path2/path3/file.extn";
-					std::string p1 = "C:/path0/path4/path5";
-					std::string P  = "../../path1/path2/path3/file.extn";
-					std::string R  = GetRelativePath(p0, p1);
-					PR_CHECK(P, R);
-				}
-				{
-					std::string p0 = "/path1/path2/file.extn";
-					std::string p1 = "/path1/path3/path4";
-					std::string P  = "../../path2/file.extn";
-					std::string R  = GetRelativePath(p0, p1);
-					PR_CHECK(P, R);
-				}
-				{
-					std::string p0 = "/path1/file.extn";
-					std::string p1 = "/path1";
-					std::string P  = "file.extn";
-					std::string R  = GetRelativePath(p0, p1);
-					PR_CHECK(P, R);
-				}
-				{
-					std::string p0 = "path1/file.extn";
-					std::string p1 = "path2";
-					std::string P  = "../path1/file.extn";
-					std::string R  = GetRelativePath(p0, p1);
-					PR_CHECK(P, R);
-				}
-				{
-					std::string p0 = "c:/path1/file.extn";
-					std::string p1 = "d:/path2";
-					std::string P  = "c:/path1/file.extn";
-					std::string R  = GetRelativePath(p0, p1);
-					PR_CHECK(P, R);
-				}
+			{
+				std::string p0 = "C:/path0/path1/path2/path3/file.extn";
+				std::string p1 = "C:/path0/path4/path5";
+				std::string P  = "../../path1/path2/path3/file.extn";
+				std::string R  = GetRelativePath(p0, p1);
+				PR_CHECK(P, R);
+			}
+			{
+				std::string p0 = "/path1/path2/file.extn";
+				std::string p1 = "/path1/path3/path4";
+				std::string P  = "../../path2/file.extn";
+				std::string R  = GetRelativePath(p0, p1);
+				PR_CHECK(P, R);
+			}
+			{
+				std::string p0 = "/path1/file.extn";
+				std::string p1 = "/path1";
+				std::string P  = "file.extn";
+				std::string R  = GetRelativePath(p0, p1);
+				PR_CHECK(P, R);
+			}
+			{
+				std::string p0 = "path1/file.extn";
+				std::string p1 = "path2";
+				std::string P  = "../path1/file.extn";
+				std::string R  = GetRelativePath(p0, p1);
+				PR_CHECK(P, R);
+			}
+			{
+				std::string p0 = "c:/path1/file.extn";
+				std::string p1 = "d:/path2";
+				std::string P  = "c:/path1/file.extn";
+				std::string R  = GetRelativePath(p0, p1);
+				PR_CHECK(P, R);
 			}
 		}
 	}

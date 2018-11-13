@@ -94,41 +94,36 @@ namespace pr
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include "pr/filesys/filesys.h"
-namespace pr
+namespace pr::filesys
 {
-	namespace unittests
+	PRUnitTest(RecurseDirectoryTests)
 	{
-		PRUnitTest(pr_filesys_recurse_directory)
+		int found[4] = {}; // 0-*.cpp, 1-*.c, 2-*.h, 3-other
+		auto file_cb = [&](filesys::FindFiles const& ff)
 		{
-			int found[4] = {}; // 0-*.cpp, 1-*.c, 2-*.h, 3-other
-			auto file_cb = [&](filesys::FindFiles const& ff)
-			{
-				auto path = ff.fullpath2();
-				auto extn = pr::filesys::GetExtension(path);
-				if      (extn.compare(L"cpp") == 0) ++found[0];
-				else if (extn.compare(L"c")   == 0) ++found[1];
-				else if (extn.compare(L"h")   == 0) ++found[2];
-				else                                ++found[3];
-				return true;
-			};
+			auto path = ff.fullpath2();
+			auto extn = pr::filesys::GetExtension(path);
+			if      (extn.compare(L"cpp") == 0) ++found[0];
+			else if (extn.compare(L"c")   == 0) ++found[1];
+			else if (extn.compare(L"h")   == 0) ++found[2];
+			else                                ++found[3];
+			return true;
+		};
 
-			wchar_t curr_dir[MAX_PATH];
-			GetCurrentDirectoryW(_countof(curr_dir), curr_dir);
-
-			auto root = pr::filesys::CombinePath<std::wstring>(curr_dir, L"..\\projects\\unittests");
-			if (!pr::filesys::DirectoryExists(root))
-			{
-				PR_CHECK(false && "Recurse directory test failed, root directory not found", true);
-				return;
-			}
-
-			PR_CHECK(pr::filesys::EnumFiles(root, L"*.cpp;*.c", file_cb), true);
-			PR_CHECK(pr::filesys::EnumFiles(root, L"*.h;*.py" , file_cb), true);
-			PR_CHECK(found[0] == 1, true);
-			PR_CHECK(found[1] == 0, true);
-			PR_CHECK(found[2] == 2, true);
-			PR_CHECK(found[3] == 2, true);
+		auto dir = pr::filesys::GetDirectory<std::string>(__FILE__);
+		auto root = pr::filesys::CombinePath<std::string>(dir, "..\\..\\..\\projects\\unittests\\src");
+		if (!pr::filesys::DirectoryExists(root))
+		{
+			PR_CHECK(false && "Recurse directory test failed, root directory not found", true);
+			return;
 		}
+
+		PR_CHECK(pr::filesys::EnumFiles(pr::Widen(root), L"*.cpp;*.c", file_cb), true);
+		PR_CHECK(pr::filesys::EnumFiles(pr::Widen(root), L"*.h;*.py" , file_cb), true);
+		PR_CHECK(found[0] == 1, true);
+		PR_CHECK(found[1] == 0, true);
+		PR_CHECK(found[2] == 2, true);
+		PR_CHECK(found[3] == 0, true);
 	}
 }
 #endif

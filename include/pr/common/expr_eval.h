@@ -688,9 +688,9 @@ namespace pr
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include "pr/maths/maths.h"
-namespace pr
+namespace pr::common
 {
-	namespace unittests
+	namespace unitests::expr_eval
 	{
 		template <typename ResType> bool Expr(char const* expr, ResType result);
 		template <> bool Expr(char const* expr, double     result) { double     val; return pr::Evaluate (expr, val) && pr::FEql(val, result); }
@@ -713,111 +713,116 @@ namespace pr
 		bool Val(char const* expr, pr::uint64 result) { pr::eval_impl::Val val; return val.read(expr) && result == (pr::uint64)val.ll(); }
 
 		#define VAL(exp) Val(#exp, (exp))
+	}
 
-		PRUnitTest(pr_common_expr_eval)
+	PRUnitTest(ExprEvalTests)
+	{
+		using namespace unitests::expr_eval;
+
+		PR_CHECK(VAL(1), true);
+		PR_CHECK(VAL(1.0), true);
+		PR_CHECK(VAL(-1), true);
+		PR_CHECK(VAL(-1.0), true);
+		PR_CHECK(VAL(10U), true);
+		PR_CHECK(VAL(100L), true);
+		PR_CHECK(VAL(-100L), true);
+		PR_CHECK(VAL(0x1000UL), true);
+		PR_CHECK(VAL(0x7FFFFFFF), true);
+		PR_CHECK(VAL(0x80000000), true);
+		PR_CHECK(VAL(0xFFFFFFFF), true);
+		PR_CHECK(VAL(0xFFFFFFFFU), true);
+		PR_CHECK(VAL(0xFFFFFFFFULL), true);
+		PR_CHECK(VAL(0x7FFFFFFFFFFFFFFFLL), true);
+		PR_CHECK(VAL(0xFFFFFFFFFFFFFFFFULL), true);
+
+		PR_CHECK(EXPR(1.0), true);
+		PR_CHECK(EXPR(+1.0), true);
+		PR_CHECK(EXPR(-1.0), true);
+		PR_CHECK(EXPR(-(1.0 + 2.0)), true);
+		PR_CHECK(EXPR(8.0 * -1.0), true);
+		PR_CHECK(EXPR(4.0 * -1.0 + 2.0), true);
+		PR_CHECK(EXPR(1.0 + +2.0), true);
+		PR_CHECK(EXPR(1.0 - -2.0), true);
+		PR_CHECK(EXPR(1.0 - 2.0 - 3.0 + 4.0), true);
+		PR_CHECK(EXPR(1.0 * +2.0), true);
+		PR_CHECK(EXPR(1 / 2), true);
+		PR_CHECK(EXPR(1.0 / 2.0), true);
+		PR_CHECK(EXPR(1.0 / 2.0 + 3.0), true);
+		PR_CHECK(EXPR(1.0 / 2.0 * 3.0), true);
+		PR_CHECK(EXPR((1 || 0) && 2), true);
+		PR_CHECK(EXPR(((13 ^ 7) | 6) & 14), true);
+		PR_CHECK(EXPR((8 < 9) + (3 <= 3) + (8 > 9) + (2 >= 2) + (1 != 2) + (2 == 2)), true);
+		PR_CHECK(EXPR(1.0 + 2.0 * 3.0 - 4.0), true);
+		PR_CHECK(EXPR(2.0 * 3.0 + 1.0 - 4.0), true);
+		PR_CHECK(EXPR(1.0 - 4.0 + 2.0 * 3.0), true);
+		PR_CHECK(EXPR((1.0 + 2.0) * 3.0 - 4.0), true);
+		PR_CHECK(EXPR(1.0 + 2.0 * -(3.0 - 4.0)), true);
+		PR_CHECK(EXPR(1.0 + (2.0 * (3.0 - 4.0))), true);
+		PR_CHECK(EXPR((1.0 + 2.0) * (3.0 - 4.0)), true);
+		PR_CHECK(EXPR(~37 & ~0), true);
+		PR_CHECK(EXPR(!37 | !0), true);
+		PR_CHECK(EXPR(~(0xFFFFFFFF >> 2)), true);
+		PR_CHECK(EXPR(~(4294967295 >> 2)), true);
+		PR_CHECK(EXPR(~(0xFFFFFFFFLL >> 2)), true);
+		PR_CHECK(EXPR(~(4294967295LL >> 2)), true);
+		PR_CHECK(Expr("sin(1.0 + 2.0)"          ,::sin(1.0 + 2.0))      ,true);
+		PR_CHECK(Expr("cos(TAU)"                ,::cos(eval_impl::TAU)) ,true);
+		PR_CHECK(Expr("tan(PHI)"                ,::tan(eval_impl::PHI)) ,true);
+		PR_CHECK(Expr("abs( 1.0)"               ,::abs( 1.0))           ,true);
+		PR_CHECK(Expr("abs(-1.0)"               ,::abs(-1.0))           ,true);
+		PR_CHECK(EXPR(11 % 3), true);
+		PR_CHECK(Expr("fmod(11.3, 3.1)"         ,::fmod(11.3, 3.1)) ,true);
+		PR_CHECK(EXPR(3.0*fmod(17.3, 2.1)), true);
+		PR_CHECK(EXPR(1 << 10), true);
+		PR_CHECK(EXPR(1024 >> 3), true);
+		PR_CHECK(Expr("ceil(3.4)"                ,::ceil(3.4))                                    ,true);
+		PR_CHECK(Expr("ceil(-3.4)"               ,::ceil(-3.4))                                   ,true);
+		PR_CHECK(Expr("floor(3.4)"               ,::floor(3.4))                                   ,true);
+		PR_CHECK(Expr("floor(-3.4)"              ,::floor(-3.4))                                  ,true);
+		PR_CHECK(Expr("asin(-0.8)"               ,::asin(-0.8))                                   ,true);
+		PR_CHECK(Expr("acos(0.2)"                ,::acos(0.2))                                    ,true);
+		PR_CHECK(Expr("atan(2.3/12.9)"           ,::atan(2.3/12.9))                               ,true);
+		PR_CHECK(Expr("atan2(2.3,-3.9)"          ,::atan2(2.3,-3.9))                              ,true);
+		PR_CHECK(Expr("sinh(0.8)"                ,::sinh(0.8))                                    ,true);
+		PR_CHECK(Expr("cosh(0.2)"                ,::cosh(0.2))                                    ,true);
+		PR_CHECK(Expr("tanh(2.3)"                ,::tanh(2.3))                                    ,true);
+		PR_CHECK(Expr("exp(2.3)"                 ,::exp(2.3))                                     ,true);
+		PR_CHECK(Expr("log(209.3)"               ,::log(209.3))                                   ,true);
+		PR_CHECK(Expr("log10(209.3)"             ,::log10(209.3))                                 ,true);
+		PR_CHECK(Expr("pow(2.3, -1.3)"           ,::pow(2.3, -1.3))                               ,true);
+		PR_CHECK(Expr("sqrt(2.3)"                ,::sqrt(2.3))                                    ,true);
+		PR_CHECK(Expr("sqr(-2.3)"                ,pr::Sqr(-2.3))                                  ,true);
+		PR_CHECK(Expr("len2(3,4)"                ,::sqrt(3.0*3.0 + 4.0*4.0))                      ,true);
+		PR_CHECK(Expr("len3(3,4,5)"              ,::sqrt(3.0*3.0 + 4.0*4.0 + 5.0*5.0))            ,true);
+		PR_CHECK(Expr("len4(3,4,5,6)"            ,::sqrt(3.0*3.0 + 4.0*4.0 + 5.0*5.0 + 6.0*6.0))  ,true);
+		PR_CHECK(Expr("deg(-1.24)"               ,-1.24 * (360.0 / eval_impl::TAU))               ,true);
+		PR_CHECK(Expr("rad(241.32)"              ,241.32 * (eval_impl::TAU / 360.0))              ,true);
+		PR_CHECK(Expr("round( 3.5)"              ,::floor(3.5 + 0.5))                             ,true);
+		PR_CHECK(Expr("round(-3.5)"              ,::floor(-3.5 + 0.5))                            ,true);
+		PR_CHECK(Expr("round( 3.2)"              ,::floor(3.2 + 0.5))                             ,true);
+		PR_CHECK(Expr("round(-3.2)"              ,::floor(-3.2 + 0.5))                            ,true);
+		PR_CHECK(Expr("min(-3.2, -3.4)"          ,pr::Min(-3.2, -3.4))                            ,true);
+		PR_CHECK(Expr("max(-3.2, -3.4)"          ,pr::Max(-3.2, -3.4))                            ,true);
+		PR_CHECK(Expr("clamp(10.0, -3.4, -3.2)"  ,pr::Clamp(10.0, -3.4, -3.2))                    ,true);
+		PR_CHECK(Expr("sqr(sqrt(2.3)*-abs(4%2)/15.0-tan(TAU/-6))", pr::Sqr(::sqrt(2.3)*-::abs(4%2)/15.0-::tan(eval_impl::TAU/-6))), true);
 		{
-			PR_CHECK(VAL(1), true);
-			PR_CHECK(VAL(1.0), true);
-			PR_CHECK(VAL(-1), true);
-			PR_CHECK(VAL(-1.0), true);
-			PR_CHECK(VAL(10U), true);
-			PR_CHECK(VAL(100L), true);
-			PR_CHECK(VAL(-100L), true);
-			PR_CHECK(VAL(0x1000UL), true);
-			PR_CHECK(VAL(0x7FFFFFFF), true);
-			PR_CHECK(VAL(0x80000000), true);
-			PR_CHECK(VAL(0xFFFFFFFF), true);
-			PR_CHECK(VAL(0xFFFFFFFFU), true);
-			PR_CHECK(VAL(0xFFFFFFFFULL), true);
-			PR_CHECK(VAL(0x7FFFFFFFFFFFFFFFLL), true);
-			PR_CHECK(VAL(0xFFFFFFFFFFFFFFFFULL), true);
-
-			PR_CHECK(EXPR(1.0), true);
-			PR_CHECK(EXPR(+1.0), true);
-			PR_CHECK(EXPR(-1.0), true);
-			PR_CHECK(EXPR(-(1.0 + 2.0)), true);
-			PR_CHECK(EXPR(8.0 * -1.0), true);
-			PR_CHECK(EXPR(4.0 * -1.0 + 2.0), true);
-			PR_CHECK(EXPR(1.0 + +2.0), true);
-			PR_CHECK(EXPR(1.0 - -2.0), true);
-			PR_CHECK(EXPR(1.0 - 2.0 - 3.0 + 4.0), true);
-			PR_CHECK(EXPR(1.0 * +2.0), true);
-			PR_CHECK(EXPR(1 / 2), true);
-			PR_CHECK(EXPR(1.0 / 2.0), true);
-			PR_CHECK(EXPR(1.0 / 2.0 + 3.0), true);
-			PR_CHECK(EXPR(1.0 / 2.0 * 3.0), true);
-			PR_CHECK(EXPR((1 || 0) && 2), true);
-			PR_CHECK(EXPR(((13 ^ 7) | 6) & 14), true);
-			PR_CHECK(EXPR((8 < 9) + (3 <= 3) + (8 > 9) + (2 >= 2) + (1 != 2) + (2 == 2)), true);
-			PR_CHECK(EXPR(1.0 + 2.0 * 3.0 - 4.0), true);
-			PR_CHECK(EXPR(2.0 * 3.0 + 1.0 - 4.0), true);
-			PR_CHECK(EXPR(1.0 - 4.0 + 2.0 * 3.0), true);
-			PR_CHECK(EXPR((1.0 + 2.0) * 3.0 - 4.0), true);
-			PR_CHECK(EXPR(1.0 + 2.0 * -(3.0 - 4.0)), true);
-			PR_CHECK(EXPR(1.0 + (2.0 * (3.0 - 4.0))), true);
-			PR_CHECK(EXPR((1.0 + 2.0) * (3.0 - 4.0)), true);
-			PR_CHECK(EXPR(~37 & ~0), true);
-			PR_CHECK(EXPR(!37 | !0), true);
-			PR_CHECK(EXPR(~(0xFFFFFFFF >> 2)), true);
-			PR_CHECK(EXPR(~(4294967295 >> 2)), true);
-			PR_CHECK(EXPR(~(0xFFFFFFFFLL >> 2)), true);
-			PR_CHECK(EXPR(~(4294967295LL >> 2)), true);
-			PR_CHECK(Expr("sin(1.0 + 2.0)"          ,::sin(1.0 + 2.0))      ,true);
-			PR_CHECK(Expr("cos(TAU)"                ,::cos(eval_impl::TAU)) ,true);
-			PR_CHECK(Expr("tan(PHI)"                ,::tan(eval_impl::PHI)) ,true);
-			PR_CHECK(Expr("abs( 1.0)"               ,::abs( 1.0))           ,true);
-			PR_CHECK(Expr("abs(-1.0)"               ,::abs(-1.0))           ,true);
-			PR_CHECK(EXPR(11 % 3), true);
-			PR_CHECK(Expr("fmod(11.3, 3.1)"         ,::fmod(11.3, 3.1)) ,true);
-			PR_CHECK(EXPR(3.0*fmod(17.3, 2.1)), true);
-			PR_CHECK(EXPR(1 << 10), true);
-			PR_CHECK(EXPR(1024 >> 3), true);
-			PR_CHECK(Expr("ceil(3.4)"                ,::ceil(3.4))                                    ,true);
-			PR_CHECK(Expr("ceil(-3.4)"               ,::ceil(-3.4))                                   ,true);
-			PR_CHECK(Expr("floor(3.4)"               ,::floor(3.4))                                   ,true);
-			PR_CHECK(Expr("floor(-3.4)"              ,::floor(-3.4))                                  ,true);
-			PR_CHECK(Expr("asin(-0.8)"               ,::asin(-0.8))                                   ,true);
-			PR_CHECK(Expr("acos(0.2)"                ,::acos(0.2))                                    ,true);
-			PR_CHECK(Expr("atan(2.3/12.9)"           ,::atan(2.3/12.9))                               ,true);
-			PR_CHECK(Expr("atan2(2.3,-3.9)"          ,::atan2(2.3,-3.9))                              ,true);
-			PR_CHECK(Expr("sinh(0.8)"                ,::sinh(0.8))                                    ,true);
-			PR_CHECK(Expr("cosh(0.2)"                ,::cosh(0.2))                                    ,true);
-			PR_CHECK(Expr("tanh(2.3)"                ,::tanh(2.3))                                    ,true);
-			PR_CHECK(Expr("exp(2.3)"                 ,::exp(2.3))                                     ,true);
-			PR_CHECK(Expr("log(209.3)"               ,::log(209.3))                                   ,true);
-			PR_CHECK(Expr("log10(209.3)"             ,::log10(209.3))                                 ,true);
-			PR_CHECK(Expr("pow(2.3, -1.3)"           ,::pow(2.3, -1.3))                               ,true);
-			PR_CHECK(Expr("sqrt(2.3)"                ,::sqrt(2.3))                                    ,true);
-			PR_CHECK(Expr("sqr(-2.3)"                ,pr::Sqr(-2.3))                                  ,true);
-			PR_CHECK(Expr("len2(3,4)"                ,::sqrt(3.0*3.0 + 4.0*4.0))                      ,true);
-			PR_CHECK(Expr("len3(3,4,5)"              ,::sqrt(3.0*3.0 + 4.0*4.0 + 5.0*5.0))            ,true);
-			PR_CHECK(Expr("len4(3,4,5,6)"            ,::sqrt(3.0*3.0 + 4.0*4.0 + 5.0*5.0 + 6.0*6.0))  ,true);
-			PR_CHECK(Expr("deg(-1.24)"               ,-1.24 * (360.0 / eval_impl::TAU))               ,true);
-			PR_CHECK(Expr("rad(241.32)"              ,241.32 * (eval_impl::TAU / 360.0))              ,true);
-			PR_CHECK(Expr("round( 3.5)"              ,::floor(3.5 + 0.5))                             ,true);
-			PR_CHECK(Expr("round(-3.5)"              ,::floor(-3.5 + 0.5))                            ,true);
-			PR_CHECK(Expr("round( 3.2)"              ,::floor(3.2 + 0.5))                             ,true);
-			PR_CHECK(Expr("round(-3.2)"              ,::floor(-3.2 + 0.5))                            ,true);
-			PR_CHECK(Expr("min(-3.2, -3.4)"          ,pr::Min(-3.2, -3.4))                            ,true);
-			PR_CHECK(Expr("max(-3.2, -3.4)"          ,pr::Max(-3.2, -3.4))                            ,true);
-			PR_CHECK(Expr("clamp(10.0, -3.4, -3.2)"  ,pr::Clamp(10.0, -3.4, -3.2))                    ,true);
-			PR_CHECK(Expr("sqr(sqrt(2.3)*-abs(4%2)/15.0-tan(TAU/-6))", pr::Sqr(::sqrt(2.3)*-::abs(4%2)/15.0-::tan(eval_impl::TAU/-6))), true);
-			{
-				long long v1 = 0, v0 = 123456789000000LL / 2;
-				PR_CHECK(pr::EvaluateI("123456789000000 / 2", v1), true);
-				PR_CHECK(v0 == v1, true);
-			}
-			PR_CHECK(Expr("1 != 2 ? 5 : 6", 5), true);
-			PR_CHECK(Expr("1 == 2 ? 5 : 6", 6), true);
-			PR_CHECK(Expr("true ? 5 : 6 + 1", 5), true);
-			PR_CHECK(Expr("false ? 5 : 6 + 1", 7), true);
-			PR_CHECK(Expr("sqr(-2) ? (1+2) : max(-2,-3)", 3), true);
-			PR_CHECK(Expr("-+1", -1),  true);
-			PR_CHECK(Expr("-++-1", 1),  true);
-			PR_CHECK(Expr("!!true", 1),  true);
-			PR_CHECK(Expr("-!!!false", -1),  true);
-			PR_CHECK(Expr("10 - 3 - 2", 5), true);
+			long long v1 = 0, v0 = 123456789000000LL / 2;
+			PR_CHECK(pr::EvaluateI("123456789000000 / 2", v1), true);
+			PR_CHECK(v0 == v1, true);
 		}
+		PR_CHECK(Expr("1 != 2 ? 5 : 6", 5), true);
+		PR_CHECK(Expr("1 == 2 ? 5 : 6", 6), true);
+		PR_CHECK(Expr("true ? 5 : 6 + 1", 5), true);
+		PR_CHECK(Expr("false ? 5 : 6 + 1", 7), true);
+		PR_CHECK(Expr("sqr(-2) ? (1+2) : max(-2,-3)", 3), true);
+		PR_CHECK(Expr("-+1", -1),  true);
+		PR_CHECK(Expr("-++-1", 1),  true);
+		PR_CHECK(Expr("!!true", 1),  true);
+		PR_CHECK(Expr("-!!!false", -1),  true);
+		PR_CHECK(Expr("10 - 3 - 2", 5), true);
+
+		#undef EXPR
+		#undef VAL
 	}
 }
 #endif

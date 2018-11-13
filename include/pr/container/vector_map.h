@@ -126,40 +126,37 @@ namespace pr
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include "pr/container/vector.h"
-namespace pr
+namespace pr::container
 {
-	namespace unittests
+	namespace unittests::vector_map
 	{
-		namespace vector_map
+		struct Thing
 		{
-			struct Thing
-			{
-				int m_id;
-				Thing() :m_id() {}
-				Thing(int id) :m_id(id) {}
-			};
-		}
-		PRUnitTest(pr_vector_map)
-		{
-			using namespace pr::unittests::vector_map;
-			typedef pr::vector<std::pair<int, Thing>, 10, true> fixed_buffer;
-			typedef pr::vector_map<int, Thing, fixed_buffer> Map;
+			int m_id;
+			Thing() :m_id() {}
+			Thing(int id) :m_id(id) {}
+		};
+	}
+	PRUnitTest(VectorMapTests)
+	{
+		using namespace unittests::vector_map;
+		typedef pr::vector<std::pair<int, Thing>, 10, true> fixed_buffer;
+		typedef pr::vector_map<int, Thing, fixed_buffer> Map;
 
-			Map map;
+		Map map;
 
-			map[3] = Thing(3);
-			map[1] = Thing(1);
-			map[9] = Thing(9);
+		map[3] = Thing(3);
+		map[1] = Thing(1);
+		map[9] = Thing(9);
 
-			PR_CHECK(!map.empty(), true);
-			PR_CHECK(map.size(), 3U);
-			PR_CHECK(map[9].m_id, 9);
-			PR_CHECK(map[1].m_id, 1);
-			PR_CHECK(map[3].m_id, 3);
+		PR_CHECK(!map.empty(), true);
+		PR_CHECK(map.size(), 3U);
+		PR_CHECK(map[9].m_id, 9);
+		PR_CHECK(map[1].m_id, 1);
+		PR_CHECK(map[3].m_id, 3);
 
-			map.clear();
-			PR_CHECK(map.empty(), true);
-		}
+		map.clear();
+		PR_CHECK(map.empty(), true);
 	}
 }
 #endif

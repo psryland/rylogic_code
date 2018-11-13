@@ -31,7 +31,8 @@ namespace pr
 		using kg_p_m³_t  = float;
 		using kg_t       = float;
 
-		// Import collision into the physics namespace
+		// Import types into this namespace
+		using namespace ::pr::maths::spatial;
 		using namespace ::pr::collision;
 
 		// Forwards

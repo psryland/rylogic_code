@@ -570,152 +570,146 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::str
 {
-	namespace unittests
+	PRUnitTest(StringUtilTests)
 	{
-		PRUnitTest(pr_str_string_util)
-		{
-			using namespace pr;
-			using namespace pr::str;
-
-			{// EnsureNewline
-				std::string thems_without   = "without";
-				std::wstring thems_with     = L"with\n";
-				EnsureNewline(thems_without);
-				EnsureNewline(thems_with);
-				PR_CHECK(*(End(thems_without) - 1), '\n');
-				PR_CHECK(*(End(thems_with)    - 1),L'\n');
-			}
-			{//Contains
-				std::string src = "string";
-				PR_CHECK(Contains(src, "in") , true);
-				PR_CHECK(Contains(src, "ing"), true);
-				PR_CHECK(ContainsI(src, "iNg"), true);
-				PR_CHECK(ContainsI(src, "inG"), true);
-			}
-			{//Compare
-				std::string src = "string1";
-				PR_CHECK(Compare(src, "string2") , -1);
-				PR_CHECK(Compare(src, "string1") ,  0);
-				PR_CHECK(Compare(src, "string0") ,  1);
-				PR_CHECK(Compare(src, "string11"), -1);
-				PR_CHECK(Compare(src, "string")  ,  1);
-				PR_CHECK(CompareI(src, "striNg2" ), -1);
-				PR_CHECK(CompareI(src, "stRIng1" ),  0);
-				PR_CHECK(CompareI(src, "strinG0" ),  1);
-				PR_CHECK(CompareI(src, "string11"), -1);
-				PR_CHECK(CompareI(src, "strinG"  ),  1);
-			}
-			{//Count
-				char            aarr[] =  "s0tr0";
-				wchar_t         warr[] = L"s0tr0";
-				std::string     astr   =  "s0tr0";
-				std::wstring    wstr   = L"s0tr0";
-				PR_CHECK(Count(aarr, "0t"), 1U);
-				PR_CHECK(Count(warr, "0") , 2U);
-				PR_CHECK(Count(astr, "0") , 2U);
-				PR_CHECK(Count(wstr, "0t"), 1U);
-			}
-			{//CompressDelimiters
-				char src[] = "\n\nstuff     with  \n  white\n   space   \n in   ";
-				char res[] = "stuff with\nwhite\nspace\nin";
-				CompressDelimiters(src, " \n", ' ', true);
-				PR_CHECK(src, res);
-			}
-			{//Tokenise
-				char const src[] = "tok0 tok1 tok2 \"tok3 and tok3\" tok4";
-				std::vector<std::string> tokens;
-				Tokenise(src, tokens);
-				PR_CHECK(tokens.size(), 5U);
-				PR_CHECK(tokens[0].c_str(), "tok0"          );
-				PR_CHECK(tokens[1].c_str(), "tok1"          );
-				PR_CHECK(tokens[2].c_str(), "tok2"          );
-				PR_CHECK(tokens[3].c_str(), "tok3 and tok3" );
-				PR_CHECK(tokens[4].c_str(), "tok4"          );
-			}
-			{//StripComments
-				char src[] =
-					"//Line Comment\n"
-					"Not a comment\n"
-					"/* multi\n"
-					"-line comment*/";
-				char res[] = "Not a comment\n";
-				PR_CHECK(StripCppComments(src), res);
-			}
-			{//Replace
-				char src[] = "Bite my shiny donkey metal donkey";
-				char res1[] = "Bite my shiny arse metal arse";
-				char res2[] = "Bite my shiny donkey metal donkey";
-				PR_CHECK(Replace(src, "donkey", "arse"), size_t(2));
-				PR_CHECK(src, res1);
-				PR_CHECK(Replace(src, "arse", "donkey"), size_t(2));
-				PR_CHECK(src, res2);
-				PR_CHECK(ReplaceI(src, "DONKEY", "arse"), size_t(2));
-				PR_CHECK(src, res1);
-			}
-			{//ConvertToCString
-				char const str[] = "Not a \"Cstring\". \a \b \f \n \r \t \v \\ \? \' ";
-				char const res[] = "Not a \\\"Cstring\\\". \\a \\b \\f \\n \\r \\t \\v \\\\ \\? \\\' ";
+		{// EnsureNewline
+			std::string thems_without   = "without";
+			std::wstring thems_with     = L"with\n";
+			EnsureNewline(thems_without);
+			EnsureNewline(thems_with);
+			PR_CHECK(*(End(thems_without) - 1), '\n');
+			PR_CHECK(*(End(thems_with)    - 1),L'\n');
+		}
+		{//Contains
+			std::string src = "string";
+			PR_CHECK(Contains(src, "in") , true);
+			PR_CHECK(Contains(src, "ing"), true);
+			PR_CHECK(ContainsI(src, "iNg"), true);
+			PR_CHECK(ContainsI(src, "inG"), true);
+		}
+		{//Compare
+			std::string src = "string1";
+			PR_CHECK(Compare(src, "string2") , -1);
+			PR_CHECK(Compare(src, "string1") ,  0);
+			PR_CHECK(Compare(src, "string0") ,  1);
+			PR_CHECK(Compare(src, "string11"), -1);
+			PR_CHECK(Compare(src, "string")  ,  1);
+			PR_CHECK(CompareI(src, "striNg2" ), -1);
+			PR_CHECK(CompareI(src, "stRIng1" ),  0);
+			PR_CHECK(CompareI(src, "strinG0" ),  1);
+			PR_CHECK(CompareI(src, "string11"), -1);
+			PR_CHECK(CompareI(src, "strinG"  ),  1);
+		}
+		{//Count
+			char            aarr[] =  "s0tr0";
+			wchar_t         warr[] = L"s0tr0";
+			std::string     astr   =  "s0tr0";
+			std::wstring    wstr   = L"s0tr0";
+			PR_CHECK(Count(aarr, "0t"), 1U);
+			PR_CHECK(Count(warr, "0") , 2U);
+			PR_CHECK(Count(astr, "0") , 2U);
+			PR_CHECK(Count(wstr, "0t"), 1U);
+		}
+		{//CompressDelimiters
+			char src[] = "\n\nstuff     with  \n  white\n   space   \n in   ";
+			char res[] = "stuff with\nwhite\nspace\nin";
+			CompressDelimiters(src, " \n", ' ', true);
+			PR_CHECK(src, res);
+		}
+		{//Tokenise
+			char const src[] = "tok0 tok1 tok2 \"tok3 and tok3\" tok4";
+			std::vector<std::string> tokens;
+			Tokenise(src, tokens);
+			PR_CHECK(tokens.size(), 5U);
+			PR_CHECK(tokens[0].c_str(), "tok0"          );
+			PR_CHECK(tokens[1].c_str(), "tok1"          );
+			PR_CHECK(tokens[2].c_str(), "tok2"          );
+			PR_CHECK(tokens[3].c_str(), "tok3 and tok3" );
+			PR_CHECK(tokens[4].c_str(), "tok4"          );
+		}
+		{//StripComments
+			char src[] =
+				"//Line Comment\n"
+				"Not a comment\n"
+				"/* multi\n"
+				"-line comment*/";
+			char res[] = "Not a comment\n";
+			PR_CHECK(StripCppComments(src), res);
+		}
+		{//Replace
+			char src[] = "Bite my shiny donkey metal donkey";
+			char res1[] = "Bite my shiny arse metal arse";
+			char res2[] = "Bite my shiny donkey metal donkey";
+			PR_CHECK(Replace(src, "donkey", "arse"), size_t(2));
+			PR_CHECK(src, res1);
+			PR_CHECK(Replace(src, "arse", "donkey"), size_t(2));
+			PR_CHECK(src, res2);
+			PR_CHECK(ReplaceI(src, "DONKEY", "arse"), size_t(2));
+			PR_CHECK(src, res1);
+		}
+		{//ConvertToCString
+			char const str[] = "Not a \"Cstring\". \a \b \f \n \r \t \v \\ \? \' ";
+			char const res[] = "Not a \\\"Cstring\\\". \\a \\b \\f \\n \\r \\t \\v \\\\ \\? \\\' ";
 				
-				auto cstr1 = StringToCString<std::string>(str);
-				auto str1  = CStringToString(cstr1);
-				PR_CHECK(Equal(cstr1, res), true);
-				PR_CHECK(Equal(str1, str), true);
-			}
-			{//FindIdentifier
-				char const str[] = "aid id iid    id aiden";
-				wchar_t id[] = L"id";
-				size_t idx;
-				idx = FindIdentifier(str, id);           PR_CHECK(idx, 4U);
-				idx = FindIdentifier(str, id, idx+1, 3); PR_CHECK(idx, 8U);
-				idx = FindIdentifier(str, id, idx+1);    PR_CHECK(idx, 14U);
-				idx = FindIdentifier(str, id, idx+1);    PR_CHECK(idx, 22U);
-			}
-			{//Quotes
-				char empty[3] = "";
-				wchar_t one[4] = L"1";
-				std::string two = "\"two\"";
-				std::wstring three = L"three";
-				PR_CHECK(str::Equal("\"\""       ,Quotes(empty ,true)), true);
-				PR_CHECK(str::Equal("\"1\""      ,Quotes(one   ,true)), true);
-				PR_CHECK(str::Equal("\"two\""    ,Quotes(two   ,true)), true);
-				PR_CHECK(str::Equal(L"\"three\"" ,Quotes(three ,true)), true);
-				PR_CHECK(str::Equal(""       ,Quotes(empty ,false)), true);
-				PR_CHECK(str::Equal("1"      ,Quotes(one   ,false)), true);
-				PR_CHECK(str::Equal("two"    ,Quotes(two   ,false)), true);
-				PR_CHECK(str::Equal(L"three" ,Quotes(three ,false)), true);
-			}
-			{// Pretty Bytes
-				auto pretty = [](long long bytes)
-				{
-					return PrettyBytes<>(bytes, true, 1) + " " + PrettyBytes<>(bytes, false, 1);
-				};
-				PR_CHECK(pretty(0)                   ,      "0B 0iB"      );
-				PR_CHECK(pretty(27)                  ,     "27B 27iB"     );
-				PR_CHECK(pretty(999)                 ,    "999B 999iB"    );
-				PR_CHECK(pretty(1000)                ,   "1.0KB 1000iB"   );
-				PR_CHECK(pretty(1023)                ,   "1.0KB 1023iB"   );
-				PR_CHECK(pretty(1024)                ,   "1.0KB 1.0KiB"   );
-				PR_CHECK(pretty(1728)                ,   "1.7KB 1.7KiB"   );
-				PR_CHECK(pretty(110592)              , "110.6KB 108.0KiB" );
-				PR_CHECK(pretty(7077888)             ,   "7.1MB 6.8MiB"   );
-				PR_CHECK(pretty(452984832)           , "453.0MB 432.0MiB" );
-				PR_CHECK(pretty(28991029248)         ,  "29.0GB 27.0GiB"  );
-				PR_CHECK(pretty(1855425871872)       ,   "1.9TB 1.7TiB"   );
-				PR_CHECK(pretty(9223372036854775807) ,   "9.2EB 8.0EiB"   );
-			}
-			{// Pretty Number
-				PR_CHECK(PrettyNumber<std::wstring>(1.234e10, 6, 3)    , L"12,340.000"    );
-				PR_CHECK(PrettyNumber<std::wstring>(1.234e10, 3, 3)    , L"12,340,000.000");
-				PR_CHECK(PrettyNumber<std::wstring>(1.234e-10, -3, 3)  , L"0.000"         );
-				PR_CHECK(PrettyNumber<std::wstring>(1.234e-10, -12, 3) , L"123.400"       );
-			}
-			{// ProcessIndentedNewlines
-				std::string str = "\nwords    and     \n\t\t\tmore  words  \n\t\t and more\nwords\n";
-				ProcessIndentedNewlines(str);
-				PR_CHECK(str, "\nwords    and\nmore  words\n and more\nwords\n");
-			}
+			auto cstr1 = StringToCString<std::string>(str);
+			auto str1  = CStringToString(cstr1);
+			PR_CHECK(Equal(cstr1, res), true);
+			PR_CHECK(Equal(str1, str), true);
+		}
+		{//FindIdentifier
+			char const str[] = "aid id iid    id aiden";
+			wchar_t id[] = L"id";
+			size_t idx;
+			idx = FindIdentifier(str, id);           PR_CHECK(idx, 4U);
+			idx = FindIdentifier(str, id, idx+1, 3); PR_CHECK(idx, 8U);
+			idx = FindIdentifier(str, id, idx+1);    PR_CHECK(idx, 14U);
+			idx = FindIdentifier(str, id, idx+1);    PR_CHECK(idx, 22U);
+		}
+		{//Quotes
+			char empty[3] = "";
+			wchar_t one[4] = L"1";
+			std::string two = "\"two\"";
+			std::wstring three = L"three";
+			PR_CHECK(str::Equal("\"\""       ,Quotes(empty ,true)), true);
+			PR_CHECK(str::Equal("\"1\""      ,Quotes(one   ,true)), true);
+			PR_CHECK(str::Equal("\"two\""    ,Quotes(two   ,true)), true);
+			PR_CHECK(str::Equal(L"\"three\"" ,Quotes(three ,true)), true);
+			PR_CHECK(str::Equal(""       ,Quotes(empty ,false)), true);
+			PR_CHECK(str::Equal("1"      ,Quotes(one   ,false)), true);
+			PR_CHECK(str::Equal("two"    ,Quotes(two   ,false)), true);
+			PR_CHECK(str::Equal(L"three" ,Quotes(three ,false)), true);
+		}
+		{// Pretty Bytes
+			auto pretty = [](long long bytes)
+			{
+				return PrettyBytes<>(bytes, true, 1) + " " + PrettyBytes<>(bytes, false, 1);
+			};
+			PR_CHECK(pretty(0)                   ,      "0B 0iB"      );
+			PR_CHECK(pretty(27)                  ,     "27B 27iB"     );
+			PR_CHECK(pretty(999)                 ,    "999B 999iB"    );
+			PR_CHECK(pretty(1000)                ,   "1.0KB 1000iB"   );
+			PR_CHECK(pretty(1023)                ,   "1.0KB 1023iB"   );
+			PR_CHECK(pretty(1024)                ,   "1.0KB 1.0KiB"   );
+			PR_CHECK(pretty(1728)                ,   "1.7KB 1.7KiB"   );
+			PR_CHECK(pretty(110592)              , "110.6KB 108.0KiB" );
+			PR_CHECK(pretty(7077888)             ,   "7.1MB 6.8MiB"   );
+			PR_CHECK(pretty(452984832)           , "453.0MB 432.0MiB" );
+			PR_CHECK(pretty(28991029248)         ,  "29.0GB 27.0GiB"  );
+			PR_CHECK(pretty(1855425871872)       ,   "1.9TB 1.7TiB"   );
+			PR_CHECK(pretty(9223372036854775807) ,   "9.2EB 8.0EiB"   );
+		}
+		{// Pretty Number
+			PR_CHECK(PrettyNumber<std::wstring>(1.234e10, 6, 3)    , L"12,340.000"    );
+			PR_CHECK(PrettyNumber<std::wstring>(1.234e10, 3, 3)    , L"12,340,000.000");
+			PR_CHECK(PrettyNumber<std::wstring>(1.234e-10, -3, 3)  , L"0.000"         );
+			PR_CHECK(PrettyNumber<std::wstring>(1.234e-10, -12, 3) , L"123.400"       );
+		}
+		{// ProcessIndentedNewlines
+			std::string str = "\nwords    and     \n\t\t\tmore  words  \n\t\t and more\nwords\n";
+			ProcessIndentedNewlines(str);
+			PR_CHECK(str, "\nwords    and\nmore  words\n and more\nwords\n");
 		}
 	}
 }

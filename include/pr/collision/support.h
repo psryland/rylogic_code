@@ -40,13 +40,13 @@ namespace pr
 
 		// Returns a support vertex for a shape for a given direction.
 		// Assumes 'direction' is in the shape's root parent space (i.e. transformed by Invert(shape2world) but not 'shape.m_s2p' or any nested shapes)
-		inline v4 SupportVertex(ShapeSphere const& shape, v4_cref direction, EFeature& feature_type)
+		inline v4 SupportVertex(ShapeSphere const& shape, v4_cref<> direction, EFeature& feature_type)
 		{
 			assert(IsNormal3(direction));
 			feature_type = EFeature::Vert;
 			return shape.m_base.m_s2p.pos + shape.m_radius * direction;
 		}
-		inline v4 SupportVertex(ShapeBox const& shape, v4_cref direction, EFeature& feature_type)
+		inline v4 SupportVertex(ShapeBox const& shape, v4_cref<> direction, EFeature& feature_type)
 		{
 			feature_type = EFeature::Vert;
 
@@ -61,13 +61,13 @@ namespace pr
 			}
 			return vert;
 		}
-		inline v4 SupportVertex(ShapeTriangle const& shape, v4_cref direction, EFeature& feature_type)
+		inline v4 SupportVertex(ShapeTriangle const& shape, v4_cref<> direction, EFeature& feature_type)
 		{
 			v4 d(Dot3(direction, shape.m_v.x), Dot3(direction, shape.m_v.y), Dot3(direction, shape.m_v.z), 0.0f);
 			feature_type = EFeature::Vert;
 			return shape.m_v[LargestElement3(d)];
 		}
-		inline v4 SupportVertex(ShapeLine const& shape, v4_cref direction, EFeature& feature_type)
+		inline v4 SupportVertex(ShapeLine const& shape, v4_cref<> direction, EFeature& feature_type)
 		{
 			auto d = Dot(direction, shape.m_base.m_s2p.z);
 			auto r = shape.m_base.m_s2p.z * shape.m_radius;
@@ -124,7 +124,7 @@ namespace pr
 						points[1] += shape.m_base.m_s2p[i] * shape.m_radius[i];
 						points[2] -= shape.m_base.m_s2p[i] * shape.m_radius[i];
 						points[3] -= shape.m_base.m_s2p[i] * shape.m_radius[i];
-						if (Triple3(axis, points[1] - points[0], points[2] - points[0]) < 0)
+						if (Triple(axis, points[1] - points[0], points[2] - points[0]) < 0)
 							std::swap(points[1],points[3]); // Flip the winding order
 						break;
 					}
@@ -190,8 +190,8 @@ namespace pr
 			// average position perpendicular to 'axis').
 
 			// For features with area, check that the polygon is facing the correct direction, +ve for featA, -ve for featB
-			assert((featA <= EFeature::Edge || (Dot3(axis, plane::make(pointA, pointA + countA)) > 0)) && "Contact polygon has incorrect winding order");
-			assert((featB <= EFeature::Edge || (Dot3(axis, plane::make(pointB, pointB + countB)) < 0)) && "Contact polygon has incorrect winding order");
+			assert((featA <= EFeature::Edge || (Dot(plane::make(pointA, pointA + countA), axis) > 0)) && "Contact polygon has incorrect winding order");
+			assert((featB <= EFeature::Edge || (Dot(plane::make(pointB, pointB + countB), axis) < 0)) && "Contact polygon has incorrect winding order");
 
 			// If both shapes contact at a vert, then the separating axis passes through their average position
 			if (featA == EFeature::Vert && featB == EFeature::Vert)
@@ -232,7 +232,7 @@ namespace pr
 				{
 					auto& as = point0[ i          ];
 					auto& ae = point0[(i+1)%count0];
-					auto n = sign * Cross3(axis, ae - as);
+					auto n = Plane{sign * Cross3(axis, ae - as)};
 					for (int j = 0; j != count1; ++j)
 					{
 						auto& edge = edges1[j];

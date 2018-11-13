@@ -42,7 +42,7 @@ namespace pr
 			if (!pen(lhs.m_radius.z + rad.z - Abs(mid.z), [&]{ return Sign(mid.z) * l2w.z; })) return;
 
 			// Lambda for returning a separating axis with the correct sign
-			auto sep_axis = [&](v4_cref sa) { return Sign(Dot(r2l.pos, sa)) * sa; };
+			auto sep_axis = [&](v4_cref<> sa) { return Sign(Dot(r2l.pos, sa)) * sa; };
 			float ra,rb;
 
 			// Try cross products of the segment direction with the coordinate axes.

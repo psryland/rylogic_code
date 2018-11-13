@@ -305,156 +305,152 @@ namespace pr
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include "pr/str/string_core.h"
-namespace pr
+namespace pr::script
 {
-	namespace unittests
+	PRUnitTest(FilterTests)
 	{
-		PRUnitTest(pr_script_filter)
-		{
-			using namespace pr::str;
-			using namespace pr::script;
+		using namespace pr::str;
 
-			{// StripLineContinuations
-				char const* str_in = "Li\
-					on";
-				char const* str_out = "Li					on";
+		{// StripLineContinuations
+			char const* str_in = "Li\
+				on";
+			char const* str_out = "Li				on";
+
+			PtrA src(str_in);
+			StripLineContinuations strip(src);
+			for (;*strip; ++strip, ++str_out)
+			{
+				if (*strip == *str_out) continue;
+				PR_CHECK(*strip, *str_out);
+			}
+			PR_CHECK(*str_out, 0);
+		}
+		{// StripComments
+			char const* str_in = 
+				"123// comment         \n"
+				"456/* blo/ck */789\n"
+				"// many               \n"
+				"// lines              \n"
+				"// \"string\"         \n"
+				"/* \"string\" */      \n"
+				"\"string \\\" /*a*/ //b\"  \n"
+				"/not a comment\n"
+				"/*\n"
+				"  more lines\n"
+				"*/\n"
+				"// multi\\\n"
+				" line\\\n"
+				" comment\n";
+			char const* str_out = 
+				"123\n"
+				"456789\n"
+				"\n"
+				"\n"
+				"\n"
+				"      \n"
+				"\"string \\\" /*a*/ //b\"  \n"
+				"/not a comment\n"
+				"\n"
+				"\n";
+
+			PtrA src(str_in);
+			StripLineContinuations cont(src);
+			StripComments strip(cont);
+			for (;*strip; ++strip, ++str_out)
+			{
+				if (*strip == *str_out) continue;
+				PR_CHECK(*strip, *str_out);
+			}
+			PR_CHECK(*str_out, 0);
+		}
+		{// StripNewLines
+			char const* str_in =
+				"  \n"
+				"      \n"
+				"   \n"
+				"\" multi-line \n"
+				"\n"
+				"\n"
+				"string \"     \n"
+				"         \n"
+				"     \n"
+				"abc  \n"
+				"\n"
+				"\n"
+				"";
+			{// min 0, max 0 lines
+				char const* str_out =
+					"  \" multi-line \n"
+					"\n"
+					"\n"
+					"string \"     abc  ";
 
 				PtrA src(str_in);
-				StripLineContinuations strip(src);
-				for (;*strip; ++strip, ++str_out)
+				StripNewLines strip(src,0,0);
+				for (; *strip; ++strip, ++str_out)
 				{
 					if (*strip == *str_out) continue;
 					PR_CHECK(*strip, *str_out);
 				}
 				PR_CHECK(*str_out, 0);
 			}
-			{// StripComments
-				char const* str_in = 
-					"123// comment         \n"
-					"456/* blo/ck */789\n"
-					"// many               \n"
-					"// lines              \n"
-					"// \"string\"         \n"
-					"/* \"string\" */      \n"
-					"\"string \\\" /*a*/ //b\"  \n"
-					"/not a comment\n"
-					"/*\n"
-					"  more lines\n"
-					"*/\n"
-					"// multi\\\n"
-					" line\\\n"
-					" comment\n";
-				char const* str_out = 
-					"123\n"
-					"456789\n"
-					"\n"
-					"\n"
-					"\n"
-					"      \n"
-					"\"string \\\" /*a*/ //b\"  \n"
-					"/not a comment\n"
-					"\n"
-					"\n";
-
-				PtrA src(str_in);
-				StripLineContinuations cont(src);
-				StripComments strip(cont);
-				for (;*strip; ++strip, ++str_out)
-				{
-					if (*strip == *str_out) continue;
-					PR_CHECK(*strip, *str_out);
-				}
-				PR_CHECK(*str_out, 0);
-			}
-			{// StripNewLines
-				char const* str_in =
+			{
+				char const* str_out =
 					"  \n"
-					"      \n"
-					"   \n"
 					"\" multi-line \n"
 					"\n"
 					"\n"
 					"string \"     \n"
-					"         \n"
-					"     \n"
+					"abc  \n"
+					"";
+
+				PtrA src(str_in);
+				StripNewLines strip(src);
+				for (; *strip; ++strip, ++str_out)
+				{
+					if (*strip == *str_out) continue;
+					PR_CHECK(*strip, *str_out);
+				}
+				PR_CHECK(*str_out, 0);
+			}
+			{
+				char const* str_out =
+					"  \" multi-line \n"
+					"\n"
+					"\n"
+					"string \"     abc  ";
+
+				PtrA src(str_in);
+				StripNewLines strip(src, 0, 0);
+				for (; *strip; ++strip, ++str_out)
+				{
+					if (*strip == *str_out) continue;
+					PR_CHECK(*strip, *str_out);
+				}
+				PR_CHECK(*str_out, 0);
+
+			}
+			{
+				char const* str_out =
+					"  \n"
+					"\n"
+					"\" multi-line \n"
+					"\n"
+					"\n"
+					"string \"     \n"
+					"\n"
 					"abc  \n"
 					"\n"
-					"\n"
 					"";
-				{// min 0, max 0 lines
-					char const* str_out =
-						"  \" multi-line \n"
-						"\n"
-						"\n"
-						"string \"     abc  ";
 
-					PtrA src(str_in);
-					StripNewLines strip(src,0,0);
-					for (; *strip; ++strip, ++str_out)
-					{
-						if (*strip == *str_out) continue;
-						PR_CHECK(*strip, *str_out);
-					}
-					PR_CHECK(*str_out, 0);
-				}
+				PtrA src(str_in);
+				StripNewLines strip(src,2,2);
+				for (; *strip; ++strip, ++str_out)
 				{
-					char const* str_out =
-						"  \n"
-						"\" multi-line \n"
-						"\n"
-						"\n"
-						"string \"     \n"
-						"abc  \n"
-						"";
-
-					PtrA src(str_in);
-					StripNewLines strip(src);
-					for (; *strip; ++strip, ++str_out)
-					{
-						if (*strip == *str_out) continue;
-						PR_CHECK(*strip, *str_out);
-					}
-					PR_CHECK(*str_out, 0);
+					if (*strip == *str_out) continue;
+					PR_CHECK(*strip, *str_out);
 				}
-				{
-					char const* str_out =
-						"  \" multi-line \n"
-						"\n"
-						"\n"
-						"string \"     abc  ";
-
-					PtrA src(str_in);
-					StripNewLines strip(src, 0, 0);
-					for (; *strip; ++strip, ++str_out)
-					{
-						if (*strip == *str_out) continue;
-						PR_CHECK(*strip, *str_out);
-					}
-					PR_CHECK(*str_out, 0);
-
-				}
-				{
-					char const* str_out =
-						"  \n"
-						"\n"
-						"\" multi-line \n"
-						"\n"
-						"\n"
-						"string \"     \n"
-						"\n"
-						"abc  \n"
-						"\n"
-						"";
-
-					PtrA src(str_in);
-					StripNewLines strip(src,2,2);
-					for (; *strip; ++strip, ++str_out)
-					{
-						if (*strip == *str_out) continue;
-						PR_CHECK(*strip, *str_out);
-					}
-					PR_CHECK(*str_out, 0);
-				}
+				PR_CHECK(*str_out, 0);
 			}
 		}
 	}

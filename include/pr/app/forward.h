@@ -63,25 +63,22 @@
 #include "pr/script/forward.h"
 #include "pr/renderer11/renderer.h"
 
-namespace pr
+namespace pr::app
 {
-	namespace app
-	{
-		#define PR_ENUM(x)\
-			x(Success           ,= 0          )\
-			x(Failed            ,= 0x80000000 )\
-			x(StartupFailed     ,             )\
-			x(SettingsNotFound  ,             )\
-			x(SettingsOutOfDate ,             )
-		PR_DEFINE_ENUM2_BASE(EResult, PR_ENUM, uint);
-		#undef PR_ENUM
+	#define PR_ENUM(x)\
+		x(Success           ,= 0          )\
+		x(Failed            ,= 0x80000000 )\
+		x(StartupFailed     ,             )\
+		x(SettingsNotFound  ,             )\
+		x(SettingsOutOfDate ,             )
+	PR_DEFINE_ENUM2_BASE(EResult, PR_ENUM, uint);
+	#undef PR_ENUM
 
-		typedef pr::Exception<EResult> Exception;
-		typedef pr::string<wchar_t> wstring;
-		typedef pr::string<char>    string;
+	typedef pr::Exception<EResult> Exception;
+	typedef pr::string<wchar_t> wstring;
+	typedef pr::string<char>    string;
 
-		struct IAppMainGui;
-		template <typename DerivedGUI, typename Main, typename MessageLoop> struct MainGUI;
-		template <typename UserSettings, typename MainGUI> struct Main;
-	}
+	struct IAppMainGui;
+	template <typename DerivedGUI, typename Main, typename MessageLoop> struct MainGUI;
+	template <typename UserSettings, typename MainGUI> struct Main;
 }

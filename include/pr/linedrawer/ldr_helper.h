@@ -155,11 +155,11 @@ namespace pr
 		{
 			return Append(str, "}\n");
 		}
-		inline IScope Group(TStr& str, typename TStr::value_type const* name, Col colour)
+		inline Scope<std::function<void()>,std::function<void()>> Group(TStr& str, typename TStr::value_type const* name, Col colour)
 		{
-			return std::move(CreateScope(
-				[&]{ GroupStart(str, name, colour); },
-				[&]{ GroupEnd(str); }));
+			std::function<void()> doit = [&]{ GroupStart(str, name, colour); };
+			std::function<void()> undo = [&]{ GroupEnd(str); };
+			return CreateScope(doit, undo);
 		}
 		inline TStr& Nest(TStr& str)
 		{
@@ -221,7 +221,7 @@ namespace pr
 		{
 			return Append(str,"*Spline",name,colour,"{",spline.x.xyz,spline.y.xyz,spline.z.xyz,spline.w.xyz,"}\n");
 		}
-		inline TStr& Curve(TStr& str, typename TStr::value_type const* name, Col colour, pr::polynomial::Quadratic const& curve, float x0, float x1, int steps, O2W const& o2w)
+		inline TStr& Curve(TStr& str, typename TStr::value_type const* name, Col colour, maths::Quadratic const& curve, float x0, float x1, int steps, O2W const& o2w)
 		{
 			Append(str,"*LineStrip",name,colour,"{");
 
@@ -232,7 +232,7 @@ namespace pr
 
 			return Append(str, o2w, "}\n");
 		}
-		inline TStr& Curve(TStr& str, typename TStr::value_type const* name, Col colour, pr::polynomial::Quadratic const& curve, float x0, float x1, int steps)
+		inline TStr& Curve(TStr& str, typename TStr::value_type const* name, Col colour, maths::Quadratic const& curve, float x0, float x1, int steps)
 		{
 			return Curve(str, name, colour, curve, x0, x1, steps, m4x4Identity);
 		}
@@ -368,7 +368,7 @@ namespace pr
 			auto g = Group(str, name, colour);
 			LineD(str, "Ang", 0xFF00FFFF, position, vec.ang);
 			LineD(str, "Lin", 0xFFFFFF00, position, vec.lin);
-			Box(str, "", colour, point_radius, position);
+			if (point_radius > 0) Box(str, "", colour, point_radius, position);
 			return str;
 		}
 		template <typename VCont, typename ICont> inline TStr& Mesh(TStr& str, typename TStr::value_type const* name, Col colour, VCont const& verts, ICont const& indices, int indices_per_prim, pr::m4x4 const& o2w)
@@ -447,22 +447,17 @@ namespace pr
 }
 
 #if PR_UNITTESTS
-namespace pr
+namespace pr::ldr
 {
-	namespace unittests
+	PRUnitTest(LdrHelperTests)
 	{
-		PRUnitTest(pr_ldr_ldrhelper)
-		{
-			using namespace pr::ldr;
+		std::string str;
+		Append(str,"*Box b",pr::Colour32Green,"{",pr::v3(1.0f,2.0f,3.0f),O2W(pr::m4x4Identity),"}");
+		PR_CHECK(str, "*Box b ff00ff00 {1 2 3}");
 
-			std::string str;
-			Append(str,"*Box b",pr::Colour32Green,"{",pr::v3(1.0f,2.0f,3.0f),O2W(pr::m4x4Identity),"}");
-			PR_CHECK(str, "*Box b ff00ff00 {1 2 3}");
-
-			str.resize(0);
-			Append(str,"*Box b",pr::Colour32Red,"{",1.5f,O2W(pr::v4ZAxis.w1()),"}");
-			PR_CHECK(str, "*Box b ffff0000 {1.5 *o2w{*pos{0 0 1}}}");
-		}
+		str.resize(0);
+		Append(str,"*Box b",pr::Colour32Red,"{",1.5f,O2W(pr::v4ZAxis.w1()),"}");
+		PR_CHECK(str, "*Box b ffff0000 {1.5 *o2w{*pos{0 0 1}}}");
 	}
 }
 #endif

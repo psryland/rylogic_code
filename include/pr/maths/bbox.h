@@ -7,7 +7,7 @@
 #include "pr/maths/forward.h"
 #include "pr/maths/constants.h"
 #include "pr/maths/vector4.h"
-#include "pr/maths/matrix3x3.h"
+#include "pr/maths/matrix3x4.h"
 #include "pr/maths/matrix4x4.h"
 #include "pr/maths/plane.h"
 #include "pr/maths/bsphere.h"
@@ -176,12 +176,12 @@ namespace pr
 	inline bool operator >  (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
 	inline bool operator <= (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
 	inline bool operator >= (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
-	inline BBox& pr_vectorcall operator += (BBox& lhs, v4_cref offset)
+	inline BBox& pr_vectorcall operator += (BBox& lhs, v4_cref<> offset)
 	{
 		lhs.m_centre += offset;
 		return lhs;
 	}
-	inline BBox& pr_vectorcall operator -= (BBox& lhs, v4_cref offset)
+	inline BBox& pr_vectorcall operator -= (BBox& lhs, v4_cref<> offset)
 	{
 		lhs.m_centre -= offset;
 		return lhs;
@@ -196,17 +196,17 @@ namespace pr
 		lhs *= (1.0f / s);
 		return lhs;
 	}
-	inline BBox pr_vectorcall operator + (BBox_cref lhs, v4_cref offset)
+	inline BBox pr_vectorcall operator + (BBox_cref lhs, v4_cref<> offset)
 	{
 		auto bb = lhs;
 		return bb += offset;
 	}
-	inline BBox pr_vectorcall operator - (BBox_cref lhs, v4_cref offset)
+	inline BBox pr_vectorcall operator - (BBox_cref lhs, v4_cref<> offset)
 	{
 		auto bb = lhs;
 		return bb -= offset;
 	}
-	inline BBox pr_vectorcall operator * (m4x4_cref m, BBox_cref rhs)
+	inline BBox pr_vectorcall operator * (m4_cref<> m, BBox_cref rhs)
 	{
 		assert("Transforming an invalid bounding box" && rhs.valid());
 
@@ -219,7 +219,7 @@ namespace pr
 		}
 		return bb;
 	}
-	inline BBox pr_vectorcall operator * (m3x4_cref m, BBox_cref rhs)
+	inline BBox pr_vectorcall operator * (m3_cref<> m, BBox_cref rhs)
 	{
 		assert("Transforming an invalid bounding box" && rhs.valid());
 
@@ -278,7 +278,7 @@ namespace pr
 	}
 
 	// Encompass 'point' within 'bbox'.
-	inline BBox& pr_vectorcall Encompass(BBox& bbox, v4_cref point)
+	inline BBox& pr_vectorcall Encompass(BBox& bbox, v4_cref<> point)
 	{
 		assert("BBox encompass point must have w = 1" && point.w == 1.0f);
 		assert("'point' must be aligned to 16" && maths::is_aligned(&point));
@@ -317,7 +317,7 @@ namespace pr
 		#endif
 		return bbox;
 	}
-	inline BBox pr_vectorcall Encompass(BBox const& bbox, v4_cref point)
+	inline BBox pr_vectorcall Encompass(BBox const& bbox, v4_cref<> point)
 	{
 		auto bb = bbox;
 		return Encompass(bb, point);
@@ -350,7 +350,7 @@ namespace pr
 	}
 
 	// Returns true if 'point' is within the bounding volume
-	inline bool pr_vectorcall IsWithin(BBox_cref bbox, v4_cref point, float tol = 0)
+	inline bool pr_vectorcall IsWithin(BBox_cref bbox, v4_cref<> point, float tol = 0)
 	{
 		return
 			Abs(point.x - bbox.m_centre.x) <= bbox.m_radius.x + tol &&
@@ -372,30 +372,27 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::maths
 {
-	namespace unittests
+	PRUnitTest(pr_maths_bbox)
 	{
-		PRUnitTest(pr_maths_bbox)
+		v4 pt[] =
 		{
-			v4 pt[] =
-			{
-				{+1,+1,+1,1},
-				{-1,+0,+1,1},
-				{+1,+1,+1,1},
-				{+0,-2,-1,1},
-			};
-			auto bbox = BBoxReset;
-			for (auto& p : pt) pr::Encompass(bbox, p);
-			PR_CHECK(bbox.Lower().x, -1.0f);
-			PR_CHECK(bbox.Lower().y, -2.0f);
-			PR_CHECK(bbox.Lower().z, -1.0f);
-			PR_CHECK(bbox.Lower().w, +1.0f);
-			PR_CHECK(bbox.Upper().x, +1.0f);
-			PR_CHECK(bbox.Upper().y, +1.0f);
-			PR_CHECK(bbox.Upper().z, +1.0f);
-			PR_CHECK(bbox.Upper().w, +1.0f);
-		}
+			{+1,+1,+1,1},
+			{-1,+0,+1,1},
+			{+1,+1,+1,1},
+			{+0,-2,-1,1},
+		};
+		auto bbox = BBoxReset;
+		for (auto& p : pt) pr::Encompass(bbox, p);
+		PR_CHECK(bbox.Lower().x, -1.0f);
+		PR_CHECK(bbox.Lower().y, -2.0f);
+		PR_CHECK(bbox.Lower().z, -1.0f);
+		PR_CHECK(bbox.Lower().w, +1.0f);
+		PR_CHECK(bbox.Upper().x, +1.0f);
+		PR_CHECK(bbox.Upper().y, +1.0f);
+		PR_CHECK(bbox.Upper().z, +1.0f);
+		PR_CHECK(bbox.Upper().w, +1.0f);
 	}
 }
 #endif

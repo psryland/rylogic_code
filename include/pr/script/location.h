@@ -188,26 +188,21 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::script
 {
-	namespace unittests
+	PRUnitTest(LocationTests)
 	{
-		PRUnitTest(pr_script_location)
-		{
-			using namespace pr::script;
+		char const* str =
+			"123\n"
+			"abc\n"
+			"\tx";
 
-			char const* str =
-				"123\n"
-				"abc\n"
-				"\tx";
+		Location loc(L"", 0, 1, 1, true, 4);
+		for (auto s = str; *s; ++s)
+			loc.inc(*s);
 
-			Location loc(L"", 0, 1, 1, true, 4);
-			for (auto s = str; *s; ++s)
-				loc.inc(*s);
-
-			PR_CHECK(loc.Line(), 3);
-			PR_CHECK(loc.Col(), 6);
-		}
+		PR_CHECK(loc.Line(), 3);
+		PR_CHECK(loc.Col(), 6);
 	}
 }
 #endif

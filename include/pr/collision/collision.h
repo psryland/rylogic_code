@@ -21,13 +21,10 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::collision
 {
-	namespace unittests
+	PRUnitTest(CollisionDetectionTests)
 	{
-		PRUnitTest(pr_collision)
-		{
-		}
 	}
 }
 #endif

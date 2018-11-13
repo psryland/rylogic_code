@@ -373,80 +373,75 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::geometry
 {
-	namespace unittests
+	PRUnitTest(TriangleAnglesTests)
 	{
-		PRUnitTest(pr_geometry_triangle_angles)
-		{
-			using namespace pr::geometry;
-			{//TriangleAngles
-				v4 v0(+1.0f, +2.0f, 0.0f, 1.0f);
-				v4 v1(-2.0f, -1.0f, 0.0f, 1.0f);
-				v4 v2(+0.0f, -1.0f, 0.0f, 1.0f);
-				v4 angles = TriangleAngles(v0, v1, v2);
-				angles.x = pr::RadiansToDegrees(angles.x);
-				angles.y = pr::RadiansToDegrees(angles.y);
-				angles.z = pr::RadiansToDegrees(angles.z);
+		{//TriangleAngles
+			v4 v0(+1.0f, +2.0f, 0.0f, 1.0f);
+			v4 v1(-2.0f, -1.0f, 0.0f, 1.0f);
+			v4 v2(+0.0f, -1.0f, 0.0f, 1.0f);
+			v4 angles = TriangleAngles(v0, v1, v2);
+			angles.x = pr::RadiansToDegrees(angles.x);
+			angles.y = pr::RadiansToDegrees(angles.y);
+			angles.z = pr::RadiansToDegrees(angles.z);
 				
-				PR_CHECK(FEql(angles.x, 26.56505f), true);
-				PR_CHECK(FEql(angles.y, 45.0f    ), true);
-				PR_CHECK(FEql(angles.z, 108.4349f), true);
-			}
+			PR_CHECK(FEql(angles.x, 26.56505f), true);
+			PR_CHECK(FEql(angles.y, 45.0f    ), true);
+			PR_CHECK(FEql(angles.z, 108.4349f), true);
 		}
-		PRUnitTest(pr_geometry_triangle_triangulate_polygon)
+	}
+	PRUnitTest(TriangulatePolygonTests)
+	{
 		{
-			using namespace pr::geometry;
+			v2 poly[] =
 			{
-				v2 poly[] =
-				{
-					{0.0f, 0.0f},
-					{0.1f, 0.9f},
-					{1.0f, 1.0f},
-					{0.0f, 1.0f},
-				};
-				pr::vector<int> tris;
-				TriangulatePolygon(poly, _countof(poly), [&](int i0, int i1, int i2)
-				{
-					tris.push_back(i0);
-					tris.push_back(i1);
-					tris.push_back(i2);
-
-					#if LDR_OUTPUT
-					pr::ldr::LdrBuilder ldr;
-					ldr.Triangle("", 0xFF00FF00, v4(poly[i0],0,1), v4(poly[i1],0,1), v4(poly[i2],0,1));
-					ldr.ToFile(L"P:\\dump\\triangulate.ldr", true);
-					#endif
-				});
-			}
+				{0.0f, 0.0f},
+				{0.1f, 0.9f},
+				{1.0f, 1.0f},
+				{0.0f, 1.0f},
+			};
+			pr::vector<int> tris;
+			TriangulatePolygon(poly, _countof(poly), [&](int i0, int i1, int i2)
 			{
-				v2 poly[] =
-				{
-					{1.0f, 3.0f}, //0
-					{1.4f, 1.7f}, //1
-					{0.4f, 2.0f}, //2
-					{1.5f, 1.2f}, //3
-					{1.0f, 0.0f}, //4
-					{1.7f, 1.0f}, //5
-					{2.5f, 0.5f}, //6
-					{2.0f, 1.5f}, //7
-					{2.0f, 2.0f}, //8
-					{1.5f, 2.5f},
-				};
-				pr::vector<int> tris;
-				TriangulatePolygon(poly, _countof(poly), [&](int i0, int i1, int i2)
-				{
-					tris.push_back(i0);
-					tris.push_back(i1);
-					tris.push_back(i2);
+				tris.push_back(i0);
+				tris.push_back(i1);
+				tris.push_back(i2);
 
-					#if LDR_OUTPUT
-					pr::ldr::LdrBuilder ldr;
-					ldr.Triangle("", 0xFF00FF00, v4(poly[i0],0,1), v4(poly[i1],0,1), v4(poly[i2],0,1));
-					ldr.ToFile(L"P:\\dump\\triangulate.ldr", true);
-					#endif
-				});
-			}
+				#if LDR_OUTPUT
+				pr::ldr::LdrBuilder ldr;
+				ldr.Triangle("", 0xFF00FF00, v4(poly[i0],0,1), v4(poly[i1],0,1), v4(poly[i2],0,1));
+				ldr.ToFile(L"P:\\dump\\triangulate.ldr", true);
+				#endif
+			});
+		}
+		{
+			v2 poly[] =
+			{
+				{1.0f, 3.0f}, //0
+				{1.4f, 1.7f}, //1
+				{0.4f, 2.0f}, //2
+				{1.5f, 1.2f}, //3
+				{1.0f, 0.0f}, //4
+				{1.7f, 1.0f}, //5
+				{2.5f, 0.5f}, //6
+				{2.0f, 1.5f}, //7
+				{2.0f, 2.0f}, //8
+				{1.5f, 2.5f},
+			};
+			pr::vector<int> tris;
+			TriangulatePolygon(poly, _countof(poly), [&](int i0, int i1, int i2)
+			{
+				tris.push_back(i0);
+				tris.push_back(i1);
+				tris.push_back(i2);
+
+				#if LDR_OUTPUT
+				pr::ldr::LdrBuilder ldr;
+				ldr.Triangle("", 0xFF00FF00, v4(poly[i0],0,1), v4(poly[i1],0,1), v4(poly[i2],0,1));
+				ldr.ToFile(L"P:\\dump\\triangulate.ldr", true);
+				#endif
+			});
 		}
 	}
 }

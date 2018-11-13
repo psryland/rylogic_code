@@ -243,48 +243,45 @@ namespace pr
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include "pr/maths/maths.h"
-namespace pr
+namespace pr::common
 {
-	namespace unittests
+	PRUnitTest(NumberTests)
 	{
-		PRUnitTest(pr_common_number)
-		{
-			auto n0 = Number{1.3};
-			PR_CHECK(n0.db() , 1.3);
-			PR_CHECK(n0.ll() , 1LL);
-			PR_CHECK(n0.ul() , 1ULL);
+		auto n0 = Number{1.3};
+		PR_CHECK(n0.db() , 1.3);
+		PR_CHECK(n0.ll() , 1LL);
+		PR_CHECK(n0.ul() , 1ULL);
 
-			auto n1 = Number{1ULL};
-			PR_CHECK(n1.db() , 1.0);
-			PR_CHECK(n1.ll() , 1LL);
-			PR_CHECK(n1.ul() , 1ULL);
+		auto n1 = Number{1ULL};
+		PR_CHECK(n1.db() , 1.0);
+		PR_CHECK(n1.ll() , 1LL);
+		PR_CHECK(n1.ul() , 1ULL);
 
-			auto n2 = Number("+0.1");
-			PR_CHECK(n2.db() , 0.1);
-			PR_CHECK(n2.ll() , 0);
-			PR_CHECK(n2.ul() , 0);
+		auto n2 = Number("+0.1");
+		PR_CHECK(n2.db() , 0.1);
+		PR_CHECK(n2.ll() , 0);
+		PR_CHECK(n2.ul() , 0);
 
-			auto n3 = Number("1ULL");
-			PR_CHECK(n3.db(), 1.0);
-			PR_CHECK(n3.ll(), 1LL);
-			PR_CHECK(n3.ul(), 1ULL);
+		auto n3 = Number("1ULL");
+		PR_CHECK(n3.db(), 1.0);
+		PR_CHECK(n3.ll(), 1LL);
+		PR_CHECK(n3.ul(), 1ULL);
 
-			auto n4 = Number("-1.234e-13f");
-			PR_CHECK(FEql(n4.db(), -1.234e-13), true);
-			PR_CHECK(n4.ll(), 0);
-			PR_CHECK(n4.ul(), 0);
+		auto n4 = Number("-1.234e-13f");
+		PR_CHECK(FEql(n4.db(), -1.234e-13), true);
+		PR_CHECK(n4.ll(), 0);
+		PR_CHECK(n4.ul(), 0);
 
-			auto n5 = Number("0xDeaDBeeF");
-			PR_CHECK(FEql(n5.db(), static_cast<double>(0xDeaDBeeF)), true);
-			PR_CHECK(n5.ll(), 0xDeaDBeeFLL);
-			PR_CHECK(n5.ul(), 0xDeaDBeeFULL);
+		auto n5 = Number("0xDeaDBeeF");
+		PR_CHECK(FEql(n5.db(), static_cast<double>(0xDeaDBeeF)), true);
+		PR_CHECK(n5.ll(), 0xDeaDBeeFLL);
+		PR_CHECK(n5.ul(), 0xDeaDBeeFULL);
 
-			auto n6 = Number("10110101", nullptr, 2);
-			PR_CHECK(FEql(n6.db(), static_cast<double>(0b10110101)), true);
-			PR_CHECK(n6.ll(), 0b10110101LL);
-			PR_CHECK(n6.ul(), 0b10110101ULL);
+		auto n6 = Number("10110101", nullptr, 2);
+		PR_CHECK(FEql(n6.db(), static_cast<double>(0b10110101)), true);
+		PR_CHECK(n6.ll(), 0b10110101LL);
+		PR_CHECK(n6.ul(), 0b10110101ULL);
 
-		}
 	}
 }
 #endif

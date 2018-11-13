@@ -347,34 +347,31 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-namespace pr
+namespace pr::maths
 {
-	namespace unittests
+	PRUnitTest(RectangleTests)
 	{
-		PRUnitTest(pr_maths_rectangle)
-		{
-			{//NormalisePoint/ScalePoint
-				auto pt = v2(200, 300);
-				auto rt = IRect(50,50,200,300);
-				auto nss = NormalisePoint(rt, pt, 1.0f, 1.0f);
-				auto ss  = ScalePoint(rt, nss, 1.0f, 1.0f);
-				PR_CHECK(FEql2(nss, v2(1.0f, 1.0f)), true);
-				PR_CHECK(FEql2(pt, ss), true);
+		{//NormalisePoint/ScalePoint
+			auto pt = v2(200, 300);
+			auto rt = IRect(50,50,200,300);
+			auto nss = NormalisePoint(rt, pt, 1.0f, 1.0f);
+			auto ss  = ScalePoint(rt, nss, 1.0f, 1.0f);
+			PR_CHECK(FEql2(nss, v2(1.0f, 1.0f)), true);
+			PR_CHECK(FEql2(pt, ss), true);
 
-				pt = v2(200, 300);
-				rt = IRect(50,50,200,300);
-				nss = NormalisePoint(rt, pt, 1.0f, -1.0f);
-				ss  = ScalePoint(rt, nss, 1.0f, -1.0f);
-				PR_CHECK(FEql2(nss, v2(1.0f, -1.0f)), true);
-				PR_CHECK(FEql2(pt, ss), true);
+			pt = v2(200, 300);
+			rt = IRect(50,50,200,300);
+			nss = NormalisePoint(rt, pt, 1.0f, -1.0f);
+			ss  = ScalePoint(rt, nss, 1.0f, -1.0f);
+			PR_CHECK(FEql2(nss, v2(1.0f, -1.0f)), true);
+			PR_CHECK(FEql2(pt, ss), true);
 
-				pt = v2(75, 130);
-				rt = IRect(50,50,200,300);
-				nss = NormalisePoint(rt, pt, 1.0f, -1.0f);
-				ss  = ScalePoint(rt, nss, 1.0f, -1.0f);
-				PR_CHECK(FEql2(nss, v2(-0.666667f, 0.36f)), true);
-				PR_CHECK(FEql2(pt, ss), true);
-			}
+			pt = v2(75, 130);
+			rt = IRect(50,50,200,300);
+			nss = NormalisePoint(rt, pt, 1.0f, -1.0f);
+			ss  = ScalePoint(rt, nss, 1.0f, -1.0f);
+			PR_CHECK(FEql2(nss, v2(-0.666667f, 0.36f)), true);
+			PR_CHECK(FEql2(pt, ss), true);
 		}
 	}
 }

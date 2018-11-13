@@ -19,6 +19,6 @@ namespace pr
 	inline float Volume_Tetrahedron(v4 const& a, v4 const& b, v4 const& c, v4 const& d)
 	{
 		assert(a.w == 1.0f && b.w == 1.0f && c.w == 1.0f && d.w == 1.0f);
-		return Triple3(b-a, c-a, d-a) / 6.0f;
+		return Triple(b-a, c-a, d-a) / 6.0f;
 	}
 }

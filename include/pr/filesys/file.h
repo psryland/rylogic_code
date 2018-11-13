@@ -233,83 +233,80 @@ namespace pr
 #include "pr/common/unittests.h"
 #include "pr/common/scope.h"
 #include "pr/filesys/filesys.h"
-namespace pr
+namespace pr::filesys
 {
-	namespace unittests
+	PRUnitTest(FileTests)
 	{
-		PRUnitTest(pr_filesys_file)
-		{
-			std::string filepath = "test.txt";
-			auto cleanup = pr::CreateScope([]{}, [&]{ pr::filesys::EraseFile(filepath); });
+		std::string filepath = "test.txt";
+		auto cleanup = pr::CreateScope([]{}, [&]{ pr::filesys::EraseFile(filepath); });
 
-			{// Write binary - Read binary
-				{// write bytes
-					unsigned char data[] = {'0','1','2','3','4','5'};
-					BufferToFile(data, 0, _countof(data), filepath, EFileData::Binary);
+		{// Write binary - Read binary
+			{// write bytes
+				unsigned char data[] = {'0','1','2','3','4','5'};
+				BufferToFile(data, 0, _countof(data), filepath, EFileData::Binary);
 
-					{// Read binary data into 'std::vector<byte>', no conversion
-						auto read = FileToBuffer<std::vector<unsigned char>>(filepath, EFileData::Binary);
-						PR_CHECK(read.size() == sizeof(data), true);
-						PR_CHECK(memcmp(&read[0], data, sizeof(data)) == 0, true);
-					}
-					{// Read binary data into 'std::wstring', no conversion
-						auto read = FileToBuffer<std::wstring>(filepath, EFileData::Binary);
-						PR_CHECK(read.size() == (sizeof(data) + 1)/2, true);
-						PR_CHECK(memcmp(&read[0], data, sizeof(data)) == 0, true);
-					}
+				{// Read binary data into 'std::vector<byte>', no conversion
+					auto read = FileToBuffer<std::vector<unsigned char>>(filepath, EFileData::Binary);
+					PR_CHECK(read.size() == sizeof(data), true);
+					PR_CHECK(memcmp(&read[0], data, sizeof(data)) == 0, true);
 				}
-				{// write !bytes
-					unsigned short data[] = {'0','1','2','3','4','5'};
-					BufferToFile(data, 0, _countof(data), filepath, EFileData::Binary);
-
-					{// Read binary data into 'std::vector<byte>', no conversion
-						auto read = FileToBuffer<std::vector<unsigned char>>(filepath, EFileData::Binary);
-						PR_CHECK(read.size() == sizeof(data), true);
-						PR_CHECK(memcmp(&read[0], data, sizeof(data)) == 0, true);
-					}
-					{// Read binary data into 'std::wstring', no conversion
-						auto read = FileToBuffer<std::wstring>(filepath, EFileData::Binary);
-						PR_CHECK(read.size() == sizeof(data)/2, true);
-						PR_CHECK(memcmp(&read[0], data, sizeof(data)) == 0, true);
-					}
+				{// Read binary data into 'std::wstring', no conversion
+					auto read = FileToBuffer<std::wstring>(filepath, EFileData::Binary);
+					PR_CHECK(read.size() == (sizeof(data) + 1)/2, true);
+					PR_CHECK(memcmp(&read[0], data, sizeof(data)) == 0, true);
 				}
 			}
-			{// Write UTF-8 text
-				unsigned char utf8[] = {0xe4, 0xbd, 0xa0, 0xe5, 0xa5, 0xbd, '\n', 0xe4, 0xbd, 0xa0, 0xe5, 0xa5, 0xbd}; // 'ni hao'
-				wchar_t ucs2[] = {0x4f60, 0x597d, '\n', 0x4f60, 0x597d};
+			{// write !bytes
+				unsigned short data[] = {'0','1','2','3','4','5'};
+				BufferToFile(data, 0, _countof(data), filepath, EFileData::Binary);
 
-				BufferToFile(utf8, 0, _countof(utf8), filepath, EFileData::Utf8, EFileData::Utf8, false, true);
-				PR_CHECK(DetectFileEncoding(filepath) == EFileData::Utf8, true);
-
-				{// Read UTF-8 - BOM automatically stripped
-					auto read = FileToBuffer<std::string>(filepath, EFileData::Utf8);
-					PR_CHECK(read.size() == _countof(utf8), true);
-					PR_CHECK(memcmp(&read[0], utf8, sizeof(utf8)) == 0, true);
+				{// Read binary data into 'std::vector<byte>', no conversion
+					auto read = FileToBuffer<std::vector<unsigned char>>(filepath, EFileData::Binary);
+					PR_CHECK(read.size() == sizeof(data), true);
+					PR_CHECK(memcmp(&read[0], data, sizeof(data)) == 0, true);
 				}
-				{// Read UTF-8 to UCS2 - BOM automatically stripped
-					auto read = FileToBuffer<std::wstring>(filepath, EFileData::Ucs2);
-					PR_CHECK(read.size() == _countof(ucs2), true);
-					PR_CHECK(memcmp(&read[0], ucs2, sizeof(ucs2)) == 0, true);
+				{// Read binary data into 'std::wstring', no conversion
+					auto read = FileToBuffer<std::wstring>(filepath, EFileData::Binary);
+					PR_CHECK(read.size() == sizeof(data)/2, true);
+					PR_CHECK(memcmp(&read[0], data, sizeof(data)) == 0, true);
 				}
-
-				//todo
-				BufferToFile(ucs2, 0, _countof(ucs2), filepath, EFileData::Utf8, EFileData::Ucs2, false, false);
-				PR_CHECK(DetectFileEncoding(filepath) == EFileData::Utf8, true);
-
-				//{// Read UTF-8 - BOM automatically stripped
-				//	auto read = FileToBuffer<std::string>(filepath, EFileData::Utf8);
-				//	PR_CHECK(read.size() == _countof(utf8), true);
-				//	PR_CHECK(memcmp(&read[0], utf8, sizeof(utf8)) == 0, true);
-				//}
-				//{// Read UTF-8 to UCS2 - BOM automatically stripped
-				//	auto read = FileToBuffer<std::wstring>(filepath, EFileData::Ucs2);
-				//	PR_CHECK(read.size() == _countof(ucs2), true);
-				//	PR_CHECK(memcmp(&read[0], ucs2, sizeof(ucs2)) == 0, true);
-				//}
-
 			}
-			{// todo...
+		}
+		{// Write UTF-8 text
+			unsigned char utf8[] = {0xe4, 0xbd, 0xa0, 0xe5, 0xa5, 0xbd, '\n', 0xe4, 0xbd, 0xa0, 0xe5, 0xa5, 0xbd}; // 'ni hao'
+			wchar_t ucs2[] = {0x4f60, 0x597d, '\n', 0x4f60, 0x597d};
+
+			BufferToFile(utf8, 0, _countof(utf8), filepath, EFileData::Utf8, EFileData::Utf8, false, true);
+			PR_CHECK(DetectFileEncoding(filepath) == EFileData::Utf8, true);
+
+			{// Read UTF-8 - BOM automatically stripped
+				auto read = FileToBuffer<std::string>(filepath, EFileData::Utf8);
+				PR_CHECK(read.size() == _countof(utf8), true);
+				PR_CHECK(memcmp(&read[0], utf8, sizeof(utf8)) == 0, true);
 			}
+			{// Read UTF-8 to UCS2 - BOM automatically stripped
+				auto read = FileToBuffer<std::wstring>(filepath, EFileData::Ucs2);
+				PR_CHECK(read.size() == _countof(ucs2), true);
+				PR_CHECK(memcmp(&read[0], ucs2, sizeof(ucs2)) == 0, true);
+			}
+
+			//todo
+			BufferToFile(ucs2, 0, _countof(ucs2), filepath, EFileData::Utf8, EFileData::Ucs2, false, false);
+			PR_CHECK(DetectFileEncoding(filepath) == EFileData::Utf8, true);
+
+			//{// Read UTF-8 - BOM automatically stripped
+			//	auto read = FileToBuffer<std::string>(filepath, EFileData::Utf8);
+			//	PR_CHECK(read.size() == _countof(utf8), true);
+			//	PR_CHECK(memcmp(&read[0], utf8, sizeof(utf8)) == 0, true);
+			//}
+			//{// Read UTF-8 to UCS2 - BOM automatically stripped
+			//	auto read = FileToBuffer<std::wstring>(filepath, EFileData::Ucs2);
+			//	PR_CHECK(read.size() == _countof(ucs2), true);
+			//	PR_CHECK(memcmp(&read[0], ucs2, sizeof(ucs2)) == 0, true);
+			//}
+
+		}
+		{// todo...
 		}
 	}
 }

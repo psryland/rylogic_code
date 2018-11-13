@@ -102,12 +102,12 @@ namespace pr
 		{
 			switch (plane_index)
 			{
-			default: assert(false && "Invalid plane index"); return pr::v4ZAxis;
+			default: assert(false && "Invalid plane index"); return pr::Plane{0,0,1,0};
 			case XPos: return pr::Plane(m_Tnorms.x.x, m_Tnorms.y.x, m_Tnorms.z.x, m_Tnorms.w.x);
 			case XNeg: return pr::Plane(m_Tnorms.x.y, m_Tnorms.y.y, m_Tnorms.z.y, m_Tnorms.w.y);
 			case YPos: return pr::Plane(m_Tnorms.x.z, m_Tnorms.y.z, m_Tnorms.z.z, m_Tnorms.w.z);
 			case YNeg: return pr::Plane(m_Tnorms.x.w, m_Tnorms.y.w, m_Tnorms.z.w, m_Tnorms.w.w);
-			case ZFar: return pr::v4ZAxis;
+			case ZFar: return pr::Plane{0,0,1,0};
 			}
 		}
 		enum EPlane {XPos = 0, XNeg = 1, YPos = 2, YNeg = 3, ZFar = 4, EPlane_NumberOf};
@@ -121,7 +121,7 @@ namespace pr
 		// Return the (inward pointing) plane vector for a face of the frustum [0,5)
 		v4 Normal(int plane_index) const
 		{
-			return Plane(plane_index).w0();
+			return static_cast<v4>(Plane(plane_index)).w0();
 		}
 	};
 

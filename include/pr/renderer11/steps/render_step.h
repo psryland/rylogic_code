@@ -23,7 +23,7 @@ namespace pr
 			using TDrawList = pr::vector<DrawListElement, 1024, false, pr::rdr::Allocator<DrawListElement>>;
 
 			// A lock context for the drawlist
-			struct Lock :Synchronise<RenderStep, std::recursive_mutex>
+			struct Lock :threads::Synchronise<RenderStep, std::recursive_mutex>
 			{
 				Lock(RenderStep const& rs)
 					:base(rs, rs.m_mutex)
