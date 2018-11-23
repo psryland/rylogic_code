@@ -11,7 +11,7 @@
 #include <mutex>
 #include <cwctype>
 #include "pr/meta/optional.h"
-#include "pr/linedrawer/ldr_object.h"
+#include "pr/ldraw/ldr_object.h"
 #include "pr/common/assert.h"
 #include "pr/crypt/hash.h"
 #include "pr/maths/maths.h"

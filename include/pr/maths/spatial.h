@@ -89,7 +89,7 @@ namespace pr::maths::spatial
 		auto const& r = lhs.pos;
 		return Vec8<Motion>(
 			E * rhs.ang,
-			E * (rhs.lin - Cross(r, rhs.ang)));
+			E * (rhs.lin + Cross(rhs.ang, r)));
 	}
 
 	// Transform a spatial force vector by an affine transform
@@ -101,7 +101,7 @@ namespace pr::maths::spatial
 		auto E = lhs.rot;
 		auto r = lhs.pos;
 		return Vec8<Force>(
-			E * (rhs.ang - Cross(r, rhs.lin)),
+			E * (rhs.ang + Cross(rhs.lin, r)),
 			E * rhs.lin);
 	}
 
@@ -155,9 +155,8 @@ namespace pr::maths::spatial
 		return Vec8<Force>(Cross3(lhs.ang, rhs.ang) + Cross3(lhs.lin, rhs.lin), Cross3(lhs.ang, rhs.lin));
 	}
 
-	// Return a motion vector, equal to 'motion', but expressed
-	// at a new location equal to the previous location + 'ofs'.
-	// This is equivalent to a translation of the vector field.
+	// Return a motion vector, equal to 'motion', but expressed at a new location equal
+	// to the previous location + 'ofs'. This is equivalent to a translation of the vector field.
 	inline Vec8<Motion> Shift(Vec8<Motion> const& motion, v4_cref<void> ofs)
 	{
 		// c.f. RBDS 2.21
@@ -225,6 +224,8 @@ namespace pr::maths::spatial
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
+#include "pr/ldraw/ldr_helper.h"
+
 namespace pr::maths
 {
 	PRUnitTest(SpatialTests)
@@ -285,39 +286,93 @@ namespace pr::maths
 			PR_CHECK(FEql(A2Cm, rm), true);
 
 			auto A2Bf = Transform<Force>(a2b);
-			auto B2Cf = Transform<Force>(b2c);;
-			auto A2Cf = Transform<Force>(a2c);;
+			auto B2Cf = Transform<Force>(b2c);
+			auto A2Cf = Transform<Force>(a2c);
 
 			auto rf = B2Cf * A2Bf;
 			PR_CHECK(FEql(A2Cf, rf), true);
 		}
 		{// Transforming a spatial vector
+			// Simple case
+			auto a2c = m4x4::Transform(v4ZAxis, float(maths::tau_by_8), v4{1,1,0,1});
+			auto c2a = InvertFast(a2c);
+
+			auto ang_a = v4{0,0,0.1f,0}; // Angular component in frame 'a'
+			auto lin_a = v4{0,0.1f,0,0};// Linear component in frame 'a'
+			{
+
+			}
+
+			// In frame 'a', the velocity at any point 'x' is found from:  vel_a = lin_a + Cross(ang_a, x);
+			// So 'lin_a' and 'ang_a' are a description of the vector field in frame 'a'. They are not associated
+			// with any particular point in frame 'a', but can be thought of as the velocity and angular velocity
+			// of a body whose centre of mass is at the origin in frame 'a'.
+
+			// In frame 'c' the body is no longer at the origin. We now want to describe the same vector field in
+			// frame 'c' so we need to calculate the 'lin_c' and 'ang_c' that result in the same vector field. The
+			// velocity of the origin of frame 'c' can be calculated in frame 'a' by knowing the position of frame 'c'
+			// in frame 'a' space. With 'lin_c' and 'ang_c' we can calculate the velocity for any point in the vector
+			// field. The velocity calculated in each frame for the same point should have the same velocity
+
+			// a2c.pos is the position of frame 'c' in frame 'a' space.
+			auto ang_c = a2c * ang_a;                           // Angular velocity in frame 'c'
+			auto lin_c = a2c * (lin_a + Cross(ang_a, a2c.pos)); // Linear velocity in frame 'c'
+
+			// For a bunch of points, the velocity should be the same when described in either frame 'a' or frame 'c'
+			for (;;)
+			{
+				// A body-fixed point in frame 'a'
+				auto pt_a = v4{0.3f,-0.8f,1,1};
+
+				// At some point 'pt_a' find the velocity in frame 'a'
+				auto vel_a = lin_a + Cross(ang_a, pt_a);
+
+				// Get the same point in frame 'c'
+				auto pt_c = a2c * (pt_a + a2c.pos);
+
+				// The velocity at 'pt_c' in frame 'c'
+				auto vel_c = lin_c + Cross(ang_c, pt_c);
+
+				// Should be equivalent to the velocity measured in frame 'a'
+				auto vel_A = c2a * vel_c;
+				PR_CHECK(FEql(vel_a, vel_A), true);
+				break;
+			}
+
+		}
+		{// Transforming a spatial vector
 			auto a2b = m4x4::Transform(v4ZAxis, float(maths::tau_by_4), v4{1,1,1,1});
 			auto b2c = m4x4::Transform(v4YAxis, float(maths::tau_by_8), v4{-1,2,-3,1});
 			auto a2c = b2c * a2b;
+			auto c2a = InvertFast(a2c);
 
 			auto ang_a = v4{2,-1,1,0}; // Angular component in frame 'a'
-			auto lin_a = v4{-3,1,-2,0};// Linear component in frame 'a'
-			auto pt_a = v4{4,-3,1,0};  // A body-fixed point in frame 'a'
+			auto lin_a = v4{-0.3f,1,-0.2f,0};// Linear component in frame 'a'
+			auto pt_a = v4{0.3f,-0.8f,1,0};  // A body-fixed point in frame 'a'
+			
+			// motion
+			{
+				//at 'pt' we measure the vector field to be 'vel_a'. 
+				// 'vel_a' is a sample of the vector field at 'pt'. Transforming
 
-			{// motion
-				auto vel_a = lin_a + Cross(ang_a, pt_a); // The velocity at 'pt' in frame 'a'
-				auto ang_c = a2c * ang_a; // angular velocity in frame 'c'
-				auto lin_c = a2c * lin_a; // linear velocity in frame 'c'
-				auto pt_c = a2c * pt_a;  // The point in frame 'c'
-				auto vel_c = lin_c + Cross(pt_c, ang_c); // The velocity at 'pt' in frame 'c'
-				PR_CHECK(FEql(vel_a, InvertFast(a2c) * vel_c), true);
+				auto vel_a     = lin_a + Cross(ang_a, pt_a); // The velocity at 'pt' in frame 'a'
+				auto ang_c     = a2c * ang_a;                // angular velocity in frame 'c'
+				auto lin_c     = a2c * lin_a;                // linear velocity in frame 'c'
+				auto pt_c      = a2c * pt_a;                 // The point in frame 'c'
+				auto vel_c     = lin_c + Cross(ang_c, pt_c); // The velocity at 'pt' in frame 'c'
+				auto vel_A     = c2a * vel_c;                // The velocity at 'pt' in frame 'a'
+				PR_CHECK(FEql(vel_a, vel_A), true);
 
 				auto A2C = Transform<Motion>(a2c);
+				auto C2A = Transform<Motion>(c2a);
 
 				auto VEL_a = v8m{ang_a, lin_a}; // The velocity vector field in frame 'a'
-				auto VEL_c = A2C * VEL_a; // The velocity vector field in frame 'c'
-
-
-				auto vel_c2 = VEL_c.lin + Cross(pt_c, VEL_c.ang);
-				PR_CHECK(FEql(vel_c, vel_c2), true);
+				auto VEL_c = A2C * VEL_a;       // The velocity vector field in frame 'c'
+				auto vel_C = VEL_c.lin + Cross(pt_c, VEL_c.ang);
+				PR_CHECK(FEql(vel_c, vel_C), true);
 			}
-			{// force
+			// force
+			{
 				auto ang_c = a2c * ang_a; // torque in frame 'c'
 				auto lin_c = a2c * lin_a; // force in frame 'c'
 			

@@ -538,21 +538,6 @@ namespace pr
 				// Create the model
 				return Create(rdr, cache);
 			}
-			//static ModelPtr Quad(Renderer& rdr, v4 const& centre, v4 const& forward, v4 const& top, float width, float height, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, v2 const& tex_origin = v2Zero, v2 const& tex_dim = v2One, NuggetProps const* mat = nullptr)
-			//{
-			//	// Calculate the required buffer sizes
-			//	int vcount, icount;
-			//	geometry::QuadSize(divisions, vcount, icount);
-
-			//	// Generate the geometry
-			//	Cache cache(vcount, icount);
-			//	auto props = geometry::Quad(centre, forward, top, width, height, divisions, colour, tex_origin, tex_dim, std::begin(cache.m_vcont), std::begin(cache.m_icont));
-			//	cache.m_bbox = props.m_bbox;
-			//	cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, mat);
-
-			//	// Create the model
-			//	return Create(rdr, cache);
-			//}
 			static ModelPtr QuadStrip(Renderer& rdr, int num_quads, v4 const* verts, float width, int num_normals = 0, v4 const* normals = nullptr, int num_colours = 0, Colour32 const* colours = nullptr, NuggetProps const* mat = nullptr)
 			{
 				// Calculate the required buffer sizes

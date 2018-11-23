@@ -318,11 +318,22 @@ namespace pr
 	}
 	template <typename Char> inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, m3x4 const& mat)
 	{
-		return out << mat.x << " " << mat.y << " " << mat.z;
+		return out <<
+			mat.x.x << " " << mat.y.x << " " << mat.z.x << "\n" <<
+			mat.x.y << " " << mat.y.y << " " << mat.z.y << "\n" <<
+			mat.x.z << " " << mat.y.z << " " << mat.z.z << "\n" <<
+			mat.x.w << " " << mat.y.w << " " << mat.z.w << "\n";
+
+		//return out << mat.x << " " << mat.y << " " << mat.z;
 	}
 	template <typename Char> inline std::basic_ostream<Char>& operator << (std::basic_ostream<Char>& out, m4x4 const& mat)
 	{
-		return out << mat.x << " " << mat.y << " " << mat.z << " " << mat.w;
+		return out <<
+			mat.x.x << " " << mat.y.x << " " << mat.z.x << " " << mat.w.x << "\n" <<
+			mat.x.y << " " << mat.y.y << " " << mat.z.y << " " << mat.w.y << "\n" <<
+			mat.x.z << " " << mat.y.z << " " << mat.z.z << " " << mat.w.z << "\n" <<
+			mat.x.w << " " << mat.y.w << " " << mat.z.w << " " << mat.w.w << "\n";
+		//return out << mat.x << " " << mat.y << " " << mat.z << " " << mat.w;
 	}
 }
 

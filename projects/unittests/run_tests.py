@@ -13,7 +13,7 @@ try:
 	Tools.AssertVersion(1)
 
 	# Set this to false to disable running tests on compiling
-	RunTests = True
+	RunTests = False
 
 	test_dll_path = os.path.abspath(sys.argv[1])
 	if RunTests and os.path.exists(test_dll_path):

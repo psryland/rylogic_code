@@ -15,7 +15,7 @@
 #include "pr/container/vector.h"
 #include "pr/script/forward.h"
 #include "pr/filesys/filewatch.h"
-#include "pr/linedrawer/ldr_object.h"
+#include "pr/ldraw/ldr_object.h"
 #include "pr/threads/synchronise.h"
 
 namespace pr

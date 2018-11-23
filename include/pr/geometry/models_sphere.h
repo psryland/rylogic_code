@@ -3,11 +3,9 @@
 //  Copyright (c) Rylogic Ltd 2013
 //********************************
 #pragma once
-#ifndef PR_GEOMETRY_SPHERE_H
-#define PR_GEOMETRY_SPHERE_H
 
 #include "pr/geometry/common.h"
-#include "pr/linedrawer/ldr_helper.h"
+#include "pr/ldraw/ldr_helper.h"
 
 namespace pr
 {
@@ -292,5 +290,3 @@ namespace pr
 		}
 	}
 }
-
-#endif

@@ -319,7 +319,7 @@ namespace RyLogViewer
 			m_check_ignore_case.Checked = Pattern.IgnoreCase;
 
 			m_btn_add.ToolTip(m_tt, IsNew ? "Add this new pattern" : "Save changes to this pattern");
-			m_btn_add.ImageIndex = (int)(IsNew ? EBtnImageIdx.AddNew : EBtnImageIdx.Save);
+			m_btn_add.ImageKey = IsNew ? "add" : "save";
 			m_btn_add.Enabled = CommitEnabled;
 
 			// Show/Hide the eqv regex

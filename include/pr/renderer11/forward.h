@@ -91,7 +91,7 @@
 #include "pr/win32/windows_com.h"
 #include "pr/script/reader.h"
 #include "pr/storage/nugget_file/nuggetfile.h"
-#include "pr/linedrawer/ldr_helper.h"
+#include "pr/ldraw/ldr_helper.h"
 
 #define PR_DBG_RDR PR_DBG
 

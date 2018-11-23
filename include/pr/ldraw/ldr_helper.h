@@ -371,6 +371,19 @@ namespace pr
 			if (point_radius > 0) Box(str, "", colour, point_radius, position);
 			return str;
 		}
+		inline TStr& VectorField(TStr& str, typename TStr::value_type const* name, Col colour, v8 const& vec, m4x4 const& o2w, float scale)
+		{
+			Append(str,"*Line",name,colour,"{");
+			for (float y = -1.0f; y <= 1.0f; y += 0.1f)
+			for (float x = -1.0f; x <= 1.0f; x += 0.1f)
+			{
+				auto pt = v4{x * scale, y * scale, 0, 1};
+				auto vf = vec.lin + Cross(vec.ang, pt);
+				Append(str, pt, pt+vf);
+			}
+			Append(str, O2W(o2w), "}\n");
+		}
+
 		template <typename VCont, typename ICont> inline TStr& Mesh(TStr& str, typename TStr::value_type const* name, Col colour, VCont const& verts, ICont const& indices, int indices_per_prim, pr::m4x4 const& o2w)
 		{
 			auto v    = std::begin(verts);

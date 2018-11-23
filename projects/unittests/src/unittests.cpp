@@ -19,8 +19,10 @@ namespace pr::unittests::your::namespace
 // For faster build times, comment out the 'all headers' include
 // and just include the header you care about
 #include "pr/common/unittests.h"
-#include "unittests/src/unittests.h" // all tests
-//#include "pr/script/preprocessor.h"
+//#include "unittests/src/unittests.h" // all tests
+#include "pr/maths/maths.h"
+#include "pr/maths/spatial.h"
+#include "pr/physics2/shape/inertia.h"
 
 // Export a function for executing the tests
 extern "C"
@@ -30,3 +32,4 @@ extern "C"
 		return pr::unittests::RunAllTests(wordy != 0);
 	}
 }
+

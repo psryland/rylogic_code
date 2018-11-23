@@ -7,7 +7,7 @@
 #include "pr/geometry/geometry.h"
 #include "pr/geometry/models_cylinder.h"
 #include "pr/renderer11/renderer.h"
-#include "pr/linedrawer/ldr_gizmo.h"
+#include "pr/ldraw/ldr_gizmo.h"
 
 namespace pr
 {

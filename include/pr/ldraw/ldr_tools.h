@@ -9,7 +9,7 @@
 #include "pr/common/guid.h"
 #include "pr/maths/maths.h"
 #include "pr/gui/wingui.h"
-#include "pr/linedrawer/ldr_object.h"
+#include "pr/ldraw/ldr_object.h"
 #include "pr/renderer11/forward.h"
 
 namespace pr

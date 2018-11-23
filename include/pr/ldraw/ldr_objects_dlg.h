@@ -10,7 +10,7 @@
 #include "pr/common/events.h"
 #include "pr/maths/maths.h"
 #include "pr/gui/wingui.h"
-#include "pr/linedrawer/ldr_object.h"
+#include "pr/ldraw/ldr_object.h"
 
 namespace pr
 {

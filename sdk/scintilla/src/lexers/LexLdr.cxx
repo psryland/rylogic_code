@@ -23,7 +23,7 @@
 #include "scintilla/src/lexlib/CharacterSet.h"
 #include "scintilla/src/lexlib/LexerModule.h"
 
-#include "pr/linedrawer/ldr_object.h"
+#include "pr/ldraw/ldr_object.h"
 #include "pr/script/forward.h"
 
 #ifdef SCI_NAMESPACE

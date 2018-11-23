@@ -9,7 +9,7 @@
 #include "pr/collision/shapes.h"
 #include "pr/collision/penetration.h"
 #include "pr/collision/support.h"
-#include "pr/linedrawer/ldr_helper.h"
+#include "pr/ldraw/ldr_helper.h"
 
 namespace pr
 {
