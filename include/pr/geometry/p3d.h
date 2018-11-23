@@ -158,9 +158,10 @@ namespace pr
 			};
 			struct Vert
 			{
-				Vec4 pos;   // This type matches pr::rdr::Vert (which has 16-byte
-				Vec4 col;   // alignment). Hence the 'pad' member.
-				Vec4 norm;  // That space might be handy for a future something
+				// This type matches 'pr::rdr::Vert' (which has 16-byte alignment). Hence the 'pad' member.
+				Vec4 pos;
+				Vec4 col;
+				Vec4 norm;
 				Vec2 uv;
 				Vec2 pad;
 			};
@@ -753,7 +754,10 @@ namespace pr
 			template <typename TSrc, typename TMeshOut> void ReadMeshes(TSrc& src, TMeshOut mesh_out)
 			{
 				// Restore the src position on return
-				auto reset_stream = pr::CreateStateScope([&]{ return Src<TSrc>::TellPos(src); }, [&](u64 start){ Src<TSrc>::SeekAbs(src, start); });
+				auto reset_stream = pr::CreateStateScope(
+					[&]{ return Src<TSrc>::TellPos(src); },
+					[&](u64 start){ Src<TSrc>::SeekAbs(src, start); }
+				);
 
 				// Find the Meshes sub chunk
 				auto meshes = Find(src, ~0U, {EChunkId::Main, EChunkId::Scene, EChunkId::Meshes});

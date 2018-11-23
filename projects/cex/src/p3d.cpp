@@ -8,6 +8,7 @@
 #include "cex/src/p3d.h"
 #include "pr/geometry/p3d.h"
 #include "pr/geometry/3ds.h"
+#include "pr/geometry/stl.h"
 #include "pr/geometry/utility.h"
 #include "pr/maths/bit_fields.h"
 
@@ -41,8 +42,8 @@ namespace cex
 			,m_infile()
 			,m_outfile()
 			,m_ops()
-			,m_quantisation(65536)
-			,m_smooth_threshold()
+			,m_quantisation(16)
+			,m_smooth_threshold(10)
 			,m_preserve_normals(false)
 			,m_preserve_colours(false)
 			,m_preserve_uvs(false)
@@ -50,12 +51,14 @@ namespace cex
 			,m_indent()
 			,m_verbosity(2)
 		{}
+
+		// Run the command
 		int Run()
 		{
 			if (!pr::filesys::FileExists(m_infile))
 				throw std::exception(pr::FmtS("Input file '%s' does not exist", m_infile.c_str()));
 
-			// Set the outfile based on the infile if not given
+			// Set the out file based on the in file if not given
 			if (m_outfile.empty())
 			{
 				m_outfile = m_codeout
@@ -63,7 +66,7 @@ namespace cex
 					: pr::filesys::ChangeExtn<std::string>(m_infile, "p3d");
 			}
 
-			// Get the infile file extension
+			// Get the in file extension
 			m_infile = pr::filesys::Standardise(m_infile);
 			auto extn = pr::filesys::GetExtension(m_infile);
 
@@ -73,6 +76,7 @@ namespace cex
 				if (extn.empty())  throw std::exception("unknown file extension");
 				else if (extn == "p3d") CreateFromP3D();
 				else if (extn == "3ds") CreateFrom3DS();
+				else if (extn == "stl") CreateFromSTL();
 				else throw std::exception(pr::FmtS("unsupported file format: '*.%s'", extn.c_str()));
 
 				if (m_verbosity >= 2)
@@ -143,7 +147,7 @@ namespace cex
 			// Read the tri mesh objects from the 3ds file
 			max_3ds::ReadObjects(src, [&](max_3ds::Object const& o)
 			{
-				// Add a trimesh to the scene
+				// Add a mesh to the scene
 				m_p3d.m_scene.m_meshes.emplace_back(o.m_name);
 				auto& mesh = m_p3d.m_scene.m_meshes.back();
 
@@ -152,9 +156,9 @@ namespace cex
 				mesh.m_idx16.reserve(o.m_mesh.m_face.size() * 3);
 				mesh.m_nugget.reserve(o.m_mesh.m_matgroup.size());
 
-				// Bounding box
+				// Bounding box (can't use 'mesh.m_bbox' directly because it's not a pr::BBox)
 				pr::BBox bbox = pr::BBoxReset;
-				auto bb = [&](pr::v4 const& v) { pr::Encompass(bbox, v); return v; };
+				auto bb = [&](pr::v4 const& v) { pr::Encompass(mesh.m_bbox, v); return v; };
 
 				// Get the 3ds code to extract the verts/faces/normals/nuggets
 				// We may regenerate the normals later
@@ -184,8 +188,6 @@ namespace cex
 						mesh.m_idx16.push_back(i1);
 						mesh.m_idx16.push_back(i2);
 					});
-
-				// Add the bounding box
 				mesh.m_bbox = bbox;
 
 				// Add the used materials to the p3d scene
@@ -207,6 +209,72 @@ namespace cex
 				}
 
 				return false;
+			});
+		}
+
+		// Populates the p3d data structures from a stl file
+		void CreateFromSTL()
+		{
+			// Open the file
+			std::ifstream src(m_infile, std::ifstream::binary);
+
+			stl::Options opts = {};
+			stl::Read(src, opts, [&](stl::Model const& o)
+			{
+				// Add a mesh to the scene
+				m_p3d.m_scene.m_meshes.emplace_back(o.m_header);
+				auto& mesh = m_p3d.m_scene.m_meshes.back();
+
+				// Bounding box (can't use 'mesh.m_bbox' directly because it's not a pr::BBox)
+				pr::BBox bbox = pr::BBoxReset;
+				auto bb = [&](pr::v4 const& v) { pr::Encompass(bbox, v); return v; };
+
+				// Copy the verts
+				mesh.m_verts.reserve(o.m_verts.size());
+				for (int i = 0, iend = int(o.m_verts.size()); i != iend; ++i)
+				{
+					p3d::Vert vert = {};
+					vert.pos = bb(o.m_verts[i]);
+					vert.col = pr::Colour32White;
+					vert.norm = o.m_norms[i/3];
+					vert.uv = pr::v2Zero;
+					mesh.m_verts.push_back(vert);
+				}
+				mesh.m_bbox = bbox;
+
+				// Generate the indices
+				auto vcount = int(o.m_verts.size());
+				if (vcount < 0x10000)
+				{
+					// Use 16bit indices
+					mesh.m_idx16.resize(vcount);
+					auto ibuf = mesh.m_idx16.data();
+					for (pr::uint16 i = 0; vcount-- != 0;)
+						*ibuf++ = i++;
+				}
+				else
+				{
+					// Use 32bit indices
+					mesh.m_idx32.resize(vcount);
+					auto ibuf = mesh.m_idx32.data();
+					for (pr::uint32 i = 0; vcount-- != 0;)
+						*ibuf++ = i++;
+				}
+
+				// Generate a nugget
+				p3d::Nugget nug = {};
+				nug.m_topo = EPrim::TriList;
+				nug.m_geom = EGeom::Vert | EGeom::Norm;
+				nug.m_vrange = pr::Range<size_t>(0, mesh.m_verts.size());
+				nug.m_irange = pr::Range<size_t>(0, mesh.m_verts.size());
+				nug.m_mat = "default";
+				mesh.m_nugget.push_back(nug);
+
+				// Generate a material
+				p3d::Material mat = {};
+				mat.m_id = "default";
+				mat.m_diffuse = pr::Colour32White;
+				m_p3d.m_scene.m_materials.push_back(mat);
 			});
 		}
 
@@ -238,7 +306,8 @@ namespace cex
 		}
 
 		// Generate normals for 16 or 32 bit indices
-		template <typename VCont, typename ICont> void GenerateNormals(pr::geometry::p3d::Nugget& nug, VCont& vcont, ICont& icont)
+		template <typename VCont, typename ICont>
+		void GenerateNormals(pr::geometry::p3d::Nugget& nug, VCont& vcont, ICont& icont)
 		{
 			typedef std::remove_reference<decltype(icont[0])>::type VIdx;
 
@@ -250,7 +319,7 @@ namespace cex
 			VIdx mx = pr::limits<VIdx>::min();
 
 			// Generate the normals
-			pr::geometry::GenerateNormals(nug.m_irange.count, iptr, m_smooth_threshold,
+			pr::geometry::GenerateNormals(nug.m_irange.count, iptr, pr::DegreesToRadians(m_smooth_threshold),
 				[&](VIdx idx) { return vcont[idx].pos; }, vcont.size(),
 				[&](VIdx new_idx, VIdx orig_idx, pr::v4 const& normal)
 				{
@@ -290,7 +359,7 @@ namespace cex
 
 				// Quantise all the verts
 				for (auto& vert : mesh.m_verts)
-					vert.pos = pr::Quantise((pr::v4)vert.pos, m_quantisation);
+					vert.pos = pr::Quantise((pr::v4)vert.pos, 1 << m_quantisation);
 
 				// Initialise the map
 				map.resize(mesh.m_verts.size());
@@ -303,13 +372,13 @@ namespace cex
 
 				// Sort the map such that degenerate verts are next to each other
 				pr::sort(map,[&](VP const& lhs, VP const& rhs)
-					{
-						auto& v0 = *lhs.orig;
-						auto& v1 = *rhs.orig;
-						if (v0.pos.x != v1.pos.x) return v0.pos.x < v1.pos.x;
-						if (v0.pos.y != v1.pos.y) return v0.pos.y < v1.pos.y;
-						return v0.pos.z < v1.pos.z;
-					});
+				{
+					auto& v0 = *lhs.orig;
+					auto& v1 = *rhs.orig;
+					if (v0.pos.x != v1.pos.x) return v0.pos.x < v1.pos.x;
+					if (v0.pos.y != v1.pos.y) return v0.pos.y < v1.pos.y;
+					return v0.pos.z < v1.pos.z;
+				});
 
 				// Set each pointer equal to the first degenerate vert
 				size_t unique_count = map.size();
@@ -438,12 +507,13 @@ namespace cex
 		std::cout << R"(
 P3D Export : Tools for creating p3d files
 Syntax:
-  Cex -p3d -fi 'filepath.ext' [-fo 'output_filepath.p3d']
-  Cex -p3d -fi 'filepath.p3d' [-fo 'output_filepath.p3d'] -remove_degenerates 'tolerence' [-preserve_uvs] [-preserve_colours]
-  Cex -p3d -fi 'filepath.p3d' [-fo 'output_filepath.p3d'] -gen_normals 'threshold'
+  cex -p3d -fi 'filepath.ext' [-fo 'output_filepath.p3d']
+  cex -p3d -fi 'filepath.p3d' [-fo 'output_filepath.p3d'] -remove_degenerates [<tolerance>] [-preserve_uvs] [-preserve_colours]
+  cex -p3d -fi 'filepath.p3d' [-fo 'output_filepath.p3d'] -generate_normals [<threshold>]
 
     -fi filepath - the input 3d model file to be converted to p3d.
-          File type is determined from the file extension. (3ds only so far)
+          File type is determined from the file extension.
+          Supported Formats: 3DS, STL (so far)
 
     -fo output_filepath - The p3d file that will be created, if omitted, then the output
           file will be named 'filepath.p3d' in the same directory.
@@ -451,9 +521,10 @@ Syntax:
     -codeout - Output the model as C++ code.
     -indent s - A string to indent each line with
 
-    -remove_degenerates tolerence - Strip duplicate verts from the model.
-          By default only position is used to determine degeneracy. 'tolerence' is
-          a power of 2 value such that verts are quantised to '1/tolerence'.
+    -remove_degenerates [<tolerance>] - Strip duplicate verts from the model.
+          By default only position is used to determine degeneracy, use the 'preserve'
+          options to include other vertex fields. <tolerance> is a value used to quantise
+          the vertex positions (quantised to '1 / 2^tolerence') (default 16).
 
     -preserve_normals - Verts with differing normals will not be considered degenerate
 
@@ -461,14 +532,14 @@ Syntax:
 
     -preserve_uvs - Verts with differing UV coordinates will not be considered degenerate
 
-    -gen_normals threshold - overwrite the model normal data using 'threshold' is the
-          tolerence for coplanar faces (in degrees)
+    -generate_normals [<threshold>] - overwrite the model normal data using 'threshold' as the
+          tolerance for coplanar faces (in degrees) (default 10)
 
     -verbosity level - amount of text written to stdout, 0=quiet, 1=minimal, 2=normal, 3=verbose
 
   Note: All commands can be given on one command line, order of operations is in the order
   specified on the command line.
-)";
+)" << std::endl;
 	}
 	bool P3d::CmdLineOption(std::string const& option, TArgIter& arg, TArgIter arg_end)
 	{
@@ -476,23 +547,30 @@ Syntax:
 		{
 			return true;
 		}
-		if (pr::str::EqualI(option, "-remove_degenerates") && arg != arg_end)
+		if (pr::str::EqualI(option, "-remove_degenerates"))
 		{
 			m_ptr->m_ops.push_back(EP3dOp::RemoveDegenerates);
-			if (!pr::str::ExtractIntC(m_ptr->m_quantisation, 10, arg->c_str()))
-				throw std::exception("Tolerance value expected following -remove_degenerates");
-			if (!pr::IsPowerOfTwo(m_ptr->m_quantisation))
-				throw std::exception("Tolerance value should be a power of 2, i.e. 256,1024,etc.");
-			++arg;
+			if (arg != arg_end && !IsOption(*arg))
+			{
+				if (!pr::str::ExtractIntC(m_ptr->m_quantisation, 10, arg->c_str()))
+					throw std::exception("Tolerance value expected following -remove_degenerates");
+				if (m_ptr->m_quantisation < 0 || m_ptr->m_quantisation >= 32)
+					throw std::exception("Tolerance value should be an integer in the range [0,32).");
+				++arg;
+			}
 			return true;
 		}
-		if (pr::str::EqualI(option, "-gen_normals") && arg != arg_end)
+		if (pr::str::EqualI(option, "-generate_normals"))
 		{
 			m_ptr->m_ops.push_back(EP3dOp::GenerateNormals);
-			if (!pr::str::ExtractRealC(m_ptr->m_smooth_threshold, arg->c_str()))
-				throw std::exception("Smoothing threshold expected following -gen_normals");
-			m_ptr->m_smooth_threshold = pr::DegreesToRadians(m_ptr->m_smooth_threshold);
-			++arg;
+			if (arg != arg_end && !IsOption(*arg))
+			{
+				if (!pr::str::ExtractRealC(m_ptr->m_smooth_threshold, arg->c_str()))
+					throw std::exception("Smoothing threshold expected following -gen_normals");
+				if (m_ptr->m_smooth_threshold < 0 || m_ptr->m_smooth_threshold >= 180)
+					throw std::exception("Smoothing threshold value should be a value in the range [0,180).");
+				++arg;
+			}
 			return true;
 		}
 		if (pr::str::EqualI(option, "-fi") && arg != arg_end)

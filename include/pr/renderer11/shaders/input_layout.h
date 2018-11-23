@@ -31,6 +31,7 @@ namespace pr
 			Colour m_diff;
 			v4     m_norm;
 			v2     m_tex0;
+			v2     pad;
 
 			// The vertex layout description
 			static D3D11_INPUT_ELEMENT_DESC const (&Layout())[4]
@@ -55,6 +56,7 @@ namespace pr
 		inline void SetP   (Vert& vert, v4 const& pos)                                                  { vert.m_vert = pos; }
 		inline void SetC   (Vert& vert, Colour const& col)                                              { vert.m_diff = col; }
 		inline void SetN   (Vert& vert, v4 const& norm)                                                 { vert.m_norm = norm; }
+		inline void SetT   (Vert& vert, v2 const& uv)                                                   { vert.m_tex0 = uv; }
 		inline void SetPC  (Vert& vert, v4 const& pos, Colour const& col)                               { vert.m_vert = pos; vert.m_diff = col; }
 		inline void SetPT  (Vert& vert, v4 const& pos, v2 const& uv)                                    { vert.m_vert = pos; vert.m_tex0 = uv; }
 		inline void SetPCN (Vert& vert, v4 const& pos, Colour const& col, v4 const& norm)               { vert.m_vert = pos; vert.m_diff = col; vert.m_norm = norm; }

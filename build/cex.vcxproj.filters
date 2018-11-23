@@ -6,9 +6,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\projects\cex\deploy.py" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="..\projects\cex\src\clip.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -77,5 +74,8 @@
     <ClCompile Include="..\projects\cex\src\shell_file_op.cpp">
       <Filter>src</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\projects\cex\deploy_cex.py" />
   </ItemGroup>
 </Project>

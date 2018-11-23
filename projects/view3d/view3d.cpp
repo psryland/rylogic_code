@@ -72,7 +72,7 @@ inline void ReportError(wchar_t const* msg, View3DWindow wnd)
 inline void ReportError(char const* func_name, View3DWindow wnd, std::exception const* ex)
 {
 	// Report the error
-	pr::string<wchar_t> msg = pr::FmtS(L"%S failed.\n%S", func_name, ex ? ex->what() : "Unknown exception occurred.");
+	auto msg = pr::Fmt<pr::string<wchar_t>>(L"%S failed.\n%S", func_name, ex ? ex->what() : "Unknown exception occurred.");
 	if (msg.last() != '\n') msg.push_back('\n');
 	GetErrorCB(wnd).Raise(msg.c_str());
 }
@@ -2713,7 +2713,7 @@ VIEW3D_API void __stdcall View3D_SelectionBoxPosition(View3DWindow window, View3
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		window->SetSelectionBox(view3d::To<pr::BBox>(bbox), view3d::To<pr::m4x4>(o2w));
+		window->SetSelectionBox(view3d::To<pr::BBox>(bbox), view3d::To<pr::m4x4>(o2w).rot);
 	}
 	CatchAndReport(View3D_SelectionBoxPosition, window, );
 }

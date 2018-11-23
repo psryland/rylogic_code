@@ -16,8 +16,8 @@ using Rylogic.Gui.WinForms;
 using Rylogic.Interop.Win32;
 using Rylogic.Maths;
 using Rylogic.Scintilla;
+using Rylogic.Utility;
 using ToolStripContainer = Rylogic.Gui.WinForms.ToolStripContainer;
-using Util = Rylogic.Gui.WinForms.Util;
 
 namespace LDraw
 {
@@ -154,7 +154,6 @@ namespace LDraw
 				Debug.WriteLine($"{Application.ExecutablePath} is a {(Environment.Is64BitProcess?"64":"32")}bit process");
 				Application.EnableVisualStyles();
 				Application.SetCompatibleTextRenderingDefault(false);
-
 
 				// Parse the command line
 				Exception err = null;
@@ -990,7 +989,16 @@ namespace LDraw
 		{
 			if (!filepath.HasValue())
 			{
-				using (var dlg = new OpenFileDialog { Title = "Open Ldr Script file", Filter = Util.FileDialogFilter("Ldr Script","*.ldr", "Comma Separated Values","*.csv", "Binary Model File","*.p3d", "All Files","*.*") })
+				var filter = Util.FileDialogFilter(
+					"Supported Files"          , "*.ldr", "*.p3d", "*.3ds", "*.stl", "*.csv",
+					"Ldr Script"               , "*.ldr",
+					"Binary Model File"        , "*.p3d",
+					"3D Studio Max Model File" , "*.3ds",
+					"STL CAD Model File"       , "*.stl",
+					"Comma Separated Values"   , "*.csv",
+					"All Files"                , "*.*");
+
+				using (var dlg = new OpenFileDialog { Title = "Open Ldr Script file", Filter = filter })
 				{
 					if (dlg.ShowDialog(this) != DialogResult.OK) return;
 					filepath = dlg.FileName;
@@ -1126,7 +1134,7 @@ namespace LDraw
 			else
 			{
 				StartPosition = FormStartPosition.Manual;
-				Bounds = Util.OnScreen(Settings.UI.WindowPosition);
+				Bounds = WinFormsUtil.OnScreen(Settings.UI.WindowPosition);
 				WindowState = Settings.UI.WindowMaximised ? FormWindowState.Maximized : FormWindowState.Normal;
 			}
 		}

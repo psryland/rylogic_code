@@ -263,6 +263,9 @@
     <ClInclude Include="..\projects\renderer11\shaders\shader_forward.h">
       <Filter>shaders</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\stl.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\renderer11\util\stdafx.cpp">

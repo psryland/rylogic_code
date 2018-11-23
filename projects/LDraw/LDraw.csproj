@@ -22,7 +22,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>DEBUG</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
@@ -32,9 +32,10 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
+    <Optimize>false</Optimize>
     <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>
+    </DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
@@ -43,37 +44,37 @@
     <ApplicationIcon>icon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+    <Reference Include="WindowsBase" />
     <Reference Include="Google.Protobuf, Version=3.5.1.0, Culture=neutral, PublicKeyToken=a7d26565bac4d604, processorArchitecture=MSIL">
       <HintPath>..\..\build\packages\Google.Protobuf.3.5.1\lib\net45\Google.Protobuf.dll</HintPath>
     </Reference>
     <Reference Include="Grpc.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=d754f35622e28bad, processorArchitecture=MSIL">
       <HintPath>..\..\build\packages\Grpc.Core.1.11.0\lib\net45\Grpc.Core.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Data" />
     <Reference Include="System.Interactive.Async, Version=3.0.3000.0, Culture=neutral, PublicKeyToken=94bc3704cddfc263, processorArchitecture=MSIL">
       <HintPath>..\..\build\packages\System.Interactive.Async.3.1.1\lib\net46\System.Interactive.Async.dll</HintPath>
     </Reference>
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Drawing" />
-    <Reference Include="System.Windows.Forms" />
-    <Reference Include="System.Xml" />
-    <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\LDraw.API\LDraw.API.csproj">
       <Project>{25f4b180-1c4b-42df-bd5b-dc5c446a3528}</Project>
       <Name>LDraw.API</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj">
-      <Project>{76ef3a15-6e9f-4348-bcc2-e39f14b2a2b4}</Project>
-      <Name>Rylogic.Core.Windows</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj">
       <Project>{37a4f319-2052-404d-ae7f-f882cfa33c1b}</Project>
       <Name>Rylogic.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj">
+      <Project>{76ef3a15-6e9f-4348-bcc2-e39f14b2a2b4}</Project>
+      <Name>Rylogic.Core.Windows</Name>
     </ProjectReference>
     <ProjectReference Include="..\Rylogic.Gui.WinForms\Rylogic.Gui.WinForms.csproj">
       <Project>{dfed22ae-d2d5-4901-9947-393c4648b381}</Project>
@@ -168,28 +169,38 @@
   <ItemGroup>
     <None Include="..\..\lib\x64\Debug\view3d.dll">
       <Link>lib\x64\debug\view3d.dll</Link>
+      <CopyToOutputDirectory Condition="Exists('..\..\lib\x64\Debug\view3d.dll')">PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\..\lib\x64\Release\view3d.dll">
       <Link>lib\x64\release\view3d.dll</Link>
+      <CopyToOutputDirectory Condition="Exists('..\..\lib\x64\Release\view3d.dll')">PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\..\lib\x86\Debug\view3d.dll">
       <Link>lib\x86\debug\view3d.dll</Link>
+      <CopyToOutputDirectory Condition="Exists('..\..\lib\x86\Debug\view3d.dll')">PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\..\lib\x86\Release\view3d.dll">
       <Link>lib\x86\release\view3d.dll</Link>
+      <CopyToOutputDirectory Condition="Exists('..\..\lib\x86\Release\view3d.dll')">PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\..\lib\x64\Debug\scintilla.dll">
       <Link>lib\x64\debug\scintilla.dll</Link>
+      <CopyToOutputDirectory Condition="Exists('..\..\lib\x64\Debug\scintilla.dll')">PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\..\lib\x64\Release\scintilla.dll">
       <Link>lib\x64\release\scintilla.dll</Link>
+      <CopyToOutputDirectory Condition="Exists('..\..\lib\x64\Release\scintilla.dll')">PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\..\lib\x86\Debug\scintilla.dll">
       <Link>lib\x86\debug\scintilla.dll</Link>
+      <CopyToOutputDirectory Condition="Exists('..\..\lib\x86\Debug\scintilla.dll')">PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\..\lib\x86\Release\scintilla.dll">
       <Link>lib\x86\release\scintilla.dll</Link>
+      <CopyToOutputDirectory Condition="Exists('..\..\lib\x86\Release\scintilla.dll')">PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+  <ItemGroup>
     <None Include="App.config">
       <SubType>Designer</SubType>
     </None>
@@ -197,11 +208,11 @@
     <None Include="deploy_ldraw.py" />
     <None Include="icon.ico" />
     <None Include="packages.config" />
-    <None Include="post_build.py" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>py $(ProjectDir)post_build.py $(ProjectDir) $(TargetDir) $(PlatformName) $(ConfigurationName)</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
   <Import Project="..\..\build\packages\Grpc.Core.1.11.0\build\net45\Grpc.Core.targets" Condition="Exists('..\..\build\packages\Grpc.Core.1.11.0\build\net45\Grpc.Core.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

@@ -270,7 +270,7 @@ namespace pr
 	template <typename T> using enable_if_reflected_enum = typename std::enable_if<is_reflected_enum<T>::value>::type;
 
 	// Common interface for accessing meta data for an enum
-	template <typename T> using Enum = typename decltype(pr_impl_get_enum_metadata((T*)nullptr));
+	template <typename T> using Enum = decltype(pr_impl_get_enum_metadata((T*)nullptr));
 }
 
 #if PR_UNITTESTS

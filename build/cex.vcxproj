@@ -125,9 +125,6 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <None Include="..\projects\cex\deploy.py" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="..\projects\cex\src\clip.h" />
     <ClInclude Include="..\projects\cex\src\data_header_gen.h" />
     <ClInclude Include="..\projects\cex\src\dir_path.h" />
@@ -157,6 +154,9 @@
     <ClCompile Include="..\projects\cex\src\open_vs.cpp" />
     <ClCompile Include="..\projects\cex\src\p3d.cpp" />
     <ClCompile Include="..\projects\cex\src\shell_file_op.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\projects\cex\deploy_cex.py" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

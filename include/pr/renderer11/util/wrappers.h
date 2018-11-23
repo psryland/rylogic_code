@@ -104,7 +104,12 @@ namespace pr
 			BufferDesc(size_t count, size_t element_size_in_bytes, EUsage usage = EUsage::Default, EBind bind_flags = EBind::UnorderedAccess, ECPUAccess cpu_access = ECPUAccess::None, EResMisc res_flag = EResMisc::None)
 				:BufferDesc()
 			{
-				Init(count, element_size_in_bytes, 0, usage, bind_flags, cpu_access, res_flag);
+				Init(count, element_size_in_bytes, nullptr, usage, bind_flags, cpu_access, res_flag);
+			}
+			BufferDesc(size_t count, void const* data, size_t element_size_in_bytes, EUsage usage = EUsage::Default, EBind bind_flags = EBind::UnorderedAccess, ECPUAccess cpu_access = ECPUAccess::None, EResMisc res_flag = EResMisc::None)
+				:BufferDesc()
+			{
+				Init(count, element_size_in_bytes, data, usage, bind_flags, cpu_access, res_flag);
 			}
 			template <typename Elem> BufferDesc(size_t count, Elem const* data, EUsage usage = EUsage::Default, EBind bind_flags = EBind::UnorderedAccess, ECPUAccess cpu_access = ECPUAccess::None, EResMisc res_flag = EResMisc::None)
 				:BufferDesc()
@@ -166,6 +171,10 @@ namespace pr
 			{}
 			IBufferDesc(size_t count, size_t element_size_in_bytes, DXGI_FORMAT format, EUsage usage = EUsage::Default, ECPUAccess cpu_access = ECPUAccess::None, EResMisc res_flag = EResMisc::None)
 				:BufferDesc(count, element_size_in_bytes, usage, EBind::IndexBuffer, cpu_access, res_flag)
+				,Format(format)
+			{}
+			IBufferDesc(size_t count, void const* data, size_t element_size_in_bytes, DXGI_FORMAT format, EUsage usage = EUsage::Default, ECPUAccess cpu_access = ECPUAccess::None, EResMisc res_flag = EResMisc::None)
+				:BufferDesc(count, data, element_size_in_bytes, usage, EBind::IndexBuffer, cpu_access, res_flag)
 				,Format(format)
 			{}
 			template <typename Elem> IBufferDesc(size_t count, Elem const* data, DXGI_FORMAT format = DxFormat<Elem>::value, EUsage usage = EUsage::Default, ECPUAccess cpu_access = ECPUAccess::None, EResMisc res_flag = EResMisc::None)

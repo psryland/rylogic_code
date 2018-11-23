@@ -3167,18 +3167,18 @@ namespace pr
 				}
 
 				// Determine the format from the file extension
-				auto info = GetModelFileInfo(m_filepath.c_str());
-				if (info.m_format == EModelFileFormat::Unknown)
+				auto format = GetModelFormat(m_filepath.c_str());
+				if (format == EModelFileFormat::Unknown)
 				{
-					string512 msg = pr::FmtS("Mesh file '%s' is not supported.\nSupported Formats: ", Narrow(m_filepath).c_str());
+					auto msg = pr::Fmt("Model file '%s' is not supported.\nSupported Formats: ", Narrow(m_filepath).c_str());
 					for (auto f : Enum<EModelFileFormat>::Members()) msg.append(ToStringA(f)).append(" ");
 					p.ReportError(EResult::Failed, msg.c_str());
 					return;
 				}
 
-				// Ask the include handler to turn the filepath into a stream
-				auto flags = IIncludeHandler::EFlags::IncludeLocalDir | (info.m_is_binary ? IIncludeHandler::EFlags::Binary : IIncludeHandler::EFlags::None);
-				auto src = p.m_reader.Includes().OpenStreamA(m_filepath, flags);
+				// Ask the include handler to turn the filepath into a stream.
+				// Load the stream in binary model. The model loading functions can convert binary to text if needed.
+				auto src = p.m_reader.Includes().OpenStreamA(m_filepath, IIncludeHandler::EFlags::Binary);
 				if (!src || !*src)
 				{
 					p.ReportError(EResult::Failed, pr::FmtS("Failed to open file stream '%s'", m_filepath.c_str()));
@@ -3186,7 +3186,7 @@ namespace pr
 				}
 
 				// Create the model
-				obj->m_model = ModelGenerator<>::LoadModel(p.m_rdr, info.m_format, *src, nullptr, m_bake != m4x4Identity ? &m_bake : nullptr, m_gen_normals);
+				obj->m_model = ModelGenerator<>::LoadModel(p.m_rdr, format, *src, nullptr, m_bake != m4x4Identity ? &m_bake : nullptr, m_gen_normals);
 				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};

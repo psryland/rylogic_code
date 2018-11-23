@@ -18,7 +18,7 @@ try:
 	# Use the everything sln so that dependent projects get built as well
 	sln = UserVars.root + "\\build\\Rylogic.sln"
 	projects = [ # e.g: "\"folder\proj_name:Rebuild\""
-		"cex",
+		"Tools\cex",
 		]
 	platforms = [
 		"x64",

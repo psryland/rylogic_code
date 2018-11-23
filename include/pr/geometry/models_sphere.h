@@ -228,8 +228,8 @@ namespace pr
 		{
 			if (wedges < 3) wedges = 3;
 			if (layers < 2) layers = 2;
-			vcount = value_cast<Tvr>((wedges + 1) * (layers + 1));
-			icount = value_cast<Tir>(3 * wedges * (2 * layers - 2));
+			vcount = checked_cast<Tvr>((wedges + 1) * (layers + 1));
+			icount = checked_cast<Tir>(3 * wedges * (2 * layers - 2));
 		}
 
 		// Generate a standard sphere
@@ -238,7 +238,7 @@ namespace pr
 		{
 			Props props;
 			props.m_bbox = BBox(pr::v4Origin, radius);
-			props.m_has_alpha = colour.a() != 0xFF;
+			props.m_has_alpha = colour.a != 0xFF;
 
 			if (wedges < 3) wedges = 3;
 			if (layers < 2) layers = 2;
@@ -252,8 +252,8 @@ namespace pr
 
 				for (std::size_t l = 1; l < layers; ++l)
 				{
-					float a = maths::tau * w / wedges;
-					float b = maths::tau_by_2 * l / layers;
+					auto a = float(maths::tau * w / wedges);
+					auto b = float(maths::tau_by_2 * l / layers);
 					norm = v4(Cos(a) * Sin(b), Sin(a) * Sin(b), Cos(b), 0.0f);
 					uv   = v2(float(w) / wedges, (1.0f - norm.z) * 0.5f);
 					SetPCNT(*out_verts++, (radius * norm).w1(), colour, norm, uv);
@@ -265,27 +265,27 @@ namespace pr
 			}
 
 			// Faces
-			typedef decltype(impl::remove_ref(*out_indices)) VIdx;
+			using VIdx = typename std::remove_reference<decltype(*out_indices)>::type;
 			std::size_t ibase = 0, ilayer = 0, verts_per_wedge = 1 + layers;
 			for (std::size_t w = 0; w != wedges; ++w, ibase += verts_per_wedge, ilayer = ibase)
 			{
-				*out_indices++ = value_cast<VIdx>(ilayer + 0);
-				*out_indices++ = value_cast<VIdx>(ilayer + 1);
-				*out_indices++ = value_cast<VIdx>(ilayer + 1 + verts_per_wedge);
+				*out_indices++ = checked_cast<VIdx>(ilayer + 0);
+				*out_indices++ = checked_cast<VIdx>(ilayer + 1);
+				*out_indices++ = checked_cast<VIdx>(ilayer + 1 + verts_per_wedge);
 				++ilayer;
 				for (std::size_t l = 1; l != layers - 1; ++l)
 				{
-					*out_indices++ = value_cast<VIdx>(ilayer + 0);
-					*out_indices++ = value_cast<VIdx>(ilayer + 1);
-					*out_indices++ = value_cast<VIdx>(ilayer + 0 + verts_per_wedge);
-					*out_indices++ = value_cast<VIdx>(ilayer + 0 + verts_per_wedge);
-					*out_indices++ = value_cast<VIdx>(ilayer + 1);
-					*out_indices++ = value_cast<VIdx>(ilayer + 1 + verts_per_wedge);
+					*out_indices++ = checked_cast<VIdx>(ilayer + 0);
+					*out_indices++ = checked_cast<VIdx>(ilayer + 1);
+					*out_indices++ = checked_cast<VIdx>(ilayer + 0 + verts_per_wedge);
+					*out_indices++ = checked_cast<VIdx>(ilayer + 0 + verts_per_wedge);
+					*out_indices++ = checked_cast<VIdx>(ilayer + 1);
+					*out_indices++ = checked_cast<VIdx>(ilayer + 1 + verts_per_wedge);
 					++ilayer;
 				}
-				*out_indices++ = value_cast<VIdx>(ilayer + 0 + verts_per_wedge);
-				*out_indices++ = value_cast<VIdx>(ilayer + 0 );
-				*out_indices++ = value_cast<VIdx>(ilayer + 1 );
+				*out_indices++ = checked_cast<VIdx>(ilayer + 0 + verts_per_wedge);
+				*out_indices++ = checked_cast<VIdx>(ilayer + 0 );
+				*out_indices++ = checked_cast<VIdx>(ilayer + 1 );
 			}
 
 			return props;

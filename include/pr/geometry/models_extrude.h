@@ -67,10 +67,10 @@ namespace pr
 
 			// Verts - create planes of cross sections at each path point
 			auto xsection = MakeRing(cs, cs + cs_count);
+			auto ori = path();
 			if (closed)
 			{
 				// Starting end cap
-				auto ori = path(0);
 				for (int x = 0; x != cs_count; ++x)
 				{
 					auto pt   = ori * v4(xsection[x], 0, 1.0f);
@@ -84,7 +84,7 @@ namespace pr
 				// Cross section verts for each segment of the path
 				// Doubled if outward normals are not smooth
 				v4 pt, norm;
-				auto ori = path(p);
+				ori = p != 0 ? path() : ori;
 				if (smooth_cs)
 				{
 					for (int x = 0; x != cs_count; ++x)
@@ -118,7 +118,6 @@ namespace pr
 			if (closed)
 			{
 				// Closing end cap
-				auto ori = path(path_count - 1);
 				for (int x = 0; x != cs_count; ++x)
 				{
 					auto pt   = ori * v4(xsection[x], 0, 1.0f);

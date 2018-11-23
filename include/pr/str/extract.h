@@ -297,7 +297,7 @@ namespace pr
 				return false;
 
 			// Copy up to the first non-identifier character
-			auto len = Length(id);
+			auto len = 0;//Length(id); don't append existing values in 'id'
 			for (Append(id, len++, *src), ++src; *src && IsIdentifier(*src, false); Append(id, len++, *src), ++src) {}
 			return true;
 		}
@@ -339,7 +339,7 @@ namespace pr
 			if (FindChar(quotes, quote) != 0) ++src; else return false;
 
 			// Copy the string
-			auto len = Length(str);
+			auto len = 0;//Length(str); don't append existing values in 'str'
 			if (auto esc_chr = Char(escape))
 			{
 				// Copy to the closing ", allowing for the escape character

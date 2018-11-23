@@ -472,9 +472,10 @@ namespace pr
 						// Lua script that generates ldr script
 						//m_lua_src.Add(fpath.c_str());
 					}
-					else if (str::EqualI(extn, "p3d"))
+					else if (str::EqualI(extn, "p3d") || str::EqualI(extn, "stl"))
 					{
-						// P3D binary model file
+						// P3D = My custom binary model file format
+						// STL = "Stereolithography" model files (binary and text)
 						Buffer<> src(ESrcType::Buffered, pr::FmtS(L"*Model {\"%s\"}", file.m_filepath.c_str()));
 						Reader reader(src, false, &file.m_includes, nullptr, m_emb_factory);
 						Parse(*m_rdr, reader, out, file.m_context_id, pr::StaticCallBack(AddFileProgressCB, this));
@@ -587,11 +588,11 @@ namespace pr
 				}
 				catch (pr::script::Exception const& ex)
 				{
-					errors = ErrorEventArgs(pr::FmtS(L"Script error found while parsing script.\r\n%S", ex.what()));
+					errors = ErrorEventArgs(pr::Fmt(L"Script error found while parsing script.\r\n%S", ex.what()));
 				}
 				catch (std::exception const& ex)
 				{
-					errors = ErrorEventArgs(pr::FmtS(L"Error found while parsing script.\r\n%S", ex.what()));
+					errors = ErrorEventArgs(pr::Fmt(L"Error found while parsing script.\r\n%S", ex.what()));
 				}
 				#pragma endregion
 
