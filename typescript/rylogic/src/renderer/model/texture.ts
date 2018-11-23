@@ -78,7 +78,7 @@ export function CreateFromFile(rdr: Rdr_.Renderer, filepath: string, opts ?: ITe
 		gl.bindTexture(gl.TEXTURE_2D, tex);
 
 		// Assign the pixel data
-		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
 
 		// Set filtering/wrap mode

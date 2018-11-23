@@ -1689,7 +1689,7 @@ export class Navigation
 		chart.canvas2d.onpointerdown = function(ev) { chart.navigation.OnMouseDown(ev); }
 		chart.canvas2d.onpointermove = function(ev) { chart.navigation.OnMouseMove(ev); };
 		chart.canvas2d.onpointerup   = function(ev) { chart.navigation.OnMouseUp(ev); };
-		chart.canvas2d.onmousewheel  = function(ev) { chart.navigation.OnMouseWheel(ev); };
+		chart.canvas2d.onwheel       = function(ev) { chart.navigation.OnMouseWheel(ev); };
 		chart.canvas2d.oncontextmenu = function(ev) { ev.preventDefault(); };
 	}
 
