@@ -1,4 +1,3 @@
-
 EXPORTS
 	AddIn_v2
 	AddIn_v3
@@ -11,17 +10,16 @@ EXPORTS
 	AddIn_m3x4
 	AddIn_m4x4
 	AddIn_m6x8
-	AddIn_MAXMatrix3
-	AddIn_stdvector
-	AddIn_stdstring
-	AddIn_stdstringstream
-	AddIn_stdifstream
-	AddIn_stdofstream
 	AddIn_Quaternion
+	AddIn_MatrixF
+	AddIn_MatrixD
+	AddIn_MAXMatrix3
 	AddIn_MD5
 	AddIn_LargeInt
 	AddIn_QuaternionAsMatrix
-	AddIn_phShape
+	AddIn_PhShape
 	AddIn_LuaState
 	AddIn_DateTime
-	
+	AddIn_stdstringstream
+	AddIn_stdifstream
+	AddIn_stdofstream

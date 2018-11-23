@@ -83,11 +83,14 @@
     </ResourceCompile>
     <Link>
       <AdditionalOptions>/MACHINE:I386 %(AdditionalOptions)</AdditionalOptions>
-      <ModuleDefinitionFile>..\projects\prautoexp\PRAutoExp.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile>..\projects\prautoexp\src\prautoexp.def</ModuleDefinitionFile>
       <DataExecutionPrevention>
       </DataExecutionPrevention>
     </Link>
     <PostBuildEvent />
+    <PreBuildEvent>
+      <Command>py $(ProjectDir)..\projects\prautoexp\pre_build.py</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Midl>
@@ -107,24 +110,44 @@
     </ResourceCompile>
     <Link>
       <AdditionalOptions>/MACHINE:I386 %(AdditionalOptions)</AdditionalOptions>
-      <ModuleDefinitionFile>..\projects\prautoexp\PRAutoExp.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile>..\projects\prautoexp\src\prautoexp.def</ModuleDefinitionFile>
       <DataExecutionPrevention>
       </DataExecutionPrevention>
     </Link>
     <PostBuildEvent />
+    <PreBuildEvent>
+      <Command>py $(ProjectDir)..\projects\prautoexp\pre_build.py</Command>
+    </PreBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <PreBuildEvent>
+      <Command>py $(ProjectDir)..\projects\prautoexp\pre_build.py</Command>
+    </PreBuildEvent>
+    <Link>
+      <ModuleDefinitionFile>..\projects\prautoexp\src\prautoexp.def</ModuleDefinitionFile>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <PreBuildEvent>
+      <Command>py $(ProjectDir)..\projects\prautoexp\pre_build.py</Command>
+    </PreBuildEvent>
+    <Link>
+      <ModuleDefinitionFile>..\projects\prautoexp\src\prautoexp.def</ModuleDefinitionFile>
+    </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\projects\prautoexp\expansions.cpp" />
     <ClCompile Include="..\include\pr\lua\lua_core.c" />
     <ClCompile Include="..\include\pr\lua\lua_lib.c" />
+    <ClCompile Include="..\projects\prautoexp\src\expansions.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\projects\prautoexp\expansions.h" />
     <ClInclude Include="..\include\pr\lua\lua.h" />
+    <ClInclude Include="..\projects\prautoexp\src\dbg_helper.h" />
+    <ClInclude Include="..\projects\prautoexp\src\reentry_guard.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\prautoexp\deploy_autoexp.py" />
-    <None Include="..\projects\prautoexp\prautoexp.def" />
+    <None Include="..\projects\prautoexp\pre_build.py" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

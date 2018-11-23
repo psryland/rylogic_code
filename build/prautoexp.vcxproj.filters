@@ -13,28 +13,29 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\projects\prautoexp\expansions.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\include\pr\lua\lua_core.c">
       <Filter>pr\lua</Filter>
     </ClCompile>
     <ClCompile Include="..\include\pr\lua\lua_lib.c">
       <Filter>pr\lua</Filter>
     </ClCompile>
+    <ClCompile Include="..\projects\prautoexp\src\expansions.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\projects\prautoexp\expansions.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\lua\lua.h">
       <Filter>pr\lua</Filter>
     </ClInclude>
+    <ClInclude Include="..\projects\prautoexp\src\dbg_helper.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\prautoexp\src\reentry_guard.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\projects\prautoexp\prautoexp.def">
-      <Filter>src</Filter>
-    </None>
     <None Include="..\projects\prautoexp\deploy_autoexp.py" />
+    <None Include="..\projects\prautoexp\pre_build.py" />
   </ItemGroup>
 </Project>

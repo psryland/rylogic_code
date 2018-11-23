@@ -137,9 +137,6 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
       <CustomToolNamespace>LDraw</CustomToolNamespace>
     </EmbeddedResource>
-    <EmbeddedResource Include="src\AboutUI.resx">
-      <DependentUpon>AboutUI.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="src\CameraUI.resx">
       <DependentUpon>CameraUI.cs</DependentUpon>
     </EmbeddedResource>

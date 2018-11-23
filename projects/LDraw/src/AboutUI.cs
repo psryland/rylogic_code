@@ -87,7 +87,7 @@ namespace LDraw
 			this.Controls.Add(this.m_btn_ok);
 			this.Controls.Add(this.m_tb_desc);
 			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
-			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+			this.Icon = Resources.logo;
 			this.Name = "AboutUI";
 			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
 			this.Text = "About LDraw";
