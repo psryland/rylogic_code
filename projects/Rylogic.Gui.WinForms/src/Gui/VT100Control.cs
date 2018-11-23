@@ -9,13 +9,14 @@ using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Interop.Win32;
 using Rylogic.Scintilla;
+using Rylogic.Utility;
 
 namespace Rylogic.Gui.WinForms
 {
 	/// <summary>A control that displays the VT100 buffer</summary>
 	public class VT100Display :ScintillaCtrl
 	{
-		private static readonly string FileFilters = Utility.Util.FileDialogFilter("Text Files","*.txt","Log Files","*.log","All Files","*.*");
+		private static readonly string FileFilters = Util.FileDialogFilter("Text Files","*.txt","Log Files","*.log","All Files","*.*");
 
 		private HoverScroll m_hs;
 		private EventBatcher m_eb;

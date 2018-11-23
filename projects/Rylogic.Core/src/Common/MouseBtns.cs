@@ -5,9 +5,9 @@ namespace Rylogic.Common
 	[Flags]
 	public enum EMouseBtns
 	{
-		// Convertible from System.Windows.Forms.MouseButtons
-		// and native MK_ constants.
-
+		// Compatible with native MK_ constants.
+		// Use the extension 'WinFormsUtil.ToMouseBtns' to convert from 'System.Windows.Forms.MouseButtons'
+		None = 0,
 		Left     = 0x0001, // MK_LBUTTON 
 		Right    = 0x0002, // MK_RBUTTON 
 		Shift    = 0x0004, // MK_SHIFT   

@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.Windows.Forms;
 using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace Rylogic.Gui.WinForms
 {

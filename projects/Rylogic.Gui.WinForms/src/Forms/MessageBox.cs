@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace Rylogic.Gui.WinForms
 {

@@ -533,7 +533,7 @@ namespace Rylogic.Utility
 
 		/// <summary>Contains information about a file</summary>
 		[Serializable]
-		[Obsolete("Use the Core version")]
+		[Obsolete("Use 'FileSystemInfo' instead")]
 		public class FileData
 		{
 			private readonly Win32.WIN32_FIND_DATA m_find_data;
@@ -571,7 +571,7 @@ namespace Rylogic.Utility
 
 			/// <summary>Attributes of the file.</summary>
 			public FileAttributes Attributes { get { return m_find_data.Attributes; } }
-			public bool IsDirectory { get { return (Attributes & FileAttributes.Directory) == FileAttributes.Directory; } }
+			public bool IsDirectory => Attributes.HasFlag(FileAttributes.Directory);
 
 			/// <summary>The file size</summary>
 			public long FileSize { get { return m_find_data.FileSize; } }

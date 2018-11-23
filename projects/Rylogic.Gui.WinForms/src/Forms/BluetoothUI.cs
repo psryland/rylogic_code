@@ -26,8 +26,7 @@ namespace Rylogic.Gui.WinForms
 		private CheckBox m_chk_show_paired;
 		private CheckBox m_chk_discoverable;
 		private ComboBox m_cb_radio;
-		private ImageList m_il_bt_device_types;
-		private System.Windows.Forms.ListBox m_lb_devices;
+		private ListBox m_lb_devices;
 		private Button m_btn_show_bt_cpl;
 		private Timer m_timer;
 		private Button m_btn_pair;
@@ -118,17 +117,30 @@ namespace Rylogic.Gui.WinForms
 		private Bluetooth.Device m_device;
 
 		/// <summary>The image list for devices (too allow users at add custom ones)</summary>
-		public ImageList DeviceImageList
-		{
-			get { return m_il_bt_device_types; }
-		}
+		public ImageList DeviceImageList { get; private set; }
 
-		/// <summary>User provided function for returning the image index for the given device</summary>
-		public Func<Bluetooth.Device, int> GetDeviceImageIndex { get; set; }
+		/// <summary>User provided function for returning the image key for the given device</summary>
+		public Func<Bluetooth.Device, string> GetDeviceImageKey { get; set; }
 
 		/// <summary>Set up the UI</summary>
 		private void SetupUI()
 		{
+			// Icons
+			{
+				DeviceImageList = new ImageList(components);
+				DeviceImageList.TransparentColor = Color.Transparent;
+				DeviceImageList.Images.Add(Bluetooth.EClassOfDeviceMajor.Miscellaneous.ToString(), Resources.bt_misc);
+				DeviceImageList.Images.Add(Bluetooth.EClassOfDeviceMajor.Computer     .ToString(), Resources.bt_laptop);
+				DeviceImageList.Images.Add(Bluetooth.EClassOfDeviceMajor.Phone        .ToString(), Resources.bt_phone);
+				DeviceImageList.Images.Add(Bluetooth.EClassOfDeviceMajor.LanAccess    .ToString(), Resources.bt_lan_access);
+				DeviceImageList.Images.Add(Bluetooth.EClassOfDeviceMajor.Audio        .ToString(), Resources.bt_audio);
+				DeviceImageList.Images.Add(Bluetooth.EClassOfDeviceMajor.Peripheral   .ToString(), Resources.bt_peripheral);
+				DeviceImageList.Images.Add(Bluetooth.EClassOfDeviceMajor.Imaging      .ToString(), Resources.bt_imaging);
+				DeviceImageList.Images.Add(Bluetooth.EClassOfDeviceMajor.Wearable     .ToString(), Resources.bt_wearable);
+				DeviceImageList.Images.Add(Bluetooth.EClassOfDeviceMajor.Toy          .ToString(), Resources.bt_misc);
+				DeviceImageList.Images.Add(Bluetooth.EClassOfDeviceMajor.Unclassified .ToString(), Resources.bt_misc);
+			}
+
 			// Radio
 			m_cb_radio.ToolTip(m_tt, "Select a specific bluetooth radio");
 			PopulateRadios();
@@ -352,12 +364,13 @@ namespace Rylogic.Gui.WinForms
 			var x = a.Bounds.Left + 1;
 			var y = a.Bounds.Top + 1;
 
-			// Get the image index for the device type
-			var img_index = Math_.Clamp(GetDeviceImageIndex != null
-				? GetDeviceImageIndex(device)
-				: device.ClassOfDeviceMajor.Assoc<int>("img"),
-				0, DeviceImageList.Images.Count);
-			var img = DeviceImageList.Images[img_index];
+			// Get the image key for the device type
+			var img_key = GetDeviceImageKey != null
+				? GetDeviceImageKey(device)
+				: device.ClassOfDeviceMajor.ToString();
+			var img = DeviceImageList.Images.ContainsKey(img_key)
+				? DeviceImageList.Images[img_key]
+				: DeviceImageList.Images[Bluetooth.EClassOfDeviceMajor.Miscellaneous.ToString()];
 
 			// Cell background
 			if (a.State.HasFlag(DrawItemState.Selected))
@@ -461,7 +474,6 @@ namespace Rylogic.Gui.WinForms
 		private void InitializeComponent()
 		{
 			this.components = new System.ComponentModel.Container();
-			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(BluetoothUI));
 			this.m_btn_cancel = new System.Windows.Forms.Button();
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_btn_pair = new System.Windows.Forms.Button();
@@ -471,8 +483,7 @@ namespace Rylogic.Gui.WinForms
 			this.m_chk_show_connected = new System.Windows.Forms.CheckBox();
 			this.m_chk_show_paired = new System.Windows.Forms.CheckBox();
 			this.m_chk_discoverable = new System.Windows.Forms.CheckBox();
-			this.m_il_bt_device_types = new System.Windows.Forms.ImageList(this.components);
-			this.m_lb_devices = new System.Windows.Forms.ListBox();
+			this.m_lb_devices = new Rylogic.Gui.WinForms.ListBox();
 			this.m_btn_show_bt_cpl = new System.Windows.Forms.Button();
 			this.m_timer = new System.Windows.Forms.Timer(this.components);
 			this.m_cb_radio = new Rylogic.Gui.WinForms.ComboBox();
@@ -568,19 +579,6 @@ namespace Rylogic.Gui.WinForms
 			this.m_chk_discoverable.Text = "Discoverable";
 			this.m_chk_discoverable.UseVisualStyleBackColor = true;
 			// 
-			// m_il_bt_device_types
-			// 
-			this.m_il_bt_device_types.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("m_il_bt_device_types.ImageStream")));
-			this.m_il_bt_device_types.TransparentColor = System.Drawing.Color.Transparent;
-			this.m_il_bt_device_types.Images.SetKeyName(0, "bt_misc.png");
-			this.m_il_bt_device_types.Images.SetKeyName(1, "bt_laptop.png");
-			this.m_il_bt_device_types.Images.SetKeyName(2, "bt_phone.png");
-			this.m_il_bt_device_types.Images.SetKeyName(3, "bt_lan_access.png");
-			this.m_il_bt_device_types.Images.SetKeyName(4, "bt_audio.png");
-			this.m_il_bt_device_types.Images.SetKeyName(5, "bt_peripheral.png");
-			this.m_il_bt_device_types.Images.SetKeyName(6, "bt_imaging.png");
-			this.m_il_bt_device_types.Images.SetKeyName(7, "bt_wearable.png");
-			// 
 			// m_lb_devices
 			// 
 			this.m_lb_devices.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
@@ -639,7 +637,7 @@ namespace Rylogic.Gui.WinForms
 			this.Controls.Add(this.m_btn_pair);
 			this.Controls.Add(this.m_btn_ok);
 			this.Controls.Add(this.m_btn_cancel);
-			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+			this.Icon = Resources.bluetooth_ico;
 			this.MinimumSize = new System.Drawing.Size(370, 200);
 			this.Name = "BluetoothUI";
 			this.Text = "Choose a Bluetooth Device";

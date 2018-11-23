@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using Rylogic.Common;
+using Rylogic.Utility;
 
 namespace Rylogic.Gui.WinForms
 {
@@ -41,38 +42,43 @@ namespace Rylogic.Gui.WinForms
 			m_pat = new Pattern();
 			m_pat.PatternChanged += UpdateUI;
 
+			// Button images
+			m_il.TransparentColor = Color.Transparent;
+			m_il.Images.Add("prev", Resources.green_left);
+			m_il.Images.Add("next", Resources.green_right);
+
 			// Search pattern
 			m_cb_pattern.TextChanged += (s,a) =>
-				{
-					m_pat.Expr = m_cb_pattern.Text;
-				};
+			{
+				m_pat.Expr = m_cb_pattern.Text;
+			};
 
 			// Radio buttons
 			m_radio_substr.Click += (s,a) =>
-				{
-					if (m_radio_substr.Checked)
-						m_pat.PatnType = EPattern.Substring;
-				};
+			{
+				if (m_radio_substr.Checked)
+					m_pat.PatnType = EPattern.Substring;
+			};
 			m_radio_wildcard.Click += (s,a) =>
-				{
-					if (m_radio_wildcard.Checked)
-						m_pat.PatnType = EPattern.Wildcard;
-				};
+			{
+				if (m_radio_wildcard.Checked)
+					m_pat.PatnType = EPattern.Wildcard;
+			};
 			m_radio_regexp.Click += (s,a) =>
-				{
-					if (m_radio_regexp.Checked)
-						m_pat.PatnType = EPattern.RegularExpression;
-				};
+			{
+				if (m_radio_regexp.Checked)
+					m_pat.PatnType = EPattern.RegularExpression;
+			};
 
 			// Search options
 			m_chk_ignore_case.CheckedChanged += (s,a) =>
-				{
-					m_pat.IgnoreCase = m_chk_ignore_case.Checked;
-				};
+			{
+				m_pat.IgnoreCase = m_chk_ignore_case.Checked;
+			};
 			m_chk_invert.CheckedChanged += (s,a) =>
-				{
-					m_pat.Invert = m_chk_invert.Checked;
-				};
+			{
+				m_pat.Invert = m_chk_invert.Checked;
+			};
 
 			// Find buttons
 			m_btn_find_next.Click += (s,a) => OnFind(new FindEventArgs(+1));
@@ -162,7 +168,6 @@ namespace Rylogic.Gui.WinForms
 		private void InitializeComponent()
 		{
 			this.components = new System.ComponentModel.Container();
-			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FindUI));
 			this.m_cb_pattern = new Rylogic.Gui.WinForms.ComboBox();
 			this.m_btn_find_prev = new System.Windows.Forms.Button();
 			this.m_il = new System.Windows.Forms.ImageList(this.components);
@@ -190,7 +195,7 @@ namespace Rylogic.Gui.WinForms
 			// m_btn_find_prev
 			// 
 			this.m_btn_find_prev.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_find_prev.ImageKey = "green_left.png";
+			this.m_btn_find_prev.ImageKey = "prev";
 			this.m_btn_find_prev.ImageList = this.m_il;
 			this.m_btn_find_prev.Location = new System.Drawing.Point(216, 13);
 			this.m_btn_find_prev.Name = "m_btn_find_prev";
@@ -198,17 +203,10 @@ namespace Rylogic.Gui.WinForms
 			this.m_btn_find_prev.TabIndex = 1;
 			this.m_btn_find_prev.UseVisualStyleBackColor = true;
 			// 
-			// m_il
-			// 
-			this.m_il.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("m_il.ImageStream")));
-			this.m_il.TransparentColor = System.Drawing.Color.Transparent;
-			this.m_il.Images.SetKeyName(0, "green_left.png");
-			this.m_il.Images.SetKeyName(1, "green_right.png");
-			// 
 			// m_btn_find_next
 			// 
 			this.m_btn_find_next.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_find_next.ImageKey = "green_right.png";
+			this.m_btn_find_next.ImageKey = "next";
 			this.m_btn_find_next.ImageList = this.m_il;
 			this.m_btn_find_next.Location = new System.Drawing.Point(245, 13);
 			this.m_btn_find_next.Name = "m_btn_find_next";

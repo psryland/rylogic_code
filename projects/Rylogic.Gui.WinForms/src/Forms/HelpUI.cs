@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using Rylogic.Extn;
 using Rylogic.Interop.Win32;
+using Rylogic.Utility;
 using BrowserCtrl = Rylogic.Gui.WinForms.WebBrowser;
 
 namespace Rylogic.Gui.WinForms
@@ -275,7 +276,6 @@ namespace Rylogic.Gui.WinForms
 		/// </summary>
 		private void InitializeComponent()
 		{
-			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(HelpUI));
 			this.m_panel = new System.Windows.Forms.Panel();
 			this.m_btn_forward = new System.Windows.Forms.Button();
 			this.m_btn_back = new System.Windows.Forms.Button();
@@ -357,7 +357,7 @@ namespace Rylogic.Gui.WinForms
 			this.Controls.Add(this.m_btn_back);
 			this.Controls.Add(this.m_btn_ok);
 			this.Controls.Add(this.m_panel);
-			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+			this.Icon = Resources.book_ico;
 			this.Name = "HelpUI2";
 			this.Text = "Help";
 			this.ResumeLayout(false);

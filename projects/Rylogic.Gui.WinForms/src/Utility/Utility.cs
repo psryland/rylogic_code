@@ -4,11 +4,12 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using Rylogic.Common;
 using Rylogic.Maths;
 
 namespace Rylogic.Gui.WinForms
 {
-	public class Util :Utility.Util
+	public static class WinFormsUtil
 	{
 		/// <summary>Blocks until the debugger is attached</summary>
 		public static void WaitForDebugger()
@@ -16,7 +17,7 @@ namespace Rylogic.Gui.WinForms
 			using (var mb = new MsgBox("Waiting for Debugger...", "Debugging", MessageBoxButtons.OK, MessageBoxIcon.Information) { PositiveBtnText = "Continue" })
 			{
 				mb.Show(null);
-				WaitForDebugger(info =>
+				Utility.Util.WaitForDebugger(info =>
 				{
 					Application.DoEvents();
 					mb.Text = info;
@@ -66,10 +67,24 @@ namespace Rylogic.Gui.WinForms
 		}
 		public const int MouseButtonCount = 6;
 
+		/// <summary>Convert to native win32 MK values</summary>
+		public static EMouseBtns ToMouseBtns(this MouseButtons btns, Keys modifiers = Keys.None)
+		{
+			var res = (EMouseBtns)0;
+			if ((btns & MouseButtons.Left    ) != 0) res |= EMouseBtns.Left;
+			if ((btns & MouseButtons.Right   ) != 0) res |= EMouseBtns.Right;
+			if ((btns & MouseButtons.Middle  ) != 0) res |= EMouseBtns.Middle;
+			if ((btns & MouseButtons.XButton1) != 0) res |= EMouseBtns.XButton1;
+			if ((btns & MouseButtons.XButton2) != 0) res |= EMouseBtns.XButton2;
+			if ((modifiers & Keys.Shift      ) != 0) res |= EMouseBtns.Shift;
+			if ((modifiers & Keys.Control    ) != 0) res |= EMouseBtns.Ctrl;
+			return res;
+		}
+
 		/// <summary>Returns true if 'point' is more than the drag size from 'ref_point'</summary>
 		public static bool Moved(Point point, Point ref_point)
 		{
-			return Moved(point, ref_point, SystemInformation.DragSize.Width, SystemInformation.DragSize.Height);
+			return Utility.Util.Moved(point, ref_point, SystemInformation.DragSize.Width, SystemInformation.DragSize.Height);
 		}
 
 		/// <summary>Test for design mode. Note: Prefer the Control extension method over this. This is just for non-Control classes</summary>

@@ -169,6 +169,16 @@ namespace Rylogic.Container
 		{
 			var old = this[index];
 
+			// Event order is important here. Must be symmetric:
+			//  PreAdd, PreRemove, PreItemReset, ItemReset, ItemRemoved, ItemAdded
+			//  'ItemReset' is invoked by base.SetItem
+			if (RaiseListChangedEvents)
+			{
+				var args = new ListChgEventArgs<T>(this, ListChg.ItemPreAdd, index, item);
+				ListChanging?.Invoke(this, args);
+				if (args.Cancel)
+					return;
+			}
 			if (RaiseListChangedEvents)
 			{
 				var args = new ListChgEventArgs<T>(this, ListChg.ItemPreRemove, index, old);
@@ -178,7 +188,7 @@ namespace Rylogic.Container
 			}
 			if (RaiseListChangedEvents)
 			{
-				var args = new ListChgEventArgs<T>(this, ListChg.ItemPreAdd, index, item);
+				var args = new ListChgEventArgs<T>(this, ListChg.ItemPreReset, index, old);
 				ListChanging?.Invoke(this, args);
 				if (args.Cancel)
 					return;
@@ -189,7 +199,6 @@ namespace Rylogic.Container
 
 			if (RaiseListChangedEvents)
 				ItemChanged?.Invoke(this, new ItemChgEventArgs<T>(index, old, item));
-
 			if (RaiseListChangedEvents)
 				ListChanging?.Invoke(this, new ListChgEventArgs<T>(this, ListChg.ItemRemoved, index, old));
 			if (RaiseListChangedEvents)

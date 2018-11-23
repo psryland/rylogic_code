@@ -976,7 +976,9 @@ $@"//
 //Assembly: System.Xml.dll
 //Assembly: System.Xml.Linq.dll
 //Assembly: .\Rylogic.Core.dll
-//Assembly: .\Rylogic.Main.dll
+//Assembly: .\Rylogic.Core.Windows.dll
+//Assembly: .\Rylogic.Gui.WinForms.dll
+//Assembly: .\Rylogic.View3d.dll
 //Assembly: .\LDraw.exe
 using System;
 using System.Drawing;
@@ -989,8 +991,8 @@ using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Container;
 using Rylogic.Extn;
-using Rylogic.Graphix;
-using Rylogic.Gui;
+using Rylogic.Gfx;
+using Rylogic.Gui.WinForms;
 using Rylogic.LDraw;
 using Rylogic.Maths;
 using Rylogic.Utility;
@@ -1303,7 +1305,7 @@ namespace ldr
 			}
 			public bool MouseNavigate(PointF point, EMouseBtns btns, bool nav_beg_or_end)
 			{
-				var op = Camera.MouseBtnToNavOp((int)btns);
+				var op = Camera.MouseBtnToNavOp(btns);
 				return MouseNavigate(point, btns, op, nav_beg_or_end);
 			}
 			private int m_in_mouse_navigate;
@@ -1709,10 +1711,10 @@ namespace ldr
 				return new Point((int)Math.Round(p.x), (int)Math.Round(p.y));
 			}
 
-			/// <summary>Standard keyboard shortcuts</summary>
-			public bool TranslateKey(int key_code)
+			/// <summary>Standard keyboard shortcuts. 'key_code' corresponds to VK_KEY</summary>
+			public bool TranslateKey(KeyCodes key_code)
 			{
-				return View3D_TranslateKey(Handle, key_code);
+				return View3D_TranslateKey(Handle, (int)key_code);
 			}
 
 			/// <summary>Handy method for creating random objects</summary>
@@ -2144,16 +2146,12 @@ namespace ldr
 			}
 
 			/// <summary>Convert a mouse button to the default navigation operation</summary>
-			//public static ENavOp MouseBtnToNavOp(MouseButtons btns)
-			//{
-			//	return MouseBtnToNavOp(Win32.ToMKey(btns));
-			//}
-			public static ENavOp MouseBtnToNavOp(int mk)
+			public static ENavOp MouseBtnToNavOp(EMouseBtns mk)
 			{
 				return View3D_MouseBtnToNavOp(mk);
 			}
 
-#region Equals
+			#region Equals
 			public static bool operator == (Camera lhs, Camera rhs)
 			{
 				return ReferenceEquals(lhs,rhs) || Equals(lhs, rhs);
@@ -2174,7 +2172,7 @@ namespace ldr
 			{
 				return m_window.GetHashCode() * 137;
 			}
-#endregion
+			#endregion
 		}
 
 		/// <summary>Object resource wrapper</summary>
@@ -3108,7 +3106,7 @@ namespace ldr
 		private static IntPtr m_module = IntPtr.Zero;
 
 		/// <summary>Helper method for loading the view3d.dll from a platform specific path</summary>
-		public static void LoadDll(string dir = @".\lib\$(platform)")
+		public static void LoadDll(string dir = @".\lib\$(platform)\$(config)")
 		{
 			if (ModuleLoaded) return;
 			m_module = Win32.LoadDll(Dll+".dll", dir);
@@ -3197,7 +3195,7 @@ namespace ldr
 		[DllImport(Dll)] private static extern v4              View3D_NSSPointToWSPoint      (HWindow window, v4 screen);
 		[DllImport(Dll)] private static extern v4              View3D_WSPointToNSSPoint      (HWindow window, v4 world);
 		[DllImport(Dll)] private static extern void            View3D_NSSPointToWSRay        (HWindow window, v4 screen, out v4 ws_point, out v4 ws_direction);
-		[DllImport(Dll)] private static extern ENavOp          View3D_MouseBtnToNavOp        (int mk);
+		[DllImport(Dll)] private static extern ENavOp          View3D_MouseBtnToNavOp        (EMouseBtns mk);
 
 		// Lights
 		[DllImport(Dll)] private static extern void              View3D_LightProperties          (HWindow window, out LightInfo light);

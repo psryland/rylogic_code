@@ -271,7 +271,8 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Yet another window update blocker</summary>
 		public static Scope SuspendWindowUpdate(this Control ctrl)
 		{
-			return Scope.Create(
+			return ctrl.Handle == IntPtr.Zero ? new Scope { } :
+				Scope.Create(
 				() => Win32.LockWindowUpdate(ctrl.Handle),
 				() => Win32.LockWindowUpdate(IntPtr.Zero));
 		}
@@ -279,7 +280,8 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Block redrawing of the control</summary>
 		public static Scope SuspendRedraw(this IWin32Window ctrl, bool refresh_on_resume)
 		{
-			return Scope.Create(
+			return ctrl.Handle == IntPtr.Zero ? new Scope { } :
+				Scope.Create(
 				() => Win32.SendMessage(ctrl.Handle, Win32.WM_SETREDRAW, 0, 0),
 				() =>
 					{
@@ -294,7 +296,8 @@ namespace Rylogic.Gui.WinForms
 		{
 			var scroll_pos = new Win32.POINT();
 			var event_mask = 0;
- 			return Scope.Create(
+			return ctrl.Handle == IntPtr.Zero ? new Scope { } :
+				Scope.Create(
 				() =>
 					{
 						Win32.SendMessage(ctrl.Handle, Win32.EM_GETSCROLLPOS, (IntPtr)0, ref scroll_pos);
@@ -1866,6 +1869,15 @@ namespace Rylogic.Gui.WinForms
 				grid_state.FitColumnsPending = false;
 			});
 		}
+		public static void FitColumnsToDisplayWidthAttach(this DataGridView grid)
+		{
+			grid.VisibleChanged             += FitColumnsToDisplayWidth;
+			grid.ColumnWidthChanged         += FitColumnsToDisplayWidth;
+			grid.RowHeadersWidthChanged     += FitColumnsToDisplayWidth;
+			grid.AutoSizeColumnsModeChanged += FitColumnsToDisplayWidth;
+			grid.SizeChanged                += FitColumnsToDisplayWidth;
+			grid.Scroll                     += FitColumnsToDisplayWidth;
+		}
 
 		/// <summary>
 		/// An event handler that resizes the columns in a grid to fill the available space and
@@ -1891,6 +1903,15 @@ namespace Rylogic.Gui.WinForms
 				grid.SetGridColumnSizes(EColumnSizeOptions.GrowToDisplayWidth|EColumnSizeOptions.Preferred);
 				grid_state.FitColumnsPending = false;
 			});
+		}
+		public static void FitColumnsWithNoLineWrapAttach(this DataGridView grid)
+		{
+			grid.VisibleChanged             += FitColumnsWithNoLineWrap;
+			grid.ColumnWidthChanged         += FitColumnsWithNoLineWrap;
+			grid.RowHeadersWidthChanged     += FitColumnsWithNoLineWrap;
+			grid.AutoSizeColumnsModeChanged += FitColumnsWithNoLineWrap;
+			grid.SizeChanged                += FitColumnsWithNoLineWrap;
+			grid.Scroll                     += FitColumnsWithNoLineWrap;
 		}
 
 		/// <summary>An event handler for auto hiding the column header text when there is only one column visible in the grid</summary>

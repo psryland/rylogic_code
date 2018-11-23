@@ -80,6 +80,8 @@ namespace Rylogic.Gui.WinForms
 		private void SetupUI()
 		{
 			// Detail button
+			m_btn_patn_detail.BackgroundImage = Resources.pencil2;
+			m_btn_patn_detail.BackgroundImageLayout = ImageLayout.Stretch;
 			m_btn_patn_detail.Click += (s,a) =>
 			{
 				// Show a modal form with the full pattern UI
@@ -115,7 +117,6 @@ namespace Rylogic.Gui.WinForms
 		#region Component Designer generated code
 		private void InitializeComponent()
 		{
-			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(PatternFilter));
 			this.m_cb_pattern = new Rylogic.Gui.WinForms.ComboBox();
 			this.m_btn_patn_detail = new System.Windows.Forms.Button();
 			this.SuspendLayout();
@@ -142,8 +143,6 @@ namespace Rylogic.Gui.WinForms
 			// m_btn_patn_type
 			// 
 			this.m_btn_patn_detail.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_patn_detail.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("m_btn_patn_type.BackgroundImage")));
-			this.m_btn_patn_detail.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch;
 			this.m_btn_patn_detail.Location = new System.Drawing.Point(540, 3);
 			this.m_btn_patn_detail.Name = "m_btn_patn_type";
 			this.m_btn_patn_detail.Size = new System.Drawing.Size(23, 21);

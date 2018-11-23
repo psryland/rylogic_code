@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows.Forms;
 using Rylogic.Extn;
 using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace Rylogic.Gui.WinForms
 {

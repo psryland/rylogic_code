@@ -1459,17 +1459,22 @@ namespace Rylogic.Gui.WinForms
 					return;
 				}
 
+				// Changes can be nested, we only want to validate the view after a sequence
+				// of list changes is complete. Suspend validation at the first 'Pre' change
+				// and resume when the corresponding non-Pre change occurs. This is really not
+				// exception safe if a Pre change throws or is cancelled, so as a work around,
+				// clear the flag always on 'Reset' changes.
+				if (m_list_chg_in_progress == null && change_type.HasFlag(ListChg.Pre))
+					m_list_chg_in_progress = change_type ^ ListChg.Pre;
+				if (m_list_chg_in_progress == change_type || change_type == ListChg.Reset)
+					m_list_chg_in_progress = null;
+
 				// See if the change to the binding source affects this view
 				switch (change_type)
 				{
-				default:
-					{
-						Debug.Assert(SanityCheck());
-						break;
-					}
 				case ListChg.PreReset:
 					{
-						// Invalidate 'Index' before a reset/position changed
+						// Invalidate 'Index' before a reset
 						Index.Clear();
 						break;
 					}
@@ -1482,20 +1487,19 @@ namespace Rylogic.Gui.WinForms
 							if (!Predicate(BindingSource[i])) continue;
 							Index.Add(i);
 						}
-						Debug.Assert(SanityCheck());
-						break;
-					}
-				case ListChg.ItemPreReset:
-					{
-						// Before an item is reset, retest whether it belongs in the view
-						var idx = SrcToViewIndex(index);
-						if (idx >= 0 && !Predicate(item)) Index.RemoveAt(idx);
-						if (idx <  0 &&  Predicate(item)) Index.Insert(~idx, index);
 						break;
 					}
 				case ListChg.ItemReset:
 					{
-						Debug.Assert(SanityCheck());
+						// Ignore ItemReset when in the middle of a list change sequence.
+						// The Remove/Add changes will handle this.
+						if (m_list_chg_in_progress == null)
+						{
+							// After an item is reset in the source, retest whether it belongs in the view
+							var idx = SrcToViewIndex(index);
+							if (idx >= 0 && !Predicate(item)) Index.RemoveAt(idx);
+							if (idx < 0 && Predicate(item)) Index.Insert(~idx, index);
+						}
 						break;
 					}
 				case ListChg.ItemPreRemove:
@@ -1507,28 +1511,22 @@ namespace Rylogic.Gui.WinForms
 						for (var i = idx; i < Index.Count; ++i) --Index[i];
 						break;
 					}
-				case ListChg.ItemRemoved:
-					{
-						Debug.Assert(SanityCheck());
-						break;
-					}
-				case ListChg.ItemPreAdd:
-					{
-						Debug.Assert(SanityCheck());
-						break;
-					}
 				case ListChg.ItemAdded:
 					{
 						// After an item is added, see if it should be added to the view
 						var idx = SrcToViewIndex(index);
 						if (idx < 0) idx = ~idx;
-						if (Predicate(item)) Index.Insert(idx, index);
-						for (var i = idx + 1; i < Index.Count; ++i) ++Index[i];
-						Debug.Assert(SanityCheck());
+						if (Predicate(item)) Index.Insert(idx++, index);
+						for (var i = idx; i < Index.Count; ++i) ++Index[i];
 						break;
 					}
 				}
+
+				// Only sanity test when the list is not mid-change
+				if (m_list_chg_in_progress == null)
+					Debug.Assert(SanityCheck());
 			}
+			private ListChg? m_list_chg_in_progress;
 
 			#region IEnumerable
 			public IEnumerator<TItem> GetEnumerator()

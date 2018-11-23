@@ -11,6 +11,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
@@ -25,7 +26,7 @@ using Rylogic.Maths;
 namespace Rylogic.Utility
 {
 	/// <summary>Utility function container</summary>
-	public class Util
+	public static class Util
 	{
 		#if DEBUG
 		public const bool IsDebug = true;
@@ -198,6 +199,24 @@ namespace Rylogic.Utility
 			}));
 			t.Start();
 			t.Join();
+		}
+
+		/// <summary>__FILE__</summary>
+		public static string __FILE__([CallerFilePath] string caller_filepath = "")
+		{
+			return caller_filepath;
+		}
+
+		/// <summary>__LINE__</summary>
+		public static int __LINE__([CallerLineNumber] int caller_line_number = 0)
+		{
+			return caller_line_number;
+		}
+
+		/// <summary>Output a VS output window style "file(line)"</summary>
+		public static string FileAndLine([CallerFilePath] string caller_filepath = "", [CallerLineNumber] int caller_line_number = 0)
+		{
+			return $"{caller_filepath}({caller_line_number})";
 		}
 
 		/// <summary>Swap two values</summary>
@@ -685,21 +704,60 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>The application directory for a roaming user</summary>
-		public static string ResolveAppDataPath(string company, string application, string relative_path = "")
+		public static string ResolveAppDataPath(params string[] paths)
 		{
-			return Path_.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), company, application, relative_path);
+			return ResolveAppDataPath((IEnumerable<string>)paths);
+		}
+		public static string ResolveAppDataPath(IEnumerable<string> paths)
+		{
+			var app_data_dir = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+			return Path_.CombinePath(paths.Prepend(app_data_dir));
 		}
 
 		/// <summary>The user's 'Documents' directory</summary>
-		public static string ResolveUserDocumentsPath(string company, string application, string relative_path = "")
+		public static string ResolveUserDocumentsPath(params string[] paths)
 		{
-			return Path_.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), company, application, relative_path);
+			return ResolveUserDocumentsPath((IEnumerable<string>)paths);
+		}
+		public static string ResolveUserDocumentsPath(IEnumerable<string> paths)
+		{
+			var my_documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+			return Path_.CombinePath(paths.Prepend(my_documents));
+		}
+
+		/// <summary>The ProgramFiles directory</summary>
+		public static string ResolveProgramFilesPath(params string[] paths)
+		{
+			return ResolveProgramFilesPath((IEnumerable<string>)paths);
+		}
+		public static string ResolveProgramFilesPath(IEnumerable<string> paths)
+		{
+			var program_files_dir = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+			var path = Path_.CombinePath(paths.Prepend(program_files_dir));
+			return path;
+		}
+
+		/// <summary>The ProgramFiles directory</summary>
+		public static string ResolveProgramFilesX86Path(params string[] paths)
+		{
+			return ResolveProgramFilesX86Path((IEnumerable<string>)paths);
+		}
+		public static string ResolveProgramFilesX86Path(IEnumerable<string> paths)
+		{
+			var program_files_dir = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+			var path = Path_.CombinePath(paths.Prepend(program_files_dir));
+			return path;
 		}
 
 		/// <summary>The ProgramData directory</summary>
-		public static string ResolveProgramDataPath(string company, string application, string relative_path = "")
+		public static string ResolveProgramDataPath(params string[] paths)
 		{
-			return Path_.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), company, application, relative_path);
+			return ResolveProgramDataPath((IEnumerable<string>)paths);
+		}
+		public static string ResolveProgramDataPath(IEnumerable<string> paths)
+		{
+			var program_data_dir = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+			return Path_.CombinePath(paths.Prepend(program_data_dir));
 		}
 
 		/// <summary>

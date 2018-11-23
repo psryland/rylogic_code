@@ -252,7 +252,7 @@ namespace Rylogic.Gui.WinForms
 				// Add the child paths for the ancestral siblings of 'path'
 				for (++part_idx; part_idx != parts.Length; ++part_idx)
 				{
-					var siblings = Path_.EnumFileSystem(path.Text.Substring(0, p.Length), SearchOption.TopDirectoryOnly).Where(x => Bit.AllSet(x.Attributes, FileAttributes.Directory));
+					var siblings = Path_.EnumFileSystem(path.Text.Substring(0, p.Length), SearchOption.TopDirectoryOnly).Where(x => x.IsDirectory());
 					foreach (var sib in siblings)
 					{
 						if (string.CompareOrdinal(parts[part_idx], sib.Name.ToLowerInvariant()) == 0) continue;
@@ -302,7 +302,7 @@ namespace Rylogic.Gui.WinForms
 		{
 			var path = new Path(node.FullPath);
 			return Path_.EnumFileSystem(path.Name, SearchOption.TopDirectoryOnly)
-				.Where(fi => Bit.AllSet(fi.Attributes, FileAttributes.Directory))
+				.Where(fi => fi.IsDirectory())
 				.Select(fi => new TreeNode(fi.Name, node.TriState));
 		}
 
@@ -528,7 +528,6 @@ namespace Rylogic.Gui.WinForms
 		private void InitializeComponent()
 		{
 			this.components = new System.ComponentModel.Container();
-			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SelectDirectoriesUI));
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_tree = new Rylogic.Gui.WinForms.SelectDirectoriesUI.TreeView();
 			this.m_listbox = new ListBox();
@@ -598,7 +597,6 @@ namespace Rylogic.Gui.WinForms
 			this.ClientSize = new System.Drawing.Size(380, 421);
 			this.Controls.Add(this.m_split);
 			this.Controls.Add(this.m_btn_ok);
-			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
 			this.Name = "SelectDirectoriesUI";
 			this.Text = "Choose Directories to Search";
 			this.m_split.Panel1.ResumeLayout(false);

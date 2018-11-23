@@ -91,7 +91,7 @@ namespace RyLogViewer
 					Columns.Add(new DataGridTextColumn
 					{
 						Header = $"Column {i}",
-						Binding = new Binding()
+						Binding = new System.Windows.Data.Binding()
 						{
 							Source = Source,
 							Converter = m_conv,

@@ -2628,8 +2628,8 @@ namespace Rylogic.Gui.WinForms
 
 			public MouseOps()
 			{
-				m_ops     = int_.Range(Util.MouseButtonCount).ToDictionary(k => k, k => (MouseOp)null);
-				m_pending = int_.Range(Util.MouseButtonCount).ToDictionary(k => k, k => (MouseOp)null);
+				m_ops     = int_.Range(WinFormsUtil.MouseButtonCount).ToDictionary(k => k, k => (MouseOp)null);
+				m_pending = int_.Range(WinFormsUtil.MouseButtonCount).ToDictionary(k => k, k => (MouseOp)null);
 			}
 
 			/// <summary>The currently active mouse op</summary>
@@ -4129,7 +4129,7 @@ namespace Rylogic.Gui.WinForms
 				return;
 
 			// Look for the mouse op to perform
-			var btn = Util.ButtonIndex(e.Button);
+			var btn = WinFormsUtil.ButtonIndex(e.Button);
 			if (m_mouse_op.Pending(btn) == null && DefaultMouseControl)
 				m_mouse_op.SetPending(btn, CreateDefaultMouseOp(e.Button, e.Location));
 
@@ -4166,7 +4166,7 @@ namespace Rylogic.Gui.WinForms
 				Capture = false;
 
 			// Look for the mouse op to perform
-			var btn = Util.ButtonIndex(e.Button);
+			var btn = WinFormsUtil.ButtonIndex(e.Button);
 			var op = m_mouse_op.Active;
 			if (op != null && !op.Cancelled)
 				op.MouseUp(e);

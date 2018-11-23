@@ -636,7 +636,7 @@ namespace Rylogic.Gui.WinForms
 				var fw = container as FloatingWindow;
 				if (fw != null)
 				{
-					fw.Bounds = Util.OnScreen(fw.Bounds);
+					fw.Bounds = WinFormsUtil.OnScreen(fw.Bounds);
 					fw.Visible = true;
 					fw.BringToFront();
 					if (fw.WindowState == FormWindowState.Minimized)
@@ -5631,7 +5631,7 @@ namespace Rylogic.Gui.WinForms
 					// If 'PinWindow' is set, then the bounds are relative to the parent window
 					var bnds = bounds.Value;
 					if (PinWindow) bnds = bnds.Shifted(TargetFrame.Left, TargetFrame.Top);
-					Bounds = Util.OnScreen(bnds);
+					Bounds = WinFormsUtil.OnScreen(bnds);
 				}
 
 				// Update the tree layout

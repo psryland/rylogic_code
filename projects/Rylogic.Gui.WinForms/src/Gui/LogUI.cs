@@ -773,7 +773,6 @@ namespace Rylogic.Gui.WinForms
 		{
 			this.components = new System.ComponentModel.Container();
 			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
-			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(LogUI));
 			this.m_tsc = new Rylogic.Gui.WinForms.ToolStripContainer();
 			this.m_view = new Rylogic.Gui.WinForms.DataGridView();
 			this.m_ts = new System.Windows.Forms.ToolStrip();
@@ -870,7 +869,7 @@ namespace Rylogic.Gui.WinForms
 			// m_btn_tail
 			// 
 			this.m_btn_tail.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_tail.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_tail.Image")));
+			this.m_btn_tail.Image = Resources.bottom;
 			this.m_btn_tail.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_tail.Name = "m_btn_tail";
 			this.m_btn_tail.Size = new System.Drawing.Size(23, 22);
@@ -880,7 +879,7 @@ namespace Rylogic.Gui.WinForms
 			// 
 			this.m_chk_line_wrap.CheckOnClick = true;
 			this.m_chk_line_wrap.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_chk_line_wrap.Image = ((System.Drawing.Image)(resources.GetObject("m_chk_line_wrap.Image")));
+			this.m_chk_line_wrap.Image = Resources.line_wrap;
 			this.m_chk_line_wrap.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_chk_line_wrap.Name = "m_chk_line_wrap";
 			this.m_chk_line_wrap.Size = new System.Drawing.Size(23, 22);
@@ -895,7 +894,7 @@ namespace Rylogic.Gui.WinForms
 			// m_btn_clear
 			// 
 			this.m_btn_clear.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.m_btn_clear.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_clear.Image")));
+			this.m_btn_clear.Image = Resources.check_reject;
 			this.m_btn_clear.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.m_btn_clear.Name = "m_btn_clear";
 			this.m_btn_clear.Size = new System.Drawing.Size(23, 22);

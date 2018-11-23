@@ -11,6 +11,12 @@ namespace Rylogic.Extn
 			dis.Invoke(action);
 		}
 
+		/// <summary>BeginInvoke on the current dispatcher</summary>
+		public static DispatcherOperation BeginInvoke(Action action)
+		{
+			return Dispatcher.CurrentDispatcher.BeginInvoke(action);
+		}
+
 		/// <summary>Allow a lambda to be passed to BeginInvoke</summary>
 		public static DispatcherOperation BeginInvoke(this Dispatcher dis, Action action)
 		{

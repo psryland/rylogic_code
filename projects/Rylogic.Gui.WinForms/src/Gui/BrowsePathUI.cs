@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using Rylogic.Common;
 using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace Rylogic.Gui.WinForms
 {

@@ -123,6 +123,13 @@
 		<value>..\res\regex_quick_ref.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
 	</data>
 
+	<data name="bluetooth_ico" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\bluetooth.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="book_ico" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\book.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+
 	<data name="boxes" type="System.Resources.ResXFileRef, System.Windows.Forms">
 		<value>..\res\boxes.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
 	</data>
@@ -189,21 +196,44 @@
 	<data name="connector4" type="System.Resources.ResXFileRef, System.Windows.Forms">
 		<value>..\res\connector4.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
 	</data>
-
-
-
-	<!--
-	<data name="display" type="System.Resources.ResXFileRef, System.Windows.Forms">
-		<value>..\res\display.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	<data name="pencil2" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\pencil2.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
 	</data>
-	<data name="SmilingGekko140x110" type="System.Resources.ResXFileRef, System.Windows.Forms">
-		<value>..\SmilingGekko140x110.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	<data name="edit_add" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\edit_add.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
 	</data>
-	<data name="Smiling_gekko_140x110_nobkgd" type="System.Resources.ResXFileRef, System.Windows.Forms">
-		<value>..\res\Smiling gekko 140x110 nobkgd.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	<data name="edit_save" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\edit_save.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
 	</data>
-	<data name="licence" type="System.Resources.ResXFileRef, System.Windows.Forms">
-		<value>..\res\licence.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;Windows-1252</value>
+	<data name="bottom" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\bottom.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="line_wrap" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\line_wrap.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="bt_audio" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\bt_audio.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="bt_imaging" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\bt_imaging.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="bt_lan_access" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\bt_lan_access.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="bt_laptop" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\bt_laptop.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="bt_misc" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\bt_misc.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="bt_peripheral" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\bt_peripheral.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="bt_phone" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\bt_phone.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="bt_wearable" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\res\bt_wearable.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
 	</data>
 	<data name="green_left" type="System.Resources.ResXFileRef, System.Windows.Forms">
 		<value>..\res\green_left.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
@@ -212,7 +242,4 @@
 		<value>..\res\green_right.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
 	</data>
 
-	<data name="file" type="System.Resources.ResXFileRef, System.Windows.Forms">
-		<value>..\res\file.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-	</data>-->
 </root>

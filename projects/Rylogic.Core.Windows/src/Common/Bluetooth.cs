@@ -4,10 +4,9 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
-using Rylogic.Attrib;
+using Rylogic.Interop.Win32;
 using Rylogic.Maths;
 using Rylogic.Utility;
-using Rylogic.Interop.Win32;
 
 namespace Rylogic.Common
 {
@@ -18,16 +17,16 @@ namespace Rylogic.Common
 
 		public enum EClassOfDeviceMajor
 		{
-			[Assoc("img", 0)] Miscellaneous = 0x00,
-			[Assoc("img", 1)] Computer      = 0x01,
-			[Assoc("img", 2)] Phone         = 0x02,
-			[Assoc("img", 3)] LanAccess     = 0x03,
-			[Assoc("img", 4)] Audio         = 0x04,
-			[Assoc("img", 5)] Peripheral    = 0x05,
-			[Assoc("img", 6)] Imaging       = 0x06,
-			[Assoc("img", 7)] Wearable      = 0x07,
-			[Assoc("img", 0)] Toy           = 0x08,
-			[Assoc("img", 0)] Unclassified  = 0x1F,
+			Miscellaneous = 0x00,
+			Computer      = 0x01,
+			Phone         = 0x02,
+			LanAccess     = 0x03,
+			Audio         = 0x04,
+			Peripheral    = 0x05,
+			Imaging       = 0x06,
+			Wearable      = 0x07,
+			Toy           = 0x08,
+			Unclassified  = 0x1F,
 		}
 		public enum EClassOfDeviceMinor
 		{

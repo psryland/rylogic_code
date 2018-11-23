@@ -11,7 +11,6 @@ using Rylogic.Extn;
 using Rylogic.Gui.WinForms;
 using Rylogic.Plugin;
 using Rylogic.Utility;
-using Util = Rylogic.Gui.WinForms.Util;
 
 namespace RyLogViewer
 {
@@ -103,7 +102,7 @@ namespace RyLogViewer
 					{ var s = new SubCodeLookup(); m_substitutors.Add(s); }
 
 					// Loads dlls from the plugins directory looking for transform substitutions
-					if (!Util.InDesignMode)
+					if (!WinFormsUtil.InDesignMode)
 					{
 						var plugins = new Plugins<ITransformSubstitution>();
 						plugins.LoadWithUI(null, Util.ResolveAppPath("plugins"), new object[0], SearchOption.AllDirectories);

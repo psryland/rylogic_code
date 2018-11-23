@@ -9,6 +9,7 @@ using Rylogic.Extn;
 using Rylogic.Gfx;
 using Rylogic.Interop.Win32;
 using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace Rylogic.Gui.WinForms
 {
@@ -58,8 +59,8 @@ namespace Rylogic.Gui.WinForms
 		}
 		protected override void Dispose(bool disposing)
 		{
-			Utility.Util.BreakIf(m_impl_wnd != null && Utility.Util.IsGCFinalizerThread);
-			Utility.Util.BreakIf(m_view3d != null && Utility.Util.IsGCFinalizerThread);
+			Util.BreakIf(m_impl_wnd != null && Util.IsGCFinalizerThread);
+			Util.BreakIf(m_view3d != null && Util.IsGCFinalizerThread);
 			Util.Dispose(ref m_impl_wnd);
 			Util.Dispose(ref m_view3d);
 			Util.Dispose(ref components);
@@ -145,7 +146,7 @@ namespace Rylogic.Gui.WinForms
 
 				void HandleKeyDown(object sender, KeyEventArgs args)
 				{
-					args.Handled = Window.TranslateKey((int)args.KeyCode);
+					args.Handled = Window.TranslateKey((KeyCodes)args.KeyCode);
 				}
 			}
 		}
@@ -189,7 +190,7 @@ namespace Rylogic.Gui.WinForms
 			Cursor = Cursors.SizeAll;
 			Capture = true;
 			m_mouse_down_at = Environment.TickCount;
-			if (Window.MouseNavigate(e.Location, (EMouseBtns)e.Button, true))
+			if (Window.MouseNavigate(e.Location, e.Button.ToMouseBtns(), true))
 				Invalidate();
 		}
 		public void OnMouseUp(object sender, MouseEventArgs e)
@@ -197,7 +198,7 @@ namespace Rylogic.Gui.WinForms
 			if (Window == null) return;
 			Cursor = Cursors.Default;
 			Capture = false;
-			if (Window.MouseNavigate(e.Location, (EMouseBtns)e.Button, View3d.ENavOp.None, true))
+			if (Window.MouseNavigate(e.Location, e.Button.ToMouseBtns(), View3d.ENavOp.None, true))
 				Invalidate();
 
 			// Short clicks bring up the context menu
@@ -207,13 +208,13 @@ namespace Rylogic.Gui.WinForms
 		public void OnMouseMove(object sender, MouseEventArgs e)
 		{
 			if (Window == null) return;
-			if (Window.MouseNavigate(e.Location, (EMouseBtns)e.Button, false))
+			if (Window.MouseNavigate(e.Location, e.Button.ToMouseBtns(), false))
 				Invalidate();
 		}
 		public void OnMouseWheel(object sender, MouseEventArgs e)
 		{
 			if (Window == null) return;
-			if (Window.MouseNavigateZ(e.Location, (EMouseBtns)e.Button, e.Delta, true))
+			if (Window.MouseNavigateZ(e.Location, e.Button.ToMouseBtns(), e.Delta, true))
 				Invalidate();
 		}
 		public void OnMouseDblClick(object sender, MouseEventArgs e)

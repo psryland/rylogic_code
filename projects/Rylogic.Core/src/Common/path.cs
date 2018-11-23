@@ -101,11 +101,19 @@ namespace Rylogic.Common
 		{
 			return FileExists(path) && (File.GetAttributes(path) & FileAttributes.Directory) == 0;
 		}
+		public static bool IsFile(this FileSystemInfo fsi)
+		{
+			return fsi is FileInfo || fsi.Attributes.HasFlag(FileAttributes.Directory) == false;
+		}
 
 		/// <summary>True if 'path' is a directory</summary>
 		public static bool IsDirectory(string path)
 		{
-			return DirExists(path) && (File.GetAttributes(path) & FileAttributes.Directory) != 0;
+			return DirExists(path) && File.GetAttributes(path).HasFlag(FileAttributes.Directory);
+		}
+		public static bool IsDirectory(this FileSystemInfo fsi)
+		{
+			return fsi is DirectoryInfo || fsi.Attributes.HasFlag(FileAttributes.Directory) == true;
 		}
 
 		/// <summary>True if 'path' is a directory containing no files or subdirectories</summary>
@@ -174,13 +182,18 @@ namespace Rylogic.Common
 		/// <summary>Return a path consisting of the concatenation of path fragments</summary>
 		public static string CombinePath(params string[] paths)
 		{
-			if (paths.Length == 0) return "";
+			return CombinePath((IEnumerable<string>)paths);
+		}
+		public static string CombinePath(IEnumerable<string> paths)
+		{
+			if (!paths.Any())
+				return "";
 
-			string path = paths[0];
-			for (int i = 1; i != paths.Length; ++i)
+			var path = (string)null;
+			var parts = paths.Where(x => !string.IsNullOrEmpty(x)).Select(x => x.TrimStart('/', '\\'));
+			foreach (var p in parts)
 			{
-				if (string.IsNullOrEmpty(paths[i])) continue;
-				path = Path.Combine(path, (paths[i][0] == '/' || paths[i][0] == '\\') ? paths[i].Substring(1) : paths[i]);
+				path = path != null ? Path.Combine(path, p) : p;
 			}
 			return Canonicalise(path);
 		}
@@ -303,7 +316,10 @@ namespace Rylogic.Common
 			return false;
 		}
 
-		/// <summary>Gets file system info for all files/directories in a directory that match a specific filter including all sub directories. 'regex_filter' is a filter on the filename, not the full path</summary>
+		/// <summary>
+		/// Gets file system info for all files/directories in a directory that match a specific filter including all sub directories.
+		/// 'regex_filter' is a filter on the filename, not the full path.
+		/// Returns 'FileInfo' or 'DirectoryInfo'. 'FileSystemInfo' is just the common base class.</summary>
 		public static IEnumerable<FileSystemInfo> EnumFileSystem(string path, SearchOption search_flags = SearchOption.TopDirectoryOnly, string regex_filter = null, RegexOptions regex_options = RegexOptions.IgnoreCase, FileAttributes exclude = FileAttributes.Hidden, Func<string, bool> progress = null, Func<string, Exception, bool> error = null)
 		{
 			// Default callbacks
@@ -322,7 +338,7 @@ namespace Rylogic.Common
 				throw new Exception($"Attempting to enumerate an invalid directory path: {path}");
 
 			// If excluding directories, use the enumerate files function
-			var entries = (exclude & FileAttributes.Directory) != 0
+			var entries = exclude.HasFlag(FileAttributes.Directory)
 				? System.IO.Directory.EnumerateFiles(path, "*", search_flags)
 				: System.IO.Directory.EnumerateFileSystemEntries(path, "*", search_flags);
 
@@ -345,7 +361,8 @@ namespace Rylogic.Common
 					// Filter if provided
 					if (filter != null)
 					{
-						var m = filter.Match(entry);
+						// Filter on the file/directory name only
+						var m = filter.Match(FileName(entry));
 						if (!m.Success)
 							continue;
 					}
@@ -406,9 +423,11 @@ namespace Rylogic.UnitTests
 {
 	using Common;
 
-	[TestFixture] public class TestPathEx
+	[TestFixture]
+	public class TestPathEx
 	{
-		[Test] public void TestPathValidation()
+		[Test]
+		public void TestPathValidation()
 		{
 			Assert.True(Path_.IsValidDirectory(@"A:\dir1\..\.\dir2", true));
 			Assert.True(Path_.IsValidDirectory(@"A:\dir1\..\.\dir2", false));
@@ -429,7 +448,8 @@ namespace Rylogic.UnitTests
 			Assert.False(Path_.IsValidFilepath(@"P:\dump\f*.txt", false));
 			Assert.False(Path_.IsValidFilepath(@"P:\dump\f?.txt", false));
 		}
-		[Test] public void TestPathNames()
+		[Test]
+		public void TestPathNames()
 		{
 			string path;
 

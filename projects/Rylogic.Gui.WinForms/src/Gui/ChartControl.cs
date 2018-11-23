@@ -83,6 +83,7 @@ namespace Rylogic.Gui.WinForms
 				AllowEditing = false;
 				AllowSelection = false;
 				DefaultMouseControl = true;
+				DefaultKeyboardShortcuts = true;
 				AreaSelectMode = EAreaSelectMode.Zoom;
 			}
 			catch
@@ -128,6 +129,7 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Rendering options for the chart</summary>
+		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public RdrOptions Options
 		{
 			[DebuggerStepThrough] get { return m_rdr_options; }
@@ -995,6 +997,7 @@ namespace Rylogic.Gui.WinForms
 			protected override void OnPaint(PaintEventArgs e)
 			{
 				base.OnPaint(e);
+				if (DesignMode) return;
 				if (m_render_needed) DoPaint();
 				Present();
 
@@ -5123,17 +5126,36 @@ namespace Rylogic.Gui.WinForms
 				var idx_range = new Range(
 					Math.Max(idx_missing.Beg, idx - PieceBlockSize),
 					Math.Min(idx_missing.End, idx + PieceBlockSize));
-				if (idx_range.Empty)
-					return new GfxPiece(null, missing);
 
 				// Create graphics over the data range 'idx_range'
+				//todo: this isn't right... need to handle this function returning 'failed to create piece'
 				switch (Options.PlotType)
 				{
 				default: throw new Exception($"Unsupported plot type: {Options.PlotType}");
-				case EPlotType.Point:    return CreatePointPlot(idx_range);
-				case EPlotType.Line:     return CreateLinePlot(idx_range);
-				case EPlotType.StepLine: return CreateStepLinePlot(idx_range);
-				case EPlotType.Bar:      return CreateBarPlot(idx_range);
+				case EPlotType.Point:
+					{
+						return idx_range.Size > 0
+							? CreatePointPlot(idx_range)
+							: new GfxPiece(null, missing);
+					}
+				case EPlotType.Line:
+					{
+						return idx_range.Size > 1
+							? CreateLinePlot(idx_range)
+							: new GfxPiece(null, missing);
+					}
+				case EPlotType.StepLine:
+					{
+						return idx_range.Size > 1
+							? CreateStepLinePlot(idx_range)
+							: new GfxPiece(null, missing);
+					}
+				case EPlotType.Bar:
+					{
+						return idx_range.Size > 1
+							? CreateBarPlot(idx_range)
+							: new GfxPiece(null, missing);
+					}
 				}
 			}
 		}

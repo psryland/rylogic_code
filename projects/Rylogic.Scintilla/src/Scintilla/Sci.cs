@@ -198,7 +198,7 @@ namespace Rylogic.Scintilla
 		private static IntPtr m_module = IntPtr.Zero;
 
 		/// <summary>Load the scintilla dll</summary>
-		public static void LoadDll(string dir = @".\lib\$(platform)")
+		public static void LoadDll(string dir = @".\lib\$(platform)\$(config)")
 		{
 			if (m_module != IntPtr.Zero) return; // Already loaded
 			m_module = Win32.LoadDll(Dll+".dll", dir);

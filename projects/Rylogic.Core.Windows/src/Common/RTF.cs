@@ -1681,13 +1681,7 @@ namespace Rylogic.UnitTests
 			rtf.Append(numberedlist);
 
 			// Determine the path
-			var test_image_path = string.Empty;
-			{
-				var dir = Environment.CurrentDirectory;
-				var idx = dir.IndexOf("projects");
-				if (idx != -1)
-					test_image_path = Path.Combine(dir.Substring(0, idx), "art", "Smiling Gecko 150x121.jpg");
-			}
+			var test_image_path = Path_.CombinePath(Path_.Directory(Utility.Util.__FILE__()), "..", "..", "..", "Rylogic.Core", "icon_128x128.png");
 			using (var bm = Image.FromFile(test_image_path))
 			{
 				var img = new Rtf.EmbeddedImage(bm);

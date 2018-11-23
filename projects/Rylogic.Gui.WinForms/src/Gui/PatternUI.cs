@@ -31,7 +31,7 @@ namespace Rylogic.Gui.WinForms
 		};
 
 		#region UI Elements
-		private ImageList      m_image_list;
+		private ImageList      m_il;
 		private Button         m_btn_regex_help;
 		private CheckBox       m_check_ignore_case;
 		private CheckBox       m_check_whole_line;
@@ -56,6 +56,12 @@ namespace Rylogic.Gui.WinForms
 		{
 			InitializeComponent();
 			Touched = false;
+
+			// Image list 
+			m_il.ImageSize = new Size(28, 28);
+			m_il.ColorDepth = ColorDepth.Depth32Bit;
+			m_il.Images.Add("add", Resources.edit_add);
+			m_il.Images.Add("save", Resources.edit_save);
 
 			// Pattern
 			// Tool tip set in UpdateUI
@@ -193,7 +199,7 @@ namespace Rylogic.Gui.WinForms
 			m_check_invert.Checked      = Pattern.Invert;
 
 			m_btn_add.ToolTip(m_tt, IsNew ? "Add this new pattern" : "Save changes to this pattern");
-			m_btn_add.ImageIndex = (int)(IsNew ? EBtnImageIdx.AddNew : EBtnImageIdx.Save);
+			m_btn_add.ImageKey = IsNew ? "add" : "save";
 			m_btn_add.Enabled = CommitEnabled;
 
 			// Highlight the expression background to show valid regex
@@ -280,12 +286,11 @@ namespace Rylogic.Gui.WinForms
 		private void InitializeComponent()
 		{
 			this.components = new System.ComponentModel.Container();
-			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(PatternUI));
 			System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
 			this.m_check_invert = new System.Windows.Forms.CheckBox();
 			this.m_check_ignore_case = new System.Windows.Forms.CheckBox();
 			this.m_btn_add = new System.Windows.Forms.Button();
-			this.m_image_list = new System.Windows.Forms.ImageList(this.components);
+			this.m_il = new System.Windows.Forms.ImageList(this.components);
 			this.m_lbl_match = new System.Windows.Forms.Label();
 			this.m_edit_match = new System.Windows.Forms.TextBox();
 			this.m_edit_test = new Rylogic.Gui.WinForms.RichTextBox();
@@ -333,20 +338,13 @@ namespace Rylogic.Gui.WinForms
 			// 
 			this.m_btn_add.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_add.BackgroundImageLayout = System.Windows.Forms.ImageLayout.None;
-			this.m_btn_add.ImageIndex = 0;
-			this.m_btn_add.ImageList = this.m_image_list;
+			this.m_btn_add.ImageKey = "add";
+			this.m_btn_add.ImageList = this.m_il;
 			this.m_btn_add.Location = new System.Drawing.Point(335, 3);
 			this.m_btn_add.Name = "m_btn_add";
 			this.m_btn_add.Size = new System.Drawing.Size(46, 46);
 			this.m_btn_add.TabIndex = 4;
 			this.m_btn_add.UseVisualStyleBackColor = true;
-			// 
-			// m_image_list
-			// 
-			this.m_image_list.ImageStream = ((System.Windows.Forms.ImageListStreamer)(resources.GetObject("m_image_list.ImageStream")));
-			this.m_image_list.TransparentColor = System.Drawing.Color.Transparent;
-			this.m_image_list.Images.SetKeyName(0, "edit_add.png");
-			this.m_image_list.Images.SetKeyName(1, "edit_save.png");
 			// 
 			// m_lbl_match
 			// 
@@ -560,12 +558,6 @@ namespace Rylogic.Gui.WinForms
 
 		}
 		#endregion
-	}
-
-	public enum EBtnImageIdx
-	{
-		AddNew = 0,
-		Save = 1
 	}
 
 	/// <summary>A pattern editor control</summary>
