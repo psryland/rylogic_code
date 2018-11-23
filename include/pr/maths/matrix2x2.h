@@ -36,7 +36,7 @@ namespace pr
 			:x(x_)
 			,y(x_)
 		{}
-		template <typename V2, typename = maths::enable_if_v2<V2>> Mat2x2(V2 const& v)
+		template <typename V2, typename = maths::enable_if_v2<V2>> explicit Mat2x2(V2 const& v)
 			:Mat2x2(x_as<Vec2<void>>(v), y_as<Vec2<void>>(v))
 		{}
 		template <typename CP, typename = maths::enable_if_vec_cp<CP>> explicit Mat2x2(CP const* v)

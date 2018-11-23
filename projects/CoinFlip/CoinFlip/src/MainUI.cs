@@ -19,7 +19,6 @@ using Rylogic.Gfx;
 using Rylogic.Interop.Win32;
 using Timer = System.Windows.Forms.Timer;
 using ToolStripContainer = Rylogic.Gui.WinForms.ToolStripContainer;
-using Util = Rylogic.Gui.WinForms.Util;
 
 namespace CoinFlip
 {
@@ -602,7 +601,7 @@ namespace CoinFlip
 			{
 				// Ensure the Bounds are at least partially within the desktop
 				StartPosition  = FormStartPosition.Manual;
-				Bounds         = Util.OnScreen(Settings.UI.WindowPosition);;
+				Bounds         = WinFormsUtil.OnScreen(Settings.UI.WindowPosition);;
 				WindowState    = Settings.UI.WindowMaximised ? FormWindowState.Maximized : FormWindowState.Normal;
 			}
 		}

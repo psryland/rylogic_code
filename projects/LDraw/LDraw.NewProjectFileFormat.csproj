@@ -1,0 +1,225 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>NET471</TargetFramework>
+		<Authors>P Ryland</Authors>
+		<Company>Rylogic</Company>
+		<Description>Script based 3D Visualisation Tool created by Rylogic.</Description>
+		<Copyright>Copyright (c) Rylogic 2007-2018</Copyright>
+		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
+		<ApplicationIcon>icon.ico</ApplicationIcon>
+		<RootNamespace>LDraw</RootNamespace>
+		<OutputType>WinExe</OutputType>
+		<StartupObject />
+		<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
+		<AssemblyVersion>5.3.0</AssemblyVersion>
+		<FileVersion>5.3.0</FileVersion>
+		<Version>5.3.0</Version>
+		<AssemblyName>LDraw</AssemblyName>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+		<PlatformTarget>AnyCPU</PlatformTarget>
+		<DefineConstants>RELEASE;NET471</DefineConstants>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+	  <PlatformTarget>AnyCPU</PlatformTarget>
+	  <DefineConstants>TRACE;DEBUG;NET471</DefineConstants>
+	</PropertyGroup>
+	<ItemGroup>
+	  <Compile Remove="src\AboutUI.Designer.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="Properties\Resources.resx" Generator="PublicResXFileCodeGenerator" CustomToolNamespace="LDraw" SubType="Designer" LastGenOutput="Resources.Designer.cs" />
+		<Compile Update="Properties\Resources.Designer.cs" DependentUpon="Resources.resx" DesignTime="True" AutoGen="True" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Resource Include="res\green_in_out.png" />
+	  <Resource Include="res\green_left_right.png" />
+	  <Resource Include="res\green_rotate.png" />
+	  <Resource Include="res\green_up_down.png" />
+	  <Resource Include="res\installer_banner_bkgd.bmp" />
+	  <Resource Include="res\installer_banner_top.bmp" />
+	  <Resource Include="res\Licence.rtf" />
+	  <Resource Include="res\locked.png" />
+	  <Resource Include="res\media_player_pause.png" />
+	  <Resource Include="res\media_player_play.png" />
+	  <Resource Include="res\media_player_start.png" />
+	  <Resource Include="res\media_player_step_bck.png" />
+	  <Resource Include="res\media_player_step_fwd.png" />
+	  <Resource Include="res\media_player_stop.png" />
+	  <Resource Include="res\unlocked.png" />
+	  <Resource Include="res\XAxis.png" />
+	  <Resource Include="res\YAxis.png" />
+	  <Resource Include="res\ZAxis.png" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\LDraw.API\LDraw.API.csproj" />
+		<ProjectReference Include="..\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj" />
+		<ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj" />
+		<ProjectReference Include="..\Rylogic.Gui.WinForms\Rylogic.Gui.WinForms.csproj" />
+		<ProjectReference Include="..\Rylogic.Scintilla\Rylogic.Scintilla.csproj" />
+		<ProjectReference Include="..\Rylogic.View3d\Rylogic.View3d.csproj" />
+	</ItemGroup>
+	
+	<ItemGroup>
+		<Reference Include="Microsoft.CSharp" />
+		<Reference Include="System" />
+		<Reference Include="System.Core" />
+		<Reference Include="System.Data" />
+		<Reference Include="System.Xml.Linq" />
+		<Reference Include="System.Drawing" />
+		<Reference Include="System.Windows.Forms" />
+		<Reference Include="System.Xml" />
+		<Reference Include="WindowsBase" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Folder Include="lib\x64\debug\" />
+		<Folder Include="lib\x64\release\" />
+		<Folder Include="lib\x86\debug\" />
+		<Folder Include="lib\x86\release\" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="..\..\lib\x64\Debug\view3d.dll">
+			<Link>lib\x64\debug\view3d.dll</Link>
+			<CopyToOutputDirectory Condition="Exists('..\..\lib\x64\Debug\view3d.dll')">PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Include="..\..\lib\x64\Release\view3d.dll">
+			<Link>lib\x64\release\view3d.dll</Link>
+			<CopyToOutputDirectory Condition="Exists('..\..\lib\x64\Release\view3d.dll')">PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Include="..\..\lib\x86\Debug\view3d.dll">
+			<Link>lib\x86\debug\view3d.dll</Link>
+			<CopyToOutputDirectory Condition="Exists('..\..\lib\x86\Debug\view3d.dll')">PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Include="..\..\lib\x86\Release\view3d.dll">
+			<Link>lib\x86\release\view3d.dll</Link>
+			<CopyToOutputDirectory Condition="Exists('..\..\lib\x86\Release\view3d.dll')">PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Include="..\..\lib\x64\Debug\scintilla.dll">
+			<Link>lib\x64\debug\scintilla.dll</Link>
+			<CopyToOutputDirectory Condition="Exists('..\..\lib\x64\Debug\scintilla.dll')">PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Include="..\..\lib\x64\Release\scintilla.dll">
+			<Link>lib\x64\release\scintilla.dll</Link>
+			<CopyToOutputDirectory Condition="Exists('..\..\lib\x64\Release\scintilla.dll')">PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Include="..\..\lib\x86\Debug\scintilla.dll">
+			<Link>lib\x86\debug\scintilla.dll</Link>
+			<CopyToOutputDirectory Condition="Exists('..\..\lib\x86\Debug\scintilla.dll')">PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Include="..\..\lib\x86\Release\scintilla.dll">
+			<Link>lib\x86\release\scintilla.dll</Link>
+			<CopyToOutputDirectory Condition="Exists('..\..\lib\x86\Release\scintilla.dll')">PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+
+</Project>
+
+<!--
+		
+		<None Include="App.config">
+			<SubType>Designer</SubType>
+		</None>
+		<None Include="installer\installer.wxs" />
+		<None Include="deploy_ldraw.py" />
+		<None Include="icon.ico" />
+		<None Include="packages.config" />
+		<None Include="post_build.py" />
+		
+  <ItemGroup>
+  <ItemGroup>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="src\AboutUI.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="src\BaseUI.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="src\CameraUI.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="src\GrpcService.cs" />
+    <Compile Include="src\LightingUI.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="src\LogUI.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="src\MainUI.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="src\Misc.cs" />
+    <Compile Include="src\Model.cs" />
+    <Compile Include="src\ObjectManagerUI.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="src\SceneUI.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="src\ScriptUI.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="src\Settings.cs" />
+    <Compile Include="src\SettingsUI.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="src\StartupOptions.cs" />
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <SubType>Designer</SubType>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <CustomToolNamespace>LDraw</CustomToolNamespace>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\AboutUI.resx">
+      <DependentUpon>AboutUI.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\CameraUI.resx">
+      <DependentUpon>CameraUI.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\LightingUI.resx">
+      <DependentUpon>LightingUI.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\LogUI.resx">
+      <DependentUpon>LogUI.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\MainUI.resx">
+      <DependentUpon>MainUI.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\ObjectManagerUI.resx">
+      <DependentUpon>ObjectManagerUI.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\SceneUI.resx">
+      <DependentUpon>SceneUI.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\ScriptUI.resx">
+      <DependentUpon>ScriptUI.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\SettingsUI.resx">
+      <DependentUpon>SettingsUI.cs</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>py $(ProjectDir)post_build.py $(ProjectDir) $(TargetDir) $(PlatformName) $(ConfigurationName)</PostBuildEvent>
+  </PropertyGroup>
+  <Import Project="..\..\build\packages\Grpc.Core.1.11.0\build\net45\Grpc.Core.targets" Condition="Exists('..\..\build\packages\Grpc.Core.1.11.0\build\net45\Grpc.Core.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\..\build\packages\Grpc.Core.1.11.0\build\net45\Grpc.Core.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\build\packages\Grpc.Core.1.11.0\build\net45\Grpc.Core.targets'))" />
+  </Target>
+-->

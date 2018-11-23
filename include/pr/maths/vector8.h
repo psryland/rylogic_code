@@ -24,6 +24,10 @@ namespace pr
 		#pragma warning(pop)
 
 		Vec8() = default;
+		Vec8(v3_cref<> ang_, v3_cref<> lin_)
+			:ang(ang_, 0)
+			,lin(lin_, 0)
+		{}
 		Vec8(v4_cref<> ang_, v4_cref<> lin_)
 			:ang(ang_)
 			,lin(lin_)
@@ -31,6 +35,10 @@ namespace pr
 		Vec8(float wx, float wy, float wz, float vx, float vy, float vz)
 			:ang(wx, wy, wz, 0)
 			, lin(vx, vy, vz, 0)
+		{}
+		Vec8(float wx, float wy, float wz, float ww, float vx, float vy, float vz, float vw)
+			:ang(wx, wy, wz, ww)
+			, lin(vx, vy, vz, vw)
 		{}
 
 		// Array access

@@ -387,7 +387,7 @@ def Spawn(args, expected_return_code=0, same_window=False, show_window=True, sho
 # Encoding can be: ascii, utf-8, cp1250, etc
 def Extract(filepath, regex, encoding="utf-8"):
 	pat = re.compile(regex)
-	with open(filepath, encoding=encoding) as f:
+	with open(filepath, mode="r", encoding=encoding) as f:
 		for line in f:
 			m = pat.search(line)
 			if m: return m
@@ -396,10 +396,11 @@ def Extract(filepath, regex, encoding="utf-8"):
 # Extract data from a text file using a regex
 # Capture groups are defined like: (?P<name>.*) and accessed like: m.group("name")
 # Returns a collection of matches from within the file
-def ExtractMany(filepath, regex):
+# Encoding can be: ascii, utf-8, cp1250, etc
+def ExtractMany(filepath, regex, encoding="utf-8"):
 	pat = re.compile(regex)
 	matches = []
-	with open(filepath, encoding="utf-8") as f:
+	with open(filepath, mode="r", encoding=encoding) as f:
 		for line in f:
 			m = pat.search(line)
 			if m: matches = matches + [m]

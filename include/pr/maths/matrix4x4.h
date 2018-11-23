@@ -58,7 +58,7 @@ namespace pr
 		{
 			assert(maths::is_aligned(this));
 		}
-		template <typename V4, typename = maths::enable_if_v4<V4>> Mat4x4(V4 const& v)
+		template <typename V4, typename = maths::enable_if_v4<V4>> explicit Mat4x4(V4 const& v)
 			:Mat4x4(x_as<v4>(v), y_as<v4>(v), z_as<v4>(v), w_as<v4>(v))
 		{}
 		template <typename CP, typename = maths::enable_if_vec_cp<CP>> explicit Mat4x4(CP const* v)

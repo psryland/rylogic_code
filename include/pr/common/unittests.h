@@ -287,6 +287,11 @@ namespace pr::unittests
 	#define PR_THROWS(func, what)\
 		Assert::ExpectException<what>(func, L#func)
 
+	#define PRTestClass(testname)\
+		ONLY_USED_AT_NAMESPACE_SCOPE struct testname : public ::Microsoft::VisualStudio::CppUnitTestFramework::TestClass<testname>
+	#define PRTestMethod(testname)\
+		TEST_METHOD(testname)
+
 #else
 
 	// If this is giving an error like "int return type assumed" and PRUnitTest is
@@ -306,5 +311,10 @@ namespace pr::unittests
 
 	#define PR_THROWS(func, what)\
 		pr::unittests::Throws<what>(func, #func, __FILE__, __LINE__)
+
+	#define PRTestClass(testname)\
+		namespace testname
+	#define PRTestMethod(testname)\
+		PRUnitTest(testname)
 
 #endif

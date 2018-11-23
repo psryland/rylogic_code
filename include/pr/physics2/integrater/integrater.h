@@ -17,6 +17,7 @@ namespace pr
 		template <typename = void>
 		void Evolve(RigidBody& rb, double elapsed_seconds)
 		{
+			(void)elapsed_seconds;
 			// Equation of Motion:
 			//   f = d(Iv)/dt = I*a + v x* Iv
 			// where:
@@ -31,8 +32,6 @@ namespace pr
 			//   I^-1 * f = a + I^-1 * (v x* Iv)
 			//   a = I^-1 * f -  I^-1 * (v x* Iv)
 
-			// Apply the change in momentum
-			rb.MomentumOS(rb.MomentumOS() + rb.ForceOS() * float(elapsed_seconds));
 
 			// Solve for the spatial acceleration
 			//   a = I^-1 * f -  I^-1 * (v x* Iv)
@@ -41,6 +40,8 @@ namespace pr
 
 
 
+			//// Apply the change in momentum
+			//rb.MomentumOS(rb.MomentumOS() + rb.ForceOS() * float(elapsed_seconds));
 
 			//// Choose the integration method based on the magnitude of the rotation and step size,
 			//// since the inertia tensor is dependent on orientation (which changes with time).
@@ -78,6 +79,16 @@ namespace pr
 			//
 			//	}
 			//}
+
+			// 
+			// x = dx/dt * dt
+
+			// The body spatial velocity
+			v8m vel(0,0,1,0,0,-0.01f);
+
+			// 
+			//auto do2w_dt = CPM(vel) * rb.O2W();
+			//rb.O2W(rb.O2W() + do2w_dt*elapsed_seconds);
 
 			// Prepare the rigid body for the next step
 			rb.UpdateDerivedState();

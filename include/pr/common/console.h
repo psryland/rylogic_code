@@ -31,13 +31,9 @@ namespace pr
 {
 	namespace console
 	{
-		typedef INPUT_RECORD Event;
+		using Event = INPUT_RECORD;
 		template <typename Char> class Console;
 		using HandlerFunction = BOOL (__stdcall *)(DWORD ctrl_type);
-
-		#define PR_CONSOLE_NO_COPY(type)\
-			type(type const&) = delete;\
-			type& operator=(type const&) = delete
 
 		#pragma region Generic string operations
 		template <typename Str> inline void append(Str& str, size_t count, typename Str::value_type ch) { str.append(count, ch); }
@@ -139,7 +135,7 @@ namespace pr
 			}
 		};
 
-		// Returns an identifier for uniquely id'ing event handlers
+		// Returns an identifier for uniquely identifying event handlers
 		using EventHandlerId = unsigned long long;
 		inline EventHandlerId GenerateEventHandlerId()
 		{
@@ -196,7 +192,8 @@ namespace pr
 
 		#pragma endregion
 
-		template <typename Char = char> class Console
+		template <typename Char = char>
+		class Console
 		{
 		public:
 			struct Pad;
@@ -236,6 +233,7 @@ namespace pr
 					,m_cons(cons)
 					,m_echo(true)
 				{}
+				LineInput(LineInput const&) = delete;
 				bool empty() const
 				{
 					return m_text.empty();
@@ -245,13 +243,13 @@ namespace pr
 					size_t end = fwd * m_text.size();
 					if (fwd)
 					{
-						for (;caret != end && !isspace(m_text[caret]); ++caret) {} // skip over non-ws
-						for (;caret != end &&  isspace(m_text[caret]); ++caret) {} // Find the next non-ws
+						for (;caret != end && !isspace(m_text[caret]); ++caret) {} // skip over non-whitespace
+						for (;caret != end &&  isspace(m_text[caret]); ++caret) {} // Find the next non-whitespace
 					}
 					else
 					{
-						for (;caret != end &&  isspace(m_text[caret]); --caret) {} // Find the next non-ws
-						for (;caret != end && !isspace(m_text[caret]); --caret) {} // skip over non-ws
+						for (;caret != end &&  isspace(m_text[caret]); --caret) {} // Find the next non-whitespace
+						for (;caret != end && !isspace(m_text[caret]); --caret) {} // skip over non-whitespace
 						caret += caret != 0;
 					}
 					return caret;
@@ -346,7 +344,6 @@ namespace pr
 					}
 					m_text.erase(m_text.begin() + m_caret, m_text.begin() + caret);
 				}
-				PR_CONSOLE_NO_COPY(LineInput);
 			};
 
 			#pragma endregion
@@ -447,7 +444,7 @@ namespace pr
 			{
 				KEY_EVENT_RECORD const& m_key;
 				Evt_Key(KEY_EVENT_RECORD const& k) :m_key(k) {}
-				PR_CONSOLE_NO_COPY(Evt_Key);
+				Evt_Key(Evt_Key const&) = delete;
 			};
 
 			// An event raised when a key event is 'pumped'. Down events only
@@ -455,7 +452,7 @@ namespace pr
 			{
 				KEY_EVENT_RECORD const& m_key;
 				Evt_KeyDown(KEY_EVENT_RECORD const& k) :m_key(k) {}
-				PR_CONSOLE_NO_COPY(Evt_KeyDown);
+				Evt_KeyDown(Evt_KeyDown const&) = delete;
 			};
 
 			// An event raised when a line of user input is available
@@ -463,7 +460,7 @@ namespace pr
 			{
 				std::basic_string<Char> const& m_input;
 				Evt_Line(std::basic_string<Char> const& input) :m_input(input) {}
-				PR_CONSOLE_NO_COPY(Evt_Line);
+				Evt_Line(Evt_Line const&) = delete;
 			};
 
 			// An event raised when escape is pressed (while there is no user input)
@@ -487,7 +484,7 @@ namespace pr
 				Pad const* m_pad;
 				Pad const* m_prev;
 				Evt_FocusChanged(Pad const* pad, Pad const* prev) :m_pad(pad) ,m_prev(prev) {}
-				PR_CONSOLE_NO_COPY(Evt_FocusChanged);
+				Evt_FocusChanged(Evt_FocusChanged const&) = delete;
 			};
 			#pragma endregion
 
@@ -500,7 +497,7 @@ namespace pr
 				COORD m_pos;
 				CursorScope(Console& cons) :m_cons(cons) ,m_pos(m_cons.Cursor()) {}
 				~CursorScope() { m_cons.Cursor(m_pos); }
-				PR_CONSOLE_NO_COPY(CursorScope);
+				CursorScope(CursorScope const&) = delete;
 			};
 
 			// RAII object for pushing console colours
@@ -510,7 +507,7 @@ namespace pr
 				Colours m_colours;
 				ColourScope(Console& cons) :m_cons(cons) ,m_colours(Colours::From(m_cons.Info().wAttributes)) {}
 				~ColourScope() { SetConsoleTextAttribute(*m_cons.m_back, m_colours); }
-				PR_CONSOLE_NO_COPY(ColourScope);
+				ColourScope(ColourScope const&) = delete;
 			};
 
 			// RAII object for pushing console colours and cursor position
@@ -519,7 +516,7 @@ namespace pr
 				CursorScope m_cur;
 				ColourScope m_col;
 				Scope(Console& cons) :m_cur(cons) ,m_col(cons) {}
-				PR_CONSOLE_NO_COPY(Scope);
+				Scope(Scope const&) = delete;
 			};
 
 			#pragma endregion
@@ -791,7 +788,7 @@ namespace pr
 					if (m_line_count == 0 && !s.empty()) m_line_count = 1;
 					pr::str::Split(s, delim, [&](std::string const& s, size_t i, size_t iend)
 						{
-							// Concat lines where possible
+							// Concatenate lines where possible
 							if (!m_items.empty() && m_items.back().m_what == EItem::AString) m_items.back().m_linea->append(s);
 							else m_items.push_back(s.substr(i, iend-i));
 							if (iend != s.size() && s[iend] == delim[0]) { m_items.push_back(NewLine); ++m_line_count; }
@@ -1060,8 +1057,7 @@ namespace pr
 				*stderr = *fp;
 				setvbuf(stderr, NULL, _IONBF, 0);
 
-				// make cout, wcout, cin, wcin, wcerr, cerr, wclog and clog
-				// point to console as well
+				// make 'cout, wcout, cin, wcin, wcerr, cerr, wclog, and clog' point to console as well
 				std::ios::sync_with_stdio();
 			}
 
@@ -1106,7 +1102,7 @@ namespace pr
 				Throw(SetConsoleScreenBufferInfoEx(*m_front, &info), "Failed to set console dimensions");
 			}
 
-			// Get/Set the highlevel console output mode
+			// Get/Set the high level console output mode
 			DWORD OutMode() const
 			{
 				DWORD mode;
@@ -1119,7 +1115,7 @@ namespace pr
 				Throw(SetConsoleMode(*m_front, mode), "failed to set console output mode");
 			}
 
-			// Get/Set the highlevel console input mode
+			// Get/Set the high level console input mode
 			DWORD InMode() const
 			{
 				DWORD mode;
@@ -1186,7 +1182,7 @@ namespace pr
 				Throw(SetConsoleActiveScreenBuffer(*m_front), "Set console active buffer failed");
 			}
 
-			// Get/Set unicode input
+			// Get/Set UNICODE input
 			bool UnicodeInput() const { return m_unicode_input; }
 			void UnicodeInput(bool on) { m_unicode_input = on; }
 
@@ -1302,7 +1298,7 @@ namespace pr
 				FlushConsoleInputBuffer(m_stdin);
 			}
 
-			// Call this method to consume input events on stdin for forward them to events
+			// Call this method to consume input events on std in for forward them to events
 			void PumpInput()
 			{
 				for(;WaitForEvent(WORD(EEvent::Any), 0);)
@@ -1386,7 +1382,7 @@ namespace pr
 				return WaitForEvent(WORD(EEvent::Key), 0);
 			}
 
-			// Consume input events upto and including the next 'key' event
+			// Consume input events up to and including the next 'key' event
 			// Calls 'func' on the key event and if true is returned, returns true. Returns false on timeout
 			// Note: these Read methods are basic and don't provide echoing etc. Use PumpInput() preferably
 			template <typename Func> bool ReadKeyEvent(Func func, DWORD wait_ms = INFINITE) const
@@ -1400,7 +1396,7 @@ namespace pr
 				return false;
 			}
 
-			// Consume input events upto and including the next 'key' event
+			// Consume input events up to and including the next 'key' event
 			// Returns the VK_KEY code for the input keyboard event
 			// Returns true if a key was read, false on timeout
 			bool ReadKey(int& vk, DWORD wait_ms = INFINITE) const
@@ -1413,7 +1409,7 @@ namespace pr
 					}, wait_ms);
 			}
 
-			// Consume input events upto and including the next 'key' event
+			// Consume input events up to and including the next 'key' event
 			// Returns true if a char was read from the input buffer, false if timed out
 			// 'wait_ms' is the length of time to wait for a key event
 			bool ReadChar(Char& ch, DWORD wait_ms = INFINITE) const
@@ -1427,7 +1423,7 @@ namespace pr
 					}, wait_ms);
 			}
 
-			// Read charactors from the console that pass 'pred'
+			// Read characters from the console that pass 'pred'
 			template <typename Str, typename Pred> Str Read(Pred pred, DWORD wait_ms = INFINITE) const
 			{
 				typedef Str::value_type Char;
@@ -1542,14 +1538,14 @@ namespace pr
 				Write(anchor, str.c_str(), dx, dy);
 			}
 
-			// Draw a box with size sx,sy anchored to a screen point
+			// Draw a box with size 'sx,sy' anchored to a screen point
 			void WriteBox(EAnchor anchor, int w, int h, int dx = 0, int dy = 0)
 			{
 				Coord loc = CursorLocation(anchor, w, h, dx, dy);
 				WriteBox(loc.X, loc.Y, w, h);
 			}
 
-			// Draw a box with size sx,sy at x,y
+			// Draw a box with size 'sx,sy' at x,y
 			void WriteBox(int x, int y, int w, int h)
 			{
 				auto c = Colour();
@@ -1677,8 +1673,6 @@ namespace pr
 			_ASSERT( 0 && "testing _ASSERT" );
 			_ASSERTE( 0 && "testing _ASSERTE" );
 		}
-
-		#undef PR_CONSOLE_NO_COPY
 	}
 
 	template <typename Char = char> using Console = console::Console<Char>;

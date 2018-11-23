@@ -374,7 +374,7 @@ namespace pr
 #include "pr/common/unittests.h"
 namespace pr::maths
 {
-	PRUnitTest(pr_maths_bbox)
+	PRUnitTest(BoundingBoxTests)
 	{
 		v4 pt[] =
 		{

@@ -166,4 +166,7 @@
   <ItemGroup>
     <None Include="..\projects\physics2/post_build.py" />
   </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="..\miscellaneous\VisualStudio\pr_visualisers.natvis" />
+  </ItemGroup>
 </Project>

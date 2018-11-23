@@ -18,7 +18,7 @@ namespace pr
 		using value_type = Real;
 		enum { LocalBufCount = 16 };
 
-	private:
+	protected:
 
 		// Store data as contiguous column vectors (like m4x4 does)
 		// e.g.

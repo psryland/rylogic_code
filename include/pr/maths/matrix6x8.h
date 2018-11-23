@@ -7,6 +7,7 @@
 #include "pr/maths/forward.h"
 #include "pr/maths/maths_core.h"
 #include "pr/maths/vector4.h"
+#include "pr/maths/vector8.h"
 #include "pr/maths/matrix3x4.h"
 #include "pr/maths/matrix4x4.h"
 
@@ -16,18 +17,31 @@ namespace pr
 	template <typename A, typename B>
 	struct alignas(16) Mat6x8
 	{
+		// Careful with memory layout: (Same style of memory layout as m4x4)
+		// e.g.
+		//  [{x} {y} {z} {w} {u} {v}]
+		// is:                                                            memory order
+		//  [x.x y.x z.x w.x u.x v.x] = [m00 m00 m00  m01 m01 m01]     [00 05 09  25 29 33]
+		//  [x.y y.y z.y w.y u.y v.y] = [m00 m00 m00  m01 m01 m01]     [01 06 10  26 30 34]
+		//  [x.z y.z z.z w.z u.z v.z] = [m00 m00 m00  m01 m01 m01]     [02 07 11  27 31 35]
+		//  [x.- y.- z.- w.- u.- v.-] = [m00 m00 m00  m01 m01 m01]     [04 08 12  28 32 36]
+		//  [x.w y.w z.w w.w u.w v.w] = [m10 m10 m10  m11 m11 m11]     [13 17 21  37 41 45]
+		//  [x.u y.u z.u w.u u.u v.u] = [m10 m10 m10  m11 m11 m11]     [14 18 22  38 42 46]
+		//  [x.v y.v z.v w.v u.v v.v] = [m10 m10 m10  m11 m11 m11]     [15 19 23  39 43 47]
+		//  [x.- y.- z.- w.- u.- v.-] = [m10 m10 m10  m11 m11 m11]     [16 20 24  40 44 48]
+		//                                                             
 		// Notes:
 		//  A,B should be the vector space that the transform operates on.
 		//  Transforms within the same vector space should have A == B (e.g. coordinate transforms).
 		//  Transforms from one to another vector space have A != B (e.g. inertia transforms).
-		Mat3x4<void,void> m00, m01;
-		Mat3x4<void,void> m10, m11;
+		Mat3x4<void,void> m00, m10, m01, m11;
 
+		// Construct from sub matrices. WARNING: careful with layout.
 		Mat6x8() = default;
 		Mat6x8(m3_cref<> m00_, m3_cref<> m01_, m3_cref<> m10_, m3_cref<> m11_)
 			:m00(m00_)
-			,m01(m01_)
 			,m10(m10_)
+			,m01(m01_)
 			,m11(m11_)
 		{}
 
@@ -37,10 +51,10 @@ namespace pr
 			return reinterpret_cast<Mat6x8<U, V> const&>(*this);
 		}
 
-		// Array access
+		// Array of column vectors
 		v8_cref<> operator [](int i) const
 		{
-			assert("index out of range" && i >= 0 && i < 8);
+			assert("index out of range" && i >= 0 && i < 6);
 			return i < 3
 				? Vec8<void>{m00[i  ], m10[i  ]}
 				: Vec8<void>{m01[i-3], m11[i-3]};
@@ -80,7 +94,7 @@ namespace pr
 			lhs.m00 * rhs.ang + lhs.m01 * rhs.lin,
 			lhs.m10 * rhs.ang + lhs.m11 * rhs.lin};
 	}
-	template <typename A, typename B, typename C> inline Mat6x8<A, C> operator * (Mat6x8<B, C> const& lhs, m6_cref<A,B> rhs)
+	template <typename A, typename B, typename C> inline Mat6x8<A, C> pr_vectorcall operator * (m6_cref<B,C> lhs, m6_cref<A,B> rhs)
 	{
 		// [a00, a01] [b00, b01] = [a00*b00 + a01*b10, a00*b01 + a01*b11]
 		// [a10, a11] [b10, b11]   [a10*b00 + a11*b10, a10*b01 + a11*b11]
@@ -115,17 +129,127 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
+#include "pr/maths/matrix.h"
 namespace pr::maths
 {
-	PRUnitTest(SpatialMatrixTests)
+	PRUnitTest(Matrix6x8Tests)
 	{
-//		auto v0 = Vec8<Motion>{v4{1,1,1,0}, v4{0,0,1,0}};
-//		auto ofs = v4{1,0,0,0};
-//		auto rot = m3x4::Rotation(v4YAxis);
-//		auto a2b_mm = Mat6x8<Motion,Motion>{rot, m3x4Zero, -rot * CPM(ofs), rot};
-//		auto b2a_mm = Mat6x8<Motion,Motion>{Transpose(rot), -rot * CPM(ofs), m3x4Zero, Transpose(rot)};;
-//
-//		PR_CHECK(Transpose(a2b_mm) == b2a_mm, true);
+		{// Memory order tests
+			auto m1 = Matrix<float>{6, 8,
+			{
+				1, 1, 1, 1, 1, 1, 1, 1, // = [{1} {2} {3} {4} {5} {6}]
+				2, 2, 2, 2, 2, 2, 2, 2,
+				3, 3, 3, 3, 3, 3, 3, 3,
+				4, 4, 4, 4, 4, 4, 4, 4,
+				5, 5, 5, 5, 5, 5, 5, 5,
+				6, 6, 6, 6, 6, 6, 6, 6,
+			}};
+			auto m2 = Matrix<float>{6, 8,
+			{
+				1, 1, 1, 1, 2, 2, 2, 2, // = [[1] [3]]
+				1, 1, 1, 1, 2, 2, 2, 2, //   [[2] [4]]
+				1, 1, 1, 1, 2, 2, 2, 2,
+				3, 3, 3, 3, 4, 4, 4, 4,
+				3, 3, 3, 3, 4, 4, 4, 4,
+				3, 3, 3, 3, 4, 4, 4, 4,
+			}};
+			auto M1 = m6x8
+			{
+				m3x4{v4{1},v4{2},v4{3}}, m3x4{v4{4},v4{5},v4{6}}, // = [{1} {2} {3} {4} {5} {6}]
+				m3x4{v4{1},v4{2},v4{3}}, m3x4{v4{4},v4{5},v4{6}}
+			};
+			auto M2 = m6x8
+			{
+				m3x4{1}, m3x4{3}, // = [[1] [3]]
+				m3x4{2}, m3x4{4}  //   [[2] [4]]
+			};
+
+			for (int c = 0; c != 6; ++c)
+			for (int r = 0; r != 8; ++r)
+			{
+				PR_CHECK(FEql(m1(c,r), M1[c][r]), true);
+				PR_CHECK(FEql(m2(c,r), M2[c][r]), true);
+			}
+		}
+		{// Multiply
+			auto m1 = Matrix<float>{6, 6,
+			{
+				1, 1, 1, 1, 1, 1, // = [{1} {2} {3} {4} {5} {6}]
+				2, 2, 2, 2, 2, 2,
+				3, 3, 3, 3, 3, 3,
+				4, 4, 4, 4, 4, 4,
+				5, 5, 5, 5, 5, 5,
+				6, 6, 6, 6, 6, 6,
+			}};
+			auto m2 = Matrix<float>{6, 6,
+			{
+				1, 1, 1, 2, 2, 2, // = [[1] [3]]
+				1, 1, 1, 2, 2, 2, //   [[2] [4]]
+				1, 1, 1, 2, 2, 2,
+				3, 3, 3, 4, 4, 4,
+				3, 3, 3, 4, 4, 4,
+				3, 3, 3, 4, 4, 4,
+			}};
+			auto m3 = Matrix<float>{6, 6,
+			{
+				36, 36, 36, 36, 36, 36, 
+				36, 36, 36, 36, 36, 36, 
+				36, 36, 36, 36, 36, 36, 
+				78, 78, 78, 78, 78, 78, 
+				78, 78, 78, 78, 78, 78, 
+				78, 78, 78, 78, 78, 78, 
+			}};
+			auto m4 = m1 * m2;
+			PR_CHECK(FEql(m3, m4), true);
+
+			auto M1 = m6x8
+			{
+				m3x4{v3{1},v3{2},v3{3}}, m3x4{v3{4},v3{5},v3{6}},
+				m3x4{v3{1},v3{2},v3{3}}, m3x4{v3{4},v3{5},v3{6}}, // = [{1} {2} {3} {4} {5} {6}]
+			};
+			auto M2 = m6x8
+			{
+				m3x4{v3{1},v3{1},v3{1}}, m3x4{v3{3},v3{3},v3{3}}, // = [[1] [3]]
+				m3x4{v3{2},v3{2},v3{2}}, m3x4{v3{4},v3{4},v3{4}}  //   [[2] [4]]
+			};
+			auto M3 = m6x8
+			{
+				m3x4{v3{36},v3{36},v3{36}}, m3x4{v3{78},v3{78},v3{78}},
+				m3x4{v3{36},v3{36},v3{36}}, m3x4{v3{78},v3{78},v3{78}} 
+			};
+			auto M4 = M1 * M2;
+			PR_CHECK(FEql(M3, M4), true);
+		}
+		{// Transpose
+			auto m1 = Matrix<float>{6, 6,
+			{
+				1, 1, 1, 1, 1, 1, // = [{1} {2} {3} {4} {5} {6}]
+				2, 2, 2, 2, 2, 2,
+				3, 3, 3, 3, 3, 3,
+				4, 4, 4, 4, 4, 4,
+				5, 5, 5, 5, 5, 5,
+				6, 6, 6, 6, 6, 6,
+			}};
+			auto M1 = m6x8
+			{
+				m3x4{v3{1},v3{2},v3{3}}, m3x4{v3{4},v3{5},v3{6}}, // = [{1} {2} {3} {4} {5} {6}]
+				m3x4{v3{1},v3{2},v3{3}}, m3x4{v3{4},v3{5},v3{6}}
+			};
+			auto m2 = Transpose(m1);
+			auto M2 = Transpose(M1);
+
+			for (int c = 0; c != 6; ++c)
+			{
+				PR_CHECK(FEql(M2[c], v8{v3{1,2,3},v3{4,5,6}}), true);
+
+				PR_CHECK(FEql(m2(c,0), M2[c].ang.x), true);
+				PR_CHECK(FEql(m2(c,1), M2[c].ang.y), true);
+				PR_CHECK(FEql(m2(c,2), M2[c].ang.z), true);
+				PR_CHECK(FEql(m2(c,3), M2[c].lin.x), true);
+				PR_CHECK(FEql(m2(c,4), M2[c].lin.y), true);
+				PR_CHECK(FEql(m2(c,5), M2[c].lin.z), true);
+			}
+		}
 	}
 }
 #endif

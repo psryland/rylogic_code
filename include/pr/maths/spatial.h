@@ -105,6 +105,27 @@ namespace pr::maths::spatial
 			E * rhs.lin);
 	}
 
+	// Spatial matrix * affine transform
+	//template <typename A> inline Mat6x8<A, Motion> pr_vectorcall operator * (m6_cref<> lhs, m4_cref<>& rhs)
+	//{
+	//	// [ E    0] * [m00, m01] = [E*m00     + 0*m10,  E*m01    + 0*m11] = [E*m00           , E*m01           ]
+	//	// [-E*rx E]   [m10, m11]   [-E*rx*m00 + E*m10, -E*rx*m01 + E*m11]   [E*(m10 - rx*m00), E*(m11 - rx*m01)]
+	//	auto E = lhs.a2b.rot;
+	//	auto rx = CPM(lhs.a2b.pos);
+	//	return Mat6x8<A, Motion>(
+	//		E * rhs.m00, E * rhs.m01,
+	//		E * (rhs.m10 - rx * rhs.m00), E * (rhs.m11 - rx * rhs.m01));
+	//}
+	//template <typename A> inline Mat6x8<A, Motion> operator * (Transform<Motion> const& lhs, Mat6x8<A, Motion> const& rhs)
+	//{
+	//	// [ E    0] * [m00, m01] = [E*m00     + 0*m10,  E*m01    + 0*m11] = [E*m00           , E*m01           ]
+	//	// [-E*rx E]   [m10, m11]   [-E*rx*m00 + E*m10, -E*rx*m01 + E*m11]   [E*(m10 - rx*m00), E*(m11 - rx*m01)]
+	//	auto E = lhs.a2b.rot;
+	//	auto rx = CPM(lhs.a2b.pos);
+	//	return Mat6x8<A, Motion>(
+	//		E * rhs.m00, E * rhs.m01,
+	//		E * (rhs.m10 - rx * rhs.m00), E * (rhs.m11 - rx * rhs.m01));
+	//}
 	#pragma endregion
 
 	#pragma region Functions
@@ -181,6 +202,24 @@ namespace pr::maths::spatial
 		return Mat6x8<Force, Force>(cx_ang, cx_lin, m3x4Zero, cx_ang);
 	}
 
+	// Create a spatial coordinate transform
+	template <typename T> Mat6x8<T,T> Transform(m4_cref<> a2b);
+	template <> inline Mat6x8<Motion,Motion> Transform<Motion>(m4_cref<> a2b)
+	{
+		// Note: RBDS shows a translation to be:
+		//  [E    0]
+		//  [-Erx E]
+		// Matrix multiplies are right to left in this library, so m10 = -rxE here
+		return Mat6x8<Motion,Motion>{a2b.rot, m3x4Zero, -CPM(a2b.pos) * a2b.rot, a2b.rot};
+	}
+	template <> inline Mat6x8<Force,Force> Transform<Force>(m4_cref<> a2b)
+	{
+		// Note: RBDS shows a translation to be:
+		//  [E -Erx]
+		//  [0    E]
+		// Matrix multiplies are right to left in this library, so m01 = -rxE here
+		return Mat6x8<Force,Force>{a2b.rot, -CPM(a2b.pos) * a2b.rot, m3x4Zero, a2b.rot};
+	}
 	#pragma endregion
 }
 
@@ -198,14 +237,14 @@ namespace pr::maths
 			auto o2w = m4x4::Transform(v4ZAxis, float(maths::tau_by_4), v4(1,1,1,1));
 		}
 		{// Cross Products
-			{
+			{// Test: CPM(m) * a == m x a
 				auto v0 = v8m(1, 1, 1, 2, 2, 2);
 				auto v1 = v8m(-1, -2, -3, -4, -5, -6);
 				auto r0 = Cross(v0, v1);
 				auto r1 = CPM(v0) * v1;
 				PR_CHECK(FEql(r0, r1), true);
 			}
-			{
+			{// Test: CPM(f) * a == f x* a
 				auto v0 = v8f(1, 1, 1, 2, 2, 2);
 				auto v1 = v8f(-1, -2, -3, -4, -5, -6);
 				auto r0 = Cross(v0, v1);
@@ -214,13 +253,79 @@ namespace pr::maths
 			}
 			{// Test: vx* == -Transpose(vx)
 				auto v = v8(-2.3f, +1.3f, 0.9f, -2.2f, 0.0f, -1.0f);
-
 				auto m0 = CPM(static_cast<v8m>(v)); // vx
 				auto m1 = CPM(static_cast<v8f>(v)); // vx*
 				auto m2 = Transpose(m1);
 				auto m3 = static_cast<m6x8m>(-m2);
 				PR_CHECK(FEql(m0, m3), true);
 			}
+		}
+		{// Transforms
+			auto a2b = m4x4::Transform(v4ZAxis, float(maths::tau_by_4), v4{1,1,1,1});
+			auto b2c = m4x4::Transform(v4YAxis, float(maths::tau_by_8), v4{-1,2,-3,1});
+			auto a2c = b2c * a2b;
+
+			auto A2B = m6x8m{a2b.rot, m3x4Zero, -CPM(a2b.pos) * a2b.rot, a2b.rot};
+			auto B2C = m6x8m{b2c.rot, m3x4Zero, -CPM(b2c.pos) * b2c.rot, b2c.rot};
+			auto A2C = m6x8m{a2c.rot, m3x4Zero, -CPM(a2c.pos) * a2c.rot, a2c.rot};
+
+			auto r = B2C * A2B;
+			PR_CHECK(FEql(A2C, r), true);
+		}
+		{// Transforms
+			auto a2b = m4x4::Transform(v4ZAxis, float(maths::tau_by_4), v4{1,1,1,1});
+			auto b2c = m4x4::Transform(v4YAxis, float(maths::tau_by_8), v4{-1,2,-3,1});
+			auto a2c = b2c * a2b;
+
+			auto A2Bm = Transform<Motion>(a2b);
+			auto B2Cm = Transform<Motion>(b2c);;
+			auto A2Cm = Transform<Motion>(a2c);;
+
+			auto rm = B2Cm * A2Bm;
+			PR_CHECK(FEql(A2Cm, rm), true);
+
+			auto A2Bf = Transform<Force>(a2b);
+			auto B2Cf = Transform<Force>(b2c);;
+			auto A2Cf = Transform<Force>(a2c);;
+
+			auto rf = B2Cf * A2Bf;
+			PR_CHECK(FEql(A2Cf, rf), true);
+		}
+		{// Transforming a spatial vector
+			auto a2b = m4x4::Transform(v4ZAxis, float(maths::tau_by_4), v4{1,1,1,1});
+			auto b2c = m4x4::Transform(v4YAxis, float(maths::tau_by_8), v4{-1,2,-3,1});
+			auto a2c = b2c * a2b;
+
+			auto ang_a = v4{2,-1,1,0}; // Angular component in frame 'a'
+			auto lin_a = v4{-3,1,-2,0};// Linear component in frame 'a'
+			auto pt_a = v4{4,-3,1,0};  // A body-fixed point in frame 'a'
+
+			{// motion
+				auto vel_a = lin_a + Cross(ang_a, pt_a); // The velocity at 'pt' in frame 'a'
+				auto ang_c = a2c * ang_a; // angular velocity in frame 'c'
+				auto lin_c = a2c * lin_a; // linear velocity in frame 'c'
+				auto pt_c = a2c * pt_a;  // The point in frame 'c'
+				auto vel_c = lin_c + Cross(pt_c, ang_c); // The velocity at 'pt' in frame 'c'
+				PR_CHECK(FEql(vel_a, InvertFast(a2c) * vel_c), true);
+
+				auto A2C = Transform<Motion>(a2c);
+
+				auto VEL_a = v8m{ang_a, lin_a}; // The velocity vector field in frame 'a'
+				auto VEL_c = A2C * VEL_a; // The velocity vector field in frame 'c'
+
+
+				auto vel_c2 = VEL_c.lin + Cross(pt_c, VEL_c.ang);
+				PR_CHECK(FEql(vel_c, vel_c2), true);
+			}
+			{// force
+				auto ang_c = a2c * ang_a; // torque in frame 'c'
+				auto lin_c = a2c * lin_a; // force in frame 'c'
+			
+				auto Vf = v8f{ang_a, lin_a};
+				auto A2Cf = Transform<Force>(a2c);
+				auto Rf = A2Cf * Vf;
+			}
+
 		}
 	}
 }

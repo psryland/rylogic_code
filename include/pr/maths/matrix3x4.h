@@ -32,6 +32,13 @@ namespace pr
 		{
 			assert(maths::is_aligned(this));
 		}
+		Mat3x4(v3_cref<> x_, v3_cref<> y_, v3_cref<> z_)
+			:x(x_, 0)
+			,y(y_, 0)
+			,z(z_, 0)
+		{
+			assert(maths::is_aligned(this));
+		}
 		Mat3x4(v4_cref<> x_, v4_cref<> y_, v4_cref<> z_)
 			:x(x_)
 			,y(y_)
@@ -39,7 +46,7 @@ namespace pr
 		{
 			assert(maths::is_aligned(this));
 		}
-		Mat3x4(Quat<A,B> const& q)
+		explicit Mat3x4(Quat<A,B> const& q)
 		{
 			assert("'quat' is a zero quaternion" && !IsZero(q));
 			auto s = 2.0f / LengthSq(q);
@@ -52,7 +59,7 @@ namespace pr
 			y = Vec4<void>{xy - wz, 1.0f - (xx + zz), yz + wx, 0};
 			z = Vec4<void>{xz + wy, yz - wx, 1.0f - (xx + yy), 0};
 		}
-		template <typename V3, typename = maths::enable_if_v3<V3>> Mat3x4(V3 const& v)
+		template <typename V3, typename = maths::enable_if_v3<V3>> explicit Mat3x4(V3 const& v)
 			:Mat3x4(x_as<Vec4<void>>(v), y_as<Vec4<void>>(v), z_as<Vec4<void>>(v))
 		{}
 		template <typename CP, typename = maths::enable_if_vec_cp<CP>> explicit Mat3x4(CP const* v)
@@ -691,7 +698,9 @@ namespace pr
 }
 
 #if PR_UNITTESTS
+#include <random>
 #include "pr/common/unittests.h"
+#include "pr/maths/maths.h"
 namespace pr::maths
 {
 	PRUnitTest(Matrix3x3Tests)
@@ -699,6 +708,7 @@ namespace pr::maths
 		std::default_random_engine rng;
 
 		{//OriFromDir
+			using namespace pr;
 			v4 dir(0,1,0,0);
 			{
 				auto ori = OriFromDir(dir, AxisId::PosZ, v4ZAxis);
@@ -758,6 +768,6 @@ namespace pr::maths
 				PR_CHECK(FEql(A0, A1), true);
 			}
 		}
-	}
+	};
 }
 #endif
