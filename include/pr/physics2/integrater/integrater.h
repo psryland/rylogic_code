@@ -11,15 +11,11 @@ namespace pr
 	namespace physics
 	{
 		// Evolve a rigid body forward in time. 
-		// This advances the position/orientation of the provided physics object by 'elapsed_seconds'.
-		// This function assumes the 'm_os_force' member of the rigid body has been set, so all constraint
-		// forces, gravity, etc should have been applied before calling this function.
 		template <typename = void>
-		void Evolve(RigidBody& rb, double elapsed_seconds)
+		void Evolve(RigidBody& rb, float elapsed_seconds)
 		{
-			(void)elapsed_seconds;
 			// Equation of Motion:
-			//   f = d(Iv)/dt = I*a + v x* Iv
+			//   f = d(Iv)/dt = I*a + vx*.I.v
 			// where:
 			//   f = net spatial force acting
 			//   I = spatial inertia tensor
@@ -28,71 +24,78 @@ namespace pr
 			//   Iv = momentum
 			//   x* = cross product for force spatial vectors
 			// So:
-			//   f = I*a + v x* Iv
-			//   I^-1 * f = a + I^-1 * (v x* Iv)
-			//   a = I^-1 * f -  I^-1 * (v x* Iv)
+			//   f = I*a + vx*.I.v
+			//   I^-1 * f = a + I^-1 * (vx*.I.v)
+			//   a = I^-1 * f -  I^-1 * (vx*.I.v)
+
+			// Notes:
+			//  'rb' should not store momentum, because we need 'v' for 'vx*.I.v'
+			//  Should a store ws_force and os_force separately so that higher order
+			//  integrators can more accurately sum the forces?
+
+			// Two options: update in world space or body space.
+			// In world space, the WS inverse inertia is needed to calculate the
+			// updated velocity. This changes with orientation and hence with time.
+			// In body space, the OS force changes with orientation (because really
+			// they are WS forces). 
+
+			// Midpoint integration.
+			auto half_dt = elapsed_seconds * 0.5f;
+
+			// Calculate the dynamics values at time_step / 2
+			auto ws_momentum = rb.MomentumWS() + rb.ForceWS() * half_dt;
+			auto ws_velocity = rb.InertiaInvWS();
+				
+				//v8m{0,0,1, 0,0,-0.6f};
+
+			// Estimate the o2w halfway through the time step
+			auto rot = rb.O2W().rot + CPM(ws_velocity.ang * half_dt) * rb.O2W().rot;
+
+			auto momentum = rb.MomentumWS() + 
+
+			// Calculate the WS inverse inertia for the estimated orientation
+			auto ws_inertia_inv = rot * os_inertia_inv * Transpose(rot);
+
+			// Simple version:
+			// A = F/M
+			auto lin_a = rb.MassProps().InvMass() * rb.ForceOS().lin + gravity;
+
+
 
 
 			// Solve for the spatial acceleration
-			//   a = I^-1 * f -  I^-1 * (v x* Iv)
-			//CPM(rb.Velocity())
+			//   a = I^-1 * f -  I^-1 * (vx*.I.v)
+			auto& os_inertia = rb.MassProps().InertiaOS();
+			auto& os_inertia_inv = rb.MassProps().InertiaInvOS();
+			auto& os_velocity = rb.VelocityOS();
+			auto& os_force = rb.ForceOS();
+			(os_inertia_inv * os_force) - 
 
-
-
-
-			//// Apply the change in momentum
-			//rb.MomentumOS(rb.MomentumOS() + rb.ForceOS() * float(elapsed_seconds));
-
-			//// Choose the integration method based on the magnitude of the rotation and step size,
-			//// since the inertia tensor is dependent on orientation (which changes with time).
-			//// Choose the 'Runge/Kutta/Merson' integrator order based on angular velocity.
-			//auto avel_os = rb.InertiaInvOS() * rb.MomentumOS().ang;
-			//// auto t = elapsed_seconds;
-
-			// Integrate
-			//for (;;) // break scope
-			//{
-			//	float const Order1Threshold = 1.8e-1f;
-			//	float const Order2Threshold = 2.3e-3f;
-			//	float const VelCapThreshold = 1.0e-6f;//1.0e-8f;
-	
-				// If the angular velocity is low, use an Euler step
-			//	if (t * avel_os < Order1Threshold)
-			//	{
-			//		StepOrder1(rb, elapsed_seconds);
-			//		break;
-			//	}
-
-				// Use a mid point step for mid range angular
-			//	t *= elapsed_seconds; // t^2
-			//	if (t * avel_os < Order2Threshold)
-			//	{
-			//		StepOrder2(rb, elapsed_seconds);
-			//		break;
-			//	}
 			
-				// Use a RKM step for high angular
-			//	t *= t * elapsed_seconds; // t^5
-			//	if (t * avel_os > VelCapThreshold)
-			//	{
-			//		// Cap the angular velocity for stability
-			//
-			//	}
-			//}
+			
+			//CPM(rb.Velocity())
+			(void)elapsed_seconds;
 
-			// 
-			// x = dx/dt * dt
+
 
 			// The body spatial velocity
-			v8m vel(0,0,1,0,0,-0.01f);
+			v8m vel();
 
-			// 
-			//auto do2w_dt = CPM(vel) * rb.O2W();
-			//rb.O2W(rb.O2W() + do2w_dt*elapsed_seconds);
+			// S = So + VoT + 0.5AT^2
+			vel = vel * elapsed_seconds;
+
+//			rb.m_object_to_world.pos += (velocity + (0.5f * elapsed_seconds) * acceleration) * elapsed_seconds;
+//
+
+			//auto vel_com = vel.at(v4Origin);
+			//auto do2w_dt = CPM(vel_com) * rb.O2W();
+			auto do2w_dt = CPM(vel.ang, vel.lin);
+			auto o2w = rb.O2W() + do2w_dt;
+			rb.O2W(Orthonorm(o2w));
 
 			// Prepare the rigid body for the next step
 			rb.UpdateDerivedState();
-			rb.ForceOS((v8f)v8Zero);
+			rb.ForceOS(v8f{});
 		}
 
 		// Euler first order step
@@ -114,9 +117,25 @@ namespace pr
 		}
 
 		template <typename = void>
-		void StepOrder2(RigidBody& rb, double elapsed_seconds)
+		void StepOrder2(RigidBody& rb, v4 vel_ang, float elapsed_seconds)
 		{
-			(void)rb,elapsed_seconds;
+//			// Use the midpoint algorithm
+//			auto dt_by_2 = elapsed_seconds * 0.5f;
+//
+//			// Calculate mid-point values
+//			auto mid_orientation            = rb.O2W().rot + CPM(vel_ang * dt_by_2) * rb.O2W().rot;
+//			auto mid_ws_inv_inertia_tensor  = mid_orientation * rb.m_os_inv_inertia_tensor * Transpose(mid_orientation);
+//			auto mid_ang_momentum           = rb.m_ang_momentum + rb.m_torque * dt_by_2;
+//			auto mid_ang_velocity           = mid_ws_inv_inertia_tensor * rb.m_inv_mass * mid_ang_momentum;
+//	
+//			// Perform step using mid-point angular velocity
+//			//
+//			auto do2w_dt = CPM(mid_ang_velocity * elapsed_seconds) * rb.O2W().rot;
+//			
+//			// S = So + VoT + 0.5AT^2
+//			rb.m_object_to_world.pos += (velocity + (0.5f * elapsed_seconds) * acceleration) * elapsed_seconds;
+//
+//			rb.m_object_to_world.rot += ;
 		}
 	}
 }

@@ -139,26 +139,32 @@ namespace pr
 			pr::LockFile lock(filepath);
 			pr::BufferToFile(str, filepath, pr::EFileData::Utf8, pr::EFileData::Ucs2, append);
 		}
-		inline TStr& GroupStart(TStr& str, typename TStr::value_type const* name, Col colour)
+		inline TStr& GroupStart(TStr& str, typename TStr::value_type const* name, Col colour = 0xFFFFFFFF)
 		{
 			return Append(str, "*Group", name, colour, "{\n");
 		}
-		inline TStr& GroupStart(TStr& str, typename TStr::value_type const* name)
-		{
-			return Append(str, "*Group", name, "{\n");
-		}
-		inline TStr& GroupEnd(TStr& str, m4x4 const& o2w)
+		inline TStr& GroupEnd(TStr& str, m4x4 const& o2w = m4x4Identity)
 		{
 			return Append(str, O2W(o2w), "\n}\n");
 		}
-		inline TStr& GroupEnd(TStr& str)
-		{
-			return Append(str, "}\n");
-		}
-		inline Scope<std::function<void()>,std::function<void()>> Group(TStr& str, typename TStr::value_type const* name, Col colour)
+		inline Scope<std::function<void()>,std::function<void()>> Group(TStr& str, typename TStr::value_type const* name, Col colour = 0xFFFFFFFF, m4x4 const& o2w = m4x4Identity)
 		{
 			std::function<void()> doit = [&]{ GroupStart(str, name, colour); };
-			std::function<void()> undo = [&]{ GroupEnd(str); };
+			std::function<void()> undo = [&]{ GroupEnd(str, o2w); };
+			return CreateScope(doit, undo);
+		}
+		inline TStr& FrameStart(TStr& str, typename TStr::value_type const* name, Col colour = 0xFFFFFFFF)
+		{
+			return Append(str, "*CoordFrame", name, Col(colour), "{\n");
+		}
+		inline TStr& FrameEnd(TStr& str, m4x4 const& o2w = m4x4Identity)
+		{
+			return Append(str, O2W(o2w), "\n}\n");
+		}
+		inline Scope<std::function<void()>,std::function<void()>> Frame(TStr& str, typename TStr::value_type const* name, Col colour = 0xFFFFFFFF, m4x4 const& o2w = m4x4Identity)
+		{
+			std::function<void()> doit = [&]{ FrameStart(str, name, colour); };
+			std::function<void()> undo = [&]{ FrameEnd(str, o2w); };
 			return CreateScope(doit, undo);
 		}
 		inline TStr& Nest(TStr& str)
@@ -371,17 +377,18 @@ namespace pr
 			if (point_radius > 0) Box(str, "", colour, point_radius, position);
 			return str;
 		}
-		inline TStr& VectorField(TStr& str, typename TStr::value_type const* name, Col colour, v8 const& vec, m4x4 const& o2w, float scale)
+		inline TStr& VectorField(TStr& str, typename TStr::value_type const* name, Col colour, v8 const& vec, v4 const& pos, float scale)
 		{
 			Append(str,"*Line",name,colour,"{");
 			for (float y = -1.0f; y <= 1.0f; y += 0.1f)
 			for (float x = -1.0f; x <= 1.0f; x += 0.1f)
 			{
-				auto pt = v4{x * scale, y * scale, 0, 1};
+				auto pt = v4{x * scale, y * scale, 0, 0};
 				auto vf = vec.lin + Cross(vec.ang, pt);
-				Append(str, pt, pt+vf);
+				Append(str, pt.xyz, (pt+vf).xyz);
 			}
-			Append(str, O2W(o2w), "}\n");
+			Append(str, O2W(pos), "}\n");
+			return str;
 		}
 
 		template <typename VCont, typename ICont> inline TStr& Mesh(TStr& str, typename TStr::value_type const* name, Col colour, VCont const& verts, ICont const& indices, int indices_per_prim, pr::m4x4 const& o2w)

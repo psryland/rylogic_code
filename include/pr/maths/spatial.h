@@ -80,29 +80,37 @@ namespace pr::maths::spatial
 	#pragma region Operators
 
 	// Transform a spatial motion vector by an affine transform
-	inline Vec8<Motion> pr_vectorcall operator * (m4_cref<> lhs, Vec8<Motion> const& rhs)
+	template <typename T>
+	inline Vec8<T> pr_vectorcall operator * (m4_cref<Motion,T> a2b, Vec8<Motion> const& vec)
 	{
 		// [ E    0] * [v.ang] = [E*v.ang             ]
 		// [-E*rx E]   [v.lin]   [E*v.lin - E*rx*v.ang]
-		assert("'lhs' is not an affine transform" && IsAffine(lhs));
-		auto const& E = lhs.rot;
-		auto const& r = lhs.pos;
-		return Vec8<Motion>(
-			E * rhs.ang,
-			E * (rhs.lin + Cross(rhs.ang, r)));
+		assert("'lhs' is not an affine transform" && IsAffine(a2b));
+		auto ang_b = m3x4{a2b.rot} * vec.ang;
+		auto lin_b = m3x4{a2b.rot} * vec.lin + Cross(a2b.pos, ang_b);
+		return Vec8<T>{ang_b, lin_b};
+	}
+	inline Vec8<Motion> pr_vectorcall operator * (m4_cref<> a2b, Vec8<Motion> const& vec)
+	{
+		auto const& a2b_m = (Mat4x4<Motion,Motion> const&)(a2b);
+		return a2b_m * vec;
 	}
 
 	// Transform a spatial force vector by an affine transform
-	inline Vec8<Force> pr_vectorcall operator * (m4_cref<> lhs, Vec8<Force> const& rhs)
+	template <typename T>
+	inline Vec8<T> pr_vectorcall operator * (m4_cref<Force,T> a2b, Vec8<Force> const& vec)
 	{
 		// [E -E*rx] * [v.ang] = [E*v.ang - E*rx*v.lin]
 		// [0     E]   [v.lin]   [E*v.lin             ]
-		assert("'lhs' is not an affine transform" && IsAffine(lhs));
-		auto E = lhs.rot;
-		auto r = lhs.pos;
-		return Vec8<Force>(
-			E * (rhs.ang + Cross(rhs.lin, r)),
-			E * rhs.lin);
+		assert("'lhs' is not an affine transform" && IsAffine(a2b));
+		auto lin_b = m3x4{a2b.rot} * vec.lin;
+		auto ang_b = m3x4{a2b.rot} * vec.ang + Cross(a2b.pos, lin_b);
+		return Vec8<T>{ang_b, lin_b};
+	}
+	inline Vec8<Force> pr_vectorcall operator * (m4_cref<> a2b, Vec8<Force> const& vec)
+	{
+		auto const& a2b_f = (Mat4x4<Force,Force> const&)(a2b);
+		return a2b_f * vec;
 	}
 
 	// Spatial matrix * affine transform
@@ -155,20 +163,18 @@ namespace pr::maths::spatial
 		return Vec8<Force>(Cross3(lhs.ang, rhs.ang) + Cross3(lhs.lin, rhs.lin), Cross3(lhs.ang, rhs.lin));
 	}
 
-	// Return a motion vector, equal to 'motion', but expressed at a new location equal
-	// to the previous location + 'ofs'. This is equivalent to a translation of the vector field.
+	// Return a motion vector, equal to 'motion', but expressed at a new location equal to the previous location + 'ofs'. 
 	inline Vec8<Motion> Shift(Vec8<Motion> const& motion, v4_cref<void> ofs)
 	{
 		// c.f. RBDS 2.21
-		return Vec8<Motion>(motion.ang, motion.lin - Cross(ofs, motion.ang));
+		return Vec8<Motion>(motion.ang, motion.lin + Cross(motion.ang, ofs));
 	}
 
-	// Return a force vector, equal to 'force', but expressed
-	// at a new location equal to the previous location + 'ofs'.
+	// Return a force vector, equal to 'force', but expressed at a new location equal to the previous location + 'ofs'.
 	inline Vec8<Force> Shift(Vec8<Force> const& force, v4_cref<void> ofs)
 	{
 		// c.f. RBDS 2.22
-		return Vec8<Force>(force.ang - Cross(ofs, force.lin), force.lin);
+		return Vec8<Force>(force.ang + Cross(force.lin, ofs), force.lin);
 	}
 
 	// Shift a spatial acceleration measured at some point to that same spatial
@@ -205,20 +211,27 @@ namespace pr::maths::spatial
 	template <typename T> Mat6x8<T,T> Transform(m4_cref<> a2b);
 	template <> inline Mat6x8<Motion,Motion> Transform<Motion>(m4_cref<> a2b)
 	{
-		// Note: RBDS shows a translation to be:
-		//  [E    0]
-		//  [-Erx E]
+		// Note: RBDS shows a transform to be:
+		//  [E    0] = motion   [E -Erx]
+		//  [-Erx E]    force = [0    E]
 		// Matrix multiplies are right to left in this library, so m10 = -rxE here
-		return Mat6x8<Motion,Motion>{a2b.rot, m3x4Zero, -CPM(a2b.pos) * a2b.rot, a2b.rot};
+		return Mat6x8<Motion,Motion>{a2b.rot, m3x4Zero, CPM(a2b.pos) * a2b.rot, a2b.rot};
 	}
 	template <> inline Mat6x8<Force,Force> Transform<Force>(m4_cref<> a2b)
 	{
-		// Note: RBDS shows a translation to be:
-		//  [E -Erx]
-		//  [0    E]
-		// Matrix multiplies are right to left in this library, so m01 = -rxE here
-		return Mat6x8<Force,Force>{a2b.rot, -CPM(a2b.pos) * a2b.rot, m3x4Zero, a2b.rot};
+		return Mat6x8<Force,Force>{a2b.rot, CPM(a2b.pos) * a2b.rot, m3x4Zero, a2b.rot};
 	}
+
+	// Spatial inertia matrix
+	template <typename T, typename U> Mat6x8<T,U> Inertia(m3_cref<> unit_inertia, v4_cref<> com, float inv_mass);
+	template <> inline Mat6x8<Motion,Force> Inertia(m3_cref<> unit_inertia, v4_cref<> com, float mass)
+	{
+		auto mcx = CPM(mass * com);
+		return Mat6x8<Motion,Force>(
+			mass * unit_inertia, mcx,
+			-mcx, m3x4::Scale(mass));
+	}
+
 	#pragma endregion
 }
 
@@ -266,9 +279,9 @@ namespace pr::maths
 			auto b2c = m4x4::Transform(v4YAxis, float(maths::tau_by_8), v4{-1,2,-3,1});
 			auto a2c = b2c * a2b;
 
-			auto A2B = m6x8m{a2b.rot, m3x4Zero, -CPM(a2b.pos) * a2b.rot, a2b.rot};
-			auto B2C = m6x8m{b2c.rot, m3x4Zero, -CPM(b2c.pos) * b2c.rot, b2c.rot};
-			auto A2C = m6x8m{a2c.rot, m3x4Zero, -CPM(a2c.pos) * a2c.rot, a2c.rot};
+			auto A2B = m6x8m{a2b.rot, m3x4Zero, CPM(a2b.pos) * a2b.rot, a2b.rot};
+			auto B2C = m6x8m{b2c.rot, m3x4Zero, CPM(b2c.pos) * b2c.rot, b2c.rot};
+			auto A2C = m6x8m{a2c.rot, m3x4Zero, CPM(a2c.pos) * a2c.rot, a2c.rot};
 
 			auto r = B2C * A2B;
 			PR_CHECK(FEql(A2C, r), true);
@@ -279,108 +292,156 @@ namespace pr::maths
 			auto a2c = b2c * a2b;
 
 			auto A2Bm = Transform<Motion>(a2b);
-			auto B2Cm = Transform<Motion>(b2c);;
-			auto A2Cm = Transform<Motion>(a2c);;
+			auto B2Cm = Transform<Motion>(b2c);
+			auto A2Cm = Transform<Motion>(a2c);
 
-			auto rm = B2Cm * A2Bm;
-			PR_CHECK(FEql(A2Cm, rm), true);
+			auto Rm = B2Cm * A2Bm;
+			PR_CHECK(FEql(A2Cm, Rm), true);
 
 			auto A2Bf = Transform<Force>(a2b);
 			auto B2Cf = Transform<Force>(b2c);
 			auto A2Cf = Transform<Force>(a2c);
 
-			auto rf = B2Cf * A2Bf;
-			PR_CHECK(FEql(A2Cf, rf), true);
+			auto Rf = B2Cf * A2Bf;
+			PR_CHECK(FEql(A2Cf, Rf), true);
 		}
 		{// Transforming a spatial vector
-			// Simple case
-			auto a2c = m4x4::Transform(v4ZAxis, float(maths::tau_by_8), v4{1,1,0,1});
-			auto c2a = InvertFast(a2c);
-
-			auto ang_a = v4{0,0,0.1f,0}; // Angular component in frame 'a'
-			auto lin_a = v4{0,0.1f,0,0};// Linear component in frame 'a'
-			{
-
-			}
-
-			// In frame 'a', the velocity at any point 'x' is found from:  vel_a = lin_a + Cross(ang_a, x);
-			// So 'lin_a' and 'ang_a' are a description of the vector field in frame 'a'. They are not associated
-			// with any particular point in frame 'a', but can be thought of as the velocity and angular velocity
-			// of a body whose centre of mass is at the origin in frame 'a'.
-
-			// In frame 'c' the body is no longer at the origin. We now want to describe the same vector field in
-			// frame 'c' so we need to calculate the 'lin_c' and 'ang_c' that result in the same vector field. The
-			// velocity of the origin of frame 'c' can be calculated in frame 'a' by knowing the position of frame 'c'
-			// in frame 'a' space. With 'lin_c' and 'ang_c' we can calculate the velocity for any point in the vector
-			// field. The velocity calculated in each frame for the same point should have the same velocity
-
-			// a2c.pos is the position of frame 'c' in frame 'a' space.
-			auto ang_c = a2c * ang_a;                           // Angular velocity in frame 'c'
-			auto lin_c = a2c * (lin_a + Cross(ang_a, a2c.pos)); // Linear velocity in frame 'c'
+			std::default_random_engine rng(1);
+			std::uniform_real_distribution<double> dist(-maths::tau, maths::tau);
 
 			// For a bunch of points, the velocity should be the same when described in either frame 'a' or frame 'c'
-			for (;;)
+			for (float y = -0.5f; y <= 0.5f; y += 0.25f)
+			for (float x = -0.5f; x <= 0.5f; x += 0.25f)
 			{
-				// A body-fixed point in frame 'a'
-				auto pt_a = v4{0.3f,-0.8f,1,1};
+				auto a2c = m4x4::Transform(Random3N(rng, 0), float(dist(rng)), Random3(rng, v4Origin, 3.0f, 1));
+				//auto a2c = m4x4::Translation(v4{1,0,0,1});
+				auto c2a = InvertFast(a2c);
 
-				// At some point 'pt_a' find the velocity in frame 'a'
-				auto vel_a = lin_a + Cross(ang_a, pt_a);
+				// A body-fixed point in frame 'a' and the same point in frame 'c'
+				auto pt_a = v4{x,y,0.01f,1};
+				auto pt_c = a2c * pt_a;
+				//auto pt_a = v4{0.3f,-0.8f,0.01f,1};
 
-				// Get the same point in frame 'c'
-				auto pt_c = a2c * (pt_a + a2c.pos);
+				auto ang_a = v4{0,0,0.1f,0}; // Angular component in frame 'a'
+				auto lin_a = v4{0,0.1f,0,0}; // Linear component in frame 'a'
+				auto spv_a = v8m{ang_a, lin_a};
+				auto spf_a = v8f{ang_a, lin_a};
 
-				// The velocity at 'pt_c' in frame 'c'
-				auto vel_c = lin_c + Cross(ang_c, pt_c);
+				// In frame 'a', the velocity at any point 'x' is found from:  vel_a = lin_a + Cross(ang_a, x);
+				// So 'lin_a' and 'ang_a' are a description of the vector field in frame 'a'. They are not associated
+				// with any particular point in frame 'a', but can be thought of as the velocity and angular velocity
+				// of a body whose centre of mass is at the origin in frame 'a'.
 
-				// Should be equivalent to the velocity measured in frame 'a'
-				auto vel_A = c2a * vel_c;
-				PR_CHECK(FEql(vel_a, vel_A), true);
-				break;
+				// In frame 'c' the body is no longer at the origin. We now want to describe the same vector field in
+				// frame 'c' so we need to calculate the 'lin_c' and 'ang_c' that result in the same vector field. The
+				// velocity of the origin of frame 'c' can be calculated in frame 'a' by knowing the position of frame 'c'
+				// in frame 'a' space. With 'lin_c' and 'ang_c' we can calculate the velocity for any point in the vector
+				// field. The velocity calculated in each frame for the same point should have the same velocity
+
+				// a2c.pos is the position of frame 'c' in frame 'a' space.
+
+				{// Motion vectors
+					// Calculation using 3-vectors
+					auto ang_c = a2c * ang_a;                         // Angular velocity in frame 'c'
+					auto lin_c = a2c * lin_a + Cross(a2c.pos, ang_c); // Linear velocity in frame 'c'
+
+					//{
+					//	{
+					//		std::string str;
+					//		{
+					//			auto frame = ldr::Frame(str, "FrameA");
+					//			ldr::VectorField(str, "field", 0xFF00FF00, v8{ang_a, lin_a}, v4Origin, 2.0f);
+					//			ldr::Box(str, "pt", 0xFFFFFFFF, 0.05f, pt_a);
+					//		}
+					//		ldr::Write(str, L"P:\\dump\\spatial_frameA.ldr");
+					//	}
+					//	{
+					//		std::string str;
+					//		{
+					//			auto frame = ldr::Frame(str, "FrameC", 0xFF808080, c2a);
+					//			ldr::VectorField(str, "field", 0xFFFF0000, v8{ang_c, lin_c}, v4Origin, 2.0f);
+					//			ldr::Box(str, "pt", 0xFFFFFFFF, 0.05f, pt_c);
+					//		}
+					//		ldr::Write(str, L"P:\\dump\\spatial_frameC.ldr");
+					//	}
+					//}
+
+					{
+						// At some point 'pt_a' find the velocity in frame 'a'
+						auto vel_a = lin_a + Cross(ang_a, pt_a);
+
+						// The velocity at 'pt_c' in frame 'c'
+						auto vel_c = lin_c + Cross(ang_c, pt_c);
+
+						// Should be equivalent to the velocity measured in frame 'a'
+						auto VEL_A = c2a * vel_c;
+						PR_CHECK(FEql(VEL_A, vel_a), true);
+					}
+
+					// Calculation using Spatial Transforms
+					auto A2C = Transform<Motion>(a2c);
+					auto spv1_c = A2C * spv_a;
+					{
+						auto vel_a = spv_a.LinAt(pt_a);
+						auto vel_c = spv1_c.LinAt(pt_c);
+
+						// Should be equivalent to the velocity measured in frame 'a'
+						auto VEL_A = c2a * vel_c;
+						PR_CHECK(FEql(VEL_A, vel_a), true);
+					}
+
+					// Calculation using affine transforms
+					auto spv2_c = a2c * spv_a;
+					{
+						auto vel_a = spv_a .LinAt(pt_a);
+						auto vel_c = spv2_c.LinAt(pt_c);
+
+						// Should be equivalent to the velocity measured in frame 'a'
+						auto VEL_A = c2a * vel_c;
+						PR_CHECK(FEql(VEL_A, vel_a), true);
+					}
+				}
+				{// Force vectors
+					// Calculation using 3-vectors
+					auto lin_c = a2c * lin_a;                         // Force in frame 'c'
+					auto ang_c = a2c * ang_a + Cross(a2c.pos, lin_c); // Torque in frame 'c'
+
+					{
+						// At some point 'pt_a', find the torque in frame 'a'
+						auto torque_a = ang_a + Cross(lin_a, pt_a);
+
+						// The torque at 'pt_c' in frame 'c'
+						auto torque_c = ang_c + Cross(lin_c, pt_c);
+
+						// Should be equivalent to the torque measured in frame 'a'
+						auto TORQUE_A = c2a * torque_c;
+						PR_CHECK(FEql(TORQUE_A, torque_a), true);
+					}
+
+					// Calculation using Spatial Transforms
+					auto A2C = Transform<Force>(a2c);
+					auto spf1_c = A2C * spf_a;
+					{
+						auto torque_a = spf_a.AngAt(pt_a);
+						auto torque_c = spf1_c.AngAt(pt_c);
+
+						// Should be equivalent to the torque measured in frame 'a'
+						auto TORQUE_A = c2a * torque_c;
+						PR_CHECK(FEql(TORQUE_A, torque_a), true);
+					}
+
+					// Calculation using affine transforms
+					auto spf2_c = a2c * spf_a;
+					{
+						auto torque_a = spf_a.AngAt(pt_a);
+						auto torque_c = spf2_c.AngAt(pt_c);
+
+						// Should be equivalent to the torque measured in frame 'a'
+						auto TORQUE_A = c2a * torque_c;
+						PR_CHECK(FEql(TORQUE_A, torque_a), true);
+					}
+				}
 			}
-
-		}
-		{// Transforming a spatial vector
-			auto a2b = m4x4::Transform(v4ZAxis, float(maths::tau_by_4), v4{1,1,1,1});
-			auto b2c = m4x4::Transform(v4YAxis, float(maths::tau_by_8), v4{-1,2,-3,1});
-			auto a2c = b2c * a2b;
-			auto c2a = InvertFast(a2c);
-
-			auto ang_a = v4{2,-1,1,0}; // Angular component in frame 'a'
-			auto lin_a = v4{-0.3f,1,-0.2f,0};// Linear component in frame 'a'
-			auto pt_a = v4{0.3f,-0.8f,1,0};  // A body-fixed point in frame 'a'
-			
-			// motion
-			{
-				//at 'pt' we measure the vector field to be 'vel_a'. 
-				// 'vel_a' is a sample of the vector field at 'pt'. Transforming
-
-				auto vel_a     = lin_a + Cross(ang_a, pt_a); // The velocity at 'pt' in frame 'a'
-				auto ang_c     = a2c * ang_a;                // angular velocity in frame 'c'
-				auto lin_c     = a2c * lin_a;                // linear velocity in frame 'c'
-				auto pt_c      = a2c * pt_a;                 // The point in frame 'c'
-				auto vel_c     = lin_c + Cross(ang_c, pt_c); // The velocity at 'pt' in frame 'c'
-				auto vel_A     = c2a * vel_c;                // The velocity at 'pt' in frame 'a'
-				PR_CHECK(FEql(vel_a, vel_A), true);
-
-				auto A2C = Transform<Motion>(a2c);
-				auto C2A = Transform<Motion>(c2a);
-
-				auto VEL_a = v8m{ang_a, lin_a}; // The velocity vector field in frame 'a'
-				auto VEL_c = A2C * VEL_a;       // The velocity vector field in frame 'c'
-				auto vel_C = VEL_c.lin + Cross(pt_c, VEL_c.ang);
-				PR_CHECK(FEql(vel_c, vel_C), true);
-			}
-			// force
-			{
-				auto ang_c = a2c * ang_a; // torque in frame 'c'
-				auto lin_c = a2c * lin_a; // force in frame 'c'
-			
-				auto Vf = v8f{ang_a, lin_a};
-				auto A2Cf = Transform<Force>(a2c);
-				auto Rf = A2Cf * Vf;
-			}
-
 		}
 	}
 }

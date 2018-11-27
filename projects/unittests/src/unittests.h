@@ -271,6 +271,7 @@
 #include "pr\physics2\integrater\jacobian.h"
 #include "pr\physics2\rigid_body\rigid_body.h"
 #include "pr\physics2\shape\inertia.h"
+#include "pr\physics2\shape\inertia_builder.h"
 #include "pr\physics2\shape\mass.h"
 #include "pr\physics2\shape\material.h"
 #include "pr\physics2\shape\shape_builder.h"

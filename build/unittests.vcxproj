@@ -289,6 +289,7 @@
     <ClInclude Include="..\include\pr\physics2\physics.h" />
     <ClInclude Include="..\include\pr\physics2\rigid_body\rigid_body.h" />
     <ClInclude Include="..\include\pr\physics2\shape\inertia.h" />
+    <ClInclude Include="..\include\pr\physics2\shape\inertia_builder.h" />
     <ClInclude Include="..\include\pr\physics2\shape\mass.h" />
     <ClInclude Include="..\include\pr\physics2\shape\material.h" />
     <ClInclude Include="..\include\pr\physics2\shape\shape_builder.h" />

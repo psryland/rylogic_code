@@ -58,6 +58,19 @@ namespace pr
 		{
 			return reinterpret_cast<Vec8<U> const&>(*this);
 		}
+
+		// Sample the vector field at 'ofs' returning the equivalent linear value assuming ang == 0.
+		v4 LinAt(v4_cref<> ofs)
+		{
+			return v4{lin + Cross(ang, ofs)};
+		}
+
+		// Sample the vector field at 'ofs' returning the equivalent angular value assuming lin == 0.
+		v4 AngAt(v4_cref<> ofs)
+		{
+			return v4{ang + Cross(lin, ofs)};
+		}
+
 	};
 	static_assert(maths::is_vec<Vec8<void>>::value, "");
 	static_assert(std::is_pod<Vec8<void>>::value, "v8 must be a pod type");

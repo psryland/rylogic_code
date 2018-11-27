@@ -20,39 +20,29 @@
 #include "pr/collision/shapes.h"
 #include "pr/geometry/closest_point.h"
 
-
-namespace pr
+namespace pr::physics
 {
-	namespace physics
+	// Import types into this namespace
+	using namespace ::pr::maths::spatial;
+	using namespace ::pr::collision;
+
+	// Forwards
+	struct Material;
+	struct RigidBody;
+
+	// Literals
+	constexpr float operator "" _kg(long double mass)
 	{
-		using metres_t   = float;
-		using metres²_t  = float;
-		using metres³_t  = float;
-		using kg_p_m³_t  = float;
-		using kg_t       = float;
-
-		// Import types into this namespace
-		using namespace ::pr::maths::spatial;
-		using namespace ::pr::collision;
-
-		// Forwards
-		struct Material;
-		struct RigidBody;
-
-		// Literals
-		constexpr kg_t operator "" _kg(long double mass)
-		{
-			return kg_t(mass);
-		}
-		constexpr metres_t operator "" _m(long double dist)
-		{
-			return metres_t(dist);
-		}
-
-		// Traits
-		template <typename T> struct is_rb :std::false_type {};
-		template <> struct is_rb<RigidBody> :std::true_type {};
-
-		template <typename T> using enable_if_rb = typename std::enable_if<is_rb<T>::value>::type;
+		return float(mass);
 	}
+	constexpr float operator "" _m(long double dist)
+	{
+		return float(dist);
+	}
+
+	// Traits
+	template <typename T> struct is_rb :std::false_type {};
+	template <> struct is_rb<RigidBody> :std::true_type {};
+
+	template <typename T> using enable_if_rb = typename std::enable_if<is_rb<T>::value>::type;
 }

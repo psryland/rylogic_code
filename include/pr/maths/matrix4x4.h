@@ -82,6 +82,16 @@ namespace pr
 		}
 		#endif
 
+		// Reinterpret as a different matrix type
+		template <typename U, typename V> explicit operator Mat4x4<U, V> const&() const
+		{
+			return reinterpret_cast<Mat4x4<U, V> const&>(*this);
+		}
+		template <typename U, typename V> explicit operator Mat4x4<U, V>&()
+		{
+			return reinterpret_cast<Mat4x4<U, V>&>(*this);
+		}
+
 		// Construct from DirectX::XMMATRIX (if defined)
 		template <typename M, typename = maths::enable_if_dx_mat<M>> Mat4x4(M const& mat, int = 0)
 		{
@@ -365,6 +375,28 @@ namespace pr
 	{
 		#if PR_MATHS_USE_DIRECTMATH
 		return Mat4x4<A,C>{DirectX::XMMatrixMultiply(rhs, lhs)};
+		#elif PR_MATHS_USE_INTRINSICS
+		auto ans = Mat4x4<A,C>{};
+		auto x = _mm_load_ps(lhs.x.arr);
+		auto y = _mm_load_ps(lhs.y.arr);
+		auto z = _mm_load_ps(lhs.z.arr);
+		auto w = _mm_load_ps(lhs.w.arr);
+		for (int i = 0; i != 4; ++i)
+		{
+			auto brod1 = _mm_set_ps1(rhs.arr[i].x);
+			auto brod2 = _mm_set_ps1(rhs.arr[i].y);
+			auto brod3 = _mm_set_ps1(rhs.arr[i].z);
+			auto brod4 = _mm_set_ps1(rhs.arr[i].w);
+			auto row = _mm_add_ps(
+				_mm_add_ps(
+					_mm_mul_ps(brod1, x),
+					_mm_mul_ps(brod2, y)),
+				_mm_add_ps(
+					_mm_mul_ps(brod3, z),
+					_mm_mul_ps(brod4, w)));
+			_mm_store_ps(ans.arr[i].arr, row);
+		}
+		return ans;
 		#else
 		auto ans = Mat4x4<A,C>{};
 		auto lhsT = Transpose4x4(lhs);
@@ -379,6 +411,26 @@ namespace pr
 	{
 		#if PR_MATHS_USE_DIRECTMATH
 		return Vec4<B>{DirectX::XMVector4Transform(rhs.vec, lhs)};
+		#elif PR_MATHS_USE_INTRINSICS
+		auto x = _mm_load_ps(lhs.x.arr);
+		auto y = _mm_load_ps(lhs.y.arr);
+		auto z = _mm_load_ps(lhs.z.arr);
+		auto w = _mm_load_ps(lhs.w.arr);
+
+		auto brod1 = _mm_set_ps1(rhs.x);
+		auto brod2 = _mm_set_ps1(rhs.y);
+		auto brod3 = _mm_set_ps1(rhs.z);
+		auto brod4 = _mm_set_ps1(rhs.w);
+
+		auto ans = _mm_add_ps(
+			_mm_add_ps(
+				_mm_mul_ps(brod1, x),
+				_mm_mul_ps(brod2, y)),
+			_mm_add_ps(
+				_mm_mul_ps(brod3, z),
+				_mm_mul_ps(brod4, w)));
+		
+		return Vec4<B>{ans};
 		#else
 		auto lhsT = Transpose4x4(lhs);
 		return Vec4<B>{Dot4(lhsT.x, rhs), Dot4(lhsT.y, rhs), Dot4(lhsT.z, rhs), Dot4(lhsT.w, rhs)};
@@ -716,21 +768,41 @@ namespace pr::maths
 		using namespace pr;
 		std::default_random_engine rng;
 		{
-			m4x4 m1 = m4x4Identity;
-			m4x4 m2 = m4x4Identity;
-			m4x4 m3 = m1 * m2;
+			auto m1 = m4x4Identity;
+			auto m2 = m4x4Identity;
+			auto m3 = m1 * m2;
 			PR_CHECK(FEql(m3, m4x4Identity), true);
 		}
+		{// Multiply scalar
+			auto m1 = m4x4{v4{1,2,3,4}, v4{1,1,1,1}, v4{-2,-2,-2,-2}, v4{4,3,2,1}};
+			auto m2 = 2.0f;
+			auto m3 = m4x4{v4{2,4,6,8}, v4{2,2,2,2}, v4{-4,-4,-4,-4}, v4{8,6,4,2}};
+			auto r = m1 * m2;
+			PR_CHECK(FEql(r, m3), true);
+		}
+		{// Multiply vector
+			auto m = m4x4{v4{1,2,3,4}, v4{1,1,1,1}, v4{-2,-2,-2,-2}, v4{4,3,2,1}};
+			auto v = v4{-3,4,2,-1};
+			auto R = v4{-7,-9,-11,-13};
+			auto r = m * v;
+			PR_CHECK(FEql(r, R), true);
+		}
+		{// Multiply matrix
+			auto m1 = m4x4{v4{1,2,3,4}, v4{1,1,1,1}, v4{-2,-2,-2,-2}, v4{4,3,2,1}};
+			auto m2 = m4x4{v4{1,1,1,1}, v4{2,2,2,2}, v4{-1,-1,-1,-1}, v4{-2,-2,-2,-2}};
+			auto m3 = m4x4{v4{4,4,4,4}, v4{8,8,8,8}, v4{-4,-4,-4,-4}, v4{-8,-8,-8,-8}};
+			auto r = m1 * m2;
+			PR_CHECK(FEql(r, m3), true);
+		}
 		{//m4x4Translation
-			m4x4 m2;
-			m4x4 m1 = m4x4(v4XAxis, v4YAxis, v4ZAxis, v4(1.0f, 2.0f, 3.0f, 1.0f));
-			m2 = m4x4::Translation(v4(1.0f, 2.0f, 3.0f, 1.0f));
+			auto m1 = m4x4(v4XAxis, v4YAxis, v4ZAxis, v4(1.0f, 2.0f, 3.0f, 1.0f));
+			auto m2 = m4x4::Translation(v4(1.0f, 2.0f, 3.0f, 1.0f));
 			PR_CHECK(FEql(m1, m2), true);
 		}
 		{//m4x4CreateFrom
-			v4 V1 = Random3(rng, 0.0f, 10.0f, 1.0f);
-			m4x4 a2b = m4x4::Transform(v4::Normal3(+3,-2,-1,0), +1.23f, v4(+4.4f, -3.3f, +2.2f, 1.0f));
-			m4x4 b2c = m4x4::Transform(v4::Normal3(-1,+2,-3,0), -3.21f, v4(-1.1f, +2.2f, -3.3f, 1.0f));
+			auto V1 = Random3(rng, 0.0f, 10.0f, 1.0f);
+			auto a2b = m4x4::Transform(v4::Normal3(+3,-2,-1,0), +1.23f, v4(+4.4f, -3.3f, +2.2f, 1.0f));
+			auto b2c = m4x4::Transform(v4::Normal3(-1,+2,-3,0), -3.21f, v4(-1.1f, +2.2f, -3.3f, 1.0f));
 			PR_CHECK(IsOrthonormal(a2b), true);
 			PR_CHECK(IsOrthonormal(b2c), true);
 			v4 V2 = a2b * V1;

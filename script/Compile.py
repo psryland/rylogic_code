@@ -123,7 +123,7 @@ def SetupVCEnvironment(_32bit:bool):
 	os.environ["LIBPATH"] = (
 		Tools.AssertPath(UserVars.dotnet)                                                                        + ";" +
 		Tools.AssertPath(UserVars.winsdk_references)                                                             + ";" +
-		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Foundation.UniversalApiContract\\6.0.0.0")      + ";" +
+		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Foundation.UniversalApiContract\\7.0.0.0")      + ";" +
 		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Foundation.FoundationContract\\3.0.0.0")        + ";" +
 		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Networking.Connectivity.WwanContract\\2.0.0.0") + ";" +
 		#Tools.AssertPath(UserVars.winsdk + "\\UnionMetadata" + UserVars.winsdkvers)                                             + ";" +
@@ -131,7 +131,7 @@ def SetupVCEnvironment(_32bit:bool):
 		"")
 	os.environ["WindowsLibPath"] = (
 		Tools.AssertPath(UserVars.winsdk_references) + ";"                                                       +
-		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Foundation.UniversalApiContract\\6.0.0.0")      + ";" +
+		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Foundation.UniversalApiContract\\7.0.0.0")      + ";" +
 		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Foundation.FoundationContract\\3.0.0.0")        + ";" +
 		Tools.AssertPath(UserVars.winsdk_references + "\\Windows.Networking.Connectivity.WwanContract\\2.0.0.0") + ";" +
 		#Tools.AssertPath(UserVars.winsdk + "\\UnionMetadata\\" + UserVars.winsdkvers) + ";" +
@@ -195,7 +195,8 @@ def LinkerPath():
 def Link(
 	obj_files:[],
 	bin_name:str,
-	libpaths:[]
+	libpaths:[],
+	debug:bool
 	):
 
 	# Get the linker path
@@ -204,6 +205,8 @@ def Link(
 	args = []
 	args += ["/OUT:"+bin_name]
 	args += ["/LIBPATH:"+l for l in libpaths]
+	if debug:
+		args += ["/DEBUG"]
 	
 	# Link the object files together
 	Tools.Exec([link] + args + obj_files)
@@ -239,15 +242,14 @@ def Compile(
 	# Check the paths exist
 	for f in files:
 		if os.path.exists(f): continue
-		raise FileNotFoundError("ERROR: "+f+" does not exist")
+		raise FileNotFoundError(f"ERROR: {f} does not exist")
 
 	# Pull the filepath apart
 	dir, file = os.path.split(files[0])
 	fname = os.path.splitext(file)[0]
 
 	# Default the output directory to the same path as the input file
-	outdir = os.path.abspath(outdir) if len(outdir) != 0 else dir + "\\obj"
-	outdir = os.path.normpath(outdir)
+	outdir = os.path.abspath(outdir if outdir else os.path.join(dir,"obj"))
 	if not os.path.exists(outdir): os.mkdir(outdir)
 	os.chdir(outdir)
 
@@ -261,7 +263,7 @@ def Compile(
 			"/Od" , # optimisation: disabled
 			"/Ob0", # optimisation: inline expansion depth
 			"/Oy-", # optimisation: disable frame pointer omission
-			]	
+			]
 	else:
 		sw.remove("/RTC1")
 		sw += [
@@ -301,7 +303,11 @@ def Compile(
 	exe = outdir + "\\" + fname + ".exe"
 
 	# Link the exe
-	Link([outdir + "\\" + os.path.splitext(os.path.split(f)[1])[0] + ".obj" for f in files], exe, libpaths)
+	Link(
+		[outdir + "\\" + os.path.splitext(os.path.split(f)[1])[0] + ".obj" for f in files],
+		exe,
+		libpaths,
+		debug)
 
 	# Return the name of the executable
 	return exe
@@ -321,13 +327,28 @@ def CompilePR(
 
 # Compile and execute
 if __name__ == "__main__":
+	"""Use Compile.py [run] <source_file.cpp> [<output_directory>]"""
 	try:
 		Tools.AssertVersion(1)
 		#print(sys.argv)
 
-		# Get the source file to build
-		src_file = sys.argv[1] if len(sys.argv) > 1 else input("Source File: ")
-		out_dir  = sys.argv[2] if len(sys.argv) > 2 else ""
+		run = False
+		src_file = None
+		out_dir = None
+
+		# Parse the command line arguments
+		i = 1
+		if len(sys.argv) > i and sys.argv[i] == "run":
+			run = True
+			i += 1
+		if len(sys.argv) > i:
+			src_file = sys.argv[i]
+			i += 1
+		if len(sys.argv) > i:
+			out_dir = sys.argv[i]
+			i += 1
+		if not src_file:
+			src_file = input("Source File: ")
 
 		# Set up the VC environment variables
 		SetupVCEnvironment(_32bit=False)
@@ -340,7 +361,7 @@ if __name__ == "__main__":
 			outdir     = out_dir)
 
 		# Run the executable
-		if len(exepath) != 0:
+		if run and len(exepath) != 0:
 			print("Executing: " + exepath)
 			proc = Tools.Spawn([exepath])
 			proc.wait()

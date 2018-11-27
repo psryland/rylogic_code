@@ -46,9 +46,13 @@ namespace pr
 		{}
 
 		// Reinterpret as a different matrix type
-		template <typename U, typename V> explicit operator Mat6x8<U, V>() const
+		template <typename U, typename V> explicit operator Mat6x8<U, V> const&() const
 		{
 			return reinterpret_cast<Mat6x8<U, V> const&>(*this);
+		}
+		template <typename U, typename V> explicit operator Mat6x8<U, V>&()
+		{
+			return reinterpret_cast<Mat6x8<U, V>&>(*this);
 		}
 
 		// Array of column vectors
@@ -74,10 +78,6 @@ namespace pr
 	{
 		return Mat6x8<A, B>{-m.m00, -m.m01, -m.m10, -m.m11};
 	}
-	template <typename A, typename B> inline Mat6x8<A,B> operator * (float lhs, m6_cref<A,B> rhs)
-	{
-		return rhs * lhs;
-	}
 	template <typename A, typename B> inline Mat6x8<A, B> operator + (m6_cref<A,B> lhs, m6_cref<A,B> rhs)
 	{
 		return Mat6x8<A, B>{lhs.m00 + rhs.m00, lhs.m01 + rhs.m01, lhs.m10 + rhs.m10, lhs.m11 + rhs.m11};
@@ -85,6 +85,14 @@ namespace pr
 	template <typename A, typename B> inline Mat6x8<A, B> operator - (m6_cref<A,B> lhs, m6_cref<A,B> rhs)
 	{
 		return Mat6x8<A, B>{lhs.m00 - rhs.m00, lhs.m01 - rhs.m01, lhs.m10 - rhs.m10, lhs.m11 - rhs.m11};
+	}
+	template <typename A, typename B> inline Mat6x8<A,B> operator * (m6_cref<A,B> lhs, float rhs)
+	{
+		return Mat6x8<A,B>{lhs.m00 * rhs, lhs.m01 * rhs, lhs.m10 * rhs, lhs.m11 * rhs};
+	}
+	template <typename A, typename B> inline Mat6x8<A,B> operator * (float lhs, m6_cref<A,B> rhs)
+	{
+		return rhs * lhs;
 	}
 	template <typename A, typename B> inline Vec8<B> operator * (m6_cref<A,B> lhs, Vec8<A> const& rhs)
 	{
@@ -171,7 +179,46 @@ namespace pr::maths
 				PR_CHECK(FEql(m2(c,r), M2[c][r]), true);
 			}
 		}
-		{// Multiply
+		{// Multiply vector
+			auto m = Matrix<float>{6, 6,
+			{
+				1, 1, 1, 1, 1, 1, // = [{1} {2} {3} {4} {5} {6}]
+				2, 2, 2, 2, 2, 2,
+				3, 3, 3, 3, 3, 3,
+				4, 4, 4, 4, 4, 4,
+				5, 5, 5, 5, 5, 5,
+				6, 6, 6, 6, 6, 6,
+			}};
+			auto v = Matrix<float>{1, 6,
+			{
+				1, 2, 3, 4, 5, 6,
+			}};
+			auto e = Matrix<float>{1, 6,
+			{
+				91, 91, 91, 91, 91, 91,
+			}};
+			auto r = m * v;
+			PR_CHECK(FEql(r, e), true);
+
+			auto M = m6x8
+			{
+				m3x4{v3{1},v3{2},v3{3}}, m3x4{v3{4},v3{5},v3{6}},
+				m3x4{v3{1},v3{2},v3{3}}, m3x4{v3{4},v3{5},v3{6}}, // = [{1} {2} {3} {4} {5} {6}]
+			};
+			auto V = v8
+			{
+				v4{1, 2, 3, 0},
+				v4{4, 5, 6, 0},
+			};
+			auto E = v8
+			{
+				v4{91, 91, 91, 0},
+				v4{91, 91, 91, 0},
+			};
+			auto R = M * V;
+			PR_CHECK(FEql(R, E), true);
+		}
+		{// Multiply matrix
 			auto m1 = Matrix<float>{6, 6,
 			{
 				1, 1, 1, 1, 1, 1, // = [{1} {2} {3} {4} {5} {6}]

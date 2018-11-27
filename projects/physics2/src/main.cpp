@@ -46,8 +46,6 @@ struct MainUI :Form
 	// Step the main loop
 	void Step(double elapsed_seconds)
 	{
-		(void)elapsed_seconds;
-
 		// Apply gravity: GMm/r^2
 		float const G = 1.0f;
 		auto sep = m_body0.O2W().pos - m_body1.O2W().pos;
@@ -62,7 +60,7 @@ struct MainUI :Form
 
 		// Evolve the bodies
 		for (auto body : {&m_body0, &m_body1})
-			Evolve(*body, elapsed_seconds);
+			Evolve(*body, float(elapsed_seconds));
 	}
 
 	// Render a frame

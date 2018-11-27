@@ -271,12 +271,12 @@ extern "C"
 				"{%+g %+g %+g  %+g %+g %+g} \n"
 				"{%+g %+g %+g  %+g %+g %+g} \n"
 				"{%+g %+g %+g  %+g %+g %+g} \n"
-				,R(mat.m00.x.x) , R(mat.m00.x.y) , R(mat.m00.x.z) , R(mat.m01.x.x) , R(mat.m01.x.y) , R(mat.m01.x.z)
-				,R(mat.m00.y.x) , R(mat.m00.y.y) , R(mat.m00.y.z) , R(mat.m01.y.x) , R(mat.m01.y.y) , R(mat.m01.y.z)
-				,R(mat.m00.z.x) , R(mat.m00.z.y) , R(mat.m00.z.z) , R(mat.m01.z.x) , R(mat.m01.z.y) , R(mat.m01.z.z)
-				,R(mat.m10.x.x) , R(mat.m10.x.y) , R(mat.m10.x.z) , R(mat.m11.x.x) , R(mat.m11.x.y) , R(mat.m11.x.z)
-				,R(mat.m10.y.x) , R(mat.m10.y.y) , R(mat.m10.y.z) , R(mat.m11.y.x) , R(mat.m11.y.y) , R(mat.m11.y.z)
-				,R(mat.m10.z.x) , R(mat.m10.z.y) , R(mat.m10.z.z) , R(mat.m11.z.x) , R(mat.m11.z.y) , R(mat.m11.z.z)
+				,R(mat.m00.x.x) , R(mat.m00.x.y) , R(mat.m00.x.z) , R(mat.m10.x.x) , R(mat.m10.x.y) , R(mat.m10.x.z)
+				,R(mat.m00.y.x) , R(mat.m00.y.y) , R(mat.m00.y.z) , R(mat.m10.y.x) , R(mat.m10.y.y) , R(mat.m10.y.z)
+				,R(mat.m00.z.x) , R(mat.m00.z.y) , R(mat.m00.z.z) , R(mat.m10.z.x) , R(mat.m10.z.y) , R(mat.m10.z.z)
+				,R(mat.m01.x.x) , R(mat.m01.x.y) , R(mat.m01.x.z) , R(mat.m11.x.x) , R(mat.m11.x.y) , R(mat.m11.x.z)
+				,R(mat.m01.y.x) , R(mat.m01.y.y) , R(mat.m01.y.z) , R(mat.m11.y.x) , R(mat.m11.y.y) , R(mat.m11.y.z)
+				,R(mat.m01.z.x) , R(mat.m01.z.y) , R(mat.m01.z.z) , R(mat.m11.z.x) , R(mat.m11.z.y) , R(mat.m11.z.z)
 				);
 		}
 		return S_OK;

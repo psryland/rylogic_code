@@ -172,9 +172,9 @@ namespace Rylogic.Maths
 		{
 			Math_.Transpose(ref lhs);
 			return new m3x4(
-				new v4(Math_.Dot(lhs.x, rhs.x), Math_.Dot(lhs.y, rhs.x), Math_.Dot(lhs.z, rhs.x), 0f),
-				new v4(Math_.Dot(lhs.x, rhs.y), Math_.Dot(lhs.y, rhs.y), Math_.Dot(lhs.z, rhs.y), 0f),
-				new v4(Math_.Dot(lhs.x, rhs.z), Math_.Dot(lhs.y, rhs.z), Math_.Dot(lhs.z, rhs.z), 0f));
+				new v4(Math_.Dot(lhs.x.xyz, rhs.x.xyz), Math_.Dot(lhs.y.xyz, rhs.x.xyz), Math_.Dot(lhs.z.xyz, rhs.x.xyz), 0f),
+				new v4(Math_.Dot(lhs.x.xyz, rhs.y.xyz), Math_.Dot(lhs.y.xyz, rhs.y.xyz), Math_.Dot(lhs.z.xyz, rhs.y.xyz), 0f),
+				new v4(Math_.Dot(lhs.x.xyz, rhs.z.xyz), Math_.Dot(lhs.y.xyz, rhs.z.xyz), Math_.Dot(lhs.z.xyz, rhs.z.xyz), 0f));
 		}
 
 		/// <summary>
@@ -502,9 +502,20 @@ namespace Rylogic.UnitTests
 
 	[TestFixture] public class UnitTestM3x4
 	{
-		[Test] public void TestOriFromDir()
+		[Test]
+		public void TestMultiply()
 		{
-			var dir = new v4(0,1,0,0);
+			var m1 = new m3x4(new v4(1,2,3,4), new v4(1,1,1,1), new v4(4,3,2,1));
+			var m2 = new m3x4(new v4(1,1,1,1), new v4(2,2,2,2), new v4(-2,-2,-2,-2));
+			var m3 = new m3x4(new v4(6,6,6,0), new v4(12,12,12,0), new v4(-12,-12,-12,0));
+			var r = m1 * m2;
+			Assert.True(Math_.FEql(r, m3));
+		}
+
+		[Test]
+		public void TestOriFromDir()
+		{
+			var dir = new v4(0, 1, 0, 0);
 			{
 				var ori = Math_.OriFromDir(AxisId.PosZ, dir, v4.ZAxis);
 				Assert.True(dir == ori.z);
@@ -516,7 +527,9 @@ namespace Rylogic.UnitTests
 				Assert.True(Math_.IsOrthonormal(ori));
 			}
 		}
-		[Test] public void TestInversion()
+
+		[Test]
+		public void TestInversion()
 		{
 			var rng = new Random();
 			{
@@ -524,7 +537,7 @@ namespace Rylogic.UnitTests
 				var inv_m0 = Math_.InvertFast(m);
 				var inv_m1 = Math_.Invert(m);
 				Assert.True(Math_.FEqlRelative(inv_m0, inv_m1, 0.001f));
-			}{
+			} {
 				var m = m3x4.Random(rng, -5.0f, +5.0f);
 				var inv_m = Math_.Invert(m);
 				var I0 = inv_m * m;
@@ -532,7 +545,7 @@ namespace Rylogic.UnitTests
 
 				Assert.True(Math_.FEqlRelative(I0, m3x4.Identity, 0.001f));
 				Assert.True(Math_.FEqlRelative(I1, m3x4.Identity, 0.001f));
-			}{
+			} {
 				var m = new m3x4(
 					new v4(0.25f, 0.5f, 1.0f, 0.0f),
 					new v4(0.49f, 0.7f, 1.0f, 0.0f),
@@ -546,9 +559,10 @@ namespace Rylogic.UnitTests
 				Assert.True(Math_.FEqlRelative(inv_m, INV_M, 0.001f));
 			}
 		}
-		[Test] public void TestQuatConversion()
-		{
-		}
+
+		[Test]
+		public void TestQuatConversion()
+		{}
 	}
 }
 #endif

@@ -73,6 +73,16 @@ namespace pr
 			return *this;
 		}
 
+		// Reinterpret as a different matrix type
+		template <typename U, typename V> explicit operator Mat3x4<U, V> const&() const
+		{
+			return reinterpret_cast<Mat3x4<U, V> const&>(*this);
+		}
+		template <typename U, typename V> explicit operator Mat3x4<U, V>&()
+		{
+			return reinterpret_cast<Mat3x4<U, V>&>(*this);
+		}
+
 		// Array access
 		v4_cref<> operator [](int i) const
 		{
@@ -308,22 +318,82 @@ namespace pr
 	}
 	template <typename A, typename B, typename C> inline Mat3x4<A,C> pr_vectorcall operator * (m3_cref<B,C> lhs, m3_cref<A,B> rhs)
 	{
+		#if PR_MATHS_USE_INTRINSICS
+		auto ans = Mat3x4<A,C>{};
+		auto x = _mm_load_ps(lhs.x.arr);
+		auto y = _mm_load_ps(lhs.y.arr);
+		auto z = _mm_load_ps(lhs.z.arr);
+		for (int i = 0; i != 3; ++i)
+		{
+			auto brod1 = _mm_set_ps(0, rhs.arr[i].x, rhs.arr[i].x, rhs.arr[i].x);
+			auto brod2 = _mm_set_ps(0, rhs.arr[i].y, rhs.arr[i].y, rhs.arr[i].y);
+			auto brod3 = _mm_set_ps(0, rhs.arr[i].z, rhs.arr[i].z, rhs.arr[i].z);
+			auto row = _mm_add_ps(
+				_mm_add_ps(
+					_mm_mul_ps(brod1, x),
+					_mm_mul_ps(brod2, y)),
+				_mm_mul_ps(brod3, z));
+
+			_mm_store_ps(ans.arr[i].arr, row);
+		}
+		return ans;
+		#else
 		auto ans = Mat3x4<A,C>{};
 		auto lhsT = Transpose(lhs);
 		ans.x = Vec4<void>{Dot3(lhsT.x, rhs.x), Dot3(lhsT.y, rhs.x), Dot3(lhsT.z, rhs.x), 0};
 		ans.y = Vec4<void>{Dot3(lhsT.x, rhs.y), Dot3(lhsT.y, rhs.y), Dot3(lhsT.z, rhs.y), 0};
 		ans.z = Vec4<void>{Dot3(lhsT.x, rhs.z), Dot3(lhsT.y, rhs.z), Dot3(lhsT.z, rhs.z), 0};
 		return ans;
+		#endif
 	}
 	template <typename A, typename B> inline Vec4<B> pr_vectorcall operator * (m3_cref<A,B> lhs, v4_cref<A> rhs)
 	{
+		#if PR_MATHS_USE_INTRINSICS
+		auto x = _mm_load_ps(lhs.x.arr);
+		auto y = _mm_load_ps(lhs.y.arr);
+		auto z = _mm_load_ps(lhs.z.arr);
+
+		auto brod1 = _mm_set_ps(0, rhs.x, rhs.x, rhs.x);
+		auto brod2 = _mm_set_ps(0, rhs.y, rhs.y, rhs.y);
+		auto brod3 = _mm_set_ps(0, rhs.z, rhs.z, rhs.z);
+
+		auto ans = _mm_add_ps(
+			_mm_add_ps(
+				_mm_mul_ps(brod1, x),
+				_mm_mul_ps(brod2, y)),
+			_mm_add_ps(
+				_mm_mul_ps(brod3, z),
+				_mm_set_ps(rhs.w, 0, 0, 0))
+		);
+		
+		return Vec4<B>{ans};
+		#else
 		auto lhsT = Transpose(lhs);
 		return Vec4<B>{Dot3(lhsT.x, rhs), Dot3(lhsT.y, rhs), Dot3(lhsT.z, rhs), rhs.w};
+		#endif
 	}
 	template <typename A, typename B> inline Vec3<B> pr_vectorcall operator * (m3_cref<A,B> lhs, v3_cref<A> rhs)
 	{
+		#if PR_MATHS_USE_INTRINSICS
+		auto x = _mm_load_ps(lhs.x.arr);
+		auto y = _mm_load_ps(lhs.y.arr);
+		auto z = _mm_load_ps(lhs.z.arr);
+
+		auto brod1 = _mm_set_ps(0, rhs.x, rhs.x, rhs.x);
+		auto brod2 = _mm_set_ps(0, rhs.y, rhs.y, rhs.y);
+		auto brod3 = _mm_set_ps(0, rhs.z, rhs.z, rhs.z);
+
+		auto ans = _mm_add_ps(
+			_mm_add_ps(
+				_mm_mul_ps(brod1, x),
+				_mm_mul_ps(brod2, y)),
+			_mm_mul_ps(brod3, z));
+		
+		return Vec3<B>{ans.m128_f32[0], ans.m128_f32[1], ans.m128_f32[2]};
+		#else
 		auto lhsT = Transpose3x3(lhs);
 		return Vec3<B>{Dot3(lhsT.x.xyz, rhs), Dot3(lhsT.y.xyz, rhs), Dot3(lhsT.z.xyz, rhs)};
+		#endif
 	}
 	#pragma endregion
 
@@ -706,7 +776,34 @@ namespace pr::maths
 	PRUnitTest(Matrix3x3Tests)
 	{
 		std::default_random_engine rng;
-
+		{// Multiply scalar
+			auto m1 = m3x4{v4{1,2,3,4}, v4{1,1,1,1}, v4{4,3,2,1}};
+			auto m2 = 2.0f;
+			auto m3 = m3x4{v4{2,4,6,8}, v4{2,2,2,2}, v4{8,6,4,2}};
+			auto r = m1 * m2;
+			PR_CHECK(FEql(r, m3), true);
+		}
+		{// Multiply vector4
+			auto m = m3x4{v4{1,2,3,4}, v4{1,1,1,1}, v4{4,3,2,1}};
+			auto v = v4{-3,4,2,-2};
+			auto R = v4{9,4,-1,-2};
+			auto r = m * v;
+			PR_CHECK(FEql(r, R), true);
+		}
+		{// Multiply vector3
+			auto m = m3x4{v4{1,2,3,4}, v4{1,1,1,1}, v4{4,3,2,1}};
+			auto v = v3{-3,4,2};
+			auto R = v3{9,4,-1};
+			auto r = m * v;
+			PR_CHECK(FEql(r, R), true);
+		}
+		{// Multiply matrix
+			auto m1 = m3x4{v4{1,2,3,4}, v4{1,1,1,1}, v4{4,3,2,1}};
+			auto m2 = m3x4{v4{1,1,1,1}, v4{2,2,2,2}, v4{-2,-2,-2,-2}};
+			auto m3 = m3x4{v4{6,6,6,0}, v4{12,12,12,0}, v4{-12,-12,-12,0}};
+			auto r = m1 * m2;
+			PR_CHECK(FEql(r, m3), true);
+		}
 		{//OriFromDir
 			using namespace pr;
 			v4 dir(0,1,0,0);
