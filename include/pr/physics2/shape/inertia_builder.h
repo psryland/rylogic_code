@@ -6,6 +6,7 @@
 
 #include "pr/physics2/forward.h"
 #include "pr/physics2/shape/mass.h"
+#include "pr/physics2/shape/inertia.h"
 
 namespace pr::physics
 {
@@ -71,14 +72,14 @@ namespace pr::physics
 			m.x.y = m.y.x = products.x;
 			m.x.z = m.z.x = products.y;
 			m.y.z = m.z.y = products.z;
-			assert(Check());
+			assert(Inertia::Check(m));
 		}
 
 		// Construct an Inertia from a symmetric 3x3 matrix.
 		explicit InertiaBuilder(m3_cref<> rhs)
 			:m(rhs)
 		{
-			assert(Check());
+			assert(Inertia::Check(m));
 		}
 
 		// Create a principal inertia matrix with identical diagonal elements, like a sphere
@@ -89,13 +90,19 @@ namespace pr::physics
 			:m()
 		{
 			m.x.x = m.y.y = m.z.z = moment;
-			assert(Check());
+			assert(Inertia::Check(m));
 		}
 
 		// Convertible to m3x4
 		operator m3x4 const&() const
 		{
 			return m;
+		}
+
+		// Convert to Inertia
+		Inertia ToInertia(float mass) const
+		{
+			return Inertia(m, mass);
 		}
 
 		// Returns an Inertia, assumed to be in frame A, rotated to frame B using rotation 'a2b'
@@ -143,46 +150,35 @@ namespace pr::physics
 			return InertiaBuilder(inertia);
 		}
 
-		// Create an Inertia matrix for a point at 'position'
-		static InertiaBuilder PointAt(v4_cref<> position)
+		// Create an inertia matrix for a point at 'offset'
+		static InertiaBuilder Point(v4_cref<> offset = v4{})
 		{
-			auto xx = position.x * position.x;
-			auto yy = position.y * position.y;
-			auto zz = position.z * position.z;
-			auto xy = position.x * position.y;
-			auto xz = position.x * position.z;
-			auto yz = position.y * position.z;
-			return InertiaBuilder(v4(yy+zz, xx+zz, xx+yy, 0), v4(-xy, -xz, -yz, 0));
+			auto xx = Sqr(offset.x);
+			auto yy = Sqr(offset.y);
+			auto zz = Sqr(offset.z);
+			auto xy = offset.x * offset.y;
+			auto xz = offset.x * offset.z;
+			auto yz = offset.y * offset.z;
+			return InertiaBuilder(v4{yy+zz, xx+zz, xx+yy, 0}, v4{-xy, -xz, -yz, 0});
 		}
 
-		// Sanity check
-		bool Check() const
+		// Create an inertia matrix for a sphere at 'offset'
+		static InertiaBuilder Sphere(float radius, v4_cref<> offset = v4{})
 		{
-			// Check for any value == NaN
-			if (IsNaN(m))
-				return false;
+			InertiaBuilder ib((2.0f/5.0f) * Sqr(radius));
+			ib.Translate(offset, 1.0f, EOffset::AwayFromCoM);
+			return ib;
+		}
 
-			float d[] = {m.x.x, m.y.y, m.z.z}; // moments (diagonal)
-			float p[] = {m.x.y, m.x.z, m.y.z}; // products (lower triangle)
-
-			// Diagonals of an Inertia matrix must be non-negative
-			if (d[0] < 0 || d[1] < 0 || d[2] < 0)
-				return false;
-
-			// Diagonals of an Inertia matrix must satisfy the triangle inequality: a + b >= c
-			// Might need to relax 'tol' due to distorted rotation matrices: using: 'Max(Sum(d), 1) * tiny_sqrt'
-			if (d[0] + d[1] < d[2] ||
-				d[1] + d[2] < d[0] ||
-				d[2] + d[0] < d[1])
-				return false;
-
-			// The magnitude of a product of inertia was too large to be physical.
-			if (d[0] < Abs(2 * p[2]) || 
-				d[1] < Abs(2 * p[1]) ||
-				d[2] < Abs(2 * p[0]))
-				return false;
-
-			return true;
+		// Create an inertia matrix for a box at 'offset'
+		static InertiaBuilder Box(v4_cref<> radius, v4_cref<> offset = v4{})
+		{
+			auto xx = (1.0f/3.0f) * (Sqr(radius.y) + Sqr(radius.z));
+			auto yy = (1.0f/3.0f) * (Sqr(radius.z) + Sqr(radius.x));
+			auto zz = (1.0f/3.0f) * (Sqr(radius.x) + Sqr(radius.y));
+			InertiaBuilder ib(v4{xx,yy,zz,0}, v4{});
+			ib.Translate(offset, 1.0f, EOffset::AwayFromCoM);
+			return ib;
 		}
 	};
 

@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2009
 //************************************************************************
 #pragma once
-#ifndef PR_PROPERTY_H
-#define PR_PROPERTY_H
 
 #include "pr/meta/alignment_of.h"
 #include "pr/meta/aligned_type.h"
@@ -14,11 +12,16 @@
 
 namespace pr
 {
-	namespace EPropertyType { enum Type { Get = 1, Set = 2, GetSet = 3 }; }
+	enum class EPropertyType
+	{
+		Get = 1,
+		Set = 2,
+		GetSet = 3 
+	};
 
 	namespace impl
 	{
-		template <EPropertyType::Type RW, typename GetSet, typename Get, typename Set> struct PropType { typedef void type; };
+		template <EPropertyType RW, typename GetSet, typename Get, typename Set> struct PropType { typedef void type; };
 		template <typename GetSet, typename Get, typename Set> struct PropType<EPropertyType::GetSet, GetSet, Get, Set> { typedef GetSet type; };
 		template <typename GetSet, typename Get, typename Set> struct PropType<EPropertyType::Get   , GetSet, Get, Set> { typedef Get    type; };
 		template <typename GetSet, typename Get, typename Set> struct PropType<EPropertyType::Set   , GetSet, Get, Set> { typedef Set    type; };
@@ -186,5 +189,3 @@ namespace pr
 		using PropertyRW<ValueType>::operator pr::PropertyR<ValueType>;
 	};
 }
-
-#endif

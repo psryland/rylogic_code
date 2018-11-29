@@ -6073,16 +6073,31 @@ namespace Rylogic.Gui.WinForms
 				set
 				{
 					if (ActiveContent == value) return;
-
-					// Ensure 'value' is the active content on its pane
 					if (value != null)
+					{
+						// If the content is not assigned to a Pane, add it to the currently active pane.
+						if (value.DockPane == null)
+						{
+							// If there is no currently active pane, then 'value' cannot become the active content.
+							if (TreeHost.ActivePane != null)
+								value.DockPane = TreeHost.ActivePane;
+							else
+								throw new Exception($"Cannot set content '{value}' as the active content, because there is not active pane to add it too");
+						}
+
+						// Ensure 'value' is the active content on its pane
 						value.DockPane.VisibleContent = value;
 
-					// Set value's pane as the active one.
-					// If value's pane was the active one before, then setting 'value' as the active content
-					// on the pane will also have caused an OnActiveContentChanged to be called. If not, then
-					// changing the active pane here will result in OnActiveContentChanged being called.
-					ActivePane = value?.DockPane;
+						// Set value's pane as the active one.
+						// If value's pane was the active one before, then setting 'value' as the active content
+						// on the pane will also have caused an OnActiveContentChanged to be called. If not, then
+						// changing the active pane here will result in OnActiveContentChanged being called.
+						ActivePane = value.DockPane;
+					}
+					else
+					{
+						ActivePane = null;
+					}
 				}
 			}
 

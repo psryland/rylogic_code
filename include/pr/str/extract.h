@@ -670,19 +670,19 @@ namespace pr::str
 
 			s = src;
 			PR_CHECK(ExtractIdentifier(aarr, s) && Equal(aarr, "_ident") && *s == L' ', true);
-			PR_CHECK(ExtractIdentifierC(aarr, ++s) && Equal(aarr, "_identident2") && *s == L'i', true);
+			PR_CHECK(ExtractIdentifierC(aarr, ++s) && Equal(aarr, "ident2") && *s == L'i', true);
 
 			s = src;
 			PR_CHECK(ExtractIdentifier(warr, s) && Equal(warr, "_ident") && *s == L' ', true);
-			PR_CHECK(ExtractIdentifierC(warr, ++s) && Equal(warr, "_identident2") && *s == L'i', true);
+			PR_CHECK(ExtractIdentifierC(warr, ++s) && Equal(warr, "ident2") && *s == L'i', true);
 
 			s = src;
 			PR_CHECK(ExtractIdentifier(astr, s) && Equal(astr, "_ident") && *s == L' ', true);
-			PR_CHECK(ExtractIdentifierC(astr, ++s) && Equal(astr, "_identident2") && *s == L'i', true);
+			PR_CHECK(ExtractIdentifierC(astr, ++s) && Equal(astr, "ident2") && *s == L'i', true);
 
 			s = src;
 			PR_CHECK(ExtractIdentifier(wstr, s) && Equal(wstr, "_ident") && *s == L' ', true);
-			PR_CHECK(ExtractIdentifierC(wstr, ++s) && Equal(wstr, "_identident2") && *s == L'i', true);
+			PR_CHECK(ExtractIdentifierC(wstr, ++s) && Equal(wstr, "ident2") && *s == L'i', true);
 		}
 		{// String
 			using namespace pr::str;
@@ -695,19 +695,19 @@ namespace pr::str
 
 			s = src;
 			PR_CHECK(ExtractString(aarr, s, L'\\', nullptr) && Equal(aarr, "string1") && *s == L' ', true);
-			PR_CHECK(ExtractStringC(aarr, ++s, L'\\', nullptr) && Equal(aarr, R"(string1str"i\ng2)") && *s == L'"', true);
+			PR_CHECK(ExtractStringC(aarr, ++s, L'\\', nullptr) && Equal(aarr, R"(str"i\ng2)") && *s == L'"', true);
 
 			s = src;
 			PR_CHECK(ExtractString(warr, s) && Equal(warr, "string1") && *s == L' ', true);
-			PR_CHECK(ExtractStringC(warr, ++s) && Equal(warr, R"(string1str\)") && *s == L'"', true);
+			PR_CHECK(ExtractStringC(warr, ++s) && Equal(warr, R"(str\)") && *s == L'"', true);
 
 			s = src;
 			PR_CHECK(ExtractString(astr, s, L'\\', nullptr) && Equal(astr, "string1") && *s == L' ', true);
-			PR_CHECK(ExtractStringC(astr, ++s, L'\\', nullptr) && Equal(astr, R"(string1str"i\ng2)") && *s == L'"', true);
+			PR_CHECK(ExtractStringC(astr, ++s, L'\\', nullptr) && Equal(astr, R"(str"i\ng2)") && *s == L'"', true);
 
 			s = src;
 			PR_CHECK(ExtractString(wstr, s) && Equal(wstr, "string1") && *s == L' ', true);
-			PR_CHECK(ExtractStringC(wstr, ++s) && Equal(wstr, R"(string1str\)") && *s == L'"', true);
+			PR_CHECK(ExtractStringC(wstr, ++s) && Equal(wstr, R"(str\)") && *s == L'"', true);
 		}
 		{// Bool
 			using namespace pr::str;

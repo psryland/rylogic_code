@@ -32,6 +32,12 @@
     <Filter Include="pr\maths">
       <UniqueIdentifier>{b1e41304-46c3-4eb7-ac89-da6455d1835d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\ldraw">
+      <UniqueIdentifier>{4ddb25be-c541-41a0-a212-6ae4b70d0ff8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\physics\utility">
+      <UniqueIdentifier>{9f24ebf5-b77b-42f0-b536-a3c844f33c79}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\physics2/src\main.cpp">
@@ -161,6 +167,15 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\maths\vector4.h">
       <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\ldraw\ldr_helper.h">
+      <Filter>pr\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\ldraw\ldr_object.h">
+      <Filter>pr\ldraw</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\utility\ldraw.h">
+      <Filter>pr\physics\utility</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

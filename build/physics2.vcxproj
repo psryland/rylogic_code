@@ -43,6 +43,8 @@
     <ClInclude Include="..\include\pr\collision\support.h" />
     <ClInclude Include="..\include\pr\gui\view3d_panel.h" />
     <ClInclude Include="..\include\pr\gui\wingui.h" />
+    <ClInclude Include="..\include\pr\ldraw\ldr_helper.h" />
+    <ClInclude Include="..\include\pr\ldraw\ldr_object.h" />
     <ClInclude Include="..\include\pr\maths\maths.h" />
     <ClInclude Include="..\include\pr\maths\matrix4x4.h" />
     <ClInclude Include="..\include\pr\maths\spatial.h" />
@@ -60,6 +62,7 @@
     <ClInclude Include="..\include\pr\physics2\shape\material.h" />
     <ClInclude Include="..\include\pr\physics2\shape\shape_builder.h" />
     <ClInclude Include="..\include\pr\physics2\shape\shape_mass.h" />
+    <ClInclude Include="..\include\pr\physics2\utility\ldraw.h" />
     <ClInclude Include="..\include\pr\view3d\view3d.h" />
     <ClInclude Include="..\projects\physics2/src\body.h" />
     <ClInclude Include="..\projects\physics2/src\forward.h" />

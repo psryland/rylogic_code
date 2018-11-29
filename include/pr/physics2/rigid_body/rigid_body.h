@@ -13,23 +13,32 @@ namespace pr::physics
 	{
 	protected:
 
-		// World space position/orientation of the rigid bodies' centre of mass
+		// Notes:
+		//  - Object space that the collision model is given in. It has the model origin at (0,0,0),
+		//    the coordinate frame equal to the root object in the collision shape, and the centre of
+		//    mass at 'm_os_com'.
+		//  - Dynamics state is stored in world space but relative to the model origin. Since momentum
+		//    and force are direction vectors floating point accuracy is not an issue.
+		//  - Careful with spatial vectors, transforming a spatial vector does not move it, it describes
+		//    it from a new position/orientation. Changing 'o2w' does move the spatial vectors though.
+
+		// World space position/orientation of the rigid body
+		// This is the position of the model origin in world space (not the CoM)
 		m4x4 m_o2w;
 
-		// World space spatial velocity
+		// Offset from the model origin to the CoM (in object space). 
+		v4 m_os_com;
+
+		// World space spatial momentum, measured at the model origin (not CoM)
 		v8f m_ws_momentum;
 
-		// The external forces and torques applied to this body (in world space).
-		// This accumulator is reset to zero after each physics step, so forces that
-		// should be constant need to be applied each frame.
+		// The external forces and torques applied to this body (in world space), measured at the model origin (not CoM).
+		// This value is an accumulator and is reset to zero after each physics step so forces that should
+		// be constant need to be applied each frame.
 		v8f m_ws_force;
 
-		// Mass properties.
-		// Currently this is just simple 3x3 inertia. Articulated bodies will need 6x6 inertia.
-		Inertia m_os_inertia;
-
-		// Vector from the 
-		v4 m_model_origin_to_com;
+		// Inertia, measured at the model origin (not CoM). Currently this is just simple 3x3 inertia. Articulated bodies will need 6x6 inertia.
+		InertiaInv m_os_inertia_inv;
 
 		// Collision shape
 		Shape const* m_shape;
@@ -37,17 +46,30 @@ namespace pr::physics
 	public:
 
 		// Construct the rigid body with a collision shape
-		// Inertia is not automatically derived from the collision shape,
-		// that is left to the caller.
-		template <typename TShape, typename = enable_if_shape<TShape>>
-		RigidBody(TShape const* shape)
-			:m_o2w(m4x4Identity)
-			,m_ws_velocity()
-			,m_ws_force()
-			,m_os_inertia()
-			,m_model_origin_to_com()
-			,m_shape(&shape->m_base)
+		// Inertia is not automatically derived from the collision shape, that is left to the caller.
+		RigidBody()
+			:RigidBody((ShapeSphere const*)nullptr)
 		{}
+		template <typename TShape, typename = enable_if_shape<TShape>>
+		explicit RigidBody(TShape const* shape, m4_cref<> o2w = m4x4Identity)
+			:m_o2w(o2w)
+			,m_os_com()
+			,m_ws_momentum()
+			,m_ws_force()
+			,m_os_inertia_inv()
+			,m_shape(collision::shape_cast(shape))
+		{}
+
+		// Access the collision shape for the rigid body
+		template <typename TShape, typename = enable_if_shape<TShape>>
+		TShape const& Shape() const
+		{
+			return shape_cast<TShape>(*m_shape);
+		}
+		collision::Shape const& Shape() const
+		{
+			return *m_shape;
+		}
 
 		// Get/Set the body object to world transform
 		m4_cref<> O2W() const
@@ -58,99 +80,377 @@ namespace pr::physics
 		{
 			return InvertFast(O2W());
 		}
-		void O2W(m4_cref<> o2w, bool update_inertia = true)
+		void O2W(m4_cref<> o2w)
 		{
 			m_o2w = o2w;
-
-			//// Update the world space inertia matrix when the orientation changes
-			//if (update_inertia)
-			//{
-			//	//' Iw = (o2w * Io * w2o)^-1  =  w2o^-1 * Io^-1 * o2w^-1  =  o2w * Io^-1 * w2o
-			//	//' where Iw = world space inertia, Io = object space inertia
-			//	m_ws_inertia_inv = m_o2w.rot * m_os_inertia_inv * Transpose(m_o2w.rot); 
-			//}
 		}
 
-		// Object space inertia
-		Inertia const& InertiaOS() const
+		// The mass of the rigid body
+		float Mass() const
 		{
-			return m_os_inertia;
+			return InertiaInvOS().Mass();
 		}
+
+		// Offset to the centre of mass (w = 0) (Object relative)
+		v4_cref<> CentreOfMassOS() const
+		{
+			return m_os_com;
+		}
+		v4 CentreOfMassWS() const
+		{
+			return O2W() * CentreOfMassOS();
+		}
+
+		// InertiaInv
 		InertiaInv InertiaInvOS() const
 		{
-			return Invert(InertiaOS());
+			return m_os_inertia_inv;
 		}
-
-		// World space inertia
 		InertiaInv InertiaInvWS() const
 		{
-			auto inv_inertia_os = InertiaInvOS().To3x3();
-			return W2O() * ;
+			return Transform(InertiaInvOS(), O2W().rot);
+		}
+		Inertia InertiaOS() const
+		{
+			return Invert(InertiaInvOS());
+		}
+		Inertia InertiaWS() const
+		{
+			return Invert(InertiaInvWS());
 		}
 
-		// Get/Set the object space velocity
+		// Get/Set the velocity
 		v8m VelocityWS() const
 		{
-			auto os_momentum = W2O() * MomentumWS();
-			auto os_velocity = InertiaInvOS() * os_momentum;
-			return O2W() * os_velocity;
+			auto ws_velocity = InertiaInvWS() * MomentumWS();
+			return ws_velocity;
 		}
-		void VelocityWS(v8m const& velocity)
+		v8m VelocityOS() const
 		{
-			auto os_velocity = W2O() * velocity;
-			auto os_momentum = InertiaOS() * os_velocity;
-			auto ws_momentum = W2O() * os_momentum;
+			return W2O().rot * VelocityWS();
+		}
+		void VelocityWS(v8m const& ws_velocity)
+		{
+			auto ws_momentum = InertiaWS() * ws_velocity;
 			MomentumWS(ws_momentum);
 		}
+		void VelocityOS(v8m const& os_velocity)
+		{
+			auto ws_velocity = O2W().rot * os_velocity;
+			VelocityWS(ws_velocity);
+		}
+		void VelocityWS(v4_cref<> ws_ang, v4_cref<> ws_lin)
+		{
+			auto spatial_velocity = v8m{ws_ang, ws_lin};
+			VelocityWS(spatial_velocity);
+		}
+		void VelocityOS(v4_cref<> os_ang, v4_cref<> os_lin)
+		{
+			auto ws_ang = O2W() * os_ang;
+			auto ws_lin = O2W() * os_lin;
+			VelocityWS(ws_ang, ws_lin);
+		}
 
-		// Get/Set the momentum of the rigid body (in world space)
+		// Get/Set the momentum of the rigid body
 		v8f MomentumWS() const
 		{
 			return m_ws_momentum;
+		}
+		v8f MomentumOS() const
+		{
+			return W2O().rot * MomentumWS();
 		}
 		void MomentumWS(v8f const& ws_momentum)
 		{
 			m_ws_momentum = ws_momentum;
 		}
-
-		// Get/Set the current forces applied to this body
-		v8f const& ForceWS() const
+		void MomentumOS(v8f const& os_momentum)
 		{
-			return m_ws_force;
-		}
-		void ForceWS(v8f const& force)
-		{
-			m_ws_force = force;
-		}
-
-		// Add an object space force acting on the rigid body
-		void ApplyForceOS(v8f const& force)
-		{
-			// Todo: Store object space forces separately, so they can
-			// be rotated with the body during integration.
-			ApplyForceWS(m_o2w * force);
-		}
-		void ApplyForceOS(v4 const& force, v4 const& torque, v4 const& at)
-		{
-			assert("'at' should be an offset (in object space) from the object centre of mass" && at.w == 0.0f);
-			ApplyForceOS(v8f(torque + Cross3(at, force), force));
-		}
-
-		// Add a world space force acting on the rigid body
-		void ApplyForceWS(v8f const& force)
-		{
-			m_ws_force += force;
-		}
-		void ApplyForceWS(v4 const& force, v4 const& torque, v4 const& at)
-		{
-			ApplyForceWS(v8f(torque + Cross3(at, force), force));
+			auto ws_momentum = O2W().rot * os_momentum;
+			MomentumWS(ws_momentum);
 		}
 
 		// Reset the state of the body
-		void UpdateDerivedState()
+		void ZeroForces()
 		{
-		//	m_ws_bbox = rb.ObjectToWorld() * rb.BBoxOS();
-		//	m_ws_inv_inertia_tensor = InvInertiaTensorWS(rb.Orientation(), rb.m_os_inv_inertia_tensor); //Iw = (o2w * Io * w2o)^-1  =  w2o^-1 * Io^-1 * o2w^-1  =  o2w * Io^-1 * w2o
+			m_ws_force = v8f{};
+		}
+		void ZeroMomentum()
+		{
+			m_ws_momentum = v8f{};
+		}
+
+		// Get/Set the current forces applied to this body.
+		v8f ForceWS() const
+		{
+			return m_ws_force;
+		}
+		v8f ForceOS() const
+		{
+			return W2O().rot * ForceWS();
+		}
+
+		// Add a force acting on the rigid body at position 'at' (world space, object origin relative, not CoM relative)
+		void ApplyForceWS(v4_cref<> ws_force, v4_cref<> ws_torque, v4_cref<> ws_at = v4Zero)
+		{
+			assert("'at' should be an offset (in world space) from the object origin" && ws_at.w == 0);
+			auto spatial_force = v8f{ws_torque + Cross3(ws_at - CentreOfMassWS(), ws_force), ws_force};
+			ApplyForceWS(spatial_force);
+		}
+		void ApplyForceWS(v8f const& ws_force)
+		{
+			m_ws_force += ws_force;
+		}
+
+		// Add a force acting on the rigid body at position 'at' (object space, not CoM relative)
+		void ApplyForceOS(v4_cref<> os_force, v4_cref<> os_torque, v4_cref<> os_at = v4Zero)
+		{
+			assert("'at' should be an offset (in object space) from the object origin" && os_at.w == 0);
+			auto o2w = O2W();
+			auto ws_force  = o2w * os_force;
+			auto ws_torque = o2w * os_torque;
+			auto ws_at     = o2w * os_at;
+			ApplyForceWS(ws_force, ws_torque, ws_at);
+		}
+		void ApplyForceOS(v8f const& os_force)
+		{
+			auto ws_force = O2W().rot * os_force;
+			ApplyForceWS(ws_force);
+		}
+
+		// Set the mass properties of the body.
+		// 'os_inertia' is the inertia for the body, measured at the model origin (not CoM) (in object space)
+		// 'os_model_to_com' is the vector from the model origin to the body's centre of mass (in object space)
+		void SetMassProperties(Inertia const& os_inertia, v4_cref<> os_model_to_com = v4{})
+		{
+			// Notes:
+			//  - os_inertia.CoM() vs. os_model_to_com:
+			//    See comments for 'Inertia', but you probably want 'os_inertia.CoM()' to be zero. It is really only
+			//    used with spatial vectors. 'os_model_to_com' is the more common case where the inertia has been
+			//    measured at a point that isn't the CoM (typically the model origin). This is recorded so that
+			//    callers can apply forces to the CoM.
+			assert("'os_model_to_com' should be an offset (in world space) from the object origin" && os_model_to_com.w == 0);
+			
+			// Object space inertia inverse
+			m_os_inertia_inv = Invert(os_inertia);
+
+			// Position of the centre of mass (in object space)
+			m_os_com = os_model_to_com;
+		}
+
+		// Return the kinetic energy of the body
+		float KineticEnergy() const
+		{
+			// KE = 0.5 v.h = 0.5 v.Iv
+			auto ke = 0.5f * Dot(VelocityWS(), MomentumWS());
+			return ke;
 		}
 	};
 }
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+#include "pr/physics2/shape/inertia_builder.h"
+#include "pr/physics2/integrater/integrater.h"
+
+namespace pr::physics
+{
+	PRUnitTest(RigidBodyTests)
+	{
+		auto mass = 5.0f;
+		{// Simple case
+			auto rb = RigidBody{};
+			rb.SetMassProperties(InertiaBuilder::Sphere(1).ToInertia(mass), v4{});
+
+			// Apply a force and torque. The force at (0,1,0) cancels out the torque
+			rb.ApplyForceWS(v4{1,0,0,0}, v4{0,0,1,0}, v4{0,1,0,0});
+			
+			// Check force applied
+			auto ws_force = rb.ForceWS();
+			auto os_force = rb.ForceOS();
+			PR_CHECK(FEql(ws_force, v8f{0,0,0, 1,0,0}), true);
+			PR_CHECK(FEql(os_force, v8f{0,0,0, 1,0,0}), true);
+
+			// Integrate for 1 sec
+			Evolve(rb, 1.0f);
+
+			// Check position
+			// Distance travelled: S = So + Vot + 0.5At²; So = 0, Vo = 0, t = 1, A = F/m, F = 1  =>  S = 0.5/mass
+			auto o2w = rb.O2W();
+			PR_CHECK(FEql(o2w.rot, m3x4Identity), true);
+			PR_CHECK(FEql(o2w.pos, v4{0.5f / mass,0,0,1}), true);
+
+			// Check the momentum
+			auto ws_mom = rb.MomentumWS();
+			auto os_mom = rb.MomentumOS();
+			PR_CHECK(FEql(ws_mom, v8f{0,0,0, 1,0,0}), true);
+			PR_CHECK(FEql(os_mom, v8f{0,0,0, 1,0,0}), true);
+
+			// Check the velocity
+			// Velocity: V = Vo + At; Vo = 0, t = 1, A = F/m, F = 1  =>  V = 1/mass
+			auto ws_vel = rb.VelocityWS();
+			auto os_vel = rb.VelocityOS();
+			PR_CHECK(FEql(ws_vel, v8m{0,0,0, 1/mass,0,0}), true);
+			PR_CHECK(FEql(os_vel, v8m{0,0,0, 1/mass,0,0}), true);
+		}
+		{// Simple case with rotation
+			auto rb = RigidBody{};
+			rb.SetMassProperties(InertiaBuilder::Sphere(1).ToInertia(mass), v4{});
+
+			// Apply a force and torque. The force at (0,-1,0) doubles the torque
+			rb.ApplyForceWS(v4{1,0,0,0}, v4{0,0,1,0}, v4{0,-1,0,0});
+
+			// Check force applied
+			auto ws_force = rb.ForceWS();
+			auto os_force = rb.ForceOS();
+			PR_CHECK(FEql(ws_force, v8f{0,0,2, 1,0,0}), true);
+			PR_CHECK(FEql(os_force, v8f{0,0,2, 1,0,0}), true);
+
+			// Integrate for 1 sec
+			Evolve(rb, 1.0f);
+
+			// Check position
+			// Distance: S = So + Vot + 0.5At²; So = 0, Vo = 0, t = 1, A = F/m, F = 1  =>  S = 0.5/mass
+			// Rotation: O = Oo + Wot + 0.5At²; Oo = 0, Wo = 0, t = 1, A = I^T, T = 2  =>  O = 0.5*I^(0,0,2)
+			auto o2w = rb.O2W();
+			auto pos = v4{0.5f / mass,0,0,1};
+			auto rot = m3x4::Rotation(0.5f * (rb.InertiaInvWS() * v4{0,0,2,0}));
+			auto invrot = InvertFast(rot);
+			PR_CHECK(FEql(o2w.pos, pos), true);
+			PR_CHECK(FEql(o2w.rot, rot), true);
+
+			// Check the momentum
+			auto ws_mom = rb.MomentumWS();
+			auto os_mom = rb.MomentumOS();
+			auto WS_MOM = v8f{0,0,2, 1,0,0};
+			auto OS_MOM = invrot * WS_MOM;
+			PR_CHECK(FEql(ws_mom, WS_MOM), true);
+			PR_CHECK(FEql(os_mom, OS_MOM), true);
+
+			// Check the velocity
+			// Velocity: V = Vo + At; Vo = 0, t = 1, A = F/m, F = 1  =>  V = 1/mass
+			// Rotation: W = Wo + At; Wo = 0, t = 1, A = I^T, T = 2  =>  W = I^(0,0,2)
+			auto ws_vel = rb.VelocityWS();
+			auto os_vel = rb.VelocityOS();
+			auto WS_VEL = v8m{(rb.InertiaInvWS() * v4{0,0,2,0}), v4{1/mass,0,0,0}};
+			auto OS_VEL = invrot * WS_VEL;
+			PR_CHECK(FEql(ws_vel, WS_VEL), true);
+			PR_CHECK(FEql(os_vel, OS_VEL), true);
+		}
+		{// Off-centre CoM
+			auto rb = RigidBody{};
+			auto model_to_com = v4{0,1,0,0};
+			rb.SetMassProperties(InertiaBuilder::Sphere(1, model_to_com).ToInertia(mass), model_to_com);
+			
+			// Apply a force and torque at the CoM.
+			rb.ApplyForceWS(v4{1,0,0,0}, v4{}, rb.CentreOfMassWS());
+
+			// Check force applied
+			// Spatial force measured at the model origin
+			auto ws_force = rb.ForceWS();
+			auto os_force = rb.ForceOS();
+			PR_CHECK(FEql(ws_force, v8f{0,0,0, 1,0,0}), true);
+			PR_CHECK(FEql(os_force, v8f{0,0,0, 1,0,0}), true);
+
+			// Integrate for 1 sec
+			Evolve(rb, 1.0f);
+
+			// Check position
+			auto o2w = rb.O2W();
+			PR_CHECK(FEql(o2w.rot, m3x4Identity), true);
+			PR_CHECK(FEql(o2w.pos, v4{0.5f / mass,0,0,1}), true);
+
+			// Check the momentum
+			auto ws_mom = rb.MomentumWS();
+			auto os_mom = rb.MomentumOS();
+			PR_CHECK(FEql(ws_mom, v8f{0,0,0, 1,0,0}), true);
+			PR_CHECK(FEql(os_mom, v8f{0,0,0, 1,0,0}), true);
+
+			// Check the velocity
+			auto ws_vel = rb.VelocityWS();
+			auto os_vel = rb.VelocityOS();
+			PR_CHECK(FEql(ws_vel, v8m{0,0,0, 1/mass,0,0}), true);
+			PR_CHECK(FEql(os_vel, v8m{0,0,0, 1/mass,0,0}), true);
+		}
+		{// Off-centre CoM with rotation
+			auto rb = RigidBody{};
+			auto model_to_com = v4{0,1,0,0};
+			rb.SetMassProperties(InertiaBuilder::Sphere(1, model_to_com).ToInertia(mass), model_to_com);
+			
+			// Apply a force and torque at the model origin.
+			rb.ApplyForceWS(v4{1,0,0,0}, v4{0,0,1,0});
+
+			// Check force applied
+			// Spatial force measured at the model origin
+			auto ws_force = rb.ForceWS();
+			auto os_force = rb.ForceOS();
+			PR_CHECK(FEql(ws_force, v8f{0,0,2, 1,0,0}), true);
+			PR_CHECK(FEql(os_force, v8f{0,0,2, 1,0,0}), true);
+
+			// Integrate for 1 sec
+			Evolve(rb, 1.0f);
+
+			// Check position
+			auto o2w = rb.O2W();
+			auto pos = v4{0.5f / mass,0,0,1};
+			auto rot = m3x4::Rotation(0.5f * (rb.InertiaInvWS() * v4{0,0,2,0}));
+			auto invrot = InvertFast(rot);
+			PR_CHECK(FEql(o2w.pos, pos), true);
+			PR_CHECK(FEql(o2w.rot, rot), true);
+
+			// Check the momentum
+			auto ws_mom = rb.MomentumWS();
+			auto os_mom = rb.MomentumOS();
+			auto WS_MOM = v8f{0,0,2, 1,0,0};
+			auto OS_MOM = invrot * WS_MOM;
+			PR_CHECK(FEql(ws_mom, WS_MOM), true);
+			PR_CHECK(FEql(os_mom, OS_MOM), true);
+
+			// Check the velocity
+			auto ws_vel = rb.VelocityWS();
+			auto os_vel = rb.VelocityOS();
+			auto WS_VEL = v8m{(rb.InertiaInvWS() * v4{0,0,2,0}), v4{1/mass,0,0,0}};
+			auto OS_VEL = invrot * WS_VEL;
+			PR_CHECK(FEql(ws_vel, WS_VEL), true);
+			PR_CHECK(FEql(os_vel, OS_VEL), true);
+		}
+		{// Off-centre CoM with complex rotation
+			auto rb = RigidBody{};
+			auto model_to_com = v4{0,1,0,0};
+			rb.SetMassProperties(InertiaBuilder::Sphere(1, model_to_com).ToInertia(mass), model_to_com);
+			
+			// Apply a force and torque at the model origin.
+			rb.ApplyForceWS(v4{1,0,0,0}, v4{0,-1,0,0}, v4{0,1,1,0}); // +X push at (0,1,1) + -Y twist to cancel rotation => translating along X
+			rb.ApplyForceWS(v4{0,-1,0,0}, v4{0,-1,0,0}, v4{1,1,0,0}); // -Y push at (1,1,0) + -Y twist => translating down Y, screwing around -Y and around -Z
+
+			// Check force applied
+			// Spatial force measured at the model origin
+			auto ws_force = rb.ForceWS();
+			auto os_force = rb.ForceOS();
+			PR_CHECK(FEql(ws_force, v8f{0,-1,-1, 1,-1,0}), true);
+			PR_CHECK(FEql(os_force, v8f{0,-1,-1, 1,-1,0}), true);
+
+			// Integrate for 1 sec
+			Evolve(rb, 1.0f);
+
+			// Check position
+			auto o2w = rb.O2W();
+			auto pos = v4{0.5f/mass,-0.5f/mass,0,1};
+			auto rot = m3x4::Rotation(0.5f * (rb.InertiaInvWS() * v4{0,-1,-1,0}));
+			auto invrot = InvertFast(rot);
+			PR_CHECK(FEql(o2w.pos, pos), true);
+			PR_CHECK(FEql(o2w.rot, rot), true);
+		}
+		{// Kinetic Energy
+			// KE should be the same no matter what frame it's measured in
+			auto rb = RigidBody{};
+			rb.SetMassProperties(InertiaBuilder::Sphere(1).ToInertia(mass), v4{});
+			rb.MomentumWS(v8f{v4{0,0,1,0}, v4{0,1,0,0}});
+
+			auto ws_ke = 0.5f * Dot(rb.VelocityWS(), rb.MomentumWS());
+			auto os_ke = 0.5f * Dot(rb.VelocityOS(), rb.MomentumOS());
+			PR_CHECK(FEql(ws_ke, os_ke), true);
+		}
+	}
+}
+#endif

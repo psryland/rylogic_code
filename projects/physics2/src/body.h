@@ -2,10 +2,10 @@
 
 #include "physics2/src/forward.h"
 
-struct Body :pr::physics::RigidBody
+struct Body :physics::RigidBody
 {
 	// Collision shape instance
-	pr::physics::ShapeBox m_shape;
+	physics::ShapeBox m_shape;
 
 	// Graphics for the object
 	View3DObject m_gfx;
@@ -17,20 +17,19 @@ struct Body :pr::physics::RigidBody
 	}
 	static wchar_t const* Desc()
 	{
-		return pr::FmtS(L"*Box b %08X { 1 1 1 }", pr::RandomRGB(rng()).argb);
+		return pr::FmtS(L"*Box b %08X { 1 1 1 }", RandomRGB(rng()).argb);
 	}
 
 	Body()
-		:pr::physics::RigidBody(&m_shape)
-		,m_shape(pr::v4(1,1,1,0))
+		:physics::RigidBody(&m_shape)
+		,m_shape(v4{1,1,1,0})
 		,m_gfx(View3D_ObjectCreateLdr(Desc(), false, nullptr, nullptr))
 	{
-		// Position randomly
-		O2W(pr::Random4x4(rng(), pr::v4Origin, 5.0f));
+		using namespace physics;
 
 		// Set the inertia
 		auto mp = CalcMassProperties(m_shape, 10.0f);
-		InertiaOS(mp.Inertia());
+		SetMassProperties(physics::Inertia{mp}, mp.m_centre_of_mass);
 
 		// Update the graphics
 		UpdateGfx();

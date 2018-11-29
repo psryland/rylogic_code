@@ -17,3 +17,5 @@
 #include "pr/win32/windows_com.h"
 
 #include "pr/physics2/physics.h"
+
+using namespace pr;

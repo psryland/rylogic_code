@@ -5,6 +5,7 @@
 #pragma once
 
 #include "pr/physics2/forward.h"
+#include "pr/physics2/rigid_body/rigid_body.h"
 
 namespace pr
 {
@@ -18,124 +19,128 @@ namespace pr
 			//   f = d(Iv)/dt = I*a + vx*.I.v
 			// where:
 			//   f = net spatial force acting
-			//   I = spatial inertia tensor
+			//   I = spatial inertia
 			//   v = spatial velocity
 			//   a = spatial acceleration
-			//   Iv = momentum
+			//   Iv = momentum (h)
 			//   x* = cross product for force spatial vectors
 			// So:
 			//   f = I*a + vx*.I.v
-			//   I^-1 * f = a + I^-1 * (vx*.I.v)
-			//   a = I^-1 * f -  I^-1 * (vx*.I.v)
+			//   I^ * f = a + I^ * (vx*.I.v)
+			//   a = I^ * f -  I^ * (vx*.I.v)
+			// where:
+			//   I^ = inverse inertia
 
-			// Notes:
-			//  'rb' should not store momentum, because we need 'v' for 'vx*.I.v'
-			//  Should a store ws_force and os_force separately so that higher order
-			//  integrators can more accurately sum the forces?
+			#if PR_DBG
+			auto ke_before = rb.KineticEnergy();
+			auto ke_change = KineticEnergyChange(rb.ForceWS(), rb.InertiaInvWS(), elapsed_seconds);
+			#endif
 
-			// Two options: update in world space or body space.
-			// In world space, the WS inverse inertia is needed to calculate the
-			// updated velocity. This changes with orientation and hence with time.
-			// In body space, the OS force changes with orientation (because really
-			// they are WS forces). 
+			// The WS inertia depends on orientation which changes throughout the step due to the angular velocity of the body.
+			// Assuming the WS force is constant for the step, then the average momentum for the step is 'h = h0 + 0.5*t*Force'.
+			// Angular velocity = I^.h but I depends on orientation, so we need to approximate I at t = 0.5.
 
-			// Midpoint integration.
-			auto half_dt = elapsed_seconds * 0.5f;
+			auto ws_force = rb.ForceWS();
+			auto ws_inertia_inv = rb.InertiaInvWS();
+			auto ws_momentum = rb.MomentumWS() + ws_force * elapsed_seconds * 0.5f;
 
-			// Calculate the dynamics values at time_step / 2
-			auto ws_momentum = rb.MomentumWS() + rb.ForceWS() * half_dt;
-			auto ws_velocity = rb.InertiaInvWS();
-				
-				//v8m{0,0,1, 0,0,-0.6f};
+			// Refine ws_inertia_inv
+			for (int i = 0; i != 1; ++i)
+			{
+				auto ws_velocity = ws_inertia_inv * ws_momentum;
+				auto dpos = ws_velocity * elapsed_seconds * 0.5f;
+				auto do2w = m3x4::Rotation(dpos.ang);
+				ws_inertia_inv = Transform(ws_inertia_inv, do2w);
+			}
 
-			// Estimate the o2w halfway through the time step
-			auto rot = rb.O2W().rot + CPM(ws_velocity.ang * half_dt) * rb.O2W().rot;
+			// Apply the average momentum for the full step using the mid-step I
+			auto ws_velocity = ws_inertia_inv * ws_momentum;
+			auto dpos = ws_velocity * elapsed_seconds;
+			auto do2w = m4x4::Transform(dpos.ang, dpos.lin.w1());
 
-			auto momentum = rb.MomentumWS() + 
+			// Update the position/orientation and momentum
+			rb.O2W(rb.O2W() * do2w);
+			rb.MomentumWS(rb.MomentumWS() + ws_force * elapsed_seconds);
+			rb.ZeroForces();
 
-			// Calculate the WS inverse inertia for the estimated orientation
-			auto ws_inertia_inv = rot * os_inertia_inv * Transpose(rot);
-
-			// Simple version:
-			// A = F/M
-			auto lin_a = rb.MassProps().InvMass() * rb.ForceOS().lin + gravity;
-
-
-
-
-			// Solve for the spatial acceleration
-			//   a = I^-1 * f -  I^-1 * (vx*.I.v)
-			auto& os_inertia = rb.MassProps().InertiaOS();
-			auto& os_inertia_inv = rb.MassProps().InertiaInvOS();
-			auto& os_velocity = rb.VelocityOS();
-			auto& os_force = rb.ForceOS();
-			(os_inertia_inv * os_force) - 
-
-			
-			
-			//CPM(rb.Velocity())
-			(void)elapsed_seconds;
-
-
-
-			// The body spatial velocity
-			v8m vel();
-
-			// S = So + VoT + 0.5AT^2
-			vel = vel * elapsed_seconds;
-
-//			rb.m_object_to_world.pos += (velocity + (0.5f * elapsed_seconds) * acceleration) * elapsed_seconds;
-//
-
-			//auto vel_com = vel.at(v4Origin);
-			//auto do2w_dt = CPM(vel_com) * rb.O2W();
-			auto do2w_dt = CPM(vel.ang, vel.lin);
-			auto o2w = rb.O2W() + do2w_dt;
-			rb.O2W(Orthonorm(o2w));
-
-			// Prepare the rigid body for the next step
-			rb.UpdateDerivedState();
-			rb.ForceOS(v8f{});
+			#if PR_DBG
+			auto ke_after = rb.KineticEnergy();
+			assert("Evolve has caused an unexpected change in kinetic energy" && FEql(abs(ke_after - ke_before), ke_change));
+			#endif
 		}
 
-		// Euler first order step
-		template <typename = void>
-		void StepOrder1(RigidBody& rb, double elapsed_seconds)
+		// Calculate the change in kinetic energy caused by applying 'force' for 'time_s'
+		inline float KineticEnergyChange(v8f const& force, InertiaInv const& inertia_inv, float time_s)
 		{
-			(void)rb, elapsed_seconds;
-		//	// Find the world space spatial velocity
-		//	// Assume that the Inertia matrix is constant for the step (i.e. order1)
-		//	auto vel_ws = rb.SpatialInertiaInvWS() * rb.MomentumWS();
-		//
-		//	
-		//
-		//	// 
-		//	// Rotate the object_to_world by the change in orientation for this time step
-		//	//'  q += qdot. qdot = rate of change of orientation CPM is a differential operator...
-		//	auto cx = CPM(avel_ * elapsed_seconds);
-		//	rb.O2W(rb.O2W() + cx * rb.O2W().rot);
-		}
-
-		template <typename = void>
-		void StepOrder2(RigidBody& rb, v4 vel_ang, float elapsed_seconds)
-		{
-//			// Use the midpoint algorithm
-//			auto dt_by_2 = elapsed_seconds * 0.5f;
-//
-//			// Calculate mid-point values
-//			auto mid_orientation            = rb.O2W().rot + CPM(vel_ang * dt_by_2) * rb.O2W().rot;
-//			auto mid_ws_inv_inertia_tensor  = mid_orientation * rb.m_os_inv_inertia_tensor * Transpose(mid_orientation);
-//			auto mid_ang_momentum           = rb.m_ang_momentum + rb.m_torque * dt_by_2;
-//			auto mid_ang_velocity           = mid_ws_inv_inertia_tensor * rb.m_inv_mass * mid_ang_momentum;
-//	
-//			// Perform step using mid-point angular velocity
-//			//
-//			auto do2w_dt = CPM(mid_ang_velocity * elapsed_seconds) * rb.O2W().rot;
-//			
-//			// S = So + VoT + 0.5AT^2
-//			rb.m_object_to_world.pos += (velocity + (0.5f * elapsed_seconds) * acceleration) * elapsed_seconds;
-//
-//			rb.m_object_to_world.rot += ;
+			// Linear:
+			//  KE = 0.5 m v² , F = m v/t => v = Ft/m
+			//     = 0.5 m (Ft/m)²
+			//     = 0.5 * t² * F² / m
+			// Angular:
+			//  KE = 0.5 w I w , T = I w/t => w = I^Tt
+			//     = 0.5 I^Tt I I^Tt
+			//     = 0.5 * t² * I^T T
+			
+			//auto ke_lin = 0.5f * Sqr(time_s) * Dot(force.lin,force.lin) / inertia_inv.Mass();
+			//auto ke_ang = 0.5f * Sqr(time_s) * Dot(inertia_inv * force.ang, force.ang);
+			//auto ke2 = ke_lin + ke_ang;
+			
+			auto ke = 0.5f * Sqr(time_s) * Dot(inertia_inv * force, force);
+			return ke;
 		}
 	}
 }
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+#include "pr/physics2/shape/inertia_builder.h"
+
+namespace pr::physics
+{
+	PRUnitTest(IntegratorTests)
+	{
+		auto mass = 5.0f;
+
+		// Set up a rigid body at rest
+		auto rb = RigidBody{};
+		rb.SetMassProperties(InertiaBuilder::Sphere(1).ToInertia(mass));
+
+		// Initial KE is zero because at rest
+		auto ke0 = rb.KineticEnergy();
+		PR_CHECK(FEql(ke0, 0), true);
+		
+		// Get it moving by applying forces/torques
+		auto force = v8f{1,1,1, 1,1,-1};
+		auto dke = KineticEnergyChange(force, rb.InertiaInvWS(), 1.0f);
+		rb.ApplyForceWS(force);
+
+		// Integrate
+		Evolve(rb, 1.0f);
+
+		ke0 += dke;
+		auto ke1 = rb.KineticEnergy();
+		PR_CHECK(FEql(ke0, ke1), true);
+
+		// Integrate some more
+		Evolve(rb, 1.0f);
+
+		ke0 += 0;
+		auto ke2 = rb.KineticEnergy();
+		PR_CHECK(FEql(ke0, ke2), true);
+
+		// Apply a force to stop the motion
+		force = -rb.MomentumWS();
+		dke = KineticEnergyChange(force, rb.InertiaInvWS(), 1.0f);
+		rb.ApplyForceWS(force);
+
+		// Integrate some more
+		Evolve(rb, 1.0f);
+
+		ke0 -= dke;
+		auto ke3 = rb.KineticEnergy();
+		PR_CHECK(FEql(ke0, ke3), true);
+
+		PR_CHECK(FEql(ke0, 0), true);
+	}
+}
+#endif

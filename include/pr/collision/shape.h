@@ -170,27 +170,43 @@ namespace pr
 		template <typename T> using enable_if_composite_shape = typename std::enable_if<is_shape<T>::composite>::type;
 
 		// Shape cast helpers
-		template <typename T, typename = enable_if_shape<T>> inline T const& shape_cast(Shape const& shape)
+		template <typename TShape, typename = enable_if_shape<TShape>> inline TShape const& shape_cast(Shape const& shape)
 		{
-			assert("Invalid shape cast" && shape.m_type == is_shape<T>::shape_type);
-			return reinterpret_cast<T const&>(shape);
+			assert("Invalid shape cast" && shape.m_type == is_shape<TShape>::shape_type);
+			return reinterpret_cast<TShape const&>(shape);
 		}
-		template <typename T, typename = enable_if_shape<T>> inline T const* shape_cast(Shape const* shape)
+		template <typename TShape, typename = enable_if_shape<TShape>> inline TShape const* shape_cast(Shape const* shape)
 		{
-			assert("Invalid shape cast" && (shape == nullptr || shape->m_type == is_shape<T>::shape_type));
-			return reinterpret_cast<T const*>(shape);
+			assert("Invalid shape cast" && (shape == nullptr || shape->m_type == is_shape<TShape>::shape_type));
+			return reinterpret_cast<TShape const*>(shape);
 		}
-		template <typename T, typename = enable_if_shape<T>> inline T& shape_cast(Shape& shape)
+		template <typename TShape, typename = enable_if_shape<TShape>> inline TShape& shape_cast(Shape& shape)
 		{
-			assert("Invalid shape cast" && shape.m_type == is_shape<T>::shape_type);
-			return reinterpret_cast<T&>(shape);
+			assert("Invalid shape cast" && shape.m_type == is_shape<TShape>::shape_type);
+			return reinterpret_cast<TShape&>(shape);
 		}
-		template <typename T, typename = enable_if_shape<T>> inline T* shape_cast(Shape* shape)
+		template <typename TShape, typename = enable_if_shape<TShape>> inline TShape* shape_cast(Shape* shape)
 		{
-			assert("Invalid shape cast" && (shape == nullptr || shape->m_type == is_shape<T>::shape_type));
-			return reinterpret_cast<T*>(shape);
+			assert("Invalid shape cast" && (shape == nullptr || shape->m_type == is_shape<TShape>::shape_type));
+			return reinterpret_cast<TShape*>(shape);
 		}
-
+		template <typename TShape, typename = enable_if_shape<TShape>> inline Shape const& shape_cast(TShape const& shape)
+		{
+			return shape.m_base;
+		}
+		template <typename TShape, typename = enable_if_shape<TShape>> inline Shape const* shape_cast(TShape const* shape)
+		{
+			return shape ? &shape->m_base : nullptr;
+		}
+		template <typename TShape, typename = enable_if_shape<TShape>> inline Shape& shape_cast(TShape& shape)
+		{
+			return shape.m_base;
+		}
+		template <typename TShape, typename = enable_if_shape<TShape>> inline Shape* shape_cast(TShape* shape)
+		{
+			return shape ? &shape->m_base : nullptr;
+		}
+		
 		// Return a shape to use in place of a real shape for objects that don't need a shape really
 		inline Shape* NoShape()
 		{

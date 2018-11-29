@@ -2510,7 +2510,7 @@ VIEW3D_API BOOL __stdcall View3D_TranslateKey(View3DWindow window, int key_code)
 				if (pr::Length3Sq(up) == 0)
 					up = {0.0f, 1.0f, 0.0f, 0.0f};
 
-				auto forward = up.z > up.y ? View3DV4{0.0f, 1.0f, 0.0f, 0.0f} : View3DV4{0.0f, 0.0f, 1.0f, 0.0f};
+				auto forward = up.z > up.y ? View3DV4{0.0f, 1.0f, 0.0f, 0.0f} : View3DV4{0.0f, 0.0f, -1.0f, 0.0f};
 
 				View3D_ResetView(window, forward, up, 0, TRUE, TRUE);
 				View3D_Render(window);

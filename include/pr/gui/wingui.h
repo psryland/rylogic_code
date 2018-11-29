@@ -814,8 +814,8 @@ namespace pr
 			{
 				ptMaxSize.x      = ::GetSystemMetrics(SM_CXVIRTUALSCREEN);
 				ptMaxSize.y      = ::GetSystemMetrics(SM_CYVIRTUALSCREEN);
-				ptMaxPosition.x  = ::GetSystemMetrics(SM_CXVIRTUALSCREEN);
-				ptMaxPosition.y  = ::GetSystemMetrics(SM_CYVIRTUALSCREEN);
+				ptMaxPosition.x  = ::GetSystemMetrics(SM_XVIRTUALSCREEN) + ptMaxSize.x;
+				ptMaxPosition.y  = ::GetSystemMetrics(SM_YVIRTUALSCREEN) + ptMaxSize.y;
 				ptMinTrackSize.x = ::GetSystemMetrics(SM_CXMINTRACK);
 				ptMinTrackSize.y = ::GetSystemMetrics(SM_CYMINTRACK);
 				ptMaxTrackSize.x = ::GetSystemMetrics(SM_CXMAXTRACK);
@@ -823,7 +823,7 @@ namespace pr
 			}
 			Rect Bounds() const
 			{
-				return Rect(0, 0, ptMaxSize.x, ptMaxSize.y);
+				return Rect(ptMaxPosition.x - ptMaxSize.x, ptMaxPosition.y - ptMaxSize.y, ptMaxPosition.x, ptMaxPosition.y);
 			}
 		};
 

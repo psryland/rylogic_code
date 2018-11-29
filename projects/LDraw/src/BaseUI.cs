@@ -46,6 +46,20 @@ namespace LDraw
 					m_dock_control.SavingLayout += HandleSavingLayout;
 					m_dock_control.DockContainerChanged += HandleDockContainerChanged;
 				}
+
+				// Handlers
+				void HandleClosed(object sender, EventArgs e)
+				{
+					OnClosed();
+				}
+				void HandleSavingLayout(object sender, DockContainerSavingLayoutEventArgs args)
+				{
+					OnSavingLayout(args);
+				}
+				void HandleDockContainerChanged(object sender, DockContainerChangedEventArgs args)
+				{
+					OnDockContainerChanged(args);
+				}
 			}
 		}
 		private DockControl m_dock_control;
@@ -89,25 +103,13 @@ namespace LDraw
 		/// <summary>Called when the dock container is assigned/changed</summary>
 		protected virtual void OnDockContainerChanged(DockContainerChangedEventArgs args)
 		{}
-		private void HandleDockContainerChanged(object sender, DockContainerChangedEventArgs args)
-		{
-			OnDockContainerChanged(args);
-		}
 
 		/// <summary>Called when layout is saving for this UI</summary>
 		protected virtual void OnSavingLayout(DockContainerSavingLayoutEventArgs args)
 		{}
-		private void HandleSavingLayout(object sender, DockContainerSavingLayoutEventArgs args)
-		{
-			OnSavingLayout(args);
-		}
 
 		/// <summary>Called when the tab for this UI is closed by the user</summary>
 		protected virtual void OnClosed()
 		{}
-		private void HandleClosed(object sender, EventArgs e)
-		{
-			OnClosed();
-		}
 	}
 }

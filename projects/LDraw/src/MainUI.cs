@@ -872,8 +872,8 @@ namespace LDraw
 			{
 				m_menu_file_new            .Enabled = true;
 				m_menu_file_edit_script    .Enabled = true;
-				m_menu_file_open           .Enabled = scene_active;
-				m_menu_file_open_additional.Enabled = scene_active;
+				m_menu_file_open           .Enabled = has_scene;
+				m_menu_file_open_additional.Enabled = has_scene;
 				m_menu_file_save           .Enabled = script_active;
 				m_menu_file_save_as        .Enabled = script_active;
 				m_menu_file_options        .Enabled = true;

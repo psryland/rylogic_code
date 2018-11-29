@@ -79,6 +79,37 @@ namespace pr::maths::spatial
 
 	#pragma region Operators
 
+	// Rotate a spatial motion vector
+	template <typename T>
+	inline Vec8<T> pr_vectorcall operator * (m3_cref<Motion,T> a2b, Vec8<Motion> const& vec)
+	{
+		// [ E    0] * [v.ang] = [E*v.ang             ]
+		// [-E*rx E]   [v.lin]   [E*v.lin - E*rx*v.ang] where rx = (0,0,0)
+		auto ang_b = m3x4{a2b} * vec.ang;
+		auto lin_b = m3x4{a2b} * vec.lin;
+		return Vec8<T>{ang_b, lin_b};
+	}
+	inline Vec8<Motion> pr_vectorcall operator * (m3_cref<> a2b, Vec8<Motion> const& vec)
+	{
+		return (m3_cref<Motion,Motion>)(a2b) * vec;
+	}
+
+	// Rotate a spatial force vector
+	template <typename T>
+	inline Vec8<T> pr_vectorcall operator * (m3_cref<Force,T> a2b, Vec8<Force> const& vec)
+	{
+		// [E -E*rx] * [v.ang] = [E*v.ang - E*rx*v.lin]
+		// [0     E]   [v.lin]   [E*v.lin             ] where rx = (0,0,0)
+		auto lin_b = m3x4{a2b} * vec.lin;
+		auto ang_b = m3x4{a2b} * vec.ang;
+		return Vec8<T>{ang_b, lin_b};
+	}
+	inline Vec8<Force> pr_vectorcall operator * (m3_cref<> a2b, Vec8<Force> const& vec)
+	{
+		return (m3_cref<Force,Force>)(a2b) * vec;
+	}
+
+
 	// Transform a spatial motion vector by an affine transform
 	template <typename T>
 	inline Vec8<T> pr_vectorcall operator * (m4_cref<Motion,T> a2b, Vec8<Motion> const& vec)
@@ -92,8 +123,7 @@ namespace pr::maths::spatial
 	}
 	inline Vec8<Motion> pr_vectorcall operator * (m4_cref<> a2b, Vec8<Motion> const& vec)
 	{
-		auto const& a2b_m = (Mat4x4<Motion,Motion> const&)(a2b);
-		return a2b_m * vec;
+		return (m4_cref<Motion,Motion>)(a2b) * vec;
 	}
 
 	// Transform a spatial force vector by an affine transform
@@ -109,8 +139,7 @@ namespace pr::maths::spatial
 	}
 	inline Vec8<Force> pr_vectorcall operator * (m4_cref<> a2b, Vec8<Force> const& vec)
 	{
-		auto const& a2b_f = (Mat4x4<Force,Force> const&)(a2b);
-		return a2b_f * vec;
+		return (m4_cref<Force,Force>)(a2b) * vec;
 	}
 
 	// Spatial matrix * affine transform

@@ -219,14 +219,13 @@ namespace pr::physics
 		void CalculateInertiaTensor()
 		{
 			auto& model = *m_model;
-
-			model.m_mp.m_os_inertia_tensor = m3x4{};
+			model.m_mp.m_os_unit_inertia = m3x4{};
 			for (auto& p : model.m_prim_list)
 			{
 				auto& prim = *p;
 				assert("All primitives should be in centre of mass frame" && FEql3(prim.m_mp.m_centre_of_mass, v4Zero));
 
-				auto primitive_inertia = InertiaBuilder(prim.m_mp.m_mass * prim.m_mp.m_os_inertia_tensor);
+				auto primitive_inertia = InertiaBuilder(prim.m_mp.m_mass * prim.m_mp.m_os_unit_inertia);
 
 				// Rotate the inertia tensor into object space
 				auto prim_to_model = prim.shape().m_s2p.rot;
@@ -236,11 +235,11 @@ namespace pr::physics
 				primitive_inertia = primitive_inertia.Translate(prim.shape().m_s2p.pos, prim.m_mp.m_mass, InertiaBuilder::AwayFromCoM);
 
 				// Add the inertia to the object inertia tensor
-				model.m_mp.m_os_inertia_tensor += primitive_inertia.m;
+				model.m_mp.m_os_unit_inertia += primitive_inertia.m;
 			}
 
 			// Assume mass == 1.0f for the model inertia tensor
-			model.m_mp.m_os_inertia_tensor /= model.m_mp.m_mass;
+			model.m_mp.m_os_unit_inertia /= model.m_mp.m_mass;
 		}
 
 		// Return access to a shape

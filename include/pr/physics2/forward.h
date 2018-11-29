@@ -19,6 +19,7 @@
 #include "pr/maths/spatial.h"
 #include "pr/collision/shapes.h"
 #include "pr/geometry/closest_point.h"
+#include "pr/ldraw/ldr_helper.h"
 
 namespace pr::physics
 {

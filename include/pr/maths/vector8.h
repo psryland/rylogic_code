@@ -34,11 +34,11 @@ namespace pr
 		{}
 		Vec8(float wx, float wy, float wz, float vx, float vy, float vz)
 			:ang(wx, wy, wz, 0)
-			, lin(vx, vy, vz, 0)
+			,lin(vx, vy, vz, 0)
 		{}
 		Vec8(float wx, float wy, float wz, float ww, float vx, float vy, float vz, float vw)
 			:ang(wx, wy, wz, ww)
-			, lin(vx, vy, vz, vw)
+			,lin(vx, vy, vz, vw)
 		{}
 
 		// Array access

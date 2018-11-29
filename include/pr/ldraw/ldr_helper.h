@@ -16,7 +16,6 @@
 #include "pr/filesys/file.h"
 #include "pr/filesys/fileex.h"
 #include "pr/maths/maths.h"
-#include "pr/maths/polynomial.h"
 #include "pr/maths/conversion.h"
 #include "pr/maths/spatial.h"
 #include "pr/geometry/closest_point.h"
@@ -25,23 +24,30 @@ namespace pr
 {
 	namespace ldr
 	{
+		using TStr = std::string;
+		using Scope = pr::Scope<std::function<void()>,std::function<void()>>;
+
 		struct O2W
 		{
-			pr::m4x4 m_mat;
-			O2W(pr::v4 const& pos) :m_mat(m4x4::Translation(pos)) {}
-			O2W(pr::m4x4 const& mat) :m_mat(mat) {}
+			m4x4 m_mat;
+			O2W(v4 const& pos) :m_mat(m4x4::Translation(pos)) {}
+			O2W(m4x4 const& mat) :m_mat(mat) {}
 		};
 		union Col
 		{
-			pr::Colour32 c;
+			Colour32 c;
 			unsigned int ui;
-			Col(pr::Colour32 c_) :c(c_) {}
+			Col(Colour32 c_) :c(c_) {}
 			Col(unsigned int ui_) :ui(ui_) {}
 		};
+		struct Width
+		{
+			float m_width;
+			Width(float w) :m_width(w) {}
+			Width(int w) :m_width(float(w)) {}
+		};
 
-		// Use 'std::wstring' to solve overload resolution hell
-		using TStr = std::string;
-
+		#pragma region Append
 		// See unit tests for example.
 		// This only works when the overloads of Append have only two parameters.
 		// For complex types, either create a struct like O2W above, or a different named function
@@ -52,8 +58,6 @@ namespace pr
 			str.append(" ");
 			return str;
 		}
-
-		#pragma region Append
 		template <typename Type> inline TStr& Append(TStr& str, Type)
 		{
 			// Note: if you hit this error, it's probably because Append(str, ???) is being
@@ -84,41 +88,47 @@ namespace pr
 		}
 		inline TStr& Append(TStr& str, int i)
 		{
-			return AppendSpace(str).append(pr::To<TStr>(i));
+			return AppendSpace(str).append(To<TStr>(i));
 		}
 		inline TStr& Append(TStr& str, long i)
 		{
-			return AppendSpace(str).append(pr::To<TStr>(i));
+			return AppendSpace(str).append(To<TStr>(i));
 		}
 		inline TStr& Append(TStr& str, float f)
 		{
-			return AppendSpace(str).append(pr::To<TStr>(f));
+			return AppendSpace(str).append(To<TStr>(f));
 		}
 		inline TStr& Append(TStr& str, double f)
 		{
-			return AppendSpace(str).append(pr::To<TStr>(f));
+			return AppendSpace(str).append(To<TStr>(f));
 		}
 		inline TStr& Append(TStr& str, Col c)
 		{
-			return AppendSpace(str).append(pr::To<TStr>(c.c));
+			if (c.ui == 0xFFFFFFFF) return str;
+			return AppendSpace(str).append(To<TStr>(c.c));
+		}
+		inline TStr& Append(TStr& str, Width w)
+		{
+			if (w.m_width != 0) Append(str, "*Width {",w.m_width,"} ");
+			return str;
 		}
 		inline TStr& Append(TStr& str, AxisId id)
 		{
-			return AppendSpace(str).append(pr::To<TStr>(int(id)));
+			return AppendSpace(str).append(To<TStr>(int(id)));
 		}
-		inline TStr& Append(TStr& str, pr::Colour32 c)
+		inline TStr& Append(TStr& str, Colour32 c)
 		{
 			return Append(str, Col(c));
 		}
-		inline TStr& Append(TStr& str, pr::v3 const& v)
+		inline TStr& Append(TStr& str, v3 const& v)
 		{
-			return AppendSpace(str).append(pr::To<TStr>(v));
+			return AppendSpace(str).append(To<TStr>(v));
 		}
-		inline TStr& Append(TStr& str, pr::v4 const& v)
+		inline TStr& Append(TStr& str, v4 const& v)
 		{
-			return AppendSpace(str).append(pr::To<TStr>(v));
+			return AppendSpace(str).append(To<TStr>(v));
 		}
-		inline TStr& Append(TStr& str, pr::m4x4 const& m)
+		inline TStr& Append(TStr& str, m4x4 const& m)
 		{
 			return Append(str, m.x, m.y, m.z, m.w);
 		}
@@ -136,8 +146,8 @@ namespace pr
 		inline void Write(TStr const& str, wchar_t const* filepath, bool append = false)
 		{
 			if (str.size() == 0) return;
-			pr::LockFile lock(filepath);
-			pr::BufferToFile(str, filepath, pr::EFileData::Utf8, pr::EFileData::Ucs2, append);
+			LockFile lock(filepath);
+			BufferToFile(str, filepath, EFileData::Utf8, EFileData::Ucs2, append);
 		}
 		inline TStr& GroupStart(TStr& str, typename TStr::value_type const* name, Col colour = 0xFFFFFFFF)
 		{
@@ -147,7 +157,7 @@ namespace pr
 		{
 			return Append(str, O2W(o2w), "\n}\n");
 		}
-		inline Scope<std::function<void()>,std::function<void()>> Group(TStr& str, typename TStr::value_type const* name, Col colour = 0xFFFFFFFF, m4x4 const& o2w = m4x4Identity)
+		inline Scope Group(TStr& str, typename TStr::value_type const* name, Col colour = 0xFFFFFFFF, m4x4 const& o2w = m4x4Identity)
 		{
 			std::function<void()> doit = [&]{ GroupStart(str, name, colour); };
 			std::function<void()> undo = [&]{ GroupEnd(str, o2w); };
@@ -161,30 +171,41 @@ namespace pr
 		{
 			return Append(str, O2W(o2w), "\n}\n");
 		}
-		inline Scope<std::function<void()>,std::function<void()>> Frame(TStr& str, typename TStr::value_type const* name, Col colour = 0xFFFFFFFF, m4x4 const& o2w = m4x4Identity)
+		inline Scope Frame(TStr& str, typename TStr::value_type const* name, Col colour = 0xFFFFFFFF, m4x4 const& o2w = m4x4Identity)
 		{
 			std::function<void()> doit = [&]{ FrameStart(str, name, colour); };
 			std::function<void()> undo = [&]{ FrameEnd(str, o2w); };
 			return CreateScope(doit, undo);
 		}
-		inline TStr& Nest(TStr& str)
+		inline TStr& NestStart(TStr& str)
 		{
-			str.resize(str.size() - 2); return str;
+			for (; !str.empty() && str.back() != '}'; str.resize(str.size() - 1)){}
+			if (!str.empty()) str.resize(str.size() - 1);
+			return Append(str, "\n");
 		}
-		inline TStr& UnNest(TStr& str)
+		inline TStr& NestEnd(TStr& str)
 		{
-			return str += "}\n";
+			return Append(str, "}\n");
+		}
+		inline Scope Nest(TStr& str)
+		{
+			std::function<void()> doit = [&]{ NestStart(str); };
+			std::function<void()> undo = [&]{ NestEnd(str); };
+			return CreateScope(doit, undo);
 		}
 		inline TStr& Nest(TStr& str, TStr const& content)
 		{
-			Nest(str);
+			auto n = Nest(str);
 			str += content;
-			UnNest(str);
 			return str;
+		}
+		inline TStr& Arrow(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& position, v4 const& direction, Width width)
+		{
+			return Append(str,"*Arrow",name,colour,"{Fwd ",position.xyz,(position+direction).xyz,width,"}\n");
 		}
 		inline TStr& Vector(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& position, v4 const& direction, float point_radius)
 		{
-			return Append(str,"*Line",name,colour,"{0 0 0 ",direction[0],direction[1],direction[2],"*Box {",point_radius,"}",O2W(position),"}\n");
+			return Arrow(str,name,colour,position,direction,point_radius);
 		}
 		inline TStr& Line(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& start, v4 const& end, float t0 = 0.0f, float t1 = 1.0f)
 		{
@@ -198,10 +219,9 @@ namespace pr
 			if (t0 != 0.0f || t1 != 1.0f) Append(str,"*Param{",t0,t1,"}");
 			return Append(str, "}\n");
 		}
-		inline TStr& LineStrip(TStr& str, typename TStr::value_type const* name, Col colour, int width, int count, v4 const* points)
+		inline TStr& LineStrip(TStr& str, typename TStr::value_type const* name, Col colour, Width width, int count, v4 const* points)
 		{
-			Append(str, "*LineStrip ",name," ",colour," {");
-			if (width != 0) Append(str, "*Width {",width,"} ");
+			Append(str,"*LineStrip",name,colour,"{",width);
 			for (int i = 0; i != count; ++i) Append(str, points[i].xyz);
 			return Append(str, "}\n");
 		}
@@ -246,7 +266,7 @@ namespace pr
 		{
 			return Append(str,"*Ellipse",name,colour,"{",axis_id,major,minor,O2W(centre),"}\n");
 		}
-		inline TStr& Sphere(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& position, float radius)
+		inline TStr& Sphere(TStr& str, typename TStr::value_type const* name, Col colour, float radius, v4 const& position)
 		{
 			return Append(str, "*Sphere",name,colour,"{",radius,O2W(position),"}\n");
 		}
@@ -262,19 +282,19 @@ namespace pr
 		{
 			return Append(str,"*Box",name,colour,"{",dim.xyz,O2W(o2w),"}\n");
 		}
-		inline TStr& BoxList(TStr& str, typename TStr::value_type const* name, Col colour, pr::v4 const& dim, pr::v4 const* positions, int count)
+		inline TStr& BoxList(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& dim, v4 const* positions, int count)
 		{
 			Append(str,"*BoxList",name,colour,"{",dim.xyz);
 			for (int i = 0; i != count; ++i) Append(str, positions[i].xyz);
 			return Append(str, "}\n");
 		}
-		inline TStr& LineBox(TStr& str, typename TStr::value_type const* name, Col colour, pr::v4 const& position, v4 const& dim)
+		inline TStr& LineBox(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& position, v4 const& dim)
 		{
 			return Append(str,"*LineBox",name,colour,"{",dim.xyz,O2W(position),"}\n");
 		}
 		inline TStr& Frustum(TStr& str, typename TStr::value_type const* name, Col colour, AxisId axis, float fovY, float aspect, float nplane, float fplane, m4x4 const& o2w)
 		{
-			return Append(str, "*FrustumFA", name, colour, "{", axis, pr::RadiansToDegrees(fovY), aspect, nplane, fplane, O2W(o2w), "}\n");
+			return Append(str, "*FrustumFA", name, colour, "{", axis, RadiansToDegrees(fovY), aspect, nplane, fplane, O2W(o2w), "}\n");
 		}
 		inline TStr& Frustum(TStr& str, typename TStr::value_type const* name, Col colour, float dist, float width, float height, float nplane, float fplane)
 		{
@@ -361,13 +381,21 @@ namespace pr
 			Append(str,"}\n",O2W(o2w),"}\n");
 			return str;
 		}
-		inline TStr& Axis(TStr& str, typename TStr::value_type const* name, Col colour, m4x4 const& basis)
+		inline TStr& Axis(TStr& str, typename TStr::value_type const* name, Col colour, m3x4 const& basis)
 		{
 			return Append(str,"*Matrix3x3",name,colour,"{",basis.x.xyz,basis.y.xyz,basis.z.xyz,"}\n");
 		}
-		inline TStr& Axis(TStr& str, typename TStr::value_type const* name, Col colour, m3x4 const& basis)
+		inline TStr& Axis(TStr& str, typename TStr::value_type const* name, Col colour, m4x4 const& basis)
 		{
-			return Axis(str, name, colour, pr::m4x4(basis, pr::v4Origin));
+			return Axis(str, name, colour, basis.rot);
+		}
+		inline TStr& CoordFrame(TStr& str, typename TStr::value_type const* name, Col colour, m4x4 const& frame, float scale = 1.0f)
+		{
+			return Append(str,"*CoordFrame",name,colour,"{",scale,O2W(frame),"}\n");
+		}
+		inline TStr& CoordFrame(TStr& str, typename TStr::value_type const* name, Col colour, m3x4 const& basis, float scale = 1.0f)
+		{
+			return CoordFrame(str,name,colour,basis.m4x4(),scale);
 		}
 		inline TStr& SpatialVector(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& position, v8 const& vec, float point_radius)
 		{
@@ -391,7 +419,7 @@ namespace pr
 			return str;
 		}
 
-		template <typename VCont, typename ICont> inline TStr& Mesh(TStr& str, typename TStr::value_type const* name, Col colour, VCont const& verts, ICont const& indices, int indices_per_prim, pr::m4x4 const& o2w)
+		template <typename VCont, typename ICont> inline TStr& Mesh(TStr& str, typename TStr::value_type const* name, Col colour, VCont const& verts, ICont const& indices, int indices_per_prim, m4x4 const& o2w)
 		{
 			auto v    = std::begin(verts);
 			auto vend = std::end(verts);
@@ -402,7 +430,7 @@ namespace pr
 				[&](){ return i != iend ? &*i++ : nullptr; },
 				indices_per_prim, o2w);
 		}
-		template <typename VFunc, typename IFunc> inline TStr& MeshFn(TStr& str, typename TStr::value_type const* name, Col colour, VFunc verts, IFunc indices, int indices_per_prim, pr::m4x4 const& o2w)
+		template <typename VFunc, typename IFunc> inline TStr& MeshFn(TStr& str, typename TStr::value_type const* name, Col colour, VFunc verts, IFunc indices, int indices_per_prim, m4x4 const& o2w)
 		{
 			Append(str,"*Mesh",name,colour,"{\n",O2W(o2w));
 
@@ -445,15 +473,15 @@ namespace pr
 			}
 			void Triangle(std::string name, Col colour, v4 const& a, v4 const& b, v4 const& c)
 			{
-				pr::ldr::Triangle(m_sb, name.c_str(), colour, a, b, c);
+				ldr::Triangle(m_sb, name.c_str(), colour, a, b, c);
 			}
 			void Triangle(std::string name, Col colour, v4 const& a, v4 const& b, v4 const& c, m4x4 const& o2w)
 			{
-				pr::ldr::Triangle(m_sb, name.c_str(), colour, a, b, c, o2w);
+				ldr::Triangle(m_sb, name.c_str(), colour, a, b, c, o2w);
 			}
 			void Box(std::string name, Col colour, float dim, v4 const& position)
 			{
-				pr::ldr::Box(m_sb, name.c_str(), colour, dim, position);
+				ldr::Box(m_sb, name.c_str(), colour, dim, position);
 			}
 		
 			void ToFile(wchar_t const* filepath, bool append = false)
@@ -461,8 +489,6 @@ namespace pr
 				Write(m_sb, filepath, append);
 			}
 		};
-
-		#undef S
 	}
 }
 
@@ -472,11 +498,11 @@ namespace pr::ldr
 	PRUnitTest(LdrHelperTests)
 	{
 		std::string str;
-		Append(str,"*Box b",pr::Colour32Green,"{",pr::v3(1.0f,2.0f,3.0f),O2W(pr::m4x4Identity),"}");
+		Append(str,"*Box b",Colour32Green,"{",v3(1.0f,2.0f,3.0f),O2W(m4x4Identity),"}");
 		PR_CHECK(str, "*Box b ff00ff00 {1 2 3}");
 
 		str.resize(0);
-		Append(str,"*Box b",pr::Colour32Red,"{",1.5f,O2W(pr::v4ZAxis.w1()),"}");
+		Append(str,"*Box b",Colour32Red,"{",1.5f,O2W(v4ZAxis.w1()),"}");
 		PR_CHECK(str, "*Box b ffff0000 {1.5 *o2w{*pos{0 0 1}}}");
 	}
 }
