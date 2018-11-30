@@ -527,6 +527,10 @@ namespace pr
 	}
 
 	// Converts bool to +1,-1 (note: no 0 value)
+	constexpr int Sign(bool positive)
+	{
+		return positive ? +1 : -1;
+	}
 	constexpr int SignI(bool positive)
 	{
 		return positive ? +1 : -1;

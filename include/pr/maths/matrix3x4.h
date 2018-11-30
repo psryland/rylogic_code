@@ -84,7 +84,7 @@ namespace pr
 		}
 
 		// Array access
-		v4_cref<> operator [](int i) const
+		Vec4<void> const& operator [](int i) const
 		{
 			assert("index out of range" && i >= 0 && i < _countof(arr));
 			return arr[i];

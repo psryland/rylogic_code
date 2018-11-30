@@ -14,11 +14,12 @@ namespace pr::physics
 	protected:
 
 		// Notes:
-		//  - Object space that the collision model is given in. It has the model origin at (0,0,0),
-		//    the coordinate frame equal to the root object in the collision shape, and the centre of
-		//    mass at 'm_os_com'.
-		//  - Dynamics state is stored in world space but relative to the model origin. Since momentum
-		//    and force are direction vectors floating point accuracy is not an issue.
+		//  - Object space is the space that the collision model is given in. It has the model origin
+		//    at (0,0,0), the coordinate frame equal to the root object in the collision shape, and
+		//    the centre of mass at 'm_os_com'.
+		//  - Dynamics state is stored in world space but relative to the model origin. If world space
+		//    spatial vectors were relative to the world origin then floating point accuracy would be
+		//    an issue.
 		//  - Careful with spatial vectors, transforming a spatial vector does not move it, it describes
 		//    it from a new position/orientation. Changing 'o2w' does move the spatial vectors though.
 
@@ -82,7 +83,26 @@ namespace pr::physics
 		}
 		void O2W(m4_cref<> o2w)
 		{
+			assert(IsOrthonormal(o2w));
 			m_o2w = o2w;
+		}
+
+		// Extrapolate the position based on the current momentum and forces
+		m4x4 O2W(float dt) const
+		{
+			// S = So + Vt + 0.5At²
+			//   = So + t * (V + 0.5At)
+			//   = So + 0.5 * t * (2*I^h + (I^f)t)
+			//   = So + 0.5 * t * I^(2*h + ft)
+			auto h = 2.0f * MomentumWS() + dt * ForceWS();
+			auto dx = 0.5f * dt * (InertiaInvWS() * h);
+
+			// The spatial vectors are object relative so rotation and translation must be applied separately.
+			return m4x4
+			{
+				m3x4::Rotation(dx.ang) * O2W().rot,
+				dx.lin + O2W().pos
+			};
 		}
 
 		// The mass of the rigid body
@@ -139,15 +159,18 @@ namespace pr::physics
 			auto ws_velocity = O2W().rot * os_velocity;
 			VelocityWS(ws_velocity);
 		}
-		void VelocityWS(v4_cref<> ws_ang, v4_cref<> ws_lin)
+		void VelocityWS(v4_cref<> ws_ang, v4_cref<> ws_lin, v4_cref<> ws_at = v4{})
 		{
+			// 'ws_ang' and 'ws_lin' are model origin relative
 			auto spatial_velocity = v8m{ws_ang, ws_lin};
+			spatial_velocity = Shift(spatial_velocity, -ws_at);
 			VelocityWS(spatial_velocity);
 		}
-		void VelocityOS(v4_cref<> os_ang, v4_cref<> os_lin)
+		void VelocityOS(v4_cref<> os_ang, v4_cref<> os_lin, v4_cref<> os_at = v4{})
 		{
 			auto ws_ang = O2W() * os_ang;
 			auto ws_lin = O2W() * os_lin;
+			auto ws_at  = O2W() * os_at;
 			VelocityWS(ws_ang, ws_lin);
 		}
 
@@ -194,7 +217,8 @@ namespace pr::physics
 		void ApplyForceWS(v4_cref<> ws_force, v4_cref<> ws_torque, v4_cref<> ws_at = v4Zero)
 		{
 			assert("'at' should be an offset (in world space) from the object origin" && ws_at.w == 0);
-			auto spatial_force = v8f{ws_torque + Cross3(ws_at - CentreOfMassWS(), ws_force), ws_force};
+			auto spatial_force = v8f{ws_torque, ws_force};
+			spatial_force = Shift(spatial_force, -(ws_at - CentreOfMassWS()));
 			ApplyForceWS(spatial_force);
 		}
 		void ApplyForceWS(v8f const& ws_force)
@@ -251,7 +275,7 @@ namespace pr::physics
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include "pr/physics2/shape/inertia_builder.h"
-#include "pr/physics2/integrater/integrater.h"
+#include "pr/physics2/integrator/integrator.h"
 
 namespace pr::physics
 {
@@ -341,7 +365,8 @@ namespace pr::physics
 			auto rb = RigidBody{};
 			auto model_to_com = v4{0,1,0,0};
 			rb.SetMassProperties(InertiaBuilder::Sphere(1, model_to_com).ToInertia(mass), model_to_com);
-			
+			PR_CHECK(FEql(rb.InertiaOS().To3x3(1), m3x4::Scale(1.4f,0.4f,1.4f)), true);
+
 			// Apply a force and torque at the CoM.
 			rb.ApplyForceWS(v4{1,0,0,0}, v4{}, rb.CentreOfMassWS());
 
@@ -430,22 +455,51 @@ namespace pr::physics
 			PR_CHECK(FEql(ws_force, v8f{0,-1,-1, 1,-1,0}), true);
 			PR_CHECK(FEql(os_force, v8f{0,-1,-1, 1,-1,0}), true);
 
+			// Expected position - the inertia changes with orientation
+			// so predicting the orientation after the step is hard...
+			auto ws_inertia_inv = rb.InertiaInvWS();
+			auto ws_velocity = ws_inertia_inv * ws_force;
+			auto dpos = m3x4::Rotation(0.5f * ws_velocity.ang); // mid-step rotation
+			ws_inertia_inv = Transform(ws_inertia_inv, dpos);
+			auto pos = v4{0.5f/mass,-0.5f/mass,0,1};
+			auto rot = m3x4::Rotation(0.5f * (ws_inertia_inv * v4{0,-1,-1,0}));
+			
 			// Integrate for 1 sec
 			Evolve(rb, 1.0f);
 
 			// Check position
 			auto o2w = rb.O2W();
-			auto pos = v4{0.5f/mass,-0.5f/mass,0,1};
-			auto rot = m3x4::Rotation(0.5f * (rb.InertiaInvWS() * v4{0,-1,-1,0}));
-			auto invrot = InvertFast(rot);
 			PR_CHECK(FEql(o2w.pos, pos), true);
-			PR_CHECK(FEql(o2w.rot, rot), true);
+			PR_CHECK(FEqlRelative(o2w.rot, rot, 0.01f), true);
+		}
+		{// Extrapolation
+			auto rb = RigidBody{};
+			rb.SetMassProperties(InertiaBuilder::Sphere(1).ToInertia(mass), v4{});
+			
+			auto vel = v8m{0,0,1, 0,1,0};
+			rb.VelocityWS(vel);
+
+			auto o2w0 = rb.O2W();
+			auto O2W0 = m4x4Identity;
+			PR_CHECK(FEql(o2w0, O2W0), true);
+
+			auto o2w1 = rb.O2W(1.0f);
+			auto O2W1 = m4x4::Transform(1*vel.ang, (1*vel.lin).w1());
+			PR_CHECK(FEql(o2w1, O2W1), true);
+
+			auto o2w2 = rb.O2W(2.0f);
+			auto O2W2 = m4x4::Transform(2*vel.ang, (2*vel.lin).w1());
+			PR_CHECK(FEql(o2w2, O2W2), true);
+
+			auto o2w3 = rb.O2W(-2.0f);
+			auto O2W3 = m4x4::Transform(-2*vel.ang, (-2*vel.lin).w1());
+			PR_CHECK(FEql(o2w3, O2W3), true);
 		}
 		{// Kinetic Energy
 			// KE should be the same no matter what frame it's measured in
 			auto rb = RigidBody{};
 			rb.SetMassProperties(InertiaBuilder::Sphere(1).ToInertia(mass), v4{});
-			rb.MomentumWS(v8f{v4{0,0,1,0}, v4{0,1,0,0}});
+			rb.MomentumWS(v8f{0,0,1, 0,1,0});
 
 			auto ws_ke = 0.5f * Dot(rb.VelocityWS(), rb.MomentumWS());
 			auto os_ke = 0.5f * Dot(rb.VelocityOS(), rb.MomentumOS());

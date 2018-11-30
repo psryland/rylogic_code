@@ -72,14 +72,14 @@ namespace pr::physics
 			m.x.y = m.y.x = products.x;
 			m.x.z = m.z.x = products.y;
 			m.y.z = m.z.y = products.z;
-			assert(Inertia::Check(m));
+			assert(Inertia::Check(m, false));
 		}
 
 		// Construct an Inertia from a symmetric 3x3 matrix.
 		explicit InertiaBuilder(m3_cref<> rhs)
 			:m(rhs)
 		{
-			assert(Inertia::Check(m));
+			assert(Inertia::Check(m, false));
 		}
 
 		// Create a principal inertia matrix with identical diagonal elements, like a sphere
@@ -90,7 +90,7 @@ namespace pr::physics
 			:m()
 		{
 			m.x.x = m.y.y = m.z.z = moment;
-			assert(Inertia::Check(m));
+			assert(Inertia::Check(m, false));
 		}
 
 		// Convertible to m3x4
@@ -166,7 +166,7 @@ namespace pr::physics
 		static InertiaBuilder Sphere(float radius, v4_cref<> offset = v4{})
 		{
 			InertiaBuilder ib((2.0f/5.0f) * Sqr(radius));
-			ib.Translate(offset, 1.0f, EOffset::AwayFromCoM);
+			ib = ib.Translate(offset, 1.0f, EOffset::AwayFromCoM);
 			return ib;
 		}
 
@@ -177,7 +177,7 @@ namespace pr::physics
 			auto yy = (1.0f/3.0f) * (Sqr(radius.z) + Sqr(radius.x));
 			auto zz = (1.0f/3.0f) * (Sqr(radius.x) + Sqr(radius.y));
 			InertiaBuilder ib(v4{xx,yy,zz,0}, v4{});
-			ib.Translate(offset, 1.0f, EOffset::AwayFromCoM);
+			ib = ib.Translate(offset, 1.0f, EOffset::AwayFromCoM);
 			return ib;
 		}
 	};

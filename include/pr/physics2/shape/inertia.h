@@ -142,9 +142,9 @@ namespace pr::physics
 		// Sanity check
 		bool Check() const
 		{
-			return Check(To3x3(1));
+			return Check(To3x3(1), false);
 		}
-		static bool Check(m3_cref<> inertia)
+		static bool Check(m3_cref<> inertia, bool is_inverse)
 		{
 			// Check for any value == NaN
 			if (IsNaN(inertia))
@@ -165,15 +165,17 @@ namespace pr::physics
 
 			// Diagonals of an Inertia matrix must satisfy the triangle inequality: a + b >= c
 			// Might need to relax 'tol' due to distorted rotation matrices: using: 'Max(Sum(d), 1) * tiny_sqrt'
-			if (dia.x + dia.y < dia.z ||
-				dia.y + dia.z < dia.x ||
-				dia.z + dia.x < dia.y)
+			if (!is_inverse && (
+				(dia.x + dia.y) < dia.z ||
+				(dia.y + dia.z) < dia.x ||
+				(dia.z + dia.x) < dia.y))
 				return false;
 
 			// The magnitude of a product of inertia was too large to be physical.
-			if (dia.x < Abs(2 * off.z) || 
+			if (!is_inverse && (
+				dia.x < Abs(2 * off.z) || 
 				dia.y < Abs(2 * off.y) ||
-				dia.z < Abs(2 * off.x))
+				dia.z < Abs(2 * off.x)))
 				return false;
 
 			return true;
@@ -264,7 +266,7 @@ namespace pr::physics
 		// Sanity check
 		bool Check() const
 		{
-			return Inertia::Check(To3x3(1));
+			return Inertia::Check(To3x3(1), true);
 		}
 	};
 

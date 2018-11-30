@@ -1,5 +1,6 @@
 #pragma once
 #include "pr/physics2/forward.h"
+#include "pr/collision/ldraw.h"
 #include "pr/physics2/rigid_body/rigid_body.h"
 
 namespace pr::ldr
@@ -16,25 +17,6 @@ namespace pr::ldr
 		All    = ~0,
 		_bitwise_operators_allowed,
 	};
-
-	inline TStr& Shape(TStr& str, typename TStr::value_type const* name, Col colour, collision::ShapeSphere const& shape, m4_cref<> o2w)
-	{
-		return Sphere(str, name, colour, shape.m_radius, o2w.pos);
-	}
-	inline TStr& Shape(TStr& str, typename TStr::value_type const* name, Col colour, collision::ShapeBox const& shape, m4_cref<> o2w)
-	{
-		return Box(str, name, colour, shape.m_radius * 2, o2w);
-	}
-	inline TStr& Shape(TStr& str, typename TStr::value_type const* name, Col colour, collision::Shape const& shape, m4_cref<> o2w)
-	{
-		using namespace collision;
-		switch (shape.m_type)
-		{
-		default: throw std::runtime_error("Unknown shape type");
-		case EShape::Sphere: return Shape(str, name, colour, shape_cast<ShapeSphere>(shape), o2w);
-		case EShape::Box:    return Shape(str, name, colour, shape_cast<ShapeBox>(shape), o2w);
-		}
-	}
 	inline TStr& RigidBody(TStr& str, typename TStr::value_type const* name, Col colour, physics::RigidBody const& rb, float scale = 1.0f, ERigidBodyFlags flags = ERigidBodyFlags::None)
 	{
 		Shape(str, name, colour, rb.Shape(), rb.O2W());

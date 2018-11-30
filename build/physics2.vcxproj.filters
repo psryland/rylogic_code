@@ -20,9 +20,6 @@
     <Filter Include="pr\physics\rigid_body">
       <UniqueIdentifier>{6a2a017e-f413-465f-b0c5-3107ac87a61c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="pr\physics\integrater">
-      <UniqueIdentifier>{29bd319b-df3b-4080-a7e8-32306a556ab9}</UniqueIdentifier>
-    </Filter>
     <Filter Include="pr\physics\shape">
       <UniqueIdentifier>{c5c98060-1da1-4e1b-b6bb-676deefe27ed}</UniqueIdentifier>
     </Filter>
@@ -37,6 +34,9 @@
     </Filter>
     <Filter Include="pr\physics\utility">
       <UniqueIdentifier>{9f24ebf5-b77b-42f0-b536-a3c844f33c79}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\physics\integrator">
+      <UniqueIdentifier>{29bd319b-df3b-4080-a7e8-32306a556ab9}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -62,12 +62,6 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\physics2\rigid_body\rigid_body.h">
       <Filter>pr\physics\rigid_body</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\physics2\integrater\integrater.h">
-      <Filter>pr\physics\integrater</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\physics2\integrater\jacobian.h">
-      <Filter>pr\physics\integrater</Filter>
     </ClInclude>
     <ClInclude Include="..\projects\physics2/src\body.h">
       <Filter>src</Filter>
@@ -106,9 +100,6 @@
       <Filter>pr\collision</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\collision\collision.h">
-      <Filter>pr\collision</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\collision\ldr_helper.h">
       <Filter>pr\collision</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\collision\penetration.h">
@@ -176,6 +167,15 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\physics2\utility\ldraw.h">
       <Filter>pr\physics\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\ldraw.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\integrator\integrator.h">
+      <Filter>pr\physics\integrator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\integrator\jacobian.h">
+      <Filter>pr\physics\integrator</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

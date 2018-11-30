@@ -137,7 +137,8 @@ namespace pr
 	#pragma region Functions
 
 	// Compare for floating point equality
-	template <typename T> inline bool FEql(v8_cref<T> lhs, v8_cref<T> rhs)
+	//template <typename T> inline bool FEql(v8_cref<T> lhs, v8_cref<T> rhs)
+	template <typename T> inline bool FEql(Vec8<T> lhs, Vec8<T> rhs)
 	{
 		return
 			FEql(lhs.ang, rhs.ang) &&
@@ -145,4 +146,82 @@ namespace pr
 	}
 
 	#pragma endregion
+
+	// Proxy object for Vec8
+	#if 0
+	struct Vec8ProxyC
+	{
+		Vec4<void> const& ang;
+		Vec4<void> const& lin;
+
+		Vec8ProxyC(Vec4<void> const& ang, Vec4<void> const& lin)
+			:ang(ang)
+			,lin(lin)
+		{}
+		Vec8ProxyC(Vec8<void> const& vec)
+			:ang(vec.ang)
+			,lin(vec.lin)
+		{}
+		operator Vec8<void>() const
+		{
+			return Vec8<void>{ang, lin};
+		}
+		float operator [](int i) const
+		{
+			return i < 4
+				? ang[i  ]
+				: lin[i-4];
+		}
+		friend bool FEql(Vec8ProxyC const& lhs, Vec8ProxyC const& rhs)
+		{
+			return FEql((Vec8<void>)lhs, (Vec8<void>)rhs);
+		}
+	};
+	struct Vec8Proxy
+	{
+		Vec4<void>& ang;
+		Vec4<void>& lin;
+	
+		Vec8Proxy(Vec4<void>& ang, Vec4<void>& lin)
+			:ang(ang)
+			,lin(lin)
+		{}
+		Vec8Proxy(Vec8<void>& vec)
+			:ang(vec.ang)
+			,lin(vec.lin)
+		{}
+		operator Vec8ProxyC() const
+		{
+			return Vec8ProxyC{ang, lin};
+		}
+		operator Vec8<void>() const
+		{
+			return Vec8<void>{ang, lin};
+		}
+		Vec8Proxy& operator = (Vec8ProxyC rhs)
+		{
+			ang = rhs.ang;
+			lin = rhs.lin;
+			return *this;
+		}
+		Vec8Proxy& operator = (Vec8Proxy rhs)
+		{
+			ang = rhs.ang;
+			lin = rhs.lin;
+			return *this;
+		}
+		Vec8Proxy& operator = (v8_cref<> rhs)
+		{
+			ang = rhs.ang;
+			lin = rhs.lin;
+			return *this;
+		}
+		float& operator [](int i)
+		{
+			return i < 4
+				? ang[i  ]
+				: lin[i-4];
+		}
+	};
+	#endif
 }

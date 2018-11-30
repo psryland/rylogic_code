@@ -7,7 +7,6 @@
 #include <cassert>
 #include "pr/common/alloca.h"
 #include "pr/maths/maths.h"
-#include "pr/collision/collision.h"
 #include "pr/geometry/closest_point.h"
 
 namespace pr
@@ -352,18 +351,115 @@ namespace pr
 	// Returns true if 'lhs' and 'rhs' intersect
 	inline bool pr_vectorcall Intersect_BBoxToBBox(BBox_cref lhs, BBox_cref rhs)
 	{
-		return	Abs(lhs.m_centre.x - rhs.m_centre.x) <= (lhs.m_radius.x + rhs.m_radius.x) &&
-				Abs(lhs.m_centre.y - rhs.m_centre.y) <= (lhs.m_radius.y + rhs.m_radius.y) &&
-				Abs(lhs.m_centre.z - rhs.m_centre.z) <= (lhs.m_radius.z + rhs.m_radius.z);
+		return
+			Abs(lhs.m_centre.x - rhs.m_centre.x) <= (lhs.m_radius.x + rhs.m_radius.x) &&
+			Abs(lhs.m_centre.y - rhs.m_centre.y) <= (lhs.m_radius.y + rhs.m_radius.y) &&
+			Abs(lhs.m_centre.z - rhs.m_centre.z) <= (lhs.m_radius.z + rhs.m_radius.z);
 	}
 
 	// Returns true if 'lhs' and 'rhs' intersect
 	inline bool pr_vectorcall Intersect_OBoxToOBox(OBox const& lhs, OBox const& rhs)
 	{
-		using namespace pr::collision;
-		ShapeBox b0(lhs.m_radius);
-		ShapeBox b1(rhs.m_radius);
-		return BoxVsBox(b0, lhs.m_box_to_world, b1, rhs.m_box_to_world);
+		auto l2w = lhs.m_box_to_world;
+		auto r2w = rhs.m_box_to_world;
+
+		// Compute a transform for 'rhs' in 'lhs's frame
+		auto r2l = InvertFast(l2w) * r2w;
+
+		// Compute common sub expressions. Add in an epsilon term to counteract arithmetic
+		// errors when two edges are parallel and their cross product is (near) 0
+		auto r2l_abs = Abs(r2l.rot) + m3x4(maths::tiny);
+
+		// Lambda for returning a separating axis with the correct sign
+		auto sep_axis = [&](v4_cref<> sa) { return Sign(Dot(r2l.pos, sa)) * sa; };
+
+		float ra, rb, sp;
+
+		// Test axes L = lhs.x, L = lhs.y, L = lhs.z
+		for (int i = 0; i != 3; ++i)
+		{
+			ra = lhs.m_radius[i];
+			rb = rhs.m_radius.x * r2l_abs.x[i] + rhs.m_radius.y * r2l_abs.y[i] + rhs.m_radius.z * r2l_abs.z[i];
+			sp = Abs(r2l.pos[i]);
+			if (Sign(ra + rb - sp) < 0)
+				return false;
+		}
+
+		// Test axes L = rhs.x, L = rhs.y, L = rhs.z
+		for (int i = 0; i != 3; ++i)
+		{
+			ra = Dot3(lhs.m_radius, r2l_abs[i]);
+			rb = rhs.m_radius[i];
+			sp = Abs(Dot3(r2l.pos, r2l[i]));
+			if (Sign(ra + rb - sp) < 0)
+				return false;
+		}
+
+		// Test axis L = lhs.x X rhs.x
+		ra = lhs.m_radius.y * r2l_abs.x.z + lhs.m_radius.z * r2l_abs.x.y;
+		rb = rhs.m_radius.y * r2l_abs.z.x + rhs.m_radius.z * r2l_abs.y.x;
+		sp = Abs(r2l.pos.z * r2l.x.y - r2l.pos.y * r2l.x.z);
+		if (Sign(ra + rb - sp) < 0)
+			return false;
+
+		// Test axis L = lhs.x X rhs.y
+		ra = lhs.m_radius.y * r2l_abs.y.z + lhs.m_radius.z * r2l_abs.y.y;
+		rb = rhs.m_radius.x * r2l_abs.z.x + rhs.m_radius.z * r2l_abs.x.x;
+		sp = Abs(r2l.pos.z * r2l.y.y - r2l.pos.y * r2l.y.z);
+		if (Sign(ra + rb - sp) < 0)
+			return false;
+
+		// Test axis L = lhs.x X rhs.z
+		ra = lhs.m_radius.y * r2l_abs.z.z + lhs.m_radius.z * r2l_abs.z.y;
+		rb = rhs.m_radius.x * r2l_abs.y.x + rhs.m_radius.y * r2l_abs.x.x;
+		sp = Abs(r2l.pos.z * r2l.z.y - r2l.pos.y * r2l.z.z);
+		if (Sign(ra + rb - sp) < 0)
+			return false;
+
+		// Test axis L = lhs.y X rhs.x
+		ra = lhs.m_radius.x * r2l_abs.x.z + lhs.m_radius.z * r2l_abs.x.x;
+		rb = rhs.m_radius.y * r2l_abs.z.y + rhs.m_radius.z * r2l_abs.y.y;
+		sp = Abs(r2l.pos.x * r2l.x.z - r2l.pos.z * r2l.x.x);
+		if (Sign(ra + rb - sp) < 0)
+			return false;
+
+		// Test axis L = lhs.y X rhs.y
+		ra = lhs.m_radius.x * r2l_abs.y.z + lhs.m_radius.z * r2l_abs.y.x;
+		rb = rhs.m_radius.x * r2l_abs.z.y + rhs.m_radius.z * r2l_abs.x.y;
+		sp = Abs(r2l.pos.x * r2l.y.z - r2l.pos.z * r2l.y.x);
+		if (Sign(ra + rb - sp) < 0)
+			return false;
+
+		// Test axis L = lhs.y X rhs.z
+		ra = lhs.m_radius.x * r2l_abs.z.z + lhs.m_radius.z * r2l_abs.z.x;
+		rb = rhs.m_radius.x * r2l_abs.y.y + rhs.m_radius.y * r2l_abs.x.y;
+		sp = Abs(r2l.pos.x * r2l.z.z - r2l.pos.z * r2l.z.x);
+		if (Sign(ra + rb - sp) < 0)
+			return false;
+
+		// Test axis L = lhs.z X rhs.x
+		ra = lhs.m_radius.x * r2l_abs.x.y + lhs.m_radius.y * r2l_abs.x.x;
+		rb = rhs.m_radius.y * r2l_abs.z.z + rhs.m_radius.z * r2l_abs.y.z;
+		sp = Abs(r2l.pos.y * r2l.x.x - r2l.pos.x * r2l.x.y);
+		if (Sign(ra + rb - sp) < 0)
+			return false;
+
+		// Test axis L = lhs.z X rhs.y
+		ra = lhs.m_radius.x * r2l_abs.y.y + lhs.m_radius.y * r2l_abs.y.x;
+		rb = rhs.m_radius.x * r2l_abs.z.z + rhs.m_radius.z * r2l_abs.x.z;
+		sp = Abs(r2l.pos.y * r2l.y.x - r2l.pos.x * r2l.y.y);
+		if (Sign(ra + rb - sp) < 0)
+			return false;
+
+		// Test axis L = lhs.z X rhs.z
+		ra = lhs.m_radius.x * r2l_abs.z.y + lhs.m_radius.y * r2l_abs.z.x;
+		rb = rhs.m_radius.x * r2l_abs.y.z + rhs.m_radius.y * r2l_abs.x.z;
+		sp = Abs(r2l.pos.y * r2l.z.x - r2l.pos.x * r2l.z.y);
+		if (Sign(ra + rb - sp) < 0)
+			return false;
+	
+		// No separating axis found, must be intersecting
+		return true;
 	}
 }
 

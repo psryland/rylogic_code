@@ -27,7 +27,7 @@
     <ClInclude Include="..\include\pr\collision\col_box_vs_line.h" />
     <ClInclude Include="..\include\pr\collision\col_sphere_vs_box.h" />
     <ClInclude Include="..\include\pr\collision\col_sphere_vs_sphere.h" />
-    <ClInclude Include="..\include\pr\collision\ldr_helper.h" />
+    <ClInclude Include="..\include\pr\collision\ldraw.h" />
     <ClInclude Include="..\include\pr\collision\penetration.h" />
     <ClInclude Include="..\include\pr\collision\ray.h" />
     <ClInclude Include="..\include\pr\collision\ray_cast.h" />
@@ -53,8 +53,8 @@
     <ClInclude Include="..\include\pr\maths\vector4.h" />
     <ClInclude Include="..\include\pr\physics2\constants.h" />
     <ClInclude Include="..\include\pr\physics2\forward.h" />
-    <ClInclude Include="..\include\pr\physics2\integrater\integrater.h" />
-    <ClInclude Include="..\include\pr\physics2\integrater\jacobian.h" />
+    <ClInclude Include="..\include\pr\physics2\integrator\integrator.h" />
+    <ClInclude Include="..\include\pr\physics2\integrator\jacobian.h" />
     <ClInclude Include="..\include\pr\physics2\physics.h" />
     <ClInclude Include="..\include\pr\physics2\rigid_body\rigid_body.h" />
     <ClInclude Include="..\include\pr\physics2\shape\inertia.h" />

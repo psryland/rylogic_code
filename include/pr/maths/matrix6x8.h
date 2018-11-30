@@ -44,6 +44,12 @@ namespace pr
 			,m01(m01_)
 			,m11(m11_)
 		{}
+		Mat6x8(v8_cref<> x, v8_cref<> y, v8_cref<> z, v8_cref<> u, v8_cref<> v, v8_cref<> w)
+			:m00(x.ang, y.ang, z.ang)
+			,m10(x.lin, y.lin, z.lin)
+			,m01(u.ang, v.ang, w.ang)
+			,m11(u.lin, v.lin, w.lin)
+		{}
 
 		// Reinterpret as a different matrix type
 		template <typename U, typename V> explicit operator Mat6x8<U, V> const&() const
@@ -56,12 +62,25 @@ namespace pr
 		}
 
 		// Array of column vectors
-		v8_cref<> operator [](int i) const
+		Vec8<void> operator [](int i) const
 		{
+			// Note: Creating a Vec8Proxy doesn't work because by default the compiler selects the
+			// mutable overload for non-const instances, so swap-style assignments don't work.
 			assert("index out of range" && i >= 0 && i < 6);
 			return i < 3
 				? Vec8<void>{m00[i  ], m10[i  ]}
 				: Vec8<void>{m01[i-3], m11[i-3]};
+		}
+		Vec8<void> col(int i) const
+		{
+			assert("index out of range" && i >= 0 && i < 6);
+			return (*this)[i];
+		}
+		void col(int i, Vec8<void> const& rhs)
+		{
+			assert("index out of range" && i >= 0 && i < 6);
+			if (i < 3) { m00[i  ] = rhs.ang; m10[i  ] = rhs.lin; }
+			else       { m01[i-3] = rhs.ang; m11[i-3] = rhs.lin; }
 		}
 	};
 	static_assert(maths::is_vec<Mat6x8<void,void>>::value, "");
@@ -143,9 +162,9 @@ namespace pr::maths
 	PRUnitTest(Matrix6x8Tests)
 	{
 		{// Memory order tests
-			auto m1 = Matrix<float>{6, 8,
+			auto m1 = Matrix<float>{6, 8,  // = [{1} {2} {3} {4} {5} {6}]
 			{
-				1, 1, 1, 1, 1, 1, 1, 1, // = [{1} {2} {3} {4} {5} {6}]
+				1, 1, 1, 1, 1, 1, 1, 1,
 				2, 2, 2, 2, 2, 2, 2, 2,
 				3, 3, 3, 3, 3, 3, 3, 3,
 				4, 4, 4, 4, 4, 4, 4, 4,
@@ -161,9 +180,9 @@ namespace pr::maths
 				3, 3, 3, 3, 4, 4, 4, 4,
 				3, 3, 3, 3, 4, 4, 4, 4,
 			}};
-			auto M1 = m6x8
+			auto M1 = m6x8 // = [{1} {2} {3} {4} {5} {6}]
 			{
-				m3x4{v4{1},v4{2},v4{3}}, m3x4{v4{4},v4{5},v4{6}}, // = [{1} {2} {3} {4} {5} {6}]
+				m3x4{v4{1},v4{2},v4{3}}, m3x4{v4{4},v4{5},v4{6}},
 				m3x4{v4{1},v4{2},v4{3}}, m3x4{v4{4},v4{5},v4{6}}
 			};
 			auto M2 = m6x8
@@ -178,6 +197,36 @@ namespace pr::maths
 				PR_CHECK(FEql(m1(c,r), M1[c][r]), true);
 				PR_CHECK(FEql(m2(c,r), M2[c][r]), true);
 			}
+
+			auto M3 = m6x8 // = [{1} {2} {3} {4} {5} {6}]
+			{
+				v8{1,1,1,1, 1,1,1,1},
+				v8{2,2,2,2, 2,2,2,2},
+				v8{3,3,3,3, 3,3,3,3},
+				v8{4,4,4,4, 4,4,4,4},
+				v8{5,5,5,5, 5,5,5,5},
+				v8{6,6,6,6, 6,6,6,6},
+			};
+			PR_CHECK(FEql(M3, M1), true);
+		}
+		{// Array access
+			auto m1 = m6x8
+			{
+				m3x4{v4{1},v4{2},v4{3}}, m3x4{v4{4},v4{5},v4{6}}, // = [{1} {2} {3} {4} {5} {6}]
+				m3x4{v4{1},v4{2},v4{3}}, m3x4{v4{4},v4{5},v4{6}}
+			};
+			PR_CHECK(FEql(m1[0], v8{1,1,1,1, 1,1,1,1}), true);
+			PR_CHECK(FEql(m1[1], v8{2,2,2,2, 2,2,2,2}), true);
+			PR_CHECK(FEql(m1[2], v8{3,3,3,3, 3,3,3,3}), true);
+			PR_CHECK(FEql(m1[3], v8{4,4,4,4, 4,4,4,4}), true);
+			PR_CHECK(FEql(m1[4], v8{5,5,5,5, 5,5,5,5}), true);
+			PR_CHECK(FEql(m1[5], v8{6,6,6,6, 6,6,6,6}), true);
+
+			auto tmp = m1.col(0);
+			m1.col(0, m1[5]);
+			m1.col(5, tmp);
+			PR_CHECK(FEql(m1[0], v8{6,6,6,6, 6,6,6,6}), true);
+			PR_CHECK(FEql(m1[5], v8{1,1,1,1, 1,1,1,1}), true);
 		}
 		{// Multiply vector
 			auto m = Matrix<float>{6, 6,
