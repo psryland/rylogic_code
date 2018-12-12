@@ -14,7 +14,7 @@ struct MainUI :Form
 	double m_clock;
 	int m_steps;
 
-	Body m_body[2];
+	Body m_body[10];
 	Physics m_physics;
 
 	MainUI()
@@ -53,20 +53,21 @@ struct MainUI :Form
 		{
 			body.ZeroForces();
 			body.ZeroMomentum();
-			body.O2W(Random4x4(rng, v4Origin, 5.0f));
+			
+			auto o2w = Random4x4(rng, v4Origin, 15.0f);
+			o2w.pos.xyz += o2w.pos.xyz;
+			body.O2W(o2w);
 		}
-		auto A = float(maths::tau_by_8);
-		m_body[0].O2W(m4x4::Transform(0*A,0*A,0*A, v4{-1,0.4f,0.4f,1}));
-		m_body[1].O2W(m4x4::Transform(0*A,0*A,0*A, v4{+1,0   ,1,1}));
-		//m_body[2].O2W(m4x4::Transform(0,0,float(maths::tau_by_8), v4{0,+1,0,1}));
-		//m_body[0].VelocityWS(v4{0, 0, 1, 0}, v4{0, +1, -1, 0});
-		//m_body[1].VelocityWS(v4{0, 0, 1, 0}, v4{0, -1, +1, 0});
-		//m_body[2].VelocityWS(v4{0, 0, 1, 0}, v4{0, -1, +1, 0});
 
-		//m_body[0].VelocityWS(v4{float(maths::tau_by_4),float(maths::tau_by_8),float(maths::tau),0}, v4{0,0,0,0});
-		//m_body[0].VelocityWS(v4{0,0,0.1f*float(maths::tau),0}, v4{0,0,0,0});
-		//m_body[0].VelocityWS(v4{3,0,0,0}, v4{1,0,0.4f,0});
-		m_body[1].VelocityWS(v4{0*1,0,0,0}, v4{-1,0,0*0.4f,0});
+		//auto A = float(maths::tau_by_8);
+		
+		//m_body[0].O2W(m4x4::Transform(0*A,0*A,0*A, v4{-1, 0.4f, 0.6f, 1}));
+		//m_body[1].O2W(m4x4::Transform(0*A,0*A,0*A, v4{+1, 0.0f, 1.0f, 1}));
+		//m_body[1].VelocityWS(v4{0*1,0,0,0}, v4{-0.6f, +0.3f, -0.3f, 0});
+
+		m_body[0].O2W(m4x4::Transform(0,0,0, v4{-0.5f, 0.0f, 1.0f, 1}));
+		m_body[1].O2W(m4x4::Transform(0,0,0, v4{-3*maths::tiny + Sqrt(Sqr(0.5f) + Sqr(0.5f)), 0.0f, 1.0f, 1}));
+		m_body[1].VelocityWS(v4{0,0,1,0}, v4{+0.0f, +0.0f, -0.0f, 0});
 
 		// Reset the broad phase
 		m_physics.m_broadphase.Clear();
@@ -74,7 +75,7 @@ struct MainUI :Form
 			m_physics.m_broadphase.Add(body);
 
 		Render(0);
-		View3D_ResetView(m_view3d.m_win, View3DV4{+0.2f,0,-1,0}, View3DV4{0,1,0,0}, 0, TRUE, TRUE);
+		View3D_ResetView(m_view3d.m_win, View3DV4{+0.0f,0,-1,0}, View3DV4{0,1,0,0}, 0, TRUE, TRUE);
 	}
 
 	// Step the main loop
@@ -88,7 +89,7 @@ struct MainUI :Form
 		auto dt = float(elapsed_seconds);
 		//auto dt = 1.0f;
 
-		#if 1
+		#if 0
 
 		//auto accel = v4Origin - m_body[0].O2W().pos; accel.y = accel.z = 0;
 		//auto w_dot = accel;//v4{};//Cross(v4YAxis, accel);
@@ -117,6 +118,19 @@ struct MainUI :Form
 					body0.ApplyForceWS(-force, v4Zero);
 					body1.ApplyForceWS(+force, v4Zero);
 				}
+			}
+		}
+
+		// Pull things back to the origin
+		for (int i = 0, iend = _countof(m_body); i != iend; ++i)
+		{
+			auto& body = m_body[i];
+
+			auto r = body.O2W().pos.w0();
+			auto rlen = Length(r);
+			if (rlen > 10.0f)
+			{
+				body.ApplyForceWS(-r * Sqrt(rlen - 10.0f) / rlen, v4{});
 			}
 		}
 

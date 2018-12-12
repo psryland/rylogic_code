@@ -31,6 +31,15 @@ namespace pr::collision
 
 		int pad;
 
+		Contact()
+			:m_axis()
+			,m_point()
+			,m_depth()
+			,m_mat_idA()
+			,m_mat_idB()
+			,pad()
+		{}
+
 		// Reverse the sense of the contact information
 		void flip()
 		{

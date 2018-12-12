@@ -62,6 +62,16 @@ namespace pr::physics
 	//  - 'CoM()' is a vector from the origin of the space that the inertia is in to the
 	//    centre of mass. This is really only used with spatial vectors and should be zero
 	//    for normal inertia use.
+	//  - Using float_inf for infinite mass objects doesn't work well because inf * 0 == NaN.
+	//    Instead, use float_max in-place of infinite.
+	//  - Infinite inertia matrices are an identity matrix but with 'mass' as float_max.
+	//    That way, Invert and other functions don't need to handle special cases.
+
+	// Use the sqrt of float_max as the threshold for infinite mass so that 
+	// 'InfiniteMass * InfiniteMass' does not overflow a float. If mass becomes
+	// 'inf' then multiplying by 0 creates NaNs.
+	constexpr float InfiniteMass = 1.84467435229094026671e19f; // = sqrt(maths::float_max);
+	constexpr float ZeroMass = 1.0f / InfiniteMass;
 
 	// Direction for translating an inertia matrix
 	enum class ETranslateInertia
@@ -76,7 +86,11 @@ namespace pr::physics
 		v4 m_products;     // The Ixy, Ixz, Iyz terms of the unit inertia at the CoM, Ic.
 		v4 m_com_and_mass; // Offset from the origin to the centre of mass, and the mass.
 
-		Inertia() = default;
+		Inertia()
+			:m_diagonal(1, 1, 1, 0)
+			,m_products(0, 0, 0, 0)
+			,m_com_and_mass(0,0,0,InfiniteMass)
+		{}
 		Inertia(m3_cref<> unit_inertia, float mass, v4_cref<> com = v4{})
 			:m_diagonal(unit_inertia.x.x, unit_inertia.y.y, unit_inertia.z.z, 0)
 			,m_products(unit_inertia.x.y, unit_inertia.x.z, unit_inertia.y.z, 0)
@@ -111,7 +125,7 @@ namespace pr::physics
 			assert(Inertia::Check(inertia));
 
 			auto m = mass >= 0 ? mass : Trace(inertia.m11) / 3.0f;
-			auto cx   = (1.0f/m) * inertia.m10;
+			auto cx   = (1.0f/m) * inertia.m01;
 			auto Ic   = (1.0f/m) * inertia.m00 + cx * cx;
 			*this = Inertia{Ic, m, v4{cx.y.z, -cx.x.z, cx.x.y, 0}};
 		}
@@ -122,20 +136,33 @@ namespace pr::physics
 		// The mass to scale the inertia by
 		float Mass() const
 		{
-			return m_com_and_mass.w;
+			return
+				m_com_and_mass.w <  ZeroMass ? 0.0f :
+				m_com_and_mass.w >= InfiniteMass ? InfiniteMass :
+				m_com_and_mass.w;
 		}
 		void Mass(float mass)
 		{
-			m_com_and_mass.w = mass;
+			assert("Mass must be positive" && mass >= 0);
+			assert(!isnan(mass));
+			m_com_and_mass.w =
+				mass <  ZeroMass ? 0.0f :
+				mass >= InfiniteMass ? InfiniteMass :
+				mass;
 		}
 
 		// The inverse mass
 		float InvMass() const
 		{
-			return 1.0f / Mass();
+			auto mass = Mass();
+			return
+				mass <  ZeroMass ? InfiniteMass :
+				mass >= InfiniteMass ? 0.0f :
+				1.0f/mass;
 		}
 
 		// Offset from the origin of the space this inertia is in to the centre of mass.
+		// Note: this is *NOT* equivalent to translating the inertia.
 		v4 CoM() const
 		{
 			return m_com_and_mass.w0();
@@ -155,6 +182,9 @@ namespace pr::physics
 		m3x4 Ic3x3(float mass = -1) const
 		{
 			mass = mass >= 0 ? mass : Mass();
+			if (mass < ZeroMass || mass >= InfiniteMass)
+				return m3x4Identity;
+
 			auto dia = mass * m_diagonal;
 			auto off = mass * m_products;
 			auto Ic = m3x4{
@@ -168,6 +198,9 @@ namespace pr::physics
 		m3x4 To3x3(float mass = -1) const
 		{
 			mass = mass >= 0 ? mass : Mass();
+			if (mass < ZeroMass || mass >= InfiniteMass)
+				return m3x4Identity;
+
 			auto Ic = Ic3x3(mass);
 			if (CoM() == v4{})
 				return Ic;
@@ -181,6 +214,9 @@ namespace pr::physics
 		Mat6x8<Motion,Force> To6x6(float mass = -1) const
 		{
 			mass = mass >= 0 ? mass : Mass();
+			if (mass < ZeroMass || mass >= InfiniteMass)
+				return Mat6x8<Motion,Force>{m6x8Identity};
+
 			auto Ic = Ic3x3(mass);
 			auto cx = CPM(CoM());
 			auto Io = Mat6x8<Motion,Force>{Ic - mass*cx*cx , mass*cx, -mass*cx, mass*m3x4Identity};
@@ -263,6 +299,12 @@ namespace pr::physics
 			return true;
 		}
 
+		// An immovable object
+		template <typename = void> static Inertia Infinite()
+		{
+			return Inertia{v4{1,1,1,0}, v4{0,0,0,0}, InfiniteMass};
+		}
+
 		// Create an inertia matrix for a point at 'offset'
 		template <typename = void> static Inertia Point(float mass, v4_cref<> offset = v4{})
 		{
@@ -307,11 +349,29 @@ namespace pr::physics
 		v4 m_products;        // The Ixy, Ixz, Iyz terms of the unit inverse inertia
 		v4 m_com_and_invmass; // Offset from the origin to the centre of mass, and the inverse mass.
 
-		InertiaInv() = default;
+		InertiaInv()
+			:m_diagonal(1, 1, 1, 0)
+			,m_products(0, 0, 0, 0)
+			,m_com_and_invmass(0, 0, 0, 0)
+		{}
 		InertiaInv(m3_cref<> unit_inertia_inv, float invmass, v4_cref<> com = v4{})
 			:m_diagonal(unit_inertia_inv.x.x, unit_inertia_inv.y.y, unit_inertia_inv.z.z, 0)
 			,m_products(unit_inertia_inv.x.y, unit_inertia_inv.x.z, unit_inertia_inv.y.z, 0)
 			,m_com_and_invmass(com.xyz, invmass)
+		{
+			assert(Check());
+		}
+		InertiaInv(v4_cref<> diagonal, v4_cref<> products, float invmass, v4_cref<> com = v4{})
+			:m_diagonal(diagonal)
+			,m_products(products)
+			,m_com_and_invmass(com.xyz, invmass)
+		{
+			assert(Check());
+		}
+		InertiaInv(InertiaInv const& rhs, v4_cref<> com)
+			:m_diagonal(rhs.m_diagonal)
+			,m_products(rhs.m_products)
+			,m_com_and_invmass(com.xyz, rhs.InvMass())
 		{
 			assert(Check());
 		}
@@ -321,25 +381,37 @@ namespace pr::physics
 			assert(InertiaInv::Check(inertia¯));
 
 			auto Ic¯ = inertia¯.m00;
-			auto cx  = Invert(Ic¯) * inertia¯.m01;
+			auto cx  = inertia¯.m10 * Invert(Ic¯);
 			auto im = invmass >= 0 ? invmass : Trace(inertia¯.m11 + cx*Ic¯*cx) / 3.0f;
-			*this = InertiaInv{Ic¯, im, v4{cx.y.z, -cx.x.z, cx.x.y, 0}};
+			*this = InertiaInv{(1/im)*Ic¯, im, v4{cx.y.z, -cx.x.z, cx.x.y, 0}};
 		}
 
 		// The mass to scale the inertia by
 		float Mass() const
 		{
-			return 1/InvMass();
+			auto im = InvMass();
+			return
+				im <  ZeroMass ? InfiniteMass :
+				im >= InfiniteMass ? 0.0f :
+				1.0f / im;
 		}
 
 		// The inverse mass
 		float InvMass() const
 		{
-			return m_com_and_invmass.w;
+			auto im = m_com_and_invmass.w;
+			return
+				im <  ZeroMass ? 0.0f :
+				im >= InfiniteMass ? InfiniteMass :
+				im;
 		}
 		void InvMass(float invmass)
 		{
-			m_com_and_invmass.w = invmass;
+			assert("Mass must be positive" && invmass >= 0);
+			m_com_and_invmass.w =
+				invmass < ZeroMass ? 0.0f :
+				invmass > InfiniteMass ? InfiniteMass :
+				invmass;
 		}
 
 		// Offset to the location to use the inverse inertia
@@ -352,16 +424,13 @@ namespace pr::physics
 			m_com_and_invmass.xyz = com.xyz;
 		}
 
-		//// The mass weighted distance from the centre of mass
-		//v4 MassMoment() const
-		//{
-		//	return Mass() * Ofs();
-		//}
-
 		// The centre of mass inverse inertia (mass scaled by default, excludes 'com')
 		m3x4 Ic3x3(float inv_mass = -1) const
 		{
 			inv_mass = inv_mass >= 0 ? inv_mass : InvMass();
+			if (inv_mass < ZeroMass || inv_mass >= InfiniteMass)
+				return m3x4Identity;
+
 			auto dia = inv_mass * m_diagonal;
 			auto off = inv_mass * m_products;
 			auto Ic¯ = m3x4{
@@ -375,6 +444,9 @@ namespace pr::physics
 		m3x4 To3x3(float inv_mass = -1) const
 		{
 			inv_mass = inv_mass >= 0 ? inv_mass : InvMass();
+			if (inv_mass < ZeroMass || inv_mass >= InfiniteMass)
+				return m3x4Identity;
+
 			auto Ic¯ = Ic3x3(inv_mass);
 			if (CoM() == v4{})
 				return Ic¯;
@@ -397,6 +469,9 @@ namespace pr::physics
 		Mat6x8<Force,Motion> To6x6(float inv_mass = -1) const
 		{
 			inv_mass = inv_mass >= 0 ? inv_mass : InvMass();
+			if (inv_mass < ZeroMass || inv_mass >= InfiniteMass)
+				return Mat6x8<Force,Motion>{m6x8Identity};
+
 			auto Ic¯ = Ic3x3(inv_mass);
 			auto cx  = CPM(CoM());
 			auto Io¯ = Mat6x8<Force,Motion>{Ic¯, -Ic¯*cx, cx*Ic¯, inv_mass*m3x4Identity - cx*Ic¯*cx};
@@ -450,10 +525,7 @@ namespace pr::physics
 			
 			// Check symmetric
 			if (!IsSymmetric(inertia¯.m00) ||
-				!IsSymmetric(inertia¯.m11) ||
-				!IsAntiSymmetric(inertia¯.m01) ||
-				!IsAntiSymmetric(inertia¯.m10) ||
-				!FEql(inertia¯.m01 + inertia¯.m10, m3x4{}))
+				!IsSymmetric(inertia¯.m11))
 				return assert(false),false;
 
 			// Check 'Ic¯'
@@ -473,6 +545,10 @@ namespace pr::physics
 				!IsAntiSymmetric(cx))
 				return assert(false),false;
 
+			// Check 'cx = -cxT'
+			if (!FEql(cx + cxT, m3x4{}))
+				return assert(false),false;
+
 			// Check '1/m'
 			auto im = inertia¯.m11 + cx * Ic¯ * cx;
 			if (!FEql(im.y.y - im.x.x, 0) ||
@@ -480,6 +556,12 @@ namespace pr::physics
 				return assert(false),false;
 
 			return true;
+		}
+
+		// An immovable object
+		template <typename = void> static InertiaInv Zero()
+		{
+			return InertiaInv{v4{1,1,1,0}, v4{0,0,0,0}, 0};
 		}
 	};
 
@@ -507,85 +589,11 @@ namespace pr::physics
 		return !(lhs == rhs);
 	}
 
-	// Add/Subtract two inertias. 'lhs' and 'rhs' must be in the same frame.
-	template <typename = void> inline Inertia operator + (Inertia const& lhs, Inertia const& rhs)
-	{
-		// The result of addition is a new Inertia so we might as well bake the offset into the result.
-		auto Ia = lhs.CoM() == v4{} ? lhs : Translate(lhs, -lhs.CoM(), ETranslateInertia::AwayFromCoM);
-		auto Ib = rhs.CoM() == v4{} ? rhs : Translate(rhs, -rhs.CoM(), ETranslateInertia::AwayFromCoM);
-
-		auto massA = Ia.Mass();
-		auto massB = Ib.Mass();
-		auto mass = massA + massB;
-
-		Inertia sum = {};
-		sum.m_diagonal = (massA*Ia.m_diagonal + massB*Ib.m_diagonal) / mass;
-		sum.m_products = (massA*Ia.m_products + massB*Ib.m_products) / mass;
-		sum.m_com_and_mass = v4{0,0,0,mass};
-		return sum;
-	}
-	template <typename = void> inline Inertia operator - (Inertia const& lhs, Inertia const& rhs)
-	{
-		// The result of subtraction is a new Inertia so we might as well bake the offset into the result.
-		auto Ia = lhs.CoM() == v4{} ? lhs : Translate(lhs, -lhs.CoM(), ETranslateInertia::AwayFromCoM);
-		auto Ib = rhs.CoM() == v4{} ? rhs : Translate(rhs, -rhs.CoM(), ETranslateInertia::AwayFromCoM);
-
-		auto massA = Ia.Mass();
-		auto massB = Ib.Mass();
-		auto mass = massA - massB;
-
-		// The result must still have a positive mass
-		if (mass <= 0)
-			throw std::runtime_error("Inertia difference is undefined");
-
-		Inertia sum = {};
-		sum.m_diagonal = (massA*Ia.m_diagonal - massB*Ib.m_diagonal) / mass;
-		sum.m_products = (massA*Ia.m_products - massB*Ib.m_products) / mass;
-		sum.m_com_and_mass = v4{0,0,0,mass};
-		return sum;
-	}
-
-	// Add/Subtract inverse inertias. 'lhs' and 'rhs' must be in the same frame.
-	template <typename = void> inline InertiaInv operator + (InertiaInv const& a¯, InertiaInv const& b¯)
-	{
-		if (a¯.CoM() == v4{} && b¯.CoM() == v4{})
-		{
-			auto s = a¯.To3x3(1) + b¯.To3x3(1);
-			auto s¯ = InertiaInv{s, a¯.InvMass() + b¯.InvMass()};
-			return s¯;
-		}
-		else
-		{
-			auto s = a¯.To6x6(1) + b¯.To6x6(1);
-			assert(InertiaInv::Check(s));
-
-			auto Ic = Invert(s.m00);
-			auto cx = Ic * s.m01;
-			//auto ofs = 
-			auto s¯ = InertiaInv{s.m00, 1.0f};
-			return s¯;
-		}
-	}
-	template <typename = void> inline InertiaInv operator - (InertiaInv const& a¯, InertiaInv const& b¯)
-	{
-		if (a¯.CoM() == v4{} && b¯.CoM() == v4{})
-		{
-			auto c¯ = a¯.To3x3() - b¯.To3x3();
-			auto inv_mass = (b¯.Mass() - a¯.Mass()) / (a¯.Mass() * b¯.Mass());
-			return InertiaInv{c¯, inv_mass};
-		}
-		else
-		{
-			throw 0;
-		}
-	//	// a¯ - b¯ = a¯.b.b¯ - a¯.a.b¯
-	//	//         = a¯.(b - a).b¯
-	// 1/ma - 1/mb = (mb - ma)/mamb
-	//	auto a = Invert(a¯);
-	//	auto b = Invert(b¯);
-	//	auto s = a¯ * (b - a) * b¯;
-	//	return s;
-	}
+	// Note: there is no operator + because its definition is ambiguous
+	//  Ia + Ib can either mean:
+	//      Ia.To3x3() + Ib.To3x3() or Ia.To6x6() + Ib.To6x6() 
+	//  or weld two rigid bodies together:
+	//      (ma*Ia + mb*Ib)/(mamb) 
 
 	// Multiply a vector by 'inertia'.
 	template <typename = void> inline v4 operator * (Inertia const& inertia, v4 const& v)
@@ -653,6 +661,94 @@ namespace pr::physics
 			FEql(lhs.m_diagonal, rhs.m_diagonal) &&
 			FEql(lhs.m_products, rhs.m_products) &&
 			FEql(lhs.m_com_and_invmass, rhs.m_com_and_invmass);
+	}
+
+	// Add/Subtract two inertias. 'lhs' and 'rhs' must be in the same frame.
+	inline Inertia Join(Inertia const& lhs, Inertia const& rhs)
+	{
+		if (lhs.CoM() != rhs.CoM())
+			throw std::runtime_error("Inertias must be in the same space");
+
+		auto& Ia = lhs;
+		auto& Ib = rhs;
+
+		auto massA = Ia.Mass();
+		auto massB = Ib.Mass();
+		auto mass = massA + massB;
+		auto com = lhs.CoM();
+
+		Inertia sum = {};
+		sum.m_diagonal = (massA*Ia.m_diagonal + massB*Ib.m_diagonal) / mass;
+		sum.m_products = (massA*Ia.m_products + massB*Ib.m_products) / mass;
+		sum.m_com_and_mass = v4{com, mass};
+		return sum;
+	}
+	inline Inertia Split(Inertia const& lhs, Inertia const& rhs)
+	{
+		if (lhs.CoM() != rhs.CoM())
+			throw std::runtime_error("Inertias must be in the same space");
+
+		auto& Ia = lhs;
+		auto& Ib = rhs;
+
+		auto massA = Ia.Mass();
+		auto massB = Ib.Mass();
+		auto mass = massA - massB;
+		auto com = lhs.CoM();
+		
+		// The result must still have a positive mass
+		if (mass <= 0)
+			throw std::runtime_error("Inertia difference is undefined");
+		
+		Inertia sum = {};
+		sum.m_diagonal = (massA*Ia.m_diagonal - massB*Ib.m_diagonal) / mass;
+		sum.m_products = (massA*Ia.m_products - massB*Ib.m_products) / mass;
+		sum.m_com_and_mass = v4{com, mass};
+		return sum;
+	}
+
+	// Add/Subtract inverse inertias. 'lhs' and 'rhs' must be in the same frame.
+	inline InertiaInv Join(InertiaInv const& lhs, InertiaInv const& rhs)
+	{
+		if (lhs.CoM() != rhs.CoM())
+			throw std::runtime_error("Inertias must be in the same space");
+
+		auto& Ia¯ = lhs;
+		auto& Ib¯ = rhs;
+
+		auto massA = Ia¯.Mass();
+		auto massB = Ib¯.Mass();
+		auto mass = massA + massB;
+		auto com = lhs.CoM();
+
+		InertiaInv sum = {};
+		sum.m_diagonal = (massA*Ia¯.m_diagonal + massB*Ib¯.m_diagonal) / mass;
+		sum.m_products = (massA*Ia¯.m_products + massB*Ib¯.m_products) / mass;
+		sum.m_com_and_invmass = v4{com, 1/mass};
+		return sum;
+	}
+	inline InertiaInv Split(InertiaInv const& lhs, InertiaInv const& rhs)
+	{
+		if (lhs.CoM() != rhs.CoM())
+			throw std::runtime_error("Inertias must be in the same space");
+
+		auto& Ia¯ = lhs;
+		auto& Ib¯ = rhs;
+
+		auto massA = Ia¯.Mass();
+		auto massB = Ib¯.Mass();
+		auto mass = massA - massB;
+		auto com = lhs.CoM();
+		
+		// The result must still have a positive mass
+		if (mass <= 0)
+			throw std::runtime_error("Inertia difference is undefined");
+		
+		InertiaInv sum = {};
+		sum.m_diagonal = (massA*Ia¯.m_diagonal - massB*Ib¯.m_diagonal) / mass;
+		sum.m_products = (massA*Ia¯.m_products - massB*Ib¯.m_products) / mass;
+		sum.m_com_and_invmass = v4{com, 1/mass};
+		return sum;
 	}
 
 	// Invert inertia
@@ -754,7 +850,7 @@ namespace pr::physics
 		auto mass = 5.0f;
 		{// Inertia Construction
 			auto moment = (1.0f/6.0f) * Sqr(2.0f);
-			
+
 			auto I0 = Inertia{moment, mass};
 			PR_CHECK(FEql(I0, Inertia{I0.To3x3(1), I0.Mass()}), true);
 			PR_CHECK(FEql(I0, Inertia{I0.To6x6()}), true);
@@ -763,9 +859,11 @@ namespace pr::physics
 			PR_CHECK(FEql(I1, Inertia{I1.To3x3(1), I1.Mass()}), true);
 			PR_CHECK(FEql(I1, Inertia{I1.To6x6()}), true);
 
+			// Note: about Inertia{3x3, com} vs. Translate,
+			//  Inertia{3x3, com} says "'3x3' is the inertia over there at 'com'"
+			//  Translate(3x3, ofs) says "'3x3' is the inertia here at the CoM, now measure it over there at 'ofs'"
 			auto I2 = Inertia{I1, -v4{3,2,1,0}};
-			//PR_CHECK(FEql(Translate(I1, v4{3,2,1,0}, ETranslateInertia::AwayFromCoM), Inertia{I2.To3x3(1), I2.Mass()}), true); // Because the ofs gets baked in
-			//PR_CHECK(FEql(I2, Inertia{I2.To6x6()}), true);
+			PR_CHECK(FEql(I2, Inertia{I2.To6x6()}), true);
 		}
 		{// InertiaInv Construction
 			auto moment = (1.0f/6.0f) * Sqr(2.0f);
@@ -774,9 +872,18 @@ namespace pr::physics
 			PR_CHECK(FEql(I0¯, InertiaInv{I0¯.To3x3(1), I0¯.InvMass()}), true);
 			PR_CHECK(FEql(I0¯, InertiaInv{I0¯.To6x6()}), true);
 			
-			auto I1¯ = Transform(I0¯, m4x4::Transform(float(maths::tau_by_4), float(maths::tau_by_4), 0, v4{1,0,0,0}), ETranslateInertia::AwayFromCoM);
+			auto I1¯ = Transform(I0¯, m4x4::Transform(float(maths::tau_by_4), float(maths::tau_by_4), 0, v4{1,2,3,0}), ETranslateInertia::AwayFromCoM);
 			PR_CHECK(FEql(I1¯, InertiaInv{I1¯.To3x3(1), I1¯.InvMass()}), true);
 			PR_CHECK(FEql(I1¯, InertiaInv{I1¯.To6x6()}), true);
+
+			auto I2¯ = InertiaInv{I1¯, -v4{3,2,1,0}};
+			PR_CHECK(FEql(I2¯, InertiaInv{I2¯.To6x6()}), true);
+		}
+		{// Infinite
+			auto inf¯ = Invert(Inertia::Infinite());
+			PR_CHECK(inf¯ == InertiaInv::Zero(), true);
+			auto inf = Invert(inf¯);
+			PR_CHECK(inf == Inertia::Infinite(), true);
 		}
 		{// Translate and Rotate
 			auto moment = (1.0f/6.0f) * Sqr(2.0f);
@@ -894,50 +1001,57 @@ namespace pr::physics
 
 			// Simple addition/subtraction of inertia in CoM frame
 			auto sph2 = Inertia::Sphere(0.5f, 2*mass);
-			auto SPH2 = sph0 + sph1;
+			auto SPH2 = Join(sph0, sph1);
+			auto SPH3 = Split(sph2, sph1);
 			PR_CHECK(FEql(sph2, SPH2), true);
-			auto sph3 = sph2 - sph1;
-			PR_CHECK(FEql(sph3, sph0), true);
+			PR_CHECK(FEql(sph0, SPH3), true);
 
 			// Addition/Subtraction of translated inertias
 			auto sph4 = Translate(sph0, v4{-1,0,0,0}, ETranslateInertia::AwayFromCoM);
 			auto sph5 = Translate(sph1, v4{+1,0,0,0}, ETranslateInertia::AwayFromCoM);
 			auto sph6 = Inertia{v4{0.1f,1.1f,1.1f,0}, v4{}, 2*mass};
-			auto SPH6 = sph4 + sph5;
+			auto SPH6 = Join(sph4, sph5);
+			auto SPH7 = Split(sph6, sph4);
 			PR_CHECK(FEql(sph6, SPH6), true);
+			PR_CHECK(FEql(sph5, SPH7), true);
 
 			// Addition/Subtraction of inertias with offsets
-			auto sph7 = Inertia{sph0, -v4{-1,0,0,0}};
-			auto sph8 = Inertia{sph1, -v4{+1,0,0,0}};
-			auto sph9 = sph6;
-			auto SPH9 = sph7 + sph8;
-			PR_CHECK(FEql(sph9, SPH9), true);
+			auto sph8 = Inertia{sph0, v4{1,2,3,0}};
+			auto sph9 = Inertia{sph1, v4{1,2,3,0}};
+			auto sph10 = Inertia{sph2, v4{1,2,3,0}};
+			auto SPH10 = Join(sph8, sph9);
+			auto SPH11 = Split(sph10, sph9);
+			PR_CHECK(FEql(sph10, SPH10), true);
+			PR_CHECK(FEql(sph8, SPH11), true);
 		}
 		{// Addition/Subtraction inverse inertia
-			//auto sph0 = Inertia::Sphere(0.5f, mass);
-			//auto sph1 = Inertia::Sphere(0.5f, mass);
-			//auto sph2 = Inertia::Sphere(0.5f, 2*mass);
-			//
-			//// Simple addition/subtraction of inertia in CoM frame
-			//auto SPH2 = Invert(sph0) + Invert(sph1);
-			//PR_CHECK(FEql(Invert(sph2), SPH2), true);
-			//auto sph3 = Invert(sph2) - Invert(sph1);
-			//PR_CHECK(FEql(sph3, Invert(sph0)), true);
-			//
-			//// Addition/Subtraction of translated inertias
-			//auto sph4 = Translate(sph0, v4{-1,0,0,0}, ETranslateInertia::AwayFromCoM);
-			//auto sph5 = Translate(sph1, v4{+1,0,0,0}, ETranslateInertia::AwayFromCoM);
-			//auto sph6 = Inertia{v4{0.1f,1.1f,1.1f,0}, v4{}, 2*mass};
-			//
-			//auto SPH6 = Invert(sph4) + Invert(sph5);
-			//PR_CHECK(FEql(Invert(sph6), SPH6), true);
+			auto sph0 = Inertia::Sphere(0.5f, mass);
+			auto sph1 = Inertia::Sphere(0.5f, mass);
+			auto sph2 = Inertia::Sphere(0.5f, 2*mass);
 
-			//// Addition/Subtraction of inertias with offsets
-			//auto sph7 = Inertia{sph0, v4{-1,0,0,0}};
-			//auto sph8 = Inertia{sph1, v4{+1,0,0,0}};
-			//auto sph9 = sph6;
-			//auto SPH9 = sph7 + sph8;
-			//PR_CHECK(FEql(sph9, SPH9), true);
+			// Simple addition/subtraction of inertia in CoM frame
+			auto SPH2 = Join(Invert(sph0), Invert(sph1));
+			auto SPH3 = Split(Invert(sph2), Invert(sph1));
+			PR_CHECK(FEql(Invert(sph2), SPH2), true);
+			PR_CHECK(FEql(Invert(sph0), SPH3), true);
+
+			// Addition/Subtraction of translated inertias
+			auto sph4 = Translate(sph0, v4{-1,0,0,0}, ETranslateInertia::AwayFromCoM);
+			auto sph5 = Translate(sph1, v4{+1,0,0,0}, ETranslateInertia::AwayFromCoM);
+			auto sph6 = Inertia{v4{0.1f,1.1f,1.1f,0}, v4{}, 2*mass};
+			auto SPH6 = Join(Invert(sph4), Invert(sph5));
+			auto SPH7 = Split(Invert(sph6), Invert(sph4));
+			PR_CHECK(FEql(Invert(sph6), SPH6), true);
+			PR_CHECK(FEql(Invert(sph5), SPH7), true);
+
+			// Addition/Subtraction of inertias with offsets
+			auto sph8 = Inertia{sph0, v4{1,2,3,0}};
+			auto sph9 = Inertia{sph1, v4{1,2,3,0}};
+			auto sph10 = Inertia{sph2, v4{1,2,3,0}};
+			auto SPH10 = Join(Invert(sph8), Invert(sph9));
+			auto SPH11 = Split(Invert(sph10), Invert(sph9));
+			PR_CHECK(FEql(Invert(sph10), SPH10), true);
+			PR_CHECK(FEql(Invert(sph8), SPH11), true);
 		}
 		{// Inverting 6x6 inertia
 			auto Ic = Inertia::Sphere(0.5f, 1);

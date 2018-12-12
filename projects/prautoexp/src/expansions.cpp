@@ -31,9 +31,18 @@ using namespace pr;
 #define ADDIN_API __declspec(dllexport)
 
 // Helper rounding function
+inline float R(float x)
+{
+	return
+		isnan(x) ? x :
+		x < -maths::tiny ? x :
+		x > +maths::tiny ? x :
+		x < 0 ? -0 : +0;
+}
 inline double R(double x)
 {
 	return 
+		isnan(x) ? x :
 		x < -maths::tiny ? x :
 		x > +maths::tiny ? x :
 		x < 0 ? -0 : +0;

@@ -999,6 +999,9 @@
     <ClInclude Include="..\include\pr\container\span.h">
       <Filter>pr\container</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\integrator\impulse.h">
+      <Filter>pr\physics\integrater</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\unittests\pre_build.py" />

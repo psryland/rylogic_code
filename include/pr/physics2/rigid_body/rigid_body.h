@@ -53,17 +53,19 @@ namespace pr::physics
 		//RigidBody()
 		//	:RigidBody((ShapeSphere const*)nullptr)
 		//{}
-		explicit RigidBody(Shape const* shape = nullptr, m4_cref<> o2w = m4x4Identity)
+		explicit RigidBody(Shape const* shape = nullptr, m4_cref<> o2w = m4x4Identity, Inertia const& inertia = {})
 			:m_o2w(o2w)
 			,m_os_com()
 			,m_ws_momentum()
 			,m_ws_force()
 			,m_os_inertia_inv()
 			,m_shape(collision::shape_cast(shape))
-		{}
+		{
+			SetMassProperties(inertia);
+		}
 		template <typename TShape, typename = enable_if_shape<TShape>>
-		explicit RigidBody(TShape const* shape, m4_cref<> o2w = m4x4Identity)
-			:RigidBody(collision::shape_cast(shape), o2w)
+		explicit RigidBody(TShape const* shape, m4_cref<> o2w = m4x4Identity, Inertia const& inertia = {})
+			:RigidBody(collision::shape_cast(shape), o2w, inertia)
 		{}
 
 		// Access the collision shape for the rigid body
@@ -124,7 +126,7 @@ namespace pr::physics
 			return O2W() * CentreOfMassOS();
 		}
 
-		// InertiaInv
+		// InertiaInv (use 'SetMassProperties' to change)
 		InertiaInv InertiaInvOS() const
 		{
 			return m_os_inertia_inv;
@@ -142,24 +144,29 @@ namespace pr::physics
 			return Invert(InertiaInvWS());
 		}
 
-		// Return the inertia rotated from object space to 'A' space, and translated by 'ofs'
-		Inertia InertiaOS(m3_cref<> o2a, v4_cref<> ofs = v4{}) const
+		// Return the inertia rotated from object space to 'A' space
+		// 'com' is the position of this object's CoM in 'A' space
+		Inertia InertiaOS(m3_cref<> o2a, v4_cref<> com = v4{}) const
 		{
 			auto inertia = InertiaOS();
-			if (o2a != m3x4Identity)
-				inertia = Rotate(inertia, o2a);
-			if (ofs != v4{})
-				inertia = Translate(inertia, ofs, ETranslateInertia::AwayFromCoM);
+			inertia = Rotate(inertia, o2a);
+			inertia.CoM(com);
 			return inertia;
 		}
-		InertiaInv InertiaInvOS(m3_cref<> o2a, v4_cref<> ofs = v4{}) const
+		InertiaInv InertiaInvOS(m3_cref<> o2a, v4_cref<> com = v4{}) const
 		{
 			auto inertia¯ = InertiaInvOS();
-			if (o2a != m3x4Identity)
-				inertia¯ = Rotate(inertia¯, o2a);
-			if (ofs != v4{})
-				inertia¯ = Translate(inertia¯, ofs, ETranslateInertia::AwayFromCoM);
+			inertia¯ = Rotate(inertia¯, o2a);
+			inertia¯.CoM(com);
 			return inertia¯;
+		}
+		Inertia InertiaOS(m4_cref<> o2a) const
+		{
+			return InertiaOS(o2a.rot, o2a.pos);
+		}
+		InertiaInv InertiaInvOS(m4_cref<> o2a) const
+		{
+			return InertiaInvOS(o2a.rot, o2a.pos);
 		}
 
 		// Get/Set the velocity

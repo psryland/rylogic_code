@@ -70,7 +70,8 @@ namespace pr::physics
 			if (!collision::Collide(objA.Shape(), m4x4Identity, objB.Shape(), c.m_b2a, c))
 				return false;
 
-			// Get the relative velocity of the bodies.
+			// Get the relative velocity of the bodies in objA space.
+			// 'c.m_velocity' is value of objB's velocity vector field sampled at objA's origin.
 			c.m_velocity = c.m_b2a * objB.VelocityOS() - objA.VelocityOS();
 
 			// If the collision point is moving out of collision, ignore the collision.
@@ -126,7 +127,7 @@ namespace pr::physics
 			// Collisions should not add energy to the system and momentum should be conserved.
 			#if PR_DBG
 			auto vel_afterA = objA.VelocityWS();
-			auto vel_afterB = objA.VelocityWS();
+			auto vel_afterB = objB.VelocityWS();
 			auto ke_afterA  = objA.KineticEnergy();
 			auto ke_afterB  = objB.KineticEnergy();
 			auto ke_diff    = (ke_afterA + ke_afterB) - (ke_beforeA + ke_beforeB);

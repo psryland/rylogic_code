@@ -28,6 +28,12 @@ namespace pr::physics
 		//    between the objects **as a vector field**. We calculate the spatial impulse that would
 		//    cause the required relative velocity change, and apply it to each object's momentum field.
 
+		//auto& hack = const_cast<Contact&>(c);
+		//hack.m_axis = v4{1,0,0,0};
+		//hack.m_point = v4{0.5f,0,0,1};
+		//hack.m_depth = 0;
+		//auto vel_at_collision_point = c.m_velocity.LinAt(c.m_point);
+
 		// Reflect the velocity through the collision normal
 		auto Vin = c.m_velocity;
 		auto Vout = Reflect(Vin, c.m_axis);
@@ -42,6 +48,9 @@ namespace pr::physics
 		// Get the change in velocity of the collision point (in objA space)
 		auto Vdiff = Vout_inelastic - Vin;
 		
+		assert("Linear velocity out > velocity in" && Length(Vdiff.lin) <= 2*Length(Vin.lin));
+		assert("Angular velocity out > velocity in" && Length(Vdiff.ang) <= 2*Length(Vin.ang));
+
 		// Calculate the effective inertia at 'c.m_point'. This is not the sum of inertias
 		// because, even though the bodies are in contact at 'c.m_point', the point has a
 		// different velocity on each body.
@@ -60,46 +69,32 @@ namespace pr::physics
 		auto& objA = *c.m_objA;
 		auto& objB = *c.m_objB;
 
-		// Get the inertias in objA space
+		// Get the inertias in objA space and the collision inertia (a.k.a "K" matrix)
 		auto inertiaA¯ = objA.InertiaInvOS(m3x4Identity).To6x6();
-		auto inertiaB¯ = objB.InertiaInvOS(c.m_b2a.rot).To6x6();
-
-		//auto inertiaA = Invert(inertiaA¯);
-		//auto os_impulseA = inertiaA * -Vdiff;
-		//
-		//auto inertiaB = Invert(inertiaB¯);
-		//auto os_impulseB = inertiaB * +Vdiff;
-
-		// Get the collision inertia (a.k.a "K" matrix)
+		auto inertiaB¯ = objB.InertiaInvOS(c.m_b2a).To6x6();
 		auto inertia = Invert(inertiaB¯ + inertiaA¯);
-		//auto inertia = inertiaB;
 
 		// Calculate the impulse needed to cause 'Vdiff'
 		auto os_impulse = inertia * Vdiff;
 
-		// Momentum is conserved in collisions.
-		#if PR_DBG
-		auto h_in = objB.InertiaOS(c.m_b2a.rot) * Vin;
-		auto h_out = objB.InertiaOS(c.m_b2a.rot) * Vout;
-		auto h_out_inelastic = objB.InertiaOS(c.m_b2a.rot) * Vout_inelastic;
-		assert("Angular momentum not conserved" && Length(h_out.ang) - Length(h_in.ang) < maths::tiny);
-		assert("Linear momentum not conserved" && Length(h_out.lin) - Length(h_in.lin) < maths::tiny);
-		assert("Angular momentum not conserved" && Length(h_out_inelastic.ang) - Length(h_in.ang) < maths::tiny);
-		assert("Linear momentum not conserved" && Length(h_out_inelastic.lin) - Length(h_in.lin) < maths::tiny);
-		#endif
+		// Limit the normal and tangential components of 'os_impulse' to the friction cone
 
-		{
-			std::string str;
-			//ldr::SpatialVector(str, "impulse", 0xFF0000FF, (v8)os_impulse * 0.1f, c.m_point);
-			ldr::Arrow(str, "Impulse", 0xFF0000FF, ldr::EArrowType::Fwd, c.m_point - os_impulse.lin, os_impulse.lin, 3);
-			ldr::Arrow(str, "Twist", 0xFF000080, ldr::EArrowType::Fwd, c.m_point - os_impulse.ang, os_impulse.ang, 3);
-			ldr::VectorField(str, "ImpulseField", 0xFF00FFFF, (v8)os_impulse * 0.1f, c.m_point);
-			ldr::Write(str, L"P:\\dump\\collision_restitution.ldr");
-		}
+		//{
+		//	std::string str;
+		//	ldr::RigidBody(str, "body0", 0x8000FF00, *c.m_objA, 0.1f, ldr::ERigidBodyFlags::None, &m4x4Identity);
+		//	ldr::RigidBody(str, "body1", 0x80FF0000, *c.m_objB, 0.1f, ldr::ERigidBodyFlags::None, &c.m_b2a);
+		//	ldr::VectorField(str, "Velocity", 0xFFFFFF00, (v8)c.m_velocity * 0.1f, v4Origin, 2, 0.25f);
+		//	ldr::VectorField(str, "ImpulseField", 0xFF00FFFF, (v8)os_impulse * 0.1f, v4Origin, 5, 0.25f);
+		//	ldr::Arrow(str, "Impulse", 0xFF0000FF, ldr::EArrowType::Fwd, c.m_point - os_impulse.lin, os_impulse.lin, 3);
+		//	ldr::Arrow(str, "Twist", 0xFF000080, ldr::EArrowType::Fwd, c.m_point - os_impulse.ang, os_impulse.ang, 3);
+		//	ldr::Write(str, L"P:\\dump\\collision_restitution.ldr");
+		//}
+
+		auto imp_at_col = os_impulse.LinAt(c.m_point);
 
 		auto impulse_pair = ImpulsePair{};
 		impulse_pair.m_os_impulse_objA = -os_impulse;
-		impulse_pair.m_os_impulse_objB = Invert(c.m_b2a.rot) * Shift(+os_impulse, c.m_b2a.pos);
+		impulse_pair.m_os_impulse_objB = InvertFast(c.m_b2a) * +os_impulse;
 		impulse_pair.m_contact = &c;
 		return impulse_pair;
 	}
@@ -141,4 +136,49 @@ auto impulse = v8f{v4{}, 1 * P2};
 //PR_ASSERT(PR_DBG_PHYSICS, IsFinite(ws_impulse, ph::OverflowValue));
 		
 return impulse;
+#endif
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+
+namespace pr::physics
+{
+	PRUnitTest(ImpulseTests)
+	{
+		// Notes:
+		// - objects spaces not aligned with world space
+
+		{// Tangential impulse
+			{
+			}
+			{// ObjA and ObjB rotating in opposite directions, should stop after collision impulses
+				ShapeSphere sph(0.5f);
+				RigidBody objA(&sph, m4x4Identity, Inertia::Sphere(0.5f, 10.0f));
+				RigidBody objB(&sph, m4x4Identity, Inertia::Sphere(0.5f, 10.0f));
+
+				objA.O2W(m4x4::Transform(0, 0, maths::tau_by_8f, v4{-0.5f, 0, 1, 1}));
+				objB.O2W(m4x4::Transform(0, 0, maths::tau_by_8f, v4{+0.5f, 0, 1, 1}));
+				objA.VelocityWS(v4{0, 0, -1, 0}, v4{});
+				objB.VelocityWS(v4{0, 0, +1, 0}, v4{});
+
+				Contact c(objA, objB);
+				c.m_axis = v4{1,0,0,0};
+				c.m_point = v4{0.5f, 0, 0, 0};
+				c.m_velocity = c.m_b2a * objB.VelocityOS() - objA.VelocityOS();
+				c.m_mat.m_elasticity_norm = 1.0f;
+				c.m_mat.m_elasticity_tang = 0.0f;
+
+				auto impulse_pair = RestitutionImpulseWS(c);
+				objA.MomentumOS(objA.MomentumOS() + impulse_pair.m_os_impulse_objA);
+				objB.MomentumOS(objB.MomentumOS() + impulse_pair.m_os_impulse_objB);
+
+				// 
+				PR_CHECK(FEql(objA.O2W().pos, v4{-0.5f, 0, 1, 1}), true);
+				PR_CHECK(FEql(objB.O2W().pos, v4{+0.5f, 0, 1, 1}), true);
+				PR_CHECK(FEql(objA.VelocityWS(), v8m{}), true);
+				PR_CHECK(FEql(objB.VelocityWS(), v8m{}), true);
+			}
+		}
+	}
+}
 #endif

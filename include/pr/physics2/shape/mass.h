@@ -25,7 +25,11 @@ namespace pr::physics
 		// Mass
 		float m_mass;
 
-		MassProperties() = default;
+		MassProperties()
+			:m_os_unit_inertia(v4{maths::float_inf}, v4{maths::float_inf}, v4{maths::float_inf})
+			,m_centre_of_mass(v4{})
+			,m_mass(maths::float_inf)
+		{}
 		MassProperties(m3_cref<> os_unit_inertia, v4_cref<> centre_of_mass, float mass)
 			:m_os_unit_inertia(os_unit_inertia)
 			,m_centre_of_mass(centre_of_mass)

@@ -423,7 +423,7 @@ namespace pr
 		inline TStr& VectorField(TStr& str, typename TStr::value_type const* name, Col colour, v8 const& vec, v4 const& pos, float scale = 1.0f, float step = 0.1f)
 		{
 			Append(str,"*Line",name,colour,"{");
-			auto fwd = vec.LinAt(v4{});
+			auto fwd = vec.AngAt(v4{});
 			auto ori = fwd != v4{} ? OriFromDir(fwd, AxisId::PosZ) : m3x4Identity;
 			for (float y = -scale; y <= scale; y += step)
 			for (float x = -scale; x <= scale; x += step)

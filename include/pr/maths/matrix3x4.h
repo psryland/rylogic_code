@@ -464,18 +464,18 @@ namespace pr
 	template <typename A, typename B> inline bool pr_vectorcall IsSymmetric(m3_cref<A,B> mat)
 	{
 		return
-			FEql(mat.x.y - mat.y.x, 0) &&
-			FEql(mat.x.z - mat.z.x, 0) &&
-			FEql(mat.y.z - mat.z.y, 0);
+			FEql(mat.x.y, mat.y.x) &&
+			FEql(mat.x.z, mat.z.x) &&
+			FEql(mat.y.z, mat.z.y);
 	}
 
 	// True if 'mat' is anti-symmetric
 	template <typename A, typename B> inline bool pr_vectorcall IsAntiSymmetric(m3_cref<A,B> mat)
 	{
 		return
-			FEql(mat.x.y + mat.y.x, 0) &&
-			FEql(mat.x.z + mat.z.x, 0) &&
-			FEql(mat.y.z + mat.z.y, 0);
+			FEql(mat.x.y, -mat.y.x) &&
+			FEql(mat.x.z, -mat.z.x) &&
+			FEql(mat.y.z, -mat.z.y);
 	}
 
 	// Invert the orthonormal matrix 'mat'

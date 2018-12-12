@@ -37,6 +37,20 @@ namespace pr
 		constexpr double const inv_root2  = 1.0 / root2;
 		constexpr double const inv_root3  = 1.0 / root3;
 
+		constexpr float const phif        = float(1.618033988749894848204586834);    // "Golden Ratio"
+		constexpr float const tauf        = float(6.283185307179586476925286766559);    // circle constant
+		constexpr float const inv_tauf    = 1.0f / tauf;
+		constexpr float const tau_by_2f   = tauf / 2.0f;
+		constexpr float const tau_by_4f   = tauf / 4.0f;
+		constexpr float const tau_by_6f   = tauf / 6.0f;
+		constexpr float const tau_by_8f   = tauf / 8.0f;
+		constexpr float const tau_by_360f = tauf / 360.0f;
+		constexpr float const E60_by_tauf = 360.0f / tauf;
+		constexpr float const root2f      = float(1.4142135623730950488);
+		constexpr float const root3f      = float(1.7320508075688772935274463415059);
+		constexpr float const inv_root2f  = 1.0f / root2f;
+		constexpr float const inv_root3f  = 1.0f / root3f;
+
 		constexpr char const    char_min     = limits<char>::min();
 		constexpr char const    char_max     = limits<char>::max();
 		constexpr uint8 const   uint8_min    = limits<uint8>::min();
