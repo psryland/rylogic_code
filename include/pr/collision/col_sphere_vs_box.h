@@ -52,7 +52,7 @@ namespace pr::collision
 		// The separating axis is in one of the box axis directions
 		if (dist_sq < maths::tiny)
 		{
-			auto i = LargestElement3(Abs(l2r));
+			auto i = MaxElementIndex3(Abs(l2r));
 
 			// Find the penetration depth
 			auto depth = sph.m_radius + box.m_radius[i] - Abs(l2r[i]);
@@ -62,7 +62,7 @@ namespace pr::collision
 				auto norm = v4Zero;
 				norm[i] = Sign(l2r[i]);
 				return r2w * norm;
-			});
+			}, lhs.m_material_id, rhs.m_material_id);
 		}
 
 		// Otherwise the centre of the sphere is outside of the box
@@ -75,7 +75,7 @@ namespace pr::collision
 			{
 				// Find the separating axis
 				return r2w * ((l2r - closest) / dist);
-			});
+			}, lhs.m_material_id, rhs.m_material_id);
 		}
 	}
 
@@ -88,9 +88,7 @@ namespace pr::collision
 	}
 
 	// Returns true if 'lhs' and 'rhs' are intersecting.
-	// 'axis' is the collision normal from 'lhs' to 'rhs'
-	// 'penetration' is the depth of penetration between the shapes
-	inline bool SphereVsBox(Shape const& lhs, m4_cref<> l2w, Shape const& rhs, m4_cref<> r2w, v4& axis, float& penetration)
+	inline bool SphereVsBox(Shape const& lhs, m4_cref<> l2w, Shape const& rhs, m4_cref<> r2w, Contact& contact)
 	{
 		ContactPenetration p;
 		SphereVsBox(lhs, l2w, rhs, r2w, p);
@@ -103,23 +101,11 @@ namespace pr::collision
 		auto p1 = Dot3(sep_axis, (r2w * rhs.m_s2p).pos);
 		auto sign = SignF(p0 < p1);
 
-		penetration = p.Depth();
-		axis        = sign * sep_axis;
-		return true;
-	}
-
-	// Returns true if 'lhs' and 'rhs' are intersecting.
-	// 'axis' is the collision normal from 'lhs' to 'rhs'
-	// 'penetration' is the depth of penetration between the shapes
-	// 'point' is the world space contact point between 'lhs','rhs' (Only valid when true is returned)
-	// To find the deepest points on 'lhs','rhs' add/subtract half the 'penetration' depth along 'axis'.
-	// Note: that applied impulses should be equal and opposite, and applied at the same point in space (hence one contact point).
-	inline bool SphereVsBox(Shape const& lhs, m4_cref<> l2w, Shape const& rhs, m4_cref<> r2w, v4& axis, float& penetration, v4& point)
-	{
-		if (!SphereVsBox(lhs, l2w, rhs, r2w, axis, penetration))
-			return false;
-
-		point = FindContactPoint(shape_cast<ShapeSphere>(lhs), l2w, shape_cast<ShapeBox>(rhs), r2w, axis, penetration);
+		contact.m_depth   = p.Depth();
+		contact.m_axis    = sign * sep_axis;
+		contact.m_point   = FindContactPoint(shape_cast<ShapeSphere>(lhs), l2w, shape_cast<ShapeBox>(rhs), r2w, contact.m_axis, contact.m_depth);
+		contact.m_mat_idA = p.m_mat_idA;
+		contact.m_mat_idB = p.m_mat_idB;
 		return true;
 	}
 }
@@ -145,7 +131,7 @@ namespace pr::collision
 		std::default_random_engine rng;
 		for (int i = 0; i != 20; ++i)
 		{
-			v4 axis, pt; float pen;
+			Contact c;
 			m4x4 l2w = i < _countof(l2w_) ? l2w_[i] : Random4x4(rng, v4Origin, 0.5f);
 			m4x4 r2w = i < _countof(r2w_) ? r2w_[i] : Random4x4(rng, v4Origin, 0.5f);
 
@@ -153,11 +139,11 @@ namespace pr::collision
 			ldr::Shape(s, "lhs", 0x30FF0000, lhs, l2w);
 			ldr::Shape(s, "rhs", 0x3000FF00, rhs, r2w);
 			//ldr::Write(s, "collision_unittests.ldr");
-			if (SphereVsBox(lhs, l2w, rhs, r2w, axis, pen, pt))
+			if (SphereVsBox(lhs, l2w, rhs, r2w, c))
 			{
-				ldr::LineD(s, "sep_axis", Colour32Yellow, pt, axis);
-				ldr::Box(s, "pt0", Colour32Yellow, 0.01f, pt - 0.5f*pen*axis);
-				ldr::Box(s, "pt1", Colour32Yellow, 0.01f, pt + 0.5f*pen*axis);
+				ldr::LineD(s, "sep_axis", Colour32Yellow, c.m_point, c.m_axis);
+				ldr::Box(s, "pt0", Colour32Yellow, 0.01f, c.m_point - 0.5f*c.m_depth*c.m_axis);
+				ldr::Box(s, "pt1", Colour32Yellow, 0.01f, c.m_point + 0.5f*c.m_depth*c.m_axis);
 			}
 			//ldr::Write(s, "collision_unittests.ldr");
 		}

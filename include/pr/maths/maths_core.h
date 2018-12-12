@@ -9,23 +9,6 @@
 
 namespace pr
 {
-	namespace maths
-	{
-		#pragma region Traits
-		template <typename T, int N> struct is_vec<T[N]> :is_vec_cp<T>
-		{
-			using value_type = T;
-			static int const dim = N;
-		};
-		static_assert(!is_vec<char* >::value, "");
-		static_assert(!is_vec<wchar_t* >::value, "");
-		static_assert(!is_vec<float* >::value, "");
-		static_assert(!is_vec<int*  >::value, "");
-		static_assert(is_vec<float[2]>::value, "");
-		static_assert(is_vec<int[2] >::value, "");
-		#pragma endregion
-	}
-	
 	#pragma region Operators
 	template <typename T, typename = maths::enable_if_vN<T>> inline bool operator == (T const& lhs, T const& rhs)
 	{
@@ -205,8 +188,56 @@ namespace pr
 	#pragma warning (disable:4756) // Constant overflow in floating point arithmetic
 
 	// Floating point comparisons
+	// *WARNING* 'tol' is an absolute tolerance. Returns true if a is in the range (b-tol,b+tol)
+	template <typename = void> constexpr bool FEqlAbsolute(float a, float b, float tol)
+	{
+		// When float operations are performed at compile time, the compiler warnings about 'inf'
+		assert(isnan(tol) || tol >= 0); // NaN is not an error, comparisons with NaN are defined to always be false
+		return Abs(a - b) < tol;
+	}
+	template <typename = void> constexpr bool FEqlAbsolute(double a, double b, double tol)
+	{
+		// When float operations are performed at compile time, the compiler warnings about 'inf'
+		assert(isnan(tol) || tol >= 0); // NaN is not an error, comparisons with NaN are defined to always be false
+		return Abs(a - b) < tol;
+	}
+	template <typename T, typename V = maths::is_vec<T>::elem_type, typename = maths::enable_if_vN<T>> constexpr bool FEqlAbsolute(T const& a, T const& b, V tol)
+	{
+		int i = 0, iend = maths::is_vec<T>::dim;
+		for (; i != iend && FEqlAbsolute(a[i],b[i],tol); ++i) {}
+		return i == iend;
+	}
+	template <typename T, typename V = maths::is_vec<T>::elem_type, typename = maths::enable_if_v2<T>> constexpr bool FEqlAbsolute2(T const& lhs, T const& rhs, V tol)
+	{
+		return
+			FEqlAbsolute(x_cp(lhs), x_cp(rhs), tol) &&
+			FEqlAbsolute(y_cp(lhs), y_cp(rhs), tol);
+	}
+	template <typename T, typename V = maths::is_vec<T>::elem_type, typename = maths::enable_if_v3<T>> constexpr bool FEqlAbsolute3(T const& lhs, T const& rhs, V tol)
+	{
+		return
+			FEqlAbsolute(x_cp(lhs), x_cp(rhs), tol) &&
+			FEqlAbsolute(y_cp(lhs), y_cp(rhs), tol) &&
+			FEqlAbsolute(z_cp(lhs), z_cp(rhs), tol);
+	}
+	template <typename T, typename V = maths::is_vec<T>::elem_type, typename = maths::enable_if_v4<T>> constexpr bool FEqlAbsolute4(T const& lhs, T const& rhs, V tol)
+	{
+		return
+			FEqlAbsolute(x_cp(lhs), x_cp(rhs), tol) &&
+			FEqlAbsolute(y_cp(lhs), y_cp(rhs), tol) &&
+			FEqlAbsolute(z_cp(lhs), z_cp(rhs), tol) &&
+			FEqlAbsolute(w_cp(lhs), w_cp(rhs), tol);
+	}
+	template <typename T> inline bool FEqlAbsolute(std::span<T> const& a, std::span<T> const& b, T tol)
+	{
+		if (a.size() != b.size()) return false;
+		int i = 0, iend = int(a.size());
+		for (; i != iend && FEqlAbsolute(a[i],b[i],tol); ++i) {}
+		return i == iend;
+	}
+
 	// *WARNING* 'tol' is a relative tolerance, relative to the largest of 'a' or 'b'
-	inline bool FEqlRelative(float a, float b, float tol)
+	template <typename = void> constexpr bool FEqlRelative(float a, float b, float tol)
 	{
 		// Floating point compare is dangerous and subtle.
 		// See: https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
@@ -219,86 +250,99 @@ namespace pr
 
 		// Handles tests against zero where relative error is meaningless
 		// Tests with 'b == 0' are the most common so do them first
-		if (b == 0) return std::abs(a) < tol;
-		if (a == 0) return std::abs(b) < tol;
+		if (b == 0) return Abs(a) < tol;
+		if (a == 0) return Abs(b) < tol;
 
 		// Handle infinities and exact values
 		if (a == b) return true;
 
-		// When float operations are performed at compile time, the compiler warnings about 'inf'
-		auto diff = a - b;
-
 		// Test relative error as a fraction of the largest value
-		return std::abs(diff) < tol * std::max(std::abs(a), std::abs(b));
+		return FEqlAbsolute(a, b, tol * Max(Abs(a), Abs(b)));
 	}
-	inline bool FEqlRelative(double a, double b, double tol)
+	template <typename = void> constexpr bool FEqlRelative(double a, double b, double tol)
 	{
-		// Handles tests against zero where relative error is meaningless
-		// Tests with 'b == 0' are the most common so do them first
-		if (b == 0) return std::abs(a) < tol;
-		if (a == 0) return std::abs(b) < tol;
-
-		// Handle infinities and exact values
+		if (b == 0) return Abs(a) < tol;
+		if (a == 0) return Abs(b) < tol;
 		if (a == b) return true;
+		auto abs_max_element = Max(Abs(a), Abs(b));
+		return FEqlAbsolute(a, b, tol * abs_max_element);
+	}
+	template <typename T, typename V = maths::is_vec<T>::elem_type, typename = maths::enable_if_vN<T>> constexpr bool FEqlRelative(T const& a, T const& b, V tol)
+	{
+		auto max_a = MaxElementAbs(a);
+		auto max_b = MaxElementAbs(b);
+		if (max_b == 0) return max_a < tol;
+		if (max_a == 0) return max_b < tol;
+		auto abs_max_element = Max(max_a, max_b);
+		return FEqlAbsolute(a, b, tol * abs_max_element);
+	}
+	template <typename T, typename V = maths::is_vec<T>::elem_type, typename = maths::enable_if_v4<T>> constexpr bool FEqlRelative4(T const& a, T const& b, V tol)
+	{
+		auto max_a = MaxElementAbs4(a);
+		auto max_b = MaxElementAbs4(b);
+		if (max_b == 0) return max_a < tol;
+		if (max_a == 0) return max_b < tol;
+		auto abs_max_element = Max(max_a, max_b);
+		return FEqlAbsolute4(a, b, tol * abs_max_element);
+	}
+	template <typename T, typename V = maths::is_vec<T>::elem_type, typename = maths::enable_if_v3<T>> constexpr bool FEqlRelative3(T const& a, T const& b, V tol)
+	{
+		auto max_a = MaxElementAbs3(a);
+		auto max_b = MaxElementAbs3(b);
+		if (max_b == 0) return max_a < tol;
+		if (max_a == 0) return max_b < tol;
+		auto abs_max_element = Max(max_a, max_b);
+		return FEqlAbsolute3(a, b, tol * abs_max_element);
+	}
+	template <typename T, typename V = maths::is_vec<T>::elem_type, typename = maths::enable_if_v2<T>> constexpr bool FEqlRelative2(T const& a, T const& b, V tol)
+	{
+		auto max_a = MaxElementAbs2(a);
+		auto max_b = MaxElementAbs2(b);
+		if (max_b == 0) return max_a < tol;
+		if (max_a == 0) return max_b < tol;
+		auto abs_max_element = Max(max_a, max_b);
+		return FEqlAbsolute2(a, b, tol * abs_max_element);
+	}
+	template <typename T> inline bool FEqlRelative(std::span<T> const& a, std::span<T> const& b, T tol)
+	{
+		if (a.size() != b.size()) return false;
+		auto max_a = MaxElementAbs(a);
+		auto max_b = MaxElementAbs(b);
+		if (max_b == 0) return max_a < tol;
+		if (max_a == 0) return max_b < tol;
+		auto abs_max_element = Max(max_a, max_b);
+		return FEqlAbsolute(a, b, tol * abs_max_element);
+	}
 
-		// When float operations are performed at compile time, the compiler warnings about 'inf'
-		auto diff = a - b;
-
-		// Test relative error as a fraction of the largest value
-		return std::abs(diff) < tol * std::max(std::abs(a), std::abs(b));
-	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline bool FEqlRelative(T const& a, T const& b, float tol)
-	{
-		int i = 0, iend = maths::is_vec<T>::dim;
-		for (; i != iend && FEqlRelative(a[i],b[i],tol); ++i) {}
-		return i == iend;
-	}
-	template <typename T, typename = maths::enable_if_v2<T>> inline bool FEqlRelative2(T const& lhs, T const& rhs, float tol)
-	{
-		return
-			FEqlRelative(x_as<float>(lhs), x_as<float>(rhs), tol) &&
-			FEqlRelative(y_as<float>(lhs), y_as<float>(rhs), tol);
-	}
-	template <typename T, typename = maths::enable_if_v3<T>> inline bool FEqlRelative3(T const& lhs, T const& rhs, float tol)
-	{
-		return
-			FEqlRelative(x_as<float>(lhs), x_as<float>(rhs), tol) &&
-			FEqlRelative(y_as<float>(lhs), y_as<float>(rhs), tol) &&
-			FEqlRelative(z_as<float>(lhs), z_as<float>(rhs), tol);
-	}
-	template <typename T, typename = maths::enable_if_v4<T>> inline bool FEqlRelative4(T const& lhs, T const& rhs, float tol)
-	{
-		return
-			FEqlRelative(x_as<float>(lhs), x_as<float>(rhs), tol) &&
-			FEqlRelative(y_as<float>(lhs), y_as<float>(rhs), tol) &&
-			FEqlRelative(z_as<float>(lhs), z_as<float>(rhs), tol) &&
-			FEqlRelative(w_as<float>(lhs), w_as<float>(rhs), tol);
-	}
-	
-	inline bool FEql(float a, float b)
+	// FEqlRelative using 'tiny'. Returns true if a in the range (b - max(a,b)*tiny, b + max(a,b)*tiny)
+	constexpr bool FEql(float a, float b)
 	{
 		// Don't add a 'tol' parameter because it looks like the function should perform a == b +- tol, which isn't what it does.
 		return FEqlRelative(a, b, maths::tiny);
 	}
-	inline bool FEql(double a, double b)
+	constexpr bool FEql(double a, double b)
 	{
 		return FEqlRelative(a, b, maths::tinyd);
 	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline bool FEql(T const& a, T const& b)
+	template <typename T, typename = maths::enable_if_vN<T>> constexpr bool FEql(T const& a, T const& b)
 	{
 		return FEqlRelative(a, b, maths::tiny);
 	}
-	template <typename T, typename = maths::enable_if_v2<T>> inline bool FEql2(T const& lhs, T const& rhs)
+	template <typename T, typename = maths::enable_if_v2<T>> constexpr bool FEql2(T const& lhs, T const& rhs)
 	{
 		return FEqlRelative2(lhs, rhs, maths::tiny);
 	}
-	template <typename T, typename = maths::enable_if_v3<T>> inline bool FEql3(T const& lhs, T const& rhs)
+	template <typename T, typename = maths::enable_if_v3<T>> constexpr bool FEql3(T const& lhs, T const& rhs)
 	{
 		return FEqlRelative3(lhs, rhs, maths::tiny);
 	}
-	template <typename T, typename = maths::enable_if_v4<T>> inline bool FEql4(T const& lhs, T const& rhs)
+	template <typename T, typename = maths::enable_if_v4<T>> constexpr bool FEql4(T const& lhs, T const& rhs)
 	{
 		return FEqlRelative4(lhs, rhs, maths::tiny);
+	}
+	template <typename T> inline bool FEql(std::span<T> const& a, std::span<T> const& b)
+	{
+		return FEqlRelative(a, b, maths::tiny);
 	}
 
 	#pragma warning (default:4756)
@@ -388,46 +432,49 @@ namespace pr
 	}
 
 	// Absolute value
-	inline float Abs(float x)
+	constexpr float Abs(float x)
 	{
-		return std::fabs(x);
+		return x >= 0 ? x : -x;
 	}
-	inline double Abs(double x)
+	constexpr double Abs(double x)
 	{
-		return std::fabs(x);
+		return x >= 0 ? x : -x;
 	}
-	inline int Abs(int x)
+	constexpr int Abs(int x)
 	{
-		return std::abs(x);
+		return x >= 0 ? x : -x;
 	}
-	inline long Abs(long x)
+	constexpr long Abs(long x)
 	{
-		return std::abs(x);
+		return x >= 0 ? x : -x;
 	}
-	inline long long Abs(long long x)
+	constexpr long long Abs(long long x)
 	{
-		return std::abs(x);
+		return x >= 0 ? x : -x;
 	}
-	inline unsigned int Abs(unsigned int x)
+	constexpr unsigned int Abs(unsigned int x)
 	{
 		return x;
 	}
-	inline unsigned long Abs(unsigned long x)
+	constexpr unsigned long Abs(unsigned long x)
 	{
 		return x;
 	}
-	inline unsigned long long Abs(unsigned long long x)
+	constexpr unsigned long long Abs(unsigned long long x)
 	{
 		return x;
 	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline T Abs(T const& v)
+	template <typename T, typename = maths::enable_if_arith<T>> constexpr T Abs(T v)
 	{
-		// Note: arrays as vectors cannot use this function because arrays cannot be returned by value
+		return x >= 0 ? x : -x;
+	}
+	template <typename T, typename = maths::enable_if_vN<T>> constexpr T Abs(T const& v)
+	{
 		auto r = v;
 		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Abs(r[i]);
 		return r;
 	}
-	template <typename T, typename = maths::enable_if_v4<T>> inline T Abs4(T const& v)
+	template <typename T, typename = maths::enable_if_v4<T>> constexpr T Abs4(T const& v)
 	{
 		auto r = v;
 		r[0] = Abs(x_cp(r));
@@ -436,7 +483,7 @@ namespace pr
 		r[3] = Abs(w_cp(r));
 		return r;
 	}
-	template <typename T, typename = maths::enable_if_v3<T>> inline T Abs3(T const& v)
+	template <typename T, typename = maths::enable_if_v3<T>> constexpr T Abs3(T const& v)
 	{
 		auto r = v;
 		r[0] = Abs(x_cp(r));
@@ -444,11 +491,46 @@ namespace pr
 		r[2] = Abs(z_cp(r));
 		return r;
 	}
-	template <typename T, typename = maths::enable_if_v2<T>> inline T Abs2(T const& v)
+	template <typename T, typename = maths::enable_if_v2<T>> constexpr T Abs2(T const& v)
 	{
 		auto r = v;
 		r[0] = Abs(x_cp(r));
 		r[1] = Abs(y_cp(r));
+		return r;
+	}
+
+	// Absolute value of an array
+	template <typename T, int N> constexpr std::array<T,N> Abs(T const (&v)[N])
+	{
+		std::array<T,N> r = {};
+		for (int i = 0, iend = N; i != iend; ++i) r[i] = Abs(v[i]);
+		return r;
+	}
+	template <typename T, int N> constexpr std::array<T,N> Abs4(T const (&v)[N])
+	{
+		std::array<T,N> r = {};
+		r[0] = Abs(v[0]);
+		r[1] = Abs(v[1]);
+		r[2] = Abs(v[2]);
+		r[3] = Abs(v[3]);
+		for (int i = 4; i != N; ++i) r[i] = v[i];
+		return r;
+	}
+	template <typename T, int N> constexpr std::array<T,N> Abs3(T const (&v)[N])
+	{
+		std::array<T,N> r = {};
+		r[0] = Abs(v[0]);
+		r[1] = Abs(v[1]);
+		r[2] = Abs(v[2]);
+		for (int i = 3; i != N; ++i) r[i] = v[i];
+		return r;
+	}
+	template <typename T, int N> constexpr std::array<T,N> Abs2(T const (&v)[N])
+	{
+		std::array<T,N> r = {};
+		r[0] = Abs(v[0]);
+		r[1] = Abs(v[1]);
+		for (int i = 2; i != N; ++i) r[i] = v[i];
 		return r;
 	}
 
@@ -818,15 +900,15 @@ namespace pr
 	}
 
 	// Lengths
-	template <typename T> inline T Len2Sq(T x, T y)
+	template <typename T> constexpr T Len2Sq(T x, T y)
 	{
 		return Sqr(x) + Sqr(y);
 	}
-	template <typename T> inline T Len3Sq(T x, T y, T z)
+	template <typename T> constexpr T Len3Sq(T x, T y, T z)
 	{
 		return Sqr(x) + Sqr(y) + Sqr(z);
 	}
-	template <typename T> inline T Len4Sq(T x, T y, T z, T w)
+	template <typename T> constexpr T Len4Sq(T x, T y, T z, T w)
 	{
 		return Sqr(x) + Sqr(y) + Sqr(z) + Sqr(w);
 	}
@@ -886,48 +968,48 @@ namespace pr
 	}
 
 	// Min/Max/Clamp
-	template <typename T, typename = maths::enable_if_not_vN<T>> inline T Min(T x, T y)
+	template <typename T, typename = maths::enable_if_not_vN<T>> constexpr T Min(T x, T y)
 	{
 		return (x > y) ? y : x;
 	}
-	template <typename T, typename = maths::enable_if_not_vN<T>> inline T Max(T x, T y)
+	template <typename T, typename = maths::enable_if_not_vN<T>> constexpr T Max(T x, T y)
 	{
 		return (x > y) ? x : y;
 	}
-	template <typename T, typename = maths::enable_if_not_vN<T>> inline T Clamp(T x, T mn, T mx)
+	template <typename T, typename = maths::enable_if_not_vN<T>> constexpr T Clamp(T x, T mn, T mx)
 	{
 		assert("[min,max] must be a positive range" && mn <= mx);
 		return (mx < x) ? mx : (x < mn) ? mn : x;
 	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline T Min(T const& x, T const& y)
+	template <typename T, typename = maths::enable_if_vN<T>> constexpr T Min(T const& x, T const& y)
 	{
 		T r;
 		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Min(x[i], y[i]);
 		return r;
 	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline T Max(T const& x, T const& y)
+	template <typename T, typename = maths::enable_if_vN<T>> constexpr T Max(T const& x, T const& y)
 	{
 		T r;
 		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Max(x[i], y[i]);
 		return r;
 	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline T Clamp(T const& x, T const& mn, T const& mx)
+	template <typename T, typename = maths::enable_if_vN<T>> constexpr T Clamp(T const& x, T const& mn, T const& mx)
 	{
 		T r;
 		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Clamp(x[i], mn[i], mx[i]);
 		return r;
 	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline T Clamp(T const& x, typename maths::is_vec<T>::cp_type mn, typename maths::is_vec<T>::cp_type mx)
+	template <typename T, typename = maths::enable_if_vN<T>> constexpr T Clamp(T const& x, typename maths::is_vec<T>::cp_type mn, typename maths::is_vec<T>::cp_type mx)
 	{
 		T r;
 		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Clamp(x[i], mn, mx);
 		return r;
 	}
-	template <typename T, typename... A> inline T Min(T const& x, T const& y, A&&... a)
+	template <typename T, typename... A> constexpr T Min(T const& x, T const& y, A&&... a)
 	{
 		return Min(Min(x,y), std::forward<A>(a)...);
 	}
-	template <typename T, typename... A> inline T Max(T const& x, T const& y, A&&... a)
+	template <typename T, typename... A> constexpr T Max(T const& x, T const& y, A&&... a)
 	{
 		return Max(Max(x,y), std::forward<A>(a)...);
 	}
@@ -991,56 +1073,242 @@ namespace pr
 		return FEql(Length4Sq(v), 1.0f);
 	}
 
-	// Smallest/Largest element
-	template <typename T, typename = maths::enable_if_vN<T>> inline int SmallestElement(T const& v)
+	// Smallest element
+	template <typename T, typename = maths::enable_if_arith<T>> constexpr T MinElement(T v)
 	{
-		int idx = 0;
-		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i)
+		return v;
+	}
+	template <typename T, typename V = maths::is_vec<T>::cp_type, typename = maths::enable_if_vN<T>> constexpr V MinElement(T const& v)
+	{
+		auto min = MinElement(v[0]);
+		for (int i = 1, iend = maths::is_vec<T>::dim; i != iend; ++i) min = Min(min, MinElement(v[i]));
+		return min;
+	}
+	template <typename T, typename V = maths::is_vec<T>::cp_type, typename = maths::enable_if_v2<T>> constexpr V MinElement2(T const& v)
+	{
+		auto x = x_cp(v);
+		auto y = y_cp(v);
+		return Min(MinElement(x), MinElement(y));
+	}
+	template <typename T, typename V = maths::is_vec<T>::cp_type, typename = maths::enable_if_v3<T>> constexpr V MinElement3(T const& v)
+	{
+		auto x = x_cp(v);
+		auto y = y_cp(v);
+		auto z = z_cp(v);
+		auto i = Min(MinElement(x), MinElement(y));
+		return Min(i, MinElement(z));
+	}
+	template <typename T, typename V = maths::is_vec<T>::cp_type, typename = maths::enable_if_v4<T>> constexpr V MinElement4(T const& v)
+	{
+		auto x = x_cp(v);
+		auto y = y_cp(v);
+		auto z = z_cp(v);
+		auto w = w_cp(v);
+		auto i = Min(MinElement(x), MinElement(y));
+		auto j = Min(MinElement(z), MinElement(w));
+		return Min(i,j);
+	}
+	template <typename T> inline T MinElement(std::span<T> const& a)
+	{
+		if (a.empty()) throw std::runtime_error("minimum undefined on zero length span");
+		auto min = MinElement(a[0]);
+		for (int i = 1, iend = int(a.size()); i != iend; ++i) min = Min(min, MinElement(a[i]));
+		return min;
+	}
+	template <typename T, typename = maths::enable_if_arith<T>> constexpr T MinElementAbs(T v)
+	{
+		return Abs(v);
+	}
+	template <typename T, typename V = maths::is_vec<T>::cp_type, typename = maths::enable_if_vN<T>> constexpr V MinElementAbs(T const& v)
+	{
+		auto min = MinElementAbs(v[0]);
+		for (int i = 1, iend = maths::is_vec<T>::dim; i != iend; ++i) min = Min(min, MinElementAbs(v[i]));
+		return min;
+	}
+	template <typename T, typename V = maths::is_vec<T>::cp_type, typename = maths::enable_if_v2<T>> constexpr V MinElementAbs2(T const& v)
+	{
+		auto x = x_cp(v);
+		auto y = y_cp(v);
+		return Min(MinElementAbs(x), MinElementAbs(y));
+	}
+	template <typename T, typename V = maths::is_vec<T>::cp_type, typename = maths::enable_if_v3<T>> constexpr V MinElementAbs3(T const& v)
+	{
+		auto x = x_cp(v);
+		auto y = y_cp(v);
+		auto z = z_cp(v);
+		auto i = Min(MinElementAbs(x), MinElementAbs(y));
+		return Min(i, MinElementAbs(z));
+	}
+	template <typename T, typename V = maths::is_vec<T>::cp_type, typename = maths::enable_if_v4<T>> constexpr V MinElementAbs4(T const& v)
+	{
+		auto x = x_cp(v);
+		auto y = y_cp(v);
+		auto z = z_cp(v);
+		auto w = w_cp(v);
+		auto i = Min(MinElementAbs(x), MinElementAbs(y));
+		auto j = Min(MinElementAbs(z), MinElementAbs(w));
+		return Min(i,j);
+	}
+	template <typename T> inline T MinElementAbs(std::span<T> const& a)
+	{
+		if (a.empty()) throw std::runtime_error("minimum undefined on zero length span");
+		auto min = MinElementAbs(a[0]);
+		for (int i = 1, iend = int(a.size()); i != iend; ++i) min = Min(min, MinElementAbs(a[i]));
+		return min;
+	}
+	
+	// Largest element (Abs variant saves a copy, plus allows FEql to work for arrays)
+	template <typename T, typename = maths::enable_if_arith<T>> constexpr T MaxElement(T v)
+	{
+		return v;
+	}
+	template <typename T, typename V = maths::is_vec<T>::cp_type, typename = maths::enable_if_vN<T>> constexpr V MaxElement(T const& v)
+	{
+		auto max = MaxElement(v[0]);
+		for (int i = 1, iend = maths::is_vec<T>::dim; i != iend; ++i) max = Max(max, MaxElement(v[i]));
+		return max;
+	}
+	template <typename T, typename V = maths::is_vec<T>::cp_type, typename = maths::enable_if_v2<T>> constexpr V MaxElement2(T const& v)
+	{
+		auto x = x_cp(v);
+		auto y = y_cp(v);
+		return Max(MaxElement(x), MaxElement(y));
+	}
+	template <typename T, typename V = maths::is_vec<T>::cp_type, typename = maths::enable_if_v3<T>> constexpr V MaxElement3(T const& v)
+	{
+		auto x = x_cp(v);
+		auto y = y_cp(v);
+		auto z = z_cp(v);
+		auto i = Max(MaxElement(x), MaxElement(y));
+		return Max(i, MaxElement(z));
+	}
+	template <typename T, typename V = maths::is_vec<T>::cp_type, typename = maths::enable_if_v4<T>> constexpr V MaxElement4(T const& v)
+	{
+		auto x = x_cp(v);
+		auto y = y_cp(v);
+		auto z = z_cp(v);
+		auto w = w_cp(v);
+		auto i = Max(MaxElement(x), MaxElement(y));
+		auto j = Max(MaxElement(z), MaxElement(w));
+		return Max(i,j);
+	}
+	template <typename T> inline T MaxElement(std::span<T> const& a)
+	{
+		if (a.empty()) throw std::runtime_error("maximum undefined on zero length span");
+		auto max = MaxElement(a[0]);
+		for (int i = 1, iend = int(a.size()); i != iend; ++i) max = Max(max, MaxElement(a[i]));
+		return max;
+	}
+	template <typename T, typename = maths::enable_if_arith<T>> constexpr T MaxElementAbs(T v)
+	{
+		return Abs(v);
+	}
+	template <typename T, typename V = maths::is_vec<T>::cp_type, typename = maths::enable_if_vN<T>> constexpr V MaxElementAbs(T const& v)
+	{
+		auto max = MaxElementAbs(v[0]);
+		for (int i = 1, iend = maths::is_vec<T>::dim; i != iend; ++i) max = Max(max, MaxElementAbs(v[i]));
+		return max;
+	}
+	template <typename T, typename V = maths::is_vec<T>::cp_type, typename = maths::enable_if_v2<T>> constexpr V MaxElementAbs2(T const& v)
+	{
+		auto x = x_cp(v);
+		auto y = y_cp(v);
+		return Max(MaxElementAbs(x), MaxElementAbs(y));
+	}
+	template <typename T, typename V = maths::is_vec<T>::cp_type, typename = maths::enable_if_v3<T>> constexpr V MaxElementAbs3(T const& v)
+	{
+		auto x = x_cp(v);
+		auto y = y_cp(v);
+		auto z = z_cp(v);
+		auto i = Max(MaxElementAbs(x), MaxElementAbs(y));
+		return Max(i, MaxElementAbs(z));
+	}
+	template <typename T, typename V = maths::is_vec<T>::cp_type, typename = maths::enable_if_v4<T>> constexpr V MaxElementAbs4(T const& v)
+	{
+		auto x = x_cp(v);
+		auto y = y_cp(v);
+		auto z = z_cp(v);
+		auto w = w_cp(v);
+		auto i = Max(MaxElementAbs(x), MaxElementAbs(y));
+		auto j = Max(MaxElementAbs(z), MaxElementAbs(w));
+		return Max(i,j);
+	}
+	template <typename T> inline T MaxElementAbs(std::span<T> const& a)
+	{
+		if (a.empty()) throw std::runtime_error("maximum undefined on zero length span");
+		auto max = MaxElementAbs(a[0]);
+		for (int i = 1, iend = int(a.size()); i != iend; ++i) max = Max(max, MaxElementAbs(a[i]));
+		return max;
+	}
+
+	// Smallest/Largest element index. Returns the index of the first min/max element if elements are equal.
+	template <typename T, typename = maths::enable_if_vN<T>> inline int MinElementIndex(T const& v)
+	{
+		auto idx = 0;
+		for (int i = 1, iend = maths::is_vec<T>::dim; i != iend; ++i)
 		{
 			if (v[i] >= v[idx]) continue;
 			idx = i;
 		}
 		return idx;
 	}
-	template <typename T, typename = maths::enable_if_v2<T>> inline int SmallestElement2(T const& v)
+	template <typename T, typename = maths::enable_if_v2<T>> inline int MinElementIndex2(T const& v)
 	{
-		return x_cp(v) > y_cp(v);
+		auto x = x_cp(v);
+		auto y = y_cp(v);
+		return x <= y ? 0 : 1;
 	}
-	template <typename T, typename = maths::enable_if_v3<T>> inline int SmallestElement3(T const& v)
+	template <typename T, typename = maths::enable_if_v3<T>> inline int MinElementIndex3(T const& v)
 	{
-		int i = (y_cp(v) > z_cp(v)) + 1;
-		return (x_cp(v) > v[i]) * i;
+		auto x = x_cp(v);
+		auto y = y_cp(v);
+		auto z = z_cp(v);
+		auto i = y <= z ? 1 : 2;
+		return x <= v[i] ? 0 : i;
 	}
-	template <typename T, typename = maths::enable_if_v4<T>> inline int SmallestElement4(T const& v)
+	template <typename T, typename = maths::enable_if_v4<T>> inline int MinElementIndex4(T const& v)
 	{
-		int i = (x_cp(v) > y_cp(v)) + 0;
-		int j = (z_cp(v) > w_cp(v)) + 2;
-		return (v[i] > v[j]) ? j : i;
+		auto x = x_cp(v);
+		auto y = y_cp(v);
+		auto z = z_cp(v);
+		auto w = w_cp(v);
+		auto i = x <= y ? 0 : 1;
+		auto j = z <= w ? 2 : 3;
+		return v[i] <= v[j] ? i : j;
 	}
-	template <typename T, typename = maths::enable_if_vN<T>> inline int LargestElement(T const& v)
+	template <typename T, typename = maths::enable_if_vN<T>> inline int MaxElementIndex(T const& v)
 	{
-		int idx = 0;
-		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i)
+		auto idx = 0;
+		for (int i = 1, iend = maths::is_vec<T>::dim; i != iend; ++i)
 		{
 			if (v[i] <= v[idx]) continue;
 			idx = i;
 		}
 		return idx;
 	}
-	template <typename T, typename = maths::enable_if_v2<T>> inline int LargestElement2(T const& v)
+	template <typename T, typename = maths::enable_if_v2<T>> inline int MaxElementIndex2(T const& v)
 	{
-		return x_cp(v) < y_cp(v);
+		auto x = x_cp(v);
+		auto y = y_cp(v);
+		return x >= y ? 0 : 1;
 	}
-	template <typename T, typename = maths::enable_if_v3<T>> inline int LargestElement3(T const& v)
+	template <typename T, typename = maths::enable_if_v3<T>> inline int MaxElementIndex3(T const& v)
 	{
-		int i = (y_cp(v) < z_cp(v)) + 1;
-		return (x_cp(v) < v[i]) * i;
+		auto x = x_cp(v);
+		auto y = y_cp(v);
+		auto z = z_cp(v);
+		auto i = y >= z ? 1 : 2;
+		return x >= v[i] ? 0 : i;
 	}
-	template <typename T, typename = maths::enable_if_v4<T>> inline int LargestElement4(T const& v)
+	template <typename T, typename = maths::enable_if_v4<T>> inline int MaxElementIndex4(T const& v)
 	{
-		int i = (x_cp(v) < y_cp(v)) + 0;
-		int j = (z_cp(v) < w_cp(v)) + 2;
-		return (v[i] < v[j]) ? j : i;
+		auto x = x_cp(v);
+		auto y = y_cp(v);
+		auto z = z_cp(v);
+		auto w = w_cp(v);
+		auto i = x >= y ? 0 : 1;
+		auto j = z >= w ? 2 : 3;
+		return v[i] >= v[j] ? i : j;
 	}
 
 	// Sum the elements in a vector
@@ -1509,16 +1777,27 @@ namespace pr::maths
 			PR_CHECK( Equal2(arr0, arr1), true);
 			PR_CHECK( Equal3(arr0, arr1), true);
 			PR_CHECK(!Equal4(arr0, arr1), true);
-
+		}
+		{// FEql arrays
 			auto t0 = 0.0f;
 			auto t1 = maths::tiny * 0.5f;
 			auto t2 = maths::tiny * 1.5f;
-			float arr2[] = {1.0f + t0, 2.0f + t0, 3.0f + t0, 5.0f + t0};
-			float arr3[] = {1.0f + t1, 2.0f + t1, 3.0f + t1, 4.0f + t1};
-			float arr4[] = {1.0f + t2, 2.0f + t2, 3.0f + t2, 4.0f + t2};
-			PR_CHECK( FEql2(arr2, arr3) && !FEql2(arr2, arr4), true);
-			PR_CHECK( FEql3(arr2, arr3) && !FEql3(arr2, arr4), true);
-			PR_CHECK(!FEql4(arr2, arr3) && !FEql4(arr2, arr4), true);
+			float arr0[] = {t0, 0, maths::tiny, -1};
+			float arr1[] = {t1, 0, maths::tiny, -1};
+			float arr2[] = {t2, 0, maths::tiny, -1};
+
+			PR_CHECK(FEql(arr0, arr1), true ); // Different by 1.000005%
+			PR_CHECK(FEql(arr0, arr2), false); // Different by 1.000015%
+			PR_CHECK(FEql2(arr0, arr1), true); // Different by 100% but comparing with zero
+			PR_CHECK(FEql2(arr0, arr2), false); // Different by 100%, comparing with zero, but greater than 'tiny'
+			PR_CHECK(FEql3(arr0, arr1), false); // Different by 50%
+			PR_CHECK(FEql3(arr0, arr2), false); // Different by 50%
+			PR_CHECK(FEql4(arr0, arr1), true);
+			PR_CHECK(FEql4(arr0, arr2), false);
+		}
+		{// Is Zero
+			auto t0 = 0.0f;
+			auto t1 = maths::tiny * 0.5f;
 
 			float arr5[] = {t0, t0, t0, t0};
 			float arr6[] = {t0, t0, t1, t1};
@@ -1570,13 +1849,17 @@ namespace pr::maths
 			PR_CHECK(Abs(arr0) == Abs(arr1), true);
 			PR_CHECK(Abs(arr0) == Abs(arr2), true);
 			PR_CHECK(Abs(arr1) == Abs(arr2), true);
+
+			float arr3[] = {+1,-2,+3,-4};
+			float arr4[] = {+1,+2,+3,+4};
+			PR_CHECK(FEql(std::span<float>(Abs(arr3)), std::span<float>(arr4)), true);
 		}
 		{// Truncate
 			v4 arr0 = {+1.1f, -1.2f, +2.8f, -2.9f};
 			v4 arr1 = {+1.0f, -1.0f, +2.0f, -2.0f};
 			v4 arr2 = {+1.0f, -1.0f, +3.0f, -3.0f};
 			v4 arr3 = {+0.1f, -0.2f, +0.8f, -0.9f};
-				
+
 			PR_CHECK(Trunc(1.9f) == 1.0f, true);
 			PR_CHECK(Trunc(10000000000000.9) == 10000000000000.0, true);
 			PR_CHECK(Trunc(arr0, ETruncType::TowardZero) == arr1, true);
@@ -1672,29 +1955,60 @@ namespace pr::maths
 			int arr2[] = {2,3,1,4,5};
 			int arr3[] = {2,3,4,1,5};
 			int arr4[] = {2,3,4,5,1};
+			static_assert(std::is_same<maths::is_vec<int[5]>::elem_type, int>::value, "");
 
-			PR_CHECK(SmallestElement(arr0) == 0, true);
-			PR_CHECK(SmallestElement(arr1) == 1, true);
-			PR_CHECK(SmallestElement(arr2) == 2, true);
-			PR_CHECK(SmallestElement(arr3) == 3, true);
-			PR_CHECK(SmallestElement(arr4) == 4, true);
-			PR_CHECK(SmallestElement2(arr1) == 1, true);
-			PR_CHECK(SmallestElement3(arr3) == 0, true);
-			PR_CHECK(SmallestElement4(arr4) == 0, true);
+			PR_CHECK(MinElement(arr0 ) == 1, true);
+			PR_CHECK(MinElement(arr1 ) == 1, true);
+			PR_CHECK(MinElement(arr2 ) == 1, true);
+			PR_CHECK(MinElement(arr3 ) == 1, true);
+			PR_CHECK(MinElement(arr4 ) == 1, true);
+			PR_CHECK(MinElement2(arr1) == 1, true);
+			PR_CHECK(MinElement3(arr3) == 2, true);
+			PR_CHECK(MinElement4(arr4) == 2, true);
 
 			float arr5[] = {1,2,3,4,5};
 			float arr6[] = {1,2,3,5,4};
 			float arr7[] = {2,3,5,1,4};
 			float arr8[] = {2,5,3,4,1};
 			float arr9[] = {5,2,3,4,1};
-			PR_CHECK(LargestElement(arr5) == 4, true);
-			PR_CHECK(LargestElement(arr6) == 3, true);
-			PR_CHECK(LargestElement(arr7) == 2, true);
-			PR_CHECK(LargestElement(arr8) == 1, true);
-			PR_CHECK(LargestElement(arr9) == 0, true);
-			PR_CHECK(LargestElement2(arr5) == 1, true);
-			PR_CHECK(LargestElement3(arr5) == 2, true);
-			PR_CHECK(LargestElement4(arr5) == 3, true);
+			PR_CHECK(MaxElement(arr5) == 5, true);
+			PR_CHECK(MaxElement(arr6) == 5, true);
+			PR_CHECK(MaxElement(arr7) == 5, true);
+			PR_CHECK(MaxElement(arr8) == 5, true);
+			PR_CHECK(MaxElement(arr9) == 5, true);
+			PR_CHECK(MaxElement2(arr5) == 2, true);
+			PR_CHECK(MaxElement3(arr5) == 3, true);
+			PR_CHECK(MaxElement4(arr5) == 4, true);
+		}
+		{// Smallest/Largest element index
+			int arr0[] = {1,2,3,4,5};
+			int arr1[] = {2,1,3,4,5};
+			int arr2[] = {2,3,1,4,5};
+			int arr3[] = {2,3,4,1,5};
+			int arr4[] = {2,3,4,5,1};
+
+			PR_CHECK(MinElementIndex(arr0) == 0, true);
+			PR_CHECK(MinElementIndex(arr1) == 1, true);
+			PR_CHECK(MinElementIndex(arr2) == 2, true);
+			PR_CHECK(MinElementIndex(arr3) == 3, true);
+			PR_CHECK(MinElementIndex(arr4) == 4, true);
+			PR_CHECK(MinElementIndex2(arr1) == 1, true);
+			PR_CHECK(MinElementIndex3(arr3) == 0, true);
+			PR_CHECK(MinElementIndex4(arr4) == 0, true);
+
+			float arr5[] = {1,2,3,4,5};
+			float arr6[] = {1,2,3,5,4};
+			float arr7[] = {2,3,5,1,4};
+			float arr8[] = {2,5,3,4,1};
+			float arr9[] = {5,2,3,4,1};
+			PR_CHECK(MaxElementIndex(arr5) == 4, true);
+			PR_CHECK(MaxElementIndex(arr6) == 3, true);
+			PR_CHECK(MaxElementIndex(arr7) == 2, true);
+			PR_CHECK(MaxElementIndex(arr8) == 1, true);
+			PR_CHECK(MaxElementIndex(arr9) == 0, true);
+			PR_CHECK(MaxElementIndex2(arr5) == 1, true);
+			PR_CHECK(MaxElementIndex3(arr5) == 2, true);
+			PR_CHECK(MaxElementIndex4(arr5) == 3, true);
 		}
 		{// Dot
 			v3 arr0(1,2,3);

@@ -106,6 +106,8 @@ namespace Rylogic.Maths
 		// Functions
 		public override bool Equals(object o)               { return o is m2x2 && (m2x2)o == this; }
 		public override int GetHashCode()                   { unchecked { return x.GetHashCode() + y.GetHashCode(); } }
+		public static m2x2 operator + (m2x2 rhs)            { return rhs; }
+		public static m2x2 operator - (m2x2 rhs)            { return new m2x2(-rhs.x, -rhs.y); }
 		public static m2x2 operator * (m2x2 lhs, float rhs) { return new m2x2(lhs.x * rhs   , lhs.y * rhs   ); }
 		public static m2x2 operator + (m2x2 lhs, m2x2 rhs)  { return new m2x2(lhs.x + rhs.x , lhs.y + rhs.y ); }
 		public static m2x2 operator - (m2x2 lhs, m2x2 rhs)  { return new m2x2(lhs.x - rhs.x , lhs.y - rhs.y ); }
@@ -176,15 +178,48 @@ namespace Rylogic.Maths
 	public static partial class Math_
 	{
 		/// <summary>Approximate equal</summary>
-		public static bool FEqlRelative(m2x2 lhs, m2x2 rhs, float tol)
+		public static bool FEqlAbsolute(m2x2 a, m2x2 b, float tol)
 		{
 			return
-				FEqlRelative(lhs.x, rhs.x, tol) &&
-				FEqlRelative(lhs.y, rhs.y, tol);
+				FEqlAbsolute(a.x, b.x, tol) &&
+				FEqlAbsolute(a.y, b.y, tol);
 		}
-		public static bool FEql(m2x2 lhs, m2x2 rhs)
+		public static bool FEqlRelative(m2x2 a, m2x2 b, float tol)
 		{
-			return FEqlRelative(lhs, rhs, TinyF);
+			var max_a = MaxElement(Abs(a));
+			var max_b = MaxElement(Abs(b));
+			if (max_b == 0) return max_a < tol;
+			if (max_a == 0) return max_b < tol;
+			var abs_max_element = Max(max_a, max_b);
+			return FEqlAbsolute(a, b, tol * abs_max_element);
+		}
+		public static bool FEql(m2x2 a, m2x2 b)
+		{
+			return FEqlRelative(a, b, TinyF);
+		}
+
+		/// <summary>Absolute value of 'x'</summary>
+		public static m2x2 Abs(m2x2 x)
+		{
+			return new m2x2(
+				Abs(x.x),
+				Abs(x.y));
+		}
+
+		/// <summary>Return the maximum element value in 'mm'</summary>
+		public static float MaxElement(m2x2 m)
+		{
+			return Max(
+				MaxElement(m.x),
+				MaxElement(m.y));
+		}
+
+		/// <summary>Return the minimum element value in 'm'</summary>
+		public static float MinElement(m2x2 m)
+		{
+			return Min(
+				MinElement(m.x),
+				MinElement(m.y));
 		}
 
 		/// <summary>Finite test of matrix elements</summary>
@@ -229,7 +264,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>True if 'm' can be inverted</summary>
-		public static bool IsInvertable(m2x2 m)
+		public static bool IsInvertible(m2x2 m)
 		{
 			return Determinant(m) != 0;
 		}
@@ -237,7 +272,7 @@ namespace Rylogic.Maths
 		/// <summary>Return the inverse of 'm'</summary>
 		public static m2x2 Invert(m2x2 m)
 		{
-			Debug.Assert(IsInvertable(m), "Matrix has no inverse");
+			Debug.Assert(IsInvertible(m), "Matrix has no inverse");
 
 			var det = Determinant(m);
 			var tmp = new m2x2(

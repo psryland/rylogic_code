@@ -242,9 +242,9 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>True if 'mat' has an inverse</summary>
-		public static bool IsInvertable(Matrix m)
+		public static bool IsInvertible(Matrix m)
 		{
-			return MatrixLU.IsInvertable(new MatrixLU(m));
+			return MatrixLU.IsInvertible(new MatrixLU(m));
 		}
 
 		/// <summary>Solves for x in 'A.x = v'</summary>
@@ -780,7 +780,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>True if 'mat' has an inverse</summary>
-		public static bool IsInvertable(MatrixLU lu)
+		public static bool IsInvertible(MatrixLU lu)
 		{
 			return !Math_.FEql(Determinant(lu), 0);
 		}
@@ -830,7 +830,7 @@ namespace Rylogic.Maths
 		/// <summary>Return the inverse of matrix 'm'</summary>
 		public static Matrix Invert(MatrixLU lu)
 		{
-			Util.Assert(IsInvertable(lu), "Matrix has no inverse");
+			Util.Assert(IsInvertible(lu), "Matrix has no inverse");
 
 			var inv = new Matrix(lu.m_rows, lu.m_cols);
 			var elem = new Matrix(lu.m_rows, 1);
@@ -871,7 +871,7 @@ namespace Rylogic.UnitTests
 			Assert.True(Math_.FEql(M.x.w, m[3,0]));
 			Assert.True(Math_.FEql(M.z.z, m[2,2]));
 
-			Assert.Equal(Matrix.IsInvertable(m), Math_.IsInvertable(M));
+			Assert.Equal(Matrix.IsInvertible(m), Math_.IsInvertible(M));
 
 			var m1 = Matrix.Invert(m);
 			var M1 = Math_.Invert(M);
@@ -893,7 +893,7 @@ namespace Rylogic.UnitTests
 					for (int j = 0; j != m.Cols; ++j)
 						m[i,j] = rng.Double(-5.0, +5.0);
 
-				if (Matrix.IsInvertable(m))
+				if (Matrix.IsInvertible(m))
 				{
 					var m_inv = Matrix.Invert(m);
 

@@ -103,6 +103,21 @@ namespace Rylogic.Maths
 		public static float     Len3(float x, float y, float z)                 { return Sqrt(Len3Sq(x,y,z)); }
 
 		// Floating point comparisons
+
+		/// <summary>
+		/// Compare floats for equality.
+		/// *WARNING* 'tol' is an absolute epsilon. Returns true if a is in the range (b-tol,b+tol)</summary>
+		public static bool FEqlAbsolute(float a, float b, float tol)
+		{
+			Debug.Assert(float.IsNaN(tol) || tol >= 0); // NaN is not an error, comparisons with NaN are defined to always be false
+			return Math.Abs(a - b) < tol;
+		}
+		public static bool FEqlAbsolute(double a, double b, double tol)
+		{
+			Debug.Assert(double.IsNaN(tol) || tol >= 0); // NaN is not an error, comparisons with NaN are defined to always be false
+			return Math.Abs(a - b) < tol;
+		}
+
 		/// <summary>
 		/// Compare floats for equality.
 		/// *WARNING* 'tol' is the fraction of the largest value. i.e. abs(a-b) &lt; tol * max(abs(a), abs(b))
@@ -127,20 +142,14 @@ namespace Rylogic.Maths
 			if (a == b) return true;
 
 			// Test relative error as a fraction of the largest value
-			return Math.Abs(a - b) < tol * Math.Max(Math.Abs(a), Math.Abs(b));
+			return FEqlAbsolute(a, b, tol * Math.Max(Math.Abs(a), Math.Abs(b)));
 		}
 		public static bool FEqlRelative(double a, double b, double tol)
 		{
-			// Handles tests against zero where relative error is meaningless
-			// Tests with 'b == 0' are the most common so do them first
+			if (a == b) return true;
 			if (b == 0) return Math.Abs(a) < tol;
 			if (a == 0) return Math.Abs(b) < tol;
-
-			// Handle infinities and exact values
-			if (a == b) return true;
-
-			// Test relative error as a fraction of the largest value
-			return Math.Abs(a - b) < tol * Math.Max(Math.Abs(a), Math.Abs(b));
+			return FEqlAbsolute(a, b, tol * Math.Max(Math.Abs(a), Math.Abs(b)));
 		}
 		public static bool FEql(float a, float b)
 		{

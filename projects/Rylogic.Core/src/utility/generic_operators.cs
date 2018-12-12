@@ -2,6 +2,7 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using Rylogic.Extn;
+using Rylogic.Maths;
 
 namespace Rylogic.Utility
 {
@@ -154,7 +155,8 @@ namespace Rylogic.Utility
 			#endregion
 			#region Divide
 			{
-				if (typeof(T).IsEnum)
+				if (typeof(T).IsEnum ||
+					Math_.IsVecMatType(typeof(T)))
 				{
 					m_div = (a,b) => { throw new Exception($"Type {typeof(T).Name} does not define the Division operator"); };
 				}
@@ -247,9 +249,13 @@ namespace Rylogic.Utility
 					var paramB = Expression.Parameter(typeof(T), "b");
 					var castA0 = Expression.Convert(paramA, Enum.GetUnderlyingType(typeof(T)));
 					var castB0 = Expression.Convert(paramB, Enum.GetUnderlyingType(typeof(T)));
-					var body   = Expression.LessThan(castA0, castB0);
-					m_less     = Expression.Lambda<Func<T, T, bool>>(body, paramA, paramB).Compile();
+					var body = Expression.LessThan(castA0, castB0);
+					m_less = Expression.Lambda<Func<T, T, bool>>(body, paramA, paramB).Compile();
 
+				}
+				else if (Math_.IsVecMatType(typeof(T)))
+				{
+					m_less = (a, b) => { throw new Exception($"Type {typeof(T).Name} does not define the LessThan operator"); };
 				}
 				else
 				{

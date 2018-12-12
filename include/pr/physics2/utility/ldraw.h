@@ -17,9 +17,10 @@ namespace pr::ldr
 		All    = ~0,
 		_bitwise_operators_allowed,
 	};
-	inline TStr& RigidBody(TStr& str, typename TStr::value_type const* name, Col colour, physics::RigidBody const& rb, float scale = 1.0f, ERigidBodyFlags flags = ERigidBodyFlags::None)
+	inline TStr& RigidBody(TStr& str, typename TStr::value_type const* name, Col colour, physics::RigidBody const& rb, float scale = 0.1f, ERigidBodyFlags flags = ERigidBodyFlags::None, m4x4 const* o2w = nullptr)
 	{
-		Shape(str, name, colour, rb.Shape(), rb.O2W());
+		Shape(str, name, colour, rb.Shape(), o2w ? *o2w : rb.O2W());
+
 		auto n = Nest(str);
 		CoordFrame(str, "Origin", 0xFFFFFFFF, m4x4Identity, 0.1f);
 		CoordFrame(str, "CoM", 0xFF404040, m4x4::Translation(rb.CentreOfMassOS().w1()), 0.1f);
@@ -29,17 +30,17 @@ namespace pr::ldr
 			auto os_velocity = scale * rb.VelocityOS();
 			auto os_force    = scale * rb.ForceOS();
 			if (bool(flags & ERigidBodyFlags::LVel))
-				Arrow(str, "LVel", 0xFF00FFFF, v4Origin, os_velocity.lin, 2);
+				Arrow(str, "LVel", 0xFF00FFFF, EArrowType::Fwd, v4Origin, os_velocity.lin, 2);
 			if (bool(flags & ERigidBodyFlags::AVel))
-				Arrow(str, "AVel", 0xFFFF00FF, v4Origin, os_velocity.ang, 2);
+				Arrow(str, "AVel", 0xFFFF00FF, EArrowType::Fwd, v4Origin, os_velocity.ang, 2);
 			if (bool(flags & ERigidBodyFlags::LMom))
-				Arrow(str, "LMom", 0xFF008080, v4Origin, os_momentum.lin, 5);
+				Arrow(str, "LMom", 0xFF008080, EArrowType::Fwd, v4Origin, os_momentum.lin, 5);
 			if (bool(flags & ERigidBodyFlags::AMom))
-				Arrow(str, "AMom", 0xFF800080, v4Origin, os_momentum.ang, 5);
+				Arrow(str, "AMom", 0xFF800080, EArrowType::Fwd, v4Origin, os_momentum.ang, 5);
 			if (bool(flags & ERigidBodyFlags::Force))
-				Arrow(str, "Force", 0xFF0000FF, -os_force.lin.w1(), os_force.lin, 8);
+				Arrow(str, "Force", 0xFF0000FF, EArrowType::Back, v4Origin, -os_force.lin.w0(), 8);
 			if (bool(flags & ERigidBodyFlags::Torque))
-				Arrow(str, "Torque", 0xFF000080, v4Origin, os_force.ang.w1(), 8);
+				Arrow(str, "Torque", 0xFF000080, EArrowType::Fwd, v4Origin, os_force.ang.w1(), 8);
 		}
 		return str;
 	}

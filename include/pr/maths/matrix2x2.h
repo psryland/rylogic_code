@@ -151,7 +151,7 @@ namespace pr
 	}
 
 	// Returns true if 'mat' has an inverse
-	template <typename A, typename B> inline bool IsInvertable(m2_cref<A,B> mat)
+	template <typename A, typename B> inline bool IsInvertible(m2_cref<A,B> mat)
 	{
 		return Determinant(mat) != 0;
 	}

@@ -151,6 +151,51 @@ namespace pr
 			Transpose(m.m01), Transpose(m.m11));
 	}
 
+	// Invert the 6x6 matrix 'm'
+	template <typename A, typename B> inline Mat6x8<B,A> Invert(m6_cref<A,B> m)
+	{
+		// 2x2 block matrix inversion
+		// R = [A B]  R' = [E F]
+		//     [C D]       [G H]
+		// For square diagonal partitions of 'R' (i.e. submatrices are square)
+		// If 'A' is non-singular then 'R' is invertible iff the Schur complement "D - CA¯B" of A is invertible
+		// R'= [A¯ + A¯B(D-CA¯B)¯CA¯ ,  -A¯B(D-CA¯B)¯ ]
+		//     [    -(D-CA¯B)¯CA¯    ,    (D-CA¯B)¯   ]
+		// or:
+		//     [   (A-BD¯C)¯     ,    -(A-BD¯C)¯BD¯   ]
+		//     [ -D¯C(A-BD¯C)¯   , D¯+D¯C(A-BD¯C)¯BD¯ ]
+
+		auto& a = m.m00;
+		auto& b = m.m01;
+		auto& c = m.m10;
+		auto& d = m.m11;
+		if (IsInvertible(a))
+		{
+			auto a¯ = Invert(a);
+			auto schur = d - c * a¯ * b; // The 'Schur Complement'
+			if (IsInvertible(schur))
+			{
+				auto schur¯ = Invert(schur);
+				return Mat6x8<B,A>{
+					a¯ + a¯ * b * schur¯ * c * a¯ , -a¯ * b * schur¯,
+					             -schur¯ * c * a¯ ,           schur¯};
+			}
+		}
+		if (IsInvertible(d))
+		{
+			auto d¯ = Invert(d);
+			auto schur = a - b * d¯ * c; // The 'Schur Complement'
+			if (IsInvertible(schur))
+			{
+				auto schur¯ = Invert(schur);
+				return Mat6x8<B,A>{
+					          schur¯ ,              -schur¯ * b * d¯,
+					-d¯ * c * schur¯ , d¯ + d¯ * c * schur¯ * b * d¯};
+			}
+		}
+		throw std::runtime_error("matrix is singular");
+	}
+
 	#pragma endregion
 }
 
@@ -345,6 +390,35 @@ namespace pr::maths
 				PR_CHECK(FEql(m2(c,4), M2[c].lin.y), true);
 				PR_CHECK(FEql(m2(c,5), M2[c].lin.z), true);
 			}
+		}
+		{// Inverse
+			auto M = m6x8
+			{
+				v8{+1, +1, +2, -1, +6, +2},
+				v8{-2, +2, +4, -3, +5, -4},
+				v8{+1, +3, -2, -5, +4, +6},
+				v8{+1, +4, +3, -7, +3, -5},
+				v8{+1, +2, +3, -2, +2, +3},
+				v8{+1, -1, -2, -3, +6, -1}
+			};
+			auto M¯ = m6x8
+			{
+				v8{+227.0f/794.0f, -135.0f/397.0f, -101.0f/794.0f,  +84.0f/397.0f,  -16.0f/397.0f,  -4.0f/397.0f},
+				v8{+219.0f/397.0f,  -75.0f/794.0f, +382.0f/1985.f, +179.0f/794.0f, -2647.f/3970.f,-976.0f/1985.f},
+				v8{-129.0f/794.0f,  +26.0f/397.0f, -107.0f/794.0f,  -25.0f/397.0f, +156.0f/397.0f, +39.0f/397.0f},
+				v8{+367.0f/794.0f,  -71.0f/794.0f,  +51.0f/3970.f,  +53.0f/794.0f, -1733.f/3970.f,-564.0f/1985.f},
+				v8{+159.0f/794.0f,  +19.0f/794.0f,  +87.0f/3970.f,   -3.0f/794.0f, -621.0f/3970.f, -28.0f/1985.f},
+				v8{ -50.0f/397.0f,  +14.0f/397.0f,  +17.0f/397.0f,  -44.0f/397.0f,  +84.0f/397.0f, +21.0f/397.0f}
+			};
+
+			auto m¯ = Invert(M);
+			PR_CHECK(FEql(m¯, M¯), true);
+
+			auto I = M * M¯;
+			PR_CHECK(FEql(I, m6x8Identity), true);
+			
+			auto i = M * m¯;
+			PR_CHECK(FEql(i, m6x8Identity), true);
 		}
 	}
 }

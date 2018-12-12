@@ -6,12 +6,12 @@
 
 #include "pr/physics2/forward.h"
 #include "pr/physics2/shape/mass.h"
-#include "pr/physics2/shape/inertia_builder.h"
+#include "pr/physics2/shape/inertia.h"
 
 namespace pr::physics
 {
-	// Return the unit inertia tensor for the sphere
-	inline m3x4 UnitInertiaTensor(ShapeSphere const& shape)
+	// Return the unit inertia for the sphere
+	inline m3x4 UnitInertia(ShapeSphere const& shape)
 	{
 		// A solid sphere:  'Ixx = Iyy = Izz = (2/5)mr^2'
 		// A hollow sphere: 'Ixx = Iyy = Izz = (2/3)mr^2'
@@ -22,8 +22,8 @@ namespace pr::physics
 		return inertia;
 	}
 
-	// Return the unit inertia tensor for the box
-	inline m3x4 UnitInertiaTensor(ShapeBox const& shape)
+	// Return the unit inertia for the box
+	inline m3x4 UnitInertia(ShapeBox const& shape)
 	{
 		auto inertia = m3x4{};
 		inertia.x.x = (1.0f / 3.0f) * (Sqr(shape.m_radius.y) + Sqr(shape.m_radius.z)); // (1/12)m(Y^2 + Z^2)
@@ -32,8 +32,8 @@ namespace pr::physics
 		return inertia;
 	}
 
-	// Return the unit inertia tensor for the triangle
-	inline m3x4 UnitInertiaTensor(ShapeTriangle const& shape)
+	// Return the unit inertia for the triangle
+	inline m3x4 UnitInertia(ShapeTriangle const& shape)
 	{
 		auto inertia = m3x4{};
 		for (int i = 0; i != 3; ++i)
@@ -55,8 +55,8 @@ namespace pr::physics
 		return inertia;
 	}
 
-	// Returns the unit inertia tensor for the polytope.
-	inline m3x4 UnitInertiaTensor(ShapePolytope const& shape)
+	// Returns the unit inertia for the polytope.
+	inline m3x4 UnitInertia(ShapePolytope const& shape)
 	{
 		// Notes:
 		//  Ensure the polytope is in it's final space before calculating its inertia.
@@ -98,11 +98,11 @@ namespace pr::physics
 		}
 
 		// If the polytope is degenerate, use the weighted average vertex positions
-		if (FEql(volume, 0))
+		if (pr::FEql(volume, 0))
 		{
 			auto centre = v4Zero;
 			for (v4 const *v = shape.vert_beg(), *vend = shape.vert_end(); v != vend; ++v) centre += *v;
-			return InertiaBuilder::Point(centre);
+			return Inertia::Point(1.0f, centre).To3x3();
 		}
 
 		// Divide by total volume
@@ -123,7 +123,7 @@ namespace pr::physics
 		MassProperties mp    = {};
 		mp.m_centre_of_mass  = v4{};
 		mp.m_mass            = volume * density;
-		mp.m_os_unit_inertia = UnitInertiaTensor(shape);
+		mp.m_os_unit_inertia = UnitInertia(shape);
 		return mp;
 	}
 
@@ -135,7 +135,7 @@ namespace pr::physics
 		MassProperties mp;
 		mp.m_centre_of_mass  = v4{};
 		mp.m_mass            = volume * density;
-		mp.m_os_unit_inertia = UnitInertiaTensor(shape);
+		mp.m_os_unit_inertia = UnitInertia(shape);
 		return mp;
 	}
 
@@ -145,7 +145,7 @@ namespace pr::physics
 		MassProperties mp;
 		mp.m_centre_of_mass  = (1.0f / 3.0f) * (shape.m_v.x + shape.m_v.y + shape.m_v.z).w0();
 		mp.m_mass            = 0.5f * Length3(Cross3(shape.m_v.y - shape.m_v.x, shape.m_v.z - shape.m_v.y)) * density;
-		mp.m_os_unit_inertia = UnitInertiaTensor(shape);
+		mp.m_os_unit_inertia = UnitInertia(shape);
 		return mp;
 	}
 
@@ -155,7 +155,7 @@ namespace pr::physics
 		MassProperties mp;
 		mp.m_centre_of_mass  = CalcCentreOfMass(shape);
 		mp.m_mass            = CalcVolume(shape) * density;
-		mp.m_os_unit_inertia = UnitInertiaTensor(shape);
+		mp.m_os_unit_inertia = UnitInertia(shape);
 		return mp;
 	}
 

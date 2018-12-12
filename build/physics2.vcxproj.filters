@@ -38,6 +38,12 @@
     <Filter Include="pr\physics\integrator">
       <UniqueIdentifier>{29bd319b-df3b-4080-a7e8-32306a556ab9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\physics\broadphase">
+      <UniqueIdentifier>{5daac01f-652f-490f-8acb-b4766cc647a6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\physics\material">
+      <UniqueIdentifier>{3b4ef9e9-32e5-44c8-916f-594af63fbeb0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\physics2/src\main.cpp">
@@ -76,9 +82,6 @@
       <Filter>pr\physics\shape</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\physics2\shape\mass.h">
-      <Filter>pr\physics\shape</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\physics2\shape\material.h">
       <Filter>pr\physics\shape</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\physics2\shape\shape_mass.h">
@@ -176,6 +179,36 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\physics2\integrator\jacobian.h">
       <Filter>pr\physics\integrator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\broadphase\brute.h">
+      <Filter>pr\physics\broadphase</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\integrator\impulse.h">
+      <Filter>pr\physics\integrator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\integrator\contact.h">
+      <Filter>pr\physics\integrator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\shape\inertia_builder.h">
+      <Filter>pr\physics\shape</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\material\material.h">
+      <Filter>pr\physics\material</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\material\material_map.h">
+      <Filter>pr\physics\material</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\integrator\engine.h">
+      <Filter>pr\physics\integrator</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\physics2\utility\misc.h">
+      <Filter>pr\physics\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\matrix6x8.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\matrix3x4.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

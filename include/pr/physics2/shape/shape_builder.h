@@ -5,7 +5,8 @@
 #pragma once
 #include "pr/physics2/forward.h"
 #include "pr/physics2/shape/mass.h"
-#include "pr/physics2/shape/material.h"
+#include "pr/physics2/shape/inertia.h"
+#include "pr/physics2/material/material.h"
 
 namespace pr::physics
 {
@@ -125,8 +126,8 @@ namespace pr::physics
 			// Determine the bounding box for the whole model
 			CalculateBoundingBox();
 
-			// Create the inertia tensor for the model
-			CalculateInertiaTensor();
+			// Create the inertia for the model
+			CalculateInertia();
 
 			// Save the mass properties we've figured out
 			mp = model.m_mp;
@@ -215,31 +216,29 @@ namespace pr::physics
 				Encompass(model.m_bbox, prim->shape().m_s2p * prim->m_bbox);
 		}
 
-		// Calculates the inertia tensor for 'm_model'
-		void CalculateInertiaTensor()
+		// Calculates the inertia for 'm_model'
+		void CalculateInertia()
 		{
 			auto& model = *m_model;
-			model.m_mp.m_os_unit_inertia = m3x4{};
+
+			auto model_inertia = m3x4{};
 			for (auto& p : model.m_prim_list)
 			{
 				auto& prim = *p;
 				assert("All primitives should be in centre of mass frame" && FEql3(prim.m_mp.m_centre_of_mass, v4Zero));
 
-				auto primitive_inertia = InertiaBuilder(prim.m_mp.m_mass * prim.m_mp.m_os_unit_inertia);
+				// The CoM frame inertia of the primitive
+				auto primitive_inertia = Inertia{prim.m_mp};
 
-				// Rotate the inertia tensor into object space
-				auto prim_to_model = prim.shape().m_s2p.rot;
-				primitive_inertia  = primitive_inertia.Rotate(prim_to_model);
+				// Transform it to object space
+				primitive_inertia = Transform(primitive_inertia, prim.shape().m_s2p, ETranslateInertia::AwayFromCoM);
 
-				// Translate the inertia tensor using the parallel axis theorem
-				primitive_inertia = primitive_inertia.Translate(prim.shape().m_s2p.pos, prim.m_mp.m_mass, InertiaBuilder::AwayFromCoM);
-
-				// Add the inertia to the object inertia tensor
-				model.m_mp.m_os_unit_inertia += primitive_inertia.m;
+				// Add the inertia to the object inertia (mass divided out at the end)
+				model_inertia += primitive_inertia.To3x3();
 			}
 
-			// Assume mass == 1.0f for the model inertia tensor
-			model.m_mp.m_os_unit_inertia /= model.m_mp.m_mass;
+			// Normalised the model inertia
+			model.m_mp.m_os_unit_inertia = model_inertia / model.m_mp.m_mass;
 		}
 
 		// Return access to a shape

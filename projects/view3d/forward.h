@@ -31,7 +31,7 @@
 #include "pr/common/cast.h"
 #include "pr/common/bstr_t.h"
 #include "pr/container/vector.h"
-#include "pr/container/array_view.h"
+#include "pr/container/span.h"
 #include "pr/container/byte_data.h"
 #include "pr/filesys/fileex.h"
 #include "pr/filesys/filewatch.h"

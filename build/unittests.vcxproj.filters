@@ -870,9 +870,6 @@
     <ClInclude Include="..\include\pr\physics2\shape\mass.h">
       <Filter>pr\physics\shape</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\physics2\shape\material.h">
-      <Filter>pr\physics\shape</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\physics2\constants.h">
       <Filter>pr\physics</Filter>
     </ClInclude>
@@ -999,8 +996,8 @@
     <ClInclude Include="..\include\pr\maths\vector8.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\physics2\shape\inertia_builder.h">
-      <Filter>pr\physics\shape</Filter>
+    <ClInclude Include="..\include\pr\container\span.h">
+      <Filter>pr\container</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

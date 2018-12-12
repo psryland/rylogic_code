@@ -893,13 +893,13 @@ namespace pr
 	}
 
 	// True if 'm' has an inverse
-	template <typename Real> inline bool IsInvertable(MatrixLU<Real> const& m)
+	template <typename Real> inline bool IsInvertible(MatrixLU<Real> const& m)
 	{
 		return Determinant(m) != 0;
 	}
-	template <typename Real> inline bool IsInvertable(Matrix<Real> const& m)
+	template <typename Real> inline bool IsInvertible(Matrix<Real> const& m)
 	{
-		return IsInvertable(MatrixLU<Real>(m));
+		return IsInvertible(MatrixLU<Real>(m));
 	}
 
 	// Solves for 'x' in 'Ax = v'
@@ -948,7 +948,7 @@ namespace pr
 	// Return the inverse of matrix 'm'
 	template <typename Real> inline Matrix<Real> Invert(MatrixLU<Real> const& lu)
 	{
-		assert("Matrix has no inverse" && IsInvertable(lu));
+		assert("Matrix has no inverse" && IsInvertible(lu));
 
 		// Inverse of an NxM matrix is a MxN matrix (even though this only works for square matrices)
 		Matrix<Real> inv(lu.rows(), lu.cols());
@@ -1072,7 +1072,7 @@ namespace pr::maths
 			PR_CHECK(FEql(m(3,0), M.w.x), true);
 			PR_CHECK(FEql(m(2,2), M.z.z), true);
 
-			PR_CHECK(IsInvertable(m) == IsInvertable(M), true);
+			PR_CHECK(IsInvertible(m) == IsInvertible(M), true);
 
 			auto m1 = Invert(m);
 			auto M1 = Invert(M);
@@ -1092,7 +1092,7 @@ namespace pr::maths
 					for (int c = 0; c != m.cols(); ++c)
 						m(c,r) = dist(rng);
 
-				if (IsInvertable(m))
+				if (IsInvertible(m))
 				{
 					auto m_inv = Invert(m);
 

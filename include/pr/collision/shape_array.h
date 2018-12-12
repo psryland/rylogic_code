@@ -27,6 +27,7 @@ namespace pr
 			{
 				// Careful: We can't be sure of what follows this object in memory.
 				// The shapes that belong to this array may not be there yet.
+				// Differ calculating the bounding box to the caller
 			}
 			operator Shape const&() const
 			{

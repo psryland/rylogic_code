@@ -21,7 +21,9 @@ namespace pr
 				:m_base(EShape::Sphere, sizeof(ShapeSphere), shape_to_model, material_id, flags)
 				,m_radius(radius)
 				,m_hollow(hollow)
-			{}
+			{
+				m_base.m_bbox = CalcBBox(*this);
+			}
 			operator Shape const&() const
 			{
 				return m_base;

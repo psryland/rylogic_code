@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <set>
 #include <map>
+#include "pr/container/span.h"
 
 namespace pr
 {
@@ -416,7 +417,7 @@ namespace pr
 	// '[include_count, exclude_count)' = the range explicitly excluded
 	template <typename T> inline bool IncludeFilter(T const& item, T const* items, int include_count, int exclude_count)
 	{
-		auto idx = pr::index_of(pr::make_array_view(items, include_count + exclude_count), item);
+		auto idx = index_of(std::make_span(items, include_count + exclude_count), item);
 		int b = 0, m = include_count, e = include_count + exclude_count;
 		
 		// Include if in the include range

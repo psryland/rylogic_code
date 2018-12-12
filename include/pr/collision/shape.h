@@ -37,15 +37,15 @@ namespace pr
 		//  - add new shape_type.h file and implement
 		//  - add to is_shape<> type traits
 		//  - add to support.h
-		enum class EShape
+		//  - update collision.h
+		enum class EShape :int
 		{
 			// Primitive shapes
 			Sphere,
 			Box,
-			Polytope,
-			Cylinder,
-			Triangle,
 			Line,
+			Triangle,
+			Polytope,
 
 			// Compound shapes
 			Array,  // An array of child shapes
@@ -63,7 +63,6 @@ namespace pr
 			case EShape::Sphere:   return "sphere";
 			case EShape::Box:      return "box";
 			case EShape::Polytope: return "polytope";
-			case EShape::Cylinder: return "cylinder";
 			case EShape::Triangle: return "triangle";
 			case EShape::Line:     return "line";
 			case EShape::Array:    return "array";
@@ -141,14 +140,9 @@ namespace pr
 			static EShape const shape_type = EShape::Box;
 			static bool const composite = false;
 		};
-		template <> struct is_shape<ShapePolytope> :std::true_type
+		template <> struct is_shape<ShapeLine> :std::true_type
 		{
-			static EShape const shape_type = EShape::Polytope;
-			static bool const composite = false;
-		};
-		template <> struct is_shape<ShapeCylinder> :std::true_type
-		{
-			static EShape const shape_type = EShape::Cylinder;
+			static EShape const shape_type = EShape::Line;
 			static bool const composite = false;
 		};
 		template <> struct is_shape<ShapeTriangle> :std::true_type
@@ -156,9 +150,9 @@ namespace pr
 			static EShape const shape_type = EShape::Triangle;
 			static bool const composite = false;
 		};
-		template <> struct is_shape<ShapeLine> :std::true_type
+		template <> struct is_shape<ShapePolytope> :std::true_type
 		{
-			static EShape const shape_type = EShape::Line;
+			static EShape const shape_type = EShape::Polytope;
 			static bool const composite = false;
 		};
 		template <> struct is_shape<ShapeArray> :std::true_type
@@ -206,6 +200,22 @@ namespace pr
 		{
 			return shape ? &shape->m_base : nullptr;
 		}
+		inline Shape const& shape_cast(Shape const& shape)
+		{
+			return shape;
+		}
+		inline Shape const* shape_cast(Shape const* shape)
+		{
+			return shape;
+		}
+		inline Shape& shape_cast(Shape& shape)
+		{
+			return shape;
+		}
+		inline Shape* shape_cast(Shape* shape)
+		{
+			return shape;
+		}
 		
 		// Return a shape to use in place of a real shape for objects that don't need a shape really
 		inline Shape* NoShape()
@@ -220,8 +230,10 @@ namespace pr
 			switch (shape.m_type)
 			{
 			default: assert("Unknown primitive type" && false); return BBoxReset;
-			case EShape::Sphere:   return CalcBBox(shape_cast<ShapeSphere>  (shape));
-			case EShape::Box:      return CalcBBox(shape_cast<ShapeBox>     (shape));
+			case EShape::Sphere:   return CalcBBox(shape_cast<ShapeSphere>(shape));
+			case EShape::Box:      return CalcBBox(shape_cast<ShapeBox>(shape));
+			case EShape::Line:     return CalcBBox(shape_cast<ShapeLine>(shape));
+			case EShape::Triangle: return CalcBBox(shape_cast<ShapeTriangle>(shape));
 			case EShape::Polytope: return CalcBBox(shape_cast<ShapePolytope>(shape));
 			}
 		}

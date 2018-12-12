@@ -69,7 +69,7 @@ namespace pr::collision
 	{
 		v4 d(Dot3(direction, shape.m_v.x), Dot3(direction, shape.m_v.y), Dot3(direction, shape.m_v.z), 0.0f);
 		feature_type = EFeature::Vert;
-		return shape.m_v[LargestElement3(d)];
+		return shape.m_v[MaxElementIndex3(d)];
 	}
 	inline v4 SupportVertex(ShapeLine const& shape, v4_cref<> direction, EFeature& feature_type)
 	{

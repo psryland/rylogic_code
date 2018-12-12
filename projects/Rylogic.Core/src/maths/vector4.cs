@@ -244,191 +244,6 @@ namespace Rylogic.Maths
 			return new v4(lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z, lhs.w / rhs.w);
 		}
 
-		/// <summary>Return a vector containing the minimum components</summary>
-		[Obsolete] public static v4 Min(v4 lhs, v4 rhs)
-		{
-			return Math_.Min(lhs, rhs);
-		}
-		[Obsolete] public static v4 Min(v4 x, params v4[] vecs)
-		{
-			return Math_.Min(x, vecs);
-		}
-
-		/// <summary>Return a vector containing the maximum components</summary>
-		[Obsolete] public static v4 Max(v4 lhs, v4 rhs)
-		{
-			return Math_.Max(lhs, rhs);
-		}
-		[Obsolete] public static v4 Max(v4 x, params v4[] vecs)
-		{
-			return Math_.Max(x, vecs);
-		}
-
-		/// <summary>Clamp the components of 'vec' within the ranges of 'min' and 'max'</summary>
-		//[Obsolete] public static v4 Clamp3(v4 vec, v4 min, v4 max)
-		//{
-		//	return Math_.Clamp3(vec, min, max);
-		//}
-		//[Obsolete] public static v4 Clamp4(v4 vec, v4 min, v4 max)
-		//{
-		//	return Math_.Clamp4(vec, min, max);
-		//}
-
-		/// <summary>Component absolute value</summary>
-		[Obsolete] public static v4 Abs(v4 vec)
-		{
-			return Math_.Abs(vec);
-		}
-
-		/// <summary>Normalise 'vec' by the length of the XY components</summary>
-		[Obsolete] public static v4 Normalise2(v4 vec)
-		{
-			return vec / vec.Length2;
-		}
-		[Obsolete] public static v4 Normalise2(ref v4 vec)
-		{
-			return vec /= vec.Length2;
-		}
-
-		/// <summary>Normalise 'vec' by the length of the XYZ components</summary>
-		[Obsolete] public static v4 Normalise3(v4 vec)
-		{
-			return vec / vec.Length3;
-		}
-		[Obsolete] public static v4 Normalise3(ref v4 vec)
-		{
-			return vec /= vec.Length3;
-		}
-
-		/// <summary>Normalise 'vec' by the length of the XYZW components</summary>
-		[Obsolete] public static v4 Normalise4(v4 vec)
-		{
-			return vec / vec.Length4;
-		}
-		[Obsolete] public static v4 Normalise4(ref v4 vec)
-		{
-			return vec /= vec.Length4;
-		}
-
-		/// <summary>Normalise 'vec' by the length of the XY components or return 'def' if zero</summary>
-		[Obsolete] public static v4 Normalise2(v4 vec, v4 def)
-		{
-			if (vec.xy == v2.Zero) return def;
-			var norm = Normalise2(vec);
-			return norm.xy != v2.Zero ? norm : def;
-		}
-
-		/// <summary>Normalise 'vec' by the length of the XYZ components or return 'def' if zero</summary>
-		[Obsolete] public static v4 Normalise3(v4 vec, v4 def)
-		{
-			if (vec.xyz == v3.Zero) return def;
-			var norm = Normalise3(vec);
-			return norm.xyz != v3.Zero ? norm : def;
-		}
-
-		/// <summary>Normalise 'vec' by the length of the XYZW components or return 'def' if zero</summary>
-		[Obsolete] public static v4 Normalise4(v4 vec, v4 def)
-		{
-			if (vec == v4.Zero) return def;
-			var norm = Normalise4(vec);
-			return norm != v4.Zero ? norm : def;
-		}
-
-		/// <summary>Dot product of XYZ components</summary>
-		[Obsolete] public static float Dot3(v4 lhs, v4 rhs)
-		{
-			return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z;
-		}
-
-		/// <summary>Dot product of XYZW components</summary>
-		[Obsolete] public static float Dot4(v4 lhs, v4 rhs)
-		{
-			return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z + lhs.w * rhs.w;
-		}
-
-		/// <summary>Cross product of XYZ components</summary>
-		[Obsolete] public static v4 Cross3(v4 lhs, v4 rhs)
-		{
-			return new v4(lhs.y * rhs.z - lhs.z * rhs.y, lhs.z * rhs.x - lhs.x * rhs.z, lhs.x * rhs.y - lhs.y * rhs.x, 0.0f);
-		}
-
-		/// <summary>Triple product (a . (b x c)) of XYZ components</summary>
-		[Obsolete] public static float Triple3(v4 a, v4 b, v4 c)
-		{
-			return Dot3(a, Cross3(b, c));
-		}
-
-		/// <summary>True if 'lhs' and 'rhs' are parallel</summary>
-		[Obsolete] public static bool Parallel(v4 lhs, v4 rhs)
-		{
-			return Math_.FEql(Cross3(lhs, rhs).Length3Sq, 0);
-		}
-
-		/// <summary>Linearly interpolate between two vectors</summary>
-		[Obsolete] public static v4 Lerp(v4 lhs, v4 rhs, float frac)
-		{
-			return lhs * (1f - frac) + rhs * (frac);
-		}
-
-		/// <summary>Returns a vector guaranteed to not be parallel to 'vec'</summary>
-		[Obsolete] public static v4 CreateNotParallelTo(v4 vec)
-		{
-			bool x_aligned = Math_.Abs(vec.x) > Math_.Abs(vec.y) && Math_.Abs(vec.x) > Math_.Abs(vec.z);
-			return new v4(Math_.SignF(!x_aligned), 0.0f, Math_.SignF(x_aligned), vec.w);
-		}
-
-		/// <summary>Returns a vector perpendicular to 'vec'</summary>
-		[Obsolete] public static v4 Perpendicular(v4 vec)
-		{
-			Debug.Assert(vec != Zero, "Cannot make a perpendicular to a zero vector");
-			var v = Cross3(vec, CreateNotParallelTo(vec));
-			v *= (float)Math.Sqrt(vec.Length3Sq / v.Length3Sq);
-			return v;
-		}
-
-		/// <summary>Returns a vector perpendicular to 'vec' favouring 'previous' as the preferred perpendicular</summary>
-		[Obsolete] public static v4 Perpendicular(v4 vec, v4 previous)
-		{
-			Debug.Assert(!Math_.FEql(vec, Zero), "Cannot make a perpendicular to a zero vector");
-
-			// If 'previous' is parallel to 'vec', choose a new perpendicular (includes previous == zero)
-			if (Parallel(vec, previous))
-				return Perpendicular(vec);
-
-			// If 'previous' is still perpendicular, keep it
-			if (Math_.FEql(Dot3(vec, previous), 0))
-				return previous;
-
-			// Otherwise, make a perpendicular that is close to 'previous'
-			var v = Cross3(Cross3(vec, previous), vec);
-			v *= (float)Math.Sqrt(vec.Length3Sq / v.Length3Sq);
-			return v;
-		}
-
-		/// <summary>Returns a 3 bit bitmask of the octant the vector is in where X = 0x1, Y = 0x2, Z = 0x4</summary>
-		[Obsolete] public static uint Octant(v4 vec)
-		{
-			return Math_.Octant(vec);
-		}
-
-		/// <summary>Return the cosine of the angle between two vectors</summary>
-		[Obsolete] public static float CosAngle3(v4 lhs, v4 rhs)
-		{
-			return Math_.CosAngle(lhs, rhs);
-		}
-
-		/// <summary>Return the angle between two vectors</summary>
-		[Obsolete] public static float Angle3(v4 lhs, v4 rhs)
-		{
-			return Math_.Angle(lhs, rhs);
-		}
-
-		/// <summary>Return the average of a collection of vectors</summary>
-		[Obsolete] public static v4 Average(IEnumerable<v4> vecs)
-		{
-			return Math_.Average(vecs);
-		}
-
 		#region Parse
 		public static v4 Parse3(string s, float w)
 		{
@@ -611,23 +426,37 @@ namespace Rylogic.Maths
 	public static partial class Math_
 	{
 		/// <summary>Approximate equal</summary>
-		public static bool FEqlRelative(v4 lhs, v4 rhs, float tol)
+		public static bool FEqlAbsolute(v4 a, v4 b, float tol)
 		{
 			return
-				FEqlRelative(lhs.x, rhs.x, tol) &&
-				FEqlRelative(lhs.y, rhs.y, tol) &&
-				FEqlRelative(lhs.z, rhs.z, tol) &&
-				FEqlRelative(lhs.w, rhs.w, tol);;
+				FEqlAbsolute(a.x, b.x, tol) &&
+				FEqlAbsolute(a.y, b.y, tol) &&
+				FEqlAbsolute(a.z, b.z, tol) &&
+				FEqlAbsolute(a.w, b.w, tol);
 		}
-		public static bool FEql(v4 lhs, v4 rhs)
+		public static bool FEqlRelative(v4 a, v4 b, float tol)
 		{
-			return
-				FEql(lhs.x, rhs.x) &&
-				FEql(lhs.y, rhs.y) &&
-				FEql(lhs.z, rhs.z) &&
-				FEql(lhs.w, rhs.w);
+			var max_a = MaxElement(Abs(a));
+			var max_b = MaxElement(Abs(b));
+			if (max_b == 0) return max_a < tol;
+			if (max_a == 0) return max_b < tol;
+			var abs_max_element = Max(max_a, max_b);
+			return FEqlAbsolute(a, b, tol * abs_max_element);
+		}
+		public static bool FEql(v4 a, v4 b)
+		{
+			return FEqlRelative(a, b, TinyF);
 		}
 
+		/// <summary>Component-wise absolute value</summary>
+		public static v4 Abs(v4 vec)
+		{
+			return new v4(
+				Math.Abs(vec.x),
+				Math.Abs(vec.y),
+				Math.Abs(vec.z),
+				Math.Abs(vec.w));
+		}
 
 		/// <summary>Return a vector containing the minimum components</summary>
 		public static v4 Min(v4 lhs, v4 rhs)
@@ -671,14 +500,36 @@ namespace Rylogic.Maths
 				Clamp(vec.w, min.w, max.w));
 		}
 
-		/// <summary>Component-wise absolute value</summary>
-		public static v4 Abs(v4 vec)
+		/// <summary>Return the maximum element value in 'v'</summary>
+		public static float MaxElement(v4 v)
 		{
-			return new v4(
-				Math.Abs(vec.x),
-				Math.Abs(vec.y),
-				Math.Abs(vec.z),
-				Math.Abs(vec.w));
+			var i = v.x >= v.y ? v.x : v.y;
+			var j = v.z >= v.w ? v.z : v.w;
+			return i >= j ? i : j;
+		}
+
+		/// <summary>Return the minimum element value in 'v'</summary>
+		public static float MinElement(v4 v)
+		{
+			var i = v.x <= v.y ? v.x : v.y;
+			var j = v.z <= v.w ? v.z : v.w;
+			return i <= j ? i : j;
+		}
+
+		/// <summary>Return the index of the maximum element in 'v'</summary>
+		public static int MaxElementIndex(v4 v)
+		{
+			int i = v.x >= v.y ? 0 : 1;
+			int j = v.z >= v.w ? 2 : 3;
+			return v[i] >= v[j] ? i : j;
+		}
+
+		/// <summary>Return the index of the minimum element in 'v'</summary>
+		public static int MinElementIndex(v4 v)
+		{
+			int i = v.x <= v.y ? 0 : 1;
+			int j = v.z <= v.w ? 2 : 3;
+			return v[i] <= v[j] ? i : j;
 		}
 
 		/// <summary>Return true if all components of 'vec' are finite</summary>

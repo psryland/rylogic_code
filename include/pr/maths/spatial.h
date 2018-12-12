@@ -193,14 +193,14 @@ namespace pr::maths::spatial
 	}
 
 	// Return a motion vector, equal to 'motion', but expressed at a new location equal to the previous location + 'ofs'. 
-	inline Vec8<Motion> Shift(Vec8<Motion> const& motion, v4_cref<void> ofs)
+	inline Vec8<Motion> Shift(Vec8<Motion> const& motion, v4_cref<> ofs)
 	{
 		// c.f. RBDS 2.21
 		return Vec8<Motion>(motion.ang, motion.lin + Cross(motion.ang, ofs));
 	}
 
 	// Return a force vector, equal to 'force', but expressed at a new location equal to the previous location + 'ofs'.
-	inline Vec8<Force> Shift(Vec8<Force> const& force, v4_cref<void> ofs)
+	inline Vec8<Force> Shift(Vec8<Force> const& force, v4_cref<> ofs)
 	{
 		// c.f. RBDS 2.22
 		return Vec8<Force>(force.ang + Cross(force.lin, ofs), force.lin);
@@ -213,7 +213,7 @@ namespace pr::maths::spatial
 	// 'acc' is the spatial acceleration to shift
 	// 'avel' is the angular velocity of the frame in which 'acc' is being shifted
 	// 'ofs' is the offset from the last position that 'acc' was measured at.
-	inline Vec8<Motion> ShiftAccelerationBy(Vec8<Motion> const& acc, v4_cref<void> avel, v4_cref<void> ofs)
+	inline Vec8<Motion> ShiftAccelerationBy(Vec8<Motion> const& acc, v4_cref<> avel, v4_cref<> ofs)
 	{
 		return Vec8<Motion>(acc.ang, acc.lin + Cross(acc.ang, ofs) + Cross(avel, Cross(avel, ofs)));
 	}
@@ -433,14 +433,14 @@ namespace pr::maths
 				{// Force vectors
 					// Calculation using 3-vectors
 					auto lin_c = a2c * lin_a;                         // Force in frame 'c'
-					auto ang_c = a2c * ang_a + Cross(a2c.pos, lin_c); // Torque in frame 'c'
+					auto ang_c = a2c * ang_a - Cross(a2c.pos, lin_c); // Torque in frame 'c'
 
 					{
-						// At some point 'pt_a', find the torque in frame 'a'
-						auto torque_a = ang_a + Cross(lin_a, pt_a);
+						// Find the torque in frame 'a' assuming 'lin_a' applied at 'pt_a', 
+						auto torque_a = ang_a + Cross(pt_a, lin_a);
 
-						// The torque at 'pt_c' in frame 'c'
-						auto torque_c = ang_c + Cross(lin_c, pt_c);
+						// Find the torque in frame 'c' assuming 'lin_c' applied at 'pt_c', 
+						auto torque_c = ang_c + Cross(pt_c, lin_c);
 
 						// Should be equivalent to the torque measured in frame 'a'
 						auto TORQUE_A = c2a * torque_c;

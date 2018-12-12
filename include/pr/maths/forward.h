@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <memory>
 #include <thread>
+#include <array>
 #include <limits>
 #include <type_traits>
 #include <intrin.h>
@@ -15,6 +16,7 @@
 #include <cstdlib>
 #include <complex>
 #include <cassert>
+#include "pr/container/span.h"
 
 // Libraries built to use DirectXMath should be fine when linked in projects
 // that don't use DirectXMath because all of the maths types have the same
@@ -171,6 +173,24 @@ namespace pr
 		}
 
 		#pragma region Traits
+		template <typename T, int N> struct is_vec<T[N]> :is_vec_cp<T>
+		{
+			using elem_type = T;
+			using cp_type = T;
+			static int const dim = N;
+		};
+		static_assert(!is_vec<char* >::value, "");
+		static_assert(!is_vec<wchar_t* >::value, "");
+		static_assert(!is_vec<float* >::value, "");
+		static_assert(!is_vec<int*  >::value, "");
+		static_assert(is_vec<float[2]>::value, "");
+		static_assert(is_vec<int[2] >::value, "");
+		template <typename T, int N> struct is_vec<std::array<T,N>> :is_vec_cp<T>
+		{
+			using elem_type = T;
+			using cp_type = T;
+			static int const dim = N;
+		};
 		template <typename T> struct is_vec<Vec2<T>> :std::true_type
 		{
 			using elem_type = float;

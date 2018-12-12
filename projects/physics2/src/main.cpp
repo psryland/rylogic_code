@@ -7,12 +7,15 @@ using namespace pr::physics;
 
 struct MainUI :Form
 {
+	using Physics = Engine<broadphase::Brute<Body>, MaterialMap>;
+
 	StatusBar   m_status;
 	View3DPanel m_view3d;
 	double m_clock;
 	int m_steps;
 
-	Body m_body[30];
+	Body m_body[2];
+	Physics m_physics;
 
 	MainUI()
 		:Form(MakeFormParams<>().name("main-ui").title(L"Rylogic Physics").start_pos(EStartPosition::Manual).xy(1000, 50).padding(0).wndclass(RegisterWndClass<MainUI>()))
@@ -21,6 +24,7 @@ struct MainUI :Form
 		,m_clock()
 		,m_steps()
 		,m_body()
+		,m_physics()
 	{
 		for (auto& body : m_body)
 			View3D_WindowAddObject(m_view3d.m_win, body.m_gfx);
@@ -33,7 +37,7 @@ struct MainUI :Form
 				Reset();
 			if (args.m_down && args.m_vk_key == 'S')
 				m_steps = 1;
-			if (args.m_down && args.m_vk_key == 'F')
+			if (args.m_down && args.m_vk_key == 'G')
 				m_steps = 0xFFFFFFFF;
 		};
 	}
@@ -49,21 +53,28 @@ struct MainUI :Form
 		{
 			body.ZeroForces();
 			body.ZeroMomentum();
-			
-			body.O2W(Random4x4(rng, v4Origin, 10.0f));
+			body.O2W(Random4x4(rng, v4Origin, 5.0f));
 		}
-		//m_body[0].O2W(m4x4::Transform(0,0,float(maths::tau_by_8), v4{-1,0,0,1}));
-		//m_body[1].O2W(m4x4::Transform(0,0,float(maths::tau_by_8), v4{+1,0,0,1}));
+		auto A = float(maths::tau_by_8);
+		m_body[0].O2W(m4x4::Transform(0*A,0*A,0*A, v4{-1,0.4f,0.4f,1}));
+		m_body[1].O2W(m4x4::Transform(0*A,0*A,0*A, v4{+1,0   ,1,1}));
 		//m_body[2].O2W(m4x4::Transform(0,0,float(maths::tau_by_8), v4{0,+1,0,1}));
-		m_body[0].VelocityWS(v4{0, 0, 1, 0}, v4{0, +1, -1, 0});
-		m_body[1].VelocityWS(v4{0, 0, 1, 0}, v4{0, -1, +1, 0});
-		m_body[2].VelocityWS(v4{0, 0, 1, 0}, v4{0, -1, +1, 0});
+		//m_body[0].VelocityWS(v4{0, 0, 1, 0}, v4{0, +1, -1, 0});
+		//m_body[1].VelocityWS(v4{0, 0, 1, 0}, v4{0, -1, +1, 0});
+		//m_body[2].VelocityWS(v4{0, 0, 1, 0}, v4{0, -1, +1, 0});
 
-		//m_body0.VelocityWS(v4{float(maths::tau_by_4),float(maths::tau_by_8),float(maths::tau),0}, v4{0,0,0,0});
-		//m_body0.VelocityWS(v4{0,0,0.1f*float(maths::tau),0}, v4{0,0,0,0});
+		//m_body[0].VelocityWS(v4{float(maths::tau_by_4),float(maths::tau_by_8),float(maths::tau),0}, v4{0,0,0,0});
+		//m_body[0].VelocityWS(v4{0,0,0.1f*float(maths::tau),0}, v4{0,0,0,0});
+		//m_body[0].VelocityWS(v4{3,0,0,0}, v4{1,0,0.4f,0});
+		m_body[1].VelocityWS(v4{0*1,0,0,0}, v4{-1,0,0*0.4f,0});
+
+		// Reset the broad phase
+		m_physics.m_broadphase.Clear();
+		for (auto& body : m_body)
+			m_physics.m_broadphase.Add(body);
 
 		Render(0);
-		View3D_ResetView(m_view3d.m_win, View3DV4{0,0,-1,0}, View3DV4{0,1,0,0}, 0, TRUE, TRUE);
+		View3D_ResetView(m_view3d.m_win, View3DV4{+0.2f,0,-1,0}, View3DV4{0,1,0,0}, 0, TRUE, TRUE);
 	}
 
 	// Step the main loop
@@ -77,15 +88,14 @@ struct MainUI :Form
 		auto dt = float(elapsed_seconds);
 		//auto dt = 1.0f;
 
-		#if 0
+		#if 1
 
-		//auto accel = v4Origin - m_body0.O2W().pos; accel.y = accel.z = 0;
-		//auto w_dot = v4{};//Cross(v4YAxis, accel);
-		//m_body0.ApplyForceWS(m_body0.Mass() * accel, m_body0.InertiaWS() * w_dot);
-		//
-		////dt = 0.5f;
+		//auto accel = v4Origin - m_body[0].O2W().pos; accel.y = accel.z = 0;
+		//auto w_dot = accel;//v4{};//Cross(v4YAxis, accel);
+		//m_body[0].ApplyForceWS(m_body[0].Mass() * accel, m_body[0].InertiaWS() * w_dot);
 		//Dump();
-		//Evolve(m_body0, float(dt));
+
+		m_physics.Step(dt, m_body);
 
 		#else
 
@@ -112,9 +122,7 @@ struct MainUI :Form
 
 		//Dump();
 
-		// Evolve the bodies
-		for (auto& body : m_body)
-			Evolve(body, dt);
+		m_physics.Step(dt, m_body);
 
 		#endif
 	}
@@ -139,7 +147,7 @@ struct MainUI :Form
 		std::string str;
 		ldr::RigidBody(str, "body0", 0x8000FF00, m_body[0], 0.1f, flags);
 		ldr::RigidBody(str, "body1", 0x10FF0000, m_body[1], 0.1f, flags);
-		ldr::RigidBody(str, "body2", 0x100000FF, m_body[2], 0.1f, flags);
+		//ldr::RigidBody(str, "body2", 0x100000FF, m_body[2], 0.1f, flags);
 		ldr::Write(str, L"P:\\dump\\physics_dump.ldr");
 	}
 

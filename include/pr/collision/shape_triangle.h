@@ -19,6 +19,7 @@ namespace pr::collision
 			,m_v(a, b, c, Normalise3(Cross3(b-a,c-b)))
 		{
 			assert(a.w == 0.0f && b.w == 0.0f && c.w == 0.0f);
+			m_base.m_bbox = CalcBBox(*this);
 		}
 		operator Shape const&() const
 		{
@@ -62,7 +63,7 @@ namespace pr::collision
 			Dot3(direction, shape.m_v.z),
 			0};
 
-		sup_vert_id = LargestElement3(d);
+		sup_vert_id = MaxElementIndex3(d);
 		return shape.m_v[(int)sup_vert_id];
 	}
 

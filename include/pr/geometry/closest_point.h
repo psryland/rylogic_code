@@ -8,7 +8,6 @@
 #include "pr/maths/maths.h"
 #include "pr/geometry/distance.h"
 #include "pr/geometry/point.h"
-#include "pr/collision/penetration.h"
 
 namespace pr
 {
@@ -108,8 +107,8 @@ namespace pr
 			auto centre = bbox.Centre();
 			auto upr = upper - point;
 			auto lwr = point - lower;
-			auto i0 = SmallestElement3(upr);
-			auto i1 = SmallestElement3(lwr);
+			auto i0 = MinElementIndex3(upr);
+			auto i1 = MinElementIndex3(lwr);
 			if (upr[i0] < lwr[i1]) result[i0] = upper[i0];
 			else                   result[i1] = lower[i1];
 		}
@@ -432,8 +431,58 @@ namespace pr
 		t1 = (a*f - b*c) / d;
 	}
 
+	// Closest point result object
+	struct MinSeparation
+	{
+		v4 m_axis;
+		float m_axis_len_sq;
+		float m_depth_sq;
+
+		MinSeparation()
+			:m_axis()
+			,m_axis_len_sq()
+			,m_depth_sq(maths::float_inf)
+		{}
+
+		// Boolean test of penetration
+		bool Contact() const
+		{
+			assert("No separating axes have been tested yet" && m_depth_sq != maths::float_inf);
+			return m_depth_sq > 0;
+		}
+
+		// Return the depth of penetration
+		float Depth() const
+		{
+			assert("No separating axes have been tested yet" && m_depth_sq != maths::float_inf);
+			return SignedSqrt(m_depth_sq);
+		}
+
+		// The direction of minimum penetration (normalised)
+		v4 SeparatingAxis() const
+		{
+			assert("No separating axes have been tested yet" && m_depth_sq != maths::float_inf);
+			return m_axis / Sqrt(m_axis_len_sq);
+		}
+
+		// Record the minimum depth separation
+		void operator()(float depth, v4_cref<> axis)
+		{
+			// Defer the sqrt by comparing squared depths.
+			// Need to preserve the sign however.
+			auto len_sq = Length3Sq(axis);
+			auto d_sq = SignedSqr(depth) / len_sq;
+			if (d_sq < m_depth_sq)
+			{
+				m_axis = axis;
+				m_axis_len_sq = len_sq;
+				m_depth_sq = d_sq;
+			}
+		};
+	};
+
 	// Returns the minimum distance of a line segment '(s,e)' to the AABB 'bbox'
-	template <typename = void> MinPenetration pr_vectorcall ClosestPoint_LineSegmentToBBox(v4_cref<> s, v4_cref<> e, BBox_cref bbox)
+	template <typename = void> MinSeparation pr_vectorcall ClosestPoint_LineSegmentToBBox(v4_cref<> s, v4_cref<> e, BBox_cref bbox)
 	{
 		// Note: This code is basically the same as col_box_vs_line.h.
 		// Make sure to maintain both
@@ -449,39 +498,40 @@ namespace pr
 		// Translate box and segment to origin
 		mid = mid - bbox.m_centre;
 
-		MinPenetration pen;
+		// Records the minimum penetration (position depth means overlap)
+		auto sep = MinSeparation{};
 
 		// Try world coordinate axes
-		pen(bbox.m_radius.x + rad.x - Abs(mid.x), [&]{ return Sign(mid.x) * v4XAxis; });
-		pen(bbox.m_radius.y + rad.y - Abs(mid.y), [&]{ return Sign(mid.y) * v4YAxis; });
-		pen(bbox.m_radius.z + rad.z - Abs(mid.z), [&]{ return Sign(mid.z) * v4ZAxis; });
+		sep(bbox.m_radius.x + rad.x - Abs(mid.x), Sign(mid.x) * v4XAxis);
+		sep(bbox.m_radius.y + rad.y - Abs(mid.y), Sign(mid.y) * v4YAxis);
+		sep(bbox.m_radius.z + rad.z - Abs(mid.z), Sign(mid.z) * v4ZAxis);
 
 		// Lambda for returning a separating axis with the correct sign
 		auto sep_axis = [&](v4_cref<> sa) { return Sign(Dot(mid, sa)) * sa; };
 
 		// Try cross products of the segment direction with the coordinate axes.
-		pen(rad.z * bbox.m_radius.y + rad.y * bbox.m_radius.z - rad.z * Abs(mid.y) - rad.y * Abs(mid.z), [&]{ return sep_axis(Cross(v4XAxis, half)); });
-		pen(rad.z * bbox.m_radius.x + rad.x * bbox.m_radius.z - rad.x * Abs(mid.z) - rad.z * Abs(mid.x), [&]{ return sep_axis(Cross(v4YAxis, half)); });
-		pen(rad.y * bbox.m_radius.x + rad.x * bbox.m_radius.y - rad.y * Abs(mid.x) - rad.x * Abs(mid.y), [&]{ return sep_axis(Cross(v4ZAxis, half)); });
+		sep(rad.z * bbox.m_radius.y + rad.y * bbox.m_radius.z - rad.z * Abs(mid.y) - rad.y * Abs(mid.z), sep_axis(Cross(v4XAxis, half)));
+		sep(rad.z * bbox.m_radius.x + rad.x * bbox.m_radius.z - rad.x * Abs(mid.z) - rad.z * Abs(mid.x), sep_axis(Cross(v4YAxis, half)));
+		sep(rad.y * bbox.m_radius.x + rad.x * bbox.m_radius.y - rad.y * Abs(mid.x) - rad.x * Abs(mid.y), sep_axis(Cross(v4ZAxis, half)));
 
-		return pen;
+		return sep;
 	}
-	template <typename = void> inline MinPenetration pr_vectorcall ClosestPoint_LineSegmentToBBox(v4_cref<> s, v4_cref<> e, BBox_cref bbox, float& t)
+	template <typename = void> MinSeparation pr_vectorcall ClosestPoint_LineSegmentToBBox(v4_cref<> s, v4_cref<> e, BBox_cref bbox, float& t)
 	{
 		// Returns the parametric value of the closest point on the line segment '(s,e)' to the AABB 'bbox' and the distance.
-		auto pen = ClosestPoint_LineSegmentToBBox(s, e, bbox);
-		auto axis = pen.SeparatingAxis();
+		auto sep = ClosestPoint_LineSegmentToBBox(s, e, bbox);
+		auto axis = sep.SeparatingAxis();
 
 		// Get the feature on the box in the direction of 'axis'
 		v4 points[4] = {}; auto n = 1;
 		for (int i = 0; i != 3; ++i)
 		{
-			if (FGtr(axis[i], 0.0f))
+			if (axis[i] > 0)
 			{
 				for (int j = 0; j != n; ++j)
 					points[j] += m4x4Identity[i] * bbox.m_radius[i];
 			}
-			else if (FLess(axis[i], 0.0f))
+			else if (axis[i] < 0)
 			{
 				for (int j = 0; j != n; ++j)
 					points[j] -= m4x4Identity[i] * bbox.m_radius[i];
@@ -504,7 +554,7 @@ namespace pr
 		if (n == 1)
 		{
 			ClosestPoint_PointToLineSegment(points[0].w1(), line_s, line_e, t);
-			return pen;
+			return sep;
 		}
 
 		// Box edge to line segment
@@ -512,69 +562,66 @@ namespace pr
 		{
 			float t2;
 			ClosestPoint_LineSegmentToLineSegment(line_s, line_e, points[0].w1(), points[1].w1(), t, t2);
-			return pen;
+			return sep;
 		}
 
 		// Box face to line segment
 		auto d = Dot(line_e - line_s, axis);
-		if (FGtr (d, 0.0f)) { t = 1.0f; return pen; }
-		if (FLess(d, 0.0f)) { t = 0.0f; return pen; }
+		if (d > 0) { t = 1.0f; return sep; }
+		if (d < 0) { t = 0.0f; return sep; }
 
 		// Box face vs. line edge
 		//throw std::exception("not implemented");
 		//ClosestPoint_LineSegmentToPlane
-		//return pen;
+		assert("not implemented" && false);
+		return sep;
 	}
-	template <typename = void> inline MinPenetration pr_vectorcall ClosestPoint_LineSegmentToBBox(v4_cref<> s, v4_cref<> e, BBox_cref bbox, v4& pt0, v4& pt1)
+	template <typename = void> MinSeparation pr_vectorcall ClosestPoint_LineSegmentToBBox(v4_cref<> s, v4_cref<> e, BBox_cref bbox, v4& pt0, v4& pt1)
 	{
 		float t;
-		auto pen = ClosestPoint_LineSegmentToBBox(s, e, bbox, t);
+		auto sep = ClosestPoint_LineSegmentToBBox(s, e, bbox, t);
 		pt0 = s + t*(e - s);
 		if (t == 0.0f || t == 1.0f)
 			pt1 = ClosestPoint_PointToBoundingBox(pt0, bbox, true);
 		else
-			pt1 = pt0 + pen.Depth() * pen.SeparatingAxis();
+			pt1 = pt0 + sep.Depth() * sep.SeparatingAxis();
 
-		return pen;
+		return sep;
 	}
 }
 
-#if PR_UNITTESTS&&0
+#if PR_UNITTESTS
 #include "pr/common/unittests.h"
-#include "pr/linedrawer/ldr_helper.h"
 #include "pr/maths/rand_vector.h"
+#include "pr/ldraw/ldr_helper.h"
 
-namespace pr
+namespace pr::geometry
 {
-	namespace unittests
+	PRUnitTest(ClosestPointTests)
 	{
-		PRUnitTest(pr_geometry_closest_point)
-		{
-			{// ClosestPoint_PointToPlane
+		{// ClosestPoint_PointToPlane
 
-			}
-			{// ClosestPoint_LineSegmentToBBox
-				Rand rng;
-				for (int i = 0; i != 100; ++i)
-				{
-					BBox bbox(Random3(rng, v4Origin, 3.0f, 1.0f), Random3(rng, v4(0), v4(3), 0.0f));
-					v4 s = Random3(rng, v4Origin, 10.0f, 1.0f);
-					v4 e = Random3(rng, v4Origin, 10.0f, 1.0f);
+		}
+		{// ClosestPoint_LineSegmentToBBox
+			std::default_random_engine rng;
+			for (int i = 0; i != 100; ++i)
+			{
+				auto bbox = BBox{Random3(rng, v4Origin, 3.0f, 1.0f), Random3(rng, v4(0), v4(3), 0.0f)};
+				auto s = Random3(rng, v4Origin, 10.0f, 1.0f);
+				auto e = Random3(rng, v4Origin, 10.0f, 1.0f);
 
-					v4 pt0, pt1;
-					auto pen = ClosestPoint_LineSegmentToBBox(s, e, bbox, pt0, pt1);
-					//auto dist = -pen.Depth();
-					auto axis = pen.SeparatingAxis();
+				v4 pt0, pt1;
+				auto sep = ClosestPoint_LineSegmentToBBox(s, e, bbox, pt0, pt1);
+				//auto dist = -sep.Depth();
+				auto axis = sep.SeparatingAxis();
 
-					std::string str;
-					ldr::Box(str, "bbox", 0x8000FF00, bbox.m_centre, bbox.m_radius*2);
-					ldr::Line(str, "line", 0xFFFF0000, s, e);
-					ldr::Box(str, "cp1", 0xFF0000FF, pt0, v4(0.01f));
-					ldr::Box(str, "cp2", 0xFF0000FF, pt1, v4(0.01f));
-					ldr::Line(str, "axis", 0xFF0000FF, pt0, pt1);
-
-					ldr::Write(str, L"P:\\dump\\test.ldr");
-				}
+				std::string str;
+				ldr::Box(str, "bbox", 0x8000FF00, bbox.m_radius*2, bbox.m_centre);
+				ldr::Line(str, "line", 0xFFFF0000, s, e);
+				ldr::Box(str, "cp1", 0xFF0000FF, 0.01f, pt0);
+				ldr::Box(str, "cp2", 0xFF0000FF, 0.01f, pt1);
+				ldr::Line(str, "axis", 0xFF0000FF, pt0, pt1);
+				//ldr::Write(str, L"P:\\dump\\test.ldr");
 			}
 		}
 	}

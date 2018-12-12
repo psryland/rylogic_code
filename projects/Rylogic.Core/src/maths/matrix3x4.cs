@@ -98,16 +98,6 @@ namespace Rylogic.Maths
 				this[c] = vec;
 			}
 		}
-		[Obsolete]
-		public float get(int r, int c)
-		{
-			return this[r, c];
-		}
-		[Obsolete]
-		public void set(int r, int c, float value)
-		{
-			this[r, c] = value;
-		}
 
 		/// <summary>Convert to a 4x4 matrix with zero translation</summary>
 		public m4x4 m4x4
@@ -143,6 +133,7 @@ namespace Rylogic.Maths
 		// Operators
 		public override bool Equals(object o)               { return o is m3x4 && (m3x4)o == this; }
 		public override int GetHashCode()                   { unchecked { return x.GetHashCode() + y.GetHashCode() + z.GetHashCode(); } }
+		public static m3x4 operator + (m3x4 rhs)            { return rhs; }
 		public static m3x4 operator - (m3x4 rhs)            { return new m3x4(-rhs.x, -rhs.y, -rhs.z); }
 		public static m3x4 operator + (m3x4 lhs, m3x4 rhs)  { return new m3x4(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z); }
 		public static m3x4 operator - (m3x4 lhs, m3x4 rhs)  { return new m3x4(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z); }
@@ -317,6 +308,13 @@ namespace Rylogic.Maths
 				new v4(r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value)),
 				new v4(r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value)));
 		}
+		public static m3x4 Random(Random r, float min_value, float max_value, float w)
+		{
+			return new m3x4(
+				new v4(r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value), w),
+				new v4(r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value), w),
+				new v4(r.Float(min_value, max_value), r.Float(min_value, max_value), r.Float(min_value, max_value), w));
+		}
 
 		/// <summary>Create a random 3D rotation matrix</summary>
 		public static m3x4 Random(Random r, v4 axis, float min_angle, float max_angle)
@@ -334,17 +332,53 @@ namespace Rylogic.Maths
 	public static partial class Math_
 	{
 		/// <summary>Approximate equal</summary>
-		public static bool FEqlRelative(m3x4 lhs, m3x4 rhs, float tol)
+		public static bool FEqlAbsolute(m3x4 a, m3x4 b, float tol)
 		{
 			return
-				FEqlRelative(lhs.x, rhs.x, tol) &&
-				FEqlRelative(lhs.y, rhs.y, tol) &&
-				FEqlRelative(lhs.z, rhs.z, tol);
+				FEqlAbsolute(a.x, b.x, tol) &&
+				FEqlAbsolute(a.y, b.y, tol) &&
+				FEqlAbsolute(a.z, b.z, tol);
 		}
-		public static bool FEql(m3x4 lhs, m3x4 rhs)
+		public static bool FEqlRelative(m3x4 a, m3x4 b, float tol)
+		{
+			var max_a = MaxElement(Abs(a));
+			var max_b = MaxElement(Abs(b));
+			if (max_b == 0) return max_a < tol;
+			if (max_a == 0) return max_b < tol;
+			var abs_max_element = Max(max_a, max_b);
+			return FEqlAbsolute(a, b, tol * abs_max_element);
+		}
+		public static bool FEql(m3x4 a, m3x4 b)
 		{
 			return
-				FEqlRelative(lhs, rhs, TinyF);
+				FEqlRelative(a, b, TinyF);
+		}
+
+		/// <summary>Absolute value of 'x'</summary>
+		public static m3x4 Abs(m3x4 x)
+		{
+			return new m3x4(
+				Abs(x.x),
+				Abs(x.y),
+				Abs(x.z));
+		}
+
+		/// <summary>Return the maximum element value in 'mm'</summary>
+		public static float MaxElement(m3x4 m)
+		{
+			return Max(
+				MaxElement(m.x),
+				MaxElement(m.y),
+				MaxElement(m.z));
+		}
+
+		/// <summary>Return the minimum element value in 'm'</summary>
+		public static float MinElement(m3x4 m)
+		{
+			return Min(
+				MinElement(m.x),
+				MinElement(m.y),
+				MinElement(m.z));
 		}
 
 		/// <summary>Finite test of matrix elements</summary>
@@ -367,6 +401,24 @@ namespace Rylogic.Maths
 		public static float Determinant(m3x4 m)
 		{
 			return Triple(m.x, m.y, m.z);
+		}
+
+		/// <summary>Return the trace of 'm'</summary>
+		public static float Trace(m3x4 m)
+		{
+			return m.x.x + m.y.y + m.z.z;
+		}
+
+		/// <summary>Return the kernel of 'm'</summary>
+		public static v4 Kernel(m3x4 m)
+		{
+			return new v4(m.y.y* m.z.z - m.y.z * m.z.y, -m.y.x * m.z.z + m.y.z * m.z.x, m.y.x* m.z.y - m.y.y * m.z.x, 0);
+		}
+
+		/// <summary>Return the diagonal elements of 'm'</summary>
+		public static v4 Diagonal(m3x4 m)
+		{
+			return new v4(m.x.x, m.y.y, m.z.z, 0);
 		}
 
 		/// <summary>Transpose 'm' in-place</summary>
@@ -399,7 +451,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>True if 'm' can be inverted</summary>
-		public static bool IsInvertable(m3x4 m)
+		public static bool IsInvertible(m3x4 m)
 		{
 			return Determinant(m) != 0;
 		}
@@ -407,7 +459,8 @@ namespace Rylogic.Maths
 		/// <summary>Invert the matrix 'm'</summary>
 		public static m3x4 Invert(m3x4 m)
 		{
-			Debug.Assert(IsInvertable(m), "Matrix has no inverse");
+			if (!IsInvertible(m))
+				throw new Exception("Matrix is singular");
 
 			var det = Determinant(m);
 			var tmp = new m3x4(
@@ -538,13 +591,18 @@ namespace Rylogic.UnitTests
 				var inv_m1 = Math_.Invert(m);
 				Assert.True(Math_.FEqlRelative(inv_m0, inv_m1, 0.001f));
 			} {
-				var m = m3x4.Random(rng, -5.0f, +5.0f);
-				var inv_m = Math_.Invert(m);
-				var I0 = inv_m * m;
-				var I1 = m * inv_m;
+				for (; ; )
+				{
+					var m = m3x4.Random(rng, -5.0f, +5.0f, 0);
+					if (!Math_.IsInvertible(m)) continue;
+					var inv_m = Math_.Invert(m);
+					var I0 = inv_m * m;
+					var I1 = m * inv_m;
 
-				Assert.True(Math_.FEqlRelative(I0, m3x4.Identity, 0.001f));
-				Assert.True(Math_.FEqlRelative(I1, m3x4.Identity, 0.001f));
+					Assert.True(Math_.FEqlRelative(I0, m3x4.Identity, 0.001f));
+					Assert.True(Math_.FEqlRelative(I1, m3x4.Identity, 0.001f));
+					break;
+				}
 			} {
 				var m = new m3x4(
 					new v4(0.25f, 0.5f, 1.0f, 0.0f),

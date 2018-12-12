@@ -39,7 +39,7 @@ namespace pr::collision
 			ra = lhs.m_radius[i];
 			rb = rhs.m_radius.x * r2l_abs.x[i] + rhs.m_radius.y * r2l_abs.y[i] + rhs.m_radius.z * r2l_abs.z[i];
 			sp = Abs(r2l.pos[i]);
-			if (!pen(ra + rb - sp, [&]{ return sep_axis(l2w[i]); }))
+			if (!pen(ra + rb - sp, [&]{ return sep_axis(l2w[i]); }, lhs_.m_material_id, rhs_.m_material_id))
 				return;
 		}
 
@@ -49,7 +49,7 @@ namespace pr::collision
 			ra = Dot3(lhs.m_radius, r2l_abs[i]);
 			rb = rhs.m_radius[i];
 			sp = Abs(Dot3(r2l.pos, r2l[i]));
-			if (!pen(ra + rb - sp, [&]{ return sep_axis(r2w[i]); }))
+			if (!pen(ra + rb - sp, [&]{ return sep_axis(r2w[i]); }, lhs_.m_material_id, rhs_.m_material_id))
 				return;
 		}
 
@@ -57,63 +57,63 @@ namespace pr::collision
 		ra = lhs.m_radius.y * r2l_abs.x.z + lhs.m_radius.z * r2l_abs.x.y;
 		rb = rhs.m_radius.y * r2l_abs.z.x + rhs.m_radius.z * r2l_abs.y.x;
 		sp = Abs(r2l.pos.z * r2l.x.y - r2l.pos.y * r2l.x.z);
-		if (!pen(ra + rb - sp, [&]{ return sep_axis(Cross3(l2w.x, r2w.x)); }))
+		if (!pen(ra + rb - sp, [&]{ return sep_axis(Cross3(l2w.x, r2w.x)); }, lhs_.m_material_id, rhs_.m_material_id))
 			return;
 
 		// Test axis L = lhs.x X rhs.y
 		ra = lhs.m_radius.y * r2l_abs.y.z + lhs.m_radius.z * r2l_abs.y.y;
 		rb = rhs.m_radius.x * r2l_abs.z.x + rhs.m_radius.z * r2l_abs.x.x;
 		sp = Abs(r2l.pos.z * r2l.y.y - r2l.pos.y * r2l.y.z);
-		if (!pen(ra + rb - sp, [&]{ return sep_axis(Cross3(l2w.x, r2w.y)); }))
+		if (!pen(ra + rb - sp, [&]{ return sep_axis(Cross3(l2w.x, r2w.y)); }, lhs_.m_material_id, rhs_.m_material_id))
 			return;
 
 		// Test axis L = lhs.x X rhs.z
 		ra = lhs.m_radius.y * r2l_abs.z.z + lhs.m_radius.z * r2l_abs.z.y;
 		rb = rhs.m_radius.x * r2l_abs.y.x + rhs.m_radius.y * r2l_abs.x.x;
 		sp = Abs(r2l.pos.z * r2l.z.y - r2l.pos.y * r2l.z.z);
-		if (!pen(ra + rb - sp, [&]{ return sep_axis(Cross3(l2w.x, r2w.z)); }))
+		if (!pen(ra + rb - sp, [&]{ return sep_axis(Cross3(l2w.x, r2w.z)); }, lhs_.m_material_id, rhs_.m_material_id))
 			return;
 
 		// Test axis L = lhs.y X rhs.x
 		ra = lhs.m_radius.x * r2l_abs.x.z + lhs.m_radius.z * r2l_abs.x.x;
 		rb = rhs.m_radius.y * r2l_abs.z.y + rhs.m_radius.z * r2l_abs.y.y;
 		sp = Abs(r2l.pos.x * r2l.x.z - r2l.pos.z * r2l.x.x);
-		if (!pen(ra + rb - sp, [&]{ return sep_axis(Cross3(l2w.y, r2w.x)); }))
+		if (!pen(ra + rb - sp, [&]{ return sep_axis(Cross3(l2w.y, r2w.x)); }, lhs_.m_material_id, rhs_.m_material_id))
 			return;
 
 		// Test axis L = lhs.y X rhs.y
 		ra = lhs.m_radius.x * r2l_abs.y.z + lhs.m_radius.z * r2l_abs.y.x;
 		rb = rhs.m_radius.x * r2l_abs.z.y + rhs.m_radius.z * r2l_abs.x.y;
 		sp = Abs(r2l.pos.x * r2l.y.z - r2l.pos.z * r2l.y.x);
-		if (!pen(ra + rb - sp, [&]{ return sep_axis(Cross3(l2w.y, r2w.y)); }))
+		if (!pen(ra + rb - sp, [&]{ return sep_axis(Cross3(l2w.y, r2w.y)); }, lhs_.m_material_id, rhs_.m_material_id))
 			return;
 
 		// Test axis L = lhs.y X rhs.z
 		ra = lhs.m_radius.x * r2l_abs.z.z + lhs.m_radius.z * r2l_abs.z.x;
 		rb = rhs.m_radius.x * r2l_abs.y.y + rhs.m_radius.y * r2l_abs.x.y;
 		sp = Abs(r2l.pos.x * r2l.z.z - r2l.pos.z * r2l.z.x);
-		if (!pen(ra + rb - sp, [&]{ return sep_axis(Cross3(l2w.y, r2w.z)); }))
+		if (!pen(ra + rb - sp, [&]{ return sep_axis(Cross3(l2w.y, r2w.z)); }, lhs_.m_material_id, rhs_.m_material_id))
 			return;
 
 		// Test axis L = lhs.z X rhs.x
 		ra = lhs.m_radius.x * r2l_abs.x.y + lhs.m_radius.y * r2l_abs.x.x;
 		rb = rhs.m_radius.y * r2l_abs.z.z + rhs.m_radius.z * r2l_abs.y.z;
 		sp = Abs(r2l.pos.y * r2l.x.x - r2l.pos.x * r2l.x.y);
-		if (!pen(ra + rb - sp, [&]{ return sep_axis(Cross3(l2w.z, r2w.x)); }))
+		if (!pen(ra + rb - sp, [&]{ return sep_axis(Cross3(l2w.z, r2w.x)); }, lhs_.m_material_id, rhs_.m_material_id))
 			return;
 
 		// Test axis L = lhs.z X rhs.y
 		ra = lhs.m_radius.x * r2l_abs.y.y + lhs.m_radius.y * r2l_abs.y.x;
 		rb = rhs.m_radius.x * r2l_abs.z.z + rhs.m_radius.z * r2l_abs.x.z;
 		sp = Abs(r2l.pos.y * r2l.y.x - r2l.pos.x * r2l.y.y);
-		if (!pen(ra + rb - sp, [&]{ return sep_axis(Cross3(l2w.z, r2w.y)); }))
+		if (!pen(ra + rb - sp, [&]{ return sep_axis(Cross3(l2w.z, r2w.y)); }, lhs_.m_material_id, rhs_.m_material_id))
 			return;
 
 		// Test axis L = lhs.z X rhs.z
 		ra = lhs.m_radius.x * r2l_abs.z.y + lhs.m_radius.y * r2l_abs.z.x;
 		rb = rhs.m_radius.x * r2l_abs.y.z + rhs.m_radius.y * r2l_abs.x.z;
 		sp = Abs(r2l.pos.y * r2l.z.x - r2l.pos.x * r2l.z.y);
-		if (!pen(ra + rb - sp, [&]{ return sep_axis(Cross3(l2w.z, r2w.z)); }))
+		if (!pen(ra + rb - sp, [&]{ return sep_axis(Cross3(l2w.z, r2w.z)); }, lhs_.m_material_id, rhs_.m_material_id))
 			return;
 	}
 
@@ -126,9 +126,7 @@ namespace pr::collision
 	}
 
 	// Returns true if 'lhs' and 'rhs' are intersecting.
-	// 'axis' is the collision normal from 'lhs' to 'rhs'
-	// 'penetration' is the depth of penetration between the boxes
-	inline bool BoxVsBox(Shape const& lhs, m4_cref<> l2w, Shape const& rhs, m4_cref<> r2w, v4& axis, float& penetration)
+	inline bool BoxVsBox(Shape const& lhs, m4_cref<> l2w, Shape const& rhs, m4_cref<> r2w, Contact& contact)
 	{
 		ContactPenetration p;
 		BoxVsBox(lhs, l2w, rhs, r2w, p);
@@ -141,23 +139,11 @@ namespace pr::collision
 		auto p1 = Dot3(sep_axis, (r2w * rhs.m_s2p).pos);
 		auto sign = SignF(p0 < p1);
 
-		penetration = p.Depth();
-		axis        = sign * sep_axis;
-		return true;
-	}
-
-	// Returns true if 'lhs' and 'rhs' are intersecting.
-	// 'axis' is the collision normal from 'lhs' to 'rhs'
-	// 'penetration' is the depth of penetration between the shapes
-	// 'point' is the world space contact point between 'lhs','rhs' (Only valid when true is returned)
-	// To find the deepest points on 'lhs','rhs' add/subtract half the 'penetration' depth along 'axis'.
-	// Note: that applied impulses should be equal and opposite, and applied at the same point in space (hence one contact point).
-	inline bool BoxVsBox(Shape const& lhs, m4_cref<> l2w, Shape const& rhs, m4_cref<> r2w, v4& axis, float& penetration, v4& point)
-	{
-		if (!BoxVsBox(lhs, l2w, rhs, r2w, axis, penetration))
-			return false;
-
-		point = FindContactPoint(shape_cast<ShapeBox>(lhs), l2w, shape_cast<ShapeBox>(rhs), r2w, axis, penetration);
+		contact.m_depth = p.Depth();
+		contact.m_axis  = sign * sep_axis;
+		contact.m_point = FindContactPoint(shape_cast<ShapeBox>(lhs), l2w, shape_cast<ShapeBox>(rhs), r2w, contact.m_axis, contact.m_depth);
+		contact.m_mat_idA = p.m_mat_idA;
+		contact.m_mat_idB = p.m_mat_idB;
 		return true;
 	}
 }
@@ -186,7 +172,7 @@ namespace pr::collision
 		std::default_random_engine rng;
 		for (int i = 0; i != 20; ++i)
 		{
-			v4 axis, pt; float pen;
+			Contact c;
 			m4x4 l2w = i < _countof(l2w_) ? l2w_[i] : Random4x4(rng, v4Origin, 0.5f);
 			m4x4 r2w = i < _countof(r2w_) ? r2w_[i] : Random4x4(rng, v4Origin, 0.5f);
 
@@ -194,11 +180,11 @@ namespace pr::collision
 			ldr::Shape(s, "lhs", 0x30FF0000, lhs, l2w);
 			ldr::Shape(s, "rhs", 0x3000FF00, rhs, r2w);
 			//ldr::Write(s, L"collision_unittests.ldr");
-			if (BoxVsBox(lhs, l2w, rhs, r2w, axis, pen, pt))
+			if (BoxVsBox(lhs, l2w, rhs, r2w, c))
 			{
-				ldr::LineD(s, "sep_axis", Colour32Yellow, pt, axis);
-				ldr::Box(s, "pt0", Colour32Yellow, 0.01f, pt - 0.5f*pen*axis);
-				ldr::Box(s, "pt1", Colour32Yellow, 0.01f, pt + 0.5f*pen*axis);
+				ldr::LineD(s, "sep_axis", Colour32Yellow, c.m_point, c.m_axis);
+				ldr::Box(s, "pt0", Colour32Yellow, 0.01f, c.m_point - 0.5f*c.m_depth*c.m_axis);
+				ldr::Box(s, "pt1", Colour32Yellow, 0.01f, c.m_point + 0.5f*c.m_depth*c.m_axis);
 			}
 			//ldr::Write(s, L"collision_unittests.ldr");
 		}

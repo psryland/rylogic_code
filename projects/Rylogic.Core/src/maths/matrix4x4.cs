@@ -137,6 +137,8 @@ namespace Rylogic.Maths
 		public readonly static m4x4 Identity = new m4x4(v4.XAxis, v4.YAxis, v4.ZAxis, v4.Origin);
 
 		// Operators
+		public static m4x4 operator + (m4x4 rhs) { return rhs; }
+		public static m4x4 operator - (m4x4 rhs) { return new m4x4(-rhs.x, -rhs.y, -rhs.z, -rhs.w); }
 		public static m4x4 operator + (m4x4 lhs, m4x4 rhs)
 		{
 			return new m4x4(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w);
@@ -364,17 +366,56 @@ namespace Rylogic.Maths
 	public static partial class Math_
 	{
 		/// <summary>Approximate equal</summary>
-		public static bool FEqlRelative(m4x4 lhs, m4x4 rhs, float tol)
+		public static bool FEqlAbsolute(m4x4 a, m4x4 b, float tol)
 		{
 			return
-				FEqlRelative(lhs.x, rhs.x, tol) &&
-				FEqlRelative(lhs.y, rhs.y, tol) &&
-				FEqlRelative(lhs.z, rhs.z, tol) &&
-				FEqlRelative(lhs.w, rhs.w, tol);
+				FEqlAbsolute(a.x, b.x, tol) &&
+				FEqlAbsolute(a.y, b.y, tol) &&
+				FEqlAbsolute(a.z, b.z, tol) &&
+				FEqlAbsolute(a.w, b.w, tol);
+		}
+		public static bool FEqlRelative(m4x4 a, m4x4 b, float tol)
+		{
+			var max_a = MaxElement(Abs(a));
+			var max_b = MaxElement(Abs(b));
+			if (max_b == 0) return max_a < tol;
+			if (max_a == 0) return max_b < tol;
+			var abs_max_element = Max(max_a, max_b);
+			return FEqlAbsolute(a, b, tol * abs_max_element);
 		}
 		public static bool FEql(m4x4 lhs, m4x4 rhs)
 		{
 			return FEqlRelative(lhs, rhs, TinyF);
+		}
+
+		/// <summary>Absolute value of 'x'</summary>
+		public static m4x4 Abs(m4x4 x)
+		{
+			return new m4x4(
+				Abs(x.x),
+				Abs(x.y),
+				Abs(x.z),
+				Abs(x.w));
+		}
+
+		/// <summary>Return the maximum element value in 'm'</summary>
+		public static float MaxElement(m4x4 m)
+		{
+			return Max(
+				MaxElement(m.x),
+				MaxElement(m.y),
+				MaxElement(m.z),
+				MaxElement(m.w));
+		}
+
+		/// <summary>Return the minimum element value in 'm'</summary>
+		public static float MinElement(m4x4 m)
+		{
+			return Min(
+				MinElement(m.x),
+				MinElement(m.y),
+				MinElement(m.z),
+				MinElement(m.w));
 		}
 
 		/// <summary>Finite test of matrix elements</summary>
@@ -476,7 +517,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>True if 'mat' has an inverse</summary>
-		public static bool IsInvertable(m4x4 m)
+		public static bool IsInvertible(m4x4 m)
 		{
 			return Determinant(m) != 0;
 		}
@@ -484,7 +525,7 @@ namespace Rylogic.Maths
 		/// <summary>Return 'm' inverted</summary>
 		public static m4x4 Invert(m4x4 m)
 		{
-			Debug.Assert(IsInvertable(m), "Matrix has no inverse");
+			Debug.Assert(IsInvertible(m), "Matrix has no inverse");
 
 			var A = Transpose(m); // Take the transpose so that row operations are faster
 			var B = m4x4.Identity;

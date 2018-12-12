@@ -28,6 +28,7 @@ namespace pr
 		constexpr double const inv_tau    = 1.0 / tau;
 		constexpr double const tau_by_2   = tau / 2.0;
 		constexpr double const tau_by_4   = tau / 4.0;
+		constexpr double const tau_by_6   = tau / 6.0;
 		constexpr double const tau_by_8   = tau / 8.0;
 		constexpr double const tau_by_360 = tau / 360.0;
 		constexpr double const E60_by_tau = 360.0 / tau;

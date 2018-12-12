@@ -19,6 +19,7 @@ namespace pr::collision
 			,m_radius(dim * 0.5f)
 		{
 			assert(dim.w == 0.0f);
+			m_base.m_bbox = CalcBBox(*this);
 		}
 		ShapeBox(BBox_cref bbox, MaterialId material_id = 0, Shape::EFlags flags = Shape::EFlags::None)
 			:ShapeBox(bbox.m_radius, m4x4::Translation(bbox.m_centre), material_id, flags)

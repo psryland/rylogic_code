@@ -1,4 +1,4 @@
-//*********************************************
+﻿//*********************************************
 // Physics Engine
 //  Copyright (C) Rylogic Ltd 2016
 //*********************************************
@@ -9,76 +9,111 @@
 
 namespace pr::physics
 {
-	// Inertia Tensor/Matrix
+	// Inertia Matrix
 	// The physical meaning of an inertia is the distribution of a rigid body's 
 	// mass about a particular point. If that point is the centre of mass of the 
 	// body, then the measured inertia is called the "central inertia" of that body. 
 	// To write down the inertia, we need to calculate the six scalars of the inertia 
-	// tensor, which is a symmetric 3x3 matrix. These scalars must be expressed in 
+	// matrix, which is a symmetric 3x3 matrix. These scalars must be expressed in 
 	// an arbitrary but specified coordinate system. So an Inertia is meaningful only 
 	// in conjunction with a particular set of axes, fixed to the body, whose origin 
 	// is the point about which the inertia is being measured, and in whose 
 	// coordinate system this measurement is being expressed. Note that changing the 
 	// reference point results in a new physical quantity, but changing the reference 
 	// axes only affects the measured numbers of that quantity. For any reference 
-	// point, there is a unique set of reference axes in which the inertia tensor is
+	// point, there is a unique set of reference axes in which the inertia matrix is
 	// diagonal; those are called the "principal axes" of the body at that point, and 
 	// the resulting diagonal elements are the "principal moments of inertia". When 
 	// we speak of an inertia being "in" a frame, we mean the physical quantity 
 	// measured about the frame's origin and then expressed in the frame's axes.
 	//
-	// Changing the coordinate system of an Inertia tensor does not entail a change of
-	// physical meaning in the way that shifting it to a different point does. To change
-	// coordinates use:
-	//    I_frameB = b2a * I_frameA * a2b
+	// Changing the coordinate system of an Inertia matrix does not entail a change of
+	// physical meaning in the way that shifting it to a different point does.
+	// To change coordinates use:
+	//    Ib = b2a * Ia * a2b
 	//
 	// An Inertia is a symmetric matrix and is positive definite for non-singular bodies
 	// (that is, a body composed of at least three non-collinear point masses).
 	//
-	// Note: inertia scales linearly with mass. This means typically inertia is stored
-	// for a unit mass (=1kg) and scaled when needed.
+	// Note: inertia scales linearly with mass. This means inertia can be stored for a
+	// unit mass (=1kg) and scaled when needed.
+
+	// I¯ = I alt+0175
 
 	// Inertia
 	// See: RBDA 2.62
 	// Inertia as a spatial matrix is a symmetric 6x6 matrix arranged as 2x2 blocks of 3x3 matrices.
 	// This type represents the spatial inertia for a simple rigid body (i.e. not articulated) in
 	// compact form. In spatial matrix form, the matrix would be:
-	//     Io = [Ic + cxcxT , cx] = [Ic - cxcx , cx]
-	//          [cxT        ,  1] = [-cx       ,  1]
+	//     Io = [Ic + cxTcx , cxT] = [Ic - cxcx , -cx]
+	//          [cx         ,   1] = [cx        ,   1]
 	//   where:
 	//     'Io' is the unit inertia measured about some arbitrary point 'o',
 	//     'Ic' is the unit inertia measured about the centre of mass (at 'c'),
-	//     'c' is the vector from 'o' to 'c'
+	//     'c' is the vector from 'o' back to 'c'
 	//     'cx' is the cross product matrix of the vector 'c'
 	//     'cxT' is the transpose of 'cx' which is equal to '-cx'.
 	//
 	// Notes:
-	//  Mass is included in Inertia so that they can be combined with other inertias.
-	//  The inertia matrix is symmetric, so we don't need to store the full matrix.
-	//  The inverse of a symmetric positive definite matrix is also symmetric positive
-	//   definite so the inverse of 'Inertia' can be stored the same way.
-	//  0 Mass is treated as infinite mass.
-	//  'CoM()' is used when an inertia is being used at a position that it wasn't measured at.
-	//  e.g. if you had a sphere, and a spatial vector measured on the surface of the sphere,
-	//  you would need to use 'CoM()' set as a vector from the point on the surface back to the
-	//  CoM so that you were using the spatial inertia and spatial vector at the same point.
-	//  This is really only used with spatial vectors and should be zero for normal inertia use.
+	//  - Mass is included in 'Inertia' so that they can be combined with other inertias.
+	//  - The inertia matrix is symmetric, so we don't need to store the full matrix.
+	//  - The inverse of a symmetric positive definite matrix is also symmetric positive
+	//    definite so the inverse of 'Inertia' can be stored the same way.
+	//  - 'CoM()' is a vector from the origin of the space that the inertia is in to the
+	//    centre of mass. This is really only used with spatial vectors and should be zero
+	//    for normal inertia use.
+
+	// Direction for translating an inertia matrix
+	enum class ETranslateInertia
+	{
+		TowardCoM,   // The pointy end of 'offset' is the CoM
+		AwayFromCoM, // The base of 'offset' is the CoM
+	};
 
 	struct Inertia
 	{
-		v4 m_diagonal; // The Ixx, Iyy, Izz terms of the unit inertia, Ic.
-		v4 m_offdiags; // The Ixy, Ixz, Iyz terms of the unit inertia, Ic.
-		v4 m_com_and_mass; // Location of the centre of mass in the frame that Ic was calculated in.
+		v4 m_diagonal;     // The Ixx, Iyy, Izz terms of the unit inertia at the CoM, Ic.
+		v4 m_products;     // The Ixy, Ixz, Iyz terms of the unit inertia at the CoM, Ic.
+		v4 m_com_and_mass; // Offset from the origin to the centre of mass, and the mass.
 
 		Inertia() = default;
 		Inertia(m3_cref<> unit_inertia, float mass, v4_cref<> com = v4{})
 			:m_diagonal(unit_inertia.x.x, unit_inertia.y.y, unit_inertia.z.z, 0)
-			,m_offdiags(unit_inertia.x.y, unit_inertia.x.z, unit_inertia.y.z, 0)
-			,m_com_and_mass(com.x, com.y, com.z, mass)
+			,m_products(unit_inertia.x.y, unit_inertia.x.z, unit_inertia.y.z, 0)
+			,m_com_and_mass(com.xyz, mass)
 		{
-			// 'com' is a vector that points from the location that the inertia
-			// is expressed at, back to where 'unit_inertia' was measured.
 			assert(Check());
+		}
+		Inertia(v4_cref<> diagonal, v4_cref<> products, float mass, v4_cref<> com = v4{})
+			:m_diagonal(diagonal)
+			,m_products(products)
+			,m_com_and_mass(com.xyz, mass)
+		{
+			assert(Check());
+		}
+		Inertia(float diagonal, float mass, v4_cref<> com = v4{})
+			:m_diagonal(diagonal, diagonal, diagonal, 0)
+			,m_products()
+			,m_com_and_mass(com.xyz, mass)
+		{
+			assert(Check());
+		}
+		Inertia(Inertia const& rhs, v4_cref<> com)
+			:m_diagonal(rhs.m_diagonal)
+			,m_products(rhs.m_products)
+			,m_com_and_mass(com.xyz, rhs.Mass())
+		{
+			assert(Check());
+		}
+		explicit Inertia(m6_cref<Motion,Force> inertia, float mass = -1)
+		{
+			// If 'mass' is given, 'inertia' is assumed to be a unit inertia
+			assert(Inertia::Check(inertia));
+
+			auto m = mass >= 0 ? mass : Trace(inertia.m11) / 3.0f;
+			auto cx   = (1.0f/m) * inertia.m10;
+			auto Ic   = (1.0f/m) * inertia.m00 + cx * cx;
+			*this = Inertia{Ic, m, v4{cx.y.z, -cx.x.z, cx.x.y, 0}};
 		}
 		explicit Inertia(MassProperties const& mp)
 			:Inertia(mp.m_os_unit_inertia, mp.m_mass)
@@ -87,7 +122,7 @@ namespace pr::physics
 		// The mass to scale the inertia by
 		float Mass() const
 		{
-			return m_com_and_mass.w != 0 ? m_com_and_mass.w : maths::float_inf;
+			return m_com_and_mass.w;
 		}
 		void Mass(float mass)
 		{
@@ -100,7 +135,7 @@ namespace pr::physics
 			return 1.0f / Mass();
 		}
 
-		// Location of the object centre of mass
+		// Offset from the origin of the space this inertia is in to the centre of mass.
 		v4 CoM() const
 		{
 			return m_com_and_mass.w0();
@@ -110,195 +145,464 @@ namespace pr::physics
 			m_com_and_mass.xyz = com.xyz;
 		}
 
-		// The mass weighted distance to the centre of mass
+		// The mass weighted distance from the centre of mass
 		v4 MassMoment() const
 		{
-			return Mass() * CoM();
+			return -Mass() * CoM();
 		}
 
-		// The inertia matrix (mass scaled by default)
-		m3x4 To3x3(float mass = -1) const
+		// Return the centre of mass inertia (mass scaled by default, excludes 'com')
+		m3x4 Ic3x3(float mass = -1) const
 		{
-			// Note: if 'CoM' in not zero, it's assumed the caller will manage the CoM offset
 			mass = mass >= 0 ? mass : Mass();
 			auto dia = mass * m_diagonal;
-			auto off = mass * m_offdiags;
-			return m3x4{
-				v4(dia.x, off.x, off.y, 0),
-				v4(off.x, dia.y, off.z, 0),
-				v4(off.y, off.z, dia.z, 0)};
+			auto off = mass * m_products;
+			auto Ic = m3x4{
+				v4{dia.x, off.x, off.y, 0},
+				v4{off.x, dia.y, off.z, 0},
+				v4{off.y, off.z, dia.z, 0}};
+			return Ic;
 		}
 
-		// Return the inertia matrix as a full spatial matrix (mass scaled by default)
+		// The 3x3 inertia matrix (mass scaled by default, includes 'com')
+		m3x4 To3x3(float mass = -1) const
+		{
+			mass = mass >= 0 ? mass : Mass();
+			auto Ic = Ic3x3(mass);
+			if (CoM() == v4{})
+				return Ic;
+
+			auto cx = CPM(CoM());
+			auto Io = Ic - mass * cx * cx;
+			return Io;
+		}
+
+		// The 6x6 inertia matrix (mass scaled by default)
 		Mat6x8<Motion,Force> To6x6(float mass = -1) const
 		{
 			mass = mass >= 0 ? mass : Mass();
-			auto Ic = To3x3(1);
+			auto Ic = Ic3x3(mass);
 			auto cx = CPM(CoM());
-			auto Io = Mat6x8<Motion,Force>{Ic - cx*cx , cx, -cx, m3x4Identity};
-			return mass * Io;
+			auto Io = Mat6x8<Motion,Force>{Ic - mass*cx*cx , mass*cx, -mass*cx, mass*m3x4Identity};
+			return Io;
 		}
 
 		// Sanity check
 		bool Check() const
 		{
-			return Check(To3x3(1), false);
+			return CoM() == v4{} ? Inertia::Check(To3x3()) : Inertia::Check(To6x6());
 		}
-		static bool Check(m3_cref<> inertia, bool is_inverse)
+		static bool Check(m3_cref<> inertia)
 		{
 			// Check for any value == NaN
 			if (IsNaN(inertia))
-				return false;
+				return assert(false),false;
 			
 			// Check symmetric
-			if (inertia.x.y != inertia.y.x ||
-				inertia.x.z != inertia.z.x ||
-				inertia.y.z != inertia.z.y)
-				return false;
+			if (!IsSymmetric(inertia))
+				return assert(false),false;
 
 			auto dia = v4{inertia.x.x, inertia.y.y, inertia.z.z, 0};
 			auto off = v4{inertia.x.y, inertia.x.z, inertia.y.z, 0};
 
 			// Diagonals of an Inertia matrix must be non-negative
 			if (dia.x < 0 || dia.y < 0 || dia.z < 0)
-				return false;
+				return assert(false),false;
 
 			// Diagonals of an Inertia matrix must satisfy the triangle inequality: a + b >= c
 			// Might need to relax 'tol' due to distorted rotation matrices: using: 'Max(Sum(d), 1) * tiny_sqrt'
-			if (!is_inverse && (
-				(dia.x + dia.y) < dia.z ||
+			if ((dia.x + dia.y) < dia.z ||
 				(dia.y + dia.z) < dia.x ||
-				(dia.z + dia.x) < dia.y))
-				return false;
+				(dia.z + dia.x) < dia.y)
+				return assert(false),false;
 
 			// The magnitude of a product of inertia was too large to be physical.
-			if (!is_inverse && (
-				dia.x < Abs(2 * off.z) || 
+			if (dia.x < Abs(2 * off.z) ||
 				dia.y < Abs(2 * off.y) ||
-				dia.z < Abs(2 * off.x)))
-				return false;
+				dia.z < Abs(2 * off.x))
+				return assert(false),false;
 
 			return true;
+		}
+		static bool Check(m6_cref<Motion,Force> inertia)
+		{
+			// Check for any value == NaN
+			if (IsNaN(inertia))
+				return assert(false),false;
+			
+			// Check symmetric
+			if (!IsSymmetric(inertia.m00) ||
+				!IsSymmetric(inertia.m11) ||
+				!IsAntiSymmetric(inertia.m01) ||
+				!IsAntiSymmetric(inertia.m10) ||
+				!FEql(inertia.m01 + inertia.m10, m3x4{}))
+				return assert(false),false;
+
+			// Check 'mass * 1'
+			auto m = inertia.m11.x.x;
+			if (!FEql(inertia.m11.y.y - m, 0) ||
+				!FEql(inertia.m11.z.z - m, 0))
+				return assert(false),false;
+
+			// Check 'mass * cx'
+			auto mcx = inertia.m01;
+			if (!FEql(Trace(mcx), 0) ||
+				!IsAntiSymmetric(mcx))
+				return assert(false),false;
+
+			// Check 'mass * cxT'
+			auto mcxT = inertia.m10;
+			if (!FEql(Trace(mcxT), 0) ||
+				!IsAntiSymmetric(mcxT))
+				return assert(false),false;
+
+			// Check 'Ic - mcxcx'
+			if (!Check(inertia.m00))
+				return assert(false),false;
+
+			return true;
+		}
+
+		// Create an inertia matrix for a point at 'offset'
+		template <typename = void> static Inertia Point(float mass, v4_cref<> offset = v4{})
+		{
+			auto ib = Inertia{1.0f, mass};
+			ib = Translate(ib, offset, ETranslateInertia::AwayFromCoM);
+			return ib;
+		}
+
+		// Create an inertia matrix for a sphere at 'offset'
+		template <typename = void> static Inertia Sphere(float radius, float mass, v4_cref<> offset = v4{})
+		{
+			auto ib = Inertia{(2.0f/5.0f) * Sqr(radius), mass};
+			ib = Translate(ib, offset, ETranslateInertia::AwayFromCoM);
+			return ib;
+		}
+
+		// Create an inertia matrix for a box at 'offset'
+		template <typename = void> static Inertia Box(v4_cref<> radius, float mass, v4_cref<> offset = v4{})
+		{
+			auto xx = (1.0f/3.0f) * (Sqr(radius.y) + Sqr(radius.z));
+			auto yy = (1.0f/3.0f) * (Sqr(radius.z) + Sqr(radius.x));
+			auto zz = (1.0f/3.0f) * (Sqr(radius.x) + Sqr(radius.y));
+			auto ib = Inertia{v4{xx,yy,zz,0}, v4{}, mass};
+			ib = Translate(ib, offset, ETranslateInertia::AwayFromCoM);
+			return ib;
 		}
 	};
 
 	// Inverse Inertia.
 	// See: RBDA 2.73
 	// The format of the inverse inertia expressed at the centre of mass is:
-	//  InvIc = InvMass * [Ic^ 0]
-	//                    [0   1]
+	//   InvMass * [Ic¯ 0]
+	//             [0   1]
 	//  where:
-	//    'Ic^' is the inverse of 'Ic', the inertia expressed at the centre of mass,
+	//    'Ic¯' is the inverse of 'Ic', the inertia expressed at the centre of mass,
 	// The form of the inverse inertia expressed at an arbitrary point is:
-	//  InvIo = InvMass * [Ic^    ,       Ic^cxT] = InvMass * [Ic^   ,      -Ic^cx]
-	//                    [cxIc^  , 1 + cxIc^cxT]             [cxIc^ , 1 - cxIc^cx]
+	//  Io¯ = InvMass * [Ic¯   ,       Ic¯cxT] = InvMass * [Ic¯   ,      -Ic¯cx]
+	//                  [cxIc¯ , 1 + cxIc¯cxT]             [cxIc¯ , 1 - cxIc¯cx]
 	struct InertiaInv
 	{
-		v4 m_diagonal; // The Ixx, Iyy, Izz terms of the unit inverse inertia tensor
-		v4 m_offdiags; // The Ixy, Ixz, Iyz terms of the unit inverse inertia tensor
-		v4 m_com_and_mass; // Location of the centre of mass in the frame that Ic was calculated in.
+		v4 m_diagonal;        // The Ixx, Iyy, Izz terms of the unit inverse inertia
+		v4 m_products;        // The Ixy, Ixz, Iyz terms of the unit inverse inertia
+		v4 m_com_and_invmass; // Offset from the origin to the centre of mass, and the inverse mass.
 
 		InertiaInv() = default;
-
-		// 'com' is the location of the CoM in the frame that the inertia is measured in.
-		InertiaInv(m3_cref<> unit_inertia_inv, float mass, v4_cref<> com = v4{})
+		InertiaInv(m3_cref<> unit_inertia_inv, float invmass, v4_cref<> com = v4{})
 			:m_diagonal(unit_inertia_inv.x.x, unit_inertia_inv.y.y, unit_inertia_inv.z.z, 0)
-			,m_offdiags(unit_inertia_inv.x.y, unit_inertia_inv.x.z, unit_inertia_inv.y.z, 0)
-			,m_com_and_mass(com.x, com.y, com.z, mass)
+			,m_products(unit_inertia_inv.x.y, unit_inertia_inv.x.z, unit_inertia_inv.y.z, 0)
+			,m_com_and_invmass(com.xyz, invmass)
 		{
 			assert(Check());
+		}
+		InertiaInv(m6_cref<Force,Motion> inertia¯, float invmass = -1)
+		{
+			// If 'invmass' is given, 'inertia¯' is assumed to be a unit inverse inertia
+			assert(InertiaInv::Check(inertia¯));
+
+			auto Ic¯ = inertia¯.m00;
+			auto cx  = Invert(Ic¯) * inertia¯.m01;
+			auto im = invmass >= 0 ? invmass : Trace(inertia¯.m11 + cx*Ic¯*cx) / 3.0f;
+			*this = InertiaInv{Ic¯, im, v4{cx.y.z, -cx.x.z, cx.x.y, 0}};
 		}
 
 		// The mass to scale the inertia by
 		float Mass() const
 		{
-			return m_com_and_mass.w != 0 ? m_com_and_mass.w : maths::float_inf;
-		}
-		void Mass(float mass)
-		{
-			m_com_and_mass.w = mass;
+			return 1/InvMass();
 		}
 
 		// The inverse mass
 		float InvMass() const
 		{
-			return 1.0f / Mass();
+			return m_com_and_invmass.w;
+		}
+		void InvMass(float invmass)
+		{
+			m_com_and_invmass.w = invmass;
 		}
 
-		// Location of the object centre of mass in the frame that the inertia tensor was calculated in.
+		// Offset to the location to use the inverse inertia
 		v4 CoM() const
 		{
-			return m_com_and_mass.w0();
+			return m_com_and_invmass.w0();
 		}
 		void CoM(v4 com)
 		{
-			m_com_and_mass.xyz = com.xyz;
+			m_com_and_invmass.xyz = com.xyz;
 		}
 
-		// The mass weighted distance to the centre of mass
-		v4 MassMoment() const
+		//// The mass weighted distance from the centre of mass
+		//v4 MassMoment() const
+		//{
+		//	return Mass() * Ofs();
+		//}
+
+		// The centre of mass inverse inertia (mass scaled by default, excludes 'com')
+		m3x4 Ic3x3(float inv_mass = -1) const
 		{
-			return Mass() * CoM();
+			inv_mass = inv_mass >= 0 ? inv_mass : InvMass();
+			auto dia = inv_mass * m_diagonal;
+			auto off = inv_mass * m_products;
+			auto Ic¯ = m3x4{
+				v4{dia.x, off.x, off.y, 0},
+				v4{off.x, dia.y, off.z, 0},
+				v4{off.y, off.z, dia.z, 0}};
+			return Ic¯;
 		}
 
 		// The mass scaled inverse inertia matrix
 		m3x4 To3x3(float inv_mass = -1) const
 		{
 			inv_mass = inv_mass >= 0 ? inv_mass : InvMass();
-			auto dia = inv_mass * m_diagonal;
-			auto off = inv_mass * m_offdiags;
-			return m3x4{
-				v4(dia.x, off.x, off.y, 0),
-				v4(off.x, dia.y, off.z, 0),
-				v4(off.y, off.z, dia.z, 0)};
+			auto Ic¯ = Ic3x3(inv_mass);
+			if (CoM() == v4{})
+				return Ic¯;
+
+			//' Io¯ = (Ic - mcxcx)¯                                  '
+			//' Identity: (A + B)¯ = A¯ - (1 + A¯B)¯A¯BA¯            '
+			//'   Let A = Ic, B = -mcxcx                             '
+			//'  Then:                                               '
+			//' Io¯ = Ic¯ + m(1 - mIc¯cxcx)¯Ic¯cxcxIc¯               '
+			//'     = Ic¯ + (1/m - Ic¯cxcx)¯Ic¯cxcxIc¯               '
+
+			// This is cheaper
+			auto cx = CPM(CoM());
+			auto Io = Invert(Ic¯) - (1.0f/inv_mass) * cx * cx;
+			auto Io¯ = Invert(Io);
+			return Io¯;
 		}
 
 		// Return the inverse inertia matrix as a full spatial matrix
 		Mat6x8<Force,Motion> To6x6(float inv_mass = -1) const
 		{
 			inv_mass = inv_mass >= 0 ? inv_mass : InvMass();
-			auto Ic = m3x4{To3x3(1)};
-			auto cx = CPM(CoM());
-			auto Io = Mat6x8<Force,Motion>{Ic, -Ic * cx, cx * Ic, m3x4Identity - cx * Ic * cx};
-			return inv_mass * Io;
+			auto Ic¯ = Ic3x3(inv_mass);
+			auto cx  = CPM(CoM());
+			auto Io¯ = Mat6x8<Force,Motion>{Ic¯, -Ic¯*cx, cx*Ic¯, inv_mass*m3x4Identity - cx*Ic¯*cx};
+			return Io¯;
 		}
 
 		// Sanity check
 		bool Check() const
 		{
-			return Inertia::Check(To3x3(1), true);
+			return CoM() == v4{} ? InertiaInv::Check(To3x3()) : InertiaInv::Check(To6x6());
+		}
+		static bool Check(m3_cref<> inertia¯)
+		{
+			// Check for any value == NaN
+			if (IsNaN(inertia¯))
+				return assert(false),false;
+			
+			// Check symmetric
+			if (!IsSymmetric(inertia¯))
+				return assert(false),false;
+
+			auto dia = v4{inertia¯.x.x, inertia¯.y.y, inertia¯.z.z, 0};
+			auto off = v4{inertia¯.x.y, inertia¯.x.z, inertia¯.y.z, 0};
+
+			// Diagonals of an inverse inertia matrix must be non-negative
+			if (dia.x < 0 || dia.y < 0 || dia.z < 0)
+				return assert(false),false;
+
+			// Diagonals of an inverse inertia matrix must satisfy the triangle inequality: a + b >= c
+			// Might need to relax 'tol' due to distorted rotation matrices: using: 'Max(Sum(d), 1) * tiny_sqrt'
+			//if (!is_inverse && (
+			//	(dia.x + dia.y) < dia.z ||
+			//	(dia.y + dia.z) < dia.x ||
+			//	(dia.z + dia.x) < dia.y))
+			//	return assert(false),false;
+
+			// The magnitude of a product of inertia was too large to be physical.
+			//if (!is_inverse && (
+			//	dia.x < Abs(2 * off.z) || 
+			//	dia.y < Abs(2 * off.y) ||
+			//	dia.z < Abs(2 * off.x)))
+			//	return assert(false),false;
+
+			return true;
+		}
+		static bool Check(m6_cref<Force,Motion> inertia¯)
+		{
+			// Check for any value == NaN
+			if (IsNaN(inertia¯))
+				return assert(false),false;
+			
+			// Check symmetric
+			if (!IsSymmetric(inertia¯.m00) ||
+				!IsSymmetric(inertia¯.m11) ||
+				!IsAntiSymmetric(inertia¯.m01) ||
+				!IsAntiSymmetric(inertia¯.m10) ||
+				!FEql(inertia¯.m01 + inertia¯.m10, m3x4{}))
+				return assert(false),false;
+
+			// Check 'Ic¯'
+			auto Ic¯ = inertia¯.m00;
+			if (!Check(Ic¯))
+				return assert(false),false;
+
+			// Check 'Ic¯ * cxT'
+			auto cxT = Invert(Ic¯) * inertia¯.m01;
+			if (!FEql(Trace(cxT), 0) ||
+				!IsAntiSymmetric(cxT))
+				return assert(false),false;
+
+			// Check 'cx * Ic¯'
+			auto cx = inertia¯.m10 * Invert(Ic¯);
+			if (!FEql(Trace(cx), 0) ||
+				!IsAntiSymmetric(cx))
+				return assert(false),false;
+
+			// Check '1/m'
+			auto im = inertia¯.m11 + cx * Ic¯ * cx;
+			if (!FEql(im.y.y - im.x.x, 0) ||
+				!FEql(im.z.z - im.x.x, 0))
+				return assert(false),false;
+
+			return true;
 		}
 	};
 
 	#pragma region Inertia Operators
-
-	// Add two inertias. 'lhs' and 'rhs' must be in the same frame.
-	inline Inertia operator + (Inertia const& lhs, Inertia const& rhs)
+	inline bool operator == (Inertia const& lhs, Inertia const& rhs)
 	{
-		// When two rigid bodies are joined, you can just add the spatial inertia directly.
+		return
+			lhs.m_diagonal == rhs.m_diagonal &&
+			lhs.m_products == rhs.m_products &&
+			lhs.m_com_and_mass == rhs.m_com_and_mass;
+	}
+	inline bool operator != (Inertia const& lhs, Inertia const& rhs)
+	{
+		return !(lhs == rhs);
+	}
+	inline bool operator == (InertiaInv const& lhs, InertiaInv const& rhs)
+	{
+		return
+			lhs.m_diagonal == rhs.m_diagonal &&
+			lhs.m_products == rhs.m_products &&
+			lhs.m_com_and_invmass == rhs.m_com_and_invmass;
+	}
+	inline bool operator != (InertiaInv const& lhs, InertiaInv const& rhs)
+	{
+		return !(lhs == rhs);
+	}
+
+	// Add/Subtract two inertias. 'lhs' and 'rhs' must be in the same frame.
+	template <typename = void> inline Inertia operator + (Inertia const& lhs, Inertia const& rhs)
+	{
+		// The result of addition is a new Inertia so we might as well bake the offset into the result.
+		auto Ia = lhs.CoM() == v4{} ? lhs : Translate(lhs, -lhs.CoM(), ETranslateInertia::AwayFromCoM);
+		auto Ib = rhs.CoM() == v4{} ? rhs : Translate(rhs, -rhs.CoM(), ETranslateInertia::AwayFromCoM);
+
+		auto massA = Ia.Mass();
+		auto massB = Ib.Mass();
+		auto mass = massA + massB;
+
 		Inertia sum = {};
-		sum.m_com_and_mass = lhs.m_com_and_mass + rhs.m_com_and_mass;
-		sum.m_diagonal = lhs.m_diagonal + rhs.m_diagonal;
-		sum.m_offdiags = lhs.m_offdiags + rhs.m_offdiags;
+		sum.m_diagonal = (massA*Ia.m_diagonal + massB*Ib.m_diagonal) / mass;
+		sum.m_products = (massA*Ia.m_products + massB*Ib.m_products) / mass;
+		sum.m_com_and_mass = v4{0,0,0,mass};
+		return sum;
+	}
+	template <typename = void> inline Inertia operator - (Inertia const& lhs, Inertia const& rhs)
+	{
+		// The result of subtraction is a new Inertia so we might as well bake the offset into the result.
+		auto Ia = lhs.CoM() == v4{} ? lhs : Translate(lhs, -lhs.CoM(), ETranslateInertia::AwayFromCoM);
+		auto Ib = rhs.CoM() == v4{} ? rhs : Translate(rhs, -rhs.CoM(), ETranslateInertia::AwayFromCoM);
+
+		auto massA = Ia.Mass();
+		auto massB = Ib.Mass();
+		auto mass = massA - massB;
+
+		// The result must still have a positive mass
+		if (mass <= 0)
+			throw std::runtime_error("Inertia difference is undefined");
+
+		Inertia sum = {};
+		sum.m_diagonal = (massA*Ia.m_diagonal - massB*Ib.m_diagonal) / mass;
+		sum.m_products = (massA*Ia.m_products - massB*Ib.m_products) / mass;
+		sum.m_com_and_mass = v4{0,0,0,mass};
 		return sum;
 	}
 
-	// Multiply a vector by 'inertia'.
-	inline v4 operator * (Inertia const& inertia, v4 const& ang)
+	// Add/Subtract inverse inertias. 'lhs' and 'rhs' must be in the same frame.
+	template <typename = void> inline InertiaInv operator + (InertiaInv const& a¯, InertiaInv const& b¯)
 	{
-		if (inertia.CoM() == v4{})
-			return inertia.To3x3() * ang;
+		if (a¯.CoM() == v4{} && b¯.CoM() == v4{})
+		{
+			auto s = a¯.To3x3(1) + b¯.To3x3(1);
+			auto s¯ = InertiaInv{s, a¯.InvMass() + b¯.InvMass()};
+			return s¯;
+		}
 		else
-			throw std::runtime_error("not supported");
+		{
+			auto s = a¯.To6x6(1) + b¯.To6x6(1);
+			assert(InertiaInv::Check(s));
+
+			auto Ic = Invert(s.m00);
+			auto cx = Ic * s.m01;
+			//auto ofs = 
+			auto s¯ = InertiaInv{s.m00, 1.0f};
+			return s¯;
+		}
+	}
+	template <typename = void> inline InertiaInv operator - (InertiaInv const& a¯, InertiaInv const& b¯)
+	{
+		if (a¯.CoM() == v4{} && b¯.CoM() == v4{})
+		{
+			auto c¯ = a¯.To3x3() - b¯.To3x3();
+			auto inv_mass = (b¯.Mass() - a¯.Mass()) / (a¯.Mass() * b¯.Mass());
+			return InertiaInv{c¯, inv_mass};
+		}
+		else
+		{
+			throw 0;
+		}
+	//	// a¯ - b¯ = a¯.b.b¯ - a¯.a.b¯
+	//	//         = a¯.(b - a).b¯
+	// 1/ma - 1/mb = (mb - ma)/mamb
+	//	auto a = Invert(a¯);
+	//	auto b = Invert(b¯);
+	//	auto s = a¯ * (b - a) * b¯;
+	//	return s;
 	}
 
-	// Multiply a vector by 'inertia_inv'.
-	inline v4 operator * (InertiaInv const& inertia_inv, v4 const& ang)
+	// Multiply a vector by 'inertia'.
+	template <typename = void> inline v4 operator * (Inertia const& inertia, v4 const& v)
 	{
-		if (inertia_inv.CoM() == v4{})
-			return inertia_inv.To3x3() * ang;
+		if (inertia.CoM() == v4{})
+			return inertia.To3x3() * v;
 		else
-			throw std::runtime_error("not supported");
+			return Translate(inertia, -inertia.CoM(), ETranslateInertia::AwayFromCoM).To3x3() * v;
+	}
+
+	// Multiply a vector by 'inertia¯'.
+	template <typename = void> inline v4 operator * (InertiaInv const& inertia¯, v4 const& h)
+	{
+		if (inertia¯.CoM() == v4{})
+			return inertia¯.To3x3() * h;
+		else
+			return Translate(inertia¯, -inertia¯.CoM(), ETranslateInertia::AwayFromCoM).To3x3() * h;
 	}
 
 	// Multiply a spatial motion vector by 'inertia'.
@@ -313,51 +617,128 @@ namespace pr::physics
 		//
 		//  h = mass * [Ic - cxcx , cx] * [ang]
 		//             [-cx       ,  1]   [lin]
+		
+		// Special case when the inertia is in CoM frame.
 		if (inertia.CoM() == v4{})
 			return v8f{inertia.To3x3() * motion.ang, inertia.Mass() * motion.lin};
 		else
 			return inertia.To6x6() * motion;
 	}
 
-	// Multiply a spatial force vector by 'inertia_inv'
-	inline v8m operator * (InertiaInv const& inertia_inv, v8f const& force)
+	// Multiply a spatial force vector by 'inertia¯'
+	inline v8m operator * (InertiaInv const& inertia¯, v8f const& force)
 	{
-		if (inertia_inv.CoM() == v4{})
-			return v8m{inertia_inv.To3x3() * force.ang, inertia_inv.InvMass() * force.lin};
+		// Special case when the inertia is in CoM frame.
+		if (inertia¯.CoM() == v4{})
+			return v8m{inertia¯.To3x3() * force.ang, inertia¯.InvMass() * force.lin};
 		else
-			return inertia_inv.To6x6() * force;
+			return inertia¯.To6x6() * force;
 	}
 
 	#pragma endregion
 
 	#pragma region Functions
 
-	// Transform an inertia in frame 'a' to frame 'b'
-	inline Inertia Transform(Inertia const& inertia, m3_cref<> a2b)
+	// Approximate equality
+	inline bool FEql(Inertia const& lhs, Inertia const& rhs)
 	{
-		// Ib = a2b*Ia*b2a
-		auto b2a = InvertFast(a2b);
-		auto I = a2b * inertia.To3x3(1) * b2a;
-		return Inertia(I, inertia.Mass(), inertia.CoM());
+		return
+			FEql(lhs.m_diagonal, rhs.m_diagonal) &&
+			FEql(lhs.m_products, rhs.m_products) &&
+			FEql(lhs.m_com_and_mass, rhs.m_com_and_mass);
 	}
-	inline InertiaInv Transform(InertiaInv const& inertia_inv, m3_cref<> a2b)
+	inline bool FEql(InertiaInv const& lhs, InertiaInv const& rhs)
 	{
-		// Ib^ = (a2b*Ia*b2a)^ = b2a^*Ia^*a2b^ = a2b*Ia^*b2a
-		auto b2a = InvertFast(a2b);
-		auto I = a2b * inertia_inv.To3x3(1) * b2a;
-		return InertiaInv(I, inertia_inv.Mass(), inertia_inv.CoM());
+		return
+			FEql(lhs.m_diagonal, rhs.m_diagonal) &&
+			FEql(lhs.m_products, rhs.m_products) &&
+			FEql(lhs.m_com_and_invmass, rhs.m_com_and_invmass);
 	}
 
 	// Invert inertia
 	inline InertiaInv Invert(Inertia const& inertia)
 	{
-		auto unit_inertia_inv = m3x4{Invert(inertia.To3x3(1))};
-		return InertiaInv(unit_inertia_inv, inertia.Mass(), inertia.CoM());
+		auto unit_inertia¯ = Invert(inertia.Ic3x3(1));
+		return InertiaInv{unit_inertia¯, inertia.InvMass(), inertia.CoM()};
 	}
-	inline Inertia Invert(InertiaInv const& inertia_inv)
+	inline Inertia Invert(InertiaInv const& inertia¯)
 	{
-		auto unit_inertia = m3x4{Invert(inertia_inv.To3x3(1))};
-		return Inertia(unit_inertia, inertia_inv.Mass(), inertia_inv.CoM());
+		auto unit_inertia = Invert(inertia¯.Ic3x3(1));
+		return Inertia{unit_inertia, inertia¯.Mass(), inertia¯.CoM()};
+	}
+
+	// Rotate an inertia in frame 'a' to frame 'b'
+	inline Inertia Rotate(Inertia const& inertia, m3_cref<> a2b)
+	{
+		// Ib = a2b*Ia*b2a
+		auto b2a = InvertFast(a2b);
+		auto Ic = a2b * inertia.Ic3x3(1) * b2a;
+		return Inertia{Ic, inertia.Mass(), inertia.CoM()};
+	}
+	inline InertiaInv Rotate(InertiaInv const& inertia¯, m3_cref<> a2b)
+	{
+		// Ib¯ = (a2b*Ia*b2a)¯ = b2a¯*Ia¯*a2b¯ = a2b*Ia¯*b2a
+		auto b2a = InvertFast(a2b);
+		auto Ic¯ = a2b * inertia¯.Ic3x3(1) * b2a;
+		return InertiaInv{Ic¯, inertia¯.InvMass(), inertia¯.CoM()};
+	}
+
+	// Returns an inertia translated using the parallel axis theorem.
+	// 'offset' is the vector from (or toward) the centre of mass (determined by 'direction').
+	// 'offset' must be in the current frame.
+	inline Inertia Translate(Inertia const& inertia0, v4_cref<> offset, ETranslateInertia direction)
+	{
+		//' Io = Ic - cxcx (for unit inertia away from CoM) '
+		//' Ic = Io + cxcx (for unit inertia toward CoM)    '
+		auto inertia1 = inertia0;
+		auto sign = (direction == ETranslateInertia::AwayFromCoM) ? +1.0f : -1.0f;
+
+		// For the diagonal elements:
+		//'  I = Io + md² (away from CoM), Io = I - md² (toward CoM) '
+		//' 'd' is the perpendicular component of 'offset'
+		inertia1.m_diagonal.x += sign * (Sqr(offset.y) + Sqr(offset.z));
+		inertia1.m_diagonal.y += sign * (Sqr(offset.z) + Sqr(offset.x));
+		inertia1.m_diagonal.z += sign * (Sqr(offset.x) + Sqr(offset.y));
+
+		// For off diagonal elements:
+		//'  Ixy = Ioxy + mdxdy  (away from CoM), Io = I - mdxdy (toward CoM) '
+		//'  Ixz = Ioxz + mdxdz  (away from CoM), Io = I - mdxdz (toward CoM) '
+		//'  Iyz = Ioyz + mdydz  (away from CoM), Io = I - mdydz (toward CoM) '
+		inertia1.m_products.x += sign * (offset.x * offset.y); // xy
+		inertia1.m_products.y += sign * (offset.x * offset.z); // xz
+		inertia1.m_products.z += sign * (offset.y * offset.z); // yz
+
+		// 'com' is mainly used for spatial inertia when multiplying the inertia
+		// at a point other than where the inertia was measured at. Translate()
+		// moves the measure point, so if 'com' is non-zero, update it to reflect
+		// the new offset.
+		if (inertia1.m_com_and_mass.xyz != v3{})
+			inertia1.m_com_and_mass.xyz -= sign * offset.xyz;
+
+		return inertia1;
+	}
+	inline InertiaInv Translate(InertiaInv const& inertia0¯, v4_cref<> offset, ETranslateInertia direction)
+	{
+		auto inertia0 = Invert(inertia0¯);
+		auto inertia1 = Translate(inertia0, offset, direction);
+		auto inertia1¯ = Invert(inertia1);
+		return inertia1¯;
+	}
+
+	// Rotate, then translate an inertia
+	inline Inertia Transform(Inertia const& inertia0, m4_cref<> a2b, ETranslateInertia direction)
+	{
+		auto inertia1 = inertia0;
+		inertia1 = Rotate(inertia1, a2b.rot);
+		inertia1 = Translate(inertia1, a2b.pos, direction);
+		return inertia1;
+	}
+	inline InertiaInv Transform(InertiaInv const& inertia0¯, m4_cref<> a2b, ETranslateInertia direction)
+	{
+		auto inertia1¯ = inertia0¯;
+		inertia1¯ = Rotate(inertia1¯, a2b.rot);
+		inertia1¯ = Translate(inertia1¯, a2b.pos, direction);
+		return inertia1¯;
 	}
 
 	#pragma endregion
@@ -371,12 +752,81 @@ namespace pr::physics
 	PRUnitTest(InertiaTests)
 	{
 		auto mass = 5.0f;
-		{
+		{// Inertia Construction
+			auto moment = (1.0f/6.0f) * Sqr(2.0f);
+			
+			auto I0 = Inertia{moment, mass};
+			PR_CHECK(FEql(I0, Inertia{I0.To3x3(1), I0.Mass()}), true);
+			PR_CHECK(FEql(I0, Inertia{I0.To6x6()}), true);
+
+			auto I1 = Transform(I0, m4x4::Transform(float(maths::tau_by_4), float(maths::tau_by_4), 0, v4{1,2,3,0}), ETranslateInertia::AwayFromCoM);
+			PR_CHECK(FEql(I1, Inertia{I1.To3x3(1), I1.Mass()}), true);
+			PR_CHECK(FEql(I1, Inertia{I1.To6x6()}), true);
+
+			auto I2 = Inertia{I1, -v4{3,2,1,0}};
+			//PR_CHECK(FEql(Translate(I1, v4{3,2,1,0}, ETranslateInertia::AwayFromCoM), Inertia{I2.To3x3(1), I2.Mass()}), true); // Because the ofs gets baked in
+			//PR_CHECK(FEql(I2, Inertia{I2.To6x6()}), true);
+		}
+		{// InertiaInv Construction
+			auto moment = (1.0f/6.0f) * Sqr(2.0f);
+			
+			auto I0¯ = Invert(Inertia{moment, mass});
+			PR_CHECK(FEql(I0¯, InertiaInv{I0¯.To3x3(1), I0¯.InvMass()}), true);
+			PR_CHECK(FEql(I0¯, InertiaInv{I0¯.To6x6()}), true);
+			
+			auto I1¯ = Transform(I0¯, m4x4::Transform(float(maths::tau_by_4), float(maths::tau_by_4), 0, v4{1,0,0,0}), ETranslateInertia::AwayFromCoM);
+			PR_CHECK(FEql(I1¯, InertiaInv{I1¯.To3x3(1), I1¯.InvMass()}), true);
+			PR_CHECK(FEql(I1¯, InertiaInv{I1¯.To6x6()}), true);
+		}
+		{// Translate and Rotate
+			auto moment = (1.0f/6.0f) * Sqr(2.0f);
+			auto Ic0 = Inertia{moment, mass};
+			auto Ic1 = Ic0;
+			
+			Ic1 = Translate(Ic1, v4{1,0,0,0}, ETranslateInertia::AwayFromCoM);
+			Ic1 = Rotate(Ic1, m3x4::Rotation(float(maths::tau_by_4), 0, 0));
+			Ic1 = Rotate(Ic1, m3x4::Rotation(0, float(maths::tau_by_4), 0));
+			Ic1 = Translate(Ic1, v4{0,0,1,0}, ETranslateInertia::TowardCoM);
+			
+			PR_CHECK(FEql(Ic0, Ic1), true);
+		}
+		{// Transform
+			auto moment = (1.0f/6.0f) * Sqr(2.0f);
+			auto a2b = m4x4::Transform(float(maths::tau_by_4), float(maths::tau_by_4), 0, v4{0,0,1,1});
+			auto Ic0 = Inertia{moment, mass};
+			auto Ic1 = Translate(Rotate(Ic0, a2b.rot), a2b.pos, ETranslateInertia::AwayFromCoM);
+			auto Ic2 = Transform(Ic0, a2b, ETranslateInertia::AwayFromCoM);
+			PR_CHECK(FEql(Ic1, Ic2), true);
+		}
+		{// Translate Inverse
+			auto a2b = m4x4::Transform(float(maths::tau_by_4), float(maths::tau_by_4), 0, v4{0,0,1,1});
+			auto Ic0 = Rotate(Inertia::Box(v4{1,2,3,0}, mass, v4{1,1,1,0}), a2b.rot);
+			auto Ic0¯ = Invert(Ic0);
+
+			// Translate by invert-translate-invert
+			auto Ic1 = Invert(Ic0¯);
+			auto Io1 = Translate(Ic1, +a2b.pos, ETranslateInertia::AwayFromCoM);
+			auto Io1¯ = Invert(Io1);
+
+			auto Io2 = Invert(Io1¯);
+			auto Ic2 = Translate(Io2, -a2b.pos, ETranslateInertia::TowardCoM);
+			auto Ic2¯ = Invert(Ic2);
+
+			// Directly translate the inverse inertia
+			auto IC0¯ = Ic0¯;
+			auto IO1¯ = Translate(IC0¯, +a2b.pos, ETranslateInertia::AwayFromCoM);
+			auto IC2¯ = Translate(IO1¯, -a2b.pos, ETranslateInertia::TowardCoM);
+
+			PR_CHECK(FEql(Ic0¯, IC0¯), true);
+			PR_CHECK(FEql(Io1¯, IO1¯), true);
+			PR_CHECK(FEql(Ic2¯, IC2¯), true);
+		}
+		{// 6x6 vs 3x3 no offset
 			auto avel = v4{0, 0, 1, 0}; //v4(-1,-2,-3,0);
 			auto lvel = v4{0, 1, 0, 0}; //v4(+1,+2,+3,0);
 			auto vel = v8m{avel, lvel};
 
-			// Inertia of a sphere with radius 1, positioned at (0,0,0), measured at (0,0,0) (2/5 m r^2)
+			// Inertia of a sphere with radius 1, positioned at (0,0,0), measured at (0,0,0) (2/5 m r²)
 			auto Ic = (2.0f/5.0f) * m3x4Identity;
 
 			// Traditional momentum calculation
@@ -394,46 +844,157 @@ namespace pr::physics
 			auto mom2 = sIc2 * vel;
 			PR_CHECK(FEql(mom, mom2), true);
 		}
-		{
-			auto avel = v4{0, 0, 1, 0}; //v4(-1,-2,-3,0);
-			auto lvel = v4{0, 1, 0, 0}; //v4(+1,+2,+3,0);
+		{// 6x6 with offset
+			auto avel = v4{0, 0, 1, 0};
+			auto lvel = v4{0, 1, 0, 0};
 			auto vel = v8m{avel, lvel};
 
-			// Inertia of a sphere with radius 1, positioned at (0,0,0), measured at (0,0,0) (2/5 m r^2)
-			auto Ic = (2.0f/5.0f) * m3x4Identity;
+			// Inertia of a sphere with radius 0.5, positioned at (0,0,0), measured at (0,0,0) (2/5 m r²)
+			auto Ic = Inertia::Sphere(0.5f, 1);
 
-			// Calculate the momentum expressed at 'r'
+			// Calculate the momentum at 'r'
 			auto r = v4{1,0,0,0};
-			auto amom = mass * Ic * avel - Cross(r, mass * lvel);
+			auto amom = mass * (Ic.To3x3() * avel - Cross(r, lvel));
 			auto lmom = mass * lvel;
 
-			// Inertia of a sphere with radius 1, positioned at (0,0,0) and measured at (0,0,0) expressed at 'r'
+			// Inertia of a sphere with radius 0.5, positioned at (0,0,0) and measured at (0,0,0) expressed at 'r'
 			auto vel_r = Shift(vel, r);
-			auto sI_r = Inertia(Ic, mass, -r); // 'r' points back at the CoM
+			auto sI_r = Inertia(Ic.To3x3(1), mass, -r);
 			auto mom = sI_r * vel_r;
 			PR_CHECK(FEql(mom.ang, amom), true);
 			PR_CHECK(FEql(mom.lin, lmom), true);
-		
+
 			// Expressed at another point
-			r = v4{1,2,3,0};
-			amom = mass * Ic * avel - Cross(r, mass * lvel);
+			r = v4{2,0,0,0};
+			amom = mass * (Ic.To3x3() * avel - Cross(r, lvel));
 			lmom = mass * lvel;
 
-			// Inertia of a sphere with radius 1, positioned at (0,0,0) and measured at (0,0,0) expressed at 'r'
+			// Inertia of a sphere with radius 0.5, positioned at (0,0,0) and measured at (0,0,0) expressed at 'r'
 			vel_r = Shift(vel, r);
-			sI_r = Inertia(Ic, mass, -r); // 'r' points back at the CoM
+			sI_r = Inertia(Ic.To3x3(1), mass, -r);
+			mom = sI_r * vel_r;
+			PR_CHECK(FEql(mom.ang, amom), true);
+			PR_CHECK(FEql(mom.lin, lmom), true);
+
+			// Expressed at another point
+			r = v4{1,2,3,0};
+			amom = mass * (Ic.To3x3() * avel - Cross(r, lvel));
+			lmom = mass * lvel;
+
+			// Inertia of a sphere with radius 0.5, positioned at (0,0,0) and measured at (0,0,0) expressed at 'r'
+			vel_r = Shift(vel, r);
+			sI_r = Inertia(Ic.To3x3(1), mass, -r);
 			mom = sI_r * vel_r;
 			PR_CHECK(FEql(mom.ang, amom), true);
 			PR_CHECK(FEql(mom.lin, lmom), true);
 		}
-		{ // Kinetic energy: 0.5 * Dot(h, v)
+		{// Addition/Subtraction inertia
+			auto sph0 = Inertia::Sphere(0.5f, mass);
+			auto sph1 = Inertia::Sphere(0.5f, mass);
+
+			// Simple addition/subtraction of inertia in CoM frame
+			auto sph2 = Inertia::Sphere(0.5f, 2*mass);
+			auto SPH2 = sph0 + sph1;
+			PR_CHECK(FEql(sph2, SPH2), true);
+			auto sph3 = sph2 - sph1;
+			PR_CHECK(FEql(sph3, sph0), true);
+
+			// Addition/Subtraction of translated inertias
+			auto sph4 = Translate(sph0, v4{-1,0,0,0}, ETranslateInertia::AwayFromCoM);
+			auto sph5 = Translate(sph1, v4{+1,0,0,0}, ETranslateInertia::AwayFromCoM);
+			auto sph6 = Inertia{v4{0.1f,1.1f,1.1f,0}, v4{}, 2*mass};
+			auto SPH6 = sph4 + sph5;
+			PR_CHECK(FEql(sph6, SPH6), true);
+
+			// Addition/Subtraction of inertias with offsets
+			auto sph7 = Inertia{sph0, -v4{-1,0,0,0}};
+			auto sph8 = Inertia{sph1, -v4{+1,0,0,0}};
+			auto sph9 = sph6;
+			auto SPH9 = sph7 + sph8;
+			PR_CHECK(FEql(sph9, SPH9), true);
+		}
+		{// Addition/Subtraction inverse inertia
+			//auto sph0 = Inertia::Sphere(0.5f, mass);
+			//auto sph1 = Inertia::Sphere(0.5f, mass);
+			//auto sph2 = Inertia::Sphere(0.5f, 2*mass);
+			//
+			//// Simple addition/subtraction of inertia in CoM frame
+			//auto SPH2 = Invert(sph0) + Invert(sph1);
+			//PR_CHECK(FEql(Invert(sph2), SPH2), true);
+			//auto sph3 = Invert(sph2) - Invert(sph1);
+			//PR_CHECK(FEql(sph3, Invert(sph0)), true);
+			//
+			//// Addition/Subtraction of translated inertias
+			//auto sph4 = Translate(sph0, v4{-1,0,0,0}, ETranslateInertia::AwayFromCoM);
+			//auto sph5 = Translate(sph1, v4{+1,0,0,0}, ETranslateInertia::AwayFromCoM);
+			//auto sph6 = Inertia{v4{0.1f,1.1f,1.1f,0}, v4{}, 2*mass};
+			//
+			//auto SPH6 = Invert(sph4) + Invert(sph5);
+			//PR_CHECK(FEql(Invert(sph6), SPH6), true);
+
+			//// Addition/Subtraction of inertias with offsets
+			//auto sph7 = Inertia{sph0, v4{-1,0,0,0}};
+			//auto sph8 = Inertia{sph1, v4{+1,0,0,0}};
+			//auto sph9 = sph6;
+			//auto SPH9 = sph7 + sph8;
+			//PR_CHECK(FEql(sph9, SPH9), true);
+		}
+		{// Inverting 6x6 inertia
+			auto Ic = Inertia::Sphere(0.5f, 1);
+			auto r = v4{1,2,3,0};
+			
+			auto a = Inertia{Ic.Ic3x3(1), mass, -r};
+			auto b = Invert(a);
+			auto c = Invert(b);
+			auto a6x6 = a.To6x6();
+			auto b6x6 = b.To6x6();
+			auto c6x6 = c.To6x6();
+			
+			auto A = a.To6x6();
+			auto B = Invert(A);
+			auto C = Invert(B);
+
+			PR_CHECK(FEqlRelative(a6x6, A, 0.001f), true);
+			PR_CHECK(FEqlRelative(b6x6, B, 0.001f), true);
+			PR_CHECK(FEqlRelative(c6x6, C, 0.001f), true);
+		}
+		{// a = I¯.f
+			auto F = 2.0f;
+			auto L = 1.0f;
+			auto I = (1.0f/12.0f) * mass * Sqr(L); // I = 1/12 m L²
+
+			// Create a vertical rod inertia
+			auto Ic = Inertia::Box(v4{0.0001f, 0.5f*L, 0.0001f,0}, mass);
+			auto Ic¯ = Invert(Ic);
+
+			// Apply a force at the CoM
+			auto f0 = v8f{0, 0, 0, F, 0, 0};
+			auto a0 = Ic¯ * f0;
+			PR_CHECK(FEql(a0, v8m{0, 0, 0, F/mass, 0, 0}), true);
+
+			// Apply a force at the top
+			// a = F/m, α = F.d/I
+			auto r = v4{0, 0.5f*L, 0, 0};
+			auto f1 = Shift(f0, -r);
+			auto a1 = Ic¯ * f1;
+			PR_CHECK(FEql(a1, v8m{0, 0, -F*r.y/I, F/mass, 0, 0}), true);
+
+			// Apply a force at an arbitrary point
+			r = v4{3,2,0,0};
+			auto f2 = Shift(f0, -r);
+			auto a2 = Ic¯ * f2;
+			auto a = (1.0f/mass)*f0.lin;
+			auto α = Ic¯.To3x3() * Cross(r, f0.lin);
+			PR_CHECK(FEql(a2, v8m{α, a}), true);
+		}
+		{ // Kinetic energy: 0.5 * Dot(v, h) = 0.5 * v.I.v
 
 			// Sphere travelling at 'vel'
 			auto avel = v4{0, 0, 1, 0}; //v4(-1,-2,-3,0);
 			auto lvel = v4{0, 1, 0, 0}; //v4(+1,+2,+3,0);
 			auto vel = v8m{avel, lvel};
 
-			// Inertia of a sphere with radius 1, positioned at (0,0,0), measured at (0,0,0) (2/5 m r^2)
+			// Inertia of a sphere with radius 1, positioned at (0,0,0), measured at (0,0,0) (2/5 m r²)
 			auto Ic = (2.0f/5.0f) * m3x4Identity;
 
 			// Calculate kinetic energy

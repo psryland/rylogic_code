@@ -46,6 +46,12 @@ namespace pr
 			Width(float w) :m_width(w) {}
 			Width(int w) :m_width(float(w)) {}
 		};
+		enum class EArrowType
+		{
+			Fwd,
+			Back,
+			FwdBack,
+		};
 
 		#pragma region Append
 		// See unit tests for example.
@@ -115,6 +121,15 @@ namespace pr
 		inline TStr& Append(TStr& str, AxisId id)
 		{
 			return AppendSpace(str).append(To<TStr>(int(id)));
+		}
+		inline TStr& Append(TStr& str, EArrowType ty)
+		{
+			switch (ty) {
+			default: throw std::runtime_error("Unknown arrow type");
+			case EArrowType::Fwd:     return Append(str, "Fwd");
+			case EArrowType::Back:    return Append(str, "Back");
+			case EArrowType::FwdBack: return Append(str, "FwdBack");
+			}
 		}
 		inline TStr& Append(TStr& str, Colour32 c)
 		{
@@ -199,13 +214,13 @@ namespace pr
 			str += content;
 			return str;
 		}
-		inline TStr& Arrow(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& position, v4 const& direction, Width width)
+		inline TStr& Arrow(TStr& str, typename TStr::value_type const* name, Col colour, EArrowType type, v4 const& position, v4 const& direction, Width width)
 		{
-			return Append(str,"*Arrow",name,colour,"{Fwd ",position.xyz,(position+direction).xyz,width,"}\n");
+			return Append(str,"*Arrow",name,colour,"{",type,position.xyz,(position+direction).xyz,width,"}\n");
 		}
 		inline TStr& Vector(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& position, v4 const& direction, float point_radius)
 		{
-			return Arrow(str,name,colour,position,direction,point_radius);
+			return Arrow(str,name,colour,EArrowType::Fwd,position,direction,point_radius);
 		}
 		inline TStr& Line(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& start, v4 const& end, float t0 = 0.0f, float t1 = 1.0f)
 		{
@@ -397,21 +412,23 @@ namespace pr
 		{
 			return CoordFrame(str,name,colour,basis.m4x4(),scale);
 		}
-		inline TStr& SpatialVector(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& position, v8 const& vec, float point_radius)
+		inline TStr& SpatialVector(TStr& str, typename TStr::value_type const* name, Col colour, v8 const& vec, v4 const& pos, float point_radius = 0)
 		{
 			auto g = Group(str, name, colour);
-			LineD(str, "Ang", 0xFF00FFFF, position, vec.ang);
-			LineD(str, "Lin", 0xFFFFFF00, position, vec.lin);
-			if (point_radius > 0) Box(str, "", colour, point_radius, position);
+			LineD(str, "Ang", Lerp(colour.c,Colour32Black,0.5f), pos, vec.ang);
+			LineD(str, "Lin", colour, pos, vec.lin);
+			if (point_radius > 0) Box(str, "", colour, point_radius, pos);
 			return str;
 		}
-		inline TStr& VectorField(TStr& str, typename TStr::value_type const* name, Col colour, v8 const& vec, v4 const& pos, float scale)
+		inline TStr& VectorField(TStr& str, typename TStr::value_type const* name, Col colour, v8 const& vec, v4 const& pos, float scale = 1.0f, float step = 0.1f)
 		{
 			Append(str,"*Line",name,colour,"{");
-			for (float y = -1.0f; y <= 1.0f; y += 0.1f)
-			for (float x = -1.0f; x <= 1.0f; x += 0.1f)
+			auto fwd = vec.LinAt(v4{});
+			auto ori = fwd != v4{} ? OriFromDir(fwd, AxisId::PosZ) : m3x4Identity;
+			for (float y = -scale; y <= scale; y += step)
+			for (float x = -scale; x <= scale; x += step)
 			{
-				auto pt = v4{x * scale, y * scale, 0, 0};
+				auto pt = ori.x * x + ori.y * y;
 				auto vf = vec.lin + Cross(vec.ang, pt);
 				Append(str, pt.xyz, (pt+vf).xyz);
 			}

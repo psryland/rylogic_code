@@ -224,11 +224,11 @@ namespace pr
 			// There will be duplicates in the buffer because of shared verts/edges in the models.
 			// Sort the results by distance and skip duplicates.
 			LockT<Intercept> lock(dc, stage.get(), 0, D3D11_MAP_READ, 0);
-			auto intercepts = pr::make_array_view(lock.ptr(), MaxIntercepts);
-			intercepts.m_count = pr::index_if(intercepts, [](auto& i){ return i.inst_ptr == nullptr; });
+			auto intercepts = std::make_span(lock.ptr(), MaxIntercepts);
+			intercepts.m_count = index_if(intercepts, [](auto& i){ return i.inst_ptr == nullptr; });
 
 			// Sort by distance
-			pr::sort(intercepts, [](auto& l, auto& r){ return l.ws_intercept.w < r.ws_intercept.w; });
+			sort(intercepts, [](auto& l, auto& r){ return l.ws_intercept.w < r.ws_intercept.w; });
 
 			// Forward each unique intercept to the callback
 			for (int i = 0, iend = int(intercepts.size()); i != iend; )

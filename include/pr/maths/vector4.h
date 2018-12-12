@@ -154,13 +154,29 @@ namespace pr
 	template <typename T> inline float pr_vectorcall w_cp(v4_cref<T> v) { return v.w; }
 
 	#pragma region Operators
+	template <typename T> inline bool pr_vectorcall operator == (v4_cref<T> lhs, v4_cref<T> rhs)
+	{
+		#if PR_MATHS_USE_INTRINSICS
+		return _mm_movemask_ps(_mm_cmpeq_ps(lhs.vec, rhs.vec)) == 0xF;
+		#else
+		return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w;
+		#endif
+	}
+	template <typename T> inline bool pr_vectorcall operator != (v4_cref<T> lhs, v4_cref<T> rhs)
+	{
+		return !(lhs == rhs);
+	}
 	template <typename T> inline Vec4<T> pr_vectorcall operator + (v4_cref<T> vec)
 	{
 		return vec;
 	}
 	template <typename T> inline Vec4<T> pr_vectorcall operator - (v4_cref<T> vec)
 	{
+		#if PR_MATHS_USE_INTRINSICS
+		return Vec4<T>{_mm_sub_ps(_mm_setzero_ps(), vec.vec)};
+		#else
 		return Vec4<T>{-vec.x, -vec.y, -vec.z, -vec.w};
+		#endif
 	}
 	template <typename T> inline Vec4<T> pr_vectorcall operator * (float lhs, v4_cref<T> rhs)
 	{
@@ -231,24 +247,76 @@ namespace pr
 	#pragma region Functions
 
 	// V4 FEql
-	template <typename T> inline bool pr_vectorcall FEqlRelative(v4_cref<T> lhs, v4_cref<T> rhs, float tol)
+	template <typename T> inline bool pr_vectorcall FEqlAbsolute(v4_cref<T> a, v4_cref<T> b, float tol)
 	{
+		// abs(a - b) < tol
 		#if PR_MATHS_USE_INTRINSICS
-		const __m128 zero = {tol, tol, tol, tol};
-		auto d = _mm_sub_ps(lhs.vec, rhs.vec);                         /// d = lhs - rhs
-		auto r = _mm_cmple_ps(_mm_mul_ps(d,d), _mm_mul_ps(zero,zero)); /// r = sqr(d) <= sqr(zero)
+		auto d = _mm_sub_ps(a.vec, b.vec);                 // d = a - b;
+		auto abs_d = _mm_andnot_ps(_mm_set_ps1(-0.0f), d); // d = abs(a - b);
+		auto r = _mm_cmplt_ps(abs_d, _mm_set_ps1(tol));    // r = abs(d) < tol
 		return (_mm_movemask_ps(r) & 0x0f) == 0x0f;
 		#else
 		return
-			FEqlRelative(lhs.x, rhs.x, tol) &&
-			FEqlRelative(lhs.y, rhs.y, tol) &&
-			FEqlRelative(lhs.z, rhs.z, tol) &&
-			FEqlRelative(lhs.w, rhs.w, tol);
+			FEqlAbsolute(lhs.x, rhs.x, tol) &&
+			FEqlAbsolute(lhs.y, rhs.y, tol) &&
+			FEqlAbsolute(lhs.z, rhs.z, tol) &&
+			FEqlAbsolute(lhs.w, rhs.w, tol);
 		#endif
 	}
-	template <typename T> inline bool pr_vectorcall FEql(v4_cref<T> lhs, v4_cref<T> rhs)
+	template <typename T> inline bool pr_vectorcall FEqlAbsolute4(v4_cref<T> a, v4_cref<T> b, float tol)
 	{
-		return FEqlRelative(lhs, rhs, maths::tiny);
+		return FEqlAbsolute(a, b, tol);
+	}
+	template <typename T> inline bool pr_vectorcall FEqlAbsolute3(v4_cref<T> a, v4_cref<T> b, float tol)
+	{
+		return FEqlAbsolute(a.w0(), b.w0(), tol);
+	}
+	template <typename T> inline bool pr_vectorcall FEqlRelative(v4_cref<T> a, v4_cref<T> b, float tol)
+	{
+		// Handles tests against zero where relative error is meaningless
+		// Tests with 'b == 0' are the most common so do them first
+		if (b == v4{}) return MaxElementAbs(a) < tol;
+		if (a == v4{}) return MaxElementAbs(b) < tol;
+
+		// Handle infinities and exact values
+		if (a == b) return true;
+
+		auto abs_max_element = Max(MaxElementAbs(a), MaxElementAbs(b));
+		return FEqlAbsolute(a, b, tol * abs_max_element);
+	}
+	template <typename T> inline bool pr_vectorcall FEqlRelative4(v4_cref<T> a, v4_cref<T> b, float tol)
+	{
+		return FEqlRelative(a, b, tol);
+	}
+	template <typename T> inline bool pr_vectorcall FEqlRelative3(v4_cref<T> a, v4_cref<T> b, float tol)
+	{
+		return FEqlRelative(a.w0(), b.w0(), tol);
+	}
+	template <typename T> inline bool pr_vectorcall FEql(v4_cref<T> a, v4_cref<T> b)
+	{
+		return FEqlRelative(a, b, maths::tiny);
+	}
+	template <typename T> inline bool pr_vectorcall FEql4(v4_cref<T> a, v4_cref<T> b)
+	{
+		return FEqlRelative(a, b, maths::tiny);
+	}
+	template <typename T> inline bool pr_vectorcall FEql3(v4_cref<T> a, v4_cref<T> b)
+	{
+		return FEqlRelative(a.w0(), b.w0(), maths::tiny);
+	}
+
+	// Abs
+	template <typename T> inline Vec4<T> pr_vectorcall Abs(v4_cref<T> v)
+	{
+		#if PR_MATHS_USE_INTRINSICS
+		return _mm_andnot_ps(_mm_set_ps1(-0.0f), v.vec);
+		#else
+		return Vec4<T>{Abs(v.x), Abs(v.y), Abs(v.z), Abs(v.w)};
+		#endif
+	}
+	template <typename T> inline Vec4<T> pr_vectorcall Abs4(v4_cref<T> v)
+	{
+		return Abs(v);
 	}
 
 	// V4 length squared
@@ -275,6 +343,42 @@ namespace pr
 		#else
 		return Len4Sq(v.x, v.y, v.z, v.w);
 		#endif
+	}
+
+	// Largest/Smallest element
+	template <typename T> inline float pr_vectorcall MinElement(v4_cref<T> const& v)
+	{
+		#if PR_MATHS_USE_INTRINSICS
+		// min([x y z w], [y x w z]) = [x<y?x:y y<x?y:x z<w?z:w w<z?w:z] = [a a b b]
+		// min([a a b b], [b b a a]) = [m m m m]
+		auto abcd = v.vec;
+		auto aabb = _mm_min_ps(abcd, _mm_shuffle_ps(abcd, abcd, _MM_SHUFFLE(1, 0, 3, 2)));
+		auto mmmm = _mm_min_ps(aabb, _mm_shuffle_ps(aabb, aabb, _MM_SHUFFLE(2, 3, 0, 1)));
+		return mmmm.m128_f32[0];
+		#else
+		return MinElement4<Vec4<T>, float>(v);
+		#endif
+	}
+	template <typename T> inline float pr_vectorcall MinElement4(v4_cref<T> const& v)
+	{
+		return MinElement(v);
+	}
+	template <typename T> inline float pr_vectorcall MaxElement(v4_cref<T> const& v)
+	{
+		#if PR_MATHS_USE_INTRINSICS
+		// max([x y z w], [y x w z]) = [x>y?x:y y>x?y:x z>w?z:w w>z?w:z] = [a a b b]
+		// max([a a b b], [b b a a]) = [m m m m]
+		auto abcd = v.vec;
+		auto aabb = _mm_max_ps(abcd, _mm_shuffle_ps(abcd, abcd, _MM_SHUFFLE(1, 0, 3, 2)));
+		auto mmmm = _mm_max_ps(aabb, _mm_shuffle_ps(aabb, aabb, _MM_SHUFFLE(2, 3, 0, 1)));
+		return mmmm.m128_f32[0];
+		#else
+		return MaxElement4<Vec4<T>, float>(v);
+		#endif
+	}
+	template <typename T> inline float pr_vectorcall MaxElement4(v4_cref<T> const& v)
+	{
+		return MaxElement(v);
 	}
 
 	// Normalise the 'xyz' components of 'v'. Note: 'w' is also scaled
@@ -379,7 +483,7 @@ namespace pr
 	// Returns a vector perpendicular to 'v'
 	template <typename T> inline Vec4<T> pr_vectorcall Perpendicular(v4_cref<T> v)
 	{
-		assert("Cannot make a perpendicular to a zero vector" && !IsZero3(v));
+		assert("Cannot make a perpendicular to a zero vector" && v != v4{});
 		auto vec = Cross3(v, CreateNotParallelTo(v));
 		vec *= Length3(v) / Length3(vec);
 		return vec;
@@ -452,28 +556,54 @@ namespace pr::maths
 			PR_CHECK(V0.w, VX0.f[3]);
 		}
 		#endif
-		{
-			v4 a(1,2,-3,-4);
+		{// Largest/Smallest element
+			auto v1 = v4{1,-2,-3,4};
+			PR_CHECK(MinElement(v1) == -3, true);
+			PR_CHECK(MaxElement(v1) == +4, true);
+			PR_CHECK(MinElementIndex(v1) == 2, true);
+			PR_CHECK(MaxElementIndex(v1) == 3, true);
+		}
+		{// FEql
+			// Equal if the relative difference is less than tiny compared to the maximum element in the matrix.
+			auto a = v4{0, 0, -1, 0.5f};
+			auto b = v4{0, 0, -1, 0.5f};
+			
+			a.x = a.y = 1.0e-5f;
+			b.x = b.y = 1.1e-5f;
+			PR_CHECK(FEql(MinElement(a), -1.0f), true);
+			PR_CHECK(FEql(MinElement(b), -1.0f), true);
+			PR_CHECK(FEql(MaxElement(a), +0.5f), true);
+			PR_CHECK(FEql(MaxElement(b), +0.5f), true);
+			PR_CHECK(FEql(a,b), true);
+			
+			a.z = a.w = 1.0e-5f;
+			b.z = b.w = 1.1e-5f;
+			PR_CHECK(FEql(MaxElement(a), 1.0e-5f), true);
+			PR_CHECK(FEql(MaxElement(b), 1.1e-5f), true);
+			PR_CHECK(FEql(a,b), false);
+		}
+		{// FEql
+			v4 a(1,1,-1,-1);
 			auto t2 = maths::tiny * 2.0f;
-
-			PR_CHECK(a.x, +1);
-			PR_CHECK(a.y, +2);
-			PR_CHECK(a.z, -3);
-			PR_CHECK(a.w, -4);
-			PR_CHECK( FEql (a, v4(1   ,2,-3,-4)), true);
-			PR_CHECK(!FEql (a, v4(1+t2,2,-3,-4)), true);
-			PR_CHECK( FEql4(a, v4(1   ,2,-3,-4)), true);
-			PR_CHECK(!FEql4(a, v4(1+t2,2,-3,-4)), true);
-			PR_CHECK( FEql3(a, v4(1   ,2,-3,-4+1)), true);
-			PR_CHECK(!FEql3(a, v4(1+t2,2,-3,-4+1)), true);
-			PR_CHECK( FEql2(a, v4(1   ,2,-3+1,-4+1)), true);
-			PR_CHECK(!FEql2(a, v4(1+t2,2,-3+1,-4+1)), true);
+			PR_CHECK(FEql (a, v4(1   ,1,-1,-1)), true);
+			PR_CHECK(FEql (a, v4(1+t2,1,-1,-1)), false);
+			PR_CHECK(FEql4(a, v4(1   ,1,-1,-1)), true);
+			PR_CHECK(FEql4(a, v4(1+t2,1,-1,-1)), false);
+			PR_CHECK(FEql3(a, v4(1   ,1,-1, 0)), true);
+			PR_CHECK(FEql3(a, v4(1+t2,1,-1, 0)), false);
+			PR_CHECK(FEql2(a, v4(1   ,1, 0, 0)), true);
+			PR_CHECK(FEql2(a, v4(1+t2,1, 0, 0)), false);
 		}
 		{
 			v4 a(3,-1,2,-4);
 			v4 b = {-2,-1,4,2};
 			PR_CHECK(Max(a,b), v4(3,-1,4,2));
 			PR_CHECK(Min(a,b), v4(-2,-1,2,-4));
+		}
+		{
+			v4 a(3,-1,2,-4);
+			PR_CHECK(MinElement(a), -4.0f);
+			PR_CHECK(MaxElement(a), 3.0f);
 		}
 		{
 			v4 a(3,-1,2,-4);
@@ -497,10 +627,10 @@ namespace pr::maths
 			PR_CHECK(IsNormal4(c), true);
 		}
 		{
-			PR_CHECK(IsZero3(pr::v4(0,0,0,1)), true);
-			PR_CHECK(IsZero4(pr::v4Zero), true);
-			PR_CHECK(FEql3(pr::v4(1e-20f,0,0,1)     , pr::v4Zero), true);
-			PR_CHECK(FEql4(pr::v4(1e-20f,0,0,1e-19f), pr::v4Zero), true);
+			PR_CHECK(IsZero3(v4(0,0,0,1)), true);
+			PR_CHECK(IsZero4(v4Zero), true);
+			PR_CHECK(FEql3(v4(1e-20f,0,0,1)     , v4Zero), true);
+			PR_CHECK(FEql4(v4(1e-20f,0,0,1e-19f), v4Zero), true);
 		}
 		{
 			v4 a = {-2,  4,  2,  6};

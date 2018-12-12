@@ -14,6 +14,10 @@ namespace pr
 	template <typename T>
 	struct alignas(16) Vec8
 	{
+		// Notes:
+		//  - Spatial vectors describe a vector at a point plus the field of vectors around that point. 
+		//   
+
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
 		union
@@ -59,18 +63,21 @@ namespace pr
 			return reinterpret_cast<Vec8<U> const&>(*this);
 		}
 
-		// Sample the vector field at 'ofs' returning the equivalent linear value assuming ang == 0.
-		v4 LinAt(v4_cref<> ofs)
+		// Sample the vector field at 'ofs'
+		// Returns the direction and magnitude of the vector field at 'ofs'
+		v4 LinAt(v4_cref<> ofs) const
 		{
 			return v4{lin + Cross(ang, ofs)};
 		}
 
-		// Sample the vector field at 'ofs' returning the equivalent angular value assuming lin == 0.
-		v4 AngAt(v4_cref<> ofs)
+		// Sample the vector field at 'ofs'
+		// Not really sure what the physical interpretation of this is.
+		// Returns 'ang - ofs x lin', which is the angular required at 'ofs' to ensure that the angular
+		// is constant over the whole vector field, given that 'ofs x lin' contributes to the angular.
+		v4 AngAt(v4_cref<> ofs) const
 		{
-			return v4{ang + Cross(lin, ofs)};
+			return v4{ang - Cross(ofs, lin)};
 		}
-
 	};
 	static_assert(maths::is_vec<Vec8<void>>::value, "");
 	static_assert(std::is_pod<Vec8<void>>::value, "v8 must be a pod type");
@@ -143,6 +150,20 @@ namespace pr
 		return
 			FEql(lhs.ang, rhs.ang) &&
 			FEql(lhs.lin, rhs.lin);
+	}
+
+	// Project a vector onto an axis. Loosely "dot(vec,axis)*axis"
+	template <typename T> inline Vec8<T> Proj(Vec8<T> const& vec, v4_cref<> axis)
+	{
+		return Vec8<T>{
+			Dot(vec.ang, axis) * axis,
+			Dot(vec.lin, axis) * axis};
+	}
+
+	// Reflect a vector. Reverses the components of 'vec' in the direction of 'normal'
+	template <typename T> inline Vec8<T> Reflect(Vec8<T> const& vec, v4_cref<> normal)
+	{
+		return vec - 2.0f * Proj(vec, normal);
 	}
 
 	#pragma endregion
@@ -225,3 +246,66 @@ namespace pr
 	};
 	#endif
 }
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+
+namespace pr::maths
+{
+	PRUnitTest(Vector8Tests)
+	{
+		std::default_random_engine rng;
+		{// LinAt, AngAt
+			auto v = v8{Random3(rng, v4{}, 10.0f, 0.0f), Random3(rng, v4{}, 10.0f, 0.0f)};
+			auto lin = v.LinAt(v4Origin);
+			auto ang = v.AngAt(v4Origin);
+			auto V = v8{ang, lin};
+			PR_CHECK(FEql(v, V), true);
+		}
+		{// LinAt, AngAt
+			auto v = v8{0, 0, 1, 0, 1, 0};
+
+			auto lin0 = v.LinAt(v4{-1,0,0,0});
+			auto ang0 = v.AngAt(v4{-1,0,0,0});
+			PR_CHECK(FEql(lin0, v4{0,0,0,0}), true);
+			PR_CHECK(FEql(ang0, v4{0,0,2,0}), true);
+
+			auto lin1 = v.LinAt(v4{0,0,0,0});
+			auto ang1 = v.AngAt(v4{0,0,0,0});
+			PR_CHECK(FEql(lin1, v4{0,1,0,0}), true);
+			PR_CHECK(FEql(ang1, v4{0,0,1,0}), true);
+
+			auto lin2 = v.LinAt(v4{+1,0,0,0});
+			auto ang2 = v.AngAt(v4{+1,0,0,0});
+			PR_CHECK(FEql(lin2, v4{0,2,0,0}), true);
+			PR_CHECK(FEql(ang2, v4{0,0,0,0}), true);
+
+			auto lin3 = v.LinAt(v4{+2,0,0,0});
+			auto ang3 = v.AngAt(v4{+2,0,0,0});
+			PR_CHECK(FEql(lin3, v4{0,3,0,0}), true);
+			PR_CHECK(FEql(ang3, v4{0,0,-1,0}), true);
+
+			auto lin4 = v.LinAt(v4{+3,0,0,0});
+			auto ang4 = v.AngAt(v4{+3,0,0,0});
+			PR_CHECK(FEql(lin4, v4{0,4,0,0}), true);
+			PR_CHECK(FEql(ang4, v4{0,0,-2,0}), true);
+		}
+		{// Projection
+			auto v = v8{1,-2,3,-3,2,-1};
+			auto vn = Proj(v, v4ZAxis);
+			auto vt = v - vn;
+			auto r = vn + vt;
+			PR_CHECK(FEql(vn, v8{0,0,3,0,0,-1}), true);
+			PR_CHECK(FEql(vt, v8{1,-2,0,-3,2,0}), true);
+			PR_CHECK(FEql(r, v), true);
+		}
+		{// Projection/Reflect
+			auto v = v8{0, 0, 1, 0, 1, 0};
+			auto n = v4::Normal3(-1,-1,-1,0);
+			auto r = v8{-0.6666666f, -0.6666666f, 0.3333333f, -0.6666666f, 0.3333333f, -0.6666666f};
+			auto R = Reflect(v, n);
+			PR_CHECK(FEql(r, R), true);
+		}
+	}
+}
+#endif

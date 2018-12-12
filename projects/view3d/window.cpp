@@ -560,7 +560,7 @@ namespace view3d
 	pr::BBox Window::SceneBounds(EView3DSceneBounds bounds, int except_count, GUID const* except)
 	{
 		assert(std::this_thread::get_id() == m_main_thread_id);
-		pr::array_view<GUID> except_arr(except, except_count);
+		auto except_arr = std::make_span(except, except_count);
 		auto pred = [](LdrObject const& ob){ return !pr::AllSet(ob.m_flags, ELdrFlags::SceneBoundsExclude); };
 
 		pr::BBox bbox;
@@ -732,7 +732,7 @@ namespace view3d
 	{
 		// Set up the ray cast
 		pr::vector<HitTestRay> ray_casts;
-		for (auto& ray : make_array_view(rays, ray_count))
+		for (auto& ray : std::make_span(rays, ray_count))
 		{
 			HitTestRay r = {};
 			r.m_ws_origin = To<v4>(ray.m_ws_origin);
@@ -743,7 +743,7 @@ namespace view3d
 		// Initialise the results
 		View3DHitTestResult invalid = {};
 		invalid.m_distance = maths::float_max;
-		for (auto& r : make_array_view(hits, ray_count))
+		for (auto& r : std::make_span(hits, ray_count))
 			r = invalid;
 
 		// Create an include function based on the context ids

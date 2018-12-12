@@ -455,9 +455,27 @@ namespace pr
 	}
 
 	// True if 'mat' can be inverted
-	template <typename A, typename B> inline bool pr_vectorcall IsInvertable(m3_cref<A,B> mat)
+	template <typename A, typename B> inline bool pr_vectorcall IsInvertible(m3_cref<A,B> mat)
 	{
 		return Determinant(mat) != 0.0f;
+	}
+
+	// True if 'mat' is symmetric
+	template <typename A, typename B> inline bool pr_vectorcall IsSymmetric(m3_cref<A,B> mat)
+	{
+		return
+			FEql(mat.x.y - mat.y.x, 0) &&
+			FEql(mat.x.z - mat.z.x, 0) &&
+			FEql(mat.y.z - mat.z.y, 0);
+	}
+
+	// True if 'mat' is anti-symmetric
+	template <typename A, typename B> inline bool pr_vectorcall IsAntiSymmetric(m3_cref<A,B> mat)
+	{
+		return
+			FEql(mat.x.y + mat.y.x, 0) &&
+			FEql(mat.x.z + mat.z.x, 0) &&
+			FEql(mat.y.z + mat.z.y, 0);
 	}
 
 	// Invert the orthonormal matrix 'mat'
@@ -467,10 +485,10 @@ namespace pr
 		return static_cast<Mat3x4<B,A>>(Transpose(mat));
 	}
 
-	// Invert the matrix 'mat'
+	// Invert the 3x3 matrix 'mat'
 	template <typename A, typename B> inline Mat3x4<B,A> pr_vectorcall Invert(m3_cref<A,B> mat)
 	{
-		assert("Matrix has no inverse" && IsInvertable(mat));
+		assert("Matrix has no inverse" && IsInvertible(mat));
 		auto det = Determinant(mat);
 		Mat3x4<B,A> tmp = {};
 		tmp.x = Cross3(mat.y, mat.z) / det;

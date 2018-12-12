@@ -4,8 +4,10 @@
 //*********************************************
 #pragma once
 
+#include "pr/collision/collision.h"
 #include "pr/physics2/forward.h"
 #include "pr/physics2/shape/inertia.h"
+#include "pr/physics2/utility/misc.h"
 
 namespace pr::physics
 {
@@ -48,17 +50,20 @@ namespace pr::physics
 
 		// Construct the rigid body with a collision shape
 		// Inertia is not automatically derived from the collision shape, that is left to the caller.
-		RigidBody()
-			:RigidBody((ShapeSphere const*)nullptr)
-		{}
-		template <typename TShape, typename = enable_if_shape<TShape>>
-		explicit RigidBody(TShape const* shape, m4_cref<> o2w = m4x4Identity)
+		//RigidBody()
+		//	:RigidBody((ShapeSphere const*)nullptr)
+		//{}
+		explicit RigidBody(Shape const* shape = nullptr, m4_cref<> o2w = m4x4Identity)
 			:m_o2w(o2w)
 			,m_os_com()
 			,m_ws_momentum()
 			,m_ws_force()
 			,m_os_inertia_inv()
 			,m_shape(collision::shape_cast(shape))
+		{}
+		template <typename TShape, typename = enable_if_shape<TShape>>
+		explicit RigidBody(TShape const* shape, m4_cref<> o2w = m4x4Identity)
+			:RigidBody(collision::shape_cast(shape), o2w)
 		{}
 
 		// Access the collision shape for the rigid body
@@ -90,25 +95,23 @@ namespace pr::physics
 		// Extrapolate the position based on the current momentum and forces
 		m4x4 O2W(float dt) const
 		{
-			// S = So + Vt + 0.5At²
-			//   = So + t * (V + 0.5At)
-			//   = So + 0.5 * t * (2*I^h + (I^f)t)
-			//   = So + 0.5 * t * I^(2*h + ft)
-			auto h = 2.0f * MomentumWS() + dt * ForceWS();
-			auto dx = 0.5f * dt * (InertiaInvWS() * h);
+			return ExtrapolateO2W(O2W(), MomentumWS(), ForceWS(), InertiaInvWS(), dt);
+		}
 
-			// The spatial vectors are object relative so rotation and translation must be applied separately.
-			return m4x4
-			{
-				m3x4::Rotation(dx.ang) * O2W().rot,
-				dx.lin + O2W().pos
-			};
+		// Return the world space bounding box for this object
+		BBox BBoxWS() const
+		{
+			return O2W() * Shape().m_bbox;
 		}
 
 		// The mass of the rigid body
 		float Mass() const
 		{
 			return InertiaInvOS().Mass();
+		}
+		float InvMass() const
+		{
+			return InertiaInvOS().InvMass();
 		}
 
 		// Offset to the centre of mass (w = 0) (Object relative)
@@ -128,7 +131,7 @@ namespace pr::physics
 		}
 		InertiaInv InertiaInvWS() const
 		{
-			return Transform(InertiaInvOS(), O2W().rot);
+			return Rotate(InertiaInvOS(), O2W().rot);
 		}
 		Inertia InertiaOS() const
 		{
@@ -137,6 +140,26 @@ namespace pr::physics
 		Inertia InertiaWS() const
 		{
 			return Invert(InertiaInvWS());
+		}
+
+		// Return the inertia rotated from object space to 'A' space, and translated by 'ofs'
+		Inertia InertiaOS(m3_cref<> o2a, v4_cref<> ofs = v4{}) const
+		{
+			auto inertia = InertiaOS();
+			if (o2a != m3x4Identity)
+				inertia = Rotate(inertia, o2a);
+			if (ofs != v4{})
+				inertia = Translate(inertia, ofs, ETranslateInertia::AwayFromCoM);
+			return inertia;
+		}
+		InertiaInv InertiaInvOS(m3_cref<> o2a, v4_cref<> ofs = v4{}) const
+		{
+			auto inertia¯ = InertiaInvOS();
+			if (o2a != m3x4Identity)
+				inertia¯ = Rotate(inertia¯, o2a);
+			if (ofs != v4{})
+				inertia¯ = Translate(inertia¯, ofs, ETranslateInertia::AwayFromCoM);
+			return inertia¯;
 		}
 
 		// Get/Set the velocity
@@ -163,7 +186,7 @@ namespace pr::physics
 		{
 			// 'ws_ang' and 'ws_lin' are model origin relative
 			auto spatial_velocity = v8m{ws_ang, ws_lin};
-			spatial_velocity = Shift(spatial_velocity, -ws_at);
+			spatial_velocity = Shift(spatial_velocity, CentreOfMassWS() - ws_at);
 			VelocityWS(spatial_velocity);
 		}
 		void VelocityOS(v4_cref<> os_ang, v4_cref<> os_lin, v4_cref<> os_at = v4{})
@@ -218,7 +241,7 @@ namespace pr::physics
 		{
 			assert("'at' should be an offset (in world space) from the object origin" && ws_at.w == 0);
 			auto spatial_force = v8f{ws_torque, ws_force};
-			spatial_force = Shift(spatial_force, -(ws_at - CentreOfMassWS()));
+			spatial_force = Shift(spatial_force, CentreOfMassWS() - ws_at);
 			ApplyForceWS(spatial_force);
 		}
 		void ApplyForceWS(v8f const& ws_force)
@@ -270,11 +293,17 @@ namespace pr::physics
 			return ke;
 		}
 	};
+
+	// Return the world space bounding box for 'rb'
+	inline BBox BBoxWS(RigidBody const& rb)
+	{
+		return rb.BBoxWS();
+	}
 }
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-#include "pr/physics2/shape/inertia_builder.h"
+#include "pr/physics2/shape/inertia.h"
 #include "pr/physics2/integrator/integrator.h"
 
 namespace pr::physics
@@ -284,7 +313,7 @@ namespace pr::physics
 		auto mass = 5.0f;
 		{// Simple case
 			auto rb = RigidBody{};
-			rb.SetMassProperties(InertiaBuilder::Sphere(1).ToInertia(mass), v4{});
+			rb.SetMassProperties(Inertia::Sphere(1, mass), v4{});
 
 			// Apply a force and torque. The force at (0,1,0) cancels out the torque
 			rb.ApplyForceWS(v4{1,0,0,0}, v4{0,0,1,0}, v4{0,1,0,0});
@@ -319,7 +348,7 @@ namespace pr::physics
 		}
 		{// Simple case with rotation
 			auto rb = RigidBody{};
-			rb.SetMassProperties(InertiaBuilder::Sphere(1).ToInertia(mass), v4{});
+			rb.SetMassProperties(Inertia::Sphere(1, mass), v4{});
 
 			// Apply a force and torque. The force at (0,-1,0) doubles the torque
 			rb.ApplyForceWS(v4{1,0,0,0}, v4{0,0,1,0}, v4{0,-1,0,0});
@@ -364,7 +393,7 @@ namespace pr::physics
 		{// Off-centre CoM
 			auto rb = RigidBody{};
 			auto model_to_com = v4{0,1,0,0};
-			rb.SetMassProperties(InertiaBuilder::Sphere(1, model_to_com).ToInertia(mass), model_to_com);
+			rb.SetMassProperties(Inertia::Sphere(1, mass, model_to_com), model_to_com);
 			PR_CHECK(FEql(rb.InertiaOS().To3x3(1), m3x4::Scale(1.4f,0.4f,1.4f)), true);
 
 			// Apply a force and torque at the CoM.
@@ -400,7 +429,7 @@ namespace pr::physics
 		{// Off-centre CoM with rotation
 			auto rb = RigidBody{};
 			auto model_to_com = v4{0,1,0,0};
-			rb.SetMassProperties(InertiaBuilder::Sphere(1, model_to_com).ToInertia(mass), model_to_com);
+			rb.SetMassProperties(Inertia::Sphere(1, mass, model_to_com), model_to_com);
 			
 			// Apply a force and torque at the model origin.
 			rb.ApplyForceWS(v4{1,0,0,0}, v4{0,0,1,0});
@@ -442,7 +471,7 @@ namespace pr::physics
 		{// Off-centre CoM with complex rotation
 			auto rb = RigidBody{};
 			auto model_to_com = v4{0,1,0,0};
-			rb.SetMassProperties(InertiaBuilder::Sphere(1, model_to_com).ToInertia(mass), model_to_com);
+			rb.SetMassProperties(Inertia::Sphere(1, mass, model_to_com), model_to_com);
 			
 			// Apply a force and torque at the model origin.
 			rb.ApplyForceWS(v4{1,0,0,0}, v4{0,-1,0,0}, v4{0,1,1,0}); // +X push at (0,1,1) + -Y twist to cancel rotation => translating along X
@@ -460,7 +489,7 @@ namespace pr::physics
 			auto ws_inertia_inv = rb.InertiaInvWS();
 			auto ws_velocity = ws_inertia_inv * ws_force;
 			auto dpos = m3x4::Rotation(0.5f * ws_velocity.ang); // mid-step rotation
-			ws_inertia_inv = Transform(ws_inertia_inv, dpos);
+			ws_inertia_inv = Rotate(ws_inertia_inv, dpos);
 			auto pos = v4{0.5f/mass,-0.5f/mass,0,1};
 			auto rot = m3x4::Rotation(0.5f * (ws_inertia_inv * v4{0,-1,-1,0}));
 			
@@ -474,7 +503,7 @@ namespace pr::physics
 		}
 		{// Extrapolation
 			auto rb = RigidBody{};
-			rb.SetMassProperties(InertiaBuilder::Sphere(1).ToInertia(mass), v4{});
+			rb.SetMassProperties(Inertia::Sphere(1, mass), v4{});
 			
 			auto vel = v8m{0,0,1, 0,1,0};
 			rb.VelocityWS(vel);
@@ -496,10 +525,13 @@ namespace pr::physics
 			PR_CHECK(FEql(o2w3, O2W3), true);
 		}
 		{// Kinetic Energy
+			std::default_random_engine rng;
+
 			// KE should be the same no matter what frame it's measured in
 			auto rb = RigidBody{};
-			rb.SetMassProperties(InertiaBuilder::Sphere(1).ToInertia(mass), v4{});
+			rb.SetMassProperties(Inertia::Sphere(1, mass), v4{});
 			rb.MomentumWS(v8f{0,0,1, 0,1,0});
+			rb.O2W(Random4x4(rng, v4Origin, 5.0f));
 
 			auto ws_ke = 0.5f * Dot(rb.VelocityWS(), rb.MomentumWS());
 			auto os_ke = 0.5f * Dot(rb.VelocityOS(), rb.MomentumOS());

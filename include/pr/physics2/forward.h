@@ -19,6 +19,7 @@
 #include "pr/maths/spatial.h"
 #include "pr/collision/shapes.h"
 #include "pr/geometry/closest_point.h"
+#include "pr/geometry/intersect.h"
 #include "pr/ldraw/ldr_helper.h"
 
 namespace pr::physics
@@ -29,7 +30,12 @@ namespace pr::physics
 
 	// Forwards
 	struct Material;
+	struct MaterialMap;
 	struct RigidBody;
+	
+	// A container object that groups the parts of a physics system together
+	template <typename TBroadphase, typename TMaterials>
+	struct Engine;
 
 	// Literals
 	constexpr float operator "" _kg(long double mass)
@@ -46,4 +52,7 @@ namespace pr::physics
 	template <> struct is_rb<RigidBody> :std::true_type {};
 
 	template <typename T> using enable_if_rb = typename std::enable_if<is_rb<T>::value>::type;
+
+	// Bring functions into the pr::physics namespace
+	using pr::FEql;
 }

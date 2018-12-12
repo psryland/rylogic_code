@@ -55,6 +55,7 @@ namespace pr
 			{
 				// Careful: We can't be sure of what follows this object in memory.
 				// The polytope data that belongs to this array may not be there yet.
+				// Differ calculating the bounding box to the caller
 			}
 
 			// Vertex accessors
@@ -539,7 +540,7 @@ namespace pr
 			// Check the polytope is in centre of mass frame
 			if (check_com)
 			{
-				//m3x4 inertia = CalcInertiaTensor(shape);
+				//m3x4 inertia = CalcInertia(shape);
 			}
 
 			return true;

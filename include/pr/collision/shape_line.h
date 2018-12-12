@@ -19,7 +19,9 @@ namespace pr
 			ShapeLine(float length, m4_cref<> shape_to_model = m4x4Identity, MaterialId material_id = 0, Shape::EFlags flags = Shape::EFlags::None)
 				:m_base(EShape::Line, sizeof(ShapeLine), shape_to_model, material_id, flags)
 				,m_radius(length * 0.5f)
-			{}
+			{
+				m_base.m_bbox = CalcBBox(*this);
+			}
 			operator Shape const&() const
 			{
 				return m_base;

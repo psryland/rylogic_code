@@ -187,197 +187,6 @@ namespace Rylogic.Maths
 			return new v3(lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z);
 		}
 
-		/// <summary>Return a vector containing the minimum components</summary>
-		[Obsolete] public static v3 Min(v3 lhs, v3 rhs)
-		{
-			 return new v3(
-				 Math.Min(lhs.x, rhs.x),
-				 Math.Min(lhs.y, rhs.y),
-				 Math.Min(lhs.z, rhs.z));
-		}
-		[Obsolete] public static v3 Min(v3 x, params v3[] vecs)
-		{
-			foreach (var v in vecs)
-				x = Min(x,v);
-			return x;
-		}
-
-		/// <summary>Return a vector containing the maximum components</summary>
-		[Obsolete] public static v3 Max(v3 lhs, v3 rhs)
-		{
-			 return new v3(
-				 Math.Max(lhs.x, rhs.x),
-				 Math.Max(lhs.y, rhs.y),
-				 Math.Max(lhs.z, rhs.z));
-		}
-		[Obsolete] public static v3 Max(v3 x, params v3[] vecs)
-		{
-			foreach (var v in vecs)
-				x = Max(x,v);
-			return x;
-		}
-
-		/// <summary>Clamp the components of 'vec' within the ranges of 'min' and 'max'</summary>
-		[Obsolete] public static v3 Clamp(v3 vec, v3 min, v3 max)
-		{
-			return new v3(
-				Math_.Clamp(vec.x, min.x, max.x),
-				Math_.Clamp(vec.y, min.y, max.y),
-				Math_.Clamp(vec.z, min.z, max.z));
-		}
-
-		/// <summary>Component absolute value</summary>
-		[Obsolete] public static v3 Abs(v3 vec)
-		{
-			return new v3(Math.Abs(vec.x), Math.Abs(vec.y), Math.Abs(vec.z));
-		}
-
-		/// <summary>Normalise 'vec' by the length of the XYZ components</summary>
-		[Obsolete] public static v3 Normalise(v3 vec)
-		{
-			return vec / vec.Length;
-		}
-		[Obsolete] public static v3 Normalise(ref v3 vec)
-		{
-			return vec /= vec.Length;
-		}
-
-		/// <summary>Normalise 'vec' by the length of the XYZ components or return 'def' if zero</summary>
-		[Obsolete] public static v3 Normalise(v3 vec, v3 def)
-		{
-			if (vec == Zero) return def;
-			var norm = Normalise(vec);
-			return norm != Zero ? norm : def;
-		}
-
-		/// <summary>Normalise 'vec' by the length of the XY components</summary>
-		[Obsolete] public static v3 Normalise2(v3 vec)
-		{
-			return vec / vec.xy.Length;
-		}
-		[Obsolete] public static v3 Normalise2(ref v3 vec)
-		{
-			return vec /= vec.xy.Length;
-		}
-
-		/// <summary>Normalise 'vec' by the length of the XYZ components</summary>
-		[Obsolete] public static v3 Normalise3(v3 vec)
-		{
-			return vec / vec.Length;
-		}
-		[Obsolete] public static v3 Normalise3(ref v3 vec)
-		{
-			return vec /= vec.Length;
-		}
-
-		/// <summary>Normalise 'vec' by the length of the XY components or return 'def' if zero</summary>
-		[Obsolete] public static v3 Normalise2(v3 vec, v3 def)
-		{
-			if (vec.xy == v2.Zero) return def;
-			var norm = Normalise2(vec);
-			return norm.xy != v2.Zero ? norm : def;
-		}
-
-		/// <summary>Normalise 'vec' by the length of the XYZ components or return 'def' if zero</summary>
-		[Obsolete] public static v3 Normalise3(v3 vec, v3 def)
-		{
-			if (vec == Zero) return def;
-			var norm = Normalise3(vec);
-			return norm != Zero ? norm : def;
-		}
-
-		/// <summary>Dot product of XYZ components</summary>
-		[Obsolete] public static float Dot3(v3 lhs, v3 rhs)
-		{
-			return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z;
-		}
-
-		/// <summary>Cross product of XYZ components</summary>
-		[Obsolete] public static v3 Cross3(v3 lhs, v3 rhs)
-		{
-			return new v3(lhs.y * rhs.z - lhs.z * rhs.y, lhs.z * rhs.x - lhs.x * rhs.z, lhs.x * rhs.y - lhs.y * rhs.x);
-		}
-
-		/// <summary>Triple product of XYZ components</summary>
-		[Obsolete] public static float Triple3(v3 a, v3 b, v3 c)
-		{
-			return Dot3(a, Cross3(b, c));
-		}
-
-		/// <summary>True if 'lhs' and 'rhs' are parallel</summary>
-		[Obsolete] public static bool Parallel(v3 lhs, v3 rhs)
-		{
-			return Math_.FEql(Cross3(lhs, rhs).LengthSq, 0);
-		}
-
-		/// <summary>Linearly interpolate between two vectors</summary>
-		[Obsolete] public static v3 Lerp(v3 lhs, v3 rhs, float frac)
-		{
-			return lhs * (1f - frac) + rhs * (frac);
-		}
-
-		/// <summary>Returns a vector guaranteed to not be parallel to 'vec'</summary>
-		[Obsolete] public static v3 CreateNotParallelTo(v3 vec)
-		{
-			bool x_aligned = Math_.Abs(vec.x) > Math_.Abs(vec.y) && Math_.Abs(vec.x) > Math_.Abs(vec.z);
-			return new v3(Math_.SignF(!x_aligned), 0.0f, Math_.SignF(x_aligned));
-		}
-
-		/// <summary>Returns a vector perpendicular to 'vec'</summary>
-		[Obsolete] public static v3 Perpendicular(v3 vec)
-		{
-			Debug.Assert(!Math_.FEql(vec, Zero), "Cannot make a perpendicular to a zero vector");
-			var v = Cross3(vec, CreateNotParallelTo(vec));
-			v *= vec.Length / v.Length;
-			return v;
-		}
-
-		/// <summary>Returns a vector perpendicular to 'vec' favouring 'previous' as the preferred perpendicular</summary>
-		[Obsolete] public static v3 Perpendicular(v3 vec, v3 previous)
-		{
-			Debug.Assert(!Math_.FEql(vec, Zero), "Cannot make a perpendicular to a zero vector");
-
-			// If 'previous' is parallel to 'vec', choose a new perpendicular (includes previous == zero)
-			if (Parallel(vec, previous))
-				return Perpendicular(vec);
-
-			// If 'previous' is still perpendicular, keep it
-			if (Math_.FEql(Dot3(vec, previous), 0))
-				return previous;
-
-			// Otherwise, make a perpendicular that is close to 'previous'
-			var v = Cross3(Cross3(vec, previous), vec);
-			v *= (float)Math.Sqrt(vec.LengthSq / v.LengthSq);
-			return v;
-		}
-
-		/// <summary>Return the cosine of the angle between two vectors</summary>
-		[Obsolete] public static float CosAngle3(v3 lhs, v3 rhs)
-		{
-			Debug.Assert(lhs.LengthSq != 0 && rhs.LengthSq != 0, "CosAngle undefined for zero vectors");
-			return Math_.Clamp(Dot3(lhs,rhs) / (float)Math.Sqrt(lhs.LengthSq * rhs.LengthSq), -1f, 1f);
-		}
-
-		/// <summary>Return the angle between two vectors</summary>
-		[Obsolete] public static float Angle3(v3 lhs, v3 rhs)
-		{
-			return (float)Math.Acos(CosAngle3(lhs, rhs));
-		}
-
-		/// <summary>Return the average of a collection of vectors</summary>
-		[Obsolete] public static v3 Average(IEnumerable<v3> vecs)
-		{
-			var acc = Zero;
-			var count = 0;
-			foreach (var v in vecs)
-			{
-				acc += v;
-				++count;
-			}
-			if (count == 0) throw new Exception("Cannot average zero items");
-			return acc / count;
-		}
-
 		#region Parse
 		public static v3 Parse3(string s)
 		{
@@ -484,16 +293,34 @@ namespace Rylogic.Maths
 	public static partial class Math_
 	{
 		/// <summary>Approximate equal</summary>
-		public static bool FEqlRelative(v3 lhs, v3 rhs, float tol)
+		public static bool FEqlAbsolute(v3 a, v3 b, float tol)
 		{
 			return
-				FEqlRelative(lhs.x, rhs.x, tol) &&
-				FEqlRelative(lhs.y, rhs.y, tol) &&
-				FEqlRelative(lhs.z, rhs.z, tol);
+				FEqlAbsolute(a.x, b.x, tol) &&
+				FEqlAbsolute(a.y, b.y, tol) &&
+				FEqlAbsolute(a.z, b.z, tol);
 		}
-		public static bool FEql(v3 lhs, v3 rhs)
+		public static bool FEqlRelative(v3 a, v3 b, float tol)
 		{
-			return FEqlRelative(lhs, rhs, TinyF);
+			var max_a = MaxElement(Abs(a));
+			var max_b = MaxElement(Abs(b));
+			if (max_b == 0) return max_a < tol;
+			if (max_a == 0) return max_b < tol;
+			var abs_max_element = Max(max_a, max_b);
+			return FEqlRelative(a, b, tol * abs_max_element);
+		}
+		public static bool FEql(v3 a, v3 b)
+		{
+			return FEqlRelative(a, b, TinyF);
+		}
+
+		/// <summary>Component absolute value</summary>
+		public static v3 Abs(v3 vec)
+		{
+			return new v3(
+				Math.Abs(vec.x),
+				Math.Abs(vec.y),
+				Math.Abs(vec.z));
 		}
 
 		/// <summary>Return true if all components of 'vec' are finite</summary>
@@ -547,15 +374,34 @@ namespace Rylogic.Maths
 				Clamp(vec.z, min.z, max.z));
 		}
 
-		/// <summary>Component absolute value</summary>
-		public static v3 Abs(v3 vec)
+		/// <summary>Return the maximum element value in 'v'</summary>
+		public static float MaxElement(v3 v)
 		{
-			return new v3(
-				Math.Abs(vec.x),
-				Math.Abs(vec.y),
-				Math.Abs(vec.z));
+			var i = v.x >= v.y ? v.x : v.y;
+			return i >= v.z ? i : v.z;
 		}
 
+		/// <summary>Return the minimum element value in 'v'</summary>
+		public static float MinElement(v3 v)
+		{
+			var i = v.x <= v.y ? v.x : v.y;
+			return i <= v.z ? i : v.z;
+		}
+
+		/// <summary>Return the index of the maximum element in 'v'</summary>
+		public static int MaxElementIndex(v3 v)
+		{
+			int i = v.y >= v.z ? 1 : 2;
+			return v.x >= v[i] ? 0 : i;
+		}
+
+		/// <summary>Return the index of the minimum element in 'v'</summary>
+		public static int MinElementIndex(v3 v)
+		{
+			int i = v.y <= v.z ? 1 : 2;
+			return v.x <= v[i] ? 0 : i;
+		}
+		
 		/// <summary>Normalise 'vec' by the length of the XYZ components</summary>
 		public static v3 Normalise(v3 vec)
 		{

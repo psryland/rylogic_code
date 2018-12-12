@@ -557,7 +557,7 @@ namespace pr
 	}
 
 	// True if 'mat' has an inverse
-	template <typename A, typename B> inline bool pr_vectorcall IsInvertable(m4_cref<A,B> mat)
+	template <typename A, typename B> inline bool pr_vectorcall IsInvertible(m4_cref<A,B> mat)
 	{
 		return Determinant4(mat) != 0;
 	}
@@ -772,6 +772,28 @@ namespace pr::maths
 			auto m2 = m4x4Identity;
 			auto m3 = m1 * m2;
 			PR_CHECK(FEql(m3, m4x4Identity), true);
+		}
+		{// Largest/Smallest element
+			auto m1 = m4x4{v4{1,2,3,4}, v4{-2,-3,-4,-5}, v4{1,1,-1,9}, v4{-8, 5, 0, 0}};
+			PR_CHECK(MinElement(m1) == -8, true);
+			PR_CHECK(MaxElement(m1) == +9, true);
+		}
+		{// FEql
+			// Equal if the relative difference is less than tiny compared to the maximum element in the matrix.
+			auto m1 = m4x4Identity;
+			auto m2 = m4x4Identity;
+			
+			m1.x.x = m1.y.y = 1.0e-5f;
+			m2.x.x = m2.y.y = 1.1e-5f;
+			PR_CHECK(FEql(MaxElement(m1), 1), true);
+			PR_CHECK(FEql(MaxElement(m2), 1), true);
+			PR_CHECK(FEql(m1,m2), true);
+			
+			m1.z.z = m1.w.w = 1.0e-5f;
+			m2.z.z = m2.w.w = 1.1e-5f;
+			PR_CHECK(FEql(MaxElement(m1), 1.0e-5f), true);
+			PR_CHECK(FEql(MaxElement(m2), 1.1e-5f), true);
+			PR_CHECK(FEql(m1,m2), false);
 		}
 		{// Multiply scalar
 			auto m1 = m4x4{v4{1,2,3,4}, v4{1,1,1,1}, v4{-2,-2,-2,-2}, v4{4,3,2,1}};
