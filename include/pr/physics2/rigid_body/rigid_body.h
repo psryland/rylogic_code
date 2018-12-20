@@ -44,15 +44,16 @@ namespace pr::physics
 		InertiaInv m_os_inertia_inv;
 
 		// Collision shape
-		Shape const* m_shape;
+		ShapeCRef m_shape;
 
 	public:
 
 		// Construct the rigid body with a collision shape
 		// Inertia is not automatically derived from the collision shape, that is left to the caller.
-		//RigidBody()
-		//	:RigidBody((ShapeSphere const*)nullptr)
-		//{}
+		template <typename TShape, typename = enable_if_shape<TShape>>
+		explicit RigidBody(TShape const* shape, m4_cref<> o2w = m4x4Identity, Inertia const& inertia = {})
+			:RigidBody(shape_cast(shape), o2w, inertia)
+		{}
 		explicit RigidBody(Shape const* shape = nullptr, m4_cref<> o2w = m4x4Identity, Inertia const& inertia = {})
 			:m_o2w(o2w)
 			,m_os_com()
@@ -63,20 +64,53 @@ namespace pr::physics
 		{
 			SetMassProperties(inertia);
 		}
-		template <typename TShape, typename = enable_if_shape<TShape>>
-		explicit RigidBody(TShape const* shape, m4_cref<> o2w = m4x4Identity, Inertia const& inertia = {})
-			:RigidBody(collision::shape_cast(shape), o2w, inertia)
-		{}
 
-		// Access the collision shape for the rigid body
-		template <typename TShape, typename = enable_if_shape<TShape>>
-		TShape const& Shape() const
+		// Raised after the collision shape changes.
+		EventHandler<RigidBody&, ChangeEventArgs<ShapeCRef>> ShapeChange;
+
+		// Get/Set the collision shape for the rigid body
+		template <typename TShape, typename = enable_if_shape<TShape>> TShape const& Shape() const
 		{
-			return shape_cast<TShape>(*m_shape);
+			return shape_cast<TShape>(Shape());
 		}
 		collision::Shape const& Shape() const
 		{
 			return *m_shape;
+		}
+		bool HasShape() const
+		{
+			return m_shape != nullptr;
+		}
+		
+		// Set the shape only, leave the mass properties unchanged
+		// Override this function to catch all changes of collision shape.
+		void Shape(ShapeCRef shape)
+		{
+			ShapeChange(*this, ChangeEventArgs<ShapeCRef>(m_shape, true));
+			m_shape = shape;
+			ShapeChange(*this, ChangeEventArgs<ShapeCRef>(m_shape, false));
+		}
+
+		// Set the shape and derive mass properties from the shape.
+		void Shape(ShapeCRef shape, float mass, bool mass_is_actually_density = false)
+		{
+			// Set the shape
+			Shape(shape);
+
+			// Derive the mass properties from the shape
+			auto mp = CalcMassProperties(*m_shape, mass_is_actually_density ? mass : 1.0f);
+			if (!mass_is_actually_density) mp.m_mass = mass;
+			SetMassProperties(Inertia{mp}, mp.m_centre_of_mass);
+		}
+
+		// Set the shape and mass properties explicitly
+		void Shape(ShapeCRef shape, Inertia inertia, v4_cref<> com = v4{})
+		{
+			// Set the shape
+			Shape(shape);
+
+			// Set the mass properties explicitly
+			SetMassProperties(inertia, com);
 		}
 
 		// Get/Set the body object to world transform
@@ -97,7 +131,9 @@ namespace pr::physics
 		// Extrapolate the position based on the current momentum and forces
 		m4x4 O2W(float dt) const
 		{
-			return ExtrapolateO2W(O2W(), MomentumWS(), ForceWS(), InertiaInvWS(), dt);
+			return Abs(dt) > maths::tiny
+				? ExtrapolateO2W(O2W(), MomentumWS(), ForceWS(), InertiaInvWS(), dt)
+				: O2W();
 		}
 
 		// Return the world space bounding box for this object
@@ -111,9 +147,17 @@ namespace pr::physics
 		{
 			return InertiaInvOS().Mass();
 		}
+		void Mass(float mass)
+		{
+			m_os_inertia_inv.Mass(mass);
+		}
 		float InvMass() const
 		{
 			return InertiaInvOS().InvMass();
+		}
+		void InvMass(float invmass)
+		{
+			return m_os_inertia_inv.InvMass(invmass);
 		}
 
 		// Offset to the centre of mass (w = 0) (Object relative)

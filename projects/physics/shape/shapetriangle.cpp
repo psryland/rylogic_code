@@ -91,7 +91,7 @@ v4 pr::ph::SupportVertex(ShapeTriangle const& shape, v4 const& direction, std::s
 	d.y = Dot3(direction, shape.m_v.y);
 	d.z = Dot3(direction, shape.m_v.z);
 	d.w = 0.0f;
-	sup_vert_id = LargestElement3(d);
+	sup_vert_id = MaxElementIndex3(d);
 	return shape.m_v[(int)sup_vert_id];
 }
 

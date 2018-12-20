@@ -136,7 +136,7 @@ void BPSweepAndPrune::EnumPairs(EnumPairsFunc func, void* context)
 
 	// Compute the variance
 	v4 variance = sum_sq - Sqr(sum) / static_cast<float>(m_entity.size());
-	m_axis = LargestElement3(variance);
+	m_axis = MaxElementIndex3(variance);
 }
 
 // Enumerate all overlaps with 'entity'

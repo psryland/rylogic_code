@@ -39,7 +39,7 @@ namespace pr
 			DSBlock           m_dsb;          // Scene-wide states
 			RSBlock           m_rsb;          // Scene-wide states
 			BSBlock           m_bsb;          // Scene-wide states
-			EvtAutoSub        m_eh_resize;    // RT resize event handler subscription
+			EventAutoSub      m_eh_resize;    // RT resize event handler subscription
 
 			Scene(Window& wnd, std::initializer_list<ERenderStep> rsteps = {ERenderStep::ForwardRender}, SceneView const& view = SceneView());
 

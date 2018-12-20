@@ -12,6 +12,7 @@
 #include "pr/common/cast.h"
 #include "pr/common/flags_enum.h"
 #include "pr/common/scope.h"
+#include "pr/common/multi_cast.h"
 #include "pr/str/to_string.h"
 #include "pr/container/vector.h"
 #include "pr/container/byte_data.h"

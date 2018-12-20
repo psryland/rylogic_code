@@ -8,29 +8,44 @@ namespace pr::physics
 {
 	struct Material
 	{
+		// Notes:
+		//  The interaction between elasticity and friction is described in the impulse restitution function.
+
 		static int const NoID = -1;
 		static int const DefaultID = 0;
 
-		int m_id;                 // Unique id for this material
-		float m_density;          // Material density in kg/m^3
-		float m_friction_static;  // Co-efficient of static friction: 0 = no friction, 1 = infinite friction
-		float m_friction_dynamic; // Co-efficient of dynamic friction: 0 = no friction, 1 = infinite friction
-		float m_elasticity_norm;  // Co-efficient of elasticity in the collision normal direction. aka restitution: 0 = inelastic, 1 = completely elastic
-		float m_elasticity_tang;  // Co-efficient of elasticity in the collision tangent direction: -1 = reverses tangential velocity, 0.0f = stops tangential velocity, 1.0f = frictionless
+		int m_id;                // Unique id for this material
+		float m_density;         // Material density in kg/m^3
+		float m_friction_static; // Static friction: 0 = no friction, 1 = infinite friction
+		float m_elasticity_norm; // Elasticity in the collision normal direction: [0,+1]
+		float m_elasticity_tang; // Elasticity in the collision tangential direction: [-1,+1]
+		float m_elasticity_tors; // Angular elasticity in the collision normal direction: 1 = elastic, 0 = inelastic
 
 		Material(
-			int id                 = DefaultID,
-			float density          = 1000.0f,
-			float friction_static  = 0.5f,
-			float friction_dynamic = 0.5f,
-			float elasticity_norm  = 1.0f,//0.5f,
-			float elasticity_tang  = 0.0f)
+			int id                = DefaultID,
+			float friction_static = 1.0f,
+			float elasticity_norm = 1.0f,
+			float elasticity_tang = 1.0f,
+			float elasticity_tors = 0.0f,
+			float density         = 1000.0f)
 			:m_id(id)
-			,m_density(density)
 			,m_friction_static(friction_static)
-			,m_friction_dynamic(std::min(friction_static, friction_dynamic))
 			,m_elasticity_norm(elasticity_norm)
 			,m_elasticity_tang(elasticity_tang)
+			,m_elasticity_tors(elasticity_tors)
+			,m_density(density)
 		{}
+
+		// Merge the properties of two contacting materials
+		static Material Merge(Material const& mat0, Material const& mat1)
+		{
+			return Material(
+				Material::NoID,
+				Sqrt(mat0.m_friction_static * mat1.m_friction_static),
+				(mat0.m_elasticity_norm + mat1.m_elasticity_norm) * 0.5f,
+				(mat0.m_elasticity_tang + mat1.m_elasticity_tang) * 0.5f,
+				(mat0.m_elasticity_tors + mat1.m_elasticity_tors) * 0.5f,
+				(mat0.m_density + mat1.m_density) * 0.5f);
+		}
 	};
 }

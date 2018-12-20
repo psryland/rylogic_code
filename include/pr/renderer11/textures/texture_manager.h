@@ -41,7 +41,7 @@ namespace pr
 			TexFileLookup            m_lookup_fname;     // A map from hash of filepath to an existing dx texture
 			pr::vector<Texture2DPtr> m_stock_textures;   // A collection of references to the stock textures
 			pr::GdiPlus              m_gdiplus;          //
-			EvtAutoSub               m_eh_resize;        // Event handler subscription for the RT resize event
+			EventAutoSub             m_eh_resize;        // Event handler subscription for the RT resize event
 			int                      m_gdi_dc_ref_count; // Used to detect outstanding DC references
 
 		public:

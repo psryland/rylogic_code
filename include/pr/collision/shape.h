@@ -217,6 +217,20 @@ namespace pr
 			return shape;
 		}
 		
+		// A constant reference to a shape
+		struct ShapeCRef
+		{
+			Shape const* m_shape;
+			ShapeCRef(Shape const* shape) :m_shape(shape) {}
+			ShapeCRef(Shape const& shape) :m_shape(&shape) {}
+			template <typename TShape, typename = enable_if_shape<TShape>> ShapeCRef(TShape const& shape) :m_shape(&shape.m_base) {}
+			template <typename TShape, typename = enable_if_shape<TShape>> ShapeCRef(TShape const* shape) :m_shape(shape.m_base) {}
+			Shape const* operator ->() const { return m_shape; }
+			Shape const& operator *() const { return *m_shape; }
+			operator Shape const*() const { return m_shape; }
+			operator Shape const&() const { return *m_shape; }
+		};
+
 		// Return a shape to use in place of a real shape for objects that don't need a shape really
 		inline Shape* NoShape()
 		{
@@ -224,7 +238,7 @@ namespace pr
 			return &s_no_shape;
 		}
 
-		// Calculate the bounding box for a shape.
+		// Calculate the bounding box for a shape (in parent space, i.e. includes m_s2p)
 		template <typename = void> inline BBox CalcBBox(Shape const& shape)
 		{
 			switch (shape.m_type)
@@ -235,6 +249,7 @@ namespace pr
 			case EShape::Line:     return CalcBBox(shape_cast<ShapeLine>(shape));
 			case EShape::Triangle: return CalcBBox(shape_cast<ShapeTriangle>(shape));
 			case EShape::Polytope: return CalcBBox(shape_cast<ShapePolytope>(shape));
+			case EShape::Array:    return CalcBBox(shape_cast<ShapeArray>(shape));
 			}
 		}
 

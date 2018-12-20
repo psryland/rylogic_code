@@ -37,6 +37,14 @@ namespace pr
 			{
 				return m_base;
 			}
+			operator Shape const*() const
+			{
+				return &m_base;
+			}
+			operator Shape*()
+			{
+				return &m_base;
+			}
 
 			// use 'next(Shape*)' to increment the iterator
 			Shape const* begin() const { return reinterpret_cast<Shape const*>(this + 1); }
@@ -47,13 +55,12 @@ namespace pr
 		static_assert(is_shape<ShapeArray>::value, "");
 
 		// Calculate the bounding box for the shape.
-		// Assumes child shape bounding boxes have been set already
 		inline BBox CalcBBox(ShapeArray const& shape)
 		{
 			auto bb = BBoxReset;
 			for (Shape const* i = shape.begin(), *i_end = shape.end(); i != i_end; i = next(i))
-				Encompass(bb, i->m_s2p * i->m_bbox);
-			return bb;
+				Encompass(bb, CalcBBox(*i));
+			return shape.m_base.m_s2p * bb;
 		}
 	}
 }

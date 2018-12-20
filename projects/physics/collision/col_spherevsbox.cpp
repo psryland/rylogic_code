@@ -68,7 +68,7 @@ void pr::ph::SphereVsBox(Shape const& sphere, m4x4 const& a2w, Shape const& box,
 	if( dist_sq < maths::tiny )
 	{
 		// Find the closest point on the box to the centre of the sphere
-		int largest = LargestElement3(Abs(b2s));
+		int largest = MaxElementIndex3(Abs(b2s));
 		float sign = (b2s[largest] > 0.0f) * 2.0f - 1.0f;
 
 		// Sphere contact point

@@ -17,7 +17,7 @@ namespace pr
 	{
 		namespace collision
 		{
-			CollisionFunction g_detection_functions[pr::TriTable<EShape_NumberOf, pr::tri_table::EType::Inclusive>::size] =
+			CollisionFunction g_detection_functions[tri_table::Size(tri_table::EType::Inclusive, EShape_NumberOf)] =
 			{
 				SphereVsSphere,			// EShape_Sphere   - EShape_Sphere
 
@@ -87,7 +87,7 @@ void pr::ph::UnknownVsUnknown(Shape const& shapeA, m4x4 const&, Shape const& sha
 // Return a function appropriate for detecting collisions between 'objA' and 'objB'
 CollisionFunction pr::ph::GetCollisionDetectionFunction(Shape const& objA, Shape const& objB)
 {
-	return collision::g_detection_functions[pr::tri_table::Index<pr::tri_table::EType::Inclusive>(objA.m_type, objB.m_type)];
+	return collision::g_detection_functions[tri_table::Index(tri_table::EType::Inclusive, objA.m_type, objB.m_type)];
 }
 
 // Collide two shapes

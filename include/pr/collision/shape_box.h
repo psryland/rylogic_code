@@ -18,7 +18,7 @@ namespace pr::collision
 			:m_base(EShape::Box, sizeof(ShapeBox), shape_to_model, material_id, flags)
 			,m_radius(dim * 0.5f)
 		{
-			assert(dim.w == 0.0f);
+			assert(dim.x > 0 && dim.y > 0 && dim.z > 0 && dim.w == 0);
 			m_base.m_bbox = CalcBBox(*this);
 		}
 		ShapeBox(BBox_cref bbox, MaterialId material_id = 0, Shape::EFlags flags = Shape::EFlags::None)
@@ -35,13 +35,21 @@ namespace pr::collision
 		{
 			return m_base;
 		}
+		operator Shape const*() const
+		{
+			return &m_base;
+		}
+		operator Shape*()
+		{
+			return &m_base;
+		}
 	};
 	static_assert(is_shape<ShapeBox>::value, "");
 
 	// Return the bounding box for a box shape
 	inline BBox CalcBBox(ShapeBox const& shape)
 	{
-		return BBox(v4Origin, shape.m_radius);
+		return shape.m_base.m_s2p * BBox(v4Origin, shape.m_radius);
 	}
 
 	// Shift the centre of a box shape

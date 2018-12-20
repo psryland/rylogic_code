@@ -40,7 +40,7 @@ namespace pr
 			BSBlock                      m_bsb;              // Blend states
 			RSBlock                      m_rsb;              // Raster states
 			DSBlock                      m_dsb;              // Depth buffer states
-			EvtAutoSub                   m_evt_model_delete; // Event subscription for model deleted notification
+			EventAutoSub                 m_evt_model_delete; // Event subscription for model deleted notification
 			std::recursive_mutex mutable m_mutex;            // Sync access to the drawlist
 
 			explicit RenderStep(Scene& scene);

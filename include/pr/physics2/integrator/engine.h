@@ -14,12 +14,22 @@
 
 namespace pr::physics
 {
+	// ToDo:
+	//  - Make use of sub step collision time
+	//  - Stop Evolve adding energy to the system (higher order integrating?)
+	//  - Use spatial vectors for impulse restitution
+	//  - Optimise the impulse restitution function
+
 	// A container object that groups the parts of a physics system together
 	template <typename TBroadphase, typename TMaterials = MaterialMap>
 	struct Engine
 	{
 		TBroadphase m_broadphase;
 		TMaterials m_materials;
+
+		// Raised after collision detection, but before resolution.
+		// The collisions list can be modified by event handlers.
+		EventHandler<Engine&, std::vector<Contact>&> PostCollisionDetection;
 
 		// Evolve the physics objects forward in time and resolve any collisions
 		template <typename TRigidBodyCont>
@@ -50,6 +60,9 @@ namespace pr::physics
 			// Assign an increasing 'island' number to each Contact. If a preceding contact involves one of the same objects, use the lowest number
 			std::sort(std::begin(collision_queue), std::end(collision_queue), [](auto& lhs, auto& rhs){ return lhs.m_time < rhs.m_time; });
 
+			// Notify of detected collisions, and allow updates/additions
+			PostCollisionDetection(*this, collision_queue);
+
 			// Resolve collisions
 			for (auto& c : collision_queue)
 				ResolveCollision(c);
@@ -70,10 +83,6 @@ namespace pr::physics
 			if (!collision::Collide(objA.Shape(), m4x4Identity, objB.Shape(), c.m_b2a, c))
 				return false;
 
-			// Get the relative velocity of the bodies in objA space.
-			// 'c.m_velocity' is value of objB's velocity vector field sampled at objA's origin.
-			c.m_velocity = c.m_b2a * objB.VelocityOS() - objA.VelocityOS();
-
 			// If the collision point is moving out of collision, ignore the collision.
 			auto rel_vel_at_point = c.m_velocity.LinAt(c.m_point);
 			if (Dot(rel_vel_at_point, c.m_axis) > 0)
@@ -86,10 +95,17 @@ namespace pr::physics
 			// Determine the parametric value for the time of the collision by estimating the A-space position
 			// of 'c.m_point' at t0 assuming linear velocity (because it's faster and easier)
 			auto point_at_t0 = c.m_point - dt * c.m_velocity.LinAt(c.m_point);
-			auto distance = Abs(Dot(c.m_point - point_at_t0, c.m_axis)); // from 'point_at_t0' to 'point_at_t1' in the direction of 'c.m_axis'
-			c.m_time = distance > c.m_depth ? c.m_depth / distance : 0.0f;
-			c.m_time = 1.0f - Clamp(c.m_time, 0.0f, 1.0f);
-		
+			
+			// The distance from 'point_at_t0' to 'point_at_t1' in the direction of 'c.m_axis'
+			auto distance = Abs(Dot(c.m_point - point_at_t0, c.m_axis));
+
+			// The collision time is a negative value so that position_at_collision = position_now + time * velocity_now
+			// If 'c.m_depth' is zero then the point in only just in collision.
+			// If 'c.m_depth' = 'distance' then the point was in collision in the last frame.
+			auto sub_step = distance > c.m_depth ? -c.m_depth / distance : 0.0f;
+
+			// Adjust the collision point and relative transform to the collision time
+			c.update(sub_step * dt);
 			return true;
 		}
 
@@ -117,12 +133,28 @@ namespace pr::physics
 			auto h_before = objA.MomentumWS() + objB.MomentumWS();
 			#endif
 
-			// Calculate the world space restitution impulse (measured at the collision point)
-			auto impulse_pair = RestitutionImpulseWS(c);
+			// Calculate the world space restitution impulse
+			auto impulse_pair = RestitutionImpulse(c);
 
 			// Apply the impulse to the objects
 			objA.MomentumOS(objA.MomentumOS() + impulse_pair.m_os_impulse_objA);
 			objB.MomentumOS(objB.MomentumOS() + impulse_pair.m_os_impulse_objB);
+
+			{
+				auto c2 = c;
+				c2.update(0);
+
+				std::string str;
+				ldr::RigidBody(str, "body0", 0x80FF0000, objA, ldr::ERigidBodyFlags::None, &m4x4Identity);
+				ldr::RigidBody(str, "body1", 0x8000FF00, objB, ldr::ERigidBodyFlags::None, &c.m_b2a);
+				ldr::Arrow(str, "Normal", 0xFFFFFFFF, ldr::EArrowType::Fwd, c.m_point_at_t, c.m_axis * 0.1f, 5);
+				ldr::VectorField(str, "VelocityBefore", 0xFFFFFF00, (v8)c.m_velocity * 0.1f, v4Origin, 2, 0.25f);
+				ldr::VectorField(str, "VelocityAfter", 0xFF00FFFF, (v8)c2.m_velocity * 0.1f, v4Origin, 2, 0.25f);
+				//ldr::VectorField(str, "ImpulseField", 0xFF007F00, (v8)impulse * 0.1f, v4Origin, 5, 0.25f);
+				//ldr::Arrow(str, "Impulse", 0xFF0000FF, ldr::EArrowType::Fwd, c.m_point - impulse.lin, impulse.lin, 3);
+				//ldr::Arrow(str, "Twist", 0xFF000080, ldr::EArrowType::Fwd, c.m_point - impulse.ang, impulse.ang, 3);
+				ldr::Write(str, L"P:\\dump\\collision.ldr");
+			}
 
 			// Collisions should not add energy to the system and momentum should be conserved.
 			#if PR_DBG
@@ -138,21 +170,6 @@ namespace pr::physics
 		//	assert("Collision caused an increase in linear momentum" && h_lin_diff <= 0);
 		//	assert("Collision caused an increase in K.E." && ke_diff <= 0);
 			#endif
-		}
-
-		// Dump the collision scene to LDraw script
-		void Dump(Contact const& c)
-		{
-			using namespace pr::ldr;
-
-			std::string str;
-			ldr::RigidBody(str, "ObjA", 0x80FF0000, *c.m_objA, 0.1f, ERigidBodyFlags::None, &m4x4Identity);
-			ldr::RigidBody(str, "ObjB", 0x8000FF00, *c.m_objB, 0.1f, ERigidBodyFlags::None, &c.m_b2a);
-			
-			ldr::Box(str, "Contact", 0xFFFFFF00, 0.005f, c.m_point);
-			ldr::SpatialVector(str, "Velocity", 0xFFFFFF00, (v8)c.m_velocity * 0.1f, c.m_point, 0.f);//1, 0.25f);
-
-			ldr::Write(str, L"P:\\dump\\collision.ldr");
 		}
 	};
 }

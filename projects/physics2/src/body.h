@@ -6,38 +6,33 @@ static int BodyIndex;
 
 struct Body :physics::RigidBody
 {
-	// Collision shape instance
-	physics::ShapeBox m_shape_box;
-	physics::ShapeSphere m_shape_sphere;
-
 	// Graphics for the object
 	View3DObject m_gfx;
 
-	static std::wstring Desc(physics::Shape const& shape)
-	{
-		static std::default_random_engine rng;
-		
-		std::string str;
-		ldr::Shape(str, "Body", RandomRGB(rng), shape, m4x4Identity);
-		return ::pr::Widen(str);
-		//return pr::FmtS(L"*Box b %08X { 1 1 1 }", RandomRGB(rng()).argb);
-	}
-
 	Body()
-		:physics::RigidBody(BodyIndex++ == 0 ? &m_shape_sphere.m_base : &m_shape_box.m_base)
-		,m_shape_box(v4{1,1,1,0})
-		,m_shape_sphere(0.5f)
-		,m_gfx(View3D_ObjectCreateLdr(Desc(*m_shape).c_str(), false, nullptr, nullptr))
+		:physics::RigidBody()
+		,m_gfx()
 	{
-		using namespace physics;
+		ShapeChange += [&](auto&,auto args)
+		{
+			if (args.before())
+			{
+				View3D_ObjectDelete(m_gfx);
+				m_gfx = nullptr;
+			}
+			else
+			{
+				if (HasShape())
+				{
+					static std::default_random_engine rng;
 
-		// Set the inertia
-		auto mp = CalcMassProperties(*m_shape, 10.0f);
-		mp.m_mass = 10.0f;
-		SetMassProperties(physics::Inertia{mp}, mp.m_centre_of_mass);
-
-		// Update the graphics
-		UpdateGfx();
+					std::string str;
+					ldr::RigidBody(str, "Body", RandomRGB(rng, 1.0f), *this);
+					m_gfx = View3D_ObjectCreateLdr(::pr::Widen(str).c_str(), false, nullptr, nullptr);
+				}
+				UpdateGfx();
+			}
+		};
 	}
 	~Body()
 	{
@@ -48,6 +43,7 @@ struct Body :physics::RigidBody
 	// Position the graphics at the rigid body location
 	void UpdateGfx()
 	{
-		View3D_ObjectO2WSet(m_gfx, view3d::To<View3DM4x4>(m_o2w), nullptr);
+		if (m_gfx)
+			View3D_ObjectO2WSet(m_gfx, view3d::To<View3DM4x4>(m_o2w), nullptr);
 	}
 };

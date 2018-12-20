@@ -32,13 +32,21 @@ namespace pr
 			{
 				return m_base;
 			}
+			operator Shape const*() const
+			{
+				return &m_base;
+			}
+			operator Shape*()
+			{
+				return &m_base;
+			}
 		};
 		static_assert(is_shape<ShapeSphere>::value, "");
 
-		// Return the bounding box for a sphere shape
+		// Return the bounding box for a sphere shape (in parent space)
 		inline BBox CalcBBox(ShapeSphere const& shape)
 		{
-			return BBox(v4Origin, v4(shape.m_radius, shape.m_radius, shape.m_radius, 0.0f));
+			return BBox(shape.m_base.m_s2p.pos, v4(shape.m_radius, shape.m_radius, shape.m_radius, 0.0f));
 		}
 
 		// Shift the centre of a sphere

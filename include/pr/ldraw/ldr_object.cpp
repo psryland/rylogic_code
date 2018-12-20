@@ -625,7 +625,7 @@ namespace pr
 			case EKeyword::ScreenSpace:
 				{
 					// Use a magic number to signal screen space mode to the ApplyState function
-					obj->m_screen_space = EvtSub((evt::IEventHandler*)1, 0);
+					obj->m_screen_space = EventSub((evt::IEventHandler*)1, 0);
 					return true;
 				}
 			case EKeyword::Font:

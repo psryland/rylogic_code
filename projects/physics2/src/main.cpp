@@ -5,6 +5,9 @@ using namespace pr;
 using namespace pr::gui;
 using namespace pr::physics;
 
+#define TEST_PAIR 1
+std::default_random_engine rng;
+
 struct MainUI :Form
 {
 	using Physics = Engine<broadphase::Brute<Body>, MaterialMap>;
@@ -14,8 +17,14 @@ struct MainUI :Form
 	double m_clock;
 	int m_steps;
 
-	Body m_body[10];
+	#if TEST_PAIR
+	Body m_body[2];
+	#else
+	Body m_body[2];
+	#endif
 	Physics m_physics;
+	ShapeSphere m_sph;
+	ShapeBox m_box;
 
 	MainUI()
 		:Form(MakeFormParams<>().name("main-ui").title(L"Rylogic Physics").start_pos(EStartPosition::Manual).xy(1000, 50).padding(0).wndclass(RegisterWndClass<MainUI>()))
@@ -25,12 +34,14 @@ struct MainUI :Form
 		,m_steps()
 		,m_body()
 		,m_physics()
+		,m_sph(0.5f)
+		#if TEST_PAIR
+		,m_box(v4{maths::inv_root2f, maths::inv_root2f, maths::inv_root2f, 0}, m4x4::Transform(0, 0, maths::tau_by_8f, v4Origin))
+		#else
+		,m_box(Abs(Random3(rng, v4{0.8f}, v4{1.4f}, 0)))
+		#endif
 	{
-		for (auto& body : m_body)
-			View3D_WindowAddObject(m_view3d.m_win, body.m_gfx);
-
 		Reset();
-
 		m_view3d.Key += [&](Control&, KeyEventArgs const& args)
 		{
 			if (args.m_down && args.m_vk_key == 'R')
@@ -48,33 +59,65 @@ struct MainUI :Form
 		m_clock = 0;
 		
 		// Reset the bodies
-		std::default_random_engine rng;
 		for (auto& body : m_body)
 		{
+			body.Shape(m_box, 10.0f);
 			body.ZeroForces();
 			body.ZeroMomentum();
 			
-			auto o2w = Random4x4(rng, v4Origin, 15.0f);
-			o2w.pos.xyz += o2w.pos.xyz;
+			auto o2w = Random4x4(rng, v4Origin, 5.0f);
+			//o2w.pos.xyz += o2w.pos.xyz;
 			body.O2W(o2w);
 		}
 
-		//auto A = float(maths::tau_by_8);
-		
-		//m_body[0].O2W(m4x4::Transform(0*A,0*A,0*A, v4{-1, 0.4f, 0.6f, 1}));
-		//m_body[1].O2W(m4x4::Transform(0*A,0*A,0*A, v4{+1, 0.0f, 1.0f, 1}));
-		//m_body[1].VelocityWS(v4{0*1,0,0,0}, v4{-0.6f, +0.3f, -0.3f, 0});
+		#if !TEST_PAIR
+		m_physics.m_materials(0).m_elasticity_norm = 0;
+		#else
+		{// Test case setup
+			auto& objA = m_body[0];
+			auto& objB = m_body[1];
+			objA.Shape(m_box, physics::Inertia::Box(v4{0.5f,0.5f,0.5f,0}, 10.0f));
+			objB.Shape(m_box, physics::Inertia::Box(v4{0.5f,0.5f,0.5f,0}, 10.0f));
+			objA.O2W(m4x4::Transform(0, 0, 0, v4{-0.5f, -0.0f, 1, 1}));
+			objB.O2W(m4x4::Transform(0, 0, 0, v4{+0.5f, +0.1f, 1, 1}));
 
-		m_body[0].O2W(m4x4::Transform(0,0,0, v4{-0.5f, 0.0f, 1.0f, 1}));
-		m_body[1].O2W(m4x4::Transform(0,0,0, v4{-3*maths::tiny + Sqrt(Sqr(0.5f) + Sqr(0.5f)), 0.0f, 1.0f, 1}));
-		m_body[1].VelocityWS(v4{0,0,1,0}, v4{+0.0f, +0.0f, -0.0f, 0});
+			objA.Mass(10);
+			objB.Mass(5);
+			objA.VelocityWS(v4{0,0,0,0}, v4{+0, 0, 0, 0});
+			objB.VelocityWS(v4{0,0,0,0}, v4{-10,-10, 0, 0});
+
+			// Self detaching handler
+			static EventSub sub;
+			sub = m_physics.PostCollisionDetection += [&](Physics const&, std::vector<physics::Contact>& contacts)
+			{
+				m_physics.PostCollisionDetection -= sub;
+				return;
+
+				contacts.resize(0);
+
+				physics::Contact c(objA, objB);
+				c.m_axis = Normalise(v4{Cos(maths::tauf/16), Sin(maths::tauf/16),0,0});
+				c.m_point = v4{0.5f, 0, 0, 0};
+				c.m_mat.m_friction_static = 1.0f;
+				c.m_mat.m_elasticity_norm = 0.0f;
+				c.m_mat.m_elasticity_tors = -1.0f;
+				c.update(0);
+				contacts.push_back(c);
+
+			};
+		}
+		#endif
 
 		// Reset the broad phase
 		m_physics.m_broadphase.Clear();
 		for (auto& body : m_body)
 			m_physics.m_broadphase.Add(body);
 
+		for (auto& body : m_body)
+			View3D_WindowAddObject(m_view3d.m_win, body.m_gfx);
+
 		Render(0);
+
 		View3D_ResetView(m_view3d.m_win, View3DV4{+0.0f,0,-1,0}, View3DV4{0,1,0,0}, 0, TRUE, TRUE);
 	}
 
@@ -89,12 +132,7 @@ struct MainUI :Form
 		auto dt = float(elapsed_seconds);
 		//auto dt = 1.0f;
 
-		#if 0
-
-		//auto accel = v4Origin - m_body[0].O2W().pos; accel.y = accel.z = 0;
-		//auto w_dot = accel;//v4{};//Cross(v4YAxis, accel);
-		//m_body[0].ApplyForceWS(m_body[0].Mass() * accel, m_body[0].InertiaWS() * w_dot);
-		//Dump();
+		#if TEST_PAIR
 
 		m_physics.Step(dt, m_body);
 
@@ -111,7 +149,7 @@ struct MainUI :Form
 				float const G = 1.0f;
 				auto sep = body0.O2W(dt/2).pos - body1.O2W(dt/2).pos;
 				auto r_sq = Length3Sq(sep);
-				if (r_sq > 0.5_m)
+				if (r_sq > Sqr(0.1_m))
 				{
 					auto force_mag = G * body0.Mass() * body1.Mass() / r_sq;
 					auto force = force_mag * sep / Sqrt(r_sq);
@@ -159,9 +197,8 @@ struct MainUI :Form
 		auto flags = ERigidBodyFlags::All;
 
 		std::string str;
-		ldr::RigidBody(str, "body0", 0x8000FF00, m_body[0], 0.1f, flags);
-		ldr::RigidBody(str, "body1", 0x10FF0000, m_body[1], 0.1f, flags);
-		//ldr::RigidBody(str, "body2", 0x100000FF, m_body[2], 0.1f, flags);
+		ldr::RigidBody(str, "body0", 0x8000FF00, m_body[0], flags, nullptr, 0.1f);
+		ldr::RigidBody(str, "body1", 0x10FF0000, m_body[1], flags, nullptr, 0.1f);
 		ldr::Write(str, L"P:\\dump\\physics_dump.ldr");
 	}
 

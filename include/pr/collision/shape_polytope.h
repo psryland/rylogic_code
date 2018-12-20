@@ -94,6 +94,14 @@ namespace pr
 			{
 				return m_base;
 			}
+			operator Shape const*() const
+			{
+				return &m_base;
+			}
+			operator Shape*()
+			{
+				return &m_base;
+			}
 		};
 		static_assert(is_shape<ShapePolytope>::value, "");
 		using PolyIdx       = ShapePolytope::Idx;
@@ -106,7 +114,7 @@ namespace pr
 			auto bbox = BBoxReset;
 			for (v4 const *v = shape.vert_beg(), *vend = shape.vert_end(); v != vend; ++v)
 				Encompass(bbox, *v);
-			return bbox;
+			return shape.m_base.m_s2p * bbox;
 		}
 
 		// Return the volume of the polytope

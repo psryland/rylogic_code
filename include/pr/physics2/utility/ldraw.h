@@ -7,28 +7,32 @@ namespace pr::ldr
 {
 	enum class ERigidBodyFlags
 	{
-		None   = 0,
-		AVel   = 1 << 0,
-		LVel   = 1 << 1,
-		AMom   = 1 << 2,
-		LMom   = 1 << 3,
-		Force  = 1 << 4,
-		Torque = 1 << 5,
-		All    = ~0,
+		None    = 0,
+		Origin  = 1 << 0,
+		CoM     = 1 << 1,
+		AVel    = 1 << 2,
+		LVel    = 1 << 3,
+		AMom    = 1 << 4,
+		LMom    = 1 << 5,
+		Force   = 1 << 6,
+		Torque  = 1 << 7,
+		Default = Origin,
+		All     = ~0,
 		_bitwise_operators_allowed,
 	};
-	inline TStr& RigidBody(TStr& str, typename TStr::value_type const* name, Col colour, physics::RigidBody const& rb, float scale = 0.1f, ERigidBodyFlags flags = ERigidBodyFlags::None, m4x4 const* o2w = nullptr)
+	inline TStr& RigidBody(TStr& str, typename TStr::value_type const* name, Col colour, physics::RigidBody const& rb, ERigidBodyFlags flags = ERigidBodyFlags::Default, m4x4 const* o2w = nullptr, float scale = 0.1f)
 	{
-		Shape(str, name, colour, rb.Shape(), o2w ? *o2w : rb.O2W());
-
-		auto n = Nest(str);
-		CoordFrame(str, "Origin", 0xFFFFFFFF, m4x4Identity, 0.1f);
-		CoordFrame(str, "CoM", 0xFF404040, m4x4::Translation(rb.CentreOfMassOS().w1()), 0.1f);
+		GroupStart(str, name, colour);
+		Shape(str, "Shape", colour, rb.Shape());
 		if (flags != ERigidBodyFlags::None)
 		{
 			auto os_momentum = scale * rb.MomentumOS();
 			auto os_velocity = scale * rb.VelocityOS();
 			auto os_force    = scale * rb.ForceOS();
+			if (bool(flags & ERigidBodyFlags::Origin))
+				CoordFrame(str, "Origin", 0xFFFFFFFF, m4x4Identity, 0.1f);
+			if (bool(flags & ERigidBodyFlags::CoM))
+				CoordFrame(str, "CoM", 0xFF404040, m4x4::Translation(rb.CentreOfMassOS().w1()), 0.1f);
 			if (bool(flags & ERigidBodyFlags::LVel))
 				Arrow(str, "LVel", 0xFF00FFFF, EArrowType::Fwd, v4Origin, os_velocity.lin, 2);
 			if (bool(flags & ERigidBodyFlags::AVel))
@@ -42,6 +46,7 @@ namespace pr::ldr
 			if (bool(flags & ERigidBodyFlags::Torque))
 				Arrow(str, "Torque", 0xFF000080, EArrowType::Fwd, v4Origin, os_force.ang.w1(), 8);
 		}
+		GroupEnd(str, o2w ? *o2w : rb.O2W());
 		return str;
 	}
 }

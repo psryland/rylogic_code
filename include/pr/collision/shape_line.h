@@ -30,12 +30,20 @@ namespace pr
 			{
 				return m_base;
 			}
+			operator Shape const*() const
+			{
+				return &m_base;
+			}
+			operator Shape*()
+			{
+				return &m_base;
+			}
 		};
 
 		// Return the bounding box for a line shape
 		inline BBox CalcBBox(ShapeLine const& shape)
 		{
-			return BBox(v4Origin, v4(0, 0, shape.m_radius, 0.0f));
+			return shape.m_base.m_s2p * BBox(v4Origin, v4(0, 0, shape.m_radius, 0.0f));
 		}
 
 		// Shift the centre of a line

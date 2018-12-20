@@ -404,19 +404,19 @@ namespace pr
 			// Note: try not to use the RdrInstance members for things other than rendering
 			// they can temporarily have different models/transforms/etc during rendering of
 			// object bounding boxes etc.
-			m4x4          m_o2p;           // Object to parent transform (or object to world if this is a top level object)
-			ELdrObject        m_type;          // Object type
-			LdrObject*        m_parent;        // The parent of this object, 0 for top level instances.
-			ObjectCont        m_child;         // A container of pointers to child instances
-			string32          m_name;          // A name for the object
-			GUID              m_context_id;    // The id of the context this instance was created in
-			Colour32      m_base_colour;   // The original colour of this object
-			uint          m_colour_mask;   // A bit mask for applying the base colour to child objects
-			Animation         m_anim;          // Animation data
-			BBoxInstance      m_bbox_instance; // Used for rendering the bounding box for this instance
-			EvtSub            m_screen_space;  // True if this object should be rendered in screen space
-			ELdrFlags         m_flags;         // Property flags controlling meta behaviour of the object
-			UserData      m_user_data;     // User data
+			m4x4         m_o2p;           // Object to parent transform (or object to world if this is a top level object)
+			ELdrObject   m_type;          // Object type
+			LdrObject*   m_parent;        // The parent of this object, 0 for top level instances.
+			ObjectCont   m_child;         // A container of pointers to child instances
+			string32     m_name;          // A name for the object
+			GUID         m_context_id;    // The id of the context this instance was created in
+			Colour32     m_base_colour;   // The original colour of this object
+			uint         m_colour_mask;   // A bit mask for applying the base colour to child objects
+			Animation    m_anim;          // Animation data
+			BBoxInstance m_bbox_instance; // Used for rendering the bounding box for this instance
+			EventSub     m_screen_space;  // True if this object should be rendered in screen space
+			ELdrFlags    m_flags;         // Property flags controlling meta behaviour of the object
+			UserData     m_user_data;     // User data
 
 			LdrObject(ObjectAttributes const& attr, LdrObject* parent, Guid const& context_id);
 			~LdrObject();

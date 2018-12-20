@@ -29,6 +29,14 @@ namespace pr::collision
 		{
 			return m_base;
 		}
+		operator Shape const*() const
+		{
+			return &m_base;
+		}
+		operator Shape*()
+		{
+			return &m_base;
+		}
 	};
 	static_assert(is_shape<ShapeTriangle>::value, "");
 
@@ -39,7 +47,7 @@ namespace pr::collision
 		Encompass(bbox, shape.m_v.x);
 		Encompass(bbox, shape.m_v.y);
 		Encompass(bbox, shape.m_v.z);
-		return bbox;
+		return shape.m_base.m_s2p * bbox;
 	}
 
 	// Shift the centre of a triangle

@@ -158,7 +158,16 @@ namespace pr::physics
 			return
 				mass <  ZeroMass ? InfiniteMass :
 				mass >= InfiniteMass ? 0.0f :
-				1.0f/mass;
+				1.0f / mass;
+		}
+		void InvMass(float invmass)
+		{
+			assert("Mass must be positive" && invmass >= 0);
+			assert(!isnan(invmass));
+			m_com_and_mass.w =
+				invmass <  ZeroMass ? InfiniteMass :
+				invmass >= InfiniteMass ? 0.0f :
+				1.0f / invmass;
 		}
 
 		// Offset from the origin of the space this inertia is in to the centre of mass.
@@ -395,22 +404,32 @@ namespace pr::physics
 				im >= InfiniteMass ? 0.0f :
 				1.0f / im;
 		}
+		void Mass(float mass)
+		{
+			assert("Mass must be positive" && mass >= 0);
+			assert(!isnan(mass));
+			m_com_and_invmass.w =
+				mass <  ZeroMass ? InfiniteMass :
+				mass >= InfiniteMass ? 0.0f :
+				1.0f / mass;
+		}
 
 		// The inverse mass
 		float InvMass() const
 		{
-			auto im = m_com_and_invmass.w;
+			auto invmass = m_com_and_invmass.w;
 			return
-				im <  ZeroMass ? 0.0f :
-				im >= InfiniteMass ? InfiniteMass :
-				im;
+				invmass <  ZeroMass ? 0.0f :
+				invmass >= InfiniteMass ? InfiniteMass :
+				invmass;
 		}
 		void InvMass(float invmass)
 		{
 			assert("Mass must be positive" && invmass >= 0);
+			assert(!isnan(invmass));
 			m_com_and_invmass.w =
-				invmass < ZeroMass ? 0.0f :
-				invmass > InfiniteMass ? InfiniteMass :
+				invmass <  ZeroMass ? 0.0f :
+				invmass >= InfiniteMass ? InfiniteMass :
 				invmass;
 		}
 

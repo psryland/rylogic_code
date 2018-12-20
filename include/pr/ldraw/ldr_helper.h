@@ -27,6 +27,12 @@ namespace pr
 		using TStr = std::string;
 		using Scope = pr::Scope<std::function<void()>,std::function<void()>>;
 
+		struct Pos
+		{
+			v4 m_pos;
+			Pos(v4 const& pos) :m_pos(pos) {}
+			Pos(m4x4 const& mat) :m_pos(mat.pos) {}
+		};
 		struct O2W
 		{
 			m4x4 m_mat;
@@ -147,6 +153,13 @@ namespace pr
 		{
 			return Append(str, m.x, m.y, m.z, m.w);
 		}
+		inline TStr& Append(TStr& str, Pos const& p)
+		{
+			if (p.m_pos == v4Origin)
+				return str;
+			else
+				return Append(AppendSpace(str), "*o2w{*pos{",p.m_pos.xyz,"}}");
+		}
 		inline TStr& Append(TStr& str, O2W const& o2w)
 		{
 			if (o2w.m_mat == m4x4Identity)
@@ -168,11 +181,11 @@ namespace pr
 		{
 			return Append(str, "*Group", name, colour, "{\n");
 		}
-		inline TStr& GroupEnd(TStr& str, m4x4 const& o2w = m4x4Identity)
+		inline TStr& GroupEnd(TStr& str, O2W const& o2w = m4x4Identity)
 		{
-			return Append(str, O2W(o2w), "\n}\n");
+			return Append(str, o2w, "\n}\n");
 		}
-		inline Scope Group(TStr& str, typename TStr::value_type const* name, Col colour = 0xFFFFFFFF, m4x4 const& o2w = m4x4Identity)
+		inline Scope Group(TStr& str, typename TStr::value_type const* name, Col colour = 0xFFFFFFFF, O2W const& o2w = m4x4Identity)
 		{
 			std::function<void()> doit = [&]{ GroupStart(str, name, colour); };
 			std::function<void()> undo = [&]{ GroupEnd(str, o2w); };
@@ -182,11 +195,11 @@ namespace pr
 		{
 			return Append(str, "*CoordFrame", name, Col(colour), "{\n");
 		}
-		inline TStr& FrameEnd(TStr& str, m4x4 const& o2w = m4x4Identity)
+		inline TStr& FrameEnd(TStr& str, O2W const& o2w = m4x4Identity)
 		{
 			return Append(str, O2W(o2w), "\n}\n");
 		}
-		inline Scope Frame(TStr& str, typename TStr::value_type const* name, Col colour = 0xFFFFFFFF, m4x4 const& o2w = m4x4Identity)
+		inline Scope Frame(TStr& str, typename TStr::value_type const* name, Col colour = 0xFFFFFFFF, O2W const& o2w = m4x4Identity)
 		{
 			std::function<void()> doit = [&]{ FrameStart(str, name, colour); };
 			std::function<void()> undo = [&]{ FrameEnd(str, o2w); };
@@ -281,21 +294,17 @@ namespace pr
 		{
 			return Append(str,"*Ellipse",name,colour,"{",axis_id,major,minor,O2W(centre),"}\n");
 		}
-		inline TStr& Sphere(TStr& str, typename TStr::value_type const* name, Col colour, float radius, v4 const& position)
+		inline TStr& Sphere(TStr& str, typename TStr::value_type const* name, Col colour, float radius, Pos const& position)
 		{
-			return Append(str, "*Sphere",name,colour,"{",radius,O2W(position),"}\n");
+			return Append(str, "*Sphere",name,colour,"{",radius,position,"}\n");
 		}
-		inline TStr& Box(TStr& str, typename TStr::value_type const* name, Col colour, float dim, v4 const& position)
+		inline TStr& Box(TStr& str, typename TStr::value_type const* name, Col colour, float dim, Pos const& position)
 		{
-			return Append(str,"*Box",name,colour,"{",dim, O2W(position),"}\n");
+			return Append(str,"*Box",name,colour,"{",dim,position,"}\n");
 		}
-		inline TStr& Box(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& dim, v4 const& position)
+		inline TStr& Box(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& dim, O2W const& o2w)
 		{
-			return Append(str,"*Box",name,colour,"{",dim.xyz,O2W(position),"}\n");
-		}
-		inline TStr& Box(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& dim, m4x4 const& o2w)
-		{
-			return Append(str,"*Box",name,colour,"{",dim.xyz,O2W(o2w),"}\n");
+			return Append(str,"*Box",name,colour,"{",dim.xyz,o2w,"}\n");
 		}
 		inline TStr& BoxList(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& dim, v4 const* positions, int count)
 		{
@@ -307,9 +316,9 @@ namespace pr
 		{
 			return Append(str,"*LineBox",name,colour,"{",dim.xyz,O2W(position),"}\n");
 		}
-		inline TStr& Frustum(TStr& str, typename TStr::value_type const* name, Col colour, AxisId axis, float fovY, float aspect, float nplane, float fplane, m4x4 const& o2w)
+		inline TStr& Frustum(TStr& str, typename TStr::value_type const* name, Col colour, AxisId axis, float fovY, float aspect, float nplane, float fplane, O2W const& o2w)
 		{
-			return Append(str, "*FrustumFA", name, colour, "{", axis, RadiansToDegrees(fovY), aspect, nplane, fplane, O2W(o2w), "}\n");
+			return Append(str, "*FrustumFA", name, colour, "{", axis, RadiansToDegrees(fovY), aspect, nplane, fplane, o2w, "}\n");
 		}
 		inline TStr& Frustum(TStr& str, typename TStr::value_type const* name, Col colour, float dist, float width, float height, float nplane, float fplane)
 		{
@@ -318,7 +327,7 @@ namespace pr
 			auto fovY = 2.0f * atan(0.5f * height / dist);
 			return Frustum(str, name, colour, AxisId::NegZ, fovY, aspect, nplane, fplane, m4x4Identity);
 		}
-		inline TStr& Frustum(TStr& str, typename TStr::value_type const* name, Col colour, pr::Frustum const& f, float nplane, float fplane, m4x4 const& o2w)
+		inline TStr& Frustum(TStr& str, typename TStr::value_type const* name, Col colour, pr::Frustum const& f, float nplane, float fplane, O2W const& o2w)
 		{
 			return Frustum(str, name, colour, AxisId::NegZ, f.FovY(), f.Aspect(), nplane, fplane, o2w);
 		}
@@ -330,13 +339,13 @@ namespace pr
 		{
 			return Frustum(str, name, colour, f, 0.0f, f.ZDist(), m4x4Identity);
 		}
-		inline TStr& Cylinder(TStr& str, typename TStr::value_type const* name, Col colour, m4x4 const& o2w, int axis_id, float height, float radius)
+		inline TStr& Cylinder(TStr& str, typename TStr::value_type const* name, Col colour, int axis_id, float height, float radius, O2W const& o2w)
 		{
-			return Append(str,"*CylinderHR",name,colour,"{",axis_id,height,radius,O2W(o2w),"}\n");
+			return Append(str,"*CylinderHR",name,colour,"{",axis_id,height,radius,o2w,"}\n");
 		}
-		inline TStr& CapsuleHR(TStr& str, typename TStr::value_type const* name, Col colour, m4x4 const& o2w, int axis_id, float length, float radius)
+		inline TStr& CapsuleHR(TStr& str, typename TStr::value_type const* name, Col colour, int axis_id, float length, float radius, O2W const& o2w)
 		{
-			return Append(str,"*CapsuleHR",name,colour,"{",axis_id,length,radius,O2W(o2w),"}\n");
+			return Append(str,"*CapsuleHR",name,colour,"{",axis_id,length,radius,o2w,"}\n");
 		}
 		inline TStr& Quad(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& x1, v4 const& x2, v4 const& x3, v4 const& x4)
 		{
@@ -359,15 +368,15 @@ namespace pr
 		{
 			Append(str,"*Plane",name,colour,"{",ClosestPoint_PointToPlane(centre, plane).xyz,plane::Direction(plane::Normalise(plane)).xyz,size,size,"}\n");
 		}
-		inline TStr& Triangle(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& a, v4 const& b, v4 const& c, m4x4 const& o2w)
+		inline TStr& Triangle(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& a, v4 const& b, v4 const& c, O2W const& o2w)
 		{
-			return Append(str,"*Triangle",name,colour,"{",a.xyz,b.xyz,c.xyz,O2W(o2w),"}\n");
+			return Append(str,"*Triangle",name,colour,"{",a.xyz,b.xyz,c.xyz,o2w,"}\n");
 		}
 		inline TStr& Triangle(TStr& str, typename TStr::value_type const* name, Col colour, v4 const& a, v4 const& b, v4 const& c)
 		{
 			return Triangle(str, name, colour, a, b, c, m4x4Identity);
 		}
-		inline TStr& Triangle(TStr& str, typename TStr::value_type const* name, Col colour, v4 const* verts, int const* faces, int num_faces, m4x4 const& o2w)
+		inline TStr& Triangle(TStr& str, typename TStr::value_type const* name, Col colour, v4 const* verts, int const* faces, int num_faces, O2W const& o2w)
 		{
 			Append(str,"*Triangle",name,colour,"{\n");
 			for (int const* i = faces, *i_end = i + 3*num_faces; i < i_end;)
@@ -377,7 +386,7 @@ namespace pr
 				Append(str, verts[*i++].xyz);
 				Append(str,"\n");
 			}
-			return Append(str, O2W(o2w),"}\n");
+			return Append(str, o2w,"}\n");
 		}
 		inline TStr& ConvexPolygon(TStr& str, typename TStr::value_type const* name, Col colour, v4 const* points, int count)
 		{
@@ -436,7 +445,7 @@ namespace pr
 			return str;
 		}
 
-		template <typename VCont, typename ICont> inline TStr& Mesh(TStr& str, typename TStr::value_type const* name, Col colour, VCont const& verts, ICont const& indices, int indices_per_prim, m4x4 const& o2w)
+		template <typename VCont, typename ICont> inline TStr& Mesh(TStr& str, typename TStr::value_type const* name, Col colour, VCont const& verts, ICont const& indices, int indices_per_prim, O2W const& o2w)
 		{
 			auto v    = std::begin(verts);
 			auto vend = std::end(verts);
@@ -447,9 +456,9 @@ namespace pr
 				[&](){ return i != iend ? &*i++ : nullptr; },
 				indices_per_prim, o2w);
 		}
-		template <typename VFunc, typename IFunc> inline TStr& MeshFn(TStr& str, typename TStr::value_type const* name, Col colour, VFunc verts, IFunc indices, int indices_per_prim, m4x4 const& o2w)
+		template <typename VFunc, typename IFunc> inline TStr& MeshFn(TStr& str, typename TStr::value_type const* name, Col colour, VFunc verts, IFunc indices, int indices_per_prim, O2W const& o2w)
 		{
-			Append(str,"*Mesh",name,colour,"{\n",O2W(o2w));
+			Append(str,"*Mesh",name,colour,"{\n",o2w);
 
 			Append(str, "*Verts {");
 			for (auto v = verts(); v != nullptr; v = verts())

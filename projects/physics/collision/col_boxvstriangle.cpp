@@ -255,8 +255,8 @@ void pr::ph::BoxVsTriangle(Shape const& objA, m4x4 const& a2w, Shape const& objB
 
 		int tri_vert_idx;
 		float sep = t2b.pos[i];
-		if( sep > 0.0f )	{ tri_vert_idx = SmallestElement3(tri_bs[i]); }
-		else				{ tri_vert_idx = LargestElement3(tri_bs[i]); }
+		if( sep > 0.0f )	{ tri_vert_idx = MinElementIndex3(tri_bs[i]); }
+		else				{ tri_vert_idx = MaxElementIndex3(tri_bs[i]); }
 		float overlap = -Abs(sep) + box.m_radius[i] + Abs(tri_bs[i][tri_vert_idx]);
 		if( overlap < 0.0f )
 			return; // No collision
