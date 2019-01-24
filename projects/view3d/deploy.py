@@ -1,8 +1,8 @@
 ﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 # deploy.py [nowait]
-import sys, os, shutil, re
-sys.path.append(re.sub(r"^(.*\\pr\\).*", r"\1script", sys.path[0]))
+import sys, os, shutil
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "script")))
 import Rylogic as Tools
 import UserVars
 
@@ -20,7 +20,7 @@ try:
 	nowait = True if "nowait" in [arg.lower() for arg in sys.argv] else False
 	trace  = True if "trace"  in [arg.lower() for arg in sys.argv] else False
 
-	sln = UserVars.root + "\\build\\rylogic.sln"
+	sln = os.path.join(UserVars.root, "build", "rylogic.sln")
 	projects = [ # e.g: "\"folder\proj_name:Rebuild\""
 		"view3d",
 		]

@@ -320,7 +320,7 @@ namespace pr::physics
 			c.m_mat.m_friction_static =  0.0f; // frictionless
 			c.m_mat.m_elasticity_norm = +1.0f; // elastic
 			c.m_mat.m_elasticity_tors = +1.0f; // elastic
-			c.update();
+			c.update(0);
 			Dump(c);
 
 			impulse_pair = RestitutionImpulse(c);
@@ -342,7 +342,7 @@ namespace pr::physics
 			c.m_mat.m_friction_static = 1.0f; // sticky
 			c.m_mat.m_elasticity_norm = 1.0f; // elastic
 			c.m_mat.m_elasticity_tors = 1.0f; // elastic
-			c.update();
+			c.update(0);
 			Dump(c);
 
 			// Tangential component is frictionless so velocity should be reflected
@@ -365,7 +365,7 @@ namespace pr::physics
 			c.m_mat.m_friction_static = 0.0f; // frictionless
 			c.m_mat.m_elasticity_norm = 1.0f; // elastic
 			c.m_mat.m_elasticity_tors = -1.0f; // anti-elastic
-			c.update();
+			c.update(0);
 			Dump(c);
 
 			// Tangential component is frictionless so velocity should be reflected
@@ -393,7 +393,7 @@ namespace pr::physics
 			c.m_mat.m_friction_static = 1.0f; // sticky
 			c.m_mat.m_elasticity_norm = 1.0f; // elastic
 			c.m_mat.m_elasticity_tors = 1.0f; // elastic
-			c.update();
+			c.update(0);
 			Dump(c);
 
 			// Collision should produce a near-zero impulse because the collision is
@@ -414,7 +414,7 @@ namespace pr::physics
 			c.m_mat.m_friction_static = 1.0f; // sticky
 			c.m_mat.m_elasticity_norm = 1.0f; // elastic
 			c.m_mat.m_elasticity_tors = 1.0f; // elastic
-			c.update();
+			c.update(0);
 			Dump(c);
 
 			// Impulses are still near zero because the normal component of the impulse is zero

@@ -669,14 +669,14 @@ namespace Rylogic.Gui.WinForms
 	public static class ComboBox_
 	{
 		/// <summary>Add a range</summary>
-		public static void AddRange<T>(this ComboBox.ObjectCollection cb, IEnumerable<T> objs)
+		public static void AddRange<T>(this System.Windows.Forms.ComboBox.ObjectCollection cb, IEnumerable<T> objs)
 		{
 			foreach (var obj in objs)
 				cb.Add(obj);
 		}
 
 		/// <summary>Return the auto-sized with of the drop down menu from it's current content</summary>
-		public static int DropDownWidthAutoSize(this ComboBox cb)
+		public static int DropDownWidthAutoSize(this System.Windows.Forms.ComboBox cb)
 		{
 			// Notes: attach to 
 			//  cb.DropDown += (s,a) => cb.DropDownWidth = DropDownWidthAutoSize();
@@ -690,7 +690,7 @@ namespace Rylogic.Gui.WinForms
 					return mi.Invoke(x, null).ToString();
 				});
 		}
-		private static int DropDownWidthAutoSize(this ComboBox cb, Func<object, string> description)
+		private static int DropDownWidthAutoSize(this System.Windows.Forms.ComboBox cb, Func<object, string> description)
 		{
 			// Calculate the width of the items (includes DataSource)
 			var width = cb.Width;
@@ -704,7 +704,7 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Auto size the drop down list to the content. Attach to 'cb.DropDown'</summary>
 		public static void DropDownWidthAutoSize(object sender, EventArgs args)
 		{
-			var cb = (ComboBox)sender;
+			var cb = (System.Windows.Forms.ComboBox)sender;
 			cb.DropDownWidth = DropDownWidthAutoSize(cb);
 		}
 
@@ -732,7 +732,7 @@ namespace Rylogic.Gui.WinForms
 	public static class ListBox_
 	{
 		/// <summary>List box select all implementation.</summary>
-		public static void SelectAll(this ListBox lb)
+		public static void SelectAll(this System.Windows.Forms.ListBox lb)
 		{
 			if (lb.SelectionMode == SelectionMode.MultiSimple ||
 				lb.SelectionMode == SelectionMode.MultiExtended)
@@ -740,13 +740,13 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>List box select none implementation.</summary>
-		public static void SelectNone(this ListBox lb)
+		public static void SelectNone(this System.Windows.Forms.ListBox lb)
 		{
 			Enumerable.Range(0, lb.Items.Count).ForEach(i => lb.SetSelected(i, false));
 		}
 
 		/// <summary>ListBox copy implementation. Returns true if something was added to the clip board</summary>
-		public static bool Copy(this ListBox lb)
+		public static bool Copy(this System.Windows.Forms.ListBox lb)
 		{
 			var d = string.Join("\n", lb.SelectedItems.Cast<object>().Select(x => x.ToString()));
 			if (!d.HasValue()) return false;
@@ -758,7 +758,7 @@ namespace Rylogic.Gui.WinForms
 		public static void SelectAll(object sender, KeyEventArgs e)
 		{
 			if (e.Handled) return; // already handled
-			var lb = (ListBox)sender;
+			var lb = (System.Windows.Forms.ListBox)sender;
 			if (!e.Control || e.KeyCode != Keys.A) return;
 			SelectAll(lb);
 			e.Handled = true;
@@ -768,7 +768,7 @@ namespace Rylogic.Gui.WinForms
 		public static void Copy(object sender, KeyEventArgs e)
 		{
 			if (e.Handled) return; // already handled
-			var lb = (ListBox)sender;
+			var lb = (System.Windows.Forms.ListBox)sender;
 			if (!e.Control || e.KeyCode != Keys.C) return;
 			if (!Copy(lb)) return;
 			e.Handled = true;
@@ -3470,7 +3470,7 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>A smarter set text that does sensible things with the caret position</summary>
-		public static void SetText(this ToolStripComboBox cb, string text)
+		public static void SetText(this System.Windows.Forms.ToolStripComboBox cb, string text)
 		{
 			var idx = cb.SelectionStart;
 			cb.SelectedText = text;

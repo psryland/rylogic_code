@@ -1187,18 +1187,18 @@ namespace Rylogic.Interop.Win32
 		/// <summary>Helper method for loading a dll from a platform specific path. 'dllname' should include the extn</summary>
 		public static IntPtr LoadDll(string dllname, string dir = @".\lib\$(platform)\$(config)")
 		{
-			Func<string,IntPtr> TryLoad = path =>
+			HWND TryLoad(string path)
 			{
 				var module = LoadLibrary(path);
 				if (module != IntPtr.Zero)
 					return module;
-				
+
 				var msg = GetLastErrorString();
 				throw new Exception(
-					$"Found dependent library '{path}' but it failed to load.\r\n"+
-					$"This is likely to be because a library that '{path}' is dependent on failed to load.\r\n"+
+					$"Found dependent library '{path}' but it failed to load.\r\n" +
+					$"This is likely to be because a library that '{path}' is dependent on failed to load.\r\n" +
 					$"Last Error: {msg}");
-			};
+			}
 
 			var searched = new List<string>();
 

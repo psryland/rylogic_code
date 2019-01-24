@@ -88,7 +88,7 @@ namespace Rylogic.Maths
 			if (Math_.FEql(line0_length_sq, 0f))                                    { t0 = 0.0f; t1 = Math_.Clamp( f / line1_length_sq, 0.0f, 1.0f); return; }
 			if (Math_.FEql(line1_length_sq, 0f))                                    { t1 = 0.0f; t0 = Math_.Clamp(-c / line0_length_sq, 0.0f, 1.0f); return; }
 
-			// The general nondegenerate case starts here
+			// The general non-degenerate case starts here
 			float b = Math_.Dot(line0, line1);
 			float denom = line0_length_sq * line1_length_sq - b * b; // Always non-negative
 

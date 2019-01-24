@@ -1,4 +1,5 @@
-﻿using System;
+﻿//#define PR_CB_TRACE
+using System;
 using System.Collections;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -17,11 +18,24 @@ namespace Rylogic.Gui.WinForms
 	[DebuggerDisplay("Value={Value} Text={Text} Valid={Valid}")]
 	public class ComboBox :System.Windows.Forms.ComboBox
 	{
+		// Notes:
+		//
 		// ValueBox is very similar to this class, maintain both.
-		// Replacement for the forms combo box that doesn't throw a first chance
-		// exception when the data source is empty
+		//
+		// ComboBox has two use cases:
+		//  - DropDownList - where the selection must be one of the values from the drop down list.
+		//  - DropDown - The value may be one from the drop down list, but doesn't have to be.
+		//  The tricky one is the second case, because the ComboBox only displays strings but
+		//  the items in the ComboBox are unknown types. When the ComboBox text is changed it
+		//  should match at item from the list if possible.
+		//
+		// 'SelectedItem' is the item from the list,
+		// 'Text' is the displayed text in the ComboBox.
+		// 'Value' is either 'SelectedItem', 'Text' converted to the value type, or a default value type.
 		//
 		// Notes:
+		// - Replacement for the forms combo box that doesn't throw a first chance exception
+		//   when the data source is empty.
 		// - When binding a DropDown style combo box, the BS position changes then an
 		//   item is selected from the drop down list. But, as soon as the text is changed,
 		//   the cb.SelectedIndex and cb.SelectedItem become -1/null (the BS position
@@ -42,20 +56,59 @@ namespace Rylogic.Gui.WinForms
 		//          using (m_cb.PreserveSelectedItem())
 		//              m_cb.DataSource = GetDataSource();
 		//      };
+		// - To use the text field to update the bound item do this:
+		//      m_cb.TextChanged += (s,a) =>
+		//      {
+		//          // The selected item becomes null when the text is changed by the user.
+		//          // Without this test, changing the selection causes the previously selected
+		//          // item to have it's text changed because TextChanged is raised before the
+		//          // binding source position and 'SelectedIndex' are changed.
+		//          if (m_cb.SelectedItem == null)
+		//              m_bs.Current.Name = m_cb.Text;
+		//      };
 		//
-		// To use the text field to update the bound item do this:
-		//	m_cb.TextChanged += (s,a) =>
-		//	{
-		//		// The selected item becomes null when the text is changed by the user.
-		//		// Without this test, changing the selection causes the previously selected
-		//		// item to have it's text changed because TextChanged is raised before the
-		//		// binding source position and 'SelectedIndex' are changed.
-		//		if (m_cb.SelectedItem == null)
-		//			m_bs.Current.Name = m_cb.Text;
-		//	};
+		// Test cases:
+		//  - Select from drop down
+		//     SelectedItem should be the item from the drop down
+		//     Text should match selected item
+		//     Value should be 'SelectedItem'
 		//
+		//  - Type text -> auto complete -> tab or enter
+		//     SelectedItem should be the item from the drop down
+		//     Text should match selected item
+		//     Value should be 'SelectedItem'
+		//
+		//  - Type full text to match an item in drop down
+		//     SelectedItem should be the first matching item in the drop down
+		//     Text should match selected item
+		//     Value should be 'SelectedItem'
+		//
+		//  - Type text not matching an item in drop down and not convertible to the value type
+		//     SelectedItem should be null
+		//     Text should be as typed
+		//     Value should be a default value type
+		//
+		//  - Type text that is convertible to the type but not matching an entry in the drop down
+		//     SelectedItem should be null
+		//     Text should be as typed
+		//     Value should be a valid value
+		//
+		//  - Programmatically assign to 'SelectedItem'
+		//     SelectedItem should be the assigned value if it exists in the drop down, otherwise null
+		//     Text should be 'SelectedItem' converted to a string ("" if null)
+		//     Value should be 'SelectedItem' (possibly null)
+		//
+		//  - Programmatically assign to 'Text'
+		//     SelectedItem should be the first matching item in the drop down
+		//     Text should be the assigned value
+		//     Value should be 'SelectedItem' if not null, or 'Text' converted to a value type, or a default value type.
+		//
+		//  - Programmatically assign to 'Value'
+		//     SelectedItem should be the assigned value if it exists in the drop down, otherwise null
+		//     Text should be the assigned value converted to a string
+		//     Value should be the assigned value 
 
-		private int m_in_set_text;
+		private int m_internal_set_text;
 
 		public ComboBox()
 			:base()
@@ -80,15 +133,10 @@ namespace Rylogic.Gui.WinForms
 			{
 				// Commit on return
 				if (m.Msg == Win32.WM_KEYDOWN && Win32.ToVKey(m.WParam) == KeyCodes.Return)
-					TryCommitValue();
+					TextToValueIfValid(Text);
 			}
 
 			return base.PreProcessMessage(ref m);
-		}
-		protected override void OnInvalidated(InvalidateEventArgs e)
-		{
-			m_valid = null;
-			base.OnInvalidated(e);
 		}
 		protected override void OnMouseUp(MouseEventArgs e)
 		{
@@ -126,6 +174,7 @@ namespace Rylogic.Gui.WinForms
 		}
 		protected override void OnTextUpdate(EventArgs e)
 		{
+			Trace($"OnTextUpdate");
 			base.OnTextUpdate(e);
 
 			if (DropDownStyle != ComboBoxStyle.DropDownList)
@@ -137,32 +186,24 @@ namespace Rylogic.Gui.WinForms
 		}
 		protected override void OnTextChanged(EventArgs e)
 		{
+			Trace($"OnTextChanged");
 			if (DropDownStyle != ComboBoxStyle.DropDownList)
 			{
 				// Update the selection whenever the text changes
 				if (PreserveSelectionThruFocusChange)
 					m_selection = SaveTextSelection();
 
-				// Invalidate the cached 'valid' state whenever the text changes
-				m_valid = null;
-
-				// Prevent reentrancy
-				if (m_in_set_text != 0) return;
-				using (Scope.Create(() => ++m_in_set_text, () => --m_in_set_text))
-					TextToValueIfValid();
+				if (ValueToText(Value) != Text)
+					TextToValueIfValid(Text);
 			}
 
 			base.OnTextChanged(e);
 		}
 		protected override void OnSelectionChangeCommitted(EventArgs e)
 		{
+			Trace($"OnSelectionChangeCommitted");
 			base.OnSelectionChangeCommitted(e);
-
-			if (DropDownStyle != ComboBoxStyle.DropDownList)
-			{
-				// Commit the value when the selection is changed
-				Value = SelectedItem;
-			}
+			SetValue(SelectedItem);
 		}
 		protected override void SetItemsCore(IList list)
 		{
@@ -180,14 +221,18 @@ namespace Rylogic.Gui.WinForms
 		}
 		protected override void OnLostFocus(EventArgs e)
 		{
+			Trace($"OnLostFocus");
 			base.OnLostFocus(e);
 
+			// Commit the value on focus lost
 			if (DropDownStyle != ComboBoxStyle.DropDownList && CommitValueOnFocusLost && !ContainsFocus)
 			{
-				// Commit the value on focus lost
-				TryCommitValue();
-				var text = ValueToText(Value);
-				Text = text;
+				// If the current value does not match the current text, try to convert the text to a value
+				if (ValueToText(Value) != Text)
+					TextToValueIfValid(Text);
+
+				// Notify value committed
+				OnValueCommitted(new ValueEventArgs(Value));
 			}
 		}
 		protected override void OnDropDown(EventArgs e)
@@ -219,13 +264,15 @@ namespace Rylogic.Gui.WinForms
 				base.OnFormat(e);
 			}
 		}
-		public override string Text
-		{
-			get { return base.Text; }
-			set { base.Text = value; }
-		}
+
+		/// <summary>The type of 'Value'</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public Type ValueType { get; set; }
 
 		/// <summary>The property of the data bound items to display</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public string DisplayProperty
 		{
 			// Prefer this over 'DisplayMember' because DisplayMember throws
@@ -242,32 +289,16 @@ namespace Rylogic.Gui.WinForms
 		private PropertyInfo m_disp_prop;
 
 		/// <summary>The text color for valid values</summary>
-		public Color ForeColorValid
-		{
-			get;
-			set;
-		}
+		public Color ForeColorValid { get; set; }
 
 		/// <summary>The background color for valid values</summary>
-		public Color BackColorValid
-		{
-			get;
-			set;
-		}
+		public Color BackColorValid { get; set; }
 
 		/// <summary>The text color for invalid values</summary>
-		public Color ForeColorInvalid
-		{
-			get;
-			set;
-		}
+		public Color ForeColorInvalid { get; set; }
 
 		/// <summary>The background color for invalid values</summary>
-		public Color BackColorInvalid
-		{
-			get;
-			set;
-		}
+		public Color BackColorInvalid { get; set; }
 
 		/// <summary>Get/Set whether the background colours are set based on value validity</summary>
 		public bool UseValidityColours { get; set; }
@@ -275,13 +306,140 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Control whether focus lost results in a ValueCommited event</summary>
 		public bool CommitValueOnFocusLost { get; set; }
 
-		/// <summary>The type of 'Value'</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public Type ValueType
+		/// <summary>The value represented in the control</summary>
+		public object Value
 		{
-			get;
-			set;
+			get
+			{
+				// Always return the selected item if valid
+				if (SelectedItem != null)
+					return SelectedItem;
+
+				// Otherwise, return the assigned value, or a default value
+				return m_value ?? ValueType.DefaultInstance();
+			}
+			set
+			{
+				if (Equals(Value, value)) return;
+				SetValue(value);
+			}
+		}
+		private object m_value;
+
+		/// <summary>Set the value explicitly (i.e. not ignored if equal to the current value)</summary>
+		public void SetValue(object value, bool notify = true)
+		{
+			// Adopt the type from 'value' if 'ValueType' is currently 'object'
+			if (ValueType == typeof(object) && value != null)
+				ValueType = value.GetType();
+
+			// Null is equivalent to the default type for structs
+			if (ValueType.IsValueType && value == null)
+				value = ValueType.DefaultInstance();
+
+			// Check the assigned value has the correct type
+			if (value != null && !ValueType.IsAssignableFrom(value.GetType()))
+				throw new ArgumentException($"Cannot assign to 'Value', argument has the wrong type. Expected: {ValueType.Name}  Received: {value.GetType().Name} with value '{value}'");
+
+			// Save the assigned value
+			m_value = value;
+
+			// Try assign the value to the SelectedItem property.
+			// If 'value' is not a drop down item, this will be silently ignored
+			SelectedItem = value;
+
+			// Set 'Text' to match the value
+			ValueToTextIfNotFocused(value);
+
+			// Notify value changed
+			if (notify)
+				OnValueChanged(new ValueEventArgs(Value));
+
+			Trace($"SetValue to '{value}'");
+		}
+
+		/// <summary>True if a valid value is selected</summary>
+		public bool Valid => Value != null;
+
+		/// <summary>Raised when the value is changed to a valid value by Enter pressed or focus lost</summary>
+		public event EventHandler<ValueEventArgs> ValueCommitted;
+		protected virtual void OnValueCommitted(ValueEventArgs args)
+		{
+			ValueCommitted?.Invoke(this, args);
+		}
+
+		/// <summary>Raised when the value changes</summary>
+		public event EventHandler<ValueEventArgs> ValueChanged;
+		protected virtual void OnValueChanged(ValueEventArgs args)
+		{
+			ValueChanged?.Invoke(this, args);
+		}
+
+		/// <summary>Convert the text to a value and assign to 'Value' if valid</summary>
+		private void TextToValueIfValid(string text)
+		{
+			if (!CanConvertTextToValue)
+				return;
+
+			// Prevent reentrancy
+			if (m_internal_set_text != 0) return;
+			using (Scope.Create(() => ++m_internal_set_text, () => --m_internal_set_text))
+				Value = ValidateText(text) ? TextToValue(text) : null;
+
+			UpdateValidationColours();
+		}
+
+		/// <summary>Convert the value to text and update 'Text' if not focused</summary>
+		private void ValueToTextIfNotFocused(object value)
+		{
+			// Only update the text when not focused to prevent
+			// the text changing while the user is typing.
+			if (Focused || DropDownStyle == ComboBoxStyle.DropDownList)
+				return;
+
+			// Prevent reentrancy
+			if (m_internal_set_text != 0) return;
+			using (Scope.Create(() => ++m_internal_set_text, () => --m_internal_set_text))
+				Text = ValueToText(value);
+
+			UpdateValidationColours();
+		}
+
+		/// <summary>Set the Fore and Back colours for the value box based on the current text</summary>
+		private void UpdateValidationColours()
+		{
+			// Ignore if not possible
+			if (DropDownStyle == ComboBoxStyle.DropDownList || !UseValidityColours || this.IsInDesignMode())
+				return;
+
+			ForeColor = Valid ? ForeColorValid : ForeColorInvalid;
+			BackColor = Valid ? BackColorValid : BackColorInvalid;
+		}
+
+		/// <summary>True if the value type can be constructed from Text</summary>
+		private bool CanConvertTextToValue
+		{
+			get
+			{
+				switch (ValueType.Name)
+				{
+				default:
+					if (ValueType.IsEnum) return true;
+					return m_text_to_value != null;
+				case nameof(String): return true;
+				case nameof(Byte): return true;
+				case nameof(Char): return true;
+				case nameof(Int16): return true;
+				case nameof(UInt16): return true;
+				case nameof(Int32): return true;
+				case nameof(UInt32): return true;
+				case nameof(Int64): return true;
+				case nameof(UInt64): return true;
+				case nameof(Single): return true;
+				case nameof(Double): return true;
+				case nameof(Decimal): return true;
+				}
+			}
 		}
 
 		/// <summary>Returns true if the text in the control represents a valid value</summary>
@@ -291,32 +449,35 @@ namespace Rylogic.Gui.WinForms
 		{
 			get
 			{
-				return m_validate_text ?? (x =>
+				return m_validate_text ?? DefaultValidateText;
+				bool DefaultValidateText(string text)
 				{
-					// For built in types, validate the text. For user types
-					// assume the text is valid (even tho we may not be able to
-					// convert the text to an instance of the user type).
-					switch (ValueType.Name) {
-					default: return x.HasValue();
-					case nameof(String ): return true;
-					case nameof(Byte   ): return x.HasValue() && byte   .TryParse(x, out var b);
-					case nameof(Char   ): return x.HasValue() && char   .TryParse(x, out var c);
-					case nameof(Int16  ): return x.HasValue() && short  .TryParse(x, out var s);
-					case nameof(UInt16 ): return x.HasValue() && ushort .TryParse(x, out var us);
-					case nameof(Int32  ): return x.HasValue() && int    .TryParse(x, out var i);
-					case nameof(UInt32 ): return x.HasValue() && uint   .TryParse(x, out var ui);
-					case nameof(Int64  ): return x.HasValue() && long   .TryParse(x, out var l);
-					case nameof(UInt64 ): return x.HasValue() && ulong  .TryParse(x, out var ul);
-					case nameof(Single ): return x.HasValue() && float  .TryParse(x, out var f);
-					case nameof(Double ): return x.HasValue() && double .TryParse(x, out var d);
-					case nameof(Decimal): return x.HasValue() && decimal.TryParse(x, out var ld);
+					// For built in types, validate the text. For user types, assume the text is valid
+					// (even tho we may not be able to convert the text to an instance of the user type).
+					switch (ValueType.Name)
+					{
+					default:
+						if (ValueType.IsEnum) return Enum.IsDefined(ValueType, text);
+						return text.HasValue();
+					case nameof(String): return true;
+					case nameof(Byte): return text.HasValue() && byte.TryParse(text, out var b);
+					case nameof(Char): return text.HasValue() && char.TryParse(text, out var c);
+					case nameof(Int16): return text.HasValue() && short.TryParse(text, out var s);
+					case nameof(UInt16): return text.HasValue() && ushort.TryParse(text, out var us);
+					case nameof(Int32): return text.HasValue() && int.TryParse(text, out var i);
+					case nameof(UInt32): return text.HasValue() && uint.TryParse(text, out var ui);
+					case nameof(Int64): return text.HasValue() && long.TryParse(text, out var l);
+					case nameof(UInt64): return text.HasValue() && ulong.TryParse(text, out var ul);
+					case nameof(Single): return text.HasValue() && float.TryParse(text, out var f);
+					case nameof(Double): return text.HasValue() && double.TryParse(text, out var d);
+					case nameof(Decimal): return text.HasValue() && decimal.TryParse(text, out var ld);
 					}
-				});
+				}
 			}
 			set
 			{
 				m_validate_text = value;
-				m_valid = null;
+				TextToValueIfValid(Text);
 			}
 		}
 		private Func<string, bool> m_validate_text;
@@ -328,32 +489,45 @@ namespace Rylogic.Gui.WinForms
 		{
 			get
 			{
-				return m_text_to_value ?? (x =>
+				return m_text_to_value ?? DefaultTextToValue;
+				object DefaultTextToValue(string text)
 				{
 					// For built in types, convert the text to the type.
-					// For user types, assume the text is a description of the type
-					// and not convertible to the type.
-					switch (ValueType.Name) {
-					default: return x.HasValue() ? (object)x : null;
-					case nameof(String ): return x ?? string.Empty;
-					case nameof(Byte   ): return x.HasValue() ? (object)byte   .Parse(x) : null;
-					case nameof(Char   ): return x.HasValue() ? (object)char   .Parse(x) : null;
-					case nameof(Int16  ): return x.HasValue() ? (object)short  .Parse(x) : null;
-					case nameof(UInt16 ): return x.HasValue() ? (object)ushort .Parse(x) : null;
-					case nameof(Int32  ): return x.HasValue() ? (object)int    .Parse(x) : null;
-					case nameof(UInt32 ): return x.HasValue() ? (object)uint   .Parse(x) : null;
-					case nameof(Int64  ): return x.HasValue() ? (object)long   .Parse(x) : null;
-					case nameof(UInt64 ): return x.HasValue() ? (object)ulong  .Parse(x) : null;
-					case nameof(Single ): return x.HasValue() ? (object)float  .Parse(x) : null;
-					case nameof(Double ): return x.HasValue() ? (object)double .Parse(x) : null;
-					case nameof(Decimal): return x.HasValue() ? (object)decimal.Parse(x) : null;
+					// For user types, assume the text is a description of the type and not convertible to the type.
+					// Don't try to match the text to an entry in 'Items' because that will always match the first
+					// item and doesn't allow for duplicate entries in the Items collection.
+					switch (ValueType.Name)
+					{
+					default:
+						if (!text.HasValue()) return null;
+						if (ValueType == typeof(string)) return text;
+						if (ValueType == typeof(object)) return text;
+						if (ValueType.IsEnum) return Enum.Parse(ValueType, text);
+
+						// Note: this function should only be called if 'x' passes 'ValidateText' so
+						// this exception means some text passed 'ValidateText' but is not actually
+						// valid, or 'Valid' has not been invalidated.
+						throw new Exception($"Cannot convert '{text}' to a value of type {ValueType.Name}");
+
+					case nameof(String): return text ?? string.Empty;
+					case nameof(Byte): return text.HasValue() ? (object)byte.Parse(text) : null;
+					case nameof(Char): return text.HasValue() ? (object)char.Parse(text) : null;
+					case nameof(Int16): return text.HasValue() ? (object)short.Parse(text) : null;
+					case nameof(UInt16): return text.HasValue() ? (object)ushort.Parse(text) : null;
+					case nameof(Int32): return text.HasValue() ? (object)int.Parse(text) : null;
+					case nameof(UInt32): return text.HasValue() ? (object)uint.Parse(text) : null;
+					case nameof(Int64): return text.HasValue() ? (object)long.Parse(text) : null;
+					case nameof(UInt64): return text.HasValue() ? (object)ulong.Parse(text) : null;
+					case nameof(Single): return text.HasValue() ? (object)float.Parse(text) : null;
+					case nameof(Double): return text.HasValue() ? (object)double.Parse(text) : null;
+					case nameof(Decimal): return text.HasValue() ? (object)decimal.Parse(text) : null;
 					}
-				});
+				}
 			}
 			set
 			{
 				m_text_to_value = value;
-				TextToValueIfValid();
+				TextToValueIfValid(Text);
 			}
 		}
 		private Func<string, object> m_text_to_value;
@@ -365,7 +539,8 @@ namespace Rylogic.Gui.WinForms
 		{
 			get
 			{
-				return m_value_to_text ?? (x =>
+				return m_value_to_text ?? DefaultValueToText;
+				string DefaultValueToText(object x)
 				{
 					if (x == null) return string.Empty;
 					if (DisplayMember.HasValue())
@@ -374,54 +549,47 @@ namespace Rylogic.Gui.WinForms
 						return mi.Invoke(x, null).ToString();
 					}
 					return x.ToString();
-				});
+				}
 			}
 			set
 			{
 				m_value_to_text = value;
-				ValueToTextIfNotFocused();
+				ValueToTextIfNotFocused(Value);
 			}
 		}
 		private Func<object, string> m_value_to_text;
 
-		/// <summary>The value represented in the control</summary>
-		public object Value
+		/// <summary>The index of the selected item in the drop down list</summary>
+		public override int SelectedIndex
 		{
-			get { return m_value ?? ValueType.DefaultInstance(); }
+			get { return Items.Count > 0 ? base.SelectedIndex : -1; }
 			set
 			{
-				if (Equals(m_value, value)) return;
-				SetValue(value);
+				if (value == base.SelectedIndex || !value.Within(0, Items.Count)) return;
+				base.SelectedIndex = value;
 			}
 		}
-		private object m_value;
 
-		/// <summary>Set the value explicitly (i.e. not ignored if equal to the current value)</summary>
-		public void SetValue(object value, bool notify = true)
+		/// <summary>Set the selected item to an item in the drop down list</summary>
+		public new object SelectedItem
 		{
-			// Adopt the type from the value if 'ValueType' is currently 'object'
-			if (ValueType == typeof(object) && value != null)
-				ValueType = value.GetType();
+			get { return base.SelectedItem; }
+			set
+			{
+				base.SelectedItem = value;
+				Value = base.SelectedItem;
 
-			// Null is equivalent to the default type for structs
-			if (ValueType.IsValueType && value == null)
-				value = ValueType.DefaultInstance();
-
-			// Check the assigned value has the correct type
-			if (value != null && !ValueType.IsAssignableFrom(value.GetType()))
-				throw new ArgumentException($"Cannot assign to 'Value', argument has the wrong type. Expected: {ValueType.Name}  Received: {value.GetType().Name}");
-
-			// Assign the value
-			m_value = value;
-
-			// Only update the text when not focused to prevent
-			// the text changing while the user is typing.
-			ValueToTextIfNotFocused();
-
-			// Notify value changed
-			if (notify)
-				OnValueChanged(new ValueEventArgs(Value));
+				// For drop down lists, if 'value' isn't in the collection then
+				// then the call to SelectedItem is ignored, silently.
+				if (!Equals(SelectedItem, value))
+					UnknownItemSelected?.Invoke(this, new UnknownItemSelectedEventArgs(value));
+			}
 		}
+
+		/// <summary>
+		/// Raised whenever an attempt to change the selected item to an unknown item is made.
+		/// I.e. whenever the combo box ignores a call to 'SelectedItem = value'</summary>
+		public event EventHandler<UnknownItemSelectedEventArgs> UnknownItemSelected;
 
 		/// <summary>A smarter set text that does sensible things with the selection position</summary>
 		public void SetText(string text)
@@ -453,70 +621,6 @@ namespace Rylogic.Gui.WinForms
 			}
 		}
 
-		/// <summary>True if the control contains a valid value</summary>
-		public bool Valid
-		{
-			get { return m_valid ?? (m_valid = ValidateText(Text)).Value; }
-		}
-		private bool? m_valid;
-
-		/// <summary>Convert the text to a value and assign to 'Value' if valid</summary>
-		private bool TextToValueIfValid()
-		{
-			// Set the text colour based on whether the value matches the text
-			UpdateTextColours();
-
-			// Update the value for valid text
-			var r = Valid && ValueType != typeof(object);
-			if (r) Value = TextToValue(Text);
-			return r;
-		}
-
-		/// <summary>Convert the value to text and update 'Text' if not focused</summary>
-		private bool ValueToTextIfNotFocused()
-		{
-			// Only update the text when not focused to prevent
-			// the text changing while the user is typing.
-			if (Focused) return false;
-			Text = ValueToText(Value);
-			return true;
-		}
-
-		/// <summary>If the current text is value, update the value, and notify of value committed</summary>
-		public bool TryCommitValue()
-		{
-			var r = TextToValueIfValid();
-			if (r) OnValueCommitted(new ValueEventArgs(Value));
-			return r;
-		}
-
-		/// <summary>Set the Fore and Back colours for the value box based on the current text</summary>
-		public void UpdateTextColours()
-		{
-			if (DropDownStyle == ComboBoxStyle.DropDownList ||
-				!UseValidityColours ||
-				this.IsInDesignMode())
-				return;
-
-			// Set the text colour based on whether the value matches the text
-			ForeColor = Valid ? ForeColorValid : ForeColorInvalid;
-			BackColor = Valid ? BackColorValid : BackColorInvalid;
-		}
-
-		/// <summary>Raised when the value is changed to a valid value by Enter pressed or focus lost</summary>
-		public event EventHandler<ValueEventArgs> ValueCommitted;
-		protected virtual void OnValueCommitted(ValueEventArgs args)
-		{
-			ValueCommitted?.Invoke(this, args);
-		}
-
-		/// <summary>Raised when the value changes</summary>
-		public event EventHandler<ValueEventArgs> ValueChanged;
-		protected virtual void OnValueChanged(ValueEventArgs args)
-		{
-			ValueChanged?.Invoke(this, args);
-		}
-
 		/// <summary>The dynamically created drop down list control</summary>
 		internal DropDownListControl DropDownListCtrl
 		{
@@ -528,54 +632,6 @@ namespace Rylogic.Gui.WinForms
 			}
 		}
 		private DropDownListControl m_dd_list_ctrl;
-
-		/// <summary>Wrapper for the dynamically created combo box drop down list</summary>
-		internal class DropDownListControl :NativeWindow
-		{
-			// Notes:
-			//  - The list control is destroyed as soon as it loses focus. This
-			//    means any behaviour while the list is displayed must be modal.
-			//    Context menus cannot be modal, they use the parent window's
-			//    message queue.
-			private readonly ComboBox m_owner;
-			internal DropDownListControl(ComboBox owner, IntPtr handle)
-			{
-				m_owner = owner;
-				AssignHandle(handle);
-			}
-			protected override void WndProc(ref Message m)
-			{
-				// ToDo: handle window messages for the list box control
-				base.WndProc(ref m);
-			}
-		}
-
-		/// <summary>The index of the selected item in the drop down list</summary>
-		public override int SelectedIndex
-		{
-			get { return Items.Count > 0 ? base.SelectedIndex : -1; }
-			set
-			{
-				if (value == base.SelectedIndex || !value.Within(0,Items.Count)) return;
-				base.SelectedIndex = value;
-			}
-		}
-
-		/// <summary>Set the selected item.</summary>
-		public new object SelectedItem
-		{
-			get { return base.SelectedItem; }
-			set
-			{
-				base.SelectedItem = value;
-				Value = value;
-
-				// For drop down lists, if 'value' isn't in the collection then
-				// then the call to SelectedItem is ignored, silently.
-				if (!Equals(SelectedItem, value))
-					UnknownItemSelected?.Invoke(this, new UnknownItemSelectedEventArgs(value));
-			}
-		}
 
 		/// <summary>Preserves the selected index in the combo</summary>
 		public Scope PreserveSelectedIndex()
@@ -592,11 +648,6 @@ namespace Rylogic.Gui.WinForms
 				() => SelectedItem,
 				si => SelectedItem = si != null || !unless_null ? si : SelectedItem);
 		}
-
-		/// <summary>
-		/// Raised whenever an attempt to change the selected item to an unknown item is made.
-		/// I.e. whenever the combo box ignores a call to 'SelectedItem = value'</summary>
-		public event EventHandler<UnknownItemSelectedEventArgs> UnknownItemSelected;
 
 		/// <summary>Get/Set the selected text</summary>
 		public new string SelectedText
@@ -676,6 +727,34 @@ namespace Rylogic.Gui.WinForms
 			//	.Fmt(selection.Value.Begi, selection.Value.Sizei,
 			//	string.Join("\n\t", new System.Diagnostics.StackTrace().GetFrames().Take(5).Select(x => x.GetMethod()))));
 			return selection;
+		}
+
+		/// <summary>Wrapper for the dynamically created combo box drop down list</summary>
+		internal class DropDownListControl : NativeWindow
+		{
+			// Notes:
+			//  - The list control is destroyed as soon as it loses focus. This
+			//    means any behaviour while the list is displayed must be modal.
+			//    Context menus cannot be modal, they use the parent window's
+			//    message queue.
+			private readonly ComboBox m_owner;
+			internal DropDownListControl(ComboBox owner, IntPtr handle)
+			{
+				m_owner = owner;
+				AssignHandle(handle);
+			}
+			protected override void WndProc(ref Message m)
+			{
+				// ToDo: handle window messages for the list box control
+				base.WndProc(ref m);
+			}
+		}
+
+		/// <summary>For debugging this bastard...</summary>
+		[Conditional("PR_CB_TRACE")]
+		private void Trace(string message)
+		{
+			Debug.WriteLine($"{message}\n\tValue={Value}\n\tText={Text}\n\tSelectedItem={SelectedItem}({SelectedIndex})");
 		}
 	}
 

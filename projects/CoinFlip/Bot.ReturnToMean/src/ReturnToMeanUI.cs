@@ -139,8 +139,8 @@ namespace Bot.ReturnToMean
 			}
 			void PopulateHoldings(object sender = null, EventArgs args = null)
 			{
-				m_tb_average_holding.TryCommitValue();
-				m_tb_holding_change.TryCommitValue();
+				//m_tb_average_holding.TryCommitValue();
+				//m_tb_holding_change.TryCommitValue();
 			}
 
 			#region Exchange Combo

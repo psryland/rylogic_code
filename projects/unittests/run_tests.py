@@ -5,7 +5,7 @@
 # Use:
 #   run_tests $(TargetPath)
 import sys, os, re, ctypes
-sys.path.append(re.sub(r"^(.*\\pr\\).*", r"\1script", sys.path[0]))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "script")))
 import Rylogic as Tools
 import UserVars
 
@@ -19,7 +19,7 @@ try:
 	if RunTests and os.path.exists(test_dll_path):
 
 		# Load the MS unit test dll
-		mstests_dll_path = UserVars.vs_dir + "\\Common7\\IDE\\CommonExtensions\\Microsoft\\TestWindow\\Extensions\\Cpp\\Microsoft.VisualStudio.TestTools.CppUnitTestFramework.x64.dll"
+		mstests_dll_path = os.path.join(UserVars.vs_dir, "Common7", "IDE", "CommonExtensions", "Microsoft", "TestWindow", "Extensions", "Cpp", "Microsoft.VisualStudio.TestTools.CppUnitTestFramework.x64.dll")
 		mstests = ctypes.windll.LoadLibrary(mstests_dll_path)
 		
 		# Load the unit tests

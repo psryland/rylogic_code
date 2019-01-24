@@ -4780,7 +4780,7 @@ LR"(// *************************************************************************
 			{
 				if (m_ldr_objects.empty()) return;
 
-				size_t const msg_max_len = 4096;
+				size_t const msg_max_len = 1000;
 				std::string msg = "Leaked LdrObjects detected:\n";
 				for (auto ldr : m_ldr_objects)
 				{

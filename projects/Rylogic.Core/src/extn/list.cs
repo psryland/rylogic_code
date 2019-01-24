@@ -61,6 +61,10 @@ namespace Rylogic.Extn
 			for (int i = start; count-- != 0; ++i)
 				yield return list[i];
 		}
+		public static IEnumerable<TSource> EnumRange<TSource>(this IList<TSource> list, int start)
+		{
+			return EnumRange(list, start, list.Count - start);
+		}
 
 		/// <summary>Return all of the range except the last 'count' items</summary>
 		public static IEnumerable<TSource> TakeFrac<TSource>(this IList<TSource> source, float frac)

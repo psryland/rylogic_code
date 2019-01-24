@@ -3102,8 +3102,8 @@ namespace ldr
 
 		/// <summary>True if the view3d dll has been loaded</summary>
 		private const string Dll = "view3d";
-		public static bool ModuleLoaded { get { return m_module != IntPtr.Zero; } }
-		private static IntPtr m_module = IntPtr.Zero;
+        public static bool ModuleLoaded => m_module != IntPtr.Zero;
+        private static IntPtr m_module = IntPtr.Zero;
 
 		/// <summary>Helper method for loading the view3d.dll from a platform specific path</summary>
 		public static void LoadDll(string dir = @".\lib\$(platform)\$(config)")

@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*- 
 # Use:
 #  post_build.py $(ProjectDir) $(TargetDir) $(ConfigurationName)
-import sys, os, shutil, re
-sys.path.append(re.sub(r"^(.*\\pr\\).*", r"\1script", sys.path[0]))
+import sys, os, shutil
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "script")))
 import Rylogic as Tools
 import UserVars
 import BuildDocs

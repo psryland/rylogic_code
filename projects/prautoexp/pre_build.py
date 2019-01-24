@@ -3,10 +3,11 @@
 #
 # Generate the .def file
 
-import sys, os, re
-sys.path.append(re.sub(r"^(.*\\pr\\).*", r"\1script", sys.path[0]))
-root = os.path.abspath(os.path.dirname(__file__))
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "script")))
 import Rylogic as Tools
+
+root = os.path.abspath(os.path.dirname(__file__))
 
 # Auto generate the module definition file 'prautoexp.def'
 infile = os.path.join(root, "src", "expansions.cpp")

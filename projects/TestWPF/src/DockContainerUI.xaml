@@ -1,21 +1,28 @@
-﻿<Window x:Class="TestWPF.DockContainerUI"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:gui2="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
-        xmlns:local="clr-namespace:TestWPF"
-        mc:Ignorable="d"
-        Title="DockContainerUI" Height="450" Width="800">
+﻿<Window 
+	x:Class="TestWPF.DockContainerUI"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:gui2="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+	xmlns:local="clr-namespace:TestWPF"
+	mc:Ignorable="d"
+	Title="DockContainerUI" Height="450" Width="800">
 
 	<Window.Resources>
-		<ResourceDictionary Source="pack://application:,,,/Rylogic.Gui.WPF;component/Themes/Generic.xaml"/>
+		<!--<ResourceDictionary Source="/Rylogic.Gui.WPF;component/Themes/Generic.xaml"/>-->
 	</Window.Resources>
 	
 	<Canvas Name="Root">
 
 		<!-- The DockContainer control -->
-		<gui2:DockContainer Name="m_dc" Visibility="Visible" Background="{x:Static SystemColors.ControlDarkBrush}" Width="{Binding ActualWidth, ElementName=Root}" Height="{Binding ActualHeight, ElementName=Root}"/>
+		<gui2:DockContainer
+			Name="m_dc"
+			Visibility="Visible"
+			Background="{x:Static SystemColors.ControlDarkBrush}"
+			Width="{Binding ActualWidth, ElementName=Root}"
+			Height="{Binding ActualHeight, ElementName=Root}"
+			/>
 
 		<DockPanel Visibility="Collapsed" Width="{Binding ActualWidth, ElementName=Root}" Height="{Binding ActualHeight, ElementName=Root}">
 			<StackPanel Name="ts" DockPanel.Dock="Right" Orientation="Horizontal" Background="Beige">

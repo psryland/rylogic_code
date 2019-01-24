@@ -76,7 +76,7 @@ namespace TestWPF
 			m_menu_file_load.Click += (s,a) => m_diag.ImportXml(m_diag_xml, m_diag.Elements.Count != 0);
 			m_menu_file_save.Click += (s,a) => m_diag_xml = m_diag.ExportXml().ToString();
 			m_menu_file_load_options.Click += (s,a) => m_diag.Options = XDocument.Load("P:\\dump\\diag_options.xml").Root.Element("options").As<DiagramControl.DiagramOptions>();
-			m_menu_file_editable.Click += (s,a) => m_menu_file_editable.IsChecked = m_diag.AllowEditing = !m_diag.AllowEditing;
+			m_menu_file_editable.Click += (s,a) => m_menu_file_editable.IsChecked = m_diag.AllowChanges = !m_diag.AllowChanges;
 
 		//	m_toolstripcont.Controls.Add(m_diag.EditToolstrip);
 			m_diag.EditToolstrip.Visible = true;

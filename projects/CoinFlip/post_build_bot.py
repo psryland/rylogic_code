@@ -4,7 +4,7 @@
 # Use:
 #  $(SolutionDir)..\post_build_bot.py $(TargetPath) $(SolutionDir) $(ConfigurationName)
 import sys, os, re, string
-sys.path.append(re.sub(r"^(.*\\pr\\).*", r"\1script", sys.path[0]))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "script")))
 import Rylogic as Tools
 import UserVars
 

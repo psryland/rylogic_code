@@ -256,18 +256,21 @@ namespace pr
 			if (module != nullptr)
 				return module;
 
-			#ifdef NDEBUG
-			bool const debug = false;
-			#else
+			#ifdef DEBUG
 			bool const debug = true;
+			#else
+			bool const debug = false;
 			#endif
 
+			std::wstring searched;
+
 			// Try the lib folder. Load the appropriate dll for the platform
-			pr::str::Replace(dir, "$(platform)", sizeof(int) == 8 ? "x64" : "x86");
-			pr::str::Replace(dir, "$(config)", debug ? "debug" : "release");
+			str::Replace(dir, L"$(platform)", sizeof(void*) == 8 ? L"x64" : sizeof(void*) == 4 ? L"x86" : throw std::runtime_error("Pointer size not supported. Platform unknown"));
+			str::Replace(dir, L"$(config)", debug ? L"debug" : L"release");
 			auto exe_dir = ExeDir<std::wstring>();
 
 			auto dllpath = CombinePath(exe_dir, dir, dllname);
+			searched.append(dllpath).append(L"\n");
 			if (FileExists(dllpath))
 			{
 				module = ::LoadLibraryW(dllpath.c_str());
@@ -277,6 +280,7 @@ namespace pr
 
 			// Try the local directory
 			dllpath = CombinePath(exe_dir, dllname);
+			searched.append(dllpath).append(L"\n");
 			if (FileExists(dllpath))
 			{
 				module = ::LoadLibraryW(dllname.c_str());
@@ -284,11 +288,11 @@ namespace pr
 					return module;
 			}
 
-			throw std::exception(pr::FmtS("Failed to load dependency '%S'", dllname.c_str()));
+			throw std::exception(pr::FmtS("Failed to load dependency '%S'\nSearched:\n%S", dllname.c_str(), searched.c_str()));
 		}
 		template <typename Context> inline HMODULE LoadDll(std::wstring const& dllname)
 		{
-			return LoadDll<Context>(dllname, L".\\");
+			return LoadDll<Context>(dllname, L".\\lib\\$(platform)\\$(config)");
 		}
 	}
 }

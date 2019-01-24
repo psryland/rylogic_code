@@ -1,0 +1,57 @@
+﻿<StackPanel
+	x:Class="Rylogic.Gui.WPF.DockContainerDetail.TitleBar"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+	xmlns:local="clr-namespace:Rylogic.Gui.WPF.DockContainerDetail"
+	mc:Ignorable="d" 
+	d:DesignHeight="18" d:DesignWidth="300"
+	>
+	<!-- Brushes -->
+	<StackPanel.Resources>
+		<ResourceDictionary>
+			<!-- Colours 
+			<Color x:Key="DockPaneTitleBackgroundActiveColour0">#FF0000F0</Color>
+			<Color x:Key="DockPaneTitleBackgroundActiveColour1">#FFF00000</Color>
+			<Color x:Key="DockPaneTitleBackgroundInactiveColour0">#FFA0A0A0</Color>
+			<Color x:Key="DockPaneTitleBackgroundInactiveColour1">#FFC0C0C0</Color>
+			-->
+			<LinearGradientBrush x:Key="TitleActiveBackground" StartPoint="0,0" EndPoint="0,1" MappingMode="RelativeToBoundingBox" SpreadMethod="Pad">
+				<GradientStop Color="{x:Static SystemColors.GradientActiveCaptionColor}" Offset="0.0" />
+				<GradientStop Color="{x:Static SystemColors.InactiveCaptionColor}" Offset="1.0" />
+			</LinearGradientBrush>
+
+			<SolidColorBrush x:Key="TitleInactiveBackground" Color="{x:Static SystemColors.InactiveCaptionColor}"/>
+
+		</ResourceDictionary>
+	</StackPanel.Resources>
+
+	<Grid
+		Background="{StaticResource TitleActiveBackground}"
+		>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="1*"/>
+			<ColumnDefinition Width="auto"/>
+			<ColumnDefinition Width="auto"/>
+		</Grid.ColumnDefinitions>
+
+		<TextBlock
+			x:Name="m_title"
+			Grid.Column="0"
+			VerticalAlignment="Center"
+			Margin="3,0,0,0"
+			Text="Title Bar"
+			/>
+
+		<local:PinButton
+			x:Name="m_pin"
+			Grid.Column="1"
+			/>
+
+		<local:CloseButton
+			x:Name="m_close"
+			Grid.Column="2"
+			/>
+	</Grid>
+</StackPanel>

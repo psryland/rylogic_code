@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 import sys, os, re, shutil
-sys.path.append(re.sub(r"^(.*\\pr\\).*", r"\1script", sys.path[0]))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "script")))
 import RylogicEnv as Tools
 import UserVars
 

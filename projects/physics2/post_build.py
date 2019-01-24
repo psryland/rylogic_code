@@ -4,8 +4,8 @@
 # Post build step
 # Use:
 #  post_build.py $(TargetDir) $(PlatformTarget) $(ConfigurationName)
-import sys, os, string, re
-sys.path.append(re.sub(r"^(.*\\pr\\).*", r"\1script", sys.path[0]))
+import sys, os, string
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "script")))
 import Rylogic as Tools
 import UserVars
 
@@ -19,8 +19,8 @@ try:
 	if platform.lower() == "win32": platform = "x86"
 
 	# Copy dependencies to 'targetdir'
-	Tools.Copy(UserVars.root + "\\lib\\"+platform+"\\"+config+"\\view3d.dll"   , targetdir+"\\", only_if_modified=True)
-	Tools.Copy(UserVars.root + "\\lib\\"+platform+"\\"+config+"\\scintilla.dll", targetdir+"\\", only_if_modified=True)
+	Tools.Copy(os.path.join(UserVars.root, "lib", platform, config, "view3d.dll")   , targetdir+"\\", only_if_modified=True)
+	Tools.Copy(os.path.join(UserVars.root, "lib", platform, config, "scintilla.dll"), targetdir+"\\", only_if_modified=True)
 
 except Exception as ex:
 	Tools.OnException(ex)

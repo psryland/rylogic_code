@@ -122,10 +122,6 @@
       <Project>{37a4f319-2052-404d-ae7f-f882cfa33c1b}</Project>
       <Name>Rylogic.Core</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj">
-      <Project>{846d147a-b7e6-4336-b019-d1add62ff095}</Project>
-      <Name>Rylogic.Gui.WPF</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

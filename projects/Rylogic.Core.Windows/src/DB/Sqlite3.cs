@@ -3233,7 +3233,7 @@ namespace Rylogic.Db
 		#region DLL Functions
 
 		/// <summary>Helper method for loading the dll from a platform specific path</summary>
-		public static void LoadDll(string dir = @".\lib\$(platform)")
+		public static void LoadDll(string dir = @".\lib\$(platform)\$(config)")
 		{
 			NativeDll.LoadDll(dir);
 		}

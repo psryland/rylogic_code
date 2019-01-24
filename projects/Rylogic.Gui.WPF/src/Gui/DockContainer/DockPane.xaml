@@ -1,0 +1,49 @@
+﻿<DockPanel
+	x:Class="Rylogic.Gui.WPF.DockContainerDetail.DockPane"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+	xmlns:gui2="clr-namespace:Rylogic.Gui.WPF"
+	xmlns:local="clr-namespace:Rylogic.Gui.WPF.DockContainerDetail"
+	mc:Ignorable="d" 
+	d:DesignHeight="450" d:DesignWidth="400"
+	>
+
+	<DockPanel.Resources>
+		<ResourceDictionary>
+
+			<!--<Style x:Key="DockPaneTitleStyle" TargetType="{x:Type StackPanel}">
+				<Setter Property="Background" Value="{StaticResource DockPaneTitleActiveBackground}" />
+			</Style>
+			
+			<Style x:Key="DockPaneTitleTextStyle" TargetType="{x:Type TextBlock}">
+				<Setter Property="FontSize" Value="10"/>
+				<Setter Property="Margin" Value="1"/>
+				<Setter Property="VerticalAlignment" Value="Center" />
+			</Style>-->
+			
+		</ResourceDictionary>
+	</DockPanel.Resources>
+
+	<!-- DockPane Control-->
+	<DockPanel>
+		<local:TitleBar x:Name="m_title"/>
+		<!--<local:TabStrip x:Name="m_tabstrip"/>-->
+		<Canvas Name="m_content_pane" Background="{x:Static SystemColors.ControlBrush}">
+		</Canvas>
+		<!--<StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Style="{StaticResource DockPaneTitleStyle}">
+			<TextBlock Name="m_lbl_title" Style="{StaticResource DockPaneTitleTextStyle}">DockPane Title</TextBlock>
+		</StackPanel>
+		<StackPanel Name="m_tab_strip" DockPanel.Dock="Bottom" Style="{StaticResource DockPaneTitleStyle}">
+			<StackPanel Orientation="Horizontal">
+				--><!--
+				<detail:TabButton/>
+				<detail:TabButton/>
+				<detail:TabButton/>
+				--><!--
+			</StackPanel>
+		</StackPanel>
+		-->
+	</DockPanel>
+</DockPanel>

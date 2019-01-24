@@ -88,6 +88,9 @@ namespace Rylogic.Container
 		/// <summary>Get/Set whether events for each item are generated for Clear, Reset, etc, or just PreReset/Reset</summary>
 		public bool PerItem { get; set; }
 
+		/// <summary>An issue number that changes whenever data is added/remove from this collection</summary>
+		public int IssueNumber { get; set; }
+
 		/// <summary>Raised whenever items are added or about to be removed from the list</summary>
 		public event EventHandler<ListChgEventArgs<T>> ListChanging;
 
@@ -116,6 +119,7 @@ namespace Rylogic.Container
 
 			// Zero items, sorted..
 			IsSorted = true;
+			IssueNumber++;
 		}
 
 		/// <summary>Inserts the specified item in the list at the specified index.</summary>
@@ -139,7 +143,8 @@ namespace Rylogic.Container
 			base.InsertItem(index, item);
 			m_hash_set?.Add(item);
 			IsSorted = false;
-	
+			IssueNumber++;
+
 			if (RaiseListChangedEvents)
 				ListChanging?.Invoke(this, new ListChgEventArgs<T>(this, ListChg.ItemAdded, index, item));
 		}
@@ -159,7 +164,8 @@ namespace Rylogic.Container
 			base.RemoveItem(index);
 			m_hash_set?.Remove(item);
 			IsSorted = false;
-	
+			IssueNumber++;
+
 			if (RaiseListChangedEvents)
 				ListChanging?.Invoke(this, new ListChgEventArgs<T>(this, ListChg.ItemRemoved, -1, item));
 		}
@@ -196,6 +202,7 @@ namespace Rylogic.Container
 
 			base.SetItem(index, item);
 			IsSorted = false;
+			IssueNumber++;
 
 			if (RaiseListChangedEvents)
 				ItemChanged?.Invoke(this, new ItemChgEventArgs<T>(index, old, item));

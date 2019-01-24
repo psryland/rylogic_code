@@ -9,6 +9,9 @@ namespace Rylogic.Gui.WPF
 {
 	public class DockPanelSplitter : Control
 	{
+		// Note:
+		//  - This class is for the WPF.DockPanel, it's nothing to do with DockContainer
+		
 		// Code Project article
 		// http://www.codeproject.com/KB/WPF/DockPanelSplitter.aspx
 		// 
