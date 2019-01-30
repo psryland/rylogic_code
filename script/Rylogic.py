@@ -758,7 +758,7 @@ def MsgBox(msg:str, title:str, btns=EMsgBoxBtns.Ok):
 # Testing
 if __name__ == "__main__":
 	try:
-		ExtractZip("C:\\temp\\boost_1_66_0.zip", "C:\\temp\\test", True)
+		pass
 	except KeyboardInterrupt:
 		pass
 	except Exception as ex:
