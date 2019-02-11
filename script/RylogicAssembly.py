@@ -9,10 +9,10 @@ import UserVars
 def PostBuild(assembly:str, projdir:str, targetdir:str, platform:str, config:str, deps:[str]):
 
 	# Assert up-to-date tools
-	Tools.AssertVersion(1);
+	Tools.AssertVersion(1)
 
 	# Ensure the target directory exists
-	os.makedirs(targetdir, exist_ok=True);
+	os.makedirs(targetdir, exist_ok=True)
 
 	# Sign the assembly
 	#signtool = UserVars.winsdk + "\\bin\\signtool.exe"
@@ -54,10 +54,6 @@ def PostBuild(assembly:str, projdir:str, targetdir:str, platform:str, config:str
 				if not res:
 					raise Exception("   **** Unit tests failed ****   ")
 
-	# Copy to the lib directory
-	if os.path.exists(dll):
-		DeployLib.DeployLib(dll, "AnyCPU", config)
-
 	return
 
 # Nuget deploy a Rylogic Assembly
@@ -93,3 +89,10 @@ def DeployAll(config:str, publish:bool):
 	Deploy("Rylogic.Gui.WPF", config, publish)
 	Deploy("Rylogic.DirectShow", config, publish)
 	return
+
+# Entry point
+if __name__ == "__main__":
+
+	# Use RylogicAssembly.py
+	if len(sys.argv) == 1:
+		DeployAll("Release", True)

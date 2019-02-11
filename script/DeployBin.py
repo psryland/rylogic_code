@@ -16,12 +16,12 @@ def DeployBin(targetpath:str, platform:str, config:str, dstsubdir:str):
 
 	if platform.lower() == "win32": platform = "x86"
 	targetpath  = os.path.abspath(targetpath) # don't change the filename case
-	srcdir,file = os.path.split(targetpath)
-	fname,extn  = os.path.splitext(file)
+	_,file      = os.path.split(targetpath)
+	fname,_     = os.path.splitext(file)
 	dstsubdir   = dstsubdir.lower() if dstsubdir != "" else fname
 	platform    = platform.lower()
 	config      = config.lower()
-	dstdir      = UserVars.root + "\\bin\\" + dstsubdir + "\\" + platform
+	dstdir      = os.path.join(UserVars.root, "bin", dstsubdir, platform)
 
 	# Set the output directory and ensure it exists
 	os.makedirs(dstdir, exist_ok=True)
@@ -29,11 +29,7 @@ def DeployBin(targetpath:str, platform:str, config:str, dstsubdir:str):
 	# Only publish release builds
 	if config == "release":
 		# Copy the binary to the bin folder
-		Tools.Copy(targetpath, dstdir + "\\" + file)
-	
-		# If the system architecture matches this release, copy to the root 'dstdir'
-		if platform == UserVars.arch:
-			Tools.Copy(dstdir + "\\" + file, UserVars.root + "\\bin\\" + file)
+		Tools.Copy(targetpath, os.path.join(dstdir, file))
 
 # Run as standalone script
 if __name__ == "__main__":

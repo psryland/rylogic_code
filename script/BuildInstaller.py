@@ -49,14 +49,14 @@ def CreateFileComponent(elem:xml.Element, filepath:str, keypath:bool=True, direc
 
 	# Create the component to contain the file
 	cmp_attr = {}
-	cmp_attr["Id"] = "Cmp_"+file+"_"+uid
+	cmp_attr["Id"] = f"Cmp_{file}_{uid}"
 	cmp_attr["Guid"] = "*"
 	if directory_id: cmp_attr["Directory"] = directory_id
 	cmp = xml.SubElement(elem, "Component", cmp_attr)
 
 	fcp_attr = {}
-	fcp_attr["Id"] = file+"_"+uid
-	fcp_attr["Source"] = filepath
+	fcp_attr["Id"] = f"{file}_{uid}"
+	fcp_attr["Source"] = os.path.abspath(filepath)
 	if keypath: fcp_attr["KeyPath"] = "yes"
 	_ = xml.SubElement(cmp, "File", fcp_attr)
 
@@ -77,9 +77,12 @@ def CreateComponentGroup(elem:xml.Element, id:str, directory:str, filepaths:[]):
 	return
 
 # Create an XML tree of a WiX fragment by enumerating the files within a directory
+# 'group_id' is the corresponding ComponentGroupRef for the feature
 # 'dir' is the directory to harvest
+# 'recursive' is true if directories should be harvested recursively
+# 'regex_filters' is a collection of filters for the files to include
 # 'install_dir' is the directory Id in the main installer
-def HarvestDirectory(dir:str, install_dir:str):
+def HarvestDirectory(group_id:str, dir:str, recursive:bool, regex_filters:[str], install_dir:str):
 
 	root = xml.Element("Wix", {"xmlns":"http://schemas.microsoft.com/wix/2006/wi"})
 	frag = xml.SubElement(root, "Fragment")
@@ -88,20 +91,18 @@ def HarvestDirectory(dir:str, install_dir:str):
 	dr = xml.SubElement(frag, "DirectoryRef", {"Id":install_dir})
 
 	# The component group sub tree
-	group_id = os.path.split(dir)[1].replace(' ','_')
 	cg = xml.SubElement(frag, "ComponentGroup", {"Id":group_id})
 
 	# Walk the directory recursively
 	def WalkDir(dtree:xml.Element, cg:xml.Element, dir:str):
-		directory_id = "Dir_" + Id()
-		dirname = os.path.split(dir)[1]
-		sub = xml.SubElement(dtree, "Directory", {"Id":directory_id, "Name":dirname})
-		for d,dnames,fnames in os.walk(dir):
-			for fname in fnames:
-				CreateFileComponent(cg, os.path.join(d, fname), directory_id=directory_id)
-			for dname in dnames:
-				WalkDir(sub, cg, os.path.join(d, dname))
-			break
+		for fname in os.listdir(dir):
+			path = os.path.abspath(os.path.join(dir, fname))
+			if os.path.isfile(path):
+				if len(regex_filters) != 0 and not any(re.match(f, fname, 0) for f in regex_filters): continue
+				CreateFileComponent(cg, path, True, dtree.attrib['Id'])
+			if os.path.isdir(path) and recursive:
+				sub = xml.SubElement(dtree, "Directory", {"Name":fname, "Id":f"Dir_{fname}_{Id()}"})
+				WalkDir(sub, cg, path)
 		return
 
 	WalkDir(dr, cg, dir)
@@ -111,42 +112,64 @@ def HarvestDirectory(dir:str, install_dir:str):
 # 'projname' is the name of the application (<projname>Installer_v<version>.msi is returned)
 # 'version' is the application version number
 # 'installer' is the full path to the main installer.wxs file
-# 'projdir' is the root folder of the project
+# 'projdir' is the root folder of the project (passed as a define to the installer.wxs, used as a reference directory)
 # 'targetdir' is the staging directory from where files are taken for the installer
 # 'dstdir' is the output directory for the installer file
-# 'harvest' is a list of ['targetdir' relative directory, install directory] pairs.
-#   The install directory should be the Id of a <Directory/> in the 'installer'
+# 'harvest' is a tuple list used to add files from a directory:
+#   [group_id, install_directory, targetdir_relative_directory, recursive, (optional) regex_filters...]
+#   'group_id' is the name of the corresponding 'ComponentGroupRef' element in the 'Feature' element of the installer.wxs
+#   'install_directory' is the id of the directory that will contain the harvested files
+#   'targetdir_relative_directory' is the relative path of where to harvest from.
+#   'recursive' should be True to search directories recursively
+#   'regex_filters' is used to match specific filenames to add to the group (no filters means add all)
 # Returns the installer full path
 def Build(projname:str, version:str, installer:str, projdir:str, targetdir:str, dstdir:str, harvest:[]):
 
+	# Notes:
+	#  - The installer.wxs file should define the basic directory layout for the install plus
+	#    the main executeables or files with additional shortcuts etc. Supplimental files (dlls etc)
+	#    can be provided by the 'harvest' argument.
+	#  - The 'group_id' is used to identify blocks of files that are included in the MSI by the
+	#    'Feature' element in the installer.wxs
+
 	# Check the installer file exists
 	if not os.path.exists(installer):
-		raise Exception("'" + installer + "' does not exist")
+		raise Exception(f"'{installer}' does not exist")
 
 	# Create a temporary working directory for the 'wixobj' files
 	objdir = tempfile.mkdtemp()
 
 	# The .msi filename
-	msi_filename = projname + "Installer_v" + version + ".msi"
+	msi_filename = f"{projname}Installer_v{version}.msi"
 
 	# Copy the main installer to the 'objdir' directory so that all the .wsx files are in the same folder
-	Tools.Copy(installer, objdir + "\\", quiet=True)
+	Tools.Copy(installer, os.path.join(objdir, ""), quiet=True)
 	installer = os.path.split(installer)[1]
 
 	# Collect all the .wsx files to build
 	wsx_files = [installer]
 
-	# Create .wsx fragment files for the harvest directories
-	for dir,install_dir in harvest:
-		root = HarvestDirectory(os.path.join(targetdir, dir), install_dir)
-		#Tools.WriteXml(root, "P:\\dump\\" + dir + ".wxs")
+	# Create .wsx fragment files for the harvest files and directories
+	for h in harvest:
+		group_id = h[0]
+		install_dir = h[1]
+		relative_dir = h[2]
+		recursive = h[3]
+		regex_filters = h[4:]
+
+		# The name of the wix file for this group
+		wxs_file = f"{group_id}.wxs"
+		
+		# Harvest files
+		root = HarvestDirectory(group_id, os.path.join(targetdir, relative_dir), recursive, regex_filters, install_dir)
+		#Tools.WriteXml(root, os.path.join(UserVars.dumpdir, wxs_file))
+		#print(f"HACK - Writing temp wix: {os.path.join(UserVars.dumpdir, wxs_file)}")
 
 		# Save to a temporary file
-		wxs_file = dir + ".wxs"
-		xml.ElementTree(root).write(objdir + "\\" + wxs_file)
+		xml.ElementTree(root).write(os.path.join(objdir, wxs_file))
 
 		# Collect the .wxs files
-		wsx_files += [wxs_file]
+		wsx_files.append(wxs_file)
 
 	# Compile all of the .wxs files to object files in 'objdir'
 	Tools.Exec([UserVars.wix_candle,
@@ -154,9 +177,9 @@ def Build(projname:str, version:str, installer:str, projdir:str, targetdir:str, 
 		"-dProjDir="+projdir,
 		"-dTargetDir="+targetdir,
 		"-dProductVersion="+version,
-		"-arch", "x86",
-		"-out", objdir+"\\"] +
-		[objdir+"\\"+f for f in wsx_files])
+		"-arch", "x64",
+		"-out", os.path.join(objdir, "")] +
+		[os.path.join(objdir, f) for f in wsx_files])
 
 	# Create the .msi
 	Tools.Exec([UserVars.wix_light,
@@ -167,12 +190,12 @@ def Build(projname:str, version:str, installer:str, projdir:str, targetdir:str, 
 		"-ext", "WixUIExtension",
 		"-ext", "WixUtilExtension",
 		"-ext", "WixNetFxExtension",
-		"-out", os.path.abspath(objdir + "\\" + msi_filename)] +
-		[objdir+"\\"+Tools.ChgExtn(f,".wixobj") for f in wsx_files])
+		"-out", os.path.abspath(os.path.join(objdir, msi_filename))] +
+		[os.path.join(objdir, Tools.ChgExtn(f,".wixobj")) for f in wsx_files])
 
 	# Copy the .msi file to the destination directory
-	Tools.Copy(objdir+"\\"+msi_filename, dstdir+"\\", quiet=True)
+	Tools.Copy(os.path.join(objdir, msi_filename), os.path.join(dstdir, ""), quiet=True)
 
 	# Clean up
 	Tools.ShellDelete(objdir)
-	return os.path.abspath(dstdir + "\\" + msi_filename)
+	return os.path.abspath(os.path.join(dstdir, msi_filename))

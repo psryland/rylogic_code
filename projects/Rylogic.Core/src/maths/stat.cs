@@ -1401,7 +1401,6 @@ namespace Rylogic.UnitTests
 				var sb = new StringBuilder();
 				foreach (var x in double_.Range(pd.XRange, 0.1))
 					sb.AppendLine($"{x},{pd[x]}");
-				sb.ToFile(@"P:\dump\test.csv");
 
 				{
 					var probabilities = new[] {0.0, 0.1, 0.5, 0.8, 1.0 };

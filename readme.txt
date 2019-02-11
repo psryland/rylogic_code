@@ -1,4 +1,4 @@
-PR Lib project organisation
+Rylogic Lib project organisation
 
 /root
 	/build           - Project files and property sheets

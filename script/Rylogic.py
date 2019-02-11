@@ -67,37 +67,36 @@ def AssertVersion(version):
 	if version > UserVars.version:
 		raise ValueError("UserVars.version is incorrect. Check your UserVars.py file")
 
-# Validate the machine name is correct for the current machine
-def AssertMachineName(machine):
-	if UserVars.machine.lower() != socket.gethostname().lower():
-		raise ValueError("Machine name does not correct for this PC. Check your UserVars.py file")
-
 # Validate an array of paths for existence.
 # Intended for use at the start of a script to validate UserVars.py
 def AssertPathsExist(paths):
 	missing = []
 	for path in paths:
-		if not os.path.exists(path):
+		if not path or not os.path.exists(path):
 			missing.append(path)
 	if (len(missing) != 0):
 		msg = "Missing paths detected:\n"
-		for p in missing: msg += "\t"+p+"\n"
+		for p in missing: msg += f"\t{p}\n" if p else "\tNone\n"
 		msg += "Check your UserVars.py file\n"
 		raise FileExistsError(msg)
 
 # Validate that a single path exists. Returns the path for method chaining
-def AssertPath(path):
-	AssertPathsExist([path])
-	return path
-	
+def AssertPath(path:str, name:str=None):
+	if path and os.path.exists(path): return path
+	raise FileExistsError(f"Path {name if name else path} does not exist. Check UserVars.py")
+
 # Check that 'winsdk_path' is the latest version
 def AssertLatestWinSDK():
-	for dir in os.listdir(UserVars.winsdk + "\\bin"):
+	for dir in os.listdir(os.path.join(UserVars.winsdk, "bin")):
 		if not re.match(r"\d+\.\d+\.\d+\.\d+", dir, 0): continue
 		if dir > UserVars.winsdkvers:
-			raise ValueError("Newer windows SDK version found: "+dir+" (Currently: "+UserVars.winsdkvers+")")
+			raise ValueError(f"Newer windows SDK version found: {dir} (Currently: {UserVars.winsdkvers})")
 	return
 	
+# Validate the machine name is correct for the current machine
+def MachineName():
+	return socket.gethostname().lower()
+
 # Convert a relative or full filepath that might be wrapped in quotes into a full file path
 def NormaliseFilepath(filepath):
 	filepath = filepath.replace('"','')
@@ -428,7 +427,7 @@ def Expand(template_filepath, output_filepath, regex_pattern, subst_func):
 			m = pat.search(buf, s)
 			if not m: break
 			subst = subst_func(m)
-			buf = buf[:m.start()] + subst + buf[m.end():]
+			buf = buf[:m.start()] + (subst if subst else "") + buf[m.end():]
 			s = m.start()
 	with open(output_filepath, mode='w') as f:
 		f.write(buf)
@@ -551,7 +550,8 @@ def MSBuild(sln_or_proj_file, projects, platforms, configs, parallel=False, same
 		for config in configs:
 			args = args_base + ["/p:Configuration="+config+";Platform="+platform]
 			if parallel:
-				procs.extend([Spawn(args, same_window=same_window)])
+				proc = Spawn(args, same_window=same_window)
+				procs.append(proc)
 			else:
 				print(platform + "|" + config + ":")
 				Exec(args)

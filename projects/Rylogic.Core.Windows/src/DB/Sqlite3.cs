@@ -3786,6 +3786,8 @@ namespace Rylogic.UnitTests
 	using System.IO;
 	using System.Text.RegularExpressions;
 	using Db;
+	using Common;
+	using Utility;
 
 	[TestFixture] public class TestSqlite3
 	{
@@ -4122,8 +4124,8 @@ namespace Rylogic.UnitTests
 
 		[TestFixtureSetUp] public void Setup()
 		{
-			var dir = Directory.GetCurrentDirectory();
-			Sqlite.LoadDll(Regex.Replace(dir, @"^(.*\\pr\\).*", @"$1lib\$(platform)\$(config)"));
+			var root = Path_.CombinePath(Path_.Directory(Util.__FILE__()), "..", "..", "..", "..");
+			Sqlite.LoadDll(root + "\\lib\\$(platform)\\$(config)");
 
 			// Register custom type bind/read methods
 			Sqlite.Bind.FunctionMap.Add(typeof(Custom), Custom.SqliteBind);

@@ -1002,6 +1002,9 @@
     <ClInclude Include="..\include\pr\physics2\integrator\impulse.h">
       <Filter>pr\physics\integrater</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\common\handle.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\unittests\pre_build.py" />

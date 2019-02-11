@@ -30,25 +30,29 @@ import UserVars
 #  dbg - debugging
 def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, trace=False, dbg=False):
 
-	fxc = UserVars.winsdk_bin + "\\x64\\fxc.exe"
-
 	Tools.AssertVersion(1)
-	Tools.AssertPathsExist([UserVars.root, UserVars.winsdk, UserVars.textedit, fxc])
 	Tools.AssertLatestWinSDK()
+	Tools.AssertPath(UserVars.root, "UserVars.root")
+	Tools.AssertPath(UserVars.winsdk, "UserVars.winsdk")
+	
+	# Get the full path to fxc.exe
+	fxc = os.path.join(UserVars.winsdk_bin, "x64", "fxc.exe")
+	Tools.AssertPath(fxc)
 
 	# Enable compiled shader objects in debug, for debugging and runtime shaders
-	if dbg: obj = True;
+	if dbg:
+		obj = True
 
 	# Show the command line options
 	if trace:
 		print("pp:" + str(pp) + "  obj:" + str(obj) + "  debug:" + str(dbg))
 
 	# Find the source and output directories
-	srcdir,file = os.path.split(fullpath)
-	fname,extn  = os.path.splitext(file)
-	if trace: print("File: " + fname + extn)
+	_,fname = os.path.split(fullpath)
+	ftitle,extn  = os.path.splitext(fname)
+	if trace: print("File: " + ftitle + extn)
 
-	outdir = UserVars.root + "\\projects\\renderer11\\shaders\\hlsl\\compiled\\"+config
+	outdir = os.path.join(UserVars.root, "projects", "renderer11", "shaders", "hlsl", "compiled", config)
 	os.makedirs(outdir, exist_ok=True)
 	if trace: print("Output directory: " + outdir)
 
@@ -72,12 +76,12 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 			# Create temporary filepaths so that we only overwrite
 			# existing files if they've actually changed. Create temp
 			# files for each unique platform/config to allow parallel build
-			tempdir = tempfile.gettempdir() + "\\" + platform + "\\" + config;
-			filepath_h   = tempdir + "\\" + shdr_name + ".h"
-			filepath_cso = tempdir + "\\" + shdr_name + ".cso"
+			tempdir = os.path.join(tempfile.gettempdir(), platform, config)
+			filepath_h = os.path.join(tempdir, shdr_name + ".h")
+			filepath_cso = os.path.join(tempdir, shdr_name + ".cso")
 
 			# Delete any potentially left over temporary output
-			os.makedirs(tempdir, exist_ok=True);
+			os.makedirs(tempdir, exist_ok=True)
 			if os.path.exists(filepath_h):   os.remove(filepath_h)
 			if os.path.exists(filepath_cso): os.remove(filepath_cso)
 
@@ -118,11 +122,11 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 					print(output)
 					print("success")
 
-				out_filepath_h   = outdir + "\\" + shdr_name + ".h"
-				out_filepath_cso = outdir + "\\" + shdr_name + ".cso"
+				out_filepath_h   = os.path.join(outdir, shdr_name + ".h")
+				out_filepath_cso = os.path.join(outdir, shdr_name + ".cso")
 
 				# Create the .built file, so that VS's custom build tool can check for it's existence to determine when a build is needed
-				with open(outdir + "\\" + fname + ".built", "w") as f: pass
+				with open(os.path.join(outdir, ftitle + ".built"), "w"): pass
 				Tools.Copy(filepath_h, out_filepath_h)
 				if os.path.exists(filepath_cso):
 					Tools.Copy(filepath_cso, out_filepath_cso)
@@ -134,23 +138,27 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 			else: # Generate preprocessed output
 
 				# Delete existing pp output
-				filepath_pp = outdir + "\\" + shdr_name + ".pp"
-				if os.path.exists(filepath_pp):  os.remove(filepath_pp)
+				filepath_pp = os.path.join(outdir, shdr_name + ".pp")
+				if os.path.exists(filepath_pp): os.remove(filepath_pp)
 
 				# Pre process and clean
-				Tools.Exec([UserVars.fxc, fullpath, "/P"+pp_filepath] + includes + defines + options)
-				Tools.Exec([UserVars.root + r"\bin\textformatter.exe", "-f", pp_filepath, "-newlines", "0", "1"])
-				Tools.Exec([UserVars.textedit, pp_filepath])
+				Tools.Exec([UserVars.fxc, fullpath, "/P"+filepath_pp] + includes + defines + options)
+				Tools.Exec([os.path.join(UserVars.root, "bin", "textformatter.exe"), "-f", filepath_pp, "-newlines", "0", "1"])
+				if UserVars.textedit:
+					Tools.Exec([UserVars.textedit, filepath_pp])
 	return
 
 # Run as standalone script
 if __name__ == "__main__":
 	try:
-		#sys.argv = [r"P:\pr\script\BuildShader.py", r"P:\pr\projects\renderer11\shaders\hlsl\screenspace\point_sprites.hlsl", "x86", "debug", "dbg"]
+		#sys.argv = [
+		#	"R:\\software\\SDK\\rylogic\\script\\BuildShader.py",
+		#	"R:\\software\\SDK\\rylogic\\projects\\renderer11\\shaders\\hlsl\\screenspace\\point_sprites.hlsl",
+		#	"x86", "debug", "dbg"]
 
 		trace = False
 		if trace:
-			print("Args: " + str(sys.argv));
+			print("Args: " + str(sys.argv))
 		
 		# The full path of the HLSL file to compile
 		fullpath = (sys.argv[1] if len(sys.argv) > 1 else input("Shader File? ")).lower()

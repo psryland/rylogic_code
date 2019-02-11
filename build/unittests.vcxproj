@@ -88,6 +88,7 @@
     <ClInclude Include="..\include\pr\common\flags_enum.h" />
     <ClInclude Include="..\include\pr\common\fmt.h" />
     <ClInclude Include="..\include\pr\common\guid.h" />
+    <ClInclude Include="..\include\pr\common\handle.h" />
     <ClInclude Include="..\include\pr\common\hresult.h" />
     <ClInclude Include="..\include\pr\common\ienumoutput.h" />
     <ClInclude Include="..\include\pr\common\imposter.h" />

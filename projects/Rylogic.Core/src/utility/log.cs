@@ -680,9 +680,11 @@ namespace Rylogic.UnitTests
 {
 	using Utility;
 
-	[TestFixture] public class TestLogger
+	[TestFixture]
+	public class TestLogger
 	{
-		[Test] public void Logger()
+		[Test]
+		public void Logger()
 		{
 			var l2s = new LogToString();
 			using (var log0 = new Logger("Thing1", l2s, 1) { AddTimestamp = false })
@@ -696,6 +698,7 @@ namespace Rylogic.UnitTests
 
 				// Overwrite the timestamp so its the same for all unit tests
 				var lines = l2s.Str.ToString().Split(new[]{"\u001b"}, StringSplitOptions.RemoveEmptyEntries);
+				Assert.Equal(3, lines.Length);
 				Assert.True(lines[0] == "A:\\file.txt(32): Thing1|Error|Error message");
 				Assert.True(lines[1] == "Thing2|Info|Info message");
 				Assert.True(lines[2] == "Thing1|Warn|Exception message - Exception: Exception");

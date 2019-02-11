@@ -42,7 +42,7 @@ namespace pr
 	// of the container can be interpreted as different types as needed.
 	// Also note: this container is intended as a byte bucket, so don't expect
 	// constructors/destructors/etc to be called on types you add to this container.
-	template <std::size_t Alignment> struct ByteData
+	template <int Alignment = 1> struct ByteData
 	{
 		using value_type = unsigned char;
 

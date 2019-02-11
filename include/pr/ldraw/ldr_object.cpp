@@ -2709,8 +2709,8 @@ namespace pr
 						else
 						{
 							p.ReportError(EResult::UnknownValue, FmtS("Cross Section type %s is not supported", m_type.c_str()));
-							p.m_reader.FindSectionEnd();
-							m_type.clear();
+							//p.m_reader.FindSectionEnd();
+							//m_type.clear();
 						}
 
 						// Optional parameters

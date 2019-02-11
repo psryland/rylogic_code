@@ -623,49 +623,11 @@ namespace Rylogic.Utility
 #if PR_UNITTESTS
 namespace Rylogic.UnitTests
 {
-	[TestFixture] public class TestPathEx
+	[TestFixture] public class TestShell
 	{
-		[Test] public void TestPathValidation()
-		{
-			Assert.True(Path_.IsValidDirectory(@"A:\dir1\..\.\dir2", true));
-			Assert.True(Path_.IsValidDirectory(@"A:\dir1\..\.\dir2", false));
-			Assert.True(Path_.IsValidDirectory(@".\dir1\..\.\dir2", false));
-			Assert.True(Path_.IsValidDirectory(@"A:\dir1\..\.\dir2\", true));
-			Assert.True(Path_.IsValidDirectory(@"A:\dir1\..\.\dir2\", false));
-			Assert.True(Path_.IsValidDirectory(@".\dir1\..\.\dir2\", false));
-			Assert.False(Path_.IsValidDirectory(@".\dir1?\..\.\", false));
-
-			Assert.True(Path_.IsValidFilepath(@"A:\dir1\..\.\dir2\file.txt", true));
-			Assert.True(Path_.IsValidFilepath(@"A:\dir1\..\.\dir2\file", false));
-			Assert.True(Path_.IsValidFilepath(@".\dir1\..\.\dir2\file", false));
-			Assert.False(Path_.IsValidFilepath(@".\dir1\", false));
-			Assert.False(Path_.IsValidFilepath(@".\dir1\file*.txt", false));
-
-			Assert.False(Path_.IsValidFilepath(@"P:\dump\file.tx##:t", false));
-			Assert.False(Path_.IsValidFilepath(@"P:\dump\fi:.txt", false));
-			Assert.False(Path_.IsValidFilepath(@"P:\dump\f*.txt", false));
-			Assert.False(Path_.IsValidFilepath(@"P:\dump\f?.txt", false));
-		}
-		[Test] public void TestPathNames()
-		{
-			string path;
-
-			path = Path_.RelativePath(@"A:\dir\sub dir\file.ext", @"A:\dir");
-			Assert.Equal(@".\sub dir\file.ext", path);
-
-			path = Path_.CombinePath(@"A:\", @".\dir\subdir2", @"..\sub dir\", "file.ext");
-			Assert.Equal(@"A:\dir\sub dir\file.ext", path);
-
-			path = Path_.SanitiseFileName("1_path@\"[{+\\!@#$%^^&*()\'/?", "@#$%", "A");
-			Assert.Equal("1_pathAA[{+A!AAAA^^&A()'AA", path);
-
-			const string noquotes   = "C:\\a b\\path.ext";
-			const string withquotes = "\"C:\\a b\\path.ext\"";
-			Assert.Equal(withquotes ,Path_.Quote(noquotes, true));
-			Assert.Equal(withquotes ,Path_.Quote(withquotes, true));
-			Assert.Equal(noquotes   ,Path_.Quote(noquotes, false));
-			Assert.Equal(noquotes   ,Path_.Quote(withquotes, false));
-		}
+        [Test]
+        public void Test()
+        { }
 	}
 }
 #endif
