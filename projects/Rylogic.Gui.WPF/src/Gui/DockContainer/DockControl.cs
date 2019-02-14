@@ -151,31 +151,34 @@ namespace Rylogic.Gui.WPF
 				if (m_pane == value) return;
 				if (m_pane != null)
 				{
-					m_pane.Content.Remove(this);
+					m_pane.AllContent.Remove(this);
 				}
-				SetDockPaneInternal(value);
-				if (m_pane != null)
+				if (value != null)
 				{
-					m_pane.Content.Add(this);
+					value.AllContent.Add(this);
 				}
-				PaneChanged?.Invoke(this, EventArgs.Empty);
 			}
 		}
 		private DockPane m_pane;
 		internal void SetDockPaneInternal(DockPane pane)
 		{
+			if (m_pane == pane)
+				return;
+
 			// Calling 'DockControl.set_DockPane' changes the Content list in the DockPane
 			// which calls this method to change the DockPane on the content without recursively
 			// changing the content list.
 			m_pane = pane;
 
 			// Record the dock container that 'pane' belongs to
-			if (pane != null)
-				DockContainer = pane.DockContainer;
+			DockContainer = pane?.DockContainer;
 
 			// If a pane is given, save the dock address for the root branch (if the pane is within a tree)
 			if (pane != null && pane.ParentBranch != null)
 				DockAddresses[m_pane.RootBranch] = DockAddress;
+
+			// Notify of pane changed
+			PaneChanged?.Invoke(this, EventArgs.Empty);
 		}
 
 		/// <summary>Raised when the pane this dockable is on is changing (possibly to null)</summary>
@@ -226,7 +229,7 @@ namespace Rylogic.Gui.WPF
 				// Move this content to a different dock site within 'branch'
 				var branch = DockPane.ParentBranch;
 				var pane = branch.DockPane(value);
-				pane.Content.Add(this);
+				pane.AllContent.Add(this);
 			}
 		}
 
@@ -239,7 +242,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The index of this dockable within the content of 'DockPane'</summary>
 		public int ContentIndex
 		{
-			get { return DockPane?.Content.IndexOf(this) ?? int.MaxValue; }
+			get { return DockPane?.AllContent.IndexOf(this) ?? int.MaxValue; }
 		}
 
 		/// <summary>Get/Set whether this content is in a floating window</summary>

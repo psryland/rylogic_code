@@ -37,7 +37,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				throw new Exception("Only panes and content should be being dragged");
 
 			m_ss_start_pt = ss_start_pt;
-			m_ghost_button = new TabButton(item_name, owner.Options);
+			m_ghost_button = new TabButton(item_name);
 			Owner = GetWindow(owner);
 			DockContainer = owner;
 			DraggedItem = item;
@@ -105,7 +105,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		{
 			base.OnMouseUp(e);
 			HitTestDropLocations(PointToScreen(e.GetPosition(this)));
-			//DialogResult = true;
+			DialogResult = true;
 			Close();
 		}
 		protected override void OnLostMouseCapture(MouseEventArgs e)
@@ -124,16 +124,9 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		}
 		protected override void OnClosed(EventArgs e)
 		{
-			Ghost = null;
-			IndCrossLg = null;
-			IndCrossSm = null;
-			IndLeft = null;
-			IndTop = null;
-			IndRight = null;
-			IndBottom = null;
-			SetHoveredPane(null);
 			ReleaseMouseCapture();
 			DockContainer.Focus();
+			SetHoveredPane(null);
 
 			// Commit the move on successful close
 			if (DialogResult == true)
@@ -170,7 +163,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				else
 				{
 					var target = TreeHost.Root.DockPane(DropAddress.First(), DropAddress.Skip(1));
-					var index = DropIndex ?? target.Content.Count;
+					var index = DropIndex ?? target.AllContent.Count;
 
 					// Dock the dragged item
 					if (DraggedItem is DockControl dc)
@@ -181,14 +174,22 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					// Dock the dragged pane
 					if (DraggedItem is DockPane dockpane)
 					{
-						foreach (var c in dockpane.Content.Reversed().ToArray())
-							target.Content.Insert(index, c);
+						foreach (var c in dockpane.AllContent.Reversed().ToArray())
+							target.AllContent.Insert(index, c);
 					}
 				}
 
 				// Restore the active content
 				DockContainer.ActiveContent = active;
 			}
+
+			Ghost = null;
+			IndCrossLg = null;
+			IndCrossSm = null;
+			IndLeft = null;
+			IndTop = null;
+			IndRight = null;
+			IndBottom = null;
 			base.OnClosed(e);
 		}
 
@@ -382,8 +383,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			if (pane != null && !over_indicator)
 			{
 				var hit = VisualTreeHelper.HitTest(pane.TitleBar, pane.TitleBar.PointFromScreen(screen_pt));
-				var title = hit != null ? hit.VisualHit as TitleBar ?? Gui_.FindVisualParent<TitleBar>(hit.VisualHit, root: pane.TitleBar) : null;
-				if (title != null)
+				if (hit != null && Gui_.FindVisualParent<Panel>(hit.VisualHit, root: pane.TitleBar) != null)
 					snap_to = EDropSite.PaneCentre;
 			}
 
@@ -746,7 +746,10 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				Height = sz.Height;
 
 				// Add an image UI element
-				AddChild(new Image { Source = (ImageSource)Resources[indy.ToString()], Width = sz.Width, Height = sz.Height });
+				var dock = new DockPanel { };
+				dock.Children.Add(new Image { Source = (ImageSource)Resources[indy.ToString()], Width = sz.Width, Height = sz.Height, Stretch = Stretch.None });
+				Content = dock;
+				//AddChild(img);
 
 				// Add the hotspots for this indicator
 				m_spots = HotSpotsFor(indy);
@@ -824,5 +827,4 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			DockSiteMask = 0xff,
 		}
 	}
-
 }

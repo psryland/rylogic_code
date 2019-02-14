@@ -1,17 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace Rylogic.Gui.WPF.DockContainerDetail
 {
@@ -22,28 +11,6 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		{
 			InitializeComponent();
 		}
-		//public TitleBar(DockPane owner, OptionsData opts)
-		//{
-		
-		//	m_opts = opts;
-		//	DockPane = owner;
-
-		//	//ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-		//	//ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0, GridUnitType.Auto) });
-		//	//ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0, GridUnitType.Auto) });
-
-		//	//// Add the Title text
-		//	//m_title = Children.Add2(new TextBlock { Text = "Title", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(3, 0, 0, 0) });
-		//	//Grid.SetColumn(m_title, 0);
-
-		//	//// Add the pin button
-		//	//m_pin = Children.Add2(new PinButton(DockPane));
-		//	//Grid.SetColumn(m_pin, 1);
-
-		//	//// Add the close button
-		//	//m_close = Children.Add2(new CloseButton(DockPane));
-		//	//Grid.SetColumn(m_close, 2);
-		//}
 		protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
 		{
 			base.OnPreviewMouseDown(e);
@@ -83,6 +50,12 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 		/// <summary>The DockPane that owns this title bar</summary>
 		public DockPane DockPane => Parent as DockPane;
+
+		/// <summary>The pin button on the title bar</summary>
+		public PinButton PinButton => m_pin;
+
+		/// <summary>The close button on the title bar</summary>
+		public CloseButton CloseButton => m_close;
 
 		/// <summary>The title bar text</summary>
 		public string Title

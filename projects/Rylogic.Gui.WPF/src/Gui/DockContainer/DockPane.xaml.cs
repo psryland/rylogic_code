@@ -5,8 +5,10 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 using System.Xml.Linq;
 using Rylogic.Extn;
 using Rylogic.Gui.WPF;
@@ -25,43 +27,38 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			InitializeComponent();
 
 			DockContainer = owner ?? throw new ArgumentNullException("The owning dock container cannot be null");
-			ApplyToVisibleContentOnly = false;
+			MoveVisibleContentOnly = false;
 
 			// Create the collection that manages the content within this pane
-			Content = new ObservableCollection<DockControl>();
+			AllContent = new ObservableCollection<DockControl>();
 
-			//// Add the title bar
-			//TitleBar = Children.Add2(new TitleBar(this, DockContainer.Options) { ShowPin = show_pin, ShowClose = show_close });
-			//DockPanel.SetDock(TitleBar, Dock.Top);
+			// Bind to this instance
+			DataContext = this;
 
-			//// Add the tab strip
-			//TabStrip = Children.Add2(new TabStrip(EDockSite.Bottom, owner.Options));
-			//DockPanel.SetDock(TabStrip, Dock.Bottom);
-
-			//// Add the panel for the content
-			//Centre = Children.Add2(new Grid { Name = "DockPaneContent" });
+			// Set up UI Elements
+			SetupUI();
 		}
 		public virtual void Dispose()
 		{
 			// Note: we don't own any of the content
 			VisibleContent = null;
-			Content = null;
-			DockContainer = null;
+			AllContent = null;
 		}
 
 		/// <summary>The owning dock container</summary>
-		public DockContainer DockContainer { [DebuggerStepThrough] get; private set; }
+		public DockContainer DockContainer { [DebuggerStepThrough] get; }
 
+		/// <summary>Control behaviour</summary>
 		public OptionsData Options => DockContainer.Options;
 
 		/// <summary>The title bar control for the pane</summary>
-		public TitleBar TitleBar => m_title;
+		public Panel TitleBar => m_titlebar;
 
 		/// <summary>The tab strip for the pane (visibility controlled adding buttons to the tab strip)</summary>
 		public TabStrip TabStrip => m_tabstrip;
 
 		/// <summary>The panel that displays the visible content</summary>
-		public Panel Centre => m_content_pane;
+		public ContentControl Centre => m_content_pane;
 
 		/// <summary>The control that hosts the dock pane and branch tree</summary>
 		internal ITreeHost TreeHost
@@ -89,19 +86,19 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		}
 
 		/// <summary>Get the dock site for this pane</summary>
-		internal EDockSite DockSite
+		public EDockSite DockSite
 		{
 			get { return ParentBranch?.Descendants.Single(x => x.Item == this).DockSite ?? EDockSite.None; }
 		}
 
 		/// <summary>Get the dock sites, from top to bottom, describing where this pane is located in the tree </summary>
-		internal EDockSite[] DockAddress
+		public EDockSite[] DockAddress
 		{
 			get { return ParentBranch.DockAddress.Concat(DockSite).ToArray(); }
 		}
 
 		/// <summary>The content hosted by this pane</summary>
-		public ObservableCollection<DockControl> Content
+		public ObservableCollection<DockControl> AllContent
 		{
 			[DebuggerStepThrough]
 			get { return m_content; }
@@ -132,16 +129,18 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 						{
 							foreach (var dc in e.NewItems.Cast<DockControl>())
 							{
+								if (dc == null)
+									throw new ArgumentNullException(nameof(dc), "Cannot add 'null' content to a dock pane");
+
 								// Before adding dockables to the content list, remove them from any previous panes (or even this pane)
-								if (dc == null) throw new ArgumentNullException(nameof(dc), "Cannot add 'null' content to a dock pane");
-								dc.DockPane = null;
+								dc.SetDockPaneInternal(null);
 
 								// Set this pane as the owning dock pane for the dockables.
 								// Don't add the dockable as a child control yet, that happens when the active content changes.
 								dc.SetDockPaneInternal(this);
 
 								// Add a tab button for this item
-								TabStrip.Buttons.Insert(Content.IndexOf(dc), new TabButton(dc, DockContainer.Options));
+								TabStrip.Buttons.Insert(AllContent.IndexOf(dc), new TabButton(dc));
 
 								// Notify tree changed
 								ParentBranch?.OnTreeChanged(new TreeChangedEventArgs(TreeChangedEventArgs.EAction.Added, dockcontrol: dc));
@@ -152,9 +151,12 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 						{
 							foreach (var dc in e.OldItems.Cast<DockControl>())
 							{
+								if (dc == null)
+									throw new ArgumentNullException(nameof(dc), "Cannot remove 'null' content from a dock pane");
+								if (dc.DockPane != this)
+									throw new Exception($"Dockable does not belong to this DockPane");
+
 								// Clear the dock pane from the content
-								if (dc == null) throw new ArgumentNullException(nameof(dc), "Cannot remove 'null' content from a dock pane");
-								if (dc.DockPane != this) throw new Exception($"Dockable does not belong to this DockPane");
 								dc.SetDockPaneInternal(null);
 
 								// Remove the tab button
@@ -228,10 +230,10 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 						// Remove the element
 						// Note: don't dispose the content, we don't own it
-						Centre.Children.Remove(m_visible_content.Owner);
+						Centre.Content = null;
 
 						// Clear the title bar
-						TitleBar.Title = string.Empty;
+						m_title.Text = string.Empty;
 
 						//							// Clear the scroll offset
 						//							AutoScrollPosition = Point.Empty;
@@ -245,10 +247,10 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					if (m_visible_content != null)
 					{
 						// Add the element
-						Centre.Children.Add(m_visible_content.Owner);
+						Centre.Content = m_visible_content.Owner;
 
 						// Set the title bar
-						TitleBar.Title = m_visible_content.TabText;
+						m_title.Text = m_visible_content.TabText;
 
 						// Restore the input focus for this content
 						m_visible_content.RestoreFocus();
@@ -286,7 +288,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				// All content in a pane should be in the same state. This is true even if
 				// 'ApplyToVisibleContentOnly' is true because any float/auto hide operation should
 				// move that content to a different pane
-				Debug.Assert(Content.All(x => x.IsFloating == floating), "All content in a pane should be in the same state");
+				Debug.Assert(AllContent.All(x => x.IsFloating == floating), "All content in a pane should be in the same state");
 				return floating;
 			}
 			set
@@ -308,8 +310,8 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				//					pane.TabStripCtrl.StripLocation = strip_location;
 
 				// Add the remaining content to the same pane that 'content' is now in
-				if (!ApplyToVisibleContentOnly)
-					pane.Content.AddRange(Content.ToArray());
+				if (!MoveVisibleContentOnly)
+					pane.AllContent.AddRange(AllContent.ToArray());
 			}
 		}
 
@@ -320,30 +322,39 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			{
 				if (VisibleContent == null) return false;
 				var auto_hide = VisibleContent.IsAutoHide;
-				Debug.Assert(Content.All(x => x.IsAutoHide == auto_hide), "All content in a pane should be in the same state");
+				Debug.Assert(AllContent.All(x => x.IsAutoHide == auto_hide), "All content in a pane should be in the same state");
 				return auto_hide;
 			}
 			set
 			{
 				// All content in this pane matches the auto hide state of the active content
 				var content = VisibleContent;
-				if (content == null)
+				if (content == null || content.IsAutoHide == value)
 					return;
 
 				// Change the state of the active content
 				content.IsAutoHide = value;
 
-				// Add the remaining content to the same pane that 'content' is now in
-				if (!ApplyToVisibleContentOnly)
+				// Add the remaining content to the same pane that 'content' is now in.
+				if (!MoveVisibleContentOnly && AllContent != null)
 				{
+					// Careful, moving all content from a pane causes it to be disposed.
+					// If the pane only contained 'content' before, then Dispose will have
+					// been called and 'AllContent' will be null. In this case, there is
+					// nothing else to move anyway
 					var pane = content.DockPane;
-					pane.Content.AddRange(Content.ToArray());
+					pane.AllContent.AddRange(AllContent.ToArray());
 				}
 			}
 		}
+		public bool IsPinned
+		{
+			get { return !IsAutoHide; }
+			set { IsAutoHide = !value; }
+		}
 
 		/// <summary>Get/Set whether operations such as floating or auto hiding apply to all content or just the visible content</summary>
-		public bool ApplyToVisibleContentOnly { get; set; }
+		public bool MoveVisibleContentOnly { get; set; }
 
 		/// <summary>Raised whenever the visible content for this dock pane changes</summary>
 		public event EventHandler<ActiveContentChangedEventArgs> VisibleContentChanged;
@@ -357,6 +368,20 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		internal void OnActivatedChanged()
 		{
 			ActivatedChanged?.Invoke(this, EventArgs.Empty);
+		}
+
+		/// <summary>Raised whenever this DockPane is moved to a new site in the tree</summary>
+		public event EventHandler DockAddressChanged;
+		internal void OnDockAddressChanged()
+		{
+			// Update the 'pin' state
+			m_pin.IsChecked = IsAutoHide;
+			m_pin.Visibility = DockSite == EDockSite.Centre && TreeHost is DockContainer
+				? Visibility.Collapsed
+				: Visibility.Visible;
+
+			// Notify that the pane has moved within the tree
+			DockAddressChanged?.Invoke(this, EventArgs.Empty);
 		}
 
 		/// <summary>Get/Set this pane as activated. Activation causes the active content in this pane to be activated</summary>
@@ -388,6 +413,113 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				return side;
 			}
 		}
+
+		/// <summary>Set up UI elements</summary>
+		private void SetupUI()
+		{
+			{// Set up dragging from the title bar
+				bool dragging = false;
+				Point? mouse_down_at = null;
+				TitleBar.PreviewMouseDown += TitleBarOnMouseDown;
+				TitleBar.PreviewMouseMove += TitleBarOnMouseMove;
+				TitleBar.PreviewMouseUp += TitleBarOnMouseUp;
+
+				void TitleBarOnMouseDown(object sender, MouseButtonEventArgs e)
+				{
+					if (e.LeftButton == MouseButtonState.Pressed && Options.AllowUserDocking)
+					{
+						// Record the mouse down location
+						// Don't start dragging until the mouse has moved far enough
+						mouse_down_at = e.GetPosition(TitleBar);
+						dragging = false;
+					}
+				}
+				void TitleBarOnMouseMove(object sender, MouseEventArgs e)
+				{
+					var loc = e.GetPosition(TitleBar);
+
+					// See if dragging should start/continue
+					if (!dragging && mouse_down_at != null && Point.Subtract(loc, mouse_down_at.Value).Length > 5)
+					{
+						// Begin dragging this pane
+						dragging = true;
+						DockContainer.DragBegin(this, PointToScreen(loc));
+					}
+				}
+				void TitleBarOnMouseUp(object sender, MouseButtonEventArgs e)
+				{
+					mouse_down_at = null;
+					dragging = false;
+				}
+			}
+		}
+
+		/// <summary>Record the layout of the pane</summary>
+		public XElement ToXml(XElement node)
+		{
+			// Record the content that is the visible content in this pane
+			if (VisibleContent != null)
+				node.Add2(XmlTag.Visible, VisibleContent.PersistName, false);
+
+			//				// Save the strip location
+			//				if (TabStripCtrl != null)
+			//					node.Add2(XmlTag.StripLocation, TabStripCtrl.StripLocation, false);
+
+			return node;
+		}
+
+		/// <summary>Apply layout state to this pane</summary>
+		public void ApplyState(XElement node)
+		{
+			// Restore the visible content
+			var visible = node.Element(XmlTag.Visible)?.As<string>();
+			if (visible != null)
+			{
+				var content = AllContent.FirstOrDefault(x => x.PersistName == visible);
+				if (content != null)
+					VisibleContent = content;
+			}
+
+			//				// Restore the strip location
+			//				var strip_location = node.Element(XmlTag.StripLocation)?.As<EDockSite>();
+			//				if (strip_location != null)
+			//					TabStripCtrl.StripLocation = strip_location.Value;
+		}
+
+		/// <summary>Output the tree structure as a string. (Recursion method, call 'DockContainer.DumpTree()')</summary>
+		public void DumpTree(StringBuilder sb, int indent, string prefix)
+		{
+			sb.Append(' ', indent).Append(prefix).Append("Pane: ").Append(DumpDesc()).AppendLine();
+		}
+
+		/// <summary>Self consistency check (Recursion method, call 'DockContainer.ValidateTree()')</summary>
+		public void ValidateTree()
+		{
+			if (DockContainer == null)
+				throw new ObjectDisposedException("This dock pane has been disposed");
+
+			if (ParentBranch?.Descendants[DockSite].Item as DockPane != this)
+				throw new Exception("Dock pane parent does not link to this dock pane");
+		}
+
+		/// <summary>A string description of the pane</summary>
+		public string DumpDesc()
+		{
+			return $"Count={AllContent.Count} Active={(AllContent.Count != 0 ? CaptionText : "<empty pane>")}";
+		}
+
+		/// <summary>A string description of where this pane is in the dock container</summary>
+		public string LocationDesc()
+		{
+			if (TreeHost is AutoHidePanel ahp)
+				return $"AutoHidePanel({ahp.DockSite}):{DockAddress.Description()}";
+			if (TreeHost is FloatingWindow fw)
+				return $"FloatingWindow:{DockAddress.Description()}";
+			return $"MainWindow:{DockAddress.Description()}";
+		}
+	}
+
+}
 #if false
 			/// <summary>Layout the pane</summary>
 			protected override void OnLayout(LayoutEventArgs e)
@@ -450,63 +582,9 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				base.WndProc(ref m);
 			}
 #endif
-
-		/// <summary>Record the layout of the pane</summary>
-		public XElement ToXml(XElement node)
-		{
-			// Record the content that is the visible content in this pane
-			if (VisibleContent != null)
-				node.Add2(XmlTag.Visible, VisibleContent.PersistName, false);
-
-			//				// Save the strip location
-			//				if (TabStripCtrl != null)
-			//					node.Add2(XmlTag.StripLocation, TabStripCtrl.StripLocation, false);
-
-			return node;
-		}
-
-		/// <summary>Apply layout state to this pane</summary>
-		public void ApplyState(XElement node)
-		{
-			// Restore the visible content
-			var visible = node.Element(XmlTag.Visible)?.As<string>();
-			if (visible != null)
-			{
-				var content = Content.FirstOrDefault(x => x.PersistName == visible);
-				if (content != null)
-					VisibleContent = content;
-			}
-
-			//				// Restore the strip location
-			//				var strip_location = node.Element(XmlTag.StripLocation)?.As<EDockSite>();
-			//				if (strip_location != null)
-			//					TabStripCtrl.StripLocation = strip_location.Value;
-		}
-
-		/// <summary>Output the tree structure as a string. (Recursion method, call 'DockContainer.DumpTree()')</summary>
-		public void DumpTree(StringBuilder sb, int indent, string prefix)
-		{
-			sb.Append(' ', indent).Append(prefix).Append("Pane: ").Append(DumpDesc()).AppendLine();
-		}
-
-		/// <summary>Self consistency check (Recursion method, call 'DockContainer.ValidateTree()')</summary>
-		public void ValidateTree()
-		{
-			if (DockContainer == null)
-				throw new ObjectDisposedException("This dock pane has been disposed");
-
-			if (ParentBranch?.Descendants[DockSite].Item as DockPane != this)
-				throw new Exception("Dock pane parent does not link to this dock pane");
-		}
-
-		/// <summary>A string description of the pane</summary>
-		public string DumpDesc()
-		{
-			return $"Count={Content.Count} Active={(Content.Count != 0 ? CaptionText : "<empty pane>")}";
-		}
 #if false
-			/// <summary>A custom control for drawing the title bar, including text, close button and pin button</summary>
-			public class PaneTitleControl : Control ,IDisposable
+/// <summary>A custom control for drawing the title bar, including text, close button and pin button</summary>
+public class PaneTitleControl : Control ,IDisposable
 			{
 				public PaneTitleControl(DockPane owner)
 				{
@@ -993,6 +1071,3 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				}
 			}
 #endif
-	}
-
-}

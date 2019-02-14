@@ -341,10 +341,10 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Initiate dragging of a pane or content</summary>
 		internal static void DragBegin(object draggee, Point ss_start_pt)
 		{
-			var dc = (DockContainer)null;
-			if (draggee is DockPane p) dc = p.DockContainer;
-			else if (draggee is DockControl c) dc = c.DockContainer;
-			else throw new Exception("Dragging only supports dock pane or dock control");
+			var dc =
+				draggee is DockPane p ? p.DockContainer :
+				draggee is DockControl c ? c.DockContainer :
+				throw new Exception("Dragging only supports dock pane or dock control");
 
 			// Create a form for displaying the dock site locations and handling the drop of a pane or content
 			using (var drop_handler = new DragHandler(dc, draggee, ss_start_pt))
@@ -784,6 +784,9 @@ namespace Rylogic.Gui.WPF
 					DockContainer.SetDock(ah.TabStrip, DockContainer.ToDock(ds));
 
 					// Position the auto hide panels within 'centre'
+					// The auto hide panel is a 3 column/row grid, where the centre column/row is the grid
+					// splitter and one panel is the dock pane, the other is empty and transparent.
+					// So, all auto hide panels span the entire centre canvas.
 					ah.SetBinding(AutoHidePanel.WidthProperty, new Binding(nameof(Canvas.ActualWidth)) { Source = centre });
 					ah.SetBinding(AutoHidePanel.HeightProperty, new Binding(nameof(Canvas.ActualHeight)) { Source = centre });
 				}

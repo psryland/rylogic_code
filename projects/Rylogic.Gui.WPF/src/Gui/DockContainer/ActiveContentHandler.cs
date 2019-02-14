@@ -16,7 +16,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		}
 
 		/// <summary>The root of the tree in this dock container</summary>
-		private ITreeHost TreeHost { [DebuggerStepThrough] get; set; }
+		private ITreeHost TreeHost { [DebuggerStepThrough] get; }
 
 		/// <summary>
 		/// Get/Set the active content. This will cause the pane that the content is on to also become active.
@@ -87,9 +87,13 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>Make the previously active dock pane the active pane</summary>
 		public void ActivatePrevious()
 		{
-			var pane = m_prev_pane.TryGetTarget(out var p) ? p : null;
-			if (pane != null && pane.DockContainer != null)
-				ActivePane = pane;
+			// If a previous pane is know, try to reactivate it
+			if (m_prev_pane != null && m_prev_pane.TryGetTarget(out var p) && p.DockContainer != null)
+				ActivePane = p;
+			
+			// Otherwise, try to activate the centre pane on the main dock container
+			else
+				ActivePane = TreeHost.Root.DockPane(EDockSite.Centre);
 		}
 
 		/// <summary>Raised whenever the active pane changes in the dock container</summary>

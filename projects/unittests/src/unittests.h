@@ -69,6 +69,7 @@
 #include "pr\common\flags_enum.h"
 #include "pr\common\fmt.h"
 #include "pr\common\guid.h"
+#include "pr\common\handle.h"
 #include "pr\common\hresult.h"
 #include "pr\common\ienumoutput.h"
 #include "pr\common\inplacealloc.h"

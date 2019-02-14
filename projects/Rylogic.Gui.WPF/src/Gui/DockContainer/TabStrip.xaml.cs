@@ -6,7 +6,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media;
 
 namespace Rylogic.Gui.WPF.DockContainerDetail
@@ -18,22 +17,20 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		public TabStrip()
 		{
 			InitializeComponent();
+			Children.Clear();
+
 			Buttons = new ObservableCollection<TabButton>();
 
 			// All tab strips are horizontal with a layout transform for vertical strips
 			Orientation = Orientation.Horizontal;
 			StripLocation = EDockSite.None;
 		}
-		protected override void OnMouseDown(MouseButtonEventArgs e)
-		{
-			base.OnMouseDown(e);
-		}
 
 		/// <summary>Dock container options</summary>
-		public OptionsData Options => DockPane?.Options ?? new OptionsData();
+		private OptionsData Options => TreeHost?.DockContainer.Options ?? new OptionsData();
 
-		/// <summary>The dock pane this tab strip is part of</summary>
-		public DockPane DockPane => Parent as DockPane;
+		/// <summary>Returns the tree root that hosts this tab strip</summary>
+		internal ITreeHost TreeHost => Gui_.FindVisualParent<ITreeHost>(this);
 
 		/// <summary>The location of the tab strip. Only L,T,R,B are valid</summary>
 		public EDockSite StripLocation
@@ -90,6 +87,9 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					throw new Exception("Orientation unknown");
 			}
 		}
+
+		/// <summary>The auto hide panel this tab strip is associated with (null if none)</summary>
+		public AutoHidePanel AHPanel { get; set; }
 
 		/// <summary>The tab buttons in this tab strip</summary>
 		public ObservableCollection<TabButton> Buttons

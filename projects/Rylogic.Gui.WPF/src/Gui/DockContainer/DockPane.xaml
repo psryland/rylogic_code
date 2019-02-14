@@ -7,43 +7,102 @@
 	xmlns:gui2="clr-namespace:Rylogic.Gui.WPF"
 	xmlns:local="clr-namespace:Rylogic.Gui.WPF.DockContainerDetail"
 	mc:Ignorable="d" 
-	d:DesignHeight="450" d:DesignWidth="400"
+	d:DesignHeight="250" d:DesignWidth="400"
+	LastChildFill="True"
+	Background="{x:Static SystemColors.ControlBrush}"
 	>
 
 	<DockPanel.Resources>
 		<ResourceDictionary>
+			<BitmapImage x:Key ="dock_pinned" UriSource="/Rylogic.Gui.WPF;component/res/dock_pinned.png"/>
+			<BitmapImage x:Key ="dock_unpinned" UriSource="/Rylogic.Gui.WPF;component/res/dock_unpinned.png"/>
+			<BitmapImage x:Key ="dock_close" UriSource="/Rylogic.Gui.WPF;component/res/dock_close.png"/>
+			<gui2:NullableToDefault x:Key="NullableToDefault"/>
 
-			<!--<Style x:Key="DockPaneTitleStyle" TargetType="{x:Type StackPanel}">
-				<Setter Property="Background" Value="{StaticResource DockPaneTitleActiveBackground}" />
-			</Style>
+			<!-- Title background brushes -->
+			<LinearGradientBrush x:Key="TitleActiveBackground" StartPoint="0,0" EndPoint="0,1" MappingMode="RelativeToBoundingBox" SpreadMethod="Pad">
+				<GradientStop Color="{x:Static SystemColors.GradientActiveCaptionColor}" Offset="0.0" />
+				<GradientStop Color="{x:Static SystemColors.InactiveCaptionColor}" Offset="1.0" />
+			</LinearGradientBrush>
+			<SolidColorBrush x:Key="TitleInactiveBackground" Color="{x:Static SystemColors.InactiveCaptionColor}"/>
+
+			<!-- Pin button -->
+			<Image x:Key="DockPinned" Source="{StaticResource dock_pinned}" Stretch="None"/>
+			<Image x:Key="DockUnPinned" Source="{StaticResource dock_unpinned}" Stretch="None"/>
 			
-			<Style x:Key="DockPaneTitleTextStyle" TargetType="{x:Type TextBlock}">
-				<Setter Property="FontSize" Value="10"/>
-				<Setter Property="Margin" Value="1"/>
-				<Setter Property="VerticalAlignment" Value="Center" />
-			</Style>-->
-			
+			<!-- Close button -->
+			<Image x:Key="DockClose" Source="{StaticResource dock_close}" Stretch="None"/>
+
 		</ResourceDictionary>
 	</DockPanel.Resources>
 
-	<!-- DockPane Control-->
-	<DockPanel>
-		<local:TitleBar x:Name="m_title"/>
-		<!--<local:TabStrip x:Name="m_tabstrip"/>-->
-		<Canvas Name="m_content_pane" Background="{x:Static SystemColors.ControlBrush}">
-		</Canvas>
-		<!--<StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Style="{StaticResource DockPaneTitleStyle}">
-			<TextBlock Name="m_lbl_title" Style="{StaticResource DockPaneTitleTextStyle}">DockPane Title</TextBlock>
-		</StackPanel>
-		<StackPanel Name="m_tab_strip" DockPanel.Dock="Bottom" Style="{StaticResource DockPaneTitleStyle}">
-			<StackPanel Orientation="Horizontal">
-				--><!--
-				<detail:TabButton/>
-				<detail:TabButton/>
-				<detail:TabButton/>
-				--><!--
-			</StackPanel>
-		</StackPanel>
-		-->
-	</DockPanel>
+	<!-- Title Bar -->
+	<Grid
+		Name="m_titlebar"
+		DockPanel.Dock="Top"
+		Background="{StaticResource TitleActiveBackground}"
+		>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="1*"/>
+			<ColumnDefinition Width="auto"/>
+			<ColumnDefinition Width="auto"/>
+		</Grid.ColumnDefinitions>
+
+		<!-- Title text -->
+		<TextBlock
+			x:Name="m_title"
+			Grid.Column="0"
+			VerticalAlignment="Center"
+			Margin="3,0,0,0"
+			Text="Title Bar"
+			/>
+
+		<!-- Pin Button -->
+		<ToggleButton
+			x:Name="m_pin"
+			Grid.Column="1"
+			Content="{StaticResource DockPinned}"
+			IsChecked="{Binding IsPinned, Mode=TwoWay, Converter={StaticResource NullableToDefault}}"
+			IsThreeState="False"
+			Background="Transparent"
+			BorderThickness="0"
+			Margin="2"
+			>
+			<ToggleButton.Style>
+				<Style TargetType="{x:Type ToggleButton}">
+					<Style.Triggers>
+						<Trigger Property="IsChecked" Value="True">
+							<Setter Property="Content" Value="{StaticResource DockPinned}"/>
+							<Setter Property="Background" Value="Transparent"/>
+						</Trigger>
+						<Trigger Property="IsChecked" Value="False">
+							<Setter Property="Content" Value="{StaticResource DockUnPinned}"/>
+							<Setter Property="Background" Value="Transparent"/>
+						</Trigger>
+					</Style.Triggers>
+				</Style>
+			</ToggleButton.Style>
+		</ToggleButton>
+
+		<!-- Close button -->
+		<Button
+			x:Name="m_close"
+			Grid.Column="2"
+			BorderThickness="0"
+			Content="{StaticResource DockClose}"
+			Background="Transparent"
+			Margin="2"
+			/>
+	</Grid>
+
+	<!-- Tab Strip -->
+	<local:TabStrip x:Name="m_tabstrip" DockPanel.Dock="Bottom"/>
+	
+	<!-- Content -->
+	<ScrollViewer
+		Name="m_content_pane"
+		Background="{x:Static SystemColors.ControlBrush}"
+		HorizontalScrollBarVisibility="Auto"
+		VerticalScrollBarVisibility="Auto"
+		/>
 </DockPanel>

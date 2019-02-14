@@ -25,7 +25,6 @@
     <Content Include="package-lock.json" />
     <Content Include="package.json" />
     <Content Include="tsconfig.json" />
-    <Content Include="tslint.json" />
     <Content Include="CHANGELOG.md" />
     <Content Include="README.md" />
     <Content Include="vsc-extension-quickstart.md" />

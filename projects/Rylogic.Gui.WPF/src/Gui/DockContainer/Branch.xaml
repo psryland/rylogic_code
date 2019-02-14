@@ -10,6 +10,4 @@
 	d:DesignHeight="450" d:DesignWidth="800"
 	Background="{x:Static SystemColors.ControlBrush}"
 	>
-	<Grid>
-	</Grid>
 </DockPanel>

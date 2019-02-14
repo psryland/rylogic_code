@@ -49,11 +49,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		public DockContainer DockContainer { [DebuggerStepThrough] get; private set; }
 
 		/// <summary>The branch that is the immediate parent of this branch (null if root)</summary>
-		public Branch ParentBranch
-		{
-			[DebuggerStepThrough]
-			get { return Parent as Branch; }
-		}
+		public Branch ParentBranch => Parent as Branch;
 
 		/// <summary>The branch at the top of the tree that contains this pane</summary>
 		public Branch RootBranch
@@ -99,8 +95,8 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			var pane = DockPane(location.First(), location.Skip(1));
 
 			// Add the content
-			index = Math_.Clamp(index, 0, pane.Content.Count);
-			pane.Content.Insert(index, dc);
+			index = Math_.Clamp(index, 0, pane.AllContent.Count);
+			pane.AllContent.Insert(index, dc);
 			pane.ContentView.MoveCurrentToPosition(index);
 			return pane;
 		}
@@ -134,7 +130,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			{
 				var p = (DockPane)c.Item;
 
-				if (p.Content.Count == 0 && c.DockSite != EDockSite.Centre)
+				if (p.AllContent.Count == 0 && c.DockSite != EDockSite.Centre)
 				{
 					// Dispose the pane
 					c.Item = null;
@@ -253,135 +249,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		}
 
 		/// <summary>The dock panes or branches of this branch (5 per branch)</summary>
-		internal DescendantCollection Descendants { [DebuggerStepThrough] get; private set; }
-		internal class DescendantCollection : IDisposable, IEnumerable<DescentantData>
-		{
-			/// <summary>The child controls (dock panes or branches) of this branch</summary>
-			private readonly Branch m_branch;
-			private DescentantData[] m_descendants;
-
-			public DescendantCollection(Branch branch)
-			{
-				m_branch = branch;
-
-				// Create an array to hold the five child controls (DockPanes or Branches)
-				m_descendants = new DescentantData[DockSiteCount];
-				for (var i = 0; i != m_descendants.Length; ++i)
-					m_descendants[i] = new DescentantData(m_branch, (EDockSite)i);
-			}
-			public virtual void Dispose()
-			{
-				Util.DisposeRange(m_descendants.Select(x => x.Item));
-			}
-
-			/// <summary>The number of non-null children in this collection</summary>
-			public int Count
-			{
-				get { return m_descendants.Count(x => x.Item != null); }
-			}
-
-			/// <summary>Access the non-null children in this collection</summary>
-			public DescentantData this[int index]
-			{
-				get { return m_descendants.Where(x => x.Item != null).ElementAt(index); }
-			}
-
-			/// <summary>Get a child control in a given dock site</summary>
-			public DescentantData this[EDockSite ds]
-			{
-				[DebuggerStepThrough]
-				get { return m_descendants[(int)ds]; }
-			}
-
-			/// <summary>Enumerate the controls in the collection</summary>
-			public IEnumerator<DescentantData> GetEnumerator()
-			{
-				foreach (var c in m_descendants)
-					yield return c;
-			}
-			IEnumerator IEnumerable.GetEnumerator()
-			{
-				return GetEnumerator();
-			}
-		}
-
-		/// <summary>Wrapper of a pane or branch</summary>
-		[DebuggerDisplay("{DockSite} {Item}")]
-		internal class DescentantData
-		{
-			public DescentantData(Branch branch, EDockSite ds)
-			{
-				ParentBranch = branch;
-				DockSite = ds;
-			}
-			public void Dispose()
-			{ }
-
-			/// <summary>The branch this is descendant from</summary>
-			public Branch ParentBranch { get; private set; }
-
-			/// <summary>The site that this child represents</summary>
-			public EDockSite DockSite { get; private set; }
-
-			/// <summary>A dock pane or branch</summary>
-			public IPaneOrBranch Item
-			{
-				get { return m_item; }
-				set
-				{
-					if (m_item == value) return;
-					if (m_item != null)
-					{
-						// Remove the pane or branch descendant
-						// Note: do not dispose the pane or branch because this could be a reassignment to a different dock site
-						ParentBranch.Children.Remove(m_item as UIElement);
-						ParentBranch.Children.Remove(m_splitter);
-
-						// Notify of the tree change
-						ParentBranch.OnTreeChanged(new TreeChangedEventArgs(TreeChangedEventArgs.EAction.Removed, pane: m_item as DockPane, branch: m_item as Branch));
-
-						m_item = null;
-						m_splitter = null;
-					}
-					m_item = value;
-					if (m_item != null)
-					{
-						// Add the pane or branch as the descendant.
-						// Note: the order of children is important. DockPanel assumes the last child is the "un-docked" child.
-						// Also, the child elements are docked/clipped in reverse order, so Children[0] will have the smallest available area.
-						// Also, the dock panel splitters operate on their immediate prior sibling.
-						if (DockSite == EDockSite.Centre)
-						{
-							ParentBranch.Children.Add(m_item as UIElement);
-						}
-						else
-						{
-							// Always have Left/Right bigger than Top/Bottom or allow dock order to control layout?
-							//// Find the insert index
-							//var index = 0;
-							//for (; index != ParentBranch.Children.Count; ++index)
-							//{
-							//	var child = ParentBranch.Children[index];
-							//	if (child is Branch || child is
-							//}
-
-							// Dock 'item'
-							var item = ParentBranch.Children.Insert2(0, m_item as UIElement);
-							DockPanel.SetDock(item, DockContainer.ToDock(DockSite));
-
-							// Add a splitter control for non-centre items
-							m_splitter = ParentBranch.Children.Insert2(1, new DockPanelSplitter { Thickness = 5.0, ProportionalResize = true, Background = SystemColors.ControlBrush });
-							DockPanel.SetDock(m_splitter, DockContainer.ToDock(DockSite));
-						}
-
-						// Notify of the tree change
-						ParentBranch.OnTreeChanged(new TreeChangedEventArgs(TreeChangedEventArgs.EAction.Added, pane: m_item as DockPane, branch: m_item as Branch));
-					}
-				}
-			}
-			private IPaneOrBranch m_item;
-			private DockPanelSplitter m_splitter;
-		}
+		internal DescendantCollection Descendants { [DebuggerStepThrough] get; }
 
 		/// <summary>Get the dock site for this branch within a parent branch.</summary>
 		internal EDockSite DockSite
@@ -453,7 +321,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			get
 			{
 				foreach (var p in AllPanes)
-					foreach (var c in p.Content)
+					foreach (var c in p.AllContent)
 						yield return c;
 			}
 		}
@@ -641,7 +509,146 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				$"R=[{(r.Item as DockPane)?.DumpDesc() ?? (r.Item is Branch ? "Branch" : "null")}] " +
 				$"B=[{(b.Item as DockPane)?.DumpDesc() ?? (b.Item is Branch ? "Branch" : "null")}]";
 		}
+
+		/// <summary>A collection of branches or panes descendant from this branch</summary>
+		internal class DescendantCollection : IDisposable, IEnumerable<DescentantData>
+		{
+			/// <summary>The child controls (dock panes or branches) of this branch</summary>
+			private readonly Branch m_branch;
+			private DescentantData[] m_descendants;
+
+			public DescendantCollection(Branch branch)
+			{
+				m_branch = branch;
+
+				// Create an array to hold the five child controls (DockPanes or Branches)
+				m_descendants = new DescentantData[DockSiteCount];
+				for (var i = 0; i != m_descendants.Length; ++i)
+					m_descendants[i] = new DescentantData(m_branch, (EDockSite)i);
+			}
+			public virtual void Dispose()
+			{
+				Util.DisposeRange(m_descendants.Select(x => x.Item));
+			}
+
+			/// <summary>The number of non-null children in this collection</summary>
+			public int Count
+			{
+				get { return m_descendants.Count(x => x.Item != null); }
+			}
+
+			/// <summary>Access the non-null children in this collection</summary>
+			public DescentantData this[int index]
+			{
+				get { return m_descendants.Where(x => x.Item != null).ElementAt(index); }
+			}
+
+			/// <summary>Get a child control in a given dock site</summary>
+			public DescentantData this[EDockSite ds]
+			{
+				[DebuggerStepThrough]
+				get { return m_descendants[(int)ds]; }
+			}
+
+			/// <summary>Enumerate the controls in the collection</summary>
+			public IEnumerator<DescentantData> GetEnumerator()
+			{
+				foreach (var c in m_descendants)
+					yield return c;
+			}
+			IEnumerator IEnumerable.GetEnumerator()
+			{
+				return GetEnumerator();
+			}
+		}
+
+		/// <summary>Wrapper of a pane or branch</summary>
+		[DebuggerDisplay("{DockSite} {Item}")]
+		internal class DescentantData
+		{
+			public DescentantData(Branch branch, EDockSite ds)
+			{
+				ParentBranch = branch;
+				DockSite = ds;
+			}
+			public void Dispose()
+			{ }
+
+			/// <summary>The branch this is descendant from</summary>
+			public Branch ParentBranch { get; }
+
+			/// <summary>The site that this child represents</summary>
+			public EDockSite DockSite { get; }
+
+			/// <summary>A dock pane or branch</summary>
+			public IPaneOrBranch Item
+			{
+				get { return m_item; }
+				set
+				{
+					if (m_item == value) return;
+					if (m_item != null)
+					{
+						// Remove the pane or branch descendant
+						// Note: do not dispose the pane or branch because this could be a reassignment to a different dock site
+						ParentBranch.Children.Remove(m_item as UIElement);
+						ParentBranch.Children.Remove(m_splitter);
+
+						// Notify of the tree change
+						ParentBranch.OnTreeChanged(new TreeChangedEventArgs(TreeChangedEventArgs.EAction.Removed, pane: m_item as DockPane, branch: m_item as Branch));
+						if (m_item is DockPane dp)
+							dp.OnDockAddressChanged();
+
+						m_item = null;
+						m_splitter = null;
+					}
+					m_item = value;
+					if (m_item != null)
+					{
+						// Add the pane or branch as the descendant.
+						// Note: the order of children is important. DockPanel assumes the last child is the "un-docked" child.
+						// Also, the child elements are docked/clipped in reverse order, so Children[0] will have the smallest available area.
+						// Also, the dock panel splitters operate on their immediate prior sibling.
+						if (DockSite == EDockSite.Centre)
+						{
+							ParentBranch.Children.Add(m_item as UIElement);
+						}
+						else
+						{
+							// Always have Left/Right bigger than Top/Bottom or allow dock order to control layout?
+							//// Find the insert index
+							//var index = 0;
+							//for (; index != ParentBranch.Children.Count; ++index)
+							//{
+							//	var child = ParentBranch.Children[index];
+							//	if (child is Branch || child is
+							//}
+
+							// Dock 'item'
+							var item = ParentBranch.Children.Insert2(0, m_item as UIElement);
+							DockPanel.SetDock(item, DockContainer.ToDock(DockSite));
+
+							// Add a splitter control for non-centre items
+							m_splitter = ParentBranch.Children.Insert2(1, new DockPanelSplitter
+							{
+								Thickness = 5.0,
+								ProportionalResize = true,
+								Background = SystemColors.ControlBrush,
+								BorderBrush = new SolidColorBrush(Color.FromRgb(0xc0,0xc0,0xc0)),
+								BorderThickness = DockSite.IsVertical() ? new Thickness(1,0,1,0) : new Thickness(0,1,0,1),
+							});
+							DockPanel.SetDock(m_splitter, DockContainer.ToDock(DockSite));
+						}
+
+						// Notify of the tree change
+						ParentBranch.OnTreeChanged(new TreeChangedEventArgs(TreeChangedEventArgs.EAction.Added, pane: m_item as DockPane, branch: m_item as Branch));
+						if (m_item is DockPane dp)
+							dp.OnDockAddressChanged();
+					}
+				}
+			}
+			private IPaneOrBranch m_item;
+			private DockPanelSplitter m_splitter;
+		}
 	}
-
-
 }

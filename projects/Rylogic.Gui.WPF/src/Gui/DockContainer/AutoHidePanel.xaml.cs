@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using Rylogic.Extn;
 using Rylogic.Utility;
 
@@ -24,14 +25,24 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		public AutoHidePanel(DockContainer dc, EDockSite ds)
 		{
 			InitializeComponent();
+			Visibility = Visibility.Collapsed;
+			Canvas.SetZIndex(this, 1);
 
 			DockContainer = dc;
 			DockSite = ds;
 			PoppedOut = false;
-			Visibility = Visibility.Collapsed;
 
-			// Create a grid to container the root branch and the splitter
 			var splitter_size = 5.0;
+			var splitter = new GridSplitter
+			{
+				HorizontalAlignment = HorizontalAlignment.Stretch,
+				VerticalAlignment = VerticalAlignment.Stretch,
+				Background = SystemColors.ControlBrush,
+				BorderBrush = new SolidColorBrush(Color.FromRgb(0xc0, 0xc0, 0xc0)),
+				BorderThickness = DockSite.IsVertical() ? new Thickness(1, 0, 1, 0) : new Thickness(0, 1, 0, 1),
+			};
+
+			// Create a grid to contain the root branch and the splitter
 			switch (DockSite)
 			{
 			default: throw new Exception($"Auto hide panels cannot be docked to {ds}");
@@ -39,18 +50,17 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			case EDockSite.Right:
 				{
 					// Vertical auto hide panel
-					var gut0 = DockSite == EDockSite.Left ? GridUnitType.Pixel : GridUnitType.Star;
-					var gut2 = DockSite == EDockSite.Left ? GridUnitType.Star : GridUnitType.Pixel;
-					ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0, gut0), MinWidth = 10 });
+					ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(DockSite == EDockSite.Left ? 1 : 0, GridUnitType.Star), MinWidth = 10 });
 					ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0, GridUnitType.Auto) });
-					ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0, gut2), MinWidth = 10 });
+					ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(DockSite == EDockSite.Right ? 1 : 0, GridUnitType.Star), MinWidth = 10 });
 
 					// Add the root branch to the appropriate column
 					Root = Children.Add2(new Branch(dc, DockSizeData.Quarters));
 					Grid.SetColumn(Root, DockSite == EDockSite.Left ? 0 : 2);
 
 					// Add the splitter to the centre column
-					var splitter = Children.Add2(new GridSplitter { Width = splitter_size, HorizontalAlignment = HorizontalAlignment.Stretch });
+					splitter.Width = splitter_size;
+					Children.Add2(splitter);
 					Grid.SetColumn(splitter, 1);
 					break;
 				}
@@ -58,30 +68,27 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			case EDockSite.Bottom:
 				{
 					// Horizontal auto hide panel
-					var gut0 = DockSite == EDockSite.Top ? GridUnitType.Pixel : GridUnitType.Star;
-					var gut2 = DockSite == EDockSite.Bottom ? GridUnitType.Star : GridUnitType.Pixel;
-					RowDefinitions.Add(new RowDefinition { Height = new GridLength(0, gut0), MinHeight = 10 });
+					RowDefinitions.Add(new RowDefinition { Height = new GridLength(DockSite == EDockSite.Top ? 1 : 0, GridUnitType.Star), MinHeight = 10 });
 					RowDefinitions.Add(new RowDefinition { Height = new GridLength(0, GridUnitType.Auto) });
-					RowDefinitions.Add(new RowDefinition { Height = new GridLength(0, gut2), MinHeight = 10 });
+					RowDefinitions.Add(new RowDefinition { Height = new GridLength(DockSite == EDockSite.Bottom ? 1 : 0 , GridUnitType.Star), MinHeight = 10 });
 
 					// Add the root branch to the appropriate row
 					Root = Children.Add2(new Branch(dc, DockSizeData.Quarters));
 					Grid.SetRow(Root, DockSite == EDockSite.Top ? 0 : 2);
 
 					// Add the splitter to the centre row
-					var splitter = Children.Add2(new GridSplitter { Height = splitter_size, VerticalAlignment = VerticalAlignment.Stretch });
+					splitter.Height = splitter_size;
+					Children.Add2(splitter);
 					Grid.SetRow(splitter, 1);
 					break;
 				}
 			}
 
-			// Create an empty dock pane in the root branch
-			var pane = Root.DockPane(EDockSite.Centre);
-
 			// Remove the tab strip from the dock pane children so we can use
 			// it as the auto hide tab strip for this auto hide panel
-			pane.Children.Remove(pane.TabStrip);
-			pane.TabStrip.StripLocation = ds;
+			TabStrip.Detach();
+			TabStrip.AHPanel = this;
+			TabStrip.StripLocation = ds;
 		}
 		public virtual void Dispose()
 		{
@@ -186,7 +193,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 							// Change the behaviour of all dock panes in the auto hide panel to only operate on the visible content
 							if (args.DockPane != null)
-								args.DockPane.ApplyToVisibleContentOnly = true;
+								args.DockPane.MoveVisibleContentOnly = true;
 
 							break;
 						}
@@ -211,16 +218,10 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		private Branch m_root;
 
 		/// <summary>Return the single dock pane for the auto-hide panel</summary>
-		private DockPane DockPane
-		{
-			get { return Root.DockPane(EDockSite.Centre); }
-		}
+		private DockPane DockPane => Root.DockPane(EDockSite.Centre);
 
 		/// <summary>The tab strip associated with this auto hide panel</summary>
-		public TabStrip TabStrip
-		{
-			get { return Root.DockPane(EDockSite.Centre).TabStrip; }
-		}
+		public TabStrip TabStrip => DockPane.TabStrip;
 
 		/// <summary>The site that this auto hide panel hides to</summary>
 		public EDockSite DockSite { get; private set; }
@@ -244,21 +245,19 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>Get/Set the popped out state of the auto hide panel</summary>
 		public bool PoppedOut
 		{
-			get { return m_popped_out; }
+			get { return Visibility == Visibility.Visible; }
 			set
 			{
-				if (m_popped_out == value) return;
-				m_popped_out = value;
+				if (PoppedOut == value) return;
 
 				// Show/Hide the panel
-				Visibility = m_popped_out ? Visibility.Visible : Visibility.Collapsed;
+				Visibility = value ? Visibility.Visible : Visibility.Collapsed;
 
 				// When no longer popped out, make the last active content active again
-				if (!m_popped_out)
+				if (!PoppedOut)
 					DockContainer.ActivatePrevious();
 			}
 		}
-		private bool m_popped_out;
 
 		/// <summary>Add a dockable instance to this auto hide panel. 'location' is ignored, all content is added to the centre site within an auto hide panel.</summary>
 		public DockPane Add(IDockable dockable, int index, params EDockSite[] location)
@@ -273,7 +272,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			return Add(dockable, int.MaxValue);
 		}
 
-#if false
+		#if false
 			/// <summary>Handle mouse clicks on a tab</summary>
 			protected override void OnTabClick(TabClickEventArgs e)
 			{

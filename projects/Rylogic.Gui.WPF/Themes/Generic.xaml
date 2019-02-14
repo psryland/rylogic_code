@@ -3,18 +3,4 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:gui2="clr-namespace:Rylogic.Gui.WPF">
 
-	<!-- Default dock panel splitter style-->
-	<Style TargetType="{x:Type gui2:DockPanelSplitter}">
-		<Setter Property="Template">
-			<Setter.Value>
-				<ControlTemplate TargetType="{x:Type gui2:DockPanelSplitter}">
-					<Border Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}">
-					</Border>
-				</ControlTemplate>
-			</Setter.Value>
-		</Setter>
-	</Style>
-
 </ResourceDictionary>

@@ -7,5 +7,4 @@
 	xmlns:local="clr-namespace:Rylogic.Gui.WPF.DockContainerDetail"
 	mc:Ignorable="d" 
 	d:DesignHeight="450" d:DesignWidth="800">
-
 </Grid>

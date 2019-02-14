@@ -5,7 +5,6 @@
 	"publisher": "Rylogic",
 	"description": "Text aligning extension for Visual Studio Code by Rylogic",
 	"license": "MIT",
-	
 	"main": ".\\out\\projects\\Rylogic.TextAligner\\src\\extension",
 	"icon": "images/icon.png",
 	"engines": {

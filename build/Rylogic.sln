@@ -164,6 +164,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "unittests", "unittests.vcxp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylogic.Gui.WPF", "..\projects\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj", "{846D147A-B7E6-4336-B019-D1ADD62FF095}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_Items", "_Items", "{8089CA42-3532-486A-BF2E-614C1AD65896}"
+	ProjectSection(SolutionItems) = preProject
+		..\typescript\tslint.json = ..\typescript\tslint.json
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -840,6 +845,7 @@ Global
 		{76EF3A15-6E9F-4348-BCC2-E39F14B2A2B4} = {28BE7DF2-BA88-4D94-BE28-EB0C2519AD6C}
 		{64F62186-4F86-4CD6-AE3A-3C0E311BB2A6} = {28BE7DF2-BA88-4D94-BE28-EB0C2519AD6C}
 		{846D147A-B7E6-4336-B019-D1ADD62FF095} = {28BE7DF2-BA88-4D94-BE28-EB0C2519AD6C}
+		{8089CA42-3532-486A-BF2E-614C1AD65896} = {A7E84EE2-B6B6-4D72-9CB6-4B75190EBD25}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7DD34DBC-7EE6-40E2-8641-CDA6D05E7838}

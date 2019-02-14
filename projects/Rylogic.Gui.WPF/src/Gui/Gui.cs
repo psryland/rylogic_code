@@ -25,7 +25,7 @@ namespace Rylogic.Gui.WPF
 			//    to have that method called when the property changes
 			//  Define:
 			//    <prop_type> <prop_name>_Coerce(<prop_type> value)
-			//    to have values coerced.
+			//    to have values coerced (i.e. massaged into a valid value).
 
 			// Don't set 'DefaultValue' unless 'def' is non-null, because the property type
 			// may not be a reference type, and 'null' may not be a valid default value.
@@ -185,12 +185,15 @@ namespace Rylogic.Gui.WPF
 		/// Finds a parent in the visual tree matching the specified type.
 		/// If 'name' is given, the parent must have the given name.
 		/// if 'root' is given, the search stops if 'root' is encountered (after testing if it's a parent)</summary>
-		public static T FindVisualParent<T>(this DependencyObject item, string name = null, DependencyObject root = null) where T : DependencyObject
+		public static T FindVisualParent<T>(this DependencyObject item, string name = null, DependencyObject root = null) where T : class
 		{
+			if (ReferenceEquals(item, root))
+				return item as T;
+
 			for (DependencyObject parent; (parent = VisualTreeHelper.GetParent(item)) != null; item = parent)
 			{
 				if (parent is T && (name == null || (parent is FrameworkElement fe && fe.Name == name)))
-					return (T)parent;
+					return parent as T;
 				if (ReferenceEquals(parent, root))
 					break;
 			}
@@ -205,6 +208,36 @@ namespace Rylogic.Gui.WPF
 					return true;
 
 			return false;
+		}
+
+		/// <summary>Remove 'item' from it's parent.</summary>
+		public static void Detach(this FrameworkElement item)
+		{
+			if (item.Parent is Panel panel)
+			{
+				panel.Children.Remove(item);
+				return;
+			}
+			if (item.Parent is Decorator decorator)
+			{
+				if (decorator.Child == item)
+					decorator.Child = null;
+				return;
+			}
+			if (item.Parent is ContentPresenter presenter)
+			{
+				if (presenter.Content == item)
+					presenter.Content = null;
+				return;
+			}
+			if (item.Parent is ContentControl cc)
+			{
+				if (cc.Content == item)
+					cc.Content = null;
+				return;
+			}
+			// maybe more
+			throw new Exception("Unknown parent type. Cannot Detach");
 		}
 
 		/// <summary>Returns new Rect(0,0,RenderSize)</summary>

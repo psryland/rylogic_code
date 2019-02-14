@@ -9,26 +9,27 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 	[DebuggerDisplay("{DockControl}")]
 	public partial class TabButton : Button
 	{
-		private readonly OptionsData m_opts;
+		// Notes:
+		// - TabButtons are children of TabStrips, which are children of DockPanes or
+		//   
+		private readonly ToolTip m_tt;
 		private Point? m_mouse_down_at;
 		private bool m_dragging;
-		private ToolTip m_tt;
 
-		public TabButton(string text, OptionsData opts)
+		public TabButton()
 		{
 			InitializeComponent();
-
-			m_opts = opts;
 			m_tt = new ToolTip { StaysOpen = true, HasDropShadow = true };
+		}
+		public TabButton(string text)
+			: this()
+		{
 			DockControl = null;
 			Content = text;
 		}
-		public TabButton(DockControl content, OptionsData opts)
+		public TabButton(DockControl content)
+			: this()
 		{
-			InitializeComponent();
-
-			m_opts = opts;
-			m_tt = new ToolTip { StaysOpen = true, HasDropShadow = true };
 			DockControl = content;
 			Content = content.TabText;
 		}
@@ -37,7 +38,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			base.OnMouseDown(e);
 
 			// If left clicking on a tab and user docking is allowed, start a drag operation
-			if (e.LeftButton == MouseButtonState.Pressed && m_opts.AllowUserDocking)
+			if (e.LeftButton == MouseButtonState.Pressed && Options.AllowUserDocking)
 			{
 				// Record the mouse down location
 				// Don't start dragging until the mouse has moved far enough
@@ -60,15 +61,14 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			var loc = e.GetPosition(this);
 
 			// See if dragging should start/continue
-			m_dragging |= m_mouse_down_at != null && Point.Subtract(loc, m_mouse_down_at.Value).Length > 5;
-			if (m_dragging)
+			if (!m_dragging && m_mouse_down_at != null && Point.Subtract(loc, m_mouse_down_at.Value).Length > 5)
 			{
 				// Begin dragging the content associated with the tab
+				m_dragging = true;
 				if (DockControl != null)
-				{
-					m_mouse_down_at = null;
 					DockContainer.DragBegin(DockControl, PointToScreen(loc));
-				}
+
+				return;
 			}
 
 			// Check for the mouse hovering over the tab
@@ -105,18 +105,31 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			// Make our content the active content on its dock pane
 			if (DockControl?.DockPane != null)
 				DockControl.DockPane.VisibleContent = DockControl;
+
+			// If this is a tab button on an auto hide panel, display the panel
+			if (TabStrip.AHPanel != null)
+				TabStrip.AHPanel.PoppedOut = true;
 		}
 		protected override void OnMouseDoubleClick(MouseButtonEventArgs e)
 		{
 			base.OnMouseDoubleClick(e);
 
 			// Float the content on double click
-			if (DockControl != null && m_opts.DoubleClickTabsToFloat)
+			if (DockControl != null && Options.DoubleClickTabsToFloat)
 				DockControl.IsFloating = !DockControl.IsFloating;
 			// Otherwise notify the owner of this tab of the double click
 			//else
 			// OnTabDblClick(new TabClickEventArgs(hit, e));
 		}
+
+		/// <summary>Control behaviour</summary>
+		private OptionsData Options => TreeHost?.DockContainer.Options ?? new OptionsData();
+
+		/// <summary>The tab strip that contains this tab button</summary>
+		private TabStrip TabStrip => Gui_.FindVisualParent<TabStrip>(this);
+
+		/// <summary>Returns the tree root that hosts this tab</summary>
+		internal ITreeHost TreeHost => Gui_.FindVisualParent<ITreeHost>(this);
 
 		/// <summary>Returns the DockControl for the associated dockable item</summary>
 		public DockControl DockControl { get; }

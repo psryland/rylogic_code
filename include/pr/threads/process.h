@@ -50,11 +50,6 @@ namespace pr
 
 	public:
 
-		struct Flags
-		{};
-
-	public:
-
 		PROCESS_INFORMATION ProcessInfo;
 		STARTUPINFOEXW StartupInfo;
 		SECURITY_ATTRIBUTES SecurityAttributes;
@@ -70,7 +65,7 @@ namespace pr
 		}
 
 		// Start the process
-		bool Start(wchar_t const* exe_path, wchar_t const* args, wchar_t const* startdir, Flags flags = {})
+		bool Start(wchar_t const* exe_path, wchar_t const* args, wchar_t const* startdir)
 		{
 			// Stop the process if currently running
 			if (ProcessInfo.hProcess != nullptr)
@@ -83,13 +78,13 @@ namespace pr
 			auto res = CreateProcessW(exe_path, &cmdline[0], &SecurityAttributes, nullptr, TRUE, EXTENDED_STARTUPINFO_PRESENT, nullptr, startdir, &StartupInfo.StartupInfo, &ProcessInfo);
 			return Succeeded(res);
 		}
-		bool Start(wchar_t const* exe_path, wchar_t const* args, Flags flags = {})
+		bool Start(wchar_t const* exe_path, wchar_t const* args)
 		{
-			return Start(exe_path, args, nullptr, flags);
+			return Start(exe_path, args, nullptr);
 		}
-		bool Start(wchar_t const* exe_path, Flags flags = {})
+		bool Start(wchar_t const* exe_path)
 		{
-			return Start(exe_path, nullptr, flags);
+			return Start(exe_path, nullptr);
 		}
 
 		// Shutdown the process
