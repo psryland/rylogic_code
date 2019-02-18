@@ -20,12 +20,6 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The root of the tree of dock panes</summary>
 		Branch Root { get; }
 
-		/// <summary>The dockable that is active on the container</summary>
-		DockControl ActiveContent { get; set; }
-
-		/// <summary>The pane that contains the active content on the container</summary>
-		DockPane ActivePane { get; set; }
-
 		/// <summary>Add a dockable instance to this branch at the position described by 'location'. 'index' is the index within the destination dock pane</summary>
 		DockPane Add(IDockable dockable, int index, params EDockSite[] location);
 	}

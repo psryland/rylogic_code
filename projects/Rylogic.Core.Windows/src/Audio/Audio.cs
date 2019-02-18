@@ -74,7 +74,7 @@ namespace Rylogic.Audio
 		private static IntPtr m_module = IntPtr.Zero;
 
 		/// <summary>Helper method for loading the view3d.dll from a platform specific path</summary>
-		public static void LoadDll(string dir = @".\lib\$(platform)")
+		public static void LoadDll(string dir = @".\lib\$(platform)\$(config)")
 		{
 			if (ModuleLoaded) return;
 			m_module = Win32.LoadDll(Dll+".dll", dir);

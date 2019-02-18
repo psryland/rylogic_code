@@ -8,5 +8,4 @@
 	mc:Ignorable="d" 
 	d:DesignHeight="20" d:DesignWidth="400"
 	>
-	<local:TabButton/>
 </StackPanel>

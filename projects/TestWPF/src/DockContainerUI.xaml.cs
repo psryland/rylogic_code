@@ -38,13 +38,29 @@ namespace TestWPF
 			var d8 = new Dockable("Dockable 8") { Background = Brushes.White };
 			var d9 = new Dockable("Dockable 9") { Background = Brushes.White };
 
+			//d0.DockControl.ActiveChanged += PrintActiveChanged;
+			//d1.DockControl.ActiveChanged += PrintActiveChanged;
+			//d2.DockControl.ActiveChanged += PrintActiveChanged;
+			//d3.DockControl.ActiveChanged += PrintActiveChanged;
+			//d4.DockControl.ActiveChanged += PrintActiveChanged;
+			//d5.DockControl.ActiveChanged += PrintActiveChanged;
+			//d6.DockControl.ActiveChanged += PrintActiveChanged;
+			//d7.DockControl.ActiveChanged += PrintActiveChanged;
+			//d8.DockControl.ActiveChanged += PrintActiveChanged;
+			//d9.DockControl.ActiveChanged += PrintActiveChanged;
+			//void PrintActiveChanged(object sender, ActiveContentChangedEventArgs e)
+			//{
+			//	var dc = sender as DockControl;
+			//	Debug.WriteLine($"{dc.TabText} {(dc.IsActiveContent ? "ACTIVE" : "INACTIVE")}");
+			//}
+
 			m_dc.Add(d0, EDockSite.Centre);
 			m_dc.Add(d1, EDockSite.Centre);
+			m_dc.Add(d2, EDockSite.Left);
+			m_dc.Add(d3, EDockSite.Left);
 			m_dc.Add(d4, EDockSite.Bottom);
-		//	m_dc.Add(d5, EDockSite.Bottom);
-		//	m_dc.Add(d2, EDockSite.Left);
-		//	m_dc.Add(d3, EDockSite.Left);
-		//	m_dc.Add(d6, EDockSite.Right);
+			m_dc.Add(d5, EDockSite.Centre);
+			m_dc.Add(d6, EDockSite.Centre);
 		//	m_dc.Add(d7, EDockSite.Right);
 		//	m_dc.Add(d8, EDockSite.Top);
 		//	m_dc.Add(d9, EDockSite.Top);

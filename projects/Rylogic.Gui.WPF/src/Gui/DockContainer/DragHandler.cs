@@ -18,7 +18,8 @@ using Rylogic.Extn;
 namespace Rylogic.Gui.WPF.DockContainerDetail
 {
 	/// <summary>Handles all docking operations</summary>
-	internal class DragHandler : Window, IDisposable
+	//internal 
+		public class DragHandler : Window, IDisposable
 	{
 		// Notes:
 		// This works by displaying an invisible modal window while the drag operation is in process.
@@ -26,7 +27,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		// The modal window spawns other non-interactive windows that provide the overlays for the drop targets.
 		private static readonly Vector DraggeeOfs = new Vector(-50, -30);
 		private static readonly Rect DraggeeRect = new Rect(0, 0, 150, 150);
-		private TabButton m_ghost_button;
+		private readonly TabButton m_ghost_button;
 		private Point m_ss_start_pt;
 
 		public DragHandler(DockContainer owner, object item, Point ss_start_pt)
@@ -37,7 +38,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				throw new Exception("Only panes and content should be being dragged");
 
 			m_ss_start_pt = ss_start_pt;
-			m_ghost_button = new TabButton(item_name);
+			m_ghost_button = new TabButton(item_name) { Opacity = 0.5 };
 			Owner = GetWindow(owner);
 			DockContainer = owner;
 			DraggedItem = item;
@@ -162,25 +163,27 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				// Otherwise dock the dragged item at the dock address
 				else
 				{
-					var target = TreeHost.Root.DockPane(DropAddress.First(), DropAddress.Skip(1));
+					// Ensure a pane exists at the drop address
+					var target = TreeHost.Root.DockPane(DropAddress);
 					var index = DropIndex ?? target.AllContent.Count;
 
 					// Dock the dragged item
-					if (DraggedItem is DockControl dc)
+					if (DraggedItem is DockControl dc && dc.DockPane != target)
 					{
 						TreeHost.Add(dc.Dockable, index, DropAddress);
 					}
 
 					// Dock the dragged pane
-					if (DraggedItem is DockPane dockpane)
+					if (DraggedItem is DockPane dockpane && dockpane != target)
 					{
-						foreach (var c in dockpane.AllContent.Reversed().ToArray())
-							target.AllContent.Insert(index, c);
+						foreach (var c in dockpane.AllContent.ToArray())
+							target.AllContent.Insert(index++, c);
 					}
 				}
 
 				// Restore the active content
 				DockContainer.ActiveContent = active;
+				Debug.Assert(DockContainer.ValidateTree());
 			}
 
 			Ghost = null;
@@ -422,9 +425,12 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				}
 				else if (snap.HasFlag(EDropSite.Root))
 				{
-					// Snap to an edge dock site at the root branch level
+					// Snap to an auto hide dock site
 					var branch = pane.RootBranch;
 					var address = branch.DockAddress.ToList();
+
+					// Auto hide panels always dock to the centre pane
+					ds = EDockSite.Centre;
 
 					// While the child at 'ds' is a branch, append 'EDockSite.Centre's to the address
 					for (; branch.Descendants[ds].Item is Branch b; branch = b, ds = EDockSite.Centre) { address.Add(ds); }
@@ -467,19 +473,21 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				// The second to last dock site should be a branch or a pane.
 				var branch = TreeHost.Root;
 				var ds = DropAddress.GetEnumerator();
-				for (var at_end = ds.MoveNext(); !at_end && branch.Descendants[(EDockSite)ds.Current].Item is Branch b; branch = b, at_end = ds.MoveNext()) { }
+				for (var more = ds.MoveNext(); more && branch.Descendants[(EDockSite)ds.Current].Item is Branch b; branch = b, more = ds.MoveNext()) { }
 				var target = branch.Descendants[(EDockSite)ds.Current];
+				if (target.Item is Branch)
+					throw new Exception("The address ends at a branch node, not a pane or null-child");
 
 				// If there is a pane at the target position then snap to fill the pane or some child area within the pane.
-				if (target.Item is DockPane pane)
+				if (target.Item is DockPane pane && pane.IsVisible)
 				{
-					// Update the pane being hovered
+					// Update the pane being hovered (so that the ghost tab can be added to it)
 					SetHoveredPane(pane, DropIndex);
 
 					// If there is one more dock site in the address, then the drop target is a child area within the content area of 'pane'.
 					if (ds.MoveNext())
 					{
-						var rect = DockContainer.DockSiteBounds((EDockSite)ds.Current, pane.Centre.RenderArea(pane), (EDockMask)(1 << (int)ds.Current), DockSizeData.Halves);
+						var rect = DockContainer.DockSiteBounds((EDockSite)ds.Current, pane.Centre.RenderArea(pane), EDockMask.None, DockSizeData.Halves);
 						bounds = pane.RectToScreen(pane.RenderArea());
 						clip = new RectangleGeometry(rect);
 					}
@@ -497,41 +505,57 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 						// If a tab on the dock pane is being hovered, include that area in the ghost form's region
 						if (DropIndex != null)
 						{
-							//								var strip = pane.TabStrip;
-							//								var visible_index = Math.Min(DropIndex, strip.TabCount - 1) - strip.FirstVisibleTabIndex;
-							//								var ghost_tab = strip.VisibleTabs.Skip(visible_index).FirstOrDefault();
-							//								if (ghost_tab != null)
-							//								{
-							//									// Include the area of the ghost tab
-							//									var b = strip.Transform.TransformRect(ghost_tab.Bounds);
-							//									var r = pane.RectangleToClient(strip.RectangleToScreen(b));
-							//									region.Union(r);
-							//								}
+							var strip = pane.TabStrip;
+							//var visible_index = Math.Min(DropIndex, strip.Buttons.Count - 1) - strip.FirstVisibleTabIndex;
+							//	var ghost_tab = strip.VisibleTabs.Skip(visible_index).FirstOrDefault();
+							//	if (ghost_tab != null)
+							//	{
+							//		// Include the area of the ghost tab
+							//		var b = strip.Transform.TransformRect(ghost_tab.Bounds);
+							//		var r = pane.RectangleToClient(strip.RectangleToScreen(b));
+							//		region.Union(r);
+							//	}
 						}
 					}
 				}
-				else if (target.Item is Branch)
-				{
-					throw new Exception("The address ends at a branch node, not a pane or null-child");
-				}
+
+				// Otherwise, the target position is an empty leaf of 'branch' or the target pane
+				// is not visible. In either case, the user cannot see the drop location.
 				else
 				{
-					// If the target is empty, then just fill the whole target area
 					var docksite = DropAddress.Back();
 
-					var area = branch.DockPane(docksite).RenderArea();
-					var rect = DockContainer.DockSiteBounds(docksite, area, branch.DockedMask | (EDockMask)(1 << (int)docksite), branch.DockSizes);
-					bounds = branch.RectToScreen(rect);
-					clip = new RectangleGeometry(rect);
+					// If the branch belongs to an auto hide panel, then the available area is
+					// calculated from the main dock container. Otherwise, we expect the branch
+					// to be visible and the available area is calculated from the branch's render area.
+					if (branch.TreeHost is AutoHidePanel ahp)
+					{
+						var area = DockContainer.RenderArea();
+						var rect = DockContainer.DockSiteBounds(ahp.DockSite, area, branch.DockedMask, branch.DockSizes);
+						bounds = DockContainer.RectToScreen(rect);
+					}
+					else if (branch.IsVisible)
+					{
+						var area = branch.RenderArea();
+						var rect = DockContainer.DockSiteBounds(docksite, area, branch.DockedMask, branch.DockSizes);
+						bounds = branch.RectToScreen(rect);
+					}
+					else
+					{
+						throw new Exception("Cannot determine the area within which the dropped item will be added");
+					}
+
+					// Calculate the area that the dropped item would occupy within 'area'
+					clip = new RectangleGeometry(Ghost.RectFromScreen(bounds));
 				}
 			}
 
 			// Update the bounds and region of the ghost
+			Ghost.Clip = clip;
 			Ghost.Left = bounds.X;
 			Ghost.Top = bounds.Y;
 			Ghost.Width = bounds.Width;
 			Ghost.Height = bounds.Height;
-			Ghost.Clip = clip;
 		}
 
 		/// <summary>Update the positions of the indicators. 'pane' is the pane under the mouse, or null</summary>
@@ -693,7 +717,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>Base class for windows used as indicator graphics</summary>
 		private class GhostBase : Window
 		{
-			public GhostBase(Window owner)
+			public GhostBase(DragHandler owner)
 			{
 				Owner = owner;
 				ShowInTaskbar = false;
@@ -703,16 +727,17 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				WindowStyle = WindowStyle.None;
 				ResizeMode = ResizeMode.NoResize;
 				Visibility = Visibility.Collapsed;
-				Background = Brushes.Black;
+				Background = Brushes.Transparent;// Black;
 				Opacity = 0.5f;
 			}
+			public DockContainer DockContainer => ((DragHandler)Owner).DockContainer;
 		}
 
 		/// <summary>A window that acts as a graphic while a pane or content is being dragged</summary>
 		[DebuggerDisplay("{Name}")]
 		private class GhostPane : GhostBase
 		{
-			public GhostPane(Window owner, object item, Point loc)
+			public GhostPane(DragHandler owner, object item, Point loc)
 				: base(owner)
 			{
 				Name = "Ghost";
@@ -730,7 +755,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		{
 			private Hotspot[] m_spots;
 
-			public Indicator(Window owner, EIndicator indy, DockPane pane = null, Point? loc = null)
+			public Indicator(DragHandler owner, EIndicator indy, DockPane pane = null, Point? loc = null)
 				: base(owner)
 			{
 				Name = indy.ToString();
@@ -746,10 +771,9 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				Height = sz.Height;
 
 				// Add an image UI element
-				var dock = new DockPanel { };
-				dock.Children.Add(new Image { Source = (ImageSource)Resources[indy.ToString()], Width = sz.Width, Height = sz.Height, Stretch = Stretch.None });
-				Content = dock;
-				//AddChild(img);
+				var src = (ImageSource)DockContainer.Resources[indy.ToString()];
+				var img = new Image { Source = src, Width = sz.Width, Height = sz.Height, Stretch = Stretch.None };
+				Content = img;
 
 				// Add the hotspots for this indicator
 				m_spots = HotSpotsFor(indy);

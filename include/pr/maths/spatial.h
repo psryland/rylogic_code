@@ -382,7 +382,7 @@ namespace pr::maths
 					//			ldr::VectorField(str, "field", 0xFF00FF00, v8{ang_a, lin_a}, v4Origin, 2.0f);
 					//			ldr::Box(str, "pt", 0xFFFFFFFF, 0.05f, pt_a);
 					//		}
-					//		ldr::Write(str, L"P:\\dump\\spatial_frameA.ldr");
+					//		ldr::Write(str, L"\\dump\\spatial_frameA.ldr");
 					//	}
 					//	{
 					//		std::string str;
@@ -391,7 +391,7 @@ namespace pr::maths
 					//			ldr::VectorField(str, "field", 0xFFFF0000, v8{ang_c, lin_c}, v4Origin, 2.0f);
 					//			ldr::Box(str, "pt", 0xFFFFFFFF, 0.05f, pt_c);
 					//		}
-					//		ldr::Write(str, L"P:\\dump\\spatial_frameC.ldr");
+					//		ldr::Write(str, L"\\dump\\spatial_frameC.ldr");
 					//	}
 					//}
 

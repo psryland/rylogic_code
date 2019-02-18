@@ -6,26 +6,38 @@
 	xmlns:gui2="clr-namespace:Rylogic.Gui.WPF"
 	xmlns:local="clr-namespace:Rylogic.Gui.WPF.DockContainerDetail"
 	mc:Ignorable="d" 
-	d:DesignHeight="30" d:DesignWidth="120">
+	d:DesignHeight="30" d:DesignWidth="120"
+	Padding="3"
+	BorderBrush="{x:Static SystemColors.ControlDarkBrush}"
+	Margin="{Binding EdgeMargin}"
+	>
 
 	<!-- Control Resources -->
 	<Button.Resources>
 		<ResourceDictionary>
-			<Style x:Key="DockPaneTabButtonStyle" TargetType="{x:Type local:TabButton}">
-				<Setter Property="Background" Value="{StaticResource DockPaneTitleActiveBackground}" />
-				<Setter Property="Template">
-					<Setter.Value>
-						<ControlTemplate TargetType="{x:Type local:TabButton}">
-
-						</ControlTemplate>
-					</Setter.Value>
-				</Setter>
-			</Style>
+			<DropShadowEffect x:Key="DropShadowEffect" Color="Black" Direction="300" ShadowDepth="3" Opacity="0.3"/>
 		</ResourceDictionary>
 	</Button.Resources>
 
-	<DockPanel>
+	<Button.Style>
+		<Style TargetType="{x:Type Button}">
+			<Style.Triggers>
+				<DataTrigger Binding="{Binding IsActiveTab}" Value="True">
+					<Setter Property="Background" Value="{x:Static SystemColors.WindowBrush}"/>
+					<Setter Property="BorderThickness" Value="{Binding EdgeBorder}"/>
+					<Setter Property="Effect" Value="{StaticResource DropShadowEffect}"/>
+				</DataTrigger>
+				<DataTrigger Binding="{Binding IsActiveTab}" Value="False">
+					<Setter Property="Background" Value="{x:Static Brushes.Transparent}"/>
+					<Setter Property="BorderThickness" Value="0"/>
+					<Setter Property="Effect" Value="{x:Null}"/>
+				</DataTrigger>
+			</Style.Triggers>
+		</Style>
+	</Button.Style>
+	
+	<StackPanel Orientation="Horizontal">
 		<Image Name="m_img_tabicon" Visibility="Visible" DockPanel.Dock="Left" Width="32"/>
 		<TextBlock Name="m_lbl_text" VerticalAlignment="Center" Padding="5 0 0 0">Tab Button</TextBlock>
-	</DockPanel>
+	</StackPanel>
 </Button>

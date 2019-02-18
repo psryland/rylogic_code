@@ -1,8 +1,24 @@
-﻿namespace Rylogic.Gui.WPF.DockContainerDetail
+﻿using System;
+using System.Windows.Controls;
+
+namespace Rylogic.Gui.WPF.DockContainerDetail
 {
 	/// <summary>Extension method helpers</summary>
 	public static class Extn
 	{
+		/// <summary>Convert a DockPanel dock location to an 'EDockSite'</summary>
+		public static EDockSite ToDockSite(this Dock dock)
+		{
+			switch (dock)
+			{
+			default: throw new Exception($"Unknown dock value {dock}");
+			case Dock.Left: return EDockSite.Left;
+			case Dock.Top: return EDockSite.Top;
+			case Dock.Right: return EDockSite.Right;
+			case Dock.Bottom: return EDockSite.Bottom;
+			}
+		}
+
 		/// <summary>True if this dock site is a edge</summary>
 		public static bool IsEdge(this EDockSite ds)
 		{

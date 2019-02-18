@@ -213,6 +213,10 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Remove 'item' from it's parent.</summary>
 		public static void Detach(this FrameworkElement item)
 		{
+			if (item.Parent == null)
+			{
+				return;
+			}
 			if (item.Parent is Panel panel)
 			{
 				panel.Children.Remove(item);

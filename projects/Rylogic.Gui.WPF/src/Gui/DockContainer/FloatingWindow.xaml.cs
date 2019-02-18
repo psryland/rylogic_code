@@ -1,18 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using System.Xml.Linq;
 using Rylogic.Extn;
 using Rylogic.Utility;
@@ -28,17 +20,24 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		{
 			InitializeComponent();
 
+			Owner = GetWindow(dc);
 			ShowInTaskbar = true;
 			ResizeMode = ResizeMode.CanResizeWithGrip;
 			WindowStartupLocation = WindowStartupLocation.CenterOwner;
-			//HideOnClose = true;
-			//Text = string.Empty;
-			//ShowIcon = false;
-			Owner = GetWindow(dc);
+			Width = Owner.Width * 0.8;
+			Height = Owner.Height * 0.8;
 			Content = m_content = new DockPanel { LastChildFill = true };
 
 			DockContainer = dc;
 			Root = new Branch(dc, DockSizeData.Quarters);
+		}
+		protected override void OnClosing(CancelEventArgs e)
+		{
+			base.OnClosing(e);
+
+			// Move all the content back to the main dock container
+			foreach (var dc in AllContent.ToArray())
+				dc.IsFloating = false;
 		}
 		public virtual void Dispose()
 		{
@@ -52,32 +51,32 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>The dock container that owns this floating window</summary>
 		public DockContainer DockContainer
 		{
-			get { return m_impl_dc; }
+			get { return m_dc; }
 			private set
 			{
-				if (m_impl_dc == value) return;
-				if (m_impl_dc != null)
+				if (m_dc == value) return;
+				if (m_dc != null)
 				{
-					m_impl_dc.ActiveContentChanged -= HandleActiveContentChanged;
+					m_dc.ActiveContentChanged -= HandleActiveContentChanged;
 				}
-				m_impl_dc = value;
-				if (m_impl_dc != null)
+				m_dc = value;
+				if (m_dc != null)
 				{
-					m_impl_dc.ActiveContentChanged += HandleActiveContentChanged;
+					m_dc.ActiveContentChanged += HandleActiveContentChanged;
 				}
 
 				/// <summary>Handler for when the active content changes</summary>
 				void HandleActiveContentChanged(object sender, ActiveContentChangedEventArgs e)
 				{
-					//						InvalidateVisual();
+					var dc = e.ContentNew?.DockControl;
+					var content_title = dc?.TabText ?? string.Empty;
+					Title = $"{Owner.Title}:{content_title}";
+					Icon = dc?.TabIcon ?? Window.GetWindow(DockContainer)?.Icon;
 				}
 			}
 		}
-		DockContainer ITreeHost.DockContainer
-		{
-			get { return DockContainer; }
-		}
-		private DockContainer m_impl_dc;
+		DockContainer ITreeHost.DockContainer => DockContainer;
+		private DockContainer m_dc;
 
 		/// <summary>The root level branch of the tree in this floating window</summary>
 		internal Branch Root
@@ -105,60 +104,25 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				{
 					switch (args.Action)
 					{
-					case TreeChangedEventArgs.EAction.ActiveContent:
-						{
-							UpdateUI();
-							break;
-						}
+					//case TreeChangedEventArgs.EAction.ActiveContent:
+					//	{
+					//		UpdateUI();
+					//		break;
+					//	}
 					case TreeChangedEventArgs.EAction.Added:
 						{
-							// When the first pane is added to the window, update the title
-							//								InvalidateArrange();
 							if (Root.AllContent.CountAtMost(2) == 1)
-							{
 								ActivePane = Root.AllPanes.First();
-								UpdateUI();
-							}
+
 							break;
 						}
 					case TreeChangedEventArgs.EAction.Removed:
 						{
-							// Whenever content is removed, check to see if the floating
-							// window is empty, if so, then hide the floating window.
-							//								InvalidateArrange();
 							if (!Root.AllContent.Any())
-							{
 								Hide();
-								UpdateUI();
-							}
+
 							break;
 						}
-					}
-
-					/// <summary>Update the floating window</summary>
-					void UpdateUI()
-					{
-#if false
-							var content = ActiveContent;
-							if (content != null)
-							{
-								Text = content.TabText;
-								var bm = content.TabIcon as Bitmap;
-								if (bm != null)
-								{
-									// Can destroy the icon created from the bitmap because
-									// the form creates it's own copy of the icon.
-									var hicon = bm.GetHicon();
-									Icon = Icon.FromHandle(hicon); // Copy assignment
-									Win32.DestroyIcon(hicon);
-								}
-							}
-							else
-							{
-								Text = string.Empty;
-								Icon = null;
-							}
-#endif
 					}
 				}
 			}
@@ -169,20 +133,26 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		}
 		private Branch m_root;
 
+		/// <summary>Manages events and changing of active pane/content</summary>
+		private ActiveContentManager ActiveContentManager => DockContainer.ActiveContentManager;
+
+		/// <summary>Enumerate the dockables in this sub-tree (breadth first, order = order of EDockSite)</summary>
+		public IEnumerable<DockControl> AllContent => Root.AllContent;
+
 		/// <summary>
 		/// Get/Set the active content on this floating window. This will cause the pane that the content is on to also become active.
 		/// To change the active content in a pane without making the pane active, assign to the pane's ActiveContent property</summary>
 		public DockControl ActiveContent
 		{
-			get { return DockContainer.ActiveContent; }
-			set { DockContainer.ActiveContent = value; }
+			get { return ActiveContentManager.ActiveContent; }
+			set { ActiveContentManager.ActiveContent = value; }
 		}
 
 		/// <summary>Get/Set the active pane. Note, this pane may be within the dock container, a floating window, or an auto hide window</summary>
 		public DockPane ActivePane
 		{
-			get { return DockContainer.ActivePane; }
-			set { DockContainer.ActivePane = value; }
+			get { return ActiveContentManager.ActivePane; }
+			set { ActiveContentManager.ActivePane = value; }
 		}
 
 		/// <summary>The current screen location and size of this window</summary>
@@ -215,41 +185,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			var addr = location.Length != 0 ? location : new[] { EDockSite.Centre };
 			return Add(dockable, int.MaxValue, addr);
 		}
-#if false
-			/// <summary>Customise floating window behaviour</summary>
-			protected override void WndProc(ref Message m)
-			{
-				switch (m.Msg)
-				{
-				default:
-					{
-						break;
-					}
-				case Win32.WM_NCLBUTTONDBLCLK:
-					{
-						// Double clicking the title bar returns the contents to the dock container
-						if (DockContainer.Options.DoubleClickTitleBarToDock &&
-							(int)Win32.SendMessage(Handle, Win32.WM_NCHITTEST, IntPtr.Zero, m.LParam) == (int)Win32.HitTest.HTCAPTION)
-						{
-							// Move all content back to the dock container
-							using (this.SuspendLayout(layout_on_resume: false))
-							{
-								var content = Root.AllPanes.SelectMany(x => x.Content).ToArray();
-								foreach (var c in content)
-									c.IsFloating = false;
 
-								Root?.TriggerLayout();
-							}
-
-							Hide();
-							return;
-						}
-						break;
-					}
-				}
-				base.WndProc(ref m);
-			}
-#endif
 		/// <summary>Save state to XML</summary>
 		public XElement ToXml(XElement node)
 		{

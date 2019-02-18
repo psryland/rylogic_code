@@ -82,6 +82,21 @@ namespace Rylogic.Gui.WPF
 			DockContainer = null;
 		}
 
+		/// <summary>Raised when the pane this dockable is on is changing (possibly to null)</summary>
+		public event EventHandler PaneChanged;
+
+		/// <summary>Raised when 'Close' is selected from the tab context menu</summary>
+		public event EventHandler Closed;
+
+		/// <summary>Raised when this becomes the active content</summary>
+		public event EventHandler<ActiveContentChangedEventArgs> ActiveChanged;
+
+		/// <summary>Raised during 'ToXml' to allow clients to add extra data to the XML data for this object</summary>
+		public event EventHandler<DockContainerSavingLayoutEventArgs> SavingLayout;
+
+		/// <summary>Raised when this DockControl is assigned to a dock container (or possibly to null)</summary>
+		public event EventHandler<DockContainerChangedEventArgs> DockContainerChanged;
+
 		/// <summary>Get the control we're providing docking functionality for</summary>
 		public UIElement Owner { [DebuggerStepThrough] get; private set; }
 
@@ -117,9 +132,6 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 		private DockContainer m_dc;
-
-		/// <summary>Raised when this DockControl is assigned to a dock container (or possibly to null)</summary>
-		public event EventHandler<DockContainerChangedEventArgs> DockContainerChanged;
 
 		/// <summary>Remove this DockControl from whatever dock container it is in</summary>
 		public void Remove()
@@ -178,20 +190,12 @@ namespace Rylogic.Gui.WPF
 				DockAddresses[m_pane.RootBranch] = DockAddress;
 
 			// Notify of pane changed
+			RaisePaneChanged();
+		}
+		internal void RaisePaneChanged()
+		{
 			PaneChanged?.Invoke(this, EventArgs.Empty);
 		}
-
-		/// <summary>Raised when the pane this dockable is on is changing (possibly to null)</summary>
-		public event EventHandler PaneChanged;
-
-		/// <summary>Raised when the dockable is not in a pane (i.e. when DockPane becomes null)</summary>
-		public event EventHandler Closed;
-
-		/// <summary>Raised when this becomes the active content</summary>
-		public event EventHandler<ActiveContentChangedEventArgs> ActiveChanged;
-
-		/// <summary>Raised during 'ToXml' to allow clients to add extra data to the XML data for this object</summary>
-		public event EventHandler<DockContainerSavingLayoutEventArgs> SavingLayout;
 
 		/// <summary>The name to use for this instance when saving layout to XML</summary>
 		public string PersistName { get; private set; }
@@ -292,12 +296,6 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 		}
-
-		///// <summary>The floating window that hosts this content (if on a floating window, otherwise null)</summary>
-		//public FloatingWindow HostFloatingWindow
-		//{
-		//	get { return TreeHost as FloatingWindow; }
-		//}
 
 		/// <summary>Get/Set whether this content is in an auto-hide panel</summary>
 		public bool IsAutoHide
@@ -427,65 +425,7 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 		private ImageSource m_icon;
-#if false
-			/// <summary>The colour to use for this tab's text. If null, defaults to the colour set of the containing TabStrip</summary>
-			public OptionData.ColourSet TabColoursActive
-			{
-				get { return m_tab_colours_active; }
-				set
-				{
-					if (m_tab_colours_active == value) return;
-					m_tab_colours_active = value;
-					InvalidateTab();
-				}
-			}
-			private OptionData.ColourSet m_tab_colours_active;
 
-			/// <summary>The colour to use for this tab's text. If null, defaults to the colour set of the containing TabStrip</summary>
-			public OptionData.ColourSet TabColoursInactive
-			{
-				get { return m_tab_colours_inactive; }
-				set
-				{
-					if (m_tab_colours_inactive == value) return;
-					m_tab_colours_inactive = value;
-					InvalidateTab();
-				}
-			}
-			private OptionData.ColourSet m_tab_colours_inactive;
-
-			/// <summary>The font to use for the active tab. If null, defaults to the fonts of the containing TabStrip</summary>
-			public Font TabFontActive
-			{
-				get { return m_tab_font_active; }
-				set
-				{
-					if (m_tab_font_active == value) return;
-
-					// Changing the font can effect the size of the tab, and therefore
-					// the layout of the whole tab strip
-					m_tab_font_active = value;
-					InvalidateTabStrip();
-				}
-			}
-			private Font m_tab_font_active;
-
-			/// <summary>The font used on the inactive tabs. If null, defaults to the fonts of the containing TabStrip</summary>
-			public Font TabFontInactive
-			{
-				get { return m_tab_font_inactive; }
-				set
-				{
-					if (m_tab_font_inactive == value) return;
-
-					// Changing the font can effect the size of the tab, and therefore
-					// the layout of the whole tab strip
-					m_tab_font_inactive = value;
-					InvalidateTabStrip();
-				}
-			}
-			private Font m_tab_font_inactive;
-#endif
 		/// <summary>A tool tip to display when the mouse hovers over the tab for this content</summary>
 		public string TabToolTip
 		{
@@ -495,12 +435,7 @@ namespace Rylogic.Gui.WPF
 		private string m_impl_tab_tt;
 
 		/// <summary>A context menu to display when the tab for this content is right clicked</summary>
-		public ContextMenu TabCMenu
-		{
-			get { return m_impl_tab_cmenu; }
-			set { m_impl_tab_cmenu = value; }
-		}
-		private ContextMenu m_impl_tab_cmenu;
+		public ContextMenu TabCMenu { get; set; }
 
 		/// <summary>Creates a default context menu for the tab. Use: TabCMenu = DefaultTabCMenu()</summary>
 		public ContextMenu DefaultTabCMenu()
@@ -639,3 +574,64 @@ namespace Rylogic.Gui.WPF
 		private DockControl m_dock_control;
 	}
 }
+
+
+#if false
+			/// <summary>The colour to use for this tab's text. If null, defaults to the colour set of the containing TabStrip</summary>
+			public OptionData.ColourSet TabColoursActive
+			{
+				get { return m_tab_colours_active; }
+				set
+				{
+					if (m_tab_colours_active == value) return;
+					m_tab_colours_active = value;
+					InvalidateTab();
+				}
+			}
+			private OptionData.ColourSet m_tab_colours_active;
+
+			/// <summary>The colour to use for this tab's text. If null, defaults to the colour set of the containing TabStrip</summary>
+			public OptionData.ColourSet TabColoursInactive
+			{
+				get { return m_tab_colours_inactive; }
+				set
+				{
+					if (m_tab_colours_inactive == value) return;
+					m_tab_colours_inactive = value;
+					InvalidateTab();
+				}
+			}
+			private OptionData.ColourSet m_tab_colours_inactive;
+
+			/// <summary>The font to use for the active tab. If null, defaults to the fonts of the containing TabStrip</summary>
+			public Font TabFontActive
+			{
+				get { return m_tab_font_active; }
+				set
+				{
+					if (m_tab_font_active == value) return;
+
+					// Changing the font can effect the size of the tab, and therefore
+					// the layout of the whole tab strip
+					m_tab_font_active = value;
+					InvalidateTabStrip();
+				}
+			}
+			private Font m_tab_font_active;
+
+			/// <summary>The font used on the inactive tabs. If null, defaults to the fonts of the containing TabStrip</summary>
+			public Font TabFontInactive
+			{
+				get { return m_tab_font_inactive; }
+				set
+				{
+					if (m_tab_font_inactive == value) return;
+
+					// Changing the font can effect the size of the tab, and therefore
+					// the layout of the whole tab strip
+					m_tab_font_inactive = value;
+					InvalidateTabStrip();
+				}
+			}
+			private Font m_tab_font_inactive;
+#endif

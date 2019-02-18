@@ -621,7 +621,7 @@ namespace pr::geometry
 				ldr::Box(str, "cp1", 0xFF0000FF, 0.01f, pt0);
 				ldr::Box(str, "cp2", 0xFF0000FF, 0.01f, pt1);
 				ldr::Line(str, "axis", 0xFF0000FF, pt0, pt1);
-				//ldr::Write(str, L"P:\\dump\\test.ldr");
+				//ldr::Write(str, L"\\dump\\test.ldr");
 			}
 		}
 	}

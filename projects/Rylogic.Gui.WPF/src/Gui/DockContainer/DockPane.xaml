@@ -18,6 +18,8 @@
 			<BitmapImage x:Key ="dock_unpinned" UriSource="/Rylogic.Gui.WPF;component/res/dock_unpinned.png"/>
 			<BitmapImage x:Key ="dock_close" UriSource="/Rylogic.Gui.WPF;component/res/dock_close.png"/>
 			<gui2:NullableToDefault x:Key="NullableToDefault"/>
+			<gui2:BoolToCollapsed x:Key="BoolToCollapsed"/>
+			<gui2:BoolToVisible x:Key="BoolToVisible"/>
 
 			<!-- Title background brushes -->
 			<LinearGradientBrush x:Key="TitleActiveBackground" StartPoint="0,0" EndPoint="0,1" MappingMode="RelativeToBoundingBox" SpreadMethod="Pad">
@@ -54,35 +56,30 @@
 			Grid.Column="0"
 			VerticalAlignment="Center"
 			Margin="3,0,0,0"
-			Text="Title Bar"
+			Text="{Binding CaptionText}"
 			/>
 
 		<!-- Pin Button -->
-		<ToggleButton
+		<Button
 			x:Name="m_pin"
 			Grid.Column="1"
-			Content="{StaticResource DockPinned}"
-			IsChecked="{Binding IsPinned, Mode=TwoWay, Converter={StaticResource NullableToDefault}}"
-			IsThreeState="False"
 			Background="Transparent"
 			BorderThickness="0"
 			Margin="2"
 			>
-			<ToggleButton.Style>
-				<Style TargetType="{x:Type ToggleButton}">
-					<Style.Triggers>
-						<Trigger Property="IsChecked" Value="True">
-							<Setter Property="Content" Value="{StaticResource DockPinned}"/>
-							<Setter Property="Background" Value="Transparent"/>
-						</Trigger>
-						<Trigger Property="IsChecked" Value="False">
-							<Setter Property="Content" Value="{StaticResource DockUnPinned}"/>
-							<Setter Property="Background" Value="Transparent"/>
-						</Trigger>
-					</Style.Triggers>
-				</Style>
-			</ToggleButton.Style>
-		</ToggleButton>
+			<StackPanel Orientation="Horizontal">
+				<Image
+					Source="{StaticResource dock_pinned}"
+					Visibility="{Binding IsAutoHide, Converter={StaticResource BoolToCollapsed}}"
+					Stretch="None"
+					/>
+				<Image 
+					Source="{StaticResource dock_unpinned}"
+					Visibility="{Binding IsAutoHide, Converter={StaticResource BoolToVisible}}"
+					Stretch="None"
+					/>
+			</StackPanel>
+		</Button>
 
 		<!-- Close button -->
 		<Button

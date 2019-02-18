@@ -104,7 +104,7 @@ namespace TestCS
 		{
 			base.OnFormClosing(e);
 			var xml = m_dock.SaveLayout();
-			xml.Save("P:\\dump\\dock_layout.xml");
+			xml.Save("\\dump\\dock_layout.xml");
 		}
 
 		#region Windows Form Designer generated code

@@ -39,8 +39,40 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			// Create the collection to hold the five child controls (DockPanes or Branches)
 			Descendants = new DescendantCollection(this);
 		}
+		protected override void OnChildDesiredSizeChanged(UIElement child)
+		{
+			base.OnChildDesiredSizeChanged(child);
+			if (child is IPaneOrBranch c)
+			{
+				var ds = Descendants[c].DockSite;
+				if (ds == EDockSite.Centre)
+					return;
+
+				// Ignore changes until this branch is displayed
+				if (RenderSize.Width == 0 || RenderSize.Height == 0)
+					return;
+
+				var item = (FrameworkElement)child;
+				var size = ds.IsVertical() ? item.DesiredSize.Width : item.DesiredSize.Height;
+				ChildSize(ds, size);
+			}
+		}
+		protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
+		{
+			base.OnRenderSizeChanged(sizeInfo);
+
+			// Update the sizes of the descendent
+			if (Descendants[EDockSite.Left]?.Item is FrameworkElement l) l.Width = ChildSize(EDockSite.Left);
+			if (Descendants[EDockSite.Top]?.Item is FrameworkElement t) t.Height = ChildSize(EDockSite.Top);
+			if (Descendants[EDockSite.Right]?.Item is FrameworkElement r) r.Width = ChildSize(EDockSite.Right);
+			if (Descendants[EDockSite.Bottom]?.Item is FrameworkElement b) b.Height = ChildSize(EDockSite.Bottom);
+		}
 		public virtual void Dispose()
 		{
+			// Ensure this branch is removed from it's parent branch
+			if (ParentBranch != null)
+				ParentBranch.Descendants.Remove(this);
+
 			Util.Dispose(Descendants);
 			DockContainer = null;
 		}
@@ -92,40 +124,37 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			dc.DockPane = null;
 
 			// Find the dock pane for this dock site, growing the tree as necessary
-			var pane = DockPane(location.First(), location.Skip(1));
+			var pane = DockPane(location);
 
 			// Add the content
 			index = Math_.Clamp(index, 0, pane.AllContent.Count);
 			pane.AllContent.Insert(index, dc);
-			pane.ContentView.MoveCurrentToPosition(index);
 			return pane;
 		}
+
+		/// <summary>Signal PruneBranches on the next message</summary>
+		internal void SignalPruneBranches()
+		{
+			if (m_prune_pending) return;
+			m_prune_pending = true;
+			Dispatcher.BeginInvoke(PruneBranches);
+		}
+		private bool m_prune_pending;
 
 		/// <summary>Remove branches without any content to reduce the size of the tree</summary>
 		internal void PruneBranches()
 		{
+			// Notes:
+			//  - This method can change the addresses of dock panes.
+
+			m_prune_pending = false;
+
 			// Depth-first recursive
 			foreach (var b in Descendants.Select(x => x.Item as Branch).NotNull())
 				b.PruneBranches();
 
-			// If any of the child branches only have a single child, replace the branch with it's child
-			foreach (var c in Descendants.Where(x => x.Item is Branch).NotNull())
-			{
-				var b = (Branch)c.Item;
-
-				// The child must, itself, have only one child
-				if (b.Descendants.Count != 1)
-					continue;
-
-				// Replace the branch with it's single child
-				var nue = b.Descendants[0].Item;
-				var old = c.Item;
-				c.Item = nue;
-				Util.Dispose(ref old);
-			}
-
-			// If any of L,R,T,B contain empty panes, prune them. Don't prune
-			// 'C', we need to leave somewhere for content to be dropped.
+			// Remove empty panes. If any of L,R,T,B contain empty panes, prune them.
+			// Don't prune 'C', we need to leave somewhere for content to be dropped.
 			foreach (var c in Descendants.Where(x => x.Item is DockPane))
 			{
 				var p = (DockPane)c.Item;
@@ -138,6 +167,23 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				}
 			}
 
+			// If any of the child branches only have a single child, replace the branch with it's child
+			foreach (var c in Descendants.Where(x => x.Item is Branch).NotNull())
+			{
+				var b = (Branch)c.Item;
+
+				// The child must, itself, have only one child
+				if (b.Descendants.Count != 1)
+					continue;
+
+				// Replace the branch with it's single child
+				var old = c.Item;
+				var nue = b.Descendants[0].Item;
+				b.Descendants[0].Item = null;
+				c.Item = nue;
+				Util.Dispose(ref old);
+			}
+
 			// If the branch has only one child, ensure it's in the Centre position
 			if (Descendants.Count == 1 && Descendants[EDockSite.Centre].Item == null)
 			{
@@ -148,15 +194,18 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 			// Ensure there is always a centre pane
 			if (Descendants[EDockSite.Centre].Item == null)
-				Descendants[EDockSite.Centre].Item = new DockPane(DockContainer, show_pin: false);
+				Descendants[EDockSite.Centre].Item = new DockPane(DockContainer);
 
 			// Check all the logic is correct
 			Debug.Assert(ValidateTree());
 		}
 
 		/// <summary>Add branches to the tree until 'rest' is empty.</summary>
-		private Branch GrowBranches(EDockSite ds, IEnumerable<EDockSite> rest, out EDockSite last_ds)
+		private Branch GrowBranches(IEnumerable<EDockSite> address, out EDockSite last_ds)
 		{
+			var ds = address.First();
+			var rest = address.Skip(1);
+
 			Debug.Assert(ds >= EDockSite.Centre && ds < EDockSite.None, "Invalid dock site");
 
 			// Note: When rest is empty, the site at 'ds' does not have a branch added.
@@ -180,36 +229,43 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			{
 				var new_branch = new Branch(DockContainer, ds == EDockSite.Centre ? DockSizeData.Quarters : DockSizeData.Halves);
 				Descendants[ds].Item = new_branch;
-				return new_branch.GrowBranches(rest.First(), rest.Skip(1), out last_ds);
+				return new_branch.GrowBranches(rest, out last_ds);
 			}
 
-			// A dock pane at 'ds'? Swap it with a branch
-			// containing the dock pane as the centre child
+			// If there's a dock pane at 'ds' swap it with a branch
+			// containing that dock pane as the centre child
 			if (Descendants[ds].Item is DockPane)
 			{
+				// Detach from the current location
+				var existing = Descendants[ds].Item;
+				Descendants[ds].Item = null;
+
+				// Create a new branch with 'existing' in the centre
 				var new_branch = new Branch(DockContainer, DockSizeData.Halves);
-				new_branch.Descendants[EDockSite.Centre].Item = Descendants[ds].Item;
+				new_branch.Descendants[EDockSite.Centre].Item = existing;
+
+				// Replace in the current location
 				Descendants[ds].Item = new_branch;
-				return new_branch.GrowBranches(rest.First(), rest.Skip(1), out last_ds);
+				return new_branch.GrowBranches(rest, out last_ds);
 			}
 			else
 			{
 				// Existing branch, recursive call into it
 				var branch = Descendants[ds].Item as Branch;
-				return branch.GrowBranches(rest.First(), rest.Skip(1), out last_ds);
+				return branch.GrowBranches(rest, out last_ds);
 			}
 		}
 
 		/// <summary>Get the pane at 'location', adding branches to the tree if necessary</summary>
-		public DockPane DockPane(EDockSite ds, IEnumerable<EDockSite> rest)
+		public DockPane DockPane(IEnumerable<EDockSite> address)
 		{
 			// Grow the tree
-			var branch = GrowBranches(ds, rest, out ds);
+			var branch = GrowBranches(address, out var ds);
 
 			// No child at 'ds'? Add a dock pane.
 			if (branch.Descendants[ds].Item == null)
 			{
-				var pane = new DockPane(DockContainer, show_pin: ds.IsEdge());
+				var pane = new DockPane(DockContainer);
 				branch.Descendants[ds].Item = pane;
 			}
 
@@ -219,7 +275,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		}
 		public DockPane DockPane(EDockSite ds)
 		{
-			return DockPane(ds, Enumerable.Empty<EDockSite>());
+			return DockPane(new[] { ds });
 		}
 
 		/// <summary>Get the child at 'location' or null if the given location is not a valid location in the tree</summary>
@@ -331,8 +387,13 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		{
 			return DockSizes.GetSize(location, DisplayRectangle, DockedMask);
 		}
-		public void ChildSize(EDockSite location, int value)
+		public void ChildSize(EDockSite location, double value)
 		{
+			if (value < 0 || double.IsNaN(value))
+				throw new Exception($"Invalid child size ({value}) for {location}");
+			if (RenderSize.Width == 0 || RenderSize.Height == 0)
+				throw new Exception($"Invalid size for this branch, can't determine dock size for {location}");
+
 			DockSizes.SetSize(location, DisplayRectangle, value);
 		}
 
@@ -360,10 +421,10 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		}
 
 		/// <summary>Return the area that the control should cover when rendered</summary>
-		private Rect DisplayRectangle
-		{
-			get { return new Rect(RenderSize); }
-		}
+		private Rect DisplayRectangle => new Rect(RenderSize);
+
+		/// <summary>Return the desired size of the control</summary>
+		private Rect DesiredRectangle => new Rect(DesiredSize);
 
 		/// <summary>Raised whenever a child (pane or branch) is added to or removed from this sub tree</summary>
 		public event EventHandler<TreeChangedEventArgs> TreeChanged;
@@ -494,23 +555,30 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>String description of the branch for debugging</summary>
 		public string DumpDesc()
 		{
-			var lvl = 0;
-			for (var p = this; p != null && p.Parent is Branch; p = (Branch)p.Parent) ++lvl;
-			var c = Descendants[EDockSite.Centre];
-			var l = Descendants[EDockSite.Left];
-			var t = Descendants[EDockSite.Top];
-			var r = Descendants[EDockSite.Right];
-			var b = Descendants[EDockSite.Bottom];
 			return
-				$"Branch Lvl={(lvl == 0 ? TreeHost.GetType()?.Name : lvl.ToString())}  " +
-				$"C=[{(c.Item as DockPane)?.DumpDesc() ?? (c.Item is Branch ? "Branch" : "null")}] " +
-				$"L=[{(l.Item as DockPane)?.DumpDesc() ?? (l.Item is Branch ? "Branch" : "null")}] " +
-				$"T=[{(t.Item as DockPane)?.DumpDesc() ?? (t.Item is Branch ? "Branch" : "null")}] " +
-				$"R=[{(r.Item as DockPane)?.DumpDesc() ?? (r.Item is Branch ? "Branch" : "null")}] " +
-				$"B=[{(b.Item as DockPane)?.DumpDesc() ?? (b.Item is Branch ? "Branch" : "null")}]";
+				$"{TreeHost?.GetType()?.Name ?? "NoParent"}{Lvl()} " +
+				$"C=[{Str(Descendants[EDockSite.Centre])}] " +
+				$"L=[{Str(Descendants[EDockSite.Left  ])}] " +
+				$"T=[{Str(Descendants[EDockSite.Top   ])}] " +
+				$"R=[{Str(Descendants[EDockSite.Right ])}] " +
+				$"B=[{Str(Descendants[EDockSite.Bottom])}]";
+
+			string Lvl()
+			{
+				var lvl = 0;
+				for (var p = this; p != null && p.Parent is Branch; p = (Branch)p.Parent) ++lvl;
+				return lvl != 0 ? $"({lvl})" : string.Empty;
+			}
+			string Str(DescentantData d)
+			{
+				if (d.Item is DockPane dp) return $"Pane({dp.CaptionText})";
+				if (d.Item is Branch) return "Branch";
+				return "null";
+			}
 		}
 
 		/// <summary>A collection of branches or panes descendant from this branch</summary>
+		[DebuggerDisplay("{m_branch.DumpDesc()}")]
 		internal class DescendantCollection : IDisposable, IEnumerable<DescentantData>
 		{
 			/// <summary>The child controls (dock panes or branches) of this branch</summary>
@@ -531,6 +599,14 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				Util.DisposeRange(m_descendants.Select(x => x.Item));
 			}
 
+			/// <summary>Remove 'child' from the collection of descendants</summary>
+			public void Remove(IPaneOrBranch child)
+			{
+				for (int i = 0; i != m_descendants.Length; ++i)
+					if (m_descendants[i].Item == child)
+						m_descendants[i].Item = null;
+			}
+
 			/// <summary>The number of non-null children in this collection</summary>
 			public int Count
 			{
@@ -548,6 +624,20 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			{
 				[DebuggerStepThrough]
 				get { return m_descendants[(int)ds]; }
+			}
+
+			/// <summary>Return the descendent data associated with 'c' (or null)</summary>
+			public DescentantData this[IPaneOrBranch c]
+			{
+				get
+				{
+					foreach (var d in m_descendants)
+					{
+						if (d.Item != c) continue;
+						return d;
+					}
+					return null;
+				}
 			}
 
 			/// <summary>Enumerate the controls in the collection</summary>
@@ -589,15 +679,15 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					if (m_item == value) return;
 					if (m_item != null)
 					{
+						var item = (FrameworkElement)m_item;
+						
 						// Remove the pane or branch descendant
 						// Note: do not dispose the pane or branch because this could be a reassignment to a different dock site
-						ParentBranch.Children.Remove(m_item as UIElement);
+						ParentBranch.Children.Remove(item);
 						ParentBranch.Children.Remove(m_splitter);
 
 						// Notify of the tree change
 						ParentBranch.OnTreeChanged(new TreeChangedEventArgs(TreeChangedEventArgs.EAction.Removed, pane: m_item as DockPane, branch: m_item as Branch));
-						if (m_item is DockPane dp)
-							dp.OnDockAddressChanged();
 
 						m_item = null;
 						m_splitter = null;
@@ -605,27 +695,33 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					m_item = value;
 					if (m_item != null)
 					{
+						var item = (FrameworkElement)m_item;
+
+						// Check that 'item' doesn't already have a parent.
+						// Can't just remove 'm_item' from it's parent, because there are other
+						// things that happen when an item is removed, e.g. the associated splitter
+						// is also removed, events generated, etc.
+						if (m_item.ParentBranch != null)
+							throw new Exception("Pane or Branch already has a parent");
+
 						// Add the pane or branch as the descendant.
 						// Note: the order of children is important. DockPanel assumes the last child is the "un-docked" child.
 						// Also, the child elements are docked/clipped in reverse order, so Children[0] will have the smallest available area.
 						// Also, the dock panel splitters operate on their immediate prior sibling.
 						if (DockSite == EDockSite.Centre)
 						{
-							ParentBranch.Children.Add(m_item as UIElement);
+							ParentBranch.Children.Add(item);
 						}
 						else
 						{
-							// Always have Left/Right bigger than Top/Bottom or allow dock order to control layout?
-							//// Find the insert index
-							//var index = 0;
-							//for (; index != ParentBranch.Children.Count; ++index)
-							//{
-							//	var child = ParentBranch.Children[index];
-							//	if (child is Branch || child is
-							//}
+							// Set the initial size of the docked item
+							if (DockSite.IsVertical())
+								item.Width = ParentBranch.ChildSize(DockSite);
+							else
+								item.Height = ParentBranch.ChildSize(DockSite);
 
 							// Dock 'item'
-							var item = ParentBranch.Children.Insert2(0, m_item as UIElement);
+							ParentBranch.Children.Insert2(0, item);
 							DockPanel.SetDock(item, DockContainer.ToDock(DockSite));
 
 							// Add a splitter control for non-centre items
@@ -642,8 +738,6 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 						// Notify of the tree change
 						ParentBranch.OnTreeChanged(new TreeChangedEventArgs(TreeChangedEventArgs.EAction.Added, pane: m_item as DockPane, branch: m_item as Branch));
-						if (m_item is DockPane dp)
-							dp.OnDockAddressChanged();
 					}
 				}
 			}

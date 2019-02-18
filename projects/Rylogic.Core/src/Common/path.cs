@@ -18,8 +18,8 @@ namespace Rylogic.Common
 		{
 			try
 			{
-				// 'Directory' and 'FileName' don't necessarily get all of the string e.g. "P:\\dump\\file.tx##:t"
-				// returns 'P:\\dump' for directory and 't' for filename. Use substring to ensure the entire string
+				// 'Directory' and 'FileName' don't necessarily get all of the string e.g. "A:\\dump\\file.tx##:t"
+				// returns 'A:\\dump' for directory and 't' for filename. Use substring to ensure the entire string
 				// is tested
 
 				if (!filepath.HasValue())
@@ -443,10 +443,10 @@ namespace Rylogic.UnitTests
 			Assert.False(Path_.IsValidFilepath(@".\dir1\", false));
 			Assert.False(Path_.IsValidFilepath(@".\dir1\file*.txt", false));
 
-			Assert.False(Path_.IsValidFilepath(@"P:\dump\file.tx##:t", false));
-			Assert.False(Path_.IsValidFilepath(@"P:\dump\fi:.txt", false));
-			Assert.False(Path_.IsValidFilepath(@"P:\dump\f*.txt", false));
-			Assert.False(Path_.IsValidFilepath(@"P:\dump\f?.txt", false));
+			Assert.False(Path_.IsValidFilepath(@"A:\dump\file.tx##:t", false));
+			Assert.False(Path_.IsValidFilepath(@"A:\dump\fi:.txt", false));
+			Assert.False(Path_.IsValidFilepath(@"A:\dump\f*.txt", false));
+			Assert.False(Path_.IsValidFilepath(@"A:\dump\f?.txt", false));
 		}
 		[Test]
 		public void TestPathNames()

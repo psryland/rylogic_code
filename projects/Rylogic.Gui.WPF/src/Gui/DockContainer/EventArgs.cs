@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml.Linq;
 
 namespace Rylogic.Gui.WPF
@@ -19,10 +15,10 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>The content that was active</summary>
-		public IDockable ContentOld { get; private set; }
+		public IDockable ContentOld { get; }
 
 		/// <summary>The content that is becoming active</summary>
-		public IDockable ContentNew { get; private set; }
+		public IDockable ContentNew { get; }
 	}
 
 	/// <summary>Args for when the active content on the dock container or dock pane changes</summary>
@@ -35,10 +31,10 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>The pane that was active</summary>
-		public DockPane PaneOld { get; private set; }
+		public DockPane PaneOld { get; }
 
 		/// <summary>The pane that is becoming active</summary>
-		public DockPane PaneNew { get; private set; }
+		public DockPane PaneNew { get; }
 	}
 
 	/// <summary>Args for when dockables are moved within the dock container</summary>
@@ -51,15 +47,18 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>What happened to the dockable</summary>
-		public EAction Action { get; private set; }
+		public EAction Action { get; }
+
+		/// <summary>The dockable that is being added or removed</summary>
+		public IDockable Dockable { get; }
+
+		/// <summary>Actions that can happen to a dockable</summary>
 		public enum EAction
 		{
 			Added = TreeChangedEventArgs.EAction.Added,
 			Removed = TreeChangedEventArgs.EAction.Removed,
+			AddressChanged,
 		}
-
-		/// <summary>The dockable that is being added or removed</summary>
-		public IDockable Dockable { get; private set; }
 	}
 
 	/// <summary>Args for when the DockContainer is changed on a DockControl</summary>
@@ -72,10 +71,10 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>The old dock container</summary>
-		public DockContainer Previous { get; private set; }
+		public DockContainer Previous { get; }
 
 		/// <summary>The new dock container</summary>
-		public DockContainer Current { get; private set; }
+		public DockContainer Current { get; }
 	}
 
 	/// <summary>Args for when layout is being saved</summary>
@@ -87,7 +86,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>The XML element to add data to</summary>
-		public XElement Node { get; private set; }
+		public XElement Node { get; }
 	}
 
 	/// <summary>Args for when panes or branches are added to a tree</summary>
@@ -114,15 +113,15 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>The type of change that occurred</summary>
-		public EAction Action { get; private set; }
+		public EAction Action { get; }
 
 		/// <summary>Non-null if it was a dockable that was added or removed</summary>
-		public DockControl DockControl { get; private set; }
+		public DockControl DockControl { get; }
 
 		/// <summary>Non-null if it was a dock pane that was added or removed</summary>
-		public DockPane DockPane { get; private set; }
+		public DockPane DockPane { get; }
 
 		/// <summary>Non-null if it was a branch that was added or removed</summary>
-		public Branch Branch { get; private set; }
+		public Branch Branch { get; }
 	}
 }

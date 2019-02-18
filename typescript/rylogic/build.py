@@ -2,10 +2,12 @@
 # -*- coding: utf-8 -*- 
 
 import sys, os, shutil, subprocess
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "script")))
+import UserVars
 
-root   = "P:\\pr\\typescript"
-proj   = root + "\\rylogic"
-objdir = proj + "\\obj"
+root   = os.path.join(UserVars.root, "typescript")
+proj   = os.path.join(root, "rylogic")
+objdir = os.path.join(proj, "obj")
 
 # Install if not installed yet
 if not os.path.exists(proj + "\\node_modules"):

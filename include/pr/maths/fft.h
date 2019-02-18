@@ -514,7 +514,7 @@ namespace pr::maths
 					auto y = Length(naive[i]);
 					s_out.append(pr::FmtS("%f, %f\n", x, y));
 				}
-				pr::BufferToFile(s_out, "P:\\dump\\frequencies0.csv");
+				pr::BufferToFile(s_out, "\\dump\\frequencies0.csv");
 			}
 		}
 		#endif
@@ -529,7 +529,7 @@ namespace pr::maths
 					auto y = Length(freq[i]);
 					s_out.append(pr::FmtS("%f, %f\n", x, y));
 				}
-				pr::BufferToFile(s_out, "P:\\dump\\frequencies1.csv");
+				pr::BufferToFile(s_out, "\\dump\\frequencies1.csv");
 			}
 		}
 		{// Sliding Window DFT
@@ -545,7 +545,7 @@ namespace pr::maths
 				auto freq_range = dft.FreqRange();
 				for (double x = freq_range.m_beg; x < freq_range.m_end; x += 0.1)
 					s_out.append(pr::FmtS("%f, %f\n", x, dft.Power(x)));
-				pr::BufferToFile(s_out, "P:\\dump\\frequencies2.csv");
+				pr::BufferToFile(s_out, "\\dump\\frequencies2.csv");
 			}
 		}
 	}

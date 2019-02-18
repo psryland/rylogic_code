@@ -39,7 +39,7 @@ namespace pr
 				,m_lbl_copyright(Label   ::Params<>().parent(this_).name("lbl-copyright").text(L"Copyright (C) 2014"     ).id(ID_LBL_COPYRIGHT).xy(42,26).dlu())
 				,m_btn_ok       (Button  ::Params<>().parent(this_).name("btn-ok"       ).text(L"OK"                     ).id(IDOK            ).xy(106,41).wh(50,14).dlu().def_btn().anchor(EAnchor::BottomRight))
 			{
-				//"P:\projects\TestWingui\res\Smiling gekko 140x110.ico"
+				//"\projects\TestWingui\res\Smiling gekko 140x110.ico"
 				m_btn_ok.Click += [&](Button&, EmptyArgs const&)
 				{
 					Close(EDialogResult::Ok);

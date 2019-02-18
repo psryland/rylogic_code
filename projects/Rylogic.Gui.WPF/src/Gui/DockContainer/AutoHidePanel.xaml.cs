@@ -50,9 +50,9 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			case EDockSite.Right:
 				{
 					// Vertical auto hide panel
-					ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(DockSite == EDockSite.Left ? 1 : 0, GridUnitType.Star), MinWidth = 10 });
+					ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(DockSite == EDockSite.Left ? 1 : 2, GridUnitType.Star), MinWidth = 10 });
 					ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0, GridUnitType.Auto) });
-					ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(DockSite == EDockSite.Right ? 1 : 0, GridUnitType.Star), MinWidth = 10 });
+					ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(DockSite == EDockSite.Right ? 1 : 2, GridUnitType.Star), MinWidth = 10 });
 
 					// Add the root branch to the appropriate column
 					Root = Children.Add2(new Branch(dc, DockSizeData.Quarters));
@@ -68,9 +68,9 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			case EDockSite.Bottom:
 				{
 					// Horizontal auto hide panel
-					RowDefinitions.Add(new RowDefinition { Height = new GridLength(DockSite == EDockSite.Top ? 1 : 0, GridUnitType.Star), MinHeight = 10 });
+					RowDefinitions.Add(new RowDefinition { Height = new GridLength(DockSite == EDockSite.Top ? 1 : 2, GridUnitType.Star), MinHeight = 10 });
 					RowDefinitions.Add(new RowDefinition { Height = new GridLength(0, GridUnitType.Auto) });
-					RowDefinitions.Add(new RowDefinition { Height = new GridLength(DockSite == EDockSite.Bottom ? 1 : 0 , GridUnitType.Star), MinHeight = 10 });
+					RowDefinitions.Add(new RowDefinition { Height = new GridLength(DockSite == EDockSite.Bottom ? 1 : 2, GridUnitType.Star), MinHeight = 10 });
 
 					// Add the root branch to the appropriate row
 					Root = Children.Add2(new Branch(dc, DockSizeData.Quarters));
@@ -84,37 +84,16 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				}
 			}
 
-			// Remove the tab strip from the dock pane children so we can use
+			// Remove the tab strip from the dock pane child so we can use
 			// it as the auto hide tab strip for this auto hide panel
 			TabStrip.Detach();
 			TabStrip.AHPanel = this;
-			TabStrip.StripLocation = ds;
 		}
 		public virtual void Dispose()
 		{
 			Root = null;
 			DockContainer = null;
 		}
-		//protected override void OnVisualParentChanged(DependencyObject oldParent)
-		//{
-		//	base.OnVisualParentChanged(oldParent);
-		//	switch (DockSite)
-		//	{
-		//	default: throw new Exception($"Auto hide panels cannot be docked to {DockSite}");
-		//	case EDockSite.Left:
-		//	case EDockSite.Right:
-		//		{
-		//			Root.Width = 0.25 * (Parent as FrameworkElement)?.ActualWidth ?? 50.0;
-		//			break;
-		//		}
-		//	case EDockSite.Top:
-		//	case EDockSite.Bottom:
-		//		{
-		//			Root.Height = 0.25 * (Parent as FrameworkElement)?.ActualHeight ?? 50.0;
-		//			break;
-		//		}
-		//	}
-		//}
 
 		/// <summary>The dock container that owns this auto hide window</summary>
 		public DockContainer DockContainer
@@ -125,27 +104,28 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				if (m_dc == value) return;
 				if (m_dc != null)
 				{
-					m_dc.ActiveContentChanged -= HandleActiveContentChanged;
+					ActiveContentManager.ActiveContentChanged -= HandleActiveContentChanged;
 				}
 				m_dc = value;
 				if (m_dc != null)
 				{
-					m_dc.ActiveContentChanged += HandleActiveContentChanged;
+					ActiveContentManager.ActiveContentChanged += HandleActiveContentChanged;
 				}
 
 				/// <summary>Handler for when the active content changes</summary>
 				void HandleActiveContentChanged(object sender, ActiveContentChangedEventArgs e)
 				{
-					// Auto hide the auto hide panel whenever content that isn't in our tree becomes active
+					// Hide the auto hide panel whenever content that isn't in our tree becomes active
 					if (e.ContentNew == null || e.ContentNew.DockControl.DockPane?.RootBranch != Root)
 						PoppedOut = false;
+
+					// Show the auto hide panel whenever content that is in our tree becomes active
+					if (e.ContentNew != null && e.ContentNew.DockControl.DockPane?.RootBranch == Root)
+						PoppedOut = true;
 				}
 			}
 		}
-		DockContainer ITreeHost.DockContainer
-		{
-			get { return DockContainer; }
-		}
+		DockContainer ITreeHost.DockContainer => DockContainer;
 		private DockContainer m_dc;
 
 		/// <summary>The root level branch of the tree in this auto hide window</summary>
@@ -217,6 +197,9 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		}
 		private Branch m_root;
 
+		/// <summary>Manages events and changing of active pane/content</summary>
+		private ActiveContentManager ActiveContentManager => DockContainer.ActiveContentManager;
+
 		/// <summary>Return the single dock pane for the auto-hide panel</summary>
 		private DockPane DockPane => Root.DockPane(EDockSite.Centre);
 
@@ -231,15 +214,15 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// To change the active content in a pane without making the pane active, assign to the pane's ActiveContent property</summary>
 		public DockControl ActiveContent
 		{
-			get { return DockContainer.ActiveContent; }
-			set { DockContainer.ActiveContent = value; }
+			get { return ActiveContentManager.ActiveContent; }
+			set { ActiveContentManager.ActiveContent = value; }
 		}
 
 		/// <summary>Get/Set the active pane. Note, this pane may be within the dock container, a floating window, or an auto hide window</summary>
 		public DockPane ActivePane
 		{
-			get { return DockContainer.ActivePane; }
-			set { DockContainer.ActivePane = value; }
+			get { return ActiveContentManager.ActivePane; }
+			set { ActiveContentManager.ActivePane = value; }
 		}
 
 		/// <summary>Get/Set the popped out state of the auto hide panel</summary>
@@ -254,8 +237,8 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				Visibility = value ? Visibility.Visible : Visibility.Collapsed;
 
 				// When no longer popped out, make the last active content active again
-				if (!PoppedOut)
-					DockContainer.ActivatePrevious();
+				if (!PoppedOut && ActivePane == DockPane)
+					ActiveContentManager.ActivatePrevious();
 			}
 		}
 
@@ -271,21 +254,5 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		{
 			return Add(dockable, int.MaxValue);
 		}
-
-		#if false
-			/// <summary>Handle mouse clicks on a tab</summary>
-			protected override void OnTabClick(TabClickEventArgs e)
-			{
-				if (ActiveContent != e.Content)
-				{
-					ActiveContent = e.Content;
-					PoppedOut = true;
-				}
-				else
-				{
-					PoppedOut = !PoppedOut;
-				}
-			}
-#endif
 	}
 }

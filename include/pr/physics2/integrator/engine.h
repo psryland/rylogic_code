@@ -153,7 +153,7 @@ namespace pr::physics
 				//ldr::VectorField(str, "ImpulseField", 0xFF007F00, (v8)impulse * 0.1f, v4Origin, 5, 0.25f);
 				//ldr::Arrow(str, "Impulse", 0xFF0000FF, ldr::EArrowType::Fwd, c.m_point - impulse.lin, impulse.lin, 3);
 				//ldr::Arrow(str, "Twist", 0xFF000080, ldr::EArrowType::Fwd, c.m_point - impulse.ang, impulse.ang, 3);
-				ldr::Write(str, L"P:\\dump\\collision.ldr");
+				ldr::Write(str, L"\\dump\\collision.ldr");
 			}
 
 			// Collisions should not add energy to the system and momentum should be conserved.

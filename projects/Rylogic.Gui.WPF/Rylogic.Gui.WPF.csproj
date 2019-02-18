@@ -61,6 +61,7 @@
     </Compile>
     <Compile Include="src\Converters\BoolToVisibility.cs" />
     <Compile Include="src\Converters\ColourToBrush.cs" />
+    <Compile Include="src\Converters\ValueConverter.cs" />
     <Compile Include="src\Converters\NullableToDefault.cs" />
     <Compile Include="src\Extn\Dispatcher.cs" />
     <Compile Include="src\Extn\Extensions.cs" />
@@ -69,7 +70,7 @@
     <Compile Include="src\Gui\DockContainer.xaml.cs">
       <DependentUpon>DockContainer.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\Gui\DockContainer\ActiveContentHandler.cs" />
+    <Compile Include="src\Gui\DockContainer\ActiveContentManager.cs" />
     <Compile Include="src\Gui\DockContainer\AutoHidePanel.xaml.cs">
       <DependentUpon>AutoHidePanel.xaml</DependentUpon>
     </Compile>

@@ -2,11 +2,13 @@
 # -*- coding: utf-8 -*-
 
 import sys, os, shutil, subprocess
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "script")))
+import UserVars
 
-root  = "P:\\pr\\typescript"
-proj  = root + "\\projects\\trading_chart"
-built = proj + "\\built"
-dist  = proj + "\\dist"
+root  = os.path.join(UserVars.root, "typescript")
+proj  = os.path.join(root, "projects", "trading_chart")
+built = os.path.join(proj, "built")
+dist  = os.path.join(proj, "dist")
 
 # Install if not installed yet
 if not os.path.exists(proj + "\\node_modules"):

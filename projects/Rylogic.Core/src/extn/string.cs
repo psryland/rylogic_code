@@ -811,9 +811,9 @@ namespace Rylogic.UnitTests
 				// Quoted path, not at the start of a string, with white spaces, and non word but legal path characters
 				new
 				{
-					Str    = @"words ""p:\path with space -,\file with space.extn"" : 412",
-					Match0 = @"""p:\path with space -,\file with space.extn""",
-					Drive  = @"p:",
+					Str    = @"words ""a:\path with space -,\file with space.extn"" : 412",
+					Match0 = @"""a:\path with space -,\file with space.extn""",
+					Drive  = @"a:",
 					Dir    = @"\path with space -,\",
 					File   = @"file with space.extn",
 					Quote  = @"""",
@@ -823,9 +823,9 @@ namespace Rylogic.UnitTests
 				// Same as above, but in single quotes
 				new
 				{
-					Str    = @"words 'p:\path with space -,\file with space.extn' : 412",
-					Match0 = @"'p:\path with space -,\file with space.extn'",
-					Drive  = @"p:",
+					Str    = @"words 'a:\path with space -,\file with space.extn' : 412",
+					Match0 = @"'a:\path with space -,\file with space.extn'",
+					Drive  = @"a:",
 					Dir    = @"\path with space -,\",
 					File   = @"file with space.extn",
 					Quote  = @"'",
@@ -835,7 +835,7 @@ namespace Rylogic.UnitTests
 				// Illegal path
 				new
 				{
-					Str    = @"words ""p:\path invalid-<>\file.extn"" : 412",
+					Str    = @"words ""a:\path invalid-<>\file.extn"" : 412",
 					Match0 = @"",
 					Drive  = @"",
 					Dir    = @"",
@@ -847,9 +847,9 @@ namespace Rylogic.UnitTests
 				// Path without quotes
 				new
 				{
-					Str    = @"words p:\path\file.extn (412) words",
-					Match0 = @"p:\path\file.extn",
-					Drive  = @"p:",
+					Str    = @"words a:\path\file.extn (412) words",
+					Match0 = @"a:\path\file.extn",
+					Drive  = @"a:",
 					Dir    = @"\path\",
 					File   = @"file.extn",
 					Quote  = @"",
@@ -859,9 +859,9 @@ namespace Rylogic.UnitTests
 				// Path without a directory, or quotes
 				new
 				{
-					Str    = @"words p:\file.extn (412) words",
-					Match0 = @"p:\file.extn",
-					Drive  = @"p:",
+					Str    = @"words a:\file.extn (412) words",
+					Match0 = @"a:\file.extn",
+					Drive  = @"a:",
 					Dir    = @"\",
 					File   = @"file.extn",
 					Quote  = @"",
@@ -871,9 +871,9 @@ namespace Rylogic.UnitTests
 				// Path without quotes, with spaces in the path
 				new
 				{
-					Str    = @"words p:\path\path\broke n\file.extn (412) words",
-					Match0 = @"p:\path\path\broke",
-					Drive  = @"p:",
+					Str    = @"words a:\path\path\broke n\file.extn (412) words",
+					Match0 = @"a:\path\path\broke",
+					Drive  = @"a:",
 					Dir    = @"\path\path\",
 					File   = @"broke",
 					Quote  = @"",
@@ -919,9 +919,9 @@ namespace Rylogic.UnitTests
 				// Full path at the start of a string
 				new
 				{
-					Str    = @"p:\path\path\path\file.extn",
-					Match0 = @"p:\path\path\path\file.extn",
-					Drive  = @"p:",
+					Str    = @"a:\path\path\path\file.extn",
+					Match0 = @"a:\path\path\path\file.extn",
+					Drive  = @"a:",
 					Dir    = @"\path\path\path\",
 					File   = @"file.extn",
 					Quote  = @"",
@@ -931,9 +931,9 @@ namespace Rylogic.UnitTests
 				// Full path at the start of a string contains white space
 				new
 				{
-					Str    = @"p:\path\path\broke n\file.extn",
-					Match0 = @"p:\path\path\broke",
-					Drive  = @"p:",
+					Str    = @"a:\path\path\broke n\file.extn",
+					Match0 = @"a:\path\path\broke",
+					Drive  = @"a:",
 					Dir    = @"\path\path\",
 					File   = @"broke",
 					Quote  = @"",
@@ -943,9 +943,9 @@ namespace Rylogic.UnitTests
 				// Full path at the start of a string, in quotes
 				new
 				{
-					Str = @"""p:\path\file.extn""",
-					Match0 = @"""p:\path\file.extn""",
-					Drive  = @"p:",
+					Str = @"""a:\path\file.extn""",
+					Match0 = @"""a:\path\file.extn""",
+					Drive  = @"a:",
 					Dir    = @"\path\",
 					File   = @"file.extn",
 					Quote  = @"""",
@@ -955,9 +955,9 @@ namespace Rylogic.UnitTests
 				// Full path at the start of a string followed by words
 				new
 				{
-					Str = @"p:\path\path\path\file.extn (412) words",
-					Match0 = @"p:\path\path\path\file.extn",
-					Drive  = @"p:",
+					Str = @"a:\path\path\path\file.extn (412) words",
+					Match0 = @"a:\path\path\path\file.extn",
+					Drive  = @"a:",
 					Dir    = @"\path\path\path\",
 					File   = @"file.extn",
 					Quote  = @"",

@@ -75,6 +75,6 @@ namespace pr::physics
 		ldr::VectorField(str, "Velocity", 0xFFFFFF00, (v8)c.m_velocity * 0.1f, v4Origin, 2, 0.25f);
 		ldr::Arrow(str, "Normal", 0xFFFFFFFF, ldr::EArrowType::Fwd, c.m_point_at_t, c.m_axis * 0.1f, 5);
 		ldr::Box(str, "Contact", 0xFFFFFF00, 0.005f, c.m_point_at_t.w1());
-		ldr::Write(str, L"P:\\dump\\collision.ldr");
+		ldr::Write(str, L"\\dump\\collision.ldr");
 	}
 }

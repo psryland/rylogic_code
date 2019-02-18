@@ -1,18 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using System.Xml.Linq;
 using Rylogic.Extn;
 
@@ -57,7 +45,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 		/// <summary>
 		/// The size of the left, top, right, bottom panes. If >= 1, then the value is interpreted
-		/// as pixels, if less than 1 then interpreted as a fraction of the ClientRectangle width/height</summary>
+		/// as pixels, if less than 1 then interpreted as a fraction of the client area width/height</summary>
 		public double Left
 		{
 			get { return m_left; }
@@ -117,7 +105,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			}
 		}
 
-		/// <summary>Get the sizes for the edge dock sites assuming the given available area</summary>
+		/// <summary>Given a rectangular area, returns the sizes for each visible dock site (given in docked_mask)</summary>
 		internal Thickness GetSizesForRect(Rect rect, EDockMask docked_mask, Size? centre_min_size = null)
 		{
 			// Ensure the centre dock pane is never fully obscured
@@ -168,28 +156,31 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			default: throw new Exception($"No size value for dock zone {location}");
 			case EDockSite.Centre: return 0;
 			case EDockSite.Left: return area.Left;
-			case EDockSite.Right: return area.Right;
 			case EDockSite.Top: return area.Top;
+			case EDockSite.Right: return area.Right;
 			case EDockSite.Bottom: return area.Bottom;
 			}
 		}
 
 		/// <summary>Get the size for a dock site in pixels, assuming an available area 'rect'</summary>
-		internal void SetSize(EDockSite location, Rect rect, int value)
+		internal void SetSize(EDockSite location, Rect rect, double value)
 		{
+			if (rect.Width == 0 || rect.Height == 0)
+				throw new Exception($"Cannot set dock sizes based on zero rectangle");
+
 			// Assign a fractional value for the dock site size
 			switch (location)
 			{
 			default: throw new Exception($"No size value for dock zone {location}");
 			case EDockSite.Centre: break;
 			case EDockSite.Left: Left = value / (Left >= 1 ? 1.0 : rect.Width); break;
-			case EDockSite.Right: Right = value / (Right >= 1 ? 1.0 : rect.Width); break;
 			case EDockSite.Top: Top = value / (Top >= 1 ? 1.0 : rect.Height); break;
+			case EDockSite.Right: Right = value / (Right >= 1 ? 1.0 : rect.Width); break;
 			case EDockSite.Bottom: Bottom = value / (Bottom >= 1 ? 1.0 : rect.Height); break;
 			}
 		}
 
-		public static DockSizeData Halves { get { return new DockSizeData(0.5, 0.5, 0.5, 0.5); } }
-		public static DockSizeData Quarters { get { return new DockSizeData(0.25, 0.25, 0.25, 0.25); } }
+		public static DockSizeData Halves => new DockSizeData(0.5, 0.5, 0.5, 0.5);
+		public static DockSizeData Quarters => new DockSizeData(0.25, 0.25, 0.25, 0.25);
 	}
 }

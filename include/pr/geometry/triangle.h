@@ -166,7 +166,7 @@ namespace pr
 				#if LDR_OUTPUT
 				pr::ldr::LdrBuilder ldr;
 				ldr.Line("", 0xFF00FF00, 1, [=](int i, v4& pt) { pt = v4(m_verts[i%count], 0, 1.0f); return i <= count; });
-				ldr.ToFile(L"P:\\dump\\triangulate.ldr");
+				ldr.ToFile(L"\\dump\\triangulate.ldr");
 				#endif
 
 				// Create a list of the polygon indices
@@ -411,7 +411,7 @@ namespace pr::geometry
 				#if LDR_OUTPUT
 				pr::ldr::LdrBuilder ldr;
 				ldr.Triangle("", 0xFF00FF00, v4(poly[i0],0,1), v4(poly[i1],0,1), v4(poly[i2],0,1));
-				ldr.ToFile(L"P:\\dump\\triangulate.ldr", true);
+				ldr.ToFile(L"\\dump\\triangulate.ldr", true);
 				#endif
 			});
 		}
@@ -439,7 +439,7 @@ namespace pr::geometry
 				#if LDR_OUTPUT
 				pr::ldr::LdrBuilder ldr;
 				ldr.Triangle("", 0xFF00FF00, v4(poly[i0],0,1), v4(poly[i1],0,1), v4(poly[i2],0,1));
-				ldr.ToFile(L"P:\\dump\\triangulate.ldr", true);
+				ldr.ToFile(L"\\dump\\triangulate.ldr", true);
 				#endif
 			});
 		}

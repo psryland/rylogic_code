@@ -32,7 +32,7 @@ namespace Rylogic.Gui.WPF
 
 			Options = new OptionsData();
 			m_all_content = new HashSet<DockControl>();
-			m_active_content = new ActiveContentImpl(this);
+			ActiveContentManager = new ActiveContentManager(this);
 
 			// The auto hide tab strips dock around the edge of the main dock container
 			// but remain hidden unless there are auto hide panels with content.
@@ -53,7 +53,10 @@ namespace Rylogic.Gui.WPF
 			Root = centre.Children.Add2(new Branch(this, DockSizeData.Quarters));
 			Root.SetBinding(Branch.WidthProperty, new Binding(nameof(Canvas.ActualWidth)) { Source = centre });
 			Root.SetBinding(Branch.HeightProperty, new Binding(nameof(Canvas.ActualHeight)) { Source = centre });
-			Root.PruneBranches(); // Ensure the default centre pane exists
+			
+			// Ensure the default centre pane exists
+			Root.PruneBranches();
+			ActivePane = (DockPane)Root.Descendants[EDockSite.Centre].Item;
 
 			// Create Commands
 			CmdLoadLayout = new LoadLayoutCommand(this);
@@ -75,7 +78,10 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Options for the dock container</summary>
-		public OptionsData Options { get; private set; }
+		public OptionsData Options { get; }
+
+		/// <summary>Manages events and changing of active pane/content</summary>
+		internal ActiveContentManager ActiveContentManager { get; }
 
 		/// <summary>Get/Set the globally active content (i.e. owned by this dock container). This will cause the pane that the content is on to also become active.</summary>
 		[Browsable(false)]
@@ -89,23 +95,16 @@ namespace Rylogic.Gui.WPF
 		[Browsable(false)]
 		public DockControl ActiveContent
 		{
-			get { return m_active_content.ActiveContent; }
-			set { m_active_content.ActiveContent = value; }
+			get { return ActiveContentManager.ActiveContent; }
+			set { ActiveContentManager.ActiveContent = value; }
 		}
-		private ActiveContentImpl m_active_content;
 
 		/// <summary>Get/Set the globally active pane (i.e. owned by this dock container). Note, this pane may be within the dock container, a floating window, or an auto hide window</summary>
 		[Browsable(false)]
 		public DockPane ActivePane
 		{
-			get { return m_active_content.ActivePane; }
-			set { m_active_content.ActivePane = value; }
-		}
-
-		/// <summary>Activate the content/pane that was previously active</summary>
-		public void ActivatePrevious()
-		{
-			m_active_content.ActivatePrevious();
+			get { return ActiveContentManager.ActivePane; }
+			set { ActiveContentManager.ActivePane = value; }
 		}
 
 		/// <summary>Return all tree hosts associated with this dock container</summary>
@@ -197,13 +196,16 @@ namespace Rylogic.Gui.WPF
 					m_root.TreeChanged += HandleTreeChanged;
 				}
 
-				/// <summary>Handler for when panes are added/removed from the tree</summary>
+				/// <summary>Handler for when panes/branches are added/removed from the tree</summary>
 				void HandleTreeChanged(object sender, TreeChangedEventArgs obj)
 				{
 					switch (obj.Action)
 					{
 					case TreeChangedEventArgs.EAction.ActiveContent:
 						{
+							// Active content notifications come from DockPanes when the visible content
+							// changes. If the pane is the active pane, we need to make pane's visible
+							// content the active content.
 							if (obj.DockPane == ActivePane)
 								ActiveContent = obj.DockControl;
 							break;
@@ -211,18 +213,23 @@ namespace Rylogic.Gui.WPF
 					case TreeChangedEventArgs.EAction.Added:
 					case TreeChangedEventArgs.EAction.Removed:
 						{
-							if (obj.DockControl != null)
-								OnDockableMoved(new DockableMovedEventArgs((DockableMovedEventArgs.EAction)obj.Action, obj.DockControl.Dockable));
+							var affected =
+								obj.DockControl != null ? new[] { obj.DockControl } :
+								obj.DockPane != null ? obj.DockPane.AllContent :
+								obj.Branch != null ? obj.Branch.AllContent :
+								new DockControl[0];
+
+							// Notify 'PaneChanged' for the affected content whenever the tree is changed
+							foreach (var dc in affected)
+								dc.RaisePaneChanged();
+
 							break;
 						}
 					}
 				}
 			}
 		}
-		Branch ITreeHost.Root
-		{
-			get { return Root; }
-		}
+		Branch ITreeHost.Root => Root;
 		private Branch m_root;
 
 		/// <summary>Add a dockable instance to this branch at the position described by 'location'.</summary>
@@ -320,22 +327,15 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Raised whenever the active pane changes in this dock container or associated floating window or auto hide panel</summary>
 		public event EventHandler<ActivePaneChangedEventArgs> ActivePaneChanged
 		{
-			add { m_active_content.ActivePaneChanged += value; }
-			remove { m_active_content.ActivePaneChanged -= value; }
+			add { ActiveContentManager.ActivePaneChanged += value; }
+			remove { ActiveContentManager.ActivePaneChanged -= value; }
 		}
 
 		/// <summary>Raised whenever the active content changes in this dock container or associated floating window or auto hide panel</summary>
 		public event EventHandler<ActiveContentChangedEventArgs> ActiveContentChanged
 		{
-			add { m_active_content.ActiveContentChanged += value; }
-			remove { m_active_content.ActiveContentChanged -= value; }
-		}
-
-		/// <summary>Raised whenever content is moved within the dock container, floating windows, or auto hide panels</summary>
-		public event EventHandler<DockableMovedEventArgs> DockableMoved;
-		protected virtual void OnDockableMoved(DockableMovedEventArgs args)
-		{
-			DockableMoved?.Invoke(this, args);
+			add { ActiveContentManager.ActiveContentChanged += value; }
+			remove { ActiveContentManager.ActiveContentChanged -= value; }
 		}
 
 		/// <summary>Initiate dragging of a pane or content</summary>
@@ -508,50 +508,50 @@ namespace Rylogic.Gui.WPF
 			pane.VisibleContent = dc;
 
 			// Make it the active item in the dock container
-			var container = pane.TreeHost;
-			if (container != null)
+			if (pane.TreeHost != null)
 			{
-				container.ActiveContent = dc;
+				ActiveContentManager.ActiveContent = dc;
 
 				// If the container is an auto hide panel, make sure it's popped out
-				if (container is AutoHidePanel ah)
+				if (pane.TreeHost is AutoHidePanel ah)
 				{
 					ah.PoppedOut = true;
 				}
 
 				// If the container is a floating window, make sure it's visible and on-screen
-				if (container is FloatingWindow fw)
+				if (pane.TreeHost is FloatingWindow fw)
 				{
 					fw.Bounds = Gui_.OnScreen(fw.Bounds);
 					fw.Visibility = Visibility.Collapsed;
-					//					fw.BringToFront();
+					//fw.BringToFront();
 					if (fw.WindowState == WindowState.Minimized)
 						fw.WindowState = WindowState.Normal;
 				}
 			}
 		}
 
-		/// <summary>Get the bounds of a dock site. 'rect' is the available area. 'docked_mask' are the </summary>
-		internal static Rect DockSiteBounds(EDockSite location, Rect rect, EDockMask docked_mask, DockSizeData dock_site_sizes)
+		/// <summary>Get the bounds of a dock site. 'rect' is the available area. 'docked_mask' are the visible dock sites within 'rect'</summary>
+		internal static Rect DockSiteBounds(EDockSite docksite, Rect rect, EDockMask docked_mask, DockSizeData dock_site_sizes)
 		{
-			var area = dock_site_sizes.GetSizesForRect(rect, docked_mask);
+			// Get the size of each dock site relative to 'rect'
+			var site_size = dock_site_sizes.GetSizesForRect(rect, docked_mask | (EDockMask)(1 << (int)docksite));
 
 			// Get the initial rectangle for the dock site assuming no other docked children
 			var r = Rect.Empty;
-			switch (location)
+			switch (docksite)
 			{
-			default: throw new Exception($"No bounds value for dock zone {location}");
+			default: throw new Exception($"No bounds value for dock zone {docksite}");
 			case EDockSite.Centre: r = rect; break;
-			case EDockSite.Left: r = new Rect(rect.Left, rect.Top, area.Left, rect.Height); break;
-			case EDockSite.Right: r = new Rect(rect.Right - area.Right, rect.Top, area.Right, rect.Height); break;
-			case EDockSite.Top: r = new Rect(rect.Left, rect.Top, rect.Width, area.Top); break;
-			case EDockSite.Bottom: r = new Rect(rect.Left, rect.Bottom - area.Bottom, rect.Width, area.Bottom); break;
+			case EDockSite.Left: r = new Rect(rect.Left, rect.Top, site_size.Left, rect.Height); break;
+			case EDockSite.Right: r = new Rect(rect.Right - site_size.Right, rect.Top, site_size.Right, rect.Height); break;
+			case EDockSite.Top: r = new Rect(rect.Left, rect.Top, rect.Width, site_size.Top); break;
+			case EDockSite.Bottom: r = new Rect(rect.Left, rect.Bottom - site_size.Bottom, rect.Width, site_size.Bottom); break;
 			}
 
 			// Remove areas from 'r' for sites with EDockSite values greater than 'location' (if present).
 			// Note: order of subtracting areas is important, subtract from highest priority to lowest
 			// so that the result is always still a rectangle.
-			for (var i = (EDockSite)DockSiteCount - 1; i > location; --i)
+			for (var i = (EDockSite)DockSiteCount - 1; i > docksite; --i)
 			{
 				if (!docked_mask.HasFlag((EDockMask)(1 << (int)i))) continue;
 				var sub = DockSiteBounds(i, rect, docked_mask, dock_site_sizes);
@@ -674,6 +674,36 @@ namespace Rylogic.Gui.WPF
 			// Adding each dockable without an address causes it to be moved to its default location
 			foreach (var dc in AllContentInternal.ToArray())
 				Add(dc, dc.DefaultDockLocation);
+		}
+
+		/// <summary>Self consistency check (for debugging)</summary>
+		public bool ValidateTree()
+		{
+			try
+			{
+				Root.ValidateTree();
+				foreach (var ah in AutoHidePanels)
+				{
+					if (ah.Root.Descendants[EDockSite.Left].Item != null ||
+						ah.Root.Descendants[EDockSite.Top].Item != null ||
+						ah.Root.Descendants[EDockSite.Right].Item != null ||
+						ah.Root.Descendants[EDockSite.Bottom].Item != null)
+						throw new Exception($"Auto hide panel {ah.DockSite} has items not in the centre pane");
+
+					ah.Root.ValidateTree();
+				}
+				foreach (var fw in FloatingWindows)
+				{
+					fw.Root.ValidateTree();
+				}
+
+				return true;
+			}
+			catch (Exception ex)
+			{
+				Debug.WriteLine(ex.MessageFull());
+				return false;
+			}
 		}
 
 		/// <summary>Output the tree structure</summary>

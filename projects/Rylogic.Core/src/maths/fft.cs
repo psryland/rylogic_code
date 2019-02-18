@@ -248,7 +248,7 @@ namespace Rylogic.UnitTests
 						auto y = Length(naive[i]);
 						s_out.append(pr::FmtS("%f, %f\n", x, y));
 					}
-					pr::BufferToFile(s_out, "P:\\dump\\frequencies0.csv");
+					pr::BufferToFile(s_out, "\\dump\\frequencies0.csv");
 				}
 			}
 #endif
@@ -264,7 +264,7 @@ namespace Rylogic.UnitTests
 						auto y = Length(freq[i]);
 						s_out.append(pr::FmtS("%f, %f\n", x, y));
 					}
-					pr::BufferToFile(s_out, "P:\\dump\\frequencies1.csv");
+					pr::BufferToFile(s_out, "\\dump\\frequencies1.csv");
 				}
 			}
 #endif
@@ -282,7 +282,7 @@ namespace Rylogic.UnitTests
 					for (double x = freq_range.Beg; x < freq_range.End; x += 0.1)
 						s_out.AppendLine($"{x}, {dft.Power(x)}");
 
-					//File.WriteAllText("P:\\dump\\frequencies2.csv", s_out.ToString());
+					//File.WriteAllText("\\dump\\frequencies2.csv", s_out.ToString());
 				}
 			}
 		}

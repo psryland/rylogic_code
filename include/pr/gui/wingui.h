@@ -5309,7 +5309,7 @@ namespace pr
 					)
 				{
 					auto out = [](char const* s) { OutputDebugStringA(s); };
-					//auto out = [](char const* s) { std::ofstream("P:\\dump\\wingui.log", std::ofstream::app).write(s,strlen(s)); };
+					//auto out = [](char const* s) { std::ofstream("\\dump\\wingui.log", std::ofstream::app).write(s,strlen(s)); };
 
 					// Display the message
 					static int msg_idx = 0; ++msg_idx;

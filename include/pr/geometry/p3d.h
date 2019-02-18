@@ -1034,7 +1034,7 @@ namespace pr::geometry
 		mesh.m_nugget.push_back(nug);
 		file.m_scene.m_meshes.push_back(mesh);
 
-		//std::ofstream buf("P:\\dump\\test.p3d", std::ofstream:: binary);
+		//std::ofstream buf("\\dump\\test.p3d", std::ofstream:: binary);
 		//p3d::Write(buf, file);
 
 		//*
@@ -1075,7 +1075,7 @@ namespace pr::geometry
 			PR_CHECK(m0.m_nugget.size() , m1.m_nugget.size());
 		}
 		//*/
-		//std::ifstream ifile("P:\\dump\\test2.3ds", std::ifstream::binary);
+		//std::ifstream ifile("\\dump\\test2.3ds", std::ifstream::binary);
 		//Read3DSMaterials(ifile, [](max_3ds::Material&&){});
 		//Read3DSModels(ifile, [](max_3ds::Object&&){});
 	}

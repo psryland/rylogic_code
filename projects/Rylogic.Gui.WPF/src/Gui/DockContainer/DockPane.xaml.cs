@@ -22,9 +22,15 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 	[DebuggerDisplay("{DumpDesc()}")]
 	public partial class DockPane : DockPanel, IPaneOrBranch, IDisposable
 	{
-		internal DockPane(DockContainer owner, bool show_pin = true, bool show_close = true)
+		// Notes:
+		//  - DockPane's don't move within the tree, only the content moves.
+		//    DockPanes get created in new positions and deleted from old
+		//    positions, with the content transferred from one to the other.
+
+		internal DockPane(DockContainer owner)
 		{
 			InitializeComponent();
+			Focusable = true;
 
 			DockContainer = owner ?? throw new ArgumentNullException("The owning dock container cannot be null");
 			MoveVisibleContentOnly = false;
@@ -38,8 +44,26 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			// Set up UI Elements
 			SetupUI();
 		}
+		protected override void OnVisualParentChanged(DependencyObject oldParent)
+		{
+			base.OnVisualParentChanged(oldParent);
+
+			// Set the visibility of the pin
+			m_pin.Visibility = DockSite != EDockSite.Centre || !(TreeHost is DockContainer)
+				? Visibility.Visible : Visibility.Collapsed;
+		}
+		protected override void OnIsKeyboardFocusWithinChanged(DependencyPropertyChangedEventArgs e)
+		{
+			base.OnIsKeyboardFocusWithinChanged(e);
+			if (IsKeyboardFocusWithin)
+				ActiveContentManager.ActivePane = this;
+		}
 		public virtual void Dispose()
 		{
+			// Ensure this pane is removed from it's parent branch
+			if (ParentBranch != null)
+				ParentBranch.Descendants.Remove(this);
+
 			// Note: we don't own any of the content
 			VisibleContent = null;
 			AllContent = null;
@@ -47,6 +71,9 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 		/// <summary>The owning dock container</summary>
 		public DockContainer DockContainer { [DebuggerStepThrough] get; }
+
+		/// <summary>Manages events and changing of active pane/content</summary>
+		private ActiveContentManager ActiveContentManager => DockContainer.ActiveContentManager;
 
 		/// <summary>Control behaviour</summary>
 		public OptionsData Options => DockContainer.Options;
@@ -61,29 +88,14 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		public ContentControl Centre => m_content_pane;
 
 		/// <summary>The control that hosts the dock pane and branch tree</summary>
-		internal ITreeHost TreeHost
-		{
-			[DebuggerStepThrough]
-			get { return ParentBranch?.TreeHost; }
-		}
+		internal ITreeHost TreeHost => ParentBranch?.TreeHost;
 
 		/// <summary>The branch at the top of the tree that contains this pane</summary>
-		internal Branch RootBranch
-		{
-			[DebuggerStepThrough]
-			get { return ParentBranch?.RootBranch; }
-		}
+		internal Branch RootBranch => ParentBranch?.RootBranch;
 
 		/// <summary>The branch that contains this pane</summary>
-		internal Branch ParentBranch
-		{
-			[DebuggerStepThrough]
-			get { return Parent as Branch; }
-		}
-		Branch IPaneOrBranch.ParentBranch
-		{
-			get { return ParentBranch; }
-		}
+		internal Branch ParentBranch => Parent as Branch;
+		Branch IPaneOrBranch.ParentBranch => ParentBranch;
 
 		/// <summary>Get the dock site for this pane</summary>
 		public EDockSite DockSite
@@ -94,7 +106,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>Get the dock sites, from top to bottom, describing where this pane is located in the tree </summary>
 		public EDockSite[] DockAddress
 		{
-			get { return ParentBranch.DockAddress.Concat(DockSite).ToArray(); }
+			get { return ParentBranch?.DockAddress.Concat(DockSite).ToArray() ?? new[] { DockSite }; }
 		}
 
 		/// <summary>The content hosted by this pane</summary>
@@ -131,9 +143,13 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 							{
 								if (dc == null)
 									throw new ArgumentNullException(nameof(dc), "Cannot add 'null' content to a dock pane");
+								if (dc.DockPane == this)
+									throw new Exception("Do not add content to the same pane twice");
 
-								// Before adding dockables to the content list, remove them from any previous panes (or even this pane)
-								dc.SetDockPaneInternal(null);
+								// Ensure 'dc' has been removed from any other pane's content collections
+								// If 'dc.DockPane == this', this will throw because we can't modify the AllContent
+								// collection within this handler.
+								dc.DockPane = null;
 
 								// Set this pane as the owning dock pane for the dockables.
 								// Don't add the dockable as a child control yet, that happens when the active content changes.
@@ -144,6 +160,9 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 								// Notify tree changed
 								ParentBranch?.OnTreeChanged(new TreeChangedEventArgs(TreeChangedEventArgs.EAction.Added, dockcontrol: dc));
+
+								// Make 'dc' the visible content
+								VisibleContent = dc;
 							}
 							break;
 						}
@@ -155,6 +174,8 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 									throw new ArgumentNullException(nameof(dc), "Cannot remove 'null' content from a dock pane");
 								if (dc.DockPane != this)
 									throw new Exception($"Dockable does not belong to this DockPane");
+								if (VisibleContent == dc)
+									VisibleContent = AllContent.Except(e.OldItems.Cast<DockControl>()).FirstOrDefault();
 
 								// Clear the dock pane from the content
 								dc.SetDockPaneInternal(null);
@@ -166,7 +187,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 								ParentBranch?.OnTreeChanged(new TreeChangedEventArgs(TreeChangedEventArgs.EAction.Removed, dockcontrol: dc));
 
 								// Remove empty branches
-								RootBranch?.PruneBranches();
+								RootBranch?.SignalPruneBranches();
 							}
 							break;
 						}
@@ -204,7 +225,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 		/// <summary>
 		/// The content in this pane that was last active (Not necessarily the active content for the dock container)
-		/// There should always be visible content while 'Content' is not empty. Empty panes are destroyed.
+		/// There should always be visible content while 'AllContent' is not empty. Empty panes are destroyed.
 		/// If this pane is not the active pane, then setting the visible content only raises events for this pane.
 		/// If this is the active pane, then the dock container events are also raised.</summary>
 		public DockControl VisibleContent
@@ -213,16 +234,17 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			get { return m_visible_content; }
 			set
 			{
-				if (m_visible_content == value || m_in_visible_content != 0) return;
+				if (m_visible_content == value) return;
+				if (m_in_visible_content != 0) return;
 				using (Scope.Create(() => ++m_in_visible_content, () => --m_in_visible_content))
 				{
 					// Ensure 'value' is the current item in the Content collection
-					// Only content that is in this pane can be made active for this pane
+					// Only content that is in this pane can be made active for this pane.
+					// 'MoveCurrentTo' recursively sets the visible content, hence the reentrancy protection.
 					if (value != null && !ContentView.MoveCurrentTo(value))
 						throw new Exception($"Dockable item '{value.TabText}' has not been added to this pane so can not be made the active content.");
 
 					// Switch to the new active content
-					var prev = m_visible_content;
 					if (m_visible_content != null)
 					{
 						// Save the control that had input focus at the time this content became inactive
@@ -234,14 +256,12 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 						// Clear the title bar
 						m_title.Text = string.Empty;
-
-						//							// Clear the scroll offset
-						//							AutoScrollPosition = Point.Empty;
 					}
 
 					// Note: 'm_visible_content' is of type 'DockControl' rather than 'IDockable' because when the DockControl is Disposed
 					// 'IDockable.DockControl' gets set to null before the disposing actually happens. This means we wouldn't be able to access
 					// the 'Owner' to remove it from the pane. i.e. 'IDockable.DockControl.Owner' throws because 'DockControl' is null during dispose.
+					var prev = m_visible_content;
 					m_visible_content = value;
 
 					if (m_visible_content != null)
@@ -250,16 +270,16 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 						Centre.Content = m_visible_content.Owner;
 
 						// Set the title bar
-						m_title.Text = m_visible_content.TabText;
+						m_title.Text = CaptionText;
 
 						// Restore the input focus for this content
 						m_visible_content.RestoreFocus();
 					}
 
-					//						// Ensure the tab for the active content is visible
-					//						TabStripCtrl.MakeTabVisible(ContentView.CurrentPosition);
+					// Ensure the tab for the active content is visible
+					//TabStripCtrl.MakeTabVisible(ContentView.CurrentPosition);
 
-					// Raise the active content changed event on this pane.
+					// Raise the visible content changed event on this pane.
 					OnVisibleContentChanged(new ActiveContentChangedEventArgs(prev?.Dockable, value?.Dockable));
 
 					// Notify the container of this tree that the active content in this pane was changed
@@ -305,12 +325,16 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				// Change the state of the active content
 				content.IsFloating = value;
 
-				// Copy properties form this pane to the new pane that hosts 'content'
+				// Copy properties from this pane to the new pane that now hosts 'content'
 				var pane = content.DockPane;
-				//					pane.TabStripCtrl.StripLocation = strip_location;
+				// pane.TabStripCtrl.StripLocation = strip_location;
 
 				// Add the remaining content to the same pane that 'content' is now in
-				if (!MoveVisibleContentOnly)
+				// Careful, moving all content from a pane causes it to be disposed.
+				// If the pane only contained 'content' before, then Dispose will have
+				// been called and 'AllContent' will be null. In this case, there is
+				// nothing else to move anyway
+				if (!MoveVisibleContentOnly && AllContent != null)
 					pane.AllContent.AddRange(AllContent.ToArray());
 			}
 		}
@@ -318,15 +342,13 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>Get/Set the content in this pane to auto hide mode</summary>
 		public bool IsAutoHide
 		{
-			get
-			{
-				if (VisibleContent == null) return false;
-				var auto_hide = VisibleContent.IsAutoHide;
-				Debug.Assert(AllContent.All(x => x.IsAutoHide == auto_hide), "All content in a pane should be in the same state");
-				return auto_hide;
-			}
+			get { return TreeHost is AutoHidePanel; }
 			set
 			{
+				// Notes:
+				//  - Setting the IsAutoHide state only moves the content to another pane.
+				//    Panes don't move, only the content does.
+
 				// All content in this pane matches the auto hide state of the active content
 				var content = VisibleContent;
 				if (content == null || content.IsAutoHide == value)
@@ -335,22 +357,17 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				// Change the state of the active content
 				content.IsAutoHide = value;
 
+				// Copy properties from this pane to the new pane that now hosts 'content'
+				var pane = content.DockPane;
+
 				// Add the remaining content to the same pane that 'content' is now in.
+				// Careful, moving all content from a pane causes it to be disposed.
+				// If the pane only contained 'content' before, then Dispose will have
+				// been called and 'AllContent' will be null. In this case, there is
+				// nothing else to move anyway
 				if (!MoveVisibleContentOnly && AllContent != null)
-				{
-					// Careful, moving all content from a pane causes it to be disposed.
-					// If the pane only contained 'content' before, then Dispose will have
-					// been called and 'AllContent' will be null. In this case, there is
-					// nothing else to move anyway
-					var pane = content.DockPane;
 					pane.AllContent.AddRange(AllContent.ToArray());
-				}
 			}
-		}
-		public bool IsPinned
-		{
-			get { return !IsAutoHide; }
-			set { IsAutoHide = !value; }
 		}
 
 		/// <summary>Get/Set whether operations such as floating or auto hiding apply to all content or just the visible content</summary>
@@ -360,6 +377,10 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		public event EventHandler<ActiveContentChangedEventArgs> VisibleContentChanged;
 		protected void OnVisibleContentChanged(ActiveContentChangedEventArgs args)
 		{
+			// Set the active tab button
+			foreach (var btn in TabStrip.Buttons)
+				btn.IsActiveTab = btn.DockControl == VisibleContent;
+
 			VisibleContentChanged?.Invoke(this, args);
 		}
 
@@ -370,30 +391,16 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			ActivatedChanged?.Invoke(this, EventArgs.Empty);
 		}
 
-		/// <summary>Raised whenever this DockPane is moved to a new site in the tree</summary>
-		public event EventHandler DockAddressChanged;
-		internal void OnDockAddressChanged()
-		{
-			// Update the 'pin' state
-			m_pin.IsChecked = IsAutoHide;
-			m_pin.Visibility = DockSite == EDockSite.Centre && TreeHost is DockContainer
-				? Visibility.Collapsed
-				: Visibility.Visible;
-
-			// Notify that the pane has moved within the tree
-			DockAddressChanged?.Invoke(this, EventArgs.Empty);
-		}
-
 		/// <summary>Get/Set this pane as activated. Activation causes the active content in this pane to be activated</summary>
 		public bool Activated
 		{
-			get { return TreeHost.ActivePane == this; }
+			get { return ActiveContentManager.ActivePane == this; }
 			set
 			{
 				// Assign this pane as the active one. This will cause the previously active pane
 				// to have Activated = false called. Careful, need to handle 'Activated' or 'TreeHost.ActivePane'
 				// being assigned to. The ActivePane handler will call OnActivatedChanged.
-				TreeHost.ActivePane = value ? this : null;
+				ActiveContentManager.ActivePane = value ? this : null;
 			}
 		}
 
@@ -451,6 +458,12 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					mouse_down_at = null;
 					dragging = false;
 				}
+			}
+			{// Set up pin/unpin
+				m_pin.Click += (s, a) =>
+				{
+					IsAutoHide = !IsAutoHide;
+				};
 			}
 		}
 

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows;
@@ -14,16 +15,19 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 	[DebuggerDisplay("{StripLocation}")]
 	public partial class TabStrip : StackPanel
 	{
+		// Notes:
+		//  - All tab strips are horizontal with a layout transform for vertical strips
+
 		public TabStrip()
 		{
 			InitializeComponent();
-			Children.Clear();
-
-			Buttons = new ObservableCollection<TabButton>();
-
-			// All tab strips are horizontal with a layout transform for vertical strips
 			Orientation = Orientation.Horizontal;
-			StripLocation = EDockSite.None;
+			Buttons = new ObservableCollection<TabButton>();
+		}
+		protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
+		{
+			base.OnRenderSizeChanged(sizeInfo);
+			UpdateLayoutTransform();
 		}
 
 		/// <summary>Dock container options</summary>
@@ -33,48 +37,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		internal ITreeHost TreeHost => Gui_.FindVisualParent<ITreeHost>(this);
 
 		/// <summary>The location of the tab strip. Only L,T,R,B are valid</summary>
-		public EDockSite StripLocation
-		{
-			get { return m_strip_loc; }
-			set
-			{
-				if (m_strip_loc == value) return;
-				m_strip_loc = value;
-
-				if (m_strip_loc != EDockSite.None)
-				{
-					switch (m_strip_loc)
-					{
-					default: throw new Exception("Invalid tab strip location");
-					case EDockSite.Left:
-					case EDockSite.Right:
-						{
-							LayoutTransform = new RotateTransform(90);
-							break;
-						}
-					case EDockSite.Top:
-					case EDockSite.Bottom:
-						{
-							LayoutTransform = Transform.Identity;
-							break;
-						}
-					}
-
-					// Update the dock location on the parent
-					if (Parent is DockPanel dp)
-					{
-						Name = $"TabStrip{m_strip_loc}";
-						DockPanel.SetDock(this, DockContainer.ToDock(m_strip_loc));
-					}
-				}
-				else
-				{
-					// Hide if not docked
-					Visibility = Visibility.Collapsed;
-				}
-			}
-		}
-		private EDockSite m_strip_loc;
+		public EDockSite StripLocation => Parent is DockPanel ? DockPanel.GetDock(this).ToDockSite() : EDockSite.None;
 
 		/// <summary>The size of the tab strip</summary>
 		public double StripSize
@@ -116,28 +79,23 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					case NotifyCollectionChangedAction.Add:
 						{
 							foreach (var btn in e.NewItems.Cast<TabButton>())
-							{
 								Children.Add(btn);
-							}
-
-							if (Buttons.Count != 0)
-								Visibility = Visibility.Visible;
-
 							break;
 						}
 					case NotifyCollectionChangedAction.Remove:
 						{
 							foreach (var btn in e.OldItems.Cast<TabButton>())
-							{
 								Children.Remove(btn);
-							}
-
-							if (Buttons.Count == 0 || (Buttons.Count == 1 && !Options.AlwaysShowTabs))
-								Visibility = Visibility.Collapsed;
-
 							break;
 						}
 					}
+
+					// Show/Hide the tab strip
+					Visibility = 
+						AHPanel != null ||
+						Buttons.Count > 1 || 
+						(Buttons.Count == 1 && Options.AlwaysShowTabs)
+						? Visibility.Visible : Visibility.Collapsed;
 				}
 			}
 		}
@@ -154,6 +112,29 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		public IEnumerable<DockControl> Content
 		{
 			get { return Buttons.Select(x => x.DockControl); }
+		}
+
+		/// <summary>Set the layout transform based on the current strip location</summary>
+		private void UpdateLayoutTransform()
+		{
+			switch (StripLocation)
+			{
+			default: throw new Exception($"Invalid tab strip location: {StripLocation}");
+			case EDockSite.None:
+				break;
+			case EDockSite.Left:
+			case EDockSite.Right:
+				{
+					LayoutTransform = new RotateTransform(90);
+					break;
+				}
+			case EDockSite.Top:
+			case EDockSite.Bottom:
+				{
+					LayoutTransform = Transform.Identity;
+					break;
+				}
+			}
 		}
 	}
 }
