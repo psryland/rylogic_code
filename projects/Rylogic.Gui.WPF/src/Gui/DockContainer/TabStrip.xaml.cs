@@ -13,7 +13,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 {
 	/// <summary>A strip of tab buttons</summary>
 	[DebuggerDisplay("{StripLocation}")]
-	public partial class TabStrip : StackPanel
+	public partial class TabStrip : WrapPanel
 	{
 		// Notes:
 		//  - All tab strips are horizontal with a layout transform for vertical strips
@@ -21,12 +21,23 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		public TabStrip()
 		{
 			InitializeComponent();
-			Orientation = Orientation.Horizontal;
 			Buttons = new ObservableCollection<TabButton>();
 		}
 		protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
 		{
 			base.OnRenderSizeChanged(sizeInfo);
+
+			if (Buttons.Count != 0)
+			{
+				var max_size_per_button = (ActualWidth - 2) / Buttons.Count;
+				foreach (var btn in Buttons)
+					btn.MaxWidth = Math.Max(btn.MinWidth, max_size_per_button);
+			}
+			UpdateLayoutTransform();
+		}
+		protected override void OnVisualParentChanged(DependencyObject oldParent)
+		{
+			base.OnVisualParentChanged(oldParent);
 			UpdateLayoutTransform();
 		}
 
@@ -37,17 +48,13 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		internal ITreeHost TreeHost => Gui_.FindVisualParent<ITreeHost>(this);
 
 		/// <summary>The location of the tab strip. Only L,T,R,B are valid</summary>
-		public EDockSite StripLocation => Parent is DockPanel ? DockPanel.GetDock(this).ToDockSite() : EDockSite.None;
-
-		/// <summary>The size of the tab strip</summary>
-		public double StripSize
+		public EDockSite StripLocation
 		{
-			get
+			get { return Parent is DockPanel ? DockPanel.GetDock(this).ToDockSite() : EDockSite.None; }
+			set
 			{
-				return
-					Orientation == Orientation.Horizontal ? ActualHeight :
-					Orientation == Orientation.Vertical ? ActualWidth :
-					throw new Exception("Orientation unknown");
+				if (Parent is DockPanel dp && value.IsEdge())
+					DockPanel.SetDock(this, value.ToDock());
 			}
 		}
 
@@ -78,14 +85,17 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					{
 					case NotifyCollectionChangedAction.Add:
 						{
-							foreach (var btn in e.NewItems.Cast<TabButton>())
-								Children.Add(btn);
+							// Ensure the order of children matches the order of the buttons
+							m_tabs.Children.Clear();
+							foreach (var btn in m_buttons)
+								m_tabs.Children.Add(btn);
+
 							break;
 						}
 					case NotifyCollectionChangedAction.Remove:
 						{
 							foreach (var btn in e.OldItems.Cast<TabButton>())
-								Children.Remove(btn);
+								m_tabs.Children.Remove(btn);
 							break;
 						}
 					}
@@ -109,7 +119,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		}
 
 		/// <summary>Get the content associated with the tabs</summary>
-		public IEnumerable<DockControl> Content
+		public IEnumerable<DockControl> AllContent
 		{
 			get { return Buttons.Select(x => x.DockControl); }
 		}

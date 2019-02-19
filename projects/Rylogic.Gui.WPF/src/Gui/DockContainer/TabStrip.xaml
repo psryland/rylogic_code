@@ -1,4 +1,4 @@
-﻿<StackPanel 
+﻿<WrapPanel
 	x:Class="Rylogic.Gui.WPF.DockContainerDetail.TabStrip"
 	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -7,5 +7,8 @@
 	xmlns:local="clr-namespace:Rylogic.Gui.WPF.DockContainerDetail"
 	mc:Ignorable="d" 
 	d:DesignHeight="20" d:DesignWidth="400"
+	Background="{x:Static SystemColors.ControlLightBrush}"
+	Orientation="Horizontal"
+	Name="m_tabs"
 	>
-</StackPanel>
+</WrapPanel>

@@ -15,6 +15,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using System.Xml.Linq;
 
 namespace TestWPF
 {
@@ -38,21 +39,18 @@ namespace TestWPF
 			var d8 = new Dockable("Dockable 8") { Background = Brushes.White };
 			var d9 = new Dockable("Dockable 9") { Background = Brushes.White };
 
-			//d0.DockControl.ActiveChanged += PrintActiveChanged;
-			//d1.DockControl.ActiveChanged += PrintActiveChanged;
-			//d2.DockControl.ActiveChanged += PrintActiveChanged;
-			//d3.DockControl.ActiveChanged += PrintActiveChanged;
-			//d4.DockControl.ActiveChanged += PrintActiveChanged;
-			//d5.DockControl.ActiveChanged += PrintActiveChanged;
-			//d6.DockControl.ActiveChanged += PrintActiveChanged;
-			//d7.DockControl.ActiveChanged += PrintActiveChanged;
-			//d8.DockControl.ActiveChanged += PrintActiveChanged;
-			//d9.DockControl.ActiveChanged += PrintActiveChanged;
-			//void PrintActiveChanged(object sender, ActiveContentChangedEventArgs e)
-			//{
-			//	var dc = sender as DockControl;
-			//	Debug.WriteLine($"{dc.TabText} {(dc.IsActiveContent ? "ACTIVE" : "INACTIVE")}");
-			//}
+			var save_btn = d0.Children.Add2(new Button { Content = "Save Layout" });
+			var load_btn = d0.Children.Add2(new Button { Content = "Load Layout" });
+			save_btn.Click += (s, a) =>
+			{
+				var xml = m_dc.SaveLayout();
+				xml.Save("\\dump\\layout.xml");
+			};
+			load_btn.Click += (s, a) =>
+			{
+				var xml = XElement.Load("\\dump\\layout.xml");
+				m_dc.LoadLayout(xml);
+			};
 
 			m_dc.Add(d0, EDockSite.Centre);
 			m_dc.Add(d1, EDockSite.Centre);
@@ -118,17 +116,6 @@ namespace TestWPF
 			return DockControl.TabText;
 		}
 	}
-	//private class TextDockable : TextBox, IDockable
-	//{
-	//	public TextDockable(string text)
-	//	{
-	//		Multiline = true;
-	//		DockControl = new DockControl(this, text) { TabText = text, TabIcon = SystemIcons.Question.ToBitmap() };
-	//	}
-
-	//	/// <summary>Implements docking functionality</summary>
-	//	public DockControl DockControl { [DebuggerStepThrough] get; private set; }
-	//}
 }
 
 /*

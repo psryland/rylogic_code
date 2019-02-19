@@ -8,20 +8,18 @@ using System.Windows.Input;
 namespace Rylogic.Gui.WPF.DockContainerDetail
 {
 	/// <summary>A tab that displays within a tab strip</summary>
-	[DebuggerDisplay("{DockControl}")]
+	[DebuggerDisplay("{Content}")]
 	public partial class TabButton : Button, INotifyPropertyChanged
 	{
 		// Notes:
 		// - TabButtons are children of TabStrips, which are children of DockPanes or
 		//   
-		private readonly ToolTip m_tt;
 		private Point? m_mouse_down_at;
 		private bool m_dragging;
 
 		public TabButton()
 		{
 			InitializeComponent();
-			m_tt = new ToolTip { StaysOpen = true, HasDropShadow = true };
 			DataContext = this;
 		}
 		public TabButton(string text)
@@ -35,6 +33,11 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		{
 			DockControl = content;
 			Content = content.TabText;
+		}
+		protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
+		{
+			base.OnRenderSizeChanged(sizeInfo);
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Clipped)));
 		}
 		protected override void OnVisualParentChanged(DependencyObject oldParent)
 		{
@@ -79,19 +82,6 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 				return;
 			}
-
-			// Check for the mouse hovering over the tab
-			if (e.LeftButton == MouseButtonState.Released)
-			{
-				// If the tool tip has been set explicitly, or the tab content is clipped, set the tool tip string
-				var tt = string.Empty;
-				if (Clipped || !ReferenceEquals(TabToolTip, TabText))
-					tt = TabToolTip;
-
-				m_tt.PlacementTarget = this;
-				m_tt.Content = tt;
-			}
-
 			base.OnMouseMove(e);
 		}
 		protected override void OnMouseUp(MouseButtonEventArgs e)
@@ -144,7 +134,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		private OptionsData Options => TreeHost?.DockContainer.Options ?? new OptionsData();
 
 		/// <summary>The tab strip that contains this tab button</summary>
-		private TabStrip TabStrip => Gui_.FindVisualParent<TabStrip>(this);
+		internal TabStrip TabStrip => Gui_.FindVisualParent<TabStrip>(this);
 
 		/// <summary>Returns the tree root that hosts this tab (Remember AHP's don't host tab strips)</summary>
 		internal ITreeHost TreeHost => Gui_.FindVisualParent<ITreeHost>(this);
@@ -153,7 +143,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		public DockControl DockControl { get; }
 
 		/// <summary>True if the tab content is larger than the size of the tab</summary>
-		public bool Clipped { get; private set; }
+		public bool Clipped => Math.Abs(ActualWidth - MaxWidth) < 0.0001;
 
 		/// <summary>The text displayed on this tab</summary>
 		public string TabText => DockControl?.TabText ?? string.Empty;

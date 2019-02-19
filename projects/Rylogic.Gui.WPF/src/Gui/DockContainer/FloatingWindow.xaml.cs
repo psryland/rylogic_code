@@ -13,7 +13,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 {
 	/// <summary>A floating window that hosts a tree of dock panes</summary>
 	[DebuggerDisplay("FloatingWindow")]
-	public partial class FloatingWindow : Window, ITreeHost, IDisposable
+	public partial class FloatingWindow : Window, ITreeHost
 	{
 		private Panel m_content;
 		public FloatingWindow(DockContainer dc)
@@ -38,11 +38,9 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			// Move all the content back to the main dock container
 			foreach (var dc in AllContent.ToArray())
 				dc.IsFloating = false;
-		}
-		public virtual void Dispose()
-		{
-			Root = null;
-			DockContainer = null;
+
+			e.Cancel = true;
+			Hide();
 		}
 
 		/// <summary>An identifier for a floating window</summary>
@@ -75,8 +73,8 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				}
 			}
 		}
-		DockContainer ITreeHost.DockContainer => DockContainer;
 		private DockContainer m_dc;
+		DockContainer ITreeHost.DockContainer => DockContainer;
 
 		/// <summary>The root level branch of the tree in this floating window</summary>
 		internal Branch Root
@@ -127,11 +125,8 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				}
 			}
 		}
-		Branch ITreeHost.Root
-		{
-			get { return Root; }
-		}
 		private Branch m_root;
+		Branch ITreeHost.Root => Root;
 
 		/// <summary>Manages events and changing of active pane/content</summary>
 		private ActiveContentManager ActiveContentManager => DockContainer.ActiveContentManager;

@@ -2,17 +2,10 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using System.Xml.Linq;
 using Rylogic.Extn;
 using Rylogic.Utility;
@@ -182,8 +175,12 @@ namespace Rylogic.Gui.WPF
 			// changing the content list.
 			m_pane = pane;
 
-			// Record the dock container that 'pane' belongs to
-			DockContainer = pane?.DockContainer;
+			// Record the dock container that 'pane' belongs to.
+			// Don't set 'DockContainer' to null, only change it. The dock container remembers content
+			// that has been added, so that it can restore it to a previous dock pane.
+			var dc = pane?.DockContainer;
+			if (dc != null && DockContainer != dc)
+				DockContainer = dc;
 
 			// If a pane is given, save the dock address for the root branch (if the pane is within a tree)
 			if (pane != null && pane.ParentBranch != null)
@@ -379,7 +376,10 @@ namespace Rylogic.Gui.WPF
 				return new[] { EDockSite.Centre };
 			});
 		}
-		private Dictionary<Branch, EDockSite[]> DockAddresses { get; set; }
+		private Dictionary<Branch, EDockSite[]> DockAddresses { get; }
+
+		/// <summary>Return the tab button associated with this content</summary>
+		internal TabButton TabButton => DockPane?.TabStrip.Buttons.FirstOrDefault(x => x.DockControl == this);
 
 		/// <summary>Get/Set whether the dock pane title control is visible while this content is active. Null means inherit default</summary>
 		public bool? ShowTitle { get; set; }
@@ -398,8 +398,7 @@ namespace Rylogic.Gui.WPF
 				// Have to invalidate the whole tab strip, because the text length
 				// will change causing the other tabs to move.
 				m_tab_text = value;
-				InvalidateTitle();
-				InvalidateTabStrip();
+				TabButton?.InvalidateArrange();
 			}
 		}
 		private string m_tab_text;
@@ -407,21 +406,12 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The icon to display on the tab. Defaults to '(Owner as Window)?.Icon'</summary>
 		public ImageSource TabIcon
 		{
-			get
-			{
-				// Note: not using Icon as the type for TabIcon because GDI+ doesn't support
-				// drawing icons. The DrawIcon function calls the win API function DrawIconEx
-				// which doesn't handle transforms properly
-
-				// If an icon image has been specified, return that
-				// If the content is a Window and it has an icon, use that
-				return m_icon ?? (Owner as Window)?.Icon;
-			}
+			get { return m_icon ?? (Owner as Window)?.Icon; }
 			set
 			{
 				if (m_icon == value) return;
 				m_icon = value;
-				InvalidateTabStrip();
+				TabButton?.InvalidateArrange();
 			}
 		}
 		private ImageSource m_icon;
@@ -504,40 +494,6 @@ namespace Rylogic.Gui.WPF
 
 			return node;
 		}
-
-		/// <summary>Invalidate the tab that represents this content</summary>
-		public void InvalidateTab()
-		{
-			if (DockPane == null) return;
-			//var tab = DockPane.TabStripCtrl.VisibleTabs.FirstOrDefault(x => x.Content == this);
-			//if (tab != null)
-			//	DockPane.TabStripCtrl.Invalidate(tab.DisplayBounds);
-			//else
-			//	InvalidateTabStrip();
-		}
-
-		/// <summary>Invalidate the tab strip that contains the tab for this content</summary>
-		public void InvalidateTabStrip()
-		{
-			if (DockPane == null) return;
-			//DockPane.TabStripCtrl.Invalidate();
-		}
-
-		/// <summary>Invalidate the title that represents this content</summary>
-		public void InvalidateTitle()
-		{
-			if (DockPane == null) return;
-			//DockPane.TitleCtrl.Invalidate();
-		}
-
-		/// <summary></summary>
-		//public override string ToString()
-		//{
-		//	if (TabText.HasValue()) return TabText;
-		//	if (PersistName.HasValue()) return PersistName;
-		//	if (Owner is FrameworkElement fe && fe.Name.HasValue()) return fe.Name;
-		//	return Owner.GetType().Name;
-		//}
 	}
 
 	/// <summary>A wrapper control that hosts a control and implements IDockable</summary>
@@ -574,64 +530,3 @@ namespace Rylogic.Gui.WPF
 		private DockControl m_dock_control;
 	}
 }
-
-
-#if false
-			/// <summary>The colour to use for this tab's text. If null, defaults to the colour set of the containing TabStrip</summary>
-			public OptionData.ColourSet TabColoursActive
-			{
-				get { return m_tab_colours_active; }
-				set
-				{
-					if (m_tab_colours_active == value) return;
-					m_tab_colours_active = value;
-					InvalidateTab();
-				}
-			}
-			private OptionData.ColourSet m_tab_colours_active;
-
-			/// <summary>The colour to use for this tab's text. If null, defaults to the colour set of the containing TabStrip</summary>
-			public OptionData.ColourSet TabColoursInactive
-			{
-				get { return m_tab_colours_inactive; }
-				set
-				{
-					if (m_tab_colours_inactive == value) return;
-					m_tab_colours_inactive = value;
-					InvalidateTab();
-				}
-			}
-			private OptionData.ColourSet m_tab_colours_inactive;
-
-			/// <summary>The font to use for the active tab. If null, defaults to the fonts of the containing TabStrip</summary>
-			public Font TabFontActive
-			{
-				get { return m_tab_font_active; }
-				set
-				{
-					if (m_tab_font_active == value) return;
-
-					// Changing the font can effect the size of the tab, and therefore
-					// the layout of the whole tab strip
-					m_tab_font_active = value;
-					InvalidateTabStrip();
-				}
-			}
-			private Font m_tab_font_active;
-
-			/// <summary>The font used on the inactive tabs. If null, defaults to the fonts of the containing TabStrip</summary>
-			public Font TabFontInactive
-			{
-				get { return m_tab_font_inactive; }
-				set
-				{
-					if (m_tab_font_inactive == value) return;
-
-					// Changing the font can effect the size of the tab, and therefore
-					// the layout of the whole tab strip
-					m_tab_font_inactive = value;
-					InvalidateTabStrip();
-				}
-			}
-			private Font m_tab_font_inactive;
-#endif

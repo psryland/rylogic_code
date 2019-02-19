@@ -19,6 +19,23 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			}
 		}
 
+		/// <summary>Convert an 'EDockSite' to a DockPanel dock location</summary>
+		public static Dock ToDock(this EDockSite docksite)
+		{
+			switch (docksite)
+			{
+			default:
+				throw new Exception($"Unknown dock site value {docksite}");
+			case EDockSite.Centre:
+			case EDockSite.None:
+				throw new Exception($"No equivalent of {docksite} for DockPanel.Dock values");
+			case EDockSite.Left: return Dock.Left;
+			case EDockSite.Top: return Dock.Top;
+			case EDockSite.Right: return Dock.Right;
+			case EDockSite.Bottom: return Dock.Bottom;
+			}
+		}
+
 		/// <summary>True if this dock site is a edge</summary>
 		public static bool IsEdge(this EDockSite ds)
 		{

@@ -4,18 +4,21 @@
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
 	xmlns:gui2="clr-namespace:Rylogic.Gui.WPF"
-	xmlns:local="clr-namespace:Rylogic.Gui.WPF.DockContainerDetail"
 	mc:Ignorable="d" 
+	x:Name="m_btn"
 	d:DesignHeight="30" d:DesignWidth="120"
 	Padding="3"
 	BorderBrush="{x:Static SystemColors.ControlDarkBrush}"
 	Margin="{Binding EdgeMargin}"
+	MinWidth="28"
 	>
 
 	<!-- Control Resources -->
 	<Button.Resources>
 		<ResourceDictionary>
+			<BitmapImage x:Key ="edit_add" UriSource="/Rylogic.Gui.WPF;component/res/edit_add.png"/>
 			<DropShadowEffect x:Key="DropShadowEffect" Color="Black" Direction="300" ShadowDepth="3" Opacity="0.3"/>
+			<gui2:BoolToVisible x:Key="BoolToVisible"/>
 		</ResourceDictionary>
 	</Button.Resources>
 
@@ -35,9 +38,26 @@
 			</Style.Triggers>
 		</Style>
 	</Button.Style>
-	
-	<StackPanel Orientation="Horizontal">
-		<Image Name="m_img_tabicon" Visibility="Visible" DockPanel.Dock="Left" Width="32"/>
-		<TextBlock Name="m_lbl_text" VerticalAlignment="Center" Padding="5 0 0 0">Tab Button</TextBlock>
-	</StackPanel>
+
+	<DockPanel LastChildFill="True">
+		<Image
+			Name="m_img_tabicon"
+			DockPanel.Dock="Left"
+			Width="22"
+			Source="{StaticResource edit_add}"
+			/>
+		<TextBlock
+			Name="m_lbl_text"
+			VerticalAlignment="Center"
+			Padding="5 0 5 0"
+			TextTrimming="CharacterEllipsis"
+			Text="Tab Button"
+			/>
+	</DockPanel>
+	<Button.ToolTip>
+		<ToolTip
+			Content="{Binding TabToolTip}"
+			Visibility="{Binding Clipped, Converter={StaticResource BoolToVisible}}"
+			/>
+	</Button.ToolTip>
 </Button>

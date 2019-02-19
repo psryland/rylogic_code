@@ -35,5 +35,4 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		public const string Active = "active";
 		public const string UserData = "user_data";
 	}
-
 }

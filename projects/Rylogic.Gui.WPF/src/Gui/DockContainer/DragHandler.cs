@@ -18,8 +18,7 @@ using Rylogic.Extn;
 namespace Rylogic.Gui.WPF.DockContainerDetail
 {
 	/// <summary>Handles all docking operations</summary>
-	//internal 
-		public class DragHandler : Window, IDisposable
+	internal class DragHandler : Window
 	{
 		// Notes:
 		// This works by displaying an invisible modal window while the drag operation is in process.
@@ -30,18 +29,32 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		private readonly TabButton m_ghost_button;
 		private Point m_ss_start_pt;
 
-		public DragHandler(DockContainer owner, object item, Point ss_start_pt)
+		public DragHandler(object draggee, Point ss_start_pt)
 		{
-			var item_name =
-				item is DockPane p ? p.Name :
-				item is DockControl c ? c.TabText :
+			WindowStartupLocation = WindowStartupLocation.Manual;
+			Visibility = Visibility.Collapsed;
+			Focusable = false;
+			ShowInTaskbar = false;
+
+			var dc = draggee as DockControl;
+			var dp = draggee as DockPane;
+			if (dc == null && dp == null)
 				throw new Exception("Only panes and content should be being dragged");
+
+			var owner =
+				dc != null ? dc.DockContainer :
+				dp != null ? dp.DockContainer :
+				null;
+			var item_name =
+				dc != null ? dc.TabText :
+				dp != null ? dp.CaptionText :
+				null;
 
 			m_ss_start_pt = ss_start_pt;
 			m_ghost_button = new TabButton(item_name) { Opacity = 0.5 };
 			Owner = GetWindow(owner);
 			DockContainer = owner;
-			DraggedItem = item;
+			DraggedItem = draggee;
 			TreeHost = null;
 			DropAddress = new EDockSite[0];
 			DropIndex = null;
@@ -49,6 +62,10 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			// Hide all auto hide panels, since they are not valid drop targets
 			foreach (var panel in DockContainer.AutoHidePanels)
 				panel.PoppedOut = false;
+
+			// If dragging a single item, hide the tab from it's pane
+			if (dc?.TabButton is TabButton tb)
+				tb.Visibility = Visibility.Collapsed;
 
 			// Create an invisible modal dialog
 			Title = "Drop Handler";
@@ -59,17 +76,6 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			Top = 0;
 			Width = 0;
 			Height = 0;
-		}
-		public void Dispose()
-		{
-			SetHoveredPane(null);
-			Ghost = null;
-			IndCrossLg = null;
-			IndCrossSm = null;
-			IndLeft = null;
-			IndTop = null;
-			IndRight = null;
-			IndBottom = null;
 		}
 		protected override void OnSourceInitialized(EventArgs e)
 		{
@@ -127,7 +133,15 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		{
 			ReleaseMouseCapture();
 			DockContainer.Focus();
-			SetHoveredPane(null);
+
+			var dc = DraggedItem as DockControl;
+			var dp = DraggedItem as DockPane;
+
+			// Tidy up tab buttons
+			if (dc?.TabButton is TabButton tb)
+				tb.Visibility = Visibility.Visible;
+			if (m_ghost_button.TabStrip != null)
+				m_ghost_button.TabStrip.Buttons.Remove(m_ghost_button);
 
 			// Commit the move on successful close
 			if (DialogResult == true)
@@ -139,17 +153,16 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				if (DropAddress.Length == 0)
 				{
 					// Float the dragged content
-					var dc = DraggedItem as DockControl;
 					if (dc != null)
 					{
 						dc.IsFloating = true;
 					}
 
 					// Or, float the dragged dock pane
-					if (DraggedItem is DockPane dockpane)
+					if (dp != null)
 					{
-						dc = dockpane.VisibleContent;
-						dockpane.IsFloating = true;
+						dc = dp.VisibleContent;
+						dp.IsFloating = true;
 					}
 
 					// Set the location of the floating window to the last position of the ghost
@@ -165,19 +178,24 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				{
 					// Ensure a pane exists at the drop address
 					var target = TreeHost.Root.DockPane(DropAddress);
-					var index = DropIndex ?? target.AllContent.Count;
+					var index = DropIndex ?? target.TabStrip.Buttons.Count;
+					var content =
+						dc != null ? new[] { dc } :
+						dp != null ? dp.AllContent.ToArray() :
+						null;
 
-					// Dock the dragged item
-					if (DraggedItem is DockControl dc && dc.DockPane != target)
+					// Dock the dragged item(s)
+					foreach (var c in content)
 					{
-						TreeHost.Add(dc.Dockable, index, DropAddress);
-					}
+						// If we're dropping the item within the same pane, the index needs to be
+						// adjusted if the original index is less than the new index.
+						if (c.DockPane == target && c.DockPane.TabStrip.Buttons.IndexOf(c.TabButton) < index)
+							--index;
 
-					// Dock the dragged pane
-					if (DraggedItem is DockPane dockpane && dockpane != target)
-					{
-						foreach (var c in dockpane.AllContent.ToArray())
-							target.AllContent.Insert(index++, c);
+						// Even if 'dc.DockPane == target' remove and re-add 'c' because we might be
+						// changing the order
+						c.DockPane = null;
+						target.AllContent.Insert(index++, c);
 					}
 				}
 
@@ -302,22 +320,6 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		}
 		private Indicator m_bottom;
 
-		/// <summary>The pane in the position that the dropped item should dock to</summary>
-		private void SetHoveredPane(DockPane pane, int? index = null)
-		{
-			if (m_hovered_pane != null)
-			{
-				m_hovered_pane.TabStrip.Buttons.Remove(m_ghost_button);
-			}
-			m_hovered_pane = pane;
-			if (m_hovered_pane != null)
-			{
-				var idx = index ?? m_hovered_pane.TabStrip.Buttons.Count;
-				m_hovered_pane.TabStrip.Buttons.Insert(idx, m_ghost_button);
-			}
-		}
-		private DockPane m_hovered_pane;
-
 		/// <summary>Enumerate all indicators</summary>
 		private IEnumerable<Indicator> Indicators
 		{
@@ -365,7 +367,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				foreach (var tree in DockContainer.AllTreeHosts)
 				{
 					var hit = VisualTreeHelper.HitTest(tree.Root, tree.Root.PointFromScreen(screen_pt));
-					pane = hit != null ? hit.VisualHit as DockPane ?? Gui_.FindVisualParent<DockPane>(hit.VisualHit, root: tree.Root) : null;
+					pane = Gui_.FindVisualParent<DockPane>(hit?.VisualHit, root: tree.Root);
 					if (pane != null) break;
 				}
 			}
@@ -374,11 +376,15 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			if (pane != null && !over_indicator)
 			{
 				var hit = VisualTreeHelper.HitTest(pane.TabStrip, pane.TabStrip.PointFromScreen(screen_pt));
-				var tab = hit != null ? hit.VisualHit as TabButton ?? Gui_.FindVisualParent<TabButton>(hit.VisualHit, root: pane.TabStrip) : null;
-				if (tab != null)
+				if (Gui_.FindVisualParent<TabButton>(hit?.VisualHit, root: pane.TabStrip) is TabButton tab)
 				{
 					snap_to = EDropSite.PaneCentre;
-					index = pane.TabStrip.Children.IndexOf(tab);
+					index = pane.TabStrip.Buttons.IndexOf(tab);
+				}
+				else if (Gui_.FindVisualParent<TabStrip>(hit?.VisualHit, root: pane.TabStrip) is TabStrip ts)
+				{
+					snap_to = EDropSite.PaneCentre;
+					index = pane.TabStrip.Buttons.Except(m_ghost_button).Count();
 				}
 			}
 
@@ -386,7 +392,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			if (pane != null && !over_indicator)
 			{
 				var hit = VisualTreeHelper.HitTest(pane.TitleBar, pane.TitleBar.PointFromScreen(screen_pt));
-				if (hit != null && Gui_.FindVisualParent<Panel>(hit.VisualHit, root: pane.TitleBar) != null)
+				if (Gui_.FindVisualParent<Panel>(hit?.VisualHit, root: pane.TitleBar) != null)
 					snap_to = EDropSite.PaneCentre;
 			}
 
@@ -478,12 +484,13 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				if (target.Item is Branch)
 					throw new Exception("The address ends at a branch node, not a pane or null-child");
 
+				// Remove the ghost tab from it's current tabstrip
+				if (m_ghost_button.TabStrip != null)
+					m_ghost_button.TabStrip.Buttons.Remove(m_ghost_button);
+
 				// If there is a pane at the target position then snap to fill the pane or some child area within the pane.
 				if (target.Item is DockPane pane && pane.IsVisible)
 				{
-					// Update the pane being hovered (so that the ghost tab can be added to it)
-					SetHoveredPane(pane, DropIndex);
-
 					// If there is one more dock site in the address, then the drop target is a child area within the content area of 'pane'.
 					if (ds.MoveNext())
 					{
@@ -494,28 +501,22 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					// Otherwise, the target area is the pane itself.
 					else
 					{
+						// Add the ghost tab to the pane's tabstrip
+						var idx = DropIndex ?? pane.TabStrip.Buttons.Count;
+						pane.TabStrip.Buttons.Insert(idx, m_ghost_button);
+
+						// Get the pane area
 						var rect = pane.RenderArea();
 						bounds = pane.RectToScreen(rect);
 
 						// Limit the shape of the ghost to the pane content area
 						clip = new RectangleGeometry(rect);
-						clip = Geometry.Combine(clip, new RectangleGeometry(pane.TitleBar.RenderArea(pane)), GeometryCombineMode.Exclude, Transform.Identity);
-						clip = Geometry.Combine(clip, new RectangleGeometry(pane.TabStrip.RenderArea(pane)), GeometryCombineMode.Exclude, Transform.Identity);
-
-						// If a tab on the dock pane is being hovered, include that area in the ghost form's region
-						if (DropIndex != null)
-						{
-							var strip = pane.TabStrip;
-							//var visible_index = Math.Min(DropIndex, strip.Buttons.Count - 1) - strip.FirstVisibleTabIndex;
-							//	var ghost_tab = strip.VisibleTabs.Skip(visible_index).FirstOrDefault();
-							//	if (ghost_tab != null)
-							//	{
-							//		// Include the area of the ghost tab
-							//		var b = strip.Transform.TransformRect(ghost_tab.Bounds);
-							//		var r = pane.RectangleToClient(strip.RectangleToScreen(b));
-							//		region.Union(r);
-							//	}
-						}
+						if (pane.TitleBar.IsVisible)
+							clip = Geometry.Combine(clip, new RectangleGeometry(pane.TitleBar.RenderArea(pane)), GeometryCombineMode.Exclude, Transform.Identity);
+						if (pane.TabStrip.IsVisible)
+							clip = Geometry.Combine(clip, new RectangleGeometry(pane.TabStrip.RenderArea(pane)), GeometryCombineMode.Exclude, Transform.Identity);
+						if (m_ghost_button.IsVisible)
+							clip = Geometry.Combine(clip, new RectangleGeometry(m_ghost_button.RenderArea(pane)), GeometryCombineMode.Union, Transform.Identity);
 					}
 				}
 

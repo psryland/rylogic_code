@@ -187,6 +187,8 @@ namespace Rylogic.Gui.WPF
 		/// if 'root' is given, the search stops if 'root' is encountered (after testing if it's a parent)</summary>
 		public static T FindVisualParent<T>(this DependencyObject item, string name = null, DependencyObject root = null) where T : class
 		{
+			if (item == null)
+				return null;
 			if (ReferenceEquals(item, root))
 				return item as T;
 

@@ -111,5 +111,4 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			ActiveContentChanged?.Invoke(DockContainer, args);
 		}
 	}
-
 }

@@ -20,7 +20,7 @@ namespace Rylogic.Gui.WPF
 	using DockContainerDetail;
 
 	/// <summary>A dock container is the parent control that manages docking of controls that implement IDockable.</summary>
-	public partial class DockContainer : DockPanel, ITreeHost, IDisposable
+	public partial class DockContainer : DockPanel, ITreeHost
 	{
 		/// <summary>The number of valid dock sites</summary>
 		private const int DockSiteCount = 5;
@@ -62,13 +62,6 @@ namespace Rylogic.Gui.WPF
 			CmdLoadLayout = new LoadLayoutCommand(this);
 			CmdSaveLayout = new SaveLayoutCommand(this);
 			CmdResetLayout = new ResetLayoutCommand(this);
-		}
-		public virtual void Dispose()
-		{
-			Root = null;
-			m_all_content.Clear();
-			Util.Dispose(FloatingWindows);
-			Util.Dispose(AutoHidePanels);
 		}
 
 		/// <summary>The dock container that owns this instance</summary>
@@ -113,8 +106,10 @@ namespace Rylogic.Gui.WPF
 			get
 			{
 				yield return this;
-				foreach (var ahp in AutoHidePanels) yield return ahp;
-				foreach (var fw in FloatingWindows) yield return fw;
+				foreach (var ahp in AutoHidePanels)
+					yield return ahp;
+				foreach (var fw in FloatingWindows.Where(x => x.IsVisible))
+					yield return fw;
 			}
 		}
 
@@ -140,14 +135,8 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Enumerate all IDockable's managed by this container</summary>
-		public IEnumerable<IDockable> AllContent
-		{
-			get { return AllContentInternal.Select(x => x.Dockable); }
-		}
-		internal IEnumerable<DockControl> AllContentInternal
-		{
-			get { return m_all_content; }
-		}
+		public IEnumerable<IDockable> AllContent => AllContentInternal.Select(x => x.Dockable);
+		internal IEnumerable<DockControl> AllContentInternal => m_all_content;
 		private HashSet<DockControl> m_all_content;
 
 		/// <summary>Return the dock pane at the given dock site or null if the site does not contain a dock pane</summary>
@@ -249,7 +238,7 @@ namespace Rylogic.Gui.WPF
 		}
 		public DockPane Add(IDockable dockable, int index, params EDockSite[] location)
 		{
-			return Add(dockable?.DockControl, int.MaxValue, location);
+			return Add(dockable?.DockControl, index, location);
 		}
 		public DockPane Add(IDockable dockable, params EDockSite[] location)
 		{
@@ -341,78 +330,13 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Initiate dragging of a pane or content</summary>
 		internal static void DragBegin(object draggee, Point ss_start_pt)
 		{
-			var dc =
-				draggee is DockPane p ? p.DockContainer :
-				draggee is DockControl c ? c.DockContainer :
-				throw new Exception("Dragging only supports dock pane or dock control");
-
 			// Create a form for displaying the dock site locations and handling the drop of a pane or content
-			using (var drop_handler = new DragHandler(dc, draggee, ss_start_pt))
-				drop_handler.ShowDialog();
+			var drop_handler = new DragHandler(draggee, ss_start_pt);
+			drop_handler.ShowDialog();
 		}
 
 		/// <summary>The floating windows associated with this dock container</summary>
-		public FloatingWindowCollection FloatingWindows { get; private set; }
-		public class FloatingWindowCollection : IEnumerable<FloatingWindow>, IDisposable
-		{
-			private readonly DockContainer m_dc;
-			private ObservableCollection<FloatingWindow> m_floaters;
-			public FloatingWindowCollection(DockContainer dc)
-			{
-				m_dc = dc;
-				m_floaters = new ObservableCollection<FloatingWindow>();
-			}
-			public void Dispose()
-			{
-				Util.DisposeAll(m_floaters);
-			}
-
-			/// <summary>Return the floating window with Id = 'id'</summary>
-			public FloatingWindow Get(int id)
-			{
-				return m_floaters.FirstOrDefault(x => x.Id == id);
-			}
-
-			/// <summary>Returns an existing floating window with id 'id', or a new floating window with the Id set to 'id'</summary>
-			public FloatingWindow GetOrAdd(int id)
-			{
-				var fw = GetOrAdd(x => x.Id == id);
-				fw.Id = id;
-				return fw;
-			}
-
-			/// <summary>Returns an existing floating window that satisfies 'pred', or a new floating window</summary>
-			public FloatingWindow GetOrAdd(Func<FloatingWindow, bool> pred)
-			{
-				foreach (var fw in m_floaters)
-				{
-					if (!pred(fw)) continue;
-					return fw;
-				}
-				return m_floaters.Add2(new FloatingWindow(m_dc));
-			}
-
-			/// <summary>Release floating windows that have no content</summary>
-			public void PurgeCachedFloatingWindows()
-			{
-				foreach (var fw in m_floaters.ToArray())
-				{
-					if (fw.ActiveContent != null) continue;
-					m_floaters.Remove(fw);
-					Util.Dispose(fw);
-				}
-			}
-
-			/// <summary></summary>
-			public IEnumerator<FloatingWindow> GetEnumerator()
-			{
-				return m_floaters.GetEnumerator();
-			}
-			IEnumerator IEnumerable.GetEnumerator()
-			{
-				return GetEnumerator();
-			}
-		}
+		public FloatingWindowCollection FloatingWindows { get; }
 
 		/// <summary>Panels that auto hide when their contained tree does not contain the active pane</summary>
 		public AutoHidePanelCollection AutoHidePanels { get; private set; }
@@ -851,6 +775,62 @@ namespace Rylogic.Gui.WPF
 			public IEnumerator<AutoHidePanel> GetEnumerator()
 			{
 				return m_auto_hide.Skip(1).GetEnumerator();
+			}
+			IEnumerator IEnumerable.GetEnumerator()
+			{
+				return GetEnumerator();
+			}
+		}
+		public class FloatingWindowCollection : IEnumerable<FloatingWindow>
+		{
+			private readonly DockContainer m_dc;
+			private ObservableCollection<FloatingWindow> m_floaters;
+			public FloatingWindowCollection(DockContainer dc)
+			{
+				m_dc = dc;
+				m_floaters = new ObservableCollection<FloatingWindow>();
+			}
+
+			/// <summary>Return the floating window with Id = 'id'</summary>
+			public FloatingWindow Get(int id)
+			{
+				return m_floaters.FirstOrDefault(x => x.Id == id);
+			}
+
+			/// <summary>Returns an existing floating window with id 'id', or a new floating window with the Id set to 'id'</summary>
+			public FloatingWindow GetOrAdd(int id)
+			{
+				var fw = GetOrAdd(x => x.Id == id);
+				fw.Id = id;
+				return fw;
+			}
+
+			/// <summary>Returns an existing floating window that satisfies 'pred', or a new floating window</summary>
+			public FloatingWindow GetOrAdd(Func<FloatingWindow, bool> pred)
+			{
+				foreach (var fw in m_floaters)
+				{
+					if (!pred(fw)) continue;
+					return fw;
+				}
+				return m_floaters.Add2(new FloatingWindow(m_dc));
+			}
+
+			/// <summary>Release floating windows that have no content</summary>
+			public void PurgeCachedFloatingWindows()
+			{
+				foreach (var fw in m_floaters.ToArray())
+				{
+					if (fw.ActiveContent != null) continue;
+					m_floaters.Remove(fw);
+					fw.Close();
+				}
+			}
+
+			/// <summary></summary>
+			public IEnumerator<FloatingWindow> GetEnumerator()
+			{
+				return m_floaters.GetEnumerator();
 			}
 			IEnumerator IEnumerable.GetEnumerator()
 			{

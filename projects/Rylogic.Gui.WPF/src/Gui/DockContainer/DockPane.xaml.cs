@@ -300,42 +300,34 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>Get/Set the content in the pane floating</summary>
 		public bool IsFloating
 		{
-			get
-			{
-				if (VisibleContent == null) return false;
-				var floating = VisibleContent.IsFloating;
-
-				// All content in a pane should be in the same state. This is true even if
-				// 'ApplyToVisibleContentOnly' is true because any float/auto hide operation should
-				// move that content to a different pane
-				Debug.Assert(AllContent.All(x => x.IsFloating == floating), "All content in a pane should be in the same state");
-				return floating;
-			}
+			get { return TreeHost is FloatingWindow; }
 			set
 			{
-				// All content in this pane matches the floating state of the active content
-				var content = VisibleContent;
-				if (content == null)
+				if (AllContent.Count == 0)
 					return;
 
-				// Record properties of this pane so we can set them on the new pane
-				// (this pane will be disposed if empty after the content has changed floating state)
-				//					var strip_location = TabStripCtrl.StripLocation;
-
-				// Change the state of the active content
-				content.IsFloating = value;
-
-				// Copy properties from this pane to the new pane that now hosts 'content'
-				var pane = content.DockPane;
-				// pane.TabStripCtrl.StripLocation = strip_location;
-
-				// Add the remaining content to the same pane that 'content' is now in
-				// Careful, moving all content from a pane causes it to be disposed.
-				// If the pane only contained 'content' before, then Dispose will have
-				// been called and 'AllContent' will be null. In this case, there is
-				// nothing else to move anyway
-				if (!MoveVisibleContentOnly && AllContent != null)
-					pane.AllContent.AddRange(AllContent.ToArray());
+				var visible_content = VisibleContent;
+				if (MoveVisibleContentOnly)
+				{
+					visible_content.IsFloating = value;
+				}
+				else
+				{
+					var pane = (DockPane)null;
+					foreach (var c in AllContent.ToArray())
+					{
+						if (pane == null)
+						{
+							c.IsFloating = true;
+							pane = c.DockPane;
+						}
+						else
+						{
+							pane.AllContent.Add(c);
+						}
+					}
+					pane.VisibleContent = visible_content;
+				}
 			}
 		}
 
@@ -345,28 +337,31 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			get { return TreeHost is AutoHidePanel; }
 			set
 			{
-				// Notes:
-				//  - Setting the IsAutoHide state only moves the content to another pane.
-				//    Panes don't move, only the content does.
-
-				// All content in this pane matches the auto hide state of the active content
-				var content = VisibleContent;
-				if (content == null || content.IsAutoHide == value)
+				if (AllContent.Count == 0)
 					return;
 
-				// Change the state of the active content
-				content.IsAutoHide = value;
-
-				// Copy properties from this pane to the new pane that now hosts 'content'
-				var pane = content.DockPane;
-
-				// Add the remaining content to the same pane that 'content' is now in.
-				// Careful, moving all content from a pane causes it to be disposed.
-				// If the pane only contained 'content' before, then Dispose will have
-				// been called and 'AllContent' will be null. In this case, there is
-				// nothing else to move anyway
-				if (!MoveVisibleContentOnly && AllContent != null)
-					pane.AllContent.AddRange(AllContent.ToArray());
+				var visible_content = VisibleContent;
+				if (MoveVisibleContentOnly)
+				{
+					visible_content.IsAutoHide = value;
+				}
+				else
+				{
+					var pane = (DockPane)null;
+					foreach (var c in AllContent.ToArray())
+					{
+						if (pane == null)
+						{
+							c.IsAutoHide = true;
+							pane = c.DockPane;
+						}
+						else
+						{
+							pane.AllContent.Add(c);
+						}
+					}
+					pane.VisibleContent = visible_content;
+				}
 			}
 		}
 
@@ -465,6 +460,14 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					IsAutoHide = !IsAutoHide;
 				};
 			}
+			{// Set up close
+				m_close.Click += (s, a) =>
+				{
+					if (VisibleContent == null) return;
+					VisibleContent.DockPane = null;
+					RootBranch.PruneBranches();
+				};
+			}
 		}
 
 		/// <summary>Record the layout of the pane</summary>
@@ -474,9 +477,9 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			if (VisibleContent != null)
 				node.Add2(XmlTag.Visible, VisibleContent.PersistName, false);
 
-			//				// Save the strip location
-			//				if (TabStripCtrl != null)
-			//					node.Add2(XmlTag.StripLocation, TabStripCtrl.StripLocation, false);
+			// Save the strip location
+			if (TabStrip != null)
+				node.Add2(XmlTag.StripLocation, TabStrip.StripLocation, false);
 
 			return node;
 		}
@@ -493,10 +496,10 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					VisibleContent = content;
 			}
 
-			//				// Restore the strip location
-			//				var strip_location = node.Element(XmlTag.StripLocation)?.As<EDockSite>();
-			//				if (strip_location != null)
-			//					TabStripCtrl.StripLocation = strip_location.Value;
+			// Restore the strip location
+			var strip_location = node.Element(XmlTag.StripLocation)?.As<EDockSite>();
+			if (strip_location != null)
+				TabStrip.StripLocation = strip_location.Value;
 		}
 
 		/// <summary>Output the tree structure as a string. (Recursion method, call 'DockContainer.DumpTree()')</summary>
@@ -531,556 +534,4 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			return $"MainWindow:{DockAddress.Description()}";
 		}
 	}
-
 }
-#if false
-			/// <summary>Layout the pane</summary>
-			protected override void OnLayout(LayoutEventArgs e)
-			{
-				// Measure the remaining space and use that for the active content
-				var rect = DisplayRectangle;
-				if (rect.Area() > 0 && !IsDisposed)
-				{
-					using (this.SuspendLayout(false))
-					{
-						// Reset the scroll position
-						HorizontalScroll.Value = 0;
-						VerticalScroll.Value = 0;
-
-						// Position the title bar
-						if (TitleCtrl != null)
-						{
-							var bounds = TitleCtrl.CalcBounds(rect);
-							TitleCtrl.Bounds = bounds;
-
-							// Update the available area if the title control is visible
-							if (TitleCtrl.Visible)
-								rect = rect.Subtract(bounds);
-
-							// Auto hide is hidden if the pane is in the centre dock site
-							TitleCtrl.ButtonAutoHide.Visible = AutoHideSide != EDockSite.Centre || IsAutoHide; // Always visible if the pane is within an auto-hide panel
-						}
-
-						// Position the tab strip
-						if (TabStripCtrl != null)
-						{
-							var bounds = TabStripCtrl.CalcBounds(rect);
-							TabStripCtrl.Bounds = bounds;
-
-							// Update the available area if the tab strip is visible
-							if (TabStripCtrl.Visible)
-								rect = rect.Subtract(bounds);
-						}
-
-						// Use the remaining area for content
-						if (VisibleContent != null)
-							VisibleContent.Owner.Bounds = rect;
-					}
-				}
-
-				base.OnLayout(e);
-			}
-#endif
-#if false
-			/// <summary>Handle mouse activation of the content within this pane</summary>
-			[SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.UnmanagedCode)]
-			protected override void WndProc(ref Message m)
-			{
-				// Watch for mouse activate. WM_MOUSEACTIVATE is sent to the inactive window under the
-				// mouse. If that window passes the message to DefWindowProc then the parent window gets it.
-				// We need to intercept WM_MOUSEACTIVATE going to a content control so we can activate the pane.
-				if (m.Msg == Win32.WM_MOUSEACTIVATE)
-					Activated = true;
-
-				base.WndProc(ref m);
-			}
-#endif
-#if false
-/// <summary>A custom control for drawing the title bar, including text, close button and pin button</summary>
-public class PaneTitleControl : Control ,IDisposable
-			{
-				public PaneTitleControl(DockPane owner)
-				{
-//					SetStyle(ControlStyles.Selectable, false);
-//					Text = GetType().FullName;
-//					ResizeRedraw = true;
-					Hidden = false;
-
-					DockPane = owner;
-//					using (this.SuspendLayout(false))
-					{
-//						ContextMenuStrip = CreateContextMenu(owner);
-						ButtonClose = new CaptionButton(Resources.dock_close);
-						ButtonAutoHide = new CaptionButton(DockPane.IsAutoHide ? Resources.dock_unpinned : Resources.dock_pinned);
-						ButtonMenu = new CaptionButton(Resources.dock_menu);
-					}
-				}
-				public virtual void Dispose()
-				{
-//					using (this.SuspendLayout(false))
-					{
-						ButtonClose = null;
-						ButtonAutoHide = null;
-						ButtonMenu = null;
-					}
-//					ContextMenuStrip = null;
-					DockPane = null;
-				}
-				protected override void OnVisibleChanged(EventArgs e)
-				{
-					Visible &= !Hidden;
-					base.OnVisibleChanged(e);
-				}
-
-				/// <summary>Get/Set whether this control is displayed</summary>
-				public bool Hidden
-				{
-					get
-					{
-						if (m_hidden) return true;
-						if (DockPane?.VisibleContent?.ShowTitle is bool show0 && show0 == false) return true;
-						if (DockPane?.DockContainer?.Options.TitleBar.ShowTitleBars is bool show1 && show1 == false) return true;
-						return false;
-					}
-					set { Visible = !(m_hidden = value); }
-				}
-				private bool m_hidden;
-
-				/// <summary>The dock pane that hosts this control</summary>
-				public DockPane DockPane
-				{
-					get { return m_impl_dock_pane; }
-					set
-					{
-						if (m_impl_dock_pane == value) return;
-						if (m_impl_dock_pane != null)
-						{
-							m_impl_dock_pane.ActivatedChanged -= Invalidate;
-							m_impl_dock_pane.Content.ListChanging -= HandleContentChanging;
-						}
-						m_impl_dock_pane = value;
-						if (m_impl_dock_pane != null)
-						{
-							m_impl_dock_pane.Content.ListChanging += HandleContentChanging;
-							m_impl_dock_pane.ActivatedChanged += Invalidate;
-						}
-					}
-				}
-				private DockPane m_impl_dock_pane;
-
-				/// <summary>The close button</summary>
-				public CaptionButton ButtonClose
-				{
-					get { return m_impl_btn_close; }
-					private set
-					{
-						if (m_impl_btn_close == value) return;
-						if (m_impl_btn_close != null)
-						{
-							m_impl_btn_close.Click -= HandleClose;
-							Controls.Remove(m_impl_btn_close);
-							Util.Dispose(ref m_impl_btn_close);
-						}
-						m_impl_btn_close = value;
-						if (m_impl_btn_close != null)
-						{
-							Controls.Add(m_impl_btn_close);
-							m_impl_btn_close.Click += HandleClose;
-						}
-					}
-				}
-				private CaptionButton m_impl_btn_close;
-
-				/// <summary>The auto hide button</summary>
-				public CaptionButton ButtonAutoHide
-				{
-					get { return m_impl_btn_auto_hide; }
-					private set
-					{
-						if (m_impl_btn_auto_hide == value) return;
-						if (m_impl_btn_auto_hide != null)
-						{
-							m_impl_btn_auto_hide.Click -= HandleAutoHide;
-							Controls.Remove(m_impl_btn_auto_hide);
-							Util.Dispose(ref m_impl_btn_auto_hide);
-						}
-						m_impl_btn_auto_hide = value;
-						if (m_impl_btn_auto_hide != null)
-						{
-							Controls.Add(m_impl_btn_auto_hide);
-							m_impl_btn_auto_hide.Click += HandleAutoHide;
-						}
-					}
-				}
-				private CaptionButton m_impl_btn_auto_hide;
-
-				/// <summary>The drop down menu for the pane</summary>
-				public CaptionButton ButtonMenu
-				{
-					get { return m_impl_btn_menu; }
-					private set
-					{
-						if (m_impl_btn_menu == value) return;
-						if (m_impl_btn_menu != null)
-						{
-							m_impl_btn_menu.Click -= HandleMenu;
-							Controls.Remove(m_impl_btn_menu);
-							Util.Dispose(ref m_impl_btn_menu);
-						}
-						m_impl_btn_menu = value;
-						if (m_impl_btn_menu != null)
-						{
-							Controls.Add(m_impl_btn_menu);
-							m_impl_btn_menu.Click += HandleMenu;
-						}
-					}
-				}
-				private CaptionButton m_impl_btn_menu;
-
-				/// <summary>Hide the Control's normal context menu</summary>
-				private new void ContextMenu() { }
-
-				/// <summary>Measure the height required by this control based on the content in 'DockPane'</summary>
-				public double MeasureHeight()
-				{
-					var opts = DockPane.DockContainer.Options.TitleBar;
-					return opts.Padding.Top + opts.TextFont.Height + opts.Padding.Bottom;
-				}
-
-				/// <summary>Returns the size of the pane title control given the available 'display_area'</summary>
-				public Rect CalcBounds(Rect display_area)
-				{
-					// No title for empty panes
-					if (DockPane.Content.Count == 0)
-						return Rect.Empty;
-
-					// Title bars are always at the top
-					var r = display_area;
-					r.Height = MeasureHeight();
-					return r;
-				}
-
-				/// <summary>Perform a hit test on the title bar at client space point 'pt'</summary>
-				public EHitItem HitTest(Point pt)
-				{
-					if (ButtonClose.Visible && ButtonClose.Bounds.Contains(pt)) return EHitItem.CloseBtn;
-					if (ButtonAutoHide.Visible && ButtonAutoHide.Bounds.Contains(pt)) return EHitItem.AutoHideBtn;
-					if (ButtonMenu.Visible && ButtonMenu.Bounds.Contains(pt)) return EHitItem.MenuBtn;
-					return EHitItem.Caption;
-				}
-				public enum EHitItem { Caption, CloseBtn, AutoHideBtn, MenuBtn }
-
-				/// <summary>Layout the pane title bar</summary>
-				protected override void OnLayout(LayoutEventArgs e)
-				{
-					if (ClientRectangle.Area() > 0)
-					{
-						using (this.SuspendLayout(false))
-						{
-							var opts = DockPane.DockContainer.Options.TitleBar;
-							var r = ClientRectangle;
-							var x = r.Right - opts.Padding.Right - 1;
-							var y = r.Y + opts.Padding.Top;
-							var h = r.Height - opts.Padding.Bottom - opts.Padding.Top;
-
-							// Position the close button
-							if (ButtonClose != null)
-							{
-								if (ButtonClose.Visible) x -= ButtonClose.Width;
-								var w = h * ButtonClose.Image.Width / ButtonClose.Image.Height;
-								ButtonClose.Bounds = new Rectangle(x, y, w, h);
-							}
-
-							// Position the auto hide button
-							if (ButtonAutoHide != null)
-							{
-								// Update the image based on dock state
-								ButtonAutoHide.Image = DockPane.IsAutoHide ? Resources.dock_unpinned : Resources.dock_pinned;
-
-								if (ButtonAutoHide.Visible) x -= ButtonAutoHide.Width;
-								var w = h * ButtonAutoHide.Image.Width / ButtonAutoHide.Image.Height;
-								ButtonAutoHide.Bounds = new Rectangle(x, y, w, h);
-							}
-
-							// Position the menu button
-							if (ButtonMenu != null)
-							{
-								if (ButtonMenu.Visible) x -= ButtonMenu.Width;
-								var w = h * ButtonMenu.Image.Width / ButtonMenu.Image.Height;
-								ButtonMenu.Bounds = new Rectangle(x, y, w, h);
-							}
-
-							Invalidate(true);
-						}
-					}
-					base.OnLayout(e);
-				}
-
-				/// <summary>Paint the control</summary>
-				protected override void OnPaint(PaintEventArgs e)
-				{
-					base.OnPaint(e);
-
-					// No area to draw in...
-					if (ClientRectangle.Area() <= 0)
-						return;
-
-					// Draw the caption control
-					var gfx = e.Graphics;
-					var opts = DockPane.DockContainer.Options.TitleBar;
-
-					// If the owner pane is activated, draw the 'active' title bar
-					// Otherwise draw the inactive title bar
-					var cols = DockPane.Activated ? opts.ActiveGrad : opts.InactiveGrad;
-					using (var brush = new LinearGradientBrush(ClientRectangle, cols.Beg, cols.End, cols.Mode) { Blend = cols.Blend })
-						gfx.FillRectangle(brush, e.ClipRectangle);
-
-					// Calculate the area available for the caption text
-					RectangleF r = ClientRectangle;
-					r.X += opts.Padding.Left;
-					r.Y += opts.Padding.Top;
-					r.Width -= opts.Padding.Left + opts.Padding.Right;
-					r.Height -= opts.Padding.Top + opts.Padding.Bottom;
-					if (ButtonClose.Visible)
-						r.Width -= ButtonClose.Width + opts.Padding.Right;
-					if (ButtonAutoHide.Visible)
-						r.Width -= ButtonAutoHide.Width + opts.Padding.Right;
-
-					// Text rendering format
-					var fmt = new StringFormat(StringFormatFlags.NoWrap | StringFormatFlags.FitBlackBox | (RightToLeft == RightToLeft.Yes ? StringFormatFlags.DirectionRightToLeft : 0)) { Trimming = StringTrimming.EllipsisCharacter };
-
-					// Draw the caption text
-					using (var bsh = new SolidBrush(cols.Text))
-						gfx.DrawString(DockPane.CaptionText, opts.TextFont, bsh, r, fmt);
-				}
-
-				/// <summary>Redo layout when RTL changes</summary>
-				protected override void OnRightToLeftChanged(EventArgs e)
-				{
-					base.OnRightToLeftChanged(e);
-					DockPane.TriggerLayout();
-				}
-
-				/// <summary>Start dragging the pane on mouse-down over the title</summary>
-				protected override void OnMouseDown(MouseEventArgs e)
-				{
-					base.OnMouseDown(e);
-
-					// If left click on the caption and user docking is allowed, start a drag operation
-					if (e.Button == MouseButtons.Left && DockPane.DockContainer.Options.AllowUserDocking && HitTest(e.Location) == EHitItem.Caption)
-					{
-						// Record the mouse down location
-						m_mouse_down_at = e.Location;
-						Capture = true;
-					}
-				}
-				protected override void OnMouseMove(MouseEventArgs e)
-				{
-					if (e.Button == MouseButtons.Left && Util.Distance(e.Location, m_mouse_down_at) > 5)
-					{
-						Capture = false;
-
-						// Begin dragging the pane
-						DragBegin(DockPane);
-					}
-					base.OnMouseMove(e);
-				}
-				protected override void OnMouseUp(MouseEventArgs e)
-				{
-					Capture = false;
-					base.OnMouseUp(e);
-				}
-				private Point m_mouse_down_at;
-
-				/// <summary>Toggle floating when double clicked</summary>
-				protected override void OnMouseDoubleClick(MouseEventArgs e)
-				{
-					base.OnMouseDoubleClick(e);
-					DockPane.IsFloating = !DockPane.IsFloating;
-				}
-
-				/// <summary>See initial visibility</summary>
-				protected override void OnHandleCreated(EventArgs e)
-				{
-					base.OnHandleCreated(e);
-					Visible = !Hidden;
-				}
-
-				/// <summary>Helper overload of invalidate</summary>
-				private void Invalidate(object sender, EventArgs e)
-				{
-					Invalidate(true);
-				}
-
-				/// <summary>Create a default content menu for 'pane'</summary>
-				private static ContextMenuStrip CreateContextMenu(DockPane pane)
-				{
-					var cmenu = new ContextMenuStrip();
-					using (cmenu.SuspendLayout(false))
-					{
-						{ // Float the pane in a new window
-							var opt = cmenu.Items.Add2(new ToolStripMenuItem("Float"));
-							cmenu.Opening += (s, a) =>
-							{
-								opt.Enabled = !pane.IsFloating;
-							};
-							opt.Click += (s, a) =>
-							{
-								pane.IsFloating = true;
-							};
-						}
-						{ // Return the pane to the dock container
-							var opt = cmenu.Items.Add2(new ToolStripMenuItem("Dock"));
-							cmenu.Opening += (s, a) =>
-							{
-								opt.Enabled = pane.IsFloating;
-							};
-							opt.Click += (s, a) =>
-							{
-								pane.IsFloating = false;
-							};
-						}
-						cmenu.Items.Add2(new ToolStripSeparator());
-						foreach (var c in pane.Content)
-						{
-							var opt = cmenu.Items.Add2(new ToolStripMenuItem(c.TabText, c.TabIcon));
-							cmenu.Opening += (s, a) =>
-							{
-								// Copy the tab context menu to this menu item (copy because otherwise the items get disposed)
-								opt.DropDownItems.Clear();
-								if (c.TabCMenu != null)
-									foreach (var tab_item in c.TabCMenu.Items.OfType<ToolStripMenuItem>())
-										opt.DropDownItems.Add(tab_item.Text, tab_item.Image, (ss, aa) => tab_item.PerformClick());
-							};
-							opt.Click += (s, a) =>
-							{
-								pane.VisibleContent = c;
-							};
-						}
-					}
-					return cmenu;
-				}
-
-				/// <summary>Update when the dock pane content changes</summary>
-				private void HandleContentChanging(object sender, ListChgEventArgs<DockControl> e)
-				{
-					if (e.ChangeType == ListChg.ItemAdded || e.ChangeType == ListChg.ItemRemoved || e.ChangeType == ListChg.Reset)
-						ContextMenuStrip = DockPane != null ? CreateContextMenu(DockPane) : null;
-				}
-
-				/// <summary>Handle the close button being clicked</summary>
-				private void HandleClose(object sender, EventArgs e)
-				{
-					if (DockPane.VisibleContent != null)
-						DockPane.Content.Remove(DockPane.VisibleContent);
-				}
-
-				/// <summary>Handle the auto hide button being clicked</summary>
-				private void HandleAutoHide(object sender, EventArgs e)
-				{
-					DockPane.IsAutoHide = !DockPane.IsAutoHide;
-				}
-
-				/// <summary>Handle the dock pane content menu being clicked</summary>
-				private void HandleMenu(object sender, EventArgs e)
-				{
-					var btn = (CaptionButton)sender;
-					if (ContextMenuStrip == null) return;
-					ContextMenuStrip.Show(PointToScreen(btn.Bounds.BottomLeft()));
-				}
-
-				/// <summary>A custom button drawn on the title bar of a pane</summary>
-				public class CaptionButton : Control
-				{
-					public CaptionButton(Bitmap image)
-					{
-						SetStyle(ControlStyles.SupportsTransparentBackColor, true);
-						Text = GetType().FullName;
-						BackColor = Color.Transparent;
-						Image = image;
-						Hidden = false;
-					}
-					protected override void OnVisibleChanged(EventArgs e)
-					{
-						Visible &= !Hidden;
-						base.OnVisibleChanged(e);
-					}
-
-					/// <summary>Get/Set whether this control is visible</summary>
-					public bool Hidden
-					{
-						get { return m_hidden; }
-						set { Visible = !(m_hidden = value); }
-					}
-					private bool m_hidden;
-
-					/// <summary>The image to display on the button</summary>
-					public Bitmap Image { get; set; }
-
-					/// <summary>Get/Set when the mouse is over the button</summary>
-					private bool IsMouseOver
-					{
-						get { return m_mouse_over; }
-						set
-						{
-							if (m_mouse_over == value) return;
-							m_mouse_over = value;
-							Invalidate();
-						}
-					}
-					private bool m_mouse_over;
-
-					/// <summary>The default size of the control</summary>
-					protected override Size DefaultSize
-					{
-						get { return Resources.dock_close.Size; }
-					}
-
-					/// <summary>Detect mouse over</summary>
-					protected override void OnMouseMove(MouseEventArgs e)
-					{
-						base.OnMouseMove(e);
-						IsMouseOver = ClientRectangle.Contains(e.X, e.Y);
-					}
-					protected override void OnMouseEnter(EventArgs e)
-					{
-						base.OnMouseEnter(e);
-						IsMouseOver = true;
-					}
-					protected override void OnMouseLeave(EventArgs e)
-					{
-						base.OnMouseLeave(e);
-						IsMouseOver = false;
-					}
-
-					/// <summary>Paint the button</summary>
-					protected override void OnPaint(PaintEventArgs e)
-					{
-						if (IsMouseOver && Enabled)
-						{
-							using (var pen = new Pen(ForeColor))
-								e.Graphics.DrawRectangle(pen, ClientRectangle.Inflated(-1, -1));// Rectangle.Inflate(ClientRectangle, -1, -1));
-						}
-
-						// Paint the button bitmap
-						using (var attr = new ImageAttributes())
-						{
-							attr.SetRemapTable(new[]{
-								new ColorMap{OldColor = Color.FromArgb(0, 0, 0), NewColor = ForeColor },
-								new ColorMap{OldColor = Image.GetPixel(0, 0), NewColor = Color.Transparent }});
-
-							e.Graphics.DrawImage(Image, new Rectangle(0, 0, Image.Width, Image.Height), 0, 0, Image.Width, Image.Height, GraphicsUnit.Pixel, attr);
-						}
-
-						base.OnPaint(e);
-					}
-
-					/// <summary>See initial visibility</summary>
-					protected override void OnHandleCreated(EventArgs e)
-					{
-						base.OnHandleCreated(e);
-						Visible = !Hidden;
-					}
-				}
-			}
-#endif
