@@ -20,7 +20,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 	/// A pane groups a set of IDockable items together. Only one IDockable is displayed at a time in the pane,
 	/// but tabs for all dockable items are displayed in the tab strip along the top, bottom, left, or right.</summary>
 	[DebuggerDisplay("{DumpDesc()}")]
-	public partial class DockPane : DockPanel, IPaneOrBranch, IDisposable
+	public partial class DockPane : DockPanel, IPaneOrBranch, INotifyPropertyChanged, IDisposable
 	{
 		// Notes:
 		//  - DockPane's don't move within the tree, only the content moves.
@@ -384,6 +384,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		internal void OnActivatedChanged()
 		{
 			ActivatedChanged?.Invoke(this, EventArgs.Empty);
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Activated)));
 		}
 
 		/// <summary>Get/Set this pane as activated. Activation causes the active content in this pane to be activated</summary>
@@ -533,5 +534,8 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				return $"FloatingWindow:{DockAddress.Description()}";
 			return $"MainWindow:{DockAddress.Description()}";
 		}
+
+		/// <summary></summary>
+		public event PropertyChangedEventHandler PropertyChanged;
 	}
 }

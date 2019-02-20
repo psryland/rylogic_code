@@ -41,6 +41,7 @@ namespace Rylogic.Extn
 		public static Type Resolve(string name, bool throw_on_error = true)
 		{
 			// Temporary conversion from namespace 'pr' to namespace 'Rylogic'
+			string Replace(string old, string nue) => name.StartsWith(old) ? name.Replace(old, nue) : name;
 			if (name.StartsWith("pr."))
 			{
 				name = Replace("pr.attrib."    , "Rylogic.Attrib."   );
@@ -60,11 +61,8 @@ namespace Rylogic.Extn
 				name = Replace("pr.util."      , "Rylogic.Utility."  );
 				name = Replace("pr.view3d."    , "Rylogic.Graphix."  );
 				name = Replace("pr.win32."     , "Rylogic.Windows32.");
-				string Replace(string old , string nue)
-				{
-					return name.StartsWith(old) ? name.Replace(old, nue) : name;
-				}
 			}
+			name = Replace("Rylogic.Extn.ToolStripLocations", "Rylogic.Gui.WinForms.ToolStripLocations");
 			// End temporary
 
 			return Type.GetType(name, null

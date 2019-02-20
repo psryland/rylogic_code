@@ -63,7 +63,7 @@ namespace Rylogic.Gui.WPF
 			Owner = owner;
 			PersistName = persist_name;
 			DefaultDockLocation = new DockLocation();
-			TabText = null;
+			TabText = PersistName;
 			TabIcon = null;
 			TabCMenu = DefaultTabCMenu();
 

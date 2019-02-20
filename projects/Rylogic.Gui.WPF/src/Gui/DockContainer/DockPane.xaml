@@ -22,9 +22,9 @@
 			<gui2:BoolToVisible x:Key="BoolToVisible"/>
 
 			<!-- Title background brushes -->
-			<LinearGradientBrush x:Key="TitleActiveBackground" StartPoint="0,0" EndPoint="0,1" MappingMode="RelativeToBoundingBox" SpreadMethod="Pad">
+			<LinearGradientBrush x:Key="TitleActiveBackground" StartPoint="0,0" EndPoint="1,1" MappingMode="RelativeToBoundingBox" SpreadMethod="Pad">
 				<GradientStop Color="{x:Static SystemColors.GradientActiveCaptionColor}" Offset="0.0" />
-				<GradientStop Color="{x:Static SystemColors.InactiveCaptionColor}" Offset="1.0" />
+				<GradientStop Color="{x:Static SystemColors.GradientInactiveCaptionColor}" Offset="1.0" />
 			</LinearGradientBrush>
 			<SolidColorBrush x:Key="TitleInactiveBackground" Color="{x:Static SystemColors.InactiveCaptionColor}"/>
 
@@ -42,13 +42,24 @@
 	<Grid
 		Name="m_titlebar"
 		DockPanel.Dock="Top"
-		Background="{StaticResource TitleActiveBackground}"
 		>
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="1*"/>
 			<ColumnDefinition Width="auto"/>
 			<ColumnDefinition Width="auto"/>
 		</Grid.ColumnDefinitions>
+		<Grid.Style>
+			<Style TargetType="{x:Type Grid}">
+				<Style.Triggers>
+					<DataTrigger Binding="{Binding Activated}" Value="True">
+						<Setter Property="Background" Value="{StaticResource TitleActiveBackground}"/>
+					</DataTrigger>
+					<DataTrigger Binding="{Binding Activated}" Value="False">
+						<Setter Property="Background" Value="{StaticResource TitleInactiveBackground}"/>
+					</DataTrigger>
+				</Style.Triggers>
+			</Style>
+		</Grid.Style>
 
 		<!-- Title text -->
 		<TextBlock

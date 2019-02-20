@@ -676,7 +676,7 @@ namespace Rylogic.Extn
 		/// <summary>
 		/// Return this element as an instance of 'T'.
 		/// Use 'ToObject' if the type should be inferred from the node attributes
-		/// 'factory' can be used to create new instances of 'T' if doesn't have a default constructor.
+		/// 'factory' can be used to create new instances of 'T' if it doesn't have a default constructor.
 		/// E.g:<para\>
 		///  val = node.Element("val").As&lt;int&gt;() <para\>
 		///  val = node.Element("val").As&lt;int&gt;(default_val) <para\></summary>
