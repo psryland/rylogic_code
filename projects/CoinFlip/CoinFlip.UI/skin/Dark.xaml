@@ -1,0 +1,24 @@
+﻿<ResourceDictionary
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:local="clr-namespace:CoinFlip.UI"
+	>
+
+	<!-- Theme colours -->
+	<Color x:Key="BackgroundColor">#FF202020</Color>
+	<Color x:Key="TextColor">#FFFFFFFF</Color>
+	<Color x:Key="ToolBarBackgroundColor">#FF303030</Color>
+	<Color x:Key="ToolBarBorderColor">#FF505050</Color>
+
+	<!-- Brushes -->
+	<SolidColorBrush x:Key="ForegroundBrush" Color="{StaticResource TextColor}"/>
+	<SolidColorBrush x:Key="BackgroundBrush" Color="{StaticResource BackgroundColor}"/>
+	<SolidColorBrush x:Key="MenuBackgroundBrush" Color="{StaticResource BackgroundColor}"/>
+	<SolidColorBrush x:Key="MenuTextBrush" Color="{StaticResource TextColor}"/>
+	<SolidColorBrush x:Key="ToolBarBackgroundBrush" Color="{StaticResource ToolBarBackgroundColor}"/>
+	<SolidColorBrush x:Key="ToolBarBorderBrush" Color="{StaticResource ToolBarBorderColor}"/>
+	
+	<!-- Main Window Brushes -->
+	<SolidColorBrush x:Key="MainWindowBorderBrush" Color="{StaticResource BackgroundColor}"/>
+
+</ResourceDictionary>

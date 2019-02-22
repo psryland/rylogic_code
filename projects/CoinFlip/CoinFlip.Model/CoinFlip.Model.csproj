@@ -12,6 +12,8 @@
     <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -32,8 +34,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Newtonsoft.Json, Version=11.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\..\..\build\packages\Newtonsoft.Json.11.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\..\..\build\packages\Newtonsoft.Json.12.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -123,22 +125,6 @@
     <ProjectReference Include="..\..\Rylogic.View3d\Rylogic.View3d.csproj">
       <Project>{0fcb5434-407b-415e-9f11-6216f44d4377}</Project>
       <Name>Rylogic.View3d</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\BitfinexApi\BitfinexApi.csproj">
-      <Project>{11863e14-7143-4228-b861-fc8318c870f2}</Project>
-      <Name>BitfinexApi</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\BittrexApi\BittrexApi.csproj">
-      <Project>{4cc09856-852f-44f2-ab0c-d981036ea17d}</Project>
-      <Name>BittrexApi</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\CryptopiaApi\CryptopiaApi.csproj">
-      <Project>{30296406-237d-4b4b-8b5a-bdd18f0c2f53}</Project>
-      <Name>CryptopiaApi</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\PoloniexApi\PoloniexApi.csproj">
-      <Project>{b550e907-0e96-4a1a-818c-49422beeeb86}</Project>
-      <Name>PoloniexApi</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

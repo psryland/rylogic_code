@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Data;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows;
+﻿using System.Windows;
+using CoinFlip.Settings;
 
 namespace CoinFlip.UI
 {
@@ -12,6 +7,20 @@ namespace CoinFlip.UI
 	{
 		public App()
 		{
+		}
+
+		/// <summary>Singleton access</summary>
+		public static new App Current => (App)Application.Current;
+
+		/// <summary>Selected app skin</summary>
+		public static ESkin Skin
+		{
+			get { return SettingsData.Settings.Skin; }
+			set
+			{
+				SettingsData.Settings.Skin = value;
+				// A restart is needed to reload StaticResources
+			}
 		}
 	}
 }

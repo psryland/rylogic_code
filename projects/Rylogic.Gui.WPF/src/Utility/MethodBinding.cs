@@ -17,6 +17,10 @@ namespace Rylogic.Gui.WPF
 {
 	public class MethodBindingExtension : MarkupExtension
 	{
+		// Notes:
+		//  - Remember to set the DataContext for the control
+		//  - Use: <Button Click={gui2:MethodBinding WhateverFunc}>
+
 		private readonly object[] _arguments;
 		private readonly List<DependencyProperty> _argument_properties = new List<DependencyProperty>();
 		private static readonly List<DependencyProperty> StorageProperties = new List<DependencyProperty>();

@@ -857,7 +857,7 @@ namespace CoinFlip
 				set { set(nameof(OrdersPerBook), value); }
 			}
 
-			private class TyConv :GenericTypeConverter<ChartSettings> {}
+			private class TyConv :GenericTypeConverter<BackTestingSettings> {}
 		}
 
 		/// <summary>Equity plot settings</summary>
