@@ -8,6 +8,7 @@ namespace Rylogic.Gui.WPF
 {
 	public static class XmlWPFExtensions
 	{
+		// Use: Xml_.Config.SupportWPFTypes();
 		public static XmlConfig SupportWPFTypes(this XmlConfig cfg)
 		{
 			Xml_.ToMap[typeof(Point)] = (obj, node) =>

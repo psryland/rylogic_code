@@ -40,16 +40,6 @@ public class Settings :SettingsBase<Settings>
 
 namespace Rylogic.Common
 {
-	public enum ESettingsEvent
-	{
-		LoadFailed,
-		NoVersion,
-		FileNotFound,
-		LoadingSettings,
-		SavingSettings,
-		SaveFailed,
-	}
-
 	/// <summary>Common interface for 'SettingsSet' and 'SettingsBase'</summary>
 	public interface ISettingsSet
 	{
@@ -182,31 +172,38 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Populate this object from XML</summary>
-		public virtual void FromXml(XElement node)
+		public virtual void FromXml(XElement node, ESettingsLoadFlags flags)
 		{
-			// Load data from settings
 			m_data.Clear();
 			foreach (var setting in node.Elements())
 			{
 				var key = setting.Attribute("key")?.Value;
-				if (key == null)
+				try
 				{
-					// Support old style settings
-					var key_elem = setting.Element("key");
-					var val_elem = setting.Element("value");
-					if (key_elem == null || val_elem == null)
-						throw new Exception($"Invalid setting element found: {setting}");
+					if (key == null)
+					{
+						// Support old style settings
+						var key_elem = setting.Element("key");
+						var val_elem = setting.Element("value");
+						if (key_elem == null || val_elem == null)
+							throw new Exception($"Invalid setting element found: {setting}");
 
-					key = key_elem.As<string>();
-					var val = val_elem.ToObject();
-					SetParentIfNesting(val);
-					m_data[key] = val;
+						key = key_elem.As<string>();
+						var val = val_elem.ToObject();
+						SetParentIfNesting(val);
+						m_data[key] = val;
+					}
+					else
+					{
+						var val = setting.ToObject();
+						SetParentIfNesting(val);
+						m_data[key] = val;
+					}
 				}
-				else
+				catch (TypeLoadException)
 				{
-					var val = setting.ToObject();
-					SetParentIfNesting(val);
-					m_data[key] = val;
+					if (flags.HasFlag(ESettingsLoadFlags.IgnoreUnknownTypes)) continue;
+					throw;
 				}
 			}
 
@@ -219,6 +216,10 @@ namespace Rylogic.Common
 				// Key not in the data yet? Must be initial value from startup
 				m_data[i.Key] = i.Value;
 			}
+		}
+		public void FromXml(XElement node)
+		{
+			FromXml(node, ESettingsLoadFlags.None);
 		}
 
 		/// <summary>An event raised before and after a setting is changes value</summary>
@@ -277,61 +278,63 @@ namespace Rylogic.Common
 			// Default to off so users can enable after startup completes
 			AutoSaveOnChanges = false;
 		}
-		protected SettingsBase(SettingsBase<T> rhs, bool read_only = false)
-			:this(rhs.ToXml(new XElement("root")), read_only)
-		{}
-		protected SettingsBase(XElement node, bool throw_on_error, bool read_only = false)
+		protected SettingsBase(XElement node, ESettingsLoadFlags flags = ESettingsLoadFlags.None)
 			:this()
 		{
 			if (node != null)
 			{
 				try
 				{
-					FromXml(node, read_only);
+					FromXml(node, flags);
 					return;
 				}
 				catch (Exception ex)
 				{
 					SettingsEvent(ESettingsEvent.LoadFailed, ex, "Failed to load settings from XML data");
-					if (throw_on_error) throw;
+					if (flags.HasFlag(ESettingsLoadFlags.ThrowOnError)) throw;
 					ResetToDefaults(); // Fall back to default values
 				}
 			}
 		}
-		protected SettingsBase(Stream stream, bool throw_on_error, bool read_only = false)
+		protected SettingsBase(Stream stream, ESettingsLoadFlags flags = ESettingsLoadFlags.None)
 			:this()
 		{
 			if (stream != null)
 			{
 				try
 				{
-					Load(stream, read_only);
+					Load(stream, flags);
 					return;
 				}
 				catch (Exception ex)
 				{
 					SettingsEvent(ESettingsEvent.LoadFailed, ex, "Failed to load settings from stream");
-					if (throw_on_error) throw;
+					if (flags.HasFlag(ESettingsLoadFlags.ThrowOnError)) throw;
 					ResetToDefaults(); // Fall back to default values
 				}
 			}
 		}
-		protected SettingsBase(string filepath, bool throw_on_error, bool read_only = false) :this()
+		protected SettingsBase(string filepath, ESettingsLoadFlags flags = ESettingsLoadFlags.None)
+			: this()
 		{
-			Debug.Assert(!string.IsNullOrEmpty(filepath));
-			Filepath = filepath;
-			try
+			if (!string.IsNullOrEmpty(filepath))
 			{
-				Reload(read_only);
-				return;
-			}
-			catch (Exception ex)
-			{
-				SettingsEvent(ESettingsEvent.LoadFailed, ex, $"Failed to load settings from {filepath}");
-				if (throw_on_error) throw;
-				ResetToDefaults(); // Fall back to default values
+				try
+				{
+					Load(filepath, flags);
+					return;
+				}
+				catch (Exception ex)
+				{
+					SettingsEvent(ESettingsEvent.LoadFailed, ex, $"Failed to load settings from {filepath}");
+					if (flags.HasFlag(ESettingsLoadFlags.ThrowOnError)) throw;
+					ResetToDefaults(); // Fall back to default values
+				}
 			}
 		}
+		protected SettingsBase(SettingsBase<T> rhs, ESettingsLoadFlags flags = ESettingsLoadFlags.None)
+			: this(rhs.ToXml(new XElement("root")), flags)
+		{ }
 
 		/// <summary>Returns the directory in which to store app settings</summary>
 		public static string DefaultAppDataDirectory
@@ -437,31 +440,11 @@ namespace Rylogic.Common
 		public void Reset()
 		{
 			Default.Save(Filepath);
-			Reload();
-		}
-
-		/// <summary>Reload the current settings file</summary>
-		public void Reload(bool read_only = false)
-		{
-			try
-			{
-				Load(Filepath, read_only);
-			}
-			catch (Exception ex)
-			{
-				// If anything goes wrong, use the defaults
-				ResetToDefaults();
-
-				// Notify of load failure
-				SettingsEvent(ESettingsEvent.LoadFailed, ex, $"Failed to load settings from {Filepath}");
-
-				// Parse the exception up
-				throw;
-			}
+			Load(Filepath);
 		}
 
 		/// <summary>Load the settings from XML</summary>
-		public override void FromXml(XElement node)
+		public override void FromXml(XElement node, ESettingsLoadFlags flags = ESettingsLoadFlags.None)
 		{
 			// Read the settings version
 			var vers = node.Element(VersionKey);
@@ -481,24 +464,34 @@ namespace Rylogic.Common
 				Upgrade(node, vers.Value);
 
 			// Load the settings from XML
-			base.FromXml(node);
+			base.FromXml(node, flags);
 			Validate();
+
+			// Set readonly after loading is complete
+			ReadOnly = flags.HasFlag(ESettingsLoadFlags.ReadOnly);
 
 			// Notify of settings loaded
 			if (SettingsLoaded != null)
 				SettingsLoaded(this,new SettingsLoadedEventArgs(Filepath));
 		}
-		public void FromXml(XElement node, bool read_only)
+
+		/// <summary>Return the settings as XML</summary>
+		public XElement ToXml()
 		{
-			FromXml(node);
-			ReadOnly = read_only;
+			return ToXml(new XElement("settings"));
+		}
+		public override XElement ToXml(XElement node)
+		{
+			node.Add2(VersionKey, Version, false);
+			base.ToXml(node);
+			return node;
 		}
 
 		/// <summary>
 		/// Refreshes the settings from a file storage.
 		/// Starts with a copy of the Default.Data, then overwrites settings with those described in 'filepath'
 		/// After load, the settings is the union of Default.Data and those in the given file.</summary>
-		public void Load(string filepath, bool read_only = false)
+		public void Load(string filepath, ESettingsLoadFlags flags = ESettingsLoadFlags.None)
 		{
 			if (!Path_.FileExists(filepath))
 			{
@@ -517,12 +510,9 @@ namespace Rylogic.Common
 
 			// Load the settings from XML. Block saving during load/upgrade
 			using (Scope.Create(() => m_block_saving = true, () => m_block_saving = false))
-				FromXml(settings);
-
-			// Set readonly after loading is complete
-			ReadOnly = read_only;
+				FromXml(settings, flags);
 		}
-		public void Load(Stream stream, bool read_only = false)
+		public void Load(Stream stream, ESettingsLoadFlags flags = ESettingsLoadFlags.None)
 		{
 			SettingsEvent(ESettingsEvent.LoadingSettings, null, "Loading settings from stream");
 
@@ -534,22 +524,7 @@ namespace Rylogic.Common
 
 			// Load the settings from XML. Block saving during load/upgrade
 			using (Scope.Create(() => m_block_saving = true, () => m_block_saving = false))
-				FromXml(settings);
-
-			// Set readonly after loading is complete
-			ReadOnly = read_only;
-		}
-
-		/// <summary>Return the settings as XML</summary>
-		public XElement ToXml()
-		{
-			return ToXml(new XElement("settings"));
-		}
-		public override XElement ToXml(XElement node)
-		{
-			node.Add2(VersionKey, Version, false);
-			base.ToXml(node);
-			return node;
+				FromXml(settings, flags);
 		}
 
 		/// <summary>Persist current settings to storage</summary>
@@ -620,6 +595,13 @@ namespace Rylogic.Common
 		public void Save()
 		{
 			Save(Filepath);
+		}
+
+		/// <summary>Save if 'AutoSaveOnChanges' is true</summary>
+		public void AutoSave()
+		{
+			if (!AutoSaveOnChanges) return;
+			Save();
 		}
 
 		/// <summary>Remove the settings file from persistent storage</summary>
@@ -865,6 +847,25 @@ namespace Rylogic.Common
 		}
 	}
 
+	public enum ESettingsEvent
+	{
+		LoadFailed,
+		NoVersion,
+		FileNotFound,
+		LoadingSettings,
+		SavingSettings,
+		SaveFailed,
+	}
+
+	[Flags]
+	public enum ESettingsLoadFlags
+	{
+		None = 0,
+		ReadOnly = 1 << 0,
+		IgnoreUnknownTypes = 1 << 1,
+		ThrowOnError = 1 << 2,
+	}
+
 	#region Event Args
 	public class SettingChangeEventArgs : EventArgs
 	{
@@ -977,8 +978,8 @@ namespace Rylogic.UnitTests
 				Sub2   = new XElement("external");
 				Things = new object[] { 1, 2.3f, "hello" };
 			}
-			public Settings(string filepath) :base(filepath, throw_on_error:false) {}
-			public Settings(XElement node) : base(node, throw_on_error: false) {}
+			public Settings(string filepath) :base(filepath) {}
+			public Settings(XElement node) : base(node) {}
 
 			public string         Str    { get { return get<string        >(nameof(Str   )); } set { set(nameof(Str   ) , value); } }
 			public int            Int    { get { return get<int           >(nameof(Int   )); } set { set(nameof(Int   ) , value); } }

@@ -461,11 +461,11 @@ namespace Rylogic.Extn
 				if (elem.Attribute(TypeAttr) is XAttribute attr && type.FullName != attr.Value)
 				{
 					try { type = Type_.Resolve(attr.Value); }
-					catch (Exception ex)
+					catch (TypeLoadException ex)
 					{
 						// If you get this error you can use GC.KeepAlive(typeof(TheTypeName)); to force
 						// the assembly to be loaded before you try to load the XML.
-						throw new Exception(
+						throw new TypeLoadException(
 							$"Failed to resolve type name {attr.Value}. No type with this name found in the loaded assemblies.\r\n"+
 							"This error indicates that the XML being parsed contains a type that this application does not recognise.\r\n"+
 							"If the type should be recognised by this application, it may be that the assembly has not been loaded yet. ", ex);
@@ -577,12 +577,19 @@ namespace Rylogic.Extn
 			var method = type.GetMethod("FromXml", BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic, null, new[]{typeof(XElement)}, null);
 			if (method == null) throw new NotSupportedException($"{type.Name} does not have a method called 'FromXml(XElement)'");
 
-			// Replace the mapping with a call that doesn't need to search for the constructor
+			// Replace the mapping with a call that doesn't need to search for the method
 			AsMap[type] = (e,t,i) =>
 				{
-					var obj = factory(type);
-					method.Invoke(obj, new object[]{e});
-					return obj;
+					try
+					{
+						var obj = factory(type);
+						method.Invoke(obj, new object[] { e });
+						return obj;
+					}
+					catch (TargetInvocationException ex)
+					{
+						throw ex.InnerException;
+					}
 				};
 			return AsMap[type](elem, type, factory);
 		}
