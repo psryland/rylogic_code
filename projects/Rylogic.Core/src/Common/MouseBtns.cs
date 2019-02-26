@@ -7,6 +7,7 @@ namespace Rylogic.Common
 	{
 		// Compatible with native MK_ constants.
 		// Use the extension 'WinFormsUtil.ToMouseBtns' to convert from 'System.Windows.Forms.MouseButtons'
+		// Use the extension 'WPFUtil.ToMouseBtns' to convert from 'System.Windows.Input.MouseEventArgs'
 		None = 0,
 		Left     = 0x0001, // MK_LBUTTON 
 		Right    = 0x0002, // MK_RBUTTON 

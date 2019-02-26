@@ -146,7 +146,11 @@ namespace pr
 		v2 Dpi() const
 		{
 			// Don't cache the DPI value
+			#if (WINVER >= 0x0605)
 			auto dpi = (float)GetDpiForSystem();
+			#else
+			auto dpi = (float)96.0f;
+			#endif
 			return v2(dpi, dpi);
 		}
 

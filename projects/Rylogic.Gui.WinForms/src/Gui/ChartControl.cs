@@ -965,7 +965,6 @@ namespace Rylogic.Gui.WinForms
 						LightProperties = View3d.LightInfo.Directional(-v4.ZAxis, Colour32.Zero, Colour32.Gray, Colour32.Zero, 0f, 0f),
 						FocusPointVisible = false,
 						OriginPointVisible = false,
-						Orthographic = true,
 					};
 					m_camera = m_window.Camera;
 					m_camera.Orthographic = true;
@@ -988,7 +987,7 @@ namespace Rylogic.Gui.WinForms
 			{
 				base.OnResize(e);
 				if (Window != null)
-					Window.RenderTargetSize = ClientSize;
+					Window.BackBufferSize = ClientSize;
 			}
 			protected override void OnPaintBackground(PaintEventArgs e)
 			{

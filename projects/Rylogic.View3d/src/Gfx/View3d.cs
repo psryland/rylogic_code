@@ -595,19 +595,59 @@ namespace Rylogic.Gfx
 			public bool GdiCompatible;
 			public string DbgName;
 
-			public TextureOptions(bool gdi_compatible)
+			public static TextureOptions New(
+				EFormat format = EFormat.DXGI_FORMAT_R8G8B8A8_UNORM,
+				EFilter filter = EFilter.D3D11_FILTER_MIN_MAG_MIP_LINEAR,
+				EAddrMode addrU = EAddrMode.D3D11_TEXTURE_ADDRESS_CLAMP,
+				EAddrMode addrV = EAddrMode.D3D11_TEXTURE_ADDRESS_CLAMP,
+				EBindFlags bind_flags = EBindFlags.D3D11_BIND_SHADER_RESOURCE,
+				EResMiscFlags misc_flags = EResMiscFlags.NONE,
+				uint mips = 0U,
+				uint colour_key = 0U,
+				bool has_alpha = false,
+				string dbg_name = null)
 			{
-				Format        = gdi_compatible ? EFormat.DXGI_FORMAT_B8G8R8A8_UNORM : EFormat.DXGI_FORMAT_R8G8B8A8_UNORM;
-				Mips          = gdi_compatible ? 1U : 0U;
-				Filter        = EFilter.D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-				AddrU         = EAddrMode.D3D11_TEXTURE_ADDRESS_CLAMP;
-				AddrV         = EAddrMode.D3D11_TEXTURE_ADDRESS_CLAMP;
-				BindFlags     = gdi_compatible ? EBindFlags.D3D11_BIND_SHADER_RESOURCE|EBindFlags.D3D11_BIND_RENDER_TARGET : EBindFlags.NONE;
-				MiscFlags     = gdi_compatible ? EResMiscFlags.D3D11_RESOURCE_MISC_GDI_COMPATIBLE : EResMiscFlags.NONE;
-				ColourKey     = 0;
-				HasAlpha      = false;
-				GdiCompatible = gdi_compatible;
-				DbgName       = string.Empty;
+				return new TextureOptions
+				{
+					Format = format,
+					Mips = mips,
+					Filter = filter,
+					AddrU = addrU,
+					AddrV = addrV,
+					BindFlags = bind_flags,
+					MiscFlags = misc_flags,
+					ColourKey = colour_key,
+					HasAlpha = has_alpha,
+					GdiCompatible = false,
+					DbgName = dbg_name ?? string.Empty,
+				};
+			}
+			public static TextureOptions GdiCompat(
+				EFormat format = EFormat.DXGI_FORMAT_B8G8R8A8_UNORM,
+				EFilter filter = EFilter.D3D11_FILTER_MIN_MAG_MIP_LINEAR,
+				EAddrMode addrU = EAddrMode.D3D11_TEXTURE_ADDRESS_CLAMP,
+				EAddrMode addrV = EAddrMode.D3D11_TEXTURE_ADDRESS_CLAMP,
+				EBindFlags bind_flags = EBindFlags.D3D11_BIND_SHADER_RESOURCE | EBindFlags.D3D11_BIND_RENDER_TARGET,
+				EResMiscFlags misc_flags = EResMiscFlags.D3D11_RESOURCE_MISC_GDI_COMPATIBLE,
+				uint mips = 1U,
+				uint colour_key = 0U,
+				bool has_alpha = true,
+				string dbg_name = null)
+			{
+				return new TextureOptions
+				{
+					Format = format,
+					Mips = mips,
+					Filter = filter,
+					AddrU = addrU,
+					AddrV = addrV,
+					BindFlags = bind_flags,
+					MiscFlags = misc_flags,
+					ColourKey = colour_key,
+					HasAlpha = has_alpha,
+					GdiCompatible = true,
+					DbgName = dbg_name ?? string.Empty,
+				};
 			}
 		}
 
@@ -1366,10 +1406,7 @@ namespace ldr
 			}
 
 			/// <summary>Get the render target texture</summary>
-			public Texture RenderTarget
-			{
-				get { return new Texture(View3D_TextureRenderTarget(m_handle)); }
-			}
+			public Texture RenderTarget => new Texture(View3D_TextureRenderTarget(m_handle));
 
 			/// <summary>Import/Export a settings string</summary>
 			public string Settings
@@ -1623,18 +1660,11 @@ namespace ldr
 				set { View3D_ShowAngleTool(m_handle, value); }
 			}
 
-			/// <summary>Get/Set orthographic rendering mode</summary>
-			public bool Orthographic
-			{
-				get { return View3D_Orthographic(m_handle); }
-				set { View3D_SetOrthographic(m_handle, value); }
-			}
-
 			/// <summary>The background colour for the window</summary>
-			public Color BackgroundColour
+			public Colour32 BackgroundColour
 			{
-				get { return Color.FromArgb(View3D_BackgroundColour(m_handle)); }
-				set { View3D_SetBackgroundColour(m_handle, value.ToArgb()); }
+				get { return new Colour32(View3D_BackgroundColourGet(m_handle)); }
+				set { View3D_BackgroundColourSet(m_handle, value.ARGB); }
 			}
 
 			/// <summary>Get/Set the animation clock</summary>
@@ -1657,16 +1687,16 @@ namespace ldr
 			}
 
 			/// <summary>Resize the render target</summary>
-			public Size RenderTargetSize
+			public Size BackBufferSize
 			{
-				get { int w,h; View3D_RenderTargetSize(m_handle, out w, out h); return new Size(w,h); }
-				set { View3D_SetRenderTargetSize(m_handle, value.Width, value.Height); }
+				get { View3D_BackBufferSizeGet(m_handle, out var w, out var h); return new Size(w,h); }
+				set { View3D_BackBufferSizeSet(m_handle, value.Width, value.Height); }
 			}
 
 			/// <summary>Restore the render target as the main output</summary>
 			public void RestoreRT()
 			{
-				View3D_RestoreMainRT(m_handle);
+				View3D_RenderTargetRestore(m_handle);
 			}
 
 			/// <summary>
@@ -1674,9 +1704,15 @@ namespace ldr
 			/// Note: Make sure the render target is not used as a texture for an object in the scene to be rendered.
 			/// Either remove that object from the scene, or detach the texture from the object. 'render_target' cannot be
 			/// a source and destination texture at the same time</summary>
-			public void RenderTo(Texture render_target, Texture depth_buffer = null)
+			public void SetRT(Texture render_target, Texture depth_buffer = null)
 			{
-				View3D_RenderTo(m_handle, render_target.Handle, depth_buffer != null ? depth_buffer.Handle : IntPtr.Zero);
+				View3D_RenderTargetSet(m_handle, render_target.Handle, depth_buffer?.Handle ?? IntPtr.Zero);
+			}
+
+			/// <summary>Save the current render target as the main render target (Restored using RestoreRT)</summary>
+			public void SaveAsMainRT()
+			{
+				View3D_RenderTargetSaveAsMain(m_handle);
 			}
 
 			/// <summary>Get/Set the size/position of the viewport within the render target</summary>
@@ -1702,7 +1738,7 @@ namespace ldr
 			/// <summary>Convert a normalised point into a screen space point</summary>
 			public v2 ScreenSpacePointF(v2 pt)
 			{
-				var da = RenderTargetSize;
+				var da = BackBufferSize;
 				return new v2((pt.x + 1f) * da.Width / 2f, (1f - pt.y) * da.Height / 2f);
 			}
 			public Point ScreenSpacePoint(v2 pt)
@@ -1766,7 +1802,7 @@ namespace ldr
 				View3D_ObjectManagerShow(m_handle, show);
 			}
 
-#region Equals
+			#region Equals
 			public static bool operator == (Window lhs, Window rhs)
 			{
 				return ReferenceEquals(lhs,rhs) || Equals(lhs, rhs);
@@ -1787,9 +1823,9 @@ namespace ldr
 			{
 				return m_handle.ToInt32();
 			}
-#endregion
+			#endregion
 
-#region Event Args
+			#region Event Args
 			public class ErrorEventArgs :EventArgs
 			{
 				public ErrorEventArgs(string msg)
@@ -1845,7 +1881,7 @@ namespace ldr
 				/// <summary>A flag used to prevent this mouse navigation being forwarded to the window</summary>
 				public bool Handled { get; set; }
 			}
-#endregion
+			#endregion
 		}
 
 		/// <summary>Namespace for the camera controls</summary>
@@ -2699,16 +2735,17 @@ namespace ldr
 			private bool m_owned;
 
 			/// <summary>Create a texture from an existing texture resource</summary>
-			internal Texture(HTexture handle)
+			internal Texture(HTexture handle, bool owned = false)
 			{
-				m_owned = false;
+				// Note: 'handle' is not the ID3D11Texture2D handle, it's the internal View3DTexture pointer.
+				m_owned = owned;
 				Handle = handle;
 				View3D_TextureGetInfo(Handle, out Info);
 			}
 
 			/// <summary>Construct an uninitialised texture</summary>
 			public Texture(uint width, uint height)
-				:this(width, height, IntPtr.Zero, 0, new TextureOptions(true))
+				:this(width, height, IntPtr.Zero, 0, TextureOptions.New())
 			{}
 			public Texture(uint width, uint height, TextureOptions options)
 				:this(width, height, IntPtr.Zero, 0, options)
@@ -2725,13 +2762,13 @@ namespace ldr
 
 			/// <summary>Construct a texture from a file</summary>
 			public Texture(string tex_filepath)
-				:this(tex_filepath, 0, 0, new TextureOptions(true))
+				:this(tex_filepath, 0, 0, TextureOptions.New())
 			{}
 			public Texture(string tex_filepath, TextureOptions options)
 				:this(tex_filepath, 0, 0, options)
 			{}
 			public Texture(string tex_filepath, uint width, uint height)
-				:this(tex_filepath, width, height, new TextureOptions(true))
+				:this(tex_filepath, width, height, TextureOptions.New())
 			{}
 			public Texture(string tex_filepath, uint width, uint height, TextureOptions options)
 			{
@@ -2807,10 +2844,16 @@ namespace ldr
 			/// <summary>Return properties of the texture</summary>
 			public static ImageInfo GetInfo(string tex_filepath)
 			{
-				ImageInfo info;
-				EResult res = View3D_TextureGetInfoFromFile(tex_filepath, out info);
+				var res = View3D_TextureGetInfoFromFile(tex_filepath, out var info);
 				if (res != EResult.Success) throw new Exception(res);
 				return info;
+			}
+
+			/// <summary>Create a Texture instance from a shared d3d resource (created on a different d3d device)</summary>
+			public static Texture FromShared(IntPtr shared_resource, TextureOptions options)
+			{
+				// Not all of the texture options are used, just sampler description, has alpha, and dbg name
+				return new Texture(View3D_TextureFromShared(shared_resource, ref options), owned:true);
 			}
 
 			/// <summary>An RAII object used to lock the texture for drawing with GDI+ methods</summary>
@@ -2845,7 +2888,7 @@ namespace ldr
 				return new Lock(this, discard);
 			}
 
-#region Equals
+			#region Equals
 			public static bool operator == (Texture lhs, Texture rhs)
 			{
 				return ReferenceEquals(lhs,rhs) || Equals(lhs, rhs);
@@ -2866,7 +2909,7 @@ namespace ldr
 			{
 				return Handle.GetHashCode();
 			}
-#endregion
+			#endregion
 		}
 
 		/// <summary>Reference type wrapper of a view3d light</summary>
@@ -3106,10 +3149,10 @@ namespace ldr
         private static IntPtr m_module = IntPtr.Zero;
 
 		/// <summary>Helper method for loading the view3d.dll from a platform specific path</summary>
-		public static void LoadDll(string dir = @".\lib\$(platform)\$(config)")
+		public static void LoadDll(string dir = @".\lib\$(platform)\$(config)", bool throw_if_missing = true)
 		{
 			if (ModuleLoaded) return;
-			m_module = Win32.LoadDll(Dll+".dll", dir);
+			m_module = Win32.LoadDll(Dll+".dll", dir, throw_if_missing);
 		}
 
 		// Context
@@ -3251,25 +3294,26 @@ namespace ldr
 		[DllImport(Dll)] private static extern void              View3D_TextureReleaseDC            (HTexture tex);
 		[DllImport(Dll)] private static extern void              View3D_TextureResize               (HTexture tex, uint width, uint height, bool all_instances, bool preserve);
 		[DllImport(Dll)] private static extern HTexture          View3D_TextureRenderTarget         (HWindow window);
+		[DllImport(Dll)] private static extern HTexture          View3D_TextureFromShared           (IntPtr shared_resource, ref TextureOptions options);
 
 		// Rendering
 		[DllImport(Dll)] private static extern void              View3D_Invalidate               (HWindow window, bool erase);
 		[DllImport(Dll)] private static extern void              View3D_InvalidateRect           (HWindow window, ref Win32.RECT rect, bool erase);
 		[DllImport(Dll)] private static extern void              View3D_Render                   (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_Present                  (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_RenderTo                 (HWindow window, HTexture render_target, HTexture depth_buffer);
-		[DllImport(Dll)] private static extern void              View3D_RenderTargetSize         (HWindow window, out int width, out int height);
-		[DllImport(Dll)] private static extern void              View3D_SetRenderTargetSize      (HWindow window, int width, int height);
+		[DllImport(Dll)] private static extern void              View3D_RenderTargetRestore      (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_RenderTargetSet          (HWindow window, HTexture render_target, HTexture depth_buffer);
+		[DllImport(Dll)] private static extern void              View3D_RenderTargetSaveAsMain   (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_BackBufferSizeGet        (HWindow window, out int width, out int height);
+		[DllImport(Dll)] private static extern void              View3D_BackBufferSizeSet        (HWindow window, int width, int height);
 		[DllImport(Dll)] private static extern Viewport          View3D_Viewport                 (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_SetViewport              (HWindow window, Viewport vp);
 		[DllImport(Dll)] private static extern EFillMode         View3D_FillModeGet              (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_FillModeSet              (HWindow window, EFillMode mode);
 		[DllImport(Dll)] private static extern ECullMode         View3D_CullModeGet              (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_CullModeSet              (HWindow window, ECullMode mode);
-		[DllImport(Dll)] private static extern bool              View3D_Orthographic             (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_SetOrthographic          (HWindow window, bool render2d);
-		[DllImport(Dll)] private static extern int               View3D_BackgroundColour         (HWindow window);
-		[DllImport(Dll)] private static extern void              View3D_SetBackgroundColour      (HWindow window, int aarrggbb);
+		[DllImport(Dll)] private static extern uint              View3D_BackgroundColourGet      (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_BackgroundColourSet      (HWindow window, uint aarrggbb);
 		[DllImport(Dll)] private static extern int               View3D_MultiSamplingGet         (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_MultiSamplingSet         (HWindow window, int multisampling);
 
@@ -3299,7 +3343,6 @@ namespace ldr
 
 		// Miscellaneous
 		[DllImport(Dll)] private static extern bool              View3D_TranslateKey             (HWindow window, int key_code);
-		[DllImport(Dll)] private static extern void              View3D_RestoreMainRT            (HWindow window);
 		[DllImport(Dll)] private static extern bool              View3D_DepthBufferEnabledGet    (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_DepthBufferEnabledSet    (HWindow window, bool enabled);
 		[DllImport(Dll)] private static extern bool              View3D_FocusPointVisibleGet     (HWindow window);

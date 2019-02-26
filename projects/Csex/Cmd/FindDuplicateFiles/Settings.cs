@@ -9,7 +9,7 @@ namespace Csex
 			SearchPaths = new string[0];
 		}
 		public Settings(string filepath)
-			:base(filepath, throw_on_error: false)
+			:base(filepath)
 		{ }
 
 		public string[] SearchPaths

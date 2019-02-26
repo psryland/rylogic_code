@@ -144,6 +144,7 @@ namespace pr
 				#ifdef PR_DBG_RDR
 				if ((m_settings.m_device_layers & D3D11_CREATE_DEVICE_DEBUG) != 0)
 				{
+					// Note: this will report that the D3D device is still live
 					D3DPtr<ID3D11Debug> dbg;
 					pr::Throw(m_d3d_device->QueryInterface(__uuidof(ID3D11Debug), (void**)&dbg.m_ptr));
 					pr::Throw(dbg->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL|D3D11_RLDO_IGNORE_INTERNAL));

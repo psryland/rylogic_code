@@ -2072,6 +2072,20 @@ VIEW3D_API void __stdcall View3D_RenderTargetSet(View3DWindow window, View3DText
 	CatchAndReport(View3D_RenderTargetSet, window,);
 }
 
+// Save the current render target as the main render target.
+// Calling RestoreRT will restore this new main render target.
+VIEW3D_API void __stdcall View3D_RenderTargetSaveAsMain(View3DWindow window)
+{
+	try
+	{
+		if (window == nullptr) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_wnd.SaveAsMainRT();
+	}
+	CatchAndReport(View3D_RenderTargetSaveAsMain, window,);
+}
+
 // Get/Set the dimensions of the render target
 // In set, if 'width' and 'height' are zero, the RT is resized to the associated window automatically.
 VIEW3D_API void __stdcall View3D_BackBufferSizeGet(View3DWindow window, int& width, int& height)
@@ -2202,30 +2216,6 @@ VIEW3D_API void __stdcall View3D_CullModeSet(View3DWindow window, EView3DCullMod
 		window->m_cull_mode = mode;
 	}
 	CatchAndReport(View3D_CullModeSet, window,);
-}
-
-// Selected between perspective and orthographic projection
-VIEW3D_API BOOL __stdcall View3D_Orthographic(View3DWindow window)
-{
-	try
-	{
-		if (!window) throw std::exception("window is null");
-
-		DllLockGuard;
-		return window->m_camera.m_orthographic;
-	}
-	CatchAndReport(View3D_Orthographic, window, false);
-}
-VIEW3D_API void __stdcall View3D_SetOrthographic(View3DWindow window, BOOL render2d)
-{
-	try
-	{
-		if (!window) throw std::exception("window is null");
-
-		DllLockGuard;
-		window->m_camera.m_orthographic = render2d != 0;
-	}
-	CatchAndReport(View3D_SetOrthographic, window,);
 }
 
 // Get/Set the background colour for a window

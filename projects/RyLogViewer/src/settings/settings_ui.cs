@@ -471,8 +471,7 @@ namespace RyLogViewer
 				using (dg)
 				{
 					if (dg.ShowDialog(this) != DialogResult.OK) return;
-					Settings.Filepath = dg.FileName;
-					Settings.Reload();
+					Settings.Load(dg.FileName);
 					UpdateUI();
 					WhatsChanged |= EWhatsChanged.Everything;
 				}

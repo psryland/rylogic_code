@@ -605,26 +605,25 @@ extern "C"
 	VIEW3D_API View3DTexture __stdcall View3D_TextureFromShared           (IUnknown* shared_resource, View3DTextureOptions const& options);
 
 	// Rendering
-	VIEW3D_API void            __stdcall View3D_Invalidate          (View3DWindow window, BOOL erase);
-	VIEW3D_API void            __stdcall View3D_InvalidateRect      (View3DWindow window, RECT const* rect, BOOL erase);
-	VIEW3D_API void            __stdcall View3D_Render              (View3DWindow window);
-	VIEW3D_API void            __stdcall View3D_Present             (View3DWindow window);
-	VIEW3D_API void            __stdcall View3D_RenderTargetRestore (View3DWindow window);
-	VIEW3D_API void            __stdcall View3D_RenderTargetSet     (View3DWindow window, View3DTexture render_target, View3DTexture depth_buffer);
-	VIEW3D_API void            __stdcall View3D_BackBufferSizeGet   (View3DWindow window, int& width, int& height);
-	VIEW3D_API void            __stdcall View3D_BackBufferSizeSet   (View3DWindow window, int width, int height);
-	VIEW3D_API View3DViewport  __stdcall View3D_Viewport            (View3DWindow window);
-	VIEW3D_API void            __stdcall View3D_SetViewport         (View3DWindow window, View3DViewport vp);
-	VIEW3D_API EView3DFillMode __stdcall View3D_FillModeGet         (View3DWindow window);
-	VIEW3D_API void            __stdcall View3D_FillModeSet         (View3DWindow window, EView3DFillMode mode);
-	VIEW3D_API EView3DCullMode __stdcall View3D_CullModeGet         (View3DWindow window);
-	VIEW3D_API void            __stdcall View3D_CullModeSet         (View3DWindow window, EView3DCullMode mode);
-	VIEW3D_API BOOL            __stdcall View3D_Orthographic        (View3DWindow window);
-	VIEW3D_API void            __stdcall View3D_SetOrthographic     (View3DWindow window, BOOL render2d);
-	VIEW3D_API unsigned int    __stdcall View3D_BackgroundColourGet (View3DWindow window);
-	VIEW3D_API void            __stdcall View3D_BackgroundColourSet (View3DWindow window, unsigned int aarrggbb);
-	VIEW3D_API int             __stdcall View3D_MultiSamplingGet    (View3DWindow window);
-	VIEW3D_API void            __stdcall View3D_MultiSamplingSet    (View3DWindow window, int multisampling);
+	VIEW3D_API void            __stdcall View3D_Invalidate             (View3DWindow window, BOOL erase);
+	VIEW3D_API void            __stdcall View3D_InvalidateRect         (View3DWindow window, RECT const* rect, BOOL erase);
+	VIEW3D_API void            __stdcall View3D_Render                 (View3DWindow window);
+	VIEW3D_API void            __stdcall View3D_Present                (View3DWindow window);
+	VIEW3D_API void            __stdcall View3D_RenderTargetRestore    (View3DWindow window);
+	VIEW3D_API void            __stdcall View3D_RenderTargetSet        (View3DWindow window, View3DTexture render_target, View3DTexture depth_buffer);
+	VIEW3D_API void            __stdcall View3D_RenderTargetSaveAsMain (View3DWindow window);
+	VIEW3D_API void            __stdcall View3D_BackBufferSizeGet      (View3DWindow window, int& width, int& height);
+	VIEW3D_API void            __stdcall View3D_BackBufferSizeSet      (View3DWindow window, int width, int height);
+	VIEW3D_API View3DViewport  __stdcall View3D_Viewport               (View3DWindow window);
+	VIEW3D_API void            __stdcall View3D_SetViewport            (View3DWindow window, View3DViewport vp);
+	VIEW3D_API EView3DFillMode __stdcall View3D_FillModeGet            (View3DWindow window);
+	VIEW3D_API void            __stdcall View3D_FillModeSet            (View3DWindow window, EView3DFillMode mode);
+	VIEW3D_API EView3DCullMode __stdcall View3D_CullModeGet            (View3DWindow window);
+	VIEW3D_API void            __stdcall View3D_CullModeSet            (View3DWindow window, EView3DCullMode mode);
+	VIEW3D_API unsigned int    __stdcall View3D_BackgroundColourGet    (View3DWindow window);
+	VIEW3D_API void            __stdcall View3D_BackgroundColourSet    (View3DWindow window, unsigned int aarrggbb);
+	VIEW3D_API int             __stdcall View3D_MultiSamplingGet       (View3DWindow window);
+	VIEW3D_API void            __stdcall View3D_MultiSamplingSet       (View3DWindow window, int multisampling);
 
 	// Tools
 	VIEW3D_API void __stdcall View3D_ObjectManagerShow        (View3DWindow window, BOOL show);

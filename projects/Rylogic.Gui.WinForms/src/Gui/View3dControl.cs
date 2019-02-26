@@ -358,9 +358,15 @@ namespace Rylogic.Gui.WinForms
 					option.SelectedIndexChanged += delegate { Window.FillMode = (View3d.EFillMode)option.SelectedIndex; Refresh(); };
 				}
 				{// Render2D
-					var option = new ToolStripMenuItem{Text = Window.Orthographic ? "Perspective" : "Orthographic"};
+					var option = new ToolStripMenuItem{Text = Window.Camera.Orthographic ? "Perspective" : "Orthographic"};
 					rdr_menu.DropDownItems.Add(option);
-					option.Click += delegate { var _2d = Window.Orthographic; Window.Orthographic = !_2d; option.Text = _2d ? "Perspective" : "Orthographic"; Refresh(); };
+					option.Click += delegate
+					{
+						var _2d = Window.Camera.Orthographic;
+						Window.Camera.Orthographic = !_2d;
+						option.Text = _2d ? "Perspective" : "Orthographic";
+						Refresh();
+					};
 				}
 				{// Lighting...
 					var lighting_menu = new ToolStripMenuItem("Lighting...");
@@ -399,7 +405,7 @@ namespace Rylogic.Gui.WinForms
 		{
 			base.OnResize(e);
 			if (Window != null && !this.IsInDesignMode())
-				Window.RenderTargetSize = new Size(Width-2, Height-2);
+				Window.BackBufferSize = new Size(Width-2, Height-2);
 		}
 
 		/// <summary>Absorb PaintBackground events</summary>
@@ -425,7 +431,7 @@ namespace Rylogic.Gui.WinForms
 		{
 			base.OnParentChanged(e);
 			if (View3d == null) return;
-			Window.RenderTargetSize = new Size(Width-2, Height-2);
+			Window.BackBufferSize = new Size(Width-2, Height-2);
 		}
 
 		/// <summary>Raises the CustomiseContextMenu event</summary>
@@ -447,6 +453,7 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Render and present the scene</summary>
 		private void Render()
 		{
+			Window.RestoreRT();
 			Window.Render();
 			Window.Present();
 		}

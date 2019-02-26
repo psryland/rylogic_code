@@ -263,30 +263,6 @@ namespace pr
 			lock.ImmediateDC()->OMSetRenderTargets(1, &m_main_rtv.m_ptr, m_main_dsv.m_ptr);
 		}
 
-		// Draw text directly to the back buffer
-		void Window::DrawString(wchar_t const* text, float x, float y)
-		{
-			Renderer::Lock lock(*m_rdr);
-			auto dwrite = lock.DWrite();
-
-			// Create a solid brush
-			D3DPtr<ID2D1SolidColorBrush> brush;
-			pr::Throw(m_d2d_dc->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Blue), &brush.m_ptr));
-
-			// Create a text format
-			D3DPtr<IDWriteTextFormat> text_format;
-			pr::Throw(dwrite->CreateTextFormat(L"tahoma", nullptr, DWRITE_FONT_WEIGHT_LIGHT, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 20.0f, L"en-GB", &text_format.m_ptr));
-
-			// Create a text layout
-			D3DPtr<IDWriteTextLayout> text_layout;
-			pr::Throw(dwrite->CreateTextLayout(text, UINT32(wcslen(text)), text_format.get(), 100.0f, 100.0f, &text_layout.m_ptr));
-
-			// Draw the string
-			m_d2d_dc->BeginDraw();
-			m_d2d_dc->DrawTextLayout(D2D1::Point2F(x, y), text_layout.get(), brush.get());
-			pr::Throw(m_d2d_dc->EndDraw());
-		}
-
 		// Binds the given render target and depth buffer views to the OM
 		void Window::SetRT(ID3D11RenderTargetView* rtv, ID3D11DepthStencilView* dsv)
 		{
@@ -335,6 +311,45 @@ namespace pr
 
 			// Set the render target
 			SetRT(rtv.get(), dsv.get());
+		}
+		
+		// Set the current render target as the main render target
+		// Calling RestoreRT will restore the main render target.
+		void Window::SaveAsMainRT()
+		{
+			Renderer::Lock lock(*m_rdr);
+			auto dc = lock.ImmediateDC();
+
+			// Release the previous RT/DS
+			m_main_rtv = nullptr;
+			m_main_dsv = nullptr;
+
+			// Get the current RT/DS
+			dc->OMGetRenderTargets(1, &m_main_rtv.m_ptr, &m_main_dsv.m_ptr);
+		}
+
+		// Draw text directly to the back buffer
+		void Window::DrawString(wchar_t const* text, float x, float y)
+		{
+			Renderer::Lock lock(*m_rdr);
+			auto dwrite = lock.DWrite();
+
+			// Create a solid brush
+			D3DPtr<ID2D1SolidColorBrush> brush;
+			pr::Throw(m_d2d_dc->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Blue), &brush.m_ptr));
+
+			// Create a text format
+			D3DPtr<IDWriteTextFormat> text_format;
+			pr::Throw(dwrite->CreateTextFormat(L"tahoma", nullptr, DWRITE_FONT_WEIGHT_LIGHT, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 20.0f, L"en-GB", &text_format.m_ptr));
+
+			// Create a text layout
+			D3DPtr<IDWriteTextLayout> text_layout;
+			pr::Throw(dwrite->CreateTextLayout(text, UINT32(wcslen(text)), text_format.get(), 100.0f, 100.0f, &text_layout.m_ptr));
+
+			// Draw the string
+			m_d2d_dc->BeginDraw();
+			m_d2d_dc->DrawTextLayout(D2D1::Point2F(x, y), text_layout.get(), brush.get());
+			pr::Throw(m_d2d_dc->EndDraw());
 		}
 
 		// Set the viewport to all of the render target

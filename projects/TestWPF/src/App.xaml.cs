@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Windows;
+using Rylogic.Gfx;
 
 namespace TestWPF
 {
@@ -10,6 +11,10 @@ namespace TestWPF
 	/// </summary>
 	public partial class App :Application
 	{
+		public App()
+		{
+			View3d.LoadDll();
+		}
 		protected override void OnStartup(StartupEventArgs e)
 		{
 			base.OnStartup(e);

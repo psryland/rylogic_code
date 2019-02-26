@@ -1185,7 +1185,7 @@ namespace Rylogic.Interop.Win32
 		#endregion
 
 		/// <summary>Helper method for loading a dll from a platform specific path. 'dllname' should include the extn</summary>
-		public static IntPtr LoadDll(string dllname, string dir = @".\lib\$(platform)\$(config)")
+		public static IntPtr LoadDll(string dllname, string dir = @".\lib\$(platform)\$(config)", bool throw_if_missing = true)
 		{
 			HWND TryLoad(string path)
 			{
@@ -1235,7 +1235,11 @@ namespace Rylogic.Interop.Win32
 					return TryLoad(dll_path);
 			}
 
-			throw new DllNotFoundException($"Could not find dependent library '{dllname}'\r\nLocations searched:\r\n{string.Join("\r\n", searched.ToArray())}");
+			// Allow LoadDll to be called multiple times if needed
+			return throw_if_missing
+				? throw new DllNotFoundException($"Could not find dependent library '{dllname}'\r\nLocations searched:\r\n{string.Join("\r\n", searched.ToArray())}")
+				: IntPtr.Zero;
+
 		}
 
 		/// <summary>Returns the upper 16bits of a 32bit DWORD such as LPARAM or WPARAM</summary>

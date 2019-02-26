@@ -69,7 +69,6 @@ namespace Rylogic.Gui.WinForms
 				m_window.LightProperties = View3d.LightInfo.Directional(-v4.ZAxis, Colour32.Zero, Colour32.Gray, Colour32.Zero, 0f, 0f);
 				m_window.FocusPointVisible = false;
 				m_window.OriginPointVisible = false;
-				m_window.Orthographic = false;
 
 				InitializeComponent();
 				SetupEditToolstrip();
@@ -209,7 +208,7 @@ namespace Rylogic.Gui.WinForms
 			}
 
 			base.OnResize(e);
-			m_window.RenderTargetSize = new Size(Width, Height);
+			m_window.BackBufferSize = new Size(Width, Height);
 		}
 		protected override void OnInvalidated(InvalidateEventArgs e)
 		{
@@ -287,6 +286,7 @@ namespace Rylogic.Gui.WinForms
 			}
 
 			// Render the diagram
+			m_window.RestoreRT();
 			m_window.Render();
 			m_window.Present();
 		}
@@ -5114,7 +5114,7 @@ namespace Rylogic.Gui.WinForms
 				TextureScale = texture_scale;
 				sx = Math.Max(1, sx * TextureScale);
 				sy = Math.Max(1, sy * TextureScale);
-				Surf = new View3d.Texture(sx, sy, new View3d.TextureOptions(true) { Filter = View3d.EFilter.D3D11_FILTER_MIN_MAG_MIP_LINEAR, DbgName = dbg_name });// D3D11_FILTER_ANISOTROPIC});
+				Surf = new View3d.Texture(sx, sy, View3d.TextureOptions.GdiCompat(dbg_name: dbg_name));// D3D11_FILTER_ANISOTROPIC});
 			}
 			public Surface(XElement node)
 			{
@@ -5122,7 +5122,7 @@ namespace Rylogic.Gui.WinForms
 				var sz = node.Element(XmlTag.Size).As<v2>();
 				var sx = Math.Max(1, (uint)(sz.x + 0.5f));
 				var sy = Math.Max(1, (uint)(sz.y + 0.5f));
-				Surf = new View3d.Texture(sx, sy, new View3d.TextureOptions(true) { Filter = View3d.EFilter.D3D11_FILTER_MIN_MAG_MIP_LINEAR });// D3D11_FILTER_ANISOTROPIC});
+				Surf = new View3d.Texture(sx, sy, View3d.TextureOptions.GdiCompat());// D3D11_FILTER_ANISOTROPIC});
 			}
 			public void Dispose()
 			{

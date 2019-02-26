@@ -70,7 +70,11 @@ namespace pr
 			v2 Dpi() const
 			{
 				// Don't cache the DPI value. It can change at any point.
+				#if (WINVER >= 0x0605)
 				auto dpi = m_hwnd != nullptr ? (float)GetDpiForWindow(m_hwnd) : (float)GetDpiForSystem();
+				#else
+				auto dpi = (float)96.0f;
+				#endif
 				return v2(dpi, dpi);
 			}
 
@@ -83,9 +87,6 @@ namespace pr
 			// Binds the render target and depth buffer to the OM
 			void RestoreRT();
 
-			// Draw text directly to the back buffer
-			void DrawString(wchar_t const* text, float x, float y);
-
 			// Binds the given render target and depth buffer views to the OM
 			void SetRT(ID3D11RenderTargetView* rtv, ID3D11DepthStencilView* dsv);
 
@@ -94,6 +95,12 @@ namespace pr
 			// 'depth_buffer' is an optional texture that will receive the depth information (can be null)
 			void SetRT(ID3D11Texture2D* render_target, ID3D11Texture2D* depth_buffer);
 
+			// Save the current render target as the main render target.
+			// Calling RestoreRT will restore this new main render target.
+			void SaveAsMainRT();
+
+			// Draw text directly to the back buffer
+			void DrawString(wchar_t const* text, float x, float y);
 
 			// Set the viewport to all of the render target
 			void RestoreFullViewport();
