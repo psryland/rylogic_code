@@ -143,7 +143,7 @@ namespace pr
 			{
 				Control::OnWindowPosChange(args);
 				if (!args.m_before && args.IsResize() && !args.Iconic())
-					View3D_SetRenderTargetSize(m_win, args.m_wp->cx, args.m_wp->cy);
+					View3D_BackBufferSizeSet(m_win, args.m_wp->cx, args.m_wp->cy);
 			}
 		};
 	}

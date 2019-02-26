@@ -13,10 +13,10 @@ namespace pr
 {
 	namespace rdr
 	{
-		Texture2D::Texture2D(TextureManager* mgr, RdrId id, ID3D11Texture2D* tex, SamplerDesc const& sam_desc, SortKeyId sort_id, bool has_alpha, char const* name)
-			:Texture2D(mgr, id, tex, nullptr, sam_desc, sort_id, has_alpha, name)
+		Texture2D::Texture2D(TextureManager* mgr, RdrId id, ID3D11Texture2D* tex, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name)
+			:Texture2D(mgr, id, tex, nullptr, sdesc, sort_id, has_alpha, name)
 		{}
-		Texture2D::Texture2D(TextureManager* mgr, RdrId id, ID3D11Texture2D* tex, ID3D11ShaderResourceView* srv, SamplerDesc const& sam_desc, SortKeyId sort_id, bool has_alpha, char const* name)
+		Texture2D::Texture2D(TextureManager* mgr, RdrId id, ID3D11Texture2D* tex, ID3D11ShaderResourceView* srv, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name)
 			:m_t2s(pr::m4x4Identity)
 			,m_tex(tex, true)
 			,m_srv(srv, true)
@@ -33,13 +33,62 @@ namespace pr
 				TextureDesc tdesc;
 				tex->GetDesc(&tdesc);
 
+				// If the texture can be a shader resource, create a shader resource view
+				if ((tdesc.BindFlags & D3D11_BIND_SHADER_RESOURCE) != 0)
+				{
+					ShaderResourceViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
+					srvdesc.Texture2D.MipLevels = tdesc.MipLevels;
+
+					Renderer::Lock lock(mgr->m_rdr);
+					pr::Throw(lock.D3DDevice()->CreateShaderResourceView(tex, &srvdesc, &m_srv.m_ptr));
+				}
+			}
+			SamDesc(sdesc);
+		}
+		Texture2D::Texture2D(TextureManager* mgr, RdrId id, IUnknown* shared_resource, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name)
+			:m_t2s(pr::m4x4Identity)
+			,m_tex()
+			,m_srv()
+			,m_samp()
+			,m_id(id == AutoId ? MakeId(this) : id)
+			,m_src_id()
+			,m_sort_id(sort_id)
+			,m_has_alpha(has_alpha)
+			,m_mgr(mgr)
+			,m_name(name ? name : "")
+		{
+			Renderer::Lock lock(m_mgr->m_rdr);
+
+			// Get the DXGI resource interface for the shared resource
+			D3DPtr<IDXGIResource> dxgi_resource;
+			pr::Throw(shared_resource->QueryInterface(__uuidof(IDXGIResource), (void**)&dxgi_resource.m_ptr));
+
+			// Get the handled of the shared resource so that we can open it with our d3d device
+			HANDLE shared_handle;
+			pr::Throw(dxgi_resource->GetSharedHandle(&shared_handle));
+
+			// Open the shared resource in our d3d device
+			D3DPtr<IUnknown> resource;
+			pr::Throw(lock.D3DDevice()->OpenSharedResource(shared_handle, __uuidof(ID3D11Resource), (void**)&resource.m_ptr));
+
+			// Query the texture interface from the resource
+			pr::Throw(resource->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&m_tex.m_ptr));
+
+			// Read the properties of the texture
+			D3D11_TEXTURE2D_DESC tdesc;
+			m_tex->GetDesc(&tdesc);
+
+			// If the texture was created with shader binding, get the srv
+			// If the texture can be a shader resource, create a shader resource view
+			if ((tdesc.BindFlags & D3D11_BIND_SHADER_RESOURCE) != 0)
+			{
 				ShaderResourceViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
 				srvdesc.Texture2D.MipLevels = tdesc.MipLevels;
-
-				Renderer::Lock lock(mgr->m_rdr);
-				pr::Throw(lock.D3DDevice()->CreateShaderResourceView(tex, &srvdesc, &m_srv.m_ptr));
+				pr::Throw(lock.D3DDevice()->CreateShaderResourceView(m_tex.get(), &srvdesc, &m_srv.m_ptr));
 			}
-			SamDesc(sam_desc);
+
+			// Save the sampler description
+			SamDesc(sdesc);
 		}
 		Texture2D::Texture2D(TextureManager* mgr, RdrId id, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name, ShaderResourceViewDesc const* srvdesc)
 			:m_t2s(pr::m4x4Identity)
@@ -114,19 +163,28 @@ namespace pr
 					scratch.InitializeFromImage(img, false);
 				}
 
+				// Create the texture with the initialisation data
 				D3DPtr<ID3D11Resource> res;
 				pr::Throw(DirectX::CreateTexture(device, scratch.GetImages(), scratch.GetImageCount(), scratch.GetMetadata(), &res.m_ptr));
 				pr::Throw(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&tex.m_ptr));
 				
-				if (srvdesc)
-					pr::Throw(device->CreateShaderResourceView(tex.m_ptr, srvdesc, &srv.m_ptr));
-				else
-					pr::Throw(DirectX::CreateShaderResourceView(device, scratch.GetImages(), scratch.GetImageCount(), scratch.GetMetadata(), &srv.m_ptr));
+				// If the texture is to be used in shaders, create a SRV
+				if ((tdesc.BindFlags & D3D11_BIND_SHADER_RESOURCE) != 0)
+				{
+					if (srvdesc)
+						pr::Throw(device->CreateShaderResourceView(tex.m_ptr, srvdesc, &srv.m_ptr));
+					else
+						pr::Throw(DirectX::CreateShaderResourceView(device, scratch.GetImages(), scratch.GetImageCount(), scratch.GetMetadata(), &srv.m_ptr));
+				}
 			}
 			else
 			{
+				// Create an uninitialised texture
 				pr::Throw(device->CreateTexture2D(&tdesc, nullptr, &tex.m_ptr));
-				pr::Throw(device->CreateShaderResourceView(tex.m_ptr, srvdesc, &srv.m_ptr));
+				
+				// If the texture is to be used in shaders, create a SRV
+				if ((tdesc.BindFlags & D3D11_BIND_SHADER_RESOURCE) != 0)
+					pr::Throw(device->CreateShaderResourceView(tex.m_ptr, srvdesc, &srv.m_ptr));
 			}
 
 			// Copy the surface data from the existing texture
@@ -241,15 +299,16 @@ namespace pr
 		{
 			Renderer::Lock lock(m_mgr->m_rdr); 
 			auto surf = GetSurface();
-			auto d2dfactory = lock.D2DFactory();
 
 			// Create render target properties
 			auto props = D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_DEFAULT, D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_PREMULTIPLIED));
-			d2dfactory->GetDesktopDpi(&props.dpiX, &props.dpiY);
+			auto dpi = m_mgr->m_rdr.Dpi();
+			props.dpiX = dpi.x;
+			props.dpiY = dpi.y;
 
 			// Create a D2D render target which can draw into our off screen D3D surface.
-			// Given that we use a constant size for the texture, we fix the DPI at 96.
 			D3DPtr<ID2D1RenderTarget> rt;
+			auto d2dfactory = lock.D2DFactory();
 			pr::Throw(d2dfactory->CreateDxgiSurfaceRenderTarget(surf.m_ptr, props, &rt.m_ptr));
 			return rt;
 		}
@@ -261,7 +320,6 @@ namespace pr
 			auto surf = GetSurface();
 			auto d3d_device = lock.D3DDevice();
 			auto d2d_device = lock.D2DDevice();
-			auto d2dfactory = lock.D2DFactory();
 
 			// Get the DXGI Device from the d3d device
 			D3DPtr<IDXGIDevice> dxgi_device;
@@ -274,7 +332,9 @@ namespace pr
 			// Create a bitmap wrapper for 'surf'
 			D3DPtr<ID2D1Bitmap1> target;
 			auto bp = D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_PREMULTIPLIED));
-			d2dfactory->GetDesktopDpi(&bp.dpiX, &bp.dpiY);
+			auto dpi = m_mgr->m_rdr.Dpi();
+			bp.dpiX = dpi.x;
+			bp.dpiY = dpi.y;
 			pr::Throw(d2d_dc->CreateBitmapFromDxgiSurface(surf.m_ptr, bp, &target.m_ptr));
 			
 			// Set the render target

@@ -54,7 +54,7 @@ namespace pr
 			,m_eh_resize()
 			,m_gdi_dc_ref_count()
 		{
-			m_eh_resize = m_rdr.RenderTargetSizeChanged += [this](Window&,RenderTargetSizeChangedEventArgs const&)
+			m_eh_resize = m_rdr.BackBufferSizeChanged += [this](Window&,BackBufferSizeChangedEventArgs const&)
 			{
 				PR_ASSERT(PR_DBG_RDR, m_gdi_dc_ref_count == 0, "Outstanding DC references during resize");
 			};
@@ -164,6 +164,26 @@ namespace pr
 
 			// Add the texture instance to the lookup table
 			AddLookup(m_lookup_tex, inst->m_id, inst.m_ptr);
+			return inst;
+		}
+
+		// Create a new texture instance that wraps a shared texture resource.
+		// 'shared_resource' is a resource created on another d3d device (possible dx9,dx10,etc).
+		Texture2DPtr TextureManager::CreateTexture2D(RdrId id, IUnknown* shared_resource, SamplerDesc const& sdesc, bool has_alpha, char const* name)
+		{
+			Renderer::Lock lock(m_rdr);
+
+			// Check whether 'id' already exists, if so, throw.
+			if (id != AutoId && m_lookup_tex.find(id) != end(m_lookup_tex))
+				throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Texture Id '%d' is already in use", id));
+
+			// Allocate a new texture instance and wrap the shared resource
+			SortKeyId sort_id = m_lookup_tex.size() % SortKey::MaxTextureId;
+			Texture2DPtr inst(m_alex_tex2d.New(this, id, shared_resource, sdesc, sort_id, has_alpha, name), true);
+			assert(m_dbg_mem_tex2d.add(inst.get()));
+
+			// Add the texture instance to the lookup table
+			AddLookup(m_lookup_tex, inst->m_id, inst.get());
 			return inst;
 		}
 

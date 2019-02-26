@@ -17,7 +17,7 @@ namespace pr
 			,m_mode(client_area)
 			,m_multisamp(4)
 			,m_buffer_count(2)
-			,m_swap_effect(DXGI_SWAP_EFFECT_DISCARD)// DXGI_SWAP_EFFECT_SEQUENTIAL <- cannot use with multi-sampling
+			,m_swap_effect(DXGI_SWAP_EFFECT_FLIP_DISCARD)// DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL <- cannot use with multi-sampling
 			,m_swap_chain_flags(DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH|(gdi_compatible_bb ? DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE : 0))
 			,m_depth_format(DXGI_FORMAT_D24_UNORM_S8_UINT)
 			,m_usage(DXGI_USAGE_RENDER_TARGET_OUTPUT|DXGI_USAGE_SHADER_INPUT)
@@ -40,8 +40,8 @@ namespace pr
 		Window::Window(Renderer& rdr, WndSettings const& settings)
 			:m_rdr(&rdr)
 			,m_hwnd(settings.m_hwnd)
-			,m_multisamp(!AllSet(rdr.Settings().m_device_layers, D3D11_CREATE_DEVICE_DEBUG) ? settings.m_multisamp : pr::rdr::MultiSamp()) // Disable multi-sampling if debug is enabled
 			,m_db_format(settings.m_depth_format)
+			,m_multisamp(!AllSet(rdr.Settings().m_device_layers, D3D11_CREATE_DEVICE_DEBUG) ? settings.m_multisamp : pr::rdr::MultiSamp()) // Disable multi-sampling if debug is enabled
 			,m_swap_chain_flags(settings.m_swap_chain_flags)
 			,m_vsync(settings.m_vsync)
 			,m_swap_chain()
@@ -80,23 +80,28 @@ namespace pr
 				pr::Throw(dxgi_device->GetParent(__uuidof(IDXGIAdapter), (void**)&adapter.m_ptr));
 				pr::Throw(adapter->GetParent(__uuidof(IDXGIFactory), (void **)&factory.m_ptr));
 
-				// Uses the flag 'DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE' to enable an application to
-				// render using GDI on a swap chain or a surface. This will allow the application
-				// to call IDXGISurface1::GetDC on the 0th back buffer or a surface.
-				DXGI_SWAP_CHAIN_DESC sd = {};
-				sd.BufferCount  = settings.m_buffer_count;
-				sd.BufferDesc   = settings.m_mode;
-				sd.SampleDesc   = m_multisamp;
-				sd.BufferUsage  = settings.m_usage;
-				sd.OutputWindow = settings.m_hwnd;
-				sd.Windowed     = settings.m_windowed;
-				sd.SwapEffect   = settings.m_swap_effect;
-				sd.Flags        = settings.m_swap_chain_flags;
-				pr::Throw(factory->CreateSwapChain(device, &sd, &m_swap_chain.m_ptr));
-				PR_EXPAND(PR_DBG_RDR, NameResource(m_swap_chain.get(), pr::FmtS("swap chain")));
+				// Creating a device with hwnd == nullptr is allowed if you only want to render to 
+				// off-screen render targets. If there's no window handle, don't create a swap chain
+				if (settings.m_hwnd != 0)
+				{
+					// Uses the flag 'DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE' to enable an application to
+					// render using GDI on a swap chain or a surface. This will allow the application
+					// to call IDXGISurface1::GetDC on the 0th back buffer or a surface.
+					DXGI_SWAP_CHAIN_DESC sd = {};
+					sd.BufferCount  = settings.m_buffer_count;
+					sd.BufferDesc   = settings.m_mode;
+					sd.SampleDesc   = m_multisamp;
+					sd.BufferUsage  = settings.m_usage;
+					sd.OutputWindow = settings.m_hwnd;
+					sd.Windowed     = settings.m_windowed;
+					sd.SwapEffect   = settings.m_swap_effect;
+					sd.Flags        = settings.m_swap_chain_flags;
+					pr::Throw(factory->CreateSwapChain(device, &sd, &m_swap_chain.m_ptr));
+					PR_EXPAND(PR_DBG_RDR, NameResource(m_swap_chain.get(), pr::FmtS("swap chain")));
 
-				// Make DXGI monitor for Alt-Enter and switch between windowed and full screen
-				pr::Throw(factory->MakeWindowAssociation(settings.m_hwnd, settings.m_allow_alt_enter ? 0 : DXGI_MWA_NO_ALT_ENTER));
+					// Make DXGI monitor for Alt-Enter and switch between windowed and full screen
+					pr::Throw(factory->MakeWindowAssociation(settings.m_hwnd, settings.m_allow_alt_enter ? 0 : DXGI_MWA_NO_ALT_ENTER));
+				}
 
 				// If D2D is enabled, Connect D2D to the same render target as D3D
 				if (AllSet(m_swap_chain_flags, DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE))
@@ -175,6 +180,11 @@ namespace pr
 		// Create a render target from the swap-chain
 		void Window::InitRT()
 		{
+			// If the renderer has been created without a window handle, there will be no swap chain.
+			// In this case the caller will be setting up a render target to an off-screen buffer
+			if (m_swap_chain == nullptr)
+				return;
+
 			Renderer::Lock lock(*m_rdr);
 			auto device = lock.D3DDevice();
 
@@ -230,7 +240,9 @@ namespace pr
 
 				// Create bitmap properties for the bitmap view of the back buffer
 				auto bp = D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE));
-				lock.D2DFactory()->GetDesktopDpi(&bp.dpiX, &bp.dpiY);
+				auto dpi = Dpi();
+				bp.dpiX = dpi.x;
+				bp.dpiY = dpi.y;
 
 				// Wrap the back buffer as a bitmap for D2D
 				D3DPtr<ID2D1Bitmap1> d2d_render_target;
@@ -283,7 +295,7 @@ namespace pr
 			lock.ImmediateDC()->OMSetRenderTargets(1, targets, dsv);
 		}
 
-		// Render this window into 'render_target;
+		// Render this window into 'render_target'
 		// 'render_target' is the texture that is rendered onto
 		// 'depth_buffer' is an optional texture that will receive the depth information (can be null)
 		// 'depth_buffer' will be created if not provided.
@@ -292,8 +304,9 @@ namespace pr
 			Renderer::Lock lock(*m_rdr);
 
 			// Get the description of the render target texture
-			TextureDesc rtdesc;
-			render_target->GetDesc(&rtdesc);
+			TextureDesc tdesc;
+			render_target->GetDesc(&tdesc);
+			PR_ASSERT(PR_DBG_RDR, (tdesc.BindFlags & D3D11_BIND_RENDER_TARGET) != 0, "This texture is not a render target");
 
 			// Get a render target view of the render target texture
 			D3DPtr<ID3D11RenderTargetView> rtv;
@@ -304,10 +317,10 @@ namespace pr
 			if (depth_buffer == nullptr)
 			{
 				TextureDesc dbdesc;
-				dbdesc.Width = rtdesc.Width;
-				dbdesc.Height = rtdesc.Height;
+				dbdesc.Width = tdesc.Width;
+				dbdesc.Height = tdesc.Height;
 				dbdesc.Format = m_db_format;
-				dbdesc.SampleDesc = rtdesc.SampleDesc;
+				dbdesc.SampleDesc = tdesc.SampleDesc;
 				dbdesc.Usage = D3D11_USAGE_DEFAULT;
 				dbdesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
 				dbdesc.CPUAccessFlags = 0;
@@ -328,7 +341,7 @@ namespace pr
 		void Window::RestoreFullViewport()
 		{
 			Renderer::Lock lock(*m_rdr);
-			auto sz = RenderTargetSize();
+			auto sz = BackBufferSize();
 			Viewport vp(float(sz.x), float(sz.y));
 			lock.ImmediateDC()->RSSetViewports(1, &vp);
 		}
@@ -411,26 +424,34 @@ namespace pr
 		// The display mode of the main render target
 		DXGI_FORMAT Window::DisplayFormat() const
 		{
+			if (m_swap_chain == nullptr)
+				return DXGI_FORMAT_UNKNOWN;
+			
 			DXGI_SWAP_CHAIN_DESC desc;
 			pr::Throw(m_swap_chain->GetDesc(&desc));
 			return desc.BufferDesc.Format;
 		}
 
 		// Returns the size of the render target
-		iv2 Window::RenderTargetSize() const
+		iv2 Window::BackBufferSize() const
 		{
+			// If we're rendering to a texture
+			if (m_swap_chain == nullptr)
+				return iv2Zero;
+
 			DXGI_SWAP_CHAIN_DESC desc;
 			Throw(m_swap_chain->GetDesc(&desc));
 			return iv2(desc.BufferDesc.Width, desc.BufferDesc.Height);
 		}
 
 		// Called when the window size changes (e.g. from a WM_SIZE message)
-		void Window::RenderTargetSize(iv2 const& size, bool force)
+		void Window::BackBufferSize(iv2 const& size, bool force)
 		{
 			PR_ASSERT(PR_DBG_RDR, size.x >= 0 && size.y >= 0, "Size should be positive definite");
+			PR_ASSERT(PR_DBG_RDR, m_swap_chain != nullptr, "Do not set the RenderTargetSize when in off-screen only mode (i.e. not swap chain)");
 
 			// Ignore resizes that aren't changes in size
-			auto area = RenderTargetSize();
+			auto area = BackBufferSize();
 			if (size == area && !force)
 				return;
 
@@ -513,7 +534,7 @@ namespace pr
 
 			// Notify that a resize of the swap chain is about to happen.
 			// Receivers need to ensure they don't have any outstanding references to the swap chain resources
-			m_rdr->RenderTargetSizeChanged(*this, RenderTargetSizeChangedEventArgs(RenderTargetSize(), false));
+			m_rdr->BackBufferSizeChanged(*this, BackBufferSizeChangedEventArgs(BackBufferSize(), false));
 
 			// Drop the render targets from the immediate context and D2D
 			if (m_d2d_dc != nullptr) m_d2d_dc->SetTarget(nullptr);
@@ -533,10 +554,9 @@ namespace pr
 
 			// Set up the render targets again
 			InitRT();
-			RestoreRT();
 
 			// Notify that the resize is done
-			m_rdr->RenderTargetSizeChanged(*this, RenderTargetSizeChangedEventArgs(m_dbg_area = RenderTargetSize(), true));
+			m_rdr->BackBufferSizeChanged(*this, BackBufferSizeChangedEventArgs(m_dbg_area = BackBufferSize(), true));
 		}
 
 		// Flip the scene to the display
@@ -559,7 +579,16 @@ namespace pr
 			// ^^ This means: Don't use calls to Present(?, DXGI_PRESENT_TEST) to test if the window is occluded,
 			// only use it after Present() has returned DXGI_STATUS_OCCLUDED.
 
-			HRESULT res = m_swap_chain->Present(m_vsync, m_idle ? DXGI_PRESENT_TEST : 0);
+			// If there is no swap chain, then we must be rendering to an off-screen texture.
+			// In that case, flush to the graphics card
+			if (m_swap_chain == nullptr)
+			{
+				Renderer::Lock lock(*m_rdr);
+				lock.ImmediateDC()->Flush();
+				return;
+			}
+
+			auto res = m_swap_chain->Present(m_vsync, m_idle ? DXGI_PRESENT_TEST : 0);
 			switch (res)
 			{
 			case S_OK:

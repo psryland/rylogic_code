@@ -602,15 +602,17 @@ extern "C"
 	VIEW3D_API void          __stdcall View3D_TextureReleaseDC            (View3DTexture tex);
 	VIEW3D_API void          __stdcall View3D_TextureResize               (View3DTexture tex, UINT32 width, UINT32 height, BOOL all_instances, BOOL preserve);
 	VIEW3D_API View3DTexture __stdcall View3D_TextureRenderTarget         (View3DWindow window);
+	VIEW3D_API View3DTexture __stdcall View3D_TextureFromShared           (IUnknown* shared_resource, View3DTextureOptions const& options);
 
 	// Rendering
 	VIEW3D_API void            __stdcall View3D_Invalidate          (View3DWindow window, BOOL erase);
 	VIEW3D_API void            __stdcall View3D_InvalidateRect      (View3DWindow window, RECT const* rect, BOOL erase);
 	VIEW3D_API void            __stdcall View3D_Render              (View3DWindow window);
 	VIEW3D_API void            __stdcall View3D_Present             (View3DWindow window);
-	VIEW3D_API void            __stdcall View3D_RenderTo            (View3DWindow window, View3DTexture render_target, View3DTexture depth_buffer);
-	VIEW3D_API void            __stdcall View3D_RenderTargetSize    (View3DWindow window, int& width, int& height);
-	VIEW3D_API void            __stdcall View3D_SetRenderTargetSize (View3DWindow window, int width, int height);
+	VIEW3D_API void            __stdcall View3D_RenderTargetRestore (View3DWindow window);
+	VIEW3D_API void            __stdcall View3D_RenderTargetSet     (View3DWindow window, View3DTexture render_target, View3DTexture depth_buffer);
+	VIEW3D_API void            __stdcall View3D_BackBufferSizeGet   (View3DWindow window, int& width, int& height);
+	VIEW3D_API void            __stdcall View3D_BackBufferSizeSet   (View3DWindow window, int width, int height);
 	VIEW3D_API View3DViewport  __stdcall View3D_Viewport            (View3DWindow window);
 	VIEW3D_API void            __stdcall View3D_SetViewport         (View3DWindow window, View3DViewport vp);
 	VIEW3D_API EView3DFillMode __stdcall View3D_FillModeGet         (View3DWindow window);
@@ -619,8 +621,8 @@ extern "C"
 	VIEW3D_API void            __stdcall View3D_CullModeSet         (View3DWindow window, EView3DCullMode mode);
 	VIEW3D_API BOOL            __stdcall View3D_Orthographic        (View3DWindow window);
 	VIEW3D_API void            __stdcall View3D_SetOrthographic     (View3DWindow window, BOOL render2d);
-	VIEW3D_API int             __stdcall View3D_BackgroundColour    (View3DWindow window);
-	VIEW3D_API void            __stdcall View3D_SetBackgroundColour (View3DWindow window, int aarrggbb);
+	VIEW3D_API unsigned int    __stdcall View3D_BackgroundColourGet (View3DWindow window);
+	VIEW3D_API void            __stdcall View3D_BackgroundColourSet (View3DWindow window, unsigned int aarrggbb);
 	VIEW3D_API int             __stdcall View3D_MultiSamplingGet    (View3DWindow window);
 	VIEW3D_API void            __stdcall View3D_MultiSamplingSet    (View3DWindow window, int multisampling);
 
@@ -651,7 +653,6 @@ extern "C"
 
 	// Miscellaneous
 	VIEW3D_API BOOL       __stdcall View3D_TranslateKey             (View3DWindow window, int key_code);
-	VIEW3D_API void       __stdcall View3D_RestoreMainRT            (View3DWindow window);
 	VIEW3D_API BOOL       __stdcall View3D_DepthBufferEnabledGet    (View3DWindow window);
 	VIEW3D_API void       __stdcall View3D_DepthBufferEnabledSet    (View3DWindow window, BOOL enabled);
 	VIEW3D_API BOOL       __stdcall View3D_FocusPointVisibleGet     (View3DWindow window);

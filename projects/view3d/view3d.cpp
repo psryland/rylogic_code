@@ -1976,6 +1976,26 @@ VIEW3D_API View3DTexture __stdcall View3D_TextureRenderTarget(View3DWindow windo
 	CatchAndReport(View3D_TextureResize, window, nullptr);
 }
 
+// Create a Texture instance from a shared d3d resource (created on a different d3d device)
+VIEW3D_API View3DTexture __stdcall View3D_TextureFromShared(IUnknown* shared_resource, View3DTextureOptions const& options)
+{
+	try
+	{
+		if (!shared_resource) throw std::exception("resource pointer is null");
+
+		DllLockGuard;
+
+		SamplerDesc sdesc;
+		sdesc.AddressU = options.m_addrU;
+		sdesc.AddressV = options.m_addrV;
+		sdesc.Filter = options.m_filter;
+
+		auto t = Dll().m_rdr.m_tex_mgr.CreateTexture2D(AutoId, shared_resource, sdesc, options.m_has_alpha != 0, options.m_dbg_name);
+		return t.release();
+	}
+	CatchAndReport(View3D_TextureFromExisting, , nullptr);
+}
+
 // Rendering ***************************************************************
 
 // Call InvalidateRect on the HWND associated with 'window'
@@ -2003,13 +2023,13 @@ VIEW3D_API void __stdcall View3D_Render(View3DWindow window)
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		window->m_wnd.RestoreRT();
 		window->Render();
 	}
 	CatchAndReport(View3D_Render, window,);
 }
 
 // Finish rendering with a back buffer flip
+// If rendering to a texture, this does a d3ddevice->Flush instead
 VIEW3D_API void __stdcall View3D_Present(View3DWindow window)
 {
 	try
@@ -2022,10 +2042,24 @@ VIEW3D_API void __stdcall View3D_Present(View3DWindow window)
 	CatchAndReport(View3D_Present, window,);
 }
 
+// Set the render target back to the main back buffer.
+// This needs to be called after 'View3D_RenderTargetSet' has been called to render to a texture
+VIEW3D_API void __stdcall View3D_RenderTargetRestore(View3DWindow window)
+{
+	try
+	{
+		if (window == nullptr) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_wnd.RestoreRT();
+	}
+	CatchAndReport(View3D_RenderTargetRestore, window,);
+}
+
 // Render a window into a texture
 // 'render_target' is the texture that is rendered onto
 // 'depth_buffer' is an optional texture that will receive the depth information (can be null)
-VIEW3D_API void __stdcall View3D_RenderTo(View3DWindow window, View3DTexture render_target, View3DTexture depth_buffer)
+VIEW3D_API void __stdcall View3D_RenderTargetSet(View3DWindow window, View3DTexture render_target, View3DTexture depth_buffer)
 {
 	try
 	{
@@ -2034,27 +2068,26 @@ VIEW3D_API void __stdcall View3D_RenderTo(View3DWindow window, View3DTexture ren
 
 		DllLockGuard;
 		window->m_wnd.SetRT(render_target->m_tex.get(), depth_buffer != nullptr ? depth_buffer->m_tex.get() : nullptr);
-		window->Render();
 	}
-	CatchAndReport(View3D_RenderTo, window,);
+	CatchAndReport(View3D_RenderTargetSet, window,);
 }
 
 // Get/Set the dimensions of the render target
 // In set, if 'width' and 'height' are zero, the RT is resized to the associated window automatically.
-VIEW3D_API void __stdcall View3D_RenderTargetSize(View3DWindow window, int& width, int& height)
+VIEW3D_API void __stdcall View3D_BackBufferSizeGet(View3DWindow window, int& width, int& height)
 {
 	try
 	{
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		auto area = window->m_wnd.RenderTargetSize();
+		auto area = window->m_wnd.BackBufferSize();
 		width     = area.x;
 		height    = area.y;
 	}
 	CatchAndReport(View3D_RenderTargetSize, window,);
 }
-VIEW3D_API void __stdcall View3D_SetRenderTargetSize(View3DWindow window, int width, int height)
+VIEW3D_API void __stdcall View3D_BackBufferSizeSet(View3DWindow window, int width, int height)
 {
 	try
 	{
@@ -2068,15 +2101,15 @@ VIEW3D_API void __stdcall View3D_SetRenderTargetSize(View3DWindow window, int wi
 		// After resize, the new aspect is: Aspect1 = scale * Width1 / Height1
 
 		// Save the current camera aspect ratio
-		auto old_size = window->m_wnd.RenderTargetSize();
+		auto old_size = window->m_wnd.BackBufferSize();
 		auto old_aspect = window->m_camera.Aspect();
 		auto scale = old_aspect * old_size.y / float(old_size.x);
 
 		// Resize the render target
-		window->m_wnd.RenderTargetSize(pr::iv2(width, height));
+		window->m_wnd.BackBufferSize(pr::iv2(width, height));
 
 		// Adjust the camera aspect ratio to preserve it
-		auto new_size = window->m_wnd.RenderTargetSize();
+		auto new_size = window->m_wnd.BackBufferSize();
 		auto new_aspect = (new_size.x == 0 || new_size.y == 0) ? 1.0f : new_size.x / float(new_size.y);
 		auto aspect = scale * new_aspect;
 
@@ -2196,18 +2229,18 @@ VIEW3D_API void __stdcall View3D_SetOrthographic(View3DWindow window, BOOL rende
 }
 
 // Get/Set the background colour for a window
-VIEW3D_API int __stdcall View3D_BackgroundColour(View3DWindow window)
+VIEW3D_API unsigned int __stdcall View3D_BackgroundColourGet(View3DWindow window)
 {
 	try
 	{
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		return window->m_background_colour;
+		return window->m_background_colour.argb;
 	}
-	CatchAndReport(View3D_BackgroundColour, window, 0);
+	CatchAndReport(View3D_BackgroundColourGet, window, 0);
 }
-VIEW3D_API void __stdcall View3D_SetBackgroundColour(View3DWindow window, int aarrggbb)
+VIEW3D_API void __stdcall View3D_BackgroundColourSet(View3DWindow window, unsigned int aarrggbb)
 {
 	try
 	{
@@ -2216,7 +2249,7 @@ VIEW3D_API void __stdcall View3D_SetBackgroundColour(View3DWindow window, int aa
 		DllLockGuard;
 		window->m_background_colour = pr::Colour32(aarrggbb);
 	}
-	CatchAndReport(View3D_SetBackgroundColour, window,);
+	CatchAndReport(View3D_BackgroundColourSet, window,);
 }
 
 // Get/Set the multi-sampling mode for a window
@@ -2538,19 +2571,6 @@ VIEW3D_API BOOL __stdcall View3D_TranslateKey(View3DWindow window, int key_code)
 		return FALSE;
 	}
 	CatchAndReport(View3D_TranslateKey, window, FALSE);
-}
-
-// Restore the main render target and depth buffer
-VIEW3D_API void __stdcall View3D_RestoreMainRT(View3DWindow window)
-{
-	try
-	{
-		if (!window) throw std::exception("window is null");
-
-		DllLockGuard;
-		window->m_wnd.RestoreRT();
-	}
-	CatchAndReport(View3D_RestoreMainRT, window,);
 }
 
 // Returns true if the depth buffer is enabled

@@ -16,11 +16,10 @@ namespace view3d
 	// Default window construction settings
 	WndSettings Window::Settings(HWND hwnd, View3DWindowOptions const& opts)
 	{
-		if (hwnd == 0)
-			throw pr::Exception<HRESULT>(E_FAIL, "Provided window handle is null");
-
-		RECT rect;
-		::GetClientRect(hwnd, &rect);
+		// Null hwnd is allowed when off-screen only rendering
+		auto rect = RECT{};
+		if (hwnd != 0)
+			::GetClientRect(hwnd, &rect);
 
 		auto settings        = pr::rdr::WndSettings(hwnd, true, opts.m_gdi_compatible_backbuffer != 0, pr::To<pr::iv2>(rect));
 		settings.m_multisamp = pr::rdr::MultiSamp(opts.m_multisampling);
@@ -79,8 +78,9 @@ namespace view3d
 				OnError += pr::StaticCallBack(opts.m_error_cb, opts.m_error_cb_ctx);
 
 			// Set the initial aspect ratio
-			pr::iv2 client_area = m_wnd.RenderTargetSize();
-			m_camera.Aspect(client_area.x / float(client_area.y));
+			auto client_area = m_wnd.BackBufferSize();
+			if (client_area != iv2Zero)
+				m_camera.Aspect(client_area.x / float(client_area.y));
 
 			// The light for the scene
 			m_light.m_type           = pr::rdr::ELight::Directional;

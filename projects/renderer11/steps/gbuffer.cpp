@@ -34,7 +34,7 @@ namespace pr
 			InitRT(true);
 
 			// Watch for renderer target size changes
-			m_eh_resize = m_scene->m_wnd->m_rdr->RenderTargetSizeChanged += [this](Window& wnd, RenderTargetSizeChangedEventArgs const& args)
+			m_eh_resize = m_scene->m_wnd->m_rdr->BackBufferSizeChanged += [this](Window& wnd, BackBufferSizeChangedEventArgs const& args)
 			{
 				// Recreate the g-buffer on resize
 				if (&wnd == m_scene->m_wnd)
@@ -61,7 +61,7 @@ namespace pr
 
 			Renderer::Lock lock(*m_scene->m_wnd->m_rdr);
 			auto device = lock.D3DDevice();
-			auto size = m_scene->m_wnd->RenderTargetSize();
+			auto size = m_scene->m_wnd->BackBufferSize();
 
 			// Create texture buffers that we will use as the render targets in the GBuffer
 			TextureDesc tdesc;

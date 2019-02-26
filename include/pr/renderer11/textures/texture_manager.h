@@ -72,6 +72,10 @@ namespace pr
 			// 'sam_desc' is the sampler state description to use on the texture
 			Texture2DPtr CreateTexture2D(RdrId id, ID3D11Texture2D* existing_tex, ID3D11ShaderResourceView* existing_srv, SamplerDesc const& sam_desc, bool has_alpha, char const* name);
 
+			// Create a new texture instance that wraps a shared texture resource.
+			// 'shared_resource' is a resource created on another d3d device (possibly dx9,dx10,etc).
+			Texture2DPtr CreateTexture2D(RdrId id, IUnknown* shared_resource, SamplerDesc const& sdesc, bool has_alpha, char const* name);
+
 			// Create a GDI texture instance
 			// 'id' is the id to assign to the created texture instance. Use 'AutoId' to auto generate an id
 			// 'src' is the initialisation data

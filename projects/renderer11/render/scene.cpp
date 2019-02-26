@@ -22,7 +22,7 @@ namespace pr
 		Scene::Scene(Window& wnd, std::initializer_list<ERenderStep> rsteps, SceneView const& view)
 			:m_wnd(&wnd)
 			,m_view(view)
-			,m_viewport(wnd.RenderTargetSize())
+			,m_viewport(wnd.BackBufferSize())
 			,m_instances()
 			,m_render_steps()
 			,m_ht_immediate()
@@ -42,8 +42,8 @@ namespace pr
 			if (wnd.m_multisamp.Count != 1)
 				m_rsb.Set(ERS::MultisampleEnable, TRUE);
 
-			// Sign up for render target resize events
-			m_eh_resize = wnd.m_rdr->RenderTargetSizeChanged += std::bind(&Scene::HandleRenderTargetSizeChanged, this, _1, _2);
+			// Sign up for back buffer resize events
+			m_eh_resize = wnd.m_rdr->BackBufferSizeChanged += std::bind(&Scene::HandleBackBufferSizeChanged, this, _1, _2);
 		}
 
 		// Access the renderer
@@ -231,7 +231,7 @@ namespace pr
 		}
 
 		// Resize the viewport on back buffer resize
-		void Scene::HandleRenderTargetSizeChanged(Window& wnd, RenderTargetSizeChangedEventArgs const& args)
+		void Scene::HandleBackBufferSizeChanged(Window& wnd, BackBufferSizeChangedEventArgs const& args)
 		{
 			if (args.m_done && &wnd == m_wnd)
 			{

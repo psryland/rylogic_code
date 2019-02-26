@@ -62,7 +62,6 @@ namespace pr
 			D3DPtr<ID2D1Factory1>        m_d2dfactory;
 			D3DPtr<IDWriteFactory>       m_dwrite;
 			D3DPtr<ID2D1Device>          m_d2d_device;
-			pr::v2                       m_dpi_scale;
 
 			RdrState(RdrSettings const& settings);
 			~RdrState();
@@ -146,13 +145,15 @@ namespace pr
 		// Return the current desktop DPI
 		v2 Dpi() const
 		{
-			return m_dpi_scale * 96.0f;
+			// Don't cache the DPI value
+			auto dpi = (float)GetDpiForSystem();
+			return v2(dpi, dpi);
 		}
 
 		// Return the scaling factors to convert DIP to physical pixels
 		v2 DpiScale() const
 		{
-			return m_dpi_scale;
+			return Dpi() / 96.0f;
 		}
 
 		// Returns an allocator object suitable for allocating instances of 'T'
@@ -176,7 +177,7 @@ namespace pr
 		// Raised when a window resizes it's back buffer.
 		// This is provided on the renderer so that other managers can receive notification
 		// without having to sign up to ever window that gets created.
-		pr::EventHandler<rdr::Window&, rdr::RenderTargetSizeChangedEventArgs> RenderTargetSizeChanged;
+		pr::EventHandler<rdr::Window&, rdr::BackBufferSizeChangedEventArgs> BackBufferSizeChanged;
 
 		// Run the given function on the Main/GUI thread
 		// 'policy = std::launch::deferred' means the function is executed by the main thread during 'RunTasks'

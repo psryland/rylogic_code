@@ -127,7 +127,7 @@ namespace pr
 		private:
 
 			// Resize the viewport on back buffer resize
-			void HandleRenderTargetSizeChanged(Window& wnd, RenderTargetSizeChangedEventArgs const& evt);
+			void HandleBackBufferSizeChanged(Window& wnd, BackBufferSizeChangedEventArgs const& evt);
 		};
 	}
 }

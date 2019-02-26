@@ -66,6 +66,17 @@ namespace pr
 			DepthStateManager& ds_mgr() const;
 			RasterStateManager& rs_mgr() const;
 
+			// Return the current DPI for this window
+			v2 Dpi() const
+			{
+				// Don't cache the DPI value. It can change at any point.
+				auto dpi = m_hwnd != nullptr ? (float)GetDpiForWindow(m_hwnd) : (float)GetDpiForSystem();
+				return v2(dpi, dpi);
+			}
+
+			// Return the scaling factors to convert DIP to physical pixels
+			v2 DpiScale() const { return Dpi() / 96.0f; }
+
 			// Create the render target and depth buffer
 			void InitRT();
 
@@ -83,6 +94,7 @@ namespace pr
 			// 'depth_buffer' is an optional texture that will receive the depth information (can be null)
 			void SetRT(ID3D11Texture2D* render_target, ID3D11Texture2D* depth_buffer);
 
+
 			// Set the viewport to all of the render target
 			void RestoreFullViewport();
 
@@ -95,11 +107,11 @@ namespace pr
 			// The display mode of the main render target
 			DXGI_FORMAT DisplayFormat() const;
 
-			// Get/Set the size of the render target
+			// Get/Set the size of the back buffer (main render target)
 			// Passing iv2.Zero will cause the RT to get its size from the associated window
 			// Call when the window size changes (e.g. from a WM_SIZE message)
-			pr::iv2 RenderTargetSize() const;
-			void RenderTargetSize(pr::iv2 const& size, bool force = false);
+			pr::iv2 BackBufferSize() const;
+			void BackBufferSize(pr::iv2 const& size, bool force = false);
 
 			// Get/Set the multi-sampling used
 			// Changing the multi-sampling mode is a bit like resizing the back buffer
