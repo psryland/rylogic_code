@@ -39,15 +39,18 @@
     <Reference Include="Microsoft.Toolkit.Wpf.UI.Controls.WebView, Version=5.0.0.0, Culture=neutral, PublicKeyToken=4aff67a105548ee2, processorArchitecture=MSIL">
       <HintPath>..\..\build\packages\Microsoft.Toolkit.Wpf.UI.Controls.WebView.5.0.1\lib\net462\Microsoft.Toolkit.Wpf.UI.Controls.WebView.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.Wpf.Interop.DirectX, Version=0.9.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=AMD64">
+      <HintPath>..\..\build\packages\Microsoft.Wpf.Interop.DirectX-x64.0.9.0-beta-22856\lib\net45\Microsoft.Wpf.Interop.DirectX.dll</HintPath>
+    </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
     <Reference Include="System.Design" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Net" />
     <Reference Include="System.Net.Http, Version=4.2.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
-    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xaml" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Xml" />
@@ -63,11 +66,35 @@
     <Compile Include="src\Converters\ColourToBrush.cs" />
     <Compile Include="src\Converters\ValueConverter.cs" />
     <Compile Include="src\Converters\NullableToDefault.cs" />
+    <Compile Include="src\Extn\UIElement.cs" />
     <Compile Include="src\Extn\Dispatcher.cs" />
-    <Compile Include="src\Extn\Extensions.cs" />
+    <Compile Include="src\Extn\Drawing.cs" />
     <Compile Include="src\Extn\Xml.cs" />
+    <Compile Include="src\Gui\ChartControl\ChartDims.cs" />
+    <Compile Include="src\Gui\ChartControl\ChartFrame.cs" />
+    <Compile Include="src\Gui\ChartControl\ChartPanel.cs" />
+    <Compile Include="src\Gui\ChartControl\ChartTools.cs" />
+    <Compile Include="src\Gui\ChartControl\ContextMenu.cs" />
+    <Compile Include="src\Gui\ChartControl\EAxis.cs" />
+    <Compile Include="src\Gui\ChartControl\EChangeType.cs" />
+    <Compile Include="src\Gui\ChartControl\Element.cs" />
+    <Compile Include="src\Gui\ChartControl\EMoveType.cs" />
+    <Compile Include="src\Gui\ChartControl\ENavMode.cs" />
+    <Compile Include="src\Gui\ChartControl\EventArgs.cs" />
+    <Compile Include="src\Gui\ChartControl\EZone.cs" />
+    <Compile Include="src\Gui\ChartControl\HitTestResult.cs" />
+    <Compile Include="src\Gui\ChartControl\MouseOps.cs" />
+    <Compile Include="src\Gui\ChartControl\Navigation.cs" />
+    <Compile Include="src\Gui\ChartControl\RangeData.cs" />
+    <Compile Include="src\Gui\ChartControl\RdrOptions.cs" />
+    <Compile Include="src\Gui\ChartControl\RdrOptionsUI.cs" />
+    <Compile Include="src\Gui\ChartControl\ChartControl.xaml.cs">
+      <DependentUpon>ChartControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Gui\ChartControl\ChartDataLegend.cs" />
+    <Compile Include="src\Gui\ChartControl\ChartDataSeries.cs" />
     <Compile Include="src\Gui\ColourWheel.cs" />
-    <Compile Include="src\Gui\DockContainer.xaml.cs">
+    <Compile Include="src\Gui\DockContainer\DockContainer.xaml.cs">
       <DependentUpon>DockContainer.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\Gui\DockContainer\ActiveContentManager.cs" />
@@ -101,7 +128,7 @@
     <Compile Include="src\Gui\DockPanelSplitter.xaml.cs">
       <DependentUpon>DockPanelSplitter.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\Gui\Gui.cs" />
+    <Compile Include="src\Extn\Gui.cs" />
     <Compile Include="src\Gui\MsgBox.xaml.cs">
       <DependentUpon>MsgBox.xaml</DependentUpon>
     </Compile>
@@ -111,11 +138,15 @@
     <Compile Include="src\Gui\RichTextBox.cs" />
     <Compile Include="src\Gui\ToolBar.cs" />
     <Compile Include="src\Gui\TriggerTracing.cs" />
+    <Compile Include="src\Gui\View3d\View3dControl.xaml.cs">
+      <DependentUpon>View3dControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\Plugin\Extensions.cs" />
     <Compile Include="src\Program.cs" />
     <Compile Include="src\Utility\Converters.cs" />
     <Compile Include="src\Utility\MethodBinding.cs" />
     <Compile Include="src\Utility\RecentFiles.cs" />
+    <Compile Include="src\Utility\WPFUtil.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj">
@@ -132,7 +163,11 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Page Include="src\Gui\DockContainer.xaml">
+    <Page Include="src\Gui\ChartControl\ChartControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Gui\DockContainer\DockContainer.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -171,6 +206,10 @@
     <Page Include="src\Gui\PatternEditor.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="src\Gui\View3d\View3dControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Themes\Generic.xaml">
       <Generator>MSBuild:Compile</Generator>

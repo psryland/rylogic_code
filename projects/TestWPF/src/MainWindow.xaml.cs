@@ -36,6 +36,10 @@ namespace TestWPF
 			{
 				Close();
 			};
+			m_menu_tests_chart.Click += (s, a) =>
+			{
+				new ChartUI().Show();
+			};
 			m_menu_tests_diagram.Click += (s, a) =>
 			{
 				new DiagramUI().Show();

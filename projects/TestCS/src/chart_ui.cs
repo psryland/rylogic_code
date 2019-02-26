@@ -12,13 +12,16 @@ namespace TestCS
 	{
 		private ChartControl m_chart;
 		private ChartDataSeries m_series;
+		private ChartDataLegend m_legend;
 		private View3d.Object m_obj0;
 
 		public ChartUI()
 		{
 			InitializeComponent();
-			m_chart = Controls.Add2(new ChartControl { Dock = DockStyle.Fill });
+			m_chart = Controls.Add2(new ChartControl { Dock = DockStyle.Fill, Title = "My Chart" });
 			m_chart.Options.Orthographic = true;
+			m_chart.XAxis.Label = "X Axis";
+			m_chart.YAxis.Label = "Y Axis";
 
 			m_obj0 = new View3d.Object(
 				"test_object", 0xFFFFFFFF, 5, 18, 1,
@@ -54,11 +57,15 @@ namespace TestCS
 				for (int i = 0; i != 100000; ++i)
 					lk.Add(new ChartDataSeries.Pt(0.01*i, Math.Sin(0.01*i*Math_.Tau)));
 			}
+			m_series.Options.Colour = Colour32.Blue;
 			m_series.Options.PlotType = ChartDataSeries.EPlotType.Bar;
 			m_series.Options.PointStyle = ChartDataSeries.EPointStyle.Triangle;
 			m_series.Options.PointSize = 50f;
 			m_series.Options.LineWidth = 3f;
 			m_series.Chart = m_chart;
+
+			m_legend = new ChartDataLegend();
+			m_chart.Elements.Add(m_legend);
 		}
 		protected override void Dispose(bool disposing)
 		{

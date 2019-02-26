@@ -1,0 +1,58 @@
+﻿<Canvas
+	x:Class="Rylogic.Gui.WPF.ChartControl"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+	xmlns:gui2="clr-namespace:Rylogic.Gui.WPF"
+	xmlns:local="clr-namespace:Rylogic.Gui.WPF.ChartDetail"
+	mc:Ignorable="d" 
+	d:DesignHeight="450" d:DesignWidth="800"
+	x:Name="m_root"
+	>
+	<!-- Title and axis labels 
+	-->
+	<DockPanel
+		Width="{Binding ActualWidth, ElementName=m_root}"
+		Height="{Binding ActualHeight, ElementName=m_root}"
+		LastChildFill="False"
+		Visibility="Collapsed"
+		>
+		<Label
+			x:Name="m_lbl_title"
+			DockPanel.Dock="Top"
+			Content="Chart Title"
+			HorizontalAlignment="Center"
+			FontWeight="Bold"
+			/>
+		<Label
+			x:Name="m_lbl_xaxis"
+			DockPanel.Dock="Bottom"
+			Content="X Axis"
+			HorizontalAlignment="Center"
+			FontWeight="Bold"
+			/>
+		<Label
+			x:Name="m_lbl_yaxis"
+			DockPanel.Dock="Left"
+			Content="Y Axis"
+			VerticalAlignment="Center"
+			RenderTransformOrigin="0.5,0.5"
+			FontWeight="Bold"
+			>
+			<Label.RenderTransform>
+				<RotateTransform Angle="-90"/>
+			</Label.RenderTransform>
+		</Label>
+	</DockPanel>
+
+	<!-- Chart area -->
+	<local:ChartPanel
+		x:Name="m_chart_panel"
+		Canvas.Left="0"
+		Canvas.Top="0"
+		Stretch="Fill"
+		Width="{Binding ActualWidth, ElementName=m_root}"
+		Height="{Binding ActualHeight, ElementName=m_root}"
+		/>
+</Canvas>

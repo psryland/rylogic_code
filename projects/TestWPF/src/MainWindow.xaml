@@ -22,6 +22,7 @@
 					<MenuItem Name="m_menu_file_close" Header="_Close" HorizontalAlignment="Left" Width="140"/>
 				</MenuItem>
 				<MenuItem Header="_Tests">
+					<MenuItem Name="m_menu_tests_chart" Header="_Chart" HorizontalAlignment="Left" />
 					<MenuItem Name="m_menu_tests_diagram" Header="_Diagram" HorizontalAlignment="Left" />
 					<MenuItem Name="m_menu_tests_view3d" Header="_View3D" HorizontalAlignment="Left" />
 					<MenuItem Name="m_menu_tests_dock_container" Header="_Dock Container" HorizontalAlignment="Left" />

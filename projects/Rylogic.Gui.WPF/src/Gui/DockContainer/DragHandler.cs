@@ -579,7 +579,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			// or the small cross indicator when over an edge site
 			if (pane.DockSite == EDockSite.Centre)
 			{
-				var pt = Point.Subtract(Gui_.Centre(pane.Centre.RenderArea(pane)), new Vector(IndCrossLg.Width * 0.5, IndCrossLg.Height * 0.5));
+				var pt = Point.Subtract(pane.Centre.RenderArea(pane).Centre(), new Vector(IndCrossLg.Width * 0.5, IndCrossLg.Height * 0.5));
 				IndCrossLg.SetLocation(pane.PointToScreen(pt));
 
 				IndCrossLg.Visibility = Visibility.Visible;
@@ -587,7 +587,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			}
 			else
 			{
-				var pt = Point.Subtract(Gui_.Centre(pane.Centre.RenderArea(pane)), new Vector(IndCrossSm.Width * 0.5, IndCrossSm.Height * 0.5));
+				var pt = Point.Subtract(pane.Centre.RenderArea(pane).Centre(), new Vector(IndCrossSm.Width * 0.5, IndCrossSm.Height * 0.5));
 				IndCrossSm.SetLocation(pane.PointToScreen(pt));
 
 				IndCrossLg.Visibility = Visibility.Collapsed;
