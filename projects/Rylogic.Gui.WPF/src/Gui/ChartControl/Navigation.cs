@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Drawing;
 using System.Linq;
+using System.Windows;
 using System.Windows.Input;
 using Rylogic.Common;
 using Rylogic.Extn;
@@ -9,8 +9,6 @@ using Rylogic.Maths;
 
 namespace Rylogic.Gui.WPF
 {
-	using ChartDetail;
-
 	public partial class ChartControl
 	{
 		/// <summary>Enable/Disable mouse navigation</summary>
@@ -45,7 +43,7 @@ namespace Rylogic.Gui.WPF
 		protected override void OnMouseDown(MouseButtonEventArgs e)
 		{
 			base.OnMouseDown(e);
-			var location = e.GetPosition(this).ToPointF();
+			var location = e.GetPosition(this);
 
 			// If a mouse op is already active, ignore mouse down
 			if (MouseOperations.Active != null)
@@ -75,13 +73,13 @@ namespace Rylogic.Gui.WPF
 				op.m_grab_chart = ClientToChart(op.m_grab_client);
 				op.m_hit_result = HitTestCS(op.m_grab_client, Keyboard.Modifiers, null);
 				op.MouseDown(e);
-				Mouse.Capture(this);
+				CaptureMouse();
 			}
 		}
 		protected override void OnMouseMove(MouseEventArgs e)
 		{
 			base.OnMouseMove(e);
-			var location = e.GetPosition(this).ToPointF();
+			var location = e.GetPosition(this);
 
 			// Look for the mouse op to perform
 			var op = MouseOperations.Active;
@@ -116,7 +114,7 @@ namespace Rylogic.Gui.WPF
 
 			// Only release the mouse when all buttons are up
 			if (e.ToMouseBtns() == EMouseBtns.None)
-				Mouse.Capture(this, CaptureMode.None);
+				ReleaseMouseCapture();
 
 			// Look for the mouse op to perform
 			var op = MouseOperations.Active;
@@ -128,13 +126,12 @@ namespace Rylogic.Gui.WPF
 		protected override void OnMouseWheel(MouseWheelEventArgs e)
 		{
 			base.OnMouseWheel(e);
+			var location = e.GetPosition(this);
 
-			var location = e.GetPosition(this).ToPointF();
-			var scene_bounds = SceneBounds;
 			var perp_z = Options.PerpendicularZTranslation != Keyboard.Modifiers.HasFlag(ModifierKeys.Alt);
 			var chart_pt = ClientToChart(location);
 
-			if (scene_bounds.Contains(location))
+			if (SceneBounds.Contains(location))
 			{
 				// If there is a mouse op in progress, ignore the wheel
 				var op = MouseOperations.Active;
@@ -142,8 +139,11 @@ namespace Rylogic.Gui.WPF
 				{
 					// Translate the camera along a ray through 'point'
 					var loc = Gui_.MapPoint(this, Scene, location);
-					Scene.Window.MouseNavigateZ(loc, e.ToMouseBtns(Keyboard.Modifiers), e.Delta, !perp_z);
-					//Invalidate();
+					Scene.Window.MouseNavigateZ(loc.ToPointF(), e.ToMouseBtns(Keyboard.Modifiers), e.Delta, !perp_z);
+
+					// Update the axes from the camera position
+					SetRangeFromCamera();
+					Scene.Invalidate();
 				}
 			}
 			else if (Options.ShowAxes)
@@ -156,8 +156,7 @@ namespace Rylogic.Gui.WPF
 				var chg = false;
 
 				// Change the aspect ratio by zooming on the XAxis
-				var xaxis_bounds = RectangleF.FromLTRB(scene_bounds.Left, scene_bounds.Bottom, scene_bounds.Right, (float)Height);
-				if (xaxis_bounds.Contains(location) && !XAxis.LockRange)
+				if (XAxisBounds.Contains(location) && !XAxis.LockRange)
 				{
 					if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && XAxis.AllowScroll)
 					{
@@ -178,13 +177,12 @@ namespace Rylogic.Gui.WPF
 				}
 
 				// Check the aspect ratio by zooming on the YAxis
-				var yaxis_bounds = RectangleF.FromLTRB(0, scene_bounds.Top, scene_bounds.Left, scene_bounds.Bottom);
-				if (yaxis_bounds.Contains(location) && !YAxis.LockRange)
+				if (YAxisBounds.Contains(location) && !YAxis.LockRange)
 				{
 					if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && YAxis.AllowScroll)
 					{
 						YAxis.Shift(YAxis.Span * delta);
-						chg = true; ;
+						chg = true;
 					}
 					if (!Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && YAxis.AllowZoom)
 					{
@@ -203,7 +201,7 @@ namespace Rylogic.Gui.WPF
 				if (chg)
 				{
 					SetCameraFromRange();
-					//Invalidate();
+					Scene.Invalidate();
 				}
 			}
 		}
@@ -269,7 +267,7 @@ namespace Rylogic.Gui.WPF
 					}
 				case EAreaSelectMode.SelectElements:
 					{
-						var rect = new RectangleF(args.SelectionArea.MinX, args.SelectionArea.MinY, args.SelectionArea.SizeX, args.SelectionArea.SizeY);
+						var rect = new Rect(args.SelectionArea.MinX, args.SelectionArea.MinY, args.SelectionArea.SizeX, args.SelectionArea.SizeY);
 						SelectElements(rect, Keyboard.Modifiers);
 						break;
 					}
@@ -286,8 +284,8 @@ namespace Rylogic.Gui.WPF
 		public void PositionChart(BBox area)
 		{
 			// Ignore if the given area is smaller than the minimum selection distance (in screen space)
-			var bl = ChartToClient(new PointF(area.MinX, area.MinY));
-			var tr = ChartToClient(new PointF(area.MaxX, area.MaxY));
+			var bl = ChartToClient(new Point(area.MinX, area.MinY));
+			var tr = ChartToClient(new Point(area.MaxX, area.MaxY));
 			if (Math.Abs(bl.X - tr.X) < Options.MinSelectionDistance ||
 				Math.Abs(bl.Y - tr.Y) < Options.MinSelectionDistance)
 				return;
@@ -298,11 +296,11 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Shifts the X and Y range of the chart so that chart space position 'gs_point' is at client space position 'cs_point'</summary>
-		public void PositionChart(Point cs_point, PointF gs_point)
+		public void PositionChart(Point cs_point, Point gs_point)
 		{
 			var dst = ClientToChart(cs_point);
 			var c2w = Scene.Camera.O2W;
-			c2w.pos += c2w.x * (gs_point.X - dst.X) + c2w.y * (gs_point.Y - dst.Y);
+			c2w.pos += c2w.x * (float)(gs_point.X - dst.X) + c2w.y * (float)(gs_point.Y - dst.Y);
 			Scene.Camera.O2W = c2w;
 			//Invalidate();
 		}

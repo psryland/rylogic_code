@@ -17,10 +17,9 @@ namespace Rylogic.Gui.WPF
 		{
 			public static readonly Guid Id = new Guid("62D495BB-36D1-4B52-A067-1B7DB4011831");
 
-			private readonly ChartControl m_owner;
-			internal ChartTools(ChartControl owner, RdrOptions opts)
+			internal ChartTools(ChartControl chart, OptionsData opts)
 			{
-				m_owner = owner;
+				Chart = chart;
 				//if (owner.IsInDesignMode())
 				//	return;
 
@@ -41,8 +40,11 @@ namespace Rylogic.Gui.WPF
 				TapeMeasure = null;
 			}
 
+			/// <summary>The owner of these tools</summary>
+			private ChartControl Chart { get; }
+
 			/// <summary>Chart options</summary>
-			private RdrOptions Options
+			private OptionsData Options
 			{
 				[DebuggerStepThrough]
 				get { return m_options; }
@@ -52,9 +54,27 @@ namespace Rylogic.Gui.WPF
 					if (m_options != null) m_options.PropertyChanged -= HandleOptionsChanged;
 					m_options = value;
 					if (m_options != null) m_options.PropertyChanged += HandleOptionsChanged;
+					
+					// Handlers
+					void HandleOptionsChanged(object sender, PropertyChangedEventArgs e)
+					{
+						switch (e.PropertyName)
+						{
+						case nameof(OptionsData.SelectionColour):
+							{
+								AreaSelect.ColourSet(Options.SelectionColour);
+								break;
+							}
+						//case nameof(OptionsData.ChartBkColour):
+						//	{
+						//		CrossHairH = CreateCrossHair(true);
+						//		CrossHairV = CreateCrossHair(false);
+						//	}
+						}
+					}
 				}
 			}
-			private RdrOptions m_options;
+			private OptionsData m_options;
 
 			/// <summary>Graphic for area selection</summary>
 			public View3d.Object AreaSelect
@@ -173,7 +193,7 @@ namespace Rylogic.Gui.WPF
 			private View3d.Object m_cross_hair_v;
 			private View3d.Object CreateCrossHair(bool horiz)
 			{
-				var col = Options.ChartBkColour.Intensity > 0.5f ? 0xFFFFFFFF : 0xFF000000;
+				var col = Chart.Scene.BackgroundColor.Intensity > 0.5f ? 0xFFFFFFFF : 0xFF000000;
 				var str = horiz
 					? Ldr.Line("chart_cross_hair_h", col, new v4(-0.5f, 0, 0, 1f), new v4(+0.5f, 0, 0, 1f))
 					: Ldr.Line("chart_cross_hair_v", col, new v4(0, -0.5f, 0, 1f), new v4(0, +0.5f, 0, 1f));
@@ -196,25 +216,11 @@ namespace Rylogic.Gui.WPF
 			private View3d.Object m_tape_measure;
 			private View3d.Object CreateTapeMeasure()
 			{
-				var col = Options.ChartBkColour.Intensity > 0.5f ? 0xFFFFFFFF : 0xFF000000;
+				var col = Chart.Scene.BackgroundColor.Intensity > 0.5f ? 0xFFFFFFFF : 0xFF000000;
 				var str = Ldr.Line("tape_measure", col, new v4(0, 0, 0, 1f), new v4(0, 0, 1f, 1f));
 				var obj = new View3d.Object(str, false, Id, null);
 				obj.FlagsSet(View3d.EFlags.SceneBoundsExclude, true);
 				return obj;
-			}
-
-			/// <summary>Update the chart tools when the options change</summary>
-			private void HandleOptionsChanged(object sender, PropertyChangedEventArgs e)
-			{
-				if (e.PropertyName == nameof(RdrOptions.SelectionColour))
-				{
-					AreaSelect.ColourSet(Options.SelectionColour);
-				}
-				if (e.PropertyName == nameof(RdrOptions.ChartBkColour))
-				{
-					CrossHairH = CreateCrossHair(true);
-					CrossHairV = CreateCrossHair(false);
-				}
 			}
 		}
 	}

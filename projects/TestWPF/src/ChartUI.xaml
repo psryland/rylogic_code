@@ -12,5 +12,8 @@
 	Left="-1050"
 	Top="500"
 	>
-	<gui2:ChartControl/>
+	<gui2:ChartControl
+		x:Name="m_chart"
+		Title="My Chart"
+		/>
 </Window>

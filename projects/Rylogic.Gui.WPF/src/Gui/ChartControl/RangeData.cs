@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
-using System.Linq;
-using System.Windows;
 using Rylogic.Common;
 using Rylogic.Gfx;
 using Rylogic.Maths;
@@ -16,11 +14,12 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The 2D size of the chart</summary>
 		public class RangeData : IDisposable
 		{
-			public RangeData(ChartControl owner)
+			private readonly ChartControl m_chart;
+			public RangeData(ChartControl chart)
 			{
-				Owner = owner;
-				XAxis = new Axis(EAxis.XAxis, owner);
-				YAxis = new Axis(EAxis.YAxis, owner);
+				m_chart = chart;
+				XAxis = new Axis(EAxis.XAxis, m_chart);
+				YAxis = new Axis(EAxis.YAxis, m_chart);
 			}
 			public RangeData(RangeData rhs)
 			{
@@ -32,9 +31,6 @@ namespace Rylogic.Gui.WPF
 				XAxis = null;
 				YAxis = null;
 			}
-
-			/// <summary>The chart that owns this axis</summary>
-			public ChartControl Owner { [DebuggerStepThrough] get; private set; }
 
 			/// <summary>The chart X axis</summary>
 			public Axis XAxis
@@ -87,19 +83,19 @@ namespace Rylogic.Gui.WPF
 			/// <summary>Add the graphics associated with the axes to the scene</summary>
 			internal void AddToScene(View3d.Window window)
 			{
-				var cam = Owner.Scene.Camera;
-				var wh = cam.ViewArea(Owner.Scene.Camera.FocusDist);
+				var cam = m_chart.Scene.Camera;
+				var wh = cam.ViewArea(m_chart.Scene.Camera.FocusDist);
 
 				// Position the grid lines so that they line up with the axis tick marks
 				// Grid lines are modelled from the bottom left corner
 				if (XAxis.GridLineGfx != null)
 				{
-					if (XAxis.Owner.Options.ShowGridLines && XAxis.Options.ShowGridLines)
+					if (m_chart.Options.ShowGridLines && XAxis.Options.ShowGridLines)
 					{
 						XAxis.GridLines(out var min, out var max, out var step);
 
 						var o2w = cam.O2W;
-						o2w.pos = cam.FocusPoint - o2w * new v4((float)(wh.x / 2 - min), wh.y / 2, Owner.Options.GridZOffset, 0);
+						o2w.pos = cam.FocusPoint - o2w * new v4((float)(wh.x / 2 - min), wh.y / 2, m_chart.Options.GridZOffset, 0);
 
 						XAxis.GridLineGfx.O2WSet(o2w);
 						window.AddObject(XAxis.GridLineGfx);
@@ -111,12 +107,12 @@ namespace Rylogic.Gui.WPF
 				}
 				if (YAxis.GridLineGfx != null)
 				{
-					if (YAxis.Owner.Options.ShowGridLines && YAxis.Options.ShowGridLines)
+					if (m_chart.Options.ShowGridLines && YAxis.Options.ShowGridLines)
 					{
 						YAxis.GridLines(out var min, out var max, out var step);
 
 						var o2w = cam.O2W;
-						o2w.pos = cam.FocusPoint - o2w * new v4(wh.x / 2, (float)(wh.y / 2 - min), Owner.Options.GridZOffset, 0);
+						o2w.pos = cam.FocusPoint - o2w * new v4(wh.x / 2, (float)(wh.y / 2 - min), m_chart.Options.GridZOffset, 0);
 
 						YAxis.GridLineGfx.O2WSet(o2w);
 						window.AddObject(YAxis.GridLineGfx);
@@ -139,7 +135,7 @@ namespace Rylogic.Gui.WPF
 				if (m_moved_args == null)
 				{
 					m_moved_args = new ChartMovedEventArgs(EMoveType.None);
-					Owner.Dispatcher.BeginInvoke(NotifyMoved);
+					m_chart.Dispatcher.BeginInvoke(NotifyMoved);
 				}
 				if (sender == XAxis) m_moved_args.MoveType |= EMoveType.XZoomed;
 				if (sender == YAxis) m_moved_args.MoveType |= EMoveType.YZoomed;
@@ -151,7 +147,7 @@ namespace Rylogic.Gui.WPF
 				if (m_moved_args == null)
 				{
 					m_moved_args = new ChartMovedEventArgs(EMoveType.None);
-					Owner.Dispatcher.BeginInvoke(NotifyMoved);
+					m_chart.Dispatcher.BeginInvoke(NotifyMoved);
 				}
 				if (sender == XAxis) m_moved_args.MoveType |= EMoveType.XScrolled;
 				if (sender == YAxis) m_moved_args.MoveType |= EMoveType.YScrolled;
@@ -160,7 +156,7 @@ namespace Rylogic.Gui.WPF
 			/// <summary>Raise the ChartMoved event on the chart</summary>
 			private void NotifyMoved()
 			{
-				Owner.OnChartMoved(m_moved_args);
+				m_chart.OnChartMoved(m_moved_args);
 				m_moved_args = null;
 			}
 			private ChartMovedEventArgs m_moved_args;
@@ -168,34 +164,33 @@ namespace Rylogic.Gui.WPF
 			/// <summary>A axis on the chart (typically X or Y)</summary>
 			public class Axis : IDisposable
 			{
-				public Axis(EAxis axis, ChartControl owner)
-					: this(axis, owner, 0f, 1f)
+				private readonly ChartControl m_chart;
+				public Axis(EAxis axis, ChartControl chart)
+					: this(axis, chart, 0f, 1f)
 				{ }
-				public Axis(EAxis axis, ChartControl owner, double min, double max)
+				public Axis(EAxis axis, ChartControl chart, double min, double max)
 				{
 					Debug.Assert(axis == EAxis.XAxis || axis == EAxis.YAxis);
-					Debug.Assert(owner != null);
+					Debug.Assert(chart != null);
+					m_chart = chart;
 					Set(min, max);
 					AxisType = axis;
-					Owner = owner;
 					Label = string.Empty;
 					AllowScroll = true;
 					AllowZoom = true;
 					LockRange = false;
 					TickText = DefaultTickText;
-					MeasureTickText = DefaultMeasureTickText;
 				}
 				public Axis(Axis rhs)
 				{
+					m_chart = rhs.m_chart;
 					Set(rhs.Min, rhs.Max);
 					AxisType = rhs.AxisType;
-					Owner = rhs.Owner;
 					Label = rhs.Label;
 					AllowScroll = rhs.AllowScroll;
 					AllowZoom = rhs.AllowZoom;
 					LockRange = rhs.LockRange;
 					TickText = rhs.TickText;
-					MeasureTickText = rhs.MeasureTickText;
 				}
 				public void Dispose()
 				{
@@ -205,31 +200,24 @@ namespace Rylogic.Gui.WPF
 				private bool m_disposed;
 
 				/// <summary>Render options for the axis</summary>
-				public ChartControl.RdrOptions.Axis Options
-				{
-					get
-					{
-						if (Owner.XAxis == this) return Owner.Options.XAxis;
-						if (Owner.YAxis == this) return Owner.Options.YAxis;
-						throw new Exception("Owner is not the owner of this axis");
-					}
-				}
+				public OptionsData.Axis Options =>
+					AxisType == EAxis.XAxis ? m_chart.Options.XAxis :
+					AxisType == EAxis.YAxis ? m_chart.Options.YAxis :
+					throw new Exception($"Unknown axis type: {AxisType}");
 
 				/// <summary>Which axis this is</summary>
-				public EAxis AxisType { get; private set; }
-
-				/// <summary>The chart that owns this axis</summary>
-				public ChartControl Owner { get; private set; }
+				public EAxis AxisType { get; }
 
 				/// <summary>The axis label</summary>
 				public string Label
 				{
 					[DebuggerStepThrough]
-					get { return m_label ?? string.Empty; }
+					get { return m_label ?? "X Axis"; }// string.Empty; }
 					set
 					{
 						if (m_label == value) return;
 						m_label = value;
+						m_chart.NotifyPropertyChanged(nameof(Label));
 					}
 				}
 				private string m_label;
@@ -327,9 +315,6 @@ namespace Rylogic.Gui.WPF
 				/// <summary>Convert the axis value to a string. "string TickText(double tick_value, double step_size)" </summary>
 				public Func<double, double, string> TickText;
 
-				/// <summary>Return the width/height to reserve for the tick text. "SizeF MeasureTickText(Graphics gfx)"</summary>
-				public Func<Graphics, SizeF> MeasureTickText;
-
 				/// <summary>Set the range without risk of an assert if 'min' is greater than 'Max' or visa versa</summary>
 				public void Set(double min, double max)
 				{
@@ -372,8 +357,9 @@ namespace Rylogic.Gui.WPF
 				/// <summary>Return the position of the grid lines for this axis</summary>
 				public void GridLines(out double min, out double max, out double step)
 				{
-					var dims = Owner.ChartDimensions;
-					var axis_length = Owner.XAxis == this ? dims.ChartArea.Width : Owner.YAxis == this ? dims.ChartArea.Height : 0.0;
+					var axis_length =
+						AxisType == EAxis.XAxis ? m_chart.Scene.ActualWidth :
+						AxisType == EAxis.YAxis ? m_chart.Scene.ActualHeight : 0.0;
 					var max_ticks = axis_length / Options.PixelsPerTick;
 
 					// Choose step sizes
@@ -440,10 +426,10 @@ namespace Rylogic.Gui.WPF
 					var i = 0;
 
 					// Grid verts
-					if (this == Owner.XAxis)
+					if (AxisType == EAxis.XAxis)
 					{
 						name = "xaxis_grid";
-						var x = 0f; var y0 = 0f; var y1 = (float)Owner.YAxis.Span;
+						var x = 0f; var y0 = 0f; var y1 = (float)m_chart.YAxis.Span;
 						for (int l = 0; l != num_lines; ++l)
 						{
 							verts[v++] = new View3d.Vertex(new v4(x, y0, 0f, 1f), Options.GridColour.ARGB);
@@ -451,10 +437,10 @@ namespace Rylogic.Gui.WPF
 							x += (float)step;
 						}
 					}
-					if (this == Owner.YAxis)
+					if (AxisType == EAxis.YAxis)
 					{
 						name = "yaxis_grid";
-						var y = 0f; var x0 = 0f; var x1 = (float)Owner.XAxis.Span;
+						var y = 0f; var x0 = 0f; var x1 = (float)m_chart.XAxis.Span;
 						for (int l = 0; l != num_lines; ++l)
 						{
 							verts[v++] = new View3d.Vertex(new v4(x0, y, 0f, 1f), Options.GridColour.ARGB);
@@ -507,14 +493,14 @@ namespace Rylogic.Gui.WPF
 					return !Math_.FEql(x / Span, 0.0) ? Math_.RoundSF(x, 5).ToString("G8") : "0";
 				}
 
-				/// <summary>Default tick text measurement</summary>
-				public SizeF DefaultMeasureTickText(Graphics gfx)
-				{
-					// Can't use 'GridLines' here because creates an infinite recursion.
-					// Using TickText(Min/Max, 0.0) causes the axes to jump around.
-					// The best option is to use one fixed length string.
-					return gfx.MeasureString("-9.99999", Options.TickFont);
-				}
+				///// <summary>Default tick text measurement</summary>
+				//public SizeF DefaultMeasureTickText(Graphics gfx)
+				//{
+				//	// Can't use 'GridLines' here because creates an infinite recursion.
+				//	// Using TickText(Min/Max, 0.0) causes the axes to jump around.
+				//	// The best option is to use one fixed length string.
+				//	return gfx.MeasureString("-9.99999", Options.TickFont);
+				//}
 
 				/// <summary>Friendly string view</summary>
 				public override string ToString()

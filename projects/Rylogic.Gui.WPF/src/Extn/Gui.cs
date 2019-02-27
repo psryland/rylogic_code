@@ -11,9 +11,6 @@ namespace Rylogic.Gui.WPF
 {
 	public static partial class Gui_
 	{
-		/// <summary>Infinite size</summary>
-		public static readonly Size SizeInfinity = new Size(double.PositiveInfinity, double.PositiveInfinity);
-
 		/// <summary>Wrapper for DependencyProperty.Register that uses reflection to look for changed or coerce handlers</summary>
 		public static DependencyProperty DPRegister<T>(string prop_name, object def = null)
 		{
@@ -122,6 +119,36 @@ namespace Rylogic.Gui.WPF
 		public static Typeface Typeface(this Control ui)
 		{
 			return new Typeface(ui.FontFamily, ui.FontStyle, ui.FontWeight, ui.FontStretch);
+		}
+		public static Typeface Typeface(this TextBlock ui)
+		{
+			return new Typeface(ui.FontFamily, ui.FontStyle, ui.FontWeight, ui.FontStretch);
+		}
+
+		/// <summary>Set the typeface on this control</summary>
+		public static void Typeface(this Control ui, Typeface tf)
+		{
+			ui.FontFamily = tf.FontFamily;
+			ui.FontStyle = tf.Style;
+			ui.FontWeight = tf.Weight;
+			ui.FontStretch = tf.Stretch;
+		}
+		public static void Typeface(this Control ui, Typeface tf, double size)
+		{
+			ui.Typeface(tf);
+			ui.FontSize = size;
+		}
+		public static void Typeface(this TextBlock ui, Typeface tf)
+		{
+			ui.FontFamily = tf.FontFamily;
+			ui.FontStyle = tf.Style;
+			ui.FontWeight = tf.Weight;
+			ui.FontStretch = tf.Stretch;
+		}
+		public static void Typeface(this TextBlock ui, Typeface tf, double size)
+		{
+			ui.Typeface(tf);
+			ui.FontSize = size;
 		}
 
 		/// <summary>Convert a point from 'src' space to 'dst' space</summary>

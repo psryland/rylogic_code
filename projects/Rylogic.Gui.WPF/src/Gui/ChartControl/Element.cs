@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Drawing;
+using System.Windows;
 using System.Windows.Input;
 using System.Xml.Linq;
 using Rylogic.Extn;
@@ -31,7 +31,7 @@ namespace Rylogic.Gui.WPF
 
 				Id = id;
 				Name = name;
-				m_impl_chart = null;
+				m_chart = null;
 				m_impl_position = position;
 				m_impl_bounds = new BBox(position.pos, v4.Zero);
 				m_impl_selected = false;
@@ -59,7 +59,7 @@ namespace Rylogic.Gui.WPF
 			protected bool Disposed { get; private set; }
 			protected virtual void Dispose(bool disposing)
 			{
-				Utility.Util.BreakIf(!Disposed && Utility.Util.IsGCFinalizerThread);
+				Util.BreakIf(!Disposed && Util.IsGCFinalizerThread);
 				Chart = null;
 				Invalidated = null;
 				PositionChanged = null;
@@ -72,10 +72,10 @@ namespace Rylogic.Gui.WPF
 			public ChartControl Chart
 			{
 				[DebuggerStepThrough]
-				get { return m_impl_chart; }
+				get { return m_chart; }
 				set { SetChartInternal(value, true); }
 			}
-			private ChartControl m_impl_chart;
+			private ChartControl m_chart;
 
 			/// <summary>Assign the chart for this element</summary>
 			internal void SetChartInternal(ChartControl chart, bool update)
@@ -85,22 +85,22 @@ namespace Rylogic.Gui.WPF
 				// this property to null, by removing it from the Elements collection, or
 				// by Disposing the element. Note: the chart does not own the elements, 
 				// elements should only be disposed by the caller.
-				if (m_impl_chart == chart) return;
+				if (m_chart == chart) return;
 
 				// Detach from the old chart
-				if (m_impl_chart != null && update)
+				if (m_chart != null && update)
 				{
-					m_impl_chart.Elements.Remove(this);
+					m_chart.Elements.Remove(this);
 				}
 
 				// Assign to the new chart
 				SetChartCore(chart);
 
 				// Attach to the new chart
-				if (m_impl_chart != null && update)
+				if (m_chart != null && update)
 				{
-					Debug.Assert(!m_impl_chart.Elements.Contains(this), "Element already in the Chart's Elements collection");
-					m_impl_chart.Elements.Add(this);
+					Debug.Assert(!m_chart.Elements.Contains(this), "Element already in the Chart's Elements collection");
+					m_chart.Elements.Add(this);
 				}
 
 				Debug.Assert(CheckConsistency());
@@ -119,7 +119,7 @@ namespace Rylogic.Gui.WPF
 				Selected = false;
 
 				// Set the new chart
-				m_impl_chart = chart;
+				m_chart = chart;
 			}
 
 			/// <summary>Unique id for this element</summary>
@@ -471,7 +471,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in client space because typically hit testing uses pixel tolerances</summary>
-			public virtual HitTestResult.Hit HitTest(PointF chart_point, PointF client_point, ModifierKeys modifier_keys, View3d.Camera cam)
+			public virtual HitTestResult.Hit HitTest(Point chart_point, Point client_point, ModifierKeys modifier_keys, View3d.Camera cam)
 			{
 				return null;
 			}
@@ -481,11 +481,11 @@ namespace Rylogic.Gui.WPF
 			{ }
 
 			/// <summary>Drag the element 'delta' from the DragStartPosition</summary>
-			public virtual void Drag(v2 delta, bool commit)
+			public virtual void Drag(Vector delta, bool commit)
 			{
 				var p = DragStartPosition;
-				p.pos.x += delta.x;
-				p.pos.y += delta.y;
+				p.pos.x += (float)delta.X;
+				p.pos.y += (float)delta.Y;
 				Position = p;
 				if (commit)
 					DragStartPosition = Position;

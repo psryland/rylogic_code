@@ -11,7 +11,8 @@ using Rylogic.Utility;
 namespace Rylogic.Container
 {
 	/// <summary>Extension to BindingList that notifies *before* an item is removed</summary>
-	[DataContract] public class BindingListEx<T> :BindingList<T>, IEnumerable<T>, IListChanging<T>, IItemChanged<T>, IBatchChanges
+	[DataContract]
+	public class BindingListEx<T> :BindingList<T>, IListChanging<T>, IItemChanged<T>, IBatchChanges
 	{
 		public BindingListEx() :base()
 		{
@@ -55,18 +56,17 @@ namespace Rylogic.Container
 			// Attach handlers to ensure we always receive the Reset event.
 			// Calling the 'new' method will cause the Pre events to be raised as well
 			ListChanged += InternalHandleListChanged;
-		}
-
-		/// <summary>Map ListChanged events to ListChanging events</summary>
-		private void InternalHandleListChanged(object sender, ListChangedEventArgs a)
-		{
-			if (a.ListChangedType == ListChangedType.Reset)
+			void InternalHandleListChanged(object sender, ListChangedEventArgs a)
 			{
-				ListChanging?.Invoke(this, new ListChgEventArgs<T>(this, ListChg.Reset, -1, default(T)));
-			}
-			if (a.ListChangedType == ListChangedType.ItemChanged)
-			{
-				ListChanging?.Invoke(this, new ListChgEventArgs<T>(this, ListChg.ItemReset, a.NewIndex, this[a.NewIndex]));
+				// Map ListChanged events to ListChanging events
+				if (a.ListChangedType == ListChangedType.Reset)
+				{
+					OnListChanging(new ListChgEventArgs<T>(this, ListChg.Reset, -1, default(T)));
+				}
+				if (a.ListChangedType == ListChangedType.ItemChanged)
+				{
+					OnListChanging(new ListChgEventArgs<T>(this, ListChg.ItemReset, a.NewIndex, this[a.NewIndex]));
+				}
 			}
 		}
 
@@ -93,9 +93,14 @@ namespace Rylogic.Container
 
 		/// <summary>Raised whenever items are added or about to be removed from the list</summary>
 		public event EventHandler<ListChgEventArgs<T>> ListChanging;
+		protected virtual void OnListChanging(ListChgEventArgs<T> args)
+		{
+			ListChanging?.Invoke(this, args);
+		}
 
 		/// <summary>Raised whenever an element in the list is replaced (i.e. by SetItem)</summary>
-		[Obsolete("This is badly defined, stop using it")] public event EventHandler<ItemChgEventArgs<T>> ItemChanged;
+		[Obsolete("This is badly defined, stop using it")]
+		public event EventHandler<ItemChgEventArgs<T>> ItemChanged;
 
 		/// <summary>Removes all items from the list</summary>
 		protected override void ClearItems()
@@ -103,7 +108,7 @@ namespace Rylogic.Container
 			if (RaiseListChangedEvents)
 			{
 				var args = new ListChgEventArgs<T>(this, ListChg.PreReset, -1, default(T));
-				ListChanging?.Invoke(this, args);
+				OnListChanging(args);
 				if (args.Cancel)
 					return;
 			}
@@ -128,7 +133,7 @@ namespace Rylogic.Container
 			if (RaiseListChangedEvents)
 			{
 				var args = new ListChgEventArgs<T>(this, ListChg.ItemPreAdd, index, item);
-				ListChanging?.Invoke(this, args);
+				OnListChanging(args);
 				if (args.Cancel)
 					return;
 
@@ -146,7 +151,7 @@ namespace Rylogic.Container
 			IssueNumber++;
 
 			if (RaiseListChangedEvents)
-				ListChanging?.Invoke(this, new ListChgEventArgs<T>(this, ListChg.ItemAdded, index, item));
+				OnListChanging(new ListChgEventArgs<T>(this, ListChg.ItemAdded, index, item));
 		}
 
 		/// <summary>Removes the item at the specified index.</summary>
@@ -156,7 +161,7 @@ namespace Rylogic.Container
 			if (RaiseListChangedEvents)
 			{
 				var args = new ListChgEventArgs<T>(this, ListChg.ItemPreRemove, index, item);
-				ListChanging?.Invoke(this, args);
+				OnListChanging(args);
 				if (args.Cancel)
 					return;
 			}
@@ -167,7 +172,7 @@ namespace Rylogic.Container
 			IssueNumber++;
 
 			if (RaiseListChangedEvents)
-				ListChanging?.Invoke(this, new ListChgEventArgs<T>(this, ListChg.ItemRemoved, -1, item));
+				OnListChanging(new ListChgEventArgs<T>(this, ListChg.ItemRemoved, -1, item));
 		}
 		
 		/// <summary>Replaces the item at the specified index with the specified item.</summary>
@@ -181,21 +186,21 @@ namespace Rylogic.Container
 			if (RaiseListChangedEvents)
 			{
 				var args = new ListChgEventArgs<T>(this, ListChg.ItemPreAdd, index, item);
-				ListChanging?.Invoke(this, args);
+				OnListChanging(args);
 				if (args.Cancel)
 					return;
 			}
 			if (RaiseListChangedEvents)
 			{
 				var args = new ListChgEventArgs<T>(this, ListChg.ItemPreRemove, index, old);
-				ListChanging?.Invoke(this, args);
+				OnListChanging(args);
 				if (args.Cancel)
 					return;
 			}
 			if (RaiseListChangedEvents)
 			{
 				var args = new ListChgEventArgs<T>(this, ListChg.ItemPreReset, index, old);
-				ListChanging?.Invoke(this, args);
+				OnListChanging(args);
 				if (args.Cancel)
 					return;
 			}
@@ -207,9 +212,9 @@ namespace Rylogic.Container
 			if (RaiseListChangedEvents)
 				ItemChanged?.Invoke(this, new ItemChgEventArgs<T>(index, old, item));
 			if (RaiseListChangedEvents)
-				ListChanging?.Invoke(this, new ListChgEventArgs<T>(this, ListChg.ItemRemoved, index, old));
+				OnListChanging(new ListChgEventArgs<T>(this, ListChg.ItemRemoved, index, old));
 			if (RaiseListChangedEvents)
-				ListChanging?.Invoke(this, new ListChgEventArgs<T>(this, ListChg.ItemAdded, index, item));
+				OnListChanging(new ListChgEventArgs<T>(this, ListChg.ItemAdded, index, item));
 		}
 
 		/// <summary>Optimised 'Contains'</summary>
@@ -224,57 +229,26 @@ namespace Rylogic.Container
 		}
 		private HashSet<T> m_hash_set;
 
-		/// <summary>Enumerable</summary>
-		IEnumerator<T> IEnumerable<T>.GetEnumerator()
-		{
-			foreach (var item in (IEnumerable)this)
-				yield return (T)item;
-		}
-
 		#region Sorting
 
 		/// <summary>True if the list supports sorting; otherwise, false. The default is false.</summary>
-		public bool SupportsSorting
-		{
-			get { return AllowSort && SortComparer != null; }
-		}
-		protected override bool SupportsSortingCore
-		{
-			get { return SupportsSorting; }
-		}
+		public bool SupportsSorting => AllowSort && SortComparer != null;
+		protected override bool SupportsSortingCore => SupportsSorting;
 
 		/// <summary>The comparer used for sorting</summary>
-		public IComparer SortComparer
-		{
-			get { return m_impl_cmp; }
-			set
-			{
-				if (m_impl_cmp == value) return;
-				m_impl_cmp = value;
-			}
-		}
-		private IComparer m_impl_cmp;
+		public IComparer SortComparer { get; set; }
 
 		/// <summary>Get/Set the direction the list is sorted. The default is ListSortDirection.Ascending.</summary>
 		public ListSortDirection SortDirection { get; set; }
-		protected override ListSortDirection SortDirectionCore
-		{
-			get { return SortDirection; }
-		}
+		protected override ListSortDirection SortDirectionCore => SortDirection;
 
 		/// <summary>Get/Set the property descriptor that is used for sorting the list.</summary>
 		public PropertyDescriptor SortProperty { get; set; }
-		protected override PropertyDescriptor SortPropertyCore
-		{
-			get { return SortProperty; }
-		}
+		protected override PropertyDescriptor SortPropertyCore => SortProperty;
 
 		/// <summary>true if the list is sorted; otherwise, false. The default is false.</summary>
 		public bool IsSorted { get; private set; }
-		protected override bool IsSortedCore
-		{
-			get { return IsSorted; }
-		}
+		protected override bool IsSortedCore => IsSorted;
 
 		/// <summary>Reorders the list</summary>
 		protected override void ApplySortCore(PropertyDescriptor prop, ListSortDirection direction)
@@ -286,7 +260,7 @@ namespace Rylogic.Container
 			if (RaiseListChangedEvents)
 			{
 				var args = new ListChgEventArgs<T>(this, ListChg.PreReset, -1, default(T));
-				ListChanging?.Invoke(this, args);
+				OnListChanging(args);
 				if (args.Cancel)
 					return;
 			}
@@ -310,7 +284,7 @@ namespace Rylogic.Container
 			base.ResetBindings();
 
 			if (RaiseListChangedEvents)
-				ListChanging?.Invoke(this, new ListChgEventArgs<T>(this, ListChg.Reset, -1, default(T)));
+				OnListChanging(new ListChgEventArgs<T>(this, ListChg.Reset, -1, default(T)));
 		}
 
 		/// <summary>Removes any sort applied with ApplySortCore()</summary>
@@ -327,7 +301,7 @@ namespace Rylogic.Container
 			if (RaiseListChangedEvents)
 			{
 				var args = new ListChgEventArgs<T>(this, ListChg.PreReset, -1, default(T));
-				ListChanging?.Invoke(this, args);
+				OnListChanging(args);
 				if (args.Cancel)
 					return;
 			}
@@ -342,7 +316,7 @@ namespace Rylogic.Container
 			if (RaiseListChangedEvents)
 			{
 				var args = new ListChgEventArgs<T>(this, ListChg.ItemPreReset, position, this[position]);
-				ListChanging?.Invoke(this, args);
+				OnListChanging(args);
 				if (args.Cancel)
 					return;
 			}

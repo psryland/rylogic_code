@@ -1,37 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Drawing;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using Rylogic.Attrib;
 using Rylogic.Common;
-using Rylogic.Container;
-using Rylogic.Core.Windows;
 using Rylogic.Extn;
 using Rylogic.Gfx;
 using Rylogic.Maths;
 using Rylogic.Utility;
-using Rectangle = System.Drawing.Rectangle;
 
 namespace Rylogic.Gui.WPF
 {
 	using System.Windows;
-	using System.Windows.Interop;
 	using ChartDetail;
 
 	/// <summary>A view 3d based chart control</summary>
-	public partial class ChartControl : Canvas
+	public partial class ChartControl : Grid, IDisposable, INotifyPropertyChanged
 	{
 		// Notes:
 		// - Two methods of camera control; 1. directly position the camera, or 2. set the
@@ -46,51 +33,50 @@ namespace Rylogic.Gui.WPF
 
 		static ChartControl()
 		{
-			View3d.LoadDll();
+			View3d.LoadDll(throw_if_missing:false);
 		}
 		public ChartControl()
-			: this(string.Empty, new RdrOptions())
+			: this(string.Empty, new OptionsData())
 		{ }
-		public ChartControl(string title, RdrOptions options)
+		public ChartControl(string title, OptionsData options)
 		{
 			InitializeComponent();
-			//SetStyle(ControlStyles.ResizeRedraw, true);
 
 			Options = options;
 			Title = title;
 			Range = new RangeData(this);
 			BaseRangeX = new RangeF(0.0, 1.0);
 			BaseRangeY = new RangeF(0.0, 1.0);
-			//Scene = new ChartPanel(this); // Must come after 'Range'
 			MouseOperations = new MouseOps();
 			Tools = new ChartTools(this, Options);
 			//m_tt_show_value = new HintBalloon { AutoSizeMode = AutoSizeMode.GrowOnly };
-			m_chart_frame = new ChartFrame(this);
+			//m_chart_frame = new ChartFrame(this);
 
-			Elements = new BindingListEx<Element> { PerItem = true, UseHashSet = true };
-			Selected = new BindingListEx<Element> { PerItem = false };
-			Hovered = new BindingListEx<Element> { PerItem = false };
-			ElemIds = new Dictionary<Guid, Element>();
-
-			Elements.ListChanging += (s, a) => OnElementListChanging(a);
-			Selected.ListChanging += (s, a) => OnSelectionListChanging(a);
-			Hovered.ListChanging += (s, a) => OnHoveredListChanging(a);
+			Elements = new ElementCollection(this);
+			Selected = new SelectedCollection(this);
+			Hovered = new HoveredCollection(this);
 
 			AllowEditing = false;
 			AllowSelection = false;
 			DefaultMouseControl = true;
 			DefaultKeyboardShortcuts = true;
 			AreaSelectMode = EAreaSelectMode.Zoom;
+
+			DataContext = this;
+			m_ap_xaxis_bottom.Axis = XAxis;
+			m_ap_yaxis_left.Axis = YAxis;
 		}
-		//protected override void Dispose(bool disposing)
+		public void Dispose()
+		{
+			MouseOperations = null;
+			Tools = null;
+			Range = null;
+			Options = null;
+		}
+		//protected override void OnInvalidated(InvalidateEventArgs e)
 		//{
-		//	MouseOperations = null;
-		//	Tools = null;
-		//	Range = null;
-		//	Scene = null;
-		//	Options = null;
-		//	Util.Dispose(ref components);
-		//	base.Dispose(disposing);
+		//	Scene?.Invalidate();
+		//	base.OnInvalidated(e);
 		//}
 		//protected override void OnLayout(LayoutEventArgs e)
 		//{
@@ -112,49 +98,41 @@ namespace Rylogic.Gui.WPF
 		//	if (DesignMode) return;
 		//	DoPaint(e.Graphics);
 		//}
-		//protected override void OnInvalidated(InvalidateEventArgs e)
+		//protected override void OnRender(DrawingContext dc)
 		//{
-		//	Scene?.Invalidate();
-		//	base.OnInvalidated(e);
+		//	base.OnRender(dc);
+		//	DoPaint(dc);
 		//}
-		protected override void OnRender(DrawingContext dc)
-		{
-			base.OnRender(dc);
-			//	DoPaint(e.Graphics);
-		}
 
 		/// <summary>Rendering options for the chart</summary>
-		public RdrOptions Options
+		public OptionsData Options
 		{
 			[DebuggerStepThrough]
-			get { return m_rdr_options; }
+			get { return m_options; }
 			set
 			{
-				if (m_rdr_options == value) return;
-				if (m_rdr_options != null)
+				if (m_options == value) return;
+				if (m_options != null)
 				{
-					m_rdr_options.PropertyChanged -= HandleRdrOptionsChanged;
+					m_options.PropertyChanged -= HandleRdrOptionsChanged;
 				}
-				m_rdr_options = value;
-				if (m_rdr_options != null)
+				m_options = value;
+				if (m_options != null)
 				{
-					m_rdr_options.PropertyChanged += HandleRdrOptionsChanged;
+					m_options.PropertyChanged += HandleRdrOptionsChanged;
 				}
 
 				void HandleRdrOptionsChanged(object sender, PropertyChangedEventArgs e)
 				{
-					OnOptionsChanged();
+					switch (e.PropertyName)
+					{
+					case nameof(OptionsData.ShowAxes):
+						break;
+					}
 				}
 			}
 		}
-		private RdrOptions m_rdr_options;
-
-		/// <summary>Raised when options change</summary>
-		public event EventHandler OptionsChanged;
-		protected virtual void OnOptionsChanged()
-		{
-			OptionsChanged?.Invoke(this, EventArgs.Empty);
-		}
+		private OptionsData m_options;
 
 		/// <summary>The title of the chart</summary>
 		public string Title
@@ -164,10 +142,19 @@ namespace Rylogic.Gui.WPF
 			{
 				if (m_title == value) return;
 				m_title = value;
-				//InvalidateArrange();
+				NotifyPropertyChanged(nameof(Title));
 			}
 		}
 		private string m_title;
+
+		/// <summary>All chart objects</summary>
+		public ElementCollection Elements { get; }
+
+		/// <summary>The set of selected chart elements</summary>
+		public SelectedCollection Selected { get; }
+
+		/// <summary>The set of hovered chart elements</summary>
+		public HoveredCollection Hovered { get; }
 
 		/// <summary>The current X/Y axis range of the chart</summary>
 		public RangeData Range
@@ -195,6 +182,18 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Default Y axis range of the chart</summary>
 		public RangeF BaseRangeY { get; set; }
 
+		/// <summary>The view3d part of the chart</summary>
+		public ChartPanel Scene => m_chart_panel;
+
+		/// <summary>Renderer</summary>
+		public View3d View3d => Scene?.View3d;
+
+		/// <summary>The view3d window for this control instance</summary>
+		public View3d.Window Window => Scene?.Window;
+
+		/// <summary>The view of the chart</summary>
+		public View3d.Camera Camera => Scene?.Camera;
+
 		/// <summary>Get/Set the aspect ratio of the chart area</summary>
 		public double Aspect
 		{
@@ -209,52 +208,12 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 
-		/// <summary>The view3d part of the chart</summary>
-		public ChartPanel Scene => m_chart_panel;
-		//{
-		//	[DebuggerStepThrough]
-		//	get { return m_impl_scene; }
-		//	private set
-		//	{
-		//		if (m_impl_scene == value) return;
-		//		//using (this.SuspendLayout(false))
-		//		//{
-		//			if (m_impl_scene != null)
-		//			{
-		//				Children.Remove(m_impl_scene);
-		//				Util.Dispose(ref m_impl_scene);
-		//			}
-		//			m_impl_scene = value;
-		//			if (m_impl_scene != null)
-		//			{
-		//				Children.Add(m_impl_scene);
-		//			}
-		//		//}
-		//	}
-		//}
-		private ChartPanel m_impl_scene;
-		private ChartFrame m_chart_frame;
-
-		/// <summary>Renderer</summary>
-		public View3d View3d => Scene?.View3d;
-
-		/// <summary>The view3d window for this control instance</summary>
-		public View3d.Window Window => Scene?.Window;
-
-		/// <summary>The view of the chart</summary>
-		public View3d.Camera Camera => Scene?.Camera;
-
-		/// <summary>All chart objects</summary>
-		public BindingListEx<Element> Elements { get; private set; }
-
-		/// <summary>The set of selected chart elements</summary>
-		public BindingListEx<Element> Selected { get; private set; }
-
-		/// <summary>The set of hovered chart elements</summary>
-		public BindingListEx<Element> Hovered { get; private set; }
-
-		/// <summary>Associative array from Element Ids to Elements</summary>
-		public Dictionary<Guid, Element> ElemIds { get; private set; }
+		/// <summary></summary>
+		public event PropertyChangedEventHandler PropertyChanged;
+		internal void NotifyPropertyChanged(string prop_name)
+		{
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+		}
 
 		/// <summary>Raised whenever the view3d area of the chart is scrolled or zoomed</summary>
 		public event EventHandler<ChartMovedEventArgs> ChartMoved;
@@ -290,17 +249,12 @@ namespace Rylogic.Gui.WPF
 		//	return args;
 		//}
 
-		/// <summary>Called just before the chart renders. Used to add View3d objects to the scene</summary>
-		public event EventHandler<ChartRenderingEventArgs> ChartRendering;
-		protected virtual void OnChartRendering(ChartRenderingEventArgs args)
+		/// <summary>Raised just before the chart renders, allowing users to add custom graphics</summary>
+		public event EventHandler BuildScene
 		{
-			ChartRendering?.Invoke(this, args);
+			add { Scene.BuildScene += value; }
+			remove { Scene.BuildScene -= value; }
 		}
-		//private void RaiseChartRendering(ChartRenderingEventArgs args)
-		//{
-		//	if (!ChartRendering.IsSuspended())
-		//		OnChartRendering(args);
-		//}
 
 		/// <summary>Called after the chart has painted, allowing users to add graphics on top of the chart</summary>
 		public event EventHandler<AddOverlaysOnPaintEventArgs> AddOverlaysOnPaint;
@@ -326,69 +280,56 @@ namespace Rylogic.Gui.WPF
 		//		OnAutoRanging(args);
 		//}
 
-		/// <summary>The client space rectangle that contains the View3d part of the control</summary>
-		public RectangleF SceneBounds
-		{
-			get
-			{
-				return new RectangleF(0, 0, 0, 0);//todo
-			}
-			//private set { Scene.Bounds = value; }
-			//get { return Scene.Bounds; }
-			//private set { Scene.Bounds = value; }
-		}
-
 		/// <summary>Returns a point in chart space from a point in client space. Use to convert mouse (client-space) locations to chart coordinates</summary>
-		public PointF ClientToChart(PointF client_point)
+		public Point ClientToChart(Point client_point)
 		{
-			return new PointF(
-				(float)(XAxis.Min + (client_point.X - SceneBounds.Left) * XAxis.Span / SceneBounds.Width),
-				(float)(YAxis.Min - (client_point.Y - SceneBounds.Bottom) * YAxis.Span / SceneBounds.Height));
+			return new Point(
+				(XAxis.Min + (client_point.X - SceneBounds.Left) * XAxis.Span / SceneBounds.Width),
+				(YAxis.Min - (client_point.Y - SceneBounds.Bottom) * YAxis.Span / SceneBounds.Height));
 		}
-		public SizeF ClientToChart(SizeF client_size)
+		public Size ClientToChart(Size client_size)
 		{
-			return new SizeF(
-				(float)(client_size.Width * XAxis.Span / SceneBounds.Width),
-				(float)(client_size.Height * YAxis.Span / SceneBounds.Height));
+			return new Size(
+				(client_size.Width * XAxis.Span / SceneBounds.Width),
+				(client_size.Height * YAxis.Span / SceneBounds.Height));
 		}
-		public RectangleF ClientToChart(RectangleF client_rect)
+		public Rect ClientToChart(Rect client_rect)
 		{
-			return new RectangleF(
+			return new Rect(
 				ClientToChart(client_rect.Location),
 				ClientToChart(client_rect.Size));
 		}
 
 		/// <summary>Returns a point in client space from a point in chart space. Inverse of ClientToChart</summary>
-		public PointF ChartToClient(PointF chart_point)
+		public Point ChartToClient(Point chart_point)
 		{
-			return new PointF(
-				(float)(SceneBounds.Left + (chart_point.X - XAxis.Min) * SceneBounds.Width / XAxis.Span),
-				(float)(SceneBounds.Bottom - (chart_point.Y - YAxis.Min) * SceneBounds.Height / YAxis.Span));
+			return new Point(
+				(SceneBounds.Left + (chart_point.X - XAxis.Min) * SceneBounds.Width / XAxis.Span),
+				(SceneBounds.Bottom - (chart_point.Y - YAxis.Min) * SceneBounds.Height / YAxis.Span));
 		}
-		public SizeF ChartToClient(SizeF chart_size)
+		public Size ChartToClient(Size chart_size)
 		{
-			return new SizeF(
-				(float)(chart_size.Width * SceneBounds.Width / XAxis.Span),
-				(float)(chart_size.Height * SceneBounds.Height / YAxis.Span));
+			return new Size(
+				(chart_size.Width * SceneBounds.Width / XAxis.Span),
+				(chart_size.Height * SceneBounds.Height / YAxis.Span));
 		}
-		public RectangleF ChartToClient(RectangleF chart_rect)
+		public Rect ChartToClient(Rect chart_rect)
 		{
-			return new RectangleF(
+			return new Rect(
 				ChartToClient(chart_rect.Location),
 				ChartToClient(chart_rect.Size));
 		}
 
 		/// <summary>Return a point in camera space from a point in chart space (Z = focus plane)</summary>
-		public v4 ChartToCamera(PointF chart_point)
+		public v4 ChartToCamera(Point chart_point)
 		{
 			// Remove the camera to origin offset
 			var origin_cs = Camera.W2O.pos.xy;
-			var pt = new v2(chart_point) + origin_cs;
-			return new v4(pt, -Camera.FocusDist, 1f);
+			return new v4((float)(chart_point.X + origin_cs.x), (float)(chart_point.Y + origin_cs.y), -Camera.FocusDist, 1f);
 		}
 
 		/// <summary>Return a point in chart space from a point in camera space</summary>
-		public PointF CameraToChart(v4 camera_point)
+		public Point CameraToChart(v4 camera_point)
 		{
 			Debug.Assert(camera_point.z != 0);
 
@@ -398,14 +339,14 @@ namespace Rylogic.Gui.WPF
 
 			// Add the offset of the camera from the origin
 			var origin_cs = Camera.W2O.pos.xy;
-			return pt - origin_cs;
+			return new Point(pt.x - origin_cs.x, pt.y - origin_cs.y);
 		}
 
 		/// <summary>
 		/// Get the scale and translation transform from chart space to client space.
 		/// e.g. chart2client * Point(x_min, y_min) = plot_area.BottomLeft()
 		///      chart2client * Point(x_max, y_max) = plot_area.TopRight()</summary>
-		public m4x4 ChartToClientSpace(RectangleF plot_area)
+		public m4x4 ChartToClientSpace(Rect plot_area)
 		{
 			var scale_x = (float)+(plot_area.Width / XAxis.Span);
 			var scale_y = (float)-(plot_area.Height / YAxis.Span);
@@ -419,7 +360,7 @@ namespace Rylogic.Gui.WPF
 				new v4(0, 0, 1, 0),
 				new v4(offset_x, offset_y, 0, 1));
 
-#if false
+			#if false
 			// Check the XAxis corners map to the expected client space locations
 			var C_pt0 = new v4((float)XAxis.Min, (float)YAxis.Min, 0, 1);
 			var C_pt1 = new v4((float)XAxis.Max, (float)YAxis.Max, 0, 1);
@@ -429,7 +370,7 @@ namespace Rylogic.Gui.WPF
 			Debug.Assert(Math.Abs(c_pt0.y - plot_area.Bottom) < 0.001);
 			Debug.Assert(Math.Abs(c_pt1.x - plot_area.Right ) < 0.001);
 			Debug.Assert(Math.Abs(c_pt1.y - plot_area.Top   ) < 0.001);
-#endif
+			#endif
 
 			return C2c;
 		}
@@ -442,7 +383,7 @@ namespace Rylogic.Gui.WPF
 		/// Get the scale and translation transform from client space to chart space.
 		/// e.g. client2chart * plot_area.BottomLeft() = Point(x_min, y_min)
 		///      client2chart * plot_area.TopRight()   = Point(x_max, y_max)</summary>
-		public m4x4 ClientToChartSpace(RectangleF plot_area)
+		public m4x4 ClientToChartSpace(Rect plot_area)
 		{
 			var scale_x = (float)+(XAxis.Span / plot_area.Width);
 			var scale_y = (float)-(YAxis.Span / plot_area.Height);
@@ -456,7 +397,7 @@ namespace Rylogic.Gui.WPF
 				new v4(0, 0, 1, 0),
 				new v4(offset_x, offset_y, 0, 1));
 
-#if true
+			#if false
 			// Check the plot_area corners map to the expected graph space locations
 			var c_pt0 = new v4((float)plot_area.Left, (float)plot_area.Bottom, 0, 1);
 			var c_pt1 = new v4((float)plot_area.Right, (float)plot_area.Top, 0, 1);
@@ -466,7 +407,7 @@ namespace Rylogic.Gui.WPF
 			Debug.Assert(Math.Abs(C_pt0.y - YAxis.Min) < 0.001f);
 			Debug.Assert(Math.Abs(C_pt1.x - XAxis.Max) < 0.001f);
 			Debug.Assert(Math.Abs(C_pt1.y - YAxis.Max) < 0.001f);
-#endif
+			#endif
 
 			return c2C;
 		}
@@ -476,45 +417,45 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Convert between client space and normalised screen space</summary>
-		public PointF ClientToNSS(PointF client_point)
+		public Point ClientToNSS(Point client_point)
 		{
-			return new PointF(
-				((client_point.X - SceneBounds.Left) / SceneBounds.Width) * 2f - 1f,
-				((SceneBounds.Bottom - client_point.Y) / SceneBounds.Height) * 2f - 1f);
+			return new Point(
+				((client_point.X - SceneBounds.Left) / SceneBounds.Width) * 2 - 1,
+				((SceneBounds.Bottom - client_point.Y) / SceneBounds.Height) * 2 - 1);
 		}
-		public SizeF ClientToNSS(SizeF client_size)
+		public Size ClientToNSS(Size client_size)
 		{
-			return new SizeF(
-				(client_size.Width / SceneBounds.Width) * 2f,
-				(client_size.Height / SceneBounds.Height) * 2f);
+			return new Size(
+				(client_size.Width / SceneBounds.Width) * 2,
+				(client_size.Height / SceneBounds.Height) * 2);
 		}
-		public RectangleF ClientToNSS(RectangleF client_rect)
+		public Rect ClientToNSS(Rect client_rect)
 		{
-			return new RectangleF(
+			return new Rect(
 				ClientToNSS(client_rect.Location),
 				ClientToNSS(client_rect.Size));
 		}
-		public PointF NSSToClient(PointF nss_point)
+		public Point NSSToClient(Point nss_point)
 		{
-			return new PointF(
-				SceneBounds.Left + 0.5f * (nss_point.X + 1f) * SceneBounds.Width,
-				SceneBounds.Bottom - 0.5f * (nss_point.Y + 1f) * SceneBounds.Height);
+			return new Point(
+				SceneBounds.Left + 0.5 * (nss_point.X + 1) * SceneBounds.Width,
+				SceneBounds.Bottom - 0.5 * (nss_point.Y + 1) * SceneBounds.Height);
 		}
-		public SizeF NSSToClient(SizeF nss_size)
+		public Size NSSToClient(Size nss_size)
 		{
-			return new SizeF(
-				0.5f * nss_size.Width * SceneBounds.Width,
-				0.5f * nss_size.Height * SceneBounds.Height);
+			return new Size(
+				0.5 * nss_size.Width * SceneBounds.Width,
+				0.5 * nss_size.Height * SceneBounds.Height);
 		}
-		public RectangleF NSSToClient(RectangleF nss_rect)
+		public Rect NSSToClient(Rect nss_rect)
 		{
-			return new RectangleF(
+			return new Rect(
 				NSSToClient(nss_rect.Location),
 				NSSToClient(nss_rect.Size));
 		}
 
 		/// <summary>Perform a hit test on the chart</summary>
-		public HitTestResult HitTestCS(PointF client_point, ModifierKeys modifier_keys, Func<Element, bool> pred)
+		public HitTestResult HitTestCS(Point client_point, ModifierKeys modifier_keys, Func<Element, bool> pred)
 		{
 			// Determine the hit zone of the control
 			var zone = EZone.None;
@@ -571,7 +512,6 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Get/Set whether the aspect ratio is locked to the current value</summary>
-		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public bool LockAspect
 		{
 			get { return Options.LockAspect != null; }
@@ -590,11 +530,13 @@ namespace Rylogic.Gui.WPF
 		{
 			// The grid is always parallel to the image plane of the camera.
 			// The camera forward vector points at the centre of the grid.
-
+			
 			// Project the camera to world vector into camera space to determine the centre of the X/Y axis. 
 			var w2c = Math_.InvertFast(Scene.Camera.O2W);
 
 			// The span of the X/Y axis is determined by the FoV and the focus point distance.
+			// Set the projection mode before 'ViewArea' because it depends on the projection mode.
+			Scene.Camera.Orthographic = Options.Orthographic;
 			var wh = Scene.Camera.ViewArea(Scene.Camera.FocusDist);
 
 			// Set the axes range
@@ -632,7 +574,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Paint the control</summary>
-		private void DoPaint(Graphics gfx)
+		private void DoPaint(DrawingContext dc)
 		{
 			try
 			{
@@ -641,10 +583,11 @@ namespace Rylogic.Gui.WPF
 				Scene.Camera.Orthographic = Options.Orthographic;
 
 				// Navigation moves the camera and axis ranges are derived from the camera position/view
-				SetRangeFromCamera();
+				//SetRangeFromCamera();
 
 				// Get the areas to draw in
-				var dims = ChartDimensions;
+				//var dims = ChartDimensions;
+
 
 				// Draw the chart frame
 				//m_chart_frame.DoPaint(gfx, dims);
@@ -680,12 +623,6 @@ namespace Rylogic.Gui.WPF
 				elem.PositionZ = HighestZ += 0.001f;
 		}
 
-		/// <summary>Return the layout sizes of the chart</summary>
-		public ChartDims ChartDimensions
-		{
-			get { return new ChartDims(this); }
-		}
-
 		/// <summary>True if users are allowed to add/remove/edit elements on the diagram</summary>
 		public bool AllowEditing
 		{
@@ -703,7 +640,7 @@ namespace Rylogic.Gui.WPF
 		public bool AllowSelection { get; set; }
 
 		/// <summary>Return a string representation of a location on the chart</summary>
-		public string LocationText(PointF location)
+		public string LocationText(Point location)
 		{
 			var pt = ClientToChart(location);
 			XAxis.GridLines(out var minx, out var maxx, out var stepx);
@@ -714,145 +651,35 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Return the current mouse pointer location as a string</summary>
-		public string PointerLocationText => LocationText(Mouse.GetPosition(this).ToPointF());
+		public string PointerLocationText => LocationText(Mouse.GetPosition(this));
+
+		/// <summary>The client space rectangle that contains the View3d part of the control</summary>
+		private Rect SceneBounds => Scene.RenderArea(this);
 
 		/// <summary>The client space area of the XAxis area of the chart</summary>
-		private RectangleF XAxisBounds
-		{
-			get { return RectangleF.FromLTRB(SceneBounds.Left, SceneBounds.Bottom, SceneBounds.Right, (float)Height); }
-		}
+		private Rect XAxisBounds => m_ap_xaxis_bottom.RenderArea(this);
 
 		/// <summary>The client space area of the YAxis area of the chart</summary>
-		private RectangleF YAxisBounds
-		{
-			get { return RectangleF.FromLTRB(0, SceneBounds.Top, SceneBounds.Left, SceneBounds.Bottom); }
-		}
+		private Rect YAxisBounds => m_ap_yaxis_left.RenderArea(this);
 
 		/// <summary>The client space area of the chart title</summary>
-		private RectangleF TitleBounds
-		{
-			get { return RectangleF.FromLTRB(SceneBounds.Left, 0, SceneBounds.Right, SceneBounds.Top); }
-		}
-
-
-		#region Mouse Operations
+		private Rect TitleBounds => m_lbl_title.RenderArea(this);
 
 		/// <summary>Per button current mouse operation</summary>
-		public MouseOps MouseOperations { get; private set; }
-
-		/// <summary>Handle elements added/removed from the elements list</summary>
-		protected virtual void OnElementListChanging(ListChgEventArgs<Element> args)
+		public MouseOps MouseOperations
 		{
-			var elem = args.Item;
-			if (elem != null && (elem.Chart != null && elem.Chart != this))
-				throw new ArgumentException("element belongs to another chart");
-
-			switch (args.ChangeType)
+			get { return m_mouse_ops; }
+			private set
 			{
-			case ListChg.Reset:
-				{
-					foreach (var e in Elements)
-						e.SetChartInternal(this, false);
-					ElemIds.Clear();
-					foreach (var e in Elements)
-						ElemIds.Add(e.Id, e);
-
-					Debug.Assert(CheckConsistency());
-					break;
-				}
-			case ListChg.ItemAdded:
-				{
-					elem.SetChartInternal(this, false);
-					ElemIds.Add(elem.Id, elem);
-					Debug.Assert(CheckConsistency());
-					break;
-				}
-			case ListChg.ItemPreRemove:
-				{
-					elem.Selected = false;
-					elem.Hovered = false;
-					Debug.Assert(CheckConsistency());
-					break;
-				}
-			case ListChg.ItemRemoved:
-				{
-					elem.SetChartInternal(null, false);
-					ElemIds.Remove(elem.Id);
-					Debug.Assert(CheckConsistency());
-					break;
-				}
+				if (m_mouse_ops == value) return;
+				Util.Dispose(ref m_mouse_ops);
+				m_mouse_ops = value;
 			}
 		}
-
-		/// <summary>Handle elements added/removed from the selection list</summary>
-		protected virtual void OnSelectionListChanging(ListChgEventArgs<Element> args)
-		{
-			var elem = args.Item;
-			if (elem != null && (elem.Chart != null && elem.Chart != this))
-				throw new ArgumentException("element belongs to another chart");
-
-			switch (args.ChangeType)
-			{
-			case ListChg.Reset:
-				{
-					Elements.ForEach(x => x.SetSelectedInternal(false, false));
-					Selected.ForEach(x => x.SetSelectedInternal(true, false));
-					Debug.Assert(CheckConsistency());
-					break;
-				}
-			case ListChg.ItemAdded:
-				{
-					elem.SetSelectedInternal(true, false);
-					Debug.Assert(CheckConsistency());
-					break;
-				}
-			case ListChg.ItemRemoved:
-				{
-					elem.SetSelectedInternal(false, false);
-					Debug.Assert(CheckConsistency());
-					break;
-				}
-			}
-		}
-
-		/// <summary>Handle elements added/removed from the hovered list</summary>
-		protected virtual void OnHoveredListChanging(ListChgEventArgs<Element> args)
-		{
-			var elem = args.Item;
-			if (elem != null && (elem.Chart != null && elem.Chart != this))
-				throw new ArgumentException("element belongs to another chart");
-
-			switch (args.ChangeType)
-			{
-			case ListChg.Reset:
-				{
-					foreach (var e in Elements)
-						e.SetHoveredInternal(false, false);
-					foreach (var h in Hovered)
-						h.SetHoveredInternal(true, false);
-					Debug.Assert(CheckConsistency());
-					//Invalidate();
-					break;
-				}
-			case ListChg.ItemAdded:
-				{
-					elem.SetHoveredInternal(true, false);
-					Debug.Assert(CheckConsistency());
-					//Invalidate();
-					break;
-				}
-			case ListChg.ItemRemoved:
-				{
-					elem.SetHoveredInternal(false, false);
-					Debug.Assert(CheckConsistency());
-					//Invalidate();
-					break;
-				}
-			}
-		}
+		private MouseOps m_mouse_ops;
 
 		/// <summary>Move the selected elements by 'delta'</summary>
-		private void DragSelected(v2 delta, bool commit)
+		private void DragSelected(Vector delta, bool commit)
 		{
 			if (!AllowEditing) return;
 			foreach (var elem in Selected)
@@ -864,19 +691,21 @@ namespace Rylogic.Gui.WPF
 		/// If no modifier keys are down, elements not in 'rect' are deselected.
 		/// If 'shift' is down, elements within 'rect' are selected in addition to the existing selection
 		/// If 'ctrl' is down, elements within 'rect' are removed from the existing selection.</summary>
-		public void SelectElements(RectangleF rect, ModifierKeys modifier_keys)
+		public void SelectElements(Rect rect, ModifierKeys modifier_keys)
 		{
 			if (!AllowSelection)
 				return;
 
 			// Normalise the selection
-			var r = new BBox(new v4(rect.Centre(), 0f, 1f), new v4(Math_.Abs(v2.From(rect.Size)) * 0.5f, 1f, 0f));
+			var c = rect.Centre();
+			var s = rect.Size;
+			var r = new BBox(new v4((float)c.X, (float)c.Y, 0f, 1f), new v4(Math_.Abs(new v2(0.5f * (float)s.Width, 0.5f * (float)s.Height)), 1f, 0f));
 
 			// If the area of selection is less than the min drag distance, assume click selection
 			var is_click = r.DiametreSq < Math_.Sqr(Options.MinDragPixelDistance);
 			if (is_click)
 			{
-				var pt = ChartToClient(rect.Location).ToPoint();
+				var pt = ChartToClient(rect.Location);
 				var hits = HitTestCS(pt, modifier_keys, x => x.Enabled);
 
 				// If control is down, deselect the first selected element in the hit list
@@ -939,17 +768,14 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 
-			//Invalidate();
+			InvalidateArrange();
 		}
-
-		#endregion
-
 
 		#region Show Value Tooltip
 
 		/// <summary>A tool tip to display the mouse location value</summary>
 		//private HintBalloon m_tt_show_value;
-		private bool m_show_value;
+		//private bool m_show_value;
 
 		/// <summary>Update the text in the 'show value' hint balloon. 'location' is in client space</summary>
 		private void SetValueToolTip(Point location)
@@ -998,7 +824,7 @@ namespace Rylogic.Gui.WPF
 				// Handlers
 				void OnMouseMoveCrossHair(object sender, MouseEventArgs e)
 				{
-					var location = e.GetPosition(this).ToPointF();
+					var location = e.GetPosition(this);
 					if (SceneBounds.Contains(location))
 					{
 						CrossHairLocation = ClientToChart(location);
@@ -1007,7 +833,7 @@ namespace Rylogic.Gui.WPF
 				}
 				void OnMouseWheelCrossHair(object sender, MouseEventArgs e)
 				{
-					var location = e.GetPosition(this).ToPointF();
+					var location = e.GetPosition(this);
 					if (SceneBounds.Contains(location))
 					{
 						CrossHairLocation = ClientToChart(location);
@@ -1019,7 +845,7 @@ namespace Rylogic.Gui.WPF
 		private bool m_cross_hair_visible;
 
 		/// <summary>The chart-space location of the cross hair</summary>
-		public PointF CrossHairLocation
+		public Point CrossHairLocation
 		{
 			get { return m_cross_hair_location; }
 			set
@@ -1049,7 +875,7 @@ namespace Rylogic.Gui.WPF
 				//Update();
 			}
 		}
-		private PointF m_cross_hair_location;
+		private Point m_cross_hair_location;
 
 		/// <summary>Raised when the cross hair is visible and moved</summary>
 		public event EventHandler CrossHairMoved;
@@ -1152,10 +978,10 @@ namespace Rylogic.Gui.WPF
 				throw new Exception("Selected elements collection is inconsistent with the selected state of the elements");
 
 			// The 'ElemIds' should match the Elements collection
-			if (ElemIds.Count != Elements.Count)
+			if (Elements.Ids.Count != Elements.Count)
 				throw new Exception("Elements collection and Element Id lookup table don't match");
 			foreach (var elem in Elements)
-				if (ElemIds.GetOrDefault(elem.Id) != elem)
+				if (Elements.Ids.GetOrDefault(elem.Id) != elem)
 					throw new Exception($"Element {elem} is not in the Element Id lookup table");
 
 			// Check the consistency of all elements

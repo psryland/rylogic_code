@@ -1,20 +1,18 @@
 ﻿using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
+using System.Windows;
 using System.Windows.Input;
 using Rylogic.Gfx;
 using Rylogic.Maths;
 
 namespace Rylogic.Gui.WPF
 {
-	using ChartDetail;
-
 	public partial class ChartControl
 	{
 		/// <summary>Results collection for a hit test</summary>
 		public class HitTestResult
 		{
-			public HitTestResult(EZone zone, PointF client_point, PointF chart_point, ModifierKeys modifier_keys, IEnumerable<Hit> hits, View3d.Camera cam)
+			public HitTestResult(EZone zone, Point client_point, Point chart_point, ModifierKeys modifier_keys, IEnumerable<Hit> hits, View3d.Camera cam)
 			{
 				Zone = zone;
 				ClientPoint = client_point;
@@ -28,10 +26,10 @@ namespace Rylogic.Gui.WPF
 			public EZone Zone { get; }
 
 			/// <summary>The client space location of where the hit test was performed</summary>
-			public PointF ClientPoint { get; }
+			public Point ClientPoint { get; }
 
 			/// <summary>The chart space location of where the hit test was performed</summary>
-			public PointF ChartPoint { get; }
+			public Point ChartPoint { get; }
 
 			/// <summary>The collection of hit objects</summary>
 			public List<Hit> Hits { get; }
@@ -45,7 +43,7 @@ namespace Rylogic.Gui.WPF
 			/// <summary></summary>
 			public class Hit
 			{
-				public Hit(Element elem, PointF elem_point, object context)
+				public Hit(Element elem, Point elem_point, object context)
 				{
 					Element = elem;
 					Point = elem_point;
@@ -57,7 +55,7 @@ namespace Rylogic.Gui.WPF
 				public Element Element { get; }
 
 				/// <summary>Where on the element it was hit (in element space)</summary>
-				public PointF Point { get; }
+				public Point Point { get; }
 
 				/// <summary>The element's chart location at the time it was hit</summary>
 				public m4x4 Location { get; }

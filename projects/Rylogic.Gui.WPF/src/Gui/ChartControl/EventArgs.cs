@@ -1,7 +1,8 @@
 ﻿using System;
-using System.Drawing;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using Rylogic.Common;
 using Rylogic.Gfx;
 using Rylogic.Maths;
@@ -39,49 +40,49 @@ namespace Rylogic.Gui.WPF
 			public EMoveType MoveType { get; internal set; }
 		}
 
-		/// <summary>Event args for the ChartRendering event</summary>
-		public class ChartRenderingEventArgs : EventArgs
-		{
-			public ChartRenderingEventArgs(ChartControl chart, View3d.Window window)
-			{
-				Chart = chart;
-				Window = window;
-			}
-
-			/// <summary>The chart that is rendering</summary>
-			public ChartControl Chart { get; private set; }
-
-			/// <summary>The View3d window to add/remove objects to/from</summary>
-			public View3d.Window Window { get; private set; }
-
-			/// <summary>Add a view3d object to the chart scene</summary>
-			public void AddToScene(View3d.Object obj)
-			{
-				Window.AddObject(obj);
-			}
-
-			/// <summary>Remove a single object from the chart scene</summary>
-			public void RemoveFromScene(View3d.Object obj)
-			{
-				Window.RemoveObject(obj);
-			}
-		}
-
 		/// <summary>Event args for the ChartClicked event</summary>
-		public class ChartClickedEventArgs : MouseButtonEventArgs
+		public class ChartClickedEventArgs : EventArgs
 		{
-			public ChartClickedEventArgs(ChartControl.HitTestResult hits, MouseButtonEventArgs e)
-				: base(e.MouseDevice, e.Timestamp, e.ChangedButton, e.StylusDevice)
+			private readonly MouseButtonEventArgs m_mouse_event;
+			public ChartClickedEventArgs(HitTestResult hits, MouseButtonEventArgs mouse_event)
 			{
+				m_mouse_event = mouse_event;
 				HitResult = hits;
 				Handled = false;
 			}
 
 			/// <summary>Results of a hit test performed at the click location</summary>
-			public ChartControl.HitTestResult HitResult { get; private set; }
+			public HitTestResult HitResult { get; private set; }
 
-			///// <summary>Set to true to suppress default chart click behaviour</summary>
-			//public bool Handled { get; set; }
+			/// <summary>The button that was clicked</summary>
+			public MouseButton ChangedButton => m_mouse_event.ChangedButton;
+
+			/// <summary>The state of the clicked button</summary>
+			public MouseButtonState ButtonState => m_mouse_event.ButtonState;
+
+			/// <summary>The number of times the changed button was clicked.</summary>
+			public int ClickCount => m_mouse_event.ClickCount;
+
+			/// <summary>the current state of the left mouse button.</summary>
+			public MouseButtonState LeftButton => m_mouse_event.LeftButton;
+
+			/// <summary>The current state of the right mouse button.</summary>
+			public MouseButtonState RightButton => m_mouse_event.RightButton;
+
+			/// <summary>The current state of the middle mouse button.</summary>
+			public MouseButtonState MiddleButton => m_mouse_event.MiddleButton;
+
+			/// <summary>The current state of the first extended mouse button.</summary>
+			public MouseButtonState XButton1 => m_mouse_event.XButton1;
+
+			/// <summary>The current state of the second extended mouse button.</summary>
+			public MouseButtonState XButton2 => m_mouse_event.XButton2;
+
+			/// <summary>The position of the mouse pointer relative to the specified element.</summary>
+			public Point GetPosition(IInputElement relativeTo) => m_mouse_event.GetPosition(relativeTo);
+
+			/// <summary>Set to true to suppress default chart click behaviour</summary>
+			public bool Handled { get; set; }
 		}
 
 		/// <summary>Event args for area selection</summary>
@@ -149,28 +150,25 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Event args for the post-paint add overlays call</summary>
 		public class AddOverlaysOnPaintEventArgs : EventArgs
 		{
-			public AddOverlaysOnPaintEventArgs(Graphics gfx, ChartDims dims, m4x4 chart_to_client, EZone zone)
+			public AddOverlaysOnPaintEventArgs(ChartControl chart, DrawingContext gfx, m4x4 chart_to_client, EZone zone)
 			{
+				Chart = chart;
 				Gfx = gfx;
-				Dims = dims;
 				ChartToClient = chart_to_client;
 				Zone = zone;
 			}
 
 			/// <summary>The device context to draw to</summary>
-			public Graphics Gfx { get; private set; }
-
-			/// <summary>Layout info about the chart</summary>
-			public ChartDims Dims { get; private set; }
+			public DrawingContext Gfx { get; }
 
 			/// <summary>The chart being drawn on</summary>
-			public ChartControl Chart { get { return Dims.Chart; } }
+			public ChartControl Chart { get; }
 
 			/// <summary>Transform from Chart space to client space</summary>
-			public m4x4 ChartToClient { get; private set; }
+			public m4x4 ChartToClient { get; }
 
 			/// <summary>The part of the chart being painted</summary>
-			public EZone Zone { get; private set; }
+			public EZone Zone { get; }
 		}
 
 		/// <summary>Event args for the auto range event</summary>

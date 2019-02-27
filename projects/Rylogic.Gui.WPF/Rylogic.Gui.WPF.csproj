@@ -62,37 +62,42 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="src\Converters\BoolToVisibility.cs" />
+    <Compile Include="src\Converters\BoolConverters.cs" />
     <Compile Include="src\Converters\ColourToBrush.cs" />
+    <Compile Include="src\Converters\NullConverters.cs" />
     <Compile Include="src\Converters\ValueConverter.cs" />
-    <Compile Include="src\Converters\NullableToDefault.cs" />
+    <Compile Include="src\Extn\Math.cs" />
     <Compile Include="src\Extn\UIElement.cs" />
     <Compile Include="src\Extn\Dispatcher.cs" />
     <Compile Include="src\Extn\Drawing.cs" />
     <Compile Include="src\Extn\Xml.cs" />
-    <Compile Include="src\Gui\ChartControl\ChartDims.cs" />
-    <Compile Include="src\Gui\ChartControl\ChartFrame.cs" />
     <Compile Include="src\Gui\ChartControl\ChartPanel.cs" />
     <Compile Include="src\Gui\ChartControl\ChartTools.cs" />
     <Compile Include="src\Gui\ChartControl\ContextMenu.cs" />
     <Compile Include="src\Gui\ChartControl\EAxis.cs" />
     <Compile Include="src\Gui\ChartControl\EChangeType.cs" />
     <Compile Include="src\Gui\ChartControl\Element.cs" />
+    <Compile Include="src\Gui\ChartControl\ElementCollection.cs" />
     <Compile Include="src\Gui\ChartControl\EMoveType.cs" />
     <Compile Include="src\Gui\ChartControl\ENavMode.cs" />
     <Compile Include="src\Gui\ChartControl\EventArgs.cs" />
     <Compile Include="src\Gui\ChartControl\EZone.cs" />
     <Compile Include="src\Gui\ChartControl\HitTestResult.cs" />
+    <Compile Include="src\Gui\ChartControl\HoveredCollection.cs" />
     <Compile Include="src\Gui\ChartControl\MouseOps.cs" />
     <Compile Include="src\Gui\ChartControl\Navigation.cs" />
     <Compile Include="src\Gui\ChartControl\RangeData.cs" />
-    <Compile Include="src\Gui\ChartControl\RdrOptions.cs" />
-    <Compile Include="src\Gui\ChartControl\RdrOptionsUI.cs" />
+    <Compile Include="src\Gui\ChartControl\Options.cs" />
+    <Compile Include="src\Gui\ChartControl\OptionsUI.cs" />
     <Compile Include="src\Gui\ChartControl\ChartControl.xaml.cs">
       <DependentUpon>ChartControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\Gui\ChartControl\ChartDataLegend.cs" />
     <Compile Include="src\Gui\ChartControl\ChartDataSeries.cs" />
+    <Compile Include="src\Gui\ChartControl\SelectedCollection.cs" />
+    <Compile Include="src\Gui\ChartControl\AxisPanel.xaml.cs">
+      <DependentUpon>AxisPanel.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\Gui\ColourWheel.cs" />
     <Compile Include="src\Gui\DockContainer\DockContainer.xaml.cs">
       <DependentUpon>DockContainer.xaml</DependentUpon>
@@ -143,7 +148,7 @@
     </Compile>
     <Compile Include="src\Plugin\Extensions.cs" />
     <Compile Include="src\Program.cs" />
-    <Compile Include="src\Utility\Converters.cs" />
+    <Compile Include="src\Converters\MiscConverters.cs" />
     <Compile Include="src\Utility\MethodBinding.cs" />
     <Compile Include="src\Utility\RecentFiles.cs" />
     <Compile Include="src\Utility\WPFUtil.cs" />
@@ -164,6 +169,10 @@
   </ItemGroup>
   <ItemGroup>
     <Page Include="src\Gui\ChartControl\ChartControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Gui\ChartControl\AxisPanel.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Drawing;
 using System.Windows;
+using System.Windows.Media;
 using System.Xml.Linq;
 using Rylogic.Extn;
 using Rylogic.Gfx;
@@ -13,21 +14,14 @@ namespace Rylogic.Gui.WPF
 	public partial class ChartControl
 	{
 		[TypeConverter(typeof(TyConv))]
-		public class RdrOptions : INotifyPropertyChanged
+		public class OptionsData : INotifyPropertyChanged
 		{
-			private class TyConv : GenericTypeConverter<RdrOptions> { }
+			private class TyConv : GenericTypeConverter<OptionsData> { }
 
-			public RdrOptions()
+			public OptionsData()
 			{
 				NavigationMode = ENavMode.Chart2D;
 				LockAspect = null;
-				BkColour = System.Drawing.SystemColors.Control;
-				ChartBkColour = Colour32.White;
-				TitleColour = Colour32.Black;
-				TitleFont = new Font("tahoma", 12, System.Drawing.FontStyle.Bold);
-				TitleTransform = new Matrix(1f, 0f, 0f, 1f, 0f, 0f);
-				Margin = new Thickness(3);
-				NoteFont = new Font("tahoma", 8, System.Drawing.FontStyle.Regular);
 				SelectionColour = Colour32.DarkGray.Alpha(0x80);
 				ShowGridLines = true;
 				GridZOffset = 0.001f;
@@ -45,17 +39,10 @@ namespace Rylogic.Gui.WPF
 				YAxis = new Axis();
 				// Don't forget to add new members to the other constructors!
 			}
-			public RdrOptions(RdrOptions rhs)
+			public OptionsData(OptionsData rhs)
 			{
 				NavigationMode = rhs.NavigationMode;
 				LockAspect = rhs.LockAspect;
-				BkColour = rhs.BkColour;
-				ChartBkColour = rhs.ChartBkColour;
-				TitleColour = rhs.TitleColour;
-				TitleFont = (Font)rhs.TitleFont.Clone();
-				TitleTransform = rhs.TitleTransform;
-				Margin = rhs.Margin;
-				NoteFont = (Font)rhs.NoteFont.Clone();
 				SelectionColour = rhs.SelectionColour;
 				ShowGridLines = rhs.ShowGridLines;
 				GridZOffset = rhs.GridZOffset;
@@ -72,17 +59,10 @@ namespace Rylogic.Gui.WPF
 				XAxis = new Axis(rhs.XAxis);
 				YAxis = new Axis(rhs.YAxis);
 			}
-			public RdrOptions(XElement node) : this()
+			public OptionsData(XElement node) : this()
 			{
 				NavigationMode = node.Element(nameof(NavigationMode)).As(NavigationMode);
 				LockAspect = node.Element(nameof(LockAspect)).As(LockAspect);
-				BkColour = node.Element(nameof(BkColour)).As(BkColour);
-				ChartBkColour = node.Element(nameof(ChartBkColour)).As(ChartBkColour);
-				TitleColour = node.Element(nameof(TitleColour)).As(TitleColour);
-				TitleTransform = node.Element(nameof(TitleTransform)).As(TitleTransform);
-				Margin = node.Element(nameof(Margin)).As(Margin);
-				TitleFont = node.Element(nameof(TitleFont)).As(TitleFont);
-				NoteFont = node.Element(nameof(NoteFont)).As(NoteFont);
 				SelectionColour = node.Element(nameof(SelectionColour)).As(SelectionColour);
 				ShowAxes = node.Element(nameof(ShowAxes)).As(ShowAxes);
 				ShowGridLines = node.Element(nameof(ShowGridLines)).As(ShowGridLines);
@@ -103,13 +83,6 @@ namespace Rylogic.Gui.WPF
 			{
 				node.Add2(nameof(NavigationMode), NavigationMode, false);
 				node.Add2(nameof(LockAspect), LockAspect, false);
-				node.Add2(nameof(BkColour), BkColour, false);
-				node.Add2(nameof(ChartBkColour), ChartBkColour, false);
-				node.Add2(nameof(TitleColour), TitleColour, false);
-				node.Add2(nameof(TitleTransform), TitleTransform, false);
-				node.Add2(nameof(Margin), Margin, false);
-				node.Add2(nameof(TitleFont), TitleFont, false);
-				node.Add2(nameof(NoteFont), NoteFont, false);
 				node.Add2(nameof(SelectionColour), SelectionColour, false);
 				node.Add2(nameof(ShowGridLines), ShowGridLines, false);
 				node.Add2(nameof(GridZOffset), GridZOffset, false);
@@ -126,10 +99,6 @@ namespace Rylogic.Gui.WPF
 				node.Add2(nameof(XAxis), XAxis, false);
 				node.Add2(nameof(YAxis), YAxis, false);
 				return node;
-			}
-			public override string ToString()
-			{
-				return "Rendering Options";
 			}
 
 			/// <summary>Property changed</summary>
@@ -156,62 +125,6 @@ namespace Rylogic.Gui.WPF
 				set { SetProp(ref m_LockAspect, value, nameof(LockAspect)); }
 			}
 			private double? m_LockAspect;
-
-			/// <summary>The fill colour of the non-chart area of the control (e.g. behind the axis labels)</summary>
-			public Colour32 BkColour
-			{
-				get { return m_BkColour; }
-				set { SetProp(ref m_BkColour, value, nameof(BkColour)); }
-			}
-			private Colour32 m_BkColour;
-
-			/// <summary>The fill colour of the chart plot area</summary>
-			public Colour32 ChartBkColour
-			{
-				get { return m_ChartBkColour; }
-				set { SetProp(ref m_ChartBkColour, value, nameof(ChartBkColour)); }
-			}
-			private Colour32 m_ChartBkColour;
-
-			/// <summary>The colour of the title text</summary>
-			public Colour32 TitleColour
-			{
-				get { return m_TitleColour; }
-				set { SetProp(ref m_TitleColour, value, nameof(TitleColour)); }
-			}
-			private Colour32 m_TitleColour;
-
-			/// <summary>Transform for position the chart title, offset from top centre</summary>
-			public Matrix TitleTransform
-			{
-				get { return m_TitleTransform; }
-				set { SetProp(ref m_TitleTransform, value, nameof(TitleTransform)); }
-			}
-			private Matrix m_TitleTransform;
-
-			/// <summary>The distances from the edge of the control to the chart area</summary>
-			public Thickness Margin
-			{
-				get { return m_Margin; }
-				set { SetProp(ref m_Margin, value, nameof(Margin)); }
-			}
-			private Thickness m_Margin;
-
-			/// <summary>Font to use for the title text</summary>
-			public Font TitleFont
-			{
-				get { return m_TitleFont; }
-				set { SetProp(ref m_TitleFont, value, nameof(TitleFont)); }
-			}
-			private Font m_TitleFont;
-
-			/// <summary>Font to use for chart notes</summary>
-			public Font NoteFont
-			{
-				get { return m_NoteFont; }
-				set { SetProp(ref m_NoteFont, value, nameof(NoteFont)); }
-			}
-			private Font m_NoteFont;
 
 			/// <summary>Area selection colour</summary>
 			public Colour32 SelectionColour
@@ -368,14 +281,12 @@ namespace Rylogic.Gui.WPF
 					LabelColour = Colour32.Black;
 					GridColour = Colour32.WhiteSmoke;
 					TickColour = Colour32.Black;
-					LabelFont = new Font("tahoma", 10, System.Drawing.FontStyle.Regular);
-					TickFont = new Font("tahoma", 8, System.Drawing.FontStyle.Regular);
 					DrawTickMarks = true;
 					DrawTickLabels = true;
 					TickLength = 5;
 					MinTickSize = 30;
 					LabelTransform = new Matrix(1f, 0f, 0f, 1f, 0f, 0f);
-					AxisThickness = 1f;
+					AxisThickness = 2f;
 					PixelsPerTick = 30.0;
 					ShowGridLines = true;
 				}
@@ -385,8 +296,6 @@ namespace Rylogic.Gui.WPF
 					LabelColour = rhs.LabelColour;
 					GridColour = rhs.GridColour;
 					TickColour = rhs.TickColour;
-					LabelFont = (Font)rhs.LabelFont.Clone();
-					TickFont = (Font)rhs.TickFont.Clone();
 					DrawTickMarks = rhs.DrawTickMarks;
 					DrawTickLabels = rhs.DrawTickLabels;
 					TickLength = rhs.TickLength;
@@ -402,8 +311,6 @@ namespace Rylogic.Gui.WPF
 					LabelColour = node.Element(nameof(LabelColour)).As(LabelColour);
 					GridColour = node.Element(nameof(GridColour)).As(GridColour);
 					TickColour = node.Element(nameof(TickColour)).As(TickColour);
-					LabelFont = node.Element(nameof(LabelFont)).As(LabelFont);
-					TickFont = node.Element(nameof(TickFont)).As(TickFont);
 					DrawTickMarks = node.Element(nameof(DrawTickMarks)).As(DrawTickMarks);
 					DrawTickLabels = node.Element(nameof(DrawTickLabels)).As(DrawTickLabels);
 					TickLength = node.Element(nameof(TickLength)).As(TickLength);
@@ -419,8 +326,6 @@ namespace Rylogic.Gui.WPF
 					node.Add2(nameof(LabelColour), LabelColour, false);
 					node.Add2(nameof(GridColour), GridColour, false);
 					node.Add2(nameof(TickColour), TickColour, false);
-					node.Add2(nameof(LabelFont), LabelFont, false);
-					node.Add2(nameof(TickFont), TickFont, false);
 					node.Add2(nameof(DrawTickMarks), DrawTickMarks, false);
 					node.Add2(nameof(DrawTickLabels), DrawTickLabels, false);
 					node.Add2(nameof(TickLength), TickLength, false);
@@ -430,10 +335,6 @@ namespace Rylogic.Gui.WPF
 					node.Add2(nameof(PixelsPerTick), PixelsPerTick, false);
 					node.Add2(nameof(ShowGridLines), ShowGridLines, false);
 					return node;
-				}
-				public override string ToString()
-				{
-					return "Axis Options";
 				}
 
 				/// <summary>Property changed</summary>
@@ -479,22 +380,6 @@ namespace Rylogic.Gui.WPF
 				}
 				private Colour32 m_TickColour;
 
-				/// <summary>The font to use for the axis label</summary>
-				public Font LabelFont
-				{
-					get { return m_LabelFont; }
-					set { SetProp(ref m_LabelFont, value, nameof(LabelFont)); }
-				}
-				private Font m_LabelFont;
-
-				/// <summary>The font to use for tick labels</summary>
-				public Font TickFont
-				{
-					get { return m_TickFont; }
-					set { SetProp(ref m_TickFont, value, nameof(TickFont)); }
-				}
-				private Font m_TickFont;
-
 				/// <summary>True if tick marks should be drawn</summary>
 				public bool DrawTickMarks
 				{
@@ -512,20 +397,20 @@ namespace Rylogic.Gui.WPF
 				private bool m_DrawTickLabels;
 
 				/// <summary>The length of the tick marks</summary>
-				public int TickLength
+				public double TickLength
 				{
 					get { return m_TickLength; }
 					set { SetProp(ref m_TickLength, value, nameof(TickLength)); }
 				}
-				private int m_TickLength;
+				private double m_TickLength;
 
 				/// <summary>The minimum space reserved for tick marks and labels</summary>
-				public float MinTickSize
+				public double MinTickSize
 				{
 					get { return m_MinTickSize; }
 					set { SetProp(ref m_MinTickSize, value, nameof(MinTickSize)); }
 				}
-				private float m_MinTickSize;
+				private double m_MinTickSize;
 
 				/// <summary>Offset transform from default label position</summary>
 				public Matrix LabelTransform
@@ -536,12 +421,12 @@ namespace Rylogic.Gui.WPF
 				private Matrix m_LabelTransform;
 
 				/// <summary>The thickness of the axis line</summary>
-				public float AxisThickness
+				public double AxisThickness
 				{
 					get { return m_AxisThickness; }
 					set { SetProp(ref m_AxisThickness, value, nameof(AxisThickness)); }
 				}
-				private float m_AxisThickness;
+				private double m_AxisThickness;
 
 				/// <summary>The preferred number of pixels between each grid line</summary>
 				public double PixelsPerTick

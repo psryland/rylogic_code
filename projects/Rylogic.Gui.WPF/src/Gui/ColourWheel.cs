@@ -411,7 +411,7 @@ namespace Rylogic.Gui.WPF
 			Rect LabelBounds(double x, double y, string label)
 			{
 				var d = new TextBlock { Text = label };
-				d.Measure(Gui_.SizeInfinity);
+				d.Measure(Size_.Infinity);
 				var sz = d.DesiredSize;
 				return new Rect(
 					(x + (vertical ? 0 : (SliderWidth - sz.Width) * 0.5)),

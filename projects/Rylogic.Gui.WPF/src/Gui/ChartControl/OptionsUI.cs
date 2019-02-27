@@ -3,7 +3,7 @@
 namespace Rylogic.Gui.WPF.ChartDetail
 {
 	/// <summary>A UI for setting these rendering properties</summary>
-	public class RdrOptionsUI : Window
+	public class OptionsUI : Window
 	{
 		//private readonly ChartControl m_chart;
 		//private readonly RdrOptions m_opts;

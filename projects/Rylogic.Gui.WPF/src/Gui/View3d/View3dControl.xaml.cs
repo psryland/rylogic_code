@@ -47,7 +47,6 @@ namespace Rylogic.Gui.WPF
 				// Initialise View3d in off-screen only mode (i.e. no window handle)
 				View3d = View3d.Create();
 				Window = new View3d.Window(View3d, IntPtr.Zero, new View3d.WindowOptions(m_error_cb = (ctx, msg) => OnReportError(new ReportErrorEventArgs(msg)), IntPtr.Zero));
-				Window.CreateDemoScene();
 				Camera.SetPosition(new v4(0, 0, 10, 1), v4.Origin, v4.YAxis);
 				Camera.ClipPlanes(0.01f, 1000f, true);
 
@@ -151,11 +150,15 @@ namespace Rylogic.Gui.WPF
 		}
 		private View3d.Texture m_render_target;
 
-		/// <summary></summary>
+		/// <summary>Trigger a redraw of the view3d scene</summary>
 		public void Invalidate()
 		{
 			if (m_render_pending) return;
 			m_render_pending = true;
+			OnInvalidated();
+		}
+		protected virtual void OnInvalidated()
+		{
 			Dispatcher.BeginInvoke(D3DImage.RequestRender);
 		}
 		private bool m_render_pending;
@@ -500,6 +503,9 @@ namespace Rylogic.Gui.WPF
 					Window.SaveAsMainRT();
 				}
 
+				// Allow objects to be added/removed from the scene
+				OnBuildScene();
+
 				// Render if the render target has been set
 				if (D3DImage.WindowOwner != IntPtr.Zero)
 				{
@@ -508,6 +514,13 @@ namespace Rylogic.Gui.WPF
 					Window.Present();
 				}
 			}
+		}
+
+		// Allow objects to be added/removed from the scene
+		public event EventHandler BuildScene;
+		protected virtual void OnBuildScene()
+		{
+			BuildScene?.Invoke(this, EventArgs.Empty);
 		}
 
 		/// <summary></summary>

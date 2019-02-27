@@ -75,6 +75,23 @@ namespace Rylogic.Gui.WPF
 					(byte)((argb >>  0) & 0xFF));
 			};
 
+			Xml_.ToMap[typeof(Typeface)] = (obj, node) =>
+			{
+				var font = (Typeface)obj;
+				node.SetValue($"{font.FontFamily.Source}:{font.Style}:{font.Weight}:{font.Stretch}");
+				return node;
+			};
+			Xml_.AsMap[typeof(Typeface)] = (elem, type, instance) =>
+			{
+				var parts = elem.Value.Split(':');
+				if (parts.Length != 4) throw new FormatException("Typeface format should be 'family:style:weight:stretch'. Family is required, others are optional. e.g. tahoma:::");
+				var family = parts[0].HasValue() ? new FontFamily(parts[0]) : throw new FormatException("Font family is required for Typeface");
+				var style = parts[1].HasValue() ? Typeface_.Style(parts[1]): FontStyles.Normal;
+				var weight = parts[2].HasValue() ? Typeface_.Weight(parts[2]) : FontWeights.Normal;
+				var stretch = parts[3].HasValue() ? Typeface_.Stretches(parts[3]) : FontStretches.Normal;
+				return new Typeface(family, style, weight, stretch);
+			};
+
 			return cfg;
 		}
 	}

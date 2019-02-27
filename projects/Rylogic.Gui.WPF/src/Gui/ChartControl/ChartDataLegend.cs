@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
 using Rylogic.Gfx;
 using Rylogic.Maths;
 using Rylogic.Utility;
@@ -25,7 +25,8 @@ namespace Rylogic.Gui.WPF
 			m_bk_colour = 0xFFFFFFFF;
 			m_padding = new Thickness(5);
 			m_anchor = new v2(+1f, +1f);
-			m_font = new Font("tahoma", 14f, System.Drawing.FontStyle.Regular, GraphicsUnit.Point);
+			m_font = new Typeface("tahoma");
+			m_font_size = 14.0;
 			m_series = new List<ChartDataSeries>();
 			PositionXY = new v2(1f, 1f);
 			ScreenSpace = true;
@@ -79,13 +80,21 @@ namespace Rylogic.Gui.WPF
 		private v2 m_anchor;
 
 		/// <summary>Return the font to use for the legend</summary>
-		public Font Font
+		public Typeface Font
 		{
 			get { return m_font; }
 			set { SetProp(ref m_font, value, nameof(Font), true, false); }
 		}
-		private Font m_font;
+		private Typeface m_font;
 
+		/// <summary>Return the font to use for the legend</summary>
+		public double FontSize
+		{
+			get { return m_font_size; }
+			set { SetProp(ref m_font_size, value, nameof(FontSize), true, false); }
+		}
+		private double m_font_size;
+			
 		/// <summary>Generate the legend graphics</summary>
 		protected override void UpdateGfxCore()
 		{
@@ -107,7 +116,7 @@ namespace Rylogic.Gui.WPF
 					$"*BackColour {{{BackColour}}}\n" +
 					$"*Anchor {{{Anchor.x} {Anchor.y}}}\n" +
 					$"*Padding{{{Padding.Left} {Padding.Top} {Padding.Right} {Padding.Bottom}}}\n" +
-					$"*Font{{ *Name{{\"{Font.Name}\"}} *Size{{{Font.SizeInPoints}}} }}\n");
+					$"*Font{{ *Name{{\"{Font.FontFamily.Source}\"}} *Size{{{FontSize}}} }}\n");
 
 				bool newline = false;
 				foreach (var s in m_series)
@@ -138,7 +147,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in client space because typically hit testing uses pixel tolerances</summary>
-		public override ChartControl.HitTestResult.Hit HitTest(PointF chart_point, PointF client_point, ModifierKeys modifier_keys, View3d.Camera cam)
+		public override ChartControl.HitTestResult.Hit HitTest(Point chart_point, Point client_point, ModifierKeys modifier_keys, View3d.Camera cam)
 		{
 			if (Gfx == null || !Gfx.Visible)
 				return null;
