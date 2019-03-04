@@ -266,6 +266,9 @@
     <ClInclude Include="..\include\pr\geometry\stl.h">
       <Filter>geometry</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\util\dx9_context.h">
+      <Filter>util</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\renderer11\util\stdafx.cpp">

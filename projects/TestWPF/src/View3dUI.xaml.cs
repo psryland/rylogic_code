@@ -16,7 +16,7 @@ namespace TestWPF
 			InitializeComponent();
 
 			m_view0.Window.CreateDemoScene();
-			m_view1.Window.CreateDemoScene();
+			//m_view1.Window.CreateDemoScene();
 
 			Closed += Gui_.DisposeChildren;
 		}

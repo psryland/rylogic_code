@@ -14,7 +14,7 @@
 		Background="Black"
 		>
 		<Grid.ColumnDefinitions>
-			<ColumnDefinition Width="*"/>
+			<ColumnDefinition Width="0.1*"/>
 			<ColumnDefinition Width="*"/>
 		</Grid.ColumnDefinitions>
 
@@ -30,11 +30,13 @@
 			Grid.Column="1"
 			Stretch="Fill"
 			/>
+		<!--
 		<gui2:View3dControl
 			x:Name="m_view1"
 			Grid.Row="0"
 			Grid.Column="0"
 			Stretch="Fill"
 			/>
+		-->
 	</Grid>
 </Window>

@@ -595,14 +595,20 @@ extern "C"
 	VIEW3D_API View3DTexture __stdcall View3D_TextureCreateFromFile       (wchar_t const* tex_filepath, UINT32 width, UINT32 height, View3DTextureOptions const& options);
 	VIEW3D_API void          __stdcall View3D_TextureLoadSurface          (View3DTexture tex, int level, char const* tex_filepath, RECT const* dst_rect, RECT const* src_rect, UINT32 filter, View3DColour colour_key);
 	VIEW3D_API void          __stdcall View3D_TextureDelete               (View3DTexture tex);
+	VIEW3D_API void          __stdcall View3D_TextureStretchBlt           (View3DTexture dst, RECT const* dst_box, View3DTexture src, RECT const* src_box);
 	VIEW3D_API void          __stdcall View3D_TextureGetInfo              (View3DTexture tex, View3DImageInfo& info);
 	VIEW3D_API EView3DResult __stdcall View3D_TextureGetInfoFromFile      (char const* tex_filepath, View3DImageInfo& info);
 	VIEW3D_API void          __stdcall View3D_TextureSetFilterAndAddrMode (View3DTexture tex, D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV);
 	VIEW3D_API HDC           __stdcall View3D_TextureGetDC                (View3DTexture tex, BOOL discard);
 	VIEW3D_API void          __stdcall View3D_TextureReleaseDC            (View3DTexture tex);
 	VIEW3D_API void          __stdcall View3D_TextureResize               (View3DTexture tex, UINT32 width, UINT32 height, BOOL all_instances, BOOL preserve);
+	VIEW3D_API void          __stdcall View3d_TexturePrivateDataGet       (View3DTexture tex, GUID const& guid, UINT& size, void* data);
+	VIEW3D_API void          __stdcall View3d_TexturePrivateDataSet       (View3DTexture tex, GUID const& guid, UINT size, void const* data);
+	VIEW3D_API void          __stdcall View3d_TexturePrivateDataIFSet     (View3DTexture tex, GUID const& guid, IUnknown* pointer);
+	VIEW3D_API ULONG         __stdcall View3D_TextureRefCount             (View3DTexture tex);
 	VIEW3D_API View3DTexture __stdcall View3D_TextureRenderTarget         (View3DWindow window);
 	VIEW3D_API View3DTexture __stdcall View3D_TextureFromShared           (IUnknown* shared_resource, View3DTextureOptions const& options);
+	VIEW3D_API View3DTexture __stdcall View3D_CreateDx9RenderTarget       (HWND hwnd, UINT width, UINT height, View3DTextureOptions const& options, HANDLE* shared_handle);
 
 	// Rendering
 	VIEW3D_API void            __stdcall View3D_Invalidate             (View3DWindow window, BOOL erase);
@@ -671,6 +677,7 @@ extern "C"
 	VIEW3D_API BSTR       __stdcall View3D_ExampleScriptBStr        ();
 	VIEW3D_API void       __stdcall View3D_DemoScriptShow           (View3DWindow window);
 	VIEW3D_API View3DM4x4 __stdcall View3D_ParseLdrTransform        (char const* ldr_script);
+	VIEW3D_API ULONG      __stdcall View3D_RefCount                 (IUnknown* pointer);
 
 	// Ldr Editor Ctrl
 	VIEW3D_API HWND __stdcall View3D_LdrEditorCreate          (HWND parent);

@@ -208,7 +208,7 @@ namespace pr
 		D3DPtr<ID3D11Buffer> ShaderManager::GetCBuf(char const* name, RdrId id, size_t sz)
 		{
 			auto iter = m_lookup_cbuf.find(id);
-			if (iter != end(m_lookup_cbuf))
+			if (iter != std::end(m_lookup_cbuf))
 				return iter->second;
 
 			Renderer::Lock lock(m_rdr);

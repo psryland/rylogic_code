@@ -15,17 +15,26 @@
 #include <windows.h>
 #include "pr/common/exception.h"
 
-// Support d3d errors if the header has been included before now. Dodgy I know :/
+// Support d3d errors if the header has been included before now.
 #if defined(PR_SUPPORT_D3D_HRESULTS) || defined(_D3D9_H_)
-	#include <d3d9.h>
-	#include <dxerr.h>
-	#pragma comment(lib, "dxerr9.lib")
+	#ifndef PR_SUPPORT_D3D9_ERRORS
 	#define PR_SUPPORT_D3D9_ERRORS
+	#endif
+#endif
+#ifdef PR_SUPPORT_D3D9_ERRORS
+	// Dxerr9.h requires the DXSDK to be installed
+	#include <d3d9.h>
+	#include <dxerr9.h>
+	#pragma comment(lib, "dxerr.lib")
 #endif
 #if defined(PR_SUPPORT_D3D_HRESULTS) || defined(__d3d11_h__)
+	#ifdef PR_SUPPORT_D3D11_ERRORS
+	#define PR_SUPPORT_D3D11_ERRORS 1
+	#endif
+#endif
+#ifdef PR_SUPPORT_D3D11_ERRORS
 	#include <d3d11.h>
 	#include <dxgitype.h>
-	#define PR_SUPPORT_D3D11_ERRORS
 #endif
 
 // Map HRESULT to an enum type

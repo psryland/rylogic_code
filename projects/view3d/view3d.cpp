@@ -47,7 +47,7 @@ static Context* g_ctx = nullptr;
 static Context& Dll()
 {
 	if (g_ctx) return *g_ctx;
-	throw std::exception("View3d not initialised");
+	throw std::runtime_error("View3d not initialised");
 }
 
 // Default error callback
@@ -340,7 +340,7 @@ VIEW3D_API void __stdcall View3D_WindowDestroy(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		Dll().WindowDestroy(window);
@@ -354,7 +354,7 @@ VIEW3D_API void __stdcall View3D_WindowErrorCBSet(View3DWindow window, View3D_Re
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 		if (add)
 			window->OnError += pr::StaticCallBack(error_cb, ctx);
 		else
@@ -368,7 +368,7 @@ VIEW3D_API char const* __stdcall View3D_WindowSettingsGet(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 		
 		std::stringstream out;
 		//out << "*SceneSettings {" << window->m_obj_cont_ui.Settings() << "}\n";
@@ -383,7 +383,7 @@ VIEW3D_API void __stdcall View3D_WindowSettingsSet(View3DWindow window, char con
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		// Parse the settings
 		pr::script::PtrA src(settings);
@@ -418,7 +418,7 @@ VIEW3D_API void __stdcall View3D_WindowSettingsChangedCB(View3DWindow window, Vi
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 		if (add)
 			window->OnSettingsChanged += pr::StaticCallBack(settings_changed_cb, ctx);
 		else
@@ -432,7 +432,7 @@ VIEW3D_API void __stdcall View3D_WindowRenderingCB(View3DWindow window, View3D_R
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 		if (add)
 			window->OnRendering += pr::StaticCallBack(rendering_cb, ctx);
 		else
@@ -446,7 +446,7 @@ VIEW3D_API void __stdcall View3d_WindowSceneChangedCB(View3DWindow window, View3
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 		if (add)
 			window->OnSceneChanged += pr::StaticCallBack(scene_changed_cb, ctx);
 		else
@@ -460,7 +460,7 @@ VIEW3D_API void __stdcall View3D_WindowSceneChangedSuspend(View3DWindow window, 
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		pr::MultiCast<SceneChangedCB>::Lock lock(window->OnSceneChanged);
 		if (suspend != 0)
@@ -476,8 +476,8 @@ VIEW3D_API void __stdcall View3D_WindowAddObject(View3DWindow window, View3DObje
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
-		if (!object) throw std::exception("object is null");
+		if (!window) throw std::runtime_error("window is null");
+		if (!object) throw std::runtime_error("object is null");
 		
 		DllLockGuard;
 		window->Add(object);
@@ -489,7 +489,7 @@ VIEW3D_API void __stdcall View3D_WindowRemoveObject(View3DWindow window, View3DO
 	try
 	{
 		if (!object) return;
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->Remove(object);
@@ -500,7 +500,7 @@ VIEW3D_API void __stdcall View3D_WindowRemoveAllObjects(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->RemoveAllObjects();
@@ -513,7 +513,7 @@ VIEW3D_API BOOL __stdcall View3D_WindowHasObject(View3DWindow window, View3DObje
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return window->Has(object, search_children != 0);
@@ -526,7 +526,7 @@ VIEW3D_API int __stdcall View3D_WindowObjectCount(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return window->ObjectCount();
@@ -539,7 +539,7 @@ VIEW3D_API void __stdcall View3D_WindowEnumGuids(View3DWindow window, View3D_Enu
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->EnumGuids(enum_guids_cb, ctx);
@@ -552,7 +552,7 @@ VIEW3D_API void __stdcall View3D_WindowEnumObjects(View3DWindow window, View3D_E
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->EnumObjects(enum_objects_cb, ctx);
@@ -563,7 +563,7 @@ VIEW3D_API void __stdcall View3D_WindowEnumObjectsById(View3DWindow window, View
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->EnumObjects(enum_objects_cb, ctx, context_ids, include_count, exclude_count);
@@ -576,7 +576,7 @@ VIEW3D_API void __stdcall View3D_WindowAddObjectsById(View3DWindow window, GUID 
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->AddObjectsById(context_ids, include_count, exclude_count);
@@ -587,7 +587,7 @@ VIEW3D_API void __stdcall View3D_WindowRemoveObjectsById(View3DWindow window, GU
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->RemoveObjectsById(context_ids, include_count, exclude_count, false);
@@ -600,8 +600,8 @@ VIEW3D_API void __stdcall View3D_WindowAddGizmo(View3DWindow window, View3DGizmo
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
-		if (!gizmo) throw std::exception("gizmo is null");
+		if (!window) throw std::runtime_error("window is null");
+		if (!gizmo) throw std::runtime_error("gizmo is null");
 		
 		DllLockGuard;
 		window->Add(gizmo);
@@ -613,7 +613,7 @@ VIEW3D_API void __stdcall View3D_WindowRemoveGizmo(View3DWindow window, View3DGi
 	try
 	{
 		if (!gizmo) return;
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->Remove(gizmo);
@@ -626,7 +626,7 @@ VIEW3D_API View3DBBox __stdcall View3D_WindowSceneBounds(View3DWindow window, EV
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return view3d::To<View3DBBox>(window->SceneBounds(bounds, except_count, except));
@@ -639,7 +639,7 @@ VIEW3D_API float __stdcall View3D_WindowAnimTimeGet(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return window->m_anim_time_s;
@@ -650,7 +650,7 @@ VIEW3D_API void __stdcall View3D_WindowAnimTimeSet(View3DWindow window, float ti
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_anim_time_s = time_s;
@@ -672,7 +672,7 @@ VIEW3D_API void __stdcall View3D_WindowHitTest(View3DWindow window, View3DHitTes
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		// todo: add the non-immediate version of this function
 		// to allow continuous hit-testing during constant rendering.
@@ -690,7 +690,7 @@ VIEW3D_API void __stdcall View3D_CameraToWorldGet(View3DWindow window, View3DM4x
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		c2w = view3d::To<View3DM4x4>(window->m_camera.m_c2w);
@@ -703,7 +703,7 @@ VIEW3D_API void __stdcall View3D_CameraToWorldSet(View3DWindow window, View3DM4x
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_camera.m_c2w = view3d::To<pr::m4x4>(c2w);
@@ -716,7 +716,7 @@ VIEW3D_API void __stdcall View3D_CameraPositionSet(View3DWindow window, View3DV4
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_camera.LookAt(view3d::To<pr::v4>(position), view3d::To<pr::v4>(lookat), view3d::To<pr::v4>(up), true);
@@ -729,7 +729,7 @@ VIEW3D_API void __stdcall View3D_CameraCommit(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_camera.Commit();
@@ -742,7 +742,7 @@ VIEW3D_API BOOL __stdcall View3D_CameraOrthographic(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return window->m_camera.m_orthographic;
@@ -753,7 +753,7 @@ VIEW3D_API void __stdcall View3D_CameraOrthographicSet(View3DWindow window, BOOL
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_camera.m_orthographic = on != 0;
@@ -766,7 +766,7 @@ VIEW3D_API float __stdcall View3D_CameraFocusDistance(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return window->m_camera.FocusDist();
@@ -779,7 +779,7 @@ VIEW3D_API void __stdcall View3D_CameraSetFocusDistance(View3DWindow window, flo
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_camera.FocusDist(dist);
@@ -792,7 +792,7 @@ VIEW3D_API void __stdcall View3D_CameraSetViewRect(View3DWindow window, float wi
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_camera.View(width, height, dist);
@@ -805,7 +805,7 @@ VIEW3D_API float __stdcall View3D_CameraAspect(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return window->m_camera.Aspect();
@@ -818,7 +818,7 @@ VIEW3D_API void __stdcall View3D_CameraSetAspect(View3DWindow window, float aspe
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_camera.Aspect(aspect);
@@ -831,7 +831,7 @@ VIEW3D_API float __stdcall View3D_CameraFovXGet(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return window->m_camera.FovX();
@@ -844,7 +844,7 @@ VIEW3D_API void __stdcall View3D_CameraFovXSet(View3DWindow window, float fovX)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_camera.FovX(fovX);
@@ -857,7 +857,7 @@ VIEW3D_API float __stdcall View3D_CameraFovYGet(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return window->m_camera.FovY();
@@ -870,7 +870,7 @@ VIEW3D_API void __stdcall View3D_CameraFovYSet(View3DWindow window, float fovY)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_camera.FovY(fovY);
@@ -883,7 +883,7 @@ VIEW3D_API void __stdcall View3D_CameraSetFov(View3DWindow window, float fovX, f
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_camera.Fov(fovX, fovY);
@@ -896,7 +896,7 @@ VIEW3D_API void __stdcall View3D_CameraBalanceFov(View3DWindow window, float fov
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_camera.BalanceFov(fov);
@@ -909,7 +909,7 @@ VIEW3D_API void __stdcall View3D_CameraClipPlanesGet(View3DWindow window, float&
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		auto cp = window->m_camera.ClipPlanes(focus_relative != 0);
@@ -922,7 +922,7 @@ VIEW3D_API void __stdcall View3D_CameraClipPlanesSet(View3DWindow window, float 
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_camera.ClipPlanes(near_, far_, focus_relative != 0);
@@ -935,7 +935,7 @@ VIEW3D_API void __stdcall View3D_CameraResetZoom(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_camera.ResetZoom();
@@ -948,7 +948,7 @@ VIEW3D_API float __stdcall View3D_CameraZoomGet(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return window->m_camera.Zoom();
@@ -959,7 +959,7 @@ VIEW3D_API void __stdcall View3D_CameraZoomSet(View3DWindow window, float zoom)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_camera.Zoom(zoom, true);
@@ -972,7 +972,7 @@ VIEW3D_API EView3DCameraLockMask __stdcall View3D_CameraLockMaskGet(View3DWindow
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return static_cast<EView3DCameraLockMask>(window->m_camera.m_lock_mask);
@@ -983,7 +983,7 @@ VIEW3D_API void __stdcall View3D_CameraLockMaskSet(View3DWindow window, EView3DC
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_camera.m_lock_mask = static_cast<pr::camera::ELockMask>(mask);
@@ -996,7 +996,7 @@ VIEW3D_API View3DV4 __stdcall View3D_CameraAlignAxisGet(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return view3d::To<View3DV4>(window->m_camera.m_align);
@@ -1009,7 +1009,7 @@ VIEW3D_API void __stdcall View3D_CameraAlignAxisSet(View3DWindow window, View3DV
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_camera.Align(view3d::To<pr::v4>(axis));
@@ -1022,7 +1022,7 @@ VIEW3D_API void __stdcall View3D_ResetView(View3DWindow window, View3DV4 forward
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 		DllLockGuard;
 		window->ResetView(view3d::To<pr::v4>(forward), view3d::To<pr::v4>(up), dist, preserve_aspect != 0, commit != 0);
 	}
@@ -1034,7 +1034,7 @@ VIEW3D_API void __stdcall View3D_ResetViewBBox(View3DWindow window, View3DBBox b
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 		DllLockGuard;
 		window->ResetView(view3d::To<pr::BBox>(bbox), view3d::To<pr::v4>(forward), view3d::To<pr::v4>(up), dist, preserve_aspect != 0, commit != 0);
 	}
@@ -1046,7 +1046,7 @@ VIEW3D_API View3DV2 __stdcall View3D_ViewArea(View3DWindow window, float dist)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return view3d::To<View3DV2>(window->m_camera.ViewArea(dist));
@@ -1066,7 +1066,7 @@ VIEW3D_API BOOL __stdcall View3D_MouseNavigate(View3DWindow window, View3DV2 ss_
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		auto ss_point = view3d::To<pr::v2>(ss_pos);
@@ -1105,7 +1105,7 @@ VIEW3D_API BOOL __stdcall View3D_MouseNavigateZ(View3DWindow window, View3DV2 ss
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		auto ss_point = view3d::To<pr::v2>(ss_pos);
@@ -1141,7 +1141,7 @@ VIEW3D_API BOOL __stdcall View3D_Navigate(View3DWindow window, float dx, float d
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return window->m_camera.Translate(dx, dy, dz);
@@ -1154,7 +1154,7 @@ VIEW3D_API void __stdcall View3D_FocusPointGet(View3DWindow window, View3DV4& po
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		position = view3d::To<View3DV4>(window->m_camera.FocusPoint());
@@ -1165,7 +1165,7 @@ VIEW3D_API void __stdcall View3D_FocusPointSet(View3DWindow window, View3DV4 pos
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_camera.FocusPoint(view3d::To<pr::v4>(position));
@@ -1178,7 +1178,7 @@ VIEW3D_API View3DV2 __stdcall View3D_SSPointToNSSPoint(View3DWindow window, View
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return view3d::To<View3DV2>(window->SSPointToNSSPoint(view3d::To<pr::v2>(screen)));
@@ -1193,7 +1193,7 @@ VIEW3D_API View3DV4 __stdcall View3D_NSSPointToWSPoint(View3DWindow window, View
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return view3d::To<View3DV4>(window->m_camera.NSSPointToWSPoint(view3d::To<pr::v4>(screen)));
@@ -1207,7 +1207,7 @@ VIEW3D_API View3DV4 __stdcall View3D_WSPointToNSSPoint(View3DWindow window, View
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return view3d::To<View3DV4>(window->m_camera.WSPointToNSSPoint(view3d::To<pr::v4>(world)));
@@ -1222,7 +1222,7 @@ VIEW3D_API void __stdcall View3D_NSSPointToWSRay(View3DWindow window, View3DV4 s
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		pr::v4 pt,dir;
@@ -1246,7 +1246,7 @@ VIEW3D_API void __stdcall View3D_LightProperties(View3DWindow window, View3DLigh
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		light.m_position        = view3d::To<View3DV4>(window->m_light.m_position);
@@ -1272,7 +1272,7 @@ VIEW3D_API void __stdcall View3D_SetLightProperties(View3DWindow window, View3DL
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_light.m_position        = view3d::To<pr::v4>(light.m_position);
@@ -1298,7 +1298,7 @@ VIEW3D_API void __stdcall View3D_LightSource(View3DWindow window, View3DV4 posit
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_light.m_position = view3d::To<pr::v4>(position);
@@ -1313,7 +1313,7 @@ VIEW3D_API void __stdcall View3D_ShowLightingDlg(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 
@@ -1349,7 +1349,7 @@ VIEW3D_API GUID __stdcall View3D_ObjectContextIdGet(View3DObject object)
 {
 	try
 	{
-		if (!object) throw std::exception("object is null");
+		if (!object) throw std::runtime_error("object is null");
 
 		DllLockGuard;
 		return object->m_context_id;
@@ -1420,7 +1420,7 @@ VIEW3D_API void __stdcall View3D_ObjectEdit(View3DObject object, View3D_EditObje
 {
 	try
 	{
-		if (!object) throw std::exception("Object is null");
+		if (!object) throw std::runtime_error("Object is null");
 
 		DllLockGuard;
 		Dll().EditObject(object, edit_cb, ctx);
@@ -1433,7 +1433,7 @@ VIEW3D_API void __stdcall View3D_ObjectUpdate(View3DObject object, wchar_t const
 {
 	try
 	{
-		if (!object) throw std::exception("object is null");
+		if (!object) throw std::runtime_error("object is null");
 
 		DllLockGuard;
 		Dll().UpdateObject(object, ldr_script, static_cast<pr::ldr::EUpdateObject>(flags));
@@ -1459,7 +1459,7 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectGetRoot(View3DObject object)
 {
 	try
 	{
-		if (!object) throw std::exception("object is null");
+		if (!object) throw std::runtime_error("object is null");
 
 		DllLockGuard;
 		auto p = object;
@@ -1474,7 +1474,7 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectGetParent(View3DObject object)
 {
 	try
 	{
-		if (!object) throw std::exception("object is null");
+		if (!object) throw std::runtime_error("object is null");
 
 		DllLockGuard;
 		return object->m_parent;
@@ -1487,7 +1487,7 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectGetChildByName(View3DObject objec
 {
 	try
 	{
-		if (!object) throw std::exception("object is null");
+		if (!object) throw std::runtime_error("object is null");
 
 		DllLockGuard;
 		return object->Child(name);
@@ -1498,7 +1498,7 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectGetChildByIndex(View3DObject obje
 {
 	try
 	{
-		if (!object) throw std::exception("object is null");
+		if (!object) throw std::runtime_error("object is null");
 
 		DllLockGuard;
 		return object->Child(index);
@@ -1511,7 +1511,7 @@ VIEW3D_API int __stdcall View3D_ObjectChildCount(View3DObject object)
 {
 	try
 	{
-		if (!object) throw std::exception("object is null");
+		if (!object) throw std::runtime_error("object is null");
 
 		DllLockGuard;
 		return int(object->m_child.size());
@@ -1524,7 +1524,7 @@ VIEW3D_API void __stdcall View3D_ObjectEnumChildren(View3DObject object, View3D_
 {
 	try
 	{
-		if (!object) throw std::exception("object is null");
+		if (!object) throw std::runtime_error("object is null");
 
 		DllLockGuard;
 		for (auto& child : object->m_child)
@@ -1596,7 +1596,7 @@ VIEW3D_API View3DM4x4 __stdcall View3D_ObjectO2WGet(View3DObject object, char co
 {
 	try
 	{
-		if (!object) throw std::exception("object is null");
+		if (!object) throw std::runtime_error("object is null");
 
 		DllLockGuard;
 		return view3d::To<View3DM4x4>(object->O2W(name));
@@ -1607,8 +1607,8 @@ VIEW3D_API void __stdcall View3D_ObjectO2WSet(View3DObject object, View3DM4x4 co
 {
 	try
 	{
-		if (!object) throw std::exception("Object is null");
-		if (!pr::FEql(o2w.w.w,1.0f)) throw std::exception("invalid object to world transform");
+		if (!object) throw std::runtime_error("Object is null");
+		if (!pr::FEql(o2w.w.w,1.0f)) throw std::runtime_error("invalid object to world transform");
 
 		DllLockGuard;
 		object->O2W(view3d::To<pr::m4x4>(o2w), name);
@@ -1623,7 +1623,7 @@ VIEW3D_API View3DM4x4 __stdcall View3D_ObjectO2PGet(View3DObject object, char co
 {
 	try
 	{
-		if (!object) throw std::exception("object is null");
+		if (!object) throw std::runtime_error("object is null");
 
 		DllLockGuard;
 		return view3d::To<View3DM4x4>(object->O2P(name));
@@ -1634,8 +1634,8 @@ VIEW3D_API void __stdcall View3D_ObjectO2PSet(View3DObject object, View3DM4x4 co
 {
 	try
 	{
-		if (!object) throw std::exception("Object is null");
-		if (!pr::FEql(o2p.w.w,1.0f)) throw std::exception("invalid object to parent transform");
+		if (!object) throw std::runtime_error("Object is null");
+		if (!pr::FEql(o2p.w.w,1.0f)) throw std::runtime_error("invalid object to parent transform");
 
 		DllLockGuard;
 		object->O2P(view3d::To<pr::m4x4>(o2p), name);
@@ -1649,7 +1649,7 @@ VIEW3D_API BOOL __stdcall View3D_ObjectVisibilityGet(View3DObject object, char c
 {
 	try
 	{
-		if (!object) throw std::exception("Object is null");
+		if (!object) throw std::runtime_error("Object is null");
 
 		DllLockGuard;
 		return const_cast<pr::ldr::LdrObject const*>(object)->Visible(name);
@@ -1660,7 +1660,7 @@ VIEW3D_API void __stdcall View3D_ObjectVisibilitySet(View3DObject object, BOOL v
 {
 	try
 	{
-		if (!object) throw std::exception("Object is null");
+		if (!object) throw std::runtime_error("Object is null");
 
 		DllLockGuard;
 		object->Visible(visible != 0, name);
@@ -1674,7 +1674,7 @@ VIEW3D_API EView3DFlags __stdcall View3D_ObjectFlagsGet(View3DObject object, cha
 {
 	try
 	{
-		if (!object) throw std::exception("Object is null");
+		if (!object) throw std::runtime_error("Object is null");
 
 		DllLockGuard;
 		return static_cast<EView3DFlags>(object->Flags(name));
@@ -1685,7 +1685,7 @@ VIEW3D_API void __stdcall View3D_ObjectFlagsSet(View3DObject object, EView3DFlag
 {
 	try
 	{
-		if (!object) throw std::exception("Object is null");
+		if (!object) throw std::runtime_error("Object is null");
 
 		DllLockGuard;
 		object->Flags(static_cast<pr::ldr::ELdrFlags>(flags), state != 0, name);
@@ -1698,7 +1698,7 @@ VIEW3D_API View3DColour __stdcall View3D_ObjectColourGet(View3DObject object, BO
 {
 	try
 	{
-		if (!object) throw std::exception("Object is null");
+		if (!object) throw std::runtime_error("Object is null");
 
 		DllLockGuard;
 		return object->Colour(base_colour != 0, name);
@@ -1709,7 +1709,7 @@ VIEW3D_API void __stdcall View3D_ObjectColourSet(View3DObject object, View3DColo
 {
 	try
 	{
-		if (!object) throw std::exception("Object is null");
+		if (!object) throw std::runtime_error("Object is null");
 
 		DllLockGuard;
 		object->Colour(pr::Colour32(colour), mask, name);
@@ -1722,7 +1722,7 @@ VIEW3D_API BOOL __stdcall View3D_ObjectWireframeGet(View3DObject object, char co
 {
 	try
 	{
-		if (!object) throw std::exception("Object is null");
+		if (!object) throw std::runtime_error("Object is null");
 
 		DllLockGuard;
 		return const_cast<pr::ldr::LdrObject const*>(object)->Wireframe(name);
@@ -1733,7 +1733,7 @@ VIEW3D_API void __stdcall View3D_ObjectWireframeSet(View3DObject object, BOOL wi
 {
 	try
 	{
-		if (!object) throw std::exception("Object is null");
+		if (!object) throw std::runtime_error("Object is null");
 
 		DllLockGuard;
 		object->Wireframe(wire_frame != 0, name);
@@ -1746,7 +1746,7 @@ VIEW3D_API void __stdcall View3D_ObjectResetColour(View3DObject object, char con
 {
 	try
 	{
-		if (!object) throw std::exception("Object is null");
+		if (!object) throw std::runtime_error("Object is null");
 
 		DllLockGuard;
 		object->ResetColour(name);
@@ -1760,7 +1760,7 @@ VIEW3D_API void __stdcall View3D_ObjectSetTexture(View3DObject object, View3DTex
 {
 	try
 	{
-		if (!object) throw std::exception("Object is null");
+		if (!object) throw std::runtime_error("Object is null");
 
 		DllLockGuard;
 		object->SetTexture(tex, name);
@@ -1773,7 +1773,7 @@ VIEW3D_API View3DBBox __stdcall View3D_ObjectBBoxMS(View3DObject object, int inc
 {
 	try
 	{
-		if (!object) throw std::exception("Object is null");
+		if (!object) throw std::runtime_error("Object is null");
 
 		DllLockGuard;
 		return view3d::To<View3DBBox>(object->BBoxMS(include_children != 0));
@@ -1793,7 +1793,7 @@ VIEW3D_API View3DTexture __stdcall View3D_TextureCreate(UINT32 width, UINT32 hei
 	{
 		Image src(width, height, data, options.m_format);
 		if (src.m_pixels != nullptr && src.m_pitch.x * src.m_pitch.y != pr::s_cast<int>(data_size))
-			throw std::exception("Incorrect data size provided");
+			throw std::runtime_error("Incorrect data size provided");
 
 		TextureDesc tdesc(src);
 		tdesc.Format = options.m_format;
@@ -1849,7 +1849,7 @@ VIEW3D_API HDC __stdcall View3D_TextureGetDC(View3DTexture tex, BOOL discard)
 {
 	try
 	{
-		if (!tex) throw std::exception("Texture is null");
+		if (!tex) throw std::runtime_error("Texture is null");
 		return tex->GetDC(discard != 0);
 	}
 	CatchAndReport(View3D_TextureGetDC, , nullptr);
@@ -1858,7 +1858,7 @@ VIEW3D_API void __stdcall View3D_TextureReleaseDC(View3DTexture tex)
 {
 	try
 	{
-		if (!tex) throw std::exception("Texture is null");
+		if (!tex) throw std::runtime_error("Texture is null");
 		tex->ReleaseDC();
 	}
 	CatchAndReport(View3D_TextureReleaseDC, ,);
@@ -1870,7 +1870,7 @@ VIEW3D_API void __stdcall View3D_TextureLoadSurface(View3DTexture tex, int level
 	try
 	{
 		(void)tex,level,tex_filepath,dst_rect,src_rect,filter,colour_key;
-		throw std::exception("not implemented");
+		throw std::runtime_error("not implemented");
 		#if 0
 		try
 		{
@@ -1892,10 +1892,28 @@ VIEW3D_API void __stdcall View3D_TextureDelete(View3DTexture tex)
 {
 	try
 	{
-		if (!tex) throw std::exception("Texture is null");
+		if (!tex) throw std::runtime_error("Texture is null");
 		tex->Release();
 	}
 	CatchAndReport(View3D_TextureDelete, ,);
+}
+
+VIEW3D_API void __stdcall View3D_TextureStretchBlt(View3DTexture dst, RECT const* dst_box, View3DTexture src, RECT const* src_box)
+{
+	try
+	{
+		if (!dst) throw std::runtime_error("Destination texture is null");
+		if (!src) throw std::runtime_error("Source texture is null");
+		if (dst->m_mgr != src->m_mgr) throw std::runtime_error("Textures belong to different renderers");
+		if ((dst->TexDesc().BindFlags & (UINT)EBind::RenderTarget) == 0) throw std::runtime_error("Destination texture must be a render target");
+
+		pr::Renderer::Lock lock(Dll().m_rdr);
+
+		// Set dst as render target
+		// Set viewport to dst_box
+		// DrawTextured quad where 'src' is the texture
+	}
+	CatchAndReport(View3D_TextureStretchBlt, ,);
 }
 
 // Read the properties of an existing texture
@@ -1903,7 +1921,7 @@ VIEW3D_API void __stdcall View3D_TextureGetInfo(View3DTexture tex, View3DImageIn
 {
 	try
 	{
-		if (!tex) throw std::exception("texture is null");
+		if (!tex) throw std::runtime_error("texture is null");
 		auto tex_info = tex->TexDesc();
 		info.m_width             = tex_info.Width;
 		info.m_height            = tex_info.Height;
@@ -1931,7 +1949,7 @@ VIEW3D_API EView3DResult __stdcall View3D_TextureGetInfoFromFile(char const* tex
 		//info.m_mips              = tex_info.MipLevels;
 		//info.m_format            = tex_info.Format;
 		//info.m_image_file_format = tex_info.ImageFileFormat;
-		throw std::exception("not implemented");
+		throw std::runtime_error("not implemented");
 		//return EView3DResult::Success;
 	}
 	CatchAndReport(View3D_TextureGetInfoFromFile, , EView3DResult::Failed);
@@ -1942,7 +1960,7 @@ VIEW3D_API void __stdcall View3D_TextureSetFilterAndAddrMode(View3DTexture tex, 
 {
 	try
 	{
-		if (!tex) throw std::exception("Texture is null");
+		if (!tex) throw std::runtime_error("Texture is null");
 		
 		DllLockGuard;
 		tex->SetFilterAndAddrMode(filter, addrU, addrV);
@@ -1955,7 +1973,7 @@ VIEW3D_API void __stdcall View3D_TextureResize(View3DTexture tex, UINT32 width, 
 {
 	try
 	{
-		if (!tex) throw std::exception("Texture is null");
+		if (!tex) throw std::runtime_error("Texture is null");
 
 		DllLockGuard;
 		tex->Resize(width, height, all_instances != 0, preserve != 0);
@@ -1963,12 +1981,53 @@ VIEW3D_API void __stdcall View3D_TextureResize(View3DTexture tex, UINT32 width, 
 	CatchAndReport(View3D_TextureResize, ,);
 }
 
+// Get/Set the private data associated with 'guid' for 'tex'
+VIEW3D_API void __stdcall View3d_TexturePrivateDataGet(View3DTexture tex, GUID const& guid, UINT& size, void* data)
+{
+	try
+	{
+		// 'size' should be the size of the data pointed to by 'data'
+		if (!tex) throw std::runtime_error("texture is null");
+		pr::Throw(tex->m_tex->GetPrivateData(guid, &size, data));
+	}
+	CatchAndReport(View3d_TexturePrivateDataGet, ,);
+}
+VIEW3D_API void __stdcall View3d_TexturePrivateDataSet(View3DTexture tex, GUID const& guid, UINT size, void const* data)
+{
+	try
+	{
+		if (!tex) throw std::runtime_error("texture is null");
+		pr::Throw(tex->m_tex->SetPrivateData(guid, size, data));
+	}
+	CatchAndReport(View3d_TexturePrivateDataSet, ,);
+}
+VIEW3D_API void __stdcall View3d_TexturePrivateDataIFSet(View3DTexture tex, GUID const& guid, IUnknown* pointer)
+{
+	try
+	{
+		if (!tex) throw std::runtime_error("texture is null");
+		pr::Throw(tex->m_tex->SetPrivateDataInterface(guid, pointer));
+	}
+	CatchAndReport(View3d_TexturePrivateDataIFSet, ,);
+}
+
+// Get the current ref count of 'tex'
+VIEW3D_API ULONG __stdcall View3D_TextureRefCount(View3DTexture tex)
+{
+	try
+	{
+		if (!tex) throw std::runtime_error("texture is null");
+		return tex->m_ref_count;
+	}
+	CatchAndReport(View3D_TextureRefCount, , 0);
+}
+
 // Return the render target as a texture
 VIEW3D_API View3DTexture __stdcall View3D_TextureRenderTarget(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return window->m_wnd.m_main_tex.m_ptr;
@@ -1981,7 +2040,7 @@ VIEW3D_API View3DTexture __stdcall View3D_TextureFromShared(IUnknown* shared_res
 {
 	try
 	{
-		if (!shared_resource) throw std::exception("resource pointer is null");
+		if (!shared_resource) throw std::runtime_error("resource pointer is null");
 
 		DllLockGuard;
 
@@ -1994,6 +2053,58 @@ VIEW3D_API View3DTexture __stdcall View3D_TextureFromShared(IUnknown* shared_res
 		return t.release();
 	}
 	CatchAndReport(View3D_TextureFromExisting, , nullptr);
+}
+
+// Create a render target texture on a D3D9 device. Intended for WPF D3DImage
+VIEW3D_API View3DTexture __stdcall View3D_CreateDx9RenderTarget(HWND hwnd, UINT width, UINT height, View3DTextureOptions const& options, HANDLE* shared_handle)
+{
+	try
+	{
+		if (hwnd == nullptr) throw std::runtime_error("DirectX 9 requires a window handle");
+		
+		// Convert the DXGI format to a Dx9 one
+		auto fmt = Dx9Context::ConvertFormat(options.m_format);
+		if (fmt == D3DFMT_UNKNOWN)
+			throw std::runtime_error(pr::FmtS("No compatible DirectX 9 texture format for DXGI format %d", options.m_format));
+		
+		// Initialise 'handle' from the optional 'shared_handle'
+		// If '*shared_handle != nullptr', then CreateTexture will create a Dx9 texture that uses the shared resource.
+		// If 'shared_handle == nullptr', then the caller doesn't care about the shared handle, but we still need it so
+		// that the created texture will be shared and we can create a Dx11 texture from it.
+		HANDLE handle = shared_handle ? *shared_handle : nullptr;
+
+		// Create the shared Dx9 texture
+		Dx9Context dx9(hwnd);
+		auto tex = dx9.CreateTexture(width, height, 1, D3DUSAGE_RENDERTARGET, fmt, D3DPOOL_DEFAULT, &handle);
+		
+		// Access the main surface of the render target texture
+		D3DPtr<IDirect3DSurface9> surf0;
+		tex->GetSurfaceLevel(0, &surf0.m_ptr);
+
+		// Save the shared handle if the caller wants it.
+		if (shared_handle != nullptr)
+			*shared_handle = handle;
+
+		SamplerDesc sdesc;
+		sdesc.AddressU = options.m_addrU;
+		sdesc.AddressV = options.m_addrV;
+		sdesc.Filter = options.m_filter;
+
+		DllLockGuard;
+
+		// Create a Dx11 texture using the shared resource
+		auto t = Dll().m_rdr.m_tex_mgr.OpenSharedTexture2D(AutoId, handle, sdesc, options.m_has_alpha != 0, options.m_dbg_name);
+
+		// Save the surface 0 pointer in the private data of the texture. (Adds a reference)
+		t->m_tex->SetPrivateDataInterface(pr::rdr::Texture2D::Surface0Pointer, surf0.get());
+
+		// Add a handler to clean up this reference when the texture is destroyed
+		auto surf0_ptr = surf0.get(); // Don't capture the RefPtr
+		t->OnDestruction += [=](Texture2D&, pr::EmptyArgs const&){ surf0_ptr->Release(); };
+
+		return t.release();
+	}
+	CatchAndReport(View3D_CreateDx9RenderTarget, , nullptr);
 }
 
 // Rendering ***************************************************************
@@ -2009,7 +2120,7 @@ VIEW3D_API void __stdcall View3D_InvalidateRect(View3DWindow window, RECT const*
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 		window->InvalidateRect(rect, erase != 0);
 	}
 	CatchAndReport(View3D_InvalidateRect, window,);
@@ -2020,7 +2131,7 @@ VIEW3D_API void __stdcall View3D_Render(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->Render();
@@ -2034,7 +2145,7 @@ VIEW3D_API void __stdcall View3D_Present(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->Present();
@@ -2048,7 +2159,7 @@ VIEW3D_API void __stdcall View3D_RenderTargetRestore(View3DWindow window)
 {
 	try
 	{
-		if (window == nullptr) throw std::exception("window is null");
+		if (window == nullptr) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_wnd.RestoreRT();
@@ -2063,8 +2174,8 @@ VIEW3D_API void __stdcall View3D_RenderTargetSet(View3DWindow window, View3DText
 {
 	try
 	{
-		if (window == nullptr) throw std::exception("window is null");
-		if (render_target == nullptr) throw std::exception("Render target texture is null");
+		if (window == nullptr) throw std::runtime_error("window is null");
+		if (render_target == nullptr) throw std::runtime_error("Render target texture is null");
 
 		DllLockGuard;
 		window->m_wnd.SetRT(render_target->m_tex.get(), depth_buffer != nullptr ? depth_buffer->m_tex.get() : nullptr);
@@ -2078,7 +2189,7 @@ VIEW3D_API void __stdcall View3D_RenderTargetSaveAsMain(View3DWindow window)
 {
 	try
 	{
-		if (window == nullptr) throw std::exception("window is null");
+		if (window == nullptr) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_wnd.SaveAsMainRT();
@@ -2092,7 +2203,7 @@ VIEW3D_API void __stdcall View3D_BackBufferSizeGet(View3DWindow window, int& wid
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		auto area = window->m_wnd.BackBufferSize();
@@ -2105,7 +2216,7 @@ VIEW3D_API void __stdcall View3D_BackBufferSizeSet(View3DWindow window, int widt
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		if (width  < 0) width  = 0;
@@ -2137,7 +2248,7 @@ VIEW3D_API View3DViewport __stdcall View3D_Viewport(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		auto& scene_vp = window->m_scene.m_viewport;
@@ -2156,7 +2267,7 @@ VIEW3D_API void __stdcall View3D_SetViewport(View3DWindow window, View3DViewport
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		auto& scene_vp = window->m_scene.m_viewport;
@@ -2175,7 +2286,7 @@ VIEW3D_API EView3DFillMode __stdcall View3D_FillModeGet(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return window->m_fill_mode;
@@ -2186,7 +2297,7 @@ VIEW3D_API void __stdcall View3D_FillModeSet(View3DWindow window, EView3DFillMod
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_fill_mode = mode;
@@ -2199,7 +2310,7 @@ VIEW3D_API EView3DCullMode __stdcall View3D_CullModeGet(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return window->m_cull_mode;
@@ -2210,7 +2321,7 @@ VIEW3D_API void __stdcall View3D_CullModeSet(View3DWindow window, EView3DCullMod
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_cull_mode = mode;
@@ -2223,7 +2334,7 @@ VIEW3D_API unsigned int __stdcall View3D_BackgroundColourGet(View3DWindow window
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return window->m_background_colour.argb;
@@ -2234,7 +2345,7 @@ VIEW3D_API void __stdcall View3D_BackgroundColourSet(View3DWindow window, unsign
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_background_colour = pr::Colour32(aarrggbb);
@@ -2247,7 +2358,7 @@ VIEW3D_API int  __stdcall View3D_MultiSamplingGet(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return window->m_wnd.MultiSampling().Count;
@@ -2258,7 +2369,7 @@ VIEW3D_API void __stdcall View3D_MultiSamplingSet(View3DWindow window, int multi
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		pr::rdr::MultiSamp ms(multisampling);
@@ -2274,7 +2385,7 @@ VIEW3D_API void __stdcall View3D_ObjectManagerShow(View3DWindow window, BOOL sho
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->ShowObjectManager(show != 0);
@@ -2287,7 +2398,7 @@ VIEW3D_API BOOL __stdcall View3D_MeasureToolVisible(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return window->m_measure_tool_ui != nullptr && window->LdrMeasureUI().Visible();
@@ -2298,7 +2409,7 @@ VIEW3D_API void __stdcall View3D_ShowMeasureTool(View3DWindow window, BOOL show)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->ShowMeasureTool(show != 0);
@@ -2311,7 +2422,7 @@ VIEW3D_API BOOL __stdcall View3D_AngleToolVisible(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return window->m_angle_tool_ui != nullptr && window->LdrAngleUI().Visible();
@@ -2322,7 +2433,7 @@ VIEW3D_API void __stdcall View3D_ShowAngleTool(View3DWindow window, BOOL show)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->ShowAngleTool(show != 0);
@@ -2363,8 +2474,8 @@ VIEW3D_API void __stdcall View3D_GizmoAttachCB(View3DGizmo gizmo, View3D_GizmoMo
 {
 	try
 	{
-		if (!gizmo) throw std::exception("Gizmo is null");
-		if (!cb) throw std::exception("Callback function is null");
+		if (!gizmo) throw std::runtime_error("Gizmo is null");
+		if (!cb) throw std::runtime_error("Callback function is null");
 
 		DllLockGuard;
 		gizmo->Attach(reinterpret_cast<pr::ldr::LdrGizmoCB::Func>(cb), ctx);
@@ -2375,8 +2486,8 @@ VIEW3D_API void __stdcall View3D_GizmoDetachCB(View3DGizmo gizmo, View3D_GizmoMo
 {
 	try
 	{
-		if (!gizmo) throw std::exception("Gizmo is null");
-		if (!cb) throw std::exception("Callback function is null");
+		if (!gizmo) throw std::runtime_error("Gizmo is null");
+		if (!cb) throw std::runtime_error("Callback function is null");
 
 		DllLockGuard;
 		gizmo->Detach(reinterpret_cast<pr::ldr::LdrGizmoCB::Func>(cb));
@@ -2389,8 +2500,8 @@ VIEW3D_API void __stdcall View3D_GizmoAttach(View3DGizmo gizmo, View3DObject obj
 {
 	try
 	{
-		if (!gizmo) throw std::exception("Gizmo is null");
-		if (!obj) throw std::exception("Object is null");
+		if (!gizmo) throw std::runtime_error("Gizmo is null");
+		if (!obj) throw std::runtime_error("Object is null");
 
 		DllLockGuard;
 		gizmo->Attach(obj->m_o2p);
@@ -2401,7 +2512,7 @@ VIEW3D_API void __stdcall View3D_GizmoDetach(View3DGizmo gizmo, View3DObject obj
 {
 	try
 	{
-		if (!gizmo) throw std::exception("Gizmo is null");
+		if (!gizmo) throw std::runtime_error("Gizmo is null");
 
 		DllLockGuard;
 		gizmo->Detach(obj->m_o2p);
@@ -2414,7 +2525,7 @@ VIEW3D_API float __stdcall View3D_GizmoScaleGet(View3DGizmo gizmo)
 {
 	try
 	{
-		if (!gizmo) throw std::exception("Gizmo is null");
+		if (!gizmo) throw std::runtime_error("Gizmo is null");
 
 		DllLockGuard;
 		return gizmo->m_scale;
@@ -2425,7 +2536,7 @@ VIEW3D_API void __stdcall View3D_GizmoScaleSet(View3DGizmo gizmo, float scale)
 {
 	try
 	{
-		if (!gizmo) throw std::exception("Gizmo is null");
+		if (!gizmo) throw std::runtime_error("Gizmo is null");
 
 		DllLockGuard;
 		gizmo->m_scale = scale;
@@ -2438,7 +2549,7 @@ VIEW3D_API EView3DGizmoMode __stdcall View3D_GizmoGetMode(View3DGizmo gizmo)
 {
 	try
 	{
-		if (!gizmo) throw std::exception("Gizmo is null");
+		if (!gizmo) throw std::runtime_error("Gizmo is null");
 		return static_cast<EView3DGizmoMode>(gizmo->Mode());
 	}
 	CatchAndReport(View3D_GizmoGetMode, ,static_cast<EView3DGizmoMode>(-1));
@@ -2447,7 +2558,7 @@ VIEW3D_API void __stdcall View3D_GizmoSetMode(View3DGizmo gizmo, EView3DGizmoMod
 {
 	try
 	{
-		if (!gizmo) throw std::exception("Gizmo is null");
+		if (!gizmo) throw std::runtime_error("Gizmo is null");
 		gizmo->Mode(static_cast<pr::ldr::LdrGizmo::EMode>(mode));
 	}
 	CatchAndReport(View3D_GizmoSetMode, ,);
@@ -2458,7 +2569,7 @@ VIEW3D_API View3DM4x4 __stdcall View3D_GizmoGetO2W(View3DGizmo gizmo)
 {
 	try
 	{
-		if (!gizmo) throw std::exception("Gizmo is null");
+		if (!gizmo) throw std::runtime_error("Gizmo is null");
 		return view3d::To<View3DM4x4>(gizmo->O2W());
 	}
 	CatchAndReport(View3D_GizmoGetO2W, ,View3DM4x4());
@@ -2467,7 +2578,7 @@ VIEW3D_API void __stdcall View3D_GizmoSetO2W(View3DGizmo gizmo, View3DM4x4 const
 {
 	try
 	{
-		if (!gizmo) throw std::exception("Gizmo is null");
+		if (!gizmo) throw std::runtime_error("Gizmo is null");
 		gizmo->O2W(view3d::To<pr::m4x4>(o2w));
 	}
 	CatchAndReport(View3D_GizmoSetO2W, ,);
@@ -2478,7 +2589,7 @@ VIEW3D_API View3DM4x4 __stdcall View3D_GizmoGetOffset(View3DGizmo gizmo)
 {
 	try
 	{
-		if (!gizmo) throw std::exception("Gizmo is null");
+		if (!gizmo) throw std::runtime_error("Gizmo is null");
 		return view3d::To<View3DM4x4>(gizmo->Offset());
 	}
 	CatchAndReport(View3D_GizmoGetOffset, ,View3DM4x4());
@@ -2489,7 +2600,7 @@ VIEW3D_API BOOL __stdcall View3D_GizmoEnabled(View3DGizmo gizmo)
 {
 	try
 	{
-		if (!gizmo) throw std::exception("Gizmo is null");
+		if (!gizmo) throw std::runtime_error("Gizmo is null");
 		return gizmo->Enabled();
 	}
 	CatchAndReport(View3D_GizmoEnabled, ,FALSE);
@@ -2498,7 +2609,7 @@ VIEW3D_API void __stdcall View3D_GizmoSetEnabled(View3DGizmo gizmo, BOOL enabled
 {
 	try
 	{
-		if (!gizmo) throw std::exception("Gizmo is null");
+		if (!gizmo) throw std::runtime_error("Gizmo is null");
 		gizmo->Enabled(enabled != 0);
 	}
 	CatchAndReport(View3D_GizmoSetEnabled, ,);
@@ -2509,7 +2620,7 @@ VIEW3D_API BOOL __stdcall View3D_GizmoManipulating(View3DGizmo gizmo)
 {
 	try
 	{
-		if (!gizmo) throw std::exception("Gizmo is null");
+		if (!gizmo) throw std::runtime_error("Gizmo is null");
 		return gizmo->Manipulating();
 	}
 	CatchAndReport(View3D_GizmoManipulating, ,FALSE);
@@ -2522,7 +2633,7 @@ VIEW3D_API BOOL __stdcall View3D_TranslateKey(View3DWindow window, int key_code)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		switch (key_code)
@@ -2568,7 +2679,7 @@ VIEW3D_API BOOL __stdcall View3D_DepthBufferEnabledGet(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return window->m_scene.m_dsb.Desc().DepthEnable;
@@ -2581,7 +2692,7 @@ VIEW3D_API void __stdcall View3D_DepthBufferEnabledSet(View3DWindow window, BOOL
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_scene.m_dsb.Set(EDS::DepthEnable, enabled);
@@ -2594,7 +2705,7 @@ VIEW3D_API BOOL __stdcall View3D_FocusPointVisibleGet(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return window->m_focus_point_visible;
@@ -2607,7 +2718,7 @@ VIEW3D_API void __stdcall View3D_FocusPointVisibleSet(View3DWindow window, BOOL 
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_focus_point_visible = show != 0;
@@ -2620,7 +2731,7 @@ VIEW3D_API void __stdcall View3D_FocusPointSizeSet(View3DWindow window, float si
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_focus_point_size = size;
@@ -2633,7 +2744,7 @@ VIEW3D_API BOOL __stdcall View3D_OriginVisibleGet(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return window->m_origin_point_visible;
@@ -2646,7 +2757,7 @@ VIEW3D_API void __stdcall View3D_OriginVisibleSet(View3DWindow window, BOOL show
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_origin_point_visible = show != 0;
@@ -2659,7 +2770,7 @@ VIEW3D_API void __stdcall View3D_OriginSizeSet(View3DWindow window, float size)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_origin_point_size = size;
@@ -2672,7 +2783,7 @@ VIEW3D_API BOOL __stdcall View3D_BBoxesVisibleGet(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return window->m_bboxes_visible;
@@ -2683,7 +2794,7 @@ VIEW3D_API void __stdcall View3D_BBoxesVisibleSet(View3DWindow window, BOOL visi
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_bboxes_visible = visible != 0;
@@ -2696,7 +2807,7 @@ VIEW3D_API BOOL __stdcall View3D_SelectionBoxVisibleGet(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return window->m_selection_box_visible;
@@ -2707,7 +2818,7 @@ VIEW3D_API void __stdcall View3D_SelectionBoxVisibleSet(View3DWindow window, BOO
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->m_selection_box_visible = visible != 0;
@@ -2720,7 +2831,7 @@ VIEW3D_API void __stdcall View3D_SelectionBoxPosition(View3DWindow window, View3
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->SetSelectionBox(view3d::To<pr::BBox>(bbox), view3d::To<pr::m4x4>(o2w).rot);
@@ -2733,7 +2844,7 @@ VIEW3D_API void __stdcall View3D_SelectionBoxFitToSelected(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->SelectionBoxFitToSelected();
@@ -2748,7 +2859,7 @@ VIEW3D_API GUID __stdcall View3D_DemoSceneCreate(View3DWindow window)
 	using namespace pr::ldr;
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		return Dll().CreateDemoScene(window);
@@ -2784,7 +2895,7 @@ VIEW3D_API void __stdcall View3D_DemoScriptShow(View3DWindow window)
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
+		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
 		window->EditorUI().Show();
@@ -2805,6 +2916,17 @@ VIEW3D_API View3DM4x4 __stdcall View3D_ParseLdrTransform(char const* ldr_script)
 	CatchAndReport(View3D_ParseLdrTransform, , view3d::To<View3DM4x4>(pr::m4x4Identity));
 }
 
+// Return the current ref count of a COM pointer
+VIEW3D_API ULONG __stdcall View3D_RefCount(IUnknown* pointer)
+{
+	try
+	{
+		if (pointer == nullptr) throw std::runtime_error("pointer is null");
+		return pr::rdr::RefCount(pointer);
+	}
+	CatchAndReport(View3D_RefCount, , 0);
+}
+
 // Create/Destroy a scintilla editor window set up for ldr script editing
 VIEW3D_API HWND __stdcall View3D_LdrEditorCreate(HWND parent)
 {
@@ -2819,7 +2941,7 @@ VIEW3D_API HWND __stdcall View3D_LdrEditorCreate(HWND parent)
 		HWND hwnd = *editor;
 		::SetLastError(0);
 		auto prev = ::SetWindowLongPtrA(hwnd, GWLP_USERDATA, LONG_PTR(editor.get()));
-		if (prev != 0 || ::GetLastError() != 0) throw std::exception("Error while creating editor window");
+		if (prev != 0 || ::GetLastError() != 0) throw std::runtime_error("Error while creating editor window");
 		editor.release();
 		return hwnd;
 	}
@@ -2832,7 +2954,7 @@ VIEW3D_API void __stdcall View3D_LdrEditorDestroy(HWND hwnd)
 		if (hwnd == 0) return;
 
 		EditorPtr edt(reinterpret_cast<pr::ldr::ScriptEditorUI*>(::GetWindowLongPtrA(hwnd, GWLP_USERDATA)));
-		if (!edt) throw std::exception("No back reference pointer found for this window");
+		if (!edt) throw std::runtime_error("No back reference pointer found for this window");
 		::SetWindowLongPtrA(hwnd, GWLP_USERDATA, 0);
 		// 'edt' going out of scope should delete it
 	}
@@ -2844,7 +2966,7 @@ VIEW3D_API void __stdcall View3D_LdrEditorCtrlInit(HWND scintilla_control, BOOL 
 {
 	try
 	{
-		if (!scintilla_control) throw std::exception("scintilla control handle is null");
+		if (!scintilla_control) throw std::runtime_error("scintilla control handle is null");
 
 		pr::gui::ScintillaCtrl s;
 		s.Attach(scintilla_control);

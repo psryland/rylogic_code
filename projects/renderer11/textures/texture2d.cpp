@@ -13,6 +13,9 @@ namespace pr
 {
 	namespace rdr
 	{
+		// Unique identifiers for data attached to the private data of this texture
+		GUID const Texture2D::Surface0Pointer = {0x6EE0154E, 0xDEAD, 0x4E2F, 0x86, 0x9B, 0xE4, 0xD1, 0x5C, 0xA2, 0x97, 0x87};
+
 		Texture2D::Texture2D(TextureManager* mgr, RdrId id, ID3D11Texture2D* tex, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name)
 			:Texture2D(mgr, id, tex, nullptr, sdesc, sort_id, has_alpha, name)
 		{}
@@ -61,30 +64,65 @@ namespace pr
 
 			// Get the DXGI resource interface for the shared resource
 			D3DPtr<IDXGIResource> dxgi_resource;
-			pr::Throw(shared_resource->QueryInterface(__uuidof(IDXGIResource), (void**)&dxgi_resource.m_ptr));
+			Throw(shared_resource->QueryInterface(__uuidof(IDXGIResource), (void**)&dxgi_resource.m_ptr));
 
 			// Get the handled of the shared resource so that we can open it with our d3d device
 			HANDLE shared_handle;
-			pr::Throw(dxgi_resource->GetSharedHandle(&shared_handle));
+			Throw(dxgi_resource->GetSharedHandle(&shared_handle));
 
 			// Open the shared resource in our d3d device
 			D3DPtr<IUnknown> resource;
-			pr::Throw(lock.D3DDevice()->OpenSharedResource(shared_handle, __uuidof(ID3D11Resource), (void**)&resource.m_ptr));
+			Throw(lock.D3DDevice()->OpenSharedResource(shared_handle, __uuidof(ID3D11Resource), (void**)&resource.m_ptr));
 
 			// Query the texture interface from the resource
-			pr::Throw(resource->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&m_tex.m_ptr));
+			Throw(resource->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&m_tex.m_ptr));
 
 			// Read the properties of the texture
 			D3D11_TEXTURE2D_DESC tdesc;
 			m_tex->GetDesc(&tdesc);
 
-			// If the texture was created with shader binding, get the srv
 			// If the texture can be a shader resource, create a shader resource view
 			if ((tdesc.BindFlags & D3D11_BIND_SHADER_RESOURCE) != 0)
 			{
 				ShaderResourceViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
 				srvdesc.Texture2D.MipLevels = tdesc.MipLevels;
-				pr::Throw(lock.D3DDevice()->CreateShaderResourceView(m_tex.get(), &srvdesc, &m_srv.m_ptr));
+				Throw(lock.D3DDevice()->CreateShaderResourceView(m_tex.get(), &srvdesc, &m_srv.m_ptr));
+			}
+
+			// Save the sampler description
+			SamDesc(sdesc);
+		}
+		Texture2D::Texture2D(TextureManager* mgr, RdrId id, HANDLE shared_handle, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name)
+			:m_t2s(pr::m4x4Identity)
+			,m_tex()
+			,m_srv()
+			,m_samp()
+			,m_id(id == AutoId ? MakeId(this) : id)
+			,m_src_id()
+			,m_sort_id(sort_id)
+			,m_has_alpha(has_alpha)
+			,m_mgr(mgr)
+			,m_name(name ? name : "")
+		{
+			Renderer::Lock lock(m_mgr->m_rdr);
+
+			// Open the shared resource in our d3d device
+			D3DPtr<IUnknown> resource;
+			Throw(lock.D3DDevice()->OpenSharedResource(shared_handle, __uuidof(ID3D11Resource), (void**)&resource.m_ptr));
+
+			// Query the texture interface from the resource
+			Throw(resource->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&m_tex.m_ptr));
+
+			// Read the properties of the texture
+			D3D11_TEXTURE2D_DESC tdesc;
+			m_tex->GetDesc(&tdesc);
+
+			// If the texture can be a shader resource, create a shader resource view
+			if ((tdesc.BindFlags & D3D11_BIND_SHADER_RESOURCE) != 0)
+			{
+				ShaderResourceViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
+				srvdesc.Texture2D.MipLevels = tdesc.MipLevels;
+				Throw(lock.D3DDevice()->CreateShaderResourceView(m_tex.get(), &srvdesc, &m_srv.m_ptr));
 			}
 
 			// Save the sampler description

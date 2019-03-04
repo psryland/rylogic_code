@@ -73,10 +73,10 @@ namespace pr
 			Renderer::Lock lock(m_rdr);
 
 			// Check whether 'id' already exists, if so, throw.
-			if (id != AutoId && m_lookup_tex.find(id) != end(m_lookup_tex))
+			if (id != AutoId && m_lookup_tex.find(id) != std::end(m_lookup_tex))
 				throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Texture Id '%d' is already in use", id));
 
-			// Allocate a new texture instance and dx texture resource
+			// Allocate a new texture instance and DX texture resource
 			SortKeyId sort_id = m_lookup_tex.size() % SortKey::MaxTextureId;
 			Texture2DPtr inst(m_alex_tex2d.New(this, id, src, tdesc, sdesc, sort_id, has_alpha, name), true);
 			assert(m_dbg_mem_tex2d.add(inst.get()));
@@ -113,13 +113,13 @@ namespace pr
 			}
 
 			// Check whether 'id' already exists, if so, throw.
-			if (id != AutoId && m_lookup_tex.find(id) == end(m_lookup_tex))
+			if (id != AutoId && m_lookup_tex.find(id) == std::end(m_lookup_tex))
 				throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Texture Id '%d' is already in use", id));
 
 			ID3D11Texture2D* tex;
 			ID3D11ShaderResourceView* srv;
 
-			// Look for an existing dx texture corresponding to 'filepath'
+			// Look for an existing DX texture corresponding to 'filepath'
 			RdrId texfile_id = MakeId(pr::filesys::Standardise<wstring256>(filepath).c_str());
 			auto iter = m_lookup_fname.find(texfile_id);
 			if (iter != m_lookup_fname.end())
@@ -145,7 +145,7 @@ namespace pr
 			return CreateTexture2D(id, sam_desc, pr::To<wstring256>(filepath).c_str(), has_alpha, name);
 		}
 
-		// Create a new texture instance that wraps an existing dx texture.
+		// Create a new texture instance that wraps an existing DX texture.
 		// 'id' is the id to assign to this new texture instance. Use 'AutoId' to auto generate an id
 		// 'existing' is an existing dx texture to wrap
 		// 'sam_desc' is an optional sampler state description to set on the clone.
@@ -154,10 +154,10 @@ namespace pr
 			Renderer::Lock lock(m_rdr);
 
 			// Check whether 'id' already exists, if so, throw.
-			if (id != AutoId && m_lookup_tex.find(id) != end(m_lookup_tex))
+			if (id != AutoId && m_lookup_tex.find(id) != std::end(m_lookup_tex))
 				throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Texture Id '%d' is already in use", id));
 
-			// Allocate a new texture instance that reuses the dx texture resource
+			// Allocate a new texture instance that reuses the DX texture resource
 			SortKeyId sort_id = m_lookup_tex.size() % SortKey::MaxTextureId;
 			Texture2DPtr inst(m_alex_tex2d.New(this, id, existing_tex, existing_srv, sam_desc, sort_id, has_alpha, name), true);
 			assert(m_dbg_mem_tex2d.add(inst.get()));
@@ -174,7 +174,7 @@ namespace pr
 			Renderer::Lock lock(m_rdr);
 
 			// Check whether 'id' already exists, if so, throw.
-			if (id != AutoId && m_lookup_tex.find(id) != end(m_lookup_tex))
+			if (id != AutoId && m_lookup_tex.find(id) != std::end(m_lookup_tex))
 				throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Texture Id '%d' is already in use", id));
 
 			// Allocate a new texture instance and wrap the shared resource
@@ -226,7 +226,7 @@ namespace pr
 			Renderer::Lock lock(m_rdr);
 
 			// Check whether 'id' already exists, if so, throw.
-			if (id != AutoId && m_lookup_tex.find(id) != end(m_lookup_tex))
+			if (id != AutoId && m_lookup_tex.find(id) != std::end(m_lookup_tex))
 				throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Texture Id '%d' is already in use", id));
 
 			// Validate
@@ -239,7 +239,7 @@ namespace pr
 			if (tdesc.MipLevels != 1)
 				throw pr::Exception<HRESULT>(E_FAIL, "GDI textures require the MipLevels == 1");
 
-			// Allocate a new texture instance and dx texture resource
+			// Allocate a new texture instance and DX texture resource
 			SortKeyId sort_id = m_lookup_tex.size() % SortKey::MaxTextureId;
 			Texture2DPtr inst(m_alex_tex2d.New(this, id, src, tdesc, sdesc, sort_id, has_alpha, name), true);
 			assert(m_dbg_mem_tex2d.add(inst.get()));
@@ -260,7 +260,7 @@ namespace pr
 			return CreateTextureGdi(id, Image(w,h), has_alpha, name);
 		}
 
-		// Create a new texture instance that uses the same dx texture as an existing texture.
+		// Create a new texture instance that uses the same DX texture as an existing texture.
 		// 'id' is the id to assign to this new texture instance. Use 'AutoId' to auto generate an id
 		// 'existing' is an existing texture instance to clone
 		// 'sam_desc' is an optional sampler state description to set on the clone.
@@ -269,10 +269,10 @@ namespace pr
 			Renderer::Lock lock(m_rdr);
 
 			// Check whether 'id' already exists, if so, throw.
-			if (id != AutoId && m_lookup_tex.find(id) == end(m_lookup_tex))
+			if (id != AutoId && m_lookup_tex.find(id) == std::end(m_lookup_tex))
 				throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Texture Id '%d' is already in use", id));
 
-			// Allocate a new texture instance that reuses the dx texture resource
+			// Allocate a new texture instance that reuses the DX texture resource
 			SortKeyId sort_id = m_lookup_tex.size() % SortKey::MaxTextureId;
 			Texture2DPtr inst(m_alex_tex2d.New(this, id, *existing, sort_id, name), true);
 			assert(m_dbg_mem_tex2d.add(inst.get()));
@@ -282,6 +282,25 @@ namespace pr
 
 			// Add the texture instance to the lookup table
 			AddLookup(m_lookup_tex, inst->m_id, inst.m_ptr);
+			return inst;
+		}
+
+		// Create a texture that references a shared resource
+		Texture2DPtr TextureManager::OpenSharedTexture2D(RdrId id, HANDLE shared_handle, SamplerDesc const& sdesc, bool has_alpha, char const* name)
+		{
+			Renderer::Lock lock(m_rdr);
+
+			// Check whether 'id' already exists, if so, throw.
+			if (id != AutoId && m_lookup_tex.find(id) != std::end(m_lookup_tex))
+				throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Texture Id '%d' is already in use", id));
+
+			// Allocate a new texture instance and wrap the shared resource
+			SortKeyId sort_id = m_lookup_tex.size() % SortKey::MaxTextureId;
+			Texture2DPtr inst(m_alex_tex2d.New(this, id, shared_handle, sdesc, sort_id, has_alpha, name), true);
+			assert(m_dbg_mem_tex2d.add(inst.get()));
+
+			// Add the texture instance to the lookup table
+			AddLookup(m_lookup_tex, inst->m_id, inst.get());
 			return inst;
 		}
 
@@ -298,7 +317,7 @@ namespace pr
 			TextureLookup::iterator iter = m_lookup_tex.find(tex->m_id);
 			PR_ASSERT(PR_DBG_RDR, iter != m_lookup_tex.end(), "Texture not found");
 
-			// If the dx texture will be released when we clean up this texture
+			// If the DX texture will be released when we clean up this texture
 			// then check whether it is in the 'fname' lookup table and remove it if it is.
 			if (tex->m_src_id != 0 && tex->m_tex.RefCount() == 1)
 			{
@@ -463,13 +482,13 @@ namespace pr
 
 		// Updates the texture and 'srv' pointers in 'existing' to those provided.
 		// If 'all_instances' is true, 'm_lookup_tex' is searched for Texture instances that point to the same
-		// dx resource as 'existing'. All are updated to point to the given 'tex' and 'srv' and the RdrId remains unchanged.
+		// DX resource as 'existing'. All are updated to point to the given 'tex' and 'srv' and the RdrId remains unchanged.
 		// If 'all_instances' is false, only 'existing' has its dx pointers changed.
 		void TextureManager::ReplaceTexture(Texture2D& existing, D3DPtr<ID3D11Texture2D> tex, D3DPtr<ID3D11ShaderResourceView> srv, bool all_instances)
 		{
 			if (all_instances && existing.m_tex != nullptr)
 			{
-				// Replace the dx texture in all other texture instances that share it with 'existing'
+				// Replace the DX texture in all other texture instances that share it with 'existing'
 				for (auto& rhs : m_lookup_tex)
 				{
 					auto& other = *rhs.second;

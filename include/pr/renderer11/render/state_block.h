@@ -177,7 +177,7 @@ namespace pr
 				// Look for a corresponding state object
 				auto hash = pr::hash::Hash(desc);
 				auto iter = m_lookup.find(hash);
-				if (iter == end(m_lookup))
+				if (iter == std::end(m_lookup))
 				{
 					// If not found, create one
 					TD3DInterface* s = create(desc.Desc());
@@ -199,8 +199,8 @@ namespace pr
 				// Just flush all. Remember, 'm_lookup.size()' is the number of *unique*
 				// states currently active.
 				// Notice, it doesn't actually matter if there are outstanding references to the
-				// states being released here. Those states will release when the go out of scope.
-				for (auto i = begin(m_lookup); !m_lookup.empty(); i = m_lookup.erase(i))
+				// states being released here. Those states will release when they go out of scope.
+				for (auto i = std::begin(m_lookup); !m_lookup.empty(); i = m_lookup.erase(i))
 					i->second->Release();
 			}
 		};

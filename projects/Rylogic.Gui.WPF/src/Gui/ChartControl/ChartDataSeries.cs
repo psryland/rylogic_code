@@ -817,7 +817,7 @@ namespace Rylogic.Gui.WPF
 							// A circle texture
 							return m_map.GetOrAdd(style, s =>
 							{
-								var sz = 32U;
+								var sz = 32;
 								var tex = new View3d.Texture(sz, sz);
 								using (var surf = tex.LockSurface(true))
 								{
@@ -832,7 +832,7 @@ namespace Rylogic.Gui.WPF
 							// An equilateral triangle within a square texture
 							return m_map.GetOrAdd(style, s =>
 							{
-								var sz = 128U;
+								var sz = 128;
 								var h0 = 0.5f * sz * (float)Math.Tan(Math_.DegreesToRadians(60));
 								var h1 = 0.5f * (sz - h0);
 								var tex = new View3d.Texture(sz, sz);

@@ -102,11 +102,11 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>True if the current thread is the 'main' thread</summary>
-		public static bool IsMainThread { get { return Thread.CurrentThread.ManagedThreadId == m_main_thread_id; } }
+		public static bool IsMainThread => Thread.CurrentThread.ManagedThreadId == m_main_thread_id;
 		private static int m_main_thread_id = Thread.CurrentThread.ManagedThreadId;
 
 		/// <summary>True if the current thread has the name 'GC Finalizer Thread'</summary>
-		public static bool IsGCFinalizerThread { get { return Thread.CurrentThread.ManagedThreadId == GCThread?.ManagedThreadId; } }
+		public static bool IsGCFinalizerThread => Thread.CurrentThread.ManagedThreadId == GCThread?.ManagedThreadId;
 		public static Thread GCThread
 		{
 			get

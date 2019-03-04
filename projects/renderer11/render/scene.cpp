@@ -191,7 +191,7 @@ namespace pr
 		// Instances can be added to render steps directly if finer control is needed
 		void Scene::AddInstance(BaseInstance const& inst)
 		{
-			m_instances.insert(&inst);
+			m_instances.push_back(&inst);
 			for (auto& rs : m_render_steps)
 				rs->AddInstance(inst);
 		}
@@ -199,7 +199,9 @@ namespace pr
 		// Remove an instance from the scene
 		void Scene::RemoveInstance(BaseInstance const& inst)
 		{
-			m_instances.erase(&inst);
+			auto iter = pr::find(m_instances, &inst);
+			m_instances.erase_fast(iter);
+
 			for (auto& rs : m_render_steps)
 				rs->RemoveInstance(inst);
 		}

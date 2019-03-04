@@ -11,6 +11,15 @@ namespace pr
 {
 	namespace rdr
 	{
+		// Helper for getting the ref count of a COM pointer.
+		// Don't inline so that it can be used in the Immediate window during debugging
+		ULONG RefCount(IUnknown* ptr);
+		template <typename T> ULONG RefCount(RefPtr<T> ptr)
+		{
+			if (ptr == nullptr) return 0;
+			return RegCount(ptr.m_ptr);
+		}
+
 		// Returns an incrementing id with each call
 		inline RdrId MonotonicId()
 		{
@@ -98,20 +107,22 @@ namespace pr
 		void GetSurfaceInfo(UINT width, UINT height, DXGI_FORMAT fmt, UINT* num_bytes, UINT* row_bytes, UINT* num_rows);
 
 		// Helper for checking values are not overwritten in a lookup table
-		template <class Table, typename Key, typename Value> inline void AddLookup(Table& table, Key const& key, Value const& value)
+		template <class Table, typename Key, typename Value>
+		inline void AddLookup(Table& table, Key const& key, Value const& value)
 		{
 			PR_ASSERT(PR_DBG_RDR, table.count(key) == 0, "Overwriting an existing lookup table item");
 			table[key] = value;
 		}
 
 		// Helper for reading values from an unordered map, returning 'def' if not found
-		template <class Map, typename Key, typename Value> inline Value const& GetOrDefault(Map const& map, Key const& key, Value const& def = Value())
+		template <class Map, typename Key, typename Value>
+		inline Value const& GetOrDefault(Map const& map, Key const& key, Value const& def = Value())
 		{
 			auto iter = map.find(key);
 			return iter == std::end(map) ? def : static_cast<Value const&>(iter->second);
 		}
 
-		// Set the name on a dx resource (debug only)
+		// Set the name on a DX resource (debug only)
 		template <typename T> inline void NameResource(T* res, char const* name)
 		{
 			#if PR_DBG_RDR

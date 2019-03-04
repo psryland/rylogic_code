@@ -91,6 +91,9 @@ namespace pr
 			// 'sam_desc' is an optional sampler state description to set on the clone.
 			Texture2DPtr CloneTexture2D(RdrId id, Texture2D const* existing, SamplerDesc const* sam_desc, char const* name);
 
+			// Create a texture that references a shared resource
+			Texture2DPtr OpenSharedTexture2D(RdrId id, HANDLE shared_handle, SamplerDesc const& sdesc, bool has_alpha, char const* name);
+
 			// Return a pointer to an existing texture
 			Texture2DPtr FindTexture(RdrId id) const
 			{

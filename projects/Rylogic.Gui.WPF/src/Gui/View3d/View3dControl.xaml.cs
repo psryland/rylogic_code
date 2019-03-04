@@ -1,26 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
+using System;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using Microsoft.Wpf.Interop.DirectX;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Gfx;
-using Rylogic.Interop.Win32;
 using Rylogic.Maths;
 using Rylogic.Utility;
 
@@ -52,8 +41,6 @@ namespace Rylogic.Gui.WPF
 
 				// Create a D3D11 off-screen render target image source
 				Source = D3DImage = new D3D11Image();
-				D3DImage.SetPixelSize(1, 1);
-				D3DImage.OnRender += Render;
 
 				// Set defaults
 				BackgroundColour = Colour32.Gray;
@@ -70,7 +57,6 @@ namespace Rylogic.Gui.WPF
 		public void Dispose()
 		{
 			Source = null;
-			RenderTarget = null;
 			D3DImage = Util.Dispose(D3DImage);
 			Window = Util.Dispose(Window);
 			View3d = Util.Dispose(View3d);
@@ -78,19 +64,10 @@ namespace Rylogic.Gui.WPF
 		protected override void OnRenderSizeChanged(SizeChangedInfo size_info)
 		{
 			base.OnRenderSizeChanged(size_info);
-
-			// Set the off screen render target size, accounting for DPI
-			var win = PresentationSource.FromVisual(this)?.CompositionTarget as HwndTarget;
-			var dpi_scale = win?.TransformToDevice.M11 ?? 1.0;
-
-			// Determine the texture size
-			var width = Math.Max(1, (int)Math.Ceiling(size_info.NewSize.Width * dpi_scale));
-			var height = Math.Max(1, (int)Math.Ceiling(size_info.NewSize.Height * dpi_scale));
-			D3DImage.SetPixelSize(width, height);
-
-			// Trigger an update
+			m_resized = true;
 			Invalidate();
 		}
+		private bool m_resized;
 
 		/// <summary>View3d context instance</summary>
 		public View3d View3d { get; private set; }
@@ -112,12 +89,14 @@ namespace Rylogic.Gui.WPF
 				{
 					Loaded -= OnLoaded;
 					Unloaded -= OnUnloaded;
+					m_d3d_image.RenderTargetChanged -= HandleRTChanged;
 				}
 				m_d3d_image = value;
 				if (m_d3d_image != null)
 				{
 					Loaded += OnLoaded;
 					Unloaded += OnUnloaded;
+					m_d3d_image.RenderTargetChanged += HandleRTChanged;
 				}
 
 				void OnLoaded(object sender, EventArgs arg)
@@ -133,22 +112,21 @@ namespace Rylogic.Gui.WPF
 					// When the control is unloaded, detach the window
 					D3DImage.WindowOwner = IntPtr.Zero;
 				}
+				void HandleRTChanged(object sender, EventArgs arg)
+				{
+					if (m_d3d_image.RenderTarget != null)
+					{
+						var info = m_d3d_image.RenderTarget.Info;
+						Window.Viewport = new View3d.Viewport(0, 0, info.m_width, info.m_height);
+						Camera.Aspect = Math_.Div(info.m_width, info.m_height, 1f);
+					}
+
+					Window.SetRT(D3DImage.RenderTarget);
+					Window.SaveAsMainRT();
+				}
 			}
 		}
 		private D3D11Image m_d3d_image;
-
-		/// <summary>The shared render target resource from 'D3DImage'</summary>
-		private View3d.Texture RenderTarget
-		{
-			get { return m_render_target; }
-			set
-			{
-				if (m_render_target == value) return;
-				Util.Dispose(ref m_render_target);
-				m_render_target = value;
-			}
-		}
-		private View3d.Texture m_render_target;
 
 		/// <summary>Trigger a redraw of the view3d scene</summary>
 		public void Invalidate()
@@ -159,7 +137,7 @@ namespace Rylogic.Gui.WPF
 		}
 		protected virtual void OnInvalidated()
 		{
-			Dispatcher.BeginInvoke(D3DImage.RequestRender);
+			Dispatcher.BeginInvoke(Render);
 		}
 		private bool m_render_pending;
 
@@ -485,33 +463,33 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Render</summary>
-		private void Render(IntPtr render_target, bool is_new)
+		private void Render()
 		{
-			// Notes:
-			//  - D3DImage.RequestRender calls 'D3DImage.OnRender' synchronously and also
-			//    calls 'AddDirtyRect' effectively invalidating the control with each render call.
 			using (Scope.Create(null, () => m_render_pending = false))
 			{
-				// If the render target texture has changed, update it in view3d
-				if (is_new)
-				{
-					RenderTarget = View3d.Texture.FromShared(render_target, View3d.TextureOptions.New());
-					Window.Viewport = new View3d.Viewport(0, 0, RenderTarget.Info.m_width, RenderTarget.Info.m_height);
-					Camera.Aspect = Math_.Div(RenderTarget.Info.m_width, RenderTarget.Info.m_height, 1f);
+				// Ignore renders until the D3DImage has a render target
+				if (D3DImage.RenderTarget == null)
+					return;
 
-					Window.SetRT(RenderTarget);
-					Window.SaveAsMainRT();
+				// If the size has changed, update the back buffer
+				if (m_resized)
+				{
+					D3DImage.SetRenderTargetSize(this);
+					m_resized = false;
 				}
 
 				// Allow objects to be added/removed from the scene
 				OnBuildScene();
 
-				// Render if the render target has been set
-				if (D3DImage.WindowOwner != IntPtr.Zero)
+				using (D3DImage.LockScope())
 				{
+					// Render the scene
 					Window.RestoreRT();
 					Window.Render();
 					Window.Present();
+
+					// Notify that the D3DImage has changed
+					D3DImage.AddDirtyRect();
 				}
 			}
 		}

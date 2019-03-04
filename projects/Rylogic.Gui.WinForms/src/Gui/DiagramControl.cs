@@ -3043,10 +3043,10 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>A 'mixin' class for a textured shape</summary>
 		public class TexturedShape<TShape> : View3d.Object where TShape : IShape
 		{
-			public TexturedShape(TShape shape, v2 sz, uint texture_scale = 4)
+			public TexturedShape(TShape shape, v2 sz, int texture_scale = 4)
 			{
 				Shape = shape;
-				Surface = new Surface((uint)(sz.x + 0.5f), (uint)(sz.y + 0.5f), texture_scale);
+				Surface = new Surface((int)(sz.x + 0.5f), (int)(sz.y + 0.5f), texture_scale);
 				UpdateModel();
 			}
 			public TexturedShape(XElement node)
@@ -3076,10 +3076,7 @@ namespace Rylogic.Gui.WinForms
 			public Surface Surface { get; }
 
 			/// <summary>Texture scaling factor</summary>
-			public uint TextureScale
-			{
-				get { return Surface.TextureScale; }
-			}
+			public int TextureScale => Surface.TextureScale;
 
 			/// <summary>Lock the texture for drawing on</summary>
 			public View3d.Texture.Lock LockSurface(bool discard)
@@ -5108,7 +5105,7 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>A 'mixin' class for elements containing a texture</summary>
 		public class Surface : IDisposable
 		{
-			public Surface(uint sx, uint sy, uint texture_scale = 2, string dbg_name = null)
+			public Surface(int sx, int sy, int texture_scale = 2, string dbg_name = null)
 			{
 				Debug.Assert(texture_scale != 0);
 				TextureScale = texture_scale;
@@ -5118,10 +5115,10 @@ namespace Rylogic.Gui.WinForms
 			}
 			public Surface(XElement node)
 			{
-				TextureScale = node.Element(XmlTag.TextureScale).As<uint>();
+				TextureScale = node.Element(XmlTag.TextureScale).As<int>();
 				var sz = node.Element(XmlTag.Size).As<v2>();
-				var sx = Math.Max(1, (uint)(sz.x + 0.5f));
-				var sy = Math.Max(1, (uint)(sz.y + 0.5f));
+				var sx = Math.Max(1, (int)(sz.x + 0.5f));
+				var sy = Math.Max(1, (int)(sz.y + 0.5f));
 				Surf = new View3d.Texture(sx, sy, View3d.TextureOptions.GdiCompat());// D3D11_FILTER_ANISOTROPIC});
 			}
 			public void Dispose()
@@ -5138,7 +5135,7 @@ namespace Rylogic.Gui.WinForms
 			}
 
 			/// <summary>Texture scaling factor</summary>
-			public uint TextureScale { get; private set; }
+			public int TextureScale { get; private set; }
 
 			/// <summary>Get/Set the logical (i.e not-scaled) size of the texture</summary>
 			public v2 Size

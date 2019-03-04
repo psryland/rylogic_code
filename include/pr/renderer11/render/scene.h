@@ -24,8 +24,11 @@ namespace pr
 		{
 			// Fixed container of render steps. Doesn't really need to be fixed,
 			// but non-fixed means we need the pr::rdr::Allocator to construct it.
+			// Conceptually, 'InstCont' should be an unordered_set, but using an array
+			// is way faster, due to the lack of allocations. This means RemoveInstance
+			// is O(n) however.
 			using RenderStepCont = pr::vector<RenderStepPtr, 16, true>;
-			using InstCont = std::unordered_set<BaseInstance const*>;
+			using InstCont = pr::vector<BaseInstance const*, 1024, false>;
 			using RayCastStepPtr = std::unique_ptr<RayCastStep>;
 
 			Window*           m_wnd;          // The controlling window

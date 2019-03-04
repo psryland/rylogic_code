@@ -72,7 +72,7 @@
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>renderer11/util/stdafx.h</PrecompiledHeaderFile>
-      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -106,7 +106,7 @@
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>renderer11/util/stdafx.h</PrecompiledHeaderFile>
-      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PR_RDR_RUNTIME_SHADERS=0;PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;PR_SUPPORT_D3D11_ERRORS=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/Zm200</AdditionalOptions>
     </ClCompile>
     <CustomBuild>
@@ -182,6 +182,7 @@
     <ClInclude Include="..\include\pr\renderer11\textures\texture_manager.h" />
     <ClInclude Include="..\include\pr\renderer11\util\allocator.h" />
     <ClInclude Include="..\include\pr\renderer11\util\demo_scene.h" />
+    <ClInclude Include="..\include\pr\renderer11\util\dx9_context.h" />
     <ClInclude Include="..\include\pr\renderer11\util\event_args.h" />
     <ClInclude Include="..\include\pr\renderer11\util\lock.h" />
     <ClInclude Include="..\include\pr\renderer11\util\lookup.h" />

@@ -21,7 +21,16 @@ namespace pr
 		static_assert(int(EPrim::LineStrip) == int(D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP    ), "EPrim::LineStrip value out of sync with dx11");
 		static_assert(int(EPrim::TriList  ) == int(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST ), "EPrim::TriList   value out of sync with dx11");
 		static_assert(int(EPrim::TriStrip ) == int(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP), "EPrim::TriStrip  value out of sync with dx11");
-		
+
+		// Helper for getting the ref count of a COM pointer.
+		ULONG RefCount(IUnknown* ptr)
+		{
+			if (ptr == nullptr) return 0;
+			auto count = ptr->AddRef();
+			ptr->Release();
+			return count - 1;
+		}
+
 		// The number of supported quality levels for the given format and sample count
 		UINT MultisampleQualityLevels(ID3D11Device* device, DXGI_FORMAT format, UINT sample_count)
 		{

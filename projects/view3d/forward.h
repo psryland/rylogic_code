@@ -44,6 +44,7 @@
 #include "pr/gui/scintilla_ctrl.h"
 #include "pr/renderer11/renderer.h"
 #include "pr/renderer11/lights/light_ui.h"
+#include "pr/renderer11/util/dx9_context.h"
 #include "pr/ldraw/ldr_object.h"
 #include "pr/ldraw/ldr_objects_dlg.h"
 #include "pr/ldraw/ldr_gizmo.h"

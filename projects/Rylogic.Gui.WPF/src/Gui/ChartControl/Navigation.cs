@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows;
@@ -6,6 +7,7 @@ using System.Windows.Input;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
@@ -26,14 +28,23 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Enable/Disable keyboard shortcuts for navigation</summary>
 		public bool DefaultKeyboardShortcuts
 		{
-			get { return m_default_keyboard_shortcuts; }
+			get { return m_default_keyshortcuts; }
 			set
 			{
-				if (m_default_keyboard_shortcuts == value) return;
-				m_default_keyboard_shortcuts = value;
+				using (Scope.Create(null, () => NotifyPropertyChanged(nameof(DefaultKeyboardShortcuts))))
+				{
+					KeyDown -= HandleKeyDown;
+					if (!(m_default_keyshortcuts = value)) return;
+					KeyDown += HandleKeyDown;
+
+					void HandleKeyDown(object sender, KeyEventArgs args)
+					{
+					//	args.Handled = Window.TranslateKey((KeyCodes)args.Key);
+					}
+				}
 			}
 		}
-		private bool m_default_keyboard_shortcuts;
+		private bool m_default_keyshortcuts;
 
 		/// <summary>The default behaviour of area select mode</summary>
 		public EAreaSelectMode AreaSelectMode { get; set; }
@@ -204,6 +215,10 @@ namespace Rylogic.Gui.WPF
 					Scene.Invalidate();
 				}
 			}
+		}
+		protected override void OnPreviewKeyDown(KeyEventArgs e)
+		{
+			base.OnPreviewKeyDown(e);
 		}
 		protected override void OnKeyDown(KeyEventArgs e)
 		{

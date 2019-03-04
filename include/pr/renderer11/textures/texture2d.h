@@ -33,8 +33,13 @@ namespace pr
 			Texture2D(TextureManager* mgr, RdrId id, ID3D11Texture2D* tex, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name);
 			Texture2D(TextureManager* mgr, RdrId id, ID3D11Texture2D* tex, ID3D11ShaderResourceView* srv, SamplerDesc const& sam_desc, SortKeyId sort_id, bool has_alpha, char const* name);
 			Texture2D(TextureManager* mgr, RdrId id, IUnknown* shared_resource, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name);
+			Texture2D(TextureManager* mgr, RdrId id, HANDLE shared_handle, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name);
 			Texture2D(TextureManager* mgr, RdrId id, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name, ShaderResourceViewDesc const* srvdesc = nullptr);
 			Texture2D(TextureManager* mgr, RdrId id, Texture2D const& existing, SortKeyId sort_id, char const* name);
+			~Texture2D()
+			{
+				OnDestruction(*this, EmptyArgs());
+			}
 
 			// Get the description of the current texture pointed to by 'm_tex'
 			TextureDesc TexDesc() const;
@@ -111,6 +116,24 @@ namespace pr
 
 			// Get a D2D device context for the DXGI surface within this texture
 			D3DPtr<ID2D1DeviceContext> GetD2DeviceContext();
+
+			// Return the shared handle associated with this texture
+			HANDLE SharedHandle() const
+			{
+				HANDLE handle;
+				D3DPtr<IDXGIResource> res;
+				pr::Throw(m_tex->QueryInterface(__uuidof(IDXGIResource), (void**)&res.m_ptr));
+				pr::Throw(res->GetSharedHandle(&handle));
+				return handle;
+			}
+
+			// Unique identifiers for data attached to the private data of this texture
+			static GUID const Surface0Pointer;
+
+			// Delegates to call when the texture is destructed
+			// WARNING: Don't add lambdas that capture a ref counted pointer to the texture
+			// or the texture will never get destructed, since the ref will never hit zero.
+			EventHandler<Texture2D&, EmptyArgs const&> OnDestruction;
 
 			// Ref counting clean up
 			static void RefCountZero(pr::RefCount<Texture2D>* doomed);

@@ -425,7 +425,8 @@ namespace Rylogic.Gfx
 			public override string ToString()                 { return $"V:<{m_pos}> C:<{m_col.ToString("X8")}>"; }
 		}
 
-		[Serializable, StructLayout(LayoutKind.Sequential)]
+		[Serializable]
+		[StructLayout(LayoutKind.Sequential)]
 		public struct Material
 		{
 			[DebuggerDisplay("{Description,nq}"), Serializable, StructLayout(LayoutKind.Sequential)] public struct ShaderSet
@@ -1222,8 +1223,8 @@ namespace ldr
 			private readonly SettingsChangedCB m_settings_cb;   // A local reference to prevent the callback being garbage collected
 			private readonly RenderCB m_render_cb;              // A local reference to prevent the callback being garbage collected
 			private readonly SceneChangedCB m_scene_changed_cb; // A local reference to prevent the callback being garbage collected
+			private readonly HWND m_hwnd;
 			private HWindow m_handle;
-			private HWND m_hwnd;
 
 			public Window(View3d view, HWND hwnd, WindowOptions opts)
 			{
@@ -1406,7 +1407,7 @@ namespace ldr
 			}
 
 			/// <summary>Get the render target texture</summary>
-			public Texture RenderTarget => new Texture(View3D_TextureRenderTarget(m_handle));
+			public Texture RenderTarget => new Texture(View3D_TextureRenderTarget(m_handle), owned:false);
 
 			/// <summary>Import/Export a settings string</summary>
 			public string Settings
@@ -1706,7 +1707,7 @@ namespace ldr
 			/// a source and destination texture at the same time</summary>
 			public void SetRT(Texture render_target, Texture depth_buffer = null)
 			{
-				View3D_RenderTargetSet(m_handle, render_target.Handle, depth_buffer?.Handle ?? IntPtr.Zero);
+				View3D_RenderTargetSet(m_handle, render_target?.Handle ?? IntPtr.Zero, depth_buffer?.Handle ?? IntPtr.Zero);
 			}
 
 			/// <summary>Save the current render target as the main render target (Restored using RestoreRT)</summary>
@@ -2735,7 +2736,7 @@ namespace ldr
 			private bool m_owned;
 
 			/// <summary>Create a texture from an existing texture resource</summary>
-			internal Texture(HTexture handle, bool owned = false)
+			internal Texture(HTexture handle, bool owned)
 			{
 				// Note: 'handle' is not the ID3D11Texture2D handle, it's the internal View3DTexture pointer.
 				m_owned = owned;
@@ -2744,16 +2745,16 @@ namespace ldr
 			}
 
 			/// <summary>Construct an uninitialised texture</summary>
-			public Texture(uint width, uint height)
+			public Texture(int width, int height)
 				:this(width, height, IntPtr.Zero, 0, TextureOptions.New())
 			{}
-			public Texture(uint width, uint height, TextureOptions options)
+			public Texture(int width, int height, TextureOptions options)
 				:this(width, height, IntPtr.Zero, 0, options)
 			{}
-			public Texture(uint width, uint height, IntPtr data, uint data_size, TextureOptions options)
+			public Texture(int width, int height, IntPtr data, uint data_size, TextureOptions options)
 			{
 				m_owned = true;
-				Handle = View3D_TextureCreate(width, height, data, data_size, ref options);
+				Handle = View3D_TextureCreate((uint)width, (uint)height, data, data_size, ref options);
 				if (Handle == HTexture.Zero) throw new Exception($"Failed to create {width}x{height} texture");
 				
 				View3D_TextureGetInfo(Handle, out Info);
@@ -2767,13 +2768,13 @@ namespace ldr
 			public Texture(string tex_filepath, TextureOptions options)
 				:this(tex_filepath, 0, 0, options)
 			{}
-			public Texture(string tex_filepath, uint width, uint height)
+			public Texture(string tex_filepath, int width, int height)
 				:this(tex_filepath, width, height, TextureOptions.New())
 			{}
-			public Texture(string tex_filepath, uint width, uint height, TextureOptions options)
+			public Texture(string tex_filepath, int width, int height, TextureOptions options)
 			{
 				m_owned = true;
-				Handle = View3D_TextureCreateFromFile(tex_filepath, width, height, ref options);
+				Handle = View3D_TextureCreateFromFile(tex_filepath, (uint)width, (uint)height, ref options);
 				if (Handle == HTexture.Zero) throw new Exception($"Failed to create texture from {tex_filepath}");
 				View3D_TextureGetInfo(Handle, out Info);
 				View3D_TextureSetFilterAndAddrMode(Handle, options.Filter, options.AddrU, options.AddrV);
@@ -2806,6 +2807,9 @@ namespace ldr
 
 			/// <summary>User Data</summary>
 			public object Tag { get; set; }
+
+			/// <summary>The current ref count of this texture</summary>
+			private ulong RefCount => View3D_TextureRefCount(Handle);
 
 			/// <summary>Resize the texture optionally preserving content</summary>
 			public void Resize(uint width, uint height, bool all_instances, bool preserve)
@@ -2840,13 +2844,31 @@ namespace ldr
 				View3D_TextureLoadSurface(Handle, level, tex_filepath, new []{dst_rect}, new []{src_rect}, filter, colour_key);
 				View3D_TextureGetInfo(Handle, out Info);
 			}
-			
+
+			/// <summary>Get/Set the private data of this texture by unique Id</summary>
+			public PrivateDataProxy PrivateData => new PrivateDataProxy(this);
+			public PrivateDataPointerProxy PrivateDataPointer => new PrivateDataPointerProxy(this);
+
 			/// <summary>Return properties of the texture</summary>
 			public static ImageInfo GetInfo(string tex_filepath)
 			{
 				var res = View3D_TextureGetInfoFromFile(tex_filepath, out var info);
 				if (res != EResult.Success) throw new Exception(res);
 				return info;
+			}
+
+			/// <summary>Copy from one region on a texture to another</summary>
+			public static void StretchBlt(Texture dst, Texture src)
+			{
+				var dst_box = Win32.RECT.FromLTRB(0, 0, (int)dst.Info.m_width, (int)dst.Info.m_height);
+				var src_box = Win32.RECT.FromLTRB(0, 0, (int)src.Info.m_width, (int)src.Info.m_height);
+				View3D_TextureStretchBlt(dst.Handle, 0, 0, 0, 0, );
+			}
+			public static void StretchBlt(Texture dst, Rectangle src_box, Texture src, Rectangle dst_box)
+			{
+				var dst_box = Win32.RECT.FromLTRB(0, 0, (int)dst.Info.m_width, (int)dst.Info.m_height);
+				var src_box = Win32.RECT.FromLTRB(0, 0, (int)src.Info.m_width, (int)src.Info.m_height);
+				View3D_TextureStretchBlt(dst.Handle, 0, 0, 0, 0, );
 			}
 
 			/// <summary>Create a Texture instance from a shared d3d resource (created on a different d3d device)</summary>
@@ -2856,8 +2878,37 @@ namespace ldr
 				return new Texture(View3D_TextureFromShared(shared_resource, ref options), owned:true);
 			}
 
+			/// <summary>Create a render target texture based on a shared Dx9 texture</summary>
+			public static Texture Dx9RenderTarget(HWND hwnd, int width, int height, TextureOptions options, out IntPtr shared_handle)
+			{
+				// Not all of the texture options are used, just format, sampler description, has alpha, and dbg name
+				if (hwnd == IntPtr.Zero)
+					throw new Exception("DirectX 9 requires a window handle");
+
+				// Try to create the texture. This can fail if the window handle is 'ready'
+				var handle = View3D_CreateDx9RenderTarget(hwnd, (uint)width, (uint)height, ref options, out shared_handle);
+				if (handle == IntPtr.Zero)
+					throw new Exception("Failed to create DirectX 9 render target texture");
+
+				return new Texture(handle, owned: true);
+			}
+			public static Texture Dx9RenderTarget(HWND hwnd, int width, int height, TextureOptions options)
+			{
+				return Dx9RenderTarget(hwnd, width, height, options, out var _);
+			}
+
+			/// <summary>Lock the texture for drawing on</summary>
+			[DebuggerHidden]
+			public Lock LockSurface(bool discard)
+			{
+				// This is a method to prevent the debugger evaluating it cause multiple GetDC calls
+				return new Lock(this, discard);
+			}
+
+			#region Helper Classes
+
 			/// <summary>An RAII object used to lock the texture for drawing with GDI+ methods</summary>
-			public class Lock :IDisposable
+			public class Lock : IDisposable
 			{
 				private readonly HTexture m_tex;
 
@@ -2880,13 +2931,84 @@ namespace ldr
 				public Graphics Gfx { get; private set; }
 			}
 
-			/// <summary>Lock the texture for drawing on</summary>
-			[DebuggerHidden]
-			public Lock LockSurface(bool discard)
+			/// <summary>Proxy object for accessing the private data of a texture</summary>
+			public class PrivateDataProxy
 			{
-				// This is a method to prevent the debugger evaluating it cause multiple GetDC calls
-				return new Lock(this, discard);
+				private readonly HTexture m_handle;
+				internal PrivateDataProxy(Texture tex)
+				{
+					m_handle = tex.Handle;
+				}
+				public byte[] this[Guid id]
+				{
+					// 'size' should be the size of the data pointed to by 'data'
+					get
+					{
+						// Request the size of the available private data
+						var size = 0U;
+						View3d_TexturePrivateDataGet(m_handle, id, ref size, IntPtr.Zero);
+						if (size == 0)
+							return new byte[0];
+
+						// Create a buffer and read the private data
+						var buffer = new byte[size];
+						using (var buf = Marshal_.Pin(buffer))
+							View3d_TexturePrivateDataGet(m_handle, id, ref size, buf.Pointer);
+
+						return buffer;
+					}
+					set
+					{
+						using (var buf = Marshal_.Pin(value))
+							View3d_TexturePrivateDataSet(m_handle, id, (uint)(value?.Length ?? 0), buf.Pointer);
+					}
+				}
 			}
+			public class PrivateDataPointerProxy
+			{
+				private readonly HTexture m_handle;
+				internal PrivateDataPointerProxy(Texture tex)
+				{
+					m_handle = tex.Handle;
+				}
+				public IntPtr this[Guid id]
+				{
+					// 'size' should be the size of the data pointed to by 'data'
+					get
+					{
+						// Request the size of the available private data
+						var size = 0U;
+						View3d_TexturePrivateDataGet(m_handle, id, ref size, IntPtr.Zero);
+						if (size == 0)
+							return IntPtr.Zero;
+
+						// Create a buffer and read the private data
+						var buffer = new byte[size];
+						using (var buf = Marshal_.Pin(buffer))
+							View3d_TexturePrivateDataGet(m_handle, id, ref size, buf.Pointer);
+
+						if (size == 8)
+							return new IntPtr(BitConverter.ToInt64(buffer, 0));
+						if (size == 4)
+							return new IntPtr(BitConverter.ToInt32(buffer, 0));
+
+						throw new Exception("Private data is not a pointer type");
+					}
+					set
+					{
+						View3d_TexturePrivateDataIFSet(m_handle, id, value);
+					}
+				}
+			}
+
+			/// <summary>Labels for private data GUIDs</summary>
+			public struct UserData
+			{
+				/// <summary>Unique IDs for types of private data attached to textures</summary>
+				public static readonly Guid Surface0Pointer = new Guid("6EE0154E-DEAD-4E2F-869B-E4D15CA29787");
+			}
+
+			#endregion
 
 			#region Equals
 			public static bool operator == (Texture lhs, Texture rhs)
@@ -3287,14 +3409,20 @@ namespace ldr
 		[DllImport(Dll)] private static extern HTexture          View3D_TextureCreateFromFile       ([MarshalAs(UnmanagedType.LPWStr)] string tex_filepath, uint width, uint height, ref TextureOptions options);
 		[DllImport(Dll)] private static extern void              View3D_TextureLoadSurface          (HTexture tex, int level, string tex_filepath, Rectangle[] dst_rect, Rectangle[] src_rect, EFilter filter, uint colour_key);
 		[DllImport(Dll)] private static extern void              View3D_TextureDelete               (HTexture tex);
+		[DllImport(Dll)] private static extern void              View3D_TextureStretchBlt           (HTexture dst, ref Win32.RECT dst_box, HTexture src, ref Win32.RECT src_box);
 		[DllImport(Dll)] private static extern void              View3D_TextureGetInfo              (HTexture tex, out ImageInfo info);
 		[DllImport(Dll)] private static extern EResult           View3D_TextureGetInfoFromFile      (string tex_filepath, out ImageInfo info);
 		[DllImport(Dll)] private static extern void              View3D_TextureSetFilterAndAddrMode (HTexture tex, EFilter filter, EAddrMode addrU, EAddrMode addrV);
 		[DllImport(Dll)] private static extern IntPtr            View3D_TextureGetDC                (HTexture tex, bool discard);
 		[DllImport(Dll)] private static extern void              View3D_TextureReleaseDC            (HTexture tex);
 		[DllImport(Dll)] private static extern void              View3D_TextureResize               (HTexture tex, uint width, uint height, bool all_instances, bool preserve);
+		[DllImport(Dll)] private static extern void              View3d_TexturePrivateDataGet       (HTexture tex, Guid guid, ref uint size, IntPtr data);
+		[DllImport(Dll)] private static extern void              View3d_TexturePrivateDataSet       (HTexture tex, Guid guid, uint size, IntPtr data);
+		[DllImport(Dll)] private static extern void              View3d_TexturePrivateDataIFSet     (HTexture tex, Guid guid, IntPtr pointer);
+		[DllImport(Dll)] private static extern ulong             View3D_TextureRefCount             (HTexture tex);
 		[DllImport(Dll)] private static extern HTexture          View3D_TextureRenderTarget         (HWindow window);
 		[DllImport(Dll)] private static extern HTexture          View3D_TextureFromShared           (IntPtr shared_resource, ref TextureOptions options);
+		[DllImport(Dll)] private static extern HTexture          View3D_CreateDx9RenderTarget       (HWND hwnd, uint width, uint height, ref TextureOptions options, out IntPtr shared_handle);
 
 		// Rendering
 		[DllImport(Dll)] private static extern void              View3D_Invalidate               (HWindow window, bool erase);
@@ -3362,6 +3490,7 @@ namespace ldr
 		[DllImport(Dll)] private static extern void              View3D_DemoScriptShow           (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_ObjectManagerShow        (HWindow window, bool show);
 		[DllImport(Dll)] private static extern m4x4              View3D_ParseLdrTransform        (string ldr_script);
+		[DllImport(Dll)] private static extern ulong             View3D_RefCount                 (IntPtr pointer);
 		[return:MarshalAs(UnmanagedType.BStr)]
 		[DllImport(Dll)] private static extern string            View3D_ExampleScriptBStr();
 

@@ -1,12 +1,5 @@
-﻿using System;
-using System.Runtime.InteropServices;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Interop;
-using Microsoft.Wpf.Interop.DirectX;
+﻿using System.Windows;
 using Rylogic.Gfx;
-using Rylogic.Maths;
-using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF.ChartDetail
 {
