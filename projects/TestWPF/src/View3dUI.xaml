@@ -14,20 +14,20 @@
 		Background="Black"
 		>
 		<Grid.ColumnDefinitions>
-			<ColumnDefinition Width="0.1*"/>
+			<!--<ColumnDefinition Width="0.1*"/>-->
 			<ColumnDefinition Width="*"/>
 		</Grid.ColumnDefinitions>
 
-		<Image 
+		<!--<Image 
 			Grid.Row="0"
 			Grid.Column="0"
 			Source="{StaticResource pencil}"
 			Stretch="Fill"
-			/>
+			/>-->
 		<gui2:View3dControl
 			x:Name="m_view0"
 			Grid.Row="0"
-			Grid.Column="1"
+			Grid.Column="0"
 			Stretch="Fill"
 			/>
 		<!--

@@ -25,7 +25,7 @@ using HWND = System.IntPtr;
 namespace Rylogic.Gfx
 {
 	/// <summary>.NET wrapper for View3D.dll</summary>
-	public class View3d :IDisposable
+	public class View3d : IDisposable
 	{
 		// Notes:
 		// - Each process should create a single View3d instance that is an isolated context.
@@ -47,20 +47,20 @@ namespace Rylogic.Gfx
 		}
 		[Flags] public enum EGeom
 		{
-			Unknown  = 0,
-			Vert     = 1 << 0,
-			Colr     = 1 << 1,
-			Norm     = 1 << 2,
-			Tex0     = 1 << 3,
+			Unknown = 0,
+			Vert = 1 << 0,
+			Colr = 1 << 1,
+			Norm = 1 << 2,
+			Tex0 = 1 << 3,
 		}
-		public enum EPrim :uint
+		public enum EPrim : uint
 		{
-			Invalid   = 0,
+			Invalid = 0,
 			PointList = 1,
-			LineList  = 2,
+			LineList = 2,
 			LineStrip = 3,
-			TriList   = 4,
-			TriStrip  = 5,
+			TriList = 4,
+			TriStrip = 5,
 		}
 		public enum EShaderVS
 		{
@@ -81,7 +81,7 @@ namespace Rylogic.Gfx
 		{
 			None = 0,
 		}
-		public enum ERenderStep :int
+		public enum ERenderStep : int
 		{
 			Invalid = 0,
 			ForwardRender,
@@ -91,206 +91,206 @@ namespace Rylogic.Gfx
 			RayCast,
 			_number_of,
 		};
-		public enum EFormat :uint
+		public enum EFormat : uint
 		{
-			DXGI_FORMAT_UNKNOWN	                    = 0,
-			DXGI_FORMAT_R32G32B32A32_TYPELESS       = 1,
-			DXGI_FORMAT_R32G32B32A32_FLOAT          = 2,
-			DXGI_FORMAT_R32G32B32A32_UINT           = 3,
-			DXGI_FORMAT_R32G32B32A32_SINT           = 4,
-			DXGI_FORMAT_R32G32B32_TYPELESS          = 5,
-			DXGI_FORMAT_R32G32B32_FLOAT             = 6,
-			DXGI_FORMAT_R32G32B32_UINT              = 7,
-			DXGI_FORMAT_R32G32B32_SINT              = 8,
-			DXGI_FORMAT_R16G16B16A16_TYPELESS       = 9,
-			DXGI_FORMAT_R16G16B16A16_FLOAT          = 10,
-			DXGI_FORMAT_R16G16B16A16_UNORM          = 11,
-			DXGI_FORMAT_R16G16B16A16_UINT           = 12,
-			DXGI_FORMAT_R16G16B16A16_SNORM          = 13,
-			DXGI_FORMAT_R16G16B16A16_SINT           = 14,
-			DXGI_FORMAT_R32G32_TYPELESS             = 15,
-			DXGI_FORMAT_R32G32_FLOAT                = 16,
-			DXGI_FORMAT_R32G32_UINT                 = 17,
-			DXGI_FORMAT_R32G32_SINT                 = 18,
-			DXGI_FORMAT_R32G8X24_TYPELESS           = 19,
-			DXGI_FORMAT_D32_FLOAT_S8X24_UINT        = 20,
-			DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS    = 21,
-			DXGI_FORMAT_X32_TYPELESS_G8X24_UINT     = 22,
-			DXGI_FORMAT_R10G10B10A2_TYPELESS        = 23,
-			DXGI_FORMAT_R10G10B10A2_UNORM           = 24,
-			DXGI_FORMAT_R10G10B10A2_UINT            = 25,
-			DXGI_FORMAT_R11G11B10_FLOAT             = 26,
-			DXGI_FORMAT_R8G8B8A8_TYPELESS           = 27,
-			DXGI_FORMAT_R8G8B8A8_UNORM              = 28,
-			DXGI_FORMAT_R8G8B8A8_UNORM_SRGB         = 29,
-			DXGI_FORMAT_R8G8B8A8_UINT               = 30,
-			DXGI_FORMAT_R8G8B8A8_SNORM              = 31,
-			DXGI_FORMAT_R8G8B8A8_SINT               = 32,
-			DXGI_FORMAT_R16G16_TYPELESS             = 33,
-			DXGI_FORMAT_R16G16_FLOAT                = 34,
-			DXGI_FORMAT_R16G16_UNORM                = 35,
-			DXGI_FORMAT_R16G16_UINT                 = 36,
-			DXGI_FORMAT_R16G16_SNORM                = 37,
-			DXGI_FORMAT_R16G16_SINT                 = 38,
-			DXGI_FORMAT_R32_TYPELESS                = 39,
-			DXGI_FORMAT_D32_FLOAT                   = 40,
-			DXGI_FORMAT_R32_FLOAT                   = 41,
-			DXGI_FORMAT_R32_UINT                    = 42,
-			DXGI_FORMAT_R32_SINT                    = 43,
-			DXGI_FORMAT_R24G8_TYPELESS              = 44,
-			DXGI_FORMAT_D24_UNORM_S8_UINT           = 45,
-			DXGI_FORMAT_R24_UNORM_X8_TYPELESS       = 46,
-			DXGI_FORMAT_X24_TYPELESS_G8_UINT        = 47,
-			DXGI_FORMAT_R8G8_TYPELESS               = 48,
-			DXGI_FORMAT_R8G8_UNORM                  = 49,
-			DXGI_FORMAT_R8G8_UINT                   = 50,
-			DXGI_FORMAT_R8G8_SNORM                  = 51,
-			DXGI_FORMAT_R8G8_SINT                   = 52,
-			DXGI_FORMAT_R16_TYPELESS                = 53,
-			DXGI_FORMAT_R16_FLOAT                   = 54,
-			DXGI_FORMAT_D16_UNORM                   = 55,
-			DXGI_FORMAT_R16_UNORM                   = 56,
-			DXGI_FORMAT_R16_UINT                    = 57,
-			DXGI_FORMAT_R16_SNORM                   = 58,
-			DXGI_FORMAT_R16_SINT                    = 59,
-			DXGI_FORMAT_R8_TYPELESS                 = 60,
-			DXGI_FORMAT_R8_UNORM                    = 61,
-			DXGI_FORMAT_R8_UINT                     = 62,
-			DXGI_FORMAT_R8_SNORM                    = 63,
-			DXGI_FORMAT_R8_SINT                     = 64,
-			DXGI_FORMAT_A8_UNORM                    = 65,
-			DXGI_FORMAT_R1_UNORM                    = 66,
-			DXGI_FORMAT_R9G9B9E5_SHAREDEXP          = 67,
-			DXGI_FORMAT_R8G8_B8G8_UNORM             = 68,
-			DXGI_FORMAT_G8R8_G8B8_UNORM             = 69,
-			DXGI_FORMAT_BC1_TYPELESS                = 70,
-			DXGI_FORMAT_BC1_UNORM                   = 71,
-			DXGI_FORMAT_BC1_UNORM_SRGB              = 72,
-			DXGI_FORMAT_BC2_TYPELESS                = 73,
-			DXGI_FORMAT_BC2_UNORM                   = 74,
-			DXGI_FORMAT_BC2_UNORM_SRGB              = 75,
-			DXGI_FORMAT_BC3_TYPELESS                = 76,
-			DXGI_FORMAT_BC3_UNORM                   = 77,
-			DXGI_FORMAT_BC3_UNORM_SRGB              = 78,
-			DXGI_FORMAT_BC4_TYPELESS                = 79,
-			DXGI_FORMAT_BC4_UNORM                   = 80,
-			DXGI_FORMAT_BC4_SNORM                   = 81,
-			DXGI_FORMAT_BC5_TYPELESS                = 82,
-			DXGI_FORMAT_BC5_UNORM                   = 83,
-			DXGI_FORMAT_BC5_SNORM                   = 84,
-			DXGI_FORMAT_B5G6R5_UNORM                = 85,
-			DXGI_FORMAT_B5G5R5A1_UNORM              = 86,
-			DXGI_FORMAT_B8G8R8A8_UNORM              = 87,
-			DXGI_FORMAT_B8G8R8X8_UNORM              = 88,
-			DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM  = 89,
-			DXGI_FORMAT_B8G8R8A8_TYPELESS           = 90,
-			DXGI_FORMAT_B8G8R8A8_UNORM_SRGB         = 91,
-			DXGI_FORMAT_B8G8R8X8_TYPELESS           = 92,
-			DXGI_FORMAT_B8G8R8X8_UNORM_SRGB         = 93,
-			DXGI_FORMAT_BC6H_TYPELESS               = 94,
-			DXGI_FORMAT_BC6H_UF16                   = 95,
-			DXGI_FORMAT_BC6H_SF16                   = 96,
-			DXGI_FORMAT_BC7_TYPELESS                = 97,
-			DXGI_FORMAT_BC7_UNORM                   = 98,
-			DXGI_FORMAT_BC7_UNORM_SRGB              = 99,
-			DXGI_FORMAT_AYUV                        = 100,
-			DXGI_FORMAT_Y410                        = 101,
-			DXGI_FORMAT_Y416                        = 102,
-			DXGI_FORMAT_NV12                        = 103,
-			DXGI_FORMAT_P010                        = 104,
-			DXGI_FORMAT_P016                        = 105,
-			DXGI_FORMAT_420_OPAQUE                  = 106,
-			DXGI_FORMAT_YUY2                        = 107,
-			DXGI_FORMAT_Y210                        = 108,
-			DXGI_FORMAT_Y216                        = 109,
-			DXGI_FORMAT_NV11                        = 110,
-			DXGI_FORMAT_AI44                        = 111,
-			DXGI_FORMAT_IA44                        = 112,
-			DXGI_FORMAT_P8                          = 113,
-			DXGI_FORMAT_A8P8                        = 114,
-			DXGI_FORMAT_B4G4R4A4_UNORM              = 115,
-			DXGI_FORMAT_FORCE_UINT                  = 0xffffffff
+			DXGI_FORMAT_UNKNOWN = 0,
+			DXGI_FORMAT_R32G32B32A32_TYPELESS = 1,
+			DXGI_FORMAT_R32G32B32A32_FLOAT = 2,
+			DXGI_FORMAT_R32G32B32A32_UINT = 3,
+			DXGI_FORMAT_R32G32B32A32_SINT = 4,
+			DXGI_FORMAT_R32G32B32_TYPELESS = 5,
+			DXGI_FORMAT_R32G32B32_FLOAT = 6,
+			DXGI_FORMAT_R32G32B32_UINT = 7,
+			DXGI_FORMAT_R32G32B32_SINT = 8,
+			DXGI_FORMAT_R16G16B16A16_TYPELESS = 9,
+			DXGI_FORMAT_R16G16B16A16_FLOAT = 10,
+			DXGI_FORMAT_R16G16B16A16_UNORM = 11,
+			DXGI_FORMAT_R16G16B16A16_UINT = 12,
+			DXGI_FORMAT_R16G16B16A16_SNORM = 13,
+			DXGI_FORMAT_R16G16B16A16_SINT = 14,
+			DXGI_FORMAT_R32G32_TYPELESS = 15,
+			DXGI_FORMAT_R32G32_FLOAT = 16,
+			DXGI_FORMAT_R32G32_UINT = 17,
+			DXGI_FORMAT_R32G32_SINT = 18,
+			DXGI_FORMAT_R32G8X24_TYPELESS = 19,
+			DXGI_FORMAT_D32_FLOAT_S8X24_UINT = 20,
+			DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS = 21,
+			DXGI_FORMAT_X32_TYPELESS_G8X24_UINT = 22,
+			DXGI_FORMAT_R10G10B10A2_TYPELESS = 23,
+			DXGI_FORMAT_R10G10B10A2_UNORM = 24,
+			DXGI_FORMAT_R10G10B10A2_UINT = 25,
+			DXGI_FORMAT_R11G11B10_FLOAT = 26,
+			DXGI_FORMAT_R8G8B8A8_TYPELESS = 27,
+			DXGI_FORMAT_R8G8B8A8_UNORM = 28,
+			DXGI_FORMAT_R8G8B8A8_UNORM_SRGB = 29,
+			DXGI_FORMAT_R8G8B8A8_UINT = 30,
+			DXGI_FORMAT_R8G8B8A8_SNORM = 31,
+			DXGI_FORMAT_R8G8B8A8_SINT = 32,
+			DXGI_FORMAT_R16G16_TYPELESS = 33,
+			DXGI_FORMAT_R16G16_FLOAT = 34,
+			DXGI_FORMAT_R16G16_UNORM = 35,
+			DXGI_FORMAT_R16G16_UINT = 36,
+			DXGI_FORMAT_R16G16_SNORM = 37,
+			DXGI_FORMAT_R16G16_SINT = 38,
+			DXGI_FORMAT_R32_TYPELESS = 39,
+			DXGI_FORMAT_D32_FLOAT = 40,
+			DXGI_FORMAT_R32_FLOAT = 41,
+			DXGI_FORMAT_R32_UINT = 42,
+			DXGI_FORMAT_R32_SINT = 43,
+			DXGI_FORMAT_R24G8_TYPELESS = 44,
+			DXGI_FORMAT_D24_UNORM_S8_UINT = 45,
+			DXGI_FORMAT_R24_UNORM_X8_TYPELESS = 46,
+			DXGI_FORMAT_X24_TYPELESS_G8_UINT = 47,
+			DXGI_FORMAT_R8G8_TYPELESS = 48,
+			DXGI_FORMAT_R8G8_UNORM = 49,
+			DXGI_FORMAT_R8G8_UINT = 50,
+			DXGI_FORMAT_R8G8_SNORM = 51,
+			DXGI_FORMAT_R8G8_SINT = 52,
+			DXGI_FORMAT_R16_TYPELESS = 53,
+			DXGI_FORMAT_R16_FLOAT = 54,
+			DXGI_FORMAT_D16_UNORM = 55,
+			DXGI_FORMAT_R16_UNORM = 56,
+			DXGI_FORMAT_R16_UINT = 57,
+			DXGI_FORMAT_R16_SNORM = 58,
+			DXGI_FORMAT_R16_SINT = 59,
+			DXGI_FORMAT_R8_TYPELESS = 60,
+			DXGI_FORMAT_R8_UNORM = 61,
+			DXGI_FORMAT_R8_UINT = 62,
+			DXGI_FORMAT_R8_SNORM = 63,
+			DXGI_FORMAT_R8_SINT = 64,
+			DXGI_FORMAT_A8_UNORM = 65,
+			DXGI_FORMAT_R1_UNORM = 66,
+			DXGI_FORMAT_R9G9B9E5_SHAREDEXP = 67,
+			DXGI_FORMAT_R8G8_B8G8_UNORM = 68,
+			DXGI_FORMAT_G8R8_G8B8_UNORM = 69,
+			DXGI_FORMAT_BC1_TYPELESS = 70,
+			DXGI_FORMAT_BC1_UNORM = 71,
+			DXGI_FORMAT_BC1_UNORM_SRGB = 72,
+			DXGI_FORMAT_BC2_TYPELESS = 73,
+			DXGI_FORMAT_BC2_UNORM = 74,
+			DXGI_FORMAT_BC2_UNORM_SRGB = 75,
+			DXGI_FORMAT_BC3_TYPELESS = 76,
+			DXGI_FORMAT_BC3_UNORM = 77,
+			DXGI_FORMAT_BC3_UNORM_SRGB = 78,
+			DXGI_FORMAT_BC4_TYPELESS = 79,
+			DXGI_FORMAT_BC4_UNORM = 80,
+			DXGI_FORMAT_BC4_SNORM = 81,
+			DXGI_FORMAT_BC5_TYPELESS = 82,
+			DXGI_FORMAT_BC5_UNORM = 83,
+			DXGI_FORMAT_BC5_SNORM = 84,
+			DXGI_FORMAT_B5G6R5_UNORM = 85,
+			DXGI_FORMAT_B5G5R5A1_UNORM = 86,
+			DXGI_FORMAT_B8G8R8A8_UNORM = 87,
+			DXGI_FORMAT_B8G8R8X8_UNORM = 88,
+			DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM = 89,
+			DXGI_FORMAT_B8G8R8A8_TYPELESS = 90,
+			DXGI_FORMAT_B8G8R8A8_UNORM_SRGB = 91,
+			DXGI_FORMAT_B8G8R8X8_TYPELESS = 92,
+			DXGI_FORMAT_B8G8R8X8_UNORM_SRGB = 93,
+			DXGI_FORMAT_BC6H_TYPELESS = 94,
+			DXGI_FORMAT_BC6H_UF16 = 95,
+			DXGI_FORMAT_BC6H_SF16 = 96,
+			DXGI_FORMAT_BC7_TYPELESS = 97,
+			DXGI_FORMAT_BC7_UNORM = 98,
+			DXGI_FORMAT_BC7_UNORM_SRGB = 99,
+			DXGI_FORMAT_AYUV = 100,
+			DXGI_FORMAT_Y410 = 101,
+			DXGI_FORMAT_Y416 = 102,
+			DXGI_FORMAT_NV12 = 103,
+			DXGI_FORMAT_P010 = 104,
+			DXGI_FORMAT_P016 = 105,
+			DXGI_FORMAT_420_OPAQUE = 106,
+			DXGI_FORMAT_YUY2 = 107,
+			DXGI_FORMAT_Y210 = 108,
+			DXGI_FORMAT_Y216 = 109,
+			DXGI_FORMAT_NV11 = 110,
+			DXGI_FORMAT_AI44 = 111,
+			DXGI_FORMAT_IA44 = 112,
+			DXGI_FORMAT_P8 = 113,
+			DXGI_FORMAT_A8P8 = 114,
+			DXGI_FORMAT_B4G4R4A4_UNORM = 115,
+			DXGI_FORMAT_FORCE_UINT = 0xffffffff
 		}
-		public enum EFilter :uint //D3D11_FILTER
+		public enum EFilter : uint //D3D11_FILTER
 		{
-			D3D11_FILTER_MIN_MAG_MIP_POINT                          = 0,
-			D3D11_FILTER_MIN_MAG_POINT_MIP_LINEAR                   = 0x1,
-			D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT             = 0x4,
-			D3D11_FILTER_MIN_POINT_MAG_MIP_LINEAR                   = 0x5,
-			D3D11_FILTER_MIN_LINEAR_MAG_MIP_POINT                   = 0x10,
-			D3D11_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR            = 0x11,
-			D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT                   = 0x14,
-			D3D11_FILTER_MIN_MAG_MIP_LINEAR                         = 0x15,
-			D3D11_FILTER_ANISOTROPIC                                = 0x55,
-			D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT               = 0x80,
-			D3D11_FILTER_COMPARISON_MIN_MAG_POINT_MIP_LINEAR        = 0x81,
-			D3D11_FILTER_COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT  = 0x84,
-			D3D11_FILTER_COMPARISON_MIN_POINT_MAG_MIP_LINEAR        = 0x85,
-			D3D11_FILTER_COMPARISON_MIN_LINEAR_MAG_MIP_POINT        = 0x90,
+			D3D11_FILTER_MIN_MAG_MIP_POINT = 0,
+			D3D11_FILTER_MIN_MAG_POINT_MIP_LINEAR = 0x1,
+			D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT = 0x4,
+			D3D11_FILTER_MIN_POINT_MAG_MIP_LINEAR = 0x5,
+			D3D11_FILTER_MIN_LINEAR_MAG_MIP_POINT = 0x10,
+			D3D11_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR = 0x11,
+			D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT = 0x14,
+			D3D11_FILTER_MIN_MAG_MIP_LINEAR = 0x15,
+			D3D11_FILTER_ANISOTROPIC = 0x55,
+			D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT = 0x80,
+			D3D11_FILTER_COMPARISON_MIN_MAG_POINT_MIP_LINEAR = 0x81,
+			D3D11_FILTER_COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT = 0x84,
+			D3D11_FILTER_COMPARISON_MIN_POINT_MAG_MIP_LINEAR = 0x85,
+			D3D11_FILTER_COMPARISON_MIN_LINEAR_MAG_MIP_POINT = 0x90,
 			D3D11_FILTER_COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR = 0x91,
-			D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT        = 0x94,
-			D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR              = 0x95,
-			D3D11_FILTER_COMPARISON_ANISOTROPIC                     = 0xd5,
-			D3D11_FILTER_MINIMUM_MIN_MAG_MIP_POINT                  = 0x100,
-			D3D11_FILTER_MINIMUM_MIN_MAG_POINT_MIP_LINEAR           = 0x101,
-			D3D11_FILTER_MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT     = 0x104,
-			D3D11_FILTER_MINIMUM_MIN_POINT_MAG_MIP_LINEAR           = 0x105,
-			D3D11_FILTER_MINIMUM_MIN_LINEAR_MAG_MIP_POINT           = 0x110,
-			D3D11_FILTER_MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR    = 0x111,
-			D3D11_FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT           = 0x114,
-			D3D11_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR                 = 0x115,
-			D3D11_FILTER_MINIMUM_ANISOTROPIC                        = 0x155,
-			D3D11_FILTER_MAXIMUM_MIN_MAG_MIP_POINT                  = 0x180,
-			D3D11_FILTER_MAXIMUM_MIN_MAG_POINT_MIP_LINEAR           = 0x181,
-			D3D11_FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT     = 0x184,
-			D3D11_FILTER_MAXIMUM_MIN_POINT_MAG_MIP_LINEAR           = 0x185,
-			D3D11_FILTER_MAXIMUM_MIN_LINEAR_MAG_MIP_POINT           = 0x190,
-			D3D11_FILTER_MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR    = 0x191,
-			D3D11_FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT           = 0x194,
-			D3D11_FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR                 = 0x195,
-			D3D11_FILTER_MAXIMUM_ANISOTROPIC                        = 0x1d5
+			D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT = 0x94,
+			D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR = 0x95,
+			D3D11_FILTER_COMPARISON_ANISOTROPIC = 0xd5,
+			D3D11_FILTER_MINIMUM_MIN_MAG_MIP_POINT = 0x100,
+			D3D11_FILTER_MINIMUM_MIN_MAG_POINT_MIP_LINEAR = 0x101,
+			D3D11_FILTER_MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT = 0x104,
+			D3D11_FILTER_MINIMUM_MIN_POINT_MAG_MIP_LINEAR = 0x105,
+			D3D11_FILTER_MINIMUM_MIN_LINEAR_MAG_MIP_POINT = 0x110,
+			D3D11_FILTER_MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR = 0x111,
+			D3D11_FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT = 0x114,
+			D3D11_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR = 0x115,
+			D3D11_FILTER_MINIMUM_ANISOTROPIC = 0x155,
+			D3D11_FILTER_MAXIMUM_MIN_MAG_MIP_POINT = 0x180,
+			D3D11_FILTER_MAXIMUM_MIN_MAG_POINT_MIP_LINEAR = 0x181,
+			D3D11_FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT = 0x184,
+			D3D11_FILTER_MAXIMUM_MIN_POINT_MAG_MIP_LINEAR = 0x185,
+			D3D11_FILTER_MAXIMUM_MIN_LINEAR_MAG_MIP_POINT = 0x190,
+			D3D11_FILTER_MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR = 0x191,
+			D3D11_FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT = 0x194,
+			D3D11_FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR = 0x195,
+			D3D11_FILTER_MAXIMUM_ANISOTROPIC = 0x1d5
 		}
-		public enum EAddrMode :uint //D3D11_TEXTURE_ADDRESS_MODE
+		public enum EAddrMode : uint //D3D11_TEXTURE_ADDRESS_MODE
 		{
-			D3D11_TEXTURE_ADDRESS_WRAP        = 1,
-			D3D11_TEXTURE_ADDRESS_MIRROR      = 2,
-			D3D11_TEXTURE_ADDRESS_CLAMP       = 3,
-			D3D11_TEXTURE_ADDRESS_BORDER      = 4,
+			D3D11_TEXTURE_ADDRESS_WRAP = 1,
+			D3D11_TEXTURE_ADDRESS_MIRROR = 2,
+			D3D11_TEXTURE_ADDRESS_CLAMP = 3,
+			D3D11_TEXTURE_ADDRESS_BORDER = 4,
 			D3D11_TEXTURE_ADDRESS_MIRROR_ONCE = 5,
 		}
-		[Flags] public enum EBindFlags :uint //D3D11_BIND_FLAG
+		[Flags] public enum EBindFlags : uint //D3D11_BIND_FLAG
 		{
-			NONE                        = 0,
-			D3D11_BIND_VERTEX_BUFFER    = 0x1,
-			D3D11_BIND_INDEX_BUFFER     = 0x2,
-			D3D11_BIND_CONSTANT_BUFFER  = 0x4,
-			D3D11_BIND_SHADER_RESOURCE  = 0x8,
-			D3D11_BIND_STREAM_OUTPUT    = 0x10,
-			D3D11_BIND_RENDER_TARGET    = 0x20,
-			D3D11_BIND_DEPTH_STENCIL    = 0x40,
+			NONE = 0,
+			D3D11_BIND_VERTEX_BUFFER = 0x1,
+			D3D11_BIND_INDEX_BUFFER = 0x2,
+			D3D11_BIND_CONSTANT_BUFFER = 0x4,
+			D3D11_BIND_SHADER_RESOURCE = 0x8,
+			D3D11_BIND_STREAM_OUTPUT = 0x10,
+			D3D11_BIND_RENDER_TARGET = 0x20,
+			D3D11_BIND_DEPTH_STENCIL = 0x40,
 			D3D11_BIND_UNORDERED_ACCESS = 0x80,
-			D3D11_BIND_DECODER          = 0x200,
-			D3D11_BIND_VIDEO_ENCODER    = 0x400
+			D3D11_BIND_DECODER = 0x200,
+			D3D11_BIND_VIDEO_ENCODER = 0x400
 		}
-		[Flags] public enum EResMiscFlags :uint//D3D11_RESOURCE_MISC_FLAG
+		[Flags] public enum EResMiscFlags : uint//D3D11_RESOURCE_MISC_FLAG
 		{
-			NONE                                                = 0,
-			D3D11_RESOURCE_MISC_GENERATE_MIPS                   = 0x1,
-			D3D11_RESOURCE_MISC_SHARED                          = 0x2,
-			D3D11_RESOURCE_MISC_TEXTURECUBE                     = 0x4,
-			D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS               = 0x10,
-			D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS          = 0x20,
-			D3D11_RESOURCE_MISC_BUFFER_STRUCTURED               = 0x40,
-			D3D11_RESOURCE_MISC_RESOURCE_CLAMP                  = 0x80,
-			D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX               = 0x100,
-			D3D11_RESOURCE_MISC_GDI_COMPATIBLE                  = 0x200,
-			D3D11_RESOURCE_MISC_SHARED_NTHANDLE                 = 0x800,
-			D3D11_RESOURCE_MISC_RESTRICTED_CONTENT              = 0x1000,
-			D3D11_RESOURCE_MISC_RESTRICT_SHARED_RESOURCE        = 0x2000,
+			NONE = 0,
+			D3D11_RESOURCE_MISC_GENERATE_MIPS = 0x1,
+			D3D11_RESOURCE_MISC_SHARED = 0x2,
+			D3D11_RESOURCE_MISC_TEXTURECUBE = 0x4,
+			D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS = 0x10,
+			D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS = 0x20,
+			D3D11_RESOURCE_MISC_BUFFER_STRUCTURED = 0x40,
+			D3D11_RESOURCE_MISC_RESOURCE_CLAMP = 0x80,
+			D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX = 0x100,
+			D3D11_RESOURCE_MISC_GDI_COMPATIBLE = 0x200,
+			D3D11_RESOURCE_MISC_SHARED_NTHANDLE = 0x800,
+			D3D11_RESOURCE_MISC_RESTRICTED_CONTENT = 0x1000,
+			D3D11_RESOURCE_MISC_RESTRICT_SHARED_RESOURCE = 0x2000,
 			D3D11_RESOURCE_MISC_RESTRICT_SHARED_RESOURCE_DRIVER = 0x4000,
-			D3D11_RESOURCE_MISC_GUARDED                         = 0x8000,
-			D3D11_RESOURCE_MISC_TILE_POOL                       = 0x20000,
-			D3D11_RESOURCE_MISC_TILED                           = 0x40000
+			D3D11_RESOURCE_MISC_GUARDED = 0x8000,
+			D3D11_RESOURCE_MISC_TILE_POOL = 0x20000,
+			D3D11_RESOURCE_MISC_TILED = 0x40000
 		}
 		public enum ELight
 		{
@@ -313,36 +313,36 @@ namespace Rylogic.Gfx
 		}
 		[Flags] public enum ENavOp
 		{
-			None      = 0,
+			None = 0,
 			Translate = 1 << 0,
-			Rotate    = 1 << 1,
-			Zoom      = 1 << 2,
+			Rotate = 1 << 1,
+			Zoom = 1 << 2,
 		}
 		[Flags] public enum ECameraLockMask
 		{
-			None           = 0,
-			TransX         = 1 << 0,
-			TransY         = 1 << 1,
-			TransZ         = 1 << 2,
-			RotX           = 1 << 3,
-			RotY           = 1 << 4,
-			RotZ           = 1 << 5,
-			Zoom           = 1 << 6,
+			None = 0,
+			TransX = 1 << 0,
+			TransY = 1 << 1,
+			TransZ = 1 << 2,
+			RotX = 1 << 3,
+			RotY = 1 << 4,
+			RotZ = 1 << 5,
+			Zoom = 1 << 6,
 			CameraRelative = 1 << 7,
-			All            = (1 << 7) - 1, // Not including camera relative
+			All = (1 << 7) - 1, // Not including camera relative
 		}
-		[Flags] public enum EUpdateObject :uint // Flags for partial update of a model
+		[Flags] public enum EUpdateObject : uint // Flags for partial update of a model
 		{
-			None       = 0U,
-			All        = ~0U,
-			Name       = 1 << 0,
-			Model      = 1 << 1,
-			Transform  = 1 << 2,
-			Children   = 1 << 3,
-			Colour     = 1 << 4,
+			None = 0U,
+			All = ~0U,
+			Name = 1 << 0,
+			Model = 1 << 1,
+			Transform = 1 << 2,
+			Children = 1 << 3,
+			Colour = 1 << 4,
 			ColourMask = 1 << 5,
-			Flags      = 1 << 6,
-			Animation  = 1 << 7,
+			Flags = 1 << 6,
+			Animation = 1 << 7,
 		}
 		[Flags] public enum EFlags
 		{
@@ -413,16 +413,16 @@ namespace Rylogic.Gfx
 		[StructLayout(LayoutKind.Sequential, Pack = 1)]
 		public struct Vertex
 		{
-			public v4   m_pos;
-			public v4   m_norm;
-			public v2   m_uv;
+			public v4 m_pos;
+			public v4 m_norm;
+			public v2 m_uv;
 			public uint m_col;
 			public uint pad;
 
-			public Vertex(v4 vert)                            { m_pos = vert; m_col = ~0U; m_norm = v4.Zero; m_uv = v2.Zero; pad = 0; }
-			public Vertex(v4 vert, uint col)                  { m_pos = vert; m_col = col; m_norm = v4.Zero; m_uv = v2.Zero; pad = 0; }
-			public Vertex(v4 vert, v4 norm, uint col, v2 tex) { m_pos = vert; m_col = col; m_norm = norm;    m_uv = tex;     pad = 0; }
-			public override string ToString()                 { return $"V:<{m_pos}> C:<{m_col.ToString("X8")}>"; }
+			public Vertex(v4 vert) { m_pos = vert; m_col = ~0U; m_norm = v4.Zero; m_uv = v2.Zero; pad = 0; }
+			public Vertex(v4 vert, uint col) { m_pos = vert; m_col = col; m_norm = v4.Zero; m_uv = v2.Zero; pad = 0; }
+			public Vertex(v4 vert, v4 norm, uint col, v2 tex) { m_pos = vert; m_col = col; m_norm = norm; m_uv = tex; pad = 0; }
+			public override string ToString() { return $"V:<{m_pos}> C:<{m_col.ToString("X8")}>"; }
 		}
 
 		[Serializable]
@@ -448,10 +448,10 @@ namespace Rylogic.Gfx
 				public EShaderPS m_ps;
 				public EShaderCS m_cs;
 
-				[MarshalAs(UnmanagedType.ByValArray, SizeConst=16)] public byte[] m_vs_data;
-				[MarshalAs(UnmanagedType.ByValArray, SizeConst=16)] public byte[] m_gs_data;
-				[MarshalAs(UnmanagedType.ByValArray, SizeConst=16)] public byte[] m_ps_data;
-				[MarshalAs(UnmanagedType.ByValArray, SizeConst=16)] public byte[] m_cs_data;
+				[MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)] public byte[] m_vs_data;
+				[MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)] public byte[] m_gs_data;
+				[MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)] public byte[] m_ps_data;
+				[MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)] public byte[] m_cs_data;
 
 				/// <summary>Description</summary>
 				public string Description
@@ -463,11 +463,11 @@ namespace Rylogic.Gfx
 			{
 				public static ShaderMap New()
 				{
-					return new ShaderMap{ m_rstep = Array_.New((int)ERenderStep._number_of, i => new ShaderSet()) };
+					return new ShaderMap { m_rstep = Array_.New((int)ERenderStep._number_of, i => new ShaderSet()) };
 				}
 
 				/// <summary>Get the shader set for the given render step</summary>
-				[MarshalAs(UnmanagedType.ByValArray, SizeConst=(int)ERenderStep._number_of)]
+				[MarshalAs(UnmanagedType.ByValArray, SizeConst = (int)ERenderStep._number_of)]
 				public ShaderSet[] m_rstep;
 			}
 
@@ -478,8 +478,8 @@ namespace Rylogic.Gfx
 			public Material(HTexture? diff_tex = null, HTexture? env_map = null, ShaderMap? shdr_map = null)
 			{
 				m_diff_tex = diff_tex ?? HTexture.Zero;
-				m_env_map  = env_map ?? HTexture.Zero;
-				m_smap     = shdr_map ?? ShaderMap.New();
+				m_env_map = env_map ?? HTexture.Zero;
+				m_smap = shdr_map ?? ShaderMap.New();
 			}
 
 			/// <summary>Material diffuse texture</summary>
@@ -515,7 +515,7 @@ namespace Rylogic.Gfx
 				using (var ms = new MemoryStream())
 				{
 					Util.Serialise(ms, args);
-					for (;ms.Length < 16;) ms.WriteByte(0);
+					for (; ms.Length < 16;) ms.WriteByte(0);
 					ms.Seek(0, SeekOrigin.Begin);
 					return ms.ToArray();
 				}
@@ -535,35 +535,35 @@ namespace Rylogic.Gfx
 			public Material m_mat;
 
 			public Nugget(EPrim topo, EGeom geom)
-				:this(topo, geom, false)
-			{}
+				: this(topo, geom, false)
+			{ }
 			public Nugget(EPrim topo, EGeom geom, bool has_alpha)
-				:this(topo, geom, 0, 0, 0, 0, has_alpha, false, null)
-			{}
+				: this(topo, geom, 0, 0, 0, 0, has_alpha, false, null)
+			{ }
 			public Nugget(EPrim topo, EGeom geom, bool has_alpha, Material? mat)
-				:this(topo, geom, 0, 0, 0, 0, has_alpha, false, mat)
-			{}
+				: this(topo, geom, 0, 0, 0, 0, has_alpha, false, mat)
+			{ }
 			public Nugget(EPrim topo, EGeom geom, bool has_alpha, bool range_overlaps, Material? mat)
-				:this(topo, geom, 0, 0, 0, 0, has_alpha, range_overlaps, mat)
-			{}
+				: this(topo, geom, 0, 0, 0, 0, has_alpha, range_overlaps, mat)
+			{ }
 			public Nugget(EPrim topo, EGeom geom, uint v0, uint v1, uint i0, uint i1)
-				:this(topo, geom, v0, v1, i0, i1, false)
-			{}
+				: this(topo, geom, v0, v1, i0, i1, false)
+			{ }
 			public Nugget(EPrim topo, EGeom geom, uint v0, uint v1, uint i0, uint i1, bool has_alpha)
-				:this(topo, geom, v0, v1, i0, i1, has_alpha, false, null)
-			{}
+				: this(topo, geom, v0, v1, i0, i1, has_alpha, false, null)
+			{ }
 			public Nugget(EPrim topo, EGeom geom, uint v0, uint v1, uint i0, uint i1, bool has_alpha, bool range_overlaps, Material? mat)
 			{
 				Debug.Assert(mat == null || mat.Value.m_smap.m_rstep != null, "Don't use default(Material)");
-				m_topo           = topo;
-				m_geom           = geom;
-				m_v0             = v0;
-				m_v1             = v1;
-				m_i0             = i0;
-				m_i1             = i1;
-				m_has_alpha      = has_alpha;
+				m_topo = topo;
+				m_geom = geom;
+				m_v0 = v0;
+				m_v1 = v1;
+				m_i0 = i0;
+				m_i1 = i1;
+				m_has_alpha = has_alpha;
 				m_range_overlaps = range_overlaps;
-				m_mat            = mat ?? new Material(null);
+				m_mat = mat ?? new Material(null);
 			}
 		}
 
@@ -571,13 +571,13 @@ namespace Rylogic.Gfx
 		[StructLayout(LayoutKind.Sequential)]
 		public struct ImageInfo
 		{
-			public uint    m_width;
-			public uint    m_height;
-			public uint    m_depth;
-			public uint    m_mips;
+			public uint m_width;
+			public uint m_height;
+			public uint m_depth;
+			public uint m_mips;
 			public EFormat m_format; //DXGI_FORMAT
-			public uint    m_image_file_format;//D3DXIMAGE_FILEFORMAT
-			public float   m_aspect { get {return (float)m_width / m_height;} }
+			public uint m_image_file_format;//D3DXIMAGE_FILEFORMAT
+			public float m_aspect { get { return (float)m_width / m_height; } }
 		}
 
 		[Serializable]
@@ -668,11 +668,11 @@ namespace Rylogic.Gfx
 			public string DbgName;
 			public WindowOptions(ReportErrorCB error_cb, IntPtr error_cb_ctx, bool gdi_compatible_bb = false)
 			{
-				ErrorCB                 = error_cb;
-				ErrorCBCtx              = error_cb_ctx;
+				ErrorCB = error_cb;
+				ErrorCBCtx = error_cb_ctx;
 				GdiCompatibleBackBuffer = gdi_compatible_bb;
-				Multisampling           = gdi_compatible_bb ? 1 : 4;
-				DbgName                 = string.Empty;
+				Multisampling = gdi_compatible_bb ? 1 : 4;
+				DbgName = string.Empty;
 			}
 		}
 
@@ -681,36 +681,36 @@ namespace Rylogic.Gfx
 		[StructLayout(LayoutKind.Sequential)]
 		public struct LightInfo
 		{
-			public ELight   m_type;
-			public v4       m_position;
-			public v4       m_direction;
+			public ELight m_type;
+			public v4 m_position;
+			public v4 m_direction;
 			public Colour32 m_ambient;
 			public Colour32 m_diffuse;
 			public Colour32 m_specular;
-			public float    m_specular_power;
-			public float    m_inner_cos_angle;
-			public float    m_outer_cos_angle;
-			public float    m_range;
-			public float    m_falloff;
-			public float    m_cast_shadow;
-			public bool     m_on;
-			public bool     m_cam_relative;
+			public float m_specular_power;
+			public float m_inner_cos_angle;
+			public float m_outer_cos_angle;
+			public float m_range;
+			public float m_falloff;
+			public float m_cast_shadow;
+			public bool m_on;
+			public bool m_cam_relative;
 
 			/// <summary>Return properties for an ambient light source</summary>
 			public static LightInfo Ambient(Colour32 ambient)
 			{
 				return new LightInfo
 				{
-					m_type           = ELight.Ambient,
-					m_position       = v4.Origin,
-					m_direction      = v4.Zero,
-					m_ambient        = ambient,
-					m_diffuse        = Colour32.Zero,
-					m_specular       = Colour32.Zero,
+					m_type = ELight.Ambient,
+					m_position = v4.Origin,
+					m_direction = v4.Zero,
+					m_ambient = ambient,
+					m_diffuse = Colour32.Zero,
+					m_specular = Colour32.Zero,
 					m_specular_power = 0f,
-					m_cast_shadow    = 0f,
-					m_on             = true,
-					m_cam_relative   = false,
+					m_cast_shadow = 0f,
+					m_on = true,
+					m_cam_relative = false,
 				};
 			}
 
@@ -719,16 +719,16 @@ namespace Rylogic.Gfx
 			{
 				return new LightInfo
 				{
-					m_type           = ELight.Directional,
-					m_position       = v4.Origin,
-					m_direction      = Math_.Normalise(direction),
-					m_ambient        = ambient,
-					m_diffuse        = diffuse,
-					m_specular       = specular,
+					m_type = ELight.Directional,
+					m_position = v4.Origin,
+					m_direction = Math_.Normalise(direction),
+					m_ambient = ambient,
+					m_diffuse = diffuse,
+					m_specular = specular,
 					m_specular_power = spec_power,
-					m_cast_shadow    = cast_shadow,
-					m_on             = true,
-					m_cam_relative   = false,
+					m_cast_shadow = cast_shadow,
+					m_on = true,
+					m_cam_relative = false,
 				};
 			}
 
@@ -737,16 +737,16 @@ namespace Rylogic.Gfx
 			{
 				return new LightInfo
 				{
-					m_type           = ELight.Point,
-					m_position       = position,
-					m_direction      = v4.Zero,
-					m_ambient        = ambient,
-					m_diffuse        = diffuse,
-					m_specular       = specular,
+					m_type = ELight.Point,
+					m_position = position,
+					m_direction = v4.Zero,
+					m_ambient = ambient,
+					m_diffuse = diffuse,
+					m_specular = specular,
 					m_specular_power = spec_power,
-					m_cast_shadow    = cast_shadow,
-					m_on             = true,
-					m_cam_relative   = false,
+					m_cast_shadow = cast_shadow,
+					m_on = true,
+					m_cam_relative = false,
 				};
 			}
 		}
@@ -829,7 +829,7 @@ namespace Rylogic.Gfx
 			{ }
 			public View3DIncludes(IEnumerable<string> paths = null, IEnumerable<HMODULE> modules = null)
 				: this(paths != null ? string.Join(",", paths) : null, modules.Take(16).ToArray())
-			{}
+			{ }
 			public View3DIncludes(string paths, HMODULE[] modules)
 			{
 				m_include_paths = paths;
@@ -911,9 +911,9 @@ namespace Rylogic.Gfx
 
 		/// <summary>Edit object callback</summary>
 		public delegate void EditObjectCB(IntPtr ctx, int vcount, int icount, int ncount,
-			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=1)][Out] Vertex[] verts,
-			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=2)][Out] ushort[] indices,
-			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=3)][Out] Nugget[] nuggets,
+			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)][Out] Vertex[] verts,
+			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)][Out] ushort[] indices,
+			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 3)][Out] Nugget[] nuggets,
 			out int new_vcount, out int new_icount, out int new_ncount);
 
 		/// <summary>Embedded code handler callback</summary>
@@ -928,19 +928,19 @@ namespace Rylogic.Gfx
 		public class Exception : System.Exception
 		{
 			public EResult m_code = EResult.Success;
-			public Exception() :this(EResult.Success) {}
-			public Exception(EResult code) :this("", code) {}
-			public Exception(string message) :this(message, EResult.Success) {}
-			public Exception(string message, EResult code) :base(message) { m_code = code; }
+			public Exception() : this(EResult.Success) { }
+			public Exception(EResult code) : this("", code) { }
+			public Exception(string message) : this(message, EResult.Success) { }
+			public Exception(string message, EResult code) : base(message) { m_code = code; }
 		}
 
 		private readonly List<Window> m_windows;              // Groups of objects to render
-		private readonly HContext     m_context;              // Unique id per Initialise call
-		private readonly Dispatcher   m_dispatcher;           // Thread marshaller
-		private readonly int          m_thread_id;            // The main thread id
-		private ReportErrorCB         m_error_cb;             // Reference to callback
-		private AddFileProgressCB     m_add_file_progress_cb; // Reference to callback
-		private SourcesChangedCB      m_sources_changed_cb;   // Reference to callback
+		private readonly HContext m_context;              // Unique id per Initialise call
+		private readonly Dispatcher m_dispatcher;           // Thread marshaller
+		private readonly int m_thread_id;            // The main thread id
+		private ReportErrorCB m_error_cb;             // Reference to callback
+		private AddFileProgressCB m_add_file_progress_cb; // Reference to callback
+		private SourcesChangedCB m_sources_changed_cb;   // Reference to callback
 		private Dictionary<string, EmbeddedCodeHandlerCB> m_embedded_code_handlers;
 
 		/// <summary>Access the View3d instance for this process</summary>
@@ -1210,13 +1210,19 @@ namespace ldr
 		}
 		public void EnumGuids(Func<Guid, bool> cb)
 		{
-			View3D_SourceEnumGuids((c,guid) => cb(guid), IntPtr.Zero);
+			View3D_SourceEnumGuids((c, guid) => cb(guid), IntPtr.Zero);
 		}
 
 		/// <summary>Return the example Ldr script</summary>
 		public string ExampleScript
 		{
 			get { return View3D_ExampleScriptBStr(); }
+		}
+
+		/// <summary>Flush any pending commands to the graphics card</summary>
+		public static void Flush()
+		{
+			View3D_Flush();
 		}
 
 		/// <summary>Binds a 3D scene to a window</summary>
@@ -3467,6 +3473,7 @@ namespace ldr
 		[DllImport(Dll)] private static extern bool              View3D_GizmoManipulating        (HGizmo gizmo);
 
 		// Miscellaneous
+		[DllImport(Dll)] private static extern void              View3D_Flush                    ();
 		[DllImport(Dll)] private static extern bool              View3D_TranslateKey             (HWindow window, int key_code);
 		[DllImport(Dll)] private static extern bool              View3D_DepthBufferEnabledGet    (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_DepthBufferEnabledSet    (HWindow window, bool enabled);

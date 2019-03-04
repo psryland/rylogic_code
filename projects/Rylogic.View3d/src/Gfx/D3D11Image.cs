@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Interop;
 using Rylogic.Utility;
@@ -40,10 +41,11 @@ namespace Rylogic.Gfx
 		static D3D11Image()
 		{
 			WindowOwnerProperty = DependencyProperty.Register(nameof(WindowOwner), typeof(IntPtr), typeof(D3D11Image), new UIPropertyMetadata(IntPtr.Zero, new PropertyChangedCallback(WindowOwnerChanged)));
+			m_is_sw_fallback_enabled = typeof(D3DImage).GetField("_isSoftwareFallbackEnabled", BindingFlags.NonPublic | BindingFlags.Instance);
 		}
 		public D3D11Image()
-			:this(96.0, 96.0)
-		{}
+			: this(96.0, 96.0)
+		{ }
 		public D3D11Image(double dpiX, double dpiY, int multi_sampling = 1)
 			: base(dpiX, dpiY)
 		{
@@ -72,6 +74,7 @@ namespace Rylogic.Gfx
 			set { SetValue(WindowOwnerProperty, value); }
 		}
 		public static DependencyProperty WindowOwnerProperty;
+
 		private static void WindowOwnerChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
 		{
 			var image = (D3D11Image)sender;
@@ -139,7 +142,7 @@ namespace Rylogic.Gfx
 
 					// Set the render target as the Dx9 surface
 					using (LockScope())
-						SetBackBuffer(D3DResourceType.IDirect3DSurface9, ptr);
+						SetBackBuffer(D3DResourceType.IDirect3DSurface9, ptr, true);
 				}
 			}
 		}
@@ -172,6 +175,7 @@ namespace Rylogic.Gfx
 			using (LockScope())
 			{
 				View3d.Texture.ResolveAA(FrontBuffer, RenderTarget);
+				View3d.Flush();
 				base.AddDirtyRect(area);
 			}
 		}
@@ -193,9 +197,9 @@ namespace Rylogic.Gfx
 			try
 			{
 				var opts = View3d.TextureOptions.New(
-					format:View3d.EFormat.DXGI_FORMAT_B8G8R8A8_UNORM,
-					mips:1,
-					bind_flags: View3d.EBindFlags.D3D11_BIND_RENDER_TARGET| View3d.EBindFlags.D3D11_BIND_SHADER_RESOURCE,
+					format: View3d.EFormat.DXGI_FORMAT_B8G8R8A8_UNORM,
+					mips: 1,
+					bind_flags: View3d.EBindFlags.D3D11_BIND_RENDER_TARGET | View3d.EBindFlags.D3D11_BIND_SHADER_RESOURCE,
 					dbg_name: "D3D11Image RenderTarget FB");
 
 				// Create the Dx9 render target of the required size;
@@ -215,6 +219,13 @@ namespace Rylogic.Gfx
 			}
 			catch { }
 		}
+
+		/// <summary>True if the front buffer is available</summary>
+		public new bool IsFrontBufferAvailable
+		{
+			get { return base.IsFrontBufferAvailable || (bool)m_is_sw_fallback_enabled.GetValue(this); }
+		}
+		private static FieldInfo m_is_sw_fallback_enabled;
 
 		/// <summary></summary>
 		private new void SetBackBuffer(D3DResourceType backBufferType, IntPtr backBuffer, bool enableSoftwareFallback)

@@ -658,6 +658,7 @@ extern "C"
 	VIEW3D_API BOOL             __stdcall View3D_GizmoManipulating        (View3DGizmo gizmo);
 
 	// Miscellaneous
+	VIEW3D_API void       __stdcall View3D_Flush                    ();
 	VIEW3D_API BOOL       __stdcall View3D_TranslateKey             (View3DWindow window, int key_code);
 	VIEW3D_API BOOL       __stdcall View3D_DepthBufferEnabledGet    (View3DWindow window);
 	VIEW3D_API void       __stdcall View3D_DepthBufferEnabledSet    (View3DWindow window, BOOL enabled);

@@ -2630,6 +2630,17 @@ VIEW3D_API BOOL __stdcall View3D_GizmoManipulating(View3DGizmo gizmo)
 
 // Miscellaneous **********************************************************************
 
+// Flush any pending commands to the graphics card. Basically 'Present' but for off-screen rendering
+VIEW3D_API void __stdcall View3D_Flush()
+{
+	try
+	{
+		pr::Renderer::Lock lock(Dll().m_rdr);
+		lock.ImmediateDC()->Flush();
+	}
+	CatchAndReport(View3D_Flush, , );
+}
+
 // Handle standard keyboard shortcuts
 VIEW3D_API BOOL __stdcall View3D_TranslateKey(View3DWindow window, int key_code)
 {
