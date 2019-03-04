@@ -2860,15 +2860,16 @@ namespace ldr
 			/// <summary>Copy from one region on a texture to another</summary>
 			public static void StretchBlt(Texture dst, Texture src)
 			{
-				var dst_box = Win32.RECT.FromLTRB(0, 0, (int)dst.Info.m_width, (int)dst.Info.m_height);
-				var src_box = Win32.RECT.FromLTRB(0, 0, (int)src.Info.m_width, (int)src.Info.m_height);
-				View3D_TextureStretchBlt(dst.Handle, 0, 0, 0, 0, );
+				var dst_box = new Rectangle(0, 0, (int)dst.Info.m_width, (int)dst.Info.m_height);
+				var src_box = new Rectangle(0, 0, (int)src.Info.m_width, (int)src.Info.m_height);
+				StretchBlt(dst, dst_box, src, src_box);
 			}
 			public static void StretchBlt(Texture dst, Rectangle src_box, Texture src, Rectangle dst_box)
 			{
-				var dst_box = Win32.RECT.FromLTRB(0, 0, (int)dst.Info.m_width, (int)dst.Info.m_height);
-				var src_box = Win32.RECT.FromLTRB(0, 0, (int)src.Info.m_width, (int)src.Info.m_height);
-				View3D_TextureStretchBlt(dst.Handle, 0, 0, 0, 0, );
+				var dst_box_ = Win32.RECT.FromLTRB(0, 0, (int)dst.Info.m_width, (int)dst.Info.m_height);
+				var src_box_ = Win32.RECT.FromLTRB(0, 0, (int)src.Info.m_width, (int)src.Info.m_height);
+				//View3D_TextureStretchBlt(dst.Handle, 0, 0, 0, 0, );
+				throw new NotImplementedException();
 			}
 
 			/// <summary>Create a Texture instance from a shared d3d resource (created on a different d3d device)</summary>
@@ -2908,7 +2909,7 @@ namespace ldr
 			#region Helper Classes
 
 			/// <summary>An RAII object used to lock the texture for drawing with GDI+ methods</summary>
-			public class Lock : IDisposable
+			public class Lock :IDisposable
 			{
 				private readonly HTexture m_tex;
 

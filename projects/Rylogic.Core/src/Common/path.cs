@@ -235,6 +235,26 @@ namespace Rylogic.Common
 			return SanitiseFileName(name, "", "_");
 		}
 
+		/// <summary>Searches up the directory tree from 'initial_dir' looking for a directory matching 'dir_name'. Returns the first found</summary>
+		public static string FindAncestorDirectory(string dir_name, string initial_dir)
+		{
+			for (;;)
+			{
+				// Check 'dir_name' doesn't exist in the current directory
+				var dir = Canonicalise(CombinePath(initial_dir, dir_name));
+				if (DirExists(dir))
+					return dir;
+
+				// Prune off a sub directory. Exit if we reach the root
+				var parent = Canonicalise(CombinePath(initial_dir, ".."));
+				if (parent == initial_dir)
+					break;
+
+				initial_dir = parent;
+			}
+			return null;
+		}
+
 		/// <summary>Adds/Removes quotes to/from 'path' if necessary</summary>
 		public static string Quote(string path, bool add)
 		{

@@ -318,6 +318,7 @@
 #include "pr\renderer11\textures\video.h"
 #include "pr\renderer11\util\allocator.h"
 #include "pr\renderer11\util\demo_scene.h"
+#include "pr\renderer11\util\dx9_context.h"
 #include "pr\renderer11\util\event_args.h"
 #include "pr\renderer11\util\lock.h"
 #include "pr\renderer11\util\lookup.h"

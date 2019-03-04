@@ -23,7 +23,7 @@ namespace Rylogic.Utility
 	{
 		public override string ToString()
 		{
-			return typeof(T).Name.Txfm(Str.ECapitalise.UpperCase, Str.ECapitalise.LowerCase, Str.ESeparate.Add, " ", "");
+			return typeof(T).Name.Txfm(Str_.ECapitalise.UpperCase, Str_.ECapitalise.LowerCase, Str_.ESeparate.Add, " ", "");
 		}
 		public override bool GetPropertiesSupported(ITypeDescriptorContext context)
 		{

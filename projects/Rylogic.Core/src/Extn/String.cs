@@ -16,71 +16,13 @@ using Rylogic.Common;
 namespace Rylogic.Extn
 {
 	/// <summary>Helper string building functions</summary>
-	public static class Str
+	public static class Str_
 	{
-		// Notes:
-		//  - This seems to be slower than using $"..{}.." even though the StringBuilder
-		//    is cached. I guess the compiler is optimising the interpolated strings better.
-
-		/// <summary>Get the text of the cached string builder'</summary>
-		[Obsolete] public static string Text
-		{
-			[DebuggerStepThrough] get { return CachedSB.ToString(); }
-		}
-
-		/// <summary>A thread local string builder, cached for better memory performance</summary>
-		[Obsolete] public static StringBuilder CachedSB { get { return m_cached_sb ?? (m_cached_sb = new StringBuilder()); } }
-		[ThreadStatic] private static StringBuilder m_cached_sb; // no initialised for thread statics
-
-		/// <summary>Reset the cached string builder'</summary>
-		[DebuggerStepThrough] [Obsolete()] public static void Reset()
-		{
-			CachedSB.Clear();
-		}
-
-		/// <summary>A helper for gluing strings together</summary>
-		[DebuggerStepThrough] [Obsolete()] public static string Build(params object[] parts)
-		{
-			return Build(CachedSB, parts);
-		}
-
-		/// <summary>Append object.ToString()s to 'sb'</summary>
-		[DebuggerStepThrough] [Obsolete()] public static void Append(params object[] parts)
-		{
-			Append(CachedSB, parts);
-		}
-
-		/// <summary>A helper for gluing strings together</summary>
-		[DebuggerStepThrough] [Obsolete()] public static string Build(StringBuilder sb, params object[] parts)
-		{
-			sb.Length = 0;
-			Append(sb, parts);
-			return sb.ToString();
-		}
-
-		/// <summary>Append object.ToString()s to 'sb'</summary>
-		[DebuggerStepThrough] [Obsolete()] public static void Append(StringBuilder sb, object part)
-		{
-			// Do not change this to automatically add white space,
-			if      (part is string     ) sb.Append((string)part);
-			else if (part is IEnumerable) foreach (var x in (IEnumerable)part) Append(sb, x);
-			else if (part != null       ) sb.Append(part.ToString());
-		}
-		[DebuggerStepThrough] [Obsolete()] public static void Append(StringBuilder sb, params object[] parts)
-		{
-			// Do not change this to automatically add white space,
-			foreach (var part in parts)
-				Append(sb, part);
-		}
-
-		/// <summary>Treats this string as a format string</summary>
-		[Obsolete("Use in-fix strings instead")] public static string Fmt(this string fmt, params object[] args)
-		{
-			return string.Format(fmt, args);
-		}
+		public static char[] WhiteSpaceChars = new[] { ' ', '\t', '\r', '\n', '\v' };
 
 		/// <summary>Returns true if this string is not null or empty</summary>
-		[DebuggerStepThrough] public static bool HasValue(this string str)
+		[DebuggerStepThrough]
+		public static bool HasValue(this string str)
 		{
 			return !string.IsNullOrEmpty(str);
 		}
@@ -792,16 +734,16 @@ namespace Rylogic.UnitTests
 			const string str0 = "SOME_stringWith_weird_Casing_Number03";
 			string str;
 
-			str = str0.Txfm(Str.ECapitalise.LowerCase, Str.ECapitalise.LowerCase, Str.ESeparate.Add, "_", "_");
+			str = str0.Txfm(Str_.ECapitalise.LowerCase, Str_.ECapitalise.LowerCase, Str_.ESeparate.Add, "_", "_");
 			Assert.Equal("some_string_with_weird_casing_number_03", str);
 
-			str = str0.Txfm(Str.ECapitalise.UpperCase, Str.ECapitalise.LowerCase, Str.ESeparate.Remove, null, "_");
+			str = str0.Txfm(Str_.ECapitalise.UpperCase, Str_.ECapitalise.LowerCase, Str_.ESeparate.Remove, null, "_");
 			Assert.Equal("SomeStringWithWeirdCasingNumber03", str);
 
-			str = str0.Txfm(Str.ECapitalise.UpperCase, Str.ECapitalise.UpperCase, Str.ESeparate.Add, "^ ^", "_");
+			str = str0.Txfm(Str_.ECapitalise.UpperCase, Str_.ECapitalise.UpperCase, Str_.ESeparate.Add, "^ ^", "_");
 			Assert.Equal("SOME^ ^STRING^ ^WITH^ ^WEIRD^ ^CASING^ ^NUMBER^ ^03", str);
 
-			str = "FieldCAPSBlah".Txfm(Str.ECapitalise.UpperCase, Str.ECapitalise.DontChange, Str.ESeparate.Add, " ");
+			str = "FieldCAPSBlah".Txfm(Str_.ECapitalise.UpperCase, Str_.ECapitalise.DontChange, Str_.ESeparate.Add, " ");
 			Assert.Equal("Field CAPS Blah", str);
 		}
 		[Test] public void RegexPatterns()

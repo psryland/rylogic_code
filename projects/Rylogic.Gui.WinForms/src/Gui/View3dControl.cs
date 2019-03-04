@@ -59,6 +59,7 @@ namespace Rylogic.Gui.WinForms
 		}
 		protected override void Dispose(bool disposing)
 		{
+			ShowMeasurementUI = false;
 			Util.BreakIf(m_impl_wnd != null && Util.IsGCFinalizerThread);
 			Util.BreakIf(m_view3d != null && Util.IsGCFinalizerThread);
 			Util.Dispose(ref m_impl_wnd);
@@ -94,12 +95,6 @@ namespace Rylogic.Gui.WinForms
 
 		/// <summary>Called whenever an error is generated in view3d</summary>
 		public event EventHandler<ReportErrorEventArgs> ReportError;
-		public class ReportErrorEventArgs :EventArgs
-		{
-			/// <summary>Error message</summary>
-			public string Message { get; private set; }
-			internal ReportErrorEventArgs(string msg) { Message = msg; }
-		}
 
 		/// <summary>Event notifying whenever rendering settings have changed</summary>
 		public event EventHandler OnSettingsChanged
@@ -110,12 +105,6 @@ namespace Rylogic.Gui.WinForms
 
 		/// <summary>Event called just before displaying the context menu to allow users to add custom options to the menu</summary>
 		public event EventHandler<CustomContextMenuEventArgs> CustomiseContextMenu;
-		public class CustomContextMenuEventArgs :EventArgs
-		{
-			/// <summary>The context menu to be customised</summary>
-			public ContextMenuStrip Menu { get; private set; }
-			internal CustomContextMenuEventArgs(ContextMenuStrip menu) { Menu = menu; }
-		}
 
 		/// <summary>Set the background colour of the control</summary>
 		[Browsable(false)]
@@ -339,7 +328,8 @@ namespace Rylogic.Gui.WinForms
 				{// Measure
 					var option = new ToolStripMenuItem{Text = "Measure..."};
 					tools_menu.DropDownItems.Add(option);
-					option.Click += delegate { Window.ShowMeasureTool = true; };
+					option.Click += delegate { ShowMeasurementUI = true; };
+					//option.Click += delegate { Window.ShowMeasureTool = true; };
 				}
 				{// Angle
 					var option = new ToolStripMenuItem{Text = "Angle..."};
@@ -458,6 +448,74 @@ namespace Rylogic.Gui.WinForms
 			Window.Present();
 		}
 
+		#region Measurement UI
+
+		/// <summary>Enable/Disable the measurement UI</summary>
+		public bool ShowMeasurementUI
+		{
+			get { return m_measure_ui != null; }
+			set
+			{
+				if (ShowMeasurementUI == value) return;
+				if (m_measure_ui != null)
+				{
+					Util.Dispose(ref m_measure_ui);
+				}
+				m_measure_ui = value ? new MeasurementUI(this) : null;
+				if (m_measure_ui != null)
+				{
+					m_measure_ui.Show(this);
+				}
+			}
+		}
+		private MeasurementUI m_measure_ui;
+
+		/// <summary>Tool window wrapper of the measurement control</summary>
+		private class MeasurementUI : ToolForm
+		{
+			public MeasurementUI(View3dControl owner)
+				: base(owner, EPin.TopLeft, new Point(10, 10), new Size(264, 330), false)
+			{
+				FormBorderStyle = FormBorderStyle.SizableToolWindow;
+				ShowInTaskbar = false;
+				HideOnClose = false;
+				Text = "Measure";
+
+				Controls.Add2(new View3dMeasurementUI
+				{
+					Dock = DockStyle.Fill,
+					CtxId = Guid.NewGuid(),
+					Window = owner.Window,
+				});
+
+				FormClosed += (s, a) =>
+				{
+					if (a.CloseReason == CloseReason.UserClosing)
+						owner.ShowMeasurementUI = false;
+				};
+			}
+		}
+
+		#endregion
+
+		#region EventArgs
+
+		public class ReportErrorEventArgs : EventArgs
+		{
+			/// <summary>Error message</summary>
+			public string Message { get; private set; }
+			internal ReportErrorEventArgs(string msg) { Message = msg; }
+		}
+
+		public class CustomContextMenuEventArgs : EventArgs
+		{
+			/// <summary>The context menu to be customised</summary>
+			public ContextMenuStrip Menu { get; private set; }
+			internal CustomContextMenuEventArgs(ContextMenuStrip menu) { Menu = menu; }
+		}
+
+		#endregion
+
 		#region Component Designer generated code
 
 		/// <summary>Required designer variable.</summary>
@@ -477,6 +535,5 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		#endregion
-
 	}
 }

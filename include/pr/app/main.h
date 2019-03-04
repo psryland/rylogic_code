@@ -153,7 +153,7 @@ namespace pr
 			virtual void Resize(pr::IRect const& area)
 			{
 				// Change the render target size
-				m_window.RenderTargetSize(area.Size());
+				m_window.BackBufferSize(area.Size());
 
 				// Adjust the viewport
 				m_scene.m_viewport.TopLeftX = float(area.Left ());

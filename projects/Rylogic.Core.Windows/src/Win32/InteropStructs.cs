@@ -41,7 +41,7 @@ namespace Rylogic.Interop.Win32
 			public Rectangle   ToRectangle()                        { return new Rectangle(left, top, width, height); }
 			public static RECT FromSize(Size size)                  { return new RECT{left=0, top=0, right=size.Width, bottom=size.Height}; }
 			public Size        ToSize()                             { return new Size(right - left, bottom - top); }
-			public static RECT FromLTRB(int l, int r, int t, int b) { return new RECT{left=l, top=t, right=r, bottom=b}; }
+			public static RECT FromLTRB(int l, int t, int r, int b) { return new RECT{left=l, top=t, right=r, bottom=b}; }
 		};
 
 		[StructLayout(LayoutKind.Sequential)]

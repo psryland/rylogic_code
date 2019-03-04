@@ -93,7 +93,7 @@ namespace RyLogViewer
 			try
 			{
 				m_settings.Filepath = filepath;
-				m_settings.Reload();
+				m_settings.Load(filepath);
 			}
 			catch (Exception ex)
 			{

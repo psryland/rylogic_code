@@ -722,7 +722,7 @@ namespace Rylogic.Gui.WinForms
 			// Otherwise pretty up the string name
 			else
 			{
-				desc = args.ListItem.ToString().Txfm(Str.ECapitalise.UpperCase, Str.ECapitalise.LowerCase, Str.ESeparate.Add, " ");
+				desc = args.ListItem.ToString().Txfm(Str_.ECapitalise.UpperCase, Str_.ECapitalise.LowerCase, Str_.ESeparate.Add, " ");
 				args.Value = desc;
 			}
 		}

@@ -216,6 +216,13 @@ namespace Rylogic.Gui.WinForms
 			base.WndProc(ref m);
 		}
 
+		/// <summary>Form title</summary>
+		public string Title
+		{
+			get => Text;
+			set => Text = value;
+		}
+
 		/// <summary>How this tool window is pinned to the owner</summary>
 		[Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public EPin Pin

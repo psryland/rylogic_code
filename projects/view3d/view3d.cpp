@@ -2240,7 +2240,7 @@ VIEW3D_API void __stdcall View3D_BackBufferSizeSet(View3DWindow window, int widt
 
 		window->m_camera.Aspect(aspect);
 	}
-	CatchAndReport(View3D_SetRenderTargetSize, window,);
+	CatchAndReport(View3D_BackBufferSizeSet, window,);
 }
 
 // Get/Set the viewport within the render target

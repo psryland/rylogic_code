@@ -17,7 +17,7 @@ namespace pr
 			,m_mode(client_area)
 			,m_multisamp(4)
 			,m_buffer_count(2)
-			,m_swap_effect(DXGI_SWAP_EFFECT_FLIP_DISCARD)// DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL <- cannot use with multi-sampling
+			,m_swap_effect(DXGI_SWAP_EFFECT_DISCARD)//DXGI_SWAP_EFFECT_FLIP_DISCARD, DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL <- cannot use with multi-sampling
 			,m_swap_chain_flags(DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH|(gdi_compatible_bb ? DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE : 0))
 			,m_depth_format(DXGI_FORMAT_D24_UNORM_S8_UINT)
 			,m_usage(DXGI_USAGE_RENDER_TARGET_OUTPUT|DXGI_USAGE_SHADER_INPUT)
@@ -312,7 +312,7 @@ namespace pr
 			// Set the render target
 			SetRT(rtv.get(), dsv.get());
 		}
-		
+
 		// Set the current render target as the main render target
 		// Calling RestoreRT will restore the main render target.
 		void Window::SaveAsMainRT()

@@ -424,7 +424,7 @@ namespace Rylogic.Extn
 		/// <summary>Convert the enum value to a string containing spaces</summary>
 		public static string ToPrettyString(this Enum e)
 		{
-			return e.ToStringFast().Txfm(Str.ECapitalise.UpperCase, Str.ECapitalise.DontChange, Str.ESeparate.Add, " ");
+			return e.ToStringFast().Txfm(Str_.ECapitalise.UpperCase, Str_.ECapitalise.DontChange, Str_.ESeparate.Add, " ");
 		}
 
 		/// <summary>A faster overload of ToString</summary>

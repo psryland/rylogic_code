@@ -200,7 +200,8 @@ namespace pr
 		void Scene::RemoveInstance(BaseInstance const& inst)
 		{
 			auto iter = pr::find(m_instances, &inst);
-			m_instances.erase_fast(iter);
+			if (iter != std::end(m_instances))
+				m_instances.erase_fast(iter);
 
 			for (auto& rs : m_render_steps)
 				rs->RemoveInstance(inst);

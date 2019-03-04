@@ -489,7 +489,7 @@ namespace Rylogic.Gui.WPF
 					Window.Present();
 
 					// Notify that the D3DImage has changed
-					D3DImage.AddDirtyRect();
+					D3DImage.Invalidate();
 				}
 			}
 		}
