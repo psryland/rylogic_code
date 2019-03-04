@@ -16,6 +16,8 @@ namespace Rylogic.Gfx
 		//  - Dx9 cannot be used without a window handle.
 		//  - PixelWidth/PixelHeight are the pixel dimensions of the render target. These sizes are
 		//    cached in this object so that they can be set before the render target is created.
+		//  - The FrontBuffer is a texture with the same dimensions as the target image size.
+		//    'RenderTarget' is a texture that may be larger so that anti aliasing can be supported.
 		//
 		//  Usage:
 		//   Assign an instance of this object as the Source of a WPF Image control.
@@ -45,18 +47,18 @@ namespace Rylogic.Gfx
 		public D3D11Image(double dpiX, double dpiY, int multi_sampling = 1)
 			: base(dpiX, dpiY)
 		{
-			MultiSampling = multi_sampling;
-		}
-		public virtual void Dispose()
-		{
-			FrontBuffer = null;
-			RenderTarget = null;
-			WindowOwner = IntPtr.Zero;
-			GC.SuppressFinalize(this);
+			MultiSampling = 4;
 		}
 		~D3D11Image()
 		{
 			Dispose();
+		}
+		public virtual void Dispose()
+		{
+			RenderTarget = null;
+			FrontBuffer = null;
+			WindowOwner = IntPtr.Zero;
+			GC.SuppressFinalize(this);
 		}
 		protected override Freezable CreateInstanceCore()
 		{
@@ -86,18 +88,34 @@ namespace Rylogic.Gfx
 			}
 		}
 
-		/// <summary>The render target scaling factor for multi-sampling. Use 1, 2, 4, or 8</summary>
-		public int MultiSampling
+		/// <summary>The render target multi-sampling</summary>
+		public uint MultiSampling
 		{
 			get { return m_multi_sampling; }
 			set
 			{
-				if (m_multi_sampling == value) return;
+				if (Equals(m_multi_sampling, value)) return;
 				m_multi_sampling = value;
 				TryCreateRenderTarget();
 			}
 		}
-		private int m_multi_sampling;
+		private uint m_multi_sampling;
+
+		/// <summary>The Dx11 render target texture</summary>
+		public View3d.Texture RenderTarget
+		{
+			get { return m_render_target; }
+			set
+			{
+				if (m_render_target == value) return;
+				Util.Dispose(ref m_render_target);
+				m_render_target = value;
+				// 'RenderTargetChanged' raised in TryCreateRenderTarget
+			}
+		}
+		private View3d.Texture m_render_target;
+		private int m_pixel_width = 16;
+		private int m_pixel_height = 16;
 
 		/// <summary>The Dx9 render target that matches the area on screen</summary>
 		private View3d.Texture FrontBuffer
@@ -126,25 +144,6 @@ namespace Rylogic.Gfx
 			}
 		}
 		private View3d.Texture m_front_buffer;
-		
-		/// <summary>The Dx11 render target texture</summary>
-		public View3d.Texture RenderTarget
-		{
-			get { return m_render_target ?? FrontBuffer; }
-			set
-			{
-				if (m_render_target == value) return;
-				if (value == FrontBuffer)
-					throw new Exception("Don't assign the front buffer as the render target");
-
-				Util.Dispose(ref m_render_target);
-				m_render_target = value;
-				RenderTargetChanged?.Invoke(this, EventArgs.Empty);
-			}
-		}
-		private View3d.Texture m_render_target;
-		private int m_pixel_width = 16;
-		private int m_pixel_height = 16;
 
 		/// <summary>Raised when the render target changes</summary>
 		public event EventHandler RenderTargetChanged;
@@ -170,18 +169,15 @@ namespace Rylogic.Gfx
 		}
 		public void Invalidate(Int32Rect area)
 		{
-			// Copy from the staging resource to the dx9 render target
-			if (FrontBuffer != RenderTarget)
+			using (LockScope())
 			{
-				// Copy from the staging render target to the front buffer
-				//View3d.Texture.StretchBlt(RenderTarget, FrontBuffer);
+				View3d.Texture.ResolveAA(FrontBuffer, RenderTarget);
+				base.AddDirtyRect(area);
 			}
-
-			base.AddDirtyRect(area);
 		}
 
 		/// <summary>RAII Scope for locking the d3d image</summary>
-		public Scope LockScope()
+		private Scope LockScope()
 		{
 			return Scope.Create(() => Lock(), () => Unlock());
 		}
@@ -189,28 +185,33 @@ namespace Rylogic.Gfx
 		/// <summary>Create a new render target if possible</summary>
 		private void TryCreateRenderTarget()
 		{
-			// Cannot create the render target until a window handle has been assigned
+			// Cannot create the render target until a window handle
+			// has been assigned because Dx9 requires a window handle.
 			if (WindowOwner == IntPtr.Zero)
 				return;
 
 			try
 			{
-				// Create the Dx9 render target
-				var opts0 = View3d.TextureOptions.GdiCompat(dbg_name: "D3D11Image RenderTarget FB");
-				var rt0 = View3d.Texture.Dx9RenderTarget(WindowOwner, m_pixel_width, m_pixel_height, opts0);
+				var opts = View3d.TextureOptions.New(
+					format:View3d.EFormat.DXGI_FORMAT_B8G8R8A8_UNORM,
+					mips:1,
+					bind_flags: View3d.EBindFlags.D3D11_BIND_RENDER_TARGET| View3d.EBindFlags.D3D11_BIND_SHADER_RESOURCE,
+					dbg_name: "D3D11Image RenderTarget FB");
+
+				// Create the Dx9 render target of the required size;
+				var rt0 = View3d.Texture.Dx9RenderTarget(WindowOwner, m_pixel_width, m_pixel_height, opts);
 				FrontBuffer = rt0;
 
+				// Add multi-sampling for the main render target
+				opts.MultiSamp = MultiSampling;
+				opts.DbgName = "D3D11Image RenderTarget BB";
+
 				// Create the Dx11 staging render target
-				if (MultiSampling <= 1)
-				{
-					RenderTarget = null;
-				}
-				else
-				{
-					var opts1 = View3d.TextureOptions.GdiCompat(dbg_name: "D3D11Image RenderTarget BB");
-					var rt1 = new View3d.Texture(m_pixel_width * MultiSampling, m_pixel_height * MultiSampling, opts1);
-					RenderTarget = rt1;
-				}
+				var rt1 = new View3d.Texture(m_pixel_width, m_pixel_height, opts);
+				RenderTarget = rt1;
+
+				// Notify of a new render target
+				RenderTargetChanged?.Invoke(this, EventArgs.Empty);
 			}
 			catch { }
 		}

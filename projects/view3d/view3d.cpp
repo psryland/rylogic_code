@@ -1798,6 +1798,7 @@ VIEW3D_API View3DTexture __stdcall View3D_TextureCreate(UINT32 width, UINT32 hei
 		TextureDesc tdesc(src);
 		tdesc.Format = options.m_format;
 		tdesc.MipLevels = options.m_mips;
+		tdesc.SampleDesc = pr::rdr::MultiSamp(options.m_multisamp, 0U);
 		tdesc.BindFlags = options.m_bind_flags | (options.m_gdi_compatible ? D3D11_BIND_SHADER_RESOURCE|D3D11_BIND_RENDER_TARGET : 0);
 		tdesc.MiscFlags = options.m_misc_flags | (options.m_gdi_compatible ? D3D11_RESOURCE_MISC_GDI_COMPATIBLE : 0);
 
@@ -1896,24 +1897,6 @@ VIEW3D_API void __stdcall View3D_TextureDelete(View3DTexture tex)
 		tex->Release();
 	}
 	CatchAndReport(View3D_TextureDelete, ,);
-}
-
-VIEW3D_API void __stdcall View3D_TextureStretchBlt(View3DTexture dst, RECT const* dst_box, View3DTexture src, RECT const* src_box)
-{
-	try
-	{
-		if (!dst) throw std::runtime_error("Destination texture is null");
-		if (!src) throw std::runtime_error("Source texture is null");
-		if (dst->m_mgr != src->m_mgr) throw std::runtime_error("Textures belong to different renderers");
-		if ((dst->TexDesc().BindFlags & (UINT)EBind::RenderTarget) == 0) throw std::runtime_error("Destination texture must be a render target");
-
-		pr::Renderer::Lock lock(Dll().m_rdr);
-
-		// Set dst as render target
-		// Set viewport to dst_box
-		// DrawTextured quad where 'src' is the texture
-	}
-	CatchAndReport(View3D_TextureStretchBlt, ,);
 }
 
 // Read the properties of an existing texture
@@ -2035,6 +2018,25 @@ VIEW3D_API View3DTexture __stdcall View3D_TextureRenderTarget(View3DWindow windo
 	CatchAndReport(View3D_TextureResize, window, nullptr);
 }
 
+// Resolve a MSAA texture into a non-MSAA texture
+VIEW3D_API void __stdcall View3D_TextureResolveAA(View3DTexture dst, View3DTexture src)
+{
+	try
+	{
+		if (!src) throw std::runtime_error("Source texture pointer is null");
+		if (!dst) throw std::runtime_error("Destination texture pointer is null");
+		
+		auto src_tdesc = src->TexDesc();
+		auto dst_tdesc = dst->TexDesc();
+		if (src_tdesc.Format != dst_tdesc.Format)
+			throw std::runtime_error("Source and destination textures must has the same format");
+
+		pr::Renderer::Lock lock(Dll().m_rdr);
+		lock.ImmediateDC()->ResolveSubresource(dst->m_tex.get(), 0U, src->m_tex.get(), 0U, src_tdesc.Format);
+	}
+	CatchAndReport(View3D_TextureResolveAA, , );
+}
+
 // Create a Texture instance from a shared d3d resource (created on a different d3d device)
 VIEW3D_API View3DTexture __stdcall View3D_TextureFromShared(IUnknown* shared_resource, View3DTextureOptions const& options)
 {
@@ -2139,7 +2141,7 @@ VIEW3D_API void __stdcall View3D_Render(View3DWindow window)
 	CatchAndReport(View3D_Render, window,);
 }
 
-// Finish rendering with a back buffer flip
+// Finish rendering with a back buffer flip.
 // If rendering to a texture, this does a d3ddevice->Flush instead
 VIEW3D_API void __stdcall View3D_Present(View3DWindow window)
 {

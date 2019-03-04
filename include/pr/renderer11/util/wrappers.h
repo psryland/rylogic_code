@@ -217,11 +217,12 @@ namespace pr
 				Count   = count;
 				Quality = quality;
 			}
-			void Validate(ID3D11Device* device, DXGI_FORMAT format)
+			MultiSamp& Validate(ID3D11Device* device, DXGI_FORMAT format)
 			{
 				UINT quality = 0;
 				for (; Count > 1 && (quality = MultisampleQualityLevels(device, format, Count)) == 0; Count >>= 1) {}
 				if (quality != 0 && Quality >= quality) Quality = quality - 1;
+				return *this;
 			}
 		};
 		inline bool operator == (DXGI_SAMPLE_DESC const& lhs, DXGI_SAMPLE_DESC const& rhs) { return lhs.Count == rhs.Count && lhs.Quality == rhs.Quality; }

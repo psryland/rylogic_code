@@ -591,6 +591,7 @@ namespace Rylogic.Gfx
 			public EAddrMode AddrV;
 			public EBindFlags BindFlags;
 			public EResMiscFlags MiscFlags;
+			public uint MultiSamp;
 			public uint ColourKey;
 			public bool HasAlpha;
 			public bool GdiCompatible;
@@ -603,6 +604,7 @@ namespace Rylogic.Gfx
 				EAddrMode addrV = EAddrMode.D3D11_TEXTURE_ADDRESS_CLAMP,
 				EBindFlags bind_flags = EBindFlags.D3D11_BIND_SHADER_RESOURCE,
 				EResMiscFlags misc_flags = EResMiscFlags.NONE,
+				uint msaa = 1U,
 				uint mips = 0U,
 				uint colour_key = 0U,
 				bool has_alpha = false,
@@ -615,6 +617,7 @@ namespace Rylogic.Gfx
 					Filter = filter,
 					AddrU = addrU,
 					AddrV = addrV,
+					MultiSamp = msaa,
 					BindFlags = bind_flags,
 					MiscFlags = misc_flags,
 					ColourKey = colour_key,
@@ -630,6 +633,7 @@ namespace Rylogic.Gfx
 				EAddrMode addrV = EAddrMode.D3D11_TEXTURE_ADDRESS_CLAMP,
 				EBindFlags bind_flags = EBindFlags.D3D11_BIND_SHADER_RESOURCE | EBindFlags.D3D11_BIND_RENDER_TARGET,
 				EResMiscFlags misc_flags = EResMiscFlags.D3D11_RESOURCE_MISC_GDI_COMPATIBLE,
+				uint msaa = 1U,
 				uint mips = 1U,
 				uint colour_key = 0U,
 				bool has_alpha = true,
@@ -642,6 +646,7 @@ namespace Rylogic.Gfx
 					Filter = filter,
 					AddrU = addrU,
 					AddrV = addrV,
+					MultiSamp = msaa,
 					BindFlags = bind_flags,
 					MiscFlags = misc_flags,
 					ColourKey = colour_key,
@@ -2857,19 +2862,10 @@ namespace ldr
 				return info;
 			}
 
-			/// <summary>Copy from one region on a texture to another</summary>
-			public static void StretchBlt(Texture dst, Texture src)
+			/// <summary>Copy a multi-sampled resource into a non-multi-sampled resource.</summary>
+			public static void ResolveAA(Texture dst, Texture src)
 			{
-				var dst_box = new Rectangle(0, 0, (int)dst.Info.m_width, (int)dst.Info.m_height);
-				var src_box = new Rectangle(0, 0, (int)src.Info.m_width, (int)src.Info.m_height);
-				StretchBlt(dst, dst_box, src, src_box);
-			}
-			public static void StretchBlt(Texture dst, Rectangle src_box, Texture src, Rectangle dst_box)
-			{
-				var dst_box_ = Win32.RECT.FromLTRB(0, 0, (int)dst.Info.m_width, (int)dst.Info.m_height);
-				var src_box_ = Win32.RECT.FromLTRB(0, 0, (int)src.Info.m_width, (int)src.Info.m_height);
-				//View3D_TextureStretchBlt(dst.Handle, 0, 0, 0, 0, );
-				throw new NotImplementedException();
+				View3D_TextureResolveAA(dst.Handle, src.Handle);
 			}
 
 			/// <summary>Create a Texture instance from a shared d3d resource (created on a different d3d device)</summary>
@@ -3410,7 +3406,6 @@ namespace ldr
 		[DllImport(Dll)] private static extern HTexture          View3D_TextureCreateFromFile       ([MarshalAs(UnmanagedType.LPWStr)] string tex_filepath, uint width, uint height, ref TextureOptions options);
 		[DllImport(Dll)] private static extern void              View3D_TextureLoadSurface          (HTexture tex, int level, string tex_filepath, Rectangle[] dst_rect, Rectangle[] src_rect, EFilter filter, uint colour_key);
 		[DllImport(Dll)] private static extern void              View3D_TextureDelete               (HTexture tex);
-		[DllImport(Dll)] private static extern void              View3D_TextureStretchBlt           (HTexture dst, ref Win32.RECT dst_box, HTexture src, ref Win32.RECT src_box);
 		[DllImport(Dll)] private static extern void              View3D_TextureGetInfo              (HTexture tex, out ImageInfo info);
 		[DllImport(Dll)] private static extern EResult           View3D_TextureGetInfoFromFile      (string tex_filepath, out ImageInfo info);
 		[DllImport(Dll)] private static extern void              View3D_TextureSetFilterAndAddrMode (HTexture tex, EFilter filter, EAddrMode addrU, EAddrMode addrV);
@@ -3422,6 +3417,7 @@ namespace ldr
 		[DllImport(Dll)] private static extern void              View3d_TexturePrivateDataIFSet     (HTexture tex, Guid guid, IntPtr pointer);
 		[DllImport(Dll)] private static extern ulong             View3D_TextureRefCount             (HTexture tex);
 		[DllImport(Dll)] private static extern HTexture          View3D_TextureRenderTarget         (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_TextureResolveAA            (HTexture dst, HTexture src);
 		[DllImport(Dll)] private static extern HTexture          View3D_TextureFromShared           (IntPtr shared_resource, ref TextureOptions options);
 		[DllImport(Dll)] private static extern HTexture          View3D_CreateDx9RenderTarget       (HWND hwnd, uint width, uint height, ref TextureOptions options, out IntPtr shared_handle);
 

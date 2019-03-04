@@ -468,7 +468,7 @@ namespace Rylogic.Gui.WPF
 			using (Scope.Create(null, () => m_render_pending = false))
 			{
 				// Ignore renders until the D3DImage has a render target
-				if (D3DImage.RenderTarget == null)
+				if (D3DImage.RenderTarget == null || !D3DImage.IsFrontBufferAvailable)
 					return;
 
 				// If the size has changed, update the back buffer
@@ -481,16 +481,13 @@ namespace Rylogic.Gui.WPF
 				// Allow objects to be added/removed from the scene
 				OnBuildScene();
 
-				using (D3DImage.LockScope())
-				{
-					// Render the scene
-					Window.RestoreRT();
-					Window.Render();
-					Window.Present();
+				// Render the scene
+				Window.RestoreRT();
+				Window.Render();
+				Window.Present();
 
-					// Notify that the D3DImage has changed
-					D3DImage.Invalidate();
-				}
+				// Notify that the D3DImage has changed
+				D3DImage.Invalidate();
 			}
 		}
 
