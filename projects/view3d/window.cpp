@@ -59,6 +59,7 @@ namespace view3d
 		,m_origin_point_visible(false)
 		,m_bboxes_visible(false)
 		,m_selection_box_visible(false)
+		,m_invalidated(false)
 		,m_editor_ui()
 		,m_obj_cont_ui()
 		,m_measure_tool_ui()
@@ -78,9 +79,9 @@ namespace view3d
 				OnError += pr::StaticCallBack(opts.m_error_cb, opts.m_error_cb_ctx);
 
 			// Set the initial aspect ratio
-			auto client_area = m_wnd.BackBufferSize();
-			if (client_area != iv2Zero)
-				m_camera.Aspect(client_area.x / float(client_area.y));
+			auto rt_area = m_wnd.RenderTargetSize();
+			if (rt_area != iv2Zero)
+				m_camera.Aspect(rt_area.x / float(rt_area.y));
 
 			// The light for the scene
 			m_light.m_type           = pr::rdr::ELight::Directional;
@@ -259,6 +260,9 @@ namespace view3d
 			m_scene.m_rsb.Clear(ERS::FillMode);
 			m_scene.m_bsb.Clear(EBS::BlendEnable, 0);
 		}
+
+		// No longer invalidated
+		m_invalidated = false;
 	}
 	void Window::Present()
 	{
@@ -681,7 +685,13 @@ namespace view3d
 	// Call InvalidateRect on the HWND associated with this window
 	void Window::InvalidateRect(RECT const* rect, bool erase)
 	{
-		::InvalidateRect(m_hwnd, rect, erase);
+		if (m_hwnd != nullptr)
+			::InvalidateRect(m_hwnd, rect, erase);
+		
+		if (!m_invalidated)
+			OnInvalidated.Raise(this);
+
+		m_invalidated = true;
 	}
 
 	// Called when objects are added/removed from this window
@@ -768,9 +778,8 @@ namespace view3d
 			if (AllSet(ldr_obj->Flags(), ELdrFlags::HitTestExclude))
 				return true;
 
-			// Not the closes hit, keep looking
-			if (hits[hit.m_ray_index].m_distance < hit.m_distance)
-				return true;
+			// The intercepts are already sorted from nearest to furtherest
+			// So we can just accept the first intercept as the hit test.
 
 			// Save the hit
 			auto& result = hits[hit.m_ray_index];
@@ -780,7 +789,7 @@ namespace view3d
 			result.m_distance          = hit.m_distance;
 			result.m_obj               = const_cast<View3DObject>(ldr_obj);
 			result.m_snap_type         = static_cast<EView3DSnapType>(hit.m_snap_type);
-			return true;
+			return false;
 		});
 	}
 

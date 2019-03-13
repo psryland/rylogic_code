@@ -88,7 +88,7 @@ namespace pr
 			PR_EXPAND(PR_DBG_RDR, NameResource(m_d3d_device.get(), "D3D device"));
 			PR_EXPAND(PR_DBG_RDR, NameResource(immediate.get(), "immediate DC"));
 
-			// Check dlls,dx features,etc required to run the renderer are available.
+			// Check dlls,DX features,etc required to run the renderer are available.
 			// Check the given settings are valid for the current adaptor.
 			{
 				if (m_feature_level < D3D_FEATURE_LEVEL_10_0)

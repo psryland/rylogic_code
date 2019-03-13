@@ -74,6 +74,7 @@ namespace view3d
 	using AddFileProgressCB     = pr::StaticCB<BOOL, pr::Guid const&, wchar_t const*, long long, BOOL>;
 	using SourcesChangedCB      = pr::StaticCB<void, EView3DSourcesChangedReason, BOOL>;
 	using EmbeddedCodeHandlerCB = pr::StaticCB<BOOL, wchar_t const*, wchar_t const*, BSTR&, BSTR&>;
+	using InvalidatedCB         = pr::StaticCB<void, Window*>;
 	using RenderingCB           = pr::StaticCB<void, Window*>;
 	using SceneChangedCB        = pr::StaticCB<void, Window*, View3DSceneChanged const&>;
 	using ReportErrorCB         = pr::StaticCB<void, wchar_t const*>;

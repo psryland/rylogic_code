@@ -2523,7 +2523,7 @@ namespace Rylogic.Gui.WinForms
 						var x = perp_z ? XAxis.Centre : chart_pt.X;
 						var left = (XAxis.Min - x) * (1f - delta);
 						var rite = (XAxis.Max - x) * (1f - delta);
-						XAxis.Set(chart_pt.X + left, chart_pt.X + rite);
+						XAxis.Set(x + left, x + rite);
 						if (Options.LockAspect != null)
 							YAxis.Span *= (1f - delta);
 
@@ -2545,7 +2545,7 @@ namespace Rylogic.Gui.WinForms
 						var y = perp_z ? YAxis.Centre : chart_pt.Y;
 						var left = (YAxis.Min - y) * (1f - delta);
 						var rite = (YAxis.Max - y) * (1f - delta);
-						YAxis.Set(chart_pt.Y + left, chart_pt.Y + rite);
+						YAxis.Set(y + left, y + rite);
 						if (Options.LockAspect != null)
 							XAxis.Span *= (1f - delta);
 
@@ -3084,7 +3084,7 @@ namespace Rylogic.Gui.WinForms
 				var pt0 = m_chart.Camera.O2W * m_chart.ChartToCamera(m_grab_chart);
 				var pt1 = m_chart.Camera.O2W * m_chart.ChartToCamera(m_chart.ClientToChart(e.Location));
 				var delta = pt1 - pt0;
-				m_chart.Tools.TapeMeasure.O2P = Math_.TxfmFromDir(AxisId.PosZ, delta, pt0) * m4x4.Scale(1f, 1f, delta.Length, v4.Origin);
+				m_chart.Tools.TapeMeasure.O2P = Math_.TxfmFromDir(EAxisId.PosZ, delta, pt0) * m4x4.Scale(1f, 1f, delta.Length, v4.Origin);
 				m_tape_measure_balloon.Location = m_chart.PointToScreen(e.Location);
 				m_tape_measure_balloon.Text =
 					$"dX:  {delta.x}\r\n"+
@@ -4327,7 +4327,7 @@ namespace Rylogic.Gui.WinForms
 			private View3d.Object m_area_select;
 			private View3d.Object CreateAreaSelect()
 			{
-				var ldr = Ldr.Rect("selection", Options.SelectionColour, AxisId.PosZ, 1f, 1f, true, pos:v4.Origin);
+				var ldr = Ldr.Rect("selection", Options.SelectionColour, EAxisId.PosZ, 1f, 1f, true, pos:v4.Origin);
 				var obj = new View3d.Object(ldr, false, Id, null);
 				obj.FlagsSet(View3d.EFlags.SceneBoundsExclude, true);
 				return obj;

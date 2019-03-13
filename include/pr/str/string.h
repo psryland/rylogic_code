@@ -602,7 +602,11 @@ namespace pr
 		// assign [ptr, <null>)
 		string& assign(const_pointer ptr)
 		{
-			return assign(ptr, traits::strlen(ptr));
+			if (ptr != nullptr)
+				return assign(ptr, traits::strlen(ptr));
+
+			resize(0);
+			return *this;
 		}
 
 		// assign [first, last), const pointers

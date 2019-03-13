@@ -798,18 +798,26 @@ namespace Rylogic.Gfx
 		[StructLayout(LayoutKind.Sequential)]
 		public struct Viewport
 		{
-			public float m_x;
-			public float m_y;
-			public float m_width;
-			public float m_height;
-			public float m_min_depth;
-			public float m_max_depth;
+			public float X;
+			public float Y;
+			public float Width;
+			public float Height;
+			public float DepthMin;
+			public float DepthMax;
 
-			public Viewport(float x, float y, float w, float h, float min = 0f, float max = 1f) { m_x = x; m_y = y; m_width = w; m_height = h; m_min_depth = min; m_max_depth = max; }
-			public Size ToSize() { return new Size((int)Math.Round(m_width), (int)Math.Round(m_height)); }
-			public SizeF ToSizeF() { return new SizeF(m_width, m_height); }
-			public Rectangle ToRect() { return new Rectangle((int)m_x, (int)m_y, (int)Math.Round(m_width), (int)Math.Round(m_height)); }
-			public RectangleF ToRectF() { return new RectangleF(m_x, m_y, m_width, m_height); }
+			public Viewport(float x, float y, float w, float h, float min = 0f, float max = 1f)
+			{
+				X = x;
+				Y = y;
+				Width = w;
+				Height = h;
+				DepthMin = min;
+				DepthMax = max;
+			}
+			public Size ToSize() => new Size((int)Math.Round(Width), (int)Math.Round(Height));
+			public SizeF ToSizeF() => new SizeF(Width, Height);
+			public Rectangle ToRect() => new Rectangle((int)X, (int)Y, (int)Math.Round(Width), (int)Math.Round(Height));
+			public RectangleF ToRectF() => new RectangleF(X, Y, Width, Height);
 		}
 
 		/// <summary>Include paths/sources for Ldr script #include resolving</summary>
@@ -906,6 +914,9 @@ namespace Rylogic.Gfx
 		/// <summary>Callback for when the collection of objects associated with a window changes</summary>
 		public delegate void SceneChangedCB(IntPtr ctx, HWindow wnd, ref View3DSceneChanged args);
 
+		/// <summary>Callback for when the window is invalidated</summary>
+		public delegate void InvalidatedCB(IntPtr ctx, HWindow wnd);
+
 		/// <summary>Called just prior to rendering</summary>
 		public delegate void RenderCB(IntPtr ctx, HWindow wnd);
 
@@ -934,13 +945,13 @@ namespace Rylogic.Gfx
 			public Exception(string message, EResult code) : base(message) { m_code = code; }
 		}
 
-		private readonly List<Window> m_windows;              // Groups of objects to render
+		private readonly List<Window> m_windows;          // Groups of objects to render
 		private readonly HContext m_context;              // Unique id per Initialise call
-		private readonly Dispatcher m_dispatcher;           // Thread marshaller
-		private readonly int m_thread_id;            // The main thread id
-		private ReportErrorCB m_error_cb;             // Reference to callback
+		private readonly Dispatcher m_dispatcher;         // Thread marshaller
+		private readonly int m_thread_id;                 // The main thread id
+		private ReportErrorCB m_error_cb;                 // Reference to callback
 		private AddFileProgressCB m_add_file_progress_cb; // Reference to callback
-		private SourcesChangedCB m_sources_changed_cb;   // Reference to callback
+		private SourcesChangedCB m_sources_changed_cb;    // Reference to callback
 		private Dictionary<string, EmbeddedCodeHandlerCB> m_embedded_code_handlers;
 
 		/// <summary>Access the View3d instance for this process</summary>
@@ -1228,40 +1239,42 @@ namespace ldr
 		/// <summary>Binds a 3D scene to a window</summary>
 		public class Window :IDisposable
 		{
-			private readonly View3d m_view;
 			private readonly WindowOptions m_opts;              // The options used to create the window (contains references to the user provided error call back)
 			private readonly ReportErrorCB m_error_cb;          // A reference to prevent the GC from getting it
 			private readonly SettingsChangedCB m_settings_cb;   // A local reference to prevent the callback being garbage collected
+			private readonly InvalidatedCB m_invalidated_cb;    // A local reference to prevent the callback being garbage collected
 			private readonly RenderCB m_render_cb;              // A local reference to prevent the callback being garbage collected
 			private readonly SceneChangedCB m_scene_changed_cb; // A local reference to prevent the callback being garbage collected
-			private readonly HWND m_hwnd;
-			private HWindow m_handle;
 
 			public Window(View3d view, HWND hwnd, WindowOptions opts)
 			{
-				m_view = view;
+				View = view;
+				Hwnd = hwnd;
 				m_opts = opts;
-				m_hwnd = hwnd;
 
 				// Create the window
-				m_handle = View3D_WindowCreate(hwnd, ref opts);
-				if (m_handle == null)
+				Handle = View3D_WindowCreate(hwnd, ref opts);
+				if (Handle == null)
 					throw new Exception("Failed to create View3D window");
 
 				// Attach the global error handler
-				View3D_WindowErrorCBSet(m_handle, m_error_cb = HandleError, IntPtr.Zero, true);
+				View3D_WindowErrorCBSet(Handle, m_error_cb = HandleError, IntPtr.Zero, true);
 				void HandleError(IntPtr ctx, string msg) { Error?.Invoke(this, new ErrorEventArgs(msg)); }
 
 				// Set up a callback for when settings are changed
-				View3D_WindowSettingsChangedCB(m_handle, m_settings_cb = HandleSettingsChanged, IntPtr.Zero, true);
+				View3D_WindowSettingsChangedCB(Handle, m_settings_cb = HandleSettingsChanged, IntPtr.Zero, true);
 				void HandleSettingsChanged(IntPtr ctx, HWindow wnd) { OnSettingsChanged?.Invoke(this, EventArgs.Empty); }
 
+				// Set up a callback for when the window is invalidated
+				View3D_WindowInvalidatedCB(Handle, m_invalidated_cb = HandleInvalidated, IntPtr.Zero, true);
+				void HandleInvalidated(IntPtr ctx, HWindow wnd) { OnInvalidated?.Invoke(this, EventArgs.Empty); }
+
 				// Set up a callback for when a render is about to happen
-				View3D_WindowRenderingCB(m_handle, m_render_cb = HandleRendering, IntPtr.Zero, true);
+				View3D_WindowRenderingCB(Handle, m_render_cb = HandleRendering, IntPtr.Zero, true);
 				void HandleRendering(IntPtr ctx, HWindow wnd) { OnRendering?.Invoke(this, EventArgs.Empty); }
 
 				// Set up a callback for when the object store for this window changes
-				View3d_WindowSceneChangedCB(m_handle, m_scene_changed_cb = HandleSceneChanged, IntPtr.Zero, true);
+				View3d_WindowSceneChangedCB(Handle, m_scene_changed_cb = HandleSceneChanged, IntPtr.Zero, true);
 				void HandleSceneChanged(IntPtr ctx, HWindow wnd, ref View3DSceneChanged args) { OnSceneChanged?.Invoke(this, new SceneChangedEventArgs(args)); }
 
 				// Set up the light source
@@ -1277,13 +1290,13 @@ namespace ldr
 			public virtual void Dispose()
 			{
 				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finalizer thread");
-				if (m_handle == HWindow.Zero) return;
-				View3d_WindowSceneChangedCB(m_handle, m_scene_changed_cb, IntPtr.Zero, false);
-				View3D_WindowRenderingCB(m_handle, m_render_cb, IntPtr.Zero, false);
-				View3D_WindowSettingsChangedCB(m_handle, m_settings_cb, IntPtr.Zero, false);
-				View3D_WindowErrorCBSet(m_handle, m_error_cb, IntPtr.Zero, false);
-				View3D_WindowDestroy(m_handle);
-				m_handle = HWindow.Zero;
+				if (Handle == HWindow.Zero) return;
+				View3d_WindowSceneChangedCB(Handle, m_scene_changed_cb, IntPtr.Zero, false);
+				View3D_WindowRenderingCB(Handle, m_render_cb, IntPtr.Zero, false);
+				View3D_WindowSettingsChangedCB(Handle, m_settings_cb, IntPtr.Zero, false);
+				View3D_WindowErrorCBSet(Handle, m_error_cb, IntPtr.Zero, false);
+				View3D_WindowDestroy(Handle);
+				Handle = HWindow.Zero;
 			}
 
 			/// <summary>Event call on errors. Note: can be called in a background thread context</summary>
@@ -1292,36 +1305,29 @@ namespace ldr
 			/// <summary>Event notifying whenever rendering settings have changed</summary>
 			public event EventHandler OnSettingsChanged;
 
-			/// <summary>Event notifying whenever objects are added/removed from the scene (Not raised during Render however)</summary>
-			public event EventHandler<SceneChangedEventArgs> OnSceneChanged;
+			/// <summary>Raised when Invalidate is called</summary>
+			public event EventHandler OnInvalidated;
 
 			/// <summary>Event notifying of a render about to happen</summary>
 			public event EventHandler OnRendering;
 
+			/// <summary>Event notifying whenever objects are added/removed from the scene (Not raised during Render however)</summary>
+			public event EventHandler<SceneChangedEventArgs> OnSceneChanged;
+
 			/// <summary>Cause a redraw to happen the near future. This method can be called multiple times</summary>
 			public void Invalidate()
 			{
-				View3D_Invalidate(m_handle, false);
+				View3D_Invalidate(Handle, false);
 			}
 
 			/// <summary>The associated view3d object</summary>
-			public View3d View
-			{
-				[DebuggerStepThrough]
-				get { return m_view; }
-			}
+			public View3d View { [DebuggerStepThrough] get; }
 
 			/// <summary>Get the view3d native handle for the window (Note: this is not the HWND)</summary>
-			public HWindow Handle
-			{
-				[DebuggerStepThrough] get { return m_handle; }
-			}
+			public HWindow Handle { [DebuggerStepThrough] get; private set; }
 
 			/// <summary>Get the windows handle associated with this window</summary>
-			public HWND Hwnd
-			{
-				[DebuggerStepThrough] get { return m_hwnd; }
-			}
+			public HWND Hwnd { [DebuggerStepThrough] get; }
 
 			/// <summary>Camera controls</summary>
 			public Camera Camera
@@ -1418,13 +1424,13 @@ namespace ldr
 			}
 
 			/// <summary>Get the render target texture</summary>
-			public Texture RenderTarget => new Texture(View3D_TextureRenderTarget(m_handle), owned:false);
+			public Texture RenderTarget => new Texture(View3D_TextureRenderTarget(Handle), owned:false);
 
 			/// <summary>Import/Export a settings string</summary>
 			public string Settings
 			{
-				get { return Marshal.PtrToStringAnsi(View3D_WindowSettingsGet(m_handle)); }
-				set { View3D_WindowSettingsSet(m_handle, value); }
+				get { return Marshal.PtrToStringAnsi(View3D_WindowSettingsGet(Handle)); }
+				set { View3D_WindowSettingsSet(Handle, value); }
 			}
 
 			/// <summary>Enumerate the guids associated with this window</summary>
@@ -1434,7 +1440,7 @@ namespace ldr
 			}
 			public void EnumGuids(Func<Guid, bool> cb)
 			{
-				View3D_WindowEnumGuids(m_handle, (c,guid) => cb(guid), IntPtr.Zero);
+				View3D_WindowEnumGuids(Handle, (c,guid) => cb(guid), IntPtr.Zero);
 			}
 
 			/// <summary>Enumerate the objects associated with this window</summary>
@@ -1444,7 +1450,7 @@ namespace ldr
 			}
 			public void EnumObjects(Func<Object, bool> cb)
 			{
-				View3D_WindowEnumObjects(m_handle, (c,obj) => cb(new Object(obj)), IntPtr.Zero);
+				View3D_WindowEnumObjects(Handle, (c,obj) => cb(new Object(obj)), IntPtr.Zero);
 			}
 			public void EnumObjects(Action<Object> cb, Guid context_id, bool all_except = false)
 			{
@@ -1464,7 +1470,7 @@ namespace ldr
 				using (var ids = Marshal_.Pin(context_ids))
 				{
 					EnumObjectsCB enum_cb = (c,obj) => cb(new Object(obj));
-					View3D_WindowEnumObjectsById(m_handle, enum_cb, IntPtr.Zero, ids.Pointer, include_count, exclude_count);
+					View3D_WindowEnumObjectsById(Handle, enum_cb, IntPtr.Zero, ids.Pointer, include_count, exclude_count);
 				}
 			}
 
@@ -1483,21 +1489,21 @@ namespace ldr
 			public Scope SuspendSceneChanged()
 			{
 				return Scope.Create(
-					() => View3D_WindowSceneChangedSuspend(m_handle, true),
-					() => View3D_WindowSceneChangedSuspend(m_handle, false));
+					() => View3D_WindowSceneChangedSuspend(Handle, true),
+					() => View3D_WindowSceneChangedSuspend(Handle, false));
 			}
 
 			/// <summary>Add an object to the window</summary>
 			public void AddObject(Object obj)
 			{
 				Debug.Assert(Math_.FEql(obj.O2P.w.w, 1f), "Invalid instance transform");
-				View3D_WindowAddObject(m_handle, obj.Handle);
+				View3D_WindowAddObject(Handle, obj.Handle);
 			}
 
 			/// <summary>Add a gizmo to the window</summary>
 			public void AddGizmo(Gizmo giz)
 			{
-				View3D_WindowAddGizmo(m_handle, giz.m_handle);
+				View3D_WindowAddGizmo(Handle, giz.m_handle);
 			}
 
 			/// <summary>Add multiple objects, filtered by 'context_ids</summary>
@@ -1505,7 +1511,7 @@ namespace ldr
 			{
 				Debug.Assert(include_count + exclude_count == context_ids.Length);
 				using (var ids = Marshal_.Pin(context_ids))
-					View3D_WindowAddObjectsById(m_handle, ids.Pointer, include_count, exclude_count);
+					View3D_WindowAddObjectsById(Handle, ids.Pointer, include_count, exclude_count);
 			}
 
 			/// <summary>Add a collection of objects to the window</summary>
@@ -1518,13 +1524,13 @@ namespace ldr
 			/// <summary>Remove an object from the window</summary>
 			public void RemoveObject(Object obj)
 			{
-				View3D_WindowRemoveObject(m_handle, obj.Handle);
+				View3D_WindowRemoveObject(Handle, obj.Handle);
 			}
 
 			/// <summary>Remove a gizmo from the window</summary>
 			public void RemoveGizmo(Gizmo giz)
 			{
-				View3D_WindowRemoveGizmo(m_handle, giz.m_handle);
+				View3D_WindowRemoveGizmo(Handle, giz.m_handle);
 			}
 
 			/// <summary>Remove a collection of objects from the window</summary>
@@ -1539,176 +1545,176 @@ namespace ldr
 			{
 				Debug.Assert(include_count + exclude_count == context_ids.Length);
 				using (var ids = Marshal_.Pin(context_ids))
-					View3D_WindowRemoveObjectsById(m_handle, ids.Pointer, include_count, exclude_count);
+					View3D_WindowRemoveObjectsById(Handle, ids.Pointer, include_count, exclude_count);
 			}
 
 			/// <summary>Remove all instances from the window</summary>
 			public void RemoveAllObjects()
 			{
-				View3D_WindowRemoveAllObjects(m_handle);
+				View3D_WindowRemoveAllObjects(Handle);
 			}
 
 			/// <summary>Return the number of objects in a window</summary>
 			public int ObjectCount
 			{
-				get { return View3D_WindowObjectCount(m_handle); }
+				get { return View3D_WindowObjectCount(Handle); }
 			}
 
 			/// <summary>True if 'obj' is a member of this window</summary>
 			public bool HasObject(Object obj, bool search_children)
 			{
-				return View3D_WindowHasObject(m_handle, obj.Handle, search_children);
+				return View3D_WindowHasObject(Handle, obj.Handle, search_children);
 			}
 
 			/// <summary>Return a bounding box of the objects in this window</summary>
 			public BBox SceneBounds(ESceneBounds bounds, Guid[] except = null)
 			{
-				return View3D_WindowSceneBounds(m_handle, bounds, except?.Length ?? 0, except);
+				return View3D_WindowSceneBounds(Handle, bounds, except?.Length ?? 0, except);
 			}
 
 			/// <summary>Show/Hide the focus point</summary>
 			public bool FocusPointVisible
 			{
-				get { return View3D_FocusPointVisibleGet(m_handle); }
-				set { View3D_FocusPointVisibleSet(m_handle, value); }
+				get { return View3D_FocusPointVisibleGet(Handle); }
+				set { View3D_FocusPointVisibleSet(Handle, value); }
 			}
 
 			/// <summary>Set the size of the focus point graphic</summary>
 			public float FocusPointSize
 			{
-				set { View3D_FocusPointSizeSet(m_handle, value); }
+				set { View3D_FocusPointSizeSet(Handle, value); }
 			}
 
 			/// <summary>Show/Hide the origin point</summary>
 			public bool OriginPointVisible
 			{
-				get { return View3D_OriginVisibleGet(m_handle); }
-				set { View3D_OriginVisibleSet(m_handle, value); }
+				get { return View3D_OriginVisibleGet(Handle); }
+				set { View3D_OriginVisibleSet(Handle, value); }
 			}
 
 			/// <summary>Set the size of the origin graphic</summary>
 			public float OriginPointSize
 			{
-				set { View3D_OriginSizeSet(m_handle, value); }
+				set { View3D_OriginSizeSet(Handle, value); }
 			}
 
 			/// <summary>Get/Set whether object bounding boxes are visible</summary>
 			public bool BBoxesVisible
 			{
-				get { return View3D_BBoxesVisibleGet(m_handle); }
-				set { View3D_BBoxesVisibleSet(m_handle, value); }
+				get { return View3D_BBoxesVisibleGet(Handle); }
+				set { View3D_BBoxesVisibleSet(Handle, value); }
 			}
 
 			/// <summary>Get/Set whether the selection box is visible</summary>
 			public bool SelectionBoxVisible
 			{
-				get { return View3D_SelectionBoxVisibleGet(m_handle); }
-				set { View3D_SelectionBoxVisibleSet(m_handle, value); }
+				get { return View3D_SelectionBoxVisibleGet(Handle); }
+				set { View3D_SelectionBoxVisibleSet(Handle, value); }
 			}
 
 			/// <summary>Set the position of the selection box</summary>
 			public void SelectionBoxPosition(BBox box, m4x4 o2w)
 			{
-				View3D_SelectionBoxPosition(m_handle, ref box, ref o2w);
+				View3D_SelectionBoxPosition(Handle, ref box, ref o2w);
 			}
 
 			/// <summary>Set the size and position of the selection box to bound the selected objects in this view</summary>
 			public void SelectionBoxFitToSelected()
 			{
-				View3D_SelectionBoxFitToSelected(m_handle);
+				View3D_SelectionBoxFitToSelected(Handle);
 			}
 
 			/// <summary>Get/Set the render mode</summary>
 			public EFillMode FillMode
 			{
-				get { return View3D_FillModeGet(m_handle); }
-				set { View3D_FillModeSet(m_handle, value); }
+				get { return View3D_FillModeGet(Handle); }
+				set { View3D_FillModeSet(Handle, value); }
 			}
 
 			/// <summary>Get/Set the face culling mode</summary>
 			public ECullMode CullMode
 			{
-				get { return View3D_CullModeGet(m_handle); }
-				set { View3D_CullModeSet(m_handle, value); }
+				get { return View3D_CullModeGet(Handle); }
+				set { View3D_CullModeSet(Handle, value); }
 			}
 
 			/// <summary>Get/Set the multi-sampling level for the window</summary>
 			public int MultiSampling
 			{
-				get { return View3D_MultiSamplingGet(m_handle); }
-				set { View3D_MultiSamplingSet(m_handle, value); }
+				get { return View3D_MultiSamplingGet(Handle); }
+				set { View3D_MultiSamplingSet(Handle, value); }
 			}
 
 			/// <summary>Get/Set the light properties. Note returned value is a value type</summary>
 			public LightInfo LightProperties
 			{
-				get { LightInfo light; View3D_LightProperties(m_handle, out light); return light; }
-				set { View3D_SetLightProperties(m_handle, ref value); }
+				get { LightInfo light; View3D_LightProperties(Handle, out light); return light; }
+				set { View3D_SetLightProperties(Handle, ref value); }
 			}
 
 			/// <summary>Show the lighting dialog</summary>
 			public void ShowLightingDlg()
 			{
-				View3D_ShowLightingDlg(m_handle);
+				View3D_ShowLightingDlg(Handle);
 			}
 
 			/// <summary>Set the single light source</summary>
 			public void SetLightSource(v4 position, v4 direction, bool camera_relative)
 			{
-				View3D_LightSource(m_handle, position, direction, camera_relative);
+				View3D_LightSource(Handle, position, direction, camera_relative);
 			}
 
 			/// <summary>Show/Hide the measuring tool</summary>
 			public bool ShowMeasureTool
 			{
-				get { return View3D_MeasureToolVisible(m_handle); }
-				set { View3D_ShowMeasureTool(m_handle, value); }
+				get { return View3D_MeasureToolVisible(Handle); }
+				set { View3D_ShowMeasureTool(Handle, value); }
 			}
 
 			/// <summary>Show/Hide the angle tool</summary>
 			public bool ShowAngleTool
 			{
-				get { return View3D_AngleToolVisible(m_handle); }
-				set { View3D_ShowAngleTool(m_handle, value); }
+				get { return View3D_AngleToolVisible(Handle); }
+				set { View3D_ShowAngleTool(Handle, value); }
 			}
 
 			/// <summary>The background colour for the window</summary>
 			public Colour32 BackgroundColour
 			{
-				get { return new Colour32(View3D_BackgroundColourGet(m_handle)); }
-				set { View3D_BackgroundColourSet(m_handle, value.ARGB); }
+				get { return new Colour32(View3D_BackgroundColourGet(Handle)); }
+				set { View3D_BackgroundColourSet(Handle, value.ARGB); }
 			}
 
 			/// <summary>Get/Set the animation clock</summary>
 			public float AnimTime
 			{
-				get { return View3D_WindowAnimTimeGet(m_handle); }
-				set { View3D_WindowAnimTimeSet(m_handle, value); }
+				get { return View3D_WindowAnimTimeGet(Handle); }
+				set { View3D_WindowAnimTimeSet(Handle, value); }
 			}
 
 			/// <summary>Cause the window to be rendered. Remember to call Present when done</summary>
 			public void Render()
 			{
-				View3D_Render(m_handle);
+				View3D_Render(Handle);
 			}
 
 			/// <summary>Called to flip the back buffer to the screen after all window have been rendered</summary>
 			public void Present()
 			{
-				View3D_Present(m_handle);
+				View3D_Present(Handle);
 			}
 
 			/// <summary>Resize the render target</summary>
 			public Size BackBufferSize
 			{
-				get { View3D_BackBufferSizeGet(m_handle, out var w, out var h); return new Size(w,h); }
-				set { View3D_BackBufferSizeSet(m_handle, value.Width, value.Height); }
+				get { View3D_BackBufferSizeGet(Handle, out var w, out var h); return new Size(w,h); }
+				set { View3D_BackBufferSizeSet(Handle, value.Width, value.Height); }
 			}
 
 			/// <summary>Restore the render target as the main output</summary>
 			public void RestoreRT()
 			{
-				View3D_RenderTargetRestore(m_handle);
+				View3D_RenderTargetRestore(Handle);
 			}
 
 			/// <summary>
@@ -1718,33 +1724,33 @@ namespace ldr
 			/// a source and destination texture at the same time</summary>
 			public void SetRT(Texture render_target, Texture depth_buffer = null)
 			{
-				View3D_RenderTargetSet(m_handle, render_target?.Handle ?? IntPtr.Zero, depth_buffer?.Handle ?? IntPtr.Zero);
+				View3D_RenderTargetSet(Handle, render_target?.Handle ?? IntPtr.Zero, depth_buffer?.Handle ?? IntPtr.Zero);
 			}
 
 			/// <summary>Save the current render target as the main render target (Restored using RestoreRT)</summary>
 			public void SaveAsMainRT()
 			{
-				View3D_RenderTargetSaveAsMain(m_handle);
+				View3D_RenderTargetSaveAsMain(Handle);
 			}
 
 			/// <summary>Get/Set the size/position of the viewport within the render target</summary>
 			public Viewport Viewport
 			{
-				get { return View3D_Viewport(m_handle); }
-				set { View3D_SetViewport(m_handle, value); }
+				get { return View3D_Viewport(Handle); }
+				set { View3D_SetViewport(Handle, value); }
 			}
 
 			/// <summary>Get/Set whether the depth buffer is enabled</summary>
 			public bool DepthBufferEnabled
 			{
-				get { return View3D_DepthBufferEnabledGet(m_handle); }
-				set { View3D_DepthBufferEnabledSet(m_handle, value); }
+				get { return View3D_DepthBufferEnabledGet(Handle); }
+				set { View3D_DepthBufferEnabledSet(Handle, value); }
 			}
 
 			/// <summary>Convert a screen space point to a normalised point</summary>
 			public v2 SSPointToNSSPoint(PointF screen)
 			{
-				return View3D_SSPointToNSSPoint(m_handle, v2.From(screen));
+				return View3D_SSPointToNSSPoint(Handle, v2.From(screen));
 			}
 
 			/// <summary>Convert a normalised point into a screen space point</summary>
@@ -1805,13 +1811,13 @@ namespace ldr
 			/// <summary>Show a window containing and example ldr script file</summary>
 			public void ShowExampleScript()
 			{
-				View3D_DemoScriptShow(m_handle);
+				View3D_DemoScriptShow(Handle);
 			}
 
 			/// <summary>Show/Hide the object manager UI</summary>
 			public void ShowObjectManager(bool show)
 			{
-				View3D_ObjectManagerShow(m_handle, show);
+				View3D_ObjectManagerShow(Handle, show);
 			}
 
 			#region Equals
@@ -1825,7 +1831,7 @@ namespace ldr
 			}
 			public bool Equals(Window rhs)
 			{
-				return rhs != null && m_handle == rhs.m_handle;
+				return rhs != null && Handle == rhs.Handle;
 			}
 			public override bool Equals(object rhs)
 			{
@@ -1833,7 +1839,7 @@ namespace ldr
 			}
 			public override int GetHashCode()
 			{
-				return m_handle.ToInt32();
+				return Handle.GetHashCode();
 			}
 			#endregion
 
@@ -3304,6 +3310,7 @@ namespace ldr
 		[DllImport(Dll)] private static extern IntPtr          View3D_WindowSettingsGet         (HWindow window);
 		[DllImport(Dll)] private static extern void            View3D_WindowSettingsSet         (HWindow window, string settings);
 		[DllImport(Dll)] private static extern void            View3D_WindowSettingsChangedCB   (HWindow window, SettingsChangedCB settings_changed_cb, IntPtr ctx, bool add);
+		[DllImport(Dll)] private static extern void            View3D_WindowInvalidatedCB       (HWindow window, InvalidatedCB invalidated_cb, IntPtr ctx, bool add);
 		[DllImport(Dll)] private static extern void            View3D_WindowRenderingCB         (HWindow window, RenderCB rendering_cb, IntPtr ctx, bool add);
 		[DllImport(Dll)] private static extern void            View3d_WindowSceneChangedCB      (HWindow window, SceneChangedCB scene_changed_cb, IntPtr ctx, bool add);
 		[DllImport(Dll)] private static extern void            View3D_WindowSceneChangedSuspend (HWindow window, bool suspend);

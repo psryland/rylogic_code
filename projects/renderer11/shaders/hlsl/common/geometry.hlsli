@@ -6,6 +6,25 @@
 #include "vector.hlsli"
 #include "functions.hlsli"
 
+// Return the normal for the triangle (a,b,c)
+// Returns 'def' if the triangle is degenerate
+float4 FaceNormal(float4 a, float4 b, float4 c, float4 def = float4(0,0,0,0))
+{
+	float3 n = cross((b - a).xyz, (c - b).xyz);
+	float len = length(n);
+	return len > 0 ? float4(n / len, 0) : def;
+}
+
+// Measure the coplanarity of the two triangles (a,b,c) and (a,c,d)
+// Returns 1 for parallel normals, -1 for opposing normals.
+// Returns 0 if either of the triangles are degenerate.
+float Coplanarity(float4 a, float4 b, float4 c, float4 d)
+{
+	float4 n0 = FaceNormal(a, b, c);
+	float4 n1 = FaceNormal(a, c, d);
+	return dot(n0,n1);
+}
+
 // Returns the parametric value of the closest point on 's -> s+d' to 'pt'
 // The closest point is at: s + t*d;
 float ClosestPoint_PointVsRay(float4 pt, float4 s, float4 d)

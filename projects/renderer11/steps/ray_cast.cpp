@@ -227,8 +227,27 @@ namespace pr
 			auto intercepts = std::make_span(lock.ptr(), MaxIntercepts);
 			intercepts.m_count = index_if(intercepts, [](auto& i){ return i.inst_ptr == nullptr; });
 
-			// Sort by distance
-			sort(intercepts, [](auto& l, auto& r){ return l.ws_intercept.w < r.ws_intercept.w; });
+			// Sort by Z-distance, then by distance from the ray.
+			sort(intercepts, [&](auto& l, auto& r)
+			{
+				// With snapping enabled, it's possible to get two or more intercepts at the
+				// same distance but on different triangles. For these cases, we want the
+				// intercept that is closest to the ray first. 
+				if (Abs(l.ws_intercept.w - r.ws_intercept.w) > m_snap_distance)
+					return l.ws_intercept.w < r.ws_intercept.w;
+
+				// Sort by distance from the ray
+				auto const& ray_l = m_rays[l.ray_index];
+				auto const& ray_r = m_rays[r.ray_index];
+				auto dist_l = DistanceSq_PointToInfiniteLine(l.ws_intercept.w1(), ray_l.m_ws_origin, ray_l.m_ws_direction);
+				auto dist_r = DistanceSq_PointToInfiniteLine(r.ws_intercept.w1(), ray_r.m_ws_origin, ray_r.m_ws_direction);
+				if (Abs(dist_l - dist_r) > maths::tiny)
+					return dist_l < dist_r;
+
+				// If both points lie on the ray, sort by z-distance again with no threshold
+				return l.ws_intercept.w < r.ws_intercept.w;
+			});
+
 
 			// Forward each unique intercept to the callback
 			for (int i = 0, iend = int(intercepts.size()); i != iend; )

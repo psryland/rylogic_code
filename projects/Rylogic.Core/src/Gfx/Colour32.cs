@@ -7,6 +7,7 @@ using System;
 using System.Drawing;
 using System.Globalization;
 using System.Runtime.InteropServices;
+using Rylogic.Maths;
 
 namespace Rylogic.Gfx
 {
@@ -118,7 +119,7 @@ namespace Rylogic.Gfx
 		}
 
 		/// <summary>A normalised measure of how bright the colour is</summary>
-		public float Intensity => (float)Math.Sqrt(Rf * Rf + Gf * Gf + Bf * Bf);
+		public float Intensity => (float)(Math_.Root3 * Math.Sqrt(Rf * Rf + Gf * Gf + Bf * Bf));
 
 		#region Parse
 		public static Colour32 Parse(string s, int radix = 16)

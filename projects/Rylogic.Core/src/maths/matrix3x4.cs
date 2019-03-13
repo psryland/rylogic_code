@@ -570,12 +570,12 @@ namespace Rylogic.UnitTests
 		{
 			var dir = new v4(0, 1, 0, 0);
 			{
-				var ori = Math_.OriFromDir(AxisId.PosZ, dir, v4.ZAxis);
+				var ori = Math_.OriFromDir(EAxisId.PosZ, dir, v4.ZAxis);
 				Assert.True(dir == ori.z);
 				Assert.True(Math_.IsOrthonormal(ori));
 			}
 			{
-				var ori = Math_.OriFromDir(AxisId.NegX, dir);
+				var ori = Math_.OriFromDir(EAxisId.NegX, dir);
 				Assert.True(dir == -ori.x);
 				Assert.True(Math_.IsOrthonormal(ori));
 			}

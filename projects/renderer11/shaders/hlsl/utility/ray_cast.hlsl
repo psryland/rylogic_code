@@ -66,6 +66,7 @@ GSIn_RayCast main(VSIn In)
 [maxvertexcount(MaxRays)]
 void main(triangle GSIn_RayCast In[3], inout PointStream<GSOut_RayCast> OutStream)
 {
+	// Triangle verts
 	float4 v0 = In[0].ws_vert;
 	float4 v1 = In[1].ws_vert;
 	float4 v2 = In[2].ws_vert;
@@ -148,8 +149,10 @@ void main(triangle GSIn_RayCast In[3], inout PointStream<GSOut_RayCast> OutStrea
 			continue;
 
 		// Output an intercept
+		// The 'ws_intercept.w' value is used to depth-sort the intercepts
+		// Use 'pt' rather than 'intercept' so that snapping doesn't change the order.
 		GSOut_RayCast Out = (GSOut_RayCast)0;
-		Out.ws_intercept = float4(intercept.xyz, distance(intercept, origin));
+		Out.ws_intercept = float4(intercept.xyz, dot(pt - origin, direction));
 		Out.snap_type = snap_type;
 		Out.ray_index = i;
 		Out.inst_ptr = m_inst_ptr;
@@ -219,7 +222,7 @@ void main(line GSIn_RayCast In[2], inout PointStream<GSOut_RayCast> OutStream)
 
 		// Output an intercept
 		GSOut_RayCast Out = (GSOut_RayCast)0;
-		Out.ws_intercept = float4(intercept.xyz, distance(intercept, origin));
+		Out.ws_intercept = float4(intercept.xyz, dot(pt - origin, direction));
 		Out.snap_type = snap_type;
 		Out.ray_index = i;
 		Out.inst_ptr = m_inst_ptr;
@@ -256,7 +259,7 @@ void main(point GSIn_RayCast In[1], inout PointStream<GSOut_RayCast> OutStream)
 
 		// Output an intercept
 		GSOut_RayCast Out = (GSOut_RayCast)0;
-		Out.ws_intercept = float4(intercept.xyz, distance(intercept, origin));
+		Out.ws_intercept = float4(intercept.xyz, dot(pt - origin, direction));
 		Out.snap_type = snap_type;
 		Out.ray_index = i;
 		Out.inst_ptr = m_inst_ptr;

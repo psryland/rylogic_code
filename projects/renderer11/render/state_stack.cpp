@@ -155,7 +155,7 @@ namespace pr
 			}
 		}
 
-		// Set up a shader
+		// Set up a set of shaders
 		void StateStack::SetupShdrs(DeviceState& current, DeviceState& pending, bool force)
 		{
 			if (current.m_shdrs != pending.m_shdrs || force)
@@ -195,7 +195,7 @@ namespace pr
 					samp[0] = pending.m_dle->m_nugget->m_tex_diffuse->m_samp.m_ptr;
 				}
 
-				//todo, diffuse texture hardcored to slot 0 here
+				//todo, diffuse texture hard-coded to slot 0 here
 				m_dc->PSSetShaderResources(0, 1, srv);
 				m_dc->PSSetSamplers(0, 1, samp);
 			}
@@ -212,7 +212,7 @@ namespace pr
 					samp[0] = pending.m_rstep_smap->m_samp.m_ptr;
 				}
 
-				//todo, shadow map texture hardcored to slot 1 here
+				//todo, shadow map texture hard-coded to slot 1 here
 				m_dc->PSSetShaderResources(1, 1, srv);
 				m_dc->PSSetSamplers(1, 1, samp);
 			}

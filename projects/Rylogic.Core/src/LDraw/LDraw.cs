@@ -166,11 +166,11 @@ namespace Rylogic.LDraw
 			var pts = points.Select(x => " "+Vec3(x));
 			return $"*LineStrip {name} {colour} {{{w} {pts} {Transform(o2w, pos)}}}";
 		}
-		public static string Ellipse(string name, Colour32 colour, int axis_id, float rx, float ry, m4x4? o2w = null, v4? pos = null)
+		public static string Ellipse(string name, Colour32 colour, AxisId axis_id, float rx, float ry, m4x4? o2w = null, v4? pos = null)
 		{
 			return $"*Ellipse {name} {colour} {{{axis_id} {rx} {ry} {Transform(o2w, pos)}}}\n";
 		}
-		public static string Rect(string name, Colour32 colour, int axis_id, float w, float h, bool solid, m4x4? o2w = null, v4? pos = null)
+		public static string Rect(string name, Colour32 colour, AxisId axis_id, float w, float h, bool solid, m4x4? o2w = null, v4? pos = null)
 		{
 			return $"*Rect {name} {colour} {{{axis_id} {w} {h} {Solid(solid)} {Transform(o2w, pos)}}}\n";
 		}
@@ -245,7 +245,7 @@ namespace Rylogic.LDraw
 			else if (part is v4         ) m_sb.Append(Ldr.Vec3((v4)part));
 			else if (part is v2         ) m_sb.Append(Ldr.Vec2((v2)part));
 			else if (part is m4x4       ) m_sb.Append(Ldr.Mat4x4((m4x4)part));
-			else if (part is AxisId     ) m_sb.Append(((AxisId)part).m_id);
+			else if (part is AxisId     ) m_sb.Append(((AxisId)part).Id);
 			else if (part is IEnumerable) foreach (var x in (IEnumerable )part) Append(" ").Append(x);
 			else if (part != null       ) m_sb.Append(part.ToString());
 			return this;

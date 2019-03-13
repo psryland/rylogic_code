@@ -114,11 +114,14 @@ namespace pr
 			// The display mode of the main render target
 			DXGI_FORMAT DisplayFormat() const;
 
-			// Get/Set the size of the back buffer (main render target)
+			// Returns the size of the current render target
+			iv2 RenderTargetSize() const;
+
+			// Get/Set the size of the swap chain back buffer.
 			// Passing iv2.Zero will cause the RT to get its size from the associated window
 			// Call when the window size changes (e.g. from a WM_SIZE message)
-			pr::iv2 BackBufferSize() const;
-			void BackBufferSize(pr::iv2 const& size, bool force = false);
+			iv2 BackBufferSize() const;
+			void BackBufferSize(iv2 const& size, bool force = false);
 
 			// Get/Set the multi-sampling used
 			// Changing the multi-sampling mode is a bit like resizing the back buffer

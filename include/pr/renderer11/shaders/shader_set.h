@@ -36,10 +36,26 @@ namespace pr
 			{
 				return std::initializer_list<Shader*>(&m_vs, &m_vs + 4);
 			}
-			ID3D11VertexShader*   VS() const { return m_vs != nullptr ? static_cast<ID3D11VertexShader*  >(m_vs->m_dx_shdr.get()) : nullptr; }
-			ID3D11PixelShader*    PS() const { return m_ps != nullptr ? static_cast<ID3D11PixelShader*   >(m_ps->m_dx_shdr.get()) : nullptr; }
-			ID3D11GeometryShader* GS() const { return m_gs != nullptr ? static_cast<ID3D11GeometryShader*>(m_gs->m_dx_shdr.get()) : nullptr; }
-			ID3D11ComputeShader*  CS() const { return m_cs != nullptr ? static_cast<ID3D11ComputeShader* >(m_cs->m_dx_shdr.get()) : nullptr; }
+			ID3D11VertexShader* VS() const
+			{
+				if (m_vs == nullptr) return nullptr;
+				return static_cast<ID3D11VertexShader*>(m_vs->m_dx_shdr.get());
+			}
+			ID3D11PixelShader* PS() const
+			{
+				if (m_ps == nullptr) return nullptr;
+				return static_cast<ID3D11PixelShader*>(m_ps->m_dx_shdr.get());
+			}
+			ID3D11GeometryShader* GS() const
+			{
+				if (m_gs == nullptr) return nullptr;
+				return static_cast<ID3D11GeometryShader*>(m_gs->m_dx_shdr.get());
+			}
+			ID3D11ComputeShader* CS() const
+			{ 
+				if (m_cs == nullptr) return nullptr;
+				return static_cast<ID3D11ComputeShader*>(m_cs->m_dx_shdr.get());
+			}
 
 			// Equality
 			friend bool operator == (ShaderSet1 const& lhs, ShaderSet1 const& rhs)

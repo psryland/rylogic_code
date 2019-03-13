@@ -22,8 +22,8 @@ namespace pr
 		template <typename TCBuf> inline void SetScreenSpaceConstants(DeviceState const& state, v2 size, bool depth, TCBuf& cb)
 		{
 			auto sz = state.m_dle->m_instance->find<v2>(EInstComp::SSSize);
-			auto screen_size = state.m_rstep->m_scene->m_wnd->BackBufferSize();
-			cb.m_screen_dim = v2(float(screen_size.x), float(screen_size.y));
+			auto rt_size = state.m_rstep->m_scene->m_wnd->RenderTargetSize();
+			cb.m_screen_dim = v2(float(rt_size.x), float(rt_size.y));
 			cb.m_size = sz ? *sz : size;
 			cb.m_depth = depth;
 		}

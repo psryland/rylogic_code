@@ -110,7 +110,7 @@ namespace pr
 				[&]{ ss.m_dbg->EndEvent(); }));
 
 			// Commit before the start of a render step to ensure changes
-			// are flushed before the render steps tries to clear back buffers, etc
+			// are flushed before the render steps try to clear back buffers, etc
 			StateStack::RSFrame frame(ss, *this);
 			ss.Commit();
 

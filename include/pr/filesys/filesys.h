@@ -200,11 +200,12 @@ namespace pr
 			return tolower(lhs) == tolower(rhs) || (DirMark(lhs) && DirMark(rhs));
 		}
 
-		// Return true if 'path' contains a drive, i.e. is a full path
+		// Return true if 'path' is an absolute path. (i.e. contains a drive or is a UNC path)
 		template <typename Str, typename Char = Str::value_type, typename = enable_if_char<Char>> inline bool IsFullPath(Str const& path)
 		{
-			Char const colon[] = {':', 0}; // no null, because 'find' is templated on array length, and so tries to match the string ":\0" (i.e. length 2)
-			return path.find(&colon[0]) != Str::npos;
+			return path.size() >= 2 && (
+				(str::IsAlpha(path[0]) && path[1] == ':') || // Rooted path
+				(path[0] == '\\' && path[1] == '\\')); // UNC path
 		}
 
 		// Add quotes to the str if it doesn't already have them

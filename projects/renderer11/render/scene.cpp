@@ -22,7 +22,7 @@ namespace pr
 		Scene::Scene(Window& wnd, std::initializer_list<ERenderStep> rsteps, SceneView const& view)
 			:m_wnd(&wnd)
 			,m_view(view)
-			,m_viewport(wnd.BackBufferSize())
+			,m_viewport(wnd.RenderTargetSize())
 			,m_instances()
 			,m_render_steps()
 			,m_ht_immediate()

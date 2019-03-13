@@ -443,6 +443,7 @@ extern "C"
 	using View3D_EnumObjectsCB         = BOOL (__stdcall *)(void* ctx, View3DObject object);
 	using View3D_AddFileProgressCB     = BOOL (__stdcall *)(void* ctx, GUID const& context_id, wchar_t const* filepath, long long file_offset, BOOL complete);
 	using View3D_SourcesChangedCB      = void (__stdcall *)(void* ctx, EView3DSourcesChangedReason reason, BOOL before);
+	using View3D_InvalidatedCB         = void (__stdcall *)(void* ctx, View3DWindow window);
 	using View3D_RenderCB              = void (__stdcall *)(void* ctx, View3DWindow window);
 	using View3D_SceneChangedCB        = void (__stdcall *)(void* ctx, View3DWindow window, View3DSceneChanged const&);
 	using View3D_GizmoMovedCB          = void (__stdcall *)(void* ctx, View3DGizmoEvent const& args);
@@ -488,6 +489,7 @@ extern "C"
 	VIEW3D_API char const*  __stdcall View3D_WindowSettingsGet        (View3DWindow window);
 	VIEW3D_API void         __stdcall View3D_WindowSettingsSet        (View3DWindow window, char const* settings);
 	VIEW3D_API void         __stdcall View3D_WindowSettingsChangedCB  (View3DWindow window, View3D_SettingsChangedCB settings_changed_cb, void* ctx, BOOL add);
+	VIEW3D_API void         __stdcall View3D_WindowInvalidatedCB      (View3DWindow window, View3D_InvalidatedCB invalidated_cb, void* ctx, BOOL add);
 	VIEW3D_API void         __stdcall View3D_WindowRenderingCB        (View3DWindow window, View3D_RenderCB rendering_cb, void* ctx, BOOL add);
 	VIEW3D_API void         __stdcall View3d_WindowSceneChangedCB     (View3DWindow window, View3D_SceneChangedCB scene_changed_cb, void* ctx, BOOL add);
 	VIEW3D_API void         __stdcall View3D_WindowSceneChangedSuspend(View3DWindow window, BOOL suspend);

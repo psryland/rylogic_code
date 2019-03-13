@@ -38,6 +38,7 @@ namespace view3d
 		bool                  m_origin_point_visible;     // True if we should draw the origin point
 		bool                  m_bboxes_visible;           // True if we should draw object bounding boxes
 		bool                  m_selection_box_visible;    // True if we should draw the selection box
+		bool                  m_invalidated;              // True after Invalidate has been called but before Render has been called
 		ScriptEditorUIPtr     m_editor_ui;                // A editor for editing Ldr script
 		LdrObjectManagerUIPtr m_obj_cont_ui;              // Object manager for objects added to this window
 		LdrMeasureUIPtr       m_measure_tool_ui;          // A UI for measuring distances between points within the 3d environment
@@ -62,6 +63,9 @@ namespace view3d
 
 		// Settings changed event
 		pr::MultiCast<SettingsChangedCB> OnSettingsChanged;
+
+		// Window invalidated
+		pr::MultiCast<InvalidatedCB> OnInvalidated;
 
 		// Rendering event
 		pr::MultiCast<RenderingCB> OnRendering;

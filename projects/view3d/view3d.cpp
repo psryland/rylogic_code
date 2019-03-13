@@ -427,6 +427,20 @@ VIEW3D_API void __stdcall View3D_WindowSettingsChangedCB(View3DWindow window, Vi
 	CatchAndReport(View3D_WindowSettingsChangedCB, window,);
 }
 
+// Add/Remove a callback that is called when the window is invalidated
+VIEW3D_API void __stdcall View3D_WindowInvalidatedCB(View3DWindow window, View3D_InvalidatedCB invalidated_cb, void* ctx, BOOL add)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+		if (add)
+			window->OnInvalidated += pr::StaticCallBack(invalidated_cb, ctx);
+		else
+			window->OnInvalidated -= pr::StaticCallBack(invalidated_cb, ctx);
+	}
+	CatchAndReport(View3D_WindowInvalidatedCB, window,);
+}
+
 // Add/Remove a callback that is called just prior to rendering the window
 VIEW3D_API void __stdcall View3D_WindowRenderingCB(View3DWindow window, View3D_RenderCB rendering_cb, void* ctx, BOOL add)
 {

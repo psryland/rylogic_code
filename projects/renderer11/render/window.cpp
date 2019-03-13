@@ -259,8 +259,7 @@ namespace pr
 		// Binds the main render target and depth buffer to the OM
 		void Window::RestoreRT()
 		{
-			Renderer::Lock lock(*m_rdr);
-			lock.ImmediateDC()->OMSetRenderTargets(1, &m_main_rtv.m_ptr, m_main_dsv.m_ptr);
+			SetRT(m_main_rtv.get(), m_main_dsv.get());
 		}
 
 		// Binds the given render target and depth buffer views to the OM
@@ -447,12 +446,37 @@ namespace pr
 			return desc.BufferDesc.Format;
 		}
 
-		// Returns the size of the render target
+		// Returns the size of the current render target
+		iv2 Window::RenderTargetSize() const
+		{
+			Renderer::Lock lock(*m_rdr);
+
+			// Get the current render target view
+			D3DPtr<ID3D11RenderTargetView> rtv;
+			lock.ImmediateDC()->OMGetRenderTargets(1, &rtv.m_ptr, nullptr);
+			if (rtv == nullptr)
+				return iv2Zero;
+			
+			// Get the resource associated with that view
+			D3DPtr<ID3D11Resource> res;
+			rtv->GetResource(&res.m_ptr);
+
+			// Get the Texture2D pointer to the resource
+			D3DPtr<ID3D11Texture2D> rt;
+			Throw(res->QueryInterface<ID3D11Texture2D>(&rt.m_ptr));
+			if (rt == nullptr)
+				return iv2Zero;
+
+			// Return the size of the texture
+			TextureDesc tdesc;
+			rt->GetDesc(&tdesc);
+			return iv2(tdesc.Width, tdesc.Height);
+		}
+
+		// Returns the size of the swap chain back buffer
 		iv2 Window::BackBufferSize() const
 		{
-			// If we're rendering to a texture
-			if (m_swap_chain == nullptr)
-				return iv2Zero;
+			PR_ASSERT(PR_DBG_RDR, m_swap_chain != nullptr, "The back buffer size is meaningless when there is no swap chain");
 
 			DXGI_SWAP_CHAIN_DESC desc;
 			Throw(m_swap_chain->GetDesc(&desc));
@@ -621,7 +645,7 @@ namespace pr
 				throw pr::Exception<HRESULT>(DXGI_ERROR_DEVICE_RESET, "Graphics adapter reset");
 
 			// This happens in situations like, laptop un-docked, or remote desktop connect etc.
-			// We'll just through so the app can shutdown/reset/whatever
+			// We'll just throw so the app can shutdown/reset/whatever
 			case DXGI_ERROR_DEVICE_REMOVED:
 				{
 					Renderer::Lock lock(*m_rdr);
