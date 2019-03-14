@@ -158,14 +158,14 @@ namespace pr::physics
 
 			// Collisions should not add energy to the system and momentum should be conserved.
 			#if PR_DBG
-			auto vel_afterA = objA.VelocityWS();
-			auto vel_afterB = objB.VelocityWS();
-			auto ke_afterA  = objA.KineticEnergy();
-			auto ke_afterB  = objB.KineticEnergy();
-			auto ke_diff    = (ke_afterA + ke_afterB) - (ke_beforeA + ke_beforeB);
-			auto h_after    = objA.MomentumWS() + objB.MomentumWS();
-			auto h_ang_diff = Length(h_after.ang) - Length(h_before.ang);
-			auto h_lin_diff = Length(h_after.lin) - Length(h_before.lin);
+		//	auto vel_afterA = objA.VelocityWS();
+		//	auto vel_afterB = objB.VelocityWS();
+		//	auto ke_afterA  = objA.KineticEnergy();
+		//	auto ke_afterB  = objB.KineticEnergy();
+		//	auto ke_diff    = (ke_afterA + ke_afterB) - (ke_beforeA + ke_beforeB);
+		//	auto h_after    = objA.MomentumWS() + objB.MomentumWS();
+		//	auto h_ang_diff = Length(h_after.ang) - Length(h_before.ang);
+		//	auto h_lin_diff = Length(h_after.lin) - Length(h_before.lin);
 		//	assert("Collision caused an increase in angular momentum" && h_ang_diff <= 0);
 		//	assert("Collision caused an increase in linear momentum" && h_lin_diff <= 0);
 		//	assert("Collision caused an increase in K.E." && ke_diff <= 0);

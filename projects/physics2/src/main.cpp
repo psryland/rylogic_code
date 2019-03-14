@@ -93,16 +93,16 @@ struct MainUI :Form
 				m_physics.PostCollisionDetection -= sub;
 				return;
 
-				contacts.resize(0);
-
-				physics::Contact c(objA, objB);
-				c.m_axis = Normalise(v4{Cos(maths::tauf/16), Sin(maths::tauf/16),0,0});
-				c.m_point = v4{0.5f, 0, 0, 0};
-				c.m_mat.m_friction_static = 1.0f;
-				c.m_mat.m_elasticity_norm = 0.0f;
-				c.m_mat.m_elasticity_tors = -1.0f;
-				c.update(0);
-				contacts.push_back(c);
+			//	contacts.resize(0);
+			//
+			//	physics::Contact c(objA, objB);
+			//	c.m_axis = Normalise(v4{Cos(maths::tauf/16), Sin(maths::tauf/16),0,0});
+			//	c.m_point = v4{0.5f, 0, 0, 0};
+			//	c.m_mat.m_friction_static = 1.0f;
+			//	c.m_mat.m_elasticity_norm = 0.0f;
+			//	c.m_mat.m_elasticity_tors = -1.0f;
+			//	c.update(0);
+			//	contacts.push_back(c);
 
 			};
 		}
