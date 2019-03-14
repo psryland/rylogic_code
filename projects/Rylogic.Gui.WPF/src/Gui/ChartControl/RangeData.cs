@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using Rylogic.Common;
 using Rylogic.Gfx;
 using Rylogic.Maths;
@@ -80,48 +79,34 @@ namespace Rylogic.Gui.WPF
 			}
 			private Axis m_yaxis;
 
+			/// <summary>The aspect ratio of the axes</summary>
+			public double Aspect
+			{
+				get { return XAxis.Span / YAxis.Span; }
+				set
+				{
+					if (Aspect == value) return;
+					if (XAxis.Span > YAxis.Span)
+						YAxis.Span = XAxis.Span / value;
+					else
+						XAxis.Span = YAxis.Span * value;
+				}
+			}
+
 			/// <summary>Add the graphics associated with the axes to the scene</summary>
 			internal void AddToScene(View3d.Window window)
 			{
-				var cam = m_chart.Scene.Camera;
-				var wh = cam.ViewArea(m_chart.Scene.Camera.FocusDist);
-
 				// Position the grid lines so that they line up with the axis tick marks
 				// Grid lines are modelled from the bottom left corner
-				if (XAxis.GridLineGfx != null)
-				{
-					if (m_chart.Options.ShowGridLines && XAxis.Options.ShowGridLines)
-					{
-						XAxis.GridLines(out var min, out var max, out var step);
+				if (m_chart.Options.ShowGridLines && XAxis.Options.ShowGridLines)
+					XAxis.AddToScene(window);
+				else if (XAxis.GridLineGfx != null)
+					window.RemoveObject(XAxis.GridLineGfx);
 
-						var o2w = cam.O2W;
-						o2w.pos = cam.FocusPoint - o2w * new v4((float)(wh.x / 2 - min), wh.y / 2, m_chart.Options.GridZOffset, 0);
-
-						XAxis.GridLineGfx.O2WSet(o2w);
-						window.AddObject(XAxis.GridLineGfx);
-					}
-					else
-					{
-						window.RemoveObject(XAxis.GridLineGfx);
-					}
-				}
-				if (YAxis.GridLineGfx != null)
-				{
-					if (m_chart.Options.ShowGridLines && YAxis.Options.ShowGridLines)
-					{
-						YAxis.GridLines(out var min, out var max, out var step);
-
-						var o2w = cam.O2W;
-						o2w.pos = cam.FocusPoint - o2w * new v4(wh.x / 2, (float)(wh.y / 2 - min), m_chart.Options.GridZOffset, 0);
-
-						YAxis.GridLineGfx.O2WSet(o2w);
-						window.AddObject(YAxis.GridLineGfx);
-					}
-					else
-					{
-						window.RemoveObject(YAxis.GridLineGfx);
-					}
-				}
+				if (m_chart.Options.ShowGridLines && YAxis.Options.ShowGridLines)
+					YAxis.AddToScene(window);
+				else if (YAxis.GridLineGfx != null)
+					window.RemoveObject(YAxis.GridLineGfx);
 			}
 
 			/// <summary>Notify of the axis zooming</summary>
@@ -194,10 +179,8 @@ namespace Rylogic.Gui.WPF
 				}
 				public void Dispose()
 				{
-					m_disposed = true;
 					GridLineGfx = null;
 				}
-				private bool m_disposed;
 
 				/// <summary>Render options for the axis</summary>
 				public OptionsData.Axis Options =>
@@ -396,15 +379,12 @@ namespace Rylogic.Gui.WPF
 				/// <summary>The graphics object used for grid lines</summary>
 				internal View3d.Object GridLineGfx
 				{
-					get
-					{
-						if (m_disposed) throw new Exception();
-						return m_gridlines ?? (m_gridlines = CreateGridLineGfx());
-					}
+					get { return m_gridlines; }
 					set
 					{
 						if (m_gridlines == value) return;
 						Util.Dispose(ref m_gridlines);
+						m_gridlines = value;
 					}
 				}
 				private View3d.Object m_gridlines;
@@ -463,8 +443,29 @@ namespace Rylogic.Gui.WPF
 					return gridlines;
 				}
 
+				/// <summary>Add graphics for this axis to the scene</summary>
+				internal void AddToScene(View3d.Window window)
+				{
+					if (GridLineGfx == null)
+						GridLineGfx = CreateGridLineGfx();
+
+					var cam = window.Camera;
+					var wh = cam.ViewArea(cam.FocusDist);
+					GridLines(out var min, out var max, out var step);
+					var pos =
+						AxisType == EAxis.XAxis ? new v4((float)(wh.x / 2 - min), wh.y / 2, m_chart.Options.GridZOffset, 0) :
+						AxisType == EAxis.YAxis ? new v4(wh.x / 2, (float)(wh.y / 2 - min), m_chart.Options.GridZOffset, 0) :
+						throw new Exception("Unknown axis type");
+
+					var o2w = cam.O2W;
+					o2w.pos = cam.FocusPoint - o2w * pos;
+
+					GridLineGfx.O2WSet(o2w);
+					window.AddObject(GridLineGfx);
+				}
+
 				/// <summary>Show the axis context menu</summary>
-				public void ShowContextMenu(System.Windows.Point location, ChartControl.HitTestResult hit_result)
+				public void ShowContextMenu(System.Windows.Point location, HitTestResult hit_result)
 				{
 					//var cmenu = new ContextMenuStrip();
 					//using (cmenu.SuspendLayout(true))
@@ -493,19 +494,10 @@ namespace Rylogic.Gui.WPF
 					return !Math_.FEql(x / Span, 0.0) ? Math_.RoundSF(x, 5).ToString("G8") : "0";
 				}
 
-				///// <summary>Default tick text measurement</summary>
-				//public SizeF DefaultMeasureTickText(Graphics gfx)
-				//{
-				//	// Can't use 'GridLines' here because creates an infinite recursion.
-				//	// Using TickText(Min/Max, 0.0) causes the axes to jump around.
-				//	// The best option is to use one fixed length string.
-				//	return gfx.MeasureString("-9.99999", Options.TickFont);
-				//}
-
 				/// <summary>Friendly string view</summary>
 				public override string ToString()
 				{
-					return $"{Label} - [{Min}:{Max}]";
+					return $"{Label} [{Min} , {Max}]";
 				}
 
 				#region Equals

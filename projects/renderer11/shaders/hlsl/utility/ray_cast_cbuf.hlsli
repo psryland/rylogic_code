@@ -61,12 +61,13 @@ cbuffer NuggetCBuf :reg(b1)
 	#define HAS_EDGE_SNAP  ((m_snap_mode & (1 << 1)) != 0)
 	#define HAS_VERT_SNAP  ((m_snap_mode & (1 << 2)) != 0)
 
+	// Keep in sync with ESnapType in 'ray_cast.h'
 	#define SNAP_TYPE_NONE 0
 	#define SNAP_TYPE_VERT 1
-	#define SNAP_TYPE_EDGE 2
-	#define SNAP_TYPE_FACE 3
-	#define SNAP_TYPE_EDGECENTRE 4
-	#define SNAP_TYPE_FACECENTRE 5
+	#define SNAP_TYPE_EDGEMIDDLE 2
+	#define SNAP_TYPE_FACECENTRE 3
+	#define SNAP_TYPE_EDGE 4
+	#define SNAP_TYPE_FACE 5
 
 #endif
 

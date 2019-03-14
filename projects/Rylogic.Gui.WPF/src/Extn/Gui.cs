@@ -205,5 +205,12 @@ namespace Rylogic.Gui.WPF
 			wnd.Left = pt.X;
 			wnd.Top = pt.Y;
 		}
+
+		/// <summary>True if this window was shown using ShowDialog</summary>
+		public static bool IsModal(this Window window)
+		{
+			return (bool)m_fi_showingAsDialog.GetValue(window);
+		}
+		private static FieldInfo m_fi_showingAsDialog = typeof(Window).GetField("_showingAsDialog", BindingFlags.Instance | BindingFlags.NonPublic);
 	}
 }

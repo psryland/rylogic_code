@@ -11,8 +11,7 @@ namespace Rylogic.Gui.WPF
 	public class IsEqual : IValueConverter
 	{
 		// Use:
-		// <RadioButton Content = "Words" IsChecked="{Binding PropName, Converter={StaticResource IsEqual}, ConverterParameter={x:Static common:Enum.Value}}"/>
-
+		// <RadioButton Content = "Words" IsChecked="{Binding PropName, Converter={StaticResource IsEqual}, ConverterParameter={x:Static xml_ns:MyType+MyNestedEnum.Value}}"/>
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			return Equals(value, parameter);

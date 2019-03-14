@@ -2,7 +2,6 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Shapes;
 
@@ -92,52 +91,53 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		/// <summary>Font for tick labels</summary>
 		public Typeface Typeface => new Typeface(FontFamily, FontStyle, FontWeight, FontStretch);
 
-		///// <summary>The axis represented by this visual</summary>
+		/// <summary>The axis represented by this visual</summary>
 		public ChartControl.RangeData.Axis Axis
 		{
-			get { return m_axis; }
-			set
+			get { return (ChartControl.RangeData.Axis)GetValue(AxisProperty); }
+			set { SetValue(AxisProperty, value); }
+		}
+		public static readonly DependencyProperty AxisProperty = Gui_.DPRegister<AxisPanel>(nameof(Axis));
+		private void Axis_Changed(ChartControl.RangeData.Axis old_value, ChartControl.RangeData.Axis new_value)
+		{
+			if (old_value != null)
 			{
-				if (m_axis == value) return;
-				if (m_axis != null)
-				{
-					Options.PropertyChanged -= HandleOptionChanged;
-					m_axis.Scroll -= HandleMoved;
-					m_axis.Zoomed -= HandleMoved;
-				}
-				m_axis = value;
-				if (m_axis != null)
-				{
-					m_axis.Zoomed += HandleMoved;
-					m_axis.Scroll += HandleMoved;
-					Options.PropertyChanged += HandleOptionChanged;
-				}
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Axis)));
+				Options.PropertyChanged -= HandleOptionChanged;
+				old_value.Scroll -= HandleMoved;
+				old_value.Zoomed -= HandleMoved;
+			}
+			if (new_value != null)
+			{
+				new_value.Zoomed += HandleMoved;
+				new_value.Scroll += HandleMoved;
+				Options.PropertyChanged += HandleOptionChanged;
+			}
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Options)));
 
-				// Handlers
-				void HandleMoved(object sender, EventArgs e)
+			// Handlers
+			void HandleMoved(object sender, EventArgs e)
+			{
+				if (m_update_graphics_pending) return;
+				m_update_graphics_pending = true;
+				Dispatcher.BeginInvoke(UpdateGraphics);
+			}
+			void HandleOptionChanged(object sender, PropertyChangedEventArgs e)
+			{
+				switch (e.PropertyName)
 				{
+				case nameof(ChartControl.OptionsData.Axis.AxisColour):
+				case nameof(ChartControl.OptionsData.Axis.AxisThickness):
 					UpdateGraphics();
-				}
-				void HandleOptionChanged(object sender, PropertyChangedEventArgs e)
-				{
-					switch (e.PropertyName)
-					{
-					case nameof(ChartControl.OptionsData.Axis.AxisColour):
-					case nameof(ChartControl.OptionsData.Axis.AxisThickness):
-						UpdateGraphics();
-						break;
-					case nameof(ChartControl.OptionsData.Axis.DrawTickLabels):
-					case nameof(ChartControl.OptionsData.Axis.DrawTickMarks):
-						m_axis_size = null;
-						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AxisSize)));
-						UpdateGraphics();
-						break;
-					}
+					break;
+				case nameof(ChartControl.OptionsData.Axis.DrawTickLabels):
+				case nameof(ChartControl.OptionsData.Axis.DrawTickMarks):
+					m_axis_size = null;
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AxisSize)));
+					UpdateGraphics();
+					break;
 				}
 			}
 		}
-		private ChartControl.RangeData.Axis m_axis;
 
 		/// <summary>The axis options</summary>
 		public ChartControl.OptionsData.Axis Options => Axis?.Options ?? new ChartControl.OptionsData.Axis();
@@ -176,6 +176,8 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		public void UpdateGraphics()
 		{
 			Children.Clear();
+			if (Axis == null)
+				return;
 
 			// Get the positions for the tick marks
 			Axis.GridLines(out var min, out var max, out var step);
@@ -305,7 +307,10 @@ namespace Rylogic.Gui.WPF.ChartDetail
 					break;
 				}
 			}
+
+			m_update_graphics_pending = false;
 		}
+		private bool m_update_graphics_pending;
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler PropertyChanged;

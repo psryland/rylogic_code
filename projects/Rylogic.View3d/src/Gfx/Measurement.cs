@@ -1,7 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Drawing;
 using System.Linq;
 using System.Text;
 using Rylogic.Attrib;
@@ -30,12 +29,12 @@ namespace Rylogic.Gfx
 		{
 			ReferenceFrame = EReferenceFrame.WorldSpace;
 			Flags = View3d.EHitTestFlags.Verts | View3d.EHitTestFlags.Edges | View3d.EHitTestFlags.Faces;
-			SnapDistance = 0.001f;
+			SnapDistance = 0.1;
 			SpotColour = Colour32.Aqua;
 			ContextIds = new Guid[1] { Guid.NewGuid() };
 			IncludeCount = 0;
 			ExcludeCount = 1;
-			Results = new BindingListEx<Result>(Enum<EQuantity>.Values.Select(x => new Result(x, "---")));
+			Results = new BindingDict<EQuantity, Result>(Enum<EQuantity>.Values.ToDictionary(x => x, x => new Result(x, "---")));
 			m_hit0 = new Hit();
 			m_hit1 = new Hit();
 			
@@ -95,7 +94,7 @@ namespace Rylogic.Gfx
 					{
 						if (Hit0.IsValid)
 						{
-							GfxHotSpot0.Colour = SnapTypeToColour(Hit0.SnapType);
+							GfxHotSpot0.Colour = SpotColour;
 							GfxHotSpot0.O2P = m4x4.Translation(Hit0.PointWS);
 							Window.AddObject(GfxHotSpot0);
 						}
@@ -108,7 +107,7 @@ namespace Rylogic.Gfx
 					{
 						if (Hit1.IsValid)
 						{
-							GfxHotSpot1.Colour = SnapTypeToColour(Hit1.SnapType);
+							GfxHotSpot1.Colour = SpotColour;
 							GfxHotSpot1.O2P = m4x4.Translation(Hit1.PointWS);
 							Window.AddObject(GfxHotSpot1);
 						}
@@ -155,6 +154,7 @@ namespace Rylogic.Gfx
 			{
 				if (m_spot_colour == value) return;
 				m_spot_colour = value;
+				Window?.Invalidate();
 				NotifyPropertyChanged(nameof(SpotColour));
 			}
 		}
@@ -168,6 +168,7 @@ namespace Rylogic.Gfx
 			{
 				if (SnapDistance == value) return;
 				m_snap_distance = value;
+				Window?.Invalidate();
 				NotifyPropertyChanged(nameof(SnapDistance));
 			}
 		}
@@ -181,6 +182,7 @@ namespace Rylogic.Gfx
 			{
 				if (Flags == value) return;
 				m_flags = value;
+				Window?.Invalidate();
 				NotifyPropertyChanged(nameof(Flags));
 			}
 		}
@@ -194,6 +196,9 @@ namespace Rylogic.Gfx
 			{
 				if (ReferenceFrame == value) return;
 				m_reference_frame = value;
+				InvalidateGfxMeasure();
+				UpdateResults();
+				Window?.Invalidate();
 				NotifyPropertyChanged(nameof(ReferenceFrame));
 			}
 		}
@@ -251,10 +256,22 @@ namespace Rylogic.Gfx
 			{
 				switch (ReferenceFrame)
 				{
-				default: throw new Exception($"Unknown reference frame: {ReferenceFrame}");
-				case EReferenceFrame.WorldSpace: return m4x4.Identity;
-				case EReferenceFrame.Object1Space: return Hit0.IsValid ? Hit0.Obj.O2P : m4x4.Identity;
-				case EReferenceFrame.Object2Space: return Hit1.IsValid ? Hit1.Obj.O2P : m4x4.Identity;
+				default:
+					throw new Exception($"Unknown reference frame: {ReferenceFrame}");
+				case EReferenceFrame.WorldSpace:
+					{
+						return m4x4.Identity;
+					}
+				case EReferenceFrame.Object1Space:
+					{
+						if (!Hit0.IsValid) return m4x4.Identity;
+						return Math_.Orthonormalise(Hit0.Obj.O2P);
+					}
+				case EReferenceFrame.Object2Space:
+					{
+						if (!Hit1.IsValid) return m4x4.Identity;
+						return Math_.Orthonormalise(Hit1.Obj.O2P);
+					}
 				}
 			}
 		}
@@ -276,8 +293,9 @@ namespace Rylogic.Gfx
 			ActiveHit.Obj = result.HitObject;
 
 			// Invalidate
+			UpdateResults();
 			InvalidateGfxMeasure();
-			Window.Invalidate();
+			Window?.Invalidate();
 		}
 
 		/// <summary>Mouse handler helpers. 'point_cs' is the client space mouse position</summary>
@@ -418,23 +436,6 @@ namespace Rylogic.Gfx
 			GfxMeasure = null;
 		}
 
-		/// <summary>Return a colour for the given snap type</summary>
-		private Colour32 SnapTypeToColour(View3d.ESnapType snap_type)
-		{
-			switch (snap_type)
-			{
-			default:
-				throw new Exception($"Unknown snap type: {snap_type}");
-			case View3d.ESnapType.Vert:
-			case View3d.ESnapType.EdgeCentre:
-			case View3d.ESnapType.FaceCentre:
-			case View3d.ESnapType.Edge:
-				return SpotColour;
-			case View3d.ESnapType.Face:
-				return SpotColour.Lerp(0xFF000000, 0.4f);
-			}
-		}
-
 		/// <summary>Property changed</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 		protected void NotifyPropertyChanged(string prop_name)
@@ -443,7 +444,7 @@ namespace Rylogic.Gfx
 		}
 
 		/// <summary>The measurement results</summary>
-		public BindingListEx<Result> Results { get; }
+		public BindingDict<EQuantity, Result> Results { get; }
 
 		/// <summary>Populate the results collection</summary>
 		private void UpdateResults()
@@ -454,23 +455,24 @@ namespace Rylogic.Gfx
 				var w2rf = Math_.InvertFast(RefSpaceToWorld);
 				var pt0 = w2rf * Hit0.PointWS;
 				var pt1 = w2rf * Hit1.PointWS;
-				Results[(int)EQuantity.Distance].Value =  (pt1 - pt0).Length.ToString();
-				Results[(int)EQuantity.DistanceX].Value = Math.Abs(pt1.x - pt0.x).ToString();
-				Results[(int)EQuantity.DistanceY].Value = Math.Abs(pt1.y - pt0.y).ToString();
-				Results[(int)EQuantity.DistanceZ].Value = Math.Abs(pt1.z - pt0.z).ToString();
-				Results[(int)EQuantity.AngleXY].Value = Math_.RadiansToDegrees(Math.Atan2(Math.Abs(pt1.y - pt0.y), Math.Abs(pt1.x - pt0.x))).ToString();
-				Results[(int)EQuantity.AngleXZ].Value = Math_.RadiansToDegrees(Math.Atan2(Math.Abs(pt1.z - pt0.z), Math.Abs(pt1.x - pt0.x))).ToString();
-				Results[(int)EQuantity.AngleYZ].Value = Math_.RadiansToDegrees(Math.Atan2(Math.Abs(pt1.z - pt0.z), Math.Abs(pt1.y - pt0.y))).ToString();
+
+				Results[EQuantity.Distance] = new Result(EQuantity.Distance, (pt1 - pt0).Length.ToString());
+				Results[EQuantity.DistanceX] = new Result(EQuantity.DistanceX, Math.Abs(pt1.x - pt0.x).ToString());
+				Results[EQuantity.DistanceY] = new Result(EQuantity.DistanceY, Math.Abs(pt1.y - pt0.y).ToString());
+				Results[EQuantity.DistanceZ] = new Result(EQuantity.DistanceZ, Math.Abs(pt1.z - pt0.z).ToString());
+				Results[EQuantity.AngleXY] = new Result(EQuantity.AngleXY, Math_.RadiansToDegrees(Math.Atan2(Math.Abs(pt1.y - pt0.y), Math.Abs(pt1.x - pt0.x))).ToString());
+				Results[EQuantity.AngleXZ] = new Result(EQuantity.AngleXZ, Math_.RadiansToDegrees(Math.Atan2(Math.Abs(pt1.z - pt0.z), Math.Abs(pt1.x - pt0.x))).ToString());
+				Results[EQuantity.AngleYZ] = new Result(EQuantity.AngleYZ, Math_.RadiansToDegrees(Math.Atan2(Math.Abs(pt1.z - pt0.z), Math.Abs(pt1.y - pt0.y))).ToString());
 			}
 			else
 			{
-				foreach (var result in Results)
-					result.Value = "---";
+				foreach (var q in Enum<EQuantity>.Values)
+					Results[q] = new Result(q, "---");
 			}
 
 			// Update the hit object if known
-			Results[(int)EQuantity.Instance0].Value = Hit0.IsValid ? Hit0.Obj.Name : "---";
-			Results[(int)EQuantity.Instance1].Value = Hit1.IsValid ? Hit1.Obj.Name : "---";
+			Results[EQuantity.Instance0] = new Result(EQuantity.Instance0, Hit0.IsValid ? Hit0.Obj.Name : "---");
+			Results[EQuantity.Instance1] = new Result(EQuantity.Instance1, Hit1.IsValid ? Hit1.Obj.Name : "---");
 		}
 
 		/// <summary>The end point of a measurement</summary>
@@ -533,8 +535,8 @@ namespace Rylogic.Gfx
 		public enum EReferenceFrame
 		{
 			[Desc("World Space")] WorldSpace,
-			[Desc("Object1 Space")] Object1Space,
-			[Desc("Object2 Space")] Object2Space,
+			[Desc("Start Object Space")] Object1Space,
+			[Desc("End Object Space")] Object2Space,
 		}
 	}
 }

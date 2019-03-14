@@ -14,7 +14,7 @@ namespace Rylogic.Gui.WPF
 {
 	public static class Size_
 	{
-		/// <summary>Infinite size</summary>
+		/// <summary>Zero size</summary>
 		public static Size Zero => new Size(0, 0);
 
 		/// <summary>Infinite size</summary>
@@ -23,6 +23,9 @@ namespace Rylogic.Gui.WPF
 
 	public static class Rect_
 	{
+		/// <summary>Zero size</summary>
+		public static Rect Zero => new Rect(0, 0, 0, 0);
+
 		/// <summary>Construct from LTRB</summary>
 		public static Rect FromLTRB(double left, double top, double right, double bottom)
 		{
@@ -98,9 +101,32 @@ namespace Rylogic.Gui.WPF
 
 	public static class Color_
 	{
+		/// <summary>Convert this colour to a media color</summary>
 		public static Color ToMediaColor(this Colour32 col)
 		{
 			return Color.FromArgb(col.A, col.R, col.G, col.B);
+		}
+
+		/// <summary>Convert this media color to an ARGB value</summary>
+		public static int ToArgb(this Color col)
+		{
+			return ((int)col.A << 24) | ((int)col.R << 16) | ((int)col.G << 8) | ((int)col.B << 0);
+		}
+		public static uint ToArgbU(this Color col)
+		{
+			return ((uint)col.A << 24) | ((uint)col.R << 16) | ((uint)col.G << 8) | ((uint)col.B << 0);
+		}
+
+		/// <summary>Convert this media color to a system drawing color</summary>
+		public static System.Drawing.Color ToColor(this Color col)
+		{
+			return System.Drawing.Color.FromArgb(col.ToArgb());
+		}
+
+		/// <summary>Convert this media color to a Rylogic Colour32</summary>
+		public static Colour32 ToColour32(this Color col)
+		{
+			return new Colour32((uint)col.ToArgb());
 		}
 
 		/// <summary>Create a colour by modifying an existing color</summary>

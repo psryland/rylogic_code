@@ -3092,10 +3092,10 @@ static_assert(int(EView3DHitTestFlags::Verts) == int(pr::rdr::EHitTestFlags::Ver
 
 static_assert(int(EView3DSnapType::NoSnap    ) == int(pr::rdr::ESnapType::NoSnap    ), "");
 static_assert(int(EView3DSnapType::Vert      ) == int(pr::rdr::ESnapType::Vert      ), "");
-static_assert(int(EView3DSnapType::Edge      ) == int(pr::rdr::ESnapType::Edge      ), "");
-static_assert(int(EView3DSnapType::Face      ) == int(pr::rdr::ESnapType::Face      ), "");
 static_assert(int(EView3DSnapType::EdgeMiddle) == int(pr::rdr::ESnapType::EdgeMiddle), "");
 static_assert(int(EView3DSnapType::FaceCentre) == int(pr::rdr::ESnapType::FaceCentre), "");
+static_assert(int(EView3DSnapType::Edge      ) == int(pr::rdr::ESnapType::Edge      ), "");
+static_assert(int(EView3DSnapType::Face      ) == int(pr::rdr::ESnapType::Face      ), "");
 
 // Specifically used to avoid alignment problems
 static_assert(sizeof(View3DV2    ) == sizeof(pr::v2       ), "");

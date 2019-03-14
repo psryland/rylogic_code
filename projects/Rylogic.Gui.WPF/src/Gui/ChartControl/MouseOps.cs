@@ -163,7 +163,7 @@ namespace Rylogic.Gui.WPF
 			/// <summary>True if the op was aborted</summary>
 			public bool Cancelled { get; protected set; }
 
-			/// <summary>True if the distance between 'location' and mouse down should be treated as a click</summary>
+			/// <summary>True if the distance between 'location' and mouse down should be treated as a click. Once false, then always false</summary>
 			public bool IsClick(Point location)
 			{
 				if (!m_is_click) return false;
@@ -195,12 +195,15 @@ namespace Rylogic.Gui.WPF
 		public class MouseOpDefaultLButton : MouseOp
 		{
 			private HitTestResult.Hit m_hit_selected;
-			private bool m_selection_graphic_added;
+			private IDisposable m_cleanup_selection_graphic;
 			private EAxis m_hit_axis;
 
 			public MouseOpDefaultLButton(ChartControl chart) : base(chart)
+			{}
+			public override void Dispose()
 			{
-				m_selection_graphic_added = false;
+				Util.Dispose(ref m_cleanup_selection_graphic);
+				base.Dispose();
 			}
 			public override void MouseDown(MouseButtonEventArgs e)
 			{
@@ -220,7 +223,11 @@ namespace Rylogic.Gui.WPF
 
 				// For 3D scenes, left mouse rotates if mouse down is within the chart bounds
 				if (m_chart.Options.NavigationMode == ENavMode.Scene3D && m_hit_axis == EAxis.None)
-					m_chart.Scene.Window.MouseNavigate(location.ToPointF(), e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Rotate, true);
+				{
+					// Get the point in 'scene' space
+					var point_ss = e.GetPosition(m_chart.Scene).ToPointF();
+					m_chart.Scene.Window.MouseNavigate(point_ss, e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Rotate, true);
+				}
 
 				// Prevent events while dragging the elements around
 				m_suspend_scope = m_chart.SuspendChartChanged(raise_on_resume: true);
@@ -230,7 +237,7 @@ namespace Rylogic.Gui.WPF
 				var location = e.GetPosition(m_chart);
 
 				// If we haven't dragged, treat it as a click instead (i.e. ignore till it's a drag operation)
-				if (IsClick(location) && !m_selection_graphic_added)
+				if (IsClick(location))
 					return;
 
 				var drag_selected = m_chart.AllowEditing && m_hit_selected != null;
@@ -246,10 +253,11 @@ namespace Rylogic.Gui.WPF
 					if (m_chart.AreaSelectMode != EAreaSelectMode.Disabled)
 					{
 						// Otherwise change the selection area
-						if (!m_selection_graphic_added)
+						if (m_cleanup_selection_graphic == null)
 						{
-							m_chart.Scene.AddObject(m_chart.Tools.AreaSelect);
-							m_selection_graphic_added = true;
+							m_cleanup_selection_graphic = Scope.Create(
+								() => m_chart.Scene.AddObject(m_chart.Tools.AreaSelect),
+								() => m_chart.Scene.RemoveObject(m_chart.Tools.AreaSelect));
 						}
 
 						// Position the selection graphic
@@ -263,8 +271,8 @@ namespace Rylogic.Gui.WPF
 				}
 				else if (m_chart.Options.NavigationMode == ENavMode.Scene3D)
 				{
-					// MouseButtons.Right provides rotation, which we want for left mouse button.
-					m_chart.Scene.Window.MouseNavigate(location.ToPointF(), e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Rotate, false);
+					var point_ss = e.GetPosition(m_chart.Scene).ToPointF();
+					m_chart.Scene.Window.MouseNavigate(point_ss, e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Rotate, false);
 				}
 				m_chart.Scene.Invalidate();
 			}
@@ -321,16 +329,24 @@ namespace Rylogic.Gui.WPF
 					else if (m_chart.Options.NavigationMode == ENavMode.Scene3D)
 					{
 						// For 3D scenes, left mouse rotates
-						m_chart.Scene.Window.MouseNavigate(location.ToPointF(), e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Rotate, true);
+						var point_ss = e.GetPosition(m_chart.Scene).ToPointF();
+						m_chart.Scene.Window.MouseNavigate(point_ss, e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Rotate, true);
 					}
 				}
 
-				// Remove the area selection graphic
-				if (m_selection_graphic_added)
-					m_chart.Scene.RemoveObject(m_chart.Tools.AreaSelect);
-
+				Util.Dispose(ref m_cleanup_selection_graphic);
 				m_chart.Cursor = Cursors.Arrow;
 				m_chart.Scene.Invalidate();
+			}
+			public override void OnKeyDown(KeyEventArgs e)
+			{
+				base.OnKeyDown(e);
+				if (e.Key == Key.Escape)
+				{
+					Cancelled = true;
+					Util.Dispose(ref m_cleanup_selection_graphic);
+					m_chart.Scene.Invalidate();
+				}
 			}
 		}
 
@@ -372,7 +388,7 @@ namespace Rylogic.Gui.WPF
 				var pt0 = m_chart.Camera.O2W * m_chart.ChartToCamera(m_grab_chart);
 				var pt1 = m_chart.Camera.O2W * m_chart.ChartToCamera(m_chart.ClientToChart(location));
 				var delta = pt1 - pt0;
-				m_chart.Tools.TapeMeasure.O2P = Math_.TxfmFromDir(AxisId.PosZ, delta, pt0) * m4x4.Scale(1f, 1f, delta.Length, v4.Origin);
+				m_chart.Tools.TapeMeasure.O2P = Math_.TxfmFromDir(EAxisId.PosZ, delta, pt0) * m4x4.Scale(1f, 1f, delta.Length, v4.Origin);
 				//m_tape_measure_balloon.Location = m_chart.PointToScreen(e.Location);
 				//m_tape_measure_balloon.Text =
 				//	$"dX:  {delta.x}\r\n" +
@@ -447,8 +463,8 @@ namespace Rylogic.Gui.WPF
 				if (m_chart.YAxisBounds.Contains(location)) m_drag_axis_allow = EAxis.YAxis;
 
 				// Right mouse translates for 2D and 3D scene
-				var loc = Gui_.MapPoint(m_chart, m_chart.Scene, location);
-				m_chart.Scene.Window.MouseNavigate(loc.ToPointF(), e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Translate, true);
+				var point_ss = e.GetPosition(m_chart.Scene).ToPointF();
+				m_chart.Scene.Window.MouseNavigate(point_ss, e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Translate, true);
 			}
 			public override void MouseMove(MouseEventArgs e)
 			{
@@ -485,7 +501,7 @@ namespace Rylogic.Gui.WPF
 					if (!args.Handled)
 					{
 						// Show the context menu on right click
-						if (e.RightButton == MouseButtonState.Pressed)
+						if (e.RightButton == MouseButtonState.Released)
 						{
 							var location1 = e.GetPosition(m_chart);
 

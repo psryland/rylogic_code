@@ -9,6 +9,7 @@
 	mc:Ignorable="d" 
 	d:DesignHeight="450" d:DesignWidth="800"
 	Background="#EEE"
+	x:Name="m_root"
 	>
 
 	<Grid.Resources>
@@ -16,7 +17,54 @@
 			<gui2:ScaleConverter x:Key="Scale"/>
 			<gui2:NullToCollapsed x:Key="NullToCollapsed"/>
 			<gui2:BoolToVisible x:Key="BoolToVisible"/>
+			<gui2:EnumToDescConverter x:Key="EnumToDescConverter"/>
 			<gui2:AnyTrue x:Key="AnyTrue"/>
+			
+			<ContextMenu x:Key="ChartCMenu">
+				<MenuItem Header="Objects">
+					<MenuItem Header="Origin" IsChecked="{Binding Window.OriginPointVisible}" Command="{Binding ToggleOriginPoint}"/>
+					<MenuItem Header="Focus" IsChecked="{Binding Window.FocusPointVisible}" Command="{Binding ToggleFocusPoint}"/>
+					<MenuItem Header="Grid Lines" IsChecked="{Binding Options.ShowGridLines}" Command="{Binding ToggleGridLines}"/>
+					<MenuItem Header="Axes" IsChecked="{Binding Options.ShowAxes}" Command="{Binding ToggleAxes}"/>
+				</MenuItem>
+				<MenuItem Header="Tools">
+					<MenuItem Header="Show Value" IsChecked="{Binding ShowValueAtPointer}" Command="{Binding ToggleShowValue}"/>
+					<MenuItem Header="Show Cross Hair" IsChecked="{Binding ShowCrossHair}" Command="{Binding ToggleShowCrossHair}"/>
+				</MenuItem>
+				<MenuItem Header="Zoom">
+					<MenuItem Header="Auto Range" Command="{Binding DoAutoRange}"/>
+					<MenuItem Header="Aspect 1:1" Command="{Binding DoAspect11}"/>
+					<MenuItem Header="Lock Aspect" IsChecked="{Binding LockAspect}" Command="{Binding ToggleLockAspect}"/>
+					<MenuItem Header="Mouse Centred Zoom" IsCheckable="{Binding Options.MouseCentredZoom}" Command="{Binding ToggleMouseCentredZoom}"/>
+				</MenuItem>
+				<MenuItem Header="Rendering">
+					<ComboBox
+						ItemsSource="{Binding NavigationModes}"
+						SelectedItem="{Binding Options.NavigationMode}"
+						Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
+						Background="{x:Static SystemColors.ControlBrush}"
+						BorderThickness="0"
+						Padding="1,1,20,1"
+						>
+						<ComboBox.ItemTemplate>
+							<DataTemplate>
+								<TextBlock Text="{Binding Path=., Converter={StaticResource EnumToDescConverter}}"/>
+							</DataTemplate>
+						</ComboBox.ItemTemplate>
+					</ComboBox>
+					<MenuItem Header="Orthographic" IsChecked="{Binding Options.Orthographic}" Command="{Binding ToggleOrthographic}"/>
+					<ComboBox
+						ItemsSource="{Binding RenderingFillModes}"
+						SelectedItem="{Binding Scene.Window.FillMode}"
+						Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
+						Background="{x:Static SystemColors.ControlBrush}"
+						BorderThickness="0"
+						Padding="1,1,20,1"/>
+					<MenuItem Header="Antialiasing" IsChecked="{Binding Options.AntiAliasing}" Command="{Binding ToggleAntiAliasing}"/>
+				</MenuItem>
+				<Separator/>
+				<MenuItem Header="Properties" Command="{Binding ShowOptionsUI}"/>
+			</ContextMenu>
 		</ResourceDictionary>
 	</Grid.Resources>
 
@@ -52,8 +100,8 @@
 		
 		<!-- Tick marks and values -->
 		<local:AxisPanel
-			x:Name="m_ap_xaxis_bottom"
 			Side="Bottom"
+			Axis="{Binding XAxis, ElementName=m_root}"
 			Height="{Binding AxisSize}"
 			Visibility="{Binding Axis, Converter={StaticResource NullToCollapsed}}"
 			/>
@@ -91,8 +139,8 @@
 
 		<!-- Tick marks and values -->
 		<local:AxisPanel
-			x:Name="m_ap_yaxis_left"
 			Side="Left"
+			Axis="{Binding YAxis, ElementName=m_root}"
 			Width="{Binding AxisSize}"
 			Visibility="{Binding Axis, Converter={StaticResource NullToCollapsed}}"
 			/>
@@ -106,8 +154,27 @@
 		>
 		<local:ChartPanel
 			x:Name="m_chart_panel"
-			Stretch="Fill"
 			/>
 	</Grid>
 	
+	<!-- Show Value popup -->
+	<Popup
+		Name="m_popup_show_value"
+		HorizontalAlignment="Left"
+		VerticalAlignment="Center"
+		Placement="Relative"
+		PlacementTarget="{Binding ElementName=m_chart_panel}"
+		MinWidth="80"
+		>
+		<Border
+			BorderThickness="1"
+			BorderBrush="Black"
+			>
+			<TextBlock
+				Background="LightYellow"
+				Padding="5"
+				Text="{Binding ValueAtPointer}"
+				/>
+		</Border>
+	</Popup>
 </Grid>

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows;
@@ -21,6 +20,7 @@ namespace Rylogic.Gui.WPF
 			{
 				if (m_default_mouse_control == value) return;
 				m_default_mouse_control = value;
+				NotifyPropertyChanged(nameof(DefaultMouseControl));
 			}
 		}
 		private bool m_default_mouse_control;
@@ -31,17 +31,9 @@ namespace Rylogic.Gui.WPF
 			get { return m_default_keyshortcuts; }
 			set
 			{
-				using (Scope.Create(null, () => NotifyPropertyChanged(nameof(DefaultKeyboardShortcuts))))
-				{
-					KeyDown -= HandleKeyDown;
-					if (!(m_default_keyshortcuts = value)) return;
-					KeyDown += HandleKeyDown;
-
-					void HandleKeyDown(object sender, KeyEventArgs args)
-					{
-					//	args.Handled = Window.TranslateKey((KeyCodes)args.Key);
-					}
-				}
+				if (m_default_keyshortcuts == value) return;
+				m_default_keyshortcuts = value;
+				NotifyPropertyChanged(nameof(DefaultKeyboardShortcuts));
 			}
 		}
 		private bool m_default_keyshortcuts;
@@ -117,6 +109,10 @@ namespace Rylogic.Gui.WPF
 
 				// Add elements that are now hovered
 				Hovered.AddRange(hovered);
+
+				// Notify that the chart coordinate at the mouse pointer has changed
+				if (hit.Zone == EZone.Chart)
+					NotifyPropertyChanged(nameof(ValueAtPointer));
 			}
 		}
 		protected override void OnMouseUp(MouseButtonEventArgs e)
@@ -139,7 +135,7 @@ namespace Rylogic.Gui.WPF
 			base.OnMouseWheel(e);
 			var location = e.GetPosition(this);
 
-			var perp_z = Options.PerpendicularZTranslation != Keyboard.Modifiers.HasFlag(ModifierKeys.Alt);
+			var along_ray = Options.MouseCentredZoom || Keyboard.Modifiers.HasFlag(ModifierKeys.Alt);
 			var chart_pt = ClientToChart(location);
 
 			if (SceneBounds.Contains(location))
@@ -150,11 +146,14 @@ namespace Rylogic.Gui.WPF
 				{
 					// Translate the camera along a ray through 'point'
 					var loc = Gui_.MapPoint(this, Scene, location);
-					Scene.Window.MouseNavigateZ(loc.ToPointF(), e.ToMouseBtns(Keyboard.Modifiers), e.Delta, !perp_z);
+					Scene.Window.MouseNavigateZ(loc.ToPointF(), e.ToMouseBtns(Keyboard.Modifiers), e.Delta, along_ray);
 
 					// Update the axes from the camera position
 					SetRangeFromCamera();
 					Scene.Invalidate();
+
+					// Notify that the chart coordinate at the mouse pointer has changed
+					NotifyPropertyChanged(nameof(ValueAtPointer));
 				}
 			}
 			else if (Options.ShowAxes)
@@ -176,10 +175,10 @@ namespace Rylogic.Gui.WPF
 					}
 					if (!Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && XAxis.AllowZoom)
 					{
-						var x = perp_z ? XAxis.Centre : chart_pt.X;
+						var x = along_ray ? chart_pt.X : XAxis.Centre;
 						var left = (XAxis.Min - x) * (1f - delta);
 						var rite = (XAxis.Max - x) * (1f - delta);
-						XAxis.Set(chart_pt.X + left, chart_pt.X + rite);
+						XAxis.Set(x + left, x + rite);
 						if (Options.LockAspect != null)
 							YAxis.Span *= (1f - delta);
 
@@ -197,10 +196,10 @@ namespace Rylogic.Gui.WPF
 					}
 					if (!Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && YAxis.AllowZoom)
 					{
-						var y = perp_z ? YAxis.Centre : chart_pt.Y;
+						var y = along_ray ? chart_pt.Y : YAxis.Centre;
 						var left = (YAxis.Min - y) * (1f - delta);
 						var rite = (YAxis.Max - y) * (1f - delta);
-						YAxis.Set(chart_pt.Y + left, chart_pt.Y + rite);
+						YAxis.Set(y + left, y + rite);
 						if (Options.LockAspect != null)
 							XAxis.Span *= (1f - delta);
 
@@ -208,17 +207,13 @@ namespace Rylogic.Gui.WPF
 					}
 				}
 
-				// Set the camera position from the Axis ranges
+				// Set the camera position from the new axis ranges
 				if (chg)
 				{
 					SetCameraFromRange();
 					Scene.Invalidate();
 				}
 			}
-		}
-		protected override void OnPreviewKeyDown(KeyEventArgs e)
-		{
-			base.OnPreviewKeyDown(e);
 		}
 		protected override void OnKeyDown(KeyEventArgs e)
 		{
@@ -235,7 +230,6 @@ namespace Rylogic.Gui.WPF
 			// see if it's a default keyboard shortcut.
 			if (!e.Handled && DefaultKeyboardShortcuts)
 				TranslateKey(e);
-
 		}
 		protected override void OnKeyUp(KeyEventArgs e)
 		{
@@ -298,15 +292,10 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Adjust the X/Y axis of the chart to cover the given area</summary>
 		public void PositionChart(BBox area)
 		{
-			// Ignore if the given area is smaller than the minimum selection distance (in screen space)
-			var bl = ChartToClient(new Point(area.MinX, area.MinY));
-			var tr = ChartToClient(new Point(area.MaxX, area.MaxY));
-			if (Math.Abs(bl.X - tr.X) < Options.MinSelectionDistance ||
-				Math.Abs(bl.Y - tr.Y) < Options.MinSelectionDistance)
-				return;
-
-			XAxis.Set(area.MinX, area.MaxX);
-			YAxis.Set(area.MinY, area.MaxY);
+			// Ensure the selection area is >= 1 pixel for width/height
+			var sz = ClientToChart(new Size(1,1));
+			XAxis.Set(area.MinX, Math.Max(area.MaxX, area.MinX + sz.Width));
+			YAxis.Set(area.MinY, Math.Max(area.MaxY, area.MinY + sz.Height));
 			SetCameraFromRange();
 		}
 
@@ -317,7 +306,7 @@ namespace Rylogic.Gui.WPF
 			var c2w = Scene.Camera.O2W;
 			c2w.pos += c2w.x * (float)(gs_point.X - dst.X) + c2w.y * (float)(gs_point.Y - dst.Y);
 			Scene.Camera.O2W = c2w;
-			//Invalidate();
+			Scene.Invalidate();
 		}
 
 		/// <summary>Handle navigation keyboard shortcuts</summary>
@@ -331,7 +320,7 @@ namespace Rylogic.Gui.WPF
 					if (AllowSelection)
 					{
 						Selected.Clear();
-						//Invalidate();
+						Scene.Invalidate();
 					}
 					break;
 				}
@@ -363,12 +352,13 @@ namespace Rylogic.Gui.WPF
 			case Key.F5:
 				{
 					View3d.ReloadScriptSources();
-					//Invalidate();
+					Scene.Invalidate();
 					break;
 				}
 			case Key.F7:
 				{
 					AutoRange();
+					Scene.Invalidate();
 					break;
 				}
 			case Key.A:
@@ -377,7 +367,7 @@ namespace Rylogic.Gui.WPF
 					{
 						Selected.Clear();
 						Selected.AddRange(Elements);
-						//Invalidate();
+						Scene.Invalidate();
 						Debug.Assert(CheckConsistency());
 					}
 					break;

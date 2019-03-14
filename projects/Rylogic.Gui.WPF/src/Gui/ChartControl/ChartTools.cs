@@ -20,41 +20,37 @@ namespace Rylogic.Gui.WPF
 			internal ChartTools(ChartControl chart, OptionsData opts)
 			{
 				Chart = chart;
-				//if (owner.IsInDesignMode())
-				//	return;
-
-				Options = opts;
 				AreaSelect = CreateAreaSelect();
-				Resizer = Array_.New(8, i => new ResizeGrabber(i));
-				CrossHairH = CreateCrossHair(true);
-				CrossHairV = CreateCrossHair(false);
+				Resizer = CreateResizeGrabber();
+				CrossHair = CreateCrossHair();
 				TapeMeasure = CreateTapeMeasure();
 			}
 			public void Dispose()
 			{
-				Options = null;
+				Chart = null;
 				AreaSelect = null;
 				Resizer = null;
-				CrossHairH = null;
-				CrossHairV = null;
+				CrossHair = null;
 				TapeMeasure = null;
 			}
 
 			/// <summary>The owner of these tools</summary>
-			private ChartControl Chart { get; }
-
-			/// <summary>Chart options</summary>
-			private OptionsData Options
+			private ChartControl Chart
 			{
-				[DebuggerStepThrough]
-				get { return m_options; }
+				get { return m_chart; }
 				set
 				{
-					if (m_options == value) return;
-					if (m_options != null) m_options.PropertyChanged -= HandleOptionsChanged;
-					m_options = value;
-					if (m_options != null) m_options.PropertyChanged += HandleOptionsChanged;
-					
+					if (m_chart == value) return;
+					if (m_chart != null)
+					{
+						m_chart.Options.PropertyChanged -= HandleOptionsChanged;
+					}
+					m_chart = value;
+					if (m_chart != null)
+					{
+						m_chart.Options.PropertyChanged += HandleOptionsChanged;
+					}
+
 					// Handlers
 					void HandleOptionsChanged(object sender, PropertyChangedEventArgs e)
 					{
@@ -65,16 +61,19 @@ namespace Rylogic.Gui.WPF
 								AreaSelect.ColourSet(Options.SelectionColour);
 								break;
 							}
-						//case nameof(OptionsData.ChartBkColour):
-						//	{
-						//		CrossHairH = CreateCrossHair(true);
-						//		CrossHairV = CreateCrossHair(false);
-						//	}
+						case nameof(ChartDetail.ChartPanel.BackgroundColor):
+							{
+								CrossHair = CreateCrossHair();
+								break;
+							}
 						}
 					}
 				}
 			}
-			private OptionsData m_options;
+			private ChartControl m_chart;
+
+			/// <summary>Chart options</summary>
+			private OptionsData Options => Chart?.Options ?? new OptionsData();
 
 			/// <summary>Graphic for area selection</summary>
 			public View3d.Object AreaSelect
@@ -90,7 +89,7 @@ namespace Rylogic.Gui.WPF
 			private View3d.Object m_area_select;
 			private View3d.Object CreateAreaSelect()
 			{
-				var ldr = Ldr.Rect("selection", Options.SelectionColour, AxisId.PosZ, 1f, 1f, true, pos: v4.Origin);
+				var ldr = Ldr.Rect("selection", Options.SelectionColour, EAxisId.PosZ, 1f, 1f, true, pos: v4.Origin);
 				var obj = new View3d.Object(ldr, false, Id, null);
 				obj.FlagsSet(View3d.EFlags.SceneBoundsExclude, true);
 				return obj;
@@ -108,6 +107,10 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 			private ResizeGrabber[] m_resizer;
+			private ResizeGrabber[] CreateResizeGrabber()
+			{
+				return Array_.New(8, i => new ResizeGrabber(i));
+			}
 			public class ResizeGrabber : View3d.Object
 			{
 				public ResizeGrabber(int corner) : base($"*Box resizer_{corner} {{5}}", false, Id, null)
@@ -169,36 +172,31 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>A vertical and horizontal line</summary>
-			public View3d.Object CrossHairH
+			public View3d.Object CrossHair
 			{
-				get { return m_cross_hair_h; }
+				get { return m_cross_hair; }
 				private set
 				{
-					if (m_cross_hair_h == value) return;
-					Util.Dispose(ref m_cross_hair_h);
-					m_cross_hair_h = value;
+					if (m_cross_hair == value) return;
+					Util.Dispose(ref m_cross_hair);
+					m_cross_hair = value;
 				}
 			}
-			public View3d.Object CrossHairV
+			private View3d.Object m_cross_hair;
+			private View3d.Object CreateCrossHair()
 			{
-				get { return m_cross_hair_v; }
-				private set
+				// Use Alpha != 0xFF so that the model is added to the alpha group and drawn lasted
+				var col = Chart.Scene.BackgroundColor.ToColour32().Intensity < 0.5f ? 0xFeFFFFFF : 0xFe000000;
+
+				var ldr = new LdrBuilder();
+				using (ldr.Group("cross_hair", col))
 				{
-					if (m_cross_hair_v == value) return;
-					Util.Dispose(ref m_cross_hair_v);
-					m_cross_hair_v = value;
+					ldr.Line("h", col, new v4(-0.5f, 0, 0, 1f), new v4(+0.5f, 0, 0, 1f));
+					ldr.Line("v", col, new v4(0, -0.5f, 0, 1f), new v4(0, +0.5f, 0, 1f));
 				}
-			}
-			private View3d.Object m_cross_hair_h;
-			private View3d.Object m_cross_hair_v;
-			private View3d.Object CreateCrossHair(bool horiz)
-			{
-				var col = Chart.Scene.BackgroundColor.Intensity > 0.5f ? 0xFFFFFFFF : 0xFF000000;
-				var str = horiz
-					? Ldr.Line("chart_cross_hair_h", col, new v4(-0.5f, 0, 0, 1f), new v4(+0.5f, 0, 0, 1f))
-					: Ldr.Line("chart_cross_hair_v", col, new v4(0, -0.5f, 0, 1f), new v4(0, +0.5f, 0, 1f));
-				var obj = new View3d.Object(str, false, Id, null);
-				obj.FlagsSet(View3d.EFlags.SceneBoundsExclude, true);
+
+				var obj = new View3d.Object(ldr.ToString(), false, Id, null);
+				obj.FlagsSet(View3d.EFlags.SceneBoundsExclude | View3d.EFlags.NoZTest | View3d.EFlags.NoZWrite, true);
 				return obj;
 			}
 
@@ -216,7 +214,7 @@ namespace Rylogic.Gui.WPF
 			private View3d.Object m_tape_measure;
 			private View3d.Object CreateTapeMeasure()
 			{
-				var col = Chart.Scene.BackgroundColor.Intensity > 0.5f ? 0xFFFFFFFF : 0xFF000000;
+				var col = Chart.Scene.BackgroundColor.ToColour32().Intensity > 0.5f ? 0xFFFFFFFF : 0xFF000000;
 				var str = Ldr.Line("tape_measure", col, new v4(0, 0, 0, 1f), new v4(0, 0, 1f, 1f));
 				var obj = new View3d.Object(str, false, Id, null);
 				obj.FlagsSet(View3d.EFlags.SceneBoundsExclude, true);

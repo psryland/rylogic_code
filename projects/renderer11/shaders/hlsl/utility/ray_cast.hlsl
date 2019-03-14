@@ -76,9 +76,9 @@ void main(triangle GSIn_RayCast In[3], inout PointStream<GSOut_RayCast> OutStrea
 		{v0, SNAP_TYPE_VERT},
 		{v1, SNAP_TYPE_VERT},
 		{v2, SNAP_TYPE_VERT},
-		{(v0 + v1) / 2, SNAP_TYPE_EDGECENTRE},
-		{(v1 + v2) / 2, SNAP_TYPE_EDGECENTRE},
-		{(v2 + v0) / 2, SNAP_TYPE_EDGECENTRE},
+		{(v0 + v1) / 2, SNAP_TYPE_EDGEMIDDLE},
+		{(v1 + v2) / 2, SNAP_TYPE_EDGEMIDDLE},
+		{(v2 + v0) / 2, SNAP_TYPE_EDGEMIDDLE},
 		{(v0 + v1 + v2) / 3, SNAP_TYPE_FACECENTRE},
 	};
 	TestEdge edges[] =
@@ -100,11 +100,14 @@ void main(triangle GSIn_RayCast In[3], inout PointStream<GSOut_RayCast> OutStrea
 
 		// Find the nearest point on the ray
 		float4 pt = float4((v0*para.x + v1*para.y + v2*para.z).xyz, 1);
+		float depth = dot(pt - origin, direction);
+		if (depth < m_snap_dist)
+			continue; // too close, or behind the ray origin
 
 		// Variables for finding the nearest snap-to point
 		float4 intercept = float4(0,0,0,0);
-		int snap_type    = SNAP_TYPE_NONE;
-		float dist       = m_snap_dist;
+		int snap_type = SNAP_TYPE_NONE;
+		float dist = m_snap_dist;
 		int j,jend;
 		
 		// Snap to points/edges within 'snap_dist'
@@ -152,7 +155,7 @@ void main(triangle GSIn_RayCast In[3], inout PointStream<GSOut_RayCast> OutStrea
 		// The 'ws_intercept.w' value is used to depth-sort the intercepts
 		// Use 'pt' rather than 'intercept' so that snapping doesn't change the order.
 		GSOut_RayCast Out = (GSOut_RayCast)0;
-		Out.ws_intercept = float4(intercept.xyz, dot(pt - origin, direction));
+		Out.ws_intercept = float4(intercept.xyz, depth);
 		Out.snap_type = snap_type;
 		Out.ray_index = i;
 		Out.inst_ptr = m_inst_ptr;
@@ -172,7 +175,7 @@ void main(line GSIn_RayCast In[2], inout PointStream<GSOut_RayCast> OutStream)
 	{
 		{v0, SNAP_TYPE_VERT},
 		{v1, SNAP_TYPE_VERT},
-		{(v0 + v1) / 2, SNAP_TYPE_EDGECENTRE},
+		{(v0 + v1) / 2, SNAP_TYPE_EDGEMIDDLE},
 	};
 
 	for (int i = 0; i != m_ray_count; ++i)
@@ -185,6 +188,9 @@ void main(line GSIn_RayCast In[2], inout PointStream<GSOut_RayCast> OutStream)
 
 		// Find the nearest point on the ray and the edge
 		float4 pt = origin + para.y * direction;
+		float depth = dot(pt - origin, direction);
+		if (depth < m_snap_dist)
+			continue; // too close, or behind the ray origin
 
 		// Variables for finding the nearest snap-to point
 		float4 intercept = float4(0,0,0,0);
@@ -222,7 +228,7 @@ void main(line GSIn_RayCast In[2], inout PointStream<GSOut_RayCast> OutStream)
 
 		// Output an intercept
 		GSOut_RayCast Out = (GSOut_RayCast)0;
-		Out.ws_intercept = float4(intercept.xyz, dot(pt - origin, direction));
+		Out.ws_intercept = float4(intercept.xyz, depth);
 		Out.snap_type = snap_type;
 		Out.ray_index = i;
 		Out.inst_ptr = m_inst_ptr;
@@ -244,9 +250,14 @@ void main(point GSIn_RayCast In[1], inout PointStream<GSOut_RayCast> OutStream)
 		// Perform a ray vs. point test
 		float para = ClosestPoint_PointVsRay(v0, origin, direction);
 
-		// Find the nearest point on the ray
+		// Find the nearest point on the ray and the point
 		float4 pt = origin + para * direction;
-		float  d = distance(pt, v0);
+		float depth = dot(pt - origin, direction);
+		if (depth < m_snap_dist)
+			continue; // too close, or behind the ray origin
+
+		// Find the nearest point on the ray
+		float d = distance(pt, v0);
 		bool snap = HAS_VERT_SNAP && d < m_snap_dist;
 
 		// Variables for finding the nearest snap-to point
@@ -259,7 +270,7 @@ void main(point GSIn_RayCast In[1], inout PointStream<GSOut_RayCast> OutStream)
 
 		// Output an intercept
 		GSOut_RayCast Out = (GSOut_RayCast)0;
-		Out.ws_intercept = float4(intercept.xyz, dot(pt - origin, direction));
+		Out.ws_intercept = float4(intercept.xyz, depth);
 		Out.snap_type = snap_type;
 		Out.ray_index = i;
 		Out.inst_ptr = m_inst_ptr;

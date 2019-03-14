@@ -44,10 +44,6 @@ namespace TestWPF
 			{
 				new DiagramUI().Show();
 			};
-			m_menu_tests_view3d.Click += (s, a) =>
-			{
-				new View3dUI().Show();
-			};
 			m_menu_tests_dock_container.Click += (s, a) =>
 			{
 				new DockContainerUI().Show();
@@ -55,6 +51,14 @@ namespace TestWPF
 			m_menu_tests_pattern_editor.Click += (s, a) =>
 			{
 				new PatternEditorUI().Show();
+			};
+			m_menu_tests_view3d.Click += (s, a) =>
+			{
+				new View3dUI().Show();
+			};
+			m_menu_tests_tool_ui.Click += (s, a) =>
+			{
+				new ToolUI { Owner = this }.Show();
 			};
 
 			m_btn_msgbox.Click += (s, a) =>

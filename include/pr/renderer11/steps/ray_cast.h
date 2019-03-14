@@ -20,14 +20,16 @@ namespace pr
 			Verts = 1 << 2,
 			_bitwise_operators_allowed = 0x7FFFFFF,
 		};
+
+		// Snap types (in priority order) (Keep in sync with SNAP_TYPE_ in 'ray_cast_cbuf.hlsli')
 		enum class ESnapType :int
 		{
-			NoSnap,
-			Vert,
-			Edge,
-			Face,
-			EdgeMiddle,
-			FaceCentre,
+			NoSnap = 0,
+			Vert = 1,
+			EdgeMiddle = 2,
+			FaceCentre = 3,
+			Edge = 4,
+			Face = 5,
 		};
 
 		// A single hit test ray into the scene

@@ -160,7 +160,7 @@ namespace Rylogic.Gui.WPF
 			var cmenu = new ContextMenu
 			{
 				PlacementTarget = menu_item,
-				PlacementRectangle = new Rect(pt, new Vector(double.PositiveInfinity, double.PositiveInfinity)),
+				PlacementRectangle = new Rect(pt, Vector_.Infinity),
 			};
 			{
 				// Remove

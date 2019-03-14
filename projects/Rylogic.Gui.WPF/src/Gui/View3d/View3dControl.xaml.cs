@@ -4,9 +4,11 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using Rylogic.Attrib;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Gfx;
@@ -21,6 +23,7 @@ namespace Rylogic.Gui.WPF
 
 		static View3dControl()
 		{
+			BackgroundColorProperty = Gui_.DPRegister<View3dControl>(nameof(BackgroundColor), def: Colors.LightGray);
 			View3d.LoadDll(throw_if_missing:false);
 		}
 		public View3dControl()
@@ -29,6 +32,7 @@ namespace Rylogic.Gui.WPF
 			{
 				InitializeComponent();
 				Stretch = Stretch.Fill;
+				Focusable = true;
 
 				if (DesignerProperties.GetIsInDesignMode(this))
 					return;
@@ -42,8 +46,78 @@ namespace Rylogic.Gui.WPF
 				// Create a D3D11 off-screen render target image source
 				Source = D3DImage = new D3D11Image();
 
+				// Initialise commands
+				ToggleOriginPoint = Command.Create(this, () =>
+				{
+					Window.OriginPointVisible = !Window.OriginPointVisible;
+					Invalidate();
+				});
+				ToggleFocusPoint = Command.Create(this, () =>
+				{
+					Window.FocusPointVisible = !Window.FocusPointVisible;
+					Invalidate();
+				});
+				ToggleOrthographic = Command.Create(this, () =>
+				{
+					Camera.Orthographic = !Camera.Orthographic;
+					Invalidate();
+				});
+				ToggleAntialiasing = Command.Create(this, () =>
+				{
+					MultiSampling = MultiSampling == 1U ? 4U : 1U;
+					Invalidate();
+				});
+				ResetView = Command.Create(this, () =>
+				{
+					Camera.ResetView();
+					Invalidate();
+				});
+				ChangeBackgroundColour = Command.Create(this, () =>
+				{
+					var dlg = new ColourPickerUI
+					{
+						Owner = System.Windows.Window.GetWindow(this),
+						Color = Window.BackgroundColour.ToMediaColor()
+					};
+					if (dlg.ShowDialog() == true)
+					{
+						Window.BackgroundColour = dlg.Color.ToColour32();
+						Invalidate();
+					}
+				});
+				ShowMeasureTool = Command.Create(this, () =>
+				{
+					new View3dMeasurementUI(this).Show();
+				});
+				ShowLightingUI = Command.Create(this, () =>
+				{
+					var light = new View3d.Light(Window.LightProperties);
+					light.PropertyChanged += (s, a) =>
+					{
+						Window.LightProperties = m_lighting_ui.Light;
+						Invalidate();
+					};
+
+					m_lighting_ui = m_lighting_ui ?? new View3dLightingUI { Owner = System.Windows.Window.GetWindow(this) };
+					m_lighting_ui.Closed += (s, a) => m_lighting_ui = null;
+					m_lighting_ui.Light = light;
+					m_lighting_ui.Show();
+					m_lighting_ui.Focus();
+				});
+				ShowObjectManager = Command.Create(this, () =>
+				{
+					//new View3dObjectManager(this).Show();
+					MessageBox.Show("ToDo...");
+				});
+
+				ViewPresets = new ListCollectionView(Enum<EViewPresets>.ValuesArray);
+				AlignDirections = new ListCollectionView(Enum<EAlignDirections>.ValuesArray);
+				RenderingFillModes = new ListCollectionView(Enum<View3d.EFillMode>.ValuesArray);
+				RenderingCullModes = new ListCollectionView(Enum<View3d.ECullMode>.ValuesArray);
+
 				// Set defaults
-				BackgroundColour = Colour32.Gray;
+				BackgroundColor = Colors.LightGray;
+				DesiredPixelAspect = 1;
 				ClickTimeMS = 180;
 				MouseNavigation = true;
 				DefaultKeyboardShortcuts = true;
@@ -57,9 +131,9 @@ namespace Rylogic.Gui.WPF
 		public void Dispose()
 		{
 			Source = null;
-			D3DImage = Util.Dispose(D3DImage);
-			Window = Util.Dispose(Window);
-			View3d = Util.Dispose(View3d);
+			D3DImage = null;
+			Window = null;
+			View3d = null;
 		}
 		protected override void OnRenderSizeChanged(SizeChangedInfo size_info)
 		{
@@ -67,16 +141,60 @@ namespace Rylogic.Gui.WPF
 			m_resized = true;
 			Invalidate();
 		}
+		protected override void OnMouseDown(MouseButtonEventArgs e)
+		{
+			base.OnMouseDown(e);
+			Keyboard.Focus(this);
+		}
 		private bool m_resized;
 
 		/// <summary>View3d context instance</summary>
-		public View3d View3d { get; private set; }
+		public View3d View3d
+		{
+			get { return m_view3d; }
+			private set
+			{
+				if (m_view3d == value) return;
+				Util.Dispose(ref m_view3d);
+				m_view3d = value;
+			}
+		}
+		private View3d m_view3d;
 
 		/// <summary>View3d window instance</summary>
-		public View3d.Window Window { get; private set; }
+		public View3d.Window Window
+		{
+			get { return m_window; }
+			private set
+			{
+				if (m_window == value) return;
+				if (m_window != null)
+				{
+					m_window.OnInvalidated -= HandleInvalidated;
+					Util.Dispose(ref m_window);
+				}
+				m_window = value;
+				if (m_window != null)
+				{
+					m_window.OnInvalidated += HandleInvalidated;
+				}
+
+				// Handler
+				void HandleInvalidated(object sender, EventArgs e)
+				{
+					if (m_render_pending) return;
+					m_render_pending = true;
+					Dispatcher.BeginInvoke(Render);
+				}
+			}
+		}
+		private View3d.Window m_window;
 
 		/// <summary>The camera used to view the scene</summary>
 		public View3d.Camera Camera => Window.Camera;
+
+		/// <summary>The D3D render target texture</summary>
+		public View3d.Texture RenderTarget => D3DImage.RenderTarget;
 
 		/// <summary>An interop object providing an off-screen render target</summary>
 		private D3D11Image D3DImage
@@ -90,6 +208,7 @@ namespace Rylogic.Gui.WPF
 					Loaded -= OnLoaded;
 					Unloaded -= OnUnloaded;
 					m_d3d_image.RenderTargetChanged -= HandleRTChanged;
+					Util.Dispose(ref m_d3d_image);
 				}
 				m_d3d_image = value;
 				if (m_d3d_image != null)
@@ -115,11 +234,7 @@ namespace Rylogic.Gui.WPF
 				void HandleRTChanged(object sender, EventArgs arg)
 				{
 					if (m_d3d_image.RenderTarget != null)
-					{
-						var info = m_d3d_image.RenderTarget.Info;
-						Window.Viewport = new View3d.Viewport(0, 0, info.m_width, info.m_height);
-						Camera.Aspect = Math_.Div(info.m_width, info.m_height, 1f);
-					}
+						OnRenderTargetChanged();
 
 					Window.SetRT(D3DImage.RenderTarget);
 					Window.SaveAsMainRT();
@@ -129,28 +244,27 @@ namespace Rylogic.Gui.WPF
 		private D3D11Image m_d3d_image;
 
 		/// <summary>Trigger a redraw of the view3d scene</summary>
-		public void Invalidate()
-		{
-			if (m_render_pending) return;
-			m_render_pending = true;
-			OnInvalidated();
-		}
-		protected virtual void OnInvalidated()
-		{
-			Dispatcher.BeginInvoke(Render);
-		}
-		private bool m_render_pending;
+		public void Invalidate() => Window.Invalidate();
 
 		/// <summary>Set the background colour of the control</summary>
-		public Colour32 BackgroundColour
+		public Color BackgroundColor
 		{
-			get { return Window.BackgroundColour; }
-			set
-			{
-				if (BackgroundColour == value) return;
-				Window.BackgroundColour = value;
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BackgroundColour)));
-			}
+			get { return (Color)GetValue(BackgroundColorProperty); }
+			set { SetValue(BackgroundColorProperty, value); }
+		}
+		private void BackgroundColor_Changed(Color new_value)
+		{
+			Window.BackgroundColour = new Colour32((uint)new_value.ToArgb());
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BackgroundColor)));
+		}
+		public Brush BackgroundColorBrush => new SolidColorBrush(BackgroundColor);
+		public static readonly DependencyProperty BackgroundColorProperty;
+
+		/// <summary>The render target multi-sampling</summary>
+		public uint MultiSampling
+		{
+			get { return D3DImage.MultiSampling; }
+			set { D3DImage.MultiSampling = value; }
 		}
 
 		/// <summary>The time between mouse down->up that is considered a mouse click</summary>
@@ -209,6 +323,35 @@ namespace Rylogic.Gui.WPF
 		}
 		private bool m_mouse_navigation;
 
+		/// <summary>The desired aspect ratio of pixels in the view</summary>
+		public double DesiredPixelAspect
+		{
+			get { return m_desired_pixel_aspect; }
+			set
+			{
+				if (DesiredPixelAspect == value) return;
+				m_desired_pixel_aspect = value;
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DesiredPixelAspect)));
+			}
+		}
+		private double m_desired_pixel_aspect;
+
+		/// <summary>The current pixel aspect ratio</summary>
+		public double ActualPixelAspect
+		{
+			get
+			{
+				var sz = RenderSize;
+				return Camera.Aspect * sz.Height / sz.Width;
+			}
+			set
+			{
+				var sz = RenderSize;
+				if (sz.Width != 0 && sz.Height != 0)
+					Camera.Aspect = (float)(value * sz.Width / sz.Height);
+			}
+		}
+
 		/// <summary>Mouse navigation - public to allow users to forward mouse calls to us.</summary>
 		public void OnMouseDown(object sender, MouseButtonEventArgs e)
 		{
@@ -236,12 +379,12 @@ namespace Rylogic.Gui.WPF
 			// Click detected
 			if (Environment.TickCount - m_mouse_down_at < ClickTimeMS)
 			{
-				if (e.MiddleButton == MouseButtonState.Pressed || (e.LeftButton == MouseButtonState.Pressed && e.RightButton == MouseButtonState.Pressed))
+				if (e.ChangedButton == MouseButton.Middle && e.MiddleButton == MouseButtonState.Released)
 				{
 					Camera.ResetZoom();
 					Invalidate();
 				}
-				else if (e.RightButton == MouseButtonState.Pressed)
+				else if (e.ChangedButton == MouseButton.Right && e.RightButton == MouseButtonState.Released)
 				{
 					ShowContextMenu();
 				}
@@ -267,186 +410,25 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Show the view3D context menu</summary>
 		public void ShowContextMenu()
 		{
-			if (Window == null)
+			if (Window == null || !(FindResource("View3dControlCMenu") is ContextMenu cmenu))
 				return;
 
-			// Create a context menu
-			var cmenu = new ContextMenu();
-			cmenu.Closed += (s, a) => Invalidate();
-
-			{// View
-				var view_menu = cmenu.Items.Add2(new MenuItem { Header = "View" });
-				{// Show focus
-					var opt = view_menu.Items.Add2(new MenuItem { Header = "Show Focus" });
-					opt.IsChecked = Window.FocusPointVisible;
-					opt.Click += (s, a) =>
-					{
-						Window.FocusPointVisible = !Window.FocusPointVisible;
-						Invalidate();
-					};
-				}
-				{// Show Origin
-					var opt = view_menu.Items.Add2(new MenuItem { Header = "Show Origin" });
-					opt.IsChecked = Window.OriginPointVisible;
-					opt.Click += (s, a) =>
-					{
-						Window.OriginPointVisible = !Window.OriginPointVisible;
-						Invalidate();
-					};
-				}
-				{// Show coords
-				}
-				{// Axis Views
-					var view_options_menu = view_menu.Items.Add2(new MenuItem { Header = "Views" });
-					//{
-					//	view_options_menu.Items.Add("Views");
-					//	view_options.Items.Add("Axis +X");
-					//	view_options.Items.Add("Axis -X");
-					//	view_options.Items.Add("Axis +Y");
-					//	view_options.Items.Add("Axis -Y");
-					//	view_options.Items.Add("Axis +Z");
-					//	view_options.Items.Add("Axis -Z");
-					//	view_options.Items.Add("Axis -X,-Y,-Z");
-					//	view_options.SelectedIndex = 0;
-					//	view_options.SelectedIndexChanged += delegate
-					//	{
-					//		var pos = Camera.FocusPoint;
-					//		switch (view_options.SelectedIndex)
-					//		{
-					//		case 1: Camera.ResetView(v4.XAxis); break;
-					//		case 2: Camera.ResetView(-v4.XAxis); break;
-					//		case 3: Camera.ResetView(v4.YAxis); break;
-					//		case 4: Camera.ResetView(-v4.YAxis); break;
-					//		case 5: Camera.ResetView(v4.ZAxis); break;
-					//		case 6: Camera.ResetView(-v4.ZAxis); break;
-					//		case 7: Camera.ResetView(-v4.XAxis - v4.YAxis - v4.ZAxis); break;
-					//		}
-					//		Camera.FocusPoint = pos;
-					//		Refresh();
-					//	};
-					//}
-				}
-				{// Object Manager UI
-				 //var obj_mgr_ui = new MenuItem{ Header = "Object Manager" };
-				 //view_menu.Items.Add(obj_mgr_ui);
-				 //obj_mgr_ui.Click += (s,a) => Window.ShowObjectManager(true);
-				}
-			}
-			{// Navigation
-				var rdr_menu = cmenu.Items.Add2(new MenuItem { Header = "Navigation" });
-				{// Reset View
-					var opt = rdr_menu.Items.Add2(new MenuItem { Header = "Reset View" });
-					opt.Click += (s, a) =>
-					{
-						Camera.ResetView();
-						Invalidate();
-					};
-				}
-				{// Align to
-					var align_menu = new MenuItem { Header = "Align" };
-					rdr_menu.Items.Add(align_menu);
-					//{
-					//	var align_options = new ToolStripComboBox("Aligns") { DropDownStyle = ComboBoxStyle.DropDownList };
-					//	align_menu.Items.Add(align_options);
-					//	align_options.Items.Add("None");
-					//	align_options.Items.Add("X");
-					//	align_options.Items.Add("Y");
-					//	align_options.Items.Add("Z");
-					//
-					//	var axis = Camera.AlignAxis;
-					//	if (Math_.FEql(axis, v4.XAxis)) align_options.SelectedIndex = 1;
-					//	else if (Math_.FEql(axis, v4.YAxis)) align_options.SelectedIndex = 2;
-					//	else if (Math_.FEql(axis, v4.ZAxis)) align_options.SelectedIndex = 3;
-					//	else align_options.SelectedIndex = 0;
-					//	align_options.SelectedIndexChanged += delegate
-					//	{
-					//		switch (align_options.SelectedIndex)
-					//		{
-					//		default: Camera.AlignAxis = v4.Zero; break;
-					//		case 1: Camera.AlignAxis = v4.XAxis; break;
-					//		case 2: Camera.AlignAxis = v4.YAxis; break;
-					//		case 3: Camera.AlignAxis = v4.ZAxis; break;
-					//		}
-					//		Refresh();
-					//	};
-					//}
-				}
-				{// Motion lock
-				}
-				{// Orbit
-				 //	var orbit_menu = new MenuItem{ Header = "Orbit" };
-				 //	rdr_menu.Items.Add2(orbit_menu);
-				 //	orbit_menu.Click += delegate {};
-				}
-			}
-			{// Tools
-				var tools_menu = cmenu.Items.Add2(new MenuItem { Header = "Tools" });
-				{// Measure
-					var opt = tools_menu.Items.Add2(new MenuItem { Header = "Measure..." });
-					opt.Click += (s, a) =>
-					{
-						Window.ShowMeasureTool = true;
-					};
-				}
-				//{// Angle
-				//	var option = new ToolStripMenuItem { Text = "Angle..." };
-				//	tools_menu.Items.Add2(option);
-				//	option.Click += delegate { Window.ShowAngleTool = true; };
-				//}
-			}
-			{// Rendering
-				var rdr_menu = cmenu.Items.Add2(new MenuItem { Header = "Rendering" });
-				{// Solid/Wireframe/Solid+Wire
-					var opt = rdr_menu.Items.Add2(new ComboBox { /*DropDownStyle = ComboBoxStyle.DropDownList*/ });
-					opt.Items.AddRange(Enum<View3d.EFillMode>.Names.Cast<object>().ToArray());
-					opt.SelectedIndex = (int)Window.FillMode;
-					//opt.SelectedIndexChanged += (s, a) =>
-					//{
-					//	Window.FillMode = (View3d.EFillMode)option.SelectedIndex;
-					//	Refresh();
-					//};
-				}
-				{// Render2D
-					var opt = rdr_menu.Items.Add2(new MenuItem { Header = Window.Camera.Orthographic ? "Perspective" : "Orthographic" });
-					opt.Click += (s, a) =>
-					{
-						Window.Camera.Orthographic = !Window.Camera.Orthographic;
-						Invalidate();
-					};
-				}
-				{// Lighting...
-					var lighting_menu = rdr_menu.Items.Add2(new MenuItem { Header = "Lighting..." });
-					lighting_menu.Click += (s, a) =>
-					{
-						Window.ShowLightingDlg();
-					};
-				}
-				{// Background colour
-				 //var bk_colour_menu = new MenuItem{ Header = "Background Colour" };
-				 //rdr_menu.Items.Add2(bk_colour_menu);
-				 //{
-				 //	var opt = bk_colour_menu.Items.Add2(new Button { });
-				 //	opt.Background = new SolidColorBrush(Window.BackgroundColour.ToMediaColor());
-				 //	opt. += delegate { Window.BackgroundColour = option.BackColor; Refresh(); };
-				 //	opt.Click += (s,a) =>
-				 //	{
-				 //		var cd = new ColourUI();
-				 //		if (cd.ShowDialog() == DialogResult.OK)
-				 //			option.BackColor = cd.Colour;
-				 //	};
-				 //}
-				}
-			}
+			// Refresh the state
+			cmenu.DataContext = null;
+			cmenu.DataContext = this;
 
 			// Allow users to add custom menu options to the context menu
 			// Do this last so that users have the option of removing options they don't want displayed
 			OnCustomiseContextMenu(new CustomContextMenuEventArgs(cmenu));
 
 			// Show the menu
+			cmenu.Items.TidySeparators();
 			cmenu.PlacementTarget = this;
-			cmenu.Placement = PlacementMode.MousePoint;
 			cmenu.IsOpen = true;
 		}
+
+		/// <summary></summary>
+		public event PropertyChangedEventHandler PropertyChanged;
 
 		/// <summary>Event called just before displaying the context menu to allow users to add custom options to the menu</summary>
 		public event EventHandler<CustomContextMenuEventArgs> CustomiseContextMenu;
@@ -460,6 +442,21 @@ namespace Rylogic.Gui.WPF
 		protected virtual void OnReportError(ReportErrorEventArgs e)
 		{
 			ReportError?.Invoke(this, e);
+		}
+
+		/// <summary>Default handling of render target changes. Set the viewport and camera aspect</summary>
+		public event EventHandler RenderTargetChanged;
+		protected virtual void OnRenderTargetChanged()
+		{
+			// Set the new viewport size. Note: use the actual render area
+			// rather than the render target size since the render target size
+			// is rounded to the next int.
+			var sz = RenderSize;
+			Window.Viewport = new View3d.Viewport(0, 0, (float)sz.Width, (float)sz.Height);
+
+			// Notify of a new render target. Don't directly subscribe to
+			// D3DImage.RenderTargetChanged because that will leak references.
+			RenderTargetChanged?.Invoke(this, EventArgs.Empty);
 		}
 
 		/// <summary>Render</summary>
@@ -478,6 +475,9 @@ namespace Rylogic.Gui.WPF
 					m_resized = false;
 				}
 
+				// Set the camera aspect to achieve the desired pixel aspect
+				ActualPixelAspect = DesiredPixelAspect;
+
 				// Allow objects to be added/removed from the scene
 				OnBuildScene();
 
@@ -490,6 +490,7 @@ namespace Rylogic.Gui.WPF
 				D3DImage.Invalidate();
 			}
 		}
+		private bool m_render_pending;
 
 		// Allow objects to be added/removed from the scene
 		public event EventHandler BuildScene;
@@ -498,8 +499,205 @@ namespace Rylogic.Gui.WPF
 			BuildScene?.Invoke(this, EventArgs.Empty);
 		}
 
-		/// <summary></summary>
-		public event PropertyChangedEventHandler PropertyChanged;
+		/// <summary>Toggle visibility of the origin point</summary>
+		public Command ToggleOriginPoint { get; }
+
+		/// <summary>Toggle visibility of the focus point</summary>
+		public Command ToggleFocusPoint { get; }
+
+		/// <summary>Toggle between orthographic and perspective projection</summary>
+		public Command ToggleOrthographic { get; }
+
+		/// <summary>Toggle Antialiasing on or off</summary>
+		public Command ToggleAntialiasing { get; }
+
+		/// <summary>Reset the camera to the default view for the scene</summary>
+		public Command ResetView { get; }
+
+		/// <summary>Show a dialog for changing the background colour</summary>
+		public Command ChangeBackgroundColour { get; }
+
+		/// <summary>Show a measurement tool window</summary>
+		public Command ShowMeasureTool { get; }
+
+		/// <summary>Show the UI for changing the lighting</summary>
+		public Command ShowLightingUI { get; }
+		private View3dLightingUI m_lighting_ui;
+
+		/// <summary>Show the UI for objects in the scene</summary>
+		public Command ShowObjectManager { get; }
+
+		/// <summary>Pre-set view directions</summary>
+		public ICollectionView ViewPresets
+		{
+			get { return m_view_presets; }
+			private set
+			{
+				if (m_view_presets == value) return;
+				if (m_view_presets != null)
+				{
+					m_view_presets.CurrentChanged -= HandleViewChanged;
+				}
+				m_view_presets = value;
+				if (m_view_presets != null)
+				{
+					m_view_presets.CurrentChanged += HandleViewChanged;
+				}
+
+				// Handler
+				void HandleViewChanged(object sender, EventArgs e)
+				{
+					var view = (EViewPresets)ViewPresets.CurrentItem;
+					if (view == EViewPresets.Current)
+						return;
+
+					var pos = Camera.FocusPoint;
+					switch (view)
+					{
+					default: throw new Exception($"Unknown view pre-set: {view}");
+					case EViewPresets.PosX: Camera.ResetView(+v4.XAxis); break;
+					case EViewPresets.NegX: Camera.ResetView(-v4.XAxis); break;
+					case EViewPresets.PosY: Camera.ResetView(+v4.YAxis); break;
+					case EViewPresets.NegY: Camera.ResetView(-v4.YAxis); break;
+					case EViewPresets.PosZ: Camera.ResetView(+v4.ZAxis); break;
+					case EViewPresets.NegZ: Camera.ResetView(-v4.ZAxis); break;
+					case EViewPresets.PosXYZ: Camera.ResetView(+v4.XAxis + v4.YAxis + v4.ZAxis); break;
+					case EViewPresets.NegXYZ: Camera.ResetView(-v4.XAxis - v4.YAxis - v4.ZAxis); break;
+					}
+					Camera.FocusPoint = pos;
+					Invalidate();
+				};
+			}
+		}
+		private ICollectionView m_view_presets;
+
+		/// <summary>Directions to align the camera up-axis to</summary>
+		public ICollectionView AlignDirections
+		{
+			get { return m_align_directions; }
+			private set
+			{
+				if (m_align_directions == value) return;
+				if (m_align_directions != null)
+				{
+					m_align_directions.CurrentChanged -= HandleAlignAxisChanged;
+				}
+				m_align_directions = value;
+				if (m_align_directions != null)
+				{
+					// Set the current align direction
+					if      (Camera.AlignAxis == +v4.XAxis) m_align_directions.MoveCurrentTo(EAlignDirections.PosX);
+					else if (Camera.AlignAxis == -v4.XAxis) m_align_directions.MoveCurrentTo(EAlignDirections.NegX);
+					else if (Camera.AlignAxis == +v4.YAxis) m_align_directions.MoveCurrentTo(EAlignDirections.PosY);
+					else if (Camera.AlignAxis == -v4.YAxis) m_align_directions.MoveCurrentTo(EAlignDirections.NegY);
+					else if (Camera.AlignAxis == +v4.ZAxis) m_align_directions.MoveCurrentTo(EAlignDirections.PosZ);
+					else if (Camera.AlignAxis == -v4.ZAxis) m_align_directions.MoveCurrentTo(EAlignDirections.NegZ);
+					else                                    m_align_directions.MoveCurrentTo(EAlignDirections.None);
+					m_align_directions.CurrentChanged += HandleAlignAxisChanged;
+				}
+
+				// Handlers
+				void HandleAlignAxisChanged(object sender, EventArgs e)
+				{
+					var align = (EAlignDirections)AlignDirections.CurrentItem;
+					switch (align)
+					{
+					default: throw new Exception($"Unknown align axis direction: {align}");
+					case EAlignDirections.None: Camera.AlignAxis = v4.Zero; break;
+					case EAlignDirections.PosX: Camera.AlignAxis = +v4.XAxis; break;
+					case EAlignDirections.NegX: Camera.AlignAxis = -v4.XAxis; break;
+					case EAlignDirections.PosY: Camera.AlignAxis = +v4.YAxis; break;
+					case EAlignDirections.NegY: Camera.AlignAxis = -v4.YAxis; break;
+					case EAlignDirections.PosZ: Camera.AlignAxis = +v4.ZAxis; break;
+					case EAlignDirections.NegZ: Camera.AlignAxis = -v4.ZAxis; break;
+					}
+					Invalidate();
+				}
+			}
+		}
+		private ICollectionView m_align_directions;
+
+		/// <summary>Available rendering fill modes</summary>
+		public ICollectionView RenderingFillModes
+		{
+			get { return m_rendering_fill_modes; }
+			private set
+			{
+				if (m_rendering_fill_modes == value) return;
+				if (m_rendering_fill_modes != null)
+				{
+					m_rendering_fill_modes.CurrentChanged -= HandleFillModeChanged;
+				}
+				m_rendering_fill_modes = value;
+				if (m_rendering_fill_modes != null)
+				{
+					m_rendering_fill_modes.MoveCurrentTo(Window.FillMode);
+					m_rendering_fill_modes.CurrentChanged += HandleFillModeChanged;
+				}
+
+				// Handler
+				void HandleFillModeChanged(object sender, EventArgs e)
+				{
+					Window.FillMode = (View3d.EFillMode)RenderingFillModes.CurrentItem;
+					Invalidate();
+				}
+			}
+		}
+		private ICollectionView m_rendering_fill_modes;
+
+		/// <summary>Available rendering cull modes</summary>
+		public ICollectionView RenderingCullModes
+		{
+			get { return m_rendering_cull_modes; }
+			private set
+			{
+				if (m_rendering_cull_modes == value) return;
+				if (m_rendering_cull_modes != null)
+				{
+					m_rendering_cull_modes.CurrentChanged -= HandleCullModeChanged;
+				}
+				m_rendering_cull_modes = value;
+				if (m_rendering_cull_modes != null)
+				{
+					m_rendering_cull_modes.MoveCurrentTo(Window.CullMode);
+					m_rendering_cull_modes.CurrentChanged += HandleCullModeChanged;
+				}
+
+				// Handler
+				void HandleCullModeChanged(object sender, EventArgs e)
+				{
+					Window.CullMode = (View3d.ECullMode)RenderingCullModes.CurrentItem;
+					Invalidate();
+				}
+			}
+		}
+		private ICollectionView m_rendering_cull_modes;
+
+		/// <summary>Pre-set view directions</summary>
+		public enum EViewPresets
+		{
+			[Desc("Pre-Set View")] Current,
+			[Desc("+X Axis")] PosX,
+			[Desc("-X Axis")] NegX,
+			[Desc("+Y Axis")] PosY,
+			[Desc("-Y Axis")] NegY,
+			[Desc("+Z Axis")] PosZ,
+			[Desc("-Z Axis")] NegZ,
+			[Desc("+X,+Y,+Z Axis")] PosXYZ,
+			[Desc("-X,-Y,-Z Axis")] NegXYZ,
+		}
+
+		/// <summary>Directions to align the camera up axis to</summary>
+		public enum EAlignDirections
+		{
+			[Desc("No Align")] None,
+			[Desc("+X Axis")] PosX,
+			[Desc("-X Axis")] NegX,
+			[Desc("+Y Axis")] PosY,
+			[Desc("-Y Axis")] NegY,
+			[Desc("+Z Axis")] PosZ,
+			[Desc("-Z Axis")] NegZ,
+		}
 
 		#region EventArgs
 		public class CustomContextMenuEventArgs : EventArgs
@@ -525,3 +723,41 @@ namespace Rylogic.Gui.WPF
 		#endregion
 	}
 }
+#if false
+			{// View
+				var view_menu = cmenu.Items.Add2(new MenuItem { Header = "View" });
+				{// Show coords
+				}
+				{// Object Manager UI
+				 //var obj_mgr_ui = new MenuItem{ Header = "Object Manager" };
+				 //view_menu.Items.Add(obj_mgr_ui);
+				 //obj_mgr_ui.Click += (s,a) => Window.ShowObjectManager(true);
+				}
+			}
+			{// Navigation
+				var rdr_menu = cmenu.Items.Add2(new MenuItem { Header = "Navigation" });
+
+				{// Orbit
+				 //	var orbit_menu = new MenuItem{ Header = "Orbit" };
+				 //	rdr_menu.Items.Add2(orbit_menu);
+				 //	orbit_menu.Click += delegate {};
+				}
+			}
+			{// Rendering
+				{// Background colour
+				 //var bk_colour_menu = new MenuItem{ Header = "Background Colour" };
+				 //rdr_menu.Items.Add2(bk_colour_menu);
+				 //{
+				 //	var opt = bk_colour_menu.Items.Add2(new Button { });
+				 //	opt.Background = new SolidColorBrush(Window.BackgroundColour.ToMediaColor());
+				 //	opt. += delegate { Window.BackgroundColour = option.BackColor; Refresh(); };
+				 //	opt.Click += (s,a) =>
+				 //	{
+				 //		var cd = new ColourUI();
+				 //		if (cd.ShowDialog() == DialogResult.OK)
+				 //			option.BackColor = cd.Colour;
+				 //	};
+				 //}
+				}
+			}
+#endif

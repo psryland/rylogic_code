@@ -32,7 +32,7 @@ namespace Rylogic.Gui.WPF
 				Orthographic = false;
 				MinSelectionDistance = 10f;
 				MinDragPixelDistance = 5f;
-				PerpendicularZTranslation = false;
+				MouseCentredZoom = true;
 				ResetForward = -v4.ZAxis;
 				ResetUp = +v4.YAxis;
 				XAxis = new Axis();
@@ -53,7 +53,7 @@ namespace Rylogic.Gui.WPF
 				Orthographic = rhs.Orthographic;
 				MinSelectionDistance = rhs.MinSelectionDistance;
 				MinDragPixelDistance = rhs.MinDragPixelDistance;
-				PerpendicularZTranslation = rhs.PerpendicularZTranslation;
+				MouseCentredZoom = rhs.MouseCentredZoom;
 				ResetForward = rhs.ResetForward;
 				ResetUp = rhs.ResetUp;
 				XAxis = new Axis(rhs.XAxis);
@@ -73,7 +73,7 @@ namespace Rylogic.Gui.WPF
 				Orthographic = node.Element(nameof(Orthographic)).As(Orthographic);
 				MinSelectionDistance = node.Element(nameof(MinSelectionDistance)).As(MinSelectionDistance);
 				MinDragPixelDistance = node.Element(nameof(MinDragPixelDistance)).As(MinDragPixelDistance);
-				PerpendicularZTranslation = node.Element(nameof(PerpendicularZTranslation)).As(PerpendicularZTranslation);
+				MouseCentredZoom = node.Element(nameof(MouseCentredZoom)).As(MouseCentredZoom);
 				ResetForward = node.Element(nameof(ResetForward)).As(ResetForward);
 				ResetUp = node.Element(nameof(ResetUp)).As(ResetUp);
 				XAxis = node.Element(nameof(XAxis)).As(XAxis);
@@ -93,7 +93,7 @@ namespace Rylogic.Gui.WPF
 				node.Add2(nameof(Orthographic), Orthographic, false);
 				node.Add2(nameof(MinSelectionDistance), MinSelectionDistance, false);
 				node.Add2(nameof(MinDragPixelDistance), MinDragPixelDistance, false);
-				node.Add2(nameof(PerpendicularZTranslation), PerpendicularZTranslation, false);
+				node.Add2(nameof(MouseCentredZoom), MouseCentredZoom, false);
 				node.Add2(nameof(ResetForward), ResetForward, false);
 				node.Add2(nameof(ResetUp), ResetUp, false);
 				node.Add2(nameof(XAxis), XAxis, false);
@@ -207,12 +207,12 @@ namespace Rylogic.Gui.WPF
 			private float m_MinDragPixelDistance;
 
 			/// <summary>True if the camera should move along a ray cast through the mouse point</summary>
-			public bool PerpendicularZTranslation
+			public bool MouseCentredZoom
 			{
-				get { return m_PerpendicularZTranslation; }
-				set { SetProp(ref m_PerpendicularZTranslation, value, nameof(PerpendicularZTranslation)); }
+				get { return m_MouseCentredZoom; }
+				set { SetProp(ref m_MouseCentredZoom, value, nameof(MouseCentredZoom)); }
 			}
-			private bool m_PerpendicularZTranslation;
+			private bool m_MouseCentredZoom;
 
 			/// <summary>The forward direction of the camera when reset</summary>
 			public v4 ResetForward

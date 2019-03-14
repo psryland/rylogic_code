@@ -27,7 +27,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Recursively enumerates all logical children of this DependencyObject (depth first)</summary>
 		public static IEnumerable<DependencyObject> AllLogicalChildren(this DependencyObject parent)
 		{
-			foreach (var child in LogicalTreeHelper.GetChildren(parent).Cast<DependencyObject>())
+			foreach (var child in LogicalTreeHelper.GetChildren(parent).OfType<DependencyObject>())
 			{
 				foreach (var c in child.AllLogicalChildren())
 					yield return c;
@@ -36,17 +36,17 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Finds a child in the visual tree matching the specified type (and, optionally, name). Depth-first search</summary>
-		public static T FindVisualChild<T>(this DependencyObject parent, string name = null) where T : DependencyObject
+		public static T FindVisualChild<T>(this DependencyObject parent, Func<T,bool> pred = null) where T : DependencyObject
 		{
 			for (int i = 0, iend = VisualTreeHelper.GetChildrenCount(parent); i != iend; ++i)
 			{
 				// Check each child
 				var child = VisualTreeHelper.GetChild(parent, i);
-				if (child is T && (name == null || (child is FrameworkElement fe && fe.Name == name)))
-					return (T)child;
+				if (child is T tchild && (pred == null || pred(tchild)))
+					return tchild;
 
 				// Recurse into children
-				var item = child.FindVisualChild<T>(name);
+				var item = child.FindVisualChild<T>(pred);
 				if (item != null)
 					return item;
 			}
@@ -57,7 +57,7 @@ namespace Rylogic.Gui.WPF
 		/// Finds a parent in the visual tree matching the specified type.
 		/// If 'name' is given, the parent must have the given name.
 		/// if 'root' is given, the search stops if 'root' is encountered (after testing if it's a parent)</summary>
-		public static T FindVisualParent<T>(this DependencyObject item, string name = null, DependencyObject root = null) where T : class
+		public static T FindVisualParent<T>(this DependencyObject item, Func<T,bool> pred = null, DependencyObject root = null) where T : DependencyObject
 		{
 			if (item == null)
 				return null;
@@ -66,8 +66,8 @@ namespace Rylogic.Gui.WPF
 
 			for (DependencyObject parent; (parent = VisualTreeHelper.GetParent(item)) != null; item = parent)
 			{
-				if (parent is T && (name == null || (parent is FrameworkElement fe && fe.Name == name)))
-					return parent as T;
+				if (parent is T tparent && (pred == null || pred(tparent)))
+					return tparent;
 				if (ReferenceEquals(parent, root))
 					break;
 			}
@@ -139,5 +139,38 @@ namespace Rylogic.Gui.WPF
 			d3d_image.SetRenderTargetSize(width, height);
 		}
 
+		/// <summary>Hide successive or start/end separators</summary>
+		public static void TidySeparators(this ItemCollection items, bool recursive = true)
+		{
+			// Note: Not using MenuItem.IsVisible because that also includes the parent's
+			// visibility (which during construction is usually false).
+			int s, e;
+
+			// Hide starting separators
+			for (s = 0; s != items.Count && items[s] is Separator sep; ++s)
+				sep.Visibility = Visibility.Collapsed;
+
+			// Hide ending separators
+			for (e = items.Count; e-- != 0 && items[e] is Separator sep;)
+				sep.Visibility = Visibility.Collapsed;
+
+			// Hide successive separators
+			for (int i = s + 1; i < e; ++i)
+			{
+				if (!(items[i] is Separator sep)) continue;
+
+				// Make the first separator in the contiguous sequence visible
+				sep.Visibility = Visibility.Visible;
+				for (int j = i + 1; j < e && items[j] is Separator sep2; i = j, ++j)
+					sep2.Visibility = Visibility.Collapsed;
+			}
+
+			// Tidy sub menus as well
+			if (recursive)
+			{
+				foreach (var item in items.OfType<MenuItem>())
+					item.Items.TidySeparators(recursive);
+			}
+		}
 	}
 }

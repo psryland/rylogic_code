@@ -21,7 +21,7 @@ namespace TestWPF
 	/// <summary>
 	/// Interaction logic for ChartUI.xaml
 	/// </summary>
-	public partial class ChartUI : Window, IDisposable
+	public partial class ChartUI : Window
 	{
 		private ChartDataSeries m_series;
 		private ChartDataLegend m_legend;
@@ -43,9 +43,9 @@ namespace TestWPF
 				{
 					new View3d.Vertex(new v4(+0, +1, +0, 1), new v4(+0.00f, +1.00f, +0.00f, 0), 0xffff0000, new v2(0.50f, 1)),
 					new View3d.Vertex(new v4(-1, -1, -1, 1), new v4(-0.57f, -0.57f, -0.57f, 0), 0xff00ff00, new v2(0.00f, 0)),
-					new View3d.Vertex(new v4(+1, -1, -1, 1), new v4(+0.57f, -0.57f, -0.57f, 0), 0xff0000ff, new v2(0.25f, 0)),
+					new View3d.Vertex(new v4(-1, -1, +1, 1), new v4(-0.57f, -0.57f, +0.57f, 0), 0xff0000ff, new v2(0.25f, 0)),
 					new View3d.Vertex(new v4(+1, -1, +1, 1), new v4(+0.57f, -0.57f, +0.57f, 0), 0xffff00ff, new v2(0.50f, 0)),
-					new View3d.Vertex(new v4(-1, -1, +1, 1), new v4(-0.57f, -0.57f, +0.57f, 0), 0xff00ffff, new v2(0.75f, 0)),
+					new View3d.Vertex(new v4(+1, -1, -1, 1), new v4(+0.57f, -0.57f, -0.57f, 0), 0xff00ffff, new v2(0.75f, 0)),
 				},
 				new ushort[]
 				{
@@ -83,10 +83,12 @@ namespace TestWPF
 			m_legend = new ChartDataLegend();
 			m_chart.Elements.Add(m_legend);
 		}
-		public void Dispose()
+		protected override void OnClosed(EventArgs e)
 		{
+			Gui_.DisposeChildren(this, EventArgs.Empty);
 			Util.Dispose(ref m_series);
 			Util.Dispose(ref m_obj0);
+			base.OnClosed(e);
 		}
 	}
 }

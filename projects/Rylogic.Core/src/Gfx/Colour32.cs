@@ -4,8 +4,11 @@
 //***************************************************
 
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
+using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using Rylogic.Maths;
 
@@ -14,6 +17,13 @@ namespace Rylogic.Gfx
 	[StructLayout(LayoutKind.Sequential)]
 	public struct Colour32 :IComparable<Colour32> ,IComparable
 	{
+		static Colour32()
+		{
+			NamedValues = typeof(Colour32)
+				.GetProperties(BindingFlags.Static | BindingFlags.Public)
+				.Where(x => x.PropertyType == typeof(Colour32))
+				.ToDictionary(x => x.Name, x => (Colour32)x.GetValue(null));
+		}
 		public Colour32(uint argb)
 		{
 			m_argb = argb;
@@ -136,6 +146,10 @@ namespace Rylogic.Gfx
 
 			byte a, r, g, b;
 
+			// Accept a named colour
+			if (NamedValues.TryGetValue(s, out col))
+				return true;
+
 			// Accept #AARRGGBB
 			if (s.Length == 9 && s[0] == '#' &&
 				uint.TryParse(s.Substring(1, 8), NumberStyles.HexNumber, null, out var aarrggbb))
@@ -205,16 +219,18 @@ namespace Rylogic.Gfx
 		#endregion
 
 		#region Constants
-		public static Colour32 Zero = new Colour32(0x00, 0x00, 0x00, 0x00);
-		public static Colour32 Black = new Colour32(0xFF, 0x00, 0x00, 0x00);
-		public static Colour32 White = new Colour32(0xFF, 0xFF, 0xFF, 0xFF);
-		public static Colour32 Red = new Colour32(0xFF, 0xFF, 0x00, 0x00);
-		public static Colour32 Green = new Colour32(0xFF, 0x00, 0xFF, 0x00);
-		public static Colour32 Blue = new Colour32(0xFF, 0x00, 0x00, 0xFF);
-		public static Colour32 Yellow = new Colour32(0xFF, 0xFF, 0xFF, 0x00);
-		public static Colour32 Aqua = new Colour32(0xFF, 0x00, 0xFF, 0xFF);
-		public static Colour32 Magenta = new Colour32(0xFF, 0xFF, 0x00, 0xFF);
-		public static Colour32 Gray = new Colour32(0xFF, 0x80, 0x80, 0x80);
+		public static Dictionary<string, Colour32> NamedValues { get; }
+
+		public static Colour32 Zero => new Colour32(0x00, 0x00, 0x00, 0x00);
+		public static Colour32 Black => new Colour32(0xFF, 0x00, 0x00, 0x00);
+		public static Colour32 White => new Colour32(0xFF, 0xFF, 0xFF, 0xFF);
+		public static Colour32 Red => new Colour32(0xFF, 0xFF, 0x00, 0x00);
+		public static Colour32 Green => new Colour32(0xFF, 0x00, 0xFF, 0x00);
+		public static Colour32 Blue => new Colour32(0xFF, 0x00, 0x00, 0xFF);
+		public static Colour32 Yellow => new Colour32(0xFF, 0xFF, 0xFF, 0x00);
+		public static Colour32 Aqua => new Colour32(0xFF, 0x00, 0xFF, 0xFF);
+		public static Colour32 Magenta => new Colour32(0xFF, 0xFF, 0x00, 0xFF);
+		public static Colour32 Gray => new Colour32(0xFF, 0x80, 0x80, 0x80);
 
 		public static Colour32 MediumBlue => Color.MediumBlue;
 		public static Colour32 MediumOrchid => Color.MediumOrchid;

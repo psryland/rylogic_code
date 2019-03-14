@@ -252,10 +252,10 @@ extern "C"
 	{
 		NoSnap,
 		Vert,
-		Edge,
-		Face,
 		EdgeMiddle,
 		FaceCentre,
+		Edge,
+		Face,
 	};
 
 	struct View3DV2

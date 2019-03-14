@@ -137,7 +137,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		internal TabStrip TabStrip => Gui_.FindVisualParent<TabStrip>(this);
 
 		/// <summary>Returns the tree root that hosts this tab (Remember AHP's don't host tab strips)</summary>
-		internal ITreeHost TreeHost => Gui_.FindVisualParent<ITreeHost>(this);
+		internal ITreeHost TreeHost => (ITreeHost)Gui_.FindVisualParent<DependencyObject>(this, x => x is ITreeHost);
 
 		/// <summary>The DockControl for the associated dockable item</summary>
 		public DockControl DockControl { get; }

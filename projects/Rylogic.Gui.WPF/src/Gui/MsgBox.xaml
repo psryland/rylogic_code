@@ -11,7 +11,6 @@
 	d:DesignHeight="220" 
 	Title="Message Box"
 	ShowInTaskbar="True"
-	ShowActivated="True"
 	MinWidth="200"
 	MinHeight="100"
 	Width="{Binding Width, ElementName=m_panel}"

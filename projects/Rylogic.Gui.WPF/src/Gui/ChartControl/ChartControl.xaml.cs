@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Media;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Gfx;
@@ -48,13 +47,10 @@ namespace Rylogic.Gui.WPF
 			BaseRangeX = new RangeF(0.0, 1.0);
 			BaseRangeY = new RangeF(0.0, 1.0);
 			MouseOperations = new MouseOps();
-			Tools = new ChartTools(this, Options);
-			//m_tt_show_value = new HintBalloon { AutoSizeMode = AutoSizeMode.GrowOnly };
-			//m_chart_frame = new ChartFrame(this);
-
 			Elements = new ElementCollection(this);
 			Selected = new SelectedCollection(this);
 			Hovered = new HoveredCollection(this);
+			Tools = new ChartTools(this, Options);
 
 			AllowEditing = false;
 			AllowSelection = false;
@@ -62,9 +58,8 @@ namespace Rylogic.Gui.WPF
 			DefaultKeyboardShortcuts = true;
 			AreaSelectMode = EAreaSelectMode.Zoom;
 
+			InitCommands();
 			DataContext = this;
-			m_ap_xaxis_bottom.Axis = XAxis;
-			m_ap_yaxis_left.Axis = YAxis;
 		}
 		public void Dispose()
 		{
@@ -73,36 +68,6 @@ namespace Rylogic.Gui.WPF
 			Range = null;
 			Options = null;
 		}
-		//protected override void OnInvalidated(InvalidateEventArgs e)
-		//{
-		//	Scene?.Invalidate();
-		//	base.OnInvalidated(e);
-		//}
-		//protected override void OnLayout(LayoutEventArgs e)
-		//{
-		//	if (Scene != null && !DesignMode)
-		//	{
-		//		using (this.SuspendLayout(false))
-		//		{
-		//			var dims = ChartDimensions;
-		//			SceneBounds = dims.ChartArea;
-		//			if (Options.LockAspect != null && dims.ChartArea.Area() != 0)
-		//				Aspect = Options.LockAspect.Value;
-		//		}
-		//	}
-		//	base.OnLayout(e);
-		//}
-		//protected override void OnPaint(PaintEventArgs e)
-		//{
-		//	base.OnPaint(e);
-		//	if (DesignMode) return;
-		//	DoPaint(e.Graphics);
-		//}
-		//protected override void OnRender(DrawingContext dc)
-		//{
-		//	base.OnRender(dc);
-		//	DoPaint(dc);
-		//}
 
 		/// <summary>Rendering options for the chart</summary>
 		public OptionsData Options
@@ -166,15 +131,19 @@ namespace Rylogic.Gui.WPF
 				if (value == m_range) return;
 				Util.Dispose(ref m_range);
 				m_range = value;
+
+				NotifyPropertyChanged(nameof(Range));
+				NotifyPropertyChanged(nameof(XAxis));
+				NotifyPropertyChanged(nameof(YAxis));
 			}
 		}
 		private RangeData m_range;
 
 		/// <summary>Accessor to the current X axis</summary>
-		public RangeData.Axis XAxis => Range.XAxis;
+		public RangeData.Axis XAxis => Range?.XAxis;
 
 		/// <summary>Accessor to the current Y axis</summary>
-		public RangeData.Axis YAxis => Range.YAxis;
+		public RangeData.Axis YAxis => Range?.YAxis;
 
 		/// <summary>Default X axis range of the chart</summary>
 		public RangeF BaseRangeX { get; set; }
@@ -194,18 +163,11 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The view of the chart</summary>
 		public View3d.Camera Camera => Scene?.Camera;
 
-		/// <summary>Get/Set the aspect ratio of the chart area</summary>
-		public double Aspect
+		/// <summary>Raised just before the chart renders, allowing users to add custom graphics</summary>
+		public event EventHandler BuildScene
 		{
-			get { return Camera.Aspect * SceneBounds.Height / SceneBounds.Width; }
-			set
-			{
-				if (Aspect == value) return;
-				if (Options.LockAspect != null) Options.LockAspect = value;
-				Camera.Aspect = (float)(value * SceneBounds.Width / SceneBounds.Height);
-				SetRangeFromCamera();
-				//Invalidate();
-			}
+			add { Scene.BuildScene += value; }
+			remove { Scene.BuildScene -= value; }
 		}
 
 		/// <summary></summary>
@@ -221,11 +183,6 @@ namespace Rylogic.Gui.WPF
 		{
 			ChartMoved?.Invoke(this, args);
 		}
-		//private void RaiseChartMoved(ChartMovedEventArgs args)
-		//{
-		//	if (!ChartMoved.IsSuspended())
-		//		OnChartMoved(args);
-		//}
 
 		/// <summary>Raised whenever elements in the chart have been edited or moved</summary>
 		public event EventHandler<ChartChangedEventArgs> ChartChanged;
@@ -241,20 +198,6 @@ namespace Rylogic.Gui.WPF
 				cc => { if (--m_chart_changed_suspended == 0) OnChartChanged(new ChartChangedEventArgs(EChangeType.Edited)); });
 		}
 		private int m_chart_changed_suspended;
-		//private ChartChangedEventArgs RaiseChartChanged(ChartChangedEventArgs args)
-		//{
-		//	if (!ChartChanged.IsSuspended())
-		//		OnChartChanged(args);
-		//
-		//	return args;
-		//}
-
-		/// <summary>Raised just before the chart renders, allowing users to add custom graphics</summary>
-		public event EventHandler BuildScene
-		{
-			add { Scene.BuildScene += value; }
-			remove { Scene.BuildScene -= value; }
-		}
 
 		/// <summary>Called after the chart has painted, allowing users to add graphics on top of the chart</summary>
 		public event EventHandler<AddOverlaysOnPaintEventArgs> AddOverlaysOnPaint;
@@ -262,11 +205,6 @@ namespace Rylogic.Gui.WPF
 		{
 			AddOverlaysOnPaint?.Invoke(this, args);
 		}
-		//private void RaiseAddOverlaysOnPaint(AddOverlaysOnPaintEventArgs args)
-		//{
-		//	if (!AddOverlaysOnPaint.IsSuspended())
-		//		OnAddOverlaysOnPaint(args);
-		//}
 
 		/// <summary>Called during AutoRange to allow handlers to set the auto range</summary>
 		public event EventHandler<AutoRangeEventArgs> AutoRanging;
@@ -274,21 +212,22 @@ namespace Rylogic.Gui.WPF
 		{
 			AutoRanging?.Invoke(this, args);
 		}
-		//private void RaiseOnAutoRanging(AutoRangeEventArgs args)
-		//{
-		//	if (!AutoRanging.IsSuspended())
-		//		OnAutoRanging(args);
-		//}
 
 		/// <summary>Returns a point in chart space from a point in client space. Use to convert mouse (client-space) locations to chart coordinates</summary>
 		public Point ClientToChart(Point client_point)
 		{
+			if (SceneBounds.Width == 0 || SceneBounds.Height == 0)
+				throw new Exception("Chart size is zero, cannot convert from client space to chart space");
+
 			return new Point(
 				(XAxis.Min + (client_point.X - SceneBounds.Left) * XAxis.Span / SceneBounds.Width),
 				(YAxis.Min - (client_point.Y - SceneBounds.Bottom) * YAxis.Span / SceneBounds.Height));
 		}
 		public Size ClientToChart(Size client_size)
 		{
+			if (SceneBounds.Width == 0 || SceneBounds.Height == 0)
+				throw new Exception("Chart size is zero, cannot convert from client space to chart space");
+
 			return new Size(
 				(client_size.Width * XAxis.Span / SceneBounds.Width),
 				(client_size.Height * YAxis.Span / SceneBounds.Height));
@@ -303,12 +242,18 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Returns a point in client space from a point in chart space. Inverse of ClientToChart</summary>
 		public Point ChartToClient(Point chart_point)
 		{
+			if (SceneBounds.Width == 0 || SceneBounds.Height == 0)
+				throw new Exception("Chart size is zero, cannot convert from chart space to client space");
+
 			return new Point(
 				(SceneBounds.Left + (chart_point.X - XAxis.Min) * SceneBounds.Width / XAxis.Span),
 				(SceneBounds.Bottom - (chart_point.Y - YAxis.Min) * SceneBounds.Height / YAxis.Span));
 		}
 		public Size ChartToClient(Size chart_size)
 		{
+			if (SceneBounds.Width == 0 || SceneBounds.Height == 0)
+				throw new Exception("Chart size is zero, cannot convert from chart space to client space");
+
 			return new Size(
 				(chart_size.Width * SceneBounds.Width / XAxis.Span),
 				(chart_size.Height * SceneBounds.Height / YAxis.Span));
@@ -501,14 +446,12 @@ namespace Rylogic.Gui.WPF
 				: Window.SceneBounds(who, except: new[] { ChartTools.Id });
 
 			// Position the camera to view the bounding box
-			Camera.ResetView(bbox, Options.ResetForward, Options.ResetUp,
-				dist: 0f,
-				preserve_aspect: LockAspect,
-				commit: true);
+			Camera.ResetView(bbox, Options.ResetForward, Options.ResetUp, dist: 0f, preserve_aspect: LockAspect, commit: true);
+			Scene.DesiredPixelAspect = Camera.Aspect * Scene.Window.Viewport.Height / Scene.Window.Viewport.Width;
 
 			// Set the axis range from the camera position
 			SetRangeFromCamera();
-			//Invalidate();
+			Scene.Invalidate();
 		}
 
 		/// <summary>Get/Set whether the aspect ratio is locked to the current value</summary>
@@ -537,6 +480,7 @@ namespace Rylogic.Gui.WPF
 			// The span of the X/Y axis is determined by the FoV and the focus point distance.
 			// Set the projection mode before 'ViewArea' because it depends on the projection mode.
 			Scene.Camera.Orthographic = Options.Orthographic;
+			Scene.ActualPixelAspect = Scene.DesiredPixelAspect;
 			var wh = Scene.Camera.ViewArea(Scene.Camera.FocusDist);
 
 			// Set the axes range
@@ -551,8 +495,11 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Position the camera based on the axis range</summary>
 		public void SetCameraFromRange()
 		{
-			// Set the aspect ratio from the axis range and scene bounds
-			Scene.Camera.Aspect = (float)(XAxis.Span / YAxis.Span);
+			// Set the new desired pixel aspect based on the
+			// axis ranges and the current size of the scene.
+			var sz = SceneBounds;
+			Scene.DesiredPixelAspect = Range.Aspect * sz.Height / sz.Width;
+			Scene.ActualPixelAspect = Scene.DesiredPixelAspect;
 
 			// Find the world space position of the new focus point.
 			// Move the focus point within the focus plane (parallel to the camera XY plane)
@@ -571,40 +518,6 @@ namespace Rylogic.Gui.WPF
 
 			Scene.Camera.O2W = c2w;
 			Scene.Camera.Commit();
-		}
-
-		/// <summary>Paint the control</summary>
-		private void DoPaint(DrawingContext dc)
-		{
-			try
-			{
-				// Set the projection mode (this must come before 'SetRangeFromCamera' because
-				// the 'ViewArea' function depends on the projection mode.
-				Scene.Camera.Orthographic = Options.Orthographic;
-
-				// Navigation moves the camera and axis ranges are derived from the camera position/view
-				//SetRangeFromCamera();
-
-				// Get the areas to draw in
-				//var dims = ChartDimensions;
-
-
-				// Draw the chart frame
-				//m_chart_frame.DoPaint(gfx, dims);
-
-				// Ensure the scene is rendered
-				//SceneBounds = dims.ChartArea;
-				//Scene.Update();
-
-				// Add user graphics over the chart
-				//OnAddOverlaysOnPaint(new AddOverlaysOnPaintEventArgs(gfx, dims, ChartToClientSpace(), ~EZone.None ^ EZone.Chart));
-			}
-			catch (OverflowException)
-			{
-				// There is a problem in the .NET graphics object that can cause these exceptions if the range is extreme
-				//using (var bsh = new SolidBrush(Color.FromArgb(0x80, Color.Black)))
-				//	gfx.DrawString("Rendering error within .NET", Options.TitleFont, bsh, PointF.Empty);
-			}
 		}
 
 		/// <summary>The Z value of the highest element in the diagram</summary>
@@ -639,9 +552,12 @@ namespace Rylogic.Gui.WPF
 		/// <summary>True if users are allowed to select elements on the diagram</summary>
 		public bool AllowSelection { get; set; }
 
-		/// <summary>Return a string representation of a location on the chart</summary>
+		/// <summary>Return a string representation of a location on the chart. 'location' is in ChartControl client space</summary>
 		public string LocationText(Point location)
 		{
+			if (SceneBounds.Width == 0 || SceneBounds.Height == 0)
+				return string.Empty;
+
 			var pt = ClientToChart(location);
 			XAxis.GridLines(out var minx, out var maxx, out var stepx);
 			YAxis.GridLines(out var miny, out var maxy, out var stepy);
@@ -657,10 +573,10 @@ namespace Rylogic.Gui.WPF
 		private Rect SceneBounds => Scene.RenderArea(this);
 
 		/// <summary>The client space area of the XAxis area of the chart</summary>
-		private Rect XAxisBounds => m_ap_xaxis_bottom.RenderArea(this);
+		private Rect XAxisBounds => Gui_.FindVisualChild<AxisPanel>(this, x => x.Axis == XAxis)?.RenderArea(this) ?? Rect_.Zero;
 
 		/// <summary>The client space area of the YAxis area of the chart</summary>
-		private Rect YAxisBounds => m_ap_yaxis_left.RenderArea(this);
+		private Rect YAxisBounds => Gui_.FindVisualChild<AxisPanel>(this, x => x.Axis == YAxis)?.RenderArea(this) ?? Rect_.Zero;
 
 		/// <summary>The client space area of the chart title</summary>
 		private Rect TitleBounds => m_lbl_title.RenderArea(this);
@@ -771,55 +687,61 @@ namespace Rylogic.Gui.WPF
 			InvalidateArrange();
 		}
 
-		#region Show Value Tooltip
-
 		/// <summary>A tool tip to display the mouse location value</summary>
-		//private HintBalloon m_tt_show_value;
-		//private bool m_show_value;
-
-		/// <summary>Update the text in the 'show value' hint balloon. 'location' is in client space</summary>
-		private void SetValueToolTip(Point location)
+		private bool ShowValueAtPointer
 		{
-			//if (SceneBounds.Contains(location))
-			//{
-			//	m_tt_show_value.Text = LocationText(location);
-			//	m_tt_show_value.Location = PointToScreen(location);
-			//	m_tt_show_value.Owner = TopLevelControl as Form;
-			//	m_tt_show_value.Visible = true;
-			//}
-			//else
-			//{
-			//	m_tt_show_value.Visible = false;
-			//}
-		}
-
-		#endregion
-
-		#region Show Cross Hair
-
-		/// <summary>True while the cross hair is visible</summary>
-		public bool CrossHairVisible
-		{
-			get { return m_cross_hair_visible; }
+			get { return m_show_value_at_pointer; }
 			set
 			{
-				if (m_cross_hair_visible == value) return;
-				if (m_cross_hair_visible)
+				if (m_show_value_at_pointer == value) return;
+				if (m_show_value_at_pointer)
+				{
+					m_chart_panel.MouseMove -= HandleMouseMove;
+					m_popup_show_value.IsOpen = false;
+				}
+				m_show_value_at_pointer = value;
+				if (m_show_value_at_pointer)
+				{
+					m_popup_show_value.IsOpen = true;
+					m_chart_panel.MouseMove += HandleMouseMove;
+				}
+				NotifyPropertyChanged(nameof(ShowValueAtPointer));
+
+				// Handlers
+				void HandleMouseMove(object sender, MouseEventArgs e)
+				{
+					var pos = e.GetPosition(m_chart_panel);
+					m_popup_show_value.HorizontalOffset = pos.X + 10;
+					m_popup_show_value.VerticalOffset = pos.Y + 20;
+				}
+			}
+		}
+		private bool m_show_value_at_pointer;
+
+		/// <summary>The chart coordinates at the current mouse pointer location</summary>
+		public string ValueAtPointer => LocationText(Mouse.GetPosition(this));
+
+		/// <summary>True while the cross hair is visible</summary>
+		public bool ShowCrossHair
+		{
+			get { return m_show_cross_hair; }
+			set
+			{
+				if (m_show_cross_hair == value) return;
+				if (m_show_cross_hair)
 				{
 					MouseMove -= OnMouseMoveCrossHair;
 					MouseWheel -= OnMouseWheelCrossHair;
-					Scene.RemoveObject(m_tools.CrossHairH);
-					Scene.RemoveObject(m_tools.CrossHairV);
+					Scene.RemoveObject(Tools.CrossHair);
 				}
-				m_cross_hair_visible = value;
-				if (m_cross_hair_visible)
+				m_show_cross_hair = value;
+				if (m_show_cross_hair)
 				{
-					Scene.AddObject(m_tools.CrossHairH);
-					Scene.AddObject(m_tools.CrossHairV);
+					Scene.AddObject(Tools.CrossHair);
 					MouseWheel += OnMouseWheelCrossHair;
 					MouseMove += OnMouseMoveCrossHair;
 				}
-				//Invalidate();
+				Scene.Invalidate();
 
 				// Handlers
 				void OnMouseMoveCrossHair(object sender, MouseEventArgs e)
@@ -827,8 +749,8 @@ namespace Rylogic.Gui.WPF
 					var location = e.GetPosition(this);
 					if (SceneBounds.Contains(location))
 					{
-						CrossHairLocation = ClientToChart(location);
-						//Invalidate();
+						PositionCrossHair(ClientToChart(location));
+						Scene.Invalidate();
 					}
 				}
 				void OnMouseWheelCrossHair(object sender, MouseEventArgs e)
@@ -836,51 +758,31 @@ namespace Rylogic.Gui.WPF
 					var location = e.GetPosition(this);
 					if (SceneBounds.Contains(location))
 					{
-						CrossHairLocation = ClientToChart(location);
-						//Invalidate();
+						PositionCrossHair(ClientToChart(location));
+						Scene.Invalidate();
 					}
 				}
+				void PositionCrossHair(Point chart_pt)
+				{
+					if (Tools.CrossHair == null)
+						return;
+
+					// The visible area of the chart at the camera focus distance
+					var view = Camera.ViewArea(Camera.FocusDist);
+
+					// 'chart_pt' converted to camera space
+					var pt_cs = ChartToCamera(chart_pt);
+
+					// Set the o2w for the cross hair
+					// Scale by 2* because the cross hair may be near the border of the chart
+					// and we need one half of the cross to be scaled to the full chart width.
+					Tools.CrossHair.O2P = new m4x4(Camera.O2W.rot, Camera.O2W * pt_cs) * m3x4.Scale(2 * view.x, 2 * view.y, 1f).m4x4;
+
+					Scene.Invalidate();
+				}
 			}
 		}
-		private bool m_cross_hair_visible;
-
-		/// <summary>The chart-space location of the cross hair</summary>
-		public Point CrossHairLocation
-		{
-			get { return m_cross_hair_location; }
-			set
-			{
-				if (m_cross_hair_location == value) return;
-				m_cross_hair_location = value;
-
-				// Scale to fill the view
-				var view = Camera.ViewArea(Camera.FocusDist);
-				var pt_cs = ChartToCamera(m_cross_hair_location);
-				if (m_tools.CrossHairH != null)
-				{
-					// Shift the position to the centre of the camera view
-					var o2w = new m4x4(Camera.O2W.rot, Camera.O2W * new v4(0, pt_cs.y, pt_cs.z, 1f));
-					m_tools.CrossHairH.O2P = o2w * m3x4.Scale(view.x, 1f, 1f).m4x4;
-				}
-				if (m_tools.CrossHairV != null)
-				{
-					// Shift the position to the centre of the camera view
-					var o2w = new m4x4(Camera.O2W.rot, Camera.O2W * new v4(pt_cs.x, 0, pt_cs.z, 1f));
-					m_tools.CrossHairV.O2P = o2w * m3x4.Scale(1f, view.y, 1f).m4x4;
-				}
-
-				// Notify of the new cross hair location
-				CrossHairMoved?.Invoke(this, EventArgs.Empty);
-				//Invalidate();
-				//Update();
-			}
-		}
-		private Point m_cross_hair_location;
-
-		/// <summary>Raised when the cross hair is visible and moved</summary>
-		public event EventHandler CrossHairMoved;
-
-		#endregion
+		private bool m_show_cross_hair;
 
 		/// <summary>Chart graphics</summary>
 		private ChartTools Tools
@@ -895,45 +797,6 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 		private ChartTools m_tools;
-
-		#region Nested Classes
-
-		///// <summary>Special menu item that doesn't draw highlighted</summary>
-		//private class NoHighlightToolStripMenuItem : ToolStripMenuItem
-		//{
-		//	public NoHighlightToolStripMenuItem(string text) : base(text) { }
-		//}
-		//
-		///// <summary>Custom button renderer because the office 'checked' state buttons look crap</summary>
-		//private class ContextMenuRenderer : ToolStripProfessionalRenderer
-		//{
-		//	protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
-		//	{
-		//		var item = e.Item as NoHighlightToolStripMenuItem;
-		//		if (item == null) { base.OnRenderMenuItemBackground(e); return; }
-		//
-		//		e.Graphics.FillRectangle(new SolidBrush(item.BackColor), e.Item.ContentRectangle);
-		//		e.Graphics.DrawRectangle(Pens.Black, e.Item.ContentRectangle);
-		//	}
-		//}
-		//
-		///// <summary>Cursors for the chart</summary>
-		//public static class Cursors
-		//{
-		//	public static readonly Cursor Default = System.Windows.Forms.Cursors.Default;
-		//	public static readonly Cursor WaitCursor = System.Windows.Forms.Cursors.WaitCursor;
-		//	public static readonly Cursor SizeWE = System.Windows.Forms.Cursors.SizeWE;
-		//	public static readonly Cursor SizeNS = System.Windows.Forms.Cursors.SizeNS;
-		//	public static readonly Cursor SizeNESW = System.Windows.Forms.Cursors.SizeNESW;
-		//	public static readonly Cursor SizeNWSE = System.Windows.Forms.Cursors.SizeNWSE;
-		//	public static readonly Cursor SizeAll = System.Windows.Forms.Cursors.SizeAll;
-		//	public static readonly Cursor Arrow = Resources.cursor_arrow.ToCursor(Point.Empty);
-		//	public static readonly Cursor ArrowPlus = Resources.cursor_arrow_plus.ToCursor(Point.Empty);
-		//	public static readonly Cursor ArrowMinus = Resources.cursor_arrow_minus.ToCursor(Point.Empty);
-		//	public static readonly Cursor CrossHair = System.Windows.Forms.Cursors.Cross;
-		//}
-
-		#endregion
 
 		#region Self Consistency
 

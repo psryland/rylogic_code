@@ -6,7 +6,6 @@ using System.Drawing;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Windows.Media;
 using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Extn;
@@ -61,17 +60,11 @@ namespace Rylogic.Gui.WPF
 		public OptionsData Options { get; set; }
 
 		/// <summary>Gain access to the underlying data</summary>
-		public LockData Lock()
-		{
-			return new LockData(this);
-		}
+		public LockData Lock() => new LockData(this);
 		private List<Pt> m_data;
 
 		/// <summary>Read the number of data points in the series. (Not synchronised by 'Lock()')</summary>
-		public int SampleCount
-		{
-			get { return m_data.Count; }
-		}
+		public int SampleCount => m_data.Count;
 
 		/// <summary>The format of the plot data</summary>
 		public EFormat Format { get; set; }
@@ -401,10 +394,7 @@ namespace Rylogic.Gui.WPF
 		private GfxCache m_impl_cache;
 
 		/// <summary>ToString</summary>
-		public override string ToString()
-		{
-			return $"{Name} count={m_data.Count}";
-		}
+		public override string ToString() => $"{Name} count={m_data.Count}";
 
 		/// <summary>Supported plot types</summary>
 		public enum EPlotType
@@ -620,43 +610,40 @@ namespace Rylogic.Gui.WPF
 		/// <summary>RAII object for synchronising access to the underlying data</summary>
 		public class LockData : ICollection<Pt>, IDisposable
 		{
-			private RangeF m_changed_data_range;
+			private RangeF m_changed_data_rangex;
 			public LockData(ChartDataSeries owner)
 			{
 				Owner = owner;
-				m_changed_data_range = RangeF.Invalid;
+				m_changed_data_rangex = RangeF.Invalid;
 				Monitor.Enter(Data);
 			}
 			public void Dispose()
 			{
-				if (m_changed_data_range == RangeF.Max)
+				if (m_changed_data_rangex == RangeF.Max)
 					Owner.FlushCachedGraphics();
-				else if (m_changed_data_range != RangeF.Invalid)
-					Owner.FlushCachedGraphics(m_changed_data_range);
+				else if (m_changed_data_rangex != RangeF.Invalid)
+					Owner.FlushCachedGraphics(m_changed_data_rangex);
 
 				Monitor.Exit(Data);
 			}
 
 			/// <summary>The data series that this lock is on</summary>
-			public ChartDataSeries Owner { get; private set; }
+			public ChartDataSeries Owner { get; }
 
 			/// <summary>The number of elements in the data series</summary>
-			public int Count
-			{
-				get { return Data.Count; }
-			}
+			public int Count => Data.Count;
 
 			/// <summary>Reset the collection</summary>
 			public void Clear()
 			{
-				m_changed_data_range = RangeF.Max;
+				m_changed_data_rangex = RangeF.Max;
 				Data.Clear();
 			}
 
 			/// <summary>Add a datum point</summary>
 			public Pt Add(Pt point)
 			{
-				m_changed_data_range.Encompass(Format.HasFlag(EFormat.XIntg) ? point.xi : point.xf);
+				m_changed_data_rangex.Encompass(Format.HasFlag(EFormat.XIntg) ? point.xi : point.xf);
 				Data.Add(point);
 				return point;
 			}
@@ -664,14 +651,14 @@ namespace Rylogic.Gui.WPF
 			/// <summary>Remove a datum point</summary>
 			public bool Remove(Pt item)
 			{
-				m_changed_data_range = RangeF.Max;
+				m_changed_data_rangex = RangeF.Max;
 				return Data.Remove(item);
 			}
 
 			/// <summary>Insert a datum point</summary>
 			public Pt Insert(int index, Pt point)
 			{
-				m_changed_data_range.Encompass(Format.HasFlag(EFormat.XIntg) ? point.xi : point.xf);
+				m_changed_data_rangex.Encompass(Format.HasFlag(EFormat.XIntg) ? point.xi : point.xf);
 				Data.Insert(index, point);
 				return point;
 			}
@@ -682,26 +669,23 @@ namespace Rylogic.Gui.WPF
 				get { return Data[idx]; }
 				set
 				{
-					m_changed_data_range.Encompass(Format.HasFlag(EFormat.XIntg) ? value.xi : value.xf);
+					m_changed_data_rangex.Encompass(Format.HasFlag(EFormat.XIntg) ? value.xi : value.xf);
 					Data[idx] = value;
 				}
 			}
 
 			/// <summary>Search for a point</summary>
-			public bool Contains(Pt point)
-			{
-				return Data.Contains(point);
-			}
+			public bool Contains(Pt point) => Data.Contains(point);
 
 			/// <summary>Sort the data series on X values (F = doubles, I = longs)</summary>
 			public void SortF()
 			{
-				m_changed_data_range = RangeF.Max;
+				m_changed_data_rangex = RangeF.Max;
 				Data.Sort(Pt.CompareXf);
 			}
 			public void SortI()
 			{
-				m_changed_data_range = RangeF.Max;
+				m_changed_data_rangex = RangeF.Max;
 				Data.Sort(Pt.CompareXi);
 			}
 

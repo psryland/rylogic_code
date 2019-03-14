@@ -1648,7 +1648,7 @@ namespace ldr
 			/// <summary>Get/Set the light properties. Note returned value is a value type</summary>
 			public LightInfo LightProperties
 			{
-				get { LightInfo light; View3D_LightProperties(Handle, out light); return light; }
+				get { View3D_LightProperties(Handle, out var light); return light; }
 				set { View3D_SetLightProperties(Handle, ref value); }
 			}
 

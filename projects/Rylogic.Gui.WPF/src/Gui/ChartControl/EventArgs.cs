@@ -52,7 +52,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>Results of a hit test performed at the click location</summary>
-			public HitTestResult HitResult { get; private set; }
+			public HitTestResult HitResult { get; }
 
 			/// <summary>The button that was clicked</summary>
 			public MouseButton ChangedButton => m_mouse_event.ChangedButton;
@@ -95,7 +95,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>The area (actually volume if you include Z) of the selection</summary>
-			public BBox SelectionArea { get; private set; }
+			public BBox SelectionArea { get; }
 
 			/// <summary>Set to true to suppress default chart click behaviour</summary>
 			public bool Handled { get; set; }
@@ -112,7 +112,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>The axis being ranged</summary>
-			public EAxis Axis { get; private set; }
+			public EAxis Axis { get; }
 
 			/// <summary>The XAxis range calculated from known chart elements data</summary>
 			public RangeF XRange { get; set; }
@@ -124,27 +124,20 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Customise context menu event args</summary>
 		public class AddUserMenuOptionsEventArgs : EventArgs
 		{
-			public AddUserMenuOptionsEventArgs(EType type, ContextMenu menu, ChartControl.HitTestResult hit_result)
+			public AddUserMenuOptionsEventArgs(ContextMenu menu, HitTestResult hit_result)
 			{
-				Type = type;
 				Menu = menu;
 				HitResult = hit_result;
 			}
 
-			/// <summary>The context menu type</summary>
-			public EType Type { get; private set; }
-			public enum EType
-			{
-				Chart,
-				XAxis,
-				YAxis,
-			}
+			/// <summary>The zone on the chart where the context menu is to be displayed</summary>
+			public EZone Zone => HitResult.Zone;
 
 			/// <summary>The menu to add menu items to</summary>
-			public ContextMenu Menu { get; private set; }
+			public ContextMenu Menu { get; }
 
 			/// <summary>The hit test result at the click location</summary>
-			public ChartControl.HitTestResult HitResult { get; private set; }
+			public HitTestResult HitResult { get; }
 		}
 
 		/// <summary>Event args for the post-paint add overlays call</summary>
@@ -182,7 +175,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>The scene elements to be auto ranged</summary>
-			public View3d.ESceneBounds Who { get; private set; }
+			public View3d.ESceneBounds Who { get; }
 
 			/// <summary>The bounding box of the range to view</summary>
 			public BBox ViewBBox { get; set; }

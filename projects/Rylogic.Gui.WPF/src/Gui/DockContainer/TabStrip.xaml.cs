@@ -45,7 +45,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		private OptionsData Options => TreeHost?.DockContainer.Options ?? new OptionsData();
 
 		/// <summary>Returns the tree root that hosts this tab strip</summary>
-		internal ITreeHost TreeHost => Gui_.FindVisualParent<ITreeHost>(this);
+		internal ITreeHost TreeHost => (ITreeHost)Gui_.FindVisualParent<DependencyObject>(this, x => x is ITreeHost);
 
 		/// <summary>The location of the tab strip. Only L,T,R,B are valid</summary>
 		public EDockSite StripLocation

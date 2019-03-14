@@ -142,7 +142,7 @@ def BuildShader(fullpath:str, platform:str, config:str, pp=False, obj=False, tra
 				if os.path.exists(filepath_pp): os.remove(filepath_pp)
 
 				# Pre process and clean
-				Tools.Exec([UserVars.fxc, fullpath, "/P"+filepath_pp] + includes + defines + options)
+				Tools.Exec([fxc, fullpath, "/P"+filepath_pp] + includes + defines + options)
 				Tools.Exec([os.path.join(UserVars.root, "bin", "textformatter.exe"), "-f", filepath_pp, "-newlines", "0", "1"])
 				if UserVars.textedit:
 					Tools.Exec([UserVars.textedit, filepath_pp])

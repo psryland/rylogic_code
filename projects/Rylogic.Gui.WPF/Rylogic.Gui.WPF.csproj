@@ -60,7 +60,8 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="src\Converters\BoolConverters.cs" />
-    <Compile Include="src\Converters\ColourToBrush.cs" />
+    <Compile Include="src\Converters\ColourConverters.cs" />
+    <Compile Include="src\Converters\MathConverters.cs" />
     <Compile Include="src\Converters\NullConverters.cs" />
     <Compile Include="src\Converters\ValueConverter.cs" />
     <Compile Include="src\Extn\Math.cs" />
@@ -71,14 +72,10 @@
     <Compile Include="src\Gui\ChartControl\ChartPanel.cs" />
     <Compile Include="src\Gui\ChartControl\ChartTools.cs" />
     <Compile Include="src\Gui\ChartControl\ContextMenu.cs" />
-    <Compile Include="src\Gui\ChartControl\EAxis.cs" />
-    <Compile Include="src\Gui\ChartControl\EChangeType.cs" />
     <Compile Include="src\Gui\ChartControl\Element.cs" />
     <Compile Include="src\Gui\ChartControl\ElementCollection.cs" />
-    <Compile Include="src\Gui\ChartControl\EMoveType.cs" />
-    <Compile Include="src\Gui\ChartControl\ENavMode.cs" />
     <Compile Include="src\Gui\ChartControl\EventArgs.cs" />
-    <Compile Include="src\Gui\ChartControl\EZone.cs" />
+    <Compile Include="src\Gui\ChartControl\Enums.cs" />
     <Compile Include="src\Gui\ChartControl\HitTestResult.cs" />
     <Compile Include="src\Gui\ChartControl\HoveredCollection.cs" />
     <Compile Include="src\Gui\ChartControl\MouseOps.cs" />
@@ -95,7 +92,12 @@
     <Compile Include="src\Gui\ChartControl\AxisPanel.xaml.cs">
       <DependentUpon>AxisPanel.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\Gui\ColourWheel.cs" />
+    <Compile Include="src\Gui\ColourPicker\ColourPickerUI.xaml.cs">
+      <DependentUpon>ColourPickerUI.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Gui\ColourPicker\ColourWheel.xaml.cs">
+      <DependentUpon>ColourWheel.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\Gui\DockContainer\DockContainer.xaml.cs">
       <DependentUpon>DockContainer.xaml</DependentUpon>
     </Compile>
@@ -139,15 +141,23 @@
     </Compile>
     <Compile Include="src\Gui\RichTextBox.cs" />
     <Compile Include="src\Gui\ToolBar.cs" />
-    <Compile Include="src\Gui\TriggerTracing.cs" />
+    <Compile Include="src\Gui\View3d\View3dLightingUI.xaml.cs">
+      <DependentUpon>View3dLightingUI.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Utility\TriggerTracing.cs" />
     <Compile Include="src\Gui\View3d\View3dControl.xaml.cs">
       <DependentUpon>View3dControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Gui\View3d\View3dMeasurementUI.xaml.cs">
+      <DependentUpon>View3dMeasurementUI.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\Plugin\Extensions.cs" />
     <Compile Include="src\Program.cs" />
     <Compile Include="src\Converters\MiscConverters.cs" />
+    <Compile Include="src\Utility\Command.cs" />
     <Compile Include="src\Utility\MethodBinding.cs" />
     <Compile Include="src\Utility\RecentFiles.cs" />
+    <Compile Include="src\Utility\PinWindow.cs" />
     <Compile Include="src\Utility\WPFUtil.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -170,6 +180,14 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="src\Gui\ChartControl\AxisPanel.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Gui\ColourPicker\ColourPickerUI.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Gui\ColourPicker\ColourWheel.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -214,6 +232,14 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="src\Gui\View3d\View3dControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Gui\View3d\View3dLightingUI.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Gui\View3d\View3dMeasurementUI.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
