@@ -136,13 +136,22 @@
     <Compile Include="src\Gui\MsgBox.xaml.cs">
       <DependentUpon>MsgBox.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\Gui\PatternEditor.xaml.cs">
+    <Compile Include="src\Gui\Pattern\PatternEditor.xaml.cs">
       <DependentUpon>PatternEditor.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Gui\Pattern\PatternEditorUI.xaml.cs">
+      <DependentUpon>PatternEditorUI.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Gui\Pattern\PatternFilter.xaml.cs">
+      <DependentUpon>PatternFilter.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\Gui\RichTextBox.cs" />
     <Compile Include="src\Gui\ToolBar.cs" />
     <Compile Include="src\Gui\View3d\View3dLightingUI.xaml.cs">
       <DependentUpon>View3dLightingUI.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Gui\View3d\View3dObjectManagerUI.xaml.cs">
+      <DependentUpon>View3dObjectManagerUI.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\Utility\TriggerTracing.cs" />
     <Compile Include="src\Gui\View3d\View3dControl.xaml.cs">
@@ -227,9 +236,17 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="src\Gui\PatternEditor.xaml">
+    <Page Include="src\Gui\Pattern\PatternEditor.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="src\Gui\Pattern\PatternEditorUI.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Gui\Pattern\PatternFilter.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="src\Gui\View3d\View3dControl.xaml">
       <SubType>Designer</SubType>
@@ -240,6 +257,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="src\Gui\View3d\View3dMeasurementUI.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Gui\View3d\View3dObjectManagerUI.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -293,6 +314,7 @@
       <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
       <CustomToolNamespace>Rylogic.Gui.WPF</CustomToolNamespace>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
@@ -301,6 +323,9 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="icon_128x128.ico" />
+    <Resource Include="res\minus1.png" />
+    <Resource Include="res\pencil.png" />
+    <Resource Include="res\plus1.png" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Properties\" />

@@ -12,7 +12,7 @@ namespace Rylogic.Container
 {
 	/// <summary>Extension to BindingList that notifies *before* an item is removed</summary>
 	[DataContract]
-	public class BindingListEx<T> :BindingList<T>, IListChanging<T>, IItemChanged<T>, IBatchChanges
+	public class BindingListEx<T> :BindingList<T>, IList<T>, IListChanging<T>, IItemChanged<T>, IBatchChanges
 	{
 		public BindingListEx() :base()
 		{

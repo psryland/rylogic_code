@@ -128,8 +128,8 @@ namespace Rylogic.Gfx
 			return Alpha((byte)(alpha * 0xFF));
 		}
 
-		/// <summary>A normalised measure of how bright the colour is</summary>
-		public float Intensity => (float)(Math_.Root3 * Math.Sqrt(Rf * Rf + Gf * Gf + Bf * Bf));
+		/// <summary>A normalised measure of how bright the colour is (Based on the HSP Colour Model)</summary>
+		public double Intensity => Math.Sqrt(0.299 * Rf * Rf + 0.587 * Gf * Gf + 0.114 * Bf * Bf);
 
 		#region Parse
 		public static Colour32 Parse(string s, int radix = 16)

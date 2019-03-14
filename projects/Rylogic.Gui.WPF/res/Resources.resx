@@ -101,8 +101,4 @@
 	<data name="regex_quick_ref" type="System.Resources.ResXFileRef, System.Windows.Forms">
 		<value>regex_quick_ref.html;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
 	</data>
-	<data name="dock_close" type="System.Resources.ResXFileRef, System.Windows.Forms">
-		<value>dock_close.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-	</data>
-
 </root>

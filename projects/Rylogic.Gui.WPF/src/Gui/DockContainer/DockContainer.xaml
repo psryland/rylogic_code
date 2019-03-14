@@ -14,17 +14,13 @@
 	>
 	<DockPanel.Resources>
 		<ResourceDictionary>
-			<BitmapImage x:Key ="dock_menu" UriSource="../../res/dock_menu.png"/>
-			<BitmapImage x:Key ="dock_site_top" UriSource="../../res/dock_site_top.png"/>
-			<BitmapImage x:Key ="dock_site_left" UriSource="../../res/dock_site_left.png"/>
-			<BitmapImage x:Key ="dock_site_right" UriSource="../../res/dock_site_right.png"/>
-			<BitmapImage x:Key ="dock_site_bottom" UriSource="../../res/dock_site_bottom.png"/>
-			<BitmapImage x:Key ="dock_site_cross_sm" UriSource="../../res/dock_site_cross_sm.png"/>
-			<BitmapImage x:Key ="dock_site_cross_lg" UriSource="../../res/dock_site_cross_lg.png"/>
-
-
-
-
+			<BitmapImage x:Key ="dock_menu" UriSource="/Rylogic.Gui.WPF;component/res/dock_menu.png"/>
+			<BitmapImage x:Key ="dock_site_top" UriSource="/Rylogic.Gui.WPF;component/res/dock_site_top.png"/>
+			<BitmapImage x:Key ="dock_site_left" UriSource="/Rylogic.Gui.WPF;component/res/dock_site_left.png"/>
+			<BitmapImage x:Key ="dock_site_right" UriSource="/Rylogic.Gui.WPF;component/res/dock_site_right.png"/>
+			<BitmapImage x:Key ="dock_site_bottom" UriSource="/Rylogic.Gui.WPF;component/res/dock_site_bottom.png"/>
+			<BitmapImage x:Key ="dock_site_cross_sm" UriSource="/Rylogic.Gui.WPF;component/res/dock_site_cross_sm.png"/>
+			<BitmapImage x:Key ="dock_site_cross_lg" UriSource="/Rylogic.Gui.WPF;component/res/dock_site_cross_lg.png"/>
 		</ResourceDictionary>
 	</DockPanel.Resources>
 </DockPanel>

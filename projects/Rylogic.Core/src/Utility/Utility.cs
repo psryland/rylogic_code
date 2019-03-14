@@ -498,33 +498,48 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>Add 'item' to a history list of items.</summary>
-		public static T[] AddToHistoryList<T>(IEnumerable<T> history, T item, int max_history_length, int index = 0, Func<T,T,bool> cmp = null)
+		public static void AddToHistoryList<T>(IList<T> history, T item, int max_history_length, int index = 0, Func<T, T, bool> cmp = null)
 		{
 			if (Equals(item, null))
 				throw new NullReferenceException("Null cannot be added to a history list");
-
-			// Convert the history to a list
-			var list = history?.ToList() ?? new List<T>();
+			if (history.IsReadOnly)
+				throw new ArgumentException("'history' must be an editable list");
 
 			// Remove any existing occurrences of 'item'
-			cmp = cmp ?? ((l,r) => Equals(l,r));
-			list.RemoveIf(i => cmp(i,item));
+			cmp = cmp ?? ((l, r) => Equals(l, r));
+			history.RemoveIf(i => cmp(i, item));
 
 			// Insert 'item' into the history
-			index = Math_.Min(index, max_history_length-1, list.Count);
-			list.Insert(index, item);
+			index = Math_.Min(index, max_history_length - 1, history.Count);
+			history.Insert(index, item);
 
 			// Ensure the history doesn't grow too long
-			list.RemoveToEnd(max_history_length);
-			return list.ToArray();
+			history.RemoveToEnd(max_history_length);
+		}
+		public static void AddToHistoryList<T>(IList<T> history, T item, bool ignore_case, int max_history_length, int index = 0)
+		{
+			var flags = ignore_case ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+			bool Cmp(T left, T right) => string.Compare(left.ToString(), right.ToString(), flags) == 0;
+			AddToHistoryList(history, item, max_history_length, index, Cmp);
 		}
 
 		/// <summary>Add 'item' to a history list of items.</summary>
-		public static T[] AddToHistoryList<T>(IEnumerable<T> history, T item, bool ignore_case, int max_history_length, int index = 0)
+		public static T[] AddToHistoryList<T>(T[] history, T item, int max_history_length, int index = 0, Func<T,T,bool> cmp = null)
 		{
-			return ignore_case
-				? AddToHistoryList(history, item, max_history_length, index, (l,r) => string.Compare(l.ToString(), r.ToString(), StringComparison.OrdinalIgnoreCase) == 0)
-				: AddToHistoryList(history, item, max_history_length, index, (l,r) => string.Compare(l.ToString(), r.ToString(), StringComparison.Ordinal) == 0);
+			// Convert the history to a list
+			var list = history?.ToList() ?? new List<T>();
+
+			// Add 'item' to the list
+			AddToHistoryList(list, item, max_history_length, index, cmp);
+
+			// Return the history as an array
+			return list.ToArray();
+		}
+		public static T[] AddToHistoryList<T>(T[] history, T item, bool ignore_case, int max_history_length, int index = 0)
+		{
+			var flags = ignore_case ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+			bool Cmp(T left, T right) => string.Compare(left.ToString(), right.ToString(), flags) == 0;
+			return AddToHistoryList(history, item, max_history_length, index, Cmp);
 		}
 
 		/// <summary>Return the distance between to points</summary>

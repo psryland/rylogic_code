@@ -10,33 +10,32 @@ namespace Rylogic.Gui.WPF
 	{
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			if (value is Color col)
+			// Convert all colour types to Colour32
+			var colour = Colour32.Black;
+			switch (value)
 			{
-				return new SolidColorBrush(col);
+			case Color col:
+				{
+					colour = col.ToColour32();
+					break;
+				}
+			case Colour32 col32:
+				{
+					colour = col32;
+					break;
+				}
+			case uint u32:
+				{
+					colour = new Colour32(u32);
+					break;
+				}
+			case int i32:
+				{
+					colour = new Colour32((uint)i32);
+					break;
+				}
 			}
-			if (value is Colour32 col32)
-			{
-				return new SolidColorBrush(col32.ToMediaColor());
-			}
-			if (value is uint u32)
-			{
-				var a = (byte)((u32 >> 24) & 0xFF);
-				var r = (byte)((u32 >> 16) & 0xFF);
-				var g = (byte)((u32 >> 8) & 0xFF);
-				var b = (byte)((u32 >> 0) & 0xFF);
-				return new SolidColorBrush(Color.FromArgb(a, r, g, b));
-			}
-			if (value is int i32)
-			{
-				u32 = (uint)i32;
-				var a = (byte)((u32 >> 24) & 0xFF);
-				var r = (byte)((u32 >> 16) & 0xFF);
-				var g = (byte)((u32 >> 8) & 0xFF);
-				var b = (byte)((u32 >> 0) & 0xFF);
-				return new SolidColorBrush(Color.FromArgb(a, r, g, b));
-			}
-
-			return null;
+			return new SolidColorBrush(colour.ToMediaColor());
 		}
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
@@ -53,53 +52,67 @@ namespace Rylogic.Gui.WPF
 			return null;
 		}
 	}
-
 	public class ColourToString : IValueConverter
 	{
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			if (value is Color col)
+			switch (value)
 			{
+			case Color col:
 				return col.ToString();
-			}
-			if (value is Colour32 col32)
-			{
+			case Colour32 col32:
 				return col32.ToString();
-			}
-			if (value is uint u32)
-			{
+			case uint u32:
 				return new Colour32(u32).ToString();
-			}
-			if (value is int i32)
-			{
-				u32 = (uint)i32;
-				return new Colour32(u32).ToString();
+			case int i32:
+				return new Colour32((uint)i32).ToString();
 			}
 			return null;
 		}
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (!(value is string str))
-			{
 				return null;
-			}
 			if (targetType.Equals(typeof(Color)))
-			{
 				return Colour32.TryParse(str)?.ToMediaColor();
-			}
 			if (targetType.Equals(typeof(Colour32)))
-			{
 				return Colour32.TryParse(str);
-			}
 			if (targetType.Equals(typeof(uint)))
-			{
 				return Colour32.TryParse(str)?.ARGB;
-			}
 			if (targetType.Equals(typeof(int)))
-			{
 				return (int?)Colour32.TryParse(str)?.ARGB;
-			}
 			return null;
+		}
+	}
+	public class TextOverColourBrush : IValueConverter
+	{
+		// Notes:
+		//   - Given a colour, returns a brush suitable for text written over that colour
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			var colour = Colour32.White;
+			switch (value)
+			{
+			case Color col:
+				colour = col.ToColour32();
+				break;
+			case Colour32 col32:
+				colour = col32;
+				break;
+			case uint u32:
+				colour = new Colour32(u32);
+				break;
+			case int i32:
+				colour = new Colour32((uint)i32);
+				break;
+			}
+			return colour.Intensity > 0.5
+				? Brushes.Black
+				: Brushes.White;
+		}
+		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			throw new NotImplementedException();
 		}
 	}
 }

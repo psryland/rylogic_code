@@ -106,8 +106,10 @@ namespace Rylogic.Gui.WPF
 				});
 				ShowObjectManager = Command.Create(this, () =>
 				{
-					//new View3dObjectManager(this).Show();
-					MessageBox.Show("ToDo...");
+					m_object_manager_ui = m_object_manager_ui ?? new View3dObjectManagerUI(this);
+					m_object_manager_ui.Closed += (s, a) => m_object_manager_ui = null;
+					m_object_manager_ui.Show();
+					m_object_manager_ui.Focus();
 				});
 
 				ViewPresets = new ListCollectionView(Enum<EViewPresets>.ValuesArray);
@@ -526,6 +528,7 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Show the UI for objects in the scene</summary>
 		public Command ShowObjectManager { get; }
+		private View3dObjectManagerUI m_object_manager_ui;
 
 		/// <summary>Pre-set view directions</summary>
 		public ICollectionView ViewPresets

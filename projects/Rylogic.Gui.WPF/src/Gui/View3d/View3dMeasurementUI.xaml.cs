@@ -46,6 +46,7 @@ namespace Rylogic.Gui.WPF
 		{
 			Measurement = null;
 			View3dCtrl = null;
+			PinState = null;
 			base.OnClosed(e);
 		}
 
@@ -87,7 +88,7 @@ namespace Rylogic.Gui.WPF
 		}
 		private View3dControl m_view3d_ctrl;
 
-		/// <summary></summary>
+		/// <summary>The view model for the measurement behaviour</summary>
 		public Measurement Measurement
 		{
 			get { return m_measurement; }
@@ -139,8 +140,18 @@ namespace Rylogic.Gui.WPF
 		}
 		private Measurement m_measurement;
 
-		/// <summary>Pin-able window</summary>
-		private PinData PinState { get; }
+		/// <summary>Pinned window support</summary>
+		private PinData PinState
+		{
+			get { return m_pin_state; }
+			set
+			{
+				if (m_pin_state == value) return;
+				Util.Dispose(ref m_pin_state);
+				m_pin_state = value;
+			}
+		}
+		private PinData m_pin_state;
 
 		/// <summary>Snap to distance</summary>
 		public double SnapDistance
