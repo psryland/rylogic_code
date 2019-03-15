@@ -17,16 +17,14 @@
 	Height="200"
 	>
 	<DockPanel>
-		<StackPanel
+		<DockPanel
 			DockPanel.Dock="Bottom"
-			Orientation="Horizontal"
-			FlowDirection="RightToLeft"
 			Background="{x:Static SystemColors.ControlBrush}"
-			Width="{Binding Width, ElementName=m_panel}"
+			LastChildFill="False"
 			>
-			<Button Content="Cancel" MinWidth="60" Margin="8" IsCancel="True"/>
-			<Button Content="OK" MinWidth="60" Margin="8" IsDefault="True" Click="HandleOkButton"/>
-		</StackPanel>
+			<Button DockPanel.Dock="Right" Content="Cancel" MinWidth="60" Margin="8" IsCancel="True" />
+			<Button DockPanel.Dock="Right" Content="OK" MinWidth="60" Margin="8" IsDefault="True" Click="HandleOkButton"/>
+		</DockPanel>
 		<gui2:ColourWheel
 			x:Name="m_colour_wheel"
 			Orientation="Horizontal"

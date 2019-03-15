@@ -14,7 +14,6 @@
 		<ResourceDictionary>
 			<BitmapImage x:Key="edit_add" UriSource="/Rylogic.Gui.WPF;component/res/edit_add.png"/>
 			<BitmapImage x:Key="edit_save" UriSource="/Rylogic.Gui.WPF;component/res/edit_save.png"/>
-			<gui2:IsEqual x:Key="IsEqual"/>
 		</ResourceDictionary>
 	</UserControl.Resources>
 
@@ -37,15 +36,15 @@
 				<TextBlock MinWidth="50" TextAlignment="Right" VerticalAlignment="Center" Margin="2" Padding="0,0,2,2" FontSize="11">Type:</TextBlock>
 				<RadioButton
 					Content="Substring"
-					IsChecked="{Binding PatnType, Converter={StaticResource IsEqual}, ConverterParameter={x:Static common:EPattern.Substring}}"
+					IsChecked="{Binding PatnType, Converter={gui2:IsEqual}, ConverterParameter={x:Static common:EPattern.Substring}}"
 					VerticalAlignment="Center" Margin="2" FontSize="11" TabIndex="1"/>
 				<RadioButton
 					Content="Wildcard"
-					IsChecked="{Binding PatnType, Converter={StaticResource IsEqual}, ConverterParameter={x:Static common:EPattern.Wildcard}}"
+					IsChecked="{Binding PatnType, Converter={gui2:IsEqual}, ConverterParameter={x:Static common:EPattern.Wildcard}}"
 					VerticalAlignment="Center" Margin="2" FontSize="11" TabIndex="2"/>
 				<RadioButton
 					Content="Regular Expression"
-					IsChecked="{Binding PatnType, Converter={StaticResource IsEqual}, ConverterParameter={x:Static common:EPattern.RegularExpression}}"
+					IsChecked="{Binding PatnType, Converter={gui2:IsEqual}, ConverterParameter={x:Static common:EPattern.RegularExpression}}"
 					VerticalAlignment="Center" Margin="2" FontSize="11" TabIndex="3"/>
 			</StackPanel>
 			<DockPanel Grid.Row="1" LastChildFill="True">

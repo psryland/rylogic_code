@@ -7,7 +7,7 @@ using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
-	public partial class View3dObjectManagerUI : Window, INotifyPropertyChanged
+	public partial class View3dObjectManagerUI : Window
 	{
 		public View3dObjectManagerUI(View3dControl owner)
 		{
@@ -87,7 +87,5 @@ namespace Rylogic.Gui.WPF
 
 		public Command CollapseAll { get; }
 
-		/// <summary></summary>
-		public event PropertyChangedEventHandler PropertyChanged;
 	}
 }

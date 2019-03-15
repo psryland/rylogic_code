@@ -491,23 +491,23 @@ namespace Rylogic.Common
 			}
 
 			/// <summary>Add a control character to the user input buffer. Returns true if the key was used</summary>
-			public bool AddInput(KeyCodes vk)
+			public bool AddInput(EKeyCodes vk)
 			{
 				switch (vk)
 				{
 				default:
 					return false;
 
-				case KeyCodes.Left:
-				case KeyCodes.Right:
-				case KeyCodes.Up:
-				case KeyCodes.Down:
+				case EKeyCodes.Left:
+				case EKeyCodes.Right:
+				case EKeyCodes.Up:
+				case EKeyCodes.Down:
 					return true; // ToDo: Send escape sequences for cursor control?
 
-				case KeyCodes.Back: AddInput('\b'); return true;
-				case KeyCodes.Delete: AddInput(" \b"); return true;
-				case KeyCodes.Return: AddInput('\n'); return true;
-				case KeyCodes.Tab: AddInput('\t'); return true;
+				case EKeyCodes.Back: AddInput('\b'); return true;
+				case EKeyCodes.Delete: AddInput(" \b"); return true;
+				case EKeyCodes.Return: AddInput('\n'); return true;
+				case EKeyCodes.Tab: AddInput('\t'); return true;
 				}
 			}
 
@@ -676,7 +676,7 @@ namespace Rylogic.Common
 				for (; e != eend;)
 				{
 					char c = text[e];
-					if (c == (char)KeyCodes.Escape || m_seq.Length != 0)
+					if (c == (char)EKeyCodes.Escape || m_seq.Length != 0)
 					{
 						Write(text, s, e - s);
 						m_seq.Append(c);
@@ -730,7 +730,7 @@ namespace Rylogic.Common
 					ReportUnsupportedEscapeSequence(m_seq);
 					break;
 
-				case (char)KeyCodes.Escape: // Double escape characters - reset to new escape sequence
+				case (char)EKeyCodes.Escape: // Double escape characters - reset to new escape sequence
 					m_seq.Length = 1;
 					return;
 

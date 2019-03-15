@@ -70,7 +70,7 @@ namespace Rylogic.Gui.WinForms
 		public override bool PreProcessMessage(ref Message m)
 		{
 			// Commit on return
-			if (m.Msg == Win32.WM_KEYDOWN && Win32.ToVKey(m.WParam) == KeyCodes.Return && !Multiline)
+			if (m.Msg == Win32.WM_KEYDOWN && Win32.ToVKey(m.WParam) == EKeyCodes.Return && !Multiline)
 				TextToValueIfValid(Text);
 
 			return base.PreProcessMessage(ref m);

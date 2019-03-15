@@ -56,14 +56,6 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			foreach (var elem in Chart.Elements)
 				elem.UpdateScene(Window);
 
-			// Set Camera properties
-			Camera.Orthographic = Chart.Options.Orthographic;
-
-			// Set window properties
-			Window.BackgroundColour = BackgroundColor.ToColour32();
-			Window.FillMode = Chart.Options.FillMode;
-			Window.CullMode = Chart.Options.CullMode;
-
 			// Raise the BuildScene event
 			base.OnBuildScene();
 		}

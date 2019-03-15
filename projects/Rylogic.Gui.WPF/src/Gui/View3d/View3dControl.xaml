@@ -11,10 +11,6 @@
 	>
 	<Image.Resources>
 		<ResourceDictionary>
-			<gui2:IsEqual x:Key="IsEqual"/>
-			<gui2:EnumToDescConverter x:Key="EnumToDescConverter"/>
-			<sys:UInt32 x:Key="UInt4">4</sys:UInt32>
-
 			<ContextMenu x:Key="View3dControlCMenu">
 				<MenuItem Header="Objects">
 					<MenuItem Header="Origin" IsChecked="{Binding Window.OriginPointVisible}" Command="{Binding ToggleOriginPoint}"/>
@@ -34,7 +30,7 @@
 							>
 							<ComboBox.ItemTemplate>
 								<DataTemplate>
-									<TextBlock Text="{Binding Path=., Converter={StaticResource EnumToDescConverter}}"/>
+									<TextBlock Text="{Binding Path=., Converter={gui2:EnumToDesc}}"/>
 								</DataTemplate>
 							</ComboBox.ItemTemplate>
 						</ComboBox>
@@ -50,18 +46,23 @@
 							>
 							<ComboBox.ItemTemplate>
 								<DataTemplate>
-									<TextBlock Text="{Binding Path=., Converter={StaticResource EnumToDescConverter}}"/>
+									<TextBlock Text="{Binding Path=., Converter={gui2:EnumToDesc}}"/>
 								</DataTemplate>
 							</ComboBox.ItemTemplate>
 						</ComboBox>
 					</MenuItem>
 				</MenuItem>
 				<MenuItem Header="Rendering">
-					<MenuItem Header="Background Colour" Background="{Binding BackgroundColorBrush}" Command="{Binding ChangeBackgroundColour}"/>
-					<MenuItem Header="Antialiasing" IsChecked="{Binding MultiSampling, Converter={StaticResource IsEqual}, ConverterParameter={StaticResource UInt4}}" Command="{Binding ToggleAntialiasing}"/>
+					<MenuItem
+						Header="Background Colour"
+						Background="{Binding Window.BackgroundColour, Converter={gui2:ColourToBrush}}"
+						Foreground="{Binding Window.BackgroundColour, Converter={gui2:TextOverColourBrush}}"
+						Command="{Binding SetBackgroundColour}"
+						/>
+					<MenuItem Header="Antialiasing" IsChecked="{Binding MultiSampling, Converter={gui2:IsEqual}, ConverterParameter=4}" Command="{Binding ToggleAntialiasing}"/>
 					<MenuItem Header="Fill Mode">
 						<ComboBox
-							ItemsSource="{Binding RenderingFillModes}"
+							ItemsSource="{Binding Window.FillMode, Converter={gui2:EnumValues}, Mode=OneTime}"
 							SelectedItem="{Binding Window.FillMode}"
 							Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
 							Background="{x:Static SystemColors.ControlBrush}"
@@ -72,7 +73,7 @@
 					</MenuItem>
 					<MenuItem Header="Cull Mode">
 						<ComboBox
-							ItemsSource="{Binding RenderingCullModes}"
+							ItemsSource="{Binding Window.CullMode, Converter={gui2:EnumValues}, Mode=OneTime}"
 							SelectedItem="{Binding Window.CullMode}"
 							Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
 							Background="{x:Static SystemColors.ControlBrush}"

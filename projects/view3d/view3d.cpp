@@ -113,13 +113,13 @@ namespace pr
 // Initialise calls are reference counted and must be matched with Shutdown calls
 // 'initialise_error_cb' is used to report dll initialisation errors only (i.e. it isn't stored)
 // Note: this function is not thread safe, avoid race calls
-VIEW3D_API View3DContext __stdcall View3D_Initialise(View3D_ReportErrorCB initialise_error_cb, void* ctx, BOOL bgra_compatibility)
+VIEW3D_API View3DContext __stdcall View3D_Initialise(View3D_ReportErrorCB initialise_error_cb, void* ctx, D3D11_CREATE_DEVICE_FLAG device_flags)
 {
 	try
 	{
 		// Create the dll context on the first call
 		if (g_ctx == nullptr)
-			g_ctx = new Context(g_hInstance, bgra_compatibility);
+			g_ctx = new Context(g_hInstance, device_flags);
 
 		// Generate a unique handle per Initialise call, used to match up with Shutdown calls
 		static View3DContext context = nullptr;
@@ -2128,7 +2128,12 @@ VIEW3D_API View3DTexture __stdcall View3D_CreateDx9RenderTarget(HWND hwnd, UINT 
 // Call InvalidateRect on the HWND associated with 'window'
 VIEW3D_API void __stdcall View3D_Invalidate(View3DWindow window, BOOL erase)
 {
-	View3D_InvalidateRect(window, nullptr, erase);
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+		window->Invalidate(erase != 0);
+	}
+	CatchAndReport(View3D_Invalidate, window, );
 }
 
 // Call InvalidateRect on the HWND associated with 'window'
@@ -2317,6 +2322,7 @@ VIEW3D_API void __stdcall View3D_FillModeSet(View3DWindow window, EView3DFillMod
 
 		DllLockGuard;
 		window->m_fill_mode = mode;
+		window->Invalidate();
 	}
 	CatchAndReport(View3D_FillModeSet, window,);
 }
@@ -2341,6 +2347,7 @@ VIEW3D_API void __stdcall View3D_CullModeSet(View3DWindow window, EView3DCullMod
 
 		DllLockGuard;
 		window->m_cull_mode = mode;
+		window->Invalidate();
 	}
 	CatchAndReport(View3D_CullModeSet, window,);
 }
@@ -2365,6 +2372,7 @@ VIEW3D_API void __stdcall View3D_BackgroundColourSet(View3DWindow window, unsign
 
 		DllLockGuard;
 		window->m_background_colour = pr::Colour32(aarrggbb);
+		window->Invalidate();
 	}
 	CatchAndReport(View3D_BackgroundColourSet, window,);
 }
@@ -2390,6 +2398,7 @@ VIEW3D_API void __stdcall View3D_MultiSamplingSet(View3DWindow window, int multi
 		DllLockGuard;
 		pr::rdr::MultiSamp ms(multisampling);
 		window->m_wnd.MultiSampling(ms);
+		window->Invalidate();
 	}
 	CatchAndReport(View3D_MultiSamplingSet, window, );
 }
@@ -2674,7 +2683,7 @@ VIEW3D_API BOOL __stdcall View3D_TranslateKey(View3DWindow window, int key_code)
 				auto forward = up.z > up.y ? View3DV4{0.0f, 1.0f, 0.0f, 0.0f} : View3DV4{0.0f, 0.0f, -1.0f, 0.0f};
 
 				View3D_ResetView(window, forward, up, 0, TRUE, TRUE);
-				View3D_Render(window);
+				View3D_Invalidate(window, FALSE);
 				return TRUE;
 			}
 		case VK_SPACE:
@@ -2691,7 +2700,7 @@ VIEW3D_API BOOL __stdcall View3D_TranslateKey(View3DWindow window, int key_code)
 					case EView3DFillMode::Wireframe: View3D_FillModeSet(window, EView3DFillMode::SolidWire); break;
 					case EView3DFillMode::SolidWire: View3D_FillModeSet(window, EView3DFillMode::Solid); break;
 					}
-					View3D_Render(window);
+					View3D_Invalidate(window, FALSE);
 				}
 				return TRUE;
 			}

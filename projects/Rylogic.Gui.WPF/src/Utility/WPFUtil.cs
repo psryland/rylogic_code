@@ -81,6 +81,12 @@ namespace Rylogic.Gui.WPF
 			return res;
 		}
 
+		/// <summary>Convert to native win32 VK_ value</summary>
+		public static EKeyCodes ToKeyCode(this Key key)
+		{
+			return (EKeyCodes)KeyInterop.VirtualKeyFromKey(key);
+		}
+
 		///// <summary>Returns true if 'point' is more than the drag size from 'ref_point'</summary>
 		//public static bool Moved(Point point, Point ref_point)
 		//{

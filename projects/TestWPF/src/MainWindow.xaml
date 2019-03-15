@@ -15,21 +15,21 @@
 		VerticalScrollBarVisibility="Auto"
 		>
 		<StackPanel>
-			<Menu HorizontalAlignment="Left" VerticalAlignment="Top" Width="517">
+			<Menu>
 				<MenuItem Name="m_menu_file" Header="_File">
-					<MenuItem Name="m_menu_file_open" Header="_Open" HorizontalAlignment="Left" Width="140"/>
+					<MenuItem Name="m_menu_file_open" Header="_Open" Width="140"/>
 					<Separator/>
 					<gui2:RecentFilesMenuItem Name="m_recent_files" Header="_Recent Files"/>
 					<Separator/>
-					<MenuItem Name="m_menu_file_close" Header="_Close" HorizontalAlignment="Left" Width="140"/>
+					<MenuItem Name="m_menu_file_close" Header="_Close" Width="140"/>
 				</MenuItem>
 				<MenuItem Header="_Tests">
-					<MenuItem Name="m_menu_tests_chart" Header="_Chart" HorizontalAlignment="Left" />
-					<MenuItem Name="m_menu_tests_diagram" Header="_Diagram" HorizontalAlignment="Left" />
-					<MenuItem Name="m_menu_tests_dock_container" Header="_Dock Container" HorizontalAlignment="Left" />
-					<MenuItem Name="m_menu_tests_pattern_editor" Header="_Pattern Editor" HorizontalAlignment="Left" />
-					<MenuItem Name="m_menu_tests_tool_ui" Header="_Tool Window" HorizontalAlignment="Left" />
-					<MenuItem Name="m_menu_tests_view3d" Header="_View3D" HorizontalAlignment="Left" />
+					<MenuItem Name="m_menu_tests_chart" Header="_Chart"/>
+					<MenuItem Name="m_menu_tests_diagram" Header="_Diagram"/>
+					<MenuItem Name="m_menu_tests_dock_container" Header="_Dock Container"/>
+					<MenuItem Name="m_menu_tests_pattern_editor" Header="_Pattern Editor"/>
+					<MenuItem Name="m_menu_tests_tool_ui" Header="_Tool Window"/>
+					<MenuItem Name="m_menu_tests_view3d" Header="_View3D"/>
 				</MenuItem>
 			</Menu>
 			<local:ImageButton

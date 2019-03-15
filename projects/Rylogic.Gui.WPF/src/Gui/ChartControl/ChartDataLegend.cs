@@ -31,10 +31,10 @@ namespace Rylogic.Gui.WPF
 			PositionXY = new v2(1f, 1f);
 			ScreenSpace = true;
 		}
-		protected override void Dispose(bool disposing)
+		public override void Dispose()
 		{
 			Gfx = null;
-			base.Dispose(disposing);
+			base.Dispose();
 		}
 		protected override void SetChartCore(ChartControl chart)
 		{

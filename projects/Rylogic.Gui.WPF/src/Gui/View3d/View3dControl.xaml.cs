@@ -64,7 +64,7 @@ namespace Rylogic.Gui.WPF
 				});
 				ToggleAntialiasing = Command.Create(this, () =>
 				{
-					MultiSampling = MultiSampling == 1U ? 4U : 1U;
+					MultiSampling = MultiSampling == 1 ? 4 : 1;
 					Invalidate();
 				});
 				ResetView = Command.Create(this, () =>
@@ -72,22 +72,30 @@ namespace Rylogic.Gui.WPF
 					Camera.ResetView();
 					Invalidate();
 				});
-				ChangeBackgroundColour = Command.Create(this, () =>
+				SetBackgroundColour = Command.Create(this, () =>
 				{
+					var bg = Window.BackgroundColour;
 					var dlg = new ColourPickerUI
 					{
+						Title = "Background Colour",
 						Owner = System.Windows.Window.GetWindow(this),
-						Color = Window.BackgroundColour.ToMediaColor()
+						Color = bg.ToMediaColor(),
+					};
+					dlg.ColorChanged += (s, a) =>
+					{
+						Window.BackgroundColour = a.Colour.ToColour32();
 					};
 					if (dlg.ShowDialog() == true)
-					{
 						Window.BackgroundColour = dlg.Color.ToColour32();
-						Invalidate();
-					}
+					else
+						Window.BackgroundColour = bg;
 				});
 				ShowMeasureTool = Command.Create(this, () =>
 				{
-					new View3dMeasurementUI(this).Show();
+					m_measurement_ui = m_measurement_ui ?? new View3dMeasurementUI(this);
+					m_measurement_ui.Closed += (s, a) => { m_measurement_ui = null; Invalidate(); };
+					m_measurement_ui.Show();
+					m_measurement_ui.Focus();
 				});
 				ShowLightingUI = Command.Create(this, () =>
 				{
@@ -98,7 +106,7 @@ namespace Rylogic.Gui.WPF
 						Invalidate();
 					};
 
-					m_lighting_ui = m_lighting_ui ?? new View3dLightingUI { Owner = System.Windows.Window.GetWindow(this) };
+					m_lighting_ui = m_lighting_ui ?? new View3dLightingUI(this);
 					m_lighting_ui.Closed += (s, a) => m_lighting_ui = null;
 					m_lighting_ui.Light = light;
 					m_lighting_ui.Show();
@@ -114,8 +122,6 @@ namespace Rylogic.Gui.WPF
 
 				ViewPresets = new ListCollectionView(Enum<EViewPresets>.ValuesArray);
 				AlignDirections = new ListCollectionView(Enum<EAlignDirections>.ValuesArray);
-				RenderingFillModes = new ListCollectionView(Enum<View3d.EFillMode>.ValuesArray);
-				RenderingCullModes = new ListCollectionView(Enum<View3d.ECullMode>.ValuesArray);
 
 				// Set defaults
 				BackgroundColor = Colors.LightGray;
@@ -130,7 +136,7 @@ namespace Rylogic.Gui.WPF
 				throw;
 			}
 		}
-		public void Dispose()
+		public virtual void Dispose()
 		{
 			Source = null;
 			D3DImage = null;
@@ -150,7 +156,7 @@ namespace Rylogic.Gui.WPF
 		}
 		private bool m_resized;
 
-		/// <summary>View3d context instance</summary>
+		/// <summary>View3d context reference</summary>
 		public View3d View3d
 		{
 			get { return m_view3d; }
@@ -263,10 +269,14 @@ namespace Rylogic.Gui.WPF
 		public static readonly DependencyProperty BackgroundColorProperty;
 
 		/// <summary>The render target multi-sampling</summary>
-		public uint MultiSampling
+		public int MultiSampling
 		{
 			get { return D3DImage.MultiSampling; }
-			set { D3DImage.MultiSampling = value; }
+			set
+			{
+				D3DImage.MultiSampling = value;
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(MultiSampling)));
+			}
 		}
 
 		/// <summary>The time between mouse down->up that is considered a mouse click</summary>
@@ -296,7 +306,7 @@ namespace Rylogic.Gui.WPF
 
 					void HandleKeyDown(object sender, KeyEventArgs args)
 					{
-						args.Handled = Window.TranslateKey((KeyCodes)args.Key);
+						args.Handled = Window.TranslateKey(args.Key.ToKeyCode());
 					}
 				}
 			}
@@ -517,10 +527,11 @@ namespace Rylogic.Gui.WPF
 		public Command ResetView { get; }
 
 		/// <summary>Show a dialog for changing the background colour</summary>
-		public Command ChangeBackgroundColour { get; }
+		public Command SetBackgroundColour { get; }
 
 		/// <summary>Show a measurement tool window</summary>
 		public Command ShowMeasureTool { get; }
+		private View3dMeasurementUI m_measurement_ui;
 
 		/// <summary>Show the UI for changing the lighting</summary>
 		public Command ShowLightingUI { get; }
@@ -620,66 +631,10 @@ namespace Rylogic.Gui.WPF
 		}
 		private ICollectionView m_align_directions;
 
-		/// <summary>Available rendering fill modes</summary>
-		public ICollectionView RenderingFillModes
-		{
-			get { return m_rendering_fill_modes; }
-			private set
-			{
-				if (m_rendering_fill_modes == value) return;
-				if (m_rendering_fill_modes != null)
-				{
-					m_rendering_fill_modes.CurrentChanged -= HandleFillModeChanged;
-				}
-				m_rendering_fill_modes = value;
-				if (m_rendering_fill_modes != null)
-				{
-					m_rendering_fill_modes.MoveCurrentTo(Window.FillMode);
-					m_rendering_fill_modes.CurrentChanged += HandleFillModeChanged;
-				}
-
-				// Handler
-				void HandleFillModeChanged(object sender, EventArgs e)
-				{
-					Window.FillMode = (View3d.EFillMode)RenderingFillModes.CurrentItem;
-					Invalidate();
-				}
-			}
-		}
-		private ICollectionView m_rendering_fill_modes;
-
-		/// <summary>Available rendering cull modes</summary>
-		public ICollectionView RenderingCullModes
-		{
-			get { return m_rendering_cull_modes; }
-			private set
-			{
-				if (m_rendering_cull_modes == value) return;
-				if (m_rendering_cull_modes != null)
-				{
-					m_rendering_cull_modes.CurrentChanged -= HandleCullModeChanged;
-				}
-				m_rendering_cull_modes = value;
-				if (m_rendering_cull_modes != null)
-				{
-					m_rendering_cull_modes.MoveCurrentTo(Window.CullMode);
-					m_rendering_cull_modes.CurrentChanged += HandleCullModeChanged;
-				}
-
-				// Handler
-				void HandleCullModeChanged(object sender, EventArgs e)
-				{
-					Window.CullMode = (View3d.ECullMode)RenderingCullModes.CurrentItem;
-					Invalidate();
-				}
-			}
-		}
-		private ICollectionView m_rendering_cull_modes;
-
 		/// <summary>Pre-set view directions</summary>
 		public enum EViewPresets
 		{
-			[Desc("Pre-Set View")] Current,
+			[Desc("Current View")] Current,
 			[Desc("+X Axis")] PosX,
 			[Desc("-X Axis")] NegX,
 			[Desc("+Y Axis")] PosY,
@@ -726,41 +681,3 @@ namespace Rylogic.Gui.WPF
 		#endregion
 	}
 }
-#if false
-			{// View
-				var view_menu = cmenu.Items.Add2(new MenuItem { Header = "View" });
-				{// Show coords
-				}
-				{// Object Manager UI
-				 //var obj_mgr_ui = new MenuItem{ Header = "Object Manager" };
-				 //view_menu.Items.Add(obj_mgr_ui);
-				 //obj_mgr_ui.Click += (s,a) => Window.ShowObjectManager(true);
-				}
-			}
-			{// Navigation
-				var rdr_menu = cmenu.Items.Add2(new MenuItem { Header = "Navigation" });
-
-				{// Orbit
-				 //	var orbit_menu = new MenuItem{ Header = "Orbit" };
-				 //	rdr_menu.Items.Add2(orbit_menu);
-				 //	orbit_menu.Click += delegate {};
-				}
-			}
-			{// Rendering
-				{// Background colour
-				 //var bk_colour_menu = new MenuItem{ Header = "Background Colour" };
-				 //rdr_menu.Items.Add2(bk_colour_menu);
-				 //{
-				 //	var opt = bk_colour_menu.Items.Add2(new Button { });
-				 //	opt.Background = new SolidColorBrush(Window.BackgroundColour.ToMediaColor());
-				 //	opt. += delegate { Window.BackgroundColour = option.BackColor; Refresh(); };
-				 //	opt.Click += (s,a) =>
-				 //	{
-				 //		var cd = new ColourUI();
-				 //		if (cd.ShowDialog() == DialogResult.OK)
-				 //			option.BackColor = cd.Colour;
-				 //	};
-				 //}
-				}
-			}
-#endif

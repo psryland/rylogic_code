@@ -92,7 +92,7 @@ namespace Rylogic.Gfx
 		}
 
 		/// <summary>The render target multi-sampling</summary>
-		public uint MultiSampling
+		public int MultiSampling
 		{
 			get { return m_multi_sampling; }
 			set
@@ -102,7 +102,7 @@ namespace Rylogic.Gfx
 				TryCreateRenderTarget();
 			}
 		}
-		private uint m_multi_sampling;
+		private int m_multi_sampling;
 
 		/// <summary>The Dx11 render target texture</summary>
 		public View3d.Texture RenderTarget
@@ -207,7 +207,7 @@ namespace Rylogic.Gfx
 				FrontBuffer = rt0;
 
 				// Add multi-sampling for the main render target
-				opts.MultiSamp = MultiSampling;
+				opts.MultiSamp = (uint)MultiSampling;
 				opts.DbgName = "D3D11Image RenderTarget BB";
 
 				// Create the Dx11 staging render target

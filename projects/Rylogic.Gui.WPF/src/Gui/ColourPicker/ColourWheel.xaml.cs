@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -8,23 +9,20 @@ using Rylogic.Maths;
 
 namespace Rylogic.Gui.WPF
 {
-	public partial class ColourWheel : UserControl
+	public partial class ColourWheel : UserControl, INotifyPropertyChanged
 	{
 		private const string ValueLabel = "V";
 		private const string AlphaLabel = "A";
 		private EParts m_selected_part;
 
-		static ColourWheel()
-		{
-			PartsProperty = Gui_.DPRegister<ColourWheel>(nameof(Parts), EParts.All);
-			OrientationProperty = Gui_.DPRegister<ColourWheel>(nameof(Orientation), Orientation.Horizontal);
-			SliderWidthProperty = Gui_.DPRegister<ColourWheel>(nameof(SliderWidth), 20.0);
-			SelectionIndicatorSizeProperty = Gui_.DPRegister<ColourWheel>(nameof(SelectionIndicatorSize), 6.0);
-			ColourProperty = Gui_.DPRegister<ColourWheel>(nameof(Colour), Colors.White);
-		}
 		public ColourWheel()
 		{
 			InitializeComponent();
+			Parts = EParts.All;
+			Orientation = Orientation.Horizontal;
+			SliderWidth = 20.0;
+			SelectionIndicatorSize = 6.0;
+			Colour = Colors.White;
 		}
 		protected override void OnMouseDown(MouseButtonEventArgs e)
 		{
@@ -145,71 +143,79 @@ namespace Rylogic.Gui.WPF
 		/// <summary>An event raised whenever the selected colour is changed</summary>
 		public event EventHandler<ColourEventArgs> ColourChanged;
 
+		/// <summary></summary>
+		public event PropertyChangedEventHandler PropertyChanged;
+
 		/// <summary>Control orientation</summary>
 		public Orientation Orientation
 		{
-			get { return (Orientation)GetValue(OrientationProperty); }
-			set { SetValue(OrientationProperty, value); }
+			get { return m_orientation; }
+			set
+			{
+				if (m_orientation == value) return;
+				m_orientation = value;
+				LayoutDimensions = null;
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Orientation)));
+			}
 		}
-		private void Orientation_Changed()
-		{
-			LayoutDimensions = null;
-			//PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Orientation)));
-		}
-		public static readonly DependencyProperty OrientationProperty;
+		private Orientation m_orientation;
 
 		/// <summary>The parts of the control to draw</summary>
 		public EParts Parts
 		{
-			get { return (EParts)GetValue(PartsProperty); }
-			set { SetValue(PartsProperty, value); }
+			get { return m_parts; }
+			set
+			{
+				if (m_parts == value) return;
+				m_parts = value;
+				LayoutDimensions = null;
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Parts)));
+			}
 		}
-		private void Parts_Changed()
-		{
-			LayoutDimensions = null;
-			//PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Parts)));
-		}
-		public static readonly DependencyProperty PartsProperty;
+		private EParts m_parts;
 
 		/// <summary>The width of the slider bars</summary>
 		public double SliderWidth
 		{
-			get { return (double)GetValue(SliderWidthProperty); }
-			set { SetValue(SliderWidthProperty, value); }
+			get { return m_slider_width; }
+			set
+			{
+				if (m_slider_width == value) return;
+				m_slider_width = value;
+				LayoutDimensions = null;
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SliderWidth)));
+			}
 		}
-		private void SliderWidth_Changed()
-		{
-			LayoutDimensions = null;
-			//PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SliderWidth)));
-		}
-		public static readonly DependencyProperty SliderWidthProperty;
+		private double m_slider_width;
 
 		/// <summary>The radius of the selector dot</summary>
 		public double SelectionIndicatorSize
 		{
-			get { return (double)GetValue(SelectionIndicatorSizeProperty); }
-			set { SetValue(SelectionIndicatorSizeProperty, value); }
+			get { return m_selection_indicator_size; }
+			set
+			{
+				if (m_selection_indicator_size == value) return;
+				m_selection_indicator_size = value;
+				InvalidateVisual();
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectionIndicatorSize)));
+			}
 		}
-		private void SelectionIndicatorSize_Changed()
-		{
-			InvalidateVisual();
-			//PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectionIndicatorSize)));
-		}
-		public static readonly DependencyProperty SelectionIndicatorSizeProperty;
+		private double m_selection_indicator_size;
 
 		/// <summary>The currently selected colour (RGB)</summary>
 		public Color Colour
 		{
-			get { return (Color)GetValue(ColourProperty); }
-			set { SetValue(ColourProperty, value); }
+			get { return m_colour; }
+			set
+			{
+				if (m_colour == value) return;
+				m_colour = value;
+				ColourChanged?.Invoke(this, new ColourEventArgs(Colour));
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Colour)));
+				InvalidateVisual();
+			}
 		}
-		private void Colour_Changed()
-		{
-			ColourChanged?.Invoke(this, new ColourEventArgs(Colour));
-			//PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Colour)));
-			InvalidateVisual();
-		}
-		public static readonly DependencyProperty ColourProperty;
+		private Color m_colour;
 
 		/// <summary>The currently selected colour (HSV)</summary>
 		public HSV HSVColour

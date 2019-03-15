@@ -509,6 +509,12 @@ namespace pr
 		}
 		void Window::MultiSampling(MultiSamp ms)
 		{
+			if (m_swap_chain == nullptr)
+				throw std::runtime_error(
+					"Setting MultiSampling on a window only applies when there is a back buffer. "
+					"If you're using a window for off-screen rendering only, you'll need to create "
+					"a larger render target texture and use ResolveSubresource. (See D3D11Image)");
+
 			// Changing the multi-sampling mode is a bit like resizing the back buffer
 			RebuildRT([&ms, this](ID3D11Device* device)
 			{

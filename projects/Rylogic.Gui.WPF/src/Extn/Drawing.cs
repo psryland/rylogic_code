@@ -106,6 +106,10 @@ namespace Rylogic.Gui.WPF
 		{
 			return Color.FromArgb(col.A, col.R, col.G, col.B);
 		}
+		public static Color ToMediaColor(this System.Drawing.Color col)
+		{
+			return Color.FromArgb(col.A, col.R, col.G, col.B);
+		}
 
 		/// <summary>Convert this media color to an ARGB value</summary>
 		public static int ToArgb(this Color col)

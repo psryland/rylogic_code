@@ -43,6 +43,7 @@ namespace Rylogic.Gui.WPF
 
 			Options = options;
 			Title = title;
+			View3d = View3d.Create();
 			Range = new RangeData(this);
 			BaseRangeX = new RangeF(0.0, 1.0);
 			BaseRangeY = new RangeF(0.0, 1.0);
@@ -67,6 +68,7 @@ namespace Rylogic.Gui.WPF
 			Tools = null;
 			Range = null;
 			Options = null;
+			View3d = null;
 		}
 
 		/// <summary>Rendering options for the chart</summary>
@@ -84,6 +86,13 @@ namespace Rylogic.Gui.WPF
 				m_options = value;
 				if (m_options != null)
 				{
+					// Apply the options to the scene
+					Camera.Orthographic = Options.Orthographic;
+					Window.FillMode = Options.FillMode;
+					Window.CullMode = Options.CullMode;
+					Window.BackgroundColour = Options.BackgroundColour;
+					Scene.MultiSampling = Options.AntiAliasing ? 4 : 1;
+
 					m_options.PropertyChanged += HandleRdrOptionsChanged;
 				}
 
@@ -91,7 +100,25 @@ namespace Rylogic.Gui.WPF
 				{
 					switch (e.PropertyName)
 					{
-					case nameof(OptionsData.ShowAxes):
+					case nameof(OptionsData.AntiAliasing):
+						Scene.MultiSampling = Options.AntiAliasing ? 4 : 1;
+						Scene.Invalidate();
+						break;
+					case nameof(OptionsData.Orthographic):
+						Camera.Orthographic = Options.Orthographic;
+						Scene.Invalidate();
+						break;
+					case nameof(OptionsData.FillMode):
+						Window.FillMode = Options.FillMode;
+						Scene.Invalidate();
+						break;
+					case nameof(OptionsData.CullMode):
+						Window.CullMode = Options.CullMode;
+						Scene.Invalidate();
+						break;
+					case nameof(OptionsData.BackgroundColour):
+						Window.BackgroundColour = Options.BackgroundColour;
+						Scene.Invalidate();
 						break;
 					}
 				}
@@ -154,8 +181,18 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The view3d part of the chart</summary>
 		public ChartPanel Scene => m_chart_panel;
 
-		/// <summary>Renderer</summary>
-		public View3d View3d => Scene?.View3d;
+		/// <summary>View3d context reference</summary>
+		private View3d View3d
+		{
+			get { return m_view3d; }
+			set
+			{
+				if (m_view3d == value) return;
+				Util.Dispose(ref m_view3d);
+				m_view3d = value;
+			}
+		}
+		private View3d m_view3d;
 
 		/// <summary>The view3d window for this control instance</summary>
 		public View3d.Window Window => Scene?.Window;
@@ -688,7 +725,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>A tool tip to display the mouse location value</summary>
-		private bool ShowValueAtPointer
+		public bool ShowValueAtPointer
 		{
 			get { return m_show_value_at_pointer; }
 			set
@@ -797,6 +834,33 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 		private ChartTools m_tools;
+
+		/// <summary>Create and display a context menu</summary>
+		public void ShowContextMenu(Point location, HitTestResult hit_result)
+		{
+			if (!(FindResource("ChartCMenu") is ContextMenu cmenu))
+				return;
+
+			// Refresh the state
+			cmenu.DataContext = null;
+			cmenu.DataContext = this;
+
+			// Allow users to add/remove menu options
+			// Do this last so that users have the option of removing options they don't want displayed
+			OnCustomiseContextMenu(new AddUserMenuOptionsEventArgs(cmenu, hit_result));
+
+			// Show the context menu
+			cmenu.Items.TidySeparators();
+			cmenu.PlacementTarget = this;
+			cmenu.IsOpen = true;
+		}
+
+		/// <summary>Event allowing callers to add options to the context menu</summary>
+		public event EventHandler<AddUserMenuOptionsEventArgs> AddUserMenuOptions;
+		protected virtual void OnCustomiseContextMenu(AddUserMenuOptionsEventArgs args)
+		{
+			AddUserMenuOptions?.Invoke(this, args);
+		}
 
 		#region Self Consistency
 

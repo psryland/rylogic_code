@@ -44,11 +44,11 @@ namespace Rylogic.Gui.WPF
 			m_point_textures = new PointStyleTextures();
 			m_range_x = RangeF.Invalid;
 		}
-		protected override void Dispose(bool disposing)
+		public override void Dispose()
 		{
 			Cache = null;
 			Util.Dispose(ref m_point_textures);
-			base.Dispose(disposing);
+			base.Dispose();
 		}
 		public override XElement ToXml(XElement node)
 		{

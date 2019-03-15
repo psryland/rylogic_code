@@ -1,5 +1,7 @@
-﻿using System.Windows;
+﻿using System;
+using System.Windows;
 using Rylogic.Gfx;
+using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
@@ -9,6 +11,17 @@ namespace Rylogic.Gui.WPF
 		{
 			InitializeComponent();
 			Light = new View3d.Light();
+		}
+		public View3dLightingUI(View3dControl owner)
+			:this()
+		{
+			Owner = GetWindow(owner);
+			PinState = new PinData(this, EPin.Centre);
+		}
+		protected override void OnClosed(EventArgs e)
+		{
+			base.OnClosed(e);
+			PinState = null;
 		}
 
 		/// <summary>The Light updated by this dialog</summary>
@@ -23,6 +36,19 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 		private View3d.Light m_light;
+
+		/// <summary>Support pinning this window</summary>
+		private PinData PinState
+		{
+			get { return m_pin_state; }
+			set
+			{
+				if (m_pin_state == value) return;
+				Util.Dispose(ref m_pin_state);
+				m_pin_state = value;
+			}
+		}
+		private PinData m_pin_state;
 
 		/// <summary>Handle the close button</summary>
 		private void HandleClose(object sender, RoutedEventArgs args)

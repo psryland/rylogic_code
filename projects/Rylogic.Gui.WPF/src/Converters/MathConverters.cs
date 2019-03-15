@@ -1,21 +1,42 @@
 ﻿using System;
 using System.Globalization;
 using System.Windows.Data;
+using System.Windows.Markup;
 using Rylogic.Maths;
 using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
-	public class VecToString : IValueConverter
+	/// <summary>Scale a value by a parameter</summary>
+	public class ScaleValue : MarkupExtension, IValueConverter
+	{
+		/// <summary>Scale a value by the given parameter</summary>
+		public object Convert(object value, Type target_type, object parameter, CultureInfo culture)
+		{
+			return System.Convert.ToDouble(value) * System.Convert.ToDouble(parameter);
+		}
+		public object ConvertBack(object value, Type target_type, object parameter, CultureInfo culture)
+		{
+			return System.Convert.ToDouble(value) / System.Convert.ToDouble(parameter);
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
+	}
+	public class VecToString : MarkupExtension, IValueConverter
 	{
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			if (value is v4 vec4)
+			switch (value)
+			{
+			case v4 vec4:
 				return parameter != null ? vec4.ToString3() : vec4.ToString4();
-			if (value is v3 vec3)
+			case v3 vec3:
 				return vec3.ToString3();
-			if (value is v2 vec2)
+			case v2 vec2:
 				return vec2.ToString2();
+			}
 			return null;
 		}
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
@@ -50,6 +71,10 @@ namespace Rylogic.Gui.WPF
 			}
 
 			return null;
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
 		}
 	}
 }

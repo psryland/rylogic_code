@@ -1,17 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using Rylogic.Extn;
-using Rylogic.Gfx;
+﻿using System.Windows;
 
 namespace Rylogic.Gui.WPF
 {
 	public partial class ChartControl
 	{
+		// Notes:
+		//  - Many commands are available on View3dControl but I want to make
+		//    the Options the source of truth for the scene settings, so the
+		//    scene commands are implemented again here, usually setting the
+		//    Options value first then forwarding to the View3dControl command.
+
 		/// <summary>Initialise the commands</summary>
 		private void InitCommands()
 		{
@@ -37,7 +35,7 @@ namespace Rylogic.Gui.WPF
 				ShowCrossHair = !ShowCrossHair;
 			});
 
-			// Zoom Menu
+			// Zoom Menu=
 			DoAutoRange = Command.Create(this, () =>
 			{
 				AutoRange();
@@ -58,28 +56,18 @@ namespace Rylogic.Gui.WPF
 			});
 
 			// Rendering
-			NavigationModes = new ListCollectionView(Enum<ENavMode>.ValuesArray);
-			NavigationModes.CurrentChanged += (s, a) =>
+			SetBackgroundColour = Command.Create(this, () =>
 			{
-				Options.NavigationMode = (ENavMode)NavigationModes.CurrentItem;
-				Scene.Invalidate();
-			};
-			RenderingFillModes.MoveCurrentTo(Options.FillMode);
-			RenderingFillModes.CurrentChanged += (s, a) =>
+				Scene.SetBackgroundColour.Execute(null);
+				Options.BackgroundColour = Window.BackgroundColour;
+			});
+			ToggleOrthographic = Command.Create(this, () =>
 			{
-				Options.FillMode = (View3d.EFillMode)RenderingFillModes.CurrentItem;
-			};
+				Options.Orthographic = !Options.Orthographic;
+			});
 			ToggleAntiAliasing = Command.Create(this, () =>
 			{
 				Options.AntiAliasing = !Options.AntiAliasing;
-				Scene.MultiSampling = Options.AntiAliasing ? 4U : 1U;
-				Scene.Invalidate();
-			});
-
-			// Properties
-			ShowOptionsUI = Command.Create(this, () =>
-			{
-				new ChartDetail.OptionsUI(this, Options).ShowDialog();
 			});
 		}
 
@@ -116,46 +104,13 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Toggle the state of zooming at the mouse pointer location</summary>
 		public Command ToggleMouseCentredZoom { get; private set; }
 
-		/// <summary>Available navigation modes for the chart</summary>
-		public ICollectionView NavigationModes { get; private set; }
+		/// <summary>Set the background colour</summary>
+		public Command SetBackgroundColour { get; private set; }
 
 		/// <summary>Toggle between orthographic and perspective projection</summary>
-		public Command ToggleOrthographic => Scene.ToggleOrthographic;
-
-		/// <summary>Available rendering fill modes</summary>
-		public ICollectionView RenderingFillModes => Scene.RenderingFillModes;
+		public Command ToggleOrthographic { get; private set; }
 
 		/// <summary>Toggle antialiasing on/off</summary>
 		public Command ToggleAntiAliasing { get; private set; }
-
-		/// <summary>Show the chart options UI</summary>
-		public Command ShowOptionsUI { get; private set; }
-
-		/// <summary>Create and display a context menu</summary>
-		public void ShowContextMenu(Point location, HitTestResult hit_result)
-		{
-			if (!(FindResource("ChartCMenu") is ContextMenu cmenu))
-				return;
-
-			// Refresh the state
-			cmenu.DataContext = null;
-			cmenu.DataContext = this;
-
-			// Allow users to add/remove menu options
-			// Do this last so that users have the option of removing options they don't want displayed
-			OnCustomiseContextMenu(new AddUserMenuOptionsEventArgs(cmenu, hit_result));
-
-			// Show the context menu
-			cmenu.Items.TidySeparators();
-			cmenu.PlacementTarget = this;
-			cmenu.IsOpen = true;
-		}
-
-		/// <summary>Event allowing callers to add options to the context menu</summary>
-		public event EventHandler<AddUserMenuOptionsEventArgs> AddUserMenuOptions;
-		protected virtual void OnCustomiseContextMenu(AddUserMenuOptionsEventArgs args)
-		{
-			AddUserMenuOptions?.Invoke(this, args);
-		}
 	}
 }

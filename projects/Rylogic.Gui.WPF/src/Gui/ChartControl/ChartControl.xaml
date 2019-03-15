@@ -14,12 +14,6 @@
 
 	<Grid.Resources>
 		<ResourceDictionary>
-			<gui2:ScaleConverter x:Key="Scale"/>
-			<gui2:NullToCollapsed x:Key="NullToCollapsed"/>
-			<gui2:BoolToVisible x:Key="BoolToVisible"/>
-			<gui2:EnumToDescConverter x:Key="EnumToDescConverter"/>
-			<gui2:AnyTrue x:Key="AnyTrue"/>
-			
 			<ContextMenu x:Key="ChartCMenu">
 				<MenuItem Header="Objects">
 					<MenuItem Header="Origin" IsChecked="{Binding Window.OriginPointVisible}" Command="{Binding ToggleOriginPoint}"/>
@@ -31,39 +25,52 @@
 					<MenuItem Header="Show Value" IsChecked="{Binding ShowValueAtPointer}" Command="{Binding ToggleShowValue}"/>
 					<MenuItem Header="Show Cross Hair" IsChecked="{Binding ShowCrossHair}" Command="{Binding ToggleShowCrossHair}"/>
 				</MenuItem>
-				<MenuItem Header="Zoom">
+				<MenuItem Header="Navigation">
+					<MenuItem Header="Mode">
+						<ComboBox
+							ItemsSource="{Binding Options.NavigationMode, Converter={gui2:EnumValues}, Mode=OneTime}"
+							SelectedItem="{Binding Options.NavigationMode}"
+							Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
+							Background="{x:Static SystemColors.ControlBrush}"
+							BorderThickness="0"
+							Margin="1,1,20,1"
+							/>
+					</MenuItem>
 					<MenuItem Header="Auto Range" Command="{Binding DoAutoRange}"/>
 					<MenuItem Header="Aspect 1:1" Command="{Binding DoAspect11}"/>
 					<MenuItem Header="Lock Aspect" IsChecked="{Binding LockAspect}" Command="{Binding ToggleLockAspect}"/>
 					<MenuItem Header="Mouse Centred Zoom" IsCheckable="{Binding Options.MouseCentredZoom}" Command="{Binding ToggleMouseCentredZoom}"/>
 				</MenuItem>
 				<MenuItem Header="Rendering">
-					<ComboBox
-						ItemsSource="{Binding NavigationModes}"
-						SelectedItem="{Binding Options.NavigationMode}"
-						Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
-						Background="{x:Static SystemColors.ControlBrush}"
-						BorderThickness="0"
-						Padding="1,1,20,1"
-						>
-						<ComboBox.ItemTemplate>
-							<DataTemplate>
-								<TextBlock Text="{Binding Path=., Converter={StaticResource EnumToDescConverter}}"/>
-							</DataTemplate>
-						</ComboBox.ItemTemplate>
-					</ComboBox>
+					<MenuItem
+						Header="Background Colour"
+						Background="{Binding Options.BackgroundColour, Converter={gui2:ColourToBrush}}"
+						Foreground="{Binding Options.BackgroundColour, Converter={gui2:TextOverColourBrush}}"
+						Command="{Binding SetBackgroundColour}"
+						/>
 					<MenuItem Header="Orthographic" IsChecked="{Binding Options.Orthographic}" Command="{Binding ToggleOrthographic}"/>
-					<ComboBox
-						ItemsSource="{Binding RenderingFillModes}"
-						SelectedItem="{Binding Scene.Window.FillMode}"
-						Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
-						Background="{x:Static SystemColors.ControlBrush}"
-						BorderThickness="0"
-						Padding="1,1,20,1"/>
 					<MenuItem Header="Antialiasing" IsChecked="{Binding Options.AntiAliasing}" Command="{Binding ToggleAntiAliasing}"/>
+					<MenuItem Header="Fill Mode">
+						<ComboBox
+							ItemsSource="{Binding Options.FillMode, Converter={gui2:EnumValues}, Mode=OneTime}"
+							SelectedItem="{Binding Options.FillMode}"
+							Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
+							Background="{x:Static SystemColors.ControlBrush}"
+							BorderThickness="0"
+							Padding="1,1,20,1"
+							/>
+					</MenuItem>
+					<MenuItem Header="Cull Mode">
+						<ComboBox
+							ItemsSource="{Binding Options.CullMode, Converter={gui2:EnumValues}, Mode=OneTime}"
+							SelectedItem="{Binding Options.CullMode}"
+							Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
+							Background="{x:Static SystemColors.ControlBrush}"
+							BorderThickness="0"
+							Padding="1,1,20,1"
+							/>
+					</MenuItem>
 				</MenuItem>
-				<Separator/>
-				<MenuItem Header="Properties" Command="{Binding ShowOptionsUI}"/>
 			</ContextMenu>
 		</ResourceDictionary>
 	</Grid.Resources>
@@ -85,7 +92,7 @@
 		Grid.Row="0"
 		Grid.Column="1"
 		Content="{Binding Title}"
-		Visibility="{Binding Title, Converter={StaticResource NullToCollapsed}}"
+		Visibility="{Binding Title, Converter={gui2:NullToCollapsed}}"
 		HorizontalAlignment="Center"
 		FontWeight="Bold"
 		/>
@@ -95,7 +102,7 @@
 		Orientation="Vertical"
 		Grid.Column="1"
 		Grid.Row="2"
-		Visibility="{Binding Options.ShowAxes, Converter={StaticResource BoolToVisible}}"
+		Visibility="{Binding Options.ShowAxes, Converter={gui2:BoolToVisible}}"
 		>
 		
 		<!-- Tick marks and values -->
@@ -103,13 +110,13 @@
 			Side="Bottom"
 			Axis="{Binding XAxis, ElementName=m_root}"
 			Height="{Binding AxisSize}"
-			Visibility="{Binding Axis, Converter={StaticResource NullToCollapsed}}"
+			Visibility="{Binding Axis, Converter={gui2:NullToCollapsed}}"
 			/>
 
 		<!-- Axis label -->
 		<TextBlock
 			Text="{Binding XAxis.Label}"
-			Visibility="{Binding XAxis.Label, Converter={StaticResource NullToCollapsed}}"
+			Visibility="{Binding XAxis.Label, Converter={gui2:NullToCollapsed}}"
 			HorizontalAlignment="Center"
 			/>
 	</StackPanel>
@@ -119,20 +126,20 @@
 		Orientation="Horizontal"
 		Grid.Column="0"
 		Grid.Row="1"
-		Visibility="{Binding Options.ShowAxes, Converter={StaticResource BoolToVisible}}"
+		Visibility="{Binding Options.ShowAxes, Converter={gui2:BoolToVisible}}"
 		>
 
 		<!-- Axis label -->
 		<TextBlock
 			Text="{Binding YAxis.Label}"
-			Visibility="{Binding YAxis.Label, Converter={StaticResource NullToCollapsed}}"
+			Visibility="{Binding YAxis.Label, Converter={gui2:NullToCollapsed}}"
 			VerticalAlignment="Center"
 			RenderTransformOrigin="0.0,0.0"
 			>
 			<TextBlock.LayoutTransform>
 				<TransformGroup>
 					<RotateTransform Angle="-90"/>
-					<TranslateTransform X="0" Y="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type TextBlock}}, Converter={StaticResource Scale}, ConverterParameter=0.5}"/>
+					<TranslateTransform X="0" Y="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type TextBlock}}, Converter={gui2:ScaleValue}, ConverterParameter=0.5}"/>
 				</TransformGroup>
 			</TextBlock.LayoutTransform>
 		</TextBlock>
@@ -142,7 +149,7 @@
 			Side="Left"
 			Axis="{Binding YAxis, ElementName=m_root}"
 			Width="{Binding AxisSize}"
-			Visibility="{Binding Axis, Converter={StaticResource NullToCollapsed}}"
+			Visibility="{Binding Axis, Converter={gui2:NullToCollapsed}}"
 			/>
 	</StackPanel>
 

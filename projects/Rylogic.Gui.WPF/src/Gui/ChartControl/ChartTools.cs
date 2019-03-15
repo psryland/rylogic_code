@@ -196,7 +196,7 @@ namespace Rylogic.Gui.WPF
 				}
 
 				var obj = new View3d.Object(ldr.ToString(), false, Id, null);
-				obj.FlagsSet(View3d.EFlags.SceneBoundsExclude | View3d.EFlags.NoZTest | View3d.EFlags.NoZWrite, true);
+				obj.FlagsSet(View3d.EFlags.SceneBoundsExclude | View3d.EFlags.NoZTest, true);
 				return obj;
 			}
 

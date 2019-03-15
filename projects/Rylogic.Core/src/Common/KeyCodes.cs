@@ -1,6 +1,6 @@
 ﻿namespace Rylogic.Common
 {
-	public enum KeyCodes
+	public enum EKeyCodes
 	{
 		// Compatible with System.Windows.Forms.Keys
 		// and native VK_ constants.

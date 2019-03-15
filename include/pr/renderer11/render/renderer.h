@@ -40,13 +40,13 @@ namespace pr
 			bool                          m_fallback_to_sw_device; // True to use a software device if 'm_driver_type' fails
 
 			// Keep this inline so that m_build_options can be verified.
-			RdrSettings(HINSTANCE inst, BOOL bgra_support)
+			RdrSettings(HINSTANCE inst, D3D11_CREATE_DEVICE_FLAG device_flags)
 				:m_instance(inst)
 				,m_build_options()
 				,m_mem()
 				,m_adapter()
 				,m_driver_type(D3D_DRIVER_TYPE_HARDWARE)
-				,m_device_layers(bgra_support ? D3D11_CREATE_DEVICE_BGRA_SUPPORT : 0)
+				,m_device_layers(device_flags)
 				,m_feature_levels()
 				,m_fallback_to_sw_device(true)
 			{}

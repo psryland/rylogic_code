@@ -191,11 +191,11 @@ namespace LDraw
 						var vk = Win32.ToVKey(m.WParam);
 
 						// Allow navigation keys through
-						if (vk == KeyCodes.Up || vk == KeyCodes.Down || vk == KeyCodes.Left || vk == KeyCodes.Right)
+						if (vk == EKeyCodes.Up || vk == EKeyCodes.Down || vk == EKeyCodes.Left || vk == EKeyCodes.Right)
 							break;
 
 						// Handle the copy keyboard shortcut
-						if (Win32.KeyDown(KeyCodes.ControlKey) && vk == KeyCodes.C)
+						if (Win32.KeyDown(EKeyCodes.ControlKey) && vk == EKeyCodes.C)
 							Cmd(Sci.SCI_COPY);
 
 						return;

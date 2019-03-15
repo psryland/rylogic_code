@@ -17,10 +17,10 @@ namespace view3d
 	pr::Guid const Context::GuidDemoSceneObjects = { 0xFE51C164, 0x9E57, 0x456F, 0x9D, 0x8D, 0x39, 0xE3, 0xFA, 0xAF, 0xD3, 0xE7 };
 
 	// Constructor
-	Context::Context(HINSTANCE instance, BOOL bgra_compatible)
+	Context::Context(HINSTANCE instance, D3D11_CREATE_DEVICE_FLAG device_flags)
 		:m_inits()
 		,m_compatible(TestSystemCompatibility())
-		,m_rdr(RdrSettings(instance, bgra_compatible))
+		,m_rdr(RdrSettings(instance, device_flags))
 		,m_wnd_cont()
 		,m_sources(m_rdr, [this](auto lang){ return CreateHandler(lang); })
 		,m_emb()

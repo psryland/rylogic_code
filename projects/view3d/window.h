@@ -182,7 +182,8 @@ namespace view3d
 		void NotifyRendering();
 
 		// Call InvalidateRect on the HWND associated with this window
-		void InvalidateRect(RECT const* rect, bool erase);
+		void InvalidateRect(RECT const* rect, bool erase = false);
+		void Invalidate(bool erase = false);
 
 		// Called when objects are added/removed from this window
 		void ObjectContainerChanged(EView3DSceneChanged change_type, GUID const* context_ids, int count, pr::ldr::LdrObject* object);

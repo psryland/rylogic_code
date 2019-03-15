@@ -76,13 +76,13 @@ namespace LDraw
 		{
 			switch (Win32.ToVKey(m.WParam))
 			{
-			case KeyCodes.F5:
+			case EKeyCodes.F5:
 				m_btn_render.PerformClick();
 				break;
-			case KeyCodes.F7:
+			case EKeyCodes.F7:
 				Scene?.AutoRange();
 				break;
-			case KeyCodes.ControlKey | KeyCodes.D:
+			case EKeyCodes.ControlKey | EKeyCodes.D:
 				m_btn_clear.PerformClick();
 				break;
 			}

@@ -40,7 +40,7 @@ namespace Rylogic.Interop.Win32
 		[DllImport("user32.dll", CharSet=CharSet.Auto)]                                                       public static extern bool   DestroyIcon(IntPtr hicon);
 		[DllImport("user32.dll", CharSet=CharSet.Unicode)]                                                    public static extern bool   DestroyWindow(HWND hwnd);
 		[DllImport("user32.dll")]                                                                             public static extern HWND   GetAncestor(HWND hwnd, uint flags);
-		[DllImport("user32.dll")]                                                                             public static extern short  GetAsyncKeyState(KeyCodes vKey);
+		[DllImport("user32.dll")]                                                                             public static extern short  GetAsyncKeyState(EKeyCodes vKey);
 		[DllImport("user32.dll", SetLastError = true, CharSet=CharSet.Unicode)]                               public static extern bool   GetCaretPos(ref POINT point);
 		[DllImport("user32.dll")]                                                                             public static extern bool   GetClientRect(HWND hwnd, out RECT rect);
 		[DllImport("User32.dll")]                                                                             public static extern IntPtr GetDC(HWND hwnd);
@@ -49,7 +49,7 @@ namespace Rylogic.Interop.Win32
 		[DllImport("user32.dll")]                                                                             public static extern HWND   GetForegroundWindow();
 		[DllImport("user32.dll")][return: MarshalAs(UnmanagedType.Bool)]                                      public static extern bool   GetIconInfo(IntPtr hIcon, ref IconInfo pIconInfo);
 		[DllImport("user32.dll")]                                                                             public static extern int    GetKeyboardState(byte[] pbKeyState);
-		[DllImport("user32.dll")]                                                                             public static extern short  GetKeyState(KeyCodes vKey);
+		[DllImport("user32.dll")]                                                                             public static extern short  GetKeyState(EKeyCodes vKey);
 		[DllImport("user32.dll")]                                                                             public static extern HWND   GetParent(HWND hwnd);
 		[DllImport("user32.dll")]                                                                             public static extern bool   GetScrollInfo(HWND hwnd, int BarType, ref SCROLLINFO lpsi);
 		[DllImport("user32.dll")]                                                                             public static extern int    GetScrollPos(HWND hWnd, int nBar);

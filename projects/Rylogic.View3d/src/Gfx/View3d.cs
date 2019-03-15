@@ -91,6 +91,18 @@ namespace Rylogic.Gfx
 			RayCast,
 			_number_of,
 		};
+		[Flags] public enum ECreateDeviceFlags : uint
+		{
+			D3D11_CREATE_DEVICE_SINGLETHREADED                                = 0x1,
+			D3D11_CREATE_DEVICE_DEBUG                                         = 0x2,
+			D3D11_CREATE_DEVICE_SWITCH_TO_REF                                 = 0x4,
+			D3D11_CREATE_DEVICE_PREVENT_INTERNAL_THREADING_OPTIMIZATIONS      = 0x8,
+			D3D11_CREATE_DEVICE_BGRA_SUPPORT                                  = 0x20,
+			D3D11_CREATE_DEVICE_DEBUGGABLE                                    = 0x40,
+			D3D11_CREATE_DEVICE_PREVENT_ALTERING_LAYER_SETTINGS_FROM_REGISTRY = 0x80,
+			D3D11_CREATE_DEVICE_DISABLE_GPU_TIMEOUT                           = 0x100,
+			D3D11_CREATE_DEVICE_VIDEO_SUPPORT                                 = 0x800
+		}
 		public enum EFormat : uint
 		{
 			DXGI_FORMAT_UNKNOWN = 0,
@@ -954,11 +966,14 @@ namespace Rylogic.Gfx
 		private SourcesChangedCB m_sources_changed_cb;    // Reference to callback
 		private Dictionary<string, EmbeddedCodeHandlerCB> m_embedded_code_handlers;
 
-		/// <summary>Access the View3d instance for this process</summary>
-		public static View3d Create(bool bgra_compatibility = true)
+		/// <summary>Initialise with support for BGRA textures</summary>
+		public static ECreateDeviceFlags CreateDeviceFlags = ECreateDeviceFlags.D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+
+		/// <summary>Create a reference to the View3d singleton instance for this process</summary>
+		public static View3d Create()
 		{
 			if (m_singleton == null)
-				m_singleton = new View3d(bgra_compatibility);
+				m_singleton = new View3d();
 
 			++m_ref_count;
 			return m_singleton;
@@ -967,7 +982,7 @@ namespace Rylogic.Gfx
 		private static int m_ref_count;
 
 		/// <summary></summary>
-		private View3d(bool bgra_compatibility)
+		private View3d()
 		{
 			if (!ModuleLoaded)
 				throw new Exception("View3d.dll has not been loaded");
@@ -980,7 +995,7 @@ namespace Rylogic.Gfx
 			// Initialise view3d
 			string init_error = null;
 			ReportErrorCB error_cb = (ctx, msg) => init_error = msg;
-			m_context = View3D_Initialise(error_cb, IntPtr.Zero, bgra_compatibility);
+			m_context = View3D_Initialise(error_cb, IntPtr.Zero, CreateDeviceFlags);
 			if (m_context == HContext.Zero)
 				throw new Exception(init_error ?? "Failed to initialised View3d");
 
@@ -1766,7 +1781,7 @@ namespace ldr
 			}
 
 			/// <summary>Standard keyboard shortcuts. 'key_code' corresponds to VK_KEY</summary>
-			public bool TranslateKey(KeyCodes key_code)
+			public bool TranslateKey(EKeyCodes key_code)
 			{
 				return View3D_TranslateKey(Handle, (int)key_code);
 			}
@@ -3287,7 +3302,7 @@ namespace ldr
 		}
 
 		// Context
-		[DllImport(Dll)] private static extern HContext        View3D_Initialise            (ReportErrorCB initialise_error_cb, IntPtr ctx, bool gdi_compatibility);
+		[DllImport(Dll)] private static extern HContext        View3D_Initialise            (ReportErrorCB initialise_error_cb, IntPtr ctx, ECreateDeviceFlags device_flags);
 		[DllImport(Dll)] private static extern void            View3D_Shutdown              (HContext context);
 		[DllImport(Dll)] private static extern void            View3D_GlobalErrorCBSet      (ReportErrorCB error_cb, IntPtr ctx, bool add);
 		[DllImport(Dll)] private static extern void            View3D_SourceEnumGuids       (EnumGuidsCB enum_guids_cb, IntPtr ctx);

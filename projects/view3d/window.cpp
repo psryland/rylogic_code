@@ -693,6 +693,10 @@ namespace view3d
 
 		m_invalidated = true;
 	}
+	void Window::Invalidate(bool erase)
+	{
+		InvalidateRect(nullptr, erase);
+	}
 
 	// Called when objects are added/removed from this window
 	void Window::ObjectContainerChanged(EView3DSceneChanged change_type, GUID const* context_ids, int count, LdrObject* object)

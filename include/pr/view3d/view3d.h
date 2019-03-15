@@ -466,7 +466,7 @@ extern "C"
 		BSTR& errors);          // Any errors in the compilation of the code
 
 	// Context
-	VIEW3D_API View3DContext __stdcall View3D_Initialise            (View3D_ReportErrorCB initialise_error_cb, void* ctx, BOOL gdi_compatibility);
+	VIEW3D_API View3DContext __stdcall View3D_Initialise            (View3D_ReportErrorCB initialise_error_cb, void* ctx, D3D11_CREATE_DEVICE_FLAG device_flags);
 	VIEW3D_API void          __stdcall View3D_Shutdown              (View3DContext context);
 	VIEW3D_API void          __stdcall View3D_GlobalErrorCBSet      (View3D_ReportErrorCB error_cb, void* ctx, BOOL add);
 	VIEW3D_API void          __stdcall View3D_SourceEnumGuids       (View3D_EnumGuidsCB enum_guids_cb, void* ctx);

@@ -16,7 +16,7 @@ namespace Rylogic.Gui.WPF
 	{
 		/// <summary>Base class for anything on a chart</summary>
 		[DebuggerDisplay("{Name} {Id} {GetType().Name}")]
-		public abstract class Element : INotifyPropertyChanged, IDisposable
+		public abstract class Element : IDisposable, INotifyPropertyChanged
 		{
 			/// <summary>Buffers for creating the chart graphics</summary>
 			protected List<View3d.Vertex> m_vbuf;
@@ -25,6 +25,7 @@ namespace Rylogic.Gui.WPF
 
 			protected Element(Guid id, m4x4 position, string name)
 			{
+				View3d = View3d.Create();
 				m_vbuf = new List<View3d.Vertex>();
 				m_nbuf = new List<View3d.Nugget>();
 				m_ibuf = new List<ushort>();
@@ -52,21 +53,28 @@ namespace Rylogic.Gui.WPF
 				Position = node.Element(nameof(Position)).As(Position);
 				Name = node.Element(nameof(Name)).As(Name);
 			}
-			public void Dispose()
+			public virtual void Dispose()
 			{
-				Dispose(true); // Mimic the WinForms Control disposing pattern
-			}
-			protected bool Disposed { get; private set; }
-			protected virtual void Dispose(bool disposing)
-			{
-				Util.BreakIf(!Disposed && Util.IsGCFinalizerThread);
 				Chart = null;
 				Invalidated = null;
 				PositionChanged = null;
 				DataChanged = null;
 				SelectedChanged = null;
-				Disposed = true;
+				View3d = null;
 			}
+
+			/// <summary>View3d context reference (needed because Elements can out-live the chart)</summary>
+			private View3d View3d
+			{
+				get { return m_view3d; }
+				set
+				{
+					if (m_view3d == value) return;
+					Util.Dispose(ref m_view3d);
+					m_view3d = value;
+				}
+			}
+			private View3d m_view3d;
 
 			/// <summary>Non-null when the element has been added to a chart. Not virtual, override 'SetChartCore' instead</summary>
 			public ChartControl Chart
@@ -112,7 +120,6 @@ namespace Rylogic.Gui.WPF
 			{
 				// Note: don't suspend events on Chart.Elements.
 				// User code maybe watching for ListChanging events.
-				Debug.Assert(!Disposed);
 
 				// Remove this element from any selected collection on the outgoing chart
 				// This also clears the 'selected' state for the element

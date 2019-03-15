@@ -26,7 +26,7 @@ namespace view3d
 		EmbCodeCBCont            m_emb;           // Embedded code execution callbacks
 		std::recursive_mutex     m_mutex;
 
-		explicit Context(HINSTANCE instance, BOOL bgra_compatible);
+		explicit Context(HINSTANCE instance, D3D11_CREATE_DEVICE_FLAG device_flags);
 
 		Context(Context const&) = delete;
 		Context& operator=(Context const&) = delete;

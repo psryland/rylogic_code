@@ -1,18 +1,34 @@
 ﻿using System;
-using System.Collections;
 using System.Drawing;
 using System.Globalization;
-using System.Linq;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Interop;
+using System.Windows.Markup;
 using System.Windows.Media.Imaging;
-using Rylogic.Attrib;
+using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
+	/// <summary>Convert an unknown type to 'targetType' using a TypeDescriptor converter</summary>
+	public class ToValue : MarkupExtension, IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			return Util.ConvertTo(value, targetType);
+		}
+		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			return Util.ConvertTo(value, targetType);
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
+	}
+
 	/// <summary>Convert icons to images</summary>
-	public class IconToImageSourceConverter : IValueConverter
+	public class IconToImageSource : MarkupExtension, IValueConverter
 	{
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
@@ -24,22 +40,9 @@ namespace Rylogic.Gui.WPF
 		{
 			throw new NotImplementedException();
 		}
-	}
-
-	/// <summary>Convert an enum to its description attribute</summary>
-	public class EnumToDescConverter : IValueConverter
-	{
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		public override object ProvideValue(IServiceProvider serviceProvider)
 		{
-			if (value is IEnumerable collection)
-				return collection.Cast<object>().OfType<Enum>().Select(x => x.Desc());
-			if (value is Enum en)
-				return en.Desc();
-			return null;
-		}
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-		{
-			throw new NotImplementedException();
+			return this;
 		}
 	}
 }

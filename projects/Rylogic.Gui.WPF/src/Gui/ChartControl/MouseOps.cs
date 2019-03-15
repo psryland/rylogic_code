@@ -23,7 +23,7 @@ namespace Rylogic.Gui.WPF
 			{
 				Active = null;
 
-				foreach (var op in PendingOp.Values.ToList())
+				foreach (var op in PendingOp.Values.NotNull().ToList())
 					op.Dispose();
 
 				PendingOp.Clear();

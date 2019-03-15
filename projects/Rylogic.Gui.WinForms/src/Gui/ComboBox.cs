@@ -132,7 +132,7 @@ namespace Rylogic.Gui.WinForms
 			if (DropDownStyle != ComboBoxStyle.DropDownList)
 			{
 				// Commit on return
-				if (m.Msg == Win32.WM_KEYDOWN && Win32.ToVKey(m.WParam) == KeyCodes.Return)
+				if (m.Msg == Win32.WM_KEYDOWN && Win32.ToVKey(m.WParam) == EKeyCodes.Return)
 					TextToValueIfValid(Text);
 			}
 

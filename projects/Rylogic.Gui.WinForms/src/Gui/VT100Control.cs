@@ -162,7 +162,7 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Adds text to the input buffer</summary>
-		protected virtual void AddToBuffer(KeyCodes vk)
+		protected virtual void AddToBuffer(EKeyCodes vk)
 		{
 			// If input triggers auto scroll
 			if (ScrollToBottomOnInput)
@@ -330,17 +330,17 @@ namespace Rylogic.Gui.WinForms
 						var vk = Win32.ToVKey(m.WParam);
 
 						// Forward navigation keys to the control
-						if (vk == KeyCodes.Up || vk == KeyCodes.Down || vk == KeyCodes.Left || vk == KeyCodes.Right)
+						if (vk == EKeyCodes.Up || vk == EKeyCodes.Down || vk == EKeyCodes.Left || vk == EKeyCodes.Right)
 						{
 							Cmd(m.Msg, m.WParam, m.LParam);
 							return;
 						}
 
 						// Handle clipboard shortcuts
-						if (Win32.KeyDown(KeyCodes.ControlKey))
+						if (Win32.KeyDown(EKeyCodes.ControlKey))
 						{
-							if (vk == KeyCodes.C) { Copy(); return; }
-							if (vk == KeyCodes.V) { Paste(); return; }
+							if (vk == EKeyCodes.C) { Copy(); return; }
+							if (vk == EKeyCodes.V) { Paste(); return; }
 							return; // Disable all other shortcuts
 						}
 

@@ -22,6 +22,7 @@ namespace Rylogic.Gui.WPF
 			{
 				NavigationMode = ENavMode.Chart2D;
 				LockAspect = null;
+				BackgroundColour = Colour32.LightGray;
 				SelectionColour = Colour32.DarkGray.Alpha(0x80);
 				ShowGridLines = true;
 				GridZOffset = 0.001f;
@@ -43,6 +44,7 @@ namespace Rylogic.Gui.WPF
 			{
 				NavigationMode = rhs.NavigationMode;
 				LockAspect = rhs.LockAspect;
+				BackgroundColour = rhs.BackgroundColour;
 				SelectionColour = rhs.SelectionColour;
 				ShowGridLines = rhs.ShowGridLines;
 				GridZOffset = rhs.GridZOffset;
@@ -63,6 +65,7 @@ namespace Rylogic.Gui.WPF
 			{
 				NavigationMode = node.Element(nameof(NavigationMode)).As(NavigationMode);
 				LockAspect = node.Element(nameof(LockAspect)).As(LockAspect);
+				BackgroundColour = node.Element(nameof(BackgroundColour)).As(BackgroundColour);
 				SelectionColour = node.Element(nameof(SelectionColour)).As(SelectionColour);
 				ShowAxes = node.Element(nameof(ShowAxes)).As(ShowAxes);
 				ShowGridLines = node.Element(nameof(ShowGridLines)).As(ShowGridLines);
@@ -83,6 +86,7 @@ namespace Rylogic.Gui.WPF
 			{
 				node.Add2(nameof(NavigationMode), NavigationMode, false);
 				node.Add2(nameof(LockAspect), LockAspect, false);
+				node.Add2(nameof(BackgroundColour), BackgroundColour, false);
 				node.Add2(nameof(SelectionColour), SelectionColour, false);
 				node.Add2(nameof(ShowGridLines), ShowGridLines, false);
 				node.Add2(nameof(GridZOffset), GridZOffset, false);
@@ -125,6 +129,14 @@ namespace Rylogic.Gui.WPF
 				set { SetProp(ref m_LockAspect, value, nameof(LockAspect)); }
 			}
 			private double? m_LockAspect;
+
+			/// <summary>The chart area background colour</summary>
+			public Colour32 BackgroundColour
+			{
+				get { return m_BackgroundColour; }
+				set { SetProp(ref m_BackgroundColour, value, nameof(BackgroundColour)); }
+			}
+			private Colour32 m_BackgroundColour;
 
 			/// <summary>Area selection colour</summary>
 			public Colour32 SelectionColour

@@ -1297,31 +1297,31 @@ namespace Rylogic.Interop.Win32
 		}
 
 		/// <summary>Convert WParam to EKeys</summary>
-		public static KeyCodes ToVKey(IntPtr wparam)
+		public static EKeyCodes ToVKey(IntPtr wparam)
 		{
-			return (KeyCodes)wparam;
+			return (EKeyCodes)wparam;
 		}
 
 		/// <summary>Convert System.Windows.Input.Key to the 'Keys' enum</summary>
-		public static KeyCodes ToVKey(Key key)
+		public static EKeyCodes ToVKey(Key key)
 		{
-			return (KeyCodes)KeyInterop.VirtualKeyFromKey(key);
+			return (EKeyCodes)KeyInterop.VirtualKeyFromKey(key);
 		}
 
 		/// <summary>Test the async state of a key</summary>
-		public static bool KeyDownAsync(KeyCodes vkey)
+		public static bool KeyDownAsync(EKeyCodes vkey)
 		{
 			return (GetAsyncKeyState(vkey) & 0x8000) != 0;
 		}
 
 		/// <summary>Test for key down using the key state for current message</summary>
-		public static bool KeyDown(KeyCodes vkey)
+		public static bool KeyDown(EKeyCodes vkey)
 		{
 			return (GetKeyState(vkey) & 0x8000) != 0;
 		}
 
 		/// <summary>Detect a key press using its async state</summary>
-		public static bool KeyPressAsync(KeyCodes vkey)
+		public static bool KeyPressAsync(EKeyCodes vkey)
 		{
 			if (!KeyDownAsync(vkey)) return false;
 			while (KeyDownAsync(vkey)) Thread.Sleep(10);
@@ -1332,7 +1332,7 @@ namespace Rylogic.Interop.Win32
 		/// Convert a 'Keys' key value to a UNICODE char using the keyboard state of the last message.
 		/// This can be called from WM_KEYDOWN to provide the actual character, instead of waiting for WM_CHAR
 		/// Returns true if 'vkey' can be converted and 'ch' is valid, false if not</summary>
-		public static bool CharFromVKey(KeyCodes vkey, out char ch)
+		public static bool CharFromVKey(EKeyCodes vkey, out char ch)
 		{
 			ch = '\0';
 			var keyboardState = new byte[256];
@@ -1350,9 +1350,9 @@ namespace Rylogic.Interop.Win32
 		}
 
 		/// <summary>True if this key is an array key</summary>
-		public static bool IsArrowKey(this KeyCodes vk)
+		public static bool IsArrowKey(this EKeyCodes vk)
 		{
-			return vk == KeyCodes.Left || vk == KeyCodes.Right || vk == KeyCodes.Up || vk == KeyCodes.Down;
+			return vk == EKeyCodes.Left || vk == EKeyCodes.Right || vk == EKeyCodes.Up || vk == EKeyCodes.Down;
 		}
 
 		/// <summary>Convert the LParam from WM_KEYDOWN, WM_KEYUP, WM_CHAR to usable data</summary>
@@ -1517,7 +1517,7 @@ namespace Rylogic.Interop.Win32
 			case WM_CHAR:
 				return
 					$"{hdr} " +
-					$"'{(msg == WM_CHAR ? new string((char)wparam,1) : Enum<KeyCodes>.ToString(wparam))}'({wparam})  " +
+					$"'{(msg == WM_CHAR ? new string((char)wparam,1) : Enum<EKeyCodes>.ToString(wparam))}'({wparam})  " +
 					$"repeats:{(lparam&0xffff)}  " +
 					$"state:{((lparam & (1 << 29)) != 0 ? "ALT " : string.Empty)}  " +
 					$"transition:{((lparam & (1 << 30)) != 0 ? "1" : "0")}{((lparam & (1 << 31)) != 0 ? "0" : "1")}";
@@ -1621,7 +1621,7 @@ namespace Rylogic.Interop.Win32
 					return $"{hdr} evt: {MsgIdToString(LoWord(wparam))} {details}";
 				}
 			case WM_SYSKEYDOWN:
-				return $"{hdr} vk_key = {wparam} ({Enum<KeyCodes>.ToString((int)wparam)})  Repeats: {lparam_lo}  lParam: {lparam}";
+				return $"{hdr} vk_key = {wparam} ({Enum<EKeyCodes>.ToString((int)wparam)})  Repeats: {lparam_lo}  lParam: {lparam}";
 			case WM_PAINT:
 				//{
 				//	RECT r;

@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System;
+using System.Windows;
 using System.Windows.Media;
 
 namespace Rylogic.Gui.WPF
@@ -15,6 +16,13 @@ namespace Rylogic.Gui.WPF
 		{
 			get { return m_colour_wheel.Colour; }
 			set { m_colour_wheel.Colour = value; }
+		}
+
+		/// <summary>Raised when the colour is changed</summary>
+		public event EventHandler<ColourWheel.ColourEventArgs> ColorChanged
+		{
+			add { m_colour_wheel.ColourChanged += value; }
+			remove { m_colour_wheel.ColourChanged -= value; }
 		}
 
 		/// <summary>Handlers</summary>

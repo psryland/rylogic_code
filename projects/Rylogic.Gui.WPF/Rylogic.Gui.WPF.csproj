@@ -61,9 +61,9 @@
     </Compile>
     <Compile Include="src\Converters\BoolConverters.cs" />
     <Compile Include="src\Converters\ColourConverters.cs" />
+    <Compile Include="src\Converters\EnumConverters.cs" />
     <Compile Include="src\Converters\MathConverters.cs" />
     <Compile Include="src\Converters\NullConverters.cs" />
-    <Compile Include="src\Converters\ValueConverter.cs" />
     <Compile Include="src\Extn\Math.cs" />
     <Compile Include="src\Extn\UIElement.cs" />
     <Compile Include="src\Extn\Dispatcher.cs" />
@@ -71,7 +71,7 @@
     <Compile Include="src\Extn\Xml.cs" />
     <Compile Include="src\Gui\ChartControl\ChartPanel.cs" />
     <Compile Include="src\Gui\ChartControl\ChartTools.cs" />
-    <Compile Include="src\Gui\ChartControl\ContextMenu.cs" />
+    <Compile Include="src\Gui\ChartControl\Commands.cs" />
     <Compile Include="src\Gui\ChartControl\Element.cs" />
     <Compile Include="src\Gui\ChartControl\ElementCollection.cs" />
     <Compile Include="src\Gui\ChartControl\EventArgs.cs" />
@@ -81,8 +81,7 @@
     <Compile Include="src\Gui\ChartControl\MouseOps.cs" />
     <Compile Include="src\Gui\ChartControl\Navigation.cs" />
     <Compile Include="src\Gui\ChartControl\RangeData.cs" />
-    <Compile Include="src\Gui\ChartControl\Options.cs" />
-    <Compile Include="src\Gui\ChartControl\OptionsUI.cs" />
+    <Compile Include="src\Gui\ChartControl\OptionsData.cs" />
     <Compile Include="src\Gui\ChartControl\ChartControl.xaml.cs">
       <DependentUpon>ChartControl.xaml</DependentUpon>
     </Compile>

@@ -30,9 +30,9 @@ namespace Rylogic.Gui.WinForms
 			:this(string.Empty)
 		{}
 		public View3dControl(string name)
-			:this(name, bgra_compatibility:true, gdi_compatible_backbuffer:false)
+			:this(name, gdi_compatible_backbuffer:false)
 		{}
-		public View3dControl(string name, bool bgra_compatibility, bool gdi_compatible_backbuffer)
+		public View3dControl(string name, bool gdi_compatible_backbuffer)
 		{
 			try
 			{
@@ -40,7 +40,7 @@ namespace Rylogic.Gui.WinForms
 				if (this.IsInDesignMode()) return;
 				SetStyle(ControlStyles.Selectable, false);
 
-				m_view3d = View3d.Create(bgra_compatibility);
+				m_view3d = View3d.Create();
 				var opts = new View3d.WindowOptions(HandleReportError, IntPtr.Zero, gdi_compatible_backbuffer) { DbgName = name ?? string.Empty };
 				m_impl_wnd = new View3d.Window(View3d, Handle, opts);
 
@@ -135,7 +135,7 @@ namespace Rylogic.Gui.WinForms
 
 				void HandleKeyDown(object sender, KeyEventArgs args)
 				{
-					args.Handled = Window.TranslateKey((KeyCodes)args.KeyCode);
+					args.Handled = Window.TranslateKey((EKeyCodes)args.KeyCode);
 				}
 			}
 		}

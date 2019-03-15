@@ -1,12 +1,63 @@
 ﻿using System;
 using System.Globalization;
 using System.Windows.Data;
+using System.Windows.Markup;
 using System.Windows.Media;
 using Rylogic.Gfx;
 
 namespace Rylogic.Gui.WPF
 {
-	public class ColourToBrush : IValueConverter
+	public class ToMediaColor : MarkupExtension, IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			switch (value)
+			{
+			case Color col:
+				{
+					return col;
+				}
+			case System.Drawing.Color dcol:
+				{
+					return dcol.ToMediaColor();
+				}
+			case Colour32 col32:
+				{
+					return col32.ToMediaColor();
+				}
+			case uint u32:
+				{
+					return new Colour32(u32).ToMediaColor();
+				}
+			case int i32:
+				{
+					return new Colour32((uint)i32).ToMediaColor();
+				}
+			}
+			return null;
+		}
+		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			if (!(value is Color col))
+				return null;
+			if (targetType.Equals(typeof(Color)))
+				return col;
+			if (targetType.Equals(typeof(System.Drawing.Color)))
+				return col.ToColor();
+			if (targetType.Equals(typeof(Colour32)))
+				return col.ToColour32();
+			if (targetType.Equals(typeof(uint)))
+				return col.ToColour32().ARGB;
+			if (targetType.Equals(typeof(int)))
+				return (int)col.ToColour32().ARGB;
+			return null;
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
+	}
+	public class ColourToBrush : MarkupExtension, IValueConverter
 	{
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
@@ -51,8 +102,12 @@ namespace Rylogic.Gui.WPF
 				return b.Color.ToArgb();
 			return null;
 		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
 	}
-	public class ColourToString : IValueConverter
+	public class ColourToString : MarkupExtension, IValueConverter
 	{
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
@@ -83,8 +138,12 @@ namespace Rylogic.Gui.WPF
 				return (int?)Colour32.TryParse(str)?.ARGB;
 			return null;
 		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
 	}
-	public class TextOverColourBrush : IValueConverter
+	public class TextOverColourBrush : MarkupExtension, IValueConverter
 	{
 		// Notes:
 		//   - Given a colour, returns a brush suitable for text written over that colour
@@ -113,6 +172,10 @@ namespace Rylogic.Gui.WPF
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			throw new NotImplementedException();
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
 		}
 	}
 }
