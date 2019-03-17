@@ -55,6 +55,7 @@ namespace Rylogic.Gui.WPF
 			};
 			Xml_.AsMap[typeof(Rect)] = (elem, type, instance) =>
 			{
+				if (elem.Value == "∞ ∞ -∞ -∞") return Rect.Empty;
 				var xywh = elem.Value.Split(Xml_.WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
 				return new Rect(double.Parse(xywh[0]), double.Parse(xywh[1]), double.Parse(xywh[2]), double.Parse(xywh[3]));
 			};

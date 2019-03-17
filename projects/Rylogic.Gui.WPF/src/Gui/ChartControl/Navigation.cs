@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Input;
 using Rylogic.Common;
 using Rylogic.Extn;
+using Rylogic.Extn.Windows;
 using Rylogic.Maths;
 using Rylogic.Utility;
 

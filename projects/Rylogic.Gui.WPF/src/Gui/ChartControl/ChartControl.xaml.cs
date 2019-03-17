@@ -3,17 +3,19 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using Rylogic.Common;
 using Rylogic.Extn;
+using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
 using Rylogic.Maths;
 using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
-	using System.Windows;
 	using ChartDetail;
 
 	/// <summary>A view 3d based chart control</summary>
@@ -40,6 +42,9 @@ namespace Rylogic.Gui.WPF
 		public ChartControl(string title, OptionsData options)
 		{
 			InitializeComponent();
+
+			if (DesignerProperties.GetIsInDesignMode(this))
+				return;
 
 			Options = options;
 			Title = title;
@@ -118,6 +123,7 @@ namespace Rylogic.Gui.WPF
 						break;
 					case nameof(OptionsData.BackgroundColour):
 						Window.BackgroundColour = Options.BackgroundColour;
+						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ChartBackground)));
 						Scene.Invalidate();
 						break;
 					}
@@ -138,6 +144,13 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 		private string m_title;
+
+		/// <summary>The chart background colour</summary>
+		public Color ChartBackground
+		{
+			get { return Scene.BackgroundColor; }
+			set { Scene.BackgroundColor = value; }
+		}
 
 		/// <summary>All chart objects</summary>
 		public ElementCollection Elements { get; }

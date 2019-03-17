@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using Rylogic.Common;
+using Rylogic.Extn;
 using Rylogic.Gfx;
 using Rylogic.Maths;
 using Rylogic.Utility;
@@ -343,15 +344,24 @@ namespace Rylogic.Gui.WPF
 					var axis_length =
 						AxisType == EAxis.XAxis ? m_chart.Scene.ActualWidth :
 						AxisType == EAxis.YAxis ? m_chart.Scene.ActualHeight : 0.0;
+
 					var max_ticks = axis_length / Options.PixelsPerTick;
 
-					// Choose step sizes
-					var span = Span;
-					double step_base = Math.Pow(10.0, (int)Math.Log10(Span)); step = step_base;
-					foreach (var s in new[] { 0.05f, 0.1f, 0.2f, 0.25f, 0.5f, 1.0f, 2.0f, 5.0f, 10.0f, 20.0f, 50.0f })
+					// Choose a step size that is a 'nice' size and that maximises the number of steps up to 'max_ticks'
+					// 'span_mag' is the order of magnitude of 'Span', e.g if Span is 7560, span_mag is 1000, so 'Span/span_mag'
+					// will be some values between [1, 10). 's' are common step sizes. Choose the step size that maximised the
+					// number of steps up to the limit 'max_ticks'.
+					double span_mag = Math.Pow(10.0, (int)Math.Log10(Span));
+					var step_sizes = new[] { 0.01, 0.02, 0.025, 0.05, 0.1, 0.2, 0.25, 0.5, 1.0, 2.0, 2.5, 5.0, 10.0, 20.0, 50.0 };
+
+					// Aim for a step size that is 'span_mag * s' and for which 'Span / step' is just less than 'max_ticks'
+					step = span_mag * 100.0;
+					for (int i = step_sizes.Length; i-- != 0;)
 					{
-						if (s * span > max_ticks * step_base) continue;
-						step = step_base / s;
+						// if 'Span / s' is still less than 'max_ticks' try the next step size
+						var s = span_mag * step_sizes[i];
+						if (Span > max_ticks * s) break;
+						step = s;
 					}
 
 					min = (Min - Math.IEEERemainder(Min, step)) - Min;
@@ -360,11 +370,11 @@ namespace Rylogic.Gui.WPF
 
 					// Protect against increments smaller than can be represented
 					if (min + step == min)
-						step = (max - min) * 0.01f;
+						step = (max - min) * 0.01;
 
 					// Protect against too many ticks along the axis
 					if (max - min > step * 100)
-						step = (max - min) * 0.01f;
+						step = (max - min) * 0.01;
 				}
 				public IEnumerable<double> EnumGridLines
 				{

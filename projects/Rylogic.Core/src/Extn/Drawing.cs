@@ -4,7 +4,8 @@ using Rylogic.Maths;
 
 namespace Rylogic.Extn
 {
-	[Flags] public enum EBoxZone
+	[Flags]
+	public enum EBoxZone
 	{
 		None   = 0,
 		Left   = 1 << 0,

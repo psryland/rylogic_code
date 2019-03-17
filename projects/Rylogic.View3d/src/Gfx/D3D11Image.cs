@@ -73,8 +73,6 @@ namespace Rylogic.Gfx
 			get { return (IntPtr)(GetValue(WindowOwnerProperty)); }
 			set { SetValue(WindowOwnerProperty, value); }
 		}
-		public static DependencyProperty WindowOwnerProperty;
-
 		private static void WindowOwnerChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
 		{
 			var image = (D3D11Image)sender;
@@ -90,6 +88,7 @@ namespace Rylogic.Gfx
 				image.TryCreateRenderTarget();
 			}
 		}
+		public static DependencyProperty WindowOwnerProperty;
 
 		/// <summary>The render target multi-sampling</summary>
 		public int MultiSampling
@@ -113,7 +112,9 @@ namespace Rylogic.Gfx
 				if (m_render_target == value) return;
 				Util.Dispose(ref m_render_target);
 				m_render_target = value;
-				// 'RenderTargetChanged' raised in TryCreateRenderTarget
+
+				// Notify of a new render target
+				RenderTargetChanged?.Invoke(this, EventArgs.Empty);
 			}
 		}
 		private View3d.Texture m_render_target;
@@ -213,9 +214,6 @@ namespace Rylogic.Gfx
 				// Create the Dx11 staging render target
 				var rt1 = new View3d.Texture(m_pixel_width, m_pixel_height, opts);
 				RenderTarget = rt1;
-
-				// Notify of a new render target
-				RenderTargetChanged?.Invoke(this, EventArgs.Empty);
 			}
 			catch { }
 		}

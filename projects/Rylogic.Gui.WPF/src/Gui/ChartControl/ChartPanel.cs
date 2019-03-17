@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System.ComponentModel;
+using System.Windows;
 using Rylogic.Gfx;
 
 namespace Rylogic.Gui.WPF.ChartDetail
@@ -7,6 +8,9 @@ namespace Rylogic.Gui.WPF.ChartDetail
 	{
 		public ChartPanel()
 		{
+			if (DesignerProperties.GetIsInDesignMode(this))
+				return;
+
 			try
 			{
 				MouseNavigation = false;

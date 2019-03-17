@@ -1329,10 +1329,14 @@ namespace ldr
 			/// <summary>Event notifying whenever objects are added/removed from the scene (Not raised during Render however)</summary>
 			public event EventHandler<SceneChangedEventArgs> OnSceneChanged;
 
-			/// <summary>Cause a redraw to happen the near future. This method can be called multiple times</summary>
+			/// <summary>Triggers the 'OnInvalidated' event on the first call. Future calls are ignored until 'Present' or 'Validate' are called</summary>
 			public void Invalidate()
 			{
 				View3D_Invalidate(Handle, false);
+			}
+			public void Validate()
+			{
+				View3D_Validate(Handle);
 			}
 
 			/// <summary>The associated view3d object</summary>
@@ -3454,6 +3458,7 @@ namespace ldr
 		[DllImport(Dll)] private static extern void              View3D_InvalidateRect           (HWindow window, ref Win32.RECT rect, bool erase);
 		[DllImport(Dll)] private static extern void              View3D_Render                   (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_Present                  (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_Validate                 (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_RenderTargetRestore      (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_RenderTargetSet          (HWindow window, HTexture render_target, HTexture depth_buffer);
 		[DllImport(Dll)] private static extern void              View3D_RenderTargetSaveAsMain   (HWindow window);

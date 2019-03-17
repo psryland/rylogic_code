@@ -75,23 +75,8 @@ namespace Rylogic.Gui.WPF
 			DockContainer = null;
 		}
 
-		/// <summary>Raised when the pane this dockable is on is changing (possibly to null)</summary>
-		public event EventHandler PaneChanged;
-
-		/// <summary>Raised when 'Close' is selected from the tab context menu</summary>
-		public event EventHandler Closed;
-
-		/// <summary>Raised when this becomes the active content</summary>
-		public event EventHandler<ActiveContentChangedEventArgs> ActiveChanged;
-
-		/// <summary>Raised during 'ToXml' to allow clients to add extra data to the XML data for this object</summary>
-		public event EventHandler<DockContainerSavingLayoutEventArgs> SavingLayout;
-
-		/// <summary>Raised when this DockControl is assigned to a dock container (or possibly to null)</summary>
-		public event EventHandler<DockContainerChangedEventArgs> DockContainerChanged;
-
 		/// <summary>Get the control we're providing docking functionality for</summary>
-		public UIElement Owner { [DebuggerStepThrough] get; private set; }
+		public UIElement Owner { get; }
 
 		/// <summary>Get/Set the dock container that manages this content.</summary>
 		public DockContainer DockContainer
@@ -125,6 +110,21 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 		private DockContainer m_dc;
+
+		/// <summary>Raised when the pane this dockable is on is changing (possibly to null)</summary>
+		public event EventHandler PaneChanged;
+
+		/// <summary>Raised when 'Close' is selected from the tab context menu</summary>
+		public event EventHandler Closed;
+
+		/// <summary>Raised when this becomes the active content</summary>
+		public event EventHandler<ActiveContentChangedEventArgs> ActiveChanged;
+
+		/// <summary>Raised during 'ToXml' to allow clients to add extra data to the XML data for this object</summary>
+		public event EventHandler<DockContainerSavingLayoutEventArgs> SavingLayout;
+
+		/// <summary>Raised when this DockControl is assigned to a dock container (or possibly to null)</summary>
+		public event EventHandler<DockContainerChangedEventArgs> DockContainerChanged;
 
 		/// <summary>Remove this DockControl from whatever dock container it is in</summary>
 		public void Remove()

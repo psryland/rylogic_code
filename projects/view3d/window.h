@@ -185,6 +185,9 @@ namespace view3d
 		void InvalidateRect(RECT const* rect, bool erase = false);
 		void Invalidate(bool erase = false);
 
+		// Clear the invalidated state for the window
+		void Validate();
+
 		// Called when objects are added/removed from this window
 		void ObjectContainerChanged(EView3DSceneChanged change_type, GUID const* context_ids, int count, pr::ldr::LdrObject* object);
 

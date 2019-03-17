@@ -60,13 +60,13 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		}
 		public virtual void Dispose()
 		{
-			// Ensure this pane is removed from it's parent branch
-			if (ParentBranch != null)
-				ParentBranch.Descendants.Remove(this);
-
 			// Note: we don't own any of the content
 			VisibleContent = null;
 			AllContent = null;
+
+			// Ensure this pane is removed from it's parent branch
+			if (ParentBranch != null)
+				ParentBranch.Descendants.Remove(this);
 		}
 
 		/// <summary>The owning dock container</summary>
@@ -85,7 +85,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		public TabStrip TabStrip => m_tabstrip;
 
 		/// <summary>The panel that displays the visible content</summary>
-		public ContentControl Centre => m_content_pane;
+		public DockPanel Centre => m_content_pane;
 
 		/// <summary>The control that hosts the dock pane and branch tree</summary>
 		internal ITreeHost TreeHost => ParentBranch?.TreeHost;
@@ -177,7 +177,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 								if (VisibleContent == dc)
 									VisibleContent = AllContent.Except(e.OldItems.Cast<DockControl>()).FirstOrDefault();
 
-								// Clear the dock pane from the content
+								// Clear the dock pane on the content
 								dc.SetDockPaneInternal(null);
 
 								// Remove the tab button
@@ -252,7 +252,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 						// Remove the element
 						// Note: don't dispose the content, we don't own it
-						Centre.Content = null;
+						Centre.Children.Clear();
 
 						// Clear the title bar
 						m_title.Text = string.Empty;
@@ -267,7 +267,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					if (m_visible_content != null)
 					{
 						// Add the element
-						Centre.Content = m_visible_content.Owner;
+						Centre.Children.Add(m_visible_content.Owner);
 
 						// Set the title bar
 						m_title.Text = CaptionText;

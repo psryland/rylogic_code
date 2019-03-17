@@ -13,6 +13,7 @@ using System.Windows.Input;
 using System.Xml.Linq;
 using Microsoft.Win32;
 using Rylogic.Extn;
+using Rylogic.Extn.Windows;
 using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
@@ -20,8 +21,14 @@ namespace Rylogic.Gui.WPF
 	using DockContainerDetail;
 
 	/// <summary>A dock container is the parent control that manages docking of controls that implement IDockable.</summary>
-	public partial class DockContainer : DockPanel, ITreeHost
+	public partial class DockContainer : DockPanel, ITreeHost, IDisposable
 	{
+		// Notes:
+		//  - The dock container does not own the content. To clean up disposable content
+		//    use 'Util.DisposeRange(m_dc.AllContent.OfType<IDisposable>().ToList());'
+		//  - Don't be tempted to add a 'DisposeContent' flag because it's ambiguous when
+		//    dispose should be called on the content. 
+
 		/// <summary>The number of valid dock sites</summary>
 		private const int DockSiteCount = 5;
 
@@ -62,6 +69,10 @@ namespace Rylogic.Gui.WPF
 			CmdLoadLayout = new LoadLayoutCommand(this);
 			CmdSaveLayout = new SaveLayoutCommand(this);
 			CmdResetLayout = new ResetLayoutCommand(this);
+		}
+		public virtual void Dispose()
+		{
+			Root = null;
 		}
 
 		/// <summary>The dock container that owns this instance</summary>

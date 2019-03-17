@@ -2174,6 +2174,19 @@ VIEW3D_API void __stdcall View3D_Present(View3DWindow window)
 	CatchAndReport(View3D_Present, window,);
 }
 
+// Clear the 'invalidated' state of the window.
+VIEW3D_API void __stdcall View3D_Validate(View3DWindow window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->Validate();
+	}
+	CatchAndReport(View3D_Validate, window, );
+}
+
 // Set the render target back to the main back buffer.
 // This needs to be called after 'View3D_RenderTargetSet' has been called to render to a texture
 VIEW3D_API void __stdcall View3D_RenderTargetRestore(View3DWindow window)
@@ -2227,9 +2240,11 @@ VIEW3D_API void __stdcall View3D_BackBufferSizeGet(View3DWindow window, int& wid
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
+		width = 0;
+		height = 0;
 		auto area = window->m_wnd.BackBufferSize();
-		width     = area.x;
-		height    = area.y;
+		width = area.x;
+		height = area.y;
 	}
 	CatchAndReport(View3D_RenderTargetSize, window,);
 }

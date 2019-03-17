@@ -86,6 +86,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 			// Remove the tab strip from the dock pane child so we can use
 			// it as the auto hide tab strip for this auto hide panel
+			TabStrip = DockPane.TabStrip;
 			TabStrip.Detach();
 			TabStrip.AHPanel = this;
 		}
@@ -161,7 +162,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 						}
 					case TreeChangedEventArgs.EAction.Added:
 						{
-							// When the first content is added, 
+							// When the first content is added
 							if (Root.AllContent.CountAtMost(2) == 1)
 							{
 								// Ensure the tab strip is visible
@@ -204,7 +205,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		private DockPane DockPane => Root.DockPane(EDockSite.Centre);
 
 		/// <summary>The tab strip associated with this auto hide panel</summary>
-		public TabStrip TabStrip => DockPane.TabStrip;
+		public TabStrip TabStrip { get; }
 
 		/// <summary>The site that this auto hide panel hides to</summary>
 		public EDockSite DockSite { get; private set; }

@@ -62,6 +62,11 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			base.OnRenderSizeChanged(sizeInfo);
 
 			// Update the sizes of the descendent
+			if (Descendants[EDockSite.Centre]?.Item is FrameworkElement c)
+			{
+				c.Width = double.NaN;
+				c.Height = double.NaN;
+			}
 			if (Descendants[EDockSite.Left]?.Item is FrameworkElement l) l.Width = ChildSize(EDockSite.Left);
 			if (Descendants[EDockSite.Top]?.Item is FrameworkElement t) t.Height = ChildSize(EDockSite.Top);
 			if (Descendants[EDockSite.Right]?.Item is FrameworkElement r) r.Width = ChildSize(EDockSite.Right);
@@ -149,6 +154,11 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 
 			m_prune_pending = false;
 
+			// A branch can be disposed between 'SignalPruneBranches' and the method
+			// being invoked. In this case, ignore the prune branches.
+			if (DockContainer == null)
+				return;
+
 			// Depth-first recursive
 			foreach (var b in Descendants.Select(x => x.Item as Branch).NotNull())
 				b.PruneBranches();
@@ -184,12 +194,22 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				Util.Dispose(ref old);
 			}
 
-			// If the branch has only one child, ensure it's in the Centre position
+			// If the branch has only one child, ensure it's in the Centre position.
 			if (Descendants.Count == 1 && Descendants[EDockSite.Centre].Item == null)
 			{
-				var ctrl = Descendants[0].Item;
+				var item = Descendants[0].Item;
 				Descendants[0].Item = null;
-				Descendants[EDockSite.Centre].Item = ctrl;
+				Descendants[EDockSite.Centre].Item = item;
+			}
+
+			// If the centre position is empty, and there is only one other descendant, move it to the centre.
+			if (Descendants.Count == 2 && Descendants[EDockSite.Centre]?.Item is DockPane dp && dp.AllContent.Count == 0)
+			{
+				var item = Descendants[1].Item;
+				Descendants[1].Item = null;
+				Descendants[0].Item = null;
+				Descendants[EDockSite.Centre].Item = item;
+				Util.Dispose(ref dp);
 			}
 
 			// Ensure there is always a centre pane
@@ -711,14 +731,22 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 						if (DockSite == EDockSite.Centre)
 						{
 							ParentBranch.Children.Add(item);
+							item.Width = double.NaN;
+							item.Height = double.NaN;
 						}
 						else
 						{
 							// Set the initial size of the docked item
 							if (DockSite.IsVertical())
+							{
 								item.Width = ParentBranch.ChildSize(DockSite);
+								item.Height = double.NaN;
+							}
 							else
+							{
+								item.Width = double.NaN;
 								item.Height = ParentBranch.ChildSize(DockSite);
+							}
 
 							// Dock 'item'
 							ParentBranch.Children.Insert2(0, item);

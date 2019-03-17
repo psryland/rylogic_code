@@ -618,6 +618,7 @@ extern "C"
 	VIEW3D_API void            __stdcall View3D_InvalidateRect         (View3DWindow window, RECT const* rect, BOOL erase);
 	VIEW3D_API void            __stdcall View3D_Render                 (View3DWindow window);
 	VIEW3D_API void            __stdcall View3D_Present                (View3DWindow window);
+	VIEW3D_API void            __stdcall View3D_Validate               (View3DWindow window);
 	VIEW3D_API void            __stdcall View3D_RenderTargetRestore    (View3DWindow window);
 	VIEW3D_API void            __stdcall View3D_RenderTargetSet        (View3DWindow window, View3DTexture render_target, View3DTexture depth_buffer);
 	VIEW3D_API void            __stdcall View3D_RenderTargetSaveAsMain (View3DWindow window);

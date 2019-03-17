@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using Rylogic.Extn;
+using Rylogic.Extn.Windows;
 
 namespace Rylogic.Gui.WPF
 {

@@ -157,11 +157,8 @@
 	<Grid
 		Grid.Column="1"
 		Grid.Row="1"
-		Background="Black"
 		>
-		<local:ChartPanel
-			x:Name="m_chart_panel"
-			/>
+		<local:ChartPanel x:Name="m_chart_panel" />
 	</Grid>
 	
 	<!-- Show Value popup -->

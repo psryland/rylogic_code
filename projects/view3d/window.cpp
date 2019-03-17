@@ -260,13 +260,13 @@ namespace view3d
 			m_scene.m_rsb.Clear(ERS::FillMode);
 			m_scene.m_bsb.Clear(EBS::BlendEnable, 0);
 		}
-
-		// No longer invalidated
-		m_invalidated = false;
 	}
 	void Window::Present()
 	{
 		m_wnd.Present();
+
+		// No longer invalidated
+		Validate();
 	}
 
 	// Close any window handles
@@ -691,11 +691,18 @@ namespace view3d
 		if (!m_invalidated)
 			OnInvalidated.Raise(this);
 
+		// The window becomes validated again when 'Present()' or 'Validate()' is called.
 		m_invalidated = true;
 	}
 	void Window::Invalidate(bool erase)
 	{
 		InvalidateRect(nullptr, erase);
+	}
+
+	// Clear the invalidated state for the window
+	void Window::Validate()
+	{
+		m_invalidated = false;
 	}
 
 	// Called when objects are added/removed from this window

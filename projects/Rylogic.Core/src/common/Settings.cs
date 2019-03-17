@@ -496,6 +496,7 @@ namespace Rylogic.Common
 			if (!Path_.FileExists(filepath))
 			{
 				SettingsEvent(ESettingsEvent.FileNotFound, null, $"Settings file {filepath} not found, using defaults");
+				Filepath = filepath;
 				Reset();
 				return; // Reset will recursively call Load again
 			}

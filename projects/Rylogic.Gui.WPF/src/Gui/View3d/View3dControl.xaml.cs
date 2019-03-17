@@ -11,6 +11,7 @@ using System.Windows.Media;
 using Rylogic.Attrib;
 using Rylogic.Common;
 using Rylogic.Extn;
+using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
 using Rylogic.Maths;
 using Rylogic.Utility;
@@ -342,6 +343,12 @@ namespace Rylogic.Gui.WPF
 			set
 			{
 				if (DesiredPixelAspect == value) return;
+				if (double.IsNaN(value))
+					throw new ArgumentException("The desired pixel aspect cannot be NaN");
+				if (double.IsInfinity(value))
+					throw new ArgumentException("The desired pixel aspect cannot be infinite");
+				if (value == 0)
+					throw new ArgumentException("The desired pixel aspect cannot be 0");
 				m_desired_pixel_aspect = value;
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DesiredPixelAspect)));
 			}
@@ -478,7 +485,11 @@ namespace Rylogic.Gui.WPF
 			{
 				// Ignore renders until the D3DImage has a render target
 				if (D3DImage.RenderTarget == null || !D3DImage.IsFrontBufferAvailable)
+				{
+					// 'Validate' the window so that future Invalidate() calls to trigger the call back.
+					Window.Validate();
 					return;
+				}
 
 				// If the size has changed, update the back buffer
 				if (m_resized)

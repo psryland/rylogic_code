@@ -4,9 +4,11 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using Rylogic.Extn;
+using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
 using Rylogic.Maths;
 using Rylogic.Utility;
+using Size_ = Rylogic.Extn.Windows.Size_;
 
 namespace Rylogic.Gui.WPF
 {
