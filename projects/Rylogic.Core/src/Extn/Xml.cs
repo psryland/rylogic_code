@@ -547,7 +547,6 @@ namespace Rylogic.Extn
 					if (factory_ != null) { func = this[type] = AsFromFactory; break; }
 
 					// Note, the constructor can be private, but not inherited
-					Debug.Assert(false, $"{type.Name} does not have a constructor taking an XElement parameter or is not a data contract class");
 					throw new NotSupportedException($"No binding for converting XElement to type {type.Name}");
 				}
 				return func(elem, type, factory);

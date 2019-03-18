@@ -63,18 +63,16 @@ namespace pr
 			//   Unfortunately it can't return void to pass to a parameterless constructor so use int:-/
 			int UserSettings() { return 0; }
 
-			static BOOL const GdiCompat = FALSE;
-
 			// Return settings to configure the render
 			pr::rdr::RdrSettings RdrSettings()
 			{
-				return pr::rdr::RdrSettings(GetModuleHandleW(nullptr), GdiCompat);
+				return pr::rdr::RdrSettings(GetModuleHandleW(nullptr), D3D11_CREATE_DEVICE_FLAG(0));
 			}
 
 			// Return settings for the render window
 			pr::rdr::WndSettings RdrWindowSettings(HWND hwnd, pr::iv2 const& client_area)
 			{
-				return pr::rdr::WndSettings(hwnd, TRUE, GdiCompat, client_area);
+				return pr::rdr::WndSettings(hwnd, TRUE, D3D11_CREATE_DEVICE_FLAG(0), client_area);
 			}
 		};
 

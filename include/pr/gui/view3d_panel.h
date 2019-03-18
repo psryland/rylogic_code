@@ -15,20 +15,30 @@ namespace pr
 		{
 			struct View3DPanelParams :PanelParams
 			{
-				View3D_ReportErrorCB m_error_cb;         // View3D error reporting callback function
-				void*                m_error_ctx;        // View3D error reporting callback context
-				bool                 m_gdi_compat;       // GDI compatibility
-				bool                 m_show_focus_point; // True if the focus cross hair should be rendered
+				View3D_ReportErrorCB     m_error_cb;         // View3D error reporting callback function
+				void*                    m_error_ctx;        // View3D error reporting callback context
+				D3D11_CREATE_DEVICE_FLAG m_device_flags;     // Device creation flags
+				bool                     m_show_focus_point; // True if the focus cross hair should be rendered
 
 				View3DPanelParams()
 					:m_error_cb([](void*, wchar_t const* msg){ throw std::exception(pr::gui::Narrow(msg).c_str()); })
 					,m_error_ctx()
-					,m_gdi_compat(false)
+					,m_device_flags()
 					,m_show_focus_point(false)
 				{}
 				View3DPanelParams* clone() const override
 				{
 					return new View3DPanelParams(*this);
+				}
+				View3DWindowOptions wnd_opts() const
+				{
+					auto opts = View3DWindowOptions{};
+					opts.m_error_cb = m_error_cb;
+					opts.m_error_cb_ctx = m_error_ctx;
+					opts.m_gdi_compatible_backbuffer = AllSet(m_device_flags, D3D11_CREATE_DEVICE_BGRA_SUPPORT);
+					opts.m_multisampling = 4;
+					opts.m_dbg_name = "vrex_gui";
+					return opts;
 				}
 			};
 			template <typename TParams = View3DPanelParams, typename Derived = void> struct Params :Panel::Params<TParams, choose_non_void<Derived, Params<>>>
@@ -68,8 +78,8 @@ namespace pr
 			View3DPanel() :View3DPanel(View3DPanelParams()) {}
 			View3DPanel(View3DPanelParams const& p)
 				:Panel(p)
-				,m_ctx(View3D_Initialise(p.m_error_cb, p.m_error_ctx, p.m_gdi_compat))
-				,m_win(View3D_WindowCreate(CreateHandle(), View3DWindowOptions{p.m_error_cb, p.m_error_ctx, p.m_gdi_compat, 4, "vrex_gui"}))
+				,m_ctx(View3D_Initialise(p.m_error_cb, p.m_error_ctx, p.m_device_flags))
+				,m_win(View3D_WindowCreate(CreateHandle(), p.wnd_opts()))
 			{
 				//View3D_CreateDemoScene(m_win);
 				View3D_FocusPointVisibleSet(m_win, cp().m_show_focus_point);

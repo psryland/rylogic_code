@@ -2209,10 +2209,11 @@ VIEW3D_API void __stdcall View3D_RenderTargetSet(View3DWindow window, View3DText
 	try
 	{
 		if (window == nullptr) throw std::runtime_error("window is null");
-		if (render_target == nullptr) throw std::runtime_error("Render target texture is null");
 
 		DllLockGuard;
-		window->m_wnd.SetRT(render_target->m_tex.get(), depth_buffer != nullptr ? depth_buffer->m_tex.get() : nullptr);
+		window->m_wnd.SetRT(
+			render_target != nullptr ? render_target->m_tex.get() : nullptr,
+			depth_buffer != nullptr ? depth_buffer->m_tex.get() : nullptr);
 	}
 	CatchAndReport(View3D_RenderTargetSet, window,);
 }

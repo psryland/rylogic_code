@@ -365,7 +365,7 @@ namespace Rylogic.Gui.WPF
 		public MenuItem WindowsMenu(string menu_name = "Windows")
 		{
 			var menu = new MenuItem { Header = menu_name };
-			var sep = new Separator();
+			var sep = menu.Items.Add2(new Separator());
 
 			// Load layout from disk
 			var load = new MenuItem { Header = "Load Layout", Command = CmdLoadLayout };

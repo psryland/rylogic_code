@@ -276,12 +276,19 @@ namespace pr
 		// 'depth_buffer' will be created if not provided.
 		void Window::SetRT(ID3D11Texture2D* render_target, ID3D11Texture2D* depth_buffer)
 		{
-			Renderer::Lock lock(*m_rdr);
+			// Allow setting the render target to null
+			if (render_target == nullptr)
+			{
+				SetRT(static_cast<ID3D11RenderTargetView*>(nullptr), static_cast<ID3D11DepthStencilView*>(nullptr));
+				return;
+			}
 
 			// Get the description of the render target texture
 			TextureDesc tdesc;
 			render_target->GetDesc(&tdesc);
 			PR_ASSERT(PR_DBG_RDR, (tdesc.BindFlags & D3D11_BIND_RENDER_TARGET) != 0, "This texture is not a render target");
+
+			Renderer::Lock lock(*m_rdr);
 
 			// Get a render target view of the render target texture
 			D3DPtr<ID3D11RenderTargetView> rtv;

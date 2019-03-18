@@ -126,11 +126,11 @@ namespace pr::physics
 			auto& objB = const_cast<RigidBody&>(*c.m_objB);
 
 			#if PR_DBG
-			auto vel_beforeA = objA.VelocityWS();
-			auto vel_beforeB = objB.VelocityWS();
-			auto ke_beforeA = objA.KineticEnergy();
-			auto ke_beforeB = objB.KineticEnergy();
-			auto h_before = objA.MomentumWS() + objB.MomentumWS();
+			//auto vel_beforeA = objA.VelocityWS();
+			//auto vel_beforeB = objB.VelocityWS();
+			//auto ke_beforeA = objA.KineticEnergy();
+			//auto ke_beforeB = objB.KineticEnergy();
+			//auto h_before = objA.MomentumWS() + objB.MomentumWS();
 			#endif
 
 			// Calculate the world space restitution impulse

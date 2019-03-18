@@ -90,6 +90,7 @@ struct MainUI :Form
 			static EventSub sub;
 			sub = m_physics.PostCollisionDetection += [&](Physics const&, std::vector<physics::Contact>& contacts)
 			{
+				(void)contacts;
 				m_physics.PostCollisionDetection -= sub;
 				return;
 
