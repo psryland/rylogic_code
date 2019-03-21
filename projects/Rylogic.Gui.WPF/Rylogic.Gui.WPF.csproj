@@ -138,6 +138,9 @@
     <Compile Include="src\Gui\Dialogs\MsgBox.xaml.cs">
       <DependentUpon>MsgBox.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\Gui\Log\LogControl.xaml.cs">
+      <DependentUpon>LogControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\Gui\Pattern\PatternEditor.xaml.cs">
       <DependentUpon>PatternEditor.xaml</DependentUpon>
     </Compile>
@@ -242,6 +245,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="src\Gui\Log\LogControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="src\Gui\Pattern\PatternEditor.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -329,6 +336,10 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="icon_128x128.ico" />
+    <Resource Include="res\bottom.png" />
+    <Resource Include="res\check_reject.png" />
+    <Resource Include="res\line_wrap.png" />
+    <Resource Include="res\folder.png" />
     <Resource Include="res\minus1.png" />
     <Resource Include="res\pencil.png" />
     <Resource Include="res\plus1.png" />

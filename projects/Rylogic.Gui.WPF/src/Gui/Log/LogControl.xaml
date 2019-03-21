@@ -1,0 +1,83 @@
+﻿<UserControl
+	x:Class="Rylogic.Gui.WPF.LogControl"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+	xmlns:local="clr-namespace:Rylogic.Gui.WPF"
+	mc:Ignorable="d" 
+	d:DesignWidth="800"
+	d:DesignHeight="450"
+	>
+	<UserControl.Resources>
+		<ResourceDictionary>
+			<BitmapImage x:Key="folder" UriSource="/Rylogic.Gui.WPF;component/res/folder.png"/>
+			<BitmapImage x:Key="check_reject" UriSource="/Rylogic.Gui.WPF;component/res/check_reject.png"/>
+			<BitmapImage x:Key="bottom" UriSource="/Rylogic.Gui.WPF;component/res/bottom.png"/>
+			<BitmapImage x:Key="line_wrap" UriSource="/Rylogic.Gui.WPF;component/res/line_wrap.png"/>
+		</ResourceDictionary>
+	</UserControl.Resources>
+
+	<Grid>
+
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+		</Grid.RowDefinitions>
+		
+		<!-- Log file tool bar -->
+		<DockPanel
+			Grid.Row="0"
+			>
+			<Button
+				DockPanel.Dock="Left"
+				Command="{Binding BrowseForLogFile}"
+				Margin="4"
+				Height="24"
+				>
+				<Image Source="{StaticResource folder}" Stretch="Uniform" StretchDirection="DownOnly"/>
+			</Button>
+			<ToggleButton
+				DockPanel.Dock="Right"
+				IsChecked="{Binding LineWrap, Mode=OneWay}"
+				Command="{Binding ToggleLineWrap}"
+				Margin="4"
+				Height="24"
+				>
+				<Image Source="{StaticResource line_wrap}" Stretch="Uniform" StretchDirection="DownOnly"/>
+			</ToggleButton>
+			<Button
+				DockPanel.Dock="Right"
+				Command="{Binding JumpToBottom}"
+				Margin="4"
+				Height="24"
+				>
+				<Image Source="{StaticResource bottom}" Stretch="Uniform" StretchDirection="DownOnly"/>
+			</Button>
+			<Button
+				DockPanel.Dock="Right"
+				Command="{Binding ClearLog}"
+				Margin="4"
+				Height="24"
+				>
+				<Image Source="{StaticResource check_reject}" Stretch="Uniform" StretchDirection="DownOnly"/>
+			</Button>
+			<TextBox
+				Text="{Binding LogFilepath}"
+				VerticalContentAlignment="Center"
+				IsReadOnly="True"
+				Margin="4"
+				/>
+		</DockPanel>
+		
+		<!-- Log View -->
+		<DataGrid
+			Name="m_view"
+			Grid.Row="1"
+			AutoGenerateColumns="False"
+			HeadersVisibility="Column"
+			GridLinesVisibility="None"
+			ItemsSource="{Binding LogEntriesView}"
+			/>
+	</Grid>
+</UserControl>

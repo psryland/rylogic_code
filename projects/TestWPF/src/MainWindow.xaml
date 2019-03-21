@@ -28,6 +28,7 @@
 					<MenuItem Name="m_menu_tests_diagram" Header="_Diagram"/>
 					<MenuItem Name="m_menu_tests_dock_container" Header="_Dock Container"/>
 					<MenuItem Name="m_menu_tests_message_box_ui" Header="_Message Box UI"/>
+					<MenuItem Name="m_menu_tests_log_ui" Header="_Log UI"/>
 					<MenuItem Name="m_menu_tests_pattern_editor" Header="_Pattern Editor"/>
 					<MenuItem Name="m_menu_tests_prompt_ui" Header="_Prompt UI"/>
 					<MenuItem Name="m_menu_tests_tool_ui" Header="_Tool Window"/>

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -51,6 +52,12 @@ namespace TestWPF
 			m_menu_tests_message_box_ui.Click += (s, a) =>
 			{
 				MsgBox.Show(this, "Informative isn't it", "Massage Box", MsgBox.EButtons.YesNoCancel, MsgBox.EIcon.Exclamation);
+			};
+			m_menu_tests_log_ui.Click += (s, a) =>
+			{
+				var log_ui = new LogControl { LogEntryPattern = new Regex(@"^(?<Tag>.*?)\|(?<Level>.*?)\|(?<Timestamp>.*?)\|(?<Message>.*)", RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.CultureInvariant | RegexOptions.Compiled) };
+				var dlg = new Window { Title = "Log UI", Content = log_ui, ResizeMode = ResizeMode.CanResizeWithGrip };
+				dlg.Show();
 			};
 			m_menu_tests_pattern_editor.Click += (s, a) =>
 			{
