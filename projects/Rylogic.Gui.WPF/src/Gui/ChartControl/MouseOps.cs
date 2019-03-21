@@ -463,6 +463,8 @@ namespace Rylogic.Gui.WPF
 				if (m_chart.SceneBounds.Contains(location)) m_drag_axis_allow = EAxis.Both;
 				if (m_chart.XAxisBounds.Contains(location)) m_drag_axis_allow = EAxis.XAxis;
 				if (m_chart.YAxisBounds.Contains(location)) m_drag_axis_allow = EAxis.YAxis;
+				if (!m_chart.XAxis.AllowScroll) m_drag_axis_allow &= ~EAxis.XAxis;
+				if (!m_chart.YAxis.AllowScroll) m_drag_axis_allow &= ~EAxis.YAxis;
 
 				// Right mouse translates for 2D and 3D scene
 				var point_ss = e.GetPosition(m_chart.Scene).ToPointF();
@@ -482,8 +484,8 @@ namespace Rylogic.Gui.WPF
 				// Limit the drag direction
 				var drop_loc = Gui_.MapPoint(m_chart, m_chart.Scene, location);
 				var grab_loc = Gui_.MapPoint(m_chart, m_chart.Scene, m_grab_client);
-				if (!m_drag_axis_allow.HasFlag(EAxis.XAxis) || m_chart.XAxis.LockRange) drop_loc.X = grab_loc.X;
-				if (!m_drag_axis_allow.HasFlag(EAxis.YAxis) || m_chart.YAxis.LockRange) drop_loc.Y = grab_loc.Y;
+				if (!m_drag_axis_allow.HasFlag(EAxis.XAxis)) drop_loc.X = grab_loc.X;
+				if (!m_drag_axis_allow.HasFlag(EAxis.YAxis)) drop_loc.Y = grab_loc.Y;
 
 				m_chart.Scene.Window.MouseNavigate(drop_loc.ToPointF(), e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Translate, false);
 				m_chart.SetRangeFromCamera();
@@ -499,22 +501,6 @@ namespace Rylogic.Gui.WPF
 				{
 					var args = new ChartClickedEventArgs(m_hit_result, e);
 					m_chart.OnChartClicked(args);
-
-					if (!args.Handled)
-					{
-						// Show the context menu on right click
-						if (e.RightButton == MouseButtonState.Released)
-						{
-							var location1 = e.GetPosition(m_chart);
-
-							if (m_hit_result.Zone.HasFlag(EZone.Chart))
-								m_chart.ShowContextMenu(location1, args.HitResult);
-							else if (m_hit_result.Zone.HasFlag(EZone.XAxis))
-								m_chart.XAxis.ShowContextMenu(location1, args.HitResult);
-							else if (m_hit_result.Zone.HasFlag(EZone.YAxis))
-								m_chart.YAxis.ShowContextMenu(location1, args.HitResult);
-						}
-					}
 					m_chart.Scene.Invalidate();
 				}
 				else
@@ -522,12 +508,13 @@ namespace Rylogic.Gui.WPF
 					// Limit the drag direction
 					var drop_loc = Gui_.MapPoint(m_chart, m_chart.Scene, location);
 					var grab_loc = Gui_.MapPoint(m_chart, m_chart.Scene, m_grab_client);
-					if (!m_drag_axis_allow.HasFlag(EAxis.XAxis) || m_chart.XAxis.LockRange) drop_loc.X = grab_loc.X;
-					if (!m_drag_axis_allow.HasFlag(EAxis.YAxis) || m_chart.YAxis.LockRange) drop_loc.Y = grab_loc.Y;
+					if (!m_drag_axis_allow.HasFlag(EAxis.XAxis)) drop_loc.X = grab_loc.X;
+					if (!m_drag_axis_allow.HasFlag(EAxis.YAxis)) drop_loc.Y = grab_loc.Y;
 
 					m_chart.Scene.Window.MouseNavigate(drop_loc.ToPointF(), e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.None, true);
 					m_chart.SetRangeFromCamera();
 					m_chart.Scene.Invalidate();
+					e.Handled = true;
 				}
 			}
 		}

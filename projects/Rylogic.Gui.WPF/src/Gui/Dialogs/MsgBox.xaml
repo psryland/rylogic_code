@@ -1,0 +1,98 @@
+﻿<Window
+	x:Class="Rylogic.Gui.WPF.MsgBox"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:local="clr-namespace:Rylogic.Gui.WPF"
+	mc:Ignorable="d" 
+	d:DesignWidth="360"
+	d:DesignHeight="230" 
+	Title="Message Box"
+	WindowStartupLocation="CenterOwner"
+	SizeToContent="WidthAndHeight"
+	ResizeMode="CanResizeWithGrip"
+	ShowInTaskbar="False"
+	MaxWidth="800"	
+	MinWidth="330"
+	MinHeight="100"
+	>
+
+	<DockPanel
+		LastChildFill="True"
+		>
+		
+		<!-- Buttons -->
+		<StackPanel
+			DockPanel.Dock="Bottom"
+			Orientation="Horizontal"
+			FlowDirection="RightToLeft"
+			Background="{x:Static SystemColors.ControlBrush}"
+			>
+			<Button
+				Name="m_btn_negative"
+				Content="{Binding NegativeBtnText}"
+				MinWidth="80"
+				MinHeight="22"
+				Margin="12,8,4,8"
+				IsCancel="True"
+				/>
+			<Button
+				Name="m_btn_neutral"
+				Content="{Binding NeutralBtnText}"
+				MinWidth="80"
+				MinHeight="22"
+				Margin="12,8,4,8"
+				/>
+			<Button
+				Name="m_btn_positive"
+				Content="{Binding PositiveBtnText}"
+				MinWidth="80"
+				MinHeight="22"
+				Margin="12,8,4,8"
+				IsDefault="True"
+				/>
+		</StackPanel>
+		
+		<!-- Body -->
+		<Grid
+			Background="{x:Static SystemColors.WindowBrush}"
+			Margin="12"
+			>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="auto"/>
+				<ColumnDefinition Width="*"/>
+			</Grid.ColumnDefinitions>
+			
+			<!-- Optional icon image -->
+			<Image
+				Grid.Column="0"
+				MaxWidth="96"
+				MaxHeight="96"
+				Stretch="Uniform"
+				StretchDirection="DownOnly"
+				Margin="8"
+				VerticalAlignment="Top"
+				Source="{Binding Image}"
+				Visibility="{Binding Image, Converter={local:NullToCollapsed}}"
+				/>
+			
+			<!-- Prompt message -->
+			<Grid
+				Grid.Column="1"
+				MinWidth="50"
+				MinHeight="50"
+				>
+				<TextBox
+					BorderThickness="0"
+					AcceptsReturn="True"
+					VerticalAlignment="Top"
+					Height="Auto"
+					TextWrapping="Wrap"
+					IsReadOnly="True"
+					Text="{Binding Message}"
+					/>
+			</Grid>
+		</Grid>
+	</DockPanel>
+</Window>

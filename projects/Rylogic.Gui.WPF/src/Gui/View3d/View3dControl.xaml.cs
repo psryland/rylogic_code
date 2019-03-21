@@ -403,10 +403,10 @@ namespace Rylogic.Gui.WPF
 					Camera.ResetZoom();
 					Invalidate();
 				}
-				else if (e.ChangedButton == MouseButton.Right && e.RightButton == MouseButtonState.Released)
-				{
-					ShowContextMenu();
-				}
+			}
+			else
+			{
+				e.Handled = true;
 			}
 		}
 		public void OnMouseMove(object sender, MouseEventArgs e)
@@ -426,35 +426,8 @@ namespace Rylogic.Gui.WPF
 		}
 		private int m_mouse_down_at;
 
-		/// <summary>Show the view3D context menu</summary>
-		public void ShowContextMenu()
-		{
-			if (Window == null || !(FindResource("View3dControlCMenu") is ContextMenu cmenu))
-				return;
-
-			// Refresh the state
-			cmenu.DataContext = null;
-			cmenu.DataContext = this;
-
-			// Allow users to add custom menu options to the context menu
-			// Do this last so that users have the option of removing options they don't want displayed
-			OnCustomiseContextMenu(new CustomContextMenuEventArgs(cmenu));
-
-			// Show the menu
-			cmenu.Items.TidySeparators();
-			cmenu.PlacementTarget = this;
-			cmenu.IsOpen = true;
-		}
-
 		/// <summary></summary>
 		public event PropertyChangedEventHandler PropertyChanged;
-
-		/// <summary>Event called just before displaying the context menu to allow users to add custom options to the menu</summary>
-		public event EventHandler<CustomContextMenuEventArgs> CustomiseContextMenu;
-		protected virtual void OnCustomiseContextMenu(CustomContextMenuEventArgs e)
-		{
-			CustomiseContextMenu?.Invoke(this, e);
-		}
 
 		/// <summary>Called whenever an error is generated in view3d</summary>
 		public event EventHandler<ReportErrorEventArgs> ReportError;
@@ -516,10 +489,10 @@ namespace Rylogic.Gui.WPF
 		private bool m_render_pending;
 
 		// Allow objects to be added/removed from the scene
-		public event EventHandler BuildScene;
+		public event EventHandler<BuildSceneEventArgs> BuildScene;
 		protected virtual void OnBuildScene()
 		{
-			BuildScene?.Invoke(this, EventArgs.Empty);
+			BuildScene?.Invoke(this, new BuildSceneEventArgs(Window));
 		}
 
 		/// <summary>Toggle visibility of the origin point</summary>
@@ -688,6 +661,19 @@ namespace Rylogic.Gui.WPF
 
 			/// <summary>Error message</summary>
 			public string Message { get; }
+		}
+		public class BuildSceneEventArgs : EventArgs
+		{
+			public BuildSceneEventArgs(View3d.Window window)
+			{
+				Window = window;
+			}
+
+			/// <summary>The chart panel</summary>
+			public View3d.Window Window { get; }
+
+			/// <summary>Current camera position</summary>
+			public View3d.Camera Camera => Window.Camera;
 		}
 		#endregion
 	}

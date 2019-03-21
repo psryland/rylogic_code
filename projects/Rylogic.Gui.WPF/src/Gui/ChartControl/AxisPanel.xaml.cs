@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using Rylogic.Extn.Windows;
@@ -13,8 +14,6 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		// Notes:
 		//  - Represents the tick marks and tick labels of an axis.
 		//  - This component is intended to be able to go on any size of the graph.
-
-		private TextBlock m_measure;
 
 		static AxisPanel()
 		{
@@ -28,7 +27,11 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		public AxisPanel()
 		{
 			InitializeComponent();
-			m_measure = new TextBlock { Text = "-12345.678" };
+
+			// Commands
+			ToggleScrollLock = Command.Create(this, () => Axis.AllowScroll = !Axis.AllowScroll);
+			ToggleZoomLock = Command.Create(this, () => Axis.AllowZoom = !Axis.AllowZoom);
+
 			DataContext = this;
 		}
 		protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
@@ -113,6 +116,11 @@ namespace Rylogic.Gui.WPF.ChartDetail
 				new_value.Scroll += HandleMoved;
 				Options.PropertyChanged += HandleOptionChanged;
 			}
+
+			// Invalidate cached values
+			m_axis_size = null;
+
+			// Notify options changed
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Options)));
 
 			// Handlers
@@ -132,6 +140,11 @@ namespace Rylogic.Gui.WPF.ChartDetail
 					break;
 				case nameof(ChartControl.OptionsData.Axis.DrawTickLabels):
 				case nameof(ChartControl.OptionsData.Axis.DrawTickMarks):
+					m_axis_size = null;
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AxisSize)));
+					UpdateGraphics();
+					break;
+				case nameof(ChartControl.OptionsData.Axis.TickTextTemplate):
 					m_axis_size = null;
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AxisSize)));
 					UpdateGraphics();
@@ -160,11 +173,12 @@ namespace Rylogic.Gui.WPF.ChartDetail
 					// Add space for tick labels
 					if (Options.DrawTickLabels)
 					{
-						m_measure.Typeface(Typeface, FontSize);
-						m_measure.Measure(Size_.Infinity);
+						var measure = new TextBlock { Text = Options.TickTextTemplate, TextWrapping = TextWrapping.Wrap };
+						measure.Typeface(Typeface, FontSize);
+						measure.Measure(Size_.Infinity);
 						m_axis_size +=
-							Side == Dock.Left || Side == Dock.Right ? m_measure.DesiredSize.Width :
-							Side == Dock.Top || Side == Dock.Bottom ? m_measure.DesiredSize.Height :
+							Side == Dock.Left || Side == Dock.Right ? measure.DesiredSize.Width :
+							Side == Dock.Top || Side == Dock.Bottom ? measure.DesiredSize.Height :
 							0;
 					}
 				}
@@ -312,6 +326,12 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			m_update_graphics_pending = false;
 		}
 		private bool m_update_graphics_pending;
+
+		/// <summary>Toggle the scroll locked state of the axis</summary>
+		public Command ToggleScrollLock { get; }
+
+		/// <summary>Toggle the scroll locked state of the axis</summary>
+		public Command ToggleZoomLock { get; }
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler PropertyChanged;

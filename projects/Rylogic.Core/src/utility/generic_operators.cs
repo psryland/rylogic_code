@@ -298,6 +298,9 @@ namespace Rylogic.Utility
 		public static T MinValue { get { return m_min_value(); } }
 		private static Func<T> m_min_value;
 
+		/// <summary>Cast from type U to type T</summary>
+		public static T Cast<U>(U a) { return Operators<T, U>.Cast(a); }
+
 		/// <summary>+a</summary>
 		public static T Plus(T a) { return m_plus(a); }
 		private static Func<T,T> m_plus;
@@ -376,6 +379,13 @@ namespace Rylogic.Utility
 	{
 		static Operators()
 		{
+			#region Cast
+			{
+				var paramA = Expression.Parameter(typeof(U), "a");
+				var body = Expression.Convert(paramA, typeof(T));
+				m_cast = Expression.Lambda<Func<U, T>>(body, paramA).Compile();
+			}
+			#endregion
 			#region Multiply
 			{
 				var paramA = Expression.Parameter(typeof(T), "a");
@@ -393,6 +403,10 @@ namespace Rylogic.Utility
 			}
 			#endregion
 		}
+
+		/// <summary>Cast a value to type 'T'</summary>
+		public static T Cast(U a) { return m_cast(a); }
+		private static Func<U, T> m_cast;
 
 		/// <summary>a * b</summary>
 		public static T Mul(T a, U b) { return m_mul(a,b); }
@@ -438,6 +452,7 @@ namespace Rylogic.UnitTests
 
 			Assert.Equal(Operators<decimal>.MaxValue, decimal.MaxValue);
 			Assert.Equal(Operators<decimal>.MinValue, decimal.MinValue);
+			Assert.Equal(Operators<decimal>.Cast(1.0).GetType(), typeof(decimal));
 
 			Assert.Equal(Operators<short  >.Plus(412)       , (short)+412 );
 			Assert.Equal(Operators<long   >.Neg(512)        , -512L       );

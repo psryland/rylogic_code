@@ -97,6 +97,9 @@
     <Compile Include="src\Gui\ColourPicker\ColourWheel.xaml.cs">
       <DependentUpon>ColourWheel.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\Gui\Dialogs\PromptUI.xaml.cs">
+      <DependentUpon>PromptUI.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\Gui\DockContainer\DockContainer.xaml.cs">
       <DependentUpon>DockContainer.xaml</DependentUpon>
     </Compile>
@@ -132,7 +135,7 @@
       <DependentUpon>DockPanelSplitter.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\Extn\Gui.cs" />
-    <Compile Include="src\Gui\MsgBox.xaml.cs">
+    <Compile Include="src\Gui\Dialogs\MsgBox.xaml.cs">
       <DependentUpon>MsgBox.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\Gui\Pattern\PatternEditor.xaml.cs">
@@ -199,6 +202,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="src\Gui\Dialogs\PromptUI.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="src\Gui\DockContainer\DockContainer.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -231,7 +238,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="src\Gui\MsgBox.xaml">
+    <Page Include="src\Gui\Dialogs\MsgBox.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

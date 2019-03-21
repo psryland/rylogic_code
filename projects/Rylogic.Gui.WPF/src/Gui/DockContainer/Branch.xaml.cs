@@ -67,10 +67,26 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				c.Width = double.NaN;
 				c.Height = double.NaN;
 			}
-			if (Descendants[EDockSite.Left]?.Item is FrameworkElement l) l.Width = ChildSize(EDockSite.Left);
-			if (Descendants[EDockSite.Top]?.Item is FrameworkElement t) t.Height = ChildSize(EDockSite.Top);
-			if (Descendants[EDockSite.Right]?.Item is FrameworkElement r) r.Width = ChildSize(EDockSite.Right);
-			if (Descendants[EDockSite.Bottom]?.Item is FrameworkElement b) b.Height = ChildSize(EDockSite.Bottom);
+			if (Descendants[EDockSite.Left]?.Item is FrameworkElement l)
+			{
+				l.Width = ChildSize(EDockSite.Left);
+				l.Height = double.NaN;
+			}
+			if (Descendants[EDockSite.Top]?.Item is FrameworkElement t)
+			{
+				t.Width = double.NaN;
+				t.Height = ChildSize(EDockSite.Top);
+			}
+			if (Descendants[EDockSite.Right]?.Item is FrameworkElement r)
+			{
+				r.Width = ChildSize(EDockSite.Right);
+				r.Height = double.NaN;
+			}
+			if (Descendants[EDockSite.Bottom]?.Item is FrameworkElement b)
+			{
+				b.Width = double.NaN;
+				b.Height = ChildSize(EDockSite.Bottom);
+			}
 		}
 		public virtual void Dispose()
 		{

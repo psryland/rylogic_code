@@ -1,3 +1,4 @@
+//#define PR_VIEW3D_CREATE_STACKTRACE
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -966,12 +967,20 @@ namespace Rylogic.Gfx
 		private SourcesChangedCB m_sources_changed_cb;    // Reference to callback
 		private Dictionary<string, EmbeddedCodeHandlerCB> m_embedded_code_handlers;
 
+		#if PR_VIEW3D_CREATE_STACKTRACE
+		private static List<StackTrace> m_create_stacktraces = new List<StackTrace>();
+		#endif
+
 		/// <summary>Initialise with support for BGRA textures</summary>
 		public static ECreateDeviceFlags CreateDeviceFlags = ECreateDeviceFlags.D3D11_CREATE_DEVICE_BGRA_SUPPORT;
 
 		/// <summary>Create a reference to the View3d singleton instance for this process</summary>
 		public static View3d Create()
 		{
+			#if PR_VIEW3D_CREATE_STACKTRACE
+			m_create_stacktraces.Add(new StackTrace(true));
+			#endif
+
 			if (m_singleton == null)
 				m_singleton = new View3d();
 
@@ -984,60 +993,62 @@ namespace Rylogic.Gfx
 		/// <summary></summary>
 		private View3d()
 		{
-			if (!ModuleLoaded)
-				throw new Exception("View3d.dll has not been loaded");
-
-			m_windows = new List<Window>();
-			m_dispatcher = Dispatcher.CurrentDispatcher;
-			m_thread_id = Thread.CurrentThread.ManagedThreadId;
-			m_embedded_code_handlers = new Dictionary<string, EmbeddedCodeHandlerCB>();
-
-			// Initialise view3d
-			string init_error = null;
-			ReportErrorCB error_cb = (ctx, msg) => init_error = msg;
-			m_context = View3D_Initialise(error_cb, IntPtr.Zero, CreateDeviceFlags);
-			if (m_context == HContext.Zero)
-				throw new Exception(init_error ?? "Failed to initialised View3d");
-
-			// Attach the global error handler
-			View3D_GlobalErrorCBSet(m_error_cb = HandleError, IntPtr.Zero, true);
-			void HandleError(IntPtr ctx, string msg)
+			try
 			{
-				if (m_thread_id != Thread.CurrentThread.ManagedThreadId)
-					m_dispatcher.BeginInvoke(m_error_cb, ctx, msg);
-				else
-					Error?.Invoke(this, new MessageEventArgs(msg));
-			}
+				if (!ModuleLoaded)
+					throw new Exception("View3d.dll has not been loaded");
 
-			// Sign up for progress reports
-			View3D_AddFileProgressCBSet(m_add_file_progress_cb = HandleAddFileProgress, IntPtr.Zero, true);
-			bool HandleAddFileProgress(IntPtr ctx, ref Guid context_id, string filepath, long foffset, bool complete)
-			{
-				var args = new AddFileProgressEventArgs(context_id, filepath, foffset, complete);
-				AddFileProgress?.Invoke(this, args);
-				return args.Cancel;
-			}
+				m_windows = new List<Window>();
+				m_dispatcher = Dispatcher.CurrentDispatcher;
+				m_thread_id = Thread.CurrentThread.ManagedThreadId;
+				m_embedded_code_handlers = new Dictionary<string, EmbeddedCodeHandlerCB>();
 
-			// Sign up for notification of the sources changing
-			View3D_SourcesChangedCBSet(m_sources_changed_cb = HandleSourcesChanged, IntPtr.Zero, true);
-			void HandleSourcesChanged(IntPtr ctx, ESourcesChangedReason reason, bool before)
-			{
-				if (m_thread_id != Thread.CurrentThread.ManagedThreadId)
-					m_dispatcher.BeginInvoke(m_sources_changed_cb, ctx, reason, before);
-				else
-					OnSourcesChanged?.Invoke(this, new SourcesChangedEventArgs(reason, before));
-			}
+				// Initialise view3d
+				string init_error = null;
+				ReportErrorCB error_cb = (ctx, msg) => init_error = msg;
+				m_context = View3D_Initialise(error_cb, IntPtr.Zero, CreateDeviceFlags);
+				if (m_context == HContext.Zero)
+					throw new Exception(init_error ?? "Failed to initialised View3d");
 
-			// Add a C# code handler
-			SetEmbeddedCodeHandler("CSharp", HandleEmbeddedCSharp);
-			bool HandleEmbeddedCSharp(IntPtr ctx, string code, string support, out string result, out string errors) // worker thread context
-			{
-				// This function may be called simultaneously in multiple threads
-				result = null;
-				errors = null;
+				// Attach the global error handler
+				View3D_GlobalErrorCBSet(m_error_cb = HandleError, IntPtr.Zero, true);
+				void HandleError(IntPtr ctx, string msg)
+				{
+					if (m_thread_id != Thread.CurrentThread.ManagedThreadId)
+						m_dispatcher.BeginInvoke(m_error_cb, ctx, msg);
+					else
+						Error?.Invoke(this, new MessageEventArgs(msg));
+				}
 
-				var src =
-				#region Embedded C# Source
+				// Sign up for progress reports
+				View3D_AddFileProgressCBSet(m_add_file_progress_cb = HandleAddFileProgress, IntPtr.Zero, true);
+				bool HandleAddFileProgress(IntPtr ctx, ref Guid context_id, string filepath, long foffset, bool complete)
+				{
+					var args = new AddFileProgressEventArgs(context_id, filepath, foffset, complete);
+					AddFileProgress?.Invoke(this, args);
+					return args.Cancel;
+				}
+
+				// Sign up for notification of the sources changing
+				View3D_SourcesChangedCBSet(m_sources_changed_cb = HandleSourcesChanged, IntPtr.Zero, true);
+				void HandleSourcesChanged(IntPtr ctx, ESourcesChangedReason reason, bool before)
+				{
+					if (m_thread_id != Thread.CurrentThread.ManagedThreadId)
+						m_dispatcher.BeginInvoke(m_sources_changed_cb, ctx, reason, before);
+					else
+						OnSourcesChanged?.Invoke(this, new SourcesChangedEventArgs(reason, before));
+				}
+
+				// Add a C# code handler
+				SetEmbeddedCodeHandler("CSharp", HandleEmbeddedCSharp);
+				bool HandleEmbeddedCSharp(IntPtr ctx, string code, string support, out string result, out string errors) // worker thread context
+				{
+					// This function may be called simultaneously in multiple threads
+					result = null;
+					errors = null;
+
+					var src =
+					#region Embedded C# Source
 $@"//
 //Assembly: netstandard.dll
 //Assembly: System.dll
@@ -1091,24 +1102,30 @@ namespace ldr
 	}}
 }}
 ";
-				#endregion
-				try
-				{
-					// Create a runtime assembly from the embedded code
-					var ass = RuntimeAssembly.FromString("ldr.Main", src, new[] { Util.ResolveAppPath() });
-					result = ass.Invoke<string>("Execute");
+					#endregion
+					try
+					{
+						// Create a runtime assembly from the embedded code
+						var ass = RuntimeAssembly.FromString("ldr.Main", src, new[] { Util.ResolveAppPath() });
+						result = ass.Invoke<string>("Execute");
+					}
+					catch (CompileException ex)
+					{
+						errors = ex.ErrorReport();
+						errors += "\r\nGenerated Code:\r\n" + src;
+					}
+					catch (Exception ex)
+					{
+						errors = ex.Message;
+						errors += "\r\nGenerated Code:\r\n" + src;
+					}
+					return true;
 				}
-				catch (CompileException ex)
-				{
-					errors = ex.ErrorReport();
-					errors += "\r\nGenerated Code:\r\n" + src;
-				}
-				catch (Exception ex)
-				{
-					errors = ex.Message;
-					errors += "\r\nGenerated Code:\r\n" + src;
-				}
-				return true;
+			}
+			catch
+			{
+				Dispose();
+				throw;
 			}
 		}
 		public void Dispose()
@@ -2777,7 +2794,11 @@ namespace ldr
 				// Note: 'handle' is not the ID3D11Texture2D handle, it's the internal View3DTexture pointer.
 				m_owned = owned;
 				Handle = handle;
-				View3D_TextureGetInfo(Handle, out Info);
+
+				if (Handle != IntPtr.Zero)
+					View3D_TextureGetInfo(Handle, out Info);
+				else
+					Info = new ImageInfo();
 			}
 
 			/// <summary>Construct an uninitialised texture</summary>

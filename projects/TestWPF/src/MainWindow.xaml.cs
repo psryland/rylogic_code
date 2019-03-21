@@ -48,9 +48,26 @@ namespace TestWPF
 			{
 				new DockContainerUI().Show();
 			};
+			m_menu_tests_message_box_ui.Click += (s, a) =>
+			{
+				MsgBox.Show(this, "Informative isn't it", "Massage Box", MsgBox.EButtons.YesNoCancel, MsgBox.EIcon.Exclamation);
+			};
 			m_menu_tests_pattern_editor.Click += (s, a) =>
 			{
 				new PatternEditorUI().Show();
+			};
+			m_menu_tests_prompt_ui.Click += (s, a) =>
+			{
+				var dlg = new PromptUI
+				{
+					Owner = this,
+					Title = "Prompting isn't it...",
+					Prompt = "I'll have what she's having. Really long message\r\nwith new lines in and \r\n other stuff\r\n\r\nType 'Hello' into the field",
+					Value = "Really long value as well, that hopefully wraps around",
+					Image = FindResource("pencil") as BitmapImage
+				};
+				if (dlg.ShowDialog() == true)
+					Debug.Assert(dlg.Value == "Hello");
 			};
 			m_menu_tests_view3d.Click += (s, a) =>
 			{

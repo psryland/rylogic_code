@@ -29,6 +29,7 @@ namespace Rylogic.Gui.WPF
 			m_font_size = 14.0;
 			m_series = new List<ChartDataSeries>();
 			PositionXY = new v2(1f, 1f);
+			PositionZ = 0.001f;
 			ScreenSpace = true;
 		}
 		public override void Dispose()

@@ -24,6 +24,23 @@ namespace Rylogic.Gui.WPF
 		}
 	}
 
+	/// <summary>Returns true if 'value' is not null</summary>
+	public class NotNull : MarkupExtension, IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			return value != null;
+		}
+		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			throw new NotImplementedException();
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
+	}
+
 	/// <summary>If the value is null, return Visible</summary>
 	public class NullToVisible : MarkupExtension, IValueConverter
 	{

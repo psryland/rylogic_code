@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Windows.Controls;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Gfx;
@@ -99,12 +100,12 @@ namespace Rylogic.Gui.WPF
 			{
 				// Position the grid lines so that they line up with the axis tick marks
 				// Grid lines are modelled from the bottom left corner
-				if (m_chart.Options.ShowGridLines && XAxis.Options.ShowGridLines)
+				if (XAxis.Options.ShowGridLines)
 					XAxis.AddToScene(window);
 				else if (XAxis.GridLineGfx != null)
 					window.RemoveObject(XAxis.GridLineGfx);
 
-				if (m_chart.Options.ShowGridLines && YAxis.Options.ShowGridLines)
+				if (YAxis.Options.ShowGridLines)
 					YAxis.AddToScene(window);
 				else if (YAxis.GridLineGfx != null)
 					window.RemoveObject(YAxis.GridLineGfx);
@@ -164,7 +165,6 @@ namespace Rylogic.Gui.WPF
 					Label = string.Empty;
 					AllowScroll = true;
 					AllowZoom = true;
-					LockRange = false;
 					TickText = DefaultTickText;
 				}
 				public Axis(Axis rhs)
@@ -175,7 +175,6 @@ namespace Rylogic.Gui.WPF
 					Label = rhs.Label;
 					AllowScroll = rhs.AllowScroll;
 					AllowZoom = rhs.AllowZoom;
-					LockRange = rhs.LockRange;
 					TickText = rhs.TickText;
 				}
 				public void Dispose()
@@ -270,31 +269,16 @@ namespace Rylogic.Gui.WPF
 				}
 
 				/// <summary>Allow scrolling on this axis</summary>
-				public bool AllowScroll
-				{
-					get { return m_allow_scroll && !LockRange; }
-					set
-					{
-						if (m_allow_scroll == value) return;
-						m_allow_scroll = value;
-					}
-				}
-				private bool m_allow_scroll;
+				public bool AllowScroll { get; set; }
 
 				/// <summary>Allow zooming on this axis</summary>
-				public bool AllowZoom
-				{
-					get { return m_allow_zoom && !LockRange; }
-					set
-					{
-						if (m_allow_zoom == value) return;
-						m_allow_zoom = value;
-					}
-				}
-				private bool m_allow_zoom;
+				public bool AllowZoom { get; set; }
 
-				/// <summary>Get/Set whether the range can be changed by user input</summary>
-				public bool LockRange { get; set; }
+				/// <summary>The context menu associated with this axis</summary>
+				public ContextMenu ContextMenu =>
+					AxisType == EAxis.XAxis ? m_chart.m_xaxis.ContextMenu :
+					AxisType == EAxis.YAxis ? m_chart.m_yaxis.ContextMenu :
+					throw new Exception("Unknown axis type");
 
 				/// <summary>Convert the axis value to a string. "string TickText(double tick_value, double step_size)" </summary>
 				public Func<double, double, string> TickText;
@@ -472,29 +456,6 @@ namespace Rylogic.Gui.WPF
 
 					GridLineGfx.O2WSet(o2w);
 					window.AddObject(GridLineGfx);
-				}
-
-				/// <summary>Show the axis context menu</summary>
-				public void ShowContextMenu(System.Windows.Point location, HitTestResult hit_result)
-				{
-					//var cmenu = new ContextMenuStrip();
-					//using (cmenu.SuspendLayout(true))
-					//{
-					//	{// Lock Range
-					//		var opt = cmenu.Items.Add2(new ToolStripMenuItem("Lock") { Checked = LockRange, CheckOnClick = true });
-					//		opt.CheckedChanged += (s, a) =>
-					//		{
-					//			LockRange = opt.Checked;
-					//		};
-					//	}
-					//
-					//	// Customise the menu
-					//	var type = AxisType == EAxis.XAxis ? AddUserMenuOptionsEventArgs.EType.XAxis : AddUserMenuOptionsEventArgs.EType.YAxis;
-					//	Owner.OnAddUserMenuOptions(new AddUserMenuOptionsEventArgs(type, cmenu, hit_result));
-					//}
-					//cmenu.Items.TidySeparators();
-					//if (cmenu.Items.Count != 0)
-					//	cmenu.Show(Owner, location);
 				}
 
 				/// <summary>Default value to text conversion</summary>

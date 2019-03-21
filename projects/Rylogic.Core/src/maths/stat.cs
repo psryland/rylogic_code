@@ -4,7 +4,6 @@
 //*********************************************************************
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -12,21 +11,22 @@ using System.Text;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace Rylogic.Maths
 {
-	public interface IStatMean
+	public interface IStatMean<T>
 	{
 		/// <summary>The sum of the values added</summary>
 		int Count { get; }
 
 		/// <summary>The sum of values added</summary>
-		double Sum { get; }
+		T Sum { get; }
 
 		/// <summary>The mean value</summary>
-		double Mean { get; }
+		T Mean { get; }
 	}
-	public interface IStatVariance
+	public interface IStatVariance<T>
 	{
 		/// <summary>Population standard deviation.<para/>Use when all data values in a set have been considered.</summary>
 		double PopStdDev { get; }
@@ -35,28 +35,28 @@ namespace Rylogic.Maths
 		double SamStdDev { get; }
 
 		/// <summary>Population variance.<para/>Use when all data values in a set have been considered.</summary>
-		double PopStdVar { get; }
+		T PopStdVar { get; }
 
 		/// <summary>Sample variance.<para/>Use the when the data values used are only a sample of the total population</summary>
-		double SamStdVar { get; }
+		T SamStdVar { get; }
 	}
-	public interface IStatMeanAndVariance :IStatMean, IStatVariance
+	public interface IStatMeanAndVariance<T> :IStatMean<T>, IStatVariance<T>
 	{
 	}
-	public interface IStatSingleVariable
+	public interface IStatSingleVariable<T>
 	{
 		/// <summary>Add a single value to the stat</summary>
-		IStatSingleVariable Add(double value);
+		IStatSingleVariable<T> Add(T value);
 	}
-	public interface IStatTwoVariables
+	public interface IStatTwoVariables<T>
 	{
 		/// <summary>Add values to the stat</summary>
-		void Add(double x, double y);
+		void Add(T x, T y);
 	}
 
 	/// <summary>Simple Running Average</summary>
 	[DebuggerDisplay("{Mean} N={Count}")]
-	public class Avr<T> :IStatMean ,IStatSingleVariable where T:Avr<T>
+	public class Average : IStatMean<double>, IStatSingleVariable<double>
 	{
 		//' let: D(k) = X(k) - avr(k-1)           => X(k) = D(k) + avr(k-1)
 		//'  avr(k-1) = SUM{X(k-1)} / (k-1)       => SUM{X(k-1)} = (k-1)*avr(k-1)
@@ -65,59 +65,48 @@ namespace Rylogic.Maths
 		//'           = (k*avr(k-1) - avr(k-1) + D(k) + avr(k-1)) / k
 		//'           = (k*avr(k-1) + D(k)) / k
 		//'           = avr(k-1) + D(k) / k
-
-		protected double m_mean;
-		protected int    m_count;
-		
-		public Avr()
+		public Average()
 		{
 			Reset();
 		}
-		public Avr(double mean, int count)
+		public Average(double mean, int count)
 		{
-			m_mean  = mean;
+			m_mean = mean;
 			m_count = count;
 		}
-		public Avr(Avr<T> rhs)
+		public Average(Average rhs)
 		{
 			m_mean = rhs.m_mean;
 			m_count = rhs.m_count;
 		}
 
 		/// <summary>Number of items added</summary>
-		public int Count
-		{
-			get { return m_count; }
-		}
+		public int Count => m_count;
+		protected int m_count;
 
 		/// <summary>Sum of values</summary>
-		public double Sum
-		{
-			get { return m_mean * m_count; }
-		}
+		public double Sum => m_mean * m_count;
 
 		/// <summary>Mean value</summary>
-		public double Mean
-		{
-			get { return m_mean; }
-		}
+		public double Mean => m_mean;
+		protected double m_mean;
 
 		/// <summary>Reset the stats</summary>
 		public virtual void Reset()
 		{
 			m_count = 0;
-			m_mean  = 0.0;
+			m_mean = 0.0;
 		}
 
 		/// <summary>
 		/// Accumulate statistics for 'value' in a single pass.
 		/// Note, this method is more accurate than the sum of squares, square of sums approach.</summary>
-		public T Add(double value)
+		public Average Add(double value)
 		{
 			AddInternal(value);
-			return (T)this;
+			return this;
 		}
-		IStatSingleVariable IStatSingleVariable.Add(double value)
+		IStatSingleVariable<double> IStatSingleVariable<double>.Add(double value)
 		{
 			return Add(value);
 		}
@@ -139,22 +128,76 @@ namespace Rylogic.Maths
 			return mean + (value - mean) / (1 + count);
 		}
 	}
-	public class Avr :Avr<Avr>
+	[DebuggerDisplay("{Mean} N={Count}")]
+	public class Average<T> :IStatMean<T>, IStatSingleVariable<T>
 	{
-		public Avr()
-			:base()
-		{}
-		public Avr(double mean, int count)
-			:base(mean, count)
-		{}
-		public Avr(Avr rhs)
-			:base(rhs)
-		{}
+		public Average()
+		{
+			Reset();
+		}
+		public Average(T mean, int count)
+		{
+			m_mean  = mean;
+			m_count = count;
+		}
+		public Average(Average<T> rhs)
+		{
+			m_mean = rhs.m_mean;
+			m_count = rhs.m_count;
+		}
+
+		/// <summary>Number of items added</summary>
+		public int Count => m_count;
+		protected int m_count;
+
+		/// <summary>Sum of values</summary>
+		public T Sum => Operators<T>.Mul(m_mean, Operators<T>.Cast(m_count));
+
+		/// <summary>Mean value</summary>
+		public T Mean => m_mean;
+		protected T m_mean;
+
+		/// <summary>Reset the stats</summary>
+		public virtual void Reset()
+		{
+			m_count = 0;
+			m_mean = default(T);
+		}
+
+		/// <summary>
+		/// Accumulate statistics for 'value' in a single pass.
+		/// Note, this method is more accurate than the sum of squares, square of sums approach.</summary>
+		public Average<T> Add(T value)
+		{
+			AddInternal(value);
+			return this;
+		}
+		IStatSingleVariable<T> IStatSingleVariable<T>.Add(T value)
+		{
+			return Add(value);
+		}
+		protected virtual void AddInternal(T value)
+		{
+			++m_count;
+			var diff = Operators<T>.Sub(value, m_mean);
+			var inv_count = 1.0 / m_count; // don't remove this, conversion to double here is needed for accuracy
+			m_mean = Operators<T>.Add(m_mean, Operators<T>.Mul(diff, Operators<T>.Cast(inv_count)));
+		}
+
+		/// <summary>
+		/// Calculate a running average.
+		/// 'value' is the new value to add to the mean.
+		/// 'mean' is the current mean.
+		/// 'count' is the number of data points that have contributed to 'mean'</summary>
+		public static T Running(T value, T mean, int count)
+		{
+			return Operators<T>.Add(mean, Operators<T>.Div(Operators<T>.Sub(value, mean), Operators<T>.Cast(1 + count)));
+		}
 	}
 
 	/// <summary>Running Average with standard deviation and variance</summary>
 	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count}")]
-	public class AvrVar<T> :Avr<T> ,IStatMeanAndVariance ,IStatSingleVariable where T:AvrVar<T>
+	public class AverageVariance : Average, IStatMeanAndVariance<double>, IStatSingleVariable<double>
 	{
 		//' let: D(k) = X(k) - avr(k-1)           => X(k) = D(k) + avr(k-1)
 		//'  avr(k-1) = SUM{X(k-1)} / (k-1)       => SUM{X(k-1)} = (k-1)*avr(k-1)
@@ -184,46 +227,34 @@ namespace Rylogic.Maths
 		//'                                = ((k-1)/k) * D(k)²
 
 		protected double m_var;
-		
-		public AvrVar()
-			:base()
+
+		public AverageVariance()
+			: base()
 		{
 			m_var = 0;
 		}
-		public AvrVar(double mean, double var, int count)
-			:base(mean, count)
+		public AverageVariance(double mean, double var, int count)
+			: base(mean, count)
 		{
 			m_var = var;
 		}
-		public AvrVar(AvrVar<T> rhs)
-			:base(rhs)
+		public AverageVariance(AverageVariance rhs)
+			: base(rhs)
 		{
 			m_var = rhs.m_var;
 		}
 
 		/// <summary>Population standard deviation.<para/>Use when all data values in a set have been considered.</summary>
-		public double PopStdDev
-		{
-			get { return Math_.Sqrt(PopStdVar); }
-		}
+		public double PopStdDev => Math_.Sqrt(PopStdVar);
 
 		/// <summary>Sample standard deviation.<para/>Use the when the data values used are only a sample of the total population</summary>
-		public double SamStdDev
-		{
-			get { return Math_.Sqrt(SamStdVar); }
-		}
+		public double SamStdDev => Math_.Sqrt(SamStdVar);
 
 		/// <summary>Population variance.<para/>Use when all data values in a set have been considered.</summary>
-		public double PopStdVar
-		{
-			get { return m_count > 0 ? m_var * (1.0 / (m_count - 0)) : 0.0; }
-		}
+		public double PopStdVar => m_count > 0 ? m_var * (1.0 / (m_count - 0)) : 0.0;
 
 		/// <summary>Sample variance.<para/>Use the when the data values used are only a sample of the total population</summary>
-		public double SamStdVar
-		{
-			get { return m_count > 1 ? m_var * (1.0 / (m_count - 1)) : 0.0; }
-		}
+		public double SamStdVar => m_count > 1 ? m_var * (1.0 / (m_count - 1)) : 0.0;
 
 		/// <summary>Reset the stats</summary>
 		public override void Reset()
@@ -244,40 +275,77 @@ namespace Rylogic.Maths
 			m_var += diff * diff * ((m_count - 1) * inv_count);
 		}
 	}
-	public class AvrVar :AvrVar<AvrVar>
+	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count}")]
+	public class AverageVariance<T> :Average<T>, IStatMeanAndVariance<T>, IStatSingleVariable<T>
 	{
-		public AvrVar()
+		protected T m_var;
+		
+		public AverageVariance()
 			:base()
-		{}
-		public AvrVar(double mean, double var, int count)
-			:base(mean, var, count)
-		{}
-		public AvrVar(AvrVar rhs)
+		{
+			m_var = default(T);
+		}
+		public AverageVariance(T mean, T var, int count)
+			:base(mean, count)
+		{
+			m_var = var;
+		}
+		public AverageVariance(AverageVariance<T> rhs)
 			:base(rhs)
-		{}
+		{
+			m_var = rhs.m_var;
+		}
+
+		/// <summary>Population standard deviation.<para/>Use when all data values in a set have been considered.</summary>
+		public double PopStdDev => Math_.Sqrt(Operators<double>.Cast(PopStdVar));
+
+		/// <summary>Sample standard deviation.<para/>Use the when the data values used are only a sample of the total population</summary>
+		public double SamStdDev => Math_.Sqrt(Operators<double>.Cast(SamStdVar));
+
+		/// <summary>Population variance.<para/>Use when all data values in a set have been considered.</summary>
+		public T PopStdVar => m_count > 0 ? Operators<T>.Mul(m_var, Operators<T>.Cast(1.0 / (m_count - 0))) : default(T);
+
+		/// <summary>Sample variance.<para/>Use the when the data values used are only a sample of the total population</summary>
+		public T SamStdVar => m_count > 1 ? Operators<T>.Mul(m_var, Operators<T>.Cast(1.0 / (m_count - 1))) : default(T);
+
+		/// <summary>Reset the stats</summary>
+		public override void Reset()
+		{
+			base.Reset();
+			m_var = default(T);
+		}
+
+		/// <summary>
+		/// Accumulate statistics for 'value' in a single pass.
+		/// Note, this method is more accurate than the sum of squares, square of sums approach.</summary>
+		protected override void AddInternal(T value)
+		{
+			++m_count;
+			var diff = Operators<T>.Sub(value, m_mean);
+			var inv_count = 1.0 / m_count; // don't remove this, conversion to double here is needed for accuracy
+			m_mean = Operators<T>.Add(m_mean, Operators<T>.Mul(diff, Operators<T>.Cast(inv_count)));
+			m_var = Operators<T>.Add(m_var, Operators<T>.Mul(Operators<T>.Mul(diff, diff), Operators<T>.Cast((m_count - 1) * inv_count)));
+		}
 	}
 
 	/// <summary>Running average with standard deviation and min/max range</summary>
 	[DebuggerDisplay("{Mean ({PopStdDev}) N={Count} R=[{Min},{Max}]")]
-	public class AvrVarMinMax<T> :AvrVar<T> ,IStatMeanAndVariance ,IStatSingleVariable where T:AvrVarMinMax<T>
+	public class AverageVarianceMinMax : AverageVariance, IStatMeanAndVariance<double>, IStatSingleVariable<double>
 	{
-		protected double m_min;
-		protected double m_max;
-
-		public AvrVarMinMax()
-			:base()
+		public AverageVarianceMinMax()
+			: base()
 		{
 			m_min = double.MaxValue;
 			m_max = double.MinValue;
 		}
-		public AvrVarMinMax(double mean, double var, int count, double min, double max)
-			:base(mean, var, count)
+		public AverageVarianceMinMax(double mean, double var, int count, double min, double max)
+			: base(mean, var, count)
 		{
 			m_min = min;
 			m_max = max;
 		}
-		public AvrVarMinMax(AvrVarMinMax<T> rhs)
-			:base(rhs)
+		public AverageVarianceMinMax(AverageVarianceMinMax rhs)
+			: base(rhs)
 		{
 			m_min = rhs.m_min;
 			m_max = rhs.m_max;
@@ -292,6 +360,7 @@ namespace Rylogic.Maths
 				return m_min;
 			}
 		}
+		protected double m_min;
 
 		/// <summary>Return the maximum value seen</summary>
 		public double Max
@@ -302,18 +371,13 @@ namespace Rylogic.Maths
 				return m_max;
 			}
 		}
+		protected double m_max;
 
 		/// <summary>The centre of the range</summary>
-		public double Mid
-		{
-			get { return (Min + Max) / 2; }
-		}
+		public double Mid => (Min + Max) / 2;
 
 		/// <summary>The value range</summary>
-		public RangeF Range
-		{
-			get { return new RangeF(Min, Max); }
-		}
+		public RangeF Range => new RangeF(Min, Max);
 
 		/// <summary>Reset the stats</summary>
 		public override void Reset()
@@ -331,22 +395,170 @@ namespace Rylogic.Maths
 			base.AddInternal(value);
 		}
 	}
-	public class AvrVarMinMax :AvrVarMinMax<AvrVarMinMax>
+	[DebuggerDisplay("{Mean ({PopStdDev}) N={Count} R=[{Min},{Max}]")]
+	public class AverageVarianceMinMax<T> :AverageVariance<T>, IStatMeanAndVariance<T>, IStatSingleVariable<T>
 	{
-		public AvrVarMinMax()
+		public AverageVarianceMinMax()
 			:base()
-		{}
-		public AvrVarMinMax(double mean, double var, int count, double min, double max)
-			:base(mean, var, count, min, max)
-		{}
-		public AvrVarMinMax(AvrVarMinMax rhs)
+		{
+			m_min = Operators<T>.MaxValue;
+			m_max = Operators<T>.MinValue;
+		}
+		public AverageVarianceMinMax(T mean, T var, int count, T min, T max)
+			:base(mean, var, count)
+		{
+			m_min = min;
+			m_max = max;
+		}
+		public AverageVarianceMinMax(AverageVarianceMinMax<T> rhs)
 			:base(rhs)
-		{}
+		{
+			m_min = rhs.m_min;
+			m_max = rhs.m_max;
+		}
+
+		/// <summary>Return the minimum value seen</summary>
+		public T Min
+		{
+			get
+			{
+				if (Count == 0) throw new Exception("No values added, minimum is undefined");
+				return m_min;
+			}
+		}
+		protected T m_min;
+
+		/// <summary>Return the maximum value seen</summary>
+		public T Max
+		{
+			get
+			{
+				if (Count == 0) throw new Exception("No values added, maximum is undefined");
+				return m_max;
+			}
+		}
+		protected T m_max;
+
+		/// <summary>The centre of the range</summary>
+		public T Mid => Operators<T>.Div(Operators<T>.Add(Min, Max), Operators<T>.Cast(2));
+
+		/// <summary>Reset the stats</summary>
+		public override void Reset()
+		{
+			m_min = Operators<T>.MaxValue;
+			m_max = Operators<T>.MinValue;
+			base.Reset();
+		}
+
+		/// <summary>Add a single value to the stat</summary>
+		protected override void AddInternal(T value)
+		{
+			if (Operators<T>.Greater(value, m_max)) m_max = value;
+			if (Operators<T>.Less(value, m_min)) m_min = value;
+			base.AddInternal(value);
+		}
+	}
+
+	/// <summary>Moving Window Average</summary>
+	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count}")]
+	public class MovingAverage : IStatMeanAndVariance<double>, IStatSingleVariable<double>
+	{
+		// Let: D(k) = X(k) - X(k-N) => X(k-N) = X(k) - D(k)
+		// Average:
+		//   avr(k) = avr(k-1) + (X(k) - X(k-N)) / N
+		//          = avr(k-1) + D(k) / N
+		private double[] m_window;
+		private int m_i;
+
+		public MovingAverage(int window_size)
+		{
+			Reset(window_size);
+		}
+		public MovingAverage(MovingAverage rhs)
+			: this(rhs.m_window.Length)
+		{
+			Array.Copy(rhs.m_window, m_window, m_window.Length);
+			m_mean = rhs.m_mean;
+			m_count = rhs.m_count;
+			m_i = rhs.m_i;
+		}
+
+		/// <summary>The size of the moving window</summary>
+		public int WindowSize => m_window.Length;
+
+		/// <summary>The number of data points added to this average</summary>
+		public int Count => m_count;
+		private int m_count;
+
+		/// <summary>Sum of values</summary>
+		public double Sum => m_mean * m_count;
+
+		/// <summary>The average</summary>
+		public double Mean => m_mean;
+		private double m_mean;
+
+		/// <summary>Variance</summary>
+		private double Var
+		{
+			get
+			{
+				double var = 0.0;
+				int count = m_count;
+				int end = m_window.Length;
+				for (int i = m_i; i-- != 0 && count != 0; --count) { double diff = m_window[i] - m_mean; var += diff * diff; }
+				for (int i = end; i-- != m_i && count != 0; --count) { double diff = m_window[i] - m_mean; var += diff * diff; }
+				return var;
+			}
+		}
+
+		// NOTE: no recursive variance because we would need to buffer the averages as well
+		// so that we could remove (X(k-N) - avr(k-N))² at each iteration
+		// Use the population standard deviation when all data values in a set have been considered.
+		// Use the sample standard deviation when the data values used are only a sample of the total population
+		public double PopStdDev => Math.Sqrt(PopStdVar);
+		public double SamStdDev => Math.Sqrt(SamStdVar);
+		public double PopStdVar => m_count > 0 ? Var * (1.0 / (m_count - 0)) : 0.0;
+		public double SamStdVar => m_count > 1 ? Var * (1.0 / (m_count - 1)) : 0.0;
+
+		/// <summary>Reset the stats</summary>
+		public void Reset(int window_size)
+		{
+			m_window = new double[window_size];
+			m_mean = 0.0;
+			m_count = 0;
+			m_i = 0;
+		}
+
+		/// <summary>Add a value to the moving average</summary>
+		public MovingAverage Add(double value)
+		{
+			if (m_count == m_window.Length)
+			{
+				if (m_i == m_window.Length) m_i = 0;
+				double diff = value - m_window[m_i];
+				double inv_count = 1.0 / m_window.Length;
+				m_mean += diff * inv_count;
+				m_window[m_i++] = value;
+			}
+			else
+			{
+				++m_count;
+				double diff = value - m_mean;
+				double inv_count = 1.0 / m_count;
+				m_mean += diff * inv_count;
+				m_window[m_i++] = value;
+			}
+			return this;
+		}
+		IStatSingleVariable<double> IStatSingleVariable<double>.Add(double value)
+		{
+			return Add(value);
+		}
 	}
 
 	/// <summary>Exponential Moving Average</summary>
 	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count}")]
-	public class ExpMovingAvr<T> :IStatMeanAndVariance ,IStatSingleVariable where T:ExpMovingAvr<T>
+	public class ExponentialMovingAverage : IStatMeanAndVariance<double>, IStatSingleVariable<double>
 	{
 		//'  avr(k) = a * X(k) + (1 - a) * avr(k-1)
 		//'         = a * X(k) + avr(k-1) - a * avr(k-1)
@@ -384,19 +596,14 @@ namespace Rylogic.Maths
 		//'             = a*k*b²*D(k)² + (b*k/(k-1)) * (k-2)var(k-1)         where: b = (1-a)
 		//'             = (b*k/(k-1))*((a*b*(k-1)*D(k)² + (k-2)var(k-1))
 	
-		protected double m_mean;
-		protected double m_var;
-		protected int    m_size;
-		protected int    m_count;
-
-		public ExpMovingAvr()
+		public ExponentialMovingAverage()
 			:this(int.MaxValue)
 		{}
-		public ExpMovingAvr(int window_size)
+		public ExponentialMovingAverage(int window_size)
 		{
 			Reset(window_size);
 		}
-		public ExpMovingAvr(ExpMovingAvr<T> rhs)
+		public ExponentialMovingAverage(ExponentialMovingAverage rhs)
 		{
 			m_mean  = rhs.m_mean;
 			m_var   = rhs.m_var;
@@ -414,49 +621,34 @@ namespace Rylogic.Maths
 			get { return m_size; }
 			set { m_size = value; }
 		}
+		protected int m_size;
 
 		/// <summary>The number of data points added to this average</summary>
-		public int Count
-		{
-			get { return m_count; }
-		}
+		public int Count => m_count;
+		protected int m_count;
 
 		/// <summary>Sum of values</summary>
-		public double Sum
-		{
-			get { return m_mean * m_count; }
-		}
+		public double Sum => m_mean * m_count;
 
 		/// <summary>The average</summary>
-		public double Mean
-		{
-			get { return m_mean; }
-		}
+		public double Mean => m_mean;
+		protected double m_mean;
 
 		// Use the population standard deviation when all data values in a set have been considered.
 		// Use the sample standard deviation when the data values used are only a sample of the total population
 		// Note: for a moving variance the choice between population/sample SD is a bit arbitrary
-		public double PopStdDev
-		{
-			get { return Math.Sqrt(PopStdVar); }
-		}
-		public double SamStdDev
-		{
-			get { return Math.Sqrt(SamStdVar); }
-		}
-		public double PopStdVar
-		{
-			get { return m_count > 0 ? m_var * (1.0 / (m_count - 0)) : 0.0; }
-		}
-		public double SamStdVar
-		{
-			get { return m_count > 1 ? m_var * (1.0 / (m_count - 1)) : 0.0; }
-		}
+		public double PopStdDev => Math.Sqrt(PopStdVar);
+		public double SamStdDev => Math.Sqrt(SamStdVar);
+		public double PopStdVar => m_count > 0 ? m_var * (1.0 / (m_count - 0)) : 0.0;
+		public double SamStdVar => m_count > 1 ? m_var * (1.0 / (m_count - 1)) : 0.0;
+		protected double m_var;
 
 		/// <summary>Reset the stats</summary>
 		public virtual void Reset(int window_size)
 		{
-			if (window_size < 0) throw new ArgumentOutOfRangeException(nameof(window_size), "Window size must be greater than zero");
+			if (window_size < 0)
+				throw new ArgumentOutOfRangeException(nameof(window_size), "Window size must be greater than zero");
+
 			m_size  = window_size;
 			m_count = 0;
 			m_mean  = 0.0;
@@ -468,12 +660,12 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Add a value to the moving average</summary>
-		public T Add(double value)
+		public ExponentialMovingAverage Add(double value)
 		{
 			AddInternal(value);
-			return (T)this;
+			return this;
 		}
-		IStatSingleVariable IStatSingleVariable.Add(double value)
+		IStatSingleVariable<double> IStatSingleVariable<double>.Add(double value)
 		{
 			return Add(value);
 		}
@@ -498,36 +690,21 @@ namespace Rylogic.Maths
 			}
 		}
 	}
-	public class ExpMovingAvr :ExpMovingAvr<ExpMovingAvr>
-	{
-		public ExpMovingAvr()
-			:base()
-		{}
-		public ExpMovingAvr(int window_size)
-			:base(window_size)
-		{}
-		public ExpMovingAvr(ExpMovingAvr rhs)
-			:base(rhs)
-		{}
-	}
 
 	/// <summary>Exponential Moving Average and min/max</summary>
 	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count} R=[{Min},{Max}]")]
-	public class ExpMovingAvrMinMax<T> :ExpMovingAvr<T> where T:ExpMovingAvrMinMax<T>
+	public class ExponentialMovingAverageMinMax :ExponentialMovingAverage
 	{
-		protected double m_min;
-		protected double m_max;
-
-		public ExpMovingAvrMinMax()
+		public ExponentialMovingAverageMinMax()
 			:this(0)
 		{}
-		public ExpMovingAvrMinMax(int window_size, double min = double.MaxValue, double max = double.MinValue)
+		public ExponentialMovingAverageMinMax(int window_size, double min = double.MaxValue, double max = double.MinValue)
 			:base(window_size)
 		{
 			m_min = min;
 			m_max = max;
 		}
-		public ExpMovingAvrMinMax(ExpMovingAvrMinMax<T> rhs)
+		public ExponentialMovingAverageMinMax(ExponentialMovingAverageMinMax rhs)
 			:base(rhs)
 		{
 			m_min = rhs.m_min;
@@ -543,6 +720,7 @@ namespace Rylogic.Maths
 				return m_min;
 			}
 		}
+		protected double m_min;
 
 		/// <summary>Return the maximum value seen</summary>
 		public double Max
@@ -553,18 +731,13 @@ namespace Rylogic.Maths
 				return m_max;
 			}
 		}
+		protected double m_max;
 
 		/// <summary>The centre of the range</summary>
-		public double Mid
-		{
-			get { return (Min + Max) / 2; }
-		}
+		public double Mid => (Min + Max) / 2;
 
 		/// <summary>The value range</summary>
-		public RangeF Range
-		{
-			get { return new RangeF(Min, Max); }
-		}
+		public RangeF Range => new RangeF(Min, Max);
 
 		/// <summary>Reset the stats</summary>
 		public override void Reset(int window_size)
@@ -582,21 +755,9 @@ namespace Rylogic.Maths
 			base.AddInternal(value);
 		}
 	}
-	public class ExpMovingAvrMinMax :ExpMovingAvrMinMax<ExpMovingAvrMinMax>
-	{
-		public ExpMovingAvrMinMax()
-			:base()
-		{}
-		public ExpMovingAvrMinMax(int window_size, double min = double.MaxValue, double max = double.MinValue)
-			:base(window_size, min, max)
-		{}
-		public ExpMovingAvrMinMax(ExpMovingAvrMinMax rhs)
-			:base(rhs)
-		{}
-	}
 
 	/// <summary>Running average of two variables with standard deviation, variance, and correlation coefficient</summary>
-	public class Correlation :IStatTwoVariables
+	public class Correlation :IStatTwoVariables<double>
 	{
 		protected int m_count;
 		protected double m_mean_x;
@@ -625,88 +786,43 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Number of items added</summary>
-		public int Count
-		{
-			get { return m_count; }
-		}
+		public int Count => m_count;
 
 		/// <summary>Mean value</summary>
-		public double MeanX
-		{
-			get { return m_mean_x; }
-		}
-		public double MeanY
-		{
-			get { return m_mean_y; }
-		}
+		public double MeanX => m_mean_x;
+		public double MeanY => m_mean_y;
 
 		/// <summary>Sum of values</summary>
-		public double SumX
-		{
-			get { return m_mean_x * m_count; }
-		}
-		public double SumY
-		{
-			get { return m_mean_y * m_count; }
-		}
+		public double SumX => m_mean_x * m_count;
+		public double SumY => m_mean_y * m_count;
 
 		/// <summary>Population standard deviation.<para/>Use when all data values in a set have been considered.</summary>
-		public double PopStdDevX
-		{
-			get { return Math_.Sqrt(PopStdVarX); }
-		}
-		public double PopStdDevY
-		{
-			get { return Math_.Sqrt(PopStdVarY); }
-		}
+		public double PopStdDevX => Math_.Sqrt(PopStdVarX);
+		public double PopStdDevY => Math_.Sqrt(PopStdVarY);
 
 		/// <summary>Sample standard deviation.<para/>Use the when the data values used are only a sample of the total population</summary>
-		public double SamStdDevX
-		{
-			get { return Math_.Sqrt(SamStdVarX); }
-		}
-		public double SamStdDevY
-		{
-			get { return Math_.Sqrt(SamStdVarY); }
-		}
+		public double SamStdDevX => Math_.Sqrt(SamStdVarX);
+		public double SamStdDevY => Math_.Sqrt(SamStdVarY);
 
 		/// <summary>Population variance.<para/>Use when all data values in a set have been considered.</summary>
-		public double PopStdVarX
-		{
-			get { return m_count > 0 ? m_var_x * (1.0 / (m_count - 0)) : 0.0; }
-		}
-		public double PopStdVarY
-		{
-			get { return m_count > 0 ? m_var_y * (1.0 / (m_count - 0)) : 0.0; }
-		}
+		public double PopStdVarX => m_count > 0 ? m_var_x * (1.0 / (m_count - 0)) : 0.0;
+		public double PopStdVarY => m_count > 0 ? m_var_y * (1.0 / (m_count - 0)) : 0.0;
 
 		/// <summary>Sample variance.<para/>Use the when the data values used are only a sample of the total population</summary>
-		public double SamStdVarX
-		{
-			get { return m_count > 1 ? m_var_x * (1.0 / (m_count - 1)) : 0.0; }
-		}
-		public double SamStdVarY
-		{
-			get { return m_count > 1 ? m_var_y * (1.0 / (m_count - 1)) : 0.0; }
-		}
+		public double SamStdVarX => m_count > 1 ? m_var_x * (1.0 / (m_count - 1)) : 0.0;
+		public double SamStdVarY => m_count > 1 ? m_var_y * (1.0 / (m_count - 1)) : 0.0;
 
 		/// <summary>Population covariance</summary>
-		public double PopCoVar
-		{
-			get { return m_count > 0 ? m_var_xy * (1.0 / (m_count - 0)) : 0.0; }
-		}
+		public double PopCoVar => m_count > 0 ? m_var_xy * (1.0 / (m_count - 0)) : 0.0;
 
 		/// <summary>Sample covariance</summary>
-		public double SamCoVar
-		{
-			get { return m_count > 1 ? m_var_xy * (1.0 / (m_count - 1)) : 0.0; }
-		}
+		public double SamCoVar => m_count > 1 ? m_var_xy * (1.0 / (m_count - 1)) : 0.0;
 
 		/// <summary>The correlation coefficient between 'x' and 'y' (A value between [-1,+1])</summary>
-		public double CorrCoeff
-		{
-			get { return m_count > 0 && !Math_.FEql(m_var_xy, 0) ? m_var_xy / Math_.Sqrt(m_var_x * m_var_y) : 0.0; }
-		}
+		public double CorrCoeff => m_count > 0 && !Math_.FEql(m_var_xy, 0) ? m_var_xy / Math_.Sqrt(m_var_x * m_var_y) : 0.0;
+
+		/// <summary>This is 'r²', i.e. a measure of how well the data fit the Linear Regression line</summary>
+		public double CoeffOfDetermination => Math_.Sqr(CorrCoeff);
 
 		/// <summary>Returns a "best-fit" linear polynomial for the data added</summary>
 		public Monic LinearRegression
@@ -718,12 +834,6 @@ namespace Rylogic.Maths
 				var B = MeanY - A * MeanX;
 				return new Monic(A,B);
 			}
-		}
-
-		/// <summary>This is 'r²', i.e. a measure of how well the data fit the Linear Regression line</summary>
-		public double CoeffOfDetermination
-		{
-			get { return Math_.Sqr(CorrCoeff); }
 		}
 
 		/// <summary>Reset the stats</summary>
@@ -754,127 +864,6 @@ namespace Rylogic.Maths
 			m_var_y += diff_y * diff_y * ((m_count - 1) * inv_count);
 
 			m_var_xy += diff_x * diff_y * ((m_count - 1) * inv_count);
-		}
-	}
-
-	/// <summary>Moving Window Average</summary>
-	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count}")]
-	public class MovingAvr :IStatMeanAndVariance ,IStatSingleVariable
-	{
-		// Let: D(k) = X(k) - X(k-N) => X(k-N) = X(k) - D(k)
-		// Average:
-		//   avr(k) = avr(k-1) + (X(k) - X(k-N)) / N
-		//          = avr(k-1) + D(k) / N
-		private double[] m_window;
-		private double   m_mean;
-		private int      m_count;
-		private int      m_i;
-
-		public MovingAvr(int window_size)
-		{
-			Reset(window_size);
-		}
-		public MovingAvr(MovingAvr rhs)
-			:this(rhs.m_window.Length)
-		{
-			Array.Copy(rhs.m_window, m_window, m_window.Length);
-			m_mean  = rhs.m_mean;
-			m_count = rhs.m_count;
-			m_i     = rhs.m_i;
-		}
-
-		/// <summary>The size of the moving window</summary>
-		public int WindowSize
-		{
-			get { return m_window.Length; }
-		}
-
-		/// <summary>The number of data points added to this average</summary>
-		public int Count
-		{
-			get { return m_count; }
-		}
-
-		/// <summary>Sum of values</summary>
-		public double Sum
-		{
-			get { return m_mean * m_count; }
-		}
-
-		/// <summary>The average</summary>
-		public double Mean
-		{
-			get { return m_mean; }
-		}
-
-		/// <summary>Variance</summary>
-		private double Var
-		{
-			get
-			{
-				double var = 0.0;
-				int count = m_count;
-				int end = m_window.Length;
-				for (int i = m_i; i-- != 0   && count != 0; --count) { double diff  = m_window[i] - m_mean; var += diff * diff; }
-				for (int i = end; i-- != m_i && count != 0; --count) { double diff  = m_window[i] - m_mean; var += diff * diff; }
-				return var;
-			}
-		}
-
-		// NOTE: no recursive variance because we would need to buffer the averages as well
-		// so that we could remove (X(k-N) - avr(k-N))² at each iteration
-		// Use the population standard deviation when all data values in a set have been considered.
-		// Use the sample standard deviation when the data values used are only a sample of the total population
-		public double PopStdDev
-		{
-			get { return Math.Sqrt(PopStdVar); }
-		}
-		public double SamStdDev
-		{
-			get { return Math.Sqrt(SamStdVar); }
-		}
-		public double PopStdVar
-		{
-			get { return m_count > 0 ? Var * (1.0 / (m_count - 0)) : 0.0; }
-		}
-		public double SamStdVar
-		{
-			get { return m_count > 1 ? Var * (1.0 / (m_count - 1)) : 0.0; }
-		}
-
-		/// <summary>Reset the stats</summary>
-		public void Reset(int window_size)
-		{
-			m_window = new double[window_size];
-			m_mean   = 0.0;
-			m_count  = 0;
-			m_i      = 0;
-		}
-
-		/// <summary>Add a value to the moving average</summary>
-		public MovingAvr Add(double value)
-		{
-			if (m_count == m_window.Length)
-			{
-				if (m_i == m_window.Length) m_i = 0;
-				double diff = value - m_window[m_i];
-				double inv_count = 1.0 / m_window.Length;
-				m_mean += diff * inv_count;
-				m_window[m_i++] = value;
-			}
-			else
-			{
-				++m_count;
-				double diff = value - m_mean;
-				double inv_count = 1.0 / m_count;
-				m_mean += diff * inv_count;
-				m_window[m_i++] = value;
-			}
-			return this;
-		}
-		IStatSingleVariable IStatSingleVariable.Add(double value)
-		{
-			return Add(value);
 		}
 	}
 
@@ -1273,30 +1262,33 @@ namespace Rylogic.UnitTests
 {
 	using System.Text;
 
-	[TestFixture] public class TestStat
+	[TestFixture]
+	public class TestStat
 	{
-		[Test] public void Stat()
+		[Test]
+		public void Stat()
 		{
-			double[] num = new[]{2.0,4.0,7.0,3.0,2.0,-5.0,-4.0,1.0,-7.0,3.0,6.0,-8.0};
-			
-			var s = new AvrVar();
+			double[] num = new[] { 2.0, 4.0, 7.0, 3.0, 2.0, -5.0, -4.0, 1.0, -7.0, 3.0, 6.0, -8.0 };
+
+			var s = new AverageVariance();
 			for (int i = 0; i != num.Length; ++i)
 				s.Add(num[i]);
-			
+
 			Assert.Equal(num.Length, s.Count);
-			Assert.Equal(4.0                               ,s.Sum       ,Math_.TinyD);
-			Assert.Equal(1.0/3.0                           ,s.Mean      ,Math_.TinyD);
-			Assert.Equal(4.83621                           ,s.PopStdDev ,0.00001);
-			Assert.Equal(23.38889                          ,s.PopStdVar ,0.00001);
-			Assert.Equal(5.0512524699475787686684767441111 ,s.SamStdDev ,Math_.TinyD);
-			Assert.Equal(25.515151515151515151515151515152 ,s.SamStdVar ,Math_.TinyD);
+			Assert.Equal(4.0, s.Sum, Math_.TinyD);
+			Assert.Equal(1.0 / 3.0, s.Mean, Math_.TinyD);
+			Assert.Equal(4.83621, s.PopStdDev, 0.00001);
+			Assert.Equal(23.38889, s.PopStdVar, 0.00001);
+			Assert.Equal(5.0512524699475787686684767441111, s.SamStdDev, Math_.TinyD);
+			Assert.Equal(25.515151515151515151515151515152, s.SamStdVar, Math_.TinyD);
 		}
-		[Test] public void MovingWindowAvr()
+		[Test]
+		public void MovingWindowAvr()
 		{
 			const int BufSz = 13;
-			
-			Random rng = new Random();
-			MovingAvr s = new MovingAvr(BufSz);
+
+			var rng = new Random();
+			var s = new MovingAverage(BufSz);
 			double[] buf = new double[BufSz];
 			int idx = 0;
 			int count = 0;
@@ -1309,15 +1301,16 @@ namespace Rylogic.UnitTests
 				double sum = 0.0f; for (int j = 0; j != count; ++j) sum += buf[j];
 				double mean = sum / count;
 				s.Add(v);
-				Assert.Equal(mean ,s.Mean ,0.00001);
+				Assert.Equal(mean, s.Mean, 0.00001);
 			}
 		}
-		[Test] public void ExpMovingAvr()
+		[Test]
+		public void ExpMovingAvr()
 		{
 			const int BufSz = 13;
-			
+
 			var rng = new Random();
-			var s = new ExpMovingAvr(BufSz);
+			var s = new ExponentialMovingAverage(BufSz);
 			const double a = 2.0 / (BufSz + 1);
 			double ema = 0;
 			int count = 0;
@@ -1325,17 +1318,18 @@ namespace Rylogic.UnitTests
 			{
 				double v = rng.NextDouble();
 				if (count < BufSz) { ++count; ema += (v - ema) / count; }
-				else               { ema = a * v + (1 - a) * ema; }
+				else { ema = a * v + (1 - a) * ema; }
 				s.Add(v);
-				Assert.Equal(ema ,s.Mean ,0.00001);
+				Assert.Equal(ema, s.Mean, 0.00001);
 			}
 		}
-		[Test] public void ExpMovingAvrMinMax()
+		[Test]
+		public void ExpMovingAvrMinMax()
 		{
 			const int BufSz = 13;
-			
+
 			var rng = new Random();
-			var s = new ExpMovingAvrMinMax(BufSz);
+			var s = new ExponentialMovingAverageMinMax(BufSz);
 			const double a = 2.0 / (BufSz + 1);
 			double ema = 0, min = double.MaxValue, max = double.MinValue;
 			int count = 0;
@@ -1344,19 +1338,20 @@ namespace Rylogic.UnitTests
 			{
 				double v = rng.NextDouble();
 				if (count < BufSz) { ++count; ema += (v - ema) / count; }
-				else               { ema = a * v + (1 - a) * ema; }
+				else { ema = a * v + (1 - a) * ema; }
 				min = Math.Min(min, v);
 				max = Math.Max(max, v);
 				s.Add(v);
-				Assert.Equal(ema ,s.Mean ,0.00001);
-				Assert.Equal(min ,s.Min  ,0.00001);
-				Assert.Equal(max ,s.Max ,0.00001);
+				Assert.Equal(ema, s.Mean, 0.00001);
+				Assert.Equal(min, s.Min, 0.00001);
+				Assert.Equal(max, s.Max, 0.00001);
 			}
 		}
-		[Test] public void Correlation()
+		[Test]
+		public void Correlation()
 		{
 			var arr0 = new double[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
-			var arr1 = new double[] { 2, 3, 4, 5, 6, 7, 8, 9,10 };
+			var arr1 = new double[] { 2, 3, 4, 5, 6, 7, 8, 9, 10 };
 			var arr2 = new double[] { 9, 8, 7, 6, 5, 4, 3, 2, 1 };
 			var arr3 = new double[] { 5, 5, 5, 5, 5, 5, 5, 5, 5 };
 
@@ -1365,27 +1360,31 @@ namespace Rylogic.UnitTests
 				for (int i = 0; i != arr0.Length; ++i)
 					corr.Add(arr0[i], arr0[i]);
 				Assert.Equal(corr.CorrCoeff, 1.0, Math_.TinyD);
-			} {
+			}
+			{
 				var corr = new Correlation();
 				for (int i = 0; i != arr0.Length; ++i)
 					corr.Add(arr0[i], arr1[i]);
 				Assert.Equal(corr.CorrCoeff, 1.0, Math_.TinyD);
-			} {
+			}
+			{
 				var corr = new Correlation();
 				for (int i = 0; i != arr0.Length; ++i)
 					corr.Add(arr0[i], arr2[i]);
 				Assert.Equal(corr.CorrCoeff, -1.0, Math_.TinyD);
-			}{
+			}
+			{
 				var corr = new Correlation();
 				for (int i = 0; i != arr0.Length; ++i)
 					corr.Add(arr0[i], arr3[i]);
 				Assert.Equal(corr.CorrCoeff, 0.0, Math_.TinyD);
 			}
 		}
-		[Test] public void Probability()
+		[Test]
+		public void Probability()
 		{
 			// Check we're independent of bucket size
-			foreach (var bk_size in new [] {0.1, 0.5, 1.0, 2.0, 5.0 })
+			foreach (var bk_size in new[] { 0.1, 0.5, 1.0, 2.0, 5.0 })
 			{
 				var pd = new Distribution(bk_size);
 				pd.Add(1);
@@ -1403,7 +1402,7 @@ namespace Rylogic.UnitTests
 					sb.AppendLine($"{x},{pd[x]}");
 
 				{
-					var probabilities = new[] {0.0, 0.1, 0.5, 0.8, 1.0 };
+					var probabilities = new[] { 0.0, 0.1, 0.5, 0.8, 1.0 };
 					var vals = pd.Values(probabilities);
 					var prob = pd.Probability(vals);
 
@@ -1412,11 +1411,11 @@ namespace Rylogic.UnitTests
 						Assert.True(Math_.FEql(prob[i], probabilities[i]));
 				}
 				{
-					var values = new[] {-10.0, -1.0, 0.0, 0.5, 3.0, 4.0, 5.0, 10.0 };
+					var values = new[] { -10.0, -1.0, 0.0, 0.5, 3.0, 4.0, 5.0, 10.0 };
 					var prob = pd.Probability(values);
 					var vals = pd.Values(prob);
 					var prob2 = pd.Probability(vals);
-					
+
 					Assert.True(prob.All(x => x.Within(0.0, 1.0)));
 					for (int i = 0; i != vals.Length; ++i)
 					{
@@ -1440,6 +1439,25 @@ namespace Rylogic.UnitTests
 						Assert.True(Math_.FEql(vals[i], values[i]) || Math_.FEql(prob[i], prob2[i]));
 					}
 				}
+			}
+		}
+		[Test]
+		public void DecimalStat()
+		{
+			{
+				var num = new[] { 2m, 4m, 7m, 3m, 2m, -5m, -4m, 1m, -7m, 3m, 6m, -8m };
+
+				var s = new AverageVariance<decimal>();
+				for (int i = 0; i != num.Length; ++i)
+					s.Add(num[i]);
+
+				Assert.Equal(num.Length, s.Count);
+				Assert.Equal(4m, s.Sum, (decimal)Math_.TinyD);
+				Assert.Equal(1m / 3m, s.Mean, (decimal)Math_.TinyD);
+				Assert.Equal(4.83621, s.PopStdDev, 0.00001);
+				Assert.Equal(23.38889m, s.PopStdVar, 0.00001m);
+				Assert.Equal(5.0512524699475787686684767441111, s.SamStdDev, Math_.TinyD);
+				Assert.Equal(25.515151515151515151515151515152m, s.SamStdVar, (decimal)Math_.TinyD);
 			}
 		}
 	}

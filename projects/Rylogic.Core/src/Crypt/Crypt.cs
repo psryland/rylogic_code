@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Security;
 using System.Security.Cryptography;
+using Rylogic.Extn;
 using Rylogic.Utility;
 
 namespace Rylogic.Crypt
@@ -114,15 +115,18 @@ namespace Rylogic.Crypt
 		{
 			// get salted byte[] buffer, containing username, password and some (constant) salt
 			using (var stream = new MemoryStream())
-			using (var writer = new StreamWriter(stream))
 			{
-				writer.Write(salt);
-				writer.Write(username);
-				writer.Write(password);
-				writer.Flush();
+				using (var writer = new StreamWriter(stream))
+				{
+					writer.Write(salt);
+					writer.Write(username);
+					writer.Write(password);
+				}
 
-				var sha = SHA256.Create();
-				return sha.ComputeHash(stream.ToArray());
+				var arr = stream.ToArray();
+				var hash = SHA256.Create().ComputeHash(arr);
+				//System.Diagnostics.Debug.WriteLine($"{username}:{password}:{salt} =>\n{hash.ToHexString()}");
+				return hash;
 			}
 		}
 	}

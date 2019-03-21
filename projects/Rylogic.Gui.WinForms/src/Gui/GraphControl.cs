@@ -2417,7 +2417,7 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Plot a moving average curve over the data</summary>
 		private void PlotMovingAverage(Graphics gfx, Series.RdrOptions opts, Matrix3x3 g2c, Iterator<GraphValue> iter)
 		{
-			var ema = new ExpMovingAvr(opts.MAWindowSize);
+			var ema = new ExponentialMovingAverage(opts.MAWindowSize);
 			using (var ma_pen = new Pen(opts.MALineColour, opts.MALineWidth))
 			{
 				bool first = true;

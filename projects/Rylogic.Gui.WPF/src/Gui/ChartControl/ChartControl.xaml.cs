@@ -42,30 +42,37 @@ namespace Rylogic.Gui.WPF
 		public ChartControl(string title, OptionsData options)
 		{
 			InitializeComponent();
-
 			if (DesignerProperties.GetIsInDesignMode(this))
 				return;
 
-			Options = options;
-			Title = title;
-			View3d = View3d.Create();
-			Range = new RangeData(this);
-			BaseRangeX = new RangeF(0.0, 1.0);
-			BaseRangeY = new RangeF(0.0, 1.0);
-			MouseOperations = new MouseOps();
-			Elements = new ElementCollection(this);
-			Selected = new SelectedCollection(this);
-			Hovered = new HoveredCollection(this);
-			Tools = new ChartTools(this, Options);
+			try
+			{
+				Options = options;
+				Title = title;
+				View3d = View3d.Create();
+				Range = new RangeData(this);
+				BaseRangeX = new RangeF(0.0, 1.0);
+				BaseRangeY = new RangeF(0.0, 1.0);
+				MouseOperations = new MouseOps();
+				Elements = new ElementCollection(this);
+				Selected = new SelectedCollection(this);
+				Hovered = new HoveredCollection(this);
+				Tools = new ChartTools(this, Options);
 
-			AllowEditing = false;
-			AllowSelection = false;
-			DefaultMouseControl = true;
-			DefaultKeyboardShortcuts = true;
-			AreaSelectMode = EAreaSelectMode.Zoom;
+				AllowEditing = false;
+				AllowSelection = false;
+				DefaultMouseControl = true;
+				DefaultKeyboardShortcuts = true;
+				AreaSelectMode = EAreaSelectMode.Zoom;
 
-			InitCommands();
-			DataContext = this;
+				InitCommands();
+				DataContext = this;
+			}
+			catch
+			{
+				Dispose();
+				throw;
+			}
 		}
 		public void Dispose()
 		{
@@ -73,6 +80,7 @@ namespace Rylogic.Gui.WPF
 			Tools = null;
 			Range = null;
 			Options = null;
+			Scene.Dispose();
 			View3d = null;
 		}
 
@@ -214,7 +222,7 @@ namespace Rylogic.Gui.WPF
 		public View3d.Camera Camera => Scene?.Camera;
 
 		/// <summary>Raised just before the chart renders, allowing users to add custom graphics</summary>
-		public event EventHandler BuildScene
+		public event EventHandler<View3dControl.BuildSceneEventArgs> BuildScene
 		{
 			add { Scene.BuildScene += value; }
 			remove { Scene.BuildScene -= value; }
@@ -449,8 +457,8 @@ namespace Rylogic.Gui.WPF
 				NSSToClient(nss_rect.Size));
 		}
 
-		/// <summary>Perform a hit test on the chart</summary>
-		public HitTestResult HitTestCS(Point client_point, ModifierKeys modifier_keys, Func<Element, bool> pred)
+		/// <summary>Perform a hit test on the chart but only test which zone is hit (faster)</summary>
+		public HitTestResult HitTestZoneCS(Point client_point, ModifierKeys modifier_keys)
 		{
 			// Determine the hit zone of the control
 			var zone = EZone.None;
@@ -462,23 +470,30 @@ namespace Rylogic.Gui.WPF
 			// The hit test point in chart space
 			var chart_point = ClientToChart(client_point);
 
+			return new HitTestResult(zone, client_point, chart_point, modifier_keys, new List<HitTestResult.Hit>(), Scene.Camera);
+		}
+
+		/// <summary>Perform a hit test on the chart and all elements within the chart</summary>
+		public HitTestResult HitTestCS(Point client_point, ModifierKeys modifier_keys, Func<Element, bool> pred)
+		{
+			var result = HitTestZoneCS(client_point, modifier_keys);
+
 			// Find elements that overlap 'client_point'
-			var hits = new List<HitTestResult.Hit>();
-			if (zone.HasFlag(EZone.Chart))
+			if (result.Zone.HasFlag(EZone.Chart))
 			{
 				var elements = pred != null ? Elements.Where(pred) : Elements;
 				foreach (var elem in elements)
 				{
-					var hit = elem.HitTest(chart_point, client_point, modifier_keys, Scene.Camera);
+					var hit = elem.HitTest(result.ChartPoint, result.ClientPoint, result.ModifierKeys, Scene.Camera);
 					if (hit != null)
-						hits.Add(hit);
+						result.Hits.Add(hit);
 				}
 
 				// Sort the results by z order
-				hits.Sort((l, r) => -l.Element.PositionZ.CompareTo(r.Element.PositionZ));
+				result.Hits.Sort((l, r) => -l.Element.PositionZ.CompareTo(r.Element.PositionZ));
 			}
 
-			return new HitTestResult(zone, client_point, chart_point, modifier_keys, hits, Scene.Camera);
+			return result;
 		}
 
 		/// <summary>Find the default range, then reset to the default range</summary>
@@ -847,33 +862,6 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 		private ChartTools m_tools;
-
-		/// <summary>Create and display a context menu</summary>
-		public void ShowContextMenu(Point location, HitTestResult hit_result)
-		{
-			if (!(FindResource("ChartCMenu") is ContextMenu cmenu))
-				return;
-
-			// Refresh the state
-			cmenu.DataContext = null;
-			cmenu.DataContext = this;
-
-			// Allow users to add/remove menu options
-			// Do this last so that users have the option of removing options they don't want displayed
-			OnCustomiseContextMenu(new AddUserMenuOptionsEventArgs(cmenu, hit_result));
-
-			// Show the context menu
-			cmenu.Items.TidySeparators();
-			cmenu.PlacementTarget = this;
-			cmenu.IsOpen = true;
-		}
-
-		/// <summary>Event allowing callers to add options to the context menu</summary>
-		public event EventHandler<AddUserMenuOptionsEventArgs> AddUserMenuOptions;
-		protected virtual void OnCustomiseContextMenu(AddUserMenuOptionsEventArgs args)
-		{
-			AddUserMenuOptions?.Invoke(this, args);
-		}
 
 		#region Self Consistency
 

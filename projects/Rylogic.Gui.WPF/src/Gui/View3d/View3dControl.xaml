@@ -7,20 +7,22 @@
 	xmlns:sys="clr-namespace:System;assembly=mscorlib"
 	xmlns:gui2="clr-namespace:Rylogic.Gui.WPF"
 	mc:Ignorable="d" 
-	d:DesignHeight="450" d:DesignWidth="800"
+	d:DesignHeight="450"
+	d:DesignWidth="800"
 	>
-	<Image.Resources>
-		<ResourceDictionary>
-			<ContextMenu x:Key="View3dControlCMenu">
-				<MenuItem Header="Objects">
-					<MenuItem Header="Origin" IsChecked="{Binding Window.OriginPointVisible}" Command="{Binding ToggleOriginPoint}"/>
-					<MenuItem Header="Focus" IsChecked="{Binding Window.FocusPointVisible}" Command="{Binding ToggleFocusPoint}"/>
-				</MenuItem>
-				<MenuItem Header="Camera">
-					<MenuItem Header="Reset View" Command="{Binding ResetView}"/>
-					<MenuItem Header="Orthographic" IsChecked="{Binding Camera.Orthographic}" Command="{Binding ToggleOrthographic}"/>
-					<MenuItem Header="Align Camera">
-						<ComboBox
+	<Image.ContextMenu>
+		<ContextMenu
+				DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+				>
+			<MenuItem Header="Objects">
+				<MenuItem Header="Origin" IsChecked="{Binding Window.OriginPointVisible}" Command="{Binding ToggleOriginPoint}"/>
+				<MenuItem Header="Focus" IsChecked="{Binding Window.FocusPointVisible}" Command="{Binding ToggleFocusPoint}"/>
+			</MenuItem>
+			<MenuItem Header="Camera">
+				<MenuItem Header="Reset View" Command="{Binding ResetView}"/>
+				<MenuItem Header="Orthographic" IsChecked="{Binding Camera.Orthographic}" Command="{Binding ToggleOrthographic}"/>
+				<MenuItem Header="Align Camera">
+					<ComboBox
 							ItemsSource="{Binding AlignDirections}"
 							Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
 							Background="{x:Static SystemColors.ControlBrush}"
@@ -28,15 +30,15 @@
 							MinWidth="80"
 							Margin="1,1,20,1"
 							>
-							<ComboBox.ItemTemplate>
-								<DataTemplate>
-									<TextBlock Text="{Binding Path=., Converter={gui2:EnumToDesc}}"/>
-								</DataTemplate>
-							</ComboBox.ItemTemplate>
-						</ComboBox>
-					</MenuItem>
-					<MenuItem Header="Pre-set View">
-						<ComboBox
+						<ComboBox.ItemTemplate>
+							<DataTemplate>
+								<TextBlock Text="{Binding Path=., Converter={gui2:EnumToDesc}}"/>
+							</DataTemplate>
+						</ComboBox.ItemTemplate>
+					</ComboBox>
+				</MenuItem>
+				<MenuItem Header="Pre-set View">
+					<ComboBox
 							ItemsSource="{Binding ViewPresets}"
 							Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
 							Background="{x:Static SystemColors.ControlBrush}"
@@ -44,24 +46,24 @@
 							MinWidth="80"
 							Margin="1,1,20,1"
 							>
-							<ComboBox.ItemTemplate>
-								<DataTemplate>
-									<TextBlock Text="{Binding Path=., Converter={gui2:EnumToDesc}}"/>
-								</DataTemplate>
-							</ComboBox.ItemTemplate>
-						</ComboBox>
-					</MenuItem>
+						<ComboBox.ItemTemplate>
+							<DataTemplate>
+								<TextBlock Text="{Binding Path=., Converter={gui2:EnumToDesc}}"/>
+							</DataTemplate>
+						</ComboBox.ItemTemplate>
+					</ComboBox>
 				</MenuItem>
-				<MenuItem Header="Rendering">
-					<MenuItem
+			</MenuItem>
+			<MenuItem Header="Rendering">
+				<MenuItem
 						Header="Background Colour"
 						Background="{Binding Window.BackgroundColour, Converter={gui2:ColourToBrush}}"
 						Foreground="{Binding Window.BackgroundColour, Converter={gui2:TextOverColourBrush}}"
 						Command="{Binding SetBackgroundColour}"
 						/>
-					<MenuItem Header="Antialiasing" IsChecked="{Binding MultiSampling, Converter={gui2:IsEqual}, ConverterParameter=4}" Command="{Binding ToggleAntialiasing}"/>
-					<MenuItem Header="Fill Mode">
-						<ComboBox
+				<MenuItem Header="Antialiasing" IsChecked="{Binding MultiSampling, Converter={gui2:IsEqual}, ConverterParameter=4}" Command="{Binding ToggleAntialiasing}"/>
+				<MenuItem Header="Fill Mode">
+					<ComboBox
 							ItemsSource="{Binding Window.FillMode, Converter={gui2:EnumValues}, Mode=OneTime}"
 							SelectedItem="{Binding Window.FillMode}"
 							Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
@@ -70,9 +72,9 @@
 							MinWidth="80"
 							Margin="1,1,20,1"
 							/>
-					</MenuItem>
-					<MenuItem Header="Cull Mode">
-						<ComboBox
+				</MenuItem>
+				<MenuItem Header="Cull Mode">
+					<ComboBox
 							ItemsSource="{Binding Window.CullMode, Converter={gui2:EnumValues}, Mode=OneTime}"
 							SelectedItem="{Binding Window.CullMode}"
 							Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
@@ -81,15 +83,13 @@
 							MinWidth="80"
 							Margin="1,1,20,1"
 							/>
-					</MenuItem>
-					<MenuItem Header="Lighting" Command="{Binding ShowLightingUI}"/>
 				</MenuItem>
-				<MenuItem Header="Tools">
-					<MenuItem Header="Measure Tool" Command="{Binding ShowMeasureTool}"/>
-					<MenuItem Header="Object Manager" Command="{Binding ShowObjectManager}"/>
-				</MenuItem>
-			</ContextMenu>
-
-		</ResourceDictionary>
-	</Image.Resources>
+				<MenuItem Header="Lighting" Command="{Binding ShowLightingUI}"/>
+			</MenuItem>
+			<MenuItem Header="Tools">
+				<MenuItem Header="Measure Tool" Command="{Binding ShowMeasureTool}"/>
+				<MenuItem Header="Object Manager" Command="{Binding ShowObjectManager}"/>
+			</MenuItem>
+		</ContextMenu>
+	</Image.ContextMenu>
 </Image>

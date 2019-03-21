@@ -10,15 +10,45 @@ using Rylogic.Utility;
 namespace Rylogic.Gui.WPF
 {
 	/// <summary>Compares a value to the parameter, return true if they are equal</summary>
+	[ValueConversion(typeof(object), typeof(bool))]
 	public class IsEqual : MarkupExtension, IValueConverter
 	{
 		// Use:
 		// <RadioButton Content = "Words" IsChecked="{Binding PropName, Converter={StaticResource IsEqual}, ConverterParameter={x:Static xml_ns:MyType+MyNestedEnum.Value}}"/>
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			if (value == null && parameter == null) return true;
-			if (value != null && parameter != null) return Equals(value, Util.ConvertTo(parameter, value.GetType()));
-			return false;
+			if (value == null && parameter == null)
+				return true;
+			if (value == null || parameter == null)
+				return false;
+
+			var ty = parameter.GetType();
+			return Equals(Util.ConvertTo(value, ty), parameter);
+		}
+		public object ConvertBack(object value, Type target_type, object parameter, CultureInfo culture)
+		{
+			return parameter;
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
+	}
+
+	/// <summary>Compares a value to the parameter, return true if (value & parameter) != 0</summary>
+	[ValueConversion(typeof(object), typeof(bool))]
+	public class HasFlag : MarkupExtension, IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			if (value == null && parameter == null)
+				return true;
+			if (value == null || parameter == null)
+				return false;
+
+			var lhs = Util.ConvertTo<long>(value);
+			var rhs = Util.ConvertTo<long>(parameter);
+			return (lhs & rhs) != 0;
 		}
 		public object ConvertBack(object value, Type target_type, object parameter, CultureInfo culture)
 		{

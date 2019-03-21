@@ -134,86 +134,91 @@ namespace Rylogic.Gui.WPF
 		protected override void OnMouseWheel(MouseWheelEventArgs e)
 		{
 			base.OnMouseWheel(e);
-			var location = e.GetPosition(this);
 
+			// If there is a mouse op in progress, ignore the wheel
+			var op = MouseOperations.Active;
+			if (op != null && !op.Cancelled)
+				return;
+
+			var location = e.GetPosition(this);
 			var along_ray = Options.MouseCentredZoom || Keyboard.Modifiers.HasFlag(ModifierKeys.Alt);
 			var chart_pt = ClientToChart(location);
+			var hit = HitTestZoneCS(location, Keyboard.Modifiers);
 
-			if (SceneBounds.Contains(location))
+			var scale = 0.001f;
+			if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) scale *= 0.1f;
+			if (Keyboard.Modifiers.HasFlag(ModifierKeys.Alt)) scale *= 0.01f;
+			var delta = Math_.Clamp(e.Delta * scale, -0.999f, 0.999f);
+			var chg = (string)null;
+
+			// If zooming is allowed on both axes, translate the camera
+			if (hit.Zone == EZone.Chart && XAxis.AllowZoom && YAxis.AllowZoom)
 			{
-				// If there is a mouse op in progress, ignore the wheel
-				var op = MouseOperations.Active;
-				if (op == null || op.Cancelled)
+				// Translate the camera along a ray through 'point'
+				var loc = Gui_.MapPoint(this, Scene, location);
+				Scene.Window.MouseNavigateZ(loc.ToPointF(), e.ToMouseBtns(Keyboard.Modifiers), e.Delta, along_ray);
+				chg = nameof(SetRangeFromCamera);
+			}
+			
+			// Otherwise, zoom on the allowed axis only
+			else if (hit.Zone == EZone.XAxis || (hit.Zone == EZone.Chart && !YAxis.AllowZoom))
+			{
+				if (hit.ModifierKeys.HasFlag(ModifierKeys.Control) && XAxis.AllowScroll)
 				{
-					// Translate the camera along a ray through 'point'
-					var loc = Gui_.MapPoint(this, Scene, location);
-					Scene.Window.MouseNavigateZ(loc.ToPointF(), e.ToMouseBtns(Keyboard.Modifiers), e.Delta, along_ray);
+					// Scroll the XAxis
+					XAxis.Shift(XAxis.Span * delta);
+					chg = nameof(SetCameraFromRange);
+				}
+				else if (!hit.ModifierKeys.HasFlag(ModifierKeys.Control) && XAxis.AllowZoom)
+				{
+					// Change the aspect ratio by zooming on the XAxis
+					var x = along_ray ? chart_pt.X : XAxis.Centre;
+					var left = (XAxis.Min - x) * (1f - delta);
+					var rite = (XAxis.Max - x) * (1f - delta);
+					XAxis.Set(x + left, x + rite);
+					if (Options.LockAspect != null)
+						YAxis.Span *= (1f - delta);
 
-					// Update the axes from the camera position
-					SetRangeFromCamera();
-					Scene.Invalidate();
-
-					// Notify that the chart coordinate at the mouse pointer has changed
-					NotifyPropertyChanged(nameof(ValueAtPointer));
+					chg = nameof(SetCameraFromRange);
 				}
 			}
-			else if (Options.ShowAxes)
+			else if (hit.Zone == EZone.YAxis || (hit.Zone == EZone.Chart && !XAxis.AllowZoom))
 			{
-				var scale = 0.001f;
-				if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) scale *= 0.1f;
-				if (Keyboard.Modifiers.HasFlag(ModifierKeys.Alt)) scale *= 0.01f;
-				var delta = Math_.Clamp(e.Delta * scale, -0.999f, 0.999f);
-
-				var chg = false;
-
-				// Change the aspect ratio by zooming on the XAxis
-				if (XAxisBounds.Contains(location) && !XAxis.LockRange)
+				if (hit.ModifierKeys.HasFlag(ModifierKeys.Control) && YAxis.AllowScroll)
 				{
-					if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && XAxis.AllowScroll)
-					{
-						XAxis.Shift(XAxis.Span * delta);
-						chg = true;
-					}
-					if (!Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && XAxis.AllowZoom)
-					{
-						var x = along_ray ? chart_pt.X : XAxis.Centre;
-						var left = (XAxis.Min - x) * (1f - delta);
-						var rite = (XAxis.Max - x) * (1f - delta);
-						XAxis.Set(x + left, x + rite);
-						if (Options.LockAspect != null)
-							YAxis.Span *= (1f - delta);
-
-						chg = true;
-					}
+					// Scroll the YAxis
+					YAxis.Shift(YAxis.Span * delta);
+					chg = nameof(SetCameraFromRange);
 				}
-
-				// Check the aspect ratio by zooming on the YAxis
-				if (YAxisBounds.Contains(location) && !YAxis.LockRange)
+				else if (!hit.ModifierKeys.HasFlag(ModifierKeys.Control) && YAxis.AllowZoom)
 				{
-					if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && YAxis.AllowScroll)
-					{
-						YAxis.Shift(YAxis.Span * delta);
-						chg = true;
-					}
-					if (!Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && YAxis.AllowZoom)
-					{
-						var y = along_ray ? chart_pt.Y : YAxis.Centre;
-						var left = (YAxis.Min - y) * (1f - delta);
-						var rite = (YAxis.Max - y) * (1f - delta);
-						YAxis.Set(y + left, y + rite);
-						if (Options.LockAspect != null)
-							XAxis.Span *= (1f - delta);
+					// Change the aspect ratio by zooming on the YAxis
+					var y = along_ray ? chart_pt.Y : YAxis.Centre;
+					var left = (YAxis.Min - y) * (1f - delta);
+					var rite = (YAxis.Max - y) * (1f - delta);
+					YAxis.Set(y + left, y + rite);
+					if (Options.LockAspect != null)
+						XAxis.Span *= (1f - delta);
 
-						chg = true;
-					}
+					chg = nameof(SetCameraFromRange);
 				}
+			}
+			
+			switch (chg)
+			{
+			// Update the axes from the camera position
+			case nameof(SetRangeFromCamera):
+				SetRangeFromCamera();
+				NotifyPropertyChanged(nameof(ValueAtPointer));
+				Scene.Invalidate();
+				break;
 
 				// Set the camera position from the new axis ranges
-				if (chg)
-				{
-					SetCameraFromRange();
-					Scene.Invalidate();
-				}
+			case nameof(SetCameraFromRange):
+				SetCameraFromRange();
+				NotifyPropertyChanged(nameof(ValueAtPointer));
+				Scene.Invalidate();
+				break;
 			}
 		}
 		protected override void OnKeyDown(KeyEventArgs e)

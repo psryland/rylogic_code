@@ -240,6 +240,11 @@ namespace Rylogic.UnitTests
 			if (Math.Abs(result - expected) < tol) return;
 			throw new UnitTestException(VSLink + $"values are not equal\r\n  expected: {expected}\r\n  result: {result}\r\n  tol: {tol}");
 		}
+		public static void Equal(decimal expected, decimal result, decimal tol)
+		{
+			if (Math.Abs(result - expected) < tol) return;
+			throw new UnitTestException(VSLink + $"values are not equal\r\n  expected: {expected}\r\n  result: {result}\r\n  tol: {tol}");
+		}
 
 		/// <summary>Tests value inequality</summary>
 		public static void NotEqual(object expected, object result)

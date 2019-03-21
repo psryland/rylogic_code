@@ -7,14 +7,17 @@
 	xmlns:gui2="clr-namespace:Rylogic.Gui.WPF"
 	xmlns:local="clr-namespace:Rylogic.Gui.WPF.ChartDetail"
 	mc:Ignorable="d" 
-	d:DesignHeight="450" d:DesignWidth="800"
+	d:DesignWidth="800"
+	d:DesignHeight="450"
 	Background="#EEE"
 	x:Name="m_root"
 	>
-
 	<Grid.Resources>
 		<ResourceDictionary>
-			<ContextMenu x:Key="ChartCMenu">
+			<ContextMenu
+				x:Key="ChartCMenu"
+				DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+				>
 				<MenuItem Header="Objects">
 					<MenuItem Header="Origin" IsChecked="{Binding Window.OriginPointVisible}" Command="{Binding ToggleOriginPoint}"/>
 					<MenuItem Header="Focus" IsChecked="{Binding Window.FocusPointVisible}" Command="{Binding ToggleFocusPoint}"/>
@@ -28,13 +31,13 @@
 				<MenuItem Header="Navigation">
 					<MenuItem Header="Mode">
 						<ComboBox
-							ItemsSource="{Binding Options.NavigationMode, Converter={gui2:EnumValues}, Mode=OneTime}"
-							SelectedItem="{Binding Options.NavigationMode}"
-							Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
-							Background="{x:Static SystemColors.ControlBrush}"
-							BorderThickness="0"
-							Margin="1,1,20,1"
-							/>
+								ItemsSource="{Binding Options.NavigationMode, Converter={gui2:EnumValues}, Mode=OneTime}"
+								SelectedItem="{Binding Options.NavigationMode}"
+								Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
+								Background="{x:Static SystemColors.ControlBrush}"
+								BorderThickness="0"
+								Margin="1,1,20,1"
+								/>
 					</MenuItem>
 					<MenuItem Header="Auto Range" Command="{Binding DoAutoRange}"/>
 					<MenuItem Header="Aspect 1:1" Command="{Binding DoAspect11}"/>
@@ -43,38 +46,44 @@
 				</MenuItem>
 				<MenuItem Header="Rendering">
 					<MenuItem
-						Header="Background Colour"
-						Background="{Binding Options.BackgroundColour, Converter={gui2:ColourToBrush}}"
-						Foreground="{Binding Options.BackgroundColour, Converter={gui2:TextOverColourBrush}}"
-						Command="{Binding SetBackgroundColour}"
-						/>
+							Header="Background Colour"
+							Background="{Binding Options.BackgroundColour, Converter={gui2:ColourToBrush}}"
+							Foreground="{Binding Options.BackgroundColour, Converter={gui2:TextOverColourBrush}}"
+							Command="{Binding SetBackgroundColour}"
+							/>
 					<MenuItem Header="Orthographic" IsChecked="{Binding Options.Orthographic}" Command="{Binding ToggleOrthographic}"/>
 					<MenuItem Header="Antialiasing" IsChecked="{Binding Options.AntiAliasing}" Command="{Binding ToggleAntiAliasing}"/>
 					<MenuItem Header="Fill Mode">
 						<ComboBox
-							ItemsSource="{Binding Options.FillMode, Converter={gui2:EnumValues}, Mode=OneTime}"
-							SelectedItem="{Binding Options.FillMode}"
-							Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
-							Background="{x:Static SystemColors.ControlBrush}"
-							BorderThickness="0"
-							Padding="1,1,20,1"
-							/>
+								ItemsSource="{Binding Options.FillMode, Converter={gui2:EnumValues}, Mode=OneTime}"
+								SelectedItem="{Binding Options.FillMode}"
+								Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
+								Background="{x:Static SystemColors.ControlBrush}"
+								BorderThickness="0"
+								Padding="1,1,20,1"
+								/>
 					</MenuItem>
 					<MenuItem Header="Cull Mode">
 						<ComboBox
-							ItemsSource="{Binding Options.CullMode, Converter={gui2:EnumValues}, Mode=OneTime}"
-							SelectedItem="{Binding Options.CullMode}"
-							Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
-							Background="{x:Static SystemColors.ControlBrush}"
-							BorderThickness="0"
-							Padding="1,1,20,1"
-							/>
+								ItemsSource="{Binding Options.CullMode, Converter={gui2:EnumValues}, Mode=OneTime}"
+								SelectedItem="{Binding Options.CullMode}"
+								Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
+								Background="{x:Static SystemColors.ControlBrush}"
+								BorderThickness="0"
+								Padding="1,1,20,1"
+								/>
 					</MenuItem>
 				</MenuItem>
 			</ContextMenu>
+			<ContextMenu
+				x:Key="AxisCMenu"
+				DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+				>
+				<MenuItem Header="Allow Scroll" IsChecked="{Binding Axis.AllowScroll, Mode=OneWay}" Command="{Binding ToggleScrollLock}"/>
+				<MenuItem Header="Allow Zoom" IsChecked="{Binding Axis.AllowZoom, Mode=OneWay}" Command="{Binding ToggleZoomLock}"/>
+			</ContextMenu>
 		</ResourceDictionary>
 	</Grid.Resources>
-
 	<Grid.ColumnDefinitions>
 		<ColumnDefinition Width="Auto"/>
 		<ColumnDefinition Width="*"/>
@@ -107,10 +116,13 @@
 		
 		<!-- Tick marks and values -->
 		<local:AxisPanel
+			x:Name="m_xaxis"
 			Side="Bottom"
 			Axis="{Binding XAxis, ElementName=m_root}"
 			Height="{Binding AxisSize}"
 			Visibility="{Binding Axis, Converter={gui2:NullToCollapsed}}"
+			Background="{Binding Background, ElementName=m_root}"
+			ContextMenu="{StaticResource AxisCMenu}"
 			/>
 
 		<!-- Axis label -->
@@ -139,18 +151,21 @@
 			<TextBlock.LayoutTransform>
 				<TransformGroup>
 					<RotateTransform Angle="-90"/>
-					<TranslateTransform X="0" Y="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type TextBlock}}, Converter={gui2:ScaleValue}, ConverterParameter=0.5}"/>
 				</TransformGroup>
 			</TextBlock.LayoutTransform>
 		</TextBlock>
 
 		<!-- Tick marks and values -->
 		<local:AxisPanel
+			x:Name="m_yaxis"
 			Side="Left"
 			Axis="{Binding YAxis, ElementName=m_root}"
 			Width="{Binding AxisSize}"
 			Visibility="{Binding Axis, Converter={gui2:NullToCollapsed}}"
+			Background="{Binding Background, ElementName=m_root}"
+			ContextMenu="{StaticResource AxisCMenu}"
 			/>
+
 	</StackPanel>
 
 	<!-- Chart area -->
@@ -158,7 +173,10 @@
 		Grid.Column="1"
 		Grid.Row="1"
 		>
-		<local:ChartPanel x:Name="m_chart_panel" />
+		<local:ChartPanel
+			x:Name="m_chart_panel"
+			ContextMenu="{StaticResource ChartCMenu}"
+			/>
 	</Grid>
 	
 	<!-- Show Value popup -->
@@ -181,4 +199,5 @@
 				/>
 		</Border>
 	</Popup>
+
 </Grid>

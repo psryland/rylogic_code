@@ -24,7 +24,6 @@ namespace Rylogic.Gui.WPF
 				LockAspect = null;
 				BackgroundColour = Colour32.LightGray;
 				SelectionColour = Colour32.DarkGray.Alpha(0x80);
-				ShowGridLines = true;
 				GridZOffset = 0.001f;
 				ShowAxes = true;
 				AntiAliasing = true;
@@ -46,7 +45,6 @@ namespace Rylogic.Gui.WPF
 				LockAspect = rhs.LockAspect;
 				BackgroundColour = rhs.BackgroundColour;
 				SelectionColour = rhs.SelectionColour;
-				ShowGridLines = rhs.ShowGridLines;
 				GridZOffset = rhs.GridZOffset;
 				ShowAxes = rhs.ShowAxes;
 				AntiAliasing = rhs.AntiAliasing;
@@ -68,7 +66,6 @@ namespace Rylogic.Gui.WPF
 				BackgroundColour = node.Element(nameof(BackgroundColour)).As(BackgroundColour);
 				SelectionColour = node.Element(nameof(SelectionColour)).As(SelectionColour);
 				ShowAxes = node.Element(nameof(ShowAxes)).As(ShowAxes);
-				ShowGridLines = node.Element(nameof(ShowGridLines)).As(ShowGridLines);
 				GridZOffset = node.Element(nameof(GridZOffset)).As(GridZOffset);
 				AntiAliasing = node.Element(nameof(AntiAliasing)).As(AntiAliasing);
 				FillMode = node.Element(nameof(FillMode)).As(FillMode);
@@ -88,7 +85,6 @@ namespace Rylogic.Gui.WPF
 				node.Add2(nameof(LockAspect), LockAspect, false);
 				node.Add2(nameof(BackgroundColour), BackgroundColour, false);
 				node.Add2(nameof(SelectionColour), SelectionColour, false);
-				node.Add2(nameof(ShowGridLines), ShowGridLines, false);
 				node.Add2(nameof(GridZOffset), GridZOffset, false);
 				node.Add2(nameof(ShowAxes), ShowAxes, false);
 				node.Add2(nameof(AntiAliasing), AntiAliasing, false);
@@ -146,14 +142,6 @@ namespace Rylogic.Gui.WPF
 			}
 			private Colour32 m_SelectionColour;
 
-			/// <summary>Show grid lines (False overrides per-axis options)</summary>
-			public bool ShowGridLines
-			{
-				get { return m_ShowGridLines; }
-				set { SetProp(ref m_ShowGridLines, value, nameof(ShowGridLines)); }
-			}
-			private bool m_ShowGridLines;
-
 			/// <summary>The offset from the origin for the grid, in the forward direction of the camera</summary>
 			public float GridZOffset
 			{
@@ -169,6 +157,18 @@ namespace Rylogic.Gui.WPF
 				set { SetProp(ref m_ShowAxes, value, nameof(ShowAxes)); }
 			}
 			private bool m_ShowAxes;
+
+			/// <summary>Show hide both X and Y Axis grid lines</summary>
+			public bool ShowGridLines
+			{
+				get { return XAxis.ShowGridLines || YAxis.ShowGridLines; }
+				set
+				{
+					var shown = ShowGridLines;
+					XAxis.ShowGridLines = !shown;
+					YAxis.ShowGridLines = !shown;
+				}
+			}
 
 			/// <summary>Enable/Disable multi-sampling in the view3d view. Can only be changed before the view is created</summary>
 			public bool AntiAliasing
@@ -301,6 +301,7 @@ namespace Rylogic.Gui.WPF
 					AxisThickness = 2f;
 					PixelsPerTick = 30.0;
 					ShowGridLines = true;
+					TickTextTemplate = "-XXXXX.XX";
 				}
 				public Axis(Axis rhs)
 				{
@@ -316,6 +317,7 @@ namespace Rylogic.Gui.WPF
 					AxisThickness = rhs.AxisThickness;
 					PixelsPerTick = rhs.PixelsPerTick;
 					ShowGridLines = rhs.ShowGridLines;
+					TickTextTemplate = rhs.TickTextTemplate;
 				}
 				public Axis(XElement node) : this()
 				{
@@ -331,6 +333,7 @@ namespace Rylogic.Gui.WPF
 					AxisThickness = node.Element(nameof(AxisThickness)).As(AxisThickness);
 					PixelsPerTick = node.Element(nameof(PixelsPerTick)).As(PixelsPerTick);
 					ShowGridLines = node.Element(nameof(ShowGridLines)).As(ShowGridLines);
+					TickTextTemplate = node.Element(nameof(TickTextTemplate)).As(TickTextTemplate);
 				}
 				public XElement ToXml(XElement node)
 				{
@@ -346,6 +349,7 @@ namespace Rylogic.Gui.WPF
 					node.Add2(nameof(AxisThickness), AxisThickness, false);
 					node.Add2(nameof(PixelsPerTick), PixelsPerTick, false);
 					node.Add2(nameof(ShowGridLines), ShowGridLines, false);
+					node.Add2(nameof(TickTextTemplate), TickTextTemplate, false);
 					return node;
 				}
 
@@ -455,6 +459,14 @@ namespace Rylogic.Gui.WPF
 					set { SetProp(ref m_ShowGridLines, value, nameof(ShowGridLines)); }
 				}
 				private bool m_ShowGridLines;
+
+				/// <summary>Example text used to measure the tick text size for this axis</summary>
+				public string TickTextTemplate
+				{
+					get { return m_TickTextTemplate; }
+					set { SetProp(ref m_TickTextTemplate, value, nameof(TickTextTemplate)); }
+				}
+				private string m_TickTextTemplate;
 			}
 		}
 	}
