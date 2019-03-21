@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Rylogic.Utility;
 
 namespace CoinFlip
@@ -95,19 +96,19 @@ namespace CoinFlip
 		public string Description => $"[Id:{OrderId}] {VolumeIn.ToString("G6", true)} → {VolumeOut.ToString("G6", true)} @ {PriceQ2B.ToString("G6", true)}";
 
 		/// <summary>Cancel this position</summary>
-		public void CancelOrder()
+		public async Task CancelOrder()
 		{
-			Exchange.CancelOrder(Pair, OrderId);
+			await Exchange.CancelOrder(Pair, OrderId);
 		}
 
 		/// <summary>Simulate this order being filled. Must be a Fake order</summary>
-		public void FillFakeOrder()
+		public async Task FillFakeOrder()
 		{
 			if (!Fake)
 				throw new Exception("Cannot fill a live order");
 
 			// Cancel the order
-			CancelOrder();
+			await CancelOrder();
 
 			// Add a fake entry to the history
 			var fill = Exchange.History.GetOrAdd(OrderId, TradeType, Pair);

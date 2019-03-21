@@ -32,5 +32,8 @@ namespace Poloniex.API
 
 		[JsonProperty("weightedAverage")]
 		public decimal WeightedAverage { get; private set; }
+
+		/// <summary>An invalid candle returned by Poloniex</summary>
+		public bool Invalid => Open == 0 && Close == 0 && High == 0 && Low == 0;
 	}
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using CoinFlip.Settings;
 using Rylogic.Utility;
 
@@ -8,13 +9,13 @@ namespace CoinFlip
 {
 	/// <summary>A Coin, owned by an exchange</summary>
 	[DebuggerDisplay("{Symbol} ({Exchange})")]
-	public class Coin
+	public class Coin :IComparable
 	{
 		public Coin(string sym, Exchange exch)
 		{
 			Symbol = sym;
 			Exchange = exch;
-			Meta = new CoinDataCollection(SettingsData.Settings)[sym];
+			Meta = SettingsData.Settings.Coins.FirstOrDefault(x => x.Symbol == sym) ?? new CoinData(sym, 1m);
 			Pairs = new HashSet<TradePair>();
 		}
 
@@ -25,7 +26,7 @@ namespace CoinFlip
 		public Exchange Exchange { [DebuggerStepThrough] get; }
 
 		/// <summary>Meta data for the coin</summary>
-		private CoinData Meta { [DebuggerStepThrough] get; }
+		public CoinData Meta { [DebuggerStepThrough] get; }
 
 		/// <summary>Trade pairs involving this coin</summary>
 		public HashSet<TradePair> Pairs { get; }
@@ -35,9 +36,6 @@ namespace CoinFlip
 
 		/// <summary>The default amount to use when creating a trade from this Coin</summary>
 		public Unit<decimal> DefaultTradeAmount => Meta.DefaultTradeAmount._(Symbol);
-
-		/// <summary>The display order of the coin</summary>
-		public int Order => Meta.Order;
 
 		/// <summary>True if this coin type is of interest</summary>
 		public bool OfInterest => Meta.OfInterest;
@@ -75,7 +73,7 @@ namespace CoinFlip
 					}
 
 					// Use spot prices
-					value = (coin == pair.Base)
+					value = coin == pair.Base
 						? value * pair.SpotPrice(ETradeType.B2Q)
 						: value * pair.SpotPrice(ETradeType.Q2B);
 
@@ -135,6 +133,13 @@ namespace CoinFlip
 			set { Meta.AssignedValue = value; }
 		}
 
+		/// <summary>Raised when the live price of this coin changes</summary>
+		public event EventHandler LivePriceChanged
+		{
+			add { Meta.LivePriceChanged += value; }
+			remove { Meta.LivePriceChanged -= value; }
+		}
+
 		/// <summary></summary>
 		public override string ToString()
 		{
@@ -172,6 +177,17 @@ namespace CoinFlip
 		public override int GetHashCode()
 		{
 			return new { Symbol, Exchange }.GetHashCode();
+		}
+		#endregion
+
+		#region IComparable
+		public int CompareTo(Coin rhs)
+		{
+			return Symbol.CompareTo(rhs.Symbol);
+		}
+		int IComparable.CompareTo(object obj)
+		{
+			return CompareTo((Coin)obj);
 		}
 		#endregion
 	}

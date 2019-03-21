@@ -43,6 +43,14 @@ namespace Poloniex.API
 		Day = 86400
 	}
 
+	/// <summary>Error codes to distinguish replies</summary>
+	public enum EErrorCode
+	{
+		Success,
+		Failure,
+		TooMuchDataRequested,
+	}
+
 	/// <summary>Global functions</summary>
 	internal static class Misc
 	{
@@ -188,5 +196,18 @@ namespace Poloniex.API
 	{
 		[JsonProperty("error")]
 		public string Message { get; private set; }
+	}
+
+	/// <summary>Exception type for PoloniexAPI errors</summary>
+	public class PoloniexException : System.Exception
+	{
+		public PoloniexException(EErrorCode code, string message)
+			:base(message)
+		{
+			ErrorCode = code;
+		}
+
+		/// <summary></summary>
+		public EErrorCode ErrorCode { get; }
 	}
 }

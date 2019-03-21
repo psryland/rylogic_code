@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Xml.Linq;
 using Rylogic.Common;
+using Rylogic.Extn.Windows;
 using Rylogic.Utility;
 
 namespace CoinFlip.Settings
@@ -16,7 +17,7 @@ namespace CoinFlip.Settings
 		{
 			UILayout = null;
 			//ToolStripLayout = new ToolStripLocations();
-			WindowPosition = Rect.Empty;
+			WindowPosition = Rect_.Zero;
 			WindowMaximised = false;
 		}
 

@@ -25,9 +25,6 @@ namespace CoinFlip
 		// - The candle cache is an ordered collection of candles, sorted by time
 		private const int CacheChunkSize = 10_000;
 
-		/// <summary>A cache of candle data read from the database</summary>
-		private List<Candle> m_cache;
-
 		/// <summary>Create a view of price data that updates as new data arrives</summary>
 		public Instrument(string name, PriceData pd)
 		{
@@ -102,11 +99,12 @@ namespace CoinFlip
 						{
 							// Data for the current candle has changed, just update the cached copy
 							if (e.IndexRange.Count != 1)
-								throw new Exception("This is not the current candle");
-							if (m_cache[e.IndexRange.Begi - CachedIndexRange.Begi].Timestamp != e.Candle.Timestamp)
+								throw new Exception("An update of the current candle should be a single value");
+							//if (m_cache[e.IndexRange.Begi - CachedIndexRange.Begi].Timestamp != e.Candle.Timestamp)
+							if (this[e.IndexRange.Begi].Timestamp != e.Candle.Timestamp)
 								throw new Exception("This is not the current candle");
 
-							m_cache[e.IndexRange.Begi - CachedIndexRange.Begi] = e.Candle;
+							this[e.IndexRange.Begi] = e.Candle;
 							break;
 						}
 					case DataEventArgs.EUpdateType.Range:
@@ -151,7 +149,8 @@ namespace CoinFlip
 				void HandlePairOrderBookChanged(object sender, EventArgs e)
 				{
 					// Notify when the order book of the latest candle changes
-					OnDataChanged(new DataEventArgs(DataEventArgs.EUpdateType.Current, PriceData, new Range(Count-1, Count), Latest));
+					if (Count != 0)
+						OnDataChanged(new DataEventArgs(DataEventArgs.EUpdateType.Current, PriceData, new Range(Count-1, Count), Latest));
 				}
 			}
 		}
@@ -190,20 +189,7 @@ namespace CoinFlip
 		private int? m_count;
 
 		/// <summary>The latest candle w.r.t to Model.UtcNow</summary>
-		public Candle Latest
-		{
-			get
-			{
-				if (Count == 0)
-					return Candle.Default;
-
-				// Ensure the latest is cached
-				EnsureCached(Count - 1);
-				
-				// When back testing is enabled m_cache.Back() is not the "latest"
-				return m_cache[Count-1 - CachedIndexRange.Begi];
-			}
-		}
+		public Candle Latest => Count != 0 ? this[Count - 1] : null;
 
 		/// <summary>The raw data. Idx = 0 is the oldest, Idx = Count is the latest</summary>
 		public Candle this[int idx]
@@ -215,6 +201,14 @@ namespace CoinFlip
 
 				EnsureCached(idx);
 				return m_cache[idx - CachedIndexRange.Begi];
+			}
+			private set
+			{
+				if (!idx.Within(0, Count))
+					throw new ArgumentOutOfRangeException(nameof(idx), $"Invalid candle index: {idx}. Range: [0,{Count})");
+
+				EnsureCached(idx);
+				m_cache[idx - CachedIndexRange.Begi] = value;
 			}
 		}
 
@@ -265,7 +259,7 @@ namespace CoinFlip
 			if (time_range.Contains(time_stamp.ExactTicks))
 			{
 				var idx = m_cache.BinarySearch(x => x.Timestamp.CompareTo(time_stamp.ExactTicks), find_insert_position:true);
-				return CachedIndexRange.Begi + idx;
+				return idx + CachedIndexRange.Begi;
 			}
 
 			// Otherwise, use a database query to determine the index, and grow the cache
@@ -325,7 +319,7 @@ namespace CoinFlip
 		public Candle CandleAt(TimeFrameTime time_stamp)
 		{
 			var idx = IndexAt(time_stamp);
-			return m_cache[idx - CachedIndexRange.Begi];
+			return this[idx];
 		}
 
 		/// <summary>Enumerate the candles within an index range. [idx_max,idx_max)</summary>
@@ -403,6 +397,7 @@ namespace CoinFlip
 			// We should now have 'idx' in the cache
 			Debug.Assert(idx.Within(CachedIndexRange.Begi, CachedIndexRange.Endi));
 		}
+		private List<Candle> m_cache;
 
 		#endregion
 

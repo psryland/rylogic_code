@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SqlClient;
 using System.Data.SQLite;
 using System.Diagnostics;
 using System.Threading;
 using CoinFlip.Settings;
 using Dapper;
-using Rylogic.Attrib;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Maths;
@@ -20,8 +18,8 @@ namespace CoinFlip
 	{
 		// Notes:
 		// - PriceData represents a single pair and TimeFrame on an exchange.
-		// - It reads candle data from the exchange (or from the DB in back testing)
-		//   and writes it into a DB.
+		// - It reads candle data from the exchange (or from the DB in back
+		//   testing) and writes it into a DB (unless back testing).
 		// - Use an 'Instrument' to view these data
 
 		public PriceData(TradePair pair, ETimeFrame time_frame, CancellationToken shutdown)
@@ -37,11 +35,11 @@ namespace CoinFlip
 				m_ref = new List<object>();
 
 				// Load the database of historic price data
-				var db_filepath = DBFilePath(pair.Name);
+				var db_filepath = DBFilePath(pair.Exchange.Name, pair.Name);
 				DB = new SQLiteConnection($"Data Source={db_filepath};Version=3;journal mode=Memory;synchronous=Off");
 
 				// Ensure a table exists for each time frame
-				foreach (var tf in Enum<ETimeFrame>.Values.Except(ETimeFrame.None))
+				foreach (var tf in pair.CandleDataAvailable)
 				{
 					DB.Execute(
 						$"create table if not exists {tf} (\n" +
@@ -80,9 +78,9 @@ namespace CoinFlip
 		public string SymbolCode => Pair.Name;
 
 		/// <summary>Generate a filepath for the given pair name</summary>
-		public static string DBFilePath(string pair_name)
+		public static string DBFilePath(string exchange_name, string pair_name)
 		{
-			var dbpath = Misc.ResolveUserPath("PriceData", $"{Path_.SanitiseFileName(pair_name)}.db");
+			var dbpath = Misc.ResolveUserPath("PriceData", $"{Path_.SanitiseFileName(pair_name)} - {Path_.SanitiseFileName(exchange_name)}.db");
 			Path_.CreateDirs(Path_.Directory(dbpath));
 			return dbpath;
 		}
@@ -101,8 +99,16 @@ namespace CoinFlip
 			set
 			{
 				if (m_db == value) return;
-				Util.Dispose(ref m_db);
+				if (m_db != null)
+				{
+					m_db.Close();
+					Util.Dispose(ref m_db);
+				}
 				m_db = value;
+				if (m_db != null)
+				{
+					m_db.Open();
+				}
 			}
 		}
 		private SQLiteConnection m_db;
@@ -149,7 +155,7 @@ namespace CoinFlip
 				, new { max_timestamp = max_timestamp_ticks });
 		}
 
-		/// <summary>The candle with the newest timestamp</summary>
+		/// <summary>The candle with the newest timestamp (or null if there is no data yet)</summary>
 		public Candle Newest
 		{
 			get
@@ -160,12 +166,12 @@ namespace CoinFlip
 						$"select * from {TimeFrame}\n"+
 						$"order by [{nameof(Candle.Timestamp)}] desc limit 1");
 				}
-				return m_newest ?? Candle.Default;
+				return m_newest;
 			}
 		}
 		private Candle m_newest;
 
-		/// <summary>The candle with the oldest timestamp</summary>
+		/// <summary>The candle with the oldest timestamp (or null if there is no data yet)</summary>
 		public Candle Oldest
 		{
 			get
@@ -176,12 +182,12 @@ namespace CoinFlip
 						$"select * from {TimeFrame}\n"+
 						$"order by [{nameof(Candle.Timestamp)}] asc limit 1");
 				}
-				return m_oldest ?? Candle.Default;
+				return m_oldest;
 			}
 		}
 		private Candle m_oldest;
 
-		/// <summary>The candle with the latest timestamp for the current time. Note: Current != Newest when back testing</summary>
+		/// <summary>The candle with the latest timestamp for the current time. Note: Current != Newest when back testing (null if no data yet)</summary>
 		public Candle Current
 		{
 			get
@@ -200,7 +206,7 @@ namespace CoinFlip
 					var t = Math_.Frac(m_current.Timestamp, Model.UtcNow.Ticks, m_current.Timestamp + Misc.TimeFrameToTicks(1.0, TimeFrame));
 					return m_current.SubCandle(Math_.Clamp(t, 0.0, 1.0));
 				}
-				return m_current ?? Candle.Default;
+				return m_current;
 			}
 		}
 		private Candle m_current;
@@ -249,7 +255,7 @@ namespace CoinFlip
 				}
 
 				// Create a new thread (if active)
-				var latest_timestamp = Newest?.Timestamp ?? DateTimeOffset_.UnixEpoch.Ticks;
+				var latest_timestamp = Newest?.Timestamp ?? Misc.CryptoCurrencyEpoch.Ticks;
 				m_update_thread = value ? new Thread(() => UpdateThreadEntryPoint(Pair.Exchange, Pair, TimeFrame, UpdatePollRate, latest_timestamp)) : null;
 
 				// Start the new thread
@@ -271,19 +277,37 @@ namespace CoinFlip
 						Thread.CurrentThread.Name = $"{SymbolCode} PriceData Update";
 						Model.Log.Write(ELogLevel.Debug, $"PriceData {SymbolCode} update thread started");
 
-						var end = start_time;
+						// Limit requests to batches of 25K candles
+						const int max_candles_per_request = 25_000;
+						var max_request_period = Misc.TimeFrameToTicks(max_candles_per_request, time_frame);
+						long PeriodEnd(long b) => Math.Min(DateTimeOffset.UtcNow.Ticks, b + max_request_period);
+
+						var beg = start_time;
+						var end = PeriodEnd(beg);
 						for (;;)
 						{
 							if (m_update_thread_exit.WaitOne(poll_rate))
 								break;
 
-							// Query for chart data
-							var data = exch.CandleData(pair, time_frame, end, DateTimeOffset.Now.Ticks, m_update_thread_cancel.Token);
-							if (data == null || data.Count == 0)
+							// Try to request the entire candle range.
+							var data = exch.CandleData(pair, time_frame, beg, end, m_update_thread_cancel.Token).Result;
+							if (data == null)
+							{
+								// If that fails, halve the range and try again
+								end = beg + (end - beg) / 2;
 								continue;
+							}
+							if (data.Count == 0)
+							{
+								// If the request returns no data, advance beg to end
+								beg = end;
+								end = PeriodEnd(beg);
+								continue;
+							}
 
-							// Update the end time range to include the returned data
-							end = data.Back().Timestamp;
+							// Update the time range to include the returned data
+							beg = data.Back().Timestamp;
+							end = PeriodEnd(beg);
 
 							// Add the received data to the database
 							Misc.RunOnMainThread(() =>
@@ -291,15 +315,17 @@ namespace CoinFlip
 								if (!UpdateThreadActive)
 									return;
 
-								var data_syncing = DataSyncing;
 								if (data.Count == 1)
 									Add(time_frame, data[0]);
 								else
 									Add(time_frame, data);
 
 								// Raise the event if 'DataSyncing' has changed
-								if (data_syncing != DataSyncing)
+								if (m_data_syncing != DataSyncing)
+								{
+									m_data_syncing = DataSyncing;
 									DataSyncingChanged?.Invoke(this, EventArgs.Empty);
+								}
 							});
 						}
 						Model.Log.Write(ELogLevel.Debug, $"PriceData {SymbolCode} update thread stopped");
@@ -314,6 +340,7 @@ namespace CoinFlip
 		private CancellationTokenSource m_update_thread_cancel;
 		private ManualResetEvent m_update_thread_exit;
 		private Thread m_update_thread;
+		private bool m_data_syncing;
 
 		/// <summary>Add a candle value to the database</summary>
 		private void Add(ETimeFrame tf, Candle candle)
@@ -329,6 +356,7 @@ namespace CoinFlip
 			// This is a new candle if it's time stamp is >= the TimeFrame period after the Newest candle.
 			// This is an update to the latest candle if within a TimeFrame period of the Newest candle.
 			var update_type =
+				Newest == null ? DataEventArgs.EUpdateType.New :
 				candle.Timestamp >= Newest.Timestamp + Misc.TimeFrameToTicks(1.0, TimeFrame) ? DataEventArgs.EUpdateType.New :
 				candle.Timestamp >= Newest.Timestamp ? DataEventArgs.EUpdateType.Current :
 				DataEventArgs.EUpdateType.Range;
@@ -399,6 +427,9 @@ namespace CoinFlip
 		/// <summary>Update or insert a candle</summary>
 		private void UpsertCandle(Candle candle, IDbTransaction transaction = null)
 		{
+			if (candle.Timestamp <= Misc.CryptoCurrencyEpoch.Ticks)
+				throw new Exception("Trying to insert an invalid candle");
+
 			DB.Execute(
 				$"insert or replace into {TimeFrame} (\n" +
 				$"  [{nameof(Candle.Timestamp)}],\n" +

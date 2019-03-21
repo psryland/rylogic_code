@@ -88,10 +88,5 @@ namespace CoinFlip
 			return new { Id }.GetHashCode();
 		}
 		#endregion
-
-		public override string ToString()
-		{
-			return Id;
-		}
 	}
 }

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using CoinFlip.Settings;
 using Poloniex.API;
 using Rylogic.Common;
@@ -57,17 +58,82 @@ namespace CoinFlip
 					m_api.OnConnectionChanged += HandleConnectionEstablished;
 					m_api.OnOrdersChanged += HandleOrdersChanged;
 				}
+
+				// Handlers
+				void HandleOrdersChanged(object sender, OrderBookChangedEventArgs args)
+				{
+					// This is currently broken on the Poloniex site
+
+					// Don't care about trade history at this point
+					if (args.Update.Type == OrderBookUpdate.EUpdateType.NewTrade)
+						return;
+
+					// Look for the associated pair, ignore if not found
+					var pair = Pairs[args.Pair.Base, args.Pair.Quote];
+					if (pair == null)
+						return;
+
+					// Create the order
+					var ty = args.Update.Order.Type;
+					var order = new Offer(args.Update.Order.Price._(pair.RateUnits), args.Update.Order.VolumeBase._(pair.Base));
+
+					// Get the orders that the update applies to
+					var book = (OrderBook)null;
+					var sign = 0;
+					switch (ty)
+					{
+					default: throw new Exception(string.Format("Unknown order update type: {0}", ty));
+					case EOrderType.Sell: book = pair.B2Q; sign = -1; break;
+					case EOrderType.Buy: book = pair.Q2B; sign = +1; break;
+					}
+
+					// Find the position in 'book.Orders' of where the update applies
+					var idx = book.Orders.BinarySearch(x => sign * x.Price.CompareTo(order.Price));
+					if (idx < 0 && ~idx >= book.Orders.Count)
+						return;
+
+					// Apply the update.
+					switch (args.Update.Type)
+					{
+					default: throw new Exception(string.Format("Unknown order book update type: {0}", args.Update.Type));
+					case OrderBookUpdate.EUpdateType.Modify:
+						{
+							// "Modify" means insert or replace the order with the matching price.
+							if (idx >= 0)
+								book.Orders[idx] = order;
+							//else
+							//	book.Orders.Insert(~idx, order);
+							break;
+						}
+					case OrderBookUpdate.EUpdateType.Remove:
+						{
+							// "Remove" means remove the order with the matching price.
+							if (idx >= 0)
+								book.Orders.RemoveAt(idx);
+							break;
+						}
+					}
+
+					Debug.Assert(pair.AssertOrdersValid());
+				}
+				void HandleConnectionEstablished(object sender, EventArgs e)
+				{
+					if (Api.IsConnected)
+						Model.Log.Write(ELogLevel.Info, $"Poloniex connection established");
+					else
+						Model.Log.Write(ELogLevel.Info, $"Poloniex connection offline");
+				}
 			}
 		}
 		private PoloniexApi m_api;
 
 		/// <summary>Open a trade</summary>
-		protected override OrderResult CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> amount, Unit<decimal> price)
+		protected async override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> amount, Unit<decimal> price)
 		{
 			try
 			{
 				// Place the trade order
-				var res = Api.SubmitTrade(new CurrencyPair(pair.Base, pair.Quote), tt.ToPoloniexTT(), price, amount);
+				var res = await Api.SubmitTrade(new CurrencyPair(pair.Base, pair.Quote), tt.ToPoloniexTT(), price, amount);
 				return new OrderResult(pair, res.OrderId, false, res.FilledOrders.Select(x => x.TradeId));
 			}
 			catch (Exception ex)
@@ -77,12 +143,12 @@ namespace CoinFlip
 		}
 
 		/// <summary>Cancel an open trade</summary>
-		protected override bool CancelOrderInternal(TradePair pair, long order_id)
+		protected async override Task<bool> CancelOrderInternal(TradePair pair, long order_id)
 		{
 			try
 			{
 				// Cancel the trade
-				return Api.CancelTrade(new CurrencyPair(pair.Base, pair.Quote), order_id);
+				return await Api.CancelTrade(new CurrencyPair(pair.Base, pair.Quote), order_id);
 			}
 			catch (Exception ex)
 			{
@@ -109,12 +175,12 @@ namespace CoinFlip
 		}
 
 		/// <summary>Return the chart data for a given pair, over a given time range</summary>
-		protected override List<Candle> CandleDataInternal(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end, CancellationToken? cancel) // Worker thread context
+		protected async override Task<List<Candle>> CandleDataInternal(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end, CancellationToken? cancel) // Worker thread context
 		{
 			var cp = new CurrencyPair(pair.Base, pair.Quote);
 
 			// Get the chart data
-			var data = Api.GetChartData(cp, ToMarketPeriod(timeframe), time_beg, time_end, cancel);
+			var data = await Api.GetChartData(cp, ToMarketPeriod(timeframe), time_beg, time_end, cancel);
 
 			// Convert it to candles (yes, Polo gets the base/quote backwards for 'Volume')
 			var candles = data.Select(x => new Candle(x.Time.Ticks, (double)x.Open, (double)x.High, (double)x.Low, (double)x.Close, (double)x.WeightedAverage, (double)x.VolumeQuote)).ToList();
@@ -122,10 +188,10 @@ namespace CoinFlip
 		}
 
 		/// <summary>Return the order book for 'pair' to a depth of 'count'</summary>
-		protected override MarketDepth MarketDepthInternal(TradePair pair, int depth) // Worker thread context
+		protected async override Task<MarketDepth> MarketDepthInternal(TradePair pair, int depth) // Worker thread context
 		{
 			var cp = new CurrencyPair(pair.Base, pair.Quote);
-			var orders = Api.GetOrderBook(cp, depth, cancel:Shutdown.Token);
+			var orders = await Api.GetOrderBook(cp, depth, cancel:Shutdown.Token);
 
 			// Update the depth of market data
 			var market_depth = new MarketDepth(pair.Base, pair.Quote);
@@ -136,14 +202,14 @@ namespace CoinFlip
 		}
 
 		/// <summary>Update this exchange's set of trading pairs</summary>
-		protected override void UpdatePairsInternal(HashSet<string> coi) // Worker thread context
+		protected async override Task UpdatePairsInternal(HashSet<string> coi) // Worker thread context
 		{
 			try
 			{
 				// Get all available trading pairs
 				// Use 'Shutdown' because updating pairs is independent of the Exchange.UpdateThread
 				// and we don't want updating pairs to be interrupted by the update thread stopping
-				var msg = Api.GetTradePairs(cancel:Shutdown.Token);
+				var msg = await Api.GetTradePairs(cancel:Shutdown.Token);
 				if (msg == null)
 					throw new Exception("Poloniex: Failed to read market data.");
 
@@ -153,7 +219,7 @@ namespace CoinFlip
 					var pairs = new HashSet<CurrencyPair>();
 
 					// Create the trade pairs and associated coins
-					foreach (var p in msg.Where(x => coi.Contains(x.Value.Pair.Base) && coi.Contains(x.Value.Pair.Quote)))
+					foreach (var p in msg.Where(x => coi.Contains(x.Value.Pair.Base) || coi.Contains(x.Value.Pair.Quote)))
 					{
 						// Poloniex gives pairs as "Quote_Base"
 						var base_ = Coins.GetOrAdd(p.Value.Pair.Base);
@@ -196,7 +262,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Update the market data, balances, and open positions</summary>
-		protected override void UpdateData() // Worker thread context
+		protected async override Task UpdateData() // Worker thread context
 		{
 			try
 			{
@@ -211,7 +277,7 @@ namespace CoinFlip
 				// Request order book data for all of the pairs
 				// Poloniex only allows 6 API calls per second, so even though this returns
 				// unnecessary data it's better to get all order books in one call.
-				var order_book = Api.GetOrderBook(depth:ExchSettings.MarketDepth, cancel:Shutdown.Token);
+				var order_book = await Api.GetOrderBook(depth:ExchSettings.MarketDepth, cancel:Shutdown.Token);
 
 				// Remove the unnecessary data. (don't really need to do this, but it's consistent with the other exchanges)
 				var surplus = order_book.Keys.Where(x => !pairs.Contains(x)).ToArray();
@@ -244,7 +310,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Update account balance data</summary>
-		protected override void UpdateBalances() // Worker thread context
+		protected async override Task UpdateBalances() // Worker thread context
 		{
 			try
 			{
@@ -252,7 +318,7 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the account data
-				var balance_data = Api.GetBalances(cancel:Shutdown.Token);
+				var balance_data = await Api.GetBalances(cancel:Shutdown.Token);
 
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
@@ -281,7 +347,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Update open positions</summary>
-		protected override void UpdatePositionsAndHistory() // Worker thread context
+		protected async override Task UpdatePositionsAndHistory() // Worker thread context
 		{
 			try
 			{
@@ -289,10 +355,10 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the existing orders
-				var existing_orders = Api.GetOpenOrders(cancel:Shutdown.Token);
+				var existing_orders = await Api.GetOpenOrders(cancel:Shutdown.Token);
 
 				// Request the history
-				var history = Api.GetTradeHistory(beg:m_history_last, end:timestamp, cancel:Shutdown.Token);
+				var history = await Api.GetTradeHistory(beg:m_history_last, end:timestamp, cancel:Shutdown.Token);
 
 				// Record the time that history has been updated to
 				m_history_last = timestamp;
@@ -342,14 +408,14 @@ namespace CoinFlip
 		}
 
 		/// <summary>Return the deposits and withdrawals made on this exchange</summary>
-		protected override void UpdateTransfers() // worker thread context
+		protected async override Task UpdateTransfers() // worker thread context
 		{
 			try
 			{
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the transfers data
-				var transfers = Api.GetTransfers(beg:m_transfers_last, end:timestamp, cancel:Shutdown.Token);
+				var transfers = await Api.GetTransfers(beg:m_transfers_last, end:timestamp, cancel:Shutdown.Token);
 
 				// Record the time that transfer history has been updated to
 				m_transfers_last = timestamp;
@@ -435,72 +501,6 @@ namespace CoinFlip
 			var timestamp = wid.Timestamp.Ticks;
 			var status    = ToTransferStatus(wid.Status);
 			return new Transfer(id, type, coin, amount, timestamp, status);
-		}
-
-		/// <summary>Handle connection to Poloniex</summary>
-		private void HandleConnectionEstablished(object sender, EventArgs e)
-		{
-			if (Api.IsConnected)
-				Model.Log.Write(ELogLevel.Info, $"Poloniex connection established");
-			else
-				Model.Log.Write(ELogLevel.Info, $"Poloniex connection offline");
-		}
-
-		/// <summary>Handle market data updates</summary>
-		private void HandleOrdersChanged(object sender, OrderBookChangedEventArgs args)
-		{
-			// This is currently broken on the Poloniex site
-
-			// Don't care about trade history at this point
-			if (args.Update.Type == OrderBookUpdate.EUpdateType.NewTrade)
-				return;
-
-			// Look for the associated pair, ignore if not found
-			var pair = Pairs[args.Pair.Base, args.Pair.Quote];
-			if (pair == null)
-				return;
-
-			// Create the order
-			var ty = args.Update.Order.Type;
-			var order = new Offer(args.Update.Order.Price._(pair.RateUnits), args.Update.Order.VolumeBase._(pair.Base));
-
-			// Get the orders that the update applies to
-			var book = (OrderBook)null;
-			var sign = 0;
-			switch (ty) {
-			default: throw new Exception(string.Format("Unknown order update type: {0}", ty));
-			case EOrderType.Sell: book = pair.B2Q; sign = -1; break;
-			case EOrderType.Buy: book = pair.Q2B; sign = +1; break;
-			}
-
-			// Find the position in 'book.Orders' of where the update applies
-			var idx = book.Orders.BinarySearch(x => sign * x.Price.CompareTo(order.Price));
-			if (idx < 0 && ~idx >= book.Orders.Count)
-				return;
-
-			// Apply the update.
-			switch (args.Update.Type)
-			{
-			default: throw new Exception(string.Format("Unknown order book update type: {0}", args.Update.Type));
-			case OrderBookUpdate.EUpdateType.Modify:
-				{
-					// "Modify" means insert or replace the order with the matching price.
-					if (idx >= 0)
-						book.Orders[idx] = order;
-					//else
-					//	book.Orders.Insert(~idx, order);
-					break;
-				}
-			case OrderBookUpdate.EUpdateType.Remove:
-				{
-					// "Remove" means remove the order with the matching price.
-					if (idx >= 0)
-						book.Orders.RemoveAt(idx);
-					break;
-				}
-			}
-
-			Debug.Assert(pair.AssertOrdersValid());
 		}
 
 		/// <summary>Convert a market period to a time frame</summary>

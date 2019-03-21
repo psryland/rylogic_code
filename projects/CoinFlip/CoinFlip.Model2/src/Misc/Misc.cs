@@ -17,6 +17,9 @@ namespace CoinFlip
 		/// <summary>The smallest price change</summary>
 		public const decimal PriceEpsilon = 1e-8m;
 
+		/// <summary>The dawn of time (from a crypto point of view)</summary>
+		public static readonly DateTimeOffset CryptoCurrencyEpoch = new DateTimeOffset(2009, 1, 1, 0, 0, 0, 0, TimeSpan.Zero);
+
 		/// <summary>Get the main thread dispatcher</summary>
 		private static readonly Dispatcher Dispatcher = Dispatcher.CurrentDispatcher;
 		
@@ -342,6 +345,24 @@ namespace CoinFlip
 			var tf = TimeFrameToTicks(1.0, time_frame);
 			var ticks = (time.Ticks / tf) * tf;
 			return new DateTimeOffset(ticks, time.Offset);
+		}
+
+		/// <summary>Return a timestamp string suitable for a chart X tick value</summary>
+		public static string ShortTimeString(DateTimeOffset dt_curr, DateTimeOffset dt_prev, bool first)
+		{
+			// First tick on the x axis
+			if (first)
+				return dt_curr.ToString("HH:mm'\r\n'dd-MMM-yy");
+
+			// Show more of the time stamp depending on how it differs from the previous time stamp
+			if (dt_curr.Year != dt_prev.Year)
+				return dt_curr.ToString("HH:mm'\r\n'dd-MMM-yy");
+			if (dt_curr.Month != dt_prev.Month)
+				return dt_curr.ToString("HH:mm'\r\n'dd-MMM");
+			if (dt_curr.Day != dt_prev.Day)
+				return dt_curr.ToString("HH:mm'\r\n'ddd dd");
+
+			return dt_curr.ToString("HH:mm");
 		}
 	}
 }

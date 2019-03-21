@@ -1,5 +1,8 @@
 ﻿using System.Windows;
 using CoinFlip.Settings;
+using Rylogic.Extn;
+using Rylogic.Gfx;
+using Rylogic.Gui.WPF;
 
 namespace CoinFlip.UI
 {
@@ -7,6 +10,8 @@ namespace CoinFlip.UI
 	{
 		public App()
 		{
+			View3d.LoadDll();
+			Xml_.Config.SupportWPFTypes();
 		}
 
 		/// <summary>Singleton access</summary>

@@ -1,25 +1,12 @@
-﻿using Rylogic.Extn;
-using Rylogic.Gui.WPF;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using CoinFlip;
-using CoinFlip.Settings;
-using System.Diagnostics;
-using Rylogic.Utility;
+﻿using System;
 using System.ComponentModel;
-using Rylogic.Common;
+using System.Diagnostics;
+using System.Linq;
+using System.Windows;
+using CoinFlip.Settings;
+using Rylogic.Extn;
+using Rylogic.Gui.WPF;
+using Rylogic.Utility;
 
 namespace CoinFlip.UI
 {
@@ -57,6 +44,9 @@ namespace CoinFlip.UI
 		protected override void OnClosed(EventArgs e)
 		{
 			base.OnClosed(e);
+
+			Util.DisposeRange(m_dc.AllContent.OfType<IDisposable>().ToList());
+			Util.Dispose(m_dc);
 			Model = null;
 		}
 
@@ -83,15 +73,13 @@ namespace CoinFlip.UI
 				Application.Current.Shutdown();
 				Process.Start(Application.ResourceAssembly.Location);
 			};
-			//m_menu_file_close.Click += (s, a) =>
-			//{
-			//	base.Close();
-			//};
+			m_menu.Items.Add(m_dc.WindowsMenu());
 			#endregion
 
 			#region Dockables
-			m_dc.Add(new GridExchanges(Model));
+			m_dc.Add(new CandleChart(Model), EDockSite.Centre);
 			m_dc.Add(new GridCoins(Model), EDockSite.Left);
+			m_dc.Add(new GridExchanges(Model), EDockSite.Left, EDockSite.Bottom);
 			#endregion
 		}
 

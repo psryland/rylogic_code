@@ -8,6 +8,7 @@ namespace CoinFlip.UI
 		public LogOnUI()
 		{
 			InitializeComponent();
+			User = new User(string.Empty, string.Empty);
 		}
 		protected override void OnSourceInitialized(EventArgs e)
 		{
@@ -44,11 +45,12 @@ namespace CoinFlip.UI
 		}
 
 		/// <summary></summary>
-		public User User => new User(Username, Password);
+		public User User { get; private set; }
 
 		/// <summary></summary>
 		private void UpdateUI()
 		{
+			User = new User(Username, Password);
 			var result = User.CheckKeys();
 			switch (result)
 			{

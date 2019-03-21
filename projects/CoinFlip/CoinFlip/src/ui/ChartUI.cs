@@ -827,7 +827,7 @@ namespace CoinFlip
 			case ChartControl.AddUserMenuOptionsEventArgs.EType.XAxis:
 				#region
 				{
-					var opt = e.Menu.Items.Add2(new ToolStripMenuItem(Enum<EXAxisLabelMode>.Cycle(XAxisLabelMode).ToString(word_sep:Str.ESeparate.Add)));
+					var opt = e.Menu.Items.Add2(new ToolStripMenuItem(Enum<EXAxisLabelMode>.Cycle(XAxisLabelMode).ToString(word_sep:Str_.ESeparate.Add)));
 					opt.Click += (s,a) =>
 					{
 						XAxisLabelMode = Enum<EXAxisLabelMode>.Cycle(XAxisLabelMode);

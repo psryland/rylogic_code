@@ -9,7 +9,8 @@
 	WindowStartupLocation="CenterScreen"
 	Title="CoinFlip Log-On"
 	Icon="{StaticResource Money}"
-	Height="220" Width="300"
+	Height="220"
+	Width="300"
 	>
 	<StackPanel
 		Orientation="Vertical"
@@ -17,7 +18,7 @@
 		>
 		<TextBlock TextWrapping="WrapWithOverflow">
 			Log on or create a new user account.<LineBreak/>
-			Each user has separate exchange API keys."
+			Each user has separate exchange API keys.
 		</TextBlock>
 		<StackPanel Orientation="Vertical">
 			<Label Content="Username:"/>
@@ -28,7 +29,7 @@
 			<PasswordBox x:Name="m_tb_password" Margin="20,0,10,0" />
 		</StackPanel>
 		<StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,20">
-			<Button x:Name="m_btn_ok" Content="OK" MinWidth="60" Margin="5" IsDefault="True"/>
+			<Button Content="OK" MinWidth="60" Margin="5" IsDefault="True" x:Name="m_btn_ok" />
 			<Button Content="Cancel" MinWidth="60" Margin="5" IsCancel="True"/>
 		</StackPanel>
 	</StackPanel>

@@ -1,4 +1,5 @@
-﻿using Rylogic.Common;
+﻿using System;
+using Rylogic.Common;
 
 namespace CoinFlip.Settings
 {
@@ -18,6 +19,12 @@ namespace CoinFlip.Settings
 
 		/// <summary>The maximum number of requests per second to the exchange server</summary>
 		float ServerRequestRateLimit { get; set; }
+
+		/// <summary>True if only public API calls should be made on this exchange</summary>
+		bool PublicAPIOnly { get; set; }
+
+		/// <summary>An event raised before and after a setting is changes value</summary>
+		event EventHandler<SettingChangeEventArgs> SettingChange;
 	}
 
 	/// <summary></summary>
@@ -31,6 +38,7 @@ namespace CoinFlip.Settings
 			TransactionFee = 0.0025m;
 			MarketDepth = 20;
 			ServerRequestRateLimit = 10f;
+			PublicAPIOnly = false;
 		}
 
 		/// <summary>True if the exchange is active</summary>
@@ -66,6 +74,13 @@ namespace CoinFlip.Settings
 		{
 			get { return get<float>(nameof(ServerRequestRateLimit)); }
 			set { set(nameof(ServerRequestRateLimit), value); }
+		}
+
+		/// <summary>True if only public API calls should be made on this exchange</summary>
+		public bool PublicAPIOnly
+		{
+			get { return get<bool>(nameof(PublicAPIOnly)); }
+			set { set(nameof(PublicAPIOnly), value); }
 		}
 	}
 }

@@ -7,8 +7,8 @@
     <ProjectGuid>{6A5EC05F-F738-4149-956B-DF8EECA14DFC}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>CoinFlip.Model2</RootNamespace>
-    <AssemblyName>CoinFlip.Model2</AssemblyName>
+    <RootNamespace>CoinFlip</RootNamespace>
+    <AssemblyName>CoinFlip.Model</AssemblyName>
     <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
@@ -23,6 +23,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <UseVSHostingProcess>true</UseVSHostingProcess>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -33,11 +34,12 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Dapper, Version=1.50.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\..\build\packages\Dapper.1.50.7\lib\net451\Dapper.dll</HintPath>
+    <Reference Include="Dapper, Version=1.60.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\..\build\packages\Dapper.1.60.1\lib\net451\Dapper.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Data.Linq" />
     <Reference Include="System.Data.SQLite, Version=1.0.109.0, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=MSIL">
       <HintPath>..\..\..\build\packages\System.Data.SQLite.Core.1.0.109.2\lib\net46\System.Data.SQLite.dll</HintPath>
     </Reference>
@@ -69,12 +71,14 @@
     <Compile Include="src\Exchange\PairCollection.cs" />
     <Compile Include="src\Exchange\TransfersCollection.cs" />
     <Compile Include="src\Misc\DapperExtensions.cs" />
+    <Compile Include="src\Misc\EShowTradeHistory.cs" />
     <Compile Include="src\Misc\ESkin.cs" />
     <Compile Include="src\Misc\ETimeFrame.cs" />
     <Compile Include="src\Chart\Instrument.cs" />
     <Compile Include="src\Chart\PriceData.cs" />
     <Compile Include="src\Chart\TimeFrame.cs" />
-    <Compile Include="src\Misc\CoinDataCollection.cs" />
+    <Compile Include="src\Misc\EXAxisLabelMode.cs" />
+    <Compile Include="src\Model\CoinDataList.cs" />
     <Compile Include="src\Coin\Coin.cs" />
     <Compile Include="src\Coin\CoinPair.cs" />
     <Compile Include="src\Exchange\CoinCollection.cs" />
@@ -86,10 +90,14 @@
     <Compile Include="src\Misc\ETradeType.cs" />
     <Compile Include="src\Misc\EExchangeStatus.cs" />
     <Compile Include="src\Misc\Misc.cs" />
+    <Compile Include="src\Model\CoinContainer.cs" />
     <Compile Include="src\Model\ExchangeContainer.cs" />
+    <Compile Include="src\Model\FundContainer.cs" />
     <Compile Include="src\Model\Model.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="src\Model\PriceDataMap.cs" />
     <Compile Include="src\Settings\BackTestingSettings.cs" />
+    <Compile Include="src\Settings\ChartSettings.cs" />
     <Compile Include="src\Settings\CoinData.cs" />
     <Compile Include="src\Settings\CrossExchangeSettings.cs" />
     <Compile Include="src\Settings\FundData.cs" />
@@ -110,6 +118,10 @@
     <Compile Include="src\Trade\OrderResult.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj">
+      <Project>{76ef3a15-6e9f-4348-bcc2-e39f14b2a2b4}</Project>
+      <Name>Rylogic.Core.Windows</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\Rylogic.Core\Rylogic.Core.csproj">
       <Project>{37a4f319-2052-404d-ae7f-f882cfa33c1b}</Project>
       <Name>Rylogic.Core</Name>

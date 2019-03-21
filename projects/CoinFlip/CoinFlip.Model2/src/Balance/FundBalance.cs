@@ -17,15 +17,15 @@ namespace CoinFlip
 		//   The main fund balance is the exchange balance minus the sum of other fund balances.
 
 		public FundBalance(string fund_id, Coin coin)
-			:this(fund_id, coin, 0m._(coin), 0m._(coin))
+			:this(fund_id, coin, 0m._(coin), 0m._(coin), DateTimeOffset.MinValue)
 		{}
-		public FundBalance(string fund_id, Coin coin, Unit<decimal> total, Unit<decimal> held)
+		public FundBalance(string fund_id, Coin coin, Unit<decimal> total, Unit<decimal> held, DateTimeOffset last_updated)
 		{
 			FundId      = fund_id;
 			Coin        = coin;
 			Total       = total;
 			HeldOnExch  = held;
-			LastUpdated = DateTimeOffset.MinValue;
+			LastUpdated = last_updated;
 			Holds       = new List<FundHold>();
 
 			if (fund_id != Fund.Main)

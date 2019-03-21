@@ -9,18 +9,17 @@ namespace CoinFlip.Settings
 {
 	[Serializable]
 	[TypeConverter(typeof(TyConv))]
-	[DebuggerDisplay("{Symbol} {Value} {OfInterest}")]
+	[DebuggerDisplay("{Symbol} {AssignedValue} {OfInterest}")]
 	public class CoinData : SettingsXml<CoinData>
 	{
 		public CoinData()
 			: this(string.Empty, 1m)
 		{ }
-		public CoinData(string symbol, decimal value)
+		public CoinData(string symbol, decimal value, bool of_interest = false)
 		{
 			Symbol = symbol;
 			AssignedValue = value;
-			Order = 0;
-			OfInterest = false;
+			OfInterest = of_interest;
 			AutoTradingLimit = 1m;
 			LivePriceSymbols = "USDT";
 			ShowLivePrices = true;
@@ -43,13 +42,6 @@ namespace CoinFlip.Settings
 		{
 			get { return get<decimal>(nameof(AssignedValue)); }
 			set { set(nameof(AssignedValue), value); }
-		}
-
-		/// <summary>The order to display the coins in</summary>
-		public int Order
-		{
-			get { return get<int>(nameof(Order)); }
-			set { set(nameof(Order), value); }
 		}
 
 		/// <summary>True if coins of this type should be included in loops</summary>
@@ -92,6 +84,20 @@ namespace CoinFlip.Settings
 		{
 			get { return get<decimal>(nameof(BackTestingInitialBalance)); }
 			set { set(nameof(BackTestingInitialBalance), value); }
+		}
+
+		/// <summary>Raised when the live price of this coin changes</summary>
+		public event EventHandler LivePriceChanged;
+		public void NotifyLivePriceChanged()
+		{
+			LivePriceChanged?.Invoke(this, EventArgs.Empty);
+		}
+
+		/// <summary>Raised when the balance of this coin has changed on one or more exchanges</summary>
+		public event EventHandler BalanceChanged;
+		public void NotifyBalanceChanged()
+		{
+			BalanceChanged?.Invoke(this, EventArgs.Empty);
 		}
 
 		private class TyConv : GenericTypeConverter<CoinData> { }

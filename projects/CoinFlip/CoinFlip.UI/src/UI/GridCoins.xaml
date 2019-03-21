@@ -10,13 +10,63 @@
 	d:DesignHeight="450" d:DesignWidth="800"
 	AutoGenerateColumns="False"
 	GridLinesVisibility="None"
+	HeadersVisibility="Column"
+	ItemsSource="{Binding Coins}"
+	SelectedItem="{Binding Current, Mode=TwoWay}"
+	IsReadOnly="True"
 	>
 	<DataGrid.Columns>
 		<DataGridTextColumn
 			Header="Coin"
+			Binding="{Binding Symbol, Mode=OneWay}"
+			Width="*"
 			/>
 		<DataGridTextColumn
 			Header="Value"
+			ToolTipService.ToolTip="The approximate value of the coin in the live value currency (typically USD)"
+			Binding="{Binding Value, Mode=OneWay}"
+			Width="*"
+			/>
+		<DataGridTextColumn
+			Header="Balance"
+			ToolTipService.ToolTip="The approximate total value of the balance of the coin (typically in USD)"
+			Binding="{Binding Balance, Mode=OneWay}"
+			Width="*"
+			/>
+		<DataGridTextColumn
+			Header="Available"
+			ToolTipService.ToolTip="The amount of the coin available for trading"
+			Binding="{Binding Available, Mode=OneWay}"
+			Width="*"
+			/>
+		<DataGridTextColumn
+			Header="Total"
+			ToolTipService.ToolTip="The total balance amount of the coin"
+			Binding="{Binding Total, Mode=OneWay}"
+			Width="*"
 			/>
 	</DataGrid.Columns>
+
+	<DataGrid.ContextMenu>
+		<ContextMenu
+			DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+			>
+			<MenuItem
+				Header="Add Coin..."
+				Command="{Binding AddCoin}"
+				/>
+			<MenuItem
+				Header="{Binding Current.Symbol}"
+				HeaderStringFormat="Remove {0}"
+				Visibility="{Binding Current, Converter={gui2:NullToCollapsed}}"
+				Command="{Binding RemoveCoin}"
+				/>
+			<Separator/>
+			<MenuItem
+				Header="Live Value Conversion..."
+				Visibility="{Binding Current, Converter={gui2:NullToCollapsed}}"
+				Command="{Binding EditLiveValueConversion}"
+				/>
+		</ContextMenu>
+	</DataGrid.ContextMenu>
 </DataGrid>

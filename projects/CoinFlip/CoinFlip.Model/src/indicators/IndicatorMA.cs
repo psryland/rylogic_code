@@ -393,19 +393,19 @@ namespace CoinFlip
 		#region Stat
 		public class Stat :IStatSingleVariable, IStatMeanAndVariance
 		{
-			private ExpMovingAvr m_ema;
-			private MovingAvr m_wma;
+			private ExponentialMovingAverage m_ema;
+			private MovingAverage m_wma;
 
 			public Stat(bool exp_ma, int window_size)
 			{
 				// Create a moving average stat that the instrument data is added to.
-				m_ema =  exp_ma ? new ExpMovingAvr(window_size) : null;
-				m_wma = !exp_ma ? new MovingAvr(window_size) : null;
+				m_ema =  exp_ma ? new ExponentialMovingAverage(window_size) : null;
+				m_wma = !exp_ma ? new MovingAverage(window_size) : null;
 			}
 			public Stat(Stat rhs)
 			{
-				if (rhs.m_ema != null) m_ema = new ExpMovingAvr(rhs.m_ema);
-				if (rhs.m_wma != null) m_wma = new MovingAvr(rhs.m_wma);
+				if (rhs.m_ema != null) m_ema = new ExponentialMovingAverage(rhs.m_ema);
+				if (rhs.m_wma != null) m_wma = new MovingAverage(rhs.m_wma);
 			}
 
 			/// <summary>Number of values added</summary>

@@ -20,7 +20,7 @@ namespace CoinFlip.Settings
 				{
 					// Ensure the app data directory exists
 					Directory.CreateDirectory(Misc.ResolveUserPath());
-					m_settings = new SettingsData(Misc.ResolveUserPath("settings.xml"));
+					m_settings = new SettingsData(Misc.ResolveUserPath("settings.new.xml"));
 				}
 				return m_settings;
 			}
@@ -35,12 +35,11 @@ namespace CoinFlip.Settings
 			PriceDataUpdatePeriodMS = 500;
 			MarketOrderPriceToleranceFrac = 0.0001;
 			//ShowLivePrices = false;
-			//ChartTemplate = new ChartSettings();
 			//Equity = new EquitySettings();
-			Coins = new CoinData[0];
+			Coins = new CoinData[] { new CoinData("BTC", 1m, true), new CoinData("ETH", 1m, true) };
 			Funds = new FundData[1] { new FundData(Fund.Main, new FundData.ExchData[0]) };
+			Chart = new ChartSettings();
 			BackTesting = new BackTestingSettings();
-			//Charts = new ChartSettings[0];
 			//Bots = new BotData[0];
 			//Cryptopia = new CrypotopiaSettings();
 			Poloniex = new PoloniexSettings();
@@ -53,7 +52,7 @@ namespace CoinFlip.Settings
 			AutoSaveOnChanges = false;
 		}
 		public SettingsData(string filepath)
-			: base(filepath, throw_on_error: false)
+			: base(filepath, ESettingsLoadFlags.IgnoreUnknownTypes) //hack
 		{
 			// Leave this disabled till everything has been set up (i.e. the Model enables it)
 			AutoSaveOnChanges = false;
@@ -111,6 +110,13 @@ namespace CoinFlip.Settings
 		{
 			get { return get<FundData[]>(nameof(Funds)); }
 			set { set(nameof(Funds), value); }
+		}
+
+		/// <summary>Setting for the candle charts</summary>
+		public ChartSettings Chart
+		{
+			get { return get<ChartSettings>(nameof(Chart)); }
+			set { set(nameof(Chart), value); }
 		}
 
 		/// <summary>Settings related to back testing</summary>

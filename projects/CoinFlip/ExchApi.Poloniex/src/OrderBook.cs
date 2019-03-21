@@ -107,7 +107,7 @@ namespace Poloniex.API
 			set
 			{
 				switch (value) {
-				default: throw new Exception(string.Format("Unknown update type: {0}", value));
+				default: throw new PoloniexException(EErrorCode.Failure, $"Unknown update type: {value}");
 				case "newTrade":        Type = EUpdateType.NewTrade; break;
 				case "orderBookModify": Type = EUpdateType.Modify; break;
 				case "orderBookRemove": Type = EUpdateType.Remove; break;

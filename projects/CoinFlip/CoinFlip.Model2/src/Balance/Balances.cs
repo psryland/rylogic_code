@@ -48,7 +48,7 @@ namespace CoinFlip
 			// Initialise the funds - Create the main fund, with the given total/held amounts.
 			// Then create the additional funds from 'Model.Funds'
 			Funds = new Dictionary<string, FundBalance>{};
-			Funds.Add(Fund.Main, new FundBalance(Fund.Main, Coin, total, held_on_exch));
+			Funds.Add(Fund.Main, new FundBalance(Fund.Main, Coin, total, held_on_exch, last_updated));
 			UpdateBalancePartitions(Enumerable.Empty<Fund>());
 		}
 
@@ -88,7 +88,7 @@ namespace CoinFlip
 		public void UpdateBalancePartitions(IEnumerable<Fund> funds)
 		{
 			// The fund ids that we need to have
-			var fund_ids = funds.Select(x => x.Id).ToHashSet();
+			var fund_ids = funds.Select(x => x.Id).Prepend(Fund.Main).ToHashSet();
 
 			// Remove fund balances that aren't in the settings
 			var to_remove = Funds.Keys.Where(x => !fund_ids.Contains(x)).ToList();
@@ -145,7 +145,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Update the distribution of the total available amount of this coin amongst the funds</summary>
-		public void Update(Unit<decimal> total_available, Unit<decimal> held_on_exchange, DateTimeOffset last_updated)
+		public void Update(Unit<decimal> total, Unit<decimal> held_on_exchange, DateTimeOffset last_updated)
 		{
 			// This update comes from the exchange, which doesn't know about 'funds'.
 			// We need to divide the total/held amounts among the funds.
@@ -160,15 +160,28 @@ namespace CoinFlip
 			// Find the sum of total and held amounts in the non-main funds
 			var main = Funds[Fund.Main];
 			var funds = Funds.Values.Except(main);
-			var total = funds.Sum(x => x.Total);
-			var held  = funds.Sum(x => x.HeldOnExch);
+			var funds_total = funds.Sum(x => x.Total);
+			var funds_held = funds.Sum(x => x.HeldOnExch);
 
 			// Set the main fund to the remainder of the non-main funds and the updated amount.
-			main.Update(last_updated, total: total_available - total, held_on_exch: held_on_exchange - held);
+			main.Update(last_updated, total: total - funds_total, held_on_exch: held_on_exchange - funds_held);
 
 			// Notify each non-fund of the balance update
 			foreach (var fund in funds)
 				fund.Update(last_updated);
+		}
+		public void Update(Balances balance)
+		{
+			if (balance.Funds.Count != 1)
+				throw new Exception("Balance Update expects only the Main fund to have a value");
+
+			var main = balance.Funds[Fund.Main];
+			if (main.HeldForTrades != 0)
+				throw new Exception("Balance Update expects 'HeldForTrades' to be zero");
+			if (main.HeldLocally != 0)
+				throw new Exception("Balance Update expects 'HeldLocally' to be zero");
+
+			Update(main.Total, main.HeldOnExch, main.LastUpdated);
 		}
 
 		/// <summary>Sanity check this balance</summary>

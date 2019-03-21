@@ -48,7 +48,7 @@ namespace CoinFlip
 				m_depth = new LazyDictionary<TradePair, MarketDepth>(k => new MarketDepth(k.Base, k.Quote));
 				m_ord   = new LazyDictionary<long, Order>(k => null);
 				m_his   = new LazyDictionary<long, OrderCompleted>(k => null);
-				m_bal   = new LazyDictionary<Coin, FundBalance>(k => new FundBalance(Fund.Main, k, m_initial_bal[k], 0m._(k)));
+				m_bal   = new LazyDictionary<Coin, FundBalance>(k => new FundBalance(Fund.Main, k, m_initial_bal[k], 0m._(k), DateTimeOffset.MinValue));
 				m_rng   = null;
 
 				// Make a copy of the initial balances (for performance)
@@ -174,7 +174,7 @@ namespace CoinFlip
 			Balance.Clear();
 			foreach (var coin in Coins.Values)
 			{
-				m_bal.Add(coin, new FundBalance(Fund.Main, coin, m_initial_bal[coin], 0m._(coin)));
+				m_bal.Add(coin, new FundBalance(Fund.Main, coin, m_initial_bal[coin], 0m._(coin), DateTimeOffset.MinValue));
 				Balance.Add(coin, new Balances(coin, m_initial_bal[coin], Sim.Clock));
 			}
 
@@ -205,10 +205,13 @@ namespace CoinFlip
 					if (src == null || src.Count == 0)
 						continue;
 
+					// No market data if the source is empty
 					Debug.Assert(src.TimeFrame == Sim.TimeFrame);
+					var latest = src.Current;
+					if (latest == null)
+						continue;
 
 					// Generate market depth for 'pair', so that the spot price matches 'src.Current'
-					var latest = src.Current;
 					var md = GenerateMarketDepth(pair, latest, Sim.TimeFrame);
 
 					// Update the order book

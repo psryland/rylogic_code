@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using CoinFlip.Settings;
 using Rylogic.Extn;
 
 namespace CoinFlip
@@ -52,17 +51,14 @@ namespace CoinFlip
 				if (TryGetValue(coin, out var balances) && balances.LastUpdated > value.LastUpdated)
 					return;
 
-				throw new NotImplementedException();
-				// todo
-				//var m_fund = (Fund)null;
-				//
-				//// Add the balances for 'coin' if none exist so far
-				//// Otherwise, update the 
-				//if (balances == null)
-				//	base[coin] = value;
-				//else
-				//	balances.Update(value[m_fund]);
-				//Model.Funds[Fund.Main]
+				// Add the balances for 'coin'
+				if (balances == null)
+					base[coin] = value;
+				else
+					balances.Update(value);
+
+				// Broadcast that the balance of this coin has changed
+				coin.Meta.NotifyBalanceChanged();
 			}
 		}
 

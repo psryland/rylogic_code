@@ -6,35 +6,69 @@
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
 	xmlns:gui2="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
 	xmlns:local="clr-namespace:CoinFlip.UI"
+	xmlns:model="clr-namespace:CoinFlip;assembly=CoinFlip.Model"
 	mc:Ignorable="d" 
 	d:DesignHeight="250" d:DesignWidth="400"
 	AutoGenerateColumns="False"
 	GridLinesVisibility="None"
+	ItemsSource="{Binding Exchanges}"
+	SelectedItem="{Binding Current, Mode=TwoWay}"
+	IsReadOnly="True"
 	>
-	<DataGrid.Resources>
-		<ResourceDictionary>
-			<gui2:ColourToBrush x:Key="ColourToBrush"/>
-		</ResourceDictionary>
-	</DataGrid.Resources>
 	
+	<!-- Columns -->
 	<DataGrid.Columns>
 		<DataGridTextColumn
 			Header="Colour"
+			Width="0.1*"
 			>
 			<DataGridTextColumn.CellStyle>
 				<Style TargetType="DataGridCell">
-					<Setter Property="Background" Value="{Binding Colour, Converter={StaticResource ColourToBrush}}"/>
+					<Setter Property="Background" Value="{Binding Colour, Converter={gui2:ColourToBrush}, Mode=OneWay}"/>
 				</Style>
 			</DataGridTextColumn.CellStyle>
 		</DataGridTextColumn>
 		
 		<DataGridTextColumn
 			Header="Exchange"
-			Binding="{Binding Name}"
+			Binding="{Binding Name, Mode=OneWay}"
+			IsReadOnly="True"
+			Width="3*"
 			/>
 		<DataGridTextColumn
 			Header="Status"
-			Binding="{Binding Status}"
+			Binding="{Binding Status, Mode=OneWay}"
+			IsReadOnly="True"
+			Width="7*"
 			/>
 	</DataGrid.Columns>
+	
+	<!-- Context menu -->
+	<DataGrid.ContextMenu>
+		<ContextMenu
+			DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+			>
+			<MenuItem
+				Header="{Binding Current.Name}"
+				HeaderStringFormat="{}{0} Enabled"
+				IsChecked="{Binding Current.Enabled}"
+				Command="{Binding ToggleEnabled}"
+				/>
+			<MenuItem
+				Header="Public API Only"
+				IsChecked="{Binding Current.Status, Converter={gui2:HasFlag}, ConverterParameter={x:Static model:EExchangeStatus.PublicAPIOnly}, Mode=OneWay}"
+				Command="{Binding TogglePublicAPIOnly}"
+				/>
+			<Separator/>
+			<MenuItem
+				Header="Set API Keys..."
+				Command="{Binding SetApiKeys}"
+				/>
+			<MenuItem
+				Header="Refresh Trade Pairs"
+				Command="{Binding RefreshTradePairs}"
+				/>
+		</ContextMenu>
+	</DataGrid.ContextMenu>
+
 </DataGrid>

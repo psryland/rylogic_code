@@ -26,6 +26,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <UseVSHostingProcess>true</UseVSHostingProcess>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -35,10 +36,12 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Data.Linq" />
     <Reference Include="System.Data.SQLite, Version=1.0.109.0, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=MSIL">
       <HintPath>..\..\..\build\packages\System.Data.SQLite.Core.1.0.109.2\lib\net46\System.Data.SQLite.dll</HintPath>
     </Reference>
@@ -66,7 +69,15 @@
     <Compile Include="src\Account\LogOnUI.xaml.cs">
       <DependentUpon>LogOnUI.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\Binding\ExchPairTimeFrame.cs" />
+    <Compile Include="src\GfxObjects\Buffers.cs" />
+    <Compile Include="src\GfxObjects\Candles.cs" />
+    <Compile Include="src\GfxObjects\SpotPrice.cs" />
+    <Compile Include="src\GfxObjects\UpdatingText.cs" />
     <Compile Include="src\SkinResourceDictionary.cs" />
+    <Compile Include="src\UI\CandleChart.xaml.cs">
+      <DependentUpon>CandleChart.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\UI\GridCoins.xaml.cs">
       <DependentUpon>GridCoins.xaml</DependentUpon>
     </Compile>
@@ -78,6 +89,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="src\Account\LogOnUI.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\UI\CandleChart.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -139,6 +154,22 @@
     <Resource Include="res\check_accept.png" />
     <Resource Include="res\check_reject.png" />
     <Resource Include="res\clock.png" />
+    <None Include="..\..\..\lib\x64\debug\view3d.dll">
+      <Link>lib\x64\debug\view3d.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\lib\x64\release\view3d.dll">
+      <Link>lib\x64\release\view3d.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\lib\x86\debug\view3d.dll">
+      <Link>lib\x86\debug\view3d.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\lib\x86\release\view3d.dll">
+      <Link>lib\x86\release\view3d.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <Content Include="res\coins.wav" />
     <Resource Include="res\gray_cross.png" />
     <Resource Include="res\green_tick.png" />
@@ -163,6 +194,10 @@
     <ProjectReference Include="..\..\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj">
       <Project>{846d147a-b7e6-4336-b019-d1add62ff095}</Project>
       <Name>Rylogic.Gui.WPF</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Rylogic.View3d\Rylogic.View3d.csproj">
+      <Project>{0fcb5434-407b-415e-9f11-6216f44d4377}</Project>
+      <Name>Rylogic.View3d</Name>
     </ProjectReference>
     <ProjectReference Include="..\CoinFlip.Model2\CoinFlip.Model2.csproj">
       <Project>{6a5ec05f-f738-4149-956b-df8eeca14dfc}</Project>

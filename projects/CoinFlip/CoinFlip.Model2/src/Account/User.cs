@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data.Linq;
 using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
@@ -24,30 +25,28 @@ namespace CoinFlip
 		public string Name { get; }
 
 		/// <summary>Hashed user credentials</summary>
-		public byte[] Cred { get; }
+		public Binary Cred { get; }
 
 		/// <summary>The location of the keys file for this user</summary>
 		public string KeysFilepath => Misc.ResolveUserPath($"{Name}.keys");
 
 		/// <summary>Return an object that can encrypt stuff based on the user name and given password</summary>
-		public ICryptoTransform Encryptor
-		{
-			get
-			{
-				var crypto = new AesCryptoServiceProvider { Padding = PaddingMode.PKCS7, Key = Cred };
-				var init = Array_.New(crypto.BlockSize / 8, i => Cred[(i * 13) % Cred.Length]);
-				return crypto.CreateEncryptor(Cred, init);
-			}
-		}
+		public ICryptoTransform Encryptor => Crypto.CreateEncryptor();
 
 		/// <summary>Return an object that can decrypt stuff based on the user name and given password</summary>
-		public ICryptoTransform Decryptor
+		public ICryptoTransform Decryptor => Crypto.CreateDecryptor();
+
+		/// <summary>Crypto service provider</summary>
+		private AesCryptoServiceProvider Crypto
 		{
 			get
 			{
-				var crypto = new AesCryptoServiceProvider { Padding = PaddingMode.PKCS7, Key = Cred };
-				var init = Array_.New(crypto.BlockSize / 8, i => Cred[(i * 13) % Cred.Length]);
-				return crypto.CreateDecryptor(Cred, init);
+				var crypto = new AesCryptoServiceProvider { Padding = PaddingMode.PKCS7 };
+				crypto.Key = Cred.ToArray();
+				crypto.IV = Array_.New(crypto.BlockSize / 8, i => crypto.Key[(i * 13) % crypto.Key.Length]);
+				//Debug.WriteLine($"Key={crypto.Key.ToHexString()}");
+				//Debug.WriteLine($"IV={crypto.IV.ToHexString()}");
+				return crypto;
 			}
 		}
 
@@ -128,14 +127,17 @@ namespace CoinFlip
 			// Read the file contents into memory and decrypt it
 			try
 			{
+				// This code throw a CryptographicException when the 'User' has an incorrect password.
+				// This is not an error, it's just that CrytographicException are not disabled by default
+				// in the debugger exception settings.
+				var keys_xml = string.Empty;
 				using (var fs = new FileStream(KeysFilepath, FileMode.Open, FileAccess.Read, FileShare.Read))
 				using (var cs = new CryptoStream(fs, Decryptor, CryptoStreamMode.Read))
 				using (var sr = new StreamReader(cs))
-				{
-					var keys_xml = sr.ReadToEnd();
-					keys = XElement.Parse(keys_xml, LoadOptions.None);
-					return EResult.Success;
-				}
+					keys_xml = sr.ReadToEnd();
+
+				keys = XElement.Parse(keys_xml, LoadOptions.None);
+				return EResult.Success;
 			}
 			catch
 			{

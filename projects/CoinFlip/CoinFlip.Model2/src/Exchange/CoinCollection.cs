@@ -5,6 +5,9 @@ namespace CoinFlip
 {
 	public class CoinCollection : CollectionBase<string, Coin>
 	{
+		// Notes:
+		//  - The coins associated with an exchange
+
 		public CoinCollection(Exchange exch)
 			: base(exch)
 		{

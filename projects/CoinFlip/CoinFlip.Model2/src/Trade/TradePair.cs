@@ -111,7 +111,31 @@ namespace CoinFlip
 		}
 
 		/// <summary>The order books for this pair</summary>
-		public MarketDepth MarketDepth { get; }
+		public MarketDepth MarketDepth
+		{
+			get { return m_market_depth; }
+			private set
+			{
+				if (m_market_depth == value) return;
+				if (m_market_depth != null)
+				{
+					m_market_depth.OrderBookChanged -= HandleOrderBookChanged;
+				}
+				m_market_depth = value;
+				if (m_market_depth != null)
+				{
+					m_market_depth.OrderBookChanged += HandleOrderBookChanged;
+				}
+
+				// Handler
+				void HandleOrderBookChanged(object sender, EventArgs e)
+				{
+					Base.Meta.NotifyLivePriceChanged();
+					Quote.Meta.NotifyLivePriceChanged();
+				}
+			}
+		}
+		private MarketDepth m_market_depth;
 
 		/// <summary>Prices for converting Base to Quote. First price is a maximum</summary>
 		public OrderBook B2Q => MarketDepth.B2Q;

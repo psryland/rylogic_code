@@ -9,8 +9,6 @@ namespace CoinFlip
 	[DebuggerDisplay("{Description}")]
 	public class Candle
 	{
-		public static readonly Candle Default = new Candle();
-
 		public Candle() {}
 		public Candle(long timestamp, double open, double high, double low, double close, double median, double volume)
 		{

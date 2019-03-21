@@ -1,15 +1,17 @@
-﻿<Window x:Class="CoinFlip.UI.MainWindow"
-		xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-		xmlns:gui2="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
-		xmlns:local="clr-namespace:CoinFlip.UI"
-		mc:Ignorable="d"
-		Title="Coin Flip"
-		Icon="/CoinFlip.UI;component/Money.ico"
-		Height="450" Width="800"
-		>
+﻿<Window
+	x:Class="CoinFlip.UI.MainWindow"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:gui2="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+	xmlns:local="clr-namespace:CoinFlip.UI"
+	mc:Ignorable="d"
+	Title="Coin Flip"
+	Icon="{StaticResource Money}"
+	Height="900"
+	Width="1400"
+	>
 	<Grid Name="m_root">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
@@ -18,7 +20,11 @@
 		</Grid.RowDefinitions>
 		
 		<!-- Menu-->
-		<Menu Grid.Row="0" IsMainMenu="True">
+		<Menu
+			Name="m_menu"
+			Grid.Row="0"
+			IsMainMenu="True"
+			>
 			<MenuItem Name="m_menu_file" Header="_File">
 				<MenuItem Header="Log _Out" Click="{gui2:MethodBinding LogOn}"/>
 				<MenuItem Name="m_menu_file_skin_toggle" Header="_ChangeSkin" />
@@ -28,25 +34,37 @@
 		</Menu>
 		
 		<!-- Tool strip -->
-		<ToolBarTray Grid.Row="1" Style="{StaticResource ToolBarTrayStyle}">
-			<ToolBar Band="0" BandIndex="0" Style="{StaticResource ToolBarStyle}">
-				<Button Name="m_btn_enable_trading" ToolTip="Enable account trading">
+		<ToolBarTray
+			Grid.Row="1"
+			Style="{StaticResource ToolBarTrayStyle}"
+			>
+			<ToolBar
+				Band="0"
+				BandIndex="0"
+				Style="{StaticResource ToolBarStyle}"
+				>
+				<Button
+					Name="m_btn_enable_trading"
+					ToolTip="Enable account trading"
+					>
 					<StackPanel Orientation="Horizontal">
 						<Image Source="{StaticResource EnableTrading}" Height="26"/>
 						<Label Content="Enable Trading" VerticalAlignment="Center" Style="{StaticResource LabelStyle}" />
 					</StackPanel>
 				</Button>
-				<Separator/>
-				<Label Content="Nett Worth" VerticalAlignment="Center" Foreground="{StaticResource MenuTextBrush}" />
-				<TextBlock VerticalAlignment="Center" Width="140" Height="22"/>
-			</ToolBar>
-			<ToolBar Band="0" BandIndex="1" Style="{StaticResource ToolBarStyle}" >
-				<Button Name="m_btn_back_testing" ToolTip="Simulate historic price action">
+				<Button
+					Name="m_btn_back_testing"
+					ToolTip="Simulate historic price action"
+					>
 					<StackPanel Orientation="Horizontal">
 						<Image Source="{StaticResource BackTesting}" Height="26"/>
 						<Label VerticalAlignment="Center" Content="Back Testing" Foreground="{StaticResource MenuTextBrush}"/>
 					</StackPanel>
 				</Button>
+
+				<Separator/>
+				<Label Content="Nett Worth" VerticalAlignment="Center" Foreground="{StaticResource MenuTextBrush}" />
+				<TextBlock VerticalAlignment="Center" Width="80" Height="22"/>
 			</ToolBar>
 		</ToolBarTray>
 		

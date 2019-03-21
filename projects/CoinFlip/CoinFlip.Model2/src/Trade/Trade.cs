@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using CoinFlip.Settings;
 using Rylogic.Common;
 using Rylogic.Maths;
@@ -244,9 +245,9 @@ namespace CoinFlip
 		}
 
 		/// <summary>Create this trade on the Exchange that owns 'Pair'</summary>
-		public OrderResult CreateOrder()
+		public async Task<OrderResult> CreateOrder()
 		{
-			return Pair.Exchange.CreateOrder(FundId, TradeType, Pair, VolumeIn, Price);
+			return await Pair.Exchange.CreateOrder(FundId, TradeType, Pair, VolumeIn, Price);
 		}
 
 		#region Equals

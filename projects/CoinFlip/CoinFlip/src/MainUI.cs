@@ -995,7 +995,7 @@ namespace CoinFlip
 						Application.SetCompatibleTextRenderingDefault(false);
 
 						// A view3d context reference the lives for the lifetime of the application
-						using (var view3d = View3d.Create(bgra_compatibility: true))
+						using (var view3d = View3d.Create())
 						using (var ui = new MainUI())
 							Application.Run(ui);
 					}

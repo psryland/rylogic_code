@@ -22,19 +22,19 @@ namespace CoinFlip
 		private IList<Exchange> Exchanges { get; }
 
 		/// <summary>Open a trade</summary>
-		protected override OrderResult CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume_base, Unit<decimal> price)
+		protected override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume_base, Unit<decimal> price)
 		{
-			return new OrderResult(pair, false);
+			return Task.FromResult(new OrderResult(pair, false));
 		}
 
 		/// <summary>Cancel an open trade</summary>
-		protected override bool CancelOrderInternal(TradePair pair, long order_id)
+		protected override Task<bool> CancelOrderInternal(TradePair pair, long order_id)
 		{
 			throw new Exception("Cannot cancel trades on the CrossExchange");
 		}
 
 		/// <summary>Update this exchange's set of trading pairs</summary>
-		protected override void UpdatePairsInternal(HashSet<string> coi) // Worker thread context
+		protected override Task UpdatePairsInternal(HashSet<string> coi) // Worker thread context
 		{
 			Model.MarketUpdates.Add(() =>
 			{
@@ -70,10 +70,11 @@ namespace CoinFlip
 					}
 				}
 			});
+			return Task.CompletedTask;
 		}
 
 		/// <summary>Update the market data, balances, and open positions</summary>
-		protected override void UpdateData() // Worker thread context
+		protected override Task UpdateData() // Worker thread context
 		{
 			try
 			{
@@ -101,10 +102,11 @@ namespace CoinFlip
 			{
 				Model.Log.Write(ELogLevel.Error, ex, "CrossExchange UpdateData() failed");
 			}
+			return Task.CompletedTask;
 		}
 
 		/// <summary>Update account balance data</summary>
-		protected override void UpdateBalances() // Worker thread context
+		protected override Task UpdateBalances() // Worker thread context
 		{
 			try
 			{
@@ -125,15 +127,17 @@ namespace CoinFlip
 			{
 				Model.Log.Write(ELogLevel.Error, ex, "CrossExchange UpdateBalances() failed");
 			}
+			return Task.CompletedTask;
 		}
 
 		/// <summary>Update open positions</summary>
-		protected override void UpdatePositionsAndHistory() // Worker thread context
+		protected override Task UpdatePositionsAndHistory() // Worker thread context
 		{
 			// There shouldn't be any of these. Cross-exchange trades
 			// are virtual, we only pretend to convert 'Coin' on 'Exchange0'
 			// to 'Coin' on 'Exchange1' (or visa versa)
 			base.UpdatePositionsAndHistory();
+			return Task.CompletedTask;
 		}
 
 		/// <summary>Set the maximum number of requests per second to the exchange server</summary>
