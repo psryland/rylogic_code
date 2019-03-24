@@ -67,4 +67,12 @@ namespace Rylogic.Gui.WPF
 		Left = 1 << EDockSite.Left,
 		Right = 1 << EDockSite.Right,
 	}
+
+	/// <summary>States for a tab button</summary>
+	public enum ETabState
+	{
+		Inactive,
+		Active,
+		Flashing,
+	}
 }

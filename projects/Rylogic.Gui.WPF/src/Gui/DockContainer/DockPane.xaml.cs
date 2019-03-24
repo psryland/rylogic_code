@@ -374,7 +374,14 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		{
 			// Set the active tab button
 			foreach (var btn in TabStrip.Buttons)
-				btn.IsActiveTab = btn.DockControl == VisibleContent;
+			{
+				// Only change Active to Inactive or Inactive to Active.
+				// Don't change other button states.
+				if (btn.DockControl == VisibleContent)
+					btn.TabState = ETabState.Active;
+				else if (btn.TabState == ETabState.Active)
+					btn.TabState = ETabState.Inactive;
+			}
 
 			VisibleContentChanged?.Invoke(this, args);
 		}

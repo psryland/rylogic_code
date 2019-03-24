@@ -1532,13 +1532,16 @@ namespace ldr
 			/// <summary>Add an object to the window</summary>
 			public void AddObject(Object obj)
 			{
-				Debug.Assert(Math_.FEql(obj.O2P.w.w, 1f), "Invalid instance transform");
+				Util.BreakIf(!Math_.FEql(obj.O2P.w.w, 1f), "Invalid instance transform");
+				Util.BreakIf(!Math_.IsFinite(obj.O2P), "Invalid instance transform");
 				View3D_WindowAddObject(Handle, obj.Handle);
 			}
 
 			/// <summary>Add a gizmo to the window</summary>
 			public void AddGizmo(Gizmo giz)
 			{
+				Util.BreakIf(!Math_.FEql(giz.O2W.w.w, 1f), "Invalid instance transform");
+				Util.BreakIf(!Math_.IsFinite(giz.O2W), "Invalid instance transform");
 				View3D_WindowAddGizmo(Handle, giz.m_handle);
 			}
 
@@ -1744,7 +1747,12 @@ namespace ldr
 			public Size BackBufferSize
 			{
 				get { View3D_BackBufferSizeGet(Handle, out var w, out var h); return new Size(w,h); }
-				set { View3D_BackBufferSizeSet(Handle, value.Width, value.Height); }
+				set
+				{
+					Util.BreakIf(value.Width == 0 || value.Height == 0, "Invalid back buffer size");
+					Util.BreakIf(!Math_.IsFinite(value.Width) || !Math_.IsFinite(value.Height), "Invalid back buffer size");
+					View3D_BackBufferSizeSet(Handle, value.Width, value.Height);
+				}
 			}
 
 			/// <summary>Restore the render target as the main output</summary>
@@ -1773,7 +1781,12 @@ namespace ldr
 			public Viewport Viewport
 			{
 				get { return View3D_Viewport(Handle); }
-				set { View3D_SetViewport(Handle, value); }
+				set
+				{
+					Util.BreakIf(value.Width == 0 || value.Height == 0, "Invalid viewport size");
+					Util.BreakIf(!Math_.IsFinite(value.Width) || !Math_.IsFinite(value.Height), "Invalid viewport size");
+					View3D_SetViewport(Handle, value);
+				}
 			}
 
 			/// <summary>Get/Set whether the depth buffer is enabled</summary>

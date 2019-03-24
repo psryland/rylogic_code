@@ -440,11 +440,8 @@ namespace Rylogic.Gui.WPF
 		public event EventHandler RenderTargetChanged;
 		protected virtual void OnRenderTargetChanged()
 		{
-			// Set the new viewport size. Note: use the actual render area
-			// rather than the render target size since the render target size
-			// is rounded to the next int.
-			var sz = RenderSize;
-			Window.Viewport = new View3d.Viewport(0, 0, (float)sz.Width, (float)sz.Height);
+			// Set the viewport to match the render target size
+			Window.Viewport = new View3d.Viewport(0, 0, RenderTarget.Info.m_width, RenderTarget.Info.m_height);
 
 			// Notify of a new render target. Don't directly subscribe to
 			// D3DImage.RenderTargetChanged because that will leak references.

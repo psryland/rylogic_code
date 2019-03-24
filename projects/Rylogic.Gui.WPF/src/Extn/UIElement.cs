@@ -55,7 +55,7 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>
 		/// Finds a parent in the visual tree matching the specified type.
-		/// If 'name' is given, the parent must have the given name.
+		/// If 'pred' is a filter, typically used to find parents by name.
 		/// if 'root' is given, the search stops if 'root' is encountered (after testing if it's a parent)</summary>
 		public static T FindVisualParent<T>(this DependencyObject item, Func<T,bool> pred = null, DependencyObject root = null) where T : DependencyObject
 		{

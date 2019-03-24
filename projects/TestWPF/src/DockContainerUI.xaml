@@ -14,6 +14,7 @@
 
 	<Window.Resources>
 		<!--<ResourceDictionary Source="/Rylogic.Gui.WPF;component/Themes/Generic.xaml"/>-->
+		<BitmapImage x:Key ="edit_add" UriSource="/Rylogic.Gui.WPF;component/res/edit_add.png"/>
 	</Window.Resources>
 	
 	<DockPanel>

@@ -30,6 +30,7 @@ namespace TestWPF
 
 			var save_btn = d0.Children.Add2(new Button { Content = "Save Layout" });
 			var load_btn = d0.Children.Add2(new Button { Content = "Load Layout" });
+			var flash_btn = d0.Children.Add2(new Button { Content = "Flash" });
 			save_btn.Click += (s, a) =>
 			{
 				var xml = m_dc.SaveLayout();
@@ -39,6 +40,10 @@ namespace TestWPF
 			{
 				var xml = XElement.Load("\\dump\\layout.xml");
 				m_dc.LoadLayout(xml);
+			};
+			flash_btn.Click += (s, a) =>
+			{
+				d1.DockControl.TabState = ETabState.Flashing;
 			};
 
 			m_dc.Add(d0, EDockSite.Centre);
@@ -66,7 +71,7 @@ namespace TestWPF
 			DockControl = new DockControl(this, text)
 			{
 				TabText = text,
-				//TabIcon = SystemIcons.Exclamation.ToBitmap()
+				TabIcon = System.Drawing.SystemIcons.Exclamation.ToBitmapSource()
 			};
 
 			var label = Children.Add2(new Label { Content = "LABEL" });

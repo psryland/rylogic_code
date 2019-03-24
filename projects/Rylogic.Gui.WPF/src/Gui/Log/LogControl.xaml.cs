@@ -8,16 +8,10 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using System.Xml.Linq;
 using Microsoft.Win32;
 using Rylogic.Common;
@@ -48,18 +42,15 @@ namespace Rylogic.Gui.WPF
 			LineWrapProperty = Gui_.DPRegister<LogControl>(nameof(LineWrap));
 		}
 		public LogControl()
-			: this("Log", "Log")
-		{}
-		public LogControl(string title, string persist_name)
 		{
 			InitializeComponent();
+			m_view.MouseRightButtonUp += DataGrid_.ColumnVisibility;
 
 			// Support for dock container controls
-			DockControl = new DockControl(this, persist_name)
+			DockControl = new DockControl(this, "log")
 			{
-				TabText = Title,
+				TabText = "Log",
 				DefaultDockLocation = new DockLocation(auto_hide: EDockSite.Right),
-				//TabColoursActive = new DockContainer.OptionData().TabStrip.ActiveTab,
 			};
 
 			// When docked in an auto-hide panel, pop out on new messages
@@ -154,20 +145,6 @@ namespace Rylogic.Gui.WPF
 		private DockControl m_dock_control;
 		protected virtual void OnDockContainerChanged(DockContainerChangedEventArgs args)
 		{ }
-
-		/// <summary>The tab name of this control</summary>
-		public string Title
-		{
-			get { return m_title; }
-			set
-			{
-				if (m_title == value) return;
-				m_title = value;
-				if (DockControl != null) DockControl.TabText = value;
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Title)));
-			}
-		}
-		private string m_title;
 
 		/// <summary>Get/Set the log file to display. Setting a filepath sets the control to the 'file tail' mode</summary>
 		public string LogFilepath
@@ -362,14 +339,9 @@ namespace Rylogic.Gui.WPF
 					if (DockControl?.DockContainer != null)
 					{
 						if (PopOutOnNewMessages)
-						{
 							DockControl.DockContainer.FindAndShow(this);
-						}
-						else
-						{
-							//DockControl.TabColoursActive.Text = Color.Red;
-							//DockControl.InvalidateTab();
-						}
+						else if (DockControl.TabState != ETabState.Active)
+							DockControl.TabState = ETabState.Flashing;
 					}
 
 					// Prevent the LogEntries collection getting too big

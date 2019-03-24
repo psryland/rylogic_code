@@ -76,7 +76,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Get the control we're providing docking functionality for</summary>
-		public UIElement Owner { get; }
+		public UIElement Owner { get; set; }
 
 		/// <summary>Get/Set the dock container that manages this content.</summary>
 		public DockContainer DockContainer
@@ -195,7 +195,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>The name to use for this instance when saving layout to XML</summary>
-		public string PersistName { get; private set; }
+		public string PersistName { get; set; }
 
 		/// <summary>The dock location to use if not otherwise given</summary>
 		public DockLocation DefaultDockLocation { get; set; }
@@ -426,6 +426,13 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>A context menu to display when the tab for this content is right clicked</summary>
 		public ContextMenu TabCMenu { get; set; }
+
+		/// <summary>The current state of the tab button associated with this content</summary>
+		public ETabState TabState
+		{
+			get { return TabButton?.TabState ?? ETabState.Inactive; }
+			set { if (TabButton is TabButton tb) tb.TabState = value; }
+		}
 
 		/// <summary>Creates a default context menu for the tab. Use: TabCMenu = DefaultTabCMenu()</summary>
 		public ContextMenu DefaultTabCMenu()

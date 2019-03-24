@@ -77,7 +77,8 @@
 			AutoGenerateColumns="False"
 			HeadersVisibility="Column"
 			GridLinesVisibility="None"
+			Background="White"
 			ItemsSource="{Binding LogEntriesView}"
-			/>
+		/>
 	</Grid>
 </UserControl>

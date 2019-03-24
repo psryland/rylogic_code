@@ -254,11 +254,7 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>The log entry tag for this instance</summary>
-		public string Tag
-		{
-			get;
-			set;
-		}
+		public string Tag { get; set; }
 
 		/// <summary>The character sequence that separates log entries</summary>
 		public char EntryDelimiter
@@ -642,11 +638,7 @@ namespace Rylogic.Utility
 		{
 			Util.Dispose(ref m_outf);
 		}
-		public string Filepath
-		{
-			get;
-			private set;
-		}
+		public string Filepath { get; }
 		public void Write(string text)
 		{
 			var bytes = Encoding.UTF8.GetBytes(text);

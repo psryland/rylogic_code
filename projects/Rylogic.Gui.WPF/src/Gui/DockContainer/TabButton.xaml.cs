@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace Rylogic.Gui.WPF.DockContainerDetail
 {
@@ -22,17 +23,17 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 			InitializeComponent();
 			DataContext = this;
 		}
-		public TabButton(string text)
+		public TabButton(string text, ImageSource icon)
 			: this()
 		{
 			DockControl = null;
-			Content = text;
+			m_def_tab_text = text;
+			m_def_tab_icon = icon;
 		}
 		public TabButton(DockControl content)
 			: this()
 		{
 			DockControl = content;
-			Content = content.TabText;
 		}
 		protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
 		{
@@ -146,7 +147,12 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		public bool Clipped => Math.Abs(ActualWidth - MaxWidth) < 0.0001;
 
 		/// <summary>The text displayed on this tab</summary>
-		public string TabText => DockControl?.TabText ?? string.Empty;
+		public string TabText => DockControl?.TabText ?? m_def_tab_text;
+		private string m_def_tab_text;
+
+		/// <summary>The icon for the tab</summary>
+		public ImageSource TabIcon => DockControl?.TabIcon ?? m_def_tab_icon;
+		private ImageSource m_def_tab_icon;
 
 		/// <summary>The tool tip string for this tab</summary>
 		public string TabToolTip => DockControl?.TabToolTip ?? string.Empty;
@@ -189,17 +195,17 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		}
 
 		/// <summary>True if this button is the active one</summary>
-		public bool IsActiveTab
+		public ETabState TabState
 		{
-			get { return m_is_active_tab; }
+			get { return m_tab_state; }
 			set
 			{
-				if (m_is_active_tab == value) return;
-				m_is_active_tab = value;
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsActiveTab)));
+				if (m_tab_state == value) return;
+				m_tab_state = value;
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TabState)));
 			}
 		}
-		private bool m_is_active_tab;
+		private ETabState m_tab_state;
 
 		/// <summary>Property changed</summary>
 		public event PropertyChangedEventHandler PropertyChanged;

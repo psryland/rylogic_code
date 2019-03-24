@@ -43,9 +43,13 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				dc != null ? dc.TabText :
 				dp != null ? dp.CaptionText :
 				null;
+			var item_icon =
+				dc != null ? dc.TabIcon :
+				dp != null ? dp.VisibleContent?.TabIcon :
+				null;
 
 			m_ss_start_pt = ss_start_pt;
-			m_ghost_button = new TabButton(item_name) { Opacity = 0.5 };
+			m_ghost_button = new TabButton(item_name, item_icon) { Opacity = 0.5 };
 			Owner = GetWindow(owner);
 			DockContainer = owner;
 			DraggedItem = draggee;
@@ -498,6 +502,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 						// Add the ghost tab to the pane's tabstrip
 						var idx = DropIndex ?? pane.TabStrip.Buttons.Count;
 						pane.TabStrip.Buttons.Insert(idx, m_ghost_button);
+						m_ghost_button.InvalidateArrange();
 
 						// Get the pane area
 						var rect = pane.RenderArea();
