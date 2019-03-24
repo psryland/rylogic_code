@@ -27,16 +27,16 @@ namespace CoinFlip
 			Pair            = pair;
 			TradeType       = tt;
 			PriceQ2B        = price_q2b;
-			VolumeBase      = amount_base;
+			AmountBase      = amount_base;
 			CommissionQuote = commission_quote;
 			Created         = created;
 			Updated         = updated;
 		}
 		public TradeCompleted(long trade_id, Order order, DateTimeOffset updated)
-			:this(order.OrderId, trade_id, order.Pair, order.TradeType, order.PriceQ2B, order.VolumeBase, order.VolumeQuote * order.Exchange.Fee, order.Created.Value, updated)
+			:this(order.OrderId, trade_id, order.Pair, order.TradeType, order.PriceQ2B, order.AmountBase, order.AmountQuote * order.Exchange.Fee, order.Created.Value, updated)
 		{}
 		public TradeCompleted(TradeCompleted rhs)
-			:this(rhs.OrderId, rhs.TradeId, rhs.Pair, rhs.TradeType, rhs.PriceQ2B, rhs.VolumeBase, rhs.CommissionQuote, rhs.Created, rhs.Updated)
+			:this(rhs.OrderId, rhs.TradeId, rhs.Pair, rhs.TradeType, rhs.PriceQ2B, rhs.AmountBase, rhs.CommissionQuote, rhs.Created, rhs.Updated)
 		{}
 
 		/// <summary>Unique Id for the open position on an exchange</summary>
@@ -60,7 +60,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>The amount of base currency traded (excludes commission)</summary>
-		public Unit<decimal> VolumeBase { get; }
+		public Unit<decimal> AmountBase { get; }
 
 		/// <summary>The amount paid in commission (in Quote)</summary>
 		public Unit<decimal> CommissionQuote { get; }
@@ -76,18 +76,18 @@ namespace CoinFlip
 		public DateTimeOffset Updated { get; }
 
 		/// <summary>The amount of quote current traded (excludes commission)</summary>
-		public Unit<decimal> VolumeQuote => VolumeBase * PriceQ2B;
+		public Unit<decimal> AmountQuote => AmountBase * PriceQ2B;
 
-		/// <summary>The input volume of the trade (in base or quote, depending on 'TradeType'. Excluding commission)</summary>
-		public Unit<decimal> VolumeIn => TradeType.VolumeIn(VolumeBase, PriceQ2B);
+		/// <summary>The input amount of the trade (in base or quote, depending on 'TradeType'. Excluding commission)</summary>
+		public Unit<decimal> AmountIn => TradeType.AmountIn(AmountBase, PriceQ2B);
 
-		/// <summary>The output volume of the trade excluding commissions (in quote or base, depending on 'TradeType')</summary>
-		public Unit<decimal> VolumeOut => TradeType.VolumeOut(VolumeBase, PriceQ2B);
+		/// <summary>The output amount of the trade excluding commissions (in quote or base, depending on 'TradeType')</summary>
+		public Unit<decimal> AmountOut => TradeType.AmountOut(AmountBase, PriceQ2B);
 
-		/// <summary>The volume received after commissions (in VolumeOut currency)</summary>
-		public Unit<decimal> VolumeNett => VolumeOut - Commission;
+		/// <summary>The amount received after commissions (in AmountOut currency)</summary>
+		public Unit<decimal> AmountNett => AmountOut - Commission;
 
-		/// <summary>The commission that was charged on this trade (in the same currency as VolumeOut)</summary>
+		/// <summary>The commission that was charged on this trade (in the same currency as AmountOut)</summary>
 		public Unit<decimal> Commission => TradeType.Commission(CommissionQuote, PriceQ2B);
 
 		/// <summary>The coin type being sold</summary>
@@ -97,7 +97,7 @@ namespace CoinFlip
 		public Coin CoinOut => TradeType.CoinOut(Pair);
 
 		/// <summary>Description string for the trade</summary>
-		public string Description => $"{VolumeIn.ToString("G6", true)} → {VolumeOut.ToString("G6", true)} @ {PriceQ2B.ToString("G6", true)}";
+		public string Description => $"{AmountIn.ToString("G6", true)} → {AmountOut.ToString("G6", true)} @ {PriceQ2B.ToString("G6", true)}";
 
 		#region Equals
 		public bool Equals(TradeCompleted rhs)

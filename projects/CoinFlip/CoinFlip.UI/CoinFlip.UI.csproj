@@ -69,12 +69,12 @@
     <Compile Include="src\Account\LogOnUI.xaml.cs">
       <DependentUpon>LogOnUI.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\Binding\ExchPairTimeFrame.cs" />
+    <Compile Include="src\Misc\ExchPairTimeFrame.cs" />
     <Compile Include="src\GfxObjects\Buffers.cs" />
     <Compile Include="src\GfxObjects\Candles.cs" />
     <Compile Include="src\GfxObjects\SpotPrice.cs" />
     <Compile Include="src\GfxObjects\UpdatingText.cs" />
-    <Compile Include="src\SkinResourceDictionary.cs" />
+    <Compile Include="src\Misc\SkinResourceDictionary.cs" />
     <Compile Include="src\UI\CandleChart.xaml.cs">
       <DependentUpon>CandleChart.xaml</DependentUpon>
     </Compile>
@@ -100,6 +100,18 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="src\UI\GridTradeHistory.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\UI\GridTradeOrders.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\UI\LogView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="src\UI\MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -107,6 +119,15 @@
     <Compile Include="src\App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="src\UI\GridTradeHistory.xaml.cs">
+      <DependentUpon>GridTradeHistory.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\UI\GridTradeOrders.xaml.cs">
+      <DependentUpon>GridTradeOrders.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\UI\LogView.xaml.cs">
+      <DependentUpon>LogView.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\UI\MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>

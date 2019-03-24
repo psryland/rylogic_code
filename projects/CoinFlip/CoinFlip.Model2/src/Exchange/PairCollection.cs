@@ -35,9 +35,14 @@ namespace CoinFlip
 			{
 				Debug.Assert(Misc.AssertMarketDataWrite());
 				if (ContainsKey(key))
+				{
 					base[key].Update(value);
+					ResetItem(key);
+				}
 				else
+				{
 					base[key] = value;
+				}
 			}
 		}
 

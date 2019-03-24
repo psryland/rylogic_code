@@ -22,7 +22,7 @@ namespace CoinFlip
 
 		/// <summary>Get the main thread dispatcher</summary>
 		private static readonly Dispatcher Dispatcher = Dispatcher.CurrentDispatcher;
-		
+
 		/// <summary>Assert that the current thread is the main thread</summary>
 		public static bool AssertMainThread()
 		{
@@ -140,7 +140,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Return the 'in' volume for a trade in this trade direction</summary>
-		public static Unit<decimal> VolumeIn(this ETradeType tt, Unit<decimal> volume_base, Unit<decimal> price_q2b)
+		public static Unit<decimal> AmountIn(this ETradeType tt, Unit<decimal> volume_base, Unit<decimal> price_q2b)
 		{
 			return
 				tt == ETradeType.B2Q ? volume_base :
@@ -149,7 +149,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Return the 'out' volume for a trade in this trade direction</summary>
-		public static Unit<decimal> VolumeOut(this ETradeType tt, Unit<decimal> volume_base, Unit<decimal> price_q2b)
+		public static Unit<decimal> AmountOut(this ETradeType tt, Unit<decimal> volume_base, Unit<decimal> price_q2b)
 		{
 			return
 				tt == ETradeType.B2Q ? volume_base * price_q2b :

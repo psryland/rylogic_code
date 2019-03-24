@@ -57,6 +57,7 @@ namespace CoinFlip
 		{
 			MainLoopRunning = false;
 			PriceData = null;
+			Funds = null;
 			User = null;
 			Shutdown = null;
 			Util.Dispose(Log);
@@ -147,6 +148,7 @@ namespace CoinFlip
 					//if (LoadAPIKeys(user, nameof(Bitfinex), out key, out secret)) Exchanges.Add(new Bitfinex(this, key, secret));
 					//if (LoadAPIKeys(user, nameof(Bittrex), out key, out secret)) Exchanges.Add(new Bittrex(this, key, secret));
 					//if (LoadAPIKeys(user, nameof(Cryptopia), out key, out secret)) Exchanges.Add(new Cryptopia(this, key, secret));
+					//if (LoadAPIKeys(user, nameof(Binance), out key, out secret)) Exchanges.Add(new Binance(this, key, secret));
 					Exchanges.Insert(0, new CrossExchange(Exchanges, Shutdown.Token));
 
 					// Save the last user name
@@ -228,9 +230,18 @@ namespace CoinFlip
 		private CoinDataList m_coins;
 
 		/// <summary>The sub-accounts used to partition balances on each exchange</summary>
-		public FundContainer Funds { get; }
+		public FundContainer Funds
+		{
+			get { return m_funds; }
+			private set
+			{
+				if (m_funds == value) return;
+				m_funds = value;
+			}
+		}
+		private FundContainer m_funds;
 
-		/// <summary></summary>
+		/// <summary>The repository of candle data for all pairs and time frames</summary>
 		public PriceDataMap PriceData
 		{
 			get { return m_price_data; }

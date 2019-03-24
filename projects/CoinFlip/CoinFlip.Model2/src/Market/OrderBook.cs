@@ -59,8 +59,8 @@ namespace CoinFlip
 		/// <summary>Add an offer to the depth of market</summary>
 		public void Add(Offer offer, bool validate = true)
 		{
-			Debug.Assert(!validate || offer.VolumeBase != 0m._(Base));
-			Debug.Assert(!validate || offer.VolumeBase * offer.Price != 0m._(Quote));
+			Debug.Assert(!validate || offer.AmountBase != 0m._(Base));
+			Debug.Assert(!validate || offer.AmountBase * offer.Price != 0m._(Quote));
 			Orders.Add(offer);
 		}
 
@@ -81,13 +81,13 @@ namespace CoinFlip
 					break;
 
 				// The volume remaining is less than the volume of 'order', stop
-				if (volume_remaining <= order.VolumeBase)
+				if (volume_remaining <= order.AmountBase)
 					break;
 
 				// 'order' is smaller than the remaining volume so it would be consumed. However, don't consume
 				// 'order' if doing so would leave 'volume_remaining' with an invalid trading volume.
-				var rem = volume_remaining - order.VolumeBase;
-				if (!pair.VolumeRangeBase.Contains(rem) || !pair.VolumeRangeQuote.Contains(rem * price))
+				var rem = volume_remaining - order.AmountBase;
+				if (!pair.AmountRangeBase.Contains(rem) || !pair.AmountRangeQuote.Contains(rem * price))
 					break;
 				
 				volume_remaining = rem;
@@ -101,8 +101,8 @@ namespace CoinFlip
 			// Remove any remaining volume from the top remaining order if doing so don't leave an invalid trading volume
 			if (volume_remaining != 0 && Orders.Count != 0 && Sign * price.CompareTo(Orders[0].Price) >= 0)
 			{
-				var rem = Orders[0].VolumeBase - volume_remaining;
-				if (pair.VolumeRangeBase.Contains(rem) && pair.VolumeRangeQuote.Contains(rem * Orders[0].Price))
+				var rem = Orders[0].AmountBase - volume_remaining;
+				if (pair.AmountRangeBase.Contains(rem) && pair.AmountRangeQuote.Contains(rem * Orders[0].Price))
 				{
 					consumed.Add(new Offer(Orders[0].Price, volume_remaining));
 					Orders[0] = new Offer(Orders[0].Price, rem);

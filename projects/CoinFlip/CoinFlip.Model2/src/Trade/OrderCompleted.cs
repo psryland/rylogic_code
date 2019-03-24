@@ -38,6 +38,10 @@ namespace CoinFlip
 
 		/// <summary>The trade type</summary>
 		public ETradeType TradeType { get; }
+		public string TradeTypeDesc =>
+			TradeType == ETradeType.Q2B? $"{Pair.Quote}→{Pair.Base} ({TradeType})" :
+			TradeType == ETradeType.B2Q? $"{Pair.Base}→{Pair.Quote} ({TradeType})" :
+			"---";
 
 		/// <summary>The pair traded</summary>
 		public TradePair Pair { get; }
@@ -68,22 +72,22 @@ namespace CoinFlip
 			}
 		}
 
-		/// <summary>The sum of trade base volumes</summary>
-		public Unit<decimal> VolumeBase => Trades.Values.Sum(x => x.VolumeBase)._(Pair.Base);
+		/// <summary>The sum of trade base amounts</summary>
+		public Unit<decimal> AmountBase => Trades.Values.Sum(x => x.AmountBase)._(Pair.Base);
 
-		/// <summary>The sum of trade quote volumes</summary>
-		public Unit<decimal> VolumeQuote => Trades.Values.Sum(x => x.VolumeQuote)._(Pair.Quote);
+		/// <summary>The sum of trade quote amounts</summary>
+		public Unit<decimal> AmountQuote => Trades.Values.Sum(x => x.AmountQuote)._(Pair.Quote);
 
-		/// <summary>The sum of trade input volumes</summary>
-		public Unit<decimal> VolumeIn => Trades.Values.Sum(x => x.VolumeIn)._(CoinIn);
+		/// <summary>The sum of trade input amounts</summary>
+		public Unit<decimal> AmountIn => Trades.Values.Sum(x => x.AmountIn)._(CoinIn);
 
-		/// <summary>The sum of trade output volumes</summary>
-		public Unit<decimal> VolumeOut => Trades.Values.Sum(x => x.VolumeOut)._(CoinOut);
+		/// <summary>The sum of trade output amounts</summary>
+		public Unit<decimal> AmountOut => Trades.Values.Sum(x => x.AmountOut)._(CoinOut);
 
-		/// <summary>The sum of trade nett output volumes</summary>
-		public Unit<decimal> VolumeNett => Trades.Values.Sum(x => x.VolumeNett)._(CoinOut);
+		/// <summary>The sum of trade nett output amounts</summary>
+		public Unit<decimal> AmountNett => Trades.Values.Sum(x => x.AmountNett)._(CoinOut);
 
-		/// <summary>The sum of trade commissions (in volume out units)</summary>
+		/// <summary>The sum of trade commissions (in amount out units)</summary>
 		public Unit<decimal> Commission => Trades.Values.Sum(x => x.Commission)._(CoinOut);
 
 		/// <summary>The coin type being sold</summary>
@@ -93,19 +97,10 @@ namespace CoinFlip
 		public Coin CoinOut => TradeType == ETradeType.B2Q ? Pair.Quote : Pair.Base;
 
 		/// <summary>The timestamp of when the original order was created</summary>
-		public DateTimeOffset Created
-		{
-			get
-			{
-				if (Trades.Count == 0)
-					return DateTimeOffset.MinValue;
-
-				return Trades.Values.Min(x => x.Created);
-			}
-		}
+		public DateTimeOffset Created => Trades.Count == 0 ? DateTimeOffset.MinValue : Trades.Values.Min(x => x.Created);
 
 		/// <summary>Description string for the trade</summary>
-		public string Description => $"{VolumeIn.ToString("G6", true)} → {VolumeNett.ToString("G6", true)} @ {PriceQ2B.ToString("G6", true)}";
+		public string Description => $"{AmountIn.ToString("G6", true)} → {AmountNett.ToString("G6", true)} @ {PriceQ2B.ToString("G6", true)}";
 
 		/// <summary>INotifyPropertyChanged</summary>
 		public event PropertyChangedEventHandler PropertyChanged;

@@ -36,12 +36,10 @@
 		<!-- Tool strip -->
 		<ToolBarTray
 			Grid.Row="1"
-			Style="{StaticResource ToolBarTrayStyle}"
 			>
 			<ToolBar
 				Band="0"
 				BandIndex="0"
-				Style="{StaticResource ToolBarStyle}"
 				>
 				<Button
 					Name="m_btn_enable_trading"
@@ -49,7 +47,7 @@
 					>
 					<StackPanel Orientation="Horizontal">
 						<Image Source="{StaticResource EnableTrading}" Height="26"/>
-						<Label Content="Enable Trading" VerticalAlignment="Center" Style="{StaticResource LabelStyle}" />
+						<Label Content="Enable Trading" VerticalAlignment="Center"/>
 					</StackPanel>
 				</Button>
 				<Button

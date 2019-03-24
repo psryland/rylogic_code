@@ -15,7 +15,21 @@
 			<BitmapImage x:Key="Money" UriSource="../res/money.png" />
 			<BitmapImage x:Key="EnableTrading" UriSource="../res/money.png" />
 			<BitmapImage x:Key="BackTesting" UriSource="../res/clock.png" />
-			
+
+			<!-- Global style for grids -->
+			<SolidColorBrush x:Key="SelectionForeground" Color="Black" />
+			<SolidColorBrush x:Key="SelectionBackground" Color="#CCDDCC" />
+			<Style TargetType="{x:Type DataGridCell}">
+				<Style.Triggers>
+					<Trigger Property="IsSelected" Value="True">
+						<Setter Property="Background" Value="{StaticResource SelectionBackground}"/>
+						<Setter Property="BorderBrush" Value="{StaticResource SelectionBackground}"/>
+						<Setter Property="Foreground" Value="{StaticResource SelectionForeground}"/>
+					</Trigger>
+				</Style.Triggers>
+			</Style>
+
+			<!-- Add skin resources -->
 			<ResourceDictionary.MergedDictionaries>
 				<ResourceDictionary Source="../skin/Dark.xaml" />
 				<ResourceDictionary Source="../skin/Default.xaml" />

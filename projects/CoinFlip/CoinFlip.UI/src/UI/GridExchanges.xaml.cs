@@ -10,17 +10,11 @@ namespace CoinFlip.UI
 {
 	public partial class GridExchanges : DataGrid, IDockable
 	{
-		static GridExchanges()
-		{
-			CurrentProperty = Gui_.DPRegister<GridExchanges>(nameof(Current));
-		}
 		public GridExchanges(Model model)
 		{
 			InitializeComponent();
-
-			Model = model;
 			DockControl = new DockControl(this, "Exchanges");
-			Exchanges = new ListCollectionView(model.Exchanges);
+			Model = model;
 
 			// Commands
 			ToggleEnabled = Command.Create(this, () =>
@@ -61,6 +55,7 @@ namespace CoinFlip.UI
 			{
 				if (m_model == value) return;
 				m_model = value;
+				Exchanges = CollectionViewSource.GetDefaultView(m_model?.Exchanges);
 			}
 		}
 		private Model m_model;
@@ -79,15 +74,14 @@ namespace CoinFlip.UI
 		private DockControl m_dock_control;
 
 		/// <summary>The view of the available exchanges</summary>
-		public ICollectionView Exchanges { get; }
+		public ICollectionView Exchanges { get; private set; }
 
 		/// <summary>The currently selected exchange</summary>
 		public Exchange Current
 		{
-			get { return (Exchange)GetValue(CurrentProperty); }
-			set { SetValue(CurrentProperty, value); }
+			get => (Exchange)Exchanges.CurrentItem;
+			set => Exchanges.MoveCurrentTo(value);
 		}
-		public static readonly DependencyProperty CurrentProperty;
 
 		/// <summary>Enable/Disable the current exchange</summary>
 		public Command ToggleEnabled { get; }

@@ -34,7 +34,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Update this exchange's set of trading pairs</summary>
-		protected override Task UpdatePairsInternal(HashSet<string> coi) // Worker thread context
+		protected override Task UpdatePairsInternal(HashSet<string> coins) // Worker thread context
 		{
 			Model.MarketUpdates.Add(() =>
 			{

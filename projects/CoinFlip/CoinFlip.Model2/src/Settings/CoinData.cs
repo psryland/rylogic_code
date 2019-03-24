@@ -64,6 +64,7 @@ namespace CoinFlip.Settings
 			get { return get<string>(nameof(LivePriceSymbols)); }
 			set { set(nameof(LivePriceSymbols), value); }
 		}
+		public string[] LivePriceSymbolsArray => LivePriceSymbols.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
 
 		/// <summary>Display the nett worth as a live price</summary>
 		public bool ShowLivePrices

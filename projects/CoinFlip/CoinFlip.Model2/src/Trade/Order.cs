@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using Rylogic.Maths;
 using Rylogic.Utility;
 
 namespace CoinFlip
@@ -13,7 +14,7 @@ namespace CoinFlip
 		//    should exist somewhere in their order book. When an Order is filled it
 		//    becomes a 'OrderFill'
 
-		public Order(string fund_id, long order_id, TradePair pair, ETradeType tt, Unit<decimal> price_q2b, Unit<decimal> volume_base, Unit<decimal> remaining_base, DateTimeOffset? created, DateTimeOffset updated, bool fake = false)
+		public Order(string fund_id, long order_id, TradePair pair, ETradeType tt, Unit<decimal> price_q2b, Unit<decimal> amount_base, Unit<decimal> remaining_base, DateTimeOffset? created, DateTimeOffset updated, bool fake = false)
 		{
 			FundId        = fund_id;
 			OrderId       = order_id;
@@ -21,14 +22,14 @@ namespace CoinFlip
 			Pair          = pair;
 			TradeType     = tt;
 			PriceQ2B      = price_q2b;
-			VolumeBase    = volume_base;
+			AmountBase    = amount_base;
 			RemainingBase = remaining_base;
 			Created       = created;
 			Updated       = updated;
 			Fake          = fake;
 		}
 		public Order(Order rhs)
-			:this(rhs.FundId, rhs.OrderId, rhs.Pair, rhs.TradeType, rhs.PriceQ2B, rhs.VolumeBase, rhs.RemainingBase, rhs.Created, rhs.Updated, rhs.Fake)
+			:this(rhs.FundId, rhs.OrderId, rhs.Pair, rhs.TradeType, rhs.PriceQ2B, rhs.AmountBase, rhs.RemainingBase, rhs.Created, rhs.Updated, rhs.Fake)
 		{}
 
 		/// <summary>The fund associated with this position</summary>
@@ -49,17 +50,21 @@ namespace CoinFlip
 
 		/// <summary>The trade type</summary>
 		public ETradeType TradeType { get; }
+		public string TradeTypeDesc =>
+			TradeType == ETradeType.Q2B ? $"{Pair.Quote}→{Pair.Base} ({TradeType})" :
+			TradeType == ETradeType.B2Q ? $"{Pair.Base}→{Pair.Quote} ({TradeType})" :
+			"---";
 
 		/// <summary>The price that the order trades at (Quote/Base)</summary>
 		public Unit<decimal> PriceQ2B { get; }
 
-		/// <summary>The volume of the trade (in base currency)</summary>
-		public Unit<decimal> VolumeBase { get; }
+		/// <summary>The amount to trade (in base currency)</summary>
+		public Unit<decimal> AmountBase { get; }
 
-		/// <summary>The volume of the trade (in quote currency) based on the trade price</summary>
-		public Unit<decimal> VolumeQuote => VolumeBase * PriceQ2B;
+		/// <summary>The amount to trade (in quote currency) based on the trade price</summary>
+		public Unit<decimal> AmountQuote => AmountBase * PriceQ2B;
 
-		/// <summary>The remaining volume to be traded (in base currency)</summary>
+		/// <summary>The remaining amount to be traded (in base currency)</summary>
 		public Unit<decimal> RemainingBase { get; }
 
 		/// <summary>When the order was created</summary>
@@ -77,23 +82,51 @@ namespace CoinFlip
 		/// <summary>The coin type being bought</summary>
 		public Coin CoinOut => TradeType == ETradeType.B2Q ? Pair.Quote : Pair.Base;
 
-		/// <summary>The input volume of the trade (in base or quote, depending on 'TradeType')</summary>
-		public Unit<decimal> VolumeIn => TradeType.VolumeIn(VolumeBase, PriceQ2B);
+		/// <summary>The input amount to trade (in base or quote, depending on 'TradeType')</summary>
+		public Unit<decimal> AmountIn => TradeType.AmountIn(AmountBase, PriceQ2B);
 
-		/// <summary>The remaining volume to be traded (in VolumeIn currency)</summary>
-		public Unit<decimal> Remaining => TradeType.VolumeIn(RemainingBase, PriceQ2B);
+		/// <summary>The remaining amount to be traded (in AmountIn currency)</summary>
+		public Unit<decimal> Remaining => TradeType.AmountIn(RemainingBase, PriceQ2B);
+		public decimal RemainingPC => 100m * Math_.Div((decimal)RemainingBase, (decimal)AmountBase, 0m);
 
-		/// <summary>The output volume of the trade excluding commissions (in quote or base, depending on 'TradeType')</summary>
-		public Unit<decimal> VolumeOut => TradeType.VolumeOut(VolumeBase, PriceQ2B);
+		/// <summary>The output amount of the trade excluding commissions (in quote or base, depending on 'TradeType')</summary>
+		public Unit<decimal> AmountOut => TradeType.AmountOut(AmountBase, PriceQ2B);
 
-		/// <summary>The output volume of the trade including commissions (in quote or base, depending on 'TradeType')</summary>
-		public Unit<decimal> VolumeOutNett => VolumeOut - Commission;
+		/// <summary>The output amount of the trade including commissions (in quote or base, depending on 'TradeType')</summary>
+		public Unit<decimal> AmountOutNett => AmountOut - Commission;
 
-		/// <summary>The commission that would be charged on this trade (in the same currency as VolumeOut)</summary>
-		public Unit<decimal> Commission => Exchange.Fee * VolumeOut;
+		/// <summary>The commission that would be charged on this trade (in the same currency as AmountOut)</summary>
+		public Unit<decimal> Commission => Exchange.Fee * AmountOut;
+
+		/// <summary>Return the current live price of the pair associated with this order</summary>
+		public Unit<decimal>? LivePriceQ2B => Pair.SpotPrice(TradeType);
+
+		/// <summary>The price distance between the order price and the current spot price</summary>
+		public Unit<decimal>? DistanceQ2B
+		{
+			get
+			{
+				var spot_b2q = Pair.SpotPrice(ETradeType.B2Q);
+				var spot_q2b = Pair.SpotPrice(ETradeType.Q2B);
+				var dist =
+					TradeType == ETradeType.B2Q && spot_b2q != null ? (PriceQ2B - spot_b2q.Value) :
+					TradeType == ETradeType.Q2B && spot_q2b != null ? (spot_q2b.Value - PriceQ2B) :
+					(Unit<decimal>?)0m;
+
+				return dist;
+			}
+		}
+		public string DistanceQ2BDesc
+		{
+			get
+			{
+				var dist = DistanceQ2B;
+				return dist != null ? $"{dist:G8} ({Pair.OrderBookIndex(TradeType, PriceQ2B)})" : "---";
+			}
+		}
 
 		/// <summary>String description of the trade</summary>
-		public string Description => $"[Id:{OrderId}] {VolumeIn.ToString("G6", true)} → {VolumeOut.ToString("G6", true)} @ {PriceQ2B.ToString("G6", true)}";
+		public string Description => $"[Id:{OrderId}] {AmountIn.ToString("G6", true)} → {AmountOut.ToString("G6", true)} @ {PriceQ2B.ToString("G6", true)}";
 
 		/// <summary>Cancel this position</summary>
 		public async Task CancelOrder()

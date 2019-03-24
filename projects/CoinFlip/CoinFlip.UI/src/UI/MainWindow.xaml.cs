@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows;
+using System.Windows.Data;
 using CoinFlip.Settings;
 using Rylogic.Extn;
 using Rylogic.Gui.WPF;
@@ -76,11 +77,12 @@ namespace CoinFlip.UI
 			m_menu.Items.Add(m_dc.WindowsMenu());
 			#endregion
 
-			#region Dockables
 			m_dc.Add(new CandleChart(Model), EDockSite.Centre);
-			m_dc.Add(new GridCoins(Model), EDockSite.Left);
-			m_dc.Add(new GridExchanges(Model), EDockSite.Left, EDockSite.Bottom);
-			#endregion
+			m_dc.Add(new GridExchanges(Model), EDockSite.Left);
+			m_dc.Add(new GridCoins(Model), EDockSite.Left, EDockSite.Bottom);
+			m_dc.Add(new GridTradeOrders(Model), 0, EDockSite.Bottom);
+			m_dc.Add(new GridTradeHistory(Model), 1, EDockSite.Bottom);
+			m_dc.Add(new LogView(), 1, EDockSite.Centre);
 		}
 
 		/// <summary>Change the logged on user</summary>
@@ -94,14 +96,14 @@ namespace CoinFlip.UI
 			#if DEBUG
 			ui.Username = "Paul";
 			ui.Password = "UltraSecurePasswordWotIMade";
-			#endif
-
+			#else
 			// If log on fails, close the application
 			if (ui.ShowDialog() != true)
 			{
 				Close();
 				return;
 			}
+			#endif
 
 			// Create the user instance from the log-on details
 			Model.User = ui.User;

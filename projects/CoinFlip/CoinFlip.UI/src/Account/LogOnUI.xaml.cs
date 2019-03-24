@@ -34,14 +34,22 @@ namespace CoinFlip.UI
 		public string Username
 		{
 			get { return m_tb_username.Text; }
-			set { m_tb_username.Text = value; }
+			set
+			{
+				m_tb_username.Text = value;
+				UpdateUI();
+			}
 		}
 
 		/// <summary></summary>
 		public string Password
 		{
 			get { return m_tb_password.Password; }
-			set { m_tb_password.Password = value; }
+			set
+			{
+				m_tb_password.Password = value;
+				UpdateUI();
+			}
 		}
 
 		/// <summary></summary>
@@ -51,7 +59,7 @@ namespace CoinFlip.UI
 		private void UpdateUI()
 		{
 			User = new User(Username, Password);
-			var result = User.CheckKeys();
+			var result = Password.Length != 0 ? User.CheckKeys() : User.EResult.BadPassword;
 			switch (result)
 			{
 			default: throw new Exception($"Unknown APIKeys result: {result}");

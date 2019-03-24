@@ -15,7 +15,7 @@ using Rylogic.Utility;
 
 namespace CoinFlip.UI
 {
-	public partial class CandleChart : UserControl, IDockable, IDisposable
+	public partial class CandleChart : Grid, IDockable, IDisposable
 	{
 		public CandleChart(Model model)
 		{
@@ -28,6 +28,7 @@ namespace CoinFlip.UI
 			GfxAsk = new GfxObjects.SpotPrice(SettingsData.Settings.Chart.AskColour);
 			GfxBid = new GfxObjects.SpotPrice(SettingsData.Settings.Chart.BidColour);
 			GfxUpdatingText = new GfxObjects.UpdatingText();
+
 			DataContext = this;
 		}
 		public void Dispose()
@@ -39,7 +40,6 @@ namespace CoinFlip.UI
 			Chart = null;
 			Model = null;
 			DockControl = null;
-			Util.Dispose(Chart);
 		}
 
 		/// <summary>Logic</summary>
@@ -114,12 +114,14 @@ namespace CoinFlip.UI
 					m_chart.AutoRanging -= HandleAutoRanging;
 					m_chart.YAxis.TickText = m_chart.YAxis.DefaultTickText;
 					m_chart.XAxis.TickText = m_chart.XAxis.DefaultTickText;
+					Util.Dispose(ref m_chart);
 				}
 				m_chart = value;
 				if (m_chart != null)
 				{
 					// Customise the chart for candles
 					m_chart.Options.AntiAliasing = false;
+					m_chart.XAxis.Options.PixelsPerTick = 50.0;
 					m_chart.XAxis.Options.TickTextTemplate = "XX:XX\r\nXXX XX XXXX";
 					m_chart.YAxis.Options.TickTextTemplate = "X.XXXX";
 					m_chart.XAxis.TickText = HandleChartXAxisTickText;

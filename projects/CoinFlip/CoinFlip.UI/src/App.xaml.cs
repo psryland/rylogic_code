@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System.Diagnostics;
+using System.Windows;
 using CoinFlip.Settings;
 using Rylogic.Extn;
 using Rylogic.Gfx;

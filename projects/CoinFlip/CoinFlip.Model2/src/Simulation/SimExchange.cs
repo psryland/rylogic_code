@@ -236,7 +236,7 @@ namespace CoinFlip
 					// Try to fill 'position'.
 					// If 'his' is null, then the position can't be filled can remains unchanged
 					// If 'pos' is null, then the position is completely filled.
-					TryFillOrder(order.Pair, order.OrderId, order.TradeType, order.PriceQ2B, order.VolumeBase, order.RemainingBase, out var pos, out var his);
+					TryFillOrder(order.Pair, order.OrderId, order.TradeType, order.PriceQ2B, order.AmountBase, order.RemainingBase, out var pos, out var his);
 					if (his == null)
 						continue;
 
@@ -266,7 +266,7 @@ namespace CoinFlip
 					}
 
 					// Sanity check that the partial trade isn't gaining or losing volume
-					Debug.Assert(order.VolumeBase == (pos?.RemainingBase ?? 0m) + (his?.Trades.Values.Sum(x => x.VolumeBase) ?? 0m));
+					Debug.Assert(order.AmountBase == (pos?.RemainingBase ?? 0m) + (his?.Trades.Values.Sum(x => x.AmountBase) ?? 0m));
 				}
 
 				using (Orders.BatchChange())
@@ -326,11 +326,11 @@ namespace CoinFlip
 			// Validate the order
 			if (pair.Exchange != Exch)
 				throw new Exception($"SimExchange: Attempt to trade a pair not provided by this exchange");
-			if (m_bal[tt.CoinIn(pair)].Available < tt.VolumeIn(volume, price))
+			if (m_bal[tt.CoinIn(pair)].Available < tt.AmountIn(volume, price))
 				throw new Exception($"SimExchange: Submit trade failed. Insufficient balance\n{tt} Pair: {pair.Name}  Vol: {volume.ToString("G8",true)} @  {price.ToString("G8",true)}");
-			if (!pair.VolumeRangeBase.Contains(volume))
+			if (!pair.AmountRangeBase.Contains(volume))
 				throw new Exception($"SimExchange: Volume in base currency is out of range");
-			if (!pair.VolumeRangeQuote.Contains(price * volume))
+			if (!pair.AmountRangeQuote.Contains(price * volume))
 				throw new Exception($"SimExchange: Volume in quote currency is out of range");
 
 			// Stop the sim for 'RunToTrade' mode
@@ -381,13 +381,13 @@ namespace CoinFlip
 
 			// Consume orders
 			var filled = orders.Consume(pair, price, current_volume, out var remaining);
-			Debug.Assert(current_volume == remaining + filled.Sum(x => x.VolumeBase));
+			Debug.Assert(current_volume == remaining + filled.Sum(x => x.AmountBase));
 
 			// The order is partially or wholly filled...
 			pos = remaining != 0              ? new Order(Fund.Main, order_id, pair, tt, price, initial_volume, remaining, Model.UtcNow, Model.UtcNow) : null;
 			his = remaining != current_volume ? new OrderCompleted(order_id, tt, pair) : null;
 			foreach (var fill in filled)
-				his.Trades.Add(new TradeCompleted(order_id, ++m_history_id, pair, tt, fill.Price, fill.VolumeBase, Exch.Fee * fill.VolumeQuote, Model.UtcNow, Model.UtcNow));
+				his.Trades.Add(new TradeCompleted(order_id, ++m_history_id, pair, tt, fill.Price, fill.AmountBase, Exch.Fee * fill.AmountQuote, Model.UtcNow, Model.UtcNow));
 		}
 
 		/// <summary>Apply the implied changes to the current balance by the given order and completed order</summary>
@@ -400,12 +400,12 @@ namespace CoinFlip
 				{
 					{// Debt from CoinIn
 						var bal0 = m_bal[fill.CoinIn];
-						bal0.Update(Model.UtcNow, total: bal0.Total - fill.VolumeIn);
+						bal0.Update(Model.UtcNow, total: bal0.Total - fill.AmountIn);
 						coins.Add(fill.CoinIn);
 					}
 					{// Credit to CoinOut
 						var bal0 = m_bal[fill.CoinOut];
-						bal0.Update(Model.UtcNow, total: bal0.Total + fill.VolumeNett);
+						bal0.Update(Model.UtcNow, total: bal0.Total + fill.AmountNett);
 						coins.Add(fill.CoinOut);
 					}
 				}

@@ -2,17 +2,19 @@
 					xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 					xmlns:local="clr-namespace:CoinFlip.UI">
 
-	<!-- Label Styles -->
+	<!-- Label Styles 
 	<Style x:Key="LabelStyle" TargetType="Label">
 		<Setter Property="Foreground" Value="{StaticResource MenuTextBrush}"/>
 	</Style>
+	-->
 
-	<!-- Button Styles -->
+	<!-- Button Styles 
 	<Style x:Key="ButtonStyle" TargetType="Button">
 		<Setter Property="Foreground" Value="{StaticResource MenuTextBrush}"/>
 	</Style>
+	-->
 
-	<!-- Menu Styles -->
+	<!-- Menu Styles 
 	<Style TargetType="Menu">
 		<Setter Property="Background" Value="{StaticResource MenuBackgroundBrush}"/>
 		<Setter Property="Foreground" Value="{StaticResource MenuTextBrush}"/>
@@ -21,8 +23,9 @@
 		<Setter Property="Background" Value="{StaticResource MenuBackgroundBrush}"/>
 		<Setter Property="Foreground" Value="{StaticResource MenuTextBrush}"/>
 	</Style>
+	-->
 
-	<!-- ToolBar Styles -->
+	<!-- ToolBar Styles 
 	<Style x:Key="ToolBarTrayStyle" TargetType="ToolBarTray">
 		<Setter Property="Background" Value="{StaticResource ToolBarBackgroundBrush}"/>
 	</Style>
@@ -30,8 +33,9 @@
 		<Setter Property="Background" Value="{StaticResource ToolBarBackgroundBrush}"/>
 		<Setter Property="Foreground" Value="{StaticResource MenuTextBrush}"/>
 	</Style>
+	-->
 
-	<!-- MainWindow Styles -->
+	<!-- MainWindow Styles
 	<Style x:Key="MainWindow" TargetType="{x:Type Window}">
 		<Setter Property="Foreground" Value="{StaticResource ForegroundBrush}"/>
 		<Setter Property="Background" Value="{StaticResource BackgroundBrush}"/>
@@ -61,23 +65,17 @@
 									</DockPanel>
 								</Border>
 
-								<!-- Title bar separator-->
 								<Border Height="1" DockPanel.Dock="Top" Background="{DynamicResource MainWindowTitleBarSeparator}" />
 
-								<!-- Actual Window Content -->
 								<AdornerDecorator DockPanel.Dock="Bottom">
 									<ContentPresenter />
 								</AdornerDecorator>
 							</DockPanel>
 						</Border>
 					</Grid>
-					<ControlTemplate.Triggers>
-						<DataTrigger Binding="{Binding RelativeSource={RelativeSource Self}, Path=Maximized}" Value="False">
-							<Setter TargetName="MaximizeRestoreImage" Property="Source" Value="/MixModes.Synergy.Resources;component/Resources/Maximize.png" />
-						</DataTrigger>
-					</ControlTemplate.Triggers>
 				</ControlTemplate>
 			</Setter.Value>
 		</Setter>
 	</Style>
+	-->
 </ResourceDictionary>

@@ -53,7 +53,7 @@ namespace CoinFlip
 			{
 				if (Q2B[i].Price < q2b_price0)
 					throw new Exception("Q2B order book price is invalid");
-				if (Q2B[i].VolumeBase < q2b0)
+				if (Q2B[i].AmountBase < q2b0)
 					throw new Exception("Q2B order book volume is invalid");
 				if (i > 0 && Q2B[i-1].Price > Q2B[i].Price)
 					throw new Exception("Q2B order book prices are out of order");
@@ -64,7 +64,7 @@ namespace CoinFlip
 			{
 				if (B2Q[i].Price < b2q_price0)
 					throw new Exception("B2Q order book price is invalid");
-				if (B2Q[i].VolumeBase < b2q0)
+				if (B2Q[i].AmountBase < b2q0)
 					throw new Exception("B2Q order book volume is invalid");
 				if (i > 0 && B2Q[i-1].Price < B2Q[i].Price)
 					throw new Exception("B2Q order book prices are out of order");

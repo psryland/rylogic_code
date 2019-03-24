@@ -35,12 +35,12 @@ namespace CoinFlip
 				if (m_model == value) return;
 				if (m_model != null)
 				{
-					Exchanges = CollectionViewSource.GetDefaultView(new Exception[0]);
+					Exchanges = null;
 				}
 				m_model = value;
 				if (m_model != null)
 				{
-					Exchanges = CollectionViewSource.GetDefaultView(m_model.Exchanges);
+					Exchanges = new ListCollectionView(m_model.Exchanges);
 				}
 			}
 		}
@@ -52,22 +52,22 @@ namespace CoinFlip
 		/// <summary>The currently selected Exchange</summary>
 		public Exchange Exchange
 		{
-			get { return (Exchange)Exchanges?.CurrentItem; }
-			set { Exchanges.MoveCurrentTo(value); }
+			get => (Exchange)Exchanges?.CurrentItem;
+			set => Exchanges.MoveCurrentTo(value);
 		}
 
 		/// <summary>The currently selected trade pair</summary>
 		public TradePair Pair
 		{
-			get { return (TradePair)Pairs?.CurrentItem; }
-			set { Pairs.MoveCurrentTo(value); }
+			get => (TradePair)Pairs?.CurrentItem;
+			set => Pairs.MoveCurrentTo(value);
 		}
 
 		/// <summary>The currently selected time frame</summary>
 		public ETimeFrame TimeFrame
 		{
-			get { return TimeFrames?.CurrentItem is ETimeFrame tf ? tf : ETimeFrame.None; }
-			set { TimeFrames.MoveCurrentTo(value); }
+			get => TimeFrames?.CurrentItem is ETimeFrame tf ? tf : ETimeFrame.None;
+			set => TimeFrames.MoveCurrentTo(value);
 		}
 
 		/// <summary>The available exchanges</summary>
@@ -101,8 +101,8 @@ namespace CoinFlip
 
 					// Set the new list of pairs for the new exchange
 					var exch = (Exchange)m_exchanges.CurrentItem;
-					var pairs = new ObservableCollection<TradePair>(exch?.Pairs.Values ?? new TradePair[0]);
-					Pairs = CollectionViewSource.GetDefaultView(pairs);
+					var pairs = new ObservableCollection<TradePair>(exch?.Pairs ?? (IList<TradePair>)new TradePair[0]);
+					Pairs = new ListCollectionView(pairs);
 
 					// Try to select the same pair
 					var idx = pair != null ? pairs.IndexOf(x => x.Name == pair) : -1;
@@ -144,7 +144,7 @@ namespace CoinFlip
 
 					var pair = (TradePair)m_pairs.CurrentItem;
 					var tfs = new ObservableCollection<ETimeFrame>(pair?.CandleDataAvailable ?? new ETimeFrame[0]);
-					TimeFrames = CollectionViewSource.GetDefaultView(tfs);
+					TimeFrames = new ListCollectionView(tfs);
 
 					// Try to select the same timeframe
 					var idx = tf != ETimeFrame.None ? tfs.IndexOf(tf) : -1;

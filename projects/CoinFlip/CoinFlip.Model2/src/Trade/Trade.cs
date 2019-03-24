@@ -63,7 +63,7 @@ namespace CoinFlip
 
 		/// <summary>Create a trade based on an existing position</summary>
 		public Trade(Order odr)
-			:this(odr.FundId, odr.TradeType, odr.Pair, odr.PriceQ2B, odr.VolumeBase)
+			:this(odr.FundId, odr.TradeType, odr.Pair, odr.PriceQ2B, odr.AmountBase)
 		{}
 
 		/// <summary>Copy constructor</summary>
@@ -96,7 +96,7 @@ namespace CoinFlip
 		{
 			get
 			{
-				var market_price_q2b = Pair.MakeTrade(FundId, TradeType, VolumeIn).PriceQ2B;
+				var market_price_q2b = Pair.MakeTrade(FundId, TradeType, AmountIn).PriceQ2B;
 				if (TradeType == ETradeType.Q2B)
 				{
 					return
@@ -119,23 +119,23 @@ namespace CoinFlip
 		public Unit<decimal> VolumeBase { get; set; }
 
 		/// <summary>The volume being sold</summary>
-		public Unit<decimal> VolumeIn
+		public Unit<decimal> AmountIn
 		{
-			get { return TradeType.VolumeIn(VolumeBase, PriceQ2B); }
+			get { return TradeType.AmountIn(VolumeBase, PriceQ2B); }
 			set { VolumeBase = TradeType.VolumeBase(PriceQ2B, volume_in:value); }
 		}
 
 		/// <summary>The volume being bought</summary>
-		public Unit<decimal> VolumeOut
+		public Unit<decimal> AmountOut
 		{
-			get { return TradeType.VolumeOut(VolumeBase, PriceQ2B); }
+			get { return TradeType.AmountOut(VolumeBase, PriceQ2B); }
 			set { VolumeBase = TradeType.VolumeBase(PriceQ2B, volume_out:value); }
 		}
 
 		/// <summary>The volume being bought after commissions</summary>
 		public Unit<decimal> VolumeNett
 		{
-			get { return VolumeOut * (1 - Pair.Fee); }
+			get { return AmountOut * (1 - Pair.Fee); }
 		}
 
 		/// <summary>The price to make the trade at (Quote/Base)</summary>
@@ -163,7 +163,7 @@ namespace CoinFlip
 		/// <summary>The effective price of this trade after fees (in CoinOut/CoinIn)</summary>
 		public Unit<decimal> PriceNett
 		{
-			get { return VolumeNett / VolumeIn; }
+			get { return VolumeNett / AmountIn; }
 		}
 
 		/// <summary>The position of this trade in the order book for the trade type</summary>
@@ -182,13 +182,13 @@ namespace CoinFlip
 		public RangeF<Unit<decimal>> PriceRange => Pair.PriceRange;
 
 		/// <summary>The allowable range on input trade volumes</summary>
-		public RangeF<Unit<decimal>> VolumeRangeIn => Pair.VolumeRangeIn(TradeType);
+		public RangeF<Unit<decimal>> VolumeRangeIn => Pair.AmountRangeIn(TradeType);
 
 		/// <summary>The allowable range on output trade volumes</summary>
-		public RangeF<Unit<decimal>> VolumeRangeOut => Pair.VolumeRangeOut(TradeType);
+		public RangeF<Unit<decimal>> VolumeRangeOut => Pair.AmountRangeOut(TradeType);
 
 		/// <summary>String description of the trade</summary>
-		public string Description => $"{VolumeIn.ToString("G6", true)} → {VolumeOut.ToString("G6", true)} @ {PriceQ2B.ToString("G6", true)}";
+		public string Description => $"{AmountIn.ToString("G6", true)} → {AmountOut.ToString("G6", true)} @ {PriceQ2B.ToString("G6", true)}";
 
 		/// <summary>Check whether this trade is an allowed trade</summary>
 		public EValidation Validate(Guid? reserved_balance_in = null, Unit<decimal>? additional_balance_in = null)
@@ -204,13 +204,13 @@ namespace CoinFlip
 			var result = EValidation.Valid;
 
 			// Check the trade volumes
-			if (VolumeIn <= 0)
+			if (AmountIn <= 0)
 				result |= EValidation.VolumeInIsInvalid;
-			else if (!Pair.VolumeRangeIn(TradeType).Contains(VolumeIn))
+			else if (!Pair.AmountRangeIn(TradeType).Contains(AmountIn))
 				result |= EValidation.VolumeInOutOfRange;
-			if (VolumeOut <= 0)
+			if (AmountOut <= 0)
 				result |= EValidation.VolumeOutIsInvalid;
-			else if (!Pair.VolumeRangeOut(TradeType).Contains(VolumeOut))
+			else if (!Pair.AmountRangeOut(TradeType).Contains(AmountOut))
 				result |= EValidation.VolumeOutOutOfRange;
 
 			// Check the price limits.
@@ -225,7 +225,7 @@ namespace CoinFlip
 			if (additional_balance_in != null) available += additional_balance_in.Value;
 
 			// Check for sufficient balance
-			if (VolumeIn > available)
+			if (AmountIn > available)
 				result |= EValidation.InsufficientBalance;
 
 			// Allowing for fees:
@@ -247,7 +247,7 @@ namespace CoinFlip
 		/// <summary>Create this trade on the Exchange that owns 'Pair'</summary>
 		public async Task<OrderResult> CreateOrder()
 		{
-			return await Pair.Exchange.CreateOrder(FundId, TradeType, Pair, VolumeIn, Price);
+			return await Pair.Exchange.CreateOrder(FundId, TradeType, Pair, AmountIn, Price);
 		}
 
 		#region Equals

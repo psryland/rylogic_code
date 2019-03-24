@@ -52,10 +52,15 @@ namespace CoinFlip
 					return;
 
 				// Add the balances for 'coin'
-				if (balances == null)
-					base[coin] = value;
-				else
+				if (balances != null)
+				{
 					balances.Update(value);
+					ResetItem(balances);
+				}
+				else
+				{
+					base[coin] = value;
+				}
 
 				// Broadcast that the balance of this coin has changed
 				coin.Meta.NotifyBalanceChanged();

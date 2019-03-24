@@ -23,7 +23,7 @@ namespace CoinFlip
 			Pair = his.Pair.Name;
 			TradeType = his.TradeType.ToString();
 			PriceQ2B = (double)(decimal)his.PriceQ2B;
-			AmountBase = (double)(decimal)his.VolumeBase;
+			AmountBase = (double)(decimal)his.AmountBase;
 			CommissionQuote = (double)(decimal)his.CommissionQuote;
 		}
 

@@ -491,7 +491,7 @@ namespace CoinFlip
 			}
 
 			// Convert the amount to base currency and the price to quote/base
-			var amount = tt.VolumeIn(amount_, price_);
+			var amount = tt.AmountIn(amount_, price_);
 			var price = tt.PriceQ2B(price_);
 			var now = Model.UtcNow;
 
@@ -501,7 +501,7 @@ namespace CoinFlip
 			// If we're live trading, remove the balance until the next balance update is received.
 			// If not live trading, hold the balance until the fake order is removed (hold is updated below)
 			var bal = tt.CoinIn(pair).Balances[fund_id];
-			var hold = tt.VolumeIn(amount, price);
+			var hold = tt.AmountIn(amount, price);
 			var hold_id = bal.Hold(hold);
 
 			// Fake positions when not back testing and not live trading.
@@ -628,10 +628,19 @@ namespace CoinFlip
 		public async Task UpdatePairs() // Worker thread context
 		{
 			// Allow update pairs in back testing mode as well
-			var coi = SettingsData.Settings.Coins.Where(x => x.OfInterest).Select(x => x.Symbol).ToHashSet();
-			await UpdatePairsInternal(coi);
+
+			// Create a set of coins to find pairs for. Include any intermediate
+			// coins needed to find the live price of coins as well
+			var coins = new HashSet<string>();
+			foreach (var coin in SettingsData.Settings.Coins)
+			{
+				coins.Add(coin.Symbol);
+				coins.AddRange(coin.LivePriceSymbolsArray);
+			}
+
+			await UpdatePairsInternal(coins);
 		}
-		protected virtual Task UpdatePairsInternal(HashSet<string> coins_of_interest)
+		protected virtual Task UpdatePairsInternal(HashSet<string> coins)
 		{
 			// This method should wait for server responses in worker threads,
 			// collect data in local buffers, then use 'RunOnMainThread' to copy

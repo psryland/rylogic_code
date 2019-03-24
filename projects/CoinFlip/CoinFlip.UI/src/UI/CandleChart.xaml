@@ -1,4 +1,4 @@
-﻿<UserControl
+﻿<Grid
 	x:Class="CoinFlip.UI.CandleChart"
 	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -10,70 +10,69 @@
 	d:DesignWidth="500"
 	d:DesignHeight="350"
 	>
-	<Grid>
-		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto"/>
-			<RowDefinition Height="*"/>
-		</Grid.RowDefinitions>
+	<Grid.RowDefinitions>
+		<RowDefinition Height="Auto"/>
+		<RowDefinition Height="*"/>
+	</Grid.RowDefinitions>
 
-		<!-- Tool bar -->
-		<StackPanel
-			Name="m_toolbar"
-			Grid.Row="0"
-			Orientation="Horizontal"
-			DataContext="{Binding ChartSelector}"
-			>
-			<!-- Exchange -->
-			<TextBlock
-				Text="Exchange:"
-				VerticalAlignment="Center"
-				Margin="2"
-				/>
-			<ComboBox
-				ItemsSource="{Binding Exchanges}"
-				SelectedItem="{Binding Exchange, Mode=TwoWay}"
-				ToolTip="Select the currency pair to display"
-				VerticalAlignment="Center"
-				MinWidth="80"
-				Margin="2"
-				/>
-
-			<!-- Pair -->
-			<TextBlock
-				Text="Pair:"
-				VerticalAlignment="Center"
-				Margin="2"
-				/>
-			<ComboBox
-				ItemsSource="{Binding Pairs}"
-				SelectedItem="{Binding Pair, Mode=TwoWay}"
-				ToolTip="Select the currency pair to display"
-				VerticalAlignment="Center"
-				MinWidth="80"
-				Margin="2"
-				/>
-
-			<!-- Time frame -->
-			<TextBlock
-				Text="Time Frame:"
-				VerticalAlignment="Center"
-				/>
-			<ComboBox
-				ItemsSource="{Binding TimeFrames}"
-				SelectedItem="{Binding TimeFrame, Mode=TwoWay}"
-				ToolTip="Select the time frame to display"
-				VerticalAlignment="Center"
-				MinWidth="80"
-				Margin="2"
-				/>
-		</StackPanel>
-		
-		<!-- Candle Chart -->
-		<gui2:ChartControl
-			x:Name="m_chart_control"
-			Grid.Row="1"
-			ChartBackground="White"
-			Margin="4"
+	<!-- Tool bar -->
+	<StackPanel
+		Name="m_toolbar"
+		Grid.Row="0"
+		Orientation="Horizontal"
+		DataContext="{Binding ChartSelector}"
+		>
+		<!-- Exchange -->
+		<TextBlock
+			Text="Exchange:"
+			VerticalAlignment="Center"
+			Margin="2"
 			/>
-	</Grid>
-</UserControl>
+		<ComboBox
+			ItemsSource="{Binding Exchanges}"
+			SelectedItem="{Binding Exchange, Mode=TwoWay}"
+			ToolTip="Select the currency pair to display"
+			VerticalAlignment="Center"
+			MinWidth="80"
+			Margin="2"
+			/>
+
+		<!-- Pair -->
+		<TextBlock
+			Text="Pair:"
+			VerticalAlignment="Center"
+			Margin="2"
+			/>
+		<ComboBox
+			ItemsSource="{Binding Pairs}"
+			SelectedItem="{Binding Pair, Mode=TwoWay}"
+			ToolTip="Select the currency pair to display"
+			VerticalAlignment="Center"
+			MinWidth="80"
+			Margin="2"
+			/>
+
+		<!-- Time frame -->
+		<TextBlock
+			Text="Time Frame:"
+			VerticalAlignment="Center"
+			/>
+		<ComboBox
+			ItemsSource="{Binding TimeFrames}"
+			SelectedItem="{Binding TimeFrame, Mode=TwoWay}"
+			ToolTip="Select the time frame to display"
+			VerticalAlignment="Center"
+			MinWidth="80"
+			Margin="2"
+			/>
+	</StackPanel>
+
+	<!-- Candle Chart -->
+	<gui2:ChartControl
+		x:Name="m_chart_control"
+		Grid.Row="1"
+		ChartBackground="White"
+		Margin="4"
+		/>
+</Grid>
+	

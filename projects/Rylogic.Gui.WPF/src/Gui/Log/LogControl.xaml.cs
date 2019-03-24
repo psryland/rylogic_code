@@ -57,7 +57,7 @@ namespace Rylogic.Gui.WPF
 			PopOutOnNewMessages = true;
 
 			// Line wrap default
-			LineWrap = false;
+			LineWrap = true;
 
 			// A buffer of the log entries.
 			// This is populated by calls to AddMessage or from the log file.
@@ -372,15 +372,15 @@ namespace Rylogic.Gui.WPF
 			if (names != null && names.Length != 0)
 			{
 				// Fill weights per column type
-				var fill_weights = new Dictionary<string, double>
+				var fill_weights = new Dictionary<string, DataGridLength>
 				{
-					{ColumnNames.Tag        , 0.30},
-					{ColumnNames.Level      , 0.30},
-					{ColumnNames.Timestamp  , 0.60},
-					{ColumnNames.Message    , 5.00},
-					{ColumnNames.File       , 2.00},
-					{ColumnNames.Line       , 0.02},
-					{ColumnNames.Occurrences, 0.02},
+					{ColumnNames.Tag        , new DataGridLength(1.00, DataGridLengthUnitType.SizeToCells)},
+					{ColumnNames.Level      , new DataGridLength(1.00, DataGridLengthUnitType.SizeToCells)},
+					{ColumnNames.Timestamp  , new DataGridLength(1.00, DataGridLengthUnitType.SizeToCells)},
+					{ColumnNames.Message    , new DataGridLength(3.00, LineWrap ? DataGridLengthUnitType.Star : DataGridLengthUnitType.Auto)},
+					{ColumnNames.File       , new DataGridLength(2.00, LineWrap ? DataGridLengthUnitType.Star : DataGridLengthUnitType.Auto)},
+					{ColumnNames.Line       , new DataGridLength(1.00, DataGridLengthUnitType.SizeToCells)},
+					{ColumnNames.Occurrences, new DataGridLength(1.00, DataGridLengthUnitType.SizeToCells)},
 				};
 
 				// Create a column for each capture group in the pattern
@@ -388,15 +388,12 @@ namespace Rylogic.Gui.WPF
 				m_view.HeadersVisibility = DataGridHeadersVisibility.Column;
 				for (int i = 0; i != names.Length; ++i)
 				{
-					// The fill weight for this column
-					var fill = fill_weights.TryGetValue(names[i], out var fw) ? fw : 1.0;
-
-					var col = m_view.Columns.Add2(new DataGridTextColumn
+					m_view.Columns.Add2(new DataGridTextColumn
 					{
 						Header = names[i],
 						Binding = new Binding(names[i]) { Mode = BindingMode.OneWay },
 						ElementStyle = element_style,
-						Width = LineWrap ? new DataGridLength(fill, DataGridLengthUnitType.Star) : new DataGridLength(fill, DataGridLengthUnitType.Auto),
+						Width = fill_weights.TryGetValue(names[i], out var fw) ? fw : new DataGridLength()
 					});
 				}
 			}
@@ -404,12 +401,14 @@ namespace Rylogic.Gui.WPF
 			{
 				m_view.Columns.Clear();
 				m_view.HeadersVisibility = DataGridHeadersVisibility.None;
-				var col = m_view.Columns.Add2(new DataGridTextColumn
+				m_view.Columns.Add2(new DataGridTextColumn
 				{
 					Header = ColumnNames.Message,
 					Binding = new Binding(nameof(LogEntry.Text)) { Mode = BindingMode.OneWay },
 					ElementStyle = element_style,
-					Width = LineWrap ? new DataGridLength(1.0, DataGridLengthUnitType.Star) : new DataGridLength(1.0, DataGridLengthUnitType.Auto),
+					Width = LineWrap
+						? new DataGridLength(1.0, DataGridLengthUnitType.Star)
+						: new DataGridLength(1.0, DataGridLengthUnitType.Auto),
 				});
 			}
 		}

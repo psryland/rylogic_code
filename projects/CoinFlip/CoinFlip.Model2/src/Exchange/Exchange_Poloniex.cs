@@ -202,7 +202,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Update this exchange's set of trading pairs</summary>
-		protected async override Task UpdatePairsInternal(HashSet<string> coi) // Worker thread context
+		protected async override Task UpdatePairsInternal(HashSet<string> coins) // Worker thread context
 		{
 			try
 			{
@@ -219,7 +219,7 @@ namespace CoinFlip
 					var pairs = new HashSet<CurrencyPair>();
 
 					// Create the trade pairs and associated coins
-					foreach (var p in msg.Where(x => coi.Contains(x.Value.Pair.Base) || coi.Contains(x.Value.Pair.Quote)))
+					foreach (var p in msg.Where(x => coins.Contains(x.Value.Pair.Base) && coins.Contains(x.Value.Pair.Quote)))
 					{
 						// Poloniex gives pairs as "Quote_Base"
 						var base_ = Coins.GetOrAdd(p.Value.Pair.Base);
@@ -227,8 +227,8 @@ namespace CoinFlip
 
 						// Create the trade pair
 						var pair = new TradePair(base_, quote, this, p.Value.Id,
-							volume_range_base:new RangeF<Unit<decimal>>(0.0001m._(base_), 10000000m._(base_)),
-							volume_range_quote:new RangeF<Unit<decimal>>(0.0001m._(quote), 10000000m._(quote)),
+							amount_range_base:new RangeF<Unit<decimal>>(0.0001m._(base_), 10000000m._(base_)),
+							amount_range_quote:new RangeF<Unit<decimal>>(0.0001m._(quote), 10000000m._(quote)),
 							price_range:null);
 
 						// Add the trade pair.

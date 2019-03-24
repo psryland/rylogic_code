@@ -57,8 +57,7 @@ namespace CoinFlip
 
 				// Calculate the live price using the sequence of currencies in the meta data
 				var value = (Unit<decimal>?)amount._(coin);
-				var symbols = Meta.LivePriceSymbols.Split(new[]{','}, StringSplitOptions.RemoveEmptyEntries);
-				foreach (var sym in symbols)
+				foreach (var sym in Meta.LivePriceSymbolsArray)
 				{
 					// Skip degenerate conversions
 					if (sym == coin)
@@ -96,8 +95,7 @@ namespace CoinFlip
 			{
 				var coin = this;
 				var available = false;
-				var symbols = Meta.LivePriceSymbols.Split(new[]{','}, StringSplitOptions.RemoveEmptyEntries);
-				foreach (var sym in symbols)
+				foreach (var sym in Meta.LivePriceSymbolsArray)
 				{
 					if (sym == coin)
 					{
