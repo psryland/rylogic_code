@@ -121,6 +121,8 @@ namespace Rylogic.Gui.WPF
 					case nameof(OptionsData.ShowAxes):
 						m_xaxis_panel.SignalUpdateGraphics();
 						m_yaxis_panel.SignalUpdateGraphics();
+						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(XAxisLabelVisibility)));
+						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(YAxisLabelVisibility)));
 						break;
 					case nameof(OptionsData.AntiAliasing):
 						Scene.MultiSampling = Options.AntiAliasing ? 4 : 1;
@@ -881,6 +883,10 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 		private bool m_show_cross_hair;
+
+		/// <summary>Binding helpers</summary>
+		public Visibility XAxisLabelVisibility => Options.ShowAxes && XAxis.Label.HasValue() ? Visibility.Visible : Visibility.Collapsed;
+		public Visibility YAxisLabelVisibility => Options.ShowAxes && YAxis.Label.HasValue() ? Visibility.Visible : Visibility.Collapsed;
 
 		/// <summary>Chart graphics</summary>
 		private ChartTools Tools

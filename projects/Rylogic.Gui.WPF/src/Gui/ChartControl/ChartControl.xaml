@@ -120,7 +120,7 @@
 		Grid.Row="5"
 		Grid.Column="2"
 		Text="{Binding XAxis.Label}"
-		Visibility="{Binding Options.ShowAxes, Converter={gui2:BoolToVisible}}"
+		Visibility="{Binding XAxisLabelVisibility}"
 		HorizontalAlignment="Center"
 		/>
 	<local:AxisPanel
@@ -140,7 +140,7 @@
 		Grid.Row="3"
 		Grid.Column="0"
 		Text="{Binding YAxis.Label}"
-		Visibility="{Binding Options.ShowAxes, Converter={gui2:BoolToVisible}}"
+		Visibility="{Binding YAxisLabelVisibility}"
 		VerticalAlignment="Center"
 		RenderTransformOrigin="0.0,0.0"
 		LayoutTransform="{StaticResource YAxisTransform}"
