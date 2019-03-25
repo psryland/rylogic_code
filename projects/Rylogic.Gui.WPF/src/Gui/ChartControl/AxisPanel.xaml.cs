@@ -17,7 +17,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 
 		static AxisPanel()
 		{
-			SideProperty = Gui_.DPRegister<AxisPanel>(nameof(Side));
+			AxisProperty = Gui_.DPRegister<AxisPanel>(nameof(Axis));
 			FontFamilyProperty = Gui_.DPRegister<AxisPanel>(nameof(FontFamily), def: new FontFamily("tahoma"));
 			FontStyleProperty = Gui_.DPRegister<AxisPanel>(nameof(FontStyle), def: FontStyles.Normal);
 			FontWeightProperty = Gui_.DPRegister<AxisPanel>(nameof(FontWeight), def: FontWeights.Normal);
@@ -31,8 +31,6 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			// Commands
 			ToggleScrollLock = Command.Create(this, () => Axis.AllowScroll = !Axis.AllowScroll);
 			ToggleZoomLock = Command.Create(this, () => Axis.AllowZoom = !Axis.AllowZoom);
-
-			DataContext = this;
 		}
 		protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
 		{
@@ -43,14 +41,6 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		{
 			Axis = null;
 		}
-
-		/// <summary>The side of the chart that this axis is positioned</summary>
-		public Dock Side
-		{
-			get { return (Dock)GetValue(SideProperty); }
-			set { SetValue(SideProperty, value); }
-		}
-		private static DependencyProperty SideProperty;
 
 		/// <summary>Font for tick marks</summary>
 		public FontFamily FontFamily
@@ -101,7 +91,6 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			get { return (ChartControl.RangeData.Axis)GetValue(AxisProperty); }
 			set { SetValue(AxisProperty, value); }
 		}
-		public static readonly DependencyProperty AxisProperty = Gui_.DPRegister<AxisPanel>(nameof(Axis));
 		private void Axis_Changed(ChartControl.RangeData.Axis old_value, ChartControl.RangeData.Axis new_value)
 		{
 			if (old_value != null)
@@ -118,10 +107,11 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			}
 
 			// Invalidate cached values
-			m_axis_size = null;
+			AxisSize = 0;
 
-			// Notify options changed
+			// Notify properties changed
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Options)));
+			UpdateGraphics();
 
 			// Handlers
 			void HandleMoved(object sender, EventArgs e)
@@ -134,24 +124,29 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			{
 				switch (e.PropertyName)
 				{
+				case nameof(ChartControl.OptionsData.Axis.Side):
+					AxisSize = 0;
+					UpdateGraphics();
+					break;
 				case nameof(ChartControl.OptionsData.Axis.AxisColour):
 				case nameof(ChartControl.OptionsData.Axis.AxisThickness):
 					UpdateGraphics();
 					break;
 				case nameof(ChartControl.OptionsData.Axis.DrawTickLabels):
 				case nameof(ChartControl.OptionsData.Axis.DrawTickMarks):
-					m_axis_size = null;
+					AxisSize = 0;
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AxisSize)));
 					UpdateGraphics();
 					break;
 				case nameof(ChartControl.OptionsData.Axis.TickTextTemplate):
-					m_axis_size = null;
+					AxisSize = 0;
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AxisSize)));
 					UpdateGraphics();
 					break;
 				}
 			}
 		}
+		public static readonly DependencyProperty AxisProperty;
 
 		/// <summary>The axis options</summary>
 		public ChartControl.OptionsData.Axis Options => Axis?.Options ?? new ChartControl.OptionsData.Axis();
@@ -177,12 +172,17 @@ namespace Rylogic.Gui.WPF.ChartDetail
 						measure.Typeface(Typeface, FontSize);
 						measure.Measure(Size_.Infinity);
 						m_axis_size +=
-							Side == Dock.Left || Side == Dock.Right ? measure.DesiredSize.Width :
-							Side == Dock.Top || Side == Dock.Bottom ? measure.DesiredSize.Height :
+							Options.Side == Dock.Left || Options.Side == Dock.Right ? measure.DesiredSize.Width :
+							Options.Side == Dock.Top || Options.Side == Dock.Bottom ? measure.DesiredSize.Height :
 							0;
 					}
 				}
 				return m_axis_size.Value;
+			}
+			private set
+			{
+				m_axis_size = null;
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AxisSize)));
 			}
 		}
 		private double? m_axis_size;
@@ -200,10 +200,10 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			// Add a line for the Chart axis
 			var axis_line = Children.Add2(new Line());
 			axis_line.Stroke = new SolidColorBrush(Options.AxisColour.ToMediaColor());
-			axis_line.StrokeThickness = Options.AxisThickness;;
+			axis_line.StrokeThickness = Options.AxisThickness;
 
 			var bsh = new SolidColorBrush(Options.TickColour.ToMediaColor());
-			switch (Side)
+			switch (Options.Side)
 			{
 			case Dock.Left: // Left-side Y-Axis
 				{
@@ -286,7 +286,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 							var lbl = Children.Add2(new TextBlock { Text = s, Foreground = bsh });
 							lbl.Typeface(Typeface, FontSize);
 							lbl.Measure(Size_.Infinity);
-							SetLeft(lbl, X + Options.TickLength);
+							SetLeft(lbl, X + Options.TickLength + 1);
 							SetTop(lbl, Y - lbl.DesiredSize.Height / 2);
 						}
 					}
@@ -307,7 +307,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 						var X = x * ActualWidth / Axis.Span;
 						if (Options.DrawTickMarks)
 						{
-							Children.Add(new Line { Stroke = bsh, X1 = X, Y1 = Y, X2 = X, Y2 = Y + Options.TickLength });
+							Children.Add(new Line { Stroke = bsh, X1 = X, Y1 = Y, X2 = X, Y2 = Y - Options.TickLength });
 						}
 						if (Options.DrawTickLabels)
 						{
@@ -316,7 +316,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 							lbl.Typeface(Typeface, FontSize);
 							lbl.Measure(Size_.Infinity);
 							SetLeft(lbl, X - lbl.DesiredSize.Width / 2);
-							SetBottom(lbl, Y - Options.TickLength);
+							SetTop(lbl, Y - Options.TickLength - lbl.DesiredSize.Height);
 						}
 					}
 					break;

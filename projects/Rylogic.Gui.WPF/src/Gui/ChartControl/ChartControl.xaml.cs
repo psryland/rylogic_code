@@ -47,9 +47,9 @@ namespace Rylogic.Gui.WPF
 
 			try
 			{
-				Options = options;
-				Title = title;
 				View3d = View3d.Create();
+				Title = title;
+				Options = options;
 				Range = new RangeData(this);
 				BaseRangeX = new RangeF(0.0, 1.0);
 				BaseRangeY = new RangeF(0.0, 1.0);
@@ -57,7 +57,7 @@ namespace Rylogic.Gui.WPF
 				Elements = new ElementCollection(this);
 				Selected = new SelectedCollection(this);
 				Hovered = new HoveredCollection(this);
-				Tools = new ChartTools(this, Options);
+				Tools = new ChartTools(this, options);
 
 				AllowEditing = false;
 				AllowSelection = false;
@@ -94,7 +94,9 @@ namespace Rylogic.Gui.WPF
 				if (m_options == value) return;
 				if (m_options != null)
 				{
-					m_options.PropertyChanged -= HandleRdrOptionsChanged;
+					m_options.XAxis.PropertyChanged -= HandleAxisOptionsChanged;
+					m_options.YAxis.PropertyChanged -= HandleAxisOptionsChanged;
+					m_options.PropertyChanged -= HandleOptionsChanged;
 				}
 				m_options = value;
 				if (m_options != null)
@@ -105,11 +107,14 @@ namespace Rylogic.Gui.WPF
 					Window.CullMode = Options.CullMode;
 					Window.BackgroundColour = Options.BackgroundColour;
 					Scene.MultiSampling = Options.AntiAliasing ? 4 : 1;
+					PositionAxisPanels();
 
-					m_options.PropertyChanged += HandleRdrOptionsChanged;
+					m_options.PropertyChanged += HandleOptionsChanged;
+					m_options.XAxis.PropertyChanged += HandleAxisOptionsChanged;
+					m_options.YAxis.PropertyChanged += HandleAxisOptionsChanged;
 				}
 
-				void HandleRdrOptionsChanged(object sender, PropertyChangedEventArgs e)
+				void HandleOptionsChanged(object sender, PropertyChangedEventArgs e)
 				{
 					switch (e.PropertyName)
 					{
@@ -134,6 +139,17 @@ namespace Rylogic.Gui.WPF
 						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ChartBackground)));
 						Scene.Invalidate();
 						break;
+					}
+				}
+				void HandleAxisOptionsChanged(object sender, PropertyChangedEventArgs e)
+				{
+					switch (e.PropertyName)
+					{
+					case nameof(OptionsData.Axis.Side):
+						{
+							PositionAxisPanels();
+							break;
+						}
 					}
 				}
 			}
@@ -644,7 +660,7 @@ namespace Rylogic.Gui.WPF
 		private Rect YAxisBounds => Gui_.FindVisualChild<AxisPanel>(this, x => x.Axis == YAxis)?.RenderArea(this) ?? Rect_.Zero;
 
 		/// <summary>The client space area of the chart title</summary>
-		private Rect TitleBounds => m_lbl_title.RenderArea(this);
+		private Rect TitleBounds => m_title_label.RenderArea(this);
 
 		/// <summary>Per button current mouse operation</summary>
 		public MouseOps MouseOperations
@@ -750,6 +766,19 @@ namespace Rylogic.Gui.WPF
 			}
 
 			InvalidateArrange();
+		}
+
+		/// <summary>Position the axis panels based on their 'Side' values</summary>
+		private void PositionAxisPanels()
+		{
+			{// XAxis
+				SetRow(m_xaxis_label, Options.XAxis.Side == Dock.Top ? 1 : 5);
+				SetRow(m_xaxis_panel, Options.XAxis.Side == Dock.Top ? 2 : 4);
+			}
+			{// YAxis
+				SetColumn(m_yaxis_label, Options.YAxis.Side == Dock.Left ? 0 : 4);
+				SetColumn(m_yaxis_panel, Options.YAxis.Side == Dock.Left ? 1 : 3);
+			}
 		}
 
 		/// <summary>A tool tip to display the mouse location value</summary>

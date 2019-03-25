@@ -34,6 +34,8 @@ namespace TestWPF
 			m_chart.Title = "My Chart Title";
 			m_chart.XAxis.Label = "My X Axis";
 			m_chart.YAxis.Label = "My Y Axis";
+			//m_chart.XAxis.Options.Side = Dock.Top;
+			//m_chart.YAxis.Options.Side = Dock.Right;
 
 			m_chart.Options.Orthographic = true;
 

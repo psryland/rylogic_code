@@ -36,7 +36,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		}
 
 		/// <summary>The containing chart control</summary>
-		private ChartControl Chart => Gui_.FindVisualParent<ChartControl>(Parent);
+		private ChartControl Chart => (ChartControl)Parent;
 
 		/// <summary>Add an object to the scene</summary>
 		public void AddObject(View3d.Object obj)

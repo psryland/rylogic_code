@@ -149,6 +149,7 @@ namespace Rylogic.Gui.WPF
 			private ChartMovedEventArgs m_moved_args;
 
 			/// <summary>A axis on the chart (typically X or Y)</summary>
+			[DebuggerDisplay("{AxisType} [{Min} , {Max}]")]
 			public class Axis : IDisposable
 			{
 				private readonly ChartControl m_chart;
@@ -195,7 +196,7 @@ namespace Rylogic.Gui.WPF
 				public string Label
 				{
 					[DebuggerStepThrough]
-					get { return m_label ?? "X Axis"; }// string.Empty; }
+					get { return m_label ?? "X Axis"; }
 					set
 					{
 						if (m_label == value) return;
@@ -276,8 +277,8 @@ namespace Rylogic.Gui.WPF
 
 				/// <summary>The context menu associated with this axis</summary>
 				public ContextMenu ContextMenu =>
-					AxisType == EAxis.XAxis ? m_chart.m_xaxis.ContextMenu :
-					AxisType == EAxis.YAxis ? m_chart.m_yaxis.ContextMenu :
+					AxisType == EAxis.XAxis ? m_chart.m_xaxis_panel.ContextMenu :
+					AxisType == EAxis.YAxis ? m_chart.m_yaxis_panel.ContextMenu :
 					throw new Exception("Unknown axis type");
 
 				/// <summary>Convert the axis value to a string. "string TickText(double tick_value, double step_size)" </summary>

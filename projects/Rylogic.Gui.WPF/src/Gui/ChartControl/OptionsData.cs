@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Drawing;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Xml.Linq;
 using Rylogic.Extn;
@@ -35,8 +36,8 @@ namespace Rylogic.Gui.WPF
 				MouseCentredZoom = true;
 				ResetForward = -v4.ZAxis;
 				ResetUp = +v4.YAxis;
-				XAxis = new Axis();
-				YAxis = new Axis();
+				XAxis = new Axis { Side = Dock.Bottom };
+				YAxis = new Axis { Side = Dock.Left };
 				// Don't forget to add new members to the other constructors!
 			}
 			public OptionsData(OptionsData rhs)
@@ -289,6 +290,7 @@ namespace Rylogic.Gui.WPF
 
 				public Axis()
 				{
+					Side = Dock.Left;
 					AxisColour = Colour32.Black;
 					LabelColour = Colour32.Black;
 					GridColour = Colour32.WhiteSmoke;
@@ -305,6 +307,7 @@ namespace Rylogic.Gui.WPF
 				}
 				public Axis(Axis rhs)
 				{
+					Side = rhs.Side;
 					AxisColour = rhs.AxisColour;
 					LabelColour = rhs.LabelColour;
 					GridColour = rhs.GridColour;
@@ -321,6 +324,7 @@ namespace Rylogic.Gui.WPF
 				}
 				public Axis(XElement node) : this()
 				{
+					Side = node.Element(nameof(Side)).As(Side);
 					AxisColour = node.Element(nameof(AxisColour)).As(AxisColour);
 					LabelColour = node.Element(nameof(LabelColour)).As(LabelColour);
 					GridColour = node.Element(nameof(GridColour)).As(GridColour);
@@ -337,6 +341,7 @@ namespace Rylogic.Gui.WPF
 				}
 				public XElement ToXml(XElement node)
 				{
+					node.Add2(nameof(Side), Side, false);
 					node.Add2(nameof(AxisColour), AxisColour, false);
 					node.Add2(nameof(LabelColour), LabelColour, false);
 					node.Add2(nameof(GridColour), GridColour, false);
@@ -363,6 +368,14 @@ namespace Rylogic.Gui.WPF
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 				}
 				public int ChangeCounter { get; private set; }
+
+				/// <summary>The side of the chart that this axis is on</summary>
+				public Dock Side
+				{
+					get { return m_Side; }
+					set { SetProp(ref m_Side, value, nameof(Side)); }
+				}
+				private Dock m_Side;
 
 				/// <summary>The colour of the main axes</summary>
 				public Colour32 AxisColour

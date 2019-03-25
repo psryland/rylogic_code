@@ -331,9 +331,11 @@ namespace Rylogic.Gui.WPF
 						return;
 				
 					// Auto scroll to the last row
+					// Have to do this outside of the event handler or we get an exception
+					// about the "ItemsSource being inconsistent with the ItemsControl"
 					var auto_tail = LogEntriesView.CurrentPosition == LogEntries.Count - 2 || LogEntries.Count == 1;
 					if (auto_tail)
-						TailScroll();
+						Dispatcher.BeginInvoke(TailScroll);
 
 					// If a log entry was added, pop-out.
 					if (DockControl?.DockContainer != null)

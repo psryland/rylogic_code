@@ -14,6 +14,9 @@
 	>
 	<Grid.Resources>
 		<ResourceDictionary>
+			<TransformGroup x:Key="YAxisTransform">
+				<RotateTransform Angle="-90"/>
+			</TransformGroup>
 			<ContextMenu
 				x:Key="ChartCMenu"
 				DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
@@ -85,101 +88,83 @@
 		</ResourceDictionary>
 	</Grid.Resources>
 	<Grid.ColumnDefinitions>
-		<ColumnDefinition Width="Auto"/>
-		<ColumnDefinition Width="*"/>
-		<ColumnDefinition Width="Auto"/>
+		<ColumnDefinition Width="Auto"/> <!-- YAxis Label (Dock=Left) -->
+		<ColumnDefinition Width="Auto"/> <!-- YAxis Panel (Dock=Left) -->
+		<ColumnDefinition Width="*"/>    <!-- Chart area-->
+		<ColumnDefinition Width="Auto"/> <!-- YAxis Panel (Dock=Right) -->
+		<ColumnDefinition Width="Auto"/> <!-- YAxis Label (Dock=Right) -->
 	</Grid.ColumnDefinitions>
 	<Grid.RowDefinitions>
-		<RowDefinition Height="Auto"/>
-		<RowDefinition Height="*"/>
-		<RowDefinition Height="Auto"/>
+		<RowDefinition Height="Auto"/> <!-- Title -->
+		<RowDefinition Height="Auto"/> <!-- XAxis Label (Dock=Top) -->
+		<RowDefinition Height="Auto"/> <!-- XAxis Panel (Dock=Top) -->
+		<RowDefinition Height="*"/>    <!-- Chart area-->
+		<RowDefinition Height="Auto"/> <!-- XAxis Panel (Dock=Bottom) -->
+		<RowDefinition Height="Auto"/> <!-- XAxis Label (Dock=Bottom) -->
 	</Grid.RowDefinitions>
 
 	<!-- Title -->
 	<Label
-		x:Name="m_lbl_title"
+		x:Name="m_title_label"
 		Grid.Row="0"
-		Grid.Column="1"
+		Grid.Column="2"
 		Content="{Binding Title}"
 		Visibility="{Binding Title, Converter={gui2:NullToCollapsed}}"
 		HorizontalAlignment="Center"
 		FontWeight="Bold"
 		/>
 	
-	<!-- X Axis Bottom -->
-	<StackPanel
-		Orientation="Vertical"
-		Grid.Column="1"
-		Grid.Row="2"
+	<!-- X Axis -->
+	<TextBlock
+		x:Name="m_xaxis_label"
+		Grid.Row="5"
+		Grid.Column="2"
+		Text="{Binding XAxis.Label}"
 		Visibility="{Binding Options.ShowAxes, Converter={gui2:BoolToVisible}}"
-		>
-		
-		<!-- Tick marks and values -->
-		<local:AxisPanel
-			x:Name="m_xaxis"
-			Side="Bottom"
-			Axis="{Binding XAxis, ElementName=m_root}"
-			Height="{Binding AxisSize}"
-			Visibility="{Binding Axis, Converter={gui2:NullToCollapsed}}"
-			Background="{Binding Background, ElementName=m_root}"
-			ContextMenu="{StaticResource AxisCMenu}"
-			/>
+		HorizontalAlignment="Center"
+		/>
+	<local:AxisPanel
+		x:Name="m_xaxis_panel"
+		Grid.Row="4"
+		Grid.Column="2"
+		Axis="{Binding XAxis}"
+		Height="{Binding AxisSize, RelativeSource={RelativeSource Self}}"
+		Visibility="{Binding Options.ShowAxes, Converter={gui2:BoolToVisible}}"
+		Background="{Binding Background}"
+		ContextMenu="{StaticResource AxisCMenu}"
+		/>
 
-		<!-- Axis label -->
-		<TextBlock
-			Text="{Binding XAxis.Label}"
-			Visibility="{Binding XAxis.Label, Converter={gui2:NullToCollapsed}}"
-			HorizontalAlignment="Center"
-			/>
-	</StackPanel>
-	
-	<!-- Y Axis Left -->
-	<StackPanel
-		Orientation="Horizontal"
+	<!-- Y Axis -->
+	<TextBlock
+		x:Name="m_yaxis_label"
+		Grid.Row="3"
 		Grid.Column="0"
-		Grid.Row="1"
+		Text="{Binding YAxis.Label}"
 		Visibility="{Binding Options.ShowAxes, Converter={gui2:BoolToVisible}}"
-		>
-
-		<!-- Axis label -->
-		<TextBlock
-			Text="{Binding YAxis.Label}"
-			Visibility="{Binding YAxis.Label, Converter={gui2:NullToCollapsed}}"
-			VerticalAlignment="Center"
-			RenderTransformOrigin="0.0,0.0"
-			>
-			<TextBlock.LayoutTransform>
-				<TransformGroup>
-					<RotateTransform Angle="-90"/>
-				</TransformGroup>
-			</TextBlock.LayoutTransform>
-		</TextBlock>
-
-		<!-- Tick marks and values -->
-		<local:AxisPanel
-			x:Name="m_yaxis"
-			Side="Left"
-			Axis="{Binding YAxis, ElementName=m_root}"
-			Width="{Binding AxisSize}"
-			Visibility="{Binding Axis, Converter={gui2:NullToCollapsed}}"
-			Background="{Binding Background, ElementName=m_root}"
-			ContextMenu="{StaticResource AxisCMenu}"
-			/>
-
-	</StackPanel>
+		VerticalAlignment="Center"
+		RenderTransformOrigin="0.0,0.0"
+		LayoutTransform="{StaticResource YAxisTransform}"
+		/>
+	<local:AxisPanel
+		x:Name="m_yaxis_panel"
+		Grid.Row="3"
+		Grid.Column="1"
+		Axis="{Binding YAxis}"
+		Width="{Binding AxisSize, RelativeSource={RelativeSource Self}}"
+		Visibility="{Binding Options.ShowAxes, Converter={gui2:BoolToVisible}}"
+		Background="{Binding Background}"
+		ContextMenu="{StaticResource AxisCMenu}"
+		/>
 
 	<!-- Chart area -->
-	<Grid
-		Grid.Column="1"
-		Grid.Row="1"
-		>
-		<local:ChartPanel
-			x:Name="m_chart_panel"
-			ContextMenu="{StaticResource ChartCMenu}"
-			/>
-	</Grid>
+	<local:ChartPanel
+		x:Name="m_chart_panel"
+		Grid.Column="2"
+		Grid.Row="3"
+		ContextMenu="{StaticResource ChartCMenu}"
+		/>
 	
-	<!-- Show Value popup -->
+	<!-- Show Value pop up -->
 	<Popup
 		Name="m_popup_show_value"
 		HorizontalAlignment="Left"

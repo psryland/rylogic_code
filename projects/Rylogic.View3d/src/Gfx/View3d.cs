@@ -1744,6 +1744,7 @@ namespace ldr
 			}
 
 			/// <summary>Resize the render target</summary>
+			[Browsable(false)]
 			public Size BackBufferSize
 			{
 				get { View3D_BackBufferSizeGet(Handle, out var w, out var h); return new Size(w,h); }
