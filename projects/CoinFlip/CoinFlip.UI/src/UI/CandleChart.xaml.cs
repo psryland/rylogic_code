@@ -112,8 +112,8 @@ namespace CoinFlip.UI
 					m_chart.BuildScene -= HandleBuildScene;
 					m_chart.MouseDown -= HandleMouseDown;
 					m_chart.AutoRanging -= HandleAutoRanging;
-					m_chart.YAxis.TickText = m_chart.YAxis.DefaultTickText;
 					m_chart.XAxis.TickText = m_chart.XAxis.DefaultTickText;
+					m_chart.YAxis.TickText = m_chart.YAxis.DefaultTickText;
 					Util.Dispose(ref m_chart);
 				}
 				m_chart = value;
@@ -126,6 +126,7 @@ namespace CoinFlip.UI
 					m_chart.YAxis.Options.TickTextTemplate = "X.XXXX";
 					m_chart.XAxis.TickText = HandleChartXAxisTickText;
 					m_chart.YAxis.TickText = HandleChartYAxisTickText;
+					m_chart.YAxis.Options.Side = Dock.Right;
 					ModifyContextMenus();
 					m_chart.AutoRanging += HandleAutoRanging;
 					m_chart.MouseDown += HandleMouseDown;

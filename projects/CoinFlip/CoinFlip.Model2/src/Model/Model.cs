@@ -141,15 +141,8 @@ namespace CoinFlip
 					if (!Path_.FileExists(m_user.KeysFilepath))
 						m_user.NewKeys();
 
-					// On a new user, reconnect to all of the exchanges
-					string apikey, secret;
-					if (m_user.GetKeys(nameof(Poloniex), out apikey, out secret) == User.EResult.Success)
-						Exchanges.Add(new Poloniex(apikey, secret, Shutdown.Token));
-					//if (LoadAPIKeys(user, nameof(Bitfinex), out key, out secret)) Exchanges.Add(new Bitfinex(this, key, secret));
-					//if (LoadAPIKeys(user, nameof(Bittrex), out key, out secret)) Exchanges.Add(new Bittrex(this, key, secret));
-					//if (LoadAPIKeys(user, nameof(Cryptopia), out key, out secret)) Exchanges.Add(new Cryptopia(this, key, secret));
-					//if (LoadAPIKeys(user, nameof(Binance), out key, out secret)) Exchanges.Add(new Binance(this, key, secret));
-					Exchanges.Insert(0, new CrossExchange(Exchanges, Shutdown.Token));
+					// Create Exchange instances with this user's API keys
+					CreateExchanges();
 
 					// Save the last user name
 					SettingsData.Settings.LastUser = m_user.Name;
@@ -182,21 +175,8 @@ namespace CoinFlip
 			private set
 			{
 				if (m_exchanges == value) return;
-				if (m_exchanges != null)
-				{
-					m_exchanges.CollectionChanged -= HandleCollectionChanged;
-				}
+				Util.DisposeAll(m_exchanges);
 				m_exchanges = value;
-				if (m_exchanges != null)
-				{
-					m_exchanges.CollectionChanged += HandleCollectionChanged;
-				}
-
-				// Handler
-				void HandleCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
-				{
-					
-				}
 			}
 		}
 		private ExchangeContainer m_exchanges;
@@ -265,6 +245,29 @@ namespace CoinFlip
 
 		/// <summary>Raised when market data changes, i.e. before and after 'IntegrateMarketUpdates' is called</summary>
 		public event EventHandler<MarketDataChangingEventArgs> MarketDataChanging;
+
+		/// <summary>Create Exchange instances with this user's API keys</summary>
+		private void CreateExchanges()
+		{
+			// Remove any previous exchanges
+			Util.DisposeAll(Exchanges);
+			Exchanges.Clear();
+
+			// Binance
+			if (User.GetKeys(nameof(Binance), out var apikey, out var secret) == User.EResult.Success)
+				Exchanges.Add(new Binance(apikey, secret, Shutdown.Token));
+			else
+				Exchanges.Add(new Binance(Shutdown.Token));
+
+			// Poloniex
+			if (User.GetKeys(nameof(Poloniex), out apikey, out secret) == User.EResult.Success)
+				Exchanges.Add(new Poloniex(apikey, secret, Shutdown.Token));
+			else
+				Exchanges.Add(new Poloniex(Shutdown.Token));
+
+			// Create the Cross-Exchange after all others have been created
+			Exchanges.Insert(0, new CrossExchange(Exchanges, Shutdown.Token));
+		}
 
 		/// <summary>Process any pending market data updates</summary>
 		private void IntegrateMarketUpdates()

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Newtonsoft.Json;
 
-namespace Poloniex.API
+namespace Poloniex.API.DomainObjects
 {
 	[DebuggerDisplay("Deposits={Deposits.Count} Withdrawals={Withdrawals.Count}")]
 	public class FundsTransfer
@@ -46,9 +46,9 @@ namespace Poloniex.API
 
 		/// <summary>Timestamp</summary>
 		public DateTimeOffset Timestamp { get; private set; }
-		[JsonProperty("timestamp")] private ulong TimestampInternal
+		[JsonProperty("timestamp")] private long TimestampInternal
 		{
-			set { Timestamp = Misc.ToDateTimeOffset(value); }
+			set { Timestamp = DateTimeOffset.FromUnixTimeMilliseconds(value); }
 		}
 
 		/// <summary></summary>
@@ -77,9 +77,9 @@ namespace Poloniex.API
 
 		/// <summary>Timestamp</summary>
 		public DateTimeOffset Timestamp { get; private set; }
-		[JsonProperty("timestamp")] private ulong TimestampInternal
+		[JsonProperty("timestamp")] private long TimestampInternal
 		{
-			set { Timestamp = Misc.ToDateTimeOffset(value); }
+			set { Timestamp = DateTimeOffset.FromUnixTimeMilliseconds(value); }
 		}
 
 		/// <summary></summary>

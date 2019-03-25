@@ -4,33 +4,33 @@ using System.Diagnostics;
 using System.Globalization;
 using Newtonsoft.Json;
 
-namespace Poloniex.API
+namespace Poloniex.API.DomainObjects
 {
 	/// <summary>The Buy(Bid) / Sell(Ask) orders. Typically associated with a pair</summary>
-	[DebuggerDisplay("Buys={BuyOrders.Count} Sells={SellOrders.Count}")]
+	[DebuggerDisplay("Buys={BuyOffers.Count} Sells={SellOffers.Count}")]
 	public class OrderBook
 	{
 		public OrderBook()
 		{
-			BuyOrders = new List<Order>();
-			SellOrders = new List<Order>();
+			BuyOffers = new List<Offer>();
+			SellOffers = new List<Offer>();
 		}
 
 		/// <summary>The currency pair associated with this order book</summary>
 		public CurrencyPair Pair { get; internal set; }
 
 		/// <summary>Offers to buy</summary>
-		public List<Order> BuyOrders { get; private set; }
-		[JsonProperty("bids")] private List<string[]> BuyOrdersInternal
+		public List<Offer> BuyOffers { get; private set; }
+		[JsonProperty("bids")] private List<string[]> BuyOffersInternal
 		{
-			set { BuyOrders = ParseOrders(value, EOrderType.Buy); }
+			set { BuyOffers = ParseOffers(value, EOrderType.Buy); }
 		}
 
 		/// <summary>Offers to sell</summary>
-		public List<Order> SellOrders { get; private set; }
-		[JsonProperty("asks")] private List<string[]> SellOrdersInternal
+		public List<Offer> SellOffers { get; private set; }
+		[JsonProperty("asks")] private List<string[]> SellOffersInternal
 		{
-			set { SellOrders = ParseOrders(value, EOrderType.Sell); }
+			set { SellOffers = ParseOffers(value, EOrderType.Sell); }
 		}
 
 		/// <summary>True if trading is frozen on the owning pair</summary>
@@ -45,12 +45,12 @@ namespace Poloniex.API
 		public int Seq { get; internal set; }
 
 		/// <summary></summary>
-		private static List<Order> ParseOrders(List<string[]> orders, EOrderType order_type)
+		private static List<Offer> ParseOffers(List<string[]> offers, EOrderType order_type)
 		{
-			var output = new List<Order>(orders.Count);
-			foreach (var order in orders)
+			var output = new List<Offer>(offers.Count);
+			foreach (var order in offers)
 			{
-				output.Add(new Order(
+				output.Add(new Offer(
 					order_type,
 					(decimal)double.Parse(order[0], CultureInfo.InvariantCulture),
 					(decimal)double.Parse(order[1], CultureInfo.InvariantCulture)));
@@ -59,34 +59,31 @@ namespace Poloniex.API
 		}
 
 		/// <summary>A trade offer</summary>
-		[DebuggerDisplay("Price={Price} Vol={VolumeBase}")]
-		public class Order
+		[DebuggerDisplay("Price={Price} Amount={AmountBase}")]
+		public class Offer
 		{
-			internal Order()
+			internal Offer()
 			{}
-			internal Order(EOrderType type, decimal price, decimal volume)
+			internal Offer(EOrderType type, decimal price, decimal volume)
 			{
 				Type = type;
 				Price = price;
-				VolumeBase = volume;
+				AmountBase = volume;
 			}
 
 			/// <summary>A buy or sell order</summary>
-			public EOrderType Type { get; private set; }
+			public EOrderType Type { get; }
 
 			/// <summary>The trade price (in quote currency)</summary>
 			[JsonProperty("rate")]
 			public decimal Price { get; private set; }
 
-			/// <summary>The trade volume (in base currency)</summary>
+			/// <summary>The trade amount (in base currency)</summary>
 			[JsonProperty("amount")]
-			public decimal VolumeBase { get; private set; }
+			public decimal AmountBase { get; private set; }
 
-			/// <summary>The trade volume (in quote currency)</summary>
-			public decimal VolumeQuote
-			{
-				get { return VolumeBase * Price; }
-			}
+			/// <summary>The trade amount (in quote currency)</summary>
+			public decimal AmountQuote => AmountBase * Price;
 		}
 	}
 
@@ -117,6 +114,6 @@ namespace Poloniex.API
 
 		/// <summary>The updated volume at the given rate</summary>
 		[JsonProperty("data")]
-		public OrderBook.Order Order { get; internal set; }
+		public OrderBook.Offer Offer { get; internal set; }
 	}
 }

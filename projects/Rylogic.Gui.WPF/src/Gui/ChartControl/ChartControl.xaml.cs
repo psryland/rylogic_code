@@ -118,6 +118,10 @@ namespace Rylogic.Gui.WPF
 				{
 					switch (e.PropertyName)
 					{
+					case nameof(OptionsData.ShowAxes):
+						m_xaxis_panel.SignalUpdateGraphics();
+						m_yaxis_panel.SignalUpdateGraphics();
+						break;
 					case nameof(OptionsData.AntiAliasing):
 						Scene.MultiSampling = Options.AntiAliasing ? 4 : 1;
 						Scene.Invalidate();

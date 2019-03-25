@@ -2,7 +2,6 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using Rylogic.Extn.Windows;
@@ -116,9 +115,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			// Handlers
 			void HandleMoved(object sender, EventArgs e)
 			{
-				if (m_update_graphics_pending) return;
-				m_update_graphics_pending = true;
-				Dispatcher.BeginInvoke(UpdateGraphics);
+				SignalUpdateGraphics();
 			}
 			void HandleOptionChanged(object sender, PropertyChangedEventArgs e)
 			{
@@ -188,7 +185,13 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		private double? m_axis_size;
 
 		/// <summary>Update the tick marks and labels</summary>
-		public void UpdateGraphics()
+		public void SignalUpdateGraphics()
+		{
+			if (m_update_graphics_pending) return;
+			m_update_graphics_pending = true;
+			Dispatcher.BeginInvoke(UpdateGraphics);
+		}
+		private void UpdateGraphics()
 		{
 			Children.Clear();
 			if (Axis == null)

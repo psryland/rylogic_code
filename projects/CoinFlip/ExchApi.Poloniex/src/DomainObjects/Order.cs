@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Globalization;
 using Newtonsoft.Json;
 
-namespace Poloniex.API
+namespace Poloniex.API.DomainObjects
 {
 	/// <summary>A trade offer</summary>
 	[DebuggerDisplay("{Type} Price={Price} Vol={VolumeBase}")]
@@ -29,7 +29,7 @@ namespace Poloniex.API
 		public EOrderType Type { get; private set; }
 		[JsonProperty("type")] private string TypeInternal
 		{
-			set { Type = Misc.ToOrderType(value); }
+			set { Type = Conv.ToOrderType(value); }
 		}
 
 		/// <summary>The trade price (in quote currency)</summary>

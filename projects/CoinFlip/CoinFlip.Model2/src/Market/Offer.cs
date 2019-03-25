@@ -5,7 +5,7 @@ using Rylogic.Utility;
 namespace CoinFlip
 {
 	/// <summary>A single trade offer in an order book</summary>
-	[DebuggerDisplay("Price={Price} Vol={VolumeBase}")]
+	[DebuggerDisplay("Price={Price} Amount={AmountBase}")]
 	public struct Offer : IComparable<Offer>
 	{
 		public Offer(Unit<decimal> price, Unit<decimal> volume)

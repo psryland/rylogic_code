@@ -9,9 +9,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Windows.Threading;
+using ExchApi.Common;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using WampSharp.V2;
+using Poloniex.API.DomainObjects;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace Poloniex.API
 {
@@ -20,8 +23,6 @@ namespace Poloniex.API
 		// Notes:
 		//  - IP restrictions on the Poloniex API key don't seem to work. You have to use Unrestricted.
 
-		private string UrlBaseAddress;
-		private string UrlWssAddress;
 		private readonly string m_key;
 		private readonly string m_secret;
 		private JsonSerializer m_json;
@@ -36,7 +37,6 @@ namespace Poloniex.API
 			UrlWssAddress = wss_address;
 			ServerRequestRateLimit = 6f;
 			Dispatcher = Dispatcher.CurrentDispatcher;
-			ActiveSubscriptions = new Dictionary<string, Subscription>();
 			Hasher = new HMACSHA512(Encoding.ASCII.GetBytes(m_secret));
 			m_json = new JsonSerializer { NullValueHandling = NullValueHandling.Ignore };
 			Client = new HttpClient();
@@ -45,231 +45,14 @@ namespace Poloniex.API
 		}
 		public virtual void Dispose()
 		{
-			// todo
-			//if (!m_cancel_token.IsCancellationRequested)
-			//	throw new Exception("Cancel should have been signalled before here");
-
-			Stop();
 			Client = null;
 		}
 
-		/// <summary>The maximum number of requests per second to the exchange server</summary>
-		public float ServerRequestRateLimit { get; set; }
-
-		/// <summary>Raised when a connection is established</summary>
-		public event EventHandler OnConnectionChanged;
-
-		/// <summary>Raised when a ticker message is received</summary>
-		public event EventHandler<TickerEventArgs> OnTicker;
-
-		/// <summary>Raised when an update to the order book for a pair is received</summary>
-		public event EventHandler<OrderBookChangedEventArgs> OnOrdersChanged;
-
-		/// <summary>The WAMP connection channel</summary>
-		private IWampChannel WampChannel
-		{
-			get { return m_wamp_channel; }
-			set
-			{
-				if (m_wamp_channel == value) return;
-				if (m_wamp_channel != null)
-				{
-					m_wamp_channel.RealmProxy.Monitor.ConnectionBroken -= HandleConnectionChanged;
-					m_wamp_channel.RealmProxy.Monitor.ConnectionEstablished -= HandleConnectionChanged;
-					Reconnector = null;
-					m_wamp_channel.Close();
-				}
-				m_wamp_channel = value;
-				if (m_wamp_channel != null)
-				{
-					m_wamp_channel.RealmProxy.Monitor.ConnectionBroken += HandleConnectionChanged;
-					m_wamp_channel.RealmProxy.Monitor.ConnectionEstablished += HandleConnectionChanged;
-				}
-
-				// Handlers
-				void HandleConnectionChanged(object sender = null, EventArgs e = null)
-				{
-					if (OnConnectionChanged != null)
-						OnConnectionChanged(this, EventArgs.Empty);
-				}
-			}
-		}
-		private IWampChannel m_wamp_channel;
-
-		/// <summary>Helper for maintaining a connection</summary>
-		private WampChannelReconnector Reconnector
-		{
-			get { return m_reconnector; }
-			set
-			{
-				if (m_reconnector == value) return;
-				if (m_reconnector != null) m_reconnector.Dispose();
-				m_reconnector = value;
-			}
-		}
-		private WampChannelReconnector m_reconnector;
-
-		/// <summary>For marshalling to the main thread</summary>
-		private Dispatcher Dispatcher { get; set; }
-
-		/// <summary>Active channel subscriptions</summary>
-		private Dictionary<string, Subscription> ActiveSubscriptions { get; set; }
-		private class Subscription :IDisposable
-		{
-			private readonly string m_stream_name;
-			private readonly Action<ISerializedValue[]> m_msg_handler;
-			private IDisposable m_handle;
-
-			public Subscription(string stream_name, Action<ISerializedValue[]> message_handler)
-			{
-				m_stream_name = stream_name;
-				m_msg_handler = message_handler;
-			}
-			public void Dispose()
-			{
-				Close();
-			}
-
-			/// <summary>Subscribe to the stream on 'channel'</summary>
-			public void Open(IWampChannel channel)
-			{
-				Close();
-
-				// Connect
-				var subject = channel.RealmProxy.Services.GetSubject(m_stream_name);
-				m_handle = subject.Subscribe(x => m_msg_handler(x.Arguments));
-			}
-
-			/// <summary>Subscribe from the stream</summary>
-			public void Close()
-			{
-				if (m_handle != null)
-				{
-					m_handle.Dispose();
-					m_handle = null;
-				}
-			}
-		}
-
-		/// <summary>Subscribe to the ticker stream</summary>
-		public void SubscribeTicker()
-		{
-			const string key = "ticker";
-
-			// Clean up old subscriptions
-			if (ActiveSubscriptions.TryGetValue(key, out var sub))
-				sub.Dispose();
-
-			// Add a subscription to the ticker stream
-			sub = ActiveSubscriptions[key] = new Subscription(key, args =>
-			{
-				if (OnTicker == null)
-					return;
-
-				// Deserialise the ticker data
-				var currency_pair       = args[0].Deserialize<string>();
-				var last_price          = args[1].Deserialize<decimal>();
-				var order_top_sell      = args[2].Deserialize<decimal>();
-				var order_top_buy       = args[3].Deserialize<decimal>();
-				var price_change_pc     = args[4].Deserialize<decimal>();
-				var volume_24hour_base  = args[5].Deserialize<decimal>();
-				var volume_24hour_quote = args[6].Deserialize<decimal>();
-				var is_frozen           = args[7].Deserialize<byte>();
-
-				// Update the price data
-				var price_data = new PriceData
-				{
-					PriceLast             = last_price,
-					OrderTopSell          = order_top_sell,
-					OrderTopBuy           = order_top_buy,
-					PriceChangePercentage = price_change_pc,
-					Volume24HourBase      = volume_24hour_base,
-					Volume24HourQuote     = volume_24hour_quote,
-					IsFrozenInternal      = is_frozen,
-				};
-
-				// Update the price data
-				var pair = CurrencyPair.Parse(currency_pair);
-				Dispatcher.BeginInvoke(new Action(() => OnTicker(this, new TickerEventArgs(pair, price_data))));
-			});
-
-			// If the WAMP channel is open, try to connect now
-			if (IsConnected)
-				sub.Open(WampChannel);
-		}
-
-		/// <summary>Subscribe to the order book stream for a pair</summary>
-		public void SubscribePair(CurrencyPair pair)
-		{
-			var key = pair.Id;
-
-			// Clean up old subscriptions
-			if (ActiveSubscriptions.TryGetValue(key, out var sub))
-				sub.Dispose();
-
-			// Add a subscription to the order book for 'pair'
-			sub = ActiveSubscriptions[key] = new Subscription(key, args =>
-			{
-				if (OnOrdersChanged == null)
-					return;
-
-				foreach (var arg in args)
-				{
-					// Update the order book
-					var update = arg.Deserialize<OrderBookUpdate>();
-					Dispatcher.BeginInvoke(new Action(() => OnOrdersChanged(this, new OrderBookChangedEventArgs(pair, update))));
-				}
-			});
-
-			// If the WaMP channel is open, try to connect now
-			if (IsConnected)
-				sub.Open(WampChannel);
-		}
-
-		/// <summary>Connect to Poloniex</summary>
-		public void Start()
-		{
-			// Create a channel
-			WampChannel = new DefaultWampChannelFactory().CreateJsonChannel(UrlWssAddress, "realm1");
-
-			// Connection helper
-			Func<Task> connect = async () =>
-			{
-				// Initiate the order book update
-				var order_book = GetOrderBook(depth:50);
-
-				// Open the channel
-				await WampChannel.Open();
-
-				// Restore subscriptions
-				foreach (var sub in ActiveSubscriptions.Values)
-					sub.Open(WampChannel);
-			};
-			Reconnector = new WampChannelReconnector(WampChannel, connect);
-			Reconnector.Start();
-		}
+		/// <summary></summary>
+		public string UrlBaseAddress { get; }
 
 		/// <summary></summary>
-		public void Stop()
-		{
-			// Clean up channel subscriptions
-			foreach (var sub in ActiveSubscriptions.Values) sub.Dispose();
-			ActiveSubscriptions.Clear();
-
-			// Close the channel
-			WampChannel = null;
-		}
-
-		/// <summary>True if a connection is established</summary>
-		public bool IsConnected
-		{
-			get { return WampChannel?.RealmProxy.Monitor.IsConnected ?? false; }
-		}
-
-		/// <summary>Hasher</summary>
-		private HMACSHA512 Hasher { get; set; }
-
-		#region REST API Functions
+		public string UrlWssAddress { get; }
 
 		/// <summary>The Http client for RESTful requests</summary>
 		private HttpClient Client
@@ -292,6 +75,15 @@ namespace Poloniex.API
 			}
 		}
 		private HttpClient m_client;
+
+		/// <summary>The maximum number of requests per second to the exchange server</summary>
+		public float ServerRequestRateLimit { get; set; }
+
+		/// <summary>For marshalling to the main thread</summary>
+		private Dispatcher Dispatcher { get; set; }
+		
+		/// <summary>Hasher</summary>
+		private HMACSHA512 Hasher { get; set; }
 
 		#region Public
 
@@ -342,23 +134,23 @@ namespace Poloniex.API
 			// https://poloniex.com/public?command=returnTradeHistory&currencyPair=BTC_NXT&start=1410158341&end=1410499372
 			return await GetData<List<Trade>>("returnTradeHistory", cancel,
 				new KV("currencyPair", pair.Id),
-				new KV("start", Misc.ToUnixTime(start_time)),
-				new KV("end", Misc.ToUnixTime(end_time)));
+				new KV("start", start_time.ToUnixTimeMilliseconds()),
+				new KV("end", end_time.ToUnixTimeMilliseconds()));
 		}
 
 		/// <summary></summary>
-		public async Task<List<MarketChartData>> GetChartData(CurrencyPair pair, EMarketPeriod period, DateTimeOffset time_beg, DateTimeOffset time_end, CancellationToken? cancel = null)
-		{
-			return await GetChartData(pair, period, time_beg.Ticks, time_end.Ticks, cancel);
-		}
 		public async Task<List<MarketChartData>> GetChartData(CurrencyPair pair, EMarketPeriod period, long time_beg, long time_end, CancellationToken? cancel = null)
+		{
+			return await GetChartData(pair, period, new DateTimeOffset(time_beg, TimeSpan.Zero), new DateTimeOffset(time_end, TimeSpan.Zero), cancel);
+		}
+		public async Task<List<MarketChartData>> GetChartData(CurrencyPair pair, EMarketPeriod period, DateTimeOffset time_beg, DateTimeOffset time_end, CancellationToken? cancel = null)
 		{
 			try
 			{
 				var data = await GetData<List<MarketChartData>>("returnChartData", cancel,
 					new KV("currencyPair", pair.Id),
-					new KV("start", Misc.ToUnixTime(time_beg)),
-					new KV("end", Misc.ToUnixTime(time_end)),
+					new KV("start", time_beg.ToUnixTimeMilliseconds()),
+					new KV("end", time_end.ToUnixTimeMilliseconds()),
 					new KV("period", (int)period));
 
 				// Poloniex returns a single invalid candle if there is no data within the range
@@ -414,8 +206,8 @@ namespace Poloniex.API
 			var parms = new List<KV>(){ new KV("currencyPair", "all") };
 			if (beg != null && end != null)
 			{
-				parms.Add(new KV("start", Misc.ToUnixTime(beg.Value)));
-				parms.Add(new KV("end", Misc.ToUnixTime(end.Value)));
+				parms.Add(new KV("start", beg.Value.ToUnixTimeMilliseconds()));
+				parms.Add(new KV("end", end.Value.ToUnixTimeMilliseconds()));
 			}
 
 			var history = await PostData<Dictionary<string, List<TradeCompleted>>>("returnTradeHistory", cancel, parms.ToArray());
@@ -430,8 +222,8 @@ namespace Poloniex.API
 			var parms = new List<KV>(){ new KV("currencyPair", pair.Id) };
 			if (beg != null && end != null)
 			{
-				parms.Add(new KV("start", Misc.ToUnixTime(beg.Value)));
-				parms.Add(new KV("end", Misc.ToUnixTime(end.Value)));
+				parms.Add(new KV("start", beg.Value.ToUnixTimeMilliseconds()));
+				parms.Add(new KV("end", end.Value.ToUnixTimeMilliseconds()));
 			}
 
 			var history = await PostData<List<TradeCompleted>>("returnTradeHistory", cancel, parms.ToArray());
@@ -446,8 +238,8 @@ namespace Poloniex.API
 		{
 			var parms = new List<KV>
 			{
-				new KV("start", Misc.ToUnixTime(beg)),
-				new KV("end", Misc.ToUnixTime(end)),
+				new KV("start", beg.ToUnixTimeMilliseconds()),
+				new KV("end", end.ToUnixTimeMilliseconds()),
 			};
 			return await PostData<FundsTransfer>("returnDepositsWithdrawals", cancel, parms.ToArray());
 		}
@@ -455,7 +247,7 @@ namespace Poloniex.API
 		/// <summary>Create an order to buy/sell. Returns a unique order ID</summary>
 		public async Task<TradeResult> SubmitTrade(CurrencyPair pair, EOrderType type, decimal price_per_coin, decimal volume_base, CancellationToken? cancel = null)
 		{
-			return await PostData<TradeResult>(Misc.ToString(type), cancel,
+			return await PostData<TradeResult>(Conv.ToString(type), cancel,
 				new KV("currencyPair", pair.Id),
 				new KV("rate", price_per_coin),
 				new KV("amount", volume_base));
@@ -590,8 +382,6 @@ namespace Poloniex.API
 		}
 		private Stopwatch m_request_sw;
 		private long m_last_request_ms;
-		
-		#endregion
 	}
 
 	#region Event Args

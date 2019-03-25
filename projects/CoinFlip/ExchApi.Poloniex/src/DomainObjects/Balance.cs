@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Newtonsoft.Json;
 
-namespace Poloniex.API
+namespace Poloniex.API.DomainObjects
 {
 	[DebuggerDisplay("Avail={Available}")]
 	public class Balance

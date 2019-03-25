@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -13,11 +16,11 @@ using Rylogic.Utility;
 
 namespace CoinFlip.UI
 {
-	public partial class GridCoins : DataGrid, IDockable, IDisposable
+	public partial class GridCoins : Grid, IDockable, IDisposable
 	{
 		// Notes:
-		//  - Coins are associated with exchanges.
-		//  - This grid shows meta data for the coins of interest
+		//  - This grid shows balance and coin information based on averages over
+		//    all exchanges, the currently selected exchange, or a specific exchange.
 
 		static GridCoins()
 		{
@@ -27,7 +30,8 @@ namespace CoinFlip.UI
 		{
 			InitializeComponent();
 			DockControl = new DockControl(this, "Coins");
-			Coins = new ListCollectionView(ListAdapter.Create(model.Coins, c => new CoinDataAdaptor(c, model), c => c?.CoinData));
+			ExchangeSource = new ListCollectionView(new List<string> { SpecialExchangeSources.All, SpecialExchangeSources.Current });
+			Coins = new ListCollectionView(ListAdapter.Create(model.Coins, c => new CoinDataAdaptor(c, model, ExchangeSource), c => c?.CoinData));
 			Model = model;
 
 			// Commands
@@ -75,10 +79,28 @@ namespace CoinFlip.UI
 			{
 				if (m_model == value) return;
 				if (m_model != null)
-				{}
+				{
+					m_model.Exchanges.CollectionChanged -= HandleExchangesChanged;
+				}
 				m_model = value;
 				if (m_model != null)
 				{
+					m_model.Exchanges.CollectionChanged += HandleExchangesChanged;
+				}
+
+				// Handler
+				void HandleExchangesChanged(object sender, NotifyCollectionChangedEventArgs e)
+				{
+					// Preserve the current item
+					var list = (List<string>)ExchangeSource.SourceCollection;
+					using (Scope.Create(() => ExchangeSource.CurrentItem, ci => ExchangeSource.MoveCurrentTo(ci)))
+					{
+						list.Clear();
+						list.Add(SpecialExchangeSources.All);
+						list.Add(SpecialExchangeSources.Current);
+						list.AddRange(Model.TradingExchanges.Select(x => x.Name));
+						ExchangeSource.Refresh();
+					}
 				}
 			}
 		}
@@ -96,6 +118,9 @@ namespace CoinFlip.UI
 			}
 		}
 		private DockControl m_dock_control;
+
+		/// <summary>The data source for coin data</summary>
+		public ICollectionView ExchangeSource { get; }
 
 		/// <summary>The view of the available exchanges</summary>
 		public ICollectionView Coins { get; }
@@ -116,20 +141,50 @@ namespace CoinFlip.UI
 
 		/// <summary>Edit the sequence used to obtain the live value of a coin</summary>
 		public Command EditLiveValueConversion { get; }
+
+		/// <summary>Tidy separators on in an opening context menu</summary>
+		private void TidySeparators(object sender, ContextMenuEventArgs e)
+		{
+			var cmenu = (ContextMenu)sender;
+			cmenu.Items.TidySeparators();
+		}
 	}
 
 	/// <summary>A wrapper for CoinData to provide live value data</summary>
 	public class CoinDataAdaptor :INotifyPropertyChanged
 	{
 		private readonly Model m_model;
-		public CoinDataAdaptor(CoinData cd, Model model)
+		private readonly ICollectionView m_exch_source;
+		public CoinDataAdaptor(CoinData cd, Model model, ICollectionView exch_source)
 		{
 			CoinData = cd;
 			m_model = model;
+			m_exch_source = exch_source;
 
-			// Watch for market data updates
+			// Notify when external data changes
 			cd.LivePriceChanged += WeakRef.MakeWeak(UpdateLiveValueChanged, h => cd.LivePriceChanged -= h);
+			void UpdateLiveValueChanged(object sender = null, EventArgs args = null)
+			{
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Value)));
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Balance)));
+			}
+
 			cd.BalanceChanged += WeakRef.MakeWeak(UpdateBalanceChanged, h => cd.BalanceChanged -= h);
+			void UpdateBalanceChanged(object sender = null, EventArgs args = null)
+			{
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Available)));
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Total)));
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Balance)));
+			}
+
+			exch_source.CurrentChanged += WeakRef.MakeWeak(UpdateSourceChanged, h => exch_source.CurrentChanged -= h);
+			void UpdateSourceChanged(object sender = null, EventArgs args = null)
+			{
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Value)));
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Available)));
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Total)));
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Balance)));
+			}
 		}
 
 		/// <summary>The wrapped coin data</summary>
@@ -139,16 +194,43 @@ namespace CoinFlip.UI
 		public string Symbol => CoinData.Symbol;
 
 		/// <summary>Value of the coin</summary>
-		public string Value => (CoinData.ShowLivePrices ? LiveValue : CoinData.AssignedValue).ToString("C");
-
-		/// <summary>The sum of available balance across all exchanges</summary>
-		public string Available => NettAvailable.ToString("F8");
-
-		/// <summary>The sum of account balances across all exchanges for this coin</summary>
-		public string Total => NettTotal.ToString("F8");
+		public decimal Value => CoinData.ShowLivePrices ? LiveValue : CoinData.AssignedValue; //.ToString("C")
 
 		/// <summary></summary>
-		public string Balance => (LiveValue * NettTotal).ToString("C");
+		public decimal Balance => LiveValue * NettTotal;
+
+		/// <summary>The sum of available balance across all exchanges</summary>
+		public decimal Available => NettAvailable;
+
+		/// <summary>The sum of account balances across all exchanges for this coin</summary>
+		public decimal Total => NettTotal;
+
+		/// <summary>Return the exchanges to consider when averaging/summing values</summary>
+		private IEnumerable<Exchange> SourceExchanges
+		{
+			get
+			{
+				var src = (string)m_exch_source.CurrentItem;
+				if (src == SpecialExchangeSources.All)
+				{
+					return m_model.TradingExchanges;
+				}
+				else if (src == SpecialExchangeSources.Current)
+				{
+					var exch = (Exchange)CollectionViewSource.GetDefaultView(m_model.Exchanges).CurrentItem;
+					if (exch != null && !(exch is CrossExchange))
+						return new[] { exch };
+				}
+				else
+				{
+					var exch = m_model.TradingExchanges.FirstOrDefault(x => x.Name == src);
+					if (exch != null)
+						return new[] { exch };
+				}
+				return Enumerable.Empty<Exchange>();
+			}
+
+		}
 
 		/// <summary>The average value of this coin</summary>
 		private decimal LiveValue
@@ -157,10 +239,10 @@ namespace CoinFlip.UI
 			{
 				// Find the average price on the available exchanges
 				var value = new Average<decimal>();
-				foreach (var exch in m_model.TradingExchanges)
+				foreach (var exch in SourceExchanges)
 				{
 					var coin = exch.Coins[Symbol];
-					if (coin == null) continue;
+					if (coin == null || !coin.LivePriceAvailable) continue;
 					value.Add(coin.ValueOf(1m));
 				}
 				return value.Mean._(Symbol);
@@ -173,7 +255,7 @@ namespace CoinFlip.UI
 			get
 			{
 				var total = 0m;
-				foreach (var exch in m_model.TradingExchanges)
+				foreach (var exch in SourceExchanges)
 				{
 					var coin = exch.Coins[Symbol];
 					if (coin == null) continue;
@@ -189,7 +271,7 @@ namespace CoinFlip.UI
 			get
 			{
 				var avail = 0m;
-				foreach (var exch in m_model.TradingExchanges)
+				foreach (var exch in SourceExchanges)
 				{
 					var coin = exch.Coins[Symbol];
 					if (coin == null) continue;
@@ -202,22 +284,14 @@ namespace CoinFlip.UI
 		/// <summary></summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 
-		/// <summary>Called to raise property changed notification when the live value changes</summary>
-		public void UpdateLiveValueChanged(object sender = null, EventArgs args = null)
-		{
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Value)));
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Balance)));
-		}
-
-		/// <summary>Called to raise property changed notification when the balance changes</summary>
-		public void UpdateBalanceChanged(object sender = null, EventArgs args = null)
-		{
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Available)));
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Total)));
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Balance)));
-		}
-
 		/// <summary>Implicit conversion to CoinData</summary>
 		public static implicit operator CoinData(CoinDataAdaptor x) { return x.CoinData; }
+	}
+
+	/// <summary></summary>
+	internal static class SpecialExchangeSources
+	{
+		public const string All = "All Exchanges (Sum/Average)";
+		public const string Current = "Selected Exchange";
 	}
 }

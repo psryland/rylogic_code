@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using Rylogic.Extn;
 using Rylogic.Gui.WPF;
 using Rylogic.Utility;
 
@@ -37,6 +38,7 @@ namespace CoinFlip.UI
 				if (Current == null) return;
 				Current.PairsUpdateRequired = true;
 			});
+			ContextMenuOpening += (s, a) => ContextMenu.Items.TidySeparators();
 
 			DataContext = this;
 		}
@@ -112,9 +114,20 @@ namespace CoinFlip.UI
 			}
 
 			{// Show the API Keys dialog
+				Model.User.GetKeys(exch.Name, out var prev_key, out var prev_secret);
+
 				var ui = new APIKeysUI(Model.User, exch.Name) { Owner = Window.GetWindow(this) };
-				if (ui.ShowDialog() == true)
+				if (ui.ShowDialog() == true && (ui.APIKey != prev_key || ui.APISecret != prev_secret))
+				{
+					// Update the keys
 					Model.User.SetKeys(ui.Exchange, ui.APIKey, ui.APISecret);
+					exch.ExchSettings.PublicAPIOnly = ui.APIKey.HasValue() && ui.APISecret.HasValue();
+
+					// Prompt to restart now
+					var res = MessageBox.Show(Window.GetWindow(this), "Restart now to use updated keys?", "Update API Keys", MessageBoxButton.YesNo, MessageBoxImage.Question);
+					if (res == MessageBoxResult.Yes)
+						App.Current.Restart();
+				}
 			}
 		}
 	}

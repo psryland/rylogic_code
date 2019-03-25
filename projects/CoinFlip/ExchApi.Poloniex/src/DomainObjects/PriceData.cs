@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using Newtonsoft.Json;
 
-namespace Poloniex.API
+namespace Poloniex.API.DomainObjects
 {
 	[DebuggerDisplay("Ask={OrderTopSell} Bid={OrderTopBuy}")]
 	public class PriceData

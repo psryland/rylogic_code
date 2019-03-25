@@ -26,11 +26,6 @@ namespace CoinFlip.UI
 					APIKey = key;
 					APISecret = secret;
 				}
-				else
-				{
-					MessageBox.Show(this, $"Accessing the API keys failed: {res}", "API Keys", MessageBoxButton.OK, MessageBoxImage.Error);
-					Close();
-				}
 			};
 		}
 

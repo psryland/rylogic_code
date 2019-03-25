@@ -42,6 +42,7 @@ namespace CoinFlip.Settings
 			BackTesting = new BackTestingSettings();
 			//Bots = new BotData[0];
 			//Cryptopia = new CrypotopiaSettings();
+			Binance = new BinanceSettings();
 			Poloniex = new PoloniexSettings();
 			//Bittrex = new BittrexSettings();
 			//Bitfinex = new BitfinexSettings();
@@ -126,7 +127,18 @@ namespace CoinFlip.Settings
 			set { set(nameof(BackTesting), value); }
 		}
 
-		/// <summary>Cryptopia exchange settings</summary>
+		/// <summary>Binance exchange settings</summary>
+		public BinanceSettings Binance
+		{
+			get { return get<BinanceSettings>(nameof(Binance)); }
+			set
+			{
+				if (value == null) throw new ArgumentNullException();
+				set(nameof(Binance), value);
+			}
+		}
+
+		/// <summary>Poloniex exchange settings</summary>
 		public PoloniexSettings Poloniex
 		{
 			get { return get<PoloniexSettings>(nameof(Poloniex)); }

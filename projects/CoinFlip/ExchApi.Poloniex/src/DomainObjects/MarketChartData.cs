@@ -1,15 +1,15 @@
 ﻿using System;
 using Newtonsoft.Json;
 
-namespace Poloniex.API
+namespace Poloniex.API.DomainObjects
 {
 	public class MarketChartData
 	{
 		/// <summary>Time stamp</summary>
 		public DateTimeOffset Time { get; private set; }
-		[JsonProperty("date")] private ulong TimeInternal
+		[JsonProperty("date")] private long TimeInternal
 		{
-			set { Time = Misc.ToDateTimeOffset(value); }
+			set { Time = DateTimeOffset.FromUnixTimeMilliseconds(value); }
 		}
 
 		[JsonProperty("open")]

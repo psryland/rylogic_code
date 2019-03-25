@@ -1,5 +1,4 @@
-﻿//#define USE_WAMP
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -7,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CoinFlip.Settings;
 using Poloniex.API;
+using Poloniex.API.DomainObjects;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Utility;
@@ -18,6 +18,11 @@ namespace CoinFlip
 	{
 		private readonly HashSet<CurrencyPair> m_pairs;
 
+		public Poloniex(CancellationToken shutdown)
+			: this(string.Empty, string.Empty, shutdown)
+		{
+			ExchSettings.PublicAPIOnly = true;
+		}
 		public Poloniex(string key, string secret, CancellationToken shutdown)
 			:base(SettingsData.Settings.Poloniex, shutdown)
 		{
@@ -40,88 +45,12 @@ namespace CoinFlip
 				if (m_api == value) return;
 				if (m_api != null)
 				{
-					m_api.OnOrdersChanged -= HandleOrdersChanged;
-					m_api.OnConnectionChanged -= HandleConnectionEstablished;
-					#if USE_WAMP
-					m_api.Stop();
-					#endif
-
 					Util.Dispose(ref m_api);
 				}
 				m_api = value;
 				if (m_api != null)
 				{
-					#if USE_WAMP
-					m_api.Start();
-					#endif
 					m_api.ServerRequestRateLimit = ExchSettings.ServerRequestRateLimit;
-					m_api.OnConnectionChanged += HandleConnectionEstablished;
-					m_api.OnOrdersChanged += HandleOrdersChanged;
-				}
-
-				// Handlers
-				void HandleOrdersChanged(object sender, OrderBookChangedEventArgs args)
-				{
-					// This is currently broken on the Poloniex site
-
-					// Don't care about trade history at this point
-					if (args.Update.Type == OrderBookUpdate.EUpdateType.NewTrade)
-						return;
-
-					// Look for the associated pair, ignore if not found
-					var pair = Pairs[args.Pair.Base, args.Pair.Quote];
-					if (pair == null)
-						return;
-
-					// Create the order
-					var ty = args.Update.Order.Type;
-					var order = new Offer(args.Update.Order.Price._(pair.RateUnits), args.Update.Order.VolumeBase._(pair.Base));
-
-					// Get the orders that the update applies to
-					var book = (OrderBook)null;
-					var sign = 0;
-					switch (ty)
-					{
-					default: throw new Exception(string.Format("Unknown order update type: {0}", ty));
-					case EOrderType.Sell: book = pair.B2Q; sign = -1; break;
-					case EOrderType.Buy: book = pair.Q2B; sign = +1; break;
-					}
-
-					// Find the position in 'book.Orders' of where the update applies
-					var idx = book.Orders.BinarySearch(x => sign * x.Price.CompareTo(order.Price));
-					if (idx < 0 && ~idx >= book.Orders.Count)
-						return;
-
-					// Apply the update.
-					switch (args.Update.Type)
-					{
-					default: throw new Exception(string.Format("Unknown order book update type: {0}", args.Update.Type));
-					case OrderBookUpdate.EUpdateType.Modify:
-						{
-							// "Modify" means insert or replace the order with the matching price.
-							if (idx >= 0)
-								book.Orders[idx] = order;
-							//else
-							//	book.Orders.Insert(~idx, order);
-							break;
-						}
-					case OrderBookUpdate.EUpdateType.Remove:
-						{
-							// "Remove" means remove the order with the matching price.
-							if (idx >= 0)
-								book.Orders.RemoveAt(idx);
-							break;
-						}
-					}
-
-					Debug.Assert(pair.AssertOrdersValid());
-				}
-				void HandleConnectionEstablished(object sender, EventArgs e)
-				{
-					if (Api.IsConnected)
-						Model.Log.Write(ELogLevel.Info, $"Poloniex connection established");
-					else
-						Model.Log.Write(ELogLevel.Info, $"Poloniex connection offline");
 				}
 			}
 		}
@@ -195,8 +124,8 @@ namespace CoinFlip
 
 			// Update the depth of market data
 			var market_depth = new MarketDepth(pair.Base, pair.Quote);
-			var buys  = orders.BuyOrders .Select(x => new Offer(x.Price._(pair.RateUnits), x.VolumeBase._(pair.Base))).ToArray();
-			var sells = orders.SellOrders.Select(x => new Offer(x.Price._(pair.RateUnits), x.VolumeBase._(pair.Base))).ToArray();
+			var buys  = orders.BuyOffers .Select(x => new Offer(x.Price._(pair.RateUnits), x.AmountBase._(pair.Base))).ToArray();
+			var sells = orders.SellOffers.Select(x => new Offer(x.Price._(pair.RateUnits), x.AmountBase._(pair.Base))).ToArray();
 			market_depth.UpdateOrderBook(buys, sells);
 			return market_depth;
 		}
@@ -211,7 +140,7 @@ namespace CoinFlip
 				// and we don't want updating pairs to be interrupted by the update thread stopping
 				var msg = await Api.GetTradePairs(cancel:Shutdown.Token);
 				if (msg == null)
-					throw new Exception("Poloniex: Failed to read market data.");
+					throw new Exception("Poloniex: Failed to trading pair data.");
 
 				// Add an action to integrate the data
 				Model.MarketUpdates.Add(() =>
@@ -294,8 +223,8 @@ namespace CoinFlip
 							continue;
 
 						// Update the depth of market data
-						var buys  = orders.BuyOrders .Select(x => new Offer(x.Price._(pair.RateUnits), x.VolumeBase._(pair.Base))).ToArray();
-						var sells = orders.SellOrders.Select(x => new Offer(x.Price._(pair.RateUnits), x.VolumeBase._(pair.Base))).ToArray();
+						var buys  = orders.BuyOffers .Select(x => new Offer(x.Price._(pair.RateUnits), x.AmountBase._(pair.Base))).ToArray();
+						var sells = orders.SellOffers.Select(x => new Offer(x.Price._(pair.RateUnits), x.AmountBase._(pair.Base))).ToArray();
 						pair.MarketDepth.UpdateOrderBook(buys, sells);
 					}
 
@@ -455,7 +384,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Convert a Poloniex order into an order</summary>
-		private Order OrderFrom(global::Poloniex.API.Order odr, DateTimeOffset updated)
+		private Order OrderFrom(global::Poloniex.API.DomainObjects.Order odr, DateTimeOffset updated)
 		{
 			var order_id = odr.OrderId;
 			var fund_id  = OrderIdtoFundId[order_id];
@@ -468,7 +397,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Convert a Poloniex trade history result into a completed order</summary>
-		private TradeCompleted TradeCompletedFrom(global::Poloniex.API.TradeCompleted his, DateTimeOffset updated)
+		private TradeCompleted TradeCompletedFrom(global::Poloniex.API.DomainObjects.TradeCompleted his, DateTimeOffset updated)
 		{
 			var order_id         = his.OrderId;
 			var trade_id         = his.GlobalTradeId;
@@ -482,7 +411,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Convert a poloniex deposit into a 'Transfer'</summary>
-		private Transfer TransferFrom(global::Poloniex.API.Deposit dep)
+		private Transfer TransferFrom(global::Poloniex.API.DomainObjects.Deposit dep)
 		{
 			var id        = dep.TransactionId;
 			var type      = ETransfer.Deposit;
@@ -492,7 +421,7 @@ namespace CoinFlip
 			var status    = ToTransferStatus(dep.Status);
 			return new Transfer(id, type, coin, amount, timestamp, status);
 		}
-		private Transfer TransferFrom(global::Poloniex.API.Withdrawal wid)
+		private Transfer TransferFrom(global::Poloniex.API.DomainObjects.Withdrawal wid)
 		{
 			var id        = wid.WithdrawalNumber.ToString();
 			var type      = ETransfer.Withdrawal;

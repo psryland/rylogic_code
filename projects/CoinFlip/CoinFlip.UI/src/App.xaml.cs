@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Windows;
 using CoinFlip.Settings;
 using Rylogic.Extn;
@@ -14,9 +15,34 @@ namespace CoinFlip.UI
 			View3d.LoadDll();
 			Xml_.Config.SupportWPFTypes();
 		}
+		protected override void OnStartup(StartupEventArgs e)
+		{
+			base.OnStartup(e);
+
+			// Record the startup info to allow restart
+			m_psi = new ProcessStartInfo
+			{
+				FileName = Process.GetCurrentProcess().MainModule.FileName,
+				Arguments = string.Join(" ", e.Args),
+			};
+		}
 
 		/// <summary>Singleton access</summary>
 		public static new App Current => (App)Application.Current;
+
+		/// <summary>Restart this process</summary>
+		public void Restart()
+		{
+			MainWindow.Closed += Start;
+			MainWindow.Close();
+			
+			void Start(object sender, EventArgs args)
+			{
+				MainWindow.Closed -= Start;
+				Process.Start(m_psi);
+			}
+		}
+		private ProcessStartInfo m_psi;
 
 		/// <summary>Selected app skin</summary>
 		public static ESkin Skin
@@ -25,7 +51,11 @@ namespace CoinFlip.UI
 			set
 			{
 				SettingsData.Settings.Skin = value;
+
 				// A restart is needed to reload StaticResources
+				var res = MessageBox.Show(Current.MainWindow, "Restart now to apply new skin settings?", "Change Skin", MessageBoxButton.YesNo, MessageBoxImage.Question);
+				if (res == MessageBoxResult.Yes)
+					Current.Restart();
 			}
 		}
 	}

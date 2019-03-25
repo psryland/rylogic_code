@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
+using ExchApi.Common;
 using Newtonsoft.Json;
 
-namespace Poloniex.API
+namespace Poloniex.API.DomainObjects
 {
 	[DebuggerDisplay("{Type} Price={PricePerCoin} Vol={VolumeBase}")]
 	public class Trade
@@ -18,7 +19,7 @@ namespace Poloniex.API
 		public EOrderType Type { get; private set; }
 		[JsonProperty("type")] private string TypeInternal
 		{
-			set { Type = Misc.ToOrderType(value); }
+			set { Type = Conv.ToOrderType(value); }
 		}
 
 		/// <summary>The price of the offer</summary>

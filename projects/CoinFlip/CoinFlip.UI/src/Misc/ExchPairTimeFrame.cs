@@ -105,8 +105,8 @@ namespace CoinFlip
 					Pairs = new ListCollectionView(pairs);
 
 					// Try to select the same pair
-					var idx = pair != null ? pairs.IndexOf(x => x.Name == pair) : -1;
-					if (idx != -1) Pairs.MoveCurrentToPosition(idx);
+					var same = pair != null ? pairs.FirstOrDefault(x => x.Name == pair) : null;
+					if (same != null) Pairs.MoveCurrentTo(same);
 				}
 			}
 		}
@@ -147,8 +147,8 @@ namespace CoinFlip
 					TimeFrames = new ListCollectionView(tfs);
 
 					// Try to select the same timeframe
-					var idx = tf != ETimeFrame.None ? tfs.IndexOf(tf) : -1;
-					if (idx != -1) TimeFrames.MoveCurrentToPosition(idx);
+					var same = tf != ETimeFrame.None ? tfs.FirstOrDefault(x => x == tf) : ETimeFrame.None;
+					if (same != ETimeFrame.None) TimeFrames.MoveCurrentTo(same);
 }
 			}
 		}

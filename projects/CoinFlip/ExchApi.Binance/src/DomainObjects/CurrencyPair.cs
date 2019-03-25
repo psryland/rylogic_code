@@ -1,6 +1,7 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 
-namespace Poloniex.API
+namespace Binance.API.DomainObjects
 {
 	/// <summary>Base/Quote currency trading pair</summary>
 	[DebuggerDisplay("{Base,nq}/{Quote,nq}")]
@@ -13,25 +14,13 @@ namespace Poloniex.API
 		}
 
 		/// <summary>The base currency</summary>
-		public string Base { get; private set; }
+		public string Base { get; }
 
 		/// <summary>The quote currency</summary>
-		public string Quote { get; private set; }
+		public string Quote { get; }
 
-		/// <summary>The name of the pair when querying Poloniex (i.e. Quote_Base)</summary>
-		public string Id
-		{
-			// Poloniex pairs are given as 'Quote_Base'.. :-/
-			get { return $"{Quote}_{Base}"; }
-		}
-
-		/// <summary>Parse the base/quote currency from a string</summary>
-		public static CurrencyPair Parse(string str)
-		{
-			// Poloniex pairs are given as 'Quote_Base'.. :-/
-			var coin = str.Split('_');
-			return new CurrencyPair(coin[1], coin[0]);
-		}
+		/// <summary>The name of the pair when querying the exchange</summary>
+		public string Id => $"{Base}{Quote}";
 
 		#region Equals
 		public bool Equals(CurrencyPair b)
