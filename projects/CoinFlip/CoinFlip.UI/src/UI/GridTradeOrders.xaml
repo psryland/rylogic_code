@@ -29,7 +29,7 @@
 	<DataGrid.Columns>
 		<DataGridTextColumn
 			Header="Order/Trade Id"
-			Binding="{Binding OrderId}"
+			Binding="{Binding OrderId, Mode=OneWay}"
 			Width="0.5*"
 			/>
 		<DataGridTextColumn
@@ -54,8 +54,8 @@
 			Width="1*"
 			/>
 		<DataGridTextColumn
-			Header="Live Price"
-			Binding="{Binding LivePriceQ2B, Converter={gui2:WithUnits}, ConverterParameter='G8', Mode=OneWay}"
+			Header="Spot Price"
+			Binding="{Binding SpotPriceQ2B, Converter={gui2:WithUnits}, ConverterParameter='G8', Mode=OneWay}"
 			ElementStyle="{StaticResource RightAlignedTextColumn}"
 			Width="1*"
 			/>
@@ -73,13 +73,13 @@
 			/>
 		<DataGridTextColumn
 			Header="Amount (Quote)"
-			Binding="{Binding AmountQueue, Converter={gui2:WithUnits}, ConverterParameter='G8', Mode=OneWay}"
+			Binding="{Binding AmountQuote, Converter={gui2:WithUnits}, ConverterParameter='G8', Mode=OneWay}"
 			ElementStyle="{StaticResource RightAlignedTextColumn}"
 			Width="1*"
 			/>
 		<DataGridTextColumn
 			Header="Remaining (%)"
-			Binding="{Binding RemainingPC, StringFormat={}{0:G4} %}"
+			Binding="{Binding RemainingPC, StringFormat={}{0:G4} %, Mode=OneWay}"
 			ElementStyle="{StaticResource RightAlignedTextColumn}"
 			Width="0.4*"
 			/>

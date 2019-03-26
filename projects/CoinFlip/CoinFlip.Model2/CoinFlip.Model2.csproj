@@ -91,7 +91,6 @@
     <Compile Include="src\Misc\ETradeType.cs" />
     <Compile Include="src\Misc\EExchangeStatus.cs" />
     <Compile Include="src\Misc\Misc.cs" />
-    <Compile Include="src\Model\CoinContainer.cs" />
     <Compile Include="src\Model\ExchangeContainer.cs" />
     <Compile Include="src\Model\FundContainer.cs" />
     <Compile Include="src\Model\Model.cs" />

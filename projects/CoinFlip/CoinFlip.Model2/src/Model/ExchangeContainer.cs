@@ -6,8 +6,7 @@ namespace CoinFlip
 	public class ExchangeContainer : ObservableCollection<Exchange>
 	{
 		public ExchangeContainer()
-		{
-		}
+		{}
 
 		/// <summary>Access an exchange by name</summary>
 		public Exchange this[string name]

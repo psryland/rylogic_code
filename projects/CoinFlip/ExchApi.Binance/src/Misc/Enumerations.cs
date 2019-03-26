@@ -11,6 +11,17 @@ namespace Binance.API
 		TooMuchDataRequested,
 	}
 
+	/// <summary>Endpoint security types</summary>
+	public enum ESecurityType
+	{
+		PUBLIC,
+		TRADE,
+		USER_DATA,
+		USER_STREAM,
+		MARKET_DATA,
+	}
+
+	/// <summary>Status for a currency pair</summary>
 	public enum ESymbolStatus
 	{
 		PRE_TRADING,
@@ -21,6 +32,7 @@ namespace Binance.API
 		AUCTION_MATCH,
 		BREAK,
 	}
+
 	public enum ESymbolType
 	{
 		SPOT,
@@ -75,6 +87,7 @@ namespace Binance.API
 
 	public enum ERateLimitType
 	{
+		RAW_REQUEST,
 		REQUEST_WEIGHT,
 		ORDERS,
 	}

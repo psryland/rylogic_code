@@ -8,7 +8,7 @@ using Rylogic.Utility;
 namespace CoinFlip
 {
 	/// <summary>A Coin, owned by an exchange</summary>
-	[DebuggerDisplay("{Symbol} ({Exchange})")]
+	[DebuggerDisplay("{Description}")]
 	public class Coin :IComparable
 	{
 		public Coin(string sym, Exchange exch)
@@ -143,6 +143,9 @@ namespace CoinFlip
 		{
 			return Symbol;
 		}
+
+		/// <summary></summary>
+		private string Description => $"{Symbol} ({Exchange}) NettTotal={Balances.NettTotal}";
 
 		/// <summary>Allow implicit conversion to string symbol name</summary>
 		[DebuggerStepThrough] public static implicit operator string(Coin coin)

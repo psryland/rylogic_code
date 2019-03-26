@@ -20,80 +20,122 @@
 		Grid.Row="0"
 		Orientation="Horizontal"
 		>
-		<TextBlock
-			Text="Exchange:"
-			VerticalAlignment="Center"
+		<StackPanel
+			Orientation="Vertical"
 			Margin="3"
-			/>
-		<ComboBox
-			ItemsSource="{Binding ExchangeSource}"
-			VerticalAlignment="Center"
-			MinWidth="120"
-			Margin="3"
-			/>
+			>
+			<TextBlock
+				Text="Exchange:"
+				/>
+			<ComboBox
+				ItemsSource="{Binding ExchangeSource}"
+				VerticalAlignment="Center"
+				MinWidth="60"
+				/>
+		</StackPanel>
+		<StackPanel
+			Orientation="Vertical"
+			Margin="3,6,3,3"
+			>
+			<CheckBox
+				Name="m_cb_filter_coins"
+				Content="Filter Coins"
+				VerticalAlignment="Center"
+				ToolTip="Exclude coins with total balances less than the given value"
+				IsChecked="{Binding FilterEnabled, Mode=TwoWay}"
+				/>
+			<StackPanel
+				Orientation="Horizontal"
+				>
+				<TextBox
+					MinWidth="40"
+					IsEnabled="{Binding IsChecked, ElementName=m_cb_filter_coins}"
+					Text="{Binding FilterThreshold, Mode=TwoWay}"
+					/>
+				<CheckBox
+					Content="Value"
+					IsChecked="{Binding IsValueFilter, Mode=TwoWay}"
+					IsEnabled="{Binding IsChecked, ElementName=m_cb_filter_coins}"
+					ToolTip="If checked, filters based on value.&#x0a;If unchecked, filters on absolute amount"
+					VerticalAlignment="Center"
+					Margin="2,0,0,0"
+					/>
+			</StackPanel>
+		</StackPanel>
 	</StackPanel>
 
+	<!-- Grid of coins -->
 	<DataGrid
 		Grid.Row="1"
 		AutoGenerateColumns="False"
 		GridLinesVisibility="None"
 		HeadersVisibility="Column"
-		Margin="0,27,0,1"
 		IsReadOnly="True"
 		ItemsSource="{Binding Coins}"
 		SelectedItem="{Binding Current, Mode=TwoWay}"
 		>
+		<DataGrid.Resources>
+			<ResourceDictionary>
+				<Style x:Key="LiveValueAvailableCellStyle" TargetType="DataGridCell" BasedOn="{StaticResource {x:Type DataGridCell}}">
+					<Style.Triggers>
+						<DataTrigger Binding="{Binding LiveValueAvailable}" Value="False">
+							<Setter Property="Foreground" Value="#AAA"/>
+						</DataTrigger>
+					</Style.Triggers>
+				</Style>
+			</ResourceDictionary>
+		</DataGrid.Resources>
 		<DataGrid.Columns>
 			<DataGridTextColumn
 				Header="Coin"
 				Binding="{Binding Symbol, Mode=OneWay}"
-				Width="*"
+				Width="0.8*"
 				/>
 			<DataGridTextColumn
 				Header="Value"
 				ToolTipService.ToolTip="The approximate value of the coin in the live value currency (typically USD)"
 				Binding="{Binding Value, StringFormat={}{0:C}, Mode=OneWay}"
-				Width="*"
+				CellStyle="{StaticResource LiveValueAvailableCellStyle}"
+				Width="1*"
 				/>
 			<DataGridTextColumn
 				Header="Balance"
 				ToolTipService.ToolTip="The approximate total value of the balance of the coin (typically in USD)"
 				Binding="{Binding Balance, StringFormat={}{0:C}, Mode=OneWay}"
-				Width="*"
+				CellStyle="{StaticResource LiveValueAvailableCellStyle}"
+				Width="1*"
 				/>
 			<DataGridTextColumn
 				Header="Available"
 				ToolTipService.ToolTip="The amount of the coin available for trading"
 				Binding="{Binding Available, StringFormat={}{0:F8}, Mode=OneWay}"
-				Width="*"
+				Width="1.5*"
 				/>
 			<DataGridTextColumn
 				Header="Total"
 				ToolTipService.ToolTip="The total balance amount of the coin"
 				Binding="{Binding Total, StringFormat={}{0:F8}, Mode=OneWay}"
-				Width="*"
+				Width="1.5*"
 				/>
 		</DataGrid.Columns>
-
 		<DataGrid.ContextMenu>
 			<ContextMenu
 				DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
-				ContextMenuOpening="TidySeparators"
 				>
 				<MenuItem
 					Header="Add Coin..."
 					Command="{Binding AddCoin}"
 					/>
 				<MenuItem
-					Header="{Binding Current.Symbol}"
+					Header="{Binding CurrentCoinName}"
 					HeaderStringFormat="Remove {0}"
-					Visibility="{Binding Current, Converter={gui2:NullToCollapsed}}"
+					IsEnabled="{Binding Current, Converter={gui2:NotNull}}"
 					Command="{Binding RemoveCoin}"
 					/>
 				<Separator/>
 				<MenuItem
 					Header="Live Value Conversion..."
-					Visibility="{Binding Current, Converter={gui2:NullToCollapsed}}"
+					IsEnabled="{Binding Current, Converter={gui2:NotNull}}"
 					Command="{Binding EditLiveValueConversion}"
 					/>
 			</ContextMenu>

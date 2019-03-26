@@ -78,12 +78,14 @@
     <Compile Include="src\UI\CandleChart.xaml.cs">
       <DependentUpon>CandleChart.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\Misc\CoinDataAdaptor.cs" />
     <Compile Include="src\UI\GridCoins.xaml.cs">
       <DependentUpon>GridCoins.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\UI\GridExchanges.xaml.cs">
       <DependentUpon>GridExchanges.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\Misc\SpecialExchangeSources.cs" />
     <Page Include="src\Account\APIKeysUI.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

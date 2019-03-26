@@ -71,7 +71,8 @@ namespace CoinFlip.UI
 				// Handler
 				void HandleCurrentChanged(object sender, EventArgs e)
 				{
-					var orders = ((Exchange)Exchanges?.CurrentItem)?.Orders;
+					var exch = (Exchange)Exchanges?.CurrentItem;
+					var orders = exch?.Orders;
 					Orders = orders != null ? new ListCollectionView(orders) : null;
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Orders)));
 				}
@@ -83,9 +84,9 @@ namespace CoinFlip.UI
 		public ICollectionView Orders { get; private set; }
 
 		/// <summary>The currently selected exchange</summary>
-		public OrderCompleted Current
+		public Order Current
 		{
-			get => (OrderCompleted)Orders?.CurrentItem;
+			get => (Order)Orders?.CurrentItem;
 			set => Orders.MoveCurrentTo(value);
 		}
 

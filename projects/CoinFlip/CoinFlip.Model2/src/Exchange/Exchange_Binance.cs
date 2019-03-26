@@ -18,13 +18,13 @@ namespace CoinFlip
 	{
 		private readonly HashSet<CurrencyPair> m_pairs;
 
-		public Binance(CancellationToken shutdown)
-			: this(string.Empty, string.Empty, shutdown)
+		public Binance(CoinDataList coin_data, CancellationToken shutdown)
+			: this(string.Empty, string.Empty, coin_data, shutdown)
 		{
 			ExchSettings.PublicAPIOnly = true;
 		}
-		public Binance(string key, string secret, CancellationToken shutdown)
-			: base(SettingsData.Settings.Binance, shutdown)
+		public Binance(string key, string secret, CoinDataList coin_data, CancellationToken shutdown)
+			: base(SettingsData.Settings.Binance, coin_data, shutdown)
 		{
 			m_pairs = new HashSet<CurrencyPair>();
 			Api = new BinanceApi(key, secret, shutdown);
@@ -239,6 +239,66 @@ namespace CoinFlip
 			return market_depth;
 		}
 
+		/// <summary>Return the chart data for a given pair, over a given time range</summary>
+		protected async override Task<List<Candle>> CandleDataInternal(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end, CancellationToken? cancel) // Worker thread context
+		{
+			var cp = new CurrencyPair(pair.Base, pair.Quote);
+
+			// Get the chart data
+			var data = await Api.GetChartData(cp, ToMarketPeriod(timeframe), time_beg, time_end, cancel);
+
+			// Convert it to candles (yes, Polo gets the base/quote backwards for 'Volume')
+			var candles = data.Select(x => new Candle(x.Time.Ticks, (double)x.Open, (double)x.High, (double)x.Low, (double)x.Close, (double)x.Median, (double)x.Volume)).ToList();
+			return candles;
+		}
+
+		protected override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume_base, Unit<decimal> price)
+		{
+			throw new NotImplementedException();
+		}
+		protected override Task<bool> CancelOrderInternal(TradePair pair, long order_id)
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>Update account balance data</summary>
+		protected async override Task UpdateBalances() // Worker thread context
+		{
+			try
+			{
+				// Request the account data
+				var balance_data = await Api.GetBalances(cancel: Shutdown.Token);
+
+				// Queue integration of the market data
+				Model.MarketUpdates.Add(() =>
+				{
+					// Process the account data and update the balances
+					var msg = balance_data;
+
+					// Ignore out of date data
+					if (msg.UpdateTime < Balance.LastUpdated)
+						return;
+
+					// Update the account balance
+					foreach (var b in msg.Balances.Where(x => x.Total != 0 || Coins.ContainsKey(x.Asset)))
+					{
+						// Find the currency that this balance is for
+						var coin = Coins.GetOrAdd(b.Asset);
+
+						// Update the balance
+						Balance[coin] = new Balances(coin, b.Total._(coin), b.Locked._(coin), msg.UpdateTime);
+					}
+
+					// Notify updated
+					Balance.LastUpdated = msg.UpdateTime;
+				});
+			}
+			catch (Exception ex)
+			{
+				HandleException(nameof(UpdateBalances), ex);
+			}
+		}
+
 		/// <summary>Enumerate all candle data and time frames provided by this exchange</summary>
 		protected override IEnumerable<PairAndTF> EnumAvailableCandleDataInternal(TradePair pair)
 		{
@@ -257,30 +317,78 @@ namespace CoinFlip
 			}
 		}
 
-		/// <summary>Return the chart data for a given pair, over a given time range</summary>
-		protected async override Task<List<Candle>> CandleDataInternal(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end, CancellationToken? cancel) // Worker thread context
+		/// <summary>Update open positions</summary>
+		protected async override Task UpdatePositionsAndHistory() // Worker thread context
 		{
-			var cp = new CurrencyPair(pair.Base, pair.Quote);
+			try
+			{
+				// Record the time just before the query to the server
+				var timestamp = DateTimeOffset.Now;
 
-			// Get the chart data
-			var data = await Api.GetChartData(cp, ToMarketPeriod(timeframe), time_beg, time_end, cancel);
+				// Request the existing orders
+				var existing_orders = await Api.GetOpenOrders(cancel: Shutdown.Token);
 
-			// Convert it to candles (yes, Polo gets the base/quote backwards for 'Volume')
-			var candles = data.Select(x => new Candle(x.Time.Ticks, (double)x.Open, (double)x.High, (double)x.Low, (double)x.Close, (double)x.Median, (double)x.Volume)).ToList();
-			return candles;
+				// Request the history
+				//var history = await Api.GetAllOrders(beg: m_history_last, end: timestamp, cancel: Shutdown.Token);
+
+				// Record the time that history has been updated to
+				m_history_last = timestamp;
+				
+				// Queue integration of the market data
+				Model.MarketUpdates.Add(() =>
+				{
+					var order_ids = new HashSet<long>();
+					var pairs = new HashSet<CurrencyPair>();
+				
+					// Update the collection of existing orders
+					foreach (var order in existing_orders)
+					{
+						// Add the order to the collection
+						var odr = OrderFrom(order, timestamp);
+						Orders[odr.OrderId] = odr;
+						order_ids.Add(odr.OrderId);
+						pairs.Add(order.Pair);
+					}
+				//	foreach (var order in history.Values.SelectMany(x => x))
+				//	{
+				//		var his = TradeCompletedFrom(order, timestamp);
+				//		var fill = History.GetOrAdd(his.OrderId, his.TradeType, his.Pair);
+				//		fill.Trades[his.TradeId] = his;
+				//		AddToTradeHistory(fill);
+				//	}
+
+					// Update the trade pairs
+					lock (m_pairs)
+						m_pairs.AddRange(pairs);
+
+					// Remove any positions that are no longer valid.
+					RemovePositionsNotIn(order_ids, timestamp);
+				
+				//	// Save the history range
+				//	HistoryInterval = new Range(HistoryInterval.Beg, timestamp.Ticks);
+				
+					// Notify updated
+					History.LastUpdated = timestamp;
+					Orders.LastUpdated = timestamp;
+				});
+			}
+			catch (Exception ex)
+			{
+				HandleException(nameof(UpdatePositionsAndHistory), ex);
+			}
 		}
 
-		protected override void SetServerRequestRateLimit(float limit)
+		/// <summary>Convert a Poloniex order into an order</summary>
+		private Order OrderFrom(global::Binance.API.DomainObjects.Order odr, DateTimeOffset updated)
 		{
-			throw new NotImplementedException();
-		}
-		protected override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume_base, Unit<decimal> price)
-		{
-			throw new NotImplementedException();
-		}
-		protected override Task<bool> CancelOrderInternal(TradePair pair, long order_id)
-		{
-			throw new NotImplementedException();
+			var order_id = odr.OrderId;
+			var fund_id = OrderIdtoFundId[order_id];
+			var tt = Misc.TradeType(odr.Side);
+			var pair = Pairs.GetOrAdd(odr.Pair.Base, odr.Pair.Quote);
+			var price = odr.Price._(pair.RateUnits);
+			var volume = odr.Amount._(pair.Base);
+			var created = odr.Created;
+			return new Order(fund_id, order_id, pair, tt, price, volume, volume, created, updated);
 		}
 
 		/// <summary>Convert a market period to a time frame</summary>

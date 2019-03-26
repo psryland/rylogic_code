@@ -37,14 +37,15 @@ namespace CoinFlip
 		//    sub-classes should not receive calls while back testing is enabled.
 		//  - All public methods should be non-virtual, forwarding to virtual protected
 		//    methods, or the 'Simulation' object when back testing is enabled
-		public Exchange(IExchangeSettings exch_settings, CancellationToken shutdown)
+
+		public Exchange(IExchangeSettings exch_settings, CoinDataList coin_data, CancellationToken shutdown)
 		{
 			try
 			{
 				ExchSettings = exch_settings;
 				m_main_shutdown = shutdown;
 				Colour = Colours[m_colour_index++ % Colours.Length];
-				Coins = new CoinCollection(this);
+				Coins = new CoinCollection(this, coin_data);
 				Pairs = new PairCollection(this);
 				Balance = new BalanceCollection(this);
 				Orders = new OrdersCollection(this);
@@ -140,6 +141,12 @@ namespace CoinFlip
 					case nameof(IExchangeSettings.PollPeriod):
 						{
 							NotifyPropertyChanged(nameof(PollPeriod));
+							break;
+						}
+					case nameof(IExchangeSettings.ServerRequestRateLimit):
+						{
+							SetServerRequestRateLimit(ExchSettings.ServerRequestRateLimit);
+							NotifyPropertyChanged(nameof(ServerRequestRateLimit));
 							break;
 						}
 					}
@@ -327,11 +334,10 @@ namespace CoinFlip
 		private volatile bool m_update_thread_exit;
 
 		/// <summary>The rate that 'Heart' beats at</summary>
-		public int PollPeriod
-		{
-			get { return ExchSettings.PollPeriod; }
-			set { ExchSettings.PollPeriod = value; }
-		}
+		public int PollPeriod => ExchSettings.PollPeriod;
+
+		/// <summary>The maximum number of requests per second to the exchange server</summary>
+		public float ServerRequestRateLimit => ExchSettings.ServerRequestRateLimit;
 
 		/// <summary>Dirty flag for updating pairs</summary>
 		public bool PairsUpdateRequired
@@ -401,20 +407,6 @@ namespace CoinFlip
 		/// <summary>True if TradeHistory can be mapped to previous order id's</summary>
 		public bool TradeHistoryUseful { get; protected set; }
 
-		/// <summary>The maximum number of requests per second to the exchange server</summary>
-		public float ServerRequestRateLimit
-		{
-			get { return ExchSettings.ServerRequestRateLimit; }
-			set
-			{
-				if (ServerRequestRateLimit == value) return;
-				ExchSettings.ServerRequestRateLimit = value;
-				SetServerRequestRateLimit(value);
-				NotifyPropertyChanged(nameof(ServerRequestRateLimit));
-			}
-		}
-		protected abstract void SetServerRequestRateLimit(float limit);
-
 		/// <summary>The percentage fee charged when performing exchanges</summary>
 		public decimal Fee => ExchSettings.TransactionFee;
 
@@ -460,6 +452,114 @@ namespace CoinFlip
 
 		/// <summary>A map from order id to the context id that created the order</summary>
 		public OrderIdtoFundIdMap OrderIdtoFundId { get; }
+
+		/// <summary>Update the collections of coins and pairs</summary>
+		public async Task UpdatePairs() // Worker thread context
+		{
+			// Allow update pairs in back testing mode as well
+
+			// Create a set of coins to find pairs for. Include any intermediate
+			// coins needed to find the live price of coins as well
+			var coins = new HashSet<string>();
+			foreach (var coin in SettingsData.Settings.Coins)
+			{
+				coins.Add(coin.Symbol);
+				coins.AddRange(coin.LivePriceSymbolsArray);
+			}
+
+			await UpdatePairsInternal(coins);
+		}
+		protected virtual Task UpdatePairsInternal(HashSet<string> coins)
+		{
+			// This method should wait for server responses in worker threads,
+			// collect data in local buffers, then use 'RunOnMainThread' to copy
+			// data to the Exchange's main collections.
+			return Task.CompletedTask;
+		}
+
+		/// <summary>Update the market data, balances, and open positions</summary>
+		protected virtual Task UpdateData() // Worker thread context
+		{
+			Pairs.LastUpdated = Model.UtcNow;
+			return Task.CompletedTask;
+		}
+
+		/// <summary>Return the order book for 'pair' to a depth of 'depth'</summary>
+		public async Task<MarketDepth> MarketDepth(TradePair pair, int depth) // Worker thread context
+		{
+			return BackTesting
+				? m_sim.MarketDepthInternal(pair, depth)
+				: await MarketDepthInternal(pair, depth);
+		}
+		protected virtual Task<MarketDepth> MarketDepthInternal(TradePair pair, int count) // Worker thread context
+		{
+			return Task.FromResult(new MarketDepth(pair.Base, pair.Quote));
+		}
+
+		/// <summary>Return the candle data for a given pair, over a given time range</summary>
+		public async Task<List<Candle>> CandleData(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end, CancellationToken? cancel) // Worker thread context
+		{
+			try
+			{
+				if (BackTesting)
+					throw new Exception("Shouldn't require candle data while back testing");
+
+				using (Scope.Create(() => CandleDataUpdateInProgress = true, () => CandleDataUpdateInProgress = false))
+					return await CandleDataInternal(pair, timeframe, time_beg, time_end, cancel);
+			}
+			catch (Exception ex)
+			{
+				HandleException(nameof(Exchange.CandleData), ex, $"PriceData {pair.NameWithExchange} get chart data failed.");
+				return null;
+			}
+		}
+		protected virtual Task<List<Candle>> CandleDataInternal(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end, CancellationToken? cancel) // Worker thread context
+		{
+			return Task.FromResult(new List<Candle>());
+		}
+		public bool CandleDataUpdateInProgress { get; private set; }
+
+		/// <summary>Update the account balances</summary>
+		protected virtual Task UpdateBalances()  // Worker thread context
+		{
+			Balance.LastUpdated = Model.UtcNow;
+			return Task.CompletedTask;
+		}
+
+		/// <summary>Update all open positions</summary>
+		protected virtual Task UpdatePositionsAndHistory() // Worker thread context
+		{
+			// Do history and positions together so there's no change of a position being
+			// filled without it appearing in the history
+			History.LastUpdated = Model.UtcNow;
+			Orders.LastUpdated = Model.UtcNow;
+			return Task.CompletedTask;
+		}
+
+		/// <summary>Update all deposits and withdrawals made on this exchange</summary>
+		protected virtual Task UpdateTransfers() // Worker thread context
+		{
+			return Task.CompletedTask;
+		}
+
+		/// <summary>Cancel an existing order</summary>
+		public async Task<bool> CancelOrder(TradePair pair, long order_id)
+		{
+			// Obey the global trade switch
+			var result =
+				BackTesting ? m_sim.CancelOrderInternal(pair, order_id) :
+				Model.AllowTrades ? await CancelOrderInternal(pair, order_id) :
+				true;
+
+			// Remove the position from the Positions collection so that there is no race condition
+			Orders.RemoveIf(x => x.Pair == pair && x.OrderId == order_id);
+
+			// Trigger a positions and balances update
+			PositionUpdateRequired = true;
+			BalanceUpdateRequired = true;
+			return result;
+		}
+		protected abstract Task<bool> CancelOrderInternal(TradePair pair, long order_id);
 
 		/// <summary>Place an order on the exchange to buy/sell 'amount' (currency depends on 'tt')</summary>
 		public async Task<OrderResult> CreateOrder(string fund_id, ETradeType tt, TradePair pair, Unit<decimal> amount_, Unit<decimal> price_)
@@ -557,25 +657,6 @@ namespace CoinFlip
 		protected abstract Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume_base, Unit<decimal> price);
 		private long m_fake_order_number;
 
-		/// <summary>Cancel an existing order</summary>
-		public async Task<bool> CancelOrder(TradePair pair, long order_id)
-		{
-			// Obey the global trade switch
-			var result =
-				BackTesting ? m_sim.CancelOrderInternal(pair, order_id) :
-				Model.AllowTrades ? await CancelOrderInternal(pair, order_id) :
-				true;
-
-			// Remove the position from the Positions collection so that there is no race condition
-			Orders.RemoveIf(x => x.Pair == pair && x.OrderId == order_id);
-
-			// Trigger a positions and balances update
-			PositionUpdateRequired = true;
-			BalanceUpdateRequired = true;
-			return result;
-		}
-		protected abstract Task<bool> CancelOrderInternal(TradePair pair, long order_id);
-
 		/// <summary>Enumerate all candle data and time frames provided by this exchange</summary>
 		public IEnumerable<PairAndTF> EnumAvailableCandleData(TradePair pair = null)
 		{
@@ -589,94 +670,9 @@ namespace CoinFlip
 			yield break;
 		}
 
-		/// <summary>Return the candle data for a given pair, over a given time range</summary>
-		public async Task<List<Candle>> CandleData(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end, CancellationToken? cancel) // Worker thread context
-		{
-			try
-			{
-				if (BackTesting)
-					throw new Exception("Shouldn't require candle data while back testing");
-
-				using (Scope.Create(() => CandleDataUpdateInProgress = true, () => CandleDataUpdateInProgress = false))
-					return await CandleDataInternal(pair, timeframe, time_beg, time_end, cancel);
-			}
-			catch (Exception ex)
-			{
-				HandleException(nameof(Exchange.CandleData), ex, $"PriceData {pair.NameWithExchange} get chart data failed.");
-				return null;
-			}
-		}
-		protected virtual Task<List<Candle>> CandleDataInternal(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end, CancellationToken? cancel) // Worker thread context
-		{
-			return Task.FromResult(new List<Candle>());
-		}
-		public bool CandleDataUpdateInProgress { get; private set; }
-
-		/// <summary>Return the order book for 'pair' to a depth of 'depth'</summary>
-		public async Task<MarketDepth> MarketDepth(TradePair pair, int depth) // Worker thread context
-		{
-			return BackTesting
-				? m_sim.MarketDepthInternal(pair, depth)
-				: await MarketDepthInternal(pair, depth);
-		}
-		protected virtual Task<MarketDepth> MarketDepthInternal(TradePair pair, int count) // Worker thread context
-		{
-			return Task.FromResult(new MarketDepth(pair.Base, pair.Quote));
-		}
-
-		/// <summary>Update the collections of coins and pairs</summary>
-		public async Task UpdatePairs() // Worker thread context
-		{
-			// Allow update pairs in back testing mode as well
-
-			// Create a set of coins to find pairs for. Include any intermediate
-			// coins needed to find the live price of coins as well
-			var coins = new HashSet<string>();
-			foreach (var coin in SettingsData.Settings.Coins)
-			{
-				coins.Add(coin.Symbol);
-				coins.AddRange(coin.LivePriceSymbolsArray);
-			}
-
-			await UpdatePairsInternal(coins);
-		}
-		protected virtual Task UpdatePairsInternal(HashSet<string> coins)
-		{
-			// This method should wait for server responses in worker threads,
-			// collect data in local buffers, then use 'RunOnMainThread' to copy
-			// data to the Exchange's main collections.
-			return Task.CompletedTask;
-		}
-
-		/// <summary>Update the market data, balances, and open positions</summary>
-		protected virtual Task UpdateData() // Worker thread context
-		{
-			Pairs.LastUpdated = Model.UtcNow;
-			return Task.CompletedTask;
-		}
-
-		/// <summary>Update the account balances</summary>
-		protected virtual Task UpdateBalances()  // Worker thread context
-		{
-			Balance.LastUpdated = Model.UtcNow;
-			return Task.CompletedTask;
-		}
-
-		/// <summary>Update all open positions</summary>
-		protected virtual Task UpdatePositionsAndHistory() // Worker thread context
-		{
-			// Do history and positions together so there's no change of a position being
-			// filled without it appearing in the history
-			History.LastUpdated = Model.UtcNow;
-			Orders.LastUpdated = Model.UtcNow;
-			return Task.CompletedTask;
-		}
-
-		/// <summary>Update all deposits and withdrawals made on this exchange</summary>
-		protected virtual Task UpdateTransfers() // Worker thread context
-		{
-			return Task.CompletedTask;
-		}
+		/// <summary>Apply the server request rate limit to the exchange API</summary>
+		protected virtual void SetServerRequestRateLimit(float limit)
+		{ }
 
 		/// <summary>Handle an exception during an update call</summary>
 		public void HandleException(string method_name, Exception ex, string msg = null)

@@ -9,7 +9,7 @@ using Rylogic.Utility;
 namespace CoinFlip
 {
 	/// <summary>The balance of a single currency on an exchange</summary>
-	[DebuggerDisplay("{Coin} Funds={Funds.Count}")]
+	[DebuggerDisplay("{Description}")]
 	public class Balances
 	{
 		// Notes:
@@ -176,13 +176,14 @@ namespace CoinFlip
 				throw new Exception("Balance Update expects only the Main fund to have a value");
 
 			var main = balance.Funds[Fund.Main];
-			if (main.HeldForTrades != 0)
-				throw new Exception("Balance Update expects 'HeldForTrades' to be zero");
 			if (main.HeldLocally != 0)
 				throw new Exception("Balance Update expects 'HeldLocally' to be zero");
 
 			Update(main.Total, main.HeldOnExch, main.LastUpdated);
 		}
+
+		/// <summary></summary>
+		private string Description => $"{Coin} Total={NettTotal} Avail={NettAvailable}";
 
 		/// <summary>Sanity check this balance</summary>
 		public bool AssertValid()

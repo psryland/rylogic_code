@@ -23,7 +23,7 @@ using Rylogic.Utility;
 
 namespace Binance.API
 {
-    public class BinanceApi :IDisposable
+	public partial class BinanceApi :IDisposable
     {
 		// Notes:
 		//   - API Info:
@@ -43,7 +43,7 @@ namespace Binance.API
 			UrlWssAddress = wss_address;
 			ServerRequestRateLimit = 6f;
 			Dispatcher = Dispatcher.CurrentDispatcher;
-			Hasher = new HMACSHA512(Encoding.ASCII.GetBytes(m_secret));
+			Hasher = new HMACSHA256(Encoding.ASCII.GetBytes(m_secret));
 			m_json = new JsonSerializer { NullValueHandling = NullValueHandling.Ignore };
 			Client = new HttpClient();
 			Subscriptions = new Dictionary<string, MarketDataSubscription>();
@@ -89,7 +89,28 @@ namespace Binance.API
 		private Dispatcher Dispatcher { get; set; }
 
 		/// <summary>Hasher</summary>
-		private HMACSHA512 Hasher { get; set; }
+		private HMACSHA256 Hasher { get; set; }
+
+		/// <summary>All coin names reported by the server</summary>
+		private HashSet<string> KnownCoins
+		{
+			get
+			{
+				if (m_known_coins == null)
+				{
+					// Query the server for the known coin
+					m_known_coins = new HashSet<string>();
+					var res = ServerRules().Result;
+					foreach (var sym in res.Symbols)
+					{
+						m_known_coins.Add(sym.BaseAsset);
+						m_known_coins.Add(sym.QuoteAsset);
+					}
+				}
+				return m_known_coins;
+			}
+		}
+		private HashSet<string> m_known_coins;
 
 		/// <summary>The maximum number of requests per second to the exchange server</summary>
 		public float ServerRequestRateLimit { get; set; }
@@ -114,14 +135,14 @@ namespace Binance.API
 		public async Task Ping(CancellationToken? cancel = null)
 		{
 			// https://api.binance.com/api/v1/ping
-			await GetData<object>("api/v1/ping", cancel);
+			await GetData<object>(ESecurityType.PUBLIC, "api/v1/ping", cancel);
 		}
 
 		/// <summary>Test connectivity</summary>
 		public async Task<DateTimeOffset> ServerTime(CancellationToken? cancel = null)
 		{
 			// https://api.binance.com/api/v1/time
-			var server_time = await GetData<JObject>("api/v1/time", cancel);
+			var server_time = await GetData<JObject>(ESecurityType.PUBLIC, "api/v1/time", cancel);
 			return new DateTimeOffset(server_time["serverTime"].Value<long>(), TimeSpan.Zero);
 		}
 
@@ -129,7 +150,7 @@ namespace Binance.API
 		public async Task<ServerRulesData> ServerRules(CancellationToken? cancel = null)
 		{
 			// https://api.binance.com/api/v1/exchangeInfo
-			return await GetData<ServerRulesData>("api/v1/exchangeInfo", cancel);
+			return await GetData<ServerRulesData>(ESecurityType.PUBLIC, "api/v1/exchangeInfo", cancel);
 		}
 
 		/// <summary>Return the current offers to buy and sell for all pairs</summary>
@@ -145,7 +166,7 @@ namespace Binance.API
 			}
 
 			// https://api.binance.com/api/v1/depth?symbol=IOTABTC&limit=5
-			var data = await GetData<OrderBook>("api/v1/depth", cancel,
+			var data = await GetData<OrderBook>(ESecurityType.PUBLIC, "api/v1/depth", cancel,
 				new KV("symbol", pair.Id),
 				new KV("limit", valid_depth));
 
@@ -162,7 +183,7 @@ namespace Binance.API
 		{
 			try
 			{
-				var data = await GetData<List<JArray>>("api/v1/klines", cancel,
+				var data = await GetData<List<JArray>>(ESecurityType.PUBLIC, "api/v1/klines", cancel,
 					new KV("symbol", pair.Id),
 					new KV("interval", period.Assoc<string>("tag")),
 					new KV("startTime", time_beg.ToUnixTimeMilliseconds()),
@@ -181,11 +202,51 @@ namespace Binance.API
 		#endregion
 
 		#region Account
+
+		/// <summary>Return the balances for the account</summary>
+		public async Task<BalancesData> GetBalances(CancellationToken? cancel = null)
+		{
+			// https://api.binance.com/api/v3/account
+			return await GetData<BalancesData>(ESecurityType.USER_DATA, "api/v3/account", cancel,
+				new KV("timestamp", DateTimeOffset.Now.ToUnixTimeMilliseconds()));
+		}
+
+		/// <summary>Get currently open orders. Not rate limiter increases for each unique pair that has an order</summary>
+		public async Task<List<Order>> GetOpenOrders(CurrencyPair? pair = null, CancellationToken? cancel = null)
+		{
+			// https://api.binance.com/api/v3/openOrders
+			var parms = new List<KV> { };
+			if (pair != null) parms.Add(new KV("symbol", pair.Value.Id));
+			parms.Add(new KV("timestamp", DateTimeOffset.Now.ToUnixTimeMilliseconds()));
+
+			// Get the orders
+			var orders = await GetData<List<Order>>(ESecurityType.USER_DATA, "api/v3/openOrders", cancel, parms.ToArray());
+
+			// Convert the currency pair strings
+			foreach (var order in orders)
+				order.Pair = ParseCurrencyPair(order.PairInternal);
+
+			return orders;
+		}
+
+		/// <summary>Get all open, cancelled, or filled orders</summary>
+		public async Task<List<Order>> GetAllOrders(CurrencyPair? pair = null, DateTimeOffset? beg = null, DateTimeOffset? end = null, long? min_order_id = null, CancellationToken? cancel = null)
+		{
+			// https://api.binance.com/api/v3/allOrders
+			var parms = new List<KV> { };
+			if (pair != null) parms.Add(new KV("symbol", pair.Value.Id));
+			if (min_order_id != null) parms.Add(new KV("orderId", min_order_id.Value));
+			if (beg != null) parms.Add(new KV("startTime", beg.Value.ToUnixTimeMilliseconds()));
+			if (end != null) parms.Add(new KV("endTime", end.Value.ToUnixTimeMilliseconds()));
+			parms.Add(new KV("timestamp", DateTimeOffset.Now.ToUnixTimeMilliseconds()));
+
+			return await GetData<List<Order>>(ESecurityType.USER_DATA, "api/v3/allOrders", cancel, parms.ToArray());
+		}
+
 		#endregion
 
-
 		/// <summary>Helper for GETs</summary>
-		private async Task<T> GetData<T>(string command, CancellationToken? cancel, params KV[] parameters)
+		private async Task<T> GetData<T>(ESecurityType security, string command, CancellationToken? cancel, params KV[] parameters)
 		{
 			// If called from the UI thread, disable the SynchronisationContext
 			// to prevent deadlocks when waiting for Async results.
@@ -206,14 +267,25 @@ namespace Binance.API
 					RequestThrottle();
 
 					// Add the command to the parameters
-					var kv = new List<KV> {};
-					kv.AddRange(parameters);
+					var kv = new List<KV>(parameters);
 
-					// Create the URL for the command + parameters
-					var url = $"{UrlBaseAddress}{command}{Misc.UrlEncode(kv)}";
+					// Add fields to the request based on 'security'
+					if (security != ESecurityType.PUBLIC)
+					{
+						var query_string = Misc.UrlEncode(kv).TrimStart('?');
+						var hash = Hasher.ComputeHash(Encoding.UTF8.GetBytes(query_string));
+						kv.Add(new KV("signature", Misc.ToStringHex(hash)));
+					}
+
+					// Create the request
+					var req = new HttpRequestMessage(HttpMethod.Get, $"{UrlBaseAddress}{command}{Misc.UrlEncode(kv)}");
+					if (security != ESecurityType.PUBLIC)
+					{
+						req.Headers.Add("X-MBX-APIKEY", m_key);
+					}
 
 					// Submit the request
-					var response = await Client.GetAsync(url, cancel_token);
+					var response = await Client.SendAsync(req, cancel_token);
 					if (!response.IsSuccessStatusCode)
 						throw new HttpException((int)response.StatusCode, response.ReasonPhrase);
 
@@ -301,5 +373,22 @@ namespace Binance.API
 		}
 		private Stopwatch m_request_sw;
 		private long m_last_request_ms;
+
+		/// <summary>Turn a string back into a currency pair</summary>
+		public CurrencyPair ParseCurrencyPair(string pair)
+		{
+			// Since there is no delimiter in the currency pair, we can't reliably convert
+			// back to base/quote. Use a bunch of heuristics to and get the base/quote values.
+			// Assume the minimum symbol code length is 3.
+			for (int i = 3, iend = pair.Length - 3; i <= iend; ++i)
+			{
+				var base_ = pair.Substring(0, i);
+				var quote = pair.Substring(i);
+				if (KnownCoins.Contains(base_) &&
+					KnownCoins.Contains(quote))
+					return new CurrencyPair(base_, quote);
+			}
+			throw new Exception($"Failed to determine currency pair from code: {pair}");
+		}
 	}
 }

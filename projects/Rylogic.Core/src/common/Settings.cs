@@ -504,7 +504,8 @@ namespace Rylogic.Common
 			SettingsEvent(ESettingsEvent.LoadingSettings, null, $"Loading settings file {filepath}");
 
 			var settings = XDocument.Load(filepath).Root;
-			if (settings == null) throw new Exception($"Invalidate settings file ({filepath})");
+			if (settings == null)
+				throw new Exception($"Invalidate settings file ({filepath})");
 
 			// Set the filepath before loading so that it's valid for the SettingsLoaded event
 			Filepath = filepath;

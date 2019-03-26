@@ -94,8 +94,6 @@ namespace CoinFlip
 				// Handlers
 				void HandleCurrentChanged(object sender, EventArgs e)
 				{
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Exchange)));
-
 					// Try to preserve the current pair and time frame
 					var pair = Pair?.Name;
 
@@ -107,6 +105,8 @@ namespace CoinFlip
 					// Try to select the same pair
 					var same = pair != null ? pairs.FirstOrDefault(x => x.Name == pair) : null;
 					if (same != null) Pairs.MoveCurrentTo(same);
+
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Exchange)));
 				}
 			}
 		}
@@ -137,8 +137,6 @@ namespace CoinFlip
 				// Handlers
 				void HandleCurrentChanged(object sender, EventArgs e)
 				{
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Pair)));
-
 					// Try to preserve the time frame
 					var tf = TimeFrame;
 
@@ -149,7 +147,9 @@ namespace CoinFlip
 					// Try to select the same timeframe
 					var same = tf != ETimeFrame.None ? tfs.FirstOrDefault(x => x == tf) : ETimeFrame.None;
 					if (same != ETimeFrame.None) TimeFrames.MoveCurrentTo(same);
-}
+
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Pair)));
+				}
 			}
 		}
 		private ICollectionView m_pairs;

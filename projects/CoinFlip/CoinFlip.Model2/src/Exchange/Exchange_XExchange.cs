@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using CoinFlip.Settings;
@@ -12,8 +10,8 @@ namespace CoinFlip
 {
 	public class CrossExchange : Exchange
 	{
-		public CrossExchange(IList<Exchange> trading_exchanges, CancellationToken shutdown)
-			: base(SettingsData.Settings.CrossExchange, shutdown)
+		public CrossExchange(IList<Exchange> trading_exchanges, CoinDataList coin_data, CancellationToken shutdown)
+			: base(SettingsData.Settings.CrossExchange, coin_data, shutdown)
 		{
 			Exchanges = trading_exchanges;
 		}

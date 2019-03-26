@@ -269,7 +269,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>The position of this trade in the order book for the trade type</summary>
-		public int OrderBookIndex(ETradeType tt, Unit<decimal> price)
+		public int OrderBookIndex(ETradeType tt, Unit<decimal> price, out bool beyond_order_book)
 		{
 			// Check units
 			if (price < 0m._(RateUnits))
@@ -280,15 +280,30 @@ namespace CoinFlip
 			//  - Want to trade B2Q == Sell our 'B' to get 'Q'.
 			//  - If there are no suitable B2Q.Orders (i.e. people wanting to buy 'B') then our trade becomes an offer in the Q2B order book.
 			//    i.e. we want to buy 'Q' so our trade is a Q2B offer.
-			return tt == ETradeType.B2Q
-				? Q2B.Orders.BinarySearch(x => +x.Price.CompareTo(price), find_insert_position:true)
-				: B2Q.Orders.BinarySearch(x => -x.Price.CompareTo(price), find_insert_position:true);
+			var idx = -1;
+			switch (tt)
+			{
+			default: throw new Exception($"Unknown trade type:{tt}");
+			case ETradeType.B2Q:
+				{
+					idx = Q2B.Orders.BinarySearch(x => +x.Price.CompareTo(price), find_insert_position: true);
+					beyond_order_book = idx == Q2B.Orders.Count;
+					break;
+				}
+			case ETradeType.Q2B:
+				{
+					idx = B2Q.Orders.BinarySearch(x => -x.Price.CompareTo(price), find_insert_position: true);
+					beyond_order_book = idx == B2Q.Orders.Count;
+					break;
+				}
+			}
+			return idx;
 		}
 
 		/// <summary>The total value of orders with a better price than 'price'</summary>
-		public Unit<decimal> OrderBookDepth(ETradeType tt, Unit<decimal> price)
+		public Unit<decimal> OrderBookDepth(ETradeType tt, Unit<decimal> price, out bool beyond_order_book)
 		{
-			var index = OrderBookIndex(tt, price);
+			var index = OrderBookIndex(tt, price, out beyond_order_book);
 			var orders = tt == ETradeType.B2Q ? Q2B.Orders : B2Q.Orders;
 			return orders.Take(index).Sum(x => x.AmountBase)._(Base);
 		}

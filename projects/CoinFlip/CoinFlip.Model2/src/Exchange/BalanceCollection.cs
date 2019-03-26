@@ -27,7 +27,7 @@ namespace CoinFlip
 		public Balances GetOrAdd(Coin coin)
 		{
 			Debug.Assert(Misc.AssertMarketDataWrite());
-			return this.GetOrAdd(coin, x => new Balances(x, Model.UtcNow));
+			return this.GetOrAdd(coin, x => new Balances(x, DateTimeOffset.MinValue));
 		}
 
 		/// <summary>Get/Set the balance for the given coin. Returns zero balance for unknown coins</summary>

@@ -177,6 +177,26 @@ namespace CoinFlip
 			throw new Exception("Unknown trade type string");
 		}
 
+		/// <summary>Convert a Binance trade type to ETradeType</summary>
+		public static ETradeType TradeType(this global::Binance.API.EOrderSide order_side)
+		{
+			switch (order_side)
+			{
+			default: throw new Exception("Unknown trade type string");
+			case global::Binance.API.EOrderSide.BUY: return ETradeType.Q2B;
+			case global::Binance.API.EOrderSide.SELL: return ETradeType.B2Q;
+			}
+		}
+		public static global::Binance.API.EOrderSide ToBinanceTT(this ETradeType trade_type)
+		{
+			switch (trade_type)
+			{
+			default: throw new Exception("Unknown trade type");
+			case ETradeType.Q2B: return global::Binance.API.EOrderSide.BUY;
+			case ETradeType.B2Q: return global::Binance.API.EOrderSide.SELL;
+			}
+		}
+
 		/// <summary>Convert a Poloniex trade type to ETradeType</summary>
 		public static ETradeType TradeType(this global::Poloniex.API.EOrderType order_type)
 		{

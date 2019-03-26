@@ -253,20 +253,16 @@ namespace CoinFlip
 			Util.DisposeAll(Exchanges);
 			Exchanges.Clear();
 
-			// Binance
-			if (User.GetKeys(nameof(Binance), out var apikey, out var secret) == User.EResult.Success)
-				Exchanges.Add(new Binance(apikey, secret, Shutdown.Token));
-			else
-				Exchanges.Add(new Binance(Shutdown.Token));
-
-			// Poloniex
-			if (User.GetKeys(nameof(Poloniex), out apikey, out secret) == User.EResult.Success)
-				Exchanges.Add(new Poloniex(apikey, secret, Shutdown.Token));
-			else
-				Exchanges.Add(new Poloniex(Shutdown.Token));
+			// Create Exchange instances
+			Exchanges.Add(User.GetKeys(nameof(Binance), out var apikey, out var secret) == User.EResult.Success
+				? new Binance(apikey, secret, Coins, Shutdown.Token)
+				: new Binance(Coins, Shutdown.Token));
+			Exchanges.Add(User.GetKeys(nameof(Poloniex), out apikey, out secret) == User.EResult.Success
+				? new Poloniex(apikey, secret, Coins, Shutdown.Token)
+				: new Poloniex(Coins, Shutdown.Token));			
 
 			// Create the Cross-Exchange after all others have been created
-			Exchanges.Insert(0, new CrossExchange(Exchanges, Shutdown.Token));
+			Exchanges.Insert(0, new CrossExchange(Exchanges, Coins, Shutdown.Token));
 		}
 
 		/// <summary>Process any pending market data updates</summary>

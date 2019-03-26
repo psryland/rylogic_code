@@ -144,14 +144,18 @@ namespace Rylogic.Gui.WPF
 		{
 			// Note: Not using MenuItem.IsVisible because that also includes the parent's
 			// visibility (which during construction is usually false).
-			int s, e;
+			int s = 0, e = items.Count - 1, send = items.Count, eend = -1;
+
+			// Find the first and last non-collapsed item
+			for (; s != send && items[s] is FrameworkElement fe && fe.Visibility == Visibility.Collapsed; ++s) {}
+			for (; e != eend && items[e] is FrameworkElement fe && fe.Visibility == Visibility.Collapsed; --e) {}
 
 			// Hide starting separators
-			for (s = 0; s != items.Count && items[s] is Separator sep; ++s)
+			for (; s != e + 1 && items[s] is Separator sep; ++s)
 				sep.Visibility = Visibility.Collapsed;
 
 			// Hide ending separators
-			for (e = items.Count; e-- != 0 && items[e] is Separator sep;)
+			for (; e != s - 1 && items[e] is Separator sep; --e)
 				sep.Visibility = Visibility.Collapsed;
 
 			// Hide successive separators

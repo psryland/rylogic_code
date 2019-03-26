@@ -167,10 +167,10 @@ namespace CoinFlip
 		}
 
 		/// <summary>The position of this trade in the order book for the trade type</summary>
-		public int OrderBookIndex => Pair.OrderBookIndex(TradeType, PriceQ2B);
+		public int OrderBookIndex => Pair.OrderBookIndex(TradeType, PriceQ2B, out var _);
 
 		/// <summary>The depth of this position in the order book for the trade type</summary>
-		public Unit<decimal> OrderBookDepth => Pair.OrderBookDepth(TradeType, PriceQ2B);
+		public Unit<decimal> OrderBookDepth => Pair.OrderBookDepth(TradeType, PriceQ2B, out var _);
 
 		/// <summary>The coin type being sold</summary>
 		public Coin CoinIn => TradeType == ETradeType.B2Q ? Pair.Base : Pair.Quote;

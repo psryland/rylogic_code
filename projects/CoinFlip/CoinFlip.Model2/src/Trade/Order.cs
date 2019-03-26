@@ -12,7 +12,7 @@ namespace CoinFlip
 		// Notes:
 		//  - An Order is a request to buy/sell that has been sent to an exchange and
 		//    should exist somewhere in their order book. When an Order is filled it
-		//    becomes a 'OrderFill'
+		//    becomes a 'OrderCompleted'
 
 		public Order(string fund_id, long order_id, TradePair pair, ETradeType tt, Unit<decimal> price_q2b, Unit<decimal> amount_base, Unit<decimal> remaining_base, DateTimeOffset? created, DateTimeOffset updated, bool fake = false)
 		{
@@ -98,8 +98,8 @@ namespace CoinFlip
 		/// <summary>The commission that would be charged on this trade (in the same currency as AmountOut)</summary>
 		public Unit<decimal> Commission => Exchange.Fee * AmountOut;
 
-		/// <summary>Return the current live price of the pair associated with this order</summary>
-		public Unit<decimal>? LivePriceQ2B => Pair.SpotPrice(TradeType);
+		/// <summary>Return the current spot price of the pair associated with this order</summary>
+		public Unit<decimal>? SpotPriceQ2B => Pair.SpotPrice(TradeType);
 
 		/// <summary>The price distance between the order price and the current spot price</summary>
 		public Unit<decimal>? DistanceQ2B
@@ -121,7 +121,9 @@ namespace CoinFlip
 			get
 			{
 				var dist = DistanceQ2B;
-				return dist != null ? $"{dist:G8} ({Pair.OrderBookIndex(TradeType, PriceQ2B)})" : "---";
+				var idx = Pair.OrderBookIndex(TradeType, PriceQ2B, out var beyond);
+				var pls = beyond ? "+" : string.Empty;
+				return dist != null ? $"{dist:G8} ({idx}{pls})" : "---";
 			}
 		}
 

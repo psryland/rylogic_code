@@ -72,7 +72,7 @@ namespace Rylogic.Gui.WPF
 		}
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			throw new NotImplementedException();
+			throw new NotImplementedException($"MarkupExtension '{nameof(WithUnits)}' cannot convert any types back to '{targetType.Name}'");
 		}
 		public override object ProvideValue(IServiceProvider serviceProvider)
 		{

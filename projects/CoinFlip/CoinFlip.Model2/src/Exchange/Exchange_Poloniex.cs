@@ -18,13 +18,13 @@ namespace CoinFlip
 	{
 		private readonly HashSet<CurrencyPair> m_pairs;
 
-		public Poloniex(CancellationToken shutdown)
-			: this(string.Empty, string.Empty, shutdown)
+		public Poloniex(CoinDataList coin_data, CancellationToken shutdown)
+			: this(string.Empty, string.Empty, coin_data, shutdown)
 		{
 			ExchSettings.PublicAPIOnly = true;
 		}
-		public Poloniex(string key, string secret, CancellationToken shutdown)
-			:base(SettingsData.Settings.Poloniex, shutdown)
+		public Poloniex(string key, string secret, CoinDataList coin_data, CancellationToken shutdown)
+			:base(SettingsData.Settings.Poloniex, coin_data, shutdown)
 		{
 			m_pairs = new HashSet<CurrencyPair>();
 			Api = new PoloniexApi(key, secret, shutdown);
@@ -56,80 +56,6 @@ namespace CoinFlip
 		}
 		private PoloniexApi m_api;
 
-		/// <summary>Open a trade</summary>
-		protected async override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> amount, Unit<decimal> price)
-		{
-			try
-			{
-				// Place the trade order
-				var res = await Api.SubmitTrade(new CurrencyPair(pair.Base, pair.Quote), tt.ToPoloniexTT(), price, amount);
-				return new OrderResult(pair, res.OrderId, false, res.FilledOrders.Select(x => x.TradeId));
-			}
-			catch (Exception ex)
-			{
-				throw new Exception($"Poloniex: Submit trade failed. {ex.Message}\n{tt} Pair: {pair.Name}  Amt: {amount.ToString("G8",true)} @  {price.ToString("G8",true)}", ex);
-			}
-		}
-
-		/// <summary>Cancel an open trade</summary>
-		protected async override Task<bool> CancelOrderInternal(TradePair pair, long order_id)
-		{
-			try
-			{
-				// Cancel the trade
-				return await Api.CancelTrade(new CurrencyPair(pair.Base, pair.Quote), order_id);
-			}
-			catch (Exception ex)
-			{
-				throw new Exception($"Poloniex: Cancel trade (id={order_id}) failed. {ex.Message}");
-			}
-		}
-
-		/// <summary>Enumerate all candle data and time frames provided by this exchange</summary>
-		protected override IEnumerable<PairAndTF> EnumAvailableCandleDataInternal(TradePair pair)
-		{
-			if (pair != null)
-			{
-				var cp = new CurrencyPair(pair.Base, pair.Quote);
-				if (!Pairs.ContainsKey(pair.UniqueKey)) yield break;
-				foreach (var mp in Enum<EMarketPeriod>.Values)
-					yield return new PairAndTF(pair, ToTimeFrame(mp));
-			}
-			else
-			{
-				foreach (var p in Pairs.Values)
-					foreach (var mp in Enum<EMarketPeriod>.Values)
-						yield return new PairAndTF(p, ToTimeFrame(mp));
-			}
-		}
-
-		/// <summary>Return the chart data for a given pair, over a given time range</summary>
-		protected async override Task<List<Candle>> CandleDataInternal(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end, CancellationToken? cancel) // Worker thread context
-		{
-			var cp = new CurrencyPair(pair.Base, pair.Quote);
-
-			// Get the chart data
-			var data = await Api.GetChartData(cp, ToMarketPeriod(timeframe), time_beg, time_end, cancel);
-
-			// Convert it to candles (yes, Polo gets the base/quote backwards for 'Volume')
-			var candles = data.Select(x => new Candle(x.Time.Ticks, (double)x.Open, (double)x.High, (double)x.Low, (double)x.Close, (double)x.WeightedAverage, (double)x.VolumeQuote)).ToList();
-			return candles;
-		}
-
-		/// <summary>Return the order book for 'pair' to a depth of 'count'</summary>
-		protected async override Task<MarketDepth> MarketDepthInternal(TradePair pair, int depth) // Worker thread context
-		{
-			var cp = new CurrencyPair(pair.Base, pair.Quote);
-			var orders = await Api.GetOrderBook(cp, depth, cancel:Shutdown.Token);
-
-			// Update the depth of market data
-			var market_depth = new MarketDepth(pair.Base, pair.Quote);
-			var buys  = orders.BuyOffers .Select(x => new Offer(x.Price._(pair.RateUnits), x.AmountBase._(pair.Base))).ToArray();
-			var sells = orders.SellOffers.Select(x => new Offer(x.Price._(pair.RateUnits), x.AmountBase._(pair.Base))).ToArray();
-			market_depth.UpdateOrderBook(buys, sells);
-			return market_depth;
-		}
-
 		/// <summary>Update this exchange's set of trading pairs</summary>
 		protected async override Task UpdatePairsInternal(HashSet<string> coins) // Worker thread context
 		{
@@ -138,7 +64,7 @@ namespace CoinFlip
 				// Get all available trading pairs
 				// Use 'Shutdown' because updating pairs is independent of the Exchange.UpdateThread
 				// and we don't want updating pairs to be interrupted by the update thread stopping
-				var msg = await Api.GetTradePairs(cancel:Shutdown.Token);
+				var msg = await Api.GetTradePairs(cancel: Shutdown.Token);
 				if (msg == null)
 					throw new Exception("Poloniex: Failed to trading pair data.");
 
@@ -156,9 +82,9 @@ namespace CoinFlip
 
 						// Create the trade pair
 						var pair = new TradePair(base_, quote, this, p.Value.Id,
-							amount_range_base:new RangeF<Unit<decimal>>(0.0001m._(base_), 10000000m._(base_)),
-							amount_range_quote:new RangeF<Unit<decimal>>(0.0001m._(quote), 10000000m._(quote)),
-							price_range:null);
+							amount_range_base: new RangeF<Unit<decimal>>(0.0001m._(base_), 10000000m._(base_)),
+							amount_range_quote: new RangeF<Unit<decimal>>(0.0001m._(quote), 10000000m._(quote)),
+							price_range: null);
 
 						// Add the trade pair.
 						Pairs[pair.UniqueKey] = pair;
@@ -168,13 +94,6 @@ namespace CoinFlip
 					// Ensure a 'Balance' object exists for each coin type
 					foreach (var c in Coins.Values)
 						Balance.GetOrAdd(c);
-
-					// Currently not working on the Poloniex site
-					#if USE_WAMP
-					// Ensure we're subscribed to the order book streams for each pair
-					foreach (var p in Pairs.Values)
-						Api.SubscribePair(new CurrencyPair(p.Base, p.Quote));
-					#endif
 
 					// Record the pairs
 					lock (m_pairs)
@@ -206,7 +125,7 @@ namespace CoinFlip
 				// Request order book data for all of the pairs
 				// Poloniex only allows 6 API calls per second, so even though this returns
 				// unnecessary data it's better to get all order books in one call.
-				var order_book = await Api.GetOrderBook(depth:ExchSettings.MarketDepth, cancel:Shutdown.Token);
+				var order_book = await Api.GetOrderBook(depth: ExchSettings.MarketDepth, cancel: Shutdown.Token);
 
 				// Remove the unnecessary data. (don't really need to do this, but it's consistent with the other exchanges)
 				var surplus = order_book.Keys.Where(x => !pairs.Contains(x)).ToArray();
@@ -223,7 +142,7 @@ namespace CoinFlip
 							continue;
 
 						// Update the depth of market data
-						var buys  = orders.BuyOffers .Select(x => new Offer(x.Price._(pair.RateUnits), x.AmountBase._(pair.Base))).ToArray();
+						var buys = orders.BuyOffers.Select(x => new Offer(x.Price._(pair.RateUnits), x.AmountBase._(pair.Base))).ToArray();
 						var sells = orders.SellOffers.Select(x => new Offer(x.Price._(pair.RateUnits), x.AmountBase._(pair.Base))).ToArray();
 						pair.MarketDepth.UpdateOrderBook(buys, sells);
 					}
@@ -238,6 +157,33 @@ namespace CoinFlip
 			}
 		}
 
+		/// <summary>Return the order book for 'pair' to a depth of 'count'</summary>
+		protected async override Task<MarketDepth> MarketDepthInternal(TradePair pair, int depth) // Worker thread context
+		{
+			var cp = new CurrencyPair(pair.Base, pair.Quote);
+			var orders = await Api.GetOrderBook(cp, depth, cancel: Shutdown.Token);
+
+			// Update the depth of market data
+			var market_depth = new MarketDepth(pair.Base, pair.Quote);
+			var buys = orders.BuyOffers.Select(x => new Offer(x.Price._(pair.RateUnits), x.AmountBase._(pair.Base))).ToArray();
+			var sells = orders.SellOffers.Select(x => new Offer(x.Price._(pair.RateUnits), x.AmountBase._(pair.Base))).ToArray();
+			market_depth.UpdateOrderBook(buys, sells);
+			return market_depth;
+		}
+
+		/// <summary>Return the chart data for a given pair, over a given time range</summary>
+		protected async override Task<List<Candle>> CandleDataInternal(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end, CancellationToken? cancel) // Worker thread context
+		{
+			var cp = new CurrencyPair(pair.Base, pair.Quote);
+
+			// Get the chart data
+			var data = await Api.GetChartData(cp, ToMarketPeriod(timeframe), time_beg, time_end, cancel);
+
+			// Convert it to candles (yes, Polo gets the base/quote backwards for 'Volume')
+			var candles = data.Select(x => new Candle(x.Time.Ticks, (double)x.Open, (double)x.High, (double)x.Low, (double)x.Close, (double)x.WeightedAverage, (double)x.VolumeQuote)).ToList();
+			return candles;
+		}
+
 		/// <summary>Update account balance data</summary>
 		protected async override Task UpdateBalances() // Worker thread context
 		{
@@ -247,7 +193,7 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the account data
-				var balance_data = await Api.GetBalances(cancel:Shutdown.Token);
+				var balance_data = await Api.GetBalances(cancel: Shutdown.Token);
 
 				// Queue integration of the market data
 				Model.MarketUpdates.Add(() =>
@@ -284,10 +230,10 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the existing orders
-				var existing_orders = await Api.GetOpenOrders(cancel:Shutdown.Token);
+				var existing_orders = await Api.GetOpenOrders(cancel: Shutdown.Token);
 
 				// Request the history
-				var history = await Api.GetTradeHistory(beg:m_history_last, end:timestamp, cancel:Shutdown.Token);
+				var history = await Api.GetTradeHistory(beg: m_history_last, end: timestamp, cancel: Shutdown.Token);
 
 				// Record the time that history has been updated to
 				m_history_last = timestamp;
@@ -344,7 +290,7 @@ namespace CoinFlip
 				var timestamp = DateTimeOffset.Now;
 
 				// Request the transfers data
-				var transfers = await Api.GetTransfers(beg:m_transfers_last, end:timestamp, cancel:Shutdown.Token);
+				var transfers = await Api.GetTransfers(beg: m_transfers_last, end: timestamp, cancel: Shutdown.Token);
 
 				// Record the time that transfer history has been updated to
 				m_transfers_last = timestamp;
@@ -374,6 +320,53 @@ namespace CoinFlip
 			catch (Exception ex)
 			{
 				HandleException(nameof(UpdateTransfers), ex);
+			}
+		}
+
+		/// <summary>Cancel an open trade</summary>
+		protected async override Task<bool> CancelOrderInternal(TradePair pair, long order_id)
+		{
+			try
+			{
+				// Cancel the trade
+				return await Api.CancelTrade(new CurrencyPair(pair.Base, pair.Quote), order_id);
+			}
+			catch (Exception ex)
+			{
+				throw new Exception($"Poloniex: Cancel trade (id={order_id}) failed. {ex.Message}");
+			}
+		}
+
+		/// <summary>Open a trade</summary>
+		protected async override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> amount, Unit<decimal> price)
+		{
+			try
+			{
+				// Place the trade order
+				var res = await Api.SubmitTrade(new CurrencyPair(pair.Base, pair.Quote), tt.ToPoloniexTT(), price, amount);
+				return new OrderResult(pair, res.OrderId, false, res.FilledOrders.Select(x => x.TradeId));
+			}
+			catch (Exception ex)
+			{
+				throw new Exception($"Poloniex: Submit trade failed. {ex.Message}\n{tt} Pair: {pair.Name}  Amt: {amount.ToString("G8",true)} @  {price.ToString("G8",true)}", ex);
+			}
+		}
+
+		/// <summary>Enumerate all candle data and time frames provided by this exchange</summary>
+		protected override IEnumerable<PairAndTF> EnumAvailableCandleDataInternal(TradePair pair)
+		{
+			if (pair != null)
+			{
+				var cp = new CurrencyPair(pair.Base, pair.Quote);
+				if (!Pairs.ContainsKey(pair.UniqueKey)) yield break;
+				foreach (var mp in Enum<EMarketPeriod>.Values)
+					yield return new PairAndTF(pair, ToTimeFrame(mp));
+			}
+			else
+			{
+				foreach (var p in Pairs.Values)
+					foreach (var mp in Enum<EMarketPeriod>.Values)
+						yield return new PairAndTF(p, ToTimeFrame(mp));
 			}
 		}
 

@@ -1,10 +1,9 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
 namespace Binance.API.DomainObjects
 {
 	/// <summary>Base/Quote currency trading pair</summary>
-	[DebuggerDisplay("{Base,nq}/{Quote,nq}")]
+	[DebuggerDisplay("{Description}")]
 	public struct CurrencyPair
 	{
 		public CurrencyPair(string base_, string quote)
@@ -21,6 +20,9 @@ namespace Binance.API.DomainObjects
 
 		/// <summary>The name of the pair when querying the exchange</summary>
 		public string Id => $"{Base}{Quote}";
+
+		/// <summary></summary>
+		private string Description => $"{Base}/{Quote}";
 
 		#region Equals
 		public bool Equals(CurrencyPair b)
