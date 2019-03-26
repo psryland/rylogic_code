@@ -57,7 +57,6 @@ namespace Rylogic.Common
 	}
 
 	/// <summary>A base class for settings structures</summary>
-	[Serializable]
 	public abstract class SettingsSet<T> :ISettingsSet ,INotifyPropertyChanged ,INotifyPropertyChanging where T:SettingsSet<T>, new()
 	{
 		/// <summary>The collection of settings</summary>
@@ -265,7 +264,6 @@ namespace Rylogic.Common
 	}
 
 	/// <summary>A base class for simple settings</summary>
-	[Serializable]
 	public abstract class SettingsBase<T> :SettingsSet<T> where T:SettingsBase<T>, new()
 	{
 		public const string VersionKey = "__SettingsVersion";
@@ -274,6 +272,7 @@ namespace Rylogic.Common
 		{
 			m_filepath = "";
 			SettingsEvent = null;
+			BackupOldSettings = true;
 
 			// Default to off so users can enable after startup completes
 			AutoSaveOnChanges = false;
@@ -422,8 +421,8 @@ namespace Rylogic.Common
 		/// <summary>Called whenever an error or warning condition occurs. By default, this function calls 'OnSettingsError'</summary>
 		public Action<ESettingsEvent, Exception, string> SettingsEvent
 		{
-			get { return m_impl_settings_error; }
-			set { m_impl_settings_error = value ?? ((err,ex,msg) => OnSettingsEvent(err,ex,msg)); }
+			get { return m_impl_settings_error ?? ((err, ex, msg) => OnSettingsEvent(err, ex, msg)); }
+			set { m_impl_settings_error = value; }
 		}
 		private Action<ESettingsEvent, Exception, string> m_impl_settings_error;
 
@@ -459,9 +458,22 @@ namespace Rylogic.Common
 			LoadedVersion = vers.Value;
 
 			// Upgrade old settings
-			vers.Remove();
 			if (vers.Value != Version)
+			{
+				// Backup old settings
+				if (BackupOldSettings && Filepath.HasValue())
+				{
+					var backup_filepath = Path.ChangeExtension(Filepath, $"backup_({vers.Value}){Path_.Extn(Filepath)}");
+					node.Save(backup_filepath);
+				}
+
+				// Upgrade the settings in memory
 				Upgrade(node, vers.Value);
+			}
+
+			// Remove the version number to support old-style settings
+			// where the element name was interpreted as the setting name.
+			vers.Remove();
 
 			// Load the settings from XML
 			base.FromXml(node, flags);
@@ -471,8 +483,7 @@ namespace Rylogic.Common
 			ReadOnly = flags.HasFlag(ESettingsLoadFlags.ReadOnly);
 
 			// Notify of settings loaded
-			if (SettingsLoaded != null)
-				SettingsLoaded(this,new SettingsLoadedEventArgs(Filepath));
+			SettingsLoaded?.Invoke(this,new SettingsLoadedEventArgs(Filepath));
 		}
 
 		/// <summary>Return the settings as XML</summary>
@@ -542,7 +553,7 @@ namespace Rylogic.Common
 			{
 				// Notify of a save about to happen
 				var args = new SettingsSavingEventArgs(false);
-				if (SettingsSaving != null) SettingsSaving(this, args);
+				SettingsSaving?.Invoke(this, args);
 				if (args.Cancel) return;
 
 				SettingsEvent(ESettingsEvent.SavingSettings, null, $"Saving settings to file {filepath}");
@@ -574,7 +585,7 @@ namespace Rylogic.Common
 			{
 				// Notify of a save about to happen
 				var args = new SettingsSavingEventArgs(false);
-				if (SettingsSaving != null) SettingsSaving(this, args);
+				SettingsSaving?.Invoke(this, args);
 				if (args.Cancel) return;
 
 				SettingsEvent(ESettingsEvent.SavingSettings, null, "Saving settings to stream");
@@ -613,20 +624,13 @@ namespace Rylogic.Common
 				File.Delete(Filepath);
 		}
 
+		/// <summary>Backup old settings before upgrades</summary>
+		public bool BackupOldSettings { get; set; }
+
 		/// <summary>Called when loading settings from an earlier version</summary>
 		public virtual void Upgrade(XElement old_settings, string from_version)
 		{
 			// Boiler-plate:
-			//// Preserve old settings
-			//if (from_version != Version && Filepath.HasValue())
-			//{
-			//	// Note: Do not save over 'Filepath' just leave the settings upgraded in memory.
-			//	// It's up to the caller whether settings should be saved.
-			//	var extn = Path_.Extn(Filepath);
-			//	var backup_filepath = Path.ChangeExtension(Filepath, $"backup_({from_version}){extn}");
-			//	old_settings.Save(backup_filepath);
-			//}
-			//
 			//for (; from_version != Version; )
 			//{
 			//	switch (from_version)
@@ -849,6 +853,37 @@ namespace Rylogic.Common
 		}
 	}
 
+	/// <summary>Extension methods for settings</summary>
+	public static class Settings_
+	{
+		/// <summary>Return the single child setting based on the given key names</summary>
+		public static XElement Child(XElement element, params string[] key_names)
+		{
+			var elem = element;
+			foreach (var key in key_names)
+				elem = elem?.Elements("setting").SingleOrDefault(x => x.Attribute("key").Value == key);
+
+			return elem;
+		}
+
+		/// <summary>Return all child settings based on the given key names</summary>
+		public static IEnumerable<XElement> Children(XElement element, params string[] key_names)
+		{
+			IEnumerable<XElement> ChildrenInternal(XElement e, int i)
+			{
+				if (i == key_names.Length)
+					return Enumerable.Empty<XElement>();
+
+				var children = e.Elements("setting").Where(x => x.Attribute("key").Value == key_names[i]);
+				return i + 1 != key_names.Length
+					? children.SelectMany(x => ChildrenInternal(x, i + 1))
+					: children;
+			}
+			return ChildrenInternal(element, 0);
+		}
+	}
+
+	/// <summary></summary>
 	public enum ESettingsEvent
 	{
 		LoadFailed,
@@ -859,6 +894,7 @@ namespace Rylogic.Common
 		SaveFailed,
 	}
 
+	/// <summary></summary>
 	[Flags]
 	public enum ESettingsLoadFlags
 	{
@@ -937,7 +973,8 @@ namespace Rylogic.UnitTests
 {
 	using Extn;
 
-	[TestFixture] public class TestSettings
+	[TestFixture]
+	public class TestSettings
 	{
 		private sealed class SettingsThing
 		{
@@ -960,43 +997,45 @@ namespace Rylogic.UnitTests
 				node.Add2("z", z, false);
 				return node;
 			}
-			public int x,y,z;
+			public int x, y, z;
 		}
-		private sealed class SubSettings :SettingsSet<SubSettings>
+		private sealed class SubSettings : SettingsSet<SubSettings>
 		{
-			public SubSettings() { Field = 2; Buffer = new byte[]{1,2,3}; }
-			public int Field     { get { return get<int>(nameof(Field)); } set { set(nameof(Field), value); } }
+			public SubSettings() { Field = 2; Buffer = new byte[] { 1, 2, 3 }; }
+			public int Field { get { return get<int>(nameof(Field)); } set { set(nameof(Field), value); } }
 			public byte[] Buffer { get { return get<byte[]>(nameof(Buffer)); } set { set(nameof(Buffer), value); } }
 		}
-		private sealed class Settings :SettingsBase<Settings>
+		private sealed class Settings : SettingsBase<Settings>
 		{
 			public Settings()
 			{
-				Str    = "default";
-				Int    = 4;
-				DTO    = DateTimeOffset.Parse("2013-01-02 12:34:56");
-				Floats = new[]{1f,2f,3f};
-				Sub    = new SubSettings();
-				Sub2   = new XElement("external");
+				Str = "default";
+				Int = 4;
+				DTO = DateTimeOffset.Parse("2013-01-02 12:34:56");
+				Floats = new[] { 1f, 2f, 3f };
+				Sub = new SubSettings();
+				Sub2 = new XElement("external");
 				Things = new object[] { 1, 2.3f, "hello" };
 			}
-			public Settings(string filepath) :base(filepath) {}
-			public Settings(XElement node) : base(node) {}
+			public Settings(string filepath) : base(filepath) { }
+			public Settings(XElement node) : base(node) { }
 
-			public string         Str    { get { return get<string        >(nameof(Str   )); } set { set(nameof(Str   ) , value); } }
-			public int            Int    { get { return get<int           >(nameof(Int   )); } set { set(nameof(Int   ) , value); } }
-			public DateTimeOffset DTO    { get { return get<DateTimeOffset>(nameof(DTO   )); } set { set(nameof(DTO   ) , value); } }
-			public float[]        Floats { get { return get<float[]       >(nameof(Floats)); } set { set(nameof(Floats) , value); } }
-			public SubSettings    Sub    { get { return get<SubSettings   >(nameof(Sub   )); } set { set(nameof(Sub   ) , value); } }
-			public XElement       Sub2   { get { return get<XElement      >(nameof(Sub2  )); } set { set(nameof(Sub2  ) , value); } }
-			public object[]       Things { get { return get<object[]      >(nameof(Things)); } set { set(nameof(Things) , value); } }
+			public string Str { get { return get<string>(nameof(Str)); } set { set(nameof(Str), value); } }
+			public int Int { get { return get<int>(nameof(Int)); } set { set(nameof(Int), value); } }
+			public DateTimeOffset DTO { get { return get<DateTimeOffset>(nameof(DTO)); } set { set(nameof(DTO), value); } }
+			public float[] Floats { get { return get<float[]>(nameof(Floats)); } set { set(nameof(Floats), value); } }
+			public SubSettings Sub { get { return get<SubSettings>(nameof(Sub)); } set { set(nameof(Sub), value); } }
+			public XElement Sub2 { get { return get<XElement>(nameof(Sub2)); } set { set(nameof(Sub2), value); } }
+			public object[] Things { get { return get<object[]>(nameof(Things)); } set { set(nameof(Things), value); } }
 		}
 
-		[TestFixtureSetUp] public void Setup()
+		[TestFixtureSetUp]
+		public void Setup()
 		{
 			//Xml.SupportWinFormsTypes();
 		}
-		[Test] public void TestSettings1()
+		[Test]
+		public void TestSettings1()
 		{
 			var s = new Settings();
 			Assert.Equal(Settings.Default.Str, s.Str);
@@ -1011,7 +1050,8 @@ namespace Rylogic.UnitTests
 			Assert.True((string)Settings.Default.Things[2] == "hello");
 			Assert.Throws(typeof(ArgumentNullException), s.Save); // no filepath set
 		}
-		[Test] public void TestSettings2()
+		[Test]
+		public void TestSettings2()
 		{
 			var file = Path.GetTempFileName();
 			var st = new SettingsThing();
@@ -1020,11 +1060,11 @@ namespace Rylogic.UnitTests
 				Str = "Changed",
 				Int = 42,
 				DTO = DateTimeOffset.UtcNow,
-				Floats = new[]{4f,5f,6f},
+				Floats = new[] { 4f, 5f, 6f },
 				Sub = new SubSettings
 				{
 					Field = 12,
-					Buffer = new byte[]{4,5,6}
+					Buffer = new byte[] { 4, 5, 6 }
 				},
 				Sub2 = st.ToXml(new XElement("external")),
 				Things = new object[] { "Hello", 6.28 },
@@ -1033,11 +1073,11 @@ namespace Rylogic.UnitTests
 
 			var S = new Settings(xml);
 
-			Assert.Equal(s.Str       , S.Str);
-			Assert.Equal(s.Int       , S.Int);
-			Assert.Equal(s.DTO       , S.DTO);
+			Assert.Equal(s.Str, S.Str);
+			Assert.Equal(s.Int, S.Int);
+			Assert.Equal(s.DTO, S.DTO);
 			Assert.True(s.Floats.SequenceEqual(S.Floats));
-			Assert.Equal(s.Sub.Field , S.Sub.Field);
+			Assert.Equal(s.Sub.Field, S.Sub.Field);
 			Assert.True(s.Sub.Buffer.SequenceEqual(S.Sub.Buffer));
 			Assert.True((string)s.Things[0] == "Hello");
 			Assert.True((double)s.Things[1] == 6.28);
@@ -1047,7 +1087,8 @@ namespace Rylogic.UnitTests
 			Assert.Equal(st.y, st2.y);
 			Assert.Equal(st.z, st2.z);
 		}
-		[Test] public void TestEvents()
+		[Test]
+		public void TestEvents()
 		{
 			var i = 0;
 			int changing = 0, changed = 0, saving = 0, loading = 0;
@@ -1081,6 +1122,31 @@ namespace Rylogic.UnitTests
 			Assert.Equal(4, changed);
 			Assert.Equal(5, saving);
 			Assert.Equal(6, loading);
+		}
+		[Test]
+		public void TestExtensions()
+		{
+			var settings = @"
+				<settings>
+					<setting key='One'>
+						<setting key='Two'/>
+						<setting key='Two'/>
+						<setting key='Two'/>
+					</setting>
+					<setting key='One'>
+						<setting key='Two'/>
+						<setting key='Two'/>
+					</setting>
+					<setting key='One'>
+						<setting key='Three'/>
+					</setting>
+				</settings>
+				";
+
+			var xml = XElement.Parse(settings);
+			Assert.Equal(3, Settings_.Children(xml, "One").Count());
+			Assert.Equal(5, Settings_.Children(xml, "One", "Two").Count());
+			Assert.Equal(1, Settings_.Children(xml, "One", "Three").Count());
 		}
 	}
 }
