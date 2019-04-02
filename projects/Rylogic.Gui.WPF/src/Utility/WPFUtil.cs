@@ -36,7 +36,7 @@ namespace Rylogic.Gui.WPF
 				CancellationToken.None,
 				(u, o, p) =>
 				{
-					for (; !Debugger.IsAttached && !u.Cancel; Thread.Sleep(100))
+					for (; !Debugger.IsAttached && !u.CancelPending; Thread.Sleep(100))
 						p(new ProgressUI.UserState { });
 				})
 			{

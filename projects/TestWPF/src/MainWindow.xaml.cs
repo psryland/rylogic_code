@@ -68,7 +68,7 @@ namespace TestWPF
 			{
 				var dlg = new ProgressUI(this, "Test Progress", "Testicles", System.Drawing.SystemIcons.Exclamation.ToBitmapSource(), CancellationToken.None, (u, _, p) =>
 				{
-					for (int i = 0, iend = 100; !u.Cancel && i != iend; ++i)
+					for (int i = 0, iend = 100; !u.CancelPending && i != iend; ++i)
 					{
 						p(new ProgressUI.UserState
 						{
@@ -78,13 +78,18 @@ namespace TestWPF
 						});
 						Thread.Sleep(100);
 					}
-				});
+				}) { AllowCancel = true };
+
+				// Modal
 				using (dlg)
 				{
 					var res = dlg.ShowDialog(500);
 					if (res == true) MessageBox.Show("Completed");
 					if (res == false) MessageBox.Show("Cancelled");
 				}
+
+				// Non-modal
+				//dlg.Show();
 			};
 			m_menu_tests_prompt_ui.Click += (s, a) =>
 			{

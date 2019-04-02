@@ -32,7 +32,7 @@ namespace Rylogic.Gui.WPF
 			ProgressBarVisible = true;
 			AllowCancel = true;
 			CancelEnabled = true;
-
+			SignalCancel = Command.Create(this, () => CancelPending = true);
 			DataContext = this;
 		}
 		public ProgressUI(Window owner, string title, string desc, ImageSource image, CancellationToken cancel, WorkerFunc worker, object arg = null, ThreadPriority priority = ThreadPriority.Normal)
@@ -43,7 +43,7 @@ namespace Rylogic.Gui.WPF
 				worker = worker ?? new WorkerFunc((ui, a, p) =>
 				{
 					// Default worker function just waits till cancel is signalled
-					for (; !Cancel; Thread.Sleep(100))
+					for (; !CancelPending; Thread.Sleep(100))
 						p(new UserState { });
 				});
 
@@ -186,13 +186,16 @@ namespace Rylogic.Gui.WPF
 		/// <summary>An event raised when the task is complete</summary>
 		public ManualResetEvent Done { get; }
 
-		/// <summary>Cancel the background task</summary>
-		public bool Cancel
+		/// <summary>The background task should cancel</summary>
+		public bool CancelPending
 		{
 			get { return AllowCancel && m_cancel.IsCancellationRequested; }
-			set { if (AllowCancel) m_cancel.Cancel(); }
+			private set { if (AllowCancel) m_cancel.Cancel(); }
 		}
 		private CancellationTokenSource m_cancel;
+
+		/// <summary>Set the state of 'CancelPending' to true</summary>
+		public Command SignalCancel { get; }
 
 		/// <summary>True if the task completed, false if cancelled, null if an error was thrown</summary>
 		public bool? Result { get; private set; }
@@ -257,7 +260,8 @@ namespace Rylogic.Gui.WPF
 
 			if (us.CloseDialog)
 			{
-				Result = Cancel ? false : true;
+				Result = CancelPending ? false : true;
+				AllowCancel = true;
 				Close();
 			}
 		}
