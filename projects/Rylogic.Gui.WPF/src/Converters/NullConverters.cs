@@ -4,7 +4,7 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Markup;
 
-namespace Rylogic.Gui.WPF
+namespace Rylogic.Gui.WPF.Converters
 {
 	/// <summary>If the value is null, return a default instance of 'targetType'</summary>
 	public class NullableToDefault : MarkupExtension, IValueConverter

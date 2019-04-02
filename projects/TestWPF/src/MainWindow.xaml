@@ -30,6 +30,7 @@
 					<MenuItem Name="m_menu_tests_message_box_ui" Header="_Message Box UI"/>
 					<MenuItem Name="m_menu_tests_log_ui" Header="_Log UI"/>
 					<MenuItem Name="m_menu_tests_pattern_editor" Header="_Pattern Editor"/>
+					<MenuItem Name="m_menu_tests_progress_ui" Header="_Progress UI"/>
 					<MenuItem Name="m_menu_tests_prompt_ui" Header="_Prompt UI"/>
 					<MenuItem Name="m_menu_tests_tool_ui" Header="_Tool Window"/>
 					<MenuItem Name="m_menu_tests_view3d" Header="_View3D"/>

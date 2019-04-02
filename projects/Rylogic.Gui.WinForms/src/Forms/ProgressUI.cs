@@ -34,7 +34,8 @@ namespace Rylogic.Gui.WinForms
 				m_progress = new TextProgressBar
 				{
 					Style = style,
-					Anchor = AnchorStyles.Left|AnchorStyles.Right|AnchorStyles.Top
+					Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top,
+					MarqueeAnimationSpeed = 30,
 				};
 				m_description = new Label
 				{

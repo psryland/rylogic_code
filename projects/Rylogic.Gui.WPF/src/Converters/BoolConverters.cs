@@ -7,8 +7,26 @@ using System.Windows.Markup;
 using Rylogic.Extn;
 using Rylogic.Utility;
 
-namespace Rylogic.Gui.WPF
+namespace Rylogic.Gui.WPF.Converters
 {
+	/// <summary>Invert a boolean value</summary>
+	[ValueConversion(typeof(bool), typeof(bool))]
+	public class Not : MarkupExtension, IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			return value is bool b ? !b : value == null;
+		}
+		public object ConvertBack(object value, Type target_type, object parameter, CultureInfo culture)
+		{
+			return value is bool b ? !b : value == null;
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
+	}
+
 	/// <summary>Compares a value to the parameter, return true if they are equal</summary>
 	[ValueConversion(typeof(object), typeof(bool))]
 	public class IsEqual : MarkupExtension, IValueConverter
@@ -127,6 +145,28 @@ namespace Rylogic.Gui.WPF
 		{
 			if (!(value is Visibility v)) return null;
 			return v == Visibility.Collapsed;
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
+	}
+
+	/// <summary>TextWrapping if true. Use parameter="invert" for true == NoWrap</summary>
+	public class BoolToWrap : MarkupExtension, IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			if (!(value is bool b)) return null;
+			if (parameter is string s && string.Compare(s, "invert", true) == 0) b = !b;
+			return b ? TextWrapping.Wrap : TextWrapping.NoWrap;
+		}
+		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			if (!(value is TextWrapping wrap)) return null;
+			var b = wrap == TextWrapping.Wrap;
+			if (parameter is string s && string.Compare(s, "invert", true) == 0) b = !b;
+			return b;
 		}
 		public override object ProvideValue(IServiceProvider serviceProvider)
 		{

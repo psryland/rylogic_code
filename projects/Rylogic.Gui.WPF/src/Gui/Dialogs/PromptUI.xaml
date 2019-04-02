@@ -1,11 +1,11 @@
 ﻿<Window
 	x:Class="Rylogic.Gui.WPF.PromptUI"
-	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-	xmlns:local="clr-namespace:Rylogic.Gui.WPF"
-	mc:Ignorable="d" 
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters"
+    mc:Ignorable="d" 
 	d:DesignWidth="220"
 	d:DesignHeight="150"
 	Title="User Prompt"
@@ -14,34 +14,49 @@
 	ResizeMode="CanResizeWithGrip"
 	ShowInTaskbar="False"
 	MaxWidth="800"
+	MaxHeight="800"
 	MinWidth="220"
 	MinHeight="150"
 	>
 	<DockPanel>
 
 		<!-- Buttons -->
-		<StackPanel
+		<Grid
 			DockPanel.Dock="Bottom"
-			Orientation="Horizontal"
-			FlowDirection="RightToLeft"
 			Background="{x:Static SystemColors.ControlBrush}"
 			>
-			<Button
-				Content="Cancel"
-				IsCancel="True"
-				MinWidth="80"
-				MinHeight="22"
-				Margin="12,8,4,8"
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="Auto"/>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="Auto"/>
+				<ColumnDefinition Width="Auto"/>
+			</Grid.ColumnDefinitions>
+
+			<CheckBox
+				Grid.Column="0"
+				Content="Wrap"
+				Margin="8,8,4,8"
+				IsChecked="{Binding Wrap, Mode=TwoWay}"
 				/>
 			<Button
+				Grid.Column="2"
 				Content="OK"
 				IsDefault="True"
 				MinWidth="80"
 				MinHeight="22"
-				Margin="8,8,4,8"
+				Margin="0,8,12,8"
 				x:Name="m_btn_ok"
 				/>
-		</StackPanel>
+			<Button
+				Grid.Column="3"
+				Content="Cancel"
+				IsCancel="True"
+				MinWidth="80"
+				MinHeight="22"
+				Margin="0,8,12,8"
+				Visibility="{Binding ReadOnly, Converter={conv:BoolToCollapsed}}"
+				/>
+		</Grid>
 		
 		<!-- Body -->
 		<Grid
@@ -63,7 +78,7 @@
 				Margin="8"
 				VerticalAlignment="Top"
 				Source="{Binding Image}"
-				Visibility="{Binding Image, Converter={local:NullToCollapsed}}"
+				Visibility="{Binding Image, Converter={conv:NullToCollapsed}}"
 				/>
 
 			<!-- Prompt and field -->
@@ -73,7 +88,6 @@
 				MinHeight="50"
 				>
 				<Grid.RowDefinitions>
-					<RowDefinition Height="Auto"/>
 					<RowDefinition Height="Auto"/>
 					<RowDefinition Height="*"/>
 				</Grid.RowDefinitions>
@@ -88,8 +102,11 @@
 					Name="m_field"
 					Grid.Row="1"
 					Text="{Binding Value}"
-					TextWrapping="Wrap"
+					TextWrapping="{Binding Wrap, Converter={conv:BoolToWrap}}"
 					Margin="8,2,8,2"
+					IsReadOnly="{Binding ReadOnly}"
+					HorizontalScrollBarVisibility="Auto"
+					VerticalScrollBarVisibility="Auto"
 					/>
 			</Grid>
 		</Grid>

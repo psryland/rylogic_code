@@ -5,6 +5,7 @@
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
 	xmlns:local="clr-namespace:Rylogic.Gui.WPF"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters"
 	mc:Ignorable="d" 
 	d:DesignWidth="800"
 	d:DesignHeight="450"
@@ -15,11 +16,27 @@
 			<BitmapImage x:Key="check_reject" UriSource="/Rylogic.Gui.WPF;component/res/check_reject.png"/>
 			<BitmapImage x:Key="bottom" UriSource="/Rylogic.Gui.WPF;component/res/bottom.png"/>
 			<BitmapImage x:Key="line_wrap" UriSource="/Rylogic.Gui.WPF;component/res/line_wrap.png"/>
+
+			<SolidColorBrush x:Key="SelectionForeground" Color="Black" />
+			<SolidColorBrush x:Key="SelectionBackground" Color="#CCDDCC" />
+			<Style TargetType="{x:Type DataGridCell}">
+				<Setter Property="BorderBrush" Value="{Binding Highlight.BackColour, Converter={conv:ColourToBrush}}"/>
+				<Setter Property="Background" Value="{Binding Highlight.BackColour, Converter={conv:ColourToBrush}}"/>
+				<Style.Triggers>
+					<Trigger Property="IsSelected" Value="True">
+						<Setter Property="BorderBrush" Value="{StaticResource SelectionBackground}"/>
+						<Setter Property="Background" Value="{StaticResource SelectionBackground}"/>
+					</Trigger>
+				</Style.Triggers>
+			</Style>
+			<Style x:Key="LogEntryStyle" TargetType="{x:Type TextBlock}">
+				<Setter Property="TextWrapping" Value="{Binding LineWrap, Converter={conv:BoolToWrap}}"/>
+				<Setter Property="Foreground" Value="{Binding Highlight.ForeColour, Converter={conv:ColourToBrush}}"/>
+			</Style>
 		</ResourceDictionary>
 	</UserControl.Resources>
 
 	<Grid>
-
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="*"/>
@@ -29,9 +46,18 @@
 		<DockPanel
 			Grid.Row="0"
 			>
+			<ComboBox
+				DockPanel.Dock="Left"
+				ItemsSource="{Binding FilterLevel, Converter={conv:EnumValues}}"
+				SelectedItem="{Binding FilterLevel}"
+				VerticalAlignment="Center"
+				MinWidth="80"
+				Margin="4"
+				/>
 			<Button
 				DockPanel.Dock="Left"
 				Command="{Binding BrowseForLogFile}"
+				Visibility="{Binding ShowLogFilepath, Converter={conv:BoolToVisible}}"
 				Margin="4"
 				Height="24"
 				>
@@ -46,14 +72,15 @@
 				>
 				<Image Source="{StaticResource line_wrap}" Stretch="Uniform" StretchDirection="DownOnly"/>
 			</ToggleButton>
-			<Button
+			<ToggleButton
 				DockPanel.Dock="Right"
-				Command="{Binding JumpToBottom}"
+				IsChecked="{Binding TailScroll, Mode=OneWay}"
+				Command="{Binding ToggleTailScroll}"
 				Margin="4"
 				Height="24"
 				>
 				<Image Source="{StaticResource bottom}" Stretch="Uniform" StretchDirection="DownOnly"/>
-			</Button>
+			</ToggleButton>
 			<Button
 				DockPanel.Dock="Right"
 				Command="{Binding ClearLog}"
@@ -64,6 +91,7 @@
 			</Button>
 			<TextBox
 				Text="{Binding LogFilepath}"
+				Visibility="{Binding ShowLogFilepath, Converter={conv:BoolToVisible}}"
 				VerticalContentAlignment="Center"
 				IsReadOnly="True"
 				Margin="4"
@@ -79,6 +107,14 @@
 			GridLinesVisibility="None"
 			Background="White"
 			ItemsSource="{Binding LogEntriesView}"
-		/>
+			SelectionChanged="HandleSelectionChanged"
+			>
+			<DataGrid.ContextMenu>
+				<ContextMenu>
+					<MenuItem Header="Copy Log Entries" Command="{Binding CopySelectedRowsToClipboard}"/>
+					<MenuItem Header="Copy Messages" Command="{Binding CopySelectedMessagesToClipboard}"/>
+				</ContextMenu>
+			</DataGrid.ContextMenu>
+		</DataGrid>
 	</Grid>
 </UserControl>

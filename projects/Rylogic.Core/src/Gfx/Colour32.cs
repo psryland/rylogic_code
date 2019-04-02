@@ -187,7 +187,7 @@ namespace Rylogic.Gfx
 				byte.TryParse(s.Substring(3, 1), NumberStyles.HexNumber, null, out b))
 			{
 				// 17 because 17 * 15 = 255
-				col = new Colour32(0xFF, 17 * r, 17 * g, 17 * b);
+				col = new Colour32(0xFF, (byte)(17 * r), (byte)(17 * g), (byte)(17 * b));
 				return true;
 			}
 

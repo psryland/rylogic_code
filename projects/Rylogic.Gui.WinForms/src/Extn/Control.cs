@@ -26,6 +26,15 @@ using ToolStripContainer = System.Windows.Forms.ToolStripContainer;
 
 namespace Rylogic.Gui.WinForms
 {
+	public static class Gui_
+	{
+		/// <summary>Show the folder browser dialog</summary>
+		public static DialogResult ShowDialog(this Core.Windows.OpenFolderUI dlg, IWin32Window owner)
+		{
+			return dlg.ShowDialog(owner.Handle) ? DialogResult.OK : DialogResult.Cancel ;
+		}
+	}
+
 	public static class Control_
 	{
 		/// <summary>Get the user data for this control associated with 'guid'. If not found, and 'make' != null then 'make' is called with the result added and returned</summary>

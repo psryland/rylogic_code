@@ -5,7 +5,7 @@ using System.Windows.Markup;
 using Rylogic.Maths;
 using Rylogic.Utility;
 
-namespace Rylogic.Gui.WPF
+namespace Rylogic.Gui.WPF.Converters
 {
 	/// <summary>Scale a value by a parameter</summary>
 	public class ScaleValue : MarkupExtension, IValueConverter

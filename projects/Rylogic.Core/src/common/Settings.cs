@@ -57,11 +57,11 @@ namespace Rylogic.Common
 	}
 
 	/// <summary>A base class for settings structures</summary>
-	public abstract class SettingsSet<T> :ISettingsSet ,INotifyPropertyChanged ,INotifyPropertyChanging where T:SettingsSet<T>, new()
+	public abstract class SettingsSet<T> :ISettingsSet, INotifyPropertyChanged, INotifyPropertyChanging
+		where T:SettingsSet<T>, new()
 	{
 		/// <summary>The collection of settings</summary>
 		protected readonly Dictionary<string, object> m_data;
-
 		protected SettingsSet()
 		{
 			m_data = new Dictionary<string, object>();
@@ -229,18 +229,22 @@ namespace Rylogic.Common
 		public event PropertyChangingEventHandler PropertyChanging;
 
 		/// <summary>Manually notify of a setting change</summary>
-		public void RaiseSettingChanged(string key)
+		public void NotifySettingChanged(string key)
 		{
 			var val = get<object>(key);
 			OnSettingChange(new SettingChangeEventArgs(this, key, val, false));
+		}
+		public void NotifyAllSettingsChanged()
+		{
+			foreach (var key in Data.Keys)
+				NotifySettingChanged(key);
 		}
 
 		/// <summary>Called before and after a setting changes</summary>
 		protected virtual void OnSettingChange(SettingChangeEventArgs args)
 		{
 			SettingChange?.Invoke(this, args);
-			if (Parent == null) return;
-			Parent.OnSettingChange(args);
+			Parent?.OnSettingChange(args);
 		}
 		void ISettingsSet.OnSettingChange(SettingChangeEventArgs args)
 		{
@@ -264,7 +268,8 @@ namespace Rylogic.Common
 	}
 
 	/// <summary>A base class for simple settings</summary>
-	public abstract class SettingsBase<T> :SettingsSet<T> where T:SettingsBase<T>, new()
+	public abstract class SettingsBase<T> :SettingsSet<T>
+		where T:SettingsBase<T>, new()
 	{
 		public const string VersionKey = "__SettingsVersion";
 
@@ -694,10 +699,9 @@ namespace Rylogic.Common
 	}
 
 	/// <summary>A base class for a class that gets saved to/loaded from XML only</summary>
-	public abstract class SettingsXml<T> :ISettingsSet ,INotifyPropertyChanged ,INotifyPropertyChanging where T:SettingsXml<T>, new()
+	public abstract class SettingsXml<T> :ISettingsSet, INotifyPropertyChanged, INotifyPropertyChanging
+		where T:SettingsXml<T>, new()
 	{
-		private readonly Dictionary<string, object> m_data;
-
 		protected SettingsXml()
 		{
 			m_data = new Dictionary<string, object>();
@@ -745,7 +749,7 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>The default values for the settings</summary>
-		public static T Default { get { return m_default ?? (m_default = new T()); } }
+		public static T Default => m_default ?? (m_default = new T());
 		private static T m_default;
 
 		/// <summary>True to block all writes to the settings</summary>
@@ -780,6 +784,7 @@ namespace Rylogic.Common
 
 		/// <summary>Find the key that corresponds to 'value'</summary>
 		public IReadOnlyDictionary<string, object> Data => m_data;
+		private readonly Dictionary<string, object> m_data;
 
 		/// <summary>Raised before and after a setting changes</summary>
 		public event EventHandler<SettingChangeEventArgs> SettingChange;

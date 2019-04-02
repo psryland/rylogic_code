@@ -5,6 +5,7 @@
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
 	xmlns:gui2="clr-namespace:Rylogic.Gui.WPF"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters"
 	xmlns:local="clr-namespace:Rylogic.Gui.WPF.ChartDetail"
 	mc:Ignorable="d" 
 	d:DesignWidth="800"
@@ -34,7 +35,7 @@
 				<MenuItem Header="Navigation">
 					<MenuItem Header="Mode">
 						<ComboBox
-								ItemsSource="{Binding Options.NavigationMode, Converter={gui2:EnumValues}, Mode=OneTime}"
+								ItemsSource="{Binding Options.NavigationMode, Converter={conv:EnumValues}, Mode=OneTime}"
 								SelectedItem="{Binding Options.NavigationMode}"
 								Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
 								Background="{x:Static SystemColors.ControlBrush}"
@@ -50,15 +51,15 @@
 				<MenuItem Header="Rendering">
 					<MenuItem
 							Header="Background Colour"
-							Background="{Binding Options.BackgroundColour, Converter={gui2:ColourToBrush}}"
-							Foreground="{Binding Options.BackgroundColour, Converter={gui2:TextOverColourBrush}}"
+							Background="{Binding Options.BackgroundColour, Converter={conv:ColourToBrush}}"
+							Foreground="{Binding Options.BackgroundColour, Converter={conv:TextOverColourBrush}}"
 							Command="{Binding SetBackgroundColour}"
 							/>
 					<MenuItem Header="Orthographic" IsChecked="{Binding Options.Orthographic}" Command="{Binding ToggleOrthographic}"/>
 					<MenuItem Header="Antialiasing" IsChecked="{Binding Options.AntiAliasing}" Command="{Binding ToggleAntiAliasing}"/>
 					<MenuItem Header="Fill Mode">
 						<ComboBox
-								ItemsSource="{Binding Options.FillMode, Converter={gui2:EnumValues}, Mode=OneTime}"
+								ItemsSource="{Binding Options.FillMode, Converter={conv:EnumValues}, Mode=OneTime}"
 								SelectedItem="{Binding Options.FillMode}"
 								Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
 								Background="{x:Static SystemColors.ControlBrush}"
@@ -68,7 +69,7 @@
 					</MenuItem>
 					<MenuItem Header="Cull Mode">
 						<ComboBox
-								ItemsSource="{Binding Options.CullMode, Converter={gui2:EnumValues}, Mode=OneTime}"
+								ItemsSource="{Binding Options.CullMode, Converter={conv:EnumValues}, Mode=OneTime}"
 								SelectedItem="{Binding Options.CullMode}"
 								Style="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}"
 								Background="{x:Static SystemColors.ControlBrush}"
@@ -109,7 +110,7 @@
 		Grid.Row="0"
 		Grid.Column="2"
 		Content="{Binding Title}"
-		Visibility="{Binding Title, Converter={gui2:NullToCollapsed}}"
+		Visibility="{Binding Title, Converter={conv:NullToCollapsed}}"
 		HorizontalAlignment="Center"
 		FontWeight="Bold"
 		/>
@@ -129,7 +130,7 @@
 		Grid.Column="2"
 		Axis="{Binding XAxis}"
 		Height="{Binding AxisSize, RelativeSource={RelativeSource Self}}"
-		Visibility="{Binding Options.ShowAxes, Converter={gui2:BoolToVisible}}"
+		Visibility="{Binding Options.ShowAxes, Converter={conv:BoolToVisible}}"
 		Background="{Binding Background}"
 		ContextMenu="{StaticResource AxisCMenu}"
 		/>
@@ -151,7 +152,7 @@
 		Grid.Column="1"
 		Axis="{Binding YAxis}"
 		Width="{Binding AxisSize, RelativeSource={RelativeSource Self}}"
-		Visibility="{Binding Options.ShowAxes, Converter={gui2:BoolToVisible}}"
+		Visibility="{Binding Options.ShowAxes, Converter={conv:BoolToVisible}}"
 		Background="{Binding Background}"
 		ContextMenu="{StaticResource AxisCMenu}"
 		/>

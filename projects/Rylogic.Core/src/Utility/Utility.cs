@@ -173,7 +173,7 @@ namespace Rylogic.Utility
 		/// <summary>Blocks until the debugger is attached</summary>
 		public static void WaitForDebugger(Func<string, bool> wait_cb = null)
 		{
-			if (Debugger.IsAttached) return;
+			if (DebuggerAttached()) return;
 			var t = new Thread(new ThreadStart(() =>
 			{
 				try
@@ -192,13 +192,17 @@ namespace Rylogic.Utility
 						return true;
 					});
 
-					for (; !Debugger.IsAttached && wait_cb(info);)
-					{}
+					for (; !DebuggerAttached() && wait_cb(info);)
+					{ }
 				}
 				catch { }
 			}));
+			t.SetApartmentState(ApartmentState.STA); // So 'wait_cb' can display a MsgBox
 			t.Start();
 			t.Join();
+
+			// Helper method for debugging (return false)
+			bool DebuggerAttached() => Debugger.IsAttached;
 		}
 
 		/// <summary>__FILE__</summary>
@@ -703,9 +707,9 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>Returns the full path to a file or directory relative to the app executable</summary>
-		public static string ResolveAppPath(string relative_path = "")
+		public static string ResolveAppPath(params string[] paths)
 		{
-			return Path_.CombinePath(AppDirectory, relative_path);
+			return Path_.CombinePath(paths.Prepend(AppDirectory));
 		}
 
 		/// <summary>Read a text file embedded resource returning it as a string</summary>

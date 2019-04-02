@@ -1,12 +1,12 @@
 ﻿<Window
 	x:Class="Rylogic.Gui.WPF.View3dLightingUI"
-	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-	xmlns:gui2="clr-namespace:Rylogic.Gui.WPF"
-	xmlns:gfx="clr-namespace:Rylogic.Gfx;assembly=Rylogic.View3d"
-	mc:Ignorable="d" 
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:gfx="clr-namespace:Rylogic.Gfx;assembly=Rylogic.View3d"
+    xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters"
+    mc:Ignorable="d" 
 	d:DesignWidth="300"
 	d:DesignHeight="440"
 	Title="Light Properties"
@@ -15,15 +15,7 @@
 	Width="300"
 	Height="440"
 	>
-	<Window.Resources>
-		<ResourceDictionary>
-			<gui2:VecToString x:Key="VecToString"/>
-			<gui2:ColourToString x:Key="ColourToString"/>
-			<gui2:AllTrue x:Key="AllTrue"/>
-			<gui2:AnyTrue x:Key="AnyTrue"/>
-		</ResourceDictionary>
-	</Window.Resources>
-	
+
 	<Grid
 		Background="{x:Static SystemColors.WindowBrush}"
 		>
@@ -63,22 +55,22 @@
 				<StackPanel>
 					<RadioButton
 						Content="Ambient"
-						IsChecked="{Binding Type, Converter={gui2:IsEqual}, ConverterParameter={x:Static gfx:View3d+ELight.Ambient}}"
+						IsChecked="{Binding Type, Converter={conv:IsEqual}, ConverterParameter={x:Static gfx:View3d+ELight.Ambient}}"
 						Margin="2"
 						/>
 					<RadioButton
 						Content="Directional"
-						IsChecked="{Binding Type, Converter={gui2:IsEqual}, ConverterParameter={x:Static gfx:View3d+ELight.Directional}}"
+						IsChecked="{Binding Type, Converter={conv:IsEqual}, ConverterParameter={x:Static gfx:View3d+ELight.Directional}}"
 						Margin="2"
 						/>
 					<RadioButton
 						Content="Point"
-						IsChecked="{Binding Type, Converter={gui2:IsEqual}, ConverterParameter={x:Static gfx:View3d+ELight.Point}}"
+						IsChecked="{Binding Type, Converter={conv:IsEqual}, ConverterParameter={x:Static gfx:View3d+ELight.Point}}"
 						Margin="2"
 						/>
 					<RadioButton
 						Content="Spot"
-						IsChecked="{Binding Type, Converter={gui2:IsEqual}, ConverterParameter={x:Static gfx:View3d+ELight.Spot}}"
+						IsChecked="{Binding Type, Converter={conv:IsEqual}, ConverterParameter={x:Static gfx:View3d+ELight.Spot}}"
 						Margin="2"
 						/>
 				</StackPanel>
@@ -119,8 +111,8 @@
 						>
 						<TextBox.IsEnabled>
 							<MultiBinding Converter="{StaticResource AnyTrue}">
-								<Binding Path="Type" Converter="{gui2:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Point}"/>
-								<Binding Path="Type" Converter="{gui2:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Spot}"/>
+								<Binding Path="Type" Converter="{conv:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Point}"/>
+								<Binding Path="Type" Converter="{conv:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Spot}"/>
 							</MultiBinding>
 						</TextBox.IsEnabled>
 					</TextBox>
@@ -141,8 +133,8 @@
 						>
 						<TextBox.IsEnabled>
 							<MultiBinding Converter="{StaticResource AnyTrue}">
-								<Binding Path="Type" Converter="{gui2:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Directional}"/>
-								<Binding Path="Type" Converter="{gui2:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Spot}"/>
+								<Binding Path="Type" Converter="{conv:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Directional}"/>
+								<Binding Path="Type" Converter="{conv:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Spot}"/>
 							</MultiBinding>
 						</TextBox.IsEnabled>
 					</TextBox>
@@ -167,9 +159,9 @@
 							>
 							<CheckBox.IsEnabled>
 								<MultiBinding Converter="{StaticResource AnyTrue}">
-									<Binding Path="Type" Converter="{gui2:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Directional}"/>
-									<Binding Path="Type" Converter="{gui2:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Point}"/>
-									<Binding Path="Type" Converter="{gui2:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Spot}"/>
+									<Binding Path="Type" Converter="{conv:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Directional}"/>
+									<Binding Path="Type" Converter="{conv:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Point}"/>
+									<Binding Path="Type" Converter="{conv:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Spot}"/>
 								</MultiBinding>
 							</CheckBox.IsEnabled>
 						</CheckBox>
@@ -207,7 +199,7 @@
 				<TextBox
 					Grid.Row="0"
 					Grid.Column="1"
-					Text="{Binding Ambient, Converter={StaticResource ColourToString}}"
+					Text="{Binding Ambient, Converter={conv:ColourToString}}"
 					Margin="2"
 					/>
 
@@ -222,14 +214,14 @@
 				<TextBox
 					Grid.Row="1"
 					Grid.Column="1"
-					Text="{Binding Diffuse, Converter={StaticResource ColourToString}}"
+					Text="{Binding Diffuse, Converter={conv:ColourToString}}"
 					Margin="2"
 					>
 					<TextBox.IsEnabled>
 						<MultiBinding Converter="{StaticResource AnyTrue}">
-							<Binding Path="Type" Converter="{gui2:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Directional}"/>
-							<Binding Path="Type" Converter="{gui2:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Point}"/>
-							<Binding Path="Type" Converter="{gui2:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Spot}"/>
+							<Binding Path="Type" Converter="{conv:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Directional}"/>
+							<Binding Path="Type" Converter="{conv:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Point}"/>
+							<Binding Path="Type" Converter="{conv:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Spot}"/>
 						</MultiBinding>
 					</TextBox.IsEnabled>
 				</TextBox>
@@ -250,9 +242,9 @@
 					>
 					<TextBox.IsEnabled>
 						<MultiBinding Converter="{StaticResource AnyTrue}">
-							<Binding Path="Type" Converter="{gui2:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Directional}"/>
-							<Binding Path="Type" Converter="{gui2:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Point}"/>
-							<Binding Path="Type" Converter="{gui2:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Spot}"/>
+							<Binding Path="Type" Converter="{conv:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Directional}"/>
+							<Binding Path="Type" Converter="{conv:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Point}"/>
+							<Binding Path="Type" Converter="{conv:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Spot}"/>
 						</MultiBinding>
 					</TextBox.IsEnabled>
 				</TextBox>
@@ -296,9 +288,9 @@
 					>
 					<TextBox.IsEnabled>
 						<MultiBinding Converter="{StaticResource AnyTrue}">
-							<Binding Path="Type" Converter="{gui2:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Directional}"/>
-							<Binding Path="Type" Converter="{gui2:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Point}"/>
-							<Binding Path="Type" Converter="{gui2:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Spot}"/>
+							<Binding Path="Type" Converter="{conv:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Directional}"/>
+							<Binding Path="Type" Converter="{conv:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Point}"/>
+							<Binding Path="Type" Converter="{conv:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Spot}"/>
 						</MultiBinding>
 					</TextBox.IsEnabled>
 				</TextBox>
@@ -319,7 +311,7 @@
 					>
 					<TextBox.IsEnabled>
 						<MultiBinding Converter="{StaticResource AnyTrue}">
-							<Binding Path="Type" Converter="{gui2:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Spot}"/>
+							<Binding Path="Type" Converter="{conv:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Spot}"/>
 						</MultiBinding>
 					</TextBox.IsEnabled>
 				</TextBox>
@@ -340,7 +332,7 @@
 					>
 					<TextBox.IsEnabled>
 						<MultiBinding Converter="{StaticResource AnyTrue}">
-							<Binding Path="Type" Converter="{gui2:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Spot}"/>
+							<Binding Path="Type" Converter="{conv:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Spot}"/>
 						</MultiBinding>
 					</TextBox.IsEnabled>
 				</TextBox>
@@ -361,7 +353,7 @@
 					>
 					<TextBox.IsEnabled>
 						<MultiBinding Converter="{StaticResource AnyTrue}">
-							<Binding Path="Type" Converter="{gui2:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Spot}"/>
+							<Binding Path="Type" Converter="{conv:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Spot}"/>
 						</MultiBinding>
 					</TextBox.IsEnabled>
 				</TextBox>
@@ -382,7 +374,7 @@
 					>
 					<TextBox.IsEnabled>
 						<MultiBinding Converter="{StaticResource AnyTrue}">
-							<Binding Path="Type" Converter="{gui2:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Spot}"/>
+							<Binding Path="Type" Converter="{conv:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Spot}"/>
 						</MultiBinding>
 					</TextBox.IsEnabled>
 				</TextBox>
@@ -403,9 +395,9 @@
 					>
 					<TextBox.IsEnabled>
 						<MultiBinding Converter="{StaticResource AnyTrue}">
-							<Binding Path="Type" Converter="{gui2:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Directional}"/>
-							<Binding Path="Type" Converter="{gui2:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Point}"/>
-							<Binding Path="Type" Converter="{gui2:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Spot}"/>
+							<Binding Path="Type" Converter="{conv:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Directional}"/>
+							<Binding Path="Type" Converter="{conv:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Point}"/>
+							<Binding Path="Type" Converter="{conv:IsEqual}" ConverterParameter="{x:Static gfx:View3d+ELight.Spot}"/>
 						</MultiBinding>
 					</TextBox.IsEnabled>
 				</TextBox>

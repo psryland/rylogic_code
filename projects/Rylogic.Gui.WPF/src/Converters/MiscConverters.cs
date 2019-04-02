@@ -8,7 +8,7 @@ using System.Windows.Markup;
 using System.Windows.Media.Imaging;
 using Rylogic.Utility;
 
-namespace Rylogic.Gui.WPF
+namespace Rylogic.Gui.WPF.Converters
 {
 	/// <summary>Convert an unknown type to 'targetType' using a TypeDescriptor converter</summary>
 	public class ToValue : MarkupExtension, IValueConverter

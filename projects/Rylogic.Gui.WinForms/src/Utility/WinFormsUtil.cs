@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
+using System.Threading;
 using System.Windows.Forms;
 using Rylogic.Common;
 using Rylogic.Maths;
@@ -14,16 +15,14 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Blocks until the debugger is attached</summary>
 		public static void WaitForDebugger()
 		{
-			using (var mb = new MsgBox("Waiting for Debugger...", "Debugging", MessageBoxButtons.OK, MessageBoxIcon.Information) { PositiveBtnText = "Continue" })
+			if (Debugger.IsAttached) return;
+			var dlg = new ProgressForm("Application Paused", "Waiting for the debugger to attach.\n\nClick 'Cancel' to skip", SystemIcons.Information, ProgressBarStyle.Marquee, (f, o, p) =>
 			{
-				mb.Show(null);
-				Utility.Util.WaitForDebugger(info =>
-				{
-					Application.DoEvents();
-					mb.Text = info;
-					return mb.DialogResult == DialogResult.None;
-				});
-			}
+				for (; !Debugger.IsAttached && !f.CancelPending; Thread.Sleep(100))
+					p(new ProgressForm.UserState {});
+			});
+			using (dlg)
+				dlg.ShowDialog();
 		}
 
 		/// <summary>Helper to ignore the requirement for matched called to Cursor.Show()/Hide()</summary>

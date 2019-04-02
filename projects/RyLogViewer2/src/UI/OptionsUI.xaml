@@ -1,11 +1,11 @@
 ﻿<Window x:Class="RyLogViewer.OptionsUI"
-		xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-		xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-		xmlns:gui2="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
-		xmlns:local="clr-namespace:RyLogViewer"
-		mc:Ignorable="d" 
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+        xmlns:local="clr-namespace:RyLogViewer"
+        mc:Ignorable="d" 
 		d:DesignWidth="400"
 		d:DesignHeight="350"
 		Title="Options"
@@ -17,7 +17,6 @@
 	<Window.Resources>
 		<ResourceDictionary>
 			<local:TabPageToInt x:Key="TabPageToInt"/>
-			<gui2:ColourToBrush x:Key="ColourToBrush"/>
 		</ResourceDictionary>
 	</Window.Resources>
 	
@@ -303,8 +302,8 @@
 									Name="m_lbl_sel_colour"
 									Content="Click to modify"
 									ToolTip="Set the selection foreground and back colors in the log view&#x0a;Click here to modify the colors"
-									Background="{Binding LineSelectBackColour, Mode=TwoWay, Converter={StaticResource ColourToBrush}}"
-									Foreground="{Binding LineSelectForeColour, Mode=TwoWay, Converter={StaticResource ColourToBrush}}"
+									Background="{Binding LineSelectBackColour, Mode=TwoWay, Converter={conv:ColourToBrush}}"
+									Foreground="{Binding LineSelectForeColour, Mode=TwoWay, Converter={conv:ColourToBrush}}"
 									PreviewMouseLeftButtonDown="HandleEditSelectionColor"
 									HorizontalContentAlignment="Center"
 									VerticalAlignment="Center"
@@ -321,8 +320,8 @@
 									Name="m_lbl_text_colour"
 									Content="Click to modify"
 									ToolTip="Set the foreground and background colors in the log view&#x0a;Click here to modify the colors"
-									Background="{Binding LineBackColour1, Mode=TwoWay, Converter={StaticResource ColourToBrush}}"
-									Foreground="{Binding LineForeColour1, Mode=TwoWay, Converter={StaticResource ColourToBrush}}"
+									Background="{Binding LineBackColour1, Mode=TwoWay, Converter={conv:ColourToBrush}}"
+									Foreground="{Binding LineForeColour1, Mode=TwoWay, Converter={conv:ColourToBrush}}"
 									PreviewMouseLeftButtonDown="HandleEditSelectionColor"
 									HorizontalContentAlignment="Center"
 									VerticalAlignment="Center"
@@ -343,8 +342,8 @@
 									Name="m_lbl_back_colour"
 									Content="Click to modify"
 									ToolTip="Set the foreground and background colors for odd numbered rows in the log view&#x0a;Click here to modify the colors"
-									Background="{Binding LineBackColour2, Mode=TwoWay, Converter={StaticResource ColourToBrush}}"
-									Foreground="{Binding LineForeColour2, Mode=TwoWay, Converter={StaticResource ColourToBrush}}"
+									Background="{Binding LineBackColour2, Mode=TwoWay, Converter={conv:ColourToBrush}}"
+									Foreground="{Binding LineForeColour2, Mode=TwoWay, Converter={conv:ColourToBrush}}"
 									PreviewMouseLeftButtonDown="HandleEditSelectionColor"
 									HorizontalContentAlignment="Center"
 									VerticalAlignment="Center"

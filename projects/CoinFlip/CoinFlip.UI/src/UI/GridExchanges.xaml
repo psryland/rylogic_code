@@ -1,13 +1,12 @@
 ﻿<DataGrid
 	x:Class="CoinFlip.UI.GridExchanges"
-	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-	xmlns:gui2="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
-	xmlns:local="clr-namespace:CoinFlip.UI"
-	xmlns:model="clr-namespace:CoinFlip;assembly=CoinFlip.Model"
-	mc:Ignorable="d" 
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:model="clr-namespace:CoinFlip;assembly=CoinFlip.Model"
+    xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+    mc:Ignorable="d" 
 	d:DesignHeight="250" d:DesignWidth="400"
 	AutoGenerateColumns="False"
 	GridLinesVisibility="None"
@@ -24,7 +23,7 @@
 			>
 			<DataGridTextColumn.CellStyle>
 				<Style TargetType="DataGridCell">
-					<Setter Property="Background" Value="{Binding Colour, Converter={gui2:ColourToBrush}, Mode=OneWay}"/>
+					<Setter Property="Background" Value="{Binding Colour, Converter={conv:ColourToBrush}, Mode=OneWay}"/>
 				</Style>
 			</DataGridTextColumn.CellStyle>
 		</DataGridTextColumn>
@@ -56,7 +55,7 @@
 				/>
 			<MenuItem
 				Header="Public API Only"
-				IsChecked="{Binding Current.Status, Converter={gui2:HasFlag}, ConverterParameter={x:Static model:EExchangeStatus.PublicAPIOnly}, Mode=OneWay}"
+				IsChecked="{Binding Current.Status, Converter={conv:HasFlag}, ConverterParameter={x:Static model:EExchangeStatus.PublicAPIOnly}, Mode=OneWay}"
 				Command="{Binding TogglePublicAPIOnly}"
 				/>
 			<Separator/>

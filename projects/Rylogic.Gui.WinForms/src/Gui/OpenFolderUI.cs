@@ -9,7 +9,7 @@ using Rylogic.Utility;
 namespace Rylogic.Gui.WinForms
 {
 	/// <summary>Select a folder using the vista style dialog</summary>
-	public sealed class OpenFolderUI : CommonDialog
+	[Obsolete("Use 'OpenFolderUI' from Rylogic.Core.Window")] public sealed class OpenFolderUI : CommonDialog
 	{
 		private FolderBrowserDialog m_old_browse_folder_dlg;
 

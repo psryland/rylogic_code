@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -62,6 +63,28 @@ namespace TestWPF
 			m_menu_tests_pattern_editor.Click += (s, a) =>
 			{
 				new PatternEditorUI().Show();
+			};
+			m_menu_tests_progress_ui.Click += (s, a) =>
+			{
+				var dlg = new ProgressUI(this, "Test Progress", "Testicles", System.Drawing.SystemIcons.Exclamation.ToBitmapSource(), CancellationToken.None, (u, _, p) =>
+				{
+					for (int i = 0, iend = 100; !u.Cancel && i != iend; ++i)
+					{
+						p(new ProgressUI.UserState
+						{
+							Description = $"Testicle: {i / 10}",
+							FractionComplete = 1.0 * i / iend,
+							ProgressBarText = $"I'm up to {i}/{iend}",
+						});
+						Thread.Sleep(100);
+					}
+				});
+				using (dlg)
+				{
+					var res = dlg.ShowDialog(500);
+					if (res == true) MessageBox.Show("Completed");
+					if (res == false) MessageBox.Show("Cancelled");
+				}
 			};
 			m_menu_tests_prompt_ui.Click += (s, a) =>
 			{

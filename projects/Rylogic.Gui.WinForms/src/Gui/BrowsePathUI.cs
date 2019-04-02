@@ -186,12 +186,9 @@ namespace Rylogic.Gui.WinForms
 				}
 			case EType.SelectDirectory:
 				{
-					using (var dlg = new OpenFolderUI { Title = Title })
-					{
-						dlg.SelectedPath = Path;
-						if (dlg.ShowDialog(this) != DialogResult.OK) break;
-						Path = dlg.SelectedPath;
-					}
+					var dlg = new Core.Windows.OpenFolderUI { Title = Title, SelectedPath = Path };
+					if (dlg.ShowDialog(this) != DialogResult.OK) break;
+					Path = dlg.SelectedPath;
 					break;
 				}
 			}

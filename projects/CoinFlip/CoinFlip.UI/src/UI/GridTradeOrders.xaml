@@ -1,11 +1,12 @@
 ﻿<DataGrid
 	x:Class="CoinFlip.UI.GridTradeOrders"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:gui2="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
-    mc:Ignorable="d" 
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+	xmlns:gui2="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+	mc:Ignorable="d" 
 	d:DesignHeight="450"
 	d:DesignWidth="800"
 	AutoGenerateColumns="False"
@@ -49,31 +50,31 @@
 			/>
 		<DataGridTextColumn
 			Header="Price"
-			Binding="{Binding PriceQ2B, Converter={gui2:WithUnits}, ConverterParameter='G8', Mode=OneWay}"
+			Binding="{Binding PriceQ2B, Converter={conv:WithUnits}, ConverterParameter='G8', Mode=OneWay}"
 			ElementStyle="{StaticResource RightAlignedTextColumn}"
 			Width="1*"
 			/>
 		<DataGridTextColumn
 			Header="Spot Price"
-			Binding="{Binding SpotPriceQ2B, Converter={gui2:WithUnits}, ConverterParameter='G8', Mode=OneWay}"
+			Binding="{Binding SpotPriceQ2B, Converter={conv:WithUnits}, ConverterParameter='G8', Mode=OneWay}"
 			ElementStyle="{StaticResource RightAlignedTextColumn}"
 			Width="1*"
 			/>
 		<DataGridTextColumn
 			Header="Distance"
-			Binding="{Binding DistanceQ2BDesc, Converter={gui2:WithUnits}, ConverterParameter='G8', Mode=OneWay}"
+			Binding="{Binding DistanceQ2BDesc, Converter={conv:WithUnits}, ConverterParameter='G8', Mode=OneWay}"
 			ElementStyle="{StaticResource RightAlignedTextColumn}"
 			Width="1*"
 			/>
 		<DataGridTextColumn
 			Header="Amount (Base)"
-			Binding="{Binding AmountBase, Converter={gui2:WithUnits}, ConverterParameter='G8', Mode=OneWay}"
+			Binding="{Binding AmountBase, Converter={conv:WithUnits}, ConverterParameter='G8', Mode=OneWay}"
 			ElementStyle="{StaticResource RightAlignedTextColumn}"
 			Width="1*"
 			/>
 		<DataGridTextColumn
 			Header="Amount (Quote)"
-			Binding="{Binding AmountQuote, Converter={gui2:WithUnits}, ConverterParameter='G8', Mode=OneWay}"
+			Binding="{Binding AmountQuote, Converter={conv:WithUnits}, ConverterParameter='G8', Mode=OneWay}"
 			ElementStyle="{StaticResource RightAlignedTextColumn}"
 			Width="1*"
 			/>
@@ -92,16 +93,16 @@
 			>
 			<MenuItem
 				Header="Cancel Order"
-				IsEnabled="{Binding Current, Converter={gui2:NotNull}}"
+				IsEnabled="{Binding Current, Converter={conv:NotNull}}"
 				/>
 			<MenuItem
 				Header="'Fill' Order"
-				IsEnabled="{Binding Current, Converter={gui2:NotNull}}"
+				IsEnabled="{Binding Current, Converter={conv:NotNull}}"
 				/>
 			<Separator/>
 			<MenuItem
 				Header="Modify"
-				IsEnabled="{Binding Current, Converter={gui2:NotNull}}"
+				IsEnabled="{Binding Current, Converter={conv:NotNull}}"
 				/>
 		</ContextMenu>
 	</DataGrid.ContextMenu>

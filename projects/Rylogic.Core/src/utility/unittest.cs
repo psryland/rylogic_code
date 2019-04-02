@@ -103,7 +103,7 @@ namespace Rylogic.UnitTests
 							}
 							catch (Exception ex)
 							{
-								if (ex is TargetInvocationException) ex = ex.InnerException;
+								while (ex is TargetInvocationException) ex = ex.InnerException;
 								outp.WriteLine();
 								outp.WriteLine($"Unit Testing:  Test {test.Name} Failed");
 								outp.WriteLine($"{ex.MessageFull()}");
@@ -121,7 +121,7 @@ namespace Rylogic.UnitTests
 						}
 						catch (Exception ex)
 						{
-							if (ex is TargetInvocationException) ex = ex.InnerException;
+							while (ex is TargetInvocationException) ex = ex.InnerException;
 							outp.WriteLine($"Unit Testing:  {fixture.Name} - Test fixture clean up function threw");
 							outp.WriteLine($"{ex.MessageFull()}");
 							outp.WriteLine($"{Util.FormatForOutputWindow(ex.StackTrace,file_pattern)}");

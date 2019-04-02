@@ -51,7 +51,7 @@ namespace CoinFlip
 				var nue = value;
 
 				SettingsData.Settings.Coins[index] = nue;
-				SettingsData.Settings.RaiseSettingChanged(nameof(SettingsData.Settings.Coins));
+				SettingsData.Settings.NotifySettingChanged(nameof(SettingsData.Settings.Coins));
 				SettingsData.Settings.AutoSave();
 
 				CollectionChanged?.Invoke(this, new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, nue, old));

@@ -3,7 +3,10 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
+using System.Threading;
+using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
 using Rylogic.Common;
 using Rylogic.Maths;
 
@@ -11,20 +14,37 @@ namespace Rylogic.Gui.WPF
 {
 	public static class WPFUtil
 	{
-		///// <summary>Blocks until the debugger is attached</summary>
-		//public static void WaitForDebugger()
-		//{
-		//	using (var mb = new MsgBox("Waiting for Debugger...", "Debugging", MessageBoxButtons.OK, MessageBoxIcon.Information) { PositiveBtnText = "Continue" })
-		//	{
-		//		mb.Show(null);
-		//		Utility.Util.WaitForDebugger(info =>
-		//		{
-		//			Application.DoEvents();
-		//			mb.Text = info;
-		//			return mb.DialogResult == DialogResult.None;
-		//		});
-		//	}
-		//}
+		/// <summary>Ensure Dispose is called during Application.Current.Exit</summary>
+		public static void DisposeAtExit(this IDisposable dis)
+		{
+			Application.Current.Exit += CallDispose;
+			void CallDispose(object sender, ExitEventArgs args)
+			{
+				Application.Current.Exit -= CallDispose;
+				dis.Dispose();
+			}
+		}
+
+		/// <summary>Blocks until the debugger is attached</summary>
+		public static void WaitForDebugger()
+		{
+			if (Debugger.IsAttached) return;
+			var dlg = new ProgressUI(null,
+				"Application Paused",
+				"Waiting for the debugger to attach.\n\nClick 'Cancel' to skip",
+				SystemIcons.Information.ToBitmapSource(),
+				CancellationToken.None,
+				(u, o, p) =>
+				{
+					for (; !Debugger.IsAttached && !u.Cancel; Thread.Sleep(100))
+						p(new ProgressUI.UserState { });
+				})
+			{
+				ProgressIsIndeterminate = true,
+			};
+			using (dlg)
+				dlg.ShowDialog();
+		}
 
 		///// <summary>Helper to ignore the requirement for matched called to Cursor.Show()/Hide()</summary>
 		//public static bool ShowCursor

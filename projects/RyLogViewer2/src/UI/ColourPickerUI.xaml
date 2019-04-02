@@ -1,12 +1,12 @@
 ﻿<Window
 	x:Class="RyLogViewer.ColourPickerUI"
-	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-	xmlns:gui2="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
-	xmlns:local="clr-namespace:RyLogViewer"
-	mc:Ignorable="d" 
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+    xmlns:gui2="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+    mc:Ignorable="d" 
 	d:DesignHeight="291" d:DesignWidth="412"
 	Title="Select Colors"
 	Width="340"
@@ -14,13 +14,6 @@
 	Background="{x:Static SystemColors.ControlBrush}"
 	WindowStartupLocation="CenterOwner"
 	>
-
-	<Window.Resources>
-		<ResourceDictionary>
-			<gui2:ColourToBrush x:Key="ColourToBrush"/>
-		</ResourceDictionary>
-	</Window.Resources>
-	
 	<DockPanel Name="m_root" LastChildFill="True">
 		<StackPanel
 			Orientation="Horizontal"
@@ -59,8 +52,8 @@
 		<Label
 			Content="Preview of selected colors"
 			DockPanel.Dock="Bottom"
-			Foreground="{Binding Colour, ElementName=m_text_colour, Converter={StaticResource ColourToBrush}}"
-			Background="{Binding Colour, ElementName=m_back_colour, Converter={StaticResource ColourToBrush}}"
+			Foreground="{Binding Colour, ElementName=m_text_colour, Converter={conv:ColourToBrush}}"
+			Background="{Binding Colour, ElementName=m_back_colour, Converter={conv:ColourToBrush}}"
 			HorizontalContentAlignment="Center"
 			VerticalContentAlignment="Center"
 			BorderThickness="1"

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Rylogic.Common;
 using Rylogic.Utility;
 
@@ -152,6 +153,7 @@ namespace Rylogic.Extn
 		{
 			return (T)mi.FindAttribute(typeof(T), inherit);
 		}
+
 		/// <summary>Returns an attribute associated with a member or null</summary>
 		public static T FindAttribute<T>(this MemberInfo mi, bool inherit = true) where T:Attribute
 		{
@@ -190,6 +192,14 @@ namespace Rylogic.Extn
 		public static bool HasAttribute<T>(this Type type, bool inherit = true) where T :Attribute
 		{
 			return type.FindAttribute<T>(inherit) != null;
+		}
+
+		/// <summary>True if this is an anonymous type</summary>
+		public static bool IsAnonymousType(this Type type)
+		{
+			return
+				type.FindAttribute<CompilerGeneratedAttribute>(inherit: false) != null &&
+				type.FullName.Contains("AnonymousType");
 		}
 
 		/// <summary>Returns the methods on this type that are decorated with the attribute 'attribute_type'</summary>
@@ -594,52 +604,53 @@ namespace Rylogic.UnitTests
 {
 	using Extn;
 
-	[TestFixture] public class TestTypeExtns
+	[TestFixture]
+	public class TestTypeExtns
 	{
-		// ReSharper disable UnusedMember.Local
 		#pragma warning disable 169, 649
 		private class ThingBase
 		{
-			private          int B_PrivateField            ;
-			protected        int B_ProtectedField          ;
-			internal         int B_InternalField           ;
-			public           int B_PublicField             ;
-			private          int B_PrivateAutoProp         { get; set; }
-			protected        int B_ProtectedAutoProp       { get; set; }
-			internal         int B_InternalAutoProp        { get; set; }
-			public           int B_PublicAutoProp          { get; set; }
-			private          int B_PrivateMethod        () { return 0; }
-			protected        int B_ProtectedMethod      () { return 0; }
-			internal         int B_InternalMethod       () { return 0; }
-			public           int B_PublicMethod         () { return 0; }
-			private   static int B_PrivateStaticMethod  () { return 0; }
+			private int B_PrivateField;
+			protected int B_ProtectedField;
+			internal int B_InternalField;
+			public int B_PublicField;
+			private int B_PrivateAutoProp { get; set; }
+			protected int B_ProtectedAutoProp { get; set; }
+			internal int B_InternalAutoProp { get; set; }
+			public int B_PublicAutoProp { get; set; }
+			private int B_PrivateMethod() { return 0; }
+			protected int B_ProtectedMethod() { return 0; }
+			internal int B_InternalMethod() { return 0; }
+			public int B_PublicMethod() { return 0; }
+			private static int B_PrivateStaticMethod() { return 0; }
 			protected static int B_ProtectedStaticMethod() { return 0; }
-			internal  static int B_InternalStaticMethod () { return 0; }
-			public    static int B_PublicStaticMethod   () { return 0; }
+			internal static int B_InternalStaticMethod() { return 0; }
+			public static int B_PublicStaticMethod() { return 0; }
 		}
-		private class Thing :ThingBase
+		private class Thing : ThingBase
 		{
-			private          int D_PrivateField            ;
-			protected        int D_ProtectedField          ;
-			internal         int D_InternalField           ;
-			public           int D_PublicField             ;
-			private          int D_PrivateAutoProp         { get; set; }
-			protected        int D_ProtectedAutoProp       { get; set; }
-			internal         int D_InternalAutoProp        { get; set; }
-			public           int D_PublicAutoProp          { get; set; }
-			private          int D_PrivateMethod        () { return 0; }
-			protected        int D_ProtectedMethod      () { return 0; }
-			internal         int D_InternalMethod       () { return 0; }
-			public           int D_PublicMethod         () { return 0; }
-			private   static int D_PrivateStaticMethod  () { return 0; }
+			private int D_PrivateField;
+			protected int D_ProtectedField;
+			internal int D_InternalField;
+			public int D_PublicField;
+			private int D_PrivateAutoProp { get; set; }
+			protected int D_ProtectedAutoProp { get; set; }
+			internal int D_InternalAutoProp { get; set; }
+			public int D_PublicAutoProp { get; set; }
+			private int D_PrivateMethod() { return 0; }
+			protected int D_ProtectedMethod() { return 0; }
+			internal int D_InternalMethod() { return 0; }
+			public int D_PublicMethod() { return 0; }
+			private static int D_PrivateStaticMethod() { return 0; }
 			protected static int D_ProtectedStaticMethod() { return 0; }
-			internal  static int D_InternalStaticMethod () { return 0; }
-			public    static int D_PublicStaticMethod   () { return 0; }
+			internal static int D_InternalStaticMethod() { return 0; }
+			public static int D_PublicStaticMethod() { return 0; }
 		}
+		private class NotSoAnonymousType { }
 		#pragma warning restore 169, 649
-		// ReSharper restore UnusedMember.Local
 
-		[Test] public void AllMembers()
+		[Test]
+		public void AllMembers()
 		{
 			// In base:
 			//  4 - 4 - fields
@@ -650,29 +661,32 @@ namespace Rylogic.UnitTests
 			// 28 - 4 - static methods
 			// 29 - 1 - constructor
 			// 58 - x2 - for the same again in derived
-			var members = typeof(Thing).AllMembers(BindingFlags.Static|BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).ToList();
+			var members = typeof(Thing).AllMembers(BindingFlags.Static | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).ToList();
 			Assert.Equal(58, members.Count);
 
-			members = typeof(Thing).AllMembers(BindingFlags.Instance|BindingFlags.Public).ToList();
+			members = typeof(Thing).AllMembers(BindingFlags.Instance | BindingFlags.Public).ToList();
 			Assert.Equal(12, members.Count);
 		}
-		[Test] public void AllFields()
+		[Test]
+		public void AllFields()
 		{
-			var fields = typeof(Thing).AllFields(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).ToList();
+			var fields = typeof(Thing).AllFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).ToList();
 			Assert.Equal(16, fields.Count);
 
-			fields = typeof(Thing).AllFields(BindingFlags.Instance|BindingFlags.Public).ToList();
+			fields = typeof(Thing).AllFields(BindingFlags.Instance | BindingFlags.Public).ToList();
 			Assert.Equal(2, fields.Count);
 		}
-		[Test] public void AllProps()
+		[Test]
+		public void AllProps()
 		{
-			var props = typeof(Thing).AllProps(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).ToList();
+			var props = typeof(Thing).AllProps(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).ToList();
 			Assert.Equal(8, props.Count);
 
-			props = typeof(Thing).AllProps(BindingFlags.Instance|BindingFlags.Public).ToList();
+			props = typeof(Thing).AllProps(BindingFlags.Instance | BindingFlags.Public).ToList();
 			Assert.Equal(2, props.Count);
 		}
-		[Test] public void Resolve()
+		[Test]
+		public void Resolve()
 		{
 			var ty0 = Type_.Resolve("System.String");
 			Assert.Equal(typeof(string), ty0);
@@ -680,7 +694,8 @@ namespace Rylogic.UnitTests
 			var ty1 = Type_.Resolve("Rylogic.Extn.int_");
 			Assert.Equal(typeof(Rylogic.Extn.int_), ty1);
 		}
-		[Test] public void IntExtn()
+		[Test]
+		public void IntExtn()
 		{
 			var x0 = int_.TryParse("1234");
 			Assert.Equal(x0, 1234);
@@ -689,7 +704,16 @@ namespace Rylogic.UnitTests
 			Assert.Equal(x1, null);
 
 			var x2 = int_.ParseArray("1  2,3\t\t\t4");
-			Assert.True(x2.SequenceEqual(new[]{1,2,3,4}));
+			Assert.True(x2.SequenceEqual(new[] { 1, 2, 3, 4 }));
+		}
+		[Test]
+		public void AnonTypes()
+		{
+			var ty0 = new { One = "one" }.GetType();
+			Assert.True(ty0.IsAnonymousType());
+
+			var ty1 = typeof(NotSoAnonymousType);
+			Assert.False(ty1.IsAnonymousType());
 		}
 	}
 }

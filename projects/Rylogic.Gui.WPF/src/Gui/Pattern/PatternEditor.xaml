@@ -1,11 +1,12 @@
 <UserControl
 	x:Class="Rylogic.Gui.WPF.PatternEditor"
 	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 	xmlns:common="clr-namespace:Rylogic.Common;assembly=Rylogic.Core"
 	xmlns:gui2="clr-namespace:Rylogic.Gui.WPF"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters"
 	mc:Ignorable="d" 
 	d:DesignWidth="450"
 	d:DesignHeight="250"
@@ -36,15 +37,15 @@
 				<TextBlock MinWidth="50" TextAlignment="Right" VerticalAlignment="Center" Margin="2" Padding="0,0,2,2" FontSize="11">Type:</TextBlock>
 				<RadioButton
 					Content="Substring"
-					IsChecked="{Binding PatnType, Converter={gui2:IsEqual}, ConverterParameter={x:Static common:EPattern.Substring}}"
+					IsChecked="{Binding PatnType, Converter={conv:IsEqual}, ConverterParameter={x:Static common:EPattern.Substring}}"
 					VerticalAlignment="Center" Margin="2" FontSize="11" TabIndex="1"/>
 				<RadioButton
 					Content="Wildcard"
-					IsChecked="{Binding PatnType, Converter={gui2:IsEqual}, ConverterParameter={x:Static common:EPattern.Wildcard}}"
+					IsChecked="{Binding PatnType, Converter={conv:IsEqual}, ConverterParameter={x:Static common:EPattern.Wildcard}}"
 					VerticalAlignment="Center" Margin="2" FontSize="11" TabIndex="2"/>
 				<RadioButton
 					Content="Regular Expression"
-					IsChecked="{Binding PatnType, Converter={gui2:IsEqual}, ConverterParameter={x:Static common:EPattern.RegularExpression}}"
+					IsChecked="{Binding PatnType, Converter={conv:IsEqual}, ConverterParameter={x:Static common:EPattern.RegularExpression}}"
 					VerticalAlignment="Center" Margin="2" FontSize="11" TabIndex="3"/>
 			</StackPanel>
 			<DockPanel Grid.Row="1" LastChildFill="True">

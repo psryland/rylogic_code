@@ -64,12 +64,16 @@
     <Compile Include="src\Converters\EnumConverters.cs" />
     <Compile Include="src\Converters\MathConverters.cs" />
     <Compile Include="src\Converters\NullConverters.cs" />
+    <Compile Include="src\Converters\PathConverters.cs" />
     <Compile Include="src\Extn\DataGrid.cs" />
     <Compile Include="src\Extn\Math.cs" />
     <Compile Include="src\Extn\UIElement.cs" />
     <Compile Include="src\Extn\Dispatcher.cs" />
     <Compile Include="src\Extn\Drawing.cs" />
     <Compile Include="src\Extn\Xml.cs" />
+    <Compile Include="src\Gui\BrowsePathUI.xaml.cs">
+      <DependentUpon>BrowsePathUI.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\Gui\ChartControl\ChartPanel.cs" />
     <Compile Include="src\Gui\ChartControl\ChartTools.cs" />
     <Compile Include="src\Gui\ChartControl\Commands.cs" />
@@ -97,6 +101,9 @@
     </Compile>
     <Compile Include="src\Gui\ColourPicker\ColourWheel.xaml.cs">
       <DependentUpon>ColourWheel.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Gui\Dialogs\ProgressUI.xaml.cs">
+      <DependentUpon>ProgressUI.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\Gui\Dialogs\PromptUI.xaml.cs">
       <DependentUpon>PromptUI.xaml</DependentUpon>
@@ -160,6 +167,7 @@
       <DependentUpon>View3dObjectManagerUI.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\Utility\BindingErrorTrace.cs" />
+    <Compile Include="src\Utility\DataContextSpy.cs" />
     <Compile Include="src\Utility\TriggerTracing.cs" />
     <Compile Include="src\Gui\View3d\View3dControl.xaml.cs">
       <DependentUpon>View3dControl.xaml</DependentUpon>
@@ -175,6 +183,8 @@
     <Compile Include="src\Utility\RecentFiles.cs" />
     <Compile Include="src\Utility\PinWindow.cs" />
     <Compile Include="src\Utility\WPFUtil.cs" />
+    <Compile Include="src\Validators\PathValidators.cs" />
+    <Compile Include="src\Validators\PredicateValidator.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj">
@@ -191,6 +201,10 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Page Include="src\Gui\BrowsePathUI.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="src\Gui\ChartControl\ChartControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -204,6 +218,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="src\Gui\ColourPicker\ColourWheel.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Gui\Dialogs\ProgressUI.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

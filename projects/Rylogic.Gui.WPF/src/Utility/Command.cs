@@ -12,9 +12,11 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>True if the command is available</summary>
 		public virtual bool CanExecute(object _) => true;
+		public void CanExecute() => CanExecute(null);
 
 		/// <summary>Execute the command</summary>
 		public virtual void Execute(object _) { }
+		public void Execute() => Execute(null);
 
 		/// <summary>Construct a command from a delegate</summary>
 		public static Command<TOwner> Create<TOwner>(TOwner owner, Action execute)

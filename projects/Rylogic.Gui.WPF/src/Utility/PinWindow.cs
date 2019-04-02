@@ -256,7 +256,7 @@ namespace Rylogic.Gui.WPF
 		{
 			if (m_location_update_pending) return;
 			m_location_update_pending = true;
-			PinWindow.Dispatcher.BeginInvoke(UpdateLocation);
+			PinWindow.Dispatcher.BeginInvoke(new Action(UpdateLocation));
 		}
 		private bool m_location_update_pending;
 

@@ -3,9 +3,11 @@ using System.Globalization;
 using System.Windows.Data;
 using System.Windows.Markup;
 using System.Windows.Media;
+using Rylogic.Attrib;
+using Rylogic.Common;
 using Rylogic.Gfx;
 
-namespace Rylogic.Gui.WPF
+namespace Rylogic.Gui.WPF.Converters
 {
 	public class ToMediaColor : MarkupExtension, IValueConverter
 	{
@@ -168,6 +170,27 @@ namespace Rylogic.Gui.WPF
 			return colour.Intensity > 0.5
 				? Brushes.Black
 				: Brushes.White;
+		}
+		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			throw new NotImplementedException();
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
+	}
+	public class ErrorLevelToBrush : MarkupExtension, IValueConverter
+	{
+		// Notes:
+		//   - Returns colours for a given error level
+		//   - Use parameter="bg" to get the background colour
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			if (!(value is EErrorLevel lvl)) return Colors.Black;
+			return parameter is string str && str == "bg"
+				? new SolidColorBrush(lvl.Background().ToMediaColor())
+				: new SolidColorBrush(lvl.Foreground().ToMediaColor());
 		}
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{

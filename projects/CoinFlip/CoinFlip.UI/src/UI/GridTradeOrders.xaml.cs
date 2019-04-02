@@ -87,7 +87,7 @@ namespace CoinFlip.UI
 		public Order Current
 		{
 			get => (Order)Orders?.CurrentItem;
-			set => Orders.MoveCurrentTo(value);
+			set => Orders?.MoveCurrentTo(value);
 		}
 
 		/// <summary></summary>

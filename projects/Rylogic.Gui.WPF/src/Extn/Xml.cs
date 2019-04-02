@@ -29,7 +29,7 @@ namespace Rylogic.Gui.WPF
 				node.SetValue($"{vec.X} {vec.Y}");
 				return node;
 			};
-			Xml_.AsMap[typeof(Vector)] = (elem, type, instance) =>
+			Xml_.AsMap[typeof(Vector)] = (elem, type, ctor) =>
 			{
 				var xy = elem.Value.Split(Xml_.WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
 				return new Vector(double.Parse(xy[0]), double.Parse(xy[1]));
@@ -53,7 +53,7 @@ namespace Rylogic.Gui.WPF
 				node.Add($"{rect.X} {rect.Y} {rect.Width} {rect.Height}");
 				return node;
 			};
-			Xml_.AsMap[typeof(Rect)] = (elem, type, instance) =>
+			Xml_.AsMap[typeof(Rect)] = (elem, type, ctor) =>
 			{
 				if (elem.Value == "∞ ∞ -∞ -∞") return Rect.Empty;
 				var xywh = elem.Value.Split(Xml_.WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
@@ -66,7 +66,7 @@ namespace Rylogic.Gui.WPF
 				node.SetValue($"{col.A:X2}{col.R:X2}{col.G:X2}{col.B:X2}");
 				return node;
 			};
-			Xml_.AsMap[typeof(Color)] = (elem, type, instance) =>
+			Xml_.AsMap[typeof(Color)] = (elem, type, ctor) =>
 			{
 				var argb = uint.Parse(elem.Value, NumberStyles.HexNumber);
 				return Color.FromArgb(
@@ -82,7 +82,7 @@ namespace Rylogic.Gui.WPF
 				node.SetValue($"{font.FontFamily.Source}:{font.Style}:{font.Weight}:{font.Stretch}");
 				return node;
 			};
-			Xml_.AsMap[typeof(Typeface)] = (elem, type, instance) =>
+			Xml_.AsMap[typeof(Typeface)] = (elem, type, ctor) =>
 			{
 				var parts = elem.Value.Split(':');
 				if (parts.Length != 4) throw new FormatException("Typeface format should be 'family:style:weight:stretch'. Family is required, others are optional. e.g. tahoma:::");

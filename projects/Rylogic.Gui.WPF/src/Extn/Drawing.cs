@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Interop;
@@ -10,6 +11,55 @@ namespace Rylogic.Gui.WPF
 {
 	public static class Color_
 	{
+		/// <summary>Parse a color from a string. #RGB, #RRGGBB, #ARGB, #AARRGGBB</summary>
+		public static Color From(string s)
+		{
+			byte a, r, g, b;
+
+			// Accept #AARRGGBB
+			if (s.Length == 9 && s[0] == '#' &&
+				uint.TryParse(s.Substring(1, 8), NumberStyles.HexNumber, null, out var aarrggbb))
+			{
+				a = (byte)((aarrggbb >> 24) & 0xFF);
+				r = (byte)((aarrggbb >> 16) & 0xFF);
+				g = (byte)((aarrggbb >>  8) & 0xFF);
+				b = (byte)((aarrggbb >>  0) & 0xFF);
+				return Color.FromArgb(a,r,g,b);
+			}
+
+			// Accept #RRGGBB
+			if (s.Length == 7 && s[0] == '#' &&
+				byte.TryParse(s.Substring(1, 2), NumberStyles.HexNumber, null, out r) &&
+				byte.TryParse(s.Substring(3, 2), NumberStyles.HexNumber, null, out g) &&
+				byte.TryParse(s.Substring(5, 2), NumberStyles.HexNumber, null, out b))
+			{
+				return Color.FromArgb(0xFF, r, g, b);
+			}
+
+			// Accept #ARGB
+			if (s.Length == 5 && s[0] == '#' &&
+				byte.TryParse(s.Substring(1, 1), NumberStyles.HexNumber, null, out a) &&
+				byte.TryParse(s.Substring(2, 1), NumberStyles.HexNumber, null, out r) &&
+				byte.TryParse(s.Substring(3, 1), NumberStyles.HexNumber, null, out g) &&
+				byte.TryParse(s.Substring(4, 1), NumberStyles.HexNumber, null, out b))
+			{
+				// 17 because 17 * 15 = 255
+				return Color.FromArgb((byte)(17 * a), (byte)(17 * r), (byte)(17 * g), (byte)(17 * b));
+			}
+
+			// Accept #RGB
+			if (s.Length == 4 && s[0] == '#' &&
+				byte.TryParse(s.Substring(1, 1), NumberStyles.HexNumber, null, out r) &&
+				byte.TryParse(s.Substring(2, 1), NumberStyles.HexNumber, null, out g) &&
+				byte.TryParse(s.Substring(3, 1), NumberStyles.HexNumber, null, out b))
+			{
+				// 17 because 17 * 15 = 255
+				return Color.FromArgb(0xFF, (byte)(17 * r), (byte)(17 * g), (byte)(17 * b));
+			}
+
+			throw new FormatException($"Colour string {s} is invalid");
+		}
+
 		/// <summary>Convert this colour to a media color</summary>
 		public static Color ToMediaColor(this Colour32 col)
 		{

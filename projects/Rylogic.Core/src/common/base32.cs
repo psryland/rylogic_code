@@ -57,7 +57,7 @@ namespace Rylogic.Common
 	//   6 -> G    15 -> P    24 -> Y
 	//   7 -> H    16 -> Q    25 -> Z
 	//   8 -> I    17 -> R    26 -> 2    pad -> =
-	
+
 	/// <summary>Base32 encoder/decoder conforming to http://tools.ietf.org/html/rfc4648#section-6 </summary>
 	public static class Base32Encoding
 	{

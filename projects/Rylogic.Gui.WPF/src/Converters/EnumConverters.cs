@@ -6,7 +6,7 @@ using System.Windows.Data;
 using System.Windows.Markup;
 using Rylogic.Attrib;
 
-namespace Rylogic.Gui.WPF
+namespace Rylogic.Gui.WPF.Converters
 {
 	public class EnumToDesc : MarkupExtension, IValueConverter
 	{
@@ -34,7 +34,7 @@ namespace Rylogic.Gui.WPF
 		// Use:
 		//  <ComboBox
 		//     ItemsSource="{Binding MyProp, Converter={gui2:EnumValues}, Mode=OneTime}"
-		//     SelectedItem="{Binding MyProp, Converter={gui2:EnumToDesc}"
+		//     SelectedItem="{Binding MyProp}"
 		//     />
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{

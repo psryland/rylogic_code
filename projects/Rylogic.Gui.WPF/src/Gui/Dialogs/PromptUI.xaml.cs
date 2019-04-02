@@ -11,6 +11,8 @@ namespace Rylogic.Gui.WPF
 			ImageProperty = Gui_.DPRegister<PromptUI>(nameof(Image));
 			PromptProperty = Gui_.DPRegister<PromptUI>(nameof(Prompt));
 			ValueProperty = Gui_.DPRegister<PromptUI>(nameof(Value));
+			WrapProperty = Gui_.DPRegister<PromptUI>(nameof(Wrap));
+			ReadOnlyProperty = Gui_.DPRegister<PromptUI>(nameof(ReadOnly));
 		}
 		public PromptUI(Window owner = null)
 		{
@@ -50,5 +52,21 @@ namespace Rylogic.Gui.WPF
 			set { SetValue(ValueProperty, value); }
 		}
 		public static readonly DependencyProperty ValueProperty;
+
+		/// <summary>True if the value text should wrap</summary>
+		public bool Wrap
+		{
+			get { return (bool)GetValue(WrapProperty); }
+			set { SetValue(WrapProperty, value); }
+		}
+		public static readonly DependencyProperty WrapProperty;
+
+		/// <summary>True if the prompt is just displaying text</summary>
+		public bool ReadOnly
+		{
+			get { return (bool)GetValue(ReadOnlyProperty); }
+			set { SetValue(ReadOnlyProperty, value); }
+		}
+		public static readonly DependencyProperty ReadOnlyProperty;
 	}
 }

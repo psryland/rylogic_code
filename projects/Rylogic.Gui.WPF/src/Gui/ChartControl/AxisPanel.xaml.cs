@@ -189,7 +189,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		{
 			if (m_update_graphics_pending) return;
 			m_update_graphics_pending = true;
-			Dispatcher.BeginInvoke(UpdateGraphics);
+			Dispatcher.BeginInvoke(new Action(UpdateGraphics));
 		}
 		private void UpdateGraphics()
 		{

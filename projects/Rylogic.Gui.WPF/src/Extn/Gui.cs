@@ -4,7 +4,10 @@ using System.Linq;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using System.Windows.Media;
+using Microsoft.Win32;
+using Rylogic.Core.Windows;
 using Rylogic.Extn;
 using Rylogic.Extn.Windows;
 
@@ -13,7 +16,7 @@ namespace Rylogic.Gui.WPF
 	public static partial class Gui_
 	{
 		/// <summary>Wrapper for DependencyProperty.Register that uses reflection to look for changed or coerce handlers</summary>
-		public static DependencyProperty DPRegister<T>(string prop_name, object def = null)
+		public static DependencyProperty DPRegister<T>(string prop_name, object def = null, FrameworkPropertyMetadataOptions flags = FrameworkPropertyMetadataOptions.BindsTwoWayByDefault)
 		{
 			// Use:
 			//  In your class with property 'prop_name':
@@ -25,11 +28,20 @@ namespace Rylogic.Gui.WPF
 			//  Define:
 			//    <prop_type> <prop_name>_Coerce(<prop_type> value)
 			//    to have values coerced (i.e. massaged into a valid value).
+			//  Define:
+			//    static bool <prop_name>_Validate(<prop_type> value)
+			//    to have values validated (has to be static, if you need per-binding validation
+			//    var binding = BindingOperations.GetBinding(<control>, ComboBox.DepProperty);
+			//    binding.ValidationRules.Clear(); etc).
 
 			// Don't set 'DefaultValue' unless 'def' is non-null, because the property type
 			// may not be a reference type, and 'null' may not be a valid default value.
-			var meta = new PropertyMetadata();
-			if (def != null) meta.DefaultValue = def;
+			var meta = new FrameworkPropertyMetadata(null, flags);
+
+			// Determine the type of the property
+			// (Note: Null exception here means you've used 'nameof(CheeseProperty)' instead of 'nameof(Cheese)' for prop_name)
+			var prop_type = typeof(T).GetProperty(prop_name).PropertyType;
+			meta.DefaultValue = def ?? (prop_type.IsValueType ? Activator.CreateInstance(prop_type) : null);
 
 			// If the type defines a Changed handler, add a callback
 			var changed_handler = typeof(T).GetMethod($"{prop_name}_Changed", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
@@ -45,7 +57,7 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 
-			// If the type defines a Validate handle, add a callback
+			// If the type defines a Coerce handler, add a callback
 			var coerce_handler = typeof(T).GetMethod($"{prop_name}_Coerce", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 			if (coerce_handler != null)
 			{
@@ -57,8 +69,68 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 
-			var prop_type = typeof(T).GetProperty(prop_name).PropertyType;
-			return DependencyProperty.Register(prop_name, prop_type, typeof(T), meta);
+			// IF the type defines a Validation handler
+			var validate_cb = (ValidateValueCallback)null;
+			var validation_handler = typeof(T).GetMethod($"{prop_name}_Validate", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+			if (validation_handler != null)
+			{
+				validate_cb = new ValidateValueCallback((x) => (bool)validation_handler.Invoke(null, new object[] { x }));
+			}
+
+			// Register the property
+			return DependencyProperty.Register(prop_name, prop_type, typeof(T), meta, validate_cb);
+		}
+
+		/// <summary>Wrapper for DependencyProperty.RegisterAttached that uses reflection to look for changed or coerce handlers</summary>
+		public static DependencyProperty DPRegisterAttached<T>(string prop_name, object def = null, FrameworkPropertyMetadataOptions flags = FrameworkPropertyMetadataOptions.BindsTwoWayByDefault)
+		{
+			// Use:
+			//  In your class with property 'prop_name':
+			//  Define:
+			//    <prop_name>_Changed() or,
+			//    <prop_name>_Changed(<prop_type> new_value) or,
+			//    <prop_name>_Changed(<prop_type> old_value, <prop_type> new_value)
+			//    to have that method called when the property changes
+			//  Define:
+			//    <prop_type> <prop_name>_Coerce(<prop_type> value)
+			//    to have values coerced (i.e. massaged into a valid value).
+
+			// Don't set 'DefaultValue' unless 'def' is non-null, because the property type
+			// may not be a reference type, and 'null' may not be a valid default value.
+			var meta = new FrameworkPropertyMetadata(null, flags);
+
+			// Determine the type of the property
+			var prop_type = typeof(T).GetMethod($"Get{prop_name}", BindingFlags.Static | BindingFlags.Public).ReturnType;
+			meta.DefaultValue = def ?? (prop_type.IsValueType ? Activator.CreateInstance(prop_type) : null);
+
+			// If the type defines a Changed handler, add a callback
+			var changed_handler = typeof(T).GetMethod($"{prop_name}_Changed", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+			if (changed_handler != null)
+			{
+				var param_count = changed_handler.GetParameters().Length;
+				switch (param_count)
+				{
+				default: throw new Exception($"Incorrect function signature for handler {prop_name}_Changed");
+				case 2: meta.PropertyChangedCallback = (d, e) => changed_handler.Invoke(d, new object[] { e.OldValue, e.NewValue }); break;
+				case 1: meta.PropertyChangedCallback = (d, e) => changed_handler.Invoke(d, new object[] { e.NewValue }); break;
+				case 0: meta.PropertyChangedCallback = (d, e) => changed_handler.Invoke(d, null); break;
+				}
+			}
+
+			// If the type defines a Validate handle, add a callback
+			var coerce_handler = typeof(T).GetMethod($"{prop_name}_Coerce", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+			if (coerce_handler != null)
+			{
+				var param_count = coerce_handler.GetParameters().Length;
+				switch (param_count)
+				{
+				default: throw new Exception($"Incorrect function signature for handler {prop_name}_Coerce");
+				case 1: meta.CoerceValueCallback = (d, v) => coerce_handler.Invoke(d, new object[] { v }); break;
+				}
+			}
+			
+			// Register the attached property using the return type of 'Get<prop_name>'
+			return DependencyProperty.RegisterAttached(prop_name, prop_type, typeof(T), meta);
 		}
 
 		/// <summary>Attached to the Closed event of a window to clean up any child objects that are disposable</summary>
@@ -213,5 +285,16 @@ namespace Rylogic.Gui.WPF
 			return (bool)m_fi_showingAsDialog.GetValue(window);
 		}
 		private static FieldInfo m_fi_showingAsDialog = typeof(Window).GetField("_showingAsDialog", BindingFlags.Instance | BindingFlags.NonPublic);
+
+		/// <summary>Show the folder browser dialog</summary>
+		public static bool ShowDialog(this OpenFolderUI dlg, DependencyObject dep)
+		{
+			var hwnd = dep != null ? ((HwndSource)PresentationSource.FromDependencyObject(dep)).Handle : IntPtr.Zero;
+			return dlg.ShowDialog(hwnd);
+		}
+		public static bool? ShowDialog(this CommonDialog dlg, DependencyObject dep)
+		{
+			return dlg.ShowDialog(Window.GetWindow(dep));
+		}
 	}
 }

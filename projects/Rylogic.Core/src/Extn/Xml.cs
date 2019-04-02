@@ -127,6 +127,13 @@ namespace Rylogic.Extn
 						node.SetValue(string.Empty);
 					return node;
 				};
+				this[typeof(AnonymousType)] = (obj, node) =>
+				{
+					var type = obj.GetType();
+					foreach (var prop in type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+						node.Add2(prop.Name, prop.GetValue(obj), true);
+					return node;
+				};
 			}
 
 			/// <summary>
@@ -144,6 +151,8 @@ namespace Rylogic.Extn
 
 				var type = obj.GetType();
 				type = Nullable.GetUnderlyingType(type) ?? type;
+				if (type.IsAnonymousType()) type = typeof(AnonymousType);
+				if (type.GetElementType()?.IsAnonymousType() ?? false) type = typeof(AnonymousType[]);
 
 				// Add the type attribute
 				if (type_attr)
@@ -152,8 +161,8 @@ namespace Rylogic.Extn
 				// Get the generic type if generic
 				var gen_type = type.IsGenericType ? type.GetGenericTypeDefinition() : type;
 
-				// Handle strings here because they are IEnumerable and
-				// enums because the type will not be in the map
+				// Handle strings here because they are IEnumerable.
+				// Handle enums because the type will not be in the map.
 				if (type == typeof(string) || type.IsEnum)
 					return ToXmlDefault(obj, node);
 
@@ -168,13 +177,17 @@ namespace Rylogic.Extn
 					// Derive an element name from the singular of the array name
 					var name = node.Name.LocalName;
 					var elem_name = name.Length > 1 && name.EndsWith("s") ? name.Substring(0,name.Length-1) : "_";
-					var child_type = type.GetElementType();
+
+					// Determine the type of the array elements
+					var elem_type = type.GetElementType();
 
 					// Add each element from the collection
-					// 'type_attr' can be false if the element matches the array element type
 					foreach (var i in (IEnumerable)obj)
 					{
-						var ty_attr = type_attr && (i == null || child_type == typeof(object) || i.GetType() != child_type);
+						// The type attribute is not needed if actual type of the element matches the array element type.
+						// It is needed if the element is a sub-class of the element type, or the array element type is
+						// 'object', or the element is null (so 'As' knows what type of null to create).
+						var ty_attr = type_attr && (i == null || elem_type == typeof(object) || i.GetType() != elem_type);
 						node.Add(Convert(i, new XElement(elem_name), ty_attr));
 					}
 
@@ -204,54 +217,46 @@ namespace Rylogic.Extn
 				}
 				return func(obj, node);
 			}
-		}
 
-		/// <summary>Returns true if 'm' is a 'ToXml' method</summary>
-		private static bool IsToXmlFunc(MethodInfo m)
-		{
-			ParameterInfo[] parms;
-			return m.Name == "ToXml" && m.ReturnType == typeof(XElement) && (parms = m.GetParameters()).Length == 1 && parms[0].ParameterType == typeof(XElement);
-		}
+			/// <summary>Return an XElement using reflection.</summary>
+			private XElement ToXmlDefault(object obj, XElement node)
+			{
+				node.SetValue(obj);
+				return node;
+			}
 
-		/// <summary>Return an XElement using reflection.</summary>
-		public static XElement ToXmlDefault(object obj, XElement node)
-		{
-			node.SetValue(obj);
-			return node;
-		}
+			/// <summary>Return an XElement using the 'ToXml' method on the type</summary>
+			private XElement ToXmlMethod(object obj, XElement node)
+			{
+				// Find the native method on the type
+				var type = obj.GetType();
+				var mi = type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).FirstOrDefault(IsToXmlFunc);
+				if (mi == null) throw new NotSupportedException($"{type.Name} does not have a 'ToXml' method");
 
-		/// <summary>Return an XElement using the 'ToXml' method on the type</summary>
-		public static XElement ToXmlMethod(object obj, XElement node)
-		{
-			// Find the native method on the type
-			var type = obj.GetType();
-			var mi = type.GetMethods(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).FirstOrDefault(IsToXmlFunc);
-			if (mi == null) throw new NotSupportedException($"{type.Name} does not have a 'ToXml' method");
+				// Replace the mapping with a call directly to that method
+				ToMap[type] = (o, n) => (XElement)mi.Invoke(o, new object[] { n });
+				return ToMap[type](obj, node);
+			}
 
-			// Replace the mapping with a call directly to that method
-			ToMap[type] = (o,n) => (XElement)mi.Invoke(o, new object[]{n});
-			return ToMap[type](obj, node);
-		}
+			/// <summary>Return an XElement object for a type that specifies the DataContract attribute</summary>
+			private XElement ToXmlDataContract(object obj, XElement node)
+			{
+				var type = obj.GetType();
 
-		/// <summary>Return an XElement object for a type that specifies the DataContract attribute</summary>
-		public static XElement ToXmlDataContract(object obj, XElement node)
-		{
-			var type = obj.GetType();
+				// Look for the DataContract attribute
+				var dca = type.GetCustomAttributes(typeof(DataContractAttribute), true).FirstOrDefault();
+				if (dca == null) throw new NotSupportedException($"{type.Name} does not have the DataContractAttribute");
 
-			// Look for the DataContract attribute
-			var dca = type.GetCustomAttributes(typeof(DataContractAttribute), true).FirstOrDefault();
-			if (dca == null) throw new NotSupportedException($"{type.Name} does not have the DataContractAttribute");
+				// Find all fields and properties with the DataMember attribute
+				var members =
+					type.AllFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Cast<MemberInfo>().Concat(
+					type.AllProps(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+					.Where(x => x.GetCustomAttributes(typeof(DataMemberAttribute), false).Any())
+					.Select(x => new { Member = x, Attr = (DataMemberAttribute)x.GetCustomAttributes(typeof(DataMemberAttribute), false).First() })
+					.ToList();
 
-			// Find all fields and properties with the DataMember attribute
-			var members =
-				type.AllFields(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).Cast<MemberInfo>().Concat(
-				type.AllProps(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic))
-				.Where(x => x.GetCustomAttributes(typeof(DataMemberAttribute),false).Any())
-				.Select(x => new{Member = x, Attr = (DataMemberAttribute)x.GetCustomAttributes(typeof(DataMemberAttribute),false).First()})
-				.ToList();
-
-			// Replace the mapping function with a call that already has the members found
-			ToMap[type] = (o,n) =>
+				// Replace the mapping function with a call that already has the members found
+				ToMap[type] = (o, n) =>
 				{
 					foreach (var m in members)
 					{
@@ -262,14 +267,26 @@ namespace Rylogic.Extn
 						FieldInfo field;
 						PropertyInfo prop;
 						object val = null;
-						if      ((prop  = m.Member as PropertyInfo) != null) val = prop.GetValue(o,null);
-						else if ((field = m.Member as FieldInfo   ) != null) val = field.GetValue(o);
+						if ((prop = m.Member as PropertyInfo) != null) val = prop.GetValue(o, null);
+						else if ((field = m.Member as FieldInfo) != null) val = field.GetValue(o);
 
 						n.Add(ToMap.Convert(val, child, true));
 					}
 					return n;
 				};
-			return ToMap[type](obj, node);
+				return ToMap[type](obj, node);
+			}
+
+			/// <summary>Returns true if 'm' is a 'ToXml' method</summary>
+			private static bool IsToXmlFunc(MethodInfo m)
+			{
+				ParameterInfo[] parms;
+				return
+					m.Name == "ToXml" &&
+					m.ReturnType == typeof(XElement) &&
+					(parms = m.GetParameters()).Length == 1 &&
+					parms[0].ParameterType == typeof(XElement);
+			}
 		}
 
 		/// <summary>Write this object into an XML node with tag 'elem_name'</summary>
@@ -388,14 +405,14 @@ namespace Rylogic.Extn
 				{
 					return TimeSpan.FromTicks(long.Parse(elem.Value));
 				};
-				this[typeof(KeyValuePair<,>)] = (elem, type, instance) =>
+				this[typeof(KeyValuePair<,>)] = (elem, type, ctor) =>
 				{
 					var ty_args = type.GetGenericArguments();
 					var key = elem.Element("k").As(ty_args[0]);
 					var val = elem.Element("v").As(ty_args[1]);
 					return Activator.CreateInstance(type, key, val);
 				};
-				this[typeof(List<>)] = (elem, type, instance) =>
+				this[typeof(List<>)] = (elem, type, ctor) =>
 				{
 					var ty_args = type.GetGenericArguments();
 					var list = Activator.CreateInstance(type);
@@ -408,7 +425,7 @@ namespace Rylogic.Extn
 					}
 					return list;
 				};
-				this[typeof(Dictionary<,>)] = (elem, type, instance) =>
+				this[typeof(Dictionary<,>)] = (elem, type, ctor) =>
 				{
 					var ty_args = type.GetGenericArguments();
 					var kv_type = typeof(KeyValuePair<,>).MakeGenericType(ty_args);
@@ -423,7 +440,7 @@ namespace Rylogic.Extn
 					}
 					return dic;
 				};
-				this[typeof(HashSet<>)] = (elem, type, instance) =>
+				this[typeof(HashSet<>)] = (elem, type, ctor) =>
 				{
 					var ty_args = type.GetGenericArguments();
 					var set = Activator.CreateInstance(type);
@@ -435,6 +452,15 @@ namespace Rylogic.Extn
 						mi_add.Invoke(set, new object[] { si });
 					}
 					return set;
+				};
+				this[typeof(AnonymousType)] = (elem, type, ctor) =>
+				{
+					throw new NotSupportedException(
+						$".NETStandard 2.0 does not have support for Reflection.Emit (even though there is " +
+						$"support in .NET Core 2 and .NetFramework 4.6+). To support deserialisation of " +
+						$"anonymous types, you need to reference 'Rylogic.Core.Windows' and add a call to " +
+						$"'Xml_.Config.SupportAnonymousTypes()' during initialisation. Ulternatively, anonymous " +
+						$"types can be returned as 'Dictionary<string,object>' by calling 'Xml_.Config.AnonymousTypesAsDictionary();");
 				};
 			}
 
@@ -511,13 +537,17 @@ namespace Rylogic.Extn
 				// If 'type' is an array...
 				if (type.IsArray)
 				{
-					// Create an array of the correct type and length
-					var ty_child = type.GetElementType();
+					// Get the child elements as a list so we know how long to make the array
 					var children = elem.Elements().ToList();
-					var array = Array.CreateInstance(ty_child, children.Count);
 
-					for (int i = 0; i != array.Length; ++i)
-						array.SetValue(children[i].As(ty_child, factory), i); // The 'factory' must handle both the array type and the element types
+					// Create an array of the correct type and length
+					var ty_elem = type.GetElementType();
+					var ty_array = ty_elem != typeof(AnonymousType) ? ty_elem : typeof(object);
+					var array = Array.CreateInstance(ty_array, children.Count);
+
+					// Note: the 'factory' must handle both the array type and the element types
+					for (int i = 0; i != children.Count; ++i)
+						array.SetValue(children[i].As(ty_elem, factory), i);
 
 					return array;
 				}
@@ -551,96 +581,90 @@ namespace Rylogic.Extn
 				}
 				return func(elem, type, factory);
 			}
-		}
 
-		/// <summary>An 'As' method that just uses Convert.ChangeType</summary>
-		public static object AsConvert(XElement elem, Type type, Func<Type,object> factory)
-		{
-			return Convert.ChangeType(elem.Value, type);
-		}
+			/// <summary>An 'As' method that expects 'type' to have a constructor taking a single XElement argument</summary>
+			private object AsCtor(XElement elem, Type type, Func<Type,object> factory)
+			{
+				var ctor = type.GetConstructor(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic, null, new[]{typeof(XElement)}, null);
+				if (ctor == null) throw new NotSupportedException($"{type.Name} does not have a constructor taking a single XElement argument");
 
-		/// <summary>An 'As' method that expects 'type' to have a constructor taking a single XElement argument</summary>
-		public static object AsCtor(XElement elem, Type type, Func<Type,object> factory)
-		{
-			var ctor = type.GetConstructor(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic, null, new[]{typeof(XElement)}, null);
-			if (ctor == null) throw new NotSupportedException($"{type.Name} does not have a constructor taking a single XElement argument");
+				// Replace the mapping with a call that doesn't need to search for the constructor
+				AsMap[type] = (e,t,i) => ctor.Invoke(new object[]{e});
+				return AsMap[type](elem, type, factory);
+			}
 
-			// Replace the mapping with a call that doesn't need to search for the constructor
-			AsMap[type] = (e,t,i) => ctor.Invoke(new object[]{e});
-			return AsMap[type](elem, type, factory);
-		}
+			/// <summary>An 'As' method that expects 'type' to have a method called 'FromXml' taking a single XElement argument</summary>
+			private object AsFromXmlMethod(XElement elem, Type type, Func<Type,object> factory)
+			{
+				var method = type.GetMethod("FromXml", BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic, null, new[]{typeof(XElement)}, null);
+				if (method == null) throw new NotSupportedException($"{type.Name} does not have a method called 'FromXml(XElement)'");
 
-		/// <summary>An 'As' method that expects 'type' to have a method called 'FromXml' taking a single XElement argument</summary>
-		public static object AsFromXmlMethod(XElement elem, Type type, Func<Type,object> factory)
-		{
-			var method = type.GetMethod("FromXml", BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic, null, new[]{typeof(XElement)}, null);
-			if (method == null) throw new NotSupportedException($"{type.Name} does not have a method called 'FromXml(XElement)'");
-
-			// Replace the mapping with a call that doesn't need to search for the method
-			AsMap[type] = (e,t,i) =>
-				{
-					try
+				// Replace the mapping with a call that doesn't need to search for the method
+				AsMap[type] = (e,t,i) =>
 					{
-						var obj = factory(type);
-						method.Invoke(obj, new object[] { e });
+						try
+						{
+							var obj = factory(type);
+							method.Invoke(obj, new object[] { e });
+							return obj;
+						}
+						catch (TargetInvocationException ex)
+						{
+							throw ex.InnerException;
+						}
+					};
+				return AsMap[type](elem, type, factory);
+			}
+
+			/// <summary>An 'As' method for types that specify the DataContract attribute</summary>
+			private object AsDataContract(XElement elem, Type type, Func<Type,object> factory)
+			{
+				// Look for the DataContract attribute
+				var dca = type.GetCustomAttributes(typeof(DataContractAttribute), true).FirstOrDefault();
+				if (dca == null) throw new NotSupportedException($"{type.Name} does not have the DataContractAttribute");
+
+				// Find all fields and properties with the DataMember attribute
+				var members =
+					type.AllFields(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).Cast<MemberInfo>().Concat(
+					type.AllProps(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic))
+					.Where(x => x.GetCustomAttributes(typeof(DataMemberAttribute),false).Any())
+					.Select(x => new{Member = x, Attr = (DataMemberAttribute)x.GetCustomAttributes(typeof(DataMemberAttribute),false).First()})
+					.OrderBy(x => x.Attr.Name ?? x.Member.Name)
+					.ToList();
+
+				// Replace the mapped function with one that doesn't need to search for members
+				AsMap[type] = (el,ty,new_inst) =>
+					{
+						new_inst = new_inst ?? Activator.CreateInstance;
+
+						// This will always de-serialise as a default object ignoring the elements
+						if (members.Count == 0 && el.HasElements)
+							throw new Exception($"{ty.Name} has the DataContract attribute, but no DataMembers.");
+
+						// Read nodes from the XML, and populate any members with matching names
+						object obj = new_inst(ty);
+						foreach (var e in el.Elements())
+						{
+							// Look for the property or field by name
+							var name = e.Name.LocalName;
+							var m = members.BinarySearchFind(x => string.CompareOrdinal(x.Attr.Name ?? x.Member.Name, name));
+							if (m == null) continue;
+
+							FieldInfo field;
+							PropertyInfo prop;
+							if      ((prop  = m.Member as PropertyInfo) != null) prop.SetValue(obj, AsMap.Convert(e, prop.PropertyType, new_inst), null);
+							else if ((field = m.Member as FieldInfo   ) != null) field.SetValue(obj, AsMap.Convert(e, field.FieldType, new_inst));
+						}
 						return obj;
-					}
-					catch (TargetInvocationException ex)
-					{
-						throw ex.InnerException;
-					}
-				};
-			return AsMap[type](elem, type, factory);
-		}
+					};
+				return AsMap[type](elem, type, factory);
+			}
 
-		/// <summary>An 'As' method for types that specify the DataContract attribute</summary>
-		public static object AsDataContract(XElement elem, Type type, Func<Type,object> factory)
-		{
-			// Look for the DataContract attribute
-			var dca = type.GetCustomAttributes(typeof(DataContractAttribute), true).FirstOrDefault();
-			if (dca == null) throw new NotSupportedException($"{type.Name} does not have the DataContractAttribute");
-
-			// Find all fields and properties with the DataMember attribute
-			var members =
-				type.AllFields(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).Cast<MemberInfo>().Concat(
-				type.AllProps(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic))
-				.Where(x => x.GetCustomAttributes(typeof(DataMemberAttribute),false).Any())
-				.Select(x => new{Member = x, Attr = (DataMemberAttribute)x.GetCustomAttributes(typeof(DataMemberAttribute),false).First()})
-				.OrderBy(x => x.Attr.Name ?? x.Member.Name)
-				.ToList();
-
-			// Replace the mapped function with one that doesn't need to search for members
-			AsMap[type] = (el,ty,new_inst) =>
-				{
-					new_inst = new_inst ?? Activator.CreateInstance;
-
-					// This will always de-serialise as a default object ignoring the elements
-					if (members.Count == 0 && el.HasElements)
-						throw new Exception($"{ty.Name} has the DataContract attribute, but no DataMembers.");
-
-					// Read nodes from the XML, and populate any members with matching names
-					object obj = new_inst(ty);
-					foreach (var e in el.Elements())
-					{
-						// Look for the property or field by name
-						var name = e.Name.LocalName;
-						var m = members.BinarySearchFind(x => string.CompareOrdinal(x.Attr.Name ?? x.Member.Name, name));
-						if (m == null) continue;
-
-						FieldInfo field;
-						PropertyInfo prop;
-						if      ((prop  = m.Member as PropertyInfo) != null) prop.SetValue(obj, AsMap.Convert(e, prop.PropertyType, new_inst), null);
-						else if ((field = m.Member as FieldInfo   ) != null) field.SetValue(obj, AsMap.Convert(e, field.FieldType, new_inst));
-					}
-					return obj;
-				};
-			return AsMap[type](elem, type, factory);
-		}
-		
-		/// <summary>An 'As' method that relies of the factory function to read 'elem'</summary>
-		public static object AsFromFactory(XElement elem, Type type, Func<Type,object> factory)
-		{
-			return factory(type);
+			/// <summary>An 'As' method that relies of the factory function to read 'elem'</summary>
+			private object AsFromFactory(XElement elem, Type type, Func<Type,object> factory)
+			{
+				return factory(type);
+			}
 		}
 
 		/// <summary>Returns this XML node as an instance of the type implied by it's node attributes</summary>
@@ -738,6 +762,18 @@ namespace Rylogic.Extn
 			.SupportRylogicMathsTypes()
 			.SupportRylogicGraphicsTypes()
 			;
+
+		/// <summary>Magic type for handling anonymous types</summary>
+		public class AnonymousType { private AnonymousType() { } }
+		public static XmlConfig AnonymousTypesAsDictionary(this XmlConfig cfg)
+		{
+			// Replace the 'As' mapping for anonymous types
+			AsMap[typeof(AnonymousType)] = (elem, type, instance) =>
+			{
+				return elem.Elements().ToDictionary(x => x.Name.LocalName, x => x.ToObject());
+			};
+			return cfg;
+		}
 
 		/// <summary>Returns the number of child nodes in this node (by counting them linearly)</summary>
 		public static int ChildCount(this XContainer node)
@@ -1471,7 +1507,8 @@ namespace Rylogic.UnitTests
 	using System.Drawing;
 	using Extn;
 
-	[TestFixture] public class TestXml
+	[TestFixture]
+	public class TestXml
 	{
 		#region Types
 		private enum EEnum
@@ -1484,12 +1521,12 @@ namespace Rylogic.UnitTests
 		{
 			public readonly uint m_uint;
 
-			public Elem1() :this(0)              {}
-			public Elem1(uint i)                 { m_uint = i; }
-			public Elem1(XElement elem)          { m_uint = uint.Parse(elem.Value.Substring(5)); }
-			public XElement ToXml(XElement node) { node.SetValue("elem_"+m_uint); return node; }
-			public override int GetHashCode()    { return (int)m_uint; }
-			private bool Equals(Elem1 other)     { return m_uint == other.m_uint; }
+			public Elem1() : this(0) { }
+			public Elem1(uint i) { m_uint = i; }
+			public Elem1(XElement elem) { m_uint = uint.Parse(elem.Value.Substring(5)); }
+			public XElement ToXml(XElement node) { node.SetValue("elem_" + m_uint); return node; }
+			public override int GetHashCode() { return (int)m_uint; }
+			private bool Equals(Elem1 other) { return m_uint == other.m_uint; }
 			public override bool Equals(object obj)
 			{
 				if (obj is null) return false;
@@ -1500,15 +1537,16 @@ namespace Rylogic.UnitTests
 		}
 
 		/// <summary>A custom DataContract type without a default constructor</summary>
-		[DataContract(Name = "ELEM2")] internal class Elem2
+		[DataContract(Name = "ELEM2")]
+		internal class Elem2
 		{
 			[DataMember(Name = "eye")] public readonly int m_int;
-			[DataMember]               public readonly string m_string;
+			[DataMember] public readonly string m_string;
 
-			public Elem2(int i, string s)      { m_int = i; m_string = s; }
-			public override string ToString()  { return m_int.ToString(CultureInfo.InvariantCulture) + " " + m_string; }
-			public override int GetHashCode()  { unchecked { return (m_int * 397) ^ (m_string != null ? m_string.GetHashCode() : 0); } }
-			private bool Equals(Elem2 other)   { return m_int == other.m_int && string.Equals(m_string, other.m_string); }
+			public Elem2(int i, string s) { m_int = i; m_string = s; }
+			public override string ToString() { return m_int.ToString(CultureInfo.InvariantCulture) + " " + m_string; }
+			public override int GetHashCode() { unchecked { return (m_int * 397) ^ (m_string != null ? m_string.GetHashCode() : 0); } }
+			private bool Equals(Elem2 other) { return m_int == other.m_int && string.Equals(m_string, other.m_string); }
 			public override bool Equals(object obj)
 			{
 				if (obj is null) return false;
@@ -1519,19 +1557,20 @@ namespace Rylogic.UnitTests
 		}
 
 		/// <summary>A custom DataContract type with a default constructor</summary>
-		[DataContract(Name = "ELEM3")] internal class Elem3
+		[DataContract(Name = "ELEM3")]
+		internal class Elem3
 		{
 			[DataMember] public readonly int m_int;
 			[DataMember] public readonly string m_string;
 
-			public Elem3()                     { m_int = 0; m_string = string.Empty; }
-			public Elem3(int i, string s)      { m_int = i; m_string = s; }
-			public override int GetHashCode()  { unchecked { return (m_int*397) ^ (m_string != null ? m_string.GetHashCode() : 0); } }
-			private bool Equals(Elem3 other)   { return m_int == other.m_int && string.Equals(m_string,other.m_string); }
+			public Elem3() { m_int = 0; m_string = string.Empty; }
+			public Elem3(int i, string s) { m_int = i; m_string = s; }
+			public override int GetHashCode() { unchecked { return (m_int * 397) ^ (m_string != null ? m_string.GetHashCode() : 0); } }
+			private bool Equals(Elem3 other) { return m_int == other.m_int && string.Equals(m_string, other.m_string); }
 			public override bool Equals(object obj)
 			{
 				if (obj is null) return false;
-				if (ReferenceEquals(this,obj)) return true;
+				if (ReferenceEquals(this, obj)) return true;
 				if (obj.GetType() != GetType()) return false;
 				return Equals((Elem3)obj);
 			}
@@ -1540,51 +1579,55 @@ namespace Rylogic.UnitTests
 		private class Elem4
 		{
 			public int m_int;
-			public XElement ToXml(XElement node) { node.SetValue("elem_"+m_int); return node; }
+			public XElement ToXml(XElement node) { node.SetValue("elem_" + m_int); return node; }
 			public void FromXml(XElement node) { m_int = int.Parse(node.Value.Substring(5)); }
 		}
 		#endregion
 
-		[Test] public void ToXmlBuiltInTypes()
+		[Test]
+		public void ToXmlBuiltInTypes()
 		{
 			// Built in types
 			var node = 5.ToXml("five", false);
 			var five = node.As<int>();
 			Assert.Equal(5, five);
 		}
-		[Test] public void ToXmlDrawing()
+		[Test]
+		public void ToXmlDrawing()
 		{
-			{	var pt = new Point(1,2);
+			{
+				var pt = new Point(1, 2);
 				var node = pt.ToXml("pt", false);
 				var PT = node.As<Point>();
 				Assert.True(pt.Equals(PT));
 			}
 			{
-				var pt = new PointF(1f,2f);
+				var pt = new PointF(1f, 2f);
 				var node = pt.ToXml("pt", false);
 				var PT = node.As<PointF>();
 				Assert.True(pt.Equals(PT));
 			}
 			{
-				var arr = new[]{new Point(1,1), new Point(2,2)};
+				var arr = new[] { new Point(1, 1), new Point(2, 2) };
 				var node = arr.ToXml("arr", true);
 				var ARR = node.As<Point[]>();
 				Assert.True(arr.SequenceEqual(ARR));
 			}
 			{
-				var rc = new Rectangle(1,2,3,4);
+				var rc = new Rectangle(1, 2, 3, 4);
 				var node = rc.ToXml("rect", false);
 				var RC = node.As<Rectangle>();
 				Assert.True(Equals(rc, RC));
 			}
 			{
-				var rc = new RectangleF(1f,2f,3f,4f);
+				var rc = new RectangleF(1f, 2f, 3f, 4f);
 				var node = rc.ToXml("rect", false);
 				var RC = node.As<RectangleF>();
 				Assert.True(Equals(rc, RC));
 			}
 		}
-		[Test] public void ToXmlDateTime()
+		[Test]
+		public void ToXmlDateTime()
 		{
 			{
 				var dto0 = DateTimeOffset.MinValue;
@@ -1592,19 +1635,21 @@ namespace Rylogic.UnitTests
 				Assert.Equal(dto0, dto1);
 			}
 			{
-				var dto0 = new DateTimeOffset(2015,11,02, 14, 04, 23, 456, TimeSpan.Zero);
+				var dto0 = new DateTimeOffset(2015, 11, 02, 14, 04, 23, 456, TimeSpan.Zero);
 				var dto1 = dto0.ToXml("today", true).As<DateTimeOffset>();
 				Assert.Equal(dto0, dto1);
 			}
 		}
-		[Test] public void ToXmlGuid()
+		[Test]
+		public void ToXmlGuid()
 		{
 			var guid = Guid.NewGuid();
 			var node = guid.ToXml("guid", false);
 			var GUID = node.As<Guid>();
 			Assert.Equal(guid, GUID);
 		}
-		[Test] public void ToXmlCustomTypes()
+		[Test]
+		public void ToXmlCustomTypes()
 		{
 			{
 				// XElement constructible class
@@ -1613,47 +1658,49 @@ namespace Rylogic.UnitTests
 				Assert.Equal(4U, four.m_uint);
 			}
 			{
-				var arr = new[]{new Elem2(1,"1"), null, new Elem2(3,"3")};
+				var arr = new[] { new Elem2(1, "1"), null, new Elem2(3, "3") };
 				var node = arr.ToXml("arr", false);
-				var ARR = node.As<Elem2[]>(factory:t => new Elem2(0,""));
+				var ARR = node.As<Elem2[]>(factory: t => new Elem2(0, ""));
 				Assert.True(arr.SequenceEqual(ARR));
 			}
 			{
-				var arr = new[]{new Elem2(1,"1"), new Elem2(2,"2"), new Elem2(3,"3")};
+				var arr = new[] { new Elem2(1, "1"), new Elem2(2, "2"), new Elem2(3, "3") };
 				var node = arr.ToXml("arr", false);
-				var ARR = node.As<Elem2[]>(factory:t => new Elem2(0,null));
+				var ARR = node.As<Elem2[]>(factory: t => new Elem2(0, null));
 				Assert.True(arr.SequenceEqual(ARR));
 			}
 			{
-				var dc = new Elem2(2,"3");
+				var dc = new Elem2(2, "3");
 				var node = dc.ToXml("dc", false);
-				var DC = node.As<Elem2>(factory:t => new Elem2(0,null));
+				var DC = node.As<Elem2>(factory: t => new Elem2(0, null));
 				Assert.Equal(dc.m_int, DC.m_int);
 				Assert.Equal(dc.m_string, DC.m_string);
 			}
 			{
-				var e4 = new Elem4{m_int = 3};
+				var e4 = new Elem4 { m_int = 3 };
 				var node = e4.ToXml("e4", false);
 				var E4 = node.As<Elem4>();
 				Assert.Equal(e4.m_int, E4.m_int);
 			}
 		}
-		[Test] public void ToXmlArrays()
+		[Test]
+		public void ToXmlArrays()
 		{
 			{
-				var arr = new int[]{0,1,2,3,4};
+				var arr = new int[] { 0, 1, 2, 3, 4 };
 				var node = arr.ToXml("arr", false);
 				var ARR = node.As<int[]>();
 				Assert.True(arr.SequenceEqual(ARR));
 			}
 			{
-				var arr = new string[]{"hello", "world"};
+				var arr = new string[] { "hello", "world" };
 				var node = arr.ToXml("arr", false);
 				var ARR = node.As<string[]>();
 				Assert.True(arr.SequenceEqual(ARR));
 			}
 		}
-		[Test] public void ToXmlNullables()
+		[Test]
+		public void ToXmlNullables()
 		{
 			{
 				int? three = 3;
@@ -1662,29 +1709,31 @@ namespace Rylogic.UnitTests
 				Assert.True(three == THREE);
 			}
 			{
-				var arr = new int?[]{1, null, 2};
+				var arr = new int?[] { 1, null, 2 };
 				var node = arr.ToXml("arr", true);
 				var ARR = node.As<int?[]>();
 				Assert.True(arr.SequenceEqual(ARR));
 			}
 		}
-		[Test] public void ToXmlObjectArrays()
+		[Test]
+		public void ToXmlObjectArrays()
 		{
-			var arr = new object[]{null, new Elem1(1), new Elem2(2,"2"), new Elem3(3,"3")};
+			var arr = new object[] { null, new Elem1(1), new Elem2(2, "2"), new Elem3(3, "3") };
 			var node = arr.ToXml("arr", true);
-			var ARR = node.As<object[]>(factory:ty =>
-				{
-					if (ty == typeof(Elem1)) return new Elem1();
-					if (ty == typeof(Elem2)) return new Elem2(0,string.Empty);
-					if (ty == typeof(Elem3)) return new Elem3();
-					throw new Exception("Unexpected type");
-				});
+			var ARR = node.As<object[]>(factory: ty =>
+				 {
+					 if (ty == typeof(Elem1)) return new Elem1();
+					 if (ty == typeof(Elem2)) return new Elem2(0, string.Empty);
+					 if (ty == typeof(Elem3)) return new Elem3();
+					 throw new Exception("Unexpected type");
+				 });
 			Assert.True(arr.SequenceEqual(ARR));
 		}
-		[Test] public void ToXmlPrTypes()
+		[Test]
+		public void ToXmlPrTypes()
 		{
 			{
-				var v = new v2(1f,-2f);
+				var v = new v2(1f, -2f);
 				var node = v.ToXml("v", true);
 				var V = node.As<v2>();
 				Assert.True(v == V);
@@ -1696,7 +1745,7 @@ namespace Rylogic.UnitTests
 				Assert.True(v == V);
 			}
 			{
-				var r = new Range(-1,+1);
+				var r = new Range(-1, +1);
 				var node = r.ToXml("r", true);
 				var R = node.As<Range>();
 				Assert.True(r == R);
@@ -1708,7 +1757,8 @@ namespace Rylogic.UnitTests
 				Assert.True(r == R);
 			}
 		}
-		[Test] public void ToXmlContainers()
+		[Test]
+		public void ToXmlContainers()
 		{
 			{
 				var kv = new KeyValuePair<int, string>(42, "fortytwo");
@@ -1717,19 +1767,19 @@ namespace Rylogic.UnitTests
 				Assert.True(Equals(kv, KV));
 			}
 			{
-				var list = new List<string>{"one","two"};
+				var list = new List<string> { "one", "two" };
 				var node = list.ToXml("list", false);
 				var LIST = node.As<List<string>>();
 				Assert.True(list.SequenceEqual(LIST));
 			}
 			{
-				var dic = new Dictionary<int, float>{[1] = 1.1f, [2] = 2.2f};
+				var dic = new Dictionary<int, float> { [1] = 1.1f, [2] = 2.2f };
 				var node = dic.ToXml("dic", false);
-				var DIC = node.As<Dictionary<int,float>>();
+				var DIC = node.As<Dictionary<int, float>>();
 				Assert.True(dic.SequenceEqualUnordered(DIC));
 			}
 			{
-				var seq = new[] {1,2,3,4,5,6,7,8,9 }.Where(x => x % 2 == 1);
+				var seq = new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }.Where(x => x % 2 == 1);
 				var node = seq.ToXml("seq", false);
 				var SEQ0 = node.As<int[]>();
 				var SEQ1 = node.As<List<int>>();
@@ -1739,7 +1789,44 @@ namespace Rylogic.UnitTests
 				Assert.True(seq.SequenceEqualUnordered(SEQ2));
 			}
 		}
-		[Test] public void XmlAs()
+		[Test]
+		public void ToXmlAnonymous()
+		{
+			var obj0 = new { One = "one", Two = 2, Three = 6.28 };
+			var obj1 = new[]
+			{
+				new { One = "one", Two = 2, Three = 6.28 },
+				new { One = "won", Two = 22, Three = 2.86 },
+				new { One = "111", Two = 222, Three = 8.62 },
+			};
+			
+			var node0 = obj0.ToXml("obj0", true);
+			var node1 = obj1.ToXml("obj1", true);
+
+			Xml_.Config.AnonymousTypesAsDictionary();
+
+			var OBJ0 = (IDictionary<string, object>)node0.ToObject();
+			Assert.Equal("one", OBJ0["One"]);
+			Assert.Equal(2    , OBJ0["Two"]);
+			Assert.Equal(6.28 , OBJ0["Three"]);
+
+			var OBJ1 = (object[])node1.ToObject();
+			Assert.Equal(3, OBJ1.Length);
+
+			Assert.Equal("one", ((IDictionary<string, object>)OBJ1[0])["One"]);
+			Assert.Equal(2    , ((IDictionary<string, object>)OBJ1[0])["Two"]);
+			Assert.Equal(6.28 , ((IDictionary<string, object>)OBJ1[0])["Three"]);
+
+			Assert.Equal("won", ((IDictionary<string, object>)OBJ1[1])["One"]);
+			Assert.Equal(22   , ((IDictionary<string, object>)OBJ1[1])["Two"]);
+			Assert.Equal(2.86 , ((IDictionary<string, object>)OBJ1[1])["Three"]);
+
+			Assert.Equal("111", ((IDictionary<string, object>)OBJ1[2])["One"]);
+			Assert.Equal(222  , ((IDictionary<string, object>)OBJ1[2])["Two"]);
+			Assert.Equal(8.62 , ((IDictionary<string, object>)OBJ1[2])["Three"]);
+		}
+		[Test]
+		public void XmlAs()
 		{
 			var xml = new XDocument(
 				new XElement("root",
@@ -1764,10 +1851,10 @@ namespace Rylogic.UnitTests
 
 			XElement root = xml.Root;
 			Assert.NotNull(root);
-			Assert.Equal(1         ,root.Element("a").As<int>());
-			Assert.Equal(2.0f      ,root.Element("b").As<float>());
-			Assert.Equal("cat"     ,root.Element("c").As<string>());
-			Assert.Equal(EEnum.Dog ,root.Element("d").As<EEnum>());
+			Assert.Equal(1, root.Element("a").As<int>());
+			Assert.Equal(2.0f, root.Element("b").As<float>());
+			Assert.Equal("cat", root.Element("c").As<string>());
+			Assert.Equal(EEnum.Dog, root.Element("d").As<EEnum>());
 
 			var ints = new List<int>();
 			root.Element("e").As(ints, "i");
@@ -1779,21 +1866,22 @@ namespace Rylogic.UnitTests
 			root.Element("e").As(chars, "j");
 			Assert.Equal(5, chars.Count);
 			for (int j = 0; j != 4; ++j)
-			Assert.Equal((char)('a' + j), chars[j]);
+				Assert.Equal((char)('a' + j), chars[j]);
 
 			ints.Clear();
-			root.Element("e").As(ints, "i", (lhs,rhs) => lhs == rhs);
+			root.Element("e").As(ints, "i", (lhs, rhs) => lhs == rhs);
 			Assert.Equal(4, ints.Count);
 			for (int i = 0; i != 4; ++i)
 				Assert.Equal(i, ints[i]);
 		}
-		[Test] public void XmlAdd()
+		[Test]
+		public void XmlAdd()
 		{
-			var xml  = new XDocument();
-			var cmt  = xml.Add2(new XComment("comments"));  Assert.Equal(cmt.Value, "comments");
-			var root = xml.Add2(new XElement("root"));      Assert.AreSame(xml.Root, root);
+			var xml = new XDocument();
+			var cmt = xml.Add2(new XComment("comments")); Assert.Equal(cmt.Value, "comments");
+			var root = xml.Add2(new XElement("root")); Assert.AreSame(xml.Root, root);
 
-			var ints = new List<int>{0,1,2,3,4};
+			var ints = new List<int> { 0, 1, 2, 3, 4 };
 			var elems = Array_.New(5, i => new Elem1((uint)i));
 			string s;
 
@@ -1803,7 +1891,7 @@ namespace Rylogic.UnitTests
 				"<root>" +
 					"<elem ty=\"System.Int32\">42</elem>" +
 				"</root>"
-				,s);
+				, s);
 			xint.Remove();
 
 			var xelem = root.Add2("elem", elems[0], true);
@@ -1812,7 +1900,7 @@ namespace Rylogic.UnitTests
 				"<root>" +
 				"<elem ty=\"Rylogic.UnitTests.TestXml+Elem1\">elem_0</elem>" +
 				"</root>"
-				,s);
+				, s);
 			xelem.Remove();
 
 			var xints = root.Add2("ints", "i", ints, true);
@@ -1827,7 +1915,7 @@ namespace Rylogic.UnitTests
 						"<i ty=\"System.Int32\">4</i>" +
 					"</ints>" +
 				"</root>"
-				,s);
+				, s);
 			xints.Remove();
 
 			var xelems = root.Add2("elems", "i", elems, true);
@@ -1842,28 +1930,30 @@ namespace Rylogic.UnitTests
 					"<i ty=\"Rylogic.UnitTests.TestXml+Elem1\">elem_4</i>" +
 					"</elems>" +
 				"</root>"
-				,s);
+				, s);
 			xelems.Remove();
 		}
-		[Test] public void XmlElements()
+		[Test]
+		public void XmlElements()
 		{
 			const string src =
-				"<root>"+
-					"<one>"+
-						"<red/>"+
-						"<red/>"+
-					"</one>"+
-					"<one>"+
-						"<red/>"+
-						"<red/>"+
-					"</one>"+
-					"<one/>"+
+				"<root>" +
+					"<one>" +
+						"<red/>" +
+						"<red/>" +
+					"</one>" +
+					"<one>" +
+						"<red/>" +
+						"<red/>" +
+					"</one>" +
+					"<one/>" +
 				"</root>";
 			var xml = XDocument.Parse(src);
-			var cnt = xml.Root.Elements("one","red").Count();
+			var cnt = xml.Root.Elements("one", "red").Count();
 			Assert.Equal(cnt, 4);
 		}
-		[Test] public void XmlEnumerateLeaves()
+		[Test]
+		public void XmlEnumerateLeaves()
 		{
 			const string src =
 			#region
@@ -1893,15 +1983,16 @@ namespace Rylogic.UnitTests
 			var xml = XDocument.Parse(src).Root;
 
 			var leaf_nodes = xml.LeafNodes().Select(x => x.GetType().Name).ToList();
-			Assert.True(leaf_nodes.SequenceEqual(new[]{"XText","XElement","XComment","XElement","XElement","XElement","XElement"}));
+			Assert.True(leaf_nodes.SequenceEqual(new[] { "XText", "XElement", "XComment", "XElement", "XElement", "XElement", "XElement" }));
 
 			var leaf_elems = xml.LeafElements().Select(x => x.Value).ToList();
-			Assert.True(leaf_elems.SequenceEqual(new[]{"1","2","3","4","5"}));
+			Assert.True(leaf_elems.SequenceEqual(new[] { "1", "2", "3", "4", "5" }));
 		}
-		[Test] public void XmlDiffPatch0()
+		[Test]
+		public void XmlDiffPatch0()
 		{
 			const string xml0_src =
-				#region xml0
+			#region xml0
 @"<?xml version=""1.0"" encoding=""utf-8""?>
 <root>
 	text1
@@ -1933,9 +2024,9 @@ namespace Rylogic.UnitTests
 		<blue>BLUE</blue>
 	</removed>
 </root>";
-				#endregion
+			#endregion
 			const string xml1_src =
-				#region xml1
+			#region xml1
 @"<?xml version=""1.0"" encoding=""utf-8""?>
 <root>
 	text0
@@ -1970,9 +2061,9 @@ namespace Rylogic.UnitTests
 		<blue />
 	</unchanged0>
 </root>";
-				#endregion
+			#endregion
 			const string xml_patch =
-				#region patch xml
+			#region patch xml
 @"<?xml version=""1.0"" encoding=""utf-8""?>
 <root>
 	<Value idx='0'>
@@ -2011,7 +2102,7 @@ namespace Rylogic.UnitTests
 	</Insert>
 	<Remove idx='10' name='removed' />
 </root>";
-				#endregion
+			#endregion
 
 			var xml0 = XDocument.Parse(xml0_src).Root;
 			var xml1 = XDocument.Parse(xml1_src).Root;
@@ -2027,10 +2118,11 @@ namespace Rylogic.UnitTests
 			xml0.Patch(xmlp);
 			Assert.True(XDocument.DeepEquals(xml0, xml1));
 		}
-		[Test] public void XmlDiffPatch1()
+		[Test]
+		public void XmlDiffPatch1()
 		{
 			const string xml0_src =
-				#region xml0
+			#region xml0
 @"<?xml version=""1.0"" encoding=""utf-8""?>
 <root>
 	text1
@@ -2045,7 +2137,7 @@ namespace Rylogic.UnitTests
 </root>";
 			#endregion
 			const string xml1_src =
-				#region xml1
+			#region xml1
 @"<?xml version=""1.0"" encoding=""utf-8""?>
 <root>
 	<one>1</one>
@@ -2056,9 +2148,9 @@ namespace Rylogic.UnitTests
 		four
 	</four>
 </root>";
-				#endregion
+			#endregion
 			const string xml_patch =
-				#region patch xml
+			#region patch xml
 @"<?xml version=""1.0"" encoding=""utf-8""?>
 <root>
   <Change idx='1' name='one'>
@@ -2077,8 +2169,8 @@ namespace Rylogic.UnitTests
   </Insert>
 </root>";
 			#endregion
-			const string xml_result = 
-				#region result
+			const string xml_result =
+			#region result
 @"<?xml version=""1.0"" encoding=""utf-8""?>
 <root>
 	text1

@@ -33,6 +33,7 @@ namespace Rylogic.Utility
 		Info,
 		Warn,
 		Error,
+		Fatal,
 	}
 	public enum ELogOutputLevel
 	{
