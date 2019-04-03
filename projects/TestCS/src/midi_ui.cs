@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Windows.Forms;
 using Rylogic.Audio;
+using Rylogic.Core.Windows;
 using Rylogic.Extn;
 using Rylogic.Gui.WinForms;
 using Util = Rylogic.Utility.Util;
@@ -61,11 +62,9 @@ namespace TestCS
 
 			m_btn_make_instrument.Click += (s,a) =>
 			{
-				using (var dlg = new OpenFolderUI { Title = "Select Root instrument folder" })
-				{
-					if (dlg.ShowDialog(this) != DialogResult.OK) return;
-					m_audio.WaveBankCreateMidiInstrument("TEST", dlg.SelectedPath, "D:\\dump\\test.xwb", "D:\\dump\\test.h");
-				}
+				var dlg = new OpenFolderUI { Title = "Select Root instrument folder" };
+				if (dlg.ShowDialog(this) != DialogResult.OK) return;
+				m_audio.WaveBankCreateMidiInstrument("TEST", dlg.SelectedPath, "D:\\dump\\test.xwb", "D:\\dump\\test.h");
 			};
 
 			m_btn_play.Click += (s,a) =>

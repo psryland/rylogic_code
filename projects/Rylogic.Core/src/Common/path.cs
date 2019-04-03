@@ -84,6 +84,12 @@ namespace Rylogic.Common
 			return FileExists(file_or_directory_path) || DirExists(file_or_directory_path);
 		}
 
+		/// <summary>The length of the file at 'path'</summary>
+		public static long FileLength(string path)
+		{
+			return new FileInfo(path).Length;
+		}
+
 		/// <summary>Create any missing directory paths in 'directory'</summary>
 		public static void CreateDirs(string path)
 		{

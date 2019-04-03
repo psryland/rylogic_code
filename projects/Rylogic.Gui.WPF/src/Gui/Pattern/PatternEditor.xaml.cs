@@ -333,30 +333,30 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Show a help dialog</summary>
 		private void ShowHelp()
 		{
-			if (_help_ui == null)
+			if (m_help_ui == null)
 			{
 				var browser = new WebView();
 				var panel = new DockPanel { LastChildFill = true };
 				panel.Children.Add(browser);
 
-				_help_ui = new Window
+				m_help_ui = new Window
 				{
 					Title = "Regular Expressions Quick Reference",
 					Icon = Window.GetWindow(this)?.Icon,
 					Content = panel,
 				};
-				_help_ui.Loaded += (s, a) =>
+				m_help_ui.Loaded += (s, a) =>
 				{
 					browser.NavigateToString(WPF.Resources.regex_quick_ref);
 				};
-				_help_ui.Closed += (s, a) =>
+				m_help_ui.Closed += (s, a) =>
 				{
-					_help_ui = null;
+					m_help_ui = null;
 				};
 			}
-			_help_ui.Show();
+			m_help_ui.Show();
 		}
-		private Window _help_ui;
+		private Window m_help_ui;
 
 		/// <summary>Capture group key/value pair</summary>
 		public class CaptureGroup
