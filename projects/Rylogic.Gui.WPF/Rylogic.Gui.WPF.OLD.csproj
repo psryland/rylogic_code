@@ -1,0 +1,375 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{846D147A-B7E6-4336-B019-D1ADD62FF095}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Rylogic.Gui.WPF</RootNamespace>
+    <AssemblyName>Rylogic.Gui.WPF</AssemblyName>
+    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;PR_UNITTESTS</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE;PR_UNITTESTS</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>icon_128x128.ico</ApplicationIcon>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.Toolkit.Wpf.UI.Controls.WebView, Version=5.0.0.0, Culture=neutral, PublicKeyToken=4aff67a105548ee2, processorArchitecture=MSIL">
+      <HintPath>..\..\build\packages\Microsoft.Toolkit.Wpf.UI.Controls.WebView.5.0.1\lib\net462\Microsoft.Toolkit.Wpf.UI.Controls.WebView.dll</HintPath>
+    </Reference>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Design" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Net" />
+    <Reference Include="System.Net.Http, Version=4.2.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Xml" />
+    <Reference Include="WindowsBase" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="res\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="src\Converters\BoolConverters.cs" />
+    <Compile Include="src\Converters\ColourConverters.cs" />
+    <Compile Include="src\Converters\EnumConverters.cs" />
+    <Compile Include="src\Converters\MathConverters.cs" />
+    <Compile Include="src\Converters\NullConverters.cs" />
+    <Compile Include="src\Converters\PathConverters.cs" />
+    <Compile Include="src\Extn\DataGrid.cs" />
+    <Compile Include="src\Extn\Math.cs" />
+    <Compile Include="src\Extn\UIElement.cs" />
+    <Compile Include="src\Extn\Dispatcher.cs" />
+    <Compile Include="src\Extn\Drawing.cs" />
+    <Compile Include="src\Extn\Xml.cs" />
+    <Compile Include="src\Gui\BrowsePathUI.xaml.cs">
+      <DependentUpon>BrowsePathUI.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Gui\ChartControl\ChartPanel.cs" />
+    <Compile Include="src\Gui\ChartControl\ChartTools.cs" />
+    <Compile Include="src\Gui\ChartControl\Commands.cs" />
+    <Compile Include="src\Gui\ChartControl\Element.cs" />
+    <Compile Include="src\Gui\ChartControl\ElementCollection.cs" />
+    <Compile Include="src\Gui\ChartControl\EventArgs.cs" />
+    <Compile Include="src\Gui\ChartControl\Enums.cs" />
+    <Compile Include="src\Gui\ChartControl\HitTestResult.cs" />
+    <Compile Include="src\Gui\ChartControl\HoveredCollection.cs" />
+    <Compile Include="src\Gui\ChartControl\MouseOps.cs" />
+    <Compile Include="src\Gui\ChartControl\Navigation.cs" />
+    <Compile Include="src\Gui\ChartControl\RangeData.cs" />
+    <Compile Include="src\Gui\ChartControl\OptionsData.cs" />
+    <Compile Include="src\Gui\ChartControl\ChartControl.xaml.cs">
+      <DependentUpon>ChartControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Gui\ChartControl\ChartDataLegend.cs" />
+    <Compile Include="src\Gui\ChartControl\ChartDataSeries.cs" />
+    <Compile Include="src\Gui\ChartControl\SelectedCollection.cs" />
+    <Compile Include="src\Gui\ChartControl\AxisPanel.xaml.cs">
+      <DependentUpon>AxisPanel.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Gui\ColourPicker\ColourPickerUI.xaml.cs">
+      <DependentUpon>ColourPickerUI.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Gui\ColourPicker\ColourWheel.xaml.cs">
+      <DependentUpon>ColourWheel.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Gui\Dialogs\ProgressUI.xaml.cs">
+      <DependentUpon>ProgressUI.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Gui\Dialogs\PromptUI.xaml.cs">
+      <DependentUpon>PromptUI.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Gui\DockContainer\DockContainer.xaml.cs">
+      <DependentUpon>DockContainer.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Gui\DockContainer\ActiveContentManager.cs" />
+    <Compile Include="src\Gui\DockContainer\AutoHidePanel.xaml.cs">
+      <DependentUpon>AutoHidePanel.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Gui\DockContainer\Branch.xaml.cs">
+      <DependentUpon>Branch.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Gui\DockContainer\DockControl.cs" />
+    <Compile Include="src\Gui\DockContainer\DockLocation.cs" />
+    <Compile Include="src\Gui\DockContainer\DockPane.xaml.cs">
+      <DependentUpon>DockPane.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Gui\DockContainer\DockSizeData.cs" />
+    <Compile Include="src\Gui\DockContainer\DragHandler.cs" />
+    <Compile Include="src\Gui\DockContainer\EventArgs.cs" />
+    <Compile Include="src\Gui\DockContainer\ExtensionMethods.cs" />
+    <Compile Include="src\Gui\DockContainer\FloatingWindow.xaml.cs">
+      <DependentUpon>FloatingWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Gui\DockContainer\Interfaces.cs" />
+    <Compile Include="src\Gui\DockContainer\OptionsData.cs" />
+    <Compile Include="src\Gui\DockContainer\TabButton.xaml.cs">
+      <DependentUpon>TabButton.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Gui\DockContainer\TabStrip.xaml.cs">
+      <DependentUpon>TabStrip.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Gui\DockContainer\XmlTag.cs" />
+    <Compile Include="src\Gui\DockPanelSplitter.xaml.cs">
+      <DependentUpon>DockPanelSplitter.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Extn\Gui.cs" />
+    <Compile Include="src\Gui\Dialogs\MsgBox.xaml.cs">
+      <DependentUpon>MsgBox.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Gui\Log\LogControl.xaml.cs">
+      <DependentUpon>LogControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Gui\Pattern\PatternEditor.xaml.cs">
+      <DependentUpon>PatternEditor.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Gui\Pattern\PatternEditorUI.xaml.cs">
+      <DependentUpon>PatternEditorUI.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Gui\Pattern\PatternFilter.xaml.cs">
+      <DependentUpon>PatternFilter.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Gui\RichTextBox.cs" />
+    <Compile Include="src\Gui\ToolBar.cs" />
+    <Compile Include="src\Gui\View3d\View3dLightingUI.xaml.cs">
+      <DependentUpon>View3dLightingUI.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Gui\View3d\View3dObjectManagerUI.xaml.cs">
+      <DependentUpon>View3dObjectManagerUI.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Utility\BindingErrorTrace.cs" />
+    <Compile Include="src\Utility\DataContextSpy.cs" />
+    <Compile Include="src\Utility\TriggerTracing.cs" />
+    <Compile Include="src\Gui\View3d\View3dControl.xaml.cs">
+      <DependentUpon>View3dControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Gui\View3d\View3dMeasurementUI.xaml.cs">
+      <DependentUpon>View3dMeasurementUI.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Plugin\Extensions.cs" />
+    <Compile Include="src\Program.cs" />
+    <Compile Include="src\Converters\MiscConverters.cs" />
+    <Compile Include="src\Utility\Command.cs" />
+    <Compile Include="src\Utility\MethodBinding.cs" />
+    <Compile Include="src\Utility\RecentFiles.cs" />
+    <Compile Include="src\Utility\PinWindow.cs" />
+    <Compile Include="src\Utility\WPFUtil.cs" />
+    <Compile Include="src\Validators\PathValidators.cs" />
+    <Compile Include="src\Validators\PredicateValidator.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Rylogic.Core.Windows\Rylogic.Core.Windows.csproj">
+      <Project>{76ef3a15-6e9f-4348-bcc2-e39f14b2a2b4}</Project>
+      <Name>Rylogic.Core.Windows</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Rylogic.Core\Rylogic.Core.csproj">
+      <Project>{37a4f319-2052-404d-ae7f-f882cfa33c1b}</Project>
+      <Name>Rylogic.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Rylogic.View3d\Rylogic.View3d.csproj">
+      <Project>{0fcb5434-407b-415e-9f11-6216f44d4377}</Project>
+      <Name>Rylogic.View3d</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="src\Gui\BrowsePathUI.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Gui\ChartControl\ChartControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Gui\ChartControl\AxisPanel.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Gui\ColourPicker\ColourPickerUI.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Gui\ColourPicker\ColourWheel.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Gui\Dialogs\ProgressUI.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Gui\Dialogs\PromptUI.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Gui\DockContainer\DockContainer.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="src\Gui\DockContainer\AutoHidePanel.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="src\Gui\DockContainer\Branch.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="src\Gui\DockContainer\DockPane.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="src\Gui\DockContainer\FloatingWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="src\Gui\DockContainer\TabButton.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="src\Gui\DockContainer\TabStrip.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="src\Gui\DockPanelSplitter.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Gui\Dialogs\MsgBox.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Gui\Log\LogControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Gui\Pattern\PatternEditor.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="src\Gui\Pattern\PatternEditorUI.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Gui\Pattern\PatternFilter.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Gui\View3d\View3dControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Gui\View3d\View3dLightingUI.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Gui\View3d\View3dMeasurementUI.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Gui\View3d\View3dObjectManagerUI.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Themes\Generic.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="res\dock_close.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="res\dock_menu.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="res\dock_pinned.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="res\dock_site_bottom.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="res\dock_site_cross_lg.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="res\dock_site_cross_sm.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="res\dock_site_left.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="res\dock_site_right.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="res\dock_site_top.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="res\dock_unpinned.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="res\edit_add.png" />
+    <Resource Include="res\edit_save.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="res\regex_quick_ref.html" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="package.nuspec" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="res\Resources.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <CustomToolNamespace>Rylogic.Gui.WPF</CustomToolNamespace>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+    <None Include="post_build.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="icon_128x128.ico" />
+    <Resource Include="res\bottom.png" />
+    <Resource Include="res\check_reject.png" />
+    <Resource Include="res\line_wrap.png" />
+    <Resource Include="res\folder.png" />
+    <Resource Include="res\minus1.png" />
+    <Resource Include="res\pencil.png" />
+    <Resource Include="res\plus1.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
+</Project>

@@ -16,7 +16,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 
 		static AxisPanel()
 		{
-			AxisProperty = Gui_.DPRegister<AxisPanel>(nameof(Axis));
+			AxisProperty = Gui_.DPRegister<AxisPanel>(nameof(Axis), flags:FrameworkPropertyMetadataOptions.None);
 			FontFamilyProperty = Gui_.DPRegister<AxisPanel>(nameof(FontFamily), def: new FontFamily("tahoma"));
 			FontStyleProperty = Gui_.DPRegister<AxisPanel>(nameof(FontStyle), def: FontStyles.Normal);
 			FontWeightProperty = Gui_.DPRegister<AxisPanel>(nameof(FontWeight), def: FontWeights.Normal);

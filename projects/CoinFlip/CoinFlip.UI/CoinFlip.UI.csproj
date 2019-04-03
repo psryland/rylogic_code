@@ -215,7 +215,7 @@
       <Name>Rylogic.Core</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj">
-      <Project>{846d147a-b7e6-4336-b019-d1add62ff095}</Project>
+      <Project>{e4734592-8ea9-45bd-8533-9ad8463b7495}</Project>
       <Name>Rylogic.Gui.WPF</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\Rylogic.View3d\Rylogic.View3d.csproj">

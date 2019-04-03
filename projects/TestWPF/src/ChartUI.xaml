@@ -7,8 +7,10 @@
 	xmlns:gui2="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
 	xmlns:local="clr-namespace:TestWPF"
 	mc:Ignorable="d"
-	Title="ChartUI" Height="450" Width="800"
 	WindowStartupLocation="Manual"
+	Title="ChartUI"
+	Height="450"
+	Width="800"
 	>
 	<!--
 	Left="-1050"
