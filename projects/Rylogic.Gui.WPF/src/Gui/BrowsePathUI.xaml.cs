@@ -95,7 +95,7 @@ namespace Rylogic.Gui.WPF
 		}
 		public static readonly DependencyProperty DialogTitleProperty;
 
-		/// <summary>The filter to apply in open/save file dialogs</summary>
+		/// <summary>The filter to apply in open/save file dialogs. Example: "Image files (*.bmp, *.jpg)|*.bmp;*.jpg|All files (*.*)|*.*"</summary>
 		public string FileFilter
 		{
 			get { return (string)GetValue(FileFilterProperty); }
