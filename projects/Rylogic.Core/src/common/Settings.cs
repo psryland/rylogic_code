@@ -115,13 +115,16 @@ namespace Rylogic.Common
 		/// <summary>Read a settings value</summary>
 		protected virtual Value get<Value>(string key)
 		{
-			if (m_data.TryGetValue(key, out var value) ||
-				Default.m_data.TryGetValue(key, out value))
-				return (Value)value;
+			var found = m_data.TryGetValue(key, out var value) || Default.m_data.TryGetValue(key, out value);
+			if (!found)
+				throw new KeyNotFoundException($"Unknown setting '{key}'.\r\n"+
+					"This is probably because there is no default value set "+
+					"in the constructor of the derived settings class");
 
-			throw new KeyNotFoundException($"Unknown setting '{key}'.\r\n"+
-				"This is probably because there is no default value set "+
-				"in the constructor of the derived settings class");
+			if (!(value is Value v))
+				v = Util.ConvertTo<Value>(value);
+			
+			return v;
 		}
 
 		/// <summary>Write a settings value</summary>

@@ -146,9 +146,9 @@ namespace Rylogic.Gui.WPF
 		}
 		protected override void OnRenderSizeChanged(SizeChangedInfo size_info)
 		{
-			base.OnRenderSizeChanged(size_info);
 			m_resized = true;
-			Invalidate();
+			base.OnRenderSizeChanged(size_info);
+			D3DImage.Invalidate();
 		}
 		protected override void OnMouseDown(MouseButtonEventArgs e)
 		{

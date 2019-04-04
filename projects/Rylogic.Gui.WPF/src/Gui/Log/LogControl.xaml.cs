@@ -87,10 +87,10 @@ namespace Rylogic.Gui.WPF
 
 			// Highlighting patterns
 			Highlighting = new ObservableCollection<HLPattern>();
-			Highlighting.Add(new HLPattern(Color_.From("#FCF"), Color_.From("#C0C"), EPattern.RegularExpression, "^Fatal.*|.*FATAL:.*") { IgnoreCase = true });
-			Highlighting.Add(new HLPattern(Color_.From("#FDD"), Color_.From("#F00"), EPattern.RegularExpression, "^Error.*|.*ERROR:.*") { IgnoreCase = true });
-			Highlighting.Add(new HLPattern(Colors.Transparent, Color_.From("#E70"), EPattern.RegularExpression, "^Warn.*"));
-			Highlighting.Add(new HLPattern(Colors.Transparent, Color_.From("#888"), EPattern.RegularExpression, "^Debug.*"));
+			Highlighting.Add(new HLPattern(Color_.From("#FCF"), Color_.From("#C0C"), EPattern.RegularExpression, ".*fatal.*") { IgnoreCase = true });
+			Highlighting.Add(new HLPattern(Color_.From("#FDD"), Color_.From("#F00"), EPattern.RegularExpression, ".*error.*") { IgnoreCase = true });
+			Highlighting.Add(new HLPattern(Colors.Transparent, Color_.From("#E70"), EPattern.RegularExpression, ".*warn.*") { IgnoreCase = true });
+			Highlighting.Add(new HLPattern(Colors.Transparent, Color_.From("#888"), EPattern.RegularExpression, ".*debug.*") { IgnoreCase = true });
 
 			// The log entry delimiter
 			LineDelimiter = Log.EntryDelimiter;

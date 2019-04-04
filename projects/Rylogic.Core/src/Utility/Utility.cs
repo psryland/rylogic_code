@@ -28,12 +28,6 @@ namespace Rylogic.Utility
 	/// <summary>Utility function container</summary>
 	public static class Util
 	{
-		#if DEBUG
-		public const bool IsDebug = true;
-		#else
-		public const bool IsDebug = false;
-		#endif
-
 		/// <summary>Dispose and return null for one-line disposing, e.g. thing = Util.Dispose(thing);</summary>
 		[DebuggerStepThrough]
 		public static T Dispose<T>(ref T doomed, bool gc_ok = false) where T : class, IDisposable
@@ -1214,11 +1208,39 @@ namespace Rylogic.Utility
 			"Kaylee", "Luke", "Mormont", "Nigella", "Oscar", "Pavarotti", "Quin", "Russel", "Stan", "Toby",
 			"Ulrick", "Vernon", "William", "Xavior", "Yvonne", "Zack",
 		};
+
+		#if DEBUG
+		public const bool IsDebug = true;
+		#else
+		public const bool IsDebug = false;
+		#endif
 	}
 
 	/// <summary>Type specific utility methods</summary>
 	public static class Util<T>
 	{
+		/// <summary>Call the constructor of 'T' to create a new instance. Use x.GetType().New() if the type is unknown at compile time</summary>
+		public static T New()
+		{
+			var arg_types = new Type[] { };
+			return (T)typeof(T).GetConstructor(arg_types).Invoke(null);
+		}
+		public static T New<A0>(A0 a0)
+		{
+			var arg_types = new Type[] { typeof(A0) };
+			return (T)typeof(T).GetConstructor(arg_types).Invoke(new object[] { a0 });
+		}
+		public static T New<A0, A1>(A0 a0, A1 a1)
+		{
+			var arg_types = new Type[] { typeof(A0), typeof(A1) };
+			return (T)typeof(T).GetConstructor(arg_types).Invoke(new object[] { a0, a1 });
+		}
+		public static T New<A0, A1, A2>(A0 a0, A1 a1, A2 a2)
+		{
+			var arg_types = new Type[] { typeof(A0), typeof(A1), typeof(A2) };
+			return (T)typeof(T).GetConstructor(arg_types).Invoke(new object[] { a0, a1, a2 });
+		}
+
 		/// <summary>Serialise 'obj' to a byte array. 'T' must have the [Serializable] attribute</summary>
 		public static byte[] ToBlob(T obj)
 		{

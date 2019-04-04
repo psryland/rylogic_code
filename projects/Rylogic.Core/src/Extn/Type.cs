@@ -12,6 +12,28 @@ namespace Rylogic.Extn
 {
 	public static class Type_
 	{
+		/// <summary>Call the constructor of this type to create a new instance. Use Util'T.New if the type is known at compile time</summary>
+		public static object New(this Type ty)
+		{
+			var arg_types = new Type[] { };
+			return ty.GetConstructor(arg_types).Invoke(null);
+		}
+		public static object New<A0>(this Type ty, A0 a0)
+		{
+			var arg_types = new Type[] { typeof(A0) };
+			return ty.GetConstructor(arg_types).Invoke(new object[] { a0 });
+		}
+		public static object New<A0, A1>(this Type ty, A0 a0, A1 a1)
+		{
+			var arg_types = new Type[] { typeof(A0), typeof(A1) };
+			return ty.GetConstructor(arg_types).Invoke(new object[] { a0, a1 });
+		}
+		public static object New<A0, A1, A2>(this Type ty, A0 a0, A1 a1, A2 a2)
+		{
+			var arg_types = new Type[] { typeof(A0), typeof(A1), typeof(A2) };
+			return ty.GetConstructor(arg_types).Invoke(new object[] { a0, a1, a2 });
+		}
+
 		/// <summary>Return a default instance of this type</summary>
 		public static object DefaultInstance(this Type type)
 		{
@@ -37,7 +59,7 @@ namespace Rylogic.Extn
 			// Fail with exception
 			throw new ArgumentException($"{type.FullName} is not a publicly-visible type, so the default value cannot be retrieved");
 		}
-			
+
 		/// <summary>Resolve a type name to a type</summary>
 		public static Type Resolve(string name, bool throw_on_error = true)
 		{

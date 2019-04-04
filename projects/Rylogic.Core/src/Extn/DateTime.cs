@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using Rylogic.Maths;
 
 namespace Rylogic.Extn
 {
@@ -140,6 +142,20 @@ namespace Rylogic.Extn
 			if (time < min) return min;
 			if (time > max) return max;
 			return time;
+		}
+
+		/// <summary>Returns the fractional distance of 'x' between [min,max]</summary>
+		public static double Frac(DateTimeOffset min, DateTimeOffset x, DateTimeOffset max)
+		{
+			Debug.Assert(Math.Abs(max.Ticks - min.Ticks) > 0);
+			return (double)(x.Ticks - min.Ticks) / (max.Ticks - min.Ticks);
+		}
+
+		/// <summary>Linearly interpolates between 'lhs' and 'rhs'</summary>
+		public static DateTimeOffset Lerp(DateTimeOffset lhs, DateTimeOffset rhs, double frac)
+		{
+			var lerp = Math_.Lerp(lhs.Ticks, rhs.Ticks, frac);
+			return new DateTimeOffset(lerp, lhs.Offset);
 		}
 	}
 

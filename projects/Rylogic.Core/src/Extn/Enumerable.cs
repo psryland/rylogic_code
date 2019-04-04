@@ -172,6 +172,19 @@ namespace Rylogic.Extn
 			return -1;
 		}
 
+		/// <summary>Return the index of the last occurrence of 'pred(x) == true' or -1</summary>
+		public static int LastIndexOf<TSource>(this IEnumerable<TSource> source, Func<TSource, bool> pred)
+		{
+			int i = -1, idx = -1;
+			foreach (var x in source)
+			{
+				++i;
+				if (pred(x))
+					idx = i;
+			}
+			return idx;
+		}
+
 		/// <summary>Returns the indices of 'element' within this collection</summary>
 		public static IEnumerable<int> IndicesOf<TSource>(this IEnumerable<TSource> source, TSource element, IEqualityComparer<TSource> comparer = null)
 		{

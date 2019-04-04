@@ -173,6 +173,9 @@ namespace Rylogic.Gfx
 		}
 		public void Invalidate(Int32Rect area)
 		{
+			if (FrontBuffer == null || RenderTarget == null)
+				return;
+
 			using (LockScope())
 			{
 				View3d.Texture.ResolveAA(FrontBuffer, RenderTarget);

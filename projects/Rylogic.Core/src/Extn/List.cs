@@ -267,6 +267,14 @@ namespace Rylogic.Extn
 			return list.IndexOf(pred, 0, list.Count);
 		}
 
+		/// <summary>Return the index of the last occurrence of 'pred(x) == true' or -1</summary>
+		public static int LastIndexOf<T>(this IList<T> list, Func<T, bool> pred)
+		{
+			int idx;
+			for (idx = list.Count; idx-- != 0 && !pred(list[idx]);) { }
+			return idx;
+		}
+
 		/// <summary>
 		/// Remove items from a list by predicate.
 		/// Returns the number of elements removed.</summary>
@@ -343,11 +351,10 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Remove the range of elements from [start_index, list.Count)</summary>
-		public static IList<T> RemoveToEnd<T>(this IList<T> list, int start_index)
+		public static void RemoveToEnd<T>(this IList<T> list, int start_index)
 		{
 			for (var i = list.Count; i-- > start_index;)
 				list.RemoveAt(start_index);
-			return list;
 		}
 
 		/// <summary>Remove all items in 'set' from this list. (More efficient that removing one at a time if 'set' is a large fraction of this list)</summary>
@@ -360,6 +367,36 @@ namespace Rylogic.Extn
 			for (int i = list.Count; i-- != 0;)
 				if (set.Contains(list[i]))
 					list.RemoveAt(i);
+		}
+
+		/// <summary>Removes items from this list that satisfy 'pred'. Returning them in a new list</summary>
+		public static IList<T> Filter<T>(this IList<T> list, Func<T, bool> pred)
+		{
+			var list_type = list.GetType();
+			if (list_type.IsArray)
+				throw new ArgumentException("List is an array which cannot be resized.");
+
+			// Create a copy of the list type
+			var filtered = (IList<T>)Activator.CreateInstance(list.GetType());
+
+			// Filter the elements
+			int i = 0, j = 0, iend = list.Count;
+			for (; i != iend; )
+			{
+				// If list[i] is to be filtered out..
+				if (pred(list[i]))
+				{
+					// Move it to the filtered list
+					filtered.Add(list[i++]);
+				}
+				else if (j != i)
+				{
+					// Keep it in the original list
+					list[j++] = list[i++];
+				}
+			}
+			list.RemoveToEnd(j);
+			return filtered;
 		}
 
 		/// <summary>
@@ -580,6 +617,10 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Sort the list using a lambda</summary>
+		public static IList<T> Sort<T,U>(this IList<T> list, Func<T, U> selector, int direction = +1) where U:IComparable
+		{
+			return list.Sort((l, r) => direction * selector(l).CompareTo(selector(r)));
+		}
 		public static IList<T> Sort<T>(this IList<T> list, Func<T,T,int> cmp)
 		{
 			return list.Sort(Cmp<T>.From(cmp));
@@ -950,6 +991,16 @@ namespace Rylogic.UnitTests
 					Assert.Equal(+5, idx);
 				}
 			}
+		}
+		[Test]
+		public void Filter()
+		{
+			var set0 = new Container.BindingListEx<int>{ 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+			var set1 = set0.Filter(x => (x & 1) == 1);
+
+			Assert.Equal(set0.GetType(), set1.GetType());
+			Assert.Equal(new[] { 2, 4, 6, 8 }, set0);
+			Assert.Equal(new[] { 1, 3, 5, 7, 9 }, set1);
 		}
 	}
 }

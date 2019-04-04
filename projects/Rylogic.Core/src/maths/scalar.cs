@@ -92,11 +92,6 @@ namespace Rylogic.Maths
 		public static v4        RadiansToDegrees(v4 degrees)                    { return new v4(RadiansToDegrees(degrees.x), RadiansToDegrees(degrees.y), RadiansToDegrees(degrees.z), RadiansToDegrees(degrees.w)); }
 
 		public static void      Swap<T>(ref T lhs, ref T rhs)                   { var tmp = lhs; lhs = rhs; rhs = tmp; }
-		public static float     Frac(int min, int x, int max)                   { Debug.Assert(max != min); return (float)(x - min) / (max - min); }
-		public static double    Frac(long min, long x, long max)                { Debug.Assert(max != min); return (double)(x - min) / (max - min); }
-		public static float     Frac(float min, float x, float max)             { Debug.Assert(Math.Abs(max - min) > float .Epsilon); return (x - min) / (max - min); }
-		public static double    Frac(double min, double x, double max)          { Debug.Assert(Math.Abs(max - min) > double.Epsilon); return (x - min) / (max - min); }
-		public static decimal   Frac(decimal min, decimal x, decimal max)       { Debug.Assert(Math.Abs(max - min) > 0); return (x - min) / (max - min); }
 		public static float     Len2Sq(float x, float y)                        { return Sqr(x) + Sqr(y); }
 		public static float     Len2(float x, float y)                          { return Sqrt(Len2Sq(x,y)); }
 		public static float     Len3Sq(float x, float y, float z)               { return Sqr(x) + Sqr(y) + Sqr(z); }
@@ -280,6 +275,38 @@ namespace Rylogic.Maths
 			
 			var idx = (int)fidx;
 			return Lerp(values[idx], values[idx+1], fidx - idx);
+		}
+
+		/// <summary>Normalise to x to range [min,max]</summary>
+		public static float Frac(int min, int x, int max)
+		{
+			Debug.Assert(max != min);
+			return (float)(x - min) / (max - min);
+		}
+		public static double Frac(long min, long x, long max)
+		{
+			Debug.Assert(max != min);
+			return (double)(x - min) / (max - min);
+		}
+		public static float Frac(float min, float x, float max)
+		{
+			Debug.Assert(Math.Abs(max - min) > float.Epsilon);
+			return (x - min) / (max - min);
+		}
+		public static double Frac(double min, double x, double max)
+		{
+			Debug.Assert(Math.Abs(max - min) > double.Epsilon);
+			return (x - min) / (max - min);
+		}
+		public static decimal Frac(decimal min, decimal x, decimal max)
+		{
+			Debug.Assert(Math.Abs(max - min) > 0);
+			return (x - min) / (max - min);
+		}
+		public static T Frac<T>(T min, T x, T max)
+		{
+			Debug.Assert(!min.Equals(max));
+			return Operators<T>.Div(Operators<T>.Sub(x, min), Operators<T>.Sub(max, min));
 		}
 
 		/// <summary>
