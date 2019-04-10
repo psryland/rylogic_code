@@ -16,49 +16,49 @@ namespace CoinFlip
 		//    to an 'Order' which is live on an exchange, waiting to be filled.
 		//  - A 'Trade' represents a single exchange of funds, so a completed Order consists
 		//    of one or more completed trades.
-		//  - VolumeIn * Price does not have to equal VolumeOut, because 'Trade' is used
-		//    with the order book to calculate the best price for trading 'volume_in'.
+		//  - AmountIn * Price does not have to equal AmountOut, because 'Trade' is used
+		//    with the order book to calculate the best price for trading 'amount_in'.
 
-		/// <summary>Create a trade on 'pair' at 'price_q2b' using 'volume_base' or the default for CoinIn if not given</summary>
-		public Trade(string fund_id, ETradeType tt, TradePair pair, Unit<decimal> price_q2b, Unit<decimal>? volume_base = null)
+		/// <summary>Create a trade on 'pair' at 'price_q2b' using 'amount_base' or the default for CoinIn if not given</summary>
+		public Trade(string fund_id, ETradeType tt, TradePair pair, Unit<decimal> price_q2b, Unit<decimal>? amount_base = null)
 		{
-			// Check trade volumes and units
-			var vol_base = volume_base ?? pair.DefaultTradeAmountBase(tt, price_q2b);
-			if (vol_base < 0m._(pair.Base))
-				throw new Exception("Invalid trade volume");
+			// Check trade amounts and units
+			var amt_base = amount_base ?? pair.DefaultTradeAmountBase(tt, price_q2b);
+			if (amt_base < 0m._(pair.Base))
+				throw new Exception("Invalid trade amount");
 			if (price_q2b < 0m._(pair.RateUnits))
 				throw new Exception("Invalid trade price");
-			if (vol_base * price_q2b < 0m._(pair.Quote))
-				throw new Exception("Invalid trade volume (quote)");
+			if (amt_base * price_q2b < 0m._(pair.Quote))
+				throw new Exception("Invalid trade amount (quote)");
 
 			FundId     = fund_id;
-			TradeType  = tt;
 			Pair       = pair;
+			TradeType  = tt;
+			AmountBase = amt_base;
 			PriceQ2B   = price_q2b;
-			VolumeBase = vol_base;
 		}
 
-		/// <summary>Create a trade on 'pair' to convert 'volume_in' of 'coin_in' to 'volume_out'</summary>
-		public Trade(string fund_id, TradePair pair, Coin coin_in, Unit<decimal> vol_in, Unit<decimal> vol_out)
+		/// <summary>Create a trade on 'pair' to convert 'amount_in' of 'coin_in' to 'amount_out'</summary>
+		public Trade(string fund_id, TradePair pair, Coin coin_in, Unit<decimal> amount_in, Unit<decimal> amount_out)
 		{
 			FundId = fund_id;
+			Pair = pair;
 			TradeType =
 				pair.Base == coin_in ? ETradeType.B2Q :
 				pair.Quote == coin_in ? ETradeType.Q2B :
 				throw new Exception($"Currency {coin_in} is not one of {pair.Name}");
-			Pair       = pair;
-			PriceQ2B   = TradeType.PriceQ2B(vol_out / vol_in);
-			VolumeBase = TradeType.VolumeBase(PriceQ2B, volume_in:vol_in);
+			AmountBase = TradeType.AmountBase(PriceQ2B, amount_id:amount_in);
+			PriceQ2B = TradeType.PriceQ2B(amount_out / amount_in);
 		}
 
-		/// <summary>Copy construct a trade, with the volume scaled by 'scale'</summary>
+		/// <summary>Copy construct a trade, with the amount scaled by 'scale'</summary>
 		public Trade(Trade rhs, decimal scale = 1m)
 		{
 			FundId     = rhs.FundId;
-			TradeType  = rhs.TradeType;
 			Pair       = rhs.Pair;
+			TradeType  = rhs.TradeType;
+			AmountBase = rhs.AmountBase * scale;
 			PriceQ2B   = rhs.PriceQ2B;
-			VolumeBase = rhs.VolumeBase * scale;
 		}
 
 		/// <summary>Create a trade based on an existing position</summary>
@@ -68,14 +68,11 @@ namespace CoinFlip
 
 		/// <summary>Copy constructor</summary>
 		public Trade(Trade rhs)
-			:this(rhs.FundId, rhs.TradeType, rhs.Pair, rhs.PriceQ2B, rhs.VolumeBase)
+			:this(rhs.FundId, rhs.TradeType, rhs.Pair, rhs.PriceQ2B, rhs.AmountBase)
 		{}
 
 		/// <summary>The fund associated with this trade</summary>
 		public string FundId { get; }
-			
-		/// <summary>The trade type</summary>
-		public ETradeType TradeType { get; }
 
 		/// <summary>The pair being traded</summary>
 		public TradePair Pair
@@ -86,10 +83,13 @@ namespace CoinFlip
 				if (m_pair == value) return;
 				m_pair = value;
 				PriceQ2B = PriceQ2B._(value.RateUnits);
-				VolumeBase = VolumeBase._(value.Base);
+				AmountBase = AmountBase._(value.Base);
 			}
 		}
 		private TradePair m_pair;
+
+		/// <summary>The trade type</summary>
+		public ETradeType TradeType { get; set; }
 
 		/// <summary>Given the current spot price, return the order type</summary>
 		public EPlaceOrderType OrderType
@@ -115,28 +115,25 @@ namespace CoinFlip
 			}
 		}
 
-		/// <summary>The base volume to trade</summary>
-		public Unit<decimal> VolumeBase { get; set; }
+		/// <summary>The base amount to trade</summary>
+		public Unit<decimal> AmountBase { get; set; }
 
-		/// <summary>The volume being sold</summary>
+		/// <summary>The amount being sold</summary>
 		public Unit<decimal> AmountIn
 		{
-			get { return TradeType.AmountIn(VolumeBase, PriceQ2B); }
-			set { VolumeBase = TradeType.VolumeBase(PriceQ2B, volume_in:value); }
+			get { return TradeType.AmountIn(AmountBase, PriceQ2B); }
+			set { AmountBase = TradeType.AmountBase(PriceQ2B, amount_id:value); }
 		}
 
-		/// <summary>The volume being bought</summary>
+		/// <summary>The amount being bought</summary>
 		public Unit<decimal> AmountOut
 		{
-			get { return TradeType.AmountOut(VolumeBase, PriceQ2B); }
-			set { VolumeBase = TradeType.VolumeBase(PriceQ2B, volume_out:value); }
+			get { return TradeType.AmountOut(AmountBase, PriceQ2B); }
+			set { AmountBase = TradeType.AmountBase(PriceQ2B, amount_out:value); }
 		}
 
-		/// <summary>The volume being bought after commissions</summary>
-		public Unit<decimal> VolumeNett
-		{
-			get { return AmountOut * (1 - Pair.Fee); }
-		}
+		/// <summary>The amount being bought after commissions</summary>
+		public Unit<decimal> AmountNett => AmountOut * (1 - Pair.Fee);
 
 		/// <summary>The price to make the trade at (Quote/Base)</summary>
 		public Unit<decimal> PriceQ2B { get; set; }
@@ -149,22 +146,13 @@ namespace CoinFlip
 		}
 
 		/// <summary>The inverse of the price to make the trade at (in CoinIn/CoinOut)</summary>
-		public Unit<decimal> PriceInv
-		{
-			get { return Math_.Div(1m._(), Price, 0m / 1m._(Price)); }
-		}
+		public Unit<decimal> PriceInv => Math_.Div(1m._(), Price, 0m / 1m._(Price));
 
 		/// <summary>The effective price of this trade after fees (in Quote/Base)</summary>
-		public Unit<decimal> PriceQ2BNett
-		{
-			get { return TradeType.PriceQ2B(PriceNett); }
-		}
+		public Unit<decimal> PriceQ2BNett => TradeType.PriceQ2B(PriceNett);
 
 		/// <summary>The effective price of this trade after fees (in CoinOut/CoinIn)</summary>
-		public Unit<decimal> PriceNett
-		{
-			get { return VolumeNett / AmountIn; }
-		}
+		public Unit<decimal> PriceNett => AmountNett / AmountIn;
 
 		/// <summary>The position of this trade in the order book for the trade type</summary>
 		public int OrderBookIndex => Pair.OrderBookIndex(TradeType, PriceQ2B, out var _);
@@ -178,14 +166,14 @@ namespace CoinFlip
 		/// <summary>The coin type being bought</summary>
 		public Coin CoinOut => TradeType == ETradeType.B2Q ? Pair.Quote : Pair.Base;
 
-		/// <summary>The allowable range on input trade volumes</summary>
+		/// <summary>The allowable range on input trade amounts</summary>
 		public RangeF<Unit<decimal>> PriceRange => Pair.PriceRange;
 
-		/// <summary>The allowable range on input trade volumes</summary>
-		public RangeF<Unit<decimal>> VolumeRangeIn => Pair.AmountRangeIn(TradeType);
+		/// <summary>The allowable range on input trade amounts</summary>
+		public RangeF<Unit<decimal>> AmountRangeIn => Pair.AmountRangeIn(TradeType);
 
-		/// <summary>The allowable range on output trade volumes</summary>
-		public RangeF<Unit<decimal>> VolumeRangeOut => Pair.AmountRangeOut(TradeType);
+		/// <summary>The allowable range on output trade amounts</summary>
+		public RangeF<Unit<decimal>> AmountRangeOut => Pair.AmountRangeOut(TradeType);
 
 		/// <summary>String description of the trade</summary>
 		public string Description => $"{AmountIn.ToString("G6", true)} → {AmountOut.ToString("G6", true)} @ {PriceQ2B.ToString("G6", true)}";
@@ -199,19 +187,19 @@ namespace CoinFlip
 			//    means include it in the available balance.
 			// - 'additional_balance' is extra balance that is assumed to be available for the
 			//    trade. Typically, this would be from a trade that will be cancelled freeing
-			//    up some available volume (i.e. in modifying an existing order)
+			//    up some available amount (i.e. in modifying an existing order)
 
 			var result = EValidation.Valid;
 
-			// Check the trade volumes
+			// Check the trade amounts
 			if (AmountIn <= 0)
-				result |= EValidation.VolumeInIsInvalid;
+				result |= EValidation.AmountInIsInvalid;
 			else if (!Pair.AmountRangeIn(TradeType).Contains(AmountIn))
-				result |= EValidation.VolumeInOutOfRange;
+				result |= EValidation.AmountInOutOfRange;
 			if (AmountOut <= 0)
-				result |= EValidation.VolumeOutIsInvalid;
+				result |= EValidation.AmountOutIsInvalid;
 			else if (!Pair.AmountRangeOut(TradeType).Contains(AmountOut))
-				result |= EValidation.VolumeOutOutOfRange;
+				result |= EValidation.AmountOutOutOfRange;
 
 			// Check the price limits.
 			if (Price <= 0)
@@ -230,7 +218,7 @@ namespace CoinFlip
 
 			// Allowing for fees:
 			// Poloniex: Fee reduces the currency being received.
-			// Cryptopia: Fee is charged on the quote volume amount.
+			// Cryptopia: Fee is charged on the quote amount amount.
 
 			// When trading Q2B (i.e. buying base currency) commissions reduce the amount of base currency received.
 			// When trading B2Q (i.e. selling base currency) commissions are removed from
@@ -238,7 +226,7 @@ namespace CoinFlip
 			//// Check the balances (allowing for fees)
 			//var bal = TradeType == ETradeType.B2Q ? Pair.Base.Balance : Pair.Quote.Balance;
 			//var available = bal.Available + (reserved_balance != null ? bal.Reserved(reserved_balance.Value) : 0m._(bal.Coin));
-			//if (available < VolumeIn * (1.0000001m + Pair.Fee))
+			//if (available < AmountIn * (1.0000001m + Pair.Fee))
 			//	result |= EValidation.InsufficientBalance;
 
 			return result;
@@ -258,7 +246,7 @@ namespace CoinFlip
 				TradeType == rhs.TradeType &&
 				Pair == rhs.Pair &&
 				Math_.Abs(PriceQ2B - rhs.PriceQ2B) < Misc.PriceEpsilon._(PriceQ2B) &&
-				Math_.Abs(VolumeBase - rhs.VolumeBase) < Misc.VolumeEpsilon._(VolumeBase);
+				Math_.Abs(AmountBase - rhs.AmountBase) < Misc.AmountEpsilon._(AmountBase);
 		}
 		public override bool Equals(object obj)
 		{
@@ -266,7 +254,7 @@ namespace CoinFlip
 		}
 		public override int GetHashCode()
 		{
-			return new { TradeType, Pair, PriceQ2B, VolumeBase }.GetHashCode();
+			return new { TradeType, Pair, PriceQ2B, AmountBase }.GetHashCode();
 		}
 		#endregion
 	}

@@ -1,73 +1,254 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Web;
-using Newtonsoft.Json;
+using Bittrex.API.DomainObjects;
+using Bittrex.API.Subscriptions;
+using ExchApi.Common;
+using Newtonsoft.Json.Linq;
+using Rylogic.Utility;
 
 namespace Bittrex.API
 {
-	public class BittrexApi :IDisposable
+	public class BittrexApi :ExchangeApi<HMACSHA512>
 	{
-		private string UrlBaseAddress;
-		private readonly string m_key;
-		private readonly string m_secret;
-		private JsonSerializer m_json;
-		private CancellationToken m_cancel_token;
-
-		public BittrexApi(CancellationToken cancel_token, string base_address = "https://bittrex.com/")
-			:this(null, null, cancel_token, base_address)
-		{}
-		public BittrexApi(string key, string secret, CancellationToken cancel_token, string base_address = "https://bittrex.com/")
+		public BittrexApi(string key, string secret, CancellationToken shutdown)
+			:base(key, secret, shutdown, 10, "https://api.bittrex.com/", "https://socket.bittrex.com/signalr")
 		{
-			m_key = key;
-			m_secret = secret;
-			UrlBaseAddress = base_address;
-			ServerRequestRateLimit = 10;
-			m_cancel_token = cancel_token;
-			Client = new HttpClient();
-			m_json = new JsonSerializer { NullValueHandling = NullValueHandling.Ignore };
-			Hasher = m_secret != null ? new HMACSHA512(Encoding.ASCII.GetBytes(m_secret)) : null;
-			m_request_sw = new Stopwatch();
-			m_request_sw.Start();
-		}
-		public virtual void Dispose()
-		{
-			Client = null;
-		}
+			WebSocket = new BittrexWebSocket(UrlSocketAddress);
+			MarketData = new MarketDataCache(WebSocket);
 
-		/// <summary>The maximum number of requests per second to the exchange server</summary>
-		public float ServerRequestRateLimit { get; set; }
-
-		/// <summary>Hasher</summary>
-		private HMACSHA512 Hasher { get; set; }
-
-		#region REST API
-
-		/// <summary>The Http client for RESTful requests</summary>
-		private HttpClient Client
-		{
-			get { return m_client; }
-			set
+			// Authenticate the web socket if a key/secret is provided
+			Dispatcher.BeginInvoke(new Action(async () =>
 			{
-				if (m_client == value) return;
-				if (m_client != null)
+				if (WebSocket == null || key == null || secret == null) return;
+				await WebSocket.Authenticate(key, secret);
+			}));
+		}
+		public override void Dispose()
+		{
+			MarketData = null;
+			WebSocket = null;
+			base.Dispose();
+		}
+
+		/// <summary>Log output callback function</summary>
+		public static void Log(ELogLevel lvl, string msg) => LogCB?.Write(lvl, msg);
+		public static Logger LogCB { get; set; }
+
+		#region WebSocket API
+
+		/// <summary></summary>
+		public new BittrexWebSocket WebSocket
+		{
+			get { return m_web_socket; }
+			private set
+			{
+				if (m_web_socket == value) return;
+				Util.Dispose(ref m_web_socket);
+				m_web_socket = value;
+			}
+		}
+		private BittrexWebSocket m_web_socket;
+
+		/// <summary>A local copy of the state of markets</summary>
+		public MarketDataCache MarketData
+		{
+			get { return m_market_data; }
+			private set
+			{
+				if (m_market_data == value) return;
+				Util.Dispose(ref m_market_data);
+				m_market_data = value;
+			}
+		}
+		private MarketDataCache m_market_data;
+
+		#endregion
+
+		#region Public
+
+		/// <summary>Return all available trading pairs and their latest price data</summary>
+		public async Task<List<MarketData>> GetMarkets(CancellationToken? cancel = null)
+		{
+			// https://api.bittrex.com/api/v1.1/public/getmarkets
+			var jtok = await GetData(Method.Public, "getmarkets", cancel);
+			return ParseJsonReply<List<MarketData>>(jtok);
+		}
+
+		/// <summary>Return the order book for a market</summary>
+		public async Task<OrderBook> GetOrderBook(CurrencyPair pair, EGetOrderBookType type = EGetOrderBookType.Both, int depth = 20, CancellationToken? cancel = null)
+		{
+			// https://api.bittrex.com/api/v1.1/public/getorderbook?market=BTC-LTC&type=both&depth=50  
+			var jtok = await GetData(Method.Public, "getorderbook", cancel,
+				new KV("market", pair.Id),
+				new KV("type", type.ToString().ToLowerInvariant()),
+				new KV("depth", depth));
+
+			// Prevent null being returned
+			var book = ParseJsonReply<OrderBook>(jtok);
+			if (book != null)
+			{
+				book.Pair = pair;
+				book.BuyOffers = book.BuyOffers ?? new List<OrderBook.Offer>();
+				book.SellOffers = book.SellOffers ?? new List<OrderBook.Offer>();
+			}
+
+			return book;
+		}
+
+		#endregion
+
+		#region Account
+
+		/// <summary>Return the balances for the account</summary>
+		public async Task<List<Balance>> GetBalances(CancellationToken? cancel = null)
+		{
+			// https://api.bittrex.com/api/v1.1/account/getbalances?apikey=API_KEY
+			var jtok = await GetData(Method.Account, "getbalances", cancel);
+			return ParseJsonReply<List<Balance>>(jtok);
+		}
+
+		/// <summary>Return the orders currently opened</summary>
+		public async Task<List<Order>> GetOpenOrders(CancellationToken? cancel = null)
+		{
+			// https://api.bittrex.com/api/v1.1/market/getopenorders?apikey=API_KEY
+			var jtok = await GetData(Method.Market, "getopenorders", cancel);
+			return ParseJsonReply<List<Order>>(jtok);
+		}
+		public async Task<List<Order>> GetOpenOrders(CurrencyPair pair, CancellationToken? cancel = null)
+		{
+			// https://api.bittrex.com/api/v1.1/market/getopenorders?apikey=API_KEY&market=BTC-LTC
+			var jtok = await GetData(Method.Market, "getopenorders", cancel,
+				new KV("market", pair.Id));
+
+			return ParseJsonReply<List<Order>>(jtok);
+		}
+		
+		/// <summary>Return the history of trades made on the account</summary>
+		public async Task<List<Trade>> GetTradeHistory(CancellationToken? cancel = null)
+		{
+			// https://api.bittrex.com/api/v1.1/account/getorderhistory
+			var jtok = await GetData(Method.Account, "getorderhistory", cancel);
+			return ParseJsonReply<List<Trade>>(jtok);
+		}
+
+		/// <summary>Get the history of deposits</summary>
+		public async Task<List<Transfer>> GetDeposits(string currency = null, CancellationToken? cancel = null)
+		{
+			// https://api.bittrex.com/api/v1.1/account/getdeposithistory?currency=BTC
+			var parms = new List<KV>{ };
+			if (currency != null) parms.Add(new KV("currency", currency));
+			var jtok = await GetData(Method.Account, "getdeposithistory", cancel, parms.ToArray());
+			return ParseJsonReply<List<Transfer>>(jtok);
+		}
+
+		/// <summary>Get the history of withdrawals</summary>
+		public async Task<List<Transfer>>GetWithdrawals(string currency = null, CancellationToken? cancel = null)
+		{
+			// https://api.bittrex.com/api/v1.1/account/getwithdrawalhistory?currency=BTC
+			var parms = new List<KV>{ };
+			if (currency != null) parms.Add(new KV("currency", currency));
+			var jtok = await GetData(Method.Account, "getwithdrawalhistory", cancel, parms.ToArray());
+			return ParseJsonReply<List<Transfer>>(jtok);
+		}
+
+		/// <summary>Create an order to buy/sell. Returns a unique order ID</summary>
+		public async Task<TradeResult> SubmitTrade(CurrencyPair pair, EOrderSide type, decimal price_per_coin, decimal amount_base, CancellationToken? cancel = null)
+		{
+			// https://api.bittrex.com/api/v1.1/market/selllimit?apikey=API_KEY&market=BTC-LTC&quantity=1.2&rate=1.3
+			// https://api.bittrex.com/api/v1.1/market/buylimit?apikey=API_KEY&market=BTC-LTC&quantity=1.2&rate=1.3
+			var jtok = await GetData(Method.Market, Conv.ToString(type), cancel,
+				new KV("market", pair.Id),
+				new KV("rate", price_per_coin),
+				new KV("quantity", amount_base));
+
+			return ParseJsonReply<TradeResult>(jtok);
+		}
+
+		/// <summary>Cancel an order</summary>
+		public async Task<TradeResult> CancelTrade(CurrencyPair pair, Guid uuid, CancellationToken? cancel = null)
+		{
+			// https://api.bittrex.com/api/v1.1/market/cancel?apikey=API_KEY&uuid=ORDER_UUID    
+			var jtok = await GetData(Method.Market, "cancel", cancel,
+				new KV("uuid", uuid));
+
+			// Return an empty trade result if there is no order with that Id
+			if (jtok is JObject jobj &&
+				jobj["success"].Value<bool>() == false &&
+				jobj["message"].Value<string>() == "ORDER_NOT_OPEN")
+				return new TradeResult();
+
+			return ParseJsonReply<TradeResult>(jtok);
+		}
+
+		#endregion
+
+		/// <summary>Helper for GETs</summary>
+		private async Task<JToken> GetData(string method, string command, CancellationToken? cancel, params KV[] parameters)
+		{
+			// If called from the UI thread, disable the SynchronisationContext
+			// to prevent deadlocks when waiting for Async results.
+			using (Misc.NoSyncContext())
+			{
+				var cancel_token = CancellationTokenSource.CreateLinkedTokenSource(Shutdown, cancel ?? CancellationToken.None).Token;
+				using (RequestThrottle.Lock(cancel_token)) // Limit requests to the required rate
 				{
-					m_client.Dispose();
-				}
-				m_client = value;
-				if (m_client != null)
-				{
-					m_client.BaseAddress = new Uri(UrlBaseAddress);
-					m_client.Timeout = TimeSpan.FromSeconds(10);
+					await RequestThrottle.Wait(cancel_token);
+
+					// Add the API key for non-public methods
+					var kv = new List<KV>();
+					if (method != Method.Public)
+					{
+						kv.Add(new KV("apikey", Key));
+						kv.Add(new KV("nonce", Misc.Nonce));
+					}
+					kv.AddRange(parameters);
+
+					// Create the URL for the command + parameters
+					var url = $"{UrlRestAddress}api/v1.1/{method}/{command}{Misc.UrlEncode(kv)}";
+
+					// Construct the GET request
+					var req = new HttpRequestMessage(HttpMethod.Get, url);
+					if (method != Method.Public)
+					{
+						var hash = Hasher.ComputeHash(Encoding.UTF8.GetBytes(url));
+						req.Headers.Add("apisign", Misc.ToStringHex(hash));
+					}
+
+					// Submit the request
+					var response = await Client.SendAsync(req, cancel_token);
+					if (!response.IsSuccessStatusCode)
+						throw new HttpException((int)response.StatusCode, response.ReasonPhrase);
+
+					// Interpret the reply
+					var reply = await response.Content.ReadAsStringAsync();
+					return JToken.Parse(reply);
 				}
 			}
 		}
-		private HttpClient m_client;
+
+		/// <summary>Interpret a JSON reply</summary>
+		private T ParseJsonReply<T>(JToken jtok)
+		{
+			if (!(jtok is JObject jobj))
+				throw new BittrexException(EErrorCode.ReplyWasNotAJsonObject, "The reply did not contain a json object");
+
+			// Check for success
+			if (jobj["success"].Value<bool>() != true)
+			{
+				var message = jobj["message"]?.Value<string>();
+				throw new BittrexException(EErrorCode.Failure, message);
+			}
+
+			// Parse the result
+			return jobj["result"].ToObject<T>();
+		}
 
 		private static class Method
 		{
@@ -81,176 +262,5 @@ namespace Bittrex.API
 			Sell,
 			Both,
 		}
-
-		#region Public
-
-		//https://bittrex.com/api/v1.1/public/getcurrencies 
-
-		/// <summary>Return all available trading pairs and their latest price data</summary>
-		public MarketsResponse GetMarkets(CancellationToken? cancel = null)
-		{
-			// https://bittrex.com/api/v1.1/public/getmarkets
-			return GetData<MarketsResponse>(Method.Public, "getmarkets", cancel);
-		}
-
-		/// <summary>Return the order book for a market</summary>
-		public OrderBookResponse GetOrderBook(CurrencyPair pair, EGetOrderBookType type = EGetOrderBookType.Both, int depth = 20, CancellationToken? cancel = null)
-		{
-			// https://bittrex.com/api/v1.1/public/getorderbook?market=BTC-LTC&type=both&depth=50  
-			var response = GetData<OrderBookResponse>(Method.Public, "getorderbook", cancel,
-				new KV("market", pair.Id),
-				new KV("type", type.ToString().ToLowerInvariant()),
-				new KV("depth", depth));
-
-			// Prevent null being returned
-			if (response.Data != null)
-			{
-				response.Data.Pair = pair;
-				response.Data.BuyOrders = response.Data.BuyOrders ?? new List<OrderBook.Order>();
-				response.Data.SellOrders = response.Data.SellOrders ?? new List<OrderBook.Order>();
-			}
-
-			return response;
-		}
-
-		#endregion
-
-		#region Account
-
-		/// <summary>Return the balances for the account</summary>
-		public BalanceResponse GetBalances(CancellationToken? cancel = null)
-		{
-			// https://bittrex.com/api/v1.1/account/getbalances?apikey=API_KEY
-			return GetData<BalanceResponse>(Method.Account, "getbalances", cancel);
-		}
-
-		/// <summary>Return the orders currently opened</summary>
-		public OrdersResponse GetOpenOrders(CancellationToken? cancel = null)
-		{
-			// https://bittrex.com/api/v1.1/market/getopenorders?apikey=API_KEY
-			return GetData<OrdersResponse>(Method.Market, "getopenorders", cancel);
-		}
-		public OrdersResponse GetOpenOrders(CurrencyPair pair, CancellationToken? cancel = null)
-		{
-			// https://bittrex.com/api/v1.1/market/getopenorders?apikey=API_KEY&market=BTC-LTC
-			return GetData<OrdersResponse>(Method.Market, "getopenorders", cancel,
-				new KV("market", pair.Id));
-		}
-		
-		/// <summary>Return the history of trades made on the account</summary>
-		public TradeHistoryResponse GetTradeHistory(CancellationToken? cancel = null)
-		{
-			// https://bittrex.com/api/v1.1/account/getorderhistory
-			return GetData<TradeHistoryResponse>(Method.Account, "getorderhistory", cancel);
-		}
-
-		/// <summary>Get the history of deposits</summary>
-		public TransferHistoryResponse GetDeposits(string currency = null, CancellationToken? cancel = null)
-		{
-			// https://bittrex.com/api/v1.1/account/getdeposithistory?currency=BTC
-			var parms = new List<KV>{ };
-			if (currency != null)
-				parms.Add(new KV("currency", currency));
-
-			return GetData<TransferHistoryResponse>(Method.Account, "getdeposithistory", cancel, parms.ToArray());
-		}
-
-		/// <summary>Get the history of withdrawals</summary>
-		public TransferHistoryResponse GetWithdrawals(string currency = null, CancellationToken? cancel = null)
-		{
-			// https://bittrex.com/api/v1.1/account/getwithdrawalhistory?currency=BTC
-			var parms = new List<KV>{ };
-			if (currency != null)
-				parms.Add(new KV("currency", currency));
-
-			return GetData<TransferHistoryResponse>(Method.Account, "getwithdrawalhistory", cancel, parms.ToArray());
-		}
-
-		/// <summary>Create an order to buy/sell. Returns a unique order ID</summary>
-		public SubmitTradeResponse SubmitTrade(CurrencyPair pair, EOrderType type, decimal price_per_coin, decimal volume_base, CancellationToken? cancel = null)
-		{
-			// https://bittrex.com/api/v1.1/market/selllimit?apikey=API_KEY&market=BTC-LTC&quantity=1.2&rate=1.3  
-			// https://bittrex.com/api/v1.1/market/buylimit?apikey=API_KEY&market=BTC-LTC&quantity=1.2&rate=1.3 
-			return GetData<SubmitTradeResponse>(Method.Market, Misc.ToString(type), cancel,
-				new KV("market", pair.Id),
-				new KV("rate", price_per_coin),
-				new KV("quantity", volume_base));
-		}
-
-		/// <summary>Cancel an order</summary>
-		public CancelTradeResponse CancelTrade(CurrencyPair pair, Guid uuid, CancellationToken? cancel = null)
-		{
-			// https://bittrex.com/api/v1.1/market/cancel?apikey=API_KEY&uuid=ORDER_UUID    
-			return GetData<CancelTradeResponse>(Method.Market, "cancel", cancel,
-				new KV("uuid", uuid));
-		}
-
-		#endregion
-
-		/// <summary>Helper for GETs</summary>
-		private T GetData<T>(string method, string command, CancellationToken? cancel, params KV[] parameters)
-		{
-			// If called from the UI thread, disable the SynchronisationContext
-			// to prevent deadlocks when waiting for Async results.
-			using (Misc.NoSyncContext())
-			using (Scope.Create(() => ++m_blocked_count, () => --m_blocked_count))
-			{
-				var cancel_token = cancel ?? m_cancel_token;
-				using (m_lock.Lock(cancel_token))
-				{
-					// Limit requests to the required rate
-					RequestThrottle();
-
-					// Add the API key for non-public methods
-					var kv = new List<KV>();
-					if (method != Method.Public)
-					{
-						kv.Add(new KV("apikey", m_key));
-						kv.Add(new KV("nonce", Misc.Nonce));
-					}
-					kv.AddRange(parameters);
-
-					// Create the URL for the command + parameters
-					var url = $"{UrlBaseAddress}api/v1.1/{method}/{command}{Misc.UrlEncode(kv)}";
-
-					// Construct the GET request
-					var req = new HttpRequestMessage(HttpMethod.Get, url);
-					if (method != Method.Public)
-					{
-						var hash = Hasher.ComputeHash(Encoding.UTF8.GetBytes(url));
-						req.Headers.Add("apisign", Misc.ToStringHex(hash));
-					}
-
-					// Submit the request
-					var response = Client.SendAsync(req, cancel_token).Result;
-					if (!response.IsSuccessStatusCode)
-						throw new HttpException((int)response.StatusCode, response.ReasonPhrase);
-
-					// Interpret the reply
-					var reply = response.Content.ReadAsStringAsync().Result;
-					using (var tr = new JsonTextReader(new StringReader(reply)))
-						return m_json.Deserialize<T>(tr);
-				}
-			}
-		}
-		private SemaphoreSlim m_lock = new SemaphoreSlim(1,1);
-		private int m_blocked_count;
-
-		/// <summary>Blocking method for throttling requests</summary>
-		private void RequestThrottle()
-		{
-			var request_period_ms = 1000 / ServerRequestRateLimit;
-			for (;;)
-			{
-				var delta = m_request_sw.ElapsedMilliseconds - m_last_request_ms;
-				if (delta < 0 || delta > request_period_ms) break;
-				Thread.Sleep((int)(request_period_ms - delta));
-			}
-			m_last_request_ms = m_request_sw.ElapsedMilliseconds;
-		}
-		private Stopwatch m_request_sw;
-		private long m_last_request_ms;
-
-		#endregion
 	}
 }

@@ -81,7 +81,7 @@
 			</ContextMenu>
 			<ContextMenu
 				x:Key="AxisCMenu"
-				DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+				DataContext="{Binding PlacementTarget, RelativeSource={RelativeSource Self}}"
 				>
 				<MenuItem Header="Allow Scroll" IsChecked="{Binding Axis.AllowScroll, Mode=OneWay}" Command="{Binding ToggleScrollLock}"/>
 				<MenuItem Header="Allow Zoom" IsChecked="{Binding Axis.AllowZoom, Mode=OneWay}" Command="{Binding ToggleZoomLock}"/>

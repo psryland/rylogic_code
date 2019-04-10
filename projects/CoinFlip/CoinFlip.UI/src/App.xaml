@@ -14,8 +14,6 @@
 				- Resources defined in App.xaml can be used statically in any other XAML file, *except* theme files such as Generic.xaml
 			-->
 			<BitmapImage x:Key="Money" UriSource="../res/money.png" />
-			<BitmapImage x:Key="EnableTrading" UriSource="../res/money.png" />
-			<BitmapImage x:Key="BackTesting" UriSource="../res/clock.png" />
 
 			<!-- Global style for grids -->
 			<SolidColorBrush x:Key="SelectionForeground" Color="Black" />

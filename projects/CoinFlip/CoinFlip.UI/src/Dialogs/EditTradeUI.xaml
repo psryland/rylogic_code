@@ -1,0 +1,294 @@
+﻿<Window
+	x:Class="CoinFlip.UI.EditTradeUI"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+	xmlns:local="clr-namespace:CoinFlip.UI"
+	xmlns:val="clr-namespace:Rylogic.Gui.WPF.Validators;assembly=Rylogic.Gui.WPF"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+	xmlns:gui2="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+	mc:Ignorable="d" 
+	d:DesignHeight="400"
+	d:DesignWidth="350"
+	Title="Modify Trade"
+	WindowStartupLocation="CenterOwner"
+	SizeToContent="WidthAndHeight"
+	ResizeMode="CanResizeWithGrip"
+	ShowInTaskbar="True"
+	MinHeight="300"
+	MinWidth="320"
+	>
+	<Window.Resources>
+		<ResourceDictionary>
+			<BitmapImage x:Key="dollar_sign" UriSource="/CoinFlip.UI;component/res/dollar_sign.png" />
+			<BitmapImage x:Key="check_accept" UriSource="/CoinFlip.UI;component/res/check_accept.png" />
+			<BitmapImage x:Key="check_reject" UriSource="/CoinFlip.UI;component/res/check_reject.png" />
+		</ResourceDictionary>
+	</Window.Resources>
+	<Grid
+		Margin="3"
+		>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
+
+		<!-- Icon and selectors -->
+		<Grid
+			Grid.Row="0"
+			>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto"/>
+			</Grid.RowDefinitions>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="Auto"/>
+				<ColumnDefinition Width="*"/>
+			</Grid.ColumnDefinitions>
+			
+			<!-- Icon -->
+			<Image
+				Grid.Row="0"
+				Grid.RowSpan="2"
+				Grid.Column="0"
+				Source="{StaticResource dollar_sign}"
+				MaxWidth="48"
+				Margin="8"
+				/>
+			
+			<!-- Exchange Selector -->
+			<Grid
+				Grid.Row="0"
+				Grid.Column="1"
+				>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="1*"/>
+					<ColumnDefinition Width="2*"/>
+				</Grid.ColumnDefinitions>
+				<TextBlock
+					Grid.Column="0"
+					Text="Exchange:"
+					HorizontalAlignment="Right"
+					VerticalAlignment="Center"
+					Margin="4"
+					/>
+				<ComboBox
+					Grid.Column="1"
+					ItemsSource="{Binding ExchangesOfferingPair}"
+					SelectedItem="{Binding ExchangesOfferingPair/}"
+					HorizontalAlignment="Left"
+					VerticalAlignment="Center"
+					MinWidth="100"
+					Margin="4"
+					/>
+			</Grid>
+
+			<!-- Trade Type Selector -->
+			<Grid
+				Grid.Row="1"
+				Grid.Column="1"
+				>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="1*"/>
+					<ColumnDefinition Width="2*"/>
+				</Grid.ColumnDefinitions>
+				<TextBlock
+					Grid.Column="0"
+					Text="Trade Type:"
+					HorizontalAlignment="Right"
+					VerticalAlignment="Center"
+					Margin="4"
+					/>
+				<ComboBox
+					Grid.Column="1"
+					ItemsSource="{Binding TradeType, Converter={conv:EnumValues}}"
+					SelectedItem="{Binding TradeType}"
+					HorizontalAlignment="Left"
+					VerticalAlignment="Center"
+					MinWidth="100"
+					Margin="4"
+					/>
+			</Grid>
+		</Grid>
+		
+		<!-- Trade price/amount-->
+		<Grid
+			Grid.Row="1"
+			>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="*"/>
+			</Grid.RowDefinitions>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="*"/>
+			</Grid.ColumnDefinitions>
+			
+			<!-- Order Price -->
+			<StackPanel
+				Grid.Row="0"
+				Grid.Column="0"
+				>
+				<TextBlock
+					Text="{Binding Trade.Pair.RateUnits, StringFormat=Order Price ({0}):}"
+					Margin="3"
+					/>
+				<TextBox
+					ToolTip="The price at which to make the trade"
+					HorizontalContentAlignment="Right"
+					Text="{Binding PriceQ2B}"
+					val:TextValidator.Pred="{Binding ValidatePrice}"
+					Margin="20,1,3,1"
+					/>
+			</StackPanel>
+
+			<!-- Order Type -->
+			<StackPanel
+				Grid.Row="0"
+				Grid.Column="1"
+				>
+				<TextBlock
+					Text="Order Type:"
+					Margin="3"
+					/>
+				<TextBox
+					Text="{Binding OrderType, Mode=OneWay}"
+					HorizontalContentAlignment="Center"
+					Margin="20,1,3,1"
+					IsReadOnly="True"
+					/>
+			</StackPanel>
+
+			<!-- Amount to Sell -->
+			<StackPanel
+				Grid.Row="1"
+				Grid.Column="0"
+				>
+				<TextBlock
+					Text="{Binding CoinIn.Symbol, StringFormat=Amount to Sell ({0}):}"
+					Margin="3"
+					/>
+				<TextBox
+					HorizontalContentAlignment="Right"
+					Text="{Binding AmountIn}"
+					val:TextValidator.Pred="{Binding ValidateAmountIn}"
+					Margin="20,1,3,1"
+					/>
+				<StackPanel
+					Orientation="Horizontal"
+					Margin="20,0,3,3"
+					>
+					<Button
+						Content="^"
+						ToolTip="{Binding CoinIn, StringFormat=Use the entire available balance of {0}}"
+						Height="{Binding Width, RelativeSource={RelativeSource Self}}"
+						Command="{Binding SetSellAmountToMaximum}"
+						Width="16"
+						/>
+					<TextBlock
+						Text="{Binding AvailableIn, StringFormat=Available: {0:G8}}"
+						Margin="2"
+						/>
+				</StackPanel>
+				<TextBlock
+					Text="{Binding TradeDescriptionIn}"
+					Margin="3,1,3,3"
+					/>
+			</StackPanel>
+
+			<!-- Amount to Buy -->
+			<StackPanel
+				Grid.Row="1"
+				Grid.Column="1"
+				>
+				<TextBlock
+					Text="{Binding CoinOut.Symbol, StringFormat=Amount to Buy ({0}):}"
+					Margin="3"
+					/>
+				<TextBox
+					HorizontalContentAlignment="Right"
+					Text="{Binding AmountOut}"
+					val:TextValidator.Pred="{Binding ValidateAmountOut}"
+					Margin="20,1,3,1"
+					/>
+				<TextBlock
+					Text="{Binding TradeDescriptionOut}"
+					Margin="3,3,3,3"
+					/>
+			</StackPanel>
+		</Grid>
+
+		<!-- Description -->
+		<Grid
+			Grid.Row="2"
+			>
+			<TextBlock
+				Text="{Binding ValidationResults}"
+				Margin="3"
+				/>
+		</Grid>
+
+		<!-- Buttons -->
+		<Grid
+			Grid.Row="3"
+			>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="Auto"/>
+				<ColumnDefinition Width="Auto"/>
+			</Grid.ColumnDefinitions>
+			
+			<!-- Create/Modify button -->
+			<Button
+				Grid.Column="1"
+				Click="{gui2:MethodBinding Apply}"
+				IsDefault="True"
+				MinWidth="150"
+				Margin="0,12,12,12"
+				>
+				<DockPanel>
+					<Image
+						DockPanel.Dock="Left"
+						Source="{StaticResource check_accept}"
+						MaxWidth="26"
+						Margin="2"
+						/>
+					<TextBlock
+						Text="Create Order"
+						FontSize="18"
+						VerticalAlignment="Center"
+						Margin="2"
+						/>
+
+				</DockPanel>
+			</Button>
+			
+			<!-- Create/Modify button -->
+			<Button
+				Grid.Column="2"
+				Click="{gui2:MethodBinding Close}"
+				IsCancel="True"
+				MinWidth="110"
+				Margin="0,12,12,12"
+				>
+				<DockPanel>
+					<Image
+						DockPanel.Dock="Left"
+						Source="{StaticResource check_reject}"
+						MaxWidth="26"
+						Margin="2"
+						/>
+					<TextBlock
+						Text="Cancel"
+						FontSize="18"
+						VerticalAlignment="Center"
+						Margin="2"
+						/>
+				</DockPanel>
+			</Button>
+		</Grid>
+	</Grid>
+</Window>

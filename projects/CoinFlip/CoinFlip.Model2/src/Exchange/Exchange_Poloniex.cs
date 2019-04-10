@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CoinFlip.Settings;
+using ExchApi.Common;
 using Poloniex.API;
 using Poloniex.API.DomainObjects;
 using Rylogic.Common;
@@ -50,11 +51,12 @@ namespace CoinFlip
 				m_api = value;
 				if (m_api != null)
 				{
-					m_api.ServerRequestRateLimit = ExchSettings.ServerRequestRateLimit;
+					m_api.RequestThrottle.RequestRateLimit = ExchSettings.ServerRequestRateLimit;
 				}
 			}
 		}
 		private PoloniexApi m_api;
+		protected override IExchangeApi ExchangeApi => Api;
 
 		/// <summary>Update this exchange's set of trading pairs</summary>
 		protected async override Task UpdatePairsInternal(HashSet<string> coins) // Worker thread context
@@ -64,19 +66,16 @@ namespace CoinFlip
 				// Get all available trading pairs
 				// Use 'Shutdown' because updating pairs is independent of the Exchange.UpdateThread
 				// and we don't want updating pairs to be interrupted by the update thread stopping
-				var msg = await Api.GetTradePairs(cancel: Shutdown.Token);
-				if (msg == null)
-					throw new Exception("Poloniex: Failed to trading pair data.");
+				var trade_pairs = await Api.GetTradePairs(cancel: Shutdown.Token);
 
 				// Add an action to integrate the data
-				Model.MarketUpdates.Add(() =>
+				Model.DataUpdates.Add(() =>
 				{
 					var pairs = new HashSet<CurrencyPair>();
 
 					// Create the trade pairs and associated coins
-					foreach (var p in msg.Where(x => coins.Contains(x.Value.Pair.Base) && coins.Contains(x.Value.Pair.Quote)))
+					foreach (var p in trade_pairs.Where(x => coins.Contains(x.Value.Pair.Base) && coins.Contains(x.Value.Pair.Quote)))
 					{
-						// Poloniex gives pairs as "Quote_Base"
 						var base_ = Coins.GetOrAdd(p.Value.Pair.Base);
 						var quote = Coins.GetOrAdd(p.Value.Pair.Quote);
 
@@ -133,7 +132,7 @@ namespace CoinFlip
 					order_book.Remove(k);
 
 				// Queue integration of the market data
-				Model.MarketUpdates.Add(() =>
+				Model.DataUpdates.Add(() =>
 				{
 					// Process the order book data and update the pairs
 					foreach (var pair in Pairs.Values)
@@ -172,7 +171,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Return the chart data for a given pair, over a given time range</summary>
-		protected async override Task<List<Candle>> CandleDataInternal(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end, CancellationToken? cancel) // Worker thread context
+		protected async override Task<List<Candle>> CandleDataInternal(TradePair pair, ETimeFrame timeframe, UnixSec time_beg, UnixSec time_end, CancellationToken? cancel) // Worker thread context
 		{
 			var cp = new CurrencyPair(pair.Base, pair.Quote);
 
@@ -196,7 +195,7 @@ namespace CoinFlip
 				var balance_data = await Api.GetBalances(cancel: Shutdown.Token);
 
 				// Queue integration of the market data
-				Model.MarketUpdates.Add(() =>
+				Model.DataUpdates.Add(() =>
 				{
 					// Process the account data and update the balances
 					var msg = balance_data;
@@ -239,7 +238,7 @@ namespace CoinFlip
 				m_history_last = timestamp;
 
 				// Queue integration of the market data
-				Model.MarketUpdates.Add(() =>
+				Model.DataUpdates.Add(() =>
 				{
 					var order_ids = new HashSet<long>();
 					var pairs = new HashSet<CurrencyPair>();
@@ -296,7 +295,7 @@ namespace CoinFlip
 				m_transfers_last = timestamp;
 
 				// Queue integration of the transfer history
-				Model.MarketUpdates.Add(() =>
+				Model.DataUpdates.Add(() =>
 				{
 					// Update the collection of funds transfers
 					foreach (var dep in transfers.Deposits)
@@ -368,12 +367,6 @@ namespace CoinFlip
 					foreach (var mp in Enum<EMarketPeriod>.Values)
 						yield return new PairAndTF(p, ToTimeFrame(mp));
 			}
-		}
-
-		/// <summary>Set the maximum number of requests per second to the exchange server</summary>
-		protected override void SetServerRequestRateLimit(float limit)
-		{
-			Api.ServerRequestRateLimit = limit;
 		}
 
 		/// <summary>Convert a Poloniex order into an order</summary>

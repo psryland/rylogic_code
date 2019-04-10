@@ -165,8 +165,12 @@ namespace Rylogic.Gui.WPF
 
 				// Make the first separator in the contiguous sequence visible
 				sep.Visibility = Visibility.Visible;
-				for (int j = i + 1; j < e && items[j] is Separator sep2; i = j, ++j)
-					sep2.Visibility = Visibility.Collapsed;
+				for (int j = i + 1; j < e; i = j, ++j)
+				{
+					if (items[j] is FrameworkElement fe && fe.Visibility == Visibility.Collapsed) continue;
+					if (items[j] is Separator sep2) { sep2.Visibility = Visibility.Collapsed; continue; }
+					break;
+				}
 			}
 
 			// Tidy sub menus as well
@@ -175,6 +179,13 @@ namespace Rylogic.Gui.WPF
 				foreach (var item in items.OfType<MenuItem>())
 					item.Items.TidySeparators(recursive);
 			}
+		}
+
+		/// <summary>Hide successive or start/end separators. Attached this to ContextMenu.Opened or MenuItem.SubmenuOpened</summary>
+		public static void TidySeparators(object sender, EventArgs args)
+		{
+			var cmenu = (ContextMenu)sender;
+			cmenu.Items.TidySeparators();
 		}
 	}
 }

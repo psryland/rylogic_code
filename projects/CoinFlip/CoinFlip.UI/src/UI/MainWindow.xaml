@@ -6,13 +6,27 @@
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 	xmlns:gui2="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
 	xmlns:local="clr-namespace:CoinFlip.UI"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
 	mc:Ignorable="d"
 	Title="Coin Flip"
 	Icon="{StaticResource Money}"
 	Height="900"
 	Width="1400"
 	>
-	<Grid Name="m_root">
+	<Window.Resources>
+		<ResourceDictionary>
+			<BitmapImage x:Key="money" UriSource="/CoinFlip.UI;component/res/money.png" />
+			<BitmapImage x:Key="clock" UriSource="/CoinFlip.UI;component/res/clock.png" />
+			<BitmapImage x:Key="media_player_end" UriSource="/CoinFlip.UI;component/res/media_player_end.png" />
+			<BitmapImage x:Key="media_player_pause" UriSource="/CoinFlip.UI;component/res/media_player_pause.png" />
+			<BitmapImage x:Key="media_player_play" UriSource="/CoinFlip.UI;component/res/media_player_play.png" />
+			<BitmapImage x:Key="media_player_start" UriSource="/CoinFlip.UI;component/res/media_player_start.png" />
+			<BitmapImage x:Key="media_player_step_fwd" UriSource="/CoinFlip.UI;component/res/media_player_step_fwd.png" />
+			<BitmapImage x:Key="media_player_stop" UriSource="/CoinFlip.UI;component/res/media_player_stop.png" />
+		</ResourceDictionary>
+	</Window.Resources>
+	
+	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="Auto"/>
@@ -26,10 +40,9 @@
 			IsMainMenu="True"
 			>
 			<MenuItem Name="m_menu_file" Header="_File">
-				<MenuItem Header="Log _Out" Click="{gui2:MethodBinding LogOn}"/>
-				<MenuItem Name="m_menu_file_skin_toggle" Header="_ChangeSkin" />
+				<MenuItem Header="Log _Out" Command="{Binding LogOn}"/>
 				<Separator/>
-				<MenuItem Header="_Close" Click="{gui2:MethodBinding Close}"/>
+				<MenuItem Header="E_xit" Click="{gui2:MethodBinding Close}"/>
 			</MenuItem>
 		</Menu>
 		
@@ -37,32 +50,144 @@
 		<ToolBarTray
 			Grid.Row="1"
 			>
+			<!-- Main Tool bar -->
 			<ToolBar
 				Band="0"
 				BandIndex="0"
+				MaxHeight="32"
 				>
-				<Button
-					Name="m_btn_enable_trading"
+				<ToggleButton
 					ToolTip="Enable account trading"
+					IsChecked="{Binding AllowTrades}"
 					>
 					<StackPanel Orientation="Horizontal">
-						<Image Source="{StaticResource EnableTrading}" Height="26"/>
-						<Label Content="Enable Trading" VerticalAlignment="Center"/>
+						<Image
+							Source="{StaticResource money}"
+							Stretch="Fill"
+							StretchDirection="DownOnly"
+							/>
+						<TextBlock
+							Text="Enable Trading"
+							VerticalAlignment="Center"
+							/>
 					</StackPanel>
+				</ToggleButton>
+				<ToggleButton
+					ToolTip="Simulate historic price action"
+					IsChecked="{Binding BackTesting}"
+					>
+					<StackPanel Orientation="Horizontal">
+						<Image
+							Source="{StaticResource clock}"
+							Stretch="Fill"
+							StretchDirection="DownOnly"
+							/>
+						<TextBlock
+							Text="Back Testing"
+							VerticalAlignment="Center"
+							/>
+					</StackPanel>
+				</ToggleButton>
+				<Separator
+					Margin="3,0,3,0"
+					/>
+				<StackPanel Orientation="Horizontal">
+					<TextBlock
+						Text="Nett Worth:"
+						VerticalAlignment="Center"
+						/>
+					<TextBox
+						Text="{Binding NettWorth, StringFormat={}{0:C}, Mode=OneWay}"
+						VerticalAlignment="Center"
+						HorizontalContentAlignment="Right"
+						IsReadOnly="True"
+						Margin="3,0,3,0"
+						Width="80"
+						Height="22"
+						/>
+				</StackPanel>
+			</ToolBar>
+			
+			<!-- Back Testing tool bar -->
+			<ToolBar
+				Band="0"
+				Visibility="{Binding DataContext, Converter={conv:NullToCollapsed}, RelativeSource={RelativeSource Self}}"
+				DataContext="{Binding Simulation}"
+				MaxHeight="32"
+				>
+				<ComboBox
+					ToolTip="The time frame or step size used for back testing"
+					MinWidth="80"
+					IsReadOnly="True"
+					IsEnabled="{Binding Running, Converter={conv:Not}}"
+					ItemsSource="{Binding TimeFrame, Converter={conv:EnumValues}}"
+					SelectedItem="{Binding TimeFrame}"
+					/>
+				<Button
+					ToolTip="Reset to the starting time"
+					Click="{gui2:MethodBinding Reset}"
+					IsEnabled="{Binding CanReset}"
+					>
+					<Image
+						Source="{StaticResource media_player_start}"
+						Stretch="Fill"
+						StretchDirection="DownOnly"
+						/>
 				</Button>
 				<Button
-					Name="m_btn_back_testing"
-					ToolTip="Simulate historic price action"
+					ToolTip="Step forward by one candle, then pause"
+					Click="{gui2:MethodBinding StepOne}"
+					IsEnabled="{Binding CanStepOne}"
 					>
-					<StackPanel Orientation="Horizontal">
-						<Image Source="{StaticResource BackTesting}" Height="26"/>
-						<Label VerticalAlignment="Center" Content="Back Testing" Foreground="{StaticResource MenuTextBrush}"/>
-					</StackPanel>
+					<Image
+						Source="{StaticResource media_player_step_fwd}"
+						Stretch="Fill"
+						StretchDirection="DownOnly"
+						/>
 				</Button>
-
-				<Separator/>
-				<Label Content="Nett Worth" VerticalAlignment="Center" Foreground="{StaticResource MenuTextBrush}" />
-				<TextBlock VerticalAlignment="Center" Width="80" Height="22"/>
+				<Button
+					ToolTip="Run up to the next submitted or filled trade"
+					Click="{gui2:MethodBinding RunToTrade}"
+					IsEnabled="{Binding CanRunToTrade}"
+					>
+					<Image
+						Source="{StaticResource media_player_end}"
+						Stretch="Fill"
+						StretchDirection="DownOnly"
+						/>
+				</Button>
+				<Button
+					ToolTip="Start back-testing"
+					Click="{gui2:MethodBinding Run}"
+					IsEnabled="{Binding CanRun}"
+					Visibility="{Binding Running, Converter={conv:BoolToCollapsed}}"
+					>
+					<Image
+						Source="{StaticResource media_player_play}"
+						Stretch="Fill"
+						StretchDirection="DownOnly"
+						/>
+				</Button>
+				<Button
+					ToolTip="Pause back-testing"
+					Click="{gui2:MethodBinding Pause}"
+					IsEnabled="{Binding CanPause}"
+					Visibility="{Binding Running, Converter={conv:BoolToVisible}}"
+					>
+					<Image
+						Source="{StaticResource media_player_pause}"
+						Stretch="Fill"
+						StretchDirection="DownOnly"
+						/>
+				</Button>
+				<Slider
+					MinWidth="300"
+					VerticalAlignment="Center"
+					IsEnabled="{Binding Running, Converter={conv:Not}}"
+					Minimum="0"
+					Maximum="100"
+					Value="{Binding PercentComplete}"
+					/>
 			</ToolBar>
 		</ToolBarTray>
 		

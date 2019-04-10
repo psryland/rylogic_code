@@ -1362,7 +1362,7 @@ namespace ldr
 			/// <summary>Get the view3d native handle for the window (Note: this is not the HWND)</summary>
 			public HWindow Handle { [DebuggerStepThrough] get; private set; }
 
-			/// <summary>Get the windows handle associated with this window</summary>
+			/// <summary>Get the windows handle associated with this window (Note: Null if using off-screen rendering only)</summary>
 			public HWND Hwnd { [DebuggerStepThrough] get; }
 
 			/// <summary>Camera controls</summary>

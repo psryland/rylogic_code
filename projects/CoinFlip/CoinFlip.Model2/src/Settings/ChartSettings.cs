@@ -10,8 +10,8 @@ namespace CoinFlip.Settings
 		{
 			AskColour = new Colour32(0xff22b14c); // Green
 			BidColour = new Colour32(0xffed1c24); // Red
-			ShowPositions = false;
-			ShowTradeHistory = EShowTradeHistory.Disabled;
+			ShowOpenOrders = EShowItems.Disabled;
+			ShowCompletedOrders = EShowItems.Disabled;
 			ShowMarketDepth = false;
 			XAxisLabelMode = EXAxisLabelMode.LocalTime;
 		}
@@ -34,17 +34,17 @@ namespace CoinFlip.Settings
 		}
 
 		/// <summary>Show current trades</summary>
-		public bool ShowPositions
+		public EShowItems ShowOpenOrders
 		{
-			get { return get<bool>(nameof(ShowPositions)); }
-			set { set(nameof(ShowPositions), value); }
+			get { return get<EShowItems>(nameof(ShowOpenOrders)); }
+			set { set(nameof(ShowOpenOrders), value); }
 		}
 
 		/// <summary>Show current trades</summary>
-		public EShowTradeHistory ShowTradeHistory
+		public EShowItems ShowCompletedOrders
 		{
-			get { return get<EShowTradeHistory>(nameof(ShowTradeHistory)); }
-			set { set(nameof(ShowTradeHistory), value); }
+			get { return get<EShowItems>(nameof(ShowCompletedOrders)); }
+			set { set(nameof(ShowCompletedOrders), value); }
 		}
 
 		/// <summary>Show current market depth</summary>

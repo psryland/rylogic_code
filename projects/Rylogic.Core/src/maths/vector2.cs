@@ -13,7 +13,7 @@ namespace Rylogic.Maths
 {
 	[Serializable]
 	[StructLayout(LayoutKind.Explicit)]
-	[DebuggerDisplay("{x}  {y}  // Len={Length2}")]
+	[DebuggerDisplay("{Description,nq}")]
 	public struct v2
 	{
 		[FieldOffset(0)] public float x;
@@ -81,14 +81,6 @@ namespace Rylogic.Maths
 		public float Length
 		{
 			get { return (float)Math.Sqrt(LengthSq); }
-		}
-		[Obsolete] public float Length2Sq
-		{
-			get { return x * x + y * y; }
-		}
-		[Obsolete] public float Length2
-		{
-			get { return (float)Math.Sqrt(Length2Sq); }
 		}
 
 		/// <summary>ToString</summary>
@@ -292,6 +284,9 @@ namespace Rylogic.Maths
 			return new { x, y }.GetHashCode();
 		}
 		#endregion
+
+		/// <summary></summary>
+		public string Description => $"{x}  {y}  //Len({Length})";
 	}
 
 	public static partial class Math_

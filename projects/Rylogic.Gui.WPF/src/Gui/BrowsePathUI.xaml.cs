@@ -61,12 +61,12 @@ namespace Rylogic.Gui.WPF
 		public event EventHandler SelectedPathChanged;
 
 		/// <summary>Callback function for validating a selected path</summary>
-		public Func<string,bool> PathValidation
+		public Func<string, ValidationResult> PathValidation
 		{
-			get { return (Func<string,bool>)GetValue(PathValidationProperty); }
+			get { return (Func<string, ValidationResult>)GetValue(PathValidationProperty); }
 			set { SetValue(PathValidationProperty, value); }
 		}
-		private void PathValidation_Changed(Func<string, bool> new_value)
+		private void PathValidation_Changed(Func<string, ValidationResult> new_value)
 		{
 			// Update the set of validation rules
 			var binding = BindingOperations.GetBinding(m_cb_path, ComboBox.TextProperty);

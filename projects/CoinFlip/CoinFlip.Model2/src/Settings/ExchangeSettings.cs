@@ -1,32 +1,7 @@
-﻿using System;
-using Rylogic.Common;
+﻿using Rylogic.Common;
 
 namespace CoinFlip.Settings
 {
-	public interface IExchangeSettings
-	{
-		/// <summary>True if the exchange is active</summary>
-		bool Active { get; set; }
-
-		/// <summary>Data polling rate (in ms)</summary>
-		int PollPeriod { get; set; }
-
-		/// <summary>The fee charged per trade</summary>
-		decimal TransactionFee { get; set; }
-
-		/// <summary>The market depth to retrieve</summary>
-		int MarketDepth { get; set; }
-
-		/// <summary>The maximum number of requests per second to the exchange server</summary>
-		float ServerRequestRateLimit { get; set; }
-
-		/// <summary>True if only public API calls should be made on this exchange</summary>
-		bool PublicAPIOnly { get; set; }
-
-		/// <summary>An event raised before and after a setting is changes value</summary>
-		event EventHandler<SettingChangeEventArgs> SettingChange;
-	}
-
 	/// <summary></summary>
 	public class ExchangeSettings<T> : SettingsSet<T>, IExchangeSettings
 		where T : SettingsSet<T>, IExchangeSettings, new()
@@ -37,7 +12,7 @@ namespace CoinFlip.Settings
 			PollPeriod = 500;
 			TransactionFee = 0.0025m;
 			MarketDepth = 20;
-			ServerRequestRateLimit = 10f;
+			ServerRequestRateLimit = 10;
 			PublicAPIOnly = false;
 		}
 
@@ -70,9 +45,9 @@ namespace CoinFlip.Settings
 		}
 
 		/// <summary>The maximum number of requests per second to the exchange server</summary>
-		public float ServerRequestRateLimit
+		public double ServerRequestRateLimit
 		{
-			get { return get<float>(nameof(ServerRequestRateLimit)); }
+			get { return get<double>(nameof(ServerRequestRateLimit)); }
 			set { set(nameof(ServerRequestRateLimit), value); }
 		}
 

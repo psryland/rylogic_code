@@ -126,6 +126,12 @@ namespace Rylogic.Extn
 			return lookup.Count == 0;
 		}
 
+		/// <summary>True if this collection is ordered, given by 'order'</summary>
+		public static bool SequenceOrdered<TSource>(this IEnumerable<TSource> source, ESequenceOrder order, IComparer<TSource> comparer = null)
+		{
+			return source.IsOrdered(order, comparer);
+		}
+
 		/// <summary>Enumerate this range in reverse. Note: Same as "IEnumerable.Reverse". "IList.Reverse" however, does an in-place reverse</summary>
 		public static IEnumerable<TSource> Reversed<TSource>(this IEnumerable<TSource> source)
 		{
@@ -216,12 +222,17 @@ namespace Rylogic.Extn
 			for (var prev = iter.CurrentThenNext(); !iter.AtEnd && pred(prev, iter.Current); prev = iter.CurrentThenNext()) {}
 			return iter.AtEnd;
 		}
-		public static bool IsOrdered<TSource>(this IEnumerable<TSource> source, bool ascending = true, IComparer<TSource> comparer = null)
+		public static bool IsOrdered<TSource>(this IEnumerable<TSource> source, ESequenceOrder order = ESequenceOrder.Increasing, IComparer<TSource> comparer = null)
 		{
 			comparer = comparer ?? Cmp<TSource>.Default;
-			return ascending
-				? source.IsOrdered((l,r) => comparer.Compare(l,r) <= 0)
-				: source.IsOrdered((l,r) => comparer.Compare(l,r) >= 0);
+			switch (order)
+			{
+			default: throw new Exception($"Unknown ordering type: {order}");
+			case ESequenceOrder.Increasing:         return source.IsOrdered((l, r) => comparer.Compare(l, r) <= 0);
+			case ESequenceOrder.StrictlyIncreasing: return source.IsOrdered((l, r) => comparer.Compare(l, r) <  0);
+			case ESequenceOrder.Decreasing:         return source.IsOrdered((l, r) => comparer.Compare(l, r) >= 0);
+			case ESequenceOrder.StrictlyDecreasing: return source.IsOrdered((l, r) => comparer.Compare(l, r) >  0);
+			}
 		}
 
 		/// <summary>Returns true if all elements this collection result in the same result from 'selector'</summary>
@@ -452,10 +463,6 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Zip two collections together in order defined by 'comparer'</summary>
-		public static IEnumerable<T> Zip<T>(this IEnumerable<T> lhs, IEnumerable<T> rhs, Func<T,T,int> comparer = null)
-		{
-			return Zip(lhs, rhs, Cmp<T>.From(comparer));
-		}
 		public static IEnumerable<T> Zip<T>(this IEnumerable<T> lhs, IEnumerable<T> rhs, IComparer<T> comparer = null)
 		{
 			comparer = comparer ?? Cmp<T>.Default;
@@ -489,10 +496,6 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Zip two collections together in order defined by 'comparer' and accumulated using 'combine'</summary>
-		public static IEnumerable<T> ZipDistinct<T>(this IEnumerable<T> lhs, IEnumerable<T> rhs, T initial_value, Func<T,T,T> combine, Func<T,T,int> comparer = null)
-		{
-			return ZipDistinct(lhs, rhs, initial_value, combine, Cmp<T>.From(comparer));
-		}
 		public static IEnumerable<T> ZipDistinct<T>(this IEnumerable<T> lhs, IEnumerable<T> rhs, T initial_value, Func<T,T,T> combine, IComparer<T> comparer = null)
 		{
 			comparer = comparer ?? Cmp<T>.Default;
@@ -513,10 +516,6 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Zip two collections together in order defined by 'comparer' and accumulated using 'combine'</summary>
-		public static IEnumerable<T> ZipAccumulate<T>(this IEnumerable<T> lhs, IEnumerable<T> rhs, T initial_value, Func<T,T,T> combine, Func<T,T,int> comparer = null)
-		{
-			return ZipAccumulate(lhs, rhs, initial_value, combine, Cmp<T>.From(comparer));
-		}
 		public static IEnumerable<T> ZipAccumulate<T>(this IEnumerable<T> lhs, IEnumerable<T> rhs, T initial_value, Func<T,T,T> combine, IComparer<T> comparer = null)
 		{
 			comparer = comparer ?? Cmp<T>.Default;
@@ -656,6 +655,14 @@ namespace Rylogic.Extn
 			public TKey Key { get; private set; }
 		}
 	}
+
+	public enum ESequenceOrder
+	{
+		Increasing,
+		StrictlyIncreasing,
+		Decreasing,
+		StrictlyDecreasing,
+	}
 }
 
 #if PR_UNITTESTS
@@ -663,50 +670,55 @@ namespace Rylogic.UnitTests
 {
 	using Extn;
 
-	[TestFixture] public class TestEnumerableExtns
+	[TestFixture]
+	public class TestEnumerableExtns
 	{
-		[Test] public void InPairs()
+		[Test]
+		public void InPairs()
 		{
-			var ints = new[]{1,2,3,4,5,6,7,8,9};
+			var ints = new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
 			var sums = new List<int>();
 			foreach (var pair in ints.InPairs())
 				sums.Add(pair.Item1 + pair.Item2);
 
-			Assert.Equal(5  ,sums.Count);
-			Assert.Equal(3  ,sums[0]);
-			Assert.Equal(7  ,sums[1]);
-			Assert.Equal(11 ,sums[2]);
-			Assert.Equal(15 ,sums[3]);
-			Assert.Equal(9  ,sums[4]);
+			Assert.Equal(5, sums.Count);
+			Assert.Equal(3, sums[0]);
+			Assert.Equal(7, sums[1]);
+			Assert.Equal(11, sums[2]);
+			Assert.Equal(15, sums[3]);
+			Assert.Equal(9, sums[4]);
 		}
-		[Test] public void Zip()
+		[Test]
+		public void Zip()
 		{
-			var a0 = new[]{1,2,4,6,10};
-			var a1 = new[]{1,3,4,7,8};
-			var r0 = new[]{1,1,2,3,4,4,6,7,8,10};
-			var r1 = a0.Zip(a1, Cmp<int>.From((l,r) => l < r));
+			var a0 = new[] { 1, 2, 4, 6, 10 };
+			var a1 = new[] { 1, 3, 4, 7, 8 };
+			var r0 = new[] { 1, 1, 2, 3, 4, 4, 6, 7, 8, 10 };
+			var r1 = a0.Zip(a1, Cmp<int>.From((l, r) => l < r));
 			Assert.True(r0.SequenceEqual(r1));
 
-			var r2 = new []{2,5,8,13,8,10};
-			var r3 = Enumerable_.ZipDistinct(a0, a1, 0, (l,r) => l+r, (l,r) => (l/2).CompareTo(r/2));
+			var r2 = new[] { 2, 5, 8, 13, 8, 10 };
+			var r3 = Enumerable_.ZipDistinct(a0, a1, 0, (l, r) => l + r, Cmp<int>.From((l, r) => (l / 2).CompareTo(r / 2)));
 			Assert.True(r2.SequenceEqual(r3));
 
-			var r4 = new []{2,7,15,28,36,46};
-			var r5 = Enumerable_.ZipAccumulate(a0, a1, 0, (l,r) => l+r, (l,r) => (l/2).CompareTo(r/2));
+			var r4 = new[] { 2, 7, 15, 28, 36, 46 };
+			var r5 = Enumerable_.ZipAccumulate(a0, a1, 0, (l, r) => l + r, Cmp<int>.From((l, r) => (l / 2).CompareTo(r / 2)));
 			Assert.True(r2.SequenceEqual(r3));
 		}
-		[Test] public void Differences()
+		[Test]
+		public void Differences()
 		{
-			var a0 = new[]{1,2,3,4,5};
-			var a1 = new[]{1,3,3,4,6,7};
-			var r0 = new[]{2,3,5,6,0,7};
-			var r1 = a0.Differences(a1).SelectMany(x => new[]{x.Item1, x.Item2}).ToArray();
+			var a0 = new[] { 1, 2, 3, 4, 5 };
+			var a1 = new[] { 1, 3, 3, 4, 6, 7 };
+			var r0 = new[] { 2, 3, 5, 6, 0, 7 };
+			var r1 = a0.Differences(a1).SelectMany(x => new[] { x.Item1, x.Item2 }).ToArray();
 
 			Assert.True(r0.SequenceEqual(r1));
 		}
-		[Test] public void MinMaxBy()
+		[Test]
+		public void MinMaxBy()
 		{
-			var a0 = new[]{4,2,7,1,8,3,4,6,8,9};
+			var a0 = new[] { 4, 2, 7, 1, 8, 3, 4, 6, 8, 9 };
 
 			Assert.Equal(1, a0.MinBy(x => x));
 			Assert.Equal(2, a0.MinBy(x => (x % 2) == 0 ? x : 1000));
@@ -724,32 +736,35 @@ namespace Rylogic.UnitTests
 			Assert.Equal(4, a0.IndexOfMaxBy(x => (x % 2) == 0 ? x : -1000));
 			Assert.Equal(3, a0.IndexOfMaxBy(x => 10 - x));
 		}
-		[Test] public void ExceptBy()
+		[Test]
+		public void ExceptBy()
 		{
-			var i0 = new[]{1,2,3,4,5,6,7,8,9};
-			var i1 = new[]{1,3,5,7,9};
+			var i0 = new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+			var i1 = new[] { 1, 3, 5, 7, 9 };
 
-			var cmp = Eql<int>.From((l,r) => l+1 == r);
+			var cmp = Eql<int>.From((l, r) => l + 1 == r);
 
 			var res = i0.ExceptBy(i1, cmp).ToArray();
-			Assert.True(res.SequenceEqual(new[]{1,3,5,7,9}));
+			Assert.True(res.SequenceEqual(new[] { 1, 3, 5, 7, 9 }));
 
 			// Notice how the built in one doesn't actually work...
 			var wrong = i0.Except(i1, cmp).ToArray();
-			Assert.False(wrong.SequenceEqual(new[]{1,3,5,7,9}));
+			Assert.False(wrong.SequenceEqual(new[] { 1, 3, 5, 7, 9 }));
 		}
-		[Test] public void ConvertTo()
+		[Test]
+		public void ConvertTo()
 		{
-			var i0 = new int[]{1,2,3,4,5,6,7};
+			var i0 = new int[] { 1, 2, 3, 4, 5, 6, 7 };
 			var res = i0.ConvertTo<byte>().ToArray();
-			Assert.True(res.SequenceEqual(new byte[]{1,2,3,4,5,6,7}));
+			Assert.True(res.SequenceEqual(new byte[] { 1, 2, 3, 4, 5, 6, 7 }));
 		}
-		[Test] public void SequenceEqual()
+		[Test]
+		public void SequenceEqual()
 		{
-			var s0 = new[] { 1,1,2,2,3,4,6,8,10 };
-			var s1 = new[] { 1,1,2,2,3,4,5,7,9 };
-			var s2 = new[] { 2,2,3,4,5,7,9,1,1 };
-			var s3 = new[] { 2,2,3,4,5,7,9,1,1,1 };
+			var s0 = new[] { 1, 1, 2, 2, 3, 4, 6, 8, 10 };
+			var s1 = new[] { 1, 1, 2, 2, 3, 4, 5, 7, 9 };
+			var s2 = new[] { 2, 2, 3, 4, 5, 7, 9, 1, 1 };
+			var s3 = new[] { 2, 2, 3, 4, 5, 7, 9, 1, 1, 1 };
 
 			Assert.True(s0.SequenceEqual(s1, 6));
 			Assert.True(!s0.SequenceEqual(s1));
@@ -757,23 +772,43 @@ namespace Rylogic.UnitTests
 			Assert.True(!s1.SequenceEqualUnordered(s3));
 			Assert.True(!s3.SequenceEqualUnordered(s1));
 		}
-		[Test] public void IsOrdered()
+		[Test]
+		public void IsOrdered()
 		{
-			var s0 = new[] { 1,1,2,2,3,4,6,8,10 };
-			var s1 = new[] { 1,1,2,3,2,4,6,8,10 };
-			var s2 = new[] { 1,1,2,3,4,6,8,10,9 };
-			var s3 = new[] { 2,1,2,3,4,6,8,10,9 };
-			var s4 = new[] { 10,9,8,6,4,2,1,1 };
+			var s0 = new[] { 1, 3, 2, 5, 3, 2, 1, 8, 10 };
+			Assert.False(s0.IsOrdered(ESequenceOrder.Increasing));
+			Assert.False(s0.IsOrdered(ESequenceOrder.StrictlyIncreasing));
+			Assert.False(s0.IsOrdered(ESequenceOrder.Decreasing));
+			Assert.False(s0.IsOrdered(ESequenceOrder.StrictlyDecreasing));
 
-			Assert.True (s0.IsOrdered());
-			Assert.False(s1.IsOrdered());
-			Assert.False(s2.IsOrdered());
-			Assert.False(s3.IsOrdered());
-			Assert.True(s4.IsOrdered(ascending:false));
+			var s1 = new[] { 1, 1, 2, 2, 3, 4, 6, 8, 10 };
+			Assert.True (s1.IsOrdered(ESequenceOrder.Increasing));
+			Assert.False(s1.IsOrdered(ESequenceOrder.StrictlyIncreasing));
+			Assert.False(s1.IsOrdered(ESequenceOrder.Decreasing));
+			Assert.False(s1.IsOrdered(ESequenceOrder.StrictlyDecreasing));
+
+			var s2 = new[] { 1, 2, 4, 5, 8, 9, 10, 12, 13 };
+			Assert.True (s2.IsOrdered(ESequenceOrder.Increasing));
+			Assert.True (s2.IsOrdered(ESequenceOrder.StrictlyIncreasing));
+			Assert.False(s2.IsOrdered(ESequenceOrder.Decreasing));
+			Assert.False(s2.IsOrdered(ESequenceOrder.StrictlyDecreasing));
+
+			var s3 = new[] { 10, 9, 9, 7, 6, 6, 6, 4, 2 };
+			Assert.False(s3.IsOrdered(ESequenceOrder.Increasing));
+			Assert.False(s3.IsOrdered(ESequenceOrder.StrictlyIncreasing));
+			Assert.True (s3.IsOrdered(ESequenceOrder.Decreasing));
+			Assert.False(s3.IsOrdered(ESequenceOrder.StrictlyDecreasing));
+
+			var s4 = new[] { 10, 9, 8, 7, 6, 4, 3, 1, 0 };
+			Assert.False(s4.IsOrdered(ESequenceOrder.Increasing));
+			Assert.False(s4.IsOrdered(ESequenceOrder.StrictlyIncreasing));
+			Assert.True (s4.IsOrdered(ESequenceOrder.Decreasing));
+			Assert.True (s4.IsOrdered(ESequenceOrder.StrictlyDecreasing));
 		}
-		[Test] public void Batch()
+		[Test]
+		public void Batch()
 		{
-			var ints = new[]{ 1,2,3,4,5,6,7,8,9 };
+			var ints = new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
 			{
 				var b = ints.Batch(4).GetEnumerator();
 
@@ -789,7 +824,7 @@ namespace Rylogic.UnitTests
 				Assert.False(b.MoveNext());
 			}
 			{
-				var b = ints.Batch(5, i => i != 3, auto_clear:false).GetEnumerator();
+				var b = ints.Batch(5, i => i != 3, auto_clear: false).GetEnumerator();
 
 				Assert.True(b.MoveNext());
 				Assert.Equal(new[] { 1, 2, 4, 5, 6 }, b.Current);
@@ -805,7 +840,8 @@ namespace Rylogic.UnitTests
 				Assert.False(b.MoveNext());
 			}
 		}
-		[Test] public void GroupByAdjacent()
+		[Test]
+		public void GroupByAdjacent()
 		{
 			var ints = new[] { 1, 1, 2, 3, 3, 3, 4, 3, 3, 1, 1, 2 };
 			var iter = ints.GroupByAdjacent(x => x).GetEnumerator();

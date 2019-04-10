@@ -56,22 +56,22 @@ namespace CoinFlip
 			"---";
 
 		/// <summary>The price that the order trades at (Quote/Base)</summary>
-		public Unit<decimal> PriceQ2B { get; }
+		public Unit<decimal> PriceQ2B { get; private set; }
 
 		/// <summary>The amount to trade (in base currency)</summary>
-		public Unit<decimal> AmountBase { get; }
+		public Unit<decimal> AmountBase { get; private set; }
 
 		/// <summary>The amount to trade (in quote currency) based on the trade price</summary>
 		public Unit<decimal> AmountQuote => AmountBase * PriceQ2B;
 
 		/// <summary>The remaining amount to be traded (in base currency)</summary>
-		public Unit<decimal> RemainingBase { get; }
+		public Unit<decimal> RemainingBase { get; private set; }
 
 		/// <summary>When the order was created</summary>
-		public DateTimeOffset? Created { get; }
+		public DateTimeOffset? Created { get; private set; }
 
 		/// <summary>When this object was last updated from the server</summary>
-		public DateTimeOffset Updated { get; }
+		public DateTimeOffset Updated { get; private set; }
 
 		/// <summary>True if this order is not really on the exchange</summary>
 		public bool Fake { get; }
@@ -153,6 +153,28 @@ namespace CoinFlip
 
 			// Log message
 			Model.Log.Write(ELogLevel.Info, $"Fake Order Filled: {Description}");
+		}
+
+		/// <summary>Update the state of this order (from data received from the exchange)</summary>
+		public void Update(Order update)
+		{
+			if (OrderId != update.OrderId)
+				throw new Exception($"Update is not for this order");
+			if (Pair != update.Pair)
+				throw new Exception($"Update cannot change trade pair");
+			if (TradeType != update.TradeType)
+				throw new Exception($"Update cannot change trade type");
+
+			// Ignore out of date data
+			if (Updated > update.Updated)
+				return;
+
+			// Update fields
+			update.PriceQ2B = update.PriceQ2B;
+			update.AmountBase = update.AmountBase;
+			update.RemainingBase = update.RemainingBase;
+			update.Created = update.Created;
+			update.Updated = update.Updated;
 		}
 
 		#region Equals

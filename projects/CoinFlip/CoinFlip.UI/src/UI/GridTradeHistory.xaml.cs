@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 using Rylogic.Gui.WPF;
 using Rylogic.Utility;
 
@@ -27,6 +30,21 @@ namespace CoinFlip.UI
 			Model = null;
 			DockControl = null;
 		}
+		protected override void OnSelectionChanged(SelectionChangedEventArgs e)
+		{
+			base.OnSelectionChanged(e);
+			foreach (var item in e.RemovedItems.Cast<OrderCompleted>())
+				Model.SelectedCompletedOrders.Remove(item);
+			foreach (var item in e.AddedItems.Cast<OrderCompleted>())
+				Model.SelectedCompletedOrders.Add(item);
+		}
+		protected override void OnMouseDoubleClick(MouseButtonEventArgs e)
+		{
+			base.OnMouseDoubleClick(e);
+			var chart = Model.Charts.FindActiveChart();
+			if (chart != null)
+				ShowCurrentCompletedOrderOnChart(chart);
+		}
 
 		/// <summary></summary>
 		public Model Model
@@ -35,8 +53,28 @@ namespace CoinFlip.UI
 			set
 			{
 				if (m_model == value) return;
+				if (m_model != null)
+				{
+					Exchanges = CollectionViewSource.GetDefaultView(null);
+					m_model.Charts.CollectionChanged -= HandleChartCollectionChanged;
+				}
 				m_model = value;
-				Exchanges = CollectionViewSource.GetDefaultView(m_model?.Exchanges);
+				if (m_model != null)
+				{
+					m_model.Charts.CollectionChanged += HandleChartCollectionChanged;
+					Exchanges = CollectionViewSource.GetDefaultView(m_model.Exchanges);
+				}
+
+				// Handler
+				void HandleChartCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+				{
+					m_menu_show_on_chart.Items.Clear();
+					foreach (var chart in Model.Charts)
+					{
+						var opt = m_menu_show_on_chart.Items.Add2(new MenuItem { Header = chart.ChartName });
+						opt.Click += (s, a) => ShowCurrentCompletedOrderOnChart(chart);
+					}
+				}
 			}
 		}
 		private Model m_model;
@@ -90,7 +128,18 @@ namespace CoinFlip.UI
 		public OrderCompleted Current
 		{
 			get => (OrderCompleted)History?.CurrentItem;
-			set => History.MoveCurrentTo(value);
+			set => History?.MoveCurrentTo(value);
+		}
+
+		/// <summary>Show the chart for the selected trade pair</summary>
+		private void ShowCurrentCompletedOrderOnChart(IChartView chart)
+		{
+			if (Current == null) return;
+			chart.Exchange = Current.Exchange;
+			chart.Pair = Current.Pair;
+			chart.TimeFrame = chart.TimeFrame != ETimeFrame.None ? chart.TimeFrame : ETimeFrame.Hour1;
+			chart.EnsureActiveContent();
+			chart.ScrollToTime(Current.Created);
 		}
 
 		/// <summary></summary>

@@ -65,7 +65,7 @@ namespace LDraw
 		public void AddMessage(string text, bool? popout = null)
 		{
 			if (!IsHandleCreated) return;
-			if (InvokeRequired) { this.BeginInvoke(() => AddMessage(text, popout)); return; }
+			if (InvokeRequired) { Model.Dispatcher.BeginInvoke(() => AddMessage(text, popout)); return; }
 
 			m_text.AppendText(text.EnsureNewLine());
 

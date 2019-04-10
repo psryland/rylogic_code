@@ -23,14 +23,14 @@ namespace Poloniex.API.DomainObjects
 		public List<Offer> BuyOffers { get; private set; }
 		[JsonProperty("bids")] private List<string[]> BuyOffersInternal
 		{
-			set { BuyOffers = ParseOffers(value, EOrderType.Buy); }
+			set { BuyOffers = ParseOffers(value, EOrderSide.Buy); }
 		}
 
 		/// <summary>Offers to sell</summary>
 		public List<Offer> SellOffers { get; private set; }
 		[JsonProperty("asks")] private List<string[]> SellOffersInternal
 		{
-			set { SellOffers = ParseOffers(value, EOrderType.Sell); }
+			set { SellOffers = ParseOffers(value, EOrderSide.Sell); }
 		}
 
 		/// <summary>True if trading is frozen on the owning pair</summary>
@@ -45,7 +45,7 @@ namespace Poloniex.API.DomainObjects
 		public int Seq { get; internal set; }
 
 		/// <summary></summary>
-		private static List<Offer> ParseOffers(List<string[]> offers, EOrderType order_type)
+		private static List<Offer> ParseOffers(List<string[]> offers, EOrderSide order_type)
 		{
 			var output = new List<Offer>(offers.Count);
 			foreach (var order in offers)
@@ -64,7 +64,7 @@ namespace Poloniex.API.DomainObjects
 		{
 			internal Offer()
 			{}
-			internal Offer(EOrderType type, decimal price, decimal volume)
+			internal Offer(EOrderSide type, decimal price, decimal volume)
 			{
 				Type = type;
 				Price = price;
@@ -72,7 +72,7 @@ namespace Poloniex.API.DomainObjects
 			}
 
 			/// <summary>A buy or sell order</summary>
-			public EOrderType Type { get; }
+			public EOrderSide Type { get; }
 
 			/// <summary>The trade price (in quote currency)</summary>
 			[JsonProperty("rate")]

@@ -81,12 +81,16 @@
 			/>
 	</DataGrid.Columns>
 
-	<!--
 	<DataGrid.ContextMenu>
 		<ContextMenu
 			DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
 			>
+			<MenuItem
+				Name="m_menu_show_on_chart"
+				Header="Show On Chart"
+				IsEnabled="{Binding Current, Converter={conv:NotNull}}"
+				/>
 		</ContextMenu>
 	</DataGrid.ContextMenu>
-	-->
+
 </DataGrid>

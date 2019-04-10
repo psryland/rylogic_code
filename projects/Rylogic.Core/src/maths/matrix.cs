@@ -15,7 +15,7 @@ using Rylogic.Utility;
 namespace Rylogic.Maths
 {
 	/// <summary>A dynamic NxM matrix</summary>
-	[DebuggerDisplay("{Description}")]
+	[DebuggerDisplay("{Description,nq}")]
 	public struct Matrix
 	{
 		// Data stored as contiguous columns,

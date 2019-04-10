@@ -1,16 +1,15 @@
 ﻿using System;
+using ExchApi.Common.JsonConverter;
 using Newtonsoft.Json;
+using Rylogic.Utility;
 
 namespace Poloniex.API.DomainObjects
 {
 	public class MarketChartData
 	{
 		/// <summary>Time stamp</summary>
-		public DateTimeOffset Time { get; private set; }
-		[JsonProperty("date")] private long TimeInternal
-		{
-			set { Time = DateTimeOffset.FromUnixTimeMilliseconds(value); }
-		}
+		[JsonProperty("date"), JsonConverter(typeof(ToUnixSec))]
+		public UnixSec Time { get; private set; }
 
 		[JsonProperty("open")]
 		public decimal Open { get; private set; }

@@ -115,7 +115,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			// Handlers
 			void HandleMoved(object sender, EventArgs e)
 			{
-				SignalUpdateGraphics();
+				Invalidate();
 			}
 			void HandleOptionChanged(object sender, PropertyChangedEventArgs e)
 			{
@@ -185,7 +185,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		private double? m_axis_size;
 
 		/// <summary>Update the tick marks and labels</summary>
-		public void SignalUpdateGraphics()
+		public void Invalidate()
 		{
 			if (m_update_graphics_pending) return;
 			m_update_graphics_pending = true;

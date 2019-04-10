@@ -17,6 +17,12 @@ namespace Rylogic.Extn
 			return Dispatcher.CurrentDispatcher.BeginInvoke(action);
 		}
 
+		/// <summary>BeginInvokeDelayed on the current dispatcher</summary>
+		public static void BeginInvokeDelayed(Action action, TimeSpan delay, DispatcherPriority priority = DispatcherPriority.Normal)
+		{
+			Dispatcher.CurrentDispatcher.BeginInvokeDelayed(action, delay, priority);
+		}
+
 		/// <summary>Allow a lambda to be passed to BeginInvoke</summary>
 		public static DispatcherOperation BeginInvoke(this Dispatcher dis, Action action)
 		{
@@ -31,14 +37,18 @@ namespace Rylogic.Extn
 		public static void BeginInvokeDelayed(this Dispatcher dis, Action action, TimeSpan delay, DispatcherPriority priority = DispatcherPriority.Normal)
 		{
 			if (delay == TimeSpan.Zero)
+			{
 				dis.BeginInvoke(action);
+			}
 			else
-				new DispatcherTimer(delay, priority, (s,a) =>
+			{
+				new DispatcherTimer(delay, priority, (s, a) =>
 				{
 					var dt = (DispatcherTimer)s;
 					dt.Stop();
 					action();
 				}, dis).Start();
+			}
 		}
 	}
 }

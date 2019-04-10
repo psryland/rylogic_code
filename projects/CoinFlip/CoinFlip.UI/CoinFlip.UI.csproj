@@ -42,9 +42,7 @@
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Data.Linq" />
-    <Reference Include="System.Data.SQLite, Version=1.0.110.0, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=MSIL">
-      <HintPath>..\..\..\build\packages\System.Data.SQLite.Core.1.0.110.0\lib\net46\System.Data.SQLite.dll</HintPath>
-    </Reference>
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Xml" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Core" />
@@ -69,6 +67,8 @@
     <Compile Include="src\Account\LogOnUI.xaml.cs">
       <DependentUpon>LogOnUI.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\GfxObjects\CompletedOrder.cs" />
+    <Compile Include="src\GfxObjects\OpenOrder.cs" />
     <Compile Include="src\Misc\ExchPairTimeFrame.cs" />
     <Compile Include="src\GfxObjects\Buffers.cs" />
     <Compile Include="src\GfxObjects\Candles.cs" />
@@ -79,6 +79,9 @@
       <DependentUpon>CandleChart.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\Misc\CoinDataAdaptor.cs" />
+    <Compile Include="src\Dialogs\EditTradeUI.xaml.cs">
+      <DependentUpon>EditTradeUI.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\UI\GridCoins.xaml.cs">
       <DependentUpon>GridCoins.xaml</DependentUpon>
     </Compile>
@@ -95,6 +98,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="src\UI\CandleChart.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Dialogs\EditTradeUI.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -168,14 +175,21 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Resource Include="money.ico" />
   </ItemGroup>
   <ItemGroup>
+    <Resource Include="res\dollar_sign_black.png" />
+    <Resource Include="res\dollar_sign_blue.png" />
+    <Resource Include="res\dollar_sign_green.png" />
+    <Resource Include="res\history_black.png" />
+    <Resource Include="res\history_blue.png" />
+    <Resource Include="res\history_green.png" />
+    <Resource Include="res\dollar_sign.png" />
+    <Resource Include="res\media_player_start.png" />
     <Resource Include="res\check_accept.png" />
-    <Resource Include="res\check_reject.png" />
+    <Resource Include="res\check_reject_gray.png" />
     <Resource Include="res\clock.png" />
     <None Include="..\..\..\lib\x64\debug\view3d.dll">
       <Link>lib\x64\debug\view3d.dll</Link>
@@ -193,6 +207,7 @@
       <Link>lib\x86\release\view3d.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <Resource Include="res\check_reject.png" />
     <Content Include="res\coins.wav" />
     <Resource Include="res\gray_cross.png" />
     <Resource Include="res\green_tick.png" />
@@ -227,12 +242,10 @@
       <Name>CoinFlip.Model2</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Data.SQLite.Core">
+      <Version>1.0.110</Version>
+    </PackageReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="..\..\..\build\packages\System.Data.SQLite.Core.1.0.110.0\build\net46\System.Data.SQLite.Core.targets" Condition="Exists('..\..\..\build\packages\System.Data.SQLite.Core.1.0.110.0\build\net46\System.Data.SQLite.Core.targets')" />
-  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
-    <PropertyGroup>
-      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
-    </PropertyGroup>
-    <Error Condition="!Exists('..\..\..\build\packages\System.Data.SQLite.Core.1.0.110.0\build\net46\System.Data.SQLite.Core.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\..\build\packages\System.Data.SQLite.Core.1.0.110.0\build\net46\System.Data.SQLite.Core.targets'))" />
-  </Target>
 </Project>

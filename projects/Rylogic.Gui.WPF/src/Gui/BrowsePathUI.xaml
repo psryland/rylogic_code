@@ -41,7 +41,11 @@
 			Command="{Binding BrowsePath}"
 			Margin="3,0,0,0"
 			>
-			<Image Source="{StaticResource folder}" Stretch="Uniform" StretchDirection="DownOnly"/>
+			<Image
+				Source="{StaticResource folder}"
+				Stretch="Uniform"
+				StretchDirection="DownOnly"
+				/>
 		</Button>
 	</Grid>
 </UserControl>

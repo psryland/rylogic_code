@@ -67,7 +67,7 @@ namespace CoinFlip
 		public ETimeFrame TimeFrame
 		{
 			get => TimeFrames?.CurrentItem is ETimeFrame tf ? tf : ETimeFrame.None;
-			set => TimeFrames.MoveCurrentTo(value);
+			set => TimeFrames.MoveCurrentTo(Misc.Nearest(value, TimeFrames.Cast<ETimeFrame>()));
 		}
 
 		/// <summary>The available exchanges</summary>

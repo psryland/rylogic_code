@@ -13,9 +13,9 @@ namespace CoinFlip.UI
 			InitializeComponent();
 
 			DockControl.Owner = this;
-			m_log.LogFilepath = Model.Log.LogCB is LogToFile l2f ? l2f.Filepath : null;
 			m_log.LogEntryPattern = LogEntryPatternRegex;
 			m_log.PopOutOnNewMessages = false;
+			m_log.LogFilepath = Model.Log.LogCB is LogToFile l2f ? l2f.Filepath : null;
 		}
 		public void Dispose()
 		{

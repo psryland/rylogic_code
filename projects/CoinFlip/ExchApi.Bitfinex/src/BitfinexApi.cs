@@ -29,7 +29,6 @@ namespace Bitfinex.API
 		private string WebSocketAddress;
 		private readonly string m_key;
 		private readonly string m_secret;
-		private CancellationToken m_cancel_token;
 		private JsonSerializer m_json;
 		private SemaphoreSlim m_lock;
 		private int m_blocked_count;
@@ -44,8 +43,8 @@ namespace Bitfinex.API
 			WebSocketAddress = web_socket_address;
 			m_key = key;
 			m_secret = secret;
-			m_cancel_token = cancel_token;
-			m_ws_cancel_token_src = CancellationTokenSource.CreateLinkedTokenSource(m_cancel_token);
+			Shutdown = cancel_token;
+			m_ws_cancel_token_src = CancellationTokenSource.CreateLinkedTokenSource(Shutdown);
 			Hasher = m_secret != null ? new HMACSHA384(Encoding.ASCII.GetBytes(m_secret)) : null;
 			m_json = new JsonSerializer { NullValueHandling = NullValueHandling.Ignore };
 			m_lock = new SemaphoreSlim(1,1);
@@ -67,12 +66,15 @@ namespace Bitfinex.API
 		}
 		public virtual void Dispose()
 		{
-			Debug.Assert(m_cancel_token.IsCancellationRequested, "Cancel should have been signalled before here");
+			Debug.Assert(Shutdown.IsCancellationRequested, "Cancel should have been signalled before here");
 
 			WebSocket = null;
 			Client = null;
 		}
- 
+
+		/// <summary>App shutdown signal</summary>
+		private CancellationToken Shutdown { get; }
+
 		/// <summary>Report errors</summary>
 		public event ErrorEventHandler OnError;
 		internal void RaiseError(string message, Exception ex = null)
@@ -173,7 +175,7 @@ namespace Bitfinex.API
 				if (m_web_socket == value) return;
 
 				// Should not be opening a web socket connection while 'm_cancel_token' says cancel.
-				if (m_cancel_token.IsCancellationRequested && value != null)
+				if (Shutdown.IsCancellationRequested && value != null)
 					throw new Exception("Attempt to open a web socket connection during shutdown");
 
 				if (m_web_socket != null)
@@ -184,7 +186,7 @@ namespace Bitfinex.API
 				m_web_socket = value;
 				if (m_web_socket != null)
 				{
-					m_ws_cancel_token_src = CancellationTokenSource.CreateLinkedTokenSource(m_cancel_token);
+					m_ws_cancel_token_src = CancellationTokenSource.CreateLinkedTokenSource(Shutdown);
 					ServiceWebSocket(m_web_socket, m_ws_cancel_token_src.Token);
 				}
 
@@ -518,7 +520,7 @@ namespace Bitfinex.API
 			using (Misc.NoSyncContext())
 			using (Scope.Create(() => ++m_blocked_count, () => --m_blocked_count))
 			{
-				var cancel_token = cancel ?? m_cancel_token;
+				var cancel_token = CancellationTokenSource.CreateLinkedTokenSource(Shutdown, cancel ?? CancellationToken.None).Token;
 				using (m_lock.Lock(cancel_token))
 				{
 					// Limit requests to the required rate
@@ -592,7 +594,7 @@ namespace Bitfinex.API
 			using (Misc.NoSyncContext())
 			using (Scope.Create(() => ++m_blocked_count, () => --m_blocked_count))
 			{
-				var cancel_token = cancel ?? m_cancel_token;
+				var cancel_token = CancellationTokenSource.CreateLinkedTokenSource(Shutdown, cancel ?? CancellationToken.None).Token;
 				using (m_lock.Lock(cancel_token))
 				{
 					// Limit requests to the required rate

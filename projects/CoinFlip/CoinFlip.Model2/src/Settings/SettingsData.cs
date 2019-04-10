@@ -9,7 +9,7 @@ using Rylogic.Common;
 namespace CoinFlip.Settings
 {
 	[Serializable]
-	public class SettingsData :SettingsBase<SettingsData>
+	public class SettingsData : SettingsBase<SettingsData>
 	{
 		/// <summary>Singleton access</summary>
 		public static SettingsData Settings
@@ -44,7 +44,7 @@ namespace CoinFlip.Settings
 			//Cryptopia = new CrypotopiaSettings();
 			Binance = new BinanceSettings();
 			Poloniex = new PoloniexSettings();
-			//Bittrex = new BittrexSettings();
+			Bittrex = new BittrexSettings();
 			//Bitfinex = new BitfinexSettings();
 			CrossExchange = new CrossExchangeSettings();
 			UI = new UISettings();
@@ -146,6 +146,17 @@ namespace CoinFlip.Settings
 			{
 				if (value == null) throw new ArgumentNullException();
 				set(nameof(Poloniex), value);
+			}
+		}
+
+		/// <summary>Bittrex exchange settings</summary>
+		public BittrexSettings Bittrex
+		{
+			get { return get<BittrexSettings>(nameof(Bittrex)); }
+			set
+			{
+				if (value == null) throw new ArgumentNullException();
+				set(nameof(Bittrex), value);
 			}
 		}
 

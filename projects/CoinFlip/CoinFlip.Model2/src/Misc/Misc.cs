@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Windows.Threading;
@@ -12,7 +13,7 @@ namespace CoinFlip
 	public static class Misc
 	{
 		/// <summary>The smallest volume change</summary>
-		public const decimal VolumeEpsilon = 1e-8m;
+		public const decimal AmountEpsilon = 1e-8m;
 
 		/// <summary>The smallest price change</summary>
 		public const decimal PriceEpsilon = 1e-8m;
@@ -131,11 +132,11 @@ namespace CoinFlip
 		}
 
 		/// <summary>Return the 'base' volume for a trade in this trade direction</summary>
-		public static Unit<decimal> VolumeBase(this ETradeType tt, Unit<decimal> price_q2b, Unit<decimal>? volume_in = null, Unit<decimal>? volume_out = null)
+		public static Unit<decimal> AmountBase(this ETradeType tt, Unit<decimal> price_q2b, Unit<decimal>? amount_id = null, Unit<decimal>? amount_out = null)
 		{
 			return
-				tt == ETradeType.B2Q ? (volume_in != null ? volume_in.Value : volume_out != null ? volume_out.Value / price_q2b : throw new Exception("One of 'volume_in' or 'volume_out' must be given")) :
-				tt == ETradeType.Q2B ? (volume_in != null ? volume_in.Value / price_q2b : volume_out != null ? volume_out.Value : throw new Exception("One of 'volume_in' or 'volume_out' must be given")) :
+				tt == ETradeType.B2Q ? (amount_id != null ? amount_id.Value : amount_out != null ? amount_out.Value / price_q2b : throw new Exception("One of 'volume_in' or 'volume_out' must be given")) :
+				tt == ETradeType.Q2B ? (amount_id != null ? amount_id.Value / price_q2b : amount_out != null ? amount_out.Value : throw new Exception("One of 'volume_in' or 'volume_out' must be given")) :
 				throw new Exception("Unknown trade type");
 		}
 
@@ -198,22 +199,42 @@ namespace CoinFlip
 		}
 
 		/// <summary>Convert a Poloniex trade type to ETradeType</summary>
-		public static ETradeType TradeType(this global::Poloniex.API.EOrderType order_type)
+		public static ETradeType TradeType(this global::Poloniex.API.EOrderSide order_type)
 		{
 			switch (order_type)
 			{
 			default: throw new Exception("Unknown trade type string");
-			case global::Poloniex.API.EOrderType.Buy: return ETradeType.Q2B;
-			case global::Poloniex.API.EOrderType.Sell: return ETradeType.B2Q;
+			case global::Poloniex.API.EOrderSide.Buy: return ETradeType.Q2B;
+			case global::Poloniex.API.EOrderSide.Sell: return ETradeType.B2Q;
 			}
 		}
-		public static global::Poloniex.API.EOrderType ToPoloniexTT(this ETradeType trade_type)
+		public static global::Poloniex.API.EOrderSide ToPoloniexTT(this ETradeType trade_type)
 		{
 			switch (trade_type)
 			{
 			default: throw new Exception("Unknown trade type");
-			case ETradeType.Q2B: return global::Poloniex.API.EOrderType.Buy;
-			case ETradeType.B2Q: return global::Poloniex.API.EOrderType.Sell;
+			case ETradeType.Q2B: return global::Poloniex.API.EOrderSide.Buy;
+			case ETradeType.B2Q: return global::Poloniex.API.EOrderSide.Sell;
+			}
+		}
+
+		/// <summary>Convert a Bittrex trade type to ETradeType</summary>
+		public static ETradeType TradeType(global::Bittrex.API.EOrderSide order_type)
+		{
+			switch (order_type)
+			{
+			default: throw new Exception("Unknown trade type string");
+			case global::Bittrex.API.EOrderSide.Buy: return ETradeType.Q2B;
+			case global::Bittrex.API.EOrderSide.Sell: return ETradeType.B2Q;
+			}
+		}
+		public static global::Bittrex.API.EOrderSide ToBittrexTT(this ETradeType trade_type)
+		{
+			switch (trade_type)
+			{
+			default: throw new Exception("Unknown trade type");
+			case ETradeType.Q2B: return global::Bittrex.API.EOrderSide.Buy;
+			case ETradeType.B2Q: return global::Bittrex.API.EOrderSide.Sell;
 			}
 		}
 
@@ -225,17 +246,6 @@ namespace CoinFlip
 		//	default: throw new Exception("Unknown trade type string");
 		//	case global::Cryptopia.API.EOrderType.Buy: return ETradeType.Q2B;
 		//	case global::Cryptopia.API.EOrderType.Sell: return ETradeType.B2Q;
-		//	}
-		//}
-
-		///// <summary>Convert a Bittrex trade type to ETradeType</summary>
-		//public static ETradeType TradeType(global::Bittrex.API.EOrderType order_type)
-		//{
-		//	switch (order_type)
-		//	{
-		//	default: throw new Exception("Unknown trade type string");
-		//	case global::Bittrex.API.EOrderType.Buy: return ETradeType.Q2B;
-		//	case global::Bittrex.API.EOrderType.Sell: return ETradeType.B2Q;
 		//	}
 		//}
 
@@ -261,16 +271,6 @@ namespace CoinFlip
 		//	}
 		//}
 
-		///// <summary>Convert this trade type to the Poloniex definition of a trade type</summary>
-		//public static global::Bittrex.API.EOrderType ToBittrexTT(this ETradeType trade_type)
-		//{
-		//	switch (trade_type)
-		//	{
-		//	default: throw new Exception("Unknown trade type");
-		//	case ETradeType.Q2B: return global::Bittrex.API.EOrderType.Buy;
-		//	case ETradeType.B2Q: return global::Bittrex.API.EOrderType.Sell;
-		//	}
-		//}
 
 		/// <summary>
 		/// Convert a time value into units of 'time_frame'.
@@ -359,11 +359,34 @@ namespace CoinFlip
 			return TimeSpan.FromTicks(TimeFrameToTicks(units, time_frame));
 		}
 
+		/// <summary>Return the time frame value from 'available' that is nearest to 'wanted'</summary>
+		public static ETimeFrame Nearest(ETimeFrame wanted, IEnumerable<ETimeFrame> available)
+		{
+			var nearest = int.MaxValue;
+			var closest = ETimeFrame.None;
+			foreach (var tf in available)
+			{
+				var dist = Math.Abs((int)tf - (int)wanted);
+				if (dist > nearest) continue;
+				nearest = dist;
+				closest = tf;
+			}
+			return closest;
+		}
+
 		/// <summary>Return 'time' rounded down to units of 'time_frame'</summary>
 		public static DateTimeOffset RoundDownTo(this DateTimeOffset time, ETimeFrame time_frame)
 		{
 			var tf = TimeFrameToTicks(1.0, time_frame);
 			var ticks = (time.Ticks / tf) * tf;
+			return new DateTimeOffset(ticks, time.Offset);
+		}
+
+		/// <summary>Return 'time' rounded up to units of 'time_frame'</summary>
+		public static DateTimeOffset RoundUpTo(this DateTimeOffset time, ETimeFrame time_frame)
+		{
+			var tf = TimeFrameToTicks(1.0, time_frame);
+			var ticks = ((time.Ticks + tf - 1) / tf) * tf;
 			return new DateTimeOffset(ticks, time.Offset);
 		}
 
@@ -383,6 +406,22 @@ namespace CoinFlip
 				return dt_curr.ToString("HH:mm'\r\n'ddd dd");
 
 			return dt_curr.ToString("HH:mm");
+		}
+
+		/// <summary>Return the first active chart, or if none are active, make the first one active</summary>
+		public static IChartView FindActiveChart(this IList<IChartView> charts)
+		{
+			if (charts.Count == 0)
+				return null;
+
+			// Find a chart that is visible
+			var active = charts.FirstOrDefault(x => x.IsActiveContentInPane);
+			if (active != null)
+				return active;
+
+			// Make the first chart visible
+			charts[0].EnsureActiveContent();
+			return charts[0];
 		}
 	}
 }

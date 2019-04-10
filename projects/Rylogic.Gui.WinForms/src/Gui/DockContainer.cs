@@ -421,7 +421,7 @@ namespace Rylogic.Gui.WinForms
 		{
 			if (m_layout_pending || !IsHandleCreated) return;
 			m_layout_pending = true;
-			this.BeginInvoke(() =>
+			Dispatcher_.BeginInvoke(() =>
 			{
 				m_layout_pending = false;
 				PerformLayout();
@@ -1419,7 +1419,7 @@ namespace Rylogic.Gui.WinForms
 			{
 				if (m_layout_pending || !IsHandleCreated) return;
 				m_layout_pending = true;
-				this.BeginInvoke(() =>
+				Dispatcher_.BeginInvoke(() =>
 				{
 					m_layout_pending = false;
 					PerformLayout();
@@ -2022,7 +2022,7 @@ namespace Rylogic.Gui.WinForms
 				if (m_do_layout.Pending || !IsHandleCreated) return;
 				m_do_layout.Signal();
 
-				this.BeginInvoke(() =>
+				Dispatcher_.BeginInvoke(() =>
 				{
 					m_do_layout.Actioned();
 					PerformLayout();

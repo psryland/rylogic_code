@@ -1,7 +1,7 @@
 ﻿namespace Poloniex.API
 {
 	/// <summary>Represents the type of an order.</summary>
-	public enum EOrderType
+	public enum EOrderSide
 	{
 		/// <summary>A.k.a Q2B, Bid, Short</summary>
 		Buy,

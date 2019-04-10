@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.Runtime.InteropServices;
 using Rylogic.Extn;
 
@@ -14,7 +13,7 @@ namespace Rylogic.Maths
 {
 	[Serializable]
 	[StructLayout(LayoutKind.Explicit)]
-	[DebuggerDisplay("{x}  {y}  {z}  // Len={Length3}")]
+	[DebuggerDisplay("{Description,nq")]
 	public struct v3
 	{
 		[FieldOffset( 0)] public float x;
@@ -94,22 +93,6 @@ namespace Rylogic.Maths
 		public float Length
 		{
 			get { return (float)Math.Sqrt(LengthSq); }
-		}
-		[Obsolete] public float Length2Sq
-		{
-			get { return x * x + y * y; }
-		}
-		[Obsolete] public float Length3Sq
-		{
-			get { return x * x + y * y + z * z; }
-		}
-		[Obsolete] public float Length2
-		{
-			get { return (float)Math.Sqrt(Length2Sq); }
-		}
-		[Obsolete] public float Length3
-		{
-			get { return (float)Math.Sqrt(Length3Sq); }
 		}
 
 		/// <summary>ToString</summary>
@@ -288,6 +271,9 @@ namespace Rylogic.Maths
 			return new { x, y, z }.GetHashCode();
 		}
 		#endregion
+
+		/// <summary></summary>
+		public string Description => $"{x}  {y}  {z}  //Len({Length})";
 	}
 
 	public static partial class Math_

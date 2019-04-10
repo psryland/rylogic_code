@@ -23,17 +23,17 @@ namespace Rylogic.Gui.WPF
 		{
 			return new Command<TOwner>(owner, (o, p) => execute(), null);
 		}
-		public static Command<TOwner> Create<TOwner>(TOwner owner, Action<TOwner> execute)
+		public static Command<TOwner> Create<TOwner>(TOwner owner, Action<object> execute)
 		{
-			return new Command<TOwner>(owner, (o, _) => execute(o), null);
+			return new Command<TOwner>(owner, (_, p) => execute(p), null);
 		}
 		public static Command<TOwner> Create<TOwner>(TOwner owner, Action<TOwner, object> execute)
 		{
 			return new Command<TOwner>(owner, (o, p) => execute(o,p), null);
 		}
-		public static Command<TOwner> Create<TOwner>(TOwner owner, Action<TOwner> execute, Func<TOwner, bool> can_execute)
+		public static Command<TOwner> Create<TOwner>(TOwner owner, Action<object> execute, Func<object, bool> can_execute)
 		{
-			return new Command<TOwner>(owner, (o, _) => execute(o), (o, _) => can_execute(o));
+			return new Command<TOwner>(owner, (_, p) => execute(p), (_, p) => can_execute(p));
 		}
 	}
 

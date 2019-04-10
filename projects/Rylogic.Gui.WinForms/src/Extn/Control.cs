@@ -116,12 +116,14 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Wrapper of begin invoke that takes a lambda</summary>
+		[Obsolete("Use Dispatcher instead. It doesn't require a window handle")]
 		public static IAsyncResult BeginInvoke(this Form form, Action action)
 		{
 			// Has to be form or the overload isn't found
 			// Note, the params overload isn't needed because 'action' is a lambda
 			return form.BeginInvoke(action);
 		}
+		[Obsolete("Use Dispatcher instead. It doesn't require a window handle")]
 		public static IAsyncResult BeginInvoke(this Control ctrl, Action action)
 		{
 			// Note, the params overload isn't needed because 'action' is a lambda
@@ -129,12 +131,14 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>Invoke that takes a lambda</summary>
+		[Obsolete("Use Dispatcher instead. It doesn't require a window handle")]
 		public static object Invoke(this Form form, Action action)
 		{
 			// Has to be form or the overload isn't found
 			// Note, the params overload isn't needed because 'action' is a lambda
 			return form.Invoke(action);
 		}
+		[Obsolete("Use Dispatcher instead. It doesn't require a window handle")]
 		public static object Invoke(this Control ctrl, Action action)
 		{
 			// Note, the params overload isn't needed because 'action' is a lambda
@@ -194,11 +198,11 @@ namespace Rylogic.Gui.WinForms
 
 				// Set the tool tip for the control so we can detect expired
 				tt.SetToolTip(ctrl, msg);
-				tt.BeginInvokeDelayed(duration, () =>
-					{
-						if (tt.GetToolTip(ctrl) == msg)
-							tt.SetToolTip(ctrl, null);
-					});
+				Dispatcher_.BeginInvokeDelayed(() =>
+				{
+					if (tt.GetToolTip(ctrl) == msg)
+						tt.SetToolTip(ctrl, null);
+				}, TimeSpan.FromMilliseconds(duration));
 			}
 		}
 
@@ -251,7 +255,7 @@ namespace Rylogic.Gui.WinForms
 		}
 
 		/// <summary>BeginInvoke an action after 'delay' milliseconds (roughly)</summary>
-		public static void BeginInvokeDelayed(this IComponent ctrl, int delay, Action action)
+		[Obsolete("Use Dispatcher_.BeginInvokeDelayed")] public static void BeginInvokeDelayed(this IComponent ctrl, int delay, Action action)
 		{
 			new Timer{Enabled = true, Interval = Math.Max(delay,1)}.Tick += (s,a) =>
 			{
@@ -1866,7 +1870,7 @@ namespace Rylogic.Gui.WinForms
 
 			// Delay the column resize until the last triggering event (particularly scroll events)
 			grid_state.FitColumnsPending = true;
-			grid.BeginInvokeDelayed(10, () =>
+			Dispatcher_.BeginInvokeDelayed(() =>
 			{
 				// If this event is a column/row header width changed event,
 				// record the user column widths before resizing.
@@ -1876,7 +1880,7 @@ namespace Rylogic.Gui.WinForms
 				// Resize columns to fit
 				grid.SetGridColumnSizes(EColumnSizeOptions.FitToDisplayWidth);
 				grid_state.FitColumnsPending = false;
-			});
+			}, TimeSpan.FromMilliseconds(10));
 		}
 		public static void FitColumnsToDisplayWidthAttach(this DataGridView grid)
 		{
@@ -1901,7 +1905,7 @@ namespace Rylogic.Gui.WinForms
 		
 			// Delay the column resize until the last triggering event (particularly scroll events)
 			grid_state.FitColumnsPending = true;
-			grid.BeginInvokeDelayed(10, () =>
+			Dispatcher_.BeginInvokeDelayed(() =>
 			{
 				// If this event is a column/row header width changed event,
 				// record the user column widths before resizing.
@@ -1911,7 +1915,7 @@ namespace Rylogic.Gui.WinForms
 				// Resize columns to fit
 				grid.SetGridColumnSizes(EColumnSizeOptions.GrowToDisplayWidth|EColumnSizeOptions.Preferred);
 				grid_state.FitColumnsPending = false;
-			});
+			}, TimeSpan.FromMilliseconds(10));
 		}
 		public static void FitColumnsWithNoLineWrapAttach(this DataGridView grid)
 		{
@@ -2473,7 +2477,7 @@ namespace Rylogic.Gui.WinForms
 				// The grid.MouseDown event calls CellMouseDown (and others) after the drag/drop operation has
 				// finished. A consequence is the cell that the drag started from gets 'clicked' causing the selection
 				// to change back to that cell. BeginInvoke ensures the drag happens after any selection changes.
-				grid.BeginInvoke(() =>
+				Dispatcher_.BeginInvoke(() =>
 				{
 					using (var data = new DragDropData(grid.Rows[hit.RowIndex], grid_pt.X, grid_pt.Y))
 						grid.DoDragDrop(data, DragDropEffects.Move|DragDropEffects.Copy|DragDropEffects.Link);
@@ -2826,7 +2830,7 @@ namespace Rylogic.Gui.WinForms
 						{
 							// Edit the filter field
 							// BeginInvoke so that Editing starts after the message queue has processed the mouse events
-							m_dgv.BeginInvoke(filter_cell.EditFilter);
+							Dispatcher_.BeginInvoke(filter_cell.EditFilter);
 							m_eat_lbuttonup = true;
 							return true;
 						}
@@ -3081,8 +3085,8 @@ namespace Rylogic.Gui.WinForms
 							var i = Cell.ColumnIndex;
 							var next = i+1 < DGV.ColumnCount ? DGV.Columns[i+1].HeaderCell as FilterHeaderCell : null;
 							var prev = i-1 > -1              ? DGV.Columns[i-1].HeaderCell as FilterHeaderCell : null;
-							if (!args.Shift && next != null) DGV.BeginInvoke(next.EditFilter);
-							if ( args.Shift && prev != null) DGV.BeginInvoke(prev.EditFilter);
+							if (!args.Shift && next != null) Dispatcher_.BeginInvoke(next.EditFilter);
+							if ( args.Shift && prev != null) Dispatcher_.BeginInvoke(prev.EditFilter);
 						}
 
 						// Close the editing control on these keys
@@ -3502,7 +3506,7 @@ namespace Rylogic.Gui.WinForms
 
 			tt.SetToolTip(parent, msg);
 			tt.Show(msg, parent, pt, duration);
-			tt.BeginInvokeDelayed(duration, () => tt.SetToolTip(parent, null));
+			Dispatcher_.BeginInvokeDelayed(() => tt.SetToolTip(parent, null), TimeSpan.FromMilliseconds(duration));
 		}
 
 		/// <summary>Returns the location of this item in screen space</summary>

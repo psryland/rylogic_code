@@ -1788,7 +1788,7 @@ namespace Rylogic.Gui.WinForms
 						}
 
 						// Swap the bitmaps on the GUI thread
-						this.BeginInvoke(() =>
+						Dispatcher_.BeginInvoke(() =>
 						{
 							// If the render was cancelled, ignore the result
 							if (rdr_issue != m_rdr_issue)

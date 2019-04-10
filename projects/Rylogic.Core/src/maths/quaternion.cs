@@ -15,7 +15,7 @@ namespace Rylogic.Maths
 	/// <summary>Quaternion functions. Note: a quaternion is a v4</summary>
 	[Serializable]
 	[StructLayout(LayoutKind.Explicit)]
-	[DebuggerDisplay("{x}  {y}  {z}  {w}  // Axis={Axis}  Ang={Angle})")]
+	[DebuggerDisplay("{Description,nq")]
 	public struct quat
 	{
 		[FieldOffset( 0)] public float x;
@@ -323,6 +323,9 @@ namespace Rylogic.Maths
 			return new { x, y, z, w }.GetHashCode();
 		}
 		#endregion
+
+		/// <summary></summary>
+		public string Description => $"{x}  {y}  {z}  {w}  //Axis({Axis}) Ang({Angle})";
 	}
 
 	public static partial class Math_

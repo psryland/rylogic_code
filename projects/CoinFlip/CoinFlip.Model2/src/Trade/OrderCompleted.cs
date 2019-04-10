@@ -96,7 +96,7 @@ namespace CoinFlip
 		/// <summary>The coin type being bought</summary>
 		public Coin CoinOut => TradeType == ETradeType.B2Q ? Pair.Quote : Pair.Base;
 
-		/// <summary>The timestamp of when the original order was created</summary>
+		/// <summary>The timestamp of when the first trade related to this order was made</summary>
 		public DateTimeOffset Created => Trades.Count == 0 ? DateTimeOffset.MinValue : Trades.Values.Min(x => x.Created);
 
 		/// <summary>Description string for the trade</summary>

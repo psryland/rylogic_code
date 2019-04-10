@@ -44,7 +44,7 @@ def CreateFileComponent(elem:xml.Element, filepath:str, keypath:bool=True, direc
 	# Get the file title from the full filepath
 	_,file = os.path.split(filepath)
 	file,_ = os.path.splitext(file)
-	file = file.replace(' ','_')
+	file = re.sub(r'[^0-9a-zA-Z_]','_', file)
 	uid = Id()
 
 	# Create the component to contain the file

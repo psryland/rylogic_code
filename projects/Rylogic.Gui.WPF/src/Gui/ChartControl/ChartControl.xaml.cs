@@ -6,6 +6,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using Rylogic.Common;
 using Rylogic.Extn;
@@ -119,8 +120,8 @@ namespace Rylogic.Gui.WPF
 					switch (e.PropertyName)
 					{
 					case nameof(OptionsData.ShowAxes):
-						m_xaxis_panel.SignalUpdateGraphics();
-						m_yaxis_panel.SignalUpdateGraphics();
+						m_xaxis_panel.Invalidate();
+						m_yaxis_panel.Invalidate();
 						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(XAxisLabelVisibility)));
 						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(YAxisLabelVisibility)));
 						break;
@@ -178,8 +179,8 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The chart background colour</summary>
 		public Color ChartBackground
 		{
-			get { return Scene.BackgroundColor; }
-			set { Scene.BackgroundColor = value; }
+			get { return Options.BackgroundColour.ToMediaColor(); }
+			set { Options.BackgroundColour = value.ToColour32(); }
 		}
 
 		/// <summary>All chart objects</summary>
@@ -211,9 +212,11 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Accessor to the current X axis</summary>
 		public RangeData.Axis XAxis => Range?.XAxis;
+		public AxisPanel XAxisPanel => m_xaxis_panel;
 
 		/// <summary>Accessor to the current Y axis</summary>
 		public RangeData.Axis YAxis => Range?.YAxis;
+		public AxisPanel YAxisPanel => m_yaxis_panel;
 
 		/// <summary>Default X axis range of the chart</summary>
 		public RangeF BaseRangeX { get; set; }
@@ -519,22 +522,33 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Find the default range, then reset to the default range</summary>
-		public void AutoRange(View3d.ESceneBounds who = View3d.ESceneBounds.All)
+		public void AutoRange(View3d.ESceneBounds who = View3d.ESceneBounds.All, EAxis axes = EAxis.Both)
 		{
 			// Allow the auto range to be handled by event
-			var args = new AutoRangeEventArgs(who);
+			var args = new AutoRangeEventArgs(who, axes);
 			OnAutoRanging(args);
-			if (args.Handled && (!args.ViewBBox.IsValid || args.ViewBBox.Radius == v4.Zero))
-				throw new Exception($"Caller provided view bounding box is invalid: {args.ViewBBox}");
 
-			// Get the bounding box to fit into the view
-			var bbox = args.Handled
-				? args.ViewBBox
+			// Get the bounding box, either from the event or from the scene bounds
+			var bbox = args.Handled ? args.ViewBBox
 				: Window.SceneBounds(who, except: new[] { ChartTools.Id });
+
+			// Check it's valid
+			if (!bbox.IsValid || bbox.Radius == v4.Zero)
+				throw new Exception($"View bounding box is invalid: {bbox}");
 
 			// Position the camera to view the bounding box
 			Camera.ResetView(bbox, Options.ResetForward, Options.ResetUp, dist: 0f, preserve_aspect: LockAspect, commit: true);
-			Scene.DesiredPixelAspect = Camera.Aspect * Scene.Window.Viewport.Height / Scene.Window.Viewport.Width;
+
+			// Set the desired pixel aspect ratio.
+			if (Scene.RenderTarget != null)
+			{
+				// In WPF, controls don't get an 'owning window' until they are visible.
+				// The view3d control uses a D3D11Image which sets it's back buffer once the window
+				// handle is known. The size of the back buffer defines the size of the viewport.
+				// So, if we don't have an owning window the viewport will have width/height = 0/0.
+				var viewport = Scene.Window.Viewport;
+				Scene.DesiredPixelAspect = Camera.Aspect * viewport.Height / viewport.Width;
+			}
 
 			// Set the axis range from the camera position
 			SetRangeFromCamera();

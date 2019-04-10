@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Interop;
 using System.Windows.Media;
 using Microsoft.Win32;
@@ -21,15 +22,15 @@ namespace Rylogic.Gui.WPF
 			// Use:
 			//  In your class with property 'prop_name':
 			//  Define:
-			//    <prop_name>_Changed() or,
-			//    <prop_name>_Changed(<prop_type> new_value) or,
-			//    <prop_name>_Changed(<prop_type> old_value, <prop_type> new_value)
+			//    private void <prop_name>_Changed() or,
+			//    private void <prop_name>_Changed(<prop_type> new_value) or,
+			//    private void <prop_name>_Changed(<prop_type> new_value, <prop_type> old_value)
 			//    to have that method called when the property changes
 			//  Define:
-			//    <prop_type> <prop_name>_Coerce(<prop_type> value)
+			//    private <prop_type> <prop_name>_Coerce(<prop_type> value)
 			//    to have values coerced (i.e. massaged into a valid value).
 			//  Define:
-			//    static bool <prop_name>_Validate(<prop_type> value)
+			//    private static bool <prop_name>_Validate(<prop_type> value)
 			//    to have values validated (has to be static, if you need per-binding validation
 			//    var binding = BindingOperations.GetBinding(<control>, ComboBox.DepProperty);
 			//    binding.ValidationRules.Clear(); etc).
@@ -51,7 +52,7 @@ namespace Rylogic.Gui.WPF
 				switch (param_count)
 				{
 				default: throw new Exception($"Incorrect function signature for handler {prop_name}_Changed");
-				case 2: meta.PropertyChangedCallback = (d, e) => changed_handler.Invoke(d, new object[] { e.OldValue, e.NewValue }); break;
+				case 2: meta.PropertyChangedCallback = (d, e) => changed_handler.Invoke(d, new object[] { e.NewValue, e.OldValue }); break;
 				case 1: meta.PropertyChangedCallback = (d, e) => changed_handler.Invoke(d, new object[] { e.NewValue }); break;
 				case 0: meta.PropertyChangedCallback = (d, e) => changed_handler.Invoke(d, null); break;
 				}
@@ -87,12 +88,12 @@ namespace Rylogic.Gui.WPF
 			// Use:
 			//  In your class with property 'prop_name':
 			//  Define:
-			//    <prop_name>_Changed() or,
-			//    <prop_name>_Changed(<prop_type> new_value) or,
-			//    <prop_name>_Changed(<prop_type> old_value, <prop_type> new_value)
+			//    private static void <prop_name>_Changed(DependencyObject obj) or,
+			//    private static void <prop_name>_Changed(DependencyObject obj, <prop_type> new_value) or,
+			//    private static void <prop_name>_Changed(DependencyObject obj, <prop_type> new_value, <prop_type> old_value)
 			//    to have that method called when the property changes
 			//  Define:
-			//    <prop_type> <prop_name>_Coerce(<prop_type> value)
+			//    private static <prop_type> <prop_name>_Coerce(<prop_type> value)
 			//    to have values coerced (i.e. massaged into a valid value).
 
 			// Don't set 'DefaultValue' unless 'def' is non-null, because the property type
@@ -111,9 +112,9 @@ namespace Rylogic.Gui.WPF
 				switch (param_count)
 				{
 				default: throw new Exception($"Incorrect function signature for handler {prop_name}_Changed");
-				case 2: meta.PropertyChangedCallback = (d, e) => changed_handler.Invoke(d, new object[] { e.OldValue, e.NewValue }); break;
-				case 1: meta.PropertyChangedCallback = (d, e) => changed_handler.Invoke(d, new object[] { e.NewValue }); break;
-				case 0: meta.PropertyChangedCallback = (d, e) => changed_handler.Invoke(d, null); break;
+				case 3: meta.PropertyChangedCallback = (d, e) => changed_handler.Invoke(null, new object[] { d, e.NewValue, e.OldValue }); break;
+				case 2: meta.PropertyChangedCallback = (d, e) => changed_handler.Invoke(null, new object[] { d, e.NewValue }); break;
+				case 1: meta.PropertyChangedCallback = (d, e) => changed_handler.Invoke(null, new object[] { d }); break;
 				}
 			}
 
@@ -125,7 +126,7 @@ namespace Rylogic.Gui.WPF
 				switch (param_count)
 				{
 				default: throw new Exception($"Incorrect function signature for handler {prop_name}_Coerce");
-				case 1: meta.CoerceValueCallback = (d, v) => coerce_handler.Invoke(d, new object[] { v }); break;
+				case 2: meta.CoerceValueCallback = (d, v) => coerce_handler.Invoke(null, new object[] { d, v }); break;
 				}
 			}
 			

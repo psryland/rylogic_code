@@ -14,7 +14,7 @@ namespace Rylogic.Maths
 {
 	[Serializable]
 	[StructLayout(LayoutKind.Explicit)]
-	[DebuggerDisplay("{x}  {y}  {z}")]
+	[DebuggerDisplay("{Description,nq}")]
 	public struct m3x4
 	{
 		[FieldOffset( 0)] public v4 x;
@@ -327,6 +327,9 @@ namespace Rylogic.Maths
 		}
 
 		#endregion
+
+		/// <summary></summary>
+		public string Description => $"{x}  {y}  {z}";
 	}
 
 	public static partial class Math_

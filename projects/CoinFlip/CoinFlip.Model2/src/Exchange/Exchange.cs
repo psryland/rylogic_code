@@ -13,6 +13,7 @@ using System.Web;
 using System.Windows.Threading;
 using CoinFlip.Settings;
 using Dapper;
+using ExchApi.Common;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Utility;
@@ -59,19 +60,26 @@ namespace CoinFlip
 				// Initialise the trade history table
 				InitTradeHistoryTable();
 
-				// Start the exchange if enabled in the settings
-				if (ExchSettings.Active)
+				// Run after the exchange is fully constructed
+				Misc.RunOnMainThread(() =>
 				{
-					if (!(this is CrossExchange))
+					// Set the request rate limit
+					ExchangeApi.RequestThrottle.RequestRateLimit = ExchSettings.ServerRequestRateLimit;
+
+					// Start the exchange if enabled in the settings
+					if (ExchSettings.Active)
 					{
-						PairsUpdateRequired = true;
-						BalanceUpdateRequired = true;
-						PositionUpdateRequired = true;
-						TransfersUpdateRequired = true;
-						MarketDataUpdateRequired = true;
+						if (!(this is CrossExchange))
+						{
+							PairsUpdateRequired = true;
+							BalanceUpdateRequired = true;
+							PositionUpdateRequired = true;
+							TransfersUpdateRequired = true;
+							MarketDataUpdateRequired = true;
+						}
+						UpdateThreadActive = true;
 					}
-					Misc.RunOnMainThread(() => UpdateThreadActive = true);
-				}
+				});
 			}
 			catch
 			{
@@ -145,8 +153,7 @@ namespace CoinFlip
 						}
 					case nameof(IExchangeSettings.ServerRequestRateLimit):
 						{
-							SetServerRequestRateLimit(ExchSettings.ServerRequestRateLimit);
-							NotifyPropertyChanged(nameof(ServerRequestRateLimit));
+							ExchangeApi.RequestThrottle.RequestRateLimit = ExchSettings.ServerRequestRateLimit;
 							break;
 						}
 					}
@@ -168,6 +175,9 @@ namespace CoinFlip
 		}
 		private CancellationTokenSource m_shutdown;
 		private CancellationToken m_main_shutdown;
+
+		/// <summary>The common interface for all exchange API objects</summary>
+		protected abstract IExchangeApi ExchangeApi { get; }
 
 		/// <summary>True if this exchange is to be used</summary>
 		public bool Enabled
@@ -260,7 +270,7 @@ namespace CoinFlip
 				NotifyPropertyChanged(nameof(Status));
 
 				/// <summary>Thread entry point for the exchange update thread</summary>
-				void UpdateThreadEntryPoint()
+				async void UpdateThreadEntryPoint()
 				{
 					try
 					{
@@ -283,7 +293,7 @@ namespace CoinFlip
 								if (PairsUpdateRequired)
 								{
 									PairsUpdateRequired = false;
-									UpdatePairs().Wait();
+									await UpdatePairs();
 								}
 
 								// Update market data
@@ -291,7 +301,7 @@ namespace CoinFlip
 								if (MarketDataUpdateRequired || (Model.UtcNow - Pairs.LastUpdated).TotalMilliseconds > MarketDataUpdatePeriodMS)
 								{
 									MarketDataUpdateRequired = false;
-									UpdateData().Wait();
+									await UpdateData();
 								}
 
 								// Update the balances
@@ -299,7 +309,7 @@ namespace CoinFlip
 								if (!ExchSettings.PublicAPIOnly && (BalanceUpdateRequired || (Model.UtcNow - Balance.LastUpdated).TotalMilliseconds > BalanceUpdatePeriodMS))
 								{
 									BalanceUpdateRequired = false;
-									UpdateBalances().Wait();
+									await UpdateBalances();
 								}
 
 								// Update funds transfers
@@ -307,7 +317,7 @@ namespace CoinFlip
 								if (!ExchSettings.PublicAPIOnly && (TransfersUpdateRequired || (Model.UtcNow - Transfers.LastUpdated).TotalMilliseconds > TransfersUpdatePeriodMS))
 								{
 									TransfersUpdateRequired = false;
-									UpdateTransfers().Wait();
+									await UpdateTransfers();
 								}
 
 								// Update positions/history
@@ -315,7 +325,7 @@ namespace CoinFlip
 								if (!ExchSettings.PublicAPIOnly && (PositionUpdateRequired || (Model.UtcNow - Orders.LastUpdated).TotalMilliseconds > PositionUpdatePeriodMS))
 								{
 									PositionUpdateRequired = false;
-									UpdatePositionsAndHistory().Wait();
+									await UpdatePositionsAndHistory();
 								}
 							}
 							catch (OperationCanceledException) { break; }
@@ -335,9 +345,6 @@ namespace CoinFlip
 
 		/// <summary>The rate that 'Heart' beats at</summary>
 		public int PollPeriod => ExchSettings.PollPeriod;
-
-		/// <summary>The maximum number of requests per second to the exchange server</summary>
-		public float ServerRequestRateLimit => ExchSettings.ServerRequestRateLimit;
 
 		/// <summary>Dirty flag for updating pairs</summary>
 		public bool PairsUpdateRequired
@@ -497,7 +504,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Return the candle data for a given pair, over a given time range</summary>
-		public async Task<List<Candle>> CandleData(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end, CancellationToken? cancel) // Worker thread context
+		public async Task<List<Candle>> CandleData(TradePair pair, ETimeFrame timeframe, UnixSec time_beg, UnixSec time_end, CancellationToken? cancel) // Worker thread context
 		{
 			try
 			{
@@ -513,7 +520,7 @@ namespace CoinFlip
 				return null;
 			}
 		}
-		protected virtual Task<List<Candle>> CandleDataInternal(TradePair pair, ETimeFrame timeframe, long time_beg, long time_end, CancellationToken? cancel) // Worker thread context
+		protected virtual Task<List<Candle>> CandleDataInternal(TradePair pair, ETimeFrame timeframe, UnixSec time_beg, UnixSec time_end, CancellationToken? cancel) // Worker thread context
 		{
 			return Task.FromResult(new List<Candle>());
 		}
@@ -669,10 +676,6 @@ namespace CoinFlip
 		{
 			yield break;
 		}
-
-		/// <summary>Apply the server request rate limit to the exchange API</summary>
-		protected virtual void SetServerRequestRateLimit(float limit)
-		{ }
 
 		/// <summary>Handle an exception during an update call</summary>
 		public void HandleException(string method_name, Exception ex, string msg = null)

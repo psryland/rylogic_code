@@ -1,89 +1,28 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
-using System.Windows.Threading;
 using ExchApi.Common;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Poloniex.API.DomainObjects;
-using Rylogic.Extn;
 using Rylogic.Utility;
 
 namespace Poloniex.API
 {
-	public class PoloniexApi :IDisposable
+	public class PoloniexApi :ExchangeApi<HMACSHA512>
 	{
 		// Notes:
 		//  - IP restrictions on the Poloniex API key don't seem to work. You have to use Unrestricted.
 
-		private readonly string m_key;
-		private readonly string m_secret;
-		private JsonSerializer m_json;
-		private CancellationToken m_cancel_token;
-
-		public PoloniexApi(string key, string secret, CancellationToken cancel_token, string base_address = "https://poloniex.com/", string wss_address = "wss://api.poloniex.com/")
+		public PoloniexApi(string key, string secret, CancellationToken shutdown)
+			:base(key, secret, shutdown, 6f, "https://poloniex.com/", "wss://api.poloniex.com/")
 		{
-			m_key = key;
-			m_secret = secret;
-			m_cancel_token = cancel_token;
-			UrlBaseAddress = base_address;
-			UrlWssAddress = wss_address;
-			ServerRequestRateLimit = 6f;
-			Dispatcher = Dispatcher.CurrentDispatcher;
-			Hasher = new HMACSHA512(Encoding.ASCII.GetBytes(m_secret));
-			m_json = new JsonSerializer { NullValueHandling = NullValueHandling.Ignore };
-			Client = new HttpClient();
-			m_request_sw = new Stopwatch();
-			m_request_sw.Start();
+			Client.DefaultRequestHeaders.Add("Key", Key);
 		}
-		public virtual void Dispose()
-		{
-			Client = null;
-		}
-
-		/// <summary></summary>
-		public string UrlBaseAddress { get; }
-
-		/// <summary></summary>
-		public string UrlWssAddress { get; }
-
-		/// <summary>The Http client for RESTful requests</summary>
-		private HttpClient Client
-		{
-			get { return m_client; }
-			set
-			{
-				if (m_client == value) return;
-				if (m_client != null)
-				{
-					m_client.Dispose();
-				}
-				m_client = value;
-				if (m_client != null)
-				{
-					m_client.BaseAddress = new Uri(UrlBaseAddress + "tradingApi");
-					m_client.Timeout = TimeSpan.FromSeconds(10);
-					m_client.DefaultRequestHeaders.Add("Key", m_key);
-				}
-			}
-		}
-		private HttpClient m_client;
-
-		/// <summary>The maximum number of requests per second to the exchange server</summary>
-		public float ServerRequestRateLimit { get; set; }
-
-		/// <summary>For marshalling to the main thread</summary>
-		private Dispatcher Dispatcher { get; set; }
-		
-		/// <summary>Hasher</summary>
-		private HMACSHA512 Hasher { get; set; }
 
 		#region Public
 
@@ -91,7 +30,9 @@ namespace Poloniex.API
 		public async Task<Dictionary<string, PriceData>> GetTradePairs(CancellationToken? cancel = null)
 		{
 			// https://poloniex.com/public?command=returnTicker
-			var data = await GetData<Dictionary<string, PriceData>>("returnTicker", cancel);
+			var jtok = await GetData(Method.Public, "returnTicker", cancel);
+			var data = ParseJsonReply<Dictionary<string, PriceData>>(jtok);
+
 			foreach (var kv in data)
 				kv.Value.Pair = CurrencyPair.Parse(kv.Key);
 
@@ -102,9 +43,11 @@ namespace Poloniex.API
 		public async Task<Dictionary<string, OrderBook>> GetOrderBook(int depth, CancellationToken? cancel = null)
 		{
 			// https://poloniex.com/public?command=returnOrderBook&currencyPair=all&depth=10
-			var data = await GetData<Dictionary<string, OrderBook>>("returnOrderBook", cancel,
+			var jtok = await GetData(Method.Public, "returnOrderBook", cancel,
 				new KV("currencyPair","all"),
 				new KV("depth",depth));
+
+			var data = ParseJsonReply<Dictionary<string, OrderBook>>(jtok);
 			foreach (var kv in data)
 				kv.Value.Pair = CurrencyPair.Parse(kv.Key);
 
@@ -115,9 +58,11 @@ namespace Poloniex.API
 		public async Task<OrderBook> GetOrderBook(CurrencyPair pair, int depth, CancellationToken? cancel = null)
 		{
 			// https://poloniex.com/public?command=returnOrderBook&currencyPair=BTC_NXT&depth=10
-			var ob = await GetData<OrderBook>("returnOrderBook", cancel,
+			var jtok = await GetData(Method.Public, "returnOrderBook", cancel,
 				new KV("currencyPair", pair.Id),
 				new KV("depth", depth));
+
+			var ob = ParseJsonReply<OrderBook>(jtok);
 			ob.Pair = pair;
 			return ob;
 		}
@@ -126,32 +71,34 @@ namespace Poloniex.API
 		public async Task<List<Trade>> GetTradeHistory(CurrencyPair pair, CancellationToken? cancel = null)
 		{
 			// https://poloniex.com/public?command=returnTradeHistory&currencyPair=BTC_NXT
-			return await GetData<List<Trade>>("returnTradeHistory", cancel,
+			var jtok = await GetData(Method.Public, "returnTradeHistory", cancel,
 				new KV("currencyPair", pair.Id));
+
+			return ParseJsonReply<List<Trade>>(jtok);
 		}
-		public async Task<List<Trade>> GetTradeHistory(CurrencyPair pair, DateTimeOffset start_time, DateTimeOffset end_time, CancellationToken? cancel = null)
+		public async Task<List<Trade>> GetTradeHistory(CurrencyPair pair, UnixSec start_time, UnixSec end_time, CancellationToken? cancel = null)
 		{
 			// https://poloniex.com/public?command=returnTradeHistory&currencyPair=BTC_NXT&start=1410158341&end=1410499372
-			return await GetData<List<Trade>>("returnTradeHistory", cancel,
+			var jtok = await GetData(Method.Public, "returnTradeHistory", cancel,
 				new KV("currencyPair", pair.Id),
-				new KV("start", start_time.ToUnixTimeMilliseconds()),
-				new KV("end", end_time.ToUnixTimeMilliseconds()));
+				new KV("start", start_time),
+				new KV("end", end_time));
+
+			return ParseJsonReply<List<Trade>>(jtok);
 		}
 
 		/// <summary></summary>
-		public async Task<List<MarketChartData>> GetChartData(CurrencyPair pair, EMarketPeriod period, long time_beg, long time_end, CancellationToken? cancel = null)
-		{
-			return await GetChartData(pair, period, new DateTimeOffset(time_beg, TimeSpan.Zero), new DateTimeOffset(time_end, TimeSpan.Zero), cancel);
-		}
-		public async Task<List<MarketChartData>> GetChartData(CurrencyPair pair, EMarketPeriod period, DateTimeOffset time_beg, DateTimeOffset time_end, CancellationToken? cancel = null)
+		public async Task<List<MarketChartData>> GetChartData(CurrencyPair pair, EMarketPeriod period, UnixSec time_beg, UnixSec time_end, CancellationToken? cancel = null)
 		{
 			try
 			{
-				var data = await GetData<List<MarketChartData>>("returnChartData", cancel,
+				var jtok = await GetData(Method.Public, "returnChartData", cancel,
 					new KV("currencyPair", pair.Id),
-					new KV("start", time_beg.ToUnixTimeMilliseconds()),
-					new KV("end", time_end.ToUnixTimeMilliseconds()),
+					new KV("start", time_beg.Value),
+					new KV("end", time_end.Value),
 					new KV("period", (int)period));
+
+				var data = ParseJsonReply<List<MarketChartData>>(jtok);
 
 				// Poloniex returns a single invalid candle if there is no data within the range
 				return
@@ -174,15 +121,17 @@ namespace Poloniex.API
 		/// <summary>Return the balances for the account</summary>
 		public async Task<Dictionary<string, Balance>> GetBalances(CancellationToken? cancel = null)
 		{
-			return await PostData<Dictionary<string, Balance>>("returnCompleteBalances", cancel);
+			var jtok = await PostData(Method.Account, "returnCompleteBalances", cancel);
+			return ParseJsonReply<Dictionary<string, Balance>>(jtok);
 		}
 
 		/// <summary>Get currently open orders</summary>
 		public async Task<Dictionary<string, List<Order>>> GetOpenOrders(CancellationToken? cancel = null)
 		{
-			var positions = await PostData<Dictionary<string, List<Order>>>("returnOpenOrders", cancel,
+			var jtok = await PostData(Method.Account, "returnOpenOrders", cancel,
 				new KV("currencyPair", "all"));
 
+			var positions = ParseJsonReply<Dictionary<string, List<Order>>>(jtok);
 			foreach (var pos in positions)
 				foreach (var p in pos.Value)
 					p.Pair = CurrencyPair.Parse(pos.Key);
@@ -191,9 +140,10 @@ namespace Poloniex.API
 		}
 		public async Task<List<Order>> GetOpenOrders(CurrencyPair pair, CancellationToken? cancel = null)
 		{
-			var positions = await PostData<List<Order>>("returnOpenOrders", cancel,
+			var jtok = await PostData(Method.Account, "returnOpenOrders", cancel,
 				new KV("currencyPair", pair.Id));
 
+			var positions = ParseJsonReply<List<Order>>(jtok);
 			foreach (var pos in positions)
 				pos.Pair = pair;
 
@@ -201,32 +151,34 @@ namespace Poloniex.API
 		}
 
 		/// <summary>Get the trade history</summary>
-		public async Task<Dictionary<string, List<TradeCompleted>>> GetTradeHistory(DateTimeOffset? beg = null, DateTimeOffset? end = null, CancellationToken? cancel = null)
+		public async Task<Dictionary<string, List<TradeCompleted>>> GetTradeHistory(UnixSec? beg = null, UnixSec? end = null, CancellationToken? cancel = null)
 		{
 			var parms = new List<KV>(){ new KV("currencyPair", "all") };
 			if (beg != null && end != null)
 			{
-				parms.Add(new KV("start", beg.Value.ToUnixTimeMilliseconds()));
-				parms.Add(new KV("end", end.Value.ToUnixTimeMilliseconds()));
+				parms.Add(new KV("start", beg.Value.Value));
+				parms.Add(new KV("end", end.Value.Value));
 			}
 
-			var history = await PostData<Dictionary<string, List<TradeCompleted>>>("returnTradeHistory", cancel, parms.ToArray());
+			var jtok = await PostData(Method.Account, "returnTradeHistory", cancel, parms.ToArray());
+			var history = ParseJsonReply<Dictionary<string, List<TradeCompleted>>>(jtok);
 			foreach (var his in history)
 				foreach (var h in his.Value)
 					h.Pair = CurrencyPair.Parse(his.Key);
 
 			return history;
 		}
-		public async Task<List<TradeCompleted>> GetTradeHistory(CurrencyPair pair, DateTimeOffset? beg = null, DateTimeOffset? end = null, CancellationToken? cancel = null)
+		public async Task<List<TradeCompleted>> GetTradeHistory(CurrencyPair pair, UnixSec? beg = null, UnixSec? end = null, CancellationToken? cancel = null)
 		{
 			var parms = new List<KV>(){ new KV("currencyPair", pair.Id) };
 			if (beg != null && end != null)
 			{
-				parms.Add(new KV("start", beg.Value.ToUnixTimeMilliseconds()));
-				parms.Add(new KV("end", end.Value.ToUnixTimeMilliseconds()));
+				parms.Add(new KV("start", beg.Value.Value));
+				parms.Add(new KV("end", end.Value.Value));
 			}
 
-			var history = await PostData<List<TradeCompleted>>("returnTradeHistory", cancel, parms.ToArray());
+			var jtok = await PostData(Method.Account, "returnTradeHistory", cancel, parms.ToArray());
+			var history = ParseJsonReply<List<TradeCompleted>>(jtok);
 			foreach (var his in history)
 				his.Pair = pair;
 
@@ -234,64 +186,61 @@ namespace Poloniex.API
 		}
 
 		/// <summary>Get the history of deposits and withdrawals</summary>
-		public async Task<FundsTransfer> GetTransfers(DateTimeOffset beg, DateTimeOffset end, CancellationToken? cancel = null)
+		public async Task<FundsTransfer> GetTransfers(UnixSec beg, UnixSec end, CancellationToken? cancel = null)
 		{
 			var parms = new List<KV>
 			{
-				new KV("start", beg.ToUnixTimeMilliseconds()),
-				new KV("end", end.ToUnixTimeMilliseconds()),
+				new KV("start", beg.Value),
+				new KV("end", end.Value),
 			};
-			return await PostData<FundsTransfer>("returnDepositsWithdrawals", cancel, parms.ToArray());
+			var jtok = await PostData(Method.Account, "returnDepositsWithdrawals", cancel, parms.ToArray());
+			return ParseJsonReply<FundsTransfer>(jtok);
 		}
 
 		/// <summary>Create an order to buy/sell. Returns a unique order ID</summary>
-		public async Task<TradeResult> SubmitTrade(CurrencyPair pair, EOrderType type, decimal price_per_coin, decimal volume_base, CancellationToken? cancel = null)
+		public async Task<TradeResult> SubmitTrade(CurrencyPair pair, EOrderSide type, decimal price_per_coin, decimal volume_base, CancellationToken? cancel = null)
 		{
-			return await PostData<TradeResult>(Conv.ToString(type), cancel,
+			var jtok = await PostData(Method.Account, Conv.ToString(type), cancel,
 				new KV("currencyPair", pair.Id),
 				new KV("rate", price_per_coin),
 				new KV("amount", volume_base));
+
+			return ParseJsonReply<TradeResult>(jtok);
 		}
 
 		/// <summary>Cancel an order</summary>
 		public async Task<bool> CancelTrade(CurrencyPair pair, long order_id, CancellationToken? cancel = null)
 		{
-			var res = await PostData<JObject>("cancelOrder", cancel,
+			var jtok = await PostData(Method.Account, "cancelOrder", cancel,
 				new KV("currencyPair", pair.Id),
 				new KV("orderNumber", order_id));
 
-			return res.Value<byte>("success") == 1;
+			return jtok is JObject jobj && jobj.Value<byte>("success") == 1;
 		}
 
 		#endregion
 
 		/// <summary>Helper for GETs</summary>
-		private async Task<T> GetData<T>(string command, CancellationToken? cancel, params KV[] parameters)
+		private async Task<JToken> GetData(string method, string command, CancellationToken? cancel, params KV[] parameters)
 		{
 			// If called from the UI thread, disable the SynchronisationContext
 			// to prevent deadlocks when waiting for Async results.
 			using (Misc.NoSyncContext())
-			using (Scope.Create(() => ++m_blocked_count, () => --m_blocked_count))
 			{
 				// Poloniex requires the 'nonce' values to be strictly increasing.
 				// That means all POSTs must be serialised to avoid a race condition
 				// when POSTing two messages in quick succession.
-				var cancel_token = cancel ?? m_cancel_token;
-				using (m_lock.Lock(cancel_token))
+				var cancel_token = CancellationTokenSource.CreateLinkedTokenSource(Shutdown, cancel ?? CancellationToken.None).Token;
+				using (RequestThrottle.Lock(cancel_token)) // Limit requests to the required rate
 				{
-					// Test the cancel token after the lock, because lots of threads will end up
-					// waiting at the lock, and we want to cancel them all once cancel is signalled
-					cancel_token.ThrowIfCancellationRequested();
-
-					// Limit requests to the required rate
-					RequestThrottle();
+					await RequestThrottle.Wait(cancel_token);
 
 					// Add the command to the parameters
 					var kv = new List<KV>{new KV("command", command)};
 					kv.AddRange(parameters);
 
 					// Create the URL for the command + parameters
-					var url = $"{UrlBaseAddress}public{Misc.UrlEncode(kv)}";
+					var url = $"{UrlRestAddress}{method}{Misc.UrlEncode(kv)}";
 
 					// Submit the request
 					var response = await Client.GetAsync(url, cancel_token);
@@ -299,89 +248,76 @@ namespace Poloniex.API
 						throw new HttpException((int)response.StatusCode, response.ReasonPhrase);
 
 					// Interpret the reply
-					var reply = response.Content.ReadAsStringAsync().Result;
-					return ParseJsonReply<T>(reply);
+					var reply = await response.Content.ReadAsStringAsync();
+					return JToken.Parse(reply);
 				}
 			}
 		}
 
 		/// <summary>Helper for POSTs</summary>
-		private async Task<T> PostData<T>(string command, CancellationToken? cancel, params KV[] parameters)
+		private async Task<JToken> PostData(string method, string command, CancellationToken? cancel, params KV[] parameters)
 		{
 			// If called from the UI thread, disable the SynchronisationContext
 			// to prevent deadlocks when waiting for Async results.
 			using (Misc.NoSyncContext())
-			using (Scope.Create(() => ++m_blocked_count, () => --m_blocked_count))
 			{
 				// Poloniex requires the 'nonce' values to be strictly increasing.
 				// That means all POSTs must be serialised to avoid a race condition
 				// when POSTing two messages in quick succession.
-				var cancel_token = cancel ?? m_cancel_token;
-				using (m_lock.Lock(cancel_token))
+				var cancel_token = CancellationTokenSource.CreateLinkedTokenSource(Shutdown, cancel ?? CancellationToken.None).Token;
+				using (RequestThrottle.Lock(cancel_token)) // Limit requests to the required rate
 				{
-					// Limit requests to the required rate
-					RequestThrottle();
+					await RequestThrottle.Wait(cancel_token);
 
 					// Add the command parameter
 					var kv = new List<KV> { new KV("command", command), new KV("nonce", Misc.Nonce) };
 					kv.AddRange(parameters);
 
-					// Create the post data
-					var post_data_string = Misc.UrlEncode(kv).TrimStart('?');
-
 					// Create the content to POST
+					var post_data_string = Misc.UrlEncode(kv).TrimStart('?');
 					var content = new StringContent(post_data_string, Encoding.UTF8, "application/x-www-form-urlencoded");
 					var msg_hash = Hasher.ComputeHash(Encoding.UTF8.GetBytes(post_data_string));
 					var signature = Misc.ToStringHex(msg_hash);
 					content.Headers.Add("Sign", signature);
+
+					var url = $"{Client.BaseAddress}{method}{Misc.UrlEncode(kv)}";
 
 					// Submit the request
 					// Result Codes:
 					//  - 422 Un-processable Entity:
 					//    Status code is directly reported by Poloniex server. It means the server understands the content type of the request entity,
 					//    and the syntax of the request entity is correct, but was unable to process the contained instructions.
-					var response = await Client.PostAsync(Client.BaseAddress, content, cancel_token);
+					var response = await Client.PostAsync(url, content, cancel_token);
 					if (!response.IsSuccessStatusCode)
 						throw new HttpException((int)response.StatusCode, response.ReasonPhrase);
 
 					// Interpret the reply
-					var reply = response.Content.ReadAsStringAsync().Result;
-					return ParseJsonReply<T>(reply);
+					var reply = await response.Content.ReadAsStringAsync();
+					return JToken.Parse(reply);
 				}
 			}
 		}
-		private SemaphoreSlim m_lock = new SemaphoreSlim(1,1);
-		private int m_blocked_count;
 
 		/// <summary>Interpret a JSON reply that may be empty, an error, or valid data</summary>
-		private T ParseJsonReply<T>(string reply)
+		private T ParseJsonReply<T>(JToken jtok)
 		{
-			using (var tr = new JsonTextReader(new StringReader(reply)))
-			{
-				if (reply == "[]")
-					return Activator.CreateInstance<T>();
-						
-				if (reply.StartsWith("{\"error\""))
-					throw new PoloniexException(EErrorCode.Failure, m_json.Deserialize<ErrorResult>(tr).Message);
+			// If an empty array is returned, return a default instance of T
+			if (jtok is JArray jarr && jarr.Count == 0)
+				return Activator.CreateInstance<T>();
 
-				return m_json.Deserialize<T>(tr);
-			}
+			// Check for an error
+			if (jtok is JObject jobj && jobj["error"]?.Value<string>() is string error)
+				throw new PoloniexException(EErrorCode.Failure, error);
+
+			// Parse the result
+			return jtok.ToObject<T>();
 		}
 
-		/// <summary>Blocking method for throttling requests</summary>
-		private void RequestThrottle()
+		private static class Method
 		{
-			var request_period_ms = 1000 / ServerRequestRateLimit;
-			for (;;)
-			{
-				var delta = m_request_sw.ElapsedMilliseconds - m_last_request_ms;
-				if (delta < 0 || delta > request_period_ms) break;
-				Thread.Sleep((int)(request_period_ms - delta));
-			}
-			m_last_request_ms = m_request_sw.ElapsedMilliseconds;
+			public const string Public = "public";
+			public const string Account = "tradingApi";
 		}
-		private Stopwatch m_request_sw;
-		private long m_last_request_ms;
 	}
 
 	#region Event Args

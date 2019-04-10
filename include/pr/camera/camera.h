@@ -734,18 +734,12 @@ namespace pr
 		}
 
 		// Position the camera so that all of 'bbox' is visible to the camera when looking 'forward' and 'up'
-		void View(BBox const& bbox_, v4 const& forward, v4 const& up, float focus_dist = 0, bool preserve_aspect = true, bool update_base = true)
+		void View(BBox const& bbox, v4 const& forward, v4 const& up, float focus_dist = 0, bool preserve_aspect = true, bool update_base = true)
 		{
-			if (!bbox_.valid())
+			if (!bbox.valid())
 				throw std::exception("Camera: Cannot view an invalid bounding box");
-			if (bbox_.is_point())
+			if (bbox.is_point())
 				return;
-
-			// Handle degenerate bounding boxes
-			auto bbox = bbox_;
-			if (FEql(bbox.m_radius.x, 0)) bbox.m_radius.x = 0.001f * Length(bbox.m_radius);
-			if (FEql(bbox.m_radius.y, 0)) bbox.m_radius.y = 0.001f * Length(bbox.m_radius);
-			if (FEql(bbox.m_radius.z, 0)) bbox.m_radius.z = 0.001f * Length(bbox.m_radius);
 
 			// This code projects 'bbox' onto a plane perpendicular to 'forward' and
 			// at the nearest point of the bbox to the camera. It then ensures a circle
@@ -773,9 +767,20 @@ namespace pr
 				auto w2c = InvertFast(c2w);
 
 				auto bbox_cs = w2c * bbox;
-				auto width   = bbox_cs.SizeX();
-				auto height  = bbox_cs.SizeY();
-				assert(width != 0 && height != 0);
+				auto width  = bbox_cs.SizeX();
+				auto height = bbox_cs.SizeY();
+				auto aspect = width / height;
+
+				// Handle degeneracy
+				if (aspect < maths::float_eps || !IsFinite(aspect))
+				{
+					const float min_aspect = maths::tiny;
+					const float max_aspect = 1 / maths::tiny;
+					if      (width  > maths::float_eps) height = width / max_aspect;
+					else if (height > maths::float_eps) width = min_aspect / height;
+					else { width = 1; height = 1; }
+					aspect = width / height;
+				}
 
 				// Choose the fields of view. If 'focus_dist' is given, then that determines
 				// the X,Y field of view. If not, choose a focus distance based on a view size
@@ -787,7 +792,6 @@ namespace pr
 				}
 
 				// Set the aspect ratio
-				auto aspect = width / height;
 				auto d = focus_dist - sizez;
 
 				// Set the aspect and FOV based on the view of the bbox

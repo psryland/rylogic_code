@@ -270,7 +270,7 @@ namespace CoinFlip
 				}
 
 				/// <summary>Thread entry point for the instrument update thread</summary>
-				void UpdateThreadEntryPoint(Exchange exch, TradePair pair, ETimeFrame time_frame, TimeSpan poll_rate, long start_time)
+				void UpdateThreadEntryPoint(Exchange exch, TradePair pair, ETimeFrame time_frame, TimeSpan poll_rate, long start_time_ticks)
 				{
 					try
 					{
@@ -282,32 +282,36 @@ namespace CoinFlip
 						var max_request_period = Misc.TimeFrameToTicks(max_candles_per_request, time_frame);
 						long PeriodEnd(long b) => Math.Min(DateTimeOffset.UtcNow.Ticks, b + max_request_period);
 
-						var beg = start_time;
-						var end = PeriodEnd(beg);
+						var beg_ticks = start_time_ticks;
+						var end_ticks = PeriodEnd(beg_ticks);
 						for (;;)
 						{
 							if (m_update_thread_exit.WaitOne(poll_rate))
 								break;
 
 							// Try to request the entire candle range.
-							var data = exch.CandleData(pair, time_frame, beg, end, m_update_thread_cancel.Token).Result;
+							var data = exch.CandleData(pair, time_frame,
+								new DateTimeOffset(beg_ticks, TimeSpan.Zero),
+								new DateTimeOffset(end_ticks, TimeSpan.Zero),
+								m_update_thread_cancel.Token).Result;
+
 							if (data == null)
 							{
 								// If that fails, halve the range and try again
-								end = beg + (end - beg) / 2;
+								end_ticks = beg_ticks + (end_ticks - beg_ticks) / 2;
 								continue;
 							}
 							if (data.Count == 0)
 							{
 								// If the request returns no data, advance beg to end
-								beg = end;
-								end = PeriodEnd(beg);
+								beg_ticks = end_ticks;
+								end_ticks = PeriodEnd(beg_ticks);
 								continue;
 							}
 
 							// Update the time range to include the returned data
-							beg = data.Back().Timestamp;
-							end = PeriodEnd(beg);
+							beg_ticks = data.Back().Timestamp;
+							end_ticks = PeriodEnd(beg_ticks);
 
 							// Add the received data to the database
 							Misc.RunOnMainThread(() =>

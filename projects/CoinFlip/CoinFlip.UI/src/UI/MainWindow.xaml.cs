@@ -11,19 +11,34 @@ using Rylogic.Utility;
 
 namespace CoinFlip.UI
 {
-	public partial class MainWindow : Window
+	public partial class MainWindow : Window, INotifyPropertyChanged
 	{
 		public MainWindow()
 		{
 			InitializeComponent();
-			m_root.DataContext = this;
 			Model = new Model();
-			SetupUI();
+
+			// Commands
+			LogOn = Command.Create(this, LogOnInternal);
+			ToggleLiveTrading = Command.Create(this, () => Model.AllowTrades = !Model.AllowTrades);
+			ToggleBackTesting = Command.Create(this, () => Model.BackTesting = !Model.BackTesting);
+
+			// Dock container windows
+			m_dc.Add(new GridExchanges(Model), EDockSite.Left);
+			m_dc.Add(new GridCoins(Model), EDockSite.Left, EDockSite.Bottom);
+			m_dc.Add(new GridTradeOrders(Model), 0, EDockSite.Bottom);
+			m_dc.Add(new GridTradeHistory(Model), 1, EDockSite.Bottom);
+			m_dc.Add(new LogView(), 2, EDockSite.Centre);
+			m_dc.Add(new CandleChart(Model), 1, EDockSite.Centre);
+			m_dc.Add(new CandleChart(Model), 0, EDockSite.Centre);
+			m_menu.Items.Add(m_dc.WindowsMenu());
+
+			DataContext = this;
 		}
 		protected override void OnSourceInitialized(EventArgs e)
 		{
 			base.OnSourceInitialized(e);
-			LogOn();
+			LogOnInternal();
 		}
 		protected override void OnClosing(CancelEventArgs e)
 		{
@@ -58,35 +73,62 @@ namespace CoinFlip.UI
 			set
 			{
 				if (m_model == value) return;
-				Util.Dispose(ref m_model);
+				if (m_model != null)
+				{
+					Model.AllowTradesChanged -= HandleAllowTradesChanged;
+					Model.BackTestingChanged -= HandleBackTestingChanged;
+					Util.Dispose(ref m_model);
+				}
 				m_model = value;
+				if (m_model != null)
+				{
+					Model.BackTestingChanged += HandleBackTestingChanged;
+					Model.AllowTradesChanged += HandleAllowTradesChanged;
+				}
+
+				// Handler
+				void HandleAllowTradesChanged(object sender, EventArgs e)
+				{
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AllowTrades)));
+				}
+				void HandleBackTestingChanged(object sender, EventArgs e)
+				{
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BackTesting)));
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Simulation)));
+				}
 			}
 		}
 		private Model m_model;
 
-		/// <summary>Set up UI elements</summary>
-		private void SetupUI()
+		/// <summary>The current state of live trading</summary>
+		public bool AllowTrades
 		{
-			#region Menu
-			m_menu_file_skin_toggle.Click += (s, a) =>
-			{
-				App.Skin = Enum<ESkin>.Cycle(App.Skin);
-				Application.Current.Shutdown();
-				Process.Start(Application.ResourceAssembly.Location);
-			};
-			m_menu.Items.Add(m_dc.WindowsMenu());
-			#endregion
-
-			m_dc.Add(new CandleChart(Model), EDockSite.Centre);
-			m_dc.Add(new GridExchanges(Model), EDockSite.Left);
-			m_dc.Add(new GridCoins(Model), EDockSite.Left, EDockSite.Bottom);
-			m_dc.Add(new GridTradeOrders(Model), 0, EDockSite.Bottom);
-			m_dc.Add(new GridTradeHistory(Model), 1, EDockSite.Bottom);
-			m_dc.Add(new LogView(), 1, EDockSite.Centre);
+			get => Model.AllowTrades;
+			set => Model.AllowTrades = value;
 		}
 
+		/// <summary>The current state of back testing mode</summary>
+		public bool BackTesting
+		{
+			get => Model.BackTesting;
+			set => Model.BackTesting = value;
+		}
+
+		/// <summary>Access the main simulation model</summary>
+		public Simulation Simulation => Model.Simulation;
+
+		/// <summary></summary>
+		public decimal NettWorth => 0m;//todo Model.NettWorth;
+
+		/// <summary>Toggle the live trading switch</summary>
+		public Command ToggleLiveTrading { get; }
+
+		/// <summary>Toggle the state of back testing</summary>
+		public Command ToggleBackTesting { get; }
+
 		/// <summary>Change the logged on user</summary>
-		private void LogOn()
+		public Command LogOn { get; }
+		private void LogOnInternal()
 		{
 			// Log off first
 			Model.User = null;
@@ -109,5 +151,8 @@ namespace CoinFlip.UI
 			Model.User = ui.User;
 			Title = $"Coin Flip - {Model.User.Name}";
 		}
+
+		/// <summary></summary>
+		public event PropertyChangedEventHandler PropertyChanged;
 	}
 }

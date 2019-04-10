@@ -10,7 +10,7 @@ using Rylogic.Utility;
 
 namespace Binance.API
 {
-	public static class Conv
+	internal static class Conv
 	{
 	}
 

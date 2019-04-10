@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Media;
 using CoinFlip.Settings;
+using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
@@ -15,7 +18,7 @@ using Rylogic.Utility;
 
 namespace CoinFlip.UI
 {
-	public partial class CandleChart : Grid, IDockable, IDisposable
+	public partial class CandleChart : Grid, IDockable, IDisposable, INotifyPropertyChanged, IChartView
 	{
 		public CandleChart(Model model)
 		{
@@ -29,10 +32,18 @@ namespace CoinFlip.UI
 			GfxBid = new GfxObjects.SpotPrice(SettingsData.Settings.Chart.BidColour);
 			GfxUpdatingText = new GfxObjects.UpdatingText();
 
+			// Commands
+			ToggleShowOpenOrders = Command.Create(this, ToggleShowOpenOrdersInternal);
+			ToggleShowCompletedOrders = Command.Create(this, ToggleShowCompletedOrdersInternal);
+			EditTrade = Command.Create(this, EditTradeInternal);
+
+			ModifyContextMenus();
 			DataContext = this;
 		}
 		public void Dispose()
 		{
+			GfxOpenOrder = null;
+			GfxCompletedOrder = null;
 			GfxUpdatingText = null;
 			GfxCandles = null;
 			ChartSelector = null;
@@ -51,10 +62,41 @@ namespace CoinFlip.UI
 				if (m_model == value) return;
 				if (m_model != null)
 				{
+					m_model.Charts.CollectionChanged -= HandleChartsCollectionChanged;
+					SettingsData.Settings.Chart.SettingChange -= HandleSettingChange;
+					m_model.Charts.Remove(this);
 				}
 				m_model = value;
 				if (m_model != null)
 				{
+					m_model.Charts.Add(this);
+					SettingsData.Settings.Chart.SettingChange += HandleSettingChange;
+					m_model.Charts.CollectionChanged += HandleChartsCollectionChanged;
+				}
+				HandleChartsCollectionChanged(this, null);
+
+				// Handler
+				void HandleSettingChange(object sender, SettingChangeEventArgs e)
+				{
+					switch (e.Key)
+					{
+					case nameof(ChartSettings.ShowOpenOrders):
+						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowOpenOrders)));
+						Chart.Scene.Invalidate();
+						break;
+					case nameof(ChartSettings.ShowCompletedOrders):
+						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowCompletedOrders)));
+						Chart.Scene.Invalidate();
+						break;
+					case nameof(ChartSettings.XAxisLabelMode):
+						Chart.XAxisPanel.Invalidate();
+						break;
+					}
+				}
+				void HandleChartsCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+				{
+					DockControl.TabText = ChartName;
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ChartName)));
 				}
 			}
 		}
@@ -109,6 +151,7 @@ namespace CoinFlip.UI
 				if (m_chart == value) return;
 				if (m_chart != null)
 				{
+					m_chart.ChartMoved -= HandleMoved;
 					m_chart.BuildScene -= HandleBuildScene;
 					m_chart.MouseDown -= HandleMouseDown;
 					m_chart.AutoRanging -= HandleAutoRanging;
@@ -121,16 +164,18 @@ namespace CoinFlip.UI
 				{
 					// Customise the chart for candles
 					m_chart.Options.AntiAliasing = false;
+					m_chart.Options.Orthographic = true;
+					m_chart.Options.SelectionColour = new Colour32(0x80BFD5EB);
 					m_chart.XAxis.Options.PixelsPerTick = 50.0;
 					m_chart.XAxis.Options.TickTextTemplate = "XX:XX\r\nXXX XX XXXX";
 					m_chart.YAxis.Options.TickTextTemplate = "X.XXXX";
 					m_chart.XAxis.TickText = HandleChartXAxisTickText;
 					m_chart.YAxis.TickText = HandleChartYAxisTickText;
 					m_chart.YAxis.Options.Side = Dock.Right;
-					ModifyContextMenus();
 					m_chart.AutoRanging += HandleAutoRanging;
 					m_chart.MouseDown += HandleMouseDown;
 					m_chart.BuildScene += HandleBuildScene;
+					m_chart.ChartMoved += HandleMoved;
 				}
 
 				// Handlers
@@ -163,16 +208,20 @@ namespace CoinFlip.UI
 						return string.Empty;
 
 					// Get the date time for the tick
+					// To prevent date time overflow, limit the extrapolation of tick values
 					var dt_curr =
-						curr >= first && curr < last ? Instrument[curr].TimestampUTC :
-						curr < first ? Instrument[0].TimestampUTC - Misc.TimeFrameToTimeSpan(first - curr, Instrument.TimeFrame) :
-						curr >= last ? Instrument[last - 1].TimestampUTC + Misc.TimeFrameToTimeSpan(curr - last + 1, Instrument.TimeFrame) :
-						throw new Exception("Impossible candle index");
+						curr < first ? default(DateTimeOffset) :
+						curr < last ? Instrument[curr].TimestampUTC :
+						curr < last + 1000 ? Instrument[last - 1].TimestampUTC + Misc.TimeFrameToTimeSpan(curr - last + 1, Instrument.TimeFrame) :
+						default(DateTimeOffset);
 					var dt_prev =
-						prev >= first && prev < last ? Instrument[prev].TimestampUTC :
-						prev < first ? Instrument[0].TimestampUTC - Misc.TimeFrameToTimeSpan(first - prev, Instrument.TimeFrame) :
-						prev >= last ? Instrument[last - 1].TimestampUTC + Misc.TimeFrameToTimeSpan(prev - last + 1, Instrument.TimeFrame) :
-						throw new Exception("Impossible candle index");
+						prev < first ? default(DateTimeOffset) :
+						prev < last ? Instrument[prev].TimestampUTC :
+						prev < last + 1000 ? Instrument[last - 1].TimestampUTC + Misc.TimeFrameToTimeSpan(prev - last + 1, Instrument.TimeFrame) :
+						default(DateTimeOffset);
+					if (dt_curr == default(DateTimeOffset) ||
+						dt_prev == default(DateTimeOffset))
+						return string.Empty;
 
 					// Get the date time values in the correct time zone
 					dt_curr = (SettingsData.Settings.Chart.XAxisLabelMode == EXAxisLabelMode.LocalTime)
@@ -218,27 +267,61 @@ namespace CoinFlip.UI
 					if (Instrument == null)
 						return;
 
-					// Display the last few candles @ N pixels per candle
 					var bb = BBox.Reset;
-					var width = (int)(Chart.Scene.ActualWidth / 6); // in candles
-					var idx_min = Instrument.Count - width * 4 / 5;
-					var idx_max = Instrument.Count + width * 1 / 5;
-					foreach (var candle in Instrument.CandleRange(idx_min, idx_max))
+					if (e.Axes.HasFlag(ChartControl.EAxis.XAxis) && e.Axes.HasFlag(ChartControl.EAxis.YAxis))
 					{
-						bb = BBox.Encompass(bb, new v4(idx_min, (float)candle.Low, -ZOrder.Max, 1f));
-						bb = BBox.Encompass(bb, new v4(idx_max, (float)candle.High, +ZOrder.Max, 1f));
+						// Display the last few candles @ N pixels per candle
+						var width = (int)(Chart.Scene.ActualWidth / 6); // in candles
+						var idx_min = Instrument.Count - width * 4 / 5;
+						var idx_max = Instrument.Count + width * 1 / 5;
+						foreach (var candle in Instrument.CandleRange(idx_min, idx_max))
+						{
+							bb = BBox.Encompass(bb, new v4(idx_min, (float)candle.Low, -ZOrder.Max, 1f));
+							bb = BBox.Encompass(bb, new v4(idx_max, (float)candle.High, +ZOrder.Max, 1f));
+						}
+					}
+					else if (e.Axes.HasFlag(ChartControl.EAxis.YAxis))
+					{
+						var idx_min = (int)Chart.XAxis.Min;
+						var idx_max = (int)Chart.XAxis.Max;
+						foreach (var candle in Instrument.CandleRange(idx_min, idx_max))
+						{
+							bb = BBox.Encompass(bb, new v4(idx_min, (float)candle.Low, -ZOrder.Max, 1f));
+							bb = BBox.Encompass(bb, new v4(idx_max, (float)candle.High, +ZOrder.Max, 1f));
+						}
+					}
+					else if (e.Axes.HasFlag(ChartControl.EAxis.XAxis))
+					{
+						// Display the last few candles @ N pixels per candle
+						var width = (int)(Chart.Scene.ActualWidth / 6); // in candles
+						var idx_min = Instrument.Count - width * 4 / 5;
+						var idx_max = Instrument.Count + width * 1 / 5;
+						bb = BBox.Encompass(bb, new v4(idx_min, (float)Chart.YAxis.Min, -ZOrder.Max, 1f));
+						bb = BBox.Encompass(bb, new v4(idx_max, (float)Chart.YAxis.Max, +ZOrder.Max, 1f));
+					}
+					else
+					{
+						bb = BBox.Encompass(bb, new v4((float)Chart.XAxis.Min, (float)Chart.YAxis.Min, -ZOrder.Max, 1f));
+						bb = BBox.Encompass(bb, new v4((float)Chart.XAxis.Max, (float)Chart.YAxis.Max, +ZOrder.Max, 1f));
 					}
 
 					// Include trades
-					if (SettingsData.Settings.Chart.ShowPositions)
+					switch (ShowOpenOrders)
 					{
+					default: break;
 						// Add 'thick' bounding boxes for the trades
-						throw new NotImplementedException();
+						//throw new NotImplementedException();
 						//foreach (var pos in AllPositions)
 						//{
 						//	bb = BBox.Encompass(bb, new v4(bb.Centre.x, (float)(decimal)pos.PriceQ2B * 1.01f, ZOrder.Trades, 1f));
 						//	bb = BBox.Encompass(bb, new v4(bb.Centre.x, (float)(decimal)pos.PriceQ2B * 0.99f, ZOrder.Trades, 1f));
 						//}
+					}
+
+					// Include trade history
+					switch (ShowCompletedOrders)
+					{
+					default: break;
 					}
 
 					// Swell the box a little for margins
@@ -253,142 +336,9 @@ namespace CoinFlip.UI
 				{
 					BuildScene(e.Window);
 				}
-				void ModifyContextMenus()
+				void HandleMoved(object sender, ChartControl.ChartMovedEventArgs e)
 				{
-					{// Chart menu
-						var idx = 0;
-						var cmenu = m_chart.Scene.ContextMenu;
-						var indicators_menu = cmenu.Items.Insert2(idx++, new MenuItem { Header = "Indicators" });
-						{
-							// Add a new indicator
-							var add_menu = indicators_menu.Items.Add2(new MenuItem { Header = "Add Indicator" });
-							{
-								{
-									// MA
-									var opt = add_menu.Items.Add2(new MenuItem { Header = "Moving Average" });
-									opt.Click += (s, a) =>
-									{
-										//	EditMaIndicator();
-									};
-								}
-								{
-									//// S&R Level
-									//var opt = add_menu.DropDownItems.Add2(new ToolStripMenuItem("Support/Resistance Level"));
-									//opt.Click += (s,a) =>
-									//{
-									//	// SnR levels are an Instrument thing. Add the SnRLevel to the instrument.
-									//	// We'll notice it in a different handler and add an indicator for it there.
-									//	var snr = new SnRLevel(e.HitResult.ChartPoint.Y, m_chart.YAxis.Span * 0.05 / Instrument.PriceData.PipSize);
-									//	Instrument.SupportResistLevels.Add(snr);
-									//	EditSnRLevel(Indicators.OfType<SnRIndicator>().First(x => x.Id == snr.Id));
-									//};
-								}
-								{
-									//// S&R
-									//var opt = add_menu.DropDownItems.Add2(new ToolStripMenuItem("Support and Resistance"));
-									//opt.Click += (s,a) => EditSnRIndicator();
-								}
-								{
-									//// Trend Strength
-									//var opt = add_menu.DropDownItems.Add2(new ToolStripMenuItem("Trend Strength"));
-									//opt.Click += (s,a) => EditTrendStrengthIndicator();
-								}
-							}
-
-							indicators_menu.Items.Add2(new Separator());
-
-							// // Modify existing indicators
-							// var hit_indicators = e.HitResult.Hits.Where(x => x.Element is Indicator).Select(x => (Indicator)x.Element).ToArray();
-							// foreach (var indicator in Indicators)
-							// {
-							// 	var is_hit = hit_indicators.Contains(indicator);
-							// 	var colour = is_hit ? Color.Blue : Color.Black;
-							// 	var font = is_hit ? new Font(e.Menu.Font, FontStyle.Bold) : e.Menu.Font;
-							// 	var opt = indicators_menu.DropDownItems.Add2(new ToolStripIndiatorMenuItem(indicator.Name) { ForeColor = colour, Font = font });
-							// 	opt.CrossClicked += (s, a) => Indicators.Remove(indicator);
-							// 	opt.Click += (s, a) => EditIndicator(indicator);
-							// }
-						}
-						var orders_menu = cmenu.Items.Insert2(idx++, new MenuItem { Header = "Orders" });
-						{
-							//if (Instrument != null)
-							//{
-							//	// The price where the mouse was clicked
-							//	var click_price = ((decimal)e.HitResult.ChartPoint.Y)._(Instrument.Pair.RateUnits);
-							//
-							//	// The corresponding pair on the currently selected exchange
-							//	var pair = Model.FindPairOnCurrentExchange(Instrument.Pair.Name);
-							//	if (pair != null)
-							//	{
-							//		{// Buy base currency (Q2B)
-							//			var trade = new Trade(Fund.Main, ETradeType.Q2B, pair, click_price);
-							//			var opt = e.Menu.Items.Insert2(idx++, new ToolStripMenuItem($"{OrderType(trade)} at {trade.PriceQ2B.ToString("G6")}") { ForeColor = ChartSettings.AskColour });
-							//			opt.Click += (s, a) =>
-							//			{
-							//				Model.EditTrade(trade, null);
-							//			};
-							//		}
-							//		{// Buy quote currency (B2Q)
-							//			var trade = new Trade(Fund.Main, ETradeType.B2Q, pair, click_price);
-							//			var opt = e.Menu.Items.Insert2(idx++, new ToolStripMenuItem($"{OrderType(trade)} at {trade.PriceQ2B.ToString("G6")}") { ForeColor = ChartSettings.BidColour });
-							//			opt.Click += (s, a) =>
-							//			{
-							//				Model.EditTrade(trade, null);
-							//			};
-							//		}
-							//	}
-							//
-							//	string OrderType(Trade trade)
-							//	{
-							//		return
-							//			trade == null ? "Market order" :
-							//			trade.OrderType == EPlaceOrderType.Market ? (trade.TradeType == ETradeType.Q2B ? "Buy" : "Sell") :
-							//			trade.OrderType == EPlaceOrderType.Limit ? "Limit order" :
-							//			trade.OrderType == EPlaceOrderType.Stop ? "Stop order" :
-							//			string.Empty;
-							//	}
-							//}
-						}
-						var rendering_menu = cmenu.Items.Insert2(idx++, new MenuItem { Header = "Rendering" });
-						{
-							// Move all original chart menu options into a sub menu called 'Rendering'
-							for (; cmenu.Items.Count > idx;)
-							{
-								var item = cmenu.Items[idx];
-								cmenu.Items.RemoveAt(idx);
-								rendering_menu.Items.Add(item);
-							}
-						}
-						cmenu.Items.TidySeparators();
-					}
-					{// XAxis menu
-						var idx = 0;
-						var cmenu = m_chart.XAxis.ContextMenu;
-						{
-							var opt = cmenu.Items.Insert2(idx++, new MenuItem { Header = "Label Mode" });
-							{
-								var cb = opt.Items.Add2(new ComboBox
-								{
-									ItemsSource = Enum<EXAxisLabelMode>.ValuesArray,
-									SelectedItem = SettingsData.Settings.Chart.XAxisLabelMode,
-									Style = FindResource(System.Windows.Controls.ToolBar.ComboBoxStyleKey) as Style,
-									Background = SystemColors.ControlBrush,
-									BorderThickness = new Thickness(0),
-									Margin = new Thickness(1, 1, 20, 1),
-									MinWidth = 80,
-								});
-								cb.SetBinding(ComboBox.SelectedItemProperty, new Binding(nameof(ChartSettings.XAxisLabelMode)) { Source = SettingsData.Settings.Chart });
-								cb.SelectionChanged += (s, a) =>
-								{
-									SettingsData.Settings.Chart.XAxisLabelMode = (EXAxisLabelMode)cb.SelectedItem;
-									m_chart.InvalidateArrange();
-								};
-							}
-						}
-						cmenu.Items.TidySeparators();
-					}
-					{// YAxis menu
-					}
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(VisibleTimeSpan)));
 				}
 			}
 		}
@@ -406,12 +356,16 @@ namespace CoinFlip.UI
 					m_instrument.DataSyncingChanged -= HandleDataSyncingChanged;
 					m_instrument.DataChanged -= HandleDataChanged;
 					Util.Dispose(m_instrument);
+					GfxCompletedOrder = null;
+					GfxOpenOrder = null;
 					GfxCandles = null;
 				}
 				m_instrument = value;
 				if (m_instrument != null)
 				{
 					GfxCandles = new GfxObjects.Candles(m_instrument);
+					GfxOpenOrder = new GfxObjects.OpenOrder(m_instrument);
+					GfxCompletedOrder = new GfxObjects.CompletedOrder(m_instrument);
 					m_instrument.DataChanged += HandleDataChanged;
 					m_instrument.DataSyncingChanged += HandleDataSyncingChanged;
 				}
@@ -459,6 +413,34 @@ namespace CoinFlip.UI
 			}
 		}
 		private Instrument m_instrument;
+
+		/// <summary>A string description of the period of time shown in the chart</summary>
+		public string VisibleTimeSpan
+		{
+			get
+			{
+				if (Instrument == null)
+					return string.Empty;
+
+				var candle_span = Chart.XAxis.Range.Size;
+				var ticks = Misc.TimeFrameToTicks(candle_span, Instrument.TimeFrame);
+				return TimeSpan.FromTicks(ticks).ToPrettyString();
+			}
+		}
+
+		/// <summary>Show currently open orders on the chart</summary>
+		public EShowItems ShowOpenOrders
+		{
+			get => SettingsData.Settings.Chart.ShowOpenOrders;
+			set => SettingsData.Settings.Chart.ShowOpenOrders = value;
+		}
+
+		/// <summary>Show completed orders on the chart</summary>
+		public EShowItems ShowCompletedOrders
+		{
+			get => SettingsData.Settings.Chart.ShowCompletedOrders;
+			set => SettingsData.Settings.Chart.ShowCompletedOrders = value;
+		}
 
 		/// <summary>Add graphics and elements to the chart</summary>
 		private void BuildScene(View3d.Window window)
@@ -512,35 +494,73 @@ namespace CoinFlip.UI
 				}
 			}
 
-			// Trades
+			// Open Orders
 			{
 				// Draw all positions on this instruction
-				if (SettingsData.Settings.Chart.ShowPositions)
+				switch (ShowOpenOrders)
 				{
-				//	foreach (var pos in VisiblePositions)
-				//		window.AddObject(GfxPositions.Get(pos));
+				default: throw new Exception($"Unknown 'ShowOpenOrders' mode: {ShowOpenOrders}");
+				case EShowItems.Disabled: break;
+				case EShowItems.Selected:
+					{
+						foreach (var item in Model.SelectedOpenOrders)
+							window.AddObject(GfxOpenOrder.Get(item, Chart.XAxis.Span, Chart.YAxis.Span));
+
+						break;
+					}
+				case EShowItems.All:
+					{
+						if (Instrument.Count == 0) break;
+						var time_min = Instrument.TimeAtFIndex(Chart.XAxis.Min);
+						var time_max = Instrument.TimeAtFIndex(Chart.XAxis.Max);
+						var price_min = ((decimal)Chart.YAxis.Min)._(Instrument.RateUnits);
+						var price_max = ((decimal)Chart.YAxis.Max)._(Instrument.RateUnits);
+						foreach (var item in Exchange.Orders.Values.Where(Visible))
+							window.AddObject(GfxOpenOrder.Get(item, Chart.XAxis.Span, Chart.YAxis.Span));
+
+						bool Visible(Order ord)
+						{
+							return
+								ord.Pair.Equals(Pair) &&
+								ord.Created != null && ord.Created.Value.Ticks.Within(time_min, time_max) &&
+								ord.PriceQ2B.Within(price_min, price_max);
+						}
+						break;
+					}
 				}
+			}
 
+			// Completed Orders
+			{
 				// Draw the selected history trade
-				switch (SettingsData.Settings.Chart.ShowTradeHistory)
+				switch (ShowCompletedOrders)
 				{
-				default: throw new Exception("Unknown trade history mode");
-				case EShowTradeHistory.Disabled:
+				default: throw new Exception($"Unknown 'ShowCompletedOrders' mode: {ShowCompletedOrders}");
+				case EShowItems.Disabled: break;
+				case EShowItems.Selected:
 					{
-						break;
-					}
-				case EShowTradeHistory.Selected:
-					{
-						//var his = Model.History.Current;
-						//if (his.Pair.Name == Instrument.Pair.Name)
-						//	window.AddObject(GfxHistory.Get(his));
+						foreach (var item in Model.SelectedCompletedOrders)
+							window.AddObject(GfxCompletedOrder.Get(item, Chart.XAxis.Span, Chart.YAxis.Span));
 
 						break;
 					}
-				case EShowTradeHistory.All:
+				case EShowItems.All:
 					{
-						//foreach (var his in VisibleHistory)
-						//	window.AddObject(GfxHistory.Get(his));
+						if (Instrument.Count == 0) break;
+						var time_min = Instrument.TimeAtFIndex(Chart.XAxis.Min);
+						var time_max = Instrument.TimeAtFIndex(Chart.XAxis.Max);
+						var price_min = ((decimal)Chart.YAxis.Min)._(Instrument.RateUnits);
+						var price_max = ((decimal)Chart.YAxis.Max)._(Instrument.RateUnits);
+						foreach (var item in Exchange.History.Values.Where(Visible))
+							window.AddObject(GfxCompletedOrder.Get(item, Chart.XAxis.Span, Chart.YAxis.Span));
+
+						bool Visible(OrderCompleted his)
+						{
+							return
+								his.Pair.Equals(Pair) &&
+								his.Created.Ticks.Within(time_min, time_max) &&
+								his.PriceQ2B.Within(price_min, price_max);
+						}
 						break;
 					}
 				}
@@ -576,8 +596,6 @@ namespace CoinFlip.UI
 			// Put the call out so others can draw on this chart
 			//BuildScene?.Invoke(this, args);
 		}
-
-		//public event EventHandler<View3dControl.BuildSceneEventArgs> BuildScene;
 
 		/// <summary>Graphics objects for the candle data</summary>
 		private GfxObjects.Candles GfxCandles
@@ -631,12 +649,269 @@ namespace CoinFlip.UI
 		}
 		private GfxObjects.UpdatingText m_gfx_updating_text;
 
+		/// <summary>Graphics for open orders</summary>
+		private GfxObjects.OpenOrder GfxOpenOrder
+		{
+			get { return m_gfx_open_order; }
+			set
+			{
+				if (m_gfx_open_order == value) return;
+				Util.Dispose(ref m_gfx_open_order);
+				m_gfx_open_order = value;
+			}
+		}
+		private GfxObjects.OpenOrder m_gfx_open_order;
+
+		/// <summary>Graphics for completed orders</summary>
+		private GfxObjects.CompletedOrder GfxCompletedOrder
+		{
+			get { return m_gfx_completed_order; }
+			set
+			{
+				if (m_gfx_completed_order == value) return;
+				Util.Dispose(ref m_gfx_completed_order);
+				m_gfx_completed_order = value;
+			}
+		}
+		private GfxObjects.CompletedOrder m_gfx_completed_order;
+
+		/// <summary>Add an ordinal to the chart name based on it's position in the model's chart view collection</summary>
+		public string ChartName => Model != null && Model.Charts.Count != 1 ? $"Chart:{Model.Charts.IndexOf(this)+1}" : $"Chart";
+
+		/// <summary>The source exchange</summary>
+		public Exchange Exchange
+		{
+			get => ChartSelector.Exchange;
+			set => ChartSelector.Exchange = value;
+		}
+
+		/// <summary>The source pair</summary>
+		public TradePair Pair
+		{
+			get => ChartSelector.Pair;
+			set => ChartSelector.Pair = value;
+		}
+
+		/// <summary>The source time frame</summary>
+		public ETimeFrame TimeFrame
+		{
+			get => ChartSelector.TimeFrame;
+			set => ChartSelector.TimeFrame = value;
+		}
+
+		/// <summary>True if this chart is the active content in it's dock pane</summary>
+		public bool IsActiveContentInPane => DockControl.IsActiveContentInPane;
+
+		/// <summary>Bring this chart to the front of any dock pane it's in</summary>
+		public void EnsureActiveContent()
+		{
+			DockControl.DockContainer.FindAndShow(this);
+		}
+
+		/// <summary>Scroll the chart to make 'time' visible</summary>
+		public void ScrollToTime(DateTimeOffset time)
+		{
+			var tft = new TimeFrameTime(time, TimeFrame);
+			var idx_range = Instrument.TimeToIndexRange(tft, tft);
+			if (!Chart.XAxis.Range.Contains(idx_range))
+			{
+				Chart.XAxis.Centre = idx_range.Beg;
+				Chart.AutoRange(axes: ChartControl.EAxis.YAxis);
+				Chart.Scene.Invalidate();
+			}
+		}
+
+		/// <summary>Cycle the 'show open orders' state</summary>
+		public Command ToggleShowOpenOrders { get; }
+		private void ToggleShowOpenOrdersInternal()
+		{
+			ShowOpenOrders = Enum<EShowItems>.Cycle(ShowOpenOrders);
+		}
+
+		/// <summary>Cycle the 'show completed orders' state</summary>
+		public Command ToggleShowCompletedOrders { get; }
+		private void ToggleShowCompletedOrdersInternal()
+		{
+			ShowCompletedOrders = Enum<EShowItems>.Cycle(ShowCompletedOrders);
+		}
+
+		/// <summary>Edit a trade</summary>
+		public Command EditTrade { get; }
+		private void EditTradeInternal(object x)
+		{
+			var trade = (Trade)x;
+			var ui = new EditTradeUI(Window.GetWindow(this), Model, trade, null);
+			ui.Show();
+		}
+
+		/// <summary>Replace the chart context menus</summary>
+		private void ModifyContextMenus()
+		{
+			// Modify the main chart area menu
+			{
+				var cmenu = m_chart.Scene.ContextMenu;
+
+				// Move the existing chart menu into a sub menu
+				var chart_options_menu = new MenuItem { Header = "Chart Options" };
+				{
+					var items = cmenu.Items.Cast<MenuItem>().ToList();
+					cmenu.Items.Clear();
+					chart_options_menu.Items.AddRange(items);
+				}
+
+				// Indicators sub menu
+				var indicators_menu = cmenu.Items.Add2(new MenuItem { Header = "Indicators" });
+				{
+					// Add an option to add an indicator to the chart
+					var add_menu = indicators_menu.Items.Add2(new MenuItem { Header = "Add Indicator" });
+					{
+						// New Moving Average
+						var opt = add_menu.Items.Add2(new MenuItem { Header = "Moving Average" });
+						opt.Click += (s, a) =>
+						{
+							throw new NotImplementedException("Edit Moving Average Indicator not implemented");
+						};
+					}
+					{
+						// Trend line
+						var opt = add_menu.Items.Add2(new MenuItem { Header = "Trend Line" });
+						opt.Click += (s, a) =>
+						{
+							throw new NotImplementedException("Edit Trend Line Indicator not implemented");
+						};
+					}
+					{
+						// Horizontal line
+						var opt = add_menu.Items.Add2(new MenuItem { Header = "Horizontal Line" });
+						opt.Click += (s, a) =>
+						{
+							throw new NotImplementedException("Edit Horizontal Line Indicator not implemented");
+						};
+					}
+					{
+						// Vertical line
+						var opt = add_menu.Items.Add2(new MenuItem { Header = "Vertical Line" });
+						opt.Click += (s, a) =>
+						{
+							throw new NotImplementedException("Edit Vertical Line Indicator not implemented");
+						};
+					}
+
+					// When the indicators menu opens, add menu items for any existing indicators
+					indicators_menu.SubmenuOpened += (s, a) =>
+					{
+						for (; indicators_menu.Items.Count > 1;)
+							indicators_menu.Items.RemoveAt(1);
+
+						indicators_menu.Items.Add(new Separator());
+						indicators_menu.Items.Add2(new MenuItem { Header = "<placeholder1>" });
+						indicators_menu.Items.Add2(new MenuItem { Header = "<placeholder2>" });
+					};
+				}
+
+				cmenu.Items.Add(new Separator());
+
+				// Add place holder menu items for creating buy/sell orders.
+				// There are updated whenever the menu opens based on the mouse location
+				var buy = cmenu.Items.Add2(new MenuItem
+				{
+					Header = "base",
+					Foreground = new SolidColorBrush(SettingsData.Settings.Chart.AskColour.ToMediaColor()),
+					Command = EditTrade,
+				});
+				var sel = cmenu.Items.Add2(new MenuItem
+				{
+					Header = "quote",
+					Foreground = new SolidColorBrush(SettingsData.Settings.Chart.BidColour.ToMediaColor()),
+					Command = EditTrade,
+				});
+				cmenu.Opened += (s, a) =>
+				{
+					// Get the spot price at the mouse location
+					var hit = Chart.HitTestZoneCS(Mouse.GetPosition(Chart), ModifierKeys.None);
+					var visible = Instrument != null && hit.ChartPoint.Y > 0;
+
+					// Hide the buy/sell options when there is no instrument or the click price is invalid
+					buy.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+					sel.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+					if (!visible)
+						return;
+
+					var click_price = ((decimal)hit.ChartPoint.Y)._(Instrument.Pair.RateUnits);
+
+					// Buy base currency (Q2B)
+					{
+						var trade = new Trade(Fund.Main, ETradeType.Q2B, Instrument.Pair, click_price);
+						buy.Header = $"{OrderType(trade)} at {trade.PriceQ2B.ToString("G6", true)}";
+						buy.CommandParameter = trade;
+					}
+
+					// Buy quote currency (B2Q)
+					{
+						var trade = new Trade(Fund.Main, ETradeType.B2Q, Instrument.Pair, click_price);
+						sel.Header = $"{OrderType(trade)} at {trade.PriceQ2B.ToString("G6", true)}";
+						sel.CommandParameter = trade;
+					}
+
+					// Convert the trade order type to a string
+					string OrderType(Trade trade)
+					{
+						return
+							trade == null ? "Market order" :
+							trade.OrderType == EPlaceOrderType.Market ? (trade.TradeType == ETradeType.Q2B ? "Buy" : "Sell") :
+							trade.OrderType == EPlaceOrderType.Limit ? "Limit order" :
+							trade.OrderType == EPlaceOrderType.Stop ? "Stop order" :
+							string.Empty;
+					}
+				};
+
+				cmenu.Items.Add(new Separator());
+
+				// Add the chart options menu at the end
+				cmenu.Items.Add(chart_options_menu);
+
+				// Add this last so it occurs after the other handlers attached to 'Opened'
+				cmenu.Opened += Gui_.TidySeparators;
+			}
+
+			// Modify the XAxis context menu
+			{
+				var cmenu = m_chart.XAxis.ContextMenu;
+
+				// Insert an option for changing the units of the XAxis
+				var idx = 0;
+				{
+					var opt = cmenu.Items.Insert2(idx++, new MenuItem { Header = "Label Mode" });
+					{
+						var cb = opt.Items.Add2(new ComboBox
+						{
+							ItemsSource = Enum<EXAxisLabelMode>.ValuesArray,
+							//SelectedItem = SettingsData.Settings.Chart.XAxisLabelMode,
+							Style = FindResource(System.Windows.Controls.ToolBar.ComboBoxStyleKey) as Style,
+							Background = SystemColors.ControlBrush,
+							BorderThickness = new Thickness(0),
+							Margin = new Thickness(1, 1, 20, 1),
+							MinWidth = 80,
+						});
+						cb.SetBinding(ComboBox.SelectedItemProperty, new Binding(nameof(ChartSettings.XAxisLabelMode)) { Source = SettingsData.Settings.Chart });
+						cb.SelectionChanged += (s, a) =>
+						{
+							SettingsData.Settings.Chart.XAxisLabelMode = (EXAxisLabelMode)cb.SelectedItem;
+						};
+					}
+				}
+			}
+		}
+
+		/// <summary></summary>
+		public event PropertyChangedEventHandler PropertyChanged;
+
 		/// <summary>Z-values for chart elements</summary>
 		public static class ZOrder
 		{
 			// Grid lines are drawn at 0
 			public const float Min = 0f;
-			public const float Candles = 0.010f;
+			public const float Candles = 0.005f;
 			public const float CurrentPrice = 0.011f;
 			public const float Indicators = 0.012f;
 			public const float Trades = 0.013f;

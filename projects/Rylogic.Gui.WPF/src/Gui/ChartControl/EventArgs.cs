@@ -167,15 +167,19 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Event args for the auto range event</summary>
 		public class AutoRangeEventArgs : EventArgs
 		{
-			public AutoRangeEventArgs(View3d.ESceneBounds who)
+			public AutoRangeEventArgs(View3d.ESceneBounds who, EAxis axes)
 			{
 				Who = who;
+				Axes = axes;
 				ViewBBox = BBox.Reset;
 				Handled = false;
 			}
 
 			/// <summary>The scene elements to be auto ranged</summary>
 			public View3d.ESceneBounds Who { get; }
+
+			/// <summary>The axes to auto range on</summary>
+			public EAxis Axes { get; }
 
 			/// <summary>The bounding box of the range to view</summary>
 			public BBox ViewBBox { get; set; }

@@ -14,6 +14,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Windows.Threading;
+using Rylogic.Extn;
 using Rylogic.Interop.Win32;
 
 // Provides methods for creating database tables by reflecting type definitions.

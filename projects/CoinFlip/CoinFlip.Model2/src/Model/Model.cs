@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
@@ -12,7 +13,7 @@ using Rylogic.Utility;
 
 namespace CoinFlip
 {
-	public class Model :IDisposable
+	public class Model : IDisposable
 	{
 		static Model()
 		{
@@ -20,7 +21,7 @@ namespace CoinFlip
 			Log.TimeZero = Log.TimeZero - Log.TimeZero.TimeOfDay;
 			Log.Write(ELogLevel.Debug, "<<< Started >>>");
 
-			MarketUpdates = new BlockingCollection<Action>();
+			DataUpdates = new BlockingCollection<Action>();
 		}
 		public Model()
 		{
@@ -31,17 +32,15 @@ namespace CoinFlip
 				Coins = new CoinDataList();
 				Funds = new FundContainer();
 				PriceData = new PriceDataMap(Shutdown.Token);
-
-				// Run these steps after construction is complete
-				Misc.RunOnMainThread(() =>
-				{
-					//// Create Bots listed in the settings
-					//CreateBotsFromSettings();
-
-				});
+				Charts = new ObservableCollection<IChartView>();
+				SelectedOpenOrders = new ObservableCollection<Order>();
+				SelectedCompletedOrders = new ObservableCollection<OrderCompleted>();
 
 				// Enable settings auto save after everything is up and running
 				SettingsData.Settings.AutoSaveOnChanges = true;
+
+				AllowTradesChanged += HandleAllowTradesChanged;
+				BackTestingChanged += HandleBackTestingChanged;
 
 				// Run the internal loop
 				MainLoopRunning = true;
@@ -56,6 +55,10 @@ namespace CoinFlip
 		public void Dispose()
 		{
 			MainLoopRunning = false;
+
+			BackTestingChanged -= HandleBackTestingChanged;
+			AllowTradesChanged -= HandleAllowTradesChanged;
+
 			PriceData = null;
 			Funds = null;
 			User = null;
@@ -71,10 +74,41 @@ namespace CoinFlip
 		public static DateTimeOffset SimClock { get; private set; }
 
 		/// <summary>True if live trading</summary>
-		public static bool AllowTrades { get; private set; }
+		public static bool AllowTrades
+		{
+			get { return s_allow_trades; }
+			set
+			{
+				if (s_allow_trades == value) return;
+				s_allow_trades = value;
+				AllowTradesChanged?.Invoke(null, EventArgs.Empty);
+			}
+		}
+		public static event EventHandler AllowTradesChanged;
+		private void HandleAllowTradesChanged(object sender, EventArgs e)
+		{
+			//...
+		}
+		private static bool s_allow_trades;
 
 		/// <summary>True if back testing is enabled</summary>
-		public static bool BackTesting { get; private set; }
+		public static bool BackTesting
+		{
+			get { return s_back_testing; }
+			set
+			{
+				if (s_back_testing == value) return;
+				s_back_testing = value;
+				BackTestingChanged?.Invoke(null, EventArgs.Empty);
+			}
+		}
+		public static event EventHandler BackTestingChanged;
+		private void HandleBackTestingChanged(object sender, EventArgs e)
+		{
+			// Create/Destroy the simulation manager
+			Simulation = BackTesting ? new Simulation(TradingExchanges) : null;
+		}
+		private static bool s_back_testing;
 
 		/// <summary>A main thread timer that simply updates the 'UtcNow' time to the current time (or back-testing clock)</summary>
 		public bool MainLoopRunning
@@ -104,7 +138,7 @@ namespace CoinFlip
 					try
 					{
 						// Process any pending market data updates
-						IntegrateMarketUpdates();
+						IntegrateDataUpdates();
 
 						// Simulate fake orders being filled
 						if (!AllowTrades && !BackTesting)
@@ -234,17 +268,39 @@ namespace CoinFlip
 		}
 		private PriceDataMap m_price_data;
 
+		/// <summary>The simulation manager. Not null while 'BackTesting' is enabled</summary>
+		public Simulation Simulation
+		{
+			get { return m_simulation; }
+			private set
+			{
+				if (m_simulation == value) return;
+				Util.Dispose(ref m_simulation);
+				m_simulation = value;
+			}
+		}
+		private Simulation m_simulation;
+
+		/// <summary>The available charts</summary>
+		public ObservableCollection<IChartView> Charts { get; }
+
+		/// <summary>Open orders that are 'selected'</summary>
+		public ObservableCollection<Order> SelectedOpenOrders { get; }
+
+		/// <summary>Completed orders that are 'selected'</summary>
+		public ObservableCollection<OrderCompleted> SelectedCompletedOrders { get; }
+
 		/// <summary>The special case cross exchange</summary>
 		public CrossExchange CrossExchange => Exchanges.OfType<CrossExchange>().FirstOrDefault();
 
 		/// <summary>All exchanges except the CrossExchange</summary>
 		public IEnumerable<Exchange> TradingExchanges => Exchanges.Where(x => !(x is CrossExchange));
 
-		/// <summary>Pending market data updates awaiting integration at the right time</summary>
-		public static BlockingCollection<Action> MarketUpdates { get; }
+		/// <summary>Pending data updates awaiting integration at the right time</summary>
+		public static BlockingCollection<Action> DataUpdates { get; }
 
-		/// <summary>Raised when market data changes, i.e. before and after 'IntegrateMarketUpdates' is called</summary>
-		public event EventHandler<MarketDataChangingEventArgs> MarketDataChanging;
+		/// <summary>Raised when market data changes, i.e. before and after 'IntegrateDataUpdates' is called</summary>
+		public event EventHandler<DataChangingEventArgs> DataChanging;
 
 		/// <summary>Create Exchange instances with this user's API keys</summary>
 		private void CreateExchanges()
@@ -254,43 +310,47 @@ namespace CoinFlip
 			Exchanges.Clear();
 
 			// Create Exchange instances
-			Exchanges.Add(User.GetKeys(nameof(Binance), out var apikey, out var secret) == User.EResult.Success
-				? new Binance(apikey, secret, Coins, Shutdown.Token)
-				: new Binance(Coins, Shutdown.Token));
+			string apikey, secret;
 			Exchanges.Add(User.GetKeys(nameof(Poloniex), out apikey, out secret) == User.EResult.Success
 				? new Poloniex(apikey, secret, Coins, Shutdown.Token)
-				: new Poloniex(Coins, Shutdown.Token));			
+				: new Poloniex(Coins, Shutdown.Token));
+			Exchanges.Add(User.GetKeys(nameof(Binance), out apikey, out secret) == User.EResult.Success
+				? new Binance(apikey, secret, Coins, Shutdown.Token)
+				: new Binance(Coins, Shutdown.Token));
+			Exchanges.Add(User.GetKeys(nameof(Bittrex), out apikey, out secret) == User.EResult.Success
+				? new Bittrex(apikey, secret, Coins, Shutdown.Token)
+				: new Bittrex(Coins, Shutdown.Token));
 
 			// Create the Cross-Exchange after all others have been created
 			Exchanges.Insert(0, new CrossExchange(Exchanges, Coins, Shutdown.Token));
 		}
 
-		/// <summary>Process any pending market data updates</summary>
-		private void IntegrateMarketUpdates()
+		/// <summary>Process any pending data updates</summary>
+		private void IntegrateDataUpdates()
 		{
 			Debug.Assert(Misc.AssertMainThread());
-			Debug.Assert(m_in_integrate_market_updates == 0);
+			Debug.Assert(m_in_integrate_data_updates == 0);
 
 			// Ignore updates when back testing.
 			if (BackTesting)
 				return;
 
 			// Notify market data about to update
-			MarketDataChanging?.Invoke(this, new MarketDataChangingEventArgs(done: false));
+			DataChanging?.Invoke(this, new DataChangingEventArgs(done: false));
 
 			// Lock the data while we're changing it
 			//using (LockMarketData())
 			//using (Positions.PreservePosition())
 			//using (History.PreservePosition())
 			//using (Balances.PreservePosition())
-			using (Scope.Create(() => ++m_in_integrate_market_updates, () => --m_in_integrate_market_updates))
+			using (Scope.Create(() => ++m_in_integrate_data_updates, () => --m_in_integrate_data_updates))
 			{
 				//Positions.Position = -1;
 				//History.Position = -1;
 				//Balances.Position = -1;
 
 				// Pull a task from the queue and execute it
-				for (; MarketUpdates.TryTake(out var update);)
+				for (; DataUpdates.TryTake(out var update);)
 				{
 					try
 					{
@@ -304,52 +364,19 @@ namespace CoinFlip
 			}
 
 			// Notify market data update complete
-			MarketDataChanging?.Invoke(this, new MarketDataChangingEventArgs(done: true));
+			DataChanging?.Invoke(this, new DataChangingEventArgs(done: true));
 		}
-		private int m_in_integrate_market_updates;
+		private int m_in_integrate_data_updates;
 	}
 
 	#region EventArgs
-	public class MarketDataChangingEventArgs : EventArgs
+	public class DataChangingEventArgs : EventArgs
 	{
-		public MarketDataChangingEventArgs(bool done)
+		public DataChangingEventArgs(bool done)
 		{
 			Done = done;
 		}
 		public bool Done { get; private set; }
 	}
-	//public class AddToUIEventArgs : EventArgs
-	//{
-	//	public AddToUIEventArgs(IDockable dockable, DockContainer.DockLocation dock_location = null)
-	//	{
-	//		Dockable = dockable;
-	//		DockLocation = dock_location;
-	//	}
-	//	public AddToUIEventArgs(ToolStrip toolbar)
-	//	{
-	//		Toolbar = toolbar;
-	//	}
-
-	//	/// <summary>Dockable content</summary>
-	//	public IDockable Dockable { get; private set; }
-	//	public DockContainer.DockLocation DockLocation { get; private set; }
-
-	//	/// <summary>Tool bar UI element</summary>
-	//	public ToolStrip Toolbar { get; private set; }
-	//}
-	//public class EditTradeEventArgs : EventArgs
-	//{
-	//	public EditTradeEventArgs(Trade trade, ulong? existing_order_id)
-	//	{
-	//		Trade = trade;
-	//		ExistingOrderId = existing_order_id;
-	//	}
-
-	//	/// <summary>The trade to edit/create</summary>
-	//	public Trade Trade { get; private set; }
-
-	//	/// <summary>The ID of the existing position this trade represents</summary>
-	//	public ulong? ExistingOrderId { get; private set; }
-	//}
 	#endregion
 }

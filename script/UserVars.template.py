@@ -36,8 +36,10 @@ winsdk_include    = CheckPath(JoinPath(winsdk, "Include", winsdkvers))
 winsdk_references = CheckPath(JoinPath(winsdk, "References", winsdkvers))
 
 # The root of the .NET framework directory
-# e.g. dotnetdir = CheckPath("C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319")
+# e.g. dotnet_dir = CheckPath("C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319")
+# e.g. dotnet = CheckPath("C:\\Program Files\\dotnet\\dotnet.exe")
 dotnet_dir = CheckPath("<DOTNET_DIRECTORY>")
+dotnet = CheckPath("<DOTNET_PATH>")
 
 # MSBuild path. Used by build scripts
 # e.g. msbuild = CheckPath("C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe")
@@ -75,9 +77,6 @@ textedit = CheckPath("<TEXTEDITOR_PATH>")
 # e.g. mergetool = CheckPath("C:\\Program Files\\Araxis\\Araxis Merge\\Merge.exe")
 mergetool = CheckPath("<MERGETOOL_PATH>")
 
-# API Key for publishing nuget packages
-nuget_api_key = "<NUGET_API_KEY>"
-
 # Web site root
 wwwroot = CheckPath("<WWW_ROOT_DIRECTORY>")
 
@@ -90,8 +89,9 @@ ttbuild = CheckPath(JoinPath(vs_dir, "Common7", "IDE", "TextTransform.exe"))
 powershell64 = CheckPath(JoinPath("C:\\Windows", "System32", "WindowsPowerShell", "v1.0", "powershell.exe"))
 powershell32 = CheckPath(JoinPath("C:\\Windows", "SysWOW64", "WindowsPowerShell", "v1.0", "powershell.exe"))
 
-# Nuget package manager
+# Nuget package manager and API Key for publishing nuget packages
 nuget = CheckPath(JoinPath(root, "tools", "nuget", "nuget.exe"))
+nuget_api_key = "<NUGET_API_KEY>"
 
 # Google Protobuf compiler
 protoc = CheckPath(JoinPath(root, "tools", "Grpc", "x64", "protoc.exe"))
@@ -111,6 +111,3 @@ errout = CheckPath(JoinPath(root, "tools", "Errout", "x64", "errout.exe"))
 # Rylogic code tools
 csex = CheckPath(JoinPath(root, "tools", "csex", "csex.exe"))
 elevate = CheckPath(JoinPath(root, "tools", "elevate.exe"))
-
-# The main rylogic code solution
-rylogic_sln = CheckPath(JoinPath(root, "build", "Rylogic.sln"))

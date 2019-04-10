@@ -21,6 +21,7 @@ namespace LDraw
 		public Model(MainUI main_ui)
 		{
 			Owner        = main_ui;
+			Dispatcher   = Dispatcher.CurrentDispatcher;
 			View3d       = View3d.Create();
 			IncludePaths = new List<string>();
 			SavedViews   = new List<SavedView>();
@@ -45,6 +46,9 @@ namespace LDraw
 			Scenes = null;
 			View3d = null;
 		}
+
+		/// <summary>Main thread dispatcher</summary>
+		public Dispatcher Dispatcher { get; }
 
 		/// <summary>The UI that created this model</summary>
 		public MainUI Owner
@@ -103,7 +107,7 @@ namespace LDraw
 					// Marshal to the main thread and update progress
 					var complete = e.Complete;
 					var progress = new AddFileProgressData(e.ContextId, e.Filepath, e.FileOffset);
-					Owner.BeginInvoke(() =>
+					Dispatcher.BeginInvoke(() =>
 					{
 						// Only update with info from the same file
 						if (AddFileProgress != null && AddFileProgress.ContextId != progress.ContextId)
@@ -358,7 +362,7 @@ namespace LDraw
 		public void ReportError(object sender, MessageEventArgs arg)
 		{
 			// Handle background threads reporting errors
-			if (Owner.InvokeRequired) Owner.BeginInvoke(() => ReportError(sender, arg));
+			if (Owner.InvokeRequired) Dispatcher.BeginInvoke(() => ReportError(sender, arg));
 			else Log.AddErrorMessage(arg.Message);
 		}
 

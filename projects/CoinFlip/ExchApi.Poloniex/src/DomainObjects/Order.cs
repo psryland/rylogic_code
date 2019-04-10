@@ -11,7 +11,7 @@ namespace Poloniex.API.DomainObjects
 	{
 		internal Order()
 		{}
-		internal Order(EOrderType order_type, decimal price, decimal volume)
+		internal Order(EOrderSide order_type, decimal price, decimal volume)
 		{
 			Type = order_type;
 			Price = price;
@@ -26,7 +26,7 @@ namespace Poloniex.API.DomainObjects
 		public long OrderId { get; internal set; }
 
 		/// <summary>A Buy or Sell order</summary>
-		public EOrderType Type { get; private set; }
+		public EOrderSide Type { get; private set; }
 		[JsonProperty("type")] private string TypeInternal
 		{
 			set { Type = Conv.ToOrderType(value); }

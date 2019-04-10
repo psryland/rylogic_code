@@ -15,7 +15,7 @@ namespace Rylogic.Maths
 	/// <summary>4x4 Matrix</summary>
 	[Serializable]
 	[StructLayout(LayoutKind.Explicit)]
-	[DebuggerDisplay("{x}  {y}  {z}  {w}")]
+	[DebuggerDisplay("{Description,nq}")]
 	public struct m4x4
 	{
 		[FieldOffset( 0)] public v4   x;
@@ -361,6 +361,9 @@ namespace Rylogic.Maths
 			return new { x, y, z, w }.GetHashCode();
 		}
 		#endregion
+
+		/// <summary></summary>
+		public string Description => $"{x}  {y}  {z}  {w}";
 	}
 
 	public static partial class Math_

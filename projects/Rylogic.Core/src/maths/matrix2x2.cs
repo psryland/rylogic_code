@@ -9,6 +9,7 @@ using Rylogic.Extn;
 
 namespace Rylogic.Maths
 {
+	[DebuggerDisplay("{Description,nq}")]
 	public struct m2x2
 	{
 		public v2 x;
@@ -173,6 +174,8 @@ namespace Rylogic.Maths
 		//}
 
 		#endregion
+
+		public string Description => $"{x}  {y}";
 	}
 
 	public static partial class Math_

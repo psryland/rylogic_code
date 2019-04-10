@@ -23,13 +23,12 @@ namespace CoinFlip
 			}
 			set
 			{
+				// If the order already exists, update rather than replace.
 				Debug.Assert(Misc.AssertMarketDataWrite());
-
-				// Ignore out of date data
-				if (this[key]?.Updated > value.Updated)
-					return;
-
-				base[key] = value;
+				if (ContainsKey(key))
+					base[key].Update(value);
+				else
+					base[key] = value;
 			}
 		}
 	}

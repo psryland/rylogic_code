@@ -304,7 +304,7 @@ namespace LDraw
 				{
 					// Load a source file and save the context id for that file
 					var id = View3d.LoadScriptSource(filepath, true, include_paths: Model.IncludePaths.ToArray());
-					this.BeginInvoke(() => AddObjects(id));
+					Model.Dispatcher.BeginInvoke(() => AddObjects(id));
 				});
 			}
 

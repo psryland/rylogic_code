@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using Rylogic.Common;
@@ -11,7 +12,7 @@ namespace Rylogic.Container
 	[DebuggerDisplay("Count={Count}")]
 	public class BindingDict<TKey, TValue>
 		:IDictionary<TKey, TValue>
-		,IBindingList, IList<TValue>, IList, IReadOnlyList<TValue>, IListChanging<TValue>, IItemChanged<TValue>
+		,IBindingList, IList<TValue>, IList, IReadOnlyList<TValue>, IListChanging<TValue>, IItemChanged<TValue>, INotifyCollectionChanged
 		,ICollection<TValue>, ICollection, IReadOnlyCollection<TValue>
 		,ICancelAddNew , IBatchChanges
 	{
@@ -163,6 +164,13 @@ namespace Rylogic.Container
 		protected virtual void OnItemChanged(ItemChgEventArgs<TValue> args)
 		{
 			ItemChanged?.Invoke(this, args);
+		}
+
+		/// <summary>Raised whenever items are added or removed from the list</summary>
+		public event NotifyCollectionChangedEventHandler CollectionChanged;
+		protected virtual void OnCollectionChanged(NotifyCollectionChangedEventArgs args)
+		{
+			CollectionChanged?.Invoke(this, args);
 		}
 
 		/// <summary>Gets/Sets a value indicating whether adding or removing items within the list raises ListChanged events.</summary>
@@ -352,6 +360,7 @@ namespace Rylogic.Container
 			{
 				OnListChanging(new ListChgEventArgs<TValue>(this, ListChg.Reset, -1, default(TValue)));
 				OnListChanged(new ListChangedEventArgs(ListChangedType.Reset, -1));
+				OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
 			}
 		}
 		protected virtual void ClearItemsCore()
@@ -381,6 +390,7 @@ namespace Rylogic.Container
 			{
 				OnListChanging(new ListChgEventArgs<TValue>(this, ListChg.ItemAdded, index, value));
 				OnListChanged(new ListChangedEventArgs(ListChangedType.ItemAdded, index));
+				OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, value));
 			}
 		}
 		protected virtual void InsertItemCore(TKey key, TValue value, int index)
@@ -410,6 +420,7 @@ namespace Rylogic.Container
 			{
 				OnListChanging(new ListChgEventArgs<TValue>(this, ListChg.ItemRemoved, -1, item));
 				OnListChanged(new ListChangedEventArgs(ListChangedType.ItemDeleted, index));
+				OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, item));
 			}
 		}
 		protected virtual void RemoveItemCore(TKey key, int index)
@@ -445,6 +456,7 @@ namespace Rylogic.Container
 			{
 				OnItemChanged(new ItemChgEventArgs<TValue>(index, old, value));
 				OnListChanged(new ListChangedEventArgs(ListChangedType.ItemChanged, index));
+				OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, value, old));
 			}
 			if (RaiseListChangedEvents)
 				OnListChanging(new ListChgEventArgs<TValue>(this, ListChg.ItemRemoved, index, old));
@@ -465,6 +477,7 @@ namespace Rylogic.Container
 
 		/// <summary>Raised when the caller signals a batch of changes are about to happen</summary>
 		public event EventHandler<PrePostEventArgs> BatchChanges;
+
 		public Scope BatchChange()
 		{
 			return Scope.Create(

@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using CoinFlip.Settings;
+using ExchApi.Common;
 using Rylogic.Utility;
 
 namespace CoinFlip
@@ -13,11 +15,16 @@ namespace CoinFlip
 		public CrossExchange(IList<Exchange> trading_exchanges, CoinDataList coin_data, CancellationToken shutdown)
 			: base(SettingsData.Settings.CrossExchange, coin_data, shutdown)
 		{
+			Api = new CrossExchangeApi(shutdown);
 			Exchanges = trading_exchanges;
 		}
 
 		/// <summary>The other available exchanges</summary>
 		private IList<Exchange> Exchanges { get; }
+
+		/// <summary>Api</summary>
+		private CrossExchangeApi Api { get; }
+		protected override IExchangeApi ExchangeApi => Api;
 
 		/// <summary>Open a trade</summary>
 		protected override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume_base, Unit<decimal> price)
@@ -34,7 +41,7 @@ namespace CoinFlip
 		/// <summary>Update this exchange's set of trading pairs</summary>
 		protected override Task UpdatePairsInternal(HashSet<string> coins) // Worker thread context
 		{
-			Model.MarketUpdates.Add(() =>
+			Model.DataUpdates.Add(() =>
 			{
 				// Create cross-exchange pairs for each coin of interest
 				foreach (var cd in SettingsData.Settings.Coins.Where(x => x.OfInterest))
@@ -76,7 +83,7 @@ namespace CoinFlip
 		{
 			try
 			{
-				Model.MarketUpdates.Add(() =>
+				Model.DataUpdates.Add(() =>
 				{
 					// Update the order book for each pair
 					foreach (var pair in Pairs.Values)
@@ -108,7 +115,7 @@ namespace CoinFlip
 		{
 			try
 			{
-				Model.MarketUpdates.Add(() =>
+				Model.DataUpdates.Add(() =>
 				{
 					// Update the Balances data
 					foreach (var pair in Pairs.Values)
@@ -138,9 +145,23 @@ namespace CoinFlip
 			return Task.CompletedTask;
 		}
 
-		/// <summary>Set the maximum number of requests per second to the exchange server</summary>
-		protected override void SetServerRequestRateLimit(float limit)
+		/// <summary>A mock for the exchange API</summary>
+		private class CrossExchangeApi : IExchangeApi
 		{
+			public CrossExchangeApi(CancellationToken shutdown)
+			{
+				RequestThrottle = new RequestThrottle();
+				Shutdown = shutdown;
+			}
+
+			/// <summary></summary>
+			public RequestThrottle RequestThrottle { get; }
+
+			/// <summary></summary>
+			public CancellationToken Shutdown { get; }
+
+			/// <summary></summary>
+			public ClientWebSocket WebSocket => null;
 		}
 	}
 }

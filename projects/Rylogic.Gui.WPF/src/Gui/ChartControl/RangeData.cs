@@ -161,6 +161,7 @@ namespace Rylogic.Gui.WPF
 					Debug.Assert(axis == EAxis.XAxis || axis == EAxis.YAxis);
 					Debug.Assert(chart != null);
 					m_chart = chart;
+					RangeLimits = new RangeF(-1e10, +1e10);
 					Set(min, max);
 					AxisType = axis;
 					Label = string.Empty;
@@ -269,6 +270,19 @@ namespace Rylogic.Gui.WPF
 					}
 				}
 
+				/// <summary>The min/max value that the axis can scroll to</summary>
+				public RangeF RangeLimits
+				{
+					get { return m_range_limits; }
+					set
+					{
+						if (m_range_limits == value) return;
+						m_range_limits = value;
+						Set(value.Beg, value.End);
+					}
+				}
+				private RangeF m_range_limits;
+
 				/// <summary>Allow scrolling on this axis</summary>
 				public bool AllowScroll { get; set; }
 
@@ -291,8 +305,9 @@ namespace Rylogic.Gui.WPF
 					var zoomed = !Math_.FEql(max - min, m_max - m_min);
 					var scroll = !Math_.FEql((max + min) * 0.5, (m_max + m_min) * 0.5);
 
-					m_min = min;
-					m_max = max;
+					m_min = Math_.Clamp(min, RangeLimits.Beg, RangeLimits.End);
+					m_max = Math_.Clamp(max, RangeLimits.Beg, RangeLimits.End);
+					if (m_max - m_min < Math_.TinyD) m_max = m_min + Math_.TinyD;
 
 					if (zoomed) OnZoomed();
 					if (scroll) OnScroll();

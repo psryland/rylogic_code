@@ -14,8 +14,8 @@ namespace CoinFlip.Settings
 		public BackTestingSettings()
 		{
 			TimeFrame = ETimeFrame.Day1;
-			MaxSteps = 30_000;
-			Steps = 0;
+			StartTime = (DateTimeOffset.UtcNow - TimeSpan.FromDays(365)).RoundDownTo(ETimeFrame.Day1);
+			EndTime = StartTime + TimeSpan.FromDays(365);
 			StepsPerCandle = 10.0;
 			SpreadFrac = 0.001;
 			OrderValueRange = new RangeF(0.1, 1000.0);
@@ -32,18 +32,18 @@ namespace CoinFlip.Settings
 			set { set(nameof(TimeFrame), value); }
 		}
 
-		/// <summary>The number of time frame steps backwards in time to start from</summary>
-		public int Steps
+		/// <summary>The date and time to start back testing from</summary>
+		public DateTimeOffset StartTime
 		{
-			get { return get<int>(nameof(Steps)); }
-			set { set(nameof(Steps), value); }
+			get { return get<DateTimeOffset>(nameof(StartTime)); }
+			set { set(nameof(StartTime), value); }
 		}
 
-		/// <summary>The maximum number of steps backwards in time to start back testing from</summary>
-		public int MaxSteps
+		/// <summary>The date and time to end back testing at</summary>
+		public DateTimeOffset EndTime
 		{
-			get { return get<int>(nameof(MaxSteps)); }
-			set { set(nameof(MaxSteps), value); }
+			get { return get<DateTimeOffset>(nameof(EndTime)); }
+			set { set(nameof(EndTime), value); }
 		}
 
 		/// <summary>How fast the simulation runs through the back testing candle data (in candles/second)</summary>

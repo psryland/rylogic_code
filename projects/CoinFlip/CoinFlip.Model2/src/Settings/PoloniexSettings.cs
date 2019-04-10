@@ -19,5 +19,4 @@ namespace CoinFlip.Settings
 		}
 		private class TyConv : GenericTypeConverter<PoloniexSettings> { }
 	}
-
 }

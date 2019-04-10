@@ -280,7 +280,7 @@ namespace CoinFlip
 			return idx + frac;
 		}
 
-		/// <summary>Return the interpolated time a the fractional index 'fidx'</summary>
+		/// <summary>Return the interpolated time (in ticks) a the fractional index 'fidx'</summary>
 		public long TimeAtFIndex(double fidx)
 		{
 			var beg = 0;

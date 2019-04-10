@@ -431,6 +431,7 @@ def Expand(template_filepath, output_filepath, regex_pattern, subst_func):
 			s = m.start()
 	with open(output_filepath, mode='w') as f:
 		f.write(buf)
+	return
 
 # Modify a file, line-by-line, using regex
 # Capture groups are defined like: (?P<name>.*) and accessed like: m.group("name")
@@ -531,38 +532,98 @@ def SetupVcEnvironment():
 #	platforms = ["x64","x86","AnyCPU"]
 #	configs = ["release","debug"]
 #	Tools.MSBuild(sln_or_proj_file, projects, platforms, configs, True, True)
-def MSBuild(sln_or_proj_file, projects, platforms, configs, parallel=False, same_window=True, msbuild_props=[]):
+def MSBuild(sln_or_proj_file:str, projects:[str], platforms:[str], configs:[str], parallel=False, same_window=True, msbuild_props=[]):
 	
+	# Handle None's
+	projects  = projects if projects else []
+	platforms = platforms if platforms else []
+	configs   = configs if configs else []
+
 	# Build the arguments list
-	AssertPath(UserVars.msbuild)
-	args_base = [UserVars.msbuild] + msbuild_props + [sln_or_proj_file, "/m", "/verbosity:minimal", "/nologo"]
+	args = [UserVars.msbuild] + msbuild_props + [sln_or_proj_file, "/m", "/verbosity:minimal", "/nologo"]
 
 	# Set the targets to build
 	# Targets should be the names as shown in the solution explorer (i.e. Folder\Project.Name)
 	if len(projects) != 0:
-		# Replace '.' in the project name with '_'
-		projects_cleaned = [proj.replace('.','_') for proj in projects]
-		args_base += ["/t:" + ";".join(projects_cleaned)]
+		projects_cleaned = [proj.replace('.','_') for proj in projects] # Replace '.' in the project name with '_'
+		args += ["/t:" + ";".join(projects_cleaned)]
 
 	# Set the platform/config
 	procs = []
-	for platform in platforms:
-		for config in configs:
-			args = args_base + ["/p:Configuration="+config+";Platform="+platform]
-			if parallel:
-				proc = Spawn(args, same_window=same_window)
-				procs.append(proc)
-			else:
-				print(platform + "|" + config + ":")
-				Exec(args)
-	
-	# Wait for all processes to finish, and check for error return codes
 	errors = False
-	for proc in procs:
-		proc.wait()
-		errors |= proc.returncode != 0
+	try:
+		if not platforms and not configs:
+			Exec(args)
+		else:
+			for platform in platforms:
+				for config in configs:
+					args_ = args + [f"/p:Configuration={config};Platform={platform}"]
+					if parallel:
+						proc = Spawn(args_, same_window=same_window)
+						procs.append(proc)
+					else:
+						print(f"{platform}|{config}:")
+						Exec(args_)
+	# Wait for all processes to finish, and check for error return codes
+	finally:	
+		for proc in procs:
+			proc.wait()
+			errors |= proc.returncode != 0
 	
-	print("\n")
+	return not errors
+
+# Invoke DotNet on a solution or project file
+# DotNet is basically a .NET Core wrapper around msbuild, nuget, and other tools
+# Solution file usage:
+#   sln_or_proj_file = "C:\path\mysolution.sln"
+#	projects = ["project_name","\"folder\proj_name:Rebuild\""]
+#	platforms = ["x64","x86","Any CPU"]
+#	configs = ["release","debug"]
+#	Tools.MSBuild(sln_or_proj_file, projects, platforms, configs, True, True)
+# Project file usage:
+#   sln_or_proj_file = "C:\path\myproject.csproj"
+#	projects = []
+#	platforms = ["x64","x86","AnyCPU"]
+#	configs = ["release","debug"]
+#	Tools.DotNet("build", sln_or_proj_file, projects, platforms, configs, True, True)
+def DotNet(command:str, sln_or_proj_file:str, projects:[str], platforms:[str], configs:[str], parallel=False, same_window=True):
+
+	# Handle None's
+	projects  = projects if projects else []
+	platforms = platforms if platforms else []
+	configs   = configs if configs else []
+
+	# Build the arguments list
+	args = [UserVars.dotnet, command, sln_or_proj_file, "--verbosity", "minimal", "/nologo"]
+
+	# Set the targets to build
+	# Targets should be the names as shown in the solution explorer (i.e. Folder\Project.Name)
+	if len(projects) != 0:
+		projects_cleaned = [proj.replace('.','_') for proj in projects] # Replace '.' in the project name with '_'
+		args += ["-t:" + ";".join(projects_cleaned)]
+
+	# Set the platform/config
+	procs = []
+	errors = False
+	try:
+		if not platforms and not configs:
+			Exec(args)
+		else:
+			for platform in platforms:
+				for config in configs:
+					args_ = args + [f"-p:Configuration={config}", f"-p:Platform={platform}"]
+					if parallel:
+						proc = Spawn(args_, same_window=same_window)
+						procs.append(proc)
+					else:
+						print(f"{platform}|{config}:")
+						Exec(args_)
+	# Wait for all processes to finish, and check for error return codes
+	finally:	
+		for proc in procs:
+			proc.wait()
+			errors |= proc.returncode != 0
+
 	return not errors
 
 # Create a Nuget package from the given project file

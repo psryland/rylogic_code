@@ -6,31 +6,58 @@
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
 	xmlns:gui2="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
 	xmlns:local="clr-namespace:CoinFlip.UI"
+	xmlns:settings="clr-namespace:CoinFlip.Settings;assembly=CoinFlip.Model"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
 	mc:Ignorable="d" 
 	d:DesignWidth="500"
 	d:DesignHeight="350"
 	>
+	
+	<Grid.Resources>
+		<ResourceDictionary>
+			<BitmapImage x:Key="dollar_sign_black" UriSource="/CoinFlip.UI;component/res/dollar_sign_black.png" />
+			<BitmapImage x:Key="dollar_sign_green" UriSource="/CoinFlip.UI;component/res/dollar_sign_green.png" />
+			<BitmapImage x:Key="dollar_sign_blue" UriSource="/CoinFlip.UI;component/res/dollar_sign_blue.png" />
+			<BitmapImage x:Key="history_black" UriSource="/CoinFlip.UI;component/res/history_black.png" />
+			<BitmapImage x:Key="history_green" UriSource="/CoinFlip.UI;component/res/history_green.png" />
+			<BitmapImage x:Key="history_blue" UriSource="/CoinFlip.UI;component/res/history_blue.png" />
+		</ResourceDictionary>
+	</Grid.Resources>
+	
 	<Grid.RowDefinitions>
 		<RowDefinition Height="Auto"/>
 		<RowDefinition Height="*"/>
 	</Grid.RowDefinitions>
 
 	<!-- Tool bar -->
-	<StackPanel
+	<Grid
 		Name="m_toolbar"
 		Grid.Row="0"
-		Orientation="Horizontal"
-		DataContext="{Binding ChartSelector}"
 		>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="*"/>
+			<ColumnDefinition Width="Auto"/>
+		</Grid.ColumnDefinitions>
+		
 		<!-- Exchange -->
 		<TextBlock
+			Grid.Column="0"
 			Text="Exchange:"
 			VerticalAlignment="Center"
 			Margin="2"
 			/>
 		<ComboBox
-			ItemsSource="{Binding Exchanges}"
-			SelectedItem="{Binding Exchange, Mode=TwoWay}"
+			Grid.Column="1"
+			ItemsSource="{Binding ChartSelector.Exchanges}"
+			SelectedItem="{Binding ChartSelector.Exchange, Mode=TwoWay}"
 			ToolTip="Select the currency pair to display"
 			VerticalAlignment="Center"
 			MinWidth="80"
@@ -39,13 +66,15 @@
 
 		<!-- Pair -->
 		<TextBlock
+			Grid.Column="2"
 			Text="Pair:"
 			VerticalAlignment="Center"
 			Margin="2"
 			/>
 		<ComboBox
-			ItemsSource="{Binding Pairs}"
-			SelectedItem="{Binding Pair, Mode=TwoWay}"
+			Grid.Column="3"
+			ItemsSource="{Binding ChartSelector.Pairs}"
+			SelectedItem="{Binding ChartSelector.Pair, Mode=TwoWay}"
 			ToolTip="Select the currency pair to display"
 			VerticalAlignment="Center"
 			MinWidth="80"
@@ -54,18 +83,86 @@
 
 		<!-- Time frame -->
 		<TextBlock
+			Grid.Column="4"
 			Text="Time Frame:"
 			VerticalAlignment="Center"
 			/>
 		<ComboBox
-			ItemsSource="{Binding TimeFrames}"
-			SelectedItem="{Binding TimeFrame, Mode=TwoWay}"
+			Grid.Column="5"
+			ItemsSource="{Binding ChartSelector.TimeFrames}"
+			SelectedItem="{Binding ChartSelector.TimeFrame, Mode=TwoWay}"
 			ToolTip="Select the time frame to display"
 			VerticalAlignment="Center"
 			MinWidth="80"
 			Margin="2"
 			/>
-	</StackPanel>
+
+		<!-- Show Current Trades -->
+		<Button
+			Grid.Column="6"
+			Command="{Binding ToggleShowOpenOrders}"
+			MaxWidth="22"
+			Margin="3"
+			>
+			<Image Stretch="UniformToFill" StretchDirection="DownOnly" RenderOptions.BitmapScalingMode="HighQuality">
+				<Image.Style>
+					<Style TargetType="{x:Type Image}">
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding ShowOpenOrders}" Value="{x:Static settings:EShowItems.Disabled}">
+								<Setter Property="Source" Value="{StaticResource dollar_sign_black}"/>
+								<Setter Property="ToolTip" Value="Display open orders on the chart"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding ShowOpenOrders}" Value="{x:Static settings:EShowItems.Selected}">
+								<Setter Property="Source" Value="{StaticResource dollar_sign_green}"/>
+								<Setter Property="ToolTip" Value="Showing the selected open order on the chart"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding ShowOpenOrders}" Value="{x:Static settings:EShowItems.All}">
+								<Setter Property="Source" Value="{StaticResource dollar_sign_blue}"/>
+								<Setter Property="ToolTip" Value="Showing all open orders on the chart"/>
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</Image.Style>
+			</Image>
+		</Button>
+
+		<!-- Show Completed orders -->
+		<Button
+			Grid.Column="7"
+			Command="{Binding ToggleShowCompletedOrders}"
+			MaxWidth="22"
+			Margin="3"
+			>
+			<Image Stretch="UniformToFill" StretchDirection="DownOnly" RenderOptions.BitmapScalingMode="HighQuality">
+				<Image.Style>
+					<Style TargetType="{x:Type Image}">
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding ShowCompletedOrders}" Value="{x:Static settings:EShowItems.Disabled}">
+								<Setter Property="Source" Value="{StaticResource history_black}"/>
+								<Setter Property="ToolTip" Value="Display completed orders on the chart"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding ShowCompletedOrders}" Value="{x:Static settings:EShowItems.Selected}">
+								<Setter Property="Source" Value="{StaticResource history_green}"/>
+								<Setter Property="ToolTip" Value="Showing the selected completed order on the chart"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding ShowCompletedOrders}" Value="{x:Static settings:EShowItems.All}">
+								<Setter Property="Source" Value="{StaticResource history_blue}"/>
+								<Setter Property="ToolTip" Value="Showing all completed orders on the chart"/>
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</Image.Style>
+			</Image>
+		</Button>
+		
+		<!-- Time Range -->
+		<TextBlock
+			Grid.Column="9"
+			Text="{Binding VisibleTimeSpan}"
+			VerticalAlignment="Center"
+			Margin="3"
+			/>
+	</Grid>
 
 	<!-- Candle Chart -->
 	<gui2:ChartControl

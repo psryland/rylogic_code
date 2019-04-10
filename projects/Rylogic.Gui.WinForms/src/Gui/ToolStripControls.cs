@@ -6,6 +6,7 @@ using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Windows.Forms;
 using Rylogic.Common;
+using Rylogic.Extn;
 
 namespace Rylogic.Gui.WinForms
 {
@@ -319,10 +320,10 @@ namespace Rylogic.Gui.WinForms
 		protected override void OnDefaultItemChanged(EventArgs e)
 		{
 			base.OnDefaultItemChanged(e);
-			
+
 			// There is a retarded bug in .NET where the OnDefaultItemChanged method is called
 			// before the default item is changed, so there's no way to see what the new default item is.
-			this.BeginInvokeDelayed(0, () =>
+			Dispatcher_.BeginInvoke(() =>
 			{
 				if (DefaultItem != null)
 				{

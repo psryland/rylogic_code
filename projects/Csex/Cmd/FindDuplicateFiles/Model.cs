@@ -4,6 +4,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using System.Windows.Threading;
 using Rylogic.Common;
 using Rylogic.Container;
 using Rylogic.Extn;
@@ -18,11 +19,15 @@ namespace Csex
 		public Model(Control parent)
 		{
 			m_parent    = parent;
+			Dispatcher  = Dispatcher.CurrentDispatcher;
 			Settings    = new Settings(Settings.DefaultLocalFilepath){AutoSaveOnChanges = true};
 			FInfoMap    = new FileInfoMap();
 			Duplicates  = new BindingListEx<FileInfo>();
 			Errors      = new List<string>();
 		}
+
+		/// <summary>Main thread dispatcher</summary>
+		private Dispatcher Dispatcher { get; }
 
 		/// <summary>Application settings</summary>
 		public Settings Settings { get; private set; }
@@ -44,7 +49,7 @@ namespace Csex
 		}
 
 		/// <summary>Does the work of finding and identifying duplicates</summary>
-		private void FindDuplicates(ProgressForm dlg, object ctx, ProgressForm.Progress progress)
+		private void FindDuplicates(ProgressForm dlg, object ctx, ProgressForm.Progress progress) // worker thread context
 		{
 			// Build a map of file data
 			var dir = string.Empty;
@@ -70,12 +75,12 @@ namespace Csex
 						FileInfo existing = FInfoMap.TryGetValue(finfo.Key, out existing) ? existing : null;
 						if (existing != null)
 						{
-							m_parent.Invoke(() =>
-								{
-									existing.Duplicates.Add(finfo);
-									var idx = Duplicates.BinarySearch(existing, FileInfo.Compare);
-									if (idx < 0) Duplicates.Insert(~idx, existing);
-								});
+							Dispatcher.Invoke(() =>
+							{
+								existing.Duplicates.Add(finfo);
+								var idx = Duplicates.BinarySearch(existing, FileInfo.Compare);
+								if (idx < 0) Duplicates.Insert(~idx, existing);
+							});
 						}
 						else
 						{

@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Windows;
 using Rylogic.Gfx;
+using Rylogic.Maths;
 
 namespace Rylogic.Gui.WPF.ChartDetail
 {
@@ -17,6 +18,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 				DefaultKeyboardShortcuts = false;
 				Window.FocusPointVisible = false;
 				Window.OriginPointVisible = false;
+				Window.LightProperties = View3d.LightInfo.Directional(-v4.ZAxis, 0, Colour32.White, 0, 1000f, 0f);
 			}
 			catch
 			{

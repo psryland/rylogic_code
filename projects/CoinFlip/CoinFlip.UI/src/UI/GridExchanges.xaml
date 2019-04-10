@@ -10,6 +10,7 @@
 	d:DesignHeight="250" d:DesignWidth="400"
 	AutoGenerateColumns="False"
 	GridLinesVisibility="None"
+	HeadersVisibility="Column"
 	ItemsSource="{Binding Exchanges}"
 	SelectedItem="{Binding Current, Mode=TwoWay}"
 	IsReadOnly="True"

@@ -52,7 +52,8 @@ namespace pr
 		// Returns true if the bbox is valid
 		bool valid() const
 		{
-			return m_radius.x >= 0 && m_radius.y >= 0 && m_radius.z >= 0;
+			return m_radius.x >= 0 && m_radius.y >= 0 && m_radius.z >= 0 &&
+				IsFinite(LengthSq(m_radius)) && IsFinite(LengthSq(m_centre));
 		}
 
 		// Returns true if this bbox encompasses a single point

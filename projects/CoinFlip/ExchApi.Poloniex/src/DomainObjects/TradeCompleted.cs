@@ -24,7 +24,7 @@ namespace Poloniex.API.DomainObjects
 		public long TradeId { get; internal set; }
 
 		/// <summary>A Buy or Sell order</summary>
-		public EOrderType Type { get; private set; }
+		public EOrderSide Type { get; private set; }
 		[JsonProperty("type")] private string TypeInternal
 		{
 			set { Type = Conv.ToOrderType(value); }

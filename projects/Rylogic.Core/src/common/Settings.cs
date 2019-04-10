@@ -121,10 +121,10 @@ namespace Rylogic.Common
 					"This is probably because there is no default value set "+
 					"in the constructor of the derived settings class");
 
-			if (!(value is Value v))
-				v = Util.ConvertTo<Value>(value);
-			
-			return v;
+			return
+				value is Value v ? v :
+				value != null ? Util.ConvertTo<Value>(value) :
+				default(Value);
 		}
 
 		/// <summary>Write a settings value</summary>

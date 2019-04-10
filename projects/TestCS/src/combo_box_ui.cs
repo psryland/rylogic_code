@@ -1,4 +1,5 @@
-﻿using System.Drawing;
+﻿using System;
+using System.Drawing;
 using System.Windows.Forms;
 using Rylogic.Container;
 using Rylogic.Extn;
@@ -54,7 +55,7 @@ namespace TestCS
 		{
 			m_tb_selected_item.Text = (string)m_cb0.SelectedItem ?? "<null>";
 			m_tb_selected_item.BackColor = Color.LightGreen;
-			this.BeginInvokeDelayed(200, () => m_tb_selected_item.BackColor = Color.White);
+			Dispatcher_.BeginInvokeDelayed(() => m_tb_selected_item.BackColor = Color.White, TimeSpan.FromMilliseconds(200));
 		}
 
 		#region Windows Form Designer generated code

@@ -9,7 +9,6 @@ using System.Collections.Generic;
 
 namespace Rylogic.Common
 {
-
 	/// <summary>
 	/// A Comparer implementation that is implicitly convertible
 	/// from any other comparer or comparison delegate.</summary>
@@ -32,49 +31,57 @@ namespace Rylogic.Common
 		// - Careful with LessThan/EqualTo, they're ambiguous. i.e. both are Func<T,T,bool>
 
 		private readonly Func<T,T,int> m_cmp;
-		private Cmp(Func<T,T,int> cmp)
+		private Cmp(Func<T, T, int> cmp)
 		{
 			m_cmp = cmp ?? Default.m_cmp;
 		}
-		public static Cmp<T> Default
-		{
-			get { return new Cmp<T>(Comparer<T>.Default.Compare); }
-		}
+
+		public static Cmp<T> Default => new Cmp<T>(Comparer<T>.Default.Compare);
 
 		/// <summary>Compares 'lhs' to 'rhs' returning -1,0,1</summary>
-		public int Compare(T lhs, T rhs)
-		{
-			return m_cmp(lhs, rhs);
-		}
-		public bool Equals(T lhs, T rhs)
-		{
-			return m_cmp(lhs, rhs) == 0;
-		}
-		public int GetHashCode(T obj)
-		{
-			return obj.GetHashCode();
-		}
-		int IComparer.Compare(object x, object y)
-		{
-			return Compare((T)x, (T)y);
-		}
-		bool IEqualityComparer.Equals(object x, object y)
-		{
-			return Equals((T)x, (T)y);
-		}
-		int IEqualityComparer.GetHashCode(object obj)
-		{
-			return GetHashCode((T)obj);
-		}
+		public int Compare(T lhs, T rhs) => m_cmp(lhs, rhs);
+		public bool Equals(T lhs, T rhs) => m_cmp(lhs, rhs) == 0;
+		public int GetHashCode(T obj) => obj.GetHashCode();
+		int IComparer.Compare(object x, object y) => Compare((T)x, (T)y);
+		bool IEqualityComparer.Equals(object x, object y) => Equals((T)x, (T)y);
+		int IEqualityComparer.GetHashCode(object obj) => GetHashCode((T)obj);
 
 		// Convert To
 		public static implicit operator Cmp<T>(Func<T,T,int> c) { return new Cmp<T>(c); }
 		public static implicit operator Cmp<T>(Comparer<T>   c) { return new Cmp<T>(c.Compare); }
 
-		// Construct From
-		public static Cmp<T> From(Func<T,T,int> c)  { return c; }
-		public static Cmp<T> From(IComparer<T> c)   { return new Cmp<T>(c.Compare); }
-		public static Cmp<T> From(Func<T,T,bool> c) { return new Cmp<T>((l,r) => c(l,r) ? -1 : c(r,l) ? 1 : 0); } // c = Less than
+		/// <summary>Create from comparison function</summary>
+		public static Cmp<T> From(Func<T,T,int> c)
+		{
+			return new Cmp<T>(c);
+		}
+
+		/// <summary>Create from any other comparer type</summary>
+		public static Cmp<T> From(IComparer<T> c)
+		{
+			return new Cmp<T>(c.Compare);
+		}
+
+		/// <summary>Compare using a predicate that defines left < right</summary>
+		public static Cmp<T> From(Func<T,T,bool> less_than)
+		{
+			return new Cmp<T>((l,r) =>
+				less_than(l,r) ? -1 :
+				less_than(r,l) ? 1 :
+				0);
+		}
+
+		/// <summary>Compare using a value derived from 'T'</summary>
+		public static Cmp<T> From<U>(Func<T, U> selector, IComparer<U> cmp = null)
+		{
+			cmp = cmp ?? Cmp<U>.Default;
+			return new Cmp<T>((l, r) =>
+			{
+				var ll = selector(l);
+				var rr = selector(r);
+				return cmp.Compare(ll, rr);
+			});
+		}
 	}
 	public class Eql<T> :IEqualityComparer<T>, IEqualityComparer
 	{

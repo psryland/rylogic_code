@@ -101,6 +101,12 @@
 				/>
 			<Separator/>
 			<MenuItem
+				Name="m_menu_show_on_chart"
+				Header="Show On Chart"
+				IsEnabled="{Binding Current, Converter={conv:NotNull}}"
+				/>
+			<Separator/>
+			<MenuItem
 				Header="Modify"
 				IsEnabled="{Binding Current, Converter={conv:NotNull}}"
 				/>
