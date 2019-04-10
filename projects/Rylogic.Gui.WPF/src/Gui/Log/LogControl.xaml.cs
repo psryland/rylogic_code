@@ -300,7 +300,7 @@ namespace Rylogic.Gui.WPF
 			get { return (bool)GetValue(LineWrapProperty); }
 			set { SetValue(LineWrapProperty, value); }
 		}
-		private void LineWrap_Changed(bool line_wrap)
+		private void LineWrap_Changed(bool new_value)
 		{
 			CreateColumns();
 		}

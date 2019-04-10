@@ -12,7 +12,7 @@ namespace CoinFlip
 {
 	public static class Misc
 	{
-		/// <summary>The smallest volume change</summary>
+		/// <summary>The smallest amount change</summary>
 		public const decimal AmountEpsilon = 1e-8m;
 
 		/// <summary>The smallest price change</summary>
@@ -131,34 +131,34 @@ namespace CoinFlip
 				throw new Exception("Unknown trade type");
 		}
 
-		/// <summary>Return the 'base' volume for a trade in this trade direction</summary>
-		public static Unit<decimal> AmountBase(this ETradeType tt, Unit<decimal> price_q2b, Unit<decimal>? amount_id = null, Unit<decimal>? amount_out = null)
+		/// <summary>Return the 'base' amount for a trade in this trade direction</summary>
+		public static Unit<decimal> AmountBase(this ETradeType tt, Unit<decimal> price_q2b, Unit<decimal>? amount_in = null, Unit<decimal>? amount_out = null)
 		{
 			return
-				tt == ETradeType.B2Q ? (amount_id != null ? amount_id.Value : amount_out != null ? amount_out.Value / price_q2b : throw new Exception("One of 'volume_in' or 'volume_out' must be given")) :
-				tt == ETradeType.Q2B ? (amount_id != null ? amount_id.Value / price_q2b : amount_out != null ? amount_out.Value : throw new Exception("One of 'volume_in' or 'volume_out' must be given")) :
+				tt == ETradeType.B2Q ? (amount_in != null ? amount_in.Value : amount_out != null ? amount_out.Value / price_q2b : throw new Exception("One of 'amount_in' or 'amount_out' must be given")) :
+				tt == ETradeType.Q2B ? (amount_in != null ? amount_in.Value / price_q2b : amount_out != null ? amount_out.Value : throw new Exception("One of 'amount_in' or 'amount_out' must be given")) :
 				throw new Exception("Unknown trade type");
 		}
 
-		/// <summary>Return the 'in' volume for a trade in this trade direction</summary>
-		public static Unit<decimal> AmountIn(this ETradeType tt, Unit<decimal> volume_base, Unit<decimal> price_q2b)
+		/// <summary>Return the 'in' amount for a trade in this trade direction</summary>
+		public static Unit<decimal> AmountIn(this ETradeType tt, Unit<decimal> amount_base, Unit<decimal> price_q2b)
 		{
 			return
-				tt == ETradeType.B2Q ? volume_base :
-				tt == ETradeType.Q2B ? volume_base * price_q2b :
+				tt == ETradeType.B2Q ? amount_base :
+				tt == ETradeType.Q2B ? amount_base * price_q2b :
 				throw new Exception("Unknown trade type");
 		}
 
-		/// <summary>Return the 'out' volume for a trade in this trade direction</summary>
-		public static Unit<decimal> AmountOut(this ETradeType tt, Unit<decimal> volume_base, Unit<decimal> price_q2b)
+		/// <summary>Return the 'out' amount for a trade in this trade direction</summary>
+		public static Unit<decimal> AmountOut(this ETradeType tt, Unit<decimal> amount_base, Unit<decimal> price_q2b)
 		{
 			return
-				tt == ETradeType.B2Q ? volume_base * price_q2b :
-				tt == ETradeType.Q2B ? volume_base :
+				tt == ETradeType.B2Q ? amount_base * price_q2b :
+				tt == ETradeType.Q2B ? amount_base :
 				throw new Exception("Unknown trade type");
 		}
 
-		/// <summary>Return the commission in 'out' volume for a trade in this trade direction</summary>
+		/// <summary>Return the commission in 'out' amount for a trade in this trade direction</summary>
 		public static Unit<decimal> Commission(this ETradeType tt, Unit<decimal> commission_quote, Unit<decimal> price_q2b)
 		{
 			return

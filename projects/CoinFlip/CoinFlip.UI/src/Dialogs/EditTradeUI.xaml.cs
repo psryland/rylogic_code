@@ -14,7 +14,9 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using CoinFlip.Settings;
 using Rylogic.Common;
+using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
 using Rylogic.Maths;
 using Rylogic.Utility;
@@ -45,7 +47,23 @@ namespace CoinFlip.UI
 			ExchangesOfferingPair.MoveCurrentTo(trade.Pair.Exchange);
 
 			SetSellAmountToMaximum = Command.Create(this, SetSellAmountToMaximumInternal);
+
+			Trade.PropertyChanged += HandleTradePropertyChanged;
 			DataContext = this;
+		}
+		protected override void OnClosed(EventArgs e)
+		{
+			base.OnClosed(e);
+			Trade.PropertyChanged -= HandleTradePropertyChanged;
+
+			// If the trade is actually a live order, and it hasn't
+			// actually changed ensure the 'Result' is 'cancelled'
+			if (Result == true && ExistingOrderId != null && Original.Equals(Trade))
+				Result = false;
+
+			// If the dialog was used modally, set 'DialogResult'
+			if (this.IsModal())
+				DialogResult = Result;
 		}
 
 		/// <summary>Model</summary>
@@ -58,7 +76,7 @@ namespace CoinFlip.UI
 		private Trade Original { get; }
 
 		/// <summary>Non-null if 'Original' is actually an order, live on an exchange</summary>
-		private long? ExistingOrderId { get; }
+		public long? ExistingOrderId { get; }
 
 		/// <summary>The exchanges that allow trades of 'Pair'</summary>
 		public ICollectionView ExchangesOfferingPair
@@ -75,6 +93,7 @@ namespace CoinFlip.UI
 				{
 					var exch = (Exchange)ExchangesOfferingPair.CurrentItem;
 					Trade.Pair = exch.Pairs[Trade.Pair.UniqueKey];
+					NotifyPropertyChanged(string.Empty);
 				}
 			}
 		}
@@ -91,8 +110,7 @@ namespace CoinFlip.UI
 			{
 				if (TradeType == value) return;
 				Trade.TradeType = value;
-				NotifyPropertyChanged(nameof(TradeType));
-				NotifyPropertyChanged(nameof(OrderType));
+				NotifyPropertyChanged(string.Empty);
 			}
 		}
 
@@ -102,12 +120,14 @@ namespace CoinFlip.UI
 		/// <summary>The trade price</summary>
 		public string PriceQ2B
 		{
-			get { return Trade.PriceQ2B.ToString("G8", false); }
+			get { return Trade.PriceQ2B.ToString("F8", false); }
 			set
 			{
-				Trade.PriceQ2B = decimal.Parse(value)._(Trade.Pair.RateUnits);
-				NotifyPropertyChanged(nameof(PriceQ2B));
-				NotifyPropertyChanged(nameof(OrderType));
+				// When changing the price, keep the in-amount constant
+				var new_price = decimal.Parse(value)._(Trade.Pair.RateUnits);
+				var amount_in = Trade.AmountIn;
+				Trade.PriceQ2B = new_price;
+				Trade.AmountIn = amount_in;
 			}
 		}
 		public Func<string, ValidationResult> ValidatePrice
@@ -129,12 +149,12 @@ namespace CoinFlip.UI
 		/// <summary>The amount to trade</summary>
 		public string AmountIn
 		{
-			get { return Trade.AmountIn.ToString("G8", false); }
+			get { return Trade.AmountIn.ToString("F8", false); }
 			set
 			{
-				Trade.AmountIn = decimal.Parse(value)._(CoinIn);
-				NotifyPropertyChanged(nameof(AmountIn));
-				NotifyPropertyChanged(nameof(AmountOut));
+				var amount_in = decimal.Parse(value)._(CoinIn);
+				Trade.AmountIn = amount_in;
+				NotifyPropertyChanged(string.Empty);
 			}
 		}
 		public Func<string, ValidationResult> ValidateAmountIn
@@ -150,12 +170,11 @@ namespace CoinFlip.UI
 		/// <summary>The amount to trade</summary>
 		public string AmountOut
 		{
-			get { return Trade.AmountOut.ToString("G8", false); }
+			get { return Trade.AmountOut.ToString("F8", false); }
 			set
 			{
 				Trade.AmountOut = decimal.Parse(value)._(CoinOut);
-				NotifyPropertyChanged(nameof(AmountOut));
-				NotifyPropertyChanged(nameof(AmountIn));
+				NotifyPropertyChanged(string.Empty);
 			}
 		}
 		public Func<string, ValidationResult> ValidateAmountOut
@@ -163,7 +182,7 @@ namespace CoinFlip.UI
 			get => s =>
 			{
 				if (!decimal.TryParse(s, out var v) || v <= 0) return new ValidationResult(false, "Amount must be positive number");
-				if (!Trade.AmountRangeOut.Contains(v._(CoinIn))) return new ValidationResult(false, $"Amount must be within {Trade.AmountRangeOut.ToString()}");
+				if (!Trade.AmountRangeOut.Contains(v._(CoinOut))) return new ValidationResult(false, $"Amount must be within {Trade.AmountRangeOut.ToString()}");
 				return ValidationResult.ValidResult;
 			};
 		}
@@ -176,10 +195,19 @@ namespace CoinFlip.UI
 		public Unit<decimal> AvailableOut => Exchange.Balance[CoinOut][Trade.FundId].Available;
 
 		/// <summary>Description of the amount sold in the trade</summary>
-		public string TradeDescriptionIn => $"Trading {Math_.Clamp(Math_.Div((decimal)Trade.AmountIn * 100m, (decimal)AvailableIn, 0m), 0m, 100m):G4}% of {CoinIn} balance";
+		public string TradeDescriptionIn => $"Trading {Math_.Clamp(Math_.Div((decimal)Trade.AmountIn, (decimal)AvailableIn, 0m), 0m, 1m):P2} of {CoinIn} balance";
 
 		/// <summary>Description of the amount received from the trade</summary>
-		public string TradeDescriptionOut => $"After Fees: {Trade.AmountNett.ToString("G6", true)}";
+		public string TradeDescriptionOut => $"After Fees: {Trade.AmountNett.ToString("F8", true)}";
+
+		/// <summary>The colour associated with the trade type</summary>
+		public Colour32 TradeTypeBgColour =>
+			TradeType == ETradeType.Q2B ? SettingsData.Settings.Chart.AskColour.Lerp(Colour32.White,0.5f) :
+			TradeType == ETradeType.B2Q ? SettingsData.Settings.Chart.BidColour.Lerp(Colour32.White,0.5f) :
+			throw new Exception($"Unknown trade type: {TradeType}");
+
+		/// <summary>Perform a validation of the trade data</summary>
+		public bool IsValid => Trade.Validate(additional_balance_in: AdditionalIn) == EValidation.Valid;
 
 		/// <summary>A description of the validation errors</summary>
 		public string ValidationResults => Trade.Validate(additional_balance_in: AdditionalIn).ToErrorDescription();
@@ -189,17 +217,36 @@ namespace CoinFlip.UI
 		private void SetSellAmountToMaximumInternal()
 		{
 			Trade.AmountIn = AvailableIn;
+			NotifyPropertyChanged(string.Empty);
 		}
 
-		public void Apply()
+		/// <summary>Close the dialog in the 'accepted' state</summary>
+		public void Accept()
 		{
+			Result = true;
+			Close();
 		}
+
+		/// <summary>Close the dialog in the 'cancelled' state</summary>
+		public void Cancel()
+		{
+			Result = false;
+			Close();
+		}
+
+		/// <summary>The dialog result when closed</summary>
+		public bool? Result { get; private set; }
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 		private void NotifyPropertyChanged(string prop_name)
 		{
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+		}
+		private void HandleTradePropertyChanged(object sender, PropertyChangedEventArgs args)
+		{
+			// Don't make 'Trade' a prprop because we don't want 'Trade' to be null after the window is closed
+			NotifyPropertyChanged(string.Empty);
 		}
 	}
 }

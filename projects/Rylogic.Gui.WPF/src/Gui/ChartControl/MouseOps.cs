@@ -126,17 +126,13 @@ namespace Rylogic.Gui.WPF
 		public abstract class MouseOp : IDisposable
 		{
 			// The general process goes:
-			//  A mouse op is created and set as the pending operation in 'MouseOps'.
-			//  MouseDown on the chart calls 'BeginOp' which moves the pending op to 'Active'.
-			//  Mouse events on the chart are forwarded to the active op
-			//  MouseUp ends the current Active op, if the pending op should start immediately
-			//  then mouse up causes the next op to start (with a faked MouseDown event).
-			//  If at any point a mouse op is cancelled, no further mouse events are forwarded
-			//  to the op. When EndOp is called, a notification can be sent by the op to indicate cancelled.
-
-			/// <summary>The owning chart</summary>
-			protected ChartControl m_chart;
-			protected Scope m_suspend_scope;
+			//  - A mouse op is created and set as the pending operation in 'MouseOps'.
+			//  - MouseDown on the chart calls 'BeginOp' which moves the pending op to 'Active'.
+			//  - Mouse events on the chart are forwarded to the active op.
+			//  - MouseUp ends the current Active op, if the pending op should start immediately
+			//    then mouse up causes the next op to start (with a faked MouseDown event).
+			//  - If at any point a mouse op is cancelled, no further mouse events are forwarded
+			//    to the op. When EndOp is called, a notification can be sent by the op to indicate cancelled.
 
 			// Selection data for a mouse button
 			public bool m_btn_down;            // True while the corresponding mouse button is down
@@ -147,7 +143,7 @@ namespace Rylogic.Gui.WPF
 
 			public MouseOp(ChartControl chart)
 			{
-				m_chart = chart;
+				Chart = chart;
 				m_is_click = true;
 				StartOnMouseDown = true;
 				Cancelled = false;
@@ -155,9 +151,13 @@ namespace Rylogic.Gui.WPF
 			public virtual void Dispose()
 			{
 				Disposed?.Invoke(this, EventArgs.Empty);
-				Util.Dispose(ref m_suspend_scope);
+				Util.Dispose(ref m_suspended_chart_changed);
 			}
+			protected IDisposable m_suspended_chart_changed;
 			public event EventHandler Disposed;
+
+			/// <summary>The owning chart</summary>
+			protected ChartControl Chart { get; }
 
 			/// <summary>True if mouse down starts the op, false if the op should start as soon as possible</summary>
 			public bool StartOnMouseDown { get; set; }
@@ -171,7 +171,7 @@ namespace Rylogic.Gui.WPF
 				if (!m_is_click) return false;
 				var grab = m_grab_client;
 				var diff = location - grab;
-				return m_is_click = diff.LengthSq() < Math_.Sqr(m_chart.Options.MinDragPixelDistance);
+				return m_is_click = diff.LengthSq() < Math_.Sqr(Chart.Options.MinDragPixelDistance);
 			}
 
 			/// <summary>Called on mouse down</summary>
@@ -209,86 +209,86 @@ namespace Rylogic.Gui.WPF
 			}
 			public override void MouseDown(MouseButtonEventArgs e)
 			{
-				var location = e.GetPosition(m_chart);
+				var location = e.GetPosition(Chart);
 
 				// See where mouse down occurred
-				if (m_chart.SceneBounds.Contains(location)) m_hit_axis = EAxis.None;
-				if (m_chart.XAxisBounds.Contains(location)) m_hit_axis = EAxis.XAxis;
-				if (m_chart.YAxisBounds.Contains(location)) m_hit_axis = EAxis.YAxis;
+				if (Chart.SceneBounds.Contains(location)) m_hit_axis = EAxis.None;
+				if (Chart.XAxisBounds.Contains(location)) m_hit_axis = EAxis.XAxis;
+				if (Chart.YAxisBounds.Contains(location)) m_hit_axis = EAxis.YAxis;
 
 				// Look for a selected object that the mouse operation starts on
 				m_hit_selected = m_hit_result.Hits.FirstOrDefault(x => x.Element.Selected);
 
 				// Record the drag start positions for selected objects
-				foreach (var elem in m_chart.Selected)
+				foreach (var elem in Chart.Selected)
 					elem.DragStartPosition = elem.Position;
 
 				// For 3D scenes, left mouse rotates if mouse down is within the chart bounds
-				if (m_chart.Options.NavigationMode == ENavMode.Scene3D && m_hit_axis == EAxis.None)
+				if (Chart.Options.NavigationMode == ENavMode.Scene3D && m_hit_axis == EAxis.None)
 				{
 					// Get the point in 'scene' space
-					var point_ss = e.GetPosition(m_chart.Scene).ToPointF();
-					m_chart.Scene.Window.MouseNavigate(point_ss, e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Rotate, true);
+					var point_ss = e.GetPosition(Chart.Scene).ToPointF();
+					Chart.Scene.Window.MouseNavigate(point_ss, e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Rotate, true);
 				}
 
 				// Prevent events while dragging the elements around
-				m_suspend_scope = m_chart.SuspendChartChanged(raise_on_resume: true);
+				m_suspended_chart_changed = Chart.SuspendChartChanged(raise_on_resume: true);
 			}
 			public override void MouseMove(MouseEventArgs e)
 			{
-				var location = e.GetPosition(m_chart);
+				var location = e.GetPosition(Chart);
 
 				// If we haven't dragged, treat it as a click instead (i.e. ignore till it's a drag operation)
 				if (IsClick(location))
 					return;
 
-				var drag_selected = m_chart.AllowEditing && m_hit_selected != null;
+				var drag_selected = Chart.AllowEditing && m_hit_selected != null;
 				if (drag_selected)
 				{
 					// If the drag operation started on a selected element then drag the
 					// selected elements within the diagram.
-					var delta = m_chart.ClientToChart(location) - m_grab_chart;
-					m_chart.DragSelected(delta, false);
+					var delta = Chart.ClientToChart(location) - m_grab_chart;
+					Chart.DragSelected(delta, false);
 				}
-				else if (m_chart.Options.NavigationMode == ENavMode.Chart2D)
+				else if (Chart.Options.NavigationMode == ENavMode.Chart2D)
 				{
-					if (m_chart.AreaSelectMode != EAreaSelectMode.Disabled)
+					if (Chart.AreaSelectMode != EAreaSelectMode.Disabled)
 					{
 						// Otherwise change the selection area
 						if (m_cleanup_selection_graphic == null)
 						{
 							m_cleanup_selection_graphic = Scope.Create(
-								() => m_chart.Scene.AddObject(m_chart.Tools.AreaSelect),
-								() => m_chart.Scene.RemoveObject(m_chart.Tools.AreaSelect));
+								() => Chart.Scene.AddObject(Chart.Tools.AreaSelect),
+								() => Chart.Scene.RemoveObject(Chart.Tools.AreaSelect));
 						}
 
 						// Position the selection graphic
-						var selection_area = BRect.FromBounds(m_grab_chart.ToV2(), m_chart.ClientToChart(location).ToV2());
-						m_chart.Tools.AreaSelect.O2P = m4x4.Scale(
+						var selection_area = BRect.FromBounds(m_grab_chart.ToV2(), Chart.ClientToChart(location).ToV2());
+						Chart.Tools.AreaSelect.O2P = m4x4.Scale(
 							selection_area.SizeX,
 							selection_area.SizeY,
 							1f,
-							new v4(selection_area.Centre, m_chart.HighestZ, 1));
+							new v4(selection_area.Centre, Chart.HighestZ, 1));
 					}
 				}
-				else if (m_chart.Options.NavigationMode == ENavMode.Scene3D)
+				else if (Chart.Options.NavigationMode == ENavMode.Scene3D)
 				{
-					var point_ss = e.GetPosition(m_chart.Scene).ToPointF();
-					m_chart.Scene.Window.MouseNavigate(point_ss, e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Rotate, false);
+					var point_ss = e.GetPosition(Chart.Scene).ToPointF();
+					Chart.Scene.Window.MouseNavigate(point_ss, e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Rotate, false);
 				}
-				m_chart.Scene.Invalidate();
+				Chart.Scene.Invalidate();
 			}
 			public override void MouseUp(MouseButtonEventArgs e)
 			{
-				Util.Dispose(ref m_suspend_scope);
-				var location = e.GetPosition(m_chart);
+				Util.Dispose(ref m_suspended_chart_changed);
+				var location = e.GetPosition(Chart);
 
 				// If this is a single click...
 				if (IsClick(location))
 				{
 					// Pass the click event out to users first
 					var args = new ChartClickedEventArgs(m_hit_result, e);
-					m_chart.OnChartClicked(args);
+					Chart.OnChartClicked(args);
 
 					// If a selected element was hit on mouse down, see if it handles the click
 					if (!args.Handled && m_hit_selected != null)
@@ -307,38 +307,38 @@ namespace Rylogic.Gui.WPF
 					if (!args.Handled && m_hit_result.Zone.HasFlag(EZone.Chart))
 					{
 						var selection_area = new Rect(m_grab_chart, Size_.Zero);
-						m_chart.SelectElements(selection_area, Keyboard.Modifiers);
+						Chart.SelectElements(selection_area, Keyboard.Modifiers);
 					}
 				}
 				// Otherwise this is a drag action
 				else
 				{
 					// If an element was selected, drag it around
-					if (m_hit_selected != null && m_chart.AllowEditing)
+					if (m_hit_selected != null && Chart.AllowEditing)
 					{
-						var delta = m_chart.ClientToChart(location) - m_grab_chart;
-						m_chart.DragSelected(delta, true);
+						var delta = Chart.ClientToChart(location) - m_grab_chart;
+						Chart.DragSelected(delta, true);
 					}
-					else if (m_chart.Options.NavigationMode == ENavMode.Chart2D)
+					else if (Chart.Options.NavigationMode == ENavMode.Chart2D)
 					{
 						// Otherwise create an area selection if the click started within the chart
-						if (m_hit_result.Zone.HasFlag(EZone.Chart) && m_chart.AreaSelectMode != EAreaSelectMode.Disabled)
+						if (m_hit_result.Zone.HasFlag(EZone.Chart) && Chart.AreaSelectMode != EAreaSelectMode.Disabled)
 						{
-							var selection_area = BBox.From(new v4(m_grab_chart.ToV2(), 0, 1f), new v4(m_chart.ClientToChart(location).ToV2(), 0f, 1f));
-							m_chart.OnChartAreaSelect(new ChartAreaSelectEventArgs(selection_area));
+							var selection_area = BBox.From(new v4(m_grab_chart.ToV2(), 0, 1f), new v4(Chart.ClientToChart(location).ToV2(), 0f, 1f));
+							Chart.OnChartAreaSelect(new ChartAreaSelectEventArgs(selection_area));
 						}
 					}
-					else if (m_chart.Options.NavigationMode == ENavMode.Scene3D)
+					else if (Chart.Options.NavigationMode == ENavMode.Scene3D)
 					{
 						// For 3D scenes, left mouse rotates
-						var point_ss = e.GetPosition(m_chart.Scene).ToPointF();
-						m_chart.Scene.Window.MouseNavigate(point_ss, e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Rotate, true);
+						var point_ss = e.GetPosition(Chart.Scene).ToPointF();
+						Chart.Scene.Window.MouseNavigate(point_ss, e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Rotate, true);
 					}
 				}
 
 				Util.Dispose(ref m_cleanup_selection_graphic);
-				m_chart.Cursor = Cursors.Arrow;
-				m_chart.Scene.Invalidate();
+				Chart.Cursor = Cursors.Arrow;
+				Chart.Scene.Invalidate();
 			}
 			public override void OnKeyDown(KeyEventArgs e)
 			{
@@ -347,7 +347,7 @@ namespace Rylogic.Gui.WPF
 				{
 					Cancelled = true;
 					Util.Dispose(ref m_cleanup_selection_graphic);
-					m_chart.Scene.Invalidate();
+					Chart.Scene.Invalidate();
 				}
 			}
 		}
@@ -370,28 +370,28 @@ namespace Rylogic.Gui.WPF
 			}
 			public override void MouseDown(MouseButtonEventArgs e)
 			{
-				var location = e.GetPosition(m_chart);
+				var location = e.GetPosition(Chart);
 
 				// If mouse down occurred within the chart, record it
-				if (m_chart.SceneBounds.Contains(location))
+				if (Chart.SceneBounds.Contains(location))
 				{
-					m_chart.Cursor = Cursors.Cross;
+					Chart.Cursor = Cursors.Cross;
 				}
 			}
 			public override void MouseMove(MouseEventArgs e)
 			{
-				var location = e.GetPosition(m_chart);
+				var location = e.GetPosition(Chart);
 
 				// If we haven't dragged, treat it as a click instead (i.e. ignore till it's a drag operation)
 				if (IsClick(location) && !m_tape_measure_graphic_added)
 					return;
 
 				// Position the tape measure graphic
-				var pt0 = m_chart.Camera.O2W * m_chart.ChartToCamera(m_grab_chart);
-				var pt1 = m_chart.Camera.O2W * m_chart.ChartToCamera(m_chart.ClientToChart(location));
+				var pt0 = Chart.Camera.O2W * Chart.ChartToCamera(m_grab_chart);
+				var pt1 = Chart.Camera.O2W * Chart.ChartToCamera(Chart.ClientToChart(location));
 				var delta = pt1 - pt0;
-				m_chart.Tools.TapeMeasure.O2P = Math_.TxfmFromDir(EAxisId.PosZ, delta, pt0) * m4x4.Scale(1f, 1f, delta.Length, v4.Origin);
-				//m_tape_measure_balloon.Location = m_chart.PointToScreen(e.Location);
+				Chart.Tools.TapeMeasure.O2P = Math_.TxfmFromDir(EAxisId.PosZ, delta, pt0) * m4x4.Scale(1f, 1f, delta.Length, v4.Origin);
+				//m_tape_measure_balloon.Location = Chart.PointToScreen(e.Location);
 				//m_tape_measure_balloon.Text =
 				//	$"dX:  {delta.x}\r\n" +
 				//	$"dY:  {delta.y}\r\n" +
@@ -401,24 +401,24 @@ namespace Rylogic.Gui.WPF
 				// Show the tape measure graphic (after the text has been initialised)
 				if (!m_tape_measure_graphic_added)
 				{
-					m_chart.Scene.AddObject(m_chart.Tools.TapeMeasure);
+					Chart.Scene.AddObject(Chart.Tools.TapeMeasure);
 					m_tape_measure_graphic_added = true;
 					//m_tape_measure_balloon.Visible = true;
 				}
 
-				m_chart.Scene.Invalidate();
+				Chart.Scene.Invalidate();
 			}
 			public override void MouseUp(MouseButtonEventArgs e)
 			{
-				Util.Dispose(ref m_suspend_scope);
-				var location = e.GetPosition(m_chart);
+				Util.Dispose(ref m_suspended_chart_changed);
+				var location = e.GetPosition(Chart);
 
 				// If this is a single click...
 				if (IsClick(location))
 				{
 					// Pass the click event out to users first
 					var args = new ChartClickedEventArgs(m_hit_result, e);
-					m_chart.OnChartClicked(args);
+					Chart.OnChartClicked(args);
 
 					if (!args.Handled)
 					{
@@ -438,12 +438,12 @@ namespace Rylogic.Gui.WPF
 				// Remove the tape measure graphic
 				if (m_tape_measure_graphic_added)
 				{
-					m_chart.Scene.RemoveObject(m_chart.Tools.TapeMeasure);
+					Chart.Scene.RemoveObject(Chart.Tools.TapeMeasure);
 					//m_tape_measure_balloon.Visible = false;
 				}
 
-				m_chart.Cursor = Cursors.Arrow;
-				m_chart.Scene.Invalidate();
+				Chart.Cursor = Cursors.Arrow;
+				Chart.Scene.Invalidate();
 			}
 		}
 
@@ -458,62 +458,62 @@ namespace Rylogic.Gui.WPF
 			{ }
 			public override void MouseDown(MouseButtonEventArgs e)
 			{
-				var location = e.GetPosition(m_chart);
+				var location = e.GetPosition(Chart);
 
-				if (m_chart.SceneBounds.Contains(location)) m_drag_axis_allow = EAxis.Both;
-				if (m_chart.XAxisBounds.Contains(location)) m_drag_axis_allow = EAxis.XAxis;
-				if (m_chart.YAxisBounds.Contains(location)) m_drag_axis_allow = EAxis.YAxis;
-				if (!m_chart.XAxis.AllowScroll) m_drag_axis_allow &= ~EAxis.XAxis;
-				if (!m_chart.YAxis.AllowScroll) m_drag_axis_allow &= ~EAxis.YAxis;
+				if (Chart.SceneBounds.Contains(location)) m_drag_axis_allow = EAxis.Both;
+				if (Chart.XAxisBounds.Contains(location)) m_drag_axis_allow = EAxis.XAxis;
+				if (Chart.YAxisBounds.Contains(location)) m_drag_axis_allow = EAxis.YAxis;
+				if (!Chart.XAxis.AllowScroll) m_drag_axis_allow &= ~EAxis.XAxis;
+				if (!Chart.YAxis.AllowScroll) m_drag_axis_allow &= ~EAxis.YAxis;
 
 				// Right mouse translates for 2D and 3D scene
-				var point_ss = e.GetPosition(m_chart.Scene).ToPointF();
-				m_chart.Scene.Window.MouseNavigate(point_ss, e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Translate, true);
+				var point_ss = e.GetPosition(Chart.Scene).ToPointF();
+				Chart.Scene.Window.MouseNavigate(point_ss, e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Translate, true);
 			}
 			public override void MouseMove(MouseEventArgs e)
 			{
-				var location = e.GetPosition(m_chart);
+				var location = e.GetPosition(Chart);
 
 				// If we haven't dragged, treat it as a click instead (i.e. ignore till it's a drag operation)
 				if (IsClick(location))
 					return;
 
 				// Change the cursor once dragging
-				m_chart.Cursor = Cursors.SizeAll;
+				Chart.Cursor = Cursors.SizeAll;
 
 				// Limit the drag direction
-				var drop_loc = Gui_.MapPoint(m_chart, m_chart.Scene, location);
-				var grab_loc = Gui_.MapPoint(m_chart, m_chart.Scene, m_grab_client);
+				var drop_loc = Gui_.MapPoint(Chart, Chart.Scene, location);
+				var grab_loc = Gui_.MapPoint(Chart, Chart.Scene, m_grab_client);
 				if (!m_drag_axis_allow.HasFlag(EAxis.XAxis)) drop_loc.X = grab_loc.X;
 				if (!m_drag_axis_allow.HasFlag(EAxis.YAxis)) drop_loc.Y = grab_loc.Y;
 
-				m_chart.Scene.Window.MouseNavigate(drop_loc.ToPointF(), e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Translate, false);
-				m_chart.SetRangeFromCamera();
-				m_chart.Scene.Invalidate();
+				Chart.Scene.Window.MouseNavigate(drop_loc.ToPointF(), e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Translate, false);
+				Chart.SetRangeFromCamera();
+				Chart.Scene.Invalidate();
 			}
 			public override void MouseUp(MouseButtonEventArgs e)
 			{
-				m_chart.Cursor = Cursors.Arrow;
-				var location = e.GetPosition(m_chart);
+				Chart.Cursor = Cursors.Arrow;
+				var location = e.GetPosition(Chart);
 
 				// If we haven't dragged, treat it as a click instead
 				if (IsClick(location))
 				{
 					var args = new ChartClickedEventArgs(m_hit_result, e);
-					m_chart.OnChartClicked(args);
-					m_chart.Scene.Invalidate();
+					Chart.OnChartClicked(args);
+					Chart.Scene.Invalidate();
 				}
 				else
 				{
 					// Limit the drag direction
-					var drop_loc = Gui_.MapPoint(m_chart, m_chart.Scene, location);
-					var grab_loc = Gui_.MapPoint(m_chart, m_chart.Scene, m_grab_client);
+					var drop_loc = Gui_.MapPoint(Chart, Chart.Scene, location);
+					var grab_loc = Gui_.MapPoint(Chart, Chart.Scene, m_grab_client);
 					if (!m_drag_axis_allow.HasFlag(EAxis.XAxis)) drop_loc.X = grab_loc.X;
 					if (!m_drag_axis_allow.HasFlag(EAxis.YAxis)) drop_loc.Y = grab_loc.Y;
 
-					m_chart.Scene.Window.MouseNavigate(drop_loc.ToPointF(), e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.None, true);
-					m_chart.SetRangeFromCamera();
-					m_chart.Scene.Invalidate();
+					Chart.Scene.Window.MouseNavigate(drop_loc.ToPointF(), e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.None, true);
+					Chart.SetRangeFromCamera();
+					Chart.Scene.Invalidate();
 					e.Handled = true;
 				}
 			}

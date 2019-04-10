@@ -7,12 +7,15 @@ using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Extn.Windows;
 using Rylogic.Maths;
-using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
 	public partial class ChartControl
 	{
+		/// <summary>Set up the chart for MouseOps</summary>
+		private void InitNavigation()
+		{}
+
 		/// <summary>Enable/Disable mouse navigation</summary>
 		public bool DefaultMouseControl
 		{
@@ -43,30 +46,45 @@ namespace Rylogic.Gui.WPF
 		public EAreaSelectMode AreaSelectMode { get; set; }
 		public enum EAreaSelectMode { Disabled, SelectElements, Zoom }
 
-		/// <summary>Mouse events on the chart</summary>
-		protected override void OnMouseDown(MouseButtonEventArgs e)
+		/// <summary>Mouse/key events on the chart</summary>
+		protected override void OnMouseDown(MouseButtonEventArgs args)
 		{
-			base.OnMouseDown(e);
-			var location = e.GetPosition(this);
+			//
+			//  *** Use PreviewMouseDown to set pending MouseOps ***
+			//  *** Don't set e.Handled = true, SetPending() is enough ***
+			//
+			// Notes:
+			//  - MouseButton events in WPF are routed events that behave differently to WinForms.
+			//  - The order of handlers for MouseDown is:
+			//     1) Registered class handlers
+			//     2) OnMouseDown - base.OnMouseDown() does *not* raise the MouseDown event
+			//     3) Handers attached to event MouseDown
+			//  - MouseDown is a 'bubbling' event, it starts at the visual tree leaf element and
+			//    bubble up the tree, stopped when a handle sets 'e.Handled = true'
+			//  - PreviewMouseDown is a tunnelling 'event', it starts at the window and drills
+			//    down the tree to the leaves. If 'e.Handled = true' in a PreviewMouseDown handler
+			//    then MouseDown is never raised, and override OnMouseDown isn't called.
+
+			var location = args.GetPosition(this);
 
 			// If a mouse op is already active, ignore mouse down
 			if (MouseOperations.Active != null)
 				return;
 
 			// Look for the mouse op to perform
-			if (MouseOperations.Pending(e.ChangedButton) == null && DefaultMouseControl)
+			if (MouseOperations.Pending(args.ChangedButton) == null && DefaultMouseControl)
 			{
-				switch (e.ChangedButton)
+				switch (args.ChangedButton)
 				{
 				default: return;
-				case MouseButton.Left: MouseOperations.SetPending(e.ChangedButton, new MouseOpDefaultLButton(this)); break;
-				case MouseButton.Middle: MouseOperations.SetPending(e.ChangedButton, new MouseOpDefaultMButton(this)); break;
-				case MouseButton.Right: MouseOperations.SetPending(e.ChangedButton, new MouseOpDefaultRButton(this)); break;
+				case MouseButton.Left:   MouseOperations.SetPending(args.ChangedButton, new MouseOpDefaultLButton(this)); break;
+				case MouseButton.Middle: MouseOperations.SetPending(args.ChangedButton, new MouseOpDefaultMButton(this)); break;
+				case MouseButton.Right:  MouseOperations.SetPending(args.ChangedButton, new MouseOpDefaultRButton(this)); break;
 				}
 			}
 
 			// Start the next mouse op
-			MouseOperations.BeginOp(e.ChangedButton);
+			MouseOperations.BeginOp(args.ChangedButton);
 
 			// Get the mouse op, save mouse location and hit test data, then call op.MouseDown()
 			var op = MouseOperations.Active;
@@ -76,24 +94,23 @@ namespace Rylogic.Gui.WPF
 				op.m_grab_client = location; // Note: in ChartControl space, not ChartPanel space
 				op.m_grab_chart = ClientToChart(op.m_grab_client);
 				op.m_hit_result = HitTestCS(op.m_grab_client, Keyboard.Modifiers, null);
-				op.MouseDown(e);
+				op.MouseDown(args);
 				CaptureMouse();
 			}
 		}
-		protected override void OnMouseMove(MouseEventArgs e)
+		protected override void OnMouseMove(MouseEventArgs args)
 		{
-			base.OnMouseMove(e);
-			var location = e.GetPosition(this);
+			var location = args.GetPosition(this);
 
 			// Look for the mouse op to perform
 			var op = MouseOperations.Active;
 			if (op != null)
 			{
 				if (!op.Cancelled)
-					op.MouseMove(e);
+					op.MouseMove(args);
 			}
 			// Otherwise, provide mouse hover detection
-			else
+			else if (SceneBounds != Rect_.Zero)
 			{
 				var hit = HitTestCS(location, Keyboard.Modifiers, null);
 				var hovered = hit.Hits.Select(x => x.Element).ToHashSet();
@@ -112,35 +129,31 @@ namespace Rylogic.Gui.WPF
 				Hovered.AddRange(hovered);
 
 				// Notify that the chart coordinate at the mouse pointer has changed
-				if (hit.Zone == EZone.Chart)
+				if (hit.Zone == EZone.Chart && ShowValueAtPointer)
 					NotifyPropertyChanged(nameof(ValueAtPointer));
 			}
 		}
-		protected override void OnMouseUp(MouseButtonEventArgs e)
+		protected override void OnMouseUp(MouseButtonEventArgs args)
 		{
-			base.OnMouseUp(e);
-
 			// Only release the mouse when all buttons are up
-			if (e.ToMouseBtns() == EMouseBtns.None)
+			if (args.ToMouseBtns() == EMouseBtns.None)
 				ReleaseMouseCapture();
 
 			// Look for the mouse op to perform
 			var op = MouseOperations.Active;
 			if (op != null && !op.Cancelled)
-				op.MouseUp(e);
+				op.MouseUp(args);
 
-			MouseOperations.EndOp(e.ChangedButton);
+			MouseOperations.EndOp(args.ChangedButton);
 		}
-		protected override void OnMouseWheel(MouseWheelEventArgs e)
+		protected override void OnMouseWheel(MouseWheelEventArgs args)
 		{
-			base.OnMouseWheel(e);
-
 			// If there is a mouse op in progress, ignore the wheel
 			var op = MouseOperations.Active;
 			if (op != null && !op.Cancelled)
 				return;
 
-			var location = e.GetPosition(this);
+			var location = args.GetPosition(this);
 			var along_ray = Options.MouseCentredZoom || Keyboard.Modifiers.HasFlag(ModifierKeys.Alt);
 			var chart_pt = ClientToChart(location);
 			var hit = HitTestZoneCS(location, Keyboard.Modifiers);
@@ -148,7 +161,7 @@ namespace Rylogic.Gui.WPF
 			var scale = 0.001f;
 			if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) scale *= 0.1f;
 			if (Keyboard.Modifiers.HasFlag(ModifierKeys.Alt)) scale *= 0.01f;
-			var delta = Math_.Clamp(e.Delta * scale, -0.999f, 0.999f);
+			var delta = Math_.Clamp(args.Delta * scale, -0.999f, 0.999f);
 			var chg = (string)null;
 
 			// If zooming is allowed on both axes, translate the camera
@@ -156,7 +169,7 @@ namespace Rylogic.Gui.WPF
 			{
 				// Translate the camera along a ray through 'point'
 				var loc = Gui_.MapPoint(this, Scene, location);
-				Scene.Window.MouseNavigateZ(loc.ToPointF(), e.ToMouseBtns(Keyboard.Modifiers), e.Delta, along_ray);
+				Scene.Window.MouseNavigateZ(loc.ToPointF(), args.ToMouseBtns(Keyboard.Modifiers), args.Delta, along_ray);
 				chg = nameof(SetRangeFromCamera);
 			}
 			
@@ -221,31 +234,27 @@ namespace Rylogic.Gui.WPF
 				break;
 			}
 		}
-		protected override void OnKeyDown(KeyEventArgs e)
+		protected override void OnKeyDown(KeyEventArgs args)
 		{
+			// *** Use PreviewKeyDown to add MouseOps ***
 			SetCursor();
 
 			var op = MouseOperations.Active;
-			if (op != null && !e.Handled)
-				op.OnKeyDown(e);
-
-			// Allow derived classes to handle the key
-			base.OnKeyDown(e);
+			if (op != null && !args.Handled)
+				op.OnKeyDown(args);
 
 			// If the current mouse operation doesn't use the key,
 			// see if it's a default keyboard shortcut.
-			if (!e.Handled && DefaultKeyboardShortcuts)
-				TranslateKey(e);
+			if (!args.Handled && DefaultKeyboardShortcuts)
+				TranslateKey(args);
 		}
-		protected override void OnKeyUp(KeyEventArgs e)
+		protected override void OnKeyUp(KeyEventArgs args)
 		{
 			SetCursor();
 
 			var op = MouseOperations.Active;
-			if (op != null && !e.Handled)
-				op.OnKeyUp(e);
-
-			base.OnKeyUp(e);
+			if (op != null && !args.Handled)
+				op.OnKeyUp(args);
 		}
 
 		/// <summary>Set the mouse cursor based on key state</summary>

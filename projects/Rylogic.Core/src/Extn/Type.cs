@@ -509,6 +509,12 @@ namespace Rylogic.Extn
 		{
 			return x.WithinInclusive(range.Begf, range.Endf);
 		}
+
+		/// <summary>Format the value with the indicated number of significant digits.</summary>
+		public static string ToString(this float value, int significant_digits)
+		{
+			return ((double)value).ToString(significant_digits);
+		}
 	}
 
 	/// <summary>'double' type extensions</summary>
@@ -568,6 +574,37 @@ namespace Rylogic.Extn
 		{
 			return x.WithinInclusive(range.Beg, range.End);
 		}
+
+		/// <summary>Format the value with the indicated number of significant digits.</summary>
+		public static string ToString(this double value, int significant_digits)
+		{
+			// Use G format to get significant digits.
+			// Then convert to double and use F format.
+			var format1 = "{0:G" + significant_digits.ToString() + "}";
+			var result = Convert.ToDouble(string.Format(format1, value)).ToString("F99");
+
+			// Remove trailing 0s.
+			result = result.TrimEnd('0');
+
+			// Remove the decimal point and leading 0s, leaving just the digits.
+			var test = result.Replace(".", "").TrimStart('0');
+
+			// See if we have enough significant digits.
+			if (significant_digits > test.Length)
+			{
+				// Add trailing 0s.
+				result += new string('0', significant_digits - test.Length);
+			}
+			else
+			{
+				// See if we should remove the trailing decimal point.
+				if ((significant_digits < test.Length) &&
+					result.EndsWith("."))
+					result = result.Substring(0, result.Length - 1);
+			}
+
+			return result;
+		}
 	}
 
 	/// <summary>'decimal' type extensions</summary>
@@ -617,6 +654,37 @@ namespace Rylogic.Extn
 		public static bool WithinInclusive(this decimal? x, decimal beg, decimal end)
 		{
 			return x.HasValue && x.Value.WithinInclusive(beg,end);
+		}
+
+		/// <summary>Format the value with the indicated number of significant digits.</summary>
+		public static string ToString(this decimal value, int significant_digits)
+		{
+			// Use G format to get significant digits.
+			// Then convert to double and use F format.
+			var format1 = "{0:G" + significant_digits.ToString() + "}";
+			var result = Convert.ToDouble(string.Format(format1, value)).ToString("F99");
+
+			// Remove trailing 0s.
+			result = result.TrimEnd('0');
+
+			// Remove the decimal point and leading 0s, leaving just the digits.
+			var test = result.Replace(".", "").TrimStart('0');
+
+			// See if we have enough significant digits.
+			if (significant_digits > test.Length)
+			{
+				// Add trailing 0s.
+				result += new string('0', significant_digits - test.Length);
+			}
+			else
+			{
+				// See if we should remove the trailing decimal point.
+				if ((significant_digits < test.Length) &&
+					result.EndsWith("."))
+					result = result.Substring(0, result.Length - 1);
+			}
+
+			return result;
 		}
 	}
 }

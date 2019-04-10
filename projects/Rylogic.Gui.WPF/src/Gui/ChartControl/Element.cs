@@ -257,7 +257,7 @@ namespace Rylogic.Gui.WPF
 			protected virtual void InvalidateChart()
 			{
 				if (Chart == null) return;
-				//Chart.Invalidate();
+				Chart.Scene.Invalidate();
 			}
 
 			/// <summary>Indicate that the graphics for this element needs to be recreated or modified</summary>

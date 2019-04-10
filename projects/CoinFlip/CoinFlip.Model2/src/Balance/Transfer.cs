@@ -41,7 +41,7 @@ namespace CoinFlip
 		public EStatus Status { get; }
 
 		/// <summary>String description of the transfer</summary>
-		public string Description => $"{Type} {Coin} {Amount.ToString("G8", true)}";
+		public string Description => $"{Type} {Coin} {Amount.ToString("F8", true)}";
 
 		/// <summary>Transfer transaction status</summary>
 		public enum EStatus

@@ -40,7 +40,7 @@ namespace CoinFlip
 			}
 			if (val.HasFlag(EValidation.InsufficientBalance))
 			{
-				sb.AppendLine("There is insufficient balance of the currency being sold.");
+				sb.AppendLine("There is insufficient balance.");
 				val ^= EValidation.InsufficientBalance;
 			}
 			if (val.HasFlag(EValidation.PriceIsInvalid))

@@ -97,7 +97,7 @@ namespace CoinFlip
 		public Coin CoinOut => TradeType.CoinOut(Pair);
 
 		/// <summary>Description string for the trade</summary>
-		public string Description => $"{AmountIn.ToString("G6", true)} → {AmountOut.ToString("G6", true)} @ {PriceQ2B.ToString("G6", true)}";
+		public string Description => $"{AmountIn.ToString("F8", true)} → {AmountOut.ToString("F8", true)} @ {PriceQ2B.ToString("F8", true)}";
 
 		#region Equals
 		public bool Equals(TradeCompleted rhs)

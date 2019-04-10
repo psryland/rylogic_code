@@ -128,7 +128,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>String description of the trade</summary>
-		public string Description => $"[Id:{OrderId}] {AmountIn.ToString("G6", true)} → {AmountOut.ToString("G6", true)} @ {PriceQ2B.ToString("G6", true)}";
+		public string Description => $"[Id:{OrderId}] {AmountIn.ToString("F8", true)} → {AmountOut.ToString("F8", true)} @ {PriceQ2B.ToString("F8", true)}";
 
 		/// <summary>Cancel this position</summary>
 		public async Task CancelOrder()

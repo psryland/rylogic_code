@@ -100,7 +100,7 @@ namespace CoinFlip
 		public DateTimeOffset Created => Trades.Count == 0 ? DateTimeOffset.MinValue : Trades.Values.Min(x => x.Created);
 
 		/// <summary>Description string for the trade</summary>
-		public string Description => $"{AmountIn.ToString("G6", true)} → {AmountNett.ToString("G6", true)} @ {PriceQ2B.ToString("G6", true)}";
+		public string Description => $"{AmountIn.ToString("F8", true)} → {AmountNett.ToString("F8", true)} @ {PriceQ2B.ToString("F8", true)}";
 
 		/// <summary>INotifyPropertyChanged</summary>
 		public event PropertyChangedEventHandler PropertyChanged;

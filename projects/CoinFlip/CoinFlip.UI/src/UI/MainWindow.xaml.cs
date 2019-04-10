@@ -28,11 +28,12 @@ namespace CoinFlip.UI
 			m_dc.Add(new GridCoins(Model), EDockSite.Left, EDockSite.Bottom);
 			m_dc.Add(new GridTradeOrders(Model), 0, EDockSite.Bottom);
 			m_dc.Add(new GridTradeHistory(Model), 1, EDockSite.Bottom);
-			m_dc.Add(new LogView(), 2, EDockSite.Centre);
-			m_dc.Add(new CandleChart(Model), 1, EDockSite.Centre);
 			m_dc.Add(new CandleChart(Model), 0, EDockSite.Centre);
+			m_dc.Add(new CandleChart(Model), 1, EDockSite.Centre);
+			m_dc.Add(new LogView(), 2, EDockSite.Centre);
 			m_menu.Items.Add(m_dc.WindowsMenu());
 
+			((CandleChart)Model.Charts[0]).DockControl.IsActiveContent = true;
 			DataContext = this;
 		}
 		protected override void OnSourceInitialized(EventArgs e)

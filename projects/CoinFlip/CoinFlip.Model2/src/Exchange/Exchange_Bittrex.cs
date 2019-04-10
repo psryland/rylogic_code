@@ -334,7 +334,7 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				throw new Exception($"Bittrex: Submit trade failed. {ex.Message}\n{tt} Pair: {pair.Name}  Vol: {amount.ToString("G8", true)} @  {price.ToString("G8", true)}", ex);
+				throw new Exception($"Bittrex: Submit trade failed. {ex.Message}\n{tt} Pair: {pair.Name}  Vol: {amount.ToString("F8", true)} @  {price.ToString("F8", true)}", ex);
 			}
 		}
 

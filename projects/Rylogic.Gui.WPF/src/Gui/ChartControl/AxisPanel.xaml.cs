@@ -90,7 +90,7 @@ namespace Rylogic.Gui.WPF.ChartDetail
 			get { return (ChartControl.RangeData.Axis)GetValue(AxisProperty); }
 			set { SetValue(AxisProperty, value); }
 		}
-		private void Axis_Changed(ChartControl.RangeData.Axis old_value, ChartControl.RangeData.Axis new_value)
+		private void Axis_Changed(ChartControl.RangeData.Axis new_value, ChartControl.RangeData.Axis old_value)
 		{
 			if (old_value != null)
 			{
@@ -231,8 +231,8 @@ namespace Rylogic.Gui.WPF.ChartDetail
 							var lbl = Children.Add2(new TextBlock { Text = s, Foreground = bsh });
 							lbl.Typeface(Typeface, FontSize);
 							lbl.Measure(Size_.Infinity);
-							SetLeft(lbl, X - lbl.DesiredSize.Width - Options.TickLength);
-							SetTop(lbl, Y - lbl.DesiredSize.Height / 2);
+							Canvas.SetLeft(lbl, X - lbl.DesiredSize.Width - Options.TickLength);
+							Canvas.SetTop(lbl, Y - lbl.DesiredSize.Height / 2);
 						}
 					}
 					break;
@@ -260,8 +260,8 @@ namespace Rylogic.Gui.WPF.ChartDetail
 							var lbl = Children.Add2(new TextBlock { Text = s, Foreground = bsh });
 							lbl.Typeface(Typeface, FontSize);
 							lbl.Measure(Size_.Infinity);
-							SetLeft(lbl, X - lbl.DesiredSize.Width / 2);
-							SetTop(lbl, Options.TickLength);
+							Canvas.SetLeft(lbl, X - lbl.DesiredSize.Width / 2);
+							Canvas.SetTop(lbl, Options.TickLength);
 						}
 					}
 					break;
@@ -289,8 +289,8 @@ namespace Rylogic.Gui.WPF.ChartDetail
 							var lbl = Children.Add2(new TextBlock { Text = s, Foreground = bsh });
 							lbl.Typeface(Typeface, FontSize);
 							lbl.Measure(Size_.Infinity);
-							SetLeft(lbl, X + Options.TickLength + 1);
-							SetTop(lbl, Y - lbl.DesiredSize.Height / 2);
+							Canvas.SetLeft(lbl, X + Options.TickLength + 1);
+							Canvas.SetTop(lbl, Y - lbl.DesiredSize.Height / 2);
 						}
 					}
 					break;
@@ -318,8 +318,8 @@ namespace Rylogic.Gui.WPF.ChartDetail
 							var lbl = Children.Add2(new TextBlock { Text = s, Foreground = bsh });
 							lbl.Typeface(Typeface, FontSize);
 							lbl.Measure(Size_.Infinity);
-							SetLeft(lbl, X - lbl.DesiredSize.Width / 2);
-							SetTop(lbl, Y - Options.TickLength - lbl.DesiredSize.Height);
+							Canvas.SetLeft(lbl, X - lbl.DesiredSize.Width / 2);
+							Canvas.SetTop(lbl, Y - Options.TickLength - lbl.DesiredSize.Height);
 						}
 					}
 					break;

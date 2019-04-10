@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using CoinFlip.Settings;
@@ -9,7 +10,7 @@ using Rylogic.Utility;
 namespace CoinFlip
 {
 	[DebuggerDisplay("{Description,nq}")]
-	public class Trade
+	public class Trade : INotifyPropertyChanged
 	{
 		// Notes:
 		//  - A 'Trade' is a description of a trade that *could* be placed. It is different
@@ -31,11 +32,11 @@ namespace CoinFlip
 			if (amt_base * price_q2b < 0m._(pair.Quote))
 				throw new Exception("Invalid trade amount (quote)");
 
-			FundId     = fund_id;
-			Pair       = pair;
-			TradeType  = tt;
+			FundId = fund_id;
+			Pair = pair;
+			TradeType = tt;
 			AmountBase = amt_base;
-			PriceQ2B   = price_q2b;
+			PriceQ2B = price_q2b;
 		}
 
 		/// <summary>Create a trade on 'pair' to convert 'amount_in' of 'coin_in' to 'amount_out'</summary>
@@ -47,29 +48,29 @@ namespace CoinFlip
 				pair.Base == coin_in ? ETradeType.B2Q :
 				pair.Quote == coin_in ? ETradeType.Q2B :
 				throw new Exception($"Currency {coin_in} is not one of {pair.Name}");
-			AmountBase = TradeType.AmountBase(PriceQ2B, amount_id:amount_in);
+			AmountBase = TradeType.AmountBase(PriceQ2B, amount_in: amount_in);
 			PriceQ2B = TradeType.PriceQ2B(amount_out / amount_in);
 		}
 
 		/// <summary>Copy construct a trade, with the amount scaled by 'scale'</summary>
 		public Trade(Trade rhs, decimal scale = 1m)
 		{
-			FundId     = rhs.FundId;
-			Pair       = rhs.Pair;
-			TradeType  = rhs.TradeType;
+			FundId = rhs.FundId;
+			Pair = rhs.Pair;
+			TradeType = rhs.TradeType;
 			AmountBase = rhs.AmountBase * scale;
-			PriceQ2B   = rhs.PriceQ2B;
+			PriceQ2B = rhs.PriceQ2B;
 		}
 
 		/// <summary>Create a trade based on an existing position</summary>
 		public Trade(Order odr)
-			:this(odr.FundId, odr.TradeType, odr.Pair, odr.PriceQ2B, odr.AmountBase)
-		{}
+			: this(odr.FundId, odr.TradeType, odr.Pair, odr.PriceQ2B, odr.AmountBase)
+		{ }
 
 		/// <summary>Copy constructor</summary>
 		public Trade(Trade rhs)
-			:this(rhs.FundId, rhs.TradeType, rhs.Pair, rhs.PriceQ2B, rhs.AmountBase)
-		{}
+			: this(rhs.FundId, rhs.TradeType, rhs.Pair, rhs.PriceQ2B, rhs.AmountBase)
+		{ }
 
 		/// <summary>The fund associated with this trade</summary>
 		public string FundId { get; }
@@ -84,12 +85,24 @@ namespace CoinFlip
 				m_pair = value;
 				PriceQ2B = PriceQ2B._(value.RateUnits);
 				AmountBase = AmountBase._(value.Base);
+				NotifyPropertyChanged(nameof(Pair));
 			}
 		}
 		private TradePair m_pair;
 
 		/// <summary>The trade type</summary>
-		public ETradeType TradeType { get; set; }
+		public ETradeType TradeType
+		{
+			get { return m_trade_type; }
+			set
+			{
+				if (m_trade_type == value) return;
+				m_trade_type = value;
+				NotifyPropertyChanged(nameof(TradeType));
+				NotifyPropertyChanged(nameof(OrderType));
+			}
+		}
+		private ETradeType m_trade_type;
 
 		/// <summary>Given the current spot price, return the order type</summary>
 		public EPlaceOrderType OrderType
@@ -116,13 +129,28 @@ namespace CoinFlip
 		}
 
 		/// <summary>The base amount to trade</summary>
-		public Unit<decimal> AmountBase { get; set; }
+		public Unit<decimal> AmountBase
+		{
+			get { return m_amount_base; }
+			set
+			{
+				// Validate the amount (and units)
+				if (value < 0m._(Pair.Base))
+					throw new Exception($"Invalid trade amount: {value}");
+
+				value = Math.Round(value, 8, MidpointRounding.AwayFromZero)._(value);
+				if (m_amount_base != 0 && m_amount_base == value) return;
+				m_amount_base = value;
+				NotifyPropertyChanged(nameof(AmountBase));
+			}
+		}
+		private Unit<decimal> m_amount_base;
 
 		/// <summary>The amount being sold</summary>
 		public Unit<decimal> AmountIn
 		{
 			get { return TradeType.AmountIn(AmountBase, PriceQ2B); }
-			set { AmountBase = TradeType.AmountBase(PriceQ2B, amount_id:value); }
+			set { AmountBase = TradeType.AmountBase(PriceQ2B, amount_in:value); }
 		}
 
 		/// <summary>The amount being bought</summary>
@@ -136,7 +164,22 @@ namespace CoinFlip
 		public Unit<decimal> AmountNett => AmountOut * (1 - Pair.Fee);
 
 		/// <summary>The price to make the trade at (Quote/Base)</summary>
-		public Unit<decimal> PriceQ2B { get; set; }
+		public Unit<decimal> PriceQ2B
+		{
+			get { return m_price_q2b; }
+			set
+			{
+				// Validate the price (and units)
+				if (value < 0m._(Pair.RateUnits))
+					throw new Exception($"Invalid trade price: {value}");
+
+				value = Math.Round(value, 8, MidpointRounding.AwayFromZero)._(value);
+				if (m_price_q2b != 0 && m_price_q2b == value) return;
+				m_price_q2b = value;
+				NotifyPropertyChanged(nameof(PriceQ2B));
+			}
+		}
+		private Unit<decimal> m_price_q2b;
 
 		/// <summary>The price to make the trade at (CoinOut/CoinIn)</summary>
 		public Unit<decimal> Price
@@ -174,9 +217,6 @@ namespace CoinFlip
 
 		/// <summary>The allowable range on output trade amounts</summary>
 		public RangeF<Unit<decimal>> AmountRangeOut => Pair.AmountRangeOut(TradeType);
-
-		/// <summary>String description of the trade</summary>
-		public string Description => $"{AmountIn.ToString("G6", true)} → {AmountOut.ToString("G6", true)} @ {PriceQ2B.ToString("G6", true)}";
 
 		/// <summary>Check whether this trade is an allowed trade</summary>
 		public EValidation Validate(Guid? reserved_balance_in = null, Unit<decimal>? additional_balance_in = null)
@@ -237,6 +277,19 @@ namespace CoinFlip
 		{
 			return await Pair.Exchange.CreateOrder(FundId, TradeType, Pair, AmountIn, Price);
 		}
+
+		/// <summary>Trade property changed</summary>
+		public event PropertyChangedEventHandler PropertyChanged;
+		private void NotifyPropertyChanged(string prop_name)
+		{
+			// Note, don't notify for all derived properties, there's too many combinations.
+			// Observers should just handle the properties with setters. UI's will need to
+			// wrap this type to handle property changed.
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+		}
+
+		/// <summary>String description of the trade</summary>
+		public string Description => $"{AmountIn.ToString("F8", true)} → {AmountOut.ToString("F8", true)} @ {PriceQ2B.ToString("F8", true)}";
 
 		#region Equals
 		public bool Equals(Trade rhs)

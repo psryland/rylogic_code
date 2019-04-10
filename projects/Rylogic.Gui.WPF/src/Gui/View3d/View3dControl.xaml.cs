@@ -152,8 +152,8 @@ namespace Rylogic.Gui.WPF
 		}
 		protected override void OnMouseDown(MouseButtonEventArgs e)
 		{
-			base.OnMouseDown(e);
 			Keyboard.Focus(this);
+			base.OnMouseDown(e);
 		}
 		private bool m_resized;
 
@@ -451,10 +451,12 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Render</summary>
 		private void Render()
 		{
+			// Don't make this public, use 'Invalidate'
+			if (!m_render_pending) return;
 			using (Scope.Create(null, () => m_render_pending = false))
 			{
 				// Ignore renders until the D3DImage has a render target
-				if (D3DImage.RenderTarget == null || !D3DImage.IsFrontBufferAvailable)
+				if (D3DImage?.RenderTarget == null || !D3DImage.IsFrontBufferAvailable)
 				{
 					// 'Validate' the window so that future Invalidate() calls to trigger the call back.
 					Window.Validate();

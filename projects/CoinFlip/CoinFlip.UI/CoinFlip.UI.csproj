@@ -69,6 +69,7 @@
     </Compile>
     <Compile Include="src\GfxObjects\CompletedOrder.cs" />
     <Compile Include="src\GfxObjects\OpenOrder.cs" />
+    <Compile Include="src\GfxObjects\TradeIndicator.cs" />
     <Compile Include="src\Misc\ExchPairTimeFrame.cs" />
     <Compile Include="src\GfxObjects\Buffers.cs" />
     <Compile Include="src\GfxObjects\Candles.cs" />

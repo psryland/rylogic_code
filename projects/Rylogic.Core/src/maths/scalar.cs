@@ -373,13 +373,21 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Round a number to 'digits' significant figures</summary>
-		public static double RoundSF(double d, int digits)
+		public static double RoundSF(double d, int significant_digits)
 		{
 			if (d == 0)
 				return 0;
 
 			var scale = (decimal)Math.Pow(10, Math.Floor(Math.Log10(Math.Abs(d))) + 1);
-			return (double)(scale * Math.Round((decimal)d / scale, digits));
+			return (double)(scale * Math.Round((decimal)d / scale, significant_digits));
+		}
+		public static decimal RoundSF(decimal d, int significant_digits)
+		{
+			if (d == 0)
+				return 0;
+
+			var scale = (decimal)Math.Pow(10, Math.Floor(Math.Log10(Math.Abs((double)d))) + 1);
+			return scale * Math.Round(d / scale, significant_digits);
 		}
 
 		/// <summary>Quantise a value to 'scale'. For best results, 'scale' should be a power of 2, i.e. 256, 1024, 2048, etc</summary>

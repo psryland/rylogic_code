@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -740,7 +741,19 @@ namespace CoinFlip.UI
 		private void EditTradeInternal(object x)
 		{
 			var trade = (Trade)x;
+
+			// Create a graphic to represent the trade on the chart
+			var indy = new GfxObjects.TradeIndicator(trade) { Chart = Chart };
+
+			// Create an editor window for the trade
 			var ui = new EditTradeUI(Window.GetWindow(this), Model, trade, null);
+			ui.Closed += (s, a) =>
+			{
+				indy.Chart = null;
+				Chart.Scene.Invalidate();
+				if (ui.Result == true)
+					{ }// Apply the trade
+			};
 			ui.Show();
 		}
 
@@ -842,14 +855,14 @@ namespace CoinFlip.UI
 					// Buy base currency (Q2B)
 					{
 						var trade = new Trade(Fund.Main, ETradeType.Q2B, Instrument.Pair, click_price);
-						buy.Header = $"{OrderType(trade)} at {trade.PriceQ2B.ToString("G6", true)}";
+						buy.Header = $"{OrderType(trade)} at {trade.PriceQ2B.ToString("F8", true)}";
 						buy.CommandParameter = trade;
 					}
 
 					// Buy quote currency (B2Q)
 					{
 						var trade = new Trade(Fund.Main, ETradeType.B2Q, Instrument.Pair, click_price);
-						sel.Header = $"{OrderType(trade)} at {trade.PriceQ2B.ToString("G6", true)}";
+						sel.Header = $"{OrderType(trade)} at {trade.PriceQ2B.ToString("F8", true)}";
 						sel.CommandParameter = trade;
 					}
 

@@ -626,7 +626,7 @@ namespace CoinFlip
 				new OrderResult(pair, ++m_fake_order_number, filled: false);
 
 			// Log the event
-			Model.Log.Write(ELogLevel.Info, $"{Name}: (id={result.OrderId}) {amount_.ToString("G6", true)} → {(amount_ * price_).ToString("G6", true)} @ {price.ToString("G6", true)}");
+			Model.Log.Write(ELogLevel.Info, $"{Name}: (id={result.OrderId}) {amount_.ToString("F8", true)} → {(amount_ * price_).ToString("F8", true)} @ {price.ToString("F8", true)}");
 
 			// Save a mapping from order id to fund id. This records who was responsible for creating the order.
 			OrderIdtoFundId[result.OrderId] = fund_id;

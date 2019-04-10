@@ -67,6 +67,7 @@ namespace Rylogic.Gui.WPF
 				AreaSelectMode = EAreaSelectMode.Zoom;
 
 				InitCommands();
+				InitNavigation();
 				DataContext = this;
 			}
 			catch

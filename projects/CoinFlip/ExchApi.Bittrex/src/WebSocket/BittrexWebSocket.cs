@@ -34,7 +34,7 @@ namespace Bittrex.API.Subscriptions
 				if (m_hub_connection == value) return;
 				if (m_hub_connection != null)
 				{
-					m_hub_connection.Stop();
+					//m_hub_connection.Stop();
 					m_hub_connection.Error -= HandleError;
 					Util.Dispose(ref m_hub_connection);
 				}

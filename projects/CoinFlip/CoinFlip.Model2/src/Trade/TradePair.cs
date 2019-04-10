@@ -235,10 +235,10 @@ namespace CoinFlip
 			if (amount < 0m._(Quote))
 				throw new Exception("Invalid amount");
 
-			// Determine the best price and amount in base currency
+			// Determine the best price and amount in base currency.
 			// Note, the units are not the typical units for an order because
-			// I'm just using 'Order' to pass back a price and amount pair.
-			var trade = new Trade(fund_id, ETradeType.Q2B, this, 0m._(RateUnits), 0m._(Base));
+			// I'm just using 'trade' to pass back a price and amount pair.
+			var trade = new Trade(fund_id, ETradeType.Q2B, this, price_q2b:0m._(RateUnits), amount_base:0m._(Base));
 			foreach (var x in Q2B)
 			{
 				if (x.Price * x.AmountBase > amount)
