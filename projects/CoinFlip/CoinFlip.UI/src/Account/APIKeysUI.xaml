@@ -6,7 +6,6 @@
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 	xmlns:local="clr-namespace:CoinFlip.UI"
 	mc:Ignorable="d"
-	Icon="{StaticResource Money}"
 	WindowStartupLocation="CenterOwner"
 	ShowInTaskbar="False"
 	Width="400"

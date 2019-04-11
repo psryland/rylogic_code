@@ -750,9 +750,20 @@ namespace CoinFlip.UI
 			ui.Closed += (s, a) =>
 			{
 				indy.Chart = null;
-				Chart.Scene.Invalidate();
 				if (ui.Result == true)
-					{ }// Apply the trade
+				{
+					//if (trade.)
+				}
+					//Dispatcher_.BeginInvoke(async () =>
+					//{
+					//	try
+					//	{
+					//		await trade.CreateOrder(Model.Shutdown.Token);
+					//	}
+					//	catch (Exception ex)
+					//	{
+					//	}
+					//});
 			};
 			ui.Show();
 		}

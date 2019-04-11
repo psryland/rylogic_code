@@ -125,6 +125,10 @@ namespace Rylogic.Gui.WPF
 				// This also clears the 'selected' state for the element
 				Selected = false;
 
+				// Remove any graphics from the previous chart
+				if (m_chart != null)
+					m_chart.Window.RemoveObjects(new[] { Id }, 1, 0);
+
 				// Set the new chart
 				m_chart = chart;
 			}

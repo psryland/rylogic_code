@@ -8,7 +8,6 @@
 	mc:Ignorable="d"
 	WindowStartupLocation="CenterScreen"
 	Title="CoinFlip Log-On"
-	Icon="{StaticResource Money}"
 	Height="220"
 	Width="300"
 	>

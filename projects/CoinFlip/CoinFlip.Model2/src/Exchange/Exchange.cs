@@ -569,7 +569,7 @@ namespace CoinFlip
 		protected abstract Task<bool> CancelOrderInternal(TradePair pair, long order_id);
 
 		/// <summary>Place an order on the exchange to buy/sell 'amount' (currency depends on 'tt')</summary>
-		public async Task<OrderResult> CreateOrder(string fund_id, ETradeType tt, TradePair pair, Unit<decimal> amount_, Unit<decimal> price_)
+		public async Task<OrderResult> CreateOrder(string fund_id, ETradeType tt, TradePair pair, Unit<decimal> amount_, Unit<decimal> price_, CancellationToken cancel)
 		{
 			// 'fund_id' is the context id of the entity creating the trade
 
@@ -661,7 +661,7 @@ namespace CoinFlip
 			BalanceUpdateRequired = true;
 			return result;
 		}
-		protected abstract Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume_base, Unit<decimal> price);
+		protected abstract Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume_base, Unit<decimal> price, CancellationToken cancel);
 		private long m_fake_order_number;
 
 		/// <summary>Enumerate all candle data and time frames provided by this exchange</summary>

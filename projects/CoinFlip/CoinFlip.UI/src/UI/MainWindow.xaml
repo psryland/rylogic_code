@@ -9,7 +9,6 @@
 	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
 	mc:Ignorable="d"
 	Title="Coin Flip"
-	Icon="{StaticResource Money}"
 	Height="900"
 	Width="1400"
 	>

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using CoinFlip.Settings;
 using Rylogic.Common;
@@ -74,6 +75,9 @@ namespace CoinFlip
 
 		/// <summary>The fund associated with this trade</summary>
 		public string FundId { get; }
+
+		/// <summary>The exchange that this trade is/would be on</summary>
+		public Exchange Exchange => Pair?.Exchange;
 
 		/// <summary>The pair being traded</summary>
 		public TradePair Pair
@@ -273,9 +277,9 @@ namespace CoinFlip
 		}
 
 		/// <summary>Create this trade on the Exchange that owns 'Pair'</summary>
-		public async Task<OrderResult> CreateOrder()
+		public async Task<OrderResult> CreateOrder(CancellationToken cancel)
 		{
-			return await Pair.Exchange.CreateOrder(FundId, TradeType, Pair, AmountIn, Price);
+			return await Exchange.CreateOrder(FundId, TradeType, Pair, AmountIn, Price);
 		}
 
 		/// <summary>Trade property changed</summary>
