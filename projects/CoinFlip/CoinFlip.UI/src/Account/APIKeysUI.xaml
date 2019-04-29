@@ -42,6 +42,7 @@
 			<TextBox
 				Margin="20,0,0,0"
 				Text="{Binding APIKey}"
+				TextWrapping="Wrap"
 				/>
 			<TextBlock
 				Text="API Secret:"

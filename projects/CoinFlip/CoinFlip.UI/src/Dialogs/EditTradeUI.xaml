@@ -143,9 +143,24 @@
 					ToolTip="The price at which to make the trade"
 					HorizontalContentAlignment="Right"
 					Text="{Binding PriceQ2B}"
-					val:TextValidator.Pred="{Binding ValidatePrice}"
 					Margin="20,1,3,1"
-					/>
+					>
+					<TextBox.Style>
+						<Style TargetType="{x:Type TextBox}">
+							<Style.Triggers>
+								<DataTrigger Binding="{Binding IsPriceValid}" Value="True">
+									<Setter Property="Foreground" Value="Black"/>
+									<Setter Property="BorderBrush" Value="Black"/>
+								</DataTrigger>
+								<DataTrigger Binding="{Binding IsPriceValid}" Value="False">
+									<Setter Property="Foreground" Value="#A00"/>
+									<Setter Property="Background" Value="#FDD"/>
+									<Setter Property="BorderBrush" Value="#F22"/>
+								</DataTrigger>
+							</Style.Triggers>
+						</Style>
+					</TextBox.Style>
+				</TextBox>
 			</StackPanel>
 
 			<!-- Order Type -->
@@ -179,9 +194,24 @@
 				<TextBox
 					HorizontalContentAlignment="Right"
 					Text="{Binding AmountIn}"
-					val:TextValidator.Pred="{Binding ValidateAmountIn}"
 					Margin="20,1,3,1"
-					/>
+					>
+					<TextBox.Style>
+						<Style TargetType="{x:Type TextBox}">
+							<Style.Triggers>
+								<DataTrigger Binding="{Binding IsAmountInValid}" Value="True">
+									<Setter Property="Foreground" Value="Black"/>
+									<Setter Property="BorderBrush" Value="Black"/>
+								</DataTrigger>
+								<DataTrigger Binding="{Binding IsAmountInValid}" Value="False">
+									<Setter Property="Foreground" Value="#A00"/>
+									<Setter Property="Background" Value="#FDD"/>
+									<Setter Property="BorderBrush" Value="#F22"/>
+								</DataTrigger>
+							</Style.Triggers>
+						</Style>
+					</TextBox.Style>
+				</TextBox>
 				<StackPanel
 					Orientation="Horizontal"
 					Margin="20,0,3,3"
@@ -227,9 +257,24 @@
 				<TextBox
 					HorizontalContentAlignment="Right"
 					Text="{Binding AmountOut}"
-					val:TextValidator.Pred="{Binding ValidateAmountOut}"
 					Margin="20,1,3,1"
-					/>
+					>
+					<TextBox.Style>
+						<Style TargetType="{x:Type TextBox}">
+							<Style.Triggers>
+								<DataTrigger Binding="{Binding IsAmountOutValid}" Value="True">
+									<Setter Property="Foreground" Value="Black"/>
+									<Setter Property="BorderBrush" Value="Black"/>
+								</DataTrigger>
+								<DataTrigger Binding="{Binding IsAmountOutValid}" Value="False">
+									<Setter Property="Foreground" Value="#A00"/>
+									<Setter Property="Background" Value="#FDD"/>
+									<Setter Property="BorderBrush" Value="#F22"/>
+								</DataTrigger>
+							</Style.Triggers>
+						</Style>
+					</TextBox.Style>
+				</TextBox>
 			</StackPanel>
 			
 			<!-- Description In-->
@@ -273,6 +318,7 @@
 			<!-- Create/Modify button -->
 			<Button
 				Grid.Column="1"
+				Name="m_btn_accept"
 				Click="{gui2:MethodBinding Accept}"
 				IsEnabled="{Binding IsValid}"
 				IsDefault="True"

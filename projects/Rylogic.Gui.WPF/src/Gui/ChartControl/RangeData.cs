@@ -478,7 +478,7 @@ namespace Rylogic.Gui.WPF
 				public string DefaultTickText(double x, double step)
 				{
 					// This solves the rounding problem for values near zero when the axis span could be anything
-					return !Math_.FEql(x / Span, 0.0) ? Math_.RoundSF(x, 5).ToString("G8") : "0";
+					return !Math_.FEql(x / Span, 0.0) ? Math_.RoundSD(x, 5).ToString("G8") : "0";
 				}
 
 				/// <summary>Friendly string view</summary>

@@ -7,10 +7,10 @@ using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF.Converters
 {
-	/// <summary>Scale a value by a parameter</summary>
 	public class ScaleValue : MarkupExtension, IValueConverter
 	{
-		/// <summary>Scale a value by the given parameter</summary>
+		// Notes:
+		//  - Scale a value by the given parameter
 		public object Convert(object value, Type target_type, object parameter, CultureInfo culture)
 		{
 			return System.Convert.ToDouble(value) * System.Convert.ToDouble(parameter);

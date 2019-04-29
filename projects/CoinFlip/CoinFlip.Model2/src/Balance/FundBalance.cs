@@ -48,6 +48,9 @@ namespace CoinFlip
 		/// <summary>A collection of reserved amounts</summary>
 		public List<FundHold> Holds { get; }
 
+		/// <summary>Fake additional funds</summary>
+		public Unit<decimal> FakeCash { get; set; }
+
 		/// <summary>The time when this balance was last updated</summary>
 		public DateTimeOffset LastUpdated { get; private set; }
 
@@ -132,8 +135,9 @@ namespace CoinFlip
 		public void Update(DateTimeOffset last_updated, Unit<decimal>? total = null, Unit<decimal>? held_on_exch = null)
 		{
 			// Update the balance values
-			if (total        != null) Total      = total.Value;
+			if (total != null) Total = total.Value;
 			if (held_on_exch != null) HeldOnExch = held_on_exch.Value;
+			if (!Model.AllowTrades) Total += FakeCash;
 			LastUpdated = last_updated;
 
 			// Check the holds are still valid.

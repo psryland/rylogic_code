@@ -403,12 +403,10 @@ VIEW3D_API void __stdcall View3D_WindowSettingsSet(View3DWindow window, char con
 				pr::string<> desc;
 				reader.Section(desc, false);
 				window->m_light.Settings(desc.c_str());
+				window->NotifySettingsChanged(EView3DWindowSettings::Lighting);
 				continue;
 			}
 		}
-
-		// Notify of settings changed
-		window->NotifySettingsChanged();
 	}
 	CatchAndReport(View3D_WindowSettingsSet, window,);
 }
@@ -1351,7 +1349,7 @@ VIEW3D_API void __stdcall View3D_ShowLightingDlg(View3DWindow window)
 		View3D_Render(window);
 		View3D_Present(window);
 
-		window->NotifySettingsChanged();
+		window->NotifySettingsChanged(EView3DWindowSettings::Lighting);
 	}
 	CatchAndReport(View3D_ShowLightingDlg, window,);
 }
@@ -2376,7 +2374,7 @@ VIEW3D_API unsigned int __stdcall View3D_BackgroundColourGet(View3DWindow window
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		return window->m_background_colour.argb;
+		return window->BackgroundColour().argb;
 	}
 	CatchAndReport(View3D_BackgroundColourGet, window, 0);
 }
@@ -2387,8 +2385,7 @@ VIEW3D_API void __stdcall View3D_BackgroundColourSet(View3DWindow window, unsign
 		if (!window) throw std::runtime_error("window is null");
 
 		DllLockGuard;
-		window->m_background_colour = pr::Colour32(aarrggbb);
-		window->Invalidate();
+		window->BackgroundColour(pr::Colour32(aarrggbb));
 	}
 	CatchAndReport(View3D_BackgroundColourSet, window,);
 }

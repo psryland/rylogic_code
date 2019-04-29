@@ -4,7 +4,9 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Markup;
+using System.Windows.Media;
 using Rylogic.Extn;
+using Rylogic.Gfx;
 using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF.Converters
@@ -167,6 +169,153 @@ namespace Rylogic.Gui.WPF.Converters
 			var b = wrap == TextWrapping.Wrap;
 			if (parameter is string s && string.Compare(s, "invert", true) == 0) b = !b;
 			return b;
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
+	}
+
+	/// <summary>Select between two values using a bool. Parameter should be 'true_value|false_value' where 'value' is a string that is convertable to 'targetType'</summary>
+	public class BoolSelect : MarkupExtension, IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			if (!(value is bool b)) return null;
+			if (!(parameter is string s)) return null;
+
+			var c = s.Split('|');
+			if (c.Length != 2)
+				throw new Exception($"{nameof(BoolSelect)} parameter has the incorrect format. Expected '<true_value>|<false_value>'");
+
+			var val = b ? c[0] : c[1];
+			return Util.ConvertTo(val, targetType);
+		}
+		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			throw new NotSupportedException();
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
+	}
+
+	/// <summary>Select between two string values using a bool. Parameter should be 'true_value|false_value' where 'value' is a string</summary>
+	public class BoolToString : MarkupExtension, IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			if (!(value is bool b)) return null;
+			if (!(parameter is string s)) return null;
+
+			var c = s.Split('|');
+			if (c.Length != 2)
+				throw new Exception($"{nameof(BoolToString)} parameter has the incorrect format. Expected '<true_value>|<false_value>'");
+
+			return b ? c[0] : c[1];
+		}
+		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			throw new NotSupportedException();
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
+	}
+
+	/// <summary>Select between colours using a bool. Parameter should be 'true_colour|false_colour' where colour is a parsable string like #RGB</summary>
+	public class BoolToColour : MarkupExtension, IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			if (!(value is bool b)) return null;
+			if (!(parameter is string s)) return null;
+
+			var c = s.Split('|');
+			if (c.Length != 2 || !Colour32.TryParse(c[0], out var true_colour) || !Colour32.TryParse(c[1], out var false_colour))
+				throw new Exception($"{nameof(BoolToColour)} parameter has the incorrect format. Expected '<true_colour>|<false_colour>'");
+
+			var colour = b ? true_colour : false_colour;
+			return colour.ToMediaColor();
+		}
+		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			throw new NotSupportedException();
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
+	}
+
+	/// <summary>Select between colour brushes using a bool. Parameter should be 'true_colour|false_colour' where colour is a parsable string like #RGB</summary>
+	public class BoolToBrush : MarkupExtension, IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			if (!(value is bool b)) return null;
+			if (!(parameter is string s)) return null;
+
+			var c = s.Split('|');
+			if (c.Length != 2 || !Colour32.TryParse(c[0], out var true_colour) || !Colour32.TryParse(c[1], out var false_colour))
+				throw new Exception($"{nameof(BoolToBrush)} parameter has the incorrect format. Expected '<true_colour>|<false_colour>'");
+
+			var colour = b ? true_colour : false_colour;
+			return new SolidColorBrush(colour.ToMediaColor());
+		}
+		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			throw new NotSupportedException();
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
+	}
+
+	/// <summary>Select between two double values using a bool. Parameter should be 'true_value|false_value' where 'value' is a parsable string like 0.123</summary>
+	public class BoolToDouble : MarkupExtension, IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			if (!(value is bool b)) return null;
+			if (!(parameter is string s)) return null;
+
+			var c = s.Split('|');
+			if (c.Length != 2 || !double.TryParse(c[0], out var true_value) || !double.TryParse(c[1], out var false_value))
+				throw new Exception($"{nameof(BoolToDouble)} parameter has the incorrect format. Expected '<true_value>|<false_value>'");
+
+			return b ? true_value : false_value;
+		}
+		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			throw new NotSupportedException();
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
+	}
+
+	/// <summary>Select between two int values using a bool. Parameter should be 'true_value|false_value' where 'value' is a parsable string like 3</summary>
+	public class BoolToInt : MarkupExtension, IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			if (!(value is bool b)) return null;
+			if (!(parameter is string s)) return null;
+
+			var c = s.Split('|');
+			if (c.Length != 2 || !int.TryParse(c[0], out var true_value) || !int.TryParse(c[1], out var false_value))
+				throw new Exception($"{nameof(BoolToDouble)} parameter has the incorrect format. Expected '<true_value>|<false_value>'");
+
+			return b ? true_value : false_value;
+		}
+		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			throw new NotSupportedException();
 		}
 		public override object ProvideValue(IServiceProvider serviceProvider)
 		{

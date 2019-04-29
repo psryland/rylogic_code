@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Rylogic.CustomTool.HtmlExpander</RootNamespace>
     <AssemblyName>Rylogic.CustomTool.HtmlExpander</AssemblyName>
-    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -81,16 +81,16 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.VisualStudio.TextTemplating.VSHost.15.0">
-      <Version>15.9.28307</Version>
+      <Version>16.0.28729</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Threading">
       <Version>16.0.102</Version>
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json">
-      <Version>12.0.1</Version>
+      <Version>12.0.2</Version>
     </PackageReference>
     <PackageReference Include="StreamJsonRpc">
-      <Version>2.0.146</Version>
+      <Version>2.0.167</Version>
     </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -58,7 +58,7 @@ namespace Rylogic.Gui.WPF
 				Elements = new ElementCollection(this);
 				Selected = new SelectedCollection(this);
 				Hovered = new HoveredCollection(this);
-				Tools = new ChartTools(this, options);
+				Tools = new ChartTools(this);
 
 				AllowEditing = false;
 				AllowSelection = false;

@@ -182,6 +182,15 @@ namespace Rylogic.Utility
 			var str = Operators<T>.ToString(Value, fmt, fp);
 			return include_units ? $"{str} {Unit_.Types[UnitId]}" : str;
 		}
+		public string ToString(int significant_digits, bool include_units = false)
+		{
+			var str =
+				Value is float f ? f.ToString(significant_digits) :
+				Value is double d ? d.ToString(significant_digits) :
+				Value is decimal m ? m.ToString(significant_digits) :
+				throw new Exception($"ToString(signficant_digit) not available for type:{Value.GetType().Name}");
+			return include_units ? $"{str} {Unit_.Types[UnitId]}" : str;
+		}
 
 		/// <summary>Parse a unit from a string</summary>
 		public static Unit<T> Parse(string str)

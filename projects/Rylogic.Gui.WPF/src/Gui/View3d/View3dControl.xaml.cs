@@ -20,6 +20,9 @@ namespace Rylogic.Gui.WPF
 {
 	public partial class View3dControl : Image, IDisposable, INotifyPropertyChanged
 	{
+		// Notes:
+		//  - This control subclasses 'Image' because the D3DImage is an 'ImageSource'
+
 		private View3d.ReportErrorCB m_error_cb;
 
 		static View3dControl()
@@ -33,6 +36,7 @@ namespace Rylogic.Gui.WPF
 			{
 				InitializeComponent();
 				Stretch = Stretch.Fill;
+				StretchDirection = StretchDirection.Both;
 				Focusable = true;
 
 				if (DesignerProperties.GetIsInDesignMode(this))
@@ -180,15 +184,26 @@ namespace Rylogic.Gui.WPF
 				if (m_window != null)
 				{
 					m_window.OnInvalidated -= HandleInvalidated;
+					m_window.OnSettingsChanged -= HandleSettingsChanged;
 					Util.Dispose(ref m_window);
 				}
 				m_window = value;
 				if (m_window != null)
 				{
+					m_window.OnSettingsChanged += HandleSettingsChanged;
 					m_window.OnInvalidated += HandleInvalidated;
 				}
 
-				// Handler
+				// Handlers
+				void HandleSettingsChanged(object sender, View3d.SettingChangeEventArgs e)
+				{
+					switch (e.Setting)
+					{
+					case View3d.EWindowSettings.BackgroundColour:
+						BackgroundColor = Window.BackgroundColour.ToMediaColor();
+						break;
+					}
+				}
 				void HandleInvalidated(object sender, EventArgs e)
 				{
 					if (m_render_pending) return;
@@ -263,7 +278,7 @@ namespace Rylogic.Gui.WPF
 		}
 		private void BackgroundColor_Changed(Color new_value)
 		{
-			Window.BackgroundColour = new Colour32((uint)new_value.ToArgb());
+			Window.BackgroundColour = new Colour32(new_value.ToArgbU());
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BackgroundColor)));
 		}
 		public Brush BackgroundColorBrush => new SolidColorBrush(BackgroundColor);

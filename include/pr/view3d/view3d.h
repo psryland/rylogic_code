@@ -257,6 +257,11 @@ extern "C"
 		Edge,
 		Face,
 	};
+	enum class EView3DWindowSettings :int
+	{
+		BackgroundColour,
+		Lighting,
+	};
 
 	struct View3DV2
 	{
@@ -438,7 +443,7 @@ extern "C"
 		View3DObject m_object;
 	};
 
-	using View3D_SettingsChangedCB     = void (__stdcall *)(void* ctx, View3DWindow window);
+	using View3D_SettingsChangedCB     = void (__stdcall *)(void* ctx, View3DWindow window, EView3DWindowSettings setting);
 	using View3D_EnumGuidsCB           = BOOL (__stdcall *)(void* ctx, GUID const& context_id);
 	using View3D_EnumObjectsCB         = BOOL (__stdcall *)(void* ctx, View3DObject object);
 	using View3D_AddFileProgressCB     = BOOL (__stdcall *)(void* ctx, GUID const& context_id, wchar_t const* filepath, long long file_offset, BOOL complete);

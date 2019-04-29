@@ -187,6 +187,10 @@
 					Maximum="100"
 					Value="{Binding PercentComplete}"
 					/>
+				<TextBlock
+					Text="{Binding Clock, StringFormat=yyyy-MM-dd HH:mm}"
+					VerticalAlignment="Center"
+					/>
 			</ToolBar>
 		</ToolBarTray>
 		

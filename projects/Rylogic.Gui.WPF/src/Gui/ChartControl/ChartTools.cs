@@ -17,7 +17,7 @@ namespace Rylogic.Gui.WPF
 		{
 			public static readonly Guid Id = new Guid("62D495BB-36D1-4B52-A067-1B7DB4011831");
 
-			internal ChartTools(ChartControl chart, OptionsData opts)
+			internal ChartTools(ChartControl chart)
 			{
 				Chart = chart;
 				AreaSelect = CreateAreaSelect();

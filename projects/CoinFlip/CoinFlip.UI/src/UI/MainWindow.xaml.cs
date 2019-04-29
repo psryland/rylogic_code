@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Data;
 using CoinFlip.Settings;
+using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Gui.WPF;
 using Rylogic.Utility;
@@ -77,13 +78,13 @@ namespace CoinFlip.UI
 				if (m_model != null)
 				{
 					Model.AllowTradesChanged -= HandleAllowTradesChanged;
-					Model.BackTestingChanged -= HandleBackTestingChanged;
+					Model.BackTestingChange -= HandleBackTestingChange;
 					Util.Dispose(ref m_model);
 				}
 				m_model = value;
 				if (m_model != null)
 				{
-					Model.BackTestingChanged += HandleBackTestingChanged;
+					Model.BackTestingChange += HandleBackTestingChange;
 					Model.AllowTradesChanged += HandleAllowTradesChanged;
 				}
 
@@ -92,8 +93,9 @@ namespace CoinFlip.UI
 				{
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AllowTrades)));
 				}
-				void HandleBackTestingChanged(object sender, EventArgs e)
+				void HandleBackTestingChange(object sender, PrePostEventArgs e)
 				{
+					if (e.Before) return;
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BackTesting)));
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Simulation)));
 				}

@@ -6,6 +6,19 @@ using Rylogic.Utility;
 
 namespace ExchApi.Common.JsonConverter
 {
+	public class NullIsDefault<T> : JsonConverter<T>
+	{
+		public override T ReadJson(JsonReader reader, Type objectType, T existingValue, bool hasExistingValue, JsonSerializer serializer)
+		{
+			return reader.Value != null
+				? (T)reader.Value
+				: default(T);
+		}
+		public override void WriteJson(JsonWriter writer, T value, JsonSerializer serializer)
+		{
+			writer.WriteValue(value);
+		}
+	}
 	public class ParseMethod<T> : JsonConverter<T>
 	{
 		private static readonly MethodInfo s_parse = typeof(T).GetMethod("Parse", BindingFlags.Static | BindingFlags.Public);

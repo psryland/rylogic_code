@@ -70,7 +70,7 @@ namespace view3d
 	using EditorCont            = std::unordered_set<EditorPtr>;
 	using LockGuard             = std::lock_guard<std::recursive_mutex>;
 	using ReportErrorCB         = pr::StaticCB<void, wchar_t const*>;
-	using SettingsChangedCB     = pr::StaticCB<void, Window*>;
+	using SettingsChangedCB     = pr::StaticCB<void, Window*, EView3DWindowSettings>;
 	using AddFileProgressCB     = pr::StaticCB<BOOL, pr::Guid const&, wchar_t const*, long long, BOOL>;
 	using SourcesChangedCB      = pr::StaticCB<void, EView3DSourcesChangedReason, BOOL>;
 	using EmbeddedCodeHandlerCB = pr::StaticCB<BOOL, wchar_t const*, wchar_t const*, BSTR&, BSTR&>;

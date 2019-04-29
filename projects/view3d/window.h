@@ -76,6 +76,10 @@ namespace view3d
 		// Report an error for this window
 		void ReportError(wchar_t const* msg);
 
+		// Get/Set the window background colour
+		pr::Colour32 BackgroundColour() const;
+		void BackgroundColour(pr::Colour32 colour);
+
 		// Render this window into whatever render target is currently set
 		void Render();
 		void Present();
@@ -176,7 +180,7 @@ namespace view3d
 		pr::v2 NSSPointToSSPoint(pr::v2 const& nss_point) const;
 
 		// Invoke the settings changed callback
-		void NotifySettingsChanged();
+		void NotifySettingsChanged(EView3DWindowSettings setting);
 
 		// Invoke the rendering event
 		void NotifyRendering();

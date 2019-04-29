@@ -42,6 +42,7 @@
 				Grid.Column="2"
 				Content="OK"
 				IsDefault="True"
+				IsEnabled="{Binding IsValid}"
 				MinWidth="80"
 				MinHeight="22"
 				Margin="0,8,12,8"
@@ -98,16 +99,31 @@
 					Margin="8,2,8,2"
 					/>
 
-				<TextBox
-					Name="m_field"
+				<DockPanel
 					Grid.Row="1"
-					Text="{Binding Value}"
-					TextWrapping="{Binding Wrap, Converter={conv:BoolToWrap}}"
+					VerticalAlignment="Top"
 					Margin="8,2,8,2"
-					IsReadOnly="{Binding ReadOnly}"
-					HorizontalScrollBarVisibility="Auto"
-					VerticalScrollBarVisibility="Auto"
-					/>
+					>
+					<TextBlock
+						DockPanel.Dock="Right"
+						Text="{Binding Units}"
+						VerticalAlignment="Center"
+						Margin="3,0,0,0"
+						/>
+					<TextBox
+						Name="m_field"
+						Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+						TextWrapping="{Binding Wrap, Converter={conv:BoolToWrap}}"
+						BorderBrush="{Binding IsValid, Converter={conv:BoolToBrush}, ConverterParameter='#000|#F00'}"
+						Background="{Binding IsValid, Converter={conv:BoolToBrush}, ConverterParameter='#FFF|#FDC'}"
+						IsReadOnly="{Binding ReadOnly}"
+						AcceptsReturn="{Binding MultiLine}"
+						HorizontalScrollBarVisibility="Auto"
+						VerticalScrollBarVisibility="Auto"
+						HorizontalContentAlignment="{Binding ValueAlignment}"
+						Padding="2"
+						/>
+				</DockPanel>
 			</Grid>
 		</Grid>
 	</DockPanel>

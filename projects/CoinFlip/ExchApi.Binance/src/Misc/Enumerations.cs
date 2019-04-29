@@ -9,6 +9,8 @@ namespace Binance.API
 		Failure,
 		InvalidParameter,
 		TooMuchDataRequested,
+		InvalidTimestamp = -1021,
+		InvalidSymbol = -1121,
 	}
 
 	/// <summary>Endpoint security types</summary>

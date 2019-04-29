@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Rylogic.Common;
+using Rylogic.Maths;
 using Rylogic.Utility;
 
 namespace Rylogic.Extn
@@ -531,6 +532,65 @@ namespace Rylogic.Extn
 			return Range(range.Beg, range.End, step);
 		}
 
+		/// <summary>Decompose an IEEE754 double into the mantissa and exponent</summary>
+		public static void Decompose(this double x, out long mantissa, out int exponent, out int sign, bool raw = false)
+		{
+			//    Normal numbers: (-1)^sign x 2^(e - 1023) x 1.fraction
+			// Subnormal numbers: (-1)^sign x 2^(1 - 1023) x 0.fraction
+
+			// Translate the double into sign, exponent, and mantissa.
+			var bits = unchecked((ulong)BitConverter.DoubleToInt64Bits(x));
+			sign     = bits.BitAt(63) != 0 ? -1 : +1;
+			exponent = (int)bits.Bits(52, 11);
+			mantissa = (long)bits.Bits(0, 52);
+			if (raw)
+				return;
+
+			// Normal numbers: add the '1' to the front of the mantissa.
+			if (exponent != 0)
+				mantissa |= 1L << 52;
+			else
+				exponent++;
+
+			// Bias the exponent
+			exponent -= 1023;
+		}
+		public static long Mantissa(this double x)
+		{
+			x.Decompose(out var mantissa, out var e, out var s);
+			return mantissa;
+		}
+		public static long Exponent(this double x)
+		{
+			x.Decompose(out var m, out var exponent, out var s);
+			return exponent;
+		}
+
+		/// <summary>Create an IEEE754 double from mantissa and exponent</summary>
+		public static double Compose(long mantissa, int exponent, int sign, bool raw = false)
+		{
+			//    Normal numbers: (-1)^sign x 2^(e - 1023) x 1.fraction
+			// Subnormal numbers: (-1)^sign x 2^(1 - 1023) x 0.fraction
+
+			if (!raw)
+			{
+				// Bias the exponent
+				exponent += 1023;
+
+				// Normal numbers: If the mantissa has the 52nd bit set, then it's a normal number
+				if (mantissa.BitAt(52) == 1)
+					mantissa &= ~(1L << 52);
+				else
+					exponent--;
+			}
+
+			// Translate the double into exponent and mantissa.
+			var s = sign < 0 ? 1UL << 63 : 0UL;
+			var e = ((ulong)exponent & 0x7FFUL) << 52;
+			var m = (ulong)mantissa & 0xFFFFFFFFFFFFFUL;
+			return BitConverter.Int64BitsToDouble(unchecked((long)(s | e | m)));
+		}
+
 		/// <summary>Try parse a double from a string</summary>
 		public static double? TryParse(string val, NumberStyles style = NumberStyles.Float)
 		{
@@ -804,6 +864,13 @@ namespace Rylogic.UnitTests
 
 			var ty1 = typeof(NotSoAnonymousType);
 			Assert.False(ty1.IsAnonymousType());
+		}
+		[Test]
+		public void Decompose()
+		{
+			(-12.34).Decompose(out var man, out var exp, out var sign);
+			var d = double_.Compose(man, exp, sign);
+			Assert.Equal(-12.34, d);
 		}
 	}
 }

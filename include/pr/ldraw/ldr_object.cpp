@@ -1872,7 +1872,7 @@ namespace pr
 
 				// Generate the model
 				// 'm_point' should contain line strip data
-				ModelGenerator<>::Cache cache(int(m_point.size() + 2), int(m_point.size() + 2));
+				ModelGenerator<>::Cache<> cache(int(m_point.size() + 2), int(m_point.size() + 2));
 
 				auto v_in  = std::begin(m_point);
 				auto v_out = std::begin(cache.m_vcont);

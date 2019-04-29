@@ -139,7 +139,8 @@ namespace Rylogic.UnitTests
 
     [TestFixture] public class TestCrypt
     {
-        [Test] public void SignFile()
+		// Disabled until 'GenerateRSAKeyPair' is upgraded [Test]
+		public void SignFile()
         {
 			// These would normally be stored as files and read into
 			// a string using File.ReadAllText()

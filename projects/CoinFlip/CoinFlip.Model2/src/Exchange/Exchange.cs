@@ -102,14 +102,13 @@ namespace CoinFlip
 		{
 			get
 			{
-				var conn_status = 
-					!Enabled ? EExchangeStatus.Stopped :
-					Model.BackTesting ? EExchangeStatus.Simulated :
-					UpdateThreadActive ? EExchangeStatus.Connected :
-					EExchangeStatus.Offline;
-				var api_status =
-					ExchSettings.PublicAPIOnly ? EExchangeStatus.PublicAPIOnly : 0;
-				return conn_status | api_status;
+				var status = EExchangeStatus.Offline;
+				if (UpdateThreadActive) status |= EExchangeStatus.Connected;
+				if (Model.BackTesting) status |= EExchangeStatus.Simulated;
+				if (LastRequestFailed) status |= EExchangeStatus.Error;
+				if (ExchSettings.PublicAPIOnly) status |= EExchangeStatus.PublicAPIOnly;
+				if (!Enabled) status |= EExchangeStatus.Stopped;
+				return status;
 			}
 		}
 
@@ -188,11 +187,11 @@ namespace CoinFlip
 				if (Enabled == value) return;
 				ExchSettings.Active = value;
 				UpdateThreadActive = value;
+
+				// Notify status changed
+				NotifyPropertyChanged(nameof(Status));
 			}
 		}
-
-		/// <summary>True when in back testing mode</summary>
-		public bool BackTesting => Sim != null;
 
 		/// <summary>Get/Set the simulation. A non-null simulation implies 'BackTesting'</summary>
 		public SimExchange Sim
@@ -210,14 +209,11 @@ namespace CoinFlip
 
 				}
 
-				// The update thread only runs when not back testing and enabled
-				UpdateThreadActive = Sim == null && Enabled;
-
 				// Reconnect to the appropriate trade history database
 				InitTradeHistoryTable();
 
-				// Notify back testing changed
-				NotifyPropertyChanged(nameof(BackTesting));
+				// Notify status changed
+				NotifyPropertyChanged(nameof(Status));
 			}
 		}
 		private SimExchange m_sim;
@@ -226,7 +222,7 @@ namespace CoinFlip
 		public bool UpdateThreadActive
 		{
 			get { return m_update_thread != null; }
-			private set
+			set
 			{
 				if (UpdateThreadActive == value) return;
 				Debug.Assert(Misc.AssertMainThread());
@@ -236,8 +232,8 @@ namespace CoinFlip
 					throw new Exception("Don't enable inactive exchanges");
 
 				// Don't enable the update thread while back testing
-				if (value && BackTesting)
-					return;
+				if (value && Model.BackTesting)
+					throw new Exception("Don't enable when back testing");
 
 				// If previously active
 				if (m_update_thread != null)
@@ -266,7 +262,7 @@ namespace CoinFlip
 					m_update_thread.Start();
 				}
 
-				// Notify updating
+				// Notify status changed
 				NotifyPropertyChanged(nameof(Status));
 
 				/// <summary>Thread entry point for the exchange update thread</summary>
@@ -474,9 +470,17 @@ namespace CoinFlip
 				coins.AddRange(coin.LivePriceSymbolsArray);
 			}
 
-			await UpdatePairsInternal(coins);
+			try
+			{
+				await UpdatePairsInternal(coins);
+				LastRequestFailed = false;
+			}
+			catch (Exception ex)
+			{
+				HandleException(nameof(UpdatePairs), ex);
+			}
 		}
-		protected virtual Task UpdatePairsInternal(HashSet<string> coins)
+		protected virtual Task UpdatePairsInternal(HashSet<string> coins) // Worker thread context
 		{
 			// This method should wait for server responses in worker threads,
 			// collect data in local buffers, then use 'RunOnMainThread' to copy
@@ -485,18 +489,98 @@ namespace CoinFlip
 		}
 
 		/// <summary>Update the market data, balances, and open positions</summary>
-		protected virtual Task UpdateData() // Worker thread context
+		protected async Task UpdateData() // Worker thread context
+		{
+			try
+			{
+				await UpdateDataInternal();
+				LastRequestFailed = false;
+			}
+			catch (Exception ex)
+			{
+				HandleException(nameof(UpdateData), ex);
+			}
+		}
+		protected virtual Task UpdateDataInternal() // Worker thread context
 		{
 			Pairs.LastUpdated = Model.UtcNow;
+			return Task.CompletedTask;
+		}
+
+		/// <summary>Update the account balances</summary>
+		protected async Task UpdateBalances()  // Worker thread context
+		{
+			try
+			{
+				await UpdateBalancesInternal();
+				LastRequestFailed = false;
+
+			}
+			catch (Exception ex)
+			{
+				HandleException(nameof(UpdateBalances), ex);
+			}
+		}
+		protected virtual Task UpdateBalancesInternal()  // Worker thread context
+		{
+			Balance.LastUpdated = Model.UtcNow;
+			return Task.CompletedTask;
+		}
+
+		/// <summary>Update all open positions</summary>
+		protected async Task UpdatePositionsAndHistory() // Worker thread context
+		{
+			try
+			{
+				// Do history and positions together so there's no change of
+				// a position being filled without it appearing in the history.
+				await UpdatePositionsAndHistoryInternal();
+				LastRequestFailed = false;
+			}
+			catch (Exception ex)
+			{
+				HandleException(nameof(UpdatePositionsAndHistory), ex);
+			}
+		}
+		protected virtual Task UpdatePositionsAndHistoryInternal() // Worker thread context
+		{
+			History.LastUpdated = Model.UtcNow;
+			Orders.LastUpdated = Model.UtcNow;
+			return Task.CompletedTask;
+		}
+
+		/// <summary>Update all deposits and withdrawals made on this exchange</summary>
+		protected async Task UpdateTransfers() // Worker thread context
+		{
+			try
+			{
+				await UpdateTransfersInternal();
+				LastRequestFailed = false;
+			}
+			catch (Exception ex)
+			{
+				HandleException(nameof(UpdatePairs), ex);
+			}
+		}
+		protected virtual Task UpdateTransfersInternal() // Worker thread context
+		{
 			return Task.CompletedTask;
 		}
 
 		/// <summary>Return the order book for 'pair' to a depth of 'depth'</summary>
 		public async Task<MarketDepth> MarketDepth(TradePair pair, int depth) // Worker thread context
 		{
-			return BackTesting
-				? m_sim.MarketDepthInternal(pair, depth)
-				: await MarketDepthInternal(pair, depth);
+			try
+			{
+				return Sim != null
+					? Sim.MarketDepthInternal(pair, depth)
+					: await MarketDepthInternal(pair, depth);
+			}
+			catch (Exception ex)
+			{
+				HandleException(nameof(MarketDepth), ex);
+				return new MarketDepth(pair.Base, pair.Quote);
+			}
 		}
 		protected virtual Task<MarketDepth> MarketDepthInternal(TradePair pair, int count) // Worker thread context
 		{
@@ -508,7 +592,7 @@ namespace CoinFlip
 		{
 			try
 			{
-				if (BackTesting)
+				if (Model.BackTesting)
 					throw new Exception("Shouldn't require candle data while back testing");
 
 				using (Scope.Create(() => CandleDataUpdateInProgress = true, () => CandleDataUpdateInProgress = false))
@@ -516,7 +600,7 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				HandleException(nameof(Exchange.CandleData), ex, $"PriceData {pair.NameWithExchange} get chart data failed.");
+				HandleException(nameof(CandleData), ex, $"PriceData {pair.NameWithExchange} get chart data failed.");
 				return null;
 			}
 		}
@@ -526,36 +610,12 @@ namespace CoinFlip
 		}
 		public bool CandleDataUpdateInProgress { get; private set; }
 
-		/// <summary>Update the account balances</summary>
-		protected virtual Task UpdateBalances()  // Worker thread context
-		{
-			Balance.LastUpdated = Model.UtcNow;
-			return Task.CompletedTask;
-		}
-
-		/// <summary>Update all open positions</summary>
-		protected virtual Task UpdatePositionsAndHistory() // Worker thread context
-		{
-			// Do history and positions together so there's no change of a position being
-			// filled without it appearing in the history
-			History.LastUpdated = Model.UtcNow;
-			Orders.LastUpdated = Model.UtcNow;
-			return Task.CompletedTask;
-		}
-
-		/// <summary>Update all deposits and withdrawals made on this exchange</summary>
-		protected virtual Task UpdateTransfers() // Worker thread context
-		{
-			return Task.CompletedTask;
-		}
-
 		/// <summary>Cancel an existing order</summary>
-		public async Task<bool> CancelOrder(TradePair pair, long order_id)
+		public async Task<bool> CancelOrder(TradePair pair, long order_id, CancellationToken cancel)
 		{
-			// Obey the global trade switch
 			var result =
-				BackTesting ? m_sim.CancelOrderInternal(pair, order_id) :
-				Model.AllowTrades ? await CancelOrderInternal(pair, order_id) :
+				Sim != null ? Sim.CancelOrderInternal(pair, order_id) :
+				Model.AllowTrades ? await CancelOrderInternal(pair, order_id, cancel) :
 				true;
 
 			// Remove the position from the Positions collection so that there is no race condition
@@ -566,7 +626,7 @@ namespace CoinFlip
 			BalanceUpdateRequired = true;
 			return result;
 		}
-		protected abstract Task<bool> CancelOrderInternal(TradePair pair, long order_id);
+		protected abstract Task<bool> CancelOrderInternal(TradePair pair, long order_id, CancellationToken cancel);
 
 		/// <summary>Place an order on the exchange to buy/sell 'amount' (currency depends on 'tt')</summary>
 		public async Task<OrderResult> CreateOrder(string fund_id, ETradeType tt, TradePair pair, Unit<decimal> amount_, Unit<decimal> price_, CancellationToken cancel)
@@ -613,7 +673,7 @@ namespace CoinFlip
 
 			// Fake positions when not back testing and not live trading.
 			// Back testing looks like live trading because of the emulated exchanges.
-			var fake = Model.AllowTrades == false && BackTesting == false;
+			var fake = Model.AllowTrades == false && Model.BackTesting == false;
 
 			// Make the trade
 			// This can have the following results:
@@ -621,8 +681,8 @@ namespace CoinFlip
 			// 2) the entire trade can be met by existing orders in the order book -> a collection of trade IDs is returned
 			// 3) some of the trade can be met by existing orders -> a single order number and a collection of trade IDs are returned.
 			var result =
-				BackTesting ? m_sim.CreateOrderInternal(pair, tt, amount, price) :
-				Model.AllowTrades ? await CreateOrderInternal(pair, tt, amount, price) :
+				Sim != null ? Sim.CreateOrderInternal(pair, tt, amount, price) :
+				Model.AllowTrades ? await CreateOrderInternal(pair, tt, amount, price, cancel) :
 				new OrderResult(pair, ++m_fake_order_number, filled: false);
 
 			// Log the event
@@ -636,7 +696,7 @@ namespace CoinFlip
 			if (!result.Filled)
 			{
 				// Add a 'Position' to the collection, this will be overwritten on the next update.
-				var order = new Order(fund_id, result.OrderId, pair, tt, price, amount, amount, now, now, fake: fake);
+				var order = new Order(fund_id, result.OrderId, tt, pair, price, amount, amount, now, now, fake: fake);
 				Orders[result.OrderId] = order;
 
 				// Update the hold with a 'StillNeeded' function
@@ -677,6 +737,36 @@ namespace CoinFlip
 			yield break;
 		}
 
+		/// <summary>Get the amount of fake cash for the given symbol assigned to this exchange</summary>
+		public Unit<decimal> FakeCash(string sym)
+		{
+			// Look for the coin on this exchange. If not supported, ignore.
+			var coin = Coins[sym];
+			if (coin == null)
+				return 0m._(sym);
+
+			// Get the balance of this coin
+			var balances = Balance[coin];
+			return balances.Funds.Values.Sum(x => x.FakeCash)._(coin);
+		}
+
+		/// <summary>Set the amount of fake cash for a coin on this exchange</summary>
+		public void FakeCash(string sym, decimal amount)
+		{
+			// Look for the coin on this exchange. If not supported, ignore.
+			var coin = Coins[sym];
+			if (coin == null)
+				return;
+
+			// Get the balance of this coin
+			var balances = Balance[coin];
+
+			// Distribute the fake cash evenly over each fund
+			var fund_count = (decimal)balances.Funds.Count;
+			foreach (var fund in balances.Funds.Values)
+				fund.FakeCash = (amount / fund_count)._(coin);
+		}
+
 		/// <summary>Handle an exception during an update call</summary>
 		public void HandleException(string method_name, Exception ex, string msg = null)
 		{
@@ -705,11 +795,25 @@ namespace CoinFlip
 
 					return;
 				}
+				LastRequestFailed = true;
 			}
 
 			// Log all other error types
 			Model.Log.Write(ELogLevel.Error, ex, $"{GetType().Name} {method_name} failed. {msg ?? string.Empty}");
 		}
+
+		/// <summary>True when an error occurs with an API request</summary>
+		private bool LastRequestFailed
+		{
+			get { return m_last_request_failed; }
+			set
+			{
+				if (m_last_request_failed == value) return;
+				m_last_request_failed = value;
+				NotifyPropertyChanged(nameof(Status));
+			}
+		}
+		private bool m_last_request_failed;
 
 		/// <summary>Remove positions that are older than 'timestamp' and not in 'order_ids'</summary>
 		protected void RemovePositionsNotIn(HashSet<long> order_ids, DateTimeOffset timestamp)
@@ -746,7 +850,7 @@ namespace CoinFlip
 		private SQLiteConnection m_db;
 
 		/// <summary>The table name for the trade history</summary>
-		private string DBFilepath => BackTesting
+		private string DBFilepath => Model.BackTesting
 			? Misc.ResolveUserPath("Sim", "History", $"TradeHistory-{Name}.db")
 			: Misc.ResolveUserPath("History",$"TradeHistory-{Name}.db");
 
@@ -760,7 +864,7 @@ namespace CoinFlip
 			DB = null;
 
 			// In back testing mode, delete the history first
-			if (BackTesting)
+			if (Model.BackTesting)
 				Path_.DelFile(DBFilepath);
 
 			// Connect

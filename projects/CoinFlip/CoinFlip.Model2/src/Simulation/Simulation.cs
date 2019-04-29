@@ -14,7 +14,7 @@ namespace CoinFlip
 	/// <summary>A container for the data maintained by the back testing simulation</summary>
 	public class Simulation : IDisposable, INotifyPropertyChanged
 	{
-		public Simulation(IEnumerable<Exchange> exchanges)
+		public Simulation(IEnumerable<Exchange> exchanges, PriceDataMap price_data_map)
 		{
 			m_sw_main_loop = new Stopwatch();
 			Exchanges = new Dictionary<string, SimExchange>();
@@ -23,7 +23,7 @@ namespace CoinFlip
 
 			// Create a SimExchange for each exchange
 			foreach (var exch in exchanges)
-				Exchanges[exch.Name] = new SimExchange(this, exch);
+				Exchanges[exch.Name] = new SimExchange(this, exch, price_data_map);
 		}
 		public void Dispose()
 		{

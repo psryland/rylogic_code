@@ -166,7 +166,7 @@ namespace CoinFlip.UI
 					// Customise the chart for candles
 					m_chart.Options.AntiAliasing = false;
 					m_chart.Options.Orthographic = true;
-					m_chart.Options.SelectionColour = new Colour32(0x80BFD5EB);
+					m_chart.Options.SelectionColour = new Colour32(0x8092A1B1);
 					m_chart.XAxis.Options.PixelsPerTick = 50.0;
 					m_chart.XAxis.Options.TickTextTemplate = "XX:XX\r\nXXX XX XXXX";
 					m_chart.YAxis.Options.TickTextTemplate = "X.XXXX";
@@ -211,17 +211,19 @@ namespace CoinFlip.UI
 					// Get the date time for the tick
 					// To prevent date time overflow, limit the extrapolation of tick values
 					var dt_curr =
-						curr < first ? default(DateTimeOffset) :
+						curr < first - 1000 ? default :
+						curr < first ? Instrument[0].TimestampUTC + Misc.TimeFrameToTimeSpan(curr - first, Instrument.TimeFrame) :
 						curr < last ? Instrument[curr].TimestampUTC :
 						curr < last + 1000 ? Instrument[last - 1].TimestampUTC + Misc.TimeFrameToTimeSpan(curr - last + 1, Instrument.TimeFrame) :
-						default(DateTimeOffset);
+						default;
 					var dt_prev =
-						prev < first ? default(DateTimeOffset) :
+						prev < first - 1000 ? default :
+						prev < first ? Instrument[0].TimestampUTC + Misc.TimeFrameToTimeSpan(prev - first, Instrument.TimeFrame) :
 						prev < last ? Instrument[prev].TimestampUTC :
 						prev < last + 1000 ? Instrument[last - 1].TimestampUTC + Misc.TimeFrameToTimeSpan(prev - last + 1, Instrument.TimeFrame) :
-						default(DateTimeOffset);
-					if (dt_curr == default(DateTimeOffset) ||
-						dt_prev == default(DateTimeOffset))
+						default;
+					if (dt_curr == default ||
+						dt_prev == default)
 						return string.Empty;
 
 					// Get the date time values in the correct time zone
@@ -244,7 +246,7 @@ namespace CoinFlip.UI
 						return string.Empty;
 
 					// This solves the rounding problem for values near zero when the axis span could be anything
-					return !Math_.FEql(x / Chart.YAxis.Span, 0.0) ? Math_.RoundSF(x, 5).ToString("G8") : "0";
+					return !Math_.FEql(x / Chart.YAxis.Span, 0.0) ? Math_.RoundSD(x, 5).ToString("G8") : "0";
 				}
 				void HandleMouseDown(object sender, MouseButtonEventArgs e)
 				{
@@ -741,29 +743,29 @@ namespace CoinFlip.UI
 		private void EditTradeInternal(object x)
 		{
 			var trade = (Trade)x;
+			var order_id = (trade as Order)?.OrderId;
 
 			// Create a graphic to represent the trade on the chart
 			var indy = new GfxObjects.TradeIndicator(trade) { Chart = Chart };
 
 			// Create an editor window for the trade
-			var ui = new EditTradeUI(Window.GetWindow(this), Model, trade, null);
+			var ui = new EditTradeUI(Window.GetWindow(this), Model, trade, order_id);
 			ui.Closed += (s, a) =>
 			{
 				indy.Chart = null;
+				Util.Dispose(ref indy);
 				if (ui.Result == true)
 				{
-					//if (trade.)
+					// Create or Update trade on the exchange
+					Dispatcher_.BeginInvoke(async () =>
+					{
+						try { await trade.CreateOrder(Model.Shutdown.Token); }
+						catch (Exception ex)
+						{
+							MsgBox.Show(Window.GetWindow(this), ex.MessageFull(), "Create/Modify Order", MsgBox.EButtons.OK, MsgBox.EIcon.Error);
+						}
+					});
 				}
-					//Dispatcher_.BeginInvoke(async () =>
-					//{
-					//	try
-					//	{
-					//		await trade.CreateOrder(Model.Shutdown.Token);
-					//	}
-					//	catch (Exception ex)
-					//	{
-					//	}
-					//});
 			};
 			ui.Show();
 		}

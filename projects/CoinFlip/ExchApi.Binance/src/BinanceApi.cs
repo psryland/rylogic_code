@@ -25,7 +25,6 @@ namespace Binance.API
 			: base(key, secret, shutdown, 6, "https://api.binance.com/", "wss://stream.binance.com:9443/")
 		{
 			//Subscriptions = new Dictionary<string, MarketDataSubscription>();
-			Client.DefaultRequestHeaders.Add("Key", Key);
 		}
 		public override void Dispose()
 		{
@@ -33,6 +32,12 @@ namespace Binance.API
 			//Subscriptions.Clear();
 			base.Dispose();
 		}
+
+		/// <summary>Return a timestamp for a request in Unix MS</summary>
+		private long RequestTimestamp => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + ServerTimeOffsetMS;
+
+		/// <summary>The offset between our clock and the time reported by the server (in ms)</summary>
+		private long ServerTimeOffsetMS { get; set; }
 
 		///// <summary>Active market data subscriptions</summary>
 		//private Dictionary<string, MarketDataSubscription> Subscriptions { get; }
@@ -63,7 +68,8 @@ namespace Binance.API
 			// https://api.binance.com/api/v1/time
 			var jtok = await GetData(ESecurityType.PUBLIC, "api/v1/time", cancel);
 			var jobj = (JObject)jtok;
-			return new DateTimeOffset(jobj["serverTime"].Value<long>(), TimeSpan.Zero);
+			var server_time = jobj["serverTime"].Value<long>();
+			return DateTimeOffset.FromUnixTimeMilliseconds(server_time);
 		}
 
 		/// <summary>Test connectivity</summary>
@@ -71,7 +77,9 @@ namespace Binance.API
 		{
 			// https://api.binance.com/api/v1/exchangeInfo
 			var jtok = await GetData(ESecurityType.PUBLIC, "api/v1/exchangeInfo", cancel);
-			return ParseJsonReply<ServerRulesData>(jtok);
+			var rules = ParseJsonReply<ServerRulesData>(jtok);
+			ServerTimeOffsetMS = (long)(rules.ServerTime - DateTimeOffset.UtcNow).TotalMilliseconds;
+			return rules;
 		}
 
 		/// <summary>Return the current offers to buy and sell for all pairs</summary>
@@ -127,7 +135,7 @@ namespace Binance.API
 		{
 			// https://api.binance.com/api/v3/account
 			var jtok = await GetData(ESecurityType.USER_DATA, "api/v3/account", cancel,
-				new KV("timestamp", DateTimeOffset.Now.ToUnixTimeMilliseconds()));
+				new KV("timestamp", RequestTimestamp));
 
 			return ParseJsonReply<BalancesData>(jtok);
 		}
@@ -138,7 +146,7 @@ namespace Binance.API
 			// https://api.binance.com/api/v3/openOrders
 			var parms = new List<KV> { };
 			if (pair != null) parms.Add(new KV("symbol", pair.Value.Id));
-			parms.Add(new KV("timestamp", DateTimeOffset.Now.ToUnixTimeMilliseconds()));
+			parms.Add(new KV("timestamp", RequestTimestamp));
 
 			// Get the orders
 			var jtok = await GetData(ESecurityType.USER_DATA, "api/v3/openOrders", cancel, parms.ToArray());
@@ -160,7 +168,7 @@ namespace Binance.API
 			if (min_order_id != null) parms.Add(new KV("orderId", min_order_id.Value));
 			if (beg != null) parms.Add(new KV("startTime", beg.Value.Value));
 			if (end != null) parms.Add(new KV("endTime", end.Value.Value));
-			parms.Add(new KV("timestamp", DateTimeOffset.Now.ToUnixTimeMilliseconds()));
+			parms.Add(new KV("timestamp", RequestTimestamp));
 
 			var jtok = await GetData(ESecurityType.USER_DATA, "api/v3/allOrders", cancel, parms.ToArray());
 			return ParseJsonReply<List<Order>>(jtok);
@@ -195,7 +203,8 @@ namespace Binance.API
 					}
 
 					// Create the request
-					var req = new HttpRequestMessage(HttpMethod.Get, $"{UrlRestAddress}{command}{Misc.UrlEncode(kv)}");
+					var url = $"{UrlRestAddress}{command}{Misc.UrlEncode(kv)}";
+					var req = new HttpRequestMessage(HttpMethod.Get, url);
 					if (security != ESecurityType.PUBLIC)
 					{
 						req.Headers.Add("X-MBX-APIKEY", Key);
@@ -203,11 +212,21 @@ namespace Binance.API
 
 					// Submit the request
 					var response = await Client.SendAsync(req, cancel_token);
-					if (!response.IsSuccessStatusCode)
-						throw new HttpException((int)response.StatusCode, response.ReasonPhrase);
+					var reply = await response.Content.ReadAsStringAsync();
 
 					// Interpret the reply
-					var reply = await response.Content.ReadAsStringAsync();
+					if (!response.IsSuccessStatusCode)
+					{
+						// Check for an error
+						var jobj = reply != null ? JObject.Parse(reply) : null;
+						if (jobj != null &&
+							jobj["code"]?.Value<int>() is int code &&
+							jobj["msg"]?.Value<string>() is string msg)
+							throw new BinanceException((EErrorCode)code, msg);
+						else
+							throw new HttpException((int)response.StatusCode, response.ReasonPhrase);
+					}
+
 					return JToken.Parse(reply);
 				}
 			}

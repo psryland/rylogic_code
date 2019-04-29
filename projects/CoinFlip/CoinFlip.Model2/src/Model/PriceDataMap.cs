@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Rylogic.Extn;
 using Rylogic.Utility;
@@ -28,7 +29,7 @@ namespace CoinFlip
 		/// <summary></summary>
 		public TPMap Pairs { get; }
 
-		/// <summary></summary>
+		/// <summary>Return the price data for 'pair' and 'time_frame'</summary>
 		public PriceData this[TradePair pair, ETimeFrame time_frame]
 		{
 			get
@@ -46,6 +47,37 @@ namespace CoinFlip
 				// Get the price data for the given time frame
 				return tf_map.TryGetValue(time_frame, out var pd) ? pd : tf_map.Add2(time_frame, new PriceData(pair, time_frame, Shutdown));
 			}
+		}
+
+		/// <summary>Return the best matching price data for 'pair' and 'time_frame'</summary>
+		public PriceData Find(string pair_name, ETimeFrame time_frame, string preferred_exchange = null)
+		{
+			if (pair_name == null)
+				throw new ArgumentNullException(nameof(pair_name));
+			if (time_frame == ETimeFrame.None)
+				throw new Exception("TimeFrame is None. No price data available");
+
+			// Search for pairs that match 'pair_name'
+			var pairs = Pairs.Where(x => x.Key.Name == pair_name && x.Key.Exchange.Enabled).ToList();
+			if (pairs.Count == 0)
+				return null;
+
+			// Look for price data from the preferred exchange
+			if (preferred_exchange != null)
+			{
+				var pair = pairs.FirstOrDefault(x => x.Key.Exchange.Name == preferred_exchange);
+				if (pair.Key != null && pair.Value.TryGetValue(time_frame, out var data))
+					return data;
+			}
+
+			// Look for price data in any of the pairs
+			foreach (var pair in pairs)
+			{
+				if (pair.Value.TryGetValue(time_frame, out var data))
+					return data;
+			}
+
+			return null;
 		}
 
 		/// <summary>Application shutdown token</summary>

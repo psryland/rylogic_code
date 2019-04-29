@@ -10,6 +10,9 @@ using Rylogic.Attrib;
 
 namespace Rylogic.Gui.WPF.Converters
 {
+	// Notes:
+	//  - [Flags] enum => use 'HasFlag' in BoolConverters
+
 	public class EnumToDesc : MarkupExtension, IValueConverter
 	{
 		// Notes:

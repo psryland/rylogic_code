@@ -248,7 +248,10 @@ namespace pr
 				void AddNugget(EPrim topo, EGeom geom, bool geometry_has_alpha, bool tint_has_alpha, NuggetProps const* mat = nullptr)
 				{
 					NuggetProps nug = {};
-					if (mat) nug = *mat;
+					if (mat)
+						nug = *mat;
+					if (nug.m_tex_diffuse == nullptr)
+						geom = SetBits(geom, EGeom::Tex0, false);
 					nug.m_topo = topo;
 					nug.m_geom = geom;
 					nug.m_geometry_has_alpha |= geometry_has_alpha;

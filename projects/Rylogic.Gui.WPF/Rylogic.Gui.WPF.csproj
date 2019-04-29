@@ -15,6 +15,7 @@
 		<AssemblyVersion>1.0.0</AssemblyVersion>
 		<FileVersion>1.0.0</FileVersion>
 		<Version>1.0.0</Version>
+		<LangVersion>latest</LangVersion>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -24,6 +25,9 @@
 		<DefineConstants>TRACE;DEBUG;NET471;PR_UNITTESTS</DefineConstants>
 		<DebugSymbols>true</DebugSymbols>
 		<DebugType>full</DebugType>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+	  <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
 	</PropertyGroup>
 
 	<ItemGroup>

@@ -117,6 +117,19 @@ namespace view3d
 		OnError.Raise(msg);
 	}
 
+	// Get/Set the window background colour
+	Colour32 Window::BackgroundColour() const
+	{
+		return m_background_colour;
+	}
+	void Window::BackgroundColour(Colour32 colour)
+	{
+		if (m_background_colour == colour) return;
+		m_background_colour = colour;
+		NotifySettingsChanged(EView3DWindowSettings::BackgroundColour);
+		Invalidate();
+	}
+
 	// Render this window into whatever render target is currently set
 	void Window::Render()
 	{
@@ -671,9 +684,9 @@ namespace view3d
 	}
 
 	// Invoke the settings changed callback
-	void Window::NotifySettingsChanged()
+	void Window::NotifySettingsChanged(EView3DWindowSettings setting)
 	{
-		OnSettingsChanged.Raise(this);
+		OnSettingsChanged.Raise(this, setting);
 	}
 
 	// Invoke the rendering event

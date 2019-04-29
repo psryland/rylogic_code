@@ -69,7 +69,7 @@ namespace CoinFlip.UI
 		public decimal Total => NettTotal;
 
 		/// <summary>Return the exchanges to consider when averaging/summing values</summary>
-		private IEnumerable<Exchange> SourceExchanges
+		public IEnumerable<Exchange> SourceExchanges
 		{
 			get
 			{
@@ -92,7 +92,6 @@ namespace CoinFlip.UI
 				}
 				return Enumerable.Empty<Exchange>();
 			}
-
 		}
 
 		/// <summary>The average value of this coin</summary>

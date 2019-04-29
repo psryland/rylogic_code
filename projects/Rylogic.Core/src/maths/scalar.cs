@@ -372,22 +372,116 @@ namespace Rylogic.Maths
 			return len_sq > 0 ? Sqrt(len_sq) : 0.0;
 		}
 
-		/// <summary>Round a number to 'digits' significant figures</summary>
-		public static double RoundSF(double d, int significant_digits)
+		/// <summary>Round a number to 'digits' significant digits</summary>
+		public static long RoundSD(long d, int significant_digits, MidpointRounding rounding = MidpointRounding.ToEven)
 		{
-			if (d == 0)
+			if (significant_digits < 0)
+				throw new ArgumentOutOfRangeException(nameof(significant_digits), "value must be >= 0");
+
+			// No significant digits is always zero
+			if (d == 0 || significant_digits == 0)
 				return 0;
 
-			var scale = (decimal)Math.Pow(10, Math.Floor(Math.Log10(Math.Abs(d))) + 1);
-			return (double)(scale * Math.Round((decimal)d / scale, significant_digits));
+			// long.MaxValue is 19 digits
+			if (significant_digits > 19)
+				return d;
+
+			var pow = (int)Math.Floor(Math.Log10(d >= 0 ? d : ~d));
+			var scale = (decimal)Math.Pow(10, significant_digits - pow - 1); // Double cannot represent long.MaxValue
+			var result = scale != 0 ? (long)((long)Math.Round(d * scale, 0) / scale) : 0L;
+			return result;
 		}
-		public static decimal RoundSF(decimal d, int significant_digits)
+		public static double RoundSD(double d, int significant_digits, MidpointRounding rounding = MidpointRounding.ToEven)
 		{
-			if (d == 0)
+			if (significant_digits < 0)
+				throw new ArgumentOutOfRangeException(nameof(significant_digits), "value must be >= 0");
+
+			// No significant digits is always zero
+			if (d == 0 || significant_digits == 0)
 				return 0;
 
-			var scale = (decimal)Math.Pow(10, Math.Floor(Math.Log10(Math.Abs((double)d))) + 1);
-			return scale * Math.Round(d / scale, significant_digits);
+			// double's mantissa is 17 digits
+			if (significant_digits > 17)
+				return d;
+
+			var pow = (int)Math.Floor(Math.Log10(Math.Abs(d)));
+			var scale = Math.Pow(10, significant_digits - pow - 1);
+			var result = Math.Round(d * scale, 0) / scale;
+			return result;
+		}
+		public static decimal RoundSD(decimal d, int significant_digits, MidpointRounding rounding = MidpointRounding.ToEven)
+		{
+			if (significant_digits < 0)
+				throw new ArgumentOutOfRangeException(nameof(significant_digits), "value must be >= 0");
+
+			// No significant digits is always zero
+			if (d == 0 || significant_digits == 0)
+				return 0;
+
+			// decimals are 29 digits
+			if (significant_digits > 29)
+				return d;
+
+			var pow = (int)Math.Floor(Math.Log10(Math.Abs((double)d)));
+			var scale = (decimal)Math.Pow(10, significant_digits - pow - 1);
+			var result = Math.Round(d * scale, 0) / scale;
+			return result;
+		}
+
+		/// <summary>Truncate a number to 'digits' significant digits</summary>
+		public static long TruncSD(long d, int significant_digits)
+		{
+			if (significant_digits < 0)
+				throw new ArgumentOutOfRangeException(nameof(significant_digits), "value must be >= 0");
+
+			// No significant digits is always zero
+			if (d == 0 || significant_digits == 0)
+				return 0;
+
+			// long.MaxValue is 19 digits
+			if (significant_digits > 19)
+				return d;
+
+			var pow = (int)Math.Floor(Math.Log10(d >= 0 ? d : ~d));
+			var scale = (decimal)Math.Pow(10, significant_digits - pow - 1); // Double cannot represent long.MaxValue
+			var result = scale != 0 ? (long)((long)(d * scale) / scale) : 0L;
+			return result;
+		}
+		public static double TruncSD(double d, int significant_digits)
+		{
+			if (significant_digits < 0)
+				throw new ArgumentOutOfRangeException(nameof(significant_digits), "value must be >= 0");
+
+			// No significant digits is always zero
+			if (d == 0 || significant_digits == 0)
+				return 0;
+
+			// double's mantissa is 17 digits
+			if (significant_digits > 17)
+				return d;
+
+			var pow = (int)Math.Floor(Math.Log10(Math.Abs(d)));
+			var scale = Math.Pow(10, significant_digits - pow - 1);
+			var result = Math.Truncate(d * scale) / scale;
+			return result;
+		}
+		public static decimal TruncSD(decimal d, int significant_digits)
+		{
+			if (significant_digits < 0)
+				throw new ArgumentOutOfRangeException(nameof(significant_digits), "value must be >= 0");
+
+			// No significant digits is always zero
+			if (d == 0 || significant_digits == 0)
+				return 0;
+
+			// decimals are 29 digits
+			if (significant_digits > 29)
+				return d;
+
+			var pow = (int)Math.Floor(Math.Log10(Math.Abs((double)d)));
+			var scale = (decimal)Math.Pow(10, significant_digits - pow - 1);
+			var result = Math.Truncate(d * scale) / scale;
+			return result;
 		}
 
 		/// <summary>Quantise a value to 'scale'. For best results, 'scale' should be a power of 2, i.e. 256, 1024, 2048, etc</summary>
@@ -463,9 +557,11 @@ namespace Rylogic.UnitTests
 	using System.Text;
 	using Maths;
 
-	[TestFixture] public class TestMathsScalar
+	[TestFixture]
+	public class TestMathsScalar
 	{
-		[Test] public void TestAverage()
+		[Test]
+		public void TestAverage()
 		{
 			var a = Math_.Average(1.0, 4.0, 2.0, 7.0, -3.0);
 			Assert.Equal(a, 2.2);
@@ -476,20 +572,22 @@ namespace Rylogic.UnitTests
 			m = Math_.Median(1.0, 4.0, 2.0, 7.0, -3.0, -1.0);
 			Assert.Equal(m, 1.5);
 		}
-		[Test] public void TestLerp()
+		[Test]
+		public void TestLerp()
 		{
-			var a0 = new[]{ 1.0, 10.0, 2.0, 5.0 };
+			var a0 = new[] { 1.0, 10.0, 2.0, 5.0 };
 			Assert.Equal(Math_.Lerp(-0.1, a0), 1.0);
-			Assert.Equal(Math_.Lerp( 0.0, a0), 1.0);
-			Assert.Equal(Math_.Lerp( 1.0, a0), 5.0);
-			Assert.Equal(Math_.Lerp( 1.1, a0), 5.0);
-			Assert.Equal(Math_.Lerp(1/2.0, a0), 6.0);
-			Assert.Equal(Math_.Lerp(1/3.0, a0), 10.0);
-			Assert.Equal(Math_.Lerp(2/3.0, a0), 2.0);
-			Assert.Equal(Math_.Lerp(1/6.0, a0), 5.5);
-			Assert.Equal(Math_.Lerp(5/6.0, a0), 3.5);
+			Assert.Equal(Math_.Lerp(0.0, a0), 1.0);
+			Assert.Equal(Math_.Lerp(1.0, a0), 5.0);
+			Assert.Equal(Math_.Lerp(1.1, a0), 5.0);
+			Assert.Equal(Math_.Lerp(1 / 2.0, a0), 6.0);
+			Assert.Equal(Math_.Lerp(1 / 3.0, a0), 10.0);
+			Assert.Equal(Math_.Lerp(2 / 3.0, a0), 2.0);
+			Assert.Equal(Math_.Lerp(1 / 6.0, a0), 5.5);
+			Assert.Equal(Math_.Lerp(5 / 6.0, a0), 3.5);
 		}
-		[Test] public void TestExponentiate()
+		[Test]
+		public void TestExponentiate()
 		{
 			Assert.True(Math_.IsIntegerPowerOfTen(+0));
 			Assert.True(Math_.IsIntegerPowerOfTen(-0));
@@ -511,6 +609,96 @@ namespace Rylogic.UnitTests
 
 			Assert.Equal(new long[] { 0xa0, 0xf00, 0x1000 }, Math_.Exponentiate(0x1fa0, 16));
 			Assert.Equal(new long[] { 0b10, 0b1000, 0b10000, 0b1000000 }, Math_.Exponentiate(0x5a, 2));
+		}
+		[Test]
+		public void TestTruncSD()
+		{
+			Assert.Equal(0L, Math_.TruncSD(0, 1));
+			Assert.Equal(0L, Math_.TruncSD(1234, 0));
+			Assert.Equal(+100000000L, Math_.TruncSD(+123456789L, 1));
+			Assert.Equal(-100000000L, Math_.TruncSD(-123456789L, 1));
+			Assert.Equal(+123000000L, Math_.TruncSD(+123456789L, 3));
+			Assert.Equal(-123000000L, Math_.TruncSD(-123456789L, 3));
+			Assert.Equal(+123456789L, Math_.TruncSD(+123456789L, 12));
+			Assert.Equal(-123456789L, Math_.TruncSD(-123456789L, 12));
+			Assert.Equal(+9223372036854775807L, Math_.TruncSD(long.MaxValue, 19));
+			Assert.Equal(-9223372036854775808L, Math_.TruncSD(long.MinValue, 19));
+			Assert.Equal(+9223372036854775807L, Math_.TruncSD(long.MaxValue, 20));
+			Assert.Equal(-9223372036854775808L, Math_.TruncSD(long.MinValue, 20));
+
+			Assert.Equal(0.0, Math_.TruncSD(0.0, 1));
+			Assert.Equal(0.0, Math_.TruncSD(1234.5678, 0));
+			Assert.Equal(+0.000100000, Math_.TruncSD(+0.000123456, 1));
+			Assert.Equal(-0.000100000, Math_.TruncSD(-0.000123456, 1));
+			Assert.Equal(+0.000123000, Math_.TruncSD(+0.000123456, 3));
+			Assert.Equal(-0.000123000, Math_.TruncSD(-0.000123456, 3));
+			Assert.Equal(+1234.500000, Math_.TruncSD(+1234.567800, 5));
+			Assert.Equal(-1234.500000, Math_.TruncSD(-1234.567800, 5));
+			Assert.Equal(+12000000.00, Math_.TruncSD(+12345678.90, 2));
+			Assert.Equal(-12000000.00, Math_.TruncSD(-12345678.90, 2));
+			Assert.Equal(+1.7976931348623157E+308, Math_.TruncSD(double.MaxValue, 17));
+			Assert.Equal(-1.7976931348623157E+308, Math_.TruncSD(double.MinValue, 17));
+			Assert.Equal(+1.7976931348623157E+308, Math_.TruncSD(double.MaxValue, 18));
+			Assert.Equal(-1.7976931348623157E+308, Math_.TruncSD(double.MinValue, 18));
+
+			Assert.Equal(0m, Math_.TruncSD(0m, 1));
+			Assert.Equal(0m, Math_.TruncSD(1234.5678m, 0));
+			Assert.Equal(+0.000100000m, Math_.TruncSD(+0.000123456m, 1));
+			Assert.Equal(-0.000100000m, Math_.TruncSD(-0.000123456m, 1));
+			Assert.Equal(+0.000123000m, Math_.TruncSD(+0.000123456m, 3));
+			Assert.Equal(-0.000123000m, Math_.TruncSD(-0.000123456m, 3));
+			Assert.Equal(+1234.500000m, Math_.TruncSD(+1234.567800m, 5));
+			Assert.Equal(-1234.500000m, Math_.TruncSD(-1234.567800m, 5));
+			Assert.Equal(+12000000.00m, Math_.TruncSD(+12345678.90m, 2));
+			Assert.Equal(-12000000.00m, Math_.TruncSD(-12345678.90m, 2));
+			Assert.Equal(+79228162514264337593543950335m, Math_.TruncSD(+79228162514264337593543950335m, 29));
+			Assert.Equal(-79228162514264337593543950335m, Math_.TruncSD(-79228162514264337593543950335m, 29));
+			Assert.Equal(+79228162514264337593543950335m, Math_.TruncSD(+79228162514264337593543950335m, 30));
+			Assert.Equal(-79228162514264337593543950335m, Math_.TruncSD(-79228162514264337593543950335m, 30));
+		}
+		[Test]
+		public void TestRoundSD()
+		{
+			Assert.Equal(0L, Math_.RoundSD(0L, 1));
+			Assert.Equal(0L, Math_.RoundSD(1234L, 0));
+			Assert.Equal(+990000000L, Math_.RoundSD(+987654321L, 2));
+			Assert.Equal(-990000000L, Math_.RoundSD(-987654321L, 2));
+			Assert.Equal(+987654321L, Math_.RoundSD(+987654321L, 12));
+			Assert.Equal(-987654321L, Math_.RoundSD(-987654321L, 12));
+			Assert.Equal(+9223372036854775807L, Math_.RoundSD(long.MaxValue, 19));
+			Assert.Equal(-9223372036854775808L, Math_.RoundSD(long.MinValue, 19));
+			Assert.Equal(+9223372036854775807L, Math_.RoundSD(long.MaxValue, 20));
+			Assert.Equal(-9223372036854775808L, Math_.RoundSD(long.MinValue, 20));
+
+			Assert.Equal(0.0, Math_.RoundSD(0.0, 1));
+			Assert.Equal(0.0, Math_.RoundSD(1234.576, 0));
+			Assert.Equal(+0.001000000, Math_.RoundSD(+0.000987654, 1));
+			Assert.Equal(-0.001000000, Math_.RoundSD(-0.000987654, 1));
+			Assert.Equal(+0.000988000, Math_.RoundSD(+0.000987654, 3));
+			Assert.Equal(-0.000988000, Math_.RoundSD(-0.000987654, 3));
+			Assert.Equal(+9876.500000, Math_.RoundSD(+9876.543200, 5));
+			Assert.Equal(-9876.500000, Math_.RoundSD(-9876.543200, 5));
+			Assert.Equal(-99000000.00, Math_.RoundSD(-98765432.10, 2));
+			Assert.Equal(+99000000.00, Math_.RoundSD(+98765432.10, 2));
+			Assert.Equal(+1.7976931348623157E+308, Math_.RoundSD(double.MaxValue, 17));
+			Assert.Equal(-1.7976931348623157E+308, Math_.RoundSD(double.MinValue, 17));
+			Assert.Equal(+1.7976931348623157E+308, Math_.RoundSD(double.MaxValue, 18));
+			Assert.Equal(-1.7976931348623157E+308, Math_.RoundSD(double.MinValue, 18));
+
+			Assert.Equal(0m, Math_.RoundSD(0m, 1));
+			Assert.Equal(0m, Math_.RoundSD(1234.576m, 0));
+			Assert.Equal(+0.001000000m, Math_.RoundSD(+0.000987654m, 1));
+			Assert.Equal(-0.001000000m, Math_.RoundSD(-0.000987654m, 1));
+			Assert.Equal(+0.000988000m, Math_.RoundSD(+0.000987654m, 3));
+			Assert.Equal(-0.000988000m, Math_.RoundSD(-0.000987654m, 3));
+			Assert.Equal(+9876.500000m, Math_.RoundSD(+9876.543200m, 5));
+			Assert.Equal(-9876.500000m, Math_.RoundSD(-9876.543200m, 5));
+			Assert.Equal(+99000000.00m, Math_.RoundSD(+98765432.10m, 2));
+			Assert.Equal(-99000000.00m, Math_.RoundSD(-98765432.10m, 2));
+			Assert.Equal(+79228162514264337593543950335m, Math_.RoundSD(+79228162514264337593543950335m, 29));
+			Assert.Equal(-79228162514264337593543950335m, Math_.RoundSD(-79228162514264337593543950335m, 29));
+			Assert.Equal(+79228162514264337593543950335m, Math_.RoundSD(+79228162514264337593543950335m, 30));
+			Assert.Equal(-79228162514264337593543950335m, Math_.RoundSD(-79228162514264337593543950335m, 30));
 		}
 	}
 }

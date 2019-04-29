@@ -100,7 +100,6 @@ namespace CoinFlip
 							// Data for the current candle has changed, just update the cached copy
 							if (e.IndexRange.Count != 1)
 								throw new Exception("An update of the current candle should be a single value");
-							//if (m_cache[e.IndexRange.Begi - CachedIndexRange.Begi].Timestamp != e.Candle.Timestamp)
 							if (this[e.IndexRange.Begi].Timestamp != e.Candle.Timestamp)
 								throw new Exception("This is not the current candle");
 

@@ -24,7 +24,7 @@ namespace Rylogic.Gui.WPF
 				NavigationMode = ENavMode.Chart2D;
 				LockAspect = null;
 				BackgroundColour = Colour32.LightGray;
-				SelectionColour = Colour32.DarkGray.Alpha(0x80);
+				SelectionColour = 0x8060A0E0;
 				GridZOffset = 0.001f;
 				ShowAxes = true;
 				AntiAliasing = true;

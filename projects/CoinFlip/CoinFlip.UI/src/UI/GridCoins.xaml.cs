@@ -28,6 +28,8 @@ namespace CoinFlip.UI
 		public GridCoins(Model model)
 		{
 			InitializeComponent();
+			m_grid_coins.MouseRightButtonUp += DataGrid_.ColumnVisibility;
+
 			DockControl = new DockControl(this, "Coins");
 			ExchangeSource = new ListCollectionView(new List<string> { SpecialExchangeSources.All, SpecialExchangeSources.Current });
 			Coins = new ListCollectionView(ListAdapter.Create(model.Coins, c => new CoinDataAdaptor(c, model, ExchangeSource), c => c?.CoinData));
@@ -42,7 +44,7 @@ namespace CoinFlip.UI
 					Prompt = "Enter the Symbol Code for the coin to add",
 				};
 				if (dlg.ShowDialog() == true)
-					Model.Coins.Add(new CoinData(dlg.Value, 1m, of_interest:true));
+					Model.Coins.Add(new CoinData(dlg.Value) { OfInterest = true });
 			});
 			RemoveCoin = Command.Create(this, () =>
 			{
@@ -60,6 +62,31 @@ namespace CoinFlip.UI
 				};
 				if (dlg.ShowDialog() == true)
 					Current.CoinData.LivePriceSymbols = dlg.Value;
+			});
+			SetFakeCash = Command.Create(this, () =>
+			{
+				if (Current == null) return;
+				var dlg = new PromptUI(Window.GetWindow(this))
+				{
+					Title = "Add/Remove Fake Cash!",
+					Prompt = "Set the amount of fake funds on each exchange",
+					Value = "0",
+					ValueAlignment = HorizontalAlignment.Right,
+					Units = Current.Symbol,
+					Validate = x => !decimal.TryParse(x, out var v) || v < 0 ? new ValidationResult(false, "Value must be a positive amount") : ValidationResult.ValidResult,
+				};
+				if (dlg.ShowDialog() == true)
+				{
+					var amount = decimal.Parse(dlg.Value);
+					foreach (var exch in Current.SourceExchanges)
+						exch.FakeCash(Current.Symbol, amount);
+				}
+			});
+			ResetFakeCash = Command.Create(this, () =>
+			{
+				if (Current == null) return;
+				foreach (var exch in Current.SourceExchanges)
+					exch.FakeCash(Current.Symbol, 0);
 			});
 
 			DataContext = this;
@@ -79,6 +106,7 @@ namespace CoinFlip.UI
 				if (m_model == value) return;
 				if (m_model != null)
 				{
+					Model.AllowTradesChanged -= HandleAllowTradesChanged;
 					m_model.Exchanges.CollectionChanged -= HandleExchangesChanged;
 					m_model.Coins.CollectionChanged -= HandleCoinsChanged;
 				}
@@ -87,6 +115,7 @@ namespace CoinFlip.UI
 				{
 					m_model.Coins.CollectionChanged += HandleCoinsChanged;
 					m_model.Exchanges.CollectionChanged += HandleExchangesChanged;
+					Model.AllowTradesChanged += HandleAllowTradesChanged;
 				}
 
 				// Handlers
@@ -106,6 +135,10 @@ namespace CoinFlip.UI
 						list.AddRange(Model.TradingExchanges.Select(x => x.Name));
 						ExchangeSource.Refresh();
 					}
+				}
+				void HandleAllowTradesChanged(object sender, EventArgs e)
+				{
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AllowTrades)));
 				}
 			}
 		}
@@ -129,6 +162,9 @@ namespace CoinFlip.UI
 
 		/// <summary>The view of the available exchanges</summary>
 		public ICollectionView Coins { get; }
+
+		/// <summary>True when live trading is enabled</summary>
+		public bool AllowTrades => Model.AllowTrades;
 
 		/// <summary>The currently selected exchange</summary>
 		public CoinDataAdaptor Current
@@ -179,6 +215,12 @@ namespace CoinFlip.UI
 
 		/// <summary>Edit the sequence used to obtain the live value of a coin</summary>
 		public Command EditLiveValueConversion { get; }
+
+		/// <summary>Add/Remove fake funds for testing</summary>
+		public Command SetFakeCash { get; }
+
+		/// <summary>Clear fake funds</summary>
+		public Command ResetFakeCash { get; }
 
 		/// <summary>Filter for the 'Coins' collection view</summary>
 		private bool CoinThresholdFilter(object obj)

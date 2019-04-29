@@ -14,11 +14,12 @@
 		<RowDefinition Height="*"/>
 	</Grid.RowDefinitions>
 
-	<!-- Exchange drop down -->
+	<!-- Tool bar -->
 	<StackPanel
 		Grid.Row="0"
 		Orientation="Horizontal"
 		>
+		<!-- Exchange drop down -->
 		<StackPanel
 			Orientation="Vertical"
 			Margin="3"
@@ -32,6 +33,8 @@
 				MinWidth="60"
 				/>
 		</StackPanel>
+
+		<!-- Filter coins -->
 		<StackPanel
 			Orientation="Vertical"
 			Margin="3,6,3,3"
@@ -61,6 +64,21 @@
 					/>
 			</StackPanel>
 		</StackPanel>
+		
+		<!-- Reset fake cash -->
+		<StackPanel
+			Orientation="Vertical"
+			Margin="3,6,3,3"
+			>
+			<TextBlock
+				Text="Fake Cash"
+				/>
+			<Button
+				Content="Reset"
+				BorderBrush="DarkGray"
+				Command="{Binding ResetFakeCash}"
+				/>
+		</StackPanel>
 	</StackPanel>
 
 	<!-- Grid of coins -->
@@ -72,6 +90,7 @@
 		IsReadOnly="True"
 		ItemsSource="{Binding Coins}"
 		SelectedItem="{Binding Current, Mode=TwoWay}"
+		x:Name="m_grid_coins"
 		>
 		<DataGrid.Resources>
 			<ResourceDictionary>
@@ -136,6 +155,15 @@
 					Header="Live Value Conversion..."
 					IsEnabled="{Binding Current, Converter={conv:NotNull}}"
 					Command="{Binding EditLiveValueConversion}"
+					/>
+				<Separator
+					Visibility="{Binding AllowTrades, Converter={conv:BoolToCollapsed}}"
+					/>
+				<MenuItem
+					Header="Fake Cash..."
+					Visibility="{Binding AllowTrades, Converter={conv:BoolToCollapsed}}"
+					IsEnabled="{Binding Current, Converter={conv:NotNull}}"
+					Command="{Binding SetFakeCash}"
 					/>
 			</ContextMenu>
 		</DataGrid.ContextMenu>

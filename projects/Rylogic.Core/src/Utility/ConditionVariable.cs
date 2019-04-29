@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Rylogic.Utility
 {
@@ -72,6 +73,39 @@ namespace Rylogic.Utility
 					return false;
 
 			return true;
+		}
+
+		/// <summary>Async await notification</summary>
+		public async Task WaitAsync()
+		{
+			var mutex = this;
+			await Task.Run(() =>
+			{
+				lock (mutex)
+					Wait(mutex);
+			});
+		}
+
+		/// <summary>Async await until 'condition' returns true</summary>
+		public async Task WaitAsync(Func<bool> condition)
+		{
+			var mutex = this;
+			await Task.Run(() =>
+			{
+				lock (mutex)
+					Wait(mutex, condition);
+			});
+		}
+
+		/// <summary>Async await until 'condition' returns true</summary>
+		public async Task WaitAsync(TimeSpan timeout, Func<bool> condition)
+		{
+			var mutex = this;
+			await Task.Run(() =>
+			{
+				lock (mutex)
+					Wait(mutex, timeout, condition);
+			});
 		}
 	}
 
@@ -166,6 +200,39 @@ namespace Rylogic.Utility
 			value = m_value;
 			return true;
 		}
+
+		/// <summary>Async await notification</summary>
+		public async Task<T> WaitAsync()
+		{
+			var mutex = this;
+			return await Task.Run(() =>
+			{
+				lock (mutex)
+					return Wait(mutex);
+			});
+		}
+
+		/// <summary>Async await until 'condition' returns true</summary>
+		public async Task<T> WaitAsync(Func<T, bool> condition)
+		{
+			var mutex = this;
+			return await Task.Run(() =>
+			{
+				lock (mutex)
+					return Wait(mutex, condition);
+			});
+		}
+
+		/// <summary>Async await until 'condition' returns true. Throws 'timeout'</summary>
+		public async Task<T> WaitAsync(TimeSpan timeout, Func<T, bool> condition)
+		{
+			var mutex = this;
+			return await Task.Run(() =>
+			{
+				lock (mutex)
+					return Wait(mutex, timeout, condition, out var value) ? value : throw new TimeoutException();
+			});
+		}
 	}
 }
 
@@ -181,54 +248,44 @@ namespace Rylogic.UnitTests
 		[Test]
 		public void Test0()
 		{
-			var mutex = new object();
 			var cv = new ConditionVariable();
 			var data = (string)null;
-			bool ready = false;
-			bool processed = false;
-
-			Action worker_thread = () =>
-			{
-				lock (mutex)
-				{
-					// Wait until main() sends data
-					cv.Wait(mutex, () => ready);
-
-					// after the wait, we own the lock.
-					data = "Changed data";
-
-					// Send data back to main()
-					processed = true;
-
-					// Should be notifying outside of the lock but C# Monitor.Pulse is
-					// not quite the same as std::condition_variable.notifiy_all()
-					cv.NotifyOne(mutex);
-				}
-			};
+			var ready = false;
+			var processed = false;
 
 			// Main
 			{
-				var worker = new Thread(new ThreadStart(worker_thread)).Run();
+				var worker = new Thread(new ThreadStart(WorkerThread)).Run();
 
 				data = "Example data";
 
 				// send data to the worker thread
-				lock (mutex)
-				{
-					ready = true;
-					cv.NotifyOne(mutex);
-				}
+				ready = true;
+				cv.NotifyOne();
 
 				// wait for the worker
-				lock (mutex)
-				{
-					cv.Wait(mutex, () => processed);
-				}
+				cv.Wait(() => processed);
 
 				// "Back in main(), data = " << data << '\n';
 				Assert.Equal(data, "Changed data");
 
 				worker.Join();
+			}
+
+			void WorkerThread()
+			{
+				// Wait until main() sends data
+				cv.Wait(() => ready);
+
+				// after the wait, we own the lock.
+				data = "Changed data";
+
+				// Send data back to main()
+				processed = true;
+
+				// Should be notifying outside of the lock but C# Monitor.Pulse is
+				// not quite the same as std::condition_variable.notifiy_all()
+				cv.NotifyOne();
 			}
 		}
 
@@ -240,25 +297,9 @@ namespace Rylogic.UnitTests
 			bool ready = false;
 			bool processed = false;
 
-			Action worker_thread = () =>
-			{
-				// Wait until main() sends data
-				lock (mutex)
-				{
-					var value = cv.Wait(mutex, x => ready);
-					Assert.Equal(value, 1);
-
-					// after the wait, we own the lock.
-					cv.NotifyOne(mutex, 42);
-
-					// Send data back to main()
-					processed = true;
-				}
-			};
-
 			// Main
 			{
-				var worker = new Thread(new ThreadStart(worker_thread)).Run();
+				var worker = new Thread(new ThreadStart(WorkerThread)).Run();
 
 				// send data to the worker thread
 				lock (mutex)
@@ -275,6 +316,66 @@ namespace Rylogic.UnitTests
 				}
 
 				worker.Join();
+			}
+
+			void WorkerThread()
+			{
+				// Wait until main() sends data
+				lock (mutex)
+				{
+					var value = cv.Wait(mutex, x => ready);
+					Assert.Equal(value, 1);
+
+					// after the wait, we own the lock.
+					cv.NotifyOne(mutex, 42);
+
+					// Send data back to main()
+					processed = true;
+				}
+			}
+		}
+
+		[Test]
+		public async void Test2()
+		{
+			var cv = new ConditionVariable();
+			var data = (string)null;
+			var ready = false;
+			var processed = false;
+
+			// Main
+			{
+				var worker = new Thread(new ThreadStart(WorkerThread)).Run();
+
+				data = "Example data";
+
+				// send data to the worker thread
+				ready = true;
+				cv.NotifyOne();
+
+				// wait for the worker
+				await cv.WaitAsync(() => processed);
+
+				// "Back in main(), data = " << data << '\n';
+				Assert.Equal(data, "Changed data");
+
+				worker.Join();
+			}
+
+			async void WorkerThread()
+			{
+				// Wait until main() sends data
+				await cv.WaitAsync(() => ready);
+
+				// after the wait, we own the lock.
+				data = "Changed data";
+
+				// Send data back to main()
+				processed = true;
+
+				// Should be notifying outside of the lock but C# Monitor.Pulse is
+				// not quite the same as std::condition_variable.notifiy_all()
+				cv.NotifyOne();
 			}
 		}
 	}

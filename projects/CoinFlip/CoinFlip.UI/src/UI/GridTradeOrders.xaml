@@ -80,7 +80,7 @@
 			/>
 		<DataGridTextColumn
 			Header="Remaining (%)"
-			Binding="{Binding RemainingPC, StringFormat={}{0:G4} %, Mode=OneWay}"
+			Binding="{Binding RemainingFrac, StringFormat={}{0:P4}, Mode=OneWay}"
 			ElementStyle="{StaticResource RightAlignedTextColumn}"
 			Width="0.4*"
 			/>

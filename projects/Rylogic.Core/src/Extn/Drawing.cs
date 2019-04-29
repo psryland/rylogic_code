@@ -175,10 +175,10 @@ namespace Rylogic.Extn
 		public static Rectangle ToRect(this RectangleF r)
 		{
 			return new Rectangle(
-				(int)Math.Round(r.Left  , MidpointRounding.AwayFromZero),
-				(int)Math.Round(r.Top   , MidpointRounding.AwayFromZero),
-				(int)Math.Round(r.Width , MidpointRounding.AwayFromZero),
-				(int)Math.Round(r.Height, MidpointRounding.AwayFromZero));
+				(int)Math.Round(r.Left  ),
+				(int)Math.Round(r.Top   ),
+				(int)Math.Round(r.Width ),
+				(int)Math.Round(r.Height));
 		}
 
 		/// <summary>Returns the top left point of the rectangle</summary>

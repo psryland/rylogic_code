@@ -40,16 +40,16 @@ namespace Rylogic.Gfx
 		private uint m_argb;
 
 		// Byte components
-		public byte A { get { return (byte)(m_argb >> 24); } set { m_argb = ((uint)value << 24) | (m_argb & 0x00FFFFFF); } }
-		public byte R { get { return (byte)(m_argb >> 16); } set { m_argb = ((uint)value << 16) | (m_argb & 0xFF00FFFF); } }
-		public byte G { get { return (byte)(m_argb >>  8); } set { m_argb = ((uint)value <<  8) | (m_argb & 0xFFFF00FF); } }
-		public byte B { get { return (byte)(m_argb >>  0); } set { m_argb = ((uint)value <<  0) | (m_argb & 0xFFFFFF00); } }
+		public byte A { get { return (byte)((m_argb >> 24) & 0xFF); } set { m_argb = ((uint)value << 24) | (m_argb & 0x00FFFFFF); } }
+		public byte R { get { return (byte)((m_argb >> 16) & 0xFF); } set { m_argb = ((uint)value << 16) | (m_argb & 0xFF00FFFF); } }
+		public byte G { get { return (byte)((m_argb >>  8) & 0xFF); } set { m_argb = ((uint)value <<  8) | (m_argb & 0xFFFF00FF); } }
+		public byte B { get { return (byte)((m_argb >>  0) & 0xFF); } set { m_argb = ((uint)value <<  0) | (m_argb & 0xFFFFFF00); } }
 
 		// Normalised float components
-		public float Af { get { return A / 255f; } set { A = (byte)(value * 255); } }
-		public float Rf { get { return R / 255f; } set { R = (byte)(value * 255); } }
-		public float Gf { get { return G / 255f; } set { G = (byte)(value * 255); } }
-		public float Bf { get { return B / 255f; } set { B = (byte)(value * 255); } }
+		public float Af { get { return A / 255f; } set { A = (byte)((int)(value * 255) & 0xFF); } }
+		public float Rf { get { return R / 255f; } set { R = (byte)((int)(value * 255) & 0xFF); } }
+		public float Gf { get { return G / 255f; } set { G = (byte)((int)(value * 255) & 0xFF); } }
+		public float Bf { get { return B / 255f; } set { B = (byte)((int)(value * 255) & 0xFF); } }
 
 		// Conversion
 		public Color ToColor() => Color.FromArgb(A, R, G, B);

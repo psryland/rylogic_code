@@ -159,12 +159,13 @@
 
 	<!-- Chart area -->
 	<local:ChartPanel
-		x:Name="m_chart_panel"
-		Grid.Column="2"
 		Grid.Row="3"
+		Grid.Column="2"
+		x:Name="m_chart_panel"
 		ContextMenu="{StaticResource ChartCMenu}"
+		Stretch="Fill"
 		/>
-	
+
 	<!-- Show Value pop up -->
 	<Popup
 		Name="m_popup_show_value"

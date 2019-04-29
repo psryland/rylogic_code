@@ -107,37 +107,26 @@ namespace Rylogic.Common
 			input = input.TrimEnd('=');
 			
 			// Determine the length of the data once decoded
-			int byte_count = DecodedLength(input.Length);
-			byte[] data = new byte[byte_count];
-			
-			// Convert a character to its decoded value
-			Func<char,int> char_to_value = ch =>
-				{
-					if (ch <  91 && ch > 64) return ch - 65; //65-90 == uppercase letters
-					if (ch <  56 && ch > 49) return ch - 24; //50-55 == numbers 2-7
-					if (ch < 123 && ch > 96) return ch - 97; //97-122 == lowercase letters
-					if (ch == '=')           return 0;
-					throw new ArgumentException("Character is not a Base32 character.", "ch");
-				};
-			
-			int i = 0;
+			var byte_count = DecodedLength(input.Length);
+			var data = new byte[byte_count];
+
+			var i = 0;
 			byte current_byte = 0;
 			byte remaining_bits = 8;
 			foreach (char c in input)
 			{
-				int value = char_to_value(c);
+				var value = CharToValue(c);
 				if (remaining_bits > 5)
 				{
-					int mask = value << (remaining_bits - 5);
-					current_byte = (byte)(current_byte | mask);
+					var mask = value << (remaining_bits - 5);
+					current_byte = (byte)((current_byte | mask) & 0xFF);
 					remaining_bits -= 5;
 				}
 				else
 				{
 					int mask = value >> (5 - remaining_bits);
-					current_byte = (byte)(current_byte | mask);
-					data[i++] = current_byte;
-					current_byte = (byte)(value << (3 + remaining_bits));
+					data[i++] = (byte)(current_byte | mask);
+					current_byte = (byte)((value << (3 + remaining_bits)) & 0xFF);
 					remaining_bits += 3;
 				}
 			}
@@ -147,6 +136,16 @@ namespace Rylogic.Common
 				data[i] = current_byte;
 			
 			return data;
+
+			// Convert a character to its decoded value
+			int CharToValue(char ch)
+			{
+				if (ch < 91 && ch > 64) return ch - 65; //65-90 == uppercase letters
+				if (ch < 56 && ch > 49) return ch - 24; //50-55 == numbers 2-7
+				if (ch < 123 && ch > 96) return ch - 97; //97-122 == lowercase letters
+				if (ch == '=') return 0;
+				throw new ArgumentException("Character is not a Base32 character.", "ch");
+			}
 		}
 
 		/// <summary>Convert a byte array to a base32 encoded string</summary>

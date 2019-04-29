@@ -13,13 +13,14 @@ namespace CoinFlip.Settings
 	public class CoinData : SettingsXml<CoinData>
 	{
 		public CoinData()
-			: this(string.Empty, 1m)
+			: this(string.Empty)
 		{ }
-		public CoinData(string symbol, decimal value, bool of_interest = false)
+		public CoinData(string symbol)
 		{
 			Symbol = symbol;
-			AssignedValue = value;
-			OfInterest = of_interest;
+			SD = 8;
+			AssignedValue = 1m;
+			OfInterest = false;
 			AutoTradingLimit = 1m;
 			LivePriceSymbols = "USDT";
 			ShowLivePrices = true;
@@ -37,18 +38,18 @@ namespace CoinFlip.Settings
 			private set { set(nameof(Symbol), value); }
 		}
 
+		/// <summary>The number of significant digits used by this currency</summary>
+		public int SD
+		{
+			get { return get<int>(nameof(SD)); }
+			set { set(nameof(SD), value); }
+		}
+
 		/// <summary>Value assigned to this coin</summary>
 		public decimal AssignedValue
 		{
 			get { return get<decimal>(nameof(AssignedValue)); }
 			set { set(nameof(AssignedValue), value); }
-		}
-
-		/// <summary>True if coins of this type should be included in loops</summary>
-		public bool OfInterest
-		{
-			get { return get<bool>(nameof(OfInterest)); }
-			set { set(nameof(OfInterest), value); }
 		}
 
 		/// <summary>The maximum amount of this coin to automatically trade in one go</summary>
@@ -85,6 +86,13 @@ namespace CoinFlip.Settings
 		{
 			get { return get<decimal>(nameof(BackTestingInitialBalance)); }
 			set { set(nameof(BackTestingInitialBalance), value); }
+		}
+
+		/// <summary>True if coins of this type should be included in loops</summary>
+		public bool OfInterest
+		{
+			get { return get<bool>(nameof(OfInterest)); }
+			set { set(nameof(OfInterest), value); }
 		}
 
 		/// <summary>Raised when the live price of this coin changes</summary>

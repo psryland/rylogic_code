@@ -418,6 +418,11 @@ namespace Rylogic.Gfx
 			EdgeCentre,
 			FaceCentre,
 		}
+		public enum EWindowSettings : int
+		{
+			BackgroundColour,
+			Lighting,
+		}
 		#endregion
 
 		#region Structs
@@ -910,7 +915,7 @@ namespace Rylogic.Gfx
 		public delegate void ReportErrorCB(IntPtr ctx, [MarshalAs(UnmanagedType.LPWStr)] string msg);
 
 		/// <summary>Report settings changed callback</summary>
-		public delegate void SettingsChangedCB(IntPtr ctx, HWindow wnd);
+		public delegate void SettingsChangedCB(IntPtr ctx, HWindow wnd, EWindowSettings setting);
 
 		/// <summary>Enumerate guids callback</summary>
 		public delegate bool EnumGuidsCB(IntPtr ctx, Guid guid);
@@ -1295,7 +1300,7 @@ namespace ldr
 
 				// Set up a callback for when settings are changed
 				View3D_WindowSettingsChangedCB(Handle, m_settings_cb = HandleSettingsChanged, IntPtr.Zero, true);
-				void HandleSettingsChanged(IntPtr ctx, HWindow wnd) { OnSettingsChanged?.Invoke(this, EventArgs.Empty); }
+				void HandleSettingsChanged(IntPtr ctx, HWindow wnd, EWindowSettings setting) { OnSettingsChanged?.Invoke(this, new SettingChangeEventArgs(setting)); }
 
 				// Set up a callback for when the window is invalidated
 				View3D_WindowInvalidatedCB(Handle, m_invalidated_cb = HandleInvalidated, IntPtr.Zero, true);
@@ -1335,7 +1340,7 @@ namespace ldr
 			public event EventHandler<ErrorEventArgs> Error;
 
 			/// <summary>Event notifying whenever rendering settings have changed</summary>
-			public event EventHandler OnSettingsChanged;
+			public event EventHandler<SettingChangeEventArgs> OnSettingsChanged;
 
 			/// <summary>Raised when Invalidate is called</summary>
 			public event EventHandler OnInvalidated;
@@ -3323,6 +3328,16 @@ namespace ldr
 
 			/// <summary>The LdrObject involved in the change (single object changes only)</summary>
 			public Object Object { get; private set; }
+		}
+		public class SettingChangeEventArgs : EventArgs
+		{
+			public SettingChangeEventArgs(EWindowSettings setting)
+			{
+				Setting = setting;
+			}
+
+			/// <summary>The setting that changed</summary>
+			public EWindowSettings Setting { get; }
 		}
 		#endregion
 

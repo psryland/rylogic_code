@@ -36,7 +36,7 @@ namespace CoinFlip.Settings
 			MarketOrderPriceToleranceFrac = 0.0001;
 			//ShowLivePrices = false;
 			//Equity = new EquitySettings();
-			Coins = new CoinData[] { new CoinData("BTC", 1m, true), new CoinData("ETH", 1m, true) };
+			Coins = new CoinData[] { new CoinData("BTC") { OfInterest = true }, new CoinData("ETH") { OfInterest = true } };
 			Funds = new FundData[1] { new FundData(Fund.Main, new FundData.ExchData[0]) };
 			Chart = new ChartSettings();
 			BackTesting = new BackTestingSettings();

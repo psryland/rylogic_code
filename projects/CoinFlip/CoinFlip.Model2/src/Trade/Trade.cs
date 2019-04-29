@@ -142,7 +142,6 @@ namespace CoinFlip
 				if (value < 0m._(Pair.Base))
 					throw new Exception($"Invalid trade amount: {value}");
 
-				value = Math.Round(value, 8, MidpointRounding.AwayFromZero)._(value);
 				if (m_amount_base != 0 && m_amount_base == value) return;
 				m_amount_base = value;
 				NotifyPropertyChanged(nameof(AmountBase));
@@ -150,22 +149,40 @@ namespace CoinFlip
 		}
 		private Unit<decimal> m_amount_base;
 
-		/// <summary>The amount being sold</summary>
-		public Unit<decimal> AmountIn
-		{
-			get { return TradeType.AmountIn(AmountBase, PriceQ2B); }
-			set { AmountBase = TradeType.AmountBase(PriceQ2B, amount_in:value); }
-		}
-
-		/// <summary>The amount being bought</summary>
-		public Unit<decimal> AmountOut
-		{
-			get { return TradeType.AmountOut(AmountBase, PriceQ2B); }
-			set { AmountBase = TradeType.AmountBase(PriceQ2B, amount_out:value); }
-		}
+		/// <summary>The amount to trade (in quote currency) based on the trade price</summary>
+		public Unit<decimal> AmountQuote => AmountBase * PriceQ2B;
 
 		/// <summary>The amount being bought after commissions</summary>
 		public Unit<decimal> AmountNett => AmountOut * (1 - Pair.Fee);
+
+		/// <summary>The input amount to trade (in base or quote, depending on 'TradeType')</summary>
+		public Unit<decimal> AmountIn
+		{
+			get { return TradeType.AmountIn(AmountBase, PriceQ2B); }
+			set
+			{
+				// Depending on the trade type, it's possible that rounding can
+				// make 'AmountIn' greater than 'value'. Always ensure 'AmountIn'
+				// is >= 'value'
+				AmountBase = TradeType.AmountBase(PriceQ2B, amount_in: value);
+			}
+		}
+
+		/// <summary>The output amount of the trade excluding commissions (in quote or base, depending on 'TradeType')</summary>
+		public Unit<decimal> AmountOut
+		{
+			get { return TradeType.AmountOut(AmountBase, PriceQ2B); }
+			set
+			{
+				AmountBase = TradeType.AmountBase(PriceQ2B, amount_out:value);
+			}
+		}
+
+		/// <summary>The output amount of the trade including commissions (in quote or base, depending on 'TradeType')</summary>
+		public Unit<decimal> AmountOutNett => AmountOut - Commission;
+
+		/// <summary>The commission that would be charged on this trade (in the same currency as AmountOut)</summary>
+		public Unit<decimal> Commission => Exchange.Fee * AmountOut;
 
 		/// <summary>The price to make the trade at (Quote/Base)</summary>
 		public Unit<decimal> PriceQ2B
@@ -177,7 +194,6 @@ namespace CoinFlip
 				if (value < 0m._(Pair.RateUnits))
 					throw new Exception($"Invalid trade price: {value}");
 
-				value = Math.Round(value, 8, MidpointRounding.AwayFromZero)._(value);
 				if (m_price_q2b != 0 && m_price_q2b == value) return;
 				m_price_q2b = value;
 				NotifyPropertyChanged(nameof(PriceQ2B));
@@ -188,8 +204,8 @@ namespace CoinFlip
 		/// <summary>The price to make the trade at (CoinOut/CoinIn)</summary>
 		public Unit<decimal> Price
 		{
-			get { return TradeType.Price(PriceQ2B); }
-			set { PriceQ2B = TradeType.PriceQ2B(value); }
+			get => TradeType.Price(PriceQ2B);
+			set => PriceQ2B = TradeType.PriceQ2B(value);
 		}
 
 		/// <summary>The inverse of the price to make the trade at (in CoinIn/CoinOut)</summary>
@@ -201,11 +217,38 @@ namespace CoinFlip
 		/// <summary>The effective price of this trade after fees (in CoinOut/CoinIn)</summary>
 		public Unit<decimal> PriceNett => AmountNett / AmountIn;
 
+		/// <summary>Return the current spot price of the pair associated with this order</summary>
+		public Unit<decimal>? SpotPriceQ2B => Pair.SpotPrice(TradeType);
+
 		/// <summary>The position of this trade in the order book for the trade type</summary>
 		public int OrderBookIndex => Pair.OrderBookIndex(TradeType, PriceQ2B, out var _);
 
 		/// <summary>The depth of this position in the order book for the trade type</summary>
 		public Unit<decimal> OrderBookDepth => Pair.OrderBookDepth(TradeType, PriceQ2B, out var _);
+
+		/// <summary>The price distance between the order price and the current spot price</summary>
+		public Unit<decimal>? DistanceQ2B
+		{
+			get
+			{
+				var spot_b2q = Pair.SpotPrice(ETradeType.B2Q);
+				var spot_q2b = Pair.SpotPrice(ETradeType.Q2B);
+				return
+					TradeType == ETradeType.B2Q && spot_b2q != null ? (PriceQ2B - spot_b2q.Value) :
+					TradeType == ETradeType.Q2B && spot_q2b != null ? (spot_q2b.Value - PriceQ2B) :
+					(Unit<decimal>?)0m;
+			}
+		}
+		public string DistanceQ2BDesc
+		{
+			get
+			{
+				var dist = DistanceQ2B;
+				var idx = Pair.OrderBookIndex(TradeType, PriceQ2B, out var beyond);
+				var pls = beyond ? "+" : string.Empty;
+				return dist != null ? $"{dist:G8} ({idx}{pls})" : "---";
+			}
+		}
 
 		/// <summary>The coin type being sold</summary>
 		public Coin CoinIn => TradeType == ETradeType.B2Q ? Pair.Base : Pair.Quote;
@@ -279,7 +322,21 @@ namespace CoinFlip
 		/// <summary>Create this trade on the Exchange that owns 'Pair'</summary>
 		public async Task<OrderResult> CreateOrder(CancellationToken cancel)
 		{
-			return await Exchange.CreateOrder(FundId, TradeType, Pair, AmountIn, Price);
+			Model.Log.Write(ELogLevel.Info, $"Creating or modifying trade: {Description}");
+
+			// If this trade is actually an existing order, we need to cancel it first
+			if (this is Order order)
+			{
+				// Cancel the previous order
+				await order.CancelOrder(cancel);
+
+				// Trigger and wait for a balance update
+				Exchange.BalanceUpdateRequired = true;
+				await Exchange.Balance.Updated.WaitAsync();
+			}
+
+			// Create the order on the exchange
+			return await Exchange.CreateOrder(FundId, TradeType, Pair, AmountIn, Price, cancel);
 		}
 
 		/// <summary>Trade property changed</summary>
@@ -292,8 +349,14 @@ namespace CoinFlip
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 		}
 
+		/// <summary>A string description of the trade type</summary>
+		public string TradeTypeDesc =>
+			TradeType == ETradeType.Q2B ? $"{Pair.Quote}→{Pair.Base} ({TradeType})" :
+			TradeType == ETradeType.B2Q ? $"{Pair.Base}→{Pair.Quote} ({TradeType})" :
+			"---";
+
 		/// <summary>String description of the trade</summary>
-		public string Description => $"{AmountIn.ToString("F8", true)} → {AmountOut.ToString("F8", true)} @ {PriceQ2B.ToString("F8", true)}";
+		public virtual string Description => $"{AmountIn.ToString("F8", true)} → {AmountOut.ToString("F8", true)} @ {PriceQ2B.ToString("F8", true)}";
 
 		#region Equals
 		public bool Equals(Trade rhs)

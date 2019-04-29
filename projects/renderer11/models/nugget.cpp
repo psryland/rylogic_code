@@ -109,12 +109,15 @@ namespace pr
 			{
 				// Set this nugget to do the front faces
 				m_sort_key.Group(ESortGroup::AlphaFront);
-				m_bsb.Set(EBS::BlendEnable    ,TRUE                      ,0);
-				m_bsb.Set(EBS::BlendOp        ,D3D11_BLEND_OP_ADD        ,0);
-				m_bsb.Set(EBS::SrcBlend       ,D3D11_BLEND_SRC_ALPHA     ,0);
-				m_bsb.Set(EBS::DestBlend      ,D3D11_BLEND_INV_SRC_ALPHA ,0);
-				m_dsb.Set(EDS::DepthWriteMask ,D3D11_DEPTH_WRITE_MASK_ZERO);
-				m_rsb.Set(ERS::CullMode       ,D3D11_CULL_BACK);
+				m_bsb.Set(EBS::BlendEnable, TRUE, 0);
+				m_bsb.Set(EBS::BlendOp, D3D11_BLEND_OP_ADD, 0);
+				m_bsb.Set(EBS::SrcBlend, D3D11_BLEND_SRC_ALPHA, 0);
+				m_bsb.Set(EBS::DestBlend, D3D11_BLEND_INV_SRC_ALPHA, 0);
+				m_bsb.Set(EBS::BlendOpAlpha, D3D11_BLEND_OP_MAX, 0);
+				m_bsb.Set(EBS::SrcBlendAlpha, D3D11_BLEND_SRC_ALPHA, 0);
+				m_bsb.Set(EBS::DestBlendAlpha, D3D11_BLEND_DEST_ALPHA, 0);
+				m_dsb.Set(EDS::DepthWriteMask, D3D11_DEPTH_WRITE_MASK_ZERO);
+				m_rsb.Set(ERS::CullMode, D3D11_CULL_BACK);
 
 				// Create a dependent nugget to do the back faces
 				if (m_owner != nullptr)
@@ -130,15 +133,18 @@ namespace pr
 			{
 				// Clear the alpha blending states 
 				m_sort_key.Group(ESortGroup::Default);
-				m_bsb.Clear(EBS::BlendEnable ,0);
-				m_bsb.Clear(EBS::BlendOp     ,0);
-				m_bsb.Clear(EBS::SrcBlend    ,0);
-				m_bsb.Clear(EBS::DestBlend   ,0);
+				m_bsb.Clear(EBS::BlendEnable, 0);
+				m_bsb.Clear(EBS::BlendOp, 0);
+				m_bsb.Clear(EBS::SrcBlend, 0);
+				m_bsb.Clear(EBS::DestBlend, 0);
+				m_bsb.Clear(EBS::BlendOpAlpha, 0);
+				m_bsb.Clear(EBS::SrcBlendAlpha, 0);
+				m_bsb.Clear(EBS::DestBlendAlpha, 0);
 				m_dsb.Clear(EDS::DepthWriteMask);
 				m_rsb.Clear(ERS::CullMode);
 
 				// Find and delete the dependent nugget
-				auto iter = pr::find_if(m_nuggets, [](auto& nug){ return nug.m_sort_key.Group() == ESortGroup::AlphaBack; });
+				auto iter = pr::find_if(m_nuggets, [](auto& nug) { return nug.m_sort_key.Group() == ESortGroup::AlphaBack; });
 				if (iter != m_nuggets.end())
 					m_model_buffer->m_mdl_mgr->Delete(&*iter);
 			}

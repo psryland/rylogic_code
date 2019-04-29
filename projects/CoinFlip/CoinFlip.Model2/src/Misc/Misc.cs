@@ -55,14 +55,6 @@ namespace CoinFlip
 			return Util.ResolveUserDocumentsPath(new[]{ "Rylogic", "CoinFlip" }.Concat(rel_path));
 		}
 
-		/// <summary>Generate a filepath for the given pair name</summary>
-		public static string CandleDBFilePath(string pair_name)
-		{
-			var dbpath = ResolveUserPath($"PriceData\\{Path_.SanitiseFileName(pair_name)}.db");
-			Path_.CreateDirs(Path_.Directory(dbpath));
-			return dbpath;
-		}
-
 		/// <summary>Return the opposite trade type</summary>
 		public static ETradeType Opposite(this ETradeType tt)
 		{
@@ -134,9 +126,10 @@ namespace CoinFlip
 		/// <summary>Return the 'base' amount for a trade in this trade direction</summary>
 		public static Unit<decimal> AmountBase(this ETradeType tt, Unit<decimal> price_q2b, Unit<decimal>? amount_in = null, Unit<decimal>? amount_out = null)
 		{
+			var price = (Unit<decimal>?)price_q2b;
 			return
-				tt == ETradeType.B2Q ? (amount_in != null ? amount_in.Value : amount_out != null ? amount_out.Value / price_q2b : throw new Exception("One of 'amount_in' or 'amount_out' must be given")) :
-				tt == ETradeType.Q2B ? (amount_in != null ? amount_in.Value / price_q2b : amount_out != null ? amount_out.Value : throw new Exception("One of 'amount_in' or 'amount_out' must be given")) :
+				tt == ETradeType.B2Q ? (amount_in ?? (amount_out / price) ?? throw new Exception("One of 'amount_in' or 'amount_out' must be given")) :
+				tt == ETradeType.Q2B ? ((amount_in / price) ?? amount_out ?? throw new Exception("One of 'amount_in' or 'amount_out' must be given")) :
 				throw new Exception("Unknown trade type");
 		}
 

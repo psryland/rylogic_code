@@ -24,7 +24,6 @@ namespace CoinFlip
 		//    requests, storing/overwriting the results in the collection members.
 		//  - SimExchange balances only use the 'NoCtx' balance context because real exchanges don't have balance contexts
 
-		private readonly LazyDictionary<TradePair, PriceData> m_src;
 		private readonly LazyDictionary<TradePair, MarketDepth> m_depth;
 		private readonly LazyDictionary<long, Order> m_ord;
 		private readonly LazyDictionary<long, OrderCompleted> m_his;
@@ -38,13 +37,13 @@ namespace CoinFlip
 		private double m_spread_frac;
 		private int m_orders_per_book;
 
-		public SimExchange(Simulation sim, Exchange exch)
+		public SimExchange(Simulation sim, Exchange exch, PriceDataMap price_data_map)
 		{
 			try
 			{
 				Sim     = sim;
 				Exch    = exch;
-				m_src   = new LazyDictionary<TradePair, PriceData>(k => null);
+				PriceData = price_data_map;
 				m_depth = new LazyDictionary<TradePair, MarketDepth>(k => new MarketDepth(k.Base, k.Quote));
 				m_ord   = new LazyDictionary<long, Order>(k => null);
 				m_his   = new LazyDictionary<long, OrderCompleted>(k => null);
@@ -55,9 +54,6 @@ namespace CoinFlip
 				m_initial_bal = new LazyDictionary<string, Unit<decimal>>(k => 1m._(k));
 				foreach (var cd in SettingsData.Settings.Coins)
 					m_initial_bal.Add(cd.Symbol, cd.BackTestingInitialBalance._(cd.Symbol));
-
-				// Locate data sources
-				FindDataSources();
 
 				// Cache settings values
 				m_order_value_range = SettingsData.Settings.BackTesting.OrderValueRange;
@@ -83,6 +79,9 @@ namespace CoinFlip
 		/// <summary>The exchange being simulated</summary>
 		private Exchange Exch { get; }
 
+		/// <summary>The store of price data instances</summary>
+		private PriceDataMap PriceData { get; }
+
 		/// <summary>Coins associated with this exchange</summary>
 		private CoinCollection Coins => Exch.Coins;
 
@@ -97,57 +96,6 @@ namespace CoinFlip
 
 		/// <summary>Trade history on this exchange, keyed on order ID</summary>
 		private OrdersCompletedCollection History => Exch.History;
-
-		/// <summary>Set up the map from pairs to data sources for each pair</summary>
-		public void FindDataSources()
-		{
-			// Don't need source data for the cross exchange
-			if (Exch is CrossExchange)
-				return;
-
-			m_src.Clear();
-
-			// Find a PriceData instance to use for each currency pair.
-			// Ideally we'd have the source data provided by 'Exch', but we can use any exchange's data.
-			foreach (var pair in Pairs.Values)
-			{
-
-				//var time_frame = Sim.TimeFrame;
-				//var db_filepath = Misc.CandleDBFilePath(pair.NameWithExchange);
-
-				//// Assume no data available
-				//m_src.Add(pair, null);
-
-				//if (Path_.FileExists(db_filepath))
-				//{
-				//	// There is data available from this exchange
-				//	m_src[pair] = Model.PriceData[pair, time_frame];
-				//}
-				//else
-				//{
-				//	// Look for price data from a different exchange
-				//	var pair_name = pair.Name.Replace('/','_');
-				//	var pattern = $@"{pair_name}\s*-\s*(?<exchange>.*)\.db";
-				//	var fd = Path_.EnumFileSystem(Path_.Directory(db_filepath), regex_filter:pattern).FirstOrDefault();
-				//	if (fd == null)
-				//		continue;
-
-				//	// Find the corresponding pair on the exchange that the database file is for
-				//	var exch_name = Regex.Match(fd.Name, pattern).Groups["exchange"].Value;
-				//	var src_exch = Model.TradingExchanges.FirstOrDefault(x => x.Name == exch_name);
-				//	if (src_exch == null)
-				//		continue;
-
-				//	// Find the pair on the source exchange
-				//	var src_pair = src_exch.Pairs[pair.Name];
-				//	if (src_pair == null)
-				//		continue;
-
-				//	// Use the data from 'src_exch'
-				//	m_src[pair] = Model.PriceData[src_pair, time_frame];
-				//}
-			}
-		}
 
 		/// <summary>Reset the Sim Exchange</summary>
 		public void Reset()
@@ -201,7 +149,7 @@ namespace CoinFlip
 				foreach (var pair in Pairs.Values)
 				{
 					// Get the data source for 'pair'
-					var src = m_src[pair];
+					var src = PriceData[pair, Sim.TimeFrame];
 					if (src == null || src.Count == 0)
 						continue;
 
@@ -265,7 +213,7 @@ namespace CoinFlip
 						m_his[order.OrderId] = his;
 					}
 
-					// Sanity check that the partial trade isn't gaining or losing volume
+					// Sanity check that the partial trade isn't gaining or losing amount
 					Debug.Assert(order.AmountBase == (pos?.RemainingBase ?? 0m) + (his?.Trades.Values.Sum(x => x.AmountBase) ?? 0m));
 				}
 
@@ -321,17 +269,17 @@ namespace CoinFlip
 		}
 
 		/// <summary>Create an order on this simulated exchange</summary>
-		public OrderResult CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume, Unit<decimal> price)
+		public OrderResult CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> amount, Unit<decimal> price)
 		{
 			// Validate the order
 			if (pair.Exchange != Exch)
 				throw new Exception($"SimExchange: Attempt to trade a pair not provided by this exchange");
-			if (m_bal[tt.CoinIn(pair)].Available < tt.AmountIn(volume, price))
-				throw new Exception($"SimExchange: Submit trade failed. Insufficient balance\n{tt} Pair: {pair.Name}  Vol: {volume.ToString("G8",true)} @  {price.ToString("G8",true)}");
-			if (!pair.AmountRangeBase.Contains(volume))
-				throw new Exception($"SimExchange: Volume in base currency is out of range");
-			if (!pair.AmountRangeQuote.Contains(price * volume))
-				throw new Exception($"SimExchange: Volume in quote currency is out of range");
+			if (m_bal[tt.CoinIn(pair)].Available < tt.AmountIn(amount, price))
+				throw new Exception($"SimExchange: Submit trade failed. Insufficient balance\n{tt} Pair: {pair.Name}  Vol: {amount.ToString("G8",true)} @  {price.ToString("G8",true)}");
+			if (!pair.AmountRangeBase.Contains(amount))
+				throw new Exception($"SimExchange: Amount in base currency is out of range");
+			if (!pair.AmountRangeQuote.Contains(price * amount))
+				throw new Exception($"SimExchange: Amount in quote currency is out of range");
 
 			// Stop the sim for 'RunToTrade' mode
 			if (Sim.RunMode == Simulation.ERunMode.RunToTrade)
@@ -341,7 +289,7 @@ namespace CoinFlip
 			var order_id = ++m_order_id;
 
 			// The order can be filled immediately, filled partially, or not filled and remain as a 'Position'
-			TryFillOrder(pair, order_id, tt, price, volume, volume, out var pos, out var his);
+			TryFillOrder(pair, order_id, tt, price, amount, amount, out var pos, out var his);
 			if (pos != null) m_ord[order_id] = pos;
 			if (his != null) m_his[order_id] = his;
 
@@ -373,19 +321,19 @@ namespace CoinFlip
 			return m_depth[pair];
 		}
 
-		/// <summary>Attempt to make a trade on 'pair' for the given 'price' and base 'volume'</summary>
-		private void TryFillOrder(TradePair pair, long order_id, ETradeType tt, Unit<decimal> price, Unit<decimal> initial_volume, Unit<decimal> current_volume, out Order pos, out OrderCompleted his)
+		/// <summary>Attempt to make a trade on 'pair' for the given 'price' and base 'amount'</summary>
+		private void TryFillOrder(TradePair pair, long order_id, ETradeType tt, Unit<decimal> price, Unit<decimal> initial_amount, Unit<decimal> current_amount, out Order pos, out OrderCompleted his)
 		{
 			// The order can be filled immediately, filled partially, or not filled and remain as a 'Position'
 			var orders = m_depth[pair][tt];
 
 			// Consume orders
-			var filled = orders.Consume(pair, price, current_volume, out var remaining);
-			Debug.Assert(current_volume == remaining + filled.Sum(x => x.AmountBase));
+			var filled = orders.Consume(pair, price, current_amount, out var remaining);
+			Debug.Assert(current_amount == remaining + filled.Sum(x => x.AmountBase));
 
 			// The order is partially or wholly filled...
-			pos = remaining != 0              ? new Order(Fund.Main, order_id, pair, tt, price, initial_volume, remaining, Model.UtcNow, Model.UtcNow) : null;
-			his = remaining != current_volume ? new OrderCompleted(order_id, tt, pair) : null;
+			pos = remaining != 0              ? new Order(Fund.Main, order_id, tt, pair, price, initial_amount, remaining, Model.UtcNow, Model.UtcNow) : null;
+			his = remaining != current_amount ? new OrderCompleted(order_id, tt, pair) : null;
 			foreach (var fill in filled)
 				his.Trades.Add(new TradeCompleted(order_id, ++m_history_id, pair, tt, fill.Price, fill.AmountBase, Exch.Fee * fill.AmountQuote, Model.UtcNow, Model.UtcNow));
 		}
@@ -477,13 +425,13 @@ namespace CoinFlip
 					if (price > best_b2q && price < best_q2b)
 						continue; // Invalid price, try again
 
-					// Generate a volume to trade. Convert a value in USD to Base currency using it's approximate value
+					// Generate an amount to trade. Convert a value in USD to Base currency using it's approximate value
 					var value = (decimal)Math.Abs(m_rng.Double(m_order_value_range.Beg, m_order_value_range.End));
 					var scale = pair.Base.AssignedValue;
-					var volume = Math_.Div(value, scale, value)._(pair.Base);
+					var amount = Math_.Div(value, scale, value)._(pair.Base);
 
 					// If the generated order is valid, return it otherwise, try again.
-					var order = new Offer(price, volume);
+					var order = new Offer(price, amount);
 					if (order.Validate(pair))
 						return order;
 				}

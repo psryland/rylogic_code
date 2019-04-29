@@ -26,18 +26,6 @@ namespace CoinFlip
 		private CrossExchangeApi Api { get; }
 		protected override IExchangeApi ExchangeApi => Api;
 
-		/// <summary>Open a trade</summary>
-		protected override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume_base, Unit<decimal> price)
-		{
-			return Task.FromResult(new OrderResult(pair, false));
-		}
-
-		/// <summary>Cancel an open trade</summary>
-		protected override Task<bool> CancelOrderInternal(TradePair pair, long order_id)
-		{
-			throw new Exception("Cannot cancel trades on the CrossExchange");
-		}
-
 		/// <summary>Update this exchange's set of trading pairs</summary>
 		protected override Task UpdatePairsInternal(HashSet<string> coins) // Worker thread context
 		{
@@ -79,70 +67,58 @@ namespace CoinFlip
 		}
 
 		/// <summary>Update the market data, balances, and open positions</summary>
-		protected override Task UpdateData() // Worker thread context
+		protected override Task UpdateDataInternal() // Worker thread context
 		{
-			try
+			Model.DataUpdates.Add(() =>
 			{
-				Model.DataUpdates.Add(() =>
+				// Update the order book for each pair
+				foreach (var pair in Pairs.Values)
 				{
-					// Update the order book for each pair
-					foreach (var pair in Pairs.Values)
-					{
-						// Get the coins in the pair
-						var coin0 = pair.Base;
-						var coin1 = pair.Quote;
+					// Get the coins in the pair
+					var coin0 = pair.Base;
+					var coin1 = pair.Quote;
 
-						// Each order book as one entry for infinite volume.
-						// Available balance is applied after the loop is identified.
-						var buys = new[] { new Offer(1m._(), decimal.MaxValue._(coin0)) };
-						var sells = new[] { new Offer(1m._(), decimal.MaxValue._(coin1)) };
-						pair.MarketDepth.UpdateOrderBook(buys, sells);
+					// Each order book as one entry for infinite volume.
+					// Available balance is applied after the loop is identified.
+					var buys = new[] { new Offer(1m._(), decimal.MaxValue._(coin0)) };
+					var sells = new[] { new Offer(1m._(), decimal.MaxValue._(coin1)) };
+					pair.MarketDepth.UpdateOrderBook(buys, sells);
 
-						// Notify updated
-						Pairs.LastUpdated = DateTimeOffset.Now;
-					}
-				});
-			}
-			catch (Exception ex)
-			{
-				Model.Log.Write(ELogLevel.Error, ex, "CrossExchange UpdateData() failed");
-			}
+					// Notify updated
+					Pairs.LastUpdated = DateTimeOffset.Now;
+				}
+			});
 			return Task.CompletedTask;
 		}
 
 		/// <summary>Update account balance data</summary>
-		protected override Task UpdateBalances() // Worker thread context
+		protected override Task UpdateBalancesInternal() // Worker thread context
 		{
-			try
+			Model.DataUpdates.Add(() =>
 			{
-				Model.DataUpdates.Add(() =>
+				// Update the Balances data
+				foreach (var pair in Pairs.Values)
 				{
-					// Update the Balances data
-					foreach (var pair in Pairs.Values)
-					{
-						Balance[pair.Base] = pair.Base.Balances;
-						Balance[pair.Quote] = pair.Quote.Balances;
-					}
+					Balance[pair.Base] = pair.Base.Balances;
+					Balance[pair.Quote] = pair.Quote.Balances;
+				}
 
-					// Notify updated
-					Balance.LastUpdated = DateTimeOffset.Now;
-				});
-			}
-			catch (Exception ex)
-			{
-				Model.Log.Write(ELogLevel.Error, ex, "CrossExchange UpdateBalances() failed");
-			}
+				// Notify updated
+				Balance.LastUpdated = DateTimeOffset.Now;
+			});
 			return Task.CompletedTask;
 		}
 
-		/// <summary>Update open positions</summary>
-		protected override Task UpdatePositionsAndHistory() // Worker thread context
+		/// <summary>Cancel an open trade</summary>
+		protected override Task<bool> CancelOrderInternal(TradePair pair, long order_id, CancellationToken cancel)
 		{
-			// There shouldn't be any of these. Cross-exchange trades
-			// are virtual, we only pretend to convert 'Coin' on 'Exchange0'
-			// to 'Coin' on 'Exchange1' (or visa versa)
-			base.UpdatePositionsAndHistory();
-			return Task.CompletedTask;
+			throw new Exception("Cannot cancel trades on the CrossExchange");
+		}
+
+		/// <summary>Open a trade</summary>
+		protected override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume_base, Unit<decimal> price, CancellationToken cancel)
+		{
+			return Task.FromResult(new OrderResult(pair, false));
 		}
 
 		/// <summary>A mock for the exchange API</summary>

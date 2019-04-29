@@ -15,7 +15,7 @@ namespace CoinFlip
 		{
 			Symbol = sym;
 			Exchange = exch;
-			Meta = SettingsData.Settings.Coins.FirstOrDefault(x => x.Symbol == sym) ?? new CoinData(sym, 1m);
+			Meta = SettingsData.Settings.Coins.FirstOrDefault(x => x.Symbol == sym) ?? new CoinData(sym);
 			Pairs = new HashSet<TradePair>();
 		}
 
@@ -30,6 +30,9 @@ namespace CoinFlip
 
 		/// <summary>Trade pairs involving this coin</summary>
 		public HashSet<TradePair> Pairs { get; }
+
+		/// <summary>Significant figures for this coin</summary>
+		public int SD => Meta.SD;
 
 		/// <summary>Return the Coin with the exchange</summary>
 		public string SymbolWithExchange => $"{Symbol} - {Exchange.Name}";

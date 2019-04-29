@@ -64,8 +64,6 @@ namespace CoinFlip
 			Util.BreakIf(m_ref.Count != 0, "Price Data still in use");
 			UpdateThreadActive = false;
 			DB = null;
-			//Pair = null;
-			//Model = null;
 		}
 
 		/// <summary>The pair we're collecting candle data for</summary>
@@ -119,15 +117,16 @@ namespace CoinFlip
 			return Scope.Create(
 				() =>
 				{
-					if (m_ref.Count == 0) UpdateThreadActive = !Model.BackTesting;
+					if (RefCount == 0) UpdateThreadActive = !Model.BackTesting;
 					m_ref.Add(who);
 				},
 				() =>
 				{
 					m_ref.Remove(who);
-					if (m_ref.Count == 0) UpdateThreadActive = false;
+					if (RefCount == 0) UpdateThreadActive = false;
 				});
 		}
+		public int RefCount => m_ref.Count;
 		private readonly List<object> m_ref;
 
 		/// <summary>The total number of candles</summary>
@@ -151,8 +150,8 @@ namespace CoinFlip
 			if (TimeFrame == ETimeFrame.None) throw new Exception("Invalid time frame");
 			return DB.ExecuteScalar<int>(
 				$"select count(1) from {TimeFrame}\n" +
-				$"where [{nameof(Candle.Timestamp)}] <= @max_timestamp"
-				, new { max_timestamp = max_timestamp_ticks });
+				$"where [{nameof(Candle.Timestamp)}] <= @max_timestamp",
+				new { max_timestamp = max_timestamp_ticks });
 		}
 
 		/// <summary>The candle with the newest timestamp (or null if there is no data yet)</summary>
@@ -261,12 +260,13 @@ namespace CoinFlip
 				// Start the new thread
 				if (m_update_thread != null)
 				{
+					// Raise the data syncing event to signal that the data is probably out of date
+					DataChanged?.Invoke(this, new DataEventArgs(this));
+					DataSyncingChanged?.Invoke(this, EventArgs.Empty);
+
 					m_update_thread_cancel = CancellationTokenSource.CreateLinkedTokenSource(MainShutdownToken);
 					m_update_thread_exit = new ManualResetEvent(false);
 					m_update_thread.Start();
-
-					// Raise the data syncing event to set the initial state
-					DataSyncingChanged?.Invoke(this, EventArgs.Empty);
 				}
 
 				/// <summary>Thread entry point for the instrument update thread</summary>
@@ -365,7 +365,7 @@ namespace CoinFlip
 				candle.Timestamp >= Newest.Timestamp ? DataEventArgs.EUpdateType.Current :
 				DataEventArgs.EUpdateType.Range;
 
-			// Insert the candle into the database if is for 'TimeFrame' and the sim isn't running.
+			// Insert the candle into the database
 			UpsertCandle(candle);
 
 			// Update/Invalidate cached values

@@ -89,7 +89,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Convert this media color to a Rylogic Colour32</summary>
 		public static Colour32 ToColour32(this Color col)
 		{
-			return new Colour32((uint)col.ToArgb());
+			return new Colour32(col.ToArgbU());
 		}
 
 		/// <summary>Create a colour by modifying an existing color</summary>

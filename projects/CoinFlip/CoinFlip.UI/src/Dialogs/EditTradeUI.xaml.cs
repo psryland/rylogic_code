@@ -1,21 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Globalization;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using CoinFlip.Settings;
-using Rylogic.Common;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
 using Rylogic.Maths;
@@ -27,8 +15,6 @@ namespace CoinFlip.UI
 	{
 		// Notes:
 		//  - This dialog is used to edit the properties of a trade or order.
-		//    Applying these changes it done by Model.CreateOrder(Trade) or
-		//    Model.ModifyOrder(Trade)
 
 		public EditTradeUI(Window owner, Model model, Trade trade, long? existing_order_id)
 		{
@@ -39,6 +25,9 @@ namespace CoinFlip.UI
 
 			Model = model;
 			Trade = trade;
+			PriceQ2B = Trade.PriceQ2B.ToString();
+			AmountIn = Trade.AmountIn.ToString();
+			AmountOut = Trade.AmountOut.ToString();
 			Original = new Trade(trade);
 			ExistingOrderId = existing_order_id;
 
@@ -120,25 +109,31 @@ namespace CoinFlip.UI
 		/// <summary>The trade price</summary>
 		public string PriceQ2B
 		{
-			get { return Trade.PriceQ2B.ToString("F8", false); }
+			get { return m_price_q2b; }
 			set
 			{
-				// When changing the price, keep the in-amount constant
-				var new_price = decimal.Parse(value)._(Trade.Pair.RateUnits);
-				var amount_in = Trade.AmountIn;
-				Trade.PriceQ2B = new_price;
-				Trade.AmountIn = amount_in;
+				if (m_in_price_q2b != 0) return;
+				using (Scope.Create(() => ++m_in_price_q2b, () => --m_in_price_q2b))
+				{
+					// Default to an invalid price
+					var price_q2b = 0m._(Trade.Pair.RateUnits);
+					m_price_q2b = value;
+
+					// Convert the value into a price
+					value = value.Trim();
+					if (decimal.TryParse(value, out var v) && v > 0)
+						price_q2b = v._(Trade.Pair.RateUnits);
+
+					// Update the trade price. Property changed
+					// notification happens in HandleTradePropertyChanged.
+					Trade.PriceQ2B = price_q2b;
+					if (price_q2b != 0)
+						m_price_q2b = Trade.PriceQ2B.ToString(8, false);
+				}
 			}
 		}
-		public Func<string, ValidationResult> ValidatePrice
-		{
-			get => s =>
-			{
-				if (!decimal.TryParse(s, out var v) || v <= 0) return new ValidationResult(false, "Price must be positive number");
-				if (!Trade.PriceRange.Contains(v._(Trade.Pair.RateUnits))) return new ValidationResult(false, $"Price must be within {Trade.PriceRange.ToString()}");
-				return ValidationResult.ValidResult;
-			};
-		}
+		private string m_price_q2b;
+		private int m_in_price_q2b;
 
 		/// <summary>The currency sold</summary>
 		public Coin CoinIn => Trade.CoinIn;
@@ -149,43 +144,69 @@ namespace CoinFlip.UI
 		/// <summary>The amount to trade</summary>
 		public string AmountIn
 		{
-			get { return Trade.AmountIn.ToString("F8", false); }
+			get { return m_amount_in; }
 			set
 			{
-				var amount_in = decimal.Parse(value)._(CoinIn);
-				Trade.AmountIn = amount_in;
-				NotifyPropertyChanged(string.Empty);
+				if (m_in_amount_in != 0) return;
+				using (Scope.Create(() => ++m_in_amount_in, () => --m_in_amount_in))
+				{
+					// Default to an invalid amount
+					var amount_in = 0m._(CoinIn);
+					m_amount_in = value;
+
+					// Convert the value into an amount
+					value = value.Trim();
+					if (value.EndsWith("%")) // Percentage of available in
+					{
+						value = value.Trim('%', ' ', '\t');
+						if (decimal.TryParse(value, out var pc) && pc > 0)
+							amount_in = AvailableIn * pc * 0.01m;
+					}
+					else
+					{
+						if (decimal.TryParse(value, out var v) && v > 0)
+							amount_in = v._(CoinIn);
+					}
+
+					// Update the trade amount. Property changed
+					// notification happens in HandleTradePropertyChanged.
+					Trade.AmountIn = amount_in;
+					if (amount_in != 0m)
+						m_amount_in = Trade.AmountIn.ToString(CoinIn.SD, false);
+				}
 			}
 		}
-		public Func<string, ValidationResult> ValidateAmountIn
-		{
-			get => s =>
-			{
-				if (!decimal.TryParse(s, out var v) || v <= 0) return new ValidationResult(false, "Amount must be positive number");
-				if (!Trade.AmountRangeIn.Contains(v._(CoinIn))) return new ValidationResult(false, $"Amount must be within {Trade.AmountRangeIn.ToString()}");
-				return ValidationResult.ValidResult;
-			};
-		}
+		private string m_amount_in;
+		private int m_in_amount_in;
 
 		/// <summary>The amount to trade</summary>
 		public string AmountOut
 		{
-			get { return Trade.AmountOut.ToString("F8", false); }
+			get { return m_amount_out; }
 			set
 			{
-				Trade.AmountOut = decimal.Parse(value)._(CoinOut);
-				NotifyPropertyChanged(string.Empty);
+				if (m_in_amount_out != 0) return;
+				using (Scope.Create(() => ++m_in_amount_out, () => --m_in_amount_out))
+				{
+					// Default to an invalid amount
+					var amount_out = 0m._(CoinOut);
+					m_amount_out = value;
+
+					// Convert the value into an amount
+					value = value.Trim();
+					if (decimal.TryParse(value, out var v) && v > 0)
+						amount_out = v._(CoinOut);
+
+					// Update the trade amount. Property changed
+					// notification happens in HandleTradePropertyChanged.
+					Trade.AmountOut = amount_out;
+					if (amount_out != 0)
+						m_amount_out = Trade.AmountOut.ToString(CoinOut.SD, false);
+				}
 			}
 		}
-		public Func<string, ValidationResult> ValidateAmountOut
-		{
-			get => s =>
-			{
-				if (!decimal.TryParse(s, out var v) || v <= 0) return new ValidationResult(false, "Amount must be positive number");
-				if (!Trade.AmountRangeOut.Contains(v._(CoinOut))) return new ValidationResult(false, $"Amount must be within {Trade.AmountRangeOut.ToString()}");
-				return ValidationResult.ValidResult;
-			};
-		}
+		private string m_amount_out;
+		private int m_in_amount_out;
 
 		/// <summary>Return the available balance of currency to sell. Includes the 'm_initial.AmountIn' when modifying 'Trade'</summary>
 		public Unit<decimal> AvailableIn => Exchange.Balance[CoinIn][Trade.FundId].Available + AdditionalIn;
@@ -206,11 +227,23 @@ namespace CoinFlip.UI
 			TradeType == ETradeType.B2Q ? SettingsData.Settings.Chart.BidColour.Lerp(Colour32.White,0.5f) :
 			throw new Exception($"Unknown trade type: {TradeType}");
 
-		/// <summary>Perform a validation of the trade data</summary>
-		public bool IsValid => Trade.Validate(additional_balance_in: AdditionalIn) == EValidation.Valid;
+		/// <summary>Validate the trade data</summary>
+		public EValidation Validation => Trade.Validate(additional_balance_in: AdditionalIn);
 
 		/// <summary>A description of the validation errors</summary>
-		public string ValidationResults => Trade.Validate(additional_balance_in: AdditionalIn).ToErrorDescription();
+		public string ValidationResults => Validation.ToErrorDescription();
+
+		/// <summary>True if all trade data is valid</summary>
+		public bool IsValid => Validation == EValidation.Valid;
+
+		/// <summary>True if the price value is valid</summary>
+		public bool IsPriceValid => !Bit.AnySet(Validation, EValidation.PriceIsInvalid | EValidation.PriceOutOfRange);
+
+		/// <summary>True if the amount value is valid</summary>
+		public bool IsAmountInValid => !Bit.AnySet(Validation, EValidation.AmountInIsInvalid | EValidation.AmountInOutOfRange | EValidation.InsufficientBalance);
+
+		/// <summary>True if the amount value is valid</summary>
+		public bool IsAmountOutValid => !Bit.AnySet(Validation, EValidation.AmountOutIsInvalid | EValidation.AmountOutOutOfRange | EValidation.InsufficientBalance);
 
 		/// <summary>Set the trade sell amount to the maximum available</summary>
 		public Command SetSellAmountToMaximum { get; }
@@ -223,6 +256,14 @@ namespace CoinFlip.UI
 		/// <summary>Close the dialog in the 'accepted' state</summary>
 		public void Accept()
 		{
+			// Grab focus to ensure values are validated
+			if (!m_btn_accept.Focus())
+				throw new Exception("Create button cannot take input focus");
+
+			// Ignore accept until the trade is valid
+			if (!IsValid)
+				return;
+
 			Result = true;
 			Close();
 		}
@@ -246,6 +287,15 @@ namespace CoinFlip.UI
 		private void HandleTradePropertyChanged(object sender, PropertyChangedEventArgs args)
 		{
 			// Don't make 'Trade' a prprop because we don't want 'Trade' to be null after the window is closed
+			switch (args.PropertyName)
+			{
+			case nameof(Trade.PriceQ2B):
+			case nameof(Trade.AmountBase):
+				PriceQ2B = Trade.PriceQ2B.ToString();
+				AmountIn = Trade.AmountIn.ToString();
+				AmountOut = Trade.AmountOut.ToString();
+				break;
+			}
 			NotifyPropertyChanged(string.Empty);
 		}
 	}

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using ExchApi.Common.JsonConverter;
 using Newtonsoft.Json;
 using Rylogic.Extn;
 
@@ -13,11 +14,8 @@ namespace Binance.API.DomainObjects
 		public string TimeZone { get; private set; }
 
 		/// <summary></summary>
+		[JsonProperty("serverTime"), JsonConverter(typeof(UnixMSToDateTimeOffset))]
 		public DateTimeOffset ServerTime { get; private set; }
-		[JsonProperty("serverTime")] private long ServerTimeInternal
-		{
-			set { ServerTime = new DateTimeOffset(value, TimeSpan.Zero); }
-		}
 
 		/// <summary></summary>
 		[JsonProperty("rateLimits")]

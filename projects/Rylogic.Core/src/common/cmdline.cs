@@ -140,6 +140,7 @@ namespace Rylogic.UnitTests
 			/// <summary>Display help information in the case of an invalid command line</summary>
 			public void ShowHelp(Exception ex) { ++HelpShownCount; }
 
+			/// <summary>Expects '-option data data'</summary>
 			public bool CmdLineOption(string option, string[] args, ref int arg)
 			{
 				Option = option;
@@ -148,6 +149,7 @@ namespace Rylogic.UnitTests
 				return CmdLineOptionResult;
 			}
 
+			/// <summary>Expects 'data data'</summary>
 			public bool CmdLineData(string data, string[] args, ref int arg)
 			{
 				Data1 = data;

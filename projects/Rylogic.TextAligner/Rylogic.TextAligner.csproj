@@ -44,7 +44,7 @@
     <AssemblyName>Rylogic.TextAligner</AssemblyName>
     <SignAssembly>false</SignAssembly>
     <AssemblyOriginatorKeyFile>Key.pfx</AssemblyOriginatorKeyFile>
-    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -211,16 +211,16 @@
       <Version>16.0.467</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Data">
-      <Version>15.9.28307</Version>
+      <Version>16.0.28727</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Editor">
-      <Version>15.6.27740</Version>
+      <Version>16.0.467</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.SDK.EmbedInteropTypes">
       <Version>15.0.27</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Shell.Design">
-      <Version>15.9.28307</Version>
+      <Version>16.0.28729</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Threading">
       <Version>16.0.102</Version>
@@ -232,13 +232,13 @@
       <Version>15.3.58</Version>
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json">
-      <Version>12.0.1</Version>
+      <Version>12.0.2</Version>
     </PackageReference>
     <PackageReference Include="stdole">
       <Version>7.0.3303</Version>
     </PackageReference>
     <PackageReference Include="StreamJsonRpc">
-      <Version>2.0.146</Version>
+      <Version>2.0.167</Version>
     </PackageReference>
     <PackageReference Include="System.Collections.Immutable">
       <Version>1.5.0</Version>

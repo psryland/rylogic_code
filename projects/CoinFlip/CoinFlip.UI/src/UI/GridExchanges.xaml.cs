@@ -14,6 +14,7 @@ namespace CoinFlip.UI
 		public GridExchanges(Model model)
 		{
 			InitializeComponent();
+			MouseRightButtonUp += DataGrid_.ColumnVisibility;
 			DockControl = new DockControl(this, "Exchanges");
 			Model = model;
 

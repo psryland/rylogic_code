@@ -40,7 +40,7 @@ namespace CoinFlip
 				SettingsData.Settings.AutoSaveOnChanges = true;
 
 				AllowTradesChanged += HandleAllowTradesChanged;
-				BackTestingChanged += HandleBackTestingChanged;
+				BackTestingChange += HandleBackTestingChange;
 
 				// Run the internal loop
 				MainLoopRunning = true;
@@ -56,7 +56,7 @@ namespace CoinFlip
 		{
 			MainLoopRunning = false;
 
-			BackTestingChanged -= HandleBackTestingChanged;
+			BackTestingChange -= HandleBackTestingChange;
 			AllowTradesChanged -= HandleAllowTradesChanged;
 
 			PriceData = null;
@@ -98,15 +98,60 @@ namespace CoinFlip
 			set
 			{
 				if (s_back_testing == value) return;
+				BackTestingChange?.Invoke(null, new PrePostEventArgs(after:false));
 				s_back_testing = value;
-				BackTestingChanged?.Invoke(null, EventArgs.Empty);
+				BackTestingChange?.Invoke(null, new PrePostEventArgs(after:true));
 			}
 		}
-		public static event EventHandler BackTestingChanged;
-		private void HandleBackTestingChanged(object sender, EventArgs e)
+		public static event EventHandler<PrePostEventArgs> BackTestingChange;
+		private void HandleBackTestingChange(object sender, PrePostEventArgs e)
 		{
-			// Create/Destroy the simulation manager
-			Simulation = BackTesting ? new Simulation(TradingExchanges) : null;
+			// If back testing is about to be enabled...
+			if (!BackTesting && e.Before)
+			{
+				// Turn off the update thread for each exchange
+				foreach (var exch in Exchanges)
+					exch.UpdateThreadActive = false;
+
+				// Turn off the update thread for each price data instance
+				foreach (var pd_pairs in PriceData.Pairs)
+					foreach (var pd in pd_pairs.Value)
+						pd.Value.UpdateThreadActive = false;
+
+				// Integrate market updates so that updates from live data don't end up in back testing data.
+				IntegrateDataUpdates();
+
+				// Disable live trading
+				AllowTrades = false;
+			}
+
+			// If back testing has just been enabled...
+			if (BackTesting && e.After)
+			{
+				// Create the simulation manager
+				Simulation = new Simulation(TradingExchanges, PriceData);
+			}
+
+			// If back testing is about to be disabled...
+			if (BackTesting && e.Before)
+			{
+			}
+
+			// If back testing has just been disabled...
+			if (!BackTesting && e.After)
+			{
+				// Clean up the simulation
+				Simulation = null;
+
+				// Turn on the update thread for each price data instance
+				foreach (var pd_pairs in PriceData.Pairs)
+					foreach (var pd in pd_pairs.Value)
+						pd.Value.UpdateThreadActive = pd.Value.RefCount != 0;
+
+				// Turn on the update thread for each exchange
+				foreach (var exch in Exchanges)
+					exch.UpdateThreadActive = exch.Enabled;
+			}
 		}
 		private static bool s_back_testing;
 
@@ -138,7 +183,8 @@ namespace CoinFlip
 					try
 					{
 						// Process any pending market data updates
-						IntegrateDataUpdates();
+						if (!BackTesting)
+							IntegrateDataUpdates();
 
 						// Simulate fake orders being filled
 						if (!AllowTrades && !BackTesting)
@@ -330,25 +376,13 @@ namespace CoinFlip
 		{
 			Debug.Assert(Misc.AssertMainThread());
 			Debug.Assert(m_in_integrate_data_updates == 0);
-
-			// Ignore updates when back testing.
-			if (BackTesting)
-				return;
+			Debug.Assert(!BackTesting);
 
 			// Notify market data about to update
 			DataChanging?.Invoke(this, new DataChangingEventArgs(done: false));
 
-			// Lock the data while we're changing it
-			//using (LockMarketData())
-			//using (Positions.PreservePosition())
-			//using (History.PreservePosition())
-			//using (Balances.PreservePosition())
 			using (Scope.Create(() => ++m_in_integrate_data_updates, () => --m_in_integrate_data_updates))
 			{
-				//Positions.Position = -1;
-				//History.Position = -1;
-				//Balances.Position = -1;
-
 				// Pull a task from the queue and execute it
 				for (; DataUpdates.TryTake(out var update);)
 				{

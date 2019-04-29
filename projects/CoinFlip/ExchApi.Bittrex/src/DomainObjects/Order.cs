@@ -9,7 +9,7 @@ namespace Bittrex.API.DomainObjects
 	{
 		/// <summary></summary>
 		[JsonProperty("Uuid")]
-		public Guid Id { get; set; }
+		public Guid? Id { get; set; }
 
 		/// <summary>Globally unique identifier for the order</summary>
 		[JsonProperty("OrderUuid")]
@@ -33,7 +33,7 @@ namespace Bittrex.API.DomainObjects
 
 		/// <summary></summary>
 		[JsonProperty("PricePerUnit")]
-		public decimal PricePerUnit { get; set; }
+		public decimal? PricePerUnit { get; set; }
 
 		/// <summary>The volume to trade (in base currency)</summary>
 		[JsonProperty("Quantity")]
@@ -53,7 +53,7 @@ namespace Bittrex.API.DomainObjects
 
 		/// <summary>The order filled time stamp</summary>
 		[JsonProperty("Closed")]
-		public DateTimeOffset Completed { get; set; }
+		public DateTimeOffset? Completed { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("CancelInitiated")]
@@ -72,7 +72,7 @@ namespace Bittrex.API.DomainObjects
 		public string Condition { get; internal set; }
 
 		/// <summary></summary>
-		[JsonProperty("ConditionTarget")]
+		[JsonProperty("ConditionTarget"), JsonConverter(typeof(NullIsDefault<string>))]
 		public string ConditionTarget { get; internal set; }
 	}
 }

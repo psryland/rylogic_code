@@ -66,248 +66,213 @@ namespace CoinFlip
 		/// <summary>Update this exchange's set of trading pairs</summary>
 		protected async override Task UpdatePairsInternal(HashSet<string> coins) // Worker thread context
 		{
-			try
-			{
-				// Get all available trading pairs
-				// Use 'Model.Shutdown' because updating pairs is independent of the Exchange.UpdateThread
-				// and we don't want updating pairs to be interrupted by the update thread stopping
-				var markets = await Api.GetMarkets(cancel: Shutdown.Token);
+			// Get all available trading pairs
+			// Use 'Model.Shutdown' because updating pairs is independent of the Exchange.UpdateThread
+			// and we don't want updating pairs to be interrupted by the update thread stopping
+			var markets = await Api.GetMarkets(cancel: Shutdown.Token);
 
-				// Add an action to integrate the data
-				Model.DataUpdates.Add(() =>
+			// Add an action to integrate the data
+			Model.DataUpdates.Add(() =>
+			{
+				var pairs = new HashSet<CurrencyPair>();
+
+				// Create the trade pairs and associated coins
+				foreach (var m in markets.Where(x => coins.Contains(x.Pair.Base) && coins.Contains(x.Pair.Quote)))
 				{
-					var pairs = new HashSet<CurrencyPair>();
+					var base_ = Coins.GetOrAdd(m.Pair.Base);
+					var quote = Coins.GetOrAdd(m.Pair.Quote);
 
-					// Create the trade pairs and associated coins
-					foreach (var m in markets.Where(x => coins.Contains(x.Pair.Base) && coins.Contains(x.Pair.Quote)))
-					{
-						var base_ = Coins.GetOrAdd(m.Pair.Base);
-						var quote = Coins.GetOrAdd(m.Pair.Quote);
+					// Create a trade pair. Note: m.MinTradeSize is not valid, 50,000 Satoshi is the minimum trade size
+					var pair = new TradePair(base_, quote, this,
+						trade_pair_id: null,
+						amount_range_base: new RangeF<Unit<decimal>>(0.0005m._(base_), 10000000m._(base_)),
+						amount_range_quote: new RangeF<Unit<decimal>>(0.0005m._(quote), 10000000m._(quote)),
+						price_range: null);
 
-						// Create a trade pair. Note: m.MinTradeSize is not valid, 50,000 Satoshi is the minimum trade size
-						var pair = new TradePair(base_, quote, this,
-							trade_pair_id: null,
-							amount_range_base: new RangeF<Unit<decimal>>(0.0005m._(base_), 10000000m._(base_)),
-							amount_range_quote: new RangeF<Unit<decimal>>(0.0005m._(quote), 10000000m._(quote)),
-							price_range: null);
+					// Update the pairs collection
+					Pairs[pair.UniqueKey] = pair;
+					pairs.Add(new CurrencyPair(base_, quote));
+				}
 
-						// Update the pairs collection
-						Pairs[pair.UniqueKey] = pair;
-						pairs.Add(new CurrencyPair(base_, quote));
-					}
+				// Ensure a 'Balance' object exists for each coin type
+				foreach (var c in Coins.Values)
+					Balance.GetOrAdd(c);
 
-					// Ensure a 'Balance' object exists for each coin type
-					foreach (var c in Coins.Values)
-						Balance.GetOrAdd(c);
-
-					// Record the pairs
-					lock (m_pairs)
-					{
-						m_pairs.Clear();
-						m_pairs.AddRange(pairs);
-					}
-				});
-			}
-			catch (Exception ex)
-			{
-				HandleException(nameof(UpdatePairs), ex);
-			}
+				// Record the pairs
+				lock (m_pairs)
+				{
+					m_pairs.Clear();
+					m_pairs.AddRange(pairs);
+				}
+			});
 		}
 
 		/// <summary>Update the market data, balances, and open positions</summary>
-		protected async override Task UpdateData() // Worker thread context
+		protected async override Task UpdateDataInternal() // Worker thread context
 		{
-			try
+			// Record the time just before the query to the server
+			var timestamp = DateTimeOffset.Now;
+
+			// Get the array of pairs to query for
+			List<CurrencyPair> pairs;
+			lock (m_pairs)
+				pairs = m_pairs.ToList();
+
+			// For each pair, get the updated market depth info
+			var updates = pairs.Select(pair =>
 			{
-				// Record the time just before the query to the server
-				var timestamp = DateTimeOffset.Now;
+				// Get the latest market data for 'pair'
+				var ob = Api.MarketData[pair];
 
-				// Get the array of pairs to query for
-				List<CurrencyPair> pairs;
-				lock (m_pairs)
-					pairs = m_pairs.ToList();
+				// Convert to CoinFlip market data format
+				var rate_units = $"{pair.Quote}/{pair.Base}";
+				var buys = ob.BuyOffers.Select(x => new Offer(x.Price._(rate_units), x.AmountBase._(pair.Base))).ToArray();
+				var sells = ob.SellOffers.Select(x => new Offer(x.Price._(rate_units), x.AmountBase._(pair.Base))).ToArray();
 
-				// For each pair, get the updated market depth info
-				var updates = pairs.Select(pair =>
-				{
-					// Get the latest market data for 'pair'
-					var ob = Api.MarketData[pair];
+				return new { pair, buys, sells };
+			}).ToList();
 
-					// Convert to CoinFlip market data format
-					var rate_units = $"{pair.Quote}/{pair.Base}";
-					var buys = ob.BuyOffers.Select(x => new Offer(x.Price._(rate_units), x.AmountBase._(pair.Base))).ToArray();
-					var sells = ob.SellOffers.Select(x => new Offer(x.Price._(rate_units), x.AmountBase._(pair.Base))).ToArray();
-
-					return new { pair, buys, sells };
-				}).ToList();
-
-				// Queue integration of the market data
-				Model.DataUpdates.Add(() =>
-				{
-					// Apply the updates
-					foreach (var update in updates)
-					{
-						// Find the pair to update
-						var pair = Pairs[update.pair.Base, update.pair.Quote];
-						if (pair == null)
-							continue;
-
-						// Update the market order book
-						pair.MarketDepth.UpdateOrderBook(update.buys, update.sells);
-					}
-
-					// Notify updated
-					Pairs.LastUpdated = timestamp;
-				});
-
-				await Task.CompletedTask;
-			}
-			catch (Exception ex)
+			// Queue integration of the market data
+			Model.DataUpdates.Add(() =>
 			{
-				HandleException(nameof(UpdateData), ex);
-			}
+				// Apply the updates
+				foreach (var update in updates)
+				{
+					// Find the pair to update
+					var pair = Pairs[update.pair.Base, update.pair.Quote];
+					if (pair == null)
+						continue;
+
+					// Update the market order book
+					pair.MarketDepth.UpdateOrderBook(update.buys, update.sells);
+				}
+
+				// Notify updated
+				Pairs.LastUpdated = timestamp;
+			});
+
+			await Task.CompletedTask;
 		}
 
 		/// <summary>Update account balance data</summary>
-		protected async override Task UpdateBalances() // Worker thread context
+		protected async override Task UpdateBalancesInternal() // Worker thread context
 		{
-			try
+			// Record the time just before the query to the server
+			var last_updated = DateTimeOffset.Now;
+
+			// Request the account data
+			var balances = await Api.GetBalances(cancel: Shutdown.Token);
+
+			// Queue integration of the market data
+			Model.DataUpdates.Add(() =>
 			{
-				// Record the time just before the query to the server
-				var last_updated = DateTimeOffset.Now;
-
-				// Request the account data
-				var balances = await Api.GetBalances(cancel: Shutdown.Token);
-
-				// Queue integration of the market data
-				Model.DataUpdates.Add(() =>
+				// Update the account balance
+				foreach (var b in balances.Where(x => x.Available != 0 || Coins.ContainsKey(x.Symbol)))
 				{
-					// Update the account balance
-					foreach (var b in balances.Where(x => x.Available != 0 || Coins.ContainsKey(x.Symbol)))
-					{
-						// Find the currency that this balance is for
-						var coin = Coins.GetOrAdd(b.Symbol);
+					// Find the currency that this balance is for
+					var coin = Coins.GetOrAdd(b.Symbol);
 
-						// Update the balance
-						Balance[coin] = new Balances(coin, b.Total._(coin), (b.Total - b.Available)._(coin), last_updated);
-					}
+					// Update the balance
+					Balance[coin] = new Balances(coin, b.Total._(coin), (b.Total - b.Available)._(coin), last_updated);
+				}
 
-					// Notify updated
-					Balance.LastUpdated = last_updated;
-				});
-			}
-			catch (Exception ex)
-			{
-				HandleException(nameof(UpdateBalances), ex);
-			}
+				// Notify updated
+				Balance.LastUpdated = last_updated;
+			});
 		}
 
 		/// <summary>Update open positions</summary>
-		protected async override Task UpdatePositionsAndHistory() // Worker thread context
+		protected async override Task UpdatePositionsAndHistoryInternal() // Worker thread context
 		{
-			try
+			// Record the time just before the query to the server
+			var timestamp = DateTimeOffset.Now;
+
+			// Request the existing orders
+			var positions = await Api.GetOpenOrders(cancel: Shutdown.Token);
+
+			// Request the history
+			var history = await Api.GetTradeHistory(cancel: Shutdown.Token);
+
+			// Record the time that history has been updated to
+			m_history_last = timestamp;
+
+			// Queue integration of the market data
+			Model.DataUpdates.Add(() =>
 			{
-				// Record the time just before the query to the server
-				var timestamp = DateTimeOffset.Now;
+				var order_ids = new HashSet<long>();
+				var pairs = new HashSet<CurrencyPair>();
 
-				// Request the existing orders
-				var positions = await Api.GetOpenOrders(cancel: Shutdown.Token);
-
-				// Request the history
-				var history = await Api.GetTradeHistory(cancel: Shutdown.Token);
-
-				// Record the time that history has been updated to
-				m_history_last = timestamp;
-
-				// Queue integration of the market data
-				Model.DataUpdates.Add(() =>
+				// Update the collection of existing orders
+				foreach (var order in positions)
 				{
-					var order_ids = new HashSet<long>();
-					var pairs = new HashSet<CurrencyPair>();
+					// Add the order to the collection
+					var odr = OrderFrom(order, timestamp);
+					Orders[odr.OrderId] = odr;
+					order_ids.Add(odr.OrderId);
+					pairs.Add(order.Pair);
+				}
+				foreach (var order in history)
+				{
+					// Add the filled positions to the collection
+					var his = TradeCompletedFrom(order, timestamp);
+					var fill = History.GetOrAdd(his.OrderId, his.TradeType, his.Pair);
+					fill.Trades[his.TradeId] = his;
+					AddToTradeHistory(fill);
+				}
 
-					// Update the collection of existing orders
-					foreach (var order in positions)
-					{
-						// Add the order to the collection
-						var odr = OrderFrom(order, timestamp);
-						Orders[odr.OrderId] = odr;
-						order_ids.Add(odr.OrderId);
-						pairs.Add(order.Pair);
-					}
-					foreach (var order in history)
-					{
-						// Add the filled positions to the collection
-						var his = TradeCompletedFrom(order, timestamp);
-						var fill = History.GetOrAdd(his.OrderId, his.TradeType, his.Pair);
-						fill.Trades[his.TradeId] = his;
-						AddToTradeHistory(fill);
-					}
+				// Update the trade pairs
+				lock (m_pairs)
+					m_pairs.AddRange(pairs);
 
-					// Update the trade pairs
-					lock (m_pairs)
-						m_pairs.AddRange(pairs);
+				// Remove any positions that are no longer valid.
+				RemovePositionsNotIn(order_ids, timestamp);
 
-					// Remove any positions that are no longer valid.
-					RemovePositionsNotIn(order_ids, timestamp);
+				// Save the history range
+				HistoryInterval = new Range(HistoryInterval.Beg, timestamp.Ticks);
 
-					// Save the history range
-					HistoryInterval = new Range(HistoryInterval.Beg, timestamp.Ticks);
-
-					// Notify updated
-					History.LastUpdated = timestamp;
-					Orders.LastUpdated = timestamp;
-				});
-			}
-			catch (Exception ex)
-			{
-				HandleException(nameof(UpdatePositionsAndHistory), ex);
-			}
+				// Notify updated
+				History.LastUpdated = timestamp;
+				Orders.LastUpdated = timestamp;
+			});
 		}
 
 		/// <summary>Return the deposits and withdrawals made on this exchange</summary>
-		protected async override Task UpdateTransfers() // worker thread context
+		protected async override Task UpdateTransfersInternal() // worker thread context
 		{
-			try
+			var timestamp = DateTimeOffset.Now;
+
+			// Request the transfers data
+			var deposits = await Api.GetDeposits(cancel: Shutdown.Token);
+			var withdrawals = await Api.GetWithdrawals(cancel: Shutdown.Token);
+
+			// Record the time that transfer history has been updated to
+			m_transfers_last = timestamp;
+
+			// Queue integration of the transfer history
+			Model.DataUpdates.Add(() =>
 			{
-				var timestamp = DateTimeOffset.Now;
-
-				// Request the transfers data
-				var deposits = await Api.GetDeposits(cancel: Shutdown.Token);
-				var withdrawals = await Api.GetWithdrawals(cancel: Shutdown.Token);
-
-				// Record the time that transfer history has been updated to
-				m_transfers_last = timestamp;
-
-				// Queue integration of the transfer history
-				Model.DataUpdates.Add(() =>
+				// Update the collection of funds transfers
+				foreach (var dep in deposits)
 				{
-					// Update the collection of funds transfers
-					foreach (var dep in deposits)
-					{
-						var deposit = TransferFrom(dep, ETransfer.Deposit);
-						Transfers[deposit.TransactionId] = deposit;
-					}
-					foreach (var wid in withdrawals)
-					{
-						var withdrawal = TransferFrom(wid, ETransfer.Withdrawal);
-						Transfers[withdrawal.TransactionId] = withdrawal;
-					}
+					var deposit = TransferFrom(dep, ETransfer.Deposit);
+					Transfers[deposit.TransactionId] = deposit;
+				}
+				foreach (var wid in withdrawals)
+				{
+					var withdrawal = TransferFrom(wid, ETransfer.Withdrawal);
+					Transfers[withdrawal.TransactionId] = withdrawal;
+				}
 
-					// Save the available range
-					TransfersInterval = new Range(TransfersInterval.Beg, timestamp.Ticks);
+				// Save the available range
+				TransfersInterval = new Range(TransfersInterval.Beg, timestamp.Ticks);
 
-					// Notify updated
-					Transfers.LastUpdated = timestamp;
-				});
-			}
-			catch (Exception ex)
-			{
-				HandleException(nameof(UpdateTransfers), ex);
-			}
+				// Notify updated
+				Transfers.LastUpdated = timestamp;
+			});
 		}
 
 		/// <summary>Cancel an open trade</summary>
-		protected async override Task<bool> CancelOrderInternal(TradePair pair, long order_id)
+		protected async override Task<bool> CancelOrderInternal(TradePair pair, long order_id, CancellationToken cancel)
 		{
 			try
 			{
@@ -318,12 +283,12 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				throw new Exception($"Bittrex: Cancel trade (id={order_id}) failed. {ex.Message}");
+				throw new Exception($"Bittrex: Cancel trade (id={order_id}) failed. {ex.Message}", ex);
 			}
 		}
 
 		/// <summary>Open a trade</summary>
-		protected async override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> amount, Unit<decimal> price)
+		protected async override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> amount, Unit<decimal> price, CancellationToken cancel)
 		{
 			try
 			{
@@ -347,10 +312,10 @@ namespace CoinFlip
 			var tt = Misc.TradeType(order.Type);
 			var pair = Pairs.GetOrAdd(order.Pair.Base, order.Pair.Quote);
 			var price = order.Limit._(pair.RateUnits);
-			var volume = order.VolumeBase._(pair.Base);
+			var amount = order.VolumeBase._(pair.Base);
 			var remaining = order.RemainingBase._(pair.Base);
 			var created = order.Created;
-			return new Order(fund_id, order_id, pair, tt, price, volume, remaining, created, updated);
+			return new Order(fund_id, order_id, tt, pair, price, amount, remaining, created, updated);
 		}
 
 		/// <summary>Convert a Cryptopia trade history result into a position object</summary>

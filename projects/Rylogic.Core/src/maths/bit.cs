@@ -16,10 +16,18 @@ namespace Rylogic.Maths
 		public enum EState { Clear = 0, Set = 1, Toggle = 2 }
 
 		/// <summary>Create a 32-bit mask from 1 &lt;&lt; n</summary>
-		public static uint Bit32(int n) { return 1U << n; }
+		public static uint Bit32(int n) => 1U << n;
 
 		/// <summary>Create a 64-bit mask from 1 &lt;&lt; n</summary>
-		public static ulong Bit64(int n) { return 1UL << n; }
+		public static ulong Bit64(int n) => 1UL << n;
+
+		/// <summary>Get the Nth bit of this value</summary>
+		public static int BitAt(this ulong x, int bit) => (int)((x >> bit) & 1);
+		public static int BitAt(this  long x, int bit) => (int)((x >> bit) & 1);
+
+		/// <summary>Get the range of bits as a value. e.g. x = 1011101, start=2,count=3 = [2,4] => 111 = 7</summary>
+		public static ulong Bits(this ulong x, int start, int count) => (x >> start) & ~(~0UL << count);
+		public static long Bits(this long x, int start, int count) => unchecked((long)Bits((ulong)x, start, count));
 
 		/// <summary>Set/Clear bits in 'value'</summary>
 		public static ulong SetBits(ulong value, ulong mask, bool state)
@@ -147,6 +155,13 @@ namespace Rylogic.Maths
 		{
 			for (uint mask; value != 0; value -= mask)
 				yield return mask = value & (value ^ (value - 1));
+		}
+
+		/// <summary>Iterate over the bits in the range</summary>
+		public static IEnumerable<int> EnumBitSeq(this ulong x, int start, int count, bool low_to_high = true)
+		{
+			for (int i = 0; i != count; ++i)
+				yield return x.BitAt(start + (low_to_high ? i : count - 1 - i));
 		}
 
 		/// <summary>Returns a value containing the reverse of the bits in 'value'</summary>
@@ -319,20 +334,26 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Convert the bit field 'bits' into a string with at least 'min_digits' characters</summary>
-		public static string ToString(uint bits, int min_digits)
+		public static string ToString(ulong bits, int min_digits)
 		{
-			var i = 0;
-			var str = new StringBuilder(32);
-			for (; i != 32 && min_digits != 32 && (bits & 0x80000000) == 0; ++i, ++min_digits, bits <<= 1) {}
-			for (; i != 32; ++i, bits <<= 1) { str.Append((bits & 0x80000000) != 0 ? '1' : '0'); }
-			return str.ToString();
+			const ulong MSB = 1UL << 63;
+			unchecked
+			{
+				var i = 0;
+				var str = new StringBuilder(64);
+				for (; i != 64 && min_digits != 64 && (bits & MSB) == 0; ++i, ++min_digits, bits <<= 1) {}
+				for (; i != 64; ++i, bits <<= 1) { str.Append((bits & MSB) != 0 ? '1' : '0'); }
+				return str.ToString();
+			}
+		}
+		public static string ToString(long bits, int min_digits)
+		{
+			return unchecked(ToString((ulong)bits, min_digits));
 		}
 
 		/// <summary>Convert the bit field 'bits' into a string</summary>
-		public static string ToString(uint bits)
-		{
-			return ToString(bits, 0);
-		}
+		public static string ToString(ulong bits) => ToString(bits, 0);
+		public static string ToString(long bits) => ToString(bits, 0);
 
 		///<summary>Encode an integer value as a variable length int byte array</summary>
 		public static IList<byte> EncodeVarInt(long value)
@@ -351,7 +372,7 @@ namespace Rylogic.Maths
 			//   byte[1] = (00000010 & 0x7F) => 0000010 ++ 0101100 => 100101100
 			//   stop because high bit wasn't set.
 
-			var val = (ulong)((value << 1) ^ (value >> 63));
+			var val = unchecked((ulong)((value << 1) ^ (value >> 63)));
 			return EncodeVarUInt(val);
 		}
 		public static IList<byte> EncodeVarUInt(ulong value)

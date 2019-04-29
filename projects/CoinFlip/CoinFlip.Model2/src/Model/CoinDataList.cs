@@ -29,7 +29,7 @@ namespace CoinFlip
 				var idx = this.IndexOf(x => x.Symbol == sym);
 				return idx >= 0
 					? SettingsData.Settings.Coins[idx]
-					: new CoinData(sym, 1m);
+					: new CoinData(sym);
 			}
 			set
 			{

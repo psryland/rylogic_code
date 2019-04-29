@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using ExchApi.Common.JsonConverter;
 using Newtonsoft.Json;
 
 namespace Bittrex.API.DomainObjects
@@ -25,13 +26,13 @@ namespace Bittrex.API.DomainObjects
 		[JsonProperty("Pending")]
 		public decimal Pending { get; internal set; }
 
-		[JsonProperty("CryptoAddress")]
+		[JsonProperty("CryptoAddress"), JsonConverter(typeof(NullIsDefault<string>))]
 		public string CryptoAddress { get; internal set; }
 
 		[JsonProperty("Requested")]
 		public bool Requested { get; internal set; }
 
-		[JsonProperty("Uuid")]
+		[JsonProperty("Uuid"), JsonConverter(typeof(NullIsDefault<string>))]
 		public string Uuid { get; internal set; }
 	}
 }

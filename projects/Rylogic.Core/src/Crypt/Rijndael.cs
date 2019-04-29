@@ -1348,25 +1348,25 @@ namespace Rylogic.Crypt
 			// Last Round is special
 			i = out_;
 			tt = m_Ke[m_rounds,0];
-			result[i++] = (byte)(sm.S[(t0 >> 24) & 0xFF] ^ (tt >> 24));
-			result[i++] = (byte)(sm.S[(t1 >> 16) & 0xFF] ^ (tt >> 16));
-			result[i++] = (byte)(sm.S[(t2 >>  8) & 0xFF] ^ (tt >>  8));
-			result[i++] = (byte)(sm.S[(t3      ) & 0xFF] ^ (tt      ));
+			result[i++] = (byte)((sm.S[(t0 >> 24) & 0xFF] ^ (tt >> 24)) & 0xFF);
+			result[i++] = (byte)((sm.S[(t1 >> 16) & 0xFF] ^ (tt >> 16)) & 0xFF);
+			result[i++] = (byte)((sm.S[(t2 >>  8) & 0xFF] ^ (tt >>  8)) & 0xFF);
+			result[i++] = (byte)((sm.S[(t3      ) & 0xFF] ^ (tt      )) & 0xFF);
 			tt = m_Ke[m_rounds,1];
-			result[i++] = (byte)(sm.S[(t1 >> 24) & 0xFF] ^ (tt >> 24));
-			result[i++] = (byte)(sm.S[(t2 >> 16) & 0xFF] ^ (tt >> 16));
-			result[i++] = (byte)(sm.S[(t3 >>  8) & 0xFF] ^ (tt >>  8));
-			result[i++] = (byte)(sm.S[(t0      ) & 0xFF] ^ (tt      ));
+			result[i++] = (byte)((sm.S[(t1 >> 24) & 0xFF] ^ (tt >> 24)) & 0xFF);
+			result[i++] = (byte)((sm.S[(t2 >> 16) & 0xFF] ^ (tt >> 16)) & 0xFF);
+			result[i++] = (byte)((sm.S[(t3 >>  8) & 0xFF] ^ (tt >>  8)) & 0xFF);
+			result[i++] = (byte)((sm.S[(t0      ) & 0xFF] ^ (tt      )) & 0xFF);
 			tt = m_Ke[m_rounds,2];
-			result[i++] = (byte)(sm.S[(t2 >> 24) & 0xFF] ^ (tt >> 24));
-			result[i++] = (byte)(sm.S[(t3 >> 16) & 0xFF] ^ (tt >> 16));
-			result[i++] = (byte)(sm.S[(t0 >>  8) & 0xFF] ^ (tt >>  8));
-			result[i++] = (byte)(sm.S[(t1      ) & 0xFF] ^ (tt      ));
+			result[i++] = (byte)((sm.S[(t2 >> 24) & 0xFF] ^ (tt >> 24)) & 0xFF);
+			result[i++] = (byte)((sm.S[(t3 >> 16) & 0xFF] ^ (tt >> 16)) & 0xFF);
+			result[i++] = (byte)((sm.S[(t0 >>  8) & 0xFF] ^ (tt >>  8)) & 0xFF);
+			result[i++] = (byte)((sm.S[(t1      ) & 0xFF] ^ (tt      )) & 0xFF);
 			tt = m_Ke[m_rounds,3];
-			result[i++] = (byte)(sm.S[(t3 >> 24) & 0xFF] ^ (tt >> 24));
-			result[i++] = (byte)(sm.S[(t0 >> 16) & 0xFF] ^ (tt >> 16));
-			result[i++] = (byte)(sm.S[(t1 >>  8) & 0xFF] ^ (tt >>  8));
-			result[i++] = (byte)(sm.S[(t2      ) & 0xFF] ^ (tt      ));
+			result[i++] = (byte)((sm.S[(t3 >> 24) & 0xFF] ^ (tt >> 24)) & 0xFF);
+			result[i++] = (byte)((sm.S[(t0 >> 16) & 0xFF] ^ (tt >> 16)) & 0xFF);
+			result[i++] = (byte)((sm.S[(t1 >>  8) & 0xFF] ^ (tt >>  8)) & 0xFF);
+			result[i++] = (byte)((sm.S[(t2      ) & 0xFF] ^ (tt      )) & 0xFF);
 		}
 
 		// Convenience method to decrypt exactly one block of plain text, assuming
@@ -1435,25 +1435,25 @@ namespace Rylogic.Crypt
 			// Last Round is special
 			i = out_;
 			tt = m_Kd[m_rounds,0];
-			result[i++] = (byte)(sm.Si[(t0 >> 24) & 0xFF] ^ (tt >> 24));
-			result[i++] = (byte)(sm.Si[(t3 >> 16) & 0xFF] ^ (tt >> 16));
-			result[i++] = (byte)(sm.Si[(t2 >>  8) & 0xFF] ^ (tt >>  8));
-			result[i++] = (byte)(sm.Si[(t1      ) & 0xFF] ^ (tt      ));
+			result[i++] = (byte)((sm.Si[(t0 >> 24) & 0xFF] ^ (tt >> 24)) & 0xFF);
+			result[i++] = (byte)((sm.Si[(t3 >> 16) & 0xFF] ^ (tt >> 16)) & 0xFF);
+			result[i++] = (byte)((sm.Si[(t2 >>  8) & 0xFF] ^ (tt >>  8)) & 0xFF);
+			result[i++] = (byte)((sm.Si[(t1      ) & 0xFF] ^ (tt      )) & 0xFF);
 			tt = m_Kd[m_rounds,1];
-			result[i++] = (byte)(sm.Si[(t1 >> 24) & 0xFF] ^ (tt >> 24));
-			result[i++] = (byte)(sm.Si[(t0 >> 16) & 0xFF] ^ (tt >> 16));
-			result[i++] = (byte)(sm.Si[(t3 >>  8) & 0xFF] ^ (tt >>  8));
-			result[i++] = (byte)(sm.Si[(t2      ) & 0xFF] ^ (tt      ));
+			result[i++] = (byte)((sm.Si[(t1 >> 24) & 0xFF] ^ (tt >> 24)) & 0xFF);
+			result[i++] = (byte)((sm.Si[(t0 >> 16) & 0xFF] ^ (tt >> 16)) & 0xFF);
+			result[i++] = (byte)((sm.Si[(t3 >>  8) & 0xFF] ^ (tt >>  8)) & 0xFF);
+			result[i++] = (byte)((sm.Si[(t2      ) & 0xFF] ^ (tt      )) & 0xFF);
 			tt = m_Kd[m_rounds,2];
-			result[i++] = (byte)(sm.Si[(t2 >> 24) & 0xFF] ^ (tt >> 24));
-			result[i++] = (byte)(sm.Si[(t1 >> 16) & 0xFF] ^ (tt >> 16));
-			result[i++] = (byte)(sm.Si[(t0 >>  8) & 0xFF] ^ (tt >>  8));
-			result[i++] = (byte)(sm.Si[(t3      ) & 0xFF] ^ (tt      ));
+			result[i++] = (byte)((sm.Si[(t2 >> 24) & 0xFF] ^ (tt >> 24)) & 0xFF);
+			result[i++] = (byte)((sm.Si[(t1 >> 16) & 0xFF] ^ (tt >> 16)) & 0xFF);
+			result[i++] = (byte)((sm.Si[(t0 >>  8) & 0xFF] ^ (tt >>  8)) & 0xFF);
+			result[i++] = (byte)((sm.Si[(t3      ) & 0xFF] ^ (tt      )) & 0xFF);
 			tt = m_Kd[m_rounds,3];
-			result[i++] = (byte)(sm.Si[(t3 >> 24) & 0xFF] ^ (tt >> 24));
-			result[i++] = (byte)(sm.Si[(t2 >> 16) & 0xFF] ^ (tt >> 16));
-			result[i++] = (byte)(sm.Si[(t1 >>  8) & 0xFF] ^ (tt >>  8));
-			result[i++] = (byte)(sm.Si[(t0      ) & 0xFF] ^ (tt      ));
+			result[i++] = (byte)((sm.Si[(t3 >> 24) & 0xFF] ^ (tt >> 24)) & 0xFF);
+			result[i++] = (byte)((sm.Si[(t2 >> 16) & 0xFF] ^ (tt >> 16)) & 0xFF);
+			result[i++] = (byte)((sm.Si[(t1 >>  8) & 0xFF] ^ (tt >>  8)) & 0xFF);
+			result[i++] = (byte)((sm.Si[(t0      ) & 0xFF] ^ (tt      )) & 0xFF);
 		}
 
 		/// <summary>buff ^= chain. length = BLOCK_SIZE</summary>

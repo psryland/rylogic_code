@@ -93,16 +93,18 @@ namespace TestWPF
 			};
 			m_menu_tests_prompt_ui.Click += (s, a) =>
 			{
-				var dlg = new PromptUI
+				var dlg = new PromptUI(this)
 				{
-					Owner = this,
 					Title = "Prompting isn't it...",
-					Prompt = "I'll have what she's having. Really long message\r\nwith new lines in and \r\n other stuff\r\n\r\nType 'Hello' into the field",
+					Prompt = "I'll have what she's having. Really long message\r\nwith new lines in and \r\n other stuff\r\n\r\nEnter a positive number",
 					Value = "Really long value as well, that hopefully wraps around",
-					Image = FindResource("pencil") as BitmapImage
+					Units = "kgs",
+					Validate = x => double.TryParse(x, out var v) && v >= 0 ? ValidationResult.ValidResult : new ValidationResult(false, "Enter a positive number"),
+					Image = FindResource("pencil") as BitmapImage,
+					MultiLine = true,
 				};
 				if (dlg.ShowDialog() == true)
-					Debug.Assert(dlg.Value == "Hello");
+					double.Parse(dlg.Value);
 			};
 			m_menu_tests_view3d.Click += (s, a) =>
 			{
