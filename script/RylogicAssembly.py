@@ -63,9 +63,9 @@ def Deploy(assembly:str, config:str, publish:bool):
 	Tools.AssertPathsExist([UserVars.root, UserVars.msbuild])
 	Tools.AssertPathsExist([UserVars.root, UserVars.nuget])
 
-	sln     = os.path.join(UserVars.root, "build", "Rylogic.sln")
-	srcdir  = os.path.join(UserVars.root, "projects", assembly)
-	proj    = os.path.join(srcdir, f"{assembly}.csproj")
+	sln     = UserVars.CheckPath(os.path.join(UserVars.root, "build", "Rylogic.sln"))
+	srcdir  = UserVars.CheckPath(os.path.join(UserVars.root, "projects", assembly))
+	proj    = UserVars.CheckPath(os.path.join(srcdir, f"{assembly}.csproj"))
 	configs = [config.lower()] if not config == "both" else ["debug", "release"]
 
 	# Build
@@ -93,6 +93,8 @@ def DeployAll(config:str, publish:bool):
 # Entry point
 if __name__ == "__main__":
 
+	publish = True if input("Publish to nuget.org? (y/n) ") == 'y' else False
+
 	# Use RylogicAssembly.py
 	if len(sys.argv) == 1:
-		DeployAll("Release", True)
+		DeployAll("Release", publish)

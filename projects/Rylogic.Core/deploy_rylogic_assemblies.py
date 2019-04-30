@@ -15,7 +15,7 @@ if __name__ == "__main__":
 		trace  = True if "trace"  in [arg.lower() for arg in sys.argv] else False
 		publish = True if input("Publish to nuget.org? (y/n)") == 'y' else False
 
-		RA.DeployAll(config, publish);
+		RA.DeployAll(config, publish)
 		Tools.OnSuccess(pause_time_seconds=1)
 
 	except Exception as ex:

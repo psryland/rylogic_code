@@ -4,7 +4,7 @@
 		<TargetFramework>netstandard2.0</TargetFramework>
 		<RootNamespace>Rylogic</RootNamespace>
 		<ApplicationIcon>icon_128x128.ico</ApplicationIcon>
-		<OutputType>Library</OutputType>
+		<OutputType>Exe</OutputType>
 		<StartupObject></StartupObject>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
 		<Authors>P Ryland</Authors>
@@ -13,9 +13,9 @@
 		<Copyright>Copyright (c) Rylogic 2007-2018</Copyright>
 		<PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
 		<PackageIconUrl></PackageIconUrl>
-		<Version>1.0.2</Version>
-		<FileVersion>1.0.2</FileVersion>
-		<AssemblyVersion>1.0.2</AssemblyVersion>
+		<Version>1.0.4</Version>
+		<FileVersion>1.0.4</FileVersion>
+		<AssemblyVersion>1.0.4</AssemblyVersion>
 		<LangVersion>latest</LangVersion>
 	</PropertyGroup>
 

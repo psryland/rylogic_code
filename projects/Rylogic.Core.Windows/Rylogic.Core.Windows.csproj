@@ -11,9 +11,9 @@
 		<OutputType>Library</OutputType>
 		<StartupObject />
 		<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
-		<AssemblyVersion>1.0.0</AssemblyVersion>
-		<FileVersion>1.0.0</FileVersion>
-		<Version>1.0.0</Version>
+		<Version>1.0.2</Version>
+		<FileVersion>1.0.2</FileVersion>
+		<AssemblyVersion>1.0.2</AssemblyVersion>
 		<LangVersion>latest</LangVersion>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
