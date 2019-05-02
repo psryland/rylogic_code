@@ -12,9 +12,9 @@
 		<StartupObject />
 		<EnableDefaultEmbeddedResourceItems>true</EnableDefaultEmbeddedResourceItems>
 		<ExtrasEnableWpfProjectSetup>true</ExtrasEnableWpfProjectSetup>
-		<Version>1.0.2</Version>
-		<FileVersion>1.0.2</FileVersion>
-		<AssemblyVersion>1.0.2</AssemblyVersion>
+		<Version>1.0.3</Version>
+		<FileVersion>1.0.3</FileVersion>
+		<AssemblyVersion>1.0.3</AssemblyVersion>
 		<LangVersion>latest</LangVersion>
 	</PropertyGroup>
 

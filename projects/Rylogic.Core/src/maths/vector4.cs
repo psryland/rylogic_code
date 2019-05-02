@@ -153,13 +153,23 @@ namespace Rylogic.Maths
 			return ToString4();
 		}
 
-		/// <summary>ToArray(). Note not implicit because it gets called when converting v4 to an object type. e.g. v4? x = v4.TryParse4("", out v) ? v : null. </summary>
-		public float[] ToArray()
+		/// <summary>Explicit conversion to an array. Note not implicit because it gets called when converting v4 to an object type. e.g. v4? x = v4.TryParse4("", out v) ? v : null. </summary>
+		public static explicit operator v4(float[] a)
 		{
-			return new[] { x, y, z, w };
+			return new v4(a[0], a[1], a[2], a[3]);
 		}
-		//public static implicit operator v4(float[] a)           { return new v4(a[0], a[1], a[2], a[3]); }
-		//public static implicit operator float[](v4 p)           { return p.ToArray(); }
+		public static explicit operator float[](v4 p)
+		{
+			return new float[] { p.x, p.y, p.z, p.w };
+		}
+		public static explicit operator v4(double[] a)
+		{
+			return new v4((float)a[0], (float)a[1], (float)a[2], (float)a[3]);
+		}
+		public static explicit operator double[](v4 p)
+		{
+			return new double[] { p.x, p.y, p.z, p.w };
+		}
 
 		public v4 w0
 		{

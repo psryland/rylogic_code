@@ -101,26 +101,27 @@ namespace Rylogic.Container
 		/// <param name="AddResult">Callback called for each element that is within the search volume</param>
 		/// <param name="AxisValueGet">Callback that returns the value of the given element on the given dimension</param>
 		/// <param name="SortAxisGet">Callback that returns the sort axis for the given element</param>
-		public static void Search<T>(IList<T> list, int dimensions, double[] centre, double radius, Action<T, double> AddResult, Func<T, int, double> AxisValueGet, Func<T, int> SortAxisGet)
+		public static IEnumerable<T> Search<T>(IList<T> list, int dimensions, double[] centre, double radius, Func<T, int, double> AxisValueGet, Func<T, int> SortAxisGet)
 		{
-			if (centre.Length != dimensions)
-				throw new Exception("Search centre must have the same number of dimensions as the KD tree");
+			if (centre.Length < dimensions)
+				throw new Exception("Search centre must have a value for each dimension of the KD tree");
 
 			var radius_sq = radius * radius;
-			Search(0, list.Count);
+			return Search(0, list.Count);
 
 			// Helpers
-			void Search(int beg, int end)
+			IEnumerable<T> Search(int beg, int end)
 			{
 				if (beg == end)
-					return;
+					yield break;
 
 				var split_point = beg + (end - beg) / 2;
-				AddIfInRegion(split_point);
+				if (IsInSearchVolume(list[split_point]))
+					yield return list[split_point];
 
 				// Bottom of the tree? Time to leave
 				if (end - beg <= 1)
-					return;
+					yield break;
 
 				var split_axis = SortAxisGet(list[split_point]);
 				var split_value = AxisValueGet(list[split_point], split_axis);
@@ -128,45 +129,45 @@ namespace Rylogic.Container
 				// If the test point is to the left of the split point
 				if (centre[split_axis] < split_value)
 				{
-					Search(beg, split_point);
+					foreach (var x in Search(beg, split_point))
+						yield return x;
 
 					var distance = split_value - centre[split_axis];
 					if (distance - radius < 0)
-						Search(split_point + 1, end);
+						foreach (var x in Search(split_point + 1, end))
+							yield return x;
 				}
 
 				// Otherwise the test point is to the right of the split point
 				else
 				{
-					Search(split_point + 1, end);
+					foreach (var x in Search(split_point + 1, end))
+						yield return x;
 
 					var distance = centre[split_axis] - split_value;
 					if (distance - radius < 0)
-						Search(beg, split_point);
+						foreach (var x in Search(beg, split_point))
+							yield return x;
 				}
 			}
-			void AddIfInRegion(int elem)
+			bool IsInSearchVolume(T elem)
 			{
-				// Calls 'AddResult' if 'list[elem]' is within the search region
 				var dist_sq = 0.0;
 				for (var a = 0; a != dimensions; ++a)
 				{
-					var dist = AxisValueGet(list[elem], a) - centre[a];
+					var dist = AxisValueGet(elem, a) - centre[a];
 					dist_sq += dist * dist;
 				}
-
-				// Call the callback if 'list[elem]' is within the search volume
-				if (dist_sq <= radius_sq)
-					AddResult(list[elem], dist_sq);
+				return dist_sq <= radius_sq;
 			}
 		}
-		public static void Search<T>(IList<T> list, int dimensions, double[] centre, double radius, Action<T, double> AddResult, IAccessors<T> accessors)
+		public static IEnumerable<T> Search<T>(IList<T> list, int dimensions, double[] centre, double radius, IAccessors<T> accessors)
 		{
-			Search(list, dimensions, centre, radius, AddResult, accessors.AxisValueGet, accessors.SortAxisGet);
+			return Search(list, dimensions, centre, radius, accessors.AxisValueGet, accessors.SortAxisGet);
 		}
-		public static void Search<T>(IList<T> list, int dimensions, double[] centre, double radius, Action<T, double> AddResult) where T : IAccessors<T>
+		public static IEnumerable<T> Search<T>(IList<T> list, int dimensions, double[] centre, double radius) where T : IAccessors<T>
 		{
-			Search(list, dimensions, centre, radius, AddResult, (x, i) => x.AxisValueGet(x, i), (x) => x.SortAxisGet(x));
+			return Search(list, dimensions, centre, radius, (x, i) => x.AxisValueGet(x, i), (x) => x.SortAxisGet(x));
 		}
 	}
 }
@@ -175,6 +176,7 @@ namespace Rylogic.Container
 namespace Rylogic.UnitTests
 {
 	using System.Diagnostics;
+	using System.Linq;
 	using Container;
 	using Maths;
 
@@ -217,8 +219,7 @@ namespace Rylogic.UnitTests
 
 			KDTree_.Build(tree, 2);
 
-			var result = new List<v2>();
-			KDTree_.Search(tree, 2, new[] { 5.0, 5.0 }, 1.1, (p, rs) => result.Add(p.pos));
+			var result = KDTree_.Search(tree, 2, new[] { 5.0, 5.0 }, 1.1).Select(x => x.pos).ToList();
 			result.Sort((l, r) =>
 			{
 				if (l.x != r.x) return l.x < r.x ? -1 : 1;

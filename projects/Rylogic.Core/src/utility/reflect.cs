@@ -22,16 +22,13 @@ namespace Rylogic.Utility
 		[DebuggerStepThrough]
 		public static string Name<Ret>(Expression<Func<T,Ret>> expression)
 		{
-			var ue = expression.Body as UnaryExpression;
-			if (ue != null && ue.NodeType == ExpressionType.Convert)
-				return ((MemberExpression) ue.Operand).Member.Name;
+			if (expression.Body is UnaryExpression ue && ue.NodeType == ExpressionType.Convert)
+				return ((MemberExpression)ue.Operand).Member.Name;
 
-			var mc = expression.Body as MethodCallExpression;
-			if (mc != null)
+			if (expression.Body is MethodCallExpression mc)
 				return mc.Method.Name;
 
-			var me = expression.Body as MemberExpression;
-			if (me != null)
+			if (expression.Body is MemberExpression me)
 				return me.Member.Name;
 
 			throw new NotImplementedException("Unknown expression type");
@@ -43,16 +40,13 @@ namespace Rylogic.Utility
 		[DebuggerStepThrough]
 		public static string Name(Expression<Action<T>> expression)
 		{
-			var ue = expression.Body as UnaryExpression;
-			if (ue != null && ue.NodeType == ExpressionType.Convert)
-				return ((MemberExpression) ue.Operand).Member.Name;
+			if (expression.Body is UnaryExpression ue && ue.NodeType == ExpressionType.Convert)
+				return ((MemberExpression)ue.Operand).Member.Name;
 
-			var mce = expression.Body as MethodCallExpression;
-			if (mce != null)
+			if (expression.Body is MethodCallExpression mce)
 				return mce.Method.Name;
 
-			var me = expression.Body as MemberExpression;
-			if (me != null)
+			if (expression.Body is MemberExpression me)
 				return me.Member.Name;
 
 			throw new NotImplementedException("Unknown expression type");
@@ -62,14 +56,14 @@ namespace Rylogic.Utility
 		[DebuggerStepThrough]
 		public static string NameBkt<Ret>(Expression<Func<T,Ret>> expression, string open="[", string close="]")
 		{
-			return open + R<T>.Name(expression) + close;
+			return open + Name(expression) + close;
 		}
 
 		/// <summary>Derives the name of a property from the given lambda and returns it within brackets</summary>
 		[DebuggerStepThrough]
 		public static string NameBkt<Ret>(Expression<Action<T>> expression, string open="[", string close="]")
 		{
-			return open + R<T>.Name(expression) + close;
+			return open + Name(expression) + close;
 		}
 
 		/// <summary>Derives the name of a property from the given lambda and returns it in the form 'TypeName.Name'</summary>
@@ -98,6 +92,23 @@ namespace Rylogic.Utility
 		public static string TypeNameBkt<Ret>(Expression<Action<T>> expression, string open="[", string close="]")
 		{
 			return typeof(T).Name + "." + NameBkt<Ret>(expression, open, close);
+		}
+
+		/// <summary>Return the type of the property from the given lambda</summary>
+		[DebuggerStepThrough]
+		public static Type Type<Ret>(Expression<Func<T, Ret>> expression)
+		{
+			// untested... might be valid but I don't know what expression has this type
+			//if (expression.Body is UnaryExpression ue && ue.NodeType == ExpressionType.Convert)
+			//	return ((MemberExpression)ue.Operand).Type;
+
+			if (expression.Body is MethodCallExpression mc)
+				return mc.Type;
+
+			if (expression.Body is MemberExpression me)
+				return me.Type;
+
+			throw new NotImplementedException("Unknown expression type");
 		}
 
 		/// <summary>Return the name of type 'T'</summary>
@@ -276,24 +287,35 @@ namespace Rylogic.Utility
 #if PR_UNITTESTS
 namespace Rylogic.UnitTests
 {
+	using System.Text;
 	using Attrib;
 	using Utility;
-	
-	[TestFixture] public class TestReflect
+
+	[TestFixture]
+	public class TestReflect
 	{
 		internal class Thing
 		{
-			[Description("My name is Desc")] public void Desc() {}
+			[Description("My name is Desc")] public void Desc() { }
 			[Desc("Short For")] public string Bob { get { return "kate"; } }
 		}
 
-		[Test] public void MemberName()
+		[Test]
+		public void MemberName()
 		{
 			Assert.Equal("X", R<Point>.Name(p => p.X));
-			Assert.Equal("Offset", R<Point>.Name(p => p.Offset(0,0)));
+			Assert.Equal("Offset", R<Point>.Name(p => p.Offset(0, 0)));
 			Assert.Equal("BaseStream", R<StreamWriter>.Name(s => s.BaseStream));
 		}
-		[Test] public void Attrib()
+		[Test]
+		public void MemberType()
+		{
+			Assert.Equal(typeof(int), R<Point>.Type(p => p.X));
+			Assert.Equal(typeof(bool), R<Point>.Type(p => p.Equals(null)));
+			Assert.Equal(typeof(Encoding), R<StreamWriter>.Type(s => s.Encoding));
+		}
+		[Test]
+		public void Attrib()
 		{
 			var attr = R<Thing>.Attrs(x => x.Desc()).ToArray();
 			Assert.Equal(1, attr.Length);

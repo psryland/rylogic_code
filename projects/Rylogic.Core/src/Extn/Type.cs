@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
@@ -235,6 +236,35 @@ namespace Rylogic.Extn
 		public static IEnumerable<MethodInfo> FindMethodsWithAttribute<T>(this Type type, BindingFlags flags = BindingFlags.Public|BindingFlags.Instance) where T:Attribute
 		{
 			return type.FindMethodsWithAttribute(typeof(T), flags);
+		}
+
+		/// <summary>Convert this type to is equivalent DbType</summary>
+		public static DbType DbType(this Type type)
+		{
+			type = Nullable.GetUnderlyingType(type) ?? type;
+			type = type.IsEnum ? type.GetEnumUnderlyingType() : type;
+
+			switch (type.Name)
+			{
+			default:
+				//if (type.IsClass) return System.Data.DbType.Object;
+				throw new Exception($"Unknown conversion from {type.Name} to DbType");
+			case "String": return System.Data.DbType.String;
+			case "Byte[]": return System.Data.DbType.Binary;
+			case "Boolean": return System.Data.DbType.Boolean;
+			case "Byte": return System.Data.DbType.Byte;
+			case "SByte": return System.Data.DbType.SByte;
+			case "Int16": return System.Data.DbType.Int16;
+			case "Int32": return System.Data.DbType.Int32;
+			case "Int64": return System.Data.DbType.Int64;
+			case "UInt16": return System.Data.DbType.UInt16;
+			case "UInt32": return System.Data.DbType.UInt32;
+			case "UInt64": return System.Data.DbType.UInt64;
+			case "Single": return System.Data.DbType.Single;
+			case "Double": return System.Data.DbType.Double;
+			case "Decimal": return System.Data.DbType.Decimal;
+			case "Guid": return System.Data.DbType.Guid;
+			}
 		}
 
 		/// <summary>Reformat the stack trace string to suit the debugger output window</summary>

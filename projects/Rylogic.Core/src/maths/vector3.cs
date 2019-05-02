@@ -117,10 +117,22 @@ namespace Rylogic.Maths
 			return ToString3();
 		}
 
-		/// <summary>ToArray(). Note not implicit because it gets called when converting to an object type. e.g. v3? x = v3.TryParse3("", out v) ? v : null. </summary>
-		public float[] ToArray()
+		/// <summary>Explicit conversion to an array. Note not implicit because it gets called when converting v3 to an object type. e.g. v3? x = v3.TryParse4("", out v) ? v : null. </summary>
+		public static explicit operator v3(float[] a)
 		{
-			return new[] { x, y, z };
+			return new v3(a[0], a[1], a[2]);
+		}
+		public static explicit operator float[] (v3 p)
+		{
+			return new float[] { p.x, p.y, p.z };
+		}
+		public static explicit operator v3(double[] a)
+		{
+			return new v3((float)a[0], (float)a[1], (float)a[2]);
+		}
+		public static explicit operator double[] (v3 p)
+		{
+			return new double[] { p.x, p.y, p.z };
 		}
 
 		// Static v3 types

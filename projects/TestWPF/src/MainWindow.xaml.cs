@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -25,6 +27,9 @@ namespace TestWPF
 		public MainWindow()
 		{
 			InitializeComponent();
+
+			var strings = new ObservableCollection<string>(new[] { "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten" });
+			Strings = new ListCollectionView(strings);
 
 			m_recent_files.Add("One", false);
 			m_recent_files.Add("Two", false);
@@ -132,7 +137,10 @@ namespace TestWPF
 			//grid.Children.Add(btn);
 			//this.Content = grid;
 
-
+			DataContext = this;
 		}
+
+		/// <summary>Some strings</summary>
+		public ICollectionView Strings { get; }
 	}
 }

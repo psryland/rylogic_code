@@ -36,6 +36,14 @@ namespace Rylogic.Extn
 				f.Write(sb.ToString());
 		}
 
+		/// <summary>Replace the string builder contents with 'value'</summary>
+		public static StringBuilder Assign<T>(this StringBuilder sb, T value)
+		{
+			sb.Clear();
+			sb.Append(value);
+			return sb;
+		}
+
 		/// <summary>Append a bunch of stuff</summary>
 		public static StringBuilder Append(this StringBuilder sb, params object[] parts)
 		{

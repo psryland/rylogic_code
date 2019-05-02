@@ -1,10 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections;
+using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Interop;
 using System.Windows.Media;
 using Microsoft.Win32;

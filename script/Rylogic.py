@@ -652,6 +652,14 @@ def NugetPackage(proj:str, publish:bool):
 	if publish:
 		package_name = Extract(nuspec, r"<id>(?P<id>.*)</id>").group("id")
 		package_path = os.path.join(UserVars.root, "lib", "packages", f"{package_name}.{vers0}.nupkg")
+
+		# Sign the package
+		if False: # my cert's out of date..
+			cert = os.path.join(UserVars.root, "projects", "Rylogic.pfx")
+			time_server = "http://timestamp.digicert.com"
+			Exec([UserVars.nuget, "sign", package_path, "-CertificatePath", cert, "-Timestamper", time_server])
+		
+		# Push the package to nuget.org
 		Exec([UserVars.nuget, "push", package_path, UserVars.nuget_api_key, "-source", "https://api.nuget.org/v3/index.json"])
 	return
 

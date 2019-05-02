@@ -17,10 +17,10 @@ namespace Rylogic.Maths
 		public static bool Clip(BBox bbox, v4 point_, v4 direction_, ref float t0, ref float t1)
 		{
 			// Convert v4's to float arrays for efficient indexing
-			var lower     = bbox.Lower().ToArray();
-			var upper     = bbox.Upper().ToArray();
-			var point     = point_.ToArray();
-			var direction = direction_.ToArray();
+			var lower = (float[])bbox.Lower();
+			var upper = (float[])bbox.Upper();
+			var point = (float[])point_;
+			var direction = (float[])direction_;
 
 			// For all three slabs
 			for (int i = 0; i != 3; ++i)

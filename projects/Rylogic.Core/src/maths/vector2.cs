@@ -97,10 +97,22 @@ namespace Rylogic.Maths
 			return ToString2();
 		}
 
-		/// <summary>ToArray(). Note not implicit because it gets called when converting to an object type. e.g. v2? x = v2.TryParse2("", out v) ? v : null. </summary>
-		public float[] ToArray()
+		/// <summary>Explicit conversion to an array. Note not implicit because it gets called when converting v2 to an object type. e.g. v2? x = v2.TryParse4("", out v) ? v : null. </summary>
+		public static explicit operator v2(float[] a)
 		{
-			return new[] { x, y };
+			return new v2(a[0], a[1]);
+		}
+		public static explicit operator float[] (v2 p)
+		{
+			return new float[] { p.x, p.y };
+		}
+		public static explicit operator v2(double[] a)
+		{
+			return new v2((float)a[0], (float)a[1]);
+		}
+		public static explicit operator double[] (v2 p)
+		{
+			return new double[] { p.x, p.y };
 		}
 
 		// Static v2 types

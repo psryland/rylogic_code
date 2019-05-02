@@ -36,6 +36,9 @@
 					<MenuItem Name="m_menu_tests_view3d" Header="_View3D"/>
 				</MenuItem>
 			</Menu>
+			<gui2:FilterComboBox
+				ItemsSource="{Binding Strings}"
+				/>
 			<local:ImageButton
 				Text="Hello World?"
 				Source="pack://application:,,,/res/pencil.png"
