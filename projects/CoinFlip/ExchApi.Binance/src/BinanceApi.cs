@@ -11,6 +11,7 @@ using Binance.API.DomainObjects;
 using ExchApi.Common;
 using Newtonsoft.Json.Linq;
 using Rylogic.Attrib;
+using Rylogic.Extn;
 using Rylogic.Utility;
 
 namespace Binance.API
@@ -95,9 +96,11 @@ namespace Binance.API
 			}
 
 			// https://api.binance.com/api/v1/depth?symbol=IOTABTC&limit=5
-			var jtok = await GetData(ESecurityType.PUBLIC, "api/v1/depth", cancel,
-				new KV("symbol", pair.Id),
-				new KV("limit", valid_depth));
+			var jtok = await GetData(ESecurityType.PUBLIC, "api/v1/depth", cancel, new Params
+			{
+				{ "symbol", pair.Id },
+				{ "limit", valid_depth },
+			});
 
 			var data = ParseJsonReply<OrderBook>(jtok);
 			data.Pair = pair;
@@ -109,11 +112,13 @@ namespace Binance.API
 		{
 			try
 			{
-				var jtok = await GetData(ESecurityType.PUBLIC, "api/v1/klines", cancel,
-					new KV("symbol", pair.Id),
-					new KV("interval", period.Assoc<string>("tag")),
-					new KV("startTime", time_beg.Value),
-					new KV("endTime", time_end.Value));
+				var jtok = await GetData(ESecurityType.PUBLIC, "api/v1/klines", cancel, new Params
+				{
+					{ "symbol", pair.Id },
+					{ "interval", period.Assoc<string>("tag") },
+					{ "startTime", time_beg.Value },
+					{ "endTime", time_end.Value },
+				});
 
 				var data = ParseJsonReply<List<JArray>>(jtok);
 				return data.Select(x => new MarketChartData(x)).ToList();
@@ -134,8 +139,10 @@ namespace Binance.API
 		public async Task<BalancesData> GetBalances(CancellationToken? cancel = null)
 		{
 			// https://api.binance.com/api/v3/account
-			var jtok = await GetData(ESecurityType.USER_DATA, "api/v3/account", cancel,
-				new KV("timestamp", RequestTimestamp));
+			var jtok = await GetData(ESecurityType.USER_DATA, "api/v3/account", cancel, new Params
+			{
+				{ "timestamp", RequestTimestamp },
+			});
 
 			return ParseJsonReply<BalancesData>(jtok);
 		}
@@ -144,12 +151,12 @@ namespace Binance.API
 		public async Task<List<Order>> GetOpenOrders(CurrencyPair? pair = null, CancellationToken? cancel = null)
 		{
 			// https://api.binance.com/api/v3/openOrders
-			var parms = new List<KV> { };
-			if (pair != null) parms.Add(new KV("symbol", pair.Value.Id));
-			parms.Add(new KV("timestamp", RequestTimestamp));
+			var parms = new Params { };
+			if (pair != null) parms["symbol"] = pair.Value.Id;
+			parms["timestamp"] = RequestTimestamp;
 
 			// Get the orders
-			var jtok = await GetData(ESecurityType.USER_DATA, "api/v3/openOrders", cancel, parms.ToArray());
+			var jtok = await GetData(ESecurityType.USER_DATA, "api/v3/openOrders", cancel, parms);
 			var orders = ParseJsonReply<List<Order>>(jtok);
 
 			// Convert the currency pair strings
@@ -163,25 +170,25 @@ namespace Binance.API
 		public async Task<List<Order>> GetAllOrders(CurrencyPair? pair = null, UnixMSec? beg = null, UnixMSec? end = null, long? min_order_id = null, CancellationToken? cancel = null)
 		{
 			// https://api.binance.com/api/v3/allOrders
-			var parms = new List<KV> { };
-			if (pair != null) parms.Add(new KV("symbol", pair.Value.Id));
-			if (min_order_id != null) parms.Add(new KV("orderId", min_order_id.Value));
-			if (beg != null) parms.Add(new KV("startTime", beg.Value.Value));
-			if (end != null) parms.Add(new KV("endTime", end.Value.Value));
-			parms.Add(new KV("timestamp", RequestTimestamp));
+			var parms = new Params{ };
+			if (pair != null) parms["symbol"] = pair.Value.Id;
+			if (min_order_id != null) parms["orderId"] = min_order_id.Value;
+			if (beg != null) parms["startTime"] = beg.Value.Value;
+			if (end != null) parms["endTime"] = end.Value.Value;
+			parms["timestamp"] = RequestTimestamp;
 
-			var jtok = await GetData(ESecurityType.USER_DATA, "api/v3/allOrders", cancel, parms.ToArray());
+			var jtok = await GetData(ESecurityType.USER_DATA, "api/v3/allOrders", cancel, parms);
 			return ParseJsonReply<List<Order>>(jtok);
 		}
 
 		#endregion
 
 		/// <summary>Helper for GETs</summary>
-		private async Task<JToken> GetData(ESecurityType security, string command, CancellationToken? cancel, params KV[] parameters)
+		private async Task<JToken> GetData(ESecurityType security, string command, CancellationToken? cancel, Params parameters = null)
 		{
 			// If called from the UI thread, disable the SynchronisationContext
 			// to prevent deadlocks when waiting for Async results.
-			using (Misc.NoSyncContext())
+			using (Task_.NoSyncContext())
 			{
 				// Poloniex requires the 'nonce' values to be strictly increasing.
 				// That means all POSTs must be serialised to avoid a race condition
@@ -191,19 +198,17 @@ namespace Binance.API
 				{
 					await RequestThrottle.Wait(cancel_token);
 
-					// Add the command to the parameters
-					var kv = new List<KV>(parameters);
-
 					// Add fields to the request based on 'security'
+					parameters = parameters ?? new Params();
 					if (security != ESecurityType.PUBLIC)
 					{
-						var query_string = Misc.UrlEncode(kv).TrimStart('?');
+						var query_string = Http_.UrlEncode(parameters).TrimStart('?');
 						var hash = Hasher.ComputeHash(Encoding.UTF8.GetBytes(query_string));
-						kv.Add(new KV("signature", Misc.ToStringHex(hash)));
+						parameters["signature"] = Misc.ToStringHex(hash);
 					}
 
 					// Create the request
-					var url = $"{UrlRestAddress}{command}{Misc.UrlEncode(kv)}";
+					var url = $"{UrlRestAddress}{command}{Http_.UrlEncode(parameters)}";
 					var req = new HttpRequestMessage(HttpMethod.Get, url);
 					if (security != ESecurityType.PUBLIC)
 					{
@@ -233,11 +238,11 @@ namespace Binance.API
 		}
 
 		/// <summary>Helper for POSTs</summary>
-		private async Task<JToken> PostData(string command, CancellationToken? cancel, params KV[] parameters)
+		private async Task<JToken> PostData(string command, CancellationToken? cancel, Params parameters = null)
 		{
 			// If called from the UI thread, disable the SynchronisationContext
 			// to prevent deadlocks when waiting for Async results.
-			using (Misc.NoSyncContext())
+			using (Task_.NoSyncContext())
 			{
 				// Poloniex requires the 'nonce' values to be strictly increasing.
 				// That means all POSTs must be serialised to avoid a race condition
@@ -248,11 +253,11 @@ namespace Binance.API
 					await RequestThrottle.Wait(cancel_token);
 
 					// Add the command parameter
-					var kv = new List<KV> { new KV("nonce", Misc.Nonce) };
-					kv.AddRange(parameters);
+					parameters = parameters ?? new Params();
+					parameters["nonce"] = Misc.Nonce;
 
 					// Create the post data
-					var post_data_string = Misc.UrlEncode(kv).TrimStart('?');
+					var post_data_string = Http_.UrlEncode(parameters).TrimStart('?');
 
 					// Create the content to POST
 					var content = new StringContent(post_data_string, Encoding.UTF8, "application/x-www-form-urlencoded");

@@ -11,6 +11,9 @@ using Bittrex.API.DomainObjects;
 using Bittrex.API.Subscriptions;
 using ExchApi.Common;
 using Newtonsoft.Json.Linq;
+using Rylogic.Common;
+using Rylogic.Extn;
+using Rylogic.INet;
 using Rylogic.Utility;
 
 namespace Bittrex.API
@@ -85,10 +88,12 @@ namespace Bittrex.API
 		public async Task<OrderBook> GetOrderBook(CurrencyPair pair, EGetOrderBookType type = EGetOrderBookType.Both, int depth = 20, CancellationToken? cancel = null)
 		{
 			// https://api.bittrex.com/api/v1.1/public/getorderbook?market=BTC-LTC&type=both&depth=50  
-			var jtok = await GetData(Method.Public, "getorderbook", cancel,
-				new KV("market", pair.Id),
-				new KV("type", type.ToString().ToLowerInvariant()),
-				new KV("depth", depth));
+			var jtok = await GetData(Method.Public, "getorderbook", cancel, new Params
+			{
+				{ "market", pair.Id },
+				{ "type", type.ToString().ToLowerInvariant() },
+				{ "depth", depth },
+			});
 
 			// Prevent null being returned
 			var book = ParseJsonReply<OrderBook>(jtok);
@@ -124,8 +129,10 @@ namespace Bittrex.API
 		public async Task<List<Order>> GetOpenOrders(CurrencyPair pair, CancellationToken? cancel = null)
 		{
 			// https://api.bittrex.com/api/v1.1/market/getopenorders?apikey=API_KEY&market=BTC-LTC
-			var jtok = await GetData(Method.Market, "getopenorders", cancel,
-				new KV("market", pair.Id));
+			var jtok = await GetData(Method.Market, "getopenorders", cancel, new Params
+			{
+				{ "market", pair.Id },
+			});
 
 			return ParseJsonReply<List<Order>>(jtok);
 		}
@@ -142,9 +149,9 @@ namespace Bittrex.API
 		public async Task<List<Transfer>> GetDeposits(string currency = null, CancellationToken? cancel = null)
 		{
 			// https://api.bittrex.com/api/v1.1/account/getdeposithistory?currency=BTC
-			var parms = new List<KV>{ };
-			if (currency != null) parms.Add(new KV("currency", currency));
-			var jtok = await GetData(Method.Account, "getdeposithistory", cancel, parms.ToArray());
+			var parms = new Params();
+			if (currency != null) parms["currency"] = currency;
+			var jtok = await GetData(Method.Account, "getdeposithistory", cancel, parms);
 			return ParseJsonReply<List<Transfer>>(jtok);
 		}
 
@@ -152,9 +159,9 @@ namespace Bittrex.API
 		public async Task<List<Transfer>>GetWithdrawals(string currency = null, CancellationToken? cancel = null)
 		{
 			// https://api.bittrex.com/api/v1.1/account/getwithdrawalhistory?currency=BTC
-			var parms = new List<KV>{ };
-			if (currency != null) parms.Add(new KV("currency", currency));
-			var jtok = await GetData(Method.Account, "getwithdrawalhistory", cancel, parms.ToArray());
+			var parms = new Params();
+			if (currency != null) parms["currency"] = currency;
+			var jtok = await GetData(Method.Account, "getwithdrawalhistory", cancel, parms);
 			return ParseJsonReply<List<Transfer>>(jtok);
 		}
 
@@ -163,11 +170,12 @@ namespace Bittrex.API
 		{
 			// https://api.bittrex.com/api/v1.1/market/selllimit?apikey=API_KEY&market=BTC-LTC&quantity=1.2&rate=1.3
 			// https://api.bittrex.com/api/v1.1/market/buylimit?apikey=API_KEY&market=BTC-LTC&quantity=1.2&rate=1.3
-			var jtok = await GetData(Method.Market, Conv.ToString(type), cancel,
-				new KV("market", pair.Id),
-				new KV("rate", price_per_coin),
-				new KV("quantity", amount_base));
-
+			var jtok = await GetData(Method.Market, Conv.ToString(type), cancel, new Params
+			{
+				{ "market", pair.Id },
+				{ "rate", price_per_coin },
+				{ "quantity", amount_base },
+			});
 			return ParseJsonReply<TradeResult>(jtok);
 		}
 
@@ -175,8 +183,10 @@ namespace Bittrex.API
 		public async Task<TradeResult> CancelTrade(CurrencyPair pair, Guid uuid, CancellationToken? cancel = null)
 		{
 			// https://api.bittrex.com/api/v1.1/market/cancel?apikey=API_KEY&uuid=ORDER_UUID    
-			var jtok = await GetData(Method.Market, "cancel", cancel,
-				new KV("uuid", uuid));
+			var jtok = await GetData(Method.Market, "cancel", cancel, new Params
+			{
+				{ "uuid", uuid },
+			});
 
 			// Return an empty trade result if there is no order with that Id
 			if (jtok is JObject jobj &&
@@ -190,11 +200,11 @@ namespace Bittrex.API
 		#endregion
 
 		/// <summary>Helper for GETs</summary>
-		private async Task<JToken> GetData(string method, string command, CancellationToken? cancel, params KV[] parameters)
+		private async Task<JToken> GetData(string method, string command, CancellationToken? cancel, Params parameters = null)
 		{
 			// If called from the UI thread, disable the SynchronisationContext
 			// to prevent deadlocks when waiting for Async results.
-			using (Misc.NoSyncContext())
+			using (Task_.NoSyncContext())
 			{
 				var cancel_token = CancellationTokenSource.CreateLinkedTokenSource(Shutdown, cancel ?? CancellationToken.None).Token;
 				using (RequestThrottle.Lock(cancel_token)) // Limit requests to the required rate
@@ -202,16 +212,15 @@ namespace Bittrex.API
 					await RequestThrottle.Wait(cancel_token);
 
 					// Add the API key for non-public methods
-					var kv = new List<KV>();
+					parameters = parameters ?? new Params();
 					if (method != Method.Public)
 					{
-						kv.Add(new KV("apikey", Key));
-						kv.Add(new KV("nonce", Misc.Nonce));
+						parameters["apikey"] = Key;
+						parameters["nonce"] = Misc.Nonce;
 					}
-					kv.AddRange(parameters);
 
 					// Create the URL for the command + parameters
-					var url = $"{UrlRestAddress}api/v1.1/{method}/{command}{Misc.UrlEncode(kv)}";
+					var url = $"{UrlRestAddress}api/v1.1/{method}/{command}{Http_.UrlEncode(parameters)}";
 
 					// Construct the GET request
 					var req = new HttpRequestMessage(HttpMethod.Get, url);

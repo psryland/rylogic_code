@@ -9,6 +9,8 @@ using System.Web;
 using ExchApi.Common;
 using Newtonsoft.Json.Linq;
 using Poloniex.API.DomainObjects;
+using Rylogic.Common;
+using Rylogic.Extn;
 using Rylogic.Utility;
 
 namespace Poloniex.API
@@ -43,9 +45,11 @@ namespace Poloniex.API
 		public async Task<Dictionary<string, OrderBook>> GetOrderBook(int depth, CancellationToken? cancel = null)
 		{
 			// https://poloniex.com/public?command=returnOrderBook&currencyPair=all&depth=10
-			var jtok = await GetData(Method.Public, "returnOrderBook", cancel,
-				new KV("currencyPair","all"),
-				new KV("depth",depth));
+			var jtok = await GetData(Method.Public, "returnOrderBook", cancel, new Params
+			{
+				{ "currencyPair", "all" },
+				{ "depth", depth },
+			});
 
 			var data = ParseJsonReply<Dictionary<string, OrderBook>>(jtok);
 			foreach (var kv in data)
@@ -58,9 +62,11 @@ namespace Poloniex.API
 		public async Task<OrderBook> GetOrderBook(CurrencyPair pair, int depth, CancellationToken? cancel = null)
 		{
 			// https://poloniex.com/public?command=returnOrderBook&currencyPair=BTC_NXT&depth=10
-			var jtok = await GetData(Method.Public, "returnOrderBook", cancel,
-				new KV("currencyPair", pair.Id),
-				new KV("depth", depth));
+			var jtok = await GetData(Method.Public, "returnOrderBook", cancel, new Params
+			{
+				{ "currencyPair", pair.Id },
+				{ "depth", depth },
+			});
 
 			var ob = ParseJsonReply<OrderBook>(jtok);
 			ob.Pair = pair;
@@ -71,18 +77,22 @@ namespace Poloniex.API
 		public async Task<List<Trade>> GetTradeHistory(CurrencyPair pair, CancellationToken? cancel = null)
 		{
 			// https://poloniex.com/public?command=returnTradeHistory&currencyPair=BTC_NXT
-			var jtok = await GetData(Method.Public, "returnTradeHistory", cancel,
-				new KV("currencyPair", pair.Id));
+			var jtok = await GetData(Method.Public, "returnTradeHistory", cancel, new Params
+			{
+				{ "currencyPair", pair.Id }
+			});
 
 			return ParseJsonReply<List<Trade>>(jtok);
 		}
 		public async Task<List<Trade>> GetTradeHistory(CurrencyPair pair, UnixSec start_time, UnixSec end_time, CancellationToken? cancel = null)
 		{
 			// https://poloniex.com/public?command=returnTradeHistory&currencyPair=BTC_NXT&start=1410158341&end=1410499372
-			var jtok = await GetData(Method.Public, "returnTradeHistory", cancel,
-				new KV("currencyPair", pair.Id),
-				new KV("start", start_time),
-				new KV("end", end_time));
+			var jtok = await GetData(Method.Public, "returnTradeHistory", cancel, new Params
+			{
+				{ "currencyPair", pair.Id },
+				{ "start", start_time },
+				{ "end", end_time },
+			});
 
 			return ParseJsonReply<List<Trade>>(jtok);
 		}
@@ -92,11 +102,13 @@ namespace Poloniex.API
 		{
 			try
 			{
-				var jtok = await GetData(Method.Public, "returnChartData", cancel,
-					new KV("currencyPair", pair.Id),
-					new KV("start", time_beg.Value),
-					new KV("end", time_end.Value),
-					new KV("period", (int)period));
+				var jtok = await GetData(Method.Public, "returnChartData", cancel, new Params
+				{
+					{ "currencyPair", pair.Id },
+					{ "start", time_beg.Value },
+					{ "end", time_end.Value },
+					{ "period", (int)period },
+				});
 
 				var data = ParseJsonReply<List<MarketChartData>>(jtok);
 
@@ -128,8 +140,10 @@ namespace Poloniex.API
 		/// <summary>Get currently open orders</summary>
 		public async Task<Dictionary<string, List<Order>>> GetOpenOrders(CancellationToken? cancel = null)
 		{
-			var jtok = await PostData(Method.Account, "returnOpenOrders", cancel,
-				new KV("currencyPair", "all"));
+			var jtok = await PostData(Method.Account, "returnOpenOrders", cancel, new Params
+			{
+				{ "currencyPair", "all" },
+			});
 
 			var positions = ParseJsonReply<Dictionary<string, List<Order>>>(jtok);
 			foreach (var pos in positions)
@@ -140,8 +154,10 @@ namespace Poloniex.API
 		}
 		public async Task<List<Order>> GetOpenOrders(CurrencyPair pair, CancellationToken? cancel = null)
 		{
-			var jtok = await PostData(Method.Account, "returnOpenOrders", cancel,
-				new KV("currencyPair", pair.Id));
+			var jtok = await PostData(Method.Account, "returnOpenOrders", cancel, new Params
+			{
+				{ "currencyPair", pair.Id },
+			});
 
 			var positions = ParseJsonReply<List<Order>>(jtok);
 			foreach (var pos in positions)
@@ -153,14 +169,14 @@ namespace Poloniex.API
 		/// <summary>Get the trade history</summary>
 		public async Task<Dictionary<string, List<TradeCompleted>>> GetTradeHistory(UnixSec? beg = null, UnixSec? end = null, CancellationToken? cancel = null)
 		{
-			var parms = new List<KV>(){ new KV("currencyPair", "all") };
+			var parms = new Params{ { "currencyPair", "all" } };
 			if (beg != null && end != null)
 			{
-				parms.Add(new KV("start", beg.Value.Value));
-				parms.Add(new KV("end", end.Value.Value));
+				parms["start"] = beg.Value.Value;
+				parms["end"] = end.Value.Value;
 			}
 
-			var jtok = await PostData(Method.Account, "returnTradeHistory", cancel, parms.ToArray());
+			var jtok = await PostData(Method.Account, "returnTradeHistory", cancel, parms);
 			var history = ParseJsonReply<Dictionary<string, List<TradeCompleted>>>(jtok);
 			foreach (var his in history)
 				foreach (var h in his.Value)
@@ -170,14 +186,14 @@ namespace Poloniex.API
 		}
 		public async Task<List<TradeCompleted>> GetTradeHistory(CurrencyPair pair, UnixSec? beg = null, UnixSec? end = null, CancellationToken? cancel = null)
 		{
-			var parms = new List<KV>(){ new KV("currencyPair", pair.Id) };
+			var parms = new Params{ { "currencyPair", pair.Id } };
 			if (beg != null && end != null)
 			{
-				parms.Add(new KV("start", beg.Value.Value));
-				parms.Add(new KV("end", end.Value.Value));
+				parms["start"] = beg.Value.Value;
+				parms["end"] = end.Value.Value;
 			}
 
-			var jtok = await PostData(Method.Account, "returnTradeHistory", cancel, parms.ToArray());
+			var jtok = await PostData(Method.Account, "returnTradeHistory", cancel, parms);
 			var history = ParseJsonReply<List<TradeCompleted>>(jtok);
 			foreach (var his in history)
 				his.Pair = pair;
@@ -188,22 +204,24 @@ namespace Poloniex.API
 		/// <summary>Get the history of deposits and withdrawals</summary>
 		public async Task<FundsTransfer> GetTransfers(UnixSec beg, UnixSec end, CancellationToken? cancel = null)
 		{
-			var parms = new List<KV>
+			var parms = new Params
 			{
-				new KV("start", beg.Value),
-				new KV("end", end.Value),
+				{ "start", beg.Value },
+				{ "end", end.Value },
 			};
-			var jtok = await PostData(Method.Account, "returnDepositsWithdrawals", cancel, parms.ToArray());
+			var jtok = await PostData(Method.Account, "returnDepositsWithdrawals", cancel, parms);
 			return ParseJsonReply<FundsTransfer>(jtok);
 		}
 
 		/// <summary>Create an order to buy/sell. Returns a unique order ID</summary>
 		public async Task<TradeResult> SubmitTrade(CurrencyPair pair, EOrderSide type, decimal price_per_coin, decimal volume_base, CancellationToken? cancel = null)
 		{
-			var jtok = await PostData(Method.Account, Conv.ToString(type), cancel,
-				new KV("currencyPair", pair.Id),
-				new KV("rate", price_per_coin),
-				new KV("amount", volume_base));
+			var jtok = await PostData(Method.Account, Conv.ToString(type), cancel, new Params
+			{
+				{ "currencyPair", pair.Id },
+				{ "rate", price_per_coin },
+				{ "amount", volume_base },
+			});
 
 			return ParseJsonReply<TradeResult>(jtok);
 		}
@@ -211,9 +229,11 @@ namespace Poloniex.API
 		/// <summary>Cancel an order</summary>
 		public async Task<bool> CancelTrade(CurrencyPair pair, long order_id, CancellationToken? cancel = null)
 		{
-			var jtok = await PostData(Method.Account, "cancelOrder", cancel,
-				new KV("currencyPair", pair.Id),
-				new KV("orderNumber", order_id));
+			var jtok = await PostData(Method.Account, "cancelOrder", cancel, new Params
+			{
+				{ "currencyPair", pair.Id },
+				{ "orderNumber", order_id },
+			});
 
 			return jtok is JObject jobj && jobj.Value<byte>("success") == 1;
 		}
@@ -221,11 +241,11 @@ namespace Poloniex.API
 		#endregion
 
 		/// <summary>Helper for GETs</summary>
-		private async Task<JToken> GetData(string method, string command, CancellationToken? cancel, params KV[] parameters)
+		private async Task<JToken> GetData(string method, string command, CancellationToken? cancel, Params parameters = null)
 		{
 			// If called from the UI thread, disable the SynchronisationContext
 			// to prevent deadlocks when waiting for Async results.
-			using (Misc.NoSyncContext())
+			using (Task_.NoSyncContext())
 			{
 				// Poloniex requires the 'nonce' values to be strictly increasing.
 				// That means all POSTs must be serialised to avoid a race condition
@@ -236,11 +256,11 @@ namespace Poloniex.API
 					await RequestThrottle.Wait(cancel_token);
 
 					// Add the command to the parameters
-					var kv = new List<KV>{new KV("command", command)};
-					kv.AddRange(parameters);
+					parameters = parameters ?? new Params();
+					parameters["command"] = command;
 
 					// Create the URL for the command + parameters
-					var url = $"{UrlRestAddress}{method}{Misc.UrlEncode(kv)}";
+					var url = $"{UrlRestAddress}{method}{Http_.UrlEncode(parameters)}";
 
 					// Submit the request
 					var response = await Client.GetAsync(url, cancel_token);
@@ -255,11 +275,11 @@ namespace Poloniex.API
 		}
 
 		/// <summary>Helper for POSTs</summary>
-		private async Task<JToken> PostData(string method, string command, CancellationToken? cancel, params KV[] parameters)
+		private async Task<JToken> PostData(string method, string command, CancellationToken? cancel, Params parameters = null)
 		{
 			// If called from the UI thread, disable the SynchronisationContext
 			// to prevent deadlocks when waiting for Async results.
-			using (Misc.NoSyncContext())
+			using (Task_.NoSyncContext())
 			{
 				// Poloniex requires the 'nonce' values to be strictly increasing.
 				// That means all POSTs must be serialised to avoid a race condition
@@ -270,17 +290,18 @@ namespace Poloniex.API
 					await RequestThrottle.Wait(cancel_token);
 
 					// Add the command parameter
-					var kv = new List<KV> { new KV("command", command), new KV("nonce", Misc.Nonce) };
-					kv.AddRange(parameters);
+					parameters = parameters ?? new Params();
+					parameters["command"] = command;
+					parameters["nonce"] = Misc.Nonce;
 
 					// Create the content to POST
-					var post_data_string = Misc.UrlEncode(kv).TrimStart('?');
+					var post_data_string = Http_.UrlEncode(parameters).TrimStart('?');
 					var content = new StringContent(post_data_string, Encoding.UTF8, "application/x-www-form-urlencoded");
 					var msg_hash = Hasher.ComputeHash(Encoding.UTF8.GetBytes(post_data_string));
 					var signature = Misc.ToStringHex(msg_hash);
 					content.Headers.Add("Sign", signature);
 
-					var url = $"{Client.BaseAddress}{method}{Misc.UrlEncode(kv)}";
+					var url = $"{Client.BaseAddress}{method}{Http_.UrlEncode(parameters)}";
 
 					// Submit the request
 					// Result Codes:

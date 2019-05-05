@@ -47,7 +47,6 @@
     <Compile Include="src\ExchangeApi.cs" />
     <Compile Include="src\IExchangeApi.cs" />
     <Compile Include="src\Misc\JsonConverters.cs" />
-    <Compile Include="src\Misc\KeyValueParameter.cs" />
     <Compile Include="src\Misc\Misc.cs" />
     <Compile Include="src\Misc\RequestThrottle.cs" />
     <Compile Include="src\WebSockets\Subscription.cs" />

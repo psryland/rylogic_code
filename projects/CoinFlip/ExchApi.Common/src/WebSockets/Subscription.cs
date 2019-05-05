@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using Rylogic.Extn;
 
 namespace ExchApi.Common
 {
@@ -52,7 +53,7 @@ namespace ExchApi.Common
 					// Send the subscription request
 					State = EState.Starting;
 					var json_request = SubscribeRequest();
-					using (Misc.NoSyncContext())
+					using (Task_.NoSyncContext())
 						await WebSocket.SendAsync(json_request, Api.Shutdown);
 				}
 			}
@@ -82,7 +83,7 @@ namespace ExchApi.Common
 					// Send the unsubscribe request
 					State = EState.Stopping;
 					var json_request = UnsubscribeRequest();
-					using (Misc.NoSyncContext())
+					using (Task_.NoSyncContext())
 						await Api.WebSocket.SendAsync(json_request, Api.Shutdown);
 				}
 			}

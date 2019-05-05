@@ -12,7 +12,7 @@ using Rylogic.Utility;
 namespace ExchApi.Common
 {
 	public static class Misc
-    {
+	{
 		/// <summary></summary>
 		public static readonly string AssemblyVersionString = Assembly.GetExecutingAssembly().GetName().Version.ToString(3);
 
@@ -43,19 +43,6 @@ namespace ExchApi.Common
 			return buf;
 		}
 
-		/// <summary>Encode 'kv' into a URL parameter list, starting with '?'</summary>
-		public static string UrlEncode(IEnumerable<KV> parameters)
-		{
-			var s = new StringBuilder();
-			foreach (var kv in parameters)
-			{
-				var value = (kv.Value as string)?.Replace(' ', '+') ?? kv.Value.ToString();
-				s.Append("&").Append(kv.Key).Append("=").Append(value);
-			}
-			if (s.Length != 0) s[0] = '?';
-			return s.ToString();
-		}
-
 		/// <summary>Helper for generating "nonce"</summary>
 		public static string Nonce
 		{
@@ -71,22 +58,6 @@ namespace ExchApi.Common
 		}
 		private static long m_nonce = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000;
 		private static object m_nonce_lock = new object();
-
-		/// <summary>Returns an RAII scope that temporarily sets the current sync context to null</summary>
-		public static Scope NoSyncContext()
-		{
-			return Scope.Create(
-				() =>
-				{
-					var context = SynchronizationContext.Current;
-					SynchronizationContext.SetSynchronizationContext(null);
-					return context;
-				},
-				sc =>
-				{
-					SynchronizationContext.SetSynchronizationContext(sc);
-				});
-		}
 
 		/// <summary>Assert for testing the thread id</summary>
 		public static bool AssertMainThread()
@@ -106,4 +77,6 @@ namespace ExchApi.Common
 			await ws.SendAsync(data, WebSocketMessageType.Text, true, cancel);
 		}
 	}
+
+	public class Params :Dictionary<string, object>{}
 }
