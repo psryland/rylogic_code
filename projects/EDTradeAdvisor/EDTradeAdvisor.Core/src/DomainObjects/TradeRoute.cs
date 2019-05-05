@@ -45,5 +45,20 @@ namespace EDTradeAdvisor.DomainObjects
 
 		/// <summary></summary>
 		public string Description => $"{Quantity}x {CommodityName} @{Origin.Station.Name} → @{Destination.System.Name}/{Destination.Station.Name} Profit={Profit}";
+
+		#region Equals
+		public bool Equals(TradeRoute rhs)
+		{
+			return Origin.Equals(rhs.Origin) && Destination.Equals(rhs.Destination);
+		}
+		public override bool Equals(object obj)
+		{
+			return base.Equals(obj);
+		}
+		public override int GetHashCode()
+		{
+			return new { Origin, Destination }.GetHashCode();
+		}
+		#endregion
 	}
 }

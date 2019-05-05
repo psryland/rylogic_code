@@ -35,5 +35,20 @@ namespace EDTradeAdvisor.DomainObjects
 
 		/// <summary></summary>
 		public DateTimeOffset LastUpdated => DateTimeOffset.FromUnixTimeSeconds(UpdatedAt);
+
+		#region Equals
+		public bool Equals(Station rhs)
+		{
+			return ID == rhs.ID;
+		}
+		public override bool Equals(object obj)
+		{
+			return base.Equals(obj);
+		}
+		public override int GetHashCode()
+		{
+			return ID.GetHashCode();
+		}
+		#endregion
 	}
 }

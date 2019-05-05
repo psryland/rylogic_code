@@ -29,7 +29,22 @@
 		/// <summary></summary>
 		public int DemandBracket { get; set; }
 
-		/// <summary></summary>
+		/// <summary>The time this listings was last updated (in unix seconds)</summary>
 		public long UpdatedAt { get; set; }
+
+		#region Equals
+		public bool Equals(Listing rhs)
+		{
+			return ID == rhs.ID;
+		}
+		public override bool Equals(object obj)
+		{
+			return base.Equals(obj);
+		}
+		public override int GetHashCode()
+		{
+			return ID.GetHashCode();
+		}
+		#endregion
 	}
 }

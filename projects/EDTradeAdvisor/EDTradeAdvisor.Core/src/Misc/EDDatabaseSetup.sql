@@ -85,3 +85,4 @@ create table if not exists [Listings] (
 		on update cascade
 		on delete cascade
 );
+create index if not exists IX_ListingsByStationID  on Listings([StationID]);

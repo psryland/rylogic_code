@@ -27,6 +27,10 @@ namespace EDTradeAdvisor
 
 		public EDDatabase(CancellationToken shutdown)
 		{
+			m_cache_star_systems = new Cache<long, StarSystem> { ThreadSafe = true, Capacity = 0 };
+			m_cache_stations = new Cache<long, Station> { ThreadSafe = true, Capacity = 0 };
+			m_cache_market = new Cache<long, Market> { ThreadSafe = true, Capacity = 0 };
+
 			// Connect to the database
 			DB = new SQLiteConnection($"Data Source={Filepath};Version=3;journal mode=Memory;synchronous=Off");
 
@@ -71,60 +75,91 @@ namespace EDTradeAdvisor
 		/// <summary>App shutdown token</summary>
 		private CancellationToken Shutdown { get; }
 
-		/// <summary>Return a star system by ID</summary>
-		public StarSystem GetStarSystem(long id)
+		/// <summary>Return a star system by Name/ID</summary>
+		public async Task<StarSystem> GetStarSystem(string name)
 		{
-			return DB.QuerySingleOrDefault<StarSystem>(new CommandDefinition(
+			return await DB.QuerySingleOrDefaultAsync<StarSystem>(new CommandDefinition(
 				$"select * from {Table.StarSystems} " +
-				$"where [{nameof(StarSystem.ID)}] = @id",
-				new { id }));
+				$"where [{nameof(StarSystem.Name)}] = @name",
+				parameters: new { name },
+				cancellationToken:Shutdown));
 		}
-
-		/// <summary>Return a station by ID</summary>
-		public Station GetStation(long id)
+		public async Task<StarSystem> GetStarSystem(long id)
 		{
-			return DB.QuerySingleOrDefault<Station>(new CommandDefinition(
-				$"select * from {Table.Stations} " +
-				$"where [{nameof(Station.ID)}] = @id",
-				new { id }));
+			return await m_cache_star_systems.GetAsync(id, _ =>
+			{
+				return DB.QuerySingleOrDefaultAsync<StarSystem>(new CommandDefinition(
+					$"select * from {Table.StarSystems} " +
+					$"where [{nameof(StarSystem.ID)}] = @id",
+					parameters: new { id },
+					cancellationToken: Shutdown));
+			});
 		}
+		private Cache<long, StarSystem> m_cache_star_systems;
+
+		/// <summary>Return a station by Name/ID</summary>
+		public async Task<Station> GetStation(long system_id, string name)
+		{
+			return await DB.QuerySingleOrDefaultAsync<Station>(new CommandDefinition(
+				$"select * from {Table.Stations} " +
+				$"where [{nameof(Station.SystemID)}] = @system_id and [{nameof(Station.Name)}] = @name",
+				parameters: new { system_id, name },
+				cancellationToken: Shutdown));
+		}
+		public async Task<Station> GetStation(long id)
+		{
+			return await m_cache_stations.GetAsync(id, _ =>
+			{
+				return DB.QuerySingleOrDefaultAsync<Station>(new CommandDefinition(
+					$"select * from {Table.Stations} " +
+					$"where [{nameof(Station.ID)}] = @id",
+					parameters: new { id },
+					cancellationToken: Shutdown));
+			});
+		}
+		private Cache<long, Station> m_cache_stations;
 
 		/// <summary>Return the market data for a given station (by id)</summary>
 		public async Task<Market> GetMarketData(long station_id)
 		{
-			var market = new Market(GetStation(station_id));
-			var sql = $"select\n" +
-				$"  c.[{nameof(Commodity.ID)}] as [{nameof(Market.Listing.CommodityID)}],\n" +
-				$"  c.[{nameof(Commodity.Name)}] as [{nameof(Market.Listing.CommodityName)}],\n" +
-				$"  l.[{nameof(Listing.BuyPrice)}] as [{nameof(Market.Listing.BuyPrice)}],\n" +
-				$"  l.[{nameof(Listing.SellPrice)}] as [{nameof(Market.Listing.SellPrice)}],\n" +
-				$"  l.[{nameof(Listing.Supply)}] as [{nameof(Market.Listing.Supply)}],\n" +
-				$"  l.[{nameof(Listing.Demand)}] as [{nameof(Market.Listing.Demand)}]\n" +
-				$"from {Table.Listings} as l\n" +
-				$"inner join {Table.Commodities} as c on l.[{nameof(Listing.CommodityID)}] = c.[{nameof(Commodity.ID)}]\n" +
-				$"where l.[{nameof(Listing.StationID)}] = @station_id";
-			market.Listings.AddRange(await DB.QueryAsync<Market.Listing>(new CommandDefinition(sql, new { station_id }, cancellationToken:Shutdown)));
-			return market;
+			return await m_cache_market.GetAsync(station_id, async _ =>
+			{
+				var station = await GetStation(station_id);
+				var market = new Market(station);
+				var sql = $"select\n" +
+					$"  c.[{nameof(Commodity.ID)}] as [{nameof(Market.Listing.CommodityID)}],\n" +
+					$"  c.[{nameof(Commodity.Name)}] as [{nameof(Market.Listing.CommodityName)}],\n" +
+					$"  l.[{nameof(Listing.BuyPrice)}] as [{nameof(Market.Listing.BuyPrice)}],\n" +
+					$"  l.[{nameof(Listing.SellPrice)}] as [{nameof(Market.Listing.SellPrice)}],\n" +
+					$"  l.[{nameof(Listing.Supply)}] as [{nameof(Market.Listing.Supply)}],\n" +
+					$"  l.[{nameof(Listing.Demand)}] as [{nameof(Market.Listing.Demand)}]\n" +
+					$"from {Table.Listings} as l\n" +
+					$"inner join {Table.Commodities} as c on l.[{nameof(Listing.CommodityID)}] = c.[{nameof(Commodity.ID)}]\n" +
+					$"where l.[{nameof(Listing.StationID)}] = @station_id";
+
+				var listings = await DB.QueryAsync<Market.Listing>(new CommandDefinition(sql, new { station_id }, cancellationToken: Shutdown));
+				market.Listings.AddRange(listings);
+				return market;
+			});
 		}
+		private Cache<long, Market> m_cache_market;
 
 		/// <summary>Enumerate all stars</summary>
 		public IEnumerable<StarSystem> EnumStarSystems(
 			string match_name = null,
 			int? max_count = null,
-			Range? pop_range = null,
+			bool? ignore_permitted = null,
 			bool buffered = true
 		) {
 			return DB.Query<StarSystem>(new CommandDefinition(
 				$"select * from {Table.StarSystems}\n" +
 				$"where 1\n" +
 				(match_name != null ? $"and [{nameof(StarSystem.Name)}] like @match_name\n" : string.Empty) +
-				(pop_range != null ? $"and [{nameof(StarSystem.Population)}] >= @pop_beg and [{nameof(StarSystem.Population)}] < @pop_end\n" : string.Empty) +
+				(ignore_permitted == true ? $"and [{nameof(StarSystem.NeedPermit)}] = 0\n" : string.Empty) +
 				(max_count != null ? $"limit @max_count\n" : string.Empty),
 				new
 				{
 					match_name = $"{match_name}%",
-					pop_beg = pop_range?.Beg,
-					pop_end = pop_range?.End,
 					max_count,
 				},
 				flags: buffered ? CommandFlags.Buffered : CommandFlags.None));
@@ -133,6 +168,7 @@ namespace EDTradeAdvisor
 		/// <summary>Enumerate stations</summary>
 		public IEnumerable<Station> EnumStations(
 			long? system_id = null,
+			string match_name = null,
 			int? max_count = null,
 			long? max_station_distance = null,
 			ELandingPadSize? required_pad_size = null,
@@ -146,6 +182,7 @@ namespace EDTradeAdvisor
 				$"select * from {Table.Stations}\n" +
 				$"where 1\n" +
 				(system_id != null ? $"and [{nameof(Station.SystemID)}] = @system_id\n" : string.Empty) +
+				(match_name != null ? $"and [{nameof(Station.Name)}] like @match_name\n" : string.Empty) +
 				(max_station_distance != null ? $"and [{nameof(Station.Distance)}] <= @max_station_distance\n" : string.Empty) +
 				(required_pad_size != null ? $"and [{nameof(Station.MaxPadSize)}] >= @required_pad_size\n" : string.Empty) +
 				(facilities_incl != null ? $"and ([{nameof(Station.Facilities)}] & @facilities_incl) = @facilities_incl\n" : string.Empty) +
@@ -155,6 +192,7 @@ namespace EDTradeAdvisor
 				new
 				{
 					system_id,
+					match_name = $"{match_name}%",
 					max_station_distance,
 					required_pad_size = (int?)required_pad_size,
 					facilities_incl = (int?)facilities_incl,
@@ -164,6 +202,28 @@ namespace EDTradeAdvisor
 				flags: buffered ? CommandFlags.Buffered: CommandFlags.None));
 		}
 
+		/// <summary>Enumerate star systems that contains a station matching 'match_station_name'</summary>
+		public IEnumerable<StarSystem> EnumStarSystemsContainingStation(
+			string match_station_name,
+			int? max_count = null,
+			bool? ignore_permitted = null,
+			bool buffered = true
+		)
+		{
+			return DB.Query<StarSystem>(new CommandDefinition(
+				$"select y.* from {Table.StarSystems} as y\n" +
+				$"inner join {Table.Stations} s on s.[{nameof(Station.SystemID)}] = y.[{nameof(StarSystem.ID)}]\n" +
+				$"where s.[{nameof(Station.Name)}] like @match_station_name\n" +
+				(ignore_permitted == true ? $"and [{nameof(StarSystem.NeedPermit)}] = 0\n" : string.Empty) +
+				(max_count != null ? $"limit @max_count\n" : string.Empty),
+				new
+				{
+					match_station_name = $"{match_station_name}%",
+					max_count,
+				},
+				flags: buffered ? CommandFlags.Buffered : CommandFlags.None));
+		}
+
 		/// <summary>Rebuild the systems table</summary>
 		public void BuildSystemsTable(string systems_populated_jsonl)
 		{
@@ -171,6 +231,7 @@ namespace EDTradeAdvisor
 			{
 				// Delete all content from the table
 				DB.Execute($"delete from {Table.StarSystems}");
+				m_cache_star_systems.Flush();
 
 				// Read each system by line
 				using (var sr = new StreamReader(systems_populated_jsonl, Encoding.UTF8, false))
@@ -241,6 +302,7 @@ namespace EDTradeAdvisor
 			{
 				// Delete all content from the table
 				DB.Execute($"delete from {Table.Stations}");
+				m_cache_stations.Flush();
 
 				// Read each station by line
 				using (var sr = new StreamReader(stations_jsonl, Encoding.UTF8, false))
@@ -345,6 +407,7 @@ namespace EDTradeAdvisor
 				// Delete all content from the tables
 				DB.Execute($"delete from {Table.Commodities}");
 				DB.Execute($"delete from {Table.CommodityCategories}");
+				m_cache_market.Flush();
 
 				// Read all commodities into memory
 				var jarr = JArray.Parse(File.ReadAllText(commodities_json));
@@ -466,10 +529,11 @@ namespace EDTradeAdvisor
 		/// <summary>Rebuild the listings table</summary>
 		public void BuildListingsTable(string listings_csv)
 		{
-			using (var msg = StatusStack.NewStatusMessage($"Building Listings Table: {0.0:P2}"))
+			using (var msg = StatusStack.NewStatusMessage($"Building Listings Table: {0:P2}"))
 			{
 				// Delete all content from the table
 				DB.Execute($"delete from {Table.Listings}");
+				m_cache_market.Flush();
 
 				// Read each listing by row
 				var rows = CSVData.Parse(listings_csv, false, x => msg.Message = $"Building Listings Table: {x:P2}");
@@ -527,6 +591,152 @@ namespace EDTradeAdvisor
 
 					transaction.Commit();
 					msg.Message = $"Building Listings Table: {1.0:P2}";
+				}
+			}
+		}
+
+		/// <summary>Merge listings data into the listings table</summary>
+		public void MergeListings(string live_listings_csv)
+		{
+			using (var msg = StatusStack.NewStatusMessage($"Merging Live Listings Data: {0:P2}"))
+			{
+				m_cache_market.Flush();
+
+				// Read each listing by row
+				var rows = CSVData.Parse(live_listings_csv, false, x => msg.Message = $"Merging Live Listings: {x:P2}");
+				using (var transaction = DB.BeginTransaction())
+				using (var cmd = DB.CreateCommand())
+				{
+					cmd.CommandText =
+						$"insert or replace into {Table.Listings} (\n" +
+						$"  [{nameof(Listing.ID)}],\n" +
+						$"  [{nameof(Listing.StationID)}],\n" +
+						$"  [{nameof(Listing.CommodityID)}],\n" +
+						$"  [{nameof(Listing.Supply)}],\n" +
+						$"  [{nameof(Listing.SupplyBracket)}],\n" +
+						$"  [{nameof(Listing.BuyPrice)}],\n" +
+						$"  [{nameof(Listing.SellPrice)}],\n" +
+						$"  [{nameof(Listing.Demand)}],\n" +
+						$"  [{nameof(Listing.DemandBracket)}],\n" +
+						$"  [{nameof(Listing.UpdatedAt)}]\n" +
+						$") select\n" +
+						$"  @id, @station_id, @commodity_id, @supply, @supply_bracket, @buy_price, @sell_price, @demand, @demand_bracket, @updated_at\n" +
+						$"where (select 1 from {Table.Stations   } where [{nameof(Station.ID)  }] = @station_id)\n" +
+						$"  and (select 1 from {Table.Commodities} where [{nameof(Commodity.ID)}] = @commodity_id)\n";
+					cmd.Parameters.Add("@id", R<Listing>.Type(x => x.ID).DbType());
+					cmd.Parameters.Add("@station_id", R<Listing>.Type(x => x.StationID).DbType());
+					cmd.Parameters.Add("@commodity_id", R<Listing>.Type(x => x.CommodityID).DbType());
+					cmd.Parameters.Add("@supply", R<Listing>.Type(x => x.Supply).DbType());
+					cmd.Parameters.Add("@supply_bracket", R<Listing>.Type(x => x.SupplyBracket).DbType());
+					cmd.Parameters.Add("@buy_price", R<Listing>.Type(x => x.BuyPrice).DbType());
+					cmd.Parameters.Add("@sell_price", R<Listing>.Type(x => x.SellPrice).DbType());
+					cmd.Parameters.Add("@demand", R<Listing>.Type(x => x.Demand).DbType());
+					cmd.Parameters.Add("@demand_bracket", R<Listing>.Type(x => x.DemandBracket).DbType());
+					cmd.Parameters.Add("@updated_at", R<Listing>.Type(x => x.UpdatedAt).DbType());
+					cmd.Transaction = transaction;
+
+					long ParseInt64(string s) => s.Length != 0 ? long.Parse(s) : 0L;
+					int ParseInt32(string s) => s.Length != 0 ? int.Parse(s) : 0;
+
+					// Update the listings table
+					foreach (var row in rows.Skip(1))
+					{
+						try
+						{
+							Shutdown.ThrowIfCancellationRequested();
+
+							cmd.Reset();
+							cmd.Parameters["@id"].Value = ParseInt64(row[0]);
+							cmd.Parameters["@station_id"].Value = ParseInt64(row[1]);
+							cmd.Parameters["@commodity_id"].Value = ParseInt64(row[2]);
+							cmd.Parameters["@supply"].Value = ParseInt32(row[3]);
+							cmd.Parameters["@supply_bracket"].Value = ParseInt32(row[4]);
+							cmd.Parameters["@buy_price"].Value = ParseInt32(row[5]);
+							cmd.Parameters["@sell_price"].Value = ParseInt32(row[6]);
+							cmd.Parameters["@demand"].Value = ParseInt64(row[7]);
+							cmd.Parameters["@demand_bracket"].Value = ParseInt32(row[8]);
+							cmd.Parameters["@updated_at"].Value = ParseInt64(row[9]);
+							cmd.ExecuteNonQuery();
+						}
+						catch (Exception ex)
+						{
+							Advisor.Log.Write(ELogLevel.Error, ex, $"Failed to update listing. Row data: '{string.Join(",", row)}'");
+						}
+					}
+
+					transaction.Commit();
+					msg.Message = $"Merging Live Listings: {1:P2}";
+				}
+			}
+		}
+
+		/// <summary>Merge market data for a station (produced by the ED journal file)</summary>
+		public async Task MergeMarketUpdate(string market_json)
+		{
+			using (var msg = StatusStack.NewStatusMessage($"Merging Market Update: {0:P2}"))
+			{
+				try
+				{
+					var jobj = JObject.Parse(File.ReadAllText(market_json));
+					var system = GetStarSystem(jobj["StarSystem"].Value<string>()).Result;
+					var station = GetStation(system.ID, jobj["StationName"].Value<string>()).Result;
+					m_cache_market.Invalidate(station.ID);
+
+					using (var transaction = DB.BeginTransaction())
+					{
+						foreach (var item in (JArray)jobj["Items"])
+						{
+							var sql =
+								$"insert or replace into {Table.Listings} (\n" +
+								$"  [{nameof(Listing.ID)}],\n" +
+								$"  [{nameof(Listing.StationID)}],\n" +
+								$"  [{nameof(Listing.CommodityID)}],\n" +
+								$"  [{nameof(Listing.Supply)}],\n" +
+								$"  [{nameof(Listing.SupplyBracket)}],\n" +
+								$"  [{nameof(Listing.BuyPrice)}],\n" +
+								$"  [{nameof(Listing.SellPrice)}],\n" +
+								$"  [{nameof(Listing.Demand)}],\n" +
+								$"  [{nameof(Listing.DemandBracket)}],\n" +
+								$"  [{nameof(Listing.UpdatedAt)}]\n" +
+								$") select\n" +
+								$"  l.[{nameof(Listing.ID)}]," +
+								$"  @station_id," +
+								$"  c.[{nameof(Commodity.ID)}]," +
+								$"  @supply," +
+								$"  @supply_bracket," +
+								$"  @buy_price," +
+								$"  @sell_price," +
+								$"  @demand," +
+								$"  @demand_bracket," +
+								$"  @updated_at\n" +
+								$"from [Listings] as l\n" +
+								$"inner join {Table.Commodities} c on l.[{nameof(Listing.CommodityID)}] = c.[{nameof(Commodity.ID)}]\n" +
+								$"where c.[{nameof(Commodity.EDID)}] = @edid\n" +
+								$"  and l.[{nameof(Listing.StationID)}] = @station_id";
+							await DB.ExecuteAsync(new CommandDefinition(
+								sql,
+								new
+								{
+									edid = item["id"].Value<long>(),
+									station_id = station.ID,
+									supply = item["Stock"].Value<int>(),
+									supply_bracket = item["StockBracket"].Value<int>(),
+									buy_price = item["BuyPrice"].Value<int>(),
+									sell_price = item["SellPrice"].Value<int>(),
+									demand = item["Demand"].Value<long>(),
+									demand_bracket = item["DemandBracket"].Value<int>(),
+									updated_at = DateTimeOffset.Now.ToUnixTimeSeconds(),
+								},
+								cancellationToken: Shutdown));
+						}
+
+						transaction.Commit();
+						msg.Message = $"Merging Market Update: {1:P2}";
+					}
+				}
+				catch (Exception ex)
+				{
+					Advisor.Log.Write(ELogLevel.Error, ex, $"Parsing market data failed: '{market_json}'");
 				}
 			}
 		}

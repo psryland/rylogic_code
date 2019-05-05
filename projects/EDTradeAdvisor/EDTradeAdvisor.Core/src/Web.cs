@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Rylogic.Common;
 using Rylogic.Extn;
+using Rylogic.INet;
 using Rylogic.Utility;
 
 namespace EDTradeAdvisor
@@ -22,12 +23,27 @@ namespace EDTradeAdvisor
 		{
 			Client = new HttpClient();
 			Client.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("gzip"));
+			OAuth = new OAuth2("51b7781a-c48c-42de-b527-7267014cb64c", "");
 			Shutdown = shutdown;
 		}
 		public void Dispose()
 		{
+			OAuth = null;
 			Client = Util.Dispose(Client);
 		}
+
+		/// <summary></summary>
+		public OAuth2 OAuth
+		{
+			get { return m_oauth; }
+			private set
+			{
+				if (m_oauth == value) return;
+				Util.Dispose(ref m_oauth);
+				m_oauth = value;
+			}
+		}
+		private OAuth2 m_oauth;
 
 		/// <summary>True when one or more downloads are active</summary>
 		public bool Downloading

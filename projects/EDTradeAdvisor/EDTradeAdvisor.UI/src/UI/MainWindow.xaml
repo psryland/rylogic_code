@@ -6,7 +6,7 @@
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
 	xmlns:local="clr-namespace:EDTradeAdvisor.UI"
-	xmlns:gui2="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
 	mc:Ignorable="d"
 	Title="Elite Dangerous Trade Advisor"
 	ResizeMode="CanResizeWithGrip"
@@ -64,26 +64,22 @@
 				<StackPanel
 					Grid.Row="0"
 					Margin="3"
-					IsEnabled="{Binding IsChecked, Converter={conv:Not}, ElementName='m_chk_use_edmc'}"
+					IsEnabled="{Binding IsChecked, Converter={conv:Not}, ElementName=m_chk_use_current_location}"
 					>
 					<TextBlock Text="Origin System/Station:" />
-					<ComboBox
-						IsEditable="True"
-						IsTextSearchEnabled="False"
-						IsSynchronizedWithCurrentItem="True"
+					<gui:ComboBoxAutoComplete
 						ItemsSource="{Binding OriginStarSystemsShortList}"
 						SelectedItem="{Binding OriginStarSystemsShortList/}"
+						UpdateAutoCompleteList="UpdateStarSystemAutoComplete"
 						DisplayMemberPath="Name"
-						TextBoxBase.TextChanged="HandleStarSystemTextChanged"
-						StaysOpenOnEdit="True"
 						MaxDropDownHeight="100"
 						Margin="10,2,2,2"
 						MinWidth="150"
 						/>
-					<ComboBox
+					<gui:ComboBoxAutoComplete
 						ItemsSource="{Binding OriginStations}"
 						SelectedItem="{Binding OriginStations/}"
-						IsSynchronizedWithCurrentItem="True"
+						UpdateAutoCompleteList="UpdateStationAutoComplete"
 						DisplayMemberPath="Name"
 						MaxDropDownHeight="100"
 						Margin="10,2,2,2"
@@ -91,13 +87,14 @@
 						/>
 				</StackPanel>
 
-				<!-- Use EDMC -->
+				<!-- Use docked location -->
 				<CheckBox
 					Grid.Row="1"
-					Content="Use EDMC Data"
-					IsChecked="{Binding UseEDMC}"
+					Content="Use Current Location"
+					ToolTip="Read the current location from the Elite Dangerous journal file"
+					IsChecked="{Binding UseCurrentLocation}"
 					Margin="3"
-					Name="m_chk_use_edmc"
+					Name="m_chk_use_current_location"
 					/>
 			</Grid>
 
@@ -118,25 +115,21 @@
 					Margin="3"
 					>
 					<TextBlock Text="Destination System/Station:" />
-					<ComboBox
-						IsEditable="True"
-						IsTextSearchEnabled="False"
-						IsSynchronizedWithCurrentItem="True"
+					<gui:ComboBoxAutoComplete
 						IsEnabled="{Binding AnyDestination, Converter={conv:Not}}"
 						ItemsSource="{Binding DestStarSystemsShortList}"
 						SelectedItem="{Binding DestStarSystemsShortList/}"
+						UpdateAutoCompleteList="UpdateStarSystemAutoComplete"
 						DisplayMemberPath="Name"
-						TextBoxBase.TextChanged="HandleStarSystemTextChanged"
-						StaysOpenOnEdit="True"
 						MaxDropDownHeight="100"
 						Margin="10,2,2,2"
 						MinWidth="150"
 						/>
-					<ComboBox
+					<gui:ComboBoxAutoComplete
 						IsEnabled="{Binding AnyDestination, Converter={conv:Not}}"
 						ItemsSource="{Binding DestStations}"
 						SelectedItem="{Binding DestStations/}"
-						IsSynchronizedWithCurrentItem="True"
+						UpdateAutoCompleteList="UpdateStationAutoComplete"
 						DisplayMemberPath="Name"
 						MaxDropDownHeight="100"
 						Margin="10,2,2,2"
@@ -156,7 +149,7 @@
 							/>
 						<TextBox
 							ToolTip="Sets a limit on how far to search away from the origin system"
-							Text="{Binding MaxTradeRouteDistance}"
+							Text="{Binding MaxTradeRouteDistance, StringFormat={}{0:N0}}"
 							IsEnabled="{Binding AnyDestination}"
 							HorizontalContentAlignment="Right"
 							MinWidth="60"
@@ -178,7 +171,7 @@
 					>
 					<TextBlock Text="Cargo Capacity: "/>
 					<TextBox
-						Text="{Binding CargoCapacity}"
+						Text="{Binding CargoCapacity, StringFormat={}{0:N0}}"
 						HorizontalContentAlignment="Right"
 						MinWidth="40"
 						/>
@@ -191,7 +184,7 @@
 					>
 					<TextBlock Text="Available Credits: "/>
 					<TextBox
-						Text="{Binding AvailableCredits}"
+						Text="{Binding AvailableCredits, StringFormat={}{0:N0}}"
 						HorizontalContentAlignment="Right"
 						MinWidth="40"
 						Margin="10,0,0,0"
@@ -205,7 +198,7 @@
 					>
 					<TextBlock Text="Jump Range: "/>
 					<TextBox
-						Text="{Binding MaxJumpRange}"
+						Text="{Binding MaxJumpRange, StringFormat={}{0:N2}}"
 						ToolTip="The maximum jump distance when fully loaded"
 						HorizontalContentAlignment="Right"
 						MinWidth="40"
@@ -314,6 +307,9 @@
 					AutoGenerateColumns="False"
 					GridLinesVisibility="None"
 					ItemsSource="{Binding TradeRoutes}"
+					SelectedItem="{Binding TradeRoutes/}"
+					MinRowHeight="25"
+					IsReadOnly="True"
 					>
 					<DataGrid.Columns>
 						<DataGridTextColumn
@@ -338,7 +334,7 @@
 							/>
 						<DataGridTextColumn
 							Header="System Distance"
-							Binding="{Binding Distance}"
+							Binding="{Binding Distance, StringFormat={}{0:N2}}"
 							Width="*"
 							/>
 						<DataGridTextColumn
@@ -348,16 +344,27 @@
 							/>
 						<DataGridTextColumn
 							Header="Profit"
-							Binding="{Binding Profit}"
+							Binding="{Binding Profit, StringFormat={}{0:N0}}"
 							Width="*"
 							/>
 					</DataGrid.Columns>
+					<DataGrid.ContextMenu>
+						<ContextMenu
+							DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+							>
+							<MenuItem
+								Header="Set as Origin"
+								Command="{Binding SetAsOrigin}"
+								IsEnabled="{Binding TradeRoutes.CurrentItem, Converter={conv:NotNull}}"
+								/>
+						</ContextMenu>
+					</DataGrid.ContextMenu>
 				</DataGrid>
 			</TabItem>
 
 			<!-- Log -->
 			<TabItem Header="Log">
-				<gui2:LogControl
+				<gui:LogControl
 					 Name="m_log"
 					/>
 			</TabItem>
