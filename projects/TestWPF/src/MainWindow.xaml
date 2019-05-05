@@ -1,14 +1,14 @@
-﻿<Window x:Class="TestWPF.MainWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-		xmlns:gui2="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
-		xmlns:local="clr-namespace:TestWPF"
-        Title="MainWindow" Height="350" Width="525"
-		WindowStartupLocation="Manual"
-		>
+﻿<Window
+	x:Class="TestWPF.MainWindow"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:gui2="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+	Title="MainWindow" Height="350" Width="525"
+	WindowStartupLocation="Manual"
+	Left="-800"
+	Top="100"
+	>
 	<!-- 
-		Left="-800"
-		Top="100"
 	-->
 
 	<ScrollViewer
@@ -16,29 +16,34 @@
 		>
 		<StackPanel>
 			<Menu>
-				<MenuItem Name="m_menu_file" Header="_File">
-					<MenuItem Name="m_menu_file_open" Header="_Open" Width="140"/>
+				<MenuItem Header="_File">
+					<MenuItem Header="_Open"/>
 					<Separator/>
-					<gui2:RecentFilesMenuItem Name="m_recent_files" Header="_Recent Files"/>
+					<gui2:RecentFilesMenuItem Header="_Recent Files" Name="m_recent_files" />
 					<Separator/>
-					<MenuItem Name="m_menu_file_close" Header="_Close" Width="140"/>
+					<MenuItem Header="_Close" Command="{Binding Exit}"/>
 				</MenuItem>
 				<MenuItem Header="_Tests">
-					<MenuItem Name="m_menu_tests_chart" Header="_Chart"/>
-					<MenuItem Name="m_menu_tests_diagram" Header="_Diagram"/>
-					<MenuItem Name="m_menu_tests_dock_container" Header="_Dock Container"/>
-					<MenuItem Name="m_menu_tests_message_box_ui" Header="_Message Box UI"/>
-					<MenuItem Name="m_menu_tests_log_ui" Header="_Log UI"/>
-					<MenuItem Name="m_menu_tests_pattern_editor" Header="_Pattern Editor"/>
-					<MenuItem Name="m_menu_tests_progress_ui" Header="_Progress UI"/>
-					<MenuItem Name="m_menu_tests_prompt_ui" Header="_Prompt UI"/>
-					<MenuItem Name="m_menu_tests_tool_ui" Header="_Tool Window"/>
-					<MenuItem Name="m_menu_tests_view3d" Header="_View3D"/>
+					<MenuItem Header="_Chart" Command="{Binding ShowChart}"/>
+					<MenuItem Header="_Diagram" Command="{Binding ShowDiagram}"/>
+					<MenuItem Header="_Dock Container" Command="{Binding ShowDockContainer}"/>
+					<MenuItem Header="_Message Box UI" Command="{Binding ShowMsgBox}"/>
+					<MenuItem Header="_Log UI" Command="{Binding ShowLogUI}"/>
+					<MenuItem Header="_Pattern Editor" Command="{Binding ShowPatternEditor}"/>
+					<MenuItem Header="_Progress UI" Command="{Binding ShowProgressUI }"/>
+					<MenuItem Header="_Prompt UI" Command="{Binding ShowPromptUI }"/>
+					<MenuItem Header="_Tool Window" Command="{Binding ShowToolWindow }"/>
+					<MenuItem Header="_View3D" Command="{Binding ShowView3DUI}"/>
 				</MenuItem>
 			</Menu>
-			<gui2:FilterComboBox
-				ItemsSource="{Binding Strings}"
+			<gui2:ComboBoxAutoComplete
+				ItemsSource="{Binding Things}"
+				SelectedItem="{Binding Things/}"
+				UpdateAutoCompleteList="ComboBoxAutoComplete_Update"
+				DisplayMemberPath="Name"
+				Margin="5"
 				/>
+			<!--
 			<local:ImageButton
 				Text="Hello World?"
 				Source="pack://application:,,,/res/pencil.png"
@@ -53,9 +58,12 @@
 				Margin="3"
 				Orientation="Horizontal"
 				/>
+			-->
 			<Button
-				Name="m_btn_msgbox"
-				Content="MsgBox"
+				Content="OK"
+				HorizontalAlignment="Right"
+				MinWidth="80"
+				Margin="8"
 				/>
 		</StackPanel>
 	</ScrollViewer>

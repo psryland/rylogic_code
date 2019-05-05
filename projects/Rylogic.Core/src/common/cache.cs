@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Rylogic.Utility;
 
 namespace Rylogic.Common
@@ -229,18 +230,23 @@ namespace Rylogic.Common
 		/// If the Mode is StandardCache, the result of 'on_miss' is stored in the cache.
 		/// If the Mode is ObjectPool, the returned object will not be in the cache, users
 		/// need to call 'Add' to return the object to the cache.</summary>
-		public TItem Get(TKey key, Func<TKey,TItem> on_miss, Action<TKey,TItem> on_hit = null)
+		public TItem Get(TKey key, Func<TKey, TItem> on_miss, Action<TKey, TItem> on_hit = null)
+		{
+			return GetAsync(key, x => Task.FromResult(on_miss(x)), on_hit).Result;
+		}
+		public async Task<TItem> GetAsync(TKey key, Func<TKey, Task<TItem>> on_miss, Action<TKey, TItem> on_hit = null)
 		{
 			// Special case 0 capacity caches
 			if (Capacity == 0)
-				return on_miss(key);
+				return await on_miss(key);
 
 			TItem item;
 
 			// Use the lookup map to find the node in the cache
-			LinkedListNode<Entry> node = null;
+			var node = (LinkedListNode<Entry>)null;
 			using (Lock())
 				m_lookup.TryGetValue(key, out node);
+
 			if (node != null)
 			{
 				// Found!
@@ -264,8 +270,7 @@ namespace Rylogic.Common
 				}
 
 				// Allow callers to do something on a cache hit
-				if (on_hit != null)
-					on_hit(key, node.Value.Item);
+				on_hit?.Invoke(key, node.Value.Item);
 
 				// Get the item to return
 				item = node.Value.Item;
@@ -276,7 +281,7 @@ namespace Rylogic.Common
 				Interlocked.Increment(ref m_stats.Misses);
 
 				// Cache miss, read it
-				item = on_miss(key);
+				item = await on_miss(key);
 				if (Equals(item, default(TItem)))
 					return item;
 

@@ -86,7 +86,7 @@ namespace Rylogic.Core.Windows
 				var result = dialog.Show(hwnd_owner);
 				if (result < 0)
 				{
-					if ((uint)result == (uint)Win32.HRESULT.ERROR_CANCELLED)
+					if (unchecked((uint)result) == (uint)Win32.HRESULT.ERROR_CANCELLED)
 						return false;
 					else
 						throw Marshal.GetExceptionForHR(result);

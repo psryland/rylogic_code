@@ -227,8 +227,8 @@ namespace Rylogic.Container
 		}
 
 		/// <summary>
-		/// Read CSV rows from a stream.
-		/// If 'support_comments' is true, rows that start with a '#' character are treated as comments</summary>
+		/// Read CSV rows from a stream or file.
+		/// if 'ignore_comment_rows' is true, rows that start with a '#' character are skipped, otherwise they are considered as CSV rows</summary>
 		public static IEnumerable<Row> Parse(Stream src, bool ignore_comment_rows, Action<double> progress_cb = null)
 		{
 			// Parse the CSV stream
@@ -236,34 +236,28 @@ namespace Rylogic.Container
 			// Quotes are escaped using double quotes.
 			using (var file = new StreamReader(src))
 			{
-				// Deal with line endings. Converts '\r', '\n', '\r\n' to '\n'
-				int next()
-				{
-					var chint = file.Read();
-					if (chint != '\r') return chint;
-					if (file.Peek() == '\n') file.Read();
-					return '\n';
-				}
-
-				// Parse the file char-by-char emitting CSV rows
 				var row = new Row();
 				var str = new StringBuilder(); // Buffer for each element
 				int line = 1, elem = 1;        // Natural indices
-				var last_progress = 0.0;       // progress reporting
+
+				// Progress reporting
+				var last_progress = 0.0;
+				var stream_length = file.BaseStream.Length;
+				var ReportProgress = progress_cb == null || stream_length == 0 ? (Action)null : () =>
+				{
+					var progress = (double)file.BaseStream.Position / stream_length;
+					if (progress - last_progress < 0.01) return;
+					progress_cb(progress);
+					last_progress = progress;
+				};
+
+				// Parse the file char-by-char emitting CSV rows
 				for (int ch; (ch = next()) >= 0; )
 				{
 					Debug.Assert(str.Length == 0, "Each loop around should be for a new element");
 
 					// Report progress
-					if (progress_cb != null && file.BaseStream.Length != 0)
-					{
-						var progress = (double)file.BaseStream.Position / file.BaseStream.Length;
-						if (progress - last_progress > 0.01)
-						{
-							progress_cb(progress);
-							last_progress = progress;
-						}
-					}
+					ReportProgress?.Invoke();
 
 					// If comments are supported, and the row starts with the comment symbol, consume the line
 					if (ch == '#' && ignore_comment_rows && row.Count == 0)
@@ -325,25 +319,33 @@ namespace Rylogic.Container
 
 						// Emit the row
 						yield return row;
-						row = new Row();
+						row = new Row(row.Capacity);
 						++line;
 						elem = 1;
 						continue;
 					}
 				}
+
+				// Get the next character from the stream
+				int next()
+				{
+					var chint = file.Read();
+
+					// Deal with line endings. Converts '\r', '\n', '\r\n' to '\n'
+					if (chint != '\r') return chint;
+					if (file.Peek() == '\n') file.Read();
+					return '\n';
+				}
 			}
 		}
-
-		/// <summary>
-		/// Stream rows from a CSV file.
-		/// if 'ignore_comment_rows' is true, rows that start with a '#' character are skipped, otherwise they are considered as CSV rows</summary>
 		public static IEnumerable<Row> Parse(string filepath, bool ignore_comment_rows, Action<double> progress_cb = null)
 		{
-			return Parse(new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.Read), ignore_comment_rows, progress_cb);
+			var stream = new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.Read);
+			return Parse(stream, ignore_comment_rows, progress_cb);
 		}
 
 		/// <summary>
-		/// Load and parse a CSV file.
+		/// Load and parse a CSV stream or file.
 		/// if 'ignore_comment_rows' is true, rows that start with a '#' character are skipped, otherwise they are considered as CSV rows</summary>
 		public static CSVData Load(Stream src, bool ignore_comment_rows, Action<double> progress_cb = null)
 		{
@@ -351,10 +353,6 @@ namespace Rylogic.Container
 			csv.Rows.AddRange(Parse(src, ignore_comment_rows, progress_cb));
 			return csv;
 		}
-
-		/// <summary>
-		/// Load and parse a CSV file.
-		/// if 'ignore_comment_rows' is true, rows that start with a '#' character are skipped, otherwise they are considered as CSV rows</summary>
 		public static CSVData Load(string filepath, bool ignore_comment_rows, Action<double> progress_cb = null)
 		{
 			var csv = new CSVData();

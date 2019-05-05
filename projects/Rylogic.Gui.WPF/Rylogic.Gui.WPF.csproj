@@ -93,6 +93,9 @@
 	    <AutoGen>True</AutoGen>
 	    <DependentUpon>Resources.resx</DependentUpon>
 	  </Compile>
+	  <Compile Update="src\Gui\ComboBoxAutoComplete.xaml.cs">
+	    <DependentUpon>ComboBoxAutoComplete.xaml</DependentUpon>
+	  </Compile>
 	</ItemGroup>
 	<ItemGroup>
 	  <EmbeddedResource Update="res\Resources.resx">

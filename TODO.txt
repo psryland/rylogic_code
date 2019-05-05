@@ -1,39 +1,11 @@
 Immediate ToDo:
 
-Cryptopia
-	CEW:
-		- Record the update-from-block-height after an update to speed up "Finding Start height"
-		- Fix progress reporting when Cursor is at the last row of the command prompt buffer
-		- Implement create withdrawal
-		- Build as a docker container for linux
-		
-
-
-	Questions:
-		- Bug? GetTransactions uses a block hash as the parameter when talking to bitcoin, but uses the block index (height) when talking to Ethereum?!
-		- How does Cryptopia manage it's wallet nodes? Which nodes are run locally? What are the addresses?
-		  What test-nets
-		- Some of the methods on 'WalletConnector' are not supported in Proxtopia
-		  e.g. 'GetTxFee', 'GetBlockCount'. Are these just legacy functions that are no longer used?
-		- The NodeJS implementation dumps all transactions to the log (i.e. 1000s of lines of text)
-		  Does this effect the performance on the live system? or is it debug only?
-		- What does ConsolidateAccounts do? When/how is it used?
-		- Where are all the other coins handled? Proxtopia only has 17 'interface's?
-		- What's the 'Proxtopia' folder in the 'Exchange' solution? It seems to contain wallet interfaces but different ones than in the Proxtopia project (except for Eth which is in both?)
-		- Bitcoin has marked accounts within wallets as deprecated. Does that effect Cryptopia?
-		- What happens if filling an order results in a remainder less than the minimum trade volume
-		  (in either order). Can it happen?
-
-	Wish List:
-		- Broadcast data connection rather than polling
-		- Provide chart "candle" data with per-tick updates
-		- Historic trades contain the UID of the trade when it was live => to confirm order filled vs. order cancelled.
-		- Trades filled immediately should still return a valid order id, so that can be matched in the history.
-		- Units on the trade history columns
-	
-	Cardano:
-		- Test wallet phrase: verb fence detail trend flush flat isolate miss agree honey grace coil
-		
+EDTradeAdvisor
+	- ED Style
+	- Settings UI
+	- History of origin's 
+	- Swap Origin<->Destination button
+	- Allow typing into station field with no system, to find system
 	
 CoinFlip
 	- determine equity in backwards from current balance
@@ -58,7 +30,7 @@ CoinFlip
 	Strategy:
 		- Have a budget; B BTC, and a a bias; O
 		- Make holding of BTC above or below budget based on std dev from mean, where 1 s.d. == O BTC
-		- Hysterisis when adjusting position
+		- Hysteresis when adjusting position
 		
 LDraw
 	- move ObjectManager to pr.view3d

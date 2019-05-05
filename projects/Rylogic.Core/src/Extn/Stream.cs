@@ -5,6 +5,7 @@
 
 using System;
 using System.IO;
+using System.Reflection;
 using Rylogic.Utility;
 
 namespace Rylogic.Extn
@@ -67,6 +68,35 @@ namespace Rylogic.Extn
 				() => src.Position,
 				sp => src.Position = sp);
 		}
+
+		/// <summary>Get/Set the stream position for a stream reader</summary>
+		public static long Position(this StreamReader reader)
+		{
+			// Shift 'Position' back by the number of bytes read into StreamReader's internal buffer.
+			var byte_len = (int)m_sr_byte_length_field.GetValue(reader);
+			var position = reader.BaseStream.Position - byte_len;
+
+			// If we have consumed chars from the buffer we need to calculate how many
+			// bytes they represent in the current encoding and add that to the position.
+			var char_pos = (int)m_sr_char_pos_field.GetValue(reader);
+			if (char_pos > 0)
+			{
+				var char_buffer = (char[])m_sr_char_buffer_field.GetValue(reader);
+				var encoding = reader.CurrentEncoding;
+				var bytes_consumed = encoding.GetBytes(char_buffer, 0, char_pos).Length;
+				position += bytes_consumed;
+			}
+
+			return position;
+		}
+		public static void Position(this StreamReader reader, long position)
+		{
+			reader.DiscardBufferedData();
+			reader.BaseStream.Seek(position, SeekOrigin.Begin);
+		}
+		private static readonly FieldInfo m_sr_char_pos_field = typeof(StreamReader).GetField("charPos", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+		private static readonly FieldInfo m_sr_byte_length_field = typeof(StreamReader).GetField("byteLen", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+		private static readonly FieldInfo m_sr_char_buffer_field = typeof(StreamReader).GetField("charBuffer", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
 	}
 }
 

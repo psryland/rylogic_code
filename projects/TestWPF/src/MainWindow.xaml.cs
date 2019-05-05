@@ -27,49 +27,42 @@ namespace TestWPF
 		public MainWindow()
 		{
 			InitializeComponent();
-
-			var strings = new ObservableCollection<string>(new[] { "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten" });
-			Strings = new ListCollectionView(strings);
-
+			Things = new ListCollectionView(new List<Thing>());
+#if DEBUG
+			PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Critical;
+#endif
 			m_recent_files.Add("One", false);
 			m_recent_files.Add("Two", false);
 			m_recent_files.Add("Three");
-			m_recent_files.RecentFileSelected += (s) =>
-			{
-				Debug.WriteLine(s);
-			};
+			m_recent_files.RecentFileSelected += s => Debug.WriteLine(s);
 
-			m_menu_file_close.Click += (s, a) =>
-			{
-				Close();
-			};
-			m_menu_tests_chart.Click += (s, a) =>
+			ShowChart = Command.Create(this, () =>
 			{
 				new ChartUI().Show();
-			};
-			m_menu_tests_diagram.Click += (s, a) =>
+			});
+			ShowDiagram = Command.Create(this, () =>
 			{
 				new DiagramUI().Show();
-			};
-			m_menu_tests_dock_container.Click += (s, a) =>
+			});
+			ShowDockContainer = Command.Create(this, () =>
 			{
 				new DockContainerUI().Show();
-			};
-			m_menu_tests_message_box_ui.Click += (s, a) =>
+			});
+			ShowMsgBox = Command.Create(this, () =>
 			{
 				MsgBox.Show(this, "Informative isn't it", "Massage Box", MsgBox.EButtons.YesNoCancel, MsgBox.EIcon.Exclamation);
-			};
-			m_menu_tests_log_ui.Click += (s, a) =>
+			});
+			ShowLogUI = Command.Create(this, () =>
 			{
 				var log_ui = new LogControl { LogEntryPattern = new Regex(@"^(?<Tag>.*?)\|(?<Level>.*?)\|(?<Timestamp>.*?)\|(?<Message>.*)", RegexOptions.Singleline | RegexOptions.Multiline | RegexOptions.CultureInvariant | RegexOptions.Compiled) };
 				var dlg = new Window { Title = "Log UI", Content = log_ui, ResizeMode = ResizeMode.CanResizeWithGrip };
 				dlg.Show();
-			};
-			m_menu_tests_pattern_editor.Click += (s, a) =>
+			});
+			ShowPatternEditor = Command.Create(this, () =>
 			{
 				new PatternEditorUI().Show();
-			};
-			m_menu_tests_progress_ui.Click += (s, a) =>
+			});
+			ShowProgressUI = Command.Create(this, () =>
 			{
 				var dlg = new ProgressUI(this, "Test Progress", "Testicles", System.Drawing.SystemIcons.Exclamation.ToBitmapSource(), CancellationToken.None, (u, _, p) =>
 				{
@@ -83,7 +76,8 @@ namespace TestWPF
 						});
 						Thread.Sleep(100);
 					}
-				}) { AllowCancel = true };
+				})
+				{ AllowCancel = true };
 
 				// Modal
 				using (dlg)
@@ -95,8 +89,8 @@ namespace TestWPF
 
 				// Non-modal
 				//dlg.Show();
-			};
-			m_menu_tests_prompt_ui.Click += (s, a) =>
+			});
+			ShowPromptUI = Command.Create(this, () =>
 			{
 				var dlg = new PromptUI(this)
 				{
@@ -110,37 +104,57 @@ namespace TestWPF
 				};
 				if (dlg.ShowDialog() == true)
 					double.Parse(dlg.Value);
-			};
-			m_menu_tests_view3d.Click += (s, a) =>
-			{
-				new View3dUI().Show();
-			};
-			m_menu_tests_tool_ui.Click += (s, a) =>
+			});
+			ShowToolWindow = Command.Create(this, () =>
 			{
 				new ToolUI { Owner = this }.Show();
-			};
-
-			m_btn_msgbox.Click += (s, a) =>
+			});
+			ShowView3DUI = Command.Create(this, () =>
 			{
-				new MsgBox(this, "The message what goes in my message box", "My Message Box", MsgBox.EButtons.OKCancel, MsgBox.EIcon.Information).ShowDialog();
-			};
-
-			//var grid = new Canvas();
-			//var btn = new ImageButton
-			//{
-			//	Width = 180,
-			//	Height=40,
-			//	Content = "Push ME!",
-			//	Template = (ControlTemplate)Resources["MyControl"]
-			//};
-
-			//grid.Children.Add(btn);
-			//this.Content = grid;
-
+				new View3dUI().Show();
+			});
+			Exit = Command.Create(this, Close);
 			DataContext = this;
 		}
 
+		public Command ShowChart { get; }
+		public Command ShowDiagram { get; }
+		public Command ShowDockContainer { get; }
+		public Command ShowMsgBox { get; }
+		public Command ShowLogUI { get; }
+		public Command ShowPatternEditor { get; }
+		public Command ShowProgressUI { get; }
+		public Command ShowPromptUI { get; }
+		public Command ShowToolWindow { get; }
+		public Command ShowView3DUI { get; }
+		public Command Exit { get; }
+
 		/// <summary>Some strings</summary>
-		public ICollectionView Strings { get; }
+		public ICollectionView Things { get; }
+
+		/// <summary>Modify the strings collection</summary>
+		private void ComboBoxAutoComplete_Update(object sender, EventArgs e)
+		{
+			var cb = (ComboBox)sender;
+			var view = (ICollectionView)cb.ItemsSource;
+			var list = (List<Thing>)view.SourceCollection;
+
+			list.Clear();
+			list.AddRange(m_things.Where(x => x.Name.Contains(cb.Text)));
+			view.Refresh();
+		}
+		private Thing[] m_things = new Thing[] { "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten" };
+
+		/// <summary></summary>
+		[DebuggerDisplay("{Name,nq}")]
+		private class Thing
+		{
+			public Thing(string name)
+			{
+				Name = name;
+			}
+			public string Name { get; }
+			public static implicit operator Thing(string name) { return new Thing(name); }
+		}
 	}
 }
