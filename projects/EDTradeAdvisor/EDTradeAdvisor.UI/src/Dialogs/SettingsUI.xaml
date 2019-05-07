@@ -10,6 +10,8 @@
 	WindowStartupLocation="CenterOwner"
 	ResizeMode="CanResizeWithGrip"
 	SizeToContent="Height"
+	Style="{StaticResource MainWindowStyle}"
+	Icon="{StaticResource TradingRank9}"
 	Title="Settings"
 	Width="550"
 	Height="250"
@@ -67,7 +69,7 @@
 		<!-- Use ED Journal file data -->
 		<StackPanel
 			Grid.Row="2"
-			IsEnabled="{Binding JournalFilesPath, Converter={conv:NotNullOrEmpty}}"
+			IsEnabled="{Binding JournalFilesDir, Converter={conv:NotNullOrEmpty}}"
 			Margin="20,3,3,3"
 			>
 			<CheckBox

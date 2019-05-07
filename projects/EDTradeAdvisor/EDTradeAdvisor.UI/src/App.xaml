@@ -8,6 +8,7 @@
 	>
 	<Application.Resources>
 		<ResourceDictionary>
+			<BitmapImage x:Key="TradingRank9" UriSource="/EDTradeAdvisor.UI;component/res/Art/rank-9-trading.png" />
 			<ResourceDictionary.MergedDictionaries>
 				<ResourceDictionary Source="/EDTradeAdvisor.UI;component/src/Skin/EDSkin.xaml"/>
 			</ResourceDictionary.MergedDictionaries>

@@ -171,7 +171,7 @@ namespace LDraw.API
 		public static Vec4 ToVec4(this v4 vec)
 		{
 			var v = new Vec4();
-			v.M.AddRange(vec.ToArray());
+			v.M.AddRange((float[])vec);
 			return v;
 		}
 	}

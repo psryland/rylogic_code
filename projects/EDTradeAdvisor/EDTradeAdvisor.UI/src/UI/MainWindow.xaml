@@ -11,8 +11,9 @@
 	Title="Elite Dangerous Trade Advisor"
 	ResizeMode="CanResizeWithGrip"
 	Style="{StaticResource MainWindowStyle}"
-	Height="450"
-	Width="800"
+	Icon="{StaticResource TradingRank9}"
+	Height="800"
+	Width="1200"
 	>
 	<Grid>
 		<Grid.RowDefinitions>
@@ -26,7 +27,7 @@
 		<Menu
 			Grid.Row="0"
 			>
-			<MenuItem Header="_File">
+			<MenuItem Header="_Menu" MinWidth="80" Padding="20,1,1,1">
 				<MenuItem Header="_Settings" Command="{Binding ShowSettings}"/>
 				<Separator/>
 				<MenuItem Header="_Rebuild Cache" Command="{Binding RebuildCache}"/>
@@ -38,7 +39,6 @@
 		<!-- Search fields -->
 		<Grid
 			Grid.Row="1"
-			Background="#FED"
 			>
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="Auto"/>
@@ -52,7 +52,7 @@
 			<!-- Start location -->
 			<Grid
 				Grid.Column="0"
-				Margin="2"
+				Margin="4"
 				>
 				<Grid.RowDefinitions>
 					<RowDefinition Height="Auto"/>
@@ -74,7 +74,8 @@
 						DisplayMemberPath="Name"
 						MaxDropDownHeight="100"
 						Margin="10,2,2,2"
-						MinWidth="150"
+						MinWidth="160"
+						TabIndex="1"
 						/>
 					<gui:ComboBoxAutoComplete
 						ItemsSource="{Binding OriginStations}"
@@ -83,7 +84,8 @@
 						DisplayMemberPath="Name"
 						MaxDropDownHeight="100"
 						Margin="10,2,2,2"
-						MinWidth="150"
+						MinWidth="160"
+						TabIndex="2"
 						/>
 				</StackPanel>
 
@@ -95,13 +97,14 @@
 					IsChecked="{Binding UseCurrentLocation}"
 					Margin="3"
 					Name="m_chk_use_current_location"
+					TabIndex="3"
 					/>
 			</Grid>
 
 			<!-- Destination -->
 			<Grid
 				Grid.Column="1"
-				Margin="2"
+				Margin="4"
 				>
 				<Grid.RowDefinitions>
 					<RowDefinition Height="Auto"/>
@@ -114,7 +117,7 @@
 					Grid.Row="0"
 					Margin="3"
 					>
-					<TextBlock Text="Destination System/Station:" />
+					<TextBlock Text="Destination System/Station:"/>
 					<gui:ComboBoxAutoComplete
 						IsEnabled="{Binding AnyDestination, Converter={conv:Not}}"
 						ItemsSource="{Binding DestStarSystemsShortList}"
@@ -123,7 +126,8 @@
 						DisplayMemberPath="Name"
 						MaxDropDownHeight="100"
 						Margin="10,2,2,2"
-						MinWidth="150"
+						MinWidth="160"
+						TabIndex="4"
 						/>
 					<gui:ComboBoxAutoComplete
 						IsEnabled="{Binding AnyDestination, Converter={conv:Not}}"
@@ -133,7 +137,8 @@
 						DisplayMemberPath="Name"
 						MaxDropDownHeight="100"
 						Margin="10,2,2,2"
-						MinWidth="150"
+						MinWidth="160"
+						TabIndex="5"
 						/>
 
 					<!-- Max Distance from Origin -->
@@ -146,13 +151,16 @@
 							ToolTip="Select if any destination will do"
 							IsChecked="{Binding AnyDestination}"
 							VerticalAlignment="Center"
+							TabIndex="6"
 							/>
 						<TextBox
 							ToolTip="Sets a limit on how far to search away from the origin system"
 							Text="{Binding MaxTradeRouteDistance, StringFormat={}{0:N0}}"
+							Style="{StaticResource StyleField}"
 							IsEnabled="{Binding AnyDestination}"
 							HorizontalContentAlignment="Right"
 							MinWidth="60"
+							TabIndex="7"
 							/>
 					</StackPanel>
 				</StackPanel>
@@ -161,7 +169,7 @@
 			<!-- Constraints -->
 			<StackPanel
 				Grid.Column="2"
-				Margin="2"
+				Margin="4"
 				>
 
 				<!-- Cargo capacity -->
@@ -169,11 +177,17 @@
 					Orientation="Horizontal"
 					Margin="3"
 					>
-					<TextBlock Text="Cargo Capacity: "/>
+					<TextBlock
+						Text="Cargo Capacity: "
+						VerticalAlignment="Center"
+						/>
 					<TextBox
 						Text="{Binding CargoCapacity, StringFormat={}{0:N0}}"
+						Style="{StaticResource StyleField}"
 						HorizontalContentAlignment="Right"
-						MinWidth="40"
+						VerticalAlignment="Center"
+						MinWidth="50"
+						TabIndex="8"
 						/>
 				</StackPanel>
 
@@ -182,12 +196,17 @@
 					Orientation="Vertical"
 					Margin="3"
 					>
-					<TextBlock Text="Available Credits: "/>
+					<TextBlock
+						Text="Available Credits: "
+						/>
 					<TextBox
 						Text="{Binding AvailableCredits, StringFormat={}{0:N0}}"
+						Style="{StaticResource StyleField}"
 						HorizontalContentAlignment="Right"
+						VerticalAlignment="Center"
 						MinWidth="40"
 						Margin="10,0,0,0"
+						TabIndex="9"
 						/>
 				</StackPanel>
 
@@ -196,12 +215,18 @@
 					Orientation="Horizontal"
 					Margin="3"
 					>
-					<TextBlock Text="Jump Range: "/>
+					<TextBlock
+						Text="Jump Range: "
+						VerticalAlignment="Center"
+						/>
 					<TextBox
 						Text="{Binding MaxJumpRange, StringFormat={}{0:N2}}"
+						Style="{StaticResource StyleField}"
 						ToolTip="The maximum jump distance when fully loaded"
 						HorizontalContentAlignment="Right"
-						MinWidth="40"
+						VerticalAlignment="Center"
+						MinWidth="70"
+						TabIndex="10"
 						/>
 				</StackPanel>
 			</StackPanel>
@@ -209,7 +234,7 @@
 			<!-- Constraints -->
 			<StackPanel
 				Grid.Column="3"
-				Margin="2"
+				Margin="4"
 				>
 
 				<!-- Station distance -->
@@ -223,8 +248,10 @@
 						/>
 					<TextBox
 						Text="{Binding MaxStationDistance}"
+						Style="{StaticResource StyleField}"
 						HorizontalContentAlignment="Right"
-						MinWidth="40"
+						MinWidth="50"
+						TabIndex="11"
 						/>
 				</StackPanel>
 
@@ -240,7 +267,10 @@
 					<ComboBox
 						ItemsSource="{Binding RequiredPadSize, Converter={conv:EnumValues}}"
 						SelectedItem="{Binding RequiredPadSize}"
-						MinWidth="60"
+						HorizontalContentAlignment="Left"
+						Margin="10,0,0,0"
+						MinWidth="70"
+						TabIndex="12"
 						/>
 				</StackPanel>
 
@@ -252,9 +282,10 @@
 					<CheckBox 
 						Content="Ignore Planet Bases"
 						IsChecked="{Binding IgnorePlanetBases}"
+						TabIndex="13"
 						/>
 				</StackPanel>
-				
+
 				<!-- Permit systems -->
 				<StackPanel
 					Orientation="Horizontal"
@@ -263,6 +294,7 @@
 					<CheckBox
 						Content="Ignore Permit Systems"
 						IsChecked="{Binding IgnorePermitSystems}"
+						TabIndex="14"
 						/>
 				</StackPanel>
 			</StackPanel>
@@ -274,25 +306,9 @@
 				Content="Active"
 				Width="64"
 				Height="64"
-				Margin="8"
-				>
-				<ToggleButton.Style>
-					<Style TargetType="{x:Type ToggleButton}">
-						<Setter Property="BorderBrush" Value="#F50"/>
-						<Setter Property="BorderThickness" Value="2"/>
-						<Setter Property="Background" Value="#000"/>
-						<Setter Property="Foreground" Value="#F80"/>
-						<Style.Triggers>
-							<Trigger Property="IsChecked" Value="True">
-								<Setter Property="BorderBrush" Value="#F50"/>
-								<Setter Property="Background" Value="#A50"/>
-								<Setter Property="Foreground" Value="#F80"/>
-							</Trigger>
-						</Style.Triggers>
-					</Style>
-				</ToggleButton.Style>
-			</ToggleButton>
-
+				Margin="32,16,32,16"
+				TabIndex="15"
+				/>
 		</Grid>
 
 		<!-- Search results and log -->
@@ -305,45 +321,50 @@
 				<DataGrid
 					HeadersVisibility="Column"
 					AutoGenerateColumns="False"
-					GridLinesVisibility="None"
 					ItemsSource="{Binding TradeRoutes}"
 					SelectedItem="{Binding TradeRoutes/}"
-					MinRowHeight="25"
 					IsReadOnly="True"
 					>
 					<DataGrid.Columns>
 						<DataGridTextColumn
 							Header="Commodity"
+							CellStyle="{StaticResource DataGridCellStyleLeft}"
 							Binding="{Binding CommodityName}"
 							Width="*"
 							/>
 						<DataGridTextColumn
 							Header="Amount"
+							CellStyle="{StaticResource DataGridCellStyleRight}"
 							Binding="{Binding Quantity}"
-							Width="*"
+							Width="0.5*"
 							/>
 						<DataGridTextColumn
-							Header="Destination System"
+							Header="System"
+							CellStyle="{StaticResource DataGridCellStyleLeft}"
 							Binding="{Binding Destination.System.Name}"
 							Width="*"
 							/>
 						<DataGridTextColumn
-							Header="Destination Station"
+							Header="Station"
+							CellStyle="{StaticResource DataGridCellStyleLeft}"
 							Binding="{Binding Destination.Station.Name}"
 							Width="*"
 							/>
 						<DataGridTextColumn
 							Header="System Distance"
+							CellStyle="{StaticResource DataGridCellStyleCenter}"
 							Binding="{Binding Distance, StringFormat={}{0:N2}}"
-							Width="*"
+							Width="0.5*"
 							/>
 						<DataGridTextColumn
 							Header="Station Distance"
+							CellStyle="{StaticResource DataGridCellStyleCenter}"
 							Binding="{Binding Destination.Station.Distance}"
-							Width="*"
+							Width="0.5*"
 							/>
 						<DataGridTextColumn
 							Header="Profit"
+							CellStyle="{StaticResource DataGridCellStyleCenter}"
 							Binding="{Binding Profit, StringFormat={}{0:N0}}"
 							Width="*"
 							/>
@@ -374,7 +395,10 @@
 		<StatusBar
 			Grid.Row="3"
 			>
-			<StatusBarItem Content="{Binding StatusMsg}"/>
+			<StatusBarItem
+				Content="{Binding StatusMsg}"
+				MinHeight="22"
+				/>
 		</StatusBar>
 	</Grid>
 </Window>

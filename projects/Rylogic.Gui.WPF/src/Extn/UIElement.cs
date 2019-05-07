@@ -52,6 +52,10 @@ namespace Rylogic.Gui.WPF
 			}
 			return null;
 		}
+		public static DependencyObject FindVisualChild(this DependencyObject parent, Func<DependencyObject, bool> pred = null)
+		{
+			return FindVisualChild<DependencyObject>(parent, pred);
+		}
 
 		/// <summary>
 		/// Finds a parent in the visual tree matching the specified type.
@@ -72,6 +76,10 @@ namespace Rylogic.Gui.WPF
 					break;
 			}
 			return null;
+		}
+		public static DependencyObject FindVisualParent(this DependencyObject item, Func<DependencyObject, bool> pred = null, DependencyObject root = null)
+		{
+			return FindVisualParent<DependencyObject>(item, pred, root);
 		}
 
 		/// <summary>Returns true if 'child' is a descendant of this object in the visual tree</summary>

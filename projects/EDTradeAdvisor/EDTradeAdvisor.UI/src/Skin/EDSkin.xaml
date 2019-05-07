@@ -1,75 +1,813 @@
 ﻿<ResourceDictionary
 	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+	xmlns:ap="clr-namespace:Rylogic.Gui.AttachedProperties;assembly=Rylogic.Gui.WPF"
 	>
 
+	<!-- Fonts -->
+	<FontFamily x:Key="Sintony_Regular">pack://application:,,,/res/Fonts/Sintony/#Sintony</FontFamily>
+	<FontFamily x:Key="Sintony_Bold">pack://application:,,,/res/Fonts/Sintony/#Sintony</FontFamily>
+	<FontFamily x:Key="EuroCaps">pack://application:,,,/res/Fonts/EuroCaps/#Euro Caps</FontFamily>
+
+	<!-- Colours -->
+	<Color x:Key="ColorBorder">#630</Color>
+	<Color x:Key="ColorBkgd">#180A00</Color>
+	<Color x:Key="ColorFrgd">#F80</Color>
+	<Color x:Key="ColorSelect">#A60</Color>
+	<Color x:Key="ColorDisabled">#444</Color>
+	<SolidColorBrush x:Key="Bdr" Color="{StaticResource ColorBorder}"/>
+	<SolidColorBrush x:Key="Bkgd" Color="{StaticResource ColorBkgd}"/>
+	<SolidColorBrush x:Key="Frgd" Color="{StaticResource ColorFrgd}"/>
+	<SolidColorBrush x:Key="Seld" Color="{StaticResource ColorSelect}"/>
+
 	<!-- Window Style -->
+	<ControlTemplate
+		x:Key="WindowTemplate"
+		TargetType="{x:Type Window}"
+		>
+		<Grid
+			Background="{StaticResource Bkgd}"
+			Margin="0"
+			>
+			<AdornerDecorator>
+				<ContentPresenter/>
+			</AdornerDecorator>
+			<ResizeGrip
+				Name="WindowResizeGrip"
+				HorizontalAlignment="Right"
+				VerticalAlignment="Bottom"
+				Visibility="Collapsed"
+				IsTabStop="false"
+				Foreground="#F80"
+				/>
+		</Grid>
+		<ControlTemplate.Triggers>
+			<Trigger Property="ResizeMode" Value="CanResizeWithGrip">
+				<Setter TargetName="WindowResizeGrip" Property="Visibility" Value="Visible" />
+			</Trigger>
+		</ControlTemplate.Triggers>
+	</ControlTemplate>
 	<Style x:Key="MainWindowStyle" TargetType="{x:Type Window}">
-		<Setter Property="Template">
-			<Setter.Value>
-				<ControlTemplate TargetType="{x:Type Window}">
-					<Grid
-						Background="#000"
-						Margin="0"
-						>
-						<AdornerDecorator>
-							<ContentPresenter/>
-						</AdornerDecorator>
-						<ResizeGrip
-							Name="WindowResizeGrip"
-							HorizontalAlignment="Right"
-							VerticalAlignment="Bottom"
-							Visibility="Collapsed"
-							IsTabStop="false"
-							Foreground="#F80"
-							/>
-					</Grid>
-					<ControlTemplate.Triggers>
-						<Trigger
-							Property="ResizeMode"
-							Value="CanResizeWithGrip"
-							>
-							<Setter
-								TargetName="WindowResizeGrip"
-								Property="Visibility"
-								Value="Visible"
-								/>
-						</Trigger>
-					</ControlTemplate.Triggers>
-				</ControlTemplate>
-			</Setter.Value>
-		</Setter>
+		<Setter Property="FontFamily" Value="{StaticResource EuroCaps}"/>
+		<Setter Property="FontSize" Value="16"/>
+		<Setter Property="Template" Value="{StaticResource WindowTemplate}"/>
 	</Style>
 
-	<!-- Menu Style -->
-	<Style TargetType="{x:Type Menu}">
-		<Setter Property="BorderBrush" Value="#000"/>
-		<Setter Property="Background" Value="#000"/>
-		<Setter Property="Foreground" Value="#F80"/>
+	<!-- TextBlock style -->
+	<Style TargetType="{x:Type TextBlock}">
+		<Setter Property="Foreground" Value="{StaticResource Frgd}"/>
+		<Setter Property="FontSize" Value="12"/>
 	</Style>
-	<Style TargetType="{x:Type MenuItem}">
-		<Setter Property="Margin" Value="0"/>
-		<Setter Property="BorderBrush" Value="#000"/>
-		<Setter Property="Background" Value="#000"/>
-		<Setter Property="Foreground" Value="#F80"/>
+
+	<!-- TextBox -->
+	<ControlTemplate
+		x:Key="TextBoxTemplate"
+		TargetType="{x:Type TextBox}"
+		>
+		<Border
+			x:Name="border"
+			BorderThickness="2"
+			BorderBrush="{StaticResource Bdr}"
+			Background="{StaticResource Bkgd}"
+			gui:Prop.Foreground="{StaticResource Frgd}"
+			>
+			<ScrollViewer x:Name="PART_ContentHost"/>
+		</Border>
+	</ControlTemplate>
+	<Style x:Key="StyleField" TargetType="{x:Type TextBox}">
+		<Setter Property="Template" Value="{StaticResource TextBoxTemplate}"/>
+		<Setter Property="Foreground" Value="White"/>
+		<Setter Property="CaretBrush" Value="{StaticResource Frgd}"/>
+		<Setter Property="SelectionBrush" Value="{StaticResource Seld}"/>
+		<Setter Property="FontSize" Value="16"/>
+	</Style>
+
+	<!-- ToolTip Style -->
+	<Style TargetType="{x:Type ToolTip}">
+		<Setter Property="Background" Value="{StaticResource Bkgd}"/>
 	</Style>
 	
-	<!-- Toggle Button Style -->
-	<Style TargetType="{x:Type ToggleButton}">
-		<Style.Triggers>
-			<Trigger Property="IsChecked" Value="True">
-				<Setter Property="Background" Value="#ff8000"/>
+	<!-- Menu Style -->
+	<ControlTemplate
+		x:Key="MenuItemTemplate"
+		TargetType="{x:Type MenuItem}">
+		<Grid
+			x:Name="ItemPanel"
+			SnapsToDevicePixels="true"
+			Margin="1"
+			>
+			<StackPanel Orientation="Horizontal">
+				<ContentPresenter
+					x:Name="Icon"
+					ContentSource="Icon"
+					SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+					VerticalAlignment="Center"
+					Visibility="Collapsed"
+					Margin="4,0,6,0"
+					/>
+				<Path
+					x:Name="GlyphPanel"
+					Fill="{TemplateBinding Foreground}"
+					FlowDirection="LeftToRight"
+					VerticalAlignment="Center"
+					Visibility="Collapsed"
+					Margin="7,0,0,0"
+					/>
+				<Label
+					x:Name="ItemContent"
+					Content="{TemplateBinding Header}"
+					Foreground="{TemplateBinding Foreground}"
+					SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+					HorizontalAlignment="{TemplateBinding HorizontalAlignment}"
+					HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+					Padding="{TemplateBinding Padding}"
+					Margin="{TemplateBinding Margin}"
+					/>
+				<!--<ContentPresenter
+					x:Name="ItemContent"
+					ContentSource="Header"
+					RecognizesAccessKey="True"
+					SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+					HorizontalAlignment="{TemplateBinding HorizontalAlignment}"
+					Margin="{TemplateBinding Margin}"
+					MinWidth="80"
+					/>-->
+			</StackPanel>
+			<Popup
+				x:Name="PART_Popup"
+				IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
+				PopupAnimation="{DynamicResource {x:Static SystemParameters.MenuPopupAnimationKey}}"
+				AllowsTransparency="true"
+				HorizontalOffset="1"
+				Focusable="false"
+				Placement="Bottom"
+				VerticalOffset="-1"
+				>
+				<Border
+					BorderThickness="2"
+					BorderBrush="{StaticResource Bdr}"
+					Background="{StaticResource Bkgd}"
+					>
+					<ScrollViewer
+						x:Name="SubMenuScrollViewer"
+						CanContentScroll="true"
+						Style="{DynamicResource {ComponentResourceKey ResourceId=MenuScrollViewer, TypeInTargetAssembly={x:Type FrameworkElement}}}"
+						>
+						<Grid
+							RenderOptions.ClearTypeHint="Enabled"
+							>
+							<ItemsPresenter
+								x:Name="ItemsPresenter"
+								Grid.IsSharedSizeScope="true"
+								SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+								KeyboardNavigation.DirectionalNavigation="Cycle"
+								KeyboardNavigation.TabNavigation="Cycle"
+								Margin="2"
+								/>
+						</Grid>
+					</ScrollViewer>
+				</Border>
+			</Popup>
+		</Grid>
+		<ControlTemplate.Triggers>
+			<Trigger Property="Grid.IsMouseOver" Value="True">
+				<Setter TargetName="ItemContent" Property="Foreground" Value="{StaticResource Bkgd}"/>
+				<Setter TargetName="ItemPanel" Property="Grid.Background" Value="{StaticResource Frgd}"/>
 			</Trigger>
-			<Trigger Property="IsChecked" Value="False">
-				<Setter Property="Background" Value="#ff8000"/>
-			</Trigger>
-		</Style.Triggers>
+		</ControlTemplate.Triggers>
+	</ControlTemplate>
+	<Style TargetType="{x:Type Menu}">
+		<Setter Property="BorderThickness" Value="0,1,0,1"/>
+		<Setter Property="BorderBrush" Value="{StaticResource Bdr}"/>
+		<Setter Property="Background" Value="{StaticResource Bkgd}"/>
+		<Setter Property="Foreground" Value="{StaticResource Frgd}"/>
+		<Setter Property="Margin" Value="2"/>
+	</Style>
+	<Style x:Key="{x:Static MenuItem.SeparatorStyleKey}" TargetType="{x:Type Separator}">
+		<Setter Property="Background" Value="{StaticResource Bdr}"/>
+		<Setter Property="HorizontalAlignment" Value="Stretch"/>
+	</Style>
+	<Style TargetType="{x:Type MenuItem}">
+		<Setter Property="Template" Value="{StaticResource MenuItemTemplate}"/>
+		<Setter Property="FontFamily" Value="{StaticResource EuroCaps}"/>
+		<Setter Property="FontSize" Value="12"/>
+		<Setter Property="Margin" Value="1"/>
 	</Style>
 
 	<!-- Status Bar Style -->
 	<Style TargetType="{x:Type StatusBar}">
-		<Setter Property="BorderBrush" Value="#000"/>
-		<Setter Property="Background" Value="#000"/>
-		<Setter Property="Foreground" Value="#F80"/>
+		<Setter Property="BorderBrush" Value="{StaticResource Bdr}"/>
+		<Setter Property="Background" Value="{StaticResource Bkgd}"/>
+		<Setter Property="Foreground" Value="{StaticResource Frgd}"/>
 	</Style>
+	<Style TargetType="{x:Type StatusBarItem}">
+		<Setter Property="FontFamily" Value="{StaticResource Sintony_Regular}"/>
+		<Setter Property="BorderBrush" Value="{StaticResource Bdr}"/>
+		<Setter Property="Background" Value="{StaticResource Bkgd}"/>
+		<Setter Property="Foreground" Value="{StaticResource Frgd}"/>
+	</Style>
+
+	<!-- CheckBox Style -->
+	<ControlTemplate
+		x:Key="CheckBoxTemplate"
+		TargetType="{x:Type CheckBox}"
+		>
+		<BulletDecorator Background="Transparent">
+			<BulletDecorator.Bullet>
+				<Border
+					x:Name="Border"
+					BorderThickness="0"
+					Background="{StaticResource Bkgd}"
+					Width="18"
+					Height="18"
+					>
+					<Grid>
+						<Path
+							x:Name="Surround"
+							StrokeThickness="2"
+							VerticalAlignment="Center"
+							SnapsToDevicePixels="False"
+							Stroke="{StaticResource Frgd}"
+							Data="M 5,0 L 0,0 L 0,16 L 5,16 M 11,0 L 16,0 L 16,16 L 11,16"
+							/>
+						<Rectangle
+							x:Name="CheckMark"
+							Width="8"
+							Height="8"
+							Margin="4,0,0,0"
+							HorizontalAlignment="Left"
+							VerticalAlignment="Center"
+							SnapsToDevicePixels="False"
+							Fill="{StaticResource Frgd}"
+							Visibility="Collapsed"
+							/>
+						<Path
+							x:Name="InderminateMark"
+							Width="8"
+							Height="8"
+							SnapsToDevicePixels="False"
+							StrokeThickness="2"
+							Stroke="{StaticResource Frgd}"
+							Data="M 0 7 L 7 0"
+							Visibility="Collapsed"
+							/>
+					</Grid>
+				</Border>
+			</BulletDecorator.Bullet>
+			<ContentPresenter
+				Margin="4,0,0,0"
+				VerticalAlignment="Center"
+				HorizontalAlignment="Left"
+				RecognizesAccessKey="True"
+				/>
+
+			<VisualStateManager.VisualStateGroups>
+				<VisualStateGroup x:Name="CommonStates">
+					<VisualState x:Name="Normal" />
+					<VisualState x:Name="MouseOver">
+						<Storyboard>
+							<ColorAnimation
+								Storyboard.TargetName="Border"
+								Storyboard.TargetProperty="Background.Color"
+								To="{StaticResource ColorSelect}"
+								/>
+						</Storyboard>
+					</VisualState>
+					<VisualState x:Name="Pressed">
+						<Storyboard>
+							<ColorAnimation
+								Storyboard.TargetName="Border"
+								Storyboard.TargetProperty="Background.Color"
+								To="{StaticResource ColorSelect}"
+								/>
+						</Storyboard>
+					</VisualState>
+					<VisualState x:Name="Disabled" />
+				</VisualStateGroup>
+				<VisualStateGroup x:Name="CheckStates">
+					<VisualState x:Name="Checked">
+						<Storyboard>
+							<ObjectAnimationUsingKeyFrames
+								Storyboard.TargetName="CheckMark"
+								Storyboard.TargetProperty="(UIElement.Visibility)"
+								>
+								<DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}" />
+							</ObjectAnimationUsingKeyFrames>
+						</Storyboard>
+					</VisualState>
+					<VisualState x:Name="Unchecked" />
+					<VisualState x:Name="Indeterminate">
+						<Storyboard>
+							<ObjectAnimationUsingKeyFrames
+								Storyboard.TargetName="InderminateMark"
+								Storyboard.TargetProperty="(UIElement.Visibility)" 
+								>
+								<DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}" />
+							</ObjectAnimationUsingKeyFrames>
+						</Storyboard>
+					</VisualState>
+				</VisualStateGroup>
+			</VisualStateManager.VisualStateGroups>
+		</BulletDecorator>
+		<!--<Grid
+			SnapsToDevicePixels="True"
+			>
+			<Border
+				x:Name="border"
+				>
+				<TextBlock
+				
+					/>
+			</Border>
+		</Grid>-->
+	</ControlTemplate>
+	<Style TargetType="{x:Type CheckBox}">
+		<Setter Property="Foreground" Value="{StaticResource Frgd}"/>
+		<Setter Property="Template" Value="{StaticResource CheckBoxTemplate}"/>
+	</Style>
+	
+	<!-- Toggle Button Style -->
+	<ControlTemplate
+		x:Key="ToggleButtonControlTemplate"
+		TargetType="{x:Type ToggleButton}"
+		>
+		<Grid>
+			<Border
+				x:Name="border"
+				BorderThickness="2"
+				Background="{StaticResource Bkgd}"
+				BorderBrush="{StaticResource Bdr}"
+				gui:Prop.Foreground="{StaticResource Frgd}"
+				>
+				<ContentPresenter
+					x:Name="ContentSite"
+					VerticalAlignment="Center"
+					HorizontalAlignment="Center"
+					/>
+			</Border>
+
+			<VisualStateManager.VisualStateGroups>
+				<VisualStateGroup x:Name="CommonStates">
+					<VisualState x:Name="Normal" />
+					<VisualState x:Name="Pressed">
+						<Storyboard>
+							<ColorAnimation
+								Duration="0"
+								Storyboard.TargetName="border"
+								Storyboard.TargetProperty="Background.Color"
+								To="{StaticResource ColorFrgd}"
+								/>
+							<ColorAnimation
+								Duration="0"
+								Storyboard.TargetName="border"
+								Storyboard.TargetProperty="(gui:Prop.Foreground).Color"
+								To="{StaticResource ColorBkgd}"
+								/>
+						</Storyboard>
+					</VisualState>
+					<VisualState x:Name="MouseOver">
+						<Storyboard>
+							<ColorAnimation
+								Duration="0"
+								Storyboard.TargetName="border"
+								Storyboard.TargetProperty="BorderBrush.Color"
+								To="{StaticResource ColorFrgd}"
+								/>
+						</Storyboard>
+					</VisualState>
+					<VisualState x:Name="Checked">
+						<Storyboard>
+							<ColorAnimation
+								Duration="0"
+								Storyboard.TargetName="border"
+								Storyboard.TargetProperty="Background.Color"
+								To="{StaticResource ColorFrgd}"
+								/>
+							<ColorAnimation
+								Duration="0"
+								Storyboard.TargetName="border"
+								Storyboard.TargetProperty="(gui:Prop.Foreground).Color"
+								To="{StaticResource ColorBkgd}"
+								/>
+						</Storyboard>
+					</VisualState>
+					<VisualState x:Name="Disabled">
+						<Storyboard>
+							<ColorAnimation
+								Duration="0"
+								Storyboard.TargetName="Border"
+								Storyboard.TargetProperty="BorderBrush.Color"
+								To="{StaticResource ColorDisabled}"
+								/>
+						</Storyboard>
+					</VisualState>
+				</VisualStateGroup>
+			</VisualStateManager.VisualStateGroups>
+		</Grid>
+	</ControlTemplate>
+	<Style TargetType="{x:Type ToggleButton}">
+		<Setter Property="SnapsToDevicePixels" Value="true"/>
+		<Setter Property="OverridesDefaultStyle" Value="true"/>
+		<Setter Property="Template" Value="{StaticResource ToggleButtonControlTemplate}"/>
+	</Style>
+
+	<!-- ComboBox Style -->
+	<ControlTemplate
+		x:Key="ComboBoxToggleButton"
+        TargetType="{x:Type ToggleButton}"
+		>
+		<Grid>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition />
+				<ColumnDefinition Width="20" />
+			</Grid.ColumnDefinitions>
+
+			<Border
+				x:Name="Border"
+				Grid.Column="0"
+				Grid.ColumnSpan="2"
+				BorderThickness="1"
+				BorderBrush="{StaticResource Bdr}"
+				Background="{StaticResource Bkgd}"
+				/>
+			<Path
+				x:Name="Arrow"
+				Grid.Column="1"
+				HorizontalAlignment="Center"
+				VerticalAlignment="Center"
+				Data="M 0,0 L 4,4 L 8,0 Z"
+				Fill="{StaticResource Frgd}"
+				/>
+
+			<VisualStateManager.VisualStateGroups>
+				<VisualStateGroup x:Name="CommonStates">
+					<VisualState x:Name="Normal" />
+					<VisualState x:Name="MouseOver">
+						<Storyboard>
+							<ColorAnimation
+								Duration="0"
+								Storyboard.TargetName="Border"
+								Storyboard.TargetProperty="BorderBrush.Color"
+								To="{StaticResource ColorFrgd}"
+								/>
+						</Storyboard>
+					</VisualState>
+					<VisualState x:Name="Pressed" />
+					<VisualState x:Name="Disabled">
+						<Storyboard>
+							<ColorAnimation
+								Duration="0"
+								Storyboard.TargetName="Border"
+								Storyboard.TargetProperty="BorderBrush.Color"
+								To="{StaticResource ColorDisabled}"
+								/>
+							<ColorAnimation
+								Duration="0"
+								Storyboard.TargetName="Arrow"
+								Storyboard.TargetProperty="Fill.Color"
+								To="{StaticResource ColorDisabled}"
+								/>
+						</Storyboard>
+					</VisualState>
+				</VisualStateGroup>
+			</VisualStateManager.VisualStateGroups>
+
+		</Grid>
+	</ControlTemplate>
+	<ControlTemplate
+		x:Key="ComboBoxEditableTextBox"
+        TargetType="{x:Type TextBox}"
+		>
+		<Border
+			x:Name="PART_ContentHost"
+			Focusable="False"
+			/>
+	</ControlTemplate>
+	<ControlTemplate
+		x:Key="ComboBoxTemplate"
+		TargetType="{x:Type ComboBox}"
+		>
+		<Grid x:Name="TemplateRoot">
+			<ToggleButton
+				x:Name="ToggleButton"
+				Grid.Column="0"
+				Grid.ColumnSpan="2"
+				Template="{StaticResource ComboBoxToggleButton}"
+				IsChecked="{Binding Path=IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+				ClickMode="Press"
+				Focusable="false"
+				/>
+			<ContentPresenter
+				x:Name="ContentSite"
+				Grid.Column="0"
+				IsHitTestVisible="False"
+				Content="{TemplateBinding ComboBox.SelectionBoxItem}"
+				ContentTemplate="{TemplateBinding ComboBox.SelectionBoxItemTemplate}"
+				ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+				VerticalAlignment="Stretch"
+				HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+				Visibility="Visible"
+				Margin="3,3,23,3"
+				/>
+			<TextBox
+				x:Name="PART_EditableTextBox"
+				Grid.Column="0"
+				Text="{TemplateBinding Text}"
+				IsReadOnly="{TemplateBinding IsReadOnly}"
+				Template="{StaticResource ComboBoxEditableTextBox}"
+				SelectionBrush="{StaticResource Seld}"
+				CaretBrush="{StaticResource Frgd}"
+				Foreground="White"
+				HorizontalAlignment="Stretch"
+				VerticalAlignment="Center"
+				Background="Transparent"
+				BorderThickness="0"
+				Visibility="Hidden"
+				Focusable="True"
+				Margin="0,0,20,0"
+				/>
+			<Popup
+				x:Name="PART_Popup"
+				Placement="Bottom"
+				IsOpen="{TemplateBinding IsDropDownOpen}"
+				AllowsTransparency="False"
+				Focusable="False"
+				PopupAnimation="Slide"
+				>
+				<Grid
+					x:Name="DropDown"
+					SnapsToDevicePixels="True"
+					MinWidth="{TemplateBinding ActualWidth}"
+					MaxHeight="{TemplateBinding MaxDropDownHeight}"
+					>
+					<Border
+						x:Name="DropDownBorder"
+						BorderThickness="1"
+						BorderBrush="{StaticResource Bdr}"
+						Background="{StaticResource Bkgd}"
+						/>
+					<ScrollViewer
+						Margin="4,6,4,6"
+						SnapsToDevicePixels="True"
+						>
+						<StackPanel
+							IsItemsHost="True"
+							KeyboardNavigation.DirectionalNavigation="Contained"
+							/>
+					</ScrollViewer>
+				</Grid>
+			</Popup>
+
+			<VisualStateManager.VisualStateGroups>
+				<VisualStateGroup x:Name="CommonStates">
+					<VisualState x:Name="Normal" />
+					<VisualState x:Name="MouseOver" />
+					<VisualState x:Name="Focused" />
+					<VisualState x:Name="Disabled" />
+				</VisualStateGroup>
+				<VisualStateGroup x:Name="EditStates">
+					<VisualState x:Name="Editable">
+						<Storyboard>
+							<ObjectAnimationUsingKeyFrames
+								Storyboard.TargetName="PART_EditableTextBox"
+								Storyboard.TargetProperty="(UIElement.Visibility)"
+								>
+								<DiscreteObjectKeyFrame
+									KeyTime="0"
+									Value="{x:Static Visibility.Visible}"
+									/>
+							</ObjectAnimationUsingKeyFrames>
+							<ObjectAnimationUsingKeyFrames
+								Storyboard.TargetName="ContentSite"
+								Storyboard.TargetProperty="(UIElement.Visibility)"
+								>
+								<DiscreteObjectKeyFrame
+									KeyTime="0"
+									Value="{x:Static Visibility.Hidden}"
+									/>
+							</ObjectAnimationUsingKeyFrames>
+						</Storyboard>
+					</VisualState>
+					<VisualState x:Name="Uneditable" />
+				</VisualStateGroup>
+			</VisualStateManager.VisualStateGroups>
+		</Grid>
+
+		<ControlTemplate.Triggers>
+			<Trigger Property="HasItems" Value="false">
+				<Setter TargetName="DropDownBorder" Property="MinHeight" Value="95" />
+			</Trigger>
+			<Trigger Property="IsGrouping" Value="true">
+				<Setter Property="ScrollViewer.CanContentScroll" Value="false" />
+			</Trigger>
+		</ControlTemplate.Triggers>
+	</ControlTemplate>
+	<Style x:Key="StyleComboBox" TargetType="{x:Type ComboBox}">
+		<Setter Property="SnapsToDevicePixels" Value="true" />
+		<Setter Property="OverridesDefaultStyle" Value="true" />
+		<Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto" />
+		<Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+		<Setter Property="ScrollViewer.CanContentScroll" Value="true" />
+		<Setter Property="FrameworkElement.FocusVisualStyle" Value="{x:Null}" />
+		<Setter Property="MinWidth" Value="120" />
+		<Setter Property="MinHeight" Value="20" />
+		<Setter Property="Template" Value="{StaticResource ComboBoxTemplate}"/>
+	</Style>
+	<Style TargetType="{x:Type ComboBox}" BasedOn="{StaticResource StyleComboBox}"/>
+	<Style TargetType="{x:Type gui:ComboBoxAutoComplete}" BasedOn="{StaticResource StyleComboBox}"/>
+
+	<!-- Tab Control Style -->
+	<ControlTemplate
+		x:Key="TabControlTemplate"
+		TargetType="{x:Type TabControl}">
+		<Grid
+			KeyboardNavigation.TabNavigation="Local"
+			>
+			<Grid.RowDefinitions>
+				<RowDefinition/>
+				<RowDefinition Height="Auto"/>
+			</Grid.RowDefinitions>
+			<Border
+				x:Name="border"
+				Grid.Row="0"
+				BorderThickness="1"
+				BorderBrush="{StaticResource Bdr}"
+				/>
+			<ContentPresenter
+				Grid.Row="0"
+				x:Name="PART_SelectedContentHost"
+				ContentSource="SelectedContent"
+				Margin="4"
+				/>
+			<TabPanel
+				x:Name="HeaderPanel"
+				Grid.Row="1"
+				Panel.ZIndex="1"
+				IsItemsHost="True"
+				Background="Transparent"
+				/>
+		</Grid>
+	</ControlTemplate>
+	<ControlTemplate
+		x:Key="TabItemTemplate"
+		TargetType="{x:Type TabItem}"
+		>
+		<Grid>
+			<Border
+				x:Name="border"
+				BorderThickness="1"
+				BorderBrush="{StaticResource Bdr}"
+				Background="{StaticResource Bkgd}"
+				gui:Prop.Foreground="{StaticResource Frgd}"
+				>
+				<ContentPresenter
+					x:Name="ContentSite"
+					ContentSource="Header"
+					VerticalAlignment="Center"
+					HorizontalAlignment="Center"
+					Margin="{TemplateBinding Padding}"
+					/>
+			</Border>
+
+			<VisualStateManager.VisualStateGroups>
+				<VisualStateGroup x:Name="SelectionStates">
+					<VisualState x:Name="Unselected" />
+					<VisualState x:Name="Selected">
+						<Storyboard>
+							<ColorAnimation
+								Storyboard.TargetName="border"
+								Storyboard.TargetProperty="Background.Color"
+								To="{StaticResource ColorFrgd}"
+								Duration="0"
+								/>
+							<ColorAnimation
+								Storyboard.TargetName="border"
+								Storyboard.TargetProperty="(gui:Prop.Foreground).Color"
+								To="{StaticResource ColorBkgd}"
+								Duration="0"
+								/>
+							<ThicknessAnimation
+								Storyboard.TargetName="border"
+								Storyboard.TargetProperty="(Border.BorderThickness)"
+								To="1,1,1,0"
+								Duration="0"
+								/>
+						</Storyboard>
+					</VisualState>
+				</VisualStateGroup>
+				<VisualStateGroup x:Name="CommonStates">
+					<VisualState x:Name="Normal" />
+					<VisualState x:Name="MouseOver">
+						<Storyboard>
+							<ColorAnimation
+								Storyboard.TargetName="border"
+								Storyboard.TargetProperty="BorderBrush.Color"
+								To="{StaticResource ColorFrgd}"
+								Duration="0"
+								/>
+						</Storyboard>
+					</VisualState>
+					<VisualState x:Name="Disabled">
+						<Storyboard>
+							<ColorAnimation
+								Storyboard.TargetName="border"
+								Storyboard.TargetProperty="BorderBrush.Color"
+								To="{StaticResource ColorDisabled}"
+								Duration="0"
+								/>
+						</Storyboard>
+					</VisualState>
+				</VisualStateGroup>
+			</VisualStateManager.VisualStateGroups>
+		</Grid>
+		<ControlTemplate.Triggers>
+			<Trigger Property="IsSelected" Value="True">
+				<Setter Property="Panel.ZIndex" Value="100" />
+			</Trigger>
+		</ControlTemplate.Triggers>
+	</ControlTemplate>
+	<Style TargetType="{x:Type TabControl}">
+		<Setter Property="Template" Value="{StaticResource TabControlTemplate}"/>
+	</Style>
+	<Style TargetType="{x:Type TabItem}">
+		<Setter Property="Template" Value="{StaticResource TabItemTemplate}"/>
+	</Style>
+
+	<!-- DataGrid Style -->
+	<ControlTemplate
+		x:Key="DataGridCellTemplate"
+		TargetType="{x:Type DataGridCell}"
+		>
+		<Grid>
+			<Border
+				x:Name="border"
+				BorderThickness="{TemplateBinding BorderThickness}"
+				BorderBrush="{TemplateBinding BorderBrush}"
+				Background="Transparent"
+				>
+				<ContentPresenter
+					VerticalAlignment="Center"
+					gui:Prop.Foreground="{StaticResource Frgd}"
+					Margin="10,0,10,0"
+					/>
+			</Border>
+		</Grid>
+	</ControlTemplate>
+	<Style x:Key="DataGridCellStyle" TargetType="{x:Type DataGridCell}">
+		<Setter Property="BorderThickness" Value="2"/>
+		<Setter Property="BorderBrush" Value="Black"/>
+		<Setter Property="Template" Value="{StaticResource DataGridCellTemplate}"/>
+		<Style.Triggers>
+			<Trigger Property="IsSelected" Value="True">
+				<Setter Property="BorderThickness" Value="0,2,0,2"/>
+				<Setter Property="Foreground" Value="{StaticResource Bkgd}"/>
+			</Trigger>
+			<Trigger Property="IsMouseOver" Value="True">
+			</Trigger>
+		</Style.Triggers>
+	</Style>
+	<Style x:Key="DataGridCellStyleLeft" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource DataGridCellStyle}">
+		<Setter Property="TextBlock.TextAlignment" Value="Left"/>
+	</Style>
+	<Style x:Key="DataGridCellStyleCenter" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource DataGridCellStyle}">
+		<Setter Property="TextBlock.TextAlignment" Value="Center"/>
+	</Style>
+	<Style x:Key="DataGridCellStyleRight" TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource DataGridCellStyle}">
+		<Setter Property="TextBlock.TextAlignment" Value="Right"/>
+	</Style>
+	<Style x:Key="DataGridHeaderStyle" TargetType="{x:Type DataGridColumnHeader}">
+		<Setter Property="MinHeight" Value="30"/>
+		<Setter Property="BorderThickness" Value="0,1,0,1"/>
+		<Setter Property="BorderBrush" Value="{StaticResource Frgd}"/>
+		<Setter Property="Background" Value="{StaticResource Bkgd}"/>
+		<Setter Property="VerticalContentAlignment" Value="Bottom"/>
+		<Setter Property="Margin" Value="3,0,3,0"/>
+	</Style>
+	<Style x:Key="DataGridRowStyle" TargetType="{x:Type DataGridRow}">
+		<Setter Property="Background" Value="{StaticResource Bkgd}"/>
+		<Setter Property="Foreground" Value="{StaticResource Frgd}"/>
+		<Style.Triggers>
+			<Trigger Property="IsMouseOver" Value="True">
+				<Setter Property="Background" Value="{StaticResource Frgd}"/>
+				<Setter Property="Foreground" Value="{StaticResource Bkgd}"/>
+			</Trigger>
+			<Trigger Property="IsSelected" Value="True">
+				<Setter Property="Background" Value="{StaticResource Frgd}"/>
+				<Setter Property="Foreground" Value="{StaticResource Bkgd}"/>
+			</Trigger>
+		</Style.Triggers>
+	</Style>
+	<Style TargetType="{x:Type DataGrid}">
+		<Setter Property="BorderThickness" Value="0"/>
+		<Setter Property="Background" Value="{StaticResource Bkgd}"/>
+		<Setter Property="ColumnHeaderStyle" Value="{StaticResource DataGridHeaderStyle}"/>
+		<Setter Property="RowStyle" Value="{StaticResource DataGridRowStyle}"/>
+		<Setter Property="GridLinesVisibility" Value="None"/>
+		<Setter Property="SelectionUnit" Value="FullRow"/>
+		<Setter Property="MinRowHeight" Value="36"/>
+		<Setter Property="Margin" Value="0"/>
+	</Style>
+	
 </ResourceDictionary>

@@ -1,5 +1,7 @@
 ASCII + UTF-8 CODES:
+	euro:       € = 0128
 	trademark:  ™ = 0153
+	cents:      ¢ = 0162
 	pound:      £ = 0163
 	copyright:  © = 0169
 	minus:      ¯ = 0175
@@ -90,3 +92,5 @@ UTF-8 CODES:
 	╠ = 2508
 	═ = 2509
 	╬ = 2510
+
+	↔ = 2194
