@@ -27,7 +27,7 @@ namespace EDTradeAdvisor.UI
 			// Setup UI
 			InitializeComponent();
 			m_log.LogEntryPattern = LogEntryPatternRegex;
-			m_log.LogFilepath = Advisor.Log.LogCB is LogToFile l2f ? l2f.Filepath : null;
+			m_log.LogFilepath = Log.Filepath;
 
 			// Collections
 			OriginStarSystemsShortList = CollectionViewSource.GetDefaultView(new List<StarSystem>());
@@ -41,6 +41,7 @@ namespace EDTradeAdvisor.UI
 			ShowSettings = Command.Create(this, ShowSettingsInternal);
 			RebuildCache = Command.Create(this, RebuildCacheInternal);
 			SetAsOrigin = Command.Create(this, SetAsOriginInternal);
+			SwapOriDest = Command.Create(this, SwapOriDestInternal);
 			Exit = Command.Create(this, Close);
 
 			// UI Binding
@@ -64,10 +65,8 @@ namespace EDTradeAdvisor.UI
 			}
 
 			// Apply settings
-			if (Settings.Instance.OriginSystemID != null)
-				Settings.Instance.NotifySettingChanged(nameof(Settings.OriginSystemID));
-			if (Settings.Instance.DestSystemID != null)
-				Settings.Instance.NotifySettingChanged(nameof(Settings.DestSystemID));
+			Settings.Instance.NotifySettingChanged(nameof(Settings.Origin));
+			Settings.Instance.NotifySettingChanged(nameof(Settings.Destination));
 		}
 		protected override void OnClosing(CancelEventArgs e)
 		{
@@ -100,6 +99,7 @@ namespace EDTradeAdvisor.UI
 				if (m_advisor == value) return;
 				if (m_advisor != null)
 				{
+					m_advisor.TradeRoutesChanged -= HandleTradeRoutesChanged;
 					m_advisor.RunChanged -= HandleRunChanged;
 					Util.Dispose(ref m_advisor);
 				}
@@ -107,12 +107,17 @@ namespace EDTradeAdvisor.UI
 				if (m_advisor != null)
 				{
 					m_advisor.RunChanged += HandleRunChanged;
+					m_advisor.TradeRoutesChanged += HandleTradeRoutesChanged;
 				}
 
 				// Handlers
 				void HandleRunChanged(object sender, EventArgs e)
 				{
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Active)));
+				}
+				void HandleTradeRoutesChanged(object sender, EventArgs e)
+				{
+					TradeRoutes.Refresh();
 				}
 			}
 		}
@@ -130,6 +135,7 @@ namespace EDTradeAdvisor.UI
 		private void RebuildCacheInternal()
 		{
 			Advisor.RebuildStaticData = true;
+			Advisor.Run = true;
 		}
 
 		/// <summary>Set the destination of the current trade route as the new origin</summary>
@@ -140,8 +146,16 @@ namespace EDTradeAdvisor.UI
 			var route = (TradeRoute)TradeRoutes.CurrentItem;
 			UseCurrentLocation = false;
 			AnyDestination = true;
-			Settings.Instance.OriginSystemID = route.Destination.System.ID;
-			Settings.Instance.OriginStationID = route.Destination.Station.ID;
+			Settings.Instance.Origin = route.Destination;
+		}
+
+		/// <summary>Swap the current origin and destination values</summary>
+		public Command SwapOriDest { get; }
+		private void SwapOriDestInternal()
+		{
+			var tmp = Settings.Instance.Origin;
+			Settings.Instance.Origin = Settings.Instance.Destination;
+			Settings.Instance.Destination = tmp;
 		}
 
 		/// <summary>Exit the app</summary>
@@ -182,7 +196,7 @@ namespace EDTradeAdvisor.UI
 				{
 					// Save the current origin system id
 					var current = (StarSystem)OriginStarSystemsShortList.CurrentItem;
-					Settings.Instance.OriginSystemID = current?.ID;
+					Settings.Instance.Origin = new LocationID(current?.ID, Settings.Instance.Origin.StationID);
 				}
 			}
 		}
@@ -210,7 +224,7 @@ namespace EDTradeAdvisor.UI
 				{
 					// Save the current destination system id
 					var current = (StarSystem)DestStarSystemsShortList.CurrentItem;
-					Settings.Instance.DestSystemID = current?.ID;
+					Settings.Instance.Destination = new LocationID(current?.ID, Settings.Instance.Destination.StationID);
 				}
 			}
 		}
@@ -238,7 +252,7 @@ namespace EDTradeAdvisor.UI
 				{
 					// Save the current origin station id
 					var current = (Station)OriginStations.CurrentItem;
-					Settings.Instance.OriginStationID = current?.ID;
+					Settings.Instance.Origin = new LocationID(Settings.Instance.Origin.StarSystemID, current?.ID);
 				}
 			}
 		}
@@ -266,7 +280,7 @@ namespace EDTradeAdvisor.UI
 				{
 					// Save the current destination station id
 					var current = (Station)DestStations.CurrentItem;
-					Settings.Instance.DestStationID = current?.ID;
+					Settings.Instance.Destination = new LocationID(Settings.Instance.Destination.StarSystemID, current?.ID);
 				}
 			}
 		}
@@ -352,7 +366,7 @@ namespace EDTradeAdvisor.UI
 				var list = (List<StarSystem>)view.SourceCollection;
 				var match = cb.Text.Replace('*', '%');
 				list.Clear();
-				list.AddRange(Advisor.DB.EnumStarSystems(match_name: match, max_count: 100));
+				list.AddRange(Advisor.Src.EnumStarSystems(match_name: match, max_count: 100));
 				view.Refresh();
 			}
 		}
@@ -363,8 +377,8 @@ namespace EDTradeAdvisor.UI
 			var cb = (ComboBox)sender;
 			var view = (ICollectionView)cb.ItemsSource;
 			var system_id =
-				view == OriginStations ? Settings.Instance.OriginSystemID :
-				view == DestStations ? Settings.Instance.DestSystemID :
+				view == OriginStations ? Settings.Instance.Origin.StarSystemID :
+				view == DestStations ? Settings.Instance.Destination.StarSystemID :
 				null;
 
 			if (system_id != null)
@@ -373,7 +387,7 @@ namespace EDTradeAdvisor.UI
 				var match = cb.Text.Replace('*', '%');
 
 				list.Clear();
-				list.AddRange(Advisor.DB.EnumStations(system_id: system_id.Value, match_name: match));
+				list.AddRange(Advisor.Src.EnumStations(system_id: system_id.Value, match_name: match));
 				view.Refresh();
 			}
 			else if (cb.Text.Length > 0)
@@ -391,7 +405,7 @@ namespace EDTradeAdvisor.UI
 					var match = cb.Text.Replace('*', '%');
 
 					list.Clear();
-					list.AddRange(Advisor.DB.EnumStarSystemsContainingStation(
+					list.AddRange(Advisor.Src.EnumStarSystemsContainingStation(
 						match_station_name: match, max_count:100,
 						ignore_permitted: Settings.Instance.IgnorePermitSystems));
 					systems_view.Refresh();
@@ -402,7 +416,7 @@ namespace EDTradeAdvisor.UI
 					var list = (List<Station>)view.SourceCollection;
 					var match = cb.Text.Replace('*', '%');
 					list.Clear();
-					list.AddRange(Advisor.DB.EnumStations(
+					list.AddRange(Advisor.Src.EnumStations(
 						match_name: match, max_count: 100,
 						max_station_distance:Settings.Instance.MaxStationDistance,
 						required_pad_size:Settings.Instance.RequiredPadSize,
@@ -417,85 +431,65 @@ namespace EDTradeAdvisor.UI
 		private void HandleSettingChange(object sender, SettingChangeEventArgs e)
 		{
 			// Notes:
-			//  - Don't change any Settings values in here. That 
-			//    should be in the model code (Advisor).
+			//  - Don't change any Settings values in here. That should be in the model
+			//    code (Advisor). Only update the collections used for binding.
 
 			if (e.Before) return;
 			switch (e.Key)
 			{
-			case nameof(Settings.OriginSystemID):
+			case nameof(Settings.Origin):
 				{
 					// Ensure the star systems short list reflects the currently selected system
 					var systems = (List<StarSystem>)OriginStarSystemsShortList.SourceCollection;
-					var idx = Settings.Instance.OriginSystemID != null ? systems.IndexOf(x => x.ID == Settings.Instance.OriginSystemID.Value) : -1;
-					if (idx == -1 && Settings.Instance.OriginSystemID != null)
+					var idx = Settings.Instance.Origin.StarSystemID != null ? systems.IndexOf(x => x.ID == Settings.Instance.Origin.StarSystemID.Value) : -1;
+					if (idx == -1 && Settings.Instance.Origin.StarSystemID != null)
 					{
 						// If the current system is not in the short list, repopulate the short list
-						var system = Advisor.DB.GetStarSystem(Settings.Instance.OriginSystemID.Value).Result;
 						systems.Clear();
-						systems.Add(system);
+						systems.Add(Advisor.Src.GetStarSystem(Settings.Instance.Origin.StarSystemID.Value).Result);
 						idx = 0;
 					}
 					OriginStarSystemsShortList.MoveCurrentToPosition(idx);
 					OriginStarSystemsShortList.Refresh();
 
 					// Populate the origin stations collection
-					var list = (List<Station>)OriginStations.SourceCollection;
-					if (Settings.Instance.OriginSystemID != null)
-						list.Assign(Advisor.DB.EnumStations(system_id: Settings.Instance.OriginSystemID.Value));
+					var stations = (List<Station>)OriginStations.SourceCollection;
+					if (Settings.Instance.Origin.StarSystemID != null)
+						stations.Assign(Advisor.Src.EnumStations(system_id: Settings.Instance.Origin.StarSystemID.Value));
 					else
-						list.Clear();
+						stations.Clear();
 
 					// Preserve the station if possible
-					idx = list.IndexOf(x => x.ID == Settings.Instance.OriginStationID);
+					idx = Settings.Instance.Origin.StationID != null ? stations.IndexOf(x => x.ID == Settings.Instance.Origin.StationID) : -1;
 					OriginStations.MoveCurrentToPosition(idx != -1 ? idx : 0);
 					OriginStations.Refresh();
 					break;
 				}
-			case nameof(Settings.DestSystemID):
+			case nameof(Settings.Destination):
 				{
 					// Ensure the star systems short list reflects the currently selected system
 					var systems = (List<StarSystem>)DestStarSystemsShortList.SourceCollection;
-					var idx = Settings.Instance.DestSystemID != null ? systems.IndexOf(x => x.ID == Settings.Instance.DestSystemID.Value) : -1;
-					if (idx == -1 && Settings.Instance.DestSystemID != null)
+					var idx = Settings.Instance.Destination.StarSystemID != null ? systems.IndexOf(x => x.ID == Settings.Instance.Destination.StarSystemID.Value) : -1;
+					if (idx == -1 && Settings.Instance.Destination.StarSystemID != null)
 					{
 						// If the current system is not in the short list, repopulate the short list
-						var system = Advisor.DB.GetStarSystem(Settings.Instance.DestSystemID.Value).Result;
 						systems.Clear();
-						systems.Add(system);
+						systems.Add(Advisor.Src.GetStarSystem(Settings.Instance.Destination.StarSystemID.Value).Result);
 						idx = 0;
 					}
 					DestStarSystemsShortList.MoveCurrentToPosition(idx);
 					DestStarSystemsShortList.Refresh();
 				
 					// Populate the destination stations collection
-					var list = (List<Station>)DestStations.SourceCollection;
-					if (Settings.Instance.DestSystemID != null)
-						list.Assign(Advisor.DB.EnumStations(system_id: Settings.Instance.DestSystemID.Value));
+					var stations = (List<Station>)DestStations.SourceCollection;
+					if (Settings.Instance.Destination.StarSystemID != null)
+						stations.Assign(Advisor.Src.EnumStations(system_id: Settings.Instance.Destination.StarSystemID.Value));
 					else
-						list.Clear();
+						stations.Clear();
 
 					// Preserve the station if possible
-					idx = list.IndexOf(x => x.ID == Settings.Instance.DestStationID);
+					idx = Settings.Instance.Destination.StationID != null ? stations.IndexOf(x => x.ID == Settings.Instance.Destination.StationID) : -1;
 					DestStations.MoveCurrentToPosition(idx != -1 ? idx : 0);
-					DestStations.Refresh();
-					break;
-				}
-			case nameof(Settings.OriginStationID):
-				{
-					// Ensure the current station reflects the settings
-					var stations = (List<Station>)OriginStations.SourceCollection;
-					var idx = Settings.Instance.OriginStationID != null ? stations.IndexOf(x => x.ID == Settings.Instance.OriginStationID.Value) : -1;
-					OriginStations.MoveCurrentToPosition(idx);
-					OriginStations.Refresh();
-					break;
-				}
-			case nameof(Settings.DestStationID):
-				{
-					// Ensure the current station reflects the settings
-					var stations = (List<Station>)DestStations.SourceCollection;
-					var idx = Settings.Instance.DestStationID != null ? stations.IndexOf(x => x.ID == Settings.Instance.DestStationID.Value) : -1;
-					DestStations.MoveCurrentToPosition(idx);
 					DestStations.Refresh();
 					break;
 				}

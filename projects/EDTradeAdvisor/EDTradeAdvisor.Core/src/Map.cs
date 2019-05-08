@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using EDTradeAdvisor.DomainObjects;
-using Rylogic.Common;
 using Rylogic.Container;
 using Rylogic.Maths;
 using Rylogic.Utility;
@@ -27,7 +25,7 @@ namespace EDTradeAdvisor
 		/// <summary>Rebuild the map</summary>
 		public void BuildSystemMap(IEnumerable<StarSystem> stars)
 		{
-			Advisor.Log.Write(ELogLevel.Info, $"Building systems map");
+			Log.Write(ELogLevel.Info, $"Building systems map");
 			using (StatusStack.NewStatusMessage($"Updating star map..."))
 			{
 				m_tree.Clear();

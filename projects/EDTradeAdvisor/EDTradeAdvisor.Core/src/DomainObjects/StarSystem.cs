@@ -10,6 +10,9 @@ namespace EDTradeAdvisor.DomainObjects
 		/// <summary></summary>
 		public long ID { get; set; }
 
+		/// <summary>The ID of this system used by EDSM</summary>
+		public long EdsmID { get; set; }
+
 		/// <summary></summary>
 		public string Name { get; set; }
 

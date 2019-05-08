@@ -10,6 +10,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
+using EDTradeAdvisor.DataProviders;
 using EDTradeAdvisor.DomainObjects;
 using Rylogic.Common;
 using Rylogic.Container;
@@ -28,43 +29,33 @@ namespace EDTradeAdvisor
 		//      - Monitor for changes in the player's location (using the ED journal files)
 		//      - Finds the best (ish) trades around the current player location
 
-		static Advisor()
-		{
-			Log = new Logger("EDTA", new LogToFile(Util.ResolveUserDocumentsPath("Rylogic", "EDTradeAdvisor", "Logs", "log.txt"), append: false));
-			Log.TimeZero = Log.TimeZero - Log.TimeZero.TimeOfDay;
-			Log.Write(ELogLevel.Info, "<<< Started >>>");
-		}
 		public Advisor(Action<Action> run_on_main_thread)
 		{
 			Settings.Instance.SettingChange += HandleSettingChange;
 			m_main_thread_id = Thread.CurrentThread.ManagedThreadId;
 			m_marshal_to_main_thread = run_on_main_thread;
-			RebuildStaticData = !Path_.FileExists(EDDatabase.Filepath);
+			RebuildStaticData = !Path_.FileExists(EliteDataProvider.Filepath);
 			Shutdown = new CancellationTokenSource();
-			TradeRoutes = new ObservableCollection<TradeRoute>();
+			TradeRoutes = new List<TradeRoute>();
 			m_find_trade_routes = new AutoResetEvent(false);
-			Map = new Map();
 			Web = new Web(Shutdown.Token);
-			DB = new EDDatabase(Shutdown.Token);
+			Src = new EliteDataProvider(Web, Shutdown.Token);
 			JournalMonitor = new EDJournalMonitor();
 		}
 		public void Dispose()
 		{
 			JournalMonitor = null;
 			Run = false;
+			Src = null;
 			Web = null;
-			DB = null;
-			Util.Dispose(Log);
+			Log.Dispose();
 			Settings.Instance.SettingChange -= HandleSettingChange;
 		}
 
 		/// <summary>Execute a delegate on the main thread</summary>
 		private void RunOnMainThread(Action action)
 		{
-			if (Thread.CurrentThread.ManagedThreadId == m_main_thread_id)
-				action();
-			else
-				m_marshal_to_main_thread(action);
+			m_marshal_to_main_thread(action);
 		}
 		private Action<Action> m_marshal_to_main_thread;
 		private int m_main_thread_id;
@@ -136,18 +127,15 @@ namespace EDTradeAdvisor
 		/// <summary>Advisor main loop</summary>
 		private async Task AdvisorMain(CancellationToken thread_stop)
 		{
-			// One-time update the data we don't expect to change
-			await UpdateStaticData(RebuildStaticData);
-
-			// Rebuild the star map
-			if (RebuildStaticData || Map.BuildNeeded)
-				Map.BuildSystemMap(DB.EnumStarSystems(buffered:false));
-
-			RebuildStaticData = false;
 			Log.Write(ELogLevel.Info, "Advisor Activated");
 
+			// One-time update the data we don't expect to change
+			await Src.BuildCache(RebuildStaticData);
+			RebuildStaticData = false;
+
 			// Start a loop
-			for (; !thread_stop.IsCancellationRequested;)
+			var issue = 0;
+			for (; !thread_stop.IsCancellationRequested; )
 			{
 				if (m_trade_routes_issue_current == m_trade_routes_issue)
 				{
@@ -159,16 +147,22 @@ namespace EDTradeAdvisor
 				}
 
 				// Find trade routes
-				RunOnMainThread(() => TradeRoutes.Clear());
-				await FindTradeRoutes(m_settings_snapshot);
+				if (issue != m_trade_routes_issue)
+				{
+					issue = m_trade_routes_issue;
+					await FindTradeRoutes(m_settings_snapshot, issue);
+				}
+				else
+				{
+					// A find routes has already been started for 'issue'.
+					// We're waiting for the 'RunOnMainThread' call to update the current issue number
+					await Task.Delay(10, Shutdown.Token);
+				}
 			}
 
 			Log.Write(ELogLevel.Info, "Advisor Deactivated");
 		}
 		private Settings m_settings_snapshot;
-
-		/// <summary>Logging</summary>
-		public static Logger Log { get; }
 
 		/// <summary>Monitor the ED commander journals</summary>
 		public EDJournalMonitor JournalMonitor
@@ -222,14 +216,15 @@ namespace EDTradeAdvisor
 				async void HandleMarketUpdate(object sender, MarketUpdateEventArgs e)
 				{
 					if (Settings.Instance.UpdateMarketDataFromJournal)
-						await DB.MergeMarketUpdate(e.MarketDataFilepath);
+						await Src.MergeMarketUpdate(e.MarketDataFilepath);
 				}
 			}
 		}
 		private EDJournalMonitor m_journal_monitor;
 
 		/// <summary>The nearby trade possibilities, sorted from best to worst</summary>
-		public ObservableCollection<TradeRoute> TradeRoutes { get; }
+		public List<TradeRoute> TradeRoutes { get; }
+		public event EventHandler TradeRoutesChanged;
 
 		/// <summary>Helper for accessing data from web sources</summary>
 		private Web Web
@@ -244,88 +239,28 @@ namespace EDTradeAdvisor
 		}
 		private Web m_web;
 
-		/// <summary>The database of ED data</summary>
-		public EDDatabase DB
+		/// <summary>The source of systems, stations, and market data</summary>
+		public IEliteDataProvider Src
 		{
-			get { return m_db; }
+			get { return m_src; }
 			private set
 			{
-				if (m_db == value) return;
-				Util.Dispose(ref m_db);
-				m_db = value;
+				if (m_src == value) return;
+				Util.Dispose(ref m_src);
+				m_src = value;
 			}
 		}
-		private EDDatabase m_db;
-
-		/// <summary>Star map</summary>
-		private Map Map
-		{
-			get; set;
-		}
-
-		/// <summary>Ensure the database is up to date</summary>
-		private async Task UpdateStaticData(bool force_rebuild)
-		{
-			using (StatusStack.NewStatusMessage($"Updating static data..."))
-			{
-				// Ensure the EDDB data has been downloaded and the database is up to date
-				var updates = (await Task.WhenAll(
-					Web.DownloadFile(SourceFiles.SystemsPopulated), //0
-					Web.DownloadFile(SourceFiles.Stations),         //1
-					Web.DownloadFile(SourceFiles.Commodities),      //2
-					Web.DownloadFile(SourceFiles.Modules),          //3
-					Web.DownloadFile(SourceFiles.Listings),         //4
-					Web.DownloadFile(SourceFiles.LiveListings)      //5
-					// Web.DownloadFile(SourceFiles.Systems),
-					)).ToDictionary(x => x.FileUrl, x => (Filepath: x.OutputFilepath, Downloaded: x.Downloaded));
-
-				// If the systems data changed, rebuild the system table and the map
-				if (force_rebuild || updates[SourceFiles.SystemsPopulated].Downloaded)
-				{
-					Log.Write(ELogLevel.Info, $"Building systems table");
-					DB.BuildSystemsTable(updates[SourceFiles.SystemsPopulated].Filepath);
-					Map.Invalidate();
-				}
-
-				// If the stations data changed, rebuild the stations table
-				if (force_rebuild || updates[SourceFiles.Stations].Downloaded)
-				{
-					Log.Write(ELogLevel.Info, $"Building stations table");
-					DB.BuildStationsTable(updates[SourceFiles.Stations].Filepath);
-				}
-
-				// If the commodities data changed, rebuild the commodities tables
-				if (force_rebuild || updates[SourceFiles.Commodities].Downloaded)
-				{
-					Log.Write(ELogLevel.Info, $"Building commodities tables");
-					DB.BuildCommoditiesTable(updates[SourceFiles.Commodities].Filepath);
-				}
-
-				// If the listings data changed, rebuild the listings table
-				if (force_rebuild || updates[SourceFiles.Listings].Downloaded)
-				{
-					Log.Write(ELogLevel.Info, $"Building listings table");
-					DB.BuildListingsTable(updates[SourceFiles.Listings].Filepath);
-				}
-
-				// If there is new live listings data, merge it into the listings table
-				if (force_rebuild || updates[SourceFiles.LiveListings].Downloaded)
-				{
-					Log.Write(ELogLevel.Info, $"Merging live listings");
-					DB.MergeListings(updates[SourceFiles.LiveListings].Filepath);
-				}
-			}
-		}
+		private IEliteDataProvider m_src;
 
 		/// <summary>Check settings are valid before trying to find trade routes</summary>
 		private bool CanFindTradeRoutes(Settings settings) // worker thread context
 		{
 			return
-				settings.OriginSystemID != null &&
-				settings.OriginStationID != null &&
+				settings.Origin.StarSystemID != null &&
+				settings.Origin.StationID != null &&
 				(
 					(settings.AnyDestination && settings.MaxTradeRouteDistance != null) ||
-					(settings.DestSystemID != null)
+					(settings.Destination.StarSystemID != null)
 				) &&
 				settings.MaxJumpRange > 0 &&
 				settings.CargoCapacity > 0 &&
@@ -333,38 +268,47 @@ namespace EDTradeAdvisor
 		}
 
 		/// <summary>Search for trades</summary>
-		private async Task FindTradeRoutes(Settings settings) // worker thread context
+		private async Task FindTradeRoutes(Settings settings, int issue) // worker thread context
 		{
-			var issue = m_trade_routes_issue;
-
-			// Settings not valid, ignore until they are.
 			if (!CanFindTradeRoutes(settings))
 			{
+				// Settings not valid, ignore until they are.
 				RunOnMainThread(() =>
 				{
 					if (issue != m_trade_routes_issue) return;
-					m_trade_routes_issue_current = m_trade_routes_issue;
-					TradeRoutes.Clear();
+					m_trade_routes_issue_current = issue;
 				});
 				return;
 			}
+			else
+			{
+				// Settings are valid, reset the trade routes before starting
+				RunOnMainThread(() =>
+				{
+					if (issue != m_trade_routes_issue || TradeRoutes.Count == 0)
+						return;
+
+					TradeRoutes.Clear();
+					TradeRoutesChanged?.Invoke(this, EventArgs.Empty);
+				});
+			}
 
 			// Get the start point
-			var origin_system = await DB.GetStarSystem(settings.OriginSystemID.Value);
-			var origin_station = await DB.GetStation(settings.OriginStationID.Value);
+			var origin_system = await Src.GetStarSystem(settings.Origin.StarSystemID.Value);
+			var origin_station = await Src.GetStation(settings.Origin.StationID.Value);
 			var origin = new Location(origin_system, origin_station);
 
 			// If a specific destination is given, find trades between the origin and that destination
 			if (!settings.AnyDestination)
 			{
-				var destination_system = await DB.GetStarSystem(settings.DestSystemID.Value);
-				var destination_station = settings.DestStationID != null ? await DB.GetStation(settings.DestStationID.Value) : null;
+				var destination_system = await Src.GetStarSystem(settings.Destination.StarSystemID.Value);
+				var destination_station = settings.Destination.StationID != null ? await Src.GetStation(settings.Destination.StationID.Value) : null;
 
 				Log.Write(ELogLevel.Info, $"Find trade routes {origin_system.Name}/{origin_station.Name} → {destination_system.Name}/{destination_station?.Name ?? "Any"}");
 
 				var stations = destination_station != null
 					? new[] { destination_station }
-					: DB.EnumStations(
+					: Src.EnumStations(
 						system_id: destination_system.ID,
 						max_station_distance: settings.MaxStationDistance,
 						required_pad_size: settings.RequiredPadSize,
@@ -400,7 +344,7 @@ namespace EDTradeAdvisor
 				var queue = new Queue<StarSystem>();
 				using (var msg = StatusStack.NewStatusMessage("Finding Trade Routes..."))
 				{
-					var candidates = Map.Search(origin_system.Position, settings.MaxTradeRouteDistance.Value).ToList();
+					var candidates = Src.Search(origin_system.Position, settings.MaxTradeRouteDistance.Value).ToList();
 					KDTree_.Build(candidates, 3);
 
 					// Find all systems within the maximum trade route distance.
@@ -436,7 +380,7 @@ namespace EDTradeAdvisor
 								return;
 
 							// Get the system
-							var destination_system = await DB.GetStarSystem(system_ref.ID);
+							var destination_system = await Src.GetStarSystem(system_ref.ID);
 
 							// Update status
 							if (++considered_systems - last_considered_systems > 100)
@@ -451,7 +395,7 @@ namespace EDTradeAdvisor
 								continue;
 
 							// Check the suitable stations
-							var stations = DB.EnumStations(
+							var stations = Src.EnumStations(
 								system_id:destination_system.ID,
 								max_station_distance: settings.MaxStationDistance,
 								required_pad_size: settings.RequiredPadSize,
@@ -492,13 +436,13 @@ namespace EDTradeAdvisor
 			var trade_routes = new List<TradeRoute>();
 
 			// Get the market data for the origin station
-			var origin_market = await DB.GetMarketData(origin.Station.ID);
+			var origin_market = await Src.GetMarketData(origin.Station.ID);
 
 			// Remove listings with zero supply
 			origin_market.Listings.RemoveIf(x => x.Supply == 0);
 
 			// Get the market for 'destination_station'
-			var market = await DB.GetMarketData(destination.Station.ID);
+			var market = await Src.GetMarketData(destination.Station.ID);
 
 			// For each commodity available in 'origin_market' see if
 			// it's profitable to buy and then sell at 'market'.
@@ -546,6 +490,9 @@ namespace EDTradeAdvisor
 				if (TradeRoutes.Count > Settings.Instance.RouteCount)
 					TradeRoutes.RemoveToEnd(Settings.Instance.RouteCount);
 			}
+
+			// Notify trade routes updated
+			TradeRoutesChanged?.Invoke(this, EventArgs.Empty);
 		}
 
 		/// <summary>Call to trigger a search for trade routes</summary>
@@ -559,18 +506,17 @@ namespace EDTradeAdvisor
 		/// <summary>Set the current location from the journal data</summary>
 		private async Task SetLocationFromJournal()
 		{
-			if (JournalMonitor.Location.StarSystem == null || JournalMonitor.Location.Station == null)
-				return;
-
 			// Lookup the star system id
-			var system = await DB.GetStarSystem(JournalMonitor.Location.StarSystem);
-			if (system == null) { Log.Write(ELogLevel.Warn, $"Could not find system: {JournalMonitor.Location.StarSystem}"); return; }
-			Settings.Instance.OriginSystemID = system.ID;
+			var system = JournalMonitor.Location.StarSystem != null
+				? await Src.GetStarSystem(JournalMonitor.Location.StarSystem)
+				: null;
 
 			// Lookup the station id
-			var station = await DB.GetStation(system.ID, JournalMonitor.Location.Station);
-			if (station == null) { Log.Write(ELogLevel.Warn, $"Could not find station: {JournalMonitor.Location.Station}"); return; }
-			Settings.Instance.OriginStationID = station.ID;
+			var station = JournalMonitor.Location.Station != null && system != null
+				? await Src.GetStation(system.ID, JournalMonitor.Location.Station)
+				: null;
+
+			Settings.Instance.Origin = new LocationID(system?.ID, station?.ID);
 		}
 
 		/// <summary>Watch for settings changes</summary>
@@ -585,25 +531,27 @@ namespace EDTradeAdvisor
 					m_journal_monitor.Run = Path_.DirExists(Settings.Instance.JournalFilesDir);
 					break;
 				}
-			case nameof(Settings.OriginStationID):
+			case nameof(Settings.Origin):
 				{
 					// If a origin station is selected but the current system id is
 					// still null, set it to the system that owns the station.
-					if (Settings.Instance.OriginStationID != null && Settings.Instance.OriginSystemID == null)
+					if (Settings.Instance.Origin.StationID != null &&
+						Settings.Instance.Origin.StarSystemID == null)
 					{
-						var station = DB.GetStation(Settings.Instance.OriginStationID.Value).Result;
-						Settings.Instance.OriginSystemID = station.SystemID;
+						var station = Src.GetStation(Settings.Instance.Origin.StationID.Value).Result;
+						Settings.Instance.Origin = new LocationID(station.SystemID, station.ID);
 					}
 					break;
 				}
-			case nameof(Settings.DestStationID):
+			case nameof(Settings.Destination.StationID):
 				{
 					// If a destination station is selected but the current system id is
 					// still null, set it to the system that owns the station.
-					if (Settings.Instance.DestStationID != null && Settings.Instance.DestSystemID == null)
+					if (Settings.Instance.Destination.StationID != null &&
+						Settings.Instance.Destination.StarSystemID == null)
 					{
-						var station = DB.GetStation(Settings.Instance.DestStationID.Value).Result;
-						Settings.Instance.DestSystemID = station.SystemID;
+						var station = Src.GetStation(Settings.Instance.Destination.StationID.Value).Result;
+						Settings.Instance.Destination = new LocationID(station.SystemID, station.ID);
 					}
 					break;
 				}

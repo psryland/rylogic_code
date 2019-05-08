@@ -45,6 +45,7 @@
 				<ColumnDefinition Width="Auto"/>
 				<ColumnDefinition Width="Auto"/>
 				<ColumnDefinition Width="Auto"/>
+				<ColumnDefinition Width="Auto"/>
 				<ColumnDefinition Width="*"/>
 				<ColumnDefinition Width="Auto"/>
 			</Grid.ColumnDefinitions>
@@ -101,9 +102,22 @@
 					/>
 			</Grid>
 
+			<!-- Swap Origin and Destination-->
+			<Button
+				Grid.Column="1"
+				BorderThickness="0"
+				HorizontalAlignment="Center"
+				VerticalAlignment="Center"
+				HorizontalContentAlignment="Center"
+				VerticalContentAlignment="Center"
+				Command="{Binding SwapOriDest}"
+				>
+				<TextBlock Text="↔" FontSize="30"/>
+			</Button>
+			
 			<!-- Destination -->
 			<Grid
-				Grid.Column="1"
+				Grid.Column="2"
 				Margin="4"
 				>
 				<Grid.RowDefinitions>
@@ -168,7 +182,7 @@
 
 			<!-- Constraints -->
 			<StackPanel
-				Grid.Column="2"
+				Grid.Column="3"
 				Margin="4"
 				>
 
@@ -233,7 +247,7 @@
 
 			<!-- Constraints -->
 			<StackPanel
-				Grid.Column="3"
+				Grid.Column="4"
 				Margin="4"
 				>
 
@@ -301,7 +315,7 @@
 
 			<!-- Active -->
 			<ToggleButton
-				Grid.Column="5"
+				Grid.Column="6"
 				IsChecked="{Binding Active}"
 				Content="Active"
 				Width="64"
@@ -321,6 +335,7 @@
 				<DataGrid
 					HeadersVisibility="Column"
 					AutoGenerateColumns="False"
+					Style="{StaticResource StyleDataGrid}"
 					ItemsSource="{Binding TradeRoutes}"
 					SelectedItem="{Binding TradeRoutes/}"
 					IsReadOnly="True"
@@ -386,7 +401,9 @@
 			<!-- Log -->
 			<TabItem Header="Log">
 				<gui:LogControl
-					 Name="m_log"
+					Name="m_log"
+					FontFamily="tahoma"
+					FontSize="11"
 					/>
 			</TabItem>
 		</TabControl>

@@ -27,13 +27,13 @@ namespace EDTradeAdvisor
 		{
 			DataPath = Util.ResolveUserDocumentsPath("Rylogic", "EDTradeAdvisor", "Data");
 			JournalFilesDir = Util.ResolveUserProfilePath("Saved Games","Frontier Developments", "Elite Dangerous");
+			CmdrName = string.Empty;
+			EDSMApiKey = string.Empty;
 			DataAge = TimeSpan.FromHours(1);
 			RouteCount = 10;
 			OriginHistory = new LocationID[0];
-			OriginSystemID = null;
-			OriginStationID = null;
-			DestSystemID = null;
-			DestStationID = null;
+			Origin = default(LocationID);
+			Destination = default(LocationID);
 			UseCurrentLocation = false;
 			AnyDestination = true;
 			MaxTradeRouteDistance = null;
@@ -72,6 +72,20 @@ namespace EDTradeAdvisor
 			set => set(nameof(JournalFilesDir), value);
 		}
 
+		/// <summary>The name of the commander to search under</summary>
+		public string CmdrName
+		{
+			get => get<string>(nameof(CmdrName));
+			set => set(nameof(CmdrName), value);
+		}
+
+		/// <summary>The account key to use when accessing data associated with 'CmdrName'</summary>
+		public string EDSMApiKey
+		{
+			get => get<string>(nameof(EDSMApiKey));
+			set => set(nameof(EDSMApiKey), value);
+		}
+
 		/// <summary>How old data is allowed to get before updating it</summary>
 		public TimeSpan DataAge
 		{
@@ -94,31 +108,17 @@ namespace EDTradeAdvisor
 		}
 
 		/// <summary>Origin system</summary>
-		public long? OriginSystemID
+		public LocationID Origin
 		{
-			get => get<long?>(nameof(OriginSystemID));
-			set => set(nameof(OriginSystemID), value);
-		}
-
-		/// <summary>Origin station</summary>
-		public long? OriginStationID
-		{
-			get => get<long?>(nameof(OriginStationID));
-			set => set(nameof(OriginStationID), value);
+			get => get<LocationID>(nameof(Origin));
+			set => set(nameof(Origin), value);
 		}
 
 		/// <summary>Destination system</summary>
-		public long? DestSystemID
+		public LocationID Destination
 		{
-			get => get<long?>(nameof(DestSystemID));
-			set => set(nameof(DestSystemID), value);
-		}
-
-		/// <summary>Destination station</summary>
-		public long? DestStationID
-		{
-			get => get<long?>(nameof(DestStationID));
-			set => set(nameof(DestStationID), value);
+			get => get<LocationID>(nameof(Destination));
+			set => set(nameof(Destination), value);
 		}
 
 		/// <summary>Get the origin location from the journal file</summary>

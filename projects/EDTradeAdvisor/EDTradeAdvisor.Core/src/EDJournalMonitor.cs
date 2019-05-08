@@ -126,7 +126,7 @@ namespace EDTradeAdvisor
 			{
 				if (m_journal_filename == value) return;
 				m_journal_filename = value;
-				Advisor.Log.Write(ELogLevel.Info, $"Reading ED Journal file: {value}");
+				Log.Write(ELogLevel.Info, $"Reading ED Journal file: {value}");
 			}
 		}
 		private string m_journal_filename;
@@ -182,7 +182,7 @@ namespace EDTradeAdvisor
 					catch (Exception ex)
 					{
 						// Assume reader exceptions mean partial line reads
-						if (!(ex is JsonReaderException)) Advisor.Log.Write(ELogLevel.Error, ex, $"Error reading journal file: {JournalFilename}");
+						if (!(ex is JsonReaderException)) Log.Write(ELogLevel.Error, ex, $"Error reading journal file: {JournalFilename}");
 						break;
 					}
 				}
@@ -193,8 +193,8 @@ namespace EDTradeAdvisor
 		/// <summary>Parse a journal location event</summary>
 		private void ParseLocation(JObject jobj)
 		{
-			Location.StarSystem = jobj["StarSystem"].Value<string>();
-			Location.Station = jobj["StationName"].Value<string>();
+			Location.StarSystem = jobj["StarSystem"]?.Value<string>();
+			Location.Station = jobj["StationName"]?.Value<string>();
 			LocationChanged?.Invoke(this, EventArgs.Empty);
 		}
 

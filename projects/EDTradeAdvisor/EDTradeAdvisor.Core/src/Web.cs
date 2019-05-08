@@ -16,8 +16,8 @@ namespace EDTradeAdvisor
 	public class Web :IDisposable
 	{
 		// Notes:
-		//  - This class handles interaction with online sources. It basically wraps HttpClient
-		//    and provides functions for downloaded data files.
+		//  - This class handles interaction with online sources. It basically
+		//    wraps HttpClient and provides functions for downloaded data files.
 
 		public Web(CancellationToken shutdown)
 		{
@@ -31,6 +31,12 @@ namespace EDTradeAdvisor
 			OAuth = null;
 			Client = Util.Dispose(Client);
 		}
+
+		/// <summary>A http client for web requests</summary>
+		public HttpClient Client { get; private set; }
+
+		/// <summary>App shutdown token</summary>
+		private CancellationToken Shutdown { get; }
 
 		/// <summary></summary>
 		public OAuth2 OAuth
@@ -62,17 +68,11 @@ namespace EDTradeAdvisor
 		/// <summary>Raised whenever 'Downloading' changes</summary>
 		public event EventHandler DownloadingChanged;
 
-		/// <summary>A http client for web requests</summary>
-		private HttpClient Client { get; set; }
-
-		/// <summary>App shutdown token</summary>
-		private CancellationToken Shutdown { get; }
-
 		/// <summary>Pull 'filename' from EDDB. Returns true if the file was downloaded, and the output filepath</summary>
-		public async Task<DownloadFileResult> DownloadFile(string file_url, bool only_if_newer = true)
+		public async Task<DownloadFileResult> DownloadFile(string file_url, string output_dir, bool only_if_newer = true)
 		{
 			var filename = Path_.FileName(file_url);
-			var output_path = Path_.CombinePath(Settings.Instance.DataPath, filename);
+			var output_path = Path_.CombinePath(Path_.CreateDirs(output_dir), filename);
 			using (StatusStack.NewStatusMessage($"Downloading '{filename}'..."))
 			{
 				try
@@ -81,12 +81,12 @@ namespace EDTradeAdvisor
 					HttpResponseMessage resp;
 
 					// Request the head information about the target file
-					Advisor.Log.Write(ELogLevel.Info, $"Checking size and timestamp of '{filename}'");
+					Log.Write(ELogLevel.Info, $"Checking size and timestamp of '{filename}'");
 					req = new HttpRequestMessage(HttpMethod.Head, file_url);
 					resp = await Client.SendAsync(req, Shutdown);
 					if (!resp.IsSuccessStatusCode)
 					{
-						Advisor.Log.Write(ELogLevel.Error, $"Downloading information for '{filename}' failed: {resp.StatusCode} {resp.ReasonPhrase}");
+						Log.Write(ELogLevel.Error, $"Downloading information for '{filename}' failed: {resp.StatusCode} {resp.ReasonPhrase}");
 						throw new HttpRequestException($"{resp.ReasonPhrase} ({resp.StatusCode})");
 					}
 
@@ -96,7 +96,7 @@ namespace EDTradeAdvisor
 						var time_diff = new FileInfo(output_path).LastWriteTime - resp.Content.Headers.LastModified;
 						if (time_diff > -Settings.Instance.DataAge)
 						{
-							Advisor.Log.Write(ELogLevel.Info, $"Local copy of '{filename}' is less than {Settings.Instance.DataAge.ToPrettyString(trailing_zeros:false)} older than the latest version");
+							Log.Write(ELogLevel.Info, $"Local copy of '{filename}' is less than {Settings.Instance.DataAge.ToPrettyString(trailing_zeros:false)} older than the latest version");
 							return new DownloadFileResult(file_url, output_path, false);
 						}
 					}
@@ -105,7 +105,7 @@ namespace EDTradeAdvisor
 					var length = resp.Content.Headers.ContentLength;
 
 					// The server version is newer, download the whole file
-					Advisor.Log.Write(ELogLevel.Info, $"Downloading '{filename}' ({length} bytes)");
+					Log.Write(ELogLevel.Info, $"Downloading '{filename}' ({length} bytes)");
 					using (Scope.Create(() => Downloading = true, () => Downloading = false))
 					{
 						// Make the web request
@@ -113,7 +113,7 @@ namespace EDTradeAdvisor
 						resp = await Client.SendAsync(req, Shutdown);
 						if (!resp.IsSuccessStatusCode)
 						{
-							Advisor.Log.Write(ELogLevel.Error, $"Downloading '{filename}' failed: {resp.StatusCode} {resp.ReasonPhrase}");
+							Log.Write(ELogLevel.Error, $"Downloading '{filename}' failed: {resp.StatusCode} {resp.ReasonPhrase}");
 							throw new HttpRequestException($"{resp.ReasonPhrase} ({resp.StatusCode})");
 						}
 
@@ -132,14 +132,14 @@ namespace EDTradeAdvisor
 								await resp.Content.CopyToAsync(file);
 							}
 
-							Advisor.Log.Write(ELogLevel.Info, $"Download complete '{filename}'");
+							Log.Write(ELogLevel.Info, $"Download complete '{filename}'");
 							return new DownloadFileResult(file_url, output_path, true);
 						}
 					}
 				}
 				catch
 				{
-					Advisor.Log.Write(ELogLevel.Error, $"Data file '{filename}' was not available from {file_url}.");
+					Log.Write(ELogLevel.Error, $"Data file '{filename}' was not available from {file_url}.");
 					return new DownloadFileResult(file_url, output_path, false);
 				}
 			}

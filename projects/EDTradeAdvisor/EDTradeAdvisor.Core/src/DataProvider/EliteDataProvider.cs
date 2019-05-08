@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Data.SqlClient;
 using System.Data.SQLite;
 using System.Diagnostics;
 using System.IO;
@@ -11,44 +9,45 @@ using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
 using EDTradeAdvisor.DomainObjects;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Rylogic.Common;
 using Rylogic.Container;
 using Rylogic.Extn;
+using Rylogic.Maths;
 using Rylogic.Utility;
 
-namespace EDTradeAdvisor
+namespace EDTradeAdvisor.DataProviders
 {
-	public class EDDatabase : IDisposable
+	public class EliteDataProvider : IEliteDataProvider
 	{
 		// Notes:
-		//  - BuildXX functions are not async for performance reasons
-		//  - transactions speed up sqlite inserts
+		//  - A data provider based on the useful bits of EDDB and EDSM
+		//  - Neither EDDB or EDSM are ideal on their own, but using both
+		//    should do the job
 
-		public EDDatabase(CancellationToken shutdown)
+		public EliteDataProvider(Web web, CancellationToken shutdown)
 		{
+			Web = web;
+			Shutdown = shutdown;
+
 			m_cache_star_systems = new Cache<long, StarSystem> { ThreadSafe = true, Capacity = 0 };
 			m_cache_stations = new Cache<long, Station> { ThreadSafe = true, Capacity = 0 };
 			m_cache_market = new Cache<long, Market> { ThreadSafe = true, Capacity = 0 };
+			Map = new Map();
 
-			// Connect to the database
-			DB = new SQLiteConnection($"Data Source={Filepath};Version=3;journal mode=Memory;synchronous=Off");
-
-			// Ensure tables exist
-			using (var sql_stream = typeof(EDDatabase).Assembly.GetManifestResourceStream($"EDTradeAdvisor.Core.src.Misc.EDDatabaseSetup.sql"))
-			using (var sr = new StreamReader(sql_stream, Encoding.UTF8))
-			{
-				var sql = sr.ReadToEnd();
-				DB.Execute(sql);
-			}
+			// Connect to the database and generate the tables
+			Path_.CreateDirs(Path_.Directory(Filepath));
+			DB = new SQLiteConnection(DBConnectionString);
+			InitDBTables();
 		}
 		public void Dispose()
 		{
 			DB = null;
 		}
 
-		/// <summary>The DB filepath</summary>
-		public static string Filepath => Path_.CombinePath(Settings.Instance.DataPath, "cache.db");
+		/// <summary>HTTP client for access REST API on EDSM</summary>
+		private Web Web { get; }
 
 		/// <summary>Database access</summary>
 		private SQLiteConnection DB
@@ -75,6 +74,14 @@ namespace EDTradeAdvisor
 		/// <summary>App shutdown token</summary>
 		private CancellationToken Shutdown { get; }
 
+		/// <summary>The DB filepath</summary>
+		public static string Filepath => Path_.CombinePath(Settings.Instance.DataPath, "cache.db");
+		private static string DBConnectionString = $"Data Source={Filepath};Version=3;journal mode=Memory;synchronous=Off";
+
+		/// <summary>Search the map for nearby systems</summary>
+		public IEnumerable<StarSystemRef> Search(v4 position, double radius) => Map.Search(position, radius);
+		private Map Map { get; }
+
 		/// <summary>Return a star system by Name/ID</summary>
 		public async Task<StarSystem> GetStarSystem(string name)
 		{
@@ -82,7 +89,7 @@ namespace EDTradeAdvisor
 				$"select * from {Table.StarSystems} " +
 				$"where [{nameof(StarSystem.Name)}] = @name",
 				parameters: new { name },
-				cancellationToken:Shutdown));
+				cancellationToken: Shutdown));
 		}
 		public async Task<StarSystem> GetStarSystem(long id)
 		{
@@ -150,7 +157,8 @@ namespace EDTradeAdvisor
 			int? max_count = null,
 			bool? ignore_permitted = null,
 			bool buffered = true
-		) {
+		)
+		{
 			return DB.Query<StarSystem>(new CommandDefinition(
 				$"select * from {Table.StarSystems}\n" +
 				$"where 1\n" +
@@ -199,7 +207,7 @@ namespace EDTradeAdvisor
 					facilities_excl = (int?)facilities_excl,
 					max_count,
 				},
-				flags: buffered ? CommandFlags.Buffered: CommandFlags.None));
+				flags: buffered ? CommandFlags.Buffered : CommandFlags.None));
 		}
 
 		/// <summary>Enumerate star systems that contains a station matching 'match_station_name'</summary>
@@ -224,45 +232,123 @@ namespace EDTradeAdvisor
 				flags: buffered ? CommandFlags.Buffered : CommandFlags.None));
 		}
 
-		/// <summary>Rebuild the systems table</summary>
-		public void BuildSystemsTable(string systems_populated_jsonl)
+		/// <summary>Populate the cache database</summary>
+		public async Task BuildCache(bool force_rebuild)
 		{
+			using (StatusStack.NewStatusMessage("Building EDSM Cache"))
+			{
+				// Ensure the latest dump files have been downloaded
+				var output_dir = Settings.Instance.DataPath;
+				var updates = (await Task.WhenAll(
+					Web.DownloadFile(SourceFiles.SystemsPopulated, output_dir),
+					Web.DownloadFile(SourceFiles.Stations, output_dir),
+					Web.DownloadFile(SourceFiles.Commodities, output_dir),
+					Web.DownloadFile(SourceFiles.Listings, output_dir),
+					Web.DownloadFile(SourceFiles.LiveListings, output_dir)
+					)).ToDictionary(x => x.FileUrl, x => (Filepath: x.OutputFilepath, Downloaded: x.Downloaded));
+
+				// Determine which tables need updating
+				var merge_list_listings = force_rebuild || updates[SourceFiles.LiveListings].Downloaded;
+				var build_commodities_table = force_rebuild || updates[SourceFiles.Commodities].Downloaded;
+				var build_listings_table = force_rebuild || build_commodities_table || updates[SourceFiles.Listings].Downloaded;
+				var build_stations_table = force_rebuild || updates[SourceFiles.Stations].Downloaded;
+				var build_systems_table = force_rebuild || build_stations_table || updates[SourceFiles.SystemsPopulated].Downloaded;
+
+				if (build_systems_table || build_stations_table || build_commodities_table || build_listings_table)
+				{
+					// Drop tables that are out of date (in order of foreign key reference dependencies)
+					try
+					{
+						await DB.ExecuteAsync(new CommandDefinition(
+							(build_listings_table ? $"drop table {Table.Listings};\n" : string.Empty) +
+							(build_commodities_table ? $"drop table {Table.Commodities};\n" : string.Empty) +
+							(build_commodities_table ? $"drop table {Table.CommodityCategories};\n" : string.Empty) +
+							(build_stations_table ? $"drop table {Table.Stations};\n" : string.Empty) +
+							(build_systems_table ? $"drop table {Table.StarSystems};\n" : string.Empty),
+							cancellationToken: Shutdown));
+					}
+					catch (SQLiteException ex) when ((SQLiteErrorCode)ex.ErrorCode == SQLiteErrorCode.Corrupt)
+					{
+						Log.Write(ELogLevel.Error, ex, $"Cache database is corrupt, rebuilding");
+						DB = null;
+						Path_.DelFile(Filepath);
+						DB = new SQLiteConnection(DBConnectionString);
+						force_rebuild = true;
+					}
+
+					// Replace the now missing tables
+					InitDBTables();
+				}
+
+				// Build the star systems table
+				if (force_rebuild || build_systems_table)
+					BuildSystemsTable(updates[SourceFiles.SystemsPopulated].Filepath);
+
+				// Build the stations table
+				if (force_rebuild || build_stations_table)
+					BuildStationsTable(updates[SourceFiles.Stations].Filepath);
+
+				// Build the commodities and commodity categories tables
+				if (force_rebuild || build_commodities_table)
+					BuildCommodityCategortiesTable(updates[SourceFiles.Commodities].Filepath);
+				if (force_rebuild || build_commodities_table)
+					BuildCommoditiesTable(updates[SourceFiles.Commodities].Filepath);
+
+				// Build the listings table
+				if (force_rebuild || build_listings_table)
+					BuildListingsTable(updates[SourceFiles.Listings].Filepath);
+
+				// Merge live listings data
+				if (force_rebuild || merge_list_listings)
+					MergeListings(updates[SourceFiles.LiveListings].Filepath);
+
+				// Rebuild the star map
+				if (Map.BuildNeeded)
+					Map.BuildSystemMap(EnumStarSystems(buffered: false));
+			}
+		}
+
+		/// <summary>Rebuild the systems table</summary>
+		private void BuildSystemsTable(string systems_populated_jsonl)
+		{
+			Log.Write(ELogLevel.Info, $"Building star systems table");
 			using (var msg = StatusStack.NewStatusMessage($"Building Systems Table: {0:P2}"))
 			{
-				// Delete all content from the table
-				DB.Execute($"delete from {Table.StarSystems}");
 				m_cache_star_systems.Flush();
+				Map.Invalidate();
 
 				// Read each system by line
-				using (var sr = new StreamReader(systems_populated_jsonl, Encoding.UTF8, false))
+				using (var sr = new StreamReader(File.OpenRead(systems_populated_jsonl), Encoding.UTF8, false))
 				using (var transaction = DB.BeginTransaction())
 				using (var cmd = DB.CreateCommand())
 				{
-					// Create a command to reuse the parameters object
+					// Create a command for inserting systems
 					cmd.CommandText =
 						$"insert into {Table.StarSystems} (\n" +
 						$"  [{nameof(StarSystem.ID)}],\n" +
+						$"  [{nameof(StarSystem.EdsmID)}],\n" +
 						$"  [{nameof(StarSystem.Name)}],\n" +
 						$"  [{nameof(StarSystem.X)}],\n" +
 						$"  [{nameof(StarSystem.Y)}],\n" +
 						$"  [{nameof(StarSystem.Z)}],\n" +
-						$"  [{nameof(StarSystem.Population)}],\n" +
 						$"  [{nameof(StarSystem.NeedPermit)}],\n" +
 						$"  [{nameof(StarSystem.UpdatedAt)}]\n" +
 						$") values (\n" +
-						$"  @id, @name, @x, @y, @z, @population, @need_permit, @updated_at\n" +
+						$"  @id, @edsm_id, @name, @x, @y, @z, @need_permit, @updated_at\n" +
 						$")\n";
 					cmd.Parameters.Add("@id", R<StarSystem>.Type(x => x.ID).DbType());
 					cmd.Parameters.Add("@name", R<StarSystem>.Type(x => x.Name).DbType());
 					cmd.Parameters.Add("@x", R<StarSystem>.Type(x => x.X).DbType());
 					cmd.Parameters.Add("@y", R<StarSystem>.Type(x => x.Y).DbType());
 					cmd.Parameters.Add("@z", R<StarSystem>.Type(x => x.Z).DbType());
-					cmd.Parameters.Add("@population", R<StarSystem>.Type(x => x.Population).DbType());
 					cmd.Parameters.Add("@need_permit", R<StarSystem>.Type(x => x.NeedPermit).DbType());
 					cmd.Parameters.Add("@updated_at", R<StarSystem>.Type(x => x.UpdatedAt).DbType());
+					cmd.Parameters.Add("@edsm_id", R<StarSystem>.Type(x => x.EdsmID).DbType());
 					cmd.Transaction = transaction;
 
+					// Parse each object
 					var last_progress_update = 0.0;
+					var stream_length = sr.BaseStream.Length;
 					for (; !sr.EndOfStream;)
 					{
 						var line = sr.ReadLine();
@@ -275,14 +361,14 @@ namespace EDTradeAdvisor
 						cmd.Parameters["@x"].Value = jobj["x"].Value<double>();
 						cmd.Parameters["@y"].Value = jobj["y"].Value<double>();
 						cmd.Parameters["@z"].Value = jobj["z"].Value<double>();
-						cmd.Parameters["@population"].Value = jobj["population"].Value<long>();
 						cmd.Parameters["@need_permit"].Value = jobj["needs_permit"].Value<bool>();
 						cmd.Parameters["@updated_at"].Value = jobj["updated_at"].Value<long>();
+						cmd.Parameters["@edsm_id"].Value = jobj["edsm_id"].Value<long?>();
 						cmd.ExecuteNonQuery();
 
 						// Report progress
-						var fraction_done = (double)sr.BaseStream.Position / sr.BaseStream.Length;
-						if (fraction_done - last_progress_update > 0.01)
+						var fraction_done = (double)sr.BaseStream.Position / stream_length;
+						if (fraction_done - last_progress_update >= 0.01)
 						{
 							msg.Message = $"Building Systems Table: {fraction_done:P2}";
 							last_progress_update = fraction_done;
@@ -296,16 +382,15 @@ namespace EDTradeAdvisor
 		}
 
 		/// <summary>Rebuild the stations table</summary>
-		public void BuildStationsTable(string stations_jsonl)
+		private void BuildStationsTable(string stations_jsonl)
 		{
+			Log.Write(ELogLevel.Info, $"Building stations table");
 			using (var msg = StatusStack.NewStatusMessage($"Building Stations Table: {0:P2}"))
 			{
-				// Delete all content from the table
-				DB.Execute($"delete from {Table.Stations}");
 				m_cache_stations.Flush();
 
 				// Read each station by line
-				using (var sr = new StreamReader(stations_jsonl, Encoding.UTF8, false))
+				using (var sr = new StreamReader(File.OpenRead(stations_jsonl), Encoding.UTF8, false))
 				using (var transaction = DB.BeginTransaction())
 				using (var cmd = DB.CreateCommand())
 				{
@@ -322,7 +407,7 @@ namespace EDTradeAdvisor
 						$"  [{nameof(Station.Planetary)}],\n" +
 						$"  [{nameof(Station.UpdatedAt)}]\n" +
 						$") values (\n" +
-						$"  @id, @name, @system_id, @type, @distance, @facilities, @max_pad_size, @planetary, @updated\n" +
+						$"  @id, @name, @system_id, @type, @distance, @facilities, @max_pad_size, @planetary, @updated_at\n" +
 						$")\n";
 					cmd.Parameters.Add("@id", R<Station>.Type(x => x.ID).DbType());
 					cmd.Parameters.Add("@name", R<Station>.Type(x => x.Name).DbType());
@@ -332,10 +417,11 @@ namespace EDTradeAdvisor
 					cmd.Parameters.Add("@facilities", R<Station>.Type(x => x.Facilities).DbType());
 					cmd.Parameters.Add("@max_pad_size", R<Station>.Type(x => x.MaxPadSize).DbType());
 					cmd.Parameters.Add("@planetary", R<Station>.Type(x => x.Planetary).DbType());
-					cmd.Parameters.Add("@updated", R<Station>.Type(x => x.UpdatedAt).DbType());
+					cmd.Parameters.Add("@updated_at", R<Station>.Type(x => x.UpdatedAt).DbType());
 					cmd.Transaction = transaction;
 
 					var last_progress_update = 0.0;
+					var stream_length = sr.BaseStream.Length;
 					for (; !sr.EndOfStream;)
 					{
 						var line = sr.ReadLine();
@@ -351,12 +437,12 @@ namespace EDTradeAdvisor
 						cmd.Parameters["@facilities"].Value = GetFacilities(jobj);
 						cmd.Parameters["@max_pad_size"].Value = GetMaxPadSize(jobj);
 						cmd.Parameters["@planetary"].Value = jobj["is_planetary"].Value<bool>();
-						cmd.Parameters["@updated"].Value = jobj["updated_at"].Value<long>();
+						cmd.Parameters["@updated_at"].Value = jobj["updated_at"].Value<long>();
 						cmd.ExecuteNonQuery();
 
 						// Report progress
-						var fraction_done = (double)sr.BaseStream.Position / sr.BaseStream.Length;
-						if (fraction_done - last_progress_update > 0.01)
+						var fraction_done = (double)sr.BaseStream.Position / stream_length;
+						if (fraction_done - last_progress_update >= 0.01)
 						{
 							msg.Message = $"Building Stations Table: {fraction_done:P2}";
 							last_progress_update = fraction_done;
@@ -388,34 +474,28 @@ namespace EDTradeAdvisor
 				return fac;
 			}
 			ELandingPadSize GetMaxPadSize(JObject jobj)
+			{
+				switch (jobj["max_landing_pad_size"].Value<string>().ToUpperInvariant())
 				{
-					switch (jobj["max_landing_pad_size"].Value<string>().ToUpperInvariant())
-					{
-					default: return ELandingPadSize.None;
-					case "L": return ELandingPadSize.Large;
-					case "M": return ELandingPadSize.Medium;
-					case "S": return ELandingPadSize.Small;
-					}
+				default: return ELandingPadSize.None;
+				case "L": return ELandingPadSize.Large;
+				case "M": return ELandingPadSize.Medium;
+				case "S": return ELandingPadSize.Small;
 				}
+			}
 		}
 
-		/// <summary>Rebuild the commodities table</summary>
-		public void BuildCommoditiesTable(string commodities_json)
+		/// <summary>Rebuild the commodity categories table</summary>
+		private void BuildCommodityCategortiesTable(string commodities_json)
 		{
-			using (var msg = StatusStack.NewStatusMessage($"Building Commodities Tables: {0:P2}"))
+			Log.Write(ELogLevel.Info, $"Building commodity categories tables");
+			using (var msg = StatusStack.NewStatusMessage($"Building Commodity Categories Tables: {0:P2}"))
 			{
-				// Delete all content from the tables
-				DB.Execute($"delete from {Table.Commodities}");
-				DB.Execute($"delete from {Table.CommodityCategories}");
 				m_cache_market.Flush();
 
-				// Read all commodities into memory
-				var jarr = JArray.Parse(File.ReadAllText(commodities_json));
-				var categories = jarr.ToDictionary(x => x["id"].Value<int>(), x => x["name"].Value<string>());
-				double last_progress_update;
-				int i;
-
-				// Build the categories table first
+				// Read commodities and find the unique categories
+				using (var sr = new StreamReader(File.OpenRead(commodities_json), Encoding.UTF8, false))
+				using (var reader = new JsonTextReader(sr))
 				using (var transaction = DB.BeginTransaction())
 				using (var cmd = DB.CreateCommand())
 				{
@@ -430,19 +510,27 @@ namespace EDTradeAdvisor
 					cmd.Parameters.Add("@name", R<CommodityCategory>.Type(x => x.Name).DbType());
 					cmd.Transaction = transaction;
 
-					last_progress_update = 0.0; i = 0;
-					foreach (var category in categories)
+					var last_progress_update = 0.0;
+					var stream_length = sr.BaseStream.Length;
+					var serializer = new JsonSerializer();
+					var categories = new HashSet<string>();
+					for (; reader.Read();)
 					{
+						if (reader.TokenType != JsonToken.StartObject) continue;
+						var jobj = serializer.Deserialize<JObject>(reader);
+						if (categories.Contains(jobj["id"].Value<string>()))
+							continue;
+
 						Shutdown.ThrowIfCancellationRequested();
 
 						cmd.Reset();
-						cmd.Parameters["@id"].Value = category.Key;
-						cmd.Parameters["@name"].Value = category.Value;
+						cmd.Parameters["@id"].Value = jobj["id"].Value<long>();
+						cmd.Parameters["@name"].Value = jobj["name"].Value<string>();
 						cmd.ExecuteNonQuery();
 
 						// Report progress
-						var fraction_done = (double)i++ / categories.Count;
-						if (fraction_done - last_progress_update > 0.01)
+						var fraction_done = (double)sr.BaseStream.Position / stream_length;
+						if (fraction_done - last_progress_update >= 0.01)
 						{
 							msg.Message = $"Building Commodity Categories Table: {fraction_done:P2}";
 							last_progress_update = fraction_done;
@@ -452,8 +540,20 @@ namespace EDTradeAdvisor
 					transaction.Commit();
 					msg.Message = $"Building Commodity Categories Table: {1:P2}";
 				}
+			}
+		}
 
-				// Build the commodities table
+		/// <summary>Rebuild the commodities table</summary>
+		private void BuildCommoditiesTable(string commodities_json)
+		{
+			Log.Write(ELogLevel.Info, $"Building commodities tables");
+			using (var msg = StatusStack.NewStatusMessage($"Building Commodities Tables: {0:P2}"))
+			{
+				m_cache_market.Flush();
+
+				// Read commodities
+				using (var sr = new StreamReader(File.OpenRead(commodities_json), Encoding.UTF8, false))
+				using (var reader = new JsonTextReader(sr))
 				using (var transaction = DB.BeginTransaction())
 				using (var cmd = DB.CreateCommand())
 				{
@@ -490,9 +590,13 @@ namespace EDTradeAdvisor
 					cmd.Parameters.Add("@ed_id", R<Commodity>.Type(x => x.EDID).DbType());
 					cmd.Transaction = transaction;
 
-					last_progress_update = 0.0; i = 0;
-					foreach (var jobj in jarr)
+					var last_progress_update = 0.0;
+					var stream_length = sr.BaseStream.Length;
+					var serializer = new JsonSerializer();
+					for (; reader.Read();)
 					{
+						if (reader.TokenType != JsonToken.StartObject) continue;
+						var jobj = serializer.Deserialize<JObject>(reader);
 						Shutdown.ThrowIfCancellationRequested();
 
 						cmd.Reset();
@@ -512,7 +616,7 @@ namespace EDTradeAdvisor
 						cmd.ExecuteNonQuery();
 
 						// Report progress
-						var fraction_done = (double)i++ / jarr.Count;
+						var fraction_done = (double)sr.BaseStream.Position / stream_length;
 						if (fraction_done - last_progress_update > 0.01)
 						{
 							msg.Message = $"Building Commodities Table: {fraction_done:P2}";
@@ -527,12 +631,11 @@ namespace EDTradeAdvisor
 		}
 
 		/// <summary>Rebuild the listings table</summary>
-		public void BuildListingsTable(string listings_csv)
+		private void BuildListingsTable(string listings_csv)
 		{
+			Log.Write(ELogLevel.Info, $"Building listings table");
 			using (var msg = StatusStack.NewStatusMessage($"Building Listings Table: {0:P2}"))
 			{
-				// Delete all content from the table
-				DB.Execute($"delete from {Table.Listings}");
 				m_cache_market.Flush();
 
 				// Read each listing by row
@@ -542,29 +645,29 @@ namespace EDTradeAdvisor
 				{
 					cmd.CommandText =
 						$"insert into {Table.Listings} (\n" +
-						$"  [{nameof(Listing.ID           )}],\n" +
-						$"  [{nameof(Listing.StationID    )}],\n" +
-						$"  [{nameof(Listing.CommodityID  )}],\n" +
-						$"  [{nameof(Listing.Supply       )}],\n" +
+						$"  [{nameof(Listing.ID)}],\n" +
+						$"  [{nameof(Listing.StationID)}],\n" +
+						$"  [{nameof(Listing.CommodityID)}],\n" +
+						$"  [{nameof(Listing.Supply)}],\n" +
 						$"  [{nameof(Listing.SupplyBracket)}],\n" +
-						$"  [{nameof(Listing.BuyPrice     )}],\n" +
-						$"  [{nameof(Listing.SellPrice    )}],\n" +
-						$"  [{nameof(Listing.Demand       )}],\n" +
+						$"  [{nameof(Listing.BuyPrice)}],\n" +
+						$"  [{nameof(Listing.SellPrice)}],\n" +
+						$"  [{nameof(Listing.Demand)}],\n" +
 						$"  [{nameof(Listing.DemandBracket)}],\n" +
-						$"  [{nameof(Listing.UpdatedAt    )}]\n" +
+						$"  [{nameof(Listing.UpdatedAt)}]\n" +
 						$") values (\n" +
 						$"  @id, @station_id, @commodity_id, @supply, @supply_bracket, @buy_price, @sell_price, @demand, @demand_bracket, @updated_at\n" +
 						$")\n";
-					cmd.Parameters.Add("@id"             ,R<Listing>.Type(x => x.ID).DbType());
-					cmd.Parameters.Add("@station_id"     ,R<Listing>.Type(x => x.StationID    ).DbType());
-					cmd.Parameters.Add("@commodity_id"   ,R<Listing>.Type(x => x.CommodityID  ).DbType());
-					cmd.Parameters.Add("@supply"         ,R<Listing>.Type(x => x.Supply       ).DbType());
-					cmd.Parameters.Add("@supply_bracket" ,R<Listing>.Type(x => x.SupplyBracket).DbType());
-					cmd.Parameters.Add("@buy_price"      ,R<Listing>.Type(x => x.BuyPrice     ).DbType());
-					cmd.Parameters.Add("@sell_price"     ,R<Listing>.Type(x => x.SellPrice    ).DbType());
-					cmd.Parameters.Add("@demand"         ,R<Listing>.Type(x => x.Demand       ).DbType());
-					cmd.Parameters.Add("@demand_bracket" ,R<Listing>.Type(x => x.DemandBracket).DbType());
-					cmd.Parameters.Add("@updated_at"     ,R<Listing>.Type(x => x.UpdatedAt    ).DbType());
+					cmd.Parameters.Add("@id", R<Listing>.Type(x => x.ID).DbType());
+					cmd.Parameters.Add("@station_id", R<Listing>.Type(x => x.StationID).DbType());
+					cmd.Parameters.Add("@commodity_id", R<Listing>.Type(x => x.CommodityID).DbType());
+					cmd.Parameters.Add("@supply", R<Listing>.Type(x => x.Supply).DbType());
+					cmd.Parameters.Add("@supply_bracket", R<Listing>.Type(x => x.SupplyBracket).DbType());
+					cmd.Parameters.Add("@buy_price", R<Listing>.Type(x => x.BuyPrice).DbType());
+					cmd.Parameters.Add("@sell_price", R<Listing>.Type(x => x.SellPrice).DbType());
+					cmd.Parameters.Add("@demand", R<Listing>.Type(x => x.Demand).DbType());
+					cmd.Parameters.Add("@demand_bracket", R<Listing>.Type(x => x.DemandBracket).DbType());
+					cmd.Parameters.Add("@updated_at", R<Listing>.Type(x => x.UpdatedAt).DbType());
 					cmd.Transaction = transaction;
 
 					long ParseInt64(string s) => s.Length != 0 ? long.Parse(s) : 0L;
@@ -596,8 +699,9 @@ namespace EDTradeAdvisor
 		}
 
 		/// <summary>Merge listings data into the listings table</summary>
-		public void MergeListings(string live_listings_csv)
+		private void MergeListings(string live_listings_csv)
 		{
+			Log.Write(ELogLevel.Info, $"Merging live listings");
 			using (var msg = StatusStack.NewStatusMessage($"Merging Live Listings Data: {0:P2}"))
 			{
 				m_cache_market.Flush();
@@ -660,7 +764,7 @@ namespace EDTradeAdvisor
 						}
 						catch (Exception ex)
 						{
-							Advisor.Log.Write(ELogLevel.Error, ex, $"Failed to update listing. Row data: '{string.Join(",", row)}'");
+							Log.Write(ELogLevel.Error, ex, $"Failed to update listing. Row data: '{string.Join(",", row)}'");
 						}
 					}
 
@@ -677,16 +781,20 @@ namespace EDTradeAdvisor
 			{
 				try
 				{
-					var jobj = JObject.Parse(File.ReadAllText(market_json));
-					var system = GetStarSystem(jobj["StarSystem"].Value<string>()).Result;
-					var station = GetStation(system.ID, jobj["StationName"].Value<string>()).Result;
-					m_cache_market.Invalidate(station.ID);
-
+					var serializer = new JsonSerializer();
+					using (var sr = new StreamReader(File.OpenRead(market_json)))
+					using (var reader = new JsonTextReader(sr))
 					using (var transaction = DB.BeginTransaction())
 					{
+						var jobj = serializer.Deserialize<JObject>(reader);
+						var system = GetStarSystem(jobj["StarSystem"].Value<string>()).Result;
+						var station = GetStation(system.ID, jobj["StationName"].Value<string>()).Result;
+						Log.Write(ELogLevel.Info, $"Merging market data for {system.Name}/{station.Name}");
+						m_cache_market.Invalidate(station.ID);
+
 						foreach (var item in (JArray)jobj["Items"])
 						{
-							var sql =
+							await DB.ExecuteAsync(new CommandDefinition(
 								$"insert or replace into {Table.Listings} (\n" +
 								$"  [{nameof(Listing.ID)}],\n" +
 								$"  [{nameof(Listing.StationID)}],\n" +
@@ -712,9 +820,7 @@ namespace EDTradeAdvisor
 								$"from [Listings] as l\n" +
 								$"inner join {Table.Commodities} c on l.[{nameof(Listing.CommodityID)}] = c.[{nameof(Commodity.ID)}]\n" +
 								$"where c.[{nameof(Commodity.EDID)}] = @edid\n" +
-								$"  and l.[{nameof(Listing.StationID)}] = @station_id";
-							await DB.ExecuteAsync(new CommandDefinition(
-								sql,
+								$"  and l.[{nameof(Listing.StationID)}] = @station_id",
 								new
 								{
 									edid = item["id"].Value<long>(),
@@ -736,9 +842,28 @@ namespace EDTradeAdvisor
 				}
 				catch (Exception ex)
 				{
-					Advisor.Log.Write(ELogLevel.Error, ex, $"Parsing market data failed: '{market_json}'");
+					Log.Write(ELogLevel.Error, ex, $"Parsing market data failed: '{market_json}'");
 				}
 			}
+		}
+
+		/// <summary>Initialise the DB tables</summary>
+		private void InitDBTables()
+		{
+			using (var sql_stream = GetType().Assembly.GetManifestResourceStream($"EDTradeAdvisor.Core.src.DataProvider.CacheSetup.sql"))
+			using (var sr = new StreamReader(sql_stream, Encoding.UTF8))
+				DB.Execute(sr.ReadToEnd());
+		}
+
+		/// <summary>Bulk data files</summary>
+		public static class SourceFiles
+		{
+			public const string SystemsPopulated = "https://eddb.io/archive/v6/systems_populated.jsonl";
+			public const string Stations = "https://eddb.io/archive/v6/stations.jsonl";
+			public const string Commodities = "https://eddb.io/archive/v6/commodities.json";
+			public const string Modules = "https://eddb.io/archive/v6/modules.json";
+			public const string Listings = "https://eddb.io/archive/v6/listings.csv";
+			public const string LiveListings = "http://elite.tromador.com/files/listings-live.csv";
 		}
 
 		/// <summary>Table names</summary>

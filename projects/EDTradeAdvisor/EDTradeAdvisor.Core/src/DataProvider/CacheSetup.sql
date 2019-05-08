@@ -1,4 +1,6 @@
-﻿-- Generates the tables and indices used by EDTradeAdvisor
+﻿--
+-- Generates the tables for 'edsm_cache.db'
+--
 
 pragma foreign_keys = ON;
 pragma synchronous = OFF;
@@ -13,9 +15,9 @@ create table if not exists [StarSystems] (
 	[X] real not null,
 	[Y] real not null,
 	[Z] real not null,
-	[Population] integer not null,
 	[NeedPermit] integer not null,
-	[UpdatedAt] integer not null
+	[UpdatedAt] integer not null,
+	[EdsmID] integer null
 );
 create index if not exists IX_SystemByName on StarSystems([Name]);
 

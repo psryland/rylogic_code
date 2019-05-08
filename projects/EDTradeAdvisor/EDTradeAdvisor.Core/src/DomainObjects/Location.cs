@@ -14,6 +14,9 @@
 		/// <summary></summary>
 		public Station Station { get; set; }
 
+		/// <summary></summary>
+		public static implicit operator LocationID(Location loc) => new LocationID(loc.System?.ID, loc.Station?.ID);
+
 		#region Equals
 		public bool Equals(Location rhs)
 		{

@@ -5,11 +5,22 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="src\DataProvider\EDDB\**" />
+    <Compile Remove="src\DataProvider\EDSM\**" />
+    <EmbeddedResource Remove="src\DataProvider\EDDB\**" />
+    <EmbeddedResource Remove="src\DataProvider\EDSM\**" />
+    <None Remove="src\DataProvider\EDDB\**" />
+    <None Remove="src\DataProvider\EDSM\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="src\DataProvider\CacheSetup.sql" />
+    <None Remove="src\DataProvider\EDDatabaseSetup.sql" />
     <None Remove="src\Misc\EDDatabaseSetup.sql" />
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="src\Misc\EDDatabaseSetup.sql" />
+    <EmbeddedResource Include="src\DataProvider\CacheSetup.sql" />
   </ItemGroup>
 
   <ItemGroup>

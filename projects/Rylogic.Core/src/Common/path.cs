@@ -92,9 +92,9 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Create any missing directory paths in 'directory'</summary>
-		public static void CreateDirs(string path)
+		public static string CreateDirs(string path)
 		{
-			System.IO.Directory.CreateDirectory(path);
+			return System.IO.Directory.CreateDirectory(path).FullName;
 		}
 
 		/// <summary>Delete a file</summary>
