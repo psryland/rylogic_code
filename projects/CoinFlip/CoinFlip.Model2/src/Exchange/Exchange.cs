@@ -891,7 +891,7 @@ namespace CoinFlip
 			// Set up the cache of known trade ids
 			TradeHistoryTradeIds = DB.Query<long>(
 				$"select [{nameof(TradeCompleted.TradeId)}] from {DBHistoryTableName}")
-				.ToHashSet();
+				.ToHashSet(0);
 
 			// Set the interval of available funds transfer history
 			TransfersInterval = new Range(

@@ -1836,7 +1836,7 @@ export class Navigation
 			{
 				// Set a scaling factor from the mouse wheel clicks
 				let scale = 1.0 / 120.0;
-				let delta = Math_.Clamp(ev.wheelDelta * scale, -100, 100);
+				let delta = Math_.Clamp(ev.deltaY * scale, -100, 100);
 
 				// Convert 'client_pt' to normalised camera space
 				let nss_point = Rect_.NormalisePoint(dims.chart_area, client_pt, +1, -1);
@@ -1849,7 +1849,7 @@ export class Navigation
 		else if (this.chart.options.show_axes)
 		{
 			let scale = 0.001;
-			let delta = Math_.Clamp(ev.wheelDelta * scale, -0.999, 0.999);
+			let delta = Math_.Clamp(ev.deltaY * scale, -0.999, 0.999);
 
 			let xaxis = this.chart.xaxis;
 			let yaxis = this.chart.yaxis;

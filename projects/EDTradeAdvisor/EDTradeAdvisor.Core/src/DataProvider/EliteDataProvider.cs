@@ -235,16 +235,16 @@ namespace EDTradeAdvisor.DataProviders
 		/// <summary>Populate the cache database</summary>
 		public async Task BuildCache(bool force_rebuild)
 		{
-			using (StatusStack.NewStatusMessage("Building EDSM Cache"))
+			using (StatusStack.NewStatusMessage("Building Cache Database..."))
 			{
 				// Ensure the latest dump files have been downloaded
 				var output_dir = Settings.Instance.DataPath;
 				var updates = (await Task.WhenAll(
-					Web.DownloadFile(SourceFiles.SystemsPopulated, output_dir),
-					Web.DownloadFile(SourceFiles.Stations, output_dir),
-					Web.DownloadFile(SourceFiles.Commodities, output_dir),
-					Web.DownloadFile(SourceFiles.Listings, output_dir),
-					Web.DownloadFile(SourceFiles.LiveListings, output_dir)
+					Web.DownloadFile(SourceFiles.SystemsPopulated, output_dir, Settings.Instance.DataAge),
+					Web.DownloadFile(SourceFiles.Stations, output_dir, Settings.Instance.DataAge),
+					Web.DownloadFile(SourceFiles.Commodities, output_dir, Settings.Instance.DataAge),
+					Web.DownloadFile(SourceFiles.Listings, output_dir, Settings.Instance.DataAge),
+					Web.DownloadFile(SourceFiles.LiveListings, output_dir, null)
 					)).ToDictionary(x => x.FileUrl, x => (Filepath: x.OutputFilepath, Downloaded: x.Downloaded));
 
 				// Determine which tables need updating

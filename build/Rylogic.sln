@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27130.2036
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.28803.352
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "renderer11", "renderer11.vcxproj", "{6EC3B435-2551-48FE-84F4-EDED821A48D0}"
 EndProject
@@ -165,7 +165,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "EDTradeAdvisor", "EDTradeAd
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EDTradeAdvisor.UI", "..\projects\EDTradeAdvisor\EDTradeAdvisor.UI\EDTradeAdvisor.UI.csproj", "{E5423809-855C-47A5-94B3-10DCA7DA8317}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EDTradeAdvisor.Core", "..\projects\EDTradeAdvisor\EDTradeAdvisor.Core\EDTradeAdvisor.Core.csproj", "{42369E56-70AE-4CD8-9843-091F447C51D1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EDTradeAdvisor.Core", "..\projects\EDTradeAdvisor\EDTradeAdvisor.Core\EDTradeAdvisor.Core.csproj", "{42369E56-70AE-4CD8-9843-091F447C51D1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LDraw2", "..\projects\LDraw2\LDraw2.csproj", "{A1982E1D-C490-4ED0-8632-AFF3E4D32EBB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -763,6 +765,18 @@ Global
 		{42369E56-70AE-4CD8-9843-091F447C51D1}.Release|x64.Build.0 = Release|Any CPU
 		{42369E56-70AE-4CD8-9843-091F447C51D1}.Release|x86.ActiveCfg = Release|Any CPU
 		{42369E56-70AE-4CD8-9843-091F447C51D1}.Release|x86.Build.0 = Release|Any CPU
+		{A1982E1D-C490-4ED0-8632-AFF3E4D32EBB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1982E1D-C490-4ED0-8632-AFF3E4D32EBB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1982E1D-C490-4ED0-8632-AFF3E4D32EBB}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A1982E1D-C490-4ED0-8632-AFF3E4D32EBB}.Debug|x64.Build.0 = Debug|Any CPU
+		{A1982E1D-C490-4ED0-8632-AFF3E4D32EBB}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A1982E1D-C490-4ED0-8632-AFF3E4D32EBB}.Debug|x86.Build.0 = Debug|Any CPU
+		{A1982E1D-C490-4ED0-8632-AFF3E4D32EBB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1982E1D-C490-4ED0-8632-AFF3E4D32EBB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1982E1D-C490-4ED0-8632-AFF3E4D32EBB}.Release|x64.ActiveCfg = Release|Any CPU
+		{A1982E1D-C490-4ED0-8632-AFF3E4D32EBB}.Release|x64.Build.0 = Release|Any CPU
+		{A1982E1D-C490-4ED0-8632-AFF3E4D32EBB}.Release|x86.ActiveCfg = Release|Any CPU
+		{A1982E1D-C490-4ED0-8632-AFF3E4D32EBB}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -818,6 +832,7 @@ Global
 		{E4734592-8EA9-45BD-8533-9AD8463B7495} = {28BE7DF2-BA88-4D94-BE28-EB0C2519AD6C}
 		{E5423809-855C-47A5-94B3-10DCA7DA8317} = {CFC728C1-5F52-46D2-9048-938C7936A67A}
 		{42369E56-70AE-4CD8-9843-091F447C51D1} = {CFC728C1-5F52-46D2-9048-938C7936A67A}
+		{A1982E1D-C490-4ED0-8632-AFF3E4D32EBB} = {D66B1442-9DDF-4160-9322-3E046941F4E6}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7DD34DBC-7EE6-40E2-8641-CDA6D05E7838}

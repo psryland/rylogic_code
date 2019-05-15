@@ -191,7 +191,7 @@ namespace Rylogic.Maths
 		/// <summary>Returns a bit mask containing only the lowest bit of 'n'</summary>
 		public static uint LowBit(uint n)
 		{
-			return n - ((n - 1) & n);
+			return unchecked(n - ((n - 1) & n));
 		}
 
 		/// <summary>

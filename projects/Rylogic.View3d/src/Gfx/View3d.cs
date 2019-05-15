@@ -1010,8 +1010,8 @@ namespace Rylogic.Gfx
 
 				// Initialise view3d
 				string init_error = null;
-				ReportErrorCB error_cb = (ctx, msg) => init_error = msg;
-				m_context = View3D_Initialise(error_cb, IntPtr.Zero, CreateDeviceFlags);
+				void ErrorCB(HTexture ctx, string msg) => init_error = msg;
+				m_context = View3D_Initialise(ErrorCB, IntPtr.Zero, CreateDeviceFlags);
 				if (m_context == HContext.Zero)
 					throw new Exception(init_error ?? "Failed to initialised View3d");
 

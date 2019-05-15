@@ -22,7 +22,6 @@ namespace EDTradeAdvisor.UI
 		{
 			StatusStack.ValueChanged += HandleStatusMsgChanged;
 			Settings.Instance.SettingChange += HandleSettingChange;
-			Settings.Instance.ReadOnly = true;
 
 			// Setup UI
 			InitializeComponent();
@@ -41,6 +40,7 @@ namespace EDTradeAdvisor.UI
 			ShowSettings = Command.Create(this, ShowSettingsInternal);
 			RebuildCache = Command.Create(this, RebuildCacheInternal);
 			SetAsOrigin = Command.Create(this, SetAsOriginInternal);
+			SetAsDestination = Command.Create(this, SetAsDestinationInternal);
 			SwapOriDest = Command.Create(this, SwapOriDestInternal);
 			Exit = Command.Create(this, Close);
 
@@ -49,7 +49,6 @@ namespace EDTradeAdvisor.UI
 
 			// Start the advisor running
 			Advisor.Run = true;
-			Settings.Instance.ReadOnly = false;
 		}
 		protected override void OnContentRendered(EventArgs e)
 		{
@@ -138,7 +137,7 @@ namespace EDTradeAdvisor.UI
 			Advisor.Run = true;
 		}
 
-		/// <summary>Set the destination of the current trade route as the new origin</summary>
+		/// <summary>Set the current trade route as the new origin</summary>
 		public Command SetAsOrigin { get; }
 		private void SetAsOriginInternal()
 		{
@@ -147,6 +146,16 @@ namespace EDTradeAdvisor.UI
 			UseCurrentLocation = false;
 			AnyDestination = true;
 			Settings.Instance.Origin = route.Destination;
+		}
+
+		/// <summary>Set the current trade route as the destination</summary>
+		public Command SetAsDestination { get; }
+		private void SetAsDestinationInternal()
+		{
+			if (TradeRoutes.CurrentItem == null) return;
+			var route = (TradeRoute)TradeRoutes.CurrentItem;
+			AnyDestination = false;
+			Settings.Instance.Destination = route.Destination;
 		}
 
 		/// <summary>Swap the current origin and destination values</summary>

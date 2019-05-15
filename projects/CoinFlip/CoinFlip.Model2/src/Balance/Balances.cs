@@ -88,7 +88,7 @@ namespace CoinFlip
 		public void UpdateBalancePartitions(IEnumerable<Fund> funds)
 		{
 			// The fund ids that we need to have
-			var fund_ids = funds.Select(x => x.Id).Prepend(Fund.Main).ToHashSet();
+			var fund_ids = funds.Select(x => x.Id).Prepend(Fund.Main).ToHashSet(0);
 
 			// Remove fund balances that aren't in the settings
 			var to_remove = Funds.Keys.Where(x => !fund_ids.Contains(x)).ToList();

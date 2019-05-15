@@ -254,6 +254,10 @@
 		<Setter Property="Foreground" Value="{StaticResource Frgd}"/>
 		<Setter Property="Margin" Value="2"/>
 	</Style>
+	<Style TargetType="{x:Type ContextMenu}">
+		<Setter Property="BorderBrush" Value="{StaticResource Bdr}"/>
+		<Setter Property="Background" Value="{StaticResource Bkgd}"/>
+	</Style>
 	<Style x:Key="{x:Static MenuItem.SeparatorStyleKey}" TargetType="{x:Type Separator}">
 		<Setter Property="Background" Value="{StaticResource Bdr}"/>
 		<Setter Property="HorizontalAlignment" Value="Stretch"/>
@@ -497,9 +501,9 @@
 				x:Name="Border"
 				Grid.Column="0"
 				Grid.ColumnSpan="2"
-				BorderThickness="1"
-				BorderBrush="{StaticResource Bdr}"
-				Background="{StaticResource Bkgd}"
+				BorderThickness="{TemplateBinding BorderThickness}"
+				BorderBrush="{TemplateBinding BorderBrush}"
+				Background="{TemplateBinding Background}"
 				/>
 			<Path
 				x:Name="Arrow"
@@ -510,39 +514,6 @@
 				Fill="{StaticResource Frgd}"
 				/>
 
-			<VisualStateManager.VisualStateGroups>
-				<VisualStateGroup x:Name="CommonStates">
-					<VisualState x:Name="Normal" />
-					<VisualState x:Name="MouseOver">
-						<Storyboard>
-							<ColorAnimation
-								Duration="0"
-								Storyboard.TargetName="Border"
-								Storyboard.TargetProperty="BorderBrush.Color"
-								To="{StaticResource ColorFrgd}"
-								/>
-						</Storyboard>
-					</VisualState>
-					<VisualState x:Name="Pressed" />
-					<VisualState x:Name="Disabled">
-						<Storyboard>
-							<ColorAnimation
-								Duration="0"
-								Storyboard.TargetName="Border"
-								Storyboard.TargetProperty="BorderBrush.Color"
-								To="{StaticResource ColorDisabled}"
-								/>
-							<ColorAnimation
-								Duration="0"
-								Storyboard.TargetName="Arrow"
-								Storyboard.TargetProperty="Fill.Color"
-								To="{StaticResource ColorDisabled}"
-								/>
-						</Storyboard>
-					</VisualState>
-				</VisualStateGroup>
-			</VisualStateManager.VisualStateGroups>
-
 		</Grid>
 	</ControlTemplate>
 	<ControlTemplate
@@ -552,46 +523,47 @@
 		<Border
 			x:Name="PART_ContentHost"
 			Focusable="False"
+			Background="{TemplateBinding Background}"
 			/>
 	</ControlTemplate>
 	<ControlTemplate
 		x:Key="ComboBoxTemplate"
 		TargetType="{x:Type ComboBox}"
 		>
-		<Grid x:Name="TemplateRoot">
+		<Grid>
 			<ToggleButton
 				x:Name="ToggleButton"
-				Grid.Column="0"
-				Grid.ColumnSpan="2"
 				Template="{StaticResource ComboBoxToggleButton}"
 				IsChecked="{Binding Path=IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+				BorderBrush="{StaticResource Bdr}"
+				Background="{StaticResource Bkgd}"
+				BorderThickness="1"
 				ClickMode="Press"
 				Focusable="false"
 				/>
 			<ContentPresenter
 				x:Name="ContentSite"
-				Grid.Column="0"
 				IsHitTestVisible="False"
 				Content="{TemplateBinding ComboBox.SelectionBoxItem}"
 				ContentTemplate="{TemplateBinding ComboBox.SelectionBoxItemTemplate}"
 				ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
-				VerticalAlignment="Stretch"
 				HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+				VerticalAlignment="Center"
 				Visibility="Visible"
 				Margin="3,3,23,3"
 				/>
 			<TextBox
 				x:Name="PART_EditableTextBox"
-				Grid.Column="0"
 				Text="{TemplateBinding Text}"
-				IsReadOnly="{TemplateBinding IsReadOnly}"
+				Style="{x:Null}"
 				Template="{StaticResource ComboBoxEditableTextBox}"
+				IsReadOnly="{TemplateBinding IsReadOnly}"
 				SelectionBrush="{StaticResource Seld}"
 				CaretBrush="{StaticResource Frgd}"
-				Foreground="White"
 				HorizontalAlignment="Stretch"
 				VerticalAlignment="Center"
 				Background="Transparent"
+				Foreground="White"
 				BorderThickness="0"
 				Visibility="Hidden"
 				Focusable="True"
@@ -632,30 +604,49 @@
 			<VisualStateManager.VisualStateGroups>
 				<VisualStateGroup x:Name="CommonStates">
 					<VisualState x:Name="Normal" />
-					<VisualState x:Name="MouseOver" />
-					<VisualState x:Name="Focused" />
-					<VisualState x:Name="Disabled" />
+					<VisualState x:Name="MouseOver" >
+						<Storyboard>
+							<ColorAnimation
+								Storyboard.TargetName="ToggleButton"
+								Storyboard.TargetProperty="BorderBrush.Color"
+								To="{StaticResource ColorFrgd}"
+								Duration="0"
+								/>
+						</Storyboard>
+					</VisualState>
+					<VisualState x:Name="Focused" >
+						<Storyboard>
+							<ColorAnimation
+								Storyboard.TargetName="ToggleButton"
+								Storyboard.TargetProperty="BorderBrush.Color"
+								To="{StaticResource ColorFrgd}"
+								Duration="0"
+								/>
+						</Storyboard>
+					</VisualState>
+					<VisualState x:Name="Disabled" >
+						<Storyboard>
+							<ColorAnimation
+								Storyboard.TargetName="ToggleButton"
+								Storyboard.TargetProperty="BorderBrush.Color"
+								To="{StaticResource ColorDisabled}"
+								Duration="0"
+								/>
+						</Storyboard>
+					</VisualState>
 				</VisualStateGroup>
 				<VisualStateGroup x:Name="EditStates">
 					<VisualState x:Name="Editable">
 						<Storyboard>
 							<ObjectAnimationUsingKeyFrames
 								Storyboard.TargetName="PART_EditableTextBox"
-								Storyboard.TargetProperty="(UIElement.Visibility)"
-								>
-								<DiscreteObjectKeyFrame
-									KeyTime="0"
-									Value="{x:Static Visibility.Visible}"
-									/>
+								Storyboard.TargetProperty="(UIElement.Visibility)">
+								<DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Visible}"/>
 							</ObjectAnimationUsingKeyFrames>
 							<ObjectAnimationUsingKeyFrames
 								Storyboard.TargetName="ContentSite"
-								Storyboard.TargetProperty="(UIElement.Visibility)"
-								>
-								<DiscreteObjectKeyFrame
-									KeyTime="0"
-									Value="{x:Static Visibility.Hidden}"
-									/>
+								Storyboard.TargetProperty="(UIElement.Visibility)">
+								<DiscreteObjectKeyFrame KeyTime="0" Value="{x:Static Visibility.Hidden}" />
 							</ObjectAnimationUsingKeyFrames>
 						</Storyboard>
 					</VisualState>
@@ -682,6 +673,7 @@
 		<Setter Property="FrameworkElement.FocusVisualStyle" Value="{x:Null}" />
 		<Setter Property="MinWidth" Value="120" />
 		<Setter Property="MinHeight" Value="20" />
+		<Setter Property="IsTabStop" Value="False" />
 		<Setter Property="Template" Value="{StaticResource ComboBoxTemplate}"/>
 	</Style>
 	<Style TargetType="{x:Type ComboBox}" BasedOn="{StaticResource StyleComboBox}"/>

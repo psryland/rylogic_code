@@ -44,7 +44,7 @@ namespace Rylogic.Gui.WPF.Converters
 	{
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			return value != null && value is string str && string.IsNullOrEmpty(str);
+			return value != null && value is string str && !string.IsNullOrEmpty(str);
 		}
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{

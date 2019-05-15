@@ -1,10 +1,12 @@
-# Rylogic user specific variables
+﻿# Rylogic user specific variables
 # Make a copy of this file in the same directory and call it 'UserVars.py'
 # Then update the values to those appropriate for your PC
 # For any paths that don't apply, set to 'None'
 import os
-def CheckPath(path:str):
-	if path and not os.path.exists(path): raise FileNotFoundError(f"Path {path} does not exist");
+def CheckPath(path:str, optional:bool = False):
+	if path and not os.path.exists(path):
+		if optional: print(f"Path {path} does not exist")
+		else: raise FileNotFoundError(f"Path {path} does not exist")
 	return path
 def JoinPath(*args):
 	return None if None in args else os.path.join(*args)
@@ -41,22 +43,22 @@ winsdk_references = CheckPath(JoinPath(winsdk, "References", winsdkvers))
 dotnet_dir = CheckPath("<DOTNET_DIRECTORY>")
 dotnet = CheckPath("<DOTNET_PATH>")
 
-# MSBuild path. Used by build scripts
-# e.g. msbuild = CheckPath("C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe")
-msbuild = CheckPath("<MSBUILD_PATH>")
-
-# The build system version. VS2013 == v120, VS2012 = v110, etc
-platform_toolset = "v141"
-
 # Visual Studio install path
 # e.g. vs_dir = CheckPath("C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community")
 vs_dir = CheckPath("<VS_DIRECTORY>")
-msvc_dir = CheckPath(JoinPath(vs_dir, "VC", "Tools", "MSVC", "14.16.27023"))
+msvc_dir = CheckPath(JoinPath(vs_dir, "VC", "Tools", "MSVC", "14.20.27508"))
 vs_compiler32 = CheckPath(JoinPath(msvc_dir, "bin", "HostX64", "x86", "cl.exe"))
 vs_compiler64 = CheckPath(JoinPath(msvc_dir, "bin", "HostX64", "x64", "cl.exe"))
 vs_linker32 = CheckPath(JoinPath(msvc_dir, "bin", "HostX64", "x86", "link.exe"))
 vs_linker64 = CheckPath(JoinPath(msvc_dir, "bin", "HostX64", "x64", "link.exe"))
 vs_vers = "15.0"
+
+# MSBuild path. Used by build scripts
+# e.g. msbuild = CheckPath("C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe")
+msbuild = CheckPath("<MSBUILD_PATH>")
+
+# The build system version. VS2013 == v120, VS2012 = v110, etc
+platform_toolset = "v142"
 
 # The full path to the android SDK
 # e.g. android_sdkdir = CheckPath("C:\\android\\android-sdk")
@@ -89,7 +91,7 @@ ttbuild = CheckPath(JoinPath(vs_dir, "Common7", "IDE", "TextTransform.exe"))
 powershell64 = CheckPath(JoinPath("C:\\Windows", "System32", "WindowsPowerShell", "v1.0", "powershell.exe"))
 powershell32 = CheckPath(JoinPath("C:\\Windows", "SysWOW64", "WindowsPowerShell", "v1.0", "powershell.exe"))
 
-# Nuget package manager and API Key for publishing nuget packages
+# Nuget package manager and API Key for publishing nuget packages (regenerated every 6months)
 nuget = CheckPath(JoinPath(root, "tools", "nuget", "nuget.exe"))
 nuget_api_key = "<NUGET_API_KEY>"
 

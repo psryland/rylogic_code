@@ -38,7 +38,7 @@ namespace Rylogic.Gui.WPF
 		//    - Add an instance of the control
 		//    - Set the log filepath
 
-		private const int FilePollPeriod = 100;
+		private const int FilePollPeriodMS = 100;
 		private readonly int m_main_thread_id;
 
 		static LogControl()
@@ -196,12 +196,12 @@ namespace Rylogic.Gui.WPF
 				if (m_log_filepath != null)
 				{
 					m_watch.Remove(m_log_filepath);
-					m_watch = null;
+					Util.Dispose(ref m_watch);
 				}
 				m_log_filepath = value;
 				if (m_log_filepath != null)
 				{
-					m_watch = new FileWatch { PollPeriod = FilePollPeriod };
+					m_watch = new FileWatch { PollPeriod = TimeSpan.FromMilliseconds(FilePollPeriodMS) };
 					m_watch.Add(m_log_filepath, HandleFileChanged);
 					HandleFileChanged(m_log_filepath, null);
 				}
@@ -363,12 +363,12 @@ namespace Rylogic.Gui.WPF
 				if (m_freeze == value) return;
 				if (m_freeze)
 				{
-					m_watch.PollPeriod = FilePollPeriod;
+					m_watch.PollPeriod = TimeSpan.FromMilliseconds(FilePollPeriodMS);
 				}
 				m_freeze = value;
 				if (m_freeze)
 				{
-					m_watch.PollPeriod = 0;
+					m_watch.PollPeriod = TimeSpan.Zero;
 				}
 			}
 		}

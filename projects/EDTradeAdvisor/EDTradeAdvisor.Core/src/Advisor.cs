@@ -40,7 +40,14 @@ namespace EDTradeAdvisor
 			m_find_trade_routes = new AutoResetEvent(false);
 			Web = new Web(Shutdown.Token);
 			Src = new EliteDataProvider(Web, Shutdown.Token);
-			JournalMonitor = new EDJournalMonitor();
+			JournalMonitor = new EDJournalMonitor(Shutdown.Token);
+
+			RunOnMainThread(new Action(() =>
+			{
+				Settings.Instance.NotifySettingChanged(nameof(Settings.UseCurrentLocation));
+				Settings.Instance.NotifySettingChanged(nameof(Settings.ReadCargoCapacityFromLoadout));
+				Settings.Instance.NotifySettingChanged(nameof(Settings.ReadMaxJumpRangeFromLoadout));
+			}));
 		}
 		public void Dispose()
 		{
@@ -137,27 +144,18 @@ namespace EDTradeAdvisor
 			var issue = 0;
 			for (; !thread_stop.IsCancellationRequested; )
 			{
-				if (m_trade_routes_issue_current == m_trade_routes_issue)
+				// If a new search is needed and not yet started, search now
+				if (m_trade_routes_issue_current != m_trade_routes_issue && issue != m_trade_routes_issue)
 				{
-					// If up to date, go to sleep
-					using (thread_stop.Register(() => m_find_trade_routes.Set()))
-						m_find_trade_routes.WaitOne();
-
+					// Find trade routes
+					issue = m_trade_routes_issue;
+					await FindTradeRoutes(m_settings_snapshot, issue);
 					continue;
 				}
 
-				// Find trade routes
-				if (issue != m_trade_routes_issue)
-				{
-					issue = m_trade_routes_issue;
-					await FindTradeRoutes(m_settings_snapshot, issue);
-				}
-				else
-				{
-					// A find routes has already been started for 'issue'.
-					// We're waiting for the 'RunOnMainThread' call to update the current issue number
-					await Task.Delay(10, Shutdown.Token);
-				}
+				// If up to date, go to sleep
+				using (thread_stop.Register(() => m_find_trade_routes.Set()))
+					m_find_trade_routes.WaitOne(TimeSpan.FromSeconds(0.5));
 			}
 
 			Log.Write(ELogLevel.Info, "Advisor Deactivated");
@@ -187,31 +185,20 @@ namespace EDTradeAdvisor
 					m_journal_monitor.CargoCapacityChanged += HandleCargoSpaceChanged;
 					m_journal_monitor.MaxJumpRangeChanged += HandleMaxJumpRangeChanged;
 					m_journal_monitor.MarketUpdate += HandleMarketUpdate;
-
-					if (Settings.Instance.UseCurrentLocation)
-						HandleLocationChanged(null, null);
-					if (Settings.Instance.ReadCargoCapacityFromLoadout)
-						HandleCargoSpaceChanged(null, null);
-					if (Settings.Instance.ReadMaxJumpRangeFromLoadout)
-						HandleMaxJumpRangeChanged(null, null);
 				}
 
 				// Handlers
-				async void HandleLocationChanged(object sender, EventArgs e)
+				void HandleLocationChanged(object sender, EventArgs e)
 				{
-					// Only if 'use current location' is enabled and only if both system and station are set
-					if (Settings.Instance.UseCurrentLocation)
-						await SetLocationFromJournal();
+					Settings.Instance.NotifySettingChanged(nameof(Settings.UseCurrentLocation));
 				}
 				void HandleCargoSpaceChanged(object sender, EventArgs e)
 				{
-					if (Settings.Instance.ReadCargoCapacityFromLoadout)
-						Settings.Instance.CargoCapacity = JournalMonitor.CargoCapacity;
+					Settings.Instance.NotifySettingChanged(nameof(Settings.ReadCargoCapacityFromLoadout));
 				}
 				void HandleMaxJumpRangeChanged(object sender, EventArgs e)
 				{
-					if (Settings.Instance.ReadMaxJumpRangeFromLoadout)
-						Settings.Instance.MaxJumpRange = JournalMonitor.MaxJumpRange;
+					Settings.Instance.NotifySettingChanged(nameof(Settings.ReadMaxJumpRangeFromLoadout));
 				}
 				async void HandleMarketUpdate(object sender, MarketUpdateEventArgs e)
 				{
@@ -517,12 +504,15 @@ namespace EDTradeAdvisor
 				: null;
 
 			Settings.Instance.Origin = new LocationID(system?.ID, station?.ID);
+			InvalidateTradeRoutes();
 		}
 
 		/// <summary>Watch for settings changes</summary>
-		private void HandleSettingChange(object sender, SettingChangeEventArgs e)
+		private async void HandleSettingChange(object sender, SettingChangeEventArgs e)
 		{
 			if (e.Before) return;
+			Log.Write(ELogLevel.Debug, $"Setting {e.Key} changed to {e.Value}");
+
 			switch (e.Key)
 			{
 			case nameof(Settings.JournalFilesDir):
@@ -543,7 +533,7 @@ namespace EDTradeAdvisor
 					}
 					break;
 				}
-			case nameof(Settings.Destination.StationID):
+			case nameof(Settings.Destination):
 				{
 					// If a destination station is selected but the current system id is
 					// still null, set it to the system that owns the station.
@@ -558,25 +548,24 @@ namespace EDTradeAdvisor
 			case nameof(Settings.UseCurrentLocation):
 				{
 					if (Settings.Instance.UseCurrentLocation)
-						SetLocationFromJournal().Wait();
+						await SetLocationFromJournal();
 					break;
 				}
 			case nameof(Settings.ReadCargoCapacityFromLoadout):
 				{
-					if (Settings.Instance.ReadCargoCapacityFromLoadout)
-						Settings.Instance.CargoCapacity = JournalMonitor.CargoCapacity;
+					if (Settings.Instance.ReadCargoCapacityFromLoadout && JournalMonitor.CargoCapacity != null)
+						Settings.Instance.CargoCapacity = JournalMonitor.CargoCapacity.Value;
 					break;
 				}
 			case nameof(Settings.ReadMaxJumpRangeFromLoadout):
 				{
-					if (Settings.Instance.ReadMaxJumpRangeFromLoadout)
-						Settings.Instance.MaxJumpRange = JournalMonitor.MaxJumpRange;
+					if (Settings.Instance.ReadMaxJumpRangeFromLoadout && JournalMonitor.MaxJumpRange != null)
+						Settings.Instance.MaxJumpRange = JournalMonitor.MaxJumpRange.Value;
 					break;
 				}
 			}
 
 			// Make a copy of the settings for thread safety
-			Log.Write(ELogLevel.Debug, $"Setting {e.Key} changed to {e.Value}");
 			m_settings_snapshot = new Settings(Settings.Instance);
 			InvalidateTradeRoutes();
 		}

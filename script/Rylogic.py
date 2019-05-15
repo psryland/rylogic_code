@@ -594,7 +594,7 @@ def DotNet(command:str, sln_or_proj_file:str, projects:[str], platforms:[str], c
 	configs   = configs if configs else []
 
 	# Build the arguments list
-	args = [UserVars.dotnet, command, sln_or_proj_file, "--verbosity", "minimal", "/nologo"]
+	args = [UserVars.dotnet, command, sln_or_proj_file, "--verbosity", "minimal", "/nologo", "-nowarn:NU1503"]
 
 	# Set the targets to build
 	# Targets should be the names as shown in the solution explorer (i.e. Folder\Project.Name)

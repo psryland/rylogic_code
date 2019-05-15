@@ -33,7 +33,7 @@ def SubInclude(kv, indent, srcpath, ofs):
 	# Read the include filepath and check it exists
 	m = re.match(r".*file=\"(?P<file>.*?)\".*", kv)
 	if not m: raise SyntaxError(Tools.VSLink(srcpath,ofs=ofs) + "Error - Invalid include: '"+kv+"'.\nCould not match 'file' field.\nExpected form: "+expected_form)
-	fpath = m.group("file");
+	fpath = m.group("file")
 	fpath = os.path.realpath(fpath if os.path.isabs(fpath) else os.path.join(os.path.split(srcpath)[0], fpath))
 
 	# check the included file exists
@@ -49,7 +49,7 @@ def SubInclude(kv, indent, srcpath, ofs):
 	result = Expand(buf, fpath)
 
 	# Apply the indent to each line in 'result'
-	buf = "";
+	buf = ""
 	for line in io.StringIO(result).readlines():
 		buf += indent + line
 
@@ -60,9 +60,9 @@ def SubVar(kv, indent, srcpath, ofs):
 	expected_form = "<!--#var name=\"variable_name\" file=\"filepath\" value=\"regex_pattern_defining_value\"-->"
 
 	# Read the name of the variable
-	m = re.match(r".*name=\"(?P<name>\w+)\".*", kv);
+	m = re.match(r".*name=\"(?P<name>\w+)\".*", kv)
 	if not m: raise SyntaxError(Tools.VSLink(srcpath,ofs=ofs) + "Error - Invalid variable declaration: '"+kv+"'.\nCould not match 'name' field.\nExpected form: " + expected_form)
-	name = m.group("name");
+	name = m.group("name")
 
 	# Read the source filepath
 	m = re.match(r".*file=\"(?P<file>.*?)\".*", kv)
@@ -75,13 +75,13 @@ def SubVar(kv, indent, srcpath, ofs):
 		raise FileNotFoundError(Tools.VSLink(srcpath,ofs=ofs) + "Error - File reference not found: " + fpath)
 
 	# Read the regex pattern that defines 'value'
-	m = re.match(r".*value=\"(?P<pattern>.*?)\".*", kv);
+	m = re.match(r".*value=\"(?P<pattern>.*?)\".*", kv)
 	if not m:
 		raise SyntaxError(Tools.VSLink(srcpath,ofs=ofs) + "Error - Invalid variable declaration: '"+kv+"'.\nCould not match 'value' field.\nExpected form: " + expected_form)
 
 	# Use the pattern to get the value for the variable
 	try:
-		pat = m.group("pattern");
+		pat = m.group("pattern")
 		m = Tools.Extract(fpath, pat)
 	except:
 		raise SyntaxError(Tools.VSLink(srcpath,ofs=ofs) + "Error - Invalid variable declaration: '"+kv+"'.\n'value' field is not a valid Regex expression.\nExpected form: " + expected_form)
@@ -91,7 +91,7 @@ def SubVar(kv, indent, srcpath, ofs):
 
 	# Save the variable value
 	value = m.group("value")
-	global variables;
+	global variables
 	variables[name] = value
 	return ""
 
@@ -100,26 +100,26 @@ def SubValue(kv, indent, srcpath, ofs):
 	expected_form = "<!--#value name=\"variable_name\"-->"
 
 	# Read the name of the variable
-	m = re.match(r".*name=\"(?P<name>\w+)\".*", kv);
+	m = re.match(r".*name=\"(?P<name>\w+)\".*", kv)
 	if not m: raise SyntaxError(Tools.VSLink(srcpath,ofs=ofs) + "Error - Invalid value declaration: '"+kv+"'.\nCould not match 'name' field.\nExpected form: " + expected_form)
-	name = m.group("name");
+	name = m.group("name")
 
 	# Lookup the value for the variable
-	global variables;
+	global variables
 	value = variables.get(name)
 	if value is None: raise LookupError(Tools.VSLink(srcpath,ofs=ofs) + "Error - Invalid value declaration: '"+kv+"'.\nVariable with 'name' "+name+" is not defined.\nExpected form: " + expected_form)
 
 	# Return the variable value, indented
-	return indent + value;
+	return indent + value
 
 # Substitute an image with its base64 text
 def SubImage(kv, indent, srcpath, ofs):
 	expected_form = "<!--#image file=\"filepath\"-->"
 
 	# Read the filename
-	m = re.match(r".*file=\"(?P<file>.*?)\".*", kv);
+	m = re.match(r".*file=\"(?P<file>.*?)\".*", kv)
 	if not m: raise SyntaxError(Tools.VSLink(srcpath,ofs=ofs) + "Error - Invalid image declaration: '"+kv+"'.\nCould not match 'file' field.\nExpected form: " + expected_form)
-	fpath = m.group("file");
+	fpath = m.group("file")
 	fpath = os.path.realpath(fpath if os.path.isabs(fpath) else os.path.join(os.path.split(srcpath)[0], fpath))
 
 	# check the image file exists
@@ -184,7 +184,7 @@ def ExpandHtmlFile(srcpath, dstdir = None):
 
 	# Split the source file path up
 	srcdir,file = os.path.split(srcpath)
-	fname,extn  = os.path.splitext(file)
+	fname,_  = os.path.splitext(file)
 
 	# Handle optional 'dstdir'
 	if dstdir is None:
@@ -204,7 +204,7 @@ def ExpandHtmlFile(srcpath, dstdir = None):
 	buf = Expand(buf, srcpath)
 
 	# Write the expanded buffer to 'dst'
-	dstdir,dstfile = os.path.split(dstpath)
+	dstdir,_ = os.path.split(dstpath)
 	os.makedirs(dstdir, exist_ok=True)
 	with open(dstpath, mode='w', encoding="utf-8-sig") as f:
 		f.write(buf)

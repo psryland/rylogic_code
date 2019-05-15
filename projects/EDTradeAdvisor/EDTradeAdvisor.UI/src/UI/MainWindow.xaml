@@ -393,6 +393,11 @@
 								Command="{Binding SetAsOrigin}"
 								IsEnabled="{Binding TradeRoutes.CurrentItem, Converter={conv:NotNull}}"
 								/>
+							<MenuItem
+								Header="Set as Destination"
+								Command="{Binding SetAsDestination}"
+								IsEnabled="{Binding TradeRoutes.CurrentItem, Converter={conv:NotNull}}"
+								/>
 						</ContextMenu>
 					</DataGrid.ContextMenu>
 				</DataGrid>

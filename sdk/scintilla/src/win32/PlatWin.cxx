@@ -1789,22 +1789,22 @@ XYPOSITION SurfaceD2D::WidthChar(Font &font_, char ch) {
 
 XYPOSITION SurfaceD2D::Ascent(Font &font_) {
 	SetFont(font_);
-	return ceil(yAscent);
+	return XYPOSITION(ceil(yAscent));
 }
 
 XYPOSITION SurfaceD2D::Descent(Font &font_) {
 	SetFont(font_);
-	return ceil(yDescent);
+	return XYPOSITION(ceil(yDescent));
 }
 
 XYPOSITION SurfaceD2D::InternalLeading(Font &font_) {
 	SetFont(font_);
-	return floor(yInternalLeading);
+	return XYPOSITION(floor(yInternalLeading));
 }
 
 XYPOSITION SurfaceD2D::ExternalLeading(Font &) {
 	// Not implemented, always return one
-	return 1;
+	return XYPOSITION(1);
 }
 
 XYPOSITION SurfaceD2D::Height(Font &font_) {

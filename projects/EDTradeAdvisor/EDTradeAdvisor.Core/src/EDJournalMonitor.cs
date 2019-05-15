@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Rylogic.Common;
@@ -15,14 +18,21 @@ namespace EDTradeAdvisor
 		//  - Monitors the journal files in the ED user data directory
 		private const string JournalRegex = @"Journal\..*\.log";
 
-		public EDJournalMonitor()
+		public EDJournalMonitor(CancellationToken shutdown)
 		{
-			Location = new CurrentLocation();
+			Settings.Instance.SettingChange += HandleSettingChange;
+			Location = new LocationNames();
+			Shutdown = shutdown;
+			InitJournalFiles();
 		}
 		public void Dispose()
 		{
 			Run = false;
+			Settings.Instance.SettingChange -= HandleSettingChange;
 		}
+
+		/// <summary>App shutdown token</summary>
+		private CancellationToken Shutdown { get; }
 
 		/// <summary>Start/Stop the journal monitoring</summary>
 		public bool Run
@@ -33,93 +43,75 @@ namespace EDTradeAdvisor
 				if (Run == value) return;
 				if (Run)
 				{
-					m_watcher.Created -= HandleCreated;
-					m_watcher.Changed -= HandleChanged;
-					m_watcher.Deleted -= HandleDeleted;
 					Util.Dispose(ref m_watcher);
 				}
-				m_watcher = value ? new FileSystemWatcher(Settings.Instance.JournalFilesDir) { EnableRaisingEvents = false } : null;
+				m_watcher = value ? new FileWatch(Shutdown, HandleFileChanged) : null;
 				if (Run)
 				{
-					m_watcher.Deleted += HandleDeleted;
-					m_watcher.Changed += HandleChanged;
-					m_watcher.Created += HandleCreated;
-
-					// Find the latest journal file in the directory
-					var latest_path = Path_.EnumFileSystem(Settings.Instance.JournalFilesDir, SearchOption.TopDirectoryOnly, JournalRegex).MaxByOrDefault(x => x.Name);
-					if (latest_path != null)
-					{
-						JournalFilename = latest_path.FullName;
-						JournalOffset = Parse(JournalFilename, 0L);
-					}
-
-					m_watcher.EnableRaisingEvents = true;
+					m_watcher.Add(Settings.Instance.JournalFilesDir, HandleFileChanged);
+					m_watcher.PollPeriod = TimeSpan.FromMilliseconds(500);
+					LocationChanged?.Invoke(this, EventArgs.Empty);
 				}
 
 				// Handlers
-				void HandleCreated(object sender, FileSystemEventArgs e)
+				bool HandleFileChanged(string filepath, object ctx)
 				{
-					if (Regex.IsMatch(e.Name, JournalRegex))
-					{
-						// When a new journal file is created, parse the remainder of the current one then load the new one.
-						if (JournalFilename != null && string.CompareOrdinal(e.Name, JournalFilename) <= 0)
-							return;
+					var filename = Path_.FileName(filepath);
 
-						// Parse the remainder of the current journal (if there is one)
-						if (JournalFilename != null)
-							JournalOffset = Parse(JournalFilename, JournalOffset);
+					// If the changed file is a journal file
+					if (Regex.IsMatch(Path_.FileName(filepath), JournalRegex))
+					{
+						// The current journal file has changed
+						if (JournalFilepath != null && string.Compare(filepath, JournalFilepath, true) == 0)
+						{
+							// If the file no longer exists, forget it
+							if (!Path_.FileExists(JournalFilepath))
+								JournalFilepath = null;
+							else
+								JournalOffset = Parse(JournalFilepath, JournalOffset);
+						}
+						// If a newer journal file was found
+						else if (JournalFilepath == null || string.Compare(filepath, JournalFilepath, true) > 0)
+						{
+							// Parse the remainder of the current journal (if there is one)
+							if (JournalFilepath != null)
+								JournalOffset = Parse(JournalFilepath, JournalOffset);
 
-						// Read the new journal
-						JournalFilename = e.FullPath;
-						JournalOffset = Parse(JournalFilename, 0L);
+							// Read the new journal
+							JournalFilepath = filepath;
+							JournalOffset = Parse(JournalFilepath, 0L);
+						}
 					}
-					if (e.Name == "Market.json")
+
+					// If the changed file is the market data file
+					else if (string.Compare(filename, "Market.json", true) == 0)
 					{
-						MarketUpdate?.Invoke(this, new MarketUpdateEventArgs(e.FullPath));
+						MarketUpdate?.Invoke(this, new MarketUpdateEventArgs(filepath));
 					}
-				}
-				void HandleChanged(object sender, FileSystemEventArgs e)
-				{
-					// When the latest journal changes, parse the additional lines
-					if (JournalFilename != null && string.CompareOrdinal(e.Name, JournalFilename) == 0)
-					{
-						JournalOffset = Parse(JournalFilename, JournalOffset);
-					}
-					if (e.Name == "Market.json")
-					{
-						MarketUpdate?.Invoke(this, new MarketUpdateEventArgs(e.FullPath));
-					}
-				}
-				void HandleDeleted(object sender, FileSystemEventArgs e)
-				{
-					// If the latest journal gets deleted, remove our reference to it
-					if (JournalFilename != null && string.CompareOrdinal(e.Name, JournalFilename) == 0)
-					{
-						JournalFilename = null;
-						JournalOffset = 0L;
-					}
+
+					return true;
 				}
 			}
 		}
-		private FileSystemWatcher m_watcher;
+		private FileWatch m_watcher;
 
 		/// <summary>The current player location</summary>
-		public CurrentLocation Location { get; }
+		public LocationNames Location { get; }
 		public event EventHandler LocationChanged;
 
 		/// <summary>The player's ship cargo space</summary>
-		public int CargoCapacity { get; private set; }
+		public int? CargoCapacity { get; private set; }
 		public event EventHandler CargoCapacityChanged;
 
 		/// <summary>The max jump range (unladen)</summary>
-		public double MaxJumpRange { get; private set; }
+		public double? MaxJumpRange { get; private set; }
 		public event EventHandler MaxJumpRangeChanged;
 
 		/// <summary>Raised when the Market.json file is created or changed</summary>
 		public event EventHandler<MarketUpdateEventArgs> MarketUpdate;
 
 		/// <summary>The latest journal name, currently being watched</summary>
-		private string JournalFilename
+		private string JournalFilepath
 		{
 			get { return m_journal_filename; }
 			set
@@ -132,7 +124,16 @@ namespace EDTradeAdvisor
 		private string m_journal_filename;
 
 		/// <summary>The offset into the journal that has been successfully parsed</summary>
-		private long JournalOffset { get; set; }
+		private long JournalOffset
+		{
+			get { return m_journal_offset; }
+			set
+			{
+				if (value < 0) throw new ArgumentOutOfRangeException();
+				m_journal_offset = value;
+			}
+		}
+		private long m_journal_offset;
 
 		/// <summary>Parse events in a journal file, reading from 'fileofs'</summary>
 		private long Parse(string filepath, long fileofs)
@@ -160,21 +161,27 @@ namespace EDTradeAdvisor
 						switch (evt)
 						{
 						case "Location":
+							Log.Write(ELogLevel.Debug, $"{filepath}:({sr.BaseStream.Position}) - Location event");
 							ParseLocation(jobj);
 							break;
 						case "SupercruiseEntry":
+							Log.Write(ELogLevel.Debug, $"{filepath}:({sr.BaseStream.Position}) - SupercruiseEntry event");
 							ParseSupercruiseEntry(jobj);
 							break;
-						case "SuperCruiseExit":
-							ParseSuperCruiseExit(jobj);
+						case "SupercruiseExit":
+							Log.Write(ELogLevel.Debug, $"{filepath}:({sr.BaseStream.Position}) - SupercruiseExit event");
+							ParseSupercruiseExit(jobj);
 							break;
 						case "Docked":
+							Log.Write(ELogLevel.Debug, $"{filepath}:({sr.BaseStream.Position}) - Docked event");
 							ParseDocked(jobj);
 							break;
 						case "Undocked":
+							Log.Write(ELogLevel.Debug, $"{filepath}:({sr.BaseStream.Position}) - Undocked event");
 							ParseUndocked(jobj);
 							break;
 						case "Loadout":
+							Log.Write(ELogLevel.Debug, $"{filepath}:({sr.BaseStream.Position}) - Loadout event");
 							ParseLoadout(jobj);
 							break;
 						}
@@ -182,7 +189,7 @@ namespace EDTradeAdvisor
 					catch (Exception ex)
 					{
 						// Assume reader exceptions mean partial line reads
-						if (!(ex is JsonReaderException)) Log.Write(ELogLevel.Error, ex, $"Error reading journal file: {JournalFilename}");
+						if (!(ex is JsonReaderException)) Log.Write(ELogLevel.Error, ex, $"Error reading journal file: {JournalFilepath}");
 						break;
 					}
 				}
@@ -222,7 +229,7 @@ namespace EDTradeAdvisor
 		}
 
 		/// <summary>Parse a journal super cruise exit event</summary>
-		private void ParseSuperCruiseExit(JObject jobj)
+		private void ParseSupercruiseExit(JObject jobj)
 		{
 			Location.StarSystem = jobj["StarSystem"].Value<string>();
 			Location.Station = null;
@@ -239,10 +246,31 @@ namespace EDTradeAdvisor
 			MaxJumpRangeChanged?.Invoke(this, EventArgs.Empty);
 		}
 
-		/// <summary>Current player location</summary>
-		public class CurrentLocation
+		/// <summary></summary>
+		private void InitJournalFiles()
 		{
-			public CurrentLocation(string system = null, string station = null)
+			// Parse all of the available journal files, in order
+			var journal_files = Path_.EnumFileSystem(Settings.Instance.JournalFilesDir, SearchOption.TopDirectoryOnly, JournalRegex).OrderBy(x => x.Name);
+			foreach (var file in journal_files)
+			{
+				JournalFilepath = file.FullName;
+				JournalOffset = Parse(JournalFilepath, 0L);
+			}
+		}
+
+		/// <summary>Handle settings changed</summary>
+		private void HandleSettingChange(object sender, SettingChangeEventArgs e)
+		{
+			if (e.Before) return;
+			if (e.Key == nameof(Settings.JournalFilesDir))
+				InitJournalFiles();
+		}
+
+		/// <summary>Current player location</summary>
+		[DebuggerDisplay("{Description,nq}")]
+		public class LocationNames
+		{
+			public LocationNames(string system = null, string station = null)
 			{
 				StarSystem = system;
 				Station = station;
@@ -253,6 +281,9 @@ namespace EDTradeAdvisor
 
 			/// <summary>The station that the player is currently in</summary>
 			public string Station { get; set; }
+
+			/// <summary></summary>
+			public string Description => $"{StarSystem}/{Station}";
 		}
 	}
 

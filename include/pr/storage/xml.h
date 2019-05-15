@@ -17,6 +17,7 @@
 #include <xmllite.h>
 
 #include "pr/common/flags_enum.h"
+#include "pr/str/string_core.h"
 
 #pragma comment(lib, "xmllite.lib")
 #pragma comment(lib, "shlwapi.lib")
@@ -145,7 +146,7 @@ namespace pr
 			template <> unsigned int      as() const { return static_cast<unsigned int>(_wtoi(m_value.c_str())); }
 			template <> float             as() const { return static_cast<float>(_wtof(m_value.c_str())); }
 			template <> double            as() const { return _wtof(m_value.c_str()); }
-			template <> std::string       as() const { return std::string(m_value.begin(), m_value.end()); }
+			template <> std::string       as() const { return pr::Narrow(m_value); }
 			template <> std::wstring      as() const { return m_value; }
 
 			// Child node access

@@ -113,7 +113,7 @@ namespace Rylogic.Gui.WPF
 			else if (SceneBounds != Rect_.Zero)
 			{
 				var hit = HitTestCS(location, Keyboard.Modifiers, null);
-				var hovered = hit.Hits.Select(x => x.Element).ToHashSet();
+				var hovered = hit.Hits.Select(x => x.Element).ToHashSet(0);
 
 				// Remove elements that are no longer hovered
 				// and remove existing hovered's from the set.

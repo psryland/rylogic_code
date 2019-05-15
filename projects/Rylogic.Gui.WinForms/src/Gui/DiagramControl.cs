@@ -3459,7 +3459,7 @@ namespace Rylogic.Gui.WinForms
 			internal void RemoveUnused(IEnumerable<Element> elements)
 			{
 				// Determine which styles are unused
-				var unused = m_map.Keys.ToHashSet();
+				var unused = m_map.Keys.ToHashSet(0);
 				foreach (var elem in elements)
 				{
 					var node = elem as Node;
@@ -3800,7 +3800,7 @@ namespace Rylogic.Gui.WinForms
 				for (int i = 0; i != nodes.Count; ++i)
 				{
 					var node0 = nodes[i];
-					var others = node0.Connectors.Select(x => x.OtherNode(node0)).ToHashSet();
+					var others = node0.Connectors.Select(x => x.OtherNode(node0)).ToHashSet(0);
 					for (int j = i + 1; j != nodes.Count; ++j)
 					{
 						var node1 = nodes[j];

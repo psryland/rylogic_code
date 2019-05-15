@@ -44,9 +44,13 @@ namespace Rylogic.Extn
 		{
 			return new HashSet<TSource>(source);
 		}
+		public static HashSet<TSource> ToHashSet<TSource>(this IEnumerable<TSource> source, int disambiguator_from_net472)
+		{
+			return new HashSet<TSource>(source);
+		}
 
 		/// <summary>Convert the collection into a hash set</summary>
-		public static HashSet<TKey> ToHashSet<TSource,TKey>(this IEnumerable<TSource> source, Func<TSource,TKey> selector)
+		public static HashSet<TKey> ToHashSet<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector)
 		{
 			return new HashSet<TKey>(source.Select(selector));
 		}

@@ -69,7 +69,7 @@ namespace EDTradeAdvisor
 		public event EventHandler DownloadingChanged;
 
 		/// <summary>Pull 'filename' from EDDB. Returns true if the file was downloaded, and the output filepath</summary>
-		public async Task<DownloadFileResult> DownloadFile(string file_url, string output_dir, bool only_if_newer = true)
+		public async Task<DownloadFileResult> DownloadFile(string file_url, string output_dir, TimeSpan? maximum_age = null)
 		{
 			var filename = Path_.FileName(file_url);
 			var output_path = Path_.CombinePath(Path_.CreateDirs(output_dir), filename);
@@ -91,10 +91,10 @@ namespace EDTradeAdvisor
 					}
 
 					// Only download if the server version is newer.
-					if (only_if_newer && Path_.FileExists(output_path))
+					if (maximum_age != null && Path_.FileExists(output_path))
 					{
 						var time_diff = new FileInfo(output_path).LastWriteTime - resp.Content.Headers.LastModified;
-						if (time_diff > -Settings.Instance.DataAge)
+						if (time_diff > -maximum_age.Value)
 						{
 							Log.Write(ELogLevel.Info, $"Local copy of '{filename}' is less than {Settings.Instance.DataAge.ToPrettyString(trailing_zeros:false)} older than the latest version");
 							return new DownloadFileResult(file_url, output_path, false);

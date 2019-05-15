@@ -29,7 +29,7 @@ namespace Rylogic.Gui.WinForms
 		//  - Add an instance of the control
 		//  - Set the log filepath
 
-		private const int FilePollPeriod = 100;
+		private const int FilePollPeriodMS = 100;
 
 		#region UI elements
 		private ToolStripContainer m_tsc;
@@ -51,7 +51,7 @@ namespace Rylogic.Gui.WinForms
 		public LogUI(string title, string persist_name)
 		{
 			InitializeComponent();
-			m_watch = new FileWatch{ PollPeriod = FilePollPeriod };
+			m_watch = new FileWatch{ PollPeriod = TimeSpan.FromMilliseconds(FilePollPeriodMS) };
 
 			Title = title;
 
@@ -260,12 +260,12 @@ namespace Rylogic.Gui.WinForms
 				if (m_freeze == value) return;
 				if (m_freeze)
 				{
-					m_watch.PollPeriod = FilePollPeriod;
+					m_watch.PollPeriod = TimeSpan.FromMilliseconds(FilePollPeriodMS);
 				}
 				m_freeze = value;
 				if (m_freeze)
 				{
-					m_watch.PollPeriod = 0;
+					m_watch.PollPeriod = TimeSpan.Zero;
 				}
 			}
 		}

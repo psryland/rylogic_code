@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>NET471</TargetFramework>
+		<TargetFramework>net472</TargetFramework>
 		<Authors>P Ryland</Authors>
 		<Company>Rylogic</Company>
 		<Description>A toolbox of extension methods, data structures, and helper classes used in tools created by Rylogic.</Description>

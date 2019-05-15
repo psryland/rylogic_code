@@ -70,7 +70,7 @@ namespace pr
 			// Convert a geom into an iv4 for flags passed to a shader
 			cb.m_flags = iv4(
 				pr::AllSet(ddata.m_geom, EGeom::Norm),
-				pr::AllSet(ddata.m_geom, EGeom::Tex0),
+				pr::AllSet(ddata.m_geom, EGeom::Tex0) && ddata.m_tex_diffuse != nullptr,
 				ddata.m_sort_key.Group() > ESortGroup::PreAlpha ? 1 : 0,
 				inst_id);
 		}

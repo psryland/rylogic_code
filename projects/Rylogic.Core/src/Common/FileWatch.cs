@@ -9,6 +9,8 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace Rylogic.Common
 {
@@ -30,99 +32,115 @@ namespace Rylogic.Common
 	//      queue, in which case they might as well just poll the FileWatch object.
 
 	/// <summary>File watcher</summary>
-	public class FileWatch
+	public class FileWatch :IDisposable
 	{
-		private readonly List<WatchedFile> m_files;
-		private readonly List<WatchedFile> m_changed_files; // Recycle the changed files collection
-		private readonly CancellationTokenSource m_shutdown;
-		private bool m_in_check_for_changes;
+		private readonly List<IWatcher> m_watched;
+		private readonly List<IWatcher> m_changed; // Recycle the changed files collection
+		private readonly CancellationToken m_shutdown;
 
-		public FileWatch()
+		public FileWatch(CancellationToken? shutdown = null)
 		{
-			m_files         = new List<WatchedFile>();
-			m_changed_files = new List<WatchedFile>();
-			m_shutdown      = new CancellationTokenSource();
-
-			DoWatch();
-			async void DoWatch()
-			{
-				for (; !m_shutdown.IsCancellationRequested;)
-				{
-					var period = 1000;
-					if (PollPeriod != 0)
-					{
-						CheckForChangedFiles();
-						period = PollPeriod;
-					}
-					await Task.Delay(period, m_shutdown.Token);
-				}
-			}
+			m_watched = new List<IWatcher>();
+			m_changed = new List<IWatcher>();
+			m_shutdown = shutdown ?? CancellationToken.None;
 		}
-		public FileWatch(FileChangedHandler on_changed, params string[] files)
-			:this(on_changed, 0, null, files)
+		public FileWatch(CancellationToken? shutdown, ChangedHandler on_changed, params string[] files)
+			:this(shutdown, on_changed, 0, null, files)
 		{}
-		public FileWatch(FileChangedHandler on_changed, int id, object ctx, params string[] files)
-			:this()
+		public FileWatch(CancellationToken? shutdown, ChangedHandler on_changed, int id, object ctx, params string[] files)
+			:this(shutdown)
 		{
 			foreach (string file in files)
-				m_files.Add(new WatchedFile(file, on_changed, id, ctx));
+				m_watched.Add(new WatchedFile(file, on_changed, id, ctx));
+		}
+		public virtual void Dispose()
+		{
+			PollPeriod = TimeSpan.Zero;
 		}
 
 		/// <summary>Get/Set the auto-polling period. If the period is 0 polling is disabled</summary>
-		public int PollPeriod { get; set; }
-
-		/// <summary>The collection of watched filepaths</summary>
-		public IEnumerable<string> Files
+		public TimeSpan PollPeriod
 		{
-			get { return m_files.Select(x => x.m_filepath); }
-		}
+			get { return m_poll_period; }
+			set
+			{
+				if (m_poll_period == value) return;
+				m_poll_period = value;
 
-		/// <summary>Add a file to be watched.</summary>
-		public void Add(string filepath, FileChangedHandler on_changed)
-		{
-			Remove(filepath);
-			m_files.Add(new WatchedFile(filepath, on_changed, 0, null));
-		}
+				//m_cancel.Cancel();
+				Util.Dispose(ref m_cancel);
+				if (m_poll_period != TimeSpan.Zero)
+				{
+					m_cancel = CancellationTokenSource.CreateLinkedTokenSource(m_shutdown);
+					DoWatch(m_cancel.Token);
+				}
 
-		/// <summary>Add a set of files to be watched.</summary>
-		public void Add(IEnumerable<string> filepaths, FileChangedHandler on_changed)
-		{
-			foreach (var f in filepaths)
-				Add(f, on_changed);
+				// Async loop to watch for changed files
+				async void DoWatch(CancellationToken cancel)
+				{
+					try
+					{
+						for (; !cancel.IsCancellationRequested;)
+						{
+							CheckForChangedFiles();
+							await Task.Delay(m_poll_period, cancel);
+						}
+					}
+					catch (OperationCanceledException) { }
+				}
+			}
 		}
+		private CancellationTokenSource m_cancel;
+		private TimeSpan m_poll_period;
 
-		/// <summary>Add a file to be watched.
-		/// 'id' is a user provided id for identifying file groups
+		/// <summary>The collection of watched paths</summary>
+		public IEnumerable<string> Paths => m_watched.Select(x => x.Path);
+
+		/// <summary>
+		/// Add a file or directory to be watched.
+		/// 'id' is a user provided id for identifying file groups.
 		/// 'ctx' is a user provided context passed back in the 'on_changed' callback</summary>
-		public void Add(string filepath, FileChangedHandler on_changed, int id, object ctx)
+		public void Add(string path, ChangedHandler on_changed)
 		{
-			Remove(filepath);
-			m_files.Add(new WatchedFile(filepath, on_changed, id, ctx));
+			Add(path, on_changed, 0, null);
+		}
+		public void Add(string path, ChangedHandler on_changed, int id, object ctx)
+		{
+			Remove(path);
+			if (Path_.IsDirectory(path))
+				m_watched.Add(new WatchedDir(path, on_changed, id, ctx));
+			else
+				m_watched.Add(new WatchedFile(path, on_changed, id, ctx));
+		}
+		public void Add(IEnumerable<string> paths, ChangedHandler on_changed, int id = 0, object ctx = null)
+		{
+			foreach (var f in paths)
+				Add(f, on_changed, id, ctx);
+		}
+
+		/// <summary>Stop watching a file or directory</summary>
+		public void Remove(string path)
+		{
+			Remove(new[] { path });
 		}
 
 		/// <summary>Stop watching a set of files</summary>
 		public void Remove(IEnumerable<string> filepaths)
 		{
-			foreach (var f in filepaths)
-				Remove(f);
-		}
-
-		/// <summary>Stop watching a file</summary>
-		public void Remove(string filepath)
-		{
-			m_files.RemoveAll(f => f.m_filepath == filepath);
+			var set = filepaths.ToHashSet(x => x.ToLowerInvariant());
+			m_watched.RemoveAll(x => set.Contains(x.Path.ToLowerInvariant()));
 		}
 
 		/// <summary>Remove all watches matching 'id'</summary>
 		public void RemoveAll(int id)
 		{
-			m_files.RemoveAll(f => f.m_id == id);
+			m_watched.RemoveAll(f => f.Id == id);
 		}
 
 		/// <summary>Remove all watched files</summary>
 		public void RemoveAll()
 		{
-			m_files.Clear();
+			m_watched.Clear();
 		}
 
 		/// <summary>Check the collection of filepaths for those that have changed</summary>
@@ -131,80 +149,186 @@ namespace Rylogic.Common
 			// Prevent reentrancy.
 			// This is not done in a worker thread because the main blocking call is
 			// 'f.m_info.Refresh()' which blocks all threads so there's no point.
-			if (!m_in_check_for_changes) try
+			if (m_in_check_for_changes != 0) return;
+			using (Scope.Create(() => ++m_in_check_for_changes, () => --m_in_check_for_changes))
 			{
-				m_in_check_for_changes = true;
-				m_changed_files.Clear();
-				foreach (var f in m_files)
-				{
-					f.m_info.Refresh();
-					
-					bool exists = f.m_info.Exists;
-					long size   = exists ? f.m_info.Length : 0;
-					long stamp  = exists ? f.m_info.LastWriteTimeUtc.Ticks : 0;
-					
-					if (f.m_stamp0 != stamp || f.m_size0 != size || f.m_exists0 != f.m_exists1) 
-						m_changed_files.Add(f);
-				
-					f.m_stamp1  = stamp;
-					f.m_size1   = size;
-					f.m_exists1 = exists;
-				}
+				// Build a collection of items that have changed
+				m_changed.Assign(m_watched.Where(x => x.HasChanged));
 
-				// Report each changed file
-				foreach (var f in m_changed_files)
-				{
-					if (f.m_onchange(f.m_filepath, f.m_ctx))
-					{
-						f.m_stamp0  = f.m_stamp1;
-						f.m_size0   = f.m_size1;
-						f.m_exists0 = f.m_exists1;
-					}
-				}
+				// Report each changed item
+				foreach (var item in m_changed)
+					item.NotifyChanged();
 			}
-			finally { m_in_check_for_changes = false; }
 		}
+		private int m_in_check_for_changes;
 
 		/// <summary>
-		/// File changed callback. Return true if the change was handled
+		/// Item changed callback. Return true if the change was handled.
 		/// Returning false causes the FileChanged notification to happen
 		/// again next time CheckForChangedFiles() is called. </summary>
-		public delegate bool FileChangedHandler(string filepath, object ctx);
+		public delegate bool ChangedHandler(string filepath, object ctx);
+
+		/// <summary>Interface for a watch on the file system</summary>
+		private interface IWatcher
+		{
+			/// <summary>A user provided ID for the watcher</summary>
+			int Id { get; }
+
+			/// <summary>The file or directory path being watched</summary>
+			string Path { get; }
+
+			/// <summary>True if the watched item has changed</summary>
+			bool HasChanged { get; }
+
+			/// <summary>Notify observers that this item has changed. Returns true if handled</summary>
+			bool NotifyChanged();
+		}
 
 		/// <summary></summary>
-		private class WatchedFile
+		private class WatchedFile : IWatcher
 		{
 			public readonly FileInfo m_info;               // File info
-			public readonly string m_filepath;             // The filepath of the file to watch
-			public readonly FileChangedHandler m_onchange; // The client to callback when a changed file is found
-			public readonly int m_id;                      // A user provided id used to identify groups of watched files
+			public readonly ChangedHandler m_onchange; // The client to callback when a changed file is found
 			public readonly object m_ctx;                  // User provided context data
-			public long m_stamp0;                          // The last time the file was modified
-			public long m_stamp1;                          // The new timestamp for the file, copied to stamp0 when the file change is handled
-			public long m_size0;                           // The last recorded size of the file
-			public long m_size1;                           // The new size for the file, copied to size0 when the file change is handled
-			public bool m_exists0;                         // Whether the file existed last time we checked
-			public bool m_exists1;                         // The new existence state of the file
+			public bool m_exists0, m_exists1;              // Whether the file existed last time we checked
+			public long m_stamp0, m_stamp1;                // The last time the file was modified
+			public long m_size0, m_size1;                  // The last recorded size of the file
 
-			public WatchedFile(string filepath, FileChangedHandler onchange, int id, object ctx)
+			public WatchedFile(string filepath, ChangedHandler onchange, int id, object ctx)
 			{
-				m_info = new FileInfo(filepath);
-				m_filepath = filepath;
+				Path = filepath;
 				m_onchange = onchange;
-				m_id = id;
 				m_ctx = ctx;
-				m_stamp0 = m_info.Exists ? m_info.LastWriteTimeUtc.Ticks : 0;
-				m_stamp1 = m_stamp0;
-				m_size0 = m_info.Exists ? m_info.Length : 0;
-				m_size1 = m_size0;
+				Id = id;
+				m_info = new FileInfo(filepath);
 				m_exists0 = m_info.Exists;
+				m_stamp0 = m_exists0 ? m_info.LastWriteTimeUtc.Ticks : 0;
+				m_size0 = m_exists0 ? m_info.Length : 0;
 				m_exists1 = m_exists0;
+				m_stamp1 = m_stamp0;
+				m_size1 = m_size0;
 			}
 
-			public override string ToString()
+			/// <summary>A user provided ID for the watcher</summary>
+			public int Id { get; }
+
+			/// <summary>The file path being watched</summary>
+			public string Path { get; }
+
+			/// <summary>True if the watched item has changed</summary>
+			public bool HasChanged
 			{
-				return "Watching: " + m_filepath;
+				get
+				{
+					m_info.Refresh();
+
+					var exists = m_info.Exists;
+					var size = exists ? m_info.Length : 0;
+					var stamp = exists ? m_info.LastWriteTimeUtc.Ticks : 0;
+					var changed = m_exists0 != exists || m_stamp0 != stamp || m_size0 != size;
+
+					m_exists1 = exists;
+					m_stamp1 = stamp;
+					m_size1 = size;
+
+					return changed;
+				}
 			}
+
+			/// <summary>Notify observers that this item has changed</summary>
+			public bool NotifyChanged()
+			{
+				if (!m_onchange(Path, m_ctx))
+					return false;
+				
+				// Only update the reference values when the change is acknowledged
+				m_stamp0 = m_stamp1;
+				m_size0 = m_size1;
+				m_exists0 = m_exists1;
+				return true;
+			}
+
+			/// <summary></summary>
+			public override string ToString() => $"Watching: {Path}";
+		}
+
+		/// <summary></summary>
+		private class WatchedDir : IWatcher
+		{
+			private readonly Dictionary<string, WatchedFile> m_files; // The files in 'Path'
+			private readonly ChangedHandler m_onchange; // The client to callback when a file is changed within the directory
+			private readonly object m_ctx;
+
+			public WatchedDir(string dirpath, ChangedHandler onchange, int id, object ctx)
+			{
+				m_files = new Dictionary<string, WatchedFile>();
+				Path = dirpath;
+				m_onchange = onchange;
+				m_ctx = ctx;
+				Id = id;
+
+				// Get the files in the directory and create a watcher for each
+				var files = Path_.EnumFileSystem(Path, SearchOption.TopDirectoryOnly, exclude: FileAttributes.Hidden | FileAttributes.Directory).ToList();
+				m_files = files.ToDictionary(x => x.FullName.ToLowerInvariant(), x => new WatchedFile(x.FullName, onchange, id, ctx));
+			}
+
+			/// <summary>User provided ID</summary>
+			public int Id { get; private set; }
+
+			/// <summary>The directory path being watched</summary>
+			public string Path { get; private set; }
+
+			/// <summary>True if the watched item has changed</summary>
+			public bool HasChanged
+			{
+				get
+				{
+					// Get the new files in the directory
+					var new_files = Path_.EnumFileSystem(Path, SearchOption.TopDirectoryOnly, exclude: FileAttributes.Hidden | FileAttributes.Directory).Any(x => !m_files.ContainsKey(x.FullName.ToLowerInvariant()));
+					return new_files || m_files.Values.Any(x => x.HasChanged);
+				}
+			}
+
+			/// <summary>Notify observers about the changed items</summary>
+			public bool NotifyChanged()
+			{
+				// Scan the directory and notify about created, deleted, or changed files
+				var current_files = Path_.EnumFileSystem(Path, SearchOption.TopDirectoryOnly, exclude: FileAttributes.Hidden | FileAttributes.Directory)
+					.Select(x => x.FullName).ToList();
+				var existing = current_files
+					.ToHashSet(x => x.ToLowerInvariant());
+
+				foreach (var path in current_files)
+				{
+					// If there is an existing watcher for the file, simply check for changed
+					if (m_files.TryGetValue(path.ToLowerInvariant(), out var file))
+					{
+						// File unchanged
+						if (!file.HasChanged)
+							continue;
+
+						// File changed, but change not handled
+						if (!file.NotifyChanged())
+							continue;
+
+						// File no longer exists, remove from 'm_files'
+						if (!Path_.FileExists(file.Path))
+							m_files.Remove(file.Path.ToLowerInvariant());
+
+						continue;
+					}
+
+					// If this is a new file, notify then add
+					file = new WatchedFile(path, m_onchange, Id, m_ctx);
+					if (file.NotifyChanged())
+						m_files[path.ToLowerInvariant()] = file;
+				}
+
+				return true;
+			}
+
+			/// <summary></summary>
+			public override string ToString() => $"Watching: {Path}";
 		}
 	}
 }

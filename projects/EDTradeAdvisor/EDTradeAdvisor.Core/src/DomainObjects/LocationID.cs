@@ -1,8 +1,10 @@
-﻿using System.Xml.Linq;
+﻿using System.Diagnostics;
+using System.Xml.Linq;
 using Rylogic.Extn;
 
 namespace EDTradeAdvisor.DomainObjects
 {
+	[DebuggerDisplay("{Description,nq}")]
 	public struct LocationID
 	{
 		public LocationID(long? star_system_id, long? station_id)
@@ -27,6 +29,10 @@ namespace EDTradeAdvisor.DomainObjects
 
 		/// <summary></summary>
 		public long? StationID { get; set; }
+
+		/// <summary></summary>
+		public string Description => $"{StarSystemID}/{StationID}";
+		public override string ToString() => Description;
 
 		#region Equals
 		public static bool operator ==(LocationID lhs, LocationID rhs)
