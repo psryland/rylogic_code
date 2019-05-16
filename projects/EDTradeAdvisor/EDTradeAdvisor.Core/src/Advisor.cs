@@ -32,7 +32,6 @@ namespace EDTradeAdvisor
 		public Advisor(Action<Action> run_on_main_thread)
 		{
 			Settings.Instance.SettingChange += HandleSettingChange;
-			m_main_thread_id = Thread.CurrentThread.ManagedThreadId;
 			m_marshal_to_main_thread = run_on_main_thread;
 			RebuildStaticData = !Path_.FileExists(EliteDataProvider.Filepath);
 			Shutdown = new CancellationTokenSource();
@@ -65,7 +64,6 @@ namespace EDTradeAdvisor
 			m_marshal_to_main_thread(action);
 		}
 		private Action<Action> m_marshal_to_main_thread;
-		private int m_main_thread_id;
 
 		/// <summary>App shutdown token</summary>
 		public CancellationTokenSource Shutdown { get; }
@@ -485,7 +483,9 @@ namespace EDTradeAdvisor
 		/// <summary>Call to trigger a search for trade routes</summary>
 		public void InvalidateTradeRoutes()
 		{
+			// Make a copy of the settings for thread safety
 			Log.Write(ELogLevel.Debug, "Trade routes invalidated");
+			m_settings_snapshot = new Settings(Settings.Instance);
 			++m_trade_routes_issue;
 			m_find_trade_routes.Set();
 		}
@@ -504,7 +504,6 @@ namespace EDTradeAdvisor
 				: null;
 
 			Settings.Instance.Origin = new LocationID(system?.ID, station?.ID);
-			InvalidateTradeRoutes();
 		}
 
 		/// <summary>Watch for settings changes</summary>
@@ -531,6 +530,7 @@ namespace EDTradeAdvisor
 						var station = Src.GetStation(Settings.Instance.Origin.StationID.Value).Result;
 						Settings.Instance.Origin = new LocationID(station.SystemID, station.ID);
 					}
+					InvalidateTradeRoutes();
 					break;
 				}
 			case nameof(Settings.Destination):
@@ -543,31 +543,34 @@ namespace EDTradeAdvisor
 						var station = Src.GetStation(Settings.Instance.Destination.StationID.Value).Result;
 						Settings.Instance.Destination = new LocationID(station.SystemID, station.ID);
 					}
+					InvalidateTradeRoutes();
 					break;
 				}
 			case nameof(Settings.UseCurrentLocation):
 				{
 					if (Settings.Instance.UseCurrentLocation)
 						await SetLocationFromJournal();
+
+					InvalidateTradeRoutes();
 					break;
 				}
 			case nameof(Settings.ReadCargoCapacityFromLoadout):
 				{
 					if (Settings.Instance.ReadCargoCapacityFromLoadout && JournalMonitor.CargoCapacity != null)
 						Settings.Instance.CargoCapacity = JournalMonitor.CargoCapacity.Value;
+
+					InvalidateTradeRoutes();
 					break;
 				}
 			case nameof(Settings.ReadMaxJumpRangeFromLoadout):
 				{
 					if (Settings.Instance.ReadMaxJumpRangeFromLoadout && JournalMonitor.MaxJumpRange != null)
 						Settings.Instance.MaxJumpRange = JournalMonitor.MaxJumpRange.Value;
+
+					InvalidateTradeRoutes();
 					break;
 				}
 			}
-
-			// Make a copy of the settings for thread safety
-			m_settings_snapshot = new Settings(Settings.Instance);
-			InvalidateTradeRoutes();
 		}
 	}
 }

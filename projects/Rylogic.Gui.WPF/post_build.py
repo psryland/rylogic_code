@@ -4,7 +4,7 @@
 #  post_build.py $(ProjectDir) $(TargetDir) $(PlatformName) $(ConfigurationName)
 import sys, os, shutil, re
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "script")))
-import RylogicAssemblyPostBuild as PostBuild
+import RylogicAssembly as PostBuild
 import Rylogic as Tools
 import UserVars
 
@@ -13,7 +13,7 @@ try:
 
 	assembly = "Rylogic.Gui.WPF"
 	projdir   = sys.argv[1].rstrip("\\") if len(sys.argv) > 1 else UserVars.root + "\\projects\\"+assembly
-	targetdir = sys.argv[2].rstrip("\\") if len(sys.argv) > 2 else UserVars.root + "\\projects\\"+assembly+"\\bin\\Debug"
+	targetdir = sys.argv[2].rstrip("\\") if len(sys.argv) > 2 else UserVars.root + "\\projects\\"+assembly+"\\bin\\net472\\Debug"
 	platform  = sys.argv[3]              if len(sys.argv) > 3 else "AnyCPU"
 	config    = sys.argv[4]              if len(sys.argv) > 4 else "Debug"
 	deps = [

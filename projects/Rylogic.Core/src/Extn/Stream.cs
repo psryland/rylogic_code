@@ -4,6 +4,7 @@
 //***************************************************
 
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using Rylogic.Utility;
@@ -87,6 +88,7 @@ namespace Rylogic.Extn
 				position += bytes_consumed;
 			}
 
+			Debug.Assert(position >= 0);
 			return position;
 		}
 		public static void Position(this StreamReader reader, long position)

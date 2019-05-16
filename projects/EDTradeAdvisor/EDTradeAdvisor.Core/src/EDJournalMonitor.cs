@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Newtonsoft.Json;
@@ -100,11 +101,31 @@ namespace EDTradeAdvisor
 		public event EventHandler LocationChanged;
 
 		/// <summary>The player's ship cargo space</summary>
-		public int? CargoCapacity { get; private set; }
+		public int? CargoCapacity
+		{
+			get { return m_cargo_capacity; }
+			private set
+			{
+				if (m_cargo_capacity == value) return;
+				m_cargo_capacity = value;
+				CargoCapacityChanged?.Invoke(this, EventArgs.Empty);
+			}
+		}
+		private int? m_cargo_capacity;
 		public event EventHandler CargoCapacityChanged;
 
 		/// <summary>The max jump range (unladen)</summary>
-		public double? MaxJumpRange { get; private set; }
+		public double? MaxJumpRange
+		{
+			get { return m_max_jump_range; }
+			private set
+			{
+				if (m_max_jump_range == value) return;
+				m_max_jump_range = value;
+				MaxJumpRangeChanged?.Invoke(this, EventArgs.Empty);
+			}
+		}
+		public double? m_max_jump_range;
 		public event EventHandler MaxJumpRangeChanged;
 
 		/// <summary>Raised when the Market.json file is created or changed</summary>
@@ -138,50 +159,73 @@ namespace EDTradeAdvisor
 		/// <summary>Parse events in a journal file, reading from 'fileofs'</summary>
 		private long Parse(string filepath, long fileofs)
 		{
+			// Assume 'fileofs' is the first character of a line
 			using (var file = new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite) { Position = fileofs })
-			using (var sr = new StreamReader(file))
 			{
-				// Seek backward to the start of the line
-				for (; sr.BaseStream.Position != 0 && sr.Peek() != '\n'; --sr.BaseStream.Position) { }
-				if (sr.BaseStream.Position != 0)
-					for (var ch = sr.Read(); ch == '\n' || ch == '\r'; ch = sr.Read()) { }
-
 				// Parse events from the journal
-				for (; !sr.EndOfStream;)
+				var buffer = new byte[65536];
+				int i = 0, b = 0;
+				for (;;)
 				{
 					try
 					{
+						// Save the position of the start of the next line
+						fileofs = file.Position;
+
 						// Read a full line from the journal
-						var line = sr.ReadLine();
+						for (i = 0; i != buffer.Length && (b = file.ReadByte()) != -1 && b != '\n'; ++i)
+							buffer[i] = (byte)b;
+
+						// Buffer overflow, read to the next newline, then try to read the next line
+						if (i == buffer.Length)
+						{
+							for (; (b = file.ReadByte()) != -1 && b != '\n';) { }
+							if (b == '\n') continue;
+							if (b == -1) break;
+						}
+
+						// Reached EoF before a full line was read
+						if (b == -1)
+							break;
+
+						// Convert to a string
+						var line = Encoding.UTF8.GetString(buffer, 0, i).TrimEnd('\r');
 						var jobj = JObject.Parse(line);
-						fileofs = sr.Position();
 
 						// Parse the line as Json
 						var evt = jobj["event"].Value<string>();
 						switch (evt)
 						{
 						case "Location":
-							Log.Write(ELogLevel.Debug, $"{filepath}:({sr.BaseStream.Position}) - Location event");
+							Log.Write(ELogLevel.Debug, $"{filepath}:({fileofs}) - {evt} event");
 							ParseLocation(jobj);
 							break;
+						case "StartJump":
+							Log.Write(ELogLevel.Debug, $"{filepath}:({fileofs}) - {evt} event");
+							ParseStartJump(jobj);
+							break;
+						case "FSDJump":
+							Log.Write(ELogLevel.Debug, $"{filepath}:({fileofs}) - {evt} event");
+							ParseFSDJump(jobj);
+							break;
 						case "SupercruiseEntry":
-							Log.Write(ELogLevel.Debug, $"{filepath}:({sr.BaseStream.Position}) - SupercruiseEntry event");
+							Log.Write(ELogLevel.Debug, $"{filepath}:({fileofs}) - {evt} event");
 							ParseSupercruiseEntry(jobj);
 							break;
 						case "SupercruiseExit":
-							Log.Write(ELogLevel.Debug, $"{filepath}:({sr.BaseStream.Position}) - SupercruiseExit event");
+							Log.Write(ELogLevel.Debug, $"{filepath}:({fileofs}) - {evt} event");
 							ParseSupercruiseExit(jobj);
 							break;
 						case "Docked":
-							Log.Write(ELogLevel.Debug, $"{filepath}:({sr.BaseStream.Position}) - Docked event");
+							Log.Write(ELogLevel.Debug, $"{filepath}:({fileofs}) - {evt} event");
 							ParseDocked(jobj);
 							break;
 						case "Undocked":
-							Log.Write(ELogLevel.Debug, $"{filepath}:({sr.BaseStream.Position}) - Undocked event");
+							Log.Write(ELogLevel.Debug, $"{filepath}:({fileofs}) - {evt} event");
 							ParseUndocked(jobj);
 							break;
 						case "Loadout":
-							Log.Write(ELogLevel.Debug, $"{filepath}:({sr.BaseStream.Position}) - Loadout event");
+							Log.Write(ELogLevel.Debug, $"{filepath}:({fileofs}) - {evt} event");
 							ParseLoadout(jobj);
 							break;
 						}
@@ -220,6 +264,22 @@ namespace EDTradeAdvisor
 			LocationChanged?.Invoke(this, EventArgs.Empty);
 		}
 
+		/// <summary>Parse a journal FSDJump event</summary>
+		private void ParseStartJump(JObject jobj)
+		{
+			Location.StarSystem = null;
+			Location.Station = null;
+			LocationChanged?.Invoke(this, EventArgs.Empty);
+		}
+
+		/// <summary>Parse a journal FSDJump event</summary>
+		private void ParseFSDJump(JObject jobj)
+		{
+			Location.StarSystem = jobj["StarSystem"].Value<string>();
+			Location.Station = null;
+			LocationChanged?.Invoke(this, EventArgs.Empty);
+		}
+
 		/// <summary>Parse a journal super cruise entry event</summary>
 		private void ParseSupercruiseEntry(JObject jobj)
 		{
@@ -236,14 +296,12 @@ namespace EDTradeAdvisor
 			LocationChanged?.Invoke(this, EventArgs.Empty);
 		}
 
+
 		/// <summary>Parse a journal load out event</summary>
 		private void ParseLoadout(JObject jobj)
 		{
 			CargoCapacity = jobj["CargoCapacity"].Value<int>();
-			CargoCapacityChanged?.Invoke(this, EventArgs.Empty);
-
 			MaxJumpRange = jobj["MaxJumpRange"].Value<double>();
-			MaxJumpRangeChanged?.Invoke(this, EventArgs.Empty);
 		}
 
 		/// <summary></summary>

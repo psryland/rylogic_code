@@ -52,7 +52,7 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Append 'sep' if the current string is not empty</summary>
-		public static StringBuilder AppendSep(this StringBuilder sb, string sep)
+		public static StringBuilder Delim(this StringBuilder sb, string sep)
 		{
 			if (sb.Length == 0) return sb;
 			return sb.Append(sep);

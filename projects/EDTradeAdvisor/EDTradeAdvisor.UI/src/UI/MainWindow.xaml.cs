@@ -470,7 +470,7 @@ namespace EDTradeAdvisor.UI
 
 					// Preserve the station if possible
 					idx = Settings.Instance.Origin.StationID != null ? stations.IndexOf(x => x.ID == Settings.Instance.Origin.StationID) : -1;
-					OriginStations.MoveCurrentToPosition(idx != -1 ? idx : 0);
+					if (idx != -1) OriginStations.MoveCurrentToPosition(idx);
 					OriginStations.Refresh();
 					break;
 				}
@@ -498,7 +498,7 @@ namespace EDTradeAdvisor.UI
 
 					// Preserve the station if possible
 					idx = Settings.Instance.Destination.StationID != null ? stations.IndexOf(x => x.ID == Settings.Instance.Destination.StationID) : -1;
-					DestStations.MoveCurrentToPosition(idx != -1 ? idx : 0);
+					if (idx != -1) DestStations.MoveCurrentToPosition(idx);
 					DestStations.Refresh();
 					break;
 				}

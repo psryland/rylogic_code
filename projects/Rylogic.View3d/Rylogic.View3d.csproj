@@ -41,4 +41,7 @@
 		<Reference Include="PresentationCore" />
 		<Reference Include="WindowsBase" />
 	</ItemGroup>
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+	  <Exec Command="py $(ProjectDir)post_build.py $(ProjectDir) $(TargetDir) $(PlatformName) $(ConfigurationName)&#xD;&#xA;" />
+	</Target>
 </Project>

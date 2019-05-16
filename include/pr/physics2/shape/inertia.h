@@ -82,6 +82,12 @@ namespace pr::physics
 
 	struct Inertia
 	{
+		// Notes:
+		//  - The 'CoM' is not built into the inertia, it can be freely set to whatever you want.
+		//    It's here as a convenience for calculating the inertia, parallel axis translated.
+		//    Think of 'CoM' as a vector from your common point (typically the model origin) to
+		//    the location of the centre of mass.
+
 		v4 m_diagonal;     // The Ixx, Iyy, Izz terms of the unit inertia at the CoM, Ic.
 		v4 m_products;     // The Ixy, Ixz, Iyz terms of the unit inertia at the CoM, Ic.
 		v4 m_com_and_mass; // Offset from the origin to the centre of mass, and the mass.
@@ -685,6 +691,8 @@ namespace pr::physics
 	// Add/Subtract two inertias. 'lhs' and 'rhs' must be in the same frame.
 	inline Inertia Join(Inertia const& lhs, Inertia const& rhs)
 	{
+		// Todo: this is not the correct check, so long as the inertias are in the same frame
+		// they can be added after parallel axis transformed to a common point.
 		if (lhs.CoM() != rhs.CoM())
 			throw std::runtime_error("Inertias must be in the same space");
 
@@ -696,10 +704,26 @@ namespace pr::physics
 		auto mass = massA + massB;
 		auto com = lhs.CoM();
 
+		// Once inertia's are in the same space they can just be added.
+		// Since these are normalised inertias however we need to add proportionally.
+		// i.e.
+		//   U = I/m = unit inertia = inertia / mass
+		//   I3 = I1 + I2, I1 = m1U1, I2 = m2U2
+		//   I3 = m3U3 = m1U1 + m2U2
+		//   U3 = (m1U1 + m2U2)/m3
 		Inertia sum = {};
-		sum.m_diagonal = (massA*Ia.m_diagonal + massB*Ib.m_diagonal) / mass;
-		sum.m_products = (massA*Ia.m_products + massB*Ib.m_products) / mass;
-		sum.m_com_and_mass = v4{com, mass};
+		if (mass < maths::tiny)
+		{
+			sum.m_diagonal = (Ia.m_diagonal + Ib.m_diagonal) / 2.0f;
+			sum.m_products = (Ia.m_products + Ib.m_products) / 2.0f;
+			sum.m_com_and_mass = v4{ com, mass };
+		}
+		else
+		{
+			sum.m_diagonal = (massA * Ia.m_diagonal + massB * Ib.m_diagonal) / mass;
+			sum.m_products = (massA * Ia.m_products + massB * Ib.m_products) / mass;
+			sum.m_com_and_mass = v4{ com, mass };
+		}
 		return sum;
 	}
 	inline Inertia Split(Inertia const& lhs, Inertia const& rhs)

@@ -6,7 +6,7 @@ import DeployLib
 import UserVars
 
 # The post-build step for Rylogic Assemblies
-def PostBuild(assembly:str, projdir:str, targetdir:str, platform:str, config:str, deps:[str]):
+def PostBuild(assembly:str, projdir:str, targetdir:str, platform:str, config:str, deps:[str], run_tests:bool=True):
 
 	# Assert up-to-date tools
 	Tools.AssertVersion(1)
@@ -19,7 +19,7 @@ def PostBuild(assembly:str, projdir:str, targetdir:str, platform:str, config:str
 	#Tools.Exec([signtool, "sign", "/fd", "SHA256" ])
 
 	# Set this to false to disable running tests on compiling
-	RunTests = True
+	RunTests = run_tests
 
 	# The build outputs
 	dll = os.path.join(targetdir, f"{assembly}.dll")
@@ -54,6 +54,8 @@ def PostBuild(assembly:str, projdir:str, targetdir:str, platform:str, config:str
 				if not res:
 					raise Exception("   **** Unit tests failed ****   ")
 
+	# Copy to lib folder
+	Tools.Copy(target, os.path.join(UserVars.root, "lib", platform, config, ""))
 	return
 
 # Nuget deploy a Rylogic Assembly

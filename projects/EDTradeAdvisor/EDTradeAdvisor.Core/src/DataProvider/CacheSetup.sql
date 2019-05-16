@@ -4,7 +4,6 @@
 
 pragma foreign_keys = ON;
 pragma synchronous = OFF;
-pragma temp_store = memory;
 pragma journal_mode = memory;
 pragma case_sensitive_like = false;
 

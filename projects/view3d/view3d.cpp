@@ -1619,7 +1619,7 @@ VIEW3D_API void __stdcall View3D_ObjectO2WSet(View3DObject object, View3DM4x4 co
 {
 	try
 	{
-		if (!object) throw std::runtime_error("Object is null");
+		if (object == nullptr) throw std::runtime_error("Object is null");
 		if (!pr::FEql(o2w.w.w,1.0f)) throw std::runtime_error("invalid object to world transform");
 
 		DllLockGuard;

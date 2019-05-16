@@ -244,7 +244,7 @@ namespace EDTradeAdvisor.DataProviders
 					Web.DownloadFile(SourceFiles.Stations, output_dir, Settings.Instance.DataAge),
 					Web.DownloadFile(SourceFiles.Commodities, output_dir, Settings.Instance.DataAge),
 					Web.DownloadFile(SourceFiles.Listings, output_dir, Settings.Instance.DataAge),
-					Web.DownloadFile(SourceFiles.LiveListings, output_dir, null)
+					Web.DownloadFile(SourceFiles.LiveListings, output_dir, Settings.Instance.DataAge)
 					)).ToDictionary(x => x.FileUrl, x => (Filepath: x.OutputFilepath, Downloaded: x.Downloaded));
 
 				// Determine which tables need updating

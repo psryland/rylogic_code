@@ -197,7 +197,8 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Add the current path value to the history</summary>
 		public virtual void AddPathToHistory(bool ignore_case = false, int max_history_length = 20)
 		{
-			History = Utility.Util.AddToHistoryList(History, Path, ignore_case, max_history_length);
+			if (string.IsNullOrEmpty(Path)) return;
+			History = Util.AddToHistoryList(History, Path, ignore_case, max_history_length);
 		}
 
 		/// <summary>Layout the control</summary>
