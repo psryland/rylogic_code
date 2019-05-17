@@ -5,33 +5,38 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".
 import Rylogic as Tools
 import UserVars
 
-try:
-	print(
-		"*************************************************************************\n"
-		"Cex Deploy\n"
-		"Copyright (c) Rylogic Limited 2014\n"
-		"*************************************************************************")
+def Deploy():
+	print("""
+		*************************************************************************
+		  Cex Deploy
+		    Copyright (c) Rylogic Limited 2014
+		*************************************************************************
+		""")
 
-	Tools.AssertVersion(1)
-	Tools.AssertPathsExist([UserVars.root])
+	dstdir = os.path.join(UserVars.root, "bin", "Cex")
 
-	# Use the everything sln so that dependent projects get built as well
+	# Ensure output directories exist and are empty
+	print(f"\nCleaning deploy directory: {dstdir}")
+	Tools.ShellDelete(dstdir)
+	os.makedirs(dstdir)
+
+	# Build
+	print("\nBuilding...")
 	sln = os.path.join(UserVars.root, "build", "Rylogic.sln")
-	projects = ["Tools\\cex"]
-	platforms = ["x64","x86"]
-	configs = ["release","debug"]
+	Tools.MSBuild(sln, ["Tools\\cex"], ["x64"], ["Release"], False, True)
 
-	# Build the project
-	if not Tools.MSBuild(sln, projects, platforms, configs, parallel=False, same_window=True):
-		Tools.OnError("Errors occurred")
+	# Copy build products to the output directory
+	print(f"\nCopying files to {dstdir}...")
+	targetdir = os.path.join(UserVars.root, "obj", UserVars.platform_toolset, "cex", "x64", "Release")
+	Tools.Copy(os.path.join(targetdir, "cex.exe"), os.path.join(dstdir, ""))
+	return
 
-	# Deploy
-	objdir = os.path.join(UserVars.root, "obj", UserVars.platform_toolset, "cex")
-	outdir = os.path.join(UserVars.root, "bin")
-	for p in platforms:
-		Tools.Copy(os.path.join(objdir, p, "release", "Cex.exe"), os.path.join(outdir, "cex", p) + "\\")
+# Entry Point
+if __name__ == "__main__":
+	try:
+		Deploy()
+		Tools.OnSuccess()
 
-	Tools.OnSuccess()
+	except Exception as ex:
+		Tools.OnException(ex)
 
-except Exception as ex:
-	Tools.OnException(ex)

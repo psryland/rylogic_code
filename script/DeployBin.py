@@ -4,6 +4,9 @@
 # Post Build Event for exporting binary files
 # Use:
 #   $(ProjectDir)..\..\script\DeployBin.py $(TargetPath) $(PlatformTarget) $(Configuration) [dstsubdir]
+
+# DEPRECATED - prefer individual deploy scripts, this one assumes single exe only
+
 import sys, os
 import Rylogic as Tools
 import UserVars
