@@ -19,10 +19,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\projects\elevate\elevate.cpp" />
+    <ClCompile Include="..\projects\elevate\src\elevate.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\projects\elevate\deploy.py" />
+    <None Include="..\projects\elevate\deploy_elevate.py" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{50944CED-7FC2-4B57-95E6-7CE85BADB08E}</ProjectGuid>

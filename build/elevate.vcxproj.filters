@@ -7,11 +7,11 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\projects\elevate\elevate.cpp">
+    <ClCompile Include="..\projects\elevate\src\elevate.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\projects\elevate\deploy.py" />
+    <None Include="..\projects\elevate\deploy_elevate.py" />
   </ItemGroup>
 </Project>

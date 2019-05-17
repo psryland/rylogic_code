@@ -5,44 +5,44 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".
 import Rylogic as Tools
 import UserVars
 
-try:
-	print(
-		"*************************************************************************\n"
-		"  Csex Deploy\n"
-		"    Copyright (c) Rylogic 2013\n"
-		"*************************************************************************")
+def Deploy():
+	print("""
+		*************************************************************************
+		  Csex Deploy
+		    Copyright (c) Rylogic 2013
+		*************************************************************************
+		""")
 
-	Tools.AssertVersion(1)
-	Tools.AssertPathsExist([UserVars.root, UserVars.msbuild])
+	dstdir = os.path.join(UserVars.root, "bin", "Csex")
+	srcdir = os.path.join(UserVars.root, "projects", "Csex")
 
-	dstdir = UserVars.root + "\\bin"
-	srcdir = UserVars.root + "\\projects\\Csex"
-	proj   = srcdir + "\\Csex.csproj"
-	config = "release"
-	dst    = dstdir + "\\csex"
-	bindir = srcdir + "\\bin\\" + config
+	# Ensure output directories exist and are empty
+	print(f"\nCleaning deploy directory: {dstdir}")
+	Tools.ShellDelete(dstdir)
+	os.makedirs(dstdir)
 
-	input(
-		"Deploy Settings:\n"
-		"    Destination: " + dst + "\n"
-		"  Configuration: " + config + "\n"
-		"Press enter to continue")
+	# Build
+	print("\nBuilding...")
+	sln = os.path.join(UserVars.root, "build", "Rylogic.sln")
+	Tools.MSBuild(sln, ["Tools\\Csex"], ["Any CPU"], ["Release"], False, True)
 
-	#Invoke MSBuild
-	print("Building the exe...")
-	Tools.Exec([UserVars.msbuild, proj, "/t:Rebuild", "/p:Configuration="+config+";Platform=AnyCPU"])
+	# Copy build products to the output directory
+	print(f"\nCopying files to {dstdir}...")
+	targetdir = os.path.join(srcdir, "bin", "Release")
+	Tools.Copy(os.path.join(targetdir, "Csex.exe"), os.path.join(dstdir, ""))
+	Tools.Copy(os.path.join(targetdir, "Rylogic.Core.dll"), os.path.join(dstdir, ""))
+	Tools.Copy(os.path.join(targetdir, "Rylogic.Core.Windows.dll"), os.path.join(dstdir, ""))
+	Tools.Copy(os.path.join(targetdir, "Rylogic.View3d.dll"), os.path.join(dstdir, ""))
+	Tools.Copy(os.path.join(targetdir, "Rylogic.Scintilla.dll"), os.path.join(dstdir, ""))
+	Tools.Copy(os.path.join(targetdir, "Rylogic.Gui.WinForms.dll"), os.path.join(dstdir, ""))
+	return
 
-	#Ensure directories exist and are empty
-	if os.path.exists(dst): shutil.rmtree(dst)
-	os.makedirs(dst)
+# Entry Point
+if __name__ == "__main__":
+	try:
+		Deploy()
+		Tools.OnSuccess()
 
-	#Copy build products to dst
-	print("Copying files to " + dst)
-	Tools.Copy(bindir + r"\Csex.exe"         , dst)
-	Tools.Copy(bindir + r"\Rylogic.Core.dll" , dst)
-	Tools.Copy(bindir + r"\Rylogic.Main.dll" , dst)
-	
-	Tools.OnSuccess()
+	except Exception as ex:
+		Tools.OnException(ex)
 
-except Exception as ex:
-	Tools.OnError("ERROR: " + str(ex))

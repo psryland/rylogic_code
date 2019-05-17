@@ -111,5 +111,6 @@ wix_heat = CheckPath(JoinPath(root, "tools", "WiX", "heat.exe"))
 errout = CheckPath(JoinPath(root, "tools", "Errout", "x64", "errout.exe"))
 
 # Rylogic code tools
+cex = CheckPath(JoinPath(root, "tools", "cex", "cex.exe"))
 csex = CheckPath(JoinPath(root, "tools", "csex", "csex.exe"))
-elevate = CheckPath(JoinPath(root, "tools", "elevate.exe"))
+elevate = CheckPath(JoinPath(root, "tools", "elevate", "elevate.exe"))
