@@ -409,64 +409,7 @@ namespace pr
 			}
 		};
 
-		// A counter that never goes below 0. Used for holding the read position in Buffer<>
-		struct EmitCount
-		{
-			int m_value;
-
-			EmitCount()
-				:m_value()
-			{}
-			explicit EmitCount(int value)
-				:EmitCount()
-			{
-				assert(value >= 0);
-				assign(value);
-			}
-			EmitCount& operator = (int n)
-			{
-				return assign(n);
-			}
-			EmitCount& operator ++()
-			{
-				return assign(m_value + 1);
-			}
-			EmitCount& operator --()
-			{
-				return assign(m_value - 1);
-			}
-			EmitCount  operator ++(int)
-			{
-				auto x = *this;
-				++*this;
-				return x;
-			}
-			EmitCount  operator --(int)
-			{
-				auto x = *this;
-				--*this;
-				return x;
-			}
-			EmitCount& operator += (int n)
-			{
-				return assign(m_value + n);
-			}
-			EmitCount& operator -= (int n)
-			{
-				return assign(m_value - n);
-			}
-			operator size_t() const
-			{
-				return size_t(m_value);
-			}
-			EmitCount& assign(int value)
-			{
-				m_value = (value > 0) ? value : 0;
-				return *this;
-			}
-		};
-
-		// Src buffer. Provides random access within a buffered range.
+		// A buffered char source. Provides random access within a buffered range.
 		// Handy debugging tip: call buffer_all(); on the buffers to preload them will all the data
 		// It makes them easier to read in the watch windows.
 		template <typename TBuf = pr::deque<wchar_t>> struct Buffer :Src
@@ -506,7 +449,7 @@ namespace pr
 			{
 				buffer_all(ptr);
 			}
-			Buffer(Buffer&& rhs)
+			Buffer(Buffer&& rhs) noexcept
 				:Src(rhs)
 				,m_buf()
 				,m_src(&m_null)
@@ -528,7 +471,7 @@ namespace pr
 				if (m_src == &rhs.m_null)
 					m_src = &m_null;
 			}
-			Buffer& operator = (Buffer&& rhs)
+			Buffer& operator = (Buffer&& rhs) noexcept
 			{
 				if (this != &rhs)
 				{
@@ -575,7 +518,7 @@ namespace pr
 			}
 
 			// Pointer-like interface
-			value_type operator *() const override
+			wchar_t operator *() const override
 			{
 				return empty() ? **m_src : m_buf[0];
 			}
@@ -776,6 +719,65 @@ namespace pr
 				auto r = match(str);
 				if (adv_if_match && r) pop_front(r);
 				return r;
+			}
+		};
+		using StringSrcA = Buffer<std::string>;
+		using StringSrcW = Buffer<std::wstring>;
+
+		// A counter that never goes below 0. Used for holding the read position in Buffer<>
+		struct EmitCount
+		{
+			int m_value;
+
+			EmitCount()
+				:m_value()
+			{}
+			explicit EmitCount(int value)
+				:EmitCount()
+			{
+				assert(value >= 0);
+				assign(value);
+			}
+			EmitCount& operator = (int n)
+			{
+				return assign(n);
+			}
+			EmitCount& operator ++()
+			{
+				return assign(m_value + 1);
+			}
+			EmitCount& operator --()
+			{
+				return assign(m_value - 1);
+			}
+			EmitCount  operator ++(int)
+			{
+				auto x = *this;
+				++*this;
+				return x;
+			}
+			EmitCount  operator --(int)
+			{
+				auto x = *this;
+				--*this;
+				return x;
+			}
+			EmitCount& operator += (int n)
+			{
+				return assign(m_value + n);
+			}
+			EmitCount& operator -= (int n)
+			{
+				return assign(m_value - n);
+			}
+			operator size_t() const
+			{
+				return size_t(m_value);
+			}
+			EmitCount& assign(int value)
+			{
+				m_value = (value > 0) ? value : 0;
+				return *this;
 			}
 		};
 

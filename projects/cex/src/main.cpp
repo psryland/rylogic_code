@@ -11,7 +11,6 @@
 #include "cex/src/hash.h"
 #include "cex/src/guid.h"
 #include "cex/src/data_header_gen.h"
-#include "cex/src/p3d.h"
 #include "cex/src/dll_proxy.h"
 #include "cex/src/new_lines.h"
 //#include "cex/src/NEW_COMMAND.h"
@@ -53,7 +52,6 @@ namespace cex
 				"    -hash     : Generate a hash of the given text input\n"
 				"    -guid     : Generate a guid\n"
 				"    -hdata    : Convert a file to C/C++ header file data\n"
-				"    -p3d      : P3d model file format converter\n"
 				"    -dllproxy : Generate a proxy dll\n"
 				"    -newlines : Add or remove newlines from a text file\n"
 				// NEW_COMMAND - add a help string
@@ -159,7 +157,6 @@ namespace cex
 				if (pr::str::EqualI(option, "-hash"     )) { m_command = std::make_unique<cex::Hash     >(); break; }
 				if (pr::str::EqualI(option, "-guid"     )) { m_command = std::make_unique<cex::Guid     >(); break; }
 				if (pr::str::EqualI(option, "-hdata"    )) { m_command = std::make_unique<cex::HData    >(); break; }
-				if (pr::str::EqualI(option, "-p3d"      )) { m_command = std::make_unique<cex::P3d      >(); break; }
 				if (pr::str::EqualI(option, "-dllproxy" )) { m_command = std::make_unique<cex::DllProxy >(); break; }
 				if (pr::str::EqualI(option, "-newlines" )) { m_command = std::make_unique<cex::NewLines >(); break; }
 				// NEW_COMMAND - handle the command

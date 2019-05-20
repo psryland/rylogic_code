@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\projects\p3d\src\main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\p3d\src\commands\model_io.cpp">
+      <Filter>src\commands</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\p3d\src\commands\remove_degenerates.cpp">
+      <Filter>src\commands</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\p3d\src\commands\generate_normals.cpp">
+      <Filter>src\commands</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\projects\p3d\src\forward.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\p3d\src\commands\model_io.h">
+      <Filter>src\commands</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\p3d\src\commands\remove_degenerates.h">
+      <Filter>src\commands</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\p3d\src\commands\generate_normals.h">
+      <Filter>src\commands</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\projects\p3d\deploy_p3d.py" />
+    <None Include="..\projects\p3d\example_script.ldr" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{a2f850e6-6dba-43d2-809a-5af64a24c83e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\commands">
+      <UniqueIdentifier>{eece3064-d302-4304-854a-ff23d1a37bdf}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

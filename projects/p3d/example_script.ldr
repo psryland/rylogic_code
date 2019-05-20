@@ -1,0 +1,48 @@
+//**********************************************
+// P3D Graphics Tool
+//  Copyright (c) Rylogic Ltd 2019
+//**********************************************
+
+// Example Script
+#if 0
+{{
+	// Set the output spam level
+	*Verbosity {3}
+
+	// Import a model file into p3d format
+	*fi { "<filepath_of_some_supported_model_format>" }
+
+	// Remove degenerate vertices
+	*RemoveDegenerates
+	{
+		*Quantisation {10}          // Optional. Vertex position quantisation value: [0,32) (default is 10 = 1<<10 = 1024)
+		*NormalSmoothingAngle {10}  // Optional. Vertices with normals different by more than this angle (deg) are not degenerate. (default normals ignored)
+		*ColourDistance {0.001}     // Optional. Vertices with colours different by more than this distance are not degenerate. (default colours ignored)
+		*UVDistance {0.001}         // Optional. Vertices with  UVs different by more than this distance are not degenerate. (default UVs ignored)
+	}
+
+	// Generate normals from face data within the model
+	*GenerateNormals
+	{
+		*SmoothingAngle {10} // All faces within 10° of each other are smoothed
+	}
+
+	// Apply a transform to the model
+	*Transform
+	{
+		*Euler {30 45 60}
+		*Pos {10 20 30}
+	}
+
+	// Export a p3d model file
+	*fo
+	{
+		// Optional. The file path to write the file to.
+		// If omitted, defaults to the input file, but with the p3d extension.
+		"<filepath_or_directory_of_where_to_write_the_file>"
+		
+		// Optional. Output a '*.cpp' file that statically defines the model
+		*Code
+	}
+}}
+#endif

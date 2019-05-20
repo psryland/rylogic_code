@@ -284,8 +284,8 @@ namespace pr
 					}
 				case EKeyword::O2W:
 					{
-						pr::m4x4 c2w = pr::m4x4Identity;
-						ParseLdrTransform(reader, c2w);
+						auto c2w = pr::m4x4Identity;
+						reader.TransformS(c2w);
 						out.m_cam.CameraToWorld(c2w);
 						out.m_cam_fields |= ECamField::C2W;
 						break;
@@ -495,7 +495,7 @@ namespace pr
 						}
 					case EKeyword::O2W:
 						{
-							ParseLdrTransform(p.m_reader, t2s);
+							p.m_reader.TransformS(t2s);
 							break;
 						}
 					case EKeyword::Addr:
@@ -579,7 +579,7 @@ namespace pr
 			case EKeyword::O2W:
 			case EKeyword::Txfm:
 				{
-					ParseLdrTransform(p.m_reader, obj->m_o2p);
+					p.m_reader.TransformS(obj->m_o2p);
 					return true;
 				}
 			case EKeyword::Colour:
@@ -3149,7 +3149,7 @@ namespace pr
 					}
 				case EKeyword::BakeTransform:
 					{
-						ParseLdrTransform(p.m_reader, m_bake);
+						p.m_reader.TransformS(m_bake);
 						return true;
 					}
 				}

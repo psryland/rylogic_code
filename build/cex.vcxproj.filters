@@ -39,9 +39,6 @@
     <ClInclude Include="..\projects\cex\src\open_vs.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\cex\src\p3d.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\projects\cex\src\shell_file_op.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -66,9 +63,6 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\projects\cex\src\open_vs.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\projects\cex\src\p3d.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\projects\cex\src\shell_file_op.cpp">

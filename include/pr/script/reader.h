@@ -542,6 +542,184 @@ namespace pr
 				return SectionStart() && Data(data, length) && SectionEnd();
 			}
 
+			// Extract a transform description accumulatively. 'o2w' should be a valid initial transform.
+			bool Transform(m4x4& o2w)
+			{
+				assert(IsFinite(o2w) && "A valid 'o2w' must be passed to this function as it pre-multiplies the transform with the one read from the script");
+				auto p2w = m4x4Identity;
+
+				// Tranform keywords
+				const int M4x4           = HashKeyword(L"M4x4"          );
+				const int M3x3           = HashKeyword(L"M3x3"          );
+				const int Pos            = HashKeyword(L"Pos"           );
+				const int Align          = HashKeyword(L"Align"         );
+				const int Quat           = HashKeyword(L"Quat"          );
+				const int QuatPos        = HashKeyword(L"QuatPos"       );
+				const int Rand4x4        = HashKeyword(L"Rand4x4"       );
+				const int RandPos        = HashKeyword(L"HashPos"       );
+				const int RandOri        = HashKeyword(L"RandOri"       );
+				const int Euler          = HashKeyword(L"Euler"         );
+				const int Scale          = HashKeyword(L"Scale"         );
+				const int Transpose      = HashKeyword(L"Transpose"     );
+				const int Inverse        = HashKeyword(L"Inverse"       );
+				const int Normalise      = HashKeyword(L"Normalise"     );
+				const int Orthonormalise = HashKeyword(L"Orthonormalise");
+				
+				// Parse the transform
+				for (int kw; NextKeywordH(kw);)
+				{
+					if (kw == M4x4)
+					{
+						auto m = m4x4Identity;
+						Matrix4x4S(m);
+						if (m.w.w != 1)
+						{
+							ReportError(script::EResult::UnknownValue, "M4x4 must be an affine transform with: w.w == 1");
+							break;
+						}
+						p2w = m * p2w;
+						continue;
+					}
+					if (kw == M3x3)
+					{
+						auto m = m4x4Identity;
+						Matrix3x3S(m.rot);
+						p2w = m * p2w;
+						continue;
+					}
+					if (kw == Pos)
+					{
+						auto m = m4x4Identity;
+						Vector3S(m.pos, 1.0f);
+						p2w = m * p2w;
+						continue;
+					}
+					if (kw == Align)
+					{
+						int axis_id;
+						v4 direction;
+						SectionStart();
+						Int(axis_id, 10);
+						Vector3(direction, 0.0f);
+						SectionEnd();
+
+						v4 axis = AxisId(axis_id);
+						if (IsZero3(axis))
+						{
+							ReportError(script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3");
+							break;
+						}
+
+						p2w = m4x4::Transform(axis, direction, v4Origin) * p2w;
+						continue;
+					}
+					if (kw == Quat)
+					{
+						quat q;
+						Vector4S(q.xyzw);
+						p2w = m4x4::Transform(q, v4Origin) * p2w;
+						continue;
+					}
+					if (kw == QuatPos)
+					{
+						v4 p;
+						quat q;
+						SectionStart();
+						Vector4(q.xyzw);
+						Vector3(p, 1.0f);
+						SectionEnd();
+						p2w = m4x4::Transform(q, p.w1()) * p2w;
+						continue;
+					}
+					if (kw == Rand4x4)
+					{
+						float radius;
+						v4 centre;
+						SectionStart();
+						Vector3(centre, 1.0f);
+						Real(radius);
+						SectionEnd();
+						p2w = Random4x4(g_rng(), centre, radius) * p2w;
+						continue;
+					}
+					if (kw == RandPos)
+					{
+						float radius;
+						v4 centre;
+						SectionStart();
+						Vector3(centre, 1.0f);
+						Real(radius);
+						SectionEnd();
+						p2w = m4x4::Translation(Random3(g_rng(), centre, radius, 1.0f)) * p2w;
+						continue;
+					}
+					if (kw == RandOri)
+					{
+						m4x4 m = m4x4Identity;
+						m.rot = Random3x4(g_rng());
+						p2w = m * p2w;
+						continue;
+					}
+					if (kw == Euler)
+					{
+						v4 angles;
+						Vector3S(angles, 0.0f);
+						p2w = m4x4::Transform(DegreesToRadians(angles.x), DegreesToRadians(angles.y), DegreesToRadians(angles.z), v4Origin) * p2w;
+						continue;
+					}
+					if (kw == Scale)
+					{
+						v4 scale;
+						SectionStart();
+						Real(scale.x);
+						if (IsSectionEnd())
+						{
+							scale.z = scale.y = scale.x;
+						}
+						else
+						{
+							Real(scale.y);
+							Real(scale.z);
+						}
+						SectionEnd();
+						p2w = m4x4::Scale(scale.x, scale.y, scale.z, v4Origin) * p2w;
+						continue;
+					}
+					if (kw == Transpose)
+					{
+						p2w = Transpose4x4(p2w);
+						continue;
+					}
+					if (kw == Inverse)
+					{
+						p2w = IsOrthonormal(p2w) ? InvertFast(p2w) : Invert(p2w);
+						continue;
+					}
+					if (kw == Normalise)
+					{
+						p2w.x = Normalise3(p2w.x);
+						p2w.y = Normalise3(p2w.y);
+						p2w.z = Normalise3(p2w.z);
+						continue;
+					}
+					if (kw == Orthonormalise)
+					{
+						p2w = Orthonorm(p2w);
+						continue;
+					}
+					ReportError(script::EResult::UnknownToken);
+					break;
+				}
+
+				// Pre-multiply the object to world transform
+				o2w = p2w * o2w;
+				return true;
+			}
+			bool TransformS(m4x4& o2w)
+			{
+				return SectionStart() && Transform(o2w) && SectionEnd();
+			}
+
 			// Extract a complete section as a preprocessed string.
 			// Note: To embed arbitrary text in a script use #lit/#end and then Section()
 			template <typename String> bool Section(String& str, bool include_braces)

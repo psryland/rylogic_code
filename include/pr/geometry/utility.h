@@ -7,6 +7,7 @@
 #include <type_traits>
 #include <cassert>
 #include "pr/geometry/common.h"
+#include "pr/geometry/triangle.h"
 
 namespace pr
 {
@@ -422,9 +423,9 @@ namespace pr
 			if (num_indices != 0)
 			{
 				out << indent << "#pragma region Indices\n";
-				if      (sizeof(*indices) <= 2) out << indent << "static pr::uint16 const idxs[] =\n";
-				else if (sizeof(*indices) <= 4) out << indent << "static pr::uint32 const idxs[] =\n";
-				else if (sizeof(*indices) <= 8) out << indent << "static pr::uint64 const idxs[] =\n";
+				if constexpr      (sizeof(*indices) <= 2) out << indent << "static pr::uint16 const idxs[] =\n";
+				else if constexpr (sizeof(*indices) <= 4) out << indent << "static pr::uint32 const idxs[] =\n";
+				else if constexpr (sizeof(*indices) <= 8) out << indent << "static pr::uint64 const idxs[] =\n";
 				else throw std::exception("Index type > 8 bytes is unsupported");
 				
 				auto wrap = 32U;

@@ -22,6 +22,7 @@
 #include "pr/common/range.h"
 #include "pr/common/scope.h"
 #include "pr/geometry/common.h"
+#include "pr/geometry/utility.h"
 #include "pr/maths/maths.h"
 
 namespace pr
@@ -126,12 +127,11 @@ namespace pr
 			struct Vec2
 			{
 				float x,y;
-				Vec2& operator = (v2 const& rhs) { x = rhs.x; y = rhs.y; return *this; }
 				operator v2() const { return v2(x, y); }
+				Vec2& operator = (v2 const& rhs) { x = rhs.x; y = rhs.y; return *this; }
 			};
 			inline bool operator == (Vec2 lhs, Vec2 rhs) { return lhs.x == rhs.x && lhs.y == rhs.y; }
 			inline bool operator != (Vec2 lhs, Vec2 rhs) { return !(lhs == rhs); }
-			inline bool FEql(Vec2 lhs, Vec2 rhs) { return pr::FEql(lhs.x,rhs.x) && pr::FEql(lhs.y,rhs.y); }
 			struct Vec4
 			{
 				#pragma warning (disable:4201)
@@ -140,14 +140,13 @@ namespace pr
 				struct { float r,g,b,a; };
 				};
 				#pragma warning (default:4201)
-				Vec4& operator = (v4 const& rhs)     { x = rhs.x; y = rhs.y; z = rhs.z; w = rhs.w; return *this; }
-				Vec4& operator = (Colour const& rhs) { r = rhs.r; g = rhs.g; b = rhs.b; a = rhs.a; return *this; }
 				operator v4() const     { return v4(x,y,z,w); }
 				operator Colour() const { return Colour(r,g,b,a); }
+				Vec4& operator = (v4 const& rhs) { x = rhs.x; y = rhs.y; z = rhs.z; w = rhs.w; return *this; }
+				Vec4& operator = (Colour const& rhs) { r = rhs.r; g = rhs.g; b = rhs.b; a = rhs.a; return *this; }
 			};
 			inline bool operator == (Vec4 lhs, Vec4 rhs) { return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w; }
 			inline bool operator != (Vec4 lhs, Vec4 rhs) { return !(lhs == rhs); }
-			inline bool FEql(Vec4 lhs, Vec4 rhs) { return pr::FEql(lhs.x,rhs.x) && pr::FEql(lhs.y,rhs.y) && pr::FEql(lhs.z,rhs.z) && pr::FEql(lhs.w,rhs.w); }
 			struct BBox
 			{
 				Vec4 centre;
@@ -190,9 +189,14 @@ namespace pr
 			inline bool operator != (Range lhs, Range rhs) { return !(lhs == rhs); }
 			struct Str16
 			{
-				typedef char c16[16];
+				using c16 = char[16];
 				c16 str;
 
+				Str16(char const* s = nullptr)
+					:str()
+				{
+					*this = s;
+				}
 				Str16& operator = (char const* s)
 				{
 					s = s ? s : "";
@@ -200,7 +204,6 @@ namespace pr
 					strncat(str, s, sizeof(str) - 1);
 					return *this;
 				}
-				Str16(char const* s = nullptr)           { *this = s; }
 				Str16& operator = (std::string const& s) { return *this = s.c_str(); }
 				operator std::string() const             { return str; }
 				operator c16 const&() const              { return str; }
@@ -473,8 +476,8 @@ namespace pr
 
 			#pragma region Read
 
-			// All of these Read functions assume 'src' points to the start of the chunk data
-			// of the corresponding chunk type.
+			// All of these Read functions assume 'src' points to the start
+			// of the chunk data of the corresponding chunk type.
 
 			// Read an array
 			template <typename TOut, typename TSrc> inline void Read(TSrc& src, TOut* out, size_t count)
@@ -487,7 +490,7 @@ namespace pr
 			{
 				TOut out;
 				Read(src, &out, 1);
-				return out;
+				return std::move(out);
 			}
 
 			// Read a null terminated string. 'src' is assumed to point to the start of a null terminated string
@@ -498,7 +501,7 @@ namespace pr
 					str.push_back(c);
 				
 				if (len_out) *len_out = len;
-				return str;
+				return std::move(str);
 			}
 
 			// Read a texture. 'src' is assumed to point to the start of EChunkId::Texture chunk data
@@ -522,7 +525,7 @@ namespace pr
 					}
 					return false;
 				});
-				return tex;
+				return std::move(tex);
 			}
 
 			// Read a material. 'src' is assumed to point to the start of EChunkId::Material chunk data
@@ -551,7 +554,7 @@ namespace pr
 					}
 					return false;
 				});
-				return mat;
+				return std::move(mat);
 			}
 
 			// Fill a container of verts. 'src' is assumed to point to the start of EChunkId::MeshVertices chunk data
@@ -568,7 +571,7 @@ namespace pr
 
 				cont.resize(count);
 				Read(src, cont.data(), count);
-				return cont;
+				return std::move(cont);
 			}
 
 			// Fill a container of indices. 'src' is assumed to point to the start of EChunkId::MeshIndices chunk data
@@ -585,7 +588,7 @@ namespace pr
 
 				cont.resize(count);
 				Read(src, cont.data(), count);
-				return cont;
+				return std::move(cont);
 			}
 
 			// Fill a container of nuggets. 'src' is assumed to point to the start of EChunkId::MeshNuggets chunk data
@@ -601,7 +604,7 @@ namespace pr
 
 				cont.resize(count);
 				Read(src, cont.data(), count);
-				return cont;
+				return std::move(cont);
 			}
 
 			// Read a mesh. 'src' is assumed to point to the start of EChunkId::Mesh chunk data
@@ -645,15 +648,13 @@ namespace pr
 					}
 					return false;
 				});
-				return mesh;
+				return std::move(mesh);
 			}
 
 			// Read a scene. 'src' is assumed to point to the start of EChunkId::Scene chunk data
 			template <typename TSrc> Scene ReadScene(TSrc& src, u32 len)
 			{
 				Scene scene;
-
-				// Read the scene sub chunks
 				ReadChunks(src, len, [&](ChunkHeader hdr, TSrc& src, u32 data_len)
 				{
 					switch (hdr.m_id)
@@ -689,7 +690,7 @@ namespace pr
 					}
 					return false;
 				});
-				return scene;
+				return std::move(scene);
 			}
 
 			// Read a p3d::File into memory from an istream-like source. Uses forward iteration only.
@@ -717,7 +718,7 @@ namespace pr
 					return false;
 				});
 
-				return file;
+				return std::move(file);
 			}
 
 			// Extract the materials in the given P3D stream
@@ -985,6 +986,21 @@ namespace pr
 
 			#pragma endregion
 		}
+	}
+	namespace maths
+	{
+		template <> struct is_vec<geometry::p3d::Vec4> :std::true_type
+		{
+			using elem_type = float;
+			using cp_type = float;
+			static int const dim = 4;
+		};
+		template <> struct is_vec<geometry::p3d::Vec2> :std::true_type
+		{
+			using elem_type = float;
+			using cp_type = float;
+			static int const dim = 2;
+		};
 	}
 }
 

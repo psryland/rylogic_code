@@ -200,7 +200,7 @@ old:
 
 	<!-- Geometry -->
 	<Type Name="pr::Colour32">
-		<DisplayString>{m_aarrggbb,x}</DisplayString>
+		<DisplayString>{argb,Xb}</DisplayString>
 	</Type>
 	<Type Name="pr::geometry::p3d::ChunkHeader">
 		<DisplayString>[{m_id}] Len={m_length}</DisplayString>

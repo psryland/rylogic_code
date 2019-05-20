@@ -27,6 +27,11 @@ namespace pr
 		using TStr = std::string;
 		using Scope = pr::Scope<std::function<void()>,std::function<void()>>;
 
+		struct Str
+		{
+			std::string m_str;
+			Str(std::string const& str) :m_str(str) {}
+		};
 		struct Pos
 		{
 			v4 m_pos;
@@ -97,6 +102,10 @@ namespace pr
 		inline TStr& Append(TStr& str, std::wstring const& s)
 		{
 			return Append(str, Narrow(s));
+		}
+		inline TStr& Append(TStr& str, Str const& s)
+		{
+			return Append(str, str::Quotes(s.m_str, true));
 		}
 		inline TStr& Append(TStr& str, int i)
 		{
@@ -176,6 +185,13 @@ namespace pr
 			if (str.size() == 0) return;
 			LockFile lock(filepath);
 			BufferToFile(str, filepath, EFileData::Utf8, EFileData::Ucs2, append);
+		}
+		inline Scope Section(TStr& str, typename TStr::value_type const* keyword)
+		{
+			assert(keyword[0] == '\0' || keyword[0] == '*');
+			std::function<void()> doit = [&] { Append(str, keyword, "{"); };
+			std::function<void()> undo = [&] { Append(str, "}\n"); };
+			return CreateScope(doit, undo);
 		}
 		inline TStr& GroupStart(TStr& str, typename TStr::value_type const* name, Col colour = 0xFFFFFFFF)
 		{

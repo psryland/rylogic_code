@@ -4,7 +4,7 @@
 //*******************************************************************
 #pragma once
 
-#include <windows.h>
+#include <objbase.h>
 #include "pr/common/hresult.h"
 
 namespace pr
