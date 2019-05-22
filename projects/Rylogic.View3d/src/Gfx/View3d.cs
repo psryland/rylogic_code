@@ -331,6 +331,14 @@ namespace Rylogic.Gfx
 			Rotate = 1 << 1,
 			Zoom = 1 << 2,
 		}
+		public enum EColourOp
+		{
+			Overwrite,
+			Add,
+			Subtract,
+			Multiply,
+			Lerp,
+		}
 		[Flags] public enum ECameraLockMask
 		{
 			None = 0,
@@ -2588,9 +2596,9 @@ namespace ldr
 			/// If 'name' is "", then the state change is applied to this object and all children recursively
 			/// Otherwise, the state change is applied to all child objects that match name.
 			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
-			public void ColourSet(Colour32 colour, uint mask, string name = null)
+			public void ColourSet(Colour32 colour, uint mask, string name = null, EColourOp op = EColourOp.Overwrite, float op_value = 0.0f)
 			{
-				View3D_ObjectColourSet(Handle, colour, mask, name);
+				View3D_ObjectColourSet(Handle, colour, mask, name, op, op_value);
 			}
 			public void ColourSet(Colour32 colour, string name = null)
 			{
@@ -3476,7 +3484,7 @@ namespace ldr
 		[DllImport(Dll)] private static extern EFlags            View3D_ObjectFlagsGet           (HObject obj, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectFlagsSet           (HObject obj, EFlags flags, bool state, string  name);
 		[DllImport(Dll)] private static extern uint              View3D_ObjectColourGet          (HObject obj, bool base_colour, string name);
-		[DllImport(Dll)] private static extern void              View3D_ObjectColourSet          (HObject obj, uint colour, uint mask, string name);
+		[DllImport(Dll)] private static extern void              View3D_ObjectColourSet          (HObject obj, uint colour, uint mask, string name, EColourOp op, float op_value);
 		[DllImport(Dll)] private static extern bool              View3D_ObjectWireframeGet       (HObject obj, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectWireframeSet       (HObject obj, bool wireframe, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectResetColour        (HObject obj, string name);

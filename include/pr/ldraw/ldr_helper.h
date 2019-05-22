@@ -13,6 +13,7 @@
 #include "pr/common/scope.h"
 #include "pr/str/to_string.h"
 #include "pr/str/string.h"
+#include "pr/str/string_util.h"
 #include "pr/filesys/file.h"
 #include "pr/filesys/fileex.h"
 #include "pr/maths/maths.h"

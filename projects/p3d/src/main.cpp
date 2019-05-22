@@ -199,14 +199,14 @@ struct Main
 				if (str::EqualI(kw, "verbosity"))
 				{
 					reader.IntS(m_verbosity, 10);
-					continue;;
+					continue;
 				}
 				if (str::EqualI(kw, "fi"))
 				{
 					ImportFile(reader);
 					continue;
 				}
-				if (str::EqualNI(kw, "fo"))
+				if (str::EqualI(kw, "fo"))
 				{
 					ExportFile(reader);
 					continue;
@@ -244,14 +244,18 @@ struct Main
 	void ImportFile(script::Reader& reader)
 	{
 		// Read the file name
-		reader.StringS(m_infile);
-		m_infile = filesys::ResolvePath(m_infile);
+		std::wstring infile;
+		reader.StringS(infile);
+
+		// Resolve the file
+		std::vector<std::wstring> searched_paths;
+		m_infile = filesys::ResolvePath(infile);// filesys::ResolvePath(infile, searched_paths, filesys::CurrentDirectory().c_str(), );
 
 		// Import the file
 		if (!filesys::FileExists(m_infile))
 		{
 			if (m_verbosity >= 1)
-				std::wcout << "'" << m_infile << "' does not exist." << std::endl;
+				std::wcout << "Could not locate '" << infile << "'. Does the file exist?" << std::endl;
 
 			m_model = nullptr;
 		}
@@ -385,6 +389,9 @@ struct Main
 	// Apply a transform to the model
 	void Transform(script::Reader& reader) const
 	{
+		if (m_model == nullptr)
+			return;
+
 		// Read the object to world transform
 		auto o2w = m4x4Identity;
 		reader.TransformS(o2w);

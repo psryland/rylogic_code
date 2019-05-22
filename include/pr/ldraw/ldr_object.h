@@ -268,6 +268,16 @@ namespace pr
 			_bitwise_operators_allowed,
 		};
 
+		// Colour blend operations
+		enum class EColourOp
+		{
+			Overwrite,
+			Add,
+			Subtract,
+			Multiply,
+			Lerp,
+		};
+
 		#pragma endregion
 
 		#pragma region Types
@@ -511,7 +521,7 @@ namespace pr
 			// For 'Get', the colour of the first object to match 'name' is returned
 			// For 'Set', the object base colour is not changed, only the tint colour = tint
 			Colour32 Colour(bool base_colour, char const* name = nullptr) const;
-			void Colour(Colour32 colour, uint mask, char const* name = nullptr);
+			void Colour(Colour32 colour, uint mask, char const* name = nullptr, EColourOp op = EColourOp::Overwrite, float op_value = 0.0f);
 
 			// Restore the colour to the initial colour for this object or child objects matching 'name' (see Apply)
 			void ResetColour(char const* name = nullptr);

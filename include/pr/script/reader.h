@@ -719,6 +719,19 @@ namespace pr
 			{
 				return SectionStart() && Transform(o2w) && SectionEnd();
 			}
+			bool Transform(m3x4& rot)
+			{
+				auto o2w = m4x4Identity;
+				if (!Transform(o2w))
+					return false;
+
+				rot = o2w.rot;
+				return true;
+			}
+			bool TransformS(m3x4& o2w)
+			{
+				return SectionStart() && Transform(o2w) && SectionEnd();
+			}
 
 			// Extract a complete section as a preprocessed string.
 			// Note: To embed arbitrary text in a script use #lit/#end and then Section()

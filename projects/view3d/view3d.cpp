@@ -1717,14 +1717,14 @@ VIEW3D_API View3DColour __stdcall View3D_ObjectColourGet(View3DObject object, BO
 	}
 	CatchAndReport(View3D_ObjectGetColour, ,View3DColour(0xFFFFFFFF));
 }
-VIEW3D_API void __stdcall View3D_ObjectColourSet(View3DObject object, View3DColour colour, UINT32 mask, char const* name)
+VIEW3D_API void __stdcall View3D_ObjectColourSet(View3DObject object, View3DColour colour, UINT32 mask, char const* name, EView3DColourOp op, float op_value)
 {
 	try
 	{
 		if (!object) throw std::runtime_error("Object is null");
 
 		DllLockGuard;
-		object->Colour(pr::Colour32(colour), mask, name);
+		object->Colour(pr::Colour32(colour), mask, name, static_cast<pr::ldr::EColourOp>(op), op_value);
 	}
 	CatchAndReport(View3D_ObjectSetColour, ,);
 }
@@ -2960,7 +2960,10 @@ VIEW3D_API View3DM4x4 __stdcall View3D_ParseLdrTransform(char const* ldr_script)
 	{
 		pr::script::PtrA src(ldr_script);
 		pr::script::Reader reader(src);
-		return view3d::To<View3DM4x4>(pr::ldr::ParseLdrTransform(reader));
+		
+		pr::m4x4 o2w;
+		reader.TransformS(o2w);
+		return view3d::To<View3DM4x4>(o2w);
 	}
 	CatchAndReport(View3D_ParseLdrTransform, , view3d::To<View3DM4x4>(pr::m4x4Identity));
 }
@@ -3034,96 +3037,102 @@ template <typename T, typename U> struct equal_size_and_alignment
 
 // EView3DFillMode - only used in this file
 
-static_assert(int(EView3DFlags::None              ) == int(pr::ldr::ELdrFlags::None              ), "");
-static_assert(int(EView3DFlags::Hidden            ) == int(pr::ldr::ELdrFlags::Hidden            ), "");
-static_assert(int(EView3DFlags::Wireframe         ) == int(pr::ldr::ELdrFlags::Wireframe         ), "");
-static_assert(int(EView3DFlags::NoZTest           ) == int(pr::ldr::ELdrFlags::NoZTest           ), "");
-static_assert(int(EView3DFlags::NoZWrite          ) == int(pr::ldr::ELdrFlags::NoZWrite          ), "");
-static_assert(int(EView3DFlags::Selected          ) == int(pr::ldr::ELdrFlags::Selected          ), "");
-static_assert(int(EView3DFlags::BBoxExclude       ) == int(pr::ldr::ELdrFlags::BBoxExclude       ), "");
-static_assert(int(EView3DFlags::SceneBoundsExclude) == int(pr::ldr::ELdrFlags::SceneBoundsExclude), "");
-static_assert(int(EView3DFlags::HitTestExclude    ) == int(pr::ldr::ELdrFlags::HitTestExclude    ), "");
+static_assert(int(EView3DFlags::None              ) == int(pr::ldr::ELdrFlags::None              ));
+static_assert(int(EView3DFlags::Hidden            ) == int(pr::ldr::ELdrFlags::Hidden            ));
+static_assert(int(EView3DFlags::Wireframe         ) == int(pr::ldr::ELdrFlags::Wireframe         ));
+static_assert(int(EView3DFlags::NoZTest           ) == int(pr::ldr::ELdrFlags::NoZTest           ));
+static_assert(int(EView3DFlags::NoZWrite          ) == int(pr::ldr::ELdrFlags::NoZWrite          ));
+static_assert(int(EView3DFlags::Selected          ) == int(pr::ldr::ELdrFlags::Selected          ));
+static_assert(int(EView3DFlags::BBoxExclude       ) == int(pr::ldr::ELdrFlags::BBoxExclude       ));
+static_assert(int(EView3DFlags::SceneBoundsExclude) == int(pr::ldr::ELdrFlags::SceneBoundsExclude));
+static_assert(int(EView3DFlags::HitTestExclude    ) == int(pr::ldr::ELdrFlags::HitTestExclude    ));
 
-static_assert(int(EView3DGeom::Unknown) == int(pr::rdr::EGeom::Invalid), "");
-static_assert(int(EView3DGeom::Vert   ) == int(pr::rdr::EGeom::Vert   ), "");
-static_assert(int(EView3DGeom::Colr   ) == int(pr::rdr::EGeom::Colr   ), "");
-static_assert(int(EView3DGeom::Norm   ) == int(pr::rdr::EGeom::Norm   ), "");
-static_assert(int(EView3DGeom::Tex0   ) == int(pr::rdr::EGeom::Tex0   ), "");
+static_assert(int(EView3DGeom::Unknown) == int(pr::rdr::EGeom::Invalid));
+static_assert(int(EView3DGeom::Vert   ) == int(pr::rdr::EGeom::Vert   ));
+static_assert(int(EView3DGeom::Colr   ) == int(pr::rdr::EGeom::Colr   ));
+static_assert(int(EView3DGeom::Norm   ) == int(pr::rdr::EGeom::Norm   ));
+static_assert(int(EView3DGeom::Tex0   ) == int(pr::rdr::EGeom::Tex0   ));
 
-static_assert(int(EView3DGizmoEvent::StartManip) == int(pr::ldr::ELdrGizmoEvent::StartManip), "");
-static_assert(int(EView3DGizmoEvent::Moving    ) == int(pr::ldr::ELdrGizmoEvent::Moving    ), "");
-static_assert(int(EView3DGizmoEvent::Commit    ) == int(pr::ldr::ELdrGizmoEvent::Commit    ), "");
-static_assert(int(EView3DGizmoEvent::Revert    ) == int(pr::ldr::ELdrGizmoEvent::Revert    ), "");
+static_assert(int(EView3DGizmoEvent::StartManip) == int(pr::ldr::ELdrGizmoEvent::StartManip));
+static_assert(int(EView3DGizmoEvent::Moving    ) == int(pr::ldr::ELdrGizmoEvent::Moving    ));
+static_assert(int(EView3DGizmoEvent::Commit    ) == int(pr::ldr::ELdrGizmoEvent::Commit    ));
+static_assert(int(EView3DGizmoEvent::Revert    ) == int(pr::ldr::ELdrGizmoEvent::Revert    ));
 
-static_assert(int(EView3DNavOp::None     ) == int(pr::camera::ENavOp::None     ), "");
-static_assert(int(EView3DNavOp::Translate) == int(pr::camera::ENavOp::Translate), "");
-static_assert(int(EView3DNavOp::Rotate   ) == int(pr::camera::ENavOp::Rotate   ), "");
-static_assert(int(EView3DNavOp::Zoom     ) == int(pr::camera::ENavOp::Zoom     ), "");
+static_assert(int(EView3DNavOp::None     ) == int(pr::camera::ENavOp::None     ));
+static_assert(int(EView3DNavOp::Translate) == int(pr::camera::ENavOp::Translate));
+static_assert(int(EView3DNavOp::Rotate   ) == int(pr::camera::ENavOp::Rotate   ));
+static_assert(int(EView3DNavOp::Zoom     ) == int(pr::camera::ENavOp::Zoom     ));
 
-static_assert(int(EView3DCameraLockMask::None          ) == int(pr::camera::ELockMask::None          ), "");
-static_assert(int(EView3DCameraLockMask::TransX        ) == int(pr::camera::ELockMask::TransX        ), "");
-static_assert(int(EView3DCameraLockMask::TransY        ) == int(pr::camera::ELockMask::TransY        ), "");
-static_assert(int(EView3DCameraLockMask::TransZ        ) == int(pr::camera::ELockMask::TransZ        ), "");
-static_assert(int(EView3DCameraLockMask::RotX          ) == int(pr::camera::ELockMask::RotX          ), "");
-static_assert(int(EView3DCameraLockMask::RotY          ) == int(pr::camera::ELockMask::RotY          ), "");
-static_assert(int(EView3DCameraLockMask::RotZ          ) == int(pr::camera::ELockMask::RotZ          ), "");
-static_assert(int(EView3DCameraLockMask::Zoom          ) == int(pr::camera::ELockMask::Zoom          ), "");
-static_assert(int(EView3DCameraLockMask::CameraRelative) == int(pr::camera::ELockMask::CameraRelative), "");
-static_assert(int(EView3DCameraLockMask::All           ) == int(pr::camera::ELockMask::All           ), "");
+static_assert(int(EView3DColourOp::Overwrite) == int(pr::ldr::EColourOp::Overwrite));
+static_assert(int(EView3DColourOp::Add      ) == int(pr::ldr::EColourOp::Add      ));
+static_assert(int(EView3DColourOp::Subtract ) == int(pr::ldr::EColourOp::Subtract ));
+static_assert(int(EView3DColourOp::Multiply ) == int(pr::ldr::EColourOp::Multiply ));
+static_assert(int(EView3DColourOp::Lerp     ) == int(pr::ldr::EColourOp::Lerp     ));
 
-static_assert(int(EView3DPrim::Invalid  ) == int(pr::rdr::EPrim::Invalid  ), "");
-static_assert(int(EView3DPrim::PointList) == int(pr::rdr::EPrim::PointList), "");
-static_assert(int(EView3DPrim::LineList ) == int(pr::rdr::EPrim::LineList ), "");
-static_assert(int(EView3DPrim::LineStrip) == int(pr::rdr::EPrim::LineStrip), "");
-static_assert(int(EView3DPrim::TriList  ) == int(pr::rdr::EPrim::TriList  ), "");
-static_assert(int(EView3DPrim::TriStrip ) == int(pr::rdr::EPrim::TriStrip ), "");
+static_assert(int(EView3DCameraLockMask::None          ) == int(pr::camera::ELockMask::None          ));
+static_assert(int(EView3DCameraLockMask::TransX        ) == int(pr::camera::ELockMask::TransX        ));
+static_assert(int(EView3DCameraLockMask::TransY        ) == int(pr::camera::ELockMask::TransY        ));
+static_assert(int(EView3DCameraLockMask::TransZ        ) == int(pr::camera::ELockMask::TransZ        ));
+static_assert(int(EView3DCameraLockMask::RotX          ) == int(pr::camera::ELockMask::RotX          ));
+static_assert(int(EView3DCameraLockMask::RotY          ) == int(pr::camera::ELockMask::RotY          ));
+static_assert(int(EView3DCameraLockMask::RotZ          ) == int(pr::camera::ELockMask::RotZ          ));
+static_assert(int(EView3DCameraLockMask::Zoom          ) == int(pr::camera::ELockMask::Zoom          ));
+static_assert(int(EView3DCameraLockMask::CameraRelative) == int(pr::camera::ELockMask::CameraRelative));
+static_assert(int(EView3DCameraLockMask::All           ) == int(pr::camera::ELockMask::All           ));
 
-static_assert(int(EView3DLight::Ambient    ) == int(pr::rdr::ELight::Ambient    ), "");
-static_assert(int(EView3DLight::Directional) == int(pr::rdr::ELight::Directional), "");
-static_assert(int(EView3DLight::Point      ) == int(pr::rdr::ELight::Point      ), "");
-static_assert(int(EView3DLight::Spot       ) == int(pr::rdr::ELight::Spot       ), "");
+static_assert(int(EView3DPrim::Invalid  ) == int(pr::rdr::EPrim::Invalid  ));
+static_assert(int(EView3DPrim::PointList) == int(pr::rdr::EPrim::PointList));
+static_assert(int(EView3DPrim::LineList ) == int(pr::rdr::EPrim::LineList ));
+static_assert(int(EView3DPrim::LineStrip) == int(pr::rdr::EPrim::LineStrip));
+static_assert(int(EView3DPrim::TriList  ) == int(pr::rdr::EPrim::TriList  ));
+static_assert(int(EView3DPrim::TriStrip ) == int(pr::rdr::EPrim::TriStrip ));
+
+static_assert(int(EView3DLight::Ambient    ) == int(pr::rdr::ELight::Ambient    ));
+static_assert(int(EView3DLight::Directional) == int(pr::rdr::ELight::Directional));
+static_assert(int(EView3DLight::Point      ) == int(pr::rdr::ELight::Point      ));
+static_assert(int(EView3DLight::Spot       ) == int(pr::rdr::ELight::Spot       ));
 	
 // EView3DLogLevel - unused?
 
-static_assert(int(EView3DUpdateObject::None      ) == int(pr::ldr::EUpdateObject::None      ), "");
-static_assert(int(EView3DUpdateObject::All       ) == int(pr::ldr::EUpdateObject::All       ), "");
-static_assert(int(EView3DUpdateObject::Name      ) == int(pr::ldr::EUpdateObject::Name      ), "");
-static_assert(int(EView3DUpdateObject::Model     ) == int(pr::ldr::EUpdateObject::Model     ), "");
-static_assert(int(EView3DUpdateObject::Transform ) == int(pr::ldr::EUpdateObject::Transform ), "");
-static_assert(int(EView3DUpdateObject::Children  ) == int(pr::ldr::EUpdateObject::Children  ), "");
-static_assert(int(EView3DUpdateObject::Colour    ) == int(pr::ldr::EUpdateObject::Colour    ), "");
-static_assert(int(EView3DUpdateObject::ColourMask) == int(pr::ldr::EUpdateObject::ColourMask), "");
-static_assert(int(EView3DUpdateObject::Flags     ) == int(pr::ldr::EUpdateObject::Flags     ), "");
-static_assert(int(EView3DUpdateObject::Animation ) == int(pr::ldr::EUpdateObject::Animation ), "");
+static_assert(int(EView3DUpdateObject::None      ) == int(pr::ldr::EUpdateObject::None      ));
+static_assert(int(EView3DUpdateObject::All       ) == int(pr::ldr::EUpdateObject::All       ));
+static_assert(int(EView3DUpdateObject::Name      ) == int(pr::ldr::EUpdateObject::Name      ));
+static_assert(int(EView3DUpdateObject::Model     ) == int(pr::ldr::EUpdateObject::Model     ));
+static_assert(int(EView3DUpdateObject::Transform ) == int(pr::ldr::EUpdateObject::Transform ));
+static_assert(int(EView3DUpdateObject::Children  ) == int(pr::ldr::EUpdateObject::Children  ));
+static_assert(int(EView3DUpdateObject::Colour    ) == int(pr::ldr::EUpdateObject::Colour    ));
+static_assert(int(EView3DUpdateObject::ColourMask) == int(pr::ldr::EUpdateObject::ColourMask));
+static_assert(int(EView3DUpdateObject::Flags     ) == int(pr::ldr::EUpdateObject::Flags     ));
+static_assert(int(EView3DUpdateObject::Animation ) == int(pr::ldr::EUpdateObject::Animation ));
 
-static_assert(int(EView3DGizmoEvent::StartManip) == int(pr::ldr::ELdrGizmoEvent::StartManip), "");
-static_assert(int(EView3DGizmoEvent::Moving    ) == int(pr::ldr::ELdrGizmoEvent::Moving    ), "");
-static_assert(int(EView3DGizmoEvent::Commit    ) == int(pr::ldr::ELdrGizmoEvent::Commit    ), "");
-static_assert(int(EView3DGizmoEvent::Revert    ) == int(pr::ldr::ELdrGizmoEvent::Revert    ), "");
+static_assert(int(EView3DGizmoEvent::StartManip) == int(pr::ldr::ELdrGizmoEvent::StartManip));
+static_assert(int(EView3DGizmoEvent::Moving    ) == int(pr::ldr::ELdrGizmoEvent::Moving    ));
+static_assert(int(EView3DGizmoEvent::Commit    ) == int(pr::ldr::ELdrGizmoEvent::Commit    ));
+static_assert(int(EView3DGizmoEvent::Revert    ) == int(pr::ldr::ELdrGizmoEvent::Revert    ));
 
-static_assert(int(EView3DGizmoMode::Translate) == int(pr::ldr::LdrGizmo::EMode::Translate), "");
-static_assert(int(EView3DGizmoMode::Rotate   ) == int(pr::ldr::LdrGizmo::EMode::Rotate   ), "");
-static_assert(int(EView3DGizmoMode::Scale    ) == int(pr::ldr::LdrGizmo::EMode::Scale    ), "");
+static_assert(int(EView3DGizmoMode::Translate) == int(pr::ldr::LdrGizmo::EMode::Translate));
+static_assert(int(EView3DGizmoMode::Rotate   ) == int(pr::ldr::LdrGizmo::EMode::Rotate   ));
+static_assert(int(EView3DGizmoMode::Scale    ) == int(pr::ldr::LdrGizmo::EMode::Scale    ));
 
-static_assert(int(EView3DSourcesChangedReason::NewData) == int(pr::ldr::ScriptSources::EReason::NewData), "");
-static_assert(int(EView3DSourcesChangedReason::Reload) == int(pr::ldr::ScriptSources::EReason::Reload), "");
+static_assert(int(EView3DSourcesChangedReason::NewData) == int(pr::ldr::ScriptSources::EReason::NewData));
+static_assert(int(EView3DSourcesChangedReason::Reload ) == int(pr::ldr::ScriptSources::EReason::Reload ));
 
-static_assert(int(EView3DHitTestFlags::Faces) == int(pr::rdr::EHitTestFlags::Faces), "");
-static_assert(int(EView3DHitTestFlags::Edges) == int(pr::rdr::EHitTestFlags::Edges), "");
-static_assert(int(EView3DHitTestFlags::Verts) == int(pr::rdr::EHitTestFlags::Verts), "");
+static_assert(int(EView3DHitTestFlags::Faces) == int(pr::rdr::EHitTestFlags::Faces));
+static_assert(int(EView3DHitTestFlags::Edges) == int(pr::rdr::EHitTestFlags::Edges));
+static_assert(int(EView3DHitTestFlags::Verts) == int(pr::rdr::EHitTestFlags::Verts));
 
-static_assert(int(EView3DSnapType::NoSnap    ) == int(pr::rdr::ESnapType::NoSnap    ), "");
-static_assert(int(EView3DSnapType::Vert      ) == int(pr::rdr::ESnapType::Vert      ), "");
-static_assert(int(EView3DSnapType::EdgeMiddle) == int(pr::rdr::ESnapType::EdgeMiddle), "");
-static_assert(int(EView3DSnapType::FaceCentre) == int(pr::rdr::ESnapType::FaceCentre), "");
-static_assert(int(EView3DSnapType::Edge      ) == int(pr::rdr::ESnapType::Edge      ), "");
-static_assert(int(EView3DSnapType::Face      ) == int(pr::rdr::ESnapType::Face      ), "");
+static_assert(int(EView3DSnapType::NoSnap    ) == int(pr::rdr::ESnapType::NoSnap    ));
+static_assert(int(EView3DSnapType::Vert      ) == int(pr::rdr::ESnapType::Vert      ));
+static_assert(int(EView3DSnapType::EdgeMiddle) == int(pr::rdr::ESnapType::EdgeMiddle));
+static_assert(int(EView3DSnapType::FaceCentre) == int(pr::rdr::ESnapType::FaceCentre));
+static_assert(int(EView3DSnapType::Edge      ) == int(pr::rdr::ESnapType::Edge      ));
+static_assert(int(EView3DSnapType::Face      ) == int(pr::rdr::ESnapType::Face      ));
 
 // Specifically used to avoid alignment problems
-static_assert(sizeof(View3DV2    ) == sizeof(pr::v2       ), "");
-static_assert(sizeof(View3DV4    ) == sizeof(pr::v4       ), "");
-static_assert(sizeof(View3DM4x4  ) == sizeof(pr::m4x4     ), "");
-static_assert(sizeof(View3DBBox  ) == sizeof(pr::BBox     ), "");
+static_assert(sizeof(View3DV2    ) == sizeof(pr::v2       ));
+static_assert(sizeof(View3DV4    ) == sizeof(pr::v4       ));
+static_assert(sizeof(View3DM4x4  ) == sizeof(pr::m4x4     ));
+static_assert(sizeof(View3DBBox  ) == sizeof(pr::BBox     ));
 // View3DVertex - only used in this file
 // View3DImageInfo - only used in this file
 // View3DLight - only used in this file
@@ -3131,6 +3140,6 @@ static_assert(sizeof(View3DBBox  ) == sizeof(pr::BBox     ), "");
 // View3DUpdateModelKeep - only used in this file
 // View3DMaterial - only used in this file
 // View3DViewport - only used in this file
-static_assert(equal_size_and_alignment<View3DGizmoEvent, pr::ldr::Evt_Gizmo>::value, "");
+static_assert(equal_size_and_alignment<View3DGizmoEvent, pr::ldr::Evt_Gizmo>::value);
 
 #pragma endregion

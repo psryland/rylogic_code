@@ -4,6 +4,8 @@
 //**********************************************
 
 // Example Script
+// Notes:
+//   Don't use keywords as macro names
 #if 0
 {{
 	// Set the output spam level

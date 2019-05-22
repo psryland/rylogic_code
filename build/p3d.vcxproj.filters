@@ -13,6 +13,9 @@
     <ClCompile Include="..\projects\p3d\src\commands\generate_normals.cpp">
       <Filter>src\commands</Filter>
     </ClCompile>
+    <ClCompile Include="..\projects\p3d\src\commands\cross_section.cpp">
+      <Filter>src\commands</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\projects\p3d\src\forward.h">
@@ -25,6 +28,9 @@
       <Filter>src\commands</Filter>
     </ClInclude>
     <ClInclude Include="..\projects\p3d\src\commands\generate_normals.h">
+      <Filter>src\commands</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\p3d\src\commands\cross_section.h">
       <Filter>src\commands</Filter>
     </ClInclude>
   </ItemGroup>

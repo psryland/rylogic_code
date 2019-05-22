@@ -36,7 +36,9 @@ old:
   [HKEY_CURRENT_USER\Software\Microsoft\VisualStudio\12.0_Config\Debugger]
   "EnableNatvisDiagnostics"=dword:00000001
 -->
-<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+<AutoVisualizer
+	xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010"
+	>
 
 	<!-- std library -->
 	<Type Name="pr::optional&lt;*&gt;">
@@ -106,43 +108,77 @@ old:
 
 	<!-- Maths -->
 	<Type Name="pr::Vec2&lt;*&gt;">
-		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_v2"></DisplayString>
+		<DisplayString>{x,g} {y,g}</DisplayString> 
+		<!--
+		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_v2"></DisplayString> 
+		-->
 	</Type>
 	<Type Name="pr::Vec3&lt;*&gt;">
+		<DisplayString>{x,g} {y,g} {z,g}</DisplayString> 
+		<!--
 		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_v3"></DisplayString>
+		-->
 	</Type>
 	<Type Name="pr::Vec4&lt;*&gt;">
-		<DisplayString LegacyAddin="P:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_v4"></DisplayString>
+		<DisplayString>{x,g} {y,g} {z,g} {w,g}</DisplayString>
+		<!--
+		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_v4"></DisplayString>
+		-->
 	</Type>
 	<Type Name="pr::Vec8&lt;*&gt;">
+		<DisplayString>{ang} {lin}</DisplayString>
+		<!--
 		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_v8"></DisplayString>
+		-->
 	</Type>
 	<Type Name="pr::IVec2&lt;*&gt;">
+		<DisplayString>{x,g} {y,g}</DisplayString> 
+		<!--
 		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_iv2"></DisplayString>
+		-->
 	</Type>
 	<Type Name="pr::IVec4&lt;*&gt;">
+		<DisplayString>{x,g} {y,g} {z,g} {w,g}</DisplayString>
+		<!--
 		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_iv4"></DisplayString>
+		-->
 	</Type>
 	<Type Name="pr::Mat2x2&lt;*&gt;">
+		<DisplayString>{x} {y}</DisplayString> 
+		<!--
 		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_m2x2"></DisplayString>
+		-->
 	</Type>
 	<Type Name="pr::Mat3x4&lt;*,*&gt;">
+		<DisplayString>[{x.xyz}] [{y.xyz}] [{z.xyz}]</DisplayString> 
+		<!--
 		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_m3x4"></DisplayString>
+		-->
 	</Type>
 	<Type Name="pr::Mat4x4&lt;*,*&gt;">
-		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_m4x4"></DisplayString>
+		<DisplayString>[{x}] [{y}] [{z}] [{w}]</DisplayString> 
+		<!--
+		<DisplayString LegacyAddin="P:\pr\obj\v142\prautoexp\x86\Debug\prautoexp.dll" Export="AddIn_m4x4"></DisplayString>
+		-->
 	</Type>
 	<Type Name="pr::Mat6x8&lt;*,*&gt;">
+		<DisplayString>{m00} {m10} {m01} {m11}</DisplayString> 
+		<!--
 		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_m6x8"></DisplayString>
+		-->
 	</Type>
 	<Type Name="pr::Matrix&lt;*&gt;">
 		<DisplayString>{m_cols}x{m_rows} {m_data,36}</DisplayString>
 	</Type>
 	<Type Name="pr::Quat">
+		<!--
 		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_Quaternion"></DisplayString>
+		-->
 	</Type>
 	<Type Name="pr::LargeInt">
+		<!--
 		<DisplayString LegacyAddin="p:\pr\lib\x86\release\prautoexp.dll" Export="AddIn_LargeInt"></DisplayString>
+		-->
 	</Type>
 	<Type Name="pr::BoundingBox">
 		<DisplayString>radius={m_radius.x} {m_radius.y} {m_radius.z} {m_radius.w} centre={m_centre.x} {m_centre.y} {m_centre.z} {m_centre.w}</DisplayString>

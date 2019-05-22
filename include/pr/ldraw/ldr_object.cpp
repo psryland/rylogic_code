@@ -5097,9 +5097,9 @@ LR"(// *************************************************************************
 		// Get/Set the colour of this object or child objects matching 'name' (see Apply)
 		// For 'Get', the colour of the first object to match 'name' is returned
 		// For 'Set', the object base colour is not changed, only the tint colour = tint
-		pr::Colour32 LdrObject::Colour(bool base_colour, char const* name) const
+		Colour32 LdrObject::Colour(bool base_colour, char const* name) const
 		{
-			pr::Colour32 col;
+			Colour32 col;
 			Apply([&](LdrObject const* o)
 			{
 				col = base_colour ? o->m_base_colour : o->m_colour;
@@ -5107,12 +5107,30 @@ LR"(// *************************************************************************
 			}, name);
 			return col;
 		}
-		void LdrObject::Colour(pr::Colour32 colour, pr::uint mask, char const* name)
+		void LdrObject::Colour(Colour32 colour, pr::uint mask, char const* name, EColourOp op, float op_value)
 		{
 			Apply([=](LdrObject* o)
 			{
+				switch (op)
+				{
+				case EColourOp::Overwrite:
 				o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, colour.argb);
-				if (o->m_model == nullptr) return true;
+					break;
+				case EColourOp::Add:
+					o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, (o->m_base_colour + colour).argb);
+					break;
+				case EColourOp::Subtract:
+					o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, (o->m_base_colour - colour).argb);
+					break;
+				case EColourOp::Multiply:
+					o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, (o->m_base_colour * colour).argb);
+					break;
+				case EColourOp::Lerp:
+					o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, Lerp(o->m_base_colour, colour, op_value).argb);
+					break;
+				}
+				if (o->m_model == nullptr)
+					return true;
 
 				auto tint_has_alpha = HasAlpha(o->m_colour);
 				for (auto& nug : o->m_model->m_nuggets)

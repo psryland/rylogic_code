@@ -178,6 +178,14 @@ extern "C"
 		Zoom      = 1 << 2,
 		_bitwise_operators_allowed,
 	};
+	enum class EView3DColourOp :int // pr::ldr::EColourOp
+	{
+		Overwrite,
+		Add,
+		Subtract,
+		Multiply,
+		Lerp,
+	};
 	enum class EView3DCameraLockMask :int // pr::camera::ELockMask
 	{
 		None           = 0,
@@ -591,7 +599,7 @@ extern "C"
 	VIEW3D_API EView3DFlags    __stdcall View3D_ObjectFlagsGet           (View3DObject object, char const* name);
 	VIEW3D_API void            __stdcall View3D_ObjectFlagsSet           (View3DObject object, EView3DFlags flags, BOOL state, char const* name);
 	VIEW3D_API View3DColour    __stdcall View3D_ObjectColourGet          (View3DObject object, BOOL base_colour, char const* name);
-	VIEW3D_API void            __stdcall View3D_ObjectColourSet          (View3DObject object, View3DColour colour, UINT32 mask, char const* name);
+	VIEW3D_API void            __stdcall View3D_ObjectColourSet          (View3DObject object, View3DColour colour, UINT32 mask, char const* name, EView3DColourOp op, float op_value);
 	VIEW3D_API BOOL            __stdcall View3D_ObjectWireframeGet       (View3DObject object, char const* name);
 	VIEW3D_API void            __stdcall View3D_ObjectWireframeSet       (View3DObject object, BOOL wireframe, char const* name);
 	VIEW3D_API void            __stdcall View3D_ObjectResetColour        (View3DObject object, char const* name);

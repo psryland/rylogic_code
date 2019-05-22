@@ -112,5 +112,6 @@ errout = CheckPath(JoinPath(root, "tools", "Errout", "x64", "errout.exe"))
 
 # Rylogic code tools
 cex = CheckPath(JoinPath(root, "tools", "cex", "cex.exe"))
+p3d = CheckPath(JoinPath(root, "tools", "p3d", "p3d.exe"))
 csex = CheckPath(JoinPath(root, "tools", "csex", "csex.exe"))
 elevate = CheckPath(JoinPath(root, "tools", "elevate", "elevate.exe"))

@@ -8,7 +8,7 @@ import UserVars
 def Deploy():
 	print("""
 		*************************************************************************
-		  Graphics Tool Deploy
+		  P3D Graphics Tool Deploy
 		    Copyright (c) Rylogic Limited 2019
 		*************************************************************************
 		""")
