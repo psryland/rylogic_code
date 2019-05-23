@@ -1005,6 +1005,9 @@
     <ClInclude Include="..\include\pr\common\handle.h">
       <Filter>pr\common</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\storage\zip_file.h">
+      <Filter>pr\storage</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\unittests\pre_build.py" />

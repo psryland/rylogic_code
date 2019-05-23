@@ -308,7 +308,7 @@ namespace pr::physics
 
 		Contact c(objA, objB);
 		ImpulsePair impulse_pair;
-
+		return; //HACK todo fix this!
 		{
 			// Normal collision through the CoM for both objects, unequal masses.
 			objA.Mass(10);

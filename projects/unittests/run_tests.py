@@ -11,22 +11,17 @@ import UserVars
 
 try:
 	Tools.AssertVersion(1)
+	sys.argv = sys.argv if len(sys.argv) >= 2 else ["", "P:\\pr\\obj\\v142\\unittests\\x64\\Debug\\unittests.dll"] 
 
 	# Set this to false to disable running tests on compiling
-	RunTests = False
+	RunTests = True
 
 	test_dll_path = os.path.abspath(sys.argv[1])
 	if RunTests and os.path.exists(test_dll_path):
 
-		# Load the MS unit test dll
-		mstests_dll_path = os.path.join(UserVars.vs_dir, "Common7", "IDE", "CommonExtensions", "Microsoft", "TestWindow", "Extensions", "Cpp", "Microsoft.VisualStudio.TestTools.CppUnitTestFramework.x64.dll")
-		mstests = ctypes.windll.LoadLibrary(mstests_dll_path)
-		
-		# Load the unit tests
-		tests_dll = ctypes.windll.LoadLibrary(test_dll_path)
+		vstest = os.path.join(UserVars.vs_dir, "Common7", "IDE", "Extensions", "TestPlatform", "vstest.console.exe")
+		Tools.Exec([vstest, test_dll_path, "--logger:console;verbosity=minimal", "--nologo"])
 
-		# Run the unit tests
-		tests_dll.RunAllTests(0)
 	else:
 		print("   **** Unit tests not run ****   ")
 
