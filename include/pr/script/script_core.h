@@ -815,7 +815,7 @@ namespace pr
 		// Buffer up to the next '\n' into 'buf'. 'emit' is the read position in 'buf'
 		template <typename TBuf> inline void BufferLine(TBuf& buf, EmitCount& emit)
 		{
-			// If the buffer is currently empty, peek at the next character so that it doesn't get buffered
+			// If the buffer is currently empty, peek at the next character so that it doesn't get buffered unecessarily
 			if (pr::str::IsNewLine(emit == 0 ? *buf : buf[emit])) return;
 			for (++emit; !pr::str::IsNewLine(buf[emit]); ++emit) {}
 		}
@@ -845,7 +845,17 @@ namespace pr
 			return true;
 		}
 
-		// Call '++src' until 'pred' returns false
+		// Buffer until 'pred' returns false. 'emit' is the read position in 'buf'.
+		template <typename TBuf, typename Pred> inline void BufferWhile(TBuf& buf, EmitCount& emit, Pred pred)
+		{
+			// If the buffer is currently empty, peek at the next character so that it doesn't get buffered unecessarily
+			if (!pred(emit == 0 ? *buf : buf[emit])) return;
+			for (++emit; buf[emit] && pred(buf[emit]); ++emit) {}
+		}
+
+		// Call '++src' until 'pred' returns false.
+		// 'eat_initial' and 'eat_final' are the number of characters to consume before
+		// applying the predicate 'pred' and the number to consume after 'pred' returns false.
 		template <typename TSrc, typename Pred> void Eat(TSrc& src, int eat_initial, int eat_final, Pred pred)
 		{
 			for (src += eat_initial; *src && pred(*src); ++src) {}

@@ -6,6 +6,7 @@
 #pragma once
 #include <iostream>
 #include <string>
+#include <filesystem>
 
 #include <sdkddkver.h>
 #include <windows.h>

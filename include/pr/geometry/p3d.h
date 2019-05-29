@@ -877,6 +877,7 @@ namespace pr
 						}
 					case EChunkId::MeshBBox:
 						{
+							assert(mesh.m_bbox.radius.x >= 0 && mesh.m_bbox.radius.y >= 0 && mesh.m_bbox.radius.z >= 0 && "Writing an invalid bounding box into p3d");
 							Write<ChunkHeader>(out, idx);
 							Write<BBox>(out, mesh.m_bbox);
 							break;

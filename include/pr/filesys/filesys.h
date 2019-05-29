@@ -771,6 +771,16 @@ namespace pr
 				path = CombinePath<Str>(dir, partial_path);
 				if (FileExists(path))
 					return path;
+				
+				// If the search paths contain partial paths, resolve recursively
+				if (!IsFullPath(path))
+				{
+					auto paths = search_paths;
+					paths.erase(std::remove_if(begin(paths), end(paths), [&](auto& p) { return p == dir; }), end(paths));
+					path = ResolvePath<Str>(path, paths, current_dir, check_working_dir, searched_paths);
+					if (FileExists(path))
+						return path;
+				}
 
 				if (searched_paths)
 					searched_paths->append(GetDirectory(path)).append(1, '\n');

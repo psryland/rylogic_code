@@ -252,7 +252,7 @@ namespace pr
 				}
 
 				// Resolve the filepath
-				auto filepath = pr::filesys::ResolvePath(include, m_paths, current_dir, false, &searched_paths);
+				auto filepath = pr::filesys::ResolvePath<string>(include, m_paths, current_dir, false, &searched_paths);
 				if (filepath.empty())
 					return false;
 

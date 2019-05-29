@@ -51,7 +51,7 @@ std::unique_ptr<p3d::File> CreateFrom3DS(std::wstring const& filepath)
 
 		// Bounding box (can't use 'mesh.m_bbox' directly because it's not a pr::BBox)
 		pr::BBox bbox = pr::BBoxReset;
-		auto bb = [&](pr::v4 const& v) { pr::Encompass(mesh.m_bbox, v); return v; };
+		auto bb = [&](pr::v4 const& v) { pr::Encompass(bbox, v); return v; };
 
 		// Get the 3ds code to extract the verts/faces/normals/nuggets
 		// We may regenerate the normals later
@@ -175,14 +175,14 @@ std::unique_ptr<p3d::File> CreateFromSTL(std::wstring const& filepath)
 }
 
 // Write 'p3d' as a p3d format file
-void WriteP3d(std::unique_ptr<p3d::File> const& p3d, std::wstring const& outfile)
+void WriteP3d(std::unique_ptr<p3d::File> const& p3d, std::filesystem::path const& outfile)
 {
 	std::ofstream ofile(outfile, std::ofstream::binary);
 	p3d::Write(ofile, *p3d);
 }
 
 // Write 'p3d' as a cpp source file
-void WriteCpp(std::unique_ptr<p3d::File> const& p3d, std::wstring const& outfile, std::string indent)
+void WriteCpp(std::unique_ptr<p3d::File> const& p3d, std::filesystem::path const& outfile, std::string indent)
 {
 	std::ofstream ofile(outfile);
 	p3d::WriteAsCode(ofile, *p3d, indent.c_str());

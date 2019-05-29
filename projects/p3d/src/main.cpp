@@ -11,17 +11,21 @@
 
 using namespace pr;
 using namespace pr::geometry;
+using namespace std::literals;
+using namespace std::filesystem;
 
 struct Main
 {
 	std::unique_ptr<p3d::File> m_model;
-	std::wstring m_infile;
+	path m_base_dir;
+	path m_infile;
 	int m_verbosity;
 
 	Main()
 		:m_model()
-		, m_infile()
-		, m_verbosity(1)
+		,m_base_dir()
+		,m_infile()
+		,m_verbosity(1)
 	{}
 
 	// Show the main help
@@ -83,92 +87,103 @@ struct Main
 		if (!cmdline::IsOption(args))
 		{
 			// If the only argument is a filepath, assume a script file
-			auto script_filepath = filesys::ResolvePath(args);
-			return !script_filepath.empty()
-				? std::make_unique<script::FileSrc>(Widen(script_filepath))
-				: nullptr;
+			auto script_filepath = path(filesys::ResolvePath(args));
+			if (script_filepath.empty())
+				return nullptr;
+
+			if (!exists(script_filepath))
+				throw std::runtime_error("Script '"s + args + "' does not exist");
+
+			m_base_dir = script_filepath.parent_path();
+			auto ptr = std::make_unique<script::FileSrc>(script_filepath.wstring());
+			return std::move(ptr);
 		}
-
-		// Otherwise, convert the command line parameters into a script
-		struct Parser :cmdline::IOptionReceiver<>
+		else
 		{
-			std::string& m_str;
-			Parser(std::string& str)
-				:m_str(str)
-			{}
-
-			// Read the option passed to Cex
-			bool CmdLineOption(std::string const& option, TArgIter& arg, TArgIter arg_end) override
+			// Otherwise, convert the command line parameters into a script
+			struct Parser :cmdline::IOptionReceiver<>
 			{
-				for (;;)
+				std::string& m_str;
+				Parser(std::string& str)
+					:m_str(str)
+				{}
+
+				// Read the option passed to Cex
+				bool CmdLineOption(std::string const& option, TArgIter& arg, TArgIter arg_end) override
 				{
-					if (str::EqualI(option, "-fi"))
+					for (;;)
 					{
-						auto fi = ldr::Section(m_str, "*fi");
-						ldr::Append(m_str, ldr::Str(*arg++));
-						break;
-					}
-					if (str::EqualI(option, "-fo"))
-					{
-						auto fo = ldr::Section(m_str, "*fo");
-						ldr::Append(m_str, ldr::Str(*arg++));
-						break;
-					}
-					if (str::EqualI(option, "-RemoveDegenerates"))
-					{
-						auto sec = ldr::Section(m_str, "*RemoveDegenerates");
-						if (!IsOption(*arg))
+						if (str::EqualI(option, "-fi"))
 						{
-							int field = 0;
-							str::Split(*arg++, ":", [&](std::string const& s, auto i, auto j)
+							auto fi = ldr::Section(m_str, "*fi");
+							ldr::Append(m_str, ldr::Str(*arg++));
+							break;
+						}
+						if (str::EqualI(option, "-fo"))
+						{
+							auto fo = ldr::Section(m_str, "*fo");
+							ldr::Append(m_str, ldr::Str(*arg++));
+							break;
+						}
+						if (str::EqualI(option, "-RemoveDegenerates"))
+						{
+							auto sec = ldr::Section(m_str, "*RemoveDegenerates");
+							if (!IsOption(*arg))
 							{
-								switch (field++) {
-								case 0: if (i != j) ldr::Append(m_str, "*Quantistation", "{", s.substr(i, j - i), "}"); break;
-								case 1: if (i != j) ldr::Append(m_str, "*NormalSmoothingAngle", "{", s.substr(i, j - i), "}"); break;
-								case 2: if (i != j) ldr::Append(m_str, "*ColourDistance", "{", s.substr(i, j - i), "}"); break;
-								case 3: if (i != j) ldr::Append(m_str, "*UVDistance", "{", s.substr(i, j - i), "}"); break;
-								default: throw std::runtime_error(FmtS("RemoveDegenerates - too many parameter fields. Expected %d", field-1));
-								}
-							});
+								int field = 0;
+								str::Split(*arg++, ":", [&](std::string const& s, auto i, auto j)
+								{
+									switch (field++)
+									{
+									case 0: if (i != j) ldr::Append(m_str, "*Quantistation", "{", s.substr(i, j - i), "}"); break;
+									case 1: if (i != j) ldr::Append(m_str, "*NormalSmoothingAngle", "{", s.substr(i, j - i), "}"); break;
+									case 2: if (i != j) ldr::Append(m_str, "*ColourDistance", "{", s.substr(i, j - i), "}"); break;
+									case 3: if (i != j) ldr::Append(m_str, "*UVDistance", "{", s.substr(i, j - i), "}"); break;
+									default: throw std::runtime_error(FmtS("RemoveDegenerates - too many parameter fields. Expected %d", field - 1));
+									}
+								});
+							}
+							break;
 						}
-						break;
-					}
-					if (str::EqualI(option, "-GenerateNormals"))
-					{
-						auto sec = ldr::Section(m_str, "*GenerateNormals");
-						for (; arg != arg_end && !IsOption(*arg); ++arg)
+						if (str::EqualI(option, "-GenerateNormals"))
 						{
-							if (int i; str::ExtractIntC(i, 10, arg->c_str())) { ldr::Append(m_str, "*SmoothingAngle {", i, "}"); continue; }
-							throw std::runtime_error(FmtS("GenerateNormals - unknown argument:  %s", arg->c_str()));
+							auto sec = ldr::Section(m_str, "*GenerateNormals");
+							for (; arg != arg_end && !IsOption(*arg); ++arg)
+							{
+								if (int i; str::ExtractIntC(i, 10, arg->c_str())) { ldr::Append(m_str, "*SmoothingAngle {", i, "}"); continue; }
+								throw std::runtime_error(FmtS("GenerateNormals - unknown argument:  %s", arg->c_str()));
+							}
+							break;
 						}
-						break;
-					}
-					if (str::EqualI(option, "-Transform"))
-					{
-						float m[16]; int i;
-						for (i = 0; i != 16 && arg != arg_end && !IsOption(*arg) && str::ExtractRealC(m[i], arg->c_str()); ++i, ++arg) {}
-						if (i != 16) throw std::runtime_error("Transform argument should be followed by 16 values");
+						if (str::EqualI(option, "-Transform"))
+						{
+							float m[16]; int i;
+							for (i = 0; i != 16 && arg != arg_end && !IsOption(*arg) && str::ExtractRealC(m[i], arg->c_str()); ++i, ++arg) {}
+							if (i != 16) throw std::runtime_error("Transform argument should be followed by 16 values");
 
-						auto sec = ldr::Section(m_str, "*Transform");
-						ldr::Append(m_str, "*m4x4 { ", m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9], m[10], m[11], m[12], m[13], m[14], m[15], "}");
-						break;
-					}
+							auto sec = ldr::Section(m_str, "*Transform");
+							ldr::Append(m_str, "*m4x4 { ", m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9], m[10], m[11], m[12], m[13], m[14], m[15], "}");
+							break;
+						}
 
-					// NEW_COMMAND
-					throw std::runtime_error(FmtS("Unknown command line option: %S", option.c_str()));
+						// NEW_COMMAND
+						throw std::runtime_error(FmtS("Unknown command line option: %S", option.c_str()));
+					}
+					return true;
 				}
-				return true;
-			}
-		};
+			};
 
-		// Create a string source
-		auto script = std::make_unique<script::StringSrcA>();
+			// Create a string source
+			auto ptr = std::make_unique<script::StringSrcA>();
 
-		Parser p(script->m_buf);
-		EnumCommandLine(args.c_str(), p);
-		return !script->m_buf.empty()
-			? std::move(script)
-			: nullptr;
+			Parser p(ptr->m_buf);
+			EnumCommandLine(args.c_str(), p);
+			if (ptr->m_buf.empty())
+				throw std::runtime_error("Invalid command line");
+
+			m_base_dir = current_path();
+			return std::move(ptr);
+		}
 	}
 
 	// Main program run
@@ -244,34 +259,34 @@ struct Main
 	void ImportFile(script::Reader& reader)
 	{
 		// Read the file name
-		std::wstring infile;
+		std::string infile;
 		reader.StringS(infile);
 
 		// Resolve the file
-		std::vector<std::wstring> searched_paths;
-		m_infile = filesys::ResolvePath(infile);// filesys::ResolvePath(infile, searched_paths, filesys::CurrentDirectory().c_str(), );
+		m_infile = path(infile);
+		m_infile = m_infile.is_relative() ? m_base_dir / m_infile : m_infile;
 
 		// Import the file
-		if (!filesys::FileExists(m_infile))
+		if (!exists(m_infile))
 		{
 			if (m_verbosity >= 1)
-				std::wcout << "Could not locate '" << infile << "'. Does the file exist?" << std::endl;
+				std::cout << "Could not locate '" << infile << "'. Does the file exist?" << std::endl;
 
 			m_model = nullptr;
 		}
 		else
 		{
 			if (m_verbosity >= 1)
-				std::wcout << "Loading '" << m_infile << "'." << std::endl;
+				std::cout << "Loading '" << m_infile << "'." << std::endl;
 
-			auto extn = filesys::GetExtension(m_infile);
+			auto extn = m_infile.extension().string();
 			m_model =
-				str::EqualI(extn, "p3d") ? CreateFromP3D(m_infile) :
-				str::EqualI(extn, "3ds") ? CreateFrom3DS(m_infile) :
-				str::EqualI(extn, "stl") ? CreateFromSTL(m_infile) :
+				str::EqualI(extn, ".p3d") ? CreateFromP3D(m_infile) :
+				str::EqualI(extn, ".3ds") ? CreateFrom3DS(m_infile) :
+				str::EqualI(extn, ".stl") ? CreateFromSTL(m_infile) :
 				nullptr;
 			if (m_model == nullptr)
-				throw std::runtime_error(FmtS("Model format '%s' is not supported", extn.c_str()));
+				throw std::runtime_error("Model format '"s + extn + "' is not supported");
 		}
 	}
 
@@ -279,7 +294,7 @@ struct Main
 	void ExportFile(script::Reader& reader) const
 	{
 		// Generate an output filepath based on 'infile'
-		auto outfile = filesys::ChangeExtn<std::wstring>(m_infile, L"p3d");
+		std::string outfile, extn = "p3d";
 		if (reader.IsSectionStart())
 		{
 			// Parse the optional *fo section
@@ -294,30 +309,39 @@ struct Main
 			{
 				if (str::EqualI(kw, "Code"))
 				{
-					outfile = filesys::ChangeExtn<std::wstring>(outfile, L"cpp");
+					extn = "cpp";
 					continue;
 				}
 			}
 
 			reader.SectionEnd();
 		}
-		outfile = filesys::GetFullPath(outfile);
 
 		// If there is no model, then there's nothing to export. (We still need to parse the script tho)
 		if (m_model == nullptr)
 			return;
 
+		// Resolve the output file path
+		auto outpath =
+			outfile.empty() ? path(m_infile).replace_extension(extn) :
+			path(outfile).is_relative() ? m_base_dir / outfile :
+			path(outfile);
+
 		if (m_verbosity >= 1)
-			std::wcout << "Writing '" << outfile << "'..." << std::endl;
+			std::cout << "Writing '" << outpath << "'..." << std::endl;
+
+		// Ensure the output directory exists
+		if (!exists(outpath.parent_path()) && !create_directories(outpath.parent_path()))
+			throw std::runtime_error("Failed to create directory: "s + outpath.parent_path().string());
 
 		// Determine the output format from the extn
-		auto extn = filesys::GetExtension(outfile);
-		if (str::EqualI(extn, "p3d")) WriteP3d(m_model, outfile);
-		else if (str::EqualI(extn, "cpp")) WriteCpp(m_model, outfile, "\t");
-		else throw std::runtime_error(FmtS("Unsupported output file format: %S", extn.c_str()));
+		extn = outpath.extension().string();
+		str::EqualI(extn, ".p3d") ? WriteP3d(m_model, outpath) :
+		str::EqualI(extn, ".cpp") ? WriteCpp(m_model, outpath, "\t") :
+		throw std::runtime_error("Unsupported output file format: "s + extn);
 
 		if (m_verbosity >= 1)
-			std::wcout << "'" << outfile << "' saved." << std::endl;
+			std::cout << "'" << outpath << "' saved." << std::endl;
 	}
 
 	// Remove degenerate verts from the model

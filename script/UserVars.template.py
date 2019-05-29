@@ -25,37 +25,43 @@ root = CheckPath("<REPO_ROOT_DIRECTORY>")
 # Location for temporary files
 dumpdir = CheckPath("<DUMP_DIRECTORY>")
 
-# The full path to the windows sdk
+# The full path to the windows sdk and version
+# e.g. winsdkvers = "10.0.18362.0"
 # e.g. winsdk = CheckPath("C:\\Program Files (x86)\\Windows Kits\\10")
-winsdk = CheckPath("<WINDOWS_SDK_DIRECTORY>")
-
-# The Windows SDK verion to use
-# e.g. winsdkvers = "10.0.17763.0"
 winsdkvers = "<WINDOWS_SDK_VERSION>"
+winsdk = CheckPath("<WINDOWS_SDK_DIRECTORY>")
 winsdk_bin        = CheckPath(JoinPath(winsdk, "Bin", winsdkvers))
 winsdk_lib        = CheckPath(JoinPath(winsdk, "Lib", winsdkvers))
 winsdk_include    = CheckPath(JoinPath(winsdk, "Include", winsdkvers))
 winsdk_references = CheckPath(JoinPath(winsdk, "References", winsdkvers))
 
 # The root of the .NET framework directory
-# e.g. dotnet_dir = CheckPath("C:\\Windows\\Microsoft.NET\\Framework\\v4.0.30319")
+# e.g. framework_vers = "v4.0.30319"
+# e.g. framework_dir = CheckPath("C:\\Windows\\Microsoft.NET\\Framework")
+framework_vers = "<FRAMEWORK_VERSION>"
+framework_dir = CheckPath(JoinPath("<FRAMEWORK_DIRECTORY>", framework_vers))
+
+# The dotnet compiler
 # e.g. dotnet = CheckPath("C:\\Program Files\\dotnet\\dotnet.exe")
-dotnet_dir = CheckPath("<DOTNET_DIRECTORY>")
 dotnet = CheckPath("<DOTNET_PATH>")
 
-# Visual Studio install path
+# Visual Studio install path and version
 # e.g. vs_dir = CheckPath("C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community")
+# vs_vers = "16.0"
+# vc_vers = "14.21.27702"
+vs_vers = "<VS_VERS>"
+vc_vers = "<VC_VERS>"
 vs_dir = CheckPath("<VS_DIRECTORY>")
-msvc_dir = CheckPath(JoinPath(vs_dir, "VC", "Tools", "MSVC", "14.20.27508"))
-vs_compiler32 = CheckPath(JoinPath(msvc_dir, "bin", "HostX64", "x86", "cl.exe"))
-vs_compiler64 = CheckPath(JoinPath(msvc_dir, "bin", "HostX64", "x64", "cl.exe"))
-vs_linker32 = CheckPath(JoinPath(msvc_dir, "bin", "HostX64", "x86", "link.exe"))
-vs_linker64 = CheckPath(JoinPath(msvc_dir, "bin", "HostX64", "x64", "link.exe"))
-vs_vers = "15.0"
+vs_devenv = CheckPath(JoinPath(vs_dir, "Common7", "IDE", "devenv.exe"))
+vs_envvars = CheckPath(JoinPath(vs_dir, "Common7", "Tools", "VsDevCmd.bat"))
+vs_compiler32 = CheckPath(JoinPath(vs_dir, "VC", "Tools", "MSVC", vc_vers, "bin", "HostX64", "x86", "cl.exe"))
+vs_compiler64 = CheckPath(JoinPath(vs_dir, "VC", "Tools", "MSVC", vc_vers, "bin", "HostX64", "x64", "cl.exe"))
+vs_linker32 = CheckPath(JoinPath(vs_dir, "VC", "Tools", "MSVC", vc_vers, "bin", "HostX64", "x86", "link.exe"))
+vs_linker64 = CheckPath(JoinPath(vs_dir, "VC", "Tools", "MSVC", vc_vers, "bin", "HostX64", "x64", "link.exe"))
 
 # MSBuild path. Used by build scripts
 # e.g. msbuild = CheckPath("C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\MSBuild\\15.0\\Bin\\MSBuild.exe")
-msbuild = CheckPath("<MSBUILD_PATH>")
+msbuild = CheckPath(JoinPath(vs_dir, "MSBuild", "Current", "Bin", "MSBuild.exe"))
 
 # The build system version. VS2013 == v120, VS2012 = v110, etc
 platform_toolset = "v142"

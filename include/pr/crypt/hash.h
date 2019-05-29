@@ -51,8 +51,8 @@ namespace pr
 			static_assert(Mul32(0x12345678, 0x12345678) == 0x1DF4D840, "");
 
 			// 64 bit multiply without a warning...
-			constexpr uint64_t Lo32(uint64_t x) { return x & uint32_t(-1); }
-			constexpr uint64_t Hi32(uint64_t x) { return x >> 32; }
+			constexpr uint64_t Lo32(uint64_t x) { return (x      ) & uint32_t(~0); }
+			constexpr uint64_t Hi32(uint64_t x) { return (x >> 32) & uint32_t(~0); }
 			constexpr uint64_t Mul64(uint64_t a, uint64_t b)
 			{
 				auto ffffffff = uint32_t(-1);

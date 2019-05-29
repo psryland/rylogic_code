@@ -52,7 +52,7 @@ namespace pr
 					,m_out(m_sc)
 					,m_emit()
 				{}
-				PPSource(PPSource&& rhs)
+				PPSource(PPSource&& rhs) noexcept
 					:Src   (std::move(rhs))
 					,m_in  (std::move(rhs.m_in ))
 					,m_del (std::move(rhs.m_del))
@@ -69,7 +69,7 @@ namespace pr
 					rhs.m_del = false;
 				}
 				PPSource(PPSource const&) = delete;
-				PPSource& operator =(PPSource&& rhs)
+				PPSource& operator =(PPSource&& rhs) noexcept
 				{
 					if (this != &rhs)
 					{
@@ -381,10 +381,23 @@ namespace pr
 				case '\'':
 					#pragma region Literal String/Char
 					{
-						// Buffer the literal string or char
-						auto beg = src.Loc();
-						BufferLiteral(src, emit, *src);
-						if (src[emit] != 0) ++emit; else throw Exception(EResult::SyntaxError, Loc(), pr::Fmt("Unclosed literal string or character\n%s", Narrow(beg.ToString()).c_str()));
+						for (;;)
+						{
+							// Buffer the literal string or char
+							auto beg = src.Loc();
+							BufferLiteral(src, emit, *src);
+							if (src[emit] != 0) ++emit; else throw Exception(EResult::SyntaxError, Loc(), pr::Fmt("Unclosed literal string or character\n%s", Narrow(beg.ToString()).c_str()));
+
+							// Consecutive strings are treated as a single string
+							auto b = int(emit - 1); // The position of the closing '"' character
+							BufferWhile(src, emit, str::IsWhiteSpace<wchar_t>);
+							if (src[emit] != '\"' && src[emit] != '\'')
+								break;
+
+							// Erase the whitespace between the strings
+							src.erase(b, emit - b + 1);
+							emit = b;
+						}
 						break;
 					}
 					#pragma endregion
@@ -1239,6 +1252,21 @@ namespace pr::script
 				;
 			char const* str_out =
 				"One = \"One\"	Two = \"Two\"	Three = \"Three\"\n"
+				;
+			Preprocessor pp(str_in);
+			for (;*pp && *str_out; ++pp, ++str_out)
+			{
+				if (*pp == *str_out) continue;
+				PR_CHECK(*pp, *str_out);
+			}
+			PR_CHECK(*str_out == 0 && *pp == 0, true);
+		}
+		{// Consecutive strings
+			char const* str_in = 
+				"\"consecutive \"  \t\"string\""
+				;
+			char const* str_out =
+				"\"consecutive string\""
 				;
 			Preprocessor pp(str_in);
 			for (;*pp && *str_out; ++pp, ++str_out)

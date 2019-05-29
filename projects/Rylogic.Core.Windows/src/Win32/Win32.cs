@@ -1189,6 +1189,7 @@ namespace Rylogic.Interop.Win32
 		{
 			HWND TryLoad(string path)
 			{
+				Debug.WriteLine($"Loading native dll '{path}'...");
 				var module = LoadLibrary(path);
 				if (module != IntPtr.Zero)
 					return module;

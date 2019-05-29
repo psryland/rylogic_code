@@ -10,35 +10,52 @@ import Rylogic as Tools
 import Compile
 import UserVars
 
-try:
+# Preprocess a CPP source file
+def Preprocess(src_filepath:str, out_filepath:str=None):
 	Tools.AssertVersion(1)
 	Tools.AssertPathsExist([UserVars.root])
+	trace = True
+
+	if not os.path.exists(src_filepath):
+		raise RuntimeError("Source filepath does not exist")
+	if not out_filepath:
+		file,ext = os.path.splitext(src_filepath)
+		out_filepath = f"{file}_pp{ext}"
 
 	# Ensure environment variables for cl.exe are set up
-	Compile.SetupVCEnvironment()
+	Tools.SetupVcEnvironment()
 
-	# Read the source file and output file
-	filepath = sys.argv[1] if len(sys.argv) > 1 else ""
-	outpath  = sys.argv[2] if len(sys.argv) > 2 else ""
+	# project_dir = r'R:\software\PC\RexSerialConnection'
+	includes = [
+		#'/I"'+project_dir+'"',
+		#'/I"'+project_dir+'\\src\\emulation"',
+		#'/I"'+project_dir+'\\..\\stm32_proxy\\products\\master_controller_v2\\source"',
+		#'/I"'+project_dir+'\\..\\stm32_proxy"',
+		#'/I"'+project_dir+'\\..\\stm32_proxy\\stm32 library\\fwlib\\library\\inc"',
+		#'/I"'+project_dir+'\\..\\..\\stm32\\products\\master_controller_v2\\source"',
+		#'/I"'+project_dir+'\\..\\..\\stm32"',
+		#'/I"'+project_dir+'\\..\\..\\stm32\\stm32 library\\fwlib\\library\\inc"',
+		#'/I"R:\\localrepo',
 
-	if filepath == "":
-		Tools.OnError("ERROR: no input file provided")
+		#'/I"'+UserVars.root+'\\projects"',
+		#'/I"'+UserVars.root+'\\sdk\\pr"',
+		#'/I"'+UserVars.root+'\\sdk\\wtl\\v8.1\\include"',
+		#'/I"'+UserVars.root+'\\sdk\\lua\\lua\\src"',
+		#'/I"'+UserVars.root+'\\sdk\\lua"',
+		#'/I"'+UserVars.root+'\\sdk\\sqlite"',
+	 	]
 
-	if outpath == "":
-		file,ext = os.path.splitext(filepath)
-		outpath = file + "_pp" + ext
+	# Preprocessor defines
+	defines = [
+		'_DEBUG',
+		'_CRT_SECURE_NO_WARNINGS',
+		'NOMINMAX',
+		#'PR_UNITTESTS'
+		#'DEF_STM32_PRODUCT=2',
+		#'PACK=',
+		]
 
-	# Prompt to do the preprocessing
-	input(
-		"Preprocessing:\n"
-		"  Source: " + filepath + "\n"
-		"  Destination: " + outpath + "\n"
-		"  Visual Studio Version: " + os.environ['VisualStudioVersion'] + "\n"
-		" Press enter to continue")
-
-	trace = False
-
-	flags=[
+	flags = [
 		'/P',
 		'/nologo',
 		'/TP',
@@ -46,49 +63,33 @@ try:
 		]
 	#/GS /analyze- /W3 /wd"4351" /Gy /Zc:wchar_t /ZI /Gm /Od /Ob0 /GF /WX- /Zc:forScope /RTC1 /Gd /Oy- /MTd /openmp /fp:precise /errorReport:prompt /EHsc 
 
-	project_dir = r'R:\software\PC\RexSerialConnection'
-	includes=[
-		'/I"'+project_dir+'"',
-		'/I"'+project_dir+'\\src\\emulation"',
-		'/I"'+project_dir+'\\..\\stm32_proxy\\products\\master_controller_v2\\source"',
-		'/I"'+project_dir+'\\..\\stm32_proxy"',
-		'/I"'+project_dir+'\\..\\stm32_proxy\\stm32 library\\fwlib\\library\\inc"',
-		'/I"'+project_dir+'\\..\\..\\stm32\\products\\master_controller_v2\\source"',
-		'/I"'+project_dir+'\\..\\..\\stm32"',
-		'/I"'+project_dir+'\\..\\..\\stm32\\stm32 library\\fwlib\\library\\inc"',
-		'/I"R:\\localrepo',
-
-		'/I"'+UserVars.root+'\\projects"',
-		'/I"'+UserVars.root+'\\sdk\\pr"',
-		'/I"'+UserVars.root+'\\sdk\\wtl\\v8.1\\include"',
-		'/I"'+UserVars.root+'\\sdk\\lua\\lua\\src"',
-		'/I"'+UserVars.root+'\\sdk\\lua"',
-		'/I"'+UserVars.root+'\\sdk\\sqlite"',
-		]
-
-	defines=[
-		'/D_DEBUG',
-		'/D_CRT_SECURE_NO_WARNINGS',
-		'/DNOMINMAX',
-		'/DPR_UNITTESTS'
-	#	'/DDEF_STM32_PRODUCT=2',
-	#	'/DPACK=',
-		]
-
 	print("Preprocessing...")
-	Tools.Exec(['cl'] + flags + includes + defines + ['/Fi'+outpath, filepath], show_arguments=trace)
+	Tools.Exec(
+		[UserVars.vs_compiler64] + 
+		[x for x in flags] + 
+		[f'/I"{x}"' for x in includes] +
+		[f'/D{x}' for x in defines] +
+		[f'/Fi{out_filepath}', src_filepath],
+		show_arguments=trace)
 
-	print("AStyling output...")
-	Tools.Exec([UserVars.root+'\\tools\\AStyle\\astyle.exe', '--options='+UserVars.root+'\\tools\\astyle\\format_with_newlines.cfg', outpath], show_arguments=trace)
-
+	#print("AStyling output...")
+	#Tools.Exec([UserVars.root+'\\tools\\AStyle\\astyle.exe', '--options='+UserVars.root+'\\tools\\astyle\\format_with_newlines.cfg', outpath], show_arguments=trace)
 	print("Cleaning output...")
-	Tools.Exec([UserVars.root+'\\bin\\textformatter.exe', '-f', outpath, '-newlines', '0', '1'], show_arguments=trace)
-
+	Tools.Exec([UserVars.cex, "-newlines", "-f", out_filepath, '-limit', '0', '1'], show_arguments=trace)
 	print("Showing output...")
-	Tools.Exec([UserVars.vs_dir + "\\Common7\\ide\\devenv.exe", "/Edit", outpath], expected_return_code=0xffffffff)
-	#Tools.Exec([UserVars.textedit, outpath])
+	Tools.Exec([UserVars.devenv, "/Edit", out_filepath], expected_return_code=0xffffffff)
 
-	Tools.OnSuccess()
+	return
 
-except Exception as ex:
-	Tools.OnException(ex)
+# Entry Point
+if __name__ == "__main__":
+	try:
+		sys.argv = ["", "P:\\pr\\include\\pr\\storage\\zip_file.h"]
+
+		# Read the source file and output file
+		filepath = sys.argv[1] if len(sys.argv) > 1 else input("Input filepath: ")
+		outpath  = sys.argv[2] if len(sys.argv) > 2 else None
+		Preprocess(filepath, outpath)
+		Tools.OnSuccess()
+	except Exception as ex:
+		Tools.OnException(ex)

@@ -69,7 +69,7 @@ namespace pr
 				g_buffer_pool.pop_back();
 				return std::move(ptr);
 			}
-			return std::make_unique<Buffers>();
+			return BuffersPtr(new Buffers()); // using make_unique causes a crash in x64 release here
 		}
 		void ReturnToPool(BuffersPtr& bptr)
 		{
@@ -5114,7 +5114,7 @@ LR"(// *************************************************************************
 				switch (op)
 				{
 				case EColourOp::Overwrite:
-				o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, colour.argb);
+					o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, colour.argb);
 					break;
 				case EColourOp::Add:
 					o->m_colour.argb = SetBits(o->m_base_colour.argb, mask, (o->m_base_colour + colour).argb);
