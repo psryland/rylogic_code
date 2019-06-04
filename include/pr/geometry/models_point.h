@@ -28,7 +28,7 @@ namespace pr
 		template <typename TVertIter, typename TIdxIter>
 		Props Points(int num_points, v4 const* points, int num_colours, Colour32 const* colours, TVertIter out_verts, TIdxIter out_indices)
 		{
-			using VIdx = typename std::remove_reference<decltype(*out_indices)>::type;
+			using VIdx = typename std::iterator_traits<TIdxIter>::value_type;
 			Props props;
 			props.m_geom = EGeom::Vert | (num_colours ? EGeom::Colr : EGeom::None) | EGeom::Tex0; // UVs are added in the geometry shader
 

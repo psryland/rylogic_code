@@ -56,7 +56,7 @@ namespace pr
 			//  verts or colours. If verts are distinct it's likely they represent
 			//  a discontinuous edge in the model and are therefore not edges that
 			//  should be smoothed anyway.
-			typedef std::remove_reference<decltype(*indices)>::type VIdx;
+			using VIdx = typename std::iterator_traits<TIdxCIter>::value_type;
 			if ((num_indices % 3) != 0)
 				throw std::exception("GenerateNormals expects triangle list data");
 

@@ -802,19 +802,23 @@ namespace pr
 
 		#pragma region Split
 		// Split a string at 'delims' outputting each sub string to 'out'
-		// 'out' should have the signature out(tstr1 const& s, size_t i, size_t j)
-		// where [i,j) is the range in 's' containing the substring
-		template <typename Str, typename Char1, typename Out> inline void Split(Str const& str, Char1 const* delims, Out out)
+		// 'out' should have the signature out(tstr1 const& s, int i, int j, int n)
+		// where [i,j) is the range in 's' containing the substring. 'n' is the index of the output subrange.
+		// Returns the number of sub strings found.
+		template <typename Str, typename Char1, typename Out> inline int Split(Str const& str, Char1 const* delims, Out out)
 		{
-			size_t i = 0, j = 0, jend = Length(str);
+			int i = 0, j = 0, jend = int(Length(str)), n = 0;
 			for (; j != jend; ++j)
 			{
 				if (*FindChar(delims, str[j]) == 0) continue;
-				out(str, i, j);
+				out(str, i, j, n++);
 				i = j + 1;
 			}
 			if (i != j)
-				out(str, i, j);
+			{
+				out(str, i, j, n++);
+			}
+			return n;
 		}
 		#pragma endregion
 
@@ -1272,7 +1276,7 @@ namespace pr::str
 			int i;
 
 			std::vector<std::string> abuf;
-			Split(astr, L",", [&](char const* s, size_t i, size_t iend)
+			Split(astr, L",", [&](char const* s, size_t i, size_t iend, int)
 				{
 					abuf.push_back(std::string(s+i, s+iend));
 				});
@@ -1280,7 +1284,7 @@ namespace pr::str
 				PR_CHECK(Equal(s, res[i++]), true);
 
 			std::vector<std::wstring> wbuf;
-			Split(wstr, ",", [&](wchar_t const* s, size_t i, size_t iend)
+			Split(wstr, ",", [&](wchar_t const* s, size_t i, size_t iend, int)
 				{
 					wbuf.push_back(std::wstring(s+i, s+iend));
 				});

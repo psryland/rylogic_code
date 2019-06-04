@@ -582,7 +582,7 @@ namespace pr
 				size_t count = Read<u32>(src);
 				data_len -= sizeof(u32);
 
-				typedef std::remove_reference<decltype(cont[0])>::type TIndex;
+				using TIndex = std::remove_reference<decltype(cont[0])>::type;
 				if (count * sizeof(TIndex) != data_len)
 					throw std::exception(FmtS("Index list count is invalid. Index count is %d, data available for %d indices.", count, data_len/sizeof(TIndex)));
 

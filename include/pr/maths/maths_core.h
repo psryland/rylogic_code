@@ -740,7 +740,7 @@ namespace pr
 		return x * x;
 	}
 
-	// Square root - if X*X = Y, then Sqrt(Y) = X. i.e. the inverse T::operator *().
+	// Square root
 	inline float Sqrt(float x)
 	{
 		assert("Sqrt of negative or undefined value" && x >= 0 && IsFinite(x));
@@ -774,6 +774,22 @@ namespace pr
 		T r;
 		for (int i = 0, iend = maths::is_vec<T>::dim; i != iend; ++i) r[i] = Sqrt(x[i]);
 		return r;
+	}
+	constexpr double SqrtCT(double x)
+	{
+		// Compile time version of the square root.
+		//   - For a finite and non-negative value of "x", returns an approximation for the square root of "x"
+		//   - Otherwise, returns NaN
+		struct L {
+			constexpr static double NewtonRaphson(double x, double curr, double prev)
+			{
+				return curr == prev ? curr
+					: NewtonRaphson(x, 0.5 * (curr + x / curr), curr);
+			}};
+
+		return x >= 0 && x < limits<double>::infinity()
+			? L::NewtonRaphson(x, x, 0)
+			: limits<double>::quiet_NaN();
 	}
 
 	// Signed Sqr

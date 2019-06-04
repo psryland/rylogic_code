@@ -34,15 +34,25 @@ namespace pr
 	template <typename Type>
 	struct Resource
 	{
-		union {
+		union
+		{
 		Type const* m_data; // Pointer to the resource
 		char const* m_buf;
 		};
-		std::size_t m_len;  // The length of the resource in 'Type's
+		size_t m_len;  // The length of the resource in 'Type's
 		
-		Resource() :m_data() ,m_len() {}
-		Resource(Type const* data, std::size_t len) :m_data(data) ,m_len(len) {}
-		std::size_t size() const { return m_len * sizeof(Type); }
+		Resource()
+			:m_data()
+			,m_len()
+		{}
+		Resource(Type const* data, size_t len)
+			:m_data(data)
+			,m_len(len)
+		{}
+		size_t size() const
+		{
+			return m_len * sizeof(Type);
+		}
 	};
 
 	namespace resource
@@ -71,7 +81,8 @@ namespace pr
 		// module = 0 means 'this exe'
 		// If you're resource is in a dll, you need to use the HMODULE passed to the DllMain function
 		// Note: you can use pr::GetCurrentModule() for 'module'
-		template <typename Type> Resource<Type> Read(wchar_t const* name, wchar_t const* type, HMODULE module = 0)
+		template <typename Type>
+		Resource<Type> Read(wchar_t const* name, wchar_t const* type, HMODULE module = 0)
 		{
 			// Get a handle to the resource
 			auto handle = ::FindResourceW(module, name, type);

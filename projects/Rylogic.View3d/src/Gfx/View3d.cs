@@ -2845,21 +2845,21 @@ namespace ldr
 				View3D_TextureSetFilterAndAddrMode(Handle, options.Filter, options.AddrU, options.AddrV);
 			}
 
-			/// <summary>Construct a texture from a file</summary>
-			public Texture(string tex_filepath)
-				:this(tex_filepath, 0, 0, TextureOptions.New())
+			/// <summary>Construct a texture from a resource (file, embeded resource, or stock asset)</summary>
+			public Texture(string resource)
+				:this(resource, 0, 0, TextureOptions.New())
 			{}
-			public Texture(string tex_filepath, TextureOptions options)
-				:this(tex_filepath, 0, 0, options)
+			public Texture(string resource, TextureOptions options)
+				:this(resource, 0, 0, options)
 			{}
-			public Texture(string tex_filepath, int width, int height)
-				:this(tex_filepath, width, height, TextureOptions.New())
+			public Texture(string resource, int width, int height)
+				:this(resource, width, height, TextureOptions.New())
 			{}
-			public Texture(string tex_filepath, int width, int height, TextureOptions options)
+			public Texture(string resource, int width, int height, TextureOptions options)
 			{
 				m_owned = true;
-				Handle = View3D_TextureCreateFromFile(tex_filepath, (uint)width, (uint)height, ref options);
-				if (Handle == HTexture.Zero) throw new Exception($"Failed to create texture from {tex_filepath}");
+				Handle = View3D_TextureCreateFromUri(resource, (uint)width, (uint)height, ref options);
+				if (Handle == HTexture.Zero) throw new Exception($"Failed to create texture from {resource}");
 				View3D_TextureGetInfo(Handle, out Info);
 				View3D_TextureSetFilterAndAddrMode(Handle, options.Filter, options.AddrU, options.AddrV);
 			}
@@ -3493,7 +3493,7 @@ namespace ldr
 
 		// Materials
 		[DllImport(Dll)] private static extern HTexture          View3D_TextureCreate               (uint width, uint height, IntPtr data, uint data_size, ref TextureOptions options);
-		[DllImport(Dll)] private static extern HTexture          View3D_TextureCreateFromFile       ([MarshalAs(UnmanagedType.LPWStr)] string tex_filepath, uint width, uint height, ref TextureOptions options);
+		[DllImport(Dll)] private static extern HTexture          View3D_TextureCreateFromUri        ([MarshalAs(UnmanagedType.LPWStr)] string resource, uint width, uint height, ref TextureOptions options);
 		[DllImport(Dll)] private static extern void              View3D_TextureLoadSurface          (HTexture tex, int level, string tex_filepath, Rectangle[] dst_rect, Rectangle[] src_rect, EFilter filter, uint colour_key);
 		[DllImport(Dll)] private static extern void              View3D_TextureDelete               (HTexture tex);
 		[DllImport(Dll)] private static extern void              View3D_TextureGetInfo              (HTexture tex, out ImageInfo info);

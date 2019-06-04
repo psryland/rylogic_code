@@ -172,6 +172,7 @@
     <ClInclude Include="..\include\pr\geometry\models_line.h" />
     <ClInclude Include="..\include\pr\geometry\models_mesh.h" />
     <ClInclude Include="..\include\pr\geometry\models_point.h" />
+    <ClInclude Include="..\include\pr\geometry\models_skybox.h" />
     <ClInclude Include="..\include\pr\geometry\model_file.h" />
     <ClInclude Include="..\include\pr\geometry\p3d.h" />
     <ClInclude Include="..\include\pr\geometry\point.h" />

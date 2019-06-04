@@ -1833,8 +1833,8 @@ VIEW3D_API View3DTexture __stdcall View3D_TextureCreate(UINT32 width, UINT32 hei
 	CatchAndReport(View3D_TextureCreate, , nullptr);
 }
 
-// Load a texture from file. Specify width == 0, height == 0 to use the dimensions of the file
-VIEW3D_API View3DTexture __stdcall View3D_TextureCreateFromFile(wchar_t const* tex_filepath, UINT32 width, UINT32 height, View3DTextureOptions const& options)
+// Load a texture from file, embedded resource, or stock assets. Specify width == 0, height == 0 to use the dimensions of the file
+VIEW3D_API View3DTexture __stdcall View3D_TextureCreateFromUri(wchar_t const* resource, UINT32 width, UINT32 height, View3DTextureOptions const& options)
 {
 	try
 	{
@@ -1849,7 +1849,7 @@ VIEW3D_API View3DTexture __stdcall View3D_TextureCreateFromFile(wchar_t const* t
 		auto has_alpha = options.m_has_alpha != 0;
 
 		DllLockGuard;
-		auto t = Dll().m_rdr.m_tex_mgr.CreateTexture2D(AutoId, sdesc, tex_filepath, has_alpha, name);
+		auto t = Dll().m_rdr.m_tex_mgr.CreateTexture2D(AutoId, resource, sdesc, has_alpha, name);
 		
 		// Rely on the caller for correct reference counting
 		return t.release();

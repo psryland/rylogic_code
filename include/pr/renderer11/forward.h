@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <algorithm>
 #include <functional>
+#include <filesystem>
 #include <type_traits>
 #include <mutex>
 #pragma warning(disable:4355)
@@ -81,6 +82,7 @@
 #include "pr/geometry/models_cylinder.h"
 #include "pr/geometry/models_extrude.h"
 #include "pr/geometry/models_mesh.h"
+#include "pr/geometry/models_skybox.h"
 #include "pr/geometry/p3d.h"
 #include "pr/geometry/3ds.h"
 #include "pr/geometry/triangle.h"

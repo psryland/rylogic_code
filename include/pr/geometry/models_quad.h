@@ -85,7 +85,7 @@ namespace pr
 		template <typename TVertCIter, typename TVertIter, typename TIdxIter>
 		Props Quad(int num_quads, TVertCIter verts, int num_colours, Colour32 const* colours, m4x4 const& t2q, TVertIter v_out, TIdxIter i_out)
 		{
-			using VIdx = typename std::remove_reference<decltype(*i_out)>::type;
+			using VIdx = typename std::iterator_traits<TIdxIter>::value_type;
 
 			Props props;
 			props.m_geom = EGeom::Vert | (colours ? EGeom::Colr : EGeom::None) | EGeom::Norm | EGeom::Tex0;
@@ -156,7 +156,7 @@ namespace pr
 		template <typename TVertIter, typename TIdxIter>
 		Props Quad(v2 const& anchor, v4 const& quad_w, v4 const& quad_h, iv2 const& divisions, Colour32 colour, m4x4 const& t2q, TVertIter v_out, TIdxIter i_out)
 		{
-			using VIdx = typename std::remove_reference<decltype(*i_out)>::type;
+			using VIdx = typename std::iterator_traits<TIdxIter>::value_type;
 
 			// Set the start point so that the model origin matches 'anchor'
 			auto origin = v4Origin
@@ -255,7 +255,7 @@ namespace pr
 		template <typename TVertCIter, typename TNormCIter, typename TVertIter, typename TIdxIter>
 		Props QuadStrip(int num_quads, TVertCIter verts, float width, int num_normals, TNormCIter normals, int num_colours, Colour32 const* colours, TVertIter v_out, TIdxIter i_out)
 		{
-			using VIdx = typename std::remove_reference<decltype(*i_out)>::type;
+			using VIdx = typename std::iterator_traits<TIdxIter>::value_type;
 
 			Props props;
 			props.m_geom = EGeom::Vert | (colours ? EGeom::Colr : EGeom::None) | EGeom::Norm | EGeom::Tex0;

@@ -33,8 +33,16 @@ namespace view3d
 	};
 	template <> struct Convert<View3DBBox, pr::BBox>
 	{
-		static View3DBBox To(pr::BBox const& bb) {
+		static View3DBBox To(pr::BBox const& bb)
+		{
 			return reinterpret_cast<View3DBBox const&>(bb);
+		}
+	};
+	template <> struct Convert<View3DColour, pr::Colour32>
+	{
+		static View3DColour To(pr::Colour32 col)
+		{
+			return col.argb;
 		}
 	};
 
@@ -64,6 +72,13 @@ namespace view3d
 		static pr::BBox To(View3DBBox const& bb)
 		{
 			return pr::BBox(view3d::To<pr::v4>(bb.centre), view3d::To<pr::v4>(bb.radius));
+		}
+	};
+	template <> struct Convert<pr::Colour32, View3DColour>
+	{
+		static pr::Colour32 To(View3DColour col)
+		{
+			return pr::Colour32(col);
 		}
 	};
 }

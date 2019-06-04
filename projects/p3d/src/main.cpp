@@ -131,7 +131,7 @@ struct Main
 							if (!IsOption(*arg))
 							{
 								int field = 0;
-								str::Split(*arg++, ":", [&](std::string const& s, auto i, auto j)
+								str::Split(*arg++, ":", [&](std::string const& s, auto i, auto j, int)
 								{
 									switch (field++)
 									{

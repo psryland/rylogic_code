@@ -134,7 +134,7 @@ namespace pr
 			virtual void SearchPaths(string paths)
 			{
 				m_paths.resize(0);
-				pr::str::Split<string>(paths, L",;", [&](string const& p, size_t s, size_t e)
+				pr::str::Split<string>(paths, L",;", [&](string const& p, size_t s, size_t e, int)
 				{
 					m_paths.push_back(p.substr(s, e - s));
 				});

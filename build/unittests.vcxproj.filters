@@ -1008,6 +1008,9 @@
     <ClInclude Include="..\include\pr\storage\zip_file.h">
       <Filter>pr\storage</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\models_skybox.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\unittests\pre_build.py" />

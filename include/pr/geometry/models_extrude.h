@@ -49,7 +49,7 @@ namespace pr
 		{
 			// Don't bother handling acute angles, users can just insert really small
 			// line segments between acute lines within the path
-			using VIdx = typename std::remove_reference<decltype(*i_out)>::type;
+			using VIdx = typename std::iterator_traits<TIdxIter>::value_type;
 			assert(path_count >= 2 && "Path must have at least 2 points");
 			
 			int vcount, icount;

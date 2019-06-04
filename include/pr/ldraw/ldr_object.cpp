@@ -475,7 +475,7 @@ namespace pr
 		// Parse a texture description. Returns a pointer to the Texture created in the renderer.
 		bool ParseTexture(ParseParams& p, Texture2DPtr& tex)
 		{
-			std::string tex_filepath;
+			std::wstring tex_resource;
 			auto t2s = pr::m4x4Identity;
 			bool has_alpha = false;
 			SamplerDesc sam;
@@ -524,23 +524,23 @@ namespace pr
 				}
 				else
 				{
-					p.m_reader.String(tex_filepath);
+					p.m_reader.String(tex_resource);
 				}
 			}
 			p.m_reader.SectionEnd();
 
 			// Silently ignore missing texture files
-			if (!tex_filepath.empty())
+			if (!tex_resource.empty())
 			{
 				// Create the texture
 				try
 				{
-					tex = p.m_rdr.m_tex_mgr.CreateTexture2D(AutoId, sam, tex_filepath.c_str(), has_alpha, pr::filesys::GetFiletitle(tex_filepath).c_str());
+					tex = p.m_rdr.m_tex_mgr.CreateTexture2D(AutoId, tex_resource.c_str(), sam, has_alpha, nullptr);
 					tex->m_t2s = t2s;
 				}
 				catch (std::exception const& e)
 				{
-					p.ReportError(EResult::ValueNotFound, pr::FmtS("failed to create texture %s\n%s", tex_filepath.c_str(), e.what()));
+					p.ReportError(EResult::ValueNotFound, pr::FmtS("failed to create texture %s\n%s", tex_resource.c_str(), e.what()));
 				}
 			}
 			return true;

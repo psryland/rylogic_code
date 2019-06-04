@@ -42,7 +42,7 @@ namespace pr
 		template <typename TVertCIter, typename TVertIter, typename TIdxIter>
 		Props Boxes(int num_boxes, TVertCIter points, int num_colours, Colour32 const* colours, TVertIter out_verts, TIdxIter out_indices)
 		{
-			using VIdx = typename std::remove_reference<decltype(*out_indices)>::type;
+			using VIdx = typename std::iterator_traits<TIdxIter>::value_type;
 
 			int const vidx[] =
 			{

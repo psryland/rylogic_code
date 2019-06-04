@@ -60,11 +60,13 @@ namespace pr
 			// 'sdesc' is a description of the sampler to use
 			Texture2DPtr CreateTexture2D(RdrId id, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, bool has_alpha, char const* name);
 
-			// Create a texture instance from a DDS file.
-			// 'filepath' can be a special string identifying a stock texture (e.g.  #black, #white, #checker, etc)
+			// Create a texture instance from a filepath, embedded resource, or stock texture id.
+			// 'resource_path' has the following formats:
+			// '#<stock_texture_name>' - '#' indicates stock texture, the remaining text is the stock texture name  (e.g.  #black, #white, #checker, etc)
+			// '@<module>:<resource_type>:<resource_name>' - '@' indicates embedded resource, <module> and <resource_type> are optional  (e.g. @::tex_resource, @00FE123:jpg:tex_resource)
+			// '<filepath>' - All other strings are interpreted as filepaths.
 			// Throws if creation fails. On success returns a pointer to the created texture.
-			Texture2DPtr CreateTexture2D(RdrId id, SamplerDesc const& sam_desc, wchar_t const* filepath, bool has_alpha, char const* name);
-			Texture2DPtr CreateTexture2D(RdrId id, SamplerDesc const& sam_desc, char const* filepath, bool has_alpha, char const* name);
+			Texture2DPtr CreateTexture2D(RdrId id, wchar_t const* resource_path, SamplerDesc const& sam_desc, bool has_alpha, char const* name);
 
 			// Create a new texture instance that wraps an existing dx texture.
 			// 'id' is the id to assign to this new texture instance. Use 'AutoId' to auto generate an id
@@ -95,10 +97,7 @@ namespace pr
 			Texture2DPtr OpenSharedTexture2D(RdrId id, HANDLE shared_handle, SamplerDesc const& sdesc, bool has_alpha, char const* name);
 
 			// Return a pointer to an existing texture
-			Texture2DPtr FindTexture(RdrId id) const
-			{
-				return Texture2DPtr(GetOrDefault(m_lookup_tex, id, (Texture2D*)nullptr), true);
-			}
+			Texture2DPtr FindTexture(RdrId id) const;
 
 			// Return a stock texture
 			Texture2DPtr FindStockTexture(EStockTexture stock);

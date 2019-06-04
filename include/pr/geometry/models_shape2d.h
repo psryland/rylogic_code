@@ -27,7 +27,7 @@ namespace pr
 		template <typename TVertIter, typename TIdxIter>
 		Props Ellipse(float dimx, float dimy, bool solid, int facets, Colour32 colour, TVertIter v_out, TIdxIter i_out)
 		{
-			using VIdx = typename std::remove_reference<decltype(*i_out)>::type;
+			using VIdx = typename std::iterator_traits<TIdxIter>::value_type;
 
 			facets = std::max(facets, 3);
 
@@ -86,7 +86,7 @@ namespace pr
 		template <typename TVertIter, typename TIdxIter>
 		Props Pie(float dimx, float dimy, float ang0, float ang1, float radius0, float radius1, bool solid, int facets, Colour32 colour, TVertIter v_out, TIdxIter i_out)
 		{
-			using VIdx = typename std::remove_reference<decltype(*i_out)>::type;
+			using VIdx = typename std::iterator_traits<TIdxIter>::value_type;
 
 			auto scale = abs(ang1 - ang0) / pr::maths::tau;
 			facets = std::max(int(scale * facets + 0.5f), 3);
@@ -150,7 +150,7 @@ namespace pr
 		template <typename TVertIter, typename TIdxIter>
 		Props RoundedRectangle(float dimx, float dimy, bool solid, float corner_radius, int facets, Colour32 colour, TVertIter v_out, TIdxIter i_out)
 		{
-			using VIdx = std::remove_reference<decltype(*i_out)>::type;
+			using VIdx = typename std::iterator_traits<TIdxIter>::value_type;
 			if (dimx < 0) { assert(!"Rectangle model dimension X is less than zero"); dimx = 0; }
 			if (dimy < 0) { assert(!"Rectangle model dimension Y is less than zero"); dimy = 0; }
 
@@ -240,7 +240,7 @@ namespace pr
 		template <typename TVertIter, typename TIdxIter>
 		Props Polygon(int num_points, v2 const* points, bool solid, int num_colours, Colour32 const* colours, TVertIter v_out, TIdxIter i_out)
 		{
-			using VIdx = std::remove_reference<decltype(*i_out)>::type;
+			using VIdx = typename std::iterator_traits<TIdxIter>::value_type;
 
 			Props props;
 			props.m_geom = EGeom::Vert | EGeom::Colr | (solid ? EGeom::Norm : EGeom::None);

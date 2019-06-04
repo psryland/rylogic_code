@@ -608,7 +608,7 @@ extern "C"
 
 	// Materials
 	VIEW3D_API View3DTexture __stdcall View3D_TextureCreate               (UINT32 width, UINT32 height, void const* data, UINT32 data_size, View3DTextureOptions const& options);
-	VIEW3D_API View3DTexture __stdcall View3D_TextureCreateFromFile       (wchar_t const* tex_filepath, UINT32 width, UINT32 height, View3DTextureOptions const& options);
+	VIEW3D_API View3DTexture __stdcall View3D_TextureCreateFromUri        (wchar_t const* resource, UINT32 width, UINT32 height, View3DTextureOptions const& options);
 	VIEW3D_API void          __stdcall View3D_TextureLoadSurface          (View3DTexture tex, int level, char const* tex_filepath, RECT const* dst_rect, RECT const* src_rect, UINT32 filter, View3DColour colour_key);
 	VIEW3D_API void          __stdcall View3D_TextureDelete               (View3DTexture tex);
 	VIEW3D_API void          __stdcall View3D_TextureGetInfo              (View3DTexture tex, View3DImageInfo& info);

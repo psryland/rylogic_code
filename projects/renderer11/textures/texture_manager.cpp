@@ -17,10 +17,9 @@ namespace pr
 {
 	namespace rdr
 	{
-		// Create a DX texture from a 'DDS,JPG,PNG,TGA,GIF,BMP' file
+		// Create a DX texture from a 'DDS,JPG,PNG,TGA,GIF,BMP' file or data in memory
 		void LoadTextureFromFile(ID3D11Device* device, wchar_t const* filepath, ID3D11Texture2D*& tex, ID3D11ShaderResourceView*& srv)
 		{
-			using namespace DirectX;
 			auto extn = pr::filesys::GetExtensionInPlace(filepath);
 
 			// If the file is a DDS file, use the faster DDS loader
@@ -39,6 +38,28 @@ namespace pr
 				// Otherwise, use the WIC loader
 				D3DPtr<ID3D11Resource> res;
 				pr::Throw(DirectX::CreateWICTextureFromFile(device, dc.m_ptr, filepath, &res.m_ptr, &srv));
+				pr::Throw(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&tex));
+			}
+		}
+		void LoadTextureFromMemory(ID3D11Device* device, void const* data, size_t size, bool dds, ID3D11Texture2D*& tex, ID3D11ShaderResourceView*& srv)
+		{
+			// If the data is a DDS file, use the faster DDS loader
+			if (dds)
+			{
+				// This does not support some DDS formats tho, so might be worth trying the 'directxtex' DDS loader
+				D3DPtr<ID3D11Resource> res;
+				pr::Throw(DirectX::CreateDDSTextureFromMemory(device, data, size, &res.m_ptr, &srv));
+				pr::Throw(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&tex));
+			}
+			else
+			{
+				D3DPtr<ID3D11DeviceContext> dc;
+				device->GetImmediateContext(&dc.m_ptr);
+
+				// Otherwise, use the WIC loader
+				D3DPtr<ID3D11Resource> res;
+				pr::Throw(DirectX::CreateWICTextureFromMemory(device, dc.m_ptr, static_cast<uint8_t const*>(data), size, &res.m_ptr, &srv));
+				pr::Throw(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&tex));
 			}
 		}
 
@@ -86,63 +107,109 @@ namespace pr
 			return inst;
 		}
 
-		// Create a texture instance from a DDS file.
-		// 'filepath' can be a special string identifying a stock texture (e.g.  #black, #white, #checker, etc)
+		// Create a texture instance from a filepath, embedded resource, or stock texture id.
+		// 'resource_path' has the following formats:
+		// '#<stock_texture_name>' - '#' indicates stock texture, the remaining text is the stock texture name  (e.g.  #black, #white, #checker, etc)
+		// '@<module>:<resource_type>:<resource_name>' - '@' indicates embedded resource, <module> and <resource_type> are optional  (e.g. @::tex_resource, @00FE123:jpg:tex_resource)
+		// '<filepath>' - All other strings are interpreted as filepaths.
 		// Throws if creation fails. On success returns a pointer to the created texture.
-		Texture2DPtr TextureManager::CreateTexture2D(RdrId id, SamplerDesc const& sam_desc, wchar_t const* filepath, bool has_alpha, char const* name)
+		Texture2DPtr TextureManager::CreateTexture2D(RdrId id, wchar_t const* resource_name, SamplerDesc const& sam_desc, bool has_alpha, char const* name)
 		{
-			if (filepath == nullptr)
-				throw std::exception("Filepath must be given");
-
 			Renderer::Lock lock(m_rdr);
+
+			// Check whether 'id' already exists, if so return it.
+			if (id != AutoId)
+			{
+				auto tex = FindTexture(id);
+				if (tex != nullptr)
+					return tex;
+			}
+
+			// The resource name is required
+			if (resource_name == nullptr || *resource_name == 0)
+				throw std::runtime_error("Filepath must be given");
 
 			// Accept stock texture strings: #black, #white, #checker, etc
 			// This is handy for model files that contain string paths for textures.
 			// The code that loads these models doesn't need to handle strings such as '#white' as a special case
-			if (id == AutoId && filepath[0] == L'#')
+			if (resource_name[0] == '#')
 			{
 				EStockTexture stock;
-				if (!TryParse(stock, filepath + 1, false))
-					throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Unknown stock texture name: %s", filepath + 1));
+				if (!TryParse(stock, resource_name + 1, false))
+					throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Unknown stock texture name: %s", resource_name + 1));
 
 				// Return a clone of the stock texture
 				auto stock_tex = FindStockTexture(stock);
 				assert(stock_tex != nullptr);
 				return CloneTexture2D(id, stock_tex.get(), &sam_desc, name);
-
 			}
-
-			// Check whether 'id' already exists, if so, throw.
-			if (id != AutoId && m_lookup_tex.find(id) == std::end(m_lookup_tex))
-				throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Texture Id '%d' is already in use", id));
 
 			ID3D11Texture2D* tex;
 			ID3D11ShaderResourceView* srv;
+			string32 tex_name;
+			RdrId src_id;
 
-			// Look for an existing DX texture corresponding to 'filepath'
-			RdrId texfile_id = MakeId(pr::filesys::Standardise<wstring256>(filepath).c_str());
-			auto iter = m_lookup_fname.find(texfile_id);
-			if (iter != m_lookup_fname.end())
+			// Create a texture from embedded resource
+			if (resource_name[0] == '@')
 			{
-				tex = iter->second;
+				src_id = MakeId(resource_name);
+				tex_name = name ? name : To<string32>(str::FindLastOf(resource_name, L":"));
+
+				// Look for an existing DX texture corresponding to the resource
+				auto iter = m_lookup_fname.find(src_id);
+				if (iter != end(m_lookup_fname))
+				{
+					tex = iter->second;
+				}
+				else
+				{
+					// Parse the embedded resource string: "@<module>:<res_type>:<res_name>"
+					HMODULE hmodule = nullptr;
+					std::wstring res_type, res_name;
+					str::Split(resource_name + 1, ":", [&](auto const& s, size_t i, size_t j, int n)
+					{
+						switch (n)
+						{
+						case 0: hmodule = reinterpret_cast<HMODULE>(std::wcstoll(&s[i], nullptr, 16) + (char*)nullptr); break;
+						case 1: res_type.assign(&s[i], j - i); break;
+						case 2: res_name.assign(&s[i], j - i); break;
+						}
+					});
+
+					// Get the embedded resource
+					auto res = pr::resource::Read<char>(res_name.c_str(), res_type.c_str(), hmodule);
+					LoadTextureFromMemory(lock.D3DDevice(), res.m_data, res.m_len, str::EqualI(res_type, "dds"), tex, srv);
+					AddLookup(m_lookup_fname, src_id, tex);
+				}
 			}
-			else // Otherwise, if not loaded already, load now
+			// Otherwise, create from file on disk
+			else
 			{
-				LoadTextureFromFile(lock.D3DDevice(), filepath, tex, srv);
-				AddLookup(m_lookup_fname, texfile_id, tex);
+				// Generate an id from the filepath
+				src_id = MakeId(pr::filesys::Standardise<wstring256>(resource_name).c_str());
+				tex_name = name ? name : To<string32>(filesys::GetFilename<wstring256>(resource_name));
+
+				// Look for an existing DX texture corresponding to the filepath
+				auto iter = m_lookup_fname.find(src_id);
+				if (iter != m_lookup_fname.end())
+				{
+					tex = iter->second;
+				}
+				// Otherwise, if not loaded already, load now
+				else
+				{
+					LoadTextureFromFile(lock.D3DDevice(), resource_name, tex, srv);
+					AddLookup(m_lookup_fname, src_id, tex);
+				}
 			}
 
 			// Allocate the texture instance
-			SortKeyId sort_id = m_lookup_tex.size() % SortKey::MaxTextureId;
-			Texture2DPtr inst(m_alex_tex2d.New(this, id, tex, srv, sam_desc, sort_id, has_alpha, name ? name : pr::To<string32>(pr::filesys::GetFilename<wstring256>(filepath)).c_str()), true);
+			auto sort_id = static_cast<SortKeyId>(m_lookup_tex.size() % SortKey::MaxTextureId);
+			Texture2DPtr inst(m_alex_tex2d.New(this, id, tex, srv, sam_desc, sort_id, has_alpha, tex_name.c_str()), true);
 			assert(m_dbg_mem_tex2d.add(inst.get()));
-			inst->m_src_id = texfile_id;
+			inst->m_src_id = src_id;
 			AddLookup(m_lookup_tex, inst->m_id, inst.m_ptr);
 			return std::move(inst);
-		}
-		Texture2DPtr TextureManager::CreateTexture2D(RdrId id, SamplerDesc const& sam_desc, char const* filepath, bool has_alpha, char const* name)
-		{
-			return CreateTexture2D(id, sam_desc, pr::To<wstring256>(filepath).c_str(), has_alpha, name);
 		}
 
 		// Create a new texture instance that wraps an existing DX texture.
@@ -278,7 +345,8 @@ namespace pr
 			assert(m_dbg_mem_tex2d.add(inst.get()));
 
 			// If a sampler state is given, recreate the sampler state
-			if (sam_desc) inst->SamDesc(*sam_desc);
+			if (sam_desc)
+				inst->SamDesc(*sam_desc);
 
 			// Add the texture instance to the lookup table
 			AddLookup(m_lookup_tex, inst->m_id, inst.m_ptr);
@@ -329,6 +397,12 @@ namespace pr
 			assert(m_dbg_mem_tex2d.remove(iter->second));
 			m_alex_tex2d.Delete(iter->second);
 			m_lookup_tex.erase(iter);
+		}
+
+		// Return a pointer to an existing texture
+		Texture2DPtr TextureManager::FindTexture(RdrId id) const
+		{
+			return Texture2DPtr(GetOrDefault(m_lookup_tex, id, (Texture2D*)nullptr), true);
 		}
 
 		// Return a stock texture

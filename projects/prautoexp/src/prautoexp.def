@@ -1,4 +1,3 @@
-LIBRARY "prautoexp.dll"
 EXPORTS
 	AddIn_v2
 	AddIn_v3

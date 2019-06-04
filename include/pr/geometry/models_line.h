@@ -35,7 +35,7 @@ namespace pr
 		template <typename TVertIter, typename TIdxIter>
 		Props Lines(int num_lines, v4 const* points, int num_colours, Colour32 const* colours, TVertIter out_verts, TIdxIter out_indices)
 		{
-			using VIdx = typename std::remove_reference<decltype(*out_indices)>::type;
+			using VIdx = typename std::iterator_traits<TIdxIter>::value_type;
 			Props props;
 			props.m_geom = EGeom::Vert | (num_colours ? EGeom::Colr : EGeom::None);
 
@@ -78,7 +78,7 @@ namespace pr
 		template <typename TVertCIter, typename TColCIter, typename TVertIter, typename TIdxIter>
 		inline Props LinesStrip(int num_lines, TVertCIter points, int num_colours, TColCIter colours, TVertIter out_verts, TIdxIter out_indices)
 		{
-			using VIdx = typename std::remove_reference<decltype(*out_indices)>::type;
+			using VIdx = typename std::iterator_traits<TIdxIter>::value_type;
 			Props props;
 			props.m_geom = EGeom::Vert | (num_colours ? EGeom::Colr : EGeom::None);
 

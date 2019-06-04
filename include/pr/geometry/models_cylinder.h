@@ -34,8 +34,8 @@ namespace pr
 		template <typename TVertIter, typename TIdxIter>
 		Props Cylinder(float radius0, float radius1, float height, float xscale ,float yscale ,int wedges, int layers, int num_colours, Colour32 const* colours, TVertIter v_out, TIdxIter i_out)
 		{
-			using VIdx = typename std::remove_reference<decltype(*i_out)>::type;
-			
+			using VIdx = typename std::iterator_traits<TIdxIter>::value_type;
+
 			int vcount,icount;
 			if (wedges < 3) wedges = 3;
 			if (layers < 1) layers = 1;
