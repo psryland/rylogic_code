@@ -1983,7 +1983,7 @@ VIEW3D_API void __stdcall View3d_TexturePrivateDataGet(View3DTexture tex, GUID c
 	{
 		// 'size' should be the size of the data pointed to by 'data'
 		if (!tex) throw std::runtime_error("texture is null");
-		pr::Throw(tex->m_tex->GetPrivateData(guid, &size, data));
+		pr::Throw(tex->m_res->GetPrivateData(guid, &size, data));
 	}
 	CatchAndReport(View3d_TexturePrivateDataGet, ,);
 }
@@ -1992,7 +1992,7 @@ VIEW3D_API void __stdcall View3d_TexturePrivateDataSet(View3DTexture tex, GUID c
 	try
 	{
 		if (!tex) throw std::runtime_error("texture is null");
-		pr::Throw(tex->m_tex->SetPrivateData(guid, size, data));
+		pr::Throw(tex->m_res->SetPrivateData(guid, size, data));
 	}
 	CatchAndReport(View3d_TexturePrivateDataSet, ,);
 }
@@ -2001,7 +2001,7 @@ VIEW3D_API void __stdcall View3d_TexturePrivateDataIFSet(View3DTexture tex, GUID
 	try
 	{
 		if (!tex) throw std::runtime_error("texture is null");
-		pr::Throw(tex->m_tex->SetPrivateDataInterface(guid, pointer));
+		pr::Throw(tex->m_res->SetPrivateDataInterface(guid, pointer));
 	}
 	CatchAndReport(View3d_TexturePrivateDataIFSet, ,);
 }
@@ -2044,7 +2044,7 @@ VIEW3D_API void __stdcall View3D_TextureResolveAA(View3DTexture dst, View3DTextu
 			throw std::runtime_error("Source and destination textures must has the same format");
 
 		pr::Renderer::Lock lock(Dll().m_rdr);
-		lock.ImmediateDC()->ResolveSubresource(dst->m_tex.get(), 0U, src->m_tex.get(), 0U, src_tdesc.Format);
+		lock.ImmediateDC()->ResolveSubresource(dst->m_res.get(), 0U, src->m_res.get(), 0U, src_tdesc.Format);
 	}
 	CatchAndReport(View3D_TextureResolveAA, , );
 }
@@ -2110,11 +2110,11 @@ VIEW3D_API View3DTexture __stdcall View3D_CreateDx9RenderTarget(HWND hwnd, UINT 
 		auto t = Dll().m_rdr.m_tex_mgr.OpenSharedTexture2D(AutoId, handle, sdesc, options.m_has_alpha != 0, options.m_dbg_name);
 
 		// Save the surface 0 pointer in the private data of the texture. (Adds a reference)
-		t->m_tex->SetPrivateDataInterface(pr::rdr::Texture2D::Surface0Pointer, surf0.get());
+		t->m_res->SetPrivateDataInterface(pr::rdr::Texture2D::Surface0Pointer, surf0.get());
 
 		// Add a handler to clean up this reference when the texture is destroyed
 		auto surf0_ptr = surf0.get(); // Don't capture the RefPtr
-		t->OnDestruction += [=](Texture2D&, pr::EmptyArgs const&){ surf0_ptr->Release(); };
+		t->OnDestruction += [=](TextureBase&, pr::EmptyArgs const&){ surf0_ptr->Release(); };
 
 		return t.release();
 	}
@@ -2210,8 +2210,8 @@ VIEW3D_API void __stdcall View3D_RenderTargetSet(View3DWindow window, View3DText
 
 		DllLockGuard;
 		window->m_wnd.SetRT(
-			render_target != nullptr ? render_target->m_tex.get() : nullptr,
-			depth_buffer != nullptr ? depth_buffer->m_tex.get() : nullptr);
+			render_target != nullptr ? render_target->dx_tex() : nullptr,
+			depth_buffer != nullptr ? depth_buffer->dx_tex() : nullptr);
 	}
 	CatchAndReport(View3D_RenderTargetSet, window,);
 }

@@ -916,7 +916,7 @@ namespace pr
 				case EStyle::Circle:
 					{
 						auto id = pr::hash::Hash("PointStyleCircle", sz);
-						return p.m_rdr.m_tex_mgr.GetTexture(id, [=]
+						return p.m_rdr.m_tex_mgr.GetTexture<Texture2D>(id, [=]
 						{
 							auto w0 = sz.x * 0.5f;
 							auto h0 = sz.y * 0.5f;
@@ -926,7 +926,7 @@ namespace pr
 				case EStyle::Triangle:
 					{
 						auto id = pr::hash::Hash("PointStyleTriangle", sz);
-						return p.m_rdr.m_tex_mgr.GetTexture(id, [=]
+						return p.m_rdr.m_tex_mgr.GetTexture<Texture2D>(id, [=]
 						{
 							Renderer::Lock lk(p.m_rdr);
 							D3DPtr<ID2D1PathGeometry> geom;
@@ -950,7 +950,7 @@ namespace pr
 				case EStyle::Star:
 					{
 						auto id = pr::hash::Hash("PointStyleStar", sz);
-						return p.m_rdr.m_tex_mgr.GetTexture(id, [=]
+						return p.m_rdr.m_tex_mgr.GetTexture<Texture2D>(id, [=]
 						{
 							Renderer::Lock lk(p.m_rdr);
 							D3DPtr<ID2D1PathGeometry> geom;
@@ -978,7 +978,7 @@ namespace pr
 				case EStyle::Annulus:
 					{
 						auto id = pr::hash::Hash("PointStyleAnnulus", sz);
-						return p.m_rdr.m_tex_mgr.GetTexture(id, [=]
+						return p.m_rdr.m_tex_mgr.GetTexture<Texture2D>(id, [=]
 						{
 							auto w0 = sz.x * 0.5f;
 							auto h0 = sz.y * 0.5f;

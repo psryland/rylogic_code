@@ -14,169 +14,85 @@ namespace pr::rdr
 	// Unique identifiers for data attached to the private data of this texture
 	GUID const Texture2D::Surface0Pointer = {0x6EE0154E, 0xDEAD, 0x4E2F, 0x86, 0x9B, 0xE4, 0xD1, 0x5C, 0xA2, 0x97, 0x87};
 
+	// Initialise 'tex.m_srv' based on the texture description
+	void InitSRV(Texture2D& tex)
+	{
+		if (tex.m_srv != nullptr)
+			return;
+
+		TextureDesc tdesc;
+		tex.dx_tex()->GetDesc(&tdesc);
+
+		// If the texture can be a shader resource, create a shader resource view
+		if ((tdesc.BindFlags & D3D11_BIND_SHADER_RESOURCE) != 0)
+		{
+			ShaderResourceViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
+			srvdesc.Texture2D.MipLevels = tdesc.MipLevels;
+
+			Renderer::Lock lock(tex.m_mgr->rdr());
+			pr::Throw(lock.D3DDevice()->CreateShaderResourceView(tex.m_res.get(), &srvdesc, &tex.m_srv.m_ptr));
+		}
+	}
+
+	// Constructors
 	Texture2D::Texture2D(TextureManager* mgr, RdrId id, ID3D11Texture2D* tex, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name)
 		:Texture2D(mgr, id, tex, nullptr, sdesc, sort_id, has_alpha, name)
 	{}
 	Texture2D::Texture2D(TextureManager* mgr, RdrId id, ID3D11Texture2D* tex, ID3D11ShaderResourceView* srv, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name)
-		:m_t2s(pr::m4x4Identity)
-		,m_tex(tex, true)
-		,m_srv(srv, true)
-		,m_samp()
-		,m_id(id == AutoId ? MakeId(this) : id)
-		,m_src_id()
-		,m_sort_id(sort_id)
-		,m_has_alpha(has_alpha)
-		,m_mgr(mgr)
-		,m_name(name ? name : "")
+		:TextureBase(mgr, id, tex, srv, nullptr, 0, sort_id, has_alpha, name)
+		,m_t2s(pr::m4x4Identity)
 	{
-		if (m_srv == nullptr)
-		{
-			TextureDesc tdesc;
-			tex->GetDesc(&tdesc);
-
-			// If the texture can be a shader resource, create a shader resource view
-			if ((tdesc.BindFlags & D3D11_BIND_SHADER_RESOURCE) != 0)
-			{
-				ShaderResourceViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
-				srvdesc.Texture2D.MipLevels = tdesc.MipLevels;
-
-				Renderer::Lock lock(mgr->m_rdr);
-				pr::Throw(lock.D3DDevice()->CreateShaderResourceView(tex, &srvdesc, &m_srv.m_ptr));
-			}
-		}
+		InitSRV(*this);
 		SamDesc(sdesc);
 	}
 	Texture2D::Texture2D(TextureManager* mgr, RdrId id, IUnknown* shared_resource, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name)
-		:m_t2s(pr::m4x4Identity)
-		,m_tex()
-		,m_srv()
-		,m_samp()
-		,m_id(id == AutoId ? MakeId(this) : id)
-		,m_src_id()
-		,m_sort_id(sort_id)
-		,m_has_alpha(has_alpha)
-		,m_mgr(mgr)
-		,m_name(name ? name : "")
+		:TextureBase(mgr, id, shared_resource, 0, sort_id, has_alpha, name)
+		,m_t2s(pr::m4x4Identity)
 	{
-		Renderer::Lock lock(m_mgr->m_rdr);
-
-		// Get the DXGI resource interface for the shared resource
-		D3DPtr<IDXGIResource> dxgi_resource;
-		Throw(shared_resource->QueryInterface(__uuidof(IDXGIResource), (void**)&dxgi_resource.m_ptr));
-
-		// Get the handled of the shared resource so that we can open it with our d3d device
-		HANDLE shared_handle;
-		Throw(dxgi_resource->GetSharedHandle(&shared_handle));
-
-		// Open the shared resource in our d3d device
-		D3DPtr<IUnknown> resource;
-		Throw(lock.D3DDevice()->OpenSharedResource(shared_handle, __uuidof(ID3D11Resource), (void**)&resource.m_ptr));
-
-		// Query the texture interface from the resource
-		Throw(resource->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&m_tex.m_ptr));
-
-		// Read the properties of the texture
-		D3D11_TEXTURE2D_DESC tdesc;
-		m_tex->GetDesc(&tdesc);
-
-		// If the texture can be a shader resource, create a shader resource view
-		if ((tdesc.BindFlags & D3D11_BIND_SHADER_RESOURCE) != 0)
-		{
-			ShaderResourceViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
-			srvdesc.Texture2D.MipLevels = tdesc.MipLevels;
-			Throw(lock.D3DDevice()->CreateShaderResourceView(m_tex.get(), &srvdesc, &m_srv.m_ptr));
-		}
-
-		// Save the sampler description
+		InitSRV(*this);
 		SamDesc(sdesc);
 	}
 	Texture2D::Texture2D(TextureManager* mgr, RdrId id, HANDLE shared_handle, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name)
-		:m_t2s(pr::m4x4Identity)
-		,m_tex()
-		,m_srv()
-		,m_samp()
-		,m_id(id == AutoId ? MakeId(this) : id)
-		,m_src_id()
-		,m_sort_id(sort_id)
-		,m_has_alpha(has_alpha)
-		,m_mgr(mgr)
-		,m_name(name ? name : "")
+		:TextureBase(mgr, id, shared_handle, 0, sort_id, has_alpha, name)
+		,m_t2s(pr::m4x4Identity)
 	{
-		Renderer::Lock lock(m_mgr->m_rdr);
-
-		// Open the shared resource in our d3d device
-		D3DPtr<IUnknown> resource;
-		Throw(lock.D3DDevice()->OpenSharedResource(shared_handle, __uuidof(ID3D11Resource), (void**)&resource.m_ptr));
-
-		// Query the texture interface from the resource
-		Throw(resource->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&m_tex.m_ptr));
-
-		// Read the properties of the texture
-		D3D11_TEXTURE2D_DESC tdesc;
-		m_tex->GetDesc(&tdesc);
-
-		// If the texture can be a shader resource, create a shader resource view
-		if ((tdesc.BindFlags & D3D11_BIND_SHADER_RESOURCE) != 0)
-		{
-			ShaderResourceViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
-			srvdesc.Texture2D.MipLevels = tdesc.MipLevels;
-			Throw(lock.D3DDevice()->CreateShaderResourceView(m_tex.get(), &srvdesc, &m_srv.m_ptr));
-		}
-
-		// Save the sampler description
+		InitSRV(*this);
 		SamDesc(sdesc);
 	}
 	Texture2D::Texture2D(TextureManager* mgr, RdrId id, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name, ShaderResourceViewDesc const* srvdesc)
-		:m_t2s(pr::m4x4Identity)
-		,m_tex()
-		,m_srv()
-		,m_samp()
-		,m_id(id == AutoId ? MakeId(this) : id)
-		,m_src_id()
-		,m_sort_id(sort_id)
-		,m_has_alpha(has_alpha)
-		,m_mgr(mgr)
-		,m_name(name ? name : "")
+		:TextureBase(mgr, id, nullptr, nullptr, nullptr, 0, sort_id, has_alpha, name)
+		,m_t2s(pr::m4x4Identity)
 	{
-		TexDesc(src, tdesc, false, false, srvdesc);
 		SamDesc(sdesc);
+		TexDesc(src, tdesc, false, false, srvdesc);
 	}
 	Texture2D::Texture2D(TextureManager* mgr, RdrId id, Texture2D const& existing, SortKeyId sort_id, char const* name)
-		:m_t2s(existing.m_t2s)
-		,m_tex(existing.m_tex)
-		,m_srv(existing.m_srv)
-		,m_samp(existing.m_samp)
-		,m_id(id == AutoId ? MakeId(this) : id)
-		,m_src_id(existing.m_src_id)
-		,m_sort_id(sort_id)
-		,m_has_alpha(existing.m_has_alpha)
-		,m_mgr(mgr)
-		,m_name(name ? name : "")
+		:TextureBase(mgr, id, existing.m_res.get(), existing.m_srv.get(), existing.m_samp.get(), existing.m_src_id, sort_id, existing.m_has_alpha, name)
+		,m_t2s(existing.m_t2s)
 	{}
 
 	// Get the description of the current texture pointed to by 'm_tex'
 	TextureDesc Texture2D::TexDesc() const
 	{
 		TextureDesc desc;
-		if (m_tex != nullptr) m_tex->GetDesc(&desc);
+		if (dx_tex() != nullptr) dx_tex()->GetDesc(&desc);
 		return desc;
 	}
 
 	// Set a new texture description and re-create/reinitialise the texture and the src.
-	// 'all_instances' - if true, all Texture2D objects that refer to the same underlying
-	//  dx texture get updated as well. If false, then this texture becomes a unique instance
-	//  and 'm_id' is changed.
-	// 'perserve' - if true, the content of the current texture is stretched on to the new texture
-	//  if possible. If not possible, an exception is thrown
+	// 'all_instances' - if true, all Texture2D objects that refer to the same underlying dx texture
+	//    get updated as well. If false, then this texture becomes a unique instance and 'm_id' is changed.
+	// 'preserve' - if true, the content of the current texture is stretched on to the new texture
+	//    if possible. If not possible, an exception is thrown.
 	// 'srvdesc' - if not null, causes the new shader resource view to be created using this description
 	void Texture2D::TexDesc(Image const& src, TextureDesc const& tdesc, bool all_instances, bool preserve, ShaderResourceViewDesc const* srvdesc)
 	{
-		D3DPtr<ID3D11Texture2D> tex;
-		D3DPtr<ID3D11ShaderResourceView> srv;
 		Renderer::Lock lock(m_mgr->m_rdr);
 		auto device = lock.D3DDevice();
 
 		// If initialisation data is provided, see if we need to generate mip-maps
+		D3DPtr<ID3D11Texture2D> tex;
+		D3DPtr<ID3D11ShaderResourceView> srv;
 		if (src.m_pixels != nullptr)
 		{
 			DirectX::Image img;
@@ -224,7 +140,7 @@ namespace pr::rdr
 		}
 
 		// Copy the surface data from the existing texture
-		if (preserve && m_tex != nullptr)
+		if (preserve && m_res != nullptr)
 		{
 			// Note: it might be tempting to do this but the effect would look the same
 			// as just using the old texture, i.e. stretched. There is no stretch copy in
@@ -234,7 +150,8 @@ namespace pr::rdr
 			//  - Push render states,
 			//  - call 'DC->Draw()'
 			//  - Restore render states
-			TextureDesc existing_desc; m_tex->GetDesc(&existing_desc);
+			TextureDesc existing_desc;
+			dx_tex()->GetDesc(&existing_desc);
 			if (existing_desc.Width != tdesc.Width || existing_desc.Height != tdesc.Height)
 				throw std::exception("Cannot preserve content of resized textures");
 
@@ -243,7 +160,7 @@ namespace pr::rdr
 			device->GetImmediateContext(&dc.m_ptr);
 			if (existing_desc.SampleDesc == tdesc.SampleDesc)
 			{
-				dc->CopyResource(tex.m_ptr, m_tex.m_ptr);
+				dc->CopyResource(tex.m_ptr, m_res.m_ptr);
 			}
 			else
 			{
@@ -259,43 +176,13 @@ namespace pr::rdr
 		m_mgr->ReplaceTexture(*this, tex, srv, all_instances);
 	}
 
-	// Returns a description of the current sampler state pointed to by 'm_samp'
-	SamplerDesc Texture2D::SamDesc() const
-	{
-		SamplerDesc desc;
-		if (m_samp != nullptr) m_samp->GetDesc(&desc);
-		return desc;
-	}
-	void Texture2D::SamDesc(SamplerDesc const& desc)
-	{
-		Renderer::Lock lock(m_mgr->m_rdr);
-		D3DPtr<ID3D11SamplerState> samp_state;
-		pr::Throw(lock.D3DDevice()->CreateSamplerState(&desc, &samp_state.m_ptr));
-		m_samp = samp_state;
-	}
-
-	// Set the filtering and address mode for this texture
-	void Texture2D::SetFilterAndAddrMode(D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV)
-	{
-		SamplerDesc desc;
-		m_samp->GetDesc(&desc);
-		desc.Filter = filter;
-		desc.AddressU = addrU;
-		desc.AddressV = addrV;
-
-		Renderer::Lock lock(m_mgr->m_rdr);
-		D3DPtr<ID3D11SamplerState> samp;
-		pr::Throw(lock.D3DDevice()->CreateSamplerState(&desc, &samp.m_ptr));
-		m_samp = samp;
-	}
-
 	// Resize this texture to 'size' optionally applying the resize to all instances of this
 	// texture and optionally preserving the current content of the texture
 	void Texture2D::Resize(size_t width, size_t height, bool all_instances, bool preserve)
 	{
 		PR_ASSERT(PR_DBG_RDR, width*height != 0, "Do not resize textures to 0x0");
 		TextureDesc tdesc;
-		m_tex->GetDesc(&tdesc);
+		dx_tex()->GetDesc(&tdesc);
 		tdesc.Width = checked_cast<UINT>(width);
 		tdesc.Height = checked_cast<UINT>(height);
 		TexDesc(Image(0,0), tdesc, all_instances, preserve);
@@ -306,7 +193,7 @@ namespace pr::rdr
 	{
 		HDC dc;
 		D3DPtr<IDXGISurface2> surf;
-		pr::Throw(m_tex->QueryInterface(__uuidof(IDXGISurface2), (void **)&surf.m_ptr));
+		pr::Throw(dx_tex()->QueryInterface(__uuidof(IDXGISurface2), (void **)&surf.m_ptr));
 		pr::Throw(surf->GetDC(discard, &dc), "GetDC can only be called for textures that were created with the D3D11_RESOURCE_MISC_GDI_COMPATIBLE flag");
 		++m_mgr->m_gdi_dc_ref_count;
 		return dc;
@@ -316,7 +203,7 @@ namespace pr::rdr
 	void Texture2D::ReleaseDC()
 	{
 		D3DPtr<IDXGISurface2> surf;
-		pr::Throw(m_tex->QueryInterface(__uuidof(IDXGISurface2), (void **)&surf.m_ptr));
+		pr::Throw(dx_tex()->QueryInterface(__uuidof(IDXGISurface2), (void **)&surf.m_ptr));
 		pr::Throw(surf->ReleaseDC(nullptr));
 		--m_mgr->m_gdi_dc_ref_count;
 		// Note: the main RT must be restored once all ReleaseDC's have been called
@@ -326,7 +213,7 @@ namespace pr::rdr
 	D3DPtr<IDXGISurface> Texture2D::GetSurface()
 	{
 		D3DPtr<IDXGISurface> surf;
-		pr::Throw(m_tex->QueryInterface(&surf.m_ptr));
+		pr::Throw(dx_tex()->QueryInterface(&surf.m_ptr));
 		return surf;
 	}
 
@@ -378,14 +265,4 @@ namespace pr::rdr
 		return d2d_dc;
 	}
 
-	// Ref counting clean up function
-	void Texture2D::RefCountZero(pr::RefCount<Texture2D>* doomed)
-	{
-		auto tex = static_cast<Texture2D*>(doomed);
-		tex->Delete();
-	}
-	void Texture2D::Delete()
-	{
-		m_mgr->Delete(this);
-	}
 }

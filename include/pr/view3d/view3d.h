@@ -17,28 +17,38 @@
 #ifdef VIEW3D_EXPORTS
 	namespace pr
 	{
-		namespace ldr { struct LdrObject; }
-		namespace ldr { struct LdrGizmo; }
-		namespace rdr { struct Texture2D; }
+		namespace ldr
+		{
+			struct LdrObject;
+			struct LdrGizmo;
+		}
+		namespace rdr
+		{
+			struct Texture2D;
+			struct TextureCube;
+		}
 	}
 	namespace view3d
 	{
-		typedef pr::ldr::LdrObject Object;
-		typedef pr::ldr::LdrGizmo  Gizmo;
-		typedef pr::rdr::Texture2D Texture;
+		using Object = pr::ldr::LdrObject;
+		using Gizmo = pr::ldr::LdrGizmo;
+		using Texture = pr::rdr::Texture2D;
+		using CubeMap = pr::rdr::TextureCube;
 		struct Window;
 	}
-	typedef unsigned char*   View3DContext;
-	typedef view3d::Window*  View3DWindow;
-	typedef view3d::Object*  View3DObject;
-	typedef view3d::Gizmo*   View3DGizmo;
-	typedef view3d::Texture* View3DTexture;
+	using View3DContext = unsigned char*;
+	using View3DWindow = view3d::Window*;
+	using View3DObject = view3d::Object*;
+	using View3DGizmo = view3d::Gizmo*;
+	using View3DTexture = view3d::Texture*;
+	using View3DCubeMap = view3d::CubeMap*;
 #else
-	typedef void* View3DContext;
-	typedef void* View3DWindow;
-	typedef void* View3DObject;
-	typedef void* View3DGizmo;
-	typedef void* View3DTexture;
+	using View3DContext = void*;
+	using View3DWindow = void*;
+	using View3DObject = void*;
+	using View3DGizmo = void*;
+	using View3DTexture = void*;
+	using View3DCubeMap = void*;
 #endif
 
 extern "C"

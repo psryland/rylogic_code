@@ -107,6 +107,7 @@ namespace pr
 		using RdrId     = std::uintptr_t;
 		using SortKeyId = pr::uint16;
 		using Range     = pr::Range<size_t>;
+		template <typename T> using RefCounted = pr::RefCount<T>;
 
 		using string32   = pr::string<char, 32>;
 		using string512  = pr::string<char, 512>;
