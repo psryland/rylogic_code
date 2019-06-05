@@ -4,7 +4,7 @@
 //*********************************************
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/textures/texture_manager.h"
-#include "pr/renderer11/textures/texture2d.h"
+#include "pr/renderer11/textures/texture_2d.h"
 #include "pr/renderer11/textures/image.h"
 #include "pr/renderer11/render/sortkey.h"
 #include "pr/renderer11/render/renderer.h"

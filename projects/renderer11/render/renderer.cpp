@@ -4,7 +4,7 @@
 //*********************************************
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/render/renderer.h"
-#include "pr/renderer11/textures/texture2d.h"
+#include "pr/renderer11/textures/texture_2d.h"
 #include "pr/renderer11/util/event_args.h"
 
 namespace pr

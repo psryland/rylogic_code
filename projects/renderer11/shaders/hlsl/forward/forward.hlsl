@@ -11,6 +11,10 @@
 Texture2D<float4> m_texture0 :register(t0);
 SamplerState      m_sampler0 :register(s0);
 
+// Environment map
+TextureCube m_envmap_texture;
+SamplerState m_envmap_sampler;
+
 // Shadow map
 Texture2D<float2> m_smap_texture[1];
 SamplerState      m_smap_sampler[1];

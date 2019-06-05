@@ -168,11 +168,14 @@ namespace pr
 		// Textures
 		class  TextureManager;
 		struct TextureDesc;
+		struct TextureBase;
 		struct Texture2D;
+		struct TextureCube;
 		struct Image;
 		struct AllocPres;
 		struct ProjectedTexture;
 		using Texture2DPtr = pr::RefPtr<Texture2D>;
+		using TextureCubePtr = pr::RefPtr<TextureCube>;
 
 		// Video
 		//struct Video;

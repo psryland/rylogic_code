@@ -10,7 +10,7 @@
 #include "pr/renderer11/render/drawlist_element.h"
 #include "pr/renderer11/shaders/shader_set.h"
 #include "pr/renderer11/models/model_buffer.h"
-#include "pr/renderer11/textures/texture2d.h"
+#include "pr/renderer11/textures/texture_2d.h"
 
 namespace pr
 {

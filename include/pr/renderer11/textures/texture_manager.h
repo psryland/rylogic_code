@@ -10,7 +10,7 @@
 #include "pr/renderer11/util/lookup.h"
 #include "pr/renderer11/util/event_args.h"
 #include "pr/renderer11/util/stock_resources.h"
-#include "pr/renderer11/textures/texture2d.h"
+#include "pr/renderer11/textures/texture_2d.h"
 
 namespace pr
 {

@@ -50,6 +50,7 @@ def Deploy():
 	Tools.Copy(os.path.join(targetdir, "Rylogic.View3d.dll"),       os.path.join(dstdir, ""))
 	Tools.Copy(os.path.join(targetdir, "Google.Protobuf.dll"),      os.path.join(dstdir, ""))
 	Tools.Copy(os.path.join(targetdir, "Grpc.Core.dll"),            os.path.join(dstdir, ""))
+	Tools.Copy(os.path.join(targetdir, "Grpc.Core.Api.dll"),        os.path.join(dstdir, ""))
 	Tools.Copy(os.path.join(targetdir, "grpc_csharp_ext.x64.dll"),  os.path.join(dstdir, ""))
 	Tools.Copy(os.path.join(targetdir, "grpc_csharp_ext.x86.dll"),  os.path.join(dstdir, ""))
 	Tools.Copy(os.path.join(targetdir, "lib"),                      os.path.join(dstdir, "lib"))

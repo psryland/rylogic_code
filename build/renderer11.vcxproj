@@ -165,7 +165,7 @@
     <ClInclude Include="..\include\pr\renderer11\steps\shadow_map.h" />
     <ClInclude Include="..\include\pr\renderer11\textures\image.h" />
     <ClInclude Include="..\include\pr\renderer11\textures\projected_texture.h" />
-    <ClInclude Include="..\include\pr\renderer11\textures\texture2d.h" />
+    <ClInclude Include="..\include\pr\renderer11\textures\texture_2d.h" />
     <ClInclude Include="..\include\pr\renderer11\models\model.h" />
     <ClInclude Include="..\include\pr\renderer11\models\model_buffer.h" />
     <ClInclude Include="..\include\pr\renderer11\models\model_generator.h" />
@@ -178,6 +178,8 @@
     <ClInclude Include="..\include\pr\renderer11\render\scene.h" />
     <ClInclude Include="..\include\pr\renderer11\render\scene_view.h" />
     <ClInclude Include="..\include\pr\renderer11\render\sortkey.h" />
+    <ClInclude Include="..\include\pr\renderer11\textures\texture_base.h" />
+    <ClInclude Include="..\include\pr\renderer11\textures\texture_cube.h" />
     <ClInclude Include="..\include\pr\renderer11\textures\texture_manager.h" />
     <ClInclude Include="..\include\pr\renderer11\util\allocator.h" />
     <ClInclude Include="..\include\pr\renderer11\util\demo_scene.h" />
@@ -204,6 +206,8 @@
     <ClCompile Include="..\projects\renderer11\models\nugget.cpp" />
     <ClCompile Include="..\projects\renderer11\render\state_block.cpp" />
     <ClCompile Include="..\projects\renderer11\steps\ray_cast.cpp" />
+    <ClCompile Include="..\projects\renderer11\textures\texture_base.cpp" />
+    <ClCompile Include="..\projects\renderer11\textures\texture_cube.cpp" />
     <ClCompile Include="..\projects\renderer11\util\util.cpp" />
     <ClCompile Include="..\projects\renderer11\config\config.cpp" />
     <ClCompile Include="..\projects\renderer11\directxtex\BC.cpp" />
@@ -240,7 +244,7 @@
     <ClCompile Include="..\projects\renderer11\steps\render_step.cpp" />
     <ClCompile Include="..\projects\renderer11\steps\shadow_map.cpp" />
     <ClCompile Include="..\projects\renderer11\textures\dds_texture_loader.cpp" />
-    <ClCompile Include="..\projects\renderer11\textures\texture2d.cpp" />
+    <ClCompile Include="..\projects\renderer11\textures\texture_2d.cpp" />
     <ClCompile Include="..\projects\renderer11\models\model.cpp" />
     <ClCompile Include="..\projects\renderer11\models\model_buffer.cpp" />
     <ClCompile Include="..\projects\renderer11\models\model_manager.cpp" />

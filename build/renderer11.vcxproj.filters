@@ -126,9 +126,6 @@
     <ClInclude Include="..\include\pr\renderer11\shaders\shader_manager.h">
       <Filter>shaders</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\renderer11\textures\texture2d.h">
-      <Filter>textures</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\renderer11\textures\texture_manager.h">
       <Filter>textures</Filter>
     </ClInclude>
@@ -269,6 +266,15 @@
     <ClInclude Include="..\include\pr\renderer11\util\dx9_context.h">
       <Filter>util</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\textures\texture_2d.h">
+      <Filter>textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\textures\texture_base.h">
+      <Filter>textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\textures\texture_cube.h">
+      <Filter>textures</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\renderer11\util\stdafx.cpp">
@@ -297,9 +303,6 @@
     </ClCompile>
     <ClCompile Include="..\projects\renderer11\shaders\shader_manager.cpp">
       <Filter>shaders</Filter>
-    </ClCompile>
-    <ClCompile Include="..\projects\renderer11\textures\texture2d.cpp">
-      <Filter>textures</Filter>
     </ClCompile>
     <ClCompile Include="..\projects\renderer11\textures\texture_manager.cpp">
       <Filter>textures</Filter>
@@ -417,6 +420,15 @@
     </ClCompile>
     <ClCompile Include="..\projects\renderer11\steps\ray_cast.cpp">
       <Filter>steps</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\textures\texture_cube.cpp">
+      <Filter>textures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\textures\texture_base.cpp">
+      <Filter>textures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\textures\texture_2d.cpp">
+      <Filter>textures</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
