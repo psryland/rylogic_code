@@ -27,14 +27,14 @@ namespace pr
 
 			// Create a staging texture to contain the NVidia magic data
 			SubResourceData tex_data(&m_nv_magic, sizeof(m_nv_magic), 0);
-			TextureDesc nvdesc(m_nv_magic.pixel_width(), m_nv_magic.pixel_height(), 1, target_format);
+			Texture2DDesc nvdesc(m_nv_magic.pixel_width(), m_nv_magic.pixel_height(), 1, target_format);
 			nvdesc.BindFlags      = 0;
 			nvdesc.Usage          = D3D11_USAGE_STAGING;
 			nvdesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 			pr::Throw(device->CreateTexture2D(&nvdesc, &tex_data, &m_mark.m_ptr));
 
 			// Create a render target with dimensions width*2, height+1
-			TextureDesc rtdesc(UINT(viewport.WidthUI() * 2), UINT(viewport.HeightUI() + 1), 1, target_format);
+			Texture2DDesc rtdesc(UINT(viewport.WidthUI() * 2), UINT(viewport.HeightUI() + 1), 1, target_format);
 			rtdesc.BindFlags = D3D11_BIND_RENDER_TARGET;
 			pr::Throw(device->CreateTexture2D(&rtdesc, nullptr, &m_rt_tex.m_ptr));
 
@@ -43,7 +43,7 @@ namespace pr
 			pr::Throw(device->CreateRenderTargetView(m_rt_tex.m_ptr, &rtvdesc, &m_rtv.m_ptr));
 
 			// Create a depth stencil buffer to fit this rt
-			TextureDesc dsdesc(UINT(viewport.WidthUI() * 2), UINT(viewport.HeightUI() + 1), 1, DXGI_FORMAT_D24_UNORM_S8_UINT);
+			Texture2DDesc dsdesc(UINT(viewport.WidthUI() * 2), UINT(viewport.HeightUI() + 1), 1, DXGI_FORMAT_D24_UNORM_S8_UINT);
 			dsdesc.SampleDesc = MultiSamp(1,0);
 			dsdesc.BindFlags  = D3D11_BIND_DEPTH_STENCIL;
 			pr::Throw(device->CreateTexture2D(&dsdesc, nullptr, &m_ds_tex.m_ptr));

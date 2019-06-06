@@ -12,19 +12,20 @@ Texture2D<float4> m_texture0 :register(t0);
 SamplerState      m_sampler0 :register(s0);
 
 // Environment map
-TextureCube m_envmap_texture;
-SamplerState m_envmap_sampler;
+TextureCube m_envmap_texture :register(t1);
+SamplerState m_envmap_sampler :register(s1);
 
 // Shadow map
-Texture2D<float2> m_smap_texture[1];
-SamplerState      m_smap_sampler[1];
+Texture2D<float2> m_smap_texture[1] :register(t2);
+SamplerState      m_smap_sampler[1] :register(s2);
 
 // Projected textures
-Texture2D<float4> m_proj_texture[PR_RDR_MAX_PROJECTED_TEXTURES];
-SamplerState      m_proj_sampler[PR_RDR_MAX_PROJECTED_TEXTURES];
+Texture2D<float4> m_proj_texture[PR_RDR_MAX_PROJECTED_TEXTURES] :register(t3);
+SamplerState      m_proj_sampler[PR_RDR_MAX_PROJECTED_TEXTURES] :register(s3);
 
 #include "../lighting/phong_lighting.hlsli"
 #include "../shadow/shadow_cast.hlsli"
+#include "../utility/env_map.hlsli"
 
 // PS output format
 struct PSOut
@@ -74,6 +75,10 @@ PSOut main(PSIn In)
 	// Texture2D (with transform)
 	if (HasTex0)
 		Out.diff = m_texture0.Sample(m_sampler0, In.tex0) * Out.diff;
+
+	// Env Map
+	if (HasEnvMap)
+		Out.diff = EnvMap(In.ws_vert, In.ws_norm, m_cam.m_c2w[3], Out.diff);
 
 	// Shadows
 	float light_visible = 1.0f;

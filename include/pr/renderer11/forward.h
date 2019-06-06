@@ -168,7 +168,7 @@ namespace pr
 
 		// Textures
 		class  TextureManager;
-		struct TextureDesc;
+		struct Texture2DDesc;
 		struct TextureBase;
 		struct Texture2D;
 		struct TextureCube;

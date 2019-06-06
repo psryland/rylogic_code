@@ -263,6 +263,7 @@
   <ItemGroup>
     <None Include="..\projects\renderer11\directxtex\DirectXTex.inl" />
     <None Include="..\projects\renderer11\shaders\hlsl\cbuf.hlsli" />
+    <None Include="..\projects\renderer11\shaders\hlsl\types.hlsli" />
     <None Include="..\projects\renderer11\shaders\hlsl\common\functions.hlsli" />
     <None Include="..\projects\renderer11\shaders\hlsl\common\geometry.hlsli" />
     <None Include="..\projects\renderer11\shaders\hlsl\common\vector.hlsli" />
@@ -272,8 +273,10 @@
     <None Include="..\projects\renderer11\shaders\hlsl\lighting\phong_lighting.hlsli" />
     <None Include="..\projects\renderer11\shaders\hlsl\shadow\shadow_cast.hlsli" />
     <None Include="..\projects\renderer11\shaders\hlsl\shadow\shadow_map_cbuf.hlsli" />
-    <None Include="..\projects\renderer11\shaders\hlsl\types.hlsli" />
-  </ItemGroup>
+		<None Include="..\projects\renderer11\shaders\hlsl\screenspace\screenspace_cbuf.hlsli"/>
+		<None Include="..\projects\renderer11\shaders\hlsl\utility\ray_cast_cbuf.hlsli"/>
+		<None Include="..\projects\renderer11\shaders\hlsl\utility\env_map.hlsli"/>
+	</ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\projects\renderer11\shaders\hlsl\deferred\dslighting.hlsl">
       <FileType>Document</FileType>
@@ -281,44 +284,24 @@
     <CustomBuild Include="..\projects\renderer11\shaders\hlsl\deferred\gbuffer.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
     <CustomBuild Include="..\projects\renderer11\shaders\hlsl\shadow\shadow_map.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
     <CustomBuild Include="..\projects\renderer11\shaders\hlsl\forward\forward.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
     <CustomBuild Include="..\projects\renderer11\shaders\hlsl\screenspace\thick_line.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\projects\renderer11\shaders\hlsl\screenspace\screenspace_cbuf.hlsli">
-      <FileType>Document</FileType>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="..\projects\renderer11\shaders\hlsl\screenspace\arrow_head.hlsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="..\projects\renderer11\shaders\hlsl\screenspace\point_sprites.hlsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="..\projects\renderer11\shaders\hlsl\utility\ray_cast.hlsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <None Include="..\projects\renderer11\shaders\hlsl\utility\ray_cast_cbuf.hlsli">
-      <FileType>Document</FileType>
-    </None>
-  </ItemGroup>
+		<CustomBuild Include="..\projects\renderer11\shaders\hlsl\utility\ray_cast.hlsl">
+			<FileType>Document</FileType>
+		</CustomBuild>
+		<CustomBuild Include="..\projects\renderer11\shaders\hlsl\screenspace\arrow_head.hlsl">
+			<FileType>Document</FileType>
+		</CustomBuild>
+		<CustomBuild Include="..\projects\renderer11\shaders\hlsl\screenspace\point_sprites.hlsl">
+			<FileType>Document</FileType>
+		</CustomBuild>
+	</ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

@@ -88,7 +88,7 @@ namespace pr::rdr
 
 	// Returns the expected row and slice pitch for a given image width*height and format
 	iv2 Pitch(iv2 size, DXGI_FORMAT fmt);
-	iv2 Pitch(TextureDesc const& tdesc);
+	iv2 Pitch(Texture2DDesc const& tdesc);
 
 	// Returns the number of expected mip levels for a given width x height texture
 	size_t MipCount(iv2 size);

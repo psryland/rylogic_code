@@ -23,6 +23,7 @@ namespace pr::rdr
 		BSBlock m_bsb;
 		ShaderSet1 m_shdrs;
 		Texture2D* m_tex_diffuse;
+		TextureCube* m_tex_envmap;
 
 		DeviceState()
 			:m_rstep()
@@ -35,6 +36,7 @@ namespace pr::rdr
 			,m_bsb()
 			,m_shdrs()
 			,m_tex_diffuse()
+			,m_tex_envmap()
 		{}
 	};
 

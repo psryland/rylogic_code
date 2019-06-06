@@ -20,7 +20,7 @@ namespace pr::rdr
 		if (tex.m_srv != nullptr)
 			return;
 
-		TextureDesc tdesc;
+		Texture2DDesc tdesc;
 		tex.dx_tex()->GetDesc(&tdesc);
 
 		// If the texture can be a shader resource, create a shader resource view
@@ -39,42 +39,52 @@ namespace pr::rdr
 		:Texture2D(mgr, id, tex, nullptr, sdesc, sort_id, has_alpha, name)
 	{}
 	Texture2D::Texture2D(TextureManager* mgr, RdrId id, ID3D11Texture2D* tex, ID3D11ShaderResourceView* srv, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name)
-		:TextureBase(mgr, id, tex, srv, nullptr, 0, sort_id, has_alpha, name)
+		:TextureBase(mgr, id, tex, srv, nullptr, 0, name)
 		,m_t2s(pr::m4x4Identity)
+		,m_sort_id(sort_id)
+		,m_has_alpha(has_alpha)
 	{
 		InitSRV(*this);
 		SamDesc(sdesc);
 	}
 	Texture2D::Texture2D(TextureManager* mgr, RdrId id, IUnknown* shared_resource, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name)
-		:TextureBase(mgr, id, shared_resource, 0, sort_id, has_alpha, name)
+		:TextureBase(mgr, id, shared_resource, 0, name)
 		,m_t2s(pr::m4x4Identity)
+		,m_sort_id(sort_id)
+		,m_has_alpha(has_alpha)
 	{
 		InitSRV(*this);
 		SamDesc(sdesc);
 	}
 	Texture2D::Texture2D(TextureManager* mgr, RdrId id, HANDLE shared_handle, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name)
-		:TextureBase(mgr, id, shared_handle, 0, sort_id, has_alpha, name)
+		:TextureBase(mgr, id, shared_handle, 0, name)
 		,m_t2s(pr::m4x4Identity)
+		,m_sort_id(sort_id)
+		,m_has_alpha(has_alpha)
 	{
 		InitSRV(*this);
 		SamDesc(sdesc);
 	}
-	Texture2D::Texture2D(TextureManager* mgr, RdrId id, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name, ShaderResourceViewDesc const* srvdesc)
-		:TextureBase(mgr, id, nullptr, nullptr, nullptr, 0, sort_id, has_alpha, name)
+	Texture2D::Texture2D(TextureManager* mgr, RdrId id, Image const& src, Texture2DDesc const& tdesc, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name, ShaderResourceViewDesc const* srvdesc)
+		:TextureBase(mgr, id, nullptr, nullptr, nullptr, 0, name)
 		,m_t2s(pr::m4x4Identity)
+		,m_sort_id(sort_id)
+		,m_has_alpha(has_alpha)
 	{
 		SamDesc(sdesc);
 		TexDesc(src, tdesc, false, false, srvdesc);
 	}
-	Texture2D::Texture2D(TextureManager* mgr, RdrId id, Texture2D const& existing, SortKeyId sort_id, char const* name)
-		:TextureBase(mgr, id, existing.m_res.get(), existing.m_srv.get(), existing.m_samp.get(), existing.m_src_id, sort_id, existing.m_has_alpha, name)
+	Texture2D::Texture2D(TextureManager* mgr, RdrId id, Texture2D const& existing, char const* name)
+		:TextureBase(mgr, id, existing.m_res.get(), existing.m_srv.get(), existing.m_samp.get(), existing.m_src_id, name)
 		,m_t2s(existing.m_t2s)
+		,m_sort_id(existing.m_sort_id)
+		,m_has_alpha(existing.m_has_alpha)
 	{}
 
 	// Get the description of the current texture pointed to by 'm_tex'
-	TextureDesc Texture2D::TexDesc() const
+	Texture2DDesc Texture2D::TexDesc() const
 	{
-		TextureDesc desc;
+		Texture2DDesc desc;
 		if (dx_tex() != nullptr) dx_tex()->GetDesc(&desc);
 		return desc;
 	}
@@ -85,7 +95,7 @@ namespace pr::rdr
 	// 'preserve' - if true, the content of the current texture is stretched on to the new texture
 	//    if possible. If not possible, an exception is thrown.
 	// 'srvdesc' - if not null, causes the new shader resource view to be created using this description
-	void Texture2D::TexDesc(Image const& src, TextureDesc const& tdesc, bool all_instances, bool preserve, ShaderResourceViewDesc const* srvdesc)
+	void Texture2D::TexDesc(Image const& src, Texture2DDesc const& tdesc, bool all_instances, bool preserve, ShaderResourceViewDesc const* srvdesc)
 	{
 		Renderer::Lock lock(m_mgr->m_rdr);
 		auto device = lock.D3DDevice();
@@ -150,7 +160,7 @@ namespace pr::rdr
 			//  - Push render states,
 			//  - call 'DC->Draw()'
 			//  - Restore render states
-			TextureDesc existing_desc;
+			Texture2DDesc existing_desc;
 			dx_tex()->GetDesc(&existing_desc);
 			if (existing_desc.Width != tdesc.Width || existing_desc.Height != tdesc.Height)
 				throw std::exception("Cannot preserve content of resized textures");
@@ -181,7 +191,7 @@ namespace pr::rdr
 	void Texture2D::Resize(size_t width, size_t height, bool all_instances, bool preserve)
 	{
 		PR_ASSERT(PR_DBG_RDR, width*height != 0, "Do not resize textures to 0x0");
-		TextureDesc tdesc;
+		Texture2DDesc tdesc;
 		dx_tex()->GetDesc(&tdesc);
 		tdesc.Width = checked_cast<UINT>(width);
 		tdesc.Height = checked_cast<UINT>(height);

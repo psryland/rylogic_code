@@ -35,8 +35,15 @@ cbuffer CBufModel :reg(b1)
 {
 	// Note: A duplicate of this struct is in 'gbuffer_cbuf.hlsli'
 
-	// Model flags
-	int4 m_flags;  // x = 1 => has normals, y = 1 => has tex0, z => has alpha, w = instance id
+	// x = Model flags:
+	//   1 << 0 = has normals
+	// y = Texture flags:
+	//   1 << 0 = has diffuse texture
+	//   1 << 1 = use env map
+	// z = Alpha flags:
+	//   1 < 0 = has alpha
+	// w = Instance Id
+	int4 m_flags;
 
 	// Object transform
 	row_major float4x4 m_o2s; // object to screen

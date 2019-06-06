@@ -74,9 +74,7 @@ namespace pr::rdr
 		template <typename U1>             void construct(pointer p, U1 const& parm1)                  { new (p) T(parm1); }
 		template <typename U1,typename U2> void construct(pointer p, U1 const& parm1, U2 const& parm2) { new (p) T(parm1,parm2); }
 
-		// helpers
-		//T*   New()                    { pointer p = allocate(1); construct(p); return p; }
-		//T*   New(const_reference val) { pointer p = allocate(1); construct(p, val); return p; }
+		// New/Delete instance
 		template <typename... Args>
 		T* New(Args&&... args)
 		{

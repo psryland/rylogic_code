@@ -55,7 +55,7 @@ namespace pr::rdr
 		// 'src' is the initialisation data. Use 'Image()' to create the texture without initialisation.
 		// 'tdesc' is a description of the texture to be created
 		// 'sdesc' is a description of the sampler to use
-		Texture2DPtr CreateTexture2D(RdrId id, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, bool has_alpha, char const* name);
+		Texture2DPtr CreateTexture2D(RdrId id, Image const& src, Texture2DDesc const& tdesc, SamplerDesc const& sdesc, bool has_alpha, char const* name);
 
 		// Create a texture instance from a filepath, embedded resource, or stock texture id.
 		// 'resource_path' has the following formats:
@@ -80,9 +80,12 @@ namespace pr::rdr
 		// 'src' is the initialisation data
 		// 'tdesc' is a description of the texture to be created
 		// 'sdesc' is a description of the sampler to use
-		Texture2DPtr CreateTextureGdi(RdrId id, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, bool has_alpha, char const* name);
+		Texture2DPtr CreateTextureGdi(RdrId id, Image const& src, Texture2DDesc const& tdesc, SamplerDesc const& sdesc, bool has_alpha, char const* name);
 		Texture2DPtr CreateTextureGdi(RdrId id, Image const& src, bool has_alpha, char const* name);
 		Texture2DPtr CreateTextureGdi(RdrId id, int w, int h, bool has_alpha, char const* name);
+
+		// Create a cube map texture instance
+		TextureCubePtr CreateTextureCube(RdrId id, wchar_t const* resource_name, Texture2DDesc const& tdesc, SamplerDesc const& sdesc, char const* name);
 
 		// Create a new texture instance that uses the same dx texture as an existing texture.
 		// 'id' is the id to assign to this new texture instance. Use 'AutoId' to auto generate an id

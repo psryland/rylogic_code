@@ -432,6 +432,24 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\projects\renderer11\directxtex\DirectXTex.inl">
+      <Filter>directxtex</Filter>
+    </None>
+    <None Include="..\projects\renderer11\shaders\hlsl\cbuf.hlsli">
+      <Filter>shaders\hlsl</Filter>
+    </None>
+    <None Include="..\projects\renderer11\shaders\hlsl\types.hlsli">
+      <Filter>shaders\hlsl</Filter>
+    </None>
+    <None Include="..\projects\renderer11\shaders\hlsl\common\functions.hlsli">
+      <Filter>shaders\hlsl\common</Filter>
+    </None>
+    <None Include="..\projects\renderer11\shaders\hlsl\common\geometry.hlsli">
+      <Filter>shaders\hlsl\common</Filter>
+    </None>
+    <None Include="..\projects\renderer11\shaders\hlsl\common\vector.hlsli">
+      <Filter>shaders\hlsl\common</Filter>
+    </None>
     <None Include="..\projects\renderer11\shaders\hlsl\deferred\gbuffer.hlsli">
       <Filter>shaders\hlsl\deferred</Filter>
     </None>
@@ -441,20 +459,11 @@
     <None Include="..\projects\renderer11\shaders\hlsl\shadow\shadow_map_cbuf.hlsli">
       <Filter>shaders\hlsl\shadow</Filter>
     </None>
-    <None Include="..\projects\renderer11\shaders\hlsl\cbuf.hlsli">
-      <Filter>shaders\hlsl</Filter>
-    </None>
-    <None Include="..\projects\renderer11\directxtex\DirectXTex.inl">
-      <Filter>directxtex</Filter>
-    </None>
     <None Include="..\projects\renderer11\shaders\hlsl\forward\forward_cbuf.hlsli">
       <Filter>shaders\hlsl\forward</Filter>
     </None>
     <None Include="..\projects\renderer11\shaders\hlsl\lighting\phong_lighting.hlsli">
       <Filter>shaders\hlsl\lighting</Filter>
-    </None>
-    <None Include="..\projects\renderer11\shaders\hlsl\types.hlsli">
-      <Filter>shaders\hlsl</Filter>
     </None>
     <None Include="..\projects\renderer11\shaders\hlsl\shadow\shadow_cast.hlsli">
       <Filter>shaders\hlsl\shadow</Filter>
@@ -465,14 +474,8 @@
     <None Include="..\projects\renderer11\shaders\hlsl\utility\ray_cast_cbuf.hlsli">
       <Filter>shaders\hlsl\utility</Filter>
     </None>
-    <None Include="..\projects\renderer11\shaders\hlsl\common\functions.hlsli">
-      <Filter>shaders\hlsl\common</Filter>
-    </None>
-    <None Include="..\projects\renderer11\shaders\hlsl\common\geometry.hlsli">
-      <Filter>shaders\hlsl\common</Filter>
-    </None>
-    <None Include="..\projects\renderer11\shaders\hlsl\common\vector.hlsli">
-      <Filter>shaders\hlsl\common</Filter>
+    <None Include="..\projects\renderer11\shaders\hlsl\utility\env_map.hlsli">
+      <Filter>shaders\hlsl\utility</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

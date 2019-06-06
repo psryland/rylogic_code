@@ -65,14 +65,19 @@ namespace pr
 		}
 
 		// Set the CBuffer model constants flags
-		template <typename TCBuf> void SetModelFlags(NuggetData const& ddata, int inst_id, TCBuf& cb)
+		template <typename TCBuf> void SetModelFlags(NuggetData const& nug, int inst_id, TCBuf& cb)
 		{
-			// Convert a geom into an iv4 for flags passed to a shader
-			cb.m_flags = iv4(
-				pr::AllSet(ddata.m_geom, EGeom::Norm),
-				pr::AllSet(ddata.m_geom, EGeom::Tex0) && ddata.m_tex_diffuse != nullptr,
-				ddata.m_sort_key.Group() > ESortGroup::PreAlpha ? 1 : 0,
-				inst_id);
+			auto model_flags =
+				(pr::AllSet(nug.m_geom, EGeom::Norm) ? (1 << 0) : 0);
+
+			auto texture_flags = 
+				(pr::AllSet(nug.m_geom, EGeom::Tex0) && nug.m_tex_diffuse != nullptr ? (1 << 0) : 0) |
+				(nug.m_tex_envmap != nullptr ? (1 << 1) : 0);
+
+			auto alpha_flags =
+				(nug.m_sort_key.Group() > ESortGroup::PreAlpha ? (1 << 0) : 0);
+
+			cb.m_flags = iv4{ model_flags, texture_flags, alpha_flags, inst_id };
 		}
 
 		// Set the transform properties of a constants buffer
@@ -101,11 +106,17 @@ namespace pr
 		}
 
 		// Set the texture properties of a constants buffer
-		template <typename TCBuf> void SetTexDiffuse(NuggetData const& ddata, TCBuf& cb)
+		template <typename TCBuf> void SetTexDiffuse(NuggetData const& nug, TCBuf& cb)
 		{
-			cb.m_tex2surf0 = ddata.m_tex_diffuse != nullptr
-				? ddata.m_tex_diffuse->m_t2s
+			cb.m_tex2surf0 = nug.m_tex_diffuse != nullptr
+				? nug.m_tex_diffuse->m_t2s
 				: pr::m4x4Identity;
+		}
+
+		// Set the environment map texture properties of a constants buffer
+		template <typename TCBuf> void SetEnvMap(NuggetData const& nug, TCBuf& cb)
+		{
+			(void)nug,cb; // nothing as yet
 		}
 
 		// Helper for setting scene view constants

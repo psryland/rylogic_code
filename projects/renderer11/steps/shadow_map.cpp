@@ -69,7 +69,7 @@ namespace pr
 			auto device = lock.D3DDevice();
 
 			// Create the smap texture
-			TextureDesc tdesc;
+			Texture2DDesc tdesc;
 			tdesc.Width          = size.x;
 			tdesc.Height         = size.y;
 			tdesc.Format         = DXGI_FORMAT_R16G16_FLOAT; // R = z depth, G = -z depth

@@ -11,9 +11,19 @@
 static const float TINY = 0.0001f;
 
 // Models
-#define HasNormals (m_flags.x == 1)
-#define HasTex0    (m_flags.y == 1)
-#define HasAlpha   (m_flags.z == 1)
+#define HasNormals ((m_flags.x >> 0) & 1)
+#define HasTex0    ((m_flags.y >> 0) & 1)
+#define HasEnvMap  ((m_flags.y >> 1) & 1)
+#define HasAlpha   ((m_flags.z >> 0) & 1)
+
+// Light types
+#define AmbientLight(light)     (light.m_info.x == 0)
+#define DirectionalLight(light) (light.m_info.x == 1)
+#define PointLight(light)       (light.m_info.x == 2)
+#define SpotLight(light)        (light.m_info.x == 3)
+
+// Shadows
+#define ShadowMapCount(shdw) (shdw.m_info.x)
 
 // Camera
 struct Camera
@@ -37,12 +47,6 @@ struct Light
 	float4 m_spot;         // x = inner cos angle, y = outer cos angle, z = range, w = falloff
 };
 
-// Helpers for identifying light type
-#define AmbientLight(light)     (light.m_info.x == 0)
-#define DirectionalLight(light) (light.m_info.x == 1)
-#define PointLight(light)       (light.m_info.x == 2)
-#define SpotLight(light)        (light.m_info.x == 3)
-
 // Shadows
 struct Shadow
 {
@@ -50,8 +54,6 @@ struct Shadow
 	float4 m_frust_dim;         // x = width at far plane, y = height at far plane, z = distance to far plane, w = smap max range (for normalising distances)
 	row_major float4x4 m_frust; // Inward pointing frustum plane normals, transposed.
 };
-
-#define ShadowMapCount(shdw) (shdw.m_info.x)
 
 #ifdef SHADER_BUILD
 

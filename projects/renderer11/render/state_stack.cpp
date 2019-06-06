@@ -4,6 +4,7 @@
 //*********************************************
 #include "renderer11/util/stdafx.h"
 #include "renderer11/render/state_stack.h"
+#include "renderer11/shaders/common.h"
 #include "pr/renderer11/models/model_buffer.h"
 #include "pr/renderer11/models/nugget.h"
 #include "pr/renderer11/shaders/input_layout.h"
@@ -193,9 +194,26 @@ namespace pr::rdr
 				samp[0] = pending.m_dle->m_nugget->m_tex_diffuse->m_samp.m_ptr;
 			}
 
-			//todo, diffuse texture hard-coded to slot 0 here
-			m_dc->PSSetShaderResources(0, 1, srv);
-			m_dc->PSSetSamplers(0, 1, samp);
+			// Diffuse texture hard-coded to slot 0 here
+			m_dc->PSSetShaderResources(UINT(hlsl::ERegister::t0), 1, srv);
+			m_dc->PSSetSamplers(UINT(hlsl::ERegister::s0), 1, samp);
+		}
+
+		// Bind the environment map texture
+		if (current.m_tex_envmap != pending.m_tex_envmap || force)
+		{
+			ID3D11ShaderResourceView* srv[1]  = {m_tex_default->m_srv.m_ptr};
+			ID3D11SamplerState*       samp[1] = {m_tex_default->m_samp.m_ptr};
+
+			if (pending.m_dle != nullptr && pending.m_dle->m_nugget->m_tex_envmap != nullptr)
+			{
+				srv[0]  = pending.m_dle->m_nugget->m_tex_envmap->m_srv.m_ptr;
+				samp[0] = pending.m_dle->m_nugget->m_tex_envmap->m_samp.m_ptr;
+			}
+
+			// Env-map texture hard-coded to slot 1 here
+			m_dc->PSSetShaderResources(UINT(hlsl::ERegister::t1), 1, srv);
+			m_dc->PSSetSamplers(UINT(hlsl::ERegister::s1), 1, samp);
 		}
 
 		// Set shadow map texture
@@ -210,9 +228,9 @@ namespace pr::rdr
 				samp[0] = pending.m_rstep_smap->m_samp.m_ptr;
 			}
 
-			//todo, shadow map texture hard-coded to slot 1 here
-			m_dc->PSSetShaderResources(1, 1, srv);
-			m_dc->PSSetSamplers(1, 1, samp);
+			//todo, shadow map texture hard-coded to slot 2 here
+			m_dc->PSSetShaderResources(UINT(hlsl::ERegister::t2), 1, srv);
+			m_dc->PSSetSamplers(UINT(hlsl::ERegister::s2), 1, samp);
 		}
 	}
 
@@ -243,6 +261,7 @@ namespace pr::rdr
 
 		// Texture
 		m_ss.m_pending.m_tex_diffuse = dle.m_nugget->m_tex_diffuse.get();
+		m_ss.m_pending.m_tex_envmap = dle.m_nugget->m_tex_envmap.get();
 	}
 
 	// State stack frame for shadow map texture

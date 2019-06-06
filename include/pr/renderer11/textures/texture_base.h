@@ -22,14 +22,12 @@ namespace pr::rdr
 		D3DPtr<ID3D11SamplerState>       m_samp;      // The sampler state to use with this texture
 		RdrId                            m_id;        // Id for this texture in the texture managers lookup map
 		RdrId                            m_src_id;    // An id identifying the source this texture was created from (needed when deleting the last ref to a dx tex)
-		SortKeyId                        m_sort_id;   // A sort key component for this texture
-		bool                             m_has_alpha; // True if the texture contains alpha pixels
 		TextureManager*                  m_mgr;       // The texture manager that created this texture
 		string32                         m_name;      // Human readable id for the texture
 
-		TextureBase(TextureManager* mgr, RdrId id, ID3D11Resource* res, ID3D11ShaderResourceView* srv, ID3D11SamplerState* samp, RdrId src_id, SortKeyId sort_id, bool has_alpha, char const* name);
-		TextureBase(TextureManager* mgr, RdrId id, HANDLE shared_handle, RdrId src_id, SortKeyId sort_id, bool has_alpha, char const* name);
-		TextureBase(TextureManager* mgr, RdrId id, IUnknown* shared_resource, RdrId src_id, SortKeyId sort_id, bool has_alpha, char const* name);
+		TextureBase(TextureManager* mgr, RdrId id, ID3D11Resource* res, ID3D11ShaderResourceView* srv, ID3D11SamplerState* samp, RdrId src_id, char const* name);
+		TextureBase(TextureManager* mgr, RdrId id, HANDLE shared_handle, RdrId src_id, char const* name);
+		TextureBase(TextureManager* mgr, RdrId id, IUnknown* shared_resource, RdrId src_id, char const* name);
 		virtual ~TextureBase()
 		{
 			OnDestruction(*this, EmptyArgs());

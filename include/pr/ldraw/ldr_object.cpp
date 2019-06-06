@@ -998,7 +998,7 @@ namespace pr
 			{
 				// Create a texture large enough to contain the text, and render the text into it
 				SamplerDesc sdesc(D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_FILTER_MIN_MAG_MIP_POINT);
-				TextureDesc tdesc(size_t(sz.x), size_t(sz.y), 1, DXGI_FORMAT_R8G8B8A8_UNORM);
+				Texture2DDesc tdesc(size_t(sz.x), size_t(sz.y), 1, DXGI_FORMAT_R8G8B8A8_UNORM);
 				tdesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 				auto tex = p.m_rdr.m_tex_mgr.CreateTexture2D(id, Image(), tdesc, sdesc, false, name);
 

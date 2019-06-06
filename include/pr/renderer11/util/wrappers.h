@@ -228,15 +228,15 @@ namespace pr
 		inline bool operator == (DXGI_SAMPLE_DESC const& lhs, DXGI_SAMPLE_DESC const& rhs) { return lhs.Count == rhs.Count && lhs.Quality == rhs.Quality; }
 
 		// Texture buffer description
-		struct TextureDesc :D3D11_TEXTURE2D_DESC
+		struct Texture2DDesc :D3D11_TEXTURE2D_DESC
 		{
-			TextureDesc()
+			Texture2DDesc()
 				:D3D11_TEXTURE2D_DESC()
 			{
 				InitDefaults();
 			}
-			TextureDesc(size_t width, size_t height, size_t mips = 0U, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM, EUsage usage = EUsage::Default)
-				:D3D11_TEXTURE2D_DESC(TextureDesc())
+			Texture2DDesc(size_t width, size_t height, size_t mips = 0U, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM, EUsage usage = EUsage::Default)
+				:D3D11_TEXTURE2D_DESC(Texture2DDesc())
 			{
 				InitDefaults();
 				Width          = static_cast<UINT>(width);
@@ -245,8 +245,8 @@ namespace pr
 				Format         = format;
 				Usage          = D3D11_USAGE(usage);
 			}
-			TextureDesc(Image const& src, size_t mips = 0U, EUsage usage = EUsage::Default)
-				:D3D11_TEXTURE2D_DESC(TextureDesc())
+			Texture2DDesc(Image const& src, size_t mips = 0U, EUsage usage = EUsage::Default)
+				:D3D11_TEXTURE2D_DESC(Texture2DDesc())
 			{
 				InitDefaults();
 				Width          = static_cast<UINT>(src.m_dim.x);

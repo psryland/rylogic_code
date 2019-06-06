@@ -11,20 +11,22 @@
 
 namespace pr::rdr
 {
-	// Todo, make a Texture base class
-	// A 2D texture
-	// Each time MatMgr.CreateTexture is called, a new Texture2D instance is allocated.
-	// However, the resources associated with this texture may be shared with other Textures.
 	struct Texture2D :TextureBase
 	{
-		m4x4 m_t2s; // Texture to surface transform
+		// Notes:
+		//   - Each time MatMgr.CreateTexture is called, a new Texture2D instance is allocated.
+		//     However, the resources associated with this texture may be shared with other Textures.
+
+		m4x4      m_t2s;       // Texture to surface transform
+		SortKeyId m_sort_id;   // A sort key component for this texture
+		bool      m_has_alpha; // True if the texture contains alpha pixels
 
 		Texture2D(TextureManager* mgr, RdrId id, ID3D11Texture2D* tex, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name);
 		Texture2D(TextureManager* mgr, RdrId id, ID3D11Texture2D* tex, ID3D11ShaderResourceView* srv, SamplerDesc const& sam_desc, SortKeyId sort_id, bool has_alpha, char const* name);
 		Texture2D(TextureManager* mgr, RdrId id, IUnknown* shared_resource, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name);
 		Texture2D(TextureManager* mgr, RdrId id, HANDLE shared_handle, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name);
-		Texture2D(TextureManager* mgr, RdrId id, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name, ShaderResourceViewDesc const* srvdesc = nullptr);
-		Texture2D(TextureManager* mgr, RdrId id, Texture2D const& existing, SortKeyId sort_id, char const* name);
+		Texture2D(TextureManager* mgr, RdrId id, Image const& src, Texture2DDesc const& tdesc, SamplerDesc const& sdesc, SortKeyId sort_id, bool has_alpha, char const* name, ShaderResourceViewDesc const* srvdesc = nullptr);
+		Texture2D(TextureManager* mgr, RdrId id, Texture2D const& existing, char const* name);
 
 		// Get the DirectX texture 2D resource
 		ID3D11Texture2D* dx_tex() const
@@ -33,7 +35,7 @@ namespace pr::rdr
 		}
 
 		// Get the description of the current texture pointed to by 'm_tex'
-		TextureDesc TexDesc() const;
+		Texture2DDesc TexDesc() const;
 
 		// Set a new texture description and re-create/reinitialise the texture and the SRV.
 		// 'all_instances' - if true, all Texture2D objects that refer to the same underlying
@@ -42,7 +44,7 @@ namespace pr::rdr
 		// 'perserve' - if true, the content of the current texture is stretch copied to the new texture
 		//  if possible. If not possible, an exception is thrown
 		// 'srvdesc' - if not null, causes the new shader resource view to be created using this description
-		void TexDesc(Image const& src, TextureDesc const& tdesc, bool all_instances, bool preserve, ShaderResourceViewDesc const* srvdesc = nullptr);
+		void TexDesc(Image const& src, Texture2DDesc const& tdesc, bool all_instances, bool preserve, ShaderResourceViewDesc const* srvdesc = nullptr);
 
 		// Resize this texture to 'size' optionally applying the resize to all instances of this
 		// texture and optionally preserving the current content of the texture

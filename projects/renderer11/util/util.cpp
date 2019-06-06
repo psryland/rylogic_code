@@ -83,7 +83,7 @@ namespace pr
 			DirectX::ComputePitch(fmt, size.x, size.y, row_pitch, slice_pitch, DirectX::CP_FLAGS_NONE);
 			return iv2(s_cast<int>(row_pitch), s_cast<int>(slice_pitch));
 		}
-		iv2 Pitch(TextureDesc const& tdesc)
+		iv2 Pitch(Texture2DDesc const& tdesc)
 		{
 			return Pitch(iv2(s_cast<int>(tdesc.Width), s_cast<int>(tdesc.Height)), tdesc.Format);
 		}

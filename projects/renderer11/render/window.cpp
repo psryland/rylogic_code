@@ -194,7 +194,7 @@ namespace pr
 			PR_EXPAND(PR_DBG_RDR, NameResource(back_buffer.get(), "main RT"));
 			
 			// Read the texture properties from the BB
-			TextureDesc bbdesc;
+			Texture2DDesc bbdesc;
 			back_buffer->GetDesc(&bbdesc);
 			static_cast<DXGI_SAMPLE_DESC&>(m_multisamp) = bbdesc.SampleDesc;
 
@@ -209,7 +209,7 @@ namespace pr
 			m_main_tex = tex_mgr().CreateTexture2D(AutoId, back_buffer.get(), m_main_srv.get(), SamplerDesc::LinearClamp(), false, "main_rt");
 
 			// Create a texture buffer that we will use as the depth buffer
-			TextureDesc desc;
+			Texture2DDesc desc;
 			desc.Width              = bbdesc.Width;
 			desc.Height             = bbdesc.Height;
 			desc.MipLevels          = 1;
@@ -284,7 +284,7 @@ namespace pr
 			}
 
 			// Get the description of the render target texture
-			TextureDesc tdesc;
+			Texture2DDesc tdesc;
 			render_target->GetDesc(&tdesc);
 			PR_ASSERT(PR_DBG_RDR, (tdesc.BindFlags & D3D11_BIND_RENDER_TARGET) != 0, "This texture is not a render target");
 
@@ -298,7 +298,7 @@ namespace pr
 			D3DPtr<ID3D11Texture2D> tmp_depth_buffer;
 			if (depth_buffer == nullptr)
 			{
-				TextureDesc dbdesc;
+				Texture2DDesc dbdesc;
 				dbdesc.Width = tdesc.Width;
 				dbdesc.Height = tdesc.Height;
 				dbdesc.Format = m_db_format;
@@ -475,7 +475,7 @@ namespace pr
 				return iv2Zero;
 
 			// Return the size of the texture
-			TextureDesc tdesc;
+			Texture2DDesc tdesc;
 			rt->GetDesc(&tdesc);
 			return iv2(tdesc.Width, tdesc.Height);
 		}

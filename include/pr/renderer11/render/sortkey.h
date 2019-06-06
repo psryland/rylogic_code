@@ -46,7 +46,7 @@ namespace pr
 		struct SortKey
 		{
 			using value_type = unsigned int;
-			static value_type const Bits   = 32U;
+			static value_type const Bits = 32U;
 
 			// GGGGGGGA SSSSSSSS SSTTTTTT TTTTTTTT
 			static value_type const TextureIdBits = 14U;

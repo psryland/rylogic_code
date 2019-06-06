@@ -64,7 +64,7 @@ namespace pr
 			auto size = m_scene->m_wnd->BackBufferSize();
 
 			// Create texture buffers that we will use as the render targets in the GBuffer
-			TextureDesc tdesc;
+			Texture2DDesc tdesc;
 			tdesc.Width              = size.x;
 			tdesc.Height             = size.y;
 			tdesc.MipLevels          = 1;

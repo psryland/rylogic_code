@@ -24,21 +24,19 @@ namespace pr::rdr
 	}
 
 	// Constructors
-	TextureBase::TextureBase(TextureManager* mgr, RdrId id, ID3D11Resource* res, ID3D11ShaderResourceView* srv, ID3D11SamplerState* samp, RdrId src_id, SortKeyId sort_id, bool has_alpha, char const* name)
+	TextureBase::TextureBase(TextureManager* mgr, RdrId id, ID3D11Resource* res, ID3D11ShaderResourceView* srv, ID3D11SamplerState* samp, RdrId src_id, char const* name)
 		:RefCounted<TextureBase>()
 		,m_res(res, true)
 		,m_srv(srv, true)
 		,m_samp(samp, true)
 		,m_id(id == AutoId ? MakeId(this) : id)
 		,m_src_id(src_id)
-		,m_sort_id(sort_id)
-		,m_has_alpha(has_alpha)
 		,m_mgr(mgr)
 		,m_name(name ? name : "")
 	{
 	}
-	TextureBase::TextureBase(TextureManager* mgr, RdrId id, HANDLE shared_handle, RdrId src_id, SortKeyId sort_id, bool has_alpha, char const* name)
-		:TextureBase(mgr, id, nullptr, nullptr, nullptr, src_id, sort_id, has_alpha, name)
+	TextureBase::TextureBase(TextureManager* mgr, RdrId id, HANDLE shared_handle, RdrId src_id, char const* name)
+		:TextureBase(mgr, id, nullptr, nullptr, nullptr, src_id, name)
 	{
 		// Open the shared resource in our d3d device
 		D3DPtr<IUnknown> resource;
@@ -48,8 +46,8 @@ namespace pr::rdr
 		// Query the resource interface from the resource
 		Throw(resource->QueryInterface(__uuidof(ID3D11Resource), (void**)&m_res.m_ptr));
 	}
-	TextureBase::TextureBase(TextureManager* mgr, RdrId id, IUnknown* shared_resource, RdrId src_id, SortKeyId sort_id, bool has_alpha, char const* name)
-		:TextureBase(mgr, id, SharedHandleFromSharedResource(shared_resource), src_id, sort_id, has_alpha, name)
+	TextureBase::TextureBase(TextureManager* mgr, RdrId id, IUnknown* shared_resource, RdrId src_id, char const* name)
+		:TextureBase(mgr, id, SharedHandleFromSharedResource(shared_resource), src_id, name)
 	{
 	}
 

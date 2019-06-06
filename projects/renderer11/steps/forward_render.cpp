@@ -67,8 +67,8 @@ namespace pr
 				D3DPtr<ID3D11RenderTargetView> rtv;
 				D3DPtr<ID3D11DepthStencilView> dsv;
 				dc->OMGetRenderTargets(1, &rtv.m_ptr, &dsv.m_ptr);
-				PR_ASSERT(PR_DBG_RDR, rtv != nullptr, "Render target is null."); // Ensure RestoreRT has been called
-				PR_ASSERT(PR_DBG_RDR, dsv != nullptr, "Depth buffer is null."); // Ensure RestoreRT has been called
+				if (rtv.m_ptr == nullptr) throw std::runtime_error("Render target is null. Ensure RestoreRT has been called");
+				if (dsv.m_ptr == nullptr) throw std::runtime_error("Depth buffer is null. Ensure RestoreRT has been called");
 
 				dc->ClearRenderTargetView(rtv.m_ptr, m_scene->m_bkgd_colour.arr);
 				dc->ClearDepthStencilView(dsv.m_ptr, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0U);
@@ -103,6 +103,7 @@ namespace pr
 				SetTxfm(*dle.m_instance, m_scene->m_view, cb1);
 				SetTint(*dle.m_instance, cb1);
 				SetTexDiffuse(nugget, cb1);
+				SetEnvMap(nugget, cb1);
 				WriteConstants(dc, m_cbuf_nugget.get(), cb1, EShaderType::VS|EShaderType::PS);
 
 				// Draw the nugget
