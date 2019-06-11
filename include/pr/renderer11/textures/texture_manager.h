@@ -16,8 +16,9 @@ namespace pr::rdr
 {
 	class TextureManager
 	{
+		using DxTexPointers      = struct { ID3D11Resource* res; ID3D11ShaderResourceView* srv; };
 		using TextureLookup      = Lookup<RdrId, TextureBase*>;
-		using TexFileLookup      = Lookup<RdrId, ID3D11Texture2D*>;
+		using DxTexLookup        = Lookup<RdrId, DxTexPointers>;
 		using AllocationsTracker = AllocationsTracker<void>;
 
 		// Textures are shared whenever possible.
@@ -35,7 +36,7 @@ namespace pr::rdr
 		AllocationsTracker       m_mem_tracker;      // Texture allocation tracker
 		Renderer&                m_rdr;              // The owning renderer instance
 		TextureLookup            m_lookup_tex;       // A map from texture id to existing texture instances
-		TexFileLookup            m_lookup_fname;     // A map from hash of filepath to an existing dx texture
+		DxTexLookup              m_lookup_dxtex;     // A map from hash of resource uri to existing dx texture pointers
 		pr::vector<Texture2DPtr> m_stock_textures;   // A collection of references to the stock textures
 		pr::GdiPlus              m_gdiplus;          // Context scope for GDI
 		EventAutoSub             m_eh_resize;        // Event handler subscription for the RT resize event
@@ -85,7 +86,7 @@ namespace pr::rdr
 		Texture2DPtr CreateTextureGdi(RdrId id, int w, int h, bool has_alpha, char const* name);
 
 		// Create a cube map texture instance
-		TextureCubePtr CreateTextureCube(RdrId id, wchar_t const* resource_name, Texture2DDesc const& tdesc, SamplerDesc const& sdesc, char const* name);
+		TextureCubePtr CreateTextureCube(RdrId id, wchar_t const* resource_name, SamplerDesc const& sdesc, char const* name);
 
 		// Create a new texture instance that uses the same dx texture as an existing texture.
 		// 'id' is the id to assign to this new texture instance. Use 'AutoId' to auto generate an id

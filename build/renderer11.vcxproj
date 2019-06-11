@@ -180,6 +180,7 @@
     <ClInclude Include="..\include\pr\renderer11\render\sortkey.h" />
     <ClInclude Include="..\include\pr\renderer11\textures\texture_base.h" />
     <ClInclude Include="..\include\pr\renderer11\textures\texture_cube.h" />
+    <ClInclude Include="..\include\pr\renderer11\textures\texture_loader.h" />
     <ClInclude Include="..\include\pr\renderer11\textures\texture_manager.h" />
     <ClInclude Include="..\include\pr\renderer11\util\allocator.h" />
     <ClInclude Include="..\include\pr\renderer11\util\demo_scene.h" />
@@ -199,8 +200,6 @@
     <ClInclude Include="..\projects\renderer11\render\stereo.h" />
     <ClInclude Include="..\projects\renderer11\shaders\common.h" />
     <ClInclude Include="..\projects\renderer11\shaders\shader_forward.h" />
-    <ClInclude Include="..\projects\renderer11\textures\dds_texture_loader.h" />
-    <ClInclude Include="..\projects\renderer11\textures\wic_texture_loader.h" />
     <ClInclude Include="..\projects\renderer11\util\forward_private.h" />
     <ClInclude Include="..\projects\renderer11\util\stdafx.h" />
     <ClCompile Include="..\projects\renderer11\models\nugget.cpp" />
@@ -243,7 +242,7 @@
     <ClCompile Include="..\projects\renderer11\steps\gbuffer.cpp" />
     <ClCompile Include="..\projects\renderer11\steps\render_step.cpp" />
     <ClCompile Include="..\projects\renderer11\steps\shadow_map.cpp" />
-    <ClCompile Include="..\projects\renderer11\textures\dds_texture_loader.cpp" />
+    <ClCompile Include="..\projects\renderer11\textures\texture_loader_dds.cpp" />
     <ClCompile Include="..\projects\renderer11\textures\texture_2d.cpp" />
     <ClCompile Include="..\projects\renderer11\models\model.cpp" />
     <ClCompile Include="..\projects\renderer11\models\model_buffer.cpp" />
@@ -251,7 +250,7 @@
     <ClCompile Include="..\projects\renderer11\render\renderer.cpp" />
     <ClCompile Include="..\projects\renderer11\render\scene.cpp" />
     <ClCompile Include="..\projects\renderer11\textures\texture_manager.cpp" />
-    <ClCompile Include="..\projects\renderer11\textures\wic_texture_loader.cpp" />
+    <ClCompile Include="..\projects\renderer11\textures\texture_loader_wic.cpp" />
     <ClCompile Include="..\projects\renderer11\util\lock.cpp" />
     <ClCompile Include="..\projects\renderer11\util\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -273,10 +272,10 @@
     <None Include="..\projects\renderer11\shaders\hlsl\lighting\phong_lighting.hlsli" />
     <None Include="..\projects\renderer11\shaders\hlsl\shadow\shadow_cast.hlsli" />
     <None Include="..\projects\renderer11\shaders\hlsl\shadow\shadow_map_cbuf.hlsli" />
-		<None Include="..\projects\renderer11\shaders\hlsl\screenspace\screenspace_cbuf.hlsli"/>
-		<None Include="..\projects\renderer11\shaders\hlsl\utility\ray_cast_cbuf.hlsli"/>
-		<None Include="..\projects\renderer11\shaders\hlsl\utility\env_map.hlsli"/>
-	</ItemGroup>
+    <None Include="..\projects\renderer11\shaders\hlsl\screenspace\screenspace_cbuf.hlsli" />
+    <None Include="..\projects\renderer11\shaders\hlsl\utility\ray_cast_cbuf.hlsli" />
+    <None Include="..\projects\renderer11\shaders\hlsl\utility\env_map.hlsli" />
+  </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\projects\renderer11\shaders\hlsl\deferred\dslighting.hlsl">
       <FileType>Document</FileType>
@@ -293,15 +292,15 @@
     <CustomBuild Include="..\projects\renderer11\shaders\hlsl\screenspace\thick_line.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
-		<CustomBuild Include="..\projects\renderer11\shaders\hlsl\utility\ray_cast.hlsl">
-			<FileType>Document</FileType>
-		</CustomBuild>
-		<CustomBuild Include="..\projects\renderer11\shaders\hlsl\screenspace\arrow_head.hlsl">
-			<FileType>Document</FileType>
-		</CustomBuild>
-		<CustomBuild Include="..\projects\renderer11\shaders\hlsl\screenspace\point_sprites.hlsl">
-			<FileType>Document</FileType>
-		</CustomBuild>
-	</ItemGroup>
+    <CustomBuild Include="..\projects\renderer11\shaders\hlsl\utility\ray_cast.hlsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="..\projects\renderer11\shaders\hlsl\screenspace\arrow_head.hlsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="..\projects\renderer11\shaders\hlsl\screenspace\point_sprites.hlsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

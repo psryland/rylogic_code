@@ -161,9 +161,11 @@ namespace view3d
 			NuggetProps nug;
 			nug.m_topo = static_cast<EPrim>(n->m_topo);
 			nug.m_geom = static_cast<EGeom>(n->m_geom);
+			if (n->m_cull_mode != EView3DCullMode::Default) nug.m_rsb.Set(ERS::CullMode, static_cast<D3D11_CULL_MODE>(n->m_cull_mode));
+			if (n->m_fill_mode != EView3DFillMode::Default) nug.m_rsb.Set(ERS::FillMode, static_cast<D3D11_FILL_MODE>(n->m_fill_mode));
 			nug.m_vrange = n->m_v0 != n->m_v1 ? Range(n->m_v0, n->m_v1) : Range(0, vcount);
 			nug.m_irange = n->m_i0 != n->m_i1 ? Range(n->m_i0, n->m_i1) : Range(0, icount);
-			nug.m_geometry_has_alpha = n->m_has_alpha != 0;
+			nug.m_flags = pr::SetBits(nug.m_flags, ENuggetFlag::GeometryHasAlpha, n->m_has_alpha != 0);
 			nug.m_tex_diffuse = Texture2DPtr(n->m_mat.m_diff_tex, true);
 			nug.m_range_overlaps = n->m_range_overlaps;
 		
@@ -444,12 +446,14 @@ namespace view3d
 				View3DNugget n = {};
 				n.m_topo = static_cast<EView3DPrim>(nug.m_topo);
 				n.m_geom = static_cast<EView3DGeom>(nug.m_geom);
+				n.m_cull_mode = static_cast<EView3DCullMode>(nug.m_rsb.Desc().CullMode);
+				n.m_fill_mode = static_cast<EView3DFillMode>(nug.m_rsb.Desc().FillMode);
 				n.m_v0 = pr::s_cast<UINT32>(nug.m_vrange.begin());
 				n.m_v1 = pr::s_cast<UINT32>(nug.m_vrange.end());
 				n.m_i0 = pr::s_cast<UINT32>(nug.m_irange.begin());
 				n.m_i1 = pr::s_cast<UINT32>(nug.m_irange.end());
 				n.m_mat.m_diff_tex = nug.m_tex_diffuse.m_ptr;
-				n.m_mat.m_env_map = nullptr;
+				n.m_mat.m_relative_reflectivity = nug.m_relative_reflectivity;
 				nuggets.push_back(n);
 			}
 		}
@@ -497,6 +501,8 @@ namespace view3d
 				mat.m_vrange.resize(new_vcount);
 				mat.m_irange.resize(new_icount);
 				mat.m_tex_diffuse = Texture2DPtr(nug.m_mat.m_diff_tex, true);
+				if (nug.m_cull_mode != EView3DCullMode::Default) mat.m_rsb.Set(ERS::CullMode, static_cast<D3D11_CULL_MODE>(nug.m_cull_mode));
+				if (nug.m_fill_mode != EView3DFillMode::Default) mat.m_rsb.Set(ERS::FillMode, static_cast<D3D11_FILL_MODE>(nug.m_fill_mode));
 				model->CreateNugget(mat);
 			}
 		}

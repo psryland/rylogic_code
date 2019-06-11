@@ -112,20 +112,12 @@ namespace pr
 		static_assert(!is_char_array<int*>::value, "");
 
 		// true if 'tptr' is a 'Type' iterator
-		//template <typename tptr> using is_char_pointer = typename std::integral_constant<bool, std::is_same<decltype(*std::declval<tptr>()), Type>::value>;
-		template <typename tptr> struct is_char_pointer
-		{
-			static tptr ptr();
-			static std::true_type  check(Type&);
-			static std::false_type check(...);
-
-			using type = decltype(check(*ptr()));
-			static bool const value = type::value;
-		};
-		static_assert( is_char_pointer<Type*>::value, "");
-		static_assert(!is_char_pointer<int*>::value, "");
-		static_assert( is_char_pointer<decltype(std::vector<Type>().begin())>::value, "");
-		static_assert(!is_char_pointer<decltype(std::vector<int>().begin())>::value, "");
+		template <typename tptr> using is_char_pointer = std::integral_constant<bool, std::is_same_v<typename std::iterator_traits<tptr>::value_type, Type>>;
+		static_assert( is_char_pointer<Type const*>::value);
+		static_assert( is_char_pointer<Type*>::value);
+		static_assert(!is_char_pointer<int*>::value);
+		static_assert( is_char_pointer<decltype(begin(std::vector<Type>()))>::value);
+		static_assert(!is_char_pointer<decltype(begin(std::vector<int>()))>::value);
 
 		// Enable if 'tarr' is an array-like container of 'Type'
 		template <typename tarr> using enable_if_char_array = typename std::enable_if<is_char_array<tarr>::value>::type;

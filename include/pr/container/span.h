@@ -9,6 +9,7 @@
 namespace std
 {
 	// std::span
+	// Remember 'T' can be const
 	template <class T> class span
 	{
 	public:
@@ -19,34 +20,23 @@ namespace std
 		using pointer = T*;
 		using reference = T&;
 
-		union {
-		T const* m_carr;
-		T* m_marr;
-		};
+		T* m_arr;
 		size_t m_count;
 
-		constexpr span(T const* arr, int count)
-			:m_carr(arr)
+		constexpr span(T* arr, size_t count)
+			:m_arr(arr)
 			,m_count(count)
 		{}
-		constexpr span(T* arr, int count)
-			:m_marr(arr)
-			,m_count(count)
+		constexpr span(std::initializer_list<T> list)
+			:m_arr(list.begin())
+			,m_count(list.size())
 		{}
 		template <int N> constexpr span(std::array<T,N> const& arr)
-			:m_carr(arr.data())
+			:m_arr(arr.data())
 			,m_count(arr.size())
-		{}
-		template <int N> constexpr span(std::array<T,N>& arr)
-			:m_marr(arr.data())
-			,m_count(arr.size())
-		{}
-		template <int N> constexpr span(T const (&arr)[N])
-			:m_carr(&arr[0])
-			,m_count(N)
 		{}
 		template <int N> constexpr span(T (&arr)[N])
-			:m_marr(&arr[0])
+			:m_arr(&arr[0])
 			,m_count(N)
 		{}
 
@@ -59,39 +49,27 @@ namespace std
 			return m_count;
 		}
 
-		T const* begin() const
+		T* begin() const
 		{
-			return m_carr;
+			return m_arr;
 		}
-		T* begin()
+		T* end() const
 		{
-			return m_marr;
-		}
-
-		T const* end() const
-		{
-			return m_carr + m_count;
-		}
-		T* end()
-		{
-			return m_marr + m_count;
+			return m_arr + m_count;
 		}
 
-		T const& operator[](int i) const
+		T& operator[](int i) const
 		{
-			return m_carr[i];
+			return m_arr[i];
 		}
-		T& operator[](int i)
+
+		operator span<T const>() const
 		{
-			return m_marr[i];
+			return std::span<T const>(m_arr, m_count);
 		}
 	};
 
 	// Type deduction helper
-	template <typename T> constexpr span<T> make_span(T const* arr, int count)
-	{
-		return span<T>(arr, count);
-	}
 	template <typename T> constexpr span<T> make_span(T* arr, int count)
 	{
 		return span<T>(arr, count);

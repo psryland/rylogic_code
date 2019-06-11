@@ -228,6 +228,45 @@ namespace pr
 		inline bool operator == (DXGI_SAMPLE_DESC const& lhs, DXGI_SAMPLE_DESC const& rhs) { return lhs.Count == rhs.Count && lhs.Quality == rhs.Quality; }
 
 		// Texture buffer description
+		struct Texture1DDesc :D3D11_TEXTURE1D_DESC
+		{
+			Texture1DDesc()
+				:D3D11_TEXTURE1D_DESC()
+			{
+				InitDefaults();
+			}
+			Texture1DDesc(size_t width, size_t mips = 0U, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM, EUsage usage = EUsage::Default)
+				:D3D11_TEXTURE1D_DESC(Texture1DDesc())
+			{
+				InitDefaults();
+				Width          = static_cast<UINT>(width);
+				MipLevels      = static_cast<UINT>(mips); // 0 means use all mips down to 1x1
+				Format         = format;
+				Usage          = D3D11_USAGE(usage);
+			}
+			Texture1DDesc(Image const& src, size_t mips = 0U, EUsage usage = EUsage::Default)
+				:D3D11_TEXTURE1D_DESC(Texture1DDesc())
+			{
+				InitDefaults();
+				Width          = static_cast<UINT>(src.m_dim.x);
+				MipLevels      = static_cast<UINT>(mips); // 0 means use all mips down to 1x1
+				Format         = src.m_format;
+				Usage          = D3D11_USAGE(usage);
+			}
+			void InitDefaults()
+			{
+				// Notes about mips: if you use 'MipLevels' other than 1, you need to provide
+				// initialisation data for all of the generated mip levels as well
+				Width          = 0U;
+				MipLevels      = 1U;
+				ArraySize      = 1U;
+				Format         = DXGI_FORMAT_R8G8B8A8_UNORM;
+				Usage          = D3D11_USAGE(EUsage::Default);// Other options: EUsage::Immutable, EUsage::Dynamic
+				BindFlags      = D3D11_BIND_FLAG(EBind::ShaderResource);
+				CPUAccessFlags = 0U;
+				MiscFlags      = 0U;
+			}
+		};
 		struct Texture2DDesc :D3D11_TEXTURE2D_DESC
 		{
 			Texture2DDesc()
@@ -270,6 +309,53 @@ namespace pr
 				CPUAccessFlags = 0U;
 				MiscFlags      = 0U;
 			}
+		};
+		struct Texture3DDesc :D3D11_TEXTURE3D_DESC
+		{
+			Texture3DDesc()
+				:D3D11_TEXTURE3D_DESC()
+			{
+				InitDefaults();
+			}
+			Texture3DDesc(size_t width, size_t height, size_t depth, size_t mips = 0U, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM, EUsage usage = EUsage::Default)
+				:D3D11_TEXTURE3D_DESC(Texture3DDesc())
+			{
+				InitDefaults();
+				Width          = static_cast<UINT>(width);
+				Height         = static_cast<UINT>(height);
+				Depth          = static_cast<UINT>(depth);
+				MipLevels      = static_cast<UINT>(mips); // 0 means use all mips down to 1x1
+				Format         = format;
+				Usage          = D3D11_USAGE(usage);
+			}
+			void InitDefaults()
+			{
+				// Notes about mips: if you use 'MipLevels' other than 1, you need to provide
+				// initialisation data for all of the generated mip levels as well
+				Width          = 0U;
+				Height         = 0U;
+				Depth          = 0U;
+				MipLevels      = 1U;
+				Format         = DXGI_FORMAT_R8G8B8A8_UNORM;
+				Usage          = D3D11_USAGE(EUsage::Default);// Other options: EUsage::Immutable, EUsage::Dynamic
+				BindFlags      = D3D11_BIND_FLAG(EBind::ShaderResource);
+				CPUAccessFlags = 0U;
+				MiscFlags      = 0U;
+			}
+		};
+		struct TextureDesc
+		{
+			D3D11_RESOURCE_DIMENSION dim;
+			union
+			{
+				Texture1DDesc Tex1D;
+				Texture2DDesc Tex2D;
+				Texture3DDesc Tex3D;
+			};
+
+			TextureDesc()
+				:dim(D3D11_RESOURCE_DIMENSION_UNKNOWN)
+			{}
 		};
 
 		// Texture sampler description
@@ -417,7 +503,7 @@ namespace pr
 			ShaderResourceViewDesc()
 				:D3D11_SHADER_RESOURCE_VIEW_DESC()
 			{}
-			ShaderResourceViewDesc(DXGI_FORMAT format, D3D11_SRV_DIMENSION view_dim)
+			explicit ShaderResourceViewDesc(DXGI_FORMAT format, D3D11_SRV_DIMENSION view_dim = D3D_SRV_DIMENSION_UNKNOWN)
 				:ShaderResourceViewDesc()
 			{
 				Format = format;

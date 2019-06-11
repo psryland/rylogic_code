@@ -85,6 +85,7 @@ namespace pr
 			hlsl::fwd::CBufFrame cb0 = {};
 			SetViewConstants(m_scene->m_view, cb0.m_cam);
 			SetLightingConstants(m_scene->m_global_light, cb0.m_global_light);
+			SetEnvMapConstants(m_scene->m_global_envmap.get(), cb0.m_env_map);
 			SetShadowMapConstants(m_scene->m_view, smap_rstep != nullptr ? 1 : 0, cb0.m_shadow);
 			WriteConstants(dc, m_cbuf_frame.get(), cb0, EShaderType::VS|EShaderType::PS);
 
@@ -99,11 +100,11 @@ namespace pr
 
 				// Set the per-nugget constants
 				hlsl::fwd::CBufModel cb1 = {};
-				SetModelFlags(nugget, UniqueId(*dle.m_instance), cb1);
+				SetModelFlags(*dle.m_instance, nugget, *m_scene, cb1);
 				SetTxfm(*dle.m_instance, m_scene->m_view, cb1);
 				SetTint(*dle.m_instance, cb1);
+				SetEnvMap(*dle.m_instance, nugget, cb1);
 				SetTexDiffuse(nugget, cb1);
-				SetEnvMap(nugget, cb1);
 				WriteConstants(dc, m_cbuf_nugget.get(), cb1, EShaderType::VS|EShaderType::PS);
 
 				// Draw the nugget

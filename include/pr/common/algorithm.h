@@ -203,6 +203,16 @@ namespace pr
 		return *iter;
 	}
 
+	// Return the first pointer like argument that isn't null
+	template <typename T, typename... Args> inline T first_not_null(T a, Args&&... args)
+	{
+		return a == nullptr ? first_not_null(std::forward<Args>(args)...) : a;
+	}
+	inline nullptr_t first_not_null()
+	{
+		return nullptr;
+	}
+
 	// Return the first element in 'cont' that matches 'pred' or return a default element instance
 	template <typename TCont, typename Pred, typename Elem = typename container_traits<TCont>::value_type> inline Elem first_or_default(TCont& cont, Pred pred, Elem def = Elem())
 	{

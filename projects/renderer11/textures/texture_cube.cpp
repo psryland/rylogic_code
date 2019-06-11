@@ -34,6 +34,7 @@ namespace pr::rdr
 
 	TextureCube::TextureCube(TextureManager* mgr, RdrId id, ID3D11Texture2D* tex, ID3D11ShaderResourceView* srv, SamplerDesc const& sdesc, char const* name)
 		:TextureBase(mgr, id, tex, srv, nullptr, 0, name)
+		,m_cube2w(m4x4Identity)
 	{
 		InitSRV(*this);
 		SamDesc(sdesc);

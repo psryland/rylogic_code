@@ -254,8 +254,8 @@ namespace pr::rdr
 					nug = *mat;
 				nug.m_topo = topo;
 				nug.m_geom = geom;
-				nug.m_geometry_has_alpha |= geometry_has_alpha;
-				nug.m_tint_has_alpha |= tint_has_alpha;
+				nug.m_flags |= geometry_has_alpha ? ENuggetFlag::GeometryHasAlpha : ENuggetFlag::None;
+				nug.m_flags |= tint_has_alpha ? ENuggetFlag::TintHasAlpha : ENuggetFlag::None;
 				m_ncont.push_back(nug);
 			}
 		};
@@ -849,6 +849,7 @@ namespace pr::rdr
 			// Model nugget properties for the sky box
 			NuggetProps mat;
 			mat.m_tex_diffuse = sky_texture;
+			mat.m_rsb.CullMode = D3D11_CULL_MODE::D3D11_CULL_FRONT;
 			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, &mat);
 
 			// Create the model
@@ -874,6 +875,7 @@ namespace pr::rdr
 			// Model nugget properties for the sky box
 			NuggetProps mat;
 			mat.m_tex_diffuse = sky_texture;
+			mat.m_rsb.CullMode = D3D11_CULL_MODE::D3D11_CULL_FRONT;
 			cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, false, &mat);
 
 			// Create the model
@@ -902,6 +904,7 @@ namespace pr::rdr
 				// Create the render nugget for this face of the sky box
 				NuggetProps mat = {};
 				mat.m_tex_diffuse = sky_texture[i];
+				mat.m_rsb.CullMode = D3D11_CULL_MODE::D3D11_CULL_FRONT;
 				mat.m_vrange = rdr::Range(i * 4, (i + 1) * 4);
 				mat.m_irange = rdr::Range(i * 6, (i + 1) * 6);
 				cache.AddNugget(EPrim::TriList, props.m_geom, props.m_has_alpha, &mat);
@@ -912,22 +915,17 @@ namespace pr::rdr
 		}
 		static ModelPtr SkyboxSixSidedCube(Renderer& rdr, wchar_t const* texture_path_pattern, float radius = 1.0f, Colour32 colour = Colour32White)
 		{
-			// 'texture_path_pattern' should be: "skybox_texture_??.ds"
-
-			// Load the skybox textures
-			wchar_t const axes[6][3] = { { L"+X" }, { L"-X" }, { L"+Y" }, { L"-Y" }, { L"+Z" }, { L"-Z" } };
-
-			// One texture per nugget
-			Texture2DPtr tex[6] = {};
-			std::wstring tpath = texture_path_pattern;
-			auto ofs = tpath.find(L"??", 0, 2);
+			wstring256 tpath = texture_path_pattern;
+			auto ofs = tpath.find(L"??");
 			PR_ASSERT(PR_DBG, ofs != string::npos, "Provided path does not include '??' characters");
-			for (int i = 0; i != 6; ++i)
+
+			Texture2DPtr tex[6] = {}; int i = 0;
+			for (auto face : { L"+X", L"-X", L"+Y", L"-Y", L"+Z", L"-Z" })
 			{
 				// Load the texture for this face of the sky box
-				tpath[ofs + 0] = axes[i][0];
-				tpath[ofs + 1] = axes[i][1];
-				tex[i] = rdr.m_tex_mgr.CreateTexture2D(AutoId, SamplerDesc::LinearClamp(), tpath.c_str(), false, "skybox");
+				tpath[ofs + 0] = face[0];
+				tpath[ofs + 1] = face[1];
+				tex[i++] = rdr.m_tex_mgr.CreateTexture2D(AutoId, SamplerDesc::LinearClamp(), tpath.c_str(), false, "skybox");
 			}
 
 			return SkyboxSixSidedCube(rdr, tex, radius, colour);
@@ -1031,7 +1029,7 @@ namespace pr::rdr
 			auto nout = [&](max_3ds::Material const& mat, EGeom geom, Range vrange, Range irange)
 			{
 				NuggetProps ddata(EPrim::TriList, geom, nullptr, vrange, irange);
-				ddata.m_geometry_has_alpha = !FEql(mat.m_diffuse.a, 1.0f);
+				ddata.m_flags = SetBits(ddata.m_flags, ENuggetFlag::GeometryHasAlpha, !FEql(mat.m_diffuse.a, 1.0f));
 
 				// Register any materials with the renderer
 				if (!mat.m_textures.empty())

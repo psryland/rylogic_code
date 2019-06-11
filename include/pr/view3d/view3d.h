@@ -76,15 +76,17 @@ extern "C"
 	};
 	enum class EView3DFillMode :int
 	{
-		Solid,
-		Wireframe,
-		SolidWire,
+		Default = 0,
+		SolidWire = 1,
+		Wireframe = D3D11_FILL_MODE::D3D11_FILL_WIREFRAME,
+		Solid = D3D11_FILL_MODE::D3D11_FILL_SOLID,
 	};
 	enum class EView3DCullMode :int
 	{
-		None,
-		Back,
-		Front,
+		Default = 0,
+		None = D3D11_CULL_MODE::D3D11_CULL_NONE,
+		Front = D3D11_CULL_MODE::D3D11_CULL_FRONT,
+		Back = D3D11_CULL_MODE::D3D11_CULL_BACK,
 	};
 	enum class EView3DGeom :int // pr::rdr::EGeom
 	{
@@ -155,16 +157,17 @@ extern "C"
 	};
 	enum class EView3DUpdateObject :unsigned int // Flags for partial update of a model
 	{
-		None       = 0U,
-		All        = ~0U,
-		Name       = 1 << 0,
-		Model      = 1 << 1,
-		Transform  = 1 << 2,
-		Children   = 1 << 3,
-		Colour     = 1 << 4,
-		ColourMask = 1 << 5,
-		Flags      = 1 << 6,
-		Animation  = 1 << 7,
+		None         = 0U,
+		All          = ~0U,
+		Name         = 1 << 0,
+		Model        = 1 << 1,
+		Transform    = 1 << 2,
+		Children     = 1 << 3,
+		Colour       = 1 << 4,
+		ColourMask   = 1 << 5,
+		Reflectivity = 1 << 6,
+		Flags        = 1 << 7,
+		Animation    = 1 << 8,
 		_bitwise_operators_allowed,
 	};
 	enum class EView3DGizmoEvent :int // ELdrGizmoEvent 
@@ -325,18 +328,20 @@ extern "C"
 		};
 
 		View3DTexture m_diff_tex;
-		View3DTexture m_env_map;
 		ShaderMap     m_smap;
+		float         m_relative_reflectivity;
 	};
 	struct View3DNugget
 	{
-		EView3DPrim    m_topo;
-		EView3DGeom    m_geom;
-		UINT32         m_v0, m_v1;       // Vertex buffer range. Set to 0,0 to mean the whole buffer
-		UINT32         m_i0, m_i1;       // Index buffer range. Set to 0,0 to mean the whole buffer
-		BOOL           m_has_alpha;      // True of the nugget contains transparent elements
-		BOOL           m_range_overlaps; // True if the nugget V/I range overlaps earlier nuggets
-		View3DMaterial m_mat;
+		EView3DPrim     m_topo;
+		EView3DGeom     m_geom;
+		EView3DCullMode m_cull_mode;
+		EView3DFillMode m_fill_mode;
+		UINT32          m_v0, m_v1;       // Vertex buffer range. Set to 0,0 to mean the whole buffer
+		UINT32          m_i0, m_i1;       // Index buffer range. Set to 0,0 to mean the whole buffer
+		BOOL            m_has_alpha;      // True of the nugget contains transparent elements
+		BOOL            m_range_overlaps; // True if the nugget V/I range overlaps earlier nuggets
+		View3DMaterial  m_mat;
 	};
 	struct View3DImageInfo
 	{
@@ -366,6 +371,7 @@ extern "C"
 	};
 	struct View3DTextureOptions
 	{
+		View3DM4x4                 m_t2s;
 		DXGI_FORMAT                m_format;
 		UINT                       m_mips;
 		D3D11_FILTER               m_filter;
@@ -377,6 +383,17 @@ extern "C"
 		UINT                       m_colour_key;
 		BOOL                       m_has_alpha;
 		BOOL                       m_gdi_compatible;
+		char const*                m_dbg_name;
+	};
+	struct View3DCubeMapOptions
+	{
+		View3DM4x4                 m_cube2w;
+		DXGI_FORMAT                m_format;
+		D3D11_FILTER               m_filter;
+		D3D11_TEXTURE_ADDRESS_MODE m_addrU;
+		D3D11_TEXTURE_ADDRESS_MODE m_addrV;
+		D3D11_BIND_FLAG            m_bind_flags;
+		D3D11_RESOURCE_MISC_FLAG   m_misc_flags;
 		char const*                m_dbg_name;
 	};
 	struct View3DWindowOptions
@@ -532,6 +549,7 @@ extern "C"
 	VIEW3D_API float        __stdcall View3D_WindowAnimTimeGet        (View3DWindow window);
 	VIEW3D_API void         __stdcall View3D_WindowAnimTimeSet        (View3DWindow window, float time_s);
 	VIEW3D_API void         __stdcall View3D_WindowHitTest            (View3DWindow window, View3DHitTestRay const* rays, View3DHitTestResult* hits, int ray_count, float snap_distance, EView3DHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count);
+	VIEW3D_API void         __stdcall View3D_WindowEnvMapSet          (View3DWindow window, View3DCubeMap env_map);
 
 	// Camera
 	VIEW3D_API void                  __stdcall View3D_CameraToWorldGet      (View3DWindow window, View3DM4x4& c2w);
@@ -575,10 +593,10 @@ extern "C"
 	VIEW3D_API EView3DNavOp          __stdcall View3D_MouseBtnToNavOp       (int mk);
 
 	// Lights
-	VIEW3D_API void        __stdcall View3D_LightProperties          (View3DWindow window, View3DLight& light);
-	VIEW3D_API void        __stdcall View3D_SetLightProperties       (View3DWindow window, View3DLight const& light);
+	VIEW3D_API void        __stdcall View3D_LightPropertiesGet       (View3DWindow window, View3DLight& light);
+	VIEW3D_API void        __stdcall View3D_LightPropertiesSet       (View3DWindow window, View3DLight const& light);
 	VIEW3D_API void        __stdcall View3D_LightSource              (View3DWindow window, View3DV4 position, View3DV4 direction, BOOL camera_relative);
-	VIEW3D_API void        __stdcall View3D_ShowLightingDlg          (View3DWindow window);
+	VIEW3D_API void        __stdcall View3D_LightShowDialog          (View3DWindow window);
 
 	// Objects
 	VIEW3D_API GUID            __stdcall View3D_ObjectContextIdGet       (View3DObject object);
@@ -610,6 +628,8 @@ extern "C"
 	VIEW3D_API void            __stdcall View3D_ObjectFlagsSet           (View3DObject object, EView3DFlags flags, BOOL state, char const* name);
 	VIEW3D_API View3DColour    __stdcall View3D_ObjectColourGet          (View3DObject object, BOOL base_colour, char const* name);
 	VIEW3D_API void            __stdcall View3D_ObjectColourSet          (View3DObject object, View3DColour colour, UINT32 mask, char const* name, EView3DColourOp op, float op_value);
+	VIEW3D_API float           __stdcall View3D_ObjectReflectivityGet    (View3DObject object, char const* name);
+	VIEW3D_API void            __stdcall View3D_ObjectReflectivitySet    (View3DObject object, float reflectivity, char const* name);
 	VIEW3D_API BOOL            __stdcall View3D_ObjectWireframeGet       (View3DObject object, char const* name);
 	VIEW3D_API void            __stdcall View3D_ObjectWireframeSet       (View3DObject object, BOOL wireframe, char const* name);
 	VIEW3D_API void            __stdcall View3D_ObjectResetColour        (View3DObject object, char const* name);
@@ -619,8 +639,9 @@ extern "C"
 	// Materials
 	VIEW3D_API View3DTexture __stdcall View3D_TextureCreate               (UINT32 width, UINT32 height, void const* data, UINT32 data_size, View3DTextureOptions const& options);
 	VIEW3D_API View3DTexture __stdcall View3D_TextureCreateFromUri        (wchar_t const* resource, UINT32 width, UINT32 height, View3DTextureOptions const& options);
+	VIEW3D_API View3DCubeMap __stdcall View3D_CubeMapCreateFromUri        (wchar_t const* resource, UINT32 width, UINT32 height, View3DCubeMapOptions const& options);
 	VIEW3D_API void          __stdcall View3D_TextureLoadSurface          (View3DTexture tex, int level, char const* tex_filepath, RECT const* dst_rect, RECT const* src_rect, UINT32 filter, View3DColour colour_key);
-	VIEW3D_API void          __stdcall View3D_TextureDelete               (View3DTexture tex);
+	VIEW3D_API void          __stdcall View3D_TextureRelease              (View3DTexture tex);
 	VIEW3D_API void          __stdcall View3D_TextureGetInfo              (View3DTexture tex, View3DImageInfo& info);
 	VIEW3D_API EView3DResult __stdcall View3D_TextureGetInfoFromFile      (char const* tex_filepath, View3DImageInfo& info);
 	VIEW3D_API void          __stdcall View3D_TextureSetFilterAndAddrMode (View3DTexture tex, D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV);

@@ -43,6 +43,7 @@ namespace pr
 			DSBlock            , // pr::rdr::DSBlock
 			RSBlock            , // pr::rdr::RSBlock
 			TintColour32       , // pr::Colour32
+			EnvMapReflectivity , // float
 			UniqueId           , // int32
 			SSSize             , // pr::v2 (screen space size)
 		};
@@ -64,6 +65,7 @@ namespace pr
 			case EInstComp::DSBlock:             return sizeof(pr::rdr::DSBlock);
 			case EInstComp::RSBlock:             return sizeof(pr::rdr::RSBlock);
 			case EInstComp::TintColour32:        return sizeof(pr::Colour32);
+			case EInstComp::EnvMapReflectivity:  return sizeof(float);
 			case EInstComp::UniqueId:            return sizeof(pr::int32);
 			case EInstComp::SSSize:              return sizeof(pr::v2);
 			default: throw std::exception("Unknown instance component type");

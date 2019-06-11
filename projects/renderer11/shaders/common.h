@@ -65,17 +65,43 @@ namespace pr
 		}
 
 		// Set the CBuffer model constants flags
-		template <typename TCBuf> void SetModelFlags(NuggetData const& nug, int inst_id, TCBuf& cb)
+		template <typename TCBuf> void SetModelFlags(BaseInstance const& inst, NuggetData const& nug, Scene const& scene, TCBuf& cb)
 		{
-			auto model_flags =
-				(pr::AllSet(nug.m_geom, EGeom::Norm) ? (1 << 0) : 0);
+			auto model_flags = 0;
+			{
+				// Has normals
+				if (pr::AllSet(nug.m_geom, EGeom::Norm))
+					model_flags |= 1 << 0;
+			}
 
-			auto texture_flags = 
-				(pr::AllSet(nug.m_geom, EGeom::Tex0) && nug.m_tex_diffuse != nullptr ? (1 << 0) : 0) |
-				(nug.m_tex_envmap != nullptr ? (1 << 1) : 0);
+			auto texture_flags = 0;
+			{
+				// Has diffuse texture
+				if (pr::AllSet(nug.m_geom, EGeom::Tex0) && nug.m_tex_diffuse != nullptr)
+					texture_flags |= 1 << 0;
 
-			auto alpha_flags =
-				(nug.m_sort_key.Group() > ESortGroup::PreAlpha ? (1 << 0) : 0);
+				// Is reflective
+				if (float const* reflec;
+					scene.m_global_envmap != nullptr &&                                              // There is an env map
+					pr::AllSet(nug.m_geom, EGeom::Norm) &&                                           // The model contains normals
+					(reflec = inst.find<float>(EInstComp::EnvMapReflectivity), reflec != nullptr) && // The instance has a reflectivity value
+					*reflec * nug.m_relative_reflectivity != 0                                       // and the reflectivity isn't zero
+					)
+					texture_flags |= 1 << 1;
+			}
+
+			auto alpha_flags = 0;
+			{
+				// Has alpha pixels
+				if (nug.m_sort_key.Group() > ESortGroup::PreAlpha)
+					alpha_flags |= 1 << 0;
+			}
+
+			auto inst_id = 0;
+			{
+				// Unique id for this instance
+				inst_id = UniqueId(inst);
+			}
 
 			cb.m_flags = iv4{ model_flags, texture_flags, alpha_flags, inst_id };
 		}
@@ -113,13 +139,16 @@ namespace pr
 				: pr::m4x4Identity;
 		}
 
-		// Set the environment map texture properties of a constants buffer
-		template <typename TCBuf> void SetEnvMap(NuggetData const& nug, TCBuf& cb)
+		// Set the environment map properties of a constants buffer
+		template <typename TCBuf> void SetEnvMap(BaseInstance const& inst, NuggetData const& nug, TCBuf& cb)
 		{
-			(void)nug,cb; // nothing as yet
+			auto reflectivity = inst.find<float>(EInstComp::EnvMapReflectivity);
+			cb.m_env_reflectivity = reflectivity != nullptr
+				? *reflectivity * nug.m_relative_reflectivity
+				: 0.0f;
 		}
 
-		// Helper for setting scene view constants
+		// Set the scene view constants
 		inline void SetViewConstants(SceneView const& view, hlsl::Camera& cb)
 		{
 			cb.m_c2w = view.CameraToWorld();
@@ -128,7 +157,7 @@ namespace pr
 			cb.m_w2s = cb.m_c2s * cb.m_w2c;
 		}
 
-		// Helper for setting lighting constants
+		// Set the lighting constants
 		inline void SetLightingConstants(Light const& light, hlsl::Light& cb)
 		{
 			cb.m_info         = iv4(int(light.m_type),0,0,0);
@@ -140,7 +169,13 @@ namespace pr
 			cb.m_spot         = v4(light.m_inner_cos_angle, light.m_outer_cos_angle, light.m_range, light.m_falloff);
 		}
 
-		// Helper for setting shadow map constants
+		// Set the env-map to world orientation
+		inline void SetEnvMapConstants(TextureCube* env_map, hlsl::EnvMap& cb)
+		{
+			cb.m_w2env = InvertFast(env_map->m_cube2w);
+		}
+
+		// Set the shadow map constants
 		inline void SetShadowMapConstants(SceneView const& view, int smap_count, hlsl::Shadow& cb)
 		{
 			auto shadow_frustum = view.ShadowFrustum();

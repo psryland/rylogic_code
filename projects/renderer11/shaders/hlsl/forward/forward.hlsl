@@ -12,8 +12,8 @@ Texture2D<float4> m_texture0 :register(t0);
 SamplerState      m_sampler0 :register(s0);
 
 // Environment map
-TextureCube m_envmap_texture :register(t1);
-SamplerState m_envmap_sampler :register(s1);
+TextureCube<float4> m_envmap_texture :register(t1);
+SamplerState        m_envmap_sampler :register(s1);
 
 // Shadow map
 Texture2D<float2> m_smap_texture[1] :register(t2);
@@ -78,7 +78,7 @@ PSOut main(PSIn In)
 
 	// Env Map
 	if (HasEnvMap)
-		Out.diff = EnvMap(In.ws_vert, In.ws_norm, m_cam.m_c2w[3], Out.diff);
+		Out.diff = EnvironmentMap(m_env_map, In.ws_vert, In.ws_norm, m_cam.m_c2w[3], Out.diff);
 
 	// Shadows
 	float light_visible = 1.0f;

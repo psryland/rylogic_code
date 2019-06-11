@@ -158,12 +158,6 @@
     <ClInclude Include="..\projects\renderer11\directxtex\scoped.h">
       <Filter>directxtex</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\renderer11\textures\dds_texture_loader.h">
-      <Filter>textures</Filter>
-    </ClInclude>
-    <ClInclude Include="..\projects\renderer11\textures\wic_texture_loader.h">
-      <Filter>textures</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\renderer11\textures\projected_texture.h">
       <Filter>textures</Filter>
     </ClInclude>
@@ -275,6 +269,9 @@
     <ClInclude Include="..\include\pr\renderer11\textures\texture_cube.h">
       <Filter>textures</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\textures\texture_loader.h">
+      <Filter>textures</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\renderer11\util\stdafx.cpp">
@@ -364,12 +361,6 @@
     <ClCompile Include="..\projects\renderer11\directxtex\DirectXTexWIC.cpp">
       <Filter>directxtex</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\renderer11\textures\dds_texture_loader.cpp">
-      <Filter>textures</Filter>
-    </ClCompile>
-    <ClCompile Include="..\projects\renderer11\textures\wic_texture_loader.cpp">
-      <Filter>textures</Filter>
-    </ClCompile>
     <ClCompile Include="..\projects\renderer11\render\state_stack.cpp">
       <Filter>render</Filter>
     </ClCompile>
@@ -428,6 +419,12 @@
       <Filter>textures</Filter>
     </ClCompile>
     <ClCompile Include="..\projects\renderer11\textures\texture_2d.cpp">
+      <Filter>textures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\textures\texture_loader_wic.cpp">
+      <Filter>textures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\textures\texture_loader_dds.cpp">
       <Filter>textures</Filter>
     </ClCompile>
   </ItemGroup>

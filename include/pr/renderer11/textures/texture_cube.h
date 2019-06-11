@@ -19,6 +19,9 @@ namespace pr::rdr
 		//           Bottom
 		//   - Each time MatMgr.CreateTexture is called, a new Texture2D instance is allocated.
 		//     However, the resources associated with this texture may be shared with other Textures.
+		
+		// Cube map to world transform
+		m4x4 m_cube2w;
 
 		TextureCube(TextureManager* mgr, RdrId id, ID3D11Texture2D* tex, ID3D11ShaderResourceView* srv, SamplerDesc const& sdesc, char const* name);
 

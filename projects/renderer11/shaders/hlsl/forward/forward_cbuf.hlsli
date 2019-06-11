@@ -1,6 +1,6 @@
 //***********************************************
 // Renderer
-//  Copyright © Rylogic Ltd 2014
+//  Copyright Â© Rylogic Ltd 2014
 //***********************************************
 // Constant buffer definitions for gbuffer shader
 // This file is included from C++ source as well
@@ -22,9 +22,12 @@ cbuffer CBufFrame :reg(b0)
 	// Global lighting
 	Light m_global_light;
 
+	// EnvMap
+	EnvMap m_env_map;
+
 	// Shadows
 	Shadow m_shadow;
-	
+
 	// Projected textures
 	float4 m_proj_tex_count;
 	row_major float4x4 m_proj_tex[PR_RDR_MAX_PROJECTED_TEXTURES];
@@ -56,6 +59,8 @@ cbuffer CBufModel :reg(b1)
 	// Tinting
 	float4 m_tint; // object tint colour
 
+	// EnvMap
+	float m_env_reflectivity; // Reflectivity of the environment map
 };
 
 #endif

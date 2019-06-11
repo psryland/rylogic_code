@@ -817,6 +817,16 @@ namespace view3d
 		});
 	}
 
+	// Get/Set the global environment map for this window
+	View3DCubeMap Window::EnvMap() const
+	{
+		return m_scene.m_global_envmap.get();
+	}
+	void Window::EnvMap(View3DCubeMap env_map)
+	{
+		m_scene.m_global_envmap = TextureCubePtr(env_map, true);
+	}
+
 	// Create stock models such as the focus point, origin, etc
 	void Window::CreateStockModels()
 	{

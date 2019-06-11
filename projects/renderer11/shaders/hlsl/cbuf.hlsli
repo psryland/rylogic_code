@@ -1,6 +1,6 @@
 //***********************************************
 // Renderer
-//  Copyright © Rylogic Ltd 2014
+//  Copyright (c) Rylogic Ltd 2014
 //***********************************************
 // Hacks to make shader struct declarations compile in C++.
 // Allowing DRY declaration of shader types

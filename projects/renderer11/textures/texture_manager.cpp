@@ -4,6 +4,7 @@
 //*********************************************
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/textures/texture_manager.h"
+#include "pr/renderer11/textures/texture_loader.h"
 #include "pr/renderer11/textures/texture_2d.h"
 #include "pr/renderer11/textures/texture_cube.h"
 #include "pr/renderer11/textures/image.h"
@@ -11,55 +12,51 @@
 #include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/util/allocator.h"
 #include "pr/renderer11/util/util.h"
-#include "renderer11/textures/dds_texture_loader.h"
-#include "renderer11/textures/wic_texture_loader.h"
 
 namespace pr::rdr
 {
-	// Create a DX texture from a 'DDS,JPG,PNG,TGA,GIF,BMP' file or data in memory
-	void LoadTextureFromFile(ID3D11Device* device, wchar_t const* filepath, ID3D11Texture2D*& tex, ID3D11ShaderResourceView*& srv)
+	// Parse an embedded resource string of the form:
+	//   "@<hmodule|module_name>:<res_type>:<res_name>"
+	void ParseEmbeddedResourceUri(wchar_t const* resource_uri, HMODULE& hmodule, wstring32& res_type, wstring32& res_name)
 	{
-		auto extn = pr::filesys::GetExtensionInPlace(filepath);
+		if (resource_uri == nullptr || resource_uri[0] != '@')
+			throw std::runtime_error("Not an embedded resource URI");
 
-		// If the file is a DDS file, use the faster DDS loader
-		if (_wcsicmp(extn, L"DDS") == 0)
-		{
-			// This does not support some DDS formats tho, so might be worth trying the 'directxtex' DDS loader
-			D3DPtr<ID3D11Resource> res;
-			pr::Throw(DirectX::CreateDDSTextureFromFile(device, filepath, &res.m_ptr, &srv));
-			pr::Throw(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&tex));
-		}
-		else
-		{
-			D3DPtr<ID3D11DeviceContext> dc;
-			device->GetImmediateContext(&dc.m_ptr);
+		hmodule = nullptr;
+		res_type.resize(0);
+		res_name.resize(0);
 
-			// Otherwise, use the WIC loader
-			D3DPtr<ID3D11Resource> res;
-			pr::Throw(DirectX::CreateWICTextureFromFile(device, dc.m_ptr, filepath, &res.m_ptr, &srv));
-			pr::Throw(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&tex));
-		}
-	}
-	void LoadTextureFromMemory(ID3D11Device* device, void const* data, size_t size, bool dds, ID3D11Texture2D*& tex, ID3D11ShaderResourceView*& srv)
-	{
-		// If the data is a DDS file, use the faster DDS loader
-		if (dds)
+		auto div0 = resource_uri;
+		auto div1 = *div0 != 0 ? str::FindChar(div0 + 1, ':') : div0;
+		auto div2 = *div1 != 0 ? str::FindChar(div1 + 1, ':') : div1;
+		if (*div2 == 0)
+			throw std::runtime_error(FmtS("Embedded resource URI (%S) invalid. Expected format \"@<hmodule|module_name>:<res_type>:<res_name>\"", resource_uri));
+		
+		// Read the HMODULE handle from a string name or 
+		auto HModule = [=](wchar_t const* s, wchar_t const* e)
 		{
-			// This does not support some DDS formats tho, so might be worth trying the 'directxtex' DDS loader
-			D3DPtr<ID3D11Resource> res;
-			pr::Throw(DirectX::CreateDDSTextureFromMemory(device, data, size, &res.m_ptr, &srv));
-			pr::Throw(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&tex));
-		}
-		else
-		{
-			D3DPtr<ID3D11DeviceContext> dc;
-			device->GetImmediateContext(&dc.m_ptr);
+			wstring32 name(s, e);
+			if (name.empty())
+				return HMODULE();
 
-			// Otherwise, use the WIC loader
-			D3DPtr<ID3D11Resource> res;
-			pr::Throw(DirectX::CreateWICTextureFromMemory(device, dc.m_ptr, static_cast<uint8_t const*>(data), size, &res.m_ptr, &srv));
-			pr::Throw(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&tex));
-		}
+			if (auto h = GetModuleHandleW(name.c_str()); h != nullptr)
+				return h;
+
+			wchar_t* end = nullptr;
+			ptrdiff_t address = std::wcstoll(s, &end, 16);
+			if (auto h = reinterpret_cast<HMODULE>((uint8_t*)nullptr + (end == e ? address : 0)); h != nullptr)
+				return h;
+
+			throw std::runtime_error(FmtS("Embedded resource URI (%S) not found. HMODULE could not be determined", resource_uri));
+		};
+
+		res_name.append(div2 + 1);
+		res_type.append(div1 + 1, div2);
+		hmodule = HModule(div0 + 1, div1);
+
+		// Both name and type are required
+		if (res_name.empty() || res_type.empty())
+			throw std::runtime_error(FmtS("Embedded resource URI (%S) not found. Resource name and type could not be determined", resource_uri));
 	}
 
 	// Constructor
@@ -68,7 +65,7 @@ namespace pr::rdr
 		,m_mem_tracker()
 		,m_rdr(rdr)
 		,m_lookup_tex(mem)
-		,m_lookup_fname(mem)
+		,m_lookup_dxtex(mem)
 		,m_stock_textures()
 		,m_gdiplus()
 		,m_eh_resize()
@@ -124,6 +121,12 @@ namespace pr::rdr
 		if (resource_name == nullptr || *resource_name == 0)
 			throw std::runtime_error("Filepath must be given");
 
+		TextureDesc tdesc;
+		string32 tex_name;
+		RdrId src_id = 0;
+		D3DPtr<ID3D11Resource> res;
+		D3DPtr<ID3D11ShaderResourceView> srv;
+
 		// Accept stock texture strings: #black, #white, #checker, etc
 		// This is handy for model files that contain string paths for textures.
 		// The code that loads these models doesn't need to handle strings such as '#white' as a special case
@@ -139,11 +142,6 @@ namespace pr::rdr
 			return CloneTexture2D(id, stock_tex.get(), &sdesc, name);
 		}
 
-		ID3D11Texture2D* tex = nullptr;
-		ID3D11ShaderResourceView* srv = nullptr;
-		string32 tex_name;
-		RdrId src_id = 0;
-
 		// Create a texture from embedded resource
 		if (resource_name[0] == '@')
 		{
@@ -151,56 +149,60 @@ namespace pr::rdr
 			tex_name = name ? name : To<string32>(str::FindLastOf(resource_name, L":"));
 
 			// Look for an existing DX texture corresponding to the resource
-			auto iter = m_lookup_fname.find(src_id);
-			if (iter != end(m_lookup_fname))
+			auto iter = m_lookup_dxtex.find(src_id);
+			if (iter != end(m_lookup_dxtex))
 			{
-				tex = iter->second;
+				res = D3DPtr<ID3D11Resource>(iter->second.res, true);
+				srv = D3DPtr<ID3D11ShaderResourceView>(iter->second.srv, true);
 			}
 			else
 			{
 				// Parse the embedded resource string: "@<module>:<res_type>:<res_name>"
-				HMODULE hmodule = nullptr;
-				std::wstring res_type, res_name;
-				str::Split(resource_name + 1, ":", [&](auto const& s, size_t i, size_t j, int n)
-				{
-					switch (n)
-					{
-					case 0: hmodule = reinterpret_cast<HMODULE>(std::wcstoll(&s[i], nullptr, 16) + (char*)nullptr); break;
-					case 1: res_type.assign(&s[i], j - i); break;
-					case 2: res_name.assign(&s[i], j - i); break;
-					}
-				});
+				HMODULE hmodule; wstring32 res_type, res_name;
+				ParseEmbeddedResourceUri(resource_name, hmodule, res_type, res_name);
 
 				// Get the embedded resource
-				auto res = pr::resource::Read<char>(res_name.c_str(), res_type.c_str(), hmodule);
-				LoadTextureFromMemory(lock.D3DDevice(), res.m_data, res.m_len, str::EqualI(res_type, "dds"), tex, srv);
-				AddLookup(m_lookup_fname, src_id, tex);
+				auto emb = resource::Read<uint8_t>(res_name.c_str(), res_type.c_str(), hmodule);
+				auto data = ImageBytes{ emb.m_data, emb.m_len };
+
+				// Create the texture
+				CreateTextureFromMemory(lock.D3DDevice(), data, 0, false, tdesc, res, srv);
+				AddLookup(m_lookup_dxtex, src_id, DxTexPointers{ res.get(), srv.get() });
 			}
 		}
+
 		// Otherwise, create from file on disk
 		else
 		{
+			using namespace std::filesystem;
+			auto filepath = canonical(path(resource_name));
+
 			// Generate an id from the filepath
-			src_id = MakeId(pr::filesys::Standardise<wstring256>(resource_name).c_str());
-			tex_name = name ? name : To<string32>(filesys::GetFilename<wstring256>(resource_name));
+			src_id = MakeId(filepath.c_str());
+			tex_name = name ? name : To<string32>(filepath.filename().c_str());
 
 			// Look for an existing DX texture corresponding to the filepath
-			auto iter = m_lookup_fname.find(src_id);
-			if (iter != m_lookup_fname.end())
+			auto iter = m_lookup_dxtex.find(src_id);
+			if (iter != end(m_lookup_dxtex))
 			{
-				tex = iter->second;
+				res = D3DPtr<ID3D11Resource>(iter->second.res, true);
+				srv = D3DPtr<ID3D11ShaderResourceView>(iter->second.srv, true);
 			}
 			// Otherwise, if not loaded already, load now
 			else
 			{
-				LoadTextureFromFile(lock.D3DDevice(), resource_name, tex, srv);
-				AddLookup(m_lookup_fname, src_id, tex);
+				CreateTextureFromFile(lock.D3DDevice(), filepath, 0, false, tdesc, res, srv);
+				AddLookup(m_lookup_dxtex, src_id, DxTexPointers{ res.get(), srv.get() });
 			}
 		}
 
-		// Allocate the texture instance
+		// Convert the resource pointer to a texture pointer
+		D3DPtr<ID3D11Texture2D> tex;
+		Throw(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&tex.m_ptr));
 		auto sort_id = static_cast<SortKeyId>(m_lookup_tex.size() % SortKey::MaxTextureId);
-		Texture2DPtr inst(Allocator<Texture2D>(m_mem_funcs).New(this, id, tex, srv, sdesc, sort_id, has_alpha, tex_name.c_str()), true);
+
+		// Allocate the texture instance
+		Texture2DPtr inst(Allocator<Texture2D>(m_mem_funcs).New(this, id, tex.get(), srv.get(), sdesc, sort_id, has_alpha, tex_name.c_str()), true);
 		assert(m_mem_tracker.add(inst.get()));
 		inst->m_src_id = src_id;
 		AddLookup(m_lookup_tex, inst->m_id, inst.m_ptr);
@@ -323,19 +325,12 @@ namespace pr::rdr
 	}
 
 	// Create a cube map texture instance
-	TextureCubePtr TextureManager::CreateTextureCube(RdrId id, wchar_t const* resource_name, Texture2DDesc const& tdesc, SamplerDesc const& sdesc, char const* name)
+	TextureCubePtr TextureManager::CreateTextureCube(RdrId id, wchar_t const* resource_name, SamplerDesc const& sdesc, char const* name)
 	{
 		// Notes:
-		//  - A cube map is just a 2D texture with special handling by DX.
-		//  - The cube texture should look like:
-		//            Top
-		//     Left  Front  Right  Back
-		//           Bottom
-		//    Where Width/Height are the dimensions of the front section of the texture.
-		//  - The texture description is used for all faces of the cube map
-
-		assert("Texture description should describe a cube map" && tdesc.ArraySize > 1);
-		assert("Texture description should describe a cube map" && (tdesc.MiscFlags & D3D11_RESOURCE_MISC_TEXTURECUBE) != 0);
+		//  - A cube map is an array of 6 2D textures.
+		//  - DDS image files contain all six faces in the single file. Other image types need to be loaded separately.
+		//  - 'resource_name' should contain '??' where the first '?' is the sign (+,-) and the second '?' is the axis (x,y,z)
 
 		Renderer::Lock lock(m_rdr);
 
@@ -347,10 +342,11 @@ namespace pr::rdr
 		if (resource_name == nullptr || *resource_name == 0)
 			throw std::runtime_error("Filepath must be given");
 
-		ID3D11Texture2D* tex = nullptr;
-		ID3D11ShaderResourceView* srv = nullptr;
+		TextureDesc tdesc;
 		string32 tex_name;
 		RdrId src_id = 0;
+		D3DPtr<ID3D11Resource> res;
+		D3DPtr<ID3D11ShaderResourceView> srv;
 
 		// Create a texture from embedded resource
 		if (resource_name[0] == '@')
@@ -359,55 +355,70 @@ namespace pr::rdr
 			tex_name = name ? name : To<string32>(str::FindLastOf(resource_name, L":"));
 
 			// Look for an existing DX texture corresponding to the resource
-			auto iter = m_lookup_fname.find(src_id);
-			if (iter != end(m_lookup_fname))
+			auto iter = m_lookup_dxtex.find(src_id);
+			if (iter != end(m_lookup_dxtex))
 			{
-				tex = iter->second;
+				res = D3DPtr<ID3D11Resource>(iter->second.res, true);
+				srv = D3DPtr<ID3D11ShaderResourceView>(iter->second.srv, true);
 			}
 			else
 			{
 				// Parse the embedded resource string: "@<module>:<res_type>:<res_name>"
-				HMODULE hmodule = nullptr;
-				std::wstring res_type, res_name;
-				str::Split(resource_name + 1, ":", [&](auto const& s, size_t i, size_t j, int n)
-				{
-					switch (n)
-					{
-					case 0: hmodule = reinterpret_cast<HMODULE>(std::wcstoll(&s[i], nullptr, 16) + (char*)nullptr); break;
-					case 1: res_type.assign(&s[i], j - i); break;
-					case 2: res_name.assign(&s[i], j - i); break;
-					}
-				});
+				HMODULE hmodule; wstring32 res_type, res_name;
+				ParseEmbeddedResourceUri(resource_name, hmodule, res_type, res_name);
 
-				// Get the embedded resource
-				auto res = pr::resource::Read<char>(res_name.c_str(), res_type.c_str(), hmodule);
-				LoadTextureFromMemory(lock.D3DDevice(), res.m_data, res.m_len, str::EqualI(res_type, "dds"), tex, srv);
-				AddLookup(m_lookup_fname, src_id, tex);
+				vector<ImageBytes> images;
+
+				// Read each face of the cube
+				auto idx = res_name.find(L"??");
+				if (idx == std::wstring::npos)
+					throw std::runtime_error("Cube map texture URI pattern should contain '??'");
+
+				for (auto face : { L"+x", L"-x", L"+y", L"-y", L"+z", L"-z" })
+				{
+					res_name[idx + 0] = face[0];
+					res_name[idx + 1] = face[1];
+					auto emb = resource::Read<uint8_t>(res_name.c_str(), res_type.c_str(), hmodule);
+					images.push_back(ImageBytes{ emb.m_data, emb.m_len });
+				}
+
+				// Create the texture
+				CreateTextureFromMemory(lock.D3DDevice(), std::span{images.data(), images.size()}, 1, true, tdesc, res, srv);
+				AddLookup(m_lookup_dxtex, src_id, DxTexPointers{ res.get(), srv.get() });
 			}
 		}
+
 		// Otherwise, create from file on disk
 		else
 		{
+			using namespace std::filesystem;
+			auto filepath = canonical(path(resource_name));
+
 			// Generate an id from the filepath
-			src_id = MakeId(pr::filesys::Standardise<wstring256>(resource_name).c_str());
-			tex_name = name ? name : To<string32>(filesys::GetFilename<wstring256>(resource_name));
+			src_id = MakeId(filepath.c_str());
+			tex_name = name ? name : To<string32>(filepath.filename().c_str());
 
 			// Look for an existing DX texture corresponding to the filepath
-			auto iter = m_lookup_fname.find(src_id);
-			if (iter != m_lookup_fname.end())
+			auto iter = m_lookup_dxtex.find(src_id);
+			if (iter != end(m_lookup_dxtex))
 			{
-				tex = iter->second;
+				res = D3DPtr<ID3D11Resource>(iter->second.res, true);
+				srv = D3DPtr<ID3D11ShaderResourceView>(iter->second.srv, true);
 			}
 			// Otherwise, if not loaded already, load now
 			else
 			{
-				LoadTextureFromFile(lock.D3DDevice(), resource_name, tex, srv);
-				AddLookup(m_lookup_fname, src_id, tex);
+				CreateTextureFromFile(lock.D3DDevice(), filepath, 1, true, tdesc, res, srv);
+				AddLookup(m_lookup_dxtex, src_id, DxTexPointers{ res.get(), srv.get() });
 			}
 		}
 
+		// Convert the resource pointer to a texture pointer
+		D3DPtr<ID3D11Texture2D> tex;
+		Throw(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&tex.m_ptr));
+
 		// Allocate the texture instance
-		TextureCubePtr inst(Allocator<TextureCube>(m_mem_funcs).New(this, id, tex, srv, sdesc, tex_name.c_str()), true);
+		TextureCubePtr inst(Allocator<TextureCube>(m_mem_funcs).New(this, id, tex.get(), srv.get(), sdesc, tex_name.c_str()), true);
 		assert(m_mem_tracker.add(inst.get()));
 		inst->m_src_id = src_id;
 		AddLookup(m_lookup_tex, inst->m_id, inst.m_ptr);
@@ -478,8 +489,8 @@ namespace pr::rdr
 		// then check whether it is in the 'fname' lookup table and remove it if it is.
 		if (tex->m_src_id != 0 && tex->m_res.RefCount() == 1)
 		{
-			auto jter = m_lookup_fname.find(tex->m_src_id);
-			if (jter != m_lookup_fname.end()) m_lookup_fname.erase(jter);
+			auto jter = m_lookup_dxtex.find(tex->m_src_id);
+			if (jter != end(m_lookup_dxtex)) m_lookup_dxtex.erase(jter);
 		}
 
 		// Delete the texture and remove the entry from the RdrId lookup map

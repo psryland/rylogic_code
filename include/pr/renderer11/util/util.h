@@ -43,6 +43,12 @@ namespace pr::rdr
 		return pr::hash::Hash(str);
 	}
 
+	// Create a 4-byte CC code
+	constexpr uint32_t MakeFourCC(uint8_t ch0, uint8_t ch1, uint8_t ch2, uint8_t ch3)
+	{
+		return static_cast<uint32_t>(ch0) | (static_cast<uint32_t>(ch1) << 8) | (static_cast<uint32_t>(ch2) << 16) | (static_cast<uint32_t>(ch3) << 24);
+	}
+
 	// Compile time type to 'DXGI_FORMAT' conversion
 	template <typename Fmt> struct DxFormat { static const DXGI_FORMAT value = DXGI_FORMAT_UNKNOWN;            static const int size = sizeof(char  ); };
 	template <> struct DxFormat<uint16>     { static const DXGI_FORMAT value = DXGI_FORMAT_R16_UINT;           static const int size = sizeof(uint16); };
@@ -91,6 +97,7 @@ namespace pr::rdr
 	iv2 Pitch(Texture2DDesc const& tdesc);
 
 	// Returns the number of expected mip levels for a given width x height texture
+	size_t MipCount(size_t w, size_t h);
 	size_t MipCount(iv2 size);
 
 	// Returns the dimensions of a mip level 'levels' below the given texture size

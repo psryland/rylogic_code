@@ -61,7 +61,7 @@ namespace pr
 		// module = 0 means 'this exe'
 		// If you're resource is in a dll, you need to use the HMODULE passed to the DllMain function
 		// Note: you can use pr::GetCurrentModule() for 'module'
-		inline bool Find(wchar_t const* name, wchar_t const* type, HMODULE module = 0)
+		inline bool Find(wchar_t const* name, wchar_t const* type, HMODULE module = nullptr)
 		{
 			// Get a handle to the resource
 			auto handle = ::FindResourceW(module, name, type);
@@ -82,7 +82,7 @@ namespace pr
 		// If you're resource is in a dll, you need to use the HMODULE passed to the DllMain function
 		// Note: you can use pr::GetCurrentModule() for 'module'
 		template <typename Type>
-		Resource<Type> Read(wchar_t const* name, wchar_t const* type, HMODULE module = 0)
+		Resource<Type> Read(wchar_t const* name, wchar_t const* type, HMODULE module = nullptr)
 		{
 			// Get a handle to the resource
 			auto handle = ::FindResourceW(module, name, type);

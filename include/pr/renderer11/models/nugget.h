@@ -52,21 +52,32 @@ namespace pr
 		// ModelPtr's that could mean models contain nuggets which contain references to them-
 		// selves, meaning the reference count will not automatically clean up the model.
 		//
+		enum class ENuggetFlag :int
+		{
+			None = 0,
+
+			// Set if the geometry data for the nugget contains alpha colours
+			GeometryHasAlpha = 1 << 0,
+
+			// Set if the tint colour contains alpha
+			TintHasAlpha = 1 << 1,
+
+			_bitwise_operators_allowed,
+		};
 
 		// Nugget data. Common base for NuggetProps and Nugget
 		struct NuggetData
 		{
-			EPrim          m_topo;               // The primitive topology for this nugget
-			EGeom          m_geom;               // The valid geometry components within this range
-			ShaderMap      m_smap;               // The shaders to use (optional, some render steps use their own shaders)
-			Texture2DPtr   m_tex_diffuse;        // Diffuse texture
-			TextureCubePtr m_tex_envmap;         // Environment map texture
-			BSBlock        m_bsb;                // Rendering states
-			DSBlock        m_dsb;                // Rendering states
-			RSBlock        m_rsb;                // Rendering states
-			SortKey        m_sort_key;           // A base sort key for this nugget (typically leave as 0, tex id, alpha, group added automatically if 0)
-			bool           m_geometry_has_alpha; // Set to true if the geometry data for the nugget contains alpha colours
-			bool           m_tint_has_alpha;     // Set to true if the tint colour contains alpha
+			EPrim          m_topo;                  // The primitive topology for this nugget
+			EGeom          m_geom;                  // The valid geometry components within this range
+			ShaderMap      m_smap;                  // The shaders to use (optional, some render steps use their own shaders)
+			Texture2DPtr   m_tex_diffuse;           // Diffuse texture
+			BSBlock        m_bsb;                   // Rendering states
+			DSBlock        m_dsb;                   // Rendering states
+			RSBlock        m_rsb;                   // Rendering states
+			SortKey        m_sort_key;              // A base sort key for this nugget (typically leave as 0, tex id, alpha, group added automatically if 0)
+			float          m_relative_reflectivity; // How reflective this nugget is, relative to the instance. Note: 1.0 means the same as the instance (which might be 0)
+			ENuggetFlag    m_flags;                 // Flags for boolean properties of the nugget
 
 			// When passed in to Model->CreateNugget(), these ranges should be relative to the model.
 			// When copied to the nugget collection for the model they are converted to model buffer relative ranges.

@@ -30,6 +30,7 @@
 #include "pr/common/multi_cast.h"
 #include "pr/common/cast.h"
 #include "pr/common/bstr_t.h"
+#include "pr/common/flags_enum.h"
 #include "pr/container/vector.h"
 #include "pr/container/span.h"
 #include "pr/container/byte_data.h"

@@ -592,6 +592,11 @@ namespace pr
 					p.m_reader.IntS(obj->m_colour_mask, 16);
 					return true;
 				}
+			case EKeyword::Reflectivity:
+				{
+					p.m_reader.RealS(obj->m_env);
+					return true;
+				};
 			case EKeyword::RandColour:
 				{
 					obj->m_base_colour = pr::RandomRGB(g_rng());
@@ -1428,7 +1433,7 @@ namespace pr
 							(!m_colours.empty() ? EGeom::Colr : EGeom::None);
 						nug.m_vrange = pr::rdr::Range::Reset();
 						nug.m_irange = pr::rdr::Range(m_indices.size(), m_indices.size());
-						nug.m_geometry_has_alpha = false;
+						nug.m_flags = SetBits(nug.m_flags, ENuggetFlag::GeometryHasAlpha, false);
 
 						int r = 1;
 						p.m_reader.SectionStart();
@@ -1461,7 +1466,7 @@ namespace pr
 							(!m_texs.empty()    ? EGeom::Tex0 : EGeom::None);
 						nug.m_vrange = pr::rdr::Range::Reset();
 						nug.m_irange = pr::rdr::Range(m_indices.size(), m_indices.size());
-						nug.m_geometry_has_alpha = false;
+						nug.m_flags = SetBits(nug.m_flags, ENuggetFlag::GeometryHasAlpha, false);
 
 						int r = 1;
 						p.m_reader.SectionStart();
@@ -1496,7 +1501,7 @@ namespace pr
 							(!m_texs.empty()    ? EGeom::Tex0 : EGeom::None);
 						nug.m_vrange = pr::rdr::Range::Reset();
 						nug.m_irange = pr::rdr::Range(m_indices.size(), m_indices.size());
-						nug.m_geometry_has_alpha = false;
+						nug.m_flags = SetBits(nug.m_flags, ENuggetFlag::GeometryHasAlpha, false);
 
 						int r = 1;
 						p.m_reader.SectionStart();
@@ -1578,7 +1583,7 @@ namespace pr
 						for (auto i = nug.m_irange.begin(); i != nug.m_irange.end(); ++i)
 						{
 							if (!HasAlpha(m_colours[m_indices[i]])) continue;
-							nug.m_geometry_has_alpha = true;
+							nug.m_flags = SetBits(nug.m_flags, ENuggetFlag::GeometryHasAlpha, true);
 							break;
 						}
 					}
@@ -1930,7 +1935,7 @@ namespace pr
 					nug.m_smap[ERenderStep::ForwardRender].m_gs = arw_shdr;
 					nug.m_vrange = vrange;
 					nug.m_irange = irange;
-					nug.m_geometry_has_alpha = cache.m_vcont[0].m_diff.a != 1.0f;
+					nug.m_flags = SetBits(nug.m_flags, ENuggetFlag::GeometryHasAlpha, cache.m_vcont[0].m_diff.a != 1.0f);
 					obj->m_model->CreateNugget(nug);
 				}
 				{
@@ -1941,7 +1946,7 @@ namespace pr
 					nug.m_smap[ERenderStep::ForwardRender].m_gs = m_line_width != 0 ? static_cast<ShaderPtr>(thk_shdr) : ShaderPtr();
 					nug.m_vrange = vrange;
 					nug.m_irange = irange;
-					nug.m_geometry_has_alpha = props.m_has_alpha;
+					nug.m_flags = SetBits(nug.m_flags, ENuggetFlag::GeometryHasAlpha, props.m_has_alpha);
 					obj->m_model->CreateNugget(nug);
 				}
 				if (m_type & EArrowType::Fwd)
@@ -1953,7 +1958,7 @@ namespace pr
 					nug.m_smap[ERenderStep::ForwardRender].m_gs = arw_shdr;
 					nug.m_vrange = vrange;
 					nug.m_irange = irange;
-					nug.m_geometry_has_alpha = cache.m_vcont.back().m_diff.a != 1.0f;
+					nug.m_flags = SetBits(nug.m_flags, ENuggetFlag::GeometryHasAlpha, cache.m_vcont.back().m_diff.a != 1.0f);
 					obj->m_model->CreateNugget(nug);
 				}
 			}
@@ -3837,6 +3842,8 @@ namespace pr
 					std::swap(object->m_anim, rhs->m_anim);
 				if (AllSet(flags, EUpdateObject::ColourMask))
 					std::swap(object->m_colour_mask, rhs->m_colour_mask);
+				if (AllSet(flags, EUpdateObject::Reflectivity))
+					std::swap(object->m_env, rhs->m_env);
 				if (AllSet(flags, EUpdateObject::Colour))
 					std::swap(object->m_base_colour, rhs->m_base_colour);
 
@@ -3953,6 +3960,7 @@ LR"(// There are a number of other object modifiers that can also be used:
 	0.2 0.5 0.4
 	*Colour {FFFF00FF}       // Override the base colour of the model
 	*ColourMask {FF000000}   // applies: 'child.colour = (obj.base_colour & mask) | (child.base_colour & ~mask)' to all children recursively
+	*Reflectivity {0.3}      // Reflectivity (used with environment mapping)
 	*RandColour              // Apply a random colour to this object
 	*Animation               // Add simple animation to this object
 	{
@@ -5135,7 +5143,7 @@ LR"(// *************************************************************************
 				auto tint_has_alpha = HasAlpha(o->m_colour);
 				for (auto& nug : o->m_model->m_nuggets)
 				{
-					nug.m_tint_has_alpha = tint_has_alpha;
+					nug.m_flags = SetBits(nug.m_flags, ENuggetFlag::TintHasAlpha, tint_has_alpha);
 					nug.UpdateAlphaStates();
 				}
 
@@ -5154,10 +5162,30 @@ LR"(// *************************************************************************
 				auto has_alpha = HasAlpha(o->m_colour);
 				for (auto& nug : o->m_model->m_nuggets)
 				{
-					nug.m_tint_has_alpha = has_alpha;
+					nug.m_flags = SetBits(nug.m_flags, ENuggetFlag::TintHasAlpha, has_alpha);
 					nug.UpdateAlphaStates();
 				}
 
+				return true;
+			}, name);
+		}
+
+		// Get/Set the reflectivity of this object or child objects matching 'name' (see Apply)
+		float LdrObject::Reflectivity(char const* name) const
+		{
+			float env;
+			Apply([&](LdrObject const* o)
+			{
+				env = o->m_env;
+				return false; // stop at the first match
+			}, name);
+			return env;
+		}
+		void LdrObject::Reflectivity(float reflectivity, char const* name)
+		{
+			Apply([=](LdrObject* o)
+			{
+				o->m_env = reflectivity;
 				return true;
 			}, name);
 		}

@@ -207,6 +207,10 @@ namespace view3d
 		// Cast a ray into the scene, returning hit info
 		void HitTest(View3DHitTestRay const* rays, View3DHitTestResult* hits, int ray_count, float snap_distance, EView3DHitTestFlags flags, GUID const* context_ids, int include_count, int exclude_count);
 
+		// Get/Set the global environment map for this window
+		View3DCubeMap EnvMap() const;
+		void EnvMap(View3DCubeMap env_map);
+
 		// Create stock models such as the focus point, origin, etc
 		void CreateStockModels();
 	};

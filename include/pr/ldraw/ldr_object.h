@@ -123,6 +123,7 @@ namespace pr
 			x(CornerRadius         ,= HashI("CornerRadius"        ))\
 			x(RandColour           ,= HashI("RandColour"          ))\
 			x(ColourMask           ,= HashI("ColourMask"          ))\
+			x(Reflectivity          ,=HashI("Reflectivity"        ))\
 			x(Animation            ,= HashI("Animation"           ))\
 			x(Style                ,= HashI("Style"               ))\
 			x(Format               ,= HashI("Format"              ))\
@@ -222,16 +223,17 @@ namespace pr
 		// Flags for partial update of a model
 		enum class EUpdateObject :unsigned int
 		{
-			None       = 0U,
-			All        = ~0U,
-			Name       = 1 << 0,
-			Model      = 1 << 1,
-			Transform  = 1 << 2,
-			Children   = 1 << 3,
-			Colour     = 1 << 4,
-			ColourMask = 1 << 5,
-			Flags      = 1 << 6,
-			Animation  = 1 << 7,
+			None         = 0U,
+			All          = ~0U,
+			Name         = 1 << 0,
+			Model        = 1 << 1,
+			Transform    = 1 << 2,
+			Children     = 1 << 3,
+			Colour       = 1 << 4,
+			ColourMask   = 1 << 5,
+			Reflectivity = 1 << 6,
+			Flags        = 1 << 7,
+			Animation    = 1 << 8,
 			_bitwise_operators_allowed,
 		};
 
@@ -304,6 +306,7 @@ namespace pr
 			x(m4x4            ,m_c2s    ,rdr::EInstComp::C2SOptional        )/*     16 bytes */\
 			x(rdr::ModelPtr   ,m_model  ,rdr::EInstComp::ModelPtr           )/* 4 or 8 bytes */\
 			x(Colour32        ,m_colour ,rdr::EInstComp::TintColour32       )/*      4 bytes */\
+			x(float           ,m_env    ,rdr::EInstComp::EnvMapReflectivity )/*      4 bytes */\
 			x(rdr::SKOverride ,m_sko    ,rdr::EInstComp::SortkeyOverride    )/*      8 bytes */\
 			x(rdr::BSBlock    ,m_bsb    ,rdr::EInstComp::BSBlock            )/*    296 bytes */\
 			x(rdr::DSBlock    ,m_dsb    ,rdr::EInstComp::DSBlock            )/*     60 bytes */\
@@ -525,6 +528,10 @@ namespace pr
 
 			// Restore the colour to the initial colour for this object or child objects matching 'name' (see Apply)
 			void ResetColour(char const* name = nullptr);
+
+			// Get/Set the reflectivity of this object or child objects matching 'name' (see Apply)
+			float Reflectivity(char const* name = nullptr) const;
+			void Reflectivity(float reflectivity, char const* name = nullptr);
 
 			// Set the texture on this object or child objects matching 'name' (see Apply)
 			// Note for difference mode drawlist management, if the object is currently in

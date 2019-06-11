@@ -20,6 +20,7 @@ using HGizmo = System.IntPtr;
 using HMODULE = System.IntPtr;
 using HObject = System.IntPtr;
 using HTexture = System.IntPtr;
+using HCubeMap = System.IntPtr;
 using HWindow = System.IntPtr;
 using HWND = System.IntPtr;
 
@@ -314,15 +315,17 @@ namespace Rylogic.Gfx
 		}
 		public enum EFillMode
 		{
-			Solid,
-			Wireframe,
-			SolidWire,
+			Default = 0,
+			SolidWire = 1,
+			Wireframe = 2, // D3D11_FILL_WIREFRAME
+			Solid = 3, // D3D11_FILL_SOLID
 		}
 		public enum ECullMode
 		{
-			None,
-			Back,
-			Front,
+			Default = 0,
+			None  = 1, // D3D11_CULL_NONE
+			Front = 2, // D3D11_CULL_FRONT
+			Back  = 3, // D3D11_CULL_BACK
 		}
 		[Flags] public enum ENavOp
 		{
@@ -501,24 +504,24 @@ namespace Rylogic.Gfx
 			{
 				return new Material(null);
 			}
-			public Material(HTexture? diff_tex = null, HTexture? env_map = null, ShaderMap? shdr_map = null)
+			public Material(HTexture? diff_tex = null, ShaderMap? shdr_map = null, float? relative_reflectivity = null)
 			{
 				m_diff_tex = diff_tex ?? HTexture.Zero;
-				m_env_map = env_map ?? HTexture.Zero;
 				m_smap = shdr_map ?? ShaderMap.New();
+				m_relative_reflectivity = relative_reflectivity ?? 1f;
 			}
 
 			/// <summary>Material diffuse texture</summary>
 			public HTexture m_diff_tex;
-
-			/// <summary>Material environment map</summary>
-			public HTexture m_env_map;
 
 			/// <summary>Shader overrides</summary>
 			public ShaderMap m_smap;
 			// ? Replace this with a text description of the shader params?
 			// It would make it human readable, byte order independent, backwards compatible,
 			// smaller, variable size...
+
+			/// <summary>How reflective this nugget is relative to the over all model</summary>
+			public float m_relative_reflectivity;
 
 			/// <summary>Set the shader to use along with the parameters it requires</summary>
 			public void Use(ERenderStep rstep, EShaderVS shdr, params object[] args)
@@ -554,35 +557,21 @@ namespace Rylogic.Gfx
 		{
 			public EPrim m_topo;
 			public EGeom m_geom;
+			public ECullMode m_cull_mode;
+			public EFillMode m_fill_mode;
 			public uint m_v0, m_v1;       // Vertex buffer range. Set to 0,0 to mean the whole buffer
 			public uint m_i0, m_i1;       // Index buffer range. Set to 0,0 to mean the whole buffer
 			public bool m_has_alpha;      // True of the nugget contains transparent elements
 			public bool m_range_overlaps; // True if the nugget V/I range overlaps earlier nuggets
 			public Material m_mat;
 
-			public Nugget(EPrim topo, EGeom geom)
-				: this(topo, geom, false)
-			{ }
-			public Nugget(EPrim topo, EGeom geom, bool has_alpha)
-				: this(topo, geom, 0, 0, 0, 0, has_alpha, false, null)
-			{ }
-			public Nugget(EPrim topo, EGeom geom, bool has_alpha, Material? mat)
-				: this(topo, geom, 0, 0, 0, 0, has_alpha, false, mat)
-			{ }
-			public Nugget(EPrim topo, EGeom geom, bool has_alpha, bool range_overlaps, Material? mat)
-				: this(topo, geom, 0, 0, 0, 0, has_alpha, range_overlaps, mat)
-			{ }
-			public Nugget(EPrim topo, EGeom geom, uint v0, uint v1, uint i0, uint i1)
-				: this(topo, geom, v0, v1, i0, i1, false)
-			{ }
-			public Nugget(EPrim topo, EGeom geom, uint v0, uint v1, uint i0, uint i1, bool has_alpha)
-				: this(topo, geom, v0, v1, i0, i1, has_alpha, false, null)
-			{ }
-			public Nugget(EPrim topo, EGeom geom, uint v0, uint v1, uint i0, uint i1, bool has_alpha, bool range_overlaps, Material? mat)
+			public Nugget(EPrim topo, EGeom geom, uint v0 = 0, uint v1 = 0, uint i0 = 0, uint i1 = 0, bool has_alpha = false, bool range_overlaps = false, Material? mat = null, ECullMode cull_mode = ECullMode.Back, EFillMode fill_mode = EFillMode.Solid)
 			{
 				Debug.Assert(mat == null || mat.Value.m_smap.m_rstep != null, "Don't use default(Material)");
 				m_topo = topo;
 				m_geom = geom;
+				m_cull_mode = cull_mode;
+				m_fill_mode = fill_mode;
 				m_v0 = v0;
 				m_v1 = v1;
 				m_i0 = i0;
@@ -610,6 +599,7 @@ namespace Rylogic.Gfx
 		[StructLayout(LayoutKind.Sequential)]
 		public struct TextureOptions
 		{
+			public m4x4 T2S;
 			public EFormat Format;
 			public uint Mips;
 			public EFilter Filter;
@@ -624,6 +614,7 @@ namespace Rylogic.Gfx
 			public string DbgName;
 
 			public static TextureOptions New(
+				m4x4? t2s = null,
 				EFormat format = EFormat.DXGI_FORMAT_R8G8B8A8_UNORM,
 				EFilter filter = EFilter.D3D11_FILTER_MIN_MAG_MIP_LINEAR,
 				EAddrMode addrU = EAddrMode.D3D11_TEXTURE_ADDRESS_CLAMP,
@@ -638,6 +629,7 @@ namespace Rylogic.Gfx
 			{
 				return new TextureOptions
 				{
+					T2S = t2s ?? m4x4.Identity,
 					Format = format,
 					Mips = mips,
 					Filter = filter,
@@ -653,6 +645,7 @@ namespace Rylogic.Gfx
 				};
 			}
 			public static TextureOptions GdiCompat(
+				m4x4? t2s = null,
 				EFormat format = EFormat.DXGI_FORMAT_B8G8R8A8_UNORM,
 				EFilter filter = EFilter.D3D11_FILTER_MIN_MAG_MIP_LINEAR,
 				EAddrMode addrU = EAddrMode.D3D11_TEXTURE_ADDRESS_CLAMP,
@@ -667,6 +660,7 @@ namespace Rylogic.Gfx
 			{
 				return new TextureOptions
 				{
+					T2S = t2s ?? m4x4.Identity,
 					Format = format,
 					Mips = mips,
 					Filter = filter,
@@ -1700,14 +1694,14 @@ namespace ldr
 			/// <summary>Get/Set the light properties. Note returned value is a value type</summary>
 			public LightInfo LightProperties
 			{
-				get { View3D_LightProperties(Handle, out var light); return light; }
-				set { View3D_SetLightProperties(Handle, ref value); }
+				get { View3D_LightPropertiesGet(Handle, out var light); return light; }
+				set { View3D_LightPropertiesSet(Handle, ref value); }
 			}
 
 			/// <summary>Show the lighting dialog</summary>
 			public void ShowLightingDlg()
 			{
-				View3D_ShowLightingDlg(Handle);
+				View3D_LightShowDialog(Handle);
 			}
 
 			/// <summary>Set the single light source</summary>
@@ -2396,6 +2390,13 @@ namespace ldr
 				set { ColourSet(value, string.Empty); }
 			}
 
+			/// <summary>Get/Set the reflectivity of this object (set applies to all child objects as well)</summary>
+			public float Reflectivity
+			{
+				get { return ReflectivityGet(string.Empty); }
+				set { ReflectivitySet(value, string.Empty); }
+			}
+
 			/// <summary>Get/Set wire-frame mode of this object (set applies to all child objects as well)</summary>
 			public bool Wireframe
 			{
@@ -2494,8 +2495,8 @@ namespace ldr
 				get
 				{
 					if (Handle == HObject.Zero) return new Object[0];
-					var objects = new List<Object>(capacity:ChildCount);
-					View3D_ObjectEnumChildren(Handle, (ctx,obj) => { objects.Add(new Object(obj)); return true; }, IntPtr.Zero);
+					var objects = new List<Object>(capacity: ChildCount);
+					View3D_ObjectEnumChildren(Handle, (ctx, obj) => { objects.Add(new Object(obj)); return true; }, IntPtr.Zero);
 					return objects.ToArray();
 				}
 			}
@@ -2569,7 +2570,7 @@ namespace ldr
 			{
 				View3D_ObjectWireframeSet(Handle, vis, name);
 			}
-		
+
 			/// <summary>
 			/// Get/Set the object flags
 			/// See LdrObject::Apply for docs on the format of 'name'</summary>
@@ -2583,19 +2584,16 @@ namespace ldr
 			}
 
 			/// <summary>
-			/// Get the colour of this object or the first child object that matches 'name'.
-			/// 'base_colour', if true returns the objects base colour, if false, returns the current colour</summary>
-			public Colour32 ColourGet(bool base_colour, string name = null)
-			{
-				return View3D_ObjectColourGet(Handle, base_colour, name);
-			}
-
-			/// <summary>
-			/// Set the colour of this object or any of its child objects that match 'name'.
+			/// Get/Set the colour of this object or the first child object that matches 'name'.
+			/// 'base_colour', if true returns the objects base colour, if false, returns the current colour.
 			/// If 'name' is null, then the state change is applied to this object only
 			/// If 'name' is "", then the state change is applied to this object and all children recursively
 			/// Otherwise, the state change is applied to all child objects that match name.
 			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
+			public Colour32 ColourGet(bool base_colour, string name = null)
+			{
+				return View3D_ObjectColourGet(Handle, base_colour, name);
+			}
 			public void ColourSet(Colour32 colour, uint mask, string name = null, EColourOp op = EColourOp.Overwrite, float op_value = 0.0f)
 			{
 				View3D_ObjectColourSet(Handle, colour, mask, name, op, op_value);
@@ -2614,6 +2612,21 @@ namespace ldr
 			public void ResetColour(string name = null)
 			{
 				View3D_ObjectResetColour(Handle, name);
+			}
+
+			/// <summary>
+			/// Get/Set the reflectivity of this object or the first child object that matches 'name'.
+			/// If 'name' is null, then the state change is applied to this object only
+			/// If 'name' is "", then the state change is applied to this object and all children recursively
+			/// Otherwise, the state change is applied to all child objects that match name.
+			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
+			public float ReflectivityGet(string name = null)
+			{
+				return View3D_ObjectReflectivityGet(Handle, name);
+			}
+			public void ReflectivitySet(float reflectivity, string name = null)
+			{
+				View3D_ObjectReflectivitySet(Handle, reflectivity, name);
 			}
 
 			/// <summary>
@@ -2637,12 +2650,12 @@ namespace ldr
 				return Description;
 			}
 
-#region Equals
-			public static bool operator == (Object lhs, Object rhs)
+			#region Equals
+			public static bool operator ==(Object lhs, Object rhs)
 			{
-				return ReferenceEquals(lhs,rhs) || Equals(lhs, rhs);
+				return ReferenceEquals(lhs, rhs) || Equals(lhs, rhs);
 			}
-			public static bool operator != (Object lhs, Object rhs)
+			public static bool operator !=(Object lhs, Object rhs)
 			{
 				return !(lhs == rhs);
 			}
@@ -2658,7 +2671,7 @@ namespace ldr
 			{
 				return Handle.GetHashCode();
 			}
-#endregion
+			#endregion
 		}
 
 		/// <summary>A 3D manipulation gizmo</summary>
@@ -2673,7 +2686,7 @@ namespace ldr
 
 			public enum EMode { Translate, Rotate, Scale, };
 			public enum EEvent { StartManip, Moving, Commit, Revert };
-			
+
 			public HGizmo m_handle; // The handle to the gizmo
 			private Callback m_cb;
 			private bool m_owned;   // True if 'm_handle' was created with this class
@@ -2746,12 +2759,13 @@ namespace ldr
 
 			/// <summary>Raised whenever the gizmo is manipulated</summary>
 			public event EventHandler<MovedEventArgs> Moved;
-			public class MovedEventArgs :EventArgs
+			public class MovedEventArgs : EventArgs
 			{
 				/// <summary>The type of movement event this is</summary>
 				public EEvent Type { get; private set; }
 
-				[System.Diagnostics.DebuggerStepThrough] public MovedEventArgs(EEvent type)
+				[System.Diagnostics.DebuggerStepThrough]
+				public MovedEventArgs(EEvent type)
 				{
 					Type = type;
 				}
@@ -2786,12 +2800,12 @@ namespace ldr
 				public EEvent m_state;
 			}
 
-#region Equals
-			public static bool operator == (Gizmo lhs, Gizmo rhs)
+			#region Equals
+			public static bool operator ==(Gizmo lhs, Gizmo rhs)
 			{
-				return ReferenceEquals(lhs,rhs) || Equals(lhs, rhs);
+				return ReferenceEquals(lhs, rhs) || Equals(lhs, rhs);
 			}
-			public static bool operator != (Gizmo lhs, Gizmo rhs)
+			public static bool operator !=(Gizmo lhs, Gizmo rhs)
 			{
 				return !(lhs == rhs);
 			}
@@ -2807,7 +2821,7 @@ namespace ldr
 			{
 				return m_handle.GetHashCode();
 			}
-#endregion
+			#endregion
 		}
 
 		/// <summary>Texture resource wrapper</summary>
@@ -2868,7 +2882,7 @@ namespace ldr
 			{
 				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finalizer thread");
 				if (Handle == HTexture.Zero) return;
-				if (m_owned) View3D_TextureDelete(Handle);
+				if (m_owned) View3D_TextureRelease(Handle);
 				Handle = HTexture.Zero;
 			}
 
@@ -3102,6 +3116,82 @@ namespace ldr
 			public override bool Equals(object rhs)
 			{
 				return Equals(rhs as Texture);
+			}
+			public override int GetHashCode()
+			{
+				return Handle.GetHashCode();
+			}
+			#endregion
+		}
+
+		/// <summary>CubeMap Texture resource wrapper</summary>
+		public class CubeMap :IDisposable
+		{
+			// Notes:
+			//  - CubeMap is basically the same as Texture except it can only
+			//    be used for environment mapping.
+
+			private bool m_owned;
+
+			/// <summary>Create a texture from an existing texture resource</summary>
+			internal CubeMap(HCubeMap handle, bool owned)
+			{
+				// Note: 'handle' is not the ID3D11Texture2D handle, it's the internal View3DCubeMap pointer.
+				m_owned = owned;
+				Handle = handle;
+
+				//if (Handle != IntPtr.Zero)
+				//	View3D_TextureGetInfo(Handle, out Info);
+				//else
+				//	Info = new ImageInfo();
+			}
+
+			/// <summary>Construct a texture from a resource (file, embeded resource, or stock asset)</summary>
+			public CubeMap(string resource)
+				: this(resource, 0, 0, TextureOptions.New())
+			{ }
+			public CubeMap(string resource, TextureOptions options)
+				: this(resource, 0, 0, options)
+			{ }
+			public CubeMap(string resource, int width, int height)
+				: this(resource, width, height, TextureOptions.New())
+			{ }
+			public CubeMap(string resource, int width, int height, TextureOptions options)
+			{
+				m_owned = true;
+				Handle = View3D_CubeMapCreateFromUri(resource, (uint)width, (uint)height, ref options);
+				if (Handle == HCubeMap.Zero) throw new Exception($"Failed to create cube map texture from {resource}");
+				//View3D_TextureGetInfo(Handle, out Info);
+				View3D_TextureSetFilterAndAddrMode(Handle, options.Filter, options.AddrU, options.AddrV);
+			}
+
+			public virtual void Dispose()
+			{
+				Util.BreakIf(Util.IsGCFinalizerThread, "Disposing in the GC finalizer thread");
+				if (Handle == HCubeMap.Zero) return;
+				if (m_owned) View3D_TextureRelease(Handle);
+				Handle = HCubeMap.Zero;
+			}
+
+			/// <summary>View3d cube map texture handle</summary>
+			public HCubeMap Handle;
+
+			#region Equals
+			public static bool operator ==(CubeMap lhs, CubeMap rhs)
+			{
+				return ReferenceEquals(lhs, rhs) || Equals(lhs, rhs);
+			}
+			public static bool operator !=(CubeMap lhs, CubeMap rhs)
+			{
+				return !(lhs == rhs);
+			}
+			public bool Equals(CubeMap rhs)
+			{
+				return rhs != null && Handle == rhs.Handle;
+			}
+			public override bool Equals(object rhs)
+			{
+				return Equals(rhs as CubeMap);
 			}
 			public override int GetHashCode()
 			{
@@ -3450,10 +3540,10 @@ namespace ldr
 		[DllImport(Dll)] private static extern ENavOp          View3D_MouseBtnToNavOp        (EMouseBtns mk);
 
 		// Lights
-		[DllImport(Dll)] private static extern void              View3D_LightProperties          (HWindow window, out LightInfo light);
-		[DllImport(Dll)] private static extern void              View3D_SetLightProperties       (HWindow window, ref LightInfo light);
+		[DllImport(Dll)] private static extern void              View3D_LightPropertiesGet       (HWindow window, out LightInfo light);
+		[DllImport(Dll)] private static extern void              View3D_LightPropertiesSet       (HWindow window, ref LightInfo light);
 		[DllImport(Dll)] private static extern void              View3D_LightSource              (HWindow window, v4 position, v4 direction, bool camera_relative);
-		[DllImport(Dll)] private static extern void              View3D_ShowLightingDlg          (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_LightShowDialog          (HWindow window);
 
 		// Objects
 		[DllImport(Dll)] private static extern Guid              View3D_ObjectContextIdGet       (HObject obj);
@@ -3485,6 +3575,8 @@ namespace ldr
 		[DllImport(Dll)] private static extern void              View3D_ObjectFlagsSet           (HObject obj, EFlags flags, bool state, string  name);
 		[DllImport(Dll)] private static extern uint              View3D_ObjectColourGet          (HObject obj, bool base_colour, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectColourSet          (HObject obj, uint colour, uint mask, string name, EColourOp op, float op_value);
+		[DllImport(Dll)] private static extern float             View3D_ObjectReflectivityGet    (HObject obj, string name);
+		[DllImport(Dll)] private static extern void              View3D_ObjectReflectivitySet    (HObject obj, float reflectivity, string name);
 		[DllImport(Dll)] private static extern bool              View3D_ObjectWireframeGet       (HObject obj, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectWireframeSet       (HObject obj, bool wireframe, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectResetColour        (HObject obj, string name);
@@ -3494,8 +3586,9 @@ namespace ldr
 		// Materials
 		[DllImport(Dll)] private static extern HTexture          View3D_TextureCreate               (uint width, uint height, IntPtr data, uint data_size, ref TextureOptions options);
 		[DllImport(Dll)] private static extern HTexture          View3D_TextureCreateFromUri        ([MarshalAs(UnmanagedType.LPWStr)] string resource, uint width, uint height, ref TextureOptions options);
+		[DllImport(Dll)] private static extern HCubeMap          View3D_CubeMapCreateFromUri        ([MarshalAs(UnmanagedType.LPWStr)] string resource, uint width, uint height, ref TextureOptions options);
 		[DllImport(Dll)] private static extern void              View3D_TextureLoadSurface          (HTexture tex, int level, string tex_filepath, Rectangle[] dst_rect, Rectangle[] src_rect, EFilter filter, uint colour_key);
-		[DllImport(Dll)] private static extern void              View3D_TextureDelete               (HTexture tex);
+		[DllImport(Dll)] private static extern void              View3D_TextureRelease              (HTexture tex);
 		[DllImport(Dll)] private static extern void              View3D_TextureGetInfo              (HTexture tex, out ImageInfo info);
 		[DllImport(Dll)] private static extern EResult           View3D_TextureGetInfoFromFile      (string tex_filepath, out ImageInfo info);
 		[DllImport(Dll)] private static extern void              View3D_TextureSetFilterAndAddrMode (HTexture tex, EFilter filter, EAddrMode addrU, EAddrMode addrV);

@@ -202,7 +202,7 @@ REFGUID GetWICCodec( _In_ WICCodecs codec )
 //-------------------------------------------------------------------------------------
 // Returns bits-per-pixel for a given DXGI format, or 0 on failure
 //-------------------------------------------------------------------------------------
-size_t BitsPerPixel( DXGI_FORMAT fmt )
+size_t BitsPerPixel( DXGI_FORMAT fmt ) // Todo: refactor, replace with pr::rdr::BitsPerPixel in util.cpp
 {
     switch( fmt )
     {

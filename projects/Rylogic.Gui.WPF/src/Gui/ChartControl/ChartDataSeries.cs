@@ -212,7 +212,7 @@ namespace Rylogic.Gui.WPF
 				var mat = View3d.Material.New();
 				mat.m_diff_tex = m_point_textures[Options.PointStyle]?.Handle ?? IntPtr.Zero;
 				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.PointSpritesGS, new v2(Options.PointSize, Options.PointSize), false);
-				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.PointList, View3d.EGeom.Vert | View3d.EGeom.Colr | View3d.EGeom.Tex0, false, mat);
+				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.PointList, View3d.EGeom.Vert | View3d.EGeom.Colr | View3d.EGeom.Tex0, mat:mat);
 			}
 
 			// Create the graphics
@@ -252,7 +252,7 @@ namespace Rylogic.Gui.WPF
 			{
 				var mat = View3d.Material.New();
 				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.ThickLineListGS, Options.LineWidth);
-				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert | View3d.EGeom.Colr, false, mat);
+				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert | View3d.EGeom.Colr, mat:mat);
 			}
 
 			// Create a nugget for the points (if visible)
@@ -261,7 +261,7 @@ namespace Rylogic.Gui.WPF
 				var mat = View3d.Material.New();
 				mat.m_diff_tex = m_point_textures[Options.PointStyle]?.Handle ?? IntPtr.Zero;
 				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.PointSpritesGS, new v2(Options.PointSize, Options.PointSize), false);
-				m_nbuf[1] = new View3d.Nugget(View3d.EPrim.PointList, View3d.EGeom.Vert | View3d.EGeom.Colr | View3d.EGeom.Tex0, false, true, mat);
+				m_nbuf[1] = new View3d.Nugget(View3d.EPrim.PointList, View3d.EGeom.Vert | View3d.EGeom.Colr | View3d.EGeom.Tex0, range_overlaps:true, mat:mat);
 			}
 
 			// Create the graphics
@@ -372,7 +372,7 @@ namespace Rylogic.Gui.WPF
 
 			// Create a nugget for the tri list
 			{
-				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.TriList, View3d.EGeom.Vert | View3d.EGeom.Colr, false);
+				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.TriList, View3d.EGeom.Vert | View3d.EGeom.Colr);
 			}
 
 			// Create the graphics

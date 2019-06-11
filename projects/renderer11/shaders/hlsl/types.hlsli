@@ -47,6 +47,12 @@ struct Light
 	float4 m_spot;         // x = inner cos angle, y = outer cos angle, z = range, w = falloff
 };
 
+// EnvMap
+struct EnvMap
+{
+	row_major float4x4 m_w2env; // world to environment map to transform
+};
+
 // Shadows
 struct Shadow
 {

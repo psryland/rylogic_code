@@ -15,13 +15,12 @@ namespace pr
 			,m_geom(geom)
 			,m_smap(smap ? *smap : ShaderMap())
 			,m_tex_diffuse()
-			,m_tex_envmap()
 			,m_bsb()
 			,m_dsb()
 			,m_rsb()
 			,m_sort_key()
-			,m_geometry_has_alpha(false)
-			,m_tint_has_alpha(false)
+			,m_relative_reflectivity(1)
+			,m_flags(ENuggetFlag::None)
 			,m_vrange(vrange)
 			,m_irange(irange)
 		{}
@@ -90,8 +89,7 @@ namespace pr
 		bool Nugget::RequiresAlpha() const
 		{
 			return
-				m_geometry_has_alpha ||
-				m_tint_has_alpha ||
+				AnySet(m_flags, ENuggetFlag::GeometryHasAlpha | ENuggetFlag::TintHasAlpha) ||
 				(m_tex_diffuse != nullptr ? m_tex_diffuse->m_has_alpha : false);
 		}
 

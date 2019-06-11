@@ -97,21 +97,21 @@ namespace pr
 				m_value &= ~SortGroupMask;
 				m_value |= (g << SortGroupOfs) & SortGroupMask;
 			}
+
+			SortKey& operator |= (SortKey::value_type rhs)
+			{
+				m_value |= rhs;
+				return *this;
+			}
+			SortKey& operator &= (SortKey::value_type rhs)
+			{ 
+				m_value &= rhs;
+				return *this;
+			}
 		};
 		static_assert(std::is_pod<SortKey>::value, "SortKey must be a pod type");
 		static_assert(8U * sizeof(SortKey) == SortKey::Bits, "8 * sizeof(Sortkey) != SortKey::Bits");
 		static_assert(uint32(ESortGroup::Default) == SortKey::MaxSortGroups/2, "ESortGroup::Default should be the middle");
-
-		inline SortKey& operator |= (SortKey& lhs, SortKey::value_type rhs)
-		{
-			lhs.m_value |= rhs;
-			return lhs;
-		}
-		inline SortKey& operator &= (SortKey& lhs, SortKey::value_type rhs)
-		{ 
-			lhs.m_value &= rhs;
-			return lhs;
-		}
 
 		// A sort key override is a mask that is applied to a sort key
 		// to override specific parts of the sort key.

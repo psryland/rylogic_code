@@ -39,6 +39,7 @@ try:
 		"pr/sound/",
 		"pr/storage/xfile/",
 		"pr/storage/zip/",
+		#"pr/storage/zip_file.h", #hack
 		"pr/script_old/",
 		"pr/terrain/",
 		"pr/collision/todo/",

@@ -44,7 +44,7 @@ namespace TestCS
 				},
 				new View3d.Nugget[]
 				{
-					new View3d.Nugget(View3d.EPrim.TriList, View3d.EGeom.Vert|View3d.EGeom.Norm|View3d.EGeom.Colr, false),
+					new View3d.Nugget(View3d.EPrim.TriList, View3d.EGeom.Vert|View3d.EGeom.Norm|View3d.EGeom.Colr),
 				}, null);
 			m_chart.ChartRendering += (s,a) =>
 			{

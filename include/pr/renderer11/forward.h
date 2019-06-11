@@ -11,6 +11,7 @@
 #include <memory>
 #include <unordered_map>
 #include <algorithm>
+#include <regex>
 #include <functional>
 #include <filesystem>
 #include <type_traits>
@@ -168,7 +169,10 @@ namespace pr
 
 		// Textures
 		class  TextureManager;
+		struct TextureDesc;
+		struct Texture1DDesc;
 		struct Texture2DDesc;
+		struct Texture3DDesc;
 		struct TextureBase;
 		struct Texture2D;
 		struct TextureCube;

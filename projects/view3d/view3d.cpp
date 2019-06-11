@@ -695,6 +695,19 @@ VIEW3D_API void __stdcall View3D_WindowHitTest(View3DWindow window, View3DHitTes
 	CatchAndReport(View3D_WindowMouseTrackGet, window, );
 }
 
+// Set the global environment map for the window
+VIEW3D_API void __stdcall View3D_WindowEnvMapSet(View3DWindow window, View3DCubeMap env_map)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->EnvMap(env_map);
+	}
+	CatchAndReport(View3D_WindowEnvMapSet, window, );
+}
+
 //  ********************************************************
 
 // Return the camera to world transform
@@ -1254,7 +1267,7 @@ VIEW3D_API EView3DNavOp __stdcall View3D_MouseBtnToNavOp(int mk)
 // Lighting ********************************************************
 
 // Return the configuration of the single light source
-VIEW3D_API void __stdcall View3D_LightProperties(View3DWindow window, View3DLight& light)
+VIEW3D_API void __stdcall View3D_LightPropertiesGet(View3DWindow window, View3DLight& light)
 {
 	try
 	{
@@ -1276,11 +1289,11 @@ VIEW3D_API void __stdcall View3D_LightProperties(View3DWindow window, View3DLigh
 		light.m_on              = window->m_light.m_on;
 		light.m_cam_relative    = window->m_light.m_cam_relative;
 	}
-	CatchAndReport(View3D_LightProperties, window, );
+	CatchAndReport(View3D_LightPropertiesGet, window, );
 }
 
 // Configure the single light source
-VIEW3D_API void __stdcall View3D_SetLightProperties(View3DWindow window, View3DLight const& light)
+VIEW3D_API void __stdcall View3D_LightPropertiesSet(View3DWindow window, View3DLight const& light)
 {
 	try
 	{
@@ -1302,7 +1315,7 @@ VIEW3D_API void __stdcall View3D_SetLightProperties(View3DWindow window, View3DL
 		window->m_light.m_on              = light.m_on != 0;
 		window->m_light.m_cam_relative    = light.m_cam_relative != 0;
 	}
-	CatchAndReport(View3D_SetLightProperties, window,);
+	CatchAndReport(View3D_LightPropertiesSet, window,);
 }
 
 // Set up a single light source for a window
@@ -1321,7 +1334,7 @@ VIEW3D_API void __stdcall View3D_LightSource(View3DWindow window, View3DV4 posit
 }
 
 // Show the lighting UI
-VIEW3D_API void __stdcall View3D_ShowLightingDlg(View3DWindow window)
+VIEW3D_API void __stdcall View3D_LightShowDialog(View3DWindow window)
 {
 	try
 	{
@@ -1351,7 +1364,7 @@ VIEW3D_API void __stdcall View3D_ShowLightingDlg(View3DWindow window)
 
 		window->NotifySettingsChanged(EView3DWindowSettings::Lighting);
 	}
-	CatchAndReport(View3D_ShowLightingDlg, window,);
+	CatchAndReport(View3D_LightShowDialog, window,);
 }
 
 // Objects **********************************************************
@@ -1729,6 +1742,30 @@ VIEW3D_API void __stdcall View3D_ObjectColourSet(View3DObject object, View3DColo
 	CatchAndReport(View3D_ObjectSetColour, ,);
 }
 
+// Get/Set the reflectivity of an object (the first object to match 'name') (See LdrObject::Apply)
+VIEW3D_API float __stdcall View3D_ObjectReflectivityGet(View3DObject object, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		return object->Reflectivity(name);
+	}
+	CatchAndReport(View3D_ObjectReflectivityGet, ,0);
+}
+VIEW3D_API void __stdcall View3D_ObjectReflectivitySet(View3DObject object, float reflectivity, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		object->Reflectivity(reflectivity, name);
+	}
+	CatchAndReport(View3D_ObjectReflectivitySet, ,);
+}
+
 // Get/Set wireframe mode for an object (the first object to match 'name') (See LdrObject::Apply)
 VIEW3D_API BOOL __stdcall View3D_ObjectWireframeGet(View3DObject object, char const* name)
 {
@@ -1821,11 +1858,19 @@ VIEW3D_API View3DTexture __stdcall View3D_TextureCreate(UINT32 width, UINT32 hei
 
 		auto name = options.m_dbg_name;
 		auto has_alpha = options.m_has_alpha != 0;
+		auto t2s = view3d::To<pr::m4x4>(options.m_t2s);
+		t2s =
+			t2s == pr::m4x4Identity ? t2s :
+			t2s == pr::m4x4Zero ? pr::m4x4Identity :
+			pr::IsAffine(t2s) ? t2s :
+			throw std::runtime_error("Invalid texture to surface transform");
 
 		DllLockGuard;
 		auto t = options.m_gdi_compatible
 			? Dll().m_rdr.m_tex_mgr.CreateTextureGdi(AutoId, src, tdesc, sdesc, has_alpha, name)
 			: Dll().m_rdr.m_tex_mgr.CreateTexture2D(AutoId, src, tdesc, sdesc, has_alpha, name);
+
+		t->m_t2s = t2s;
 
 		// Rely on the caller for correct reference counting
 		return t.release();
@@ -1847,14 +1892,51 @@ VIEW3D_API View3DTexture __stdcall View3D_TextureCreateFromUri(wchar_t const* re
 
 		auto name = options.m_dbg_name;
 		auto has_alpha = options.m_has_alpha != 0;
+		auto t2s = view3d::To<pr::m4x4>(options.m_t2s);
+		t2s =
+			t2s == pr::m4x4Identity ? t2s :
+			t2s == pr::m4x4Zero ? pr::m4x4Identity :
+			pr::IsAffine(t2s) ? t2s :
+			throw std::runtime_error("Invalid texture to surface transform");
 
 		DllLockGuard;
 		auto t = Dll().m_rdr.m_tex_mgr.CreateTexture2D(AutoId, resource, sdesc, has_alpha, name);
-		
+		t->m_t2s = t2s;
+
 		// Rely on the caller for correct reference counting
 		return t.release();
 	}
 	CatchAndReport(View3D_TextureCreateFromFile, , nullptr);
+}
+
+// Load a cube map from file, embedded resource, or stock assets. Specify width == 0, height == 0 to use the dimensions of the file
+VIEW3D_API View3DCubeMap __stdcall View3D_CubeMapCreateFromUri(wchar_t const* resource, UINT32 width, UINT32 height, View3DCubeMapOptions const& options)
+{
+	try
+	{
+		(void)width,height; //todo
+
+		SamplerDesc sdesc;
+		sdesc.AddressU = options.m_addrU;
+		sdesc.AddressV = options.m_addrV;
+		sdesc.Filter   = options.m_filter;
+
+		auto name = options.m_dbg_name;
+		auto cube2w = view3d::To<pr::m4x4>(options.m_cube2w);
+		cube2w =
+			cube2w == pr::m4x4Identity ? cube2w :
+			cube2w == pr::m4x4Zero ? pr::m4x4Identity :
+			pr::IsAffine(cube2w) ? cube2w :
+			throw std::runtime_error("Invalid cube map orientation transform");
+
+		DllLockGuard;
+		auto t = Dll().m_rdr.m_tex_mgr.CreateTextureCube(AutoId, resource, sdesc, name);
+		t->m_cube2w = cube2w;
+
+		// Rely on the caller for correct reference counting
+		return t.release();
+	}
+	CatchAndReport(View3D_CubeMapCreateFromUri, , nullptr);
 }
 
 // Get/Release a DC for the texture. Must be a TextureGdi texture
@@ -1900,15 +1982,15 @@ VIEW3D_API void __stdcall View3D_TextureLoadSurface(View3DTexture tex, int level
 	CatchAndReport(View3D_TextureLoadSurface, ,);
 }
 
-// Release a texture to free memory
-VIEW3D_API void __stdcall View3D_TextureDelete(View3DTexture tex)
+// Release a reference to a texture
+VIEW3D_API void __stdcall View3D_TextureRelease(View3DTexture tex)
 {
 	try
 	{
 		if (!tex) throw std::runtime_error("Texture is null");
 		tex->Release();
 	}
-	CatchAndReport(View3D_TextureDelete, ,);
+	CatchAndReport(View3D_TextureRelease, ,);
 }
 
 // Read the properties of an existing texture
@@ -3094,16 +3176,17 @@ static_assert(int(EView3DLight::Spot       ) == int(pr::rdr::ELight::Spot       
 	
 // EView3DLogLevel - unused?
 
-static_assert(int(EView3DUpdateObject::None      ) == int(pr::ldr::EUpdateObject::None      ));
-static_assert(int(EView3DUpdateObject::All       ) == int(pr::ldr::EUpdateObject::All       ));
-static_assert(int(EView3DUpdateObject::Name      ) == int(pr::ldr::EUpdateObject::Name      ));
-static_assert(int(EView3DUpdateObject::Model     ) == int(pr::ldr::EUpdateObject::Model     ));
-static_assert(int(EView3DUpdateObject::Transform ) == int(pr::ldr::EUpdateObject::Transform ));
-static_assert(int(EView3DUpdateObject::Children  ) == int(pr::ldr::EUpdateObject::Children  ));
-static_assert(int(EView3DUpdateObject::Colour    ) == int(pr::ldr::EUpdateObject::Colour    ));
-static_assert(int(EView3DUpdateObject::ColourMask) == int(pr::ldr::EUpdateObject::ColourMask));
-static_assert(int(EView3DUpdateObject::Flags     ) == int(pr::ldr::EUpdateObject::Flags     ));
-static_assert(int(EView3DUpdateObject::Animation ) == int(pr::ldr::EUpdateObject::Animation ));
+static_assert(int(EView3DUpdateObject::None        ) == int(pr::ldr::EUpdateObject::None        ));
+static_assert(int(EView3DUpdateObject::All         ) == int(pr::ldr::EUpdateObject::All         ));
+static_assert(int(EView3DUpdateObject::Name        ) == int(pr::ldr::EUpdateObject::Name        ));
+static_assert(int(EView3DUpdateObject::Model       ) == int(pr::ldr::EUpdateObject::Model       ));
+static_assert(int(EView3DUpdateObject::Transform   ) == int(pr::ldr::EUpdateObject::Transform   ));
+static_assert(int(EView3DUpdateObject::Children    ) == int(pr::ldr::EUpdateObject::Children    ));
+static_assert(int(EView3DUpdateObject::Colour      ) == int(pr::ldr::EUpdateObject::Colour      ));
+static_assert(int(EView3DUpdateObject::ColourMask  ) == int(pr::ldr::EUpdateObject::ColourMask  ));
+static_assert(int(EView3DUpdateObject::Reflectivity) == int(pr::ldr::EUpdateObject::Reflectivity));
+static_assert(int(EView3DUpdateObject::Flags       ) == int(pr::ldr::EUpdateObject::Flags       ));
+static_assert(int(EView3DUpdateObject::Animation   ) == int(pr::ldr::EUpdateObject::Animation   ));
 
 static_assert(int(EView3DGizmoEvent::StartManip) == int(pr::ldr::ELdrGizmoEvent::StartManip));
 static_assert(int(EView3DGizmoEvent::Moving    ) == int(pr::ldr::ELdrGizmoEvent::Moving    ));

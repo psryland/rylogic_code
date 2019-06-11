@@ -185,14 +185,19 @@ namespace pr::rdr
 		// Bind the diffuse texture
 		if (current.m_tex_diffuse != pending.m_tex_diffuse || force)
 		{
-			ID3D11ShaderResourceView* srv[1]  = {m_tex_default->m_srv.m_ptr};
-			ID3D11SamplerState*       samp[1] = {m_tex_default->m_samp.m_ptr};
+			ID3D11ShaderResourceView* srv[1]  = {m_tex_default->m_srv.get()};
+			ID3D11SamplerState*       samp[1] = {m_tex_default->m_samp.get()};
 
-			if (pending.m_dle != nullptr && pending.m_dle->m_nugget->m_tex_diffuse != nullptr)
+			if (pending.m_tex_diffuse != nullptr)
 			{
-				srv[0]  = pending.m_dle->m_nugget->m_tex_diffuse->m_srv.m_ptr;
-				samp[0] = pending.m_dle->m_nugget->m_tex_diffuse->m_samp.m_ptr;
+				srv[0]  = pending.m_tex_diffuse->m_srv.get();
+				samp[0] = pending.m_tex_diffuse->m_samp.get();
 			}
+			//if (pending.m_dle != nullptr && pending.m_dle->m_nugget->m_tex_diffuse != nullptr)
+			//{
+			//	srv[0]  = pending.m_dle->m_nugget->m_tex_diffuse->m_srv.m_ptr;
+			//	samp[0] = pending.m_dle->m_nugget->m_tex_diffuse->m_samp.m_ptr;
+			//}
 
 			// Diffuse texture hard-coded to slot 0 here
 			m_dc->PSSetShaderResources(UINT(hlsl::ERegister::t0), 1, srv);
@@ -202,14 +207,19 @@ namespace pr::rdr
 		// Bind the environment map texture
 		if (current.m_tex_envmap != pending.m_tex_envmap || force)
 		{
-			ID3D11ShaderResourceView* srv[1]  = {m_tex_default->m_srv.m_ptr};
-			ID3D11SamplerState*       samp[1] = {m_tex_default->m_samp.m_ptr};
+			ID3D11ShaderResourceView* srv[1]  = {nullptr};
+			ID3D11SamplerState*       samp[1] = {nullptr};
 
-			if (pending.m_dle != nullptr && pending.m_dle->m_nugget->m_tex_envmap != nullptr)
+			if (pending.m_tex_envmap != nullptr)
 			{
-				srv[0]  = pending.m_dle->m_nugget->m_tex_envmap->m_srv.m_ptr;
-				samp[0] = pending.m_dle->m_nugget->m_tex_envmap->m_samp.m_ptr;
+				srv[0]  = pending.m_tex_envmap->m_srv.get();
+				samp[0] = pending.m_tex_envmap->m_samp.get();
 			}
+			//if (pending.m_dle != nullptr && pending.m_dle->m_nugget->m_tex_envmap != nullptr)
+			//{
+			//	srv[0]  = pending.m_dle->m_nugget->m_tex_envmap->m_srv.m_ptr;
+			//	samp[0] = pending.m_dle->m_nugget->m_tex_envmap->m_samp.m_ptr;
+			//}
 
 			// Env-map texture hard-coded to slot 1 here
 			m_dc->PSSetShaderResources(UINT(hlsl::ERegister::t1), 1, srv);
@@ -220,12 +230,12 @@ namespace pr::rdr
 		if (current.m_rstep_smap != pending.m_rstep_smap || force)
 		{
 			ID3D11ShaderResourceView* srv[1]  = {nullptr};
-			ID3D11SamplerState*       samp[1] = {m_tex_default->m_samp.m_ptr};
+			ID3D11SamplerState*       samp[1] = {m_tex_default->m_samp.get()};
 				
 			if (pending.m_rstep_smap != nullptr)
 			{
-				srv[0] = pending.m_rstep_smap->m_srv.m_ptr;
-				samp[0] = pending.m_rstep_smap->m_samp.m_ptr;
+				srv[0] = pending.m_rstep_smap->m_srv.get();
+				samp[0] = pending.m_rstep_smap->m_samp.get();
 			}
 
 			//todo, shadow map texture hard-coded to slot 2 here
@@ -239,6 +249,7 @@ namespace pr::rdr
 		:Frame(ss)
 	{
 		m_ss.m_pending.m_rstep = &rstep;
+		m_ss.m_pending.m_tex_envmap = ss.m_scene.m_global_envmap.get();
 	}
 
 	// State stack frame for a DLE
@@ -261,7 +272,6 @@ namespace pr::rdr
 
 		// Texture
 		m_ss.m_pending.m_tex_diffuse = dle.m_nugget->m_tex_diffuse.get();
-		m_ss.m_pending.m_tex_envmap = dle.m_nugget->m_tex_envmap.get();
 	}
 
 	// State stack frame for shadow map texture

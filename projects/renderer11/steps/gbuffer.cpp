@@ -203,7 +203,7 @@ namespace pr
 
 				// Set the per-nugget constants
 				hlsl::ds::CBufModel cb1 = {};
-				SetModelFlags(*dle.m_nugget, UniqueId(*dle.m_instance), cb1);
+				SetModelFlags(*dle.m_instance, *dle.m_nugget, *m_scene, cb1);
 				SetTxfm(*dle.m_instance, m_scene->m_view, cb1);
 				SetTint(*dle.m_instance, cb1);
 				SetTexDiffuse(*dle.m_nugget, cb1);

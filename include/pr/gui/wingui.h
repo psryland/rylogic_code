@@ -6379,7 +6379,7 @@ namespace pr
 				using base = MakeCtrlParams<TParams, choose_non_void<Derived, Params<>>>;
 				using This = typename base::This;
 
-				Params() { wndclass(WndClassName()).name("edit").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx).margin(3); }
+				Params() { wndclass(WndClassName()).name("edit").wh(DefW, DefH).style('=',DefaultStyle).style_ex('=',DefaultStyleEx).bk_col(0xFFFFFF).fr_col(0).margin(3); }
 				operator TextBoxParams const&() const
 				{
 					return params;
@@ -6502,7 +6502,6 @@ namespace pr
 				switch (message)
 				{
 				case WM_COMMAND:
-					#pragma region
 					{
 						switch (HiWord(wparam))
 						{
@@ -6515,7 +6514,6 @@ namespace pr
 						}
 						break;
 					}
-					#pragma endregion
 				}
 				return Control::WndProc(message, wparam, lparam);
 			}
