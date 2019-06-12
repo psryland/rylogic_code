@@ -4,26 +4,24 @@
 //*********************************************
 #pragma once
 
-namespace pr
+namespace pr::rdr
 {
-	namespace rdr
-	{
-		// Shader Forward Declarations
-		struct FwdShaderVS;
-		struct FwdShaderPS;
+	// Shader Forward Declarations
+	struct FwdShaderVS;
+	struct FwdShaderPS;
+	struct FwdRadialFadePS;
 		
-		struct GBufferVS;
-		struct GBufferPS;
-		struct DSLightingVS;
-		struct DSLightingPS;
+	struct GBufferVS;
+	struct GBufferPS;
+	struct DSLightingVS;
+	struct DSLightingPS;
 		
-		struct ShadowMapVS;
-		struct ShadowMapFaceGS;
-		struct ShadowMapLineGS;
-		struct ShadowMapPS;
+	struct ShadowMapVS;
+	struct ShadowMapFaceGS;
+	struct ShadowMapLineGS;
+	struct ShadowMapPS;
 
-		struct PointSpritesGS;
-		struct ThickLineListGS;
-		struct ArrowHeadGS;
-	}
+	struct PointSpritesGS;
+	struct ThickLineListGS;
+	struct ArrowHeadGS;
 }

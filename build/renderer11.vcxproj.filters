@@ -272,6 +272,9 @@
     <ClInclude Include="..\include\pr\renderer11\textures\texture_loader.h">
       <Filter>textures</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\shaders\shdr_fwd.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\renderer11\util\stdafx.cpp">
@@ -486,6 +489,9 @@
       <Filter>shaders\hlsl\deferred</Filter>
     </CustomBuild>
     <CustomBuild Include="..\projects\renderer11\shaders\hlsl\forward\forward.hlsl">
+      <Filter>shaders\hlsl\forward</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\projects\renderer11\shaders\hlsl\forward\forward_radial_fade.hlsl">
       <Filter>shaders\hlsl\forward</Filter>
     </CustomBuild>
     <CustomBuild Include="..\projects\renderer11\shaders\hlsl\screenspace\thick_line.hlsl">

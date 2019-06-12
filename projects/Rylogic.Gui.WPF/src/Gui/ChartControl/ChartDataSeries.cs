@@ -211,7 +211,7 @@ namespace Rylogic.Gui.WPF
 			{
 				var mat = View3d.Material.New();
 				mat.m_diff_tex = m_point_textures[Options.PointStyle]?.Handle ?? IntPtr.Zero;
-				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.PointSpritesGS, new v2(Options.PointSize, Options.PointSize), false);
+				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.PointSpritesGS, $"*PointSize {{{Options.PointSize} {Options.PointSize}}} *Depth {{{false}}}");
 				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.PointList, View3d.EGeom.Vert | View3d.EGeom.Colr | View3d.EGeom.Tex0, mat:mat);
 			}
 
@@ -251,7 +251,7 @@ namespace Rylogic.Gui.WPF
 			// Create a nugget for the list strip using the thick line shader
 			{
 				var mat = View3d.Material.New();
-				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.ThickLineListGS, Options.LineWidth);
+				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.ThickLineListGS, $"*LineWidth {{{Options.LineWidth}}}");
 				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert | View3d.EGeom.Colr, mat:mat);
 			}
 
@@ -260,7 +260,7 @@ namespace Rylogic.Gui.WPF
 			{
 				var mat = View3d.Material.New();
 				mat.m_diff_tex = m_point_textures[Options.PointStyle]?.Handle ?? IntPtr.Zero;
-				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.PointSpritesGS, new v2(Options.PointSize, Options.PointSize), false);
+				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.PointSpritesGS, $"*PointSize {{{Options.PointSize} {Options.PointSize}}} *Depth {{{false}}}");
 				m_nbuf[1] = new View3d.Nugget(View3d.EPrim.PointList, View3d.EGeom.Vert | View3d.EGeom.Colr | View3d.EGeom.Tex0, range_overlaps:true, mat:mat);
 			}
 
@@ -302,7 +302,7 @@ namespace Rylogic.Gui.WPF
 			// Create a nugget for the list strip using the thick line shader
 			{
 				var mat = View3d.Material.New();
-				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.ThickLineListGS, Options.LineWidth);
+				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.ThickLineListGS, $"*LineWidth {{{Options.LineWidth}}}");
 				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert | View3d.EGeom.Colr, 0, (uint)vert, 0, (uint)indx, false, false, mat);
 			}
 
@@ -316,7 +316,7 @@ namespace Rylogic.Gui.WPF
 
 				var mat = View3d.Material.New();
 				mat.m_diff_tex = m_point_textures[Options.PointStyle]?.Handle ?? IntPtr.Zero;
-				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.PointSpritesGS, new v2(Options.PointSize, Options.PointSize), false);
+				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.PointSpritesGS, $"*PointSize {{{Options.PointSize} {Options.PointSize}}} *Depth {{{false}}}");
 				m_nbuf[1] = new View3d.Nugget(View3d.EPrim.PointList, View3d.EGeom.Vert | View3d.EGeom.Colr | View3d.EGeom.Tex0, 0, (uint)vert, (uint)i0, (uint)indx, false, false, mat);
 			}
 

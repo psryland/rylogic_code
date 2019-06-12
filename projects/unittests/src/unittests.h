@@ -305,6 +305,7 @@
 #include "pr\renderer11\shaders\shader.h"
 #include "pr\renderer11\shaders\shader_manager.h"
 #include "pr\renderer11\shaders\shader_set.h"
+#include "pr\renderer11\shaders\shdr_fwd.h"
 #include "pr\renderer11\shaders\shdr_screen_space.h"
 #include "pr\renderer11\steps\dslighting.h"
 #include "pr\renderer11\steps\forward_render.h"

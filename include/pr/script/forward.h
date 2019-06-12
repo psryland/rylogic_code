@@ -136,11 +136,12 @@ namespace pr
 			x(ExpressionSyntaxError           ,)\
 			x(EmbeddedCodeNotSupported        ,)\
 			x(EmbeddedCodeError               ,)\
+			x(KeywordNotFound                 ,)\
 			x(TokenNotFound                   ,)\
+			x(ValueNotFound                   ,)\
 			x(UnknownKeyword                  ,)\
 			x(UnknownToken                    ,)\
 			x(UnknownValue                    ,)\
-			x(ValueNotFound                   ,)\
 			x(FileNotFound                    ,)
 		PR_DEFINE_ENUM2_BASE(EResult, PR_ENUM, unsigned int);
 		#undef PR_ENUM

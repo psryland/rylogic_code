@@ -438,8 +438,7 @@ namespace Rylogic.Gfx
 
 		#region Structs
 
-		[Serializable]
-		[StructLayout(LayoutKind.Sequential, Pack = 1)]
+		[StructLayout(LayoutKind.Sequential, Pack = 1), Serializable]
 		public struct Vertex
 		{
 			public v4 m_pos;
@@ -454,41 +453,32 @@ namespace Rylogic.Gfx
 			public override string ToString() { return $"V:<{m_pos}> C:<{m_col.ToString("X8")}>"; }
 		}
 
-		[Serializable]
-		[StructLayout(LayoutKind.Sequential)]
+		[StructLayout(LayoutKind.Sequential), Serializable]
 		public struct Material
 		{
-			[DebuggerDisplay("{Description,nq}"), Serializable, StructLayout(LayoutKind.Sequential)] public struct ShaderSet
+			[DebuggerDisplay("{Description,nq}"), Serializable, StructLayout(LayoutKind.Sequential)]
+			public struct ShaderSet
 			{
-				public ShaderSet(EShaderVS vs, EShaderGS gs, EShaderPS ps, EShaderCS cs)
-				{
-					m_vs = vs;
-					m_gs = gs;
-					m_ps = ps;
-					m_cs = cs;
-					m_vs_data = new byte[16];
-					m_gs_data = new byte[16];
-					m_ps_data = new byte[16];
-					m_cs_data = new byte[16];
-				}
+				[StructLayout(LayoutKind.Sequential), Serializable]
+				public struct ShaderVS { public EShaderVS shdr; [MarshalAs(UnmanagedType.LPStr)] public string parms; }
+				[StructLayout(LayoutKind.Sequential), Serializable]
+				public struct ShaderGS { public EShaderGS shdr;[MarshalAs(UnmanagedType.LPStr)] public string parms; }
+				[StructLayout(LayoutKind.Sequential), Serializable]
+				public struct ShaderPS { public EShaderPS shdr;[MarshalAs(UnmanagedType.LPStr)] public string parms; }
+				[StructLayout(LayoutKind.Sequential), Serializable]
+				public struct ShaderCS { public EShaderCS shdr;[MarshalAs(UnmanagedType.LPStr)] public string parms; }
 
-				public EShaderVS m_vs;
-				public EShaderGS m_gs;
-				public EShaderPS m_ps;
-				public EShaderCS m_cs;
-
-				[MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)] public byte[] m_vs_data;
-				[MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)] public byte[] m_gs_data;
-				[MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)] public byte[] m_ps_data;
-				[MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)] public byte[] m_cs_data;
+				public ShaderVS m_vs;
+				public ShaderGS m_gs;
+				public ShaderPS m_ps;
+				public ShaderCS m_cs;
 
 				/// <summary>Description</summary>
-				public string Description
-				{
-					get { return $"VS={m_vs} GS={m_gs} PS={m_ps} CS={m_cs}"; }
-				}
+				public string Description => $"VS={m_vs.shdr} GS={m_gs.shdr} PS={m_ps.shdr} CS={m_cs.shdr}";
 			}
-			[DebuggerDisplay("Smap"), Serializable, StructLayout(LayoutKind.Sequential)] public struct ShaderMap
+
+			[DebuggerDisplay("Smap"), Serializable, StructLayout(LayoutKind.Sequential)]
+			public struct ShaderMap
 			{
 				public static ShaderMap New()
 				{
@@ -507,7 +497,7 @@ namespace Rylogic.Gfx
 			public Material(HTexture? diff_tex = null, ShaderMap? shdr_map = null, float? relative_reflectivity = null)
 			{
 				m_diff_tex = diff_tex ?? HTexture.Zero;
-				m_smap = shdr_map ?? ShaderMap.New();
+				m_shader_map = shdr_map ?? ShaderMap.New();
 				m_relative_reflectivity = relative_reflectivity ?? 1f;
 			}
 
@@ -515,39 +505,31 @@ namespace Rylogic.Gfx
 			public HTexture m_diff_tex;
 
 			/// <summary>Shader overrides</summary>
-			public ShaderMap m_smap;
-			// ? Replace this with a text description of the shader params?
-			// It would make it human readable, byte order independent, backwards compatible,
-			// smaller, variable size...
+			public ShaderMap m_shader_map;
 
 			/// <summary>How reflective this nugget is relative to the over all model</summary>
 			public float m_relative_reflectivity;
 
 			/// <summary>Set the shader to use along with the parameters it requires</summary>
-			public void Use(ERenderStep rstep, EShaderVS shdr, params object[] args)
+			public void Use(ERenderStep rstep, EShaderVS shdr, string parms)
 			{
-				m_smap.m_rstep[(int)rstep].m_vs = shdr;
-				m_smap.m_rstep[(int)rstep].m_vs_data = GetData(args);
+				m_shader_map.m_rstep[(int)rstep].m_vs.shdr = shdr;
+				m_shader_map.m_rstep[(int)rstep].m_vs.parms = parms;
 			}
-			public void Use(ERenderStep rstep, EShaderGS shdr, params object[] args)
+			public void Use(ERenderStep rstep, EShaderGS shdr, string parms)
 			{
-				m_smap.m_rstep[(int)rstep].m_gs = shdr;
-				m_smap.m_rstep[(int)rstep].m_gs_data = GetData(args);
+				m_shader_map.m_rstep[(int)rstep].m_gs.shdr = shdr;
+				m_shader_map.m_rstep[(int)rstep].m_gs.parms = parms;
 			}
-			public void Use(ERenderStep rstep, EShaderPS shdr, params object[] args)
+			public void Use(ERenderStep rstep, EShaderPS shdr, string parms)
 			{
-				m_smap.m_rstep[(int)rstep].m_ps = shdr;
-				m_smap.m_rstep[(int)rstep].m_ps_data = GetData(args);
+				m_shader_map.m_rstep[(int)rstep].m_ps.shdr = shdr;
+				m_shader_map.m_rstep[(int)rstep].m_ps.parms = parms;
 			}
-			private byte[] GetData(params object[] args)
+			public void Use(ERenderStep rstep, EShaderCS shdr, string parms)
 			{
-				using (var ms = new MemoryStream())
-				{
-					Util.Serialise(ms, args);
-					for (; ms.Length < 16;) ms.WriteByte(0);
-					ms.Seek(0, SeekOrigin.Begin);
-					return ms.ToArray();
-				}
+				m_shader_map.m_rstep[(int)rstep].m_cs.shdr = shdr;
+				m_shader_map.m_rstep[(int)rstep].m_cs.parms = parms;
 			}
 		}
 
@@ -567,7 +549,7 @@ namespace Rylogic.Gfx
 
 			public Nugget(EPrim topo, EGeom geom, uint v0 = 0, uint v1 = 0, uint i0 = 0, uint i1 = 0, bool has_alpha = false, bool range_overlaps = false, Material? mat = null, ECullMode cull_mode = ECullMode.Back, EFillMode fill_mode = EFillMode.Solid)
 			{
-				Debug.Assert(mat == null || mat.Value.m_smap.m_rstep != null, "Don't use default(Material)");
+				Debug.Assert(mat == null || mat.Value.m_shader_map.m_rstep != null, "Don't use default(Material)");
 				m_topo = topo;
 				m_geom = geom;
 				m_cull_mode = cull_mode;

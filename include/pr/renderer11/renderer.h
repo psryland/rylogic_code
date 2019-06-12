@@ -75,6 +75,7 @@
 #include "pr/renderer11/shaders/input_layout.h"
 #include "pr/renderer11/shaders/shader_manager.h"
 #include "pr/renderer11/shaders/shader.h"
+#include "pr/renderer11/shaders/shdr_fwd.h"
 #include "pr/renderer11/shaders/shdr_screen_space.h"
 
 // Textures

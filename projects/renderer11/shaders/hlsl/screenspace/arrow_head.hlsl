@@ -3,7 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2010
 //***********************************************
 
-#include "screenspace_cbuf.hlsli"
+#include "screen_space_cbuf.hlsli"
 #include "../types.hlsli"
 
 // Converts point geometry into arrow heads

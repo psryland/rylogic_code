@@ -891,7 +891,7 @@ namespace pr
 				if (m_point_size.x != 0 && m_point_size.y != 0)
 				{
 					// Get/Create an instance of the point sprites shader
-					auto id = pr::hash::Hash("LDrawPointSprites", m_point_size, m_depth);
+					auto id = pr::hash::Hash("PointSprites", m_point_size, m_depth);
 					auto shdr = p.m_rdr.m_shdr_mgr.GetShader<PointSpritesGS>(id, RdrId(EStockShader::PointSpritesGS));
 					shdr->m_size = m_point_size;
 					shdr->m_depth = m_depth;
@@ -1160,7 +1160,7 @@ namespace pr
 				if (m_line_width != 0.0f)
 				{
 					// Get or create an instance of the thick line shader
-					auto id = pr::hash::Hash("LDrawThickLine", m_line_width);
+					auto id = pr::hash::Hash("ThickLine", m_line_width);
 					auto shdr = p.m_rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id, RdrId(EStockShader::ThickLineListGS));
 					shdr->m_width = m_line_width;
 
@@ -1914,11 +1914,11 @@ namespace pr
 				obj->m_model->m_name = obj->TypeAndName();
 
 				// Get instances of the arrow head geometry shader and the thick line shader
-				auto id_thk = pr::hash::Hash("LDrawThickLine", m_line_width);
+				auto id_thk = pr::hash::Hash("ThickLine", m_line_width);
 				auto thk_shdr = p.m_rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id_thk, RdrId(EStockShader::ThickLineListGS));
 				thk_shdr->m_width = m_line_width;
 
-				auto id_arw = pr::hash::Hash("LDrawArrowHead", m_line_width*2);
+				auto id_arw = pr::hash::Hash("ArrowHead", m_line_width*2);
 				auto arw_shdr = p.m_rdr.m_shdr_mgr.GetShader<ArrowHeadGS>(id_arw, RdrId(EStockShader::ArrowHeadGS));
 				arw_shdr->m_size = m_line_width * 2;
 
@@ -3067,7 +3067,7 @@ namespace pr
 					if (m_width != 0.0f)
 					{
 						// Use thick lines
-						auto id = pr::hash::Hash("LDrawThickLine", m_width);
+						auto id = pr::hash::Hash("ThickLine", m_width);
 						auto shdr = p.m_rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id, RdrId(EStockShader::ThickLineListGS));
 						shdr->m_width = m_width;
 						nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;

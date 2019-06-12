@@ -261,6 +261,13 @@ namespace pr
 			x(Right)
 		PR_DEFINE_ENUM1(EEye, PR_ENUM);
 		#undef PR_ENUM
+
+		// ERadial
+		#define PR_ENUM(x)\
+			x(Spherical)\
+			x(Cylindrical)
+		PR_DEFINE_ENUM1(ERadial, PR_ENUM);
+		#undef PR_ENUM
 	}
 }
 

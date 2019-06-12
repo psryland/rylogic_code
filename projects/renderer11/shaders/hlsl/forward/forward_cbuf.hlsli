@@ -2,7 +2,7 @@
 // Renderer
 //  Copyright © Rylogic Ltd 2014
 //***********************************************
-// Constant buffer definitions for gbuffer shader
+// Constant buffer definitions for forward shaders.
 // This file is included from C++ source as well
 #ifndef PR_RDR_SHADER_FORWARD_CBUF_HLSL
 #define PR_RDR_SHADER_FORWARD_CBUF_HLSL
@@ -61,6 +61,21 @@ cbuffer CBufModel :reg(b1)
 
 	// EnvMap
 	float m_env_reflectivity; // Reflectivity of the environment map
+};
+
+// Constants used for radial fading.
+cbuffer CBufFade :reg(b2)
+{
+	// The centre of the fade region. Set to (0,0,0,0) to use the camera position
+	float4 m_fade_centre;
+	
+	// x = Fade starting radius
+	// y = Fade ending radius
+	float2 m_fade_radius;
+
+	// 0 = Spherical fade
+	// 1 = Cylindrical fade
+	int m_fade_type;
 };
 
 #endif

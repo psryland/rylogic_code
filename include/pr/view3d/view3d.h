@@ -113,18 +113,25 @@ extern "C"
 	enum class EView3DShaderPS :int
 	{
 		Standard = 0,
+
+		// Radial fade params:
+		//  *Type {Spherical|Cylindrical}
+		//  *Radius {min,max}
+		//  *Centre {x,y,z} (optional, defaults to camera position)
+		//  *Absolute (optional, default false) - True if 'radius' is absolute, false if 'radius' should be scaled by the focus distance
+		RadialFadePS,
 	};
 	enum class EView3DShaderGS :int
 	{
 		Standard = 0,
 
-		// Point sprite data: v2(width,height) bool(depth)
+		// Point sprite params: *PointSize {w,h} *Depth {true|false}
 		PointSpritesGS,
 
-		// Thick line data: float(width)
+		// Thick line params: *LineWidth {width}
 		ThickLineListGS,
 
-		// Arrow head: float(size)
+		// Arrow params: *Size {size}
 		ArrowHeadGS,
 	};
 	enum class EView3DShaderCS :int
@@ -313,22 +320,19 @@ extern "C"
 	{
 		struct ShaderSet
 		{
-			EView3DShaderVS m_vs;
-			EView3DShaderGS m_gs;
-			EView3DShaderPS m_ps;
-			EView3DShaderCS m_cs;
-			uint8_t m_vs_data[16];
-			uint8_t m_gs_data[16];
-			uint8_t m_ps_data[16];
-			uint8_t m_cs_data[16];
+			struct { EView3DShaderVS shdr; char const* params; } m_vs;
+			struct { EView3DShaderGS shdr; char const* params; } m_gs;
+			struct { EView3DShaderPS shdr; char const* params; } m_ps;
+			struct { EView3DShaderCS shdr; char const* params; } m_cs;
 		};
 		struct ShaderMap
 		{
+			// The set of shaders for each render step
 			ShaderSet m_rstep[(int)EView3DRenderStep::_number_of];
 		};
 
 		View3DTexture m_diff_tex;
-		ShaderMap     m_smap;
+		ShaderMap     m_shader_map;
 		float         m_relative_reflectivity;
 	};
 	struct View3DNugget

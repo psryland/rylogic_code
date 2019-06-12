@@ -151,6 +151,7 @@ namespace view3d
 	// Create an object from geometry
 	LdrObject* Context::ObjectCreate(char const* name, pr::Colour32 colour, int vcount, int icount, int ncount, View3DVertex const* verts, pr::uint16 const* indices, View3DNugget const* nuggets, pr::Guid const& context_id)
 	{
+		using namespace pr::script;
 		auto geom = EGeom::None;
 
 		// Generate the nuggets first so we can tell what geometry data is needed
@@ -171,34 +172,49 @@ namespace view3d
 		
 			for (int rs = 1; rs != ERenderStep_::NumberOf; ++rs)
 			{
-				auto& rstep0 = n->m_mat.m_smap.m_rstep[rs];
+				auto& rstep0 = n->m_mat.m_shader_map.m_rstep[rs];
 				auto& rstep1 = nug.m_smap[static_cast<ERenderStep>(rs)];
 				{// VS
-					switch (rstep0.m_vs)
+					switch (rstep0.m_vs.shdr)
 					{
-					default: throw std::exception("Unknown vertex shader");
+					default: throw std::runtime_error("Unknown vertex shader");
 					case EView3DShaderVS::Standard: break;
 					}
 				}
 				{// PS
-					switch (rstep0.m_ps)
+					switch (rstep0.m_ps.shdr)
 					{
-					default: throw std::exception("Unknown pixel shader");
+					default: throw std::runtime_error("Unknown pixel shader");
 					case EView3DShaderPS::Standard: break;
+					case EView3DShaderPS::RadialFadePS:
+						{
+							Reader reader(rstep0.m_ps.params);
+							auto type = reader.Keyword(L"Type").EnumS<pr::rdr::ERadial>();
+							auto radius = reader.Keyword(L"Radius").Vector2S();
+							auto centre = reader.FindKeyword(L"Centre") ? reader.Vector3S(1) : pr::v4Zero;
+							auto focus_relative = reader.FindKeyword(L"Absolute") == false;
+							auto id = pr::hash::Hash("RadialFadePS", centre, radius, type, focus_relative);
+							auto shdr = m_rdr.m_shdr_mgr.GetShader<FwdRadialFadePS>(id, RdrId(EStockShader::FwdRadialFadePS));
+							shdr->m_fade_centre = centre;
+							shdr->m_fade_radius = radius;
+							shdr->m_fade_type = type;
+							shdr->m_focus_relative = focus_relative;
+							rstep1.m_ps = shdr;
+							break;
+						}
 					}
 				}
 				{// GS
-					switch (rstep0.m_gs)
+					switch (rstep0.m_gs.shdr)
 					{
-					default: throw std::exception("Unknown geometry shader");
+					default: throw std::runtime_error("Unknown geometry shader");
 					case EView3DShaderGS::Standard: break;
 					case EView3DShaderGS::PointSpritesGS:
 						{
-							auto ptr = pr::ByteDataCPtr(rstep0.m_gs_data);
-							auto point_size = ptr.read<pr::v2>();
-							auto depth = ptr.read<bool>();
-
-							auto id = pr::hash::Hash("LDrawPointSprites", point_size, depth);
+							Reader reader(rstep0.m_gs.params);
+							auto point_size = reader.Keyword(L"PointSize").Vector2S();
+							auto depth = reader.Keyword(L"Depth").BoolS<bool>();
+							auto id = pr::hash::Hash("PointSprites", point_size, depth);
 							auto shdr = m_rdr.m_shdr_mgr.GetShader<PointSpritesGS>(id, RdrId(EStockShader::PointSpritesGS));
 							shdr->m_size = point_size;
 							shdr->m_depth = depth;
@@ -207,9 +223,9 @@ namespace view3d
 						}
 					case EView3DShaderGS::ThickLineListGS:
 						{
-							auto ptr = pr::ByteDataCPtr(rstep0.m_gs_data);
-							auto line_width = ptr.read<float>();
-							auto id = pr::hash::Hash("LDrawThickLine", line_width);
+							Reader reader(rstep0.m_gs.params);
+							auto line_width = reader.Keyword(L"LineWidth").RealS<float>();
+							auto id = pr::hash::Hash("ThickLine", line_width);
 							auto shdr = m_rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id, RdrId(EStockShader::ThickLineListGS));
 							shdr->m_width = line_width;
 							rstep1.m_gs = shdr;
@@ -217,14 +233,21 @@ namespace view3d
 						}
 					case EView3DShaderGS::ArrowHeadGS:
 						{
-							auto ptr = pr::ByteDataCPtr(rstep0.m_gs_data);
-							auto size = ptr.read<float>();
-							auto id = pr::hash::Hash("LDrawArrowHead", size);
+							Reader reader(rstep0.m_gs.params);
+							auto size = reader.Keyword(L"Size").RealS<float>();
+							auto id = pr::hash::Hash("ArrowHead", size);
 							auto shdr = m_rdr.m_shdr_mgr.GetShader<ArrowHeadGS>(id, RdrId(EStockShader::ArrowHeadGS));
 							shdr->m_size = size;
 							rstep1.m_gs = shdr;
 							break;
 						}
+					}
+				}
+				{// CS
+					switch (rstep0.m_cs.shdr)
+					{
+					default: throw std::runtime_error("Unknown compute shader");
+					case EView3DShaderCS::None: break;
 					}
 				}
 			}

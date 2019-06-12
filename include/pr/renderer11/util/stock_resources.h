@@ -36,6 +36,7 @@ namespace pr
 			x(Invalid         , = InvalidId)\
 			x(FwdShaderVS     ,)\
 			x(FwdShaderPS     ,)\
+			x(FwdRadialFadePS ,)\
 			x(GBufferVS       ,)\
 			x(GBufferPS       ,)\
 			x(DSLightingVS    ,)\

@@ -156,6 +156,7 @@
     <ClInclude Include="..\include\pr\renderer11\shaders\shader.h" />
     <ClInclude Include="..\include\pr\renderer11\shaders\shader_manager.h" />
     <ClInclude Include="..\include\pr\renderer11\shaders\shader_set.h" />
+    <ClInclude Include="..\include\pr\renderer11\shaders\shdr_fwd.h" />
     <ClInclude Include="..\include\pr\renderer11\shaders\shdr_screen_space.h" />
     <ClInclude Include="..\include\pr\renderer11\steps\dslighting.h" />
     <ClInclude Include="..\include\pr\renderer11\steps\forward_render.h" />
@@ -287,6 +288,9 @@
       <FileType>Document</FileType>
     </CustomBuild>
     <CustomBuild Include="..\projects\renderer11\shaders\hlsl\forward\forward.hlsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="..\projects\renderer11\shaders\hlsl\forward\forward_radial_fade.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
     <CustomBuild Include="..\projects\renderer11\shaders\hlsl\screenspace\thick_line.hlsl">
