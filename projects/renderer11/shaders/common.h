@@ -170,6 +170,7 @@ namespace pr::rdr
 	// Set the env-map to world orientation
 	inline void SetEnvMapConstants(TextureCube* env_map, hlsl::EnvMap& cb)
 	{
+		if (env_map == nullptr) return;
 		cb.m_w2env = InvertFast(env_map->m_cube2w);
 	}
 

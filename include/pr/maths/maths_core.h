@@ -311,7 +311,7 @@ namespace pr
 		if (max_b == 0) return max_a < tol;
 		if (max_a == 0) return max_b < tol;
 		auto abs_max_element = Max(max_a, max_b);
-		return FEqlAbsolute(a, b, tol * abs_max_element);
+		return FEqlAbsolute<T>(a, b, tol * abs_max_element);
 	}
 
 	// FEqlRelative using 'tiny'. Returns true if a in the range (b - max(a,b)*tiny, b + max(a,b)*tiny)
@@ -342,7 +342,7 @@ namespace pr
 	}
 	template <typename T> inline bool FEql(std::span<T> const& a, std::span<T> const& b)
 	{
-		return FEqlRelative(a, b, maths::tiny);
+		return FEqlRelative<T>(a, b, maths::tiny);
 	}
 
 	#pragma warning (default:4756)
@@ -500,15 +500,15 @@ namespace pr
 	}
 
 	// Absolute value of an array
-	template <typename T, int N> constexpr std::array<T,N> Abs(T const (&v)[N])
+	template <typename T, int N> constexpr std::array<std::remove_cv_t<T>,N> Abs(T (& v)[N])
 	{
-		std::array<T,N> r = {};
+		std::array<std::remove_cv_t<T>,N> r = {};
 		for (int i = 0, iend = N; i != iend; ++i) r[i] = Abs(v[i]);
 		return r;
 	}
-	template <typename T, int N> constexpr std::array<T,N> Abs4(T const (&v)[N])
+	template <typename T, int N> constexpr std::array<std::remove_cv_t<T>,N> Abs4(T (& v)[N])
 	{
-		std::array<T,N> r = {};
+		std::array<std::remove_cv_t<T>,N> r = {};
 		r[0] = Abs(v[0]);
 		r[1] = Abs(v[1]);
 		r[2] = Abs(v[2]);
@@ -516,18 +516,18 @@ namespace pr
 		for (int i = 4; i != N; ++i) r[i] = v[i];
 		return r;
 	}
-	template <typename T, int N> constexpr std::array<T,N> Abs3(T const (&v)[N])
+	template <typename T, int N> constexpr std::array<std::remove_cv_t<T>,N> Abs3(T (& v)[N])
 	{
-		std::array<T,N> r = {};
+		std::array<std::remove_cv_t<T>,N> r = {};
 		r[0] = Abs(v[0]);
 		r[1] = Abs(v[1]);
 		r[2] = Abs(v[2]);
 		for (int i = 3; i != N; ++i) r[i] = v[i];
 		return r;
 	}
-	template <typename T, int N> constexpr std::array<T,N> Abs2(T const (&v)[N])
+	template <typename T, int N> constexpr std::array<std::remove_cv_t<T>,N> Abs2(T (& v)[N])
 	{
-		std::array<T,N> r = {};
+		std::array<std::remove_cv_t<T>,N> r = {};
 		r[0] = Abs(v[0]);
 		r[1] = Abs(v[1]);
 		for (int i = 2; i != N; ++i) r[i] = v[i];
@@ -1868,7 +1868,12 @@ namespace pr::maths
 
 			float arr3[] = {+1,-2,+3,-4};
 			float arr4[] = {+1,+2,+3,+4};
-			PR_CHECK(FEql(std::span<float>(Abs(arr3)), std::span<float>(arr4)), true);
+			std::span<float const> span0(Abs(arr3));
+			std::span<float const> span1(arr4);
+			PR_CHECK(FEql(span0, span1), true);
+
+			std::array<float, 5> const arr5 = { 1, 2, 3, 4, 5 };
+			std::span<float const> span5(arr5);
 		}
 		{// Truncate
 			v4 arr0 = {+1.1f, -1.2f, +2.8f, -2.9f};
