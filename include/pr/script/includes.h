@@ -322,7 +322,7 @@ namespace pr
 			}
 
 			// Open 'include' as an ASCII stream
-			std::unique_ptr<std::istream> OpenStreamA(string const& include, EFlags flags, Location const& loc = Location()) override
+			std::unique_ptr<std::basic_istream<char>> OpenStreamA(string const& include, EFlags flags, Location const& loc = Location()) override
 			{
 				string result, searched_paths;
 				HMODULE module;
@@ -338,7 +338,7 @@ namespace pr
 				if (AllSet(m_types, EType::Resources) && ResolveResourceInclude(include, result, AllSet(flags, EFlags::Binary), module))
 				{
 					auto res = pr::resource::Read<char>(result.c_str(), AllSet(flags, EFlags::Binary) ? L"BINARY" : L"TEXT", module);
-					return std::make_unique<pr::imemstream>(res.m_data, res.size());
+					return std::unique_ptr<std::basic_istream<char>>(new mem_istream<char>(res.m_data, res.size()));
 				}
 
 				// Try the string table

@@ -308,7 +308,7 @@ namespace pr::storage::zip
 					// Bugfix: This code was also checking if the internal attribute was non-zero, which wasn't correct.
 					// Most/all zip writers (hopefully) set DOS file/directory attributes in the low 16-bits, so check for the DOS directory flag and ignore the source OS ID in the created by field.
 					// FIXME: Remove this check? Is it necessary - we already check the filename.
-					(ExternalAttributes & DOSSubDirectoryFlag) != 0;
+					has_flag(ExternalAttributes, DOSSubDirectoryFlag);
 			}
 			time_t Time() const
 			{
@@ -358,7 +358,7 @@ namespace pr::storage::zip
 		using alloc_traits_t = typename std::allocator_traits<allocator_t>;
 		template <typename U> using allocator_u = typename alloc_traits_t::template rebind_alloc<U>;
 		template <typename T> using vector_t = std::vector<T, allocator_u<T>>;
-		template <typename T> using lookup_t = std::unordered_multimap<uint64_t, T, std::hash<uint64_t>, std::equal_to<uint64_t>, allocator_u<std::pair<uint64_t const, T>>>;
+		using name_hash_index_pair_t = struct { uint64_t name_hash; int index; };
 		using string_t = std::basic_string<char, allocator_u<char>>;
 		using iarray_t = std::basic_string_view<uint8_t>;
 		using oarray_t = vector_t<uint8_t>;
@@ -368,8 +368,8 @@ namespace pr::storage::zip
 		static uint32_t const LZDictionarySize = 32768;
 
 		// Read/Write function pointer types. Functions are expected to read/write 'n' bytes or throw.
-		using read_func_t = void(*)(void* ctx, int64_t file_ofs, void* buf, size_t n);
-		using write_func_t = void(*)(void* ctx, int64_t file_ofs, void const* buf, size_t n);
+		using read_func_t = void(*)(ZipArchiveA const& me, int64_t file_ofs, void* buf, size_t n);
+		using write_func_t = void(*)(ZipArchiveA& me, int64_t file_ofs, void const* buf, size_t n);
 
 		// Output stream interface. The compressor uses this interface to write compressed data. It'll typically be called TDEFL_OUT_BUF_SIZE at a time.
 		using tinfl_put_buf_func_ptr = int (*)(void const* pBuf, int len, void *pUser);
@@ -385,7 +385,7 @@ namespace pr::storage::zip
 
 		// In reading mode, this is the size of the entire zip data including the central directory header.
 		// In writing mode, this is the size of the data written to the output stream so far.
-		int64_t m_archive_size;
+		size_t m_archive_size;
 
 		// The number of entries in the archive
 		int m_total_entries;
@@ -402,16 +402,16 @@ namespace pr::storage::zip
 		// Byte offsets to the start of the header for each entry 
 		vector_t<uint32_t> m_cdir_index;
 
-		// A lookup table from entry name to central directory index
-		lookup_t<int> m_central_dir_lookup;
+		// A lookup table from entry name hash to central directory index
+		vector_t<name_hash_index_pair_t> m_central_dir_lookup;
 
-		// Zip archive file pointer
+		// Zip file
 		std::filesystem::path m_filepath;
-		std::ifstream m_ifile;
+		mutable std::ifstream m_ifile;
 		std::ofstream m_ofile;
 
-		// Zip in-memory pointer
-		iarray_t m_imem;
+		// Zip in-memory
+		mutable iarray_t m_imem;
 		oarray_t m_omem;
 
 		// Read/Write functions that change depending on whether the archive is in memory or a file on disk.
@@ -468,7 +468,7 @@ namespace pr::storage::zip
 		{
 			m_filepath = filepath;
 			m_ifile = std::ifstream(filepath, std::ios::binary);
-			m_archive_size = static_cast<int64_t>(std::filesystem::file_size(filepath));
+			m_archive_size = std::filesystem::file_size(filepath);
 			m_read = FileReadFunc;
 			ReadCentralDirectory();
 		}
@@ -525,28 +525,28 @@ namespace pr::storage::zip
 
 			// See if the lookup hash table is available.
 			// Check the flags used to create the cache are the same as the flags provided here.
-			auto mask = EZipFlags::IgnoreCase | EZipFlags::IgnorePath;
-			if (!m_central_dir_lookup.empty() && (m_flags & mask) == (flags & mask))
+			if (!m_central_dir_lookup.empty() && m_flags == flags)
 			{
 				// Get the range of items that match 'name'
 				auto hash = Hash(item_name.data(), flags);
-				for (auto& p : m_central_dir_lookup.equal_range(hash))
+				auto matches = std::equal_range(begin(m_central_dir_lookup), end(m_central_dir_lookup), hash);
+				for (auto p = matches.first; p != matches.second; ++p)
 				{
 					// Find a matching item name
-					auto name = Name(p.second);
+					auto name = Name(p->index);
 					if (Compare(item_name, name, flags) != 0)
 						continue;
 
 					// Check matching comment
 					if (!item_comment.empty())
 					{
-						auto comment = Comment(p.second);
+						auto comment = Comment(p->index);
 						if (Compare(item_comment, comment) != 0)
 							continue;
 					}
 
 					// Found it
-					return p.second;
+					return p->index;
 				}
 			}
 
@@ -630,18 +630,18 @@ namespace pr::storage::zip
 
 			// Write the local directory header
 			LDH ldh(item_name.size(), extra.size(), uncompressed_size, buf.size(), uncompressed_crc32, method, bit_flags, dos_time, dos_date);
-			m_write(this, ldh_ofs, &ldh, sizeof(ldh));
+			m_write(*this, ldh_ofs, &ldh, sizeof(ldh));
 
 			// Write the item name
-			m_write(this, item_ofs, item_name.data(), item_name.size());
+			m_write(*this, item_ofs, item_name.data(), item_name.size());
 			item_ofs += item_name.size();
 
 			// Write the extra data
-			m_write(this, item_ofs, extra.data(), extra.size());
+			m_write(*this, item_ofs, extra.data(), extra.size());
 			item_ofs += extra.size();
 
 			// Write the item data
-			m_write(this, item_ofs, buf.data(), buf.size());
+			m_write(*this, item_ofs, buf.data(), buf.size());
 			item_ofs += buf.size();
 
 			// Add an entry to the central directory
@@ -650,7 +650,7 @@ namespace pr::storage::zip
 			m_central_dir.append(item_name.begin(), item_name.end());
 			m_central_dir.append(extra.begin(), extra.end());
 			m_central_dir.append(item_comment.begin(), item_comment.end());
-			m_cdir_index.push_back(m_archive_size);
+			m_cdir_index.push_back(checked_cast<uint32_t>(m_archive_size));
 
 			// Update stats
 			m_archive_size = item_ofs;
@@ -679,7 +679,7 @@ namespace pr::storage::zip
 				throw std::runtime_error("Compression level out of range");
 			if (m_total_entries >= 0xFFFF)
 				throw std::runtime_error("Too many files added.");
-			if (flags & EZipFlags::CompressedData)
+			if (has_flag(flags, EZipFlags::CompressedData))
 				throw std::runtime_error("Use the 'AddAlreadyCompressed' function to add compressed data.");
 
 			// Overflow check
@@ -731,21 +731,21 @@ namespace pr::storage::zip
 			WriteZeros(ldh_ofs, sizeof(LDH));
 
 			// Write the item name
-			m_write(this, item_ofs, item_name.data(), item_name.size());
+			m_write(*this, item_ofs, item_name.data(), item_name.size());
 			item_ofs += item_name.size();
 
 			// Write the extra data
-			m_write(this, item_ofs, extra.data(), extra.size());
+			m_write(*this, item_ofs, extra.data(), extra.size());
 			item_ofs += extra.size();
 
 			// Calculate the uncompressed crc
-			if ((flags & EZipFlags::IgnoreCrc) == 0)
+			if (!has_flag(flags, EZipFlags::IgnoreCrc))
 				buf_crc32 = Crc(buf.data(), buf.size());
 
 			// Write the compressed data
 			if (level == ECompressionLevel::None)
 			{
-				m_write(this, item_ofs, buf.data(), buf.size());
+				m_write(*this, item_ofs, buf.data(), buf.size());
 				item_ofs += buf.size();
 				method = EMethod::None;
 				compressed_size = buf.size();
@@ -769,7 +769,7 @@ namespace pr::storage::zip
 
 			// Write the local directory header now that we have the compressed size
 			LDH ldh(item_name.size(), extra.size(), buf.size(), compressed_size, buf_crc32, method, bit_flags, dos_time, dos_date);
-			m_write(this, ldh_ofs, &ldh, sizeof(ldh));
+			m_write(*this, ldh_ofs, &ldh, sizeof(ldh));
 
 			// Add an entry to the central directory
 			CDH cdh(item_name.size(), extra.size(), item_comment.size(), buf.size(), compressed_size, buf_crc32, method, bit_flags, dos_time, dos_date, ldh_ofs, ext_attributes, int_attributes);
@@ -777,7 +777,7 @@ namespace pr::storage::zip
 			m_central_dir.append(item_name.begin(), item_name.end());
 			m_central_dir.append(extra.begin(), extra.end());
 			m_central_dir.append(item_comment.begin(), item_comment.end());
-			m_cdir_index.push_back(m_archive_size);
+			m_cdir_index.push_back(checked_cast<uint32_t>(m_archive_size));
 
 			// Update stats
 			m_total_entries++;
@@ -810,7 +810,7 @@ namespace pr::storage::zip
 				throw std::runtime_error("File '"s + src_filepath + "' is too large. Zip64 is not supported");
 			if (level < ECompressionLevel::None || level > ECompressionLevel::Uber)
 				throw std::runtime_error("Compression level out of range");
-			if (flags & EZipFlags::CompressedData)
+			if (has_flag(flags, EZipFlags::CompressedData))
 				throw std::runtime_error("Use the 'AddAlreadyCompressed' function to add compressed data.");
 			if (m_total_entries >= 0xFFFF)
 				throw std::runtime_error("Too many files added.");
@@ -859,11 +859,11 @@ namespace pr::storage::zip
 			WriteZeros(ldh_ofs, sizeof(LDH));
 
 			// Write the item name
-			m_write(this, item_ofs, item_name.data(), item_name.size());
+			m_write(*this, item_ofs, item_name.data(), item_name.size());
 			item_ofs += item_name.size();
 
 			// Write the extra data
-			m_write(this, item_ofs, extra.data(), extra.size());
+			m_write(*this, item_ofs, extra.data(), extra.size());
 			item_ofs += extra.size();
 
 			// Write the compressed data
@@ -881,7 +881,7 @@ namespace pr::storage::zip
 					file_crc32 = Crc(buf.data(), n, file_crc32);
 
 					// Write the data into the archive
-					m_write(this, item_ofs, buf.data(), n);
+					m_write(*this, item_ofs, buf.data(), n);
 					item_ofs += n;
 					remaining -= n;
 				}
@@ -918,7 +918,7 @@ namespace pr::storage::zip
 
 			// Write the local directory header now that we have the compressed size
 			LDH ldh(item_name.size(), extra.size(), uncompressed_size, compressed_size, file_crc32, method, bit_flags, dos_time, dos_date);
-			m_write(this, ldh_ofs, &ldh, sizeof(ldh));
+			m_write(*this, ldh_ofs, &ldh, sizeof(ldh));
 
 			// Add an entry to the central directory
 			CDH cdh(item_name.size(), extra.size(), item_comment.size(), uncompressed_size, compressed_size, file_crc32, method, bit_flags, dos_time, dos_date, ldh_ofs, ext_attributes, int_attributes);
@@ -926,7 +926,7 @@ namespace pr::storage::zip
 			m_central_dir.append(item_name.begin(), item_name.end());
 			m_central_dir.append(extra.begin(), extra.end());
 			m_central_dir.append(item_comment.begin(), item_comment.end());
-			m_cdir_index.push_back(m_archive_size);
+			m_cdir_index.push_back(checked_cast<uint32_t>(m_archive_size));
 
 			// Update stats
 			m_total_entries++;
@@ -938,18 +938,18 @@ namespace pr::storage::zip
 		// 'dst_filepath' is where to write the extracted file.
 		// 'index' is the item's index within the archive.
 		// This function only extracts files, not archive directory records.
-		void Extract(std::string_view item_name, std::filesystem::path const& dst_filepath, std::string_view item_comment = "", EZipFlags flags = EZipFlags::None)
+		void Extract(std::string_view item_name, std::filesystem::path const& dst_filepath, EZipFlags flags = EZipFlags::None) const
 		{
-			auto index = IndexOf(item_name, item_comment, flags);
+			auto index = IndexOf(item_name, "", flags);
 			return index >= 0 && index < m_total_entries
-				? Extract(index, dst_filepath, item_comment, flags)
+				? Extract(index, dst_filepath, flags)
 				: throw std::runtime_error("Archive item not found");
 		}
-		void Extract(int index, std::filesystem::path const& dst_filepath, std::string_view item_comment = "", EZipFlags flags = EZipFlags::None) const
+		void Extract(int index, std::filesystem::path const& dst_filepath, EZipFlags flags = EZipFlags::None) const
 		{
 			// Create the destination file
 			auto outfile = std::ostream(dst_filepath, std::ios::binary);
-			auto status = Extract(index, [&outfile](void*, uint64_t, void const* buf, size_t n) { outfile.write(buf, n); }, nullptr, item_comment, flags);
+			Extract(index, outfile, flags);
 			outfile.close();
 
 			// Set the file time on the extracted file to match the times recorded in the archive
@@ -961,19 +961,42 @@ namespace pr::storage::zip
 				throw std::runtime_error(strerror("Failed to update modified time."));
 		}
 
+		// Extracts an archive entry to a stream.
+		// 'item_name' is the entry name for the item to extract.
+		// 'out' is where to write the extracted file.
+		// 'index' is the item's index within the archive.
+		// This function only extracts files, not archive directory records.
+		template <typename Elem = uint8_t>
+		void Extract(std::string_view item_name, std::basic_ostream<Elem>& out, EZipFlags flags = EZipFlags::None) const
+		{
+			auto index = IndexOf(item_name, "", flags);
+			return index >= 0 && index < m_total_entries
+				? Extract(index, out, flags)
+				: throw std::runtime_error("Archive item not found");
+		}
+		template <typename Elem = uint8_t>
+		void Extract(int index, std::basic_ostream<Elem>& out, EZipFlags flags = EZipFlags::None) const
+		{
+			Extract(index, [&out](void*, uint64_t ofs, void const* buf, size_t n)
+			{
+				out.seekp(ofs);
+				out.write(static_cast<Elem const*>(buf), n / sizeof(Elem));
+			}, nullptr, flags);
+		}
+
 		// Extracts a archive entry using a callback function to output the uncompressed data.
 		// OutputCB = void(void* ctx, uint64_t output_buffer_ofs, void const* buf, size_t len)
 		// OutputCB is expected to copy 'buf[0:len) to '&somewhere[output_buffer_ofs]'.
 		// OutputCB should throw if not all bytes can be copied.
 		// 'output_buffer_ofs' is a convenience for output streams that do not have an internal 'file' pointer.
 		template <typename OutputCB>
-		void Extract(std::string_view item_name, OutputCB callback, void* ctx, std::string_view item_comment = "", EZipFlags flags = EZipFlags::None)
+		void Extract(std::string_view item_name, OutputCB callback, void* ctx, EZipFlags flags = EZipFlags::None) const
 		{
-			auto index = IndexOf(item_name, item_comment, flags);
-			Extract(index, callback, ctx, item_comment, flags);
+			auto index = IndexOf(item_name, "", flags);
+			Extract(index, callback, ctx, flags);
 		}
 		template <typename OutputCB>
-		void Extract(int index, OutputCB callback, void* ctx, std::string_view item_comment = "", EZipFlags flags = EZipFlags::None)
+		void Extract(int index, OutputCB callback, void* ctx, EZipFlags flags = EZipFlags::None) const
 		{
 			using namespace std::literals;
 
@@ -988,15 +1011,15 @@ namespace pr::storage::zip
 				throw std::runtime_error("Item is a directory entry. Only file items can be extracted");
 
 			// Encryption and patch files are not supported.
-			if (cdh.BitFlags & (EBitFlags::Encrypted | EBitFlags::PatchFile))
+			if (has_flag(cdh.BitFlags, EBitFlags::Encrypted) || has_flag(cdh.BitFlags, EBitFlags::PatchFile))
 				throw std::runtime_error("Encryption and patch files are not supported");
 
 			// This function only supports stored and deflate.
-			if (cdh.Method != EMethod::Deflate && cdh.Method != EMethod::None && !(flags & EZipFlags::CompressedData))
-				throw std::runtime_error("Unsupported compression method type: "s + std::to_string(cdh.Method));
+			if (cdh.Method != EMethod::Deflate && cdh.Method != EMethod::None && !has_flag(flags, EZipFlags::CompressedData))
+				throw std::runtime_error("Unsupported compression method type: "s + std::to_string(int(cdh.Method)));
 
 			// Read and parse the local directory entry.
-			LDH ldh; m_read(this, cdh.LocalHeaderOffset, &ldh, sizeof(ldh));
+			LDH ldh; m_read(*this, cdh.LocalHeaderOffset, &ldh, sizeof(ldh));
 			if (ldh.Sig != LDH::Signature)
 				throw std::runtime_error("Item header structure is invalid. Signature mismatch");
 
@@ -1005,169 +1028,1016 @@ namespace pr::storage::zip
 			if (item_ofs + cdh.CompressedSize > m_archive_size)
 				throw std::runtime_error("Archive corrupt. Indicated item size exceeds the available data");
 
-			uint64_t out_buf_ofs = 0;
-			uint32_t item_crc32 = 0;
-
-			// The item was stored uncompressed or the caller has requested the compressed data.
-			if (cdh.Method == EMethod::None || (flags & EZipFlags::CompressedData))
-			{
-				// From input memory stream
-				if (!m_imem.empty())
-				{
-					// Zip64 check
-					if constexpr (sizeof(size_t) == sizeof(uint32_t))
-						if (cdh.CompressedSize > 0xFFFFFFFF)
-							throw std::runtime_error("Item is too large. Zip64 is not supported");
-
-					// Calculate the crc if the call was not just for the compressed data
-					if (!(flags & EZipFlags::CompressedData) && !(flags & EZipFlags::IgnoreCrc))
-						item_crc32 = Crc(m_imem.data() + item_ofs, cdh.CompressedSize, item_crc32);
-
-					// Send the data directly to the callback
-					callback(ctx, out_buf_ofs, m_imem.data() + item_ofs, size_t(cdh.CompressedSize));
-
-					// All data sent
-					item_ofs += cdh.CompressedSize;
-					out_buf_ofs += cdh.CompressedSize;
-				}
-
-				// From ifile
-				else
-				{
-					// Zip is a file. Read chunks into a temporary buffer
-					std::array<uint8_t, 4096> buf;
-					for (size_t remaining = cdh.CompressedSize; remaining != 0;)
-					{
-						// Read chunk
-						auto n = std::min<size_t>(buf.size(), remaining);
-						m_read(this, item_ofs, buf.data(), n);
-
-						// Calculate the crc if the call was not just for the compressed data
-						if (!(flags & EZipFlags::CompressedData) && !(flags & EZipFlags::IgnoreCrc))
-							item_crc32 = Crc(buf.data(), n, item_crc32);
-
-						// Send the data directly to the callback
-						callback(ctx, out_buf_ofs, buf.data(), n);
-
-						// Accumulate
-						remaining -= n;
-						item_ofs += n;
-						out_buf_ofs += n;
-					}
-				}
-			}
-
-			// Data is compressed, inflate before passing to callback
-			else if (cdh.Method == EMethod::Deflate)
-			{
-				#if 0 //todo
-				Deflate aglo;
-
-				// Decompress into a temporary buffer. The minimum buffer size must be 'LZDictionarySize'
-				vector_t<uint8_t> buf(LZDictionarySize);
-
-
-				algo.Decompress((const uint8_t*)pRead_buf + read_buf_ofs, &in_buf_size, (uint8_t*)pWrite_buf, pWrite_buf_cur, &out_buf_size, comp_remaining ? TINFL_FLAG_HAS_MORE_INPUT : 0);
-
-				if (nullptr == (pWrite_buf = pZip->m_pAlloc(pZip->m_pAlloc_opaque, 1, LZDictionarySize)))
-					status = TINFL_STATUS_FAILED;
-				else
-				{
-					do
-					{
-						uint8_t* pWrite_buf_cur = (uint8_t*)pWrite_buf + (out_buf_ofs & (LZDictionarySize - 1));
-						size_t in_buf_size, out_buf_size = LZDictionarySize - (out_buf_ofs & (LZDictionarySize - 1));
-						if ((!read_buf_avail) && (!pZip->m_pState->m_pMem))
-						{
-							read_buf_avail = std::min(read_buf_size, comp_remaining);
-							if (pZip->m_pRead(pZip->m_pIO_opaque, item_ofs, pRead_buf, (size_t)read_buf_avail) != read_buf_avail)
-							{
-								status = TINFL_STATUS_FAILED;
-								break;
-							}
-							item_ofs += read_buf_avail;
-							comp_remaining -= read_buf_avail;
-							read_buf_ofs = 0;
-						}
-
-						in_buf_size = (size_t)read_buf_avail;
-						status = Decompress(&aglo, (const uint8_t*)pRead_buf + read_buf_ofs, &in_buf_size, (uint8_t*)pWrite_buf, pWrite_buf_cur, &out_buf_size, comp_remaining ? TINFL_FLAG_HAS_MORE_INPUT : 0);
-						read_buf_avail -= in_buf_size;
-						read_buf_ofs += in_buf_size;
-
-						if (out_buf_size)
-						{
-							if (callback(ctx, out_buf_ofs, pWrite_buf_cur, out_buf_size) != out_buf_size)
-							{
-								status = TINFL_STATUS_FAILED;
-								break;
-							}
-							file_crc32 = (uint32_t)mz_crc32(file_crc32, pWrite_buf_cur, out_buf_size);
-							if ((out_buf_ofs += out_buf_size) > cdh.m_uncomp_size)
-							{
-								status = TINFL_STATUS_FAILED;
-								break;
-							}
-						}
-					}
-					while ((status == TINFL_STATUS_NEEDS_MORE_INPUT) || (status == TINFL_STATUS_HAS_MORE_OUTPUT));
-				}
-
-
-
-				// Decompress
-				if (!m_imem.empty())
-				{
-					// Zip is in memory
-					pRead_buf = m_imem.data() + item_ofs;
-					read_buf_size = read_buf_avail = cdh.m_comp_size;
-					comp_remaining = 0;
-				}
-				else
-				{
-					// Zip is a file
-					read_buf_size = std::min<uint64_t>(cdh.m_comp_size, MaxIOBufferSize);
-					if (nullptr == (pRead_buf = pZip->m_pAlloc(pZip->m_pAlloc_opaque, 1, (size_t)read_buf_size)))
-						return MZ_FALSE;
-
-					read_buf_avail = 0;
-					comp_remaining = cdh.m_comp_size;
-				}
-
-				int status = TINFL_STATUS_DONE;
-				uint64_t read_buf_size;
-				uint64_t read_buf_ofs = 0;
-				uint64_t read_buf_avail;
-				void* pRead_buf = nullptr;
-				void* pWrite_buf = nullptr;
-
-
-				if ((status == TINFL_STATUS_DONE) && (!(flags & MZ_ZIP_FLAG_COMPRESSED_DATA)))
-				{
-					// Make sure the entire file was decompressed, and check its CRC.
-					if ((out_buf_ofs != cdh.m_uncomp_size) || (file_crc32 != cdh.m_crc32))
-						status = TINFL_STATUS_FAILED;
-				}
-
-				if (!pZip->m_pState->m_pMem)
-					pZip->m_pFree(pZip->m_pAlloc_opaque, pRead_buf);
-				if (pWrite_buf)
-					pZip->m_pFree(pZip->m_pAlloc_opaque, pWrite_buf);
-
-				return status == TINFL_STATUS_DONE;
-				#endif
-			}
+			// From input memory stream
+			if (!m_imem.empty())
+				ExtractFromMemory(callback, ctx, cdh, item_ofs, flags);
+			else if (m_ifile.good())
+				ExtractFromFile(callback, ctx, cdh, item_ofs, flags);
 			else
+				throw std::runtime_error("Input data stream not available");
+		}
+
+	private:
+
+		// Read the top level directory structure contained in the zip and populate our state variables
+		void ReadCentralDirectory()
+		{
+			// Basic sanity checks - reject files that are too small, and check the
+			// first 4 bytes of the file to make sure a local header is there.
+			if (m_archive_size < sizeof(ECDH))
+				throw std::runtime_error("Archive is invalid. Smaller than header structure size");
+
+			// The current position in the data
+			auto ofs = m_archive_size;
+			std::array<uint8_t, 4096> buf;
+
+			// Find the end of central directory record by scanning the file from end to start.
+			for (;;)
 			{
-				std::runtime_error("Unsupported compresseion method:"s + std::to_string(cdh.Method));
+				// Read a chunk
+				auto n = std::min<int64_t>(buf.size(), ofs);
+				m_read(*this, ofs - n, buf.data(), n);
+				ofs -= n;
+
+				// Search (backwards) for the CDH end marker
+				for (uint32_t sig = 0; n-- != 0;)
+				{
+					sig = (sig << 8) | buf[n];
+					if (sig == ECDH::Signature) break;
+				}
+				if (ofs == 0 && n == -1)
+					throw std::runtime_error("Invalid zip. Central directory header not found");
+				if (n == -1)
+					continue;
+
+				// Found the CDH end marker at '@buf[n]', move 'ofs' to the start of the ECDH.
+				ofs += n;
+				break;
+			}
+
+			// Read and verify the end of central directory record.
+			ECDH ecdh; m_read(*this, ofs, &ecdh, sizeof(ecdh));
+			if (ecdh.Sig != ECDH::Signature)
+				throw std::runtime_error("Invalid zip. Central directory end marker not found");
+			if (ecdh.TotalEntries != ecdh.NumEntriesOnDisk || ecdh.DiskNumber > 1)
+				throw std::runtime_error("Invalid zip. Archives that span multiple disks are not supported");
+			if (ecdh.CDirSize < ecdh.TotalEntries * sizeof(CDH))
+				throw std::runtime_error("Invalid zip. Central directory size is invalid");
+			if (ecdh.CDirOffset + ecdh.CDirSize > m_archive_size)
+				throw std::runtime_error("Invalid zip. Central directory size exceeds archive size");
+
+			// Read the central directory into memory.
+			m_total_entries = ecdh.TotalEntries;
+			m_central_dir.resize(ecdh.CDirSize);
+			m_cdir_index.resize(m_total_entries);
+			m_read(*this, ecdh.CDirOffset, m_central_dir.data(), m_central_dir.size());
+
+			// Populate the index of offsets into the central directory
+			auto p = m_central_dir.data();
+			for (size_t n = ecdh.CDirSize, i = 0; i != m_total_entries; ++i)
+			{
+				auto& cdh = *reinterpret_cast<CDH const*>(p);
+
+				// Sanity checks
+				if (n < sizeof(CDH) || cdh.Sig != CDH::Signature)
+					throw std::runtime_error("Invalid zip. Central directory header corrupt");
+				if ((cdh.UncompressedSize != 0 && cdh.CompressedSize == 0) || cdh.UncompressedSize == 0xFFFFFFFF || cdh.CompressedSize == 0xFFFFFFFF)
+					throw std::runtime_error("Invalid zip. Compressed and Decompressed sizes are invalid");
+				if (cdh.Method == EMethod::None && cdh.UncompressedSize != cdh.CompressedSize)
+					throw std::runtime_error("Invalid zip. Header indicates no compression, but compressed and decompressed sizes differ");
+				if (cdh.DiskNumberStart != ecdh.DiskNumber && cdh.DiskNumberStart != 1)
+					throw std::runtime_error("Unsupported zip. Archive spans multiple disks");
+				if (cdh.LocalHeaderOffset + sizeof(LDH) + cdh.CompressedSize > m_archive_size)
+					throw std::runtime_error("Invalid zip. Item size value exceeds actual data size");
+				auto total_header_size = sizeof(CDH) + cdh.NameSize + cdh.ExtraSize + cdh.CommentSize;
+				if (total_header_size > n)
+					throw std::runtime_error("Invalid zip. Computed header size does not agree header end signature location");
+
+				m_cdir_index[i] = checked_cast<uint32_t>(p - m_central_dir.data());
+				n -= total_header_size;
+				p += total_header_size;
+			}
+
+			// Generate a lookup table from name (hashed) to index
+			if (has_flag(m_flags, EZipFlags::FastNameLookup))
+			{
+				m_central_dir_lookup.reserve(m_total_entries);
+				for (int i = 0, iend = int(m_cdir_index.size()); i != iend; ++i)
+				{
+					auto name = Name(i);
+					auto hash = Hash(name, m_flags);
+					m_central_dir_lookup.push_back(name_hash_index_pair_t{ hash, i });
+				}
+				std::sort(begin(m_central_dir_lookup), end(m_central_dir_lookup));
 			}
 		}
 
+		// Return the required padding needed to align an item in the archive
+		int CalcAlignmentPadding() const
+		{
+			if (m_entry_alignment == 0) return 0;
+			auto n = static_cast<int>(m_archive_size & (m_entry_alignment - 1));
+			return (m_entry_alignment - n) & (m_entry_alignment - 1);
+		}
 
+		// Write zeros into the output
+		void WriteZeros(int64_t ofs, size_t count)
+		{
+			static char const zeros[1024] = {};
+			while (count)
+			{
+				auto sz = std::min<size_t>(sizeof(zeros), count);
+				m_write(*this, ofs, zeros, sz);
+				ofs += sz;
+				count -= sz;
+			}
+		}
+
+		// Extract from a zip archive in memory
+		template <typename OutputCB>
+		void ExtractFromMemory(OutputCB callback, void* ctx, CDH const& cdh, int64_t item_ofs, EZipFlags flags) const
+		{
+			if (m_imem.empty())
+				throw std::runtime_error("There is no in-memory archive");
+
+			// The item was stored uncompressed or the caller has requested the compressed data.
+			if (cdh.Method == EMethod::None || has_flag(flags, EZipFlags::CompressedData))
+			{
+				// Zip64 check
+				if constexpr (sizeof(size_t) == sizeof(uint32_t))
+					if (cdh.CompressedSize > 0xFFFFFFFF)
+						throw std::runtime_error("Item is too large. Zip64 is not supported");
+
+				uint64_t ofs = 0;
+				uint32_t crc32 = 0;
+
+				// Calculate the crc if the call was not just for the compressed data
+				if (!has_flag(flags, EZipFlags::CompressedData) && !has_flag(flags, EZipFlags::IgnoreCrc))
+					crc32 = Crc(m_imem.data() + item_ofs, cdh.CompressedSize, crc32);
+
+				// Send the data directly to the callback
+				callback(ctx, ofs, m_imem.data() + item_ofs, size_t(cdh.CompressedSize));
+
+				// All data sent
+				item_ofs += cdh.CompressedSize;
+				ofs += cdh.CompressedSize;
+				return;
+			}
+
+			// Data is compressed, inflate before passing to callback
+			if (cdh.Method == EMethod::Deflate)
+			{
+				// Decompress into a temporary buffer. The minimum buffer size must be 'LZDictionarySize'
+				// because Deflate uses references to earlier bytes, upto an LZ dictionary size prior.
+				Deflate algo;
+				uint64_t ofs = 0;
+				uint32_t crc32 = 0;
+				vector_t<uint8_t> buf(LZDictionarySize);
+				algo.Decompress(m_imem.data(), buf.data(), [&](uint8_t*& ptr)
+				{
+					auto count = size_t(ptr - buf.data());
+					assert(count <= buf.size());
+
+					// Update the crc
+					crc32 = Crc(buf.data(), count, crc32);
+
+					// Push the buffered data out to the callback
+					callback(ctx, ofs, buf.data(), count);
+					ofs += count;
+
+					// Reset to the start of the buffer
+					ptr = buf.data();
+				}, Deflate::EFlags::ExpectZlibHeader);
+				return;
+			}
+			
+			using namespace std::literals;
+			std::runtime_error("Unsupported compression method:"s + std::to_string(int(cdh.Method)));
+		}
+
+		// Extract from a zip archive file
+		template <typename OutputCB>
+		void ExtractFromFile(OutputCB callback, void* ctx, CDH const& cdh, int64_t item_ofs, EZipFlags flags) const
+		{
+			if (!m_ifile.good())
+				throw std::runtime_error("There is no archive file");
+
+			// The item was stored uncompressed or the caller has requested the compressed data.
+			if (cdh.Method == EMethod::None || has_flag(flags, EZipFlags::CompressedData))
+			{
+				uint64_t ofs = 0;
+				uint32_t crc32 = 0;
+
+				// Zip is a file. Read chunks into a temporary buffer
+				std::array<uint8_t, 4096> buf;
+				for (size_t remaining = cdh.CompressedSize; remaining != 0;)
+				{
+					// Read chunk
+					auto n = std::min<size_t>(buf.size(), remaining);
+					m_read(*this, item_ofs, buf.data(), n);
+
+					// Calculate the crc if the call was not just for the compressed data
+					if (!has_flag(flags, EZipFlags::CompressedData) && !has_flag(flags, EZipFlags::IgnoreCrc))
+						crc32 = Crc(buf.data(), n, crc32);
+
+					// Send the data directly to the callback
+					callback(ctx, ofs, buf.data(), n);
+
+					// Accumulate
+					remaining -= n;
+					item_ofs += n;
+					ofs += n;
+				}
+				return;
+			}
+
+			// Data is compressed, inflate before passing to callback
+			if (cdh.Method == EMethod::Deflate)
+			{
+				Deflate algo;
+				uint64_t ofs = 0;
+				uint32_t crc32 = 0;
+
+				m_ifile.seekg(item_ofs);
+				auto src = std::istream_iterator<uint8_t>(m_ifile);
+
+				// Decompress into a temporary buffer. The minimum buffer size must be 'LZDictionarySize'
+				// because Deflate uses references to earlier bytes, upto an LZ dictionary size prior.
+				vector_t<uint8_t> buf(LZDictionarySize);
+				algo.Decompress(src, buf.data(), [&](uint8_t*& ptr)
+				{
+					auto count = size_t(ptr - buf.data());
+					assert(count <= buf.size());
+
+					// Update the crc
+					crc32 = Crc(buf.data(), count, crc32);
+
+					// Push the buffered data out to the callback
+					callback(ctx, ofs, buf.data(), count);
+					ofs += count;
+
+					// Reset to the start of the buffer
+					ptr = buf.data();
+				});
+				return;
+			}
+
+			using namespace std::literals;
+			std::runtime_error("Unsupported compression method:"s + std::to_string(int(cdh.Method)));
+		}
+
+		// Lexicographically compare strings
+		template <bool IgnorePath = false, bool IgnoreCase = false> static int Compare(std::string_view lhs, std::string_view rhs)
+		{
+			// One range empty => the empty range is less. Both ranges empty => equal
+			if (lhs.empty() || rhs.empty())
+				return int(rhs.empty()) - int(lhs.empty());
+
+			// The ranges to compare
+			auto lhs_beg = begin(lhs);
+			auto rhs_beg = begin(rhs);
+			auto lhs_end = end(lhs);
+			auto rhs_end = end(rhs);
+
+			// Exclude everything prior to the last '/', '\\', ':' character
+			if constexpr (IgnorePath)
+			{
+				auto PathDivider = [](char c) { return c == '/' || c == '\\' || c == ':'; };
+
+				auto p = lhs_end;
+				for (p = lhs_end; p-- != lhs_beg && !PathDivider(*p);) {}
+				lhs_beg = p + int(p != lhs_beg);
+				for (p = rhs_end; p-- != rhs_beg && !PathDivider(*p);) {}
+				rhs_beg = p + int(p != rhs_beg);
+			}
+
+			// Compare ordinal
+			for (;lhs_beg != lhs_end && rhs_beg != rhs_end;)
+			{
+				int c = IgnoreCase
+					? std::tolower(*lhs_beg++) - std::tolower(*rhs_beg++)
+					: *lhs_beg++ - *rhs_beg++;
+
+				if (c != 0)
+					return c;
+			}
+
+			return int(rhs_beg == rhs_end) - int(lhs_beg == lhs_end);
+		}
+		static int Compare(std::string_view lhs, std::string_view rhs, EZipFlags flags = EZipFlags::None)
+		{
+			auto ignore_path = has_flag(flags, EZipFlags::IgnorePath);
+			auto ignore_case = has_flag(flags, EZipFlags::IgnoreCase);
+			return
+				!ignore_path && !ignore_case ? Compare<false, false>(lhs, rhs) :
+				!ignore_path &&  ignore_case ? Compare<false, true>(lhs, rhs) :
+				 ignore_path && !ignore_case ? Compare<true, false>(lhs, rhs) :
+				 ignore_path &&  ignore_case ? Compare<true, true>(lhs, rhs) :
+				throw std::runtime_error("");
+		}
+		static bool Equals(std::string_view lhs, std::string_view rhs, EZipFlags flags = EZipFlags::None)
+		{
+			return Compare(lhs, rhs, flags) == 0;
+		}
+
+		// Generate a hash of 'name' based on 'flags'
+		static uint64_t Hash(std::string_view name, EZipFlags flags)
+		{
+			if (name.empty())
+				return 0;
+
+			// Hash from end to start so that 'IgnorePath' quick outs at the first path divider
+			uint64_t hash = 0;
+			auto end = rend(name);
+			auto p = rbegin(name);
+			for (p += *p == '/'; p != end; ++p) // Skip the last '/' for sub-directories
+			{
+				hash = Hash64CT(has_flag(flags, EZipFlags::IgnoreCase) ? std::tolower(*p) : *p, hash);
+				if (has_flag(flags, EZipFlags::IgnorePath) && (*p == '/' || *p == '\\' || *p == ':'))
+					break;
+			}
+			return hash;
+		}
+
+		// Callback functions for reading/writing data in memory
+		static void InMemoryReadFunc(ZipArchiveA const& me, int64_t ofs, void* buf, size_t n)
+		{
+			using namespace std::literals;
+			if (ofs + n > me.m_archive_size)
+				throw std::runtime_error("Out of bounds read (@ "s + std::to_string(ofs) + ") from zip memory buffer");
+
+			memcpy(buf, me.m_imem.data() + ofs, n);
+		}
+		static void InMemoryWriteFunc(ZipArchiveA& me, int64_t ofs, void const* buf, size_t n)
+		{
+			me.m_omem.resize(std::max<size_t>(size_t(ofs + n), me.m_omem.size()));
+			memcpy(me.m_omem.data() + ofs, buf, n);
+		}
+
+		// Callback function for reading/writing data from/to file
+		static void FileReadFunc(ZipArchiveA const& me, int64_t ofs, void* buf, size_t n)
+		{
+			using namespace std::literals;
+			if (!me.m_ifile.seekg(ofs, std::ios::beg).good())
+				throw std::runtime_error("File seek read position to "s + std::to_string(ofs) + " failed");
+
+			me.m_ifile.read(static_cast<char*>(buf), n);
+		}
+		static void FileWriteFunc(ZipArchiveA& me, int64_t ofs, void const* buf, size_t n)
+		{
+			using namespace std::literals;
+			if (!me.m_ofile.seekp(ofs, std::ios::beg).good())
+				throw std::runtime_error("File seek write position to "s + std::to_string(ofs) + " failed");
+
+			me.m_ofile.write(static_cast<char const*>(buf), n);
+		}
+
+		// Callback for writing compressed data to the zip
+		static void ZipWriterFunc(void const* buf, int len, void* ctx)
+		{
+			#if 0 // Finding compiler bug
+			auto& pState = static_cast<mz_zip_writer_add_state*>(ctx);
+			if ((int)pState->m_pZip->m_pWrite(pState->m_pZip->m_pIO_opaque, pState->m_cur_archive_file_ofs, pBuf, len) != len)
+				return MZ_FALSE;
+			pState->m_cur_archive_file_ofs += len;
+			pState->m_comp_size += len;
+			return MZ_TRUE;
+			#endif
+		}
+
+	private:
+
+		struct Deflate
+		{
+			// Notes:
+			//  - Implements the DEFLATE compression algorthim
+			//  - Compression format:
+			//       https://en.wikipedia.org/wiki/DEFLATE
+			//       https://www.w3.org/Graphics/PNG/RFC-1951
+			// Algorithm:
+			//  The compressor terminates a block when it determines that starting a new block with fresh trees
+			//  would be useful, or when the block size fills up the compressor's block buffer.
+			//
+			//  The compressor uses a chained hash table to find duplicated strings, using a hash function that
+			//  operates on 3-byte sequences. At any given point during compression, let XYZ be the next 3 input
+			//  bytes to be examined (not necessarily all different, of course). First, the compressor examines
+			//  the hash chain for XYZ. If the chain is empty, the compressor simply writes out X as a literal
+			//  byte and advances one byte in the input. If the hash chain is not empty, indicating that the
+			//  sequence XYZ (or, if we are unlucky, some other 3 bytes with the same hash function value) has
+			//  occurred recently, the compressor compares all strings on the XYZ hash chain with the actual
+			//  input data sequence starting at the current point, and selects the longest match.
+			//
+			//  The compressor searches the hash chains starting with the most recent strings, to favor small
+			//  distances and thus take advantage of the Huffman encoding. The hash chains are singly linked.
+			//  There are no deletions from the hash chains; the algorithm simply discards matches that are too
+			//  old. To avoid a worst-case situation, very long hash chains are arbitrarily truncated at a certain
+			//  length, determined by a run-time parameter.
+			//
+			//  To improve overall compression, the compressor optionally defers the selection of matches ("lazy matching"):
+			//    after a match of length N has been found, the compressor searches for a longer match starting at
+			//    the next input byte. If it finds a longer match, it truncates the previous match to a length of one
+			//    (thus producing a single literal byte) and then emits the longer match. Otherwise, it emits the
+			//    original match, and, as described above, advances N bytes before continuing.
+			//
+			//  Run-time parameters also control this "lazy match" procedure. If compression ratio is most important,
+			//  the compressor attempts a complete second search regardless of the length of the first match. In the
+			//  normal case, if the current match is "long enough", the compressor reduces the search for a longer
+			//  match, thus speeding up the process. If speed is most important, the compressor inserts new strings
+			//  in the hash table only when no match was found, or when the match is not "too long". This degrades
+			//  the compression ratio but saves time since there are both fewer insertions and fewer searches.
+
+			// Flags
+			enum class EFlags
+			{
+				None = 0,
+
+				// Used by Decompress(). If set, the input has a valid zlib header and ends with an
+				// Adler32 checksum (i.e. a zlib stream). Otherwise, the input is a raw deflate stream.
+				ExpectZlibHeader = 1 << 0,
+			};
+
+			// Bit shift register. Could also use uint32_t if on 32-bit
+			using bit_buf_t = uint64_t;
+
+			// A decoded zlib header
+			struct ZLibHeader
+			{
+				// The ZLib header is two bytes, interpretted as:
+				//  CMF
+				//   bits [0..3] = CM - Compression method
+				//   bits [4..7] = CINFO - Compression info
+				//  FLG
+				//   bits [0..4] = FCHECK - Check bits for CMF and FLG
+				//   bits [5..5] = FDICT - Preset dictionary
+				//   bits [6..7] = FLEVEL - Compression level
+				// FCHECK is used to ensure ((CMF<<8)|FLG) is a multiple of 31
+
+				// See: https://tools.ietf.org/html/rfc1950
+				uint8_t CMF;
+				uint8_t FLG;
+
+				ZLibHeader(uint8_t cmf, uint8_t flg)
+					:CMF(cmf)
+					,FLG(flg)
+				{
+					// Header checksum
+					auto fcheck = CMF * 256 + FLG;
+					if ((fcheck % 31) != 0)
+						throw std::runtime_error("ZLIB header invalid. FCHECK failed.");
+				}
+
+				// Compression method
+				EMethod Method() const
+				{
+					return EMethod(CMF & 0xF);
+				}
+
+				// Deflate compression window size
+				uint32_t DeflateWindowSize() const
+				{
+					if (Method != EMethod::Deflate)
+						throw std::runtime_error("ZLIB header LZ77 Window size is only valid when the compression method is DEFLATE");
+					
+					auto log_sz = ((CMF >> 4) & 0xF);
+					if (log_sz > 7)
+						throw std::runtime_error("ZLIB header invalid. ZLIB header CINFO field is greater than 7.");
+
+					return 1 << (log_sz + 8);
+				}
+
+				// True if a preset dictionary immediately follows the ZLIB header
+				bool PresetDictionary() const
+				{
+					// If set, a DICT dictionary identifier is present immediately after the FLG byte.
+					// The dictionary is a sequence of bytes which are initially fed to the compressor
+					// without producing any compressed output. DICT is the Adler-32 checksum of this
+					// sequence of bytes (see the definition of ADLER32 below). The decompressor can
+					// use this identifier to determine which dictionary has been used by the compressor.
+					return (FLG & (1 << 5)) != 0;
+				}
+
+				// The compression level
+				uint32_t CompressionLevel() const
+				{
+					// 0 = Compressor used fastest algorithm 
+					// 1 = Compressor used fast algorithm 
+					// 2 = Compressor used default algorithm 
+					// 2 = Compressor used maximum/slowest algorithm
+					return (FLG >> 6) & 0x3;
+				}
+			};
+
+			// Huffman table
+			struct HuffTable
+			{
+				enum
+				{
+					HuffSymbols0 = 288,
+					HuffSymbols1 = 32,
+					Huffsymbols2 = 19,
+					LookupTableBits = 10,
+					LookupTableSize = 1 << LookupTableBits,
+					LookupTableMask = LookupTableSize - 1,
+				};
+
+				uint32_t m_size; // Table size
+				int16_t m_look_up[LookupTableSize];
+				int16_t m_tree[HuffSymbols0 * 2];
+				uint8_t m_code_size[HuffSymbols0];
+			};
+
+			bit_buf_t m_bit_buf; // MSB -> LSB shift register
+			uint32_t m_num_bits; // The current number of bits in the shift register
+
+			Deflate()
+				:m_bit_buf()
+				,m_num_bits()
+			{}
+
+			// Decompress a stream of bytes from 'src' and write the decompressed stream to 'out'.
+			// 'Src' should have uint8_t pointer-like symmantics.
+			// 'Out' should have uint8_t pointer-like symmantics and be copyable.
+			// 'flush' is called after each decompressed block. Signature: void flush(Out& out)
+			template <typename Src, typename Out, typename FlushCB, bool CalcChecksum = true>
+			void Decompress(Src src, Out out, FlushCB flush, EFlags const decomp_flags = EFlags::ExpectZlibHeader)
+			{
+				// Notes:
+				//  - Reads beyond the end of 'src' should return 0
+
+				HuffTable tables[2] = {};
+				auto out_beg = out;
+				m_num_bits = 0;
+				m_bit_buf = 0;
+
+				// Parse the ZLIB header
+				if (has_flag(decomp_flags, EFlags::ExpectZlibHeader))
+				{
+					auto cmf = *src++; // Compression method an flags
+					auto flg = *src++; // More flags
+					auto zhdr = ZLibHeader(cmf, flg);
+					if (zhdr.Method() != EMethod::Deflate)
+						throw std::runtime_error("ZLIB header indicates a compression method other than 'DEFLATE'. Not supported.");
+					if (zhdr.PresetDictionary())
+						throw std::runtime_error("ZLIB header contains a preset dictionary. Not supported.");
+				}
+
+				// Checksum accumulator
+				AlderChecksum<CalcChecksum> adler;
+
+				// A Deflate stream consists of a series of blocks. Each block is preceded by a 3-bit header:
+				// First bit: Last-block-in-stream marker:
+				//  1: this is the last block in the stream.
+				//  0: there are more blocks to process after this one.
+				// Second and third bits: Encoding method used for this block type:
+				//  00: a stored/raw/literal section, between 0 and 65,535 bytes in length.
+				//  01: a static Huffman compressed block, using a pre-agreed Huffman tree.
+				//  10: a compressed block complete with the Huffman table supplied.
+				//  11: reserved, don't use.
+				for (auto hdr = GetBits<uint32_t>(src, 3); (hdr & 1) == 0; hdr = GetBits<uint32_t>(src, 3))
+				{
+					// Read the block type and prepare the huff tables based on type
+					auto type = hdr >> 1;
+					switch (type)
+					{
+					// A stored/raw/literal section, between 0 and 65,535 bytes in length.
+					case 0:
+						{
+							// Skip bits up to the next byte boundary
+							void(GetBits<uint32_t>(src, m_num_bits & 7));
+
+							// The length and two's complement of length of uncompressed data follows.
+							auto a0 = static_cast<uint16_t>(GetByte(src));
+							auto a1 = static_cast<uint16_t>(GetByte(src));
+							auto len = a0 | (a1 << 8); 
+
+							auto b0 = static_cast<uint16_t>(GetByte(src));
+							auto b1 = static_cast<uint16_t>(GetByte(src));
+							auto nlen = b0 | (b1 << 8);
+
+							if (len != ~nlen)
+								throw std::runtime_error("DEFLATE uncompressed block has an invalid length");
+
+							// Copy bytes directly to the output stream
+							for (; len-- != 0; ++out)
+								*out = adler(GetByte(src));
+
+							continue;
+						}
+					// A static Huffman compressed block, using a pre-agreed Huffman tree.
+					case 1:
+						{
+							tables[0].m_size = HuffTable::HuffSymbols0;
+							tables[1].m_size = HuffTable::HuffSymbols1;
+
+							// Initialise the literal code sizes
+							int i = 0;
+							auto p = &tables[0].m_code_size[0];
+							for (; i <= 143; ++i) *p++ = 8;
+							for (; i <= 255; ++i) *p++ = 9;
+							for (; i <= 279; ++i) *p++ = 7;
+							for (; i <= 287; ++i) *p++ = 8;
+
+							// Initialise the distance code sizes
+							memset(&tables[1].m_code_size[0], 5, tables[1].m_size);
+							break;
+						}
+					// A compressed block complete with the Huffman table supplied.
+					case 2:
+						{
+							HuffTable dyn_codes;
+							tables[0].m_size = GetBits<uint8_t>(src, 5) + 257; // number of literal codes (- 256)
+							tables[1].m_size = GetBits<uint8_t>(src, 5) + 1;   // number of distance codes (- 1)
+							dyn_codes.m_size = GetBits<uint8_t>(src, 4) + 4;   // number of bit length codes (- 3)
+
+							// Copy the compressed Huffman codes into table[2]
+							memset(&dyn_codes.m_code_size[0], 0, sizeof(dyn_codes.m_code_size));
+							static uint8_t const s_length_dezigzag[19] = { 16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15 };
+							for (int i = 0; i != int(dyn_codes.m_size); ++i) dyn_codes.m_code_size[s_length_dezigzag[i]] = GetBits<uint8_t>(src, 3);
+							dyn_codes.m_size = HuffTable::Huffsymbols2;
+
+							// Decompress the Huffman codes
+							PopulateHuffmanTree(dyn_codes);
+							uint8_t code_sizes[HuffTable::HuffSymbols0 + HuffTable::HuffSymbols1 + 137] = {};
+							for (int i = 0, iend = tables[0].m_size + tables[1].m_size; i != iend;)
+							{
+								auto dist = HuffDecode(src, dyn_codes);
+								if (dist < 16)
+								{
+									code_sizes[i++] = (uint8_t)dist;
+									continue;
+								}
+
+								//
+								if (dist == 16 && i == 0)
+								{
+									throw std::runtime_error("");
+								}
+
+								//
+								auto s = GetBits<uint32_t>(src, "\02\03\07"[dist - 16]) + "\03\03\013"[dist - 16];
+								memset(code_sizes + i, dist == 16 ? code_sizes[i - 1] : 0, s);
+
+								//
+								if ((i += s) > iend)
+									throw std::runtime_error("Corrupt Huffman table");
+							}
+
+							// Append the dynamic Huffman tables to ends of the static tables
+							memcpy(&tables[0].m_code_size[0], &code_sizes[0], tables[0].m_size);
+							memcpy(&tables[1].m_code_size[0], &code_sizes[0] + tables[0].m_size, tables[1].m_size);
+							break;
+						}
+					// reserved, don't use.
+					case 3:
+					default:
+						{
+							throw std::runtime_error("DEFLATE stream contains an invalid block header");
+						}
+					}
+
+					// Populate the Huffman tree in each table so that they can be used for decompression
+					PopulateHuffmanTree(tables[1]);
+					PopulateHuffmanTree(tables[0]);
+
+					// Decompress the block
+					for (;;)
+					{
+						int16_t sym;
+						for (;;)
+						{
+							// Read and decode a symbol from the source stream
+							sym = ReadSym(src, tables[0]);
+							if (sym & 0x0100) break;
+							*out = adler(static_cast<uint8_t>(sym));
+							++out;
+						}
+
+						// Is this symbol the end-of-block marker?
+						sym &= 0x1FF;
+						if (sym == 0x0100)
+							break;
+
+						static int const s_length_base[31] = { 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258, 0, 0 };
+						static int const s_length_extra[31] = { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0, 0, 0 };
+						auto count = s_length_base[sym - 257] + GetBits<uint32_t>(src, s_length_extra[sym - 257]);
+
+						// Read the relative offset back to where to read from
+						auto ofs = HuffDecode(src, tables[1]);
+						static int const s_dist_base[32] = { 1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577, 0, 0 };
+						static int const s_dist_extra[32] = { 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13 };
+						auto dist = s_dist_base[ofs] + GetBits<uint32_t>(src, s_dist_extra[ofs]);
+
+						// The number of bytes output so far
+						if (dist > out - out_beg)
+							throw std::runtime_error("Corrupt zip. Rereference to an earlier byte sequence that is out of range");
+
+						// Repeat an earlier sequence from [existing, existing + count)
+						auto existing = out - dist;
+						for (; count-- != 0; ++out, ++existing)
+							*out = adler(*existing);
+					}
+
+					// Signal the end of a block
+					flush(out);
+				}
+
+				// ZLib streams contain the Alder32 CRC after the data.
+				if (has_flag(decomp_flags, EFlags::ExpectZlibHeader))
+				{
+					// Skip bits up to the next byte boundary
+					void(GetBits<uint32_t>(src, m_num_bits & 7));
+
+					// Read the expected Alder32 value
+					uint32_t tail_adler32 = 1;
+					for (int i = 0; i != 4; ++i)
+						tail_adler32 = (tail_adler32 << 8) | GetByte(src);
+
+					// Check the CRC of the output data
+					if constexpr (CalcChecksum)
+						if (adler.checksum() != tail_adler32)
+							throw std::runtime_error("CRC check failure");
+				}
+			}
+
+		private:
+
+			// Wrapper to help calculate the Adler32 checksum
+			template <bool Enabled = true> struct AlderChecksum
+			{
+				static uint32_t const AdlerMod = 65521;
+				uint32_t a, b;
+
+				AlderChecksum()
+					:a(1)
+					,b(0)
+				{}
+				uint32_t checksum() const
+				{
+					return (b << 16) | a;
+				}
+				uint8_t operator()(uint8_t byte)
+				{
+					if constexpr (Enabled)
+					{
+						a = (a + byte) % AdlerMod;
+						b = (b + a) % AdlerMod;
+					}
+					return byte;
+				}
+			};
+
+			//// Read 4 bytes from 'src'
+			//template <typename Src>
+			//static uint32_t ReadLE32(Src src)
+			//{
+			//	if constexpr (std::is_pointer_v<Src> && UnalignedLoadStore && LittleEndian)
+			//	{
+			//		return *reinterpret_cast<uint32_t const*>(src);
+			//	}
+			//	else
+			//	{
+			//		auto b0 = *src++;
+			//		auto b1 = *src++;
+			//		auto b2 = *src++;
+			//		auto b3 = *src++;
+			//		return
+			//			(static_cast<uint32_t>(b0) <<  0U) |
+			//			(static_cast<uint32_t>(b1) <<  8U) |
+			//			(static_cast<uint32_t>(b2) << 16U) |
+			//			(static_cast<uint32_t>(b3) << 24U);
+			//	}
+			//}
+
+			//// Read 2 bytes from 'src'
+			//template <typename Src>
+			//static uint16_t ReadLE16(Src src)
+			//{
+			//	if constexpr (std::is_pointer_v<Src> && UnalignedLoadStore && LittleEndian)
+			//	{
+			//		return *reinterpret_cast<uint16_t const*>(src);
+			//	}
+			//	else
+			//	{
+			//		auto b0 = *src++;
+			//		auto b1 = *src++;
+			//		return
+			//			(static_cast<uint16_t>(b0) <<  0U) |
+			//			(static_cast<uint16_t>(b1) <<  8U);
+			//	}
+			//}
+
+			// Return 'value' with 'length' bits reversed
+			uint32_t ReverseBits(uint32_t value, uint32_t length)
+			{
+				uint32_t reversed = 0;
+				for (; length-- != 0;)
+				{
+					reversed = (reversed << 1) | (value & 1);
+					value >>= 1;
+				}
+				return reversed;
+			}
+
+			// Read one byte from 'src'
+			template <typename Src>
+			uint8_t GetByte(Src& src)
+			{
+				if (m_num_bits == 0)
+					return *src++;
+
+				if (m_num_bits < 8)
+				{
+					// Append bits on the left
+					m_bit_buf |= static_cast<bit_buf_t>(*src++) << m_num_bits;
+					m_num_bits += 8;
+				}
+				auto b = static_cast<uint8_t>(m_bit_buf & 0xFF);
+				m_bit_buf >>= 8;
+				m_num_bits -= 8;
+				return b;
+			}
+
+			// Read 'n' bits from the source stream into 'm_bit_buf'
+			template <typename TInt, typename Src>
+			TInt GetBits(Src& src, uint32_t n)
+			{
+				assert(n <= sizeof(TInt) * 8);
+				for (; m_num_bits < n;)
+				{
+					// Append bits on the left
+					m_bit_buf |= static_cast<bit_buf_t>(*src++) << m_num_bits;
+					m_num_bits += 8;
+				}
+
+				// Read and pop the lower 'n' bits
+				auto b = static_cast<TInt>(m_bit_buf & ((1 << n) - 1));
+				m_bit_buf >>= n;
+				m_num_bits -= n;
+				return b;
+			}
+
+			// Interpret the next bits as a symbol and pop the bits
+			template <typename Src>
+			int16_t ReadSym(Src& src, HuffTable const& table)
+			{
+				// Ensure 'm_bit_buf' contains at least 15 bits
+				if (m_num_bits < 8)
+				{
+					m_bit_buf |= static_cast<bit_buf_t>(*src++) << m_num_bits;
+					m_num_bits += 8;
+				}
+				if (m_num_bits < 16)
+				{
+					m_bit_buf |= static_cast<bit_buf_t>(*src++) << m_num_bits;
+					m_num_bits += 8;
+				}
+
+				// Read the symbol
+				auto sym = table.m_look_up[m_bit_buf & HuffTable::LookupTableMask];
+
+				int code_len;
+				if (sym >= 0)
+				{
+					code_len = sym >> 9;
+				}
+				else
+				{
+					code_len = HuffTable::LookupTableBits;
+					for (; sym < 0;)
+					{
+						sym = table.m_tree[~sym + ((m_bit_buf >> code_len++) & 1)];
+					}
+				}
+				m_bit_buf >>= code_len;
+				m_num_bits -= code_len;
+				return sym;
+			}
+
+			// Decodes and returns the next Huffman coded symbol.
+			template <typename Src>
+			int HuffDecode(Src& src, HuffTable const& table)
+			{
+				// Notes:
+				//  - This function reads 2 bytes from 'src'.
+				// It's more complex than you would initially expect because the zlib API expects the decompressor to never read
+				// beyond the final byte of the deflate stream. (In other words, when this macro wants to read another byte from the input, it REALLY needs another byte in order to fully
+				// decode the next Huffman code.) Handling this properly is particularly important on raw deflate (non-zlib) streams, which aren't followed by a byte aligned adler-32.
+				// The slow path is only executed at the very end of the input buffer.
+				if (m_num_bits < 15)
+				{
+					m_bit_buf |= static_cast<bit_buf_t>(*src++) << (m_num_bits + 0);
+					m_bit_buf |= static_cast<bit_buf_t>(*src++) << (m_num_bits + 8);
+					m_num_bits += 16;
+				}
+
+				// Read the Huff symbol
+				int code_len = 0;
+				int sym = table.m_look_up[m_bit_buf & HuffTable::LookupTableMask];
+				if (sym >= 0)
+				{
+					code_len = sym >> 9;
+					sym &= 511;
+				}
+				else
+				{
+					code_len = HuffTable::LookupTableBits;
+					for (;sym < 0;)
+					{
+						sym = table.m_tree[~sym + ((m_bit_buf >> code_len++) & 1)]; 
+					}
+				}
+
+				m_bit_buf >>= code_len;
+				m_num_bits -= code_len;
+				return sym;
+			}
+
+			// Populate the tree and lookup tables in 'table'
+			void PopulateHuffmanTree(HuffTable& table)
+			{
+				// Reset the tree and lookup arrays
+				memset(&table.m_look_up[0], 0, sizeof(table.m_look_up));
+				memset(&table.m_tree[0], 0, sizeof(table.m_tree));
+
+				// Find the counts of each code size
+				uint32_t total_syms[16] = {};
+				for (int i = 0; i != int(table.m_size); ++i)
+					total_syms[table.m_code_size[i]]++;
+
+				// Fill the 'next_code' buffer
+				uint32_t next_code[17] = { 0, 0 }, total = 0, used_syms = 0;
+				for (int i = 2; i != 17; ++i)
+				{
+					total = (total + total_syms[i - 1]) << 1;
+					used_syms += total_syms[i - 1];
+					next_code[i] = total;
+				}
+				if (total != 65536 && used_syms > 1)
+					throw std::runtime_error(""); // ??? If this is a partial block (i.e. not 65536 in size) then only one symbol should be used? a literal?
+
+				// Generate the lookup table
+				int16_t tree_cur, tree_next = -1;
+				for (int sym_index = 0; sym_index != int(table.m_size); ++sym_index)
+				{
+					// Get the length of the code
+					auto code_size = table.m_code_size[sym_index];
+					if (code_size == 0)
+						continue;
+
+					// Get the code (bit reversed)
+					auto rev_code = ReverseBits(next_code[code_size]++, code_size);
+
+					// 
+					if (code_size <= HuffTable::LookupTableBits)
+					{
+						auto k = static_cast<int16_t>((code_size << 9) | sym_index);
+						while (rev_code < HuffTable::LookupTableSize)
+						{
+							table.m_look_up[rev_code] = k;
+							rev_code += (1 << code_size);
+						}
+						continue;
+					}
+
+					// 
+					tree_cur = table.m_look_up[rev_code & HuffTable::LookupTableMask];
+					if (tree_cur == 0)
+					{
+						// Save the index to the next sub-tree
+						table.m_look_up[rev_code & HuffTable::LookupTableMask] = tree_next;
+						tree_cur = tree_next;
+						tree_next -= 2;
+					}
+
+					//
+					rev_code >>= HuffTable::LookupTableBits - 1;
+					for (int i = code_size; i > HuffTable::LookupTableBits + 1; --i)
+					{
+						rev_code >>= 1;
+						tree_cur -= rev_code & 1;
+
+						if (!table.m_tree[~tree_cur])
+						{
+							table.m_tree[~tree_cur] = tree_next;
+							tree_cur = tree_next;
+							tree_next -= 2;
+						}
+						else
+						{
+							tree_cur = table.m_tree[~tree_cur];
+						}
+					}
+
+					tree_cur -= (rev_code >>= 1) & 1;
+					table.m_tree[~tree_cur] = (int16_t)sym_index;
+				}
+			}
+		};
+
+		#if 0 // Finding compiler bug
 		// Change the archive to the given mode
 		void ChangeMode(EMode mode)
 		{
-			#if 0 // Finding compiler bug
 			if (m_zip_mode == mode)
 				return;
 
@@ -1239,7 +2109,7 @@ namespace pr::storage::zip
 			case EMode::Writing:
 				{
 					// Finalizes the archive by writing the central directory records followed by the end of central directory record.
-					
+
 					// No zip64 support
 					if (m_total_entries > 0xFFFF || m_archive_size + m_central_dir.size() + sizeof(ECDH) > 0xFFFFFFFF)
 						throw std::runtime_error("Zip too large. Zip64 is not supported");
@@ -1251,7 +2121,7 @@ namespace pr::storage::zip
 						// Write central directory
 						central_dir_ofs = m_archive_size;
 						central_dir_size = m_central_dir.size();
-						m_write(this, central_dir_ofs, m_central_dir.data(), central_dir_size);
+						m_write(*this, central_dir_ofs, m_central_dir.data(), central_dir_size);
 						m_archive_size += central_dir_size;
 					}
 
@@ -1262,7 +2132,7 @@ namespace pr::storage::zip
 					WriteLE16(&hdr[0] + ECDH::CDirTotalEntriesOffset, m_total_entries);
 					WriteLE32(&hdr[0] + ECDH::CDirSize, central_dir_size);
 					WriteLE32(&hdr[0] + ECDH::CDirOffset, central_dir_ofs);
-					m_write(this, m_archive_size, hdr.data(), hdr.size());
+					m_write(*this, m_archive_size, hdr.data(), hdr.size());
 
 					// Release buffers
 					m_central_dir.clear();
@@ -1332,800 +2202,12 @@ namespace pr::storage::zip
 			}
 
 			m_zip_mode = mode;
-			#endif
 		}
-
-	private:
-
-		// Read the top level directory structure contained in the zip and populate our state variables
-		void ReadCentralDirectory()
-		{
-			// Basic sanity checks - reject files that are too small, and check the
-			// first 4 bytes of the file to make sure a local header is there.
-			if (m_archive_size < sizeof(ECDH))
-				throw std::runtime_error("Archive is invalid. Smaller than header structure size");
-
-			// The current position in the data
-			auto ofs = m_archive_size;
-			std::array<uint8_t, 4096> buf;
-
-			// Find the end of central directory record by scanning the file from end to start.
-			for (;;)
-			{
-				// Read a chunk
-				auto n = std::min<int64_t>(buf.size(), ofs);
-				m_read(this, ofs - n, buf.data(), n);
-				ofs -= n;
-
-				// Search (backwards) for the CDH end marker
-				for (uint32_t sig = 0; n-- != 0;)
-				{
-					sig = (sig << 8) | buf[n];
-					if (sig == ECDH::Signature) break;
-				}
-				if (ofs == 0 && n == -1)
-					throw std::runtime_error("Invalid zip. Central directory header not found");
-				if (n == -1)
-					continue;
-
-				// Found the CDH end marker at '@buf[n]', move 'ofs' to the start of the ECDH.
-				ofs += n;
-				break;
-			}
-
-			// Read and verify the end of central directory record.
-			ECDH ecdh; m_read(this, ofs, &ecdh, sizeof(ecdh));
-			if (ecdh.Sig != ECDH::Signature)
-				throw std::runtime_error("Invalid zip. Central directory end marker not found");
-			if (ecdh.TotalEntries != ecdh.NumEntriesOnDisk || ecdh.DiskNumber > 1)
-				throw std::runtime_error("Invalid zip. Archives that span multiple disks are not supported");
-			if (ecdh.CDirSize < ecdh.TotalEntries * sizeof(CDH))
-				throw std::runtime_error("Invalid zip. Central directory size is invalid");
-			if (ecdh.CDirOffset + ecdh.CDirSize > m_archive_size)
-				throw std::runtime_error("Invalid zip. Central directory size exceeds archive size");
-
-			// Read the central directory into memory.
-			m_total_entries = ecdh.TotalEntries;
-			m_central_dir.resize(ecdh.CDirSize);
-			m_cdir_index.resize(m_total_entries);
-			m_read(this, ecdh.CDirOffset, m_central_dir.data(), m_central_dir.size());
-
-			// Populate the index of offsets into the central directory
-			auto p = m_central_dir.data();
-			for (size_t n = ecdh.CDirSize, i = 0; i != m_total_entries; ++i)
-			{
-				auto& cdh = *reinterpret_cast<CDH const*>(p);
-
-				// Sanity checks
-				if (n < sizeof(CDH) || cdh.Sig != CDH::Signature)
-					throw std::runtime_error("Invalid zip. Central directory header corrupt");
-				if ((cdh.UncompressedSize != 0 && cdh.CompressedSize == 0) || cdh.UncompressedSize == 0xFFFFFFFF || cdh.CompressedSize == 0xFFFFFFFF)
-					throw std::runtime_error("Invalid zip. Compressed and Decompressed sizes are invalid");
-				if (cdh.Method == EMethod::None && cdh.UncompressedSize != cdh.CompressedSize)
-					throw std::runtime_error("Invalid zip. Header indicates no compression, but compressed and decompressed sizes differ");
-				if (cdh.DiskNumberStart != ecdh.DiskNumber && cdh.DiskNumberStart != 1)
-					throw std::runtime_error("Unsupported zip. Archive spans multiple disks");
-				if (cdh.LocalHeaderOffset + sizeof(LDH) + cdh.CompressedSize > size_t(m_archive_size))
-					throw std::runtime_error("Invalid zip. Item size value exceeds actual data size");
-				auto total_header_size = sizeof(CDH) + cdh.NameSize + cdh.ExtraSize + cdh.CommentSize;
-				if (total_header_size > n)
-					throw std::runtime_error("Invalid zip. Computed header size does not agree header end signature location");
-
-				m_cdir_index[i] = checked_cast<uint32_t>(p - m_central_dir.data());
-				n -= total_header_size;
-				p += total_header_size;
-			}
-
-			// Generate a lookup table from name to index
-			if ((m_flags & EZipFlags::FastNameLookup) != 0)
-			{
-				m_central_dir_lookup.reserve(m_total_entries);
-				for (int i = 0, iend = int(m_cdir_index.size()); i != iend; ++i)
-				{
-					auto name = Name(i);
-					auto hash = Hash(name, m_flags);
-					m_central_dir_lookup.insert(std::make_pair(hash, i));
-				}
-			}
-		}
-
-		// Return the required padding needed to align an item in the archive
-		int CalcAlignmentPadding() const
-		{
-			if (m_entry_alignment == 0) return 0;
-			auto n = static_cast<int>(m_archive_size & (m_entry_alignment - 1));
-			return (m_entry_alignment - n) & (m_entry_alignment - 1);
-		}
-
-		// Write zeros into the output
-		void WriteZeros(int64_t ofs, size_t count)
-		{
-			static char const zeros[1024] = {};
-			while (count)
-			{
-				auto sz = std::min<size_t>(sizeof(zeros), count);
-				m_write(this, ofs, zeros, sz);
-				ofs += sz;
-				count -= sz;
-			}
-		}
-
-		// Lexicographically compare strings
-		static int Compare(std::string_view lhs, std::string_view rhs, EZipFlags flags = EZipFlags::None)
-		{
-			// One range empty => the empty range is less. Both ranges empty => equal
-			if (lhs.empty() || rhs.empty())
-				return int(rhs.empty()) - int(lhs.empty());
-
-			// The ranges to compare
-			auto lhs_beg = begin(lhs);
-			auto rhs_beg = begin(rhs);
-			auto lhs_end = end(lhs);
-			auto rhs_end = end(rhs);
-			
-			// Exclude everything prior to the last '/', '\\', ':' character
-			if (flags & EZipFlags::IgnorePath)
-			{
-				auto PathDivider = [](char c) { return *p == '/' || *p == '\\' || *p == ':'; };
-
-				auto p = lhs_end;
-				for (p = lhs_end; p-- != lhs_beg && !PathDivider(*p);) {}
-				lhs_beg = p + int(p != lhs_beg);
-				for (p = rhs_end; p-- != rhs_beg && !PathDivider(*p);) {}
-				rhs_beg = p + int(p != rhs_beg);
-			}
-
-			// Predicate that return -1 if less, +1 if greater, 0 if equal
-			auto pred = (flags & EZipFlags::IgnoreCase)
-				? [](char l, char r) { return std::tolower(l) - std::tolower(r); }
-				: [](char l, char r) { return l - r; };
-
-			// Compare ordinal
-			for (;lhs_beg != lhs.end && rhs_beg != rhs_end;)
-			{
-				auto c = pred(*lhs_beg++, *rhs_beg++);
-				if (c != 0) return c;
-			}
-			return int(rhs_beg == rhs_end) - int(lhs_beg == lhs_end);
-		}
-		static bool Equals(std::string_view lhs, std::string_view rhs, EZipFlags flags = EZipFlags::None)
-		{
-			return Compare(lhs, rhs, flags) == 0;
-		}
-
-		// Generate a hash of 'name' based on 'flags'
-		static uint64_t Hash(std::string_view name, EZipFlags flags)
-		{
-			if (name.empty()) return 0;
-
-			// Hash from end to start so that 'IgnorePath' quick outs at the first path divider
-			uint64_t hash = 0;
-			auto end = rend(name);
-			auto p = rbegin(name);
-			for (p += *p == '/'; p != end; ++p) // Skip the last '/' for sub-directories
-			{
-				hash = Hash64CT((flags & EZipFlags::IgnoreCase) != 0 ? std::tolower(*p) : *p, hash);
-				if ((flags & EZipFlags::IgnorePath) != 0 && (*p == '/' || *p == '\\' || *p == ':'))
-					break;
-			}
-			return hash;
-		}
-
-		// Callback functions for reading/writing data in memory
-		static void InMemoryReadFunc(void* ctx, int64_t file_ofs, void* buf, size_t n)
-		{
-			auto& me = *static_cast<ZipArchive*>(ctx);
-			if (me.m_archive_size - (file_ofs + n) < 0)
-				throw std::runtime_error("Out of bounds read from zip memory buffer");
-
-			memcpy(buf, me.m_imem.data() + file_ofs, n);
-		}
-		static void InMemoryWriteFunc(void* ctx, int64_t file_ofs, void const* buf, size_t n)
-		{
-			auto& me = *static_cast<ZipArchive*>(ctx);
-			me.m_omem.resize(std::max<size_t>(size_t(file_ofs + n), me.m_omem.size()));
-			memcpy(me.m_omem.data() + file_ofs, buf, n);
-		}
-
-		// Callback function for reading/writing data from/to file
-		static void FileReadFunc(void* ctx, int64_t file_ofs, void* buf, size_t n)
-		{
-			auto& me = *static_cast<ZipArchive*>(ctx);
-			if (!me.m_ifile.seekg(file_ofs, std::ios::beg).good())
-				throw std::runtime_error("Out of bounds read from zip file");
-
-			me.m_ifile.read(static_cast<char*>(buf), n);
-		}
-		static void FileWriteFunc(void* ctx, int64_t file_ofs, void const* buf, size_t n)
-		{
-			using namespace std::literals;
-
-			auto& me = *static_cast<ZipArchive*>(ctx);
-			if (!me.m_ofile.seekp(file_ofs, std::ios::beg).good())
-				throw std::runtime_error("File seek to offset "s + std::to_string(file_ofs) + " failed");
-
-			me.m_ofile.write(static_cast<char const*>(buf), n);
-		}
-
-		// Callback for writing compressed data to the zip
-		static void ZipWriterFunc(void const* buf, int len, void* ctx)
-		{
-			#if 0 // Finding compiler bug
-			auto& pState = static_cast<mz_zip_writer_add_state*>(ctx);
-			if ((int)pState->m_pZip->m_pWrite(pState->m_pZip->m_pIO_opaque, pState->m_cur_archive_file_ofs, pBuf, len) != len)
-				return MZ_FALSE;
-			pState->m_cur_archive_file_ofs += len;
-			pState->m_comp_size += len;
-			return MZ_TRUE;
-			#endif
-		}
-
-
-	private:
-		#if 0 // Finding compiler bug
-		struct Deflate
-		{
-			// Notes:
-			//  - Implements the DEFLATE compression algorthim
-			//  - Compression format:
-			//       https://en.wikipedia.org/wiki/DEFLATE
-			//       https://www.w3.org/Graphics/PNG/RFC-1951
-			// Algorithm:
-			//  The compressor terminates a block when it determines that starting a new block with fresh trees
-			//  would be useful, or when the block size fills up the compressor's block buffer.
-			//
-			//  The compressor uses a chained hash table to find duplicated strings, using a hash function that
-			//  operates on 3-byte sequences. At any given point during compression, let XYZ be the next 3 input
-			//  bytes to be examined (not necessarily all different, of course). First, the compressor examines
-			//  the hash chain for XYZ. If the chain is empty, the compressor simply writes out X as a literal
-			//  byte and advances one byte in the input. If the hash chain is not empty, indicating that the
-			//  sequence XYZ (or, if we are unlucky, some other 3 bytes with the same hash function value) has
-			//  occurred recently, the compressor compares all strings on the XYZ hash chain with the actual
-			//  input data sequence starting at the current point, and selects the longest match.
-			//
-			//  The compressor searches the hash chains starting with the most recent strings, to favor small
-			//  distances and thus take advantage of the Huffman encoding. The hash chains are singly linked.
-			//  There are no deletions from the hash chains; the algorithm simply discards matches that are too
-			//  old. To avoid a worst-case situation, very long hash chains are arbitrarily truncated at a certain
-			//  length, determined by a run-time parameter.
-			//
-			//  To improve overall compression, the compressor optionally defers the selection of matches ("lazy matching"):
-			//    after a match of length N has been found, the compressor searches for a longer match starting at
-			//    the next input byte. If it finds a longer match, it truncates the previous match to a length of one
-			//    (thus producing a single literal byte) and then emits the longer match. Otherwise, it emits the
-			//    original match, and, as described above, advances N bytes before continuing.
-			//
-			//  Run-time parameters also control this "lazy match" procedure. If compression ratio is most important,
-			//  the compressor attempts a complete second search regardless of the length of the first match. In the
-			//  normal case, if the current match is "long enough", the compressor reduces the search for a longer
-			//  match, thus speeding up the process. If speed is most important, the compressor inserts new strings
-			//  in the hash table only when no match was found, or when the match is not "too long". This degrades
-			//  the compression ratio but saves time since there are both fewer insertions and fewer searches.
-
-			// Flags used by Decompress().
-			enum class EFlags
-			{
-				// If set, the input has a valid zlib header and ends with an adler32 checksum
-				// (it's a valid zlib stream). Otherwise, the input is a raw deflate stream.
-				ExpectZlibHeader = 1 << 0,
-
-				// Ignore
-				bitwise_operators_allowed_tag = 0,
-			};
-
-			// Bit shift register. Could also use uint32_t if on 32-bit
-			using bit_buf_t = uint64_t;
-
-			// Huffman table
-			struct HuffTable
-			{
-				enum
-				{
-					HuffSymbols0 = 288,
-					HuffSymbols1 = 32,
-					Huffsymbols2 = 19,
-					LookupTableBits = 10,
-					LookupTableSize = 1 << LookupTableBits,
-					LookupTableMask = LookupTableSize - 1,
-				};
-
-				uint32_t m_size; // Table size
-				int16_t m_look_up[LookupTableSize];
-				int16_t m_tree[HuffSymbols0 * 2];
-				uint8_t m_code_size[HuffSymbols0];
-			};
-
-			bit_buf_t m_bit_buf; // MSB -> LSB shift register
-			uint32_t m_num_bits; // The current number of bits in the shift register
-
-			Deflate()
-				:m_bit_buf()
-				,m_num_bits()
-			{}
-
-			// Decompress a stream of bytes from 'src' and write the decompressed stream to 'out'.
-			// 'Src' and 'Out' should have uint8_t pointer-like symmantics.
-			template <typename Src, typename Out, bool CalcChecksum = true>
-			void Decompress(Src& src, Out& out, EFlags const decomp_flags = EFlags::ExpectZlibHeader)
-			{
-				// Notes:
-				//  - Reads beyond the end of 'src' should return 0
-
-				HuffTable tables[2] = {};
-				auto out_beg = out;
-				m_num_bits = 0;
-				m_bit_buf = 0;
-
-				// Parse the ZLIB header
-				if (decomp_flags & EFlags::ExpectZlibHeader)
-				{
-					auto zhdr0 = *src++;
-					auto zhdr1 = *src++;
-					auto zhdr = ((zhdr0 * 256 + zhdr1) % 31) != 0 || (zhdr1 & 32) != 0 || (zhdr0 & 15) != 8;
-					if (zhdr) throw std::runtime_error("ZLIB header is invalid");
-				}
-
-				// Checksum accumulator
-				AlderChecksum<CalcChecksum> adler;
-
-				// A Deflate stream consists of a series of blocks. Each block is preceded by a 3-bit header:
-				// First bit: Last-block-in-stream marker:
-				//  1: this is the last block in the stream.
-				//  0: there are more blocks to process after this one.
-				// Second and third bits: Encoding method used for this block type:
-				//  00: a stored/raw/literal section, between 0 and 65,535 bytes in length.
-				//  01: a static Huffman compressed block, using a pre-agreed Huffman tree.
-				//  10: a compressed block complete with the Huffman table supplied.
-				//  11: reserved, don't use.
-				for (auto hdr = GetBits<uint32_t>(src, 3); (hdr & 1) == 0; hdr = GetBits<uint32_t>(src, 3))
-				{
-					// Read the block type and prepare the huff tables based on type
-					auto type = hdr >> 1;
-					switch (type)
-					{
-					// A stored/raw/literal section, between 0 and 65,535 bytes in length.
-					case 0:
-						{
-							// Skip bits to the next byte boundary
-							ReadBits(src, m_num_bits & 7);
-
-							// The length and two's complement of length of uncompressed data follows.
-							auto b0 = static_cast<uint16_t>(GetByte(src));
-							auto b1 = static_cast<uint16_t>(GetByte(src));
-							auto len = b0 | (b1 << 8); 
-
-							auto b0 = static_cast<uint16_t>(GetByte(src));
-							auto b1 = static_cast<uint16_t>(GetByte(src));
-							auto nlen = b0 | (b1 << 8);
-
-							if (len != ~nlen)
-								throw std::runtime_error("DEFLATE uncompressed block has an invalid length");
-
-							// Copy bytes directly to the output stream
-							for (; len-- != 0;)
-								*out = adler(GetByte(src)), ++out;
-
-							continue;
-						}
-					// A static Huffman compressed block, using a pre-agreed Huffman tree.
-					case 1:
-						{
-							tables[0].m_size = HuffTable::HuffSymbols0;
-							tables[1].m_size = HuffTable::HuffSymbols1;
-
-							// Initialise the literal code sizes
-							int i = 0;
-							auto p = &tables[0].m_code_size[0];
-							for (; i <= 143; ++i) *p++ = 8;
-							for (; i <= 255; ++i) *p++ = 9;
-							for (; i <= 279; ++i) *p++ = 7;
-							for (; i <= 287; ++i) *p++ = 8;
-
-							// Initialise the distance code sizes
-							memset(&tables[1].m_code_size[0], 5, tables[1].m_size);
-							break;
-						}
-					// A compressed block complete with the Huffman table supplied.
-					case 2:
-						{
-							HuffTable dyn_codes;
-							tables[0].m_size = GetBits<uint8_t>(src, 5) + 257; // number of literal codes (- 256)
-							tables[1].m_size = GetBits<uint8_t>(src, 5) + 1;   // number of distance codes (- 1)
-							dyn_codes.m_size = GetBits<uint8_t>(src, 4) + 4;   // number of bit length codes (- 3)
-
-							// Copy the compressed Huffman codes into table[2]
-							memset(&dyn_codes.m_code_size[0], 0, sizeof(dyn_codes.m_code_size));
-							static uint8_t const s_length_dezigzag[19] = { 16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15 };
-							for (int i = 0; i != dyn_codes.m_size; ++i) dyn_codes.m_code_size[s_length_dezigzag[i]] = GetBits<uint8_t>(src, 3);
-							dyn_codes.m_size = HuffTable::Huffsymbols2;
-
-							// Decompress the Huffman codes
-							PopulateHuffmanTree(dyn_codes);
-							uint8_t code_sizes[HuffTable::HuffSymbols0 + HuffTable::HuffSymbols1 + 137] = {};
-							for (int i = 0, iend = tables[0].m_size + tables[1].m_size; i != iend;)
-							{
-								auto dist = HuffDecode(src, dyn_codes);
-								if (dist < 16)
-								{
-									code_sizes[i++] = (uint8_t)dist;
-									continue;
-								}
-
-								//
-								if (dist == 16 && i == 0)
-								{
-									throw std::runtime_error("");
-								}
-
-								//
-								auto s = GetBits<uint32_t>(src, "\02\03\07"[dist - 16]) + "\03\03\013"[dist - 16];
-								memset(code_sizes + i, dist == 16 ? code_sizes[i - 1] : 0, s);
-
-								//
-								if ((i += s) > iend)
-									throw std::runtime_error("Corrupt Huffman table");
-							}
-
-							// Append the dynamic Huffman tables to ends of the static tables
-							memcpy(&tables[0].m_code_size[0], &code_sizes[0], tables[0].m_size);
-							memcpy(&tables[1].m_code_size[0], &code_sizes[0] + tables[0].m_size, tables[1].m_size);
-							break;
-						}
-					// reserved, don't use.
-					case 3:
-					default:
-						{
-							throw std::runtime_error("DEFLATE stream contains an invalid block header");
-						}
-					}
-
-					// Populate the Huffman tree in each table so that they can be used for decompression
-					PopulateHuffmanTree(tables[1]);
-					PopulateHuffmanTree(tables[0]);
-
-					// Decompress the block
-					for (;;)
-					{
-						int16_t sym;
-						for (;;)
-						{
-							// Read and decode a symbol from the source stream
-							sym = ReadSym(src, tables[0]);
-							if (sym & 0x0100) break;
-							*out = adler(static_cast<uint8_t>(sym)), ++out;
-						}
-
-						// Is this symbol the end-of-block marker?
-						sym &= 0x1FF;
-						if (sym == 0x0100)
-							break;
-
-						static int const s_length_base[31] = { 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258, 0, 0 };
-						static int const s_length_extra[31] = { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0, 0, 0 };
-						auto count = s_length_base[sym - 257] + GetBits<uint32_t>(src, s_length_extra[sym - 257]);
-
-						// Read the relative offset back to where to read from
-						auto ofs = HuffDecode(src, &tables[1]);
-						static int const s_dist_base[32] = { 1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577, 0, 0 };
-						static int const s_dist_extra[32] = { 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13 };
-						auto dist = s_dist_base[ofs] + GetBits<uint32_t>(src, s_dist_extra[ofs]);
-
-						// The number of bytes output so far
-						if (dist > out - out_beg)
-							throw std::runtime_error("Corrupt zip. Rereference to an earlier byte sequence that is out of range");
-
-						// Repeat an earlier sequence from [existing, existing + count)
-						auto existing = out - dist;
-						for (; count-- != 0; ++out, ++existing)
-							*out = adler(*existing);
-					}
-				}
-
-				// ZLib streams contain the Alder32 CRC after the data.
-				if (decomp_flags & EFlags::ExpectZlibHeader)
-				{
-					ReadBits(src, m_num_bits & 7);
-
-					// Read the expected Alder32 value
-					uint32_t tail_adler32 = 1;
-					for (int i = 0; i != 4; ++i)
-						tail_adler32 = (tail_adler32 << 8) | GetByte(src);
-
-					// Check the CRC of the output data
-					if constexpr (CalcChecksum)
-						if (adler.checksum() != tail_adler32)
-							throw std::runtime_error("CRC check failure");
-				}
-			}
-
-		private:
-
-			// Wrapper to help calculate the Adler32 checksum
-			template <bool Enabled = true> struct AlderChecksum
-			{
-				static uint32_t const AdlerMod = 65521;
-				uint32_t a, b;
-
-				AlderChecksum()
-					:a(1)
-					,b(0)
-				{}
-				uint32_t checksum() const
-				{
-					return (b << 16) | a;
-				}
-				uint8_t operator()(uint8_t byte)
-				{
-					if constexpr (Enabled)
-					{
-						a = (a + byte) % AdlerMod;
-						b = (b + a) % AdlerMod;
-					}
-					return byte;
-				}
-			};
-
-			// Read 4 bytes from 'src'
-			template <typename Src>
-			static uint32_t ReadLE32(Src src)
-			{
-				if constexpr (std::is_pointer_v<Src> && UnalignedLoadStore && LittleEndian)
-				{
-					return *reinterpret_cast<uint32_t const*>(src);
-				}
-				else
-				{
-					auto b0 = *src++;
-					auto b1 = *src++;
-					auto b2 = *src++;
-					auto b3 = *src++;
-					return
-						(static_cast<uint32_t>(b0) <<  0U) |
-						(static_cast<uint32_t>(b1) <<  8U) |
-						(static_cast<uint32_t>(b2) << 16U) |
-						(static_cast<uint32_t>(b3) << 24U);
-				}
-			}
-
-			// Read 2 bytes from 'src'
-			template <typename Src>
-			static uint16_t ReadLE16(Src src)
-			{
-				if constexpr (std::is_pointer_v<Src> && UnalignedLoadStore && LittleEndian)
-				{
-					return *reinterpret_cast<uint16_t const*>(src);
-				}
-				else
-				{
-					auto b0 = *src++;
-					auto b1 = *src++;
-					return
-						(static_cast<uint16_t>(b0) <<  0U) |
-						(static_cast<uint16_t>(b1) <<  8U);
-				}
-			}
-
-			// Return 'value' with 'length' bits reversed
-			uint32_t ReverseBits(uint32_t value, uint32_t length)
-			{
-				uint32_t reversed = 0;
-				for (; length-- != 0;)
-				{
-					reversed = (reversed << 1) | (value & 1);
-					value >>= 1;
-				}
-				return reversed;
-			}
-
-			// Read one byte from 'src'
-			template <typename Src>
-			uint8_t GetByte(Src& src)
-			{
-				if (m_num_bits == 0)
-					return *src++;
-
-				if (m_num_bits < 8)
-				{
-					// Append bits on the left
-					m_bit_buf |= static_cast<bit_buf_t>(*src++) << m_num_bits;
-					m_num_bits += 8;
-				}
-				auto b = static_cast<uint8_t>(m_bit_buf & 0xFF);
-				m_bit_buf >>= 8;
-				m_num_bits -= 8;
-				return b;
-			}
-
-			// Read 'n' bits from the source stream into 'm_bit_buf'
-			template <typename TInt, typename Src>
-			TInt GetBits(Src& src, uint32_t n)
-			{
-				assert(n <= sizeof(TInt) * 8);
-				for (; m_num_bits < n;)
-				{
-					// Append bits on the left
-					m_bit_buf |= static_cast<bit_buf_t>(*src++) << m_num_bits;
-					m_num_bits += 8;
-				}
-
-				// Read and pop the lower 'n' bits
-				auto b = static_cast<TInt>(m_bit_buf & ((1 << n) - 1));
-				m_bit_buf >>= n;
-				m_num_bits -= n;
-				return b;
-			}
-
-			// Interpret the next bits as a symbol and pop the bits
-			template <typename Src>
-			int16_t ReadSym(Src& src, HuffTable const& table)
-			{
-				// Ensure 'm_bit_buf' contains at least 15 bits
-				if constexpr (sizeof(bit_buf_t) == sizeof(uint64_t))
-				{
-					if (m_num_bits < 30)
-					{
-						m_bit_buf |= static_cast<bit_buf_t>(ReadLE32(src)) << m_num_bits;
-						m_num_bits += 32;
-						src += 4;
-					}
-				}
-				else
-				{
-					if (m_num_bits < 15)
-					{
-						m_bit_buf |= static_cast<bit_buf_t>(ReadLE16(src)) << m_num_bits;
-						m_num_bits += 16;
-						src += 2;
-					}
-				}
-
-				// Read the symbol from the 
-				auto sym = table.m_look_up[m_bit_buf & LookupTableMask];
-
-				int code_len;
-				if (sym >= 0)
-				{
-					code_len = sym >> 9;
-				}
-				else
-				{
-					code_len = LookupTableBits;
-					for (; sym < 0;)
-					{
-						sym = table.m_tree[~sym + ((m_bit_buf >> code_len++) & 1)];
-					}
-				}
-				m_bit_buf >>= code_len;
-				m_num_bits -= code_len;
-				return sym;
-			}
-
-			// Decodes and returns the next Huffman coded symbol.
-			template <typename Src>
-			int HuffDecode(Src& src, HuffTable const& table)
-			{
-				// Notes:
-				//  - This function reads 2 bytes from 'src'.
-				// It's more complex than you would initially expect because the zlib API expects the decompressor to never read
-				// beyond the final byte of the deflate stream. (In other words, when this macro wants to read another byte from the input, it REALLY needs another byte in order to fully
-				// decode the next Huffman code.) Handling this properly is particularly important on raw deflate (non-zlib) streams, which aren't followed by a byte aligned adler-32.
-				// The slow path is only executed at the very end of the input buffer.
-				if (m_num_bits < 15)
-				{
-					m_bit_buf |= static_cast<bit_buf_t>(*src++) << (m_num_bits + 0);
-					m_bit_buf |= static_cast<bit_buf_t>(*src++) << (m_num_bits + 8);
-					m_num_bits += 16;
-				}
-
-				// Read the Huff symbol
-				int code_len = 0;
-				int sym = table.m_look_up[m_bit_buf & LookupTableMask];
-				if (sym >= 0)
-				{
-					code_len = sym >> 9;
-					sym &= 511;
-				}
-				else
-				{
-					code_len = LookupTableBits;
-					for (;sym < 0;)
-					{
-						sym = table.m_tree[~sym + ((m_bit_buf >> code_len++) & 1)]; 
-					}
-				}
-
-				m_bit_buf >>= code_len;
-				m_num_bits -= code_len;
-				return sym;
-			}
-
-			// Populate the tree and lookup tables in 'table'
-			void PopulateHuffmanTree(HuffTable& table)
-			{
-				// Reset the tree and lookup arrays
-				memset(&table.m_look_up[0], 0, sizeof(table.m_look_up));
-				memset(&table.m_tree[0], 0, sizeof(table.m_tree));
-
-				// Find the counts of each code size
-				uint32_t total_syms[16] = {};
-				for (int i = 0; i != table.m_size; ++i)
-					total_syms[table.m_code_size[i]]++;
-
-				// Fill the 'next_code' buffer
-				uint32_t next_code[17] = { 0, 0 }, total = 0, used_syms = 0;
-				for (int i = 2; i != 17; ++i)
-				{
-					total = (total + total_syms[i - 1]) << 1;
-					used_syms += total_syms[i - 1];
-					next_code[i] = total;
-				}
-				if (total != 65536 && used_syms > 1)
-					throw std::runtime_error(""); // ??? If this is a partial block (i.e. not 65536 in size) then only one symbol should be used? a literal?
-
-				// Generate the lookup table
-				int16_t tree_cur, tree_next = -1;
-				for (int sym_index = 0; sym_index != table.m_size; ++sym_index)
-				{
-					// Get the length of the code
-					auto code_size = table.m_code_size[sym_index];
-					if (code_size == 0)
-						continue;
-
-					// Get the code (bit reversed)
-					auto rev_code = ReverseBits(next_code[code_size]++, code_size);
-
-					// 
-					if (code_size <= LookupTableBits)
-					{
-						auto k = static_cast<int16_t>((code_size << 9) | sym_index);
-						while (rev_code < LookupTableSize)
-						{
-							table.m_look_up[rev_code] = k;
-							rev_code += (1 << code_size);
-						}
-						continue;
-					}
-
-					// 
-					tree_cur = table.m_look_up[rev_code & LookupTableMask];
-					if (tree_cur == 0)
-					{
-						// Save the index to the next sub-tree
-						table.m_look_up[rev_code & LookupTableMask] = tree_next;
-						tree_cur = tree_next;
-						tree_next -= 2;
-					}
-
-					//
-					rev_code >>= LookupTableBits - 1;
-					for (int i = code_size; i > LookupTableBits + 1; --i)
-					{
-						rev_code >>= 1;
-						tree_cur -= rev_code & 1;
-
-						if (!table.m_tree[~tree_cur])
-						{
-							table.m_tree[~tree_cur] = tree_next;
-							tree_cur = tree_next;
-							tree_next -= 2;
-						}
-						else
-						{
-							tree_cur = table.m_tree[~tree_cur];
-						}
-					}
-
-					tree_cur -= (rev_code >>= 1) & 1;
-					table.m_tree[~tree_cur] = (int16_t)sym_index;
-				}
-			}
-		};
 		#endif
 
-		#if 0 // yes to be refactored...
 	private: // ------------------- Low-level Decompression (completely independent from all compression API's)
 
-
+		#if 0 // yes to be refactored...
 		// tinfl_decompress_mem_to_callback() decompresses a block in memory to an internal 32KB buffer, and a user
 		// provided callback function will be called to flush the buffer. Returns 1 on success or 0 on failure.
 		int tinfl_decompress_mem_to_callback(const void* pIn_buf, size_t* pIn_buf_size, tinfl_put_buf_func_ptr pPut_buf_func, void* pPut_buf_user, int flags)
@@ -4108,6 +4190,7 @@ namespace pr::storage::zip
 			0x0000, 0x0001, 0x0003, 0x0007, 0x000F, 0x001F, 0x003F, 0x007F, 0x00FF, 0x01FF, 0x03FF, 0x07FF, 0x0FFF, 0x1FFF, 0x3FFF, 0x7FFF, 0xFFFF
 		};
 		#endif
+
 	private:
 
 		// Validate an archive item name
@@ -4237,6 +4320,32 @@ namespace pr::storage::zip
 			return (ofs & (m_entry_alignment - 1)) == 0;
 		}
 
+		// True if (value & flags) == flags;
+		template <typename T> static constexpr bool has_flag(T value, T flags)
+		{
+			if constexpr (std::is_enum_v<T>)
+			{
+				using ut = typename std::underlying_type<T>::type;
+				return (ut(value) & ut(flags)) == ut(flags);
+			}
+			else
+				return (value & flags) == flags;
+		}
+
+		// Less operator for name_hash_index_pair_t (used when searching 'm_central_dir_lookup')
+		friend constexpr bool operator < (name_hash_index_pair_t const& lhs, name_hash_index_pair_t const& rhs)
+		{
+			return lhs.name_hash < rhs.name_hash;
+		}
+		friend constexpr bool operator < (name_hash_index_pair_t const& lhs, uint64_t rhs)
+		{
+			return lhs.name_hash < rhs;
+		}
+		friend constexpr bool operator < (uint64_t lhs, name_hash_index_pair_t const& rhs)
+		{
+			return lhs < rhs.name_hash;
+		}
+
 		// Casting helper
 		union variant_cptr_t
 		{
@@ -4255,86 +4364,56 @@ namespace pr::storage::zip
 			variant_mptr_t(void* x) :vp(x) {}
 		};
 
-		// Read / Write helper functions
-		static uint16_t ReadLE16(variant_cptr_t ptr)
-		{
-			if constexpr (LittleEndian && UnalignedLoadStore)
-				return *ptr.u16;
-			else
-				return static_cast<uint16_t>((ptr.u8[1] << 8U) | (ptr.u8[0]));
-		}
-		static uint32_t ReadLE32(variant_cptr_t ptr)
-		{
-			if constexpr (LittleEndian && UnalignedLoadStore)
-				return *ptr.u32;
-			else
-				return static_cast<uint32_t>((ptr.u8[3] << 24U) | (ptr.u8[2] << 16U) | (ptr.u8[1] << 8U) | (ptr.u8[0]));
-		}
-		static void WriteLE16(variant_mptr_t ptr, uint64_t v)
-		{
-			assert(v <= 0xFFFF);
-			if constexpr (LittleEndian && UnalignedLoadStore)
-			{
-				ptr.u16[0] = static_cast<uint16_t>(v);
-			}
-			else
-			{
-				ptr.u8[0] = static_cast<uint8_t>((v >> 0) & 0xFF);
-				ptr.u8[1] = static_cast<uint8_t>((v >> 8) & 0xFF);
-			}
-		}
-		static void WriteLE32(variant_mptr_t ptr, uint64_t v)
-		{
-			assert(v <= 0xFFFFFFFF);
-			if constexpr (LittleEndian && UnalignedLoadStore)
-			{
-				ptr.u32[0] = static_cast<uint32_t>(v);
-			}
-			else
-			{
-				ptr.u8[0] = static_cast<uint8_t>((v >>  0) & 0xFF);
-				ptr.u8[1] = static_cast<uint8_t>((v >>  8) & 0xFF);
-				ptr.u8[2] = static_cast<uint8_t>((v >> 16) & 0xFF);
-				ptr.u8[3] = static_cast<uint8_t>((v >> 24) & 0xFF);
-			}
-		}
-
-		// Support bitwise operators for flags enums
-		template <typename TEnum> struct allow_bitops :std::false_type {};
-		template <> struct allow_bitops<EZipFlags> :std::true_type {};
-		template <> struct allow_bitops<ECompressionFlags> :std::true_type {};
-		template <> struct allow_bitops<EBitFlags> :std::true_type {};
-
-		template <typename TEnum, typename = std::enable_if_t<allow_bitops<TEnum>::value>>
-		friend constexpr TEnum operator | (TEnum lhs, TEnum rhs)
-		{
-			using ut = typename std::underlying_type<TEnum>::type;
-			return TEnum(ut(lhs) | ut(rhs));
-		}
-		template <typename TEnum, typename = std::enable_if_t<allow_bitops<TEnum>::value>>
-		friend constexpr TEnum operator & (TEnum lhs, TEnum rhs)
-		{
-			using ut = typename std::underlying_type<TEnum>::type;
-			return TEnum(ut(lhs) & ut(rhs));
-		}
-		template <typename TEnum, typename = std::enable_if_t<allow_bitops<TEnum>::value>>
-		friend constexpr bool operator == (TEnum lhs, int rhs)
-		{
-			using ut = typename std::underlying_type<TEnum>::type;
-			return ut(lhs) == ut(rhs);
-		}
-		template <typename TEnum, typename = std::enable_if_t<allow_bitops<TEnum>::value>>
-		friend constexpr bool operator != (TEnum lhs, int rhs)
-		{
-			using ut = typename std::underlying_type<TEnum>::type;
-			return ut(lhs) != ut(rhs);
-		}
+		//// Read / Write helper functions
+		//static uint16_t ReadLE16(variant_cptr_t ptr)
+		//{
+		//	if constexpr (LittleEndian && UnalignedLoadStore)
+		//		return *ptr.u16;
+		//	else
+		//		return static_cast<uint16_t>((ptr.u8[1] << 8U) | (ptr.u8[0]));
+		//}
+		//static uint32_t ReadLE32(variant_cptr_t ptr)
+		//{
+		//	if constexpr (LittleEndian && UnalignedLoadStore)
+		//		return *ptr.u32;
+		//	else
+		//		return static_cast<uint32_t>((ptr.u8[3] << 24U) | (ptr.u8[2] << 16U) | (ptr.u8[1] << 8U) | (ptr.u8[0]));
+		//}
+		//static void WriteLE16(variant_mptr_t ptr, uint64_t v)
+		//{
+		//	assert(v <= 0xFFFF);
+		//	if constexpr (LittleEndian && UnalignedLoadStore)
+		//	{
+		//		ptr.u16[0] = static_cast<uint16_t>(v);
+		//	}
+		//	else
+		//	{
+		//		ptr.u8[0] = static_cast<uint8_t>((v >> 0) & 0xFF);
+		//		ptr.u8[1] = static_cast<uint8_t>((v >> 8) & 0xFF);
+		//	}
+		//}
+		//static void WriteLE32(variant_mptr_t ptr, uint64_t v)
+		//{
+		//	assert(v <= 0xFFFFFFFF);
+		//	if constexpr (LittleEndian && UnalignedLoadStore)
+		//	{
+		//		ptr.u32[0] = static_cast<uint32_t>(v);
+		//	}
+		//	else
+		//	{
+		//		ptr.u8[0] = static_cast<uint8_t>((v >>  0) & 0xFF);
+		//		ptr.u8[1] = static_cast<uint8_t>((v >>  8) & 0xFF);
+		//		ptr.u8[2] = static_cast<uint8_t>((v >> 16) & 0xFF);
+		//		ptr.u8[3] = static_cast<uint8_t>((v >> 24) & 0xFF);
+		//	}
+		//}
 	};
 	using ZipArchive = ZipArchiveA<std::allocator<void>>;
 }
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
+#include "pr/common/memstream.h"
 
 namespace pr::storage
 {
@@ -4347,6 +4426,17 @@ namespace pr::storage
 			zip::ZipArchive z(path / "binary-00-0F.zip", zip::ZipArchive::EZipFlags::FastNameLookup);
 			PR_CHECK(z.Count(), 1);
 			PR_CHECK(z.Name(0), "binary-00-0F.bin");
+			PR_CHECK(z.IndexOf("binary-00-0F.bin"), 0);
+			
+			std::basic_string<uint8_t> bytes;
+			pr::mem_ostream out(bytes);
+			z.Extract("binary-00-0F.bin", out);
+
+			std::basic_ifstream<uint8_t> ifile(path / "binary-00-0F.bin");
+			std::basic_stringstream<uint8_t> file_bytes;
+			file_bytes << ifile.rdbuf();
+
+			PR_CHECK(bytes == file_bytes.str(), true);
 		}
 
 		//{// Write a zip file
