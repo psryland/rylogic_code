@@ -2,8 +2,9 @@
 // Zip Compression
 //	Copyright (c) Rylogic 2019
 //*****************************************
-// This code is a refactored copy of: https://github.com/tfussell/miniz-cpp/blob/master/zip_file.hpp
-// See file end for copyright notices
+// This code is based on the 'miniz' library.
+// Refactored to make use of modern C++ language features.
+// See the file end for copyright notices.
 #pragma once
 
 #include <memory>
@@ -39,21 +40,19 @@
 
 namespace pr::storage::zip
 {
-	template <typename TAlloc = std::allocator<void>, bool LittleEndian = true, bool UnalignedLoadStore = true>
+	template <typename TAlloc = std::allocator<void>>
 	class ZipArchiveA
 	{
-	public:
 		// Notes:
-		//  - Format Reference: https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT
-		//  - For more compatibility with zlib, miniz uses unsigned long for some parameters/struct members.
-		//    Beware: mz_ulong can be either 32 or 64-bits!
+		//  - Zip File Format Reference: https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT
+		//  - Deflate algorithm reference: https://www.w3.org/Graphics/PNG/RFC-1951#algorithm
+		//  - ZLIB compressed data format spec: https://tools.ietf.org/html/rfc1950
 
-		using mz_ulong = unsigned long;
-		using mz_uint = unsigned int;
-		using mz_bool = int;
 		static_assert(sizeof(uint16_t) == 2);
 		static_assert(sizeof(uint32_t) == 4);
 		static_assert(sizeof(uint64_t) == 8);
+
+	public:
 
 		// Per-entry compression methods
 		enum class EMethod :uint16_t
@@ -84,7 +83,7 @@ namespace pr::storage::zip
 			AE_x = 99, // encryption marker (see APPENDIX E)
 		};
 
-		// Flags
+		// Archive flags
 		enum class EZipFlags
 		{
 			None = 0,
@@ -95,7 +94,7 @@ namespace pr::storage::zip
 			// Used when searching for items by name
 			IgnorePath = 1 << 1,
 
-			// Used when extracting items. Does not calculate Crc's.
+			// Used when adding and extracting items. Does not calculate or check CRC's.
 			IgnoreCrc = 1 << 2,
 			
 			// Used when opening an archive. Generates a hash table of zip entry names to
@@ -116,48 +115,7 @@ namespace pr::storage::zip
 			Uber = 10,
 		};
 
-		// Compression strategies.
-		enum class ECompressionStrategy
-		{
-			DefaultStrategy = 0,
-			Filtered = 1,
-			HuffmanOnly = 2,
-			RLE = 3,
-			Fixed = 4,
-		};
-
-		// Flags that control compression
-		enum class ECompressionFlags
-		{
-			// The low 12 bits are reserved to control the max # of hash probes per dictionary lookup (see MAX_PROBES_MASK).
-			None = 0,
-
-			// WRITE_ZLIB_HEADER: If set, the compressor outputs a zlib header before the deflate data, and the Adler-32 of the source data at the end. Otherwise, you'll get raw deflate data.
-			WriteZLibHeader = 0x01000,
-
-			// COMPUTE_ADLER32: Always compute the adler-32 of the input data (even when not writing zlib headers).
-			ComputeAdler32 = 0x02000,
-
-			// GREEDY_PARSING_FLAG: Set to use faster greedy parsing, instead of more efficient lazy parsing.
-			GreedyParsing = 0x04000,
-
-			// NONDETERMINISTIC_PARSING_FLAG: Enable to decrease the compressor's initialization time to the minimum, but the output may vary from run to run given the same input (depending on the contents of memory).
-			NonDeterministicParsing = 0x08000,
-
-			// RLE_MATCHES: Only look for RLE matches (matches with a distance of 1)
-			RLEMatches = 0x10000,
-
-			// FILTER_MATCHES: Discards matches <= 5 chars if enabled.
-			FilterMatches = 0x20000,
-
-			// FORCE_ALL_STATIC_BLOCKS: Disable usage of optimized Huffman tables.
-			ForceAllStaticBlocks = 0x40000,
-
-			// FORCE_ALL_RAW_BLOCKS: Only use raw (uncompressed) deflate blocks.
-			ForceAllRawBlocks = 0x80000,
-		};
-
-		// Bit flags
+		// Zip file header flags
 		enum class EBitFlags :uint16_t
 		{
 			None = 0,
@@ -220,10 +178,10 @@ namespace pr::storage::zip
 				,FileTime(dos_time)
 				,FileDate(dos_date)
 				,Crc(uncompressed_crc32)
-				,CompressedSize(compressed_size)
-				,UncompressedSize(uncompressed_size)
-				,NameSize(item_name_size)
-				,ExtraSize(extra_size)
+				,CompressedSize(checked_cast<uint32_t>(compressed_size))
+				,UncompressedSize(checked_cast<uint32_t>(uncompressed_size))
+				,NameSize(checked_cast<uint16_t>(item_name_size))
+				,ExtraSize(checked_cast<uint16_t>(extra_size))
 			{}
 			std::string_view ItemName() const
 			{
@@ -279,15 +237,15 @@ namespace pr::storage::zip
 				,FileTime(dos_time)
 				,FileDate(dos_date)
 				,Crc(uncompressed_crc32)
-				,CompressedSize(compressed_size)
-				,UncompressedSize(uncompressed_size)
-				,NameSize(name_size)
-				,ExtraSize(extra_size)
-				,CommentSize(comment_size)
+				,CompressedSize(checked_cast<uint32_t>(compressed_size))
+				,UncompressedSize(checked_cast<uint32_t>(uncompressed_size))
+				,NameSize(checked_cast<uint16_t>(name_size))
+				,ExtraSize(checked_cast<uint16_t>(extra_size))
+				,CommentSize(checked_cast<uint16_t>(comment_size))
 				,DiskNumberStart()
 				,InternalAttributes(int_attributes)
 				,ExternalAttributes(ext_attributes)
-				,LocalHeaderOffset(local_header_ofs)
+				,LocalHeaderOffset(checked_cast<uint32_t>(local_header_ofs))
 			{}
 			std::string_view ItemName() const
 			{
@@ -363,17 +321,14 @@ namespace pr::storage::zip
 		using iarray_t = std::basic_string_view<uint8_t>;
 		using oarray_t = vector_t<uint8_t>;
 
+		// Constants
+		static size_t const LZDictionarySize = 0x8000;
 		static uint32_t const DOSSubDirectoryFlag = 0x10;
-		static uint32_t const MaxIOBufferSize = 4096;//64 * 1024;
-		static uint32_t const LZDictionarySize = 32768;
+		static uint32_t const InitialCrc = 0;
 
 		// Read/Write function pointer types. Functions are expected to read/write 'n' bytes or throw.
 		using read_func_t = void(*)(ZipArchiveA const& me, int64_t file_ofs, void* buf, size_t n);
 		using write_func_t = void(*)(ZipArchiveA& me, int64_t file_ofs, void const* buf, size_t n);
-
-		// Output stream interface. The compressor uses this interface to write compressed data. It'll typically be called TDEFL_OUT_BUF_SIZE at a time.
-		using tinfl_put_buf_func_ptr = int (*)(void const* pBuf, int len, void *pUser);
-		using tdefl_put_buf_func_ptr = mz_bool(*)(const void* pBuf, int len, void *pUser);
 
 	private:
 
@@ -516,7 +471,11 @@ namespace pr::storage::zip
 
 		// Searches the archive's central directory for an entry matching 'item_name' and 'item_comment' (if not null).
 		// Valid flags: EZipFlags::IgnoreCase | EZipFlags::IgnorePath. Returns -1 if the file cannot be found.
-		int IndexOf(std::string_view item_name, std::string_view item_comment = "", EZipFlags flags = EZipFlags::None) const
+		int IndexOf(std::string_view item_name, std::string_view item_comment = "") const
+		{
+			return IndexOf(item_name, item_comment, m_flags);
+		}
+		int IndexOf(std::string_view item_name, std::string_view item_comment, EZipFlags flags) const
 		{
 			if (!ValidateItemName(item_name))
 				throw std::runtime_error("Item name is invalid or too long");
@@ -583,7 +542,7 @@ namespace pr::storage::zip
 		// 'method' is the method that was used to compressed the data.
 		// 'uncompressed_size' is the original size of the data.
 		// 'uncompressed_crc' is the crc of the uncompressed data.
-		void AddAlreadyCompressed(std::string_view item_name, std::span<void const> buf, size_t uncompressed_size, uint32_t uncompressed_crc32, EMethod method = EMethod::Deflate, std::span<void const> extra = {}, std::string_view item_comment = "")
+		void AddAlreadyCompressed(std::string_view item_name, std::span<void const> buf, size_t uncompressed_size, uint32_t uncompressed_crc32, EMethod method = EMethod::Deflate, std::span<uint8_t const> extra = {}, std::string_view item_comment = "")
 		{
 			// Sanity checks
 			if (m_mode != EMode::Writing)
@@ -646,10 +605,10 @@ namespace pr::storage::zip
 
 			// Add an entry to the central directory
 			CDH cdh(item_name.size(), extra.size(), item_comment.size(), uncompressed_size, buf.size(), uncompressed_crc32, method, bit_flags, dos_time, dos_date, ldh_ofs, ext_attributes, int_attributes);
-			m_central_dir.append(&cdh, &cdh + 1);
-			m_central_dir.append(item_name.begin(), item_name.end());
-			m_central_dir.append(extra.begin(), extra.end());
-			m_central_dir.append(item_comment.begin(), item_comment.end());
+			append(m_central_dir, &cdh, &cdh + 1);
+			append(m_central_dir, item_name);
+			append(m_central_dir, extra);
+			append(m_central_dir, item_comment);
 			m_cdir_index.push_back(checked_cast<uint32_t>(m_archive_size));
 
 			// Update stats
@@ -664,7 +623,7 @@ namespace pr::storage::zip
 		// 'method' is the method to use to compressed the data.
 		// 'uncompressed_size' is the original size of the data.
 		// 'uncompressed_crc' is the crc of the uncompressed data.
-		void Add(std::string_view item_name, std::span<void const> buf, EMethod method = EMethod::Deflate, std::span<void const> extra = {}, std::string_view item_comment = "", ECompressionLevel level = ECompressionLevel::Default, ECompressionFlags comp_flags = ECompressionFlags::None, EZipFlags flags = EZipFlags::None)
+		void Add(std::string_view item_name, std::span<uint8_t const> buf, EMethod method = EMethod::Deflate, std::span<uint8_t const> extra = {}, std::string_view item_comment = "", ECompressionLevel level = ECompressionLevel::Default, EZipFlags flags = EZipFlags::None)
 		{
 			// Sanity checks
 			if (m_mode != EMode::Writing)
@@ -682,11 +641,6 @@ namespace pr::storage::zip
 			if (has_flag(flags, EZipFlags::CompressedData))
 				throw std::runtime_error("Use the 'AddAlreadyCompressed' function to add compressed data.");
 
-			// Overflow check
-			auto num_alignment_padding_bytes = CalcAlignmentPadding();
-			if (m_archive_size + m_central_dir.size() + num_alignment_padding_bytes + sizeof(CDH) + sizeof(LDH) + item_name.size() + extra.size() + item_comment.size() + buf.size() > 0xFFFFFFFF)
-				throw std::runtime_error("Zip too large. Zip64 is not supported");
-
 			// Don't compress if too small
 			if (buf.size() <= 3)
 				level = ECompressionLevel::None;
@@ -695,10 +649,10 @@ namespace pr::storage::zip
 			uint16_t bit_flags = 0;
 			uint16_t int_attributes = 0;
 			uint32_t ext_attributes = 0;
-			uint32_t buf_crc32 = 0;
 			uint64_t compressed_size = 0;
 			uint16_t dos_time = 0;
 			uint16_t dos_date = 0;
+			uint32_t crc32 = InitialCrc;
 
 			// If the name has a directory divider at the end, set the directory bit
 			if (item_name.back() == '/')
@@ -711,8 +665,7 @@ namespace pr::storage::zip
 					throw std::runtime_error("Sub-directories cannot contain data.");
 			}
 
-			// Record the current time so the item can be date stamped.
-			// Do this before compressing just in case compression takes a while
+			// Record the current time so the item can be date stamped. Do this before compressing just in case compression takes a while
 			TimeToDosTime(time(nullptr), dos_time, dos_date);
 
 			// Reserve space for the entry in the central directory
@@ -720,6 +673,7 @@ namespace pr::storage::zip
 			m_cdir_index.reserve(m_cdir_index.size() + 1);
 
 			// Insert offsets
+			auto num_alignment_padding_bytes = CalcAlignmentPadding();
 			auto ldh_ofs = m_archive_size + num_alignment_padding_bytes;
 			auto item_ofs = m_archive_size + num_alignment_padding_bytes + sizeof(LDH);
 			assert(is_aligned(ldh_ofs) && "header offset should be aligned");
@@ -740,43 +694,48 @@ namespace pr::storage::zip
 
 			// Calculate the uncompressed crc
 			if (!has_flag(flags, EZipFlags::IgnoreCrc))
-				buf_crc32 = Crc(buf.data(), buf.size());
+				crc32 = Crc(buf.data(), buf.size());
 
-			// Write the compressed data
+			// Add the data
+			auto item_ofs_beg = item_ofs;
 			if (level == ECompressionLevel::None)
 			{
+				// Write the raw data
 				m_write(*this, item_ofs, buf.data(), buf.size());
 				item_ofs += buf.size();
+				
+				// Record the stats
+				compressed_size = item_ofs - item_ofs_beg;
 				method = EMethod::None;
-				compressed_size = buf.size();
 			}
 			else
 			{
-				mz_zip_writer_add_state state(item_ofs, 0);
+				Deflate algo;
 
-				// Create a compressor
-				auto mem = alloc_traits_t::allocate(m_alloc, sizeof(tdefl_compressor));
-				std::unique_ptr<tdefl_compressor> compressor.reset(new (mem) tdefl_compressor(ZipWriterFunc, &state, CompressionFlagsFrom(level, -15, ECompressionStrategy::DefaultStrategy)));
-
-				// Compress the data, writing it to the zip
-				compresser->compress(buf, buf_size, TDEFL_FINISH);
-				item_ofs = state.m_cur_archive_file_ofs;
+				// Compress into a local buffer and periodically flush to the output
+				vector_t<uint8_t> buf(Deflate::MaxBlockSize);
+				algo.Compress(buf.data(), buf.size(), buf.data(), [&](auto& out, int)
+				{
+					m_write(*this, item_ofs, buf.data(), out - buf.data());
+					item_ofs += out - buf.data();
+					out = buf.data();
+				});
 
 				// Record the stats
+				compressed_size = item_ofs - item_ofs_beg;
 				method = EMethod::Deflate;
-				compressed_size = state.m_comp_size;
 			}
 
 			// Write the local directory header now that we have the compressed size
-			LDH ldh(item_name.size(), extra.size(), buf.size(), compressed_size, buf_crc32, method, bit_flags, dos_time, dos_date);
+			LDH ldh(item_name.size(), extra.size(), buf.size(), compressed_size, crc32, method, bit_flags, dos_time, dos_date);
 			m_write(*this, ldh_ofs, &ldh, sizeof(ldh));
 
 			// Add an entry to the central directory
-			CDH cdh(item_name.size(), extra.size(), item_comment.size(), buf.size(), compressed_size, buf_crc32, method, bit_flags, dos_time, dos_date, ldh_ofs, ext_attributes, int_attributes);
-			m_central_dir.append(&cdh, &cdh + 1);
-			m_central_dir.append(item_name.begin(), item_name.end());
-			m_central_dir.append(extra.begin(), extra.end());
-			m_central_dir.append(item_comment.begin(), item_comment.end());
+			CDH cdh(item_name.size(), extra.size(), item_comment.size(), buf.size(), compressed_size, crc32, method, bit_flags, dos_time, dos_date, ldh_ofs, ext_attributes, int_attributes);
+			append(m_central_dir, &cdh, &cdh + 1);
+			append(m_central_dir, item_name);
+			append(m_central_dir, extra);
+			append(m_central_dir, item_comment);
 			m_cdir_index.push_back(checked_cast<uint32_t>(m_archive_size));
 
 			// Update stats
@@ -791,23 +750,23 @@ namespace pr::storage::zip
 		// 'method' is the method to use to compressed the data.
 		// 'uncompressed_size' is the original size of the data.
 		// 'uncompressed_crc' is the crc of the uncompressed data.
-		void Add(std::string_view item_name, std::filesystem::path const& src_filepath, EMethod method = EMethod::Deflate, std::span<void const> extra = {}, std::string_view item_comment = "", ECompressionLevel level = ECompressionLevel::Default, EZipFlags flags = EZipFlags::None)
+		void Add(std::string_view item_name, std::filesystem::path const& src_filepath, EMethod method = EMethod::Deflate, std::span<uint8_t const> extra = {}, std::string_view item_comment = "", ECompressionLevel level = ECompressionLevel::Default, EZipFlags flags = EZipFlags::None)
 		{
 			using namespace std::literals;
 
 			// Sanity checks
-			if (m_zip_mode != EMode::Writing)
+			if (m_mode != EMode::Writing)
 				throw std::runtime_error("ZipArchive not in writing mode");
 			if (!ValidateItemName(item_name))
 				throw std::runtime_error("Archive name is invalid or too long");
 			if (!ValidateItemComment(item_comment))
 				throw std::runtime_error("Item comment is invalid or too long");
 			if (!std::filesystem::exists(src_filepath))
-				throw std::runtime_error("Path '"s + src_filepath + "' does not exist"s);
+				throw std::runtime_error("Path '"s + src_filepath.string() + "' does not exist");
 			if (!std::filesystem::is_directory(src_filepath))
-				throw std::runtime_error("Path '"s + src_filepath + "' is not a file"s);
+				throw std::runtime_error("Path '"s + src_filepath.string() + "' is not a file");
 			if (std::filesystem::file_size(src_filepath) > 0xFFFFFFFF)
-				throw std::runtime_error("File '"s + src_filepath + "' is too large. Zip64 is not supported");
+				throw std::runtime_error("File '"s + src_filepath.string() + "' is too large. Zip64 is not supported");
 			if (level < ECompressionLevel::None || level > ECompressionLevel::Uber)
 				throw std::runtime_error("Compression level out of range");
 			if (has_flag(flags, EZipFlags::CompressedData))
@@ -815,24 +774,18 @@ namespace pr::storage::zip
 			if (m_total_entries >= 0xFFFF)
 				throw std::runtime_error("Too many files added.");
 
-			// Overflow check
-			auto num_alignment_padding_bytes = CalcAlignmentPadding();
-			if (m_archive_size + m_central_dir.size() + num_alignment_padding_bytes + sizeof(CDH) + sizeof(LDH) + item_name.size() + extra.size() + item_comment.size() + buf.size() > 0xFFFFFFFF)
-				throw std::runtime_error("Zip too large. Zip64 is not supported");
-
 			// Open the source file
 			auto src_file = std::ifstream(src_filepath, std::ios::binary);
 			if (!src_file.good())
-				throw std::runtime_error("Failed to open file '"s + src_filepath + "'");
+				throw std::runtime_error("Failed to open file '"s + src_filepath.string() + "'");
 
-			EMethod method = EMethod::None;
-			uint16_t bit_flags = 0;
+			EBitFlags bit_flags = EBitFlags::None;
 			uint16_t int_attributes = 0;
 			uint32_t ext_attributes = 0;
-			uint32_t file_crc32 = 0;
 			uint64_t compressed_size = 0;
 			uint16_t dos_time = 0;
 			uint16_t dos_date = 0;
+			uint32_t crc32 = InitialCrc;
 
 			// Don't compress if too small
 			auto uncompressed_size = std::filesystem::file_size(src_filepath);
@@ -848,9 +801,10 @@ namespace pr::storage::zip
 			m_cdir_index.reserve(m_cdir_index.size() + 1);
 
 			// Insert offsets
-			auto lhd_ofs = m_archive_size + num_alignment_padding_bytes;
+			auto num_alignment_padding_bytes = CalcAlignmentPadding();
+			auto ldh_ofs = m_archive_size + num_alignment_padding_bytes;
 			auto item_ofs = m_archive_size + num_alignment_padding_bytes + sizeof(LDH);
-			assert(is_aligned(lhd_ofs) && "header offset should be aligned");
+			assert(is_aligned(ldh_ofs) && "header offset should be aligned");
 
 			// Write zeros for padding
 			WriteZeros(m_archive_size, num_alignment_padding_bytes);
@@ -866,66 +820,55 @@ namespace pr::storage::zip
 			m_write(*this, item_ofs, extra.data(), extra.size());
 			item_ofs += extra.size();
 
+			// Calculate the uncompressed crc
+			if (!has_flag(flags, EZipFlags::IgnoreCrc))
+				crc32 = Crc(src_file);
+
 			// Write the compressed data
+			auto item_ofs_beg = item_ofs;
 			if (level == ECompressionLevel::None)
 			{
 				// Read from the file in blocks
 				std::array<char, 4096> buf;
-				for (auto remaining = uncompressed_size; remaining != 0; )
+				for (; src_file.read(buf.data(), buf.size()).good();)
 				{
-					auto n = std::min<size_t>(buf.size(), remaining);
-					if (!src_file.read(buf.data(), n).good())
-						throw std::runtime_error("File read error when reading '"s + src_filepath + "'");
-					
-					// Calculate the CRC as we go
-					file_crc32 = Crc(buf.data(), n, file_crc32);
-
-					// Write the data into the archive
-					m_write(*this, item_ofs, buf.data(), n);
-					item_ofs += n;
-					remaining -= n;
+					m_write(*this, item_ofs, buf.data(), src_file.gcount());
+					item_ofs += src_file.gcount();
 				}
-				compressed_size = uncompressed_size;
+				
+				// Record the stats
+				compressed_size = item_ofs - item_ofs_beg;
 				method = EMethod::None;
 			}
 			else
 			{
-				#if 0//todo
-				mz_zip_writer_add_state state(item_ofs, 0);
+				Deflate algo;
 
-				// Create a compressor
-				auto mem = alloc_traits_t::allocate(m_alloc, sizeof(tdefl_compressor));
-				std::unique_ptr<tdefl_compressor> compressor.reset(new (mem) tdefl_compressor(ZipWriterFunc, &state, CompressionFlagsFrom(level, -15, ECompressionStrategy::DefaultStrategy)));
-
-				// Compress the data, writing to the zip
-				std::array<char, 4096> buf;
-				for (auto remaining = uncompressed_size; remaining != 0; )
+				// Compress into a local buffer and periodically flush to the output
+				vector_t<uint8_t> buf(Deflate::MaxBlockSize);
+				algo.Compress(std::istream_iterator<uint8_t>(m_ifile), uncompressed_size, buf.data(), [&](auto& out, int)
 				{
-					auto n = std::min<size_t>(buf.size(), remaining);
-					if (!src_file.read(buf.data(), n).good())
-						throw std::runtime_error("File read error when reading '"s + src_filepath + "'");
+					auto size = out - buf.data();
+					m_write(*this, item_ofs, buf.data(), size);
+					item_ofs += size;
+					out = buf.data();
+				});
 
-					uncompressed_crc32 = Crc(buf.data(), n, uncompressed_crc32);
-					compressor->tdefl_compress_buffer(buf.data(), n, remaining == n ? TDEFL_NO_FLUSH : TDEFL_FINISH);
-					remaining -= n;
-				}
-
-				compressed_size = state.m_comp_size;
-				item_ofs = state.m_cur_archive_file_ofs;
-				#endif
+				// Record the stats
+				compressed_size = item_ofs - item_ofs_beg;
 				method = EMethod::Deflate;
 			}
 
 			// Write the local directory header now that we have the compressed size
-			LDH ldh(item_name.size(), extra.size(), uncompressed_size, compressed_size, file_crc32, method, bit_flags, dos_time, dos_date);
+			LDH ldh(item_name.size(), extra.size(), uncompressed_size, compressed_size, crc32, method, bit_flags, dos_time, dos_date);
 			m_write(*this, ldh_ofs, &ldh, sizeof(ldh));
 
 			// Add an entry to the central directory
-			CDH cdh(item_name.size(), extra.size(), item_comment.size(), uncompressed_size, compressed_size, file_crc32, method, bit_flags, dos_time, dos_date, ldh_ofs, ext_attributes, int_attributes);
-			m_central_dir.append(&cdh, &cdh + 1);
-			m_central_dir.append(item_name.begin(), item_name.end());
-			m_central_dir.append(extra.begin(), extra.end());
-			m_central_dir.append(item_comment.begin(), item_comment.end());
+			CDH cdh(item_name.size(), extra.size(), item_comment.size(), uncompressed_size, compressed_size, crc32, method, bit_flags, dos_time, dos_date, ldh_ofs, ext_attributes, int_attributes);
+			append(m_central_dir, &cdh, &cdh + 1);
+			append(m_central_dir, item_name);
+			append(m_central_dir, extra);
+			append(m_central_dir, item_comment);
 			m_cdir_index.push_back(checked_cast<uint32_t>(m_archive_size));
 
 			// Update stats
@@ -938,14 +881,22 @@ namespace pr::storage::zip
 		// 'dst_filepath' is where to write the extracted file.
 		// 'index' is the item's index within the archive.
 		// This function only extracts files, not archive directory records.
-		void Extract(std::string_view item_name, std::filesystem::path const& dst_filepath, EZipFlags flags = EZipFlags::None) const
+		void Extract(std::string_view item_name, std::filesystem::path const& dst_filepath) const
+		{
+			Extract(item_name, dst_filepath, m_flags);
+		}
+		void Extract(std::string_view item_name, std::filesystem::path const& dst_filepath, EZipFlags flags) const
 		{
 			auto index = IndexOf(item_name, "", flags);
 			return index >= 0 && index < m_total_entries
 				? Extract(index, dst_filepath, flags)
 				: throw std::runtime_error("Archive item not found");
 		}
-		void Extract(int index, std::filesystem::path const& dst_filepath, EZipFlags flags = EZipFlags::None) const
+		void Extract(int index, std::filesystem::path const& dst_filepath) const
+		{
+			Extract(index, dst_filepath, m_flags);
+		}
+		void Extract(int index, std::filesystem::path const& dst_filepath, EZipFlags flags) const
 		{
 			// Create the destination file
 			auto outfile = std::ostream(dst_filepath, std::ios::binary);
@@ -966,16 +917,22 @@ namespace pr::storage::zip
 		// 'out' is where to write the extracted file.
 		// 'index' is the item's index within the archive.
 		// This function only extracts files, not archive directory records.
-		template <typename Elem = uint8_t>
-		void Extract(std::string_view item_name, std::basic_ostream<Elem>& out, EZipFlags flags = EZipFlags::None) const
+		template <typename Elem = uint8_t> void Extract(std::string_view item_name, std::basic_ostream<Elem> & out) const
+		{
+			Extract(item_name, out, m_flags);
+		}
+		template <typename Elem = uint8_t> void Extract(std::string_view item_name, std::basic_ostream<Elem>& out, EZipFlags flags) const
 		{
 			auto index = IndexOf(item_name, "", flags);
 			return index >= 0 && index < m_total_entries
 				? Extract(index, out, flags)
 				: throw std::runtime_error("Archive item not found");
 		}
-		template <typename Elem = uint8_t>
-		void Extract(int index, std::basic_ostream<Elem>& out, EZipFlags flags = EZipFlags::None) const
+		template <typename Elem = uint8_t> void Extract(int index, std::basic_ostream<Elem> & out) const
+		{
+			void Extract(index, out, m_flags);
+		}
+		template <typename Elem = uint8_t> void Extract(int index, std::basic_ostream<Elem>& out, EZipFlags flags) const
 		{
 			Extract(index, [&out](void*, uint64_t ofs, void const* buf, size_t n)
 			{
@@ -989,14 +946,20 @@ namespace pr::storage::zip
 		// OutputCB is expected to copy 'buf[0:len) to '&somewhere[output_buffer_ofs]'.
 		// OutputCB should throw if not all bytes can be copied.
 		// 'output_buffer_ofs' is a convenience for output streams that do not have an internal 'file' pointer.
-		template <typename OutputCB>
-		void Extract(std::string_view item_name, OutputCB callback, void* ctx, EZipFlags flags = EZipFlags::None) const
+		template <typename OutputCB> void Extract(std::string_view item_name, OutputCB callback, void* ctx) const
+		{
+			Extract(item_name, callback, ctx, m_flags);
+		}
+		template <typename OutputCB> void Extract(std::string_view item_name, OutputCB callback, void* ctx, EZipFlags flags) const
 		{
 			auto index = IndexOf(item_name, "", flags);
 			Extract(index, callback, ctx, flags);
 		}
-		template <typename OutputCB>
-		void Extract(int index, OutputCB callback, void* ctx, EZipFlags flags = EZipFlags::None) const
+		template <typename OutputCB> void Extract(int index, OutputCB callback, void* ctx) const
+		{
+			Extract(index, callback, ctx, m_flags);
+		}
+		template <typename OutputCB> void Extract(int index, OutputCB callback, void* ctx, EZipFlags flags) const
 		{
 			using namespace std::literals;
 
@@ -1160,6 +1123,9 @@ namespace pr::storage::zip
 			if (m_imem.empty())
 				throw std::runtime_error("There is no in-memory archive");
 
+			uint64_t ofs = 0;
+			uint32_t crc32 = InitialCrc;
+
 			// The item was stored uncompressed or the caller has requested the compressed data.
 			if (cdh.Method == EMethod::None || has_flag(flags, EZipFlags::CompressedData))
 			{
@@ -1167,9 +1133,6 @@ namespace pr::storage::zip
 				if constexpr (sizeof(size_t) == sizeof(uint32_t))
 					if (cdh.CompressedSize > 0xFFFFFFFF)
 						throw std::runtime_error("Item is too large. Zip64 is not supported");
-
-				uint64_t ofs = 0;
-				uint32_t crc32 = 0;
 
 				// Calculate the crc if the call was not just for the compressed data
 				if (!has_flag(flags, EZipFlags::CompressedData) && !has_flag(flags, EZipFlags::IgnoreCrc))
@@ -1181,6 +1144,11 @@ namespace pr::storage::zip
 				// All data sent
 				item_ofs += cdh.CompressedSize;
 				ofs += cdh.CompressedSize;
+
+				// CRC check
+				if (!has_flag(flags, EZipFlags::CompressedData) && !has_flag(flags, EZipFlags::IgnoreCrc) && cdh.Crc != crc32)
+					throw std::runtime_error("CRC check failure");
+
 				return;
 			}
 
@@ -1188,18 +1156,17 @@ namespace pr::storage::zip
 			if (cdh.Method == EMethod::Deflate)
 			{
 				// Decompress into a temporary buffer. The minimum buffer size must be 'LZDictionarySize'
-				// because Deflate uses references to earlier bytes, upto an LZ dictionary size prior.
+				// because Deflate uses references to earlier bytes, up to an LZ dictionary size prior.
 				Deflate algo;
-				uint64_t ofs = 0;
-				uint32_t crc32 = 0;
 				vector_t<uint8_t> buf(LZDictionarySize);
-				algo.Decompress(m_imem.data(), buf.data(), [&](uint8_t*& ptr)
+				algo.Decompress(m_imem.data(), m_imem.size(), buf.data(), [&](uint8_t*& ptr, int)
 				{
 					auto count = size_t(ptr - buf.data());
 					assert(count <= buf.size());
 
 					// Update the crc
-					crc32 = Crc(buf.data(), count, crc32);
+					if (!has_flag(flags, EZipFlags::IgnoreCrc))
+						crc32 = Crc(buf.data(), count, crc32);
 
 					// Push the buffered data out to the callback
 					callback(ctx, ofs, buf.data(), count);
@@ -1207,7 +1174,12 @@ namespace pr::storage::zip
 
 					// Reset to the start of the buffer
 					ptr = buf.data();
-				}, Deflate::EFlags::ExpectZlibHeader);
+				});
+
+				// CRC check
+				if (!has_flag(flags, EZipFlags::IgnoreCrc) && cdh.Crc != crc32)
+					throw std::runtime_error("CRC check failure");
+
 				return;
 			}
 			
@@ -1222,12 +1194,12 @@ namespace pr::storage::zip
 			if (!m_ifile.good())
 				throw std::runtime_error("There is no archive file");
 
+			uint64_t ofs = 0;
+			uint32_t crc32 = InitialCrc;
+
 			// The item was stored uncompressed or the caller has requested the compressed data.
 			if (cdh.Method == EMethod::None || has_flag(flags, EZipFlags::CompressedData))
 			{
-				uint64_t ofs = 0;
-				uint32_t crc32 = 0;
-
 				// Zip is a file. Read chunks into a temporary buffer
 				std::array<uint8_t, 4096> buf;
 				for (size_t remaining = cdh.CompressedSize; remaining != 0;)
@@ -1248,6 +1220,11 @@ namespace pr::storage::zip
 					item_ofs += n;
 					ofs += n;
 				}
+
+				// Check the CRC
+				if (!has_flag(flags, EZipFlags::CompressedData) && !has_flag(flags, EZipFlags::IgnoreCrc) && cdh.Crc != crc32)
+					throw std::runtime_error("CRC check failure");
+
 				return;
 			}
 
@@ -1255,22 +1232,22 @@ namespace pr::storage::zip
 			if (cdh.Method == EMethod::Deflate)
 			{
 				Deflate algo;
-				uint64_t ofs = 0;
-				uint32_t crc32 = 0;
-
+		
 				m_ifile.seekg(item_ofs);
 				auto src = std::istream_iterator<uint8_t>(m_ifile);
+				auto len = std::filesystem::file_size(m_filepath);
 
 				// Decompress into a temporary buffer. The minimum buffer size must be 'LZDictionarySize'
 				// because Deflate uses references to earlier bytes, upto an LZ dictionary size prior.
 				vector_t<uint8_t> buf(LZDictionarySize);
-				algo.Decompress(src, buf.data(), [&](uint8_t*& ptr)
+				algo.Decompress(src, len, buf.data(), [&](uint8_t*& ptr, int)
 				{
 					auto count = size_t(ptr - buf.data());
 					assert(count <= buf.size());
 
-					// Update the crc
-					crc32 = Crc(buf.data(), count, crc32);
+					// Update the CRC
+					if (!has_flag(flags, EZipFlags::IgnoreCrc))
+						crc32 = Crc(buf.data(), count, crc32);
 
 					// Push the buffered data out to the callback
 					callback(ctx, ofs, buf.data(), count);
@@ -1279,6 +1256,11 @@ namespace pr::storage::zip
 					// Reset to the start of the buffer
 					ptr = buf.data();
 				});
+
+				// Check the CRC
+				if (!has_flag(flags, EZipFlags::IgnoreCrc) && cdh.Crc != crc32)
+					throw std::runtime_error("CRC check failure");
+
 				return;
 			}
 
@@ -1392,19 +1374,6 @@ namespace pr::storage::zip
 			me.m_ofile.write(static_cast<char const*>(buf), n);
 		}
 
-		// Callback for writing compressed data to the zip
-		static void ZipWriterFunc(void const* buf, int len, void* ctx)
-		{
-			#if 0 // Finding compiler bug
-			auto& pState = static_cast<mz_zip_writer_add_state*>(ctx);
-			if ((int)pState->m_pZip->m_pWrite(pState->m_pZip->m_pIO_opaque, pState->m_cur_archive_file_ofs, pBuf, len) != len)
-				return MZ_FALSE;
-			pState->m_cur_archive_file_ofs += len;
-			pState->m_comp_size += len;
-			return MZ_TRUE;
-			#endif
-		}
-
 	private:
 
 		struct Deflate
@@ -1414,6 +1383,8 @@ namespace pr::storage::zip
 			//  - Compression format:
 			//       https://en.wikipedia.org/wiki/DEFLATE
 			//       https://www.w3.org/Graphics/PNG/RFC-1951
+			//       https://zlib.net/feldspar.html <- explanation of DEFLATE
+			//
 			// Algorithm:
 			//  The compressor terminates a block when it determines that starting a new block with fresh trees
 			//  would be useful, or when the block size fills up the compressor's block buffer.
@@ -1446,18 +1417,56 @@ namespace pr::storage::zip
 			//  in the hash table only when no match was found, or when the match is not "too long". This degrades
 			//  the compression ratio but saves time since there are both fewer insertions and fewer searches.
 
-			// Flags
-			enum class EFlags
+			// Bit shift register. Could also use uint32_t if on 32-bit
+			using bit_buf_t = uint64_t;
+
+			// The maximum size of a block
+			static size_t const MaxBlockSize = 64U * 1024U;
+
+			// Huffman table sizes
+			static size_t const LitTableSize = 288;
+			static size_t const DstTableSize = 32;
+			static size_t const DynTableSize = 19;
+			static size_t const MaxTableSize = std::max({ LitTableSize, DstTableSize, DynTableSize });
+
+			// The compressor defaults to 128 dictionary probes per dictionary search. 0=Huffman only, 1=Huffman+LZ (fastest/crap compression), 4095=Huffman+LZ (slowest/best compression).
+			static uint32_t const DefaultProbes = 0x080;
+			static uint32_t const MaxProbesMask = 0xFFF;
+			static int const MaxSupportedHuffCodeSize = 32;
+			static int const StaticBlockSizeThreshold = 5;
+			static int const DynamicBlockSizeThreshold = 48;
+			static int const MinMatchLength = 3;
+			static int const MaxMatchLength = 258;
+
+			// Flags used in 'Decompress()'
+			enum class EDecompressFlags
 			{
 				None = 0,
 
-				// Used by Decompress(). If set, the input has a valid zlib header and ends with an
-				// Adler32 checksum (i.e. a zlib stream). Otherwise, the input is a raw deflate stream.
+				// If set, the input has a valid zlib header and ends with an Adler32 checksum (i.e. a zlib stream). Otherwise, the input is a raw deflate stream.
 				ExpectZlibHeader = 1 << 0,
 			};
 
-			// Bit shift register. Could also use uint32_t if on 32-bit
-			using bit_buf_t = uint64_t;
+			// Flags used by 'Compress()'
+			enum class ECompressFlags
+			{
+				None = 0,
+				
+				// If set, the compressor outputs a zlib header before the deflate data, and the Adler-32 of the source data at the end. Otherwise, you'll get raw deflate data.
+				WriteZLibHeader = 1 << 0,
+
+				// Set to use faster greedy parsing, instead of more efficient lazy parsing.
+				GreedyParsing = 1 << 1,
+
+				// RLE_MATCHES: Only look for RLE matches (matches with a distance of 1)
+				RLEMatches = 1 << 2,
+
+				// Disable usage of optimized Huffman tables.
+				ForceAllStaticBlocks = 1 << 3,
+
+				// Only use raw (uncompressed) deflate blocks.
+				ForceAllRawBlocks = 1 << 4,
+			};
 
 			// A decoded zlib header
 			struct ZLibHeader
@@ -1527,53 +1536,64 @@ namespace pr::storage::zip
 				}
 			};
 
-			// Huffman table
-			struct HuffTable
+			// Functor for calculating the Adler32 checksum
+			struct AdlerChecksum
 			{
-				enum
-				{
-					HuffSymbols0 = 288,
-					HuffSymbols1 = 32,
-					Huffsymbols2 = 19,
-					LookupTableBits = 10,
-					LookupTableSize = 1 << LookupTableBits,
-					LookupTableMask = LookupTableSize - 1,
-				};
+				static uint32_t const AdlerMod = 65521;
+				uint32_t a, b;
 
-				uint32_t m_size; // Table size
-				int16_t m_look_up[LookupTableSize];
-				int16_t m_tree[HuffSymbols0 * 2];
-				uint8_t m_code_size[HuffSymbols0];
+				AdlerChecksum()
+					:a(1)
+					,b(0)
+				{}
+				uint32_t checksum() const
+				{
+					return (b << 16) | a;
+				}
+				uint8_t operator()(uint8_t byte)
+				{
+					a = (a + byte) % AdlerMod;
+					b = (b + a) % AdlerMod;
+					return byte;
+				}
 			};
 
-			bit_buf_t m_bit_buf; // MSB -> LSB shift register
-			uint32_t m_num_bits; // The current number of bits in the shift register
+			// Shift register used to stream data in/out during Compress()/Decompress()
+			bit_buf_t m_bit_buf; // bits in => MSB...LSB => bits out
+			int m_num_bits; // The current number of bits in the shift register
 
 			Deflate()
 				:m_bit_buf()
 				,m_num_bits()
 			{}
 
-			// Decompress a stream of bytes from 'src' and write the decompressed stream to 'out'.
+			// Decompress a stream of bytes from 'stream' and write the decompressed stream to 'output'.
 			// 'Src' should have uint8_t pointer-like symmantics.
-			// 'Out' should have uint8_t pointer-like symmantics and be copyable.
-			// 'flush' is called after each decompressed block. Signature: void flush(Out& out)
-			template <typename Src, typename Out, typename FlushCB, bool CalcChecksum = true>
-			void Decompress(Src src, Out out, FlushCB flush, EFlags const decomp_flags = EFlags::ExpectZlibHeader)
+			// 'Out' should have uint8_t pointer-like symmantics.
+			// 'stream' is the input stream of compressed data
+			// 'length' is the length of data available via 'stream'
+			// 'output' is an output iterator that receives the decompressed data.
+			// 'flush' is called after each decompressed block. Signature: void flush(Out& out, int block_number)
+			// 'flags' control the decompression behaviour
+			// 'adler_checksum' is used to return the checksum value. Only valid for ZLib data.
+			//   Callers should use the AdlerChecksum helper with their output iterator to calculate
+			//   the checksum then compare it to the 'adler_checksum' value.
+			template <typename Src, typename Out, typename FlushCB>
+			void Decompress(Src stream, size_t length, Out output, FlushCB flush, EDecompressFlags const flags = EDecompressFlags::None, uint32_t* adler_checksum = nullptr)
 			{
-				// Notes:
-				//  - Reads beyond the end of 'src' should return 0
+				using namespace std::literals;
 
-				HuffTable tables[2] = {};
-				auto out_beg = out;
 				m_num_bits = 0;
 				m_bit_buf = 0;
 
+				SrcIter<Src> src(stream, length);
+				OutIter<Out> out(output);
+
 				// Parse the ZLIB header
-				if (has_flag(decomp_flags, EFlags::ExpectZlibHeader))
+				if (has_flag(flags, EDecompressFlags::ExpectZlibHeader))
 				{
-					auto cmf = *src++; // Compression method an flags
-					auto flg = *src++; // More flags
+					auto cmf = *src; ++src; // Compression method an flags
+					auto flg = *src; ++src; // More flags
 					auto zhdr = ZLibHeader(cmf, flg);
 					if (zhdr.Method() != EMethod::Deflate)
 						throw std::runtime_error("ZLIB header indicates a compression method other than 'DEFLATE'. Not supported.");
@@ -1581,26 +1601,28 @@ namespace pr::storage::zip
 						throw std::runtime_error("ZLIB header contains a preset dictionary. Not supported.");
 				}
 
-				// Checksum accumulator
-				AlderChecksum<CalcChecksum> adler;
-
 				// A Deflate stream consists of a series of blocks. Each block is preceded by a 3-bit header:
 				// First bit: Last-block-in-stream marker:
 				//  1: this is the last block in the stream.
 				//  0: there are more blocks to process after this one.
 				// Second and third bits: Encoding method used for this block type:
-				//  00: a stored/raw/literal section, between 0 and 65,535 bytes in length.
+				//  00: a stored/raw/literal section, between 0 and 0xFFFF bytes in length.
 				//  01: a static Huffman compressed block, using a pre-agreed Huffman tree.
 				//  10: a compressed block complete with the Huffman table supplied.
 				//  11: reserved, don't use.
-				for (auto hdr = GetBits<uint32_t>(src, 3); (hdr & 1) == 0; hdr = GetBits<uint32_t>(src, 3))
+				int block_number = 0;
+				for (bool more = true; more; ++block_number)
 				{
+					// Read the block header, and see if this is the last block
+					auto hdr = GetBits<uint32_t>(src, 3);
+					more = (hdr & 1) == 0;
+
 					// Read the block type and prepare the huff tables based on type
-					auto type = hdr >> 1;
+					auto type = static_cast<EBlock>(hdr >> 1);
 					switch (type)
 					{
 					// A stored/raw/literal section, between 0 and 65,535 bytes in length.
-					case 0:
+					case EBlock::Literal:
 						{
 							// Skip bits up to the next byte boundary
 							void(GetBits<uint32_t>(src, m_num_bits & 7));
@@ -1619,130 +1641,99 @@ namespace pr::storage::zip
 
 							// Copy bytes directly to the output stream
 							for (; len-- != 0; ++out)
-								*out = adler(GetByte(src));
+								*out = GetByte(src);
 
-							continue;
-						}
-					// A static Huffman compressed block, using a pre-agreed Huffman tree.
-					case 1:
-						{
-							tables[0].m_size = HuffTable::HuffSymbols0;
-							tables[1].m_size = HuffTable::HuffSymbols1;
-
-							// Initialise the literal code sizes
-							int i = 0;
-							auto p = &tables[0].m_code_size[0];
-							for (; i <= 143; ++i) *p++ = 8;
-							for (; i <= 255; ++i) *p++ = 9;
-							for (; i <= 279; ++i) *p++ = 7;
-							for (; i <= 287; ++i) *p++ = 8;
-
-							// Initialise the distance code sizes
-							memset(&tables[1].m_code_size[0], 5, tables[1].m_size);
 							break;
 						}
-					// A compressed block complete with the Huffman table supplied.
-					case 2:
+
+					// A static Huffman compressed block, using pre-agreed symbol and distance tables
+					case EBlock::Static:
 						{
-							HuffTable dyn_codes;
-							tables[0].m_size = GetBits<uint8_t>(src, 5) + 257; // number of literal codes (- 256)
-							tables[1].m_size = GetBits<uint8_t>(src, 5) + 1;   // number of distance codes (- 1)
-							dyn_codes.m_size = GetBits<uint8_t>(src, 4) + 4;   // number of bit length codes (- 3)
+							// Initialise the literal/lengths table
+							HuffLookupTable lit_table(LitTableSize);
+							memset(&lit_table.m_code_size[  0], 8, 144);
+							memset(&lit_table.m_code_size[144], 9, 112);
+							memset(&lit_table.m_code_size[256], 7,  24);
+							memset(&lit_table.m_code_size[280], 8,   8);
+							lit_table.Populate();
 
-							// Copy the compressed Huffman codes into table[2]
-							memset(&dyn_codes.m_code_size[0], 0, sizeof(dyn_codes.m_code_size));
-							static uint8_t const s_length_dezigzag[19] = { 16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15 };
-							for (int i = 0; i != int(dyn_codes.m_size); ++i) dyn_codes.m_code_size[s_length_dezigzag[i]] = GetBits<uint8_t>(src, 3);
-							dyn_codes.m_size = HuffTable::Huffsymbols2;
+							// Initialise the distance table
+							HuffLookupTable dst_table(DstTableSize);
+							memset(&dst_table.m_code_size[0], 5, dst_table.m_size);
+							dst_table.Populate();
 
-							// Decompress the Huffman codes
-							PopulateHuffmanTree(dyn_codes);
-							uint8_t code_sizes[HuffTable::HuffSymbols0 + HuffTable::HuffSymbols1 + 137] = {};
-							for (int i = 0, iend = tables[0].m_size + tables[1].m_size; i != iend;)
+							// Decompress the block
+							ReadBlock(src, lit_table, dst_table, out);
+							break;
+						}
+
+					// A compressed block complete with the Huffman table supplied.
+					case EBlock::Dynamic:
+						{
+							HuffLookupTable lit_table(GetBits<uint8_t>(src, 5) + 257); // number of literal/length codes (- 257)
+							HuffLookupTable dst_table(GetBits<uint8_t>(src, 5) + 1);   // number of distance codes (- 1)
+							HuffLookupTable dyn_table(GetBits<uint8_t>(src, 4) + 4);   // number of code length codes (- 4)
+
+							// Read the 3-bit integer code lengths into 'dyn_table'.
+							static std::array<uint8_t, 19> const s_dezigzag = { 16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15 };
+							for (int i = 0; i != int(dyn_table.m_size); ++i) dyn_table.m_code_size[s_dezigzag[i]] = GetBits<uint8_t>(src, 3);
+							dyn_table.m_size = DynTableSize;
+							dyn_table.Populate();
+
+							// Decompress the dynamic code length values
+							std::array<uint8_t, LitTableSize + DstTableSize + 137> code_sizes = {};
+							for (int i = 0, iend = lit_table.m_size + dst_table.m_size; i != iend;)
 							{
-								auto dist = HuffDecode(src, dyn_codes);
-								if (dist < 16)
+								auto sym = HuffDecode(src, dyn_table);
+								if (sym < 16)
 								{
-									code_sizes[i++] = (uint8_t)dist;
-									continue;
+									// 'Sym' < 16 means it is a literal code size value
+									code_sizes[i] = static_cast<uint8_t>(sym);
+									++i;
 								}
-
-								//
-								if (dist == 16 && i == 0)
+								else
 								{
-									throw std::runtime_error("");
+									// The dynamic table of code sizes is run length encoded, so all "distance" values are assumed to be 1.
+
+									// The first symbol cannot be a reference to an earlier location
+									if (i == 0 && sym == 16)
+										throw std::runtime_error("Dynamic Huffman table is corrupt. Block index "s + std::to_string(block_number));
+
+									// Read the length of the LZ encoded code size
+									auto len = "\03\03\013"[sym - 16] + GetBits<uint32_t>(src, "\02\03\07"[sym - 16]); // length + num_extra
+									memset(&code_sizes[i], sym == 16 ? code_sizes[i - 1] : 0, len);
+									if ((i += len) > iend)
+										throw std::runtime_error("Dynamic Huffman table is corrupt. Block index "s + std::to_string(block_number));
 								}
-
-								//
-								auto s = GetBits<uint32_t>(src, "\02\03\07"[dist - 16]) + "\03\03\013"[dist - 16];
-								memset(code_sizes + i, dist == 16 ? code_sizes[i - 1] : 0, s);
-
-								//
-								if ((i += s) > iend)
-									throw std::runtime_error("Corrupt Huffman table");
 							}
 
-							// Append the dynamic Huffman tables to ends of the static tables
-							memcpy(&tables[0].m_code_size[0], &code_sizes[0], tables[0].m_size);
-							memcpy(&tables[1].m_code_size[0], &code_sizes[0] + tables[0].m_size, tables[1].m_size);
+							// Copy the code length values to the lit/dst tables
+							memcpy(&lit_table.m_code_size[0], &code_sizes[               0], lit_table.m_size);
+							memcpy(&dst_table.m_code_size[0], &code_sizes[lit_table.m_size], dst_table.m_size);
+
+							// Populate the Huffman trees and lookup tables
+							dst_table.Populate();
+							lit_table.Populate();
+
+							// Decompress the block
+							ReadBlock(src, lit_table, dst_table, out);
 							break;
 						}
+
 					// reserved, don't use.
-					case 3:
+					case EBlock::Reserved:
 					default:
 						{
 							throw std::runtime_error("DEFLATE stream contains an invalid block header");
 						}
 					}
 
-					// Populate the Huffman tree in each table so that they can be used for decompression
-					PopulateHuffmanTree(tables[1]);
-					PopulateHuffmanTree(tables[0]);
-
-					// Decompress the block
-					for (;;)
-					{
-						int16_t sym;
-						for (;;)
-						{
-							// Read and decode a symbol from the source stream
-							sym = ReadSym(src, tables[0]);
-							if (sym & 0x0100) break;
-							*out = adler(static_cast<uint8_t>(sym));
-							++out;
-						}
-
-						// Is this symbol the end-of-block marker?
-						sym &= 0x1FF;
-						if (sym == 0x0100)
-							break;
-
-						static int const s_length_base[31] = { 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258, 0, 0 };
-						static int const s_length_extra[31] = { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0, 0, 0 };
-						auto count = s_length_base[sym - 257] + GetBits<uint32_t>(src, s_length_extra[sym - 257]);
-
-						// Read the relative offset back to where to read from
-						auto ofs = HuffDecode(src, tables[1]);
-						static int const s_dist_base[32] = { 1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577, 0, 0 };
-						static int const s_dist_extra[32] = { 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13 };
-						auto dist = s_dist_base[ofs] + GetBits<uint32_t>(src, s_dist_extra[ofs]);
-
-						// The number of bytes output so far
-						if (dist > out - out_beg)
-							throw std::runtime_error("Corrupt zip. Rereference to an earlier byte sequence that is out of range");
-
-						// Repeat an earlier sequence from [existing, existing + count)
-						auto existing = out - dist;
-						for (; count-- != 0; ++out, ++existing)
-							*out = adler(*existing);
-					}
-
 					// Signal the end of a block
-					flush(out);
+					flush(out.m_ptr, block_number);
 				}
 
 				// ZLib streams contain the Alder32 CRC after the data.
-				if (has_flag(decomp_flags, EFlags::ExpectZlibHeader))
+				if (has_flag(flags, EDecompressFlags::ExpectZlibHeader))
 				{
 					// Skip bits up to the next byte boundary
 					void(GetBits<uint32_t>(src, m_num_bits & 7));
@@ -1752,103 +1743,975 @@ namespace pr::storage::zip
 					for (int i = 0; i != 4; ++i)
 						tail_adler32 = (tail_adler32 << 8) | GetByte(src);
 
-					// Check the CRC of the output data
-					if constexpr (CalcChecksum)
-						if (adler.checksum() != tail_adler32)
-							throw std::runtime_error("CRC check failure");
+					// Return the checksum
+					if (adler_checksum != nullptr)
+						*adler_checksum = tail_adler32;
+				}
+			}
+
+			// Compress a stream of bytes from 'stream' and write the compressed stream to 'output'.
+			// 'Src' should have uint8_t pointer-like symmantics.
+			// 'Out' should have uint8_t pointer-like symmantics.
+			// 'stream' is the input stream to be compressed.
+			// 'length' is the number of bytes available from 'stream'
+			// 'output' is the compressed output stream
+			// 'flush' is called after each block is written. Signature: void flush(Out& out, int block_number)
+			// 'flags' controls the compression output.
+			// 'probe_count' controls the level of compression and must be a value in the range [0,4096) where 0=Huffman only, 1=Huffman+LZ (fastest/crap compression), 4095=Huffman+LZ (slowest/best compression).
+			template <typename Src, typename Out, typename FlushCB>
+			void Compress(Src stream, size_t length, Out output, FlushCB flush, ECompressFlags const flags = ECompressFlags::None, int probe_count = DefaultProbes)
+			{
+				m_bit_buf = 0;
+				m_num_bits = 0;
+
+				LZDictionary dict;
+				LZBuffer lz_buffer;
+				SymCount lit_counts(LitTableSize);
+				SymCount dst_counts(DstTableSize);
+				SrcIter<Src> src(stream, length), src_end;
+				OutIter<Out> out(output);
+				int block_number = 0;
+				Range deferred;
+
+				// Write the ZLib header for DEFLATE
+				if (has_flag(flags, ECompressFlags::WriteZLibHeader) && length != 0)
+				{
+					PutByte(out, 0x78);
+					PutByte(out, 0x01);
+				}
+
+				// Handle raw block output as a special case
+				if (has_flag(flags, ECompressFlags::ForceAllRawBlocks))
+				{
+					for (auto remaining = length; remaining != 0; ++block_number)
+					{
+						// Header + Data <= MaxBlockSize
+						auto const max = MaxBlockSize - 5;
+						auto len = static_cast<uint16_t>(std::min(remaining, max));
+						remaining -= len;
+
+						// Write block header (1 byte)
+						PutBits(out, len != max, 1);           // Write 1 for "last block"
+						PutBits(out, int(EBlock::Literal), 2); // Write block type
+						PutBits(out, 0, 5);                    // Align to next byte
+
+						// Write length (4 bytes)
+						PutBits(out, len, 16);
+						PutBits(out, ~len, 16);
+
+						// Write raw data (<= max bytes)
+						for (; len-- != 0; ++src)
+							PutByte(out, *src);
+
+						flush(out.m_ptr, block_number);
+					}
+					assert(src == src_end);
+				}
+
+				// Add a literal byte to 'lz_buffer' and count frequencies of the byte values
+				auto RecordLiteral = [&](uint8_t lit)
+				{
+					lz_buffer.add(lit);
+					lit_counts[lit]++;
+				};
+
+				// Add a (length,distance) pair to 'lz_buffer' and count frequencies of the length and distance values
+				auto RecordMatch = [&](Range match)
+				{
+					assert(match.len >= MinMatchLength && match.pos >= 1 && match.pos <= LZDictionarySize && "Match is invalid");
+					lz_buffer.add(match);
+
+					// Count frequency of matches of this length
+					auto s = s_tdefl_len_sym[match.len - MinMatchLength];
+					lit_counts[s]++;
+
+					// Count frequency of matches at this distance
+					auto dist = match.pos - 1;
+					auto d = dist <= 0x1FF
+						? s_tdefl_small_dist_sym[(dist >> 0) & 0x1FF]
+						: s_tdefl_large_dist_sym[(dist >> 8) & 0x07F];
+					dst_counts[d]++;
+				};
+
+				// Consume all bytes from 'stream'
+				ptrdiff_t pos = 0;
+				for (; src != src_end || pos != dict.m_size; ++block_number)
+				{
+					// Push up to 'MaxMatchLength' bytes into the dictionary
+					for (; src != src_end && dict.m_size - pos < MaxMatchLength; ++src)
+						dict.Push(*src);
+
+					// Find the longest match for the current position
+					auto match =
+						has_flag(flags, ECompressFlags::RLEMatches) ? dict.RLEMatch(pos) :
+						dict.Match(pos, probe_count);
+
+					// Encode the source data into 'lz_buffer'
+					if (match.len < MinMatchLength) // If there is no suitable match...
+					{
+						// If there is no deferred match...
+						if (deferred.len == 0 || has_flag(flags, ECompressFlags::GreedyParsing))
+						{
+							// Write a literal byte
+							RecordLiteral(dict[pos]);
+							++pos;
+						}
+						else
+						{
+							// Write the deferred match. It should include the byte at 'pos'
+							assert(deferred.begin() < pos && pos <= deferred.end());
+							RecordMatch(deferred);
+							pos = deferred.end();
+							deferred = Range();
+						}
+					}
+					else // A match was found...
+					{
+						if (has_flag(flags, ECompressFlags::GreedyParsing))
+						{
+							// Greedy parsing means don't bother with defering matches
+							RecordMatch(match);
+							pos = match.end();
+						}
+						else if (deferred.len == 0)
+						{
+							// Defer recording this match. See "lazy matching" in the comments above
+							deferred = match;
+							++pos;
+						}
+						else
+						{
+							// If 'match' is better than 'deferred'
+							if (match.len > deferred.len)
+							{
+								// Record a literal byte and keep 'match' as the new 'deferred'
+								RecordLiteral(dict[deferred.pos]);
+								deferred = match;
+								++pos;
+							}
+							else
+							{
+								// Otherwise, deferred is better than 'match', record 'deferred'. It should include 'match'
+								assert(deferred.begin() < match.begin() && match.end() <= deferred.end());
+								RecordMatch(deferred);
+								pos = deferred.end();
+								deferred = Range();
+							}
+						}
+					}
+
+					// Write a block when 'lz_buffer' is full
+					if (LZBuffer::Size - lz_buffer.size() < LZBuffer::MinSpaceRequired)
+					{
+						WriteBlock(out, lz_buffer, dict, pos, lit_counts, dst_counts, flags, false);
+						flush(out.m_ptr, block_number);
+						
+						// Reset the compression bumber and symbol counts
+						lz_buffer.reset();
+						lit_counts.reset();
+						dst_counts.reset();
+					}
+				}
+
+				// Write any remaining data
+				WriteBlock(out, lz_buffer, dict, pos, lit_counts, dst_counts, flags, true);
+				flush(out.m_ptr, block_number);
+
+				// Write the ZLib footer
+				if (has_flag(flags, ECompressFlags::WriteZLibHeader) && length != 0)
+				{
+					// Calculate the checksum on the source input
+					auto s = stream;
+					AdlerChecksum adler;
+					for (auto l = length; l-- != 0; ++s)
+						adler(*s);
+
+					// Align to the next byte
+					if (m_num_bits != 0)
+						PutBits(out, 0, 8 - m_num_bits);
+
+					// Write the adler checksum (bit endian)
+					auto checksum = adler.checksum();
+					PutByte(out, (checksum >> 24) & 0xFF);
+					PutByte(out, (checksum >> 16) & 0xFF);
+					PutByte(out, (checksum >>  8) & 0xFF);
+					PutByte(out, (checksum >>  0) & 0xFF);
 				}
 			}
 
 		private:
 
-			// Wrapper to help calculate the Adler32 checksum
-			template <bool Enabled = true> struct AlderChecksum
+			// Compressed block types
+			enum class EBlock
 			{
-				static uint32_t const AdlerMod = 65521;
-				uint32_t a, b;
+				Literal  = 0,
+				Static   = 1,
+				Dynamic  = 2,
+				Reserved = 3,
+			};
 
-				AlderChecksum()
-					:a(1)
-					,b(0)
+			// An iterator wrapper for 'src' pointers
+			template <typename Src>
+			struct SrcIter
+			{
+				using value_type = typename std::iterator_traits<Src>::value_type;
+
+				Src m_ptr;       // Iterator to underlying sequence
+				ptrdiff_t m_len; // Remaining count
+
+				SrcIter()
+					:m_ptr()
+					,m_len()
 				{}
-				uint32_t checksum() const
+				SrcIter(Src src, ptrdiff_t len)
+					:m_ptr(src)
+					,m_len(len)
+				{}
+				value_type operator *() const
 				{
-					return (b << 16) | a;
+					return m_len != 0 ? *m_ptr : value_type{};
 				}
-				uint8_t operator()(uint8_t byte)
+				SrcIter& operator ++()
 				{
-					if constexpr (Enabled)
+					if (m_len != 0)
 					{
-						a = (a + byte) % AdlerMod;
-						b = (b + a) % AdlerMod;
+						++m_ptr;
+						--m_len;
 					}
-					return byte;
+					return *this;
+				}
+
+				friend bool operator == (SrcIter lhs, SrcIter rhs) { return lhs.m_ptr == rhs.m_ptr || (lhs.m_len == 0 && rhs.m_len == 0); }
+				friend bool operator != (SrcIter lhs, SrcIter rhs) { return !(lhs == rhs); }
+				friend ptrdiff_t operator - (SrcIter lhs, SrcIter rhs)
+				{
+					// Remember, 'm_len' is length remaining so iterators with 'm_len == 0' are end iterators
+					return lhs.m_len - rhs.m_len;
 				}
 			};
 
-			//// Read 4 bytes from 'src'
-			//template <typename Src>
-			//static uint32_t ReadLE32(Src src)
-			//{
-			//	if constexpr (std::is_pointer_v<Src> && UnalignedLoadStore && LittleEndian)
-			//	{
-			//		return *reinterpret_cast<uint32_t const*>(src);
-			//	}
-			//	else
-			//	{
-			//		auto b0 = *src++;
-			//		auto b1 = *src++;
-			//		auto b2 = *src++;
-			//		auto b3 = *src++;
-			//		return
-			//			(static_cast<uint32_t>(b0) <<  0U) |
-			//			(static_cast<uint32_t>(b1) <<  8U) |
-			//			(static_cast<uint32_t>(b2) << 16U) |
-			//			(static_cast<uint32_t>(b3) << 24U);
-			//	}
-			//}
-
-			//// Read 2 bytes from 'src'
-			//template <typename Src>
-			//static uint16_t ReadLE16(Src src)
-			//{
-			//	if constexpr (std::is_pointer_v<Src> && UnalignedLoadStore && LittleEndian)
-			//	{
-			//		return *reinterpret_cast<uint16_t const*>(src);
-			//	}
-			//	else
-			//	{
-			//		auto b0 = *src++;
-			//		auto b1 = *src++;
-			//		return
-			//			(static_cast<uint16_t>(b0) <<  0U) |
-			//			(static_cast<uint16_t>(b1) <<  8U);
-			//	}
-			//}
-
-			// Return 'value' with 'length' bits reversed
-			uint32_t ReverseBits(uint32_t value, uint32_t length)
+			// An output iterator wrapper
+			template <typename Out>
+			struct OutIter
 			{
-				uint32_t reversed = 0;
-				for (; length-- != 0;)
+				Out m_ptr;       // Underlying output iterator
+				ptrdiff_t m_len; // Number of bytes written
+
+				explicit OutIter(Out ptr, ptrdiff_t len = 0)
+					:m_ptr(ptr)
+					,m_len(len)
+				{}
+				OutIter& operator*()
 				{
-					reversed = (reversed << 1) | (value & 1);
-					value >>= 1;
+					return *this;
 				}
-				return reversed;
-			}
+				OutIter& operator = (uint8_t b)
+				{
+					*m_ptr = b;
+					return *this;
+				}
+				OutIter& operator ++()
+				{
+					++m_ptr;
+					++m_len;
+					return *this;
+				}
+				friend OutIter operator - (OutIter lhs, ptrdiff_t ofs)
+				{
+					if (ofs > lhs.m_len)
+						throw std::runtime_error("Corrupt zip. Rereference to an earlier byte sequence that is out of range");
+
+					return OutIter(lhs.m_ptr - ofs, lhs.m_len - ofs);
+				}
+			};
+
+			// Represents the interval [pos, pos + len)
+			struct Range
+			{
+				ptrdiff_t pos;
+				ptrdiff_t len;
+
+				Range()
+					:Range(0,0)
+				{}
+				Range(ptrdiff_t start, ptrdiff_t count)
+					:pos(start)
+					,len(count)
+				{}
+
+				// True if 'x' is within the interval [pos, pos + len)
+				bool contains(ptrdiff_t x) const
+				{
+					return x >= begin() && x < end();
+				}
+				bool contains(Range x) const
+				{
+					return x.begin() >= begin() && x.end() <= end();
+				}
+
+				// Reduce the range to [pos + count, pos + len - count)
+				void move_beg(ptrdiff_t count = 1)
+				{
+					pos += count;
+					len -= count;
+					return *this;
+				}
+
+				// Extend the range to [pos, pos + len + count)
+				void move_end(ptrdiff_t count = 1)
+				{
+					len += count;
+					return *this;
+				}
+
+				// The range begin/end
+				ptrdiff_t begin() const
+				{
+					return pos;
+				}
+				ptrdiff_t end() const
+				{
+					return pos + len;
+				}
+			};
+
+			// Fixed buffer for counting symbol frequencies
+			struct SymCount
+			{
+				std::array<uint16_t, MaxTableSize> m_data;
+				size_t m_size;
+
+				SymCount()
+					:SymCount(0)
+				{}
+				SymCount(size_t size)
+					:m_data()
+					,m_size(size)
+				{
+					assert(size <= MaxTableSize);
+				}
+				size_t size() const
+				{
+					return m_size;
+				}
+				void reset()
+				{
+					memset(m_data.data(), 0, sizeof(uint16_t) * m_size);
+				}
+				uint16_t operator[](int idx) const
+				{
+					assert(idx < m_size);
+					return m_data[idx];
+				}
+				uint16_t& operator[](int idx)
+				{
+					assert(idx < m_size);
+					return m_data[idx];
+				}
+				operator std::span<uint16_t const>() const
+				{
+					return std::make_span(m_data.data(), m_size);
+				}
+			};
+
+			// A ring buffer of 'T' with fixed size 'Size' and optional "tail" of length 'Extend'
+			template <typename T, size_t Size, size_t Extend = 0>
+			struct RingBuffer
+			{
+				// This is basically a normal ring buffer of size 'Size'. There is an additional
+				// 'Extend' bytes duplicated at the end so that sequences of 'Extend' bytes are contiguous.
+				static_assert((Size & (Size - 1)) == 0, "RingBuffer size must be a power of 2");
+				static_assert(Extend <= Size, "Size must be large enough to contain 'Extend' bytes");
+				static_assert(std::is_pod_v<T>, "Designed for POD types only");
+				static int const Mask = Size - 1;
+
+				std::array<T, Size + Extend> m_buf;
+				bool m_extend_required; // Dirty flag for when values are modified in the range [0, Extend)
+
+				RingBuffer()
+					:m_buf()
+					,m_extend_required()
+				{}
+
+				// The maximum size of the ring buffer
+				constexpr int capacity() const
+				{
+					return Size;
+				}
+
+				// Ring buffer array access
+				T operator [](ptrdiff_t idx) const
+				{
+					return m_buf[idx & Mask];
+				}
+				T& operator [](ptrdiff_t idx)
+				{
+					m_extend_required |= idx >= 0 && idx < Extend;
+					return m_buf[idx & Mask];
+				}
+
+				// Return a pointer into the buffer that is valid for at least 'Extend' values
+				T const* ptr(ptrdiff_t ofs) const
+				{
+					const_cast<RingBuffer*>(this)->extend();
+					return &m_buf[ofs & Mask];
+				}
+
+			private:
+
+				// Replicate the first 'Extend' value at the end of the buffer
+				void extend()
+				{
+					if (!m_extend_required) return;
+					memcpy(&m_buf[Size], &m_buf[0], Extend * sizeof(T));
+					m_extend_required = false;
+				}
+			};
+
+			// Helper for generating Huffman codes up to 'max_code_size' in length
+			template <typename T>
+			struct HuffCodeGen
+			{
+				std::array<T, 1 + sizeof(T) * 8> m_next_code;
+				int m_max_code_size;
+
+				HuffCodeGen(int max_code_size, std::span<int const> num_sizes)
+					:m_next_code({ 0, 0 })
+					,m_max_code_size(max_code_size)
+				{
+					assert(max_code_size <= m_next_code.size());
+					assert(num_sizes.size() >= max_code_size);
+
+					uint32_t total = 0;
+					for (int i = 1; i != m_max_code_size; ++i)
+					{
+						total = static_cast<uint32_t>((total + num_sizes[i]) << 1);
+						m_next_code[i + 1] = total;
+					}
+					if (total != 1U << m_max_code_size)
+						throw std::runtime_error("'num_sizes' does not span the code space");
+				}
+
+				// Return the Huffman code for 'code_size'
+				T operator()(int code_size)
+				{
+					assert(code_size < m_max_code_size);
+					return ReverseBits(m_next_code[code_size]++, code_size);
+				}
+			};
+
+			// Ring buffers used to identify repeating sequences of bytes in the input stream
+			struct LZDictionary
+			{
+				// Hash table constants
+				static int const HashTableBits = 15; // Alternative for low memory environments: 12
+				static int const LZHashShift = Div3(HashTableBits);
+				static size_t const HashTableSize = 1 << HashTableBits;
+
+				// A ring buffer of source bytes
+				RingBuffer<uint8_t, LZDictionarySize, MaxMatchLength> m_bytes;
+
+				// Singularly linked lists of locations in 'm_bytes' that have the same hash value
+				RingBuffer<uint16_t, LZDictionarySize> m_next;
+
+				// Mapping from the hash of a 3-byte sequence to its starting index position in 'm_bytes'
+				RingBuffer<uint16_t, HashTableSize> m_hash;
+
+				// The number of bytes added to the dictionary (not wrapped to LZDictionarySize)
+				ptrdiff_t m_size;
+
+				LZDictionary()
+					:m_bytes()
+					,m_next()
+					,m_hash()
+					,m_size()
+				{}
+
+				// Return the range of bytes currently in the 'm_bytes' ring buffer
+				Range Available() const
+				{
+					return Range(std::max<ptrdiff_t>(0, m_size - LZDictionarySize), std::min<ptrdiff_t>(m_size, LZDictionarySize));
+				}
+
+				// Push a source byte into the dictionary
+				void Push(uint8_t b)
+				{
+					assert(m_size < m_bytes.capacity());
+
+					// Add the next byte to the dictionary
+					m_bytes[m_size] = b;
+					++m_size;
+
+					// Calcalate the hash of the last 3 bytes
+					// Wrap around is handled by the ring buffer.
+					auto i = m_size - 3;
+					auto hash =
+						(m_bytes[i + 0] << (LZHashShift * 2)) ^
+						(m_bytes[i + 1] << (LZHashShift * 1)) ^
+						(m_bytes[i + 2] << (LZHashShift * 0));
+
+					// Insert 'hash' at the head of the singularly linked list of dictionary positions with the same hash value.
+					// Note that by inserting at the head, hashes are in order from most recently seen to most distant.
+					//  e.g.
+					//     hash = HashFn(bytes[i+0], bytes[i+1], bytes[i+2])
+					//     m_hash[hash] = i -> the newest index position with hash value 'hash'
+					//     m_next[i] -> index of the next most recent position that has the same hash value, say, "j".
+					//         m_next[j] -> index of the next most recent position that has the same hash value, say, "k".
+					//             m_next[k] -> 0 = end of list.
+					//
+					// Note that 'm_hash' is only needed for constructing the linked lists of index positions.
+					// Matching only requires the 'm_next' buffer and a starting index position.
+					m_next[i] = m_hash[hash];
+					m_hash[hash] = static_cast<uint16_t>(i);
+				}
+
+				// Search the dictionary for another position that matches 'pos' that is longer than 'best_match'
+				// 'pos' is the source location in the dictionary to match against.
+				// 'probe_count' is the maximum number of searches to perform
+				Range Match(ptrdiff_t pos, int probe_count) const
+				{
+					// Hashes are based on 3-bytes sequences, so at least 3 bytes must have been added before matches can be found.
+					assert(pos + 3 <= m_size);
+
+					// The hash value of the 3-byte sequence at 'm_bytes[pos]' is the value in 'm_hash[pos]'.
+					// We don't actually need the hash, we just need to search the linked list of index locations whose head is at 'm_next[pos]'.
+					// The dictionary only contains a maximum of 'LZDictionarySize' bytes, so if 'i' is further back than this, a match cannot be tested.
+					Range best_match;
+					for (auto i = m_next[pos]; probe_count-- != 0 && i != 0 && m_size - i >= LZDictionarySize; i = m_next[i])
+					{
+						auto ref = m_bytes.ptr(pos);
+						auto cmp = m_bytes.ptr(i);
+
+						// Find the length of the match
+						int len = 0, max = std::min(MaxMatchLength, int(m_size - pos));
+						for (; len != max && *cmp == *ref; ++len, ++cmp, ++ref) {}
+
+						// If the match is longer than the current best match record it
+						if (len > best_match.len)
+						{
+							// If a decent match is found, reduce the number of remaining probes to speed up searching
+							if (len >= (MaxMatchLength + best_match.len) / 2)
+								probe_count >>= 1;
+
+							// Save the best match
+							best_match = Range(i, len);
+
+							// Can't do better than this so stop searching
+							if (len == MaxMatchLength)
+								break;
+						}
+					}
+					return best_match;
+				}
+
+				// Look for a range using run length encoding starting at 'pos'
+				Range RLEMatch(ptrdiff_t pos) const
+				{
+					auto ref = m_bytes.ptr(pos);
+					auto cmp = m_bytes.ptr(pos);
+
+					int len = 0, max = std::min(MaxMatchLength, int(m_size - pos));
+					for (; len != max && *cmp == *ref; ++len, ++cmp) {}
+
+					return Range(pos, len);
+				}
+
+				// Data access
+				uint8_t operator[](ptrdiff_t idx) const
+				{
+					return m_bytes[idx];
+				}
+			};
+
+			// Records literal bytes, or (length,distance) pairs
+			struct LZBuffer
+			{
+				// Notes:
+				//  - Constructs an interlaced buffer of flags and literal bytes or (length,distance) pairs.
+				//     e.g. [flags, bytes..., flags, bytes..., flags, etc...]
+				//  - The LSB of a flags byte is the 'type' of data in the following byte
+				//    0 - means a literal byte (length = 1)
+				//    1 - means a (length, distance) pair (length = 3 bytes)
+
+				static size_t const Size = 64 * 1024;
+				static size_t const MinSpaceRequired = 4;  // for the largest "add" call = 1 byte for flags, 3 bytes for (length,distance)
+				static_assert(Size > LZDictionarySize);
+
+				uint8_t m_buf[Size];
+				uint8_t* m_flags;   // Flags that record the type of data stored in the following bytes
+				uint8_t* m_bytes;   // Where to insert the next literal byte or (length,distance) pair
+				int m_num_flags;    // The number of flags used in the current byte pointed to by 'm_flags'
+				size_t m_data_size; // The number of source bytes represented
+
+				LZBuffer()
+					:m_buf()
+					,m_flags(&m_buf[0])
+					,m_bytes(&m_buf[1])
+					,m_num_flags(0)
+					,m_data_size(0)
+				{}
+
+				// The number of bytes currently in the buffer;
+				size_t size() const
+				{
+					return (m_num_flags != 0 ? m_bytes : m_flags) - &m_buf[0];
+				}
+
+				// Reset the buffer
+				void reset()
+				{
+					m_flags = &m_buf[0];
+					m_bytes = &m_buf[1];
+					m_num_flags = 0;
+					m_data_size = 0;
+				}
+
+				// Add a literal byte to the buffer
+				void add(uint8_t byte)
+				{
+					assert(m_bytes - &m_buf[0] + 1 <= Size && "LZBuffer overflow");
+					*m_bytes++ = byte;
+					m_data_size += 1;
+					push_flag<0>();
+				}
+
+				// Add a match to the buffer
+				void add(Range match)
+				{
+					static_assert(LZDictionarySize - 1 <= 0xFFFF);
+					static_assert(MaxMatchLength - MinMatchLength <= 0xFF);
+					assert(match.len >= MinMatchLength && match.len <= MaxMatchLength && "Match length is invalid");
+					assert(match.pos >= 1 && match.pos <= LZDictionarySize && "Match distance is invalid");
+					assert(m_bytes - &m_buf[0] + 3 <= Size && "LZBuffer overflow");
+
+					m_data_size = static_cast<size_t>(m_data_size + match.len);
+					*m_bytes++ = static_cast<uint8_t>(match.len - MinMatchLength);
+					*m_bytes++ = static_cast<uint8_t>(((match.pos - 1) >> 0) & 0xFF);
+					*m_bytes++ = static_cast<uint8_t>(((match.pos - 1) >> 8) & 0xFF);
+					push_flag<1>();
+				}
+
+				// The number of input data bytes represented
+				size_t data_size() const
+				{
+					return m_data_size;
+				}
+
+				// Begin/End to the range of contained data
+				uint8_t const* begin() const
+				{
+					return &m_buf[0];
+				}
+				uint8_t const* end() const
+				{
+					return begin() + size();
+				}
+
+			private:
+
+				// Append a flag
+				template <int bit> void push_flag()
+				{
+					static_assert(bit <= 1);
+
+					*m_flags |= static_cast<uint8_t>(bit << m_num_flags);
+					if (++m_num_flags == 8)
+					{
+						// If the flags byte is full, use the next byte in the buffer for flags
+						m_num_flags = 0;
+						m_flags = m_bytes++;
+					}
+				}
+			};
+
+			// Huffman lookup table
+			struct HuffLookupTable
+			{
+				static int const Bits = 10;
+				static size_t const Size = 1 << Bits;
+				static size_t const Mask = Size - 1;
+
+				int m_size; // Table size
+				std::array<uint8_t, MaxTableSize> m_code_size;
+				std::array<int16_t, MaxTableSize * 2> m_tree;
+				std::array<int16_t, Size> m_look_up;
+
+				HuffLookupTable() = default;
+				HuffLookupTable(int size)
+					:m_size(size)
+					,m_code_size()
+					,m_tree()
+					,m_look_up()
+				{}
+
+				// Populate the tree and lookup tables after 'm_code_size' has been updated
+				void Populate()
+				{
+					// The alphabet is all byte values in the range [0, m_size)
+					// With just the code sizes for each alphabet value, the Huffman tree can be
+					// constructed, which implies the Huffman code used for each alphabet value.
+
+					// Find the counts of each code size
+					std::array<int, 16> num_sizes = {};
+					for (int i = 0; i != m_size; ++i)
+						num_sizes[m_code_size[i]]++;
+
+					// Generate the lookup table and tree
+					HuffCodeGen<uint16_t> gen(16, num_sizes);
+					int16_t tree_cur, tree_next = -1;
+					for (int sym_index = 0; sym_index != m_size; ++sym_index)
+					{
+						// Get the length of the code
+						auto code_size = m_code_size[sym_index];
+						if (code_size == 0)
+							continue;
+
+						// Populate the lookup table with the code size and symbol index bit stuffed into an int16.
+						auto rev_code = gen(code_size);
+						if (code_size <= HuffLookupTable::Bits)
+						{
+							auto k = static_cast<int16_t>((code_size << 9) | sym_index);
+							for (; rev_code < HuffLookupTable::Size; rev_code += (1 << code_size))
+								m_look_up[rev_code] = k;
+
+							continue;
+						}
+
+						// Grow the tree
+						tree_cur = m_look_up[rev_code & HuffLookupTable::Mask];
+						if (tree_cur == 0)
+						{
+							// Save the index to the next sub-tree
+							m_look_up[rev_code & HuffLookupTable::Mask] = tree_next;
+							tree_cur = tree_next;
+							tree_next -= 2;
+						}
+
+						// Navigate the tree to find where to save 'sym_index'
+						rev_code >>= HuffLookupTable::Bits - 1;
+						for (int i = code_size; i > HuffLookupTable::Bits + 1; --i)
+						{
+							rev_code >>= 1;
+							tree_cur -= rev_code & 1;
+
+							if (!m_tree[~tree_cur])
+							{
+								m_tree[~tree_cur] = tree_next;
+								tree_cur = tree_next;
+								tree_next -= 2;
+							}
+							else
+							{
+								tree_cur = m_tree[~tree_cur];
+							}
+						}
+
+						tree_cur -= (rev_code >>= 1) & 1;
+						m_tree[~tree_cur] = (int16_t)sym_index;
+					}
+				}
+			};
+
+			// Used to generate Huffman codes
+			struct HuffCodeTable
+			{
+				int m_size;          // Table size
+				int m_max_code_size; // The maximum value of any code size
+				std::array<uint8_t, MaxTableSize> m_code_size;
+				std::array<uint16_t, MaxTableSize> m_code;
+
+				HuffCodeTable() = default;
+				HuffCodeTable(int size, int max_code_size)
+					:m_size(size)
+					,m_max_code_size(max_code_size)
+					,m_code_size()
+					,m_code()
+				{
+					assert(max_code_size <= MaxSupportedHuffCodeSize);
+				}
+
+				// Populate the 'm_code' table once 'm_code_sizes' have been set
+				void Populate(EBlock block_type, std::span<uint16_t const> counts)
+				{
+					// Count the frequency of each code size
+					std::array<int, MaxSupportedHuffCodeSize + 1> num_sizes = {};
+					switch (block_type)
+					{
+					case EBlock::Static:
+						{
+							// All code sizes have an equal number (i.e. 1)
+							for (int i = 0; i != m_size; ++i)
+								num_sizes[m_code_size[i]]++;
+							break;
+						}
+					case EBlock::Dynamic:
+						{
+							// Optimise this table by moving the most common symbols to
+							// the start so that common symbols get shorter Huffman codes.
+
+							using SymbolFreq = struct { uint16_t m_count; uint16_t m_index; };
+							std::array<SymbolFreq, MaxTableSize> count_to_index;
+							int len = 0;
+
+							// Map counts to index position
+							for (uint16_t i = 0; i != m_size; ++i)
+							{
+								if (counts[i] == 0) continue;
+								count_to_index[len++] = SymbolFreq{ counts[i], i };
+							}
+
+							// Sort the symbols by frequency so that the most common are at the front
+							auto syms = std::make_span(count_to_index.data(), len);
+							std::sort(begin(syms), end(syms), [](auto& l, auto& r) { return l.m_count > r.m_count; });
+
+							// Calculate Minimum Redunancy
+							for(;;)
+							{
+								// Originally written by: Alistair Moffat, alistair@cs.mu.oz.au, Jyrki Katajainen, jyrki@diku.dk, November 1996.
+								if (len == 0)
+								{
+									break;
+								}
+								if (len == 1)
+								{
+									syms[0].m_count = 1;
+									break;
+								}
+
+								syms[0].m_count += syms[1].m_count;
+
+								int root = 0;
+								int next = 1;
+								int leaf = 2;
+								for (; next < len - 1; ++next)
+								{
+									if (leaf >= len || syms[root].m_count < syms[leaf].m_count)
+									{
+										syms[next].m_count = syms[root].m_count;
+										syms[root].m_count = static_cast<uint16_t>(next);
+										root++;
+									}
+									else
+									{
+										syms[next].m_count = syms[leaf].m_count;
+										leaf++;
+									}
+
+									if (leaf >= len || (root < next && syms[root].m_count < syms[leaf].m_count))
+									{
+										syms[next].m_count = static_cast<uint16_t>(syms[next].m_count + syms[root].m_count);
+										syms[root].m_count = static_cast<uint16_t>(next);
+										root++;
+									}
+									else
+									{
+										syms[next].m_count = static_cast<uint16_t>(syms[next].m_count + syms[leaf].m_count);
+										leaf++;
+									}
+								}
+
+								syms[len - 2].m_count = 0;
+								for (next = len - 3; next >= 0; next--)
+									syms[next].m_count = syms[syms[next].m_count].m_count + 1;
+
+								int avbl = 1;
+								int used = 0;
+								int dpth = 0;
+								root = len - 2;
+								next = len - 1;
+								while (avbl > 0)
+								{
+									while (root >= 0 && (int)syms[root].m_count == dpth)
+									{
+										used++;
+										root--;
+									}
+									while (avbl > used)
+									{
+										syms[next--].m_count = (uint16_t)(dpth);
+										avbl--;
+									}
+
+									avbl = 2 * used;
+									dpth++;
+									used = 0;
+								}
+								break;
+							}
+
+							// 
+							for (int i = 0; i != len; ++i)
+								num_sizes[syms[i].m_count]++;
+
+							// Limits canonical Huffman code table's max code size.
+							for (;;)
+							{
+								if (len <= 1)
+									break;
+
+								uint32_t total = 0;
+								for (int i = m_max_code_size + 1; i <= MaxSupportedHuffCodeSize; i++)
+									num_sizes[m_max_code_size] += num_sizes[i];
+								for (int i = m_max_code_size; i > 0; i--)
+									total += (((uint32_t)num_sizes[i]) << (m_max_code_size - i));
+
+								for (; total != (1UL << m_max_code_size); total--)
+								{
+									num_sizes[m_max_code_size]--;
+									for (int i = m_max_code_size - 1; i > 0; i--)
+									{
+										if (num_sizes[i] == 0) continue;
+										num_sizes[i]--;
+										num_sizes[i + 1] += 2;
+										break;
+									}
+								}
+
+								break;
+							}
+
+							// Update the code sizes
+							for (int i = 0, j = len; i != m_max_code_size; ++i)
+								for (int l = num_sizes[i+1]; l > 0; l--)
+									m_code_size[syms[--j].m_index] = checked_cast<uint8_t>(i + 1);
+
+							break;
+						}
+					case EBlock::Literal:
+						{
+							throw std::runtime_error("Block type does not have a Huffman table");
+						}
+					case EBlock::Reserved:
+					default:
+						{
+							throw std::runtime_error("Invalid block type");
+						}
+					}
+
+					// Generate the huffman codes
+					HuffCodeGen<uint16_t> gen(m_max_code_size, num_sizes);
+					for (int i = 0; i != m_size; ++i)
+					{
+						if (m_code_size[i] == 0) continue;
+						m_code[i] = gen(m_code_size[i]);
+					}
+				}
+			};
 
 			// Read one byte from 'src'
 			template <typename Src>
-			uint8_t GetByte(Src& src)
+			uint8_t GetByte(SrcIter<Src>& src)
 			{
 				if (m_num_bits == 0)
-					return *src++;
+				{
+					auto b = *src; ++src;
+					return b;
+				}
 
 				if (m_num_bits < 8)
 				{
 					// Append bits on the left
-					m_bit_buf |= static_cast<bit_buf_t>(*src++) << m_num_bits;
+					m_bit_buf |= static_cast<bit_buf_t>(*src) << m_num_bits; ++src;
 					m_num_bits += 8;
 				}
 				auto b = static_cast<uint8_t>(m_bit_buf & 0xFF);
@@ -1857,15 +2720,34 @@ namespace pr::storage::zip
 				return b;
 			}
 
+			// Write one byte to 'out'
+			template <typename Out>
+			void PutByte(OutIter<Out>& out, uint8_t b)
+			{
+				if (m_num_bits == 0)
+				{
+					*out = b; ++out;
+					return;
+				}
+
+				m_bit_buf |= static_cast<bit_buf_t>(b << m_num_bits);
+				m_num_bits += 8;
+
+				// Write out a whole byte
+				*out = static_cast<uint8_t>(m_bit_buf & 0xFF); ++out;
+				m_bit_buf >>= 8;
+				m_num_bits -= 8;
+			}
+
 			// Read 'n' bits from the source stream into 'm_bit_buf'
 			template <typename TInt, typename Src>
-			TInt GetBits(Src& src, uint32_t n)
+			TInt GetBits(SrcIter<Src>& src, int n)
 			{
-				assert(n <= sizeof(TInt) * 8);
+				assert(n <= sizeof(TInt) * 8 && "Return type not large enough for 'n' bits");
 				for (; m_num_bits < n;)
 				{
 					// Append bits on the left
-					m_bit_buf |= static_cast<bit_buf_t>(*src++) << m_num_bits;
+					m_bit_buf |= static_cast<bit_buf_t>(*src) << m_num_bits; ++src;
 					m_num_bits += 8;
 				}
 
@@ -1876,161 +2758,382 @@ namespace pr::storage::zip
 				return b;
 			}
 
-			// Interpret the next bits as a symbol and pop the bits
-			template <typename Src>
-			int16_t ReadSym(Src& src, HuffTable const& table)
+			// Write 'n' bits to the output stream, via 'm_bit_buf'
+			template <typename Out>
+			void PutBits(OutIter<Out>& out, bit_buf_t bits, int n)
 			{
-				// Ensure 'm_bit_buf' contains at least 15 bits
-				if (m_num_bits < 8)
-				{
-					m_bit_buf |= static_cast<bit_buf_t>(*src++) << m_num_bits;
-					m_num_bits += 8;
-				}
-				if (m_num_bits < 16)
-				{
-					m_bit_buf |= static_cast<bit_buf_t>(*src++) << m_num_bits;
-					m_num_bits += 8;
-				}
+				assert((bits & (~bit_buf_t() << n)) == 0 && "'bits' has more than 'n' bits");
+				assert(m_num_bits + n <= sizeof(bit_buf_t) * 8 && "Bit buffer overflow");
 
-				// Read the symbol
-				auto sym = table.m_look_up[m_bit_buf & HuffTable::LookupTableMask];
+				// Add the bits on the left
+				m_bit_buf |= bits << m_num_bits;
+				m_num_bits += n;
 
-				int code_len;
-				if (sym >= 0)
+				// Write out whole bytes
+				for (; m_num_bits >= 8;)
 				{
-					code_len = sym >> 9;
+					*out = static_cast<uint8_t>(m_bit_buf & 0xFF); ++out;
+					m_bit_buf >>= 8;
+					m_num_bits -= 8;
 				}
-				else
-				{
-					code_len = HuffTable::LookupTableBits;
-					for (; sym < 0;)
-					{
-						sym = table.m_tree[~sym + ((m_bit_buf >> code_len++) & 1)];
-					}
-				}
-				m_bit_buf >>= code_len;
-				m_num_bits -= code_len;
-				return sym;
 			}
 
 			// Decodes and returns the next Huffman coded symbol.
 			template <typename Src>
-			int HuffDecode(Src& src, HuffTable const& table)
+			int HuffDecode(SrcIter<Src>& src, HuffLookupTable const& table)
 			{
 				// Notes:
 				//  - This function reads 2 bytes from 'src'.
+
 				// It's more complex than you would initially expect because the zlib API expects the decompressor to never read
 				// beyond the final byte of the deflate stream. (In other words, when this macro wants to read another byte from the input, it REALLY needs another byte in order to fully
 				// decode the next Huffman code.) Handling this properly is particularly important on raw deflate (non-zlib) streams, which aren't followed by a byte aligned adler-32.
 				// The slow path is only executed at the very end of the input buffer.
-				if (m_num_bits < 15)
+
+				// Ensure 'm_bit_buf' contains at least 15 bits
+				for (; m_num_bits < 16; m_num_bits += 8)
 				{
-					m_bit_buf |= static_cast<bit_buf_t>(*src++) << (m_num_bits + 0);
-					m_bit_buf |= static_cast<bit_buf_t>(*src++) << (m_num_bits + 8);
-					m_num_bits += 16;
+					m_bit_buf |= static_cast<bit_buf_t>(*src) << m_num_bits;
+					++src;
 				}
+
+				// if symbol >= 0:
+				//   bits [15..9] = code length
+				//   bits [8] = word encoded flag
+				//   bits [0..7] = literal byte (if bit 8 is 0), length (it bit 8 is 1)
+				// else:
+				//   Navigate the Huffman tree to locate the symbol
 
 				// Read the Huff symbol
-				int code_len = 0;
-				int sym = table.m_look_up[m_bit_buf & HuffTable::LookupTableMask];
-				if (sym >= 0)
-				{
-					code_len = sym >> 9;
-					sym &= 511;
-				}
+				auto symbol = table.m_look_up[m_bit_buf & HuffLookupTable::Mask];
+				auto code_len = symbol >= 0 ? symbol >> 9 : HuffLookupTable::Bits;
+				if (symbol >= 0)
+					symbol &= 0x1FF;
 				else
-				{
-					code_len = HuffTable::LookupTableBits;
-					for (;sym < 0;)
-					{
-						sym = table.m_tree[~sym + ((m_bit_buf >> code_len++) & 1)]; 
-					}
-				}
+					for (; symbol < 0;)
+						symbol = table.m_tree[~symbol + ((m_bit_buf >> code_len++) & 1)];
 
+				// Consume 'code_len' bits
 				m_bit_buf >>= code_len;
 				m_num_bits -= code_len;
-				return sym;
+				return symbol;
 			}
 
-			// Populate the tree and lookup tables in 'table'
-			void PopulateHuffmanTree(HuffTable& table)
+			// Uses the given tables to decompress data to the end of the block
+			template <typename Src, typename Out>
+			void ReadBlock(SrcIter<Src>& src, HuffLookupTable const& lit_table, HuffLookupTable const& dst_table, OutIter<Out>& out)
 			{
-				// Reset the tree and lookup arrays
-				memset(&table.m_look_up[0], 0, sizeof(table.m_look_up));
-				memset(&table.m_tree[0], 0, sizeof(table.m_tree));
-
-				// Find the counts of each code size
-				uint32_t total_syms[16] = {};
-				for (int i = 0; i != int(table.m_size); ++i)
-					total_syms[table.m_code_size[i]]++;
-
-				// Fill the 'next_code' buffer
-				uint32_t next_code[17] = { 0, 0 }, total = 0, used_syms = 0;
-				for (int i = 2; i != 17; ++i)
+				for (;;)
 				{
-					total = (total + total_syms[i - 1]) << 1;
-					used_syms += total_syms[i - 1];
-					next_code[i] = total;
+					// Read an decode the next symbol
+					auto symbol = HuffDecode(src, lit_table);
+
+					// If the symbol is the end-of-block marker, done
+					if (symbol == 0x0100)
+					{
+						break;
+					}
+
+					// If the symbol is not a length value, output the literal byte
+					else if (!has_flag(symbol, 0x0100))
+					{
+						*out = static_cast<uint8_t>(symbol & 0xFF);
+						++out;
+					}
+
+					// Otherwise the symbol is a length value, implying it's followed by a distance value
+					else
+					{
+						// Read the length of the sequence
+						auto idx = symbol - 257;
+						static std::array<int, 31> const s_length_base = { 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258, 0, 0 };
+						static std::array<int, 31> const s_length_extra = { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0, 0, 0 };
+						auto count = s_length_base[idx] + GetBits<uint32_t>(src, s_length_extra[idx]);
+
+						// Read the relative offset back to where to read from
+						auto ofs = HuffDecode(src, dst_table);
+						static std::array<int, 32> const s_dist_base = { 1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577, 0, 0 };
+						static std::array<int, 32> const s_dist_extra = { 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13 };
+						auto dist = s_dist_base[ofs] + GetBits<uint32_t>(src, s_dist_extra[ofs]);
+
+						// Repeat an earlier sequence from [prev, prev + count)
+						auto prev = out - dist;
+						for (; count-- != 0; ++out, ++prev)
+							*out = *prev;
+					}
 				}
-				if (total != 65536 && used_syms > 1)
-					throw std::runtime_error(""); // ??? If this is a partial block (i.e. not 65536 in size) then only one symbol should be used? a literal?
+			}
 
-				// Generate the lookup table
-				int16_t tree_cur, tree_next = -1;
-				for (int sym_index = 0; sym_index != int(table.m_size); ++sym_index)
+			// Write a block to the output
+			template <typename Out>
+			void WriteBlock(OutIter<Out>& out, LZBuffer const& lz_buffer, LZDictionary const& dict, ptrdiff_t pos, SymCount const& lit_counts, SymCount const& dst_counts, ECompressFlags flags, bool last)
+			{
+				// Write the "last block" flag
+				PutBits(out, last, 1);
+
+				// Decide what block type to output
+				auto block_type =
+					has_flag(flags, ECompressFlags::ForceAllStaticBlocks) ? EBlock::Static :
+					lz_buffer.data_size() < StaticBlockSizeThreshold ? EBlock::Literal :
+					lz_buffer.data_size() < DynamicBlockSizeThreshold ? EBlock::Static :
+					EBlock::Dynamic;
+
+				// Output a block
+				switch (block_type)
 				{
-					// Get the length of the code
-					auto code_size = table.m_code_size[sym_index];
-					if (code_size == 0)
-						continue;
-
-					// Get the code (bit reversed)
-					auto rev_code = ReverseBits(next_code[code_size]++, code_size);
-
-					// 
-					if (code_size <= HuffTable::LookupTableBits)
+				case EBlock::Literal:
 					{
-						auto k = static_cast<int16_t>((code_size << 9) | sym_index);
-						while (rev_code < HuffTable::LookupTableSize)
+						// Output the block header (2 bits)
+						PutBits(out, int(EBlock::Literal), 2);
+
+						// Align to the next byte
+						if (m_num_bits != 0)
+							PutBits(out, 0, 8 - m_num_bits);
+
+						// Output the data length and its 2s complement
+						assert(lz_buffer.data_size() <= 0xFFFF);
+						auto len = static_cast<uint16_t>(lz_buffer.data_size());
+						PutBits(out, len, 16);
+						PutBits(out, ~len, 16);
+
+						// Output the literal data
+						auto range = Range(pos - len, len);
+						assert(dict.Available().contains(range) && "Literal data not in dictionary");
+						for (auto i = range.begin(); i != range.end(); ++i)
+							PutByte(out, dict[i]);
+
+						break;
+					}
+				case EBlock::Static:
+					{
+						// Initialise the literal/lengths table
+						HuffCodeTable lit_table(LitTableSize, 15);
+						memset(&lit_table.m_code_size[  0], 8, 144);
+						memset(&lit_table.m_code_size[144], 9, 112);
+						memset(&lit_table.m_code_size[256], 7,  24);
+						memset(&lit_table.m_code_size[280], 8,   8);
+						lit_table.Populate(EBlock::Static, lit_counts);
+
+						// Initialise the distance table
+						HuffCodeTable dst_table(DstTableSize, 15);
+						memset(&dst_table.m_code_size[0], 5, 32);
+						dst_table.Populate(EBlock::Static, dst_counts);
+
+						// Output the block header (2 bits)
+						PutBits(out, int(EBlock::Static), 2);
+
+						// Output the compressed data
+						WriteCompressedData(out, lz_buffer, lit_table, dst_table);
+						break;
+					}
+				case EBlock::Dynamic:
+					{
+						HuffCodeTable lit_table(LitTableSize, 15);
+						HuffCodeTable dst_table(DstTableSize, 15);
+
+						//needed? lit_counts[256] = 1;
+
+						lit_table.Populate(EBlock::Dynamic, lit_counts);
+						dst_table.Populate(EBlock::Dynamic, dst_counts);
+
+						int num_lit_codes;
+						for (num_lit_codes = 286; num_lit_codes > 257; --num_lit_codes)
+							if (lit_table.m_code_size[num_lit_codes - 1] != 0)
+								break;
+
+						int num_dist_codes;
+						for (num_dist_codes = 30; num_dist_codes > 1; num_dist_codes--)
+							if (dst_table.m_code_size[num_dist_codes - 1])
+								break;
+
+						uint8_t code_sizes_to_pack[LitTableSize + DstTableSize];
+						memcpy(&code_sizes_to_pack[0], &lit_table.m_code_size[0], num_lit_codes);
+						memcpy(&code_sizes_to_pack[num_lit_codes], &dst_table.m_code_size[0], num_dist_codes);
+
+						int total_code_sizes_to_pack = num_lit_codes + num_dist_codes;
+						int rle_z_count = 0;
+						int rle_repeat_count = 0;
+
+						// Count the frequencies of the symbols
+						SymCount dyn_count;
+						uint8_t prev_code_size = 0xFF;
+						int num_packed_code_sizes = 0;
+						uint8_t packed_code_sizes[LitTableSize + DstTableSize];
+						auto TDEFL_RLE_ZERO_CODE_SIZE = [&]
 						{
-							table.m_look_up[rev_code] = k;
-							rev_code += (1 << code_size);
+							if (rle_z_count)
+							{
+								if (rle_z_count < 3)
+								{
+									dyn_count[0] = (uint16_t)(dyn_count[0] + rle_z_count);
+									while (rle_z_count--)
+										packed_code_sizes[num_packed_code_sizes++] = 0;
+								}
+								else if (rle_z_count <= 10)
+								{
+									dyn_count[17] = (uint16_t)(dyn_count[17] + 1);
+									packed_code_sizes[num_packed_code_sizes++] = 17;
+									packed_code_sizes[num_packed_code_sizes++] = (uint8_t)(rle_z_count - 3);
+								}
+								else
+								{
+									dyn_count[18] = (uint16_t)(dyn_count[18] + 1);
+									packed_code_sizes[num_packed_code_sizes++] = 18;
+									packed_code_sizes[num_packed_code_sizes++] = (uint8_t)(rle_z_count - 11);
+								}
+								rle_z_count = 0;
+							}
+						};
+						auto TDEFL_RLE_PREV_CODE_SIZE = [&]
+						{
+							if (rle_repeat_count)
+							{
+								if (rle_repeat_count < 3)
+								{
+									dyn_count[prev_code_size] = (uint16_t)(dyn_count[prev_code_size] + rle_repeat_count);
+									while (rle_repeat_count--)
+										packed_code_sizes[num_packed_code_sizes++] = prev_code_size;
+								}
+								else
+								{
+									dyn_count[16] = (uint16_t)(dyn_count[16] + 1);
+									packed_code_sizes[num_packed_code_sizes++] = 16;
+									packed_code_sizes[num_packed_code_sizes++] = (uint8_t)(rle_repeat_count - 3);
+								}
+								rle_repeat_count = 0;
+							}
+						};
+						for (int i = 0; i < total_code_sizes_to_pack; i++)
+						{
+							uint8_t code_size = code_sizes_to_pack[i];
+							if (code_size == 0)
+							{
+								TDEFL_RLE_PREV_CODE_SIZE();
+								if (++rle_z_count == 138)
+								{
+									TDEFL_RLE_ZERO_CODE_SIZE();
+								}
+							}
+							else
+							{
+								TDEFL_RLE_ZERO_CODE_SIZE();
+								if (code_size != prev_code_size)
+								{
+									TDEFL_RLE_PREV_CODE_SIZE();
+									dyn_count[code_size] = (uint16_t)(dyn_count[code_size] + 1);
+									packed_code_sizes[num_packed_code_sizes++] = code_size;
+								}
+								else if (++rle_repeat_count == 6)
+								{
+									TDEFL_RLE_PREV_CODE_SIZE();
+								}
+							}
+							prev_code_size = code_size;
 						}
-						continue;
-					}
-
-					// 
-					tree_cur = table.m_look_up[rev_code & HuffTable::LookupTableMask];
-					if (tree_cur == 0)
-					{
-						// Save the index to the next sub-tree
-						table.m_look_up[rev_code & HuffTable::LookupTableMask] = tree_next;
-						tree_cur = tree_next;
-						tree_next -= 2;
-					}
-
-					//
-					rev_code >>= HuffTable::LookupTableBits - 1;
-					for (int i = code_size; i > HuffTable::LookupTableBits + 1; --i)
-					{
-						rev_code >>= 1;
-						tree_cur -= rev_code & 1;
-
-						if (!table.m_tree[~tree_cur])
+						if (rle_repeat_count)
 						{
-							table.m_tree[~tree_cur] = tree_next;
-							tree_cur = tree_next;
-							tree_next -= 2;
+							TDEFL_RLE_PREV_CODE_SIZE();
 						}
 						else
 						{
-							tree_cur = table.m_tree[~tree_cur];
+							TDEFL_RLE_ZERO_CODE_SIZE();
 						}
+
+						HuffCodeTable dyn_table(DynTableSize, 7);
+						dyn_table.Populate(EBlock::Dynamic, dyn_count);
+
+						// Write a dynamic block header
+						PutBits(out, int(EBlock::Dynamic), 2);
+
+						// Write the sizes of the dynamic Huffman tables
+						PutBits(out, num_lit_codes - 257, 5);
+						PutBits(out, num_dist_codes - 1, 5);
+
+						// Write the Huffman encoded code sizes
+						static std::array<uint8_t, 19> const s_tdefl_packed_code_size_syms_swizzle = { 16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15 };
+
+						int num_bit_lengths;
+						for (num_bit_lengths = 18; num_bit_lengths >= 0; num_bit_lengths--)
+							if (dyn_table.m_code_size[s_tdefl_packed_code_size_syms_swizzle[num_bit_lengths]])
+								break;
+
+						num_bit_lengths = std::max(4, (num_bit_lengths + 1));
+						PutBits(out, num_bit_lengths - 4, 4);
+						for (int i = 0; (int)i < num_bit_lengths; i++)
+							PutBits(out, dyn_table.m_code_size[s_tdefl_packed_code_size_syms_swizzle[i]], 3);
+
+						for (int packed_code_sizes_index = 0; packed_code_sizes_index < num_packed_code_sizes; )
+						{
+							auto code = packed_code_sizes[packed_code_sizes_index++];
+							assert(code < DynTableSize);
+
+							PutBits(out, dyn_table.m_code[code], dyn_table.m_code_size[code]);
+
+							if (code >= 16)
+								PutBits(out, packed_code_sizes[packed_code_sizes_index++], "\02\03\07"[code - 16]);
+						}
+
+						// Output the compressed data
+						WriteCompressedData(out, lz_buffer, lit_table, dst_table);
+						break;
+					}
+				case EBlock::Reserved:
+				default:
+					{
+						throw std::runtime_error("Invalid output block type");
+					}
+				}
+			}
+
+			// Write the compressed data in 'lz_buffer' to the output, using the Huffman code tables for symbols and distances
+			template <typename Out>
+			void WriteCompressedData(OutIter<Out>& out, LZBuffer const& lz_buffer, HuffCodeTable const& lit_table, HuffCodeTable const& dst_table)
+			{
+				uint8_t flags = 0;
+				for (auto ptr = lz_buffer.begin(); ptr != lz_buffer.end(); flags >>= 1)
+				{
+					// Every 8 loops, the next byte is the 'flags' byte
+					if (((ptr - lz_buffer.begin()) & 7) == 0)
+						flags = *ptr++;
+
+					// If the LSB is 0, then the next byte is a literal
+					if ((flags & 1) == 0)
+					{
+						// Write out the literal
+						auto lit = *ptr++;
+						assert(lit_table.m_code_size[lit] != 0 && "No Huffman code assigned to this value");
+						PutBits(out, lit_table.m_code[lit], lit_table.m_code_size[lit]);
 					}
 
-					tree_cur -= (rev_code >>= 1) & 1;
-					table.m_tree[~tree_cur] = (int16_t)sym_index;
+					// Otherwise, this is a (length,distance) pair
+					else
+					{
+						auto len = ptr[0];
+						auto dst = ptr[1] | (ptr[2] << 8);
+						ptr += 3;
+
+						static std::array<uint32_t 17> const s_bitmasks = { 0x0000, 0x0001, 0x0003, 0x0007, 0x000F, 0x001F, 0x003F, 0x007F, 0x00FF, 0x01FF, 0x03FF, 0x07FF, 0x0FFF, 0x1FFF, 0x3FFF, 0x7FFF, 0xFFFF };
+
+						// Write out the length value
+						assert(lit_table.m_code_size[s_tdefl_len_sym[len]] != 0 && "No Huffman code assigned to this length value");
+						PutBits(out, lit_table.m_code[s_tdefl_len_sym[len]], lit_table.m_code_size[s_tdefl_len_sym[len]]);
+						PutBits(out, len & s_bitmasks[s_tdefl_len_extra[len]], s_tdefl_len_extra[len]);
+
+						// Write out the distance value
+						auto sym = dst <= 0x1FF
+							? s_tdefl_small_dist_sym[dst >> 0]
+							: s_tdefl_large_dist_sym[dst >> 8];
+						auto extra = dst <= 0x1FF
+							? s_tdefl_small_dist_extra[dst >> 0]
+							: s_tdefl_large_dist_extra[dst >> 8];
+						assert(dst_table.m_code_size[sym] != 0 && "No Huffman code assigned to this distance value");
+						PutBits(out, dst_table.m_code[sym], dst_table.m_code_size[sym]);
+						PutBits(out, dst & s_bitmasks[num_extra_bits], num_extra_bits);
+					}
 				}
+
+				// Write the unused code
+				PutBits(out, lit_table.m_code[256], lit_table.m_code_size[256]);
 			}
 		};
 
@@ -2203,271 +3306,14 @@ namespace pr::storage::zip
 
 			m_zip_mode = mode;
 		}
-		#endif
-
-	private: // ------------------- Low-level Decompression (completely independent from all compression API's)
-
-		#if 0 // yes to be refactored...
-		// tinfl_decompress_mem_to_callback() decompresses a block in memory to an internal 32KB buffer, and a user
-		// provided callback function will be called to flush the buffer. Returns 1 on success or 0 on failure.
-		int tinfl_decompress_mem_to_callback(const void* pIn_buf, size_t* pIn_buf_size, tinfl_put_buf_func_ptr pPut_buf_func, void* pPut_buf_user, int flags)
-		{
-			int result = 0;
-			Deflate decomp;
-			uint8_t* pDict = (uint8_t*)mz_malloc(LZDictionarySize);
-			size_t in_buf_ofs = 0;
-			size_t dict_ofs = 0;
-			if (!pDict)
-				return TINFL_STATUS_FAILED;
-
-			decomp.m_state = 0;
-			for(;;)
-			{
-				size_t in_buf_size = *pIn_buf_size - in_buf_ofs;
-				size_t dst_buf_size = LZDictionarySize - dict_ofs;
-				tinfl_status status = Decompress(&decomp,
-					(const uint8_t*)pIn_buf + in_buf_ofs, &in_buf_size,
-					pDict, pDict + dict_ofs, &dst_buf_size,
-					(flags & ~(TINFL_FLAG_HAS_MORE_INPUT | TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF)));
-				
-				in_buf_ofs += in_buf_size;
-				if ((dst_buf_size) && (!(*pPut_buf_func)(pDict + dict_ofs, (int)dst_buf_size, pPut_buf_user)))
-					break;
-
-				if (status != TINFL_STATUS_HAS_MORE_OUTPUT)
-				{
-					result = (status == TINFL_STATUS_DONE);
-					break;
-				}
-
-				dict_ofs = (dict_ofs + dst_buf_size) & (LZDictionarySize - 1);
-			}
-
-			mz_free(pDict);
-			*pIn_buf_size = in_buf_ofs;
-			return result;
-		}
-
-	private:
 
 		struct tdefl_compressor
 		{
-			enum
-			{
-				TDEFL_MAX_HUFF_TABLES = 3,
-				TDEFL_MAX_HUFF_SYMBOLS_0 = 288,
-				TDEFL_MAX_HUFF_SYMBOLS_1 = 32,
-				TDEFL_MAX_HUFF_SYMBOLS_2 = 19,
-				TDEFL_LZ_DICT_SIZE = 32768,
-				TDEFL_LZ_DICT_SIZE_MASK = TDEFL_LZ_DICT_SIZE - 1,
-				TDEFL_MIN_MATCH_LEN = 3,
-				TDEFL_MAX_MATCH_LEN = 258,
-				TDEFL_MAX_SUPPORTED_HUFF_CODESIZE = 32,
-			};
-			enum
-			{
-				// TDEFL_OUT_BUF_SIZE MUST be large enough to hold a single entire compressed output block (using static/fixed Huffman codes).
-				TDEFL_LZ_CODE_BUF_SIZE = 64 * 1024,
-				TDEFL_OUT_BUF_SIZE = (TDEFL_LZ_CODE_BUF_SIZE * 13) / 10,
-				TDEFL_MAX_HUFF_SYMBOLS = 288,
-				TDEFL_LZ_HASH_BITS = 15,
-				TDEFL_LEVEL1_HASH_SIZE_MASK = 4095,
-				TDEFL_LZ_HASH_SHIFT = (TDEFL_LZ_HASH_BITS + 2) / 3,
-				TDEFL_LZ_HASH_SIZE = 1 << TDEFL_LZ_HASH_BITS,
-
-				// Alternative for low memory environments:
-				// TDEFL_LZ_CODE_BUF_SIZE = 24 * 1024, 
-				// TDEFL_OUT_BUF_SIZE = (TDEFL_LZ_CODE_BUF_SIZE * 13) / 10, 
-				// TDEFL_MAX_HUFF_SYMBOLS = 288, 
-				// TDEFL_LZ_HASH_BITS = 12, 
-				// TDEFL_LEVEL1_HASH_SIZE_MASK = 4095, 
-				// TDEFL_LZ_HASH_SHIFT = (TDEFL_LZ_HASH_BITS + 2) / 3, 
-				// TDEFL_LZ_HASH_SIZE = 1 << TDEFL_LZ_HASH_BITS,
-			};
-
-			// Must map to MZ_NO_FLUSH, MZ_SYNC_FLUSH, etc. enums
-			enum class tdefl_flush
-			{
-				NO_FLUSH = 0,
-				SYNC_FLUSH = 2,
-				FULL_FLUSH = 3,
-				FINISH = 4
-			};
-			enum tdefl_status
-			{
-				TDEFL_STATUS_BAD_PARAM = -2,
-				TDEFL_STATUS_PUT_BUF_FAILED = -1,
-				TDEFL_STATUS_OKAY = 0,
-				TDEFL_STATUS_DONE = 1,
-			};
-
-			// tdefl's compression state structure.
-			uint8_t m_dict[TDEFL_LZ_DICT_SIZE + TDEFL_MAX_MATCH_LEN - 1];
-			uint16_t m_huff_count[TDEFL_MAX_HUFF_TABLES][TDEFL_MAX_HUFF_SYMBOLS];
-			uint16_t m_huff_codes[TDEFL_MAX_HUFF_TABLES][TDEFL_MAX_HUFF_SYMBOLS];
-			uint8_t m_huff_code_sizes[TDEFL_MAX_HUFF_TABLES][TDEFL_MAX_HUFF_SYMBOLS];
-			uint8_t m_lz_code_buf[TDEFL_LZ_CODE_BUF_SIZE];
-			uint16_t m_next[TDEFL_LZ_DICT_SIZE];
-			uint16_t m_hash[TDEFL_LZ_HASH_SIZE];
-			uint8_t m_output_buf[TDEFL_OUT_BUF_SIZE];
-			tdefl_put_buf_func_ptr m_pPut_buf_func;
-			void *m_pPut_buf_user;
-			ECompressionFlags m_flags;
-			mz_uint m_max_probes[2];
-			bool m_greedy_parsing;
-			mz_uint m_adler32;
-			mz_uint m_lookahead_pos;
-			mz_uint m_lookahead_size;
-			mz_uint m_dict_size;
-			uint8_t* m_pLZ_code_buf;
-			uint8_t* m_pLZ_flags;
-			uint8_t* m_pOutput_buf;
-			uint8_t* m_pOutput_buf_end;
-			mz_uint m_num_flags_left;
-			mz_uint m_total_lz_bytes;
-			mz_uint m_lz_code_buf_dict_pos;
-			mz_uint m_bits_in;
-			mz_uint m_bit_buffer;
-			mz_uint m_saved_match_dist;
-			mz_uint m_saved_match_len;
-			mz_uint m_saved_lit;
-			mz_uint m_output_flush_ofs;
-			mz_uint m_output_flush_remaining;
-			mz_uint m_finished;
-			mz_uint m_block_index;
-			mz_uint m_wants_to_finish;
-			tdefl_status m_prev_return_status;
-			void const* m_pIn_buf;
-			void* m_pOut_buf;
-			size_t* m_pIn_buf_size;
-			size_t* m_pOut_buf_size;
-			tdefl_flush m_flush;
-			uint8_t const* m_pSrc;
-			size_t m_src_buf_left;
-			size_t m_out_buf_ofs;
-
-			tdefl_compressor(tdefl_put_buf_func_ptr pPut_buf_func, void* pPut_buf_user, ECompressionFlags flags)
-				:m_dict()
-				,m_huff_count()
-				,m_huff_codes()
-				,m_huff_code_sizes()
-				,m_lz_code_buf()
-				,m_next()
-				,m_hash()
-				,m_output_buf()
-				,m_pPut_buf_func(pPut_buf_func)
-				,m_pPut_buf_user(pPut_buf_user)
-				,m_flags(flags)
-				,m_max_probes()
-				,m_greedy_parsing((flags & ECompressionFlags::GreedyParsing) != 0)
-				,m_adler32(1)
-				,m_lookahead_pos(0)
-				,m_lookahead_size(0)
-				,m_dict_size(0)
-				,m_pLZ_code_buf(&m_lz_code_buf[1])
-				,m_pLZ_flags(&m_lz_code_buf[0])
-				,m_pOutput_buf(&m_output_buf[0])
-				,m_pOutput_buf_end(&m_output_buf[0])
-				,m_num_flags_left(8)
-				,m_total_lz_bytes(0)
-				,m_lz_code_buf_dict_pos(0)
-				,m_bits_in(0)
-				,m_bit_buffer(0)
-				,m_saved_match_dist(0)
-				,m_saved_match_len(0)
-				,m_saved_lit(0)
-				,m_output_flush_ofs(0)
-				,m_output_flush_remaining(0)
-				,m_finished(0)
-				,m_block_index(0)
-				,m_wants_to_finish(0)
-				,m_prev_return_status(TDEFL_STATUS_OKAY)
-				,m_pIn_buf(nullptr)
-				,m_pOut_buf(nullptr)
-				,m_pIn_buf_size(nullptr)
-				,m_pOut_buf_size(nullptr)
-				,m_flush(TDEFL_NO_FLUSH)
-				,m_pSrc(nullptr)
-				,m_src_buf_left(0)
-				,m_out_buf_ofs(0)
-			{
-				if (m_pPut_buf_func == nullptr)
-					throw std::runtime_error("The writer callback function must be provided");
-				
-				// Initializes the compressor.
-				// pBut_buf_func: If nullptr, output data will be supplied to the specified callback.
-				// In this case, the user should call the tdefl_compress_buffer() API for compression.
-				// If pBut_buf_func is nullptr the user should always call the tdefl_compress() API.
-				// flags: See the above enums (TDEFL_HUFFMAN_ONLY, TDEFL_WRITE_ZLIB_HEADER, etc.)
-				m_max_probes[0] = 1 + ((flags & TDEFL_MAX_PROBES_MASK) + 2) / 3;
-				m_max_probes[1] = 1 + (((flags & TDEFL_MAX_PROBES_MASK) >> 2) + 2) / 3;
-
-				//if ((flags & ECompressionFlags::NonDeterministicParsing) == 0)
-				//	memset(m_hash); // wtf
-			}
-
 			// Compress data in 'buf'
 			tdefl_status tdefl_compress_buffer(void const* buf, size_t buf_size, tdefl_flush flush)
 			{
 				return tdefl_compress(buf, &buf_size, nullptr, nullptr, flush);
 			}
-
-		private:
-
-			// Compresses a block of data, consuming as much of the specified input buffer as possible, and writing as much compressed data to the specified output buffer as possible.
-			tdefl_status tdefl_compress(void const* buf, size_t* pIn_buf_size, void* pOut_buf, size_t* pOut_buf_size, tdefl_flush flush)
-			{
-				m_pIn_buf = buf;
-				m_pIn_buf_size = buf_size;
-				m_pOut_buf = pOut_buf;
-				m_pOut_buf_size = pOut_buf_size;
-				m_pSrc = (const uint8_t*)(buf);
-				m_src_buf_left = buf_size ? *buf_size : 0;
-				m_out_buf_ofs = 0;
-				m_flush = flush;
-
-				if (((m_pPut_buf_func != nullptr) == ((pOut_buf != nullptr) || (pOut_buf_size != nullptr))) || (m_prev_return_status != TDEFL_STATUS_OKAY) ||
-					(m_wants_to_finish && (flush != TDEFL_FINISH)) || (buf_size && *buf_size && !buf) || (pOut_buf_size && *pOut_buf_size && !pOut_buf))
-				{
-					if (buf_size)* buf_size = 0;
-					if (pOut_buf_size)* pOut_buf_size = 0;
-					return (m_prev_return_status = TDEFL_STATUS_BAD_PARAM);
-				}
-				m_wants_to_finish |= (flush == TDEFL_FINISH);
-
-				if ((m_output_flush_remaining) || (m_finished))
-					return (m_prev_return_status = tdefl_flush_output_buffer(d));
-
-				if constexpr (UnalignedLoadStore && LittleEndian)
-				{
-					if (((m_flags & TDEFL_MAX_PROBES_MASK) == 1) &&
-						((m_flags & TDEFL_GREEDY_PARSING_FLAG) != 0) &&
-						((m_flags & (TDEFL_FILTER_MATCHES | TDEFL_FORCE_ALL_RAW_BLOCKS | TDEFL_RLE_MATCHES)) == 0))
-					{
-						if (!tdefl_compress_fast(d))
-							return m_prev_return_status;
-					}
-				}
-				else
-				{
-					if (!tdefl_compress_normal(d))
-						return m_prev_return_status;
-				}
-
-				if ((m_flags & (TDEFL_WRITE_ZLIB_HEADER | TDEFL_COMPUTE_ADLER32)) && (buf))
-					m_adler32 = (uint32_t)Adler32(m_adler32, (const uint8_t*)buf, m_pSrc - (const uint8_t*)buf);
-
-				if ((flush) && (!m_lookahead_size) && (!m_src_buf_left) && (!m_output_flush_remaining))
-				{
-					if (tdefl_flush_block(d, flush) < 0)
-						return m_prev_return_status;
-					m_finished = (flush == TDEFL_FINISH);
-					if (flush == TDEFL_FULL_FLUSH) { memset(m_hash); memset(m_next); m_dict_size = 0; }
-				}
-
-				return (m_prev_return_status = tdefl_flush_output_buffer(d));
-			}
-
 		};
 		struct mz_zip_writer_add_state
 		{
@@ -2583,7 +3429,7 @@ namespace pr::storage::zip
 			m_bit_flag = ReadLE16(p + CDH::BitFlagsOffset);
 			return (m_bit_flag & 1);
 		}
-
+		static uint32_t const MaxIOBufferSize = 4096;//64 * 1024;
 
 		// Extracts a archive file to a memory buffer using no memory allocation.
 		mz_bool mz_zip_reader_extract_to_mem_no_alloc(mz_zip_archive* pZip, mz_uint file_index, void* pBuf, size_t buf_size, mz_uint flags, void* pUser_read_buf, size_t user_read_buf_size)
@@ -3044,23 +3890,8 @@ namespace pr::storage::zip
 
 	private: // ------------------- Low-level Compression (independent from all decompression API's)
 
-		 // tdefl_init() compression flags logically OR'd together (low 12 bits contain the max. number of probes per dictionary search):
-		enum
-		{
-			TDEFL_HUFFMAN_ONLY = 0,
-			// TDEFL_DEFAULT_MAX_PROBES: The compressor defaults to 128 dictionary probes per dictionary search.
-			// 0=Huffman only, 1=Huffman+LZ (fastest/crap compression), 4095=Huffman+LZ (slowest/best compression).
-			TDEFL_DEFAULT_MAX_PROBES = 128,
-			TDEFL_MAX_PROBES_MASK = 0xFFF,
-		};
 
 
-
-		struct tdefl_sym_freq
-		{
-			uint16_t m_key;
-			uint16_t m_sym_index;
-		};
 		struct tdefl_output_buffer
 		{
 			size_t m_size;
@@ -3117,7 +3948,7 @@ namespace pr::storage::zip
 		//  The caller must mz_free() the returned heap block (which will typically be larger than *pLen_out) when it's no longer needed.
 		void* tdefl_write_image_to_png_file_in_memory(const void* pImage, int w, int h, int num_chans, size_t* pLen_out)
 		{
-			// Level 6 corresponds to TDEFL_DEFAULT_MAX_PROBES or MZ_DEFAULT_LEVEL (but we can't depend on MZ_DEFAULT_LEVEL being available in case the zlib API's where #defined out)
+			// Level 6 corresponds to DefaultProbes or MZ_DEFAULT_LEVEL (but we can't depend on MZ_DEFAULT_LEVEL being available in case the zlib API's where #defined out)
 			return tdefl_write_image_to_png_file_in_memory_ex(pImage, w, h, num_chans, pLen_out, 6, MZ_FALSE);
 		}
 		void* tdefl_write_image_to_png_file_in_memory_ex(const void* pImage, int w, int h, int num_chans, size_t* pLen_out, mz_uint level, mz_bool flip)
@@ -3134,7 +3965,7 @@ namespace pr::storage::zip
 			// write dummy header
 			for (z = 41; z; --z) tdefl_output_buffer_putter(&z, 1, &out_buf);
 			// compress image data
-			tdefl_init(pComp, tdefl_output_buffer_putter, &out_buf, s_tdefl_png_num_probes[std::min<mz_uint>(10, level)] | TDEFL_WRITE_ZLIB_HEADER);
+			tdefl_init(pComp, tdefl_output_buffer_putter, &out_buf, s_tdefl_png_num_probes[std::min<mz_uint>(10, level)] | ECompressFlags::WriteZLibHeader);
 			for (y = 0; y < h; ++y) { tdefl_compress_buffer(pComp, &z, 1, TDEFL_NO_FLUSH); tdefl_compress_buffer(pComp, (uint8_t*)pImage + (flip ? (h - 1 - y) : y) * bpl, bpl, TDEFL_NO_FLUSH); }
 			if (tdefl_compress_buffer(pComp, nullptr, 0, TDEFL_FINISH) != TDEFL_STATUS_DONE) { mz_free(pComp); mz_free(out_buf.m_pBuf); return nullptr; }
 			// write real header
@@ -3173,11 +4004,11 @@ namespace pr::storage::zip
 
 		tdefl_status tdefl_get_prev_return_status(tdefl_compressor* d)
 		{
-			return d->m_prev_return_status;
+			return m_prev_return_status;
 		}
 		uint32_t tdefl_get_adler32(tdefl_compressor* d)
 		{
-			return d->m_adler32;
+			return m_adler32;
 		}
 
 		// Create tdefl_compress() flags given zlib-style compression parameters.
@@ -3200,7 +4031,7 @@ namespace pr::storage::zip
 			else if (strategy == ECompressionStrategy::Filtered)
 				comp_flags |= ECompressionFlags::FilterMatches;
 			else if (strategy == ECompressionStrategy::HuffmanOnly)
-				comp_flags &= ~TDEFL_MAX_PROBES_MASK;
+				comp_flags &= ~MaxProbesMask;
 			else if (strategy == ECompressionStrategy::Fixed)
 				comp_flags |= ECompressionFlags::ForceAllStaticBlocks;
 			else if (strategy == ECompressionStrategy::RLE)
@@ -3209,868 +4040,28 @@ namespace pr::storage::zip
 			return comp_flags;
 		}
 
-		// Radix sorts tdefl_sym_freq[] array by 16-bit key m_key. Returns ptr to sorted values.
-		tdefl_sym_freq* tdefl_radix_sort_syms(mz_uint num_syms, tdefl_sym_freq * pSyms0, tdefl_sym_freq * pSyms1)
-		{
-			uint32_t total_passes = 2, pass_shift, pass, i, hist[256 * 2] = {};
-			tdefl_sym_freq* pCur_syms = pSyms0, *pNew_syms = pSyms1;
-
-			for (i = 0; i < num_syms; i++) { mz_uint freq = pSyms0[i].m_key; hist[freq & 0xFF]++; hist[256 + ((freq >> 8) & 0xFF)]++; }
-			while ((total_passes > 1) && (num_syms == hist[(total_passes - 1) * 256])) total_passes--;
-			for (pass_shift = 0, pass = 0; pass < total_passes; pass++, pass_shift += 8)
-			{
-				const uint32_t* pHist = &hist[pass << 8];
-				mz_uint offsets[256], cur_ofs = 0;
-				for (i = 0; i < 256; i++) { offsets[i] = cur_ofs; cur_ofs += pHist[i]; }
-				for (i = 0; i < num_syms; i++) pNew_syms[offsets[(pCur_syms[i].m_key >> pass_shift) & 0xFF]++] = pCur_syms[i];
-				{ tdefl_sym_freq* t = pCur_syms; pCur_syms = pNew_syms; pNew_syms = t; }
-			}
-			return pCur_syms;
-		}
-
-		// tdefl_calculate_minimum_redundancy() originally written by: Alistair Moffat, alistair@cs.mu.oz.au, Jyrki Katajainen, jyrki@diku.dk, November 1996.
-		void tdefl_calculate_minimum_redundancy(tdefl_sym_freq* A, int n)
-		{
-			int root, leaf, next, avbl, used, dpth;
-			if (n == 0) return;
-			else if (n == 1) { A[0].m_key = 1; return; }
-			A[0].m_key += A[1].m_key; root = 0; leaf = 2;
-			for (next = 1; next < n - 1; next++)
-			{
-				if (leaf >= n || A[root].m_key < A[leaf].m_key) { A[next].m_key = A[root].m_key; A[root++].m_key = (uint16_t)next; }
-				else A[next].m_key = A[leaf++].m_key;
-				if (leaf >= n || (root < next && A[root].m_key < A[leaf].m_key)) { A[next].m_key = (uint16_t)(A[next].m_key + A[root].m_key); A[root++].m_key = (uint16_t)next; }
-				else A[next].m_key = (uint16_t)(A[next].m_key + A[leaf++].m_key);
-			}
-			A[n - 2].m_key = 0; for (next = n - 3; next >= 0; next--) A[next].m_key = A[A[next].m_key].m_key + 1;
-			avbl = 1; used = dpth = 0; root = n - 2; next = n - 1;
-			while (avbl > 0)
-			{
-				while (root >= 0 && (int)A[root].m_key == dpth) { used++; root--; }
-				while (avbl > used) { A[next--].m_key = (uint16_t)(dpth); avbl--; }
-				avbl = 2 * used; dpth++; used = 0;
-			}
-		}
-
-		// Limits canonical Huffman code table's max code size.
-		void tdefl_huffman_enforce_max_code_size(int* pNum_codes, int code_list_len, int max_code_size)
-		{
-			int i; uint32_t total = 0; if (code_list_len <= 1) return;
-			for (i = max_code_size + 1; i <= TDEFL_MAX_SUPPORTED_HUFF_CODESIZE; i++) pNum_codes[max_code_size] += pNum_codes[i];
-			for (i = max_code_size; i > 0; i--) total += (((uint32_t)pNum_codes[i]) << (max_code_size - i));
-			while (total != (1UL << max_code_size))
-			{
-				pNum_codes[max_code_size]--;
-				for (i = max_code_size - 1; i > 0; i--) if (pNum_codes[i]) { pNum_codes[i]--; pNum_codes[i + 1] += 2; break; }
-				total--;
-			}
-		}
 
 		#define TDEFL_READ_UNALIGNED_WORD(p) *(const uint16_t*)(p)
 
-		void tdefl_optimize_huffman_table(tdefl_compressor* d, int table_num, int table_len, int code_size_limit, int static_table)
-		{
-			int i, j, l, num_codes[1 + TDEFL_MAX_SUPPORTED_HUFF_CODESIZE];
-			mz_uint next_code[TDEFL_MAX_SUPPORTED_HUFF_CODESIZE + 1] = {};
-			if (static_table)
-			{
-				for (i = 0; i < table_len; i++) num_codes[d->m_huff_code_sizes[table_num][i]]++;
-			}
-			else
-			{
-				tdefl_sym_freq syms0[TDEFL_MAX_HUFF_SYMBOLS], syms1[TDEFL_MAX_HUFF_SYMBOLS], * pSyms;
-				int num_used_syms = 0;
-				const uint16_t* pSym_count = &d->m_huff_count[table_num][0];
-				for (i = 0; i < table_len; i++) if (pSym_count[i]) { syms0[num_used_syms].m_key = (uint16_t)pSym_count[i]; syms0[num_used_syms++].m_sym_index = (uint16_t)i; }
-
-				pSyms = tdefl_radix_sort_syms(num_used_syms, syms0, syms1);
-				tdefl_calculate_minimum_redundancy(pSyms, num_used_syms);
-
-				for (i = 0; i < num_used_syms; i++) num_codes[pSyms[i].m_key]++;
-
-				tdefl_huffman_enforce_max_code_size(num_codes, num_used_syms, code_size_limit);
-
-				memset(d->m_huff_code_sizes[table_num]);
-				memset(d->m_huff_codes[table_num]);
-				for (i = 1, j = num_used_syms; i <= code_size_limit; i++)
-					for (l = num_codes[i]; l > 0; l--) d->m_huff_code_sizes[table_num][pSyms[--j].m_sym_index] = (uint8_t)(i);
-			}
-
-			next_code[1] = 0; for (j = 0, i = 2; i <= code_size_limit; i++) next_code[i] = j = ((j + num_codes[i - 1]) << 1);
-
-			for (i = 0; i < table_len; i++)
-			{
-				mz_uint rev_code = 0, code, code_size; if ((code_size = d->m_huff_code_sizes[table_num][i]) == 0) continue;
-				code = next_code[code_size]++; for (l = code_size; l > 0; l--, code >>= 1) rev_code = (rev_code << 1) | (code & 1);
-				d->m_huff_codes[table_num][i] = (uint16_t)rev_code;
-			}
-		}
-		void tdefl_start_dynamic_block(tdefl_compressor* d)
-		{
-			static uint8_t s_tdefl_packed_code_size_syms_swizzle[] = { 16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15 };
-
-			int num_lit_codes, num_dist_codes, num_bit_lengths;
-			mz_uint i, total_code_sizes_to_pack, num_packed_code_sizes, rle_z_count, rle_repeat_count, packed_code_sizes_index;
-			uint8_t code_sizes_to_pack[TDEFL_MAX_HUFF_SYMBOLS_0 + TDEFL_MAX_HUFF_SYMBOLS_1], packed_code_sizes[TDEFL_MAX_HUFF_SYMBOLS_0 + TDEFL_MAX_HUFF_SYMBOLS_1], prev_code_size = 0xFF;
-
-			d->m_huff_count[0][256] = 1;
-
-			tdefl_optimize_huffman_table(d, 0, TDEFL_MAX_HUFF_SYMBOLS_0, 15, MZ_FALSE);
-			tdefl_optimize_huffman_table(d, 1, TDEFL_MAX_HUFF_SYMBOLS_1, 15, MZ_FALSE);
-
-			for (num_lit_codes = 286; num_lit_codes > 257; num_lit_codes--) if (d->m_huff_code_sizes[0][num_lit_codes - 1]) break;
-			for (num_dist_codes = 30; num_dist_codes > 1; num_dist_codes--) if (d->m_huff_code_sizes[1][num_dist_codes - 1]) break;
-
-			memcpy(code_sizes_to_pack, &d->m_huff_code_sizes[0][0], num_lit_codes);
-			memcpy(code_sizes_to_pack + num_lit_codes, &d->m_huff_code_sizes[1][0], num_dist_codes);
-			total_code_sizes_to_pack = num_lit_codes + num_dist_codes;
-			num_packed_code_sizes = 0;
-			rle_z_count = 0;
-			rle_repeat_count = 0;
-
-			auto TDEFL_RLE_ZERO_CODE_SIZE = [&]
-			{
-				if (rle_z_count)
-				{
-					if (rle_z_count < 3)
-					{
-						d->m_huff_count[2][0] = (uint16_t)(d->m_huff_count[2][0] + rle_z_count);
-						while (rle_z_count--)
-							packed_code_sizes[num_packed_code_sizes++] = 0;
-					}
-					else if (rle_z_count <= 10)
-					{
-						d->m_huff_count[2][17] = (uint16_t)(d->m_huff_count[2][17] + 1);
-						packed_code_sizes[num_packed_code_sizes++] = 17;
-						packed_code_sizes[num_packed_code_sizes++] = (uint8_t)(rle_z_count - 3);
-					}
-					else
-					{
-						d->m_huff_count[2][18] = (uint16_t)(d->m_huff_count[2][18] + 1);
-						packed_code_sizes[num_packed_code_sizes++] = 18;
-						packed_code_sizes[num_packed_code_sizes++] = (uint8_t)(rle_z_count - 11);
-					}
-					rle_z_count = 0;
-				}
-			};
-			auto TDEFL_RLE_PREV_CODE_SIZE = [&]
-			{
-				if (rle_repeat_count)
-				{
-					if (rle_repeat_count < 3)
-					{
-						d->m_huff_count[2][prev_code_size] = (uint16_t)(d->m_huff_count[2][prev_code_size] + rle_repeat_count);
-						while (rle_repeat_count--)
-							packed_code_sizes[num_packed_code_sizes++] = prev_code_size;
-					}
-					else
-					{
-						d->m_huff_count[2][16] = (uint16_t)(d->m_huff_count[2][16] + 1);
-						packed_code_sizes[num_packed_code_sizes++] = 16;
-						packed_code_sizes[num_packed_code_sizes++] = (uint8_t)(rle_repeat_count - 3);
-					}
-					rle_repeat_count = 0;
-				}
-			};
-
-			memset(&d->m_huff_count[2][0], 0, sizeof(d->m_huff_count[2][0]) * TDEFL_MAX_HUFF_SYMBOLS_2);
-			for (i = 0; i < total_code_sizes_to_pack; i++)
-			{
-				uint8_t code_size = code_sizes_to_pack[i];
-				if (!code_size)
-				{
-					TDEFL_RLE_PREV_CODE_SIZE();
-					if (++rle_z_count == 138) { TDEFL_RLE_ZERO_CODE_SIZE(); }
-				}
-				else
-				{
-					TDEFL_RLE_ZERO_CODE_SIZE();
-					if (code_size != prev_code_size)
-					{
-						TDEFL_RLE_PREV_CODE_SIZE();
-						d->m_huff_count[2][code_size] = (uint16_t)(d->m_huff_count[2][code_size] + 1); packed_code_sizes[num_packed_code_sizes++] = code_size;
-					}
-					else if (++rle_repeat_count == 6)
-					{
-						TDEFL_RLE_PREV_CODE_SIZE();
-					}
-				}
-				prev_code_size = code_size;
-			}
-			if (rle_repeat_count) { TDEFL_RLE_PREV_CODE_SIZE(); }
-			else { TDEFL_RLE_ZERO_CODE_SIZE(); }
-
-			tdefl_optimize_huffman_table(d, 2, TDEFL_MAX_HUFF_SYMBOLS_2, 7, MZ_FALSE);
-
-			tdefl_put_bits(d, 2, 2);
-
-			tdefl_put_bits(d, num_lit_codes - 257, 5);
-			tdefl_put_bits(d, num_dist_codes - 1, 5);
-
-			for (num_bit_lengths = 18; num_bit_lengths >= 0; num_bit_lengths--) if (d->m_huff_code_sizes[2][s_tdefl_packed_code_size_syms_swizzle[num_bit_lengths]]) break;
-			num_bit_lengths = std::max(4, (num_bit_lengths + 1));
-			tdefl_put_bits(d, num_bit_lengths - 4, 4);
-			for (i = 0; (int)i < num_bit_lengths; i++)
-				tdefl_put_bits(d, d->m_huff_code_sizes[2][s_tdefl_packed_code_size_syms_swizzle[i]], 3);
-
-			for (packed_code_sizes_index = 0; packed_code_sizes_index < num_packed_code_sizes; )
-			{
-				mz_uint code = packed_code_sizes[packed_code_sizes_index++];
-				mz_assert(code < TDEFL_MAX_HUFF_SYMBOLS_2);
-				tdefl_put_bits(d, d->m_huff_codes[2][code], d->m_huff_code_sizes[2][code]);
-				if (code >= 16) tdefl_put_bits(d, packed_code_sizes[packed_code_sizes_index++], "\02\03\07"[code - 16]);
-			}
-		}
-		void tdefl_start_static_block(tdefl_compressor* d)
-		{
-			uint8_t* p = &d->m_huff_code_sizes[0][0];
-
-			mz_uint i = 0;
-			for (; i <= 143; ++i) *p++ = 8;
-			for (; i <= 255; ++i) *p++ = 9;
-			for (; i <= 279; ++i) *p++ = 7;
-			for (; i <= 287; ++i) *p++ = 8;
-
-			memset(d->m_huff_code_sizes[1], 5, 32);
-
-			tdefl_optimize_huffman_table(d, 0, 288, 15, MZ_TRUE);
-			tdefl_optimize_huffman_table(d, 1, 32, 15, MZ_TRUE);
-
-			tdefl_put_bits(d, 1, 2);
-		}
-		void tdefl_put_bits(tdefl_compressor * d, mz_uint bits, mz_uint len)
-		{
-			mz_assert(bits <= ((1U << len) - 1U));
-
-			d->m_bit_buffer |= (bits << d->m_bits_in); d->m_bits_in += len;
-			while (d->m_bits_in >= 8)
-			{
-				if (d->m_pOutput_buf < d->m_pOutput_buf_end)
-					*d->m_pOutput_buf++ = (uint8_t)(d->m_bit_buffer);
-
-				d->m_bit_buffer >>= 8;
-				d->m_bits_in -= 8;
-			}
-		}
-		mz_bool tdefl_compress_lz_codes(tdefl_compressor* d)
-		{
-			if constexpr (UnalignedLoadStore && LittleEndian && sizeof(size_t) == 8)
-			{
-				mz_uint flags;
-				uint8_t* pLZ_codes;
-				uint8_t* pOutput_buf = d->m_pOutput_buf;
-				uint8_t* pLZ_code_buf_end = d->m_pLZ_code_buf;
-				uint64_t bit_buffer = d->m_bit_buffer;
-				mz_uint bits_in = d->m_bits_in;
-
-				#define TDEFL_PUT_BITS_FAST(b, l) { bit_buffer |= (((uint64_t)(b)) << bits_in); bits_in += (l); }
-
-				flags = 1;
-				for (pLZ_codes = d->m_lz_code_buf; pLZ_codes < pLZ_code_buf_end; flags >>= 1)
-				{
-					if (flags == 1)
-						flags = *pLZ_codes++ | 0x100;
-
-					if (flags & 1)
-					{
-						mz_uint s0, s1, n0, n1, sym, num_extra_bits;
-						mz_uint match_len = pLZ_codes[0], match_dist = *(const uint16_t*)(pLZ_codes + 1); pLZ_codes += 3;
-
-						mz_assert(d->m_huff_code_sizes[0][s_tdefl_len_sym[match_len]]);
-						TDEFL_PUT_BITS_FAST(d->m_huff_codes[0][s_tdefl_len_sym[match_len]], d->m_huff_code_sizes[0][s_tdefl_len_sym[match_len]]);
-						TDEFL_PUT_BITS_FAST(match_len & mz_bitmasks[s_tdefl_len_extra[match_len]], s_tdefl_len_extra[match_len]);
-
-						// This sequence coaxes MSVC into using cmov's vs. jmp's.
-						s0 = s_tdefl_small_dist_sym[match_dist & 511];
-						n0 = s_tdefl_small_dist_extra[match_dist & 511];
-						s1 = s_tdefl_large_dist_sym[match_dist >> 8];
-						n1 = s_tdefl_large_dist_extra[match_dist >> 8];
-						sym = (match_dist < 512) ? s0 : s1;
-						num_extra_bits = (match_dist < 512) ? n0 : n1;
-
-						mz_assert(d->m_huff_code_sizes[1][sym]);
-						TDEFL_PUT_BITS_FAST(d->m_huff_codes[1][sym], d->m_huff_code_sizes[1][sym]);
-						TDEFL_PUT_BITS_FAST(match_dist & mz_bitmasks[num_extra_bits], num_extra_bits);
-					}
-					else
-					{
-						mz_uint lit = *pLZ_codes++;
-						mz_assert(d->m_huff_code_sizes[0][lit]);
-						TDEFL_PUT_BITS_FAST(d->m_huff_codes[0][lit], d->m_huff_code_sizes[0][lit]);
-
-						if (((flags & 2) == 0) && (pLZ_codes < pLZ_code_buf_end))
-						{
-							flags >>= 1;
-							lit = *pLZ_codes++;
-							mz_assert(d->m_huff_code_sizes[0][lit]);
-							TDEFL_PUT_BITS_FAST(d->m_huff_codes[0][lit], d->m_huff_code_sizes[0][lit]);
-
-							if (((flags & 2) == 0) && (pLZ_codes < pLZ_code_buf_end))
-							{
-								flags >>= 1;
-								lit = *pLZ_codes++;
-								mz_assert(d->m_huff_code_sizes[0][lit]);
-								TDEFL_PUT_BITS_FAST(d->m_huff_codes[0][lit], d->m_huff_code_sizes[0][lit]);
-							}
-						}
-					}
-
-					if (pOutput_buf >= d->m_pOutput_buf_end)
-						return MZ_FALSE;
-
-					*(uint64_t*)pOutput_buf = bit_buffer;
-					pOutput_buf += (bits_in >> 3);
-					bit_buffer >>= (bits_in & ~7);
-					bits_in &= 7;
-				}
-
-				#undef TDEFL_PUT_BITS_FAST
-
-				d->m_pOutput_buf = pOutput_buf;
-				d->m_bits_in = 0;
-				d->m_bit_buffer = 0;
-
-				while (bits_in)
-				{
-					auto n = std::min<mz_uint>(bits_in, 16);
-					tdefl_put_bits(d, (mz_uint)bit_buffer & mz_bitmasks[n], n);
-					bit_buffer >>= n;
-					bits_in -= n;
-				}
-
-				tdefl_put_bits(d, d->m_huff_codes[0][256], d->m_huff_code_sizes[0][256]);
-
-				return (d->m_pOutput_buf < d->m_pOutput_buf_end);
-			}
-			else
-			{
-				mz_uint flags;
-				uint8_t* pLZ_codes;
-
-				flags = 1;
-				for (pLZ_codes = d->m_lz_code_buf; pLZ_codes < d->m_pLZ_code_buf; flags >>= 1)
-				{
-					if (flags == 1)
-						flags = *pLZ_codes++ | 0x100;
-					if (flags & 1)
-					{
-						mz_uint sym, num_extra_bits;
-						mz_uint match_len = pLZ_codes[0], match_dist = (pLZ_codes[1] | (pLZ_codes[2] << 8)); pLZ_codes += 3;
-
-						mz_assert(d->m_huff_code_sizes[0][s_tdefl_len_sym[match_len]]);
-						tdefl_put_bits(d, d->m_huff_codes[0][s_tdefl_len_sym[match_len]], d->m_huff_code_sizes[0][s_tdefl_len_sym[match_len]]);
-						tdefl_put_bits(d, match_len & mz_bitmasks[s_tdefl_len_extra[match_len]], s_tdefl_len_extra[match_len]);
-
-						if (match_dist < 512)
-						{
-							sym = s_tdefl_small_dist_sym[match_dist]; num_extra_bits = s_tdefl_small_dist_extra[match_dist];
-						}
-						else
-						{
-							sym = s_tdefl_large_dist_sym[match_dist >> 8]; num_extra_bits = s_tdefl_large_dist_extra[match_dist >> 8];
-						}
-						mz_assert(d->m_huff_code_sizes[1][sym]);
-						tdefl_put_bits(d, d->m_huff_codes[1][sym], d->m_huff_code_sizes[1][sym]);
-						tdefl_put_bits(d, match_dist & mz_bitmasks[num_extra_bits], num_extra_bits);
-					}
-					else
-					{
-						mz_uint lit = *pLZ_codes++;
-						mz_assert(d->m_huff_code_sizes[0][lit]);
-						tdefl_put_bits(d, d->m_huff_codes[0][lit], d->m_huff_code_sizes[0][lit]);
-					}
-				}
-
-				tdefl_put_bits(d, d->m_huff_codes[0][256], d->m_huff_code_sizes[0][256]);
-
-				return (d->m_pOutput_buf < d->m_pOutput_buf_end);
-			}
-		}
-		mz_bool tdefl_compress_block(tdefl_compressor * d, mz_bool static_block)
-		{
-			if (static_block)
-				tdefl_start_static_block(d);
-			else
-				tdefl_start_dynamic_block(d);
-
-			return tdefl_compress_lz_codes(d);
-		}
-		mz_bool tdefl_compress_fast(tdefl_compressor* d)
-		{
-			if constexpr (UnalignedLoadStore && LittleEndian)
-			{
-				// Faster, minimally featured LZRW1-style match+parse loop with better register utilization. Intended for applications where raw throughput is valued more highly than ratio.
-				mz_uint lookahead_pos = d->m_lookahead_pos, lookahead_size = d->m_lookahead_size, dict_size = d->m_dict_size, total_lz_bytes = d->m_total_lz_bytes, num_flags_left = d->m_num_flags_left;
-				uint8_t* pLZ_code_buf = d->m_pLZ_code_buf, * pLZ_flags = d->m_pLZ_flags;
-				mz_uint cur_pos = lookahead_pos & TDEFL_LZ_DICT_SIZE_MASK;
-
-				while ((d->m_src_buf_left) || ((d->m_flush) && (lookahead_size)))
-				{
-					const mz_uint TDEFL_COMP_FAST_LOOKAHEAD_SIZE = 4096;
-					mz_uint dst_pos = (lookahead_pos + lookahead_size) & TDEFL_LZ_DICT_SIZE_MASK;
-					mz_uint num_bytes_to_process = std::min<mz_uint>(static_cast<mz_uint>(d->m_src_buf_left), static_cast<mz_uint>(TDEFL_COMP_FAST_LOOKAHEAD_SIZE - lookahead_size));
-					d->m_src_buf_left -= num_bytes_to_process;
-					lookahead_size += num_bytes_to_process;
-
-					while (num_bytes_to_process)
-					{
-						uint32_t n = std::min(TDEFL_LZ_DICT_SIZE - dst_pos, num_bytes_to_process);
-						memcpy(d->m_dict + dst_pos, d->m_pSrc, n);
-						if (dst_pos < (TDEFL_MAX_MATCH_LEN - 1))
-							memcpy(d->m_dict + TDEFL_LZ_DICT_SIZE + dst_pos, d->m_pSrc, std::min(n, (TDEFL_MAX_MATCH_LEN - 1) - dst_pos));
-						d->m_pSrc += n;
-						dst_pos = (dst_pos + n) & TDEFL_LZ_DICT_SIZE_MASK;
-						num_bytes_to_process -= n;
-					}
-
-					dict_size = std::min(TDEFL_LZ_DICT_SIZE - lookahead_size, dict_size);
-					if ((!d->m_flush) && (lookahead_size < TDEFL_COMP_FAST_LOOKAHEAD_SIZE)) break;
-
-					while (lookahead_size >= 4)
-					{
-						mz_uint cur_match_dist, cur_match_len = 1;
-						uint8_t* pCur_dict = d->m_dict + cur_pos;
-						mz_uint first_trigram = (*(const uint32_t*)pCur_dict) & 0xFFFFFF;
-						mz_uint hash = (first_trigram ^ (first_trigram >> (24 - (TDEFL_LZ_HASH_BITS - 8)))) & TDEFL_LEVEL1_HASH_SIZE_MASK;
-						mz_uint probe_pos = d->m_hash[hash];
-						d->m_hash[hash] = (uint16_t)lookahead_pos;
-
-						if (((cur_match_dist = (uint16_t)(lookahead_pos - probe_pos)) <= dict_size) && ((*(const uint32_t*)(d->m_dict + (probe_pos &= TDEFL_LZ_DICT_SIZE_MASK)) & 0xFFFFFF) == first_trigram))
-						{
-							const uint16_t* p = (const uint16_t*)pCur_dict;
-							const uint16_t* q = (const uint16_t*)(d->m_dict + probe_pos);
-							uint32_t probe_len = 32;
-							do {}
-							while ((TDEFL_READ_UNALIGNED_WORD(++p) == TDEFL_READ_UNALIGNED_WORD(++q)) && (TDEFL_READ_UNALIGNED_WORD(++p) == TDEFL_READ_UNALIGNED_WORD(++q)) &&
-								(TDEFL_READ_UNALIGNED_WORD(++p) == TDEFL_READ_UNALIGNED_WORD(++q)) && (TDEFL_READ_UNALIGNED_WORD(++p) == TDEFL_READ_UNALIGNED_WORD(++q)) && (--probe_len > 0));
-							cur_match_len = ((mz_uint)(p - (const uint16_t*)pCur_dict) * 2) + (mz_uint)(*(const uint8_t*)p == *(const uint8_t*)q);
-							if (!probe_len)
-								cur_match_len = cur_match_dist ? TDEFL_MAX_MATCH_LEN : 0;
-
-							if ((cur_match_len < TDEFL_MIN_MATCH_LEN) || ((cur_match_len == TDEFL_MIN_MATCH_LEN) && (cur_match_dist >= 8U * 1024U)))
-							{
-								cur_match_len = 1;
-								*pLZ_code_buf++ = (uint8_t)first_trigram;
-								*pLZ_flags = (uint8_t)(*pLZ_flags >> 1);
-								d->m_huff_count[0][(uint8_t)first_trigram]++;
-							}
-							else
-							{
-								uint32_t s0, s1;
-								cur_match_len = std::min(cur_match_len, lookahead_size);
-
-								mz_assert((cur_match_len >= TDEFL_MIN_MATCH_LEN) && (cur_match_dist >= 1) && (cur_match_dist <= TDEFL_LZ_DICT_SIZE));
-
-								cur_match_dist--;
-
-								pLZ_code_buf[0] = (uint8_t)(cur_match_len - TDEFL_MIN_MATCH_LEN);
-								*(uint16_t*)(&pLZ_code_buf[1]) = (uint16_t)cur_match_dist;
-								pLZ_code_buf += 3;
-								*pLZ_flags = (uint8_t)((*pLZ_flags >> 1) | 0x80);
-
-								s0 = s_tdefl_small_dist_sym[cur_match_dist & 511];
-								s1 = s_tdefl_large_dist_sym[cur_match_dist >> 8];
-								d->m_huff_count[1][(cur_match_dist < 512) ? s0 : s1]++;
-
-								d->m_huff_count[0][s_tdefl_len_sym[cur_match_len - TDEFL_MIN_MATCH_LEN]]++;
-							}
-						}
-						else
-						{
-							*pLZ_code_buf++ = (uint8_t)first_trigram;
-							*pLZ_flags = (uint8_t)(*pLZ_flags >> 1);
-							d->m_huff_count[0][(uint8_t)first_trigram]++;
-						}
-
-						if (--num_flags_left == 0) { num_flags_left = 8; pLZ_flags = pLZ_code_buf++; }
-
-						total_lz_bytes += cur_match_len;
-						lookahead_pos += cur_match_len;
-						dict_size = std::min<mz_uint>(dict_size + cur_match_len, TDEFL_LZ_DICT_SIZE);
-						cur_pos = (cur_pos + cur_match_len) & TDEFL_LZ_DICT_SIZE_MASK;
-						mz_assert(lookahead_size >= cur_match_len);
-						lookahead_size -= cur_match_len;
-
-						if (pLZ_code_buf > & d->m_lz_code_buf[TDEFL_LZ_CODE_BUF_SIZE - 8])
-						{
-							int n;
-							d->m_lookahead_pos = lookahead_pos; d->m_lookahead_size = lookahead_size; d->m_dict_size = dict_size;
-							d->m_total_lz_bytes = total_lz_bytes; d->m_pLZ_code_buf = pLZ_code_buf; d->m_pLZ_flags = pLZ_flags; d->m_num_flags_left = num_flags_left;
-							if ((n = tdefl_flush_block(d, 0)) != 0)
-								return (n < 0) ? MZ_FALSE : MZ_TRUE;
-							total_lz_bytes = d->m_total_lz_bytes; pLZ_code_buf = d->m_pLZ_code_buf; pLZ_flags = d->m_pLZ_flags; num_flags_left = d->m_num_flags_left;
-						}
-					}
-
-					while (lookahead_size)
-					{
-						uint8_t lit = d->m_dict[cur_pos];
-
-						total_lz_bytes++;
-						*pLZ_code_buf++ = lit;
-						*pLZ_flags = (uint8_t)(*pLZ_flags >> 1);
-						if (--num_flags_left == 0) { num_flags_left = 8; pLZ_flags = pLZ_code_buf++; }
-
-						d->m_huff_count[0][lit]++;
-
-						lookahead_pos++;
-						dict_size = std::min<mz_uint>(dict_size + 1, TDEFL_LZ_DICT_SIZE);
-						cur_pos = (cur_pos + 1) & TDEFL_LZ_DICT_SIZE_MASK;
-						lookahead_size--;
-
-						if (pLZ_code_buf > & d->m_lz_code_buf[TDEFL_LZ_CODE_BUF_SIZE - 8])
-						{
-							int n;
-							d->m_lookahead_pos = lookahead_pos; d->m_lookahead_size = lookahead_size; d->m_dict_size = dict_size;
-							d->m_total_lz_bytes = total_lz_bytes; d->m_pLZ_code_buf = pLZ_code_buf; d->m_pLZ_flags = pLZ_flags; d->m_num_flags_left = num_flags_left;
-							if ((n = tdefl_flush_block(d, 0)) != 0)
-								return (n < 0) ? MZ_FALSE : MZ_TRUE;
-							total_lz_bytes = d->m_total_lz_bytes; pLZ_code_buf = d->m_pLZ_code_buf; pLZ_flags = d->m_pLZ_flags; num_flags_left = d->m_num_flags_left;
-						}
-					}
-				}
-
-				d->m_lookahead_pos = lookahead_pos; d->m_lookahead_size = lookahead_size; d->m_dict_size = dict_size;
-				d->m_total_lz_bytes = total_lz_bytes; d->m_pLZ_code_buf = pLZ_code_buf; d->m_pLZ_flags = pLZ_flags; d->m_num_flags_left = num_flags_left;
-				return MZ_TRUE;
-			}
-			else
-			{
-				return MZ_FALSE;
-			}
-		}
-		mz_bool tdefl_compress_normal(tdefl_compressor* d)
-		{
-			const uint8_t* pSrc = d->m_pSrc; size_t src_buf_left = d->m_src_buf_left;
-			tdefl_flush flush = d->m_flush;
-
-			while ((src_buf_left) || ((flush) && (d->m_lookahead_size)))
-			{
-				mz_uint len_to_move, cur_match_dist, cur_match_len, cur_pos;
-				// Update dictionary and hash chains. Keeps the lookahead size equal to TDEFL_MAX_MATCH_LEN.
-				if ((d->m_lookahead_size + d->m_dict_size) >= (TDEFL_MIN_MATCH_LEN - 1))
-				{
-					mz_uint dst_pos = (d->m_lookahead_pos + d->m_lookahead_size) & TDEFL_LZ_DICT_SIZE_MASK, ins_pos = d->m_lookahead_pos + d->m_lookahead_size - 2;
-					mz_uint hash = (d->m_dict[ins_pos & TDEFL_LZ_DICT_SIZE_MASK] << TDEFL_LZ_HASH_SHIFT) ^ d->m_dict[(ins_pos + 1) & TDEFL_LZ_DICT_SIZE_MASK];
-					mz_uint num_bytes_to_process = std::min<mz_uint>(static_cast<mz_uint>(src_buf_left), static_cast<mz_uint>(TDEFL_MAX_MATCH_LEN - d->m_lookahead_size));
-					const uint8_t * pSrc_end = pSrc + num_bytes_to_process;
-					src_buf_left -= num_bytes_to_process;
-					d->m_lookahead_size += num_bytes_to_process;
-					while (pSrc != pSrc_end)
-					{
-						uint8_t c = *pSrc++; d->m_dict[dst_pos] = c; if (dst_pos < (TDEFL_MAX_MATCH_LEN - 1)) d->m_dict[TDEFL_LZ_DICT_SIZE + dst_pos] = c;
-						hash = ((hash << TDEFL_LZ_HASH_SHIFT) ^ c) & (TDEFL_LZ_HASH_SIZE - 1);
-						d->m_next[ins_pos & TDEFL_LZ_DICT_SIZE_MASK] = d->m_hash[hash]; d->m_hash[hash] = (uint16_t)(ins_pos);
-						dst_pos = (dst_pos + 1) & TDEFL_LZ_DICT_SIZE_MASK; ins_pos++;
-					}
-				}
-				else
-				{
-					while ((src_buf_left) && (d->m_lookahead_size < TDEFL_MAX_MATCH_LEN))
-					{
-						uint8_t c = *pSrc++;
-						mz_uint dst_pos = (d->m_lookahead_pos + d->m_lookahead_size) & TDEFL_LZ_DICT_SIZE_MASK;
-						src_buf_left--;
-						d->m_dict[dst_pos] = c;
-						if (dst_pos < (TDEFL_MAX_MATCH_LEN - 1))
-							d->m_dict[TDEFL_LZ_DICT_SIZE + dst_pos] = c;
-						if ((++d->m_lookahead_size + d->m_dict_size) >= TDEFL_MIN_MATCH_LEN)
-						{
-							mz_uint ins_pos = d->m_lookahead_pos + (d->m_lookahead_size - 1) - 2;
-							mz_uint hash = ((d->m_dict[ins_pos & TDEFL_LZ_DICT_SIZE_MASK] << (TDEFL_LZ_HASH_SHIFT * 2)) ^ (d->m_dict[(ins_pos + 1) & TDEFL_LZ_DICT_SIZE_MASK] << TDEFL_LZ_HASH_SHIFT) ^ c) & (TDEFL_LZ_HASH_SIZE - 1);
-							d->m_next[ins_pos & TDEFL_LZ_DICT_SIZE_MASK] = d->m_hash[hash]; d->m_hash[hash] = (uint16_t)(ins_pos);
-						}
-					}
-				}
-				d->m_dict_size = std::min(TDEFL_LZ_DICT_SIZE - d->m_lookahead_size, d->m_dict_size);
-				if ((!flush) && (d->m_lookahead_size < TDEFL_MAX_MATCH_LEN))
-					break;
-
-				// Simple lazy/greedy parsing state machine.
-				len_to_move = 1; cur_match_dist = 0; cur_match_len = d->m_saved_match_len ? d->m_saved_match_len : (TDEFL_MIN_MATCH_LEN - 1); cur_pos = d->m_lookahead_pos & TDEFL_LZ_DICT_SIZE_MASK;
-				if (d->m_flags & (TDEFL_RLE_MATCHES | TDEFL_FORCE_ALL_RAW_BLOCKS))
-				{
-					if ((d->m_dict_size) && (!(d->m_flags & TDEFL_FORCE_ALL_RAW_BLOCKS)))
-					{
-						uint8_t c = d->m_dict[(cur_pos - 1) & TDEFL_LZ_DICT_SIZE_MASK];
-						cur_match_len = 0; while (cur_match_len < d->m_lookahead_size) { if (d->m_dict[cur_pos + cur_match_len] != c) break; cur_match_len++; }
-						if (cur_match_len < TDEFL_MIN_MATCH_LEN) cur_match_len = 0; else cur_match_dist = 1;
-					}
-				}
-				else
-				{
-					tdefl_find_match(d, d->m_lookahead_pos, d->m_dict_size, d->m_lookahead_size, &cur_match_dist, &cur_match_len);
-				}
-				if (((cur_match_len == TDEFL_MIN_MATCH_LEN) && (cur_match_dist >= 8U * 1024U)) || (cur_pos == cur_match_dist) || ((d->m_flags & TDEFL_FILTER_MATCHES) && (cur_match_len <= 5)))
-				{
-					cur_match_dist = cur_match_len = 0;
-				}
-				if (d->m_saved_match_len)
-				{
-					if (cur_match_len > d->m_saved_match_len)
-					{
-						tdefl_record_literal(d, (uint8_t)d->m_saved_lit);
-						if (cur_match_len >= 128)
-						{
-							tdefl_record_match(d, cur_match_len, cur_match_dist);
-							d->m_saved_match_len = 0; len_to_move = cur_match_len;
-						}
-						else
-						{
-							d->m_saved_lit = d->m_dict[cur_pos]; d->m_saved_match_dist = cur_match_dist; d->m_saved_match_len = cur_match_len;
-						}
-					}
-					else
-					{
-						tdefl_record_match(d, d->m_saved_match_len, d->m_saved_match_dist);
-						len_to_move = d->m_saved_match_len - 1; d->m_saved_match_len = 0;
-					}
-				}
-				else if (!cur_match_dist)
-					tdefl_record_literal(d, d->m_dict[std::min<mz_uint>(cur_pos, sizeof(d->m_dict) - 1)]);
-				else if ((d->m_greedy_parsing) || (d->m_flags & TDEFL_RLE_MATCHES) || (cur_match_len >= 128))
-				{
-					tdefl_record_match(d, cur_match_len, cur_match_dist);
-					len_to_move = cur_match_len;
-				}
-				else
-				{
-					d->m_saved_lit = d->m_dict[std::min<mz_uint>(cur_pos, sizeof(d->m_dict) - 1)]; d->m_saved_match_dist = cur_match_dist; d->m_saved_match_len = cur_match_len;
-				}
-				// Move the lookahead forward by len_to_move bytes.
-				d->m_lookahead_pos += len_to_move;
-				mz_assert(d->m_lookahead_size >= len_to_move);
-				d->m_lookahead_size -= len_to_move;
-				d->m_dict_size = std::min<mz_uint>(d->m_dict_size + len_to_move, TDEFL_LZ_DICT_SIZE);
-				// Check if it's time to flush the current LZ codes to the internal output buffer.
-				if ((d->m_pLZ_code_buf > & d->m_lz_code_buf[TDEFL_LZ_CODE_BUF_SIZE - 8]) ||
-					((d->m_total_lz_bytes > 31 * 1024) && (((((mz_uint)(d->m_pLZ_code_buf - d->m_lz_code_buf) * 115) >> 7) >= d->m_total_lz_bytes) || (d->m_flags & TDEFL_FORCE_ALL_RAW_BLOCKS))))
-				{
-					int n;
-					d->m_pSrc = pSrc; d->m_src_buf_left = src_buf_left;
-					if ((n = tdefl_flush_block(d, 0)) != 0)
-						return (n < 0) ? MZ_FALSE : MZ_TRUE;
-				}
-			}
-
-			d->m_pSrc = pSrc; d->m_src_buf_left = src_buf_left;
-			return MZ_TRUE;
-		}
-		int tdefl_flush_block(tdefl_compressor* d, int flush)
-		{
-			mz_uint saved_bit_buf, saved_bits_in;
-			uint8_t* pSaved_output_buf;
-			mz_bool comp_block_succeeded = MZ_FALSE;
-			int n, use_raw_block = ((d->m_flags & TDEFL_FORCE_ALL_RAW_BLOCKS) != 0) && (d->m_lookahead_pos - d->m_lz_code_buf_dict_pos) <= d->m_dict_size;
-			uint8_t * pOutput_buf_start = ((d->m_pPut_buf_func == nullptr) && ((*d->m_pOut_buf_size - d->m_out_buf_ofs) >= TDEFL_OUT_BUF_SIZE)) ? ((uint8_t*)d->m_pOut_buf + d->m_out_buf_ofs) : d->m_output_buf;
-
-			d->m_pOutput_buf = pOutput_buf_start;
-			d->m_pOutput_buf_end = d->m_pOutput_buf + TDEFL_OUT_BUF_SIZE - 16;
-
-			mz_assert(!d->m_output_flush_remaining);
-			d->m_output_flush_ofs = 0;
-			d->m_output_flush_remaining = 0;
-
-			*d->m_pLZ_flags = (uint8_t)(*d->m_pLZ_flags >> d->m_num_flags_left);
-			d->m_pLZ_code_buf -= (d->m_num_flags_left == 8);
-
-			if ((d->m_flags & TDEFL_WRITE_ZLIB_HEADER) && (!d->m_block_index))
-			{
-				tdefl_put_bits(d, 0x78, 8);
-				tdefl_put_bits(d, 0x01, 8);
-			}
-
-			tdefl_put_bits(d, flush == TDEFL_FINISH, 1);
-
-			pSaved_output_buf = d->m_pOutput_buf; saved_bit_buf = d->m_bit_buffer; saved_bits_in = d->m_bits_in;
-
-			if (!use_raw_block)
-				comp_block_succeeded = tdefl_compress_block(d, (d->m_flags & TDEFL_FORCE_ALL_STATIC_BLOCKS) || (d->m_total_lz_bytes < 48));
-
-			// If the block gets expanded, forget the current contents of the output buffer and send a raw block instead.
-			if (((use_raw_block) || ((d->m_total_lz_bytes) && ((d->m_pOutput_buf - pSaved_output_buf + 1U) >= d->m_total_lz_bytes))) &&
-				((d->m_lookahead_pos - d->m_lz_code_buf_dict_pos) <= d->m_dict_size))
-			{
-				mz_uint i; d->m_pOutput_buf = pSaved_output_buf; d->m_bit_buffer = saved_bit_buf, d->m_bits_in = saved_bits_in;
-				tdefl_put_bits(d, 0, 2);
-				if (d->m_bits_in) { tdefl_put_bits(d, 0, 8 - d->m_bits_in); }
-				for (i = 2; i; --i, d->m_total_lz_bytes ^= 0xFFFF)
-				{
-					tdefl_put_bits(d, d->m_total_lz_bytes & 0xFFFF, 16);
-				}
-				for (i = 0; i < d->m_total_lz_bytes; ++i)
-				{
-					tdefl_put_bits(d, d->m_dict[(d->m_lz_code_buf_dict_pos + i) & TDEFL_LZ_DICT_SIZE_MASK], 8);
-				}
-			}
-			// Check for the extremely unlikely (if not impossible) case of the compressed block not fitting into the output buffer when using dynamic codes.
-			else if (!comp_block_succeeded)
-			{
-				d->m_pOutput_buf = pSaved_output_buf; d->m_bit_buffer = saved_bit_buf, d->m_bits_in = saved_bits_in;
-				tdefl_compress_block(d, MZ_TRUE);
-			}
-
-			if (flush)
-			{
-				if (flush == TDEFL_FINISH)
-				{
-					if (d->m_bits_in) { tdefl_put_bits(d, 0, 8 - d->m_bits_in); }
-					if (d->m_flags & TDEFL_WRITE_ZLIB_HEADER) { mz_uint i, a = d->m_adler32; for (i = 0; i < 4; i++) { tdefl_put_bits(d, (a >> 24) & 0xFF, 8); a <<= 8; } }
-				}
-				else
-				{
-					mz_uint i, z = 0; tdefl_put_bits(d, 0, 3); if (d->m_bits_in) { tdefl_put_bits(d, 0, 8 - d->m_bits_in); } for (i = 2; i; --i, z ^= 0xFFFF) { tdefl_put_bits(d, z & 0xFFFF, 16); }
-				}
-			}
-
-			mz_assert(d->m_pOutput_buf < d->m_pOutput_buf_end);
-
-			memset(&d->m_huff_count[0][0], 0, sizeof(d->m_huff_count[0][0]) * TDEFL_MAX_HUFF_SYMBOLS_0);
-			memset(&d->m_huff_count[1][0], 0, sizeof(d->m_huff_count[1][0]) * TDEFL_MAX_HUFF_SYMBOLS_1);
-
-			d->m_pLZ_code_buf = d->m_lz_code_buf + 1; d->m_pLZ_flags = d->m_lz_code_buf; d->m_num_flags_left = 8; d->m_lz_code_buf_dict_pos += d->m_total_lz_bytes; d->m_total_lz_bytes = 0; d->m_block_index++;
-
-			if ((n = (int)(d->m_pOutput_buf - pOutput_buf_start)) != 0)
-			{
-				if (d->m_pPut_buf_func)
-				{
-					*d->m_pIn_buf_size = d->m_pSrc - (const uint8_t*)d->m_pIn_buf;
-					if (!(*d->m_pPut_buf_func)(d->m_output_buf, n, d->m_pPut_buf_user))
-						return (d->m_prev_return_status = TDEFL_STATUS_PUT_BUF_FAILED);
-				}
-				else if (pOutput_buf_start == d->m_output_buf)
-				{
-					int bytes_to_copy = (int)std::min((size_t)n, (size_t)(*d->m_pOut_buf_size - d->m_out_buf_ofs));
-					memcpy((uint8_t*)d->m_pOut_buf + d->m_out_buf_ofs, d->m_output_buf, bytes_to_copy);
-					d->m_out_buf_ofs += bytes_to_copy;
-					if ((n -= bytes_to_copy) != 0)
-					{
-						d->m_output_flush_ofs = bytes_to_copy;
-						d->m_output_flush_remaining = n;
-					}
-				}
-				else
-				{
-					d->m_out_buf_ofs += n;
-				}
-			}
-
-			return d->m_output_flush_remaining;
-		}
-		void tdefl_find_match(tdefl_compressor* d, mz_uint lookahead_pos, mz_uint max_dist, mz_uint max_match_len, mz_uint* pMatch_dist, mz_uint* pMatch_len)
-		{
-
-			if constexpr (UnalignedLoadStore)
-			{
-				mz_uint dist, pos = lookahead_pos & TDEFL_LZ_DICT_SIZE_MASK, match_len = *pMatch_len, probe_pos = pos, next_probe_pos, probe_len;
-				mz_uint num_probes_left = d->m_max_probes[match_len >= 32];
-				const uint16_t* s = (const uint16_t*)(d->m_dict + pos), *p, *q;
-				uint16_t c01 = TDEFL_READ_UNALIGNED_WORD(&d->m_dict[pos + match_len - 1]), s01 = TDEFL_READ_UNALIGNED_WORD(s);
-				mz_assert(max_match_len <= TDEFL_MAX_MATCH_LEN); if (max_match_len <= match_len) return;
-				for(;;)
-				{
-					for(;;)
-					{
-						if (--num_probes_left == 0) return;
-						#define TDEFL_PROBE \
-							next_probe_pos = d->m_next[probe_pos]; \
-							if ((!next_probe_pos) || ((dist = (uint16_t)(lookahead_pos - next_probe_pos)) > max_dist)) return; \
-							probe_pos = next_probe_pos & TDEFL_LZ_DICT_SIZE_MASK; \
-							if (TDEFL_READ_UNALIGNED_WORD(&d->m_dict[probe_pos + match_len - 1]) == c01) break;
-						TDEFL_PROBE; TDEFL_PROBE; TDEFL_PROBE;
-					}
-					if (!dist) break; q = (const uint16_t*)(d->m_dict + probe_pos); if (TDEFL_READ_UNALIGNED_WORD(q) != s01) continue; p = s; probe_len = 32;
-					do {}
-					while ((TDEFL_READ_UNALIGNED_WORD(++p) == TDEFL_READ_UNALIGNED_WORD(++q)) && (TDEFL_READ_UNALIGNED_WORD(++p) == TDEFL_READ_UNALIGNED_WORD(++q)) &&
-						(TDEFL_READ_UNALIGNED_WORD(++p) == TDEFL_READ_UNALIGNED_WORD(++q)) && (TDEFL_READ_UNALIGNED_WORD(++p) == TDEFL_READ_UNALIGNED_WORD(++q)) && (--probe_len > 0));
-					if (!probe_len)
-					{
-						*pMatch_dist = dist;
-						*pMatch_len = std::min<mz_uint>(max_match_len, TDEFL_MAX_MATCH_LEN);
-						break;
-					}
-					else if ((probe_len = ((mz_uint)(p - s) * 2) + (mz_uint)(*(const uint8_t*)p == *(const uint8_t*)q)) > match_len)
-					{
-						*pMatch_dist = dist; if ((*pMatch_len = match_len = std::min(max_match_len, probe_len)) == max_match_len) break;
-						c01 = TDEFL_READ_UNALIGNED_WORD(&d->m_dict[pos + match_len - 1]);
-					}
-				}
-			}
-			else
-			{
-				mz_uint dist, pos = lookahead_pos & TDEFL_LZ_DICT_SIZE_MASK, match_len = *pMatch_len, probe_pos = pos, next_probe_pos, probe_len;
-				mz_uint num_probes_left = d->m_max_probes[match_len >= 32];
-				const uint8_t* s = d->m_dict + pos, * p, * q;
-				uint8_t c0 = d->m_dict[pos + match_len], c1 = d->m_dict[pos + match_len - 1];
-				mz_assert(max_match_len <= TDEFL_MAX_MATCH_LEN); if (max_match_len <= match_len) return;
-				for(;;)
-				{
-					for(;;)
-					{
-						if (--num_probes_left == 0) return;
-						#define TDEFL_PROBE \
-			next_probe_pos = d->m_next[probe_pos]; \
-			if ((!next_probe_pos) || ((dist = (uint16_t)(lookahead_pos - next_probe_pos)) > max_dist)) return; \
-			probe_pos = next_probe_pos & TDEFL_LZ_DICT_SIZE_MASK; \
-			if ((d->m_dict[probe_pos + match_len] == c0) && (d->m_dict[probe_pos + match_len - 1] == c1)) break;
-						TDEFL_PROBE; TDEFL_PROBE; TDEFL_PROBE;
-					}
-					if (!dist) break; p = s; q = d->m_dict + probe_pos; for (probe_len = 0; probe_len < max_match_len; probe_len++) if (*p++ != *q++) break;
-					if (probe_len > match_len)
-					{
-						*pMatch_dist = dist; if ((*pMatch_len = match_len = probe_len) == max_match_len) return;
-						c0 = d->m_dict[pos + match_len]; c1 = d->m_dict[pos + match_len - 1];
-					}
-				}
-			}
-		}
-		void tdefl_record_literal(tdefl_compressor* d, uint8_t lit)
-		{
-			d->m_total_lz_bytes++;
-			*d->m_pLZ_code_buf++ = lit;
-			*d->m_pLZ_flags = (uint8_t)(*d->m_pLZ_flags >> 1); if (--d->m_num_flags_left == 0) { d->m_num_flags_left = 8; d->m_pLZ_flags = d->m_pLZ_code_buf++; }
-			d->m_huff_count[0][lit]++;
-		}
-		void tdefl_record_match(tdefl_compressor* d, mz_uint match_len, mz_uint match_dist)
-		{
-			uint32_t s0, s1;
-
-			mz_assert((match_len >= TDEFL_MIN_MATCH_LEN) && (match_dist >= 1) && (match_dist <= TDEFL_LZ_DICT_SIZE));
-
-			d->m_total_lz_bytes += match_len;
-
-			d->m_pLZ_code_buf[0] = (uint8_t)(match_len - TDEFL_MIN_MATCH_LEN);
-
-			match_dist -= 1;
-			d->m_pLZ_code_buf[1] = (uint8_t)(match_dist & 0xFF);
-			d->m_pLZ_code_buf[2] = (uint8_t)(match_dist >> 8); d->m_pLZ_code_buf += 3;
-
-			*d->m_pLZ_flags = (uint8_t)((*d->m_pLZ_flags >> 1) | 0x80); if (--d->m_num_flags_left == 0) { d->m_num_flags_left = 8; d->m_pLZ_flags = d->m_pLZ_code_buf++; }
-
-			s0 = s_tdefl_small_dist_sym[match_dist & 511]; s1 = s_tdefl_large_dist_sym[(match_dist >> 8) & 127];
-			d->m_huff_count[1][(match_dist < 512) ? s0 : s1]++;
-
-			if (match_len >= TDEFL_MIN_MATCH_LEN) d->m_huff_count[0][s_tdefl_len_sym[match_len - TDEFL_MIN_MATCH_LEN]]++;
-		}
 		tdefl_status tdefl_flush_output_buffer(tdefl_compressor* d)
 		{
-			if (d->m_pIn_buf_size)
+			if (m_pIn_buf_size)
 			{
-				*d->m_pIn_buf_size = d->m_pSrc - (const uint8_t*)d->m_pIn_buf;
+				*m_pIn_buf_size = m_pSrc - (const uint8_t*)m_pIn_buf;
 			}
 
-			if (d->m_pOut_buf_size)
+			if (m_pOut_buf_size)
 			{
-				auto n = std::min<mz_uint>(static_cast<mz_uint>(*d->m_pOut_buf_size - d->m_out_buf_ofs), d->m_output_flush_remaining);
-				memcpy((uint8_t*)d->m_pOut_buf + d->m_out_buf_ofs, d->m_output_buf + d->m_output_flush_ofs, n);
-				d->m_output_flush_ofs += (mz_uint)n;
-				d->m_output_flush_remaining -= (mz_uint)n;
-				d->m_out_buf_ofs += n;
+				auto n = std::min<mz_uint>(static_cast<mz_uint>(*m_pOut_buf_size - m_out_buf_ofs), m_output_flush_remaining);
+				memcpy((uint8_t*)m_pOut_buf + m_out_buf_ofs, m_output_buf + m_output_flush_ofs, n);
+				m_output_flush_ofs += (mz_uint)n;
+				m_output_flush_remaining -= (mz_uint)n;
+				m_out_buf_ofs += n;
 
-				*d->m_pOut_buf_size = d->m_out_buf_ofs;
+				*m_pOut_buf_size = m_out_buf_ofs;
 			}
 
-			return (d->m_finished && !d->m_output_flush_remaining) ? TDEFL_STATUS_DONE : TDEFL_STATUS_OKAY;
+			return (m_finished && !m_output_flush_remaining) ? TDEFL_STATUS_DONE : TDEFL_STATUS_OKAY;
 		}
 		static mz_bool tdefl_output_buffer_putter(const void* pBuf, int len, void* pUser)
 		{
@@ -4126,72 +4117,22 @@ namespace pr::storage::zip
 			return (s2 << 16) + s1;
 		}
 
-
-
-		// Purposely making these tables static for faster init and thread safety.
-		inline static const uint16_t s_tdefl_len_sym[256] =
-		{
-			257, 258, 259, 260, 261, 262, 263, 264, 265, 265, 266, 266, 267, 267, 268, 268, 269, 269, 269, 269, 270, 270, 270, 270, 271, 271, 271, 271, 272, 272, 272, 272,
-			273, 273, 273, 273, 273, 273, 273, 273, 274, 274, 274, 274, 274, 274, 274, 274, 275, 275, 275, 275, 275, 275, 275, 275, 276, 276, 276, 276, 276, 276, 276, 276,
-			277, 277, 277, 277, 277, 277, 277, 277, 277, 277, 277, 277, 277, 277, 277, 277, 278, 278, 278, 278, 278, 278, 278, 278, 278, 278, 278, 278, 278, 278, 278, 278,
-			279, 279, 279, 279, 279, 279, 279, 279, 279, 279, 279, 279, 279, 279, 279, 279, 280, 280, 280, 280, 280, 280, 280, 280, 280, 280, 280, 280, 280, 280, 280, 280,
-			281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281,
-			282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282,
-			283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283,
-			284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 285,
-		};
-		inline static const uint8_t s_tdefl_len_extra[256] =
-		{
-			0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-			5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-			5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 0,
-		};
-		inline static const uint8_t s_tdefl_small_dist_sym[512] =
-		{
-			0, 1, 2, 3, 4, 4, 5, 5, 6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 9, 9, 9, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11,
-			11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 13,
-			13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14,
-			14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14,
-			14, 14, 14, 14, 14, 14, 14, 14, 14, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
-			15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
-			16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
-			16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
-			16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17,
-			17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17,
-			17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17,
-			17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17,
-		};
-		inline static const uint8_t s_tdefl_small_dist_extra[512] =
-		{
-			0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5,
-			5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
-			6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
-			6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-			7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-			7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-			7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-			7, 7, 7, 7, 7, 7, 7, 7,
-		};
-		inline static const uint8_t s_tdefl_large_dist_sym[128] =
-		{
-			0, 0, 18, 19, 20, 20, 21, 21, 22, 22, 22, 22, 23, 23, 23, 23, 24, 24, 24, 24, 24, 24, 24, 24, 25, 25, 25, 25, 25, 25, 25, 25, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26,
-			26, 26, 26, 26, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28,
-			28, 28, 28, 28, 28, 28, 28, 28, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29,
-		};
-		inline static const uint8_t s_tdefl_large_dist_extra[128] =
-		{
-			0, 0, 8, 8, 9, 9, 9, 9, 10, 10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,
-			12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
-			13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
-		};
-		inline static const mz_uint mz_bitmasks[17] =
-		{
-			0x0000, 0x0001, 0x0003, 0x0007, 0x000F, 0x001F, 0x003F, 0x007F, 0x00FF, 0x01FF, 0x03FF, 0x07FF, 0x0FFF, 0x1FFF, 0x3FFF, 0x7FFF, 0xFFFF
-		};
 		#endif
 
 	private:
+
+		// Callback for writing compressed data to the zip
+		static void ZipWriterFunc(void const* buf, int len, void* ctx)
+		{
+			#if 0 // Finding compiler bug
+			auto& pState = static_cast<mz_zip_writer_add_state*>(ctx);
+			if ((int)pState->m_pZip->m_pWrite(pState->m_pZip->m_pIO_opaque, pState->m_cur_archive_file_ofs, pBuf, len) != len)
+				return MZ_FALSE;
+			pState->m_cur_archive_file_ofs += len;
+			pState->m_comp_size += len;
+			return MZ_TRUE;
+			#endif
+		}
 
 		// Validate an archive item name
 		static bool ValidateItemName(std::string_view item_name)
@@ -4261,7 +4202,7 @@ namespace pr::storage::zip
 		}
 
 		// Accumulate the crc of given data.
-		static uint32_t Crc(void const* ptr, size_t buf_len, uint32_t crc = 0)
+		static uint32_t Crc(void const* ptr, size_t buf_len, uint32_t crc = InitialCrc)
 		{
 			// Karl Malbrain's compact CRC-32. See "A compact CCITT crc16 and crc32 C implementation that balances
 			// processor cache usage against speed": http://www.geocities.com/malbrain/
@@ -4283,11 +4224,41 @@ namespace pr::storage::zip
 			}
 			return ~crc;
 		}
+		static uint32_t Crc(std::ifstream& ifile, uint32_t crc = InitialCrc)
+		{
+			// Preserve the current file pointer position
+			auto fpos = ifile.tellg();
+			ifile.seekg(0);
+
+			// Read from the file in blocks
+			std::array<char, 4096> buf;
+			for (;ifile.read(buf.data(), buf.size()).good();)
+				crc = Crc(buf.data(), ifile.gcount(), crc);
+
+			// Restoure the file pointer position
+			ifile.seekg(fpos);
+			return crc;
+		}
+
+		// Return 'value' with 'length' bits reversed
+		template <typename TInt>
+		static TInt ReverseBits(TInt value, int length)
+		{
+			assert(length <= sizeof(TInt) * 8);
+
+			TInt reversed = 0;
+			for (; length-- != 0;)
+			{
+				reversed = (reversed << 1) | (value & 1);
+				value >>= 1;
+			}
+			return reversed;
+		}
 
 		// CompileTime accumulative hash 
+		static uint64_t const FNV_prime64 = 1099511628211ULL;
 		static uint64_t const FNV_offset_basis64 = 14695981039346656037ULL;
-		static uint64_t const FNV_prime64        = 1099511628211ULL;
-		static constexpr uint64_t Hash64CT(uint64_t ch, uint64_t h)
+		static constexpr uint64_t Hash64CT(uint64_t ch, uint64_t h = FNV_offset_basis64)
 		{
 			return Mul64(h ^ ch, FNV_prime64);
 		}
@@ -4306,15 +4277,29 @@ namespace pr::storage::zip
 		static constexpr uint64_t Lo32(uint64_t x) { return (x      ) & uint32_t(-1); }
 		static_assert(Mul64(0x1234567887654321, 0x1234567887654321) == 0x290D0FCAD7A44A41, "Compile time multiply failed");
 
-		// Helper for detecting data lost when casting
-		template <typename T, typename U> T checked_cast(U x)
+		// Append bytes to a vector of bytes
+		static void append(vector_t<uint8_t>& vec, void const* beg, void const* end)
 		{
-			assert("Cast loses data" && static_cast<U>(static_cast<T>(x)) == x);
+			vec.insert(vec.end(), static_cast<uint8_t const*>(beg), static_cast<uint8_t const*>(end));
+		}
+		static void append(vector_t<uint8_t>& vec, std::span<uint8_t const> bytes)
+		{
+			vec.insert(vec.end(), bytes.begin(), bytes.end());
+		}
+		static void append(vector_t<uint8_t>& vec, std::string_view str)
+		{
+			vec.insert(vec.end(), str.data(), str.data() + str.size());
+		}
+
+		// Helper for detecting data lost when casting
+		template <typename T, typename U> static constexpr T checked_cast(U x)
+		{
+			assert(static_cast<U>(static_cast<T>(x)) == x && "Cast loses data");
 			return static_cast<T>(x);
 		}
 
 		// True if 'ofs' is an aligned offset in the output stream
-		template <typename T> bool is_aligned(int64_t ofs) const
+		template <typename T> bool is_aligned(T ofs) const
 		{
 			if (m_entry_alignment == 0) return true;
 			return (ofs & (m_entry_alignment - 1)) == 0;
@@ -4332,6 +4317,9 @@ namespace pr::storage::zip
 				return (value & flags) == flags;
 		}
 
+		// Integer divide by 3 with round up
+		static constexpr int Div3(int x) { return (x + 2) / 3; }
+
 		// Less operator for name_hash_index_pair_t (used when searching 'm_central_dir_lookup')
 		friend constexpr bool operator < (name_hash_index_pair_t const& lhs, name_hash_index_pair_t const& rhs)
 		{
@@ -4346,67 +4334,65 @@ namespace pr::storage::zip
 			return lhs < rhs.name_hash;
 		}
 
-		// Casting helper
-		union variant_cptr_t
-		{
-			void const* vp;
-			uint32_t const* u32;
-			uint16_t const* u16;
-			uint8_t const* u8;
-			variant_cptr_t(void const* x) :vp(x) {}
-		};
-		union variant_mptr_t
-		{
-			void* vp;
-			uint32_t* u32;
-			uint16_t* u16;
-			uint8_t* u8;
-			variant_mptr_t(void* x) :vp(x) {}
-		};
+	private:
 
-		//// Read / Write helper functions
-		//static uint16_t ReadLE16(variant_cptr_t ptr)
-		//{
-		//	if constexpr (LittleEndian && UnalignedLoadStore)
-		//		return *ptr.u16;
-		//	else
-		//		return static_cast<uint16_t>((ptr.u8[1] << 8U) | (ptr.u8[0]));
-		//}
-		//static uint32_t ReadLE32(variant_cptr_t ptr)
-		//{
-		//	if constexpr (LittleEndian && UnalignedLoadStore)
-		//		return *ptr.u32;
-		//	else
-		//		return static_cast<uint32_t>((ptr.u8[3] << 24U) | (ptr.u8[2] << 16U) | (ptr.u8[1] << 8U) | (ptr.u8[0]));
-		//}
-		//static void WriteLE16(variant_mptr_t ptr, uint64_t v)
-		//{
-		//	assert(v <= 0xFFFF);
-		//	if constexpr (LittleEndian && UnalignedLoadStore)
-		//	{
-		//		ptr.u16[0] = static_cast<uint16_t>(v);
-		//	}
-		//	else
-		//	{
-		//		ptr.u8[0] = static_cast<uint8_t>((v >> 0) & 0xFF);
-		//		ptr.u8[1] = static_cast<uint8_t>((v >> 8) & 0xFF);
-		//	}
-		//}
-		//static void WriteLE32(variant_mptr_t ptr, uint64_t v)
-		//{
-		//	assert(v <= 0xFFFFFFFF);
-		//	if constexpr (LittleEndian && UnalignedLoadStore)
-		//	{
-		//		ptr.u32[0] = static_cast<uint32_t>(v);
-		//	}
-		//	else
-		//	{
-		//		ptr.u8[0] = static_cast<uint8_t>((v >>  0) & 0xFF);
-		//		ptr.u8[1] = static_cast<uint8_t>((v >>  8) & 0xFF);
-		//		ptr.u8[2] = static_cast<uint8_t>((v >> 16) & 0xFF);
-		//		ptr.u8[3] = static_cast<uint8_t>((v >> 24) & 0xFF);
-		//	}
-		//}
+		// Purposely making these tables static for faster init and thread safety.
+		inline static std::array<uint16_t, 256> const s_tdefl_len_sym =
+		{
+			257, 258, 259, 260, 261, 262, 263, 264, 265, 265, 266, 266, 267, 267, 268, 268, 269, 269, 269, 269, 270, 270, 270, 270, 271, 271, 271, 271, 272, 272, 272, 272,
+			273, 273, 273, 273, 273, 273, 273, 273, 274, 274, 274, 274, 274, 274, 274, 274, 275, 275, 275, 275, 275, 275, 275, 275, 276, 276, 276, 276, 276, 276, 276, 276,
+			277, 277, 277, 277, 277, 277, 277, 277, 277, 277, 277, 277, 277, 277, 277, 277, 278, 278, 278, 278, 278, 278, 278, 278, 278, 278, 278, 278, 278, 278, 278, 278,
+			279, 279, 279, 279, 279, 279, 279, 279, 279, 279, 279, 279, 279, 279, 279, 279, 280, 280, 280, 280, 280, 280, 280, 280, 280, 280, 280, 280, 280, 280, 280, 280,
+			281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281, 281,
+			282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282, 282,
+			283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283,
+			284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 285,
+		};
+		inline static std::array<uint8_t, 256> const s_tdefl_len_extra =
+		{
+			0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+			5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+			5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 0,
+		};
+		inline static std::array<uint8_t, 512> const s_tdefl_small_dist_sym =
+		{
+			0, 1, 2, 3, 4, 4, 5, 5, 6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 9, 9, 9, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11,
+			11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 13,
+			13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14,
+			14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14,
+			14, 14, 14, 14, 14, 14, 14, 14, 14, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+			15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
+			16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
+			16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
+			16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17,
+			17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17,
+			17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17,
+			17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17,
+		};
+		inline static std::array<uint8_t, 512> const s_tdefl_small_dist_extra =
+		{
+			0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5,
+			5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+			6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+			6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+			7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+			7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+			7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+			7, 7, 7, 7, 7, 7, 7, 7,
+		};
+		inline static std::array<uint8_t, 128> const s_tdefl_large_dist_sym =
+		{
+			0, 0, 18, 19, 20, 20, 21, 21, 22, 22, 22, 22, 23, 23, 23, 23, 24, 24, 24, 24, 24, 24, 24, 24, 25, 25, 25, 25, 25, 25, 25, 25, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26,
+			26, 26, 26, 26, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28,
+			28, 28, 28, 28, 28, 28, 28, 28, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29,
+		};
+		inline static std::array<uint8_t, 128> const s_tdefl_large_dist_extra =
+		{
+			0, 0, 8, 8, 9, 9, 9, 9, 10, 10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,
+			12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+			13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
+		};
 	};
 	using ZipArchive = ZipArchiveA<std::allocator<void>>;
 }
@@ -4435,8 +4421,19 @@ namespace pr::storage
 			std::basic_ifstream<uint8_t> ifile(path / "binary-00-0F.bin");
 			std::basic_stringstream<uint8_t> file_bytes;
 			file_bytes << ifile.rdbuf();
-
 			PR_CHECK(bytes == file_bytes.str(), true);
+		}
+
+		// Write a test zip file
+		{
+			zip::ZipArchive z;
+			z.Add("binary-00-0f.bin", path / "binary-00-0F.bin");
+
+			//std::basic_ifstream<uint8_t> zip(path / "binary-00-0F.zip");
+			//std::basic_stringstream<uint8_t> zip_bytes;
+			//zip_bytes << zip.rdbuf();
+			//PR_CHECK(zip == zip_bytes.str(), true);
+
 		}
 
 		//{// Write a zip file
@@ -4471,659 +4468,6 @@ namespace pr::storage
 	}
 }
 #endif
-
-
-
-
-#if 0
-struct ZipInfo
-{
-	std::string filename;
-
-	struct
-	{
-		int year = 1980;
-		int month = 0;
-		int day = 0;
-		int hours = 0;
-		int minutes = 0;
-		int seconds = 0;
-	} date_time;
-
-	std::string comment;
-	std::string extra;
-	uint16_t create_system = 0;
-	uint16_t create_version = 0;
-	uint16_t extract_version = 0;
-	uint16_t flag_bits = 0;
-	std::size_t volume = 0;
-	uint32_t internal_attr = 0;
-	uint32_t external_attr = 0;
-	std::size_t header_offset = 0;
-	uint32_t crc = 0;
-	std::size_t compress_size = 0;
-	std::size_t file_size = 0;
-};
-
-class ZipFile
-{
-	using miniz = ZipArchive<>;
-	std::unique_ptr<miniz::mz_zip_archive> mutable m_archive;
-	std::filesystem::path m_filepath;
-	std::stringstream m_open_stream;
-	std::vector<char> m_buffer;
-	std::string m_comment;
-	miniz m;
-
-public:
-	enum class ECompression
-	{
-		None = miniz::MZ_NO_COMPRESSION,
-		Fast = miniz::MZ_BEST_SPEED,
-		Default = miniz::MZ_DEFAULT_LEVEL,
-		Best = miniz::MZ_BEST_COMPRESSION,
-		Uber = miniz::MZ_UBER_COMPRESSION, // Not zlib compatible
-	};
-
-	ZipFile()
-		:m_archive(new miniz::mz_zip_archive())
-		,m_filepath()
-		,m_open_stream()
-		,m_buffer()
-		,m_comment()
-		,m()
-	{
-		Reset();
-	}
-	ZipFile(std::filesystem::path const& filename)
-		:ZipFile()
-	{
-		Load(filename);
-	}
-	ZipFile(std::istream& stream)
-		:ZipFile()
-	{
-		Load(stream);
-	}
-	ZipFile(std::vector<unsigned char> const& bytes)
-		:ZipFile()
-	{
-		Load(bytes);
-	}
-	~ZipFile()
-	{
-		Reset();
-	}
-
-	// The archive filepath
-	std::filesystem::path Filepath() const
-	{
-		return m_filepath;
-	}
-
-	// Comment associated with the archive
-	std::string Comment() const
-	{
-		return m_comment;
-	}
-
-	// Load a zip file into memory
-	void Load(std::istream& stream)
-	{
-		Reset();
-		m_buffer.assign(std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>());
-		RemoveComment();
-		StartRead();
-	}
-	void Load(std::filesystem::path const& filepath)
-	{
-		if (!std::filesystem::exists(filepath))
-			throw std::runtime_error(std::string().append("file '").append(filepath.string()).append("' not found"));
-
-		m_filepath = filepath;
-
-		std::ifstream stream(filepath, std::ios::binary);
-		Load(stream);
-	}
-	void Load(std::vector<unsigned char> const& bytes)
-	{
-		Reset();
-		m_buffer.assign(bytes.begin(), bytes.end());
-		RemoveComment();
-		StartRead();
-	}
-
-	// Save a zip file
-	void Save(std::filesystem::path const& filepath)
-	{
-		m_filepath = filepath;
-
-		std::ofstream stream(filepath, std::ios::binary);
-		Save(stream);
-	}
-	void Save(std::ostream &stream)
-	{
-		if (m_archive->m_zip_mode == miniz::MZ_ZIP_MODE_WRITING)
-			m.mz_zip_writer_finalize_archive(m_archive.get());
-
-		if (m_archive->m_zip_mode == miniz::MZ_ZIP_MODE_WRITING_HAS_BEEN_FINALIZED)
-			m.mz_zip_writer_end(m_archive.get());
-
-		if (m_archive->m_zip_mode == miniz::MZ_ZIP_MODE_INVALID)
-			StartRead();
-
-		AppendComment();
-		stream.write(m_buffer.data(), static_cast<long>(m_buffer.size()));
-	}
-	void Save(std::vector<unsigned char> &bytes)
-	{
-		if (m_archive->m_zip_mode == miniz::MZ_ZIP_MODE_WRITING)
-			m.mz_zip_writer_finalize_archive(m_archive.get());
-
-		if (m_archive->m_zip_mode == miniz::MZ_ZIP_MODE_WRITING_HAS_BEEN_FINALIZED)
-			m.mz_zip_writer_end(m_archive.get());
-
-		if (m_archive->m_zip_mode == miniz::MZ_ZIP_MODE_INVALID)
-			StartRead();
-
-		AppendComment();
-		bytes.assign(m_buffer.begin(), m_buffer.end());
-	}
-
-	// True if the archive contains 'name'
-	bool HasFile(std::string const& name)
-	{
-		if (m_archive->m_zip_mode != miniz::MZ_ZIP_MODE_READING)
-			StartRead();
-
-		auto index = m.IndexOf(m_archive.get(), name.c_str(), nullptr, 0);
-		return index != -1;
-	}
-	bool HasFile(ZipInfo const& name)
-	{
-		return HasFile(name.filename);
-	}
-
-	// Read info about an item in the archive
-	ZipInfo Info(std::string const& name)
-	{
-		if (m_archive->m_zip_mode != miniz::MZ_ZIP_MODE_READING)
-			StartRead();
-
-		int index = m.IndexOf(m_archive.get(), name.c_str(), nullptr, 0);
-		if (index == -1) throw std::runtime_error("not found");
-		return Info(index);
-	}
-
-	// Read info for each item in the archive
-	std::vector<ZipInfo> InfoList()
-	{
-		if (m_archive->m_zip_mode != miniz::MZ_ZIP_MODE_READING)
-			StartRead();
-
-		std::vector<ZipInfo> info;
-		for (std::size_t i = 0; i < m.mz_zip_reader_get_num_files(m_archive.get()); i++)
-			info.push_back(Info(static_cast<int>(i)));
-
-		return info;
-	}
-
-	// Return the names of the items in the archive
-	std::vector<std::string> NameList()
-	{
-		std::vector<std::string> names;
-		for (auto& info : InfoList())
-			names.push_back(info.filename);
-
-		return names;
-	}
-
-	// Open an item in the archive into the internal stream
-	std::ostream& Open(std::string const& name)
-	{
-		return Open(Info(name));
-	}
-	std::ostream& Open(ZipInfo const& name)
-	{
-		auto data = Read(name);
-
-		std::string data_string(data.begin(), data.end());
-		m_open_stream << data_string;
-		return m_open_stream;
-	}
-
-	// Extract an item to a file on disk
-	void Extract(std::string const& member, std::filesystem::path path)
-	{
-		auto outpath = path.append(member);
-		std::fstream stream(outpath, std::ios::binary | std::ios::out);
-		stream << Open(member).rdbuf();
-	}
-	void Extract(ZipInfo const& member, std::filesystem::path path)
-	{
-		auto outpath = path.append(member.filename);
-		std::fstream stream(outpath, std::ios::binary | std::ios::out);
-		stream << Open(member).rdbuf();
-	}
-	void ExtractAll(std::filesystem::path const& path)
-	{
-		ExtractAll(path, InfoList());
-	}
-	void ExtractAll(std::filesystem::path const& path, std::vector<std::string> const& members)
-	{
-		for (auto& member : members)
-			Extract(member, path);
-	}
-	void ExtractAll(std::filesystem::path const& path, std::vector<ZipInfo> const& members)
-	{
-		for (auto &member : members)
-			Extract(member, path);
-	}
-
-	// Extract an item to memory
-	std::string Read(std::string const& name)
-	{
-		return Read(Info(name));
-	}
-	std::string Read(ZipInfo const& info)
-	{
-		std::size_t size;
-		auto data = static_cast<char*>(m.mz_zip_reader_extract_file_to_heap(m_archive.get(), info.filename.c_str(), &size, 0));
-		if (data == nullptr)
-			throw std::runtime_error("file couldn't be read");
-
-		std::string extracted(data, data + size);
-		m.mz_free(data);
-		return extracted;
-	}
-
-	// Add an item to the archive
-	void Write(std::filesystem::path const& filepath)
-	{
-		Write(filepath, filepath.filename().string());
-	}
-	void Write(std::filesystem::path const& filepath, std::string const& arcname)
-	{
-		if (!std::filesystem::exists(filepath))
-			throw std::runtime_error(filepath.string() + " - file not found");
-
-		std::fstream file(filepath, std::ios::binary | std::ios::in);
-		std::stringstream ss; ss << file.rdbuf();
-		std::string bytes = ss.str();
-		WriteStr(arcname, bytes);
-	}
-
-	// Add an item from memory to the archive
-	void WriteStr(std::string const& arcname, std::string const& bytes, ECompression compression = ECompression::Default)
-	{
-		if (m_archive->m_zip_mode != miniz::MZ_ZIP_MODE_WRITING)
-			StartWrite();
-
-		if (!m.mz_zip_writer_add_mem(m_archive.get(), arcname.c_str(), bytes.data(), bytes.size(), static_cast<unsigned int>(compression)))
-			throw std::runtime_error("write error");
-	}
-	void WriteStr(ZipInfo const& info, std::string const& bytes, ECompression compression = ECompression::Default)
-	{
-		if (info.filename.empty() || info.date_time.year < 1980)
-			throw std::runtime_error("must specify a filename and valid date (year >= 1980");
-
-		if (m_archive->m_zip_mode != miniz::MZ_ZIP_MODE_WRITING)
-			StartWrite();
-
-		auto crc = crc32buf(bytes.c_str(), bytes.size());
-		if (!m.mz_zip_writer_add_mem_ex(m_archive.get(), info.filename.c_str(), bytes.data(), bytes.size(), info.comment.c_str(), static_cast<unsigned short>(info.comment.size()), static_cast<unsigned int>(compression), 0, crc))
-			throw std::runtime_error("write error");
-	}
-
-	// Print the directory structure in the archive
-	void PrintDir()
-	{
-		PrintDir(std::cout);
-	}
-	void PrintDir(std::ostream& stream)
-	{
-		stream << "  Length " << "  " << "   " << "Date" << "   " << " " << "Time " << "   " << "Name" << std::endl;
-		stream << "---------  ---------- -----   ----" << std::endl;
-
-		std::size_t sum_length = 0;
-		std::size_t file_count = 0;
-		for (auto& member : InfoList())
-		{
-			sum_length += member.file_size;
-			file_count++;
-
-			auto length_string = std::to_string(member.file_size);
-			while (length_string.length() < 9)
-			{
-				length_string = " " + length_string;
-			}
-			stream << length_string;
-
-			stream << "  ";
-			stream << (member.date_time.month < 10 ? "0" : "") << member.date_time.month;
-			stream << "/";
-			stream << (member.date_time.day < 10 ? "0" : "") << member.date_time.day;
-			stream << "/";
-			stream << member.date_time.year;
-			stream << " ";
-			stream << (member.date_time.hours < 10 ? "0" : "") << member.date_time.hours;
-			stream << ":";
-			stream << (member.date_time.minutes < 10 ? "0" : "") << member.date_time.minutes;
-			stream << "   ";
-			stream << member.filename;
-			stream << std::endl;
-		}
-
-		stream << "---------                     -------" << std::endl;
-
-		auto length_string = std::to_string(sum_length);
-		while (length_string.length() < 9)
-		{
-			length_string = " " + length_string;
-		}
-		stream << length_string << "                     " << file_count << " " << (file_count == 1 ? "file" : "files");
-		stream << std::endl;
-	}
-
-	std::pair<bool, std::string> TestZip()
-	{
-		if (m_archive->m_zip_mode == miniz::MZ_ZIP_MODE_INVALID)
-			throw std::runtime_error("not open");
-
-		for (auto &file : InfoList())
-		{
-			auto content = Read(file);
-			auto crc = crc32buf(content.c_str(), content.size());
-
-			if (crc != file.crc)
-			{
-				return { false, file.filename };
-			}
-		}
-
-		return { true, "" };
-	}
-
-private:
-
-	// Reset the miniz archive structure
-	void Reset()
-	{
-		switch (m_archive->m_zip_mode)
-		{
-		case miniz::MZ_ZIP_MODE_READING:
-			m.mz_zip_reader_end(m_archive.get());
-			break;
-		case miniz::MZ_ZIP_MODE_WRITING:
-			m.mz_zip_writer_finalize_archive(m_archive.get());
-			m.mz_zip_writer_end(m_archive.get());
-			break;
-		case miniz::MZ_ZIP_MODE_WRITING_HAS_BEEN_FINALIZED:
-			m.mz_zip_writer_end(m_archive.get());
-			break;
-		case miniz::MZ_ZIP_MODE_INVALID:
-			break;
-		}
-		if (m_archive->m_zip_mode != miniz::MZ_ZIP_MODE_INVALID)
-			throw std::runtime_error("Failed to reset the archive");
-
-		m_buffer.clear();
-		m_comment.clear();
-
-		StartWrite();
-		m.mz_zip_writer_finalize_archive(m_archive.get());
-		m.mz_zip_writer_end(m_archive.get());
-	}
-
-	// Prepare the archive for reading
-	void StartRead()
-	{
-		if (m_archive->m_zip_mode == miniz::MZ_ZIP_MODE_READING)
-			return;
-
-		if (m_archive->m_zip_mode == miniz::MZ_ZIP_MODE_WRITING)
-			m.mz_zip_writer_finalize_archive(m_archive.get());
-
-		if (m_archive->m_zip_mode == miniz::MZ_ZIP_MODE_WRITING_HAS_BEEN_FINALIZED)
-			m.mz_zip_writer_end(m_archive.get());
-
-		if (!m.mz_zip_reader_init_mem(m_archive.get(), m_buffer.data(), m_buffer.size(), 0))
-			throw std::runtime_error("bad zip");
-	}
-
-	// Prepare the archive for reading
-	void StartWrite()
-	{
-		if (m_archive->m_zip_mode == miniz::MZ_ZIP_MODE_WRITING)
-			return;
-
-		auto write_callback = [](void* opaque, std::uint64_t file_ofs, void const* pBuf, std::size_t n)
-		{
-			auto buffer = static_cast<std::vector<char>*>(opaque);
-			if (file_ofs + n > buffer->size())
-			{
-				auto new_size = static_cast<std::vector<char>::size_type>(file_ofs + n);
-				buffer->resize(new_size);
-			}
-
-			for (std::size_t i = 0; i < n; i++)
-			{
-				(*buffer)[static_cast<std::size_t>(file_ofs + i)] = (static_cast<const char *>(pBuf))[i];
-			}
-
-			return n;
-		};
-
-		switch (m_archive->m_zip_mode)
-		{
-		case miniz::MZ_ZIP_MODE_READING:
-			{
-				miniz::mz_zip_archive archive_copy;
-				std::memset(&archive_copy, 0, sizeof(miniz::mz_zip_archive));
-				std::vector<char> buffer_copy(m_buffer.begin(), m_buffer.end());
-
-				if (!m.mz_zip_reader_init_mem(&archive_copy, buffer_copy.data(), buffer_copy.size(), 0))
-					throw std::runtime_error("bad zip");
-
-				m.mz_zip_reader_end(m_archive.get());
-
-				m_archive->m_pWrite = write_callback;
-				m_archive->m_pIO_opaque = &m_buffer;
-				m_buffer = std::vector<char>();
-
-				if (!m.mz_zip_writer_init(m_archive.get(), 0))
-				{
-					throw std::runtime_error("bad zip");
-				}
-
-				for (unsigned int i = 0; i < static_cast<unsigned int>(archive_copy.m_total_entries); i++)
-				{
-					if (!m.mz_zip_writer_add_from_zip_reader(m_archive.get(), &archive_copy, i))
-					{
-						throw std::runtime_error("fail");
-					}
-				}
-
-				m.mz_zip_reader_end(&archive_copy);
-				return;
-			}
-		case miniz::MZ_ZIP_MODE_WRITING_HAS_BEEN_FINALIZED:
-			m.mz_zip_writer_end(m_archive.get());
-			break;
-		case miniz::MZ_ZIP_MODE_INVALID:
-		case miniz::MZ_ZIP_MODE_WRITING:
-			break;
-		}
-
-
-		m_archive->m_pWrite = write_callback;
-		m_archive->m_pIO_opaque = &m_buffer;
-
-		if (!m.mz_zip_writer_init(m_archive.get(), 0))
-			throw std::runtime_error("bad zip");
-	}
-
-	//
-	void AppendComment()
-	{
-		if (!m_comment.empty())
-		{
-			auto comment_length = std::min(static_cast<uint16_t>(m_comment.length()), std::numeric_limits<uint16_t>::max());
-			m_buffer[m_buffer.size() - 2] = static_cast<char>(comment_length);
-			m_buffer[m_buffer.size() - 1] = static_cast<char>(comment_length >> 8);
-			std::copy(m_comment.begin(), m_comment.end(), std::back_inserter(m_buffer));
-		}
-	}
-
-	//
-	void RemoveComment()
-	{
-		if (m_buffer.empty())
-			return;
-
-		auto position = m_buffer.size() - 1;
-		for (; position >= 3; position--)
-		{
-			if (m_buffer[position - 3] == 'P' &&
-				m_buffer[position - 2] == 'K' &&
-				m_buffer[position - 1] == '\x05' &&
-				m_buffer[position - 0] == '\x06')
-			{
-				position = position + 17;
-				break;
-			}
-		}
-		if (position == 3)
-			throw std::runtime_error("didn't find end of central directory signature");
-
-		auto length = static_cast<uint16_t>(m_buffer[position + 1]);
-		length = static_cast<uint16_t>(length << 8) + static_cast<uint16_t>(m_buffer[position]);
-		position += 2;
-
-		if (length != 0)
-		{
-			m_comment = std::string(m_buffer.data() + position, m_buffer.data() + position + length);
-			m_buffer.resize(m_buffer.size() - length);
-			m_buffer[m_buffer.size() - 1] = 0;
-			m_buffer[m_buffer.size() - 2] = 0;
-		}
-	}
-
-	// Read file info for the file at position 'index' in the archive
-	ZipInfo Info(int index)
-	{
-		if (m_archive->m_zip_mode != miniz::MZ_ZIP_MODE_READING)
-			StartRead();
-
-		miniz::ZipItemStat stat;
-		m.ItemStat(m_archive.get(), static_cast<unsigned int>(index), &stat);
-
-		tm time;
-		if (!m.LocalTime(stat.m_time, time))
-			throw std::runtime_error("");
-
-		ZipInfo result = {};
-		result.filename = std::string(stat.m_filename, stat.m_filename + std::strlen(stat.m_filename));
-		result.comment = std::string(stat.m_comment, stat.m_comment + stat.m_comment_size);
-		result.compress_size = static_cast<std::size_t>(stat.m_comp_size);
-		result.file_size = static_cast<std::size_t>(stat.m_uncomp_size);
-		result.header_offset = static_cast<std::size_t>(stat.m_local_header_ofs);
-		result.crc = stat.m_crc32;
-		result.date_time.year = 1900 + time.tm_year;
-		result.date_time.month = 1 + time.tm_mon;
-		result.date_time.day = time.tm_mday;
-		result.date_time.hours = time.tm_hour;
-		result.date_time.minutes = time.tm_min;
-		result.date_time.seconds = time.tm_sec;
-		result.flag_bits = stat.m_bit_flag;
-		result.internal_attr = stat.m_internal_attr;
-		result.external_attr = stat.m_external_attr;
-		result.extract_version = stat.m_version_needed;
-		result.create_version = stat.m_version_made_by;
-		result.volume = stat.m_file_index;
-		result.create_system = stat.m_method;
-		return result;
-	}
-
-	//
-	static uint32_t crc32buf(const char *buf, std::size_t len, uint32_t crc = 0xFFFFFFFF)
-	{
-		/* CRC polynomial 0xedb88320 */
-		uint32_t crc_32_tab[] =
-		{
-
-			0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
-			0xe963a535, 0x9e6495a3, 0x0edb8832, 0x79dcb8a4, 0xe0d5e91e, 0x97d2d988,
-			0x09b64c2b, 0x7eb17cbd, 0xe7b82d07, 0x90bf1d91, 0x1db71064, 0x6ab020f2,
-			0xf3b97148, 0x84be41de, 0x1adad47d, 0x6ddde4eb, 0xf4d4b551, 0x83d385c7,
-			0x136c9856, 0x646ba8c0, 0xfd62f97a, 0x8a65c9ec, 0x14015c4f, 0x63066cd9,
-			0xfa0f3d63, 0x8d080df5, 0x3b6e20c8, 0x4c69105e, 0xd56041e4, 0xa2677172,
-			0x3c03e4d1, 0x4b04d447, 0xd20d85fd, 0xa50ab56b, 0x35b5a8fa, 0x42b2986c,
-			0xdbbbc9d6, 0xacbcf940, 0x32d86ce3, 0x45df5c75, 0xdcd60dcf, 0xabd13d59,
-			0x26d930ac, 0x51de003a, 0xc8d75180, 0xbfd06116, 0x21b4f4b5, 0x56b3c423,
-			0xcfba9599, 0xb8bda50f, 0x2802b89e, 0x5f058808, 0xc60cd9b2, 0xb10be924,
-			0x2f6f7c87, 0x58684c11, 0xc1611dab, 0xb6662d3d, 0x76dc4190, 0x01db7106,
-			0x98d220bc, 0xefd5102a, 0x71b18589, 0x06b6b51f, 0x9fbfe4a5, 0xe8b8d433,
-			0x7807c9a2, 0x0f00f934, 0x9609a88e, 0xe10e9818, 0x7f6a0dbb, 0x086d3d2d,
-			0x91646c97, 0xe6635c01, 0x6b6b51f4, 0x1c6c6162, 0x856530d8, 0xf262004e,
-			0x6c0695ed, 0x1b01a57b, 0x8208f4c1, 0xf50fc457, 0x65b0d9c6, 0x12b7e950,
-			0x8bbeb8ea, 0xfcb9887c, 0x62dd1ddf, 0x15da2d49, 0x8cd37cf3, 0xfbd44c65,
-			0x4db26158, 0x3ab551ce, 0xa3bc0074, 0xd4bb30e2, 0x4adfa541, 0x3dd895d7,
-			0xa4d1c46d, 0xd3d6f4fb, 0x4369e96a, 0x346ed9fc, 0xad678846, 0xda60b8d0,
-			0x44042d73, 0x33031de5, 0xaa0a4c5f, 0xdd0d7cc9, 0x5005713c, 0x270241aa,
-			0xbe0b1010, 0xc90c2086, 0x5768b525, 0x206f85b3, 0xb966d409, 0xce61e49f,
-			0x5edef90e, 0x29d9c998, 0xb0d09822, 0xc7d7a8b4, 0x59b33d17, 0x2eb40d81,
-			0xb7bd5c3b, 0xc0ba6cad, 0xedb88320, 0x9abfb3b6, 0x03b6e20c, 0x74b1d29a,
-			0xead54739, 0x9dd277af, 0x04db2615, 0x73dc1683, 0xe3630b12, 0x94643b84,
-			0x0d6d6a3e, 0x7a6a5aa8, 0xe40ecf0b, 0x9309ff9d, 0x0a00ae27, 0x7d079eb1,
-			0xf00f9344, 0x8708a3d2, 0x1e01f268, 0x6906c2fe, 0xf762575d, 0x806567cb,
-			0x196c3671, 0x6e6b06e7, 0xfed41b76, 0x89d32be0, 0x10da7a5a, 0x67dd4acc,
-			0xf9b9df6f, 0x8ebeeff9, 0x17b7be43, 0x60b08ed5, 0xd6d6a3e8, 0xa1d1937e,
-			0x38d8c2c4, 0x4fdff252, 0xd1bb67f1, 0xa6bc5767, 0x3fb506dd, 0x48b2364b,
-			0xd80d2bda, 0xaf0a1b4c, 0x36034af6, 0x41047a60, 0xdf60efc3, 0xa867df55,
-			0x316e8eef, 0x4669be79, 0xcb61b38c, 0xbc66831a, 0x256fd2a0, 0x5268e236,
-			0xcc0c7795, 0xbb0b4703, 0x220216b9, 0x5505262f, 0xc5ba3bbe, 0xb2bd0b28,
-			0x2bb45a92, 0x5cb36a04, 0xc2d7ffa7, 0xb5d0cf31, 0x2cd99e8b, 0x5bdeae1d,
-			0x9b64c2b0, 0xec63f226, 0x756aa39c, 0x026d930a, 0x9c0906a9, 0xeb0e363f,
-			0x72076785, 0x05005713, 0x95bf4a82, 0xe2b87a14, 0x7bb12bae, 0x0cb61b38,
-			0x92d28e9b, 0xe5d5be0d, 0x7cdcefb7, 0x0bdbdf21, 0x86d3d2d4, 0xf1d4e242,
-			0x68ddb3f8, 0x1fda836e, 0x81be16cd, 0xf6b9265b, 0x6fb077e1, 0x18b74777,
-			0x88085ae6, 0xff0f6a70, 0x66063bca, 0x11010b5c, 0x8f659eff, 0xf862ae69,
-			0x616bffd3, 0x166ccf45, 0xa00ae278, 0xd70dd2ee, 0x4e048354, 0x3903b3c2,
-			0xa7672661, 0xd06016f7, 0x4969474d, 0x3e6e77db, 0xaed16a4a, 0xd9d65adc,
-			0x40df0b66, 0x37d83bf0, 0xa9bcae53, 0xdebb9ec5, 0x47b2cf7f, 0x30b5ffe9,
-			0xbdbdf21c, 0xcabac28a, 0x53b39330, 0x24b4a3a6, 0xbad03605, 0xcdd70693,
-			0x54de5729, 0x23d967bf, 0xb3667a2e, 0xc4614ab8, 0x5d681b02, 0x2a6f2b94,
-			0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d
-		};
-
-		for (; len; --len, ++buf)
-			crc = crc_32_tab[(crc ^ static_cast<uint8_t>(*buf)) & 0xff] ^ (crc >> 8);
-
-		return ~crc;
-	}
-};
-#endif
-
-// Copyright (c) 2014-2017 Thomas Fussell
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, WRISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE
 
 // @license: http://www.opensource.org/licenses/mit-license.php
 /*

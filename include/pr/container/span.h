@@ -68,6 +68,11 @@ namespace std
 		{
 			return m_arr[i];
 		}
+		
+		T* data() const
+		{
+			return m_arr;
+		}
 
 		operator span<T const>() const
 		{
