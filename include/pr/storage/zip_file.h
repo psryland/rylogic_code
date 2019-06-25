@@ -421,10 +421,11 @@ namespace pr::storage::zip
 		ZipArchiveA(std::filesystem::path const& filepath, EZipFlags flags = EZipFlags::None, int entry_alignment = 0)
 			:ZipArchiveA(flags, entry_alignment, EMode::Reading)
 		{
-			m_filepath = filepath;
-			m_ifile = std::ifstream(filepath, std::ios::binary);
-			m_archive_size = std::filesystem::file_size(filepath);
 			m_read = FileReadFunc;
+			m_filepath = filepath;
+			m_archive_size = std::filesystem::file_size(filepath);
+			m_ifile = std::ifstream(filepath, std::ios::binary);
+			std::noskipws(m_ifile);
 			ReadCentralDirectory();
 		}
 		
@@ -763,7 +764,7 @@ namespace pr::storage::zip
 				throw std::runtime_error("Item comment is invalid or too long");
 			if (!std::filesystem::exists(src_filepath))
 				throw std::runtime_error("Path '"s + src_filepath.string() + "' does not exist");
-			if (!std::filesystem::is_directory(src_filepath))
+			if (std::filesystem::is_directory(src_filepath))
 				throw std::runtime_error("Path '"s + src_filepath.string() + "' is not a file");
 			if (std::filesystem::file_size(src_filepath) > 0xFFFFFFFF)
 				throw std::runtime_error("File '"s + src_filepath.string() + "' is too large. Zip64 is not supported");
@@ -776,6 +777,7 @@ namespace pr::storage::zip
 
 			// Open the source file
 			auto src_file = std::ifstream(src_filepath, std::ios::binary);
+			std::noskipws(src_file);
 			if (!src_file.good())
 				throw std::runtime_error("Failed to open file '"s + src_filepath.string() + "'");
 
@@ -843,10 +845,13 @@ namespace pr::storage::zip
 			else
 			{
 				Deflate algo;
+				
+				src_file.seekg(0);
+				auto src = std::istream_iterator<uint8_t>(src_file);
 
 				// Compress into a local buffer and periodically flush to the output
 				vector_t<uint8_t> buf(Deflate::MaxBlockSize);
-				algo.Compress(std::istream_iterator<uint8_t>(m_ifile), uncompressed_size, buf.data(), [&](auto& out, int)
+				algo.Compress(src, uncompressed_size, buf.data(), [&](auto& out, int)
 				{
 					auto size = out - buf.data();
 					m_write(*this, item_ofs, buf.data(), size);
@@ -1235,12 +1240,11 @@ namespace pr::storage::zip
 		
 				m_ifile.seekg(item_ofs);
 				auto src = std::istream_iterator<uint8_t>(m_ifile);
-				auto len = std::filesystem::file_size(m_filepath);
 
 				// Decompress into a temporary buffer. The minimum buffer size must be 'LZDictionarySize'
 				// because Deflate uses references to earlier bytes, upto an LZ dictionary size prior.
 				vector_t<uint8_t> buf(LZDictionarySize);
-				algo.Decompress(src, len, buf.data(), [&](uint8_t*& ptr, int)
+				algo.Decompress(src, cdh.CompressedSize, buf.data(), [&](uint8_t*& ptr, int)
 				{
 					auto count = size_t(ptr - buf.data());
 					assert(count <= buf.size());
@@ -1437,6 +1441,7 @@ namespace pr::storage::zip
 			static int const DynamicBlockSizeThreshold = 48;
 			static int const MinMatchLength = 3;
 			static int const MaxMatchLength = 258;
+			static int const MaxDeferCount = 8;
 
 			// Flags used in 'Decompress()'
 			enum class EDecompressFlags
@@ -1455,10 +1460,10 @@ namespace pr::storage::zip
 				// If set, the compressor outputs a zlib header before the deflate data, and the Adler-32 of the source data at the end. Otherwise, you'll get raw deflate data.
 				WriteZLibHeader = 1 << 0,
 
-				// Set to use faster greedy parsing, instead of more efficient lazy parsing.
-				GreedyParsing = 1 << 1,
+				// If set, the first best match is used. Matching is not deferred
+				GreedyMatching = 1 << 1,
 
-				// RLE_MATCHES: Only look for RLE matches (matches with a distance of 1)
+				// Only look for RLE matches (i.e. matches with a distance of 1)
 				RLEMatches = 1 << 2,
 
 				// Disable usage of optimized Huffman tables.
@@ -1770,8 +1775,9 @@ namespace pr::storage::zip
 				SymCount dst_counts(DstTableSize);
 				SrcIter<Src> src(stream, length), src_end;
 				OutIter<Out> out(output);
+				RingBuffer<Range, MaxDeferCount> deferred;
+				int defer_count = 0;
 				int block_number = 0;
-				Range deferred;
 
 				// Write the ZLib header for DEFLATE
 				if (has_flag(flags, ECompressFlags::WriteZLibHeader) && length != 0)
@@ -1816,26 +1822,61 @@ namespace pr::storage::zip
 				};
 
 				// Add a (length,distance) pair to 'lz_buffer' and count frequencies of the length and distance values
-				auto RecordMatch = [&](Range match)
+				auto RecordMatch = [&](ptrdiff_t pos, Range match)
 				{
-					assert(match.len >= MinMatchLength && match.pos >= 1 && match.pos <= LZDictionarySize && "Match is invalid");
+					// 'match' is an absolute range. It needs to be converted to be relative to 'pos'.
+					match.pos = pos - match.pos;
+					assert(match.len >= MinMatchLength && "Match is too small");
+					assert(match.pos >= 1 && match.pos <= LZDictionarySize && "Match is not within the dictionary");
 					lz_buffer.add(match);
 
 					// Count frequency of matches of this length
-					auto s = s_tdefl_len_sym[match.len - MinMatchLength];
+					auto s = s_len_sym[match.len - MinMatchLength];
 					lit_counts[s]++;
 
 					// Count frequency of matches at this distance
+					// Note: since a relative position of 0 is invalid, pos - 1 is stored in 'lz_buffer'
 					auto dist = match.pos - 1;
 					auto d = dist <= 0x1FF
-						? s_tdefl_small_dist_sym[(dist >> 0) & 0x1FF]
-						: s_tdefl_large_dist_sym[(dist >> 8) & 0x07F];
+						? s_small_dist_sym[(dist >> 0) & 0x1FF]
+						: s_large_dist_sym[(dist >> 8) & 0x07F];
 					dst_counts[d]++;
+				};
+
+				// Record the best match of the buffered matches. (m0 is the index of the first queued match)
+				auto FlushDeferQueue = [&](ptrdiff_t m0)
+				{
+					// Find the best of the deferred matches based on compression ratio
+					auto best = 0;
+					auto best_ratio = 0.0;
+					for (int i = 0; i != defer_count; ++i)
+					{
+						auto& m = deferred[m0 + i];
+						auto cost = i + (m.len >= MinMatchLength ? 3 : 1); // storage cost = 1 literal byte per skipped match +3 bytes if the match is valid or +1 literal byte if not valid
+						auto value = i + m.len;                            // data represented count
+						auto ratio = value / double(cost);                 // bytes represented / bytes stored
+						if (ratio > best_ratio)
+						{
+							best_ratio = ratio;
+							best = i;
+						}
+					}
+
+					// Record the best match
+					auto p = m0 + best; // The position that the best match is relative to
+					for (auto i = m0; i != p; ++i) RecordLiteral(dict[i]);
+					RecordMatch(p, deferred[p]);
+
+					// Reset the defer queue
+					defer_count = 0;
+
+					// Return the next byte to be considered
+					return p + deferred[p].len;
 				};
 
 				// Consume all bytes from 'stream'
 				ptrdiff_t pos = 0;
-				for (; src != src_end || pos != dict.m_size; ++block_number)
+				for (; src != src_end || pos != dict.m_size; )
 				{
 					// Push up to 'MaxMatchLength' bytes into the dictionary
 					for (; src != src_end && dict.m_size - pos < MaxMatchLength; ++src)
@@ -1843,70 +1884,81 @@ namespace pr::storage::zip
 
 					// Find the longest match for the current position
 					auto match =
+						dict.m_size - pos < MinMatchLength ? Range(pos, 1) :
 						has_flag(flags, ECompressFlags::RLEMatches) ? dict.RLEMatch(pos) :
 						dict.Match(pos, probe_count);
 
-					// Encode the source data into 'lz_buffer'
-					if (match.len < MinMatchLength) // If there is no suitable match...
+					// Greedy matching, record the first best match as we find it
+					if (has_flag(flags, ECompressFlags::GreedyMatching))
 					{
-						// If there is no deferred match...
-						if (deferred.len == 0 || has_flag(flags, ECompressFlags::GreedyParsing))
+						// If there is no suitable match...
+						if (match.len < MinMatchLength) 
 						{
 							// Write a literal byte
 							RecordLiteral(dict[pos]);
 							++pos;
 						}
-						else
+						else // A match was found...
 						{
-							// Write the deferred match. It should include the byte at 'pos'
-							assert(deferred.begin() < pos && pos <= deferred.end());
-							RecordMatch(deferred);
-							pos = deferred.end();
-							deferred = Range();
-						}
-					}
-					else // A match was found...
-					{
-						if (has_flag(flags, ECompressFlags::GreedyParsing))
-						{
-							// Greedy parsing means don't bother with defering matches
-							RecordMatch(match);
+							RecordMatch(pos, match);
 							pos = match.end();
 						}
-						else if (deferred.len == 0)
+					}
+					else
+					{
+						// Deferred matches:
+						// For any match, defer recording it until we know it's the best match for
+						// the current position. A better match may exist that starts within 'match'.
+						// E.g. consider the sequence: 1234567 0123 01234567
+						//  matching group 3 will find group 2, but if we defer by one byte, a better
+						//  match is found in group 1. This generalises on the number of bytes to defer
+						//  by. Consider:  234567 0123 01234567. Deferring by 2 bytes finds the better
+						//  match.
+						// Algorithm:
+						//   Let Q = [M0, M1, ...] be a queue of deferred matches.
+						//   If the queue is empty, push the match onto the queue (this is M0)
+						//   If the current position is spanned by M0, push the match on the queue
+						//   If not, select the best match from the buffered matches (best = highest
+						//   compression ratio = bytes-represented / bytes-stored). Advance 'pos' and 
+						//   reset the queue.
+						auto m0 = pos - defer_count;
+
+						// No match and no deferred matches, write a literal
+						if (defer_count == 0 && match.len < MinMatchLength)
 						{
-							// Defer recording this match. See "lazy matching" in the comments above
-							deferred = match;
+							RecordLiteral(dict[pos]);
 							++pos;
 						}
 						else
 						{
-							// If 'match' is better than 'deferred'
-							if (match.len > deferred.len)
+							// Push the match onto the queue
+							deferred[pos] = match;
+							++defer_count;
+							++pos;
+
+							// Flush the defer queue when: 
+							if (defer_count == MaxDeferCount ||               // the queue is full
+								match.len == MaxMatchLength ||                // a best possible match is found
+								!deferred[m0].contains(pos) ||                // the first deferred match no longer spans 'pos'
+								pos - deferred[m0].pos == LZDictionarySize || // the first match is about to roll out of the dictionary ring buffer
+								src == src_end ||                             // the end of the source data has been reached
+								false)
 							{
-								// Record a literal byte and keep 'match' as the new 'deferred'
-								RecordLiteral(dict[deferred.pos]);
-								deferred = match;
-								++pos;
-							}
-							else
-							{
-								// Otherwise, deferred is better than 'match', record 'deferred'. It should include 'match'
-								assert(deferred.begin() < match.begin() && match.end() <= deferred.end());
-								RecordMatch(deferred);
-								pos = deferred.end();
-								deferred = Range();
+								auto next_pos = FlushDeferQueue(m0);
+								assert(next_pos >= pos && "'pos' should never go backwards");
+								pos = next_pos;
 							}
 						}
 					}
 
 					// Write a block when 'lz_buffer' is full
-					if (LZBuffer::Size - lz_buffer.size() < LZBuffer::MinSpaceRequired)
+					static size_t const MinSpaceRequired = 1 + (MaxDeferCount-1) + 3; // 1 byte for flags, MaxDeferCount-1 literal bytes, +3 bytes for (length,distance)
+					if (LZBuffer::Size - lz_buffer.size() < MinSpaceRequired)
 					{
 						WriteBlock(out, lz_buffer, dict, pos, lit_counts, dst_counts, flags, false);
-						flush(out.m_ptr, block_number);
-						
-						// Reset the compression bumber and symbol counts
+						flush(out.m_ptr, block_number++);
+
+						// Reset the compression buffer and symbol counts
 						lz_buffer.reset();
 						lit_counts.reset();
 						dst_counts.reset();
@@ -1915,7 +1967,7 @@ namespace pr::storage::zip
 
 				// Write any remaining data
 				WriteBlock(out, lz_buffer, dict, pos, lit_counts, dst_counts, flags, true);
-				flush(out.m_ptr, block_number);
+				flush(out.m_ptr, block_number++);
 
 				// Write the ZLib footer
 				if (has_flag(flags, ECompressFlags::WriteZLibHeader) && length != 0)
@@ -1981,8 +2033,14 @@ namespace pr::storage::zip
 					return *this;
 				}
 
-				friend bool operator == (SrcIter lhs, SrcIter rhs) { return lhs.m_ptr == rhs.m_ptr || (lhs.m_len == 0 && rhs.m_len == 0); }
-				friend bool operator != (SrcIter lhs, SrcIter rhs) { return !(lhs == rhs); }
+				friend bool operator == (SrcIter lhs, SrcIter rhs)
+				{
+					return lhs.m_ptr == rhs.m_ptr || (lhs.m_len == 0 && rhs.m_len == 0);
+				}
+				friend bool operator != (SrcIter lhs, SrcIter rhs)
+				{
+					return !(lhs == rhs);
+				}
 				friend ptrdiff_t operator - (SrcIter lhs, SrcIter rhs)
 				{
 					// Remember, 'm_len' is length remaining so iterators with 'm_len == 0' are end iterators
@@ -2001,14 +2059,9 @@ namespace pr::storage::zip
 					:m_ptr(ptr)
 					,m_len(len)
 				{}
-				OutIter& operator*()
+				uint8_t& operator*()
 				{
-					return *this;
-				}
-				OutIter& operator = (uint8_t b)
-				{
-					*m_ptr = b;
-					return *this;
+					return *m_ptr;
 				}
 				OutIter& operator ++()
 				{
@@ -2031,9 +2084,7 @@ namespace pr::storage::zip
 				ptrdiff_t pos;
 				ptrdiff_t len;
 
-				Range()
-					:Range(0,0)
-				{}
+				Range() = default;
 				Range(ptrdiff_t start, ptrdiff_t count)
 					:pos(start)
 					,len(count)
@@ -2110,7 +2161,7 @@ namespace pr::storage::zip
 				}
 				operator std::span<uint16_t const>() const
 				{
-					return std::make_span(m_data.data(), m_size);
+					return std::make_span(m_data.data(), int(m_size));
 				}
 			};
 
@@ -2132,6 +2183,11 @@ namespace pr::storage::zip
 					:m_buf()
 					,m_extend_required()
 				{}
+				RingBuffer(uint8_t fill)
+					:RingBuffer()
+				{
+					memset(&m_buf[0], fill, m_buf.size() * sizeof(T));
+				}
 
 				// The maximum size of the ring buffer
 				constexpr int capacity() const
@@ -2182,13 +2238,13 @@ namespace pr::storage::zip
 					assert(max_code_size <= m_next_code.size());
 					assert(num_sizes.size() >= max_code_size);
 
-					uint32_t total = 0;
+					size_t total = 0;
 					for (int i = 1; i != m_max_code_size; ++i)
 					{
-						total = static_cast<uint32_t>((total + num_sizes[i]) << 1);
-						m_next_code[i + 1] = total;
+						total = (total + num_sizes[i]) << 1;
+						m_next_code[i + 1] = static_cast<T>(total);
 					}
-					if (total != 1U << m_max_code_size)
+					if (total != 1ULL << m_max_code_size)
 						throw std::runtime_error("'num_sizes' does not span the code space");
 				}
 
@@ -2209,13 +2265,16 @@ namespace pr::storage::zip
 				static size_t const HashTableSize = 1 << HashTableBits;
 
 				// A ring buffer of source bytes
-				RingBuffer<uint8_t, LZDictionarySize, MaxMatchLength> m_bytes;
+				using ByteBuffer = RingBuffer<uint8_t, LZDictionarySize, MaxMatchLength>;
+				ByteBuffer m_bytes;
 
 				// Singularly linked lists of locations in 'm_bytes' that have the same hash value
-				RingBuffer<uint16_t, LZDictionarySize> m_next;
+				using NextBuffer = RingBuffer<uint16_t, LZDictionarySize>;
+				NextBuffer m_next;
 
 				// Mapping from the hash of a 3-byte sequence to its starting index position in 'm_bytes'
-				RingBuffer<uint16_t, HashTableSize> m_hash;
+				using HashBuffer = RingBuffer<uint16_t, HashTableSize>;
+				HashBuffer m_hash;
 
 				// The number of bytes added to the dictionary (not wrapped to LZDictionarySize)
 				ptrdiff_t m_size;
@@ -2236,8 +2295,6 @@ namespace pr::storage::zip
 				// Push a source byte into the dictionary
 				void Push(uint8_t b)
 				{
-					assert(m_size < m_bytes.capacity());
-
 					// Add the next byte to the dictionary
 					m_bytes[m_size] = b;
 					++m_size;
@@ -2262,7 +2319,7 @@ namespace pr::storage::zip
 					// Note that 'm_hash' is only needed for constructing the linked lists of index positions.
 					// Matching only requires the 'm_next' buffer and a starting index position.
 					m_next[i] = m_hash[hash];
-					m_hash[hash] = static_cast<uint16_t>(i);
+					m_hash[hash] = static_cast<uint16_t>(i & ByteBuffer::Mask);
 				}
 
 				// Search the dictionary for another position that matches 'pos' that is longer than 'best_match'
@@ -2276,8 +2333,8 @@ namespace pr::storage::zip
 					// The hash value of the 3-byte sequence at 'm_bytes[pos]' is the value in 'm_hash[pos]'.
 					// We don't actually need the hash, we just need to search the linked list of index locations whose head is at 'm_next[pos]'.
 					// The dictionary only contains a maximum of 'LZDictionarySize' bytes, so if 'i' is further back than this, a match cannot be tested.
-					Range best_match;
-					for (auto i = m_next[pos]; probe_count-- != 0 && i != 0 && m_size - i >= LZDictionarySize; i = m_next[i])
+					Range best_match(pos, 1);
+					for (auto i = m_next[pos]; probe_count-- != 0 && i != (pos & ByteBuffer::Mask); i = m_next[i])
 					{
 						auto ref = m_bytes.ptr(pos);
 						auto cmp = m_bytes.ptr(i);
@@ -2294,7 +2351,8 @@ namespace pr::storage::zip
 								probe_count >>= 1;
 
 							// Save the best match
-							best_match = Range(i, len);
+							auto p = pos - ((pos - i) & ByteBuffer::Mask); // Absolute position
+							best_match = Range(p, len);
 
 							// Can't do better than this so stop searching
 							if (len == MaxMatchLength)
@@ -2334,7 +2392,6 @@ namespace pr::storage::zip
 				//    1 - means a (length, distance) pair (length = 3 bytes)
 
 				static size_t const Size = 64 * 1024;
-				static size_t const MinSpaceRequired = 4;  // for the largest "add" call = 1 byte for flags, 3 bytes for (length,distance)
 				static_assert(Size > LZDictionarySize);
 
 				uint8_t m_buf[Size];
@@ -2370,12 +2427,12 @@ namespace pr::storage::zip
 				void add(uint8_t byte)
 				{
 					assert(m_bytes - &m_buf[0] + 1 <= Size && "LZBuffer overflow");
+					push_flag<0>();
 					*m_bytes++ = byte;
 					m_data_size += 1;
-					push_flag<0>();
 				}
 
-				// Add a match to the buffer
+				// Add a *relative* match to the buffer
 				void add(Range match)
 				{
 					static_assert(LZDictionarySize - 1 <= 0xFFFF);
@@ -2384,11 +2441,11 @@ namespace pr::storage::zip
 					assert(match.pos >= 1 && match.pos <= LZDictionarySize && "Match distance is invalid");
 					assert(m_bytes - &m_buf[0] + 3 <= Size && "LZBuffer overflow");
 
-					m_data_size = static_cast<size_t>(m_data_size + match.len);
+					push_flag<1>();
 					*m_bytes++ = static_cast<uint8_t>(match.len - MinMatchLength);
 					*m_bytes++ = static_cast<uint8_t>(((match.pos - 1) >> 0) & 0xFF);
 					*m_bytes++ = static_cast<uint8_t>(((match.pos - 1) >> 8) & 0xFF);
-					push_flag<1>();
+					m_data_size = static_cast<size_t>(m_data_size + match.len);
 				}
 
 				// The number of input data bytes represented
@@ -2414,13 +2471,14 @@ namespace pr::storage::zip
 				{
 					static_assert(bit <= 1);
 
-					*m_flags |= static_cast<uint8_t>(bit << m_num_flags);
-					if (++m_num_flags == 8)
+					// If the flags byte is full, use the next byte in the buffer for flags
+					if (m_num_flags == 8)
 					{
-						// If the flags byte is full, use the next byte in the buffer for flags
-						m_num_flags = 0;
 						m_flags = m_bytes++;
+						m_num_flags = 0;
 					}
+					*m_flags |= static_cast<uint8_t>(bit << m_num_flags);
+					++m_num_flags;
 				}
 			};
 
@@ -2550,19 +2608,18 @@ namespace pr::storage::zip
 							// the start so that common symbols get shorter Huffman codes.
 
 							using SymbolFreq = struct { uint16_t m_count; uint16_t m_index; };
-							std::array<SymbolFreq, MaxTableSize> count_to_index;
+							std::array<SymbolFreq, MaxTableSize> syms;
 							int len = 0;
 
 							// Map counts to index position
 							for (uint16_t i = 0; i != m_size; ++i)
 							{
 								if (counts[i] == 0) continue;
-								count_to_index[len++] = SymbolFreq{ counts[i], i };
+								syms[len++] = SymbolFreq{ counts[i], i };
 							}
 
-							// Sort the symbols by frequency so that the most common are at the front
-							auto syms = std::make_span(count_to_index.data(), len);
-							std::sort(begin(syms), end(syms), [](auto& l, auto& r) { return l.m_count > r.m_count; });
+							// Sort the symbols by frequency
+							std::sort(syms.data(), syms.data() + len, [](auto& l, auto& r) { return l.m_count < r.m_count; });
 
 							// Calculate Minimum Redunancy
 							for(;;)
@@ -2932,113 +2989,68 @@ namespace pr::storage::zip
 						HuffCodeTable dst_table(DstTableSize, 15);
 
 						//needed? lit_counts[256] = 1;
-
 						lit_table.Populate(EBlock::Dynamic, lit_counts);
 						dst_table.Populate(EBlock::Dynamic, dst_counts);
 
-						int num_lit_codes;
-						for (num_lit_codes = 286; num_lit_codes > 257; --num_lit_codes)
-							if (lit_table.m_code_size[num_lit_codes - 1] != 0)
-								break;
-
-						int num_dist_codes;
-						for (num_dist_codes = 30; num_dist_codes > 1; num_dist_codes--)
-							if (dst_table.m_code_size[num_dist_codes - 1])
-								break;
-
-						uint8_t code_sizes_to_pack[LitTableSize + DstTableSize];
-						memcpy(&code_sizes_to_pack[0], &lit_table.m_code_size[0], num_lit_codes);
-						memcpy(&code_sizes_to_pack[num_lit_codes], &dst_table.m_code_size[0], num_dist_codes);
-
-						int total_code_sizes_to_pack = num_lit_codes + num_dist_codes;
-						int rle_z_count = 0;
-						int rle_repeat_count = 0;
-
-						// Count the frequencies of the symbols
-						SymCount dyn_count;
-						uint8_t prev_code_size = 0xFF;
-						int num_packed_code_sizes = 0;
-						uint8_t packed_code_sizes[LitTableSize + DstTableSize];
-						auto TDEFL_RLE_ZERO_CODE_SIZE = [&]
+						// Count the length of 'code_size', excluding trailing zeros
+						auto TrimCount = [](std::span<uint8_t const> code_size, int min, int max)
 						{
-							if (rle_z_count)
-							{
-								if (rle_z_count < 3)
-								{
-									dyn_count[0] = (uint16_t)(dyn_count[0] + rle_z_count);
-									while (rle_z_count--)
-										packed_code_sizes[num_packed_code_sizes++] = 0;
-								}
-								else if (rle_z_count <= 10)
-								{
-									dyn_count[17] = (uint16_t)(dyn_count[17] + 1);
-									packed_code_sizes[num_packed_code_sizes++] = 17;
-									packed_code_sizes[num_packed_code_sizes++] = (uint8_t)(rle_z_count - 3);
-								}
-								else
-								{
-									dyn_count[18] = (uint16_t)(dyn_count[18] + 1);
-									packed_code_sizes[num_packed_code_sizes++] = 18;
-									packed_code_sizes[num_packed_code_sizes++] = (uint8_t)(rle_z_count - 11);
-								}
-								rle_z_count = 0;
-							}
+							int num = max;
+							for (; num != min && code_size[num - 1] == 0; --num) {}
+							return num;
 						};
-						auto TDEFL_RLE_PREV_CODE_SIZE = [&]
+						auto num_lit_codes = TrimCount(lit_table.m_code_size, 257, 286);
+						auto num_dist_codes = TrimCount(dst_table.m_code_size, 1, 30);
+						auto num = num_lit_codes + num_dist_codes;
+
+						// Collect the literals/lengths and distances into a single buffer
+						std::array<uint8_t, LitTableSize + DstTableSize> code_sizes;
+						memcpy(&code_sizes[0], &lit_table.m_code_size[0], num_lit_codes);
+						memcpy(&code_sizes[num_lit_codes], &dst_table.m_code_size[0], num_dist_codes);
+
+						// LZ compress the table using run length encoding.
+						// This compression uses 5-bit numbers so '16' is the first "encoded" value with the MSB set.
+						SymCount dyn_count(DynTableSize);
+						std::array<uint8_t, LitTableSize + DstTableSize> lz_code_sizes;
+						int lz_code_sizes_count = 0;
+						for (int i = 0; i != num; )
 						{
-							if (rle_repeat_count)
+							auto code_size = code_sizes[i];
+							
+							// Count the number of contiguous equal values
+							int count = 1, max = code_size == 0 ? 138 : 6;
+							for (++i; i != num && code_sizes[i] == code_size && count != max; ++i, ++count) {}
+
+							// Write literals if there's less than 3 in a row
+							if (count < 3)
 							{
-								if (rle_repeat_count < 3)
+								for (; count--;)
 								{
-									dyn_count[prev_code_size] = (uint16_t)(dyn_count[prev_code_size] + rle_repeat_count);
-									while (rle_repeat_count--)
-										packed_code_sizes[num_packed_code_sizes++] = prev_code_size;
+									++dyn_count[0];
+									lz_code_sizes[lz_code_sizes_count++] = 0;
 								}
-								else
-								{
-									dyn_count[16] = (uint16_t)(dyn_count[16] + 1);
-									packed_code_sizes[num_packed_code_sizes++] = 16;
-									packed_code_sizes[num_packed_code_sizes++] = (uint8_t)(rle_repeat_count - 3);
-								}
-								rle_repeat_count = 0;
 							}
-						};
-						for (int i = 0; i < total_code_sizes_to_pack; i++)
-						{
-							uint8_t code_size = code_sizes_to_pack[i];
-							if (code_size == 0)
+							else if (code_size != 0)
 							{
-								TDEFL_RLE_PREV_CODE_SIZE();
-								if (++rle_z_count == 138)
-								{
-									TDEFL_RLE_ZERO_CODE_SIZE();
-								}
+								++dyn_count[16];
+								lz_code_sizes[lz_code_sizes_count++] = 16;
+								lz_code_sizes[lz_code_sizes_count++] = (uint8_t)(count - 3);
+							}
+							else if (count <= 10)
+							{
+								++dyn_count[17];
+								lz_code_sizes[lz_code_sizes_count++] = 17;
+								lz_code_sizes[lz_code_sizes_count++] = (uint8_t)(count - 3);
 							}
 							else
 							{
-								TDEFL_RLE_ZERO_CODE_SIZE();
-								if (code_size != prev_code_size)
-								{
-									TDEFL_RLE_PREV_CODE_SIZE();
-									dyn_count[code_size] = (uint16_t)(dyn_count[code_size] + 1);
-									packed_code_sizes[num_packed_code_sizes++] = code_size;
-								}
-								else if (++rle_repeat_count == 6)
-								{
-									TDEFL_RLE_PREV_CODE_SIZE();
-								}
+								++dyn_count[18];
+								lz_code_sizes[lz_code_sizes_count++] = 18;
+								lz_code_sizes[lz_code_sizes_count++] = (uint8_t)(count - 11);
 							}
-							prev_code_size = code_size;
-						}
-						if (rle_repeat_count)
-						{
-							TDEFL_RLE_PREV_CODE_SIZE();
-						}
-						else
-						{
-							TDEFL_RLE_ZERO_CODE_SIZE();
 						}
 
+						// Huffman encode the the literal/length, distance tables
 						HuffCodeTable dyn_table(DynTableSize, 7);
 						dyn_table.Populate(EBlock::Dynamic, dyn_count);
 
@@ -3049,28 +3061,25 @@ namespace pr::storage::zip
 						PutBits(out, num_lit_codes - 257, 5);
 						PutBits(out, num_dist_codes - 1, 5);
 
+						//
+						int num_bit_lengths = 18;
+						static std::array<uint8_t, 19> const s_swizzle = { 16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15 };
+						for (; num_bit_lengths >= 0 && dyn_table.m_code_size[s_swizzle[num_bit_lengths]] == 0; --num_bit_lengths) {}
+						num_bit_lengths = std::max(4, num_bit_lengths + 1);
+
 						// Write the Huffman encoded code sizes
-						static std::array<uint8_t, 19> const s_tdefl_packed_code_size_syms_swizzle = { 16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15 };
-
-						int num_bit_lengths;
-						for (num_bit_lengths = 18; num_bit_lengths >= 0; num_bit_lengths--)
-							if (dyn_table.m_code_size[s_tdefl_packed_code_size_syms_swizzle[num_bit_lengths]])
-								break;
-
-						num_bit_lengths = std::max(4, (num_bit_lengths + 1));
 						PutBits(out, num_bit_lengths - 4, 4);
-						for (int i = 0; (int)i < num_bit_lengths; i++)
-							PutBits(out, dyn_table.m_code_size[s_tdefl_packed_code_size_syms_swizzle[i]], 3);
+						for (int i = 0; i < num_bit_lengths; ++i)
+							PutBits(out, dyn_table.m_code_size[s_swizzle[i]], 3);
 
-						for (int packed_code_sizes_index = 0; packed_code_sizes_index < num_packed_code_sizes; )
+						// Write the compressed table data
+						for (int i = 0; i < lz_code_sizes_count; )
 						{
-							auto code = packed_code_sizes[packed_code_sizes_index++];
-							assert(code < DynTableSize);
+							auto code_size = lz_code_sizes[i++];
+							PutBits(out, dyn_table.m_code[code_size], dyn_table.m_code_size[code_size]);
 
-							PutBits(out, dyn_table.m_code[code], dyn_table.m_code_size[code]);
-
-							if (code >= 16)
-								PutBits(out, packed_code_sizes[packed_code_sizes_index++], "\02\03\07"[code - 16]);
+							if (code_size >= 16)
+								PutBits(out, lz_code_sizes[i++], "\02\03\07"[code_size - 16]);
 						}
 
 						// Output the compressed data
@@ -3089,12 +3098,12 @@ namespace pr::storage::zip
 			template <typename Out>
 			void WriteCompressedData(OutIter<Out>& out, LZBuffer const& lz_buffer, HuffCodeTable const& lit_table, HuffCodeTable const& dst_table)
 			{
-				uint8_t flags = 0;
+				int flags = 1;
 				for (auto ptr = lz_buffer.begin(); ptr != lz_buffer.end(); flags >>= 1)
 				{
 					// Every 8 loops, the next byte is the 'flags' byte
-					if (((ptr - lz_buffer.begin()) & 7) == 0)
-						flags = *ptr++;
+					if (flags == 1)
+						flags = *ptr++ | 0x100;
 
 					// If the LSB is 0, then the next byte is a literal
 					if ((flags & 1) == 0)
@@ -3112,23 +3121,23 @@ namespace pr::storage::zip
 						auto dst = ptr[1] | (ptr[2] << 8);
 						ptr += 3;
 
-						static std::array<uint32_t 17> const s_bitmasks = { 0x0000, 0x0001, 0x0003, 0x0007, 0x000F, 0x001F, 0x003F, 0x007F, 0x00FF, 0x01FF, 0x03FF, 0x07FF, 0x0FFF, 0x1FFF, 0x3FFF, 0x7FFF, 0xFFFF };
+						static std::array<uint32_t, 17> const s_bitmasks = { 0x0000, 0x0001, 0x0003, 0x0007, 0x000F, 0x001F, 0x003F, 0x007F, 0x00FF, 0x01FF, 0x03FF, 0x07FF, 0x0FFF, 0x1FFF, 0x3FFF, 0x7FFF, 0xFFFF };
 
 						// Write out the length value
-						assert(lit_table.m_code_size[s_tdefl_len_sym[len]] != 0 && "No Huffman code assigned to this length value");
-						PutBits(out, lit_table.m_code[s_tdefl_len_sym[len]], lit_table.m_code_size[s_tdefl_len_sym[len]]);
-						PutBits(out, len & s_bitmasks[s_tdefl_len_extra[len]], s_tdefl_len_extra[len]);
+						assert(lit_table.m_code_size[s_len_sym[len]] != 0 && "No Huffman code assigned to this length value");
+						PutBits(out, lit_table.m_code[s_len_sym[len]], lit_table.m_code_size[s_len_sym[len]]);
+						PutBits(out, len & s_bitmasks[s_len_extra[len]], s_len_extra[len]);
 
 						// Write out the distance value
 						auto sym = dst <= 0x1FF
-							? s_tdefl_small_dist_sym[dst >> 0]
-							: s_tdefl_large_dist_sym[dst >> 8];
+							? s_small_dist_sym[dst >> 0]
+							: s_large_dist_sym[dst >> 8];
 						auto extra = dst <= 0x1FF
-							? s_tdefl_small_dist_extra[dst >> 0]
-							: s_tdefl_large_dist_extra[dst >> 8];
+							? s_small_dist_extra[dst >> 0]
+							: s_large_dist_extra[dst >> 8];
 						assert(dst_table.m_code_size[sym] != 0 && "No Huffman code assigned to this distance value");
 						PutBits(out, dst_table.m_code[sym], dst_table.m_code_size[sym]);
-						PutBits(out, dst & s_bitmasks[num_extra_bits], num_extra_bits);
+						PutBits(out, dst & s_bitmasks[extra], extra);
 					}
 				}
 
@@ -3958,14 +3967,14 @@ namespace pr::storage::zip
 			// This is actually a modification of Alex's original code so PNG files generated by this function pass pngcheck.
 
 			// Using a local copy of this array here in case MINIZ_NO_ZLIB_APIS was defined.
-			static const mz_uint s_tdefl_png_num_probes[11] = { 0, 1, 6, 32, 16, 32, 128, 256, 512, 768, 1500 };
+			static const mz_uint s_png_num_probes[11] = { 0, 1, 6, 32, 16, 32, 128, 256, 512, 768, 1500 };
 			tdefl_compressor* pComp = (tdefl_compressor*)mz_malloc(sizeof(tdefl_compressor)); tdefl_output_buffer out_buf; int i, bpl = w * num_chans, y, z; uint32_t c; *pLen_out = 0;
 			if (!pComp) return nullptr;
 			memset(out_buf); out_buf.m_expandable = MZ_TRUE; out_buf.m_capacity = 57 + std::max(64, (1 + bpl) * h); if (nullptr == (out_buf.m_pBuf = (uint8_t*)mz_malloc(out_buf.m_capacity))) { mz_free(pComp); return nullptr; }
 			// write dummy header
 			for (z = 41; z; --z) tdefl_output_buffer_putter(&z, 1, &out_buf);
 			// compress image data
-			tdefl_init(pComp, tdefl_output_buffer_putter, &out_buf, s_tdefl_png_num_probes[std::min<mz_uint>(10, level)] | ECompressFlags::WriteZLibHeader);
+			tdefl_init(pComp, tdefl_output_buffer_putter, &out_buf, s_png_num_probes[std::min<mz_uint>(10, level)] | ECompressFlags::WriteZLibHeader);
 			for (y = 0; y < h; ++y) { tdefl_compress_buffer(pComp, &z, 1, TDEFL_NO_FLUSH); tdefl_compress_buffer(pComp, (uint8_t*)pImage + (flip ? (h - 1 - y) : y) * bpl, bpl, TDEFL_NO_FLUSH); }
 			if (tdefl_compress_buffer(pComp, nullptr, 0, TDEFL_FINISH) != TDEFL_STATUS_DONE) { mz_free(pComp); mz_free(out_buf.m_pBuf); return nullptr; }
 			// write real header
@@ -4018,10 +4027,10 @@ namespace pr::storage::zip
 		static ECompressionFlags CompressionFlagsFrom(ECompressionLevel level, int window_bits, ECompressionStrategy strategy)
 		{
 			assert(level >= ECompressionLevel::None && level <= ECompressionLevel::Uber);
-			static mz_uint const s_tdefl_num_probes[11] = { 0, 1, 6, 32, 16, 32, 128, 256, 512, 768, 1500 };
+			static mz_uint const s_num_probes[11] = { 0, 1, 6, 32, 16, 32, 128, 256, 512, 768, 1500 };
 
 			// level may actually range from [0,10] (10 is a "hidden" max level, where we want a bit more compression and it's fine if throughput to fall off a cliff on some files).
-			auto comp_flags = static_cast<ECompressionFlags>(s_tdefl_num_probes[level]) | (level <= 3 ? ECompressionFlags::GreedyParsing : ECompressionFlags::None);
+			auto comp_flags = static_cast<ECompressionFlags>(s_num_probes[level]) | (level <= 3 ? ECompressionFlags::GreedyMatching : ECompressionFlags::None);
 
 			if (window_bits > 0)
 				comp_flags |= ECompressionFlags::WriteZLibHeader;
@@ -4235,7 +4244,8 @@ namespace pr::storage::zip
 			for (;ifile.read(buf.data(), buf.size()).good();)
 				crc = Crc(buf.data(), ifile.gcount(), crc);
 
-			// Restoure the file pointer position
+			// Restore the file pointer position
+			ifile.clear();
 			ifile.seekg(fpos);
 			return crc;
 		}
@@ -4337,7 +4347,7 @@ namespace pr::storage::zip
 	private:
 
 		// Purposely making these tables static for faster init and thread safety.
-		inline static std::array<uint16_t, 256> const s_tdefl_len_sym =
+		inline static std::array<uint16_t, 256> const s_len_sym =
 		{
 			257, 258, 259, 260, 261, 262, 263, 264, 265, 265, 266, 266, 267, 267, 268, 268, 269, 269, 269, 269, 270, 270, 270, 270, 271, 271, 271, 271, 272, 272, 272, 272,
 			273, 273, 273, 273, 273, 273, 273, 273, 274, 274, 274, 274, 274, 274, 274, 274, 275, 275, 275, 275, 275, 275, 275, 275, 276, 276, 276, 276, 276, 276, 276, 276,
@@ -4348,14 +4358,14 @@ namespace pr::storage::zip
 			283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283, 283,
 			284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 284, 285,
 		};
-		inline static std::array<uint8_t, 256> const s_tdefl_len_extra =
+		inline static std::array<uint8_t, 256> const s_len_extra =
 		{
 			0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
 			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
 			5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
 			5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 0,
 		};
-		inline static std::array<uint8_t, 512> const s_tdefl_small_dist_sym =
+		inline static std::array<uint8_t, 512> const s_small_dist_sym =
 		{
 			0, 1, 2, 3, 4, 4, 5, 5, 6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 9, 9, 9, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11,
 			11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 13,
@@ -4370,7 +4380,7 @@ namespace pr::storage::zip
 			17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17,
 			17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17,
 		};
-		inline static std::array<uint8_t, 512> const s_tdefl_small_dist_extra =
+		inline static std::array<uint8_t, 512> const s_small_dist_extra =
 		{
 			0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5,
 			5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
@@ -4381,13 +4391,13 @@ namespace pr::storage::zip
 			7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
 			7, 7, 7, 7, 7, 7, 7, 7,
 		};
-		inline static std::array<uint8_t, 128> const s_tdefl_large_dist_sym =
+		inline static std::array<uint8_t, 128> const s_large_dist_sym =
 		{
 			0, 0, 18, 19, 20, 20, 21, 21, 22, 22, 22, 22, 23, 23, 23, 23, 24, 24, 24, 24, 24, 24, 24, 24, 25, 25, 25, 25, 25, 25, 25, 25, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26, 26,
 			26, 26, 26, 26, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28,
 			28, 28, 28, 28, 28, 28, 28, 28, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29,
 		};
-		inline static std::array<uint8_t, 128> const s_tdefl_large_dist_extra =
+		inline static std::array<uint8_t, 128> const s_large_dist_extra =
 		{
 			0, 0, 8, 8, 9, 9, 9, 9, 10, 10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,
 			12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13,
@@ -4427,6 +4437,7 @@ namespace pr::storage
 		// Write a test zip file
 		{
 			zip::ZipArchive z;
+			z.Add("file3.txt", path / "file3.txt");
 			z.Add("binary-00-0f.bin", path / "binary-00-0F.bin");
 
 			//std::basic_ifstream<uint8_t> zip(path / "binary-00-0F.zip");
