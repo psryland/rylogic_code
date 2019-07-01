@@ -7,36 +7,16 @@
 // See the file end for copyright notices.
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
-#include <unordered_map>
-#include <limits>
 #include <iostream>
 #include <sstream>
 #include <fstream>
 #include <algorithm>
 #include <filesystem>
-#include <cstdint>
-#include <cctype>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
-#include <assert.h>
-#include <time.h>
-#include <sys/stat.h>
-#if defined(_MSC_VER) || defined(__MINGW64__)
-#include <sys/utime.h>
-#elif defined(__MINGW32__)
-#include <sys/utime.h>
-#elif defined(__TINYC__)
-#include <sys/utime.h>
-#elif defined(__GNUC__) && _LARGEFILE64_SOURCE
-#include <utime.h>
-#else
-#include <utime.h>
-#endif
+#include <chrono>
 
 namespace pr::storage::zip
 {
@@ -93,6 +73,7 @@ namespace pr::storage::zip
 		template <typename T> using span_t = typename std::basic_string_view<T>;
 		template <typename T> using ifstream_t = typename std::basic_ifstream<T>;
 		template <typename T> using ofstream_t = typename std::basic_ofstream<T>;
+		using MSDosTimestamp = struct { uint16_t time, date; };
 		static_assert(sizeof(uint16_t) == 2);
 		static_assert(sizeof(uint32_t) == 4);
 		static_assert(sizeof(uint64_t) == 8);
@@ -222,13 +203,13 @@ namespace pr::storage::zip
 			// uint8_t Data[CompressedSize];
 
 			LDH() = default;
-			LDH(size_t item_name_size, size_t extra_size, size_t uncompressed_size, size_t compressed_size, uint32_t uncompressed_crc32, EMethod method, EBitFlags bit_flags, uint16_t dos_time, uint16_t dos_date)
+			LDH(size_t item_name_size, size_t extra_size, size_t uncompressed_size, size_t compressed_size, uint32_t uncompressed_crc32, EMethod method, EBitFlags bit_flags, MSDosTimestamp dos_timestamp)
 				:Sig(Signature)
 				,Version(VersionFor(method))
 				,BitFlags(bit_flags)
 				,Method(method)
-				,FileTime(dos_time)
-				,FileDate(dos_date)
+				,FileTime(dos_timestamp.time)
+				,FileDate(dos_timestamp.date)
 				,Crc(uncompressed_crc32)
 				,CompressedSize(checked_cast<uint32_t>(compressed_size))
 				,UncompressedSize(checked_cast<uint32_t>(uncompressed_size))
@@ -291,14 +272,14 @@ namespace pr::storage::zip
 			// uint8_t ItemComment[ItemCommentSize];
 
 			CDH() = default;
-			CDH(size_t name_size, size_t extra_size, size_t comment_size, size_t uncompressed_size, size_t compressed_size, uint32_t uncompressed_crc32, EMethod method, EBitFlags bit_flags, uint16_t dos_time, uint16_t dos_date, size_t local_header_ofs, uint32_t ext_attributes, uint16_t int_attributes)
+			CDH(size_t name_size, size_t extra_size, size_t comment_size, size_t uncompressed_size, size_t compressed_size, uint32_t uncompressed_crc32, EMethod method, EBitFlags bit_flags, MSDosTimestamp dos_timestamp, size_t local_header_ofs, uint32_t ext_attributes, uint16_t int_attributes)
 				:Sig(Signature)
 				,VersionMadeBy()
 				,VersionNeeded(VersionFor(method))
 				,BitFlags(bit_flags)
 				,Method(method)
-				,FileTime(dos_time)
-				,FileDate(dos_date)
+				,FileTime(dos_timestamp.time)
+				,FileDate(dos_timestamp.date)
 				,Crc(uncompressed_crc32)
 				,CompressedSize(checked_cast<uint32_t>(compressed_size))
 				,UncompressedSize(checked_cast<uint32_t>(uncompressed_size))
@@ -337,9 +318,9 @@ namespace pr::storage::zip
 					NameSize != 0 && *(reinterpret_cast<char const*>(this + 1) + NameSize - 1) == '/' ||
 					has_flag(ExternalAttributes, DOSSubDirectoryFlag);
 			}
-			time_t Time() const
+			std::filesystem::file_time_type Time() const
 			{
-				return DosTimeToTime(FileTime, FileDate);
+				return DosTimeToFSTime(FileTime, FileDate);
 			}
 		};
 		static_assert(sizeof(CDH) == 46);
@@ -827,12 +808,10 @@ namespace pr::storage::zip
 			EBitFlags bit_flags = 0;
 			uint16_t int_attribytes = 0;
 			uint32_t ext_attributes = 0;
-			uint16_t dos_time = 0;
-			uint16_t dos_date = 0;
 
 			// Record the current time so the item can be date stamped.
 			// Do this before compressing just in case compression takes a while
-			TimeToDosTime(time(nullptr), dos_time, dos_date);
+			auto dos_timestamp = FSTimeToDosTime(std::filesystem::file_time_type::now());
 
 			// Reserve space for the entry in the central directory
 			m_cdir.reserve(m_cdir.size() + sizeof(CDH) + item_name.size() + extra.size() + item_comment.size());
@@ -845,7 +824,7 @@ namespace pr::storage::zip
 			item_ofs += num_alignment_padding_bytes;
 
 			// Write the local directory header
-			LDH ldh(item_name.size(), extra.size(), uncompressed_size, buf.size(), uncompressed_crc32, method, bit_flags, dos_time, dos_date);
+			LDH ldh(item_name.size(), extra.size(), uncompressed_size, buf.size(), uncompressed_crc32, method, bit_flags, dos_timestamp.time, dos_timestamp_date);
 			m_write(*this, item_ofs, &ldh, sizeof(ldh));
 			item_ofs += sizeof(LDH);
 
@@ -862,7 +841,7 @@ namespace pr::storage::zip
 			item_ofs += buf.size();
 
 			// Add an entry to the central directory
-			CDH cdh(item_name.size(), extra.size(), item_comment.size(), uncompressed_size, buf.size(), uncompressed_crc32, method, bit_flags, dos_time, dos_date, ldh_ofs, ext_attributes, int_attributes);
+			CDH cdh(item_name.size(), extra.size(), item_comment.size(), uncompressed_size, buf.size(), uncompressed_crc32, method, bit_flags, dos_timestamp, ldh_ofs, ext_attributes, int_attributes);
 			append(m_cdir, &cdh, &cdh + 1);
 			append(m_cdir, item_name);
 			append(m_cdir, extra);
@@ -921,8 +900,6 @@ namespace pr::storage::zip
 			uint16_t int_attributes = 0;
 			uint32_t ext_attributes = 0;
 			uint64_t compressed_size = 0;
-			uint16_t dos_time = 0;
-			uint16_t dos_date = 0;
 			uint32_t crc32 = InitialCrc;
 
 			// If the name has a directory divider at the end, set the directory bit
@@ -937,7 +914,7 @@ namespace pr::storage::zip
 			}
 
 			// Record the current time so the item can be date stamped. Do this before compressing just in case compression takes a while
-			TimeToDosTime(time(nullptr), dos_time, dos_date);
+			auto dos_timestamp = FSTimeToDosTime(std::filesystem::file_time_type::now());
 
 			// Reserve space for the entry in the central directory
 			m_cdir.reserve(m_cdir.size() + sizeof(CDH) + item_name.size() + extra.size() + item_comment.size());
@@ -994,11 +971,11 @@ namespace pr::storage::zip
 			}
 
 			// Write the local directory header now that we have the compressed size
-			LDH ldh(item_name.size(), extra.size(), buf.size(), compressed_size, crc32, method, bit_flags, dos_time, dos_date);
+			LDH ldh(item_name.size(), extra.size(), buf.size(), compressed_size, crc32, method, bit_flags, dos_timestamp);
 			m_write(*this, ldh_ofs, &ldh, sizeof(ldh));
 
 			// Add an entry to the central directory
-			CDH cdh(item_name.size(), extra.size(), item_comment.size(), buf.size(), compressed_size, crc32, method, bit_flags, dos_time, dos_date, ldh_ofs, ext_attributes, int_attributes);
+			CDH cdh(item_name.size(), extra.size(), item_comment.size(), buf.size(), compressed_size, crc32, method, bit_flags, dos_timestamp, ldh_ofs, ext_attributes, int_attributes);
 			append(m_cdir, &cdh, &cdh + 1);
 			append(m_cdir, item_name);
 			append(m_cdir, extra);
@@ -1069,8 +1046,6 @@ namespace pr::storage::zip
 			uint16_t int_attributes = 0;
 			uint32_t ext_attributes = 0;
 			uint64_t compressed_size = 0;
-			uint16_t dos_time = 0;
-			uint16_t dos_date = 0;
 			uint32_t crc32 = InitialCrc;
 
 			// Don't compress if too small
@@ -1080,7 +1055,7 @@ namespace pr::storage::zip
 
 			// Record the current time so the item can be date stamped.
 			// Do this before compressing just in case compression takes a while
-			TimeToDosTime(time(nullptr), dos_time, dos_date);
+			auto dos_timestamp = FSTimeToDosTime(std::filesystem::file_time_type::clock::now());
 
 			// Reserve space for the entry in the central directory
 			m_cdir.reserve(m_cdir.size() + sizeof(CDH) + item_name.size() + extra.size() + item_comment.size());
@@ -1145,11 +1120,11 @@ namespace pr::storage::zip
 			}
 
 			// Write the local directory header now that we have the compressed size
-			LDH ldh(item_name.size(), extra.size(), uncompressed_size, compressed_size, crc32, method, bit_flags, dos_time, dos_date);
+			LDH ldh(item_name.size(), extra.size(), uncompressed_size, compressed_size, crc32, method, bit_flags, dos_timestamp);
 			m_write(*this, ldh_ofs, &ldh, sizeof(ldh));
 
 			// Add an entry to the central directory
-			CDH cdh(item_name.size(), extra.size(), item_comment.size(), uncompressed_size, compressed_size, crc32, method, bit_flags, dos_time, dos_date, ldh_ofs, ext_attributes, int_attributes);
+			CDH cdh(item_name.size(), extra.size(), item_comment.size(), uncompressed_size, compressed_size, crc32, method, bit_flags, dos_timestamp, ldh_ofs, ext_attributes, int_attributes);
 			append(m_cdir, &cdh, &cdh + 1);
 			append(m_cdir, item_name);
 			append(m_cdir, extra);
@@ -1166,6 +1141,45 @@ namespace pr::storage::zip
 
 			// Move the cdir offset
 			m_cdir_offset = item_ofs;
+		}
+
+		// Extract all items in the archive to the given directory
+		// 'progress' is a callback of the number of items extracted. Sig: bool progress_cb(CDH const& info, int index, int count)
+		void ExtractAll(std::filesystem::path const& directory) const
+		{
+			ExtractAll(directory, [](CDH const&, int, int) {});
+		}
+		template <typename ProgressCB>
+		void ExtractAll(std::filesystem::path const& directory, ProgressCB progress) const
+		{
+			// Create the output directory if it doesn't exist
+			if (!std::filesystem::exists(directory))
+				std::filesystem::create_directories(directory);
+
+			// Create the subdirectories included in the archive
+			for (int i = 0, iend = Count(); i != iend; ++i)
+			{
+				auto& info = CDirEntry(i);
+				if (!info.IsDirectory())
+					continue;
+				
+				auto rel_path = std::filesystem::path(info.ItemName());
+				std::filesystem::create_directories(directory / rel_path);
+			}
+
+			// Extract each archive item
+			for (int i = 0, iend = Count(); i != iend; ++i)
+			{
+				auto& info = CDirEntry(i);
+				if (info.IsDirectory())
+					continue;
+
+				auto path = directory / std::filesystem::path(info.ItemName());
+
+				progress(info, i, iend);
+				Extract(info.ItemName(), path);
+				progress(info, i + 1, iend);
+			}
 		}
 
 		// Extracts an archive entry to disk and restores its last accessed and modified times.
@@ -1191,17 +1205,13 @@ namespace pr::storage::zip
 		void Extract(int index, std::filesystem::path const& dst_filepath, EZipFlags flags) const
 		{
 			// Create the destination file
-			auto outfile = std::ostream(dst_filepath, std::ios::binary);
+			std::ofstream outfile(dst_filepath, std::ios::binary);
 			Extract(index, outfile, flags);
 			outfile.close();
 
 			// Set the file time on the extracted file to match the times recorded in the archive
-			utimbuf time = {};
 			auto stat = CDirEntry(index);
-			time.actime = stat.m_time;
-			time.modtime = stat.m_time;
-			if (utime(dst_filepath.c_str(), &time) != 0)
-				throw std::runtime_error(strerror("Failed to update modified time."));
+			std::filesystem::last_write_time(dst_filepath, stat.Time());
 		}
 
 		// Extracts an archive entry to a stream.
@@ -1791,47 +1801,66 @@ namespace pr::storage::zip
 			return true;
 		}
 
-		// Convert a time to a local time
-		static bool LocalTime(time_t time, tm& tm)
+		// Convert a MS DOS file time to a standard filesystem time
+		static std::filesystem::file_time_type DosTimeToFSTime(MSDosTimestamp dos_timestamp)
 		{
-			#ifdef _MSC_VER
-			return localtime_s(&tm, &time) == 0;
+			using namespace std::filesystem;
+			using namespace std::chrono;
+
+			// DOS date/time: https://docs.microsoft.com/en-us/windows/desktop/api/winbase/nf-winbase-dosdatetimetofiletime
+			struct tm tm = {};
+			tm.tm_isdst  = -1;
+			tm.tm_year   = ((dos_timestamp.date >> 9) & 127) + 1980 - 1900;
+			tm.tm_mon    = ((dos_timestamp.date >> 5) & 15) - 1;
+			tm.tm_mday   = ((dos_timestamp.date     ) & 31);
+			tm.tm_hour   = (dos_timestamp.time >> 11) & 31;
+			tm.tm_min    = (dos_timestamp.time >>  5) & 63;
+			tm.tm_sec    = (dos_timestamp.time <<  1) & 62;
+			auto time    = mktime(&tm);
+
+			#if defined (_MSC_VER)
+			// In VS, 'file_time_type' is in 100s of nanoseconds since 1601-01-01 (i.e. FILETIME).
+			// For whatever reason, 'from_time_t' isn't defined, so
+			return file_time_type(file_time_type::duration(long long(time) * 10000000LL + 116444736000000000LL));
 			#else
-			tm = *localtime(&time);
-			return true;
+			return file_time_type::clock::from_time_t(time);
 			#endif
 		}
-		static time_t DosTimeToTime(int dos_time, int dos_date)
+
+		// Convert a standard filesystem time to a MS DOS time and date
+		static MSDosTimestamp FSTimeToDosTime(std::filesystem::file_time_type last_mod_time)
 		{
-			struct tm tm = {};
-			tm.tm_isdst = -1;
-			tm.tm_year = ((dos_date >> 9) & 127) + 1980 - 1900;
-			tm.tm_mon = ((dos_date >> 5) & 15) - 1;
-			tm.tm_mday = dos_date & 31;
-			tm.tm_hour = (dos_time >> 11) & 31;
-			tm.tm_min = (dos_time >> 5) & 63;
-			tm.tm_sec = (dos_time << 1) & 62;
-			return mktime(&tm);
-		}
-		static void TimeToDosTime(time_t time, uint16_t& dos_time, uint16_t& dos_date)
-		{
+			using namespace std::filesystem;
+			using namespace std::chrono;
+
+			// Convert the file time to a std::time_t
+			#if defined (_MSC_VER)
+			auto filetime = last_mod_time.time_since_epoch().count();
+			auto time = std::time_t(filetime - 116444736000000000LL) / 10000000LL;
+			#else
+			auto time = file_time_type::clock::to_time_t(last_mod_time);
+			#endif
+
+			// Convert a time to a local time
+			auto LocalTime = [](time_t time, tm& tm)
+			{
+				#ifdef _MSC_VER
+				return localtime_s(&tm, &time) == 0;
+				#else
+				tm = *localtime(&time);
+				return true;
+				#endif
+			};
+
+			// Convert the time_t to a 'tm' in local time
 			struct tm tm;
+			MSDosTimestamp dos_timestamp = {};
 			if (LocalTime(time, tm))
 			{
-				dos_time = static_cast<uint16_t>((tm.tm_hour << 11) + (tm.tm_min << 5) + (tm.tm_sec >> 1));
-				dos_date = static_cast<uint16_t>(((tm.tm_year + 1900 - 1980) << 9) + ((tm.tm_mon + 1) << 5) + tm.tm_mday);
+				dos_timestamp.time = static_cast<uint16_t>((tm.tm_hour << 11) + (tm.tm_min << 5) + (tm.tm_sec >> 1));
+				dos_timestamp.date = static_cast<uint16_t>(((tm.tm_year + 1900 - 1980) << 9) + ((tm.tm_mon + 1) << 5) + tm.tm_mday);
 			}
-			else
-			{
-				dos_date = 0;
-				dos_time = 0;
-			}
-		}
-		static void FileTimeToDosTime(std::filesystem::path filepath, uint16_t& dos_time, uint16_t& dos_date)
-		{
-			auto ftime = std::filesystem::last_write_time(filepath);
-			auto time = decltype(ftime)::clock::to_time_t(ftime);
-			TimeToDosTime(time, dos_time, dos_date);
+			return dos_timestamp;
 		}
 
 		// Accumulate the crc of given data.
@@ -4001,6 +4030,13 @@ namespace pr::storage
 			auto matches = bytes == file_bytes;
 			return matches;
 		};
+
+		{// Round trip time stamps
+			//auto now = std::filesystem::file_time_type::clock::now();
+			//auto dos = zip::ZipArchive::FSTimeToDosTime(now);
+			//auto NOW = zip::ZipArchive::DosTimeToFSTime(dos);
+			//PR_CHECK(NOW - now < std::chrono::seconds(3), true); // DOS time has 2s resolution
+		}
 
 		// Write a test zip file
 		{

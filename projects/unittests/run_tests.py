@@ -14,7 +14,7 @@ try:
 	sys.argv = sys.argv if len(sys.argv) >= 2 else ["", "P:\\pr\\obj\\v142\\unittests\\x64\\Debug\\unittests.dll"] 
 
 	# Set this to false to disable running tests on compiling
-	RunTests = False
+	RunTests = True
 
 	test_dll_path = os.path.abspath(sys.argv[1])
 	if RunTests and os.path.exists(test_dll_path):
