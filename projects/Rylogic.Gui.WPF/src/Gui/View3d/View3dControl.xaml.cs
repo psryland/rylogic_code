@@ -247,7 +247,7 @@ namespace Rylogic.Gui.WPF
 					// When the control is loaded, attach the main win.
 					// Detach when unloaded (not reliable though)
 					var win = System.Windows.Window.GetWindow(this);
-					D3DImage.WindowOwner = new WindowInteropHelper(win).Handle;
+					D3DImage.WindowOwner = win != null ? new WindowInteropHelper(win).Handle : IntPtr.Zero;
 					Invalidate();
 				}
 				void OnUnloaded(object sender, EventArgs arg)

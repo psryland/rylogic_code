@@ -17,12 +17,13 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Rylogic.Extn;
 using Rylogic.Gui.WPF;
 
 namespace TestWPF
 {
 	/// <summary>Interaction logic for MainWindow.xaml</summary>
-	public partial class MainWindow :Window
+	public partial class MainWindow : Window
 	{
 		public MainWindow()
 		{
@@ -51,6 +52,19 @@ namespace TestWPF
 			ShowMsgBox = Command.Create(this, () =>
 			{
 				MsgBox.Show(this, "Informative isn't it", "Massage Box", MsgBox.EButtons.YesNoCancel, MsgBox.EIcon.Exclamation);
+			});
+			ShowListUI = Command.Create(this, () =>
+			{
+				var dlg = new ListUI(this)
+				{
+					Title = "Listing to the Left",
+					Prompt = "Select anything you like",
+					SelectionMode = SelectionMode.Multiple,
+					AllowCancel = false,
+				};
+				dlg.Items.AddRange(new[] { "One", "Two", "Three", "Phooore, was that you?" });
+				if (dlg.ShowDialog() == true)
+					MsgBox.Show(this, $"{string.Join(",", dlg.SelectedItems.Cast<string>())}! Good Choice!", "Result", MsgBox.EButtons.OK);
 			});
 			ShowLogUI = Command.Create(this, () =>
 			{
@@ -121,6 +135,7 @@ namespace TestWPF
 		public Command ShowDiagram { get; }
 		public Command ShowDockContainer { get; }
 		public Command ShowMsgBox { get; }
+		public Command ShowListUI { get; }
 		public Command ShowLogUI { get; }
 		public Command ShowPatternEditor { get; }
 		public Command ShowProgressUI { get; }

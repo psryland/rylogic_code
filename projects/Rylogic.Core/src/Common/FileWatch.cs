@@ -37,6 +37,7 @@ namespace Rylogic.Common
 		private readonly List<IWatcher> m_watched;
 		private readonly List<IWatcher> m_changed; // Recycle the changed files collection
 		private readonly CancellationToken m_shutdown;
+		private bool m_disposed;
 
 		public FileWatch(CancellationToken? shutdown = null)
 		{
@@ -56,6 +57,7 @@ namespace Rylogic.Common
 		public virtual void Dispose()
 		{
 			PollPeriod = TimeSpan.Zero;
+			m_disposed = true;
 		}
 
 		/// <summary>Get/Set the auto-polling period. If the period is 0 polling is disabled</summary>
@@ -64,11 +66,14 @@ namespace Rylogic.Common
 			get { return m_poll_period; }
 			set
 			{
+				if (m_disposed) throw new ObjectDisposedException("FileWatch disposed. Do not set PollPeriod");
 				if (m_poll_period == value) return;
+				if (m_poll_period != TimeSpan.Zero)
+				{
+					m_cancel.Cancel();
+					m_cancel = null;
+				}
 				m_poll_period = value;
-
-				//m_cancel.Cancel();
-				Util.Dispose(ref m_cancel);
 				if (m_poll_period != TimeSpan.Zero)
 				{
 					m_cancel = CancellationTokenSource.CreateLinkedTokenSource(m_shutdown);

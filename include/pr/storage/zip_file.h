@@ -320,7 +320,7 @@ namespace pr::storage::zip
 			}
 			std::filesystem::file_time_type Time() const
 			{
-				return DosTimeToFSTime(FileTime, FileDate);
+				return DosTimeToFSTime(MSDosTimestamp{FileTime, FileDate});
 			}
 		};
 		static_assert(sizeof(CDH) == 46);

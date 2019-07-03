@@ -700,12 +700,6 @@ namespace Rylogic.Utility
 			get { return Path_.Directory(ExecutablePath); }
 		}
 
-		/// <summary>Returns the full path to a file or directory relative to the app executable</summary>
-		public static string ResolveAppPath(params string[] paths)
-		{
-			return Path_.CombinePath(paths.Prepend(AppDirectory));
-		}
-
 		/// <summary>Read a text file embedded resource returning it as a string</summary>
 		public static string TextResource(string resource_name, Assembly ass)
 		{
@@ -714,6 +708,16 @@ namespace Rylogic.Utility
 			if (stream == null) throw new IOException("No resource with name "+resource_name+" found");
 			using (var src = new StreamReader(stream))
 				return src.ReadToEnd();
+		}
+
+		/// <summary>Returns the full path to a file or directory relative to the app executable</summary>
+		public static string ResolveAppPath(params string[] paths)
+		{
+			return ResolveAppPath((IEnumerable<string>)paths);
+		}
+		public static string ResolveAppPath(IEnumerable<string> paths)
+		{
+			return Path_.CombinePath(paths.Prepend(AppDirectory));
 		}
 
 		/// <summary>The application directory for a roaming user</summary>

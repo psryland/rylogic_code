@@ -23,17 +23,20 @@
 					<Separator/>
 					<MenuItem Header="_Close" Command="{Binding Exit}"/>
 				</MenuItem>
-				<MenuItem Header="_Tests">
+				<MenuItem Header="_UI Elements">
 					<MenuItem Header="_Chart" Command="{Binding ShowChart}"/>
 					<MenuItem Header="_Diagram" Command="{Binding ShowDiagram}"/>
 					<MenuItem Header="_Dock Container" Command="{Binding ShowDockContainer}"/>
-					<MenuItem Header="_Message Box UI" Command="{Binding ShowMsgBox}"/>
 					<MenuItem Header="_Log UI" Command="{Binding ShowLogUI}"/>
+					<MenuItem Header="_View3D" Command="{Binding ShowView3DUI}"/>
+				</MenuItem>
+				<MenuItem Header="_Dialogs">
+					<MenuItem Header="_Message Box UI" Command="{Binding ShowMsgBox}"/>
+					<MenuItem Header="_List UI" Command="{Binding ShowListUI}"/>
 					<MenuItem Header="_Pattern Editor" Command="{Binding ShowPatternEditor}"/>
 					<MenuItem Header="_Progress UI" Command="{Binding ShowProgressUI }"/>
 					<MenuItem Header="_Prompt UI" Command="{Binding ShowPromptUI }"/>
 					<MenuItem Header="_Tool Window" Command="{Binding ShowToolWindow }"/>
-					<MenuItem Header="_View3D" Command="{Binding ShowView3DUI}"/>
 				</MenuItem>
 			</Menu>
 			<gui2:ComboBoxAutoComplete
