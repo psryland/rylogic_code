@@ -127,7 +127,7 @@ namespace Rylogic.Plugin
 
 				// Return the type that implements the interface
 				var fd = new FileInfo(ass.Location);
-				yield return new PluginFile(fd.Name, type, ass, fd, attr.Unique);
+				yield return new PluginFile(Path_.FileTitle(fd.Name), type, ass, fd, attr.Unique);
 			}
 		}
 

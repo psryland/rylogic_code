@@ -60,6 +60,13 @@ namespace Rylogic.Gui.WPF
 			set => m_list.SelectionMode = value;
 		}
 
+		/// <summary>Get/Set the property to display</summary>
+		public string DisplayMember
+		{
+			get => m_list.DisplayMemberPath;
+			set => m_list.DisplayMemberPath = value;
+		}
+
 		/// <summary>The prompt text</summary>
 		public string Prompt
 		{

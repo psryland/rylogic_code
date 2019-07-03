@@ -472,7 +472,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				m_close.Click += (s, a) =>
 				{
 					if (VisibleContent == null) return;
-					VisibleContent.DockPane = null;
+					VisibleContent.Close();
 					RootBranch.PruneBranches();
 				};
 			}

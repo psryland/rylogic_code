@@ -71,8 +71,7 @@ namespace Rylogic.Gui.WPF
 		}
 		public virtual void Dispose()
 		{
-			DockPane = null;
-			DockContainer = null;
+			Remove();
 		}
 
 		/// <summary>Get the control we're providing docking functionality for</summary>
@@ -126,12 +125,54 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Raised when this DockControl is assigned to a dock container (or possibly to null)</summary>
 		public event EventHandler<DockContainerChangedEventArgs> DockContainerChanged;
 
+		/// <summary>Hide this item in the dock container. (Use Remove() to make remove it completely)</summary>
+		public void Close()
+		{
+			// Although removed from the UI, the dock container still remembers this instance.
+			// The 'Windows' menu can be used to reopen it. If 'DestroyOnClose' is true or the
+			// instance is 'Removed', then it can't be reopened.
+			DockPane = null;
+			Closed?.Invoke(this, EventArgs.Empty);
+		}
+
 		/// <summary>Remove this DockControl from whatever dock container it is in</summary>
 		public void Remove()
 		{
 			DockPane = null;
 			DockContainer = null;
 		}
+
+		/// <summary>If true, the instance is removed and disposed when closed</summary>
+		public bool DestroyOnClose
+		{
+			get { return m_destroy_on_close; }
+			set
+			{
+				if (m_destroy_on_close == value) return;
+				if (m_destroy_on_close)
+				{
+					Closed -= HandleClose;
+				}
+				m_destroy_on_close = value;
+				if (m_destroy_on_close)
+				{
+					Closed += HandleClose;
+				}
+
+				// Handler
+				void HandleClose(object sender, EventArgs args)
+				{
+					Closed -= HandleClose;
+					if (m_destroy_on_close)
+					{
+						Remove();
+						if (Owner is IDisposable disposable)
+							disposable.Dispose();
+					}
+				}
+			}
+		}
+		private bool m_destroy_on_close;
 
 		/// <summary>The dock container, auto-hide panel, or floating window that this content is docked within</summary>
 		internal ITreeHost TreeHost
@@ -140,11 +181,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Gets 'Owner' as an IDockable</summary>
-		public IDockable Dockable
-		{
-			[DebuggerStepThrough]
-			get { return (IDockable)Owner; }
-		}
+		public IDockable Dockable => (IDockable)Owner;
 
 		/// <summary>Get/Set the pane that this content resides within.</summary>
 		public DockPane DockPane
@@ -440,11 +477,7 @@ namespace Rylogic.Gui.WPF
 			var cmenu = new ContextMenu();
 			{
 				var opt = cmenu.Items.Add2(new MenuItem { Header = "Close" });
-				opt.Click += (s, a) =>
-				{
-					DockPane = null;
-					Closed?.Invoke(this, EventArgs.Empty);
-				};
+				opt.Click += (s, a) => Close();
 			}
 			return cmenu;
 		}

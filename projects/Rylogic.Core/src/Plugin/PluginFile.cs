@@ -31,6 +31,12 @@ namespace Rylogic.Plugin
 		/// <summary>True if only one instance of the plugin at a time is allowed</summary>
 		public bool Unique { get; private set; }
 
+		/// <summary>Create an instance of this plugin</summary>
+		public object CreateInstance<TInterface>(object[] args)
+		{
+			return (TInterface)Activator.CreateInstance(Type, args);
+		}
+
 		/// <summary></summary>
 		public override string ToString()
 		{
