@@ -42,7 +42,7 @@ namespace Rylogic.Gui.WinForms
 
 				m_view3d = View3d.Create();
 				var opts = new View3d.WindowOptions(HandleReportError, IntPtr.Zero, gdi_compatible_backbuffer) { DbgName = name ?? string.Empty };
-				m_impl_wnd = new View3d.Window(View3d, Handle, opts);
+				m_window = new View3d.Window(View3d, Handle, opts);
 
 				InitializeComponent();
 
@@ -60,9 +60,9 @@ namespace Rylogic.Gui.WinForms
 		protected override void Dispose(bool disposing)
 		{
 			ShowMeasurementUI = false;
-			Util.BreakIf(m_impl_wnd != null && Util.IsGCFinalizerThread);
+			Util.BreakIf(m_window != null && Util.IsGCFinalizerThread);
 			Util.BreakIf(m_view3d != null && Util.IsGCFinalizerThread);
-			Util.Dispose(ref m_impl_wnd);
+			Util.Dispose(ref m_window);
 			Util.Dispose(ref m_view3d);
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
@@ -83,9 +83,9 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>The binding to this control</summary>
 		public View3d.Window Window
 		{
-			[DebuggerStepThrough] get { return m_impl_wnd; }
+			[DebuggerStepThrough] get { return m_window; }
 		}
-		private View3d.Window m_impl_wnd;
+		private View3d.Window m_window;
 
 		/// <summary>The main camera</summary>
 		public View3d.Camera Camera
@@ -226,38 +226,42 @@ namespace Rylogic.Gui.WinForms
 			context_menu.Closed += (s,a) => Refresh();
 
 			{// View
-				var view_menu = new ToolStripMenuItem("View");
-				context_menu.Items.Add(view_menu);
+				var view_menu = context_menu.Items.Add2(new ToolStripMenuItem("View") { Name = CMenuItems.View });
 				{// Show focus
-					var show_focus_menu = new ToolStripMenuItem("Show Focus");
-					view_menu.DropDownItems.Add(show_focus_menu);
-					show_focus_menu.Checked = Window.FocusPointVisible;
-					show_focus_menu.Click += (s,a) => { Window.FocusPointVisible = !Window.FocusPointVisible; Refresh(); };
+					var opt = view_menu.DropDownItems.Add2(new ToolStripMenuItem("Show Focus") { Name = CMenuItems.ViewMenu.ShowFocus });
+					opt.Checked = Window.FocusPointVisible;
+					opt.Click += (s,a) =>
+					{
+						Window.FocusPointVisible = !Window.FocusPointVisible;
+						Refresh();
+					};
 				}
 				{// Show Origin
-					var show_origin_menu = new ToolStripMenuItem("Show Origin");
-					view_menu.DropDownItems.Add(show_origin_menu);
-					show_origin_menu.Checked = Window.OriginPointVisible;
-					show_origin_menu.Click += (s,a) => { Window.OriginPointVisible = !Window.OriginPointVisible; Refresh(); };
+					var opt = view_menu.DropDownItems.Add2(new ToolStripMenuItem("Show Origin") { Name = CMenuItems.ViewMenu.ShowOrigin });
+					opt.Checked = Window.OriginPointVisible;
+					opt.Click += (s,a) =>
+					{
+						Window.OriginPointVisible = !Window.OriginPointVisible;
+						Refresh();
+					};
 				}
 				{// Show coords
 				}
 				{// Axis Views
-					var view_options = new ToolStripComboBox("Views") { DropDownStyle = ComboBoxStyle.DropDownList };
-					view_menu.DropDownItems.Add(view_options);
-					view_options.Items.Add("Views");
-					view_options.Items.Add("Axis +X");
-					view_options.Items.Add("Axis -X");
-					view_options.Items.Add("Axis +Y");
-					view_options.Items.Add("Axis -Y");
-					view_options.Items.Add("Axis +Z");
-					view_options.Items.Add("Axis -Z");
-					view_options.Items.Add("Axis -X,-Y,-Z");
-					view_options.SelectedIndex = 0;
-					view_options.SelectedIndexChanged += delegate
+					var opt = view_menu.DropDownItems.Add2(new ToolStripComboBox("Views") { Name = CMenuItems.ViewMenu.Views, DropDownStyle = ComboBoxStyle.DropDownList });
+					opt.Items.Add("Views");
+					opt.Items.Add("Axis +X");
+					opt.Items.Add("Axis -X");
+					opt.Items.Add("Axis +Y");
+					opt.Items.Add("Axis -Y");
+					opt.Items.Add("Axis +Z");
+					opt.Items.Add("Axis -Z");
+					opt.Items.Add("Axis -X,-Y,-Z");
+					opt.SelectedIndex = 0;
+					opt.SelectedIndexChanged += (s, a) =>
 					{
 						var pos = Camera.FocusPoint;
-						switch (view_options.SelectedIndex)
+						switch (opt.SelectedIndex)
 						{
 						case 1: Camera.ResetView( v4.XAxis); break;
 						case 2: Camera.ResetView(-v4.XAxis); break;
@@ -278,32 +282,32 @@ namespace Rylogic.Gui.WinForms
 				}
 			}
 			{// Navigation
-				var rdr_menu = new ToolStripMenuItem("Navigation");
-				context_menu.Items.Add(rdr_menu);
+				var rdr_menu = context_menu.Items.Add2(new ToolStripMenuItem("Navigation") { Name = CMenuItems.Navigation });
 				{// Reset View
-					var reset_menu = new ToolStripMenuItem("Reset View");
-					rdr_menu.DropDownItems.Add(reset_menu);
-					reset_menu.Click += delegate { Camera.ResetView(); Refresh(); };
+					var opt = rdr_menu.DropDownItems.Add2(new ToolStripMenuItem("Reset View") { Name = CMenuItems.NavMenu.ResetView });
+					opt.Click += (s,a) =>
+					{
+						Camera.ResetView();
+						Refresh();
+					};
 				}
 				{// Align to
-					var align_menu = new ToolStripMenuItem("Align");
-					rdr_menu.DropDownItems.Add(align_menu);
+					var align_menu = rdr_menu.DropDownItems.Add2(new ToolStripMenuItem("Align") { Name = CMenuItems.NavMenu.Align });
 					{
-						var align_options = new ToolStripComboBox("Aligns") { DropDownStyle = ComboBoxStyle.DropDownList };
-						align_menu.DropDownItems.Add(align_options);
-						align_options.Items.Add("None");
-						align_options.Items.Add("X");
-						align_options.Items.Add("Y");
-						align_options.Items.Add("Z");
+						var opt = align_menu.DropDownItems.Add2(new ToolStripComboBox("Aligns") { Name = CMenuItems.NavMenu.AlignMenu.Aligns, DropDownStyle = ComboBoxStyle.DropDownList });
+						opt.Items.Add("None");
+						opt.Items.Add("X");
+						opt.Items.Add("Y");
+						opt.Items.Add("Z");
 
 						var axis = Camera.AlignAxis;
-						if      (Math_.FEql(axis, v4.XAxis)) align_options.SelectedIndex = 1;
-						else if (Math_.FEql(axis, v4.YAxis)) align_options.SelectedIndex = 2;
-						else if (Math_.FEql(axis, v4.ZAxis)) align_options.SelectedIndex = 3;
-						else                                 align_options.SelectedIndex = 0;
-						align_options.SelectedIndexChanged += delegate
+						if      (Math_.FEql(axis, v4.XAxis)) opt.SelectedIndex = 1;
+						else if (Math_.FEql(axis, v4.YAxis)) opt.SelectedIndex = 2;
+						else if (Math_.FEql(axis, v4.ZAxis)) opt.SelectedIndex = 3;
+						else                                 opt.SelectedIndex = 0;
+						opt.SelectedIndexChanged += (s,a) =>
 						{
-							switch (align_options.SelectedIndex)
+							switch (opt.SelectedIndex)
 							{
 							default: Camera.AlignAxis = v4.Zero;  break;
 							case 1:  Camera.AlignAxis = v4.XAxis; break;
@@ -317,63 +321,73 @@ namespace Rylogic.Gui.WinForms
 				{// Motion lock
 				}
 				{// Orbit
-				//	var orbit_menu = new ToolStripMenuItem("Orbit");
-				//	rdr_menu.DropDownItems.Add(orbit_menu);
-				//	orbit_menu.Click += delegate {};
+					//var orbit_menu = new ToolStripMenuItem("Orbit");
+					//rdr_menu.DropDownItems.Add(orbit_menu);
+					//orbit_menu.Click += delegate {};
 				}
 			}
 			{// Tools
-				var tools_menu = new ToolStripMenuItem("Tools");
-				context_menu.Items.Add(tools_menu);
+				var tools_menu = context_menu.Items.Add2(new ToolStripMenuItem("Tools") { Name = CMenuItems.Tools });
 				{// Measure
-					var option = new ToolStripMenuItem{Text = "Measure..."};
-					tools_menu.DropDownItems.Add(option);
-					option.Click += delegate { ShowMeasurementUI = true; };
-					//option.Click += delegate { Window.ShowMeasureTool = true; };
+					var opt = tools_menu.DropDownItems.Add2(new ToolStripMenuItem("Measure...") { Name = CMenuItems.ToolsMenu.Measure });
+					opt.Click += (s, a) =>
+					{
+						ShowMeasurementUI = true;
+					};
 				}
 				{// Angle
-					var option = new ToolStripMenuItem{Text = "Angle..."};
-					tools_menu.DropDownItems.Add(option);
-					option.Click += delegate { Window.ShowAngleTool = true; };
+					var opt = tools_menu.DropDownItems.Add2(new ToolStripMenuItem("Angle...") { Name = CMenuItems.ToolsMenu.Angle });
+					opt.Click += (s, a)=>
+					{
+						Window.ShowAngleTool = true;
+					};
 				}
 			}
 			{// Rendering
-				var rdr_menu = new ToolStripMenuItem("Rendering");
-				context_menu.Items.Add(rdr_menu);
+				var rdr_menu = context_menu.Items.Add2(new ToolStripMenuItem("Rendering") { Name = CMenuItems.Rendering });
 				{// Solid/Wireframe/Solid+Wire
-					var option = new ToolStripComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
-					rdr_menu.DropDownItems.Add(option);
-					option.Items.AddRange(Enum<View3d.EFillMode>.Names.Cast<object>().ToArray());
-					option.SelectedIndex = (int)Window.FillMode;
-					option.SelectedIndexChanged += delegate { Window.FillMode = (View3d.EFillMode)option.SelectedIndex; Refresh(); };
+					var opt = rdr_menu.DropDownItems.Add2(new ToolStripComboBox { Name = CMenuItems.RenderingMenu.FillMode, DropDownStyle = ComboBoxStyle.DropDownList });
+					opt.Items.AddRange(Enum<View3d.EFillMode>.Names.Cast<object>().ToArray());
+					opt.SelectedIndex = (int)Window.FillMode;
+					opt.SelectedIndexChanged += (s,a) =>
+					{
+						Window.FillMode = (View3d.EFillMode)opt.SelectedIndex;
+						Refresh();
+					};
 				}
 				{// Render2D
-					var option = new ToolStripMenuItem{Text = Window.Camera.Orthographic ? "Perspective" : "Orthographic"};
-					rdr_menu.DropDownItems.Add(option);
-					option.Click += delegate
+					var opt = rdr_menu.DropDownItems.Add2(new ToolStripMenuItem(Window.Camera.Orthographic ? "Perspective" : "Orthographic") { Name = CMenuItems.RenderingMenu.Orthographic });
+					opt.Click += (s,a) =>
 					{
 						var _2d = Window.Camera.Orthographic;
 						Window.Camera.Orthographic = !_2d;
-						option.Text = _2d ? "Perspective" : "Orthographic";
+						opt.Text = _2d ? "Perspective" : "Orthographic";
 						Refresh();
 					};
 				}
 				{// Lighting...
-					var lighting_menu = new ToolStripMenuItem("Lighting...");
-					rdr_menu.DropDownItems.Add(lighting_menu);
-					lighting_menu.Click += delegate { Window.ShowLightingDlg(); };
+					var opt = rdr_menu.DropDownItems.Add2(new ToolStripMenuItem("Lighting...") { Name = CMenuItems.RenderingMenu.Lighting });
+					opt.Click += (s,a) =>
+					{
+						Window.ShowLightingDlg();
+					};
 				}
 				{// Background colour
-					var bk_colour_menu = new ToolStripMenuItem("Background Colour");
-					rdr_menu.DropDownItems.Add(bk_colour_menu);
+					var bk_colour_menu = rdr_menu.DropDownItems.Add2(new ToolStripMenuItem("Background Colour") { Name = CMenuItems.RenderingMenu.Background });
+					var opt = bk_colour_menu.DropDownItems.Add2(new ToolStripButton(" "));
+					opt.AutoToolTip = false;
+					opt.BackColor = Window.BackgroundColour;
+					opt.Click += (s,a) =>
 					{
-						var option = new ToolStripButton(" ");
-						bk_colour_menu.DropDownItems.Add(option);
-						option.AutoToolTip = false;
-						option.BackColor = Window.BackgroundColour;
-						option.Click += delegate { var cd = new ColourUI(); if (cd.ShowDialog() == DialogResult.OK) option.BackColor = cd.Colour; };
-						option.BackColorChanged += delegate { Window.BackgroundColour = option.BackColor; Refresh(); };
-					}
+						var cd = new ColourUI();
+						if (cd.ShowDialog() == DialogResult.OK)
+							opt.BackColor = cd.Colour;
+					};
+					opt.BackColorChanged += (s,a) =>
+					{
+						Window.BackgroundColour = opt.BackColor;
+						Refresh();
+					};
 				}
 			}
 
@@ -496,6 +510,43 @@ namespace Rylogic.Gui.WinForms
 			}
 		}
 
+		#endregion
+
+		#region CMenuItems
+		public static class CMenuItems
+		{
+			public const string View = "View";
+			public static class ViewMenu
+			{
+				public const string ShowFocus = "ShowFocus";
+				public const string ShowOrigin = "ShowOrigin";
+				public const string Views = "Views";
+			}
+			public const string Navigation = "Navigation";
+			public static class NavMenu
+			{
+				public const string ResetView = "ResetView";
+				public const string Align = "Align";
+				public static class AlignMenu
+				{
+					public const string Aligns = "Aligns";
+				}
+			}
+			public const string Tools = "Tools";
+			public static class ToolsMenu
+			{
+				public const string Measure = "Measure";
+				public const string Angle = "Angle";
+			}
+			public const string Rendering = "Rendering";
+			public static class RenderingMenu
+			{
+				public const string FillMode = "FillMode";
+				public const string Orthographic = "Orthographic";
+				public const string Lighting = "Lighting";
+				public const string Background = "Background";
+			}
+		}
 		#endregion
 
 		#region EventArgs

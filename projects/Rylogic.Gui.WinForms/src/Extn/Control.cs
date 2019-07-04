@@ -35,6 +35,7 @@ namespace Rylogic.Gui.WinForms
 		}
 	}
 
+	/// <summary>General control extensions</summary>
 	public static class Control_
 	{
 		/// <summary>Get the user data for this control associated with 'guid'. If not found, and 'make' != null then 'make' is called with the result added and returned</summary>
@@ -3232,6 +3233,43 @@ namespace Rylogic.Gui.WinForms
 		{
 			item.Enabled = enabled;
 			item.ToolTipText = tool_tip;
+		}
+
+		/// <summary>Find the first sub-menu item with the given tags (depth first search)</summary>
+		public static ToolStripItem Find(this ToolStripItemCollection items, params string[] tags)
+		{
+			return Find(items, (IEnumerable<string>)tags);
+		}
+		public static ToolStripItem Find(this ToolStripItemCollection items, IEnumerable<string> tags)
+		{
+			var tag = tags.FirstOrDefault();
+			if (tag == null)
+				return null;
+
+			// Check each child that matches 'next'
+			var rest = tags.Skip(1);
+			foreach (var child in items.Find(tag, false))
+			{
+				if (!rest.Any())
+					return child;
+
+				switch (child)
+				{
+				case ToolStripMenuItem menu:
+					{
+						var found = menu.DropDownItems.Find(rest);
+						if (found != null) return found;
+						break;
+					}
+				case ToolStripDropDownItem dd:
+					{
+						var found = dd.DropDownItems.Find(rest);
+						if (found != null) return found;
+						break;
+					}
+				}
+			}
+			return null;
 		}
 
 		/// <summary>Add and return an item to this collection</summary>

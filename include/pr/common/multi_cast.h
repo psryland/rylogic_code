@@ -26,7 +26,7 @@ namespace pr
 		// Non-template interface for all event handlers
 		struct IEventHandler
 		{
-			virtual ~IEventHandler() {} 
+			virtual ~IEventHandler() {}
 			virtual void unsubscribe(Sub& sub) = 0;
 		};
 
@@ -48,7 +48,7 @@ namespace pr
 			{
 				static std::atomic_uint s_id = {};
 				auto id = s_id.load();
-				for (;!s_id.compare_exchange_weak(id, id + 1);) {}
+				for (; !s_id.compare_exchange_weak(id, id + 1);) {}
 				return Sub(evt, id + 1);
 			}
 
@@ -103,7 +103,7 @@ namespace pr
 		//  - Subscribing to event handlers is not thread safe. Lock guards should be used.
 
 		// The signature of the event handling function
-		using Delegate = std::function<void(Sender,Args)>;
+		using Delegate = std::function<void(Sender, Args)>;
 		using AutoSub = evt::AutoSub;
 		using Sub = evt::Sub;
 		using Id = evt::Id;
@@ -140,7 +140,7 @@ namespace pr
 			// Take a copy in case handlers are changed by handlers
 			auto handlers = m_handlers;
 			for (auto& h : handlers)
-				h.m_delegate(s,a);
+				h.m_delegate(s, a);
 		}
 		void operator()(Sender& s) const
 		{
@@ -225,6 +225,15 @@ namespace pr
 		ErrorEventArgs(std::wstring msg = L"", int code = 0)
 			:m_msg(msg)
 			,m_code(code)
+		{}
+	};
+
+	// Event args used to report a property has changed
+	struct PropertyChangedEventArgs :EmptyArgs
+	{
+		char const* m_property_name;
+		PropertyChangedEventArgs(char const* prop_name)
+			:m_property_name(prop_name)
 		{}
 	};
 

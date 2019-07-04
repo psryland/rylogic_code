@@ -289,6 +289,7 @@ extern "C"
 	{
 		BackgroundColour,
 		Lighting,
+		Camera,
 	};
 
 	struct View3DV2
@@ -560,36 +561,36 @@ extern "C"
 	VIEW3D_API void                  __stdcall View3D_CameraToWorldSet      (View3DWindow window, View3DM4x4 const& c2w);
 	VIEW3D_API void                  __stdcall View3D_CameraPositionSet     (View3DWindow window, View3DV4 position, View3DV4 lookat, View3DV4 up);
 	VIEW3D_API void                  __stdcall View3D_CameraCommit          (View3DWindow window);
-	VIEW3D_API BOOL                  __stdcall View3D_CameraOrthographic    (View3DWindow window);
+	VIEW3D_API BOOL                  __stdcall View3D_CameraOrthographicGet (View3DWindow window);
 	VIEW3D_API void                  __stdcall View3D_CameraOrthographicSet (View3DWindow window, BOOL on);
-	VIEW3D_API float                 __stdcall View3D_CameraFocusDistance   (View3DWindow window);
-	VIEW3D_API void                  __stdcall View3D_CameraSetFocusDistance(View3DWindow window, float dist);
-	VIEW3D_API void                  __stdcall View3D_CameraSetViewRect     (View3DWindow window, float width, float height, float dist);
-	VIEW3D_API float                 __stdcall View3D_CameraAspect          (View3DWindow window);
-	VIEW3D_API void                  __stdcall View3D_CameraSetAspect       (View3DWindow window, float aspect);
+	VIEW3D_API float                 __stdcall View3D_CameraFocusDistanceGet(View3DWindow window);
+	VIEW3D_API void                  __stdcall View3D_CameraFocusDistanceSet(View3DWindow window, float dist);
+	VIEW3D_API void                  __stdcall View3D_CameraFocusPointGet   (View3DWindow window, View3DV4& position);
+	VIEW3D_API void                  __stdcall View3D_CameraFocusPointSet   (View3DWindow window, View3DV4 position);
+	VIEW3D_API void                  __stdcall View3D_CameraViewRectSet     (View3DWindow window, float width, float height, float dist);
+	VIEW3D_API float                 __stdcall View3D_CameraAspectGet       (View3DWindow window);
+	VIEW3D_API void                  __stdcall View3D_CameraAspectSet       (View3DWindow window, float aspect);
 	VIEW3D_API float                 __stdcall View3D_CameraFovXGet         (View3DWindow window);
 	VIEW3D_API void                  __stdcall View3D_CameraFovXSet         (View3DWindow window, float fovX);
 	VIEW3D_API float                 __stdcall View3D_CameraFovYGet         (View3DWindow window);
 	VIEW3D_API void                  __stdcall View3D_CameraFovYSet         (View3DWindow window, float fovY);
-	VIEW3D_API void                  __stdcall View3D_CameraSetFov          (View3DWindow window, float fovX, float fovY);
+	VIEW3D_API void                  __stdcall View3D_CameraFovSet          (View3DWindow window, float fovX, float fovY);
 	VIEW3D_API void                  __stdcall View3D_CameraBalanceFov      (View3DWindow window, float fov);
 	VIEW3D_API void                  __stdcall View3D_CameraClipPlanesGet   (View3DWindow window, float& near_, float& far_, BOOL focus_relative);
 	VIEW3D_API void                  __stdcall View3D_CameraClipPlanesSet   (View3DWindow window, float near_, float far_, BOOL focus_relative);
-	VIEW3D_API void                  __stdcall View3D_CameraResetZoom       (View3DWindow window);
-	VIEW3D_API float                 __stdcall View3D_CameraZoomGet         (View3DWindow window);
-	VIEW3D_API void                  __stdcall View3D_CameraZoomSet         (View3DWindow window, float zoom);
 	VIEW3D_API EView3DCameraLockMask __stdcall View3D_CameraLockMaskGet     (View3DWindow window);
 	VIEW3D_API void                  __stdcall View3D_CameraLockMaskSet     (View3DWindow window, EView3DCameraLockMask mask);
 	VIEW3D_API View3DV4              __stdcall View3D_CameraAlignAxisGet    (View3DWindow window);
 	VIEW3D_API void                  __stdcall View3D_CameraAlignAxisSet    (View3DWindow window, View3DV4 axis);
+	VIEW3D_API void                  __stdcall View3D_CameraResetZoom       (View3DWindow window);
+	VIEW3D_API float                 __stdcall View3D_CameraZoomGet         (View3DWindow window);
+	VIEW3D_API void                  __stdcall View3D_CameraZoomSet         (View3DWindow window, float zoom);
 	VIEW3D_API void                  __stdcall View3D_ResetView             (View3DWindow window, View3DV4 forward, View3DV4 up, float dist, BOOL preserve_aspect, BOOL commit);
 	VIEW3D_API void                  __stdcall View3D_ResetViewBBox         (View3DWindow window, View3DBBox bbox, View3DV4 forward, View3DV4 up, float dist, BOOL preserve_aspect, BOOL commit);
 	VIEW3D_API View3DV2              __stdcall View3D_ViewArea              (View3DWindow window, float dist);
 	VIEW3D_API BOOL                  __stdcall View3D_MouseNavigate         (View3DWindow window, View3DV2 ss_pos, EView3DNavOp nav_op, BOOL nav_start_or_end);
 	VIEW3D_API BOOL                  __stdcall View3D_MouseNavigateZ        (View3DWindow window, View3DV2 ss_pos, float delta, BOOL along_ray);
 	VIEW3D_API BOOL                  __stdcall View3D_Navigate              (View3DWindow window, float dx, float dy, float dz);
-	VIEW3D_API void                  __stdcall View3D_FocusPointGet         (View3DWindow window, View3DV4& position);
-	VIEW3D_API void                  __stdcall View3D_FocusPointSet         (View3DWindow window, View3DV4 position);
 	VIEW3D_API View3DV2              __stdcall View3D_SSPointToNSSPoint     (View3DWindow window, View3DV2 screen);
 	VIEW3D_API View3DV4              __stdcall View3D_NSSPointToWSPoint     (View3DWindow window, View3DV4 screen);
 	VIEW3D_API View3DV4              __stdcall View3D_WSPointToNSSPoint     (View3DWindow window, View3DV4 world);

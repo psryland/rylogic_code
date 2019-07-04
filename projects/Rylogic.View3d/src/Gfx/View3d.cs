@@ -433,6 +433,7 @@ namespace Rylogic.Gfx
 		{
 			BackgroundColour,
 			Lighting,
+			Camera,
 		}
 		#endregion
 
@@ -1976,13 +1977,6 @@ namespace ldr
 				Commit();
 			}
 
-			/// <summary>Get/Set Orthographic projection mode</summary>
-			public bool Orthographic
-			{
-				get { return View3D_CameraOrthographic(m_window.Handle); }
-				set { View3D_CameraOrthographicSet(m_window.Handle, value); }
-			}
-
 			/// <summary>Return the world space size of the camera view area at 'dist' in front of the camera</summary>
 			public v2 ViewArea(float dist)
 			{
@@ -1991,6 +1985,13 @@ namespace ldr
 			public v2 ViewArea()
 			{
 				return ViewArea(FocusDist);
+			}
+
+			/// <summary>Get/Set Orthographic projection mode</summary>
+			public bool Orthographic
+			{
+				get { return View3D_CameraOrthographicGet(m_window.Handle); }
+				set { View3D_CameraOrthographicSet(m_window.Handle, value); }
 			}
 
 			/// <summary>Get/Set the camera align axis (camera up axis). Zero vector means no align axis is set</summary>
@@ -2003,8 +2004,8 @@ namespace ldr
 			/// <summary>Get/Set the camera view aspect ratio = Width/Height</summary>
 			public float Aspect
 			{
-				get { return View3D_CameraAspect(m_window.Handle); }
-				set { View3D_CameraSetAspect(m_window.Handle, value); }
+				get { return View3D_CameraAspectGet(m_window.Handle); }
+				set { View3D_CameraAspectSet(m_window.Handle, value); }
 			}
 
 			/// <summary>Get/Set the camera horizontal field of view (in radians). Note aspect ratio is preserved, setting FovX changes FovY and visa versa</summary>
@@ -2024,7 +2025,7 @@ namespace ldr
 			/// <summary>Set both the X and Y field of view (i.e. change the aspect ratio)</summary>
 			public void SetFov(float fovX, float fovY)
 			{
-				View3D_CameraSetFov(m_window.Handle, fovX, fovY);
+				View3D_CameraFovSet(m_window.Handle, fovX, fovY);
 			}
 
 			/// <summary>Adjust the FocusDist, FovX, and FovY so that the average FOV equals 'fov'</summary>
@@ -2060,18 +2061,18 @@ namespace ldr
 			/// <summary>Get/Set the position of the camera focus point (in world space, relative to the world origin)</summary>
 			public v4 FocusPoint
 			{
-				get { v4 pos; View3D_FocusPointGet(m_window.Handle, out pos); return pos; }
-				set { View3D_FocusPointSet(m_window.Handle, value); }
+				get { v4 pos; View3D_CameraFocusPointGet(m_window.Handle, out pos); return pos; }
+				set { View3D_CameraFocusPointSet(m_window.Handle, value); }
 			}
 
 			/// <summary>Get/Set the distance to the camera focus point</summary>
 			public float FocusDist
 			{
-				get { return View3D_CameraFocusDistance(m_window.Handle); }
+				get { return View3D_CameraFocusDistanceGet(m_window.Handle); }
 				set
 				{
 					Debug.Assert(value >= 0, "Focus distance cannot be negative");
-					View3D_CameraSetFocusDistance(m_window.Handle, value);
+					View3D_CameraFocusDistanceSet(m_window.Handle, value);
 				}
 			}
 
@@ -2109,7 +2110,7 @@ namespace ldr
 			/// <summary>Set the camera fields of view (H and V) and focus distance such that a rectangle (w/h) exactly fills the view</summary>
 			public void SetView(float width, float height, float dist)
 			{
-				View3D_CameraSetViewRect(m_window.Handle, width, height, dist);
+				View3D_CameraViewRectSet(m_window.Handle, width, height, dist);
 			}
 
 			/// <summary>Move the camera to a position that can see the whole scene</summary>
@@ -2173,7 +2174,7 @@ namespace ldr
 			public v4 SSPointToWSPoint(PointF screen)
 			{
 				var nss = SSPointToNSSPoint(screen);
-				return NSSPointToWSPoint(new v4(nss.x, nss.y, View3D_CameraFocusDistance(m_window.Handle), 1.0f));
+				return NSSPointToWSPoint(new v4(nss.x, nss.y, View3D_CameraFocusDistanceGet(m_window.Handle), 1.0f));
 			}
 
 			/// <summary>Return the normalised screen space point corresponding to a screen space point</summary>
@@ -2218,7 +2219,7 @@ namespace ldr
 			{
 				var nss_s = SSPointToNSSPoint(s);
 				var nss_e = SSPointToNSSPoint(e);
-				var z = View3D_CameraFocusDistance(m_window.Handle);
+				var z = View3D_CameraFocusDistanceGet(m_window.Handle);
 				return
 					NSSPointToWSPoint(new v4(nss_e.x, nss_e.y, z, 1.0f)) -
 					NSSPointToWSPoint(new v4(nss_s.x, nss_s.y, z, 1.0f));
@@ -2235,7 +2236,7 @@ namespace ldr
 			public void SSPointToWSRay(PointF screen, out v4 ws_point, out v4 ws_direction)
 			{
 				var nss = SSPointToNSSPoint(screen);
-				NSSPointToWSRay(new v4(nss.x, nss.y, View3D_CameraFocusDistance(m_window.Handle), 1.0f), out ws_point, out ws_direction);
+				NSSPointToWSRay(new v4(nss.x, nss.y, View3D_CameraFocusDistanceGet(m_window.Handle), 1.0f), out ws_point, out ws_direction);
 			}
 
 			/// <summary>Convert a mouse button to the default navigation operation</summary>
@@ -3485,36 +3486,36 @@ namespace ldr
 		[DllImport(Dll)] private static extern void            View3D_CameraToWorldSet       (HWindow window, ref m4x4 c2w);
 		[DllImport(Dll)] private static extern void            View3D_CameraPositionSet      (HWindow window, v4 position, v4 lookat, v4 up);
 		[DllImport(Dll)] private static extern void            View3D_CameraCommit           (HWindow window);
-		[DllImport(Dll)] private static extern bool            View3D_CameraOrthographic     (HWindow window);
+		[DllImport(Dll)] private static extern bool            View3D_CameraOrthographicGet  (HWindow window);
 		[DllImport(Dll)] private static extern void            View3D_CameraOrthographicSet  (HWindow window, bool on);
-		[DllImport(Dll)] private static extern float           View3D_CameraFocusDistance    (HWindow window);
-		[DllImport(Dll)] private static extern void            View3D_CameraSetFocusDistance (HWindow window, float dist);
-		[DllImport(Dll)] private static extern void            View3D_CameraSetViewRect      (HWindow window, float width, float height, float dist);
-		[DllImport(Dll)] private static extern float           View3D_CameraAspect           (HWindow window);
-		[DllImport(Dll)] private static extern void            View3D_CameraSetAspect        (HWindow window, float aspect);
+		[DllImport(Dll)] private static extern float           View3D_CameraFocusDistanceGet (HWindow window);
+		[DllImport(Dll)] private static extern void            View3D_CameraFocusDistanceSet (HWindow window, float dist);
+		[DllImport(Dll)] private static extern void            View3D_CameraFocusPointGet    (HWindow window, out v4 position);
+		[DllImport(Dll)] private static extern void            View3D_CameraFocusPointSet    (HWindow window, v4 position);
+		[DllImport(Dll)] private static extern void            View3D_CameraViewRectSet      (HWindow window, float width, float height, float dist);
+		[DllImport(Dll)] private static extern float           View3D_CameraAspectGet        (HWindow window);
+		[DllImport(Dll)] private static extern void            View3D_CameraAspectSet        (HWindow window, float aspect);
 		[DllImport(Dll)] private static extern float           View3D_CameraFovXGet          (HWindow window);
 		[DllImport(Dll)] private static extern void            View3D_CameraFovXSet          (HWindow window, float fovX);
 		[DllImport(Dll)] private static extern float           View3D_CameraFovYGet          (HWindow window);
 		[DllImport(Dll)] private static extern void            View3D_CameraFovYSet          (HWindow window, float fovY);
-		[DllImport(Dll)] private static extern void            View3D_CameraSetFov           (HWindow window, float fovX, float fovY);
+		[DllImport(Dll)] private static extern void            View3D_CameraFovSet           (HWindow window, float fovX, float fovY);
 		[DllImport(Dll)] private static extern void            View3D_CameraBalanceFov       (HWindow window, float fov);
 		[DllImport(Dll)] private static extern void            View3D_CameraClipPlanesGet    (HWindow window, out float near, out float far, bool focus_relative);
 		[DllImport(Dll)] private static extern void            View3D_CameraClipPlanesSet    (HWindow window, float near, float far, bool focus_relative);
-		[DllImport(Dll)] private static extern void            View3D_CameraResetZoom        (HWindow window);
-		[DllImport(Dll)] private static extern float           View3D_CameraZoomGet          (HWindow window);
-		[DllImport(Dll)] private static extern void            View3D_CameraZoomSet          (HWindow window, float zoom);
 		[DllImport(Dll)] private static extern ECameraLockMask View3D_CameraLockMaskGet      (HWindow window);
 		[DllImport(Dll)] private static extern void            View3D_CameraLockMaskSet      (HWindow window, ECameraLockMask mask);
 		[DllImport(Dll)] private static extern v4              View3D_CameraAlignAxisGet     (HWindow window);
 		[DllImport(Dll)] private static extern void            View3D_CameraAlignAxisSet     (HWindow window, v4 axis);
+		[DllImport(Dll)] private static extern void            View3D_CameraResetZoom        (HWindow window);
+		[DllImport(Dll)] private static extern float           View3D_CameraZoomGet          (HWindow window);
+		[DllImport(Dll)] private static extern void            View3D_CameraZoomSet          (HWindow window, float zoom);
 		[DllImport(Dll)] private static extern void            View3D_ResetView              (HWindow window, v4 forward, v4 up, float dist, bool preserve_aspect, bool commit);
 		[DllImport(Dll)] private static extern void            View3D_ResetViewBBox          (HWindow window, BBox bbox, v4 forward, v4 up, float dist, bool preserve_aspect, bool commit);
 		[DllImport(Dll)] private static extern v2              View3D_ViewArea               (HWindow window, float dist);
 		[DllImport(Dll)] private static extern bool            View3D_MouseNavigate          (HWindow window, v2 ss_point, ENavOp nav_op, bool nav_start_or_end);
 		[DllImport(Dll)] private static extern bool            View3D_MouseNavigateZ         (HWindow window, v2 ss_point, float delta, bool along_ray);
 		[DllImport(Dll)] private static extern bool            View3D_Navigate               (HWindow window, float dx, float dy, float dz);
-		[DllImport(Dll)] private static extern void            View3D_FocusPointGet          (HWindow window, out v4 position);
-		[DllImport(Dll)] private static extern void            View3D_FocusPointSet          (HWindow window, v4 position);
 		[DllImport(Dll)] private static extern v2              View3D_SSPointToNSSPoint      (HWindow window, v2 screen);
 		[DllImport(Dll)] private static extern v4              View3D_NSSPointToWSPoint      (HWindow window, v4 screen);
 		[DllImport(Dll)] private static extern v4              View3D_WSPointToNSSPoint      (HWindow window, v4 world);

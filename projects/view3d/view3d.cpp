@@ -708,7 +708,7 @@ VIEW3D_API void __stdcall View3D_WindowEnvMapSet(View3DWindow window, View3DCube
 	CatchAndReport(View3D_WindowEnvMapSet, window, );
 }
 
-//  ********************************************************
+// Camera ********************************************************
 
 // Return the camera to world transform
 VIEW3D_API void __stdcall View3D_CameraToWorldGet(View3DWindow window, View3DM4x4& c2w)
@@ -763,7 +763,7 @@ VIEW3D_API void __stdcall View3D_CameraCommit(View3DWindow window)
 }
 
 // Enable/Disable orthographic projection
-VIEW3D_API BOOL __stdcall View3D_CameraOrthographic(View3DWindow window)
+VIEW3D_API BOOL __stdcall View3D_CameraOrthographicGet(View3DWindow window)
 {
 	try
 	{
@@ -772,7 +772,7 @@ VIEW3D_API BOOL __stdcall View3D_CameraOrthographic(View3DWindow window)
 		DllLockGuard;
 		return window->m_camera.m_orthographic;
 	}
-	CatchAndReport(View3D_CameraOrthographic, window, FALSE);
+	CatchAndReport(View3D_CameraOrthographicGet, window, FALSE);
 }
 VIEW3D_API void __stdcall View3D_CameraOrthographicSet(View3DWindow window, BOOL on)
 {
@@ -782,12 +782,13 @@ VIEW3D_API void __stdcall View3D_CameraOrthographicSet(View3DWindow window, BOOL
 
 		DllLockGuard;
 		window->m_camera.m_orthographic = on != 0;
+		window->NotifySettingsChanged(EView3DWindowSettings::Camera);
 	}
 	CatchAndReport(View3D_CameraOrthographicSet, window,);
 }
 
-// Return the distance to the camera focus point
-VIEW3D_API float __stdcall View3D_CameraFocusDistance(View3DWindow window)
+// Get/Set the distance to the camera focus point
+VIEW3D_API float __stdcall View3D_CameraFocusDistanceGet(View3DWindow window)
 {
 	try
 	{
@@ -796,11 +797,9 @@ VIEW3D_API float __stdcall View3D_CameraFocusDistance(View3DWindow window)
 		DllLockGuard;
 		return window->m_camera.FocusDist();
 	}
-	CatchAndReport(View3D_CameraFocusDistance, window, 0.0f);
+	CatchAndReport(View3D_CameraFocusDistanceGet, window, 0.0f);
 }
-
-// Set the camera focus distance
-VIEW3D_API void __stdcall View3D_CameraSetFocusDistance(View3DWindow window, float dist)
+VIEW3D_API void __stdcall View3D_CameraFocusDistanceSet(View3DWindow window, float dist)
 {
 	try
 	{
@@ -808,12 +807,38 @@ VIEW3D_API void __stdcall View3D_CameraSetFocusDistance(View3DWindow window, flo
 
 		DllLockGuard;
 		window->m_camera.FocusDist(dist);
+		window->NotifySettingsChanged(EView3DWindowSettings::Camera);
 	}
-	CatchAndReport(View3D_CameraSetFocusDistance, window,);
+	CatchAndReport(View3D_CameraFocusDistanceSet, window,);
+}
+
+// Get/Set the camera focus point position
+VIEW3D_API void __stdcall View3D_CameraFocusPointGet(View3DWindow window, View3DV4& position)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		position = view3d::To<View3DV4>(window->m_camera.FocusPoint());
+	}
+	CatchAndReport(View3D_CameraFocusPointGet, window,);
+}
+VIEW3D_API void __stdcall View3D_CameraFocusPointSet(View3DWindow window, View3DV4 position)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->m_camera.FocusPoint(view3d::To<pr::v4>(position));
+		window->NotifySettingsChanged(EView3DWindowSettings::Camera);
+	}
+	CatchAndReport(View3D_CameraFocusPointSet, window,);
 }
 
 // Set the camera distance and H/V field of view to exactly view a rectangle with dimensions 'width'/'height'
-VIEW3D_API void __stdcall View3D_CameraSetViewRect(View3DWindow window, float width, float height, float dist)
+VIEW3D_API void __stdcall View3D_CameraViewRectSet(View3DWindow window, float width, float height, float dist)
 {
 	try
 	{
@@ -821,12 +846,13 @@ VIEW3D_API void __stdcall View3D_CameraSetViewRect(View3DWindow window, float wi
 
 		DllLockGuard;
 		window->m_camera.View(width, height, dist);
+		window->NotifySettingsChanged(EView3DWindowSettings::Camera);
 	}
-	CatchAndReport(View3D_CameraSetViewRect, window,);
+	CatchAndReport(View3D_CameraViewRectSet, window,);
 }
 
-// Return the aspect ratio for the camera field of view
-VIEW3D_API float __stdcall View3D_CameraAspect(View3DWindow window)
+// Get/Set the aspect ratio for the camera field of view
+VIEW3D_API float __stdcall View3D_CameraAspectGet(View3DWindow window)
 {
 	try
 	{
@@ -835,11 +861,9 @@ VIEW3D_API float __stdcall View3D_CameraAspect(View3DWindow window)
 		DllLockGuard;
 		return window->m_camera.Aspect();
 	}
-	CatchAndReport(View3D_CameraAspect, window, 1.0f);
+	CatchAndReport(View3D_CameraAspectGet, window, 1.0f);
 }
-
-// Set the aspect ratio for the camera field of view
-VIEW3D_API void __stdcall View3D_CameraSetAspect(View3DWindow window, float aspect)
+VIEW3D_API void __stdcall View3D_CameraAspectSet(View3DWindow window, float aspect)
 {
 	try
 	{
@@ -847,11 +871,12 @@ VIEW3D_API void __stdcall View3D_CameraSetAspect(View3DWindow window, float aspe
 
 		DllLockGuard;
 		window->m_camera.Aspect(aspect);
+		window->NotifySettingsChanged(EView3DWindowSettings::Camera);
 	}
-	CatchAndReport(View3D_CameraSetAspect, window,);
+	CatchAndReport(View3D_CameraAspectSet, window,);
 }
 
-// Return the horizontal field of view (in radians).
+// Get/Set the horizontal field of view (in radians). Note aspect ratio is preserved, setting FovX changes FovY and visa versa
 VIEW3D_API float __stdcall View3D_CameraFovXGet(View3DWindow window)
 {
 	try
@@ -863,8 +888,6 @@ VIEW3D_API float __stdcall View3D_CameraFovXGet(View3DWindow window)
 	}
 	CatchAndReport(View3D_CameraFovXGet, window, 0.0f);
 }
-
-// Set the horizontal field of view (in radians). Note aspect ratio is preserved, setting FovX changes FovY and visa versa
 VIEW3D_API void __stdcall View3D_CameraFovXSet(View3DWindow window, float fovX)
 {
 	try
@@ -873,11 +896,12 @@ VIEW3D_API void __stdcall View3D_CameraFovXSet(View3DWindow window, float fovX)
 
 		DllLockGuard;
 		window->m_camera.FovX(fovX);
+		window->NotifySettingsChanged(EView3DWindowSettings::Camera);
 	}
 	CatchAndReport(View3D_CameraFovXSet, window,);
 }
 
-// Return the vertical field of view (in radians).
+// Get/Set the vertical field of view (in radians). Note aspect ratio is preserved, setting FovY changes FovX and visa versa
 VIEW3D_API float __stdcall View3D_CameraFovYGet(View3DWindow window)
 {
 	try
@@ -889,8 +913,6 @@ VIEW3D_API float __stdcall View3D_CameraFovYGet(View3DWindow window)
 	}
 	CatchAndReport(View3D_CameraFovYGet, window, 0.0f);
 }
-
-// Set the vertical field of view (in radians). Note aspect ratio is preserved, setting FovY changes FovX and visa versa
 VIEW3D_API void __stdcall View3D_CameraFovYSet(View3DWindow window, float fovY)
 {
 	try
@@ -899,12 +921,13 @@ VIEW3D_API void __stdcall View3D_CameraFovYSet(View3DWindow window, float fovY)
 
 		DllLockGuard;
 		window->m_camera.FovY(fovY);
+		window->NotifySettingsChanged(EView3DWindowSettings::Camera);
 	}
 	CatchAndReport(View3D_CameraFovYSet, window,);
 }
 
 // Set both the X and Y fields of view (i.e. set the aspect ratio)
-VIEW3D_API void __stdcall View3D_CameraSetFov(View3DWindow window, float fovX, float fovY)
+VIEW3D_API void __stdcall View3D_CameraFovSet(View3DWindow window, float fovX, float fovY)
 {
 	try
 	{
@@ -912,8 +935,9 @@ VIEW3D_API void __stdcall View3D_CameraSetFov(View3DWindow window, float fovX, f
 
 		DllLockGuard;
 		window->m_camera.Fov(fovX, fovY);
+		window->NotifySettingsChanged(EView3DWindowSettings::Camera);
 	}
-	CatchAndReport(View3D_CameraSetFov, window,);
+	CatchAndReport(View3D_CameraFovSet, window,);
 }
 
 // Adjust the FocusDist, FovX, and FovY so that the average FOV equals 'fov'
@@ -925,6 +949,7 @@ VIEW3D_API void __stdcall View3D_CameraBalanceFov(View3DWindow window, float fov
 
 		DllLockGuard;
 		window->m_camera.BalanceFov(fov);
+		window->NotifySettingsChanged(EView3DWindowSettings::Camera);
 	}
 	CatchAndReport(View3D_CameraBalanceFov, window,);
 }
@@ -951,8 +976,59 @@ VIEW3D_API void __stdcall View3D_CameraClipPlanesSet(View3DWindow window, float 
 
 		DllLockGuard;
 		window->m_camera.ClipPlanes(near_, far_, focus_relative != 0);
+		window->NotifySettingsChanged(EView3DWindowSettings::Camera);
 	}
 	CatchAndReport(View3D_CameraClipPlanesSet, window,);
+}
+
+// Get/Set the scene camera lock mask
+VIEW3D_API EView3DCameraLockMask __stdcall View3D_CameraLockMaskGet(View3DWindow window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return static_cast<EView3DCameraLockMask>(window->m_camera.m_lock_mask);
+	}
+	CatchAndReport(View3D_CameraLockMaskGet, window, EView3DCameraLockMask::None);
+}
+VIEW3D_API void __stdcall View3D_CameraLockMaskSet(View3DWindow window, EView3DCameraLockMask mask)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->m_camera.m_lock_mask = static_cast<pr::camera::ELockMask>(mask);
+		window->NotifySettingsChanged(EView3DWindowSettings::Camera);
+	}
+	CatchAndReport(View3D_CameraLockMaskSet, window,);
+}
+
+// Get/Set the camera align axis
+VIEW3D_API View3DV4 __stdcall View3D_CameraAlignAxisGet(View3DWindow window)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		return view3d::To<View3DV4>(window->m_camera.m_align);
+	}
+	CatchAndReport(View3D_CameraAlignAxisGet, window, view3d::To<View3DV4>(pr::v4Zero));
+}
+VIEW3D_API void __stdcall View3D_CameraAlignAxisSet(View3DWindow window, View3DV4 axis)
+{
+	try
+	{
+		if (!window) throw std::runtime_error("window is null");
+
+		DllLockGuard;
+		window->m_camera.Align(view3d::To<pr::v4>(axis));
+		window->NotifySettingsChanged(EView3DWindowSettings::Camera);
+	}
+	CatchAndReport(View3D_CameraAlignAxisSet, window,);
 }
 
 // Reset to the default zoom
@@ -990,56 +1066,6 @@ VIEW3D_API void __stdcall View3D_CameraZoomSet(View3DWindow window, float zoom)
 		window->m_camera.Zoom(zoom, true);
 	}
 	CatchAndReport(View3D_CameraZoomSet, window,);
-}
-
-// Get/Set the scene camera lock mask
-VIEW3D_API EView3DCameraLockMask __stdcall View3D_CameraLockMaskGet(View3DWindow window)
-{
-	try
-	{
-		if (!window) throw std::runtime_error("window is null");
-
-		DllLockGuard;
-		return static_cast<EView3DCameraLockMask>(window->m_camera.m_lock_mask);
-	}
-	CatchAndReport(View3D_CameraLockMaskGet, window, EView3DCameraLockMask::None);
-}
-VIEW3D_API void __stdcall View3D_CameraLockMaskSet(View3DWindow window, EView3DCameraLockMask mask)
-{
-	try
-	{
-		if (!window) throw std::runtime_error("window is null");
-
-		DllLockGuard;
-		window->m_camera.m_lock_mask = static_cast<pr::camera::ELockMask>(mask);
-	}
-	CatchAndReport(View3D_CameraLockMaskSet, window,);
-}
-
-// Return the camera align axis
-VIEW3D_API View3DV4 __stdcall View3D_CameraAlignAxisGet(View3DWindow window)
-{
-	try
-	{
-		if (!window) throw std::runtime_error("window is null");
-
-		DllLockGuard;
-		return view3d::To<View3DV4>(window->m_camera.m_align);
-	}
-	CatchAndReport(View3D_CameraAlignAxisGet, window, view3d::To<View3DV4>(pr::v4Zero));
-}
-
-// Align the camera to an axis
-VIEW3D_API void __stdcall View3D_CameraAlignAxisSet(View3DWindow window, View3DV4 axis)
-{
-	try
-	{
-		if (!window) throw std::runtime_error("window is null");
-
-		DllLockGuard;
-		window->m_camera.Align(view3d::To<pr::v4>(axis));
-	}
-	CatchAndReport(View3D_CameraAlignAxisSet, window,);
 }
 
 // Move the camera to a position that can see the whole scene. Set 'dist' to 0 to preserve the FoV, or a distance to set the FoV
@@ -1172,30 +1198,6 @@ VIEW3D_API BOOL __stdcall View3D_Navigate(View3DWindow window, float dx, float d
 		return window->m_camera.Translate(dx, dy, dz);
 	}
 	CatchAndReport(View3D_Navigate, window, FALSE);
-}
-
-// Get/Set the camera focus point position
-VIEW3D_API void __stdcall View3D_FocusPointGet(View3DWindow window, View3DV4& position)
-{
-	try
-	{
-		if (!window) throw std::runtime_error("window is null");
-
-		DllLockGuard;
-		position = view3d::To<View3DV4>(window->m_camera.FocusPoint());
-	}
-	CatchAndReport(View3D_FocusPointGet, window,);
-}
-VIEW3D_API void __stdcall View3D_FocusPointSet(View3DWindow window, View3DV4 position)
-{
-	try
-	{
-		if (!window) throw std::runtime_error("window is null");
-
-		DllLockGuard;
-		window->m_camera.FocusPoint(view3d::To<pr::v4>(position));
-	}
-	CatchAndReport(View3D_FocusPointSet, window,);
 }
 
 // Convert a point in 'window' screen space to normalised screen space
@@ -1471,6 +1473,7 @@ VIEW3D_API void __stdcall View3D_ObjectDelete(View3DObject object)
 {
 	try
 	{
+		// Delete is idempotent
 		if (!object) return;
 		
 		DllLockGuard;
@@ -1987,7 +1990,8 @@ VIEW3D_API void __stdcall View3D_TextureRelease(View3DTexture tex)
 {
 	try
 	{
-		if (!tex) throw std::runtime_error("Texture is null");
+		// Release is idempotent
+		if (!tex) return;
 		tex->Release();
 	}
 	CatchAndReport(View3D_TextureRelease, ,);

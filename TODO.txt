@@ -8,6 +8,9 @@ EDTradeAdvisor
 	- Allow typing into station field with no system, to find system
 	
 CoinFlip
+	- Trade history from Binance
+	- Spot price label on YAxis
+	- Dashed 'crosshair' line, also in a lighter colour
 	- determine equity in backwards from current balance
 	- pending orders (Stop, OneEnablesOther, )
 	- Make orders glow when hovered
@@ -26,11 +29,6 @@ CoinFlip
 	- retest Loop finder
 	- MOAR indicators
 	- Equity graph for live account
-
-	Strategy:
-		- Have a budget; B BTC, and a a bias; O
-		- Make holding of BTC above or below budget based on std dev from mean, where 1 s.d. == O BTC
-		- Hysteresis when adjusting position
 		
 LDraw
 	- move ObjectManager to pr.view3d
@@ -54,7 +52,6 @@ RexLink
 RAPT
 
 VRex
-	- Add a pre-start up check for the SD card files that Rex needs and warn the user if missing
 	- Fix devices going offline
 	- Fix assert_param macro - threading issues
 	- Add named-pipe RexLink connection type
