@@ -19,7 +19,7 @@ namespace CoinFlip
 		// - This class is basically an array with an indexer and Count.
 		// - When back-testing is enabled, an Instrument represents a sub-range of PriceData.
 		// - There can be multiple instrument instances for the same pair, each having a different TimeFrame.
-		//   e.g. a ChartUI has an instrument, indicators has instruments, the Simulation has instruments, Bots can have instruments.
+		//   e.g. a ChartUI has an instrument, indicators have instruments, the Simulation has instruments, Bots can have instruments.
 		// - The candle cache size has no upper bound. Potentially all candle data can be loaded into memory.
 		//   This only happens on demand however, by default only the last Chunk of candles are loaded.
 		// - The candle cache is an ordered collection of candles, sorted by time
@@ -80,28 +80,31 @@ namespace CoinFlip
 				// Handlers
 				void HandleDataChanged(object sender, DataEventArgs e)
 				{
-					// The PriceData update thread should be disabled during back-testing.
-					// Instruments handle the SimStep events because emulating the price data is done using the cache.
-					if (Model.BackTesting)
-						throw new Exception("Should not be getting DataChanged events from a PriceData while back-testing");
-
 					// Update cached items
 					switch (e.UpdateType)
 					{
 					default: throw new Exception($"Unknown update type: {e.UpdateType}");
 					case DataEventArgs.EUpdateType.New:
 						{
-							// A new candle was added, update the count so that the cache grows
-							m_count += 1;
+							// A new candle was added. If the candle is the next expected time slot just bump the count
+							// Otherwise, invalidate because time might have skipped forward (due to the simulation or a gap in data).
+							// The cache doesn't need to be invalidated because "New" means candles we haven't seen before.
+							if (Latest?.Timestamp + Misc.TimeFrameToTicks(1.0, TimeFrame) == e.Candle.Timestamp)
+								m_count += 1;
+							else
+								m_count = null;
+							EnsureCached(Count - 1);
 							break;
 						}
 					case DataEventArgs.EUpdateType.Current:
 						{
 							// Data for the current candle has changed, just update the cached copy
+							if (Latest.Timestamp != e.Candle.Timestamp)
+								throw new Exception("This is not the current candle");
 							if (e.IndexRange.Count != 1)
 								throw new Exception("An update of the current candle should be a single value");
-							if (this[e.IndexRange.Begi].Timestamp != e.Candle.Timestamp)
-								throw new Exception("This is not the current candle");
+							if (e.IndexRange.Begi != Count - 1)
+								throw new Exception("The current candle index should be the only value in the update index range");
 
 							this[e.IndexRange.Begi] = e.Candle;
 							break;
@@ -178,7 +181,7 @@ namespace CoinFlip
 		{
 			get
 			{
-				// When the simulation, is running is will less than 'DBCandleCount'
+				// When the simulation is running this will be less than 'DBCandleCount'
 				if (m_count == null)
 					m_count = PriceData.CountTo(Model.UtcNow.Ticks);
 

@@ -758,19 +758,18 @@ namespace Rylogic.Extn
 			result = result.TrimEnd('0');
 
 			// Remove the decimal point and leading 0s, leaving just the digits.
-			var test = result.Replace(".", "").TrimStart('0');
+			var trimmed = result.Replace(".", "").TrimStart('0');
 
 			// See if we have enough significant digits.
-			if (significant_digits > test.Length)
+			if (significant_digits > trimmed.Length)
 			{
 				// Add trailing 0s.
-				result += new string('0', significant_digits - test.Length);
+				result += new string('0', significant_digits - trimmed.Length);
 			}
 			else
 			{
 				// See if we should remove the trailing decimal point.
-				if ((significant_digits < test.Length) &&
-					result.EndsWith("."))
+				if (result.EndsWith(".") && significant_digits <= trimmed.Length)
 					result = result.Substring(0, result.Length - 1);
 			}
 

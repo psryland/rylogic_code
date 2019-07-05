@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
@@ -21,19 +22,22 @@ namespace CoinFlip.UI
 
 			// Commands
 			LogOn = Command.Create(this, LogOnInternal);
+			NewChart = Command.Create(this, NewChartInternal);
 			ToggleLiveTrading = Command.Create(this, () => Model.AllowTrades = !Model.AllowTrades);
 			ToggleBackTesting = Command.Create(this, () => Model.BackTesting = !Model.BackTesting);
 
 			// Dock container windows
 			m_dc.Add(new GridExchanges(Model), EDockSite.Left);
+			m_dc.Add(new GridBots(Model), EDockSite.Left);
 			m_dc.Add(new GridCoins(Model), EDockSite.Left, EDockSite.Bottom);
+			m_dc.Add(new GridFunds(Model), EDockSite.Left, EDockSite.Bottom);
 			m_dc.Add(new GridTradeOrders(Model), 0, EDockSite.Bottom);
 			m_dc.Add(new GridTradeHistory(Model), 1, EDockSite.Bottom);
 			m_dc.Add(new CandleChart(Model), 0, EDockSite.Centre);
-			m_dc.Add(new CandleChart(Model), 1, EDockSite.Centre);
 			m_dc.Add(new LogView(), 2, EDockSite.Centre);
 			m_menu.Items.Add(m_dc.WindowsMenu());
 
+			// Focus the first chart
 			((CandleChart)Model.Charts[0]).DockControl.IsActiveContent = true;
 			DataContext = this;
 		}
@@ -153,6 +157,78 @@ namespace CoinFlip.UI
 			// Create the user instance from the log-on details
 			Model.User = ui.User;
 			Title = $"Coin Flip - {Model.User.Name}";
+
+			SelectLastExchange();
+			ShowLastChart();
+		}
+
+		/// <summary>Add a new chart window</summary>
+		public Command NewChart { get; }
+		private void NewChartInternal()
+		{
+			m_dc.Add(new CandleChart(Model), EDockSite.Centre);
+		}
+
+		/// <summary>Try to select the last exchange</summary>
+		private void SelectLastExchange()
+		{
+			if (SettingsData.Settings.LastExchange.Length != 0)
+			{
+				var exch = m_dc.AllContent.OfType<GridExchanges>().First();
+				exch.Current = Model.Exchanges[SettingsData.Settings.LastExchange];
+			}
+		}
+
+		/// <summary>Try to display the last chart</summary>
+		private void ShowLastChart()
+		{
+			var parts = SettingsData.Settings.LastChart.Split('-');
+			if (parts.Length != 3)
+				return;
+
+			// Find the specified exchange
+			var exch = Model.Exchanges.FirstOrDefault(x => x.Name == parts[0]);
+			if (exch == null)
+				return;
+
+			var pair_name = parts[1];
+			var tf = Enum<ETimeFrame>.TryParse(parts[2]) ?? ETimeFrame.None;
+
+			// Wait for the exchange to load its pairs, and select the chart when available
+			exch.Pairs.CollectionChanged += WaitForPairs;
+			void WaitForPairs(object sender, NotifyCollectionChangedEventArgs e)
+			{
+				if (e.Action != NotifyCollectionChangedAction.Add)
+					return;
+
+				for (; ; )
+				{
+					// Give up if an instrument is selected already
+					var chart0 = Model.Charts[0];
+					if (chart0.Exchange != null && chart0.Exchange != exch)
+						break;
+
+					// Give up if a different pair is selected already
+					if (chart0.Pair != null && chart0.Pair.Name != pair_name)
+						break;
+
+					// Give up if a different time frame is selected already
+					if (chart0.TimeFrame != ETimeFrame.None && chart0.TimeFrame != tf)
+						break;
+
+					// See if the pair is available. If not, keep waiting
+					var pair = exch?.Pairs.Values.FirstOrDefault(x => x.Name == parts[1]);
+					if (pair == null)
+						return;
+
+					// Set the chart
+					chart0.Exchange = exch;
+					chart0.Pair = pair;
+					chart0.TimeFrame = tf;
+					break;
+				}
+				exch.Pairs.CollectionChanged -= WaitForPairs;
+			}
 		}
 
 		/// <summary></summary>

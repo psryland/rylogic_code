@@ -1,0 +1,100 @@
+﻿<Window
+	x:Class="CoinFlip.UI.FundAllocationsUI"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d" 
+	d:DesignWidth="350"
+	d:DesignHeight="400"
+	Title="Fund Allocation"
+	WindowStartupLocation="CenterOwner"
+	SizeToContent="WidthAndHeight"
+	ResizeMode="CanResizeWithGrip"
+	ShowInTaskbar="True"
+	MinHeight="300"
+	MinWidth="340"
+	>
+	<Window.Resources>
+		<ResourceDictionary>
+			<BitmapImage x:Key="dollar_sign" UriSource="/CoinFlip.UI;component/res/dollar_sign.png" />
+			<BitmapImage x:Key="check_accept" UriSource="/CoinFlip.UI;component/res/check_accept.png" />
+			<BitmapImage x:Key="check_reject" UriSource="/CoinFlip.UI;component/res/check_reject.png" />
+		</ResourceDictionary>
+	</Window.Resources>
+
+	<Grid
+		Margin="3"
+		>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
+		
+		<!-- Fund Selector -->
+		<StackPanel
+			Grid.Row="0"
+			Orientation="Horizontal"
+			HorizontalAlignment="Center"
+			>
+			<TextBlock
+				Text="Fund:"
+				VerticalAlignment="Center"
+				FontSize="18"
+				/>
+			<ComboBox
+				ItemsSource="{Binding Funds}"
+				SelectedItem="{Binding Funds/, Mode=TwoWay}"
+				HorizontalAlignment="Left"
+				VerticalAlignment="Center"
+				MinWidth="100"
+				Margin="3"
+				/>
+		</StackPanel>
+
+		<!-- Fund Allocation -->
+		<DataGrid
+			Grid.Row="1"
+			AutoGenerateColumns="False"
+			>
+			
+		</DataGrid>
+		
+		<!-- Buttons -->
+		<Grid
+			Grid.Row="2"
+			>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="Auto"/>
+			</Grid.ColumnDefinitions>
+
+			<Button
+				Grid.Column="1"
+				Name="m_btn_accept"
+				Command="{Binding Accept}"
+				IsEnabled="{Binding IsValid}"
+				IsDefault="True"
+				MinWidth="100"
+				Margin="0,12,12,12"
+				>
+				<DockPanel>
+					<Image
+						DockPanel.Dock="Left"
+						Source="{StaticResource check_accept}"
+						MaxWidth="26"
+						Margin="2"
+						/>
+					<TextBlock
+						Text="Done"
+						FontSize="18"
+						VerticalAlignment="Center"
+						Margin="2"
+						/>
+				</DockPanel>
+			</Button>
+		</Grid>
+
+	</Grid>
+</Window>

@@ -46,7 +46,7 @@ namespace CoinFlip.UI.GfxObjects
 					$"	*Text\n" +
 					$"	{{\n" +
 					$"		*Font {{ *Name {{\"Tahoma\"}} *Size {{10}} *Colour {{ {col:X8} }} }}\n" +
-					$"		*BackColour {{ A0FFFFFF }}\n" +
+					$"		*BackColour {{ E0FFFFFF }}\n" +
 					$"		*CString {{ \"{(buy ? ord.AmountBase.ToString("F8", true) : ord.AmountQuote.ToString("F8", true))}\\n@ {ord.PriceQ2B.ToString("F8", true)}\" }}\n" +
 					$"		*Billboard\n" +
 					$"		*o2w {{ *pos {{ 0 {(buy ? -2.2 : +2.2)} 0 }} }}\n" +

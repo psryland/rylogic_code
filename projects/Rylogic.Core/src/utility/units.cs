@@ -14,7 +14,7 @@ using Rylogic.Extn;
 namespace Rylogic.Utility
 {
 	[DebuggerDisplay("{ToString(true),nq}")]
-	public struct Unit<T> :IComparable<Unit<T>>, IComparable<T>, IComparable where T:IComparable
+	public struct Unit<T> : IComparable<Unit<T>>, IComparable<T>, IComparable where T : IComparable
 	{
 		public Unit(T value, int unit)
 		{
@@ -50,17 +50,17 @@ namespace Rylogic.Utility
 		}
 
 		// Unary operators
-		[DebuggerStepThrough] public static Unit<T> operator + (Unit<T> lhs)
+		[DebuggerStepThrough] public static Unit<T> operator +(Unit<T> lhs)
 		{
 			return Operators<T>.Plus(lhs);
 		}
-		[DebuggerStepThrough] public static Unit<T> operator - (Unit<T> lhs)
+		[DebuggerStepThrough] public static Unit<T> operator -(Unit<T> lhs)
 		{
 			return new Unit<T>(Operators<T>.Neg(lhs.Value), lhs.UnitId);
 		}
 
 		// Binary operators
-		[DebuggerStepThrough] public static Unit<T> operator + (Unit<T> lhs, Unit<T> rhs)
+		[DebuggerStepThrough] public static Unit<T> operator +(Unit<T> lhs, Unit<T> rhs)
 		{
 			// Allow add to scalar zero
 			if (rhs.IsScalarZero) return lhs;
@@ -68,15 +68,15 @@ namespace Rylogic.Utility
 			if (lhs.UnitId != rhs.UnitId) throw new Exception("Unit types don't match");
 			return new Unit<T>(Operators<T>.Add(lhs.Value, rhs.Value), lhs.UnitId);
 		}
-		[DebuggerStepThrough] public static Unit<T> operator + (T lhs, Unit<T> rhs)
+		[DebuggerStepThrough] public static Unit<T> operator +(T lhs, Unit<T> rhs)
 		{
 			return new Unit<T>(Operators<T>.Add(lhs, rhs.Value), rhs.UnitId);
 		}
-		[DebuggerStepThrough] public static Unit<T> operator + (Unit<T> lhs, T rhs)
+		[DebuggerStepThrough] public static Unit<T> operator +(Unit<T> lhs, T rhs)
 		{
 			return new Unit<T>(Operators<T>.Add(lhs.Value, rhs), lhs.UnitId);
 		}
-		[DebuggerStepThrough] public static Unit<T> operator - (Unit<T> lhs, Unit<T> rhs)
+		[DebuggerStepThrough] public static Unit<T> operator -(Unit<T> lhs, Unit<T> rhs)
 		{
 			// Allow subtract with scalar zero
 			if (rhs.IsScalarZero) return lhs;
@@ -84,73 +84,73 @@ namespace Rylogic.Utility
 			if (lhs.UnitId != rhs.UnitId) throw new Exception("Unit types don't match");
 			return new Unit<T>(Operators<T>.Sub(lhs.Value, rhs.Value), lhs.UnitId);
 		}
-		[DebuggerStepThrough] public static Unit<T> operator - (T lhs, Unit<T> rhs)
+		[DebuggerStepThrough] public static Unit<T> operator -(T lhs, Unit<T> rhs)
 		{
 			return new Unit<T>(Operators<T>.Sub(lhs, rhs.Value), rhs.UnitId);
 		}
-		[DebuggerStepThrough] public static Unit<T> operator - (Unit<T> lhs, T rhs)
+		[DebuggerStepThrough] public static Unit<T> operator -(Unit<T> lhs, T rhs)
 		{
 			return new Unit<T>(Operators<T>.Sub(lhs.Value, rhs), lhs.UnitId);
 		}
-		[DebuggerStepThrough] public static Unit<T> operator * (Unit<T> lhs, Unit<T> rhs)
+		[DebuggerStepThrough] public static Unit<T> operator *(Unit<T> lhs, Unit<T> rhs)
 		{
-			var id = Unit_.CombineUnits(lhs.UnitId, rhs.UnitId, divide:false);
+			var id = Unit_.CombineUnits(lhs.UnitId, rhs.UnitId, divide: false);
 			return new Unit<T>(Operators<T>.Mul(lhs.Value, rhs.Value), id);
 		}
-		[DebuggerStepThrough] public static Unit<T> operator * (T lhs, Unit<T> rhs)
+		[DebuggerStepThrough] public static Unit<T> operator *(T lhs, Unit<T> rhs)
 		{
 			return new Unit<T>(Operators<T>.Mul(lhs, rhs.Value), rhs.UnitId);
 		}
-		[DebuggerStepThrough] public static Unit<T> operator * (Unit<T> lhs, T rhs)
+		[DebuggerStepThrough] public static Unit<T> operator *(Unit<T> lhs, T rhs)
 		{
 			return new Unit<T>(Operators<T>.Mul(lhs.Value, rhs), lhs.UnitId);
 		}
-		[DebuggerStepThrough] public static Unit<T> operator / (Unit<T> lhs, Unit<T> rhs)
+		[DebuggerStepThrough] public static Unit<T> operator /(Unit<T> lhs, Unit<T> rhs)
 		{
-			var id = Unit_.CombineUnits(lhs.UnitId, rhs.UnitId, divide:true);
+			var id = Unit_.CombineUnits(lhs.UnitId, rhs.UnitId, divide: true);
 			return new Unit<T>(Operators<T>.Div(lhs.Value, rhs.Value), id);
 		}
-		[DebuggerStepThrough] public static Unit<T> operator / (T lhs, Unit<T> rhs)
+		[DebuggerStepThrough] public static Unit<T> operator /(T lhs, Unit<T> rhs)
 		{
-			var id = Unit_.CombineUnits(Unit_.NoUnitsId, rhs.UnitId, divide:true);
+			var id = Unit_.CombineUnits(Unit_.NoUnitsId, rhs.UnitId, divide: true);
 			return new Unit<T>(Operators<T>.Div(lhs, rhs.Value), id);
 		}
-		[DebuggerStepThrough] public static Unit<T> operator / (Unit<T> lhs, T rhs)
+		[DebuggerStepThrough] public static Unit<T> operator /(Unit<T> lhs, T rhs)
 		{
 			return new Unit<T>(Operators<T>.Div(lhs.Value, rhs), lhs.UnitId);
 		}
 
 		// Equality operators
-		[DebuggerStepThrough] public static bool operator == (Unit<T> lhs, Unit<T> rhs)
+		[DebuggerStepThrough] public static bool operator ==(Unit<T> lhs, Unit<T> rhs)
 		{
 			// Comparing different units is an error. A == B cannot have
 			// different behaviour depending on whether checking is enabled or not.
 			if (lhs.UnitId != rhs.UnitId && !lhs.IsScalarZero && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
 			return lhs.Value.CompareTo(rhs.Value) == 0;
 		}
-		[DebuggerStepThrough] public static bool operator != (Unit<T> lhs, Unit<T> rhs)
+		[DebuggerStepThrough] public static bool operator !=(Unit<T> lhs, Unit<T> rhs)
 		{
 			// Comparing different units is an error. A == B cannot have
 			// different behaviour depending on whether checking is enabled or not.
 			if (lhs.UnitId != rhs.UnitId && !lhs.IsScalarZero && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
 			return lhs.Value.CompareTo(rhs.Value) != 0;
 		}
-		[DebuggerStepThrough] public static bool operator <  (Unit<T> lhs, Unit<T> rhs)
+		[DebuggerStepThrough] public static bool operator <(Unit<T> lhs, Unit<T> rhs)
 		{
 			if (lhs.UnitId != rhs.UnitId && !lhs.IsScalarZero && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
 			return lhs.Value.CompareTo(rhs.Value) < 0;
 		}
-		[DebuggerStepThrough] public static bool operator >  (Unit<T> lhs, Unit<T> rhs)
+		[DebuggerStepThrough] public static bool operator >(Unit<T> lhs, Unit<T> rhs)
 		{
 			if (lhs.UnitId != rhs.UnitId && !lhs.IsScalarZero && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
 			return lhs.Value.CompareTo(rhs.Value) > 0;
 		}
-		[DebuggerStepThrough] public static bool operator <= (Unit<T> lhs, Unit<T> rhs)
+		[DebuggerStepThrough] public static bool operator <=(Unit<T> lhs, Unit<T> rhs)
 		{
 			if (lhs.UnitId != rhs.UnitId && !lhs.IsScalarZero && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
 			return lhs.Value.CompareTo(rhs.Value) <= 0;
 		}
-		[DebuggerStepThrough] public static bool operator >= (Unit<T> lhs, Unit<T> rhs)
+		[DebuggerStepThrough] public static bool operator >=(Unit<T> lhs, Unit<T> rhs)
 		{
 			if (lhs.UnitId != rhs.UnitId && !lhs.IsScalarZero && !rhs.IsScalarZero) throw new Exception("Unit types don't match");
 			return lhs.Value.CompareTo(rhs.Value) >= 0;
@@ -198,10 +198,10 @@ namespace Rylogic.Utility
 			if (str == null)
 				throw new ArgumentNullException();
 
-			var parts = str.Split(new[]{' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+			var parts = str.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
 			if (parts.Length != 1 && parts.Length != 2)
 				throw new FormatException();
-			
+
 			return new Unit<T>(Operators<T>.Parse(parts[0]), parts.Length == 2 ? Unit_.UnitId(parts[1]) : Unit_.NoUnitsId);
 		}
 		public static bool TryParse(string str, out Unit<T> unit)
@@ -211,7 +211,7 @@ namespace Rylogic.Utility
 			if (str == null)
 				return false;
 
-			var parts = str.Split(new[]{' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+			var parts = str.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
 			if (parts.Length != 1 && parts.Length != 2)
 				return false;
 
@@ -267,7 +267,7 @@ namespace Rylogic.Utility
 		public const int NoUnitsId = 0;
 
 		/// <summary>A map from unit type to string representation</summary>
-		public static BiDictionary<string, int> Types = new BiDictionary<string, int>(){ [NoUnitsId] = string.Empty };
+		public static BiDictionary<string, int> Types = new BiDictionary<string, int>() { [NoUnitsId] = string.Empty };
 		public static int UnitTypeId = NoUnitsId;
 
 		/// <summary>A cache of the result of combining two types</summary>
@@ -276,17 +276,17 @@ namespace Rylogic.Utility
 		/// <summary>Return the unique id assigned to a unit</summary>
 		public static int UnitId(string unit_name)
 		{
-			#if UNITS_ENABLED
+#if UNITS_ENABLED
 			return Types.GetOrAdd(unit_name, s => ++UnitTypeId);
-			#else
+#else
 			return NoUnitsId;
-			#endif
+#endif
 		}
 
 		/// <summary>Combine unit ids into a new unit</summary>
 		public static int CombineUnits(int lhs, int rhs, bool divide)
 		{
-			#if UNITS_ENABLED
+#if UNITS_ENABLED
 			// Unit ids are always positive, so the sign bit is free
 			Debug.Assert(lhs >= 0 && rhs >= 0);
 
@@ -296,17 +296,17 @@ namespace Rylogic.Utility
 			var x = (ulong)lhs;
 			var y = (ulong)rhs;
 			var key =
-				divide  ? (x << 32) | y | (1UL << 63) :
+				divide ? (x << 32) | y | (1UL << 63) :
 				(x < y) ? (x << 32) | y :
-				          (y << 32) | x;
+						  (y << 32) | x;
 
 			return m_cache_combined_types.GetOrAdd(key, k =>
 			{
 				return UnitId(CombineUnits(Types[lhs], Types[rhs], divide));
 			});
-			#else
+#else
 			return NoUnitsId;
-			#endif
+#endif
 		}
 
 		/// <summary>Combine unit strings into a new unit</summary>
@@ -322,14 +322,14 @@ namespace Rylogic.Utility
 
 			// The powers of each unit type
 			var powers = new Accumulator<string, int>();
-			
+
 			// Characters that are allowed for unit strings
 			Func<string, int, bool> IsUnitChar = (string str, int idx) =>
 			{
 				// '1' is a special case. It's a unit char if not followed by [./²³^] or the end of string
 				var ch = str[idx];
-				if (ch == '1' && idx+1 == str.Length) return false;
-				if (ch == '1' && idx+1 <  str.Length) ch = str[idx+1];
+				if (ch == '1' && idx + 1 == str.Length) return false;
+				if (ch == '1' && idx + 1 < str.Length) ch = str[idx + 1];
 				return ch != '.' && ch != '/' && ch != '²' && ch != '³' && ch != '^';
 			};
 
@@ -341,18 +341,18 @@ namespace Rylogic.Utility
 				for (int s, e = 0; e != str.Length;)
 				{
 					// A².B^5/C.D - extract a unit
-					for (s = e; e != str.Length && IsUnitChar(str,e); ++e) {}
-					if (s != e) powers[prev = str.Substring(s, e-s)] += sign;
+					for (s = e; e != str.Length && IsUnitChar(str, e); ++e) { }
+					if (s != e) powers[prev = str.Substring(s, e - s)] += sign;
 
 					// Find the power of the unit
-					if      (e == str.Length) break;
+					if (e == str.Length) break;
 					else if (str[e] == '1') { ++e; }
-					else if (str[e] == '²') { powers[prev] += 1*sign; ++e; }
-					else if (str[e] == '³') { powers[prev] += 2*sign; ++e; }
+					else if (str[e] == '²') { powers[prev] += 1 * sign; ++e; }
+					else if (str[e] == '³') { powers[prev] += 2 * sign; ++e; }
 					else if (str[e] == '^')
 					{
-						for (s = ++e; e != str.Length && char.IsDigit(str[e]); ++e) {}
-						powers[prev] += (int.Parse(str.Substring(s, e-s)) - 1) * sign;
+						for (s = ++e; e != str.Length && char.IsDigit(str[e]); ++e) { }
+						powers[prev] += (int.Parse(str.Substring(s, e - s)) - 1) * sign;
 					}
 
 					// Multiply/Divide separator
@@ -367,7 +367,7 @@ namespace Rylogic.Utility
 			Decompose(rhs, divide ? -1 : +1);
 
 			// Helper for converting the power of a unit to a string
-			Func<int,string> power_value = i => i == 1 ? "" : i == 2 ? "²" : i == 3 ? "³" : $"^{i}";
+			Func<int, string> power_value = i => i == 1 ? "" : i == 2 ? "²" : i == 3 ? "³" : $"^{i}";
 
 			// Recompose the powers back into a unit string
 			var numer = new StringBuilder();
@@ -388,65 +388,84 @@ namespace Rylogic.Utility
 		}
 
 		/// <summary>Convert this raw value into a type with a known unit</summary>
-		[DebuggerStepThrough] public static Unit<T> _<T>(this T x, string unit) where T:IComparable
+		[DebuggerStepThrough] public static Unit<T> _<T>(this T x, string unit) where T : IComparable
 		{
 			return new Unit<T>(x, UnitId(unit));
 		}
-		[DebuggerStepThrough] public static Unit<T> _<T>(this T x, Unit<T> unit) where T:IComparable
+		[DebuggerStepThrough] public static Unit<T> _<T>(this T x, Unit<T> unit) where T : IComparable
 		{
 			return new Unit<T>(x, unit.UnitId);
 		}
-		[DebuggerStepThrough] public static Unit<T> _<T>(this T x) where T:IComparable
+		[DebuggerStepThrough] public static Unit<T> _<T>(this T x) where T : IComparable
 		{
 			return new Unit<T>(x, NoUnitsId);
 		}
 
 		/// <summary>Cast one unit to another</summary>
-		[DebuggerStepThrough] public static Unit<T> _<T>(this Unit<T> x, string unit) where T:IComparable
+		[DebuggerStepThrough] public static Unit<T> _<T>(this Unit<T> x, string unit) where T : IComparable
 		{
 			return new Unit<T>(x, UnitId(unit));
 		}
-		[DebuggerStepThrough] public static Unit<T> _<T>(this Unit<T> x, Unit<T> unit) where T:IComparable
+		[DebuggerStepThrough] public static Unit<T> _<T>(this Unit<T> x, Unit<T> unit) where T : IComparable
 		{
 			return new Unit<T>(x, unit.UnitId);
 		}
 
 		/// <summary>True if this value is in the range [beg,end) or [end,beg) (whichever is a positive range)</summary>
-		public static bool Within<T>(this Unit<T> x, Unit<T> beg, Unit<T> end) where T:IComparable
+		public static bool Within<T>(this Unit<T> x, Unit<T> beg, Unit<T> end) where T : IComparable
 		{
 			return beg <= end
 				? x >= beg && x < end
 				: x >= end && x < beg;
 		}
-		public static bool Within<T>(this Unit<T>? x, Unit<T> beg, Unit<T> end) where T:IComparable
+		public static bool Within<T>(this Unit<T>? x, Unit<T> beg, Unit<T> end) where T : IComparable
 		{
 			return x.HasValue && x.Value.Within(beg, end);
 		}
-		public static bool WithinInclusive<T>(this Unit<T> x, Unit<T> beg, Unit<T> end) where T:IComparable
+		public static bool WithinInclusive<T>(this Unit<T> x, Unit<T> beg, Unit<T> end) where T : IComparable
 		{
-			return x.Within(beg,end) || x == end;
+			return x.Within(beg, end) || x == end;
 		}
-		public static bool WithinInclusive<T>(this Unit<T>? x, Unit<T> beg, Unit<T> end) where T:IComparable
+		public static bool WithinInclusive<T>(this Unit<T>? x, Unit<T> beg, Unit<T> end) where T : IComparable
 		{
 			return x.HasValue && x.Value.WithinInclusive(beg, end);
 		}
 
 		/// <summary>ToString</summary>
-		public static string ToString<T>(this Unit<T>? x, bool include_units) where T:IComparable
+		public static string ToString<T>(this Unit<T>? x, bool include_units) where T : IComparable
 		{
 			return x?.ToString(include_units) ?? string.Empty;
 		}
-		public static string ToString<T>(this Unit<T>? x, IFormatProvider fp, bool include_units = false) where T:IComparable
+		public static string ToString<T>(this Unit<T>? x, IFormatProvider fp, bool include_units = false) where T : IComparable
 		{
 			return x?.ToString(fp, include_units) ?? string.Empty;
 		}
-		public static string ToString<T>(this Unit<T>? x, string fmt, bool include_units = false) where T:IComparable
+		public static string ToString<T>(this Unit<T>? x, string fmt, bool include_units = false) where T : IComparable
 		{
 			return x?.ToString(fmt, include_units) ?? string.Empty;
 		}
-		public static string ToString<T>(this Unit<T>? x, string fmt, IFormatProvider fp, bool include_units = false) where T:IComparable
+		public static string ToString<T>(this Unit<T>? x, string fmt, IFormatProvider fp, bool include_units = false) where T : IComparable
 		{
 			return x?.ToString(fmt, fp, include_units) ?? string.Empty;
+		}
+	}
+}
+namespace Rylogic.Maths
+{
+	/// <summary>Maths overloads for Unit</summary>
+	public static partial class Math_
+	{
+		public static Utility.Unit<long> RoundSD(Utility.Unit<long> d, int significant_digits, MidpointRounding rounding = MidpointRounding.ToEven)
+		{
+			return Utility.Unit_._(RoundSD(d.Value, significant_digits, rounding), d);
+		}
+		public static Utility.Unit<double> RoundSD(Utility.Unit<double> d, int significant_digits, MidpointRounding rounding = MidpointRounding.ToEven)
+		{
+			return Utility.Unit_._(RoundSD(d.Value, significant_digits, rounding), d);
+		}
+		public static Utility.Unit<decimal> RoundSD(Utility.Unit<decimal> d, int significant_digits, MidpointRounding rounding = MidpointRounding.ToEven)
+		{
+			return Utility.Unit_._(RoundSD(d.Value, significant_digits, rounding), d);
 		}
 	}
 }

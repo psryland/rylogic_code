@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -193,15 +194,21 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		}
 		private void UpdateGraphics()
 		{
-			Children.Clear();
 			if (Axis == null)
 				return;
+
+			// Preserve any graphics added by third parties
+			const string Prefix = "PART_AxisPanel";
+			var preserved = Children.Cast<FrameworkElement>().Where(x => !x.Name.StartsWith(Prefix)).ToList();
+
+			// Reset the child controls
+			Children.Clear();
 
 			// Get the positions for the tick marks
 			Axis.GridLines(out var min, out var max, out var step);
 
 			// Add a line for the Chart axis
-			var axis_line = Children.Add2(new Line());
+			var axis_line = Children.Add2(new Line { Name = $"{Prefix}_ChartAxis" });
 			axis_line.Stroke = new SolidColorBrush(Options.AxisColour.ToMediaColor());
 			axis_line.StrokeThickness = Options.AxisThickness;
 
@@ -223,12 +230,12 @@ namespace Rylogic.Gui.WPF.ChartDetail
 						var Y = ActualHeight - y * ActualHeight / Axis.Span;
 						if (Options.DrawTickMarks)
 						{
-							Children.Add(new Line { Stroke = bsh, X1 = X, Y1 = Y, X2 = X - Options.TickLength, Y2 = Y });
+							Children.Add(new Line { Name = $"{Prefix}_TickMark", Stroke = bsh, X1 = X, Y1 = Y, X2 = X - Options.TickLength, Y2 = Y });
 						}
 						if (Options.DrawTickLabels)
 						{
 							var s = Axis.TickText(y + Axis.Min, step);
-							var lbl = Children.Add2(new TextBlock { Text = s, Foreground = bsh });
+							var lbl = Children.Add2(new TextBlock { Name = $"{Prefix}_TickLabel", Text = s, Foreground = bsh });
 							lbl.Typeface(Typeface, FontSize);
 							lbl.Measure(Size_.Infinity);
 							Canvas.SetLeft(lbl, X - lbl.DesiredSize.Width - Options.TickLength);
@@ -252,12 +259,12 @@ namespace Rylogic.Gui.WPF.ChartDetail
 						var X = x * ActualWidth / Axis.Span;
 						if (Options.DrawTickMarks)
 						{
-							Children.Add(new Line { Stroke = bsh, X1 = X, Y1 = Y, X2 = X, Y2 = Y + Options.TickLength });
+							Children.Add(new Line { Name = $"{Prefix}_TickMark", Stroke = bsh, X1 = X, Y1 = Y, X2 = X, Y2 = Y + Options.TickLength });
 						}
 						if (Options.DrawTickLabels)
 						{
 							var s = Axis.TickText(x + Axis.Min, step);
-							var lbl = Children.Add2(new TextBlock { Text = s, Foreground = bsh });
+							var lbl = Children.Add2(new TextBlock { Name = $"{Prefix}_TickLabel", Text = s, Foreground = bsh });
 							lbl.Typeface(Typeface, FontSize);
 							lbl.Measure(Size_.Infinity);
 							Canvas.SetLeft(lbl, X - lbl.DesiredSize.Width / 2);
@@ -281,12 +288,12 @@ namespace Rylogic.Gui.WPF.ChartDetail
 						var Y = ActualHeight - y * ActualHeight / Axis.Span;
 						if (Options.DrawTickMarks)
 						{
-							Children.Add(new Line { Stroke = bsh, X1 = X, Y1 = Y, X2 = X + Options.TickLength, Y2 = Y });
+							Children.Add(new Line { Name = $"{Prefix}_TickMark", Stroke = bsh, X1 = X, Y1 = Y, X2 = X + Options.TickLength, Y2 = Y });
 						}
 						if (Options.DrawTickLabels)
 						{
 							var s = Axis.TickText(y + Axis.Min, step);
-							var lbl = Children.Add2(new TextBlock { Text = s, Foreground = bsh });
+							var lbl = Children.Add2(new TextBlock { Name = $"{Prefix}_TickLabel", Text = s, Foreground = bsh });
 							lbl.Typeface(Typeface, FontSize);
 							lbl.Measure(Size_.Infinity);
 							Canvas.SetLeft(lbl, X + Options.TickLength + 1);
@@ -310,12 +317,12 @@ namespace Rylogic.Gui.WPF.ChartDetail
 						var X = x * ActualWidth / Axis.Span;
 						if (Options.DrawTickMarks)
 						{
-							Children.Add(new Line { Stroke = bsh, X1 = X, Y1 = Y, X2 = X, Y2 = Y - Options.TickLength });
+							Children.Add(new Line { Name = $"{Prefix}_TickMark", Stroke = bsh, X1 = X, Y1 = Y, X2 = X, Y2 = Y - Options.TickLength });
 						}
 						if (Options.DrawTickLabels)
 						{
 							var s = Axis.TickText(x + Axis.Min, step);
-							var lbl = Children.Add2(new TextBlock { Text = s, Foreground = bsh });
+							var lbl = Children.Add2(new TextBlock { Name = $"{Prefix}_TickLabel", Text = s, Foreground = bsh });
 							lbl.Typeface(Typeface, FontSize);
 							lbl.Measure(Size_.Infinity);
 							Canvas.SetLeft(lbl, X - lbl.DesiredSize.Width / 2);
@@ -325,6 +332,10 @@ namespace Rylogic.Gui.WPF.ChartDetail
 					break;
 				}
 			}
+
+			// Restore the preserved controls
+			foreach (var c in preserved)
+				Children.Add(c);
 
 			m_update_graphics_pending = false;
 		}

@@ -1,0 +1,79 @@
+﻿<Grid
+	x:Class="CoinFlip.UI.GridBots"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+	mc:Ignorable="d" 
+	d:DesignHeight="450"
+	d:DesignWidth="800"
+	>
+	<Grid.RowDefinitions>
+		<RowDefinition Height="Auto"/>
+		<RowDefinition Height="*"/>
+	</Grid.RowDefinitions>
+	
+	<!-- Grid of Bots -->
+	<DataGrid
+		Grid.Row="1"
+		AutoGenerateColumns="False"
+		GridLinesVisibility="None"
+		HeadersVisibility="Column"
+		IsReadOnly="True"
+		ItemsSource="{Binding Bots}"
+		SelectedItem="{Binding Bots/, Mode=TwoWay}"
+		x:Name="m_grid"
+		>
+		<DataGrid.Columns>
+			<DataGridTextColumn
+				Header="Bot"
+				Binding="{Binding Name, Mode=OneWay}"
+				Width="1*"
+				/>
+			<DataGridTextColumn
+				Header="Fund"
+				Binding="{Binding Fund.Id, Mode=OneWay}"
+				Width="1*"
+				/>
+			<DataGridTextColumn
+				Header="Active"
+				Binding="{Binding Fund.Active, Mode=OneWay}"
+				Width="0.3*"
+				/>
+		</DataGrid.Columns>
+		<DataGrid.ContextMenu>
+			<ContextMenu
+				DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+				>
+				<MenuItem
+					Header="Create New Bot..."
+					Command="{Binding CreateNewBot}"
+					/>
+				<MenuItem
+					Header="Add Existing Bot..."
+					Command="{Binding AddExistingBot}"
+					/>
+				<MenuItem
+					Header="{Binding Bots/Name}"
+					HeaderStringFormat="Remove {0}"
+					IsEnabled="{Binding Bots/, Converter={conv:NotNull}}"
+					Command="{Binding RemoveBot}"
+					/>
+				<Separator/>
+				<MenuItem
+					Header="Active"
+					IsEnabled="{Binding Bots/, Converter={conv:NotNull}}"
+					IsChecked="{Binding Bots/Active}"
+					Command="{Binding ToggleActive}"
+					/>
+				<Separator/>
+				<MenuItem
+					Header="Configure"
+					IsEnabled="{Binding Bots/, Converter={conv:NotNull}}"
+					Command="{Binding ShowConfig}"
+					/>
+			</ContextMenu>
+		</DataGrid.ContextMenu>
+	</DataGrid>
+</Grid>

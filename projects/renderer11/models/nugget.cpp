@@ -16,7 +16,7 @@ namespace pr::rdr
 		,m_bsb()
 		,m_dsb()
 		,m_rsb()
-		,m_sort_key()
+		,m_sort_key(ESortGroup::Default)
 		,m_relative_reflectivity(1)
 		,m_flags(ENuggetFlag::None)
 		,m_vrange(vrange)

@@ -23,71 +23,24 @@ namespace CoinFlip.UI
 		{
 			CurrentProperty = Gui_.DPRegister<GridCoins>(nameof(Current));
 			FilterThresholdProperty = Gui_.DPRegister<GridCoins>(nameof(FilterThreshold));
-			IsValueFilterProperty = Gui_.DPRegister<GridCoins>(nameof(IsValueFilter));
+			FilterTypeProperty = Gui_.DPRegister<GridCoins>(nameof(FilterType));
 		}
 		public GridCoins(Model model)
 		{
 			InitializeComponent();
-			m_grid_coins.MouseRightButtonUp += DataGrid_.ColumnVisibility;
+			m_grid.MouseRightButtonUp += DataGrid_.ColumnVisibility;
 
 			DockControl = new DockControl(this, "Coins");
 			ExchangeSource = new ListCollectionView(new List<string> { SpecialExchangeSources.All, SpecialExchangeSources.Current });
-			Coins = new ListCollectionView(ListAdapter.Create(model.Coins, c => new CoinDataAdaptor(c, model, ExchangeSource), c => c?.CoinData));
+			Coins = new ListCollectionView(ListAdapter.Create(model.Coins, c => new CoinDataToLiveValueAdapter(c, model, ExchangeSource), c => c?.CoinData));
 			Model = model;
 
 			// Commands
-			AddCoin = Command.Create(this, () =>
-			{
-				var dlg = new PromptUI(Window.GetWindow(this))
-				{
-					Title = "Add Coin",
-					Prompt = "Enter the Symbol Code for the coin to add",
-				};
-				if (dlg.ShowDialog() == true)
-					Model.Coins.Add(new CoinData(dlg.Value) { OfInterest = true });
-			});
-			RemoveCoin = Command.Create(this, () =>
-			{
-				if (Current == null) return;
-				Model.Coins.Remove(Current.CoinData);
-			});
-			EditLiveValueConversion = Command.Create(this, () =>
-			{
-				if (Current == null) return;
-				var dlg = new PromptUI(Window.GetWindow(this))
-				{
-					Title = "Live Price Conversion",
-					Prompt = "Set the symbols used to convert to a live price value (comma separated)",
-					Value = Current.CoinData.LivePriceSymbols,
-				};
-				if (dlg.ShowDialog() == true)
-					Current.CoinData.LivePriceSymbols = dlg.Value;
-			});
-			SetFakeCash = Command.Create(this, () =>
-			{
-				if (Current == null) return;
-				var dlg = new PromptUI(Window.GetWindow(this))
-				{
-					Title = "Add/Remove Fake Cash!",
-					Prompt = "Set the amount of fake funds on each exchange",
-					Value = "0",
-					ValueAlignment = HorizontalAlignment.Right,
-					Units = Current.Symbol,
-					Validate = x => !decimal.TryParse(x, out var v) || v < 0 ? new ValidationResult(false, "Value must be a positive amount") : ValidationResult.ValidResult,
-				};
-				if (dlg.ShowDialog() == true)
-				{
-					var amount = decimal.Parse(dlg.Value);
-					foreach (var exch in Current.SourceExchanges)
-						exch.FakeCash(Current.Symbol, amount);
-				}
-			});
-			ResetFakeCash = Command.Create(this, () =>
-			{
-				if (Current == null) return;
-				foreach (var exch in Current.SourceExchanges)
-					exch.FakeCash(Current.Symbol, 0);
-			});
+			AddCoin = Command.Create(this, AddCoinInternal);
+			RemoveCoin = Command.Create(this, RemoveCoinInternal);
+			EditLiveValueConversion = Command.Create(this, EditLiveValueConversionInternal);
+			SetFakeCash = Command.Create(this, SetFakeCashInternal);
+			ResetFakeCash = Command.Create(this, ResetFakeCashInternal);
 
 			DataContext = this;
 		}
@@ -157,19 +110,19 @@ namespace CoinFlip.UI
 		}
 		private DockControl m_dock_control;
 
-		/// <summary>The data source for coin data</summary>
+		/// <summary>The view of the available exchanges</summary>
 		public ICollectionView ExchangeSource { get; }
 
-		/// <summary>The view of the available exchanges</summary>
+		/// <summary>The data source for coin data</summary>
 		public ICollectionView Coins { get; }
 
 		/// <summary>True when live trading is enabled</summary>
 		public bool AllowTrades => Model.AllowTrades;
 
 		/// <summary>The currently selected exchange</summary>
-		public CoinDataAdaptor Current
+		public CoinDataToLiveValueAdapter Current
 		{
-			get { return (CoinDataAdaptor)GetValue(CurrentProperty); }
+			get { return (CoinDataToLiveValueAdapter)GetValue(CurrentProperty); }
 			set { SetValue(CurrentProperty, value); }
 		}
 		public string CurrentCoinName => Current?.Symbol ?? "Coin";
@@ -185,6 +138,20 @@ namespace CoinFlip.UI
 				m_filter_enabled = value;
 				Coins.Filter = value ? CoinThresholdFilter : (Predicate<object>)null;
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FilterEnabled)));
+
+				/// <summary>Filter for the 'Coins' collection view</summary>
+				bool CoinThresholdFilter(object obj)
+				{
+					var cda = (CoinDataToLiveValueAdapter)obj;
+					switch (FilterType)
+					{
+					default: throw new Exception("Unknown Filter Type");
+					case ECoinFilterType.Value: return cda.Value > FilterThreshold;
+					case ECoinFilterType.Balance: return cda.Balance > FilterThreshold;
+					case ECoinFilterType.Available: return cda.Available > FilterThreshold;
+					case ECoinFilterType.Total: return cda.Total > FilterThreshold;
+					}
+				}
 			}
 		}
 		private bool m_filter_enabled;
@@ -198,35 +165,81 @@ namespace CoinFlip.UI
 		private void FilterThreshold_Changed() => Coins.Refresh();
 		public static readonly DependencyProperty FilterThresholdProperty;
 
-		/// <summary>True if the filter should exclude based on normalised value, rather than absolute amount</summary>
-		public bool IsValueFilter
+		/// <summary>What to filter on</summary>
+		public ECoinFilterType FilterType
 		{
-			get { return (bool)GetValue(IsValueFilterProperty); }
-			set { SetValue(IsValueFilterProperty, value); }
+			get { return (ECoinFilterType)GetValue(FilterTypeProperty); }
+			set { SetValue(FilterTypeProperty, value); }
 		}
-		private void IsValueFilter_Changed() => Coins.Refresh();
-		public static readonly DependencyProperty IsValueFilterProperty;
+		private void FilterType_Changed() => Coins.Refresh();
+		public static readonly DependencyProperty FilterTypeProperty;
 
 		/// <summary>Add a coin to the collection</summary>
 		public Command AddCoin { get; }
+		private void AddCoinInternal()
+		{
+			// Prompt for the coin to add
+			var dlg = new PromptUI(Window.GetWindow(this))
+			{
+				Title = "Add Coin",
+				Prompt = "Enter the Symbol Code for the coin to add",
+			};
+			if (dlg.ShowDialog() == true)
+				Model.Coins.Add(new CoinData(dlg.Value) { OfInterest = true });
+		}
 
 		/// <summary>Remove a coin from the collection</summary>
 		public Command RemoveCoin { get; }
+		private void RemoveCoinInternal()
+		{
+			if (Current == null) return;
+			Model.Coins.Remove(Current.CoinData);
+		}
 
 		/// <summary>Edit the sequence used to obtain the live value of a coin</summary>
 		public Command EditLiveValueConversion { get; }
+		private void EditLiveValueConversionInternal()
+		{
+			if (Current == null) return;
+			var dlg = new PromptUI(Window.GetWindow(this))
+			{
+				Title = "Live Price Conversion",
+				Prompt = "Set the symbols used to convert to a live price value (comma separated)",
+				Value = Current.CoinData.LivePriceSymbols,
+			};
+			if (dlg.ShowDialog() == true)
+				Current.CoinData.LivePriceSymbols = dlg.Value;
+		}
 
 		/// <summary>Add/Remove fake funds for testing</summary>
 		public Command SetFakeCash { get; }
+		private void SetFakeCashInternal()
+		{
+			if (Current == null) return;
+			var dlg = new PromptUI(Window.GetWindow(this))
+			{
+				Title = "Add/Remove Fake Cash!",
+				Prompt = "Set the amount of fake funds on each exchange",
+				Value = "0",
+				ValueAlignment = HorizontalAlignment.Right,
+				Units = Current.Symbol,
+				Validate = x => !decimal.TryParse(x, out var v) || v < 0 ? new ValidationResult(false, "Value must be a positive amount") : ValidationResult.ValidResult,
+			};
+			if (dlg.ShowDialog() == true)
+			{
+				var amount = decimal.Parse(dlg.Value);
+				foreach (var exch in Current.SourceExchanges)
+					exch.FakeCash(Current.Symbol, amount);
+			}
+		}
 
 		/// <summary>Clear fake funds</summary>
 		public Command ResetFakeCash { get; }
-
-		/// <summary>Filter for the 'Coins' collection view</summary>
-		private bool CoinThresholdFilter(object obj)
+		private void ResetFakeCashInternal()
 		{
-			var cda = (CoinDataAdaptor)obj;
-			return (IsValueFilter ? cda.Balance : cda.Total) > FilterThreshold;
+			if (Current == null) return;
+			foreach (var exch in Current.SourceExchanges)
+				exch.FakeCash(Current.Symbol, 0);
 		}
 
 		/// <summary></summary>

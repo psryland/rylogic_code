@@ -1,0 +1,149 @@
+﻿<Grid
+	x:Class="CoinFlip.UI.GridFunds"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+	mc:Ignorable="d" 
+	d:DesignWidth="800"
+	d:DesignHeight="450"
+	>
+	<Grid.Resources>
+
+		<!-- Cell template for fund balances -->
+		<DataTemplate x:Key="FundBalanceDataTemplate">
+			<Grid>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+				</Grid.RowDefinitions>
+
+				<!-- Total balance -->
+				<TextBlock
+					Grid.Row="0"
+					Text="{Binding Total, StringFormat=Total: {0:N8}}"
+					Foreground="DarkBlue"
+					FontSize="10"
+					/>
+
+				<!-- Available balance -->
+				<TextBlock
+					Grid.Row="1"
+					Text="{Binding Available, StringFormat=Avail: {0:N8}}"
+					Foreground="DarkGreen"
+					FontSize="10"
+					/>
+
+				<!-- Held for Trades -->
+				<TextBlock
+					Grid.Row="2"
+					Text="{Binding HeldForTrades, StringFormat=Held: {0:N8}}"
+					Foreground="DarkRed"
+					FontSize="10"
+					/>
+			</Grid>
+		</DataTemplate>
+
+	</Grid.Resources>
+	
+	<Grid.RowDefinitions>
+		<RowDefinition Height="Auto"/>
+		<RowDefinition Height="*"/>
+	</Grid.RowDefinitions>
+
+	<!-- Tool bar -->
+	<StackPanel
+		Grid.Row="0"
+		Orientation="Horizontal"
+		>
+		
+		<!-- Exchange drop down -->
+		<StackPanel
+			Orientation="Vertical"
+			Margin="3"
+			>
+			<TextBlock
+				Text="Exchange:"
+				/>
+			<ComboBox
+				ItemsSource="{Binding Exchanges}"
+				SelectedItem="{Binding Exchanges/, Mode=TwoWay}"
+				DisplayMemberPath="Name"
+				VerticalAlignment="Center"
+				MinWidth="60"
+				/>
+		</StackPanel>
+
+		<!-- Filter coins -->
+		<StackPanel
+			Orientation="Vertical"
+			Margin="3,6,3,3"
+			>
+			<CheckBox
+				Name="m_cb_filter_coins"
+				Content="Filter Coins"
+				VerticalAlignment="Center"
+				ToolTip="Exclude coins with total balances less than the given value"
+				IsChecked="{Binding FilterEnabled, Mode=TwoWay}"
+				/>
+			<StackPanel
+				Orientation="Horizontal"
+				>
+				<TextBox
+					MinWidth="40"
+					IsEnabled="{Binding IsChecked, ElementName=m_cb_filter_coins}"
+					Text="{Binding FilterThreshold, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+					/>
+				<ComboBox
+					ItemsSource="{Binding FilterType, Converter={conv:EnumValues}}"
+					SelectedItem="{Binding FilterType}"
+					VerticalAlignment="Center"
+					MinWidth="50"
+					Margin="2,0,0,0"
+					/>
+			</StackPanel>
+		</StackPanel>
+
+	</StackPanel>
+
+	<!-- Grid of Funds -->
+	<DataGrid
+		Grid.Row="1"
+		AutoGenerateColumns="False"
+		GridLinesVisibility="None"
+		HeadersVisibility="Column"
+		IsReadOnly="True"
+		ItemsSource="{Binding Coins}"
+		SelectedItem="{Binding Coins/, Mode=TwoWay}"
+		x:Name="m_grid"
+		>
+		<DataGrid.Columns>
+			<DataGridTextColumn
+				Header="Coins"
+				Binding="{Binding Symbol, Mode=OneWay}"
+				Width="0.5*"
+				/>
+		</DataGrid.Columns>
+		<DataGrid.ContextMenu>
+			<ContextMenu
+				DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+				>
+				<MenuItem
+					Header="Create New Fund..."
+					Command="{Binding CreateNewFund}"
+					/>
+				<MenuItem
+					Header="Remove Fund..."
+					Command="{Binding RemoveFund}"
+					/>
+				<Separator/>
+				<MenuItem
+					Header="Manage Fund Allocations"
+					Command="{Binding ShowFundAllocationsUI}"
+					/>
+			</ContextMenu>
+		</DataGrid.ContextMenu>
+	</DataGrid>
+</Grid>

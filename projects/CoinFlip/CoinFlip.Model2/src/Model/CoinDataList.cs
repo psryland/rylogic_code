@@ -8,7 +8,7 @@ using Rylogic.Extn;
 
 namespace CoinFlip
 {
-	public class CoinDataList :IList<CoinData>, INotifyCollectionChanged
+	public class CoinDataList :IList<CoinData>, IList, INotifyCollectionChanged
 	{
 		// Notes:
 		//  - This is a helper wrapper around the 'Settings.Coins' array.
@@ -138,6 +138,42 @@ namespace CoinFlip
 		{
 			return GetEnumerator();
 		}
+
+		#region IList
+		bool IList.IsFixedSize => false;
+		bool ICollection.IsSynchronized => false;
+		object ICollection.SyncRoot => throw new NotImplementedException();
+		object IList.this[int index]
+		{
+			get => this[index];
+			set => this[index] = (CoinData)value;
+		}
+		bool IList.Contains(object value)
+		{
+			return Contains((CoinData)value);
+		}
+		int IList.IndexOf(object value)
+		{
+			return IndexOf((CoinData)value);
+		}
+		int IList.Add(object value)
+		{
+			Add((CoinData)value);
+			return Count - 1;
+		}
+		void IList.Insert(int index, object value)
+		{
+			Insert(index, (CoinData)value);
+		}
+		void IList.Remove(object value)
+		{
+			Remove((CoinData)value);
+		}
+		void ICollection.CopyTo(Array array, int index)
+		{
+			SettingsData.Settings.Coins.CopyTo(array, index);
+		}
+		#endregion
 
 		/// <summary></summary>
 		public event NotifyCollectionChangedEventHandler CollectionChanged;

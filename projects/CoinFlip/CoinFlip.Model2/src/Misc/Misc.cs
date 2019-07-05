@@ -18,6 +18,9 @@ namespace CoinFlip
 		/// <summary>The smallest price change</summary>
 		public const decimal PriceEpsilon = 1e-8m;
 
+		/// <summary>Regex expression for finding bot plugin dlls</summary>
+		public const string BotFilterRegex = @"Bot\.(?<name>\w+)\.dll";
+
 		/// <summary>The dawn of time (from a crypto point of view)</summary>
 		public static readonly DateTimeOffset CryptoCurrencyEpoch = new DateTimeOffset(2009, 1, 1, 0, 0, 0, 0, TimeSpan.Zero);
 
@@ -53,6 +56,12 @@ namespace CoinFlip
 		public static string ResolveUserPath(params string[] rel_path)
 		{
 			return Util.ResolveUserDocumentsPath(new[]{ "Rylogic", "CoinFlip" }.Concat(rel_path));
+		}
+
+		/// <summary>Resolve a full path relative to the bots directory</summary>
+		public static string ResolveBotPath(params string[] rel_path)
+		{
+			return Util.ResolveAppPath(new[] { "bots" }.Concat(rel_path));
 		}
 
 		/// <summary>Return the opposite trade type</summary>

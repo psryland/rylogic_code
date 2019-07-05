@@ -16,6 +16,26 @@ namespace Rylogic.Extn
 {
 	public static class Enum<T> where T : struct, IConvertible
 	{
+		static Enum()
+		{
+			var type = typeof(T);
+			if (!type.IsEnum)
+				throw new ArgumentException("Generic Enum type works only with enums");
+
+			var names = Enum.GetNames(type);
+			var values = (T[])Enum.GetValues(type);
+			if (type.GetCustomAttributes(typeof(FlagsAttribute), false).Length != 0)
+			{
+				Converter = new FlagsEnumConverter(names, values);
+			}
+			else
+			{
+				Converter = values.Where((t, i) => Convert.ToInt32(t) != i).Any()
+					? new DictionaryEnumConverter(names, values)
+					: (EnumConverter)new ArrayEnumConverter(names);
+			}
+		}
+
 		// Some of this came from:
 		//  http://www.codeproject.com/KB/dotnet/enum.aspx
 		//  Author: Boris Dongarov (ideafixxxer)
@@ -397,26 +417,6 @@ namespace Rylogic.Extn
 			return m_impl_or(a,b);
 		}
 		private static Func<T,T,T> m_impl_or;
-
-		static Enum()
-		{
-			var type = typeof(T);
-			if (!type.IsEnum)
-				throw new ArgumentException("Generic Enum type works only with enums");
-
-			var names = Enum.GetNames(type);
-			var values = (T[])Enum.GetValues(type);
-			if (type.GetCustomAttributes(typeof(FlagsAttribute), false).Length != 0)
-			{
-				Converter = new FlagsEnumConverter(names, values);
-			}
-			else
-			{
-				Converter = values.Where((t, i) => Convert.ToInt32(t) != i).Any()
-					? new DictionaryEnumConverter(names, values)
-					: (EnumConverter)new ArrayEnumConverter(names);
-			}
-		}
 	}
 
 	public static class Enum_

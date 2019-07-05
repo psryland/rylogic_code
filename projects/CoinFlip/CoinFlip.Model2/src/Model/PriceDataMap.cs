@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -7,7 +8,7 @@ using Rylogic.Utility;
 
 namespace CoinFlip
 {
-	public class PriceDataMap : IDisposable
+	public class PriceDataMap : IDisposable, IEnumerable<PriceData>
 	{
 		public class TPMap : Dictionary<TradePair, TFMap> { }
 		public class TFMap : Dictionary<ETimeFrame, PriceData> { }
@@ -82,5 +83,17 @@ namespace CoinFlip
 
 		/// <summary>Application shutdown token</summary>
 		private CancellationToken Shutdown { get; }
+
+		/// <summary>Enumerate all price data instances</summary>
+		public IEnumerator<PriceData> GetEnumerator()
+		{
+			foreach (var pair in Pairs.Values)
+				foreach (var pd in pair.Values)
+					yield return pd;
+		}
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return GetEnumerator();
+		}
 	}
 }

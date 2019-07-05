@@ -1,47 +1,47 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using CoinFlip.Settings;
+using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Gui.WPF;
 using Rylogic.Utility;
 
 namespace CoinFlip.UI
 {
-	public partial class GridExchanges : DataGrid, IDockable
+	public partial class GridExchanges : DataGrid, IDockable, IDisposable
 	{
 		public GridExchanges(Model model)
 		{
 			InitializeComponent();
 			MouseRightButtonUp += DataGrid_.ColumnVisibility;
 			DockControl = new DockControl(this, "Exchanges");
+			Exchanges = CollectionViewSource.GetDefaultView(model.Exchanges);
 			Model = model;
 
 			// Commands
-			ToggleEnabled = Command.Create(this, () =>
-			{
-				if (Current == null) return;
-				Current.Enabled = !Current.Enabled;
-			});
-			TogglePublicAPIOnly = Command.Create(this, () =>
-			{
-				if (Current == null) return;
-				Current.ExchSettings.PublicAPIOnly = !Current.ExchSettings.PublicAPIOnly;
-			});
-			SetApiKeys = Command.Create(this, () =>
-			{
-				if (Current == null) return;
-				ChangeApiKeys(Current);
-			});
-			RefreshTradePairs = Command.Create(this, () =>
-			{
-				if (Current == null) return;
-				Current.PairsUpdateRequired = true;
-			});
-			ContextMenuOpening += (s, a) => ContextMenu.Items.TidySeparators();
+			ToggleEnabled = Command.Create(this, ToggleEnabledInternal);
+			TogglePublicAPIOnly = Command.Create(this, TogglePublicAPIOnlyInternal);
+			SetApiKeys = Command.Create(this, SetApiKeysInternal);
+			RefreshTradePairs = Command.Create(this, RefreshTradePairsInternal);
+
+			ContextMenuOpening += delegate { ContextMenu.Items.TidySeparators(); };
 
 			DataContext = this;
+		}
+		public void Dispose()
+		{
+			DockControl = null;
+			Model = null;
+		}
+		protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
+		{
+			// Record the last selected exchange
+			base.OnMouseLeftButtonUp(e);
+			SettingsData.Settings.LastExchange = Current?.Name;
 		}
 		protected override void OnMouseRightButtonUp(MouseButtonEventArgs e)
 		{
@@ -57,8 +57,13 @@ namespace CoinFlip.UI
 			set
 			{
 				if (m_model == value) return;
+				if (m_model != null)
+				{
+				}
 				m_model = value;
-				Exchanges = CollectionViewSource.GetDefaultView(m_model?.Exchanges);
+				if (m_model != null)
+				{
+				}
 			}
 		}
 		private Model m_model;
@@ -88,15 +93,35 @@ namespace CoinFlip.UI
 
 		/// <summary>Enable/Disable the current exchange</summary>
 		public Command ToggleEnabled { get; }
+		private void ToggleEnabledInternal()
+		{
+			if (Current == null) return;
+			Current.Enabled = !Current.Enabled;
+		}
 
 		/// <summary>Enable/Disable accessing private account data from the selected exchange</summary>
 		public Command TogglePublicAPIOnly { get; }
+		private void TogglePublicAPIOnlyInternal()
+		{
+			if (Current == null) return;
+			Current.ExchSettings.PublicAPIOnly = !Current.ExchSettings.PublicAPIOnly;
+		}
 
 		/// <summary>Set the API keys for the current exchange</summary>
 		public Command SetApiKeys { get; }
+		private void SetApiKeysInternal()
+		{
+			if (Current == null) return;
+			ChangeApiKeys(Current);
+		}
 
 		/// <summary>Single an update of the available pairs for the current exchange</summary>
 		public Command RefreshTradePairs { get; }
+		private void RefreshTradePairsInternal()
+		{
+			if (Current == null) return;
+			Current.PairsUpdateRequired = true;
+		}
 
 		/// <summary>Change the API keys for 'exch'</summary>
 		private void ChangeApiKeys(Exchange exch)

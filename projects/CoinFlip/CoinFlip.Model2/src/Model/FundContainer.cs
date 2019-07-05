@@ -12,6 +12,12 @@ namespace CoinFlip
 			this[Fund.Main] = new Fund(Fund.Main);
 			foreach (var fund in SettingsData.Settings.Funds.Where(x => x.Id != Fund.Main))
 				this[fund.Id] = new Fund(fund.Id);
+
+			// Record the funds whenever they change
+			CollectionChanged += delegate
+			{
+				// Todo persist funds
+			};
 		}
 
 		/// <summary>Return the fund associated with 'fund_id' (or null)</summary>

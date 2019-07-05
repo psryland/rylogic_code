@@ -37,13 +37,14 @@ namespace CoinFlip
 		private double m_spread_frac;
 		private int m_orders_per_book;
 
-		public SimExchange(Simulation sim, Exchange exch, PriceDataMap price_data_map)
+		public SimExchange(Simulation sim, Exchange exch)
 		{
 			try
 			{
+				Debug.Assert(Model.BackTesting == true);
+
 				Sim     = sim;
 				Exch    = exch;
-				PriceData = price_data_map;
 				m_depth = new LazyDictionary<TradePair, MarketDepth>(k => new MarketDepth(k.Base, k.Quote));
 				m_ord   = new LazyDictionary<long, Order>(k => null);
 				m_his   = new LazyDictionary<long, OrderCompleted>(k => null);
@@ -60,7 +61,7 @@ namespace CoinFlip
 				m_spread_frac       = SettingsData.Settings.BackTesting.SpreadFrac;
 				m_orders_per_book   = SettingsData.Settings.BackTesting.OrdersPerBook;
 
-				// Don't reset here. Wait for 'BackTesting' to be true first.
+				Reset();
 			}
 			catch
 			{
@@ -80,7 +81,7 @@ namespace CoinFlip
 		private Exchange Exch { get; }
 
 		/// <summary>The store of price data instances</summary>
-		private PriceDataMap PriceData { get; }
+		private PriceDataMap PriceData => Sim.PriceData;
 
 		/// <summary>Coins associated with this exchange</summary>
 		private CoinCollection Coins => Exch.Coins;

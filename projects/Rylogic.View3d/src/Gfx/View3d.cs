@@ -396,6 +396,19 @@ namespace Rylogic.Gfx
 			// Ignored for hit test ray casts
 			HitTestExclude = 1 << 11,
 		}
+		public enum ESortGroup :int
+		{
+			Min = 0,               // The minimum sort group value
+			PreOpaques = 63,       // 
+			Default = 64,          // Make opaques the middle group
+			Skybox,                // Sky-box after opaques
+			PostOpaques,           // 
+			PreAlpha = Default+16, // Last group before the alpha groups
+			AlphaBack,             // 
+			AlphaFront,            // 
+			PostAlpha,             // First group after the alpha groups
+			Max = 127,             // The maximum sort group value
+		}
 		public enum ESceneBounds
 		{
 			All,
@@ -2387,7 +2400,7 @@ namespace ldr
 				set { WireframeSet(value, string.Empty); }
 			}
 
-			/// <summary>Get the state flags of this object</summary>
+			/// <summary>Get/Set the state flags of this object</summary>
 			public EFlags Flags
 			{
 				get { return FlagsGet(string.Empty); }
@@ -2396,6 +2409,13 @@ namespace ldr
 					FlagsSet(~EFlags.None, false);
 					FlagsSet(value, true);
 				}
+			}
+
+			/// <summary>Get/Set sort group of this object</summary>
+			public ESortGroup SortGroup
+			{
+				get { return SortGroupGet(string.Empty); }
+				set { SortGroupSet(value, string.Empty); }
 			}
 
 			/// <summary>The context id that this object belongs to</summary>
@@ -2566,6 +2586,18 @@ namespace ldr
 				View3D_ObjectFlagsSet(Handle, flags, state, name);
 			}
 
+			/// <summary>
+			/// Get/Set the object sort group.
+			/// See LdrObject::Apply for docs on the format of 'name'</summary>
+			public ESortGroup SortGroupGet(string name = null)
+			{
+				return View3D_ObjectSortGroupGet(Handle, name);
+			}
+			public void SortGroupSet(ESortGroup group, string name = null)
+			{
+				View3D_ObjectSortGroupSet(Handle, group, name);
+			}
+			
 			/// <summary>
 			/// Get/Set the colour of this object or the first child object that matches 'name'.
 			/// 'base_colour', if true returns the objects base colour, if false, returns the current colour.
@@ -3555,7 +3587,9 @@ namespace ldr
 		[DllImport(Dll)] private static extern bool              View3D_ObjectVisibilityGet      (HObject obj, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectVisibilitySet      (HObject obj, bool visible, string name);
 		[DllImport(Dll)] private static extern EFlags            View3D_ObjectFlagsGet           (HObject obj, string name);
-		[DllImport(Dll)] private static extern void              View3D_ObjectFlagsSet           (HObject obj, EFlags flags, bool state, string  name);
+		[DllImport(Dll)] private static extern void              View3D_ObjectFlagsSet           (HObject obj, EFlags flags, bool state, string name);
+		[DllImport(Dll)] private static extern ESortGroup        View3D_ObjectSortGroupGet       (HObject obj, string name);
+		[DllImport(Dll)] private static extern void              View3D_ObjectSortGroupSet       (HObject obj, ESortGroup group, string name);
 		[DllImport(Dll)] private static extern uint              View3D_ObjectColourGet          (HObject obj, bool base_colour, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectColourSet          (HObject obj, uint colour, uint mask, string name, EColourOp op, float op_value);
 		[DllImport(Dll)] private static extern float             View3D_ObjectReflectivityGet    (HObject obj, string name);

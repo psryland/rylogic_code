@@ -24,7 +24,7 @@ namespace CoinFlip.UI
 		public CandleChart(Model model)
 		{
 			InitializeComponent();
-			DockControl = new DockControl(this, "Chart");
+			DockControl = new DockControl(this, "Chart") { DestroyOnClose = true };
 			ChartSelector = new ExchPairTimeFrame(model);
 			Chart = m_chart_control;
 			Model = model;
@@ -32,6 +32,9 @@ namespace CoinFlip.UI
 			GfxAsk = new GfxObjects.SpotPrice(SettingsData.Settings.Chart.AskColour);
 			GfxBid = new GfxObjects.SpotPrice(SettingsData.Settings.Chart.BidColour);
 			GfxUpdatingText = new GfxObjects.UpdatingText();
+			SpotPriceLabel = new TextBlock();
+			CrossHairCandleLabel = new TextBlock();
+			CrossHairPriceLabel = new TextBlock();
 
 			// Commands
 			ToggleShowOpenOrders = Command.Create(this, ToggleShowOpenOrdersInternal);
@@ -167,6 +170,7 @@ namespace CoinFlip.UI
 					m_chart.Options.AntiAliasing = false;
 					m_chart.Options.Orthographic = true;
 					m_chart.Options.SelectionColour = new Colour32(0x8092A1B1);
+					m_chart.Options.CrossHairZOffset = ZOrder.Cursors;
 					m_chart.XAxis.Options.PixelsPerTick = 50.0;
 					m_chart.XAxis.Options.TickTextTemplate = "XX:XX\r\nXXX XX XXXX";
 					m_chart.YAxis.Options.TickTextTemplate = "X.XXXX";
@@ -356,6 +360,7 @@ namespace CoinFlip.UI
 				if (m_instrument == value) return;
 				if (m_instrument != null)
 				{
+					SettingsData.Settings.LastChart = string.Empty;
 					m_instrument.DataSyncingChanged -= HandleDataSyncingChanged;
 					m_instrument.DataChanged -= HandleDataChanged;
 					Util.Dispose(m_instrument);
@@ -371,6 +376,7 @@ namespace CoinFlip.UI
 					GfxCompletedOrder = new GfxObjects.CompletedOrder(m_instrument);
 					m_instrument.DataChanged += HandleDataChanged;
 					m_instrument.DataSyncingChanged += HandleDataSyncingChanged;
+					SettingsData.Settings.LastChart = $"{m_instrument.Exchange.Name}-{m_instrument.Pair.Name}-{m_instrument.TimeFrame}";
 				}
 
 				// Auto Range and refresh
@@ -393,14 +399,23 @@ namespace CoinFlip.UI
 						GfxCandles.Invalidate(e.IndexRange);
 					}
 
-					// Auto scroll if 'e.Candle' is a new candle
-					if (e.UpdateType == DataEventArgs.EUpdateType.New)
+					// Only auto when the user isn't interacting with the chart
+					var latest_count = Instrument.Count;
+					if (Chart.MouseOperations.Active == null)
 					{
-						// If the latest candle is visible, move the X-Axis range forward.
-						var latest_idx = (double)Instrument.Count;
-						if (latest_idx.Within(Chart.XAxis.Min, Chart.XAxis.Max))
-							Chart.XAxis.Set(Chart.XAxis.Min + 1, Chart.XAxis.Max + 1);
+						// Auto range if the current chart range does not overlap the instrument range
+						if (Chart.XAxis.Max < 0 || Chart.XAxis.Min > latest_count)
+						{
+							Chart.AutoRange();
+						}
+						// If the latest candle is visible, move the X-Axis range so that it stays in the same place on screen
+						else if (((double)m_prev_count).Within(Chart.XAxis.Min, Chart.XAxis.Max))
+						{
+							Chart.XAxis.Shift(latest_count - m_prev_count);
+							Chart.SetCameraFromRange();
+						}
 					}
+					m_prev_count = latest_count;
 
 					// Invalidate other instrument data dependent graphics
 					//GfxMarketDepth.Invalidate();
@@ -416,6 +431,7 @@ namespace CoinFlip.UI
 			}
 		}
 		private Instrument m_instrument;
+		private int m_prev_count;
 
 		/// <summary>A string description of the period of time shown in the chart</summary>
 		public string VisibleTimeSpan
@@ -454,8 +470,8 @@ namespace CoinFlip.UI
 
 			// Candles
 			{
-				 // Convert the XAxis values into an index range.
-				 // (indices, not time frame units, because of the gaps in the price data).
+				// Convert the XAxis values into an index range.
+				// (indices, not time frame units, because of the gaps in the price data).
 				var range = Instrument.IndexRange((int)(Chart.XAxis.Min - 1), (int)(Chart.XAxis.Max + 1));
 
 				// Add the candles that cover 'range'
@@ -494,6 +510,22 @@ namespace CoinFlip.UI
 					{
 						window.RemoveObject(GfxBid);
 					}
+				}
+
+				// Price label
+				if (spot_q2b != null)
+				{
+					var pt = Chart.ChartToClient(new Point(Chart.XAxis.Max, (double)(decimal)spot_q2b.Value));
+					pt = Gui_.MapPoint(Chart, Chart.YAxisPanel, pt);
+
+					Canvas.SetLeft(SpotPriceLabel, 0);
+					Canvas.SetTop(SpotPriceLabel, pt.Y - SpotPriceLabel.RenderSize.Height/2);
+					SpotPriceLabel.Text = spot_q2b.Value.ToString(5, false);
+					SpotPriceLabel.Visibility = Visibility.Visible;
+				}
+				else
+				{
+					SpotPriceLabel.Visibility = Visibility.Collapsed;
 				}
 			}
 
@@ -594,6 +626,30 @@ namespace CoinFlip.UI
 				// Updating text
 				if (GfxUpdatingText != null && Instrument?.DataSyncing == true)
 					window.AddObject(GfxUpdatingText);
+
+				// Cross hair labels
+				if (Chart.ShowCrossHair)
+				{
+					var xhair = Chart.Tools.CrossHair.O2P.pos.xy;
+					var pt = Chart.ChartToClient(new Point(xhair.x, xhair.y));
+
+					// Position the candle label
+					CrossHairCandleLabel.Visibility = Visibility.Visible;
+					CrossHairCandleLabel.Text = Chart.XAxis.TickText(xhair.x, Chart.XAxis.Span);
+					Canvas.SetLeft(CrossHairCandleLabel, Gui_.MapPoint(Chart, Chart.XAxisPanel, pt).X - CrossHairPriceLabel.RenderSize.Width / 2);
+					Canvas.SetTop(CrossHairCandleLabel, 0);
+
+					// Position the price label
+					CrossHairPriceLabel.Visibility = Visibility.Visible;
+					CrossHairPriceLabel.Text = ((decimal)xhair.y).ToString(5);
+					Canvas.SetLeft(CrossHairPriceLabel, 0);
+					Canvas.SetTop(CrossHairPriceLabel, Gui_.MapPoint(Chart, Chart.YAxisPanel, pt).Y - CrossHairPriceLabel.RenderSize.Height / 2);
+				}
+				else
+				{
+					CrossHairCandleLabel.Visibility = Visibility.Collapsed;
+					CrossHairPriceLabel.Visibility = Visibility.Collapsed;
+				}
 			}
 
 			// Put the call out so others can draw on this chart
@@ -677,6 +733,83 @@ namespace CoinFlip.UI
 			}
 		}
 		private GfxObjects.CompletedOrder m_gfx_completed_order;
+
+		/// <summary>A text label for the current spot price</summary>
+		public TextBlock SpotPriceLabel
+		{
+			get { return m_gfx_spot_price; }
+			private set
+			{
+				if (m_gfx_spot_price == value) return;
+				if (m_gfx_spot_price != null)
+				{
+					Chart.YAxisPanel.Children.Remove(m_gfx_spot_price);
+				}
+				m_gfx_spot_price = value;
+				if (m_gfx_spot_price != null)
+				{
+					m_gfx_spot_price.Name = "m_gfx_spot_price";
+					m_gfx_spot_price.Visibility = Visibility.Collapsed;
+					m_gfx_spot_price.Typeface(Chart.YAxisPanel.Typeface, Chart.YAxisPanel.FontSize);
+					m_gfx_spot_price.Background = new SolidColorBrush(SettingsData.Settings.Chart.AskColour.ToMediaColor());
+					m_gfx_spot_price.Foreground = Brushes.White;
+					Chart.YAxisPanel.Children.Add(m_gfx_spot_price);
+				}
+			}
+		}
+		private TextBlock m_gfx_spot_price;
+
+		/// <summary>A text label for the cross hair candle/time</summary>
+		public TextBlock CrossHairCandleLabel
+		{
+			get { return m_gfx_cross_hair_candle_label; }
+			private set
+			{
+				if (m_gfx_cross_hair_candle_label == value) return;
+				if (m_gfx_cross_hair_candle_label != null)
+				{
+					Chart.XAxisPanel.Children.Remove(m_gfx_cross_hair_candle_label);
+				}
+				m_gfx_cross_hair_candle_label = value;
+				if (m_gfx_cross_hair_candle_label != null)
+				{
+					m_gfx_cross_hair_candle_label.Name = "m_gfx_cross_hair_candle_label";
+					m_gfx_cross_hair_candle_label.Visibility = Visibility.Collapsed;
+					m_gfx_cross_hair_candle_label.TextAlignment = TextAlignment.Center;
+					m_gfx_cross_hair_candle_label.Typeface(Chart.YAxisPanel.Typeface, Chart.YAxisPanel.FontSize);
+					m_gfx_cross_hair_candle_label.Background = new SolidColorBrush(Chart.Tools.CrossHairColour.ToMediaColor());
+					m_gfx_cross_hair_candle_label.Foreground = new SolidColorBrush(Chart.Tools.CrossHairColour.Invert().ToMediaColor());
+					Chart.XAxisPanel.Children.Add(m_gfx_cross_hair_candle_label);
+				}
+			}
+		}
+		private TextBlock m_gfx_cross_hair_candle_label;
+
+		/// <summary>A text label for the cross hair price</summary>
+		public TextBlock CrossHairPriceLabel
+		{
+			get { return m_gfx_cross_hair_price_label; }
+			private set
+			{
+				if (m_gfx_cross_hair_price_label == value) return;
+				if (m_gfx_cross_hair_price_label != null)
+				{
+					Chart.YAxisPanel.Children.Remove(m_gfx_cross_hair_price_label);
+				}
+				m_gfx_cross_hair_price_label = value;
+				if (m_gfx_cross_hair_price_label != null)
+				{
+					m_gfx_cross_hair_price_label.Name = "m_gfx_cross_hair_price";
+					m_gfx_cross_hair_price_label.Visibility = Visibility.Collapsed;
+					m_gfx_cross_hair_price_label.TextAlignment = TextAlignment.Left;
+					m_gfx_cross_hair_price_label.Typeface(Chart.YAxisPanel.Typeface, Chart.YAxisPanel.FontSize);
+					m_gfx_cross_hair_price_label.Background = new SolidColorBrush(Chart.Tools.CrossHairColour.ToMediaColor());
+					m_gfx_cross_hair_price_label.Foreground = new SolidColorBrush(Chart.Tools.CrossHairColour.Invert().ToMediaColor());
+					Chart.YAxisPanel.Children.Add(m_gfx_cross_hair_price_label);
+				}
+			}
+		}
+		private TextBlock m_gfx_cross_hair_price_label;
 
 		/// <summary>Add an ordinal to the chart name based on it's position in the model's chart view collection</summary>
 		public string ChartName => Model != null && Model.Charts.Count != 1 ? $"Chart:{Model.Charts.IndexOf(this)+1}" : $"Chart";
@@ -868,14 +1001,14 @@ namespace CoinFlip.UI
 					// Buy base currency (Q2B)
 					{
 						var trade = new Trade(Fund.Main, ETradeType.Q2B, Instrument.Pair, click_price);
-						buy.Header = $"{OrderType(trade)} at {trade.PriceQ2B.ToString("F8", true)}";
+						buy.Header = $"{OrderType(trade)} at {trade.PriceQ2B.ToString(5, true)}";
 						buy.CommandParameter = trade;
 					}
 
 					// Buy quote currency (B2Q)
 					{
 						var trade = new Trade(Fund.Main, ETradeType.B2Q, Instrument.Pair, click_price);
-						sel.Header = $"{OrderType(trade)} at {trade.PriceQ2B.ToString("F8", true)}";
+						sel.Header = $"{OrderType(trade)} at {trade.PriceQ2B.ToString(5, true)}";
 						sel.CommandParameter = trade;
 					}
 
@@ -938,9 +1071,10 @@ namespace CoinFlip.UI
 			// Grid lines are drawn at 0
 			public const float Min = 0f;
 			public const float Candles = 0.005f;
-			public const float CurrentPrice = 0.011f;
+			public const float CurrentPrice = 0.010f;
 			public const float Indicators = 0.012f;
 			public const float Trades = 0.013f;
+			public const float Cursors = 0.020f;
 			public const float Max = 0.1f;
 		}
 

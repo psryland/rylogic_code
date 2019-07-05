@@ -1721,6 +1721,31 @@ VIEW3D_API void __stdcall View3D_ObjectFlagsSet(View3DObject object, EView3DFlag
 	CatchAndReport(View3D_ObjectFlagsSet, ,);
 }
 
+// Get/Set the sort group for the object or its children
+VIEW3D_API EView3DSortGroup __stdcall View3D_ObjectSortGroupGet(View3DObject object, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		return static_cast<EView3DSortGroup>(object->SortGroup(name));
+	}
+	CatchAndReport(View3D_ObjectSortGroupGet, ,EView3DSortGroup::Default);
+}
+VIEW3D_API void __stdcall View3D_ObjectSortGroupSet(View3DObject object, EView3DSortGroup group, char const* name)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		object->SortGroup(static_cast<pr::rdr::ESortGroup>(group), name);
+	}
+	CatchAndReport(View3D_ObjectSortGroupSet, ,);
+
+}
+
 // Get/Set the current or base colour of an object (the first object to match 'name') (See LdrObject::Apply)
 VIEW3D_API View3DColour __stdcall View3D_ObjectColourGet(View3DObject object, BOOL base_colour, char const* name)
 {
@@ -3132,6 +3157,17 @@ static_assert(int(EView3DFlags::Selected          ) == int(pr::ldr::ELdrFlags::S
 static_assert(int(EView3DFlags::BBoxExclude       ) == int(pr::ldr::ELdrFlags::BBoxExclude       ));
 static_assert(int(EView3DFlags::SceneBoundsExclude) == int(pr::ldr::ELdrFlags::SceneBoundsExclude));
 static_assert(int(EView3DFlags::HitTestExclude    ) == int(pr::ldr::ELdrFlags::HitTestExclude    ));
+
+static_assert(int(EView3DSortGroup::Min        ) == int(pr::rdr::ESortGroup::Min        ));
+static_assert(int(EView3DSortGroup::PreOpaques ) == int(pr::rdr::ESortGroup::PreOpaques ));
+static_assert(int(EView3DSortGroup::Default    ) == int(pr::rdr::ESortGroup::Default    ));
+static_assert(int(EView3DSortGroup::Skybox     ) == int(pr::rdr::ESortGroup::Skybox     ));
+static_assert(int(EView3DSortGroup::PostOpaques) == int(pr::rdr::ESortGroup::PostOpaques));
+static_assert(int(EView3DSortGroup::PreAlpha   ) == int(pr::rdr::ESortGroup::PreAlpha   ));
+static_assert(int(EView3DSortGroup::AlphaBack  ) == int(pr::rdr::ESortGroup::AlphaBack  ));
+static_assert(int(EView3DSortGroup::AlphaFront ) == int(pr::rdr::ESortGroup::AlphaFront ));
+static_assert(int(EView3DSortGroup::PostAlpha  ) == int(pr::rdr::ESortGroup::PostAlpha  ));
+static_assert(int(EView3DSortGroup::Max        ) == int(pr::rdr::ESortGroup::Max        ));
 
 static_assert(int(EView3DGeom::Unknown) == int(pr::rdr::EGeom::Invalid));
 static_assert(int(EView3DGeom::Vert   ) == int(pr::rdr::EGeom::Vert   ));

@@ -118,10 +118,16 @@ namespace Rylogic.Gfx
 			return alpha_too ? Lerp(White, t) : LerpNoAlpha(White, t);
 		}
 
+		/// <summary>Invert the colour e.g. White -> Black</summary>
+		public Colour32 Invert(bool alpha_too = false)
+		{
+			return alpha_too ? ~m_argb : Bit.SetBits(m_argb, 0x00FFFFFF, ~m_argb);
+		}
+
 		/// <summary>Return this colour with the alpha value changed</summary>
 		public Colour32 Alpha(byte alpha)
 		{
-			return new Colour32(((uint)alpha << 24) | (m_argb & 0x00FFFFFF));
+			return Bit.SetBits(m_argb, 0xFF000000, (uint)alpha << 24);
 		}
 		public Colour32 Alpha(float alpha)
 		{

@@ -18,29 +18,37 @@ namespace CoinFlip
 		{
 			m_sw_main_loop = new Stopwatch();
 			Exchanges = new Dictionary<string, SimExchange>();
-
-			Clock = StartTime;
+			PriceData = price_data_map;
 
 			// Create a SimExchange for each exchange
 			foreach (var exch in exchanges)
-				Exchanges[exch.Name] = new SimExchange(this, exch, price_data_map);
+				Exchanges[exch.Name] = new SimExchange(this, exch);
+
+			Clock = StartTime;
+			UpdatePriceData();
 		}
 		public void Dispose()
 		{
 			Running = false;
+			Util.DisposeRange(Exchanges.Values);
+			Exchanges.Clear();
 		}
 
 		/// <summary>The exchanges involved in the simulation</summary>
 		private IDictionary<string, SimExchange> Exchanges { get; }
 
+		/// <summary>The store of price data instances</summary>
+		public PriceDataMap PriceData { get; }
+
 		/// <summary>Get the current simulation time</summary>
 		public DateTimeOffset Clock
 		{
-			get { return m_clock; }
+			get { return Model.SimClock; }
 			private set
 			{
-				if (m_clock == value) return;
-				m_clock = DateTimeOffset_.Clamp(value, StartTime, EndTime);
+				if (Model.SimClock == value) return;
+				Model.SimClock = DateTimeOffset_.Clamp(value, StartTime, EndTime);
+
 				NotifyPropertyChanged(nameof(Clock));
 				NotifyPropertyChanged(nameof(PercentComplete));
 				NotifyPropertyChanged(nameof(CanReset));
@@ -49,7 +57,6 @@ namespace CoinFlip
 				NotifyPropertyChanged(nameof(CanRun));
 			}
 		}
-		private DateTimeOffset m_clock;
 
 		/// <summary>The simulation step resolution</summary>
 		public ETimeFrame TimeFrame
@@ -74,6 +81,7 @@ namespace CoinFlip
 				SettingsData.Settings.BackTesting.StartTime = value;
 				EndTime = DateTimeOffset_.Max(EndTime, StartTime + Misc.TimeFrameToTimeSpan(1.0, TimeFrame));
 				Clock = DateTimeOffset_.Clamp(Clock, StartTime, EndTime);
+				UpdatePriceData();
 				NotifyPropertyChanged(nameof(StartTime));
 				NotifyPropertyChanged(nameof(Steps));
 			}
@@ -88,6 +96,7 @@ namespace CoinFlip
 				SettingsData.Settings.BackTesting.EndTime = value;
 				StartTime = DateTimeOffset_.Min(StartTime, EndTime - Misc.TimeFrameToTimeSpan(1.0, TimeFrame));
 				Clock = DateTimeOffset_.Clamp(Clock, StartTime, EndTime);
+				UpdatePriceData();
 				NotifyPropertyChanged(nameof(EndTime));
 				NotifyPropertyChanged(nameof(Steps));
 			}
@@ -116,6 +125,7 @@ namespace CoinFlip
 			{
 				value = Math_.Clamp(value * 0.01, 0, 1);
 				Clock = DateTimeOffset_.Lerp(StartTime, EndTime, value);
+				UpdatePriceData();
 			}
 		}
 
@@ -141,6 +151,7 @@ namespace CoinFlip
 			RunMode = ERunMode.Stopped;
 			m_main_loop_last_step = StartTime.Ticks;
 			Clock = StartTime;
+			UpdatePriceData();
 
 			// Reset the exchange simulations
 			foreach (var exch in Exchanges.Values)
@@ -188,7 +199,7 @@ namespace CoinFlip
 		}
 		public bool CanPause => Running;
 
-		/// <summary>The thread the runs the simulation</summary>
+		/// <summary>The thread that runs the simulation</summary>
 		public bool Running
 		{
 			get { return m_timer != null; }
@@ -218,6 +229,8 @@ namespace CoinFlip
 				// Handlers
 				void HandleTick(object sender, EventArgs args)
 				{
+					Debug.Assert(Misc.AssertMainThread());
+
 					// Advance the simulation clock at a rate of 'StepRate' candles per second.
 					// 'm_sw_main_loop' tracks the amount of real world time that has elapsed while 'Running' is true
 					switch (RunMode)
@@ -254,7 +267,10 @@ namespace CoinFlip
 					if (elapsed < m_max_ticks_per_step) return;
 					m_main_loop_last_step += m_max_ticks_per_step;
 
-					// Notify the sim step. This causes PriceData's to "add" candles
+					// Update each price data (i.e. "add" candles)
+					UpdatePriceData();
+
+					// Notify the sim step.
 					SimStep?.Invoke(this, new SimStepEventArgs(Clock));
 
 					// Run the required number of steps
@@ -271,6 +287,16 @@ namespace CoinFlip
 
 		/// <summary>Modes to run the simulation in</summary>
 		public ERunMode RunMode { get; private set; }
+
+		/// <summary>Cause all price data instances to update</summary>
+		private void UpdatePriceData()
+		{
+			foreach (var pd in PriceData)
+				pd.SimulationUpdate();
+
+			foreach (var exch in Exchanges.Values)
+				exch.Step();
+		}
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler PropertyChanged;

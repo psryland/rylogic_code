@@ -23,7 +23,7 @@ namespace Bittrex.API
 		public BittrexApi(string key, string secret, CancellationToken shutdown)
 			:base(key, secret, shutdown, 10, "https://api.bittrex.com/", "https://socket.bittrex.com/signalr")
 		{
-			WebSocket = new BittrexWebSocket(UrlSocketAddress);
+			WebSocket = new BittrexWebSocket(UrlSocketAddress, shutdown);
 			MarketData = new MarketDataCache(WebSocket);
 
 			// Authenticate the web socket if a key/secret is provided

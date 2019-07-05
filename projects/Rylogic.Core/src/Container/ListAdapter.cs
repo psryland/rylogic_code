@@ -8,6 +8,10 @@ namespace Rylogic.Container
 {
 	public class ListAdapter<TIn, TOut> :IList<TOut>, IList, INotifyCollectionChanged
 	{
+		// Notes:
+		//  - Used to make a list of type 'TIn' appear like a list of 'TOut'
+		//  - Uses function delegates to "Adapt" a 'TIn' to a 'TOut', and "Conform" a 'TOut' back to a 'TIn'
+
 		public ListAdapter(IList<TIn> list, Func<TIn, TOut> adapt, Func<TOut, TIn> conform = null)
 		{
 			Source = list;

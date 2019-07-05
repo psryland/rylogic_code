@@ -30,6 +30,8 @@ namespace CoinFlip.Settings
 		public SettingsData()
 		{
 			LastUser = string.Empty;
+			LastExchange = string.Empty;
+			LastChart = string.Empty;
 			Skin = ESkin.Default;
 			MainLoopPeriodMS = 500;
 			PriceDataUpdatePeriodMS = 500;
@@ -38,9 +40,9 @@ namespace CoinFlip.Settings
 			//Equity = new EquitySettings();
 			Coins = new CoinData[] { new CoinData("BTC") { OfInterest = true }, new CoinData("ETH") { OfInterest = true } };
 			Funds = new FundData[1] { new FundData(Fund.Main, new FundData.ExchData[0]) };
+			Bots = new BotData[0];
 			Chart = new ChartSettings();
 			BackTesting = new BackTestingSettings();
-			//Bots = new BotData[0];
 			//Cryptopia = new CrypotopiaSettings();
 			Binance = new BinanceSettings();
 			Poloniex = new PoloniexSettings();
@@ -64,6 +66,20 @@ namespace CoinFlip.Settings
 		{
 			get { return get<string>(nameof(LastUser)); }
 			set { set(nameof(LastUser), value); }
+		}
+
+		/// <summary>The last exchange to be selected. Reselected on startup</summary>
+		public string LastExchange
+		{
+			get { return get<string>(nameof(LastExchange)); }
+			set { set(nameof(LastExchange), value); }
+		}
+
+		/// <summary>The last chart to be displayed. Displayed again on startup</summary>
+		public string LastChart
+		{
+			get { return get<string>(nameof(LastChart)); }
+			set { set(nameof(LastChart), value); }
 		}
 
 		/// <summary>The skin of the application</summary>
@@ -111,6 +127,13 @@ namespace CoinFlip.Settings
 		{
 			get { return get<FundData[]>(nameof(Funds)); }
 			set { set(nameof(Funds), value); }
+		}
+		
+		/// <summary>The bots created in the UI</summary>
+		public BotData[] Bots
+		{
+			get { return get<BotData[]>(nameof(Bots)); }
+			set { set(nameof(Bots), value); }
 		}
 
 		/// <summary>Setting for the candle charts</summary>

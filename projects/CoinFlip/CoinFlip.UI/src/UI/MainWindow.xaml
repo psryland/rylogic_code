@@ -41,6 +41,8 @@
 			<MenuItem Name="m_menu_file" Header="_File">
 				<MenuItem Header="Log _Out" Command="{Binding LogOn}"/>
 				<Separator/>
+				<MenuItem Header="New _Chart" Command="{Binding NewChart}"/>
+				<Separator/>
 				<MenuItem Header="E_xit" Click="{gui2:MethodBinding Close}"/>
 			</MenuItem>
 		</Menu>

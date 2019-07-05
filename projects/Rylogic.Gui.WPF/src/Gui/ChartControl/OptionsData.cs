@@ -26,6 +26,7 @@ namespace Rylogic.Gui.WPF
 				BackgroundColour = Colour32.LightGray;
 				SelectionColour = 0x8060A0E0;
 				GridZOffset = 0.001f;
+				CrossHairZOffset = 0.005f;
 				ShowAxes = true;
 				AntiAliasing = true;
 				FillMode = View3d.EFillMode.Solid;
@@ -47,6 +48,7 @@ namespace Rylogic.Gui.WPF
 				BackgroundColour = rhs.BackgroundColour;
 				SelectionColour = rhs.SelectionColour;
 				GridZOffset = rhs.GridZOffset;
+				CrossHairZOffset = rhs.CrossHairZOffset;
 				ShowAxes = rhs.ShowAxes;
 				AntiAliasing = rhs.AntiAliasing;
 				FillMode = rhs.FillMode;
@@ -68,6 +70,7 @@ namespace Rylogic.Gui.WPF
 				SelectionColour = node.Element(nameof(SelectionColour)).As(SelectionColour);
 				ShowAxes = node.Element(nameof(ShowAxes)).As(ShowAxes);
 				GridZOffset = node.Element(nameof(GridZOffset)).As(GridZOffset);
+				CrossHairZOffset = node.Element(nameof(CrossHairZOffset)).As(CrossHairZOffset);
 				AntiAliasing = node.Element(nameof(AntiAliasing)).As(AntiAliasing);
 				FillMode = node.Element(nameof(FillMode)).As(FillMode);
 				CullMode = node.Element(nameof(CullMode)).As(CullMode);
@@ -87,6 +90,7 @@ namespace Rylogic.Gui.WPF
 				node.Add2(nameof(BackgroundColour), BackgroundColour, false);
 				node.Add2(nameof(SelectionColour), SelectionColour, false);
 				node.Add2(nameof(GridZOffset), GridZOffset, false);
+				node.Add2(nameof(CrossHairZOffset), CrossHairZOffset, false);
 				node.Add2(nameof(ShowAxes), ShowAxes, false);
 				node.Add2(nameof(AntiAliasing), AntiAliasing, false);
 				node.Add2(nameof(FillMode), FillMode, false);
@@ -143,13 +147,21 @@ namespace Rylogic.Gui.WPF
 			}
 			private Colour32 m_SelectionColour;
 
-			/// <summary>The offset from the origin for the grid, in the forward direction of the camera</summary>
+			/// <summary>The offset from the origin for the grid, in the forward direction of the camera (focus distance relative)</summary>
 			public float GridZOffset
 			{
 				get { return m_GridZOffset; }
 				set { SetProp(ref m_GridZOffset, value, nameof(GridZOffset)); }
 			}
 			private float m_GridZOffset;
+
+			/// <summary>The depth position of the cross hair (focus distance relative)</summary>
+			public float CrossHairZOffset
+			{
+				get { return m_CrossHairZOffset; }
+				set { SetProp(ref m_CrossHairZOffset, value, nameof(CrossHairZOffset)); }
+			}
+			private float m_CrossHairZOffset;
 
 			/// <summary>Show/Hide the chart axes</summary>
 			public bool ShowAxes

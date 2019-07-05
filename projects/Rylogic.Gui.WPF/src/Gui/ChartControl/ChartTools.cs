@@ -185,10 +185,8 @@ namespace Rylogic.Gui.WPF
 			private View3d.Object m_cross_hair;
 			private View3d.Object CreateCrossHair()
 			{
-				// Use Alpha != 0xFF so that the model is added to the alpha group and drawn lasted
-				var col = Chart.Scene.BackgroundColor.ToColour32().Intensity < 0.5f ? 0xFeFFFFFF : 0xFe000000;
-
 				var ldr = new LdrBuilder();
+				var col = CrossHairColour;
 				using (ldr.Group("cross_hair", col))
 				{
 					ldr.Line("h", col, new v4(-0.5f, 0, 0, 1f), new v4(+0.5f, 0, 0, 1f));
@@ -197,8 +195,10 @@ namespace Rylogic.Gui.WPF
 
 				var obj = new View3d.Object(ldr.ToString(), false, Id, null);
 				obj.FlagsSet(View3d.EFlags.SceneBoundsExclude | View3d.EFlags.NoZTest, true);
+				obj.SortGroup = View3d.ESortGroup.PostAlpha;
 				return obj;
 			}
+			public Colour32 CrossHairColour => Chart.Scene.BackgroundColor.ToColour32().Intensity < 0.5f ? 0xFFCCCCCC : 0xFF333333;
 
 			/// <summary>A line for measuring distances</summary>
 			public View3d.Object TapeMeasure

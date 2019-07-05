@@ -5,18 +5,17 @@ using System.Linq;
 using System.Windows.Data;
 using CoinFlip.Settings;
 using Rylogic.Common;
-using Rylogic.Gui.WPF;
 using Rylogic.Maths;
 using Rylogic.Utility;
 
 namespace CoinFlip.UI
 {
 	/// <summary>A wrapper for CoinData to provide live value data</summary>
-	public class CoinDataAdaptor : INotifyPropertyChanged
+	public class CoinDataToLiveValueAdapter : INotifyPropertyChanged
 	{
 		private readonly Model m_model;
 		private readonly ICollectionView m_exch_source;
-		public CoinDataAdaptor(CoinData cd, Model model, ICollectionView exch_source)
+		public CoinDataToLiveValueAdapter(CoinData cd, Model model, ICollectionView exch_source)
 		{
 			CoinData = cd;
 			m_model = model;
@@ -150,6 +149,6 @@ namespace CoinFlip.UI
 		public event PropertyChangedEventHandler PropertyChanged;
 
 		/// <summary>Implicit conversion to CoinData</summary>
-		public static implicit operator CoinData(CoinDataAdaptor x) { return x.CoinData; }
+		public static implicit operator CoinData(CoinDataToLiveValueAdapter x) { return x.CoinData; }
 	}
 }

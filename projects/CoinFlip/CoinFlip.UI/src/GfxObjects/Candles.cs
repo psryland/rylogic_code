@@ -187,7 +187,7 @@ namespace CoinFlip.UI.GfxObjects
 		{
 			var idx_beg = candle_index_range.Begi / BatchSize;
 			var idx_end = candle_index_range.Endi / BatchSize;
-			for (var i = idx_beg; i != idx_end; ++i)
+			for (var i = idx_beg; i <= idx_end; ++i)
 				m_cache.Invalidate(i);
 		}
 

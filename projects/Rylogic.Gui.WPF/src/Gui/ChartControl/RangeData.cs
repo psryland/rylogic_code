@@ -152,6 +152,8 @@ namespace Rylogic.Gui.WPF
 			[DebuggerDisplay("{AxisType} [{Min} , {Max}]")]
 			public class Axis : IDisposable
 			{
+				public delegate string TickTextCB(double x, double step);
+
 				private readonly ChartControl m_chart;
 				public Axis(EAxis axis, ChartControl chart)
 					: this(axis, chart, 0f, 1f)
@@ -296,7 +298,7 @@ namespace Rylogic.Gui.WPF
 					throw new Exception("Unknown axis type");
 
 				/// <summary>Convert the axis value to a string. "string TickText(double tick_value, double step_size)" </summary>
-				public Func<double, double, string> TickText;
+				public TickTextCB TickText;
 
 				/// <summary>Set the range without risk of an assert if 'min' is greater than 'Max' or visa versa</summary>
 				public void Set(double min, double max)
@@ -463,8 +465,8 @@ namespace Rylogic.Gui.WPF
 					var wh = cam.ViewArea(cam.FocusDist);
 					GridLines(out var min, out var max, out var step);
 					var pos =
-						AxisType == EAxis.XAxis ? new v4((float)(wh.x / 2 - min), wh.y / 2, m_chart.Options.GridZOffset, 0) :
-						AxisType == EAxis.YAxis ? new v4(wh.x / 2, (float)(wh.y / 2 - min), m_chart.Options.GridZOffset, 0) :
+						AxisType == EAxis.XAxis ? new v4((float)(wh.x / 2 - min), wh.y / 2, cam.FocusDist * m_chart.Options.GridZOffset, 0) :
+						AxisType == EAxis.YAxis ? new v4(wh.x / 2, (float)(wh.y / 2 - min), cam.FocusDist * m_chart.Options.GridZOffset, 0) :
 						throw new Exception("Unknown axis type");
 
 					var o2w = cam.O2W;

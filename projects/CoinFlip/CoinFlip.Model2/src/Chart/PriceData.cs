@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SQLite;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using CoinFlip.Settings;
 using Dapper;
@@ -18,8 +19,8 @@ namespace CoinFlip
 	{
 		// Notes:
 		// - PriceData represents a single pair and TimeFrame on an exchange.
-		// - It reads candle data from the exchange (or from the DB in back
-		//   testing) and writes it into a DB (unless back testing).
+		// - Handles adding new data to the DB.
+		// - Serves data from the DB to the Instruments.
 		// - Use an 'Instrument' to view these data
 
 		public PriceData(TradePair pair, ETimeFrame time_frame, CancellationToken shutdown)
@@ -28,6 +29,7 @@ namespace CoinFlip
 			{
 				Pair = pair;
 				TimeFrame = time_frame;
+				DataAvailable = pair.CandleDataAvailable.Contains(time_frame);
 				UpdatePollRate = TimeSpan.FromMilliseconds(SettingsData.Settings.PriceDataUpdatePeriodMS);
 				MainShutdownToken = shutdown;
 
@@ -38,11 +40,11 @@ namespace CoinFlip
 				var db_filepath = DBFilePath(pair.Exchange.Name, pair.Name);
 				DB = new SQLiteConnection($"Data Source={db_filepath};Version=3;journal mode=Memory;synchronous=Off");
 
-				// Ensure a table exists for each time frame
-				foreach (var tf in pair.CandleDataAvailable)
+				// Ensure a table exists for the time frame
+				if (DataAvailable)
 				{
 					DB.Execute(
-						$"create table if not exists {tf} (\n" +
+						$"create table if not exists {TimeFrame} (\n" +
 						$"  [{nameof(Candle.Timestamp)}] integer unique primary key,\n" +
 						$"  [{nameof(Candle.Open)}] real not null,\n" +
 						$"  [{nameof(Candle.High)}] real not null,\n" +
@@ -65,6 +67,9 @@ namespace CoinFlip
 			UpdateThreadActive = false;
 			DB = null;
 		}
+
+		/// <summary>True if the exchange provides this pair and timeframe combination</summary>
+		private bool DataAvailable { get; }
 
 		/// <summary>The pair we're collecting candle data for</summary>
 		public TradePair Pair { get; }
@@ -137,29 +142,19 @@ namespace CoinFlip
 				if (m_total == null)
 				{
 					if (TimeFrame == ETimeFrame.None) throw new Exception("Invalid time frame");
-					m_total = DB.ExecuteScalar<int>($"select count(1) from {TimeFrame}");
+					m_total = DataAvailable ? DB.ExecuteScalar<int>($"select count(1) from {TimeFrame}") : 0;
 				}
 				return m_total.Value;
 			}
 		}
 		private int? m_total;
 
-		/// <summary>The number of candles with a timestamp less than 'max_timestamp'</summary>
-		public int CountTo(long max_timestamp_ticks)
-		{
-			if (TimeFrame == ETimeFrame.None) throw new Exception("Invalid time frame");
-			return DB.ExecuteScalar<int>(
-				$"select count(1) from {TimeFrame}\n" +
-				$"where [{nameof(Candle.Timestamp)}] <= @max_timestamp",
-				new { max_timestamp = max_timestamp_ticks });
-		}
-
 		/// <summary>The candle with the newest timestamp (or null if there is no data yet)</summary>
 		public Candle Newest
 		{
 			get
 			{
-				if (m_newest == null)
+				if (m_newest == null && DataAvailable)
 				{
 					m_newest = DB.QuerySingleOrDefault<Candle>(
 						$"select * from {TimeFrame}\n"+
@@ -175,7 +170,7 @@ namespace CoinFlip
 		{
 			get
 			{
-				if (m_oldest == null)
+				if (m_oldest == null && DataAvailable)
 				{
 					m_oldest = DB.QuerySingleOrDefault<Candle>(
 						$"select * from {TimeFrame}\n"+
@@ -191,14 +186,7 @@ namespace CoinFlip
 		{
 			get
 			{
-				if (m_current == null)
-				{
-					m_current = DB.QuerySingleOrDefault<Candle>(
-						$"select * from {TimeFrame}\n"+
-						$"where [{nameof(Candle.Timestamp)}] <= @time_stamp\n" +
-						$"order by [{nameof(Candle.Timestamp)}] desc limit 1",
-						new { time_stamp = Model.UtcNow.Ticks });
-				}
+				m_current = m_current ?? CurrentAt(Model.UtcNow.Ticks);
 				if (m_current != null && Model.BackTesting)
 				{
 					// Interpolate the latest candle to determine the spot price
@@ -209,6 +197,34 @@ namespace CoinFlip
 			}
 		}
 		private Candle m_current;
+
+		/// <summary>The number of candles with a timestamp less than 'max_timestamp'</summary>
+		public int CountTo(long max_timestamp_ticks)
+		{
+			if (TimeFrame == ETimeFrame.None)
+				throw new Exception("Invalid time frame");
+
+			if (!DataAvailable)
+				return 0;
+
+			return DB.ExecuteScalar<int>(
+				$"select count(1) from {TimeFrame}\n" +
+				$"where [{nameof(Candle.Timestamp)}] <= @max_timestamp",
+				new { max_timestamp = max_timestamp_ticks });
+		}
+
+		/// <summary>Get the current that would be 'Current' at the given time</summary>
+		private Candle CurrentAt(long time_stamp_ticks)
+		{
+			if (!DataAvailable)
+				return null;
+
+			return DB.QuerySingleOrDefault<Candle>(
+				$"select * from {TimeFrame}\n" +
+				$"where [{nameof(Candle.Timestamp)}] <= @time_stamp_ticks\n" +
+				$"order by [{nameof(Candle.Timestamp)}] desc limit 1",
+				new { time_stamp_ticks });
+		}
 
 		/// <summary>The timestamp of the last time we received data (not necessarily an update to 'Latest) (in UTC)</summary>
 		public DateTimeOffset LastUpdatedUTC { get; private set; }
@@ -226,7 +242,20 @@ namespace CoinFlip
 				new { start = time_period.Beg, count = time_period.Size });
 		}
 
-		#region Update
+		/// <summary>Raised whenever candles are added/modified</summary>
+		public event EventHandler<DataEventArgs> DataChanged;
+		protected virtual void OnDataChanged(DataEventArgs args)
+		{
+			DataChanged?.Invoke(this, args);
+		}
+
+		/// <summary>Indicates that the data is out of date and is being updated. False when UtcNow is within [Newest.Timestamp, Newest.Timestamp + TimeFrame)</summary>
+		public bool DataSyncing => Newest == null || Model.UtcNow > Newest.TimestampEnd(TimeFrame);
+
+		/// <summary>Raised when the state of the price data changes from up-to-date to syncing or visa versa</summary>
+		public event EventHandler DataSyncingChanged;
+
+		#region Live Update
 
 		/// <summary>The background thread for performing candle data updates</summary>
 		public bool UpdateThreadActive
@@ -240,6 +269,10 @@ namespace CoinFlip
 				// Don't allow the update thread to run during back testing
 				if (value && Model.BackTesting)
 					throw new Exception("Update thread should not be activated while back-testing");
+
+				// Ignore if there is up data available
+				if (!DataAvailable)
+					return;
 
 				// Shutdown the thread if currently running
 				if (m_update_thread != null)
@@ -260,6 +293,12 @@ namespace CoinFlip
 				// Start the new thread
 				if (m_update_thread != null)
 				{
+					// Invalidate cached data
+					m_total = null;
+					m_newest = null;
+					m_oldest = null;
+					m_current = null;
+
 					// Raise the data syncing event to signal that the data is probably out of date
 					DataChanged?.Invoke(this, new DataEventArgs(this));
 					DataSyncingChanged?.Invoke(this, EventArgs.Empty);
@@ -288,6 +327,10 @@ namespace CoinFlip
 						{
 							if (m_update_thread_exit.WaitOne(poll_rate))
 								break;
+
+							// Safety check
+							if (Model.BackTesting)
+								throw new Exception("Update thread should not be active while back-testing");
 
 							// Try to request the entire candle range.
 							var data = exch.CandleData(pair, time_frame,
@@ -357,16 +400,21 @@ namespace CoinFlip
 			if (Model.BackTesting)
 				throw new Exception("Should not be adding candles to the DB while back testing");
 
-			// This is a new candle if it's time stamp is >= the TimeFrame period after the Newest candle.
+			// This is a new candle if it's time stamp is one TimeFrame period after the Newest candle.
 			// This is an update to the latest candle if within a TimeFrame period of the Newest candle.
+			// Otherwise it's an unknown range.
+			var tf_ticks = Misc.TimeFrameToTicks(1.0, TimeFrame);
 			var update_type =
-				Newest == null ? DataEventArgs.EUpdateType.New :
-				candle.Timestamp >= Newest.Timestamp + Misc.TimeFrameToTicks(1.0, TimeFrame) ? DataEventArgs.EUpdateType.New :
-				candle.Timestamp >= Newest.Timestamp ? DataEventArgs.EUpdateType.Current :
+				Newest == null ? DataEventArgs.EUpdateType.Range :
+				candle.Timestamp == Newest.Timestamp + tf_ticks ? DataEventArgs.EUpdateType.New :
+				candle.Timestamp.Within(Newest.Timestamp, Newest.Timestamp + tf_ticks) ? DataEventArgs.EUpdateType.Current :
 				DataEventArgs.EUpdateType.Range;
 
 			// Insert the candle into the database
 			UpsertCandle(candle);
+
+			// Record the last time data was received
+			LastUpdatedUTC = Model.UtcNow;
 
 			// Update/Invalidate cached values
 			switch (update_type)
@@ -396,9 +444,6 @@ namespace CoinFlip
 				}
 			}
 
-			// Record the last time data was received
-			LastUpdatedUTC = Model.UtcNow;
-
 			// Notify data added/changed
 			OnDataChanged(new DataEventArgs(update_type, this, new Range(Count-1, Count), candle));
 		}
@@ -415,14 +460,14 @@ namespace CoinFlip
 				transaction.Commit();
 			}
 
+			// Record the last time data was received
+			LastUpdatedUTC = Model.UtcNow;
+
 			// Invalidate cached values
 			m_total = null;
 			m_newest = null;
 			m_oldest = null;
 			m_current = null;
-
-			// Record the last time data was received
-			LastUpdatedUTC = Model.UtcNow;
 
 			// Notify data added/changed
 			OnDataChanged(new DataEventArgs(this));
@@ -431,6 +476,11 @@ namespace CoinFlip
 		/// <summary>Update or insert a candle</summary>
 		private void UpsertCandle(Candle candle, IDbTransaction transaction = null)
 		{
+			// Sanity check
+			Debug.Assert(candle.Valid());
+			Debug.Assert(candle.Timestamp != 0);
+			if (Model.BackTesting)
+				throw new Exception("Should not be adding candles to the DB while back testing");
 			if (candle.Timestamp <= Misc.CryptoCurrencyEpoch.Ticks)
 				throw new Exception("Trying to insert an invalid candle");
 
@@ -459,18 +509,60 @@ namespace CoinFlip
 				transaction);
 		}
 
-		/// <summary>Raised whenever candles are added/modified in this instrument</summary>
-		public event EventHandler<DataEventArgs> DataChanged;
-		protected virtual void OnDataChanged(DataEventArgs args)
+		#endregion
+
+		#region Simulation Update
+
+		/// <summary>
+		/// Emulate the behaviour of the update thread by notifying of
+		/// 'DataChanged' as the simulation time advances.</summary>
+		public void SimulationUpdate()
 		{
-			DataChanged?.Invoke(this, args);
+			// Don't actually modify the DB.
+			var now = Model.UtcNow.Ticks;
+
+			// Determine the update type by comparing the sim time to the time stamp of the current candle.
+			// This is a "new" candle the sim time is within one TimeFrame period after the current candle.
+			// This is an update to the "latest" candle if within a TimeFrame period of the current candle.
+			// Otherwise it's an unknown range.
+			var tf_ticks = Misc.TimeFrameToTicks(1.0, TimeFrame);
+			var update_type =
+				m_current == null ? DataEventArgs.EUpdateType.Range :
+				now.Within(m_current.Timestamp + 1*tf_ticks, m_current.Timestamp + 2*tf_ticks) ? DataEventArgs.EUpdateType.New :
+				now.Within(m_current.Timestamp, m_current.Timestamp + 1 * tf_ticks) ? DataEventArgs.EUpdateType.Current :
+				DataEventArgs.EUpdateType.Range;
+
+			// Record the last time data was received
+			LastUpdatedUTC = Model.UtcNow;
+
+			// Update/Invalidate cached values
+			switch (update_type)
+			{
+			case DataEventArgs.EUpdateType.New:
+				{
+					// Invalidate 'm_current' so that the next candle is read from the DB.
+					// Don't change m_total, m_newest, or m_oldest, they are constant during simulations.
+					m_current = null;
+					var count = CountTo(now);
+					OnDataChanged(new DataEventArgs(update_type, this, new Range(count - 1, count), Current));
+					break;
+				}
+			case DataEventArgs.EUpdateType.Current:
+				{
+					// Nothing to invalidate. 'Current' does sub candle interpolation in back-testing mode.
+					var count = CountTo(now);
+					OnDataChanged(new DataEventArgs(update_type, this, new Range(count - 1, count), Current));
+					break;
+				}
+			default:
+				{
+					// 'now' has moved to an unknown time. Just invalidate 'm_current'
+					m_current = CurrentAt(now);
+					OnDataChanged(new DataEventArgs(this));
+					break;
+				}
+			}
 		}
-
-		/// <summary>Indicates that the data is out of date and is being updated. False when UtcNow is within [Newest.Timestamp, Newest.Timestamp + TimeFrame)</summary>
-		public bool DataSyncing => Newest == null || Model.UtcNow > Newest.TimestampEnd(TimeFrame);
-
-		/// <summary>Raised when the state of the price data changes from up-to-date to syncing or visa versa</summary>
-		public event EventHandler DataSyncingChanged;
 
 		#endregion
 	}

@@ -5102,6 +5102,21 @@ LR"(// *************************************************************************
 			}, name);
 		}
 
+		// Get/Set the render group for this object or child objects matching 'name' (see Apply)
+		rdr::ESortGroup LdrObject::SortGroup(char const* name) const
+		{
+			auto obj = Child(name);
+			return obj ? obj->m_sko.Group() : rdr::ESortGroup::Default;
+		}
+		void LdrObject::SortGroup(rdr::ESortGroup grp, char const* name)
+		{
+			Apply([=](LdrObject* o)
+			{
+				o->m_sko.Group(grp);
+				return true;
+			}, name);
+		}
+
 		// Get/Set the colour of this object or child objects matching 'name' (see Apply)
 		// For 'Get', the colour of the first object to match 'name' is returned
 		// For 'Set', the object base colour is not changed, only the tint colour = tint

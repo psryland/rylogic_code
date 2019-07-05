@@ -54,7 +54,6 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="System.Net.Http" />
     <Reference Include="System.Xaml">
       <RequiredTargetFramework>4.0</RequiredTargetFramework>
     </Reference>
@@ -73,10 +72,12 @@
     <Compile Include="src\Account\LogOnUI.xaml.cs">
       <DependentUpon>LogOnUI.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\Dialogs\FundAllocationsUI.xaml.cs">
+      <DependentUpon>FundAllocationsUI.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\GfxObjects\CompletedOrder.cs" />
     <Compile Include="src\GfxObjects\OpenOrder.cs" />
     <Compile Include="src\GfxObjects\TradeIndicator.cs" />
-    <Compile Include="src\Misc\ExchPairTimeFrame.cs" />
     <Compile Include="src\GfxObjects\Buffers.cs" />
     <Compile Include="src\GfxObjects\Candles.cs" />
     <Compile Include="src\GfxObjects\SpotPrice.cs" />
@@ -85,9 +86,13 @@
     <Compile Include="src\UI\CandleChart.xaml.cs">
       <DependentUpon>CandleChart.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\Misc\CoinDataAdaptor.cs" />
+    <Compile Include="src\Misc\CoinDataToLiveValueAdapter.cs" />
     <Compile Include="src\Dialogs\EditTradeUI.xaml.cs">
       <DependentUpon>EditTradeUI.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\Misc\ECoinFilterType.cs" />
+    <Compile Include="src\UI\GridBots.xaml.cs">
+      <DependentUpon>GridBots.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\UI\GridCoins.xaml.cs">
       <DependentUpon>GridCoins.xaml</DependentUpon>
@@ -104,6 +109,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="src\Dialogs\FundAllocationsUI.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="src\UI\CandleChart.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -112,7 +121,15 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="src\UI\GridBots.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="src\UI\GridCoins.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\UI\GridFunds.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -135,6 +152,9 @@
     <Compile Include="src\App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="src\UI\GridFunds.xaml.cs">
+      <DependentUpon>GridFunds.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\UI\GridTradeHistory.xaml.cs">
       <DependentUpon>GridTradeHistory.xaml</DependentUpon>
@@ -215,6 +235,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <Resource Include="res\check_reject.png" />
+    <Content Include="bots\readme.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="res\coins.wav" />
     <Resource Include="res\gray_cross.png" />
     <Resource Include="res\green_tick.png" />
@@ -251,7 +274,10 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="System.Data.SQLite.Core">
-      <Version>1.0.110</Version>
+      <Version>1.0.111</Version>
+    </PackageReference>
+    <PackageReference Include="System.Net.Http">
+      <Version>4.3.4</Version>
     </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

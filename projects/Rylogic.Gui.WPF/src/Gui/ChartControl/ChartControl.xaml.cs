@@ -635,7 +635,7 @@ namespace Rylogic.Gui.WPF
 			HighestZ = 0f;
 
 			foreach (var elem in Elements)
-				elem.PositionZ = HighestZ += 0.001f;
+				elem.PositionZ = HighestZ += Camera.FocusDist * 0.001f;
 		}
 
 		/// <summary>True if users are allowed to add/remove/edit elements on the diagram</summary>
@@ -891,7 +891,9 @@ namespace Rylogic.Gui.WPF
 					// Set the o2w for the cross hair
 					// Scale by 2* because the cross hair may be near the border of the chart
 					// and we need one half of the cross to be scaled to the full chart width.
-					Tools.CrossHair.O2P = new m4x4(Camera.O2W.rot, Camera.O2W * pt_cs) * m3x4.Scale(2 * view.x, 2 * view.y, 1f).m4x4;
+					var o2p = new m4x4(Camera.O2W.rot, Camera.O2W * pt_cs) * m3x4.Scale(2 * view.x, 2 * view.y, 1f).m4x4;
+					o2p.w.z += Camera.FocusDist * Options.CrossHairZOffset;
+					Tools.CrossHair.O2P = o2p;
 
 					Scene.Invalidate();
 				}
@@ -904,11 +906,11 @@ namespace Rylogic.Gui.WPF
 		public Visibility YAxisLabelVisibility => Options.ShowAxes && YAxis.Label.HasValue() ? Visibility.Visible : Visibility.Collapsed;
 
 		/// <summary>Chart graphics</summary>
-		private ChartTools Tools
+		public ChartTools Tools
 		{
 			[DebuggerStepThrough]
 			get { return m_tools; }
-			set
+			private set
 			{
 				if (m_tools == value) return;
 				Util.Dispose(ref m_tools);

@@ -37,6 +37,7 @@ namespace Rylogic.Gui.WPF
 				InitializeComponent();
 				Stretch = Stretch.Fill;
 				StretchDirection = StretchDirection.Both;
+				UseLayoutRounding = true;
 				Focusable = true;
 
 				if (DesignerProperties.GetIsInDesignMode(this))

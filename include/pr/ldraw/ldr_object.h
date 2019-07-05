@@ -520,6 +520,10 @@ namespace pr
 			ELdrFlags Flags(char const* name = nullptr) const;
 			void Flags(ELdrFlags flags, bool state, char const* name = nullptr);
 
+			// Get/Set the render group for this object or child objects matching 'name' (see Apply)
+			rdr::ESortGroup SortGroup(char const* name = nullptr) const;
+			void SortGroup(rdr::ESortGroup grp, char const* name = nullptr);
+
 			// Get/Set the colour of this object or child objects matching 'name' (see Apply)
 			// For 'Get', the colour of the first object to match 'name' is returned
 			// For 'Set', the object base colour is not changed, only the tint colour = tint

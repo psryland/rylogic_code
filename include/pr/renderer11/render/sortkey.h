@@ -6,177 +6,185 @@
 
 #include "pr/renderer11/forward.h"
 
-namespace pr
+namespace pr::rdr
 {
-	namespace rdr
+	// Bit layout:
+	// 11111111 11111111 11111111 11111111
+	//                     ###### ######## texture id  lowest priority, most common thing changed when processing the drawlist
+	//          ######## ##                shader id
+	//        #                            has alpha
+	// #######                             sort group  highest priority, least common thing changed when processing the drawlist
+	//
+	// General sorting notes: From the word of Al:
+	// Z Buffering:
+	//   Always try to maintain the z buffer (i.e. write enable) even for HUDs etc
+	//   Stereoscopic rendering requires everything to have correct depth
+	//   Render the sky box after all opaques to reduce overdraw
+	// Alpha:
+	//   Two sided objects should be rendered twice, 1st with front face
+	//   culling, 2nd with back face culling
+	//
+
+	// Define sort groups
+	enum class ESortGroup
 	{
-		// Bit layout:
-		// 11111111 11111111 11111111 11111111
-		//                     ###### ######## texture id  lowest priority, most common thing changed when processing the drawlist
-		//          ######## ##                shader id
-		//        #                            has alpha
-		// #######                             sort group  highest priority, least common thing changed when processing the drawlist
-		//
-		// General sorting notes: From the word of Al:
-		// Z Buffering:
-		//   Always try to maintain the z buffer (i.e. write enable) even for HUDs etc
-		//   Stereoscopic rendering requires everything to have correct depth
-		//   Render the sky box after all opaques to reduce overdraw
-		// Alpha:
-		//   Two sided objects should be rendered twice, 1st with front face
-		//   culling, 2nd with back face culling
-		//
+		// Notes:
+		//  - Can't use a 2's complement value here because stuffing a negative value
+		//    into the sortkey will mess up the ordering. This means that a sort key
+		//    of 0 will *NOT* be in the default sort group.
+		
+		Min = 0,               // The minimum sort group value
+		PreOpaques = 63,       // 
+		Default = 64,          // Make opaques the middle group
+		Skybox,                // Sky-box after opaques
+		PostOpaques,           // 
+		PreAlpha = Default+16, // Last group before the alpha groups
+		AlphaBack,             // 
+		AlphaFront,            // 
+		PostAlpha,             // First group after the alpha groups
+		Max = 127,             // The maximum sort group value
 
-		// Define sort groups
-		enum class ESortGroup
+		_arithmetic_operators_allowed,
+	};
+	static_assert(has_arithmetic_operators_allowed<ESortGroup>::value);
+
+	// The sort key type (wraps a uint32)
+	struct SortKey
+	{
+		using value_type = unsigned int;
+		static int const Bits = sizeof(value_type) * 8;
+
+		// GGGGGGGA SSSSSSSS SSTTTTTT TTTTTTTT
+		static int const TextureIdBits = 14U;
+		static int const ShaderIdBits  = 10U;
+		static int const AlphaBits     = 1U ;
+		static int const SortGroupBits = Bits - (AlphaBits + ShaderIdBits + TextureIdBits);
+		static_assert(Bits > AlphaBits + ShaderIdBits + TextureIdBits, "Sort key is not large enough");
+
+		static int const TextureIdOfs  = 0;
+		static int const ShaderIdOfs   = 0 + TextureIdBits;
+		static int const AlphaOfs      = 0 + TextureIdBits + ShaderIdBits;
+		static int const SortGroupOfs  = 0 + TextureIdBits + ShaderIdBits + AlphaBits;
+
+		static value_type const TextureIdMask = (~value_type() >> (Bits - TextureIdBits)) << TextureIdOfs;
+		static value_type const ShaderIdMask  = (~value_type() >> (Bits - ShaderIdBits )) << ShaderIdOfs ;
+		static value_type const AlphaMask     = (~value_type() >> (Bits - AlphaBits    )) << AlphaOfs    ;
+		static value_type const SortGroupMask = (~value_type() >> (Bits - SortGroupBits)) << SortGroupOfs;
+
+		static value_type const MaxTextureId  = 1U << TextureIdBits;
+		static value_type const MaxShaderId   = 1U << ShaderIdBits ;
+		static value_type const MaxSortGroups = 1U << SortGroupBits;
+		static_assert(int(ESortGroup::Max) - int(ESortGroup::Min) < MaxSortGroups, "Not enough bits to represent the sort groups");
+
+		value_type m_value;
+
+		SortKey() = default;
+		explicit SortKey(value_type value)
+			:m_value(value)
+		{}
+		explicit SortKey(ESortGroup grp)
+			:m_value()
 		{
-			PreOpaques  = 63, // 
-			Default     = 64, // Make opaques the middle group
-			Skybox          , // Sky-box after opaques
-			PostOpaques     , // 
-			PreAlpha    = 80, // 
-			AlphaBack       , // 
-			AlphaFront      , // 
-			PostAlpha       , // 
-			
-			_arithmetic_operators_allowed = 0x7FFFFFFF,
-		};
-
-		// The sort key type (wraps a uint32)
-		struct SortKey
+			Group(grp);
+		}
+		operator value_type() const
 		{
-			using value_type = unsigned int;
-			static value_type const Bits = 32U;
+			return m_value;
+		}
 
-			// GGGGGGGA SSSSSSSS SSTTTTTT TTTTTTTT
-			static value_type const TextureIdBits = 14U;
-			static value_type const ShaderIdBits  = 10U;
-			static value_type const AlphaBits     = 1U ;
-			static value_type const SortGroupBits = Bits - (AlphaBits + ShaderIdBits + TextureIdBits);
-			static_assert(Bits > AlphaBits + ShaderIdBits + TextureIdBits, "Sort key is not large enough");
-
-			static value_type const MaxTextureId  = 1U << TextureIdBits;
-			static value_type const MaxShaderId   = 1U << ShaderIdBits ;
-			static value_type const MaxSortGroups = 1U << SortGroupBits;
-
-			static value_type const TextureIdOfs  = value_type();
-			static value_type const ShaderIdOfs   = value_type() + TextureIdBits;
-			static value_type const AlphaOfs      = value_type() + TextureIdBits + ShaderIdBits;
-			static value_type const SortGroupOfs  = value_type() + TextureIdBits + ShaderIdBits + AlphaBits;
-
-			static value_type const TextureIdMask = (~value_type() >> (Bits - TextureIdBits)) << TextureIdOfs;
-			static value_type const ShaderIdMask  = (~value_type() >> (Bits - ShaderIdBits )) << ShaderIdOfs ;
-			static value_type const AlphaMask     = (~value_type() >> (Bits - AlphaBits    )) << AlphaOfs    ;
-			static value_type const SortGroupMask = (~value_type() >> (Bits - SortGroupBits)) << SortGroupOfs;
-
-			value_type m_value;
-
-			SortKey() = default;
-			explicit SortKey(value_type value)
-				:m_value(value)
-			{}
-			explicit SortKey(ESortGroup grp)
-				:m_value()
-			{
-				Group(grp);
-			}
-			operator value_type() const
-			{
-				return m_value;
-			}
-
-			// Get/Set the sort group
-			ESortGroup Group() const
-			{
-				return static_cast<ESortGroup>((m_value & SortGroupMask) >> SortGroupOfs);
-			}
-			void Group(ESortGroup group)
-			{
-				auto g = value_type(group);
-				PR_ASSERT(PR_DBG_RDR, g >= 0 && g < MaxSortGroups, "sort group out of range");
-				m_value &= ~SortGroupMask;
-				m_value |= (g << SortGroupOfs) & SortGroupMask;
-			}
-
-			SortKey& operator |= (SortKey::value_type rhs)
-			{
-				m_value |= rhs;
-				return *this;
-			}
-			SortKey& operator &= (SortKey::value_type rhs)
-			{ 
-				m_value &= rhs;
-				return *this;
-			}
-		};
-		static_assert(std::is_pod<SortKey>::value, "SortKey must be a pod type");
-		static_assert(8U * sizeof(SortKey) == SortKey::Bits, "8 * sizeof(Sortkey) != SortKey::Bits");
-		static_assert(uint32(ESortGroup::Default) == SortKey::MaxSortGroups/2, "ESortGroup::Default should be the middle");
-
-		// A sort key override is a mask that is applied to a sort key
-		// to override specific parts of the sort key.
-		struct SKOverride
+		// Get/Set the sort group
+		ESortGroup Group() const
 		{
-			using value_type = SortKey::value_type;
-			value_type m_mask; // The bits to override
-			value_type m_key;  // The overridden bit values
+			return static_cast<ESortGroup>((m_value & SortGroupMask) >> SortGroupOfs);
+		}
+		void Group(ESortGroup group)
+		{
+			auto g = value_type(group);
+			PR_ASSERT(PR_DBG_RDR, g >= 0 && g < MaxSortGroups, "sort group out of range");
+			m_value = SetBits(m_value, SortGroupMask, g << SortGroupOfs);
+		}
 
-			SKOverride()
-				:m_mask(0)
-				,m_key(0)
-			{}
+		SortKey& operator |= (SortKey::value_type rhs)
+		{
+			m_value |= rhs;
+			return *this;
+		}
+		SortKey& operator &= (SortKey::value_type rhs)
+		{ 
+			m_value &= rhs;
+			return *this;
+		}
+	};
+	static_assert(std::is_pod_v<SortKey>, "Softkey must be POD so that draw list elements are PODs");
 
-			// Combine this override with a sort key to produce a new sort key
-			SortKey Combine(SortKey key) const
-			{
-				return SortKey{(key.m_value & ~m_mask) | m_key};
-			}
+	// A sort key override is a mask that is applied to a sort key
+	// to override specific parts of the sort key.
+	struct SKOverride
+	{
+		using value_type = SortKey::value_type;
 
-			// Get/Set the alpha component of the sort key
-			bool HasAlpha() const
-			{
-				return (m_mask & SortKey::AlphaMask) != 0;
-			}
-			bool Alpha() const
-			{
-				return ((m_key & SortKey::AlphaMask) >> SortKey::AlphaOfs) != 0;
-			}
-			SKOverride& ClearAlpha()
-			{
-				m_mask &= ~SortKey::AlphaMask;
-				m_key  &= ~SortKey::AlphaMask;
-				return *this;
-			}
-			SKOverride& Alpha(bool has_alpha)
-			{
-				m_mask |= SortKey::AlphaMask;
-				m_key  |= (has_alpha << SortKey::AlphaOfs) & SortKey::AlphaMask;
-				return *this;
-			}
+		value_type m_mask; // The bits to override
+		value_type m_key;  // The overridden bit values
 
-			// Get/Set the sort group component of the sort key
-			bool HasGroup() const
-			{
-				return (m_mask & SortKey::SortGroupMask) != 0;
-			}
-			int Group() const
-			{
-				return static_cast<int>(((m_key & SortKey::SortGroupMask) >> SortKey::SortGroupOfs) - value_type(ESortGroup::Default));
-			}
-			SKOverride& ClearGroup()
-			{
-				m_mask &= ~SortKey::SortGroupMask;
-				m_key  &= ~SortKey::SortGroupMask;
-				return *this;
-			}
-			SKOverride& Group(ESortGroup group)
-			{
-				auto g = value_type(group);
-				PR_ASSERT(PR_DBG_RDR, g >= 0 && g < SortKey::MaxSortGroups, "sort group out of range");
-				m_mask |= SortKey::SortGroupMask;
-				m_key  |= (g << SortKey::SortGroupOfs) & SortKey::SortGroupMask;
-				return *this;
-			}
-		};
-	}
+		SKOverride()
+			:m_mask(0)
+			,m_key(0)
+		{}
+
+		// Combine this override with a sort key to produce a new sort key
+		SortKey Combine(SortKey key) const
+		{
+			return SortKey(SetBits(key.m_value, m_mask, m_key));
+		}
+
+		// Get/Set the alpha component of the sort key
+		bool HasAlpha() const
+		{
+			// True if we're overriding the alpha value
+			return AllSet(m_mask, SortKey::AlphaMask);
+		}
+		bool Alpha() const
+		{
+			// The overridden state of the alpha value
+			return (m_key & SortKey::AlphaMask) != 0;
+		}
+		SKOverride& ClearAlpha()
+		{
+			m_mask = SetBits(m_mask, SortKey::AlphaMask, false);
+			m_key  = SetBits(m_key, SortKey::AlphaMask, false);
+			return *this;
+		}
+		SKOverride& Alpha(bool has_alpha)
+		{
+			m_mask = SetBits(m_mask, SortKey::AlphaMask, true);
+			m_key  = SetBits(m_key, SortKey::AlphaMask, has_alpha << SortKey::AlphaOfs);
+			return *this;
+		}
+
+		// Get/Set the sort group component of the sort key
+		bool HasGroup() const
+		{
+			// True if we're overriding the sort group
+			return AllSet(m_mask, SortKey::SortGroupMask);
+		}
+		ESortGroup Group() const
+		{
+			// The value of the overridden sort group
+			return static_cast<ESortGroup>((m_key & SortKey::SortGroupMask) >> SortKey::SortGroupOfs);
+		}
+		SKOverride& ClearGroup()
+		{
+			m_mask = SetBits(m_mask, SortKey::SortGroupMask, false);
+			m_key  = SetBits(m_key, SortKey::SortGroupMask, false);
+			return *this;
+		}
+		SKOverride& Group(ESortGroup group)
+		{
+			auto g = value_type(group);
+			PR_ASSERT(PR_DBG_RDR, g >= 0 && g < SortKey::MaxSortGroups, "sort group out of range");
+			m_mask = SetBits(m_mask, SortKey::SortGroupMask, true);
+			m_key  = SetBits(m_key, SortKey::SortGroupMask, g << SortKey::SortGroupOfs);
+			return *this;
+		}
+	};
 }

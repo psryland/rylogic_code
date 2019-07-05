@@ -75,7 +75,7 @@ namespace pr
 			BSBlock        m_bsb;                   // Rendering states
 			DSBlock        m_dsb;                   // Rendering states
 			RSBlock        m_rsb;                   // Rendering states
-			SortKey        m_sort_key;              // A base sort key for this nugget (typically leave as 0, tex id, alpha, group added automatically if 0)
+			SortKey        m_sort_key;              // A base sort key for this nugget
 			float          m_relative_reflectivity; // How reflective this nugget is, relative to the instance. Note: 1.0 means the same as the instance (which might be 0)
 			ENuggetFlag    m_flags;                 // Flags for boolean properties of the nugget
 

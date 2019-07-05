@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Windows.Threading;
+using CoinFlip.Bots;
 using CoinFlip.Settings;
 using Rylogic.Common;
 using Rylogic.Utility;
@@ -31,6 +32,7 @@ namespace CoinFlip
 				Exchanges = new ExchangeContainer();
 				Coins = new CoinDataList();
 				Funds = new FundContainer();
+				Bots = new BotContainer(this);
 				PriceData = new PriceDataMap(Shutdown.Token);
 				Charts = new ObservableCollection<IChartView>();
 				SelectedOpenOrders = new ObservableCollection<Order>();
@@ -60,6 +62,7 @@ namespace CoinFlip
 			AllowTradesChanged -= HandleAllowTradesChanged;
 
 			PriceData = null;
+			Bots = null;
 			Funds = null;
 			User = null;
 			Shutdown = null;
@@ -71,7 +74,7 @@ namespace CoinFlip
 
 		/// <summary>The current time. This might be in the past during a simulation</summary>
 		public static DateTimeOffset UtcNow => BackTesting ? SimClock : DateTimeOffset.UtcNow;
-		public static DateTimeOffset SimClock { get; private set; }
+		public static DateTimeOffset SimClock { get; internal set; }
 
 		/// <summary>True if live trading</summary>
 		public static bool AllowTrades
@@ -144,9 +147,8 @@ namespace CoinFlip
 				Simulation = null;
 
 				// Turn on the update thread for each price data instance
-				foreach (var pd_pairs in PriceData.Pairs)
-					foreach (var pd in pd_pairs.Value)
-						pd.Value.UpdateThreadActive = pd.Value.RefCount != 0;
+				foreach (var pd  in PriceData)
+					pd.UpdateThreadActive = pd.RefCount != 0;
 
 				// Turn on the update thread for each exchange
 				foreach (var exch in Exchanges)
@@ -208,6 +210,7 @@ namespace CoinFlip
 			set
 			{
 				if (m_user == value) return;
+				UserChange?.Invoke(this, new PrePostEventArgs(after: false));
 				if (m_user != null)
 				{
 					// Drop connections to exchanges
@@ -227,9 +230,11 @@ namespace CoinFlip
 					// Save the last user name
 					SettingsData.Settings.LastUser = m_user.Name;
 				}
+				UserChange?.Invoke(this, new PrePostEventArgs(after: true));
 			}
 		}
 		private User m_user;
+		public event EventHandler<PrePostEventArgs> UserChange;
 
 		/// <summary>A cancellation token for graceful shutdown</summary>
 		public CancellationTokenSource Shutdown
@@ -300,6 +305,18 @@ namespace CoinFlip
 			}
 		}
 		private FundContainer m_funds;
+
+		/// <summary>The trading bot instances</summary>
+		public BotContainer Bots
+		{
+			get { return m_bots; }
+			private set
+			{
+				if (m_bots == value) return;
+				m_bots = value;
+			}
+		}
+		private BotContainer m_bots;
 
 		/// <summary>The repository of candle data for all pairs and time frames</summary>
 		public PriceDataMap PriceData

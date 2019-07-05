@@ -3,18 +3,25 @@ using System.IO;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using ExchApi.Common;
 using Microsoft.AspNet.SignalR.Client;
 using Newtonsoft.Json.Linq;
+using Rylogic.Extn;
 using Rylogic.Utility;
 
 namespace Bittrex.API.Subscriptions
 {
 	public class BittrexWebSocket : IDisposable
 	{
-		public BittrexWebSocket(string address)
+		// Notes:
+		//  - Bittrex only support Aspnet.SignalR, not Aspnetcore.SignalR
+
+		public BittrexWebSocket(string address, CancellationToken shutdown)
 		{
+			Shutdown = shutdown;
+
 			// Create connection to c2 SignalR hub
 			HubConnection = new HubConnection(address);
 			HubProxy = HubConnection.CreateHubProxy("c2");
@@ -25,6 +32,9 @@ namespace Bittrex.API.Subscriptions
 			HubConnection = null;
 		}
 
+		/// <summary>Shutdown token</summary>
+		public CancellationToken Shutdown { get; }
+
 		/// <summary>The socket wrapper</summary>
 		private HubConnection HubConnection
 		{
@@ -34,17 +44,31 @@ namespace Bittrex.API.Subscriptions
 				if (m_hub_connection == value) return;
 				if (m_hub_connection != null)
 				{
-					//m_hub_connection.Stop();
+					if (m_market_data_update_sub != null ||
+						m_wallet_update_sub != null ||
+						m_order_update_sub != null)
+						throw new Exception("Subscriptions should be disposed first");
+
+					m_hub_connection.Closed -= HandleClosed;
 					m_hub_connection.Error -= HandleError;
-					Util.Dispose(ref m_hub_connection);
+					//m_hub_connection.Stop(); // This blocks for some reason :-(
+					//Util.Dispose(ref m_hub_connection); // This blocks for some reason :-(
 				}
 				m_hub_connection = value;
 				if (m_hub_connection != null)
 				{
 					m_hub_connection.Error += HandleError;
+					m_hub_connection.Closed += HandleClosed;
 				}
 
 				// Handlers
+				async void HandleClosed()
+				{
+					// Attempt to reconnect if the connection is dropped unexpectedly
+					if (Shutdown.IsCancellationRequested) return;
+					await Task.Delay(new Random().Next(0, 5) * 1000, Shutdown);
+					await m_hub_connection.Start();
+				}
 				void HandleError(Exception ex)
 				{
 					BittrexApi.Log(ELogLevel.Error, ex.Message);
@@ -82,7 +106,7 @@ namespace Bittrex.API.Subscriptions
 			{
 				// Add a callback on the first subscription
 				if (m_market_data_update == null)
-					m_market_data_update_sub = HubProxy.On<string>(CallbackCode.Market, x => m_market_data_update.Invoke(Decode(x)));
+					m_market_data_update_sub = HubProxy.On<string>(CallbackCode.Market, x => m_market_data_update?.Invoke(Decode(x)));
 
 				m_market_data_update += value;
 			}
@@ -147,6 +171,7 @@ namespace Bittrex.API.Subscriptions
 		/// <summary>Request a full snapshot to initialise the order book</summary>
 		public async Task<JToken> QueryExchangeState(string market_name)
 		{
+			Shutdown.ThrowIfCancellationRequested();
 			var snapshot = await HubProxy.Invoke<string>("QueryExchangeState", market_name);
 			return Decode(snapshot);
 		}
