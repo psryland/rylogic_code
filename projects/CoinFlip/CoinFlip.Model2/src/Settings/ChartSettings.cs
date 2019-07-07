@@ -8,8 +8,8 @@ namespace CoinFlip.Settings
 	{
 		public ChartSettings()
 		{
-			AskColour = new Colour32(0xff22b14c); // Green
-			BidColour = new Colour32(0xffed1c24); // Red
+			Q2BColour = new Colour32(0xff22b14c); // Green
+			B2QColour = new Colour32(0xffed1c24); // Red
 			ShowOpenOrders = EShowItems.Disabled;
 			ShowCompletedOrders = EShowItems.Disabled;
 			ShowMarketDepth = false;
@@ -19,18 +19,18 @@ namespace CoinFlip.Settings
 			: base(node)
 		{}
 
-		/// <summary>The colour to draw 'Bullish/Ask/Buy' things</summary>
-		public Colour32 AskColour
+		/// <summary>The colour to draw 'Buy Price, Bid, Long, Highest one on a chart' things</summary>
+		public Colour32 Q2BColour
 		{
-			get { return get<Colour32>(nameof(AskColour)); }
-			set { set(nameof(AskColour), value); }
+			get { return get<Colour32>(nameof(Q2BColour)); }
+			set { set(nameof(Q2BColour), value); }
 		}
 
-		/// <summary>The colour to draw 'Bearish/Bid/Sell' things</summary>
-		public Colour32 BidColour
+		/// <summary>The colour to draw 'Sell Price, Ask, Short, Lowest one on a chart' things</summary>
+		public Colour32 B2QColour
 		{
-			get { return get<Colour32>(nameof(BidColour)); }
-			set { set(nameof(BidColour), value); }
+			get { return get<Colour32>(nameof(B2QColour)); }
+			set { set(nameof(B2QColour), value); }
 		}
 
 		/// <summary>Show current trades</summary>

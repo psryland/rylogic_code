@@ -7,8 +7,10 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using CoinFlip.Settings;
+using Rylogic.Common;
 using Rylogic.Container;
 using Rylogic.Gui.WPF;
+using Rylogic.Maths;
 using Rylogic.Utility;
 
 namespace CoinFlip.UI
@@ -19,21 +21,18 @@ namespace CoinFlip.UI
 		//  - This grid shows balance and coin information based on averages over
 		//    all exchanges, the currently selected exchange, or a specific exchange.
 
-		static GridCoins()
-		{
-			CurrentProperty = Gui_.DPRegister<GridCoins>(nameof(Current));
-			FilterThresholdProperty = Gui_.DPRegister<GridCoins>(nameof(FilterThreshold));
-			FilterTypeProperty = Gui_.DPRegister<GridCoins>(nameof(FilterType));
-		}
 		public GridCoins(Model model)
 		{
 			InitializeComponent();
 			m_grid.MouseRightButtonUp += DataGrid_.ColumnVisibility;
 
 			DockControl = new DockControl(this, "Coins");
-			ExchangeSource = new ListCollectionView(new List<string> { SpecialExchangeSources.All, SpecialExchangeSources.Current });
-			Coins = new ListCollectionView(ListAdapter.Create(model.Coins, c => new CoinDataToLiveValueAdapter(c, model, ExchangeSource), c => c?.CoinData));
+			Filter = new CoinFilter(x => (CoinDataAdapter)x);
+			ExchangeNames = new ListCollectionView(new List<string> { SpecialExchangeSources.All, SpecialExchangeSources.Current });
+			Coins = new ListCollectionView(ListAdapter.Create(model.Coins, c => new CoinDataAdapter(c, model, ExchangeNames), c => c?.CoinData)) { Filter = Filter.Predicate };
 			Model = model;
+
+			Filter.PropertyChanged += delegate { Coins.Refresh(); };
 
 			// Commands
 			AddCoin = Command.Create(this, AddCoinInternal);
@@ -79,14 +78,14 @@ namespace CoinFlip.UI
 				void HandleExchangesChanged(object sender, NotifyCollectionChangedEventArgs e)
 				{
 					// Preserve the current item
-					var list = (List<string>)ExchangeSource.SourceCollection;
-					using (Scope.Create(() => ExchangeSource.CurrentItem, ci => ExchangeSource.MoveCurrentTo(ci)))
+					var list = (List<string>)ExchangeNames.SourceCollection;
+					using (Scope.Create(() => ExchangeNames.CurrentItem, ci => ExchangeNames.MoveCurrentTo(ci)))
 					{
 						list.Clear();
 						list.Add(SpecialExchangeSources.All);
 						list.Add(SpecialExchangeSources.Current);
 						list.AddRange(Model.TradingExchanges.Select(x => x.Name));
-						ExchangeSource.Refresh();
+						ExchangeNames.Refresh();
 					}
 				}
 				void HandleAllowTradesChanged(object sender, EventArgs e)
@@ -111,7 +110,7 @@ namespace CoinFlip.UI
 		private DockControl m_dock_control;
 
 		/// <summary>The view of the available exchanges</summary>
-		public ICollectionView ExchangeSource { get; }
+		public ICollectionView ExchangeNames { get; }
 
 		/// <summary>The data source for coin data</summary>
 		public ICollectionView Coins { get; }
@@ -120,59 +119,17 @@ namespace CoinFlip.UI
 		public bool AllowTrades => Model.AllowTrades;
 
 		/// <summary>The currently selected exchange</summary>
-		public CoinDataToLiveValueAdapter Current
+		private CoinDataAdapter Current
 		{
-			get { return (CoinDataToLiveValueAdapter)GetValue(CurrentProperty); }
-			set { SetValue(CurrentProperty, value); }
+			get => (CoinDataAdapter)Coins.CurrentItem;
+			set => Coins.MoveCurrentTo(value);
 		}
+
+		/// <summary>The currently selected coin name (or generic 'Coin')</summary>
 		public string CurrentCoinName => Current?.Symbol ?? "Coin";
-		public static readonly DependencyProperty CurrentProperty;
 
-		/// <summary>True if coins should be filtered</summary>
-		public bool FilterEnabled
-		{
-			get { return m_filter_enabled; }
-			set
-			{
-				if (m_filter_enabled == value) return;
-				m_filter_enabled = value;
-				Coins.Filter = value ? CoinThresholdFilter : (Predicate<object>)null;
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FilterEnabled)));
-
-				/// <summary>Filter for the 'Coins' collection view</summary>
-				bool CoinThresholdFilter(object obj)
-				{
-					var cda = (CoinDataToLiveValueAdapter)obj;
-					switch (FilterType)
-					{
-					default: throw new Exception("Unknown Filter Type");
-					case ECoinFilterType.Value: return cda.Value > FilterThreshold;
-					case ECoinFilterType.Balance: return cda.Balance > FilterThreshold;
-					case ECoinFilterType.Available: return cda.Available > FilterThreshold;
-					case ECoinFilterType.Total: return cda.Total > FilterThreshold;
-					}
-				}
-			}
-		}
-		private bool m_filter_enabled;
-
-		/// <summary>Filter balances with a value or amount less than this threshold</summary>
-		public decimal FilterThreshold
-		{
-			get { return (decimal)GetValue(FilterThresholdProperty); }
-			set { SetValue(FilterThresholdProperty, value); }
-		}
-		private void FilterThreshold_Changed() => Coins.Refresh();
-		public static readonly DependencyProperty FilterThresholdProperty;
-
-		/// <summary>What to filter on</summary>
-		public ECoinFilterType FilterType
-		{
-			get { return (ECoinFilterType)GetValue(FilterTypeProperty); }
-			set { SetValue(FilterTypeProperty, value); }
-		}
-		private void FilterType_Changed() => Coins.Refresh();
-		public static readonly DependencyProperty FilterTypeProperty;
+		/// <summary>Filter support for 'Coins'</summary>
+		public CoinFilter Filter { get; }
 
 		/// <summary>Add a coin to the collection</summary>
 		public Command AddCoin { get; }
@@ -228,8 +185,11 @@ namespace CoinFlip.UI
 			if (dlg.ShowDialog() == true)
 			{
 				var amount = decimal.Parse(dlg.Value);
-				foreach (var exch in Current.SourceExchanges)
-					exch.FakeCash(Current.Symbol, amount);
+				foreach (var exch in Model.TradingExchanges)
+				{
+					var coin = exch.Coins[Current.Symbol];
+					exch.Balance[coin].FakeCash = amount._(coin);
+				}
 			}
 		}
 
@@ -238,11 +198,151 @@ namespace CoinFlip.UI
 		private void ResetFakeCashInternal()
 		{
 			if (Current == null) return;
-			foreach (var exch in Current.SourceExchanges)
-				exch.FakeCash(Current.Symbol, 0);
+			foreach (var exch in Model.TradingExchanges)
+			{
+				var coin = exch.Coins[Current.Symbol];
+				exch.Balance[coin].FakeCash = 0m._(coin);
+			}
 		}
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler PropertyChanged;
+
+		/// <summary>A wrapper for CoinData to provide live value data</summary>
+		private class CoinDataAdapter :INotifyPropertyChanged, IValueTotalAvail
+		{
+			// Notes:
+			//  - This CoinData wrapper is used with multiple Exchanges showing averaged/summed data
+
+			public CoinDataAdapter(CoinData cd, Model model, ICollectionView exchange_names)
+			{
+				CoinData = cd;
+				Model = model;
+				ExchangeNames = exchange_names;
+
+				// Notify when external data changes
+				cd.LivePriceChanged += WeakRef.MakeWeak(UpdateLiveValueChanged, h => cd.LivePriceChanged -= h);
+				void UpdateLiveValueChanged(object sender = null, EventArgs args = null)
+				{
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Value)));
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Balance)));
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(LiveValueAvailable)));
+				}
+
+				cd.BalanceChanged += WeakRef.MakeWeak(UpdateBalanceChanged, h => cd.BalanceChanged -= h);
+				void UpdateBalanceChanged(object sender = null, EventArgs args = null)
+				{
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Available)));
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Total)));
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Balance)));
+				}
+
+				exchange_names.CurrentChanged += WeakRef.MakeWeak(UpdateSourceChanged, h => exchange_names.CurrentChanged -= h);
+				void UpdateSourceChanged(object sender = null, EventArgs args = null)
+				{
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Value)));
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Available)));
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Total)));
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Balance)));
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(LiveValueAvailable)));
+				}
+			}
+
+			/// <summary>App logic</summary>
+			private Model Model { get; }
+
+			/// <summary>All exchanges</summary>
+			private ICollectionView ExchangeNames { get; }
+
+			/// <summary>Returns the exchanges to consider when averaging/summing values</summary>
+			private IEnumerable<Exchange> SourceExchanges
+			{
+				get
+				{
+					var src = (string)ExchangeNames.CurrentItem;
+					if (src == SpecialExchangeSources.All)
+					{
+						return Model.TradingExchanges;
+					}
+					else if (src == SpecialExchangeSources.Current)
+					{
+						var exch = (Exchange)CollectionViewSource.GetDefaultView(Model.Exchanges).CurrentItem;
+						if (exch != null && !(exch is CrossExchange))
+							return new[] { exch };
+					}
+					else
+					{
+						var exch = Model.TradingExchanges.FirstOrDefault(x => x.Name == src);
+						if (exch != null)
+							return new[] { exch };
+					}
+					return Enumerable.Empty<Exchange>();
+				}
+			}
+
+			/// <summary>The wrapped coin data</summary>
+			public CoinData CoinData { get; }
+
+			/// <summary>Coin symbol code</summary>
+			public string Symbol => CoinData.Symbol;
+
+			/// <summary>The value of all holdings of this coin on all source exchanges</summary>
+			public decimal Balance => Value * Total;
+
+			/// <summary>The average value of this coin across all exchanges</summary>
+			public decimal Value
+			{
+				get
+				{
+					// Find the average price on the available exchanges
+					var value = new Average<decimal>();
+					foreach (var exch in SourceExchanges)
+					{
+						var coin = exch.Coins[Symbol];
+						if (coin == null || !coin.LivePriceAvailable) continue;
+						value.Add(coin.ValueOf(1m));
+					}
+					return value.Count != 0 ? value.Mean._(Symbol) : CoinData.AssignedValue._(Symbol);
+				}
+			}
+
+			/// <summary>The sum of account balances across all exchanges for this coin</summary>
+			public Unit<decimal> Total
+			{
+				get
+				{
+					var total = 0m;
+					foreach (var exch in SourceExchanges)
+					{
+						var coin = exch.Coins[Symbol];
+						if (coin == null) continue;
+						total += coin.Balances.NettTotal;
+					}
+					return total._(Symbol);
+				}
+			}
+
+			/// <summary>The sum of available balance across all exchanges</summary>
+			public Unit<decimal> Available
+			{
+				get
+				{
+					var avail = 0m;
+					foreach (var exch in SourceExchanges)
+					{
+						var coin = exch.Coins[Symbol];
+						if (coin == null) continue;
+						avail += coin.Balances.NettAvailable;
+					}
+					return avail._(Symbol);
+				}
+			}
+
+			/// <summary>True if a live value could be calculated</summary>
+			public bool LiveValueAvailable => SourceExchanges.Any(x => x.Coins[Symbol]?.LivePriceAvailable ?? false);
+
+			/// <summary></summary>
+			public event PropertyChangedEventHandler PropertyChanged;
+		}
 	}
 }

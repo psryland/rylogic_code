@@ -20,7 +20,7 @@ namespace CoinFlip.Settings
 				{
 					// Ensure the app data directory exists
 					Directory.CreateDirectory(Misc.ResolveUserPath());
-					m_settings = new SettingsData(Misc.ResolveUserPath("settings.new.xml"));
+					m_settings = new SettingsData(Misc.ResolveUserPath("settings.xml"));
 				}
 				return m_settings;
 			}

@@ -37,6 +37,7 @@ namespace CoinFlip.UI
 			ToggleActive = Command.Create(this, ToggleActiveInternal);
 			ShowConfig = Command.Create(this, ShowConfigInternal);
 
+			m_grid.ContextMenu.Opened += delegate { m_grid.ContextMenu.Items.TidySeparators(); };
 			DataContext = this;
 		}
 		public void Dispose()
@@ -72,6 +73,11 @@ namespace CoinFlip.UI
 
 		/// <summary>The data source for bots</summary>
 		public ICollectionView Bots { get; }
+		public IBot Current
+		{
+			get => (IBot)Bots.CurrentItem;
+			set => Bots.MoveCurrentTo(value);
+		}
 
 		/// <summary>Create a new bot instance</summary>
 		public Command CreateNewBot { get; }

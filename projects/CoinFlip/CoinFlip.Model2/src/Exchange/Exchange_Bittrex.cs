@@ -173,7 +173,7 @@ namespace CoinFlip
 					var coin = Coins.GetOrAdd(b.Symbol);
 
 					// Update the balance
-					Balance[coin] = new Balances(coin, b.Total._(coin), (b.Total - b.Available)._(coin), last_updated);
+					Balance.AssignFundBalance(coin, Fund.Main, b.Total._(coin), (b.Total - b.Available)._(coin), last_updated);
 				}
 
 				// Notify updated

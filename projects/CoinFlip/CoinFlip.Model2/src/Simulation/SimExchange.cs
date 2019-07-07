@@ -27,7 +27,7 @@ namespace CoinFlip
 		private readonly LazyDictionary<TradePair, MarketDepth> m_depth;
 		private readonly LazyDictionary<long, Order> m_ord;
 		private readonly LazyDictionary<long, OrderCompleted> m_his;
-		private readonly LazyDictionary<Coin, FundBalance> m_bal;
+		private readonly LazyDictionary<Coin, AccountBalance> m_bal;
 		private readonly LazyDictionary<string, Unit<decimal>> m_initial_bal;
 
 		private Random m_rng;
@@ -48,7 +48,7 @@ namespace CoinFlip
 				m_depth = new LazyDictionary<TradePair, MarketDepth>(k => new MarketDepth(k.Base, k.Quote));
 				m_ord   = new LazyDictionary<long, Order>(k => null);
 				m_his   = new LazyDictionary<long, OrderCompleted>(k => null);
-				m_bal   = new LazyDictionary<Coin, FundBalance>(k => new FundBalance(Fund.Main, k, m_initial_bal[k], 0m._(k), DateTimeOffset.MinValue));
+				m_bal   = new LazyDictionary<Coin, AccountBalance>(k => new AccountBalance(k, m_initial_bal[k], 0m._(k)));
 				m_rng   = null;
 
 				// Make a copy of the initial balances (for performance)
@@ -123,7 +123,7 @@ namespace CoinFlip
 			Balance.Clear();
 			foreach (var coin in Coins.Values)
 			{
-				m_bal.Add(coin, new FundBalance(Fund.Main, coin, m_initial_bal[coin], 0m._(coin), DateTimeOffset.MinValue));
+				m_bal.Add(coin, new AccountBalance(coin, m_initial_bal[coin], 0m._(coin)));
 				Balance.Add(coin, new Balances(coin, m_initial_bal[coin], Sim.Clock));
 			}
 
@@ -259,7 +259,7 @@ namespace CoinFlip
 					foreach (var bal in m_bal.Values)
 					{
 						if (Equals(bal, Balance[bal.Coin])) continue;
-						Balance[bal.Coin].Update(bal.Total, bal.HeldOnExch, bal.LastUpdated);
+						Balance[bal.Coin].AssignFundBalance(Fund.Main, bal.Total, bal.Held, Model.UtcNow);
 					}
 				}
 
@@ -348,13 +348,13 @@ namespace CoinFlip
 				foreach (var fill in his.Trades.Values)
 				{
 					{// Debt from CoinIn
-						var bal0 = m_bal[fill.CoinIn];
-						bal0.Update(Model.UtcNow, total: bal0.Total - fill.AmountIn);
+						var bal = m_bal[fill.CoinIn];
+						bal.Total -= fill.AmountIn;
 						coins.Add(fill.CoinIn);
 					}
 					{// Credit to CoinOut
-						var bal0 = m_bal[fill.CoinOut];
-						bal0.Update(Model.UtcNow, total: bal0.Total + fill.AmountNett);
+						var bal = m_bal[fill.CoinOut];
+						bal.Total += fill.AmountNett;
 						coins.Add(fill.CoinOut);
 					}
 				}
@@ -362,8 +362,8 @@ namespace CoinFlip
 			if (ord != null)
 			{
 				// Hold for trade
-				var bal0 = m_bal[ord.CoinIn];
-				bal0.Update(Model.UtcNow, held_on_exch: bal0.HeldOnExch + ord.Remaining);
+				var bal = m_bal[ord.CoinIn];
+				bal.Held += ord.Remaining;
 				coins.Add(ord.CoinIn);
 			}
 		}
@@ -371,8 +371,8 @@ namespace CoinFlip
 		/// <summary>Reverse the balance changes due to 'order'</summary>
 		private void ReverseBalance(Order order)
 		{
-			var bal0 = m_bal[order.CoinIn];
-			bal0.Update(Model.UtcNow, held_on_exch: bal0.HeldOnExch - order.Remaining);
+			var bal = m_bal[order.CoinIn];
+			bal.Held -= order.Remaining;
 		}
 
 		/// <summary>Generate fake market depth for 'pair', using 'latest' as the reference for the current spot price</summary>
@@ -437,6 +437,21 @@ namespace CoinFlip
 						return order;
 				}
 			}
+		}
+
+		/// <summary>Represents the simulated user account on the exchange</summary>
+		private class AccountBalance
+		{
+			public AccountBalance(Coin coin, Unit<decimal> total, Unit<decimal> held)
+			{
+				Coin = coin;
+				Total = total;
+				Held = held;
+			}
+			public Coin Coin { get; }
+			public Unit<decimal> Total { get; set; }
+			public Unit<decimal> Held { get; set; }
+			public Unit<decimal> Available => Total - Held;
 		}
 	}
 }

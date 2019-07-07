@@ -232,7 +232,7 @@ namespace CoinFlip
 					var coin = Coins.GetOrAdd(b.Asset);
 
 					// Update the balance
-					Balance[coin] = new Balances(coin, b.Total._(coin), b.Locked._(coin), msg.UpdateTime);
+					Balance.AssignFundBalance(coin, Fund.Main, b.Total._(coin), b.Locked._(coin), msg.UpdateTime);
 				}
 
 				// Notify updated

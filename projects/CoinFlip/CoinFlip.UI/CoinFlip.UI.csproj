@@ -82,11 +82,12 @@
     <Compile Include="src\GfxObjects\Candles.cs" />
     <Compile Include="src\GfxObjects\SpotPrice.cs" />
     <Compile Include="src\GfxObjects\UpdatingText.cs" />
+    <Compile Include="src\Misc\CoinFilter.cs" />
     <Compile Include="src\Misc\SkinResourceDictionary.cs" />
+    <Compile Include="src\Misc\SignedValueToBrush.cs" />
     <Compile Include="src\UI\CandleChart.xaml.cs">
       <DependentUpon>CandleChart.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\Misc\CoinDataToLiveValueAdapter.cs" />
     <Compile Include="src\Dialogs\EditTradeUI.xaml.cs">
       <DependentUpon>EditTradeUI.xaml</DependentUpon>
     </Compile>

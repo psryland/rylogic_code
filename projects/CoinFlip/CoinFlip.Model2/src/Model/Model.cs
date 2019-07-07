@@ -3,9 +3,11 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Windows.Data;
 using System.Windows.Threading;
 using CoinFlip.Bots;
 using CoinFlip.Settings;
@@ -184,6 +186,10 @@ namespace CoinFlip
 				{
 					try
 					{
+						// Ignore messages after the timer is stopped
+						if (!MainLoopRunning)
+							return;
+
 						// Process any pending market data updates
 						if (!BackTesting)
 							IntegrateDataUpdates();
@@ -301,7 +307,13 @@ namespace CoinFlip
 			private set
 			{
 				if (m_funds == value) return;
+				if (m_funds != null)
+				{
+				}
 				m_funds = value;
+				if (m_funds != null)
+				{
+				}
 			}
 		}
 		private FundContainer m_funds;
@@ -364,6 +376,12 @@ namespace CoinFlip
 
 		/// <summary>Raised when market data changes, i.e. before and after 'IntegrateDataUpdates' is called</summary>
 		public event EventHandler<DataChangingEventArgs> DataChanging;
+
+		/// <summary>Persist the current fund balances to settings</summary>
+		public void SaveFundBalances()
+		{
+			Funds.SaveToSettings(Exchanges);
+		}
 
 		/// <summary>Create Exchange instances with this user's API keys</summary>
 		private void CreateExchanges()

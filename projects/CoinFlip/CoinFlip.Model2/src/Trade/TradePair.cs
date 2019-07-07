@@ -179,8 +179,8 @@ namespace CoinFlip
 		{
 			switch (tt) {
 			default: throw new Exception($"Unknown trade type: {tt}");
-			case ETradeType.Q2B: return B2Q.Orders.Count != 0 ? B2Q.Orders[0].Price : (Unit<decimal>?)null;
-			case ETradeType.B2Q: return Q2B.Orders.Count != 0 ? Q2B.Orders[0].Price : (Unit<decimal>?)null;
+			case ETradeType.Q2B: return Q2B.Orders.Count != 0 ? Q2B.Orders[0].Price : (Unit<decimal>?)null;
+			case ETradeType.B2Q: return B2Q.Orders.Count != 0 ? B2Q.Orders[0].Price : (Unit<decimal>?)null;
 			}
 		}
 

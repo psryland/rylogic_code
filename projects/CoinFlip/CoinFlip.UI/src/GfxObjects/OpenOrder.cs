@@ -30,7 +30,7 @@ namespace CoinFlip.UI.GfxObjects
 			var gfx = m_cache.Get(ord.UniqueKey, k =>
 			{
 				var buy = ord.TradeType == ETradeType.Q2B;
-				var col = (buy ? SettingsData.Settings.Chart.AskColour : SettingsData.Settings.Chart.BidColour).LerpNoAlpha(Colour32.Black, 0.5f);
+				var col = (buy ? SettingsData.Settings.Chart.Q2BColour : SettingsData.Settings.Chart.B2QColour).LerpNoAlpha(Colour32.Black, 0.5f);
 				var ldr =
 					$"*Group {(buy ? "buy" : "sell")}_{ord.OrderId}\n" +
 					$"{{\n" +

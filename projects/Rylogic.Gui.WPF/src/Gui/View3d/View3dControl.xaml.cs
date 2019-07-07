@@ -475,7 +475,7 @@ namespace Rylogic.Gui.WPF
 				if (D3DImage?.RenderTarget == null || !D3DImage.IsFrontBufferAvailable)
 				{
 					// 'Validate' the window so that future Invalidate() calls to trigger the call back.
-					Window.Validate();
+					Window?.Validate();
 					return;
 				}
 

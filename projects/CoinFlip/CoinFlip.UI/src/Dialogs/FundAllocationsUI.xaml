@@ -4,16 +4,20 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d" 
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+	xmlns:local="clr-namespace:CoinFlip.UI"
+	mc:Ignorable="d" 
 	d:DesignWidth="350"
 	d:DesignHeight="400"
 	Title="Fund Allocation"
 	WindowStartupLocation="CenterOwner"
-	SizeToContent="WidthAndHeight"
+	SizeToContent="Height"
 	ResizeMode="CanResizeWithGrip"
 	ShowInTaskbar="True"
 	MinHeight="300"
 	MinWidth="340"
+	Height="300"
+	Width="340"
 	>
 	<Window.Resources>
 		<ResourceDictionary>
@@ -28,6 +32,7 @@
 		>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="*"/>
 			<RowDefinition Height="Auto"/>
 		</Grid.RowDefinitions>
@@ -39,61 +44,130 @@
 			HorizontalAlignment="Center"
 			>
 			<TextBlock
+				Text="Exchange:"
+				VerticalAlignment="Center"
+				FontSize="16"
+				Margin="3"
+				/>
+			<ComboBox
+				ItemsSource="{Binding Exchanges}"
+				SelectedItem="{Binding Exchanges/, Mode=TwoWay}"
+				DisplayMemberPath="Name"
+				HorizontalAlignment="Left"
+				VerticalAlignment="Center"
+				MinWidth="60"
+				Margin="3"
+				/>
+			<TextBlock
 				Text="Fund:"
 				VerticalAlignment="Center"
-				FontSize="18"
+				FontSize="16"
+				Margin="3"
 				/>
 			<ComboBox
 				ItemsSource="{Binding Funds}"
 				SelectedItem="{Binding Funds/, Mode=TwoWay}"
+				DisplayMemberPath="Id"
 				HorizontalAlignment="Left"
 				VerticalAlignment="Center"
-				MinWidth="100"
+				MinWidth="60"
 				Margin="3"
+				/>
+		</StackPanel>
+
+		<!-- Filter coins -->
+		<StackPanel
+			Grid.Row="1"
+			Orientation="Horizontal"
+			HorizontalAlignment="Center"
+			Margin="3,6,3,3"
+			>
+			<CheckBox
+				Name="m_cb_filter_coins"
+				Content="Filter Coins"
+				VerticalAlignment="Center"
+				ToolTip="Exclude coins with total balances less than the given value"
+				IsChecked="{Binding Filter.Enabled, Mode=TwoWay}"
+				/>
+			<TextBox
+				IsEnabled="{Binding IsChecked, ElementName=m_cb_filter_coins}"
+				Text="{Binding Filter.Threshold, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+				MinWidth="80"
+				Margin="3"
+				/>
+			<ComboBox
+				ItemsSource="{Binding Filter.Type, Converter={conv:EnumValues}}"
+				SelectedItem="{Binding Filter.Type}"
+				VerticalAlignment="Center"
+				MinWidth="80"
+				Margin="2,0,0,0"
 				/>
 		</StackPanel>
 
 		<!-- Fund Allocation -->
 		<DataGrid
-			Grid.Row="1"
+			Grid.Row="2"
+			Background="Transparent"
 			AutoGenerateColumns="False"
+			GridLinesVisibility="None"
+			HeadersVisibility="Column"
+			ItemsSource="{Binding Coins}"
+			SelectedItem="{Binding Coins/}"
+			x:Name="m_grid"
 			>
-			
+			<DataGrid.Columns>
+				<DataGridTextColumn
+					Header="Coin"
+					Binding="{Binding CoinData.Symbol, Mode=OneWay}"
+					IsReadOnly="True"
+					Width="0.5*"
+					/>
+				<DataGridTextColumn
+					Header="Max Available"
+					Binding="{Binding MaxAvailable, Mode=OneWay}"
+					IsReadOnly="True"
+					Width="1*"
+					>
+					<DataGridTextColumn.ElementStyle>
+						<Style TargetType="TextBlock">
+							<Setter Property="Foreground" Value="{Binding RelativeSource={RelativeSource AncestorType={x:Type DataGridRow}}, Path=Item.MaxAvailable, Converter={local:SignedValueToBrush}}" />
+						</Style>
+					</DataGridTextColumn.ElementStyle>
+				</DataGridTextColumn>
+				<DataGridTextColumn
+					Header="Fund Allocation"
+					Binding="{Binding Allocated, Mode=TwoWay}"
+					Width="1*"
+					/>
+			</DataGrid.Columns>
 		</DataGrid>
 		
 		<!-- Buttons -->
 		<Grid
-			Grid.Row="2"
+			Grid.Row="3"
 			>
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="*"/>
 				<ColumnDefinition Width="Auto"/>
 			</Grid.ColumnDefinitions>
 
+			<TextBlock
+				Grid.Column="0"
+				Text="{Binding Validate.Message}"
+				Foreground="Red"
+				TextWrapping="Wrap"
+				Margin="3"
+				/>
 			<Button
 				Grid.Column="1"
 				Name="m_btn_accept"
+				Content="OK"
 				Command="{Binding Accept}"
-				IsEnabled="{Binding IsValid}"
+				IsEnabled="{Binding Validate, Converter={conv:IsNull}}"
 				IsDefault="True"
-				MinWidth="100"
+				MinWidth="80"
 				Margin="0,12,12,12"
-				>
-				<DockPanel>
-					<Image
-						DockPanel.Dock="Left"
-						Source="{StaticResource check_accept}"
-						MaxWidth="26"
-						Margin="2"
-						/>
-					<TextBlock
-						Text="Done"
-						FontSize="18"
-						VerticalAlignment="Center"
-						Margin="2"
-						/>
-				</DockPanel>
-			</Button>
+				/>
 		</Grid>
 
 	</Grid>

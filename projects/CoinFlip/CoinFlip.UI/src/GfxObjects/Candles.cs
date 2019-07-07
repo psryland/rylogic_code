@@ -62,8 +62,8 @@ namespace CoinFlip.UI.GfxObjects
 			// On miss, generate the graphics model for the data range [idx, idx + min(BatchSize, Count-idx))
 			return m_cache.Get(cache_idx, i =>
 			{
-				var colour_bullish = SettingsData.Settings.Chart.AskColour.ARGB;
-				var colour_bearish = SettingsData.Settings.Chart.BidColour.ARGB;
+				var colour_bullish = SettingsData.Settings.Chart.Q2BColour.ARGB;
+				var colour_bearish = SettingsData.Settings.Chart.B2QColour.ARGB;
 				var db_idx_range = new Range((i + 0) * BatchSize, (i + 1) * BatchSize);
 
 				// Get the series data over the time range specified

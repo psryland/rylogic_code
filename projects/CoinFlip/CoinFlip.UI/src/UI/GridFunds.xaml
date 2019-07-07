@@ -72,7 +72,7 @@
 				SelectedItem="{Binding Exchanges/, Mode=TwoWay}"
 				DisplayMemberPath="Name"
 				VerticalAlignment="Center"
-				MinWidth="60"
+				MinWidth="80"
 				/>
 		</StackPanel>
 
@@ -86,7 +86,7 @@
 				Content="Filter Coins"
 				VerticalAlignment="Center"
 				ToolTip="Exclude coins with total balances less than the given value"
-				IsChecked="{Binding FilterEnabled, Mode=TwoWay}"
+				IsChecked="{Binding Filter.Enabled, Mode=TwoWay}"
 				/>
 			<StackPanel
 				Orientation="Horizontal"
@@ -94,18 +94,17 @@
 				<TextBox
 					MinWidth="40"
 					IsEnabled="{Binding IsChecked, ElementName=m_cb_filter_coins}"
-					Text="{Binding FilterThreshold, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+					Text="{Binding Filter.Threshold, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
 					/>
 				<ComboBox
-					ItemsSource="{Binding FilterType, Converter={conv:EnumValues}}"
-					SelectedItem="{Binding FilterType}"
+					ItemsSource="{Binding Filter.Type, Converter={conv:EnumValues}}"
+					SelectedItem="{Binding Filter.Type}"
 					VerticalAlignment="Center"
 					MinWidth="50"
 					Margin="2,0,0,0"
 					/>
 			</StackPanel>
 		</StackPanel>
-
 	</StackPanel>
 
 	<!-- Grid of Funds -->
@@ -136,11 +135,13 @@
 					/>
 				<MenuItem
 					Header="Remove Fund..."
+					IsEnabled="{Binding HasUserFunds}"
 					Command="{Binding RemoveFund}"
 					/>
 				<Separator/>
 				<MenuItem
 					Header="Manage Fund Allocations"
+					IsEnabled="{Binding HasUserFunds}"
 					Command="{Binding ShowFundAllocationsUI}"
 					/>
 			</ContextMenu>

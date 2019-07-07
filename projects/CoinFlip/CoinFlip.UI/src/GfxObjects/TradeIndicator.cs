@@ -101,8 +101,8 @@ namespace CoinFlip.UI.GfxObjects
 
 			// Colour based on trade direction
 			var col =
-				TradeType == ETradeType.Q2B ? SettingsData.Settings.Chart.AskColour :
-				TradeType == ETradeType.B2Q ? SettingsData.Settings.Chart.BidColour :
+				TradeType == ETradeType.Q2B ? SettingsData.Settings.Chart.B2QColour :
+				TradeType == ETradeType.B2Q ? SettingsData.Settings.Chart.Q2BColour :
 				throw new Exception("Unknown trade type");
 
 			var ldr =

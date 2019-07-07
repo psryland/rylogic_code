@@ -24,6 +24,7 @@ namespace Rylogic.Gui.WPF
 			InitializeComponent();
 			Owner = owner;
 			Icon = Owner?.Icon;
+			ShowWrapCheckbox = true;
 			DataContext = this;
 			m_field.Focus();
 
@@ -136,6 +137,19 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 		private bool m_is_valid;
+
+		/// <summary>Make the "wrap" checkbox vislble</summary>
+		public bool ShowWrapCheckbox
+		{
+			get { return m_show_wrap_checkbox; }
+			set
+			{
+				if (m_show_wrap_checkbox == value) return;
+				m_show_wrap_checkbox = value;
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowWrapCheckbox)));
+			}
+		}
+		private bool m_show_wrap_checkbox;
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler PropertyChanged;

@@ -48,11 +48,32 @@ namespace Bot.Rebalance
 		/// <summary>Bot settings</summary>
 		public SettingsData Settings { get; }
 
+		/// <summary>True if the bot is ok to run</summary>
+		public override bool CanActivate => Settings.Validate(Model) == null;
+
 		/// <summary>Configure</summary>
 		public override Task Configure(object owner)
 		{
 			new ConfigureUI((Window)owner, Model, Settings).Show();
 			return Task.CompletedTask;
+		}
+
+		// Step the bot
+		protected override async Task Step()
+		{
+			// Get the pair we're monitoring
+			var exch = Model.Exchanges[Settings.Exchange];
+			var pair = exch?.Pairs[Settings.Pair];
+			if (pair == null)
+				return;
+
+			// Get the current spot price
+			var spot_price = pair.SpotPrice(ETradeType.Q2B);
+			if (spot_price == null)
+				return;
+
+
+			await Task.CompletedTask;
 		}
 	}
 }

@@ -4,7 +4,8 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d" 
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+	mc:Ignorable="d" 
 	d:DesignWidth="500"
 	d:DesignHeight="450"
 	Title="Configure Rebalance Bot"
@@ -32,16 +33,26 @@
 			Background="{x:Static SystemColors.ControlBrush}"
 			>
 			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="Auto"/>
 				<ColumnDefinition Width="*"/>
 				<ColumnDefinition Width="Auto"/>
 				<ColumnDefinition Width="Auto"/>
 			</Grid.ColumnDefinitions>
 
+			<!-- Validation results -->
+			<TextBlock
+				Text="{Binding Validate.Message, FallbackValue=''}"
+				Visibility="{Binding Validate, Converter={conv:NullToCollapsed}}"
+				Foreground="Red"
+				TextWrapping="Wrap"
+				Margin="6"
+				/>
+
+			<!-- Ok Button -->
 			<Button
-				Grid.Column="1"
+				Grid.Column="2"
 				Content="OK"
 				IsDefault="True"
-				IsEnabled="{Binding IsValid}"
 				MinWidth="80"
 				MinHeight="22"
 				Margin="0,8,12,8"
@@ -212,8 +223,8 @@
 							MinWidth="130"
 							/>
 						<ComboBox
-							ItemsSource="{Binding Funds}"
-							SelectedItem="{Binding Fund}"
+							ItemsSource="{Binding AvailableFunds}"
+							SelectedItem="{Binding AvailableFunds/, Mode=TwoWay}"
 							DisplayMemberPath="Id"
 							MinWidth="80"
 							Margin="3"

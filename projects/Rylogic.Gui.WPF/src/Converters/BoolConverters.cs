@@ -29,6 +29,40 @@ namespace Rylogic.Gui.WPF.Converters
 		}
 	}
 
+	/// <summary>Compare to a constant expression</summary>
+	[ValueConversion(typeof(object), typeof(bool), ParameterType=typeof(string))]
+	public class Compare :MarkupExtension, IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			// Expect parameter to have the form: "<=|>=|<|>|!=|== <constant value>"
+			var expr = (string)parameter;
+			if (expr == null)
+				return Util.ConvertTo<double>(value) != 0;
+			if (expr.StartsWith("=="))
+				return Util.ConvertTo<double>(value) == double.Parse(expr.Substring(2));
+			if (expr.StartsWith("!="))
+				return Util.ConvertTo<double>(value) != double.Parse(expr.Substring(2));
+			if (expr.StartsWith("<="))
+				return Util.ConvertTo<double>(value) <= double.Parse(expr.Substring(2));
+			if (expr.StartsWith(">="))
+				return Util.ConvertTo<double>(value) >= double.Parse(expr.Substring(2));
+			if (expr.StartsWith("<"))
+				return Util.ConvertTo<double>(value) < double.Parse(expr.Substring(1));
+			if (expr.StartsWith(">"))
+				return Util.ConvertTo<double>(value) > double.Parse(expr.Substring(1));
+			throw new Exception("Unknown comparison");
+		}
+		public object ConvertBack(object value, Type target_type, object parameter, CultureInfo culture)
+		{
+			throw new NotSupportedException();
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
+	}
+
 	/// <summary>Compares a value to the parameter, return true if they are equal</summary>
 	[ValueConversion(typeof(object), typeof(bool))]
 	public class IsEqual : MarkupExtension, IValueConverter

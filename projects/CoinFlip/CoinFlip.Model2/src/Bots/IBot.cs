@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Threading;
 using CoinFlip.Settings;
 using Rylogic.Plugin;
+using Rylogic.Utility;
 
 namespace CoinFlip.Bots
 {
@@ -71,34 +74,64 @@ namespace CoinFlip.Bots
 		/// <summary>Activate/Deactivate the bot</summary>
 		public bool Active
 		{
-			get { return m_active; }
+			get { return m_bot_main_timer != null; }
 			set
 			{
-				if (m_active == value) return;
-				if (m_active)
+				if (Active == value) return;
+				if (value && !CanActivate) return;
+				Debug.Assert(Misc.AssertMainThread());
+
+				if (Active)
 				{
+					m_bot_main_timer.Stop();
+					Model.Log.Write(ELogLevel.Info, $"Bot '{Name}' stopped");
 				}
-				m_active = value;
-				if (m_active)
+				m_bot_main_timer = value ? new DispatcherTimer(LoopPeriod, DispatcherPriority.Normal, HandleTick, Dispatcher.CurrentDispatcher) : null;
+				if (Active)
 				{
+					Model.Log.Write(ELogLevel.Info, $"Bot '{Name}' started");
+					m_bot_main_timer.Start();
+					HandleTick();
 				}
 
 				// Record the active state in the settings
 				if (!m_disposing)
 				{
-					var settings = SettingsData.Settings.Bots.First(x => x.Id == Id);
-					settings.Active = value;
+					SettingsData.Settings.Bots.First(x => x.Id == Id).Active = value;
 					SettingsData.Settings.Save();
+				}
+
+				// Handlers
+				async void HandleTick(object sender = null, EventArgs e = null)
+				{
+					try
+					{
+						// Ignore messages after the timer is stopped
+						if (!Active)
+							return;
+
+						await Step();
+					}
+					catch (Exception ex)
+					{
+						if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
+						if (ex is OperationCanceledException) return;
+						else Model.Log.Write(ELogLevel.Error, ex, $"Unhandled error in bot '{Name}' main loop.");
+					}
 				}
 			}
 		}
-		private bool m_active;
+		protected virtual TimeSpan LoopPeriod => TimeSpan.FromMilliseconds(1000);
+		private DispatcherTimer m_bot_main_timer;
 
 		/// <summary>Application shutdown signal</summary>
 		public CancellationToken Shutdown => Model.Shutdown.Token;
 
 		/// <summary>The filepath to use for settings for this bot</summary>
 		public string SettingsFilepath => Misc.ResolveUserPath("Bots", $"settings.{Id}.xml");
+
+		/// <summary>True if the bot is ok to run</summary>
+		public virtual bool CanActivate => false;
 
 		/// <summary>Configure this bot</summary>
 		public virtual Task Configure(object owner)
@@ -107,6 +140,12 @@ namespace CoinFlip.Bots
 			//  - Configure can be called at any point, even when the bot is running.
 			//  - Configure is called in the UI thread, so the bot can display UI. 'owner' is a WPF Window
 
+			return Task.CompletedTask;
+		}
+
+		/// <summary>Step the bot</summary>
+		protected virtual Task Step()
+		{
 			return Task.CompletedTask;
 		}
 

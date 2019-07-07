@@ -29,10 +29,11 @@ namespace CoinFlip.UI
 			Chart = m_chart_control;
 			Model = model;
 
-			GfxAsk = new GfxObjects.SpotPrice(SettingsData.Settings.Chart.AskColour);
-			GfxBid = new GfxObjects.SpotPrice(SettingsData.Settings.Chart.BidColour);
+			GfxB2Q = new GfxObjects.SpotPrice(SettingsData.Settings.Chart.B2QColour);
+			GfxQ2B = new GfxObjects.SpotPrice(SettingsData.Settings.Chart.Q2BColour);
 			GfxUpdatingText = new GfxObjects.UpdatingText();
-			SpotPriceLabel = new TextBlock();
+			B2QPriceLabel = new TextBlock(); // Add first, so green is above red
+			Q2BPriceLabel = new TextBlock();
 			CrossHairCandleLabel = new TextBlock();
 			CrossHairPriceLabel = new TextBlock();
 
@@ -481,51 +482,57 @@ namespace CoinFlip.UI
 
 			// Price Data
 			{
-				// Add the ask and bid lines
+				// Add the spot price lines and labels
 				var pair = Instrument.Pair;
 				var spot_q2b = pair.SpotPrice(ETradeType.Q2B);
 				var spot_b2q = pair.SpotPrice(ETradeType.B2Q);
-				if (GfxAsk != null)
-				{
-					if (spot_q2b != null)
-					{
-						var price = (float)(decimal)spot_q2b.Value;
-						GfxAsk.O2P = m4x4.Scale((float)Chart.XAxis.Span, 1f, 1f, new v4((float)Chart.XAxis.Min, price, ZOrder.CurrentPrice, 1f));
-						window.AddObject(GfxAsk);
-					}
-					else
-					{
-						window.RemoveObject(GfxAsk);
-					}
-				}
-				if (GfxBid != null)
-				{
-					if (spot_b2q != null)
-					{
-						var price = (float)(decimal)spot_b2q.Value;
-						GfxBid.O2P = m4x4.Scale((float)Chart.XAxis.Span, 1f, 1f, new v4((float)Chart.XAxis.Min, price, ZOrder.CurrentPrice, 1f));
-						window.AddObject(GfxBid);
-					}
-					else
-					{
-						window.RemoveObject(GfxBid);
-					}
-				}
-
-				// Price label
 				if (spot_q2b != null)
 				{
-					var pt = Chart.ChartToClient(new Point(Chart.XAxis.Max, (double)(decimal)spot_q2b.Value));
+					var price = (double)(decimal)spot_q2b.Value;
+					var pt = Chart.ChartToClient(new Point(Chart.XAxis.Max, price));
 					pt = Gui_.MapPoint(Chart, Chart.YAxisPanel, pt);
 
-					Canvas.SetLeft(SpotPriceLabel, 0);
-					Canvas.SetTop(SpotPriceLabel, pt.Y - SpotPriceLabel.RenderSize.Height/2);
-					SpotPriceLabel.Text = spot_q2b.Value.ToString(5, false);
-					SpotPriceLabel.Visibility = Visibility.Visible;
+					// Spot price label
+					Canvas.SetLeft(Q2BPriceLabel, 0);
+					Canvas.SetTop(Q2BPriceLabel, pt.Y - Q2BPriceLabel.RenderSize.Height/2);
+					Q2BPriceLabel.Text = spot_q2b.Value.ToString(8, false);
+					Q2BPriceLabel.Visibility = Visibility.Visible;
+
+					if (GfxQ2B != null)
+					{
+						GfxQ2B.O2P = m4x4.Scale((float)Chart.XAxis.Span, 1f, 1f, new v4((float)Chart.XAxis.Min, (float)price, ZOrder.CurrentPrice, 1f));
+						window.AddObject(GfxQ2B);
+					}
 				}
 				else
 				{
-					SpotPriceLabel.Visibility = Visibility.Collapsed;
+					Q2BPriceLabel.Visibility = Visibility.Collapsed;
+					if (GfxQ2B != null)
+						window.RemoveObject(GfxQ2B);
+				}
+				if (spot_b2q != null)
+				{
+					var price = (double)(decimal)spot_b2q.Value;
+					var pt = Chart.ChartToClient(new Point(Chart.XAxis.Max, price));
+					pt = Gui_.MapPoint(Chart, Chart.YAxisPanel, pt);
+
+					// Spot price label
+					Canvas.SetLeft(B2QPriceLabel, 0);
+					Canvas.SetTop(B2QPriceLabel, pt.Y - B2QPriceLabel.RenderSize.Height / 2);
+					B2QPriceLabel.Text = spot_q2b.Value.ToString(8, false);
+					B2QPriceLabel.Visibility = Visibility.Visible;
+
+					if (GfxB2Q != null)
+					{
+						GfxB2Q.O2P = m4x4.Scale((float)Chart.XAxis.Span, 1f, 1f, new v4((float)Chart.XAxis.Min, (float)price, ZOrder.CurrentPrice, 1f));
+						window.AddObject(GfxB2Q);
+					}
+				}
+				else
+				{
+					B2QPriceLabel.Visibility = Visibility.Collapsed;
+					if (GfxB2Q != null)
+						window.RemoveObject(GfxB2Q);
 				}
 			}
 
@@ -641,7 +648,7 @@ namespace CoinFlip.UI
 
 					// Position the price label
 					CrossHairPriceLabel.Visibility = Visibility.Visible;
-					CrossHairPriceLabel.Text = ((decimal)xhair.y).ToString(5);
+					CrossHairPriceLabel.Text = ((decimal)xhair.y).ToString(8);
 					Canvas.SetLeft(CrossHairPriceLabel, 0);
 					Canvas.SetTop(CrossHairPriceLabel, Gui_.MapPoint(Chart, Chart.YAxisPanel, pt).Y - CrossHairPriceLabel.RenderSize.Height / 2);
 				}
@@ -669,31 +676,31 @@ namespace CoinFlip.UI
 		}
 		private GfxObjects.Candles m_gfx_candles;
 
-		/// <summary>Graphics for the asking price line</summary>
-		private GfxObjects.SpotPrice GfxAsk
+		/// <summary>Graphics for the base->quote price line</summary>
+		private GfxObjects.SpotPrice GfxB2Q
 		{
-			get { return m_gfx_ask; }
+			get { return m_gfx_b2q; }
 			set
 			{
-				if (m_gfx_ask == value) return;
-				Util.Dispose(ref m_gfx_ask);
-				m_gfx_ask = value;
+				if (m_gfx_b2q == value) return;
+				Util.Dispose(ref m_gfx_b2q);
+				m_gfx_b2q = value;
 			}
 		}
-		private GfxObjects.SpotPrice m_gfx_ask;
+		private GfxObjects.SpotPrice m_gfx_b2q;
 
-		/// <summary>Graphics for the asking price line</summary>
-		private GfxObjects.SpotPrice GfxBid
+		/// <summary>Graphics for the quote->base price line</summary>
+		private GfxObjects.SpotPrice GfxQ2B
 		{
-			get { return m_gfx_bid; }
+			get { return m_gfx_q2b; }
 			set
 			{
-				if (m_gfx_bid == value) return;
-				Util.Dispose(ref m_gfx_bid);
-				m_gfx_bid = value;
+				if (m_gfx_q2b == value) return;
+				Util.Dispose(ref m_gfx_q2b);
+				m_gfx_q2b = value;
 			}
 		}
-		private GfxObjects.SpotPrice m_gfx_bid;
+		private GfxObjects.SpotPrice m_gfx_q2b;
 
 		/// <summary>A message to indicate the chart is updating</summary>
 		private GfxObjects.UpdatingText GfxUpdatingText
@@ -735,29 +742,54 @@ namespace CoinFlip.UI
 		private GfxObjects.CompletedOrder m_gfx_completed_order;
 
 		/// <summary>A text label for the current spot price</summary>
-		public TextBlock SpotPriceLabel
+		public TextBlock Q2BPriceLabel
 		{
-			get { return m_gfx_spot_price; }
+			get { return m_gfx_q2b_price_label; }
 			private set
 			{
-				if (m_gfx_spot_price == value) return;
-				if (m_gfx_spot_price != null)
+				if (m_gfx_q2b_price_label == value) return;
+				if (m_gfx_q2b_price_label != null)
 				{
-					Chart.YAxisPanel.Children.Remove(m_gfx_spot_price);
+					Chart.YAxisPanel.Children.Remove(m_gfx_q2b_price_label);
 				}
-				m_gfx_spot_price = value;
-				if (m_gfx_spot_price != null)
+				m_gfx_q2b_price_label = value;
+				if (m_gfx_q2b_price_label != null)
 				{
-					m_gfx_spot_price.Name = "m_gfx_spot_price";
-					m_gfx_spot_price.Visibility = Visibility.Collapsed;
-					m_gfx_spot_price.Typeface(Chart.YAxisPanel.Typeface, Chart.YAxisPanel.FontSize);
-					m_gfx_spot_price.Background = new SolidColorBrush(SettingsData.Settings.Chart.AskColour.ToMediaColor());
-					m_gfx_spot_price.Foreground = Brushes.White;
-					Chart.YAxisPanel.Children.Add(m_gfx_spot_price);
+					m_gfx_q2b_price_label.Name = "m_gfx_q2b_price_label";
+					m_gfx_q2b_price_label.Visibility = Visibility.Collapsed;
+					m_gfx_q2b_price_label.Typeface(Chart.YAxisPanel.Typeface, Chart.YAxisPanel.FontSize);
+					m_gfx_q2b_price_label.Background = new SolidColorBrush(SettingsData.Settings.Chart.Q2BColour.ToMediaColor());
+					m_gfx_q2b_price_label.Foreground = Brushes.White;
+					Chart.YAxisPanel.Children.Add(m_gfx_q2b_price_label);
 				}
 			}
 		}
-		private TextBlock m_gfx_spot_price;
+		private TextBlock m_gfx_q2b_price_label;
+
+		/// <summary>A text label for the current spot price</summary>
+		public TextBlock B2QPriceLabel
+		{
+			get { return m_gfx_b2q_price_label; }
+			private set
+			{
+				if (m_gfx_b2q_price_label == value) return;
+				if (m_gfx_b2q_price_label != null)
+				{
+					Chart.YAxisPanel.Children.Remove(m_gfx_b2q_price_label);
+				}
+				m_gfx_b2q_price_label = value;
+				if (m_gfx_b2q_price_label != null)
+				{
+					m_gfx_b2q_price_label.Name = "m_gfx_b2q_price_label";
+					m_gfx_b2q_price_label.Visibility = Visibility.Collapsed;
+					m_gfx_b2q_price_label.Typeface(Chart.YAxisPanel.Typeface, Chart.YAxisPanel.FontSize);
+					m_gfx_b2q_price_label.Background = new SolidColorBrush(SettingsData.Settings.Chart.B2QColour.ToMediaColor());
+					m_gfx_b2q_price_label.Foreground = Brushes.White;
+					Chart.YAxisPanel.Children.Add(m_gfx_b2q_price_label);
+				}
+			}
+		}
+		private TextBlock m_gfx_b2q_price_label;
 
 		/// <summary>A text label for the cross hair candle/time</summary>
 		public TextBlock CrossHairCandleLabel
@@ -975,13 +1007,13 @@ namespace CoinFlip.UI
 				var buy = cmenu.Items.Add2(new MenuItem
 				{
 					Header = "base",
-					Foreground = new SolidColorBrush(SettingsData.Settings.Chart.AskColour.ToMediaColor()),
+					Foreground = new SolidColorBrush(SettingsData.Settings.Chart.B2QColour.ToMediaColor()),
 					Command = EditTrade,
 				});
 				var sel = cmenu.Items.Add2(new MenuItem
 				{
 					Header = "quote",
-					Foreground = new SolidColorBrush(SettingsData.Settings.Chart.BidColour.ToMediaColor()),
+					Foreground = new SolidColorBrush(SettingsData.Settings.Chart.Q2BColour.ToMediaColor()),
 					Command = EditTrade,
 				});
 				cmenu.Opened += (s, a) =>

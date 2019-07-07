@@ -164,7 +164,7 @@ namespace CoinFlip
 					var coin = Coins.GetOrAdd(b.Key);
 
 					// Update the balance
-					Balance[coin] = new Balances(coin, (b.Value.HeldForTrades + b.Value.Available)._(coin), b.Value.HeldForTrades._(coin), timestamp);
+					Balance.AssignFundBalance(coin, Fund.Main, (b.Value.HeldForTrades + b.Value.Available)._(coin), b.Value.HeldForTrades._(coin), timestamp);
 				}
 
 				// Notify updated

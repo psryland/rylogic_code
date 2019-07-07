@@ -72,20 +72,23 @@ namespace CoinFlip.Settings
 		[DebuggerDisplay("{Symbol} {Total}")]
 		public class BalData
 		{
-			public BalData(string sym, decimal total)
+			public BalData(string sym, decimal total, decimal held)
 			{
 				Symbol = sym;
 				Total = total;
+				Held = held;
 			}
 			public BalData(XElement node)
 			{
 				Symbol = node.Element(nameof(Symbol)).OrDefault(Symbol);
 				Total = node.Element(nameof(Total)).OrDefault(Total);
+				Held = node.Element(nameof(Held)).OrDefault(Held);
 			}
 			public XElement ToXml(XElement node)
 			{
 				node.Add2(nameof(Symbol), Symbol, false);
 				node.Add2(nameof(Total), Total, false);
+				node.Add2(nameof(Held), Held, false);
 				return node;
 			}
 
@@ -94,6 +97,9 @@ namespace CoinFlip.Settings
 
 			/// <summary>The total amount of 'Symbol' from this exchange in this fund</summary>
 			public decimal Total { get; set; }
+
+			/// <summary>The amount held for pending trades</summary>
+			public decimal Held { get; set; }
 		}
 
 		private class TyConv : GenericTypeConverter<FundData> { }

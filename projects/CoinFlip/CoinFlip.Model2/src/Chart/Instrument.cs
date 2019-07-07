@@ -361,10 +361,11 @@ namespace CoinFlip
 			Debug.Assert(Misc.AssertMainThread());
 
 			// Shouldn't be requesting indices outside the range of available data
-			Debug.Assert(idx.Within(0, DBCandleCount));
+			// Accept '-1' however because often (Count - 1) is used when Count can be 0.
+			Debug.Assert(idx.Within(-1, DBCandleCount));
 
 			// Already cached?
-			if (CachedIndexRange.Contains(idx))
+			if (idx == -1 || CachedIndexRange.Contains(idx))
 				return;
 
 			// Read from the database of historic price data

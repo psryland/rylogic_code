@@ -55,6 +55,7 @@
     <Compile Include="src\Balance\Fund.cs" />
     <Compile Include="src\Balance\FundBalance.cs" />
     <Compile Include="src\Balance\FundHold.cs" />
+    <Compile Include="src\Balance\IBalance.cs" />
     <Compile Include="src\Balance\Transfer.cs" />
     <Compile Include="src\Balance\Transfers.cs" />
     <Compile Include="src\Bots\IBot.cs" />
@@ -78,6 +79,7 @@
     <Compile Include="src\Chart\TimeFrame.cs" />
     <Compile Include="src\Misc\EXAxisLabelMode.cs" />
     <Compile Include="src\Misc\ExchPairTimeFrame.cs" />
+    <Compile Include="src\Misc\IValueTotalAvail.cs" />
     <Compile Include="src\Model\BotContainer.cs" />
     <Compile Include="src\Model\CoinDataList.cs" />
     <Compile Include="src\Coin\Coin.cs" />

@@ -22,7 +22,7 @@
 		HeadersVisibility="Column"
 		IsReadOnly="True"
 		ItemsSource="{Binding Bots}"
-		SelectedItem="{Binding Bots/, Mode=TwoWay}"
+		SelectedItem="{Binding Current, Mode=TwoWay}"
 		x:Name="m_grid"
 		>
 		<DataGrid.Columns>
@@ -55,22 +55,23 @@
 					Command="{Binding AddExistingBot}"
 					/>
 				<MenuItem
-					Header="{Binding Bots/Name}"
+					Header="{Binding Current.Name, FallbackValue='Bot'}"
 					HeaderStringFormat="Remove {0}"
-					IsEnabled="{Binding Bots/, Converter={conv:NotNull}}"
+					IsEnabled="{Binding Current, Converter={conv:NotNull}}"
 					Command="{Binding RemoveBot}"
 					/>
 				<Separator/>
 				<MenuItem
 					Header="Active"
-					IsEnabled="{Binding Bots/, Converter={conv:NotNull}}"
-					IsChecked="{Binding Bots/Active}"
+					IsChecked="{Binding Current.Active, FallbackValue=False}"
+					IsEnabled="{Binding Current.CanActivate, FallbackValue=False}"
 					Command="{Binding ToggleActive}"
 					/>
 				<Separator/>
 				<MenuItem
-					Header="Configure"
-					IsEnabled="{Binding Bots/, Converter={conv:NotNull}}"
+					Header="{Binding Current.Name, FallbackValue='Bot'}"
+					HeaderStringFormat="Configure {0}"
+					IsEnabled="{Binding Current, Converter={conv:NotNull}}"
 					Command="{Binding ShowConfig}"
 					/>
 			</ContextMenu>

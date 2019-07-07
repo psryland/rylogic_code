@@ -1,5 +1,8 @@
-﻿using CoinFlip;
+﻿using System;
+using System.Windows.Controls;
+using CoinFlip;
 using Rylogic.Common;
+using Rylogic.Extn;
 
 namespace Bot.Rebalance
 {
@@ -8,6 +11,8 @@ namespace Bot.Rebalance
 		public SettingsData()
 		{
 			FundId = Fund.Main;
+			Exchange = string.Empty;
+			Pair = string.Empty;
 			AllInPrice = 0m;
 			AllOutPrice = 100_000m;
 			BaseCurrencyBalance = 0m;
@@ -26,6 +31,20 @@ namespace Bot.Rebalance
 		{
 			get { return get<string>(nameof(FundId)); }
 			set { set(nameof(FundId), value); }
+		}
+
+		/// <summary>The exchange that hosts the pair</summary>
+		public string Exchange
+		{
+			get { return get<string>(nameof(Exchange)); }
+			set { set(nameof(Exchange), value); }
+		}
+
+		/// <summary>The name of the pair to trade</summary>
+		public string Pair
+		{
+			get { return get<string>(nameof(Pair)); }
+			set { set(nameof(Pair), value); }
 		}
 
 		/// <summary>The price at which the balance is maximally in the base currency</summary>
@@ -54,6 +73,24 @@ namespace Bot.Rebalance
 		{
 			get { return get<decimal>(nameof(QuoteCurrencyBalance)); }
 			set { set(nameof(QuoteCurrencyBalance), value); }
+		}
+
+		/// <summary>Performs validation on the settings. Returns null if valid</summary>
+		public Exception Validate(Model model)
+		{
+			if (!Exchange.HasValue())
+				return new Exception("No exchange configured");
+			if (model.Exchanges[Exchange] == null)
+				return new Exception("The configured exchange is not available");
+			if (!Pair.HasValue())
+				return new Exception("No pair configured");
+			if (model.Exchanges[Exchange].Pairs[Pair] == null)
+				return new Exception("The configured paid is not available");
+			if (AllInPrice >= AllOutPrice)
+				return new Exception("Price range is invalid");
+			if (model.Funds[FundId] == null)
+				return new Exception("Fund is invalid");
+			return null;
 		}
 	}
 }

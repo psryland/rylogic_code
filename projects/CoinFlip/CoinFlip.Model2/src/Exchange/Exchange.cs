@@ -737,35 +737,34 @@ namespace CoinFlip
 			yield break;
 		}
 
-		/// <summary>Get the amount of fake cash for the given symbol assigned to this exchange</summary>
-		public Unit<decimal> FakeCash(string sym)
-		{
-			// Look for the coin on this exchange. If not supported, ignore.
-			var coin = Coins[sym];
-			if (coin == null)
-				return 0m._(sym);
+		///// <summary>Get/Set the amount of fake cash for the given symbol assigned to this exchange</summary>
+		//public Unit<decimal> FakeCash(string sym)
+		//{
+		//	// Look for the coin on this exchange. If not supported, ignore.
+		//	var coin = Coins[sym];
+		//	if (coin == null)
+		//		return 0m._(sym);
 
-			// Get the balance of this coin
-			var balances = Balance[coin];
-			return balances.Funds.Values.Sum(x => x.FakeCash)._(coin);
-		}
+		//	// Get the balance of this coin
+		//	var balances = Balance[coin];
+		//	return balances.FakeCash;
+		//}
+		//public void FakeCash(string sym, decimal amount)
+		//{
+		//	// Look for the coin on this exchange. If not supported, ignore.
+		//	var coin = Coins[sym];
+		//	if (coin == null)
+		//		return;
 
-		/// <summary>Set the amount of fake cash for a coin on this exchange</summary>
-		public void FakeCash(string sym, decimal amount)
-		{
-			// Look for the coin on this exchange. If not supported, ignore.
-			var coin = Coins[sym];
-			if (coin == null)
-				return;
+		//	// Get the balance of this coin
+		//	var balances = Balance[coin];
+		//	balances.FakeCash = amount._(coin);
 
-			// Get the balance of this coin
-			var balances = Balance[coin];
-
-			// Distribute the fake cash evenly over each fund
-			var fund_count = (decimal)balances.Funds.Count;
-			foreach (var fund in balances.Funds.Values)
-				fund.FakeCash = (amount / fund_count)._(coin);
-		}
+		//	//// Distribute the fake cash evenly over each fund
+		//	//var fund_count = (decimal)balances.Funds.Count;
+		//	//foreach (var fund in balances.Funds.Values)
+		//	//	fund.FakeCash = (amount / fund_count)._(coin);
+		//}
 
 		/// <summary>Handle an exception during an update call</summary>
 		public void HandleException(string method_name, Exception ex, string msg = null)

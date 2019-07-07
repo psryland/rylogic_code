@@ -16,22 +16,21 @@ using Rylogic.Utility;
 
 namespace CoinFlip.UI
 {
-	public partial class GridFunds : Grid, IDockable, IDisposable, INotifyPropertyChanged
+	public partial class GridFunds : Grid, IDockable, IDisposable
 	{
-		static GridFunds()
-		{
-			FilterThresholdProperty = Gui_.DPRegister<GridFunds>(nameof(FilterThreshold));
-			FilterTypeProperty = Gui_.DPRegister<GridFunds>(nameof(FilterType));
-		}
 		public GridFunds(Model model)
 		{
 			InitializeComponent();
+			m_grid.MouseRightButtonUp += DataGrid_.ColumnVisibility;
 			DockControl = new DockControl(this, "Funds");
-			Exchanges = new ListCollectionView(new List<Exchange>());
-			Coins = new ListCollectionView(model.Coins);
+			Filter = new CoinFilter(x => (CoinDataAdapter)x);
+			Exchanges = new ListCollectionView(model.Exchanges) { Filter = x => !(x is CrossExchange) };
+			Coins = new ListCollectionView(ListAdapter.Create(model.Coins, x => new CoinDataAdapter(this, x), x => x.CoinData)) { Filter = Filter.Predicate };
+			Funds = new ListCollectionView(model.Funds);
 			Model = model;
 
 			Exchanges.CurrentChanged += delegate { Coins.Refresh(); };
+			Filter.PropertyChanged += delegate { Coins.Refresh(); };
 
 			// Commands
 			CreateNewFund = Command.Create(this, CreateNewFundInternal);
@@ -66,6 +65,7 @@ namespace CoinFlip.UI
 					m_model.Funds.CollectionChanged += HandleFundsChanged;
 					m_model.Coins.CollectionChanged += HandleCoinsChanged;
 					m_model.Exchanges.CollectionChanged += HandleExchangesChanged;
+					Exchanges.MoveCurrentToFirst();
 				}
 
 				// Handle funds being created or destroyed
@@ -79,11 +79,6 @@ namespace CoinFlip.UI
 				}
 				void HandleExchangesChanged(object sender, NotifyCollectionChangedEventArgs e)
 				{
-					var list = (List<Exchange>)Exchanges.SourceCollection;
-					using (Scope.Create(() => Exchanges.CurrentItem, ci => Exchanges.MoveCurrentTo(ci)))
-						list.Assign(Model.TradingExchanges);
-
-					Exchanges.Refresh();
 					Coins.Refresh();
 				}
 			}
@@ -109,76 +104,14 @@ namespace CoinFlip.UI
 		/// <summary>The data source for coin data</summary>
 		public ICollectionView Coins { get; }
 
-		/// <summary>True if coins should be filtered</summary>
-		public bool FilterEnabled
-		{
-			get { return m_filter_enabled; }
-			set
-			{
-				if (m_filter_enabled == value) return;
-				m_filter_enabled = value;
-				Coins.Filter = value ? CoinThresholdFilter : (Predicate<object>)null;
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FilterEnabled)));
+		/// <summary>The available funds</summary>
+		public ICollectionView Funds { get; }
 
-				/// <summary>Filter for the 'Coins' collection view</summary>
-				bool CoinThresholdFilter(object obj)
-				{
-					var coin_data = (CoinData)obj;
-					var exch = (Exchange)Exchanges.CurrentItem;
-					if (exch == null)
-						return false;
+		/// <summary>Filter on 'Coins'</summary>
+		public CoinFilter Filter { get; }
 
-					var coin = exch.Coins[coin_data.Symbol];
-					if (coin == null)
-						return false;
-
-					switch (FilterType)
-					{
-					default: throw new Exception("Unknown Filter Type");
-					case ECoinFilterType.Value:
-						{
-							var live_price = coin.LivePriceAvailable ? (decimal)coin.ValueOf(1m) : 0m;
-							return live_price > FilterThreshold;
-						}
-					case ECoinFilterType.Available:
-						{
-							var avail_sum = Model.Funds.Sum(x => (decimal)x[coin].Available);
-							return avail_sum > FilterThreshold;
-						}
-					case ECoinFilterType.Total:
-						{
-							var total_sum = Model.Funds.Sum(x => (decimal)x[coin].Total);
-							return total_sum > FilterThreshold;
-						}
-					case ECoinFilterType.Balance:
-						{
-							var total_sum = Model.Funds.Sum(x => (decimal)x[coin].Total);
-							var live_price = coin.LivePriceAvailable ? (decimal)coin.ValueOf(1m) : 0m;
-							return total_sum * live_price > FilterThreshold;
-						}
-					}
-				}
-			}
-		}
-		private bool m_filter_enabled;
-
-		/// <summary>Filter balances with a value or amount less than this threshold</summary>
-		public decimal FilterThreshold
-		{
-			get { return (decimal)GetValue(FilterThresholdProperty); }
-			set { SetValue(FilterThresholdProperty, value); }
-		}
-		private void FilterThreshold_Changed() => Coins.Refresh();
-		public static readonly DependencyProperty FilterThresholdProperty;
-
-		/// <summary>What to filter on</summary>
-		public ECoinFilterType FilterType
-		{
-			get { return (ECoinFilterType)GetValue(FilterTypeProperty); }
-			set { SetValue(FilterTypeProperty, value); }
-		}
-		private void FilterType_Changed() => Coins.Refresh();
-		public static readonly DependencyProperty FilterTypeProperty;
+		/// <summary>True if there are funds other than the Main fund</summary>
+		public bool HasUserFunds => Funds.Cast<Fund>().Any(x => x.Id != Fund.Main);
 
 		/// <summary>Reset the grid columns to contain a column per fund</summary>
 		private void CreateFundColumns()
@@ -188,7 +121,7 @@ namespace CoinFlip.UI
 				m_grid.Columns.RemoveAt(1);
 
 			// Create a column for each fund
-			var conv = new CoinDataToFundBalanceConverter(Exchanges);
+			var conv = new CoinDataAdapterToIBalanceConverter();
 			var templ = (DataTemplate)FindResource("FundBalanceDataTemplate");
 			foreach (var fund in Model.Funds)
 			{
@@ -215,6 +148,7 @@ namespace CoinFlip.UI
 			{
 				Title = "Fund Name",
 				Prompt = "Choose a name for the Fund",
+				ShowWrapCheckbox = false,
 				Validate = x =>
 					!x.HasValue() ? new ValidationResult(false, "No value") :
 					Model.Funds[x] != null ? new ValidationResult(false, "Fund name already exists") :
@@ -223,6 +157,7 @@ namespace CoinFlip.UI
 			if (dlg.ShowDialog() == true)
 			{
 				Model.Funds[dlg.Value] = new Fund(dlg.Value);
+				Model.SaveFundBalances();
 			}
 		}
 
@@ -235,6 +170,7 @@ namespace CoinFlip.UI
 				Title = "Remove Fund",
 				Prompt = "Select the Funds to remove",
 				SelectionMode = SelectionMode.Extended,
+				DisplayMember = nameof(Fund.Id),
 				AllowCancel = true,
 			};
 			dlg.Items.AddRange(Model.Funds.Where(x => x.Id != Fund.Main));
@@ -249,64 +185,57 @@ namespace CoinFlip.UI
 		public Command ShowFundAllocationsUI { get; }
 		private void ShowFundAllocationsUIInternal()
 		{
-			var dlg = new FundAllocationsUI(Window.GetWindow(this), Model)
-			{
-			};
-			dlg.ShowDialog();
+			var dlg = new FundAllocationsUI(Window.GetWindow(this), Model);
+			dlg.Exchanges.MoveCurrentTo(Exchanges.CurrentItem);
+			dlg.Show();
 		}
 
-		/// <summary></summary>
-		public event PropertyChangedEventHandler PropertyChanged;
-
-		/// <summary>Converter for displaying a coin balance per exchange, per fund</summary>
-		private class CoinDataToFundBalanceConverter : IValueConverter
+		/// <summary>Wraps 'CoinData' to expose properties for binding</summary>
+		private class CoinDataAdapter :IValueTotalAvail
 		{
-			private readonly ICollectionView m_exchanges;
-			public CoinDataToFundBalanceConverter(ICollectionView exchanges)
+			private readonly GridFunds m_me;
+			public CoinDataAdapter(GridFunds me, CoinData cd)
 			{
-				m_exchanges = exchanges;
+				m_me = me;
+				CoinData = cd;
 			}
+
+			/// <summary>The wrapped coin data</summary>
+			public CoinData CoinData { get; }
+
+			/// <summary>The name of the coin</summary>
+			public string Symbol => CoinData.Symbol;
+
+			/// <summary>The currently selected exchange</summary>
+			private Exchange Exchange => (Exchange)m_me.Exchanges.CurrentItem;
+
+			/// <summary>The coin on the currently selected exchange (can be null if there is no selected Exchange)</summary>
+			public Coin Coin => Exchange?.Coins[Symbol];
+
+			/// <summary>Value of the coin (probably in USD)</summary>
+			public decimal Value => Coin?.ValueOf(1m) ?? 0m;
+
+			/// <summary>The total amount of the coin (in coin currency)</summary>
+			public Unit<decimal> Total => Coin?.Balances.NettTotal ?? 0m._(Symbol);
+
+			/// <summary>The available amount of the coin (in coin currency)</summary>
+			public Unit<decimal> Available => Coin?.Balances.NettAvailable ?? 0m._(Symbol);
+		}
+
+		/// <summary>Converter for converting 'CoinDataAdapter' to an 'IBalance', per exchange, per fund</summary>
+		private class CoinDataAdapterToIBalanceConverter : IValueConverter
+		{
 			public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 			{
-				var coin_data = (CoinData)value;
-				var fund = (Fund)parameter;
-
-				// Get the currently selected exchange
-				var exch = (Exchange)m_exchanges.CurrentItem;
-				if (exch == null)
-					return null;
-
-				// Find the coin on the exchange
-				var coin = exch.Coins[coin_data.Symbol];
-				if (coin == null)
-					return null;
-
 				// Get the balance associated with this coin on this exchange in this fund
-				var bal = fund[coin];
-				return bal;
+				var item = (CoinDataAdapter)value;
+				var fund = (Fund)parameter;
+				var coin = item.Coin;
+				return coin != null ? fund[coin] : null;
 			}
 			public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 			{
 				throw new NotImplementedException();
-			}
-		}
-
-		/// <summary>Extend DataGridTemplateColumn to alloow binding</summary>
-		private class DataGridBoundTemplateColumn : DataGridTemplateColumn
-		{
-			public Binding Binding { get; set; }
-
-			protected override FrameworkElement GenerateEditingElement(DataGridCell cell, object dataItem)
-			{
-				var element = base.GenerateEditingElement(cell, dataItem);
-				element.SetBinding(ContentPresenter.ContentProperty, Binding);
-				return element;
-			}
-			protected override FrameworkElement GenerateElement(DataGridCell cell, object dataItem)
-			{
-				var element = base.GenerateElement(cell, dataItem);
-				element.SetBinding(ContentPresenter.ContentProperty, Binding);
-				return element;
 			}
 		}
 	}

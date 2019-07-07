@@ -28,8 +28,7 @@ namespace CoinFlip.UI
 			SetApiKeys = Command.Create(this, SetApiKeysInternal);
 			RefreshTradePairs = Command.Create(this, RefreshTradePairsInternal);
 
-			ContextMenuOpening += delegate { ContextMenu.Items.TidySeparators(); };
-
+			ContextMenu.Opened += delegate { ContextMenu.Items.TidySeparators(); };
 			DataContext = this;
 		}
 		public void Dispose()

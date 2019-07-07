@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {
@@ -23,13 +24,6 @@ namespace CoinFlip
 			: base(rhs)
 		{ }
 
-		/// <summary>Get or add a coin type that there is a balance for on the exchange</summary>
-		public Balances GetOrAdd(Coin coin)
-		{
-			Debug.Assert(Misc.AssertMarketDataWrite());
-			return this.GetOrAdd(coin, x => new Balances(x, DateTimeOffset.MinValue));
-		}
-
 		/// <summary>Get/Set the balance for the given coin. Returns zero balance for unknown coins</summary>
 		public override Balances this[Coin coin]
 		{
@@ -39,32 +33,38 @@ namespace CoinFlip
 				if (coin.Exchange != Exch && !(Exch is CrossExchange)) throw new Exception("Currency not associated with this exchange");
 				return TryGetValue(coin, out var bal) ? bal : new Balances(coin, Model.UtcNow);
 			}
-			set
-			{
-				Debug.Assert(Misc.AssertMarketDataWrite());
-				Debug.Assert(value != null && value.AssertValid());
+		}
 
-				if (coin.Exchange != Exch && !(Exch is CrossExchange))
-					throw new Exception("Currency not associated with this exchange");
+		/// <summary>Get or add a coin type that there is a balance for on the exchange</summary>
+		public Balances GetOrAdd(Coin coin)
+		{
+			Debug.Assert(Misc.AssertMarketDataWrite());
+			return this.GetOrAdd(coin, x => new Balances(x, DateTimeOffset.MinValue));
+		}
 
-				// Ignore out-of-date data
-				if (TryGetValue(coin, out var balances) && balances.LastUpdated > value.LastUpdated)
-					return;
+		/// <summary>Update the balance of the fund 'fund_id'</summary>
+		public void AssignFundBalance(Coin coin, string fund_id, Unit<decimal> total, Unit<decimal> held_on_exch, DateTimeOffset update_time)
+		{
+			Debug.Assert(Misc.AssertMarketDataWrite());
 
-				// Add the balances for 'coin'
-				if (balances != null)
-				{
-					balances.Update(value);
-					ResetItem(balances);
-				}
-				else
-				{
-					base[coin] = value;
-				}
+			// Check the assigned balance info is for this exchange
+			if (coin.Exchange != Exch && !(Exch is CrossExchange))
+				throw new Exception("Currency not associated with this exchange");
 
-				// Broadcast that the balance of this coin has changed
-				coin.Meta.NotifyBalanceChanged();
-			}
+			// Get the balances associated with this coin
+			var balances = GetOrAdd(coin);
+
+			// Ignore out-of-date data
+			if (balances[fund_id].LastUpdated > update_time)
+				return;
+
+			// Assign the new fund balance
+			balances.AssignFundBalance(fund_id, total, held_on_exch, update_time);
+			//Debug.Assert(balances.Validate() == null);
+
+			// Broadcast that the balance of this coin has changed
+			coin.Meta.NotifyBalanceChanged();
+			ResetItem(balances); // Invalidate binding
 		}
 
 		/// <summary>Get the balance by coin symbol name</summary>

@@ -259,6 +259,10 @@ namespace Rylogic.Utility
 		{
 			get { return UnitId == Unit_.NoUnitsId && Equals(Value, default(T)); }
 		}
+
+		/// <summary>Check units</summary>
+		public bool IsUnit(int unit_id) => UnitId == unit_id;
+		public bool IsUnit(string unit) => IsUnit(Unit_.UnitId(unit));
 	}
 
 	/// <summary>Utility methods for 'Unit<T>'</summary>

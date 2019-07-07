@@ -37,6 +37,7 @@
 				Content="Wrap"
 				Margin="8,8,4,8"
 				IsChecked="{Binding Wrap, Mode=TwoWay}"
+				Visibility="{Binding ShowWrapCheckbox, Converter={conv:BoolToVisible}}"
 				/>
 			<Button
 				Grid.Column="2"

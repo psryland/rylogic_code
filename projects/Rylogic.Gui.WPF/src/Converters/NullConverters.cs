@@ -24,6 +24,23 @@ namespace Rylogic.Gui.WPF.Converters
 		}
 	}
 
+	/// <summary>Returns true if 'value' is null</summary>
+	public class IsNull :MarkupExtension, IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			return value == null;
+		}
+		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			throw new NotImplementedException($"MarkupExtension '{nameof(IsNull)}' cannot convert any types back to '{targetType.Name}'");
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
+	}
+
 	/// <summary>Returns true if 'value' is not null</summary>
 	public class NotNull : MarkupExtension, IValueConverter
 	{

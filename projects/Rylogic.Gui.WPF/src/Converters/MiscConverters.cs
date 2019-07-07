@@ -46,13 +46,16 @@ namespace Rylogic.Gui.WPF.Converters
 		}
 	}
 
-	/// <summary>Display a Unit'T value as a string with units</summary>
+	/// <summary>Display a Unit'T value as a string with units. 'parameter' is the format string</summary>
 	public class WithUnits : MarkupExtension, IValueConverter
 	{
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (value == null)
 				return null;
+
+			// The parameter is the format string
+			var fmt = (string)parameter ?? string.Empty;
 
 			// If 'value' is not an instance of 'Unit<>' just convert to string
 			var ty = value.GetType();
@@ -64,11 +67,42 @@ namespace Rylogic.Gui.WPF.Converters
 			if (to_string == null)
 				return value.ToString();
 
+			// Convert to string with units
+			return (string)to_string.Invoke(value, new object[] { fmt, true });
+		}
+		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			throw new NotImplementedException($"MarkupExtension '{nameof(WithUnits)}' cannot convert any types back to '{targetType.Name}'");
+		}
+		public override object ProvideValue(IServiceProvider serviceProvider)
+		{
+			return this;
+		}
+	}
+
+	/// <summary>Display a Unit'T value as a string without units. 'parameter' is the format string</summary>
+	public class WithoutUnits :MarkupExtension, IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+		{
+			if (value == null)
+				return null;
+
 			// The parameter is the format string
 			var fmt = (string)parameter ?? string.Empty;
 
+			// If 'value' is not an instance of 'Unit<>' just convert to string
+			var ty = value.GetType();
+			if (!ty.IsGenericType || ty.GetGenericTypeDefinition() != typeof(Unit<>))
+				return value.ToString();
+
+			// Find the method 'ToString(string fmt, bool include_units)'
+			var to_string = ty.GetMethod(nameof(ToString), new[] { typeof(string), typeof(bool) });
+			if (to_string == null)
+				return value.ToString();
+
 			// Convert to string with units
-			return (string)to_string.Invoke(value, new object[] { fmt, true });
+			return (string)to_string.Invoke(value, new object[] { fmt, false });
 		}
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{

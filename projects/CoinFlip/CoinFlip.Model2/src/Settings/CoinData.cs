@@ -19,7 +19,7 @@ namespace CoinFlip.Settings
 		{
 			Symbol = symbol;
 			SD = 8;
-			AssignedValue = 1m;
+			AssignedValue = 0m;
 			OfInterest = false;
 			AutoTradingLimit = 1m;
 			LivePriceSymbols = "USDT";
