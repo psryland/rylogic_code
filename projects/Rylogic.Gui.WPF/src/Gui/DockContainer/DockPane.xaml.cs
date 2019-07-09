@@ -106,7 +106,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 		/// <summary>Get the dock sites, from top to bottom, describing where this pane is located in the tree </summary>
 		public EDockSite[] DockAddress
 		{
-			get { return ParentBranch?.DockAddress.Concat(DockSite).ToArray() ?? new[] { DockSite }; }
+			get { return ParentBranch?.DockAddress.Append(DockSite).ToArray() ?? new[] { DockSite }; }
 		}
 
 		/// <summary>The content hosted by this pane</summary>

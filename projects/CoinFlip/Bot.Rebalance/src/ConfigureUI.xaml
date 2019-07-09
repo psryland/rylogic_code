@@ -14,9 +14,9 @@
 	SizeToContent="Height"
 	ShowInTaskbar="True"
 	MinWidth="330"
-	MinHeight="343"
+	MinHeight="320"
 	Width="330"
-	Height="343"
+	Height="320"
 	>
 	<Window.Resources>
 		<ResourceDictionary>
@@ -24,27 +24,268 @@
 		</ResourceDictionary>
 	</Window.Resources>
 	
-	<DockPanel
-		Margin="3">
+	<Grid
+		Margin="3"
+		>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
+
+		<!-- Instrument selector -->
+		<GroupBox
+			Grid.Row="0"
+			Header="Trading Pair:"
+			>
+			<DockPanel
+				Margin="6,6,6,3"
+				>
+
+				<!-- Exchange -->
+				<TextBlock
+					Text="Exchange:"
+					VerticalAlignment="Center"
+					Margin="2"
+					/>
+				<ComboBox
+					ItemsSource="{Binding ChartSelector.Exchanges}"
+					SelectedItem="{Binding ChartSelector.Exchange, Mode=TwoWay}"
+					ToolTip="Select the exchange that lists the pair"
+					VerticalAlignment="Center"
+					MinWidth="80"
+					Margin="2"
+					/>
+
+				<!-- Pair -->
+				<TextBlock
+					Text="Pair:"
+					VerticalAlignment="Center"
+					Margin="2"
+					/>
+				<ComboBox
+					ItemsSource="{Binding ChartSelector.Pairs}"
+					SelectedItem="{Binding ChartSelector.Pair, Mode=TwoWay}"
+					ToolTip="Select the currency pair"
+					VerticalAlignment="Center"
+					MinWidth="80"
+					Margin="2"
+					/>
+
+				<!-- Spacer -->
+				<StackPanel/>
+			</DockPanel>
+		</GroupBox>
+
+		<!-- Price Range -->
+		<GroupBox
+			Grid.Row="1"
+			Header="Price Range:"
+			>
+			<Grid
+				Margin="20,6,6,3"
+				>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+				</Grid.RowDefinitions>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto"/>
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition Width="Auto"/>
+				</Grid.ColumnDefinitions>
+
+				<!-- All Out Price -->
+				<StackPanel
+					Grid.Row="0"
+					Grid.Column="0"
+					Orientation="Horizontal"
+					>
+					<TextBlock
+						Text="'All-Out' Price:"
+						VerticalAlignment="Center"
+						MinWidth="80"
+						/>
+					<TextBox
+						Text="{Binding Settings.AllOutPrice}"
+						ToolTip="The price at which the balance is maximally in the quote currency"
+						VerticalAlignment="Center"
+						MinWidth="80"
+						Margin="3"
+						/>
+					<TextBlock
+						Text="{Binding ChartSelector.Pair.Quote.Symbol}"
+						VerticalAlignment="Center"
+						/>
+				</StackPanel>
+
+				<!-- All In Price -->
+				<StackPanel
+					Grid.Row="1"
+					Grid.Column="0"
+					Orientation="Horizontal"
+					>
+					<TextBlock
+						Text="'All-In' Price:"
+						VerticalAlignment="Center"
+						MinWidth="80"
+						/>
+					<TextBox
+						Text="{Binding Settings.AllInPrice}"
+						ToolTip="The price at which the balance is maximally in the base currency"
+						VerticalAlignment="Center"
+						MinWidth="80"
+						Margin="3"
+						/>
+					<TextBlock
+						Text="{Binding ChartSelector.Pair.Quote.Symbol}"
+						VerticalAlignment="Center"
+						/>
+				</StackPanel>
+
+				<!-- Show On Chart -->
+				<Button
+					Grid.Row="0"
+					Grid.RowSpan="2"
+					Grid.Column="2"
+					Command="{Binding ShowOnChart}"
+					ToolTip="Show price range on chart"
+					Background="Transparent"
+					BorderBrush="#AAF"
+					Width="60"
+					Height="60"
+					>
+					<Image
+						Source="{StaticResource candlestick_chart}"
+						RenderOptions.BitmapScalingMode="HighQuality"
+						MaxWidth="48"
+						/>
+				</Button>
+			</Grid>
+		</GroupBox>
+
+		<!-- Funding -->
+		<GroupBox
+			Grid.Row="2"
+			Header="Funds:"
+			>
+			<Grid
+				Margin="20,6,6,3"
+				>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+				</Grid.RowDefinitions>
+
+				<!-- Fund Id -->
+				<StackPanel
+					Grid.Row="0"
+					Orientation="Horizontal"
+					>
+					<TextBlock
+						Text="Fund:"
+						VerticalAlignment="Center"
+						MinWidth="110"
+						/>
+					<TextBlock
+						Text="{Binding Fund.Id}"
+						VerticalAlignment="Center"
+						MinWidth="80"
+						Margin="3"
+						/>
+				</StackPanel>
+				
+				<!-- Base Currency Balance -->
+				<StackPanel
+					Grid.Row="1"
+					Orientation="Horizontal"
+					>
+					<TextBlock
+						Text="Allocation (Base):"
+						VerticalAlignment="Center"
+						MinWidth="110"
+						/>
+					<TextBox
+						Text="{Binding Settings.BaseCurrencyBalance}"
+						ToolTip="The current balance of base currency"
+						VerticalAlignment="Center"
+						MinWidth="80"
+						Margin="3"
+						/>
+					<TextBlock
+						Text="{Binding ChartSelector.Pair.Base.Symbol}"
+						VerticalAlignment="Center"
+						MinWidth="50"
+						/>
+					<Button
+						Content="All"
+						Command="{Binding AllocateAllAvailableBase}"
+						VerticalAlignment="Center"
+						Background="Transparent"
+						BorderThickness="1"
+						BorderBrush="#AAF"
+						Padding="1,0,1,0"
+						/>
+				</StackPanel>
+
+				<!-- Quote Currency Balance -->
+				<StackPanel
+					Grid.Row="2"
+					Orientation="Horizontal"
+					>
+					<TextBlock
+						Text="Allocation (Quote):"
+						VerticalAlignment="Center"
+						MinWidth="110"
+						/>
+					<TextBox
+						Text="{Binding Settings.QuoteCurrencyBalance}"
+						ToolTip="The current balance of quote currency"
+						VerticalAlignment="Center"
+						MinWidth="80"
+						Margin="3"
+						/>
+					<TextBlock
+						Text="{Binding ChartSelector.Pair.Quote.Symbol}"
+						VerticalAlignment="Center"
+						MinWidth="50"
+						/>
+					<Button
+						Content="All"
+						Command="{Binding AllocateAllAvailableQuote}"
+						VerticalAlignment="Center"
+						Background="Transparent"
+						BorderThickness="1"
+						BorderBrush="#AAF"
+						Padding="1,0,1,0"
+						/>
+				</StackPanel>
+			</Grid>
+		</GroupBox>
 
 		<!-- Buttons -->
 		<Grid
+			Grid.Row="4"
 			DockPanel.Dock="Bottom"
-			Background="{x:Static SystemColors.ControlBrush}"
+			Background="{x:Static SystemColors.WindowBrush}"
 			>
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="Auto"/>
 				<ColumnDefinition Width="*"/>
 				<ColumnDefinition Width="Auto"/>
-				<ColumnDefinition Width="Auto"/>
 			</Grid.ColumnDefinitions>
 
 			<!-- Validation results -->
 			<TextBlock
+				Grid.Column="0"
 				Text="{Binding Validate.Message, FallbackValue=''}"
 				Visibility="{Binding Validate, Converter={conv:NullToCollapsed}}"
 				Foreground="Red"
 				TextWrapping="Wrap"
+				MaxWidth="210"
 				Margin="6"
 				/>
 
@@ -60,224 +301,5 @@
 				x:Name="m_btn_ok"
 				/>
 		</Grid>
-
-		<!-- Body -->
-		<Grid>
-			<Grid.RowDefinitions>
-				<RowDefinition Height="Auto"/>
-				<RowDefinition Height="Auto"/>
-				<RowDefinition Height="Auto"/>
-			</Grid.RowDefinitions>
-
-			<!-- Instrument selector -->
-			<GroupBox
-				Grid.Row="0"
-				Header="Trading Pair:"
-				>
-				<DockPanel
-					Margin="6,6,6,3"
-					>
-
-					<!-- Exchange -->
-					<TextBlock
-						Text="Exchange:"
-						VerticalAlignment="Center"
-						Margin="2"
-						/>
-					<ComboBox
-						ItemsSource="{Binding ChartSelector.Exchanges}"
-						SelectedItem="{Binding ChartSelector.Exchange, Mode=TwoWay}"
-						ToolTip="Select the exchange that lists the pair"
-						VerticalAlignment="Center"
-						MinWidth="80"
-						Margin="2"
-						/>
-
-					<!-- Pair -->
-					<TextBlock
-						Text="Pair:"
-						VerticalAlignment="Center"
-						Margin="2"
-						/>
-					<ComboBox
-						ItemsSource="{Binding ChartSelector.Pairs}"
-						SelectedItem="{Binding ChartSelector.Pair, Mode=TwoWay}"
-						ToolTip="Select the currency pair"
-						VerticalAlignment="Center"
-						MinWidth="80"
-						Margin="2"
-						/>
-
-					<!-- Spacer -->
-					<StackPanel/>
-				</DockPanel>
-			</GroupBox>
-			
-			<!-- Price Range -->
-			<GroupBox
-				Grid.Row="1"
-				Header="Price Range:"
-				>
-				<Grid
-					Margin="20,6,6,3"
-					>
-					<Grid.RowDefinitions>
-						<RowDefinition Height="Auto"/>
-						<RowDefinition Height="Auto"/>
-					</Grid.RowDefinitions>
-					<Grid.ColumnDefinitions>
-						<ColumnDefinition Width="Auto"/>
-						<ColumnDefinition Width="*"/>
-						<ColumnDefinition Width="Auto"/>
-					</Grid.ColumnDefinitions>
-
-					<!-- All Out Price -->
-					<StackPanel
-						Grid.Row="0"
-						Grid.Column="0"
-						Orientation="Horizontal"
-						>
-						<TextBlock
-							Text="'All-Out' Price:"
-							VerticalAlignment="Center"
-							MinWidth="80"
-							/>
-						<TextBox
-							Text="{Binding Settings.AllOutPrice}"
-							ToolTip="The price at which the balance is maximally in the quote currency"
-							VerticalAlignment="Center"
-							MinWidth="80"
-							Margin="3"
-							/>
-						<TextBlock
-							Text="{Binding ChartSelector.Pair.Quote.Symbol}"
-							VerticalAlignment="Center"
-							/>
-					</StackPanel>
-
-					<!-- All In Price -->
-					<StackPanel
-						Grid.Row="1"
-						Grid.Column="0"
-						Orientation="Horizontal"
-						>
-						<TextBlock
-							Text="'All-In' Price:"
-							VerticalAlignment="Center"
-							MinWidth="80"
-							/>
-						<TextBox
-							Text="{Binding Settings.AllInPrice}"
-							ToolTip="The price at which the balance is maximally in the base currency"
-							VerticalAlignment="Center"
-							MinWidth="80"
-							Margin="3"
-							/>
-						<TextBlock
-							Text="{Binding ChartSelector.Pair.Quote.Symbol}"
-							VerticalAlignment="Center"
-							/>
-					</StackPanel>
-
-					<!-- Show On Chart -->
-					<Button
-						Grid.Row="0"
-						Grid.RowSpan="2"
-						Grid.Column="2"
-						Width="60"
-						Height="60"
-						ToolTip="Show price range on chart"
-						Command="{Binding ShowOnChart}"
-						>
-						<Image
-							Source="{StaticResource candlestick_chart}"
-							RenderOptions.BitmapScalingMode="HighQuality"
-							MaxWidth="48"
-							/>
-					</Button>
-				</Grid>
-			</GroupBox>
-
-			<!-- Funding -->
-			<GroupBox
-				Grid.Row="2"
-				Header="Funds:"
-				>
-				<Grid
-					Margin="20,6,6,3"
-					>
-					<Grid.RowDefinitions>
-						<RowDefinition Height="Auto"/>
-						<RowDefinition Height="Auto"/>
-						<RowDefinition Height="Auto"/>
-					</Grid.RowDefinitions>
-
-					<!-- Fund Id -->
-					<StackPanel
-						Grid.Row="0"
-						Orientation="Horizontal"
-						>
-						<TextBlock
-							Text="Fund Id:"
-							VerticalAlignment="Center"
-							MinWidth="130"
-							/>
-						<ComboBox
-							ItemsSource="{Binding AvailableFunds}"
-							SelectedItem="{Binding AvailableFunds/, Mode=TwoWay}"
-							DisplayMemberPath="Id"
-							MinWidth="80"
-							Margin="3"
-							/>
-					</StackPanel>
-					
-					<!-- Base Currency Balance -->
-					<StackPanel
-						Grid.Row="1"
-						Orientation="Horizontal"
-						>
-						<TextBlock
-							Text="Base Currency Balance:"
-							VerticalAlignment="Center"
-							MinWidth="130"
-							/>
-						<TextBox
-							Text="{Binding Settings.BaseCurrencyBalance}"
-							ToolTip="The current balance of base currency"
-							VerticalAlignment="Center"
-							MinWidth="80"
-							Margin="3"
-							/>
-						<TextBlock
-							Text="{Binding ChartSelector.Pair.Base.Symbol}"
-							VerticalAlignment="Center"
-							/>
-					</StackPanel>
-
-					<!-- Quote Currency Balance -->
-					<StackPanel
-						Grid.Row="2"
-						Orientation="Horizontal"
-						>
-						<TextBlock
-							Text="Quote Currency Balance:"
-							VerticalAlignment="Center"
-							MinWidth="130"
-							/>
-						<TextBox
-							Text="{Binding Settings.QuoteCurrencyBalance}"
-							ToolTip="The current balance of quote currency"
-							VerticalAlignment="Center"
-							MinWidth="80"
-							Margin="3"
-							/>
-						<TextBlock
-							Text="{Binding ChartSelector.Pair.Quote.Symbol}"
-							VerticalAlignment="Center"
-							/>
-					</StackPanel>
-				</Grid>
-			</GroupBox>
-		</Grid>
-	</DockPanel>
+	</Grid>
 </Window>

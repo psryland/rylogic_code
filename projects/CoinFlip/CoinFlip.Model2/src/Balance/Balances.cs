@@ -10,11 +10,11 @@ using Rylogic.Utility;
 
 namespace CoinFlip
 {
-	/// <summary>The balances of a single currency on an exchange</summary>
-	[DebuggerDisplay("{Description}")]
+	[DebuggerDisplay("{Description,nq}")]
 	public class Balances :IEnumerable<IBalance>
 	{
 		// Notes:
+		// - The balances of a single currency on an exchange
 		// - 'Balances' rather than 'Balance' because each balance is partitioned
 		//   into 'funds', where each fund is an isolated virtual account. This is
 		//   so that bots can operate in parallel with other bots and make assumptions
@@ -50,27 +50,30 @@ namespace CoinFlip
 			ExchTotal = total;
 			ExchHeld = held_on_exch;
 
-			// Initialise the funds - Create the main fund, with the given
-			// total /held amounts. Then create the additional funds from settings.
+			// Initialise the balances per fund - Create the main fund, with the given
+			// total/held amounts. Then create the additional funds from settings.
 			m_funds = new List<Balance>{};
 			m_funds.Add(new Balance(this, Fund.Main));
 
-			// Create each additional fund
-			// The settings shouldn't really contain 'Main' but just in case...
-			foreach (var fund_data in SettingsData.Settings.Funds.Where(x => x.Id != Fund.Main))
-			{
-				// Ensure the fund exists
-				var bal = m_funds.Add2(new Balance(this, fund_data.Id));
+			// Select the source of defined funds based on the backtesting state.
+			// Separate instances of this class are created for live trading and back testing
+			var fund_data = Model.BackTesting ? SettingsData.Settings.BackTesting.TestFunds : SettingsData.Settings.LiveFunds;
 
-				// Look for balance data for this fund on this exchange.
-				// Not found means the balance in this fund is zero on this exchange.
-				var exch_data = fund_data.Exchanges.FirstOrDefault(x => x.Name == Exchange.Name);
-				var bal_data = exch_data?.Balances.FirstOrDefault(x => x.Symbol == Coin.Symbol);
-				if (bal_data == null)
+			// Create each additional fund
+			foreach (var fd in fund_data)
+			{
+				// The settings shouldn't really contain 'Main' but just in case...
+				if (fd.Id == Fund.Main)
 					continue;
 
-				// Attribute the balance amount to 'fund_data.Id'
-				AssignFundBalance(fund_data.Id, bal_data.Total._(Coin), bal_data.Held._(Coin), Model.UtcNow);
+				// Ensure the fund exists
+				var bal = m_funds.Add2(new Balance(this, fd.Id));
+
+				// Look for balance data for this fund/exchange.
+				var bal_data = fd[Exchange.Name][Coin.Symbol];
+
+				// Attribute the balance amount to fund 'fd.Id'
+				AssignFundBalance(fd.Id, bal_data.Total._(Coin), bal_data.Held._(Coin), Model.UtcNow);
 			}
 		}
 

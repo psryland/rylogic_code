@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
@@ -13,13 +12,18 @@ using Rylogic.Utility;
 
 namespace CoinFlip.Bots
 {
-	public abstract class IBot : IDisposable
+	public abstract class IBot : IDisposable, INotifyPropertyChanged
 	{
 		// Notes:
 		//  - Bots must be designed to start and stop at any point. All data must be persisted to
 		//    disk immediately.
 		//  - Every new bot instance is assigned a GUID to distingush between multiple instances
 		//    of the same bot.
+		//  - As a safety feature, bots can only be "live" or "backtesting" bots. They can't switch
+		//    from one state to the other. This means they can't share settings, order ids, etc and
+		//    potentially make incorrect live trades based on simulation data.
+		//  - Trades created by a bot can be managed using a 'MonitoredOrders' instance. Monitored
+		//    orders are designed to be saved with Settings Data so that they persist across restarts.
 		//
 		// How to:
 		//  - Create a .NET framework 4.7.2 class library project called 'Bot.<BotName>'
@@ -29,47 +33,52 @@ namespace CoinFlip.Bots
 		//  - Set the post build event to: @"py $(ProjectDir)..\post_build_bot.py $(TargetPath) $(ProjectDir) $(ConfigurationName)"
 		//  - The derived type must have a constructor with the same signature as IBot
 
-		public IBot(Guid id, Model model)
+		public IBot(BotData bot_data, Model model)
 		{
-			Id = id;
+			BotData = bot_data;
+			BotData.TypeName = GetType().FullName;
 			Model = model;
-			Fund = model.Funds[Fund.Main];
-			Name = string.Empty;
 		}
 		public virtual void Dispose()
 		{
-			m_disposing = true;
 			Active = false;
-			Model = null;
 		}
-		private bool m_disposing;
 
-		/// <summary>The unique ID for this bot instance</summary>
-		public Guid Id { get; }
+		/// <summary>Access the application persisted data for this bot</summary>
+		public BotData BotData { get; }
 
 		/// <summary>App logic</summary>
-		public Model Model
+		public Model Model { get; }
+
+		/// <summary>The unique ID for this bot instance</summary>
+		public Guid Id => BotData.Id;
+
+		/// <summary>True if this bot is only used in backtesting mode</summary>
+		public bool BackTesting => BotData.BackTesting;
+
+		/// <summary>The fund interface</summary>
+		public Fund Fund
 		{
-			get { return m_model; }
-			private set
+			get { return Model.Funds[BotData.FundId]; }
+			set
 			{
-				if (m_model == value) return;
-				if (m_model != null)
-				{
-				}
-				m_model = value;
-				if (m_model != null)
-				{
-				}
+				if (Fund?.Id == value?.Id) return;
+				BotData.FundId = value?.Id ?? string.Empty;
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Fund)));
 			}
 		}
-		private Model m_model;
-
-		/// <summary>The fund available to this bot</summary>
-		public Fund Fund { get; set; }
 
 		/// <summary>User assigned name for the bot</summary>
-		public string Name { get; set; }
+		public string Name
+		{
+			get { return BotData.Name; }
+			set
+			{
+				if (Name == value) return;
+				BotData.Name = value;
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Name)));
+			}
+		}
 
 		/// <summary>Activate/Deactivate the bot</summary>
 		public bool Active
@@ -77,6 +86,17 @@ namespace CoinFlip.Bots
 			get { return m_bot_main_timer != null; }
 			set
 			{
+				// Notes:
+				//  - Don't persist the active state to settings here. Do it at the point
+				//    where the user chooses to activate or deactivate the bot. This solves
+				//    issues with shutdown and switching between backtesting and live.
+				//  - Don't activate from the constructor of IBot, because derived bots may not
+				//    be fully set up yet.
+				//  - The bot stepping mechanism is different for backtesting because we want to
+				//    run it at faster than real time. The timer is still created in backtesting
+				//    mode but it doesn't call Step. Instead, the simulation calls step on bots
+				//    as the simulation time advances
+
 				if (Active == value) return;
 				if (value && !CanActivate) return;
 				Debug.Assert(Misc.AssertMainThread());
@@ -84,22 +104,21 @@ namespace CoinFlip.Bots
 				if (Active)
 				{
 					m_bot_main_timer.Stop();
+					Cancel.Cancel();
 					Model.Log.Write(ELogLevel.Info, $"Bot '{Name}' stopped");
 				}
 				m_bot_main_timer = value ? new DispatcherTimer(LoopPeriod, DispatcherPriority.Normal, HandleTick, Dispatcher.CurrentDispatcher) : null;
 				if (Active)
 				{
 					Model.Log.Write(ELogLevel.Info, $"Bot '{Name}' started");
+					Cancel = CancellationTokenSource.CreateLinkedTokenSource(Shutdown);
+					LastStepTime = Model.UtcNow - LoopPeriod;
 					m_bot_main_timer.Start();
 					HandleTick();
 				}
 
-				// Record the active state in the settings
-				if (!m_disposing)
-				{
-					SettingsData.Settings.Bots.First(x => x.Id == Id).Active = value;
-					SettingsData.Settings.Save();
-				}
+				// Notify active changed
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Active)));
 
 				// Handlers
 				async void HandleTick(object sender = null, EventArgs e = null)
@@ -110,7 +129,8 @@ namespace CoinFlip.Bots
 						if (!Active)
 							return;
 
-						await Step();
+						if (!Model.BackTesting)
+							await Step();
 					}
 					catch (Exception ex)
 					{
@@ -121,8 +141,16 @@ namespace CoinFlip.Bots
 				}
 			}
 		}
-		protected virtual TimeSpan LoopPeriod => TimeSpan.FromMilliseconds(1000);
 		private DispatcherTimer m_bot_main_timer;
+
+		/// <summary>How frequently the Bot wants to be stepped</summary>
+		public virtual TimeSpan LoopPeriod => TimeSpan.FromMilliseconds(1000);
+
+		/// <summary>Time stamp of when the last occurred</summary>
+		public DateTimeOffset LastStepTime { get; private set; }
+
+		/// <summary>Cancel token for deactivating the bot</summary>
+		public CancellationTokenSource Cancel { get; private set; }
 
 		/// <summary>Application shutdown signal</summary>
 		public CancellationToken Shutdown => Model.Shutdown.Token;
@@ -131,20 +159,54 @@ namespace CoinFlip.Bots
 		public string SettingsFilepath => Misc.ResolveUserPath("Bots", $"settings.{Id}.xml");
 
 		/// <summary>True if the bot is ok to run</summary>
-		public virtual bool CanActivate => false;
+		public bool CanActivate
+		{
+			get
+			{
+				try { return Fund != null && CanActivateInternal; }
+				catch (Exception ex)
+				{
+					Model.Log.Write(ELogLevel.Error, ex, $"Bot {Name} 'CanActivate' Error");
+					return false;
+				}
+			}
+		}
+		protected virtual bool CanActivateInternal => false;
 
 		/// <summary>Configure this bot</summary>
-		public virtual Task Configure(object owner)
+		public async Task Configure(object owner)
 		{
-			// Notes:
-			//  - Configure can be called at any point, even when the bot is running.
-			//  - Configure is called in the UI thread, so the bot can display UI. 'owner' is a WPF Window
-
+			try
+			{
+				// Notes:
+				//  - Configure can be called at any point, even when the bot is running.
+				//  - Configure is called in the UI thread, so the bot can display UI. 'owner' is a WPF Window
+				await ConfigureInternal(owner);
+			}
+			catch (Exception ex)
+			{
+				Model.Log.Write(ELogLevel.Error, ex, $"Bot {Name} Configure Error");
+			}
+		}
+		protected virtual Task ConfigureInternal(object owner)
+		{
 			return Task.CompletedTask;
 		}
 
 		/// <summary>Step the bot</summary>
-		protected virtual Task Step()
+		public async Task Step()
+		{
+			try
+			{
+				await StepInternal();
+				LastStepTime = Model.UtcNow;
+			}
+			catch (Exception ex)
+			{
+				Model.Log.Write(ELogLevel.Error, ex, $"Bot {Name} Step Error");
+			}
+		}
+		protected virtual Task StepInternal()
 		{
 			return Task.CompletedTask;
 		}
@@ -156,5 +218,8 @@ namespace CoinFlip.Bots
 			var bot_files = Plugins<IBot>.Enumerate(Misc.ResolveBotPath(), regex_filter: Misc.BotFilterRegex).ToArray();
 			return bot_files;
 		}
+
+		/// <summary></summary>
+		public event PropertyChangedEventHandler PropertyChanged;
 	}
 }

@@ -8,10 +8,10 @@ namespace CoinFlip
 	[DebuggerDisplay("Price={Price} Amount={AmountBase}")]
 	public struct Offer : IComparable<Offer>
 	{
-		public Offer(Unit<decimal> price, Unit<decimal> volume)
+		public Offer(Unit<decimal> price, Unit<decimal> amount_base)
 		{
 			Price = price;
-			AmountBase = volume;
+			AmountBase = amount_base;
 		}
 
 		/// <summary>The price (to buy or sell) (in Quote/Base)</summary>

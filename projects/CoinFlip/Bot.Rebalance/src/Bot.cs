@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows;
 using CoinFlip;
 using CoinFlip.Bots;
+using Rylogic.Maths;
 using Rylogic.Plugin;
+using Rylogic.Utility;
 
 namespace Bot.Rebalance
 {
@@ -32,48 +35,168 @@ namespace Bot.Rebalance
 		//  When Price Ratio != Acct Ratio within X%, Rebalance again.
 		//  All-In and All-Out do not have to mean 0% and 100%
 
-		public Bot(Guid id, Model model)
-			: base(id, model)
+		private IDisposable m_monitor;
+		public Bot(CoinFlip.Settings.BotData bot_data, Model model)
+			: base(bot_data, model)
 		{
-			Name = "Rebalance";
-
 			// Load the bot settings
 			Settings = new SettingsData(SettingsFilepath);
+			Settings.PendingOrders.OrderCompleted += HandleOrderCompleted;
+			m_monitor = Settings.PendingOrders.Register(model);
 		}
 		public override void Dispose()
 		{
+			Util.Dispose(ref m_monitor);
 			base.Dispose();
 		}
 
 		/// <summary>Bot settings</summary>
 		public SettingsData Settings { get; }
 
+		/// <summary>Step rate of this bot</summary>
+		public override TimeSpan LoopPeriod => TimeSpan.FromMinutes(10);
+
 		/// <summary>True if the bot is ok to run</summary>
-		public override bool CanActivate => Settings.Validate(Model) == null;
+		protected override bool CanActivateInternal => Settings.Validate(Model) == null;
 
 		/// <summary>Configure</summary>
-		public override Task Configure(object owner)
+		protected override Task ConfigureInternal(object owner)
 		{
-			new ConfigureUI((Window)owner, Model, Settings).Show();
+			new ConfigureUI((Window)owner, this).Show();
 			return Task.CompletedTask;
 		}
 
-		// Step the bot
-		protected override async Task Step()
+		/// <summary>Step the bot</summary>
+		protected override async Task StepInternal()
 		{
+			Debug.Assert(CanActivate);
+
+			// If there are orders on the exchange, wait from them to be filled
+			if (Settings.PendingOrders.Count != 0)
+				return;
+
 			// Get the pair we're monitoring
-			var exch = Model.Exchanges[Settings.Exchange];
-			var pair = exch?.Pairs[Settings.Pair];
+			var pair = Pair;
 			if (pair == null)
 				return;
 
-			// Get the current spot price
-			var spot_price = pair.SpotPrice(ETradeType.Q2B);
-			if (spot_price == null)
+			// Check for an adjustment in either direction
+			var trade = (Trade)null;
+			foreach (var tt in new[] { ETradeType.Q2B, ETradeType.B2Q })
+			{
+				// Get the current spot price
+				var price = pair.SpotPrice(tt) ?? 0m._(pair.RateUnits);
+				if (price == 0)
+					continue;
+
+				// Determine where the current price is within the price range
+				var price_ratio = PriceFrac(price);
+
+				// The value (in quote) of all holdings
+				var total_holdings = HoldingsQuote + HoldingsBase * price;
+
+				// Calculate the ratio of quote holdings to total holdings
+				var quote_holdings_ratio = (double)(decimal)(HoldingsQuote / total_holdings);
+
+				// See if the difference is greater than the rebalance threshold
+				if (tt == ETradeType.Q2B)
+				{
+					// This is a buy adjustment and we "buy low" so the amount
+					// of quote needs to be too high, i.e. quote_holdings_ratio > price_frac
+					if (quote_holdings_ratio - price_ratio > Settings.RebalanceThreshold)
+					{
+						// The amount to buy is the amount that will bring the quote holdings
+						// ratio down to match the price ratio.
+						var target_quote_holdings = (decimal)price_ratio * total_holdings;
+						var quote_holdings_difference = HoldingsQuote - target_quote_holdings;
+						Debug.Assert(quote_holdings_difference > 0._(Pair.Quote));
+
+						// Place the rebalance order
+						trade = new Trade(Fund.Id, tt, pair, price, quote_holdings_difference / price);
+						break;
+					}
+				}
+				else
+				{
+					// This is a sell adjustment and we "sell high" so the amount
+					// of quote needs to be too low, i.e. quote_holdings_ratio < price_frac
+					if (price_ratio - quote_holdings_ratio > Settings.RebalanceThreshold)
+					{
+						// The amount to sell is the amount that will bring the quote holdings
+						// ratio up to match the price ratio.
+						var target_quote_holdings = (decimal)price_ratio * total_holdings;
+						var quote_holdings_difference = target_quote_holdings - HoldingsQuote;
+						Debug.Assert(quote_holdings_difference > 0._(Pair.Quote));
+
+						// Place the rebalance order
+						trade = new Trade(Fund.Id, tt, pair, price, quote_holdings_difference / price);
+						break;
+					}
+				}
+			}
+
+			// No adjustment needed, done
+			if (trade == null)
 				return;
 
+			// An adjustment trade is needed, place the order now
+			var order = await trade.CreateOrder(Cancel.Token);
+			Settings.PendingOrders.Add(order);
+		}
 
-			await Task.CompletedTask;
+		/// <summary>The exchange we're trading on</summary>
+		private Exchange Exchange => Model.Exchanges[Settings.Exchange];
+
+		/// <summary>The pair being traded</summary>
+		private TradePair Pair => Exchange?.Pairs[Settings.Pair];
+
+		/// <summary>The amount held in base currency</summary>
+		private Unit<decimal> HoldingsBase
+		{
+			get => Settings.BaseCurrencyBalance._(Pair.Base);
+			set => Settings.BaseCurrencyBalance = value;
+		}
+
+		/// <summary>The amount held in quote currency</summary>
+		private Unit<decimal> HoldingsQuote
+		{
+			get => Settings.QuoteCurrencyBalance._(Pair.Quote);
+			set => Settings.QuoteCurrencyBalance = value;
+		}
+
+		/// <summary>Get the fractional position of 'price' within the price range. [0,1] = [AllIn,AllOut]</summary>
+		private double PriceFrac(Unit<decimal> price)
+		{
+			var numer = (double)((decimal)price - Settings.AllInPrice);
+			var denom = (double)(Settings.AllOutPrice - Settings.AllInPrice);
+			return Math_.Clamp(numer / denom, 0.0, 1.0);
+		}
+
+		/// <summary>Handle an order being filled</summary>
+		private void HandleOrderCompleted(object sender, MonitoredOrderEventArgs e)
+		{
+			// When an order is completed, update the holdings
+			var his = e.Exchange.History[e.OrderId];
+			if (his == null)
+				throw new NotSupportedException("Completed order not found in history");
+
+			// Update the holdings
+			switch (his.TradeType)
+			{
+			default: throw new Exception("Unknown trade type");
+			case ETradeType.Q2B:
+				{
+					HoldingsQuote -= his.AmountNett;
+					HoldingsBase += his.AmountIn;
+					break;
+				}
+			case ETradeType.B2Q:
+				{
+					HoldingsQuote += his.AmountNett;
+					HoldingsBase -= his.AmountIn;
+					break;
+				}
+			}
 		}
 	}
 }

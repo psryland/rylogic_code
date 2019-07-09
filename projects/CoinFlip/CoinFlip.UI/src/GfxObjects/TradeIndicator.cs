@@ -47,6 +47,53 @@ namespace CoinFlip.UI.GfxObjects
 					Chart.MouseOperations.SetPending(MouseButton.Left, new DragPrice(this));
 			}
 		}
+		protected override void UpdateGfxCore()
+		{
+			/// <summary>Position/Colour the graphics</summary>
+			base.UpdateGfxCore();
+
+			// Price displayed with 8 significant figures
+			var price = ((decimal)PriceQ2B).ToString(8);
+
+			// Colour based on trade direction
+			var col =
+				TradeType == ETradeType.Q2B ? SettingsData.Settings.Chart.B2QColour :
+				TradeType == ETradeType.B2Q ? SettingsData.Settings.Chart.Q2BColour :
+				throw new Exception("Unknown trade type");
+
+			var ldr =
+				$"*Group trade " +
+				$"{{" +
+				$"  *Line gripper {col} {{ {1f - GripperWidthFrac} 0 0  1 0 0 *Width {{{GripperHeight}}} }}" +
+				$"  *Line level {col} {{0 0 0 1 0 0}}" +
+				$"  *Line halo {col.Alpha(0.25f)} {{0 0 0 1 0 0 *Width {{{GripperHeight * 0.75f}}} *Hidden }}" +
+				$"  *Font{{*Name{{\"tahoma\"}} *Size{{10}} *Weight{{500}} *Colour{{FFFFFFFF}}}}" +
+				$"  *Text price {{ \"{price}\" *Billboard *Anchor {{+1 0}} *BackColour {{{col}}} *o2w{{*pos{{1 0 0}}}} *NoZTest }}" +
+				$"}}";
+
+			Gfx = new View3d.Object(ldr, false, Id, null);
+		}
+		protected override void UpdateSceneCore(View3d.Window window)
+		{
+			/// <summary>Add the graphics to the chart</summary>
+			base.UpdateSceneCore(window);
+			if (Gfx == null)
+				return;
+
+			if (Visible)
+			{
+				Gfx.Child("halo").Visible = Hovered;
+				Gfx.O2P =
+					m4x4.Translation((float)Chart.XAxis.Min, (float)(decimal)PriceQ2B, CandleChart.ZOrder.Indicators) *
+					m4x4.Scale((float)Chart.XAxis.Span, 1f, 1f, v4.Origin);
+
+				window.AddObject(Gfx);
+			}
+			else
+			{
+				window.RemoveObject(Gfx);
+			}
+		}
 
 		/// <summary>The Trade being 'indicated'</summary>
 		private Trade Trade
@@ -89,55 +136,6 @@ namespace CoinFlip.UI.GfxObjects
 		{
 			get => Trade.PriceQ2B;
 			set => Trade.PriceQ2B = value;
-		}
-
-		/// <summary>Position/Colour the graphics</summary>
-		protected override void UpdateGfxCore()
-		{
-			base.UpdateGfxCore();
-
-			// Price displayed with 8 significant figures
-			var price = ((decimal)PriceQ2B).ToString(8);
-
-			// Colour based on trade direction
-			var col =
-				TradeType == ETradeType.Q2B ? SettingsData.Settings.Chart.B2QColour :
-				TradeType == ETradeType.B2Q ? SettingsData.Settings.Chart.Q2BColour :
-				throw new Exception("Unknown trade type");
-
-			var ldr =
-				$"*Group trade " +
-				$"{{" +
-				$"  *Line gripper {col} {{ {1f - GripperWidthFrac} 0 0  1 0 0 *Width {{{GripperHeight}}} }}" +
-				$"  *Line level {col} {{0 0 0 1 0 0}}" +
-				$"  *Line halo {col.Alpha(0.25f)} {{0 0 0 1 0 0 *Width {{{GripperHeight * 0.75f}}} *Hidden }}" +
-				$"  *Font{{*Name{{\"tahoma\"}} *Size{{10}} *Weight{{500}} *Colour{{FFFFFFFF}}}}" +
-				$"  *Text price {{ \"{price}\" *Billboard *Anchor {{+1 0}} *BackColour {{{col}}} *o2w{{*pos{{1 0 0}}}} *NoZTest }}" +
-				$"}}";
-
-			Gfx = new View3d.Object(ldr, false, Id, null);
-		}
-
-		/// <summary>Add the graphics to the chart</summary>
-		protected override void UpdateSceneCore(View3d.Window window)
-		{
-			base.UpdateSceneCore(window);
-			if (Gfx == null)
-				return;
-
-			if (Visible)
-			{
-				Gfx.Child("halo").Visible = Hovered;
-				Gfx.O2P =
-					m4x4.Translation((float)Chart.XAxis.Min, (float)(decimal)PriceQ2B, CandleChart.ZOrder.Indicators) *
-					m4x4.Scale((float)Chart.XAxis.Span, 1f, 1f, v4.Origin);
-
-				window.AddObject(Gfx);
-			}
-			else
-			{
-				window.RemoveObject(Gfx);
-			}
 		}
 
 		/// <summary>Hit test the trade price indicator</summary>

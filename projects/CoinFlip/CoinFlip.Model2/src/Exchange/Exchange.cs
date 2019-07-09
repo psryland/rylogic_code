@@ -408,7 +408,7 @@ namespace CoinFlip
 		private bool m_transfers_update_required;
 
 		/// <summary>True if TradeHistory can be mapped to previous order id's</summary>
-		public bool TradeHistoryUseful { get; protected set; }
+		[Obsolete("Get all history working")] public bool TradeHistoryUseful { get; protected set; }
 
 		/// <summary>The percentage fee charged when performing exchanges</summary>
 		public decimal Fee => ExchSettings.TransactionFee;
@@ -447,14 +447,14 @@ namespace CoinFlip
 		/// <summary>Open orders held on this exchange, keyed on order ID</summary>
 		public OrdersCollection Orders { get; }
 
-		/// <summary>Funds transfers on this exchange</summary>
-		public TransfersCollection Transfers { get; }
-
 		/// <summary>Trade history on this exchange, keyed on order ID</summary>
 		public OrdersCompletedCollection History { get; }
 
 		/// <summary>A map from order id to the context id that created the order</summary>
 		public OrderIdtoFundIdMap OrderIdtoFundId { get; }
+
+		/// <summary>Funds transfers on this exchange</summary>
+		public TransfersCollection Transfers { get; }
 
 		/// <summary>Update the collections of coins and pairs</summary>
 		public async Task UpdatePairs() // Worker thread context
@@ -814,18 +814,6 @@ namespace CoinFlip
 		}
 		private bool m_last_request_failed;
 
-		/// <summary>Remove positions that are older than 'timestamp' and not in 'order_ids'</summary>
-		protected void RemovePositionsNotIn(HashSet<long> order_ids, DateTimeOffset timestamp)
-		{
-			// Remove any positions that are no longer valid.
-			foreach (var pos in Orders.Values.Where(x => !order_ids.Contains(x.OrderId)).ToArray())
-			{
-				if (pos.Created >= timestamp) continue;
-				if (Model.AllowTrades == false && pos.OrderId < 100) continue; // Hack for fake positions
-				Orders.Remove(pos.OrderId);
-			}
-		}
-
 		/// <summary>Database connection</summary>
 		private SQLiteConnection DB
 		{
@@ -862,9 +850,12 @@ namespace CoinFlip
 			// Release the connection to the DB
 			DB = null;
 
+			// Ensure the directory that contains the trade history DB's exists
+			Path_.CreateDirs(Path_.Directory(DBFilepath));
+
 			// In back testing mode, delete the history first
 			if (Model.BackTesting)
-				Path_.DelFile(DBFilepath);
+				Path_.DelFile(DBFilepath, fail_if_missing:false);
 
 			// Connect
 			DB = new SQLiteConnection($"Data Source={DBFilepath};Version=3;journal mode=Memory;synchronous=Off");
@@ -905,13 +896,13 @@ namespace CoinFlip
 		/// <summary>The set of known trade ids</summary>
 		private HashSet<long> TradeHistoryTradeIds { get; set; }
 
-		/// <summary>Add a new or modified PositionFill to the trade history DB</summary>
+		/// <summary>Add a new or modified OrderCompleted to the trade history DB</summary>
 		public void AddToTradeHistory(OrderCompleted fill)
 		{
 			// Notes:
 			// - This doesn't happen when 'Model.History' is accessed/added to by derived exchanges
-			//   because adding 'OrderCompleted' instances to a 'PositionFill' would not raise notifications.
-			//   Also, 'PositionFill' instances are added as empty instances and then populated.
+			//   because adding 'OrderCompleted' instances to a 'OrderCompleted' would not raise notifications.
+			//   Also, 'OrderCompleted' instances are added as empty instances and then populated.
 
 			if (fill.Exchange != this)
 				throw new Exception("This position fill did not occur on this exchange");

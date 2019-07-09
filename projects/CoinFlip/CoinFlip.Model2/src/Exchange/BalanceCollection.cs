@@ -10,9 +10,8 @@ namespace CoinFlip
 		// Notes:
 		//  - BalanceCollection is all the balances of the coins associated with an exchange.
 		//  - Balances are per-coin and are the amounts assigned to each fund.
-		//  - FundBalance is the single balance for a coin in a given fund.
-		//  - Fund is a string ID for a named partition of money. Funds are used by
-		//    bots to give predictability to account balances.
+		//  - IBalance is the single balance for a coin in a given fund.
+		//  - Fund is a string ID for a named partition of money. Funds are used by bots to give predictability to account balances.
 
 		public BalanceCollection(Exchange exch)
 			: base(exch)
@@ -20,9 +19,6 @@ namespace CoinFlip
 			KeyFrom = x => x.Coin;
 			SupportsSorting = false;
 		}
-		public BalanceCollection(BalanceCollection rhs)
-			: base(rhs)
-		{ }
 
 		/// <summary>Get/Set the balance for the given coin. Returns zero balance for unknown coins</summary>
 		public override Balances this[Coin coin]
@@ -30,7 +26,7 @@ namespace CoinFlip
 			get
 			{
 				Debug.Assert(Misc.AssertMarketDataRead());
-				if (coin.Exchange != Exch && !(Exch is CrossExchange)) throw new Exception("Currency not associated with this exchange");
+				if (coin.Exchange != Exchange && !(Exchange is CrossExchange)) throw new Exception("Currency not associated with this exchange");
 				return TryGetValue(coin, out var bal) ? bal : new Balances(coin, Model.UtcNow);
 			}
 		}
@@ -48,7 +44,7 @@ namespace CoinFlip
 			Debug.Assert(Misc.AssertMarketDataWrite());
 
 			// Check the assigned balance info is for this exchange
-			if (coin.Exchange != Exch && !(Exch is CrossExchange))
+			if (coin.Exchange != Exchange && !(Exchange is CrossExchange))
 				throw new Exception("Currency not associated with this exchange");
 
 			// Get the balances associated with this coin
@@ -62,17 +58,18 @@ namespace CoinFlip
 			balances.AssignFundBalance(fund_id, total, held_on_exch, update_time);
 			//Debug.Assert(balances.Validate() == null);
 
-			// Broadcast that the balance of this coin has changed
+			// Invalidate bindings
+			ResetItem(balances);
+
+			// Broadcast that the balance of 'coin' has changed
 			coin.Meta.NotifyBalanceChanged();
-			ResetItem(balances); // Invalidate binding
 		}
 
 		/// <summary>Get the balance by coin symbol name</summary>
 		public Balances Get(string sym)
 		{
-			// Don't provide this, the Coin implicit cast is favoured over the overloaded method
-			//@"public Balance this[string sym]"
-			var coin = Exch.Coins[sym];
+			// Don't provide this: 'public Balance this[string sym]', the Coin implicit cast is favoured over the overloaded method
+			var coin = Exchange.Coins[sym];
 			return this[coin];
 		}
 	}

@@ -18,9 +18,9 @@ namespace CoinFlip
 		/// <summary>Get or add the pair associated with the given symbols</summary>
 		public TradePair GetOrAdd(string @base, string quote, int? trade_pair_id = null)
 		{
-			var coinB = Exch.Coins.GetOrAdd(@base);
-			var coinQ = Exch.Coins.GetOrAdd(quote);
-			return this[@base, quote] ?? this.Add2(new TradePair(coinB, coinQ, Exch, trade_pair_id));
+			var coinB = Exchange.Coins.GetOrAdd(@base);
+			var coinQ = Exchange.Coins.GetOrAdd(quote);
+			return this[@base, quote] ?? this.Add2(new TradePair(coinB, coinQ, Exchange, trade_pair_id));
 		}
 
 		/// <summary>Get/Set the pair</summary>

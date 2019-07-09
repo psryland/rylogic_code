@@ -39,7 +39,7 @@ namespace CoinFlip.Settings
 			//ShowLivePrices = false;
 			//Equity = new EquitySettings();
 			Coins = new CoinData[] { new CoinData("BTC") { OfInterest = true }, new CoinData("ETH") { OfInterest = true } };
-			Funds = new FundData[1] { new FundData(Fund.Main, new FundData.ExchData[0]) };
+			LiveFunds = new FundData[1] { new FundData(Fund.Main, new FundData.ExchData[0]) };
 			Bots = new BotData[0];
 			Chart = new ChartSettings();
 			BackTesting = new BackTestingSettings();
@@ -122,11 +122,11 @@ namespace CoinFlip.Settings
 			set { set(nameof(Coins), value); }
 		}
 
-		/// <summary>The partitions of user funds</summary>
-		public FundData[] Funds
+		/// <summary>The partitions of user funds used for live trading</summary>
+		public FundData[] LiveFunds
 		{
-			get { return get<FundData[]>(nameof(Funds)); }
-			set { set(nameof(Funds), value); }
+			get { return get<FundData[]>(nameof(LiveFunds)); }
+			set { set(nameof(LiveFunds), value); }
 		}
 		
 		/// <summary>The bots created in the UI</summary>

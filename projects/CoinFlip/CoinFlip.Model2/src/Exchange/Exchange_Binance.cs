@@ -285,7 +285,7 @@ namespace CoinFlip
 					m_pairs.AddRange(pairs);
 
 				// Remove any positions that are no longer valid.
-				RemovePositionsNotIn(order_ids, timestamp);
+				Orders.RemoveOrdersNotIn(order_ids, timestamp);
 
 				//	// Save the history range
 				//	HistoryInterval = new Range(HistoryInterval.Beg, timestamp.Ticks);

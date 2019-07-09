@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Extn;
@@ -11,7 +12,7 @@ namespace CoinFlip.Settings
 	/// <summary>A balance partition, a.k.a fund</summary>
 	[Serializable]
 	[TypeConverter(typeof(TyConv))]
-	[DebuggerDisplay("{Id}")]
+	[DebuggerDisplay("{Id,nq}")]
 	public class FundData : SettingsXml<FundData>
 	{
 		public FundData()
@@ -40,36 +41,42 @@ namespace CoinFlip.Settings
 			set { set(nameof(Exchanges), value); }
 		}
 
+		/// <summary>Access data for an exchange</summary>
+		public ExchData this[string exch_name] => Exchanges.FirstOrDefault(x => x.ExchangeName == exch_name) ?? new ExchData(exch_name, new BalData[0]);
+
 		/// <summary>The balances assigned to this fund within each exchange</summary>
-		[DebuggerDisplay("{Name}")]
+		[DebuggerDisplay("{ExchangeName,nq}")]
 		public class ExchData
 		{
 			public ExchData(string name, BalData[] bal_data)
 			{
-				Name = name;
+				ExchangeName = name;
 				Balances = bal_data;
 			}
 			public ExchData(XElement node)
 			{
-				Name = node.Element(nameof(Name)).OrDefault(Name);
+				ExchangeName = node.Element(nameof(ExchangeName)).OrDefault(ExchangeName);
 				Balances = node.Element(nameof(Balances)).OrDefault(Balances);
 			}
 			public XElement ToXml(XElement node)
 			{
-				node.Add2(nameof(Name), Name, false);
+				node.Add2(nameof(ExchangeName), ExchangeName, false);
 				node.Add2(nameof(Balances), Balances, false);
 				return node;
 			}
 
 			/// <summary>The name of the exchange</summary>
-			public string Name { get; set; }
+			public string ExchangeName { get; set; }
 
 			/// <summary>Balances for each currency on this exchange in this fund</summary>
 			public BalData[] Balances { get; set; }
+
+			/// <summary>Access data for a currency</summary>
+			public BalData this[string symbol] => Balances.FirstOrDefault(x => x.Symbol == symbol) ?? new BalData(symbol, 0m, 0m);
 		}
 
 		/// <summary>The balance of a single coin on an exchange</summary>
-		[DebuggerDisplay("{Symbol} {Total}")]
+		[DebuggerDisplay("{Symbol,nq} {Total}")]
 		public class BalData
 		{
 			public BalData(string sym, decimal total, decimal held)

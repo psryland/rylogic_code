@@ -1,40 +1,42 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Windows;
-using System.Windows.Data;
 using CoinFlip;
+using CoinFlip.Settings;
 using Rylogic.Common;
-using Rylogic.Extn;
 using Rylogic.Gui.WPF;
+using Rylogic.Maths;
 using Rylogic.Utility;
 
 namespace Bot.Rebalance
 {
 	public partial class ConfigureUI : Window, IDisposable, INotifyPropertyChanged
 	{
-		public ConfigureUI(Window owner, Model model, SettingsData settings)
+		private readonly Bot m_bot;
+		public ConfigureUI(Window owner, Bot bot)
 		{
 			InitializeComponent();
 			Icon = owner?.Icon;
 			Owner = owner;
+			m_bot = bot;
 
-			Model = model;
-			Settings = settings;
-			ChartSelector = new ExchPairTimeFrame(model);
-			AvailableFunds = new ListCollectionView(model.Funds);
-			
+			ChartSelector = new ExchPairTimeFrame(Model);
+			GfxPriceRange = null;//todo new GfxPriceRange(BotData.Id);
+			Settings.SettingChange += HandleSettingChange;
+
 			// Commands
 			Accept = Command.Create(this, AcceptInternal);
 			ShowOnChart = Command.Create(this, ShowOnChartInternal);
+			AllocateAllAvailableBase = Command.Create(this, AllocateAllAvailableBaseInternal);
+			AllocateAllAvailableQuote = Command.Create(this, AllocateAllAvailableQuoteInternal);
 
 			DataContext = this;
 		}
 		public void Dispose()
 		{
+			Settings.SettingChange -= HandleSettingChange;
+			GfxPriceRange = null;
 			ChartSelector = null;
-			AvailableFunds = null;
-			Settings = null;
-			Model = null;
 		}
 		protected override void OnClosed(EventArgs e)
 		{
@@ -42,49 +44,17 @@ namespace Bot.Rebalance
 			Dispose();
 		}
 
-		/// <summary>Bot settings</summary>
-		public SettingsData Settings
-		{
-			get { return m_settings; }
-			private set
-			{
-				if (m_settings == value) return;
-				if (m_settings != null)
-				{
-					m_settings.SettingChange -= HandleSettingChange;
-				}
-				m_settings = value;
-				if (m_settings != null)
-				{
-					m_settings.SettingChange += HandleSettingChange;
-				}
+		/// <summary>Bot user settings</summary>
+		public SettingsData Settings => m_bot.Settings;
 
-				// Handler
-				void HandleSettingChange(object sender, SettingChangeEventArgs e)
-				{
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Validate)));
-				}
-			}
-		}
-		private SettingsData m_settings;
+		/// <summary>Application bot data</summary>
+		public BotData BotData => m_bot.BotData;
 
 		/// <summary>App logic</summary>
-		public Model Model
-		{
-			get { return m_model; }
-			private set
-			{
-				if (m_model == value) return;
-				if (m_model != null)
-				{
-				}
-				m_model = value;
-				if (m_model != null)
-				{
-				}
-			}
-		}
-		private Model m_model;
+		public Model Model => m_bot.Model;
+
+		/// <summary>The fund assigned to the bot being configured</summary>
+		public Fund Fund => m_bot.Fund;
 
 		/// <summary>Trading instrument selector</summary>
 		public ExchPairTimeFrame ChartSelector
@@ -126,34 +96,6 @@ namespace Bot.Rebalance
 		}
 		private ExchPairTimeFrame m_chart_selector;
 
-		/// <summary>The funds to choose from</summary>
-		public ICollectionView AvailableFunds
-		{
-			get { return m_available_funds; }
-			private set
-			{
-				if (m_available_funds == value) return;
-				if (m_available_funds != null)
-				{
-					m_available_funds.CurrentChanged -= HandleCurrentChanged;
-				}
-				m_available_funds = value;
-				if (m_available_funds != null)
-				{
-					m_available_funds.MoveCurrentTo(Model.Funds[Settings.FundId]);
-					m_available_funds.CurrentChanged += HandleCurrentChanged;
-				}
-
-				// Handler
-				void HandleCurrentChanged(object sender, EventArgs args)
-				{
-					var fund = (Fund)AvailableFunds.CurrentItem;
-					Settings.FundId = fund?.Id;
-				}
-			}
-		}
-		private ICollectionView m_available_funds;
-
 		/// <summary>Validate the current settings</summary>
 		public Exception Validate
 		{
@@ -168,16 +110,13 @@ namespace Bot.Rebalance
 				if (pair == null)
 					return new Exception("No trading pair selected");
 
-				// Check against available funds
-				var fund = Model.Funds[Settings.FundId];
-				if (fund == null)
-					return new Exception($"Fund {fund} not available");
-
 				// Check that the balances are available in the fund
-				if (fund[pair.Base].Available < Settings.BaseCurrencyBalance._(pair.Base))
-					return new Exception($"Fund {fund.Id} does not have enough {pair.Base.Symbol}");
-				if (fund[pair.Quote].Available < Settings.QuoteCurrencyBalance._(pair.Quote))
-					return new Exception($"Fund {fund.Id} does not have enough {pair.Quote.Symbol}");
+				if (Fund == null)
+					return new Exception("No fund is assigned");
+				if (Fund[pair.Base].Available < Settings.BaseCurrencyBalance._(pair.Base))
+					return new Exception($"Fund {Fund.Id} does not have enough {pair.Base.Symbol}");
+				if (Fund[pair.Quote].Available < Settings.QuoteCurrencyBalance._(pair.Quote))
+					return new Exception($"Fund {Fund.Id} does not have enough {pair.Quote.Symbol}");
 
 				return null;
 			}
@@ -194,18 +133,50 @@ namespace Bot.Rebalance
 		public Command ShowOnChart { get; }
 		private void ShowOnChartInternal()
 		{
-			// Look for a chart for the selected instrument
-			// If none found, create one
+			// Get the active chart
+			var chart = Model.Charts.ActiveChart;
+			chart.Exchange = ChartSelector.Exchange;
+			chart.Pair = ChartSelector.Pair;
+			chart.TimeFrame = ETimeFrame.Day1;
+			chart.EnsureActiveContent();
+
 			// Add graphics + support for resizing price range
+		}
+
+		/// <summary>Use all available base currency in the current fund for the bot</summary>
+		public Command AllocateAllAvailableBase { get; }
+		private void AllocateAllAvailableBaseInternal()
+		{
+			var available = Fund[ChartSelector.Pair.Base].Available;
+			Settings.BaseCurrencyBalance = available;
+		}
+
+		/// <summary>Use all available quote currency in the current fund for the bot</summary>
+		public Command AllocateAllAvailableQuote { get; }
+		private void AllocateAllAvailableQuoteInternal()
+		{
+			var available = Fund[ChartSelector.Pair.Quote].Available;
+			Settings.QuoteCurrencyBalance = available;
 		}
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler PropertyChanged;
-		private void SetProp<T>(ref T prop, T new_value, string prop_name)
+		private void HandleSettingChange(object sender, SettingChangeEventArgs e)
 		{
-			if (Equals(prop, new_value)) return;
-			prop = new_value;
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Validate)));
 		}
+
+		/// <summary>Graphics object for showing the price range</summary>
+		private GfxPriceRange GfxPriceRange
+		{
+			get { return m_gfx_price_range; }
+			set
+			{
+				if (m_gfx_price_range == value) return;
+				Util.Dispose(ref m_gfx_price_range);
+				m_gfx_price_range = value;
+			}
+		}
+		private GfxPriceRange m_gfx_price_range;
 	}
 }

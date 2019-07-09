@@ -41,7 +41,7 @@ namespace CoinFlip.UI
 		protected override void OnMouseDoubleClick(MouseButtonEventArgs e)
 		{
 			base.OnMouseDoubleClick(e);
-			var chart = Model.Charts.FindActiveChart();
+			var chart = Model.Charts.ActiveChart;
 			if (chart != null)
 				ShowCurrentCompletedOrderOnChart(chart);
 		}

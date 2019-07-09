@@ -106,6 +106,8 @@ namespace CoinFlip.Settings
 		public event EventHandler BalanceChanged;
 		public void NotifyBalanceChanged()
 		{
+			// Note: rather than one global event for "Any coin balance changed", prefer to attach
+			// weak handlers to 'BalanceChanged' for the coins you care about. See GridCoins for an example.
 			BalanceChanged?.Invoke(this, EventArgs.Empty);
 		}
 

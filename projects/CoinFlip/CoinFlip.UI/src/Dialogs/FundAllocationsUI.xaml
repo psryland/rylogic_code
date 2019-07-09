@@ -55,7 +55,7 @@
 				DisplayMemberPath="Name"
 				HorizontalAlignment="Left"
 				VerticalAlignment="Center"
-				MinWidth="60"
+				MinWidth="80"
 				Margin="3"
 				/>
 			<TextBlock

@@ -13,11 +13,11 @@ namespace CoinFlip
 	{
 		// Notes:
 		//   - This is one side of the MarketDepth (either buy or sell).
-		//   - The available trades are ordered by price (Increasing for Ask, Decreasing for Bid).
+		//   - The available trades are ordered by price (Increasing for Q2B, Decreasing for B2Q).
 		public OrderBook(Coin @base, Coin quote, ETradeType tt)
 		{
 			TradeType = tt;
-			Orders = new ObservableCollection<Offer>();
+			Offers = new ObservableCollection<Offer>();
 			Base = @base;
 			Quote = quote;
 		}
@@ -25,7 +25,7 @@ namespace CoinFlip
 		{
 			Base = rhs.Base;
 			Quote = rhs.Quote;
-			Orders = new ObservableCollection<Offer>(rhs.Orders);
+			Offers = new ObservableCollection<Offer>(rhs.Offers);
 			TradeType = rhs.TradeType;
 		}
 
@@ -39,21 +39,21 @@ namespace CoinFlip
 		public Coin Quote { get; }
 
 		/// <summary>The buy/sell offers</summary>
-		public ObservableCollection<Offer> Orders { get; }
+		public ObservableCollection<Offer> Offers { get; }
 
 		/// <summary>If positive, then the first order is a minimum (i.e. Q2B). If negative, then the first order is a maximum (i.e. B2Q)</summary>
 		public int Sign => TradeType.Sign();
 
 		/// <summary>The number of orders</summary>
-		public int Count => Orders.Count;
+		public int Count => Offers.Count;
 
 		/// <summary>Array access</summary>
-		public Offer this[int index] => Orders[index];
+		public Offer this[int index] => Offers[index];
 
 		/// <summary>Remove all orders</summary>
 		public void Clear()
 		{
-			Orders.Clear();
+			Offers.Clear();
 		}
 
 		/// <summary>Add an offer to the depth of market</summary>
@@ -61,7 +61,7 @@ namespace CoinFlip
 		{
 			Debug.Assert(!validate || offer.AmountBase != 0m._(Base));
 			Debug.Assert(!validate || offer.AmountBase * offer.Price != 0m._(Quote));
-			Orders.Add(offer);
+			Offers.Add(offer);
 		}
 
 		/// <summary>
@@ -74,7 +74,7 @@ namespace CoinFlip
 			volume_remaining = volume;
 
 			var count = 0;
-			foreach (var order in Orders)
+			foreach (var order in Offers)
 			{
 				// Price is too high/low to fill 'order', stop.
 				if (Sign * price.CompareTo(order.Price) < 0)
@@ -95,17 +95,17 @@ namespace CoinFlip
 			}
 
 			// Remove the orders that have been filled
-			var consumed = Orders.Take(count).ToList();
-			Orders.RemoveRange(0, count);
+			var consumed = Offers.Take(count).ToList();
+			Offers.RemoveRange(0, count);
 
-			// Remove any remaining volume from the top remaining order if doing so don't leave an invalid trading volume
-			if (volume_remaining != 0 && Orders.Count != 0 && Sign * price.CompareTo(Orders[0].Price) >= 0)
+			// Remove any remaining volume from the top remaining order if doing so doesn't leave an invalid trading volume
+			if (volume_remaining != 0 && Offers.Count != 0 && Sign * price.CompareTo(Offers[0].Price) >= 0)
 			{
-				var rem = Orders[0].AmountBase - volume_remaining;
-				if (pair.AmountRangeBase.Contains(rem) && pair.AmountRangeQuote.Contains(rem * Orders[0].Price))
+				var rem = Offers[0].AmountBase - volume_remaining;
+				if (pair.AmountRangeBase.Contains(rem) && pair.AmountRangeQuote.Contains(rem * Offers[0].Price))
 				{
-					consumed.Add(new Offer(Orders[0].Price, volume_remaining));
-					Orders[0] = new Offer(Orders[0].Price, rem);
+					consumed.Add(new Offer(Offers[0].Price, volume_remaining));
+					Offers[0] = new Offer(Offers[0].Price, rem);
 					volume_remaining = 0m._(volume);
 				}
 			}
@@ -123,7 +123,7 @@ namespace CoinFlip
 		/// <summary>Enumerable Orders</summary>
 		public IEnumerator<Offer> GetEnumerator()
 		{
-			return Orders.GetEnumerator();
+			return Offers.GetEnumerator();
 		}
 		IEnumerator IEnumerable.GetEnumerator()
 		{

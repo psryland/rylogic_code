@@ -53,12 +53,12 @@
     <Compile Include="src\Balance\Balances.cs" />
     <Compile Include="src\Balance\ETransfer.cs" />
     <Compile Include="src\Balance\Fund.cs" />
-    <Compile Include="src\Balance\FundBalance.cs" />
     <Compile Include="src\Balance\FundHold.cs" />
     <Compile Include="src\Balance\IBalance.cs" />
     <Compile Include="src\Balance\Transfer.cs" />
     <Compile Include="src\Balance\Transfers.cs" />
     <Compile Include="src\Bots\IBot.cs" />
+    <Compile Include="src\Bots\MonitoredOrders.cs" />
     <Compile Include="src\Chart\Candle.cs" />
     <Compile Include="src\Exchange\BalanceCollection.cs" />
     <Compile Include="src\Exchange\Exchange_Binance.cs" />
@@ -81,6 +81,7 @@
     <Compile Include="src\Misc\ExchPairTimeFrame.cs" />
     <Compile Include="src\Misc\IValueTotalAvail.cs" />
     <Compile Include="src\Model\BotContainer.cs" />
+    <Compile Include="src\Model\ChartContainer.cs" />
     <Compile Include="src\Model\CoinDataList.cs" />
     <Compile Include="src\Coin\Coin.cs" />
     <Compile Include="src\Coin\CoinPair.cs" />

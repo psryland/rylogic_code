@@ -1,0 +1,98 @@
+﻿<Window
+	x:Class="CoinFlip.UI.NewBotUI"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+	mc:Ignorable="d" 
+	d:DesignWidth="800"
+	d:DesignHeight="450"
+	Title="Create Bot"
+	WindowStartupLocation="CenterOwner"
+	ResizeMode="CanResizeWithGrip"
+	SizeToContent="WidthAndHeight"
+	ShowInTaskbar="True"
+	MinWidth="330"
+	MinHeight="343"
+	Width="330"
+	Height="343"
+	>
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
+
+		<!-- Bot name -->
+		<StackPanel
+			Grid.Row="0"
+			Orientation="Vertical"
+			Margin="8"
+			>
+			<TextBlock
+				Text="Name:"
+				/>
+			<TextBox
+				MinWidth="80"
+				Text="{Binding BotName}"
+				/>
+		</StackPanel>
+
+		<!-- Bot List -->
+		<DockPanel
+			Grid.Row="1"
+			Margin="8"
+			>
+			<TextBlock
+				DockPanel.Dock="Top"
+				Text="Available Bots:"
+			/>
+			<ListView
+				ItemsSource="{Binding AvailableBots}"
+				SelectedItem="{Binding AvailableBots/}"
+				DisplayMemberPath="Name"
+				SelectionMode="Single"
+				/>
+		</DockPanel>
+		
+		<!-- Buttons -->
+		<Grid
+			Grid.Row="2"
+			>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*"/>
+				<ColumnDefinition Width="Auto"/>
+				<ColumnDefinition Width="Auto"/>
+			</Grid.ColumnDefinitions>
+
+			<TextBlock
+				Text="{Binding Validate.Message, FallbackValue=''}"
+				TextWrapping="Wrap"
+				Foreground="Red"
+				Margin="8"
+				/>
+			
+			<!-- Ok -->
+			<Button
+				Grid.Column="1"
+				Content="OK"
+				Command="{Binding Accept}"
+				IsEnabled="{Binding Validate, Converter={conv:IsNull}}"
+				IsDefault="True"
+				MinWidth="80"
+				Margin="4,8,4,8"
+				/>
+			
+			<!-- Cancel -->
+			<Button
+				Grid.Column="2"
+				Content="Cancel"
+				IsCancel="True"
+				MinWidth="80"
+				Margin="4,8,8,8"
+				/>
+		</Grid>
+	</Grid>
+</Window>

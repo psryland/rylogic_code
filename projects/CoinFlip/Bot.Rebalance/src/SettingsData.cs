@@ -1,22 +1,23 @@
 ﻿using System;
-using System.Windows.Controls;
 using CoinFlip;
+using CoinFlip.Bots;
 using Rylogic.Common;
 using Rylogic.Extn;
 
 namespace Bot.Rebalance
 {
-	public class SettingsData : SettingsBase<SettingsData>
+	public class SettingsData :SettingsBase<SettingsData>
 	{
 		public SettingsData()
 		{
-			FundId = Fund.Main;
 			Exchange = string.Empty;
 			Pair = string.Empty;
 			AllInPrice = 0m;
 			AllOutPrice = 100_000m;
 			BaseCurrencyBalance = 0m;
 			QuoteCurrencyBalance = 0m;
+			RebalanceThreshold = 0.1;
+			PendingOrders = new MonitoredOrders();
 
 			AutoSaveOnChanges = true;
 		}
@@ -24,13 +25,6 @@ namespace Bot.Rebalance
 			: base(filepath)
 		{
 			AutoSaveOnChanges = true;
-		}
-
-		/// <summary>The fund to use for this bot</summary>
-		public string FundId
-		{
-			get { return get<string>(nameof(FundId)); }
-			set { set(nameof(FundId), value); }
 		}
 
 		/// <summary>The exchange that hosts the pair</summary>
@@ -47,32 +41,46 @@ namespace Bot.Rebalance
 			set { set(nameof(Pair), value); }
 		}
 
-		/// <summary>The price at which the balance is maximally in the base currency</summary>
+		/// <summary>The price (in Quote/Base) at which the balance is maximally in the base currency</summary>
 		public decimal AllInPrice
 		{
 			get { return get<decimal>(nameof(AllInPrice)); }
 			set { set(nameof(AllInPrice), value); }
 		}
 
-		/// <summary>The price at which the balance is maximally in the quote currency</summary>
+		/// <summary>The price (in Quote/Base) at which the balance is maximally in the quote currency</summary>
 		public decimal AllOutPrice
 		{
 			get { return get<decimal>(nameof(AllOutPrice)); }
 			set { set(nameof(AllOutPrice), value); }
 		}
 
-		/// <summary>The current balance of base currency</summary>
+		/// <summary>The current balance of base currency (in Base) </summary>
 		public decimal BaseCurrencyBalance
 		{
 			get { return get<decimal>(nameof(BaseCurrencyBalance)); }
 			set { set(nameof(BaseCurrencyBalance), value); }
 		}
 
-		/// <summary>The current balance of quote currency</summary>
+		/// <summary>The current balance of quote currency (in Quote) </summary>
 		public decimal QuoteCurrencyBalance
 		{
 			get { return get<decimal>(nameof(QuoteCurrencyBalance)); }
 			set { set(nameof(QuoteCurrencyBalance), value); }
+		}
+
+		/// <summary>The minimum ratio difference before a rebalance is done</summary>
+		public double RebalanceThreshold
+		{
+			get { return get<double>(nameof(RebalanceThreshold)); }
+			set { set(nameof(RebalanceThreshold), value); }
+		}
+
+		/// <summary>Orders that have been created and are live on an exchange waiting to be filled</summary>
+		public MonitoredOrders PendingOrders
+		{
+			get { return get<MonitoredOrders>(nameof(PendingOrders)); }
+			set { set(nameof(PendingOrders), value); }
 		}
 
 		/// <summary>Performs validation on the settings. Returns null if valid</summary>
@@ -88,8 +96,14 @@ namespace Bot.Rebalance
 				return new Exception("The configured paid is not available");
 			if (AllInPrice >= AllOutPrice)
 				return new Exception("Price range is invalid");
-			if (model.Funds[FundId] == null)
-				return new Exception("Fund is invalid");
+			if (BaseCurrencyBalance < 0)
+				return new Exception("Base holdings is invalid");
+			if (QuoteCurrencyBalance < 0)
+				return new Exception("Quote holdings is invalid");
+			if (BaseCurrencyBalance == 0 && QuoteCurrencyBalance == 0)
+				return new Exception("Combined holdings must be > 0");
+			if (RebalanceThreshold <= 0)
+				return new Exception("Rebalance threshold is invalid");
 			return null;
 		}
 	}

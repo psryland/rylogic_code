@@ -409,21 +409,5 @@ namespace CoinFlip
 
 			return dt_curr.ToString("HH:mm");
 		}
-
-		/// <summary>Return the first active chart, or if none are active, make the first one active</summary>
-		public static IChartView FindActiveChart(this IList<IChartView> charts)
-		{
-			if (charts.Count == 0)
-				return null;
-
-			// Find a chart that is visible
-			var active = charts.FirstOrDefault(x => x.IsActiveContentInPane);
-			if (active != null)
-				return active;
-
-			// Make the first chart visible
-			charts[0].EnsureActiveContent();
-			return charts[0];
-		}
 	}
 }

@@ -413,7 +413,7 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 				else if (snap.HasFlag(EDropSite.Pane))
 				{
 					// Dock to a site within the current pane
-					DropAddress = pane.DockAddress.Concat(ds).ToArray();
+					DropAddress = pane.DockAddress.Append(ds).ToArray();
 				}
 				else if (snap.HasFlag(EDropSite.Branch))
 				{

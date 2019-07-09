@@ -15,7 +15,7 @@ using Rylogic.Utility;
 
 namespace CoinFlip.UI
 {
-	public partial class GridCoins : Grid, IDockable, IDisposable, INotifyPropertyChanged
+	public partial class GridCoins :Grid, IDockable, IDisposable, INotifyPropertyChanged
 	{
 		// Notes:
 		//  - This grid shows balance and coin information based on averages over
@@ -38,6 +38,7 @@ namespace CoinFlip.UI
 			AddCoin = Command.Create(this, AddCoinInternal);
 			RemoveCoin = Command.Create(this, RemoveCoinInternal);
 			EditLiveValueConversion = Command.Create(this, EditLiveValueConversionInternal);
+			SetBackTestingBalances = Command.Create(this, SetBackTestingBalancesInternal);
 			SetFakeCash = Command.Create(this, SetFakeCashInternal);
 			ResetFakeCash = Command.Create(this, ResetFakeCashInternal);
 
@@ -53,28 +54,26 @@ namespace CoinFlip.UI
 		public Model Model
 		{
 			get { return m_model; }
-			set
+			private set
 			{
 				if (m_model == value) return;
 				if (m_model != null)
 				{
 					Model.AllowTradesChanged -= HandleAllowTradesChanged;
-					m_model.Exchanges.CollectionChanged -= HandleExchangesChanged;
+					Model.BackTestingChange -= HandleBackTestingChange;
 					m_model.Coins.CollectionChanged -= HandleCoinsChanged;
+					m_model.Exchanges.CollectionChanged -= HandleExchangesChanged;
 				}
 				m_model = value;
 				if (m_model != null)
 				{
-					m_model.Coins.CollectionChanged += HandleCoinsChanged;
 					m_model.Exchanges.CollectionChanged += HandleExchangesChanged;
+					m_model.Coins.CollectionChanged += HandleCoinsChanged;
+					Model.BackTestingChange += HandleBackTestingChange;
 					Model.AllowTradesChanged += HandleAllowTradesChanged;
 				}
 
 				// Handlers
-				void HandleCoinsChanged(object sender, NotifyCollectionChangedEventArgs e)
-				{
-					Coins.Refresh();
-				}
 				void HandleExchangesChanged(object sender, NotifyCollectionChangedEventArgs e)
 				{
 					// Preserve the current item
@@ -87,6 +86,14 @@ namespace CoinFlip.UI
 						list.AddRange(Model.TradingExchanges.Select(x => x.Name));
 						ExchangeNames.Refresh();
 					}
+				}
+				void HandleCoinsChanged(object sender, NotifyCollectionChangedEventArgs e)
+				{
+					Coins.Refresh();
+				}
+				void HandleBackTestingChange(object sender, PrePostEventArgs e)
+				{
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BackTesting)));
 				}
 				void HandleAllowTradesChanged(object sender, EventArgs e)
 				{
@@ -115,6 +122,9 @@ namespace CoinFlip.UI
 		/// <summary>The data source for coin data</summary>
 		public ICollectionView Coins { get; }
 
+		/// <summary>True when back testing is enabled</summary>
+		public bool BackTesting => Model.BackTesting;
+
 		/// <summary>True when live trading is enabled</summary>
 		public bool AllowTrades => Model.AllowTrades;
 
@@ -124,9 +134,6 @@ namespace CoinFlip.UI
 			get => (CoinDataAdapter)Coins.CurrentItem;
 			set => Coins.MoveCurrentTo(value);
 		}
-
-		/// <summary>The currently selected coin name (or generic 'Coin')</summary>
-		public string CurrentCoinName => Current?.Symbol ?? "Coin";
 
 		/// <summary>Filter support for 'Coins'</summary>
 		public CoinFilter Filter { get; }
@@ -166,6 +173,16 @@ namespace CoinFlip.UI
 			};
 			if (dlg.ShowDialog() == true)
 				Current.CoinData.LivePriceSymbols = dlg.Value;
+		}
+
+		/// <summary>Set initial balances for back testing</summary>
+		public Command SetBackTestingBalances { get; }
+		private void SetBackTestingBalancesInternal()
+		{
+			var dlg = new BackTestingConfigUI(Window.GetWindow(this), Model);
+			if (dlg.ShowDialog() == true)
+			{
+			}
 		}
 
 		/// <summary>Add/Remove fake funds for testing</summary>

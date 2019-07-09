@@ -1,23 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using CoinFlip.Bots;
-using Rylogic.Gui.WPF;
+using CoinFlip.Settings;
+using Rylogic.Common;
 using Rylogic.Extn;
-using Rylogic.Utility;
+using Rylogic.Gui.WPF;
 using Rylogic.Plugin;
+using Rylogic.Utility;
 
 namespace CoinFlip.UI
 {
@@ -27,7 +20,8 @@ namespace CoinFlip.UI
 		{
 			InitializeComponent();
 			DockControl = new DockControl(this, "Bots");
-			Bots = new ListCollectionView(model.Bots);
+			Bots = new ListCollectionView(model.Bots) { Filter = x => ((IBot)x)?.BackTesting == Model.BackTesting };
+			AvailableFunds = new ListCollectionView(model.Funds);
 			Model = model;
 
 			// Commands
@@ -35,6 +29,7 @@ namespace CoinFlip.UI
 			AddExistingBot = Command.Create(this, AddExistingBotInternal);
 			RemoveBot = Command.Create(this, RemoveBotInternal);
 			ToggleActive = Command.Create(this, ToggleActiveInternal);
+			RenameBot = Command.Create(this, RenameBotInternal);
 			ShowConfig = Command.Create(this, ShowConfigInternal);
 
 			m_grid.ContextMenu.Opened += delegate { m_grid.ContextMenu.Items.TidySeparators(); };
@@ -53,7 +48,22 @@ namespace CoinFlip.UI
 			set
 			{
 				if (m_model == value) return;
+				if (m_model != null)
+				{
+					Model.BackTestingChange -= HandleBackTestingChanged;
+				}
 				m_model = value;
+				if (m_model != null)
+				{
+					Model.BackTestingChange += HandleBackTestingChanged;
+				}
+
+				// Handler
+				void HandleBackTestingChanged(object sender, PrePostEventArgs e)
+				{
+					if (e.Before) return;
+					Bots.Refresh();
+				}
 			}
 		}
 		private Model m_model;
@@ -79,25 +89,21 @@ namespace CoinFlip.UI
 			set => Bots.MoveCurrentTo(value);
 		}
 
+		/// <summary>The Funds to choose from</summary>
+		public ICollectionView AvailableFunds { get; }
+
 		/// <summary>Create a new bot instance</summary>
 		public Command CreateNewBot { get; }
 		private void CreateNewBotInternal()
 		{
 			// Present a list of available bots
-			var dlg = new ListUI(Window.GetWindow(this))
-			{
-				Title = "Available Bots",
-				Prompt = "Select the Bot type to create",
-				SelectionMode = SelectionMode.Single,
-				DisplayMember = nameof(PluginFile.Name),
-				AllowCancel = true,
-			};
-			dlg.Items.AddRange(IBot.AvailableBots());
+			var dlg = new NewBotUI(Window.GetWindow(this));
 			if (dlg.ShowDialog() == true)
 			{
 				// Add a new instance of this plugin
-				var bot_plugin = (PluginFile)dlg.SelectedItem;
-				Model.Bots.Add((IBot)bot_plugin.Create(Guid.NewGuid(), Model));
+				var bot_data = new BotData { Id = Guid.NewGuid(), Name = dlg.BotName, BackTesting = Model.BackTesting };
+				Model.Bots.Add((IBot)dlg.SelectedBot.Create(bot_data, Model));
+				Model.Bots.SaveToSettings();
 			}
 		}
 
@@ -116,6 +122,7 @@ namespace CoinFlip.UI
 			if (bot == null) return;
 			bot.Active = false;
 			Model.Bots.Remove(bot);
+			Model.Bots.SaveToSettings();
 		}
 
 		/// <summary>Activate/Deactivate a bot</summary>
@@ -125,6 +132,30 @@ namespace CoinFlip.UI
 			var bot = (IBot)Bots.CurrentItem;
 			if (bot == null) return;
 			bot.Active = !bot.Active;
+
+			// Save the active state in the settings
+			var bot_data = SettingsData.Settings.Bots.First(x => x.Id == bot.Id);
+			bot_data.Active = bot.Active;
+			SettingsData.Settings.Save();
+		}
+
+		/// <summary>Rename a bot</summary>
+		public Command RenameBot { get; }
+		private void RenameBotInternal()
+		{
+			if (Current == null) return;
+			var dlg = new PromptUI(Window.GetWindow(this))
+			{
+				Title = "Rename Bot",
+				Prompt = "Choose a new name for this bot",
+				Value = Current.Name,
+				ShowWrapCheckbox = false,
+			};
+			if (dlg.ShowDialog() == true)
+			{
+				Current.Name = dlg.Value;
+				SettingsData.Settings.Save();
+			}
 		}
 
 		/// <summary>Display the configuration options for the selected bot</summary>

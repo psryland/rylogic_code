@@ -56,10 +56,9 @@ namespace CoinFlip
 			if (Meta.ShowLivePrices)
 			{
 				var coin = this;
-				var valid = true;
+				var value = (Unit<decimal>?)amount._(coin);
 
 				// Calculate the live price using the sequence of currencies in the meta data
-				var value = (Unit<decimal>?)amount._(coin);
 				foreach (var sym in Meta.LivePriceSymbolsArray)
 				{
 					// Skip degenerate conversions
@@ -70,7 +69,7 @@ namespace CoinFlip
 					var pair = Exchange.Pairs[coin, sym];
 					if (pair == null)
 					{
-						valid = false;
+						value = null;
 						break;
 					}
 
@@ -78,12 +77,14 @@ namespace CoinFlip
 					value = coin == pair.Base
 						? value * pair.SpotPrice(ETradeType.B2Q)
 						: value * pair.SpotPrice(ETradeType.Q2B);
+					if (value == null)
+						break;
 
 					coin = pair.OtherCoin(coin);
 				}
 
 				// Return the live price if it could be determined
-				if (valid && value.HasValue)
+				if (value.HasValue)
 					return value.Value._(Symbol);
 			}
 

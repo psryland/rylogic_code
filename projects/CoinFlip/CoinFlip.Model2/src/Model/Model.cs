@@ -12,6 +12,7 @@ using System.Windows.Threading;
 using CoinFlip.Bots;
 using CoinFlip.Settings;
 using Rylogic.Common;
+using Rylogic.Extn;
 using Rylogic.Utility;
 
 namespace CoinFlip
@@ -26,7 +27,7 @@ namespace CoinFlip
 
 			DataUpdates = new BlockingCollection<Action>();
 		}
-		public Model()
+		public Model(Func<IChartView> create_chart_cb)
 		{
 			try
 			{
@@ -36,7 +37,7 @@ namespace CoinFlip
 				Funds = new FundContainer();
 				Bots = new BotContainer(this);
 				PriceData = new PriceDataMap(Shutdown.Token);
-				Charts = new ObservableCollection<IChartView>();
+				Charts = new ChartContainer(create_chart_cb);
 				SelectedOpenOrders = new ObservableCollection<Order>();
 				SelectedCompletedOrders = new ObservableCollection<OrderCompleted>();
 
@@ -64,8 +65,6 @@ namespace CoinFlip
 			AllowTradesChanged -= HandleAllowTradesChanged;
 
 			PriceData = null;
-			Bots = null;
-			Funds = null;
 			User = null;
 			Shutdown = null;
 			Util.Dispose(Log);
@@ -119,12 +118,19 @@ namespace CoinFlip
 					exch.UpdateThreadActive = false;
 
 				// Turn off the update thread for each price data instance
-				foreach (var pd_pairs in PriceData.Pairs)
-					foreach (var pd in pd_pairs.Value)
-						pd.Value.UpdateThreadActive = false;
+				foreach (var pd in PriceData)
+					pd.UpdateThreadActive = false;
+
+				// Deactivate all live trading bots (actually, deactivate all of them)
+				foreach (var bot in Bots)
+					bot.Active = false;
 
 				// Integrate market updates so that updates from live data don't end up in back testing data.
 				IntegrateDataUpdates();
+
+				// Save and rseet the current Fund container
+				Funds.SaveToSettings(Exchanges);
+				Funds.AssignFunds(new FundData[0]);
 
 				// Disable live trading
 				AllowTrades = false;
@@ -133,13 +139,30 @@ namespace CoinFlip
 			// If back testing has just been enabled...
 			if (BackTesting && e.After)
 			{
+				// Create the fund container from the back testing settings
+				Funds.AssignFunds(SettingsData.Settings.BackTesting.TestFunds);
+
+				// Reset the balance collections in each exchange
+				foreach (var exch in Exchanges)
+					exch.Balance.Clear();
+
 				// Create the simulation manager
-				Simulation = new Simulation(TradingExchanges, PriceData);
+				Simulation = new Simulation(TradingExchanges, PriceData, Bots);
+
+				// Enable backtesting bots based on their settings
+				foreach (var bot in Bots.Where(x => x.BackTesting))
+					bot.Active = bot.BotData.Active;
 			}
 
 			// If back testing is about to be disabled...
 			if (BackTesting && e.Before)
 			{
+				// Deactivate all backtesting bots (actually, deactivate all of them)
+				foreach (var bot in Bots)
+					bot.Active = false;
+
+				// Remove (without saving) the current fund container
+				Funds.AssignFunds(new FundData[0]);
 			}
 
 			// If back testing has just been disabled...
@@ -148,6 +171,13 @@ namespace CoinFlip
 				// Clean up the simulation
 				Simulation = null;
 
+				// Restore the fund container from settings
+				Funds.AssignFunds(SettingsData.Settings.LiveFunds);
+
+				// Reset the balance collections in each exchange
+				foreach (var exch in Exchanges)
+					exch.Balance.Clear();
+
 				// Turn on the update thread for each price data instance
 				foreach (var pd  in PriceData)
 					pd.UpdateThreadActive = pd.RefCount != 0;
@@ -155,6 +185,10 @@ namespace CoinFlip
 				// Turn on the update thread for each exchange
 				foreach (var exch in Exchanges)
 					exch.UpdateThreadActive = exch.Enabled;
+
+				// Enable live trading bots based on their settings
+				foreach (var bot in Bots.Where(x => !x.BackTesting))
+					bot.Active = bot.BotData.Active;
 			}
 		}
 		private static bool s_back_testing;
@@ -301,34 +335,10 @@ namespace CoinFlip
 		private CoinDataList m_coins;
 
 		/// <summary>The sub-accounts used to partition balances on each exchange</summary>
-		public FundContainer Funds
-		{
-			get { return m_funds; }
-			private set
-			{
-				if (m_funds == value) return;
-				if (m_funds != null)
-				{
-				}
-				m_funds = value;
-				if (m_funds != null)
-				{
-				}
-			}
-		}
-		private FundContainer m_funds;
+		public FundContainer Funds { get; }
 
 		/// <summary>The trading bot instances</summary>
-		public BotContainer Bots
-		{
-			get { return m_bots; }
-			private set
-			{
-				if (m_bots == value) return;
-				m_bots = value;
-			}
-		}
-		private BotContainer m_bots;
+		public BotContainer Bots { get; }
 
 		/// <summary>The repository of candle data for all pairs and time frames</summary>
 		public PriceDataMap PriceData
@@ -357,7 +367,7 @@ namespace CoinFlip
 		private Simulation m_simulation;
 
 		/// <summary>The available charts</summary>
-		public ObservableCollection<IChartView> Charts { get; }
+		public ChartContainer Charts { get; }
 
 		/// <summary>Open orders that are 'selected'</summary>
 		public ObservableCollection<Order> SelectedOpenOrders { get; }
@@ -366,7 +376,7 @@ namespace CoinFlip
 		public ObservableCollection<OrderCompleted> SelectedCompletedOrders { get; }
 
 		/// <summary>The special case cross exchange</summary>
-		public CrossExchange CrossExchange => Exchanges.OfType<CrossExchange>().FirstOrDefault();
+		public CrossExchange CrossExchange { get; private set; }
 
 		/// <summary>All exchanges except the CrossExchange</summary>
 		public IEnumerable<Exchange> TradingExchanges => Exchanges.Where(x => !(x is CrossExchange));
@@ -403,7 +413,7 @@ namespace CoinFlip
 				: new Bittrex(Coins, Shutdown.Token));
 
 			// Create the Cross-Exchange after all others have been created
-			Exchanges.Insert(0, new CrossExchange(Exchanges, Coins, Shutdown.Token));
+			CrossExchange = Exchanges.Insert2(0, new CrossExchange(Exchanges, Coins, Shutdown.Token));
 		}
 
 		/// <summary>Process any pending data updates</summary>

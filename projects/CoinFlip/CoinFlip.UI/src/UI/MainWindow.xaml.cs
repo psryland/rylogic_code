@@ -18,13 +18,13 @@ namespace CoinFlip.UI
 		public MainWindow()
 		{
 			InitializeComponent();
-			Model = new Model();
+			Model = new Model(CreateNewChart);
 
 			// Commands
 			LogOn = Command.Create(this, LogOnInternal);
 			NewChart = Command.Create(this, NewChartInternal);
-			ToggleLiveTrading = Command.Create(this, () => Model.AllowTrades = !Model.AllowTrades);
-			ToggleBackTesting = Command.Create(this, () => Model.BackTesting = !Model.BackTesting);
+			ToggleLiveTrading = Command.Create(this, ToggleLiveTradingInternal);
+			ToggleBackTesting = Command.Create(this, ToggleBackTestingInternal);
 
 			// Dock container windows
 			m_dc.Add(new GridExchanges(Model), EDockSite.Left);
@@ -129,9 +129,17 @@ namespace CoinFlip.UI
 
 		/// <summary>Toggle the live trading switch</summary>
 		public Command ToggleLiveTrading { get; }
+		private void ToggleLiveTradingInternal()
+		{
+			Model.AllowTrades = !Model.AllowTrades;
+		}
 
 		/// <summary>Toggle the state of back testing</summary>
 		public Command ToggleBackTesting { get; }
+		private void ToggleBackTestingInternal()
+		{
+			Model.BackTesting = !Model.BackTesting;
+		}
 
 		/// <summary>Change the logged on user</summary>
 		public Command LogOn { get; }
@@ -166,7 +174,7 @@ namespace CoinFlip.UI
 		public Command NewChart { get; }
 		private void NewChartInternal()
 		{
-			m_dc.Add(new CandleChart(Model), EDockSite.Centre);
+			CreateNewChart();
 		}
 
 		/// <summary>Try to select the last exchange</summary>
@@ -229,6 +237,13 @@ namespace CoinFlip.UI
 				}
 				exch.Pairs.CollectionChanged -= WaitForPairs;
 			}
+		}
+
+		/// <summary>Callback function for creating new charts</summary>
+		private IChartView CreateNewChart()
+		{
+			var chart = m_dc.Add2(new CandleChart(Model), EDockSite.Centre);
+			return chart;
 		}
 
 		/// <summary></summary>

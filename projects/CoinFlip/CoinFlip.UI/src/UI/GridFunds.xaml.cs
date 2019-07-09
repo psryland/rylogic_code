@@ -9,6 +9,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using CoinFlip.Settings;
+using Rylogic.Common;
 using Rylogic.Container;
 using Rylogic.Extn;
 using Rylogic.Gui.WPF;
@@ -23,12 +24,14 @@ namespace CoinFlip.UI
 			InitializeComponent();
 			m_grid.MouseRightButtonUp += DataGrid_.ColumnVisibility;
 			DockControl = new DockControl(this, "Funds");
+
+			Model = model;
 			Filter = new CoinFilter(x => (CoinDataAdapter)x);
 			Exchanges = new ListCollectionView(model.Exchanges) { Filter = x => !(x is CrossExchange) };
 			Coins = new ListCollectionView(ListAdapter.Create(model.Coins, x => new CoinDataAdapter(this, x), x => x.CoinData)) { Filter = Filter.Predicate };
 			Funds = new ListCollectionView(model.Funds);
-			Model = model;
 
+			Exchanges.MoveCurrentToFirst();
 			Exchanges.CurrentChanged += delegate { Coins.Refresh(); };
 			Filter.PropertyChanged += delegate { Coins.Refresh(); };
 
@@ -55,29 +58,48 @@ namespace CoinFlip.UI
 				if (m_model == value) return;
 				if (m_model != null)
 				{
-					m_model.Exchanges.CollectionChanged -= HandleExchangesChanged;
-					m_model.Coins.CollectionChanged -= HandleCoinsChanged;
-					m_model.Funds.CollectionChanged -= HandleFundsChanged;
+					m_model.Exchanges.CollectionChanged -= HandleExchangeCollectionChanged;
+					m_model.Coins.CollectionChanged -= HandleCoinsCollectionChanged;
+					m_model.Funds.CollectionChanged -= HandleFundCollectionChanged;
+					SettingsData.Settings.SettingChange -= HandleSettingChange;
+					Model.BackTestingChange -= HandleBackTestingChanged;
 				}
 				m_model = value;
 				if (m_model != null)
 				{
-					m_model.Funds.CollectionChanged += HandleFundsChanged;
-					m_model.Coins.CollectionChanged += HandleCoinsChanged;
-					m_model.Exchanges.CollectionChanged += HandleExchangesChanged;
-					Exchanges.MoveCurrentToFirst();
+					Model.BackTestingChange += HandleBackTestingChanged;
+					SettingsData.Settings.SettingChange += HandleSettingChange;
+					m_model.Funds.CollectionChanged += HandleFundCollectionChanged;
+					m_model.Coins.CollectionChanged += HandleCoinsCollectionChanged;
+					m_model.Exchanges.CollectionChanged += HandleExchangeCollectionChanged;
 				}
 
 				// Handle funds being created or destroyed
-				void HandleFundsChanged(object sender, NotifyCollectionChangedEventArgs e)
+				void HandleBackTestingChanged(object sender, PrePostEventArgs e)
+				{
+					if (e.Before) return;
+					CreateFundColumns();
+					Coins.Refresh();
+				}
+				void HandleSettingChange(object sender, SettingChangeEventArgs e)
+				{
+					if (e.Before) return;
+					if (e.Key == nameof(SettingsData.LiveFunds) || e.Key == nameof(BackTestingSettings.TestFunds))
+					{
+						CreateFundColumns();
+						Coins.Refresh();
+					}
+				}
+				void HandleFundCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 				{
 					CreateFundColumns();
+					Coins.Refresh();
 				}
-				void HandleCoinsChanged(object sender, NotifyCollectionChangedEventArgs e)
+				void HandleCoinsCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 				{
 					Coins.Refresh();
 				}
-				void HandleExchangesChanged(object sender, NotifyCollectionChangedEventArgs e)
+				void HandleExchangeCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 				{
 					Coins.Refresh();
 				}
@@ -104,7 +126,7 @@ namespace CoinFlip.UI
 		/// <summary>The data source for coin data</summary>
 		public ICollectionView Coins { get; }
 
-		/// <summary>The available funds</summary>
+		/// <summary>The available funds.</summary>
 		public ICollectionView Funds { get; }
 
 		/// <summary>Filter on 'Coins'</summary>
@@ -191,13 +213,20 @@ namespace CoinFlip.UI
 		}
 
 		/// <summary>Wraps 'CoinData' to expose properties for binding</summary>
-		private class CoinDataAdapter :IValueTotalAvail
+		private class CoinDataAdapter :IValueTotalAvail, INotifyPropertyChanged
 		{
 			private readonly GridFunds m_me;
 			public CoinDataAdapter(GridFunds me, CoinData cd)
 			{
 				m_me = me;
 				CoinData = cd;
+
+				// When the balance of 'cd' changes, trigger a binding update.
+				cd.BalanceChanged += WeakRef.MakeWeak(UpdateBalanceChanged, h => cd.BalanceChanged -= h);
+				void UpdateBalanceChanged(object sender = null, EventArgs args = null)
+				{
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(null));
+				}
 			}
 
 			/// <summary>The wrapped coin data</summary>
@@ -220,6 +249,9 @@ namespace CoinFlip.UI
 
 			/// <summary>The available amount of the coin (in coin currency)</summary>
 			public Unit<decimal> Available => Coin?.Balances.NettAvailable ?? 0m._(Symbol);
+
+			/// <summary></summary>
+			public event PropertyChangedEventHandler PropertyChanged;
 		}
 
 		/// <summary>Converter for converting 'CoinDataAdapter' to an 'IBalance', per exchange, per fund</summary>

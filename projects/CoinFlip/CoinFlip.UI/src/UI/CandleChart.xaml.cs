@@ -40,6 +40,7 @@ namespace CoinFlip.UI
 			// Commands
 			ToggleShowOpenOrders = Command.Create(this, ToggleShowOpenOrdersInternal);
 			ToggleShowCompletedOrders = Command.Create(this, ToggleShowCompletedOrdersInternal);
+			ToggleMarketDepth = Command.Create(this, ToggleMarketDepthInternal);
 			EditTrade = Command.Create(this, EditTradeInternal);
 
 			ModifyContextMenus();
@@ -91,6 +92,10 @@ namespace CoinFlip.UI
 						break;
 					case nameof(ChartSettings.ShowCompletedOrders):
 						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowCompletedOrders)));
+						Chart.Scene.Invalidate();
+						break;
+					case nameof(ChartSettings.ShowMarketDepth):
+						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowMarketDepth)));
 						Chart.Scene.Invalidate();
 						break;
 					case nameof(ChartSettings.XAxisLabelMode):
@@ -365,6 +370,7 @@ namespace CoinFlip.UI
 					m_instrument.DataSyncingChanged -= HandleDataSyncingChanged;
 					m_instrument.DataChanged -= HandleDataChanged;
 					Util.Dispose(m_instrument);
+					GfxMarketDepth = null;
 					GfxCompletedOrder = null;
 					GfxOpenOrder = null;
 					GfxCandles = null;
@@ -375,6 +381,7 @@ namespace CoinFlip.UI
 					GfxCandles = new GfxObjects.Candles(m_instrument);
 					GfxOpenOrder = new GfxObjects.OpenOrder(m_instrument);
 					GfxCompletedOrder = new GfxObjects.CompletedOrder(m_instrument);
+					GfxMarketDepth = new GfxObjects.MarketDepth(m_instrument.Pair.MarketDepth);
 					m_instrument.DataChanged += HandleDataChanged;
 					m_instrument.DataSyncingChanged += HandleDataSyncingChanged;
 					SettingsData.Settings.LastChart = $"{m_instrument.Exchange.Name}-{m_instrument.Pair.Name}-{m_instrument.TimeFrame}";
@@ -418,9 +425,6 @@ namespace CoinFlip.UI
 					}
 					m_prev_count = latest_count;
 
-					// Invalidate other instrument data dependent graphics
-					//GfxMarketDepth.Invalidate();
-
 					// Signal a refresh
 					Chart.Scene.Invalidate();
 				}
@@ -460,6 +464,17 @@ namespace CoinFlip.UI
 		{
 			get => SettingsData.Settings.Chart.ShowCompletedOrders;
 			set => SettingsData.Settings.Chart.ShowCompletedOrders = value;
+		}
+
+		/// <summary>Show current market depth</summary>
+		public bool ShowMarketDepth
+		{
+			get { return SettingsData.Settings.Chart.ShowMarketDepth; }
+			set
+			{
+				SettingsData.Settings.Chart.ShowMarketDepth = value;
+				GfxMarketDepth.Invalidate();
+			}
 		}
 
 		/// <summary>Add graphics and elements to the chart</summary>
@@ -609,16 +624,16 @@ namespace CoinFlip.UI
 			}
 
 			// Market Depth
-			if (SettingsData.Settings.Chart.ShowMarketDepth)
+			if (ShowMarketDepth)
 			{
-				//var gfx = GfxMarketDepth.Gfx;
-				//if (gfx != null)
-				//{
-				//	// Market depth graphics created at x = 0 with an aspect ratio of 1:2
-				//	var x_scale = (float)(0.25 * ChartCtrl.XAxis.Span / ChartCtrl.YAxis.Span);
-				//	gfx.O2P = m4x4.Translation(Instrument.Count + 5, 0f, ZOrder.Indicators) * m4x4.Scale(x_scale, 1f, 1f, v4.Origin);
-				//	args.AddToScene(gfx);
-				//}
+				if (GfxMarketDepth.Gfx != null)
+				{
+					// Market depth graphics created at x = 0 with an aspect ratio of 1:2.
+					// Position the depth info at the far right of the chart
+					var x_scale = (float)(0.25 * Chart.XAxis.Span / Chart.YAxis.Span);
+					GfxMarketDepth.Gfx.O2P = m4x4.Translation((float)Chart.XAxis.Max, 0f, ZOrder.Indicators) * m4x4.Scale(x_scale, 1f, 1f, v4.Origin);
+					window.AddObject(GfxMarketDepth.Gfx);
+				}
 			}
 
 			// Bots
@@ -740,6 +755,19 @@ namespace CoinFlip.UI
 			}
 		}
 		private GfxObjects.CompletedOrder m_gfx_completed_order;
+
+		/// <summary>Graphics for market depth</summary>
+		private GfxObjects.MarketDepth GfxMarketDepth
+		{
+			get { return m_gfx_market_depth; }
+			set
+			{
+				if (m_gfx_market_depth == value) return;
+				Util.Dispose(ref m_gfx_market_depth);
+				m_gfx_market_depth = value;
+			}
+		}
+		private GfxObjects.MarketDepth m_gfx_market_depth;
 
 		/// <summary>A text label for the current spot price</summary>
 		public TextBlock Q2BPriceLabel
@@ -901,6 +929,13 @@ namespace CoinFlip.UI
 		private void ToggleShowCompletedOrdersInternal()
 		{
 			ShowCompletedOrders = Enum<EShowItems>.Cycle(ShowCompletedOrders);
+		}
+
+		/// <summary>Show/Hide the market depth graphics on the chart</summary>
+		public Command ToggleMarketDepth { get; }
+		private void ToggleMarketDepthInternal()
+		{
+			ShowMarketDepth = !ShowMarketDepth;
 		}
 
 		/// <summary>Edit a trade</summary>

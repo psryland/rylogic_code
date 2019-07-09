@@ -174,13 +174,16 @@ namespace CoinFlip
 			get { return Exchange.EnumAvailableCandleData(this).Select(x => x.TimeFrame); }
 		}
 
-		/// <summary>Return the spot price (Quote/Base) for the given trade type</summary>
+		/// <summary>Return the spot price (Quote/Base) for the given trade type. Requires order book data</summary>
 		public Unit<decimal>? SpotPrice(ETradeType tt)
 		{
+			// Note: SpotPrice is for the person wanting to buy or sell. If they want to buy
+			// then they want the cheapest of the sell offers. If they want to sell, they want
+			// the highest of the buy offers.
 			switch (tt) {
 			default: throw new Exception($"Unknown trade type: {tt}");
-			case ETradeType.Q2B: return Q2B.Orders.Count != 0 ? Q2B.Orders[0].Price : (Unit<decimal>?)null;
-			case ETradeType.B2Q: return B2Q.Orders.Count != 0 ? B2Q.Orders[0].Price : (Unit<decimal>?)null;
+			case ETradeType.Q2B: return Q2B.Offers.Count != 0 ? Q2B.Offers[0].Price : (Unit<decimal>?)null;
+			case ETradeType.B2Q: return B2Q.Offers.Count != 0 ? B2Q.Offers[0].Price : (Unit<decimal>?)null;
 			}
 		}
 
@@ -286,14 +289,14 @@ namespace CoinFlip
 			default: throw new Exception($"Unknown trade type:{tt}");
 			case ETradeType.B2Q:
 				{
-					idx = Q2B.Orders.BinarySearch(x => +x.Price.CompareTo(price), find_insert_position: true);
-					beyond_order_book = idx == Q2B.Orders.Count;
+					idx = Q2B.Offers.BinarySearch(x => +x.Price.CompareTo(price), find_insert_position: true);
+					beyond_order_book = idx == Q2B.Offers.Count;
 					break;
 				}
 			case ETradeType.Q2B:
 				{
-					idx = B2Q.Orders.BinarySearch(x => -x.Price.CompareTo(price), find_insert_position: true);
-					beyond_order_book = idx == B2Q.Orders.Count;
+					idx = B2Q.Offers.BinarySearch(x => -x.Price.CompareTo(price), find_insert_position: true);
+					beyond_order_book = idx == B2Q.Offers.Count;
 					break;
 				}
 			}
@@ -304,7 +307,7 @@ namespace CoinFlip
 		public Unit<decimal> OrderBookDepth(ETradeType tt, Unit<decimal> price, out bool beyond_order_book)
 		{
 			var index = OrderBookIndex(tt, price, out beyond_order_book);
-			var orders = tt == ETradeType.B2Q ? Q2B.Orders : B2Q.Orders;
+			var orders = tt == ETradeType.B2Q ? Q2B.Offers : B2Q.Offers;
 			return orders.Take(index).Sum(x => x.AmountBase)._(Base);
 		}
 
@@ -320,7 +323,7 @@ namespace CoinFlip
 			AmountRangeBase  = rhs.AmountRangeBase;
 			AmountRangeQuote = rhs.AmountRangeQuote;
 			PriceRange       = rhs.PriceRange;
-			MarketDepth.UpdateOrderBook(rhs.B2Q.Orders, rhs.Q2B.Orders);
+			MarketDepth.UpdateOrderBook(rhs.B2Q.Offers, rhs.Q2B.Offers);
 		}
 
 		/// <summary>Return the default amount to use for a trade on 'pair' (in CoinIn currency)</summary>

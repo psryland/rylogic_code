@@ -1613,7 +1613,7 @@ namespace Rylogic.Gui.WinForms
 			/// <summary>Get the dock sites, from top to bottom, describing where this pane is located in the tree </summary>
 			internal EDockSite[] DockAddress
 			{
-				get { return Branch.DockAddress.Concat(DockSite).ToArray(); }
+				get { return Branch.DockAddress.Append(DockSite).ToArray(); }
 			}
 
 			/// <summary>The content hosted by this pane</summary>
@@ -5046,7 +5046,7 @@ namespace Rylogic.Gui.WinForms
 				else if (snap.HasFlag(EDropSite.Pane))
 				{
 					// Dock to a site within the current pane
-					DropAddress = pane.DockAddress.Concat(ds).ToArray();
+					DropAddress = pane.DockAddress.Append(ds).ToArray();
 				}
 				else if (snap.HasFlag(EDropSite.Branch))
 				{

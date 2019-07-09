@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Threading;
 using CoinFlip.Settings;
 using Rylogic.Common;
@@ -14,15 +16,16 @@ namespace CoinFlip
 	/// <summary>A container for the data maintained by the back testing simulation</summary>
 	public class Simulation : IDisposable, INotifyPropertyChanged
 	{
-		public Simulation(IEnumerable<Exchange> exchanges, PriceDataMap price_data_map)
+		public Simulation(IEnumerable<Exchange> exchanges, PriceDataMap price_data_map, BotContainer bots)
 		{
 			m_sw_main_loop = new Stopwatch();
 			Exchanges = new Dictionary<string, SimExchange>();
 			PriceData = price_data_map;
+			Bots = bots;
 
 			// Create a SimExchange for each exchange
 			foreach (var exch in exchanges)
-				Exchanges[exch.Name] = new SimExchange(this, exch);
+				Exchanges[exch.Name] = new SimExchange(this, exch, price_data_map);
 
 			Clock = StartTime;
 			UpdatePriceData();
@@ -38,7 +41,10 @@ namespace CoinFlip
 		private IDictionary<string, SimExchange> Exchanges { get; }
 
 		/// <summary>The store of price data instances</summary>
-		public PriceDataMap PriceData { get; }
+		private PriceDataMap PriceData { get; }
+
+		/// <summary>The collection of bots</summary>
+		private BotContainer Bots { get; }
 
 		/// <summary>Get the current simulation time</summary>
 		public DateTimeOffset Clock
@@ -64,6 +70,7 @@ namespace CoinFlip
 			get { return SettingsData.Settings.BackTesting.TimeFrame; }
 			set
 			{
+				if (SettingsData.Settings.BackTesting.TimeFrame == value) return;
 				SettingsData.Settings.BackTesting.TimeFrame = value;
 				NotifyPropertyChanged(nameof(TimeFrame));
 				NotifyPropertyChanged(nameof(StartTime));
@@ -78,6 +85,7 @@ namespace CoinFlip
 			get { return SettingsData.Settings.BackTesting.StartTime.RoundDownTo(TimeFrame); }
 			set
 			{
+				if (SettingsData.Settings.BackTesting.StartTime == value) return;
 				SettingsData.Settings.BackTesting.StartTime = value;
 				EndTime = DateTimeOffset_.Max(EndTime, StartTime + Misc.TimeFrameToTimeSpan(1.0, TimeFrame));
 				Clock = DateTimeOffset_.Clamp(Clock, StartTime, EndTime);
@@ -93,6 +101,7 @@ namespace CoinFlip
 			get { return SettingsData.Settings.BackTesting.EndTime.RoundUpTo(TimeFrame); }
 			set
 			{
+				if (SettingsData.Settings.BackTesting.EndTime == value) return;
 				SettingsData.Settings.BackTesting.EndTime = value;
 				StartTime = DateTimeOffset_.Min(StartTime, EndTime - Misc.TimeFrameToTimeSpan(1.0, TimeFrame));
 				Clock = DateTimeOffset_.Clamp(Clock, StartTime, EndTime);
@@ -102,12 +111,13 @@ namespace CoinFlip
 			}
 		}
 
-		/// <summary>Get the back testing end time</summary>
+		/// <summary>Controls the rate that the simulation runs at</summary>
 		public double StepsPerCandle
 		{
 			get { return SettingsData.Settings.BackTesting.StepsPerCandle; }
 			set
 			{
+				if (SettingsData.Settings.BackTesting.StepsPerCandle == value) return;
 				SettingsData.Settings.BackTesting.StepsPerCandle = value;
 				NotifyPropertyChanged(nameof(StepsPerCandle));
 				NotifyPropertyChanged(nameof(CanStepOne));
@@ -141,11 +151,9 @@ namespace CoinFlip
 		/// <summary>Reset the sim back to the start time</summary>
 		public void Reset()
 		{
-			// todo - caller should do this
-			//// All bots must be stopped and restarted
-			//var active_bots = Model.Bots.Where(x => x.Active).ToArray();
-			//foreach (var bot in active_bots)
-			//	bot.Active = false;
+			// Deactivate all back-testing bots (Actually, all of them)
+			foreach (var bot in Bots)
+				bot.Active = false;
 
 			// Reset the sim time back to 'StartTime'
 			RunMode = ERunMode.Stopped;
@@ -157,14 +165,14 @@ namespace CoinFlip
 			foreach (var exch in Exchanges.Values)
 				exch.Reset();
 
-			// todo - caller - // Restart the bots that were started
-			// todo - caller - foreach (var bot in active_bots)
-			// todo - caller - 	bot.Active = true;
+			// Restart the previously active backtesting bots
+			foreach (var bot in Bots.Where(x => x.BackTesting))
+				bot.Active = bot.BotData.Active;
 
 			// Notify of reset
 			SimReset?.Invoke(this, new SimResetEventArgs(this));
 		}
-		public bool CanReset => Clock != StartTime;
+		public bool CanReset => true;// So that balances can be update etc even if Clock == StartTime
 
 		/// <summary>Advance the simulation forward by one step</summary>
 		public void StepOne()
@@ -199,7 +207,7 @@ namespace CoinFlip
 		}
 		public bool CanPause => Running;
 
-		/// <summary>The thread that runs the simulation</summary>
+		/// <summary>Get/Set whether the simulation is running</summary>
 		public bool Running
 		{
 			get { return m_timer != null; }
@@ -211,28 +219,30 @@ namespace CoinFlip
 				SimRunningChanged?.Invoke(this, new PrePostEventArgs(after: false));
 				if (Running)
 				{
+					m_timer.Stop();
 					m_sw_main_loop.Stop();
 					m_sw_main_loop.Reset();
-					m_timer.Stop();
 				}
 				m_timer = value ? new DispatcherTimer(TimeSpan.FromMilliseconds(1), DispatcherPriority.Normal, HandleTick, Dispatcher.CurrentDispatcher) : null;
 				if (Running)
 				{
-					m_timer.Start();
-					m_sw_main_loop.Start();
 					m_max_ticks_per_step = Misc.TimeFrameToTicks(1.0 / StepsPerCandle, TimeFrame);
+					m_sw_main_loop.Start();
+					m_timer.Start();
 				}
 				SimRunningChanged?.Invoke(this, new PrePostEventArgs(after: true));
 				NotifyPropertyChanged(nameof(Running));
 				NotifyPropertyChanged(nameof(CanPause));
 
 				// Handlers
-				void HandleTick(object sender, EventArgs args)
+				async void HandleTick(object sender, EventArgs args)
 				{
 					Debug.Assert(Misc.AssertMainThread());
 
-					// Advance the simulation clock at a rate of 'StepRate' candles per second.
-					// 'm_sw_main_loop' tracks the amount of real world time that has elapsed while 'Running' is true
+					// Advance the simulation clock at a maximum rate of 'StepRate' candles per second.
+					// 'm_sw_main_loop' tracks the amount of real world time that has elapsed while 'Running' is true.
+					// Determine the time difference to add to the simulation clock
+					var next_clock = Clock;
 					switch (RunMode)
 					{
 					case ERunMode.Continuous:
@@ -240,42 +250,80 @@ namespace CoinFlip
 						{
 							var elapsed_ticks = Math.Max(m_max_ticks_per_step, m_sw_main_loop.ElapsedTicks - m_main_loop_last_ticks);
 							m_main_loop_last_ticks = m_sw_main_loop.ElapsedTicks;
-							Clock += new TimeSpan(elapsed_ticks);
+							next_clock += new TimeSpan(elapsed_ticks);
 							break;
 						}
 					case ERunMode.StepOne:
 						{
 							// If this is a single step, increment the clock by a fixed amount
-							Clock += new TimeSpan(m_max_ticks_per_step);
+							next_clock += new TimeSpan(m_max_ticks_per_step);
 							break;
 						}
 					}
 
-					// Stop when the clock has caught up to real time or if we've done enough steps
-					if (Clock > DateTimeOffset.UtcNow)
+					// Cap the next clock value to real time
+					var caught_up_to_realtime = false;
+					if (next_clock > DateTimeOffset.UtcNow)
+					{
+						next_clock = DateTimeOffset.UtcNow;
+						caught_up_to_realtime = true;
+					}
+
+					// Make sure bots get stepped at their required rate
+					for (;Running; await Task.Yield())
+					{
+						// Find the next bot requiring stepping
+						var bot = Bots
+							.Where(x => x.Active)
+							.MinByOrDefault(x => (x.LastStepTime + x.LoopPeriod) - Model.UtcNow);
+
+						// If the next bot to step is within this step, step it.
+						if (bot != null && bot.LastStepTime + bot.LoopPeriod < next_clock)
+						{
+							// Advance to clock to the bot's next step time
+							Clock = bot.LastStepTime + bot.LoopPeriod;
+
+							// Update the sim exchanges
+							foreach (var exch in Exchanges.Values)
+								exch.Step();
+
+							// Step the bot
+							await bot.Step();
+							continue;
+						}
+
+						// Stop when all bots are caught up
+						break;
+					}
+
+					// Advance the clock to the end of the step and stop if the clock has caught up to real time
+					Clock = next_clock;
+					if (caught_up_to_realtime)
 					{
 						Running = false;
 						return;
 					}
 
-					// Run the sim exchanges at top speed
-					foreach (var exch in Exchanges.Values)
-						exch.Step();
-
 					// See if it's time for a sim step
 					var elapsed = Clock.Ticks - m_main_loop_last_step;
-					if (elapsed < m_max_ticks_per_step) return;
-					m_main_loop_last_step += m_max_ticks_per_step;
+					if (elapsed >= m_max_ticks_per_step)
+					{
+						m_main_loop_last_step += m_max_ticks_per_step;
 
-					// Update each price data (i.e. "add" candles)
-					UpdatePriceData();
+						// Update the sim exchanges
+						foreach (var exch in Exchanges.Values)
+							exch.Step();
 
-					// Notify the sim step.
-					SimStep?.Invoke(this, new SimStepEventArgs(Clock));
+						// Update each price data (i.e. "add" candles)
+						UpdatePriceData();
 
-					// Run the required number of steps
-					if (RunMode == ERunMode.StepOne)
-						Running = false;
+						// Notify the sim step.
+						SimStep?.Invoke(this, new SimStepEventArgs(Clock));
+
+						// Run the required number of steps
+						if (RunMode == ERunMode.StepOne)
+							Running = false;
+					}
 				}
 			}
 		}

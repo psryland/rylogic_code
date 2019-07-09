@@ -28,7 +28,6 @@ namespace CoinFlip
 		private readonly LazyDictionary<long, Order> m_ord;
 		private readonly LazyDictionary<long, OrderCompleted> m_his;
 		private readonly LazyDictionary<Coin, AccountBalance> m_bal;
-		private readonly LazyDictionary<string, Unit<decimal>> m_initial_bal;
 
 		private Random m_rng;
 		private long m_order_id;
@@ -37,31 +36,30 @@ namespace CoinFlip
 		private double m_spread_frac;
 		private int m_orders_per_book;
 
-		public SimExchange(Simulation sim, Exchange exch)
+		public SimExchange(Simulation sim, Exchange exch, PriceDataMap price_data)
 		{
 			try
 			{
 				Debug.Assert(Model.BackTesting == true);
 
-				Sim     = sim;
-				Exch    = exch;
-				m_depth = new LazyDictionary<TradePair, MarketDepth>(k => new MarketDepth(k.Base, k.Quote));
-				m_ord   = new LazyDictionary<long, Order>(k => null);
-				m_his   = new LazyDictionary<long, OrderCompleted>(k => null);
-				m_bal   = new LazyDictionary<Coin, AccountBalance>(k => new AccountBalance(k, m_initial_bal[k], 0m._(k)));
-				m_rng   = null;
-
-				// Make a copy of the initial balances (for performance)
-				m_initial_bal = new LazyDictionary<string, Unit<decimal>>(k => 1m._(k));
-				foreach (var cd in SettingsData.Settings.Coins)
-					m_initial_bal.Add(cd.Symbol, cd.BackTestingInitialBalance._(cd.Symbol));
+				Sim       = sim;
+				Exchange  = exch;
+				PriceData = price_data;
+				m_depth   = new LazyDictionary<TradePair, MarketDepth>(k => new MarketDepth(k.Base, k.Quote));
+				m_ord     = new LazyDictionary<long, Order>(k => null);
+				m_his     = new LazyDictionary<long, OrderCompleted>(k => null);
+				m_bal     = new LazyDictionary<Coin, AccountBalance>(k => new AccountBalance(k, 0m._(k), 0m._(k)));
+				m_rng     = null;
 
 				// Cache settings values
 				m_order_value_range = SettingsData.Settings.BackTesting.OrderValueRange;
 				m_spread_frac       = SettingsData.Settings.BackTesting.SpreadFrac;
 				m_orders_per_book   = SettingsData.Settings.BackTesting.OrdersPerBook;
 
+				Exchange.Sim = this;
+
 				Reset();
+				Step();
 			}
 			catch
 			{
@@ -71,6 +69,7 @@ namespace CoinFlip
 		}
 		public void Dispose()
 		{
+			Exchange.Sim = null;
 			Reset();
 		}
 
@@ -78,25 +77,25 @@ namespace CoinFlip
 		private Simulation Sim { get; }
 
 		/// <summary>The exchange being simulated</summary>
-		private Exchange Exch { get; }
+		private Exchange Exchange { get; }
 
 		/// <summary>The store of price data instances</summary>
-		private PriceDataMap PriceData => Sim.PriceData;
+		private PriceDataMap PriceData { get; }
 
 		/// <summary>Coins associated with this exchange</summary>
-		private CoinCollection Coins => Exch.Coins;
+		private CoinCollection Coins => Exchange.Coins;
 
 		/// <summary>The pairs associated with this exchange</summary>
-		private PairCollection Pairs => Exch.Pairs;
+		private PairCollection Pairs => Exchange.Pairs;
 
 		/// <summary>The balance of the given coin on this exchange</summary>
-		private BalanceCollection Balance => Exch.Balance;
+		private BalanceCollection Balance => Exchange.Balance;
 
 		/// <summary>Positions by order id</summary>
-		private OrdersCollection Orders => Exch.Orders;
+		private OrdersCollection Orders => Exchange.Orders;
 
 		/// <summary>Trade history on this exchange, keyed on order ID</summary>
-		private OrdersCompletedCollection History => Exch.History;
+		private OrdersCompletedCollection History => Exchange.History;
 
 		/// <summary>Reset the Sim Exchange</summary>
 		public void Reset()
@@ -114,17 +113,15 @@ namespace CoinFlip
 			History.Clear();
 			m_history_id = 0;
 
-			// Reset the initial balances from the settings data
-			foreach (var cd in SettingsData.Settings.Coins)
-				m_initial_bal[cd.Symbol] = cd.BackTestingInitialBalance._(cd.Symbol);
-
 			// Reset the balances to the initial values
 			m_bal.Clear();
 			Balance.Clear();
+			var exch_data = SettingsData.Settings.BackTesting.AccountBalances[Exchange.Name];
 			foreach (var coin in Coins.Values)
 			{
-				m_bal.Add(coin, new AccountBalance(coin, m_initial_bal[coin], 0m._(coin)));
-				Balance.Add(coin, new Balances(coin, m_initial_bal[coin], Sim.Clock));
+				var bal = exch_data[coin.Symbol];
+				m_bal.Add(coin, new AccountBalance(coin, bal.Total._(coin), bal.Held._(coin)));
+				Balance.Add(coin, new Balances(coin, bal.Total._(coin), Sim.Clock));
 			}
 
 			// Reset the order books of the pairs
@@ -140,7 +137,7 @@ namespace CoinFlip
 			// method and the operations that occur on the exchange.
 
 			// Do nothing if not enabled
-			if (!Exch.Enabled)
+			if (!Exchange.Enabled)
 				return;
 
 			#region Update Market Data
@@ -167,8 +164,8 @@ namespace CoinFlip
 					pair.MarketDepth.UpdateOrderBook(md.B2Q.ToArray(), md.Q2B.ToArray());
 
 					// Check. Remember: Q2B spot price = B2Q[0].Price and visa versa
-					Debug.Assert(pair.SpotPrice(ETradeType.B2Q) >= ((decimal)latest.Close + (decimal)pair.Spread)._(pair.RateUnits));
-					Debug.Assert(pair.SpotPrice(ETradeType.Q2B) <= ((decimal)latest.Close                       )._(pair.RateUnits));
+					Debug.Assert(pair.SpotPrice(ETradeType.Q2B) >= ((decimal)latest.Close + (decimal)pair.Spread)._(pair.RateUnits));
+					Debug.Assert(pair.SpotPrice(ETradeType.B2Q) <= ((decimal)latest.Close                       )._(pair.RateUnits));
 				}
 
 				// Notify updated
@@ -239,7 +236,7 @@ namespace CoinFlip
 						if (Equals(his, History[his.OrderId])) continue;
 						var fill = new OrderCompleted(his);
 						History[his.OrderId] = fill;
-						Exch.AddToTradeHistory(fill);
+						Exchange.AddToTradeHistory(fill);
 					}
 				}
 
@@ -273,7 +270,7 @@ namespace CoinFlip
 		public OrderResult CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> amount, Unit<decimal> price)
 		{
 			// Validate the order
-			if (pair.Exchange != Exch)
+			if (pair.Exchange != Exchange)
 				throw new Exception($"SimExchange: Attempt to trade a pair not provided by this exchange");
 			if (m_bal[tt.CoinIn(pair)].Available < tt.AmountIn(amount, price))
 				throw new Exception($"SimExchange: Submit trade failed. Insufficient balance\n{tt} Pair: {pair.Name}  Vol: {amount.ToString("G8",true)} @  {price.ToString("G8",true)}");
@@ -336,7 +333,7 @@ namespace CoinFlip
 			pos = remaining != 0              ? new Order(Fund.Main, order_id, tt, pair, price, initial_amount, remaining, Model.UtcNow, Model.UtcNow) : null;
 			his = remaining != current_amount ? new OrderCompleted(order_id, tt, pair) : null;
 			foreach (var fill in filled)
-				his.Trades.Add(new TradeCompleted(order_id, ++m_history_id, pair, tt, fill.Price, fill.AmountBase, Exch.Fee * fill.AmountQuote, Model.UtcNow, Model.UtcNow));
+				his.Trades.Add(new TradeCompleted(order_id, ++m_history_id, pair, tt, fill.Price, fill.AmountBase, Exchange.Fee * fill.AmountQuote, Model.UtcNow, Model.UtcNow));
 		}
 
 		/// <summary>Apply the implied changes to the current balance by the given order and completed order</summary>
@@ -380,7 +377,7 @@ namespace CoinFlip
 		{
 			// Get the market data for 'pair'.
 			// Market data is maintained independently to pair.B2Q/Q2B because the rest of the
-			// application expects the market data to periodic overwrite the pair's order books.
+			// application expects the market data to periodically overwrite the pair's order books.
 			var md = m_depth[pair];
 
 			// Get the spot price from the candle close
@@ -388,7 +385,7 @@ namespace CoinFlip
 			var best_q2b = ((decimal)(latest.Close + spread))._(pair.RateUnits);
 			var best_b2q = ((decimal)(latest.Close         ))._(pair.RateUnits);
 
-			// Make one collection and remove orders within the spread
+			// Join all existing orders into one collection and remove any orders within the spread
 			var orders = Enumerable
 				.Concat(md.Q2B.Take(m_orders_per_book), md.B2Q.Take(m_orders_per_book))
 				.Where(x => x.Price < best_b2q || x.Price > best_q2b)
@@ -426,13 +423,13 @@ namespace CoinFlip
 					if (price > best_b2q && price < best_q2b)
 						continue; // Invalid price, try again
 
-					// Generate an amount to trade. Convert a value in USD to Base currency using it's approximate value
-					var value = (decimal)Math.Abs(m_rng.Double(m_order_value_range.Beg, m_order_value_range.End));
-					var scale = pair.Base.AssignedValue;
-					var amount = Math_.Div(value, scale, value)._(pair.Base);
+					// Generate an amount to trade in the application common currency (probably USD).
+					// The convert that to base currency using its 'live' value.
+					var common_value = (decimal)Math.Abs(m_rng.Double(m_order_value_range.Beg, m_order_value_range.End));
+					var amount_base = Math_.Div(common_value, (decimal)pair.Base.ValueOf(1m), common_value)._(pair.Base);
 
 					// If the generated order is valid, return it otherwise, try again.
-					var order = new Offer(price, amount);
+					var order = new Offer(price, amount_base);
 					if (order.Validate(pair))
 						return order;
 				}

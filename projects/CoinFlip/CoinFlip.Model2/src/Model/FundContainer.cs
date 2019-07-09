@@ -1,6 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
 using CoinFlip.Settings;
 using Rylogic.Extn;
 
@@ -8,14 +8,28 @@ namespace CoinFlip
 {
 	public class FundContainer : ObservableCollection<Fund>
 	{
+		// Notes:
+		//  - Fund partitions are saved in isolated sets in the settings data.
+		//    For live trading the funds are called 'LiveFunds'
+		//    For back testing the funds are called 'TestFunds' (in the back testing settings)
+
 		public FundContainer()
 		{
-			// Ensure the 'Main' fund exists and initialise the funds from the settings
+			// Get the appropriate settings data based on the back testing state
+			AssignFunds(Model.BackTesting
+				? SettingsData.Settings.LiveFunds
+				: SettingsData.Settings.BackTesting.TestFunds);
+		}
+
+		/// <summary>Create funds from the provided fund data</summary>
+		public void AssignFunds(IList<FundData> fund_data)
+		{
+			Clear();
 			Add(new Fund(Fund.Main));
-			foreach (var fund_data in SettingsData.Settings.Funds)
+			foreach (var fd in fund_data)
 			{
-				if (fund_data.Id == Fund.Main) continue;
-				Add(new Fund(fund_data.Id));
+				if (fd.Id == Fund.Main) continue;
+				Add(new Fund(fd.Id));
 			}
 		}
 
@@ -66,7 +80,12 @@ namespace CoinFlip
 				}
 				fund_data.Add(new FundData(fund.Id, exch_data.ToArray()));
 			}
-			SettingsData.Settings.Funds = fund_data.ToArray();
+
+			// Save to the appropriate location
+			if (Model.BackTesting)
+				SettingsData.Settings.BackTesting.TestFunds = fund_data.ToArray();
+			else
+				SettingsData.Settings.LiveFunds = fund_data.ToArray();
 		}
 	}
 }

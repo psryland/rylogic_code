@@ -21,6 +21,8 @@
 			<BitmapImage x:Key="history_black" UriSource="/CoinFlip.UI;component/res/history_black.png" />
 			<BitmapImage x:Key="history_green" UriSource="/CoinFlip.UI;component/res/history_green.png" />
 			<BitmapImage x:Key="history_blue" UriSource="/CoinFlip.UI;component/res/history_blue.png" />
+			<BitmapImage x:Key="market_depth_colour" UriSource="/CoinFlip.UI;component/res/market_depth_colour.png" />
+			<BitmapImage x:Key="market_depth_gray" UriSource="/CoinFlip.UI;component/res/market_depth_gray.png" />
 		</ResourceDictionary>
 	</Grid.Resources>
 	
@@ -35,6 +37,7 @@
 		Grid.Row="0"
 		>
 		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="Auto"/>
 			<ColumnDefinition Width="Auto"/>
 			<ColumnDefinition Width="Auto"/>
 			<ColumnDefinition Width="Auto"/>
@@ -155,10 +158,35 @@
 				</Image.Style>
 			</Image>
 		</Button>
+
+		<!-- Market Depth -->
+		<Button
+			Grid.Column="8"
+			Command="{Binding ToggleMarketDepth}"
+			MaxWidth="22"
+			Margin="3"
+			>
+			<Image Stretch="UniformToFill" StretchDirection="DownOnly" RenderOptions.BitmapScalingMode="HighQuality">
+				<Image.Style>
+					<Style TargetType="{x:Type Image}">
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding ShowMarketDepth}" Value="False">
+								<Setter Property="Source" Value="{StaticResource market_depth_gray}"/>
+								<Setter Property="ToolTip" Value="Display market depth on the chart"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding ShowMarketDepth}" Value="True">
+								<Setter Property="Source" Value="{StaticResource market_depth_colour}"/>
+								<Setter Property="ToolTip" Value="Showing the selected completed order on the chart"/>
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</Image.Style>
+			</Image>
+		</Button>
 		
 		<!-- Time Range -->
 		<TextBlock
-			Grid.Column="9"
+			Grid.Column="10"
 			Text="{Binding VisibleTimeSpan}"
 			VerticalAlignment="Center"
 			Margin="3"

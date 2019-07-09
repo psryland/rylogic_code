@@ -14,6 +14,11 @@ namespace CoinFlip
 			Q2B = new OrderBook(@base, quote, ETradeType.Q2B);
 			B2Q = new OrderBook(@base, quote, ETradeType.B2Q);
 		}
+		public MarketDepth(MarketDepth rhs)
+		{
+			Q2B = new OrderBook(rhs.Q2B);
+			B2Q = new OrderBook(rhs.B2Q);
+		}
 
 		/// <summary>Prices for converting Base to Quote. First price is a maximum</summary>
 		public OrderBook B2Q { [DebuggerStepThrough] get; }
@@ -30,11 +35,11 @@ namespace CoinFlip
 		/// <summary>Update the list of buy/sell orders</summary>
 		public void UpdateOrderBook(IEnumerable<Offer> b2q, IEnumerable<Offer> q2b)
 		{
-			B2Q.Orders.Clear();
-			B2Q.Orders.AddRange(b2q);
+			B2Q.Offers.Clear();
+			B2Q.Offers.AddRange(b2q);
 
-			Q2B.Orders.Clear();
-			Q2B.Orders.AddRange(q2b);
+			Q2B.Offers.Clear();
+			Q2B.Offers.AddRange(q2b);
 
 			Debug.Assert(AssertOrdersValid());
 			OrderBookChanged?.Invoke(this, EventArgs.Empty);
@@ -48,7 +53,7 @@ namespace CoinFlip
 			var q2b0 = 0m._(Q2B.Base);
 			var b2q0 = 0m._(B2Q.Base);
 
-			// Asking price should increase
+			// The Q2B prices should increase, i.e. the best offer from a trader's point of view is the lowest price.
 			for (int i = 0; i != Q2B.Count; ++i)
 			{
 				if (Q2B[i].Price < q2b_price0)
@@ -59,7 +64,7 @@ namespace CoinFlip
 					throw new Exception("Q2B order book prices are out of order");
 			}
 
-			// Bid price should decrease
+			// The B2Q prices should decrease, i.e. the best offer from a trader's point of view is the highest price.
 			for (int i = 0; i != B2Q.Count; ++i)
 			{
 				if (B2Q[i].Price < b2q_price0)

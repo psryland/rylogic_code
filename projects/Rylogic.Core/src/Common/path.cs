@@ -98,8 +98,9 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>Delete a file</summary>
-		public static void DelFile(string path)
+		public static void DelFile(string path, bool fail_if_missing = true)
 		{
+			if (!fail_if_missing && !PathExists(path)) return;
 			File.Delete(path);
 		}
 

@@ -6,17 +6,17 @@ namespace CoinFlip
 {
 	public class CollectionBase<TKey, TValue> : BindingDict<TKey, TValue>
 	{
-		public CollectionBase(Exchange exch)
+		public CollectionBase(Exchange exchange)
 		{
-			Exch = exch;
+			Exchange = exchange;
 			Updated = new ConditionVariable<DateTimeOffset>(DateTimeOffset.MinValue);
 		}
 		public CollectionBase(CollectionBase<TKey, TValue> rhs)
-			: this(rhs.Exch)
+			: this(rhs.Exchange)
 		{ }
 
 		/// <summary>The owning exchange</summary>
-		public Exchange Exch { get; }
+		public Exchange Exchange { get; }
 
 		/// <summary>Wait-able object for update notification</summary>
 		public ConditionVariable<DateTimeOffset> Updated { get; }

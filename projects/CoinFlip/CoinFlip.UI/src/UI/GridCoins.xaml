@@ -64,6 +64,22 @@
 			</StackPanel>
 		</StackPanel>
 		
+		<!-- Backtesting Balances -->
+		<StackPanel
+			Orientation="Vertical"
+			Visibility="{Binding BackTesting, Converter={conv:BoolToVisible}}"
+			Margin="3,6,3,3"
+			>
+			<TextBlock
+				Text="Back Testing"
+				/>
+			<Button
+				Content="Balances"
+				BorderBrush="DarkGray"
+				Command="{Binding SetBackTestingBalances}"
+				/>
+		</StackPanel>
+		
 		<!-- Reset fake cash -->
 		<StackPanel
 			Orientation="Vertical"
@@ -144,7 +160,7 @@
 					Command="{Binding AddCoin}"
 					/>
 				<MenuItem
-					Header="{Binding CurrentCoinName}"
+					Header="{Binding Current.Symbol, FallbackValue='Coin'}"
 					HeaderStringFormat="Remove {0}"
 					IsEnabled="{Binding Current, Converter={conv:NotNull}}"
 					Command="{Binding RemoveCoin}"

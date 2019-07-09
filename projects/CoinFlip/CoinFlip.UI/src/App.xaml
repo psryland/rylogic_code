@@ -27,6 +27,22 @@
 					</Trigger>
 				</Style.Triggers>
 			</Style>
+			
+			<!-- Style for combo boxes in grids -->
+			<Style x:Key="GridComboBoxStyle" TargetType="{x:Type ComboBox}" BasedOn="{StaticResource {x:Static ToolBar.ComboBoxStyleKey}}">
+				<Setter Property="BorderThickness" Value="0"/>
+				<Setter Property="Background" Value="Transparent"/>
+				<Style.Triggers>
+					<Trigger Property="IsDropDownOpen" Value="True">
+						<Setter Property="Background" Value="{StaticResource SelectionBackground}"/>
+					</Trigger>
+					<Trigger Property="IsSelected" Value="True">
+						<Setter Property="Background" Value="{StaticResource SelectionBackground}"/>
+						<Setter Property="BorderBrush" Value="{StaticResource SelectionBackground}"/>
+						<Setter Property="Foreground" Value="{StaticResource SelectionForeground}"/>
+					</Trigger>
+				</Style.Triggers>
+			</Style>
 
 			<!-- Add skin resources -->
 			<ResourceDictionary.MergedDictionaries>

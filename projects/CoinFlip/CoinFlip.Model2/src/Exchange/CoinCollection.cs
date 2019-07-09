@@ -37,7 +37,7 @@ namespace CoinFlip
 		/// <summary>Implicitly create a new coin</summary>
 		private Coin CreateCoin(string sym)
 		{
-			var coin = new Coin(sym, Exch);
+			var coin = new Coin(sym, Exchange);
 			if (!m_coin_data.Contains(coin.Meta))
 				m_coin_data.Add(coin.Meta);
 

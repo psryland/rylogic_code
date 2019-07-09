@@ -9,10 +9,12 @@ namespace CoinFlip.Settings
 	/// <summary>Settings related to back testing</summary>
 	[Serializable]
 	[TypeConverter(typeof(TyConv))]
-	public class BackTestingSettings : SettingsXml<BackTestingSettings>
+	public class BackTestingSettings : SettingsSet<BackTestingSettings>
 	{
 		public BackTestingSettings()
 		{
+			AccountBalances = new FundData();
+			TestFunds = new FundData[1] { new FundData(Fund.Main, new FundData.ExchData[0]) };
 			TimeFrame = ETimeFrame.Day1;
 			StartTime = (DateTimeOffset.UtcNow - TimeSpan.FromDays(365)).RoundDownTo(ETimeFrame.Day1);
 			EndTime = StartTime + TimeSpan.FromDays(365);
@@ -21,9 +23,20 @@ namespace CoinFlip.Settings
 			OrderValueRange = new RangeF(0.1, 1000.0);
 			OrdersPerBook = 50;
 		}
-		public BackTestingSettings(XElement node)
-			: base(node)
-		{ }
+
+		/// <summary>The balance of each currency on the simulation exchanges</summary>
+		public FundData AccountBalances
+		{
+			get { return get<FundData>(nameof(AccountBalances)); }
+			set { set(nameof(AccountBalances), value); }
+		}
+
+		/// <summary>The partitions of user funds used for back testing</summary>
+		public FundData[] TestFunds
+		{
+			get { return get<FundData[]>(nameof(TestFunds)); }
+			set { set(nameof(TestFunds), value); }
+		}
 
 		/// <summary>The time frame to test with</summary>
 		public ETimeFrame TimeFrame

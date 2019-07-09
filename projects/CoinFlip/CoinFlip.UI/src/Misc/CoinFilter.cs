@@ -47,13 +47,14 @@ namespace CoinFlip.UI
 			if (coin == null)
 				return false;
 
+			// Use '>' rather than '>=' so that filtering against '0' removes all zero amounts.
 			switch (Type)
 			{
 			default: throw new Exception("Unknown Filter Type");
-			case ECoinFilterType.Value: return coin.Value >= Threshold;
-			case ECoinFilterType.Total: return (decimal)coin.Total >= Threshold;
-			case ECoinFilterType.Available: return (decimal)coin.Available >= Threshold;
-			case ECoinFilterType.Balance: return (decimal)(coin.Value * coin.Total) >= Threshold;
+			case ECoinFilterType.Value: return coin.Value > Threshold;
+			case ECoinFilterType.Total: return (decimal)coin.Total > Threshold;
+			case ECoinFilterType.Available: return (decimal)coin.Available > Threshold;
+			case ECoinFilterType.Balance: return (decimal)(coin.Value * coin.Total) > Threshold;
 			}
 		}
 

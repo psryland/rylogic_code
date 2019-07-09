@@ -52,6 +52,7 @@
     <Compile Include="src\ConfigureUI.xaml.cs">
       <DependentUpon>ConfigureUI.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\GfxPriceRange.cs" />
     <Compile Include="src\SettingsData.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -62,6 +63,10 @@
     <ProjectReference Include="..\..\Rylogic.Gui.WPF\Rylogic.Gui.WPF.csproj">
       <Project>{e4734592-8ea9-45bd-8533-9ad8463b7495}</Project>
       <Name>Rylogic.Gui.WPF</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Rylogic.View3d\Rylogic.View3d.csproj">
+      <Project>{0fcb5434-407b-415e-9f11-6216f44d4377}</Project>
+      <Name>Rylogic.View3d</Name>
     </ProjectReference>
     <ProjectReference Include="..\CoinFlip.Model2\CoinFlip.Model2.csproj">
       <Project>{6a5ec05f-f738-4149-956b-df8eeca14dfc}</Project>

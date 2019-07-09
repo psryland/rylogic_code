@@ -14,7 +14,7 @@ namespace CoinFlip.Settings
 			Active = true;
 			PollPeriod = 500;
 			TransactionFee = 0.0025m;
-			MarketDepth = 20;
+			MarketDepth = 100;
 			ServerRequestRateLimit = 6f;
 		}
 		private class TyConv : GenericTypeConverter<BinanceSettings> { }
