@@ -329,8 +329,7 @@ namespace Rylogic.Extn
 		}
 		public class Item
 		{
-			private FieldInfo m_fi;
-
+			private readonly FieldInfo m_fi;
 			internal Item(FieldInfo fi)
 			{
 				m_fi = fi;
@@ -339,10 +338,10 @@ namespace Rylogic.Extn
 			}
 
 			/// <summary>The name of the enum member</summary>
-			public string Name { get; private set; }
+			public string Name { get; }
 
 			/// <summary>The value of the enum member</summary>
-			public T Value { get; private set; }
+			public T Value { get; }
 
 			/// <summary>The associated description string of the enum member</summary>
 			public string Desc
@@ -351,9 +350,15 @@ namespace Rylogic.Extn
 			}
 
 			/// <summary>The associated AssocAttribute of the enum member</summary>
-			public TAssoc Assoc<TAssoc>(string name)
+			public TAssoc Assoc<TAssoc>(string name = null)
 			{
-				return AssocAttr.Assoc<TAssoc>(m_fi, name);
+				return Assoc_.Assoc<TAssoc>(m_fi, name);
+			}
+
+			/// <summary>Try to get the associated value of the enum member</summary>
+			public bool TryAssoc<TAssoc>(out TAssoc assoc, string name = null)
+			{
+				return Assoc_.TryAssoc(m_fi, out assoc, name);
 			}
 
 			public override string ToString() { return Desc ?? Name; }
@@ -367,10 +372,30 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Returns the objects of type 'TAssoc' associated with each enum member using the AssocAttribute</summary>
-		public static IEnumerable<TAssoc> Assoc<TAssoc>(string name)
+		public static IEnumerable<TAssoc> Assoc<TAssoc>(string name = null)
 		{
 			return Items.Select(x => x.Assoc<TAssoc>(name));
 		}
+
+		/// <summary>Return the enum value with the given associated value. Null if there is no matching enum value</summary>
+		public static T? FromAssoc<TAssoc>(TAssoc assoc, string name = null)
+		{
+			if (m_assoc_reverse_lookup == null)
+			{
+				var map = new Dictionary<TAssoc, T>();
+				foreach (var item in Items)
+				{
+					if (item.TryAssoc<TAssoc>(out var a, name))
+						map.Add(a, item.Value);
+				}
+				m_assoc_reverse_lookup = map;
+			}
+
+			// Lookup the enum member from the associated value
+			var lookup = (Dictionary<TAssoc, T>)m_assoc_reverse_lookup;
+			return lookup.TryGetValue(assoc, out var value) ? (T?)value : null;
+		}
+		private static object m_assoc_reverse_lookup;
 
 		/// <summary>Returns the number of members in the enumeration</summary>
 		public static int Count

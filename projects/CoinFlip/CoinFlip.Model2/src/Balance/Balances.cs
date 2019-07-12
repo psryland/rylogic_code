@@ -101,7 +101,7 @@ namespace CoinFlip
 		public Unit<decimal> NettAvailable => NettTotal - NettHeld;
 
 		/// <summary>The USD value of the nett total</summary>
-		public decimal NettValue => Coin.ValueOf(NettTotal);
+		public Unit<decimal> NettValue => Coin.ValueOf(NettTotal);
 
 		/// <summary>Fake additional funds</summary>
 		public Unit<decimal> FakeCash { get; set; }

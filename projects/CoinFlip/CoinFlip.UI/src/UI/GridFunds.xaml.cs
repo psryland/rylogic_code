@@ -27,11 +27,11 @@ namespace CoinFlip.UI
 
 			Model = model;
 			Filter = new CoinFilter(x => (CoinDataAdapter)x);
-			Exchanges = new ListCollectionView(model.Exchanges) { Filter = x => !(x is CrossExchange) };
+			Exchanges = CollectionViewSource.GetDefaultView(model.Exchanges);// { Filter = x => !(x is CrossExchange) };
 			Coins = new ListCollectionView(ListAdapter.Create(model.Coins, x => new CoinDataAdapter(this, x), x => x.CoinData)) { Filter = Filter.Predicate };
 			Funds = new ListCollectionView(model.Funds);
 
-			Exchanges.MoveCurrentToFirst();
+			//Exchanges.MoveCurrentToFirst();
 			Exchanges.CurrentChanged += delegate { Coins.Refresh(); };
 			Filter.PropertyChanged += delegate { Coins.Refresh(); };
 

@@ -7,6 +7,7 @@ using Rylogic.Extn;
 
 namespace ExchApi.Common
 {
+#if false
 	[DebuggerDisplay("{ChannelName} {ChannelId}")]
 	public abstract class Subscription
 	{
@@ -109,7 +110,7 @@ namespace ExchApi.Common
 			Stopping,
 		}
 
-		#region Equals
+#region Equals
 		public bool Equals(Subscription rhs)
 		{
 			return rhs != null && ChannelName == rhs.ChannelName;
@@ -122,8 +123,9 @@ namespace ExchApi.Common
 		{
 			return ChannelName.GetHashCode();
 		}
-		#endregion
+#endregion
 	}
+#endif
 }
 #if false
 		/// <summary>Parse a snapshot or update message associated with this subscription</summary>

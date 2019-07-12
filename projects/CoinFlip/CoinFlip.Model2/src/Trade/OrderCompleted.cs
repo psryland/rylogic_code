@@ -15,8 +15,9 @@ namespace CoinFlip
 		//  - An OrderCompleted is a completed Order consisting of one or more 'TradeCompleted's
 		//    that where made to complete the order.
 
-		public OrderCompleted(long order_id, ETradeType tt, TradePair pair)
+		public OrderCompleted(string fund_id, long order_id, ETradeType tt, TradePair pair)
 		{
+			FundId    = fund_id;
 			OrderId   = order_id;
 			UniqueKey = Guid.NewGuid();
 			TradeType = tt;
@@ -24,17 +25,26 @@ namespace CoinFlip
 			Trades    = new TradeCompletedCollection(this);
 		}
 		public OrderCompleted(OrderCompleted rhs)
-			:this(rhs.OrderId, rhs.TradeType, rhs.Pair)
+			:this(rhs.FundId, rhs.OrderId, rhs.TradeType, rhs.Pair)
 		{
 			foreach (var fill in rhs.Trades.Values)
 				Trades.Add(fill.TradeId, new TradeCompleted(fill));
 		}
+
+		/// <summary>The fund that this order was associated with</summary>
+		public string FundId { get; }
 
 		/// <summary>The Id of the order that was filled by this collection of trades</summary>
 		public long OrderId { get; }
 
 		/// <summary>A unique key assigned to this position (local only)</summary>
 		public Guid UniqueKey { get; }
+
+		/// <summary>The exchange that this trade occurred on</summary>
+		public Exchange Exchange => Pair?.Exchange;
+
+		/// <summary>The pair traded</summary>
+		public TradePair Pair { get; }
 
 		/// <summary>The trade type</summary>
 		public ETradeType TradeType { get; }
@@ -43,17 +53,11 @@ namespace CoinFlip
 			TradeType == ETradeType.B2Q? $"{Pair.Base}→{Pair.Quote} ({TradeType})" :
 			"---";
 
-		/// <summary>The pair traded</summary>
-		public TradePair Pair { get; }
-
 		/// <summary>The trades associated with filling a single order</summary>
 		public TradeCompletedCollection Trades { get; }
 
-		/// <summary>The number of completed trades that make up this completed order</summary>
-		public int TradeCount => Trades.Count;
-
-		/// <summary>The exchange that this trade occurred on</summary>
-		public Exchange Exchange => Pair?.Exchange;
+		///// <summary>The number of completed trades that make up this completed order</summary>
+		//public int TradeCount => Trades.Count;
 
 		/// <summary>
 		/// The approximate price of the filled order (in Quote/Base).

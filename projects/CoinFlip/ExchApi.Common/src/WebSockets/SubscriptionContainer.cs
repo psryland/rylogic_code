@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace ExchApi.Common
 {
+#if false
 	public class SubscriptionContainer
 	{
 		public SubscriptionContainer(IExchangeApi api)
@@ -110,4 +111,5 @@ namespace ExchApi.Common
 			await Task.WhenAll(tasks);
 		}
 	}
+#endif
 }

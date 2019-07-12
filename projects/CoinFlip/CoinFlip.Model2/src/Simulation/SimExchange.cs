@@ -164,8 +164,8 @@ namespace CoinFlip
 					pair.MarketDepth.UpdateOrderBook(md.B2Q.ToArray(), md.Q2B.ToArray());
 
 					// Check. Remember: Q2B spot price = B2Q[0].Price and visa versa
-					Debug.Assert(pair.SpotPrice(ETradeType.Q2B) >= ((decimal)latest.Close + (decimal)pair.Spread)._(pair.RateUnits));
-					Debug.Assert(pair.SpotPrice(ETradeType.B2Q) <= ((decimal)latest.Close                       )._(pair.RateUnits));
+					Debug.Assert(pair.SpotPrice[ETradeType.Q2B] >= ((decimal)latest.Close + (decimal)pair.Spread)._(pair.RateUnits));
+					Debug.Assert(pair.SpotPrice[ETradeType.B2Q] <= ((decimal)latest.Close                       )._(pair.RateUnits));
 				}
 
 				// Notify updated
@@ -182,7 +182,7 @@ namespace CoinFlip
 					// Try to fill 'position'.
 					// If 'his' is null, then the position can't be filled can remains unchanged
 					// If 'pos' is null, then the position is completely filled.
-					TryFillOrder(order.Pair, order.OrderId, order.TradeType, order.PriceQ2B, order.AmountBase, order.RemainingBase, out var pos, out var his);
+					TryFillOrder(order.Pair, order.FundId, order.OrderId, order.TradeType, order.PriceQ2B, order.AmountBase, order.RemainingBase, out var pos, out var his);
 					if (his == null)
 						continue;
 
@@ -287,7 +287,7 @@ namespace CoinFlip
 			var order_id = ++m_order_id;
 
 			// The order can be filled immediately, filled partially, or not filled and remain as a 'Position'
-			TryFillOrder(pair, order_id, tt, price, amount, amount, out var pos, out var his);
+			TryFillOrder(pair, Fund.Main, order_id, tt, price, amount, amount, out var pos, out var his);
 			if (pos != null) m_ord[order_id] = pos;
 			if (his != null) m_his[order_id] = his;
 
@@ -320,18 +320,18 @@ namespace CoinFlip
 		}
 
 		/// <summary>Attempt to make a trade on 'pair' for the given 'price' and base 'amount'</summary>
-		private void TryFillOrder(TradePair pair, long order_id, ETradeType tt, Unit<decimal> price, Unit<decimal> initial_amount, Unit<decimal> current_amount, out Order pos, out OrderCompleted his)
+		private void TryFillOrder(TradePair pair, string fund_id, long order_id, ETradeType tt, Unit<decimal> price, Unit<decimal> initial_amount, Unit<decimal> current_amount, out Order pos, out OrderCompleted his)
 		{
 			// The order can be filled immediately, filled partially, or not filled and remain as a 'Position'
-			var orders = m_depth[pair][tt];
+			var offers = m_depth[pair][tt];
 
 			// Consume orders
-			var filled = orders.Consume(pair, price, current_amount, out var remaining);
+			var filled = offers.Consume(pair, price, current_amount, out var remaining);
 			Debug.Assert(current_amount == remaining + filled.Sum(x => x.AmountBase));
 
-			// The order is partially or wholly filled...
-			pos = remaining != 0              ? new Order(Fund.Main, order_id, tt, pair, price, initial_amount, remaining, Model.UtcNow, Model.UtcNow) : null;
-			his = remaining != current_amount ? new OrderCompleted(order_id, tt, pair) : null;
+			// The order is partially or completely filled...
+			pos = remaining != 0              ? new Order(fund_id, order_id, tt, pair, price, initial_amount, remaining, Model.UtcNow, Model.UtcNow) : null;
+			his = remaining != current_amount ? new OrderCompleted(fund_id, order_id, tt, pair) : null;
 			foreach (var fill in filled)
 				his.Trades.Add(new TradeCompleted(order_id, ++m_history_id, pair, tt, fill.Price, fill.AmountBase, Exchange.Fee * fill.AmountQuote, Model.UtcNow, Model.UtcNow));
 		}

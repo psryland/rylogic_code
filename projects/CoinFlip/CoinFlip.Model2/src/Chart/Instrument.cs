@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using Rylogic.Common;
@@ -139,12 +140,14 @@ namespace CoinFlip
 				if (m_pair == value) return;
 				if (m_pair != null)
 				{
+					m_pair.MarketDepth.Needed -= HandleMDNeeded;
 					m_pair.MarketDepth.OrderBookChanged -= HandlePairOrderBookChanged;
 				}
 				m_pair = value;
 				if (m_pair != null)
 				{
 					m_pair.MarketDepth.OrderBookChanged += HandlePairOrderBookChanged;
+					m_pair.MarketDepth.Needed += HandleMDNeeded;
 				}
 
 				// Handlers
@@ -153,6 +156,10 @@ namespace CoinFlip
 					// Notify when the order book of the latest candle changes
 					if (Count != 0)
 						OnDataChanged(new DataEventArgs(DataEventArgs.EUpdateType.Current, PriceData, new Range(Count-1, Count), Latest));
+				}
+				void HandleMDNeeded(object sender, HandledEventArgs e)
+				{
+					e.Handled = true;
 				}
 			}
 		}
@@ -238,10 +245,7 @@ namespace CoinFlip
 		public string Description => $"{Name} {Pair.NameWithExchange} {TimeFrame}";
 
 		/// <summary>The current spot price for Quote to Base trades</summary>
-		public Unit<decimal>? SpotPrice(ETradeType tt)
-		{
-			return Pair.SpotPrice(tt); 
-		}
+		public Unit<decimal>? SpotPrice(ETradeType tt) => Pair.SpotPrice[tt];
 
 		#region Ranges and Indexing
 

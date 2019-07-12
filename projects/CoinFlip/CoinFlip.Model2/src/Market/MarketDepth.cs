@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using Rylogic.Extn;
 using Rylogic.Utility;
@@ -29,8 +30,25 @@ namespace CoinFlip
 		/// <summary>Access the order book for the given trade direction</summary>
 		public OrderBook this[ETradeType tt] => tt == ETradeType.B2Q ? B2Q : Q2B;
 
+		/// <summary>True when something is interested in this market data</summary>
+		public bool IsNeeded
+		{
+			get
+			{
+				var args = new HandledEventArgs();
+				Needed?.Invoke(this, args);
+				return args.Handled;
+			}
+		}
+
 		/// <summary>Raised when the order book for this pair is updated</summary>
 		public event EventHandler OrderBookChanged;
+
+		/// <summary>
+		/// Called by the exchanged to determine if anything is interested in this market data.
+		/// Interested parties should attach *Weak* handles, so that we they no longer exist their
+		/// references disappear and 'Needed' will return false</summary>
+		public event EventHandler<HandledEventArgs> Needed;
 
 		/// <summary>Update the list of buy/sell orders</summary>
 		public void UpdateOrderBook(IEnumerable<Offer> b2q, IEnumerable<Offer> q2b)

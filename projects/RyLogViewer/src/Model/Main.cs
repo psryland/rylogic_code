@@ -326,7 +326,7 @@ namespace RyLogViewer
 					// Clear bookmarks
 					Bookmarks.Clear();
 
-					using (m_suspend_grid_events.Scope())
+					using (m_suspend_grid_events.RefToken(this))
 					{
 						// Abort any BLI in progress
 						CancelBuildLineIndex();
@@ -624,13 +624,13 @@ namespace RyLogViewer
 					if (m_line_index.Count != 0)
 					{
 						// Ensure the grid has the correct number of rows
-						using (m_suspend_grid_events.Scope())
+						using (m_suspend_grid_events.RefToken(this))
 							SetGridRowCount(m_line_index.Count, row_delta);
 					}
 					else
 					{
 						m_grid.ColumnHeadersVisible = false;
-						using (m_suspend_grid_events.Scope())
+						using (m_suspend_grid_events.RefToken(this))
 							SetGridRowCount(0, 0);
 					}
 					SetGridColumnSizes(false);

@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using Rylogic.Extn;
 using Rylogic.Utility;
 
 namespace Rylogic.Attrib
@@ -58,19 +57,18 @@ namespace Rylogic.Attrib
 		}
 
 		/// <summary>A name to identify the associated type</summary>
-		public string Name { get; private set; }
+		public string Name { get; }
 
 		/// <summary>The type of the associated value</summary>
-		public Type Type { get; private set; }
+		public Type Type { get; }
 
 		/// <summary>The instance associated with the owning property/enum value/field</summary>
-		public object AssocItem { get { return m_get(); } }
+		public object AssocItem => m_get();
 		private Func<object> m_get;
-
 	}
 
 	/// <summary>Access class for AssocAttribute</summary>
-	public static class AssocAttr
+	public static class Assoc_
 	{
 		/// <summary>Returns the AssocAttribute instance associated with an enum value</summary>
 		private static AssocAttribute Get<T>(MemberInfo mi, string name = null)
@@ -86,7 +84,9 @@ namespace Rylogic.Attrib
 		public static T Assoc<T>(MemberInfo mi, string name = null)
 		{
 			var attr = Get<T>(mi, name);
-			if (attr != null) return (T)attr.AssocItem;
+			if (attr != null)
+				return (T)attr.AssocItem;
+
 			throw name == null
 				? new Exception($"Member {mi.Name} does not have an unnamed AssocAttribute<{typeof(T).Name}>")
 				: new Exception($"Member {mi.Name} does not have an AssocAttribute<{typeof(T).Name}> with name {name}");
@@ -101,31 +101,39 @@ namespace Rylogic.Attrib
 			return Assoc<T>(mi, name);
 		}
 
-		/// <summary>Returns true if 'ty.member_name' has an AssocAttribute of type 'T'</summary>
-		public static bool HasAssoc<T>(Type ty, string member_name, string name = null)
-		{
-			var mi =
-				(MemberInfo)ty.GetProperty(member_name, BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic) ??
-				(MemberInfo)ty.GetField   (member_name, BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic);
-			return Get<T>(mi, name) != null;
-		}
-
 		/// <summary>Return the AssocItem associated with an enum value</summary>
 		public static T Assoc<T>(this Enum enum_, string name = null)
 		{
 			return Assoc<T>(enum_.GetType(), enum_.ToString(), name);
 		}
 
-		/// <summary>Returns true if 'enum_' has an AssocAttribute of type 'T'</summary>
-		public static bool HasAssoc<T>(this Enum enum_, string name = null)
+		/// <summary>Returns true if 'ty.member_name' has an AssocAttribute of type 'T'</summary>
+		public static bool TryAssoc<T>(MemberInfo mi, out T assoc, string name = null)
 		{
-			return HasAssoc<T>(enum_.GetType(), enum_.ToString(), name);
+			var attr = Get<T>(mi, name);
+			assoc = (T)(attr?.AssocItem ?? default(T));
+			return attr != null;
+		}
+
+		/// <summary>Returns true if 'ty.member_name' has an AssocAttribute of type 'T'</summary>
+		public static bool TryAssoc<T>(Type ty, string member_name, out T assoc, string name = null)
+		{
+			var mi =
+				(MemberInfo)ty.GetProperty(member_name, BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic) ??
+				(MemberInfo)ty.GetField(member_name, BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+			return TryAssoc<T>(mi, out assoc, name);
+		}
+
+		/// <summary>Returns true if 'enum_' has an AssocAttribute of type 'T'</summary>
+		public static bool TryAssoc<T>(this Enum enum_, out T assoc, string name = null)
+		{
+			return TryAssoc<T>(enum_.GetType(), enum_.ToString(), out assoc, name);
 		}
 	}
 
+	/// <summary></summary>
 	public static class Assoc<Ty,T>
 	{
-
 		/// <summary>Returns the item associated with a member</summary>
 		[DebuggerStepThrough]
 		public static T Get<Ret>(Expression<Func<Ty,Ret>> expression, string name = null)

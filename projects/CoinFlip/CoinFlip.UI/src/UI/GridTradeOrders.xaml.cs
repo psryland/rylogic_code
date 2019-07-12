@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
@@ -109,16 +110,15 @@ namespace CoinFlip.UI
 				// Handler
 				void HandleCurrentChanged(object sender, EventArgs e)
 				{
-					var exch = (Exchange)Exchanges?.CurrentItem;
-					var orders = exch?.Orders;
-					Orders = orders != null ? new ListCollectionView(orders) : null;
+					var exchange = (Exchange)Exchanges?.CurrentItem;
+					Orders = exchange != null ? new ListCollectionView(exchange.Orders) : null;
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Orders)));
 				}
 			}
 		}
 		private ICollectionView m_exchanges;
 
-		/// <summary>The view of the trade history</summary>
+		/// <summary>The view of the current live orders</summary>
 		public ICollectionView Orders { get; private set; }
 
 		/// <summary>The currently selected exchange</summary>

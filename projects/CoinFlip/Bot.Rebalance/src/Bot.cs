@@ -85,7 +85,7 @@ namespace Bot.Rebalance
 			foreach (var tt in new[] { ETradeType.Q2B, ETradeType.B2Q })
 			{
 				// Get the current spot price
-				var price = pair.SpotPrice(tt) ?? 0m._(pair.RateUnits);
+				var price = pair.SpotPrice[tt] ?? 0m._(pair.RateUnits);
 				if (price == 0)
 					continue;
 
@@ -140,6 +140,7 @@ namespace Bot.Rebalance
 				return;
 
 			// An adjustment trade is needed, place the order now
+			Log.Write(ELogLevel.Debug, $"Rebalance trade created: {trade.Description}");
 			var order = await trade.CreateOrder(Cancel.Token);
 			Settings.PendingOrders.Add(order);
 		}

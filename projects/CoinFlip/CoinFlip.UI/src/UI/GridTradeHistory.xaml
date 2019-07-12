@@ -75,7 +75,7 @@
 			/>
 		<DataGridTextColumn
 			Header="Trade Count"
-			Binding="{Binding TradeCount, Mode=OneWay}"
+			Binding="{Binding Trades.Count, Mode=OneWay}"
 			ElementStyle="{StaticResource RightAlignedTextColumn}"
 			Width="0.2*"
 			/>

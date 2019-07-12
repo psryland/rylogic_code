@@ -28,13 +28,12 @@ namespace CoinFlip
 			:base(SettingsData.Settings.Poloniex, coin_data, shutdown)
 		{
 			m_pairs = new HashSet<CurrencyPair>();
-			Api = new PoloniexApi(key, secret, shutdown);
-			TradeHistoryUseful = true;
+			Api = new PoloniexApi(key, secret, shutdown, Model.Log);
 		}
 		public override void Dispose()
 		{
-			Api = null;
 			base.Dispose();
+			Api = null;
 		}
 
 		/// <summary>The API interface</summary>
@@ -66,9 +65,10 @@ namespace CoinFlip
 			// and we don't want updating pairs to be interrupted by the update thread stopping
 			var trade_pairs = await Api.GetTradePairs(cancel: Shutdown.Token);
 
-			// Add an action to integrate the data
+			// Integrate the data (on the main thread)
 			Model.DataUpdates.Add(() =>
 			{
+				Util.AssertMainThread();
 				var pairs = new HashSet<CurrencyPair>();
 
 				// Create the trade pairs and associated coins
@@ -98,6 +98,90 @@ namespace CoinFlip
 					m_pairs.Clear();
 					m_pairs.AddRange(pairs);
 				}
+			});
+		}
+
+		/// <summary>Update account balance data</summary>
+		protected async override Task UpdateBalancesInternal() // Worker thread context
+		{
+			// Record the time just before the query to the server
+			var timestamp = DateTimeOffset.Now;
+
+			// Request the account data
+			var balance_data = await Api.GetBalances(cancel: Shutdown.Token);
+
+			// Queue integration of the market data
+			Model.DataUpdates.Add(() =>
+			{
+				// Process the account data and update the balances
+				var msg = balance_data;
+
+				// Update the account balance
+				foreach (var b in msg.Where(x => x.Value.Available != 0 || Coins.ContainsKey(x.Key)))
+				{
+					// Find the currency that this balance is for. If it's not a coin of interest, ignore
+					var coin = Coins.GetOrAdd(b.Key);
+
+					// Update the balance
+					Balance.AssignFundBalance(coin, Fund.Main, (b.Value.HeldForTrades + b.Value.Available)._(coin), b.Value.HeldForTrades._(coin), timestamp);
+				}
+
+				// Notify updated
+				Balance.LastUpdated = timestamp;
+			});
+		}
+
+		/// <summary>Update open orders and completed trades</summary>
+		protected async override Task UpdateOrdersAndHistoryInternal() // Worker thread context
+		{
+			// Record the time just before the query to the server
+			var timestamp = DateTimeOffset.Now;
+
+			// Request the existing orders
+			var existing_orders = await Api.GetOpenOrders(cancel: Shutdown.Token);
+
+			// Request the history
+			var history = await Api.GetTradeHistory(beg: m_history_last, end: timestamp, cancel: Shutdown.Token);
+
+			// Record the time that history has been updated to
+			m_history_last = timestamp;
+
+			// Queue integration of the market data
+			Model.DataUpdates.Add(() =>
+			{
+				var order_ids = new HashSet<long>();
+				var pairs = new HashSet<CurrencyPair>();
+
+				// Update the collection of existing orders
+				foreach (var order in existing_orders.Values.Where(x => x.Count != 0).SelectMany(x => x))
+				{
+					// Add the order to the collection
+					var odr = OrderFrom(order, timestamp);
+					Orders[odr.OrderId] = odr;
+					order_ids.Add(odr.OrderId);
+					pairs.Add(order.Pair);
+				}
+				foreach (var order in history.Values.SelectMany(x => x))
+				{
+					var his = TradeCompletedFrom(order, timestamp);
+					var fill = History.GetOrAdd(OrderIdtoFundId[his.OrderId], his.OrderId, his.TradeType, his.Pair);
+					fill.Trades[his.TradeId] = his;
+					AddToTradeHistory(fill);
+				}
+
+				// Update the trade pairs
+				lock (m_pairs)
+					m_pairs.AddRange(pairs);
+
+				// Remove any positions that are no longer valid.
+				Orders.RemoveOrdersNotIn(order_ids, timestamp);
+
+				// Save the history range
+				HistoryInterval = new Range(HistoryInterval.Beg, timestamp.Ticks);
+
+				// Notify updated
+				History.LastUpdated = timestamp;
+				Orders.LastUpdated = timestamp;
 			});
 		}
 
@@ -139,90 +223,6 @@ namespace CoinFlip
 
 				// Notify updated
 				Pairs.LastUpdated = timestamp;
-			});
-		}
-
-		/// <summary>Update account balance data</summary>
-		protected async override Task UpdateBalancesInternal() // Worker thread context
-		{
-			// Record the time just before the query to the server
-			var timestamp = DateTimeOffset.Now;
-
-			// Request the account data
-			var balance_data = await Api.GetBalances(cancel: Shutdown.Token);
-
-			// Queue integration of the market data
-			Model.DataUpdates.Add(() =>
-			{
-				// Process the account data and update the balances
-				var msg = balance_data;
-
-				// Update the account balance
-				foreach (var b in msg.Where(x => x.Value.Available != 0 || Coins.ContainsKey(x.Key)))
-				{
-					// Find the currency that this balance is for. If it's not a coin of interest, ignore
-					var coin = Coins.GetOrAdd(b.Key);
-
-					// Update the balance
-					Balance.AssignFundBalance(coin, Fund.Main, (b.Value.HeldForTrades + b.Value.Available)._(coin), b.Value.HeldForTrades._(coin), timestamp);
-				}
-
-				// Notify updated
-				Balance.LastUpdated = timestamp;
-			});
-		}
-
-		/// <summary>Update open positions</summary>
-		protected async override Task UpdatePositionsAndHistoryInternal() // Worker thread context
-		{
-			// Record the time just before the query to the server
-			var timestamp = DateTimeOffset.Now;
-
-			// Request the existing orders
-			var existing_orders = await Api.GetOpenOrders(cancel: Shutdown.Token);
-
-			// Request the history
-			var history = await Api.GetTradeHistory(beg: m_history_last, end: timestamp, cancel: Shutdown.Token);
-
-			// Record the time that history has been updated to
-			m_history_last = timestamp;
-
-			// Queue integration of the market data
-			Model.DataUpdates.Add(() =>
-			{
-				var order_ids = new HashSet<long>();
-				var pairs = new HashSet<CurrencyPair>();
-
-				// Update the collection of existing orders
-				foreach (var order in existing_orders.Values.Where(x => x.Count != 0).SelectMany(x => x))
-				{
-					// Add the order to the collection
-					var odr = OrderFrom(order, timestamp);
-					Orders[odr.OrderId] = odr;
-					order_ids.Add(odr.OrderId);
-					pairs.Add(order.Pair);
-				}
-				foreach (var order in history.Values.SelectMany(x => x))
-				{
-					var his = TradeCompletedFrom(order, timestamp);
-					var fill = History.GetOrAdd(his.OrderId, his.TradeType, his.Pair);
-					fill.Trades[his.TradeId] = his;
-					AddToTradeHistory(fill);
-				}
-
-				// Update the trade pairs
-				lock (m_pairs)
-					m_pairs.AddRange(pairs);
-
-				// Remove any positions that are no longer valid.
-				Orders.RemoveOrdersNotIn(order_ids, timestamp);
-
-				// Save the history range
-				HistoryInterval = new Range(HistoryInterval.Beg, timestamp.Ticks);
-
-				// Notify updated
-				History.LastUpdated = timestamp;
-				Orders.LastUpdated = timestamp;
 			});
 		}
 

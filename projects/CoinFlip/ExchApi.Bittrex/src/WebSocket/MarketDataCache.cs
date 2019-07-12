@@ -2,16 +2,15 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Windows.Threading;
 using Bittrex.API.DomainObjects;
 using Bittrex.API.Subscriptions;
 using ExchApi.Common;
 using ExchApi.Common.JsonConverter;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Rylogic.Common;
 using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace Bittrex.API
 {
@@ -31,18 +30,16 @@ namespace Bittrex.API
 		//    - Query the full market state.
 		//    - Apply buffered deltas sequentially, starting with nonces greater than that received in step 4.
 
-		private const int MaxBufferedUpdates = 1024;
-		private readonly Dictionary<CurrencyPair, OrderBook> m_data;
-		private readonly List<IMarketUpdate> m_pending;
-		public MarketDataCache(BittrexWebSocket bws)
+		public MarketDataCache(BittrexApi api)
 		{
-			Debug.Assert(Misc.AssertMainThread());
-			m_data = new Dictionary<CurrencyPair, OrderBook>();
-			m_pending = new List<IMarketUpdate>();
-			Socket = bws;
+			Api = api;
+			Streams = new Dictionary<CurrencyPair, MarketStream>();
+			Socket = Api.WebSocket;
 		}
 		public void Dispose()
 		{
+			Util.DisposeRange(Streams.Values);
+			Streams.Clear();
 			Socket = null;
 		}
 
@@ -67,136 +64,190 @@ namespace Bittrex.API
 				void HandleMarketUpdate(JToken jtok)
 				{
 					var delta = jtok.ToObject<MarketDelta>();
-					ApplyPendingUpdates(delta.Pair, delta);
+
+					try
+					{
+						var stream = (MarketStream)null;
+						lock (Streams)
+						{
+							if (!Streams.TryGetValue(delta.Pair, out stream))
+								return;
+						}
+						stream.ApplyUpdate(delta);
+					}
+					catch (Exception ex)
+					{
+						BittrexApi.Log.Write(ELogLevel.Error, ex, $"Market update error for {delta.Pair.Id}");
+						lock (Streams) Streams.Remove(delta.Pair);
+					}
 				}
 			}
 		}
 		private BittrexWebSocket m_socket;
+
+		/// <summary>The owning API instance</summary>
+		private BittrexApi Api { get; }
+
+		/// <summary>Market data streams per currency</summary>
+		private Dictionary<CurrencyPair, MarketStream> Streams { get; }
 
 		/// <summary>Return the order book for the given pair</summary>
 		public OrderBook this[CurrencyPair pair] // Any thread context
 		{
 			get
 			{
-				// If it's not there add a subscription for the pair
 				try
 				{
-					lock (m_data)
+					var stream = (MarketStream)null;
+					var subscribe = false;
+					lock (Streams)
 					{
-						// Try to find 'pair' in our local cache. 
-						// Return a copy since any thread can call this function.
-						if (m_data.TryGetValue(pair, out var ob))
-							return new OrderBook(ob);
+						// Look for the stream for 'pair'. Create if not found.
+						if (!Streams.TryGetValue(pair, out stream))
+						{
+							stream = Streams[pair] = new MarketStream(pair, this);
+							subscribe = true;
+						}
+					}
+					
+					// This cannot be done in the constructor or MarketStream because the Socket calls will deadlock 
+					if (subscribe)
+					{
+						// Add a new subscription for updates to 'pair'
+						Socket.SubscribeToExchangeDeltas(pair.Id).Wait();
+
+						// Request a full snapshot to initialise the order book
+						var jtok = Socket.QueryExchangeState(pair.Id).Result;
+						var snapshot = jtok.ToObject<MarketSnapshot>();
+						stream.ApplyUpdate(snapshot);
 					}
 
-					// Add a new subscription for updates to 'pair'
-					Socket.SubscribeToExchangeDeltas(pair.Id).Wait();
-
-					// Request a full snapshot to initialise the order book
-					var jtok = Socket.QueryExchangeState(pair.Id).Result;
-					var snapshot = jtok.ToObject<MarketSnapshot>();
-					ApplyPendingUpdates(pair, snapshot);
-					Debug.Assert(m_data.ContainsKey(pair));
-
-					// Return a copy of the order book
-					lock (m_data)
-						return new OrderBook(m_data[pair]);
+					lock (stream.OrderBook)
+					{
+						// Return a copy since any thread can call this function.
+						return new OrderBook(stream.OrderBook);
+					}
 				}
 				catch (Exception ex)
 				{
-					m_data.Remove(pair);
-					BittrexApi.Log(Rylogic.Utility.ELogLevel.Error, $"Subscribing to market updates for {pair} failed. {ex.Message}");
+					BittrexApi.Log.Write(ELogLevel.Error, $"Subscribing to market updates for {pair} failed. {ex.Message}");
+					lock (Streams) Streams.Remove(pair);
 					return new OrderBook(pair, 0);
 				}
 			}
 		}
 
-		/// <summary>Parse a market data update message</summary>
-		private void ApplyPendingUpdates(CurrencyPair pair, IMarketUpdate update) // Worker thread context
+		/// <summary>Per-currency pair market stream</summary>
+		private class MarketStream :IDisposable
 		{
-			lock (m_data)
+			private const int MaxBufferedUpdates = 1024;
+			private readonly List<IMarketUpdate> m_pending;
+			public MarketStream(CurrencyPair pair, MarketDataCache owner)
 			{
-				m_pending.Add(update);
-
-				// Try to get the existing order book for 'pair'
-				var order_book = m_data.TryGetValue(pair, out var ob) ? ob : null;
-				var nonce = order_book?.Nonce ?? 0L;
-
-				// Create a list of the updates that apply to 'pair'
-				var updates = m_pending.Where(x => x.Pair.Equals(pair)).ToList();
-
-				// Get the newest snapshot, if it's newer than 'order_book.Nonce'
-				var snap = updates.OfType<MarketSnapshot>().MaxByOrDefault(x => x.Nonce);
-				snap = snap?.Nonce > nonce ? snap : null;
-				nonce = snap?.Nonce ?? nonce;
-
-				// Remove updates older than 'nonce'.
-				// Note, snapshots and deltas in the pending list can have the same nonce value.
-				updates.RemoveIf(x => x.Nonce <= nonce && x != snap);
-				if (updates.Count == 0)
-					return;
-
-				// Order by nonce value.
-				updates.Sort(x => x.Nonce);
-				Debug.Assert(updates.IsOrdered(ESequenceOrder.StrictlyIncreasing, Cmp<IMarketUpdate>.From(x => x.Nonce)));
-
-				// If there is no order book for 'pair' yet and we don't have
-				// a newer snapshot then give up, we need a snapshot to start with.
-				if (order_book == null && snap == null)
-					return;
-
-				// If the first update is a snapshot, we can dump any previous book
-				// and repopulate it from the snapshot and subsequent deltas.
-				if (snap != null)
+				try
 				{
-					m_data.Remove(pair);
-					order_book = m_data.Add2(pair, new OrderBook(pair, snap.Nonce));
-					PopulateBook(order_book.BuyOffers, snap.Buys, -1);
-					PopulateBook(order_book.SellOffers, snap.Sells, +1);
-					updates.RemoveAt(0);
+					Cache = owner;
+					Pair = pair;
+					OrderBook = new OrderBook(pair, 0L);
+					m_pending = new List<IMarketUpdate>();
 				}
-
-				// Apply the rest of the delta updates to the order book
-				foreach (var upd in updates)
+				catch
 				{
-					if (!(upd is MarketDelta delta))
-						throw new Exception("There should be a maximum of one snapshot in a group of updates");
-					if (order_book.Nonce >= delta.Nonce)
-						throw new Exception("Updates should have increasing nonce values");
-
-					UpdateBook(order_book.BuyOffers, delta.Buys, -1);
-					UpdateBook(order_book.SellOffers, delta.Sells, +1);
-					order_book.Nonce = delta.Nonce;
+					Dispose();
+					throw;
 				}
-
-				// Remove all updates for 'pair' with a nonce <= 'order_book.Nonce'
-				m_pending.RemoveIf(x => x.Nonce <= order_book.Nonce);
+			}
+			public void Dispose()
+			{
+				// There is no unsubscribe. The recommendation is to drop the connection.
 			}
 
-			// Handlers
-			void UpdateBook(List<OrderBook.Offer> book, List<MarketDelta.Offer> changes, int sign)
-			{
-				// Merge the 'changes' into 'book'
-				foreach (var chg in changes)
-				{
-					// Find the index of 'price' in 'book'
-					var order = new OrderBook.Offer(chg.Rate, chg.Amount);
-					var cmp = Comparer<OrderBook.Offer>.Create((l, r) => sign * l.Price.CompareTo(r.Price));
-					var idx = book.BinarySearch(order, cmp);
+			/// <summary>The owning cache</summary>
+			private MarketDataCache Cache { get; }
 
-					switch (chg.Type) {
-					default: throw new Exception($"Unknown change type: {chg.Type}");
-					case MarketDelta.EUpdateType.Add:    if (idx < 0) book.Insert(~idx, order); else book[idx] = order; break;
-					case MarketDelta.EUpdateType.Update: if (idx >= 0) book[idx] = order; break;
-					case MarketDelta.EUpdateType.Remove: if (idx >= 0) book.RemoveAt(idx); break;
+			/// <summary></summary>
+			private BittrexApi Api => Cache.Api;
+
+			/// <summary>The pair this stream is for</summary>
+			public CurrencyPair Pair { get; }
+
+			/// <summary>The order book being maintained by this stream</summary>
+			public OrderBook OrderBook { get; }
+
+			/// <summary>Parse a market data update message</summary>
+			public void ApplyUpdate(IMarketUpdate update) // Worker thread context
+			{
+				lock (OrderBook)
+				{
+					m_pending.Add(update);
+					m_pending.Sort(x => x.Nonce);
+
+					// Remove updates older than the OrderBook nonce
+					// Note, snapshots and deltas in the pending list can have the same nonce value.
+					var cnt = m_pending.CountWhile(x => x.Nonce < OrderBook.Nonce || (x.Nonce == OrderBook.Nonce && x is MarketSnapshot));
+					m_pending.RemoveRange(0, cnt);
+
+					// If we're still waiting for the first snapshot, leave
+					if (m_pending.Count == 0 || (!(m_pending[0] is MarketSnapshot) && OrderBook.Nonce == 0))
+					{
+						if (m_pending.Count < MaxBufferedUpdates) return;
+						throw new Exception($"Market data snapshot never arrived for {Pair.Id}");
+					}
+
+					// If the first update is a snapshot, we can dump any previous book
+					// data and repopulate it from the snapshot and subsequent deltas.
+					if (m_pending[0] is MarketSnapshot snap)
+					{
+						OrderBook.BuyOffers.Clear();
+						OrderBook.SellOffers.Clear();
+						PopulateBook(OrderBook.BuyOffers, snap.Buys, -1);
+						PopulateBook(OrderBook.SellOffers, snap.Sells, +1);
+						OrderBook.Nonce = snap.Nonce;
+						m_pending.RemoveAt(0);
+					}
+
+					// Apply the rest of the delta updates to the order book
+					foreach (var upd in m_pending)
+					{
+						if (!(upd is MarketDelta delta))
+							throw new Exception("There should be a maximum of one snapshot in a group of updates");
+						if (!(OrderBook.Nonce <= delta.Nonce))
+							throw new Exception("Updates should have increasing nonce values");
+
+						UpdateBook(OrderBook.BuyOffers, delta.Buys, -1);
+						UpdateBook(OrderBook.SellOffers, delta.Sells, +1);
+						OrderBook.Nonce = delta.Nonce;
+					}
+
+					// All pending updates have been applied
+					m_pending.Clear();
+				}
+
+				// Handlers
+				void UpdateBook(List<OrderBook.Offer> book, List<MarketDelta.Offer> changes, int sign)
+				{
+					// Merge the 'changes' into 'book'
+					foreach (var chg in changes)
+					{
+						// Find the index of 'price' in 'book'
+						var order = new OrderBook.Offer(chg.Rate, chg.Amount);
+						var cmp = Comparer<OrderBook.Offer>.Create((l, r) => sign * l.PriceQ2B.CompareTo(r.PriceQ2B));
+						var idx = book.BinarySearch(order, cmp);
+
+						switch (chg.Type) {
+						default: throw new Exception($"Unknown change type: {chg.Type}");
+						case MarketDelta.EUpdateType.Add:    if (idx < 0) book.Insert(~idx, order); else book[idx] = order; break;
+						case MarketDelta.EUpdateType.Update: if (idx >= 0) book[idx] = order; break;
+						case MarketDelta.EUpdateType.Remove: if (idx >= 0) book.RemoveAt(idx); break;
+						}
 					}
 				}
-			}
-			void PopulateBook(List<OrderBook.Offer> book, List<MarketSnapshot.Offer> offers, int sign)
-			{
-				// Populate 'book' from 'offers'
-				offers.Sort(x => sign * x.Rate);
-				book.AddRange(offers.Select(x => new OrderBook.Offer(x.Rate, x.Amount)));
+				void PopulateBook(List<OrderBook.Offer> book, List<MarketSnapshot.Offer> offers, int sign)
+				{
+					// Populate 'book' from 'offers'
+					offers.Sort(x => sign * x.Rate);
+					book.AddRange(offers.Select(x => new OrderBook.Offer(x.Rate, x.Amount)));
+				}
 			}
 		}
 

@@ -35,10 +35,13 @@ namespace Binance.API
 		BREAK,
 	}
 
+	/// <summary></summary>
 	public enum ESymbolType
 	{
 		SPOT,
 	}
+
+	/// <summary>The current state of an order</summary>
 	public enum EOrderStatus
 	{
 		NEW,
@@ -49,7 +52,35 @@ namespace Binance.API
 		REJECTED,
 		EXPIRED,
 	}
-	public enum EOrderTypes
+
+	/// <summary>Actions associated with an order (i.e. what happen, or what to do to it)</summary>
+	public enum EExecutionType
+	{
+		NEW,
+		CANCELED,
+		REPLACED,
+		REJECTED,
+		TRADE,
+		EXPIRED,
+	}
+
+	/// <summary>Reasons for not allowing an order</summary>
+	public enum EOrderRejectReason
+	{
+		NONE,
+		UNKNOWN_INSTRUMENT,
+		MARKET_CLOSED,
+		PRICE_QTY_EXCEED_HARD_LIMITS,
+		UNKNOWN_ORDER,
+		DUPLICATE_ORDER,
+		UNKNOWN_ACCOUNT,
+		INSUFFICIENT_BALANCE,
+		ACCOUNT_INACTIVE,
+		ACCOUNT_CANNOT_SETTLE,
+	}
+
+	/// <summary>Order type</summary>
+	public enum EOrderType
 	{
 		LIMIT,
 		MARKET,
@@ -59,16 +90,20 @@ namespace Binance.API
 		TAKE_PROFIT_LIMIT,
 		LIMIT_MAKER,
 	}
+
+	/// <summary>Trade type</summary>
 	public enum EOrderSide
 	{
 		BUY,
 		SELL,
 	}
+
+	/// <summary>Order lifetime</summary>
 	public enum ETimeInForce
 	{
-		GTC,
-		IOC,
-		FOK,
+		GTC, // Good till cancelled
+		IOC, // 
+		FOK, //
 	}
 
 	/// <summary></summary>
@@ -98,20 +133,20 @@ namespace Binance.API
 	public enum EMarketPeriod
 	{
 		None = 0,
-		[Assoc("tag", "1m")] Minutes1,
-		[Assoc("tag", "3m")] Minutes3,
-		[Assoc("tag", "5m")] Minutes5,
-		[Assoc("tag", "15m")] Minutes15,
-		[Assoc("tag", "30m")] Minutes30,
-		[Assoc("tag", "1h")] Hours1,
-		[Assoc("tag", "2h")] Hours2,
-		[Assoc("tag", "4h")] Hours4,
-		[Assoc("tag", "6h")] Hours6,
-		[Assoc("tag", "8h")] Hours8,
-		[Assoc("tag", "12h")] Hours12,
-		[Assoc("tag", "1d")] Day1,
-		[Assoc("tag", "3d")] Day3,
-		[Assoc("tag", "1w")] Week1,
-		[Assoc("tag", "1M")] Month1,
+		[Assoc("1m")] Minutes1,
+		[Assoc("3m")] Minutes3,
+		[Assoc("5m")] Minutes5,
+		[Assoc("15m")] Minutes15,
+		[Assoc("30m")] Minutes30,
+		[Assoc("1h")] Hours1,
+		[Assoc("2h")] Hours2,
+		[Assoc("4h")] Hours4,
+		[Assoc("6h")] Hours6,
+		[Assoc("8h")] Hours8,
+		[Assoc("12h")] Hours12,
+		[Assoc("1d")] Day1,
+		[Assoc("3d")] Day3,
+		[Assoc("1w")] Week1,
+		[Assoc("1M")] Month1,
 	}
 }

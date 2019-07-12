@@ -25,6 +25,7 @@ namespace CoinFlip
 	public abstract class Exchange : IDisposable, INotifyPropertyChanged, IComparable<Exchange>, IComparable
 	{
 		// Notes:
+		//  - Exchanges are 'below' the Model, i.e. they are unaware of the Model class.
 		//  - Pairs should be given as Base/Quote.
 		//  - Orders have the price in Quote/Base and the Volume in Base currency.
 		//  - Typically, the more common currency is the Quote currency,
@@ -54,31 +55,38 @@ namespace CoinFlip
 				OrderIdtoFundId = new OrderIdtoFundIdMap();
 				Transfers = new TransfersCollection(this);
 				Shutdown = CancellationTokenSource.CreateLinkedTokenSource(shutdown);
+				Dispatcher = Dispatcher.CurrentDispatcher;
 				m_update_thread_step = new AutoResetEvent(false);
-				TradeHistoryUseful = false;
+				Pairs.CollectionChanged += delegate { UpdateValuationPaths(); };
 
 				// Initialise the trade history table
 				InitTradeHistoryTable();
 
 				// Run after the exchange is fully constructed
-				Misc.RunOnMainThread(() =>
+				Misc.RunOnMainThread(async () =>
 				{
-					// Set the request rate limit
-					ExchangeApi.RequestThrottle.RequestRateLimit = ExchSettings.ServerRequestRateLimit;
+					// Perform async initialisation
+					await ExchangeApi.InitAsync();
 
 					// Start the exchange if enabled in the settings
-					if (ExchSettings.Active)
+					if (!ExchSettings.Active)
+						return;
+
+					// Initialise currencies and balances
+					if (!(this is CrossExchange))
 					{
-						if (!(this is CrossExchange))
-						{
-							PairsUpdateRequired = true;
-							BalanceUpdateRequired = true;
-							PositionUpdateRequired = true;
-							TransfersUpdateRequired = true;
-							MarketDataUpdateRequired = true;
-						}
-						UpdateThreadActive = true;
+						await UpdatePairs();
+						await UpdateBalances();
+						OrdersUpdateRequired = true;
+						MarketDataUpdateRequired = true;
+						TransfersUpdateRequired = true;
 					}
+
+					// Start the Exchange's main loop after the pairs and balances have been integrated.
+					Model.DataUpdates.Add(() =>
+					{
+						UpdateThreadActive = true;
+					});
 				});
 			}
 			catch
@@ -178,6 +186,9 @@ namespace CoinFlip
 		/// <summary>The common interface for all exchange API objects</summary>
 		protected abstract IExchangeApi ExchangeApi { get; }
 
+		/// <summary>For invoke calls on the main thread</summary>
+		protected Dispatcher Dispatcher { get; }
+
 		/// <summary>True if this exchange is to be used</summary>
 		public bool Enabled
 		{
@@ -254,7 +265,10 @@ namespace CoinFlip
 				{
 					// Trigger updates
 					BalanceUpdateRequired = true;
-					PositionUpdateRequired = true;
+					OrdersUpdateRequired = true;
+
+					// Set the request rate limit
+					ExchangeApi.RequestThrottle.RequestRateLimit = ExchSettings.ServerRequestRateLimit;
 
 					// Start the thread
 					m_update_thread_exit = false;
@@ -292,20 +306,28 @@ namespace CoinFlip
 									await UpdatePairs();
 								}
 
-								// Update market data
-								const int MarketDataUpdatePeriodMS = 100;
-								if (MarketDataUpdateRequired || (Model.UtcNow - Pairs.LastUpdated).TotalMilliseconds > MarketDataUpdatePeriodMS)
-								{
-									MarketDataUpdateRequired = false;
-									await UpdateData();
-								}
-
 								// Update the balances
 								const double BalanceUpdatePeriodMS = 1000;
 								if (!ExchSettings.PublicAPIOnly && (BalanceUpdateRequired || (Model.UtcNow - Balance.LastUpdated).TotalMilliseconds > BalanceUpdatePeriodMS))
 								{
 									BalanceUpdateRequired = false;
 									await UpdateBalances();
+								}
+
+								// Update market data
+								const int MarketDataUpdatePeriodMS = 100;
+								if (MarketDataUpdateRequired || (Model.UtcNow - Pairs.LastUpdated).TotalMilliseconds > MarketDataUpdatePeriodMS)
+								{
+									MarketDataUpdateRequired = false;
+									await UpdateMarketData();
+								}
+
+								// Update orders/history
+								const int OrdersUpdatePeriodMS = 1000;
+								if (!ExchSettings.PublicAPIOnly && (OrdersUpdateRequired || (Model.UtcNow - Orders.LastUpdated).TotalMilliseconds > OrdersUpdatePeriodMS))
+								{
+									OrdersUpdateRequired = false;
+									await UpdateOrdersAndHistory();
 								}
 
 								// Update funds transfers
@@ -315,14 +337,6 @@ namespace CoinFlip
 									TransfersUpdateRequired = false;
 									await UpdateTransfers();
 								}
-
-								// Update positions/history
-								const int PositionUpdatePeriodMS = 1000;
-								if (!ExchSettings.PublicAPIOnly && (PositionUpdateRequired || (Model.UtcNow - Orders.LastUpdated).TotalMilliseconds > PositionUpdatePeriodMS))
-								{
-									PositionUpdateRequired = false;
-									await UpdatePositionsAndHistory();
-								}
 							}
 							catch (OperationCanceledException) { break; }
 						}
@@ -330,7 +344,7 @@ namespace CoinFlip
 					catch (Exception ex)
 					{
 						Model.Log.Write(ELogLevel.Error, ex, $"Exchange {Name} update thread exit");
-						Misc.RunOnMainThread(() => UpdateThreadActive = false);
+						await Misc.RunOnMainThread(() => UpdateThreadActive = false);
 					}
 				}
 			}
@@ -355,19 +369,6 @@ namespace CoinFlip
 		}
 		private bool m_pairs_update_required;
 
-		/// <summary>Dirty flag for market data</summary>
-		public bool MarketDataUpdateRequired
-		{
-			get { return m_market_data_update_required; }
-			set
-			{
-				if (m_market_data_update_required == value) return;
-				m_market_data_update_required = value;
-				if (value) m_update_thread_step.Set();
-			}
-		}
-		private bool m_market_data_update_required;
-
 		/// <summary>Dirty flag for account balance data</summary>
 		public bool BalanceUpdateRequired
 		{
@@ -382,7 +383,7 @@ namespace CoinFlip
 		private bool m_balance_update_required;
 
 		/// <summary>Dirty flag for existing positions data</summary>
-		public bool PositionUpdateRequired
+		public bool OrdersUpdateRequired
 		{
 			get { return m_position_update_required; }
 			set
@@ -393,6 +394,19 @@ namespace CoinFlip
 			}
 		}
 		private bool m_position_update_required;
+
+		/// <summary>Dirty flag for market data</summary>
+		public bool MarketDataUpdateRequired
+		{
+			get { return m_market_data_update_required; }
+			set
+			{
+				if (m_market_data_update_required == value) return;
+				m_market_data_update_required = value;
+				if (value) m_update_thread_step.Set();
+			}
+		}
+		private bool m_market_data_update_required;
 
 		/// <summary>Dirty flag for fund transfers data</summary>
 		public bool TransfersUpdateRequired
@@ -406,9 +420,6 @@ namespace CoinFlip
 			}
 		}
 		private bool m_transfers_update_required;
-
-		/// <summary>True if TradeHistory can be mapped to previous order id's</summary>
-		[Obsolete("Get all history working")] public bool TradeHistoryUseful { get; protected set; }
 
 		/// <summary>The percentage fee charged when performing exchanges</summary>
 		public decimal Fee => ExchSettings.TransactionFee;
@@ -461,18 +472,14 @@ namespace CoinFlip
 		{
 			// Allow update pairs in back testing mode as well
 
-			// Create a set of coins to find pairs for. Include any intermediate
-			// coins needed to find the live price of coins as well
-			var coins = new HashSet<string>();
-			foreach (var coin in SettingsData.Settings.Coins)
-			{
-				coins.Add(coin.Symbol);
-				coins.AddRange(coin.LivePriceSymbolsArray);
-			}
-
 			try
 			{
+				Debug.Assert(Misc.AssertBackgroundThread());
+
+				// Create a set of coins to find pairs for.
+				var coins = SettingsData.Settings.Coins.Select(x => x.Symbol).Prepend("BTC").ToHashSet(0);
 				await UpdatePairsInternal(coins);
+
 				LastRequestFailed = false;
 			}
 			catch (Exception ex)
@@ -488,30 +495,13 @@ namespace CoinFlip
 			return Task.CompletedTask;
 		}
 
-		/// <summary>Update the market data, balances, and open positions</summary>
-		protected async Task UpdateData() // Worker thread context
-		{
-			try
-			{
-				await UpdateDataInternal();
-				LastRequestFailed = false;
-			}
-			catch (Exception ex)
-			{
-				HandleException(nameof(UpdateData), ex);
-			}
-		}
-		protected virtual Task UpdateDataInternal() // Worker thread context
-		{
-			Pairs.LastUpdated = Model.UtcNow;
-			return Task.CompletedTask;
-		}
-
 		/// <summary>Update the account balances</summary>
 		protected async Task UpdateBalances()  // Worker thread context
 		{
 			try
 			{
+				Debug.Assert(Misc.AssertBackgroundThread());
+
 				await UpdateBalancesInternal();
 				LastRequestFailed = false;
 
@@ -527,25 +517,48 @@ namespace CoinFlip
 			return Task.CompletedTask;
 		}
 
-		/// <summary>Update all open positions</summary>
-		protected async Task UpdatePositionsAndHistory() // Worker thread context
+		/// <summary>Update all open orders and completed trades</summary>
+		protected async Task UpdateOrdersAndHistory() // Worker thread context
 		{
 			try
 			{
-				// Do history and positions together so there's no change of
-				// a position being filled without it appearing in the history.
-				await UpdatePositionsAndHistoryInternal();
+				Debug.Assert(Misc.AssertBackgroundThread());
+
+				// Do orders and history together so there's no chance of a
+				// position being filled without it appearing in the history.
+				await UpdateOrdersAndHistoryInternal();
 				LastRequestFailed = false;
 			}
 			catch (Exception ex)
 			{
-				HandleException(nameof(UpdatePositionsAndHistory), ex);
+				HandleException(nameof(UpdateOrdersAndHistory), ex);
 			}
 		}
-		protected virtual Task UpdatePositionsAndHistoryInternal() // Worker thread context
+		protected virtual Task UpdateOrdersAndHistoryInternal() // Worker thread context
 		{
-			History.LastUpdated = Model.UtcNow;
 			Orders.LastUpdated = Model.UtcNow;
+			History.LastUpdated = Model.UtcNow;
+			return Task.CompletedTask;
+		}
+
+		/// <summary>Update the market data, balances, and open positions</summary>
+		protected async Task UpdateMarketData() // Worker thread context
+		{
+			try
+			{
+				Debug.Assert(Misc.AssertBackgroundThread());
+
+				await UpdateDataInternal();
+				LastRequestFailed = false;
+			}
+			catch (Exception ex)
+			{
+				HandleException(nameof(UpdateMarketData), ex);
+			}
+		}
+		protected virtual Task UpdateDataInternal() // Worker thread context
+		{
+			Pairs.LastUpdated = Model.UtcNow;
 			return Task.CompletedTask;
 		}
 
@@ -554,6 +567,8 @@ namespace CoinFlip
 		{
 			try
 			{
+				Debug.Assert(Misc.AssertBackgroundThread());
+
 				await UpdateTransfersInternal();
 				LastRequestFailed = false;
 			}
@@ -572,6 +587,8 @@ namespace CoinFlip
 		{
 			try
 			{
+				Debug.Assert(Misc.AssertBackgroundThread());
+
 				return Sim != null
 					? Sim.MarketDepthInternal(pair, depth)
 					: await MarketDepthInternal(pair, depth);
@@ -622,7 +639,7 @@ namespace CoinFlip
 			Orders.RemoveIf(x => x.Pair == pair && x.OrderId == order_id);
 
 			// Trigger a positions and balances update
-			PositionUpdateRequired = true;
+			OrdersUpdateRequired = true;
 			BalanceUpdateRequired = true;
 			return result;
 		}
@@ -691,8 +708,8 @@ namespace CoinFlip
 			// Save a mapping from order id to fund id. This records who was responsible for creating the order.
 			OrderIdtoFundId[result.OrderId] = fund_id;
 
-			// Add the position to the Positions collection so that there is no race condition
-			// between placing an order and checking 'Positions' for the order just placed.
+			// Add the order to the Orders collection so that there is no race condition
+			// between placing an order and checking 'Orders' for the existence of the order just placed.
 			if (!result.Filled)
 			{
 				// Add a 'Position' to the collection, this will be overwritten on the next update.
@@ -707,7 +724,7 @@ namespace CoinFlip
 			// The order may have also been completed or partially filled. Add the filled orders to the trade history.
 			foreach (var tid in result.TradeIds)
 			{
-				var fill = History.GetOrAdd(result.OrderId, tt, pair);
+				var fill = History.GetOrAdd(fund_id, result.OrderId, tt, pair);
 				fill.Trades[tid] = new TradeCompleted(result.OrderId, tid, pair, tt, price, amount, price * amount * Fee, now, now);
 			}
 
@@ -717,7 +734,7 @@ namespace CoinFlip
 
 			// Trigger updates
 			MarketDataUpdateRequired = true;
-			PositionUpdateRequired = true;
+			OrdersUpdateRequired = true;
 			BalanceUpdateRequired = true;
 			return result;
 		}
@@ -893,6 +910,13 @@ namespace CoinFlip
 			m_transfers_last = new DateTimeOffset(TransfersInterval.End, TimeSpan.Zero);
 		}
 
+		/// <summary>Ensure the valuation paths for the current coins are up to date</summary>
+		public void UpdateValuationPaths()
+		{
+			foreach (var coin in Coins.Values)
+				coin.UpdateValuationPaths();
+		}
+
 		/// <summary>The set of known trade ids</summary>
 		private HashSet<long> TradeHistoryTradeIds { get; set; }
 
@@ -1004,6 +1028,7 @@ namespace CoinFlip
 			public ETimeFrame TimeFrame;
 		}
 
+		/// <summary>Colours for exchanges</summary>
 		private static uint[] Colours = new[]{ 0xFF000080, 0xFF008000, 0xFF800000, 0xFF808000, 0xFF800080, 0xFF008080, 0xFF80FF80 };
 		private static int m_colour_index;
 	}

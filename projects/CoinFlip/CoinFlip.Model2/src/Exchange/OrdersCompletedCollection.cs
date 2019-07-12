@@ -14,30 +14,26 @@ namespace CoinFlip
 			: base(rhs)
 		{ }
 
-		/// <summary>Get or Add a history entry with order id 'key' for 'pair'</summary>
-		public OrderCompleted GetOrAdd(long key, ETradeType tt, TradePair pair)
+		/// <summary>Get or Add a history entry with order id 'order_id' for 'pair'</summary>
+		public OrderCompleted GetOrAdd(string fund_id, long order_id, ETradeType tt, TradePair pair)
 		{
 			Debug.Assert(Misc.AssertMarketDataWrite());
-			return this.GetOrAdd(key, x => new OrderCompleted(key, tt, pair));
+			return this.GetOrAdd(order_id, x => new OrderCompleted(fund_id, order_id, tt, pair));
 		}
 
-		/// <summary>Get/Set a history entry by order id. Returns null if 'key' is not in the collection</summary>
-		public override OrderCompleted this[long key]
+		/// <summary>Get/Set a history entry by order id. Returns null if 'order_id' is not in the collection</summary>
+		public override OrderCompleted this[long order_id]
 		{
 			get
 			{
 				Debug.Assert(Misc.AssertMarketDataRead());
-				return TryGetValue(key, out var pos) ? pos : null;
+				return TryGetValue(order_id, out var pos) ? pos : null;
 			}
 			set
 			{
 				Debug.Assert(Misc.AssertMarketDataWrite());
-				base[key] = value;
+				base[order_id] = value;
 			}
 		}
 	}
-
 }
-
-
-

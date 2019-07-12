@@ -464,6 +464,11 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 		}
+		public void FindAndShow(Type type)
+		{
+			foreach (var item in AllContent.OfType(type).Cast<IDockable>())
+				FindAndShow(item);
+		}
 
 		/// <summary>Get the bounds of a dock site. 'rect' is the available area. 'docked_mask' are the visible dock sites within 'rect'</summary>
 		internal static Rect DockSiteBounds(EDockSite docksite, Rect rect, EDockMask docked_mask, DockSizeData dock_site_sizes)

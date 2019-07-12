@@ -117,6 +117,7 @@
     <Compile Include="src\Settings\UISettings.cs" />
     <Compile Include="src\Simulation\SimExchange.cs" />
     <Compile Include="src\Simulation\Simulation.cs" />
+    <Compile Include="src\Trade\SpotPrices.cs" />
     <Compile Include="src\Trade\TradeCompleted.cs" />
     <Compile Include="src\Trade\Order.cs" />
     <Compile Include="src\Trade\OrderCompleted.cs" />

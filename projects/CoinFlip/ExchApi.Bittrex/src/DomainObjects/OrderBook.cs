@@ -47,23 +47,23 @@ namespace Bittrex.API.DomainObjects
 		{
 			public Offer(decimal price, decimal amount_base)
 			{
-				Price = price;
+				PriceQ2B = price;
 				AmountBase = amount_base;
 			}
 
 			/// <summary></summary>
 			[JsonProperty("Rate")]
-			public decimal Price { get; set; }
+			public decimal PriceQ2B { get; set; }
 
 			/// <summary></summary>
 			[JsonProperty("Quantity")]
 			public decimal AmountBase { get; set; }
 
 			/// <summary></summary>
-			public decimal AmountQuote => Price + AmountBase;
+			public decimal AmountQuote => PriceQ2B + AmountBase;
 
 			/// <summary></summary>
-			public string Description => $"Price={Price} Amount={AmountBase}";
+			public string Description => $"Price={PriceQ2B} Amount={AmountBase}";
 		}
 	}
 }

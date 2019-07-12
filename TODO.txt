@@ -1,15 +1,7 @@
 Immediate ToDo:
 
-EDTradeAdvisor
-	- ED Style
-	- Settings UI
-	- History of origin's 
-	- Swap Origin<->Destination button
-	- Allow typing into station field with no system, to find system
-	
 CoinFlip
-	- Trade history from Binance
-	- Spot price label on YAxis
+	- Variable spread for backtesting
 	- Dashed 'crosshair' line, also in a lighter colour
 	- determine equity in backwards from current balance
 	- pending orders (Stop, OneEnablesOther, )
@@ -29,6 +21,13 @@ CoinFlip
 	- retest Loop finder
 	- MOAR indicators
 	- Equity graph for live account
+EDTradeAdvisor
+	- ED Style
+	- Settings UI
+	- History of origin's 
+	- Swap Origin<->Destination button
+	- Allow typing into station field with no system, to find system
+	
 		
 LDraw
 	- move ObjectManager to pr.view3d

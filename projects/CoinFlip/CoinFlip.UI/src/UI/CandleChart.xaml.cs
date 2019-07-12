@@ -96,6 +96,7 @@ namespace CoinFlip.UI
 						break;
 					case nameof(ChartSettings.ShowMarketDepth):
 						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowMarketDepth)));
+						GfxMarketDepth.Invalidate();
 						Chart.Scene.Invalidate();
 						break;
 					case nameof(ChartSettings.XAxisLabelMode):
@@ -369,7 +370,7 @@ namespace CoinFlip.UI
 					SettingsData.Settings.LastChart = string.Empty;
 					m_instrument.DataSyncingChanged -= HandleDataSyncingChanged;
 					m_instrument.DataChanged -= HandleDataChanged;
-					Util.Dispose(m_instrument);
+					Util.Dispose(ref m_instrument);
 					GfxMarketDepth = null;
 					GfxCompletedOrder = null;
 					GfxOpenOrder = null;
@@ -469,12 +470,8 @@ namespace CoinFlip.UI
 		/// <summary>Show current market depth</summary>
 		public bool ShowMarketDepth
 		{
-			get { return SettingsData.Settings.Chart.ShowMarketDepth; }
-			set
-			{
-				SettingsData.Settings.Chart.ShowMarketDepth = value;
-				GfxMarketDepth.Invalidate();
-			}
+			get => SettingsData.Settings.Chart.ShowMarketDepth;
+			set => SettingsData.Settings.Chart.ShowMarketDepth = value;
 		}
 
 		/// <summary>Add graphics and elements to the chart</summary>
@@ -499,8 +496,7 @@ namespace CoinFlip.UI
 			{
 				// Add the spot price lines and labels
 				var pair = Instrument.Pair;
-				var spot_q2b = pair.SpotPrice(ETradeType.Q2B);
-				var spot_b2q = pair.SpotPrice(ETradeType.B2Q);
+				var spot_q2b = pair.SpotPrice[ETradeType.Q2B];
 				if (spot_q2b != null)
 				{
 					var price = (double)(decimal)spot_q2b.Value;
@@ -525,6 +521,8 @@ namespace CoinFlip.UI
 					if (GfxQ2B != null)
 						window.RemoveObject(GfxQ2B);
 				}
+
+				var spot_b2q = pair.SpotPrice[ETradeType.B2Q];
 				if (spot_b2q != null)
 				{
 					var price = (double)(decimal)spot_b2q.Value;
@@ -534,7 +532,7 @@ namespace CoinFlip.UI
 					// Spot price label
 					Canvas.SetLeft(B2QPriceLabel, 0);
 					Canvas.SetTop(B2QPriceLabel, pt.Y - B2QPriceLabel.RenderSize.Height / 2);
-					B2QPriceLabel.Text = spot_q2b.Value.ToString(8, false);
+					B2QPriceLabel.Text = spot_b2q.Value.ToString(8, false);
 					B2QPriceLabel.Visibility = Visibility.Visible;
 
 					if (GfxB2Q != null)

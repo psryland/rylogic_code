@@ -91,10 +91,10 @@ namespace Binance.API.DomainObjects
 			public int QuoteAssetPrecision { get; private set; }
 
 			/// <summary></summary>
-			public List<EOrderTypes> OrderTypes { get; private set; }
+			public List<EOrderType> OrderTypes { get; private set; }
 			[JsonProperty("orderTypes")] private List<string> OrderTypesInternal
 			{
-				set { OrderTypes = value.Select(x => Enum<EOrderTypes>.Parse(x)).ToList(); }
+				set { OrderTypes = value.Select(x => Enum<EOrderType>.Parse(x)).ToList(); }
 			}
 
 			/// <summary></summary>

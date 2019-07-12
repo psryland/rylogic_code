@@ -1,4 +1,6 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Binance.API.DomainObjects
 {
@@ -6,6 +8,14 @@ namespace Binance.API.DomainObjects
 	[DebuggerDisplay("{Description}")]
 	public struct CurrencyPair
 	{
+		// Notes:
+		//  - Binance use "symbol" to mean currency pair.
+		//  - Binance don't use a delimiter in their currency pairs so there
+		//    isn't a clean way to parse a currency pair string.
+		//  - The 'ServerRules' API provides the mapping from all supported
+		//    'symbols' to currency pairs. This must be populated at runtime
+		//    however.
+
 		public CurrencyPair(string base_, string quote)
 		{
 			Base  = base_.ToUpperInvariant();
@@ -23,6 +33,31 @@ namespace Binance.API.DomainObjects
 
 		/// <summary></summary>
 		private string Description => $"{Base}/{Quote}";
+
+		/// <summary>Mapping from Binance 'Symbol' to currency pair</summary>
+		internal static Dictionary<string, CurrencyPair> SymbolToPair = new Dictionary<string, CurrencyPair>();
+		public static CurrencyPair Parse(string pair_name)
+		{
+			if (SymbolToPair.TryGetValue(pair_name, out var pair))
+				return pair;
+
+			// Check the mapping has been populated by a call to 'ServerRules'
+			if (SymbolToPair.Count == 0)
+				throw new Exception("A call to 'ServerRules' must be made on the Binance API. This populates the list of supported currency pairs");
+
+			// Since there is no delimiter in the currency pair, we can't reliably convert
+			// back to base/quote. Use a bunch of heuristics to and get the base/quote values.
+			// Assume the minimum symbol code length is 3.
+			//for (int i = 3, iend = pair.Length - 3; i <= iend; ++i)
+			//{
+			//	var base_ = pair.Substring(0, i);
+			//	var quote = pair.Substring(i);
+			//	if (KnownCoins.Contains(base_) &&
+			//		KnownCoins.Contains(quote))
+			//		return new CurrencyPair(base_, quote);
+			//}
+			throw new Exception($"Failed to determine currency pair from code: {pair}");
+		}
 
 		#region Equals
 		public bool Equals(CurrencyPair b)

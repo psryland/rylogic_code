@@ -34,7 +34,7 @@ namespace Binance.API
 			Stream = wss_stream;
 			Shutdown = shutdown;
 			Dispatcher = Dispatcher.CurrentDispatcher;
-			OrderBook = new OrderBook();
+			OrderBook = new MarketDepth();
 			Active = true;
 		}
 		public void Dispose()
@@ -55,7 +55,7 @@ namespace Binance.API
 		private Dispatcher Dispatcher { get; }
 
 		/// <summary>The order book for 'Pair'</summary>
-		private OrderBook OrderBook { get; }
+		private MarketDepth OrderBook { get; }
 
 		/// <summary>Start/Stop the web socket stream</summary>
 		private bool Active

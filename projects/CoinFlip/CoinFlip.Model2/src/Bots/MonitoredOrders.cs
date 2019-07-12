@@ -33,51 +33,34 @@ namespace CoinFlip.Bots
 		/// <summary>Register this monitor with the model to monitor completed orders</summary>
 		public IDisposable Register(Model model)
 		{
-			return Scope.Create(
-				() =>
-				{
-					// Attach a handler to the collection changed event for each exchange's orders collection
-					foreach (var exch in model.TradingExchanges)
-					{
-						if (exch.TradeHistoryUseful)
-						{
-							exch.History.ItemChanged += TriggerUpdate;
-							exch.History.CollectionChanged += TriggerUpdate;
-						}
-						else
-						{
-							exch.Orders.ItemChanged += TriggerUpdate;
-							exch.Orders.CollectionChanged += TriggerUpdate;
-						}
-					}
-				},
-				() =>
-				{
-					// Detach the handler on the collection changed event for each exchange's orders collection
-					foreach (var exch in model.TradingExchanges)
-					{
-						if (exch.TradeHistoryUseful)
-						{
-							exch.History.ItemChanged -= TriggerUpdate;
-							exch.History.CollectionChanged -= TriggerUpdate;
-						}
-						else
-						{
-							exch.Orders.ItemChanged -= TriggerUpdate;
-							exch.Orders.CollectionChanged -= TriggerUpdate;
-						}
-					}
-				});
+			return Scope.Create(() => Model = model, () => Model = null);
+		}
 
-			// Handle notification that the History or Orders collections on an exchange has changed
-			void TriggerUpdate(object sender, EventArgs e)
+		/// <summary>The model we're registered with</summary>
+		private Model Model
+		{
+			get { return m_model; }
+			set
 			{
-				if (sender is OrdersCompletedCollection h)
-					CheckForCompletedOrders(h.Exchange);
-				if (sender is OrdersCollection o)
-					CheckForCompletedOrders(o.Exchange);
+				if (m_model == value) return;
+				if (m_model != null)
+				{
+					m_model.MainLoopTick -= HandleLoopTick;
+				}
+				m_model = value;
+				if (m_model != null)
+				{
+					m_model.MainLoopTick += HandleLoopTick;
+				}
+
+				// Handle notification that the History or Orders collections on an exchange has changed
+				void HandleLoopTick(object sender, EventArgs e)
+				{
+					CheckForCompletedOrders();
+				}
 			}
 		}
+		private Model m_model;
 
 		/// <summary>The number of orders not known to be filled</summary>
 		public int Count => Orders.Length;
@@ -95,36 +78,40 @@ namespace CoinFlip.Bots
 		}
 
 		/// <summary>Look for pending orders that have completed</summary>
-		private void CheckForCompletedOrders(Exchange exchange)
+		private void CheckForCompletedOrders()
 		{
-			var remove = new List<PersistedOrder>();
+			var remove = new HashSet<PersistedOrder>();
 			foreach (var order in Orders)
 			{
-				// 'order' is not on 'exchange', keep it.
-				if (order.ExchangeName != exchange.Name)
+				// Find the exchange that 'order' is on
+				var exchange = Model.Exchanges[order.ExchangeName];
+				if (exchange == null)
+				{
+					Model.Log.Write(ELogLevel.Warn, $"Abandoning monitored order. The exchange {order.ExchangeName} doesn't exist");
+					remove.Add(order);
 					continue;
+				}
+				if (!exchange.UpdateThreadActive)
+				{
+					// The exchange is still starting up
+					continue;
+				}
 
-				// If 'order' still exists on the exchange, keep it.
+				// If 'order' is still in the exchange's 'Orders' collection, keep it.
 				if (exchange.Orders[order.OrderId] != null)
 					continue;
 
-				// 'order' is no longer in the exchange's orders collection. It may have been filled or cancelled.
-				// If the exchange data allows mapping from order id to completed orders, then we can use the history
-				// to spot completed orders. If not, then we have to assume missing means "filled".
-				if (exchange.TradeHistoryUseful)
-				{
-					// If there is a historic trade matching the order id then the order has definitely been filled.
-					var his = exchange.History[order.OrderId];
-					if (his != null)
-						OrderCompleted?.Invoke(this, new MonitoredOrderEventArgs(exchange, order.OrderId));
-					else
-						OrderCancelled?.Invoke(this, new MonitoredOrderEventArgs(exchange, order.OrderId));
-				}
-				else
-				{
-					// Trade has gone, assume it was filled
+				// 'order' is no longer in the exchange's 'Orders' collection. It may have
+				// been filled or cancelled. All supported exchanges support mapping from order
+				// id to completed orders, so we can use the history to spot completed orders.
+				// If there is a historic trade matching the order id then the order has definitely been filled.
+				// If not, then the order must have been cancelled. Note: In back testing, the exchange gets reset
+				// which effectly makes any orders become cancelled.
+				var his = exchange.History[order.OrderId];
+				if (his != null)
 					OrderCompleted?.Invoke(this, new MonitoredOrderEventArgs(exchange, order.OrderId));
-				}
+				else
+					OrderCancelled?.Invoke(this, new MonitoredOrderEventArgs(exchange, order.OrderId));
 
 				// Stop monitoring it
 				remove.Add(order);

@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using ExchApi.Common;
 using Microsoft.AspNet.SignalR.Client;
 using Newtonsoft.Json.Linq;
-using Rylogic.Extn;
 using Rylogic.Utility;
 
 namespace Bittrex.API.Subscriptions
@@ -21,15 +20,17 @@ namespace Bittrex.API.Subscriptions
 		public BittrexWebSocket(string address, CancellationToken shutdown)
 		{
 			Shutdown = shutdown;
-
-			// Create connection to c2 SignalR hub
 			HubConnection = new HubConnection(address);
 			HubProxy = HubConnection.CreateHubProxy("c2");
-			HubConnection.Start().Wait();
 		}
 		public virtual void Dispose()
 		{
 			HubConnection = null;
+		}
+		public async Task InitAsync()
+		{
+			// Create connection to c2 SignalR hub
+			await HubConnection.Start();
 		}
 
 		/// <summary>Shutdown token</summary>
@@ -71,7 +72,7 @@ namespace Bittrex.API.Subscriptions
 				}
 				void HandleError(Exception ex)
 				{
-					BittrexApi.Log(ELogLevel.Error, ex.Message);
+					BittrexApi.Log.Write(ELogLevel.Error, ex.Message);
 				}
 			}
 		}
@@ -83,7 +84,7 @@ namespace Bittrex.API.Subscriptions
 		/// <summary>Authenticate the connection</summary>
 		public async Task Authenticate(string apikey, string secret)
 		{
-			BittrexApi.Log(ELogLevel.Debug, "BittrexWebSocket: Authentication starting");
+			BittrexApi.Log.Write(ELogLevel.Debug, "BittrexWebSocket: Authentication starting");
 
 			// Get the challenge string
 			var challenge = await HubProxy.Invoke<string>("GetAuthContext", apikey);
@@ -96,7 +97,7 @@ namespace Bittrex.API.Subscriptions
 			// Pass the signed data to the Authenticate call
 			await HubProxy.Invoke<bool>("Authenticate", apikey, signed);
 
-			BittrexApi.Log(ELogLevel.Debug, "BittrexWebSocket: Authentication complete");
+			BittrexApi.Log.Write(ELogLevel.Debug, "BittrexWebSocket: Authentication complete");
 		}
 
 		/// <summary>Called whenever market data updates are received</summary>

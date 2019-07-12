@@ -20,34 +20,45 @@ namespace Bittrex.API
 {
 	public class BittrexApi :ExchangeApi<HMACSHA512>
 	{
-		public BittrexApi(string key, string secret, CancellationToken shutdown)
+		public BittrexApi(string key, string secret, CancellationToken shutdown, Logger log)
 			:base(key, secret, shutdown, 10, "https://api.bittrex.com/", "https://socket.bittrex.com/signalr")
 		{
-			WebSocket = new BittrexWebSocket(UrlSocketAddress, shutdown);
-			MarketData = new MarketDataCache(WebSocket);
-
-			// Authenticate the web socket if a key/secret is provided
-			Dispatcher.BeginInvoke(new Action(async () =>
+			try
 			{
-				if (WebSocket == null || key == null || secret == null) return;
-				await WebSocket.Authenticate(key, secret);
-			}));
+				Log = new Logger("BittrexApi", log);
+				WebSocket = new BittrexWebSocket(UrlSocketAddress, shutdown);
+				MarketData = new MarketDataCache(this);
+			}
+			catch
+			{
+				Dispose();
+				throw;
+			}
 		}
 		public override void Dispose()
 		{
 			MarketData = null;
 			WebSocket = null;
+			Log = Util.Dispose(Log);
 			base.Dispose();
 		}
+		public override async Task InitAsync()
+		{
+			// Start the web socket
+			await WebSocket.InitAsync();
 
-		/// <summary>Log output callback function</summary>
-		public static void Log(ELogLevel lvl, string msg) => LogCB?.Write(lvl, msg);
-		public static Logger LogCB { get; set; }
+			// Authenticate the web socket if a key/secret is provided
+			if (Key == null || Secret == null) return;
+			await WebSocket.Authenticate(Key, Secret);
+		}
+
+		/// <summary>Static log instance</summary>
+		public static Logger Log { get; private set; }
 
 		#region WebSocket API
 
 		/// <summary></summary>
-		public new BittrexWebSocket WebSocket
+		public BittrexWebSocket WebSocket
 		{
 			get { return m_web_socket; }
 			private set

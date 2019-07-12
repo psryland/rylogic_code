@@ -298,16 +298,17 @@ namespace Rylogic.Utility
 				if (m_ctx == value) return;
 				if (m_ctx != null)
 				{
-					m_ctx.RefCount.ReleaseRef();
+					Util.Dispose(ref m_ref_token);
 				}
 				m_ctx = value;
 				if (m_ctx != null)
 				{
-					m_ctx.RefCount.AddRef();
+					m_ref_token = m_ctx.RefCount.RefToken(this);
 				}
 			}
 		}
 		private SharedContext m_ctx;
+		private IDisposable m_ref_token;
 
 		/// <summary>A log instance to forward log entries to</summary>
 		public Logger ForwardLog { get; set; }
@@ -418,22 +419,22 @@ namespace Rylogic.Utility
 			public bool AddTimestamp { get; set; }
 
 			/// <summary>References to this shared context</summary>
-			public RefCount RefCount { get; private set; }
+			public RefCount RefCount { get; }
 
 			/// <summary>The time point when logging started</summary>
 			public DateTimeOffset TimeZero { get; set; }
 
 			/// <summary>Queue of log events to report</summary>
-			public BlockingCollection<LogEvent> Queue { get; private set; }
+			public BlockingCollection<LogEvent> Queue { get; }
 
 			/// <summary>A flag to indicate when the logger is idle</summary>
-			public ManualResetEvent Idle { get; private set; }
+			public ManualResetEvent Idle { get; }
 
 			/// <summary>A callback function used in immediate mode</summary>
-			public ILogWriter LogCB { get; private set; }
+			public ILogWriter LogCB { get; }
 
 			/// <summary>The maximum number of identical events per batch</summary>
-			public int OccurrencesBatchSize { get; private set; }
+			public int OccurrencesBatchSize { get; }
 
 			/// <summary>The method that converts a log entry into a string</summary>
 			public Func<LogEvent, string> Serialise { get; set; }
@@ -535,6 +536,11 @@ namespace Rylogic.Utility
 				{
 					if (!Queue.TryTake(out ev))
 					{
+						// Notes:
+						//  - If you get a block here on shutdown, it's probably because of leaked references to
+						//    the log shared context. Look at 'RefCount' in the debugger. You may turn on 'REfS'
+						//    and 'STACKTRACES' in the 'RefCount' class if you want. If each 'm_refs', look at the
+						//    'Tag' name.
 						Idle.Set();
 						ev = Queue.Take(); // Blocks
 						Idle.Reset();
@@ -566,7 +572,7 @@ namespace Rylogic.Utility
 			{
 				Level       = ELogLevel.Error;
 				Timestamp   = TimeSpan.Zero;
-				Tag     = string.Empty;
+				Tag         = string.Empty;
 				Message     = string.Empty;
 				File        = string.Empty;
 				Line        = 0;
@@ -576,7 +582,7 @@ namespace Rylogic.Utility
 			{
 				Level       = level;
 				Timestamp   = DateTimeOffset.Now - tzero;
-				Tag     = ctx;
+				Tag         = ctx;
 				Message     = msg;
 				File        = file;
 				Line        = line;

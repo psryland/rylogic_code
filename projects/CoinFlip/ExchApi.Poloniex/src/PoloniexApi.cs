@@ -20,11 +20,20 @@ namespace Poloniex.API
 		// Notes:
 		//  - IP restrictions on the Poloniex API key don't seem to work. You have to use Unrestricted.
 
-		public PoloniexApi(string key, string secret, CancellationToken shutdown)
+		public PoloniexApi(string key, string secret, CancellationToken shutdown, Logger log)
 			:base(key, secret, shutdown, 6f, "https://poloniex.com/", "wss://api.poloniex.com/")
 		{
+			Log = new Logger("PoloniexApi", log);
 			Client.DefaultRequestHeaders.Add("Key", Key);
 		}
+		public override void Dispose()
+		{
+			Log = Util.Dispose(Log);
+			base.Dispose();
+		}
+
+		/// <summary>Static log instance</summary>
+		public static Logger Log { get; private set; }
 
 		#region Public
 

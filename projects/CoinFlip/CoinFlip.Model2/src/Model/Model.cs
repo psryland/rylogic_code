@@ -19,9 +19,24 @@ namespace CoinFlip
 {
 	public class Model : IDisposable
 	{
+		// Notes:
+		//  Startup Process:
+		// - The application is idle until a user is assigned. Setting the user allows
+		//   the exchanges to be created (with API keys), followed by the main loop
+		//   starting up.
+		// - Each exchange constructor creates an instance of its API object. There
+		//   shouldn't be any async/API calls during construction, instead a dispatcher
+		//   action is queued by each exchange to run the InitAsync() method of each
+		//   API object. Following that, the updates are called once to initialise 
+		//   data, and then the 'UpdateThreadActive' is set true (if active according
+		//   to the settings).
+		// - Exchanges should use the 'IntegrateDataUpdates' mechanism for merging new
+		//   live exchange data because it is controllable when switching to back testing
+		//   mode.
+
 		static Model()
 		{
-			Log = new Logger("CF", new LogToFile(Misc.ResolveUserPath("Logs\\log.txt"), append: false));
+			Log = new Logger("CoinFlip", new LogToFile(Misc.ResolveUserPath("Logs\\log.txt"), append: false));
 			Log.TimeZero = Log.TimeZero - Log.TimeZero.TimeOfDay;
 			Log.Write(ELogLevel.Debug, "<<< Started >>>");
 
@@ -46,9 +61,6 @@ namespace CoinFlip
 
 				AllowTradesChanged += HandleAllowTradesChanged;
 				BackTestingChange += HandleBackTestingChange;
-
-				// Run the internal loop
-				MainLoopRunning = true;
 			}
 			catch
 			{
@@ -59,6 +71,9 @@ namespace CoinFlip
 		}
 		public void Dispose()
 		{
+			Util.DisposeRange(Bots);
+			Bots.Clear();
+
 			MainLoopRunning = false;
 
 			BackTestingChange -= HandleBackTestingChange;
@@ -69,6 +84,99 @@ namespace CoinFlip
 			Shutdown = null;
 			Util.Dispose(Log);
 		}
+
+		/// <summary>The logged on user</summary>
+		public User User
+		{
+			get { return m_user; }
+			set
+			{
+				if (m_user == value) return;
+				UserChange?.Invoke(this, new PrePostEventArgs(after: false));
+				if (m_user != null)
+				{
+					// Run the internal loop
+					MainLoopRunning = false;
+
+					// Drop connections to exchanges
+					Util.DisposeAll(Exchanges);
+					Exchanges.Clear();
+				}
+				m_user = value;
+				if (m_user != null)
+				{
+					// Ensure the keys file exists
+					if (!Path_.FileExists(m_user.KeysFilepath))
+						m_user.NewKeys();
+
+					// Save the last user name
+					SettingsData.Settings.LastUser = m_user.Name;
+
+					// Create Exchange instances with this user's API keys
+					CreateExchanges();
+
+					// Run the internal loop
+					MainLoopRunning = true;
+				}
+				UserChange?.Invoke(this, new PrePostEventArgs(after: true));
+			}
+		}
+		private User m_user;
+		public event EventHandler<PrePostEventArgs> UserChange;
+
+		/// <summary>A main thread timer that simply updates the 'UtcNow' time to the current time (or back-testing clock)</summary>
+		public bool MainLoopRunning
+		{
+			get { return m_main_loop_timer != null; }
+			set
+			{
+				if (MainLoopRunning == value) return;
+				Debug.Assert(Misc.AssertMainThread());
+
+				if (MainLoopRunning)
+				{
+					m_main_loop_timer.Stop();
+					Log.Write(ELogLevel.Debug, "MainLoop stopped");
+				}
+				m_main_loop_timer = value ? new DispatcherTimer(TimeSpan.FromMilliseconds(10), DispatcherPriority.Normal, HandleTick, Dispatcher.CurrentDispatcher) : null;
+				if (MainLoopRunning)
+				{
+					Log.Write(ELogLevel.Debug, "MainLoop started");
+					m_main_loop_timer.Start();
+					HandleTick();
+				}
+
+				// Handlers
+				void HandleTick(object sender = null, EventArgs e = null)
+				{
+					try
+					{
+						// Ignore messages after the timer is stopped
+						if (!MainLoopRunning)
+							return;
+
+						// Process any pending market data updates
+						if (!BackTesting)
+							IntegrateDataUpdates();
+
+						// Simulate fake orders being filled
+						if (!AllowTrades && !BackTesting)
+						{ }// todo SimulateFakeOrders();
+
+						// Notify Heartbeat 
+						MainLoopTick?.Invoke(this, EventArgs.Empty);
+					}
+					catch (Exception ex)
+					{
+						if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
+						if (ex is OperationCanceledException) return;
+						else Log.Write(ELogLevel.Error, ex, "Error during main loop.");
+					}
+				}
+			}
+		}
+		public event EventHandler MainLoopTick;
+		private DispatcherTimer m_main_loop_timer;
 
 		/// <summary>Logging</summary>
 		public static Logger Log { get; }
@@ -102,9 +210,9 @@ namespace CoinFlip
 			set
 			{
 				if (s_back_testing == value) return;
-				BackTestingChange?.Invoke(null, new PrePostEventArgs(after:false));
+				BackTestingChange?.Invoke(null, new PrePostEventArgs(after: false));
 				s_back_testing = value;
-				BackTestingChange?.Invoke(null, new PrePostEventArgs(after:true));
+				BackTestingChange?.Invoke(null, new PrePostEventArgs(after: true));
 			}
 		}
 		public static event EventHandler<PrePostEventArgs> BackTestingChange;
@@ -179,7 +287,7 @@ namespace CoinFlip
 					exch.Balance.Clear();
 
 				// Turn on the update thread for each price data instance
-				foreach (var pd  in PriceData)
+				foreach (var pd in PriceData)
 					pd.UpdateThreadActive = pd.RefCount != 0;
 
 				// Turn on the update thread for each exchange
@@ -192,89 +300,6 @@ namespace CoinFlip
 			}
 		}
 		private static bool s_back_testing;
-
-		/// <summary>A main thread timer that simply updates the 'UtcNow' time to the current time (or back-testing clock)</summary>
-		public bool MainLoopRunning
-		{
-			get { return m_main_loop_timer != null; }
-			set
-			{
-				if (MainLoopRunning == value) return;
-				Debug.Assert(Misc.AssertMainThread());
-
-				if (MainLoopRunning)
-				{
-					m_main_loop_timer.Stop();
-					Log.Write(ELogLevel.Debug, "MainLoop stopped");
-				}
-				m_main_loop_timer = value ? new DispatcherTimer(TimeSpan.FromMilliseconds(10), DispatcherPriority.Normal, HandleTick, Dispatcher.CurrentDispatcher) : null;
-				if (MainLoopRunning)
-				{
-					Log.Write(ELogLevel.Debug, "MainLoop started");
-					m_main_loop_timer.Start();
-					HandleTick();
-				}
-
-				// Handlers
-				void HandleTick(object sender = null, EventArgs e = null)
-				{
-					try
-					{
-						// Ignore messages after the timer is stopped
-						if (!MainLoopRunning)
-							return;
-
-						// Process any pending market data updates
-						if (!BackTesting)
-							IntegrateDataUpdates();
-
-						// Simulate fake orders being filled
-						if (!AllowTrades && !BackTesting)
-						{ }// todo SimulateFakeOrders();
-					}
-					catch (Exception ex)
-					{
-						if (ex is AggregateException ae) ex = ae.InnerExceptions.First();
-						if (ex is OperationCanceledException) return;
-						else Log.Write(ELogLevel.Error, ex, "Error during main loop.");
-					}
-				}
-			}
-		}
-		private DispatcherTimer m_main_loop_timer;
-
-		/// <summary>The logged on user</summary>
-		public User User
-		{
-			get { return m_user; }
-			set
-			{
-				if (m_user == value) return;
-				UserChange?.Invoke(this, new PrePostEventArgs(after: false));
-				if (m_user != null)
-				{
-					// Drop connections to exchanges
-					Util.DisposeAll(Exchanges);
-					Exchanges.Clear();
-				}
-				m_user = value;
-				if (m_user != null)
-				{
-					// Ensure the keys file exists
-					if (!Path_.FileExists(m_user.KeysFilepath))
-						m_user.NewKeys();
-
-					// Create Exchange instances with this user's API keys
-					CreateExchanges();
-
-					// Save the last user name
-					SettingsData.Settings.LastUser = m_user.Name;
-				}
-				UserChange?.Invoke(this, new PrePostEventArgs(after: true));
-			}
-		}
-		private User m_user;
-		public event EventHandler<PrePostEventArgs> UserChange;
 
 		/// <summary>A cancellation token for graceful shutdown</summary>
 		public CancellationTokenSource Shutdown
@@ -387,6 +412,23 @@ namespace CoinFlip
 		/// <summary>Raised when market data changes, i.e. before and after 'IntegrateDataUpdates' is called</summary>
 		public event EventHandler<DataChangingEventArgs> DataChanging;
 
+		/// <summary>Total holdings value across all exchanges and all currencies</summary>
+		public Unit<decimal> NettWorth
+		{
+			get
+			{
+				Unit<decimal> worth = 0m;
+				foreach (var exch in Exchanges)
+				{
+					foreach (var bal in exch.Balance.Values)
+					{
+						worth += bal.NettValue;
+					}
+				}
+				return worth;
+			}
+		}
+
 		/// <summary>Persist the current fund balances to settings</summary>
 		public void SaveFundBalances()
 		{
@@ -402,22 +444,24 @@ namespace CoinFlip
 
 			// Create Exchange instances
 			string apikey, secret;
-			Exchanges.Add(User.GetKeys(nameof(Poloniex), out apikey, out secret) == User.EResult.Success
-				? new Poloniex(apikey, secret, Coins, Shutdown.Token)
-				: new Poloniex(Coins, Shutdown.Token));
 			Exchanges.Add(User.GetKeys(nameof(Binance), out apikey, out secret) == User.EResult.Success
 				? new Binance(apikey, secret, Coins, Shutdown.Token)
 				: new Binance(Coins, Shutdown.Token));
-			Exchanges.Add(User.GetKeys(nameof(Bittrex), out apikey, out secret) == User.EResult.Success
-				? new Bittrex(apikey, secret, Coins, Shutdown.Token)
-				: new Bittrex(Coins, Shutdown.Token));
+			
+			//hack
+			//Exchanges.Add(User.GetKeys(nameof(Poloniex), out apikey, out secret) == User.EResult.Success
+			//	? new Poloniex(apikey, secret, Coins, Shutdown.Token)
+			//	: new Poloniex(Coins, Shutdown.Token));
+			//Exchanges.Add(User.GetKeys(nameof(Bittrex), out apikey, out secret) == User.EResult.Success
+			//	? new Bittrex(apikey, secret, Coins, Shutdown.Token)
+			//	: new Bittrex(Coins, Shutdown.Token));
 
 			// Create the Cross-Exchange after all others have been created
-			CrossExchange = Exchanges.Insert2(0, new CrossExchange(Exchanges, Coins, Shutdown.Token));
+			//CrossExchange = Exchanges.Insert2(0, new CrossExchange(Exchanges, Coins, Shutdown.Token));
 		}
 
 		/// <summary>Process any pending data updates</summary>
-		private void IntegrateDataUpdates()
+		public void IntegrateDataUpdates()
 		{
 			Debug.Assert(Misc.AssertMainThread());
 			Debug.Assert(m_in_integrate_data_updates == 0);

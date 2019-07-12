@@ -28,6 +28,7 @@ namespace CoinFlip
 			Base  = base_;
 			Quote = quote;
 			Exchange = exchange;
+			SpotPrice = new SpotPrices(base_, quote);
 
 			TradePairId      = trade_pair_id;
 			AmountRangeBase  = amount_range_base  ?? new RangeF<Unit<decimal>>(0m._(Base), decimal.MaxValue._(Base));
@@ -110,6 +111,12 @@ namespace CoinFlip
 			}
 		}
 
+		/// <summary>The current spot price for this pair</summary>
+		public SpotPrices SpotPrice { get; }
+
+		/// <summary>The spot price spread</summary>
+		public Unit<decimal>? Spread => SpotPrice.Spread;
+
 		/// <summary>The order books for this pair</summary>
 		public MarketDepth MarketDepth
 		{
@@ -169,32 +176,7 @@ namespace CoinFlip
 		public string RateUnitsInv => Base.Symbol != Quote.Symbol ? $"{Base}/{Quote}" : string.Empty;
 
 		/// <summary>Returns the time frames for which candle data is available for this pair</summary>
-		public IEnumerable<ETimeFrame> CandleDataAvailable
-		{
-			get { return Exchange.EnumAvailableCandleData(this).Select(x => x.TimeFrame); }
-		}
-
-		/// <summary>Return the spot price (Quote/Base) for the given trade type. Requires order book data</summary>
-		public Unit<decimal>? SpotPrice(ETradeType tt)
-		{
-			// Note: SpotPrice is for the person wanting to buy or sell. If they want to buy
-			// then they want the cheapest of the sell offers. If they want to sell, they want
-			// the highest of the buy offers.
-			switch (tt) {
-			default: throw new Exception($"Unknown trade type: {tt}");
-			case ETradeType.Q2B: return Q2B.Offers.Count != 0 ? Q2B.Offers[0].Price : (Unit<decimal>?)null;
-			case ETradeType.B2Q: return B2Q.Offers.Count != 0 ? B2Q.Offers[0].Price : (Unit<decimal>?)null;
-			}
-		}
-
-		/// <summary>Return the current difference between buy/sell prices</summary>
-		public Unit<decimal>? Spread
-		{
-			// Remember: Q2B spot price = B2Q[0].Price and visa versa
-			// Spread is the difference between the buy and sell price,
-			// which is always a loss (i.e. negative).
-			get { return -(SpotPrice(ETradeType.Q2B) - SpotPrice(ETradeType.B2Q)); }
-		}
+		public IEnumerable<ETimeFrame> CandleDataAvailable => Exchange.EnumAvailableCandleData(this).Select(x => x.TimeFrame);
 
 		/// <summary>
 		/// Convert an amount of 'Base' currency to 'Quote' currency using the available orders.

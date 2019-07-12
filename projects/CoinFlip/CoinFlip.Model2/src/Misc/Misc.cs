@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Threading;
 using Rylogic.Common;
 using Rylogic.Extn;
@@ -34,6 +36,13 @@ namespace CoinFlip
 			throw new Exception("Cross-thread call detected");
 		}
 
+		/// <summary>Assert that the current thread is the main thread</summary>
+		public static bool AssertBackgroundThread()
+		{
+			if (Thread.CurrentThread.ManagedThreadId != Dispatcher.Thread.ManagedThreadId) return true;
+			throw new Exception("Main-thread call detected");
+		}
+
 		/// <summary>Assert that it is safe to read the market data</summary>
 		public static bool AssertMarketDataRead()
 		{
@@ -47,9 +56,35 @@ namespace CoinFlip
 		}
 
 		/// <summary>Execute a delegate on the main thread</summary>
-		public static void RunOnMainThread(Action action)
+		public static DispatcherOperation RunOnMainThread(Action action)
 		{
-			Dispatcher.BeginInvoke(action);
+			return Dispatcher.BeginInvoke(Worker);
+			void Worker()
+			{
+				Debug.Assert(AssertMainThread());
+				try { action(); }
+				catch (Exception ex)
+				{
+					Model.Log.Write(ELogLevel.Error, ex, "Unhandled exception in main-thread function");
+					throw;
+				}
+			}
+		}
+
+		/// <summary>Execute a delegate on a background thread</summary>
+		public static Task RunOnWorkerThread(Action action, CancellationToken? cancel = null)
+		{
+			return Task.Factory.StartNew(Worker, cancel ?? CancellationToken.None, TaskCreationOptions.None, TaskScheduler.Default);
+			void Worker()
+			{
+				Debug.Assert(AssertBackgroundThread());
+				try { action(); }
+				catch (Exception ex)
+				{
+					Model.Log.Write(ELogLevel.Error, ex, "Unhandled exception in worker-thread function");
+					throw;
+				}
+			}
 		}
 
 		/// <summary>Resolve a relative path to a user directory path</summary>

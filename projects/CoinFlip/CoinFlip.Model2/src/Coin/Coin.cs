@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
 using CoinFlip.Settings;
+using Rylogic.Common;
+using Rylogic.Container;
 using Rylogic.Utility;
 
 namespace CoinFlip
@@ -17,16 +20,21 @@ namespace CoinFlip
 			Exchange = exch;
 			Meta = SettingsData.Settings.Coins.FirstOrDefault(x => x.Symbol == sym) ?? new CoinData(sym);
 			Pairs = new HashSet<TradePair>();
+			ValuationPath = new List<TradePair>();
+
+			// Don't call this from here, because coins are created before the trade pairs.
+			// An explicit call to 'UpdateValuationPaths' should happen after updating the pairs for the exchange.
+			// UpdateValuationPaths();
 		}
 
 		/// <summary>Coin name</summary>
-		public string Symbol { [DebuggerStepThrough] get; }
+		public string Symbol { get; }
 
 		/// <summary>The Exchange trading this coin</summary>
-		public Exchange Exchange { [DebuggerStepThrough] get; }
+		public Exchange Exchange { get; }
 
 		/// <summary>Meta data for the coin</summary>
-		public CoinData Meta { [DebuggerStepThrough] get; }
+		public CoinData Meta { get; }
 
 		/// <summary>Trade pairs involving this coin</summary>
 		public HashSet<TradePair> Pairs { get; }
@@ -49,77 +57,36 @@ namespace CoinFlip
 		/// <summary>The value of 1 unit of this currency (Live if available, falling back to assigned)</summary>
 		public decimal Value => ValueOf(1m);
 
+		/// <summary>True if the live price can be found using the LivePriceSymbols</summary>
+		public bool LivePriceAvailable => ValuationPath.Count != 0 || Symbol == SettingsData.Settings.ValuationCurrency;
+
 		/// <summary>Return the value of 'amount' units of this currency</summary>
 		public Unit<decimal> ValueOf(decimal amount)
 		{
-			// Live price is only available for coins of interest
-			if (Meta.ShowLivePrices)
+			var coin = this;
+			var value = (Unit<decimal>?)amount._(coin);
+
+			if (!LivePriceAvailable && !UpdateValuationPaths())
+				return 0m._(SettingsData.Settings.ValuationCurrency);
+
+			foreach (var pair in ValuationPath)
 			{
-				var coin = this;
-				var value = (Unit<decimal>?)amount._(coin);
+				// Use spot prices
+				value = 
+					coin == pair.Base  ? value * pair.SpotPrice[ETradeType.B2Q] :
+					coin == pair.Quote ? value / pair.SpotPrice[ETradeType.Q2B] :
+					throw new Exception($"Invalid valuation pair ({pair.Name}) when converting {coin} to {SettingsData.Settings.ValuationCurrency}");
 
-				// Calculate the live price using the sequence of currencies in the meta data
-				foreach (var sym in Meta.LivePriceSymbolsArray)
-				{
-					// Skip degenerate conversions
-					if (sym == coin)
-						continue;
-
-					// Find the pair to convert 'coin' to 'sym'
-					var pair = Exchange.Pairs[coin, sym];
-					if (pair == null)
-					{
-						value = null;
-						break;
-					}
-
-					// Use spot prices
-					value = coin == pair.Base
-						? value * pair.SpotPrice(ETradeType.B2Q)
-						: value * pair.SpotPrice(ETradeType.Q2B);
-					if (value == null)
-						break;
-
-					coin = pair.OtherCoin(coin);
-				}
-
-				// Return the live price if it could be determined
-				if (value.HasValue)
-					return value.Value._(Symbol);
+				if (value == null) break;
+				coin = pair.OtherCoin(coin);
 			}
 
-			// Otherwise, fall back to using the given value for the currency
-			return (Meta.AssignedValue * amount)._(Symbol);
+			Debug.Assert(value == null || value >= 0m._(SettingsData.Settings.ValuationCurrency));
+			return value ?? 0m._(SettingsData.Settings.ValuationCurrency);
 		}
 
-		/// <summary>True if the live price can be found using the LivePriceSymbols</summary>
-		public bool LivePriceAvailable
-		{
-			get
-			{
-				var coin = this;
-				var available = false;
-				foreach (var sym in Meta.LivePriceSymbolsArray)
-				{
-					if (sym == coin)
-					{
-						available = true;
-						continue;
-					}
-
-					// Find the pair to convert 'coin' to 'sym'
-					var pair = Exchange.Pairs[coin, sym];
-					available = pair != null && (
-						(coin == pair.Base  && pair.SpotPrice(ETradeType.B2Q) != null) ||
-						(coin == pair.Quote && pair.SpotPrice(ETradeType.Q2B) != null));
-					if (!available)
-						break;
-
-					coin = pair.OtherCoin(coin);
-				}
-				return available;
-			}
-		}
+		/// <summary>The pairs to use to find the value in valuation currency</summary>
+		private List<TradePair> ValuationPath { get; }
 
 		/// <summary>The maximum amount to automatically trade</summary>
 		public Unit<decimal> AutoTradeLimit
@@ -140,6 +107,47 @@ namespace CoinFlip
 		{
 			add { Meta.LivePriceChanged += value; }
 			remove { Meta.LivePriceChanged -= value; }
+		}
+
+		/// <summary>Ensure this coin can be valuated in the valuation currency</summary>
+		public bool UpdateValuationPaths()
+		{
+			// Check the current path still valid
+			var still_valid =
+				(Symbol == SettingsData.Settings.ValuationCurrency) ||
+				(ValuationPath.Count != 0 && ValuationPath.All(x => Exchange.Pairs.ContainsKey(x.UniqueKey)));
+			if (still_valid)
+				return true;
+
+			// Rebuild the valuation path
+			ValuationPath.Clear();
+			if (Exchange.Pairs.Count == 0)
+				return false;
+
+			// Look for direct conversions first
+			var pair = Exchange.Pairs[Symbol, SettingsData.Settings.ValuationCurrency];
+			if (pair != null)
+			{
+				ValuationPath.Add(pair);
+				return true;
+			}
+
+			// Look for likely common intermediate currencies
+			foreach (var intermediate in new[] { "BTC", "USDT", "USDC", "ETH" }.Where(x => x != SettingsData.Settings.ValuationCurrency))
+			{
+				var step0 = Exchange.Pairs[Symbol, intermediate];
+				var step1 = Exchange.Pairs[intermediate, SettingsData.Settings.ValuationCurrency];
+				if (step0 != null && step1 != null)
+				{
+					ValuationPath.Add(step0);
+					ValuationPath.Add(step1);
+					return true;
+				}
+			}
+
+			// If that fails try an exhaustive search... or give up
+			// throw new NotImplementedException();
+			return false;
 		}
 
 		/// <summary></summary>

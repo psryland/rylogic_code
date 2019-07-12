@@ -3,8 +3,22 @@ using Newtonsoft.Json.Linq;
 
 namespace Binance.API.DomainObjects
 {
-	public class MarketChartData
+	public class MarketChartData :IComparable<MarketChartData>
 	{
+		public MarketChartData(DateTimeOffset time, decimal open, decimal high, decimal low, decimal close, decimal volume, DateTimeOffset time_close, decimal quote_asset_volume, int trade_count, decimal taker_buy_volume_base, decimal taker_buy_volume_quote)
+		{
+			Time = time;
+			Open = open;
+			High = high;
+			Low = low;
+			Close = close;
+			Volume = volume;
+			TimeClose = time_close;
+			QuoteAssetVolume = quote_asset_volume;
+			TradeCount = trade_count;
+			TakerBuyVolumeBase = taker_buy_volume_base;
+			TakerBuyVolumeQuote = taker_buy_volume_quote;
+		}
 		public MarketChartData(JArray candle_data)
 		{
 			Time = DateTimeOffset.FromUnixTimeMilliseconds(candle_data[0].Value<long>());
@@ -58,5 +72,10 @@ namespace Binance.API.DomainObjects
 
 		/// <summary></summary>
 		public decimal Reserved { get; }
+
+		public int CompareTo(MarketChartData other)
+		{
+			return Time.CompareTo(other.Time);
+		}
 	}
 }

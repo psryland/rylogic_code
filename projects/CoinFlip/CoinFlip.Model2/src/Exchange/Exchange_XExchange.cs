@@ -66,6 +66,24 @@ namespace CoinFlip
 			return Task.CompletedTask;
 		}
 
+		/// <summary>Update account balance data</summary>
+		protected override Task UpdateBalancesInternal() // Worker thread context
+		{
+			Model.DataUpdates.Add(() =>
+			{
+				// Update the Balances data
+				foreach (var pair in Pairs.Values)
+				{
+					Balance[pair.Base] = pair.Base.Balances;
+					Balance[pair.Quote] = pair.Quote.Balances;
+				}
+
+				// Notify updated
+				Balance.LastUpdated = DateTimeOffset.Now;
+			});
+			return Task.CompletedTask;
+		}
+
 		/// <summary>Update the market data, balances, and open positions</summary>
 		protected override Task UpdateDataInternal() // Worker thread context
 		{
@@ -91,24 +109,6 @@ namespace CoinFlip
 			return Task.CompletedTask;
 		}
 
-		/// <summary>Update account balance data</summary>
-		protected override Task UpdateBalancesInternal() // Worker thread context
-		{
-			Model.DataUpdates.Add(() =>
-			{
-				// Update the Balances data
-				foreach (var pair in Pairs.Values)
-				{
-					Balance[pair.Base] = pair.Base.Balances;
-					Balance[pair.Quote] = pair.Quote.Balances;
-				}
-
-				// Notify updated
-				Balance.LastUpdated = DateTimeOffset.Now;
-			});
-			return Task.CompletedTask;
-		}
-
 		/// <summary>Cancel an open trade</summary>
 		protected override Task<bool> CancelOrderInternal(TradePair pair, long order_id, CancellationToken cancel)
 		{
@@ -128,6 +128,10 @@ namespace CoinFlip
 			{
 				RequestThrottle = new RequestThrottle();
 				Shutdown = shutdown;
+			}
+			public Task InitAsync()
+			{
+				return Task.CompletedTask;
 			}
 
 			/// <summary></summary>

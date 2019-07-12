@@ -86,7 +86,25 @@ namespace CoinFlip
 			set
 			{
 				if (m_pair == value) return;
+
+				// Since 'Trade' is not dispose able, we have to attach a weak handler to 'Needed'
+				// on the market data. The handler contains 'this' so that while this object lives
+				// the 'Needed' event will signal true.
+				var HandleNeeded = WeakRef.MakeWeak<HandledEventArgs>((s, a) => a.Handled = this != null, h => m_pair.MarketDepth.Needed -= h);
+				var HandleOBChanged = WeakRef.MakeWeak((s,a) => NotifyPropertyChanged(nameof(DistanceQ2BDesc)), h => m_pair.MarketDepth.OrderBookChanged -= h);
+
+				if (m_pair != null)
+				{
+					m_pair.MarketDepth.OrderBookChanged -= HandleOBChanged;
+					m_pair.MarketDepth.Needed -= HandleNeeded;
+				}
 				m_pair = value;
+				if (m_pair != null)
+				{
+					m_pair.MarketDepth.Needed += HandleNeeded;
+					m_pair.MarketDepth.OrderBookChanged += HandleOBChanged;
+				}
+
 				PriceQ2B = PriceQ2B._(value.RateUnits);
 				AmountBase = AmountBase._(value.Base);
 				NotifyPropertyChanged(nameof(Pair));
@@ -218,7 +236,7 @@ namespace CoinFlip
 		public Unit<decimal> PriceNett => AmountNett / AmountIn;
 
 		/// <summary>Return the current spot price of the pair associated with this order</summary>
-		public Unit<decimal>? SpotPriceQ2B => Pair.SpotPrice(TradeType);
+		public Unit<decimal>? SpotPriceQ2B => Pair.SpotPrice[TradeType];
 
 		/// <summary>The position of this trade in the order book for the trade type</summary>
 		public int OrderBookIndex => Pair.OrderBookIndex(TradeType, PriceQ2B, out var _);
@@ -231,8 +249,8 @@ namespace CoinFlip
 		{
 			get
 			{
-				var spot_b2q = Pair.SpotPrice(ETradeType.B2Q);
-				var spot_q2b = Pair.SpotPrice(ETradeType.Q2B);
+				var spot_b2q = Pair.SpotPrice[ETradeType.B2Q];
+				var spot_q2b = Pair.SpotPrice[ETradeType.Q2B];
 				return
 					TradeType == ETradeType.B2Q && spot_b2q != null ? (PriceQ2B - spot_b2q.Value) :
 					TradeType == ETradeType.Q2B && spot_q2b != null ? (spot_q2b.Value - PriceQ2B) :
@@ -356,7 +374,7 @@ namespace CoinFlip
 			"---";
 
 		/// <summary>String description of the trade</summary>
-		public virtual string Description => $"{AmountIn.ToString("F8", true)} → {AmountOut.ToString("F8", true)} @ {PriceQ2B.ToString("F8", true)}";
+		public virtual string Description => $"{AmountIn.ToString(6, true)} → {AmountOut.ToString(6, true)} @ {PriceQ2B.ToString(6, true)}";
 
 		#region Equals
 		public bool Equals(Trade rhs)

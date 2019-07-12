@@ -1,9 +1,13 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows.Data;
+using Rylogic.Common;
+using Rylogic.Extn;
 
 namespace CoinFlip
 {
@@ -45,27 +49,6 @@ namespace CoinFlip
 		/// <summary></summary>
 		public string Address => $"{Exchange?.Name}-{Pair?.Name}-{TimeFrame}";
 
-		/// <summary>The currently selected Exchange</summary>
-		public Exchange Exchange
-		{
-			get => (Exchange)Exchanges?.CurrentItem;
-			set => Exchanges.MoveCurrentTo(value);
-		}
-
-		/// <summary>The currently selected trade pair</summary>
-		public TradePair Pair
-		{
-			get => (TradePair)Pairs?.CurrentItem;
-			set => Pairs.MoveCurrentTo(value);
-		}
-
-		/// <summary>The currently selected time frame</summary>
-		public ETimeFrame TimeFrame
-		{
-			get => TimeFrames?.CurrentItem is ETimeFrame tf ? tf : ETimeFrame.None;
-			set => TimeFrames.MoveCurrentTo(Misc.Nearest(value, TimeFrames.Cast<ETimeFrame>()));
-		}
-
 		/// <summary>The available exchanges</summary>
 		public ICollectionView Exchanges
 		{
@@ -73,6 +56,10 @@ namespace CoinFlip
 			private set
 			{
 				if (m_exchanges == value) return;
+
+				// Preserve the exchange by name if possible
+				var exch_name = Exchange?.Name;
+
 				if (m_exchanges != null)
 				{
 					m_exchanges.CurrentChanged -= HandleCurrentChanged;
@@ -80,28 +67,22 @@ namespace CoinFlip
 				m_exchanges = value;
 				if (m_exchanges != null)
 				{
-					m_exchanges.CurrentChanged += HandleCurrentChanged;
 					m_exchanges.Filter = exch => !(exch is CrossExchange);
-					m_exchanges.MoveCurrentToFirst();
+					var match = m_exchanges.Cast<Exchange>().FirstOrDefault(x => x.Name == exch_name);
+					if (match != null) m_exchanges.MoveCurrentTo(match);
+
+					m_exchanges.CurrentChanged += HandleCurrentChanged;
+					HandleCurrentChanged(null, null);
 				}
 
+				// Notify exchange collection changed
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Exchanges)));
 
 				// Handlers
 				void HandleCurrentChanged(object sender, EventArgs e)
 				{
-					// Try to preserve the current pair and time frame
-					var pair = Pair?.Name;
-
-					// Set the new list of pairs for the new exchange
-					var exch = (Exchange)m_exchanges.CurrentItem;
-					var pairs = new ObservableCollection<TradePair>(exch?.Pairs ?? (IList<TradePair>)new TradePair[0]);
-					Pairs = new ListCollectionView(pairs);
-
-					// Try to select the same pair
-					var same = pair != null ? pairs.FirstOrDefault(x => x.Name == pair) : null;
-					if (same != null) Pairs.MoveCurrentTo(same);
-
+					var pairs = Exchange?.Pairs;
+					Pairs = pairs != null ? new ListCollectionView(pairs) : null;
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Exchange)));
 				}
 			}
@@ -115,35 +96,36 @@ namespace CoinFlip
 			private set
 			{
 				if (m_pairs == value) return;
+
+				// Preserve the pair by name if possible
+				var pair_name = Pair?.Name;
+
 				if (m_pairs != null)
 				{
+					// Shouldn't need to subscribe to ((PairCollection)m_pairs.SourceCollection).CollectionChanged
+					// because ICollectionView already does that automatically
 					m_pairs.CurrentChanged -= HandleCurrentChanged;
 				}
 				m_pairs = value;
 				if (m_pairs != null)
 				{
-					m_pairs.CurrentChanged += HandleCurrentChanged;
 					m_pairs.SortDescriptions.Add(new SortDescription(nameof(TradePair.Base), ListSortDirection.Ascending));
 					m_pairs.SortDescriptions.Add(new SortDescription(nameof(TradePair.Quote), ListSortDirection.Ascending));
-					m_pairs.MoveCurrentToFirst();
+					var match = m_pairs.Cast<TradePair>().FirstOrDefault(x => x.Name == pair_name);
+					if (match != null) m_pairs.MoveCurrentTo(match);
+
+					m_pairs.CurrentChanged += HandleCurrentChanged;
+					HandleCurrentChanged(null, null);
 				}
 
+				// Notify pairs collection changed
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Pairs)));
 
 				// Handlers
 				void HandleCurrentChanged(object sender, EventArgs e)
 				{
-					// Try to preserve the time frame
-					var tf = TimeFrame;
-
-					var pair = (TradePair)m_pairs.CurrentItem;
-					var tfs = new ObservableCollection<ETimeFrame>(pair?.CandleDataAvailable ?? new ETimeFrame[0]);
-					TimeFrames = new ListCollectionView(tfs);
-
-					// Try to select the same timeframe
-					var same = tf != ETimeFrame.None ? tfs.FirstOrDefault(x => x == tf) : ETimeFrame.None;
-					if (same != ETimeFrame.None) TimeFrames.MoveCurrentTo(same);
-
+					var tfs = Pair?.CandleDataAvailable.ToList();
+					TimeFrames = tfs != null ? new ListCollectionView(tfs) : null;
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Pair)));
 				}
 			}
@@ -157,6 +139,10 @@ namespace CoinFlip
 			private set
 			{
 				if (m_time_frames == value) return;
+
+				// Preserve the time frame
+				var tf = TimeFrame;
+
 				if (m_time_frames != null)
 				{
 					m_time_frames.CurrentChanged -= HandleCurrentChanged;
@@ -164,12 +150,17 @@ namespace CoinFlip
 				m_time_frames = value;
 				if (m_time_frames != null)
 				{
+					var match = m_time_frames.Cast<ETimeFrame>().FirstOrDefault(x => x == tf);
+					if (match != ETimeFrame.None) m_time_frames.MoveCurrentTo(match);
+
 					m_time_frames.CurrentChanged += HandleCurrentChanged;
-					m_time_frames.MoveCurrentToFirst();
+					HandleCurrentChanged(null, null);
 				}
 
+				// Notify time frame collection changed
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TimeFrames)));
 
+				// Handlers
 				void HandleCurrentChanged(object sender, EventArgs e)
 				{
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TimeFrame)));
@@ -177,6 +168,31 @@ namespace CoinFlip
 			}
 		}
 		private ICollectionView m_time_frames;
+
+		/// <summary>Current exchange</summary>
+		public Exchange Exchange
+		{
+			get => (Exchange)Exchanges?.CurrentItem;
+			set => Exchanges?.MoveCurrentTo(value);
+		}
+
+		/// <summary>The currently selected trade pair</summary>
+		public TradePair Pair
+		{
+			get => (TradePair)Pairs?.CurrentItem;
+			set
+			{
+				if (value != null) Exchange = value.Exchange;
+				Pairs?.MoveCurrentTo(value);
+			}
+		}
+
+		/// <summary>The currently selected time frame</summary>
+		public ETimeFrame TimeFrame
+		{
+			get => (ETimeFrame?)TimeFrames?.CurrentItem ?? ETimeFrame.None;
+			set => TimeFrames?.MoveCurrentTo(value);
+		}
 
 		/// <summary>Get the instrument for the selected options</summary>
 		public Instrument GetInstrument(string name)

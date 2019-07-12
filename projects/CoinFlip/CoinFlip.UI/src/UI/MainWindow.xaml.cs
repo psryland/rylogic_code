@@ -26,7 +26,14 @@ namespace CoinFlip.UI
 			ToggleLiveTrading = Command.Create(this, ToggleLiveTradingInternal);
 			ToggleBackTesting = Command.Create(this, ToggleBackTestingInternal);
 
-			// Dock container windows
+			DataContext = this;
+		}
+		protected override void OnSourceInitialized(EventArgs e)
+		{
+			base.OnSourceInitialized(e);
+			LogOnInternal();
+
+			// Create the grids after log on so that exchanges have been initialised
 			m_dc.Add(new GridExchanges(Model), EDockSite.Left);
 			m_dc.Add(new GridBots(Model), EDockSite.Left);
 			m_dc.Add(new GridCoins(Model), EDockSite.Left, EDockSite.Bottom);
@@ -37,14 +44,18 @@ namespace CoinFlip.UI
 			m_dc.Add(new LogView(), 2, EDockSite.Centre);
 			m_menu.Items.Add(m_dc.WindowsMenu());
 
-			// Focus the first chart
-			((CandleChart)Model.Charts[0]).DockControl.IsActiveContent = true;
-			DataContext = this;
-		}
-		protected override void OnSourceInitialized(EventArgs e)
-		{
-			base.OnSourceInitialized(e);
-			LogOnInternal();
+			// Bring panes to the front
+			m_dc.FindAndShow(typeof(GridExchanges));
+			m_dc.FindAndShow(typeof(GridCoins));
+			m_dc.FindAndShow(typeof(GridTradeOrders));
+			m_dc.FindAndShow(typeof(CandleChart));
+
+			// Move the "current" position in the default binding to the last selected exchange
+			var last_exchange = Model.Exchanges.FirstOrDefault(x => x.Name == SettingsData.Settings.LastExchange);
+			CollectionViewSource.GetDefaultView(Model.Exchanges).MoveCurrentTo(last_exchange);
+
+			// Display the last viewed instrument
+			ShowLastChart();
 		}
 		protected override void OnClosing(CancelEventArgs e)
 		{
@@ -83,16 +94,22 @@ namespace CoinFlip.UI
 				{
 					Model.AllowTradesChanged -= HandleAllowTradesChanged;
 					Model.BackTestingChange -= HandleBackTestingChange;
+					m_model.MainLoopTick -= HandleModelHeartBeat;
 					Util.Dispose(ref m_model);
 				}
 				m_model = value;
 				if (m_model != null)
 				{
+					m_model.MainLoopTick += HandleModelHeartBeat;
 					Model.BackTestingChange += HandleBackTestingChange;
 					Model.AllowTradesChanged += HandleAllowTradesChanged;
 				}
 
 				// Handler
+				void HandleModelHeartBeat(object sender, EventArgs e)
+				{
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(NettWorth)));
+				}
 				void HandleAllowTradesChanged(object sender, EventArgs e)
 				{
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AllowTrades)));
@@ -124,8 +141,9 @@ namespace CoinFlip.UI
 		/// <summary>Access the main simulation model</summary>
 		public Simulation Simulation => Model.Simulation;
 
-		/// <summary></summary>
-		public decimal NettWorth => 0m;//todo Model.NettWorth;
+		/// <summary>Total holdings value across all exchanges and all currencies</summary>
+		public decimal NettWorth => Model.NettWorth;
+		public string ValuationCurrency => SettingsData.Settings.ValuationCurrency;
 
 		/// <summary>Toggle the live trading switch</summary>
 		public Command ToggleLiveTrading { get; }
@@ -165,9 +183,6 @@ namespace CoinFlip.UI
 			// Create the user instance from the log-on details
 			Model.User = ui.User;
 			Title = $"Coin Flip - {Model.User.Name}";
-
-			SelectLastExchange();
-			ShowLastChart();
 		}
 
 		/// <summary>Add a new chart window</summary>
@@ -175,16 +190,6 @@ namespace CoinFlip.UI
 		private void NewChartInternal()
 		{
 			CreateNewChart();
-		}
-
-		/// <summary>Try to select the last exchange</summary>
-		private void SelectLastExchange()
-		{
-			if (SettingsData.Settings.LastExchange.Length != 0)
-			{
-				var exch = m_dc.AllContent.OfType<GridExchanges>().First();
-				exch.Current = Model.Exchanges[SettingsData.Settings.LastExchange];
-			}
 		}
 
 		/// <summary>Try to display the last chart</summary>
@@ -211,21 +216,13 @@ namespace CoinFlip.UI
 
 				for (; ; )
 				{
-					// Give up if an instrument is selected already
+					// Give up if the chart has instrument, pair, and time frame selected already
 					var chart0 = Model.Charts[0];
-					if (chart0.Exchange != null && chart0.Exchange != exch)
-						break;
-
-					// Give up if a different pair is selected already
-					if (chart0.Pair != null && chart0.Pair.Name != pair_name)
-						break;
-
-					// Give up if a different time frame is selected already
-					if (chart0.TimeFrame != ETimeFrame.None && chart0.TimeFrame != tf)
+					if (chart0.Exchange != null && chart0.Pair != null && chart0.TimeFrame != ETimeFrame.None)
 						break;
 
 					// See if the pair is available. If not, keep waiting
-					var pair = exch?.Pairs.Values.FirstOrDefault(x => x.Name == parts[1]);
+					var pair = exch.Pairs[parts[1]];
 					if (pair == null)
 						return;
 

@@ -1,11 +1,17 @@
 ﻿using System;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 using Rylogic.Extn;
 
 namespace Binance.API.DomainObjects
 {
-	public class Order
+	public class TradeResult
 	{
+		public TradeResult()
+		{
+			Fills = new List<Fill>();
+		}
+
 		/// <summary>Currency pair</summary>
 		public CurrencyPair Pair { get; set; }
 		[JsonProperty("symbol")] private string PairInternal { set => Pair = CurrencyPair.Parse(value); }
@@ -17,6 +23,10 @@ namespace Binance.API.DomainObjects
 		/// <summary>Unique identifier for the order</summary>
 		[JsonProperty("clientOrderId")]
 		public string ClientOrderId { get; set; }
+
+		/// <summary></summary>
+		public DateTimeOffset Created { get; set; }
+		[JsonProperty("transactTime")] private long CreatedInternal { set => Created = DateTimeOffset.FromUnixTimeMilliseconds(value); }
 
 		/// <summary></summary>
 		[JsonProperty("price")]
@@ -54,23 +64,27 @@ namespace Binance.API.DomainObjects
 		[JsonProperty("side")] private string SideInternal { set => Side = Enum<EOrderSide>.Parse(value); }
 
 		/// <summary></summary>
-		[JsonProperty("stopPrice")]
-		public decimal StopPrice { get; set; }
+		[JsonProperty("fills")]
+		public List<Fill> Fills { get; }
 
 		/// <summary></summary>
-		[JsonProperty("icebergQty")]
-		public decimal IcebergAmount { get; set; }
+		public class Fill
+		{
+			/// <summary></summary>
+			[JsonProperty("price")]
+			public decimal Price { get; set; }
 
-		/// <summary></summary>
-		public DateTimeOffset Created { get; set; }
-		[JsonProperty("time")] private long CreatedInternal { set => Created = DateTimeOffset.FromUnixTimeMilliseconds(value); }
+			/// <summary></summary>
+			[JsonProperty("qty")]
+			public decimal Amount { get; set; }
 
-		/// <summary></summary>
-		public DateTimeOffset Updated { get; set; }
-		[JsonProperty("updateTime")] private long UpdatedTimeInternal { set => Updated = DateTimeOffset.FromUnixTimeMilliseconds(value); }
+			/// <summary></summary>
+			[JsonProperty("commission")]
+			public decimal Commission { get; set; }
 
-		/// <summary></summary>
-		[JsonProperty("isWorking")]
-		public bool IsWorking { get; set; }
+			/// <summary>The initial amount of the order</summary>
+			[JsonProperty("commissionAsset")]
+			public decimal CommissionAsset { get; set; }
+		}
 	}
 }

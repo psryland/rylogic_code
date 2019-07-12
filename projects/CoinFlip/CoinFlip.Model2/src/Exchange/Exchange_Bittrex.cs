@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Bittrex.API;
@@ -30,13 +29,12 @@ namespace CoinFlip
 		{
 			m_pairs = new HashSet<CurrencyPair>();
 			m_order_id_lookup = new Dictionary<long, Guid>();
-			Api = new BittrexApi(key, secret, shutdown);
-			TradeHistoryUseful = true;
+			Api = new BittrexApi(key, secret, shutdown, Model.Log);
 		}
 		public override void Dispose()
 		{
-			Api = null;
 			base.Dispose();
+			Api = null;
 		}
 
 		/// <summary>The API interface</summary>
@@ -49,13 +47,11 @@ namespace CoinFlip
 				if (m_api == value) return;
 				if (m_api != null)
 				{
-					BittrexApi.LogCB = null;
 					Util.Dispose(ref m_api);
 				}
 				m_api = value;
 				if (m_api != null)
 				{
-					BittrexApi.LogCB = Model.Log;
 					m_api.RequestThrottle.RequestRateLimit = ExchSettings.ServerRequestRateLimit;
 				}
 			}
@@ -107,53 +103,6 @@ namespace CoinFlip
 			});
 		}
 
-		/// <summary>Update the market data, balances, and open positions</summary>
-		protected async override Task UpdateDataInternal() // Worker thread context
-		{
-			// Record the time just before the query to the server
-			var timestamp = DateTimeOffset.Now;
-
-			// Get the array of pairs to query for
-			List<CurrencyPair> pairs;
-			lock (m_pairs)
-				pairs = m_pairs.ToList();
-
-			// For each pair, get the updated market depth info
-			var updates = pairs.Select(pair =>
-			{
-				// Get the latest market data for 'pair'
-				var ob = Api.MarketData[pair];
-
-				// Convert to CoinFlip market data format
-				var rate_units = $"{pair.Quote}/{pair.Base}";
-				var buys = ob.BuyOffers.Select(x => new Offer(x.Price._(rate_units), x.AmountBase._(pair.Base))).ToArray();
-				var sells = ob.SellOffers.Select(x => new Offer(x.Price._(rate_units), x.AmountBase._(pair.Base))).ToArray();
-
-				return new { pair, buys, sells };
-			}).ToList();
-
-			// Queue integration of the market data
-			Model.DataUpdates.Add(() =>
-			{
-				// Apply the updates
-				foreach (var update in updates)
-				{
-					// Find the pair to update
-					var pair = Pairs[update.pair.Base, update.pair.Quote];
-					if (pair == null)
-						continue;
-
-					// Update the market order book
-					pair.MarketDepth.UpdateOrderBook(update.buys, update.sells);
-				}
-
-				// Notify updated
-				Pairs.LastUpdated = timestamp;
-			});
-
-			await Task.CompletedTask;
-		}
-
 		/// <summary>Update account balance data</summary>
 		protected async override Task UpdateBalancesInternal() // Worker thread context
 		{
@@ -181,8 +130,8 @@ namespace CoinFlip
 			});
 		}
 
-		/// <summary>Update open positions</summary>
-		protected async override Task UpdatePositionsAndHistoryInternal() // Worker thread context
+		/// <summary>Update open orders and completed trades</summary>
+		protected async override Task UpdateOrdersAndHistoryInternal() // Worker thread context
 		{
 			// Record the time just before the query to the server
 			var timestamp = DateTimeOffset.Now;
@@ -215,7 +164,7 @@ namespace CoinFlip
 				{
 					// Add the filled positions to the collection
 					var his = TradeCompletedFrom(order, timestamp);
-					var fill = History.GetOrAdd(his.OrderId, his.TradeType, his.Pair);
+					var fill = History.GetOrAdd(OrderIdtoFundId[his.OrderId], his.OrderId, his.TradeType, his.Pair);
 					fill.Trades[his.TradeId] = his;
 					AddToTradeHistory(fill);
 				}
@@ -234,6 +183,53 @@ namespace CoinFlip
 				History.LastUpdated = timestamp;
 				Orders.LastUpdated = timestamp;
 			});
+		}
+
+		/// <summary>Update the market data, balances, and open positions</summary>
+		protected async override Task UpdateDataInternal() // Worker thread context
+		{
+			// Record the time just before the query to the server
+			var timestamp = DateTimeOffset.Now;
+
+			// Get the array of pairs to query for
+			List<CurrencyPair> pairs;
+			lock (m_pairs)
+				pairs = m_pairs.ToList();
+
+			// For each pair, get the updated market depth info
+			var updates = pairs.Select(pair =>
+			{
+				// Get the latest market data for 'pair'
+				var ob = Api.MarketData[pair];
+
+				// Convert to CoinFlip market data format
+				var rate_units = $"{pair.Quote}/{pair.Base}";
+				var buys = ob.BuyOffers.Select(x => new Offer(x.PriceQ2B._(rate_units), x.AmountBase._(pair.Base))).ToArray();
+				var sells = ob.SellOffers.Select(x => new Offer(x.PriceQ2B._(rate_units), x.AmountBase._(pair.Base))).ToArray();
+
+				return new { pair, buys, sells };
+			}).ToList();
+
+			// Queue integration of the market data
+			Model.DataUpdates.Add(() =>
+			{
+				// Apply the updates
+				foreach (var update in updates)
+				{
+					// Find the pair to update
+					var pair = Pairs[update.pair.Base, update.pair.Quote];
+					if (pair == null)
+						continue;
+
+					// Update the market order book
+					pair.MarketDepth.UpdateOrderBook(update.buys, update.sells);
+				}
+
+				// Notify updated
+				Pairs.LastUpdated = timestamp;
+			});
+
+			await Task.CompletedTask;
 		}
 
 		/// <summary>Return the deposits and withdrawals made on this exchange</summary>
@@ -347,7 +343,7 @@ namespace CoinFlip
 			return new Transfer(id, type, coin, amount, timestamp, status);
 		}
 
-		/// <summary>Convert a Bittrex UUID to a CoinFlip order id (ULONG)</summary>
+		/// <summary>Convert a Bittrex UUID to a CoinFlip order id</summary>
 		private TradeIdPair ToIdPair(Guid guid)
 		{
 			// Convert the guid into a order id/trade id pair and check if it's already in the map.
@@ -361,7 +357,7 @@ namespace CoinFlip
 			return ids;
 		}
 
-		/// <summary>Convert a CoinFlip order id (ULONG) to a Bittrex UUID</summary>
+		/// <summary>Convert a CoinFlip order id to a Bittrex UUID</summary>
 		private Guid ToUuid(long order_id)
 		{
 			return m_order_id_lookup[order_id];

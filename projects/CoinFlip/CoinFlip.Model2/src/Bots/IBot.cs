@@ -38,10 +38,12 @@ namespace CoinFlip.Bots
 			BotData = bot_data;
 			BotData.TypeName = GetType().FullName;
 			Model = model;
+			Log = new Logger(BotData.Name, Model.Log);
 		}
 		public virtual void Dispose()
 		{
 			Active = false;
+			Util.Dispose(Log);
 		}
 
 		/// <summary>Access the application persisted data for this bot</summary>
@@ -49,6 +51,9 @@ namespace CoinFlip.Bots
 
 		/// <summary>App logic</summary>
 		public Model Model { get; }
+
+		/// <summary>Log context specific to this bot</summary>
+		public Logger Log { get; }
 
 		/// <summary>The unique ID for this bot instance</summary>
 		public Guid Id => BotData.Id;

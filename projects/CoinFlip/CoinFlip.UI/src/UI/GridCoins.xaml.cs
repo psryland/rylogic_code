@@ -9,6 +9,7 @@ using System.Windows.Data;
 using CoinFlip.Settings;
 using Rylogic.Common;
 using Rylogic.Container;
+using Rylogic.Extn;
 using Rylogic.Gui.WPF;
 using Rylogic.Maths;
 using Rylogic.Utility;
@@ -28,16 +29,16 @@ namespace CoinFlip.UI
 
 			DockControl = new DockControl(this, "Coins");
 			Filter = new CoinFilter(x => (CoinDataAdapter)x);
-			ExchangeNames = new ListCollectionView(new List<string> { SpecialExchangeSources.All, SpecialExchangeSources.Current });
+			ExchangeNames = new ListCollectionView(new List<string>());
 			Coins = new ListCollectionView(ListAdapter.Create(model.Coins, c => new CoinDataAdapter(c, model, ExchangeNames), c => c?.CoinData)) { Filter = Filter.Predicate };
 			Model = model;
 
 			Filter.PropertyChanged += delegate { Coins.Refresh(); };
+			m_grid.ContextMenu.Opened += delegate { m_grid.ContextMenu.Items.TidySeparators(); };
 
 			// Commands
 			AddCoin = Command.Create(this, AddCoinInternal);
 			RemoveCoin = Command.Create(this, RemoveCoinInternal);
-			EditLiveValueConversion = Command.Create(this, EditLiveValueConversionInternal);
 			SetBackTestingBalances = Command.Create(this, SetBackTestingBalancesInternal);
 			SetFakeCash = Command.Create(this, SetFakeCashInternal);
 			ResetFakeCash = Command.Create(this, ResetFakeCashInternal);
@@ -71,6 +72,7 @@ namespace CoinFlip.UI
 					m_model.Coins.CollectionChanged += HandleCoinsChanged;
 					Model.BackTestingChange += HandleBackTestingChange;
 					Model.AllowTradesChanged += HandleAllowTradesChanged;
+					HandleExchangesChanged(null, null);
 				}
 
 				// Handlers
@@ -78,7 +80,7 @@ namespace CoinFlip.UI
 				{
 					// Preserve the current item
 					var list = (List<string>)ExchangeNames.SourceCollection;
-					using (Scope.Create(() => ExchangeNames.CurrentItem, ci => ExchangeNames.MoveCurrentTo(ci)))
+					using (Scope.Create(() => ExchangeNames.CurrentItem, ci => ExchangeNames.MoveCurrentToOrFirst(ci)))
 					{
 						list.Clear();
 						list.Add(SpecialExchangeSources.All);
@@ -89,7 +91,10 @@ namespace CoinFlip.UI
 				}
 				void HandleCoinsChanged(object sender, NotifyCollectionChangedEventArgs e)
 				{
-					Coins.Refresh();
+					using (Scope.Create(() => Coins.CurrentItem, ci => Coins.MoveCurrentToOrFirst(ci)))
+					{
+						Coins.Refresh();
+					}
 				}
 				void HandleBackTestingChange(object sender, PrePostEventArgs e)
 				{
@@ -158,21 +163,6 @@ namespace CoinFlip.UI
 		{
 			if (Current == null) return;
 			Model.Coins.Remove(Current.CoinData);
-		}
-
-		/// <summary>Edit the sequence used to obtain the live value of a coin</summary>
-		public Command EditLiveValueConversion { get; }
-		private void EditLiveValueConversionInternal()
-		{
-			if (Current == null) return;
-			var dlg = new PromptUI(Window.GetWindow(this))
-			{
-				Title = "Live Price Conversion",
-				Prompt = "Set the symbols used to convert to a live price value (comma separated)",
-				Value = Current.CoinData.LivePriceSymbols,
-			};
-			if (dlg.ShowDialog() == true)
-				Current.CoinData.LivePriceSymbols = dlg.Value;
 		}
 
 		/// <summary>Set initial balances for back testing</summary>
@@ -316,8 +306,9 @@ namespace CoinFlip.UI
 					foreach (var exch in SourceExchanges)
 					{
 						var coin = exch.Coins[Symbol];
-						if (coin == null || !coin.LivePriceAvailable) continue;
-						value.Add(coin.ValueOf(1m));
+						if (coin == null) continue;
+						var val = coin.ValueOf(1m);
+						if (val != 0) value.Add(val);
 					}
 					return value.Count != 0 ? value.Mean._(Symbol) : CoinData.AssignedValue._(Symbol);
 				}

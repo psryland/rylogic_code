@@ -36,7 +36,8 @@ namespace CoinFlip.Settings
 			MainLoopPeriodMS = 500;
 			PriceDataUpdatePeriodMS = 500;
 			MarketOrderPriceToleranceFrac = 0.0001;
-			//ShowLivePrices = false;
+			ValuationCurrency = "USDT";
+
 			//Equity = new EquitySettings();
 			Coins = new CoinData[] { new CoinData("BTC") { OfInterest = true }, new CoinData("ETH") { OfInterest = true } };
 			LiveFunds = new FundData[1] { new FundData(Fund.Main, new FundData.ExchData[0]) };
@@ -113,6 +114,13 @@ namespace CoinFlip.Settings
 		{
 			get { return MarketOrderPriceToleranceFrac * 100.0; }
 			set { MarketOrderPriceToleranceFrac = value * 0.01; }
+		}
+
+		/// <summary>The common currency to used for comparitive price valuation</summary>
+		public string ValuationCurrency
+		{
+			get { return get<string>(nameof(ValuationCurrency)); }
+			set { set(nameof(ValuationCurrency), value); }
 		}
 
 		/// <summary>Meta data for known coins</summary>

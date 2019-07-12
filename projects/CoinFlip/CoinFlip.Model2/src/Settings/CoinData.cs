@@ -22,8 +22,8 @@ namespace CoinFlip.Settings
 			AssignedValue = 0m;
 			OfInterest = false;
 			AutoTradingLimit = 1m;
-			LivePriceSymbols = "USDT";
-			ShowLivePrices = true;
+			//LivePriceSymbols = "USDT";
+			//ShowLivePrices = true;
 			DefaultTradeAmount = 1m;
 			BackTestingInitialBalance = 1m;
 		}
@@ -59,20 +59,20 @@ namespace CoinFlip.Settings
 			set { set(nameof(AutoTradingLimit), value); }
 		}
 
-		/// <summary>A comma separated list of currencies used to convert this coin to a live price value</summary>
-		public string LivePriceSymbols
-		{
-			get { return get<string>(nameof(LivePriceSymbols)); }
-			set { set(nameof(LivePriceSymbols), value); }
-		}
-		public string[] LivePriceSymbolsArray => LivePriceSymbols.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+		///// <summary>A comma separated list of currencies used to convert this coin to a live price value</summary>
+		//public string LivePriceSymbols
+		//{
+		//	get { return get<string>(nameof(LivePriceSymbols)); }
+		//	set { set(nameof(LivePriceSymbols), value); }
+		//}
+		//public string[] LivePriceSymbolsArray => LivePriceSymbols.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
 
-		/// <summary>Display the nett worth as a live price</summary>
-		public bool ShowLivePrices
-		{
-			get { return get<bool>(nameof(ShowLivePrices)); }
-			set { set(nameof(ShowLivePrices), value); }
-		}
+		///// <summary>Display the nett worth as a live price</summary>
+		//public bool ShowLivePrices
+		//{
+		//	get { return get<bool>(nameof(ShowLivePrices)); }
+		//	set { set(nameof(ShowLivePrices), value); }
+		//}
 
 		/// <summary>The amount to initialise trades with</summary>
 		public decimal DefaultTradeAmount

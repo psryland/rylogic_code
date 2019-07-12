@@ -46,6 +46,7 @@ namespace Rylogic.Extn
 		}
 		public static HashSet<TSource> ToHashSet<TSource>(this IEnumerable<TSource> source, int disambiguator_from_net472)
 		{
+			// This is needed when Rylogic.Core (a NetStandart2.0 library) is used in a .NET4.7.2 project
 			return new HashSet<TSource>(source);
 		}
 

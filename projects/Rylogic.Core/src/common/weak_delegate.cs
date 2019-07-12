@@ -5,16 +5,17 @@
 // http://diditwith.net/PermaLink,guid,aacdb8ae-7baa-4423-a953-c18c1c7940ab.aspx
 
 using System;
+using System.Collections.Specialized;
 
 namespace Rylogic.Common
 {
-	public interface IWeakHandler<E> where E: EventArgs { EventHandler<E>     Handler {get;} }
-	public interface IWeakHandler                       { EventHandler        Handler {get;} }
-	public interface IWeakAction                        { Action              Handler {get;} }
-	public interface IWeakAction<T1>                    { Action<T1>          Handler {get;} }
-	public interface IWeakAction<T1,T2>                 { Action<T1,T2>       Handler {get;} }
-	public interface IWeakAction<T1,T2,T3>              { Action<T1,T2,T3>    Handler {get;} }
-	public interface IWeakAction<T1,T2,T3,T4>           { Action<T1,T2,T3,T4> Handler {get;} }
+	public interface IWeakAction                          { Action                              Handler { get; } }
+	public interface IWeakAction<T1>                      { Action<T1>                          Handler { get; } }
+	public interface IWeakAction<T1,T2>                   { Action<T1,T2>                       Handler { get; } }
+	public interface IWeakAction<T1,T2,T3>                { Action<T1,T2,T3>                    Handler { get; } }
+	public interface IWeakAction<T1,T2,T3,T4>             { Action<T1,T2,T3,T4>                 Handler { get; } }
+	public interface IWeakHandler                         { EventHandler                        Handler { get; } }
+	public interface IWeakHandler<E> where E: EventArgs   { EventHandler<E>                     Handler { get; } }
 
 	// Event Handlers
 	public class WeakHandlerImpl<T> :IWeakHandler where T: class
@@ -304,7 +305,6 @@ namespace Rylogic.UnitTests
 	using System.Runtime.CompilerServices;
 	using System.Threading;
 	using Common;
-	using Extn;
 
 	[TestFixture] public class TestWeakRef
 	{

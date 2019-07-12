@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -81,7 +82,7 @@ namespace CoinFlip.UI
 		private DockControl m_dock_control;
 
 		/// <summary>The view of the available exchanges</summary>
-		public ICollectionView Exchanges { get; private set; }
+		public ICollectionView Exchanges { get; }
 
 		/// <summary>The currently selected exchange</summary>
 		public Exchange Current
