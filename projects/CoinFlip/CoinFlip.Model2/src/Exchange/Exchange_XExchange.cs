@@ -116,7 +116,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Open a trade</summary>
-		protected override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume_base, Unit<decimal> price, CancellationToken cancel)
+		protected override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EPlaceOrderType ot, Unit<decimal> volume_base, Unit<decimal> price, CancellationToken cancel)
 		{
 			return Task.FromResult(new OrderResult(pair, false));
 		}

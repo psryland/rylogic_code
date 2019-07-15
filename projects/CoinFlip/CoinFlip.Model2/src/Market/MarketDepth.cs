@@ -21,11 +21,11 @@ namespace CoinFlip
 			B2Q = new OrderBook(rhs.B2Q);
 		}
 
-		/// <summary>Prices for converting Base to Quote. First price is a maximum</summary>
-		public OrderBook B2Q { [DebuggerStepThrough] get; }
-
 		/// <summary>Prices for converting Quote to Base. First price is a minimum</summary>
 		public OrderBook Q2B { [DebuggerStepThrough] get; }
+
+		/// <summary>Prices for converting Base to Quote. First price is a maximum</summary>
+		public OrderBook B2Q { [DebuggerStepThrough] get; }
 
 		/// <summary>Access the order book for the given trade direction</summary>
 		public OrderBook this[ETradeType tt] => tt == ETradeType.B2Q ? B2Q : Q2B;

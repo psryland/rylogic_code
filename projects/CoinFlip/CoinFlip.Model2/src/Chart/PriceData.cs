@@ -516,7 +516,7 @@ namespace CoinFlip
 		/// <summary>
 		/// Emulate the behaviour of the update thread by notifying of
 		/// 'DataChanged' as the simulation time advances.</summary>
-		public void SimulationUpdate()
+		public void SimulationUpdate(bool force_invalidate)
 		{
 			// Don't actually modify the DB.
 			var now = Model.UtcNow.Ticks;
@@ -527,7 +527,7 @@ namespace CoinFlip
 			// Otherwise it's an unknown range.
 			var tf_ticks = Misc.TimeFrameToTicks(1.0, TimeFrame);
 			var update_type =
-				m_current == null ? DataEventArgs.EUpdateType.Range :
+				m_current == null || force_invalidate ? DataEventArgs.EUpdateType.Range :
 				now.Within(m_current.Timestamp + 1*tf_ticks, m_current.Timestamp + 2*tf_ticks) ? DataEventArgs.EUpdateType.New :
 				now.Within(m_current.Timestamp, m_current.Timestamp + 1 * tf_ticks) ? DataEventArgs.EUpdateType.Current :
 				DataEventArgs.EUpdateType.Range;

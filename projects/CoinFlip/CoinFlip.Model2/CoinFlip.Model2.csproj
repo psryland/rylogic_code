@@ -65,7 +65,6 @@
     <Compile Include="src\Exchange\Exchange_Bittrex.cs" />
     <Compile Include="src\Exchange\Exchange_Poloniex.cs" />
     <Compile Include="src\Exchange\Exchange_XExchange.cs" />
-    <Compile Include="src\Exchange\OrderIdtoFundIdMap.cs" />
     <Compile Include="src\Exchange\OrdersCompletedCollection.cs" />
     <Compile Include="src\Exchange\OrdersCollection.cs" />
     <Compile Include="src\Exchange\PairCollection.cs" />
@@ -79,6 +78,7 @@
     <Compile Include="src\Chart\TimeFrame.cs" />
     <Compile Include="src\Misc\EXAxisLabelMode.cs" />
     <Compile Include="src\Misc\ExchPairTimeFrame.cs" />
+    <Compile Include="src\Trade\IOrder.cs" />
     <Compile Include="src\Misc\IValueTotalAvail.cs" />
     <Compile Include="src\Model\BotContainer.cs" />
     <Compile Include="src\Model\ChartContainer.cs" />
@@ -110,6 +110,7 @@
     <Compile Include="src\Settings\FundData.cs" />
     <Compile Include="src\Settings\ExchangeSettings.cs" />
     <Compile Include="src\Settings\IExchangeSettings.cs" />
+    <Compile Include="src\Settings\OrderDetails.cs" />
     <Compile Include="src\Settings\PoloniexSettings.cs" />
     <Compile Include="src\Settings\SettingsData.cs" />
     <Compile Include="src\Misc\EPlaceOrderType.cs" />

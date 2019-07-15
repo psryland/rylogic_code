@@ -164,7 +164,7 @@ namespace CoinFlip
 				{
 					// Add the filled positions to the collection
 					var his = TradeCompletedFrom(order, timestamp);
-					var fill = History.GetOrAdd(OrderIdtoFundId[his.OrderId], his.OrderId, his.TradeType, his.Pair);
+					var fill = History.GetOrAdd(OrderIdToFundId(his.OrderId), his.OrderId, his.TradeType, his.Pair);
 					fill.Trades[his.TradeId] = his;
 					AddToTradeHistory(fill);
 				}
@@ -174,10 +174,7 @@ namespace CoinFlip
 					m_pairs.AddRange(pairs);
 
 				// Remove any positions that are no longer valid.
-				Orders.RemoveOrdersNotIn(order_ids, timestamp);
-
-				// Save the history range
-				HistoryInterval = new Range(HistoryInterval.Beg, timestamp.Ticks);
+				SynchroniseOrders(order_ids, timestamp);
 
 				// Notify updated
 				History.LastUpdated = timestamp;
@@ -284,11 +281,12 @@ namespace CoinFlip
 		}
 
 		/// <summary>Open a trade</summary>
-		protected async override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> amount, Unit<decimal> price, CancellationToken cancel)
+		protected async override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EPlaceOrderType ot, Unit<decimal> amount, Unit<decimal> price, CancellationToken cancel)
 		{
 			try
 			{
 				// Place the trade order
+				if (ot != EPlaceOrderType.Limit) throw new NotImplementedException();
 				var res = await Api.SubmitTrade(new CurrencyPair(pair.Base, pair.Quote), tt.ToBittrexTT(), price, amount);
 				var order_id = ToIdPair(res.Id).OrderId;
 				return new OrderResult(pair, order_id, filled: false);
@@ -304,7 +302,7 @@ namespace CoinFlip
 		{
 			// Get the associated trade pair (add the pair if it doesn't exist)
 			var order_id = ToIdPair(order.OrderId).OrderId;
-			var fund_id = OrderIdtoFundId[order_id];
+			var fund_id = OrderIdToFundId(order_id);
 			var tt = Misc.TradeType(order.Type);
 			var pair = Pairs.GetOrAdd(order.Pair.Base, order.Pair.Quote);
 			var price = order.Limit._(pair.RateUnits);

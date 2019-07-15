@@ -30,6 +30,7 @@ namespace CoinFlip.UI
 			AmountOut = Trade.AmountOut.ToString();
 			Original = new Trade(trade);
 			ExistingOrderId = existing_order_id;
+			CreatorName = string.Empty;//todo
 
 			// Find the exchanges that offer the trade pair
 			ExchangesOfferingPair = new ListCollectionView(Model.Exchanges.Where(x => x.Pairs.ContainsKey(trade.Pair.UniqueKey)).ToList());
@@ -104,7 +105,10 @@ namespace CoinFlip.UI
 		}
 
 		/// <summary>The type of order, implied by the trade type and the current spot price</summary>
-		public EPlaceOrderType OrderType => Trade.OrderType;
+		public EPlaceOrderType? OrderType => Trade.OrderType;
+
+		/// <summary>User text associated with the trade</summary>
+		public string CreatorName { get; set; }
 
 		/// <summary>The trade price</summary>
 		public string PriceQ2B

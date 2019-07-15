@@ -52,7 +52,6 @@ namespace CoinFlip
 				Balance = new BalanceCollection(this);
 				Orders = new OrdersCollection(this);
 				History = new OrdersCompletedCollection(this);
-				OrderIdtoFundId = new OrderIdtoFundIdMap();
 				Transfers = new TransfersCollection(this);
 				Shutdown = CancellationTokenSource.CreateLinkedTokenSource(shutdown);
 				Dispatcher = Dispatcher.CurrentDispatcher;
@@ -461,9 +460,6 @@ namespace CoinFlip
 		/// <summary>Trade history on this exchange, keyed on order ID</summary>
 		public OrdersCompletedCollection History { get; }
 
-		/// <summary>A map from order id to the context id that created the order</summary>
-		public OrderIdtoFundIdMap OrderIdtoFundId { get; }
-
 		/// <summary>Funds transfers on this exchange</summary>
 		public TransfersCollection Transfers { get; }
 
@@ -646,7 +642,7 @@ namespace CoinFlip
 		protected abstract Task<bool> CancelOrderInternal(TradePair pair, long order_id, CancellationToken cancel);
 
 		/// <summary>Place an order on the exchange to buy/sell 'amount' (currency depends on 'tt')</summary>
-		public async Task<OrderResult> CreateOrder(string fund_id, ETradeType tt, TradePair pair, Unit<decimal> amount_, Unit<decimal> price_, CancellationToken cancel)
+		public async Task<OrderResult> CreateOrder(string fund_id, TradePair pair, ETradeType tt, EPlaceOrderType ot, Unit<decimal> amount_, Unit<decimal> price_, CancellationToken cancel, string creator_name)
 		{
 			// 'fund_id' is the context id of the entity creating the trade
 
@@ -698,39 +694,55 @@ namespace CoinFlip
 			// 2) the entire trade can be met by existing orders in the order book -> a collection of trade IDs is returned
 			// 3) some of the trade can be met by existing orders -> a single order number and a collection of trade IDs are returned.
 			var result =
-				Sim != null ? Sim.CreateOrderInternal(pair, tt, amount, price) :
-				Model.AllowTrades ? await CreateOrderInternal(pair, tt, amount, price, cancel) :
+				Sim != null ? Sim.CreateOrderInternal(pair, tt, ot, amount, price) :
+				Model.AllowTrades ? await CreateOrderInternal(pair, tt, ot, amount, price, cancel) :
 				new OrderResult(pair, ++m_fake_order_number, filled: false);
 
 			// Log the event
 			Model.Log.Write(ELogLevel.Info, $"{Name}: (id={result.OrderId}) {amount_.ToString("F8", true)} → {(amount_ * price_).ToString("F8", true)} @ {price.ToString("F8", true)}");
 
-			// Save a mapping from order id to fund id. This records who was responsible for creating the order.
-			OrderIdtoFundId[result.OrderId] = fund_id;
-
-			// Add the order to the Orders collection so that there is no race condition
-			// between placing an order and checking 'Orders' for the existence of the order just placed.
-			if (!result.Filled)
-			{
-				// Add a 'Position' to the collection, this will be overwritten on the next update.
-				var order = new Order(fund_id, result.OrderId, tt, pair, price, amount, amount, now, now, fake: fake);
-				Orders[result.OrderId] = order;
-
-				// Update the hold with a 'StillNeeded' function
-				if (fake)
-					bal.Hold(hold_id, b => Orders[result.OrderId] != null);
-			}
-
-			// The order may have also been completed or partially filled. Add the filled orders to the trade history.
+			// The order may have been completed or partially filled. Add the filled orders to the trade history.
 			foreach (var tid in result.TradeIds)
 			{
 				var fill = History.GetOrAdd(fund_id, result.OrderId, tt, pair);
 				fill.Trades[tid] = new TradeCompleted(result.OrderId, tid, pair, tt, price, amount, price * amount * Fee, now, now);
 			}
 
+			// Add the order to the Orders collection so that there is no race condition
+			// between placing an order and checking 'Orders' for the existence of the order just placed.
+			if (!result.Filled)
+			{
+				// Save the extra details about the live order.
+				ExchSettings.OrderDetails.Add(new OrderDetails(result.OrderId, fund_id, creator_name));
+				ExchSettings.Save();
+
+				// Add a 'Position' to the collection, this will be overwritten on the next update.
+				var order = new Order(fund_id, result.OrderId, tt, pair, price, amount, amount, now, now, fake: fake);
+				Orders[result.OrderId] = order;
+
+				// The order is on the exchange, so update the held amount to be held on the exchange
+				if (fake)
+				{
+					// Update the hold with a 'StillNeeded' function
+					bal.Hold(hold_id, b => Orders[result.OrderId] != null);
+				}
+				else
+				{
+					bal.Release(hold_id);
+					bal.HeldOnExch = hold;
+				}
+			}
+			else
+			{
+				// If the order was immediately completely filled, apply the changes to the associated fund.
+				// There was never any amount held on the exchange in this case
+				bal.Release(hold_id);
+				ApplyChangesToFund(History[result.OrderId], false, now);
+			}
+
 			// Remove entries from the order book that this order should have filled.
 			// This will be overwritten with the next update.
-			pair.OrderBook(tt).Consume(pair, price, amount, out var remaining);
+			pair.OrderBook(tt).Consume(pair, ot, price, amount, out var remaining);
 
 			// Trigger updates
 			MarketDataUpdateRequired = true;
@@ -738,7 +750,7 @@ namespace CoinFlip
 			BalanceUpdateRequired = true;
 			return result;
 		}
-		protected abstract Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> volume_base, Unit<decimal> price, CancellationToken cancel);
+		protected abstract Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EPlaceOrderType ot, Unit<decimal> volume_base, Unit<decimal> price, CancellationToken cancel);
 		private long m_fake_order_number;
 
 		/// <summary>Enumerate all candle data and time frames provided by this exchange</summary>
@@ -861,6 +873,9 @@ namespace CoinFlip
 		/// <summary>DB table name for the trade history</summary>
 		private string DBHistoryTableName => "History";
 
+		/// <summary>The set of known trade ids</summary>
+		private HashSet<long> TradeHistoryTradeIds { get; set; }
+
 		/// <summary>Initialise the trade history table</summary>
 		private void InitTradeHistoryTable()
 		{
@@ -908,6 +923,9 @@ namespace CoinFlip
 			// Set the time to get history from
 			m_history_last = new DateTimeOffset(HistoryInterval.End, TimeSpan.Zero);
 			m_transfers_last = new DateTimeOffset(TransfersInterval.End, TimeSpan.Zero);
+			m_history_last_id = DB.ExecuteScalar<long>(
+				$"select [{nameof(TradeCompleted.OrderId)}] from {DBHistoryTableName}\n" +
+				$"order by [{nameof(TradeCompleted.Created)}] desc limit 1");
 		}
 
 		/// <summary>Ensure the valuation paths for the current coins are up to date</summary>
@@ -917,8 +935,33 @@ namespace CoinFlip
 				coin.UpdateValuationPaths();
 		}
 
-		/// <summary>The set of known trade ids</summary>
-		private HashSet<long> TradeHistoryTradeIds { get; set; }
+		/// <summary>Synchronise the Orders collection with 'live_order_ids'</summary>
+		public void SynchroniseOrders(HashSet<long> live_order_ids, DateTimeOffset timestamp)
+		{
+			// Remove orders not in 'live_order_ids'
+			foreach (var order in Orders.Values.Where(x => !live_order_ids.Contains(x.OrderId)).ToArray())
+			{
+				// 'order' is newer than 'timestamp', so it can stay
+				if (order.Created >= timestamp)
+					continue;
+
+				// If the order is now in the history, it has been completed.
+				// Apply the trade amounts to the associated fund.
+				var was_filled = History.TryGetValue(order.OrderId, out var his);
+				if (was_filled)
+					ApplyChangesToFund(his, true, timestamp);
+
+				// Remove the entry from the persisted order details (if it's there)
+				ExchSettings.OrderDetails.RemoveIf(x => x.OrderId == order.OrderId);
+				ExchSettings.Save();
+
+				// The order is no longer on the exchange, so remove it from this collection
+				Orders.Remove(order.OrderId);
+			}
+
+			// Update the history range
+			HistoryInterval = new Range(HistoryInterval.Beg, timestamp.Ticks);
+		}
 
 		/// <summary>Add a new or modified OrderCompleted to the trade history DB</summary>
 		public void AddToTradeHistory(OrderCompleted fill)
@@ -927,6 +970,8 @@ namespace CoinFlip
 			// - This doesn't happen when 'Model.History' is accessed/added to by derived exchanges
 			//   because adding 'OrderCompleted' instances to a 'OrderCompleted' would not raise notifications.
 			//   Also, 'OrderCompleted' instances are added as empty instances and then populated.
+			// - Adding an 'OrderCompleted' does not imply the associated order is filled. Orders can be
+			//   partially filled. AddToTradeHistory is called for each partial fill of an order.
 
 			if (fill.Exchange != this)
 				throw new Exception("This position fill did not occur on this exchange");
@@ -985,9 +1030,27 @@ namespace CoinFlip
 				transaction); 
 		}
 
-		/// <summary>The time range that the position history covers (in ticks)</summary>
+		/// <summary>Return the fund id associated with an order id (from the order details)</summary>
+		public string OrderIdToFundId(long order_id)
+		{
+			var details = ExchSettings.OrderDetails.FirstOrDefault(x => x.OrderId == order_id);
+			return details?.FundId ?? Fund.Main;
+		}
+
+		/// <summary>Adjust the balances of a fund based on a completed order</summary>
+		private void ApplyChangesToFund(OrderCompleted his, bool amount_in_was_held, DateTimeOffset timestamp)
+		{
+			if (his.FundId == Fund.Main)
+				return;
+
+			Balance[his.CoinIn].ChangeFundBalance(his.FundId, -his.AmountIn, amount_in_was_held ? -his.AmountIn : (Unit<decimal>?)null, timestamp);
+			Balance[his.CoinOut].ChangeFundBalance(his.FundId, +his.AmountNett, null, timestamp);
+		}
+
+		/// <summary>The time range that the completed orders history covers (in ticks)</summary>
 		public Range HistoryInterval { get; protected set; }
 		protected DateTimeOffset m_history_last; // Worker thread context only
+		protected long m_history_last_id; // Worker thread context only
 
 		/// <summary>The time range that the transfer history covers (in ticks)</summary>
 		public Range TransfersInterval { get; protected set; }

@@ -21,7 +21,7 @@ namespace CoinFlip.Settings
 			StepsPerCandle = 10.0;
 			SpreadFrac = 0.001;
 			OrderValueRange = new RangeF(0.1, 1000.0);
-			OrdersPerBook = 50;
+			OrdersPerBook = 500;
 		}
 
 		/// <summary>The balance of each currency on the simulation exchanges</summary>

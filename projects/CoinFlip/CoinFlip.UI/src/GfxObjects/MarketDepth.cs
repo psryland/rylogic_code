@@ -1,8 +1,13 @@
 ﻿using System;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Shapes;
 using CoinFlip.Settings;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Gfx;
+using Rylogic.Gui.WPF;
 using Rylogic.Maths;
 using Rylogic.Utility;
 
@@ -13,14 +18,32 @@ namespace CoinFlip.UI.GfxObjects
 		public MarketDepth(CoinFlip.MarketDepth market)
 		{
 			Market = market;
+
+			ScaleIndicator = new StackPanel
+			{
+				Orientation = Orientation.Horizontal,
+				Background = Brushes.White,
+				//Cursor = "SizeWE"
+			};
+			ScaleIndicator.Children.Add(new Polygon
+			{
+				Points = PointCollection.Parse("0,10 5,5 -5,5"),
+				Stroke = Brushes.Black,
+			});
+			ScaleIndicator.Children.Add(new TextBlock
+			{
+				Text = "100 BTC",
+				FontSize = 10.0,
+			});
 		}
 		public override void Dispose()
 		{
 			Gfx = null;
 			Market = null;
+			ScaleIndicator = null;
 			base.Dispose();
 		}
-		
+
 		/// <summary>The market whose depth we're drawing</summary>
 		private CoinFlip.MarketDepth Market
 		{
@@ -47,11 +70,14 @@ namespace CoinFlip.UI.GfxObjects
 		}
 		private CoinFlip.MarketDepth m_market;
 
+		/// <summary>The maximum volume in the depth market (defines the scale)</summary>
+		private decimal MaxVolume { get; set; }
+
 		/// <summary>The graphics object</summary>
-		public View3d.Object Gfx
+		private View3d.Object Gfx
 		{
 			get { return m_gfx ?? (m_gfx = UpdateGfx()); }
-			private set
+			set
 			{
 				if (m_gfx == value) return;
 				Util.Dispose(ref m_gfx);
@@ -60,10 +86,41 @@ namespace CoinFlip.UI.GfxObjects
 		}
 		private View3d.Object m_gfx;
 
+		/// <summary>The text label that indicates the volume</summary>
+		private StackPanel ScaleIndicator
+		{
+			get => m_scale_indicator;
+			set
+			{
+				if (m_scale_indicator == value) return;
+				if (m_scale_indicator?.Parent is Canvas parent)
+					parent.Children.Remove(m_scale_indicator);
+				m_scale_indicator = value;
+			}
+		}
+		private StackPanel m_scale_indicator;
+
 		/// <summary>Invalidate the graphics</summary>
 		public void Invalidate()
 		{
 			Gfx = null;
+		}
+
+		/// <summary>Add the graphics objects to the scene</summary>
+		public void BuildScene(ChartControl chart, View3d.Window window, Canvas overlay)
+		{
+			if (Gfx != null)
+			{
+				// Market depth graphics created at x = 0 with an aspect ratio of 1:2.
+				// Position the depth info at the far right of the chart
+				var x_scale = (float)(0.25 * chart.XAxis.Span / chart.YAxis.Span);
+				Gfx.O2P = m4x4.Translation((float)chart.XAxis.Max, 0f, CandleChart.ZOrder.Indicators) * m4x4.Scale(x_scale, 1f, 1f, v4.Origin);
+				window.AddObject(Gfx);
+			}
+
+			// Add the scale indicator
+			//Misc.AddToOverlay(ScaleIndicator, overlay);
+			//
 		}
 
 		/// <summary>Update the graphics model</summary>
@@ -94,6 +151,7 @@ namespace CoinFlip.UI.GfxObjects
 				price_range.Encompass(order.Price);
 				q2b_volume += order.AmountBase;
 			}
+
 			var max_volume = Math.Max(b2q_volume, q2b_volume);
 
 			// Update the graphics model

@@ -9,6 +9,9 @@ namespace CoinFlip
 	[DebuggerDisplay("{Description}")]
 	public class Candle
 	{
+		// Notes:
+		// - Candle prices are the Q2B spot price
+
 		public Candle() {}
 		public Candle(long timestamp, double open, double high, double low, double close, double median, double volume)
 		{

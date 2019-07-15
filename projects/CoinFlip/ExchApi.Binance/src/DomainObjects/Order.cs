@@ -46,18 +46,20 @@ namespace Binance.API.DomainObjects
 		[JsonProperty("timeInForce")] private string TimeInForceInternal { set => TimeInForce = Enum<ETimeInForce>.Parse(value); }
 
 		/// <summary></summary>
-		public EOrderType Type { get; set; }
-		[JsonProperty("type")] private string TypeInternal { set => Type = Enum<EOrderType>.Parse(value); }
+		public EOrderType OrderType { get; set; }
+		[JsonProperty("type")] private string OrderTypeInternal { set => OrderType = Enum<EOrderType>.Parse(value); }
 
 		/// <summary></summary>
-		public EOrderSide Side { get; set; }
-		[JsonProperty("side")] private string SideInternal { set => Side = Enum<EOrderSide>.Parse(value); }
+		public EOrderSide OrderSide { get; set; }
+		[JsonProperty("side")] private string OrderSideInternal { set => OrderSide = Enum<EOrderSide>.Parse(value); }
 
 		/// <summary></summary>
 		[JsonProperty("stopPrice")]
 		public decimal StopPrice { get; set; }
 
-		/// <summary></summary>
+		/// <summary>
+		/// In "iceberg" is a conditional order to buy or sell a large amount of assets in
+		/// smaller predetermined quantities in order to conceal the total order quantity.</summary>
 		[JsonProperty("icebergQty")]
 		public decimal IcebergAmount { get; set; }
 

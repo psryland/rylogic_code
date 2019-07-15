@@ -25,7 +25,7 @@ namespace CoinFlip
 		Unit<decimal> Available { get; }
 
 		/// <summary>Total amount set aside for pending orders and trade strategies</summary>
-		Unit<decimal> HeldOnExch { get; }
+		Unit<decimal> HeldOnExch { get; set; }
 
 		/// <summary>Reserve 'amount' until the next balance update</summary>
 		Guid Hold(Unit<decimal> amount);

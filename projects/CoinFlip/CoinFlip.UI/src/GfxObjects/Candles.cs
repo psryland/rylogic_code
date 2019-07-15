@@ -15,7 +15,7 @@ namespace CoinFlip.UI.GfxObjects
 
 		public Candles(Instrument instrument)
 		{
-			Cache = new Cache<int, CandleGfx>();
+			Cache = new Cache<int, CandleGfx>(100);
 			Instrument = instrument;
 		}
 		public override void Dispose()

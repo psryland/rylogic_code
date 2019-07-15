@@ -64,16 +64,14 @@ namespace CoinFlip
 			}
 		}
 
-		/// <summary>Return the current difference between buy/sell prices</summary>
+		/// <summary>Return the current difference between the lowest Q2B offer and the highest B2Q offer (positive number)</summary>
 		public Unit<decimal>? Spread
 		{
-			// Remember: Q2B spot price = B2Q[0].Price and visa versa
-			// Spread is the difference between the buy and sell price,
-			// which is always a loss (i.e. negative).
+			// Spread is the difference between the lowest Q2B offer and the highest B2Q offer
 			get
 			{
-				var spread = -(m_spot_q2b - m_spot_b2q);
-				Debug.Assert(spread == null || spread < 0m._(RateUnits));
+				var spread = m_spot_q2b - m_spot_b2q;
+				Debug.Assert(spread == null || spread >= 0m._(RateUnits));
 				return spread;
 			}
 		}

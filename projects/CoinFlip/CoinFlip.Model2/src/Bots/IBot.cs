@@ -151,6 +151,9 @@ namespace CoinFlip.Bots
 		/// <summary>How frequently the Bot wants to be stepped</summary>
 		public virtual TimeSpan LoopPeriod => TimeSpan.FromMilliseconds(1000);
 
+		/// <summary>The time span until this bot is due to be stepped</summary>
+		public TimeSpan TimeTillNextStep => (LastStepTime + LoopPeriod) - Model.UtcNow;
+
 		/// <summary>Time stamp of when the last occurred</summary>
 		public DateTimeOffset LastStepTime { get; private set; }
 

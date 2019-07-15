@@ -24,10 +24,10 @@ namespace CoinFlip
 		//    requests, storing/overwriting the results in the collection members.
 		//  - SimExchange balances only use the 'NoCtx' balance context because real exchanges don't have balance contexts
 
-		private readonly LazyDictionary<TradePair, MarketDepth> m_depth;
 		private readonly LazyDictionary<long, Order> m_ord;
 		private readonly LazyDictionary<long, OrderCompleted> m_his;
 		private readonly LazyDictionary<Coin, AccountBalance> m_bal;
+		private readonly LazyDictionary<TradePair, MarketDepth> m_depth;
 
 		private Random m_rng;
 		private long m_order_id;
@@ -45,10 +45,10 @@ namespace CoinFlip
 				Sim       = sim;
 				Exchange  = exch;
 				PriceData = price_data;
-				m_depth   = new LazyDictionary<TradePair, MarketDepth>(k => new MarketDepth(k.Base, k.Quote));
 				m_ord     = new LazyDictionary<long, Order>(k => null);
 				m_his     = new LazyDictionary<long, OrderCompleted>(k => null);
 				m_bal     = new LazyDictionary<Coin, AccountBalance>(k => new AccountBalance(k, 0m._(k), 0m._(k)));
+				m_depth   = new LazyDictionary<TradePair, MarketDepth>(k => new MarketDepth(k.Base, k.Quote));
 				m_rng     = null;
 
 				// Cache settings values
@@ -124,10 +124,14 @@ namespace CoinFlip
 				Balance.Add(coin, new Balances(coin, bal.Total._(coin), Sim.Clock));
 			}
 
-			// Reset the order books of the pairs
+			// Reset the spot price and order books of the pairs
 			m_depth.Clear();
 			foreach (var pair in Pairs.Values)
+			{
+				pair.SpotPrice[ETradeType.Q2B] = null;
+				pair.SpotPrice[ETradeType.B2Q] = null;
 				pair.MarketDepth.UpdateOrderBook(Enumerable.Empty<Offer>(), Enumerable.Empty<Offer>());
+			}
 		}
 
 		/// <summary>Step the exchange</summary>
@@ -160,12 +164,14 @@ namespace CoinFlip
 					// Generate market depth for 'pair', so that the spot price matches 'src.Current'
 					var md = GenerateMarketDepth(pair, latest, Sim.TimeFrame);
 
-					// Update the order book
+					// Update the spot price and order book
 					pair.MarketDepth.UpdateOrderBook(md.B2Q.ToArray(), md.Q2B.ToArray());
+					pair.SpotPrice[ETradeType.Q2B] = md.Q2B[0].Price;
+					pair.SpotPrice[ETradeType.B2Q] = md.B2Q[0].Price;
 
-					// Check. Remember: Q2B spot price = B2Q[0].Price and visa versa
-					Debug.Assert(pair.SpotPrice[ETradeType.Q2B] >= ((decimal)latest.Close + (decimal)pair.Spread)._(pair.RateUnits));
-					Debug.Assert(pair.SpotPrice[ETradeType.B2Q] <= ((decimal)latest.Close                       )._(pair.RateUnits));
+					// Q2B => first price is the minimum, B2Q => first price is a maximum
+					Debug.Assert(pair.SpotPrice[ETradeType.Q2B] == ((decimal)latest.Close                       )._(pair.RateUnits));
+					Debug.Assert(pair.SpotPrice[ETradeType.B2Q] == ((decimal)latest.Close - (decimal)pair.Spread)._(pair.RateUnits));
 				}
 
 				// Notify updated
@@ -173,8 +179,8 @@ namespace CoinFlip
 			}
 			#endregion
 
-			#region Positions / History
-			// Fill any positions that can be filled, update 'Positions' from 'm_pos', and 'History' from 'm_his'
+			#region Orders / History
+			// Fill any orders that can be filled, update 'Orders' from 'm_ord', and 'History' from 'm_his'
 			{
 				// Try to fill orders
 				foreach (var order in m_ord.Values.ToArray())
@@ -182,7 +188,8 @@ namespace CoinFlip
 					// Try to fill 'position'.
 					// If 'his' is null, then the position can't be filled can remains unchanged
 					// If 'pos' is null, then the position is completely filled.
-					TryFillOrder(order.Pair, order.FundId, order.OrderId, order.TradeType, order.PriceQ2B, order.AmountBase, order.RemainingBase, out var pos, out var his);
+					// 'order.OrderType' should have a value because the trade cannot be submitted without knowing the spot price
+					TryFillOrder(order.Pair, order.FundId, order.OrderId, order.TradeType, order.OrderType.Value, order.PriceQ2B, order.AmountBase, order.RemainingBase, out var pos, out var his);
 					if (his == null)
 						continue;
 
@@ -215,59 +222,63 @@ namespace CoinFlip
 					Debug.Assert(order.AmountBase == (pos?.RemainingBase ?? 0m) + (his?.Trades.Values.Sum(x => x.AmountBase) ?? 0m));
 				}
 
-				using (Orders.BatchChange())
+				// This is equivalent to the 'DataUpdates' code in 'UpdateOrdersAndHistoryInternal'
 				{
-					// Update (overwrite) 'Positions' from 'm_pos'
-					Orders.RemoveIf(x => !m_ord.ContainsKey(x.OrderId));
-					foreach (var pos in m_ord.Values)
-					{
-						if (Equals(pos, Orders[pos.OrderId])) continue;
-						var position = new Order(pos);
-						Orders[pos.OrderId] = position;
-					}
-				}
+					var order_ids = new HashSet<long>();
+					var timestamp = Model.UtcNow;
 
-				// Update (override) 'History' from 'm_history'
-				using (History.BatchChange())
-				{
-					History.RemoveIf(x => !m_his.ContainsKey(x.OrderId));
-					foreach (var his in m_his.Values)
+					// Update the collection of existing orders
+					foreach (var order in m_ord.Values)
 					{
-						if (Equals(his, History[his.OrderId])) continue;
-						var fill = new OrderCompleted(his);
-						History[his.OrderId] = fill;
+						// Add the order to the collection
+						var odr = new Order(order);
+						Orders[order.OrderId] = odr;
+						order_ids.Add(odr.OrderId);
+					}
+					var history_updates = m_his.Values.Where(x => x.Created.Ticks >= Exchange.HistoryInterval.End);
+					foreach (var order in history_updates.SelectMany(x => x.Trades.Values))
+					{
+						// Add the completed trades to the collection
+						var his = new TradeCompleted(order);
+						var fill = History.GetOrAdd(Exchange.OrderIdToFundId(his.OrderId), his.OrderId, his.TradeType, his.Pair);
+						fill.Trades[his.TradeId] = his;
 						Exchange.AddToTradeHistory(fill);
 					}
-				}
 
-				// Notify updated. Notify history before positions so that orders don't "disappear" temporarily
-				History.LastUpdated = Model.UtcNow;
-				Orders.LastUpdated = Model.UtcNow;
+					// Remove any orders that are no longer valid
+					Exchange.SynchroniseOrders(order_ids, timestamp);
+
+					// Notify updated. Notify history before positions so that orders don't "disappear" temporarily
+					History.LastUpdated = timestamp;
+					Orders.LastUpdated = timestamp;
+				}
 			}
 			#endregion
 
 			#region Balance
 			{
-				// Update (overwrite) 'Balance' from 'm_bal'
-				using (Balance.BatchChange())
+				// This is equivalent to the 'DataUpdates' code in 'UpdateBalancesInternal'
 				{
-					// Differential update to prevent unnecessary ListChanging events
-					Balance.RemoveIf(x => !m_bal.ContainsKey(x.Coin));
-					foreach (var bal in m_bal.Values)
-					{
-						if (Equals(bal, Balance[bal.Coin])) continue;
-						Balance[bal.Coin].AssignFundBalance(Fund.Main, bal.Total, bal.Held, Model.UtcNow);
-					}
-				}
+					var timestamp = Model.UtcNow;
 
-				// Notify updated
-				Balance.LastUpdated = Model.UtcNow;
+					foreach (var b in m_bal.Values)
+					{
+						// Find the currency that this balance is for
+						var coin = Coins.GetOrAdd(b.Coin.Symbol);
+
+						// Update the balance
+						Balance.AssignFundBalance(coin, Fund.Main, b.Total._(coin), b.Held._(coin), timestamp);
+					}
+
+					// Notify updated
+					Balance.LastUpdated = timestamp;
+				}
 			}
 			#endregion
 		}
 
 		/// <summary>Create an order on this simulated exchange</summary>
-		public OrderResult CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> amount, Unit<decimal> price)
+		public OrderResult CreateOrderInternal(TradePair pair, ETradeType tt, EPlaceOrderType ot, Unit<decimal> amount, Unit<decimal> price)
 		{
 			// Validate the order
 			if (pair.Exchange != Exchange)
@@ -287,7 +298,7 @@ namespace CoinFlip
 			var order_id = ++m_order_id;
 
 			// The order can be filled immediately, filled partially, or not filled and remain as a 'Position'
-			TryFillOrder(pair, Fund.Main, order_id, tt, price, amount, amount, out var pos, out var his);
+			TryFillOrder(pair, Fund.Main, order_id, tt, ot, price, amount, amount, out var pos, out var his);
 			if (pos != null) m_ord[order_id] = pos;
 			if (his != null) m_his[order_id] = his;
 
@@ -320,13 +331,13 @@ namespace CoinFlip
 		}
 
 		/// <summary>Attempt to make a trade on 'pair' for the given 'price' and base 'amount'</summary>
-		private void TryFillOrder(TradePair pair, string fund_id, long order_id, ETradeType tt, Unit<decimal> price, Unit<decimal> initial_amount, Unit<decimal> current_amount, out Order pos, out OrderCompleted his)
+		private void TryFillOrder(TradePair pair, string fund_id, long order_id, ETradeType tt, EPlaceOrderType ot, Unit<decimal> price, Unit<decimal> initial_amount, Unit<decimal> current_amount, out Order pos, out OrderCompleted his)
 		{
-			// The order can be filled immediately, filled partially, or not filled and remain as a 'Position'
+			// The order can be filled immediately, filled partially, or not filled and remain as an 'Order'
 			var offers = m_depth[pair][tt];
 
 			// Consume orders
-			var filled = offers.Consume(pair, price, current_amount, out var remaining);
+			var filled = offers.Consume(pair, ot, price, current_amount, out var remaining);
 			Debug.Assert(current_amount == remaining + filled.Sum(x => x.AmountBase));
 
 			// The order is partially or completely filled...
@@ -380,14 +391,16 @@ namespace CoinFlip
 			// application expects the market data to periodically overwrite the pair's order books.
 			var md = m_depth[pair];
 
-			// Get the spot price from the candle close
+			// Get the Q2B (bid) spot price from the candle close. (This is the minimum of the Q2B offers)
+			// The B2Q spot price is Q2B - spread, which will be the maximum of the B2Q offers
 			var spread = latest.Close * m_spread_frac;
-			var best_q2b = ((decimal)(latest.Close + spread))._(pair.RateUnits);
-			var best_b2q = ((decimal)(latest.Close         ))._(pair.RateUnits);
+			var best_q2b = ((decimal)(latest.Close         ))._(pair.RateUnits);
+			var best_b2q = ((decimal)(latest.Close - spread))._(pair.RateUnits);
 
 			// Join all existing orders into one collection and remove any orders within the spread
+			// Don't worry about order, they'll need sorting anyway
 			var orders = Enumerable
-				.Concat(md.Q2B.Take(m_orders_per_book), md.B2Q.Take(m_orders_per_book))
+				.Concat(md.B2Q.Take(m_orders_per_book), md.Q2B.Take(m_orders_per_book))
 				.Where(x => x.Price < best_b2q || x.Price > best_q2b)
 				.ToList();
 
@@ -400,7 +413,7 @@ namespace CoinFlip
 				orders.Add(CreateRandomOrder());
 
 			// Sort by price, lowest to highest.
-			orders.Sort((l,r) => +l.Price.CompareTo(r.Price));
+			orders.Sort(x => x.Price);
 
 			// Populate the market data
 			var idx = orders.BinarySearch(x => x.Price.CompareTo(best_q2b));

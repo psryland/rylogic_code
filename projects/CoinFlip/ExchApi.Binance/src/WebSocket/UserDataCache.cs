@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Binance.API.DomainObjects;
@@ -165,29 +166,23 @@ namespace Binance.API
 						bal.Locked = upd.Locked;
 					}
 				}
-				m_balance_data.UpdateTime = update.EventTime;
+				m_balance_data.UpdateTime = update.Updated;
 			}
 		}
 
 		/// <summary>Update account data</summary>
 		private void ApplyUpdate(TradeOrderUpdate update)
 		{
-			if (update.ExecutionType == EExecutionType.TRADE)
-			{
-				// This is an update about a completed trade
-			}
-			else
-			{
-				// This is an update about a live order
-			}
-			throw new NotImplementedException();
+			// Apply the consequences of this update to the orders and the history
+			Orders.ApplyUpdate(update);
+			History.ApplyUpdate(update);
 		}
 
 		/// <summary>Proxy object for lists of active orders</summary>
 		public class OrdersStream
 		{
 			private readonly BinanceApi m_api;
-			private readonly LazyDictionary<CurrencyPair, List<Order>> m_orders;
+			private readonly Dictionary<CurrencyPair, List<Order>> m_orders;
 
 			public OrdersStream(BinanceApi api)
 			{
@@ -202,24 +197,98 @@ namespace Binance.API
 				lock (m_orders)
 				{
 					foreach (var order in orders)
-						m_orders[order.Pair].Add(order);
+						m_orders[order.Pair] = new List<Order> { order };
 				}
 			}
 
 			/// <summary>Access all orders for the given currency pair</summary>
-			public List<Order> this[CurrencyPair pair]
+			public List<Order> this[CurrencyPair pair] // Worker thread context
 			{
-				get // Worker thread context
+				get
 				{
 					var orders_per_pair = (List<Order>)null;
 					lock (m_orders)
 					{
 						if (!m_orders.TryGetValue(pair, out orders_per_pair))
-							orders_per_pair = m_orders[pair];
+							orders_per_pair = m_orders[pair] = new List<Order>();
 					}
 					lock (orders_per_pair)
 					{
 						return new List<Order>(orders_per_pair);
+					}
+				}
+			}
+
+			/// <summary>Apply an update to the trade history</summary>
+			internal void ApplyUpdate(TradeOrderUpdate update)
+			{
+				// Get the orders associated with the pair in the update
+				var orders_per_pair = (List<Order>)null;
+				lock (m_orders)
+				{
+					if (!m_orders.TryGetValue(update.Pair, out orders_per_pair))
+						orders_per_pair = m_orders[update.Pair] = new List<Order>();
+				}
+
+				// Apply the update to the specific order
+				lock (orders_per_pair)
+				{
+					// If there is an existing order with this order id, update it
+					var existing = orders_per_pair.FirstOrDefault(x => x.OrderId == update.OrderId);
+					if (existing != null)
+					{
+						existing.ClientOrderId = update.ClientOrderId;
+						existing.Price = update.Price;
+						existing.Amount = update.AmountBase;
+						existing.AmountCompleted = update.AmountBaseCumulativeFilled;
+						existing.CummulativeAmountQuote = update.AmountQuoteCumulativeFilled;
+						existing.Status = update.Status;
+						existing.TimeInForce = update.TimeInForce;
+						existing.OrderType = update.OrderType;
+						existing.OrderSide = update.OrderSide;
+						existing.StopPrice = update.StopPrice;
+						existing.IcebergAmount = update.IcebergAmountBase;
+						existing.Created = update.Created;
+						existing.Updated = update.Updated;
+						existing.IsWorking = update.IsOrderWorking;
+					}
+
+					// Do something to the order based on execution type
+					switch (update.ExecutionType)
+					{
+					default: throw new Exception($"Unknown order update execution type: {update.ExecutionType}");
+					case EExecutionType.NEW:
+						{
+							orders_per_pair.RemoveIf(x => x.OrderId == update.OrderId);
+							orders_per_pair.Add(update);
+							break;
+						}
+					case EExecutionType.CANCELED:
+					case EExecutionType.REJECTED:
+					case EExecutionType.EXPIRED:
+						{
+							orders_per_pair.RemoveIf(x => x.OrderId == update.OrderId);
+							break;
+						}
+					case EExecutionType.REPLACED:
+						{
+							// Notes: the API docs say this is currently unused.
+							// The order has been replaced with an updated version
+							orders_per_pair.Remove(existing);
+							orders_per_pair.Add(update);
+							throw new NotSupportedException("Supposed to not be used according to the Binance API docs");
+						}
+					case EExecutionType.TRADE:
+						{
+							// A trade was made in relation to this order
+							// The order was filled, so remove it from the orders list
+							if (update.Status == EOrderStatus.PARTIALLY_FILLED) {}
+							else if (update.Status == EOrderStatus.FILLED)
+								orders_per_pair.RemoveIf(x => x.OrderId == update.OrderId);
+							else
+								throw new Exception("Order update with unhandled order status");
+							break;
+						}
 					}
 				}
 			}
@@ -267,41 +336,72 @@ namespace Binance.API
 					}
 				}
 			}
+
+			/// <summary>Apply an update to the trade history</summary>
+			internal void ApplyUpdate(TradeOrderUpdate update)
+			{
+				// Get the order fill list associated with the pair in the update
+				var orderfills_per_pair = (List<OrderFill>)null;
+				lock (m_history)
+				{
+					if (!m_history.TryGetValue(update.Pair, out orderfills_per_pair))
+						orderfills_per_pair = m_history[update.Pair] = new List<OrderFill>();
+				}
+
+				// Add the update as a new OrderFill item
+				lock (orderfills_per_pair)
+				{
+					orderfills_per_pair.RemoveIf(x => x.OrderId == update.OrderId && x.TradeId == update.TradeId);
+					orderfills_per_pair.Add(update);
+					orderfills_per_pair.Sort(x => x.Created);
+				}
+			}
 		}
 
 		/// <summary>Account balance update</summary>
 		private class AccountUpdate
 		{
+			/// <summary></summary>
 			[JsonProperty("e")]
 			public string EventType { get; set; }
 
+			/// <summary></summary>
 			[JsonProperty("E"), JsonConverter(typeof(UnixMSToDateTimeOffset))]
 			public DateTimeOffset EventTime { get; set; }
 
-			// Update when Binance API updated
-			#region Undefined API Result fields 
+			/// <summary></summary>
 			[JsonProperty("m")]
-			private int M { get; set; }
+			public decimal MakerCommissionRate { get; set; }
 
+			/// <summary></summary>
 			[JsonProperty("t")]
-			private int t { get; set; }
+			public decimal TakerCommissionRate { get; set; }
 
+			/// <summary></summary>
 			[JsonProperty("b")]
-			private int B { get; set; }
+			public decimal BuyerCommissionRate { get; set; }
 
+			/// <summary></summary>
 			[JsonProperty("s")]
-			private int S { get; set; }
+			public decimal SellerCommissionRate { get; set; }
 
+			/// <summary></summary>
 			[JsonProperty("T")]
-			private bool T { get; set; }
+			public bool CanTrade { get; set; }
 
+			/// <summary></summary>
 			[JsonProperty("W")]
-			private bool W { get; set; }
+			public bool CanWithdraw { get; set; }
 
+			/// <summary></summary>
 			[JsonProperty("D")]
-			private bool D { get; set; }
-			#endregion
+			public bool CanDeposit { get; set; }
 
+			/// <summary></summary>
+			[JsonProperty("u"), JsonConverter(typeof(UnixMSToDateTimeOffset))]
+			public DateTimeOffset Updated { get; set; }
+
+			/// <summary></summary>
 			[JsonProperty("B")]
 			public List<BalanceData> Balances { get; set; }
 
@@ -319,99 +419,160 @@ namespace Binance.API
 			}
 		}
 
-		/// <summary>Trade or Order update</summary>
-		private class TradeOrderUpdate
+		/// <summary>Order or OrderFill update</summary>
+		internal class TradeOrderUpdate
 		{
+			/// <summary>Event type</summary>
 			[JsonProperty("e")]
 			public string EventType { get; set; }
 
+			/// <summary>Event time</summary>
 			[JsonProperty("E"), JsonConverter(typeof(UnixMSToDateTimeOffset))]
 			public DateTimeOffset EventTime { get; set; }
 
-			[JsonProperty("s")]
-			public string Symbol { get; set; }
+			/// <summary>Transaction instrument</summary>
+			public CurrencyPair Pair { get; set; }
+			[JsonProperty("s")] private string PairInternal { set => Pair = CurrencyPair.Parse(value); }
 
+			/// <summary>Client order id</summary>
 			[JsonProperty("c")]
-			public string NewClientOrderId { get; set; }
+			public string ClientOrderId { get; set; }
 
+			/// <summary>Trade side</summary>
 			[JsonProperty("S"), JsonConverter(typeof(ToEnum<EOrderSide>))]
-			public EOrderSide Side { get; set; }
+			public EOrderSide OrderSide { get; set; }
 
+			/// <summary>Order type</summary>
 			[JsonProperty("o"), JsonConverter(typeof(ToEnum<EOrderType>))]
-			public EOrderType Type { get; set; }
+			public EOrderType OrderType { get; set; }
 
-			[JsonProperty("O")]
-			private string Deprecated1 { get; set; }
-
+			/// <summary>Time in force</summary>
 			[JsonProperty("f"), JsonConverter(typeof(ToEnum<ETimeInForce>))]
 			public ETimeInForce TimeInForce { get; set; }
 
+			/// <summary>Order quantity</summary>
 			[JsonProperty("q")]
-			public decimal Quantity { get; set; }
+			public decimal AmountBase { get; set; }
 
+			/// <summary>Order price</summary>
 			[JsonProperty("p")]
 			public decimal Price { get; set; }
 
+			/// <summary>Order stop price</summary>
+			[JsonProperty("P")]
+			public decimal StopPrice { get; set; }
+
+			/// <summary>Iceberg amount</summary>
+			[JsonProperty("F")]
+			public decimal IcebergAmountBase { get; set; }
+
+			/// <summary>Original client order Id. This is the ID of the order being canceled</summary>
+			[JsonProperty("C")]
+			public string OriginalClientOrderId { get; set; }
+
+			/// <summary>Current execution type</summary>
 			[JsonProperty("x"), JsonConverter(typeof(ToEnum<EExecutionType>))]
 			public EExecutionType ExecutionType { get; set; }
 
+			/// <summary>Current order status</summary>
 			[JsonProperty("X"), JsonConverter(typeof(ToEnum<EOrderStatus>))]
-			public EOrderStatus OrderStatus { get; set; }
+			public EOrderStatus Status { get; set; }
 
+			/// <summary>Order rejection reason</summary>
 			[JsonProperty("r"), JsonConverter(typeof(ToEnum<EOrderRejectReason>))]
 			public EOrderRejectReason OrderRejectReason { get; set; }
 
+			/// <summary>Order Id</summary>
 			[JsonProperty("i")]
 			public long OrderId { get; set; }
 
-			[JsonProperty("I")]
-			private string Depricated2 { get; set; }
-
+			/// <summary>Last executed quantity</summary>
 			[JsonProperty("l")]
-			public decimal QuantityOfLastFilledTrade { get; set; }
+			public decimal AmountBaseLastExecuted { get; set; }
 
+			/// <summary>Last quote asset transacted quantity (i.e. lastPrice * lastQty)</summary>
+			[JsonProperty("Y")]
+			public decimal AmountQuoteLastExecuted { get; set; }
+
+			/// <summary>Cumulative filled quantity</summary>
 			[JsonProperty("z")]
-			public decimal AccumulatedQuantityOfFilledTradesThisOrder { get; set; }
+			public decimal AmountBaseCumulativeFilled { get; set; }
 
+			/// <summary>Cumulative quote asset transacted amount</summary>
+			[JsonProperty("Z")]
+			public decimal AmountQuoteCumulativeFilled { get; set; }
+
+			/// <summary>Last executed price</summary>
 			[JsonProperty("L")]
-			public decimal PriceOfLastFilledTrade { get; set; }
+			public decimal PriceLastExecuted { get; set; }
 
+			/// <summary>Commission amount</summary>
 			[JsonProperty("n")]
 			public decimal Commission { get; set; }
 
+			/// <summary>Commission asset</summary>
 			[JsonProperty("N")]
-			public string AssetCommissionTakenFrom { get; set; }
+			public string CommissionAsset { get; set; }
 
-			/// <summary>Represents Order or Trade time</summary>
+			/// <summary>Order created timestamp</summary>
+			[JsonProperty("O"), JsonConverter(typeof(UnixMSToDateTimeOffset))]
+			public DateTimeOffset Created { get; set; }
+
+			/// <summary>Transaction time</summary>
 			[JsonProperty("T"), JsonConverter(typeof(UnixMSToDateTimeOffset))]
-			public DateTimeOffset TimeStamp { get; set; }
+			public DateTimeOffset Updated { get; set; }
 
+			/// <summary>Trade ID</summary>
 			[JsonProperty("t")]
 			public long TradeId { get; set; }
 
-			[JsonProperty("m")]
-			public bool IsBuyerMaker { get; set; }
-
-			// Update when Binance API updated
-			#region Undefined API Result fields
-			[JsonProperty("P")]
-			private double P { get; set; }
-
-			[JsonProperty("F")]
-			private double F { get; set; }
-
-			[JsonProperty("g")]
-			private string G { get; set; }
-
-			[JsonProperty("C")]
-			private string C { get; set; }
-
+			/// <summary>Is the order working? Stops will have</summary>
 			[JsonProperty("w")]
-			private bool w { get; set; }
+			public bool IsOrderWorking { get; set; }
 
-			[JsonProperty("M")]
-			public bool M { get; set; }
-			#endregion
+			/// <summary>Is this trade the maker side?</summary>
+			[JsonProperty("m")]
+			public bool IsMaker { get; set; }
+
+			public static implicit operator Order(TradeOrderUpdate update)
+			{
+				return new Order
+				{
+					Pair = update.Pair,
+					OrderId = update.OrderId,
+					ClientOrderId = update.ClientOrderId,
+					Price = update.Price,
+					Amount = update.AmountBase,
+					AmountCompleted = update.AmountBaseCumulativeFilled,
+					CummulativeAmountQuote = update.AmountQuoteCumulativeFilled,
+					Status = update.Status,
+					TimeInForce = update.TimeInForce,
+					OrderType = update.OrderType,
+					OrderSide = update.OrderSide,
+					StopPrice = update.StopPrice,
+					IcebergAmount = update.IcebergAmountBase,
+					Created = update.Created,
+					Updated = update.Updated,
+					IsWorking = update.IsOrderWorking,
+				};
+			}
+			public static implicit operator OrderFill(TradeOrderUpdate update)
+			{
+				return new OrderFill
+				{
+					Pair = update.Pair,
+					OrderId = update.OrderId,
+					TradeId = update.TradeId,
+					Side = update.OrderSide,
+					Price = update.Price,
+					AmountBase = update.AmountBase,
+					AmountQuote = update.AmountBase * update.Price,
+					Commission = update.Commission,
+					CommissionAsset = update.CommissionAsset,
+					Created = update.Updated,
+					IsMaker = update.IsMaker,
+				};
+			}
 		}
 	}
 }

@@ -8,7 +8,7 @@ using Rylogic.Utility;
 namespace CoinFlip
 {
 	[DebuggerDisplay("{Description,nq}")]
-	public class Order :Trade
+	public class Order :Trade, IOrder
 	{
 		// Notes:
 		//  - An Order is a request to buy/sell that has been sent to an exchange and

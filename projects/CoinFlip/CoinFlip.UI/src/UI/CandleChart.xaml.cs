@@ -41,6 +41,7 @@ namespace CoinFlip.UI
 			ToggleShowOpenOrders = Command.Create(this, ToggleShowOpenOrdersInternal);
 			ToggleShowCompletedOrders = Command.Create(this, ToggleShowCompletedOrdersInternal);
 			ToggleMarketDepth = Command.Create(this, ToggleMarketDepthInternal);
+			ShowChartOptions = Command.Create(this, ShowChartOptionsInternal);
 			EditTrade = Command.Create(this, EditTradeInternal);
 
 			ModifyContextMenus();
@@ -48,8 +49,8 @@ namespace CoinFlip.UI
 		}
 		public void Dispose()
 		{
-			GfxOpenOrder = null;
-			GfxCompletedOrder = null;
+			GfxOpenOrders = null;
+			GfxCompletedOrders = null;
 			GfxUpdatingText = null;
 			GfxCandles = null;
 			ChartSelector = null;
@@ -63,7 +64,7 @@ namespace CoinFlip.UI
 		public Model Model
 		{
 			get { return m_model; }
-			set
+			private set
 			{
 				if (m_model == value) return;
 				if (m_model != null)
@@ -101,6 +102,15 @@ namespace CoinFlip.UI
 						break;
 					case nameof(ChartSettings.XAxisLabelMode):
 						Chart.XAxisPanel.Invalidate();
+						break;
+					case nameof(ChartSettings.TradeLabelSize):
+						Chart.Scene.Invalidate();
+						break;
+					case nameof(ChartSettings.TradeLabelTransparency):
+						Chart.Scene.Invalidate();
+						break;
+					case nameof(ChartSettings.ShowTradeDescriptions):
+						Chart.Scene.Invalidate();
 						break;
 					}
 				}
@@ -372,16 +382,16 @@ namespace CoinFlip.UI
 					m_instrument.DataChanged -= HandleDataChanged;
 					Util.Dispose(ref m_instrument);
 					GfxMarketDepth = null;
-					GfxCompletedOrder = null;
-					GfxOpenOrder = null;
+					GfxCompletedOrders = null;
+					GfxOpenOrders = null;
 					GfxCandles = null;
 				}
 				m_instrument = value;
 				if (m_instrument != null)
 				{
 					GfxCandles = new GfxObjects.Candles(m_instrument);
-					GfxOpenOrder = new GfxObjects.OpenOrder(m_instrument);
-					GfxCompletedOrder = new GfxObjects.CompletedOrder(m_instrument);
+					GfxOpenOrders = new GfxObjects.Orders(m_instrument);
+					GfxCompletedOrders = new GfxObjects.Orders(m_instrument);
 					GfxMarketDepth = new GfxObjects.MarketDepth(m_instrument.Pair.MarketDepth);
 					m_instrument.DataChanged += HandleDataChanged;
 					m_instrument.DataSyncingChanged += HandleDataSyncingChanged;
@@ -558,30 +568,27 @@ namespace CoinFlip.UI
 				case EShowItems.Disabled: break;
 				case EShowItems.Selected:
 					{
-						foreach (var item in Model.SelectedOpenOrders)
-							window.AddObject(GfxOpenOrder.Get(item, Chart.XAxis.Span, Chart.YAxis.Span));
-
+						GfxOpenOrders.BuildScene(Model.SelectedOpenOrders.Where(Visible), Chart, m_chart_overlay);
 						break;
 					}
 				case EShowItems.All:
 					{
 						if (Instrument.Count == 0) break;
-						var time_min = Instrument.TimeAtFIndex(Chart.XAxis.Min);
-						var time_max = Instrument.TimeAtFIndex(Chart.XAxis.Max);
-						var price_min = ((decimal)Chart.YAxis.Min)._(Instrument.RateUnits);
-						var price_max = ((decimal)Chart.YAxis.Max)._(Instrument.RateUnits);
-						foreach (var item in Exchange.Orders.Values.Where(Visible))
-							window.AddObject(GfxOpenOrder.Get(item, Chart.XAxis.Span, Chart.YAxis.Span));
-
-						bool Visible(Order ord)
-						{
-							return
-								ord.Pair.Equals(Pair) &&
-								ord.Created != null && ord.Created.Value.Ticks.Within(time_min, time_max) &&
-								ord.PriceQ2B.Within(price_min, price_max);
-						}
+						GfxOpenOrders.BuildScene(Exchange.Orders.Values.Where(Visible), Chart, m_chart_overlay);
 						break;
 					}
+				}
+
+				bool Visible(Order ord)
+				{
+					var time_min = Instrument.TimeAtFIndex(Chart.XAxis.Min);
+					var time_max = Instrument.TimeAtFIndex(Chart.XAxis.Max);
+					var price_min = ((decimal)Chart.YAxis.Min)._(Instrument.RateUnits);
+					var price_max = ((decimal)Chart.YAxis.Max)._(Instrument.RateUnits);
+					return
+						ord.Pair.Equals(Pair) &&
+						Model.UtcNow.Ticks.Within(time_min, time_max) &&
+						ord.PriceQ2B.Within(price_min, price_max);
 				}
 			}
 
@@ -594,44 +601,34 @@ namespace CoinFlip.UI
 				case EShowItems.Disabled: break;
 				case EShowItems.Selected:
 					{
-						foreach (var item in Model.SelectedCompletedOrders)
-							window.AddObject(GfxCompletedOrder.Get(item, Chart.XAxis.Span, Chart.YAxis.Span));
-
+						GfxCompletedOrders.BuildScene(Model.SelectedCompletedOrders.Where(Visible), Chart, m_chart_overlay);
 						break;
 					}
 				case EShowItems.All:
 					{
 						if (Instrument.Count == 0) break;
-						var time_min = Instrument.TimeAtFIndex(Chart.XAxis.Min);
-						var time_max = Instrument.TimeAtFIndex(Chart.XAxis.Max);
-						var price_min = ((decimal)Chart.YAxis.Min)._(Instrument.RateUnits);
-						var price_max = ((decimal)Chart.YAxis.Max)._(Instrument.RateUnits);
-						foreach (var item in Exchange.History.Values.Where(Visible))
-							window.AddObject(GfxCompletedOrder.Get(item, Chart.XAxis.Span, Chart.YAxis.Span));
-
-						bool Visible(OrderCompleted his)
-						{
-							return
-								his.Pair.Equals(Pair) &&
-								his.Created.Ticks.Within(time_min, time_max) &&
-								his.PriceQ2B.Within(price_min, price_max);
-						}
+						GfxCompletedOrders.BuildScene(Exchange.History.Values.Where(Visible), Chart, m_chart_overlay);
 						break;
 					}
+				}
+
+				bool Visible(OrderCompleted ord)
+				{
+					var time_min = Instrument.TimeAtFIndex(Chart.XAxis.Min);
+					var time_max = Instrument.TimeAtFIndex(Chart.XAxis.Max);
+					var price_min = ((decimal)Chart.YAxis.Min)._(Instrument.RateUnits);
+					var price_max = ((decimal)Chart.YAxis.Max)._(Instrument.RateUnits);
+					return
+						ord.Pair.Equals(Pair) &&
+						ord.Created.Ticks.Within(time_min, time_max) &&
+						ord.PriceQ2B.Within(price_min, price_max);
 				}
 			}
 
 			// Market Depth
 			if (ShowMarketDepth)
 			{
-				if (GfxMarketDepth.Gfx != null)
-				{
-					// Market depth graphics created at x = 0 with an aspect ratio of 1:2.
-					// Position the depth info at the far right of the chart
-					var x_scale = (float)(0.25 * Chart.XAxis.Span / Chart.YAxis.Span);
-					GfxMarketDepth.Gfx.O2P = m4x4.Translation((float)Chart.XAxis.Max, 0f, ZOrder.Indicators) * m4x4.Scale(x_scale, 1f, 1f, v4.Origin);
-					window.AddObject(GfxMarketDepth.Gfx);
-				}
+				GfxMarketDepth.BuildScene(Chart, window, m_chart_overlay);
 			}
 
 			// Bots
@@ -729,30 +726,30 @@ namespace CoinFlip.UI
 		private GfxObjects.UpdatingText m_gfx_updating_text;
 
 		/// <summary>Graphics for open orders</summary>
-		private GfxObjects.OpenOrder GfxOpenOrder
+		private GfxObjects.Orders GfxOpenOrders
 		{
-			get { return m_gfx_open_order; }
+			get { return m_gfx_open_orders; }
 			set
 			{
-				if (m_gfx_open_order == value) return;
-				Util.Dispose(ref m_gfx_open_order);
-				m_gfx_open_order = value;
+				if (m_gfx_open_orders == value) return;
+				Util.Dispose(ref m_gfx_open_orders);
+				m_gfx_open_orders = value;
 			}
 		}
-		private GfxObjects.OpenOrder m_gfx_open_order;
+		private GfxObjects.Orders m_gfx_open_orders;
 
 		/// <summary>Graphics for completed orders</summary>
-		private GfxObjects.CompletedOrder GfxCompletedOrder
+		private GfxObjects.Orders GfxCompletedOrders
 		{
-			get { return m_gfx_completed_order; }
+			get { return m_gfx_completed_orders; }
 			set
 			{
-				if (m_gfx_completed_order == value) return;
-				Util.Dispose(ref m_gfx_completed_order);
-				m_gfx_completed_order = value;
+				if (m_gfx_completed_orders == value) return;
+				Util.Dispose(ref m_gfx_completed_orders);
+				m_gfx_completed_orders = value;
 			}
 		}
-		private GfxObjects.CompletedOrder m_gfx_completed_order;
+		private GfxObjects.Orders m_gfx_completed_orders;
 
 		/// <summary>Graphics for market depth</summary>
 		private GfxObjects.MarketDepth GfxMarketDepth
@@ -936,6 +933,16 @@ namespace CoinFlip.UI
 			ShowMarketDepth = !ShowMarketDepth;
 		}
 
+		/// <summary>Show the options dialog for chart behaviour</summary>
+		public Command ShowChartOptions { get; }
+		private void ShowChartOptionsInternal()
+		{
+			var wnd = Window.GetWindow(this);
+			var pt = wnd.PointToScreen(Mouse.GetPosition(wnd));
+			var dlg = new ChartOptionsUI(wnd) { Left = pt.X, Top = pt.Y }.OnScreen();
+			dlg.ShowDialog();
+		}
+
 		/// <summary>Edit a trade</summary>
 		public Command EditTrade { get; }
 		private void EditTradeInternal(object x)
@@ -955,9 +962,9 @@ namespace CoinFlip.UI
 				if (ui.Result == true)
 				{
 					// Create or Update trade on the exchange
-					Dispatcher_.BeginInvoke(async () =>
+					Misc.RunOnMainThread(async () =>
 					{
-						try { await trade.CreateOrder(Model.Shutdown.Token); }
+						try { await trade.CreateOrder(Model.Shutdown.Token, ui.CreatorName); }
 						catch (Exception ex)
 						{
 							MsgBox.Show(Window.GetWindow(this), ex.MessageFull(), "Create/Modify Order", MsgBox.EButtons.OK, MsgBox.EIcon.Error);
@@ -1065,14 +1072,14 @@ namespace CoinFlip.UI
 
 					// Buy base currency (Q2B)
 					{
-						var trade = new Trade(Fund.Main, ETradeType.Q2B, Instrument.Pair, click_price);
+						var trade = new Trade(Fund.Main, ETradeType.Q2B, Instrument.Pair, click_price, Instrument.Pair.Base.DefaultTradeAmount);
 						buy.Header = $"{OrderType(trade)} at {trade.PriceQ2B.ToString(5, true)}";
 						buy.CommandParameter = trade;
 					}
 
 					// Buy quote currency (B2Q)
 					{
-						var trade = new Trade(Fund.Main, ETradeType.B2Q, Instrument.Pair, click_price);
+						var trade = new Trade(Fund.Main, ETradeType.B2Q, Instrument.Pair, click_price, Instrument.Pair.Base.DefaultTradeAmount);
 						sel.Header = $"{OrderType(trade)} at {trade.PriceQ2B.ToString(5, true)}";
 						sel.CommandParameter = trade;
 					}

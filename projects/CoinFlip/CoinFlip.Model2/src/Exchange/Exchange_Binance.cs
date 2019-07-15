@@ -251,7 +251,7 @@ namespace CoinFlip
 				{
 					// Add the completed order to the collection
 					var his = TradeCompletedFrom(order, timestamp);
-					var fill = History.GetOrAdd(OrderIdtoFundId[his.OrderId], his.OrderId, his.TradeType, his.Pair);
+					var fill = History.GetOrAdd(OrderIdToFundId(his.OrderId), his.OrderId, his.TradeType, his.Pair);
 					fill.Trades[his.TradeId] = his;
 					AddToTradeHistory(fill);
 				}
@@ -261,10 +261,7 @@ namespace CoinFlip
 					m_pairs.AddRange(new_pairs);
 
 				// Remove any positions that are no longer valid.
-				Orders.RemoveOrdersNotIn(order_ids, timestamp);
-
-				// Save the history range
-				HistoryInterval = new Range(HistoryInterval.Beg, timestamp.Ticks);
+				SynchroniseOrders(order_ids, timestamp);
 
 				// Notify updated
 				History.LastUpdated = timestamp;
@@ -314,14 +311,14 @@ namespace CoinFlip
 
 					// Convert to CoinFlip market data format
 					var rate_units = $"{pair.Quote}/{pair.Base}";
-					var buys = ob.BuyOffers.Select(x => new Offer(x.PriceQ2B._(rate_units), x.AmountBase._(pair.Base))).ToArray();
-					var sells = ob.SellOffers.Select(x => new Offer(x.PriceQ2B._(rate_units), x.AmountBase._(pair.Base))).ToArray();
+					var b2q = ob.B2QOffers.Select(x => new Offer(x.PriceQ2B._(rate_units), x.AmountBase._(pair.Base))).ToArray();
+					var q2b = ob.Q2BOffers.Select(x => new Offer(x.PriceQ2B._(rate_units), x.AmountBase._(pair.Base))).ToArray();
 
-					return new { pair, buys, sells };
+					return new { pair, b2q, q2b};
 				}).ToList();
 
 			// Queue integration of the market data
-			Model.DataUpdates.Add(() =>
+			Model.DataUpdates.Add((Action)(() =>
 			{
 				// Update the spot price on each pair
 				foreach (var upd in ticker_updates)
@@ -343,12 +340,12 @@ namespace CoinFlip
 						continue;
 				
 					// Update the depth of market data
-					pair.MarketDepth.UpdateOrderBook(update.buys, update.sells);
+					pair.MarketDepth.UpdateOrderBook(update.b2q, update.q2b);
 				}
 
 				// Notify updated
 				Pairs.LastUpdated = timestamp;
-			});
+			}));
 			return Task.CompletedTask;
 		}
 
@@ -387,7 +384,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Open a trade</summary>
-		protected override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> amount_base, Unit<decimal> q2b_price, CancellationToken cancel)
+		protected override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EPlaceOrderType ot, Unit<decimal> amount_base, Unit<decimal> q2b_price, CancellationToken cancel)
 		{
 			try
 			{
@@ -428,8 +425,8 @@ namespace CoinFlip
 		private Order OrderFrom(global::Binance.API.DomainObjects.Order order, DateTimeOffset updated)
 		{
 			var order_id = order.OrderId;
-			var fund_id = OrderIdtoFundId[order_id];
-			var tt = Misc.TradeType(order.Side);
+			var fund_id = OrderIdToFundId(order_id);
+			var tt = Misc.TradeType(order.OrderSide);
 			var pair = Pairs.GetOrAdd(order.Pair.Base, order.Pair.Quote);
 			var price_q2b = order.Price._(pair.RateUnits);
 			var amount_base = order.Amount._(pair.Base);
@@ -449,12 +446,16 @@ namespace CoinFlip
 			var commission = fill.Commission._(fill.CommissionAsset);
 			var created = fill.Created;
 
-			// Binance allows commissions to be paid in BNB rather than quote currency
-			// In this case, treat the commission as zero, assume the user controls the commission funds separately
-			if (fill.CommissionAsset != fill.Pair.Quote)
-				commission = 0m._(pair.Quote);
+			// Binance doesn't seem to take the commission out of the amount traded. The commission is
+			// charged in the 'CoinOut' currency, or BNB tokens. To be consistent with other exchanges,
+			// convert the commission to quote currency. If the commission is in BNB then treat the
+			// commission as zero, assume the user controls the commission funds separately.
+			var commission_quote =
+				fill.CommissionAsset == fill.Pair.Base ? (commission * fill.Price)._(pair.Quote) :
+				fill.CommissionAsset == fill.Pair.Quote ? commission._(pair.Quote) :
+				0m._(pair.Quote);
 
-			return new TradeCompleted(order_id, trade_id, pair, tt, price_q2b, amount_base, commission, created, updated);
+			return new TradeCompleted(order_id, trade_id, pair, tt, price_q2b, amount_base, commission_quote, created, updated);
 		}
 
 		/// <summary>Convert a market period to a time frame</summary>

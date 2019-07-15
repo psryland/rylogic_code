@@ -206,19 +206,21 @@
 					<TextBlock
 						Text="Allocation (Base):"
 						VerticalAlignment="Center"
-						MinWidth="110"
+						MinWidth="100"
 						/>
 					<TextBox
-						Text="{Binding Settings.BaseCurrencyBalance}"
+						Text="{Binding Settings.BaseCurrencyBalance, StringFormat={}{0:F8}}"
 						ToolTip="The current balance of base currency"
 						VerticalAlignment="Center"
-						MinWidth="80"
+						HorizontalContentAlignment="Right"
+						MinWidth="100"
+						MaxWidth="100"
 						Margin="3"
 						/>
 					<TextBlock
 						Text="{Binding ChartSelector.Pair.Base.Symbol}"
 						VerticalAlignment="Center"
-						MinWidth="50"
+						MinWidth="40"
 						/>
 					<Button
 						Content="All"
@@ -239,19 +241,21 @@
 					<TextBlock
 						Text="Allocation (Quote):"
 						VerticalAlignment="Center"
-						MinWidth="110"
+						MinWidth="100"
 						/>
 					<TextBox
-						Text="{Binding Settings.QuoteCurrencyBalance}"
+						Text="{Binding Settings.QuoteCurrencyBalance, StringFormat={}{0:F8}}"
 						ToolTip="The current balance of quote currency"
+						HorizontalContentAlignment="Right"
 						VerticalAlignment="Center"
-						MinWidth="80"
+						MinWidth="100"
+						MaxWidth="100"
 						Margin="3"
 						/>
 					<TextBlock
 						Text="{Binding ChartSelector.Pair.Quote.Symbol}"
 						VerticalAlignment="Center"
-						MinWidth="50"
+						MinWidth="40"
 						/>
 					<Button
 						Content="All"

@@ -18,7 +18,11 @@ namespace Binance.API.DomainObjects
 		public long TradeId { get; set; }
 
 		/// <summary></summary>
-		public EOrderSide Side => IsBuyer ? EOrderSide.BUY : EOrderSide.SELL;
+		public EOrderSide Side
+		{
+			get => IsBuyer ? EOrderSide.BUY : EOrderSide.SELL;
+			set => IsBuyer = value == EOrderSide.BUY;
+		}
 
 		/// <summary></summary>
 		[JsonProperty("price")]
@@ -51,9 +55,5 @@ namespace Binance.API.DomainObjects
 		/// <summary></summary>
 		[JsonProperty("isMaker")]
 		public bool IsMaker { get; set; }
-
-		/// <summary></summary>
-		[JsonProperty("isBestMatch")]
-		public bool IsBestMatch { get; set; }
 	}
 }

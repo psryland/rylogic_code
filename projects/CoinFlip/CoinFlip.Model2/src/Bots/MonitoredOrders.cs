@@ -91,7 +91,7 @@ namespace CoinFlip.Bots
 					remove.Add(order);
 					continue;
 				}
-				if (!exchange.UpdateThreadActive)
+				if (!exchange.UpdateThreadActive && !Model.BackTesting)
 				{
 					// The exchange is still starting up
 					continue;

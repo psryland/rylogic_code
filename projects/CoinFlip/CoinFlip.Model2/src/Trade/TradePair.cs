@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using CoinFlip.Settings;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Utility;
@@ -114,7 +115,7 @@ namespace CoinFlip
 		/// <summary>The current spot price for this pair</summary>
 		public SpotPrices SpotPrice { get; }
 
-		/// <summary>The spot price spread</summary>
+		/// <summary>Return the current difference between the lowest Q2B offer and the highest B2Q offer (positive number)</summary>
 		public Unit<decimal>? Spread => SpotPrice.Spread;
 
 		/// <summary>The order books for this pair</summary>
@@ -177,6 +178,31 @@ namespace CoinFlip
 
 		/// <summary>Returns the time frames for which candle data is available for this pair</summary>
 		public IEnumerable<ETimeFrame> CandleDataAvailable => Exchange.EnumAvailableCandleData(this).Select(x => x.TimeFrame);
+
+		/// <summary>Return the order type implied by the given trade type and price relative to the spot price</summary>
+		public EPlaceOrderType? OrderType(ETradeType trade_type, Unit<decimal> price_q2b)
+		{
+			// If the spot price is unknown, then so is the impled order type
+			var market_price_q2b = SpotPrice[trade_type];
+			if (market_price_q2b == null)
+				return null;
+
+			if (trade_type == ETradeType.Q2B)
+			{
+				return
+					price_q2b > market_price_q2b.Value * (decimal)(1.0 + SettingsData.Settings.MarketOrderPriceToleranceFrac) ? EPlaceOrderType.Stop :
+					price_q2b < market_price_q2b.Value * (decimal)(1.0 - SettingsData.Settings.MarketOrderPriceToleranceFrac) ? EPlaceOrderType.Limit :
+					EPlaceOrderType.Market;
+			}
+			if (trade_type == ETradeType.B2Q)
+			{
+				return
+					price_q2b < market_price_q2b.Value * (decimal)(1.0 + SettingsData.Settings.MarketOrderPriceToleranceFrac) ? EPlaceOrderType.Stop :
+					price_q2b > market_price_q2b.Value * (decimal)(1.0 - SettingsData.Settings.MarketOrderPriceToleranceFrac) ? EPlaceOrderType.Limit :
+					EPlaceOrderType.Market;
+			}
+			throw new Exception("Unknown trade type");
+		}
 
 		/// <summary>
 		/// Convert an amount of 'Base' currency to 'Quote' currency using the available orders.

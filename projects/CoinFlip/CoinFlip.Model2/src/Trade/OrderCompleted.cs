@@ -9,7 +9,7 @@ using Rylogic.Utility;
 namespace CoinFlip
 {
 	[DebuggerDisplay("{Description,nq}")]
-	public class OrderCompleted :INotifyPropertyChanged
+	public class OrderCompleted :IOrder, INotifyPropertyChanged
 	{
 		// Notes:
 		//  - An OrderCompleted is a completed Order consisting of one or more 'TradeCompleted's
@@ -56,9 +56,6 @@ namespace CoinFlip
 		/// <summary>The trades associated with filling a single order</summary>
 		public TradeCompletedCollection Trades { get; }
 
-		///// <summary>The number of completed trades that make up this completed order</summary>
-		//public int TradeCount => Trades.Count;
-
 		/// <summary>
 		/// The approximate price of the filled order (in Quote/Base).
 		/// Approximate because each trade can be at a different price.</summary>
@@ -102,9 +99,10 @@ namespace CoinFlip
 
 		/// <summary>The timestamp of when the first trade related to this order was made</summary>
 		public DateTimeOffset Created => Trades.Count == 0 ? DateTimeOffset.MinValue : Trades.Values.Min(x => x.Created);
+		DateTimeOffset? IOrder.Created => Created;
 
 		/// <summary>Description string for the trade</summary>
-		public string Description => $"{AmountIn.ToString("F8", true)} → {AmountNett.ToString("F8", true)} @ {PriceQ2B.ToString("F8", true)}";
+		public string Description => $"{AmountIn.ToString(6, true)} → {AmountNett.ToString(6, true)} @ {PriceQ2B.ToString(4, true)}";
 
 		/// <summary>INotifyPropertyChanged</summary>
 		public event PropertyChangedEventHandler PropertyChanged;

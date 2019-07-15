@@ -23,7 +23,7 @@
 				<!-- Total balance -->
 				<TextBlock
 					Grid.Row="0"
-					Text="{Binding Total, StringFormat=Total: {0:N8}}"
+					Text="{Binding Total, Converter={conv:WithoutUnits}, ConverterParameter='G8', StringFormat=Total: {0}}"
 					Foreground="DarkBlue"
 					FontSize="10"
 					/>
@@ -31,7 +31,7 @@
 				<!-- Available balance -->
 				<TextBlock
 					Grid.Row="1"
-					Text="{Binding Available, StringFormat=Avail: {0:N8}}"
+					Text="{Binding Available, Converter={conv:WithoutUnits}, ConverterParameter='G8', StringFormat=Avail: {0}}"
 					Foreground="DarkGreen"
 					FontSize="10"
 					/>
@@ -39,7 +39,7 @@
 				<!-- Held for Trades -->
 				<TextBlock
 					Grid.Row="2"
-					Text="{Binding HeldForTrades, StringFormat=Held: {0:N8}}"
+					Text="{Binding HeldForTrades, Converter={conv:WithoutUnits}, ConverterParameter='G8', StringFormat=Held: {0}}"
 					Foreground="DarkRed"
 					FontSize="10"
 					/>

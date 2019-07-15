@@ -13,28 +13,28 @@ namespace Binance.API.DomainObjects
 		public MarketDepth(CurrencyPair pair)
 		{
 			Pair = pair;
-			BuyOffers = new List<Offer>();
-			SellOffers = new List<Offer>();
+			B2QOffers = new List<Offer>();
+			Q2BOffers = new List<Offer>();
 			SequenceNo = 0;
 		}
 		public MarketDepth(MarketDepth rhs)
 		{
 			Pair = rhs.Pair;
-			BuyOffers = new List<Offer>(rhs.BuyOffers);
-			SellOffers = new List<Offer>(rhs.SellOffers);
+			B2QOffers = new List<Offer>(rhs.B2QOffers);
+			Q2BOffers = new List<Offer>(rhs.Q2BOffers);
 			SequenceNo = rhs.SequenceNo;
 		}
 
 		/// <summary>The pair that this order book is for</summary>
 		public CurrencyPair Pair { get; set; }
 
-		/// <summary>Buy orderbook</summary>
-		public List<Offer> BuyOffers { get; private set; }
-		[JsonProperty("bids")] private List<string[]> BuyOffersInternal { set => BuyOffers = ParseOffers(value); }
+		/// <summary>Prices for converting Quote to Base. First price is a minimum</summary>
+		public List<Offer> Q2BOffers { get; private set; }
+		[JsonProperty("asks")] private List<string[]> Q2BOffersInternal { set => Q2BOffers = ParseOffers(value); }
 
-		/// <summary>Sell orderbook</summary>
-		public List<Offer> SellOffers { get; private set; }
-		[JsonProperty("asks")] private List<string[]> SellOffersInternal { set => SellOffers = ParseOffers(value); }
+		/// <summary>Prices for converting Base to Quote. First price is a maximum</summary>
+		public List<Offer> B2QOffers { get; private set; }
+		[JsonProperty("bids")] private List<string[]> B2QOffersInternal { set => B2QOffers = ParseOffers(value); }
 
 		/// <summary></summary>
 		[JsonProperty("lastUpdateId")]

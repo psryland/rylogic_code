@@ -75,15 +75,18 @@
     <Compile Include="src\Dialogs\BackTestingConfigUI.xaml.cs">
       <DependentUpon>BackTestingConfigUI.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\Dialogs\ChartOptionsUI.xaml.cs">
+      <DependentUpon>ChartOptionsUI.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\Dialogs\FundAllocationsUI.xaml.cs">
       <DependentUpon>FundAllocationsUI.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\Dialogs\NewBotUI.xaml.cs">
       <DependentUpon>NewBotUI.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\GfxObjects\CompletedOrder.cs" />
+    <Compile Include="src\GfxObjects\Misc.cs" />
+    <Compile Include="src\GfxObjects\Orders.cs" />
     <Compile Include="src\GfxObjects\MarketDepth.cs" />
-    <Compile Include="src\GfxObjects\OpenOrder.cs" />
     <Compile Include="src\GfxObjects\TradeIndicator.cs" />
     <Compile Include="src\GfxObjects\Buffers.cs" />
     <Compile Include="src\GfxObjects\Candles.cs" />
@@ -118,6 +121,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="src\Dialogs\BackTestingConfigUI.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Dialogs\ChartOptionsUI.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -223,6 +230,7 @@
     <Resource Include="money.ico" />
   </ItemGroup>
   <ItemGroup>
+    <Resource Include="res\options.png" />
     <Resource Include="res\market_depth_colour.png" />
     <Resource Include="res\market_depth_gray.png" />
     <Resource Include="res\dollar_sign_black.png" />

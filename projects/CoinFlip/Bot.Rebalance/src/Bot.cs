@@ -141,7 +141,7 @@ namespace Bot.Rebalance
 
 			// An adjustment trade is needed, place the order now
 			Log.Write(ELogLevel.Debug, $"Rebalance trade created: {trade.Description}");
-			var order = await trade.CreateOrder(Cancel.Token);
+			var order = await trade.CreateOrder(Cancel.Token, Name);
 			Settings.PendingOrders.Add(order);
 		}
 
@@ -187,8 +187,8 @@ namespace Bot.Rebalance
 			default: throw new Exception("Unknown trade type");
 			case ETradeType.Q2B:
 				{
-					HoldingsQuote -= his.AmountNett;
-					HoldingsBase += his.AmountIn;
+					HoldingsQuote -= his.AmountIn;
+					HoldingsBase += his.AmountNett;
 					break;
 				}
 			case ETradeType.B2Q:

@@ -23,6 +23,7 @@
 			<BitmapImage x:Key="history_blue" UriSource="/CoinFlip.UI;component/res/history_blue.png" />
 			<BitmapImage x:Key="market_depth_colour" UriSource="/CoinFlip.UI;component/res/market_depth_colour.png" />
 			<BitmapImage x:Key="market_depth_gray" UriSource="/CoinFlip.UI;component/res/market_depth_gray.png" />
+			<BitmapImage x:Key="options" UriSource="/CoinFlip.UI;component/res/options.png" />
 		</ResourceDictionary>
 	</Grid.Resources>
 	
@@ -47,6 +48,7 @@
 			<ColumnDefinition Width="Auto"/>
 			<ColumnDefinition Width="Auto"/>
 			<ColumnDefinition Width="*"/>
+			<ColumnDefinition Width="Auto"/>
 			<ColumnDefinition Width="Auto"/>
 		</Grid.ColumnDefinitions>
 		
@@ -191,14 +193,50 @@
 			VerticalAlignment="Center"
 			Margin="3"
 			/>
+		
+		<!-- Chart Options -->
+		<Button
+			Grid.Column="11"
+			Command="{Binding ShowChartOptions}"
+			MaxWidth="22"
+			Margin="3"
+			>
+			<Image Source="{StaticResource options}" Stretch="UniformToFill" StretchDirection="DownOnly" RenderOptions.BitmapScalingMode="HighQuality"/>
+		</Button>
 	</Grid>
 
 	<!-- Candle Chart -->
 	<gui2:ChartControl
-		x:Name="m_chart_control"
 		Grid.Row="1"
+		x:Name="m_chart_control"
 		ChartBackground="White"
 		Margin="4"
 		/>
+	<Canvas
+		Grid.Row="1"
+		x:Name="m_chart_overlay"
+		ClipToBounds="True"
+		Margin="4"
+		>
+		<StackPanel
+			Canvas.Left="900"
+			Canvas.Top="0"
+			Orientation="Horizontal"
+			Background="#FFF"
+			Cursor="SizeWE"
+			>
+			<Polygon
+				Points="0,10 5,5 -5,5"
+				Stroke="Black"
+				/>
+			<TextBlock
+				Text="100 BTC"
+				FontSize="10"
+				VerticalAlignment="Center"
+				HorizontalAlignment="Center"
+				/>
+		</StackPanel>
+
+	</Canvas>
 </Grid>
 	

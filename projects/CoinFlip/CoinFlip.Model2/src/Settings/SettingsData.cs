@@ -104,7 +104,7 @@ namespace CoinFlip.Settings
 			set { set(nameof(PriceDataUpdatePeriodMS), value); }
 		}
 
-		/// <summary>An order is considered 'MarketOrder' if the order price is within this tolerance of the current price to fill the order</summary>
+		/// <summary>An order is considered a 'MarketOrder' if the order price is within this tolerance of the current price to fill the order</summary>
 		public double MarketOrderPriceToleranceFrac
 		{
 			get { return get<double>(nameof(MarketOrderPriceToleranceFrac)); }

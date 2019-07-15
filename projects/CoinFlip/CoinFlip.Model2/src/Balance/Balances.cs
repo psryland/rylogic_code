@@ -50,8 +50,9 @@ namespace CoinFlip
 			ExchTotal = total;
 			ExchHeld = held_on_exch;
 
-			// Initialise the balances per fund - Create the main fund, with the given
-			// total/held amounts. Then create the additional funds from settings.
+			// Initialise the funds collection. Although there is a 'Balance' instance for
+			// the main fund, its just a place holder. Its accessors use the 'ExchTotal'
+			// and 'ExchHeld' properties in this class.
 			m_funds = new List<Balance>{};
 			m_funds.Add(new Balance(this, Fund.Main));
 
@@ -130,8 +131,37 @@ namespace CoinFlip
 				var balance = (Balance)Funds.FirstOrDefault(x => x.FundId == fund_id);
 				balance = balance ?? m_funds.Add2(new Balance(this, fund_id));
 
-				balance.Total = total ?? balance.Total;
-				balance.HeldOnExch = held_on_exch ?? balance.HeldOnExch;
+				if (total != null)
+					balance.Total = total.Value;
+				if (held_on_exch != null)
+					balance.HeldOnExch = held_on_exch.Value;
+
+				balance.LastUpdated = now;
+				balance.CheckHolds();
+			}
+		}
+
+		/// <summary>Add or subtract an amount from a fund</summary>
+		public void ChangeFundBalance(string fund_id, Unit<decimal>? change_total, Unit<decimal>? change_held_on_exch, DateTimeOffset now)
+		{
+			if (fund_id == Fund.Main)
+			{
+				if (change_total != null)
+					ExchTotal += change_total.Value;
+				if (change_held_on_exch != null)
+					ExchHeld += change_held_on_exch.Value;
+			}
+			else
+			{
+				// Get the balance info for 'fund_id', create if necessary
+				var balance = (Balance)Funds.FirstOrDefault(x => x.FundId == fund_id);
+				balance = balance ?? m_funds.Add2(new Balance(this, fund_id));
+
+				if (change_total != null)
+					balance.Total += change_total.Value;
+				if (change_held_on_exch != null)
+					balance.HeldOnExch += change_held_on_exch.Value;
+
 				balance.LastUpdated = now;
 				balance.CheckHolds();
 			}
@@ -211,7 +241,7 @@ namespace CoinFlip
 				get { return FundId == Fund.Main ? m_balances.NettTotal - m_balances.FundsExceptMain.Sum(x => x.Total) : m_total; }
 				set
 				{
-					Debug.Assert(value.IsUnit(Coin));
+					Debug.Assert(FundId != Fund.Main);
 					m_total = value;
 				}
 			}
@@ -221,7 +251,11 @@ namespace CoinFlip
 			public Unit<decimal> HeldOnExch
 			{
 				get { return FundId == Fund.Main ? m_balances.NettHeld - m_balances.FundsExceptMain.Sum(x => x.HeldOnExch) : m_held_on_exch; }
-				set { m_held_on_exch = value; }
+				set
+				{
+					Debug.Assert(FundId != Fund.Main);
+					m_held_on_exch = value;
+				}
 			}
 			private Unit<decimal> m_held_on_exch;
 

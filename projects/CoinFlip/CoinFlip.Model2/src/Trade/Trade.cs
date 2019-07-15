@@ -11,7 +11,7 @@ using Rylogic.Utility;
 namespace CoinFlip
 {
 	[DebuggerDisplay("{Description,nq}")]
-	public class Trade : INotifyPropertyChanged
+	public class Trade :INotifyPropertyChanged
 	{
 		// Notes:
 		//  - A 'Trade' is a description of a trade that *could* be placed. It is different
@@ -20,23 +20,24 @@ namespace CoinFlip
 		//    of one or more completed trades.
 		//  - AmountIn * Price does not have to equal AmountOut, because 'Trade' is used
 		//    with the order book to calculate the best price for trading 'amount_in'.
+		//  - Order type is implied by the trade price and the spot price. This prevents
+		//    accidentally creating the wrong type of order on the wrong side of the spot price.
 
-		/// <summary>Create a trade on 'pair' at 'price_q2b' using 'amount_base' or the default for CoinIn if not given</summary>
-		public Trade(string fund_id, ETradeType tt, TradePair pair, Unit<decimal> price_q2b, Unit<decimal>? amount_base = null)
+		/// <summary>Create a trade on 'pair' at 'price_q2b' using 'amount_base'</summary>
+		public Trade(string fund_id, ETradeType tt, TradePair pair, Unit<decimal> price_q2b, Unit<decimal> amount_base)
 		{
 			// Check trade amounts and units
-			var amt_base = amount_base ?? pair.DefaultTradeAmountBase(tt, price_q2b);
-			if (amt_base < 0m._(pair.Base))
+			if (amount_base < 0m._(pair.Base))
 				throw new Exception("Invalid trade amount");
 			if (price_q2b < 0m._(pair.RateUnits))
 				throw new Exception("Invalid trade price");
-			if (amt_base * price_q2b < 0m._(pair.Quote))
+			if (amount_base * price_q2b < 0m._(pair.Quote))
 				throw new Exception("Invalid trade amount (quote)");
 
 			FundId = fund_id;
 			Pair = pair;
 			TradeType = tt;
-			AmountBase = amt_base;
+			AmountBase = amount_base;
 			PriceQ2B = price_q2b;
 		}
 
@@ -91,7 +92,7 @@ namespace CoinFlip
 				// on the market data. The handler contains 'this' so that while this object lives
 				// the 'Needed' event will signal true.
 				var HandleNeeded = WeakRef.MakeWeak<HandledEventArgs>((s, a) => a.Handled = this != null, h => m_pair.MarketDepth.Needed -= h);
-				var HandleOBChanged = WeakRef.MakeWeak((s,a) => NotifyPropertyChanged(nameof(DistanceQ2BDesc)), h => m_pair.MarketDepth.OrderBookChanged -= h);
+				var HandleOBChanged = WeakRef.MakeWeak((s, a) => NotifyPropertyChanged(nameof(DistanceQ2BDesc)), h => m_pair.MarketDepth.OrderBookChanged -= h);
 
 				if (m_pair != null)
 				{
@@ -127,28 +128,7 @@ namespace CoinFlip
 		private ETradeType m_trade_type;
 
 		/// <summary>Given the current spot price, return the order type</summary>
-		public EPlaceOrderType OrderType
-		{
-			get
-			{
-				var market_price_q2b = Pair.MakeTrade(FundId, TradeType, AmountIn).PriceQ2B;
-				if (TradeType == ETradeType.Q2B)
-				{
-					return
-						PriceQ2B > market_price_q2b * (decimal)(1.0 + SettingsData.Settings.MarketOrderPriceToleranceFrac) ? EPlaceOrderType.Stop :
-						PriceQ2B < market_price_q2b * (decimal)(1.0 - SettingsData.Settings.MarketOrderPriceToleranceFrac) ? EPlaceOrderType.Limit :
-						EPlaceOrderType.Market;
-				}
-				if (TradeType == ETradeType.B2Q)
-				{
-					return
-						PriceQ2B < market_price_q2b * (decimal)(1.0 + SettingsData.Settings.MarketOrderPriceToleranceFrac) ? EPlaceOrderType.Stop :
-						PriceQ2B > market_price_q2b * (decimal)(1.0 - SettingsData.Settings.MarketOrderPriceToleranceFrac) ? EPlaceOrderType.Limit :
-						EPlaceOrderType.Market;
-				}
-				throw new Exception("Unknown trade type");
-			}
-		}
+		public EPlaceOrderType? OrderType => Pair.OrderType(TradeType, PriceQ2B);
 
 		/// <summary>The base amount to trade</summary>
 		public Unit<decimal> AmountBase
@@ -212,7 +192,9 @@ namespace CoinFlip
 				if (value < 0m._(Pair.RateUnits))
 					throw new Exception($"Invalid trade price: {value}");
 
-				if (m_price_q2b != 0 && m_price_q2b == value) return;
+				if (m_price_q2b != 0 && m_price_q2b == value)
+					return;
+
 				m_price_q2b = value;
 				NotifyPropertyChanged(nameof(PriceQ2B));
 			}
@@ -338,9 +320,13 @@ namespace CoinFlip
 		}
 
 		/// <summary>Create this trade on the Exchange that owns 'Pair'</summary>
-		public async Task<OrderResult> CreateOrder(CancellationToken cancel)
+		public async Task<OrderResult> CreateOrder(CancellationToken cancel, string creator_name)
 		{
 			Model.Log.Write(ELogLevel.Info, $"Creating or modifying trade: {Description}");
+
+			// Don't place the order if we don't known what the spot price is
+			if (OrderType == null)
+				throw new Exception("Order type cannot be determined for this trade because there is no spot price");
 
 			// If this trade is actually an existing order, we need to cancel it first
 			if (this is Order order)
@@ -354,7 +340,7 @@ namespace CoinFlip
 			}
 
 			// Create the order on the exchange
-			return await Exchange.CreateOrder(FundId, TradeType, Pair, AmountIn, Price, cancel);
+			return await Exchange.CreateOrder(FundId, Pair, TradeType, OrderType.Value, AmountIn, Price, cancel, creator_name);
 		}
 
 		/// <summary>Trade property changed</summary>
@@ -374,7 +360,7 @@ namespace CoinFlip
 			"---";
 
 		/// <summary>String description of the trade</summary>
-		public virtual string Description => $"{AmountIn.ToString(6, true)} → {AmountOut.ToString(6, true)} @ {PriceQ2B.ToString(6, true)}";
+		public virtual string Description => $"{AmountIn.ToString(6, true)} → {AmountOut.ToString(6, true)} @ {PriceQ2B.ToString(4, true)}";
 
 		#region Equals
 		public bool Equals(Trade rhs)

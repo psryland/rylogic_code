@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Threading;
+using CoinFlip.Bots;
 using CoinFlip.Settings;
 using Rylogic.Common;
 using Rylogic.Extn;
@@ -24,11 +25,13 @@ namespace CoinFlip
 			Bots = bots;
 
 			// Create a SimExchange for each exchange
+			Clock = StartTime;
 			foreach (var exch in exchanges)
 				Exchanges[exch.Name] = new SimExchange(this, exch, price_data_map);
 
-			Clock = StartTime;
-			UpdatePriceData();
+			// Ensure the first update to the price data after creating the simulation
+			// resets all instrument's cached data
+			UpdatePriceData(force_invalidate:true);
 		}
 		public void Dispose()
 		{
@@ -239,6 +242,9 @@ namespace CoinFlip
 				{
 					Debug.Assert(Misc.AssertMainThread());
 
+					// Returns the next bot to be stepped based on their LastStepTime's and the current sim time
+					IBot NextBotToStep() => Bots.Where(x => x.Active).MinByOrDefault(x => x.TimeTillNextStep);
+
 					// Advance the simulation clock at a maximum rate of 'StepRate' candles per second.
 					// 'm_sw_main_loop' tracks the amount of real world time that has elapsed while 'Running' is true.
 					// Determine the time difference to add to the simulation clock
@@ -255,8 +261,10 @@ namespace CoinFlip
 						}
 					case ERunMode.StepOne:
 						{
-							// If this is a single step, increment the clock by a fixed amount
-							next_clock += new TimeSpan(m_max_ticks_per_step);
+							// If this is a single step, increment the clock by the step size,
+							// or up to the next bot to be stepped, which ever is less.
+							var step = TimeSpan_.Min(new TimeSpan(m_max_ticks_per_step), NextBotToStep()?.TimeTillNextStep ?? TimeSpan.MaxValue);
+							next_clock += step;
 							break;
 						}
 					}
@@ -273,12 +281,10 @@ namespace CoinFlip
 					for (;Running; await Task.Yield())
 					{
 						// Find the next bot requiring stepping
-						var bot = Bots
-							.Where(x => x.Active)
-							.MinByOrDefault(x => (x.LastStepTime + x.LoopPeriod) - Model.UtcNow);
+						var bot = NextBotToStep();
 
 						// If the next bot to step is within this step, step it.
-						if (bot != null && bot.LastStepTime + bot.LoopPeriod < next_clock)
+						if (bot != null && bot.LastStepTime + bot.LoopPeriod <= next_clock)
 						{
 							// Advance to clock to the bot's next step time
 							Clock = bot.LastStepTime + bot.LoopPeriod;
@@ -337,10 +343,10 @@ namespace CoinFlip
 		public ERunMode RunMode { get; private set; }
 
 		/// <summary>Cause all price data instances to update</summary>
-		private void UpdatePriceData()
+		private void UpdatePriceData(bool force_invalidate = false)
 		{
 			foreach (var pd in PriceData)
-				pd.SimulationUpdate();
+				pd.SimulationUpdate(force_invalidate);
 
 			foreach (var exch in Exchanges.Values)
 				exch.Step();

@@ -65,32 +65,31 @@ namespace CoinFlip
 		}
 
 		/// <summary>
-		/// Consume orders up to 'price' or 'volume' (simulating them being filled).
+		/// Consume orders up to 'price' or 'amount' (simulating them being filled).
 		/// 'pair' is the trade pair that this OrderBook is associated with.
-		/// Returns the orders that were consumed. 'volume_remaining' is what remains unfilled</summary>
-		public IList<Offer> Consume(TradePair pair, Unit<decimal> price, Unit<decimal> volume, out Unit<decimal> volume_remaining)
+		/// Returns the orders that were consumed. 'amount_remaining' is what remains unfilled</summary>
+		public IList<Offer> Consume(TradePair pair, EPlaceOrderType ot, Unit<decimal> price, Unit<decimal> amount, out Unit<decimal> amount_remaining)
 		{
-			// Note: Have to be careful not to leave behind volumes that are less than the allowable limits for 'pair'
-			volume_remaining = volume;
+			amount_remaining = amount;
 
 			var count = 0;
-			foreach (var order in Offers)
+			foreach (var offer in Offers)
 			{
-				// Price is too high/low to fill 'order', stop.
-				if (Sign * price.CompareTo(order.Price) < 0)
+				// Price is too high/low to fill 'offer', stop.
+				if (ot != EPlaceOrderType.Market && Sign * price.CompareTo(offer.Price) < 0)
 					break;
 
-				// The volume remaining is less than the volume of 'order', stop
-				if (volume_remaining <= order.AmountBase)
+				// The volume remaining is less than the volume of 'offer', stop
+				if (amount_remaining <= offer.AmountBase)
 					break;
 
-				// 'order' is smaller than the remaining volume so it would be consumed. However, don't consume
-				// 'order' if doing so would leave 'volume_remaining' with an invalid trading volume.
-				var rem = volume_remaining - order.AmountBase;
+				// 'offer' is smaller than the remaining volume so it would be consumed. However, don't consume
+				// 'offer' if doing so would leave 'amount_remaining' with an invalid trading amount.
+				var rem = amount_remaining - offer.AmountBase;
 				if (!pair.AmountRangeBase.Contains(rem) || !pair.AmountRangeQuote.Contains(rem * price))
 					break;
 				
-				volume_remaining = rem;
+				amount_remaining = rem;
 				++count;
 			}
 
@@ -98,15 +97,15 @@ namespace CoinFlip
 			var consumed = Offers.Take(count).ToList();
 			Offers.RemoveRange(0, count);
 
-			// Remove any remaining volume from the top remaining order if doing so doesn't leave an invalid trading volume
-			if (volume_remaining != 0 && Offers.Count != 0 && Sign * price.CompareTo(Offers[0].Price) >= 0)
+			// Remove any remaining amount from the top remaining order if doing so doesn't leave an invalid trading amount
+			if (amount_remaining != 0 && Offers.Count != 0 && (ot == EPlaceOrderType.Market || Sign * price.CompareTo(Offers[0].Price) >= 0))
 			{
-				var rem = Offers[0].AmountBase - volume_remaining;
+				var rem = Offers[0].AmountBase - amount_remaining;
 				if (pair.AmountRangeBase.Contains(rem) && pair.AmountRangeQuote.Contains(rem * Offers[0].Price))
 				{
-					consumed.Add(new Offer(Offers[0].Price, volume_remaining));
+					consumed.Add(new Offer(Offers[0].Price, amount_remaining));
 					Offers[0] = new Offer(Offers[0].Price, rem);
-					volume_remaining = 0m._(volume);
+					amount_remaining = 0m._(amount);
 				}
 			}
 

@@ -39,17 +39,5 @@ namespace CoinFlip
 				}
 			}
 		}
-
-		/// <summary>Remove orders that are older than 'timestamp' and not in 'order_ids'</summary>
-		public void RemoveOrdersNotIn(HashSet<long> order_ids, DateTimeOffset timestamp)
-		{
-			// Remove any positions that are no longer valid.
-			foreach (var pos in Values.Where(x => !order_ids.Contains(x.OrderId)).ToArray())
-			{
-				if (pos.Created >= timestamp) continue;
-				if (Model.AllowTrades == false && pos.OrderId < 100) continue; // Hack for fake positions
-				Remove(pos.OrderId);
-			}
-		}
 	}
 }

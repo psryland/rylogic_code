@@ -164,7 +164,7 @@ namespace CoinFlip
 				foreach (var order in history.Values.SelectMany(x => x))
 				{
 					var his = TradeCompletedFrom(order, timestamp);
-					var fill = History.GetOrAdd(OrderIdtoFundId[his.OrderId], his.OrderId, his.TradeType, his.Pair);
+					var fill = History.GetOrAdd(OrderIdToFundId(his.OrderId), his.OrderId, his.TradeType, his.Pair);
 					fill.Trades[his.TradeId] = his;
 					AddToTradeHistory(fill);
 				}
@@ -174,10 +174,7 @@ namespace CoinFlip
 					m_pairs.AddRange(pairs);
 
 				// Remove any positions that are no longer valid.
-				Orders.RemoveOrdersNotIn(order_ids, timestamp);
-
-				// Save the history range
-				HistoryInterval = new Range(HistoryInterval.Beg, timestamp.Ticks);
+				SynchroniseOrders(order_ids, timestamp);
 
 				// Notify updated
 				History.LastUpdated = timestamp;
@@ -302,11 +299,12 @@ namespace CoinFlip
 		}
 
 		/// <summary>Open a trade</summary>
-		protected async override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, Unit<decimal> amount, Unit<decimal> price, CancellationToken cancel)
+		protected async override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EPlaceOrderType ot, Unit<decimal> amount, Unit<decimal> price, CancellationToken cancel)
 		{
 			try
 			{
 				// Place the trade order
+				if (ot != EPlaceOrderType.Limit) throw new NotImplementedException();
 				var res = await Api.SubmitTrade(new CurrencyPair(pair.Base, pair.Quote), tt.ToPoloniexTT(), price, amount);
 				return new OrderResult(pair, res.OrderId, false, res.FilledOrders.Select(x => x.TradeId));
 			}
@@ -338,7 +336,7 @@ namespace CoinFlip
 		private Order OrderFrom(global::Poloniex.API.DomainObjects.Order odr, DateTimeOffset updated)
 		{
 			var order_id = odr.OrderId;
-			var fund_id  = OrderIdtoFundId[order_id];
+			var fund_id  = OrderIdToFundId(order_id);
 			var tt       = Misc.TradeType(odr.Type);
 			var pair     = Pairs.GetOrAdd(odr.Pair.Base, odr.Pair.Quote);
 			var price    = odr.Price._(pair.RateUnits);

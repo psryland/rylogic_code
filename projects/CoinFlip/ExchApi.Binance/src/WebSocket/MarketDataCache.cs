@@ -110,8 +110,8 @@ namespace Binance.API
 					var ob = Api.GetOrderBook(Pair, 1000, Api.Shutdown).Result;
 					lock (MarketDepth)
 					{
-						MarketDepth.BuyOffers.Assign(ob.BuyOffers);
-						MarketDepth.SellOffers.Assign(ob.SellOffers);
+						MarketDepth.B2QOffers.Assign(ob.B2QOffers);
+						MarketDepth.Q2BOffers.Assign(ob.Q2BOffers);
 						MarketDepth.SequenceNo = ob.SequenceNo;
 					}
 				}
@@ -219,8 +219,8 @@ namespace Binance.API
 							BinanceApi.Log.Write(ELogLevel.Warn, $"Gap in market data updates for {Pair.Id}");
 
 						// The data in the update is absolute price
-						UpdateBook(MarketDepth.BuyOffers, upd.Buys, -1);
-						UpdateBook(MarketDepth.SellOffers, upd.Sells, +1);
+						UpdateBook(MarketDepth.B2QOffers, upd.Buys, -1);
+						UpdateBook(MarketDepth.Q2BOffers, upd.Sells, +1);
 						MarketDepth.SequenceNo = upd.SequenceNoEnd;
 					}
 
