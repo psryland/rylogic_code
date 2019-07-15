@@ -15,87 +15,87 @@ namespace Rylogic.Maths
 	/// <summary>scalar functions</summary>
 	public static partial class Math_
 	{
-		public const float TinyF     = 1.00000007e-05f;
-		public const float TinySqF   = 1.00000015e-10f;
+		public const float TinyF = 1.00000007e-05f;
+		public const float TinySqF = 1.00000015e-10f;
 		public const float TinySqrtF = 3.16227786e-03f;
 
-		public const double TinyD     = 1.0000000000000002e-12;
-		public const double TinySqD   = 1.0000000000000003e-24;
+		public const double TinyD = 1.0000000000000002e-12;
+		public const double TinySqD = 1.0000000000000003e-24;
 		public const double TinySqrtD = 1.0000000000000002e-06;
-		
-		public const double Phi       = 1.618033988749894848204586834; // "Golden Ratio"
-		public const double Tau       = 6.283185307179586476925286766559; // circle constant
-		public const double InvTau    = 1.0 / Tau;
-		public const double TauBy2    = Tau / 2.0;
-		public const double TauBy3    = Tau / 3.0;
-		public const double TauBy4    = Tau / 4.0;
-		public const double TauBy5    = Tau / 5.0;
-		public const double TauBy6    = Tau / 6.0;
-		public const double TauBy7    = Tau / 7.0;
-		public const double TauBy8    = Tau / 8.0;
-		public const double TauBy10   = Tau / 10.0;
-		public const double TauBy16   = Tau / 16.0;
-		public const double TauBy32   = Tau / 32.0;
-		public const double TauBy360  = Tau / 360.0;
+
+		public const double Phi = 1.618033988749894848204586834; // "Golden Ratio"
+		public const double Tau = 6.283185307179586476925286766559; // circle constant
+		public const double InvTau = 1.0 / Tau;
+		public const double TauBy2 = Tau / 2.0;
+		public const double TauBy3 = Tau / 3.0;
+		public const double TauBy4 = Tau / 4.0;
+		public const double TauBy5 = Tau / 5.0;
+		public const double TauBy6 = Tau / 6.0;
+		public const double TauBy7 = Tau / 7.0;
+		public const double TauBy8 = Tau / 8.0;
+		public const double TauBy10 = Tau / 10.0;
+		public const double TauBy16 = Tau / 16.0;
+		public const double TauBy32 = Tau / 32.0;
+		public const double TauBy360 = Tau / 360.0;
 		public const double _360ByTau = 360.0 / Tau;
-		public const double Root2     = 1.4142135623730950488016887242097;
-		public const double Root3     = 1.7320508075688772935274463415059;
-		public const double InvRoot2  = 1.0 / 1.4142135623730950488016887242097;
-		public const double InvRoot3  = 1.0 / 1.7320508075688772935274463415059;
+		public const double Root2 = 1.4142135623730950488016887242097;
+		public const double Root3 = 1.7320508075688772935274463415059;
+		public const double InvRoot2 = 1.0 / 1.4142135623730950488016887242097;
+		public const double InvRoot3 = 1.0 / 1.7320508075688772935274463415059;
 
-		public const float PhiF       = (float)Phi;
-		public const float TauF       = (float)Tau;
-		public const float InvTauF    = (float)InvTau;
-		public const float TauBy2F    = (float)TauBy2;
-		public const float TauBy3F    = (float)TauBy3;
-		public const float TauBy4F    = (float)TauBy4;
-		public const float TauBy5F    = (float)TauBy5;
-		public const float TauBy6F    = (float)TauBy6;
-		public const float TauBy7F    = (float)TauBy7;
-		public const float TauBy8F    = (float)TauBy8;
-		public const float TauBy10F   = (float)TauBy10;
-		public const float TauBy16F   = (float)TauBy16;
-		public const float TauBy32F   = (float)TauBy32;
-		public const float TauBy360F  = (float)TauBy360;
+		public const float PhiF = (float)Phi;
+		public const float TauF = (float)Tau;
+		public const float InvTauF = (float)InvTau;
+		public const float TauBy2F = (float)TauBy2;
+		public const float TauBy3F = (float)TauBy3;
+		public const float TauBy4F = (float)TauBy4;
+		public const float TauBy5F = (float)TauBy5;
+		public const float TauBy6F = (float)TauBy6;
+		public const float TauBy7F = (float)TauBy7;
+		public const float TauBy8F = (float)TauBy8;
+		public const float TauBy10F = (float)TauBy10;
+		public const float TauBy16F = (float)TauBy16;
+		public const float TauBy32F = (float)TauBy32;
+		public const float TauBy360F = (float)TauBy360;
 		public const float _360ByTauF = (float)_360ByTau;
-		public const float Root2F     = (float)Root2;
-		public const float Root3F     = (float)Root3;
-		public const float InvRoot2F  = (float)InvRoot2;
-		public const float InvRoot3F  = (float)InvRoot3;
+		public const float Root2F = (float)Root2;
+		public const float Root3F = (float)Root3;
+		public const float InvRoot2F = (float)InvRoot2;
+		public const float InvRoot3F = (float)InvRoot3;
 
-		public static bool      IsFinite(float x)                               { return !float.IsInfinity(x) && !float.IsNaN(x); }
-		public static bool      IsFinite(double x)                              { return !double.IsInfinity(x) && !double.IsNaN(x); }
-		public static int       SignI(bool positive)                            { return positive ? 1 : -1; }
-		public static float     SignF(bool positive)                            { return positive ? 1f : -1f; }
-		public static double    SignD(bool positive)                            { return positive ? 1.0 : -1.0; }
-		public static decimal   SignM(bool positive)                            { return positive ? 1m : -1m; }
-		public static int       Sign(int x)                                     { return SignI(x >= 0.0f); }
-		public static float     Sign(float x)                                   { return SignF(x >= 0.0f); }
-		public static double    Sign(double x)                                  { return SignD(x >= 0.0); }
-		public static decimal   Sign(decimal x)                                 { return SignM(x >= 0m); }
-		public static int       OneIfZero(int x)                                { return x != 0 ? x : 1; }
-		public static float     OneIfZero(float x)                              { return x != 0f ? x : 1f; }
-		public static int       Sqr(int x)                                      { return x * x; }
-		public static float     Sqr(float x)                                    { return x * x; }
-		public static double    Sqr(double x)                                   { return x * x; }
-		public static float     Sqrt(float x)                                   { return (float)Sqrt((double)x); }
-		public static double    Sqrt(double x)                                  { return Math.Sqrt(x); }
-		public static float     Cubed(float x)                                  { return x * x * x; }
-		public static double    Cubed(double x)                                 { return x * x * x; }
-		public static float     CubeRoot(float x)                               { return (float)CubeRoot((double)x); }
-		public static double    CubeRoot(double x)                              { return Math.Pow(x, 1.0/3.0); }
-		public static float     DegreesToRadians(float degrees)                 { return (float)(degrees * TauBy360); }
-		public static double    DegreesToRadians(double degrees)                { return degrees * TauBy360; }
-		public static v4        DegreesToRadians(v4 degrees)                    { return new v4(DegreesToRadians(degrees.x), DegreesToRadians(degrees.y), DegreesToRadians(degrees.z), DegreesToRadians(degrees.w)); }
-		public static float     RadiansToDegrees(float radians)                 { return (float)(radians * _360ByTau); }
-		public static double    RadiansToDegrees(double radians)                { return radians * _360ByTau; }
-		public static v4        RadiansToDegrees(v4 degrees)                    { return new v4(RadiansToDegrees(degrees.x), RadiansToDegrees(degrees.y), RadiansToDegrees(degrees.z), RadiansToDegrees(degrees.w)); }
+		public static bool IsFinite(float x) { return !float.IsInfinity(x) && !float.IsNaN(x); }
+		public static bool IsFinite(double x) { return !double.IsInfinity(x) && !double.IsNaN(x); }
+		public static int SignI(bool positive) { return positive ? 1 : -1; }
+		public static float SignF(bool positive) { return positive ? 1f : -1f; }
+		public static double SignD(bool positive) { return positive ? 1.0 : -1.0; }
+		public static decimal SignM(bool positive) { return positive ? 1m : -1m; }
+		public static int Sign(int x) { return SignI(x >= 0.0f); }
+		public static float Sign(float x) { return SignF(x >= 0.0f); }
+		public static double Sign(double x) { return SignD(x >= 0.0); }
+		public static decimal Sign(decimal x) { return SignM(x >= 0m); }
+		public static int OneIfZero(int x) { return x != 0 ? x : 1; }
+		public static float OneIfZero(float x) { return x != 0f ? x : 1f; }
+		public static int Sqr(int x) { return x * x; }
+		public static float Sqr(float x) { return x * x; }
+		public static double Sqr(double x) { return x * x; }
+		public static float Sqrt(float x) { return (float)Sqrt((double)x); }
+		public static double Sqrt(double x) { return Math.Sqrt(x); }
+		public static float Cubed(float x) { return x * x * x; }
+		public static double Cubed(double x) { return x * x * x; }
+		public static float CubeRoot(float x) { return (float)CubeRoot((double)x); }
+		public static double CubeRoot(double x) { return Math.Pow(x, 1.0 / 3.0); }
+		public static float DegreesToRadians(float degrees) { return (float)(degrees * TauBy360); }
+		public static double DegreesToRadians(double degrees) { return degrees * TauBy360; }
+		public static v4 DegreesToRadians(v4 degrees) { return new v4(DegreesToRadians(degrees.x), DegreesToRadians(degrees.y), DegreesToRadians(degrees.z), DegreesToRadians(degrees.w)); }
+		public static float RadiansToDegrees(float radians) { return (float)(radians * _360ByTau); }
+		public static double RadiansToDegrees(double radians) { return radians * _360ByTau; }
+		public static v4 RadiansToDegrees(v4 degrees) { return new v4(RadiansToDegrees(degrees.x), RadiansToDegrees(degrees.y), RadiansToDegrees(degrees.z), RadiansToDegrees(degrees.w)); }
 
-		public static void      Swap<T>(ref T lhs, ref T rhs)                   { var tmp = lhs; lhs = rhs; rhs = tmp; }
-		public static float     Len2Sq(float x, float y)                        { return Sqr(x) + Sqr(y); }
-		public static float     Len2(float x, float y)                          { return Sqrt(Len2Sq(x,y)); }
-		public static float     Len3Sq(float x, float y, float z)               { return Sqr(x) + Sqr(y) + Sqr(z); }
-		public static float     Len3(float x, float y, float z)                 { return Sqrt(Len3Sq(x,y,z)); }
+		public static void Swap<T>(ref T lhs, ref T rhs) { var tmp = lhs; lhs = rhs; rhs = tmp; }
+		public static float Len2Sq(float x, float y) { return Sqr(x) + Sqr(y); }
+		public static float Len2(float x, float y) { return Sqrt(Len2Sq(x, y)); }
+		public static float Len3Sq(float x, float y, float z) { return Sqr(x) + Sqr(y) + Sqr(z); }
+		public static float Len3(float x, float y, float z) { return Sqrt(Len3Sq(x, y, z)); }
 
 		// Floating point comparisons
 
@@ -164,33 +164,33 @@ namespace Rylogic.Maths
 		/// <summary>Return 'a/b', or 'def' if 'b' is zero</summary>
 		public static T Div<T>(T a, T b, T def = default(T))
 		{
-			return !Equals(b, default(T)) ? Operators<T>.Div(a,b) : def;
+			return !Equals(b, default(T)) ? Operators<T>.Div(a, b) : def;
 		}
 
 		/// <summary>Minimum value</summary>
-		public static T Min<T>(T lhs, T rhs) where T :IComparable<T>
+		public static T Min<T>(T lhs, T rhs) where T : IComparable<T>
 		{
 			return lhs.CompareTo(rhs) <= 0 ? lhs : rhs;
 		}
-		public static T Min<T>(T lhs, params T[] rhs) where T :IComparable<T>
+		public static T Min<T>(T lhs, params T[] rhs) where T : IComparable<T>
 		{
 			foreach (var r in rhs) lhs = Min(lhs, r);
 			return lhs;
 		}
 
 		/// <summary>Maximum value</summary>
-		public static T Max<T>(T lhs, T rhs) where T :IComparable<T>
+		public static T Max<T>(T lhs, T rhs) where T : IComparable<T>
 		{
 			return lhs.CompareTo(rhs) >= 0 ? lhs : rhs;
 		}
-		public static T Max<T>(T lhs, params T[] rhs) where T :IComparable<T>
+		public static T Max<T>(T lhs, params T[] rhs) where T : IComparable<T>
 		{
 			foreach (var r in rhs) lhs = Max(lhs, r);
 			return lhs;
 		}
 
 		/// <summary>Clamp value to an inclusive range</summary>
-		public static T Clamp<T>(T x, T min, T max) where T:IComparable<T>
+		public static T Clamp<T>(T x, T min, T max) where T : IComparable<T>
 		{
 			Debug.Assert(min.CompareTo(max) <= 0);
 			return
@@ -199,7 +199,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>True if 'x' is within the interval '[min-tol,max+tol]'</summary>
-		public static bool Within<T>(T min, T x, T max, T tol = default(T)) where T:IComparable<T>
+		public static bool Within<T>(T min, T x, T max, T tol = default(T)) where T : IComparable<T>
 		{
 			min = Operators<T>.Sub(min, tol);
 			max = Operators<T>.Add(max, tol);
@@ -216,13 +216,13 @@ namespace Rylogic.Maths
 
 			var sum = default(T);
 			foreach (var v in values)
-				sum = Operators<T>.Add(sum, v); 
+				sum = Operators<T>.Add(sum, v);
 
-			return Operators<T,int>.Div(sum, values.Length);
+			return Operators<T, int>.Div(sum, values.Length);
 		}
 
 		/// <summary>Return the median of the given values</summary>
-		public static T Median<T>(params T[] values) where T:IComparable<T>
+		public static T Median<T>(params T[] values) where T : IComparable<T>
 		{
 			if (values.Length == 0)
 				throw new Exception("Median: no values provided");
@@ -233,7 +233,7 @@ namespace Rylogic.Maths
 			// Otherwise, the median is just the middle value.
 			var idx = values.Length / 2;
 			return (values.Length & 1) == 0
-				? Average(values.NthElement(idx-1), values.NthElement(idx))
+				? Average(values.NthElement(idx - 1), values.NthElement(idx))
 				: values.NthElement(idx);
 		}
 
@@ -260,7 +260,7 @@ namespace Rylogic.Maths
 		}
 		public static T Lerp<T>(T lhs, T rhs, double frac)
 		{
-			return Operators<T>.Add(Operators<T,double>.Mul(lhs, 1.0 - frac), Operators<T,double>.Mul(rhs, frac));
+			return Operators<T>.Add(Operators<T, double>.Mul(lhs, 1.0 - frac), Operators<T, double>.Mul(rhs, frac));
 		}
 		public static T Lerp<T>(double frac, params T[] values)
 		{
@@ -270,11 +270,11 @@ namespace Rylogic.Maths
 
 			// Scale 'frac' up to the number of values
 			var fidx = frac * (len - 1);
-			if (fidx <=   0.0) return values[0];
-			if (fidx >= len-1) return values[len-1];
-			
+			if (fidx <= 0.0) return values[0];
+			if (fidx >= len - 1) return values[len - 1];
+
 			var idx = (int)fidx;
-			return Lerp(values[idx], values[idx+1], fidx - idx);
+			return Lerp(values[idx], values[idx + 1], fidx - idx);
 		}
 
 		/// <summary>Normalise to x to range [min,max]</summary>
@@ -319,7 +319,7 @@ namespace Rylogic.Maths
 		}
 		public static int LeastCommonMultiple(int a, int b)
 		{
-			return (a*b) / GreatestCommonFactor(a,b);
+			return (a * b) / GreatestCommonFactor(a, b);
 		}
 
 		/// <summary>Returns true if 'value' is a single digit integer multiple of a power of ten. (e.g. 2000, 300, 1, 90000. Not 1200, 234)</summary>
@@ -341,6 +341,43 @@ namespace Rylogic.Maths
 				if (val != 0)
 					yield return val * e;
 			}
+		}
+
+		/// <summary>Returns the order of magnitude of 'x'. E.g. OrderOfMagnitude(24301) = 10000, OrderOfMagnitude(0.085) = 0.01, </summary>
+		public static double OrderOfMagnitude(double x)
+		{
+			if (x == 0) return 0;
+			var sign = x > 0 ? +1 : -1;
+			return sign * Math.Pow(10, Math.Floor(Math.Log10(Math.Abs(x))));
+		}
+
+		/// <summary>Return the nearest aesthetic value greaterequal than (dir = +1), less than (dir = -1),  or nearest to (dir = 0) 'x'</summary>
+		public static double AestheticValue(double x, int dir = 0)
+		{
+			if (x == 0)
+				return 0;
+
+			// 'oom' is signed, so 'val' is always positive
+			var oom = OrderOfMagnitude(x);
+			var val = x / oom;
+
+			// 0.5 and 10.0 are impossible values. They're used so that idx + 1 and idx - 1 don't need bounds checking.
+			var nice = new[] { 0.5, 1.0, 2.0, 2.5, 5.0, 10.0 };
+			var idx = nice.BinarySearch(s => s.CompareTo(val));
+
+			if (idx >= 0)
+				return nice[idx] * oom;
+
+			idx = ~idx;
+			dir = x >= 0 ? +dir : -dir;
+
+			if (dir > 0)
+				return nice[idx] * oom;
+			if (dir < 0)
+				return nice[idx - 1] * oom;
+
+			var n = Frac(nice[idx - 1], val, nice[idx]) < 0.5 ? nice[idx - 1] : nice[idx];
+			return n * oom;
 		}
 
 		/// <summary>Returns the radius of a sphere with the given volume</summary>
@@ -699,6 +736,28 @@ namespace Rylogic.UnitTests
 			Assert.Equal(-79228162514264337593543950335m, Math_.RoundSD(-79228162514264337593543950335m, 29));
 			Assert.Equal(+79228162514264337593543950335m, Math_.RoundSD(+79228162514264337593543950335m, 30));
 			Assert.Equal(-79228162514264337593543950335m, Math_.RoundSD(-79228162514264337593543950335m, 30));
+		}
+		[Test]
+		public void TestAestheticValues()
+		{
+			Assert.Equal(0.0, Math_.AestheticValue(0.0, 0));
+
+			Assert.Equal(5000.0, Math_.AestheticValue(4322.0,  0)); // 2500, 4322, 5000.. 5000 is nearest
+			Assert.Equal(2500.0, Math_.AestheticValue(4322.0, -1)); // 2500, 4322, 5000.. 2500 is nearest less than
+			Assert.Equal(5000.0, Math_.AestheticValue(4322.0, +1)); // 2500, 4322, 5000.. 5000 is nearest greater than
+
+			Assert.Equal(0.02, Math_.AestheticValue(0.022, 0)); // 0.02, 0.022, 0.025.. 0.02 is nearest
+			Assert.Equal(0.02, Math_.AestheticValue(0.019, 0)); // 0.01, 0.019, 0.02.. 0.02 is nearest
+
+			Assert.Equal(-100.0, Math_.AestheticValue(-123.0,  0)); // -200, -123, -100.. -100 is nearest
+			Assert.Equal(-100.0, Math_.AestheticValue(-123.0, +1)); // -200, -123, -100.. -100 is nearest greater than
+			Assert.Equal(-200.0, Math_.AestheticValue(-123.0, -1)); // -200, -123, -100.. -200 is nearest less than
+
+			Assert.Equal(-10000.0, Math_.AestheticValue(-9999.0, 0)); // -10000, -9999, -5000.. -10000 is nearest
+
+			Assert.Equal(-10.0, Math_.AestheticValue(-10.0,  0));
+			Assert.Equal(-10.0, Math_.AestheticValue(-10.0, +1));
+			Assert.Equal(-10.0, Math_.AestheticValue(-10.0, -1));
 		}
 	}
 }

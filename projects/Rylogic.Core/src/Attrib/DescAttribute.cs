@@ -32,6 +32,9 @@ namespace Rylogic.Attrib
 	/// <summary>Access class for DescAttribute</summary>
 	public static class DescAttr
 	{
+		// Reflecting on attributes is slow => caching
+		private static readonly Cache<string, object> m_str_cache = new Cache<string, object>(1000) { ThreadSafe = true };
+
 		/// <summary>Get the DescAttribute or DescriptionAttribute associated with a member</summary>
 		public static Attribute Get(MemberInfo mi)
 		{
@@ -122,9 +125,6 @@ namespace Rylogic.Attrib
 					return strs.ToArray();
 				});
 		}
-
-		// Reflecting on attributes is slow => caching
-		private static readonly Cache<string,object> m_str_cache  = new Cache<string,object> { ThreadSafe = true };
 
 		/// <summary>A cache key for an enum value</summary>
 		private static string Key(Enum enum_)

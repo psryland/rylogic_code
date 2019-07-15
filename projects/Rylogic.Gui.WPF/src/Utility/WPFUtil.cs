@@ -1,14 +1,12 @@
 ﻿using System;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
-using System.Linq;
 using System.Threading;
 using System.Windows;
 using System.Windows.Input;
-using System.Windows.Threading;
 using Rylogic.Common;
-using Rylogic.Maths;
+using Point = System.Windows.Point;
+using Size = System.Windows.Size;
 
 namespace Rylogic.Gui.WPF
 {
@@ -60,20 +58,20 @@ namespace Rylogic.Gui.WPF
 		//}
 		//private static bool m_cursor_visible = true;
 
-		///// <summary>Move a screen-space rectangle so that it is within the virtual screen</summary>
-		//public static Rectangle OnScreen(Rectangle rect)
-		//{
-		//	var scn = SystemInformation.VirtualScreen;
-		//	if (rect.Right  > scn.Right ) rect.X = scn.Right - rect.Width;
-		//	if (rect.Bottom > scn.Bottom) rect.Y = scn.Bottom - rect.Height;
-		//	if (rect.Left   < scn.Left  ) rect.X = scn.Left;
-		//	if (rect.Top    < scn.Top   ) rect.Y = scn.Top;
-		//	return rect;
-		//}
-		//public static Point OnScreen(Point location, Size size)
-		//{
-		//	return OnScreen(new Rectangle(location, size)).Location;
-		//}
+		/// <summary>Move a screen-space rectangle so that it is within the virtual screen</summary>
+		public static Rect OnScreen(Rect rect)
+		{
+			var scn = new Rect(SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenTop, SystemParameters.VirtualScreenWidth, SystemParameters.VirtualScreenHeight);
+			if (rect.Right > scn.Right) rect.X = scn.Right - rect.Width;
+			if (rect.Bottom > scn.Bottom) rect.Y = scn.Bottom - rect.Height;
+			if (rect.Left < scn.Left) rect.X = scn.Left;
+			if (rect.Top < scn.Top) rect.Y = scn.Top;
+			return rect;
+		}
+		public static Point OnScreen(Point location, Size size)
+		{
+			return OnScreen(new Rect(location, size)).Location;
+		}
 
 		///// <summary>Convert this mouse button flag into an index of first button that is down</summary>
 		//public static int ButtonIndex(MouseButtons button)

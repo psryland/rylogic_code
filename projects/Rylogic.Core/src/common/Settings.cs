@@ -49,6 +49,9 @@ namespace Rylogic.Common
 		/// <summary>Find the key that corresponds to 'value'</summary>
 		IReadOnlyDictionary<string, object> Data { get; }
 
+		/// <summary>Save the current settings</summary>
+		void Save();
+
 		/// <summary>An event raised when a setting is about to change value</summary>
 		event EventHandler<SettingChangeEventArgs> SettingChange;
 
@@ -222,6 +225,13 @@ namespace Rylogic.Common
 		public void FromXml(XElement node)
 		{
 			FromXml(node, ESettingsLoadFlags.None);
+		}
+
+		/// <summary>Save the current settings</summary>
+		public virtual void Save()
+		{
+			if (Parent == null) throw new Exception("Settings set is not a child of SettingsBase. Save not possible");
+			Parent.Save();
 		}
 
 		/// <summary>An event raised before and after a setting is changes value</summary>
@@ -613,7 +623,7 @@ namespace Rylogic.Common
 		private bool m_block_saving;
 
 		/// <summary>Save using the last filepath</summary>
-		public void Save()
+		public override void Save()
 		{
 			Save(Filepath);
 		}
@@ -795,6 +805,13 @@ namespace Rylogic.Common
 		/// <summary>Property changed</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 		public event PropertyChangingEventHandler PropertyChanging;
+
+		/// <summary>Save the current settings</summary>
+		public virtual void Save()
+		{
+			if (Parent == null) throw new Exception("Settings set is not a child of SettingsBase. Save not possible");
+			Parent.Save();
+		}
 
 		/// <summary>Called before and after a setting changes</summary>
 		protected virtual void OnSettingChange(SettingChangeEventArgs args)

@@ -52,7 +52,7 @@ namespace Rylogic.Utility
 		// Unary operators
 		[DebuggerStepThrough] public static Unit<T> operator +(Unit<T> lhs)
 		{
-			return Operators<T>.Plus(lhs);
+			return new Unit<T>(Operators<T>.Plus(lhs.Value), lhs.UnitId);
 		}
 		[DebuggerStepThrough] public static Unit<T> operator -(Unit<T> lhs)
 		{

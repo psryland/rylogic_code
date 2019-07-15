@@ -8,6 +8,23 @@ using Rylogic.Utility;
 
 namespace Rylogic.Common
 {
+	/// <summary>Cache behaviour</summary>
+	public enum CacheMode
+	{
+		/// <summary>
+		/// Standard cache, where objects returned in 'Get' remain in the 
+		/// cache until flushed or removed. Used for performance when accessing
+		/// a slow data source.</summary>
+		StandardCache,
+
+		/// <summary>
+		/// An object pool removes items from the cache when they are returned
+		/// from 'Get'. Users return the object to the cache when finished with
+		/// it. Object pools are used for recycling expensive objects.</summary>
+		ObjectPool
+	}
+
+	/// <summary>Interface for a cache</summary>
 	public interface ICache<TKey,TItem> :IDisposable
 	{
 		/// <summary>Get/Set whether the cache should use thread locking</summary>
@@ -48,34 +65,25 @@ namespace Rylogic.Common
 		void Flush();
 	}
 
-	public enum CacheMode
-	{
-		/// <summary>
-		/// Standard cache, where objects returned in 'Get' remain in the 
-		/// cache until flushed or removed. Used for performance when accessing
-		/// a slow data source.</summary>
-		StandardCache,
-
-		/// <summary>
-		/// An object pool removes items from the cache when they are returned
-		/// from 'Get'. Users return the object to the cache when finished with
-		/// it. Object pools are used for recycling expensive objects.</summary>
-		ObjectPool
-	}
-
+	/// <summary>Performance stats for a cache</summary>
 	public struct CacheStats
 	{
 		public int Hits;
 		public int Misses;
-		public float Performance { get { return Hits / (float)(Hits + Misses); } }
-		public void Clear() { Hits = Misses = 0; }
+		public float Performance => Hits / (float)(Hits + Misses);
+		public void Clear()
+		{
+			Hits = 0;
+			Misses = 0;
+		}
 	}
 
 	/// <summary>Generic, count limited, cache implementation</summary>
 	public class Cache<TKey,TItem> :ICache<TKey,TItem>
 	{
-		// The cache is an ordered linked list and a map from keys to list nodes
-		// The order of items in the linked list is the order of last accessed.
+		// Notes:
+		// - The cache is an ordered linked list and a map from keys to list nodes.
+		// - The order of items in the linked list is the order of last accessed.
 
 		/// <summary>The cache entry</summary>
 		private class Entry
@@ -89,7 +97,7 @@ namespace Rylogic.Common
 		private readonly LinkedList<Entry> m_cache;
 
 		/// <summary>A lookup table from 'key' to node in 'm_cache'</summary>
-		private readonly Dictionary<TKey,LinkedListNode<Entry>> m_lookup;
+		private readonly Dictionary<TKey, LinkedListNode<Entry>> m_lookup;
 
 		/// <summary>A lock object for synchronisation</summary>
 		private readonly object m_lock;
@@ -97,7 +105,7 @@ namespace Rylogic.Common
 		/// <summary>The id of the thread the cache was created on (for debugging non-thread-safe use)</summary>
 		private int m_thread_id;
 
-		public Cache()
+		public Cache(int capacity)// = 100)
 		{
 			m_cache     = new LinkedList<Entry>();
 			m_lookup    = new Dictionary<TKey,LinkedListNode<Entry>>();
@@ -105,7 +113,7 @@ namespace Rylogic.Common
 			m_thread_id = Thread.CurrentThread.ManagedThreadId;
 			Mode        = CacheMode.StandardCache;
 			ThreadSafe  = false;
-			m_capacity  = 100;
+			m_capacity  = capacity;
 			m_stats     = new CacheStats();
 		}
 
@@ -131,16 +139,10 @@ namespace Rylogic.Common
 		public bool ThreadSafe { get; set; }
 
 		/// <summary>The number of items in the cache</summary>
-		public int Count
-		{
-			get { return m_cache.Count; }
-		}
+		public int Count => m_cache.Count;
 
 		/// <summary>Enumerate over the items in the cache</summary>
-		public IEnumerable<TItem> CachedItems
-		{
-			get { return m_cache.Select(x => x.Item); }
-		}
+		public IEnumerable<TItem> CachedItems => m_cache.Select(x => x.Item);
 
 		/// <summary>Get/Set an upper limit on the number of cached items</summary>
 		public int Capacity
@@ -158,10 +160,7 @@ namespace Rylogic.Common
 		private int m_capacity;
 
 		/// <summary>Return performance data for the cache</summary>
-		public CacheStats Stats
-		{
-			get { return m_stats; }
-		}
+		public CacheStats Stats => m_stats;
 		private CacheStats m_stats;
 
 		/// <summary>Returns true if an object with a key matching 'key' is currently in the cache</summary>
@@ -389,26 +388,26 @@ namespace Rylogic.Common
 		public bool ThreadSafe { get; set; }
 
 		/// <summary>The number of items in the cache</summary>
-		public int Count { get { return 0; } }
+		public int Count => 0;
 
 		/// <summary>Gets/Sets the maximum number of objects to store in the cache</summary>
-		public int Capacity { get { return 0; } set {} }
+		public int Capacity { get => 0; set { } }
 
 		/// <summary>Return performance data for the cache</summary>
-		public CacheStats Stats { get { return m_stats; } }
+		public CacheStats Stats => m_stats;
 		private CacheStats m_stats;
 
 		/// <summary>Returns true if an object with a key matching 'key' is currently in the cache</summary>
-		public bool IsCached(TKey key) { return false; }
+		public bool IsCached(TKey key) => false;
 
 		/// <summary>Preload the cache with an item</summary>
-		public bool Add(TKey key, TItem item) { return false; }
+		public bool Add(TKey key, TItem item) => false;
 
 		/// <summary>Preload the cache with a range of items.</summary>
-		public bool Add(IEnumerable<TKey> keys, IEnumerable<TItem> items) { return false; }
+		public bool Add(IEnumerable<TKey> keys, IEnumerable<TItem> items) => false;
 
 		/// <summary>Remove an item from the cache (does not delete/dispose it). Returns true if an item is removed</summary>
-		public bool Remove(TKey key) { return false; }
+		public bool Remove(TKey key) => false;
 
 		/// <summary>
 		/// Returns an object from the cache if available, otherwise calls 'on_miss'.
@@ -489,7 +488,7 @@ namespace Rylogic.UnitTests
 	{
 		[Test] public void ObjectPoolBehaviour()
 		{
-			var cache = new Cache<int, object>{Mode = CacheMode.ObjectPool};
+			var cache = new Cache<int, object>(5){Mode = CacheMode.ObjectPool};
 			cache.Add(1, (object)1);
 			cache.Add(2, (object)2);
 			cache.Add(3, (object)3);
@@ -505,14 +504,14 @@ namespace Rylogic.UnitTests
 		}
 		[Test] public void TestCachePreloading()
 		{
-			var cache = new Cache<int, string>();
+			var cache = new Cache<int, string>(100);
 			cache.Add(Enumerable.Range(0, 100), Enumerable.Range(0, 100).Select(x => x.ToString()));
 			for (var i = 0; i != 100; ++i)
 				Assert.True(cache.IsCached(i));
 		}
 		[Test] public void TestThreadSafety()
 		{
-			var cache = new Cache<int,string>{ThreadSafe = true};
+			var cache = new Cache<int,string>(100){ThreadSafe = true};
 			var tasks = new List<Task>();
 			for (var i = 0; i != 1000; ++i)
 			{

@@ -68,7 +68,7 @@ namespace Rylogic.Common
 		/// <summary>Compile source into an in-memory assembly</summary>
 		private RuntimeAssembly(string inst_name, string source, string[] assemblies)
 		{
-			m_mi_cache = new Cache<string,MethodInfo>{ ThreadSafe = true };
+			m_mi_cache = new Cache<string,MethodInfo>(100){ ThreadSafe = true };
 
 			var provider = new CSharpCodeProvider(new Dictionary<string, string>{{"CompilerVersion", "v4.0"}});
 			var compiler_params = new CompilerParameters()

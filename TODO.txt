@@ -1,12 +1,22 @@
 Immediate ToDo:
 
 CoinFlip
+	- Opacity control for on-chart trade text
+	- Fix z-order of on-chart trade text
+	- Depth of market scale indicator/adjuster
+	- Support create trade at market price (so that it always fills)
+	- Do something so that all pairs are not queried for history all the time on startup
+	- Figure out how to isolate the monitored orders between back testing and live mode
+	- Figure out how to isolate the order details between back testing and live mode
+	- Add spot price support to Poloniex and Bittrex
 	- Variable spread for backtesting
 	- Dashed 'crosshair' line, also in a lighter colour
 	- determine equity in backwards from current balance
 	- pending orders (Stop, OneEnablesOther, )
 	- Make orders glow when hovered
-	- Add more graphics to the positions, so they look better
+	- Add more graphics to the positions, so they look better. Also, have orders at the current time, with their 'line' going back to when they were created.
+	- Use smaller text for orders/history, single line, show both base and quote amounts
+	- Add a toggle for show/hide order/history text
 	- saving/loading history to/from db
 	- equity plotting
 	- highlight selected positions on graph
@@ -15,12 +25,10 @@ CoinFlip
 	- Add S&R lines + other drawing tools
 	- Add pending orders
 	- Line indicators
-	- Fishing - volume based position adjust
 	- Equity graph
-	- retest Fishing bottom
-	- retest Loop finder
 	- MOAR indicators
 	- Equity graph for live account
+	
 EDTradeAdvisor
 	- ED Style
 	- Settings UI
