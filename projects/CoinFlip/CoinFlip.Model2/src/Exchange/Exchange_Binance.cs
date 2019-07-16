@@ -220,14 +220,16 @@ namespace CoinFlip
 				var orders = Api.UserData.Orders[cp];
 				return orders;
 			}).ToList();
+			existing_orders.Sort(x => x.Created);
 
 			// Request all trade history since 'm_history_last'
 			var history_orders = pairs.SelectMany(pair =>
 			{
 				var cp = new CurrencyPair(pair.Base.Symbol, pair.Quote.Symbol);
-				var history = Api.UserData.History[cp, m_history_last];
+				var history = Api.UserData.History[cp, m_history_last, m_history_last_id];
 				return history;
 			}).ToList();
+			history_orders.Sort(x => x.Created);
 
 			// Record the time that history has been updated to
 			m_history_last = timestamp;
@@ -237,6 +239,7 @@ namespace CoinFlip
 			{
 				var order_ids = new HashSet<long>();
 				var new_pairs = new HashSet<TradePair>();
+				var history_last_id = 0L;
 
 				// Update the collection of existing orders
 				foreach (var order in existing_orders)
@@ -254,11 +257,17 @@ namespace CoinFlip
 					var fill = History.GetOrAdd(OrderIdToFundId(his.OrderId), his.OrderId, his.TradeType, his.Pair);
 					fill.Trades[his.TradeId] = his;
 					AddToTradeHistory(fill);
+
+					// Save the last order id
+					history_last_id = fill.OrderId;
 				}
 
 				// Merge pairs that have trades into the 'm_pairs' set
 				lock (m_pairs)
+				{
 					m_pairs.AddRange(new_pairs);
+					m_history_last_id = history_last_id;
+				}
 
 				// Remove any positions that are no longer valid.
 				SynchroniseOrders(order_ids, timestamp);

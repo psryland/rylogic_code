@@ -158,6 +158,8 @@ namespace CoinFlip.UI
 				void HandlePropertyChanged(object sender, PropertyChangedEventArgs e)
 				{
 					Instrument = ChartSelector.GetInstrument($"Chart {ChartSelector.Address}");
+					if (Instrument != null)
+						SettingsData.Settings.LastChart = $"{Instrument.Exchange.Name}-{Instrument.Pair.Name}-{Instrument.TimeFrame}";
 				}
 			}
 		}
@@ -377,7 +379,6 @@ namespace CoinFlip.UI
 				if (m_instrument == value) return;
 				if (m_instrument != null)
 				{
-					SettingsData.Settings.LastChart = string.Empty;
 					m_instrument.DataSyncingChanged -= HandleDataSyncingChanged;
 					m_instrument.DataChanged -= HandleDataChanged;
 					Util.Dispose(ref m_instrument);
@@ -395,7 +396,6 @@ namespace CoinFlip.UI
 					GfxMarketDepth = new GfxObjects.MarketDepth(m_instrument.Pair.MarketDepth);
 					m_instrument.DataChanged += HandleDataChanged;
 					m_instrument.DataSyncingChanged += HandleDataSyncingChanged;
-					SettingsData.Settings.LastChart = $"{m_instrument.Exchange.Name}-{m_instrument.Pair.Name}-{m_instrument.TimeFrame}";
 				}
 
 				// Auto Range and refresh

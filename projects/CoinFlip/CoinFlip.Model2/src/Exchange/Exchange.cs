@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Data;
 using System.Data.SqlClient;
@@ -56,10 +57,9 @@ namespace CoinFlip
 				Shutdown = CancellationTokenSource.CreateLinkedTokenSource(shutdown);
 				Dispatcher = Dispatcher.CurrentDispatcher;
 				m_update_thread_step = new AutoResetEvent(false);
-				Pairs.CollectionChanged += delegate { UpdateValuationPaths(); };
 
 				// Initialise the trade history table
-				InitTradeHistoryTable();
+				InitTradeHistoryTables();
 
 				// Run after the exchange is fully constructed
 				Misc.RunOnMainThread(async () =>
@@ -84,6 +84,10 @@ namespace CoinFlip
 					// Start the Exchange's main loop after the pairs and balances have been integrated.
 					Model.DataUpdates.Add(() =>
 					{
+						// Attach observers to Pairs changed
+						Pairs.CollectionChanged += delegate { UpdateValuationPaths(); };
+						Pairs.CollectionChanged += delegate { PopulateTradeHistory(); };
+						PopulateTradeHistory();
 						UpdateThreadActive = true;
 					});
 				});
@@ -220,7 +224,7 @@ namespace CoinFlip
 				}
 
 				// Reconnect to the appropriate trade history database
-				InitTradeHistoryTable();
+				InitTradeHistoryTables();
 
 				// Notify status changed
 				NotifyPropertyChanged(nameof(Status));
@@ -766,35 +770,6 @@ namespace CoinFlip
 			yield break;
 		}
 
-		///// <summary>Get/Set the amount of fake cash for the given symbol assigned to this exchange</summary>
-		//public Unit<decimal> FakeCash(string sym)
-		//{
-		//	// Look for the coin on this exchange. If not supported, ignore.
-		//	var coin = Coins[sym];
-		//	if (coin == null)
-		//		return 0m._(sym);
-
-		//	// Get the balance of this coin
-		//	var balances = Balance[coin];
-		//	return balances.FakeCash;
-		//}
-		//public void FakeCash(string sym, decimal amount)
-		//{
-		//	// Look for the coin on this exchange. If not supported, ignore.
-		//	var coin = Coins[sym];
-		//	if (coin == null)
-		//		return;
-
-		//	// Get the balance of this coin
-		//	var balances = Balance[coin];
-		//	balances.FakeCash = amount._(coin);
-
-		//	//// Distribute the fake cash evenly over each fund
-		//	//var fund_count = (decimal)balances.Funds.Count;
-		//	//foreach (var fund in balances.Funds.Values)
-		//	//	fund.FakeCash = (amount / fund_count)._(coin);
-		//}
-
 		/// <summary>Handle an exception during an update call</summary>
 		public void HandleException(string method_name, Exception ex, string msg = null)
 		{
@@ -870,14 +845,8 @@ namespace CoinFlip
 			? Misc.ResolveUserPath("Sim", "History", $"TradeHistory-{Name}.db")
 			: Misc.ResolveUserPath("History",$"TradeHistory-{Name}.db");
 
-		/// <summary>DB table name for the trade history</summary>
-		private string DBHistoryTableName => "History";
-
-		/// <summary>The set of known trade ids</summary>
-		private HashSet<long> TradeHistoryTradeIds { get; set; }
-
 		/// <summary>Initialise the trade history table</summary>
-		private void InitTradeHistoryTable()
+		private void InitTradeHistoryTables()
 		{
 			// Release the connection to the DB
 			DB = null;
@@ -890,42 +859,45 @@ namespace CoinFlip
 				Path_.DelFile(DBFilepath, fail_if_missing:false);
 
 			// Connect
-			DB = new SQLiteConnection($"Data Source={DBFilepath};Version=3;journal mode=Memory;synchronous=Off");
+			DB = new SQLiteConnection($"Data Source={DBFilepath};Version=3;journal mode=Memory;synchronous=Off;foreign_keys=On");
 
-			// Ensure the trade history table exists
+			// Ensure the OrderComplete table exists
 			DB.Execute(
-				$"create table if not exists {DBHistoryTableName} (\n" +
-				$"  [{nameof(TradeRecord.TradeId)}] integer unique primary key,\n" +
-				$"  [{nameof(TradeRecord.OrderId)}] integer unique,\n" +
-				$"  [{nameof(TradeRecord.Created)}] integer,\n" +
-				$"  [{nameof(TradeRecord.Pair)}] text,\n" +
-				$"  [{nameof(TradeRecord.TradeType)}] text,\n" +
-				$"  [{nameof(TradeRecord.PriceQ2B)}] real,\n" +
-				$"  [{nameof(TradeRecord.AmountBase)}] real,\n" +
-				$"  [{nameof(TradeRecord.CommissionQuote)}] real\n" +
+				$"create table if not exists {Table.OrderComplete} (\n" +
+				$"  [{nameof(OrderRecord.OrderId)}] integer unique primary key,\n" +
+				$"  [{nameof(OrderRecord.FundId)}] text,\n" +
+				$"  [{nameof(OrderRecord.TradeType)}] text,\n" +
+				$"  [{nameof(OrderRecord.Pair)}] text\n" +
 				$")");
 
-			// Set the interval of available history.
+			// Ensure the TradeComplete table exists
+			DB.Execute(
+				$"create table if not exists {Table.TradeComplete} (\n" +
+				$"  [{nameof(TradeRecord.TradeId)}] integer unique primary key,\n" +
+				$"  [{nameof(TradeRecord.OrderId)}] integer,\n" +
+				$"  [{nameof(TradeRecord.Created)}] integer,\n" +
+				$"  [{nameof(TradeRecord.Updated)}] integer,\n" +
+				$"  [{nameof(TradeRecord.PriceQ2B)}] real,\n" +
+				$"  [{nameof(TradeRecord.AmountBase)}] real,\n" +
+				$"  [{nameof(TradeRecord.CommissionQuote)}] real,\n" +
+				$"\n" +
+				$"  foreign key ({nameof(TradeRecord.OrderId)}) references {Table.OrderComplete}([{nameof(OrderRecord.OrderId)}])\n" +
+				$"     on update cascade\n" +
+				$"     on delete cascade\n" +
+				$")");
+
+			// Reset the interval of available history.
 			HistoryInterval = new Range(
 				DateTimeOffset_.UnixEpoch.Ticks,
 				DateTimeOffset_.UnixEpoch.Ticks);
 
-			// Set up the cache of known trade ids
-			TradeHistoryTradeIds = DB.Query<long>(
-				$"select [{nameof(TradeCompleted.TradeId)}] from {DBHistoryTableName}")
-				.ToHashSet(0);
-
-			// Set the interval of available funds transfer history
+			// Reset the interval of available funds transfer history
 			TransfersInterval = new Range(
 				DateTimeOffset_.UnixEpoch.Ticks,
 				DateTimeOffset_.UnixEpoch.Ticks);
 
-			// Set the time to get history from
-			m_history_last = new DateTimeOffset(HistoryInterval.End, TimeSpan.Zero);
-			m_transfers_last = new DateTimeOffset(TransfersInterval.End, TimeSpan.Zero);
-			m_history_last_id = DB.ExecuteScalar<long>(
-				$"select [{nameof(TradeCompleted.OrderId)}] from {DBHistoryTableName}\n" +
-				$"order by [{nameof(TradeCompleted.Created)}] desc limit 1");
+			// Note: the 'History' Collection cannot be populated
+			// here because at this point the Trade pairs are not known.
 		}
 
 		/// <summary>Ensure the valuation paths for the current coins are up to date</summary>
@@ -958,13 +930,10 @@ namespace CoinFlip
 				// The order is no longer on the exchange, so remove it from this collection
 				Orders.Remove(order.OrderId);
 			}
-
-			// Update the history range
-			HistoryInterval = new Range(HistoryInterval.Beg, timestamp.Ticks);
 		}
 
 		/// <summary>Add a new or modified OrderCompleted to the trade history DB</summary>
-		public void AddToTradeHistory(OrderCompleted fill)
+		public void AddToTradeHistory(OrderCompleted order)
 		{
 			// Notes:
 			// - This doesn't happen when 'Model.History' is accessed/added to by derived exchanges
@@ -973,59 +942,74 @@ namespace CoinFlip
 			// - Adding an 'OrderCompleted' does not imply the associated order is filled. Orders can be
 			//   partially filled. AddToTradeHistory is called for each partial fill of an order.
 
-			if (fill.Exchange != this)
+			if (order.Exchange != this)
 				throw new Exception("This position fill did not occur on this exchange");
 
-			// Get the trades not already in the DB
-			var trades = fill.Trades.Values.Where(x => !TradeHistoryTradeIds.Contains(x.TradeId)).ToList();
-			if (trades.Count != 0)
+			// Update the completed orders
+			using (var transaction = DB.BeginTransaction())
 			{
-				// Add each new trade
-				using (var transaction = DB.BeginTransaction())
-				{
-					foreach (var his in trades)
-					{
-						UpsertTradeCompleted(his, transaction);
+				// Get the trades not already in the DB
+				UpsertOrderCompleted(order, transaction);
+				foreach (var trade in order.Trades.Values)
+					UpsertTradeCompleted(trade, transaction);
 
-						// Record in the cache of known trades
-						TradeHistoryTradeIds.Add(his.TradeId);
-					}
-
-					transaction.Commit();
-				}
-
-				//// Notify that the trade history has changed
-				//todo - Caller's responsibility => Model.RaiseTradeHistoryChanged();
+				transaction.Commit();
 			}
+
+			// Update the history range
+			HistoryInterval = new Range(
+				Math.Min(HistoryInterval.Beg, order.Created.Ticks),
+				Math.Max(HistoryInterval.End, order.Created.Ticks));
 		}
 
 		/// <summary>Update or insert an 'OrderCompleted'</summary>
+		private void UpsertOrderCompleted(OrderCompleted order, IDbTransaction transaction = null)
+		{
+			var rec = new OrderRecord(order);
+			DB.Execute(
+				$"insert or replace into {Table.OrderComplete} (\n" +
+				$"  [{nameof(OrderRecord.OrderId)}],\n" +
+				$"  [{nameof(OrderRecord.FundId)}],\n" +
+				$"  [{nameof(OrderRecord.TradeType)}],\n" +
+				$"  [{nameof(OrderRecord.Pair)}]\n" +
+				$") values (\n" +
+				$"  @order_id, @fund_id, @trade_type, @pair\n" +
+				$")",
+				new
+				{
+					order_id = rec.OrderId,
+					fund_id = rec.FundId,
+					trade_type = rec.TradeType,
+					pair = rec.Pair,
+				},
+				transaction);
+		}
+
+		/// <summary>Update or insert a 'TradeCompleted'</summary>
 		private void UpsertTradeCompleted(TradeCompleted trade, IDbTransaction transaction = null)
 		{
 			var rec = new TradeRecord(trade);
 			DB.Execute(
-				$"insert or replace into {DBHistoryTableName} (\n" +
+				$"insert or replace into {Table.TradeComplete} (\n" +
 				$"  [{nameof(TradeRecord.TradeId)}],\n" +
 				$"  [{nameof(TradeRecord.OrderId)}],\n" +
 				$"  [{nameof(TradeRecord.Created)}],\n" +
-				$"  [{nameof(TradeRecord.Pair)}],\n" +
-				$"  [{nameof(TradeRecord.TradeType)}],\n" +
+				$"  [{nameof(TradeRecord.Updated)}],\n" +
 				$"  [{nameof(TradeRecord.PriceQ2B)}],\n" +
 				$"  [{nameof(TradeRecord.AmountBase)}],\n" +
 				$"  [{nameof(TradeRecord.CommissionQuote)}]\n" +
 				$") values (\n" +
-				$"  @trade_id, @order_id, @timestamp, @pair, @trade_type, @price, @amount, @commission\n" +
+				$"  @trade_id, @order_id, @created, @updated, @price_q2b, @amount_base, @commission_quote\n" +
 				$")",
 				new
 				{
 					trade_id = rec.TradeId,
 					order_id = rec.OrderId,
-					timestamp = rec.Created,
-					pair = rec.Pair,
-					trade_type = rec.TradeType,
-					price = rec.PriceQ2B,
-					amount = rec.AmountBase,
-					commission = rec.CommissionQuote,
+					created = rec.Created,
+					updated = rec.Updated,
+					price_q2b = rec.PriceQ2B,
+					amount_base = rec.AmountBase,
+					commission_quote = rec.CommissionQuote,
 				},
 				transaction); 
 		}
@@ -1046,6 +1030,74 @@ namespace CoinFlip
 			Balance[his.CoinIn].ChangeFundBalance(his.FundId, -his.AmountIn, amount_in_was_held ? -his.AmountIn : (Unit<decimal>?)null, timestamp);
 			Balance[his.CoinOut].ChangeFundBalance(his.FundId, +his.AmountNett, null, timestamp);
 		}
+
+		/// <summary>Update the trade history from the DB</summary>
+		private void PopulateTradeHistory()
+		{
+			if (m_populate_history_signalled) return;
+			m_populate_history_signalled = true;
+			Misc.RunOnMainThread(async () =>
+			{
+				Debug.Assert(Misc.AssertMainThread());
+				m_populate_history_signalled = false;
+
+				var history = new Dictionary<long, OrderCompleted>();
+				var history_first = DateTimeOffset.MaxValue;
+				var history_last = DateTimeOffset_.UnixEpoch;
+				var transfers_last = DateTimeOffset_.UnixEpoch;
+				var history_last_id = 0L;
+
+				// Get the completed orders
+				var orders = await DB.QueryAsync<OrderRecord>($"select * from {Table.OrderComplete}");
+				foreach (var order in orders)
+				{
+					var pair = Pairs[order.Pair];
+					if (pair != null)
+						history.Add(order.OrderId, new OrderCompleted(order.OrderId, order.FundId, Enum<ETradeType>.Parse(order.TradeType), pair));
+				}
+
+				// Get the trades that make up the completed orders
+				var trades = await DB.QueryAsync<TradeRecord>($"select * from {Table.TradeComplete}");
+				foreach (var trade in trades)
+				{
+					if (history.TryGetValue(trade.OrderId, out var order))
+					{
+						var pair = order.Pair;
+						var price_q2b = ((decimal)trade.PriceQ2B)._(pair.RateUnits);
+						var amount_base = ((decimal)trade.AmountBase)._(pair.Base);
+						var commission_quote = ((decimal)trade.CommissionQuote)._(pair.Quote);
+						var created = new DateTimeOffset(trade.Created, TimeSpan.Zero);
+						var updated = new DateTimeOffset(trade.Updated, TimeSpan.Zero);
+						order.Trades.Add(new TradeCompleted(trade.OrderId, trade.TradeId, order.Pair, order.TradeType, price_q2b, amount_base, commission_quote, created, updated));
+
+						// Record the range of completed orders
+						if (created < history_first)
+						{
+							history_first = created;
+						}
+						if (created > history_last)
+						{
+							history_last = created;
+							history_last_id = trade.OrderId;
+						}
+					}
+				}
+
+				// Assign to the collection
+				History.Clear();
+				History.AddRange(history);
+
+				// Set the time to get history from
+				m_history_last = history_last;
+				m_transfers_last = transfers_last;
+				m_history_last_id = history_last_id;
+
+				// Set the range to span the available history
+				if (history_first <= history_last)
+					HistoryInterval = new Range(history_first.Ticks, history_last.Ticks);
+			});
+		}
+		private bool m_populate_history_signalled;
 
 		/// <summary>The time range that the completed orders history covers (in ticks)</summary>
 		public Range HistoryInterval { get; protected set; }
@@ -1091,13 +1143,49 @@ namespace CoinFlip
 			public ETimeFrame TimeFrame;
 		}
 
+		/// <summary>Trade history table names</summary>
+		private static class Table
+		{
+			public const string OrderComplete = "OrderComplete";
+			public const string TradeComplete = "TradeComplete";
+		}
+
 		/// <summary>Colours for exchanges</summary>
 		private static uint[] Colours = new[]{ 0xFF000080, 0xFF008000, 0xFF800000, 0xFF808000, 0xFF800080, 0xFF008080, 0xFF80FF80 };
 		private static int m_colour_index;
 	}
-
 }
 
+
+
+///// <summary>Get/Set the amount of fake cash for the given symbol assigned to this exchange</summary>
+//public Unit<decimal> FakeCash(string sym)
+//{
+//	// Look for the coin on this exchange. If not supported, ignore.
+//	var coin = Coins[sym];
+//	if (coin == null)
+//		return 0m._(sym);
+
+//	// Get the balance of this coin
+//	var balances = Balance[coin];
+//	return balances.FakeCash;
+//}
+//public void FakeCash(string sym, decimal amount)
+//{
+//	// Look for the coin on this exchange. If not supported, ignore.
+//	var coin = Coins[sym];
+//	if (coin == null)
+//		return;
+
+//	// Get the balance of this coin
+//	var balances = Balance[coin];
+//	balances.FakeCash = amount._(coin);
+
+//	//// Distribute the fake cash evenly over each fund
+//	//var fund_count = (decimal)balances.Funds.Count;
+//	//foreach (var fund in balances.Funds.Values)
+//	//	fund.FakeCash = (amount / fund_count)._(coin);
+//}
 
 
 ///// <summary>App logic</summary>

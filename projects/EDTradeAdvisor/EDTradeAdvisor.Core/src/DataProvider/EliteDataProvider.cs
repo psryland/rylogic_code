@@ -31,9 +31,9 @@ namespace EDTradeAdvisor.DataProviders
 			Web = web;
 			Shutdown = shutdown;
 
-			m_cache_star_systems = new Cache<long, StarSystem> { ThreadSafe = true, Capacity = 0 };
-			m_cache_stations = new Cache<long, Station> { ThreadSafe = true, Capacity = 0 };
-			m_cache_market = new Cache<long, Market> { ThreadSafe = true, Capacity = 0 };
+			m_cache_star_systems = new Cache<long, StarSystem>(100) { ThreadSafe = true, Capacity = 0 };
+			m_cache_stations = new Cache<long, Station>(100) { ThreadSafe = true, Capacity = 0 };
+			m_cache_market = new Cache<long, Market>(100) { ThreadSafe = true, Capacity = 0 };
 			Map = new Map();
 
 			// Connect to the database and generate the tables

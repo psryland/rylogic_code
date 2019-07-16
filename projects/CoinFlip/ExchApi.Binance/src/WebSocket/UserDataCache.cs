@@ -311,7 +311,7 @@ namespace Binance.API
 			}
 
 			/// <summary>Access all historic trades for the given currency pair, since 'since' if given</summary>
-			public List<OrderFill> this[CurrencyPair pair, DateTimeOffset? since = null]
+			public List<OrderFill> this[CurrencyPair pair, DateTimeOffset? since = null, long? from_id = null]
 			{
 				get // Worker thread context
 				{
@@ -320,7 +320,9 @@ namespace Binance.API
 					{
 						if (!m_history.TryGetValue(pair, out history_per_pair))
 						{
-							history_per_pair = m_history[pair] = m_api.GetTradeHistory(pair, 0L).Result;
+							// Note: can't delay the 'GetTradeHistory' call because the caller needs
+							// accurate results on *this* call, not at some later time.
+							history_per_pair = m_history[pair] = m_api.GetTradeHistory(pair, from_id ?? 0L).Result;
 							history_per_pair.Sort(x => x.Created);
 						}
 					}

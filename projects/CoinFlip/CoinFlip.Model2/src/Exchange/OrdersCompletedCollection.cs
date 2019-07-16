@@ -18,7 +18,7 @@ namespace CoinFlip
 		public OrderCompleted GetOrAdd(string fund_id, long order_id, ETradeType tt, TradePair pair)
 		{
 			Debug.Assert(Misc.AssertMarketDataWrite());
-			return this.GetOrAdd(order_id, x => new OrderCompleted(fund_id, order_id, tt, pair));
+			return this.GetOrAdd(order_id, x => new OrderCompleted(order_id, fund_id, tt, pair));
 		}
 
 		/// <summary>Get/Set a history entry by order id. Returns null if 'order_id' is not in the collection</summary>

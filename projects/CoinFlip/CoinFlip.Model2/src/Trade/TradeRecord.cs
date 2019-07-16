@@ -1,30 +1,23 @@
-﻿using System;
-using System.Diagnostics;
-using Rylogic.Extn;
-using Rylogic.Utility;
-
-namespace CoinFlip
+﻿namespace CoinFlip
 {
-	/// <summary>Basic record of a trade</summary>
-	[DebuggerDisplay("{Description,nq}")]
-	public class TradeRecord
+	internal class TradeRecord
 	{
 		// Notes:
 		//  - This is a domain object used to stored a history of trades in a DB Table
-
+		//  - This type is used instead of 'TradeCompleted' because it doesn't have
+		//    Unit<decimal> properties and DateTimeOffset's etc. It's easier to store
+		//    in a DB table.
 		public TradeRecord()
 		{ }
-		public TradeRecord(TradeCompleted his)
+		public TradeRecord(TradeCompleted trade)
 		{
-			TradeId = his.TradeId;
-			OrderId = his.OrderId;
-			Created = his.Created.Ticks;
-			Updated = his.Updated.Ticks;
-			Pair = his.Pair.Name;
-			TradeType = his.TradeType.ToString();
-			PriceQ2B = (double)(decimal)his.PriceQ2B;
-			AmountBase = (double)(decimal)his.AmountBase;
-			CommissionQuote = (double)(decimal)his.CommissionQuote;
+			TradeId = trade.TradeId;
+			OrderId = trade.OrderId;
+			Created = trade.Created.Ticks;
+			Updated = trade.Updated.Ticks;
+			PriceQ2B = (double)(decimal)trade.PriceQ2B;
+			AmountBase = (double)(decimal)trade.AmountBase;
+			CommissionQuote = (double)(decimal)trade.CommissionQuote;
 		}
 
 		/// <summary>The trade id</summary>
@@ -39,12 +32,6 @@ namespace CoinFlip
 		/// <summary>When this trade was last updated from the server</summary>
 		public long Updated { get; set; }
 
-		/// <summary>The name of the pair that was traded</summary>
-		public string Pair { get; set; }
-
-		/// <summary>The direction of the trade</summary>
-		public string TradeType { get; set; }
-
 		/// <summary>The price that the trade occurred at</summary>
 		public double PriceQ2B { get; set; }
 
@@ -53,18 +40,5 @@ namespace CoinFlip
 
 		/// <summary>The amount charged as commission on the trade</summary>
 		public double CommissionQuote { get; set; }
-
-		/// <summary>Convert from DB record to 'TradeCompleted'</summary>
-		public TradeCompleted ToTradeCompleted(Exchange exch)
-		{
-			var pair = exch.Pairs[Pair];
-			var tt = Enum<ETradeType>.Parse(TradeType);
-			var created = new DateTimeOffset(Created, TimeSpan.Zero);
-			var updated = new DateTimeOffset(Updated, TimeSpan.Zero);
-			var price_q2b = ((decimal)PriceQ2B)._(pair.RateUnits);
-			var amount_base = ((decimal)AmountBase)._(pair.Base);
-			var commission_quote = ((decimal)CommissionQuote)._(pair.Quote);
-			return new TradeCompleted(OrderId, TradeId, pair, tt, price_q2b, amount_base, commission_quote, created, updated);
-		}
 	}
 }

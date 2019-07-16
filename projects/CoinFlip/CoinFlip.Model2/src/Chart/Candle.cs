@@ -6,7 +6,7 @@ using Rylogic.Maths;
 namespace CoinFlip
 {
 	/// <summary>The core data of a single candle</summary>
-	[DebuggerDisplay("{Description}")]
+	[DebuggerDisplay("{Description,nq}")]
 	public class Candle
 	{
 		// Notes:

@@ -1,8 +1,6 @@
 Immediate ToDo:
 
 CoinFlip
-	- Opacity control for on-chart trade text
-	- Fix z-order of on-chart trade text
 	- Depth of market scale indicator/adjuster
 	- Support create trade at market price (so that it always fills)
 	- Do something so that all pairs are not queried for history all the time on startup
