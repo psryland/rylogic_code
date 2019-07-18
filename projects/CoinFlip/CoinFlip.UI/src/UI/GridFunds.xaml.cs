@@ -135,33 +135,6 @@ namespace CoinFlip.UI
 		/// <summary>True if there are funds other than the Main fund</summary>
 		public bool HasUserFunds => Funds.Cast<Fund>().Any(x => x.Id != Fund.Main);
 
-		/// <summary>Reset the grid columns to contain a column per fund</summary>
-		private void CreateFundColumns()
-		{
-			// Delete the columns
-			for (; m_grid.Columns.Count > 1;)
-				m_grid.Columns.RemoveAt(1);
-
-			// Create a column for each fund
-			var conv = new CoinDataAdapterToIBalanceConverter();
-			var templ = (DataTemplate)FindResource("FundBalanceDataTemplate");
-			foreach (var fund in Model.Funds)
-			{
-				var col = m_grid.Columns.Add2(new DataGridBoundTemplateColumn
-				{
-					Header = fund.Id,
-					Width = new DataGridLength(1.0, DataGridLengthUnitType.Star),
-					CellTemplate = templ,
-					Binding = new Binding()
-					{
-						Mode = BindingMode.OneWay,
-						Converter = conv,
-						ConverterParameter = fund,
-					},
-				});
-			}
-		}
-
 		/// <summary>Create a new Fund</summary>
 		public Command CreateNewFund { get; }
 		private void CreateNewFundInternal()
@@ -212,6 +185,39 @@ namespace CoinFlip.UI
 			dlg.Show();
 		}
 
+		/// <summary>Reset the grid columns to contain a column per fund</summary>
+		private void CreateFundColumns()
+		{
+			// Delete the columns
+			for (; m_grid.Columns.Count > 1;)
+				m_grid.Columns.RemoveAt(1);
+
+			// Create a column for each fund.
+			// Rows are bound to a collection of 'CoinDataAdapter'.
+			// Each column wants the balance for it's associated fund.
+			// The column binding is essentially a factory for creating bindings
+			// for each cell in the column.
+			// The bindings in 'FundBalanceDataTemplate' are to the properties
+			// of the object returned from the converter (which is an IBalance)
+			var conv = new CoinDataAdapterToIBalanceConverter();
+			var templ = (DataTemplate)FindResource("FundBalanceDataTemplate");
+			foreach (var fund in Model.Funds)
+			{
+				var col = m_grid.Columns.Add2(new DataGridBoundTemplateColumn
+				{
+					Header = fund.Id,
+					Width = new DataGridLength(1.0, DataGridLengthUnitType.Star),
+					CellTemplate = templ,
+					Binding = new Binding()
+					{
+						Mode = BindingMode.OneWay,
+						Converter = conv,
+						ConverterParameter = fund,
+					},
+				});
+			}
+		}
+
 		/// <summary>Wraps 'CoinData' to expose properties for binding</summary>
 		private class CoinDataAdapter :IValueTotalAvail, INotifyPropertyChanged
 		{
@@ -220,13 +226,6 @@ namespace CoinFlip.UI
 			{
 				m_me = me;
 				CoinData = cd;
-
-				// When the balance of 'cd' changes, trigger a binding update.
-				cd.BalanceChanged += WeakRef.MakeWeak(UpdateBalanceChanged, h => cd.BalanceChanged -= h);
-				void UpdateBalanceChanged(object sender = null, EventArgs args = null)
-				{
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(null));
-				}
 			}
 
 			/// <summary>The wrapped coin data</summary>
@@ -250,8 +249,15 @@ namespace CoinFlip.UI
 			/// <summary>The available amount of the coin (in coin currency)</summary>
 			public Unit<decimal> Available => Coin?.Balances.NettAvailable ?? 0m._(Symbol);
 
+			/// <summary>The amount that is locked</summary>
+			public Unit<decimal> Held => Coin?.Balances.NettHeld ?? 0m._(Symbol);
+
 			/// <summary></summary>
 			public event PropertyChangedEventHandler PropertyChanged;
+			public void NotifyPropertyChanged(string prop_name)
+			{
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+			}
 		}
 
 		/// <summary>Converter for converting 'CoinDataAdapter' to an 'IBalance', per exchange, per fund</summary>
@@ -260,9 +266,9 @@ namespace CoinFlip.UI
 			public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 			{
 				// Get the balance associated with this coin on this exchange in this fund
-				var item = (CoinDataAdapter)value;
+				var adpt = (CoinDataAdapter)value;
 				var fund = (Fund)parameter;
-				var coin = item.Coin;
+				var coin = adpt.Coin;
 				return coin != null ? fund[coin] : null;
 			}
 			public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

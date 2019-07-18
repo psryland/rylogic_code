@@ -62,6 +62,8 @@ namespace CoinFlip.UI
 				{
 					Model.AllowTradesChanged -= HandleAllowTradesChanged;
 					Model.BackTestingChange -= HandleBackTestingChange;
+					CoinData.BalanceChangeded -= HandleBalanceChanged;
+					CoinData.LivePriceChanged -= HandleBalanceChanged;
 					m_model.Coins.CollectionChanged -= HandleCoinsChanged;
 					m_model.Exchanges.CollectionChanged -= HandleExchangesChanged;
 				}
@@ -70,6 +72,8 @@ namespace CoinFlip.UI
 				{
 					m_model.Exchanges.CollectionChanged += HandleExchangesChanged;
 					m_model.Coins.CollectionChanged += HandleCoinsChanged;
+					CoinData.LivePriceChanged += HandleBalanceChanged;
+					CoinData.BalanceChangeded += HandleBalanceChanged;
 					Model.BackTestingChange += HandleBackTestingChange;
 					Model.AllowTradesChanged += HandleAllowTradesChanged;
 					HandleExchangesChanged(null, null);
@@ -88,13 +92,18 @@ namespace CoinFlip.UI
 						list.AddRange(Model.TradingExchanges.Select(x => x.Name));
 						ExchangeNames.Refresh();
 					}
+
+					Coins.Refresh();
 				}
 				void HandleCoinsChanged(object sender, NotifyCollectionChangedEventArgs e)
 				{
 					using (Scope.Create(() => Coins.CurrentItem, ci => Coins.MoveCurrentToOrFirst(ci)))
-					{
 						Coins.Refresh();
-					}
+				}
+				void HandleBalanceChanged(object sender, CoinEventArgs e)
+				{
+					var coin = Coins.Cast<CoinDataAdapter>().FirstOrDefault(x => x.CoinData.Symbol == e.Coin.Symbol);
+					coin?.Invalidate();
 				}
 				void HandleBackTestingChange(object sender, PrePostEventArgs e)
 				{
@@ -226,33 +235,6 @@ namespace CoinFlip.UI
 				CoinData = cd;
 				Model = model;
 				ExchangeNames = exchange_names;
-
-				// Notify when external data changes
-				cd.LivePriceChanged += WeakRef.MakeWeak(UpdateLiveValueChanged, h => cd.LivePriceChanged -= h);
-				void UpdateLiveValueChanged(object sender = null, EventArgs args = null)
-				{
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Value)));
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Balance)));
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(LiveValueAvailable)));
-				}
-
-				cd.BalanceChanged += WeakRef.MakeWeak(UpdateBalanceChanged, h => cd.BalanceChanged -= h);
-				void UpdateBalanceChanged(object sender = null, EventArgs args = null)
-				{
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Available)));
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Total)));
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Balance)));
-				}
-
-				exchange_names.CurrentChanged += WeakRef.MakeWeak(UpdateSourceChanged, h => exchange_names.CurrentChanged -= h);
-				void UpdateSourceChanged(object sender = null, EventArgs args = null)
-				{
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Value)));
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Available)));
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Total)));
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Balance)));
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(LiveValueAvailable)));
-				}
 			}
 
 			/// <summary>App logic</summary>
@@ -350,7 +332,21 @@ namespace CoinFlip.UI
 			public bool LiveValueAvailable => SourceExchanges.Any(x => x.Coins[Symbol]?.LivePriceAvailable ?? false);
 
 			/// <summary></summary>
+			public void Invalidate()
+			{
+				NotifyPropertyChanged(nameof(Value));
+				NotifyPropertyChanged(nameof(Balance));
+				NotifyPropertyChanged(nameof(Total));
+				NotifyPropertyChanged(nameof(Available));
+				NotifyPropertyChanged(nameof(LiveValueAvailable));
+			}
+
+			/// <summary></summary>
 			public event PropertyChangedEventHandler PropertyChanged;
+			public void NotifyPropertyChanged(string prop_name)
+			{
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+			}
 		}
 	}
 }

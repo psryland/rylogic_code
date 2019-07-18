@@ -242,21 +242,26 @@ namespace CoinFlip
 				var history_last_id = 0L;
 
 				// Update the collection of existing orders
-				foreach (var order in existing_orders)
+				foreach (var exch_order in existing_orders)
 				{
 					// Add the order to the collection
-					var odr = OrderFrom(order, timestamp);
-					Orders[odr.OrderId] = odr;
-					order_ids.Add(odr.OrderId);
-					new_pairs.Add(odr.Pair);
+					var order = OrderFrom(exch_order, timestamp);
+					Orders[order.OrderId] = order;
+					order_ids.Add(order.OrderId);
+					new_pairs.Add(order.Pair);
 				}
-				foreach (var order in history_orders)
+				foreach (var exch_order in history_orders)
 				{
-					// Add the completed order to the collection
-					var his = TradeCompletedFrom(order, timestamp);
-					var fill = History.GetOrAdd(OrderIdToFundId(his.OrderId), his.OrderId, his.TradeType, his.Pair);
-					fill.Trades[his.TradeId] = his;
-					AddToTradeHistory(fill);
+					// Get/Add the completed order
+					var order_completed = History.GetOrAdd(exch_order.OrderId, x => new OrderCompleted(x, OrderIdToFundId(x),
+						Misc.TradeType(exch_order.Side), Pairs.GetOrAdd(exch_order.Pair.Base, exch_order.Pair.Quote)));
+
+					// Add the trade to the completed order
+					var fill = TradeCompletedFrom(exch_order, order_completed, timestamp);
+					order_completed.Trades[fill.TradeId] = fill;
+
+					// Update the history of completed orders
+					AddToTradeHistory(order_completed);
 
 					// Save the last order id
 					history_last_id = fill.OrderId;
@@ -320,8 +325,8 @@ namespace CoinFlip
 
 					// Convert to CoinFlip market data format
 					var rate_units = $"{pair.Quote}/{pair.Base}";
-					var b2q = ob.B2QOffers.Select(x => new Offer(x.PriceQ2B._(rate_units), x.AmountBase._(pair.Base))).ToArray();
-					var q2b = ob.Q2BOffers.Select(x => new Offer(x.PriceQ2B._(rate_units), x.AmountBase._(pair.Base))).ToArray();
+					var b2q = ob.B2QOffers.Select(x => new Offer(x.PriceQ2B, x.AmountBase)).ToArray();
+					var q2b = ob.Q2BOffers.Select(x => new Offer(x.PriceQ2B, x.AmountBase)).ToArray();
 
 					return new { pair, b2q, q2b};
 				}).ToList();
@@ -444,12 +449,10 @@ namespace CoinFlip
 		}
 
 		/// <summary>Convert an exchange order into a CoinFlip order completed</summary>
-		private TradeCompleted TradeCompletedFrom(global::Binance.API.DomainObjects.OrderFill fill, DateTimeOffset updated)
+		private TradeCompleted TradeCompletedFrom(global::Binance.API.DomainObjects.OrderFill fill, OrderCompleted order_completed, DateTimeOffset updated)
 		{
-			var order_id = fill.OrderId;
+			var pair = order_completed.Pair;
 			var trade_id = fill.TradeId;
-			var tt = Misc.TradeType(fill.Side);
-			var pair = Pairs.GetOrAdd(fill.Pair.Base, fill.Pair.Quote);
 			var price_q2b = fill.Price._(pair.RateUnits);
 			var amount_base = fill.AmountBase._(pair.Base);
 			var commission = fill.Commission._(fill.CommissionAsset);
@@ -464,7 +467,7 @@ namespace CoinFlip
 				fill.CommissionAsset == fill.Pair.Quote ? commission._(pair.Quote) :
 				0m._(pair.Quote);
 
-			return new TradeCompleted(order_id, trade_id, pair, tt, price_q2b, amount_base, commission_quote, created, updated);
+			return new TradeCompleted(order_completed, trade_id, price_q2b, amount_base, commission_quote, created, updated);
 		}
 
 		/// <summary>Convert a market period to a time frame</summary>

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 using CoinFlip.Bots;
 using CoinFlip.Settings;
 using Rylogic.Common;
@@ -164,7 +165,13 @@ namespace CoinFlip.UI
 		{
 			var bot = (IBot)Bots.CurrentItem;
 			if (bot == null) return;
-			bot.Configure(Window.GetWindow(this));
+			bot.Configure(Window.GetWindow(this)).Wait();
+		}
+
+		/// <summary></summary>
+		private void HandleActiveCellClick(object sender, MouseButtonEventArgs e)
+		{
+			ToggleActive.Execute();
 		}
 	}
 }

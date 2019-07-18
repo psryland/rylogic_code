@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Threading;
@@ -181,6 +181,9 @@ namespace CoinFlip
 
 		/// <summary>The commission that would be charged on this trade (in the same currency as AmountOut)</summary>
 		public Unit<decimal> Commission => Exchange.Fee * AmountOut;
+
+		/// <summary>The commission that would be charged on this trade (in quote currency)</summary>
+		public Unit<decimal> CommissionQuote => Exchange.Fee * AmountQuote;
 
 		/// <summary>The price to make the trade at (Quote/Base)</summary>
 		public Unit<decimal> PriceQ2B

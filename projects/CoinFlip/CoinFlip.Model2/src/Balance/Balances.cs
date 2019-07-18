@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using CoinFlip.Settings;
@@ -74,7 +75,7 @@ namespace CoinFlip
 				var bal_data = fd[Exchange.Name][Coin.Symbol];
 
 				// Attribute the balance amount to fund 'fd.Id'
-				AssignFundBalance(fd.Id, bal_data.Total._(Coin), bal_data.Held._(Coin), Model.UtcNow);
+				AssignFundBalance(fd.Id, bal_data.Total._(Coin), bal_data.Held._(Coin), Model.UtcNow, notify:false);
 			}
 		}
 
@@ -112,12 +113,13 @@ namespace CoinFlip
 		public IBalance this[Fund fund] => this[fund?.Id];
 
 		/// <summary>Set the total balance attributed to the fund 'fund_id'. Only non-null values are changed</summary>
-		public void AssignFundBalance(string fund_id, Unit<decimal>? total, Unit<decimal>? held_on_exch, DateTimeOffset now)
+		public void AssignFundBalance(string fund_id, Unit<decimal>? total, Unit<decimal>? held_on_exch, DateTimeOffset now, bool notify = true)
 		{
 			// Notes:
 			// - Don't throw if the nett total becomes negative, that probably just means a fund
 			//   has been assigned too much. Allow the user to reduce the allocations.
 
+			var balance = (Balance)Funds.FirstOrDefault(x => x.FundId == fund_id);
 			if (fund_id == Fund.Main)
 			{
 				if (total != null)
@@ -128,7 +130,6 @@ namespace CoinFlip
 			else
 			{
 				// Get the balance info for 'fund_id', create if necessary
-				var balance = (Balance)Funds.FirstOrDefault(x => x.FundId == fund_id);
 				balance = balance ?? m_funds.Add2(new Balance(this, fund_id));
 
 				if (total != null)
@@ -139,11 +140,19 @@ namespace CoinFlip
 				balance.LastUpdated = now;
 				balance.CheckHolds();
 			}
+
+			// Signal balance changed
+			if (notify)
+			{
+				balance.Invalidate();
+				CoinData.NotifyBalanceChanged(Coin);
+			}
 		}
 
 		/// <summary>Add or subtract an amount from a fund</summary>
-		public void ChangeFundBalance(string fund_id, Unit<decimal>? change_total, Unit<decimal>? change_held_on_exch, DateTimeOffset now)
+		public void ChangeFundBalance(string fund_id, Unit<decimal>? change_total, Unit<decimal>? change_held_on_exch, DateTimeOffset now, bool notify = true)
 		{
+			var balance = (Balance)Funds.FirstOrDefault(x => x.FundId == fund_id);
 			if (fund_id == Fund.Main)
 			{
 				if (change_total != null)
@@ -154,7 +163,6 @@ namespace CoinFlip
 			else
 			{
 				// Get the balance info for 'fund_id', create if necessary
-				var balance = (Balance)Funds.FirstOrDefault(x => x.FundId == fund_id);
 				balance = balance ?? m_funds.Add2(new Balance(this, fund_id));
 
 				if (change_total != null)
@@ -164,6 +172,13 @@ namespace CoinFlip
 
 				balance.LastUpdated = now;
 				balance.CheckHolds();
+			}
+
+			// Signal balance changed
+			if (notify)
+			{
+				balance.Invalidate();
+				CoinData.NotifyBalanceChanged(Coin);
 			}
 		}
 
@@ -207,7 +222,7 @@ namespace CoinFlip
 
 		/// <summary>Implements the balance associated with a single fund for a coin on an exchange</summary>
 		[DebuggerDisplay("{Description,nq}")]
-		private class Balance :IBalance, IValueTotalAvail
+		private class Balance :IBalance, IValueTotalAvail, INotifyPropertyChanged
 		{
 			private readonly Balances m_balances;
 			public Balance(Balances balances, string fund_id)
@@ -247,6 +262,17 @@ namespace CoinFlip
 			}
 			private Unit<decimal> m_total;
 
+			/// <summary>Total amount able to be used for new trades</summary>
+			public Unit<decimal> Available
+			{
+				get
+				{
+					CheckHolds();
+					var avail = Total - HeldForTrades;
+					return avail > 0 ? avail : 0m._(Coin);
+				}
+			}
+
 			/// <summary>Total amount set aside for pending orders and trade strategies</summary>
 			public Unit<decimal> HeldOnExch
 			{
@@ -264,17 +290,6 @@ namespace CoinFlip
 
 			/// <summary>Total amount set aside for pending orders and trade strategies</summary>
 			public Unit<decimal> HeldForTrades => HeldOnExch + HeldLocally;
-
-			/// <summary>Total amount able to be used for new trades</summary>
-			public Unit<decimal> Available
-			{
-				get
-				{
-					CheckHolds();
-					var avail = Total - HeldForTrades;
-					return avail > 0 ? avail : 0m._(Coin);
-				}
-			}
 
 			/// <summary>Reserve 'amount' until the next balance update</summary>
 			public Guid Hold(Unit<decimal> amount)
@@ -325,6 +340,23 @@ namespace CoinFlip
 					if (hold.StillNeeded(this)) continue;
 					Holds.Remove(hold);
 				}
+			}
+
+			/// <summary></summary>
+			public event PropertyChangedEventHandler PropertyChanged;
+			private void NotifyPropertyChanged(string prop_name)
+			{
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+			}
+
+			/// <summary></summary>
+			public void Invalidate()
+			{
+				NotifyPropertyChanged(nameof(Total));
+				NotifyPropertyChanged(nameof(Available));
+				NotifyPropertyChanged(nameof(HeldOnExch));
+				NotifyPropertyChanged(nameof(HeldLocally));
+				NotifyPropertyChanged(nameof(HeldForTrades));
 			}
 
 			/// <summary>String description of this fund balance</summary>

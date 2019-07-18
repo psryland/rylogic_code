@@ -17,7 +17,7 @@ namespace CoinFlip
 		public OrderBook(Coin @base, Coin quote, ETradeType tt)
 		{
 			TradeType = tt;
-			Offers = new ObservableCollection<Offer>();
+			Offers = new List<Offer>();
 			Base = @base;
 			Quote = quote;
 		}
@@ -25,7 +25,7 @@ namespace CoinFlip
 		{
 			Base = rhs.Base;
 			Quote = rhs.Quote;
-			Offers = new ObservableCollection<Offer>(rhs.Offers);
+			Offers = new List<Offer>(rhs.Offers);
 			TradeType = rhs.TradeType;
 		}
 
@@ -39,7 +39,7 @@ namespace CoinFlip
 		public Coin Quote { get; }
 
 		/// <summary>The buy/sell offers</summary>
-		public ObservableCollection<Offer> Offers { get; }
+		public List<Offer> Offers { get; }
 
 		/// <summary>If positive, then the first order is a minimum (i.e. Q2B). If negative, then the first order is a maximum (i.e. B2Q)</summary>
 		public int Sign => TradeType.Sign();
@@ -48,7 +48,11 @@ namespace CoinFlip
 		public int Count => Offers.Count;
 
 		/// <summary>Array access</summary>
-		public Offer this[int index] => Offers[index];
+		public Offer this[int index]
+		{
+			get => Offers[index];
+			set => Offers[index] = value;
+		}
 
 		/// <summary>Remove all orders</summary>
 		public void Clear()

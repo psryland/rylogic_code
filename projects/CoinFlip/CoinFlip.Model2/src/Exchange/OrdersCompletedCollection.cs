@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using Rylogic.Extn;
 
 namespace CoinFlip
@@ -15,10 +16,11 @@ namespace CoinFlip
 		{ }
 
 		/// <summary>Get or Add a history entry with order id 'order_id' for 'pair'</summary>
-		public OrderCompleted GetOrAdd(string fund_id, long order_id, ETradeType tt, TradePair pair)
+		public OrderCompleted GetOrAdd(long order_id, Func<long, OrderCompleted> factory)
 		{
 			Debug.Assert(Misc.AssertMarketDataWrite());
-			return this.GetOrAdd(order_id, x => new OrderCompleted(order_id, fund_id, tt, pair));
+			var order = Dictionary_.GetOrAdd(this, order_id, factory);
+			return order;
 		}
 
 		/// <summary>Get/Set a history entry by order id. Returns null if 'order_id' is not in the collection</summary>

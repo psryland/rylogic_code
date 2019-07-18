@@ -147,6 +147,7 @@ namespace Bot.Rebalance
 		public Command AllocateAllAvailableBase { get; }
 		private void AllocateAllAvailableBaseInternal()
 		{
+			if (ChartSelector.Pair == null) return;
 			var available = Fund[ChartSelector.Pair.Base].Available;
 			Settings.BaseCurrencyBalance = available;
 		}
@@ -155,6 +156,7 @@ namespace Bot.Rebalance
 		public Command AllocateAllAvailableQuote { get; }
 		private void AllocateAllAvailableQuoteInternal()
 		{
+			if (ChartSelector.Pair == null) return;
 			var available = Fund[ChartSelector.Pair.Quote].Available;
 			Settings.QuoteCurrencyBalance = available;
 		}

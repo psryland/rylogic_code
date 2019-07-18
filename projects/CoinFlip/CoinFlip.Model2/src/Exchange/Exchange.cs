@@ -662,7 +662,7 @@ namespace CoinFlip
 				if (price_ <= 0m._(pair.Quote) / 1m._(pair.Base))
 					throw new Exception($"Invalid exchange rate: {price_}");
 				if (amount_ > Balance[pair.Base][fund_id].Available)
-					throw new Exception($"Order amount is greater than the current balance: {Balance[pair.Base][fund_id].Available}");
+					throw new Exception($"Order amount ({amount_}) is greater than the current balance: {Balance[pair.Base][fund_id].Available}");
 			}
 			if (tt == ETradeType.Q2B)
 			{
@@ -671,7 +671,7 @@ namespace CoinFlip
 				if (price_ <= 0m._(pair.Base) / 1m._(pair.Quote))
 					throw new Exception($"Invalid exchange rate: {price_}");
 				if (amount_ > Balance[pair.Quote][fund_id].Available)
-					throw new Exception($"Order amount is greater than the current balance: {Balance[pair.Quote][fund_id].Available}");
+					throw new Exception($"Order amount ({amount_}) is greater than the current balance: {Balance[pair.Quote][fund_id].Available}");
 			}
 
 			// Convert the amount to base currency and the price to quote/base
@@ -706,10 +706,11 @@ namespace CoinFlip
 			Model.Log.Write(ELogLevel.Info, $"{Name}: (id={result.OrderId}) {amount_.ToString("F8", true)} → {(amount_ * price_).ToString("F8", true)} @ {price.ToString("F8", true)}");
 
 			// The order may have been completed or partially filled. Add the filled orders to the trade history.
-			foreach (var tid in result.TradeIds)
+			foreach (var fill in result.Trades)
 			{
-				var fill = History.GetOrAdd(fund_id, result.OrderId, tt, pair);
-				fill.Trades[tid] = new TradeCompleted(result.OrderId, tid, pair, tt, price, amount, price * amount * Fee, now, now);
+				// At this stage we don't know how the amount is distributed across the individual trades
+				var order_completed = History.GetOrAdd(result.OrderId, x => new OrderCompleted(x, fund_id, tt, pair));
+				order_completed.Trades[fill.TradeId] = new TradeCompleted(order_completed, fill.TradeId, fill.Price, fill.Amount, fill.Commission, now, now);
 			}
 
 			// Add the order to the Orders collection so that there is no race condition
@@ -1060,15 +1061,15 @@ namespace CoinFlip
 				var trades = await DB.QueryAsync<TradeRecord>($"select * from {Table.TradeComplete}");
 				foreach (var trade in trades)
 				{
-					if (history.TryGetValue(trade.OrderId, out var order))
+					if (history.TryGetValue(trade.OrderId, out var order_completed))
 					{
-						var pair = order.Pair;
+						var pair = order_completed.Pair;
 						var price_q2b = ((decimal)trade.PriceQ2B)._(pair.RateUnits);
 						var amount_base = ((decimal)trade.AmountBase)._(pair.Base);
 						var commission_quote = ((decimal)trade.CommissionQuote)._(pair.Quote);
 						var created = new DateTimeOffset(trade.Created, TimeSpan.Zero);
 						var updated = new DateTimeOffset(trade.Updated, TimeSpan.Zero);
-						order.Trades.Add(new TradeCompleted(trade.OrderId, trade.TradeId, order.Pair, order.TradeType, price_q2b, amount_base, commission_quote, created, updated));
+						order_completed.Trades.Add(new TradeCompleted(order_completed, trade.TradeId, price_q2b, amount_base, commission_quote, created, updated));
 
 						// Record the range of completed orders
 						if (created < history_first)

@@ -152,21 +152,27 @@ namespace CoinFlip
 				var pairs = new HashSet<CurrencyPair>();
 
 				// Update the collection of existing orders
-				foreach (var order in positions)
+				foreach (var exch_order in positions)
 				{
 					// Add the order to the collection
-					var odr = OrderFrom(order, timestamp);
-					Orders[odr.OrderId] = odr;
-					order_ids.Add(odr.OrderId);
-					pairs.Add(order.Pair);
+					var order = OrderFrom(exch_order, timestamp);
+					Orders[order.OrderId] = order;
+					order_ids.Add(order.OrderId);
+					pairs.Add(exch_order.Pair);
 				}
-				foreach (var order in history)
+				foreach (var exch_order in history)
 				{
-					// Add the filled positions to the collection
-					var his = TradeCompletedFrom(order, timestamp);
-					var fill = History.GetOrAdd(OrderIdToFundId(his.OrderId), his.OrderId, his.TradeType, his.Pair);
-					fill.Trades[his.TradeId] = his;
-					AddToTradeHistory(fill);
+					// Get/Add the completed order
+					var ids = ToIdPair(exch_order.OrderId);
+					var order_completed = History.GetOrAdd(ids.OrderId, x => new OrderCompleted(x, OrderIdToFundId(x),
+						Misc.TradeType(exch_order.Type), Pairs.GetOrAdd(exch_order.Pair.Base, exch_order.Pair.Quote)));
+
+					// Add the trade to the completed order
+					var fill = TradeCompletedFrom(exch_order, order_completed, timestamp);
+					order_completed.Trades[fill.TradeId] = fill;
+
+					// Update the history of completed orders
+					AddToTradeHistory(order_completed);
 				}
 
 				// Update the trade pairs
@@ -313,21 +319,19 @@ namespace CoinFlip
 		}
 
 		/// <summary>Convert a Cryptopia trade history result into a position object</summary>
-		private TradeCompleted TradeCompletedFrom(global::Bittrex.API.DomainObjects.Trade his, DateTimeOffset updated)
+		private TradeCompleted TradeCompletedFrom(global::Bittrex.API.DomainObjects.Trade his, OrderCompleted order_completed, DateTimeOffset updated)
 		{
 			// Get the associated trade pair (add the pair if it doesn't exist)
 			// Bittrex doesn't use trade ids. Make them up using the Remaining
 			// volume so that each trade for a given order is unique (ish).
+			var pair = order_completed.Pair;
 			var ids = ToIdPair(his.OrderId);
-			var order_id = ids.OrderId;
 			var trade_id = ids.TradeId;
-			var tt = Misc.TradeType(his.Type);
-			var pair = Pairs.GetOrAdd(his.Pair.Base, his.Pair.Quote);
 			var price = his.PricePerUnit._(pair.RateUnits);
 			var amount_base = his.FilledBase._(pair.Base);
 			var commission_quote = his.Commission._(pair.Quote);
 			var created = his.Created;
-			return new TradeCompleted(order_id, trade_id, pair, tt, price, amount_base, commission_quote, created, updated);
+			return new TradeCompleted(order_completed, trade_id, price, amount_base, commission_quote, created, updated);
 		}
 
 		/// <summary>Convert a poloniex deposit into a 'Transfer'</summary>

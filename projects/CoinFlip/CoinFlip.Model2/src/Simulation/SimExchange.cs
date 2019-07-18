@@ -59,7 +59,6 @@ namespace CoinFlip
 				Exchange.Sim = this;
 
 				Reset();
-				Step();
 			}
 			catch
 			{
@@ -130,7 +129,17 @@ namespace CoinFlip
 			{
 				pair.SpotPrice[ETradeType.Q2B] = null;
 				pair.SpotPrice[ETradeType.B2Q] = null;
-				pair.MarketDepth.UpdateOrderBook(Enumerable.Empty<Offer>(), Enumerable.Empty<Offer>());
+				pair.MarketDepth.UpdateOrderBook(new Offer[0], new Offer[0]);
+
+				// Set the spot prices from the current candle at the simulation time
+				var latest = PriceData[pair, Sim.TimeFrame]?.Current;
+				if (latest != null)
+				{
+					var spot_q2b = latest.Close;
+					var spread = spot_q2b * m_spread_frac;
+					pair.SpotPrice[ETradeType.Q2B] = ((decimal)(spot_q2b         ))._(pair.RateUnits);
+					pair.SpotPrice[ETradeType.B2Q] = ((decimal)(spot_q2b - spread))._(pair.RateUnits);
+				}
 			}
 		}
 
@@ -166,8 +175,8 @@ namespace CoinFlip
 
 					// Update the spot price and order book
 					pair.MarketDepth.UpdateOrderBook(md.B2Q.ToArray(), md.Q2B.ToArray());
-					pair.SpotPrice[ETradeType.Q2B] = md.Q2B[0].Price;
-					pair.SpotPrice[ETradeType.B2Q] = md.B2Q[0].Price;
+					pair.SpotPrice[ETradeType.Q2B] = ((decimal)md.Q2B[0].Price)._(pair.RateUnits);
+					pair.SpotPrice[ETradeType.B2Q] = ((decimal)md.B2Q[0].Price)._(pair.RateUnits);
 
 					// Q2B => first price is the minimum, B2Q => first price is a maximum
 					Debug.Assert(pair.SpotPrice[ETradeType.Q2B] == ((decimal)latest.Close                       )._(pair.RateUnits));
@@ -228,21 +237,26 @@ namespace CoinFlip
 					var timestamp = Model.UtcNow;
 
 					// Update the collection of existing orders
-					foreach (var order in m_ord.Values)
+					foreach (var exch_order in m_ord.Values)
 					{
 						// Add the order to the collection
-						var odr = new Order(order);
-						Orders[order.OrderId] = odr;
-						order_ids.Add(odr.OrderId);
+						var order = new Order(exch_order);
+						Orders[exch_order.OrderId] = order;
+						order_ids.Add(order.OrderId);
 					}
 					var history_updates = m_his.Values.Where(x => x.Created.Ticks >= Exchange.HistoryInterval.End);
-					foreach (var order in history_updates.SelectMany(x => x.Trades.Values))
+					foreach (var exch_order in history_updates.SelectMany(x => x.Trades.Values))
 					{
-						// Add the completed trades to the collection
-						var his = new TradeCompleted(order);
-						var fill = History.GetOrAdd(Exchange.OrderIdToFundId(his.OrderId), his.OrderId, his.TradeType, his.Pair);
-						fill.Trades[his.TradeId] = his;
-						Exchange.AddToTradeHistory(fill);
+						// Get/Add the completed order
+						var order_completed = History.GetOrAdd(exch_order.OrderId, x => new OrderCompleted(x, Exchange.OrderIdToFundId(x),
+							exch_order.TradeType, exch_order.Pair));
+
+						// Add the trade to the completed order
+						var fill = new TradeCompleted(order_completed, exch_order.TradeId, exch_order.PriceQ2B, exch_order.AmountBase, exch_order.CommissionQuote, exch_order.Created, timestamp);
+						order_completed.Trades[fill.TradeId] = fill;
+
+						// Update the history of the completed orders
+						Exchange.AddToTradeHistory(order_completed);
 					}
 
 					// Remove any orders that are no longer valid
@@ -306,7 +320,8 @@ namespace CoinFlip
 			ApplyToBalance(pos, his);
 
 			// Record the filled orders in the trade result
-			return new OrderResult(pair, order_id, pos == null, his?.Trades.Values.Select(x => x.TradeId));
+			return new OrderResult(pair, order_id, pos == null, his?.Trades.Values.Select(x =>
+				new OrderResult.Fill(x.TradeId, x.PriceQ2B, x.AmountBase, x.CommissionQuote)));
 		}
 
 		/// <summary>Cancel an existing position</summary>
@@ -338,13 +353,13 @@ namespace CoinFlip
 
 			// Consume orders
 			var filled = offers.Consume(pair, ot, price, current_amount, out var remaining);
-			Debug.Assert(current_amount == remaining + filled.Sum(x => x.AmountBase));
+			Debug.Assert(current_amount == remaining + ((decimal)filled.Sum(x => x.AmountBase))._(pair.Base));
 
 			// The order is partially or completely filled...
 			pos = remaining != 0              ? new Order(fund_id, order_id, tt, pair, price, initial_amount, remaining, Model.UtcNow, Model.UtcNow) : null;
 			his = remaining != current_amount ? new OrderCompleted(order_id, fund_id, tt, pair) : null;
 			foreach (var fill in filled)
-				his.Trades.Add(new TradeCompleted(order_id, ++m_history_id, pair, tt, fill.Price, fill.AmountBase, Exchange.Fee * fill.AmountQuote, Model.UtcNow, Model.UtcNow));
+				his.Trades.Add(new TradeCompleted(his, ++m_history_id, ((decimal)fill.Price)._(pair.RateUnits), ((decimal)fill.AmountBase)._(pair.Base), (Exchange.Fee * (decimal)fill.AmountQuote)._(pair.Quote), Model.UtcNow, Model.UtcNow));
 		}
 
 		/// <summary>Apply the implied changes to the current balance by the given order and completed order</summary>
@@ -386,66 +401,47 @@ namespace CoinFlip
 		/// <summary>Generate fake market depth for 'pair', using 'latest' as the reference for the current spot price</summary>
 		private MarketDepth GenerateMarketDepth(TradePair pair, Candle latest, ETimeFrame time_frame)
 		{
+			// Notes:
+			//  - This is an expensive call when back testing is running so minimise allocation, resizing, and sorting.
+			//  - Do all calculations using double's for speed.
+
 			// Get the market data for 'pair'.
-			// Market data is maintained independently to pair.B2Q/Q2B because the rest of the
-			// application expects the market data to periodically overwrite the pair's order books.
+			// Market data is maintained independently to the pair's market data instance because the
+			// rest of the application expects the market data to periodically overwrite the pair's order books.
 			var md = m_depth[pair];
 
 			// Get the Q2B (bid) spot price from the candle close. (This is the minimum of the Q2B offers)
 			// The B2Q spot price is Q2B - spread, which will be the maximum of the B2Q offers
 			var spread = latest.Close * m_spread_frac;
-			var best_q2b = ((decimal)(latest.Close         ))._(pair.RateUnits);
-			var best_b2q = ((decimal)(latest.Close - spread))._(pair.RateUnits);
+			var best_q2b = latest.Close;
+			var best_b2q = latest.Close - spread;
+			var base_value = (double)(decimal)pair.Base.Value;
+			var rate_units = pair.RateUnits;
 
-			// Join all existing orders into one collection and remove any orders within the spread
-			// Don't worry about order, they'll need sorting anyway
-			var orders = Enumerable
-				.Concat(md.B2Q.Take(m_orders_per_book), md.Q2B.Take(m_orders_per_book))
-				.Where(x => x.Price < best_b2q || x.Price > best_q2b)
-				.ToList();
+			md.Q2B.Offers.Resize(m_orders_per_book);
+			md.B2Q.Offers.Resize(m_orders_per_book);
 
-			// Add the spot price orders
-			orders.Add(CreateRandomOrder(best_q2b));
-			orders.Add(CreateRandomOrder(best_b2q));
-
-			// Add random orders to grow the collection up to size
-			for (; orders.Count < 2*m_orders_per_book; )
-				orders.Add(CreateRandomOrder());
-
-			// Sort by price, lowest to highest.
-			orders.Sort(x => x.Price);
-
-			// Populate the market data
-			var idx = orders.BinarySearch(x => x.Price.CompareTo(best_q2b));
-			Debug.Assert(idx > 0 && orders[idx].Price == best_q2b && orders[idx-1].Price == best_b2q);
-
-			var b2q = orders.GetRange(0, idx).ReverseInPlace();
-			var q2b = orders.GetRange(idx, orders.Count - idx);
-			md.UpdateOrderBook(b2q, q2b);
+			// Generate offers with a normal distribution about 'best'
+			var range = 0.2 * 0.5 * (best_q2b + best_b2q);
+			for (var i = 0; i != m_orders_per_book; ++i)
+			{
+				// Normal distribution: y = A.e^-(x/B)^2, A = amplitude, B = 'width'
+				// As 'i' increases, 'p' is the difference in price from the best price.
+				// When 'i' is 0, price is the spot price.
+				//var p = ((decimal)(range * (1 - Math.Exp(-Math_.Sqr(2.5 * i / m_orders_per_book)))))._(pair.RateUnits);
+				var p = range * Math_.Sqr((double)i / m_orders_per_book);
+				md.Q2B.Offers[i] = new Offer(best_q2b + p, RandomAmountBase());
+				md.B2Q.Offers[i] = new Offer(best_b2q - p, RandomAmountBase());
+			}
 			return md;
 
-			// Create an order
-			Offer CreateRandomOrder(Unit<decimal>? price_ = null)
+			double RandomAmountBase()
 			{
-				Debug.Assert(price_ == null || price_.Value <= best_b2q || price_.Value >= best_q2b);
-				for (;;)
-				{
-					// Generate a price if not given
-					var mean = (double)(decimal)(best_q2b + best_b2q) / 2.0;
-					var price = price_ ?? ((decimal)Math.Max(m_rng.GaussianDouble(mean, mean/100.0), Math_.TinyD))._(pair.RateUnits);
-					if (price > best_b2q && price < best_q2b)
-						continue; // Invalid price, try again
-
-					// Generate an amount to trade in the application common currency (probably USD).
-					// The convert that to base currency using its 'live' value.
-					var common_value = (decimal)Math.Abs(m_rng.Double(m_order_value_range.Beg, m_order_value_range.End));
-					var amount_base = Math_.Div(common_value, (decimal)pair.Base.ValueOf(1m), common_value)._(pair.Base);
-
-					// If the generated order is valid, return it otherwise, try again.
-					var order = new Offer(price, amount_base);
-					if (order.Validate(pair))
-						return order;
-				}
+				// Generate an amount to trade in the application common currency (probably USD).
+				// Then convert that to base currency using the 'live' value.
+				var common_value = Math.Abs(m_rng.Double(m_order_value_range.Beg, m_order_value_range.End));
+				var amount_base = Math_.Div(common_value, base_value, common_value);
+				return amount_base;
 			}
 		}
 

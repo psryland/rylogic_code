@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using Dapper;
-using Rylogic.Extn;
 using Rylogic.Utility;
 
 namespace CoinFlip
@@ -11,10 +9,14 @@ namespace CoinFlip
 	{
 		// Notes:
 		//  - A TradeCompleted is a completed single trade that is part of an OrderCompleted
+		//  - TradeCompleted doesn't really need 'pair' and 'tt' because they are duplicates
+		//    of fields in the containing OrderCompleted. However, they allow convenient conversion
+		//    to CoinIn/CoinOut etc.
 
-		public TradeCompleted(long order_id, long trade_id, TradePair pair, ETradeType tt, Unit<decimal> price_q2b, Unit<decimal> amount_base, Unit<decimal> commission_quote, DateTimeOffset created, DateTimeOffset updated)
+		public TradeCompleted(OrderCompleted order_completed, long trade_id, Unit<decimal> price_q2b, Unit<decimal> amount_base, Unit<decimal> commission_quote, DateTimeOffset created, DateTimeOffset updated)
 		{
 			// Check units
+			var pair = order_completed.Pair;
 			if (amount_base <= 0m._(pair.Base))
 				throw new Exception("Invalid amount");
 			if (price_q2b * amount_base <= 0m._(pair.Quote))
@@ -22,34 +24,32 @@ namespace CoinFlip
 			if (commission_quote < 0m._(pair.Quote))
 				throw new Exception("Negative commission");
 
-			OrderId         = order_id;
+			Order           = order_completed;
 			TradeId         = trade_id;
-			Pair            = pair;
-			TradeType       = tt;
 			PriceQ2B        = price_q2b;
 			AmountBase      = amount_base;
 			CommissionQuote = commission_quote;
 			Created         = created;
 			Updated         = updated;
 		}
-		public TradeCompleted(long trade_id, Order order, DateTimeOffset updated)
-			:this(order.OrderId, trade_id, order.Pair, order.TradeType, order.PriceQ2B, order.AmountBase, order.AmountQuote * order.Exchange.Fee, order.Created.Value, updated)
-		{}
 		public TradeCompleted(TradeCompleted rhs)
-			:this(rhs.OrderId, rhs.TradeId, rhs.Pair, rhs.TradeType, rhs.PriceQ2B, rhs.AmountBase, rhs.CommissionQuote, rhs.Created, rhs.Updated)
+			:this(rhs.Order, rhs.TradeId, rhs.PriceQ2B, rhs.AmountBase, rhs.CommissionQuote, rhs.Created, rhs.Updated)
 		{}
 
+		/// <summary>The order that this trade complete is a member of</summary>
+		public OrderCompleted Order { get; }
+
 		/// <summary>Unique Id for the open position on an exchange</summary>
-		public long OrderId { get; }
+		public long OrderId => Order.OrderId;
+
+		/// <summary>The pair being traded</summary>
+		public TradePair Pair => Order.Pair;
+
+		/// <summary>The trade type</summary>
+		public ETradeType TradeType => Order.TradeType;
 
 		/// <summary>Unique Id for a completed trade. 0 means not completed</summary>
 		public long TradeId { get; }
-
-		/// <summary>The pair being traded</summary>
-		public TradePair Pair { get; }
-
-		/// <summary>The trade type</summary>
-		public ETradeType TradeType { get; }
 
 		/// <summary>The price that the trade was filled at</summary>
 		public Unit<decimal> PriceQ2B { get; private set; }
@@ -117,9 +117,6 @@ namespace CoinFlip
 		{
 			return new { OrderId, Pair }.GetHashCode();
 		}
-		#endregion
-
-		#region SqlMapping
 		#endregion
 	}
 }

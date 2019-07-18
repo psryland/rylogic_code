@@ -47,8 +47,8 @@ namespace Binance.API.DomainObjects
 			foreach (var order in offers)
 			{
 				output.Add(new Offer(
-					(decimal)double.Parse(order[0], CultureInfo.InvariantCulture),
-					(decimal)double.Parse(order[1], CultureInfo.InvariantCulture)));
+					double.Parse(order[0], CultureInfo.InvariantCulture),
+					double.Parse(order[1], CultureInfo.InvariantCulture)));
 			}
 			return output;
 		}
@@ -57,17 +57,17 @@ namespace Binance.API.DomainObjects
 		[DebuggerDisplay("Price={Price} Amount={AmountBase}")]
 		public class Offer
 		{
-			public Offer(decimal price_q2b, decimal amount_base)
+			public Offer(double price_q2b, double amount_base)
 			{
 				PriceQ2B = price_q2b;
 				AmountBase = amount_base;
 			}
 
 			/// <summary></summary>
-			public decimal PriceQ2B { get; }
+			public double PriceQ2B { get; }
 
 			/// <summary></summary>
-			public decimal AmountBase { get; }
+			public double AmountBase { get; }
 		}
 	}
 }

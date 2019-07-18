@@ -51,13 +51,10 @@ namespace CoinFlip
 		public event EventHandler<HandledEventArgs> Needed;
 
 		/// <summary>Update the list of buy/sell orders</summary>
-		public void UpdateOrderBook(IEnumerable<Offer> b2q, IEnumerable<Offer> q2b)
+		public void UpdateOrderBook(IList<Offer> b2q, IList<Offer> q2b)
 		{
-			B2Q.Offers.Clear();
-			B2Q.Offers.AddRange(b2q);
-
-			Q2B.Offers.Clear();
-			Q2B.Offers.AddRange(q2b);
+			B2Q.Offers.Assign(b2q);
+			Q2B.Offers.Assign(q2b);
 
 			Debug.Assert(AssertOrdersValid());
 			OrderBookChanged?.Invoke(this, EventArgs.Empty);

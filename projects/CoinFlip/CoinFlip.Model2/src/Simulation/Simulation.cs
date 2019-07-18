@@ -278,7 +278,7 @@ namespace CoinFlip
 					}
 
 					// Make sure bots get stepped at their required rate
-					for (;Running; await Task.Yield())
+					for (;Running;)
 					{
 						// Find the next bot requiring stepping
 						var bot = NextBotToStep();
@@ -289,16 +289,15 @@ namespace CoinFlip
 							// Advance to clock to the bot's next step time
 							Clock = bot.LastStepTime + bot.LoopPeriod;
 
-							// Update the sim exchanges
-							foreach (var exch in Exchanges.Values)
-								exch.Step();
+							// Update each price data (i.e. "add" candles)
+							UpdatePriceData();
 
 							// Step the bot
 							await bot.Step();
 							continue;
 						}
 
-						// Stop when all bots are caught up
+						// Stop when all bots have caught up
 						break;
 					}
 
@@ -315,10 +314,6 @@ namespace CoinFlip
 					if (elapsed >= m_max_ticks_per_step)
 					{
 						m_main_loop_last_step += m_max_ticks_per_step;
-
-						// Update the sim exchanges
-						foreach (var exch in Exchanges.Values)
-							exch.Step();
 
 						// Update each price data (i.e. "add" candles)
 						UpdatePriceData();

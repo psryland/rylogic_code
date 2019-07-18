@@ -3,6 +3,7 @@
 	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 	xmlns:gui2="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
 	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
@@ -72,6 +73,7 @@
 							Command="{Binding ToggleActive}"
 							Background="Transparent"
 							BorderThickness="0"
+							PreviewMouseLeftButtonDown="HandleActiveCellClick"
 							>
 							<Image
 								Stretch="UniformToFill"

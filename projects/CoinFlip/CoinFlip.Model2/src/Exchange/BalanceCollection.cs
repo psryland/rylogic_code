@@ -56,13 +56,9 @@ namespace CoinFlip
 
 			// Assign the new fund balance
 			balances.AssignFundBalance(fund_id, total, held_on_exch, update_time);
-			//Debug.Assert(balances.Validate() == null);
 
 			// Invalidate bindings
 			ResetItem(balances);
-
-			// Broadcast that the balance of 'coin' has changed
-			coin.Meta.NotifyBalanceChanged();
 		}
 
 		/// <summary>Get the balance by coin symbol name</summary>

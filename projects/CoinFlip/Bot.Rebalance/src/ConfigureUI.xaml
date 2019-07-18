@@ -169,6 +169,7 @@
 		<!-- Funding -->
 		<GroupBox
 			Grid.Row="2"
+			IsEnabled="{Binding ChartSelector.Pair, Converter={conv:NotNull}}"
 			Header="Funds:"
 			>
 			<Grid

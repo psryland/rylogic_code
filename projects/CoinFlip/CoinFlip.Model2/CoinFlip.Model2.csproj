@@ -76,6 +76,7 @@
     <Compile Include="src\Chart\Instrument.cs" />
     <Compile Include="src\Chart\PriceData.cs" />
     <Compile Include="src\Chart\TimeFrame.cs" />
+    <Compile Include="src\Misc\EValidation.cs" />
     <Compile Include="src\Misc\EXAxisLabelMode.cs" />
     <Compile Include="src\Misc\ExchPairTimeFrame.cs" />
     <Compile Include="src\Trade\IOrder.cs" />
@@ -114,10 +115,10 @@
     <Compile Include="src\Settings\PoloniexSettings.cs" />
     <Compile Include="src\Settings\SettingsData.cs" />
     <Compile Include="src\Misc\EPlaceOrderType.cs" />
-    <Compile Include="src\Misc\EValidation.cs" />
     <Compile Include="src\Settings\UISettings.cs" />
     <Compile Include="src\Simulation\SimExchange.cs" />
     <Compile Include="src\Simulation\Simulation.cs" />
+    <Compile Include="src\Trade\OrderRecord.cs" />
     <Compile Include="src\Trade\SpotPrices.cs" />
     <Compile Include="src\Trade\TradeCompleted.cs" />
     <Compile Include="src\Trade\Order.cs" />

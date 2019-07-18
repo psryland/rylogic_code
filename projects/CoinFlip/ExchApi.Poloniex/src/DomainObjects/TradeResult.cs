@@ -45,6 +45,10 @@ namespace Poloniex.API.DomainObjects
 			[JsonProperty("amount")]
 			public decimal VolumeBase { get; private set; }
 
+			/// <summary></summary>
+			[JsonProperty("commission")] // TODO:
+			public decimal Commission { get; private set; }
+
 			/// <summary>The value of the trade (equal to Price * VolumeBase) (in quote currency)</summary>
 			[JsonProperty("total")]
 			public decimal Total { get; private set; }

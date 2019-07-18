@@ -54,7 +54,7 @@ namespace Bot.Rebalance
 		public SettingsData Settings { get; }
 
 		/// <summary>Step rate of this bot</summary>
-		public override TimeSpan LoopPeriod => TimeSpan.FromMinutes(10);
+		public override TimeSpan LoopPeriod => TimeSpan.FromMinutes(60);
 
 		/// <summary>True if the bot is ok to run</summary>
 		protected override bool CanActivateInternal => Settings.Validate(Model) == null;
@@ -69,8 +69,6 @@ namespace Bot.Rebalance
 		/// <summary>Step the bot</summary>
 		protected override async Task StepInternal()
 		{
-			Debug.Assert(CanActivate);
-
 			// If there are orders on the exchange, wait from them to be filled
 			if (Settings.PendingOrders.Count != 0)
 				return;
@@ -113,6 +111,7 @@ namespace Bot.Rebalance
 
 						// Place the rebalance order
 						trade = new Trade(Fund.Id, tt, pair, price, quote_holdings_difference / price);
+						Debug.Assert(trade.Validate() == EValidation.Valid);
 						break;
 					}
 				}
@@ -130,6 +129,7 @@ namespace Bot.Rebalance
 
 						// Place the rebalance order
 						trade = new Trade(Fund.Id, tt, pair, price, quote_holdings_difference / price);
+						Debug.Assert(trade.Validate() == EValidation.Valid);
 						break;
 					}
 				}

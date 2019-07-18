@@ -206,6 +206,12 @@ namespace CoinFlip.Bots
 		{
 			try
 			{
+				if (!CanActivate)
+				{
+					Active = false;
+					return;
+				}
+
 				await StepInternal();
 				LastStepTime = Model.UtcNow;
 			}

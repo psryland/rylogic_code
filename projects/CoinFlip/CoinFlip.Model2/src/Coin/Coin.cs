@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
 using CoinFlip.Settings;
-using Rylogic.Common;
-using Rylogic.Container;
 using Rylogic.Utility;
 
 namespace CoinFlip
@@ -54,35 +51,45 @@ namespace CoinFlip
 		/// <summary>Return the balance for this coin on its associated exchange</summary>
 		public Balances Balances => Exchange.Balance[this];
 
-		/// <summary>The value of 1 unit of this currency (Live if available, falling back to assigned)</summary>
-		public decimal Value => ValueOf(1m);
-
 		/// <summary>True if the live price can be found using the LivePriceSymbols</summary>
 		public bool LivePriceAvailable => ValuationPath.Count != 0 || Symbol == SettingsData.Settings.ValuationCurrency;
+
+		/// <summary>The value of 1 unit of this currency</summary>
+		public Unit<decimal> Value
+		{
+			get
+			{
+				var coin = this;
+				var value = (Unit<decimal>?)1m._(coin);
+
+				if (!LivePriceAvailable && !UpdateValuationPaths())
+					return 0m._(SettingsData.Settings.ValuationCurrency);
+
+				foreach (var pair in ValuationPath)
+				{
+					// Use spot prices
+					value =
+						coin == pair.Base ? value * pair.SpotPrice[ETradeType.B2Q] :
+						coin == pair.Quote ? value / pair.SpotPrice[ETradeType.Q2B] :
+						throw new Exception($"Invalid valuation pair ({pair.Name}) when converting {coin} to {SettingsData.Settings.ValuationCurrency}");
+
+					if (value == null) break;
+					coin = pair.OtherCoin(coin);
+				}
+
+				Debug.Assert(value == null || value >= 0m._(SettingsData.Settings.ValuationCurrency));
+				ValueApprox = value ?? 0m._(SettingsData.Settings.ValuationCurrency);
+				return ValueApprox;
+			}
+		}
+
+		/// <summary>The last known live value (doesn't recheck the live value)</summary>
+		public Unit<decimal> ValueApprox { get; private set; }
 
 		/// <summary>Return the value of 'amount' units of this currency</summary>
 		public Unit<decimal> ValueOf(decimal amount)
 		{
-			var coin = this;
-			var value = (Unit<decimal>?)amount._(coin);
-
-			if (!LivePriceAvailable && !UpdateValuationPaths())
-				return 0m._(SettingsData.Settings.ValuationCurrency);
-
-			foreach (var pair in ValuationPath)
-			{
-				// Use spot prices
-				value = 
-					coin == pair.Base  ? value * pair.SpotPrice[ETradeType.B2Q] :
-					coin == pair.Quote ? value / pair.SpotPrice[ETradeType.Q2B] :
-					throw new Exception($"Invalid valuation pair ({pair.Name}) when converting {coin} to {SettingsData.Settings.ValuationCurrency}");
-
-				if (value == null) break;
-				coin = pair.OtherCoin(coin);
-			}
-
-			Debug.Assert(value == null || value >= 0m._(SettingsData.Settings.ValuationCurrency));
-			return value ?? 0m._(SettingsData.Settings.ValuationCurrency);
+			return amount * Value;
 		}
 
 		/// <summary>The pairs to use to find the value in valuation currency</summary>
@@ -100,13 +107,6 @@ namespace CoinFlip
 		{
 			get { return Meta.AssignedValue; }
 			set { Meta.AssignedValue = value; }
-		}
-
-		/// <summary>Raised when the live price of this coin changes</summary>
-		public event EventHandler LivePriceChanged
-		{
-			add { Meta.LivePriceChanged += value; }
-			remove { Meta.LivePriceChanged -= value; }
 		}
 
 		/// <summary>Ensure this coin can be valuated in the valuation currency</summary>

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Rylogic.Utility;
 
 namespace CoinFlip
 {
@@ -14,11 +15,11 @@ namespace CoinFlip
 		public OrderResult(TradePair pair, long order_id, bool filled)
 			:this(pair, order_id, filled, null)
 		{}
-		public OrderResult(TradePair pair, long order_id, bool filled, IEnumerable<long> trade_ids)
+		public OrderResult(TradePair pair, long order_id, bool filled, IEnumerable<Fill> trades)
 		{
 			Pair = pair;
 			OrderId = order_id;
-			TradeIds = trade_ids?.Cast<long>().ToList() ?? new List<long>();
+			Trades = trades?.ToList() ?? new List<Fill>();
 			Filled = filled;
 		}
 
@@ -29,12 +30,36 @@ namespace CoinFlip
 		public long OrderId { get; }
 
 		/// <summary>Filled orders as a result of a submitted trade</summary>
-		public List<long> TradeIds { get; }
+		public List<Fill> Trades { get; }
 
 		/// <summary>True if the trade is filled immediately</summary>
 		public bool Filled { get; }
 
 		/// <summary>A string description of this trade result</summary>
-		public string Description => $"{Pair.Name} Id={OrderId} [{string.Join(",", TradeIds)}]";
+		public string Description => $"{Pair.Name} Id={OrderId} [{Trades.Count}]";
+
+		/// <summary>Trades that occurred immediately to fill or partially fill the order</summary>
+		public class Fill
+		{
+			public Fill(long trade_id, Unit<decimal> price, Unit<decimal> amount, Unit<decimal> commission)
+			{
+				TradeId = trade_id;
+				Price = price;
+				Amount = amount;
+				Commission = commission;
+			}
+
+			/// <summary>The exchange assigned Id for the trade</summary>
+			public long TradeId { get; }
+
+			/// <summary>The price that the trade was filled at</summary>
+			public Unit<decimal> Price { get; }
+
+			/// <summary>The amount that was traded in this trade</summary>
+			public Unit<decimal> Amount { get; }
+
+			/// <summary>The amount of commission charged on the trade</summary>
+			public Unit<decimal> Commission { get; }
+		}
 	}
 }

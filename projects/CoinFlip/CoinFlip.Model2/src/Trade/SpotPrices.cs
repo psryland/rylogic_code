@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using CoinFlip.Settings;
 using Rylogic.Utility;
 
 namespace CoinFlip
@@ -29,20 +30,6 @@ namespace CoinFlip
 		{
 			get
 			{
-				///// <summary>Return the spot price (Quote/Base) for the given trade type. Requires order book data</summary>
-				//public Unit<decimal>? SpotPrice(ETradeType tt)
-				//{
-				//	// Note: SpotPrice is for the person wanting to buy or sell. If they want to buy
-				//	// then they want the cheapest of the sell offers. If they want to sell, they want
-				//	// the highest of the buy offers.
-				//	switch (tt)
-				//	{
-				//	default: throw new Exception($"Unknown trade type: {tt}");
-				//	case ETradeType.Q2B: return Q2B.Offers.Count != 0 ? Q2B.Offers[0].Price : (Unit<decimal>?)null;
-				//	case ETradeType.B2Q: return B2Q.Offers.Count != 0 ? B2Q.Offers[0].Price : (Unit<decimal>?)null;
-				//	}
-				//}
-
 				return
 					tt == ETradeType.Q2B ? m_spot_q2b :
 					tt == ETradeType.B2Q ? m_spot_b2q :
@@ -59,8 +46,9 @@ namespace CoinFlip
 				case ETradeType.Q2B: m_spot_q2b = value; break;
 				case ETradeType.B2Q: m_spot_b2q = value; break;
 				}
-				Base.Meta.NotifyLivePriceChanged();
-				Quote.Meta.NotifyLivePriceChanged();
+
+				CoinData.NotifyLivePriceChanged(Base);
+				CoinData.NotifyLivePriceChanged(Quote);
 			}
 		}
 

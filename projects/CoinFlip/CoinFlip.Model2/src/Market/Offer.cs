@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using Rylogic.Extn;
 using Rylogic.Utility;
 
 namespace CoinFlip
@@ -8,20 +9,24 @@ namespace CoinFlip
 	[DebuggerDisplay("Price={Price} Amount={AmountBase}")]
 	public struct Offer : IComparable<Offer>
 	{
-		public Offer(Unit<decimal> price, Unit<decimal> amount_base)
+		// Notes:
+		//  - Market depth is the most expensive part of the simulation.
+		//    For performance, store price and amount as double's
+
+		public Offer(double price, double amount_base)
 		{
 			Price = price;
 			AmountBase = amount_base;
 		}
 
 		/// <summary>The price (to buy or sell) (in Quote/Base)</summary>
-		public Unit<decimal> Price { get; set; }
+		public double Price { get; set; }
 
 		/// <summary>The volume (in base currency)</summary>
-		public Unit<decimal> AmountBase { get; set; }
+		public double AmountBase { get; set; }
 
 		/// <summary>The volume (in quote currency)</summary>
-		public Unit<decimal> AmountQuote => AmountBase * Price;
+		public double AmountQuote => AmountBase * Price;
 
 		/// <summary>Orders are compared by price</summary>
 		public int CompareTo(Offer rhs)
@@ -30,18 +35,18 @@ namespace CoinFlip
 		}
 
 		/// <summary>Check this order against the limits given in 'pair'</summary>
-		public bool Validate(TradePair pair)
+		public Exception Validate(TradePair pair)
 		{
-			if (Price <= 0m)
-				return false;
+			if (Price <= 0)
+				return new Exception($"Offer price ({Price.ToString(6)}) is <= 0");
 
-			if (!pair.AmountRangeBase.Contains(AmountBase))
-				return false;
+			if (!pair.AmountRangeBase.Contains(((decimal)AmountBase)._(pair.Base)))
+				return new Exception($"Offer amount ({AmountBase.ToString(6)}) is not within the valid range: [{pair.AmountRangeBase.Beg},{pair.AmountRangeBase.End}]");
 
-			if (!pair.AmountRangeQuote.Contains(AmountQuote))
-				return false;
+			if (!pair.AmountRangeQuote.Contains(((decimal)AmountQuote)._(pair.Quote)))
+				return new Exception($"Offer amount ({AmountQuote.ToString(6)}) is not within the valid range: [{pair.AmountRangeQuote.Beg},{pair.AmountRangeQuote.End}]");
 
-			return true;
+			return null;
 		}
 	}
 }

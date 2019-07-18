@@ -22,8 +22,6 @@ namespace CoinFlip.Settings
 			AssignedValue = 0m;
 			OfInterest = false;
 			AutoTradingLimit = 1m;
-			//LivePriceSymbols = "USDT";
-			//ShowLivePrices = true;
 			DefaultTradeAmount = 1m;
 			BackTestingInitialBalance = 1m;
 		}
@@ -59,21 +57,6 @@ namespace CoinFlip.Settings
 			set { set(nameof(AutoTradingLimit), value); }
 		}
 
-		///// <summary>A comma separated list of currencies used to convert this coin to a live price value</summary>
-		//public string LivePriceSymbols
-		//{
-		//	get { return get<string>(nameof(LivePriceSymbols)); }
-		//	set { set(nameof(LivePriceSymbols), value); }
-		//}
-		//public string[] LivePriceSymbolsArray => LivePriceSymbols.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-
-		///// <summary>Display the nett worth as a live price</summary>
-		//public bool ShowLivePrices
-		//{
-		//	get { return get<bool>(nameof(ShowLivePrices)); }
-		//	set { set(nameof(ShowLivePrices), value); }
-		//}
-
 		/// <summary>The amount to initialise trades with</summary>
 		public decimal DefaultTradeAmount
 		{
@@ -95,22 +78,35 @@ namespace CoinFlip.Settings
 			set { set(nameof(OfInterest), value); }
 		}
 
-		/// <summary>Raised when the live price of this coin changes</summary>
-		public event EventHandler LivePriceChanged;
-		public void NotifyLivePriceChanged()
+		/// <summary>Raised when the live price of 'coin' changes</summary>
+		public static event EventHandler<CoinEventArgs> LivePriceChanged;
+		public static void NotifyLivePriceChanged(Coin coin)
 		{
-			LivePriceChanged?.Invoke(this, EventArgs.Empty);
+			LivePriceChanged?.Invoke(null, new CoinEventArgs(coin));
 		}
 
-		/// <summary>Raised when the balance of this coin has changed on one or more exchanges</summary>
-		public event EventHandler BalanceChanged;
-		public void NotifyBalanceChanged()
+		/// <summary>Raised when the balance of 'coin' has changed on an exchange</summary>
+		public static event EventHandler<CoinEventArgs> BalanceChangeded;
+		public static void NotifyBalanceChanged(Coin coin)
 		{
 			// Note: rather than one global event for "Any coin balance changed", prefer to attach
 			// weak handlers to 'BalanceChanged' for the coins you care about. See GridCoins for an example.
-			BalanceChanged?.Invoke(this, EventArgs.Empty);
+			BalanceChangeded?.Invoke(null, new CoinEventArgs(coin));
 		}
 
 		private class TyConv : GenericTypeConverter<CoinData> { }
 	}
+
+	#region EventArgs
+	public class CoinEventArgs :EventArgs
+	{
+		public CoinEventArgs(Coin coin)
+		{
+			Coin = coin;
+		}
+
+		/// <summary>The coin whose balance has changed</summary>
+		public Coin Coin { get; }
+	}
+	#endregion
 }

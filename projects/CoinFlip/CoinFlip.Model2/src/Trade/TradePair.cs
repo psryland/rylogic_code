@@ -30,8 +30,10 @@ namespace CoinFlip
 			Quote = quote;
 			Exchange = exchange;
 			SpotPrice = new SpotPrices(base_, quote);
+			RateUnits = Base.Symbol != Quote.Symbol ? $"{Quote}/{Base}" : string.Empty;
+			RateUnitsInv = Base.Symbol != Quote.Symbol ? $"{Base}/{Quote}" : string.Empty;
 
-			TradePairId      = trade_pair_id;
+			TradePairId = trade_pair_id;
 			AmountRangeBase  = amount_range_base  ?? new RangeF<Unit<decimal>>(0m._(Base), decimal.MaxValue._(Base));
 			AmountRangeQuote = amount_range_quote ?? new RangeF<Unit<decimal>>(0m._(Quote), decimal.MaxValue._(Quote));
 			PriceRange       = price_range        ?? new RangeF<Unit<decimal>>(0m._(RateUnits), decimal.MaxValue._(RateUnits));
@@ -138,8 +140,8 @@ namespace CoinFlip
 				// Handler
 				void HandleOrderBookChanged(object sender, EventArgs e)
 				{
-					Base.Meta.NotifyLivePriceChanged();
-					Quote.Meta.NotifyLivePriceChanged();
+					CoinData.NotifyLivePriceChanged(Base);
+					CoinData.NotifyLivePriceChanged(Quote);
 				}
 			}
 		}
@@ -173,8 +175,8 @@ namespace CoinFlip
 		public decimal Fee => Base.Exchange == Quote.Exchange ? Base.Exchange.Fee : 0;
 
 		/// <summary>Return the units for the conversion rate from Base to Quote (i.e. Quote/Base)</summary>
-		public string RateUnits    => Base.Symbol != Quote.Symbol ? $"{Quote}/{Base}" : string.Empty;
-		public string RateUnitsInv => Base.Symbol != Quote.Symbol ? $"{Base}/{Quote}" : string.Empty;
+		public string RateUnits { get; }
+		public string RateUnitsInv { get; }
 
 		/// <summary>Returns the time frames for which candle data is available for this pair</summary>
 		public IEnumerable<ETimeFrame> CandleDataAvailable => Exchange.EnumAvailableCandleData(this).Select(x => x.TimeFrame);
@@ -218,19 +220,19 @@ namespace CoinFlip
 			var trade = new Trade(fund_id, ETradeType.B2Q, this, 0m._(RateUnits), 0m._(Base));
 			foreach (var x in B2Q)
 			{
-				if (x.AmountBase > amount)
+				if (x.AmountBase > (double)(decimal)amount)
 				{
-					trade.Price = x.Price;
+					trade.Price = ((decimal)x.Price)._(RateUnits);
 					trade.AmountIn += amount;
-					trade.AmountOut += x.Price * amount;
+					trade.AmountOut += ((decimal)x.Price * amount)._(Quote);
 					break;
 				}
 				else
 				{
-					trade.Price = x.Price;
-					trade.AmountIn += x.AmountBase;
-					trade.AmountOut += x.Price * x.AmountBase;
-					amount -= x.AmountBase;
+					trade.Price = ((decimal)x.Price)._(RateUnits);
+					trade.AmountIn += ((decimal)x.AmountBase)._(Base);
+					trade.AmountOut += ((decimal)(x.Price * x.AmountBase))._(Quote);
+					amount -= ((decimal)x.AmountBase)._(Base);
 				}
 			}
 			return trade;
@@ -252,19 +254,19 @@ namespace CoinFlip
 			var trade = new Trade(fund_id, ETradeType.Q2B, this, price_q2b:0m._(RateUnits), amount_base:0m._(Base));
 			foreach (var x in Q2B)
 			{
-				if (x.Price * x.AmountBase > amount)
+				if (((decimal)(x.Price * x.AmountBase))._(Quote) > amount)
 				{
-					trade.Price = 1m / x.Price;
+					trade.Price = ((decimal)(1.0 / x.Price))._(RateUnitsInv);
 					trade.AmountIn += amount;
-					trade.AmountOut += amount / x.Price;
+					trade.AmountOut += ((amount / (decimal)x.Price))._(Base);
 					break;
 				}
 				else
 				{
-					trade.Price = 1m / x.Price;
-					trade.AmountIn += x.AmountQuote;
-					trade.AmountOut += x.AmountBase;
-					amount -= x.AmountQuote;
+					trade.Price = ((decimal)(1.0 / x.Price))._(RateUnitsInv);
+					trade.AmountIn += ((decimal)x.AmountQuote)._(Quote);
+					trade.AmountOut += ((decimal)x.AmountBase)._(Base);
+					amount -= ((decimal)x.AmountQuote)._(Quote);
 				}
 			}
 			return trade;
@@ -316,7 +318,7 @@ namespace CoinFlip
 		{
 			var index = OrderBookIndex(tt, price, out beyond_order_book);
 			var orders = tt == ETradeType.B2Q ? Q2B.Offers : B2Q.Offers;
-			return orders.Take(index).Sum(x => x.AmountBase)._(Base);
+			return ((decimal)orders.Take(index).Sum(x => x.AmountBase))._(Base);
 		}
 
 		/// <summary>Update this pair using the contents of 'rhs'</summary>
@@ -411,9 +413,9 @@ namespace CoinFlip
 			// Asking price should increase
 			for (int i = 0; i != Q2B.Count; ++i)
 			{
-				if (Q2B[i].Price < 0m._(RateUnits))
+				if (Q2B[i].Price < 0)
 					throw new Exception("Q2B order book price is invalid");
-				if (Q2B[i].AmountBase < 0m._(Base))
+				if (Q2B[i].AmountBase < 0)
 					throw new Exception("Q2B order book amount is invalid");
 				if (i > 0 && Q2B[i-1].Price > Q2B[i].Price)
 					throw new Exception("Q2B order book prices are out of order");
@@ -422,9 +424,9 @@ namespace CoinFlip
 			// Bid price should decrease
 			for (int i = 0; i != B2Q.Count; ++i)
 			{
-				if (B2Q[i].Price < 0m._(RateUnits))
+				if (B2Q[i].Price < 0)
 					throw new Exception("B2Q order book price is invalid");
-				if (B2Q[i].AmountBase < 0m._(Base))
+				if (B2Q[i].AmountBase < 0)
 					throw new Exception("B2Q order book amount is invalid");
 				if (i > 0 && B2Q[i-1].Price < B2Q[i].Price)
 					throw new Exception("B2Q order book prices are out of order");

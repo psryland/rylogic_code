@@ -74,9 +74,13 @@ namespace CoinFlip
 			await CancelOrder(cancel);
 
 			// Add a fake entry to the history
-			var fill = Exchange.History.GetOrAdd(FundId, OrderId, TradeType, Pair);
-			var tid = (long)fill.Trades.Count;
-			fill.Trades[tid] = new TradeCompleted(tid, this, DateTimeOffset.Now);
+			var order_completed = Exchange.History.GetOrAdd(OrderId, x => new OrderCompleted(x, FundId, TradeType, Pair));
+
+			// Add the 'filled' trade to the completed order
+			var tid = (long)order_completed.Trades.Count;
+			order_completed.Trades[tid] = new TradeCompleted(order_completed, tid, PriceQ2B, AmountBase, CommissionQuote, DateTimeOffset.Now, DateTimeOffset.Now);
+
+			// Signal a history updated required
 			Exchange.OrdersUpdateRequired = true;
 
 			// Log message
