@@ -30,7 +30,7 @@ namespace Rylogic.Gui.WinForms
 				throw new Exception("This class expects 'Type' to have a single integer primary key");
 
 			DB             = null;
-			Cache          = new Cache<int,Type>{Capacity = 10000};
+			Cache          = new Cache<int, Type>(10000);
 			BaseTableName  = base_table_name;
 			Count          = 0;
 			Filter         = null;

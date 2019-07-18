@@ -369,6 +369,13 @@ namespace Rylogic.Extn
 					list.RemoveAt(i);
 		}
 
+		/// <summary>Fill a sub-range of this list with the given value</summary>
+		public static void Fill<T>(this IList<T> list, int start, int count, T value)
+		{
+			for (; count-- != 0; ++start)
+				list[start] = value;
+		}
+
 		/// <summary>Removes items from this list that satisfy 'pred'. Returning them in a new list</summary>
 		public static IList<T> Filter<T>(this IList<T> list, Func<T, bool> pred)
 		{
