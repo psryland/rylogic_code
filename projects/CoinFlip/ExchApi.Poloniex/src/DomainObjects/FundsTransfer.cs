@@ -34,7 +34,7 @@ namespace Poloniex.API.DomainObjects
 
 		/// <summary></summary>
 		[JsonProperty("amount")]
-		public decimal Amount { get; private set; }
+		public double Amount { get; private set; }
 
 		/// <summary></summary>
 		[JsonProperty("confirmations")]
@@ -73,7 +73,7 @@ namespace Poloniex.API.DomainObjects
 
 		/// <summary></summary>
 		[JsonProperty("amount")]
-		public decimal Amount { get; private set; }
+		public double Amount { get; private set; }
 
 		/// <summary>Timestamp</summary>
 		public DateTimeOffset Timestamp { get; private set; }

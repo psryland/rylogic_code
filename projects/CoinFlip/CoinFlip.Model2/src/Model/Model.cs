@@ -413,17 +413,15 @@ namespace CoinFlip
 		public event EventHandler<DataChangingEventArgs> DataChanging;
 
 		/// <summary>Total holdings value across all exchanges and all currencies</summary>
-		public Unit<decimal> NettWorth
+		public Unit<double> NettWorth
 		{
 			get
 			{
-				Unit<decimal> worth = 0m;
+				Unit<double> worth = 0.0;
 				foreach (var exch in Exchanges)
 				{
 					foreach (var bal in exch.Balance.Values)
-					{
 						worth += bal.NettValue;
-					}
 				}
 				return worth;
 			}

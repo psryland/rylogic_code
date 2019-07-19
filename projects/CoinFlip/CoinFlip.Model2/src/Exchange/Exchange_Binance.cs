@@ -148,8 +148,8 @@ namespace CoinFlip
 
 					// Create the trade pair
 					var pair = new TradePair(base_, quote, this, null,
-						amount_range_base: new RangeF<Unit<decimal>>(0.0001m._(base_), 10000000m._(base_)),
-						amount_range_quote: new RangeF<Unit<decimal>>(0.0001m._(quote), 10000000m._(quote)),
+						amount_range_base: new RangeF<Unit<double>>(0.0001._(base_), 10000000.0._(base_)),
+						amount_range_quote: new RangeF<Unit<double>>(0.0001._(quote), 10000000.0._(quote)),
 						price_range: null);
 
 					// Add the trade pair.
@@ -325,14 +325,14 @@ namespace CoinFlip
 
 					// Convert to CoinFlip market data format
 					var rate_units = $"{pair.Quote}/{pair.Base}";
-					var b2q = ob.B2QOffers.Select(x => new Offer(x.PriceQ2B, x.AmountBase)).ToArray();
-					var q2b = ob.Q2BOffers.Select(x => new Offer(x.PriceQ2B, x.AmountBase)).ToArray();
+					var b2q = ob.B2QOffers.Select(x => new Offer(x.PriceQ2B._(rate_units), x.AmountBase._(pair.Base))).ToArray();
+					var q2b = ob.Q2BOffers.Select(x => new Offer(x.PriceQ2B._(rate_units), x.AmountBase._(pair.Base))).ToArray();
 
 					return new { pair, b2q, q2b};
 				}).ToList();
 
 			// Queue integration of the market data
-			Model.DataUpdates.Add((Action)(() =>
+			Model.DataUpdates.Add(() =>
 			{
 				// Update the spot price on each pair
 				foreach (var upd in ticker_updates)
@@ -352,14 +352,14 @@ namespace CoinFlip
 					var pair = Pairs[update.pair.Base, update.pair.Quote];
 					if (pair == null)
 						continue;
-				
+
 					// Update the depth of market data
 					pair.MarketDepth.UpdateOrderBook(update.b2q, update.q2b);
 				}
 
 				// Notify updated
 				Pairs.LastUpdated = timestamp;
-			}));
+			});
 			return Task.CompletedTask;
 		}
 
@@ -387,7 +387,7 @@ namespace CoinFlip
 			//var data = await Api.GetChartData(cp, ToMarketPeriod(timeframe), time_beg, time_end, cancel);
 
 			// Convert it to candles
-			var candles = data.Select(x => new Candle(x.Time.Ticks, (double)x.Open, (double)x.High, (double)x.Low, (double)x.Close, (double)x.Median, (double)x.Volume)).ToList();
+			var candles = data.Select(x => new Candle(x.Time.Ticks, x.Open, x.High, x.Low, x.Close, x.Median, x.Volume)).ToList();
 			return Task.FromResult(candles);
 		}
 
@@ -398,7 +398,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Open a trade</summary>
-		protected override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EPlaceOrderType ot, Unit<decimal> amount_base, Unit<decimal> q2b_price, CancellationToken cancel)
+		protected override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EPlaceOrderType ot, Unit<double> amount_base, Unit<double> q2b_price, CancellationToken cancel)
 		{
 			try
 			{
@@ -465,7 +465,7 @@ namespace CoinFlip
 			var commission_quote =
 				fill.CommissionAsset == fill.Pair.Base ? (commission * fill.Price)._(pair.Quote) :
 				fill.CommissionAsset == fill.Pair.Quote ? commission._(pair.Quote) :
-				0m._(pair.Quote);
+				0.0._(pair.Quote);
 
 			return new TradeCompleted(order_completed, trade_id, price_q2b, amount_base, commission_quote, created, updated);
 		}

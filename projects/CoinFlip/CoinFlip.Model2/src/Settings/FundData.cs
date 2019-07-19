@@ -72,14 +72,14 @@ namespace CoinFlip.Settings
 			public BalData[] Balances { get; set; }
 
 			/// <summary>Access data for a currency</summary>
-			public BalData this[string symbol] => Balances.FirstOrDefault(x => x.Symbol == symbol) ?? new BalData(symbol, 0m, 0m);
+			public BalData this[string symbol] => Balances.FirstOrDefault(x => x.Symbol == symbol) ?? new BalData(symbol, 0, 0);
 		}
 
 		/// <summary>The balance of a single coin on an exchange</summary>
 		[DebuggerDisplay("{Symbol,nq} {Total}")]
 		public class BalData
 		{
-			public BalData(string sym, decimal total, decimal held)
+			public BalData(string sym, double total, double held)
 			{
 				Symbol = sym;
 				Total = total;
@@ -103,10 +103,10 @@ namespace CoinFlip.Settings
 			public string Symbol { get; set; }
 
 			/// <summary>The total amount of 'Symbol' from this exchange in this fund</summary>
-			public decimal Total { get; set; }
+			public double Total { get; set; }
 
 			/// <summary>The amount held for pending trades</summary>
-			public decimal Held { get; set; }
+			public double Held { get; set; }
 		}
 
 		private class TyConv : GenericTypeConverter<FundData> { }

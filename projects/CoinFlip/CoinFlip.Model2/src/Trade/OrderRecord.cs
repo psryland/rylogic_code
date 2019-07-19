@@ -4,7 +4,7 @@
 	{
 		// Notes:
 		//  - This type is used instead of 'OrderCompleted' because it doesn't have
-		//    Unit<decimal> properties and DateTimeOffset's etc. It's easier to store
+		//    Unit<double> properties and DateTimeOffset's etc. It's easier to store
 		//    in a DB table.
 		public OrderRecord()
 		{ }

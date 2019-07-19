@@ -138,9 +138,9 @@ namespace CoinFlip.UI.GfxObjects
 				return null;
 
 			// Find the bounds on the order book
-			var b2q_volume = 0m;
-			var q2b_volume = 0m;
-			var price_range = RangeF<decimal>.Invalid;
+			var b2q_volume = 0.0;
+			var q2b_volume = 0.0;
+			var price_range = RangeF.Invalid;
 			foreach (var order in b2q)
 			{
 				price_range.Encompass(order.Price);
@@ -166,7 +166,7 @@ namespace CoinFlip.UI.GfxObjects
 
 			// Scale the depth graphics so the width/height ratio is 0.5;
 			var count = count_b2q + count_q2b;
-			var width_scale = 0.5m * price_range.Size / max_volume;
+			var width_scale = 0.5 * price_range.Size / max_volume;
 
 			// Note: B2Q = all offers to "sell" Base for Quote, i.e. they are the offers available to buyers.
 			var b2q_colour = SettingsData.Settings.Chart.Q2BColour.Alpha(0.5f);
@@ -181,12 +181,12 @@ namespace CoinFlip.UI.GfxObjects
 			var indx = 0;
 
 			//  b2q = /\
-			var volume = 0m;
+			var volume = 0.0;
 			for (int i = 0; i != count_b2q; ++i)
 			{
 				volume += b2q[i].AmountBase;
-				var y1 = (float)(decimal)b2q[i].Price;
-				var y0 = i + 1 != count_b2q ? (float)(decimal)b2q[i + 1].Price : y1;
+				var y1 = (float)b2q[i].Price;
+				var y0 = i + 1 != count_b2q ? (float)b2q[i + 1].Price : y1;
 				var dx = (float)(width_scale * volume);
 				var v = vert;
 
@@ -204,12 +204,12 @@ namespace CoinFlip.UI.GfxObjects
 			}
 
 			// q2b = \/
-			volume = 0m;
+			volume = 0.0;
 			for (int i = 0; i != count_q2b; ++i)
 			{
 				volume += q2b[i].AmountBase;
-				var y0 = (float)(decimal)q2b[i].Price;
-				var y1 = i + 1 != count_q2b ? (float)(decimal)q2b[i + 1].Price : y0;
+				var y0 = (float)q2b[i].Price;
+				var y1 = i + 1 != count_q2b ? (float)q2b[i + 1].Price : y0;
 				var dx = (float)(width_scale * volume);
 				var v = vert;
 

@@ -19,11 +19,11 @@ namespace CoinFlip.Settings
 		{
 			Symbol = symbol;
 			SD = 8;
-			AssignedValue = 0m;
+			AssignedValue = 0;
 			OfInterest = false;
-			AutoTradingLimit = 1m;
-			DefaultTradeAmount = 1m;
-			BackTestingInitialBalance = 1m;
+			AutoTradingLimit = 1;
+			DefaultTradeAmount = 1;
+			BackTestingInitialBalance = 1;
 		}
 		public CoinData(XElement node)
 			: base(node)
@@ -44,30 +44,30 @@ namespace CoinFlip.Settings
 		}
 
 		/// <summary>Value assigned to this coin</summary>
-		public decimal AssignedValue
+		public double AssignedValue
 		{
-			get { return get<decimal>(nameof(AssignedValue)); }
+			get { return get<double>(nameof(AssignedValue)); }
 			set { set(nameof(AssignedValue), value); }
 		}
 
 		/// <summary>The maximum amount of this coin to automatically trade in one go</summary>
-		public decimal AutoTradingLimit
+		public double AutoTradingLimit
 		{
-			get { return get<decimal>(nameof(AutoTradingLimit)); }
+			get { return get<double>(nameof(AutoTradingLimit)); }
 			set { set(nameof(AutoTradingLimit), value); }
 		}
 
 		/// <summary>The amount to initialise trades with</summary>
-		public decimal DefaultTradeAmount
+		public double DefaultTradeAmount
 		{
-			get { return get<decimal>(nameof(DefaultTradeAmount)); }
+			get { return get<double>(nameof(DefaultTradeAmount)); }
 			set { set(nameof(DefaultTradeAmount), value); }
 		}
 
 		/// <summary>The initial balance for this currency when back testing</summary>
-		public decimal BackTestingInitialBalance
+		public double BackTestingInitialBalance
 		{
-			get { return get<decimal>(nameof(BackTestingInitialBalance)); }
+			get { return get<double>(nameof(BackTestingInitialBalance)); }
 			set { set(nameof(BackTestingInitialBalance), value); }
 		}
 

@@ -24,14 +24,14 @@ namespace CoinFlip
 		//    accidentally creating the wrong type of order on the wrong side of the spot price.
 
 		/// <summary>Create a trade on 'pair' at 'price_q2b' using 'amount_base'</summary>
-		public Trade(string fund_id, ETradeType tt, TradePair pair, Unit<decimal> price_q2b, Unit<decimal> amount_base)
+		public Trade(string fund_id, ETradeType tt, TradePair pair, Unit<double> price_q2b, Unit<double> amount_base)
 		{
 			// Check trade amounts and units
-			if (amount_base < 0m._(pair.Base))
+			if (amount_base < 0._(pair.Base))
 				throw new Exception("Invalid trade amount");
-			if (price_q2b < 0m._(pair.RateUnits))
+			if (price_q2b < 0._(pair.RateUnits))
 				throw new Exception("Invalid trade price");
-			if (amount_base * price_q2b < 0m._(pair.Quote))
+			if (amount_base * price_q2b < 0._(pair.Quote))
 				throw new Exception("Invalid trade amount (quote)");
 
 			FundId = fund_id;
@@ -42,7 +42,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Create a trade on 'pair' to convert 'amount_in' of 'coin_in' to 'amount_out'</summary>
-		public Trade(string fund_id, TradePair pair, Coin coin_in, Unit<decimal> amount_in, Unit<decimal> amount_out)
+		public Trade(string fund_id, TradePair pair, Coin coin_in, Unit<double> amount_in, Unit<double> amount_out)
 		{
 			FundId = fund_id;
 			Pair = pair;
@@ -55,7 +55,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Copy construct a trade, with the amount scaled by 'scale'</summary>
-		public Trade(Trade rhs, decimal scale = 1m)
+		public Trade(Trade rhs, double scale = 1)
 		{
 			FundId = rhs.FundId;
 			Pair = rhs.Pair;
@@ -131,13 +131,13 @@ namespace CoinFlip
 		public EPlaceOrderType? OrderType => Pair.OrderType(TradeType, PriceQ2B);
 
 		/// <summary>The base amount to trade</summary>
-		public Unit<decimal> AmountBase
+		public Unit<double> AmountBase
 		{
 			get { return m_amount_base; }
 			set
 			{
 				// Validate the amount (and units)
-				if (value < 0m._(Pair.Base))
+				if (value < 0._(Pair.Base))
 					throw new Exception($"Invalid trade amount: {value}");
 
 				if (m_amount_base != 0 && m_amount_base == value) return;
@@ -145,16 +145,16 @@ namespace CoinFlip
 				NotifyPropertyChanged(nameof(AmountBase));
 			}
 		}
-		private Unit<decimal> m_amount_base;
+		private Unit<double> m_amount_base;
 
 		/// <summary>The amount to trade (in quote currency) based on the trade price</summary>
-		public Unit<decimal> AmountQuote => AmountBase * PriceQ2B;
+		public Unit<double> AmountQuote => AmountBase * PriceQ2B;
 
 		/// <summary>The amount being bought after commissions</summary>
-		public Unit<decimal> AmountNett => AmountOut * (1 - Pair.Fee);
+		public Unit<double> AmountNett => AmountOut * (1 - Pair.Fee);
 
 		/// <summary>The input amount to trade (in base or quote, depending on 'TradeType')</summary>
-		public Unit<decimal> AmountIn
+		public Unit<double> AmountIn
 		{
 			get { return TradeType.AmountIn(AmountBase, PriceQ2B); }
 			set
@@ -167,7 +167,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>The output amount of the trade excluding commissions (in quote or base, depending on 'TradeType')</summary>
-		public Unit<decimal> AmountOut
+		public Unit<double> AmountOut
 		{
 			get { return TradeType.AmountOut(AmountBase, PriceQ2B); }
 			set
@@ -177,22 +177,22 @@ namespace CoinFlip
 		}
 
 		/// <summary>The output amount of the trade including commissions (in quote or base, depending on 'TradeType')</summary>
-		public Unit<decimal> AmountOutNett => AmountOut - Commission;
+		public Unit<double> AmountOutNett => AmountOut - Commission;
 
 		/// <summary>The commission that would be charged on this trade (in the same currency as AmountOut)</summary>
-		public Unit<decimal> Commission => Exchange.Fee * AmountOut;
+		public Unit<double> Commission => Exchange.Fee * AmountOut;
 
 		/// <summary>The commission that would be charged on this trade (in quote currency)</summary>
-		public Unit<decimal> CommissionQuote => Exchange.Fee * AmountQuote;
+		public Unit<double> CommissionQuote => Exchange.Fee * AmountQuote;
 
 		/// <summary>The price to make the trade at (Quote/Base)</summary>
-		public Unit<decimal> PriceQ2B
+		public Unit<double> PriceQ2B
 		{
 			get { return m_price_q2b; }
 			set
 			{
 				// Validate the price (and units)
-				if (value < 0m._(Pair.RateUnits))
+				if (value < 0._(Pair.RateUnits))
 					throw new Exception($"Invalid trade price: {value}");
 
 				if (m_price_q2b != 0 && m_price_q2b == value)
@@ -202,35 +202,35 @@ namespace CoinFlip
 				NotifyPropertyChanged(nameof(PriceQ2B));
 			}
 		}
-		private Unit<decimal> m_price_q2b;
+		private Unit<double> m_price_q2b;
 
 		/// <summary>The price to make the trade at (CoinOut/CoinIn)</summary>
-		public Unit<decimal> Price
+		public Unit<double> Price
 		{
 			get => TradeType.Price(PriceQ2B);
 			set => PriceQ2B = TradeType.PriceQ2B(value);
 		}
 
 		/// <summary>The inverse of the price to make the trade at (in CoinIn/CoinOut)</summary>
-		public Unit<decimal> PriceInv => Math_.Div(1m._(), Price, 0m / 1m._(Price));
+		public Unit<double> PriceInv => Math_.Div(1.0._(), Price, 0.0/1.0._(Price));
 
 		/// <summary>The effective price of this trade after fees (in Quote/Base)</summary>
-		public Unit<decimal> PriceQ2BNett => TradeType.PriceQ2B(PriceNett);
+		public Unit<double> PriceQ2BNett => TradeType.PriceQ2B(PriceNett);
 
 		/// <summary>The effective price of this trade after fees (in CoinOut/CoinIn)</summary>
-		public Unit<decimal> PriceNett => AmountNett / AmountIn;
+		public Unit<double> PriceNett => AmountNett / AmountIn;
 
 		/// <summary>Return the current spot price of the pair associated with this order</summary>
-		public Unit<decimal>? SpotPriceQ2B => Pair.SpotPrice[TradeType];
+		public Unit<double>? SpotPriceQ2B => Pair.SpotPrice[TradeType];
 
 		/// <summary>The position of this trade in the order book for the trade type</summary>
 		public int OrderBookIndex => Pair.OrderBookIndex(TradeType, PriceQ2B, out var _);
 
 		/// <summary>The depth of this position in the order book for the trade type</summary>
-		public Unit<decimal> OrderBookDepth => Pair.OrderBookDepth(TradeType, PriceQ2B, out var _);
+		public Unit<double> OrderBookDepth => Pair.OrderBookDepth(TradeType, PriceQ2B, out var _);
 
 		/// <summary>The price distance between the order price and the current spot price</summary>
-		public Unit<decimal>? DistanceQ2B
+		public Unit<double>? DistanceQ2B
 		{
 			get
 			{
@@ -239,7 +239,7 @@ namespace CoinFlip
 				return
 					TradeType == ETradeType.B2Q && spot_b2q != null ? (PriceQ2B - spot_b2q.Value) :
 					TradeType == ETradeType.Q2B && spot_q2b != null ? (spot_q2b.Value - PriceQ2B) :
-					(Unit<decimal>?)0m;
+					(Unit<double>?)0;
 			}
 		}
 		public string DistanceQ2BDesc
@@ -260,16 +260,16 @@ namespace CoinFlip
 		public Coin CoinOut => TradeType == ETradeType.B2Q ? Pair.Quote : Pair.Base;
 
 		/// <summary>The allowable range on input trade amounts</summary>
-		public RangeF<Unit<decimal>> PriceRange => Pair.PriceRange;
+		public RangeF<Unit<double>> PriceRange => Pair.PriceRange;
 
 		/// <summary>The allowable range on input trade amounts</summary>
-		public RangeF<Unit<decimal>> AmountRangeIn => Pair.AmountRangeIn(TradeType);
+		public RangeF<Unit<double>> AmountRangeIn => Pair.AmountRangeIn(TradeType);
 
 		/// <summary>The allowable range on output trade amounts</summary>
-		public RangeF<Unit<decimal>> AmountRangeOut => Pair.AmountRangeOut(TradeType);
+		public RangeF<Unit<double>> AmountRangeOut => Pair.AmountRangeOut(TradeType);
 
 		/// <summary>Check whether this trade is an allowed trade</summary>
-		public EValidation Validate(Guid? reserved_balance_in = null, Unit<decimal>? additional_balance_in = null)
+		public EValidation Validate(Guid? reserved_balance_in = null, Unit<double>? additional_balance_in = null)
 		{
 			// Notes:
 			// - 'reserved_balance' is the Id on a hold placed on a certain amount of balance
@@ -315,7 +315,7 @@ namespace CoinFlip
 
 			//// Check the balances (allowing for fees)
 			//var bal = TradeType == ETradeType.B2Q ? Pair.Base.Balance : Pair.Quote.Balance;
-			//var available = bal.Available + (reserved_balance != null ? bal.Reserved(reserved_balance.Value) : 0m._(bal.Coin));
+			//var available = bal.Available + (reserved_balance != null ? bal.Reserved(reserved_balance.Value) : 0.0._(bal.Coin));
 			//if (available < AmountIn * (1.0000001m + Pair.Fee))
 			//	result |= EValidation.InsufficientBalance;
 

@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Newtonsoft.Json;
 
 namespace Poloniex.API.DomainObjects
@@ -9,12 +7,12 @@ namespace Poloniex.API.DomainObjects
 	public class Balance
 	{
 		[JsonProperty("available")]
-		public decimal Available { get; private set; }
+		public double Available { get; private set; }
 
 		[JsonProperty("onOrders")]
-		public decimal HeldForTrades { get; private set; }
+		public double HeldForTrades { get; private set; }
 
 		[JsonProperty("btcValue")]
-		public decimal BitcoinValue { get; private set; }
+		public double BitcoinValue { get; private set; }
 	}
 }

@@ -49,7 +49,7 @@ namespace CoinFlip.UI.GfxObjects
 				// Update the position
 				var t = order is Order ? Model.UtcNow : order.Created.Value;
 				var x = m_instrument.IndexAt(new TimeFrameTime(t, m_instrument.TimeFrame));
-				var y = (double)(decimal)order.PriceQ2B;
+				var y = order.PriceQ2B;
 				var s = chart.ChartToClient(new Point(x, y));
 				gfx.Update(overlay, s);
 			}

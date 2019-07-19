@@ -297,11 +297,11 @@ namespace Bittrex.API
 
 				/// <summary>Price of the order</summary>
 				[JsonProperty("R")]
-				public decimal Rate { get; set; }
+				public double Rate { get; set; }
 
 				/// <summary>Total amount at this price</summary>
 				[JsonProperty("Q")]
-				public decimal Amount { get; set; }
+				public double Amount { get; set; }
 
 				/// <summary></summary>
 				public string Description => $"{Type} Price={Rate} Amount={Amount}";
@@ -318,11 +318,11 @@ namespace Bittrex.API
 
 				/// <summary></summary>
 				[JsonProperty("R")]
-				public decimal Rate { get; set; }
+				public double Rate { get; set; }
 
 				/// <summary></summary>
 				[JsonProperty("Q")]
-				public decimal Amount { get; set; }
+				public double Amount { get; set; }
 
 				/// <summary></summary>
 				[JsonProperty("T"), JsonConverter(typeof(UnixMSToDateTimeOffset))]
@@ -363,11 +363,11 @@ namespace Bittrex.API
 			{
 				/// <summary></summary>
 				[JsonProperty("R")]
-				public decimal Rate { get; set; }
+				public double Rate { get; set; }
 
 				/// <summary></summary>
 				[JsonProperty("Q")]
-				public decimal Amount { get; set; }
+				public double Amount { get; set; }
 
 				/// <summary></summary>
 				public string Description => $"Price={Rate} Amount={Amount}";
@@ -384,15 +384,15 @@ namespace Bittrex.API
 
 				/// <summary></summary>
 				[JsonProperty("Q")]
-				public decimal Amount { get; set; }
+				public double Amount { get; set; }
 
 				/// <summary></summary>
 				[JsonProperty("P")]
-				public decimal Price { get; set; }
+				public double Price { get; set; }
 
 				/// <summary>Total price of the order</summary>
 				[JsonProperty("t")]
-				public decimal Total { get; set; }
+				public double Total { get; set; }
 
 				/// <summary>The side of the order</summary>
 				[JsonProperty("F"), JsonConverter(typeof(ToEnum<EFillType>))]

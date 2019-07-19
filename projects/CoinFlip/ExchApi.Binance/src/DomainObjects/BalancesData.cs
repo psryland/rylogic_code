@@ -69,14 +69,14 @@ namespace Binance.API.DomainObjects
 
 			/// <summary></summary>
 			[JsonProperty("free")]
-			public decimal Free { get; set; }
+			public double Free { get; set; }
 
 			/// <summary></summary>
 			[JsonProperty("locked")]
-			public decimal Locked { get; set; }
+			public double Locked { get; set; }
 
 			/// <summary></summary>
-			public decimal Total => Free + Locked;
+			public double Total => Free + Locked;
     	}
 	}
 }

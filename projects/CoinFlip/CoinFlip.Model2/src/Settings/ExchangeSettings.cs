@@ -11,7 +11,7 @@ namespace CoinFlip.Settings
 		{
 			Active = true;
 			PollPeriod = 500;
-			TransactionFee = 0.0025m;
+			TransactionFee = 0.0025;
 			MarketDepth = 100;
 			ServerRequestRateLimit = 10;
 			PublicAPIOnly = false;
@@ -33,9 +33,9 @@ namespace CoinFlip.Settings
 		}
 
 		/// <summary>The fee charged per trade</summary>
-		public decimal TransactionFee
+		public double TransactionFee
 		{
-			get { return get<decimal>(nameof(TransactionFee)); }
+			get { return get<double>(nameof(TransactionFee)); }
 			set { set(nameof(TransactionFee), value); }
 		}
 

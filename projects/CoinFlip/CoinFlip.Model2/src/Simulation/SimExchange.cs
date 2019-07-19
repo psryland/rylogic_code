@@ -47,7 +47,7 @@ namespace CoinFlip
 				PriceData = price_data;
 				m_ord     = new LazyDictionary<long, Order>(k => null);
 				m_his     = new LazyDictionary<long, OrderCompleted>(k => null);
-				m_bal     = new LazyDictionary<Coin, AccountBalance>(k => new AccountBalance(k, 0m._(k), 0m._(k)));
+				m_bal     = new LazyDictionary<Coin, AccountBalance>(k => new AccountBalance(k, 0.0._(k), 0.0._(k)));
 				m_depth   = new LazyDictionary<TradePair, MarketDepth>(k => new MarketDepth(k.Base, k.Quote));
 				m_rng     = null;
 
@@ -137,8 +137,8 @@ namespace CoinFlip
 				{
 					var spot_q2b = latest.Close;
 					var spread = spot_q2b * m_spread_frac;
-					pair.SpotPrice[ETradeType.Q2B] = ((decimal)(spot_q2b         ))._(pair.RateUnits);
-					pair.SpotPrice[ETradeType.B2Q] = ((decimal)(spot_q2b - spread))._(pair.RateUnits);
+					pair.SpotPrice[ETradeType.Q2B] = spot_q2b._(pair.RateUnits);
+					pair.SpotPrice[ETradeType.B2Q] = (spot_q2b - spread)._(pair.RateUnits);
 				}
 			}
 		}
@@ -175,12 +175,12 @@ namespace CoinFlip
 
 					// Update the spot price and order book
 					pair.MarketDepth.UpdateOrderBook(md.B2Q.ToArray(), md.Q2B.ToArray());
-					pair.SpotPrice[ETradeType.Q2B] = ((decimal)md.Q2B[0].Price)._(pair.RateUnits);
-					pair.SpotPrice[ETradeType.B2Q] = ((decimal)md.B2Q[0].Price)._(pair.RateUnits);
+					pair.SpotPrice[ETradeType.Q2B] = md.Q2B[0].Price;
+					pair.SpotPrice[ETradeType.B2Q] = md.B2Q[0].Price;
 
 					// Q2B => first price is the minimum, B2Q => first price is a maximum
-					Debug.Assert(pair.SpotPrice[ETradeType.Q2B] == ((decimal)latest.Close                       )._(pair.RateUnits));
-					Debug.Assert(pair.SpotPrice[ETradeType.B2Q] == ((decimal)latest.Close - (decimal)pair.Spread)._(pair.RateUnits));
+					Debug.Assert(pair.SpotPrice[ETradeType.Q2B] == latest.Close._(pair.RateUnits));
+					Debug.Assert(pair.SpotPrice[ETradeType.B2Q] == (latest.Close - (double)pair.Spread)._(pair.RateUnits));
 				}
 
 				// Notify updated
@@ -228,7 +228,7 @@ namespace CoinFlip
 					}
 
 					// Sanity check that the partial trade isn't gaining or losing amount
-					Debug.Assert(order.AmountBase == (pos?.RemainingBase ?? 0m) + (his?.Trades.Values.Sum(x => x.AmountBase) ?? 0m));
+					Debug.Assert(order.AmountBase == (pos?.RemainingBase ?? 0) + (his?.Trades.Values.Sum(x => x.AmountBase) ?? 0));
 				}
 
 				// This is equivalent to the 'DataUpdates' code in 'UpdateOrdersAndHistoryInternal'
@@ -292,7 +292,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Create an order on this simulated exchange</summary>
-		public OrderResult CreateOrderInternal(TradePair pair, ETradeType tt, EPlaceOrderType ot, Unit<decimal> amount, Unit<decimal> price)
+		public OrderResult CreateOrderInternal(TradePair pair, ETradeType tt, EPlaceOrderType ot, Unit<double> amount, Unit<double> price)
 		{
 			// Validate the order
 			if (pair.Exchange != Exchange)
@@ -346,20 +346,20 @@ namespace CoinFlip
 		}
 
 		/// <summary>Attempt to make a trade on 'pair' for the given 'price' and base 'amount'</summary>
-		private void TryFillOrder(TradePair pair, string fund_id, long order_id, ETradeType tt, EPlaceOrderType ot, Unit<decimal> price, Unit<decimal> initial_amount, Unit<decimal> current_amount, out Order pos, out OrderCompleted his)
+		private void TryFillOrder(TradePair pair, string fund_id, long order_id, ETradeType tt, EPlaceOrderType ot, Unit<double> price, Unit<double> initial_amount, Unit<double> current_amount, out Order pos, out OrderCompleted his)
 		{
 			// The order can be filled immediately, filled partially, or not filled and remain as an 'Order'
 			var offers = m_depth[pair][tt];
 
 			// Consume orders
 			var filled = offers.Consume(pair, ot, price, current_amount, out var remaining);
-			Debug.Assert(current_amount == remaining + ((decimal)filled.Sum(x => x.AmountBase))._(pair.Base));
+			Debug.Assert(current_amount == remaining + filled.Sum(x => x.AmountBase));
 
 			// The order is partially or completely filled...
 			pos = remaining != 0              ? new Order(fund_id, order_id, tt, pair, price, initial_amount, remaining, Model.UtcNow, Model.UtcNow) : null;
 			his = remaining != current_amount ? new OrderCompleted(order_id, fund_id, tt, pair) : null;
 			foreach (var fill in filled)
-				his.Trades.Add(new TradeCompleted(his, ++m_history_id, ((decimal)fill.Price)._(pair.RateUnits), ((decimal)fill.AmountBase)._(pair.Base), (Exchange.Fee * (decimal)fill.AmountQuote)._(pair.Quote), Model.UtcNow, Model.UtcNow));
+				his.Trades.Add(new TradeCompleted(his, ++m_history_id, fill.Price, fill.AmountBase, Exchange.Fee * fill.AmountQuote, Model.UtcNow, Model.UtcNow));
 		}
 
 		/// <summary>Apply the implied changes to the current balance by the given order and completed order</summary>
@@ -415,8 +415,7 @@ namespace CoinFlip
 			var spread = latest.Close * m_spread_frac;
 			var best_q2b = latest.Close;
 			var best_b2q = latest.Close - spread;
-			var base_value = (double)(decimal)pair.Base.Value;
-			var rate_units = pair.RateUnits;
+			var base_value = pair.Base.Value;
 
 			md.Q2B.Offers.Resize(m_orders_per_book);
 			md.B2Q.Offers.Resize(m_orders_per_book);
@@ -425,13 +424,9 @@ namespace CoinFlip
 			var range = 0.2 * 0.5 * (best_q2b + best_b2q);
 			for (var i = 0; i != m_orders_per_book; ++i)
 			{
-				// Normal distribution: y = A.e^-(x/B)^2, A = amplitude, B = 'width'
-				// As 'i' increases, 'p' is the difference in price from the best price.
-				// When 'i' is 0, price is the spot price.
-				//var p = ((decimal)(range * (1 - Math.Exp(-Math_.Sqr(2.5 * i / m_orders_per_book)))))._(pair.RateUnits);
 				var p = range * Math_.Sqr((double)i / m_orders_per_book);
-				md.Q2B.Offers[i] = new Offer(best_q2b + p, RandomAmountBase());
-				md.B2Q.Offers[i] = new Offer(best_b2q - p, RandomAmountBase());
+				md.Q2B.Offers[i] = new Offer((best_q2b + p)._(pair.RateUnits), RandomAmountBase()._(pair.Base));
+				md.B2Q.Offers[i] = new Offer((best_b2q - p)._(pair.RateUnits), RandomAmountBase()._(pair.Base));
 			}
 			return md;
 
@@ -440,7 +435,7 @@ namespace CoinFlip
 				// Generate an amount to trade in the application common currency (probably USD).
 				// Then convert that to base currency using the 'live' value.
 				var common_value = Math.Abs(m_rng.Double(m_order_value_range.Beg, m_order_value_range.End));
-				var amount_base = Math_.Div(common_value, base_value, common_value);
+				var amount_base = Math_.Div(common_value, (double)base_value, common_value);
 				return amount_base;
 			}
 		}
@@ -448,16 +443,16 @@ namespace CoinFlip
 		/// <summary>Represents the simulated user account on the exchange</summary>
 		private class AccountBalance
 		{
-			public AccountBalance(Coin coin, Unit<decimal> total, Unit<decimal> held)
+			public AccountBalance(Coin coin, Unit<double> total, Unit<double> held)
 			{
 				Coin = coin;
 				Total = total;
 				Held = held;
 			}
 			public Coin Coin { get; }
-			public Unit<decimal> Total { get; set; }
-			public Unit<decimal> Held { get; set; }
-			public Unit<decimal> Available => Total - Held;
+			public Unit<double> Total { get; set; }
+			public Unit<double> Held { get; set; }
+			public Unit<double> Available => Total - Held;
 		}
 	}
 }

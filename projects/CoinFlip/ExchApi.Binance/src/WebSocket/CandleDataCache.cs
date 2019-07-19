@@ -241,19 +241,19 @@ namespace Binance.API
 				public long LastTradeId { get; set; }
 
 				[JsonProperty("o")]
-				public decimal Open { get; set; }
+				public double Open { get; set; }
 
 				[JsonProperty("c")]
-				public decimal Close { get; set; }
+				public double Close { get; set; }
 
 				[JsonProperty("h")]
-				public decimal High { get; set; }
+				public double High { get; set; }
 
 				[JsonProperty("l")]
-				public decimal Low { get; set; }
+				public double Low { get; set; }
 
 				[JsonProperty("v")]
-				public decimal Volume { get; set; }
+				public double Volume { get; set; }
 
 				[JsonProperty("n")]
 				public int NumberOfTrades { get; set; }
@@ -262,13 +262,13 @@ namespace Binance.API
 				public bool IsBarFinal { get; set; }
 
 				[JsonProperty("q")]
-				public decimal QuoteVolume { get; set; }
+				public double QuoteVolume { get; set; }
 
 				[JsonProperty("V")]
-				public decimal VolumeOfActivyBuy { get; set; }
+				public double VolumeOfActivyBuy { get; set; }
 
 				[JsonProperty("Q")]
-				public decimal QuoteVolumeOfActivyBuy { get; set; }
+				public double QuoteVolumeOfActivyBuy { get; set; }
 
 				public static implicit operator MarketChartData(Candle c)
 				{

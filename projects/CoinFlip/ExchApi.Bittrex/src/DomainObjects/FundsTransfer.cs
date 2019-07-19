@@ -16,7 +16,7 @@ namespace Bittrex.API.DomainObjects
 
 		/// <summary></summary>
 		[JsonProperty("amount")]
-		public decimal Amount { get; private set; }
+		public double Amount { get; private set; }
 
 		/// <summary>The address that was used for the deposit</summary>
 		[JsonProperty("address")]
@@ -36,7 +36,7 @@ namespace Bittrex.API.DomainObjects
 
 		/// <summary></summary>
 		[JsonProperty("TxCost")]
-		public decimal TxCost { get; private set; }
+		public double TxCost { get; private set; }
 
 		/// <summary></summary>
 		[JsonProperty("TxId")]

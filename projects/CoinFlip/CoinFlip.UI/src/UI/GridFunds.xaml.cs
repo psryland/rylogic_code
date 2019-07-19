@@ -241,16 +241,16 @@ namespace CoinFlip.UI
 			public Coin Coin => Exchange?.Coins[Symbol];
 
 			/// <summary>Value of the coin (probably in USD)</summary>
-			public decimal Value => Coin?.ValueOf(1m) ?? 0m;
+			public double Value => Coin?.ValueOf(1) ?? 0;
 
 			/// <summary>The total amount of the coin (in coin currency)</summary>
-			public Unit<decimal> Total => Coin?.Balances.NettTotal ?? 0m._(Symbol);
+			public Unit<double> Total => Coin?.Balances.NettTotal ?? 0.0._(Symbol);
 
 			/// <summary>The available amount of the coin (in coin currency)</summary>
-			public Unit<decimal> Available => Coin?.Balances.NettAvailable ?? 0m._(Symbol);
+			public Unit<double> Available => Coin?.Balances.NettAvailable ?? 0.0._(Symbol);
 
 			/// <summary>The amount that is locked</summary>
-			public Unit<decimal> Held => Coin?.Balances.NettHeld ?? 0m._(Symbol);
+			public Unit<double> Held => Coin?.Balances.NettHeld ?? 0.0._(Symbol);
 
 			/// <summary></summary>
 			public event PropertyChangedEventHandler PropertyChanged;

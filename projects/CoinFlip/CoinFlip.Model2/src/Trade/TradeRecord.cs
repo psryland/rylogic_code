@@ -5,7 +5,7 @@
 		// Notes:
 		//  - This is a domain object used to stored a history of trades in a DB Table
 		//  - This type is used instead of 'TradeCompleted' because it doesn't have
-		//    Unit<decimal> properties and DateTimeOffset's etc. It's easier to store
+		//    Unit<double> properties and DateTimeOffset's etc. It's easier to store
 		//    in a DB table.
 		public TradeRecord()
 		{ }
@@ -15,9 +15,9 @@
 			OrderId = trade.OrderId;
 			Created = trade.Created.Ticks;
 			Updated = trade.Updated.Ticks;
-			PriceQ2B = (double)(decimal)trade.PriceQ2B;
-			AmountBase = (double)(decimal)trade.AmountBase;
-			CommissionQuote = (double)(decimal)trade.CommissionQuote;
+			PriceQ2B = trade.PriceQ2B;
+			AmountBase = trade.AmountBase;
+			CommissionQuote = trade.CommissionQuote;
 		}
 
 		/// <summary>The trade id</summary>

@@ -154,6 +154,8 @@ namespace CoinFlip
 		/// <summary>Reset the sim back to the start time</summary>
 		public void Reset()
 		{
+			Running = false;
+
 			// Deactivate all back-testing bots (Actually, all of them)
 			foreach (var bot in Bots)
 				bot.Active = false;

@@ -5,7 +5,7 @@ namespace Binance.API.DomainObjects
 {
 	public class MarketChartData :IComparable<MarketChartData>
 	{
-		public MarketChartData(DateTimeOffset time, decimal open, decimal high, decimal low, decimal close, decimal volume, DateTimeOffset time_close, decimal quote_asset_volume, int trade_count, decimal taker_buy_volume_base, decimal taker_buy_volume_quote)
+		public MarketChartData(DateTimeOffset time, double open, double high, double low, double close, double volume, DateTimeOffset time_close, double quote_asset_volume, int trade_count, double taker_buy_volume_base, double taker_buy_volume_quote)
 		{
 			Time = time;
 			Open = open;
@@ -22,56 +22,56 @@ namespace Binance.API.DomainObjects
 		public MarketChartData(JArray candle_data)
 		{
 			Time = DateTimeOffset.FromUnixTimeMilliseconds(candle_data[0].Value<long>());
-			Open = candle_data[1].Value<decimal>();
-			High = candle_data[2].Value<decimal>();
-			Low = candle_data[3].Value<decimal>();
-			Close = candle_data[4].Value<decimal>();
-			Volume = candle_data[5].Value<decimal>();
+			Open = candle_data[1].Value<double>();
+			High = candle_data[2].Value<double>();
+			Low = candle_data[3].Value<double>();
+			Close = candle_data[4].Value<double>();
+			Volume = candle_data[5].Value<double>();
 			TimeClose = DateTimeOffset.FromUnixTimeMilliseconds(candle_data[6].Value<long>());
-			QuoteAssetVolume = candle_data[7].Value<decimal>();
+			QuoteAssetVolume = candle_data[7].Value<double>();
 			TradeCount = candle_data[8].Value<int>();
-			TakerBuyVolumeBase = candle_data[9].Value<decimal>();
-			TakerBuyVolumeQuote = candle_data[10].Value<decimal>();
+			TakerBuyVolumeBase = candle_data[9].Value<double>();
+			TakerBuyVolumeQuote = candle_data[10].Value<double>();
 		}
 
 		/// <summary>Time stamp</summary>
 		public DateTimeOffset Time { get; }
 
 		/// <summary></summary>
-		public decimal Open { get; }
+		public double Open { get; }
 
 		/// <summary></summary>
-		public decimal High { get; }
+		public double High { get; }
 
 		/// <summary></summary>
-		public decimal Low{ get; }
+		public double Low { get; }
 
 		/// <summary></summary>
-		public decimal Close { get; }
+		public double Close { get; }
 
 		/// <summary>Volume traded in this candle (in quote currency)</summary>
-		public decimal Volume { get; }
+		public double Volume { get; }
 
 		/// <summary></summary>
 		public DateTimeOffset TimeClose { get; }
 
 		/// <summary></summary>
-		public decimal QuoteAssetVolume { get; }
+		public double QuoteAssetVolume { get; }
 
 		/// <summary></summary>
 		public int TradeCount { get; }
 
 		/// <summary></summary>
-		public decimal TakerBuyVolumeBase { get; }
+		public double TakerBuyVolumeBase { get; }
 
 		/// <summary></summary>
-		public decimal TakerBuyVolumeQuote { get; }
+		public double TakerBuyVolumeQuote { get; }
 
 		/// <summary>Fake median data, since Binance doesn't supply this info</summary>
-		public decimal Median => (Open + High + Low + Close) / 4;
+		public double Median => (Open + High + Low + Close) / 4;
 
 		/// <summary></summary>
-		public decimal Reserved { get; }
+		public double Reserved { get; }
 
 		public int CompareTo(MarketChartData other)
 		{

@@ -53,7 +53,7 @@ namespace CoinFlip.UI.GfxObjects
 			base.UpdateGfxCore();
 
 			// Price displayed with 8 significant figures
-			var price = ((decimal)PriceQ2B).ToString(8);
+			var price = PriceQ2B.ToString(8);
 
 			// Colour based on trade direction
 			var col =
@@ -84,7 +84,7 @@ namespace CoinFlip.UI.GfxObjects
 			{
 				Gfx.Child("halo").Visible = Hovered;
 				Gfx.O2P =
-					m4x4.Translation((float)Chart.XAxis.Min, (float)(decimal)PriceQ2B, CandleChart.ZOrder.Indicators) *
+					m4x4.Translation((float)Chart.XAxis.Min, (float)PriceQ2B, CandleChart.ZOrder.Indicators) *
 					m4x4.Scale((float)Chart.XAxis.Span, 1f, 1f, v4.Origin);
 
 				window.AddObject(Gfx);
@@ -132,7 +132,7 @@ namespace CoinFlip.UI.GfxObjects
 		public ETradeType TradeType => Trade.TradeType;
 
 		/// <summary>The price level that the indicator is at</summary>
-		public Unit<decimal> PriceQ2B
+		public Unit<double> PriceQ2B
 		{
 			get => Trade.PriceQ2B;
 			set => Trade.PriceQ2B = value;
@@ -143,12 +143,12 @@ namespace CoinFlip.UI.GfxObjects
 		{
 			// Find the nearest point to 'client_point' on the line
 			var chart_pt = chart_point;
-			var client_pt = Chart.ChartToClient(new Point(chart_pt.X, (float)(decimal)PriceQ2B));
+			var client_pt = Chart.ChartToClient(new Point(chart_pt.X, PriceQ2B));
 
 			// If the point is within tolerance of the gripper
 			if (Math_.Frac(Chart.XAxis.Min, chart_pt.X, Chart.XAxis.Max) > 1.0f - GripperWidthFrac &&
 				Math.Abs(client_pt.Y - client_point.Y) < GripperHeight)
-				return new ChartControl.HitTestResult.Hit(this, new Point(chart_pt.X, (float)(decimal)PriceQ2B), null);
+				return new ChartControl.HitTestResult.Hit(this, new Point(chart_pt.X, PriceQ2B), null);
 
 			return null;
 		}
@@ -165,7 +165,7 @@ namespace CoinFlip.UI.GfxObjects
 			public override void MouseMove(MouseEventArgs e)
 			{
 				var chart_pt = Chart.ClientToChart(e.GetPosition(Chart));
-				m_trade_indicator.PriceQ2B = ((decimal)chart_pt.Y)._(m_trade_indicator.PriceQ2B);
+				m_trade_indicator.PriceQ2B = chart_pt.Y._(m_trade_indicator.PriceQ2B);
 				base.MouseMove(e);
 			}
 		}

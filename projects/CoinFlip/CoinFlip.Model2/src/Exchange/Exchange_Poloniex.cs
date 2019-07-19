@@ -79,8 +79,8 @@ namespace CoinFlip
 
 					// Create the trade pair
 					var pair = new TradePair(base_, quote, this, p.Value.Id,
-						amount_range_base: new RangeF<Unit<decimal>>(0.0001m._(base_), 10000000m._(base_)),
-						amount_range_quote: new RangeF<Unit<decimal>>(0.0001m._(quote), 10000000m._(quote)),
+						amount_range_base: new RangeF<Unit<double>>(0.0001._(base_), 10000000.0._(base_)),
+						amount_range_quote: new RangeF<Unit<double>>(0.0001._(quote), 10000000.0._(quote)),
 						price_range: null);
 
 					// Add the trade pair.
@@ -286,7 +286,7 @@ namespace CoinFlip
 			var data = await Api.GetChartData(cp, ToMarketPeriod(timeframe), time_beg, time_end, cancel);
 
 			// Convert it to candles (yes, Polo gets the base/quote backwards for 'Volume')
-			var candles = data.Select(x => new Candle(x.Time.Ticks, (double)x.Open, (double)x.High, (double)x.Low, (double)x.Close, (double)x.WeightedAverage, (double)x.VolumeQuote)).ToList();
+			var candles = data.Select(x => new Candle(x.Time.Ticks, x.Open, x.High, x.Low, x.Close, x.WeightedAverage, x.VolumeQuote)).ToList();
 			return candles;
 		}
 
@@ -305,7 +305,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Open a trade</summary>
-		protected async override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EPlaceOrderType ot, Unit<decimal> amount, Unit<decimal> price, CancellationToken cancel)
+		protected async override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EPlaceOrderType ot, Unit<double> amount, Unit<double> price, CancellationToken cancel)
 		{
 			try
 			{

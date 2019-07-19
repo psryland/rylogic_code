@@ -152,13 +152,13 @@ namespace CoinFlip.UI
 			public Coin Coin => SelectedExchange?.Coins[Symbol];
 
 			/// <summary>The live value of this coin</summary>
-			public decimal Value => Coin?.ValueOf(1m) ?? 0m;
+			public double Value => Coin?.ValueOf(1) ?? 0;
 
 			/// <summary>The total amount of the coin (in coin currency)</summary>
-			public Unit<decimal> Total => Coin?.Balances.Sum(x => x.Total) ?? 0m._(Symbol);
+			public Unit<double> Total => Coin?.Balances.Sum(x => x.Total) ?? 0.0._(Symbol);
 
 			/// <summary>The available amount of the coin (in coin currency)</summary>
-			public Unit<decimal> Available => Coin?.Balances.Sum(x => x.Available) ?? 0m._(Symbol);
+			public Unit<double> Available => Coin?.Balances.Sum(x => x.Available) ?? 0.0._(Symbol);
 
 			/// <summary>The currently selected exchange</summary>
 			private Exchange SelectedExchange => (Exchange)m_owner.Exchanges.CurrentItem;
@@ -167,13 +167,13 @@ namespace CoinFlip.UI
 			private Fund SelectedFund => (Fund)m_owner.Funds.CurrentItem;
 
 			/// <summary>The maximum amount that can be allocated to the fund</summary>
-			public decimal MaxAvailable
+			public double MaxAvailable
 			{
 				get
 				{
 					var balances = Coin?.Balances;
 					if (balances == null)
-						return 0m;
+						return 0;
 
 					// The max available to the currently selected fund is:
 					// + the exchange's available amount (because you can't trade with held funds)
@@ -193,13 +193,13 @@ namespace CoinFlip.UI
 			}
 
 			/// <summary>The balance of this coin in the selected fund</summary>
-			public decimal Allocated
+			public double Allocated
 			{
 				get
 				{
 					var fund_id = SelectedFund?.Id;
-					if (fund_id == null) return 0m;
-					return Coin?.Balances[fund_id].Total ?? 0m;
+					if (fund_id == null) return 0;
+					return Coin?.Balances[fund_id].Total ?? 0;
 				}
 				set
 				{
@@ -211,7 +211,7 @@ namespace CoinFlip.UI
 					if (coin == null)
 						return;
 
-					value = Math.Max(value, 0m);
+					value = Math.Max(value, 0);
 					coin.Balances.AssignFundBalance(fund_id, value._(coin), null, Model.UtcNow);
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(MaxAvailable)));
 					m_owner.NotifyPropertyChanged(nameof(FundAllocationsUI.Validate));

@@ -102,7 +102,7 @@ namespace CoinFlip.UI.GfxObjects
 					if (rng.Begi + candle_idx == Instrument.Count - 1)
 					{
 						var spot = Instrument.SpotPrice(ETradeType.Q2B);
-						if (spot != null) close = (double)(decimal)spot.Value;
+						if (spot != null) close = spot.Value;
 					}
 
 					// Create the graphics with the first candle at x == 0

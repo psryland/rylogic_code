@@ -45,7 +45,7 @@ namespace Bittrex.API.DomainObjects
 		[DebuggerDisplay("{Description,nq}")]
 		public struct Offer
 		{
-			public Offer(decimal price, decimal amount_base)
+			public Offer(double price, double amount_base)
 			{
 				PriceQ2B = price;
 				AmountBase = amount_base;
@@ -53,14 +53,14 @@ namespace Bittrex.API.DomainObjects
 
 			/// <summary></summary>
 			[JsonProperty("Rate")]
-			public decimal PriceQ2B { get; set; }
+			public double PriceQ2B { get; set; }
 
 			/// <summary></summary>
 			[JsonProperty("Quantity")]
-			public decimal AmountBase { get; set; }
+			public double AmountBase { get; set; }
 
 			/// <summary></summary>
-			public decimal AmountQuote => PriceQ2B + AmountBase;
+			public double AmountQuote => PriceQ2B + AmountBase;
 
 			/// <summary></summary>
 			public string Description => $"Price={PriceQ2B} Amount={AmountBase}";

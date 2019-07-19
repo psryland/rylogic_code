@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using ExchApi.Common.JsonConverter;
 using Newtonsoft.Json;
 
@@ -25,27 +24,27 @@ namespace Bittrex.API.DomainObjects
 
 		/// <summary>The limit price at which the trade will be filled (in quote currency)</summary>
 		[JsonProperty("Limit")]
-		public decimal Limit { get; internal set; }
+		public double Limit { get; internal set; }
 
 		/// <summary>The price that the trade has been filled at (in quote currency)</summary>
 		[JsonProperty("Price")]
-		public decimal ActualPrice { get; set; }
+		public double ActualPrice { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("PricePerUnit")]
-		public decimal? PricePerUnit { get; set; }
+		public double? PricePerUnit { get; set; }
 
 		/// <summary>The volume to trade (in base currency)</summary>
 		[JsonProperty("Quantity")]
-		public decimal VolumeBase { get; set; }
+		public double VolumeBase { get; set; }
 
 		/// <summary>The volume that remains to be traded (in base currency)</summary>
 		[JsonProperty("QuantityRemaining")]
-		public decimal RemainingBase { get; set; }
+		public double RemainingBase { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("CommissionPaid")]
-		public decimal CommissionPaid { get; set; }
+		public double CommissionPaid { get; set; }
 
 		/// <summary>The order creation time stamp</summary>
 		[JsonProperty("Opened")]

@@ -245,7 +245,7 @@ namespace CoinFlip
 		public string Description => $"{Name} {Pair.NameWithExchange} {TimeFrame}";
 
 		/// <summary>The current spot price for Quote to Base trades</summary>
-		public Unit<decimal>? SpotPrice(ETradeType tt) => Pair.SpotPrice[tt];
+		public Unit<double>? SpotPrice(ETradeType tt) => Pair.SpotPrice[tt];
 
 		#region Ranges and Indexing
 

@@ -63,10 +63,10 @@ namespace CoinFlip
 		/// <summary>Check the orders are in the correct order</summary>
 		public bool AssertOrdersValid()
 		{
-			var q2b_price0 = 0m._(Q2B.RateUnits);
-			var b2q_price0 = 0m._(B2Q.RateUnits);
-			var q2b0 = 0m._(Q2B.Base);
-			var b2q0 = 0m._(B2Q.Base);
+			var q2b_price0 = 0.0;
+			var b2q_price0 = 0.0;
+			var q2b0 = 0.0;
+			var b2q0 = 0.0;
 
 			// The Q2B prices should increase, i.e. the best offer from a trader's point of view is the lowest price.
 			for (int i = 0; i != Q2B.Count; ++i)

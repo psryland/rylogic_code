@@ -3,6 +3,7 @@ using CoinFlip;
 using CoinFlip.Bots;
 using Rylogic.Common;
 using Rylogic.Extn;
+using Rylogic.Utility;
 
 namespace Bot.Rebalance
 {
@@ -12,10 +13,10 @@ namespace Bot.Rebalance
 		{
 			Exchange = string.Empty;
 			Pair = string.Empty;
-			AllInPrice = 0m;
-			AllOutPrice = 100_000m;
-			BaseCurrencyBalance = 0m;
-			QuoteCurrencyBalance = 0m;
+			AllInPrice = 0.0;
+			AllOutPrice = 100_000.0;
+			BaseCurrencyBalance = 0.0;
+			QuoteCurrencyBalance = 0.0;
 			RebalanceThreshold = 0.1;
 			PendingOrders = new MonitoredOrders();
 
@@ -42,30 +43,30 @@ namespace Bot.Rebalance
 		}
 
 		/// <summary>The price (in Quote/Base) at which the balance is maximally in the base currency</summary>
-		public decimal AllInPrice
+		public double AllInPrice
 		{
-			get { return get<decimal>(nameof(AllInPrice)); }
+			get { return get<double>(nameof(AllInPrice)); }
 			set { set(nameof(AllInPrice), value); }
 		}
 
 		/// <summary>The price (in Quote/Base) at which the balance is maximally in the quote currency</summary>
-		public decimal AllOutPrice
+		public double AllOutPrice
 		{
-			get { return get<decimal>(nameof(AllOutPrice)); }
+			get { return get<double>(nameof(AllOutPrice)); }
 			set { set(nameof(AllOutPrice), value); }
 		}
 
 		/// <summary>The current balance of base currency (in Base) </summary>
-		public decimal BaseCurrencyBalance
+		public double BaseCurrencyBalance
 		{
-			get { return get<decimal>(nameof(BaseCurrencyBalance)); }
+			get { return get<double>(nameof(BaseCurrencyBalance)); }
 			set { set(nameof(BaseCurrencyBalance), value); }
 		}
 
 		/// <summary>The current balance of quote currency (in Quote) </summary>
-		public decimal QuoteCurrencyBalance
+		public double QuoteCurrencyBalance
 		{
-			get { return get<decimal>(nameof(QuoteCurrencyBalance)); }
+			get { return get<double>(nameof(QuoteCurrencyBalance)); }
 			set { set(nameof(QuoteCurrencyBalance), value); }
 		}
 
@@ -84,7 +85,7 @@ namespace Bot.Rebalance
 		}
 
 		/// <summary>Performs validation on the settings. Returns null if valid</summary>
-		public Exception Validate(Model model)
+		public Exception Validate(Model model, Fund fund)
 		{
 			if (!Exchange.HasValue())
 				return new Exception("No exchange configured");
@@ -92,14 +93,21 @@ namespace Bot.Rebalance
 				return new Exception("The configured exchange is not available");
 			if (!Pair.HasValue())
 				return new Exception("No pair configured");
-			if (model.Exchanges[Exchange].Pairs[Pair] == null)
+
+			var pair = model.Exchanges[Exchange].Pairs[Pair];
+			if (pair == null)
 				return new Exception("The configured paid is not available");
 			if (AllInPrice >= AllOutPrice)
 				return new Exception("Price range is invalid");
-			if (BaseCurrencyBalance < 0)
+
+			var base_balance = BaseCurrencyBalance._(pair.Base);
+			if (base_balance < 0 || base_balance > fund[pair.Base].Available)
 				return new Exception("Base holdings is invalid");
-			if (QuoteCurrencyBalance < 0)
+
+			var quote_balance = QuoteCurrencyBalance._(pair.Quote);
+			if (quote_balance < 0 || quote_balance > fund[pair.Quote].Available)
 				return new Exception("Quote holdings is invalid");
+
 			if (BaseCurrencyBalance == 0 && QuoteCurrencyBalance == 0)
 				return new Exception("Combined holdings must be > 0");
 			if (RebalanceThreshold <= 0)

@@ -39,7 +39,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Update the balance of the fund 'fund_id'</summary>
-		public void AssignFundBalance(Coin coin, string fund_id, Unit<decimal> total, Unit<decimal> held_on_exch, DateTimeOffset update_time)
+		public void AssignFundBalance(Coin coin, string fund_id, Unit<double> total, Unit<double> held_on_exch, DateTimeOffset update_time)
 		{
 			Debug.Assert(Misc.AssertMarketDataWrite());
 

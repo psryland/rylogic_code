@@ -27,24 +27,24 @@ namespace CoinFlip
 
 		private readonly List<Balance> m_funds;
 		public Balances(Coin coin, DateTimeOffset last_updated)
-			:this(coin, 0m._(coin), last_updated)
+			:this(coin, 0.0._(coin), last_updated)
 		{}
-		public Balances(Coin coin, Unit<decimal> total, DateTimeOffset last_updated)
-			:this(coin, total, 0m._(coin), last_updated)
+		public Balances(Coin coin, Unit<double> total, DateTimeOffset last_updated)
+			:this(coin, total, 0.0._(coin), last_updated)
 		{}
-		public Balances(Coin coin, Unit<decimal> total, Unit<decimal> held_on_exch, DateTimeOffset last_updated)
+		public Balances(Coin coin, Unit<double> total, Unit<double> held_on_exch, DateTimeOffset last_updated)
 		{
 			// Truncation error can create off by 1 LSD
 			if (total < 0)
 			{
-				Debug.Assert(total >= -decimal_.Epsilon);
-				total = 0m._(total);
+				Debug.Assert(total >= -double.Epsilon);
+				total = 0.0._(total);
 			}
 			if (!held_on_exch.WithinInclusive(0, total))
 			{
-				Debug.Assert(held_on_exch >= -decimal_.Epsilon);
-				Debug.Assert(held_on_exch <= total + decimal_.Epsilon);
-				held_on_exch = Math_.Clamp(held_on_exch, 0m._(held_on_exch), total);
+				Debug.Assert(held_on_exch >= -double.Epsilon);
+				Debug.Assert(held_on_exch <= total + double.Epsilon);
+				held_on_exch = Math_.Clamp(held_on_exch, 0.0._(held_on_exch), total);
 			}
 			
 			Coin = coin;
@@ -92,28 +92,28 @@ namespace CoinFlip
 		public IEnumerable<IBalance> FundsExceptMain => m_funds.Where(x => x.FundId != Fund.Main);
 
 		/// <summary>The nett total balance is the balance that the exchange reports (regardless of what the funds think they have)</summary>
-		public Unit<decimal> NettTotal => ExchTotal + (!Model.AllowTrades ? FakeCash : 0m._(Coin));
-		private Unit<decimal> ExchTotal { get; set; }
+		public Unit<double> NettTotal => ExchTotal + (!Model.AllowTrades ? FakeCash : 0.0._(Coin));
+		private Unit<double> ExchTotal { get; set; }
 
 		/// <summary>The nett held balance is the held amount that the exchange reports (regardless of what the funds think)</summary>
-		public Unit<decimal> NettHeld => ExchHeld;
-		private Unit<decimal> ExchHeld { get; set; }
+		public Unit<double> NettHeld => ExchHeld;
+		private Unit<double> ExchHeld { get; set; }
 
 		/// <summary>The nett available balance is the (total - held) balance reported by the exchange</summary>
-		public Unit<decimal> NettAvailable => NettTotal - NettHeld;
+		public Unit<double> NettAvailable => NettTotal - NettHeld;
 
 		/// <summary>The USD value of the nett total</summary>
-		public Unit<decimal> NettValue => Coin.ValueOf(NettTotal);
+		public Unit<double> NettValue => Coin.ValueOf(NettTotal);
 
 		/// <summary>Fake additional funds</summary>
-		public Unit<decimal> FakeCash { get; set; }
+		public Unit<double> FakeCash { get; set; }
 
 		/// <summary>Access balances associated with the given fund. Unknown fund ids return an empty balance</summary>
 		public IBalance this[string fund_id] => Funds.FirstOrDefault(x => x.FundId == fund_id) ?? new Balance(this, fund_id);
 		public IBalance this[Fund fund] => this[fund?.Id];
 
 		/// <summary>Set the total balance attributed to the fund 'fund_id'. Only non-null values are changed</summary>
-		public void AssignFundBalance(string fund_id, Unit<decimal>? total, Unit<decimal>? held_on_exch, DateTimeOffset now, bool notify = true)
+		public void AssignFundBalance(string fund_id, Unit<double>? total, Unit<double>? held_on_exch, DateTimeOffset now, bool notify = true)
 		{
 			// Notes:
 			// - Don't throw if the nett total becomes negative, that probably just means a fund
@@ -150,7 +150,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Add or subtract an amount from a fund</summary>
-		public void ChangeFundBalance(string fund_id, Unit<decimal>? change_total, Unit<decimal>? change_held_on_exch, DateTimeOffset now, bool notify = true)
+		public void ChangeFundBalance(string fund_id, Unit<double>? change_total, Unit<double>? change_held_on_exch, DateTimeOffset now, bool notify = true)
 		{
 			var balance = (Balance)Funds.FirstOrDefault(x => x.FundId == fund_id);
 			if (fund_id == Fund.Main)
@@ -186,9 +186,9 @@ namespace CoinFlip
 		public Exception Validate()
 		{
 			// Check exchange side balance
-			if (ExchTotal < 0m._(Coin))
+			if (ExchTotal < 0.0._(Coin))
 				return new Exception("Exchange Balance Invalid: Total < 0");
-			if (ExchHeld < 0m._(Coin))
+			if (ExchHeld < 0.0._(Coin))
 				return new Exception("Exchange Balance Invalid: Held < 0");
 			if (ExchHeld > ExchTotal)
 				return new Exception("Exchange Balance Invalid: Held > Total");
@@ -196,9 +196,9 @@ namespace CoinFlip
 			// Check the fund balances are logical
 			foreach (var fund in Funds)
 			{
-				if (fund.Total < 0m._(Coin))
+				if (fund.Total < 0.0._(Coin))
 					return new Exception($"Fund {fund.FundId} balance invalid: Total < 0");
-				if (fund.HeldOnExch < 0m._(Coin))
+				if (fund.HeldOnExch < 0.0._(Coin))
 					return new Exception($"Fund {fund.FundId} balance invalid: Held < 0");
 				if (fund.HeldOnExch > fund.Total)
 					return new Exception($"Fund {fund.FundId} balance invalid: Held > Total");
@@ -228,8 +228,8 @@ namespace CoinFlip
 			public Balance(Balances balances, string fund_id)
 			{
 				m_balances = balances;
-				m_total = 0m._(balances.Coin);
-				m_held_on_exch = 0m._(balances.Coin);
+				m_total = 0.0._(balances.Coin);
+				m_held_on_exch = 0.0._(balances.Coin);
 				FundId = fund_id;
 				Holds = new List<FundHold>();
 			}
@@ -247,10 +247,10 @@ namespace CoinFlip
 			public List<FundHold> Holds { get; }
 
 			/// <summary>The value of 'Coin' (probably in USD)</summary>
-			public decimal Value => Coin.ValueOf(1m);
+			public double Value => Coin.ValueOf(1);
 
 			/// <summary>The total balance associated with this fund (includes held amounts)</summary>
-			public Unit<decimal> Total
+			public Unit<double> Total
 			{
 				// The Main fund contains whatever is left over after the other funds have their share
 				get { return FundId == Fund.Main ? m_balances.NettTotal - m_balances.FundsExceptMain.Sum(x => x.Total) : m_total; }
@@ -260,21 +260,21 @@ namespace CoinFlip
 					m_total = value;
 				}
 			}
-			private Unit<decimal> m_total;
+			private Unit<double> m_total;
 
 			/// <summary>Total amount able to be used for new trades</summary>
-			public Unit<decimal> Available
+			public Unit<double> Available
 			{
 				get
 				{
 					CheckHolds();
 					var avail = Total - HeldForTrades;
-					return avail > 0 ? avail : 0m._(Coin);
+					return avail > 0 ? avail : 0.0._(Coin);
 				}
 			}
 
 			/// <summary>Total amount set aside for pending orders and trade strategies</summary>
-			public Unit<decimal> HeldOnExch
+			public Unit<double> HeldOnExch
 			{
 				get { return FundId == Fund.Main ? m_balances.NettHeld - m_balances.FundsExceptMain.Sum(x => x.HeldOnExch) : m_held_on_exch; }
 				set
@@ -283,23 +283,23 @@ namespace CoinFlip
 					m_held_on_exch = value;
 				}
 			}
-			private Unit<decimal> m_held_on_exch;
+			private Unit<double> m_held_on_exch;
 
 			/// <summary>Amount set aside (locally) for trading strategies associated with this fund</summary>
-			public Unit<decimal> HeldLocally => Holds.Sum(x => x.Volume);
+			public Unit<double> HeldLocally => Holds.Sum(x => x.Volume);
 
 			/// <summary>Total amount set aside for pending orders and trade strategies</summary>
-			public Unit<decimal> HeldForTrades => HeldOnExch + HeldLocally;
+			public Unit<double> HeldForTrades => HeldOnExch + HeldLocally;
 
 			/// <summary>Reserve 'amount' until the next balance update</summary>
-			public Guid Hold(Unit<decimal> amount)
+			public Guid Hold(Unit<double> amount)
 			{
 				var ts = Model.UtcNow;
 				return Hold(amount, b => b.LastUpdated < ts);
 			}
 
 			/// <summary>Reserve 'amount' until 'still_needed' returns false.</summary>
-			public Guid Hold(Unit<decimal> amount, Func<IBalance, bool> still_needed)
+			public Guid Hold(Unit<double> amount, Func<IBalance, bool> still_needed)
 			{
 				// 'Available' removes stale holds
 				if (amount > Available)
@@ -325,7 +325,7 @@ namespace CoinFlip
 			}
 
 			/// <summary>Return the amount held for the given id</summary>
-			public Unit<decimal> Reserved(Guid hold_id)
+			public Unit<double> Reserved(Guid hold_id)
 			{
 				return Holds.Where(x => x.Id == hold_id).Sum(x => x.Volume);
 			}
@@ -375,10 +375,10 @@ namespace CoinFlip
 
 
 		/// <summary>The maximum amount that bots are allowed to trade</summary>
-		public Unit<decimal> AutoTradeLimit
+		public Unit<double> AutoTradeLimit
 		{
 			get { return Coin.AutoTradeLimit; }
-			set { Coin.AutoTradeLimit = ((decimal)value)._(Coin); }
+			set { Coin.AutoTradeLimit = value._(Coin); }
 		}
 
 		/// <summary>Update the balance partitions corresponding to each fund</summary>
@@ -398,7 +398,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Create a fund (sub account)</summary>
-		private void AddFund(string fund_id, Unit<decimal>? amount = null, double? fraction = null)
+		private void AddFund(string fund_id, Unit<double>? amount = null, double? fraction = null)
 		{
 			// Close any existing fund associated with 'fund_id'
 			RemoveFund(fund_id);
@@ -406,8 +406,8 @@ namespace CoinFlip
 			// Get the amount to move from the main fund
 			var volume =
 				amount   != null ? amount.Value :                        // Create from a fixed amount
-				fraction != null ? NettTotal * (decimal)fraction.Value : // Create as a fraction of the nett total balance
-				0m._(Coin);
+				fraction != null ? NettTotal * (double)fraction.Value : // Create as a fraction of the nett total balance
+				0.0._(Coin);
 
 			// Check there is enough in the main fund to cover 'volume'
 			var pot = Funds[Fund.Main];

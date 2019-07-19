@@ -13,15 +13,15 @@ namespace CoinFlip
 		//    of fields in the containing OrderCompleted. However, they allow convenient conversion
 		//    to CoinIn/CoinOut etc.
 
-		public TradeCompleted(OrderCompleted order_completed, long trade_id, Unit<decimal> price_q2b, Unit<decimal> amount_base, Unit<decimal> commission_quote, DateTimeOffset created, DateTimeOffset updated)
+		public TradeCompleted(OrderCompleted order_completed, long trade_id, Unit<double> price_q2b, Unit<double> amount_base, Unit<double> commission_quote, DateTimeOffset created, DateTimeOffset updated)
 		{
 			// Check units
 			var pair = order_completed.Pair;
-			if (amount_base <= 0m._(pair.Base))
+			if (amount_base <= 0.0._(pair.Base))
 				throw new Exception("Invalid amount");
-			if (price_q2b * amount_base <= 0m._(pair.Quote))
+			if (price_q2b * amount_base <= 0.0._(pair.Quote))
 				throw new Exception("Invalid price");
-			if (commission_quote < 0m._(pair.Quote))
+			if (commission_quote < 0.0._(pair.Quote))
 				throw new Exception("Negative commission");
 
 			Order           = order_completed;
@@ -52,18 +52,18 @@ namespace CoinFlip
 		public long TradeId { get; }
 
 		/// <summary>The price that the trade was filled at</summary>
-		public Unit<decimal> PriceQ2B { get; private set; }
+		public Unit<double> PriceQ2B { get; private set; }
 		private double PriceQ2BInternal
 		{
-			get { return (double)(decimal)PriceQ2B; }
-			set { PriceQ2B = ((decimal)value)._(Pair.RateUnits); }
+			get { return PriceQ2B; }
+			set { PriceQ2B = value._(Pair.RateUnits); }
 		}
 
 		/// <summary>The amount of base currency traded (excludes commission)</summary>
-		public Unit<decimal> AmountBase { get; }
+		public Unit<double> AmountBase { get; }
 
 		/// <summary>The amount paid in commission (in Quote)</summary>
-		public Unit<decimal> CommissionQuote { get; }
+		public Unit<double> CommissionQuote { get; }
 
 		/// <summary>When the trade occurred (in Ticks)</summary>
 		public long Timestamp { get; private set; }
@@ -76,19 +76,19 @@ namespace CoinFlip
 		public DateTimeOffset Updated { get; }
 
 		/// <summary>The amount of quote current traded (excludes commission)</summary>
-		public Unit<decimal> AmountQuote => AmountBase * PriceQ2B;
+		public Unit<double> AmountQuote => AmountBase * PriceQ2B;
 
 		/// <summary>The input amount of the trade (in base or quote, depending on 'TradeType'. Excluding commission)</summary>
-		public Unit<decimal> AmountIn => TradeType.AmountIn(AmountBase, PriceQ2B);
+		public Unit<double> AmountIn => TradeType.AmountIn(AmountBase, PriceQ2B);
 
 		/// <summary>The output amount of the trade excluding commissions (in quote or base, depending on 'TradeType')</summary>
-		public Unit<decimal> AmountOut => TradeType.AmountOut(AmountBase, PriceQ2B);
+		public Unit<double> AmountOut => TradeType.AmountOut(AmountBase, PriceQ2B);
 
 		/// <summary>The amount received after commissions (in AmountOut currency)</summary>
-		public Unit<decimal> AmountNett => AmountOut - Commission;
+		public Unit<double> AmountNett => AmountOut - Commission;
 
 		/// <summary>The commission that was charged on this trade (in the same currency as AmountOut)</summary>
-		public Unit<decimal> Commission => TradeType.Commission(CommissionQuote, PriceQ2B);
+		public Unit<double> Commission => TradeType.Commission(CommissionQuote, PriceQ2B);
 
 		/// <summary>The coin type being sold</summary>
 		public Coin CoinIn => TradeType.CoinIn(Pair);

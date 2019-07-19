@@ -15,7 +15,7 @@ namespace CoinFlip
 		//    should exist somewhere in their order book. When an Order is filled it
 		//    becomes a 'OrderCompleted'
 
-		public Order(string fund_id, long order_id, ETradeType tt, TradePair pair, Unit<decimal> price_q2b, Unit<decimal> amount_base, Unit<decimal> remaining_base, DateTimeOffset? created, DateTimeOffset updated, bool fake = false)
+		public Order(string fund_id, long order_id, ETradeType tt, TradePair pair, Unit<double> price_q2b, Unit<double> amount_base, Unit<double> remaining_base, DateTimeOffset? created, DateTimeOffset updated, bool fake = false)
 			:base(fund_id, tt, pair, price_q2b, amount_base)
 		{
 			OrderId = order_id;
@@ -25,7 +25,7 @@ namespace CoinFlip
 			Updated = updated;
 			Fake = fake;
 		}
-		public Order(Trade trade, long order_id, Unit<decimal> remaining_base, DateTimeOffset? created, DateTimeOffset updated, bool fake = false)
+		public Order(Trade trade, long order_id, Unit<double> remaining_base, DateTimeOffset? created, DateTimeOffset updated, bool fake = false)
 			: this(trade.FundId, order_id, trade.TradeType, trade.Pair, trade.PriceQ2B, trade.AmountBase, remaining_base, created, updated, fake)
 		{ }
 		public Order(Order rhs)
@@ -40,11 +40,11 @@ namespace CoinFlip
 		public Guid UniqueKey { get; }
 
 		/// <summary>The remaining amount to be traded (in base currency)</summary>
-		public Unit<decimal> RemainingBase { get; private set; }
+		public Unit<double> RemainingBase { get; private set; }
 
 		/// <summary>The remaining amount to be traded (in AmountIn currency)</summary>
-		public Unit<decimal> Remaining => TradeType.AmountIn(RemainingBase, PriceQ2B);
-		public decimal RemainingFrac => Math_.Div((decimal)RemainingBase, (decimal)AmountBase, 0m);
+		public Unit<double> Remaining => TradeType.AmountIn(RemainingBase, PriceQ2B);
+		public double RemainingFrac => Math_.Div(RemainingBase, AmountBase, 0);
 
 		/// <summary>When the order was created</summary>
 		public DateTimeOffset? Created { get; private set; }

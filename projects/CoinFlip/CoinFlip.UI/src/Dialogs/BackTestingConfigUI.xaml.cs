@@ -12,7 +12,7 @@ namespace CoinFlip.UI
 {
 	public partial class BackTestingConfigUI :Window
 	{
-		private class CoinToBalance :LazyDictionary<string, decimal> { };
+		private class CoinToBalance :LazyDictionary<string, double> { };
 		private class ExchToBalance :LazyDictionary<string, CoinToBalance> { };
 
 		public BackTestingConfigUI(Window owner, Model model)
@@ -46,7 +46,7 @@ namespace CoinFlip.UI
 				foreach (var bal in exch.Value)
 				{
 					if (bal.Value == 0) continue;
-					bal_data.Add(new FundData.BalData(bal.Key, bal.Value, 0m));
+					bal_data.Add(new FundData.BalData(bal.Key, bal.Value, 0));
 				}
 				if (bal_data.Count == 0) continue;
 				exch_data.Add(new FundData.ExchData(exch.Key, bal_data.ToArray()));
@@ -90,11 +90,11 @@ namespace CoinFlip.UI
 			private Exchange Exchange => (Exchange)m_me.Exchanges.CurrentItem;
 
 			/// <summary>Get/Set the initial balance</summary>
-			public decimal Balance
+			public double Balance
 			{
 				get
 				{
-					if (Exchange == null) return 0m;
+					if (Exchange == null) return 0;
 					return m_me.InitialBalances[Exchange.Name][CoinData.Symbol];
 				}
 				set

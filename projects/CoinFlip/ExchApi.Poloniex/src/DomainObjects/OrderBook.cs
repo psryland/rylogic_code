@@ -52,8 +52,8 @@ namespace Poloniex.API.DomainObjects
 			{
 				output.Add(new Offer(
 					order_type,
-					(decimal)double.Parse(order[0], CultureInfo.InvariantCulture),
-					(decimal)double.Parse(order[1], CultureInfo.InvariantCulture)));
+					double.Parse(order[0], CultureInfo.InvariantCulture),
+					double.Parse(order[1], CultureInfo.InvariantCulture)));
 			}
 			return output;
 		}
@@ -64,7 +64,7 @@ namespace Poloniex.API.DomainObjects
 		{
 			internal Offer()
 			{}
-			internal Offer(EOrderSide type, decimal price, decimal volume)
+			internal Offer(EOrderSide type, double price, double volume)
 			{
 				Type = type;
 				Price = price;
@@ -76,14 +76,14 @@ namespace Poloniex.API.DomainObjects
 
 			/// <summary>The trade price (in quote currency)</summary>
 			[JsonProperty("rate")]
-			public decimal Price { get; private set; }
+			public double Price { get; private set; }
 
 			/// <summary>The trade amount (in base currency)</summary>
 			[JsonProperty("amount")]
-			public decimal AmountBase { get; private set; }
+			public double AmountBase { get; private set; }
 
 			/// <summary>The trade amount (in quote currency)</summary>
-			public decimal AmountQuote => AmountBase * Price;
+			public double AmountQuote => AmountBase * Price;
 		}
 	}
 

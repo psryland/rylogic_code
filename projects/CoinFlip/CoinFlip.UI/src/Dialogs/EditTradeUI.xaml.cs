@@ -120,12 +120,12 @@ namespace CoinFlip.UI
 				using (Scope.Create(() => ++m_in_price_q2b, () => --m_in_price_q2b))
 				{
 					// Default to an invalid price
-					var price_q2b = 0m._(Trade.Pair.RateUnits);
+					var price_q2b = 0.0._(Trade.Pair.RateUnits);
 					m_price_q2b = value;
 
 					// Convert the value into a price
 					value = value.Trim();
-					if (decimal.TryParse(value, out var v) && v > 0)
+					if (double.TryParse(value, out var v) && v > 0)
 						price_q2b = v._(Trade.Pair.RateUnits);
 
 					// Update the trade price. Property changed
@@ -155,7 +155,7 @@ namespace CoinFlip.UI
 				using (Scope.Create(() => ++m_in_amount_in, () => --m_in_amount_in))
 				{
 					// Default to an invalid amount
-					var amount_in = 0m._(CoinIn);
+					var amount_in = 0.0._(CoinIn);
 					m_amount_in = value;
 
 					// Convert the value into an amount
@@ -163,19 +163,19 @@ namespace CoinFlip.UI
 					if (value.EndsWith("%")) // Percentage of available in
 					{
 						value = value.Trim('%', ' ', '\t');
-						if (decimal.TryParse(value, out var pc) && pc > 0)
-							amount_in = AvailableIn * pc * 0.01m;
+						if (double.TryParse(value, out var pc) && pc > 0)
+							amount_in = AvailableIn * pc * 0.01;
 					}
 					else
 					{
-						if (decimal.TryParse(value, out var v) && v > 0)
+						if (double.TryParse(value, out var v) && v > 0)
 							amount_in = v._(CoinIn);
 					}
 
 					// Update the trade amount. Property changed
 					// notification happens in HandleTradePropertyChanged.
 					Trade.AmountIn = amount_in;
-					if (amount_in != 0m)
+					if (amount_in != 0)
 						m_amount_in = Trade.AmountIn.ToString(CoinIn.SD, false);
 				}
 			}
@@ -193,12 +193,12 @@ namespace CoinFlip.UI
 				using (Scope.Create(() => ++m_in_amount_out, () => --m_in_amount_out))
 				{
 					// Default to an invalid amount
-					var amount_out = 0m._(CoinOut);
+					var amount_out = 0.0._(CoinOut);
 					m_amount_out = value;
 
 					// Convert the value into an amount
 					value = value.Trim();
-					if (decimal.TryParse(value, out var v) && v > 0)
+					if (double.TryParse(value, out var v) && v > 0)
 						amount_out = v._(CoinOut);
 
 					// Update the trade amount. Property changed
@@ -213,14 +213,14 @@ namespace CoinFlip.UI
 		private int m_in_amount_out;
 
 		/// <summary>Return the available balance of currency to sell. Includes the 'm_initial.AmountIn' when modifying 'Trade'</summary>
-		public Unit<decimal> AvailableIn => Exchange.Balance[CoinIn][Trade.FundId].Available + AdditionalIn;
-		private Unit<decimal> AdditionalIn => ExistingOrderId != null ? Original.AmountIn : 0m._(CoinIn);
+		public Unit<double> AvailableIn => Exchange.Balance[CoinIn][Trade.FundId].Available + AdditionalIn;
+		private Unit<double> AdditionalIn => ExistingOrderId != null ? Original.AmountIn : 0.0._(CoinIn);
 
 		/// <summary>Return the available balance of currency to buy. Includes the 'm_initial.VolumeIn' when modifying 'Trade'</summary>
-		public Unit<decimal> AvailableOut => Exchange.Balance[CoinOut][Trade.FundId].Available;
+		public Unit<double> AvailableOut => Exchange.Balance[CoinOut][Trade.FundId].Available;
 
 		/// <summary>Description of the amount sold in the trade</summary>
-		public string TradeDescriptionIn => $"Trading {Math_.Clamp(Math_.Div((decimal)Trade.AmountIn, (decimal)AvailableIn, 0m), 0m, 1m):P2} of {CoinIn} balance";
+		public string TradeDescriptionIn => $"Trading {Math_.Clamp(Math_.Div(Trade.AmountIn, AvailableIn, 0.0._(CoinIn)), 0, 1):P2} of {CoinIn} balance";
 
 		/// <summary>Description of the amount received from the trade</summary>
 		public string TradeDescriptionOut => $"After Fees: {Trade.AmountNett.ToString("F8", true)}";

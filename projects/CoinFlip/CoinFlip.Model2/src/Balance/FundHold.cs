@@ -8,7 +8,7 @@ namespace CoinFlip
 	[DebuggerDisplay("{Volume}")]
 	public class FundHold
 	{
-		public FundHold(Guid id, Unit<decimal> amount, Func<IBalance, bool> still_needed)
+		public FundHold(Guid id, Unit<double> amount, Func<IBalance, bool> still_needed)
 		{
 			Id = id;
 			Volume = amount;
@@ -19,7 +19,7 @@ namespace CoinFlip
 		public Guid Id { get; }
 
 		/// <summary>How much to reserve</summary>
-		public Unit<decimal> Volume { get; }
+		public Unit<double> Volume { get; }
 
 		/// <summary>Callback function to test whether the reserve is still required</summary>
 		public Func<IBalance, bool> StillNeeded { get; set; }

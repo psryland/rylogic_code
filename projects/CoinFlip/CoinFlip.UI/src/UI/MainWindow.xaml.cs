@@ -142,7 +142,7 @@ namespace CoinFlip.UI
 		public Simulation Simulation => Model.Simulation;
 
 		/// <summary>Total holdings value across all exchanges and all currencies</summary>
-		public decimal NettWorth => Model.NettWorth;
+		public double NettWorth => Model.NettWorth;
 		public string ValuationCurrency => SettingsData.Settings.ValuationCurrency;
 
 		/// <summary>Toggle the live trading switch</summary>

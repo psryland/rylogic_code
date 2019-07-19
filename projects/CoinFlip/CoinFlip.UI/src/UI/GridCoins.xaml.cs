@@ -196,11 +196,11 @@ namespace CoinFlip.UI
 				Value = "0",
 				ValueAlignment = HorizontalAlignment.Right,
 				Units = Current.Symbol,
-				Validate = x => !decimal.TryParse(x, out var v) || v < 0 ? new ValidationResult(false, "Value must be a positive amount") : ValidationResult.ValidResult,
+				Validate = x => !double.TryParse(x, out var v) || v < 0 ? new ValidationResult(false, "Value must be a positive amount") : ValidationResult.ValidResult,
 			};
 			if (dlg.ShowDialog() == true)
 			{
-				var amount = decimal.Parse(dlg.Value);
+				var amount = double.Parse(dlg.Value);
 				foreach (var exch in Model.TradingExchanges)
 				{
 					var coin = exch.Coins[Current.Symbol];
@@ -217,7 +217,7 @@ namespace CoinFlip.UI
 			foreach (var exch in Model.TradingExchanges)
 			{
 				var coin = exch.Coins[Current.Symbol];
-				exch.Balance[coin].FakeCash = 0m._(coin);
+				exch.Balance[coin].FakeCash = 0.0._(coin);
 			}
 		}
 
@@ -276,20 +276,20 @@ namespace CoinFlip.UI
 			public string Symbol => CoinData.Symbol;
 
 			/// <summary>The value of all holdings of this coin on all source exchanges</summary>
-			public decimal Balance => Value * Total;
+			public double Balance => Value * Total;
 
 			/// <summary>The average value of this coin across all exchanges</summary>
-			public decimal Value
+			public double Value
 			{
 				get
 				{
 					// Find the average price on the available exchanges
-					var value = new Average<decimal>();
+					var value = new Average<double>();
 					foreach (var exch in SourceExchanges)
 					{
 						var coin = exch.Coins[Symbol];
 						if (coin == null) continue;
-						var val = coin.ValueOf(1m);
+						var val = coin.ValueOf(1.0);
 						if (val != 0) value.Add(val);
 					}
 					return value.Count != 0 ? value.Mean._(Symbol) : CoinData.AssignedValue._(Symbol);
@@ -297,11 +297,11 @@ namespace CoinFlip.UI
 			}
 
 			/// <summary>The sum of account balances across all exchanges for this coin</summary>
-			public Unit<decimal> Total
+			public Unit<double> Total
 			{
 				get
 				{
-					var total = 0m;
+					var total = 0.0;
 					foreach (var exch in SourceExchanges)
 					{
 						var coin = exch.Coins[Symbol];
@@ -313,11 +313,11 @@ namespace CoinFlip.UI
 			}
 
 			/// <summary>The sum of available balance across all exchanges</summary>
-			public Unit<decimal> Available
+			public Unit<double> Available
 			{
 				get
 				{
-					var avail = 0m;
+					var avail = 0.0;
 					foreach (var exch in SourceExchanges)
 					{
 						var coin = exch.Coins[Symbol];

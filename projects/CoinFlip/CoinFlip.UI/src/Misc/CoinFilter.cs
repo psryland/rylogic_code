@@ -22,12 +22,12 @@ namespace CoinFlip.UI
 		private bool m_enabled;
 
 		/// <summary>Filter balances with a value or amount less than this threshold</summary>
-		public decimal Threshold
+		public double Threshold
 		{
 			get { return m_threshold; }
 			set { SetProp(ref m_threshold, value, nameof(Threshold)); }
 		}
-		private decimal m_threshold;
+		private double m_threshold;
 
 		/// <summary>What to filter on</summary>
 		public ECoinFilterType Type
@@ -52,9 +52,9 @@ namespace CoinFlip.UI
 			{
 			default: throw new Exception("Unknown Filter Type");
 			case ECoinFilterType.Value: return coin.Value > Threshold;
-			case ECoinFilterType.Total: return (decimal)coin.Total > Threshold;
-			case ECoinFilterType.Available: return (decimal)coin.Available > Threshold;
-			case ECoinFilterType.Balance: return (decimal)(coin.Value * coin.Total) > Threshold;
+			case ECoinFilterType.Total: return coin.Total > Threshold;
+			case ECoinFilterType.Available: return coin.Available > Threshold;
+			case ECoinFilterType.Balance: return (coin.Value * coin.Total) > Threshold;
 			}
 		}
 

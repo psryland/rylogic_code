@@ -19,19 +19,19 @@ namespace CoinFlip
 		DateTimeOffset LastUpdated { get; }
 
 		/// <summary>The total amount of the currency 'Coin' associated with this fund on 'Coin.Exchange'</summary>
-		Unit<decimal> Total { get; }
+		Unit<double> Total { get; }
 
 		/// <summary>Total amount able to be used for new trades</summary>
-		Unit<decimal> Available { get; }
+		Unit<double> Available { get; }
 
 		/// <summary>Total amount set aside for pending orders and trade strategies</summary>
-		Unit<decimal> HeldOnExch { get; set; }
+		Unit<double> HeldOnExch { get; set; }
 
 		/// <summary>Reserve 'amount' until the next balance update</summary>
-		Guid Hold(Unit<decimal> amount);
+		Guid Hold(Unit<double> amount);
 
 		/// <summary>Reserve 'amount' until 'still_needed' returns false.</summary>
-		Guid Hold(Unit<decimal> amount, Func<IBalance, bool> still_needed);
+		Guid Hold(Unit<double> amount, Func<IBalance, bool> still_needed);
 
 		/// <summary>Update the 'still_needed' function for a balance hold</summary>
 		void Hold(Guid hold_id, Func<IBalance, bool> still_needed);
@@ -40,6 +40,6 @@ namespace CoinFlip
 		void Release(Guid hold_id);
 
 		/// <summary>Return the amount held for the given id</summary>
-		Unit<decimal> Reserved(Guid hold_id);
+		Unit<double> Reserved(Guid hold_id);
 	}
 }

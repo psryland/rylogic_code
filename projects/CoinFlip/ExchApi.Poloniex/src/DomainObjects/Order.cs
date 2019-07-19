@@ -11,7 +11,7 @@ namespace Poloniex.API.DomainObjects
 	{
 		internal Order()
 		{}
-		internal Order(EOrderSide order_type, decimal price, decimal volume)
+		internal Order(EOrderSide order_type, double price, double volume)
 		{
 			Type = order_type;
 			Price = price;
@@ -34,19 +34,19 @@ namespace Poloniex.API.DomainObjects
 
 		/// <summary>The trade price (in quote currency)</summary>
 		[JsonProperty("rate")]
-		public decimal Price { get; internal set; }
+		public double Price { get; internal set; }
 
 		/// <summary>The trade volume (in base currency)</summary>
 		[JsonProperty("startingAmount")]
-		public decimal VolumeBase { get; internal set; }
+		public double VolumeBase { get; internal set; }
 
 		/// <summary>The trade volume remaining (in base currency)</summary>
 		[JsonProperty("amount")]
-		public decimal RemainingBase { get; private set; }
+		public double RemainingBase { get; private set; }
 
 		/// <summary>The value of the trade (equal to Price * VolumeBase) (in quote currency)</summary>
 		[JsonProperty("total")]
-		public decimal Total { get; private set; }
+		public double Total { get; private set; }
 
 		/// <summary>The order creation time stamp</summary>
 		public DateTimeOffset Created { get; private set; }

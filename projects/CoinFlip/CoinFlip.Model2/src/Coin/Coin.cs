@@ -43,7 +43,7 @@ namespace CoinFlip
 		public string SymbolWithExchange => $"{Symbol} - {Exchange.Name}";
 
 		/// <summary>The default amount to use when creating a trade from this Coin</summary>
-		public Unit<decimal> DefaultTradeAmount => Meta.DefaultTradeAmount._(Symbol);
+		public Unit<double> DefaultTradeAmount => Meta.DefaultTradeAmount._(Symbol);
 
 		/// <summary>True if this coin type is of interest</summary>
 		public bool OfInterest => Meta.OfInterest;
@@ -55,15 +55,15 @@ namespace CoinFlip
 		public bool LivePriceAvailable => ValuationPath.Count != 0 || Symbol == SettingsData.Settings.ValuationCurrency;
 
 		/// <summary>The value of 1 unit of this currency</summary>
-		public Unit<decimal> Value
+		public Unit<double> Value
 		{
 			get
 			{
 				var coin = this;
-				var value = (Unit<decimal>?)1m._(coin);
+				var value = (Unit<double>?)1.0._(coin);
 
 				if (!LivePriceAvailable && !UpdateValuationPaths())
-					return 0m._(SettingsData.Settings.ValuationCurrency);
+					return 0.0._(SettingsData.Settings.ValuationCurrency);
 
 				foreach (var pair in ValuationPath)
 				{
@@ -77,17 +77,17 @@ namespace CoinFlip
 					coin = pair.OtherCoin(coin);
 				}
 
-				Debug.Assert(value == null || value >= 0m._(SettingsData.Settings.ValuationCurrency));
-				ValueApprox = value ?? 0m._(SettingsData.Settings.ValuationCurrency);
+				Debug.Assert(value == null || value >= 0.0._(SettingsData.Settings.ValuationCurrency));
+				ValueApprox = value ?? 0.0._(SettingsData.Settings.ValuationCurrency);
 				return ValueApprox;
 			}
 		}
 
 		/// <summary>The last known live value (doesn't recheck the live value)</summary>
-		public Unit<decimal> ValueApprox { get; private set; }
+		public Unit<double> ValueApprox { get; private set; }
 
 		/// <summary>Return the value of 'amount' units of this currency</summary>
-		public Unit<decimal> ValueOf(decimal amount)
+		public Unit<double> ValueOf(double amount)
 		{
 			return amount * Value;
 		}
@@ -96,14 +96,14 @@ namespace CoinFlip
 		private List<TradePair> ValuationPath { get; }
 
 		/// <summary>The maximum amount to automatically trade</summary>
-		public Unit<decimal> AutoTradeLimit
+		public Unit<double> AutoTradeLimit
 		{
 			get { return Meta.AutoTradingLimit._(Symbol); }
 			set { Meta.AutoTradingLimit = value; }
 		}
 
 		/// <summary>The assigned amount this coin type is worth</summary>
-		public decimal AssignedValue
+		public double AssignedValue
 		{
 			get { return Meta.AssignedValue; }
 			set { Meta.AssignedValue = value; }

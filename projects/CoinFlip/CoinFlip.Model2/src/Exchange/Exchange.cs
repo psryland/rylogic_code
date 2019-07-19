@@ -425,15 +425,15 @@ namespace CoinFlip
 		private bool m_transfers_update_required;
 
 		/// <summary>The percentage fee charged when performing exchanges</summary>
-		public decimal Fee => ExchSettings.TransactionFee;
+		public double Fee => ExchSettings.TransactionFee;
 
 		/// <summary>The value of all coins held on this exchange</summary>
-		public decimal NettWorth
+		public double NettWorth
 		{
 			get
 			{
-				if (this is CrossExchange) return 0m;
-				return Balance.Values.Sum(x => (decimal)x.Coin.ValueOf(x.NettTotal));
+				if (this is CrossExchange) return 0;
+				return Balance.Values.Sum(x => (double)x.Coin.ValueOf(x.NettTotal));
 			}
 		}
 
@@ -646,7 +646,7 @@ namespace CoinFlip
 		protected abstract Task<bool> CancelOrderInternal(TradePair pair, long order_id, CancellationToken cancel);
 
 		/// <summary>Place an order on the exchange to buy/sell 'amount' (currency depends on 'tt')</summary>
-		public async Task<OrderResult> CreateOrder(string fund_id, TradePair pair, ETradeType tt, EPlaceOrderType ot, Unit<decimal> amount_, Unit<decimal> price_, CancellationToken cancel, string creator_name)
+		public async Task<OrderResult> CreateOrder(string fund_id, TradePair pair, ETradeType tt, EPlaceOrderType ot, Unit<double> amount_, Unit<double> price_, CancellationToken cancel, string creator_name)
 		{
 			// 'fund_id' is the context id of the entity creating the trade
 
@@ -657,18 +657,18 @@ namespace CoinFlip
 			}
 			if (tt == ETradeType.B2Q)
 			{
-				if (amount_ <= 0m._(pair.Base))
+				if (amount_ <= 0.0._(pair.Base))
 					throw new Exception($"Invalid trade amount: {amount_}");
-				if (price_ <= 0m._(pair.Quote) / 1m._(pair.Base))
+				if (price_ <= 0.0._(pair.Quote) / 1.0._(pair.Base))
 					throw new Exception($"Invalid exchange rate: {price_}");
 				if (amount_ > Balance[pair.Base][fund_id].Available)
 					throw new Exception($"Order amount ({amount_}) is greater than the current balance: {Balance[pair.Base][fund_id].Available}");
 			}
 			if (tt == ETradeType.Q2B)
 			{
-				if (amount_ <= 0m._(pair.Quote))
+				if (amount_ <= 0.0._(pair.Quote))
 					throw new Exception($"Invalid trade amount: {amount_}");
-				if (price_ <= 0m._(pair.Base) / 1m._(pair.Quote))
+				if (price_ <= 0.0._(pair.Base) / 1.0._(pair.Quote))
 					throw new Exception($"Invalid exchange rate: {price_}");
 				if (amount_ > Balance[pair.Quote][fund_id].Available)
 					throw new Exception($"Order amount ({amount_}) is greater than the current balance: {Balance[pair.Quote][fund_id].Available}");
@@ -755,7 +755,7 @@ namespace CoinFlip
 			BalanceUpdateRequired = true;
 			return result;
 		}
-		protected abstract Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EPlaceOrderType ot, Unit<decimal> volume_base, Unit<decimal> price, CancellationToken cancel);
+		protected abstract Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EPlaceOrderType ot, Unit<double> volume_base, Unit<double> price, CancellationToken cancel);
 		private long m_fake_order_number;
 
 		/// <summary>Enumerate all candle data and time frames provided by this exchange</summary>
@@ -1028,7 +1028,7 @@ namespace CoinFlip
 			if (his.FundId == Fund.Main)
 				return;
 
-			Balance[his.CoinIn].ChangeFundBalance(his.FundId, -his.AmountIn, amount_in_was_held ? -his.AmountIn : (Unit<decimal>?)null, timestamp);
+			Balance[his.CoinIn].ChangeFundBalance(his.FundId, -his.AmountIn, amount_in_was_held ? -his.AmountIn : (Unit<double>?)null, timestamp);
 			Balance[his.CoinOut].ChangeFundBalance(his.FundId, +his.AmountNett, null, timestamp);
 		}
 
@@ -1064,9 +1064,9 @@ namespace CoinFlip
 					if (history.TryGetValue(trade.OrderId, out var order_completed))
 					{
 						var pair = order_completed.Pair;
-						var price_q2b = ((decimal)trade.PriceQ2B)._(pair.RateUnits);
-						var amount_base = ((decimal)trade.AmountBase)._(pair.Base);
-						var commission_quote = ((decimal)trade.CommissionQuote)._(pair.Quote);
+						var price_q2b = trade.PriceQ2B._(pair.RateUnits);
+						var amount_base = trade.AmountBase._(pair.Base);
+						var commission_quote = trade.CommissionQuote._(pair.Quote);
 						var created = new DateTimeOffset(trade.Created, TimeSpan.Zero);
 						var updated = new DateTimeOffset(trade.Updated, TimeSpan.Zero);
 						order_completed.Trades.Add(new TradeCompleted(order_completed, trade.TradeId, price_q2b, amount_base, commission_quote, created, updated));
@@ -1160,18 +1160,18 @@ namespace CoinFlip
 
 
 ///// <summary>Get/Set the amount of fake cash for the given symbol assigned to this exchange</summary>
-//public Unit<decimal> FakeCash(string sym)
+//public Unit<double> FakeCash(string sym)
 //{
 //	// Look for the coin on this exchange. If not supported, ignore.
 //	var coin = Coins[sym];
 //	if (coin == null)
-//		return 0m._(sym);
+//		return 0.0._(sym);
 
 //	// Get the balance of this coin
 //	var balances = Balance[coin];
 //	return balances.FakeCash;
 //}
-//public void FakeCash(string sym, decimal amount)
+//public void FakeCash(string sym, double amount)
 //{
 //	// Look for the coin on this exchange. If not supported, ignore.
 //	var coin = Coins[sym];
@@ -1183,7 +1183,7 @@ namespace CoinFlip
 //	balances.FakeCash = amount._(coin);
 
 //	//// Distribute the fake cash evenly over each fund
-//	//var fund_count = (decimal)balances.Funds.Count;
+//	//var fund_count = (double)balances.Funds.Count;
 //	//foreach (var fund in balances.Funds.Values)
 //	//	fund.FakeCash = (amount / fund_count)._(coin);
 //}

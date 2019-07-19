@@ -289,16 +289,16 @@ namespace Binance.API
 			{
 				return offers.Select(x => new Offer
 				{
-					Price = (decimal)double.Parse(x[0], CultureInfo.InvariantCulture),
-					Quantity = (decimal)double.Parse(x[1], CultureInfo.InvariantCulture),
+					Price = double.Parse(x[0], CultureInfo.InvariantCulture),
+					Quantity = double.Parse(x[1], CultureInfo.InvariantCulture),
 				}).ToList();
 			}
 
 			/// </summary>
 			public class Offer
 			{
-				public decimal Price { get; set; }
-				public decimal Quantity { get; set; }
+				public double Price { get; set; }
+				public double Quantity { get; set; }
 			}
 
 			private class DepthDeltaArrayConverter :JsonConverter
@@ -309,8 +309,8 @@ namespace Binance.API
 					var list = new List<Offer>();
 					foreach (var tradePrice in JArray.Load(reader))
 					{
-						var price = tradePrice.ElementAt(0).ToObject<decimal>();
-						var quantity = tradePrice.ElementAt(1).ToObject<decimal>();
+						var price = tradePrice.ElementAt(0).ToObject<double>();
+						var quantity = tradePrice.ElementAt(1).ToObject<double>();
 						list.Add(new Offer { Price = price, Quantity = quantity });
 					}
 					return list;

@@ -13,7 +13,7 @@ namespace CoinFlip.Settings
 		{
 			Active = true;
 			PollPeriod = 500;
-			TransactionFee = 0m;
+			TransactionFee = 0;
 			MarketDepth = 100;
 			ServerRequestRateLimit = 1_000_000f;
 		}

@@ -18,13 +18,13 @@ namespace Bittrex.API.DomainObjects
 		public string Symbol { get; internal set; }
 
 		[JsonProperty("Balance")]
-		public decimal Total { get; internal set; }
+		public double Total { get; internal set; }
 
 		[JsonProperty("Available")]
-		public decimal Available { get; internal set; }
+		public double Available { get; internal set; }
 
 		[JsonProperty("Pending")]
-		public decimal Pending { get; internal set; }
+		public double Pending { get; internal set; }
 
 		[JsonProperty("CryptoAddress"), JsonConverter(typeof(NullIsDefault<string>))]
 		public string CryptoAddress { get; internal set; }

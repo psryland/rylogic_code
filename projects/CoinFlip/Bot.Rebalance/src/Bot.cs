@@ -57,7 +57,7 @@ namespace Bot.Rebalance
 		public override TimeSpan LoopPeriod => TimeSpan.FromMinutes(60);
 
 		/// <summary>True if the bot is ok to run</summary>
-		protected override bool CanActivateInternal => Settings.Validate(Model) == null;
+		protected override bool CanActivateInternal => Settings.Validate(Model, Fund) == null;
 
 		/// <summary>Configure</summary>
 		protected override Task ConfigureInternal(object owner)
@@ -83,7 +83,7 @@ namespace Bot.Rebalance
 			foreach (var tt in new[] { ETradeType.Q2B, ETradeType.B2Q })
 			{
 				// Get the current spot price
-				var price = pair.SpotPrice[tt] ?? 0m._(pair.RateUnits);
+				var price = pair.SpotPrice[tt] ?? 0.0._(pair.RateUnits);
 				if (price == 0)
 					continue;
 
@@ -94,7 +94,7 @@ namespace Bot.Rebalance
 				var total_holdings = HoldingsQuote + HoldingsBase * price;
 
 				// Calculate the ratio of quote holdings to total holdings
-				var quote_holdings_ratio = (double)(decimal)(HoldingsQuote / total_holdings);
+				var quote_holdings_ratio = HoldingsQuote / total_holdings;
 
 				// See if the difference is greater than the rebalance threshold
 				if (tt == ETradeType.Q2B)
@@ -105,7 +105,7 @@ namespace Bot.Rebalance
 					{
 						// The amount to buy is the amount that will bring the quote holdings
 						// ratio down to match the price ratio.
-						var target_quote_holdings = (decimal)price_ratio * total_holdings;
+						var target_quote_holdings = price_ratio * total_holdings;
 						var quote_holdings_difference = HoldingsQuote - target_quote_holdings;
 						Debug.Assert(quote_holdings_difference > 0._(Pair.Quote));
 
@@ -123,7 +123,7 @@ namespace Bot.Rebalance
 					{
 						// The amount to sell is the amount that will bring the quote holdings
 						// ratio up to match the price ratio.
-						var target_quote_holdings = (decimal)price_ratio * total_holdings;
+						var target_quote_holdings = price_ratio * total_holdings;
 						var quote_holdings_difference = target_quote_holdings - HoldingsQuote;
 						Debug.Assert(quote_holdings_difference > 0._(Pair.Quote));
 
@@ -152,24 +152,24 @@ namespace Bot.Rebalance
 		private TradePair Pair => Exchange?.Pairs[Settings.Pair];
 
 		/// <summary>The amount held in base currency</summary>
-		private Unit<decimal> HoldingsBase
+		private Unit<double> HoldingsBase
 		{
 			get => Settings.BaseCurrencyBalance._(Pair.Base);
 			set => Settings.BaseCurrencyBalance = value;
 		}
 
 		/// <summary>The amount held in quote currency</summary>
-		private Unit<decimal> HoldingsQuote
+		private Unit<double> HoldingsQuote
 		{
 			get => Settings.QuoteCurrencyBalance._(Pair.Quote);
 			set => Settings.QuoteCurrencyBalance = value;
 		}
 
 		/// <summary>Get the fractional position of 'price' within the price range. [0,1] = [AllIn,AllOut]</summary>
-		private double PriceFrac(Unit<decimal> price)
+		private double PriceFrac(Unit<double> price)
 		{
-			var numer = (double)((decimal)price - Settings.AllInPrice);
-			var denom = (double)(Settings.AllOutPrice - Settings.AllInPrice);
+			var numer = (double)price - Settings.AllInPrice;
+			var denom = Settings.AllOutPrice - Settings.AllInPrice;
 			return Math_.Clamp(numer / denom, 0.0, 1.0);
 		}
 

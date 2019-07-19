@@ -373,19 +373,19 @@ namespace Binance.API
 
 			/// <summary></summary>
 			[JsonProperty("m")]
-			public decimal MakerCommissionRate { get; set; }
+			public double MakerCommissionRate { get; set; }
 
 			/// <summary></summary>
 			[JsonProperty("t")]
-			public decimal TakerCommissionRate { get; set; }
+			public double TakerCommissionRate { get; set; }
 
 			/// <summary></summary>
 			[JsonProperty("b")]
-			public decimal BuyerCommissionRate { get; set; }
+			public double BuyerCommissionRate { get; set; }
 
 			/// <summary></summary>
 			[JsonProperty("s")]
-			public decimal SellerCommissionRate { get; set; }
+			public double SellerCommissionRate { get; set; }
 
 			/// <summary></summary>
 			[JsonProperty("T")]
@@ -414,10 +414,10 @@ namespace Binance.API
 				public string Asset { get; set; }
 
 				[JsonProperty("f")]
-				public decimal Free { get; set; }
+				public double Free { get; set; }
 
 				[JsonProperty("l")]
-				public decimal Locked { get; set; }
+				public double Locked { get; set; }
 			}
 		}
 
@@ -454,19 +454,19 @@ namespace Binance.API
 
 			/// <summary>Order quantity</summary>
 			[JsonProperty("q")]
-			public decimal AmountBase { get; set; }
+			public double AmountBase { get; set; }
 
 			/// <summary>Order price</summary>
 			[JsonProperty("p")]
-			public decimal Price { get; set; }
+			public double Price { get; set; }
 
 			/// <summary>Order stop price</summary>
 			[JsonProperty("P")]
-			public decimal StopPrice { get; set; }
+			public double StopPrice { get; set; }
 
 			/// <summary>Iceberg amount</summary>
 			[JsonProperty("F")]
-			public decimal IcebergAmountBase { get; set; }
+			public double IcebergAmountBase { get; set; }
 
 			/// <summary>Original client order Id. This is the ID of the order being canceled</summary>
 			[JsonProperty("C")]
@@ -490,27 +490,27 @@ namespace Binance.API
 
 			/// <summary>Last executed quantity</summary>
 			[JsonProperty("l")]
-			public decimal AmountBaseLastExecuted { get; set; }
+			public double AmountBaseLastExecuted { get; set; }
 
 			/// <summary>Last quote asset transacted quantity (i.e. lastPrice * lastQty)</summary>
 			[JsonProperty("Y")]
-			public decimal AmountQuoteLastExecuted { get; set; }
+			public double AmountQuoteLastExecuted { get; set; }
 
 			/// <summary>Cumulative filled quantity</summary>
 			[JsonProperty("z")]
-			public decimal AmountBaseCumulativeFilled { get; set; }
+			public double AmountBaseCumulativeFilled { get; set; }
 
 			/// <summary>Cumulative quote asset transacted amount</summary>
 			[JsonProperty("Z")]
-			public decimal AmountQuoteCumulativeFilled { get; set; }
+			public double AmountQuoteCumulativeFilled { get; set; }
 
 			/// <summary>Last executed price</summary>
 			[JsonProperty("L")]
-			public decimal PriceLastExecuted { get; set; }
+			public double PriceLastExecuted { get; set; }
 
 			/// <summary>Commission amount</summary>
 			[JsonProperty("n")]
-			public decimal Commission { get; set; }
+			public double Commission { get; set; }
 
 			/// <summary>Commission asset</summary>
 			[JsonProperty("N")]

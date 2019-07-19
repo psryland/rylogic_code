@@ -11,7 +11,7 @@ namespace CoinFlip
 		// Notes:
 		//  - A transfer of funds on or off an exchange (i.e. deposit or withdrawal)
 
-		public Transfer(string id, ETransfer type, Coin coin, Unit<decimal> amount, long timestamp, EStatus status)
+		public Transfer(string id, ETransfer type, Coin coin, Unit<double> amount, long timestamp, EStatus status)
 		{
 			TransactionId = id;
 			Type          = type;
@@ -31,7 +31,7 @@ namespace CoinFlip
 		public Coin Coin { get; }
 
 		/// <summary>The amount moved</summary>
-		public Unit<decimal> Amount { get; }
+		public Unit<double> Amount { get; }
 
 		/// <summary>The timestamp of the transfer (in ticks)</summary>
 		public long Timestamp { get; }

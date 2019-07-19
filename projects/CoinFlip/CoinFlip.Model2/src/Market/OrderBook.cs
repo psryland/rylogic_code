@@ -1,6 +1,5 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using Rylogic.Extn;
@@ -20,13 +19,13 @@ namespace CoinFlip
 			Offers = new List<Offer>();
 			Base = @base;
 			Quote = quote;
+			RateUnits = Base.Symbol != Quote.Symbol ? $"{Quote}/{Base}" : string.Empty;
+			RateUnitsInv = Base.Symbol != Quote.Symbol ? $"{Base}/{Quote}" : string.Empty;
 		}
 		public OrderBook(OrderBook rhs)
+			:this(rhs.Base, rhs.Quote, rhs.TradeType)
 		{
-			Base = rhs.Base;
-			Quote = rhs.Quote;
-			Offers = new List<Offer>(rhs.Offers);
-			TradeType = rhs.TradeType;
+			Offers.Assign(rhs.Offers);
 		}
 
 		/// <summary>The trade direction of offer in this order book. E.g. B2Q means offers to convert Base to Quote</summary>
@@ -63,8 +62,8 @@ namespace CoinFlip
 		/// <summary>Add an offer to the depth of market</summary>
 		public void Add(Offer offer, bool validate = true)
 		{
-			Debug.Assert(!validate || offer.AmountBase != 0m._(Base));
-			Debug.Assert(!validate || offer.AmountBase * offer.Price != 0m._(Quote));
+			Debug.Assert(!validate || offer.AmountBase != 0.0._(Base));
+			Debug.Assert(!validate || offer.AmountBase * offer.Price != 0.0._(Quote));
 			Offers.Add(offer);
 		}
 
@@ -72,7 +71,7 @@ namespace CoinFlip
 		/// Consume orders up to 'price' or 'amount' (simulating them being filled).
 		/// 'pair' is the trade pair that this OrderBook is associated with.
 		/// Returns the orders that were consumed. 'amount_remaining' is what remains unfilled</summary>
-		public IList<Offer> Consume(TradePair pair, EPlaceOrderType ot, Unit<decimal> price, Unit<decimal> amount, out Unit<decimal> amount_remaining)
+		public IList<Offer> Consume(TradePair pair, EPlaceOrderType ot, Unit<double> price, Unit<double> amount, out Unit<double> amount_remaining)
 		{
 			amount_remaining = amount;
 
@@ -109,7 +108,7 @@ namespace CoinFlip
 				{
 					consumed.Add(new Offer(Offers[0].Price, amount_remaining));
 					Offers[0] = new Offer(Offers[0].Price, rem);
-					amount_remaining = 0m._(amount);
+					amount_remaining = 0.0._(amount);
 				}
 			}
 
@@ -117,8 +116,8 @@ namespace CoinFlip
 		}
 
 		/// <summary>Return the units for the conversion rate from Base to Quote (i.e. Quote/Base)</summary>
-		public string RateUnits    => Base.Symbol != Quote.Symbol ? $"{Quote}/{Base}" : string.Empty;
-		public string RateUnitsInv => Base.Symbol != Quote.Symbol ? $"{Base}/{Quote}" : string.Empty;
+		public string RateUnits { get; }
+		public string RateUnitsInv { get; }
 
 		/// <summary>A string description of the order book</summary>
 		public string Description => $"{Base}/{Quote} Orders={Count}";

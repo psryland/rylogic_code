@@ -55,12 +55,12 @@ namespace CoinFlip
 		/// <summary>
 		/// The approximate price of the filled order (in Quote/Base).
 		/// Approximate because each trade can be at a different price.</summary>
-		public Unit<decimal> PriceQ2B
+		public Unit<double> PriceQ2B
 		{
 			get
 			{
 				if (Trades.Count == 0)
-					return 0m._(Pair.RateUnits);
+					return 0.0._(Pair.RateUnits);
 
 				return
 					TradeType == ETradeType.B2Q ? Trades.Values.Min(x => x.PriceQ2B) :
@@ -70,22 +70,22 @@ namespace CoinFlip
 		}
 
 		/// <summary>The sum of trade base amounts</summary>
-		public Unit<decimal> AmountBase => Trades.Values.Sum(x => x.AmountBase)._(Pair.Base);
+		public Unit<double> AmountBase => Trades.Values.Sum(x => x.AmountBase)._(Pair.Base);
 
 		/// <summary>The sum of trade quote amounts</summary>
-		public Unit<decimal> AmountQuote => Trades.Values.Sum(x => x.AmountQuote)._(Pair.Quote);
+		public Unit<double> AmountQuote => Trades.Values.Sum(x => x.AmountQuote)._(Pair.Quote);
 
 		/// <summary>The sum of trade input amounts</summary>
-		public Unit<decimal> AmountIn => Trades.Values.Sum(x => x.AmountIn)._(CoinIn);
+		public Unit<double> AmountIn => Trades.Values.Sum(x => x.AmountIn)._(CoinIn);
 
 		/// <summary>The sum of trade output amounts</summary>
-		public Unit<decimal> AmountOut => Trades.Values.Sum(x => x.AmountOut)._(CoinOut);
+		public Unit<double> AmountOut => Trades.Values.Sum(x => x.AmountOut)._(CoinOut);
 
 		/// <summary>The sum of trade nett output amounts</summary>
-		public Unit<decimal> AmountNett => Trades.Values.Sum(x => x.AmountNett)._(CoinOut);
+		public Unit<double> AmountNett => Trades.Values.Sum(x => x.AmountNett)._(CoinOut);
 
 		/// <summary>The sum of trade commissions (in amount out units)</summary>
-		public Unit<decimal> Commission => Trades.Values.Sum(x => x.Commission)._(CoinOut);
+		public Unit<double> Commission => Trades.Values.Sum(x => x.Commission)._(CoinOut);
 
 		/// <summary>The coin type being sold</summary>
 		public Coin CoinIn => TradeType == ETradeType.B2Q ? Pair.Base : Pair.Quote;

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using ExchApi.Common.JsonConverter;
 using Newtonsoft.Json;
 
@@ -21,33 +20,33 @@ namespace Bittrex.API.DomainObjects
 
 		/// <summary>The absolute value of the change in the account balance, after fees (in quote currency)</summary>
 		[JsonProperty("Price")]
-		public decimal BalanceChange { get; set; }
+		public double BalanceChange { get; set; }
 
 		/// <summary>The price that the trade was filled at. Typically less than 'Limit' (in quote currency)</summary>
 		[JsonProperty("PricePerUnit")]
-		public decimal PricePerUnit { get; set; }
+		public double PricePerUnit { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("Quantity")]
-		public decimal QuantityBase { get; set; }
+		public double QuantityBase { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("QuantityRemaining")]
-		public decimal RemainingBase { get; set; }
+		public double RemainingBase { get; set; }
 
 		/// <summary>The amount filled in this trade (in base currency)</summary>
-		public decimal FilledBase => QuantityBase - RemainingBase;
+		public double FilledBase => QuantityBase - RemainingBase;
 
 		/// <summary>The amount filled in this trade (in quote currency)</summary>
-		public decimal FilledQuote => FilledBase * PricePerUnit;
+		public double FilledQuote => FilledBase * PricePerUnit;
 
 		/// <summary></summary>
 		[JsonProperty("Limit")]
-		public decimal Limit { get; set; }
+		public double Limit { get; set; }
 
 		/// <summary></summary>
 		[JsonProperty("Commission")]
-		public decimal Commission { get; set; }
+		public double Commission { get; set; }
 
 		/// <summary>The order creation time stamp</summary>
 		[JsonProperty("TimeStamp")]

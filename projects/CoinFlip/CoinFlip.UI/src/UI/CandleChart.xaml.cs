@@ -509,7 +509,7 @@ namespace CoinFlip.UI
 				var spot_q2b = pair.SpotPrice[ETradeType.Q2B];
 				if (spot_q2b != null)
 				{
-					var price = (double)(decimal)spot_q2b.Value;
+					var price = spot_q2b.Value;
 					var pt = Chart.ChartToClient(new Point(Chart.XAxis.Max, price));
 					pt = Gui_.MapPoint(Chart, Chart.YAxisPanel, pt);
 
@@ -535,7 +535,7 @@ namespace CoinFlip.UI
 				var spot_b2q = pair.SpotPrice[ETradeType.B2Q];
 				if (spot_b2q != null)
 				{
-					var price = (double)(decimal)spot_b2q.Value;
+					var price = spot_b2q.Value;
 					var pt = Chart.ChartToClient(new Point(Chart.XAxis.Max, price));
 					pt = Gui_.MapPoint(Chart, Chart.YAxisPanel, pt);
 
@@ -583,8 +583,8 @@ namespace CoinFlip.UI
 				{
 					var time_min = Instrument.TimeAtFIndex(Chart.XAxis.Min);
 					var time_max = Instrument.TimeAtFIndex(Chart.XAxis.Max);
-					var price_min = ((decimal)Chart.YAxis.Min)._(Instrument.RateUnits);
-					var price_max = ((decimal)Chart.YAxis.Max)._(Instrument.RateUnits);
+					var price_min = Chart.YAxis.Min._(Instrument.RateUnits);
+					var price_max = Chart.YAxis.Max._(Instrument.RateUnits);
 					return
 						ord.Pair.Equals(Pair) &&
 						Model.UtcNow.Ticks.Within(time_min, time_max) &&
@@ -616,8 +616,8 @@ namespace CoinFlip.UI
 				{
 					var time_min = Instrument.TimeAtFIndex(Chart.XAxis.Min);
 					var time_max = Instrument.TimeAtFIndex(Chart.XAxis.Max);
-					var price_min = ((decimal)Chart.YAxis.Min)._(Instrument.RateUnits);
-					var price_max = ((decimal)Chart.YAxis.Max)._(Instrument.RateUnits);
+					var price_min = Chart.YAxis.Min._(Instrument.RateUnits);
+					var price_max = Chart.YAxis.Max._(Instrument.RateUnits);
 					return
 						ord.Pair.Equals(Pair) &&
 						ord.Created.Ticks.Within(time_min, time_max) &&
@@ -1068,7 +1068,7 @@ namespace CoinFlip.UI
 					if (!visible)
 						return;
 
-					var click_price = ((decimal)hit.ChartPoint.Y)._(Instrument.Pair.RateUnits);
+					var click_price = hit.ChartPoint.Y._(Instrument.Pair.RateUnits);
 
 					// Buy base currency (Q2B)
 					{

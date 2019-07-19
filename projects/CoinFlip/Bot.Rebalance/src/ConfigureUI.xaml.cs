@@ -101,11 +101,6 @@ namespace Bot.Rebalance
 		{
 			get
 			{
-				// Check the settings are valid
-				var err = Settings.Validate(Model);
-				if (err != null)
-					return err;
-
 				var pair = ChartSelector.Pair;
 				if (pair == null)
 					return new Exception("No trading pair selected");
@@ -117,6 +112,11 @@ namespace Bot.Rebalance
 					return new Exception($"Fund {Fund.Id} does not have enough {pair.Base.Symbol}");
 				if (Fund[pair.Quote].Available < Settings.QuoteCurrencyBalance._(pair.Quote))
 					return new Exception($"Fund {Fund.Id} does not have enough {pair.Quote.Symbol}");
+
+				// Check the settings are valid
+				var err = Settings.Validate(Model, Fund);
+				if (err != null)
+					return err;
 
 				return null;
 			}
