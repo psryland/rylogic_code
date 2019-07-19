@@ -293,9 +293,9 @@
       <Project>{0fcb5434-407b-415e-9f11-6216f44d4377}</Project>
       <Name>Rylogic.View3d</Name>
     </ProjectReference>
-    <ProjectReference Include="..\CoinFlip.Model2\CoinFlip.Model2.csproj">
+    <ProjectReference Include="..\CoinFlip.Model\CoinFlip.Model.csproj">
       <Project>{6a5ec05f-f738-4149-956b-df8eeca14dfc}</Project>
-      <Name>CoinFlip.Model2</Name>
+      <Name>CoinFlip.Model</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
