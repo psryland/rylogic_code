@@ -16,6 +16,7 @@ namespace CoinFlip.UI
 			m_log.LogEntryPattern = LogEntryPatternRegex;
 			m_log.PopOutOnNewMessages = false;
 			m_log.LogFilepath = Model.Log.LogCB is LogToFile l2f ? l2f.Filepath : null;
+			m_log.FilterLevel = ELogLevel.Debug;
 		}
 		public void Dispose()
 		{
@@ -39,5 +40,5 @@ namespace CoinFlip.UI
 		//	new HLPattern(Color_.FromArgb(0xfffcffae), Color.Black, EPattern.Substring, "filled"),
 		//	new HLPattern(Color_.FromArgb(0xffff7e39), Color.Black, EPattern.Substring, "ignored"),
 		//};
-		}
 	}
+}

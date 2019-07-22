@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Threading;
@@ -15,7 +16,7 @@ using Rylogic.Utility;
 namespace CoinFlip
 {
 	/// <summary>A container for the data maintained by the back testing simulation</summary>
-	public class Simulation : IDisposable, INotifyPropertyChanged
+	public class Simulation :IDisposable, INotifyPropertyChanged
 	{
 		public Simulation(IEnumerable<Exchange> exchanges, PriceDataMap price_data_map, BotContainer bots)
 		{
@@ -31,7 +32,7 @@ namespace CoinFlip
 
 			// Ensure the first update to the price data after creating the simulation
 			// resets all instrument's cached data
-			UpdatePriceData(force_invalidate:true);
+			UpdatePriceData(force_invalidate: true);
 		}
 		public void Dispose()
 		{
@@ -157,22 +158,25 @@ namespace CoinFlip
 			Running = false;
 
 			// Deactivate all back-testing bots (Actually, all of them)
-			foreach (var bot in Bots)
-				bot.Active = false;
+			// Restore the state before deleting the bot so that, by default, 
+			// a bot can be constructed in it's initial state.
+			foreach (var bot in Bots) bot.RestoreInitialState();
+			Bots.RemoveAll();
 
 			// Reset the sim time back to 'StartTime'
 			RunMode = ERunMode.Stopped;
 			m_main_loop_last_step = StartTime.Ticks;
 			Clock = StartTime;
-			UpdatePriceData();
 
 			// Reset the exchange simulations
 			foreach (var exch in Exchanges.Values)
 				exch.Reset();
 
-			// Restart the previously active backtesting bots
-			foreach (var bot in Bots.Where(x => x.BackTesting))
-				bot.Active = bot.BotData.Active;
+			// Reload the testing bots
+			Bots.LoadFromSettings();
+
+			// Generate initial price data
+			UpdatePriceData();
 
 			// Notify of reset
 			SimReset?.Invoke(this, new SimResetEventArgs(this));
@@ -247,6 +251,11 @@ namespace CoinFlip
 					// Returns the next bot to be stepped based on their LastStepTime's and the current sim time
 					IBot NextBotToStep() => Bots.Where(x => x.Active).MinByOrDefault(x => x.TimeTillNextStep);
 
+					// On the first step from reset, preserve the initial state
+					if (Clock == StartTime)
+						foreach (var bot in Bots)
+							bot.PreserveInitialState();
+
 					// Advance the simulation clock at a maximum rate of 'StepRate' candles per second.
 					// 'm_sw_main_loop' tracks the amount of real world time that has elapsed while 'Running' is true.
 					// Determine the time difference to add to the simulation clock
@@ -280,7 +289,7 @@ namespace CoinFlip
 					}
 
 					// Make sure bots get stepped at their required rate
-					for (;Running;)
+					for (; Running;)
 					{
 						// Find the next bot requiring stepping
 						var bot = NextBotToStep();

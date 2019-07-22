@@ -57,7 +57,15 @@ namespace Bot.Rebalance
 		public override TimeSpan LoopPeriod => TimeSpan.FromMinutes(60);
 
 		/// <summary>True if the bot is ok to run</summary>
-		protected override bool CanActivateInternal => Settings.Validate(Model, Fund) == null;
+		protected override bool CanActivateInternal
+		{
+			get
+			{
+				var err = Settings.Validate(Model, Fund);
+				if (err == null) return true;
+				return false;
+			}
+		}
 
 		/// <summary>Configure</summary>
 		protected override Task ConfigureInternal(object owner)

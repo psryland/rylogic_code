@@ -115,6 +115,9 @@ namespace CoinFlip
 					// Create Exchange instances with this user's API keys
 					CreateExchanges();
 
+					// Create the bot instances
+					Bots.LoadFromSettings();
+
 					// Run the internal loop
 					MainLoopRunning = true;
 				}
@@ -230,8 +233,7 @@ namespace CoinFlip
 					pd.UpdateThreadActive = false;
 
 				// Deactivate all live trading bots (actually, deactivate all of them)
-				foreach (var bot in Bots)
-					bot.Active = false;
+				Bots.RemoveAll();
 
 				// Integrate market updates so that updates from live data don't end up in back testing data.
 				IntegrateDataUpdates();
@@ -250,6 +252,9 @@ namespace CoinFlip
 				// Create the fund container from the back testing settings
 				Funds.AssignFunds(SettingsData.Settings.BackTesting.TestFunds);
 
+				// Create the back testing bots
+				Bots.LoadFromSettings();
+
 				// Reset the balance collections in each exchange
 				foreach (var exch in Exchanges)
 					exch.Balance.Clear();
@@ -265,9 +270,8 @@ namespace CoinFlip
 			// If back testing is about to be disabled...
 			if (BackTesting && e.Before)
 			{
-				// Deactivate all backtesting bots (actually, deactivate all of them)
-				foreach (var bot in Bots)
-					bot.Active = false;
+				// Deactivate all back testing bots (actually, deactivate all of them)
+				Bots.RemoveAll();
 
 				// Remove (without saving) the current fund container
 				Funds.AssignFunds(new FundData[0]);
@@ -281,6 +285,9 @@ namespace CoinFlip
 
 				// Restore the fund container from settings
 				Funds.AssignFunds(SettingsData.Settings.LiveFunds);
+
+				// Restore the live trading bots
+				Bots.LoadFromSettings();
 
 				// Reset the balance collections in each exchange
 				foreach (var exch in Exchanges)

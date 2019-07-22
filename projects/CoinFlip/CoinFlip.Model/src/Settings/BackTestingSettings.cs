@@ -15,6 +15,7 @@ namespace CoinFlip.Settings
 		{
 			AccountBalances = new FundData();
 			TestFunds = new FundData[1] { new FundData(Fund.Main, new FundData.ExchData[0]) };
+			TestBots = new BotData[0];
 			TimeFrame = ETimeFrame.Day1;
 			StartTime = (DateTimeOffset.UtcNow - TimeSpan.FromDays(365)).RoundDownTo(ETimeFrame.Day1);
 			EndTime = StartTime + TimeSpan.FromDays(365);
@@ -36,6 +37,13 @@ namespace CoinFlip.Settings
 		{
 			get { return get<FundData[]>(nameof(TestFunds)); }
 			set { set(nameof(TestFunds), value); }
+		}
+
+		/// <summary>The bots created in the UI</summary>
+		public BotData[] TestBots
+		{
+			get { return get<BotData[]>(nameof(TestBots)); }
+			set { set(nameof(TestBots), value); }
 		}
 
 		/// <summary>The time frame to test with</summary>

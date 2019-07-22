@@ -731,6 +731,17 @@ namespace Rylogic.Utility
 			return Path_.CombinePath(paths.Prepend(app_data_dir));
 		}
 
+		/// <summary>The temp directory</summary>
+		public static string ResolveTempPath(params string[] paths)
+		{
+			return ResolveTempPath((IEnumerable<string>)paths);
+		}
+		public static string ResolveTempPath(IEnumerable<string> paths)
+		{
+			var temp_dir = Path.GetTempPath();
+			return Path_.CombinePath(paths.Prepend(temp_dir));
+		}
+
 		/// <summary>The user's 'home' directory</summary>
 		public static string ResolveUserProfilePath(params string[] paths)
 		{

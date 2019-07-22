@@ -86,12 +86,10 @@ namespace CoinFlip.Settings
 		}
 
 		/// <summary>Raised when the balance of 'coin' has changed on an exchange</summary>
-		public static event EventHandler<CoinEventArgs> BalanceChangeded;
+		public static event EventHandler<CoinEventArgs> BalanceChanged;
 		public static void NotifyBalanceChanged(Coin coin)
 		{
-			// Note: rather than one global event for "Any coin balance changed", prefer to attach
-			// weak handlers to 'BalanceChanged' for the coins you care about. See GridCoins for an example.
-			BalanceChangeded?.Invoke(null, new CoinEventArgs(coin));
+			BalanceChanged?.Invoke(null, new CoinEventArgs(coin));
 		}
 
 		private class TyConv : GenericTypeConverter<CoinData> { }

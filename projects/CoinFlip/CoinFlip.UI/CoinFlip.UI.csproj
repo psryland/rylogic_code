@@ -102,6 +102,9 @@
       <DependentUpon>EditTradeUI.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\Misc\ECoinFilterType.cs" />
+    <Compile Include="src\UI\EquityChart.xaml.cs">
+      <DependentUpon>EquityChart.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\UI\GridBots.xaml.cs">
       <DependentUpon>GridBots.xaml</DependentUpon>
     </Compile>
@@ -141,6 +144,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="src\Dialogs\EditTradeUI.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\UI\EquityChart.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

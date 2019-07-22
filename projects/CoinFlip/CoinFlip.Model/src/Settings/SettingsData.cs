@@ -41,10 +41,9 @@ namespace CoinFlip.Settings
 			//Equity = new EquitySettings();
 			Coins = new CoinData[] { new CoinData("BTC") { OfInterest = true }, new CoinData("ETH") { OfInterest = true } };
 			LiveFunds = new FundData[1] { new FundData(Fund.Main, new FundData.ExchData[0]) };
-			Bots = new BotData[0];
+			LiveBots = new BotData[0];
 			Chart = new ChartSettings();
 			BackTesting = new BackTestingSettings();
-			//Cryptopia = new CrypotopiaSettings();
 			Binance = new BinanceSettings();
 			Poloniex = new PoloniexSettings();
 			Bittrex = new BittrexSettings();
@@ -138,10 +137,10 @@ namespace CoinFlip.Settings
 		}
 		
 		/// <summary>The bots created in the UI</summary>
-		public BotData[] Bots
+		public BotData[] LiveBots
 		{
-			get { return get<BotData[]>(nameof(Bots)); }
-			set { set(nameof(Bots), value); }
+			get { return get<BotData[]>(nameof(LiveBots)); }
+			set { set(nameof(LiveBots), value); }
 		}
 
 		/// <summary>Setting for the candle charts</summary>

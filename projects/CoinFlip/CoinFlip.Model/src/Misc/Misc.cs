@@ -87,6 +87,12 @@ namespace CoinFlip
 			}
 		}
 
+		/// <summary>Resolve a relative path in the temporary directory</summary>
+		public static string ResolveTempPath(params string[] rel_path)
+		{
+			return Util.ResolveTempPath(new[] { "Rylogic", "CoinFlip" }.Concat(rel_path));
+		}
+
 		/// <summary>Resolve a relative path to a user directory path</summary>
 		public static string ResolveUserPath(params string[] rel_path)
 		{

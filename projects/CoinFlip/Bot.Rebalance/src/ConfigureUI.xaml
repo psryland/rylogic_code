@@ -189,12 +189,16 @@
 					<TextBlock
 						Text="Fund:"
 						VerticalAlignment="Center"
-						MinWidth="110"
+						MinWidth="100"
 						/>
-					<TextBlock
-						Text="{Binding Fund.Id}"
+					<ComboBox
+						ItemsSource="{Binding Funds}"
+						SelectedItem="{Binding Fund, Mode=TwoWay}"
+						Background="{x:Static SystemColors.WindowBrush}"
+						DisplayMemberPath="Id"
 						VerticalAlignment="Center"
-						MinWidth="80"
+						MinWidth="100"
+						MaxWidth="100"
 						Margin="3"
 						/>
 				</StackPanel>

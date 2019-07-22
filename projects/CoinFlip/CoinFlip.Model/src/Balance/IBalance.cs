@@ -1,9 +1,10 @@
 ﻿using System;
+using System.ComponentModel;
 using Rylogic.Utility;
 
 namespace CoinFlip
 {
-	public interface IBalance
+	public interface IBalance :INotifyPropertyChanged
 	{
 		// Notes:
 		//  - This interface is used to isolate the rest of the code from the

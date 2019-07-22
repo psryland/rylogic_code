@@ -69,32 +69,26 @@
 				>
 				<DataGridTemplateColumn.CellTemplate>
 					<DataTemplate>
-						<Button
-							Command="{Binding ToggleActive}"
-							Background="Transparent"
-							BorderThickness="0"
+						<Image
+							Stretch="UniformToFill"
+							StretchDirection="DownOnly"
+							RenderOptions.BitmapScalingMode="HighQuality"
 							PreviewMouseLeftButtonDown="HandleActiveCellClick"
+							MaxWidth="18"
 							>
-							<Image
-								Stretch="UniformToFill"
-								StretchDirection="DownOnly"
-								RenderOptions.BitmapScalingMode="HighQuality"
-								MaxWidth="18"
-								>
-								<Image.Style>
-									<Style TargetType="{x:Type Image}">
-										<Style.Triggers>
-											<DataTrigger Binding="{Binding Active}" Value="False">
-												<Setter Property="Source" Value="{StaticResource power_gray}"/>
-											</DataTrigger>
-											<DataTrigger Binding="{Binding Active}" Value="True">
-												<Setter Property="Source" Value="{StaticResource power_blue}"/>
-											</DataTrigger>
-										</Style.Triggers>
-									</Style>
-								</Image.Style>
-							</Image>
-						</Button>
+							<Image.Style>
+								<Style TargetType="{x:Type Image}">
+									<Style.Triggers>
+										<DataTrigger Binding="{Binding Active}" Value="False">
+											<Setter Property="Source" Value="{StaticResource power_gray}"/>
+										</DataTrigger>
+										<DataTrigger Binding="{Binding Active}" Value="True">
+											<Setter Property="Source" Value="{StaticResource power_blue}"/>
+										</DataTrigger>
+									</Style.Triggers>
+								</Style>
+							</Image.Style>
+						</Image>
 					</DataTemplate>
 				</DataGridTemplateColumn.CellTemplate>
 			</DataGridTemplateColumn>

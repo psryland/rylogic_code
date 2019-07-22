@@ -225,6 +225,7 @@ namespace CoinFlip
 
 				// Reconnect to the appropriate trade history database
 				InitTradeHistoryTables();
+				PopulateTradeHistory();
 
 				// Notify status changed
 				NotifyPropertyChanged(nameof(Status));

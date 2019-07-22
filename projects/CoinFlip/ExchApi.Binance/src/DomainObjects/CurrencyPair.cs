@@ -45,18 +45,22 @@ namespace Binance.API.DomainObjects
 			if (SymbolToPair.Count == 0)
 				throw new Exception("A call to 'ServerRules' must be made on the Binance API. This populates the list of supported currency pairs");
 
+			// Check for a valid pair name
+			if (pair_name?.Length == 0)
+			{
+				BinanceApi.Log.Write(Rylogic.Utility.ELogLevel.Warn, $"CurrencyPair.Parse failed: The given 'pair_name' has no value");
+				return new CurrencyPair("Unkn", "own");
+			}
+
 			// Since there is no delimiter in the currency pair, we can't reliably convert
 			// back to base/quote. Use a bunch of heuristics to and get the base/quote values.
 			// Assume the minimum symbol code length is 3.
-			//for (int i = 3, iend = pair.Length - 3; i <= iend; ++i)
-			//{
-			//	var base_ = pair.Substring(0, i);
-			//	var quote = pair.Substring(i);
-			//	if (KnownCoins.Contains(base_) &&
-			//		KnownCoins.Contains(quote))
-			//		return new CurrencyPair(base_, quote);
-			//}
-			throw new Exception($"Failed to determine currency pair from code: {pair}");
+			if (pair_name.Length == 6)
+				return new CurrencyPair(pair_name.Substring(0, 3), pair_name.Substring(3, 3));
+
+			// Log the unknown coin and return an invalid pair
+			BinanceApi.Log.Write(Rylogic.Utility.ELogLevel.Warn, $"Failed to determine currency pair from code: {pair}");
+			return new CurrencyPair("Unkn", "own");
 		}
 
 		#region Equals

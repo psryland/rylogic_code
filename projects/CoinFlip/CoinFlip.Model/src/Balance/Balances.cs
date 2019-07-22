@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using CoinFlip.Settings;
+using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Maths;
 using Rylogic.Utility;
@@ -24,15 +25,16 @@ namespace CoinFlip
 		// - When orders are placed, they should have an associated fund id. This is
 		//   used to attribute balance changes to the correct fund.
 		// - The 'Balances' object provides a readonly sum of all fund balances.
+		// - 'notify' is used to notify balance changed on the 'coin'
 
 		private readonly List<Balance> m_funds;
 		public Balances(Coin coin, DateTimeOffset last_updated)
 			:this(coin, 0.0._(coin), last_updated)
 		{}
-		public Balances(Coin coin, Unit<double> total, DateTimeOffset last_updated)
-			:this(coin, total, 0.0._(coin), last_updated)
+		public Balances(Coin coin, Unit<double> total, DateTimeOffset last_updated, bool notify = false)
+			:this(coin, total, 0.0._(coin), last_updated, notify)
 		{}
-		public Balances(Coin coin, Unit<double> total, Unit<double> held_on_exch, DateTimeOffset last_updated)
+		public Balances(Coin coin, Unit<double> total, Unit<double> held_on_exch, DateTimeOffset last_updated, bool notify = false)
 		{
 			// Truncation error can create off by 1 LSD
 			if (total < 0)
@@ -75,7 +77,7 @@ namespace CoinFlip
 				var bal_data = fd[Exchange.Name][Coin.Symbol];
 
 				// Attribute the balance amount to fund 'fd.Id'
-				AssignFundBalance(fd.Id, bal_data.Total._(Coin), bal_data.Held._(Coin), Model.UtcNow, notify:false);
+				AssignFundBalance(fd.Id, bal_data.Total._(Coin), bal_data.Held._(Coin), Model.UtcNow, notify: notify);
 			}
 		}
 
@@ -144,7 +146,10 @@ namespace CoinFlip
 			// Signal balance changed
 			if (notify)
 			{
-				balance.Invalidate();
+				// Notify all funds changed
+				foreach (var bal in Funds.Cast<Balance>())
+					bal.Invalidate();
+
 				CoinData.NotifyBalanceChanged(Coin);
 			}
 		}
@@ -177,7 +182,10 @@ namespace CoinFlip
 			// Signal balance changed
 			if (notify)
 			{
-				balance.Invalidate();
+				// Notify all funds changed
+				foreach (var bal in Funds.Cast<Balance>())
+					bal.Invalidate();
+
 				CoinData.NotifyBalanceChanged(Coin);
 			}
 		}
@@ -222,7 +230,7 @@ namespace CoinFlip
 
 		/// <summary>Implements the balance associated with a single fund for a coin on an exchange</summary>
 		[DebuggerDisplay("{Description,nq}")]
-		private class Balance :IBalance, IValueTotalAvail, INotifyPropertyChanged
+		private class Balance :IBalance, IValueTotalAvail
 		{
 			private readonly Balances m_balances;
 			public Balance(Balances balances, string fund_id)
@@ -350,7 +358,7 @@ namespace CoinFlip
 			}
 
 			/// <summary></summary>
-			public void Invalidate()
+			public void Invalidate(object sender = null, EventArgs args = null)
 			{
 				NotifyPropertyChanged(nameof(Total));
 				NotifyPropertyChanged(nameof(Available));

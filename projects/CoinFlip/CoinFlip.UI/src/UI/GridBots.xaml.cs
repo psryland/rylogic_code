@@ -135,9 +135,7 @@ namespace CoinFlip.UI
 			bot.Active = !bot.Active;
 
 			// Save the active state in the settings
-			var bot_data = SettingsData.Settings.Bots.First(x => x.Id == bot.Id);
-			bot_data.Active = bot.Active;
-			SettingsData.Settings.Save();
+			Model.Bots.PersistActiveState(bot);
 		}
 
 		/// <summary>Rename a bot</summary>

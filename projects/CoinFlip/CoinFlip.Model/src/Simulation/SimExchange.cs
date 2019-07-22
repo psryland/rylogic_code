@@ -121,6 +121,7 @@ namespace CoinFlip
 				var bal = exch_data[coin.Symbol];
 				m_bal.Add(coin, new AccountBalance(coin, bal.Total._(coin), bal.Held._(coin)));
 				Balance.Add(coin, new Balances(coin, bal.Total._(coin), Sim.Clock));
+				CoinData.NotifyBalanceChanged(coin);
 			}
 
 			// Reset the spot price and order books of the pairs

@@ -1,5 +1,5 @@
 ﻿using System.Diagnostics;
-using System.Linq;
+using CoinFlip.Settings;
 using Rylogic.Extn;
 
 namespace CoinFlip
@@ -41,6 +41,7 @@ namespace CoinFlip
 			if (!m_coin_data.Contains(coin.Meta))
 				m_coin_data.Add(coin.Meta);
 
+			CoinData.NotifyBalanceChanged(coin);
 			return coin;
 		}
 	}

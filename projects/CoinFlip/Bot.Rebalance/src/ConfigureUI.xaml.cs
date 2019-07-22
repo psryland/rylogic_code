@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Data;
 using CoinFlip;
 using CoinFlip.Settings;
 using Rylogic.Common;
@@ -23,6 +24,7 @@ namespace Bot.Rebalance
 			ChartSelector = new ExchPairTimeFrame(Model);
 			GfxPriceRange = null;//todo new GfxPriceRange(BotData.Id);
 			Settings.SettingChange += HandleSettingChange;
+			m_bot.BotData.SettingChange += HandleSettingChange;
 
 			// Commands
 			Accept = Command.Create(this, AcceptInternal);
@@ -34,6 +36,7 @@ namespace Bot.Rebalance
 		}
 		public void Dispose()
 		{
+			m_bot.BotData.SettingChange -= HandleSettingChange;
 			Settings.SettingChange -= HandleSettingChange;
 			GfxPriceRange = null;
 			ChartSelector = null;
@@ -54,7 +57,14 @@ namespace Bot.Rebalance
 		public Model Model => m_bot.Model;
 
 		/// <summary>The fund assigned to the bot being configured</summary>
-		public Fund Fund => m_bot.Fund;
+		public Fund Fund
+		{
+			get => m_bot.Fund;
+			set => m_bot.Fund = value;
+		}
+
+		/// <summary>The available funds</summary>
+		public ICollectionView Funds => CollectionViewSource.GetDefaultView(m_bot.Model.Funds);
 
 		/// <summary>Trading instrument selector</summary>
 		public ExchPairTimeFrame ChartSelector

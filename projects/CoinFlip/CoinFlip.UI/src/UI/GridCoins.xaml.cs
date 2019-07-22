@@ -62,7 +62,7 @@ namespace CoinFlip.UI
 				{
 					Model.AllowTradesChanged -= HandleAllowTradesChanged;
 					Model.BackTestingChange -= HandleBackTestingChange;
-					CoinData.BalanceChangeded -= HandleBalanceChanged;
+					CoinData.BalanceChanged -= HandleBalanceChanged;
 					CoinData.LivePriceChanged -= HandleBalanceChanged;
 					m_model.Coins.CollectionChanged -= HandleCoinsChanged;
 					m_model.Exchanges.CollectionChanged -= HandleExchangesChanged;
@@ -73,7 +73,7 @@ namespace CoinFlip.UI
 					m_model.Exchanges.CollectionChanged += HandleExchangesChanged;
 					m_model.Coins.CollectionChanged += HandleCoinsChanged;
 					CoinData.LivePriceChanged += HandleBalanceChanged;
-					CoinData.BalanceChangeded += HandleBalanceChanged;
+					CoinData.BalanceChanged += HandleBalanceChanged;
 					Model.BackTestingChange += HandleBackTestingChange;
 					Model.AllowTradesChanged += HandleAllowTradesChanged;
 					HandleExchangesChanged(null, null);

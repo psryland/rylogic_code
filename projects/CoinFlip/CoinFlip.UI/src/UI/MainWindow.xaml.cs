@@ -21,6 +21,7 @@ namespace CoinFlip.UI
 			Model = new Model(CreateNewChart);
 
 			// Commands
+			CloseApp = Command.Create(this, CloseAppInternal);
 			LogOn = Command.Create(this, LogOnInternal);
 			NewChart = Command.Create(this, NewChartInternal);
 			ToggleLiveTrading = Command.Create(this, ToggleLiveTradingInternal);
@@ -41,7 +42,8 @@ namespace CoinFlip.UI
 			m_dc.Add(new GridTradeOrders(Model), 0, EDockSite.Bottom);
 			m_dc.Add(new GridTradeHistory(Model), 1, EDockSite.Bottom);
 			m_dc.Add(new CandleChart(Model), 0, EDockSite.Centre);
-			m_dc.Add(new LogView(), 2, EDockSite.Centre);
+			m_dc.Add(new EquityChart(Model), 1, EDockSite.Centre);
+			m_dc.Add(new LogView(), 2, EDockSite.Right).IsAutoHide = true;
 			m_menu.Items.Add(m_dc.WindowsMenu());
 
 			// Bring panes to the front
@@ -144,6 +146,13 @@ namespace CoinFlip.UI
 		/// <summary>Total holdings value across all exchanges and all currencies</summary>
 		public double NettWorth => Model.NettWorth;
 		public string ValuationCurrency => SettingsData.Settings.ValuationCurrency;
+
+		/// <summary>Command to close the app</summary>
+		public Command CloseApp { get; }
+		private void CloseAppInternal()
+		{
+			Close();
+		}
 
 		/// <summary>Toggle the live trading switch</summary>
 		public Command ToggleLiveTrading { get; }

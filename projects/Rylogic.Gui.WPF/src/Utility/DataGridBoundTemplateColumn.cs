@@ -31,13 +31,13 @@ namespace Rylogic.Gui.WPF
 		protected override FrameworkElement GenerateEditingElement(DataGridCell cell, object dataItem)
 		{
 			var element = base.GenerateEditingElement(cell, dataItem);
-			element.SetBinding(ContentPresenter.ContentProperty, Binding);
+			if (Binding != null) element.SetBinding(ContentPresenter.ContentProperty, Binding);
 			return element;
 		}
 		protected override FrameworkElement GenerateElement(DataGridCell cell, object dataItem)
 		{
 			var element = base.GenerateElement(cell, dataItem);
-			element.SetBinding(ContentPresenter.ContentProperty, Binding);
+			if (Binding != null) element.SetBinding(ContentPresenter.ContentProperty, Binding);
 			return element;
 		}
 	}

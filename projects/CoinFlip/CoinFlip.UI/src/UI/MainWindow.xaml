@@ -43,7 +43,7 @@
 				<Separator/>
 				<MenuItem Header="New _Chart" Command="{Binding NewChart}"/>
 				<Separator/>
-				<MenuItem Header="E_xit" Click="{gui2:MethodBinding Close}"/>
+				<MenuItem Header="E_xit" Command="{Binding CloseApp}"/>
 			</MenuItem>
 		</Menu>
 		

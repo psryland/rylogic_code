@@ -45,6 +45,7 @@ namespace CoinFlip.UI
 		}
 		public void Dispose()
 		{
+			Exchanges = null;
 			Model = null;
 			DockControl = null;
 		}
@@ -58,9 +59,9 @@ namespace CoinFlip.UI
 				if (m_model == value) return;
 				if (m_model != null)
 				{
-					m_model.Exchanges.CollectionChanged -= HandleExchangeCollectionChanged;
-					m_model.Coins.CollectionChanged -= HandleCoinsCollectionChanged;
-					m_model.Funds.CollectionChanged -= HandleFundCollectionChanged;
+					m_model.Exchanges.CollectionChanged -= HandleFundsChanged;
+					m_model.Coins.CollectionChanged -= HandleFundsChanged;
+					m_model.Funds.CollectionChanged -= HandleFundsChanged;
 					SettingsData.Settings.SettingChange -= HandleSettingChange;
 					Model.BackTestingChange -= HandleBackTestingChanged;
 				}
@@ -69,39 +70,26 @@ namespace CoinFlip.UI
 				{
 					Model.BackTestingChange += HandleBackTestingChanged;
 					SettingsData.Settings.SettingChange += HandleSettingChange;
-					m_model.Funds.CollectionChanged += HandleFundCollectionChanged;
-					m_model.Coins.CollectionChanged += HandleCoinsCollectionChanged;
-					m_model.Exchanges.CollectionChanged += HandleExchangeCollectionChanged;
+					m_model.Funds.CollectionChanged += HandleFundsChanged;
+					m_model.Coins.CollectionChanged += HandleFundsChanged;
+					m_model.Exchanges.CollectionChanged += HandleFundsChanged;
 				}
 
 				// Handle funds being created or destroyed
 				void HandleBackTestingChanged(object sender, PrePostEventArgs e)
 				{
 					if (e.Before) return;
-					CreateFundColumns();
-					Coins.Refresh();
+					HandleFundsChanged();
 				}
 				void HandleSettingChange(object sender, SettingChangeEventArgs e)
 				{
 					if (e.Before) return;
 					if (e.Key == nameof(SettingsData.LiveFunds) || e.Key == nameof(BackTestingSettings.TestFunds))
-					{
-						CreateFundColumns();
-						Coins.Refresh();
-					}
+						HandleFundsChanged();
 				}
-				void HandleFundCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+				void HandleFundsChanged(object sender = null, NotifyCollectionChangedEventArgs e = null)
 				{
 					CreateFundColumns();
-					Coins.Refresh();
-				}
-				void HandleCoinsCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
-				{
-					Coins.Refresh();
-				}
-				void HandleExchangeCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
-				{
-					Coins.Refresh();
 				}
 			}
 		}
@@ -121,7 +109,56 @@ namespace CoinFlip.UI
 		private DockControl m_dock_control;
 
 		/// <summary>The view of the available exchanges</summary>
-		public ICollectionView Exchanges { get; }
+		public ICollectionView Exchanges
+		{
+			get => m_exchanges;
+			private set
+			{
+				if (m_exchanges == value) return;
+				if (m_exchanges != null)
+				{
+					m_exchanges.CurrentChanged -= HandleCurrentExchangeChanged;
+				}
+				m_exchanges = value;
+				if (m_exchanges != null)
+				{
+					m_exchanges.CurrentChanged += HandleCurrentExchangeChanged;
+				}
+
+				// Handler
+				void HandleCurrentExchangeChanged(object sender, EventArgs e)
+				{
+					Exchange = (Exchange)Exchanges.CurrentItem;
+				}
+			}
+		}
+		private ICollectionView m_exchanges;
+
+		/// <summary>The selected exchange to show the funds of</summary>
+		public Exchange Exchange
+		{
+			get { return m_exchange; }
+			private set
+			{
+				if (m_exchange == value) return;
+				if (m_exchange != null)
+				{
+					m_exchange.Balance.CollectionChanged -= HandleBalanceCollectionChanged;
+				}
+				m_exchange = value;
+				if (m_exchange != null)
+				{
+					m_exchange.Balance.CollectionChanged += HandleBalanceCollectionChanged;
+				}
+
+				// Handler
+				void HandleBalanceCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+				{
+					CreateFundColumns();
+				}
+			}
+		}
+		private Exchange m_exchange;
 
 		/// <summary>The data source for coin data</summary>
 		public ICollectionView Coins { get; }
@@ -192,6 +229,9 @@ namespace CoinFlip.UI
 			for (; m_grid.Columns.Count > 1;)
 				m_grid.Columns.RemoveAt(1);
 
+			// Refresh the coin data source
+			Coins.Refresh();
+
 			// Create a column for each fund.
 			// Rows are bound to a collection of 'CoinDataAdapter'.
 			// Each column wants the balance for it's associated fund.
@@ -235,7 +275,7 @@ namespace CoinFlip.UI
 			public string Symbol => CoinData.Symbol;
 
 			/// <summary>The currently selected exchange</summary>
-			private Exchange Exchange => (Exchange)m_me.Exchanges.CurrentItem;
+			public Exchange Exchange => (Exchange)m_me.Exchanges.CurrentItem;
 
 			/// <summary>The coin on the currently selected exchange (can be null if there is no selected Exchange)</summary>
 			public Coin Coin => Exchange?.Coins[Symbol];
@@ -253,6 +293,14 @@ namespace CoinFlip.UI
 			public Unit<double> Held => Coin?.Balances.NettHeld ?? 0.0._(Symbol);
 
 			/// <summary></summary>
+			public void Invalidate(object sender = null, EventArgs args = null)
+			{
+				NotifyPropertyChanged(nameof(Value));
+				NotifyPropertyChanged(nameof(Total));
+				NotifyPropertyChanged(nameof(Available));
+			}
+
+			/// <summary></summary>
 			public event PropertyChangedEventHandler PropertyChanged;
 			public void NotifyPropertyChanged(string prop_name)
 			{
@@ -261,7 +309,7 @@ namespace CoinFlip.UI
 		}
 
 		/// <summary>Converter for converting 'CoinDataAdapter' to an 'IBalance', per exchange, per fund</summary>
-		private class CoinDataAdapterToIBalanceConverter : IValueConverter
+		private class CoinDataAdapterToIBalanceConverter :IValueConverter
 		{
 			public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 			{

@@ -7,12 +7,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 using CoinFlip.Settings;
+using Rylogic.Common;
 using Rylogic.Plugin;
 using Rylogic.Utility;
 
 namespace CoinFlip.Bots
 {
-	public abstract class IBot : IDisposable, INotifyPropertyChanged
+	public abstract class IBot :IDisposable, INotifyPropertyChanged
 	{
 		// Notes:
 		//  - Bots must be designed to start and stop at any point. All data must be persisted to
@@ -70,6 +71,7 @@ namespace CoinFlip.Bots
 				if (Fund?.Id == value?.Id) return;
 				BotData.FundId = value?.Id ?? string.Empty;
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Fund)));
+				BotData.Save();
 			}
 		}
 
@@ -164,7 +166,7 @@ namespace CoinFlip.Bots
 		public CancellationToken Shutdown => Model.Shutdown.Token;
 
 		/// <summary>The filepath to use for settings for this bot</summary>
-		public string SettingsFilepath => Misc.ResolveUserPath("Bots", $"settings.{Id}.xml");
+		public string SettingsFilepath => Misc.ResolveUserPath(Model.BackTesting ? "Sim" : "", "Bots", $"settings.{Name}.{Id}.xml");
 
 		/// <summary>True if the bot is ok to run</summary>
 		public bool CanActivate
@@ -190,6 +192,7 @@ namespace CoinFlip.Bots
 				//  - Configure can be called at any point, even when the bot is running.
 				//  - Configure is called in the UI thread, so the bot can display UI. 'owner' is a WPF Window
 				await ConfigureInternal(owner);
+				PreserveInitialState();
 			}
 			catch (Exception ex)
 			{
@@ -223,6 +226,26 @@ namespace CoinFlip.Bots
 		protected virtual Task StepInternal()
 		{
 			return Task.CompletedTask;
+		}
+
+		/// <summary>Save/Restore the bot settings</summary>
+		public void PreserveInitialState()
+		{
+			PreserveInitialStateInternal();
+		}
+		protected virtual void PreserveInitialStateInternal()
+		{
+			if (Path_.FileExists(SettingsFilepath))
+				Shell.Copy(SettingsFilepath, SettingsFilepath + ".initial", overwrite: true);
+		}
+		public void RestoreInitialState()
+		{
+			RestoreInitialStateInternal();
+		}
+		protected virtual void RestoreInitialStateInternal()
+		{
+			if (Path_.FileExists(SettingsFilepath + ".initial"))
+				Shell.Copy(SettingsFilepath + ".initial", SettingsFilepath, overwrite: true);
 		}
 
 		/// <summary>Returns a dynamically checked list of the available bots</summary>

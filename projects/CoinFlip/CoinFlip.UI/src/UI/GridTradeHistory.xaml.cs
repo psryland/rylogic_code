@@ -1,16 +1,18 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using Rylogic.Extn;
 using Rylogic.Gui.WPF;
 using Rylogic.Utility;
 
 namespace CoinFlip.UI
 {
-	public partial class GridTradeHistory : DataGrid, IDockable, IDisposable, INotifyPropertyChanged
+	public partial class GridTradeHistory : Grid, IDockable, IDisposable, INotifyPropertyChanged
 	{
 		// Notes:
 		//   - Historic trades are instances of 'OrderCompleted' classes. They contain
@@ -21,7 +23,23 @@ namespace CoinFlip.UI
 			InitializeComponent();
 			MouseRightButtonUp += DataGrid_.ColumnVisibility;
 			DockControl = new DockControl(this, "History");
+			PairNames = new ListCollectionView(new List<string>());
 			Model = model;
+
+
+			m_grid.SelectionChanged += (s, a) =>
+			{
+				foreach (var item in a.RemovedItems.Cast<OrderCompleted>())
+					Model.SelectedCompletedOrders.Remove(item);
+				foreach (var item in a.AddedItems.Cast<OrderCompleted>())
+					Model.SelectedCompletedOrders.Add(item);
+			};
+			m_grid.MouseDoubleClick += (s, a) =>
+			{
+				var chart = Model.Charts.ActiveChart;
+				if (chart != null)
+					ShowCurrentCompletedOrderOnChart(chart);
+			};
 
 			DataContext = this;
 		}
@@ -29,21 +47,6 @@ namespace CoinFlip.UI
 		{
 			Model = null;
 			DockControl = null;
-		}
-		protected override void OnSelectionChanged(SelectionChangedEventArgs e)
-		{
-			base.OnSelectionChanged(e);
-			foreach (var item in e.RemovedItems.Cast<OrderCompleted>())
-				Model.SelectedCompletedOrders.Remove(item);
-			foreach (var item in e.AddedItems.Cast<OrderCompleted>())
-				Model.SelectedCompletedOrders.Add(item);
-		}
-		protected override void OnMouseDoubleClick(MouseButtonEventArgs e)
-		{
-			base.OnMouseDoubleClick(e);
-			var chart = Model.Charts.ActiveChart;
-			if (chart != null)
-				ShowCurrentCompletedOrderOnChart(chart);
 		}
 
 		/// <summary></summary>
@@ -116,6 +119,14 @@ namespace CoinFlip.UI
 					var history = ((Exchange)Exchanges?.CurrentItem)?.History;
 					History = history != null ? new ListCollectionView(history) : null;
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(History)));
+
+					using (Scope.Create(() => PairNames.CurrentItem, n => PairNames.MoveCurrentToOrFirst(n)))
+					{
+						var list = (List<string>)PairNames.SourceCollection;
+						var pairs = ((Exchange)Exchanges?.CurrentItem)?.Pairs.Values;
+						list.Assign(pairs != null ? pairs.Select(x => x.Name).Prepend("All Pairs") : new string[0]);
+					}
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PairNames)));
 				}
 			}
 		}
@@ -123,6 +134,9 @@ namespace CoinFlip.UI
 
 		/// <summary>The view of the trade history</summary>
 		public ICollectionView History { get; private set; }
+
+		/// <summary>The names of pairs to filter the list by</summary>
+		public ICollectionView PairNames { get; }
 
 		/// <summary>The currently selected exchange</summary>
 		public OrderCompleted Current

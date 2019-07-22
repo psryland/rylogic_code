@@ -101,11 +101,11 @@ namespace Bot.Rebalance
 				return new Exception("Price range is invalid");
 
 			var base_balance = BaseCurrencyBalance._(pair.Base);
-			if (base_balance < 0 || base_balance > fund[pair.Base].Available)
+			if (base_balance < 0 || base_balance > fund[pair.Base].Total)
 				return new Exception("Base holdings is invalid");
 
 			var quote_balance = QuoteCurrencyBalance._(pair.Quote);
-			if (quote_balance < 0 || quote_balance > fund[pair.Quote].Available)
+			if (quote_balance < 0 || quote_balance > fund[pair.Quote].Total)
 				return new Exception("Quote holdings is invalid");
 
 			if (BaseCurrencyBalance == 0 && QuoteCurrencyBalance == 0)
