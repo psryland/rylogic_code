@@ -208,7 +208,7 @@
 	<!-- Candle Chart -->
 	<gui2:ChartControl
 		Grid.Row="1"
-		x:Name="m_chart_control"
+		x:Name="m_chart_candles"
 		ChartBackground="White"
 		Margin="4"
 		/>

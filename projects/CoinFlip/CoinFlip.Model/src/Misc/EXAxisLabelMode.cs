@@ -5,6 +5,6 @@
 	{
 		LocalTime,
 		UtcTime,
-		CandleIndex,
+		AxisIndex,
 	}
 }

@@ -357,7 +357,7 @@ namespace CoinFlip
 			Debug.Assert(current_amount == remaining + filled.Sum(x => x.AmountBase));
 
 			// The order is partially or completely filled...
-			pos = remaining != 0              ? new Order(fund_id, order_id, tt, pair, price, initial_amount, remaining, Model.UtcNow, Model.UtcNow) : null;
+			pos = remaining != 0              ? new Order(order_id, fund_id, tt, pair, price, initial_amount, remaining, Model.UtcNow, Model.UtcNow) : null;
 			his = remaining != current_amount ? new OrderCompleted(order_id, fund_id, tt, pair) : null;
 			foreach (var fill in filled)
 				his.Trades.Add(new TradeCompleted(his, ++m_history_id, fill.Price, fill.AmountBase, Exchange.Fee * fill.AmountQuote, Model.UtcNow, Model.UtcNow));

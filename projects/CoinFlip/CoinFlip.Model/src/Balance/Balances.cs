@@ -5,7 +5,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using CoinFlip.Settings;
-using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Maths;
 using Rylogic.Utility;
@@ -26,6 +25,7 @@ namespace CoinFlip
 		//   used to attribute balance changes to the correct fund.
 		// - The 'Balances' object provides a readonly sum of all fund balances.
 		// - 'notify' is used to notify balance changed on the 'coin'
+		// - m_fund[0].Total != ExchTotal. m_fund[0].Total is the exchange total minus the fund totals.
 
 		private readonly List<Balance> m_funds;
 		public Balances(Coin coin, DateTimeOffset last_updated)
@@ -48,16 +48,18 @@ namespace CoinFlip
 				Debug.Assert(held_on_exch <= total + double.Epsilon);
 				held_on_exch = Math_.Clamp(held_on_exch, 0.0._(held_on_exch), total);
 			}
-			
+
 			Coin = coin;
-			ExchTotal = total;
-			ExchHeld = held_on_exch;
 
 			// Initialise the funds collection. Although there is a 'Balance' instance for
 			// the main fund, its just a place holder. Its accessors use the 'ExchTotal'
 			// and 'ExchHeld' properties in this class.
 			m_funds = new List<Balance>{};
 			m_funds.Add(new Balance(this, Fund.Main));
+
+			// Assign the balance info from the exchange
+			ExchTotal = total;
+			ExchHeld = held_on_exch;
 
 			// Select the source of defined funds based on the backtesting state.
 			// Separate instances of this class are created for live trading and back testing
@@ -91,15 +93,36 @@ namespace CoinFlip
 		public IEnumerable<IBalance> Funds => m_funds;
 
 		/// <summary>All funds except 'Main'</summary>
-		public IEnumerable<IBalance> FundsExceptMain => m_funds.Where(x => x.FundId != Fund.Main);
+		public IEnumerable<IBalance> FundsExceptMain => Funds.Skip(1);
 
 		/// <summary>The nett total balance is the balance that the exchange reports (regardless of what the funds think they have)</summary>
 		public Unit<double> NettTotal => ExchTotal + (!Model.AllowTrades ? FakeCash : 0.0._(Coin));
-		private Unit<double> ExchTotal { get; set; }
+		private Unit<double> ExchTotal
+		{
+			get => m_exch_total;
+			set
+			{
+				if (m_exch_total == value) return;
+				m_exch_total = value;
+				m_funds[0].NotifyPropertyChanged(nameof(Balance.Total));
+			}
+		}
+		private Unit<double> m_exch_total;
 
 		/// <summary>The nett held balance is the held amount that the exchange reports (regardless of what the funds think)</summary>
 		public Unit<double> NettHeld => ExchHeld;
-		private Unit<double> ExchHeld { get; set; }
+		private Unit<double> ExchHeld
+		{
+			get => m_exch_held;
+			set
+			{
+				if (m_exch_held == value) return;
+				m_exch_held = value;
+				m_funds[0].NotifyPropertyChanged(nameof(Balance.Available));
+				m_funds[0].NotifyPropertyChanged(nameof(Balance.HeldForTrades));
+			}
+		}
+		private Unit<double> m_exch_held;
 
 		/// <summary>The nett available balance is the (total - held) balance reported by the exchange</summary>
 		public Unit<double> NettAvailable => NettTotal - NettHeld;
@@ -133,25 +156,18 @@ namespace CoinFlip
 			{
 				// Get the balance info for 'fund_id', create if necessary
 				balance = balance ?? m_funds.Add2(new Balance(this, fund_id));
-
 				if (total != null)
 					balance.Total = total.Value;
 				if (held_on_exch != null)
 					balance.HeldOnExch = held_on_exch.Value;
-
-				balance.LastUpdated = now;
-				balance.CheckHolds();
 			}
+
+			balance.LastUpdated = now;
+			balance.CheckHolds();
 
 			// Signal balance changed
 			if (notify)
-			{
-				// Notify all funds changed
-				foreach (var bal in Funds.Cast<Balance>())
-					bal.Invalidate();
-
 				CoinData.NotifyBalanceChanged(Coin);
-			}
 		}
 
 		/// <summary>Add or subtract an amount from a fund</summary>
@@ -169,25 +185,18 @@ namespace CoinFlip
 			{
 				// Get the balance info for 'fund_id', create if necessary
 				balance = balance ?? m_funds.Add2(new Balance(this, fund_id));
-
 				if (change_total != null)
 					balance.Total += change_total.Value;
 				if (change_held_on_exch != null)
 					balance.HeldOnExch += change_held_on_exch.Value;
-
-				balance.LastUpdated = now;
-				balance.CheckHolds();
 			}
+
+			balance.LastUpdated = now;
+			balance.CheckHolds();
 
 			// Signal balance changed
 			if (notify)
-			{
-				// Notify all funds changed
-				foreach (var bal in Funds.Cast<Balance>())
-					bal.Invalidate();
-
 				CoinData.NotifyBalanceChanged(Coin);
-			}
 		}
 
 		/// <summary>Sanity check this balance. Returns null if valid</summary>
@@ -261,11 +270,13 @@ namespace CoinFlip
 			public Unit<double> Total
 			{
 				// The Main fund contains whatever is left over after the other funds have their share
-				get { return FundId == Fund.Main ? m_balances.NettTotal - m_balances.FundsExceptMain.Sum(x => x.Total) : m_total; }
+				get { return FundId != Fund.Main ? m_total : m_balances.NettTotal - m_balances.FundsExceptMain.Sum(x => x.Total); }
 				set
 				{
 					Debug.Assert(FundId != Fund.Main);
+					if (m_total == value) return;
 					m_total = value;
+					NotifyPropertyChanged(nameof(Total));
 				}
 			}
 			private Unit<double> m_total;
@@ -284,11 +295,14 @@ namespace CoinFlip
 			/// <summary>Total amount set aside for pending orders and trade strategies</summary>
 			public Unit<double> HeldOnExch
 			{
-				get { return FundId == Fund.Main ? m_balances.NettHeld - m_balances.FundsExceptMain.Sum(x => x.HeldOnExch) : m_held_on_exch; }
+				get { return FundId != Fund.Main ? m_held_on_exch : m_balances.NettHeld - m_balances.FundsExceptMain.Sum(x => x.HeldOnExch); }
 				set
 				{
 					Debug.Assert(FundId != Fund.Main);
+					if (m_held_on_exch == value) return;
 					m_held_on_exch = value;
+					NotifyPropertyChanged(nameof(Available));
+					NotifyPropertyChanged(nameof(HeldForTrades));
 				}
 			}
 			private Unit<double> m_held_on_exch;
@@ -316,6 +330,7 @@ namespace CoinFlip
 				// Create a new fund hold
 				var id = Guid.NewGuid();
 				Holds.Add(new FundHold(id, amount, still_needed));
+				NotifyPropertyChanged(nameof(HeldForTrades));
 				return id;
 			}
 
@@ -329,7 +344,8 @@ namespace CoinFlip
 			/// <summary>Release a hold on funds</summary>
 			public void Release(Guid hold_id)
 			{
-				Holds.RemoveAll(x => x.Id == hold_id);
+				if (Holds.RemoveAll(x => x.Id == hold_id) != 0)
+					NotifyPropertyChanged(nameof(HeldForTrades));
 			}
 
 			/// <summary>Return the amount held for the given id</summary>
@@ -343,28 +359,22 @@ namespace CoinFlip
 			{
 				// Check the holds are still valid.
 				// Some 'StillNeeded' calls can modify 'Holds'
+				var holds_removed = false;
 				foreach (var hold in Holds.ToList())
 				{
 					if (hold.StillNeeded(this)) continue;
 					Holds.Remove(hold);
+					holds_removed = true;
 				}
+				if (holds_removed)
+					NotifyPropertyChanged(nameof(HeldForTrades));
 			}
 
 			/// <summary></summary>
 			public event PropertyChangedEventHandler PropertyChanged;
-			private void NotifyPropertyChanged(string prop_name)
+			public void NotifyPropertyChanged(string prop_name)
 			{
 				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
-			}
-
-			/// <summary></summary>
-			public void Invalidate(object sender = null, EventArgs args = null)
-			{
-				NotifyPropertyChanged(nameof(Total));
-				NotifyPropertyChanged(nameof(Available));
-				NotifyPropertyChanged(nameof(HeldOnExch));
-				NotifyPropertyChanged(nameof(HeldLocally));
-				NotifyPropertyChanged(nameof(HeldForTrades));
 			}
 
 			/// <summary>String description of this fund balance</summary>

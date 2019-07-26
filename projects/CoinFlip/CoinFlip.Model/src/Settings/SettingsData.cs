@@ -38,11 +38,11 @@ namespace CoinFlip.Settings
 			MarketOrderPriceToleranceFrac = 0.0001;
 			ValuationCurrency = "USDT";
 
-			//Equity = new EquitySettings();
 			Coins = new CoinData[] { new CoinData("BTC") { OfInterest = true }, new CoinData("ETH") { OfInterest = true } };
 			LiveFunds = new FundData[1] { new FundData(Fund.Main, new FundData.ExchData[0]) };
 			LiveBots = new BotData[0];
 			Chart = new ChartSettings();
+			Equity = new EquitySettings();
 			BackTesting = new BackTestingSettings();
 			Binance = new BinanceSettings();
 			Poloniex = new PoloniexSettings();
@@ -148,6 +148,13 @@ namespace CoinFlip.Settings
 		{
 			get { return get<ChartSettings>(nameof(Chart)); }
 			set { set(nameof(Chart), value); }
+		}
+
+		/// <summary>Setting for the equity chart</summary>
+		public EquitySettings Equity
+		{
+			get { return get<EquitySettings>(nameof(Equity)); }
+			set { set(nameof(Equity), value); }
 		}
 
 		/// <summary>Settings related to back testing</summary>

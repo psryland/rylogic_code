@@ -15,7 +15,7 @@ namespace CoinFlip
 			: base(rhs)
 		{ }
 
-		/// <summary>Get or Add a history entry with order id 'order_id' for 'pair'</summary>
+		/// <summary>Get or Add a completed order by 'order_id'</summary>
 		public OrderCompleted GetOrAdd(long order_id, Func<long, OrderCompleted> factory)
 		{
 			Debug.Assert(Misc.AssertMarketDataWrite());
@@ -30,11 +30,6 @@ namespace CoinFlip
 			{
 				Debug.Assert(Misc.AssertMarketDataRead());
 				return TryGetValue(order_id, out var pos) ? pos : null;
-			}
-			set
-			{
-				Debug.Assert(Misc.AssertMarketDataWrite());
-				base[order_id] = value;
 			}
 		}
 	}

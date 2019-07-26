@@ -723,8 +723,8 @@ namespace CoinFlip
 				ExchSettings.Save();
 
 				// Add a 'Position' to the collection, this will be overwritten on the next update.
-				var order = new Order(fund_id, result.OrderId, tt, pair, price, amount, amount, now, now, fake: fake);
-				Orders[result.OrderId] = order;
+				var order = new Order(result.OrderId, fund_id, tt, pair, price, amount, amount, now, now, fake: fake);
+				Orders.AddOrUpdate(order);
 
 				// The order is on the exchange, so update the held amount to be held on the exchange
 				if (fake)

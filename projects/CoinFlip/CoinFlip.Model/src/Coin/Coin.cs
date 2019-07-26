@@ -8,11 +8,16 @@ using Rylogic.Utility;
 namespace CoinFlip
 {
 	/// <summary>A Coin, owned by an exchange</summary>
-	[DebuggerDisplay("{Description}")]
+	[DebuggerDisplay("{Description,nq}")]
 	public class Coin :IComparable
 	{
 		public Coin(string sym, Exchange exch)
 		{
+			if (sym == null || sym.Length == 0)
+				throw new Exception("Coin's must have a symbol name");
+			if (exch == null)
+				throw new Exception("Coin's must belong to an exchange");
+
 			Symbol = sym;
 			Exchange = exch;
 			Meta = SettingsData.Settings.Coins.FirstOrDefault(x => x.Symbol == sym) ?? new CoinData(sym);
@@ -157,7 +162,7 @@ namespace CoinFlip
 		}
 
 		/// <summary></summary>
-		private string Description => $"{Symbol} ({Exchange}) NettTotal={Balances.NettTotal}";
+		private string Description => $"{Symbol} ({Exchange})";
 
 		/// <summary>Allow implicit conversion to string symbol name</summary>
 		[DebuggerStepThrough] public static implicit operator string(Coin coin)

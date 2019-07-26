@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
 using CoinFlip.Settings;
+using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
@@ -139,7 +140,7 @@ namespace CoinFlip.UI.GfxObjects
 		}
 
 		/// <summary>Hit test the trade price indicator</summary>
-		public override ChartControl.HitTestResult.Hit HitTest(Point chart_point, Point client_point, ModifierKeys modifier_keys, View3d.Camera cam)
+		public override ChartControl.HitTestResult.Hit HitTest(Point chart_point, Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
 		{
 			// Find the nearest point to 'client_point' on the line
 			var chart_pt = chart_point;

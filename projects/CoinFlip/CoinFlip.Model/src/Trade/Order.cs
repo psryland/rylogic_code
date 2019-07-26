@@ -15,7 +15,7 @@ namespace CoinFlip
 		//    should exist somewhere in their order book. When an Order is filled it
 		//    becomes a 'OrderCompleted'
 
-		public Order(string fund_id, long order_id, ETradeType tt, TradePair pair, Unit<double> price_q2b, Unit<double> amount_base, Unit<double> remaining_base, DateTimeOffset? created, DateTimeOffset updated, bool fake = false)
+		public Order(long order_id, string fund_id, ETradeType tt, TradePair pair, Unit<double> price_q2b, Unit<double> amount_base, Unit<double> remaining_base, DateTimeOffset? created, DateTimeOffset updated, bool fake = false)
 			:base(fund_id, tt, pair, price_q2b, amount_base)
 		{
 			OrderId = order_id;
@@ -25,11 +25,11 @@ namespace CoinFlip
 			Updated = updated;
 			Fake = fake;
 		}
-		public Order(Trade trade, long order_id, Unit<double> remaining_base, DateTimeOffset? created, DateTimeOffset updated, bool fake = false)
-			: this(trade.FundId, order_id, trade.TradeType, trade.Pair, trade.PriceQ2B, trade.AmountBase, remaining_base, created, updated, fake)
+		public Order(long order_id, Trade trade, Unit<double> remaining_base, DateTimeOffset? created, DateTimeOffset updated, bool fake = false)
+			: this(order_id, trade.FundId, trade.TradeType, trade.Pair, trade.PriceQ2B, trade.AmountBase, remaining_base, created, updated, fake)
 		{ }
 		public Order(Order rhs)
-			:this(rhs, rhs.OrderId, rhs.RemainingBase, rhs.Created, rhs.Updated, rhs.Fake)
+			:this(rhs.OrderId, (Trade)rhs, rhs.RemainingBase, rhs.Created, rhs.Updated, rhs.Fake)
 		{}
 
 		/// <summary>Unique Id for the open position on an exchange</summary>

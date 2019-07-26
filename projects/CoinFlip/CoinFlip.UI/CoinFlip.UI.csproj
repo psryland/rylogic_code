@@ -84,6 +84,7 @@
     <Compile Include="src\Dialogs\NewBotUI.xaml.cs">
       <DependentUpon>NewBotUI.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\GfxObjects\Equity.cs" />
     <Compile Include="src\GfxObjects\Misc.cs" />
     <Compile Include="src\GfxObjects\Orders.cs" />
     <Compile Include="src\GfxObjects\MarketDepth.cs" />

@@ -11,13 +11,13 @@ namespace CoinFlip
 		// Notes:
 		//  - A transfer of funds on or off an exchange (i.e. deposit or withdrawal)
 
-		public Transfer(string id, ETransfer type, Coin coin, Unit<double> amount, long timestamp, EStatus status)
+		public Transfer(string id, ETransfer type, Coin coin, Unit<double> amount, DateTimeOffset created, EStatus status)
 		{
 			TransactionId = id;
 			Type          = type;
 			Coin          = coin;
 			Amount        = amount;
-			Timestamp     = timestamp;
+			Created       = created;
 			Status        = status;
 		}
 
@@ -34,14 +34,13 @@ namespace CoinFlip
 		public Unit<double> Amount { get; }
 
 		/// <summary>The timestamp of the transfer (in ticks)</summary>
-		public long Timestamp { get; }
-		public DateTimeOffset TimestampUTC => new DateTimeOffset(Timestamp, TimeSpan.Zero);
+		public DateTimeOffset Created { get; }
 
 		/// <summary>The transaction status</summary>
 		public EStatus Status { get; }
 
 		/// <summary>String description of the transfer</summary>
-		public string Description => $"{Type} {Coin} {Amount.ToString("F8", true)}";
+		public string Description => $"{Type} {Coin} {Amount.ToString(Coin.Meta.SD, true)}";
 
 		/// <summary>Transfer transaction status</summary>
 		public enum EStatus

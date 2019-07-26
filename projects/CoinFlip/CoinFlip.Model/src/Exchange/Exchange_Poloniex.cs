@@ -157,7 +157,7 @@ namespace CoinFlip
 				{
 					// Add the order to the collection
 					var order = OrderFrom(exch_order, timestamp);
-					Orders[order.OrderId] = order;
+					Orders.AddOrUpdate(order);
 					order_ids.Add(order.OrderId);
 					pairs.Add(exch_order.Pair);
 				}
@@ -349,7 +349,7 @@ namespace CoinFlip
 			var price    = odr.Price._(pair.RateUnits);
 			var amount   = odr.VolumeBase._(pair.Base);
 			var created  = odr.Created;
-			return new Order(fund_id, order_id, tt, pair, price, amount, amount, created, updated);
+			return new Order(order_id, fund_id, tt, pair, price, amount, amount, created, updated);
 		}
 
 		/// <summary>Convert a Poloniex trade history result into a completed order</summary>
@@ -371,7 +371,7 @@ namespace CoinFlip
 			var type      = ETransfer.Deposit;
 			var coin      = Coins.GetOrAdd(dep.Currency);
 			var amount    = dep.Amount._(coin);
-			var timestamp = dep.Timestamp.Ticks;
+			var timestamp = dep.Timestamp;
 			var status    = ToTransferStatus(dep.Status);
 			return new Transfer(id, type, coin, amount, timestamp, status);
 		}
@@ -381,7 +381,7 @@ namespace CoinFlip
 			var type      = ETransfer.Withdrawal;
 			var coin      = Coins.GetOrAdd(wid.Currency);
 			var amount    = wid.Amount._(coin);
-			var timestamp = wid.Timestamp.Ticks;
+			var timestamp = wid.Timestamp;
 			var status    = ToTransferStatus(wid.Status);
 			return new Transfer(id, type, coin, amount, timestamp, status);
 		}

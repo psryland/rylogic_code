@@ -26,7 +26,7 @@ namespace CoinFlip.UI
 			InitializeComponent();
 			DockControl = new DockControl(this, "Chart") { DestroyOnClose = true };
 			ChartSelector = new ExchPairTimeFrame(model);
-			Chart = m_chart_control;
+			Chart = m_chart_candles;
 			Model = model;
 
 			GfxB2Q = new GfxObjects.SpotPrice(SettingsData.Settings.Chart.B2QColour);
@@ -212,7 +212,7 @@ namespace CoinFlip.UI
 					// values to X Axis values.
 
 					// Draw the X Axis labels as indices instead of time stamps
-					if (SettingsData.Settings.Chart.XAxisLabelMode == EXAxisLabelMode.CandleIndex)
+					if (SettingsData.Settings.Chart.XAxisLabelMode == EXAxisLabelMode.AxisIndex)
 						return x.ToString();
 
 					if (Instrument == null || Instrument.Count == 0)
@@ -488,7 +488,7 @@ namespace CoinFlip.UI
 		private void BuildScene(View3d.Window window)
 		{
 			window.RemoveObjects(new[] { CtxId }, 1, 0);
-			if (Instrument == null)
+			if (Instrument == null || !DockControl.IsVisible)
 				return;
 
 			// Candles
@@ -1059,7 +1059,7 @@ namespace CoinFlip.UI
 				cmenu.Opened += (s, a) =>
 				{
 					// Get the spot price at the mouse location
-					var hit = Chart.HitTestZoneCS(Mouse.GetPosition(Chart), ModifierKeys.None);
+					var hit = Chart.HitTestZoneCS(Mouse.GetPosition(Chart), ModifierKeys.None, WPFUtil.MouseBtns());
 					var visible = Instrument != null && hit.ChartPoint.Y > 0;
 
 					// Hide the buy/sell options when there is no instrument or the click price is invalid

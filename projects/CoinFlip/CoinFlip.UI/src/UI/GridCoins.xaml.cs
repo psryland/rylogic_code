@@ -279,54 +279,13 @@ namespace CoinFlip.UI
 			public double Balance => Value * Total;
 
 			/// <summary>The average value of this coin across all exchanges</summary>
-			public double Value
-			{
-				get
-				{
-					// Find the average price on the available exchanges
-					var value = new Average<double>();
-					foreach (var exch in SourceExchanges)
-					{
-						var coin = exch.Coins[Symbol];
-						if (coin == null) continue;
-						var val = coin.ValueOf(1.0);
-						if (val != 0) value.Add(val);
-					}
-					return value.Count != 0 ? value.Mean._(Symbol) : CoinData.AssignedValue._(Symbol);
-				}
-			}
+			public double Value => CoinData.AverageValue(SourceExchanges);
 
 			/// <summary>The sum of account balances across all exchanges for this coin</summary>
-			public Unit<double> Total
-			{
-				get
-				{
-					var total = 0.0;
-					foreach (var exch in SourceExchanges)
-					{
-						var coin = exch.Coins[Symbol];
-						if (coin == null) continue;
-						total += coin.Balances.NettTotal;
-					}
-					return total._(Symbol);
-				}
-			}
+			public Unit<double> Total => CoinData.NettTotal(SourceExchanges);
 
 			/// <summary>The sum of available balance across all exchanges</summary>
-			public Unit<double> Available
-			{
-				get
-				{
-					var avail = 0.0;
-					foreach (var exch in SourceExchanges)
-					{
-						var coin = exch.Coins[Symbol];
-						if (coin == null) continue;
-						avail += coin.Balances.NettAvailable;
-					}
-					return avail._(Symbol);
-				}
-			}
+			public Unit<double> Available => CoinData.NettAvailable(SourceExchanges);
 
 			/// <summary>True if a live value could be calculated</summary>
 			public bool LiveValueAvailable => SourceExchanges.Any(x => x.Coins[Symbol]?.LivePriceAvailable ?? false);

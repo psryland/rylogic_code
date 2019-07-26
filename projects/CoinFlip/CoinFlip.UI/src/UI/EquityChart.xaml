@@ -9,16 +9,87 @@
 	d:DesignHeight="450"
 	d:DesignWidth="800"
 	>
+
+	<Grid.Resources>
+		<ResourceDictionary>
+			<BitmapImage x:Key="options" UriSource="/CoinFlip.UI;component/res/options.png" />
+		</ResourceDictionary>
+	</Grid.Resources>
+	
 	<Grid.RowDefinitions>
 		<RowDefinition Height="Auto"/>
 		<RowDefinition Height="*"/>
 	</Grid.RowDefinitions>
-	
+
+	<!-- Tool bar -->
+	<Grid
+		Name="m_toolbar"
+		Grid.Row="0"
+		>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="*"/>
+			<ColumnDefinition Width="Auto"/>
+			<ColumnDefinition Width="Auto"/>
+		</Grid.ColumnDefinitions>
+
+		<!-- Time Range -->
+		<TextBlock
+			Grid.Column="10"
+			Text="{Binding VisibleTimeSpan}"
+			VerticalAlignment="Center"
+			Margin="3"
+			/>
+
+		<!-- Chart Options -->
+		<Button
+			Grid.Column="11"
+			Command="{Binding ShowChartOptions}"
+			MaxWidth="22"
+			Margin="3"
+			>
+			<Image Source="{StaticResource options}" Stretch="UniformToFill" StretchDirection="DownOnly" RenderOptions.BitmapScalingMode="HighQuality"/>
+		</Button>
+	</Grid>
+
 	<!-- Equity Chart -->
 	<gui2:ChartControl
 		Grid.Row="1"
 		ChartBackground="White"
-		x:Name="m_chart_control"
+		x:Name="m_chart_equity"
 		Margin="4"
 		/>
+	<Canvas
+		Grid.Row="1"
+		x:Name="m_chart_overlay"
+		ClipToBounds="True"
+		Margin="4"
+		>
+		<StackPanel
+			Canvas.Left="900"
+			Canvas.Top="0"
+			Orientation="Horizontal"
+			Background="#FFF"
+			Cursor="SizeWE"
+			>
+			<Polygon
+				Points="0,10 5,5 -5,5"
+				Stroke="Black"
+				/>
+			<TextBlock
+				Text="100 BTC"
+				FontSize="10"
+				VerticalAlignment="Center"
+				HorizontalAlignment="Center"
+				/>
+		</StackPanel>
+	</Canvas>
 </Grid>

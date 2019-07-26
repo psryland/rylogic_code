@@ -156,7 +156,7 @@ namespace CoinFlip
 				{
 					// Add the order to the collection
 					var order = OrderFrom(exch_order, timestamp);
-					Orders[order.OrderId] = order;
+					Orders.AddOrUpdate(order);
 					order_ids.Add(order.OrderId);
 					pairs.Add(exch_order.Pair);
 				}
@@ -315,7 +315,7 @@ namespace CoinFlip
 			var amount = order.VolumeBase._(pair.Base);
 			var remaining = order.RemainingBase._(pair.Base);
 			var created = order.Created;
-			return new Order(fund_id, order_id, tt, pair, price, amount, remaining, created, updated);
+			return new Order(order_id, fund_id, tt, pair, price, amount, remaining, created, updated);
 		}
 
 		/// <summary>Convert a Cryptopia trade history result into a position object</summary>
@@ -340,7 +340,7 @@ namespace CoinFlip
 			var id = xfr.TxId;
 			var coin = Coins.GetOrAdd(xfr.Currency);
 			var amount = xfr.Amount._(coin);
-			var timestamp = xfr.Timestamp.Ticks;
+			var timestamp = xfr.Timestamp;
 			var status = ToTransferStatus(xfr);
 			return new Transfer(id, type, coin, amount, timestamp, status);
 		}

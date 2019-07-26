@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Rylogic.Extn;
 
 namespace CoinFlip
 {
@@ -16,6 +17,22 @@ namespace CoinFlip
 			: base(rhs)
 		{ }
 
+		/// <summary>Add or update an order</summary>
+		public Order AddOrUpdate(Order order)
+		{
+			Debug.Assert(Misc.AssertMarketDataWrite());
+			if (TryGetValue(order.OrderId, out var existing))
+			{
+				existing.Update(order);
+				ResetItem(order.OrderId); // Needed since we're updating in-place
+			}
+			else
+			{
+				Add(order.OrderId, order);
+			}
+			return order;
+		}
+
 		/// <summary>Get/Set a position by order id</summary>
 		public override Order this[long key]
 		{
@@ -23,20 +40,6 @@ namespace CoinFlip
 			{
 				Debug.Assert(Misc.AssertMarketDataRead());
 				return TryGetValue(key, out var pos) ? pos : null;
-			}
-			set
-			{
-				// If the order already exists, update rather than replace.
-				Debug.Assert(Misc.AssertMarketDataWrite());
-				if (ContainsKey(key))
-				{
-					base[key].Update(value);
-					ResetItem(key); // Needed since we're updating in-place
-				}
-				else
-				{
-					base[key] = value;
-				}
 			}
 		}
 	}

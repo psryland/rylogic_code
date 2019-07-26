@@ -69,6 +69,8 @@
     <Compile Include="src\Exchange\OrdersCollection.cs" />
     <Compile Include="src\Exchange\PairCollection.cs" />
     <Compile Include="src\Exchange\TransfersCollection.cs" />
+    <Compile Include="src\Extn\CoinData_.cs" />
+    <Compile Include="src\Extn\TradeType_.cs" />
     <Compile Include="src\Misc\DapperExtensions.cs" />
     <Compile Include="src\Misc\EShowItems.cs" />
     <Compile Include="src\Misc\ESkin.cs" />
@@ -79,6 +81,7 @@
     <Compile Include="src\Misc\EValidation.cs" />
     <Compile Include="src\Misc\EXAxisLabelMode.cs" />
     <Compile Include="src\Misc\ExchPairTimeFrame.cs" />
+    <Compile Include="src\Settings\EquitySettings.cs" />
     <Compile Include="src\Trade\IOrder.cs" />
     <Compile Include="src\Misc\IValueTotalAvail.cs" />
     <Compile Include="src\Model\BotContainer.cs" />

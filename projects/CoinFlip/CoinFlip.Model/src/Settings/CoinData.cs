@@ -105,6 +105,13 @@ namespace CoinFlip.Settings
 
 		/// <summary>The coin whose balance has changed</summary>
 		public Coin Coin { get; }
+
+		public enum EBalance
+		{
+			Total,
+			Available,
+			Held,
+		}
 	}
 	#endregion
 }

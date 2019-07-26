@@ -244,9 +244,10 @@ namespace CoinFlip
 				// Update the collection of existing orders
 				foreach (var exch_order in existing_orders)
 				{
-					// Add the order to the collection
+					// Get/Add the order
 					var order = OrderFrom(exch_order, timestamp);
-					Orders[order.OrderId] = order;
+					Orders.AddOrUpdate(order);
+
 					order_ids.Add(order.OrderId);
 					new_pairs.Add(order.Pair);
 				}
@@ -445,7 +446,7 @@ namespace CoinFlip
 			var price_q2b = order.Price._(pair.RateUnits);
 			var amount_base = order.Amount._(pair.Base);
 			var created = order.Created;
-			return new Order(fund_id, order_id, tt, pair, price_q2b, amount_base, amount_base, created, updated);
+			return new Order(order_id, fund_id, tt, pair, price_q2b, amount_base, amount_base, created, updated);
 		}
 
 		/// <summary>Convert an exchange order into a CoinFlip order completed</summary>
