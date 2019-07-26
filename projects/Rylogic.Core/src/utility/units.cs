@@ -13,7 +13,7 @@ using Rylogic.Extn;
 
 namespace Rylogic.Utility
 {
-	[DebuggerDisplay("{ToString(true),nq}")]
+	[DebuggerDisplay("{Description,nq}")]
 	public struct Unit<T> : IComparable<Unit<T>>, IComparable<T>, IComparable where T : IComparable
 	{
 		public Unit(T value, int unit)
@@ -191,6 +191,7 @@ namespace Rylogic.Utility
 				throw new Exception($"ToString(signficant_digit) not available for type:{Value.GetType().Name}");
 			return include_units ? $"{str} {Unit_.Types[UnitId]}" : str;
 		}
+		private string Description => ToString(true);
 
 		/// <summary>Parse a unit from a string</summary>
 		public static Unit<T> Parse(string str)

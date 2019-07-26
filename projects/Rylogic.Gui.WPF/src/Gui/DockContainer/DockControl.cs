@@ -372,6 +372,12 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 
+		/// <summary>True if this content is visible somewhere in the dock container or it's floating windows</summary>
+		public bool IsVisible
+		{
+			get => IsActiveContentInPane && DockPane.IsVisible;
+		}
+
 		/// <summary>A record of where this pane was located in a dock container, auto hide window, or floating window</summary>
 		internal EDockSite[] DockAddressFor(ITreeHost tree)
 		{

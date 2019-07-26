@@ -93,7 +93,7 @@ namespace Rylogic.Gui.WPF
 				op.m_btn_down = true;
 				op.m_grab_client = location; // Note: in ChartControl space, not ChartPanel space
 				op.m_grab_chart = ClientToChart(op.m_grab_client);
-				op.m_hit_result = HitTestCS(op.m_grab_client, Keyboard.Modifiers, null);
+				op.m_hit_result = HitTestCS(op.m_grab_client, Keyboard.Modifiers, args.ToMouseBtns(), null);
 				op.MouseDown(args);
 				CaptureMouse();
 			}
@@ -112,7 +112,7 @@ namespace Rylogic.Gui.WPF
 			// Otherwise, provide mouse hover detection
 			else if (SceneBounds != Rect_.Zero)
 			{
-				var hit = HitTestCS(location, Keyboard.Modifiers, null);
+				var hit = HitTestCS(location, Keyboard.Modifiers, args.ToMouseBtns(), null);
 				var hovered = hit.Hits.Select(x => x.Element).ToHashSet(0);
 
 				// Remove elements that are no longer hovered
@@ -156,7 +156,7 @@ namespace Rylogic.Gui.WPF
 			var location = args.GetPosition(this);
 			var along_ray = Options.MouseCentredZoom || Keyboard.Modifiers.HasFlag(ModifierKeys.Alt);
 			var chart_pt = ClientToChart(location);
-			var hit = HitTestZoneCS(location, Keyboard.Modifiers);
+			var hit = HitTestZoneCS(location, Keyboard.Modifiers, args.ToMouseBtns());
 
 			var scale = 0.001f;
 			if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) scale *= 0.1f;
@@ -292,7 +292,7 @@ namespace Rylogic.Gui.WPF
 				case EAreaSelectMode.SelectElements:
 					{
 						var rect = new Rect(args.SelectionArea.MinX, args.SelectionArea.MinY, args.SelectionArea.SizeX, args.SelectionArea.SizeY);
-						SelectElements(rect, Keyboard.Modifiers);
+						SelectElements(rect, Keyboard.Modifiers, args.MouseBtns);
 						break;
 					}
 				case EAreaSelectMode.Zoom:

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using Rylogic.Common;
 using Rylogic.Utility;
 
@@ -78,12 +77,13 @@ namespace Rylogic.Container
 	}
 
 	/// <summary>Args for the event raised whenever the list is changed</summary>
-	public class ListChgEventArgs :EventArgs
+	public class ListChgEventArgs :PrePostEventArgs
 	{
-		[DebuggerStepThrough] public ListChgEventArgs(IList list)
+		public ListChgEventArgs(IList list)
 			:this(list, ListChg.Reset, -1, null)
 		{}
-		[DebuggerStepThrough] public ListChgEventArgs(IList list, ListChg chg, int index, object item)
+		public ListChgEventArgs(IList list, ListChg chg, int index, object item)
+			:base(!chg.HasFlag(ListChg.Pre))
 		{
 			List       = list;
 			ChangeType = chg;
@@ -93,10 +93,10 @@ namespace Rylogic.Container
 		}
 
 		/// <summary>The list this event is associated with</summary>
-		public IList List { get; private set; }
+		public IList List { get; }
 
 		/// <summary>The change this event represents</summary>
-		public ListChg ChangeType { get; private set; }
+		public ListChg ChangeType { get; }
 
 		/// <summary>
 		/// The index of the item in the list, or where it will be in the list.
@@ -113,32 +113,18 @@ namespace Rylogic.Container
 		/// <summary>On 'Pre' events, can be used to prevent the change</summary>
 		public bool Cancel { get; set; }
 
-		/// <summary>True if this is the event before the list change</summary>
-		public bool IsPreEvent
-		{
-			get { return ChangeType.HasFlag(ListChg.Pre); }
-		}
-
-		/// <summary>True if this is the event after the list change</summary>
-		public bool IsPostEvent
-		{
-			get { return !ChangeType.HasFlag(ListChg.Pre); }
-		}
-
 		/// <summary>True if data in the collection has possibly changed, not just the collection order</summary>
-		public bool IsDataChanged
-		{
-			get { return IsPostEvent; }
-		}
+		public bool IsDataChanged => After;
 	}
 
 	/// <summary>Args for the event raised whenever the list is changed</summary>
-	public class ListChgEventArgs<T> :EventArgs
+	public class ListChgEventArgs<T> :PrePostEventArgs
 	{
-		[DebuggerStepThrough] public ListChgEventArgs(IList<T> list)
+		public ListChgEventArgs(IList<T> list)
 			:this(list, ListChg.Reset, -1, default(T))
 		{}
-		[DebuggerStepThrough] public ListChgEventArgs(IList<T> list, ListChg chg, int index, T item)
+		public ListChgEventArgs(IList<T> list, ListChg chg, int index, T item)
+			:base(!chg.HasFlag(ListChg.Pre))
 		{
 			List       = list;
 			ChangeType = chg;
@@ -148,10 +134,10 @@ namespace Rylogic.Container
 		}
 
 		/// <summary>The list this event is associated with</summary>
-		public IList<T> List { get; private set; }
+		public IList<T> List { get; }
 
 		/// <summary>The change this event represents</summary>
-		public ListChg ChangeType { get; private set; }
+		public ListChg ChangeType { get; }
 
 		/// <summary>
 		/// The index of the item in the list, or where it will be in the list.
@@ -168,23 +154,8 @@ namespace Rylogic.Container
 		/// <summary>On 'Pre' events, can be used to prevent the change</summary>
 		public bool Cancel { get; set; }
 
-		/// <summary>True if this is the event before the list change</summary>
-		public bool IsPreEvent
-		{
-			get { return ChangeType.HasFlag(ListChg.Pre); }
-		}
-
-		/// <summary>True if this is the event after the list change</summary>
-		public bool IsPostEvent
-		{
-			get { return !ChangeType.HasFlag(ListChg.Pre); }
-		}
-
 		/// <summary>True if data in the collection has possibly changed, not just the collection order</summary>
-		public bool IsDataChanged
-		{
-			get { return IsPostEvent; }
-		}
+		public bool IsDataChanged => After;
 	}
 
 	/// <summary>Event args for the event raised whenever an item in the list is changed</summary>
@@ -197,13 +168,13 @@ namespace Rylogic.Container
 			NewItem = new_item;
 		}
 		/// <summary>Index position of the item that was changed</summary>
-		public int Index { get; private set; }
+		public int Index { get; }
 
 		/// <summary>The item before it was changed</summary>
-		public object OldItem { get; private set; }
+		public object OldItem { get; }
 
 		/// <summary>The new item now in position 'Index' in the list</summary>
-		public object NewItem { get; private set; }
+		public object NewItem { get; }
 	}
 
 	/// <summary>Event args for the event raised whenever an item in the list is changed</summary>
@@ -216,13 +187,13 @@ namespace Rylogic.Container
 			NewItem = new_item;
 		}
 		/// <summary>Index position of the item that was changed</summary>
-		public int Index { get; private set; }
+		public int Index { get; }
 
 		/// <summary>The item before it was changed</summary>
-		public T OldItem { get; private set; }
+		public T OldItem { get; }
 
 		/// <summary>The new item now in position 'Index' in the list</summary>
-		public T NewItem { get; private set; }
+		public T NewItem { get; }
 	}
 
 	/// <summary>List index position change event</summary>
@@ -235,9 +206,9 @@ namespace Rylogic.Container
 		}
 
 		/// <summary>The previous index (-1 means no previous index)</summary>
-		public int OldIndex { get; private set; }
+		public int OldIndex { get; }
 		
 		/// <summary>The new current index (-1 means no current index)</summary>
-		public int NewIndex { get; private set; }
+		public int NewIndex { get; }
 	}
 }

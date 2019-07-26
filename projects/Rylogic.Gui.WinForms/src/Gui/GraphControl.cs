@@ -579,7 +579,7 @@ namespace Rylogic.Gui.WinForms
 		private BindingListEx<Series> m_impl_data;
 		private void HandleDataChanging(object sender, ListChgEventArgs<Series> e)
 		{
-			if (e.IsPostEvent)
+			if (e.After)
 				Dirty = true;
 		}
 

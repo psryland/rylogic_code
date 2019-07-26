@@ -402,6 +402,29 @@ namespace Rylogic.Utility
 				m_div = Expression.Lambda<Func<T, U, T>>(body, paramA, paramB).Compile();
 			}
 			#endregion
+			#region Power
+			{
+				//if (typeof(T).IsPrimitive && typeof(T) == typeof(double))
+				if (typeof(T) == typeof(double))
+				{
+					var paramA = Expression.Parameter(typeof(T), "a");
+					var paramB = Expression.Parameter(typeof(U), "b");
+					var body = Expression.Power(paramA, Expression.ConvertChecked(paramB, typeof(double)));
+					m_pow = Expression.Lambda<Func<T, U, T>>(body, paramA, paramB).Compile();
+				}
+				else if (typeof(T).IsPrimitive)
+				{
+					var paramA = Expression.Parameter(typeof(T), "a");
+					var paramB = Expression.Parameter(typeof(U), "b");
+					var body = Expression.ConvertChecked(Expression.Power(Expression.ConvertChecked(paramA, typeof(double)), Expression.ConvertChecked(paramB, typeof(double))), typeof(T));
+					m_pow = Expression.Lambda<Func<T, U, T>>(body, paramA, paramB).Compile();
+				}
+				else
+				{
+					m_pow = (a,b) => { throw new Exception($"Type {typeof(T).Name} does not support the Pow operator"); };
+				}
+			}
+			#endregion
 		}
 
 		/// <summary>Cast a value to type 'T'</summary>
@@ -415,6 +438,10 @@ namespace Rylogic.Utility
 		/// <summary>a / b</summary>
 		public static T Div(T a, U b) { return m_div(a,b); }
 		private static Func<T,U,T> m_div;
+
+		/// <summary>a ^ b</summary>
+		public static T Pow(T a, U b) { return m_pow(a, b); }
+		private static Func<T, U, T> m_pow;
 	}
 }
 

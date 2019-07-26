@@ -542,7 +542,7 @@ namespace Rylogic.Gui.WinForms
 		/// <summary>Handle the list of log entries changing</summary>
 		private void HandleLogEntriesChanging(object sender, ListChgEventArgs<LogEntry> e)
 		{
-			if (!e.IsPostEvent || !e.IsDataChanged)
+			if (!e.After || !e.IsDataChanged)
 				return;
 
 			// Auto tail

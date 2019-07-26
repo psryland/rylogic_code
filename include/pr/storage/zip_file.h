@@ -11,6 +11,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <array>
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -867,7 +868,7 @@ namespace pr::storage::zip
 		// 'method' is the method to use to compressed the data.
 		// 'uncompressed_size' is the original size of the data.
 		// 'uncompressed_crc' is the crc of the uncompressed data.
-		void Add(span_t<uint8_t> buf, std::string_view item_name, EMethod method = EMethod::Deflate, span_t<uint8_t> extra = {}, std::string_view item_comment = "", ECompressionLevel level = ECompressionLevel::Default, EZipFlags flags = EZipFlags::None)
+		void AddBytes(span_t<uint8_t> buf, std::string_view item_name, EMethod method = EMethod::Deflate, span_t<uint8_t> extra = {}, std::string_view item_comment = "", ECompressionLevel level = ECompressionLevel::Default, EZipFlags flags = EZipFlags::None)
 		{
 			// Sanity checks
 			if (m_mode == EMode::ReadOnly)
@@ -914,7 +915,7 @@ namespace pr::storage::zip
 			}
 
 			// Record the current time so the item can be date stamped. Do this before compressing just in case compression takes a while
-			auto dos_timestamp = FSTimeToDosTime(std::filesystem::file_time_type::now());
+			auto dos_timestamp = FSTimeToDosTime(std::filesystem::file_time_type::clock::now());
 
 			// Reserve space for the entry in the central directory
 			m_cdir.reserve(m_cdir.size() + sizeof(CDH) + item_name.size() + extra.size() + item_comment.size());
@@ -993,6 +994,21 @@ namespace pr::storage::zip
 			// Move the cdir offset
 			m_cdir_offset = item_ofs;
 		}
+		void AddBytes(void const* data, size_t len, std::string_view item_name, EMethod method = EMethod::Deflate, span_t<uint8_t> extra = {}, std::string_view item_comment = "", ECompressionLevel level = ECompressionLevel::Default, EZipFlags flags = EZipFlags::None)
+		{
+			auto buf = span_t<uint8_t>(static_cast<uint8_t const*>(data), len);
+			AddBytes(buf, item_name, method, extra, item_comment, level, flags);
+		}
+		void AddBytes(std::vector<uint8_t> const& data, std::string_view item_name, EMethod method = EMethod::Deflate, span_t<uint8_t> extra = {}, std::string_view item_comment = "", ECompressionLevel level = ECompressionLevel::Default, EZipFlags flags = EZipFlags::None)
+		{
+			auto buf = span_t<uint8_t>(data.data(), data.size());
+			AddBytes(buf, item_name, method, extra, item_comment, level, flags);
+		}
+		void AddString(std::string_view data, std::string_view item_name, EMethod method = EMethod::Deflate, span_t<uint8_t> extra = {}, std::string_view item_comment = "", ECompressionLevel level = ECompressionLevel::Default, EZipFlags flags = EZipFlags::None)
+		{
+			auto buf = span_t<uint8_t>(reinterpret_cast<uint8_t const*>(data.data()), data.size());
+			AddBytes(buf, item_name, method, extra, item_comment, level, flags);
+		}
 
 		// Compresses and adds the contents of a disk file to an archive.
 		// To add a directory entry, call this method with an archive name ending in a forward slash and an empty buffer.
@@ -1001,7 +1017,7 @@ namespace pr::storage::zip
 		// 'method' is the method to use to compressed the data.
 		// 'uncompressed_size' is the original size of the data.
 		// 'uncompressed_crc' is the crc of the uncompressed data.
-		void Add(std::filesystem::path const& src_filepath, std::string_view item_name = "", EMethod method = EMethod::Deflate, span_t<uint8_t> extra = {}, std::string_view item_comment = "", ECompressionLevel level = ECompressionLevel::Default, EZipFlags flags = EZipFlags::None)
+		void AddFile(std::filesystem::path const& src_filepath, std::string_view item_name = "", EMethod method = EMethod::Deflate, span_t<uint8_t> extra = {}, std::string_view item_comment = "", ECompressionLevel level = ECompressionLevel::Default, EZipFlags flags = EZipFlags::None)
 		{
 			using namespace std::literals;
 
@@ -2813,11 +2829,11 @@ namespace pr::storage::zip
 				static int const Capacity = Size;
 				static int const Mask = Size - 1;
 
-				std::array<T, Size + Extend> m_buf;
+				std::vector<T> m_buf;
 				bool m_extend_required; // Dirty flag for when values are modified in the range [0, Extend)
 
 				RingBuffer()
-					:m_buf()
+					:m_buf(Size + Extend)
 					,m_extend_required()
 				{}
 				RingBuffer(uint8_t fill)
@@ -3154,14 +3170,14 @@ namespace pr::storage::zip
 				static size_t const Size = 64 * 1024;
 				static_assert(Size > LZDictionarySize);
 
-				uint8_t m_buf[Size];
+				std::vector<uint8_t> m_buf;
 				uint8_t* m_flags;   // Flags that record the type of data stored in the following bytes
 				uint8_t* m_bytes;   // Where to insert the next literal byte or (length,distance) pair
 				int m_num_flags;    // The number of flags used in the current byte pointed to by 'm_flags'
 				size_t m_data_size; // The number of source bytes represented
 
 				LZBuffer()
-					:m_buf()
+					:m_buf(Size)
 					,m_flags(&m_buf[0])
 					,m_bytes(&m_buf[1])
 					,m_num_flags(0)
@@ -4042,10 +4058,10 @@ namespace pr::storage
 		{
 			// Create a zip
 			zip::ZipArchive z;
-			z.Add(path / "file1.txt");
-			z.Add(path / "file2.txt");
-			z.Add(path / "file3.txt");
-			z.Add(path / "binary-00-0F.bin");
+			z.AddFile(path / "file1.txt");
+			z.AddFile(path / "file2.txt");
+			z.AddFile(path / "file3.txt");
+			z.AddFile(path / "binary-00-0F.bin");
 			z.Save(path / "zip_out.zip");
 			z.Close();
 

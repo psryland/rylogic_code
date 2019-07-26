@@ -112,6 +112,9 @@
     <ClCompile Include="..\projects\unittests\src\unittests.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\include\pr\crypt\monocypher.c">
+      <Filter>pr\crypt</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pr\geometry\3ds.h">
@@ -1010,6 +1013,21 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\geometry\models_skybox.h">
       <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\network\email.h">
+      <Filter>pr\network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\network\winsock.h">
+      <Filter>pr\network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\crypt\sha512.h">
+      <Filter>pr\crypt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\crypt\monocypher.h">
+      <Filter>pr\crypt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\crypt\blake2b.h">
+      <Filter>pr\crypt</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

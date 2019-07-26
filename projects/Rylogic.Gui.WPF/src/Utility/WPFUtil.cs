@@ -99,6 +99,20 @@ namespace Rylogic.Gui.WPF
 			return res;
 		}
 
+		/// <summary>Return the native win32 MK values for the current Mouse state</summary>
+		public static EMouseBtns MouseBtns(ModifierKeys modifiers = ModifierKeys.None)
+		{
+			var res = (EMouseBtns)0;
+			if (Mouse.LeftButton == MouseButtonState.Pressed) res |= EMouseBtns.Left;
+			if (Mouse.RightButton == MouseButtonState.Pressed) res |= EMouseBtns.Right;
+			if (Mouse.MiddleButton == MouseButtonState.Pressed) res |= EMouseBtns.Middle;
+			if (Mouse.XButton1 == MouseButtonState.Pressed) res |= EMouseBtns.XButton1;
+			if (Mouse.XButton2 == MouseButtonState.Pressed) res |= EMouseBtns.XButton2;
+			if (modifiers.HasFlag(ModifierKeys.Shift)) res |= EMouseBtns.Shift;
+			if (modifiers.HasFlag(ModifierKeys.Control)) res |= EMouseBtns.Ctrl;
+			return res;
+		}
+
 		/// <summary>Convert to native win32 VK_ value</summary>
 		public static EKeyCodes ToKeyCode(this Key key)
 		{

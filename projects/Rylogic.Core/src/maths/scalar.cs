@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Utility;
 
@@ -153,6 +154,22 @@ namespace Rylogic.Maths
 		public static bool FEql(double a, double b)
 		{
 			return FEqlRelative(a, b, TinyD);
+		}
+		public static IEqualityComparer<float> FEqlRelComparer(float tol)
+		{
+			return Eql<float>.From((l, r) => FEqlRelative(l, r, tol));
+		}
+		public static IEqualityComparer<float> FEqlAbsComparer(float tol)
+		{
+			return Eql<float>.From((l, r) => FEqlAbsolute(l, r, tol));
+		}
+		public static IEqualityComparer<double> FEqlRelComparer(double tol)
+		{
+			return Eql<double>.From((l, r) => FEqlRelative(l, r, tol));
+		}
+		public static IEqualityComparer<double> FEqlAbsComparer(double tol)
+		{
+			return Eql<double>.From((l, r) => FEqlAbsolute(l, r, tol));
 		}
 
 		/// <summary>Absolute value of 'a'</summary>
@@ -307,6 +324,44 @@ namespace Rylogic.Maths
 		{
 			Debug.Assert(!min.Equals(max));
 			return Operators<T>.Div(Operators<T>.Sub(x, min), Operators<T>.Sub(max, min));
+		}
+
+		/// <summary>Returns values in an arithmetic series</summary>
+		public static IEnumerable<T> ArithmeticSeries<T>(T first, T step)
+		{
+			// Note: the simple way to do this causes accumulative error.
+			for (int i = 0; ; ++i)
+				yield return Operators<T>.Add(first, Operators<T,int>.Mul(step, i));
+		}
+
+		/// <summary>Returns values in an geometric series</summary>
+		public static IEnumerable<T> GeometricSeries<T>(T first, T step)
+		{
+			// Note: the simple way to do this causes accumulative error.
+			for (int i = 0; ; ++i)
+				yield return Operators<T>.Mul(first, Operators<T,int>.Pow(step, i));
+		}
+
+		/// <summary>Return the sum of an arithmetic series</summary>
+		public static T ArithmeticSeriesSum<T>(T first, T step, int count)
+		{
+			// Sn = 0.5 * n * (a1 - an)
+			// an = a1 + d * (n - 1), since a(i+1) = a(i) + d
+			var last = Operators<T>.Add(first, Operators<T,int>.Mul(step, count - 1));   // last = first + step * (count - 1)
+			return Operators<T, double>.Mul(Operators<T>.Add(first, last), count * 0.5); // Sn = (first + last) * count / 2
+		}
+
+		/// <summary>Return the sum of a geometric series</summary>
+		public static T GeometricSeriesSum<T>(T first, T step, int count)
+		{
+			if (count == 1)
+				return first;
+
+			// Sn = first * (1 - r^n) / (1 - r)
+			var one = Operators<T>.Div(step, step);
+			var numer = Operators<T>.Sub(one, Operators<T, int>.Pow(step, count));
+			var denom = Operators<T>.Sub(one, step);
+			return Operators<T>.Div(Operators<T>.Mul(first, numer), denom);
 		}
 
 		/// <summary>
@@ -592,6 +647,7 @@ namespace Rylogic.Maths
 namespace Rylogic.UnitTests
 {
 	using System.Text;
+	using System.Linq;
 	using Maths;
 
 	[TestFixture]
@@ -758,6 +814,21 @@ namespace Rylogic.UnitTests
 			Assert.Equal(-10.0, Math_.AestheticValue(-10.0,  0));
 			Assert.Equal(-10.0, Math_.AestheticValue(-10.0, +1));
 			Assert.Equal(-10.0, Math_.AestheticValue(-10.0, -1));
+		}
+		[Test]
+		public void TestSeries()
+		{
+			var series0 = Math_.ArithmeticSeries(1.0, 0.1).Take(5).ToArray();
+			Assert.True(series0.SequenceEqual(new[] { 1.0, 1.1, 1.2, 1.3, 1.4 }, Math_.FEqlRelComparer(0.0001)));
+
+			var series1 = Math_.GeometricSeries(0.1, 3.0).Take(5).ToArray();
+			Assert.True(series1.SequenceEqual(new[] { 0.1, 0.3, 0.9, 2.7, 8.1 }, Math_.FEqlRelComparer(0.0001)));
+
+			var sum0 = Math_.ArithmeticSeriesSum(1.0, 0.1, 5);
+			Assert.True(Math_.FEql(6.0, sum0));
+
+			var sum1 = Math_.GeometricSeriesSum(0.1, 3.0, 5);
+			Assert.True(Math_.FEql(12.1, sum1));
 		}
 	}
 }

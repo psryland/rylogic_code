@@ -105,8 +105,8 @@ namespace pr
 		case EGuidVersion::SHA1Hashing:
 			{
 				pr::hash::SHA1 sha1;
-				sha1.Add(namespace_bytes, namespace_bytes_len);
-				sha1.Add(name_bytes, name_bytes_len);
+				sha1.Update(namespace_bytes, namespace_bytes_len);
+				sha1.Update(name_bytes, name_bytes_len);
 				auto hash = sha1.Final();
 
 				// Most bytes from the hash are copied straight to the bytes of the new GUID (steps 5-7, 9, 11-12)

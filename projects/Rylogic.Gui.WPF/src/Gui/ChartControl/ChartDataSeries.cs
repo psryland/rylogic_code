@@ -336,11 +336,11 @@ namespace Rylogic.Gui.WPF
 			m_nbuf.Resize(1);
 
 			// Create the vertex/index data
-			int vert = 0, indx = 0;
+			int vidx = 0, iidx = 0, nidx = 0;
 			var col = Options.Colour;
 			var width = Options.BarWidth;
 			var x_range = RangeF.Invalid;
-			for (int i = 0, iend = n; i != iend; ++i)
+			for (int i = 0; i != n; ++i)
 			{
 				// Get the points on either side of 'i'
 				var j = i + idx_range.Begi;
@@ -354,25 +354,53 @@ namespace Rylogic.Gui.WPF
 				if (l == 0f) l = r;
 				if (r == 0f) r = l;
 
-				var v = vert;
-				m_vbuf[vert++] = new View3d.Vertex(new v4((float)(pt.xf + r), (float)(pt.yf >= 0f ? pt.yf : 0f), 0f, 1f), col);
-				m_vbuf[vert++] = new View3d.Vertex(new v4((float)(pt.xf - l), (float)(pt.yf >= 0f ? pt.yf : 0f), 0f, 1f), col);
-				m_vbuf[vert++] = new View3d.Vertex(new v4((float)(pt.xf - l), (float)(pt.yf >= 0f ? 0f : pt.yf), 0f, 1f), col);
-				m_vbuf[vert++] = new View3d.Vertex(new v4((float)(pt.xf + r), (float)(pt.yf >= 0f ? 0f : pt.yf), 0f, 1f), col);
+				var v = vidx;
+				m_vbuf[vidx++] = new View3d.Vertex(new v4((float)(pt.xf + r), (float)(pt.yf >= 0f ? pt.yf : 0f), 0f, 1f), col);
+				m_vbuf[vidx++] = new View3d.Vertex(new v4((float)(pt.xf - l), (float)(pt.yf >= 0f ? pt.yf : 0f), 0f, 1f), col);
+				m_vbuf[vidx++] = new View3d.Vertex(new v4((float)(pt.xf - l), (float)(pt.yf >= 0f ? 0f : pt.yf), 0f, 1f), col);
+				m_vbuf[vidx++] = new View3d.Vertex(new v4((float)(pt.xf + r), (float)(pt.yf >= 0f ? 0f : pt.yf), 0f, 1f), col);
 
-				m_ibuf[indx++] = (ushort)(v + 0);
-				m_ibuf[indx++] = (ushort)(v + 1);
-				m_ibuf[indx++] = (ushort)(v + 2);
-				m_ibuf[indx++] = (ushort)(v + 2);
-				m_ibuf[indx++] = (ushort)(v + 3);
-				m_ibuf[indx++] = (ushort)(v + 0);
+				m_ibuf[iidx++] = (ushort)(v + 0);
+				m_ibuf[iidx++] = (ushort)(v + 1);
+				m_ibuf[iidx++] = (ushort)(v + 2);
+				m_ibuf[iidx++] = (ushort)(v + 2);
+				m_ibuf[iidx++] = (ushort)(v + 3);
+				m_ibuf[iidx++] = (ushort)(v + 0);
 
 				x_range.Encompass(pt.xf);
 			}
 
 			// Create a nugget for the tri list
+			uint v0 = 0, v1 = (uint)vidx;
+			uint i0 = 0, i1 = (uint)iidx;
+			m_nbuf[nidx++] = new View3d.Nugget(View3d.EPrim.TriList, View3d.EGeom.Vert | View3d.EGeom.Colr, v0, v1, i0, i1, has_alpha: col.A != 0xff);
+
+			// Add the bar 'tops'
+			if (Options.LinesOnBarPlot)
 			{
-				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.TriList, View3d.EGeom.Vert | View3d.EGeom.Colr);
+				// Use line strips
+				m_vbuf.Resize(m_vbuf.Count + n * 2);
+				m_ibuf.Resize(m_ibuf.Count + n * 2);
+				m_nbuf.Resize(m_nbuf.Count + 1);
+
+				var line_colour = col.Darken(0.25f).Alpha(1f);
+				for (int i = 0; i != n; ++i)
+				{
+					var vert0 = m_vbuf[i * 4 + 0];
+					var vert1 = m_vbuf[i * 4 + 1];
+					var v = vidx;
+
+					m_vbuf[vidx++] = new View3d.Vertex(vert0.m_pos, line_colour);
+					m_vbuf[vidx++] = new View3d.Vertex(vert1.m_pos, line_colour);
+
+					m_ibuf[iidx++] = (ushort)(v + 0);
+					m_ibuf[iidx++] = (ushort)(v + 1);
+				}
+
+				// Create a nugget for the bar tops
+				v0 = v1; v1 += (uint)(n * 2);
+				i0 = i1; i1 += (uint)(n * 2);
+				m_nbuf[nidx++] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert | View3d.EGeom.Colr, v0, v1, i0, i1, has_alpha: false);
 			}
 
 			// Create the graphics
@@ -631,7 +659,15 @@ namespace Rylogic.Gui.WPF
 			public ChartDataSeries Owner { get; }
 
 			/// <summary>The number of elements in the data series</summary>
-			public int Count => Data.Count;
+			public int Count
+			{
+				get => Data.Count;
+				set
+				{
+					m_changed_data_rangex = RangeF.Max;
+					Data.Resize(value);
+				}
+			}
 
 			/// <summary>Reset the collection</summary>
 			public void Clear()
@@ -845,6 +881,7 @@ namespace Rylogic.Gui.WPF
 				LineWidth = 5f;
 				PointsOnLinePlot = true;
 				BarWidth = 0.8f;
+				LinesOnBarPlot = true;
 				//Visible        = true;
 				//DrawData       = true;
 				//DrawErrorBars  = false;
@@ -872,55 +909,63 @@ namespace Rylogic.Gui.WPF
 				LineWidth = rhs.LineWidth;
 				PointsOnLinePlot = rhs.PointsOnLinePlot;
 				BarWidth = rhs.BarWidth;
+				LinesOnBarPlot = rhs.LinesOnBarPlot;
 			}
 
 			/// <summary>The base colour for this plot</summary>
 			public Colour32 Colour
 			{
-				get { return get<Colour32>(nameof(Colour)); }
-				set { set(nameof(Colour), value); }
+				get => get<Colour32>(nameof(Colour));
+				set => set(nameof(Colour), value);
 			}
 
 			/// <summary>The plot type for the series</summary>
 			public EPlotType PlotType
 			{
-				get { return get<EPlotType>(nameof(PlotType)); }
-				set { set(nameof(PlotType), value); }
+				get => get<EPlotType>(nameof(PlotType));
+				set => set(nameof(PlotType), value);
 			}
 
 			/// <summary>The style of points to draw</summary>
 			public EPointStyle PointStyle
 			{
-				get { return get<EPointStyle>(nameof(PointStyle)); }
-				set { set(nameof(PointStyle), value); }
+				get => get<EPointStyle>(nameof(PointStyle));
+				set => set(nameof(PointStyle), value);
 			}
 
 			/// <summary>The size of point data graphics</summary>
 			public float PointSize
 			{
-				get { return get<float>(nameof(PointSize)); }
-				set { set(nameof(PointSize), value); }
+				get => get<float>(nameof(PointSize));
+				set => set(nameof(PointSize), value);
 			}
 
 			/// <summary>The width of the line in line plots</summary>
 			public float LineWidth
 			{
-				get { return get<float>(nameof(LineWidth)); }
-				set { set(nameof(LineWidth), value); }
+				get => get<float>(nameof(LineWidth));
+				set => set(nameof(LineWidth), value);
 			}
 
 			/// <summary>True if point graphics should be drawn on line plots</summary>
 			public bool PointsOnLinePlot
 			{
-				get { return get<bool>(nameof(PointsOnLinePlot)); }
-				set { set(nameof(PointsOnLinePlot), value); }
+				get => get<bool>(nameof(PointsOnLinePlot));
+				set => set(nameof(PointsOnLinePlot), value);
 			}
 
 			/// <summary>The normalised bar width in bar plots</summary>
 			public float BarWidth
 			{
-				get { return get<float>(nameof(BarWidth)); }
-				set { set(nameof(BarWidth), value); }
+				get => get<float>(nameof(BarWidth));
+				set => set(nameof(BarWidth), value);
+			}
+
+			/// <summary>True if line graphics should be drawn on the tops of bar plots</summary>
+			public bool LinesOnBarPlot
+			{
+				get => get<bool>(nameof(LinesOnBarPlot));
+				set => set(nameof(LinesOnBarPlot), value);
 			}
 
 			//public bool       Visible        { get; set; }
@@ -937,3 +982,4 @@ namespace Rylogic.Gui.WPF
 		}
 	}
 }
+

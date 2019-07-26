@@ -13,7 +13,7 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>The message</summary>
-		public string Message { get; private set; }
+		public string Message { get; }
 	}
 
 	/// <summary>Event containing a single value</summary>
@@ -25,7 +25,7 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>The value</summary>
-		public object Value { get; private set; }
+		public object Value { get; }
 	}
 
 	/// <summary>Event containing a single value</summary>
@@ -37,7 +37,7 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>The value</summary>
-		public T Value { get; private set; }
+		public T Value { get; }
 	}
 
 	/// <summary>Event signalled before and then after an event</summary>
@@ -49,10 +49,10 @@ namespace Rylogic.Common
 		}
 
 		/// <summary>True if this event is logically "before" something is about to happen</summary>
-		public bool Before { get { return !After; } }
+		public bool Before => !After;
 
 		/// <summary>True if this event is logically "after" something has happened</summary>
-		public bool After { get; private set; }
+		public bool After { get; }
 	}
 
 	/// <summary>Event signalling a changed value, providing both the old and new values</summary>
@@ -64,7 +64,7 @@ namespace Rylogic.Common
 			Old = old;
 		}
 
-		public T New { get; private set; }
-		public T Old { get; private set; }
+		public T New { get; }
+		public T Old { get; }
 	}
 }

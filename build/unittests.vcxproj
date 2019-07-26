@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\include\pr\crypt\monocypher.c" />
     <ClCompile Include="..\projects\unittests\src\unittests.cpp">
       <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</PreprocessToFile>
     </ClCompile>
@@ -147,10 +148,13 @@
     <ClInclude Include="..\include\pr\container\stack.h" />
     <ClInclude Include="..\include\pr\container\tri_table.h" />
     <ClInclude Include="..\include\pr\container\vector_map.h" />
+    <ClInclude Include="..\include\pr\crypt\blake2b.h" />
     <ClInclude Include="..\include\pr\crypt\hash.h" />
     <ClInclude Include="..\include\pr\crypt\md5.h" />
+    <ClInclude Include="..\include\pr\crypt\monocypher.h" />
     <ClInclude Include="..\include\pr\crypt\rijndael.h" />
     <ClInclude Include="..\include\pr\crypt\sha1.h" />
+    <ClInclude Include="..\include\pr\crypt\sha512.h" />
     <ClInclude Include="..\include\pr\filesys\autofile.h" />
     <ClInclude Include="..\include\pr\filesys\file.h" />
     <ClInclude Include="..\include\pr\filesys\fileex.h" />
@@ -282,10 +286,12 @@
     <ClInclude Include="..\include\pr\meta\remove_pointer.h" />
     <ClInclude Include="..\include\pr\network\bluetooth.h" />
     <ClInclude Include="..\include\pr\network\bluetooth_ui.h" />
+    <ClInclude Include="..\include\pr\network\email.h" />
     <ClInclude Include="..\include\pr\network\pipe.h" />
     <ClInclude Include="..\include\pr\network\sockets.h" />
     <ClInclude Include="..\include\pr\network\tcpip.h" />
     <ClInclude Include="..\include\pr\network\web_get.h" />
+    <ClInclude Include="..\include\pr\network\winsock.h" />
     <ClInclude Include="..\include\pr\physics2\constants.h" />
     <ClInclude Include="..\include\pr\physics2\forward.h" />
     <ClInclude Include="..\include\pr\physics2\integrater\integrater.h" />

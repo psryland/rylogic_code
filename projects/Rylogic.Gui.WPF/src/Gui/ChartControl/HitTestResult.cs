@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
+using Rylogic.Common;
 using Rylogic.Gfx;
 using Rylogic.Maths;
 
@@ -12,13 +13,14 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Results collection for a hit test</summary>
 		public class HitTestResult
 		{
-			public HitTestResult(EZone zone, Point client_point, Point chart_point, ModifierKeys modifier_keys, IEnumerable<Hit> hits, View3d.Camera cam)
+			public HitTestResult(EZone zone, Point client_point, Point chart_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, IEnumerable<Hit> hits, View3d.Camera cam)
 			{
 				Zone = zone;
 				ClientPoint = client_point;
 				ChartPoint = chart_point;
 				Hits = hits.ToList();
 				ModifierKeys = modifier_keys;
+				MouseBtns = mouse_btns;
 				Camera = cam;
 			}
 
@@ -36,6 +38,9 @@ namespace Rylogic.Gui.WPF
 
 			/// <summary>Keys held down during the hit test</summary>
 			public ModifierKeys ModifierKeys { get; }
+
+			/// <summary>The mouse button state during the hit test</summary>
+			public EMouseBtns MouseBtns { get; }
 
 			/// <summary>The camera position when the hit test was performed (needed for chart to screen space conversion)</summary>
 			public View3d.Camera Camera { get; }

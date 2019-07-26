@@ -484,7 +484,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Perform a hit test on the chart but only test which zone is hit (faster)</summary>
-		public HitTestResult HitTestZoneCS(Point client_point, ModifierKeys modifier_keys)
+		public HitTestResult HitTestZoneCS(Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns)
 		{
 			// Determine the hit zone of the control
 			var zone = EZone.None;
@@ -496,13 +496,13 @@ namespace Rylogic.Gui.WPF
 			// The hit test point in chart space
 			var chart_point = ClientToChart(client_point);
 
-			return new HitTestResult(zone, client_point, chart_point, modifier_keys, new List<HitTestResult.Hit>(), Scene.Camera);
+			return new HitTestResult(zone, client_point, chart_point, modifier_keys, mouse_btns, new List<HitTestResult.Hit>(), Scene.Camera);
 		}
 
 		/// <summary>Perform a hit test on the chart and all elements within the chart</summary>
-		public HitTestResult HitTestCS(Point client_point, ModifierKeys modifier_keys, Func<Element, bool> pred)
+		public HitTestResult HitTestCS(Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, Func<Element, bool> pred)
 		{
-			var result = HitTestZoneCS(client_point, modifier_keys);
+			var result = HitTestZoneCS(client_point, modifier_keys, mouse_btns);
 
 			// Find elements that overlap 'client_point'
 			if (result.Zone.HasFlag(EZone.Chart))
@@ -510,7 +510,7 @@ namespace Rylogic.Gui.WPF
 				var elements = pred != null ? Elements.Where(pred) : Elements;
 				foreach (var elem in elements)
 				{
-					var hit = elem.HitTest(result.ChartPoint, result.ClientPoint, result.ModifierKeys, Scene.Camera);
+					var hit = elem.HitTest(result.ChartPoint, result.ClientPoint, result.ModifierKeys, result.MouseBtns, Scene.Camera);
 					if (hit != null)
 						result.Hits.Add(hit);
 				}
@@ -709,7 +709,7 @@ namespace Rylogic.Gui.WPF
 		/// If no modifier keys are down, elements not in 'rect' are deselected.
 		/// If 'shift' is down, elements within 'rect' are selected in addition to the existing selection
 		/// If 'ctrl' is down, elements within 'rect' are removed from the existing selection.</summary>
-		public void SelectElements(Rect rect, ModifierKeys modifier_keys)
+		public void SelectElements(Rect rect, ModifierKeys modifier_keys, EMouseBtns mouse_btns)
 		{
 			if (!AllowSelection)
 				return;
@@ -724,7 +724,7 @@ namespace Rylogic.Gui.WPF
 			if (is_click)
 			{
 				var pt = ChartToClient(rect.Location);
-				var hits = HitTestCS(pt, modifier_keys, x => x.Enabled);
+				var hits = HitTestCS(pt, modifier_keys, mouse_btns, x => x.Enabled);
 
 				// If control is down, deselect the first selected element in the hit list
 				if (modifier_keys.HasFlag(ModifierKeys.Control))

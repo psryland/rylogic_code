@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
 using System.Xml.Linq;
+using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Gfx;
 using Rylogic.Maths;
@@ -482,7 +483,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in client space because typically hit testing uses pixel tolerances</summary>
-			public virtual HitTestResult.Hit HitTest(Point chart_point, Point client_point, ModifierKeys modifier_keys, View3d.Camera cam)
+			public virtual HitTestResult.Hit HitTest(Point chart_point, Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
 			{
 				return null;
 			}

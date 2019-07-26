@@ -307,7 +307,7 @@ namespace Rylogic.Gui.WPF
 					if (!args.Handled && m_hit_result.Zone.HasFlag(EZone.Chart))
 					{
 						var selection_area = new Rect(m_grab_chart, Size_.Zero);
-						Chart.SelectElements(selection_area, Keyboard.Modifiers);
+						Chart.SelectElements(selection_area, Keyboard.Modifiers, e.ToMouseBtns());
 					}
 				}
 				// Otherwise this is a drag action
@@ -325,7 +325,7 @@ namespace Rylogic.Gui.WPF
 						if (m_hit_result.Zone.HasFlag(EZone.Chart) && Chart.AreaSelectMode != EAreaSelectMode.Disabled)
 						{
 							var selection_area = BBox.From(new v4(m_grab_chart.ToV2(), 0, 1f), new v4(Chart.ClientToChart(location).ToV2(), 0f, 1f));
-							Chart.OnChartAreaSelect(new ChartAreaSelectEventArgs(selection_area));
+							Chart.OnChartAreaSelect(new ChartAreaSelectEventArgs(selection_area, e.ToMouseBtns()));
 						}
 					}
 					else if (Chart.Options.NavigationMode == ENavMode.Scene3D)

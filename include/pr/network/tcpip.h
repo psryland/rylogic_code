@@ -33,7 +33,7 @@ namespace pr::network
 			case IPPROTO_UDP: m_listen_socket = ::socket(AF_INET, SOCK_DGRAM,  IPPROTO_UDP); break;
 			}
 			if (m_listen_socket == INVALID_SOCKET)
-				ThrowSocketError(WSAGetLastError());
+				Throw(WSAGetLastError());
 
 			// Bind the local address to the socket
 			sockaddr_in my_address          = {};
@@ -42,7 +42,7 @@ namespace pr::network
 			my_address.sin_addr.S_un.S_addr = INADDR_ANY;
 			int result = ::bind(m_listen_socket, (sockaddr const*)&my_address, sizeof(my_address));
 			if (result == SOCKET_ERROR)
-				ThrowSocketError(WSAGetLastError());
+				Throw(WSAGetLastError());
 
 			// For message-oriented sockets (i.e UDP) we must not exceed the max packet size of
 			// the underlying provider. Assume all clients use the same provider as m_socket
@@ -87,7 +87,7 @@ namespace pr::network
 			// Create the socket
 			m_socket = ::socket(AF_INET, m_sock_type, m_protocol);
 			if (m_socket == INVALID_SOCKET)
-				ThrowSocketError(WSAGetLastError());
+				Throw(WSAGetLastError());
 		}
 
 		// For a TCP connections, use IPPROTO_TCP, the ip address and port
@@ -123,7 +123,7 @@ namespace pr::network
 				sockaddr_in host_addr = GetAddress(ip, port);
 				int result = ::connect(m_socket, (sockaddr*)&host_addr, sizeof(host_addr));
 				if (result == SOCKET_ERROR)
-					ThrowSocketError(WSAGetLastError());
+					Throw(WSAGetLastError());
 
 				// Wait for the socket to say it's writable (meaning it's connected)
 				fd_set set = {};
@@ -133,7 +133,7 @@ namespace pr::network
 				if (result == 0)
 					return false;
 				if (result == SOCKET_ERROR)
-					ThrowSocketError(WSAGetLastError());
+					Throw(WSAGetLastError());
 			}
 			return true;
 		}

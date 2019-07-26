@@ -88,14 +88,18 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Event args for area selection</summary>
 		public class ChartAreaSelectEventArgs : EventArgs
 		{
-			public ChartAreaSelectEventArgs(BBox selection_area)
+			public ChartAreaSelectEventArgs(BBox selection_area, EMouseBtns mouse_btns)
 			{
 				SelectionArea = selection_area;
+				MouseBtns = mouse_btns;
 				Handled = false;
 			}
 
 			/// <summary>The area (actually volume if you include Z) of the selection</summary>
 			public BBox SelectionArea { get; }
+
+			/// <summary>The current mouse button states</summary>
+			public EMouseBtns MouseBtns { get; }
 
 			/// <summary>Set to true to suppress default chart click behaviour</summary>
 			public bool Handled { get; set; }

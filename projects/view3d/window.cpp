@@ -133,6 +133,11 @@ namespace view3d
 	// Render this window into whatever render target is currently set
 	void Window::Render()
 	{
+		// Notes:
+		// - Don't be tempted to call 'Validate()' at the start of Render so that objects
+		//   added to the scene during the render re-invalidate. Instead defer the invalidate
+		//   to the next windows event.
+
 		using namespace pr::rdr;
 		assert(std::this_thread::get_id() == m_main_thread_id);
 
