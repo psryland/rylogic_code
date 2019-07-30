@@ -16,6 +16,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using CoinFlip.Settings;
 using Rylogic.Common;
+using Rylogic.Container;
 using Rylogic.Extn;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
@@ -36,14 +37,18 @@ namespace CoinFlip.UI
 			InitializeComponent();
 			DockControl = new DockControl(this, "Equity");
 			Chart = m_chart_equity;
-			GfxEquity = new GfxObjects.Equity();
+			Equity = new Equity(model);
+			GfxEquity = new GfxObjects.Equity(Equity);
+			GfxCompletedOrders = new GfxObjects.Orders(IOrderToXValue, IOrderToYValue);
 			Legend = new ChartDataLegend { Chart = Chart, BackColour = 0xFFE0E0E0 };
 			Model = model;
 
+			ModifyContextMenus();
 			DataContext = this;
 		}
 		public void Dispose()
 		{
+			Legend = null;
 			GfxEquity = null;
 			Chart = null;
 			Model = null;
@@ -59,21 +64,20 @@ namespace CoinFlip.UI
 				if (m_model == value) return;
 				if (m_model != null)
 				{
+					m_model.SelectedCompletedOrders.CollectionChanged -= HandleSelectedCompletedOrdersChanged;
 					SettingsData.Settings.SettingChange -= HandleSettingChange;
-					m_model.DataChanging -= HandleDataChanging;
 				}
 				m_model = value;
 				if (m_model != null)
 				{
-					m_model.DataChanging += HandleDataChanging;
 					SettingsData.Settings.SettingChange += HandleSettingChange;
+					m_model.SelectedCompletedOrders.CollectionChanged += HandleSelectedCompletedOrdersChanged;
 				}
-				GfxEquity?.Update(Model);
 
 				// Handler
-				void HandleDataChanging(object sender, DataChangingEventArgs e)
+				void HandleSelectedCompletedOrdersChanged(object sender, NotifyCollectionChangedEventArgs e)
 				{
-					GfxEquity.Update(Model);
+					Chart.Scene.Invalidate();
 				}
 				void HandleSettingChange(object sender, SettingChangeEventArgs e)
 				{
@@ -109,6 +113,9 @@ namespace CoinFlip.UI
 			}
 		}
 		private Model m_model;
+
+		/// <summary>The source equity data</summary>
+		public Equity Equity { get; }
 
 		/// <summary>Provides support for the DockContainer</summary>
 		public DockControl DockControl
@@ -158,13 +165,27 @@ namespace CoinFlip.UI
 					//m_chart.MouseDown += HandleMouseDown;
 					m_chart.BuildScene += HandleBuildScene;
 					m_chart.ChartMoved += HandleMoved;
+					m_chart.PreviewKeyDown += (s, a) =>
+					{
+						if (a.Key == Key.F5)
+							Equity.Invalidate();
+					};
 				}
 
 				// Handlers
 				string HandleChartXAxisTickText(double x, double step)
 				{
+					if (SettingsData.Settings.Equity.XAxisLabelMode == EXAxisLabelMode.AxisIndex)
+						return x.ToString();
+
+					if (x < 0 || x > (Model.UtcNow - Misc.CryptoCurrencyEpoch).TotalDays + 365)
+						return string.Empty;
+
 					// Convert the x axis value to a date time.
 					var dt_curr = Misc.CryptoCurrencyEpoch + TimeSpan.FromDays(x);
+					if (x - step < 0)
+						return Misc.ShortTimeString(dt_curr, dt_curr, true);
+
 					var dt_prev = Misc.CryptoCurrencyEpoch + TimeSpan.FromDays(x - step);
 
 					// Get the date time values in the correct time zone
@@ -187,16 +208,28 @@ namespace CoinFlip.UI
 					if (e.Axes.HasFlag(ChartControl.EAxis.XAxis) && e.Axes.HasFlag(ChartControl.EAxis.YAxis))
 					{
 						// Display the full equity history
-						var first_trade = new DateTimeOffset(Model.Exchanges.Min(x => x.HistoryInterval.Beg), TimeSpan.Zero);
-						var beg = (float)(first_trade - Misc.CryptoCurrencyEpoch).TotalDays;
-						var end = (float)(Model.UtcNow - Misc.CryptoCurrencyEpoch).TotalDays;
+						var utc_now = Model.UtcNow;
+						var first = utc_now;
+						foreach (var exch in Model.Exchanges)
+						{
+							foreach (var his in exch.History.Values)
+								first = DateTimeOffset_.Min(first, his.Created);
+							foreach (var xfr in exch.Transfers.Values)
+								first = DateTimeOffset_.Min(first, xfr.Created);
+						}
+						if (first == utc_now)
+							first = utc_now - TimeSpan.FromDays(365);
+
+						var beg = (float)(first - Misc.CryptoCurrencyEpoch).TotalDays;
+						var end = (float)(utc_now - Misc.CryptoCurrencyEpoch).TotalDays;
 						var y0 = 0f;
-						var y1 = (float)Model.NettWorth * 1.2f;
+						var y1 = (float)Model.NettWorth * 2f;
 						bb = BBox.Encompass(bb, new v4(beg, y0, -ZOrder.Max, 1f));
-						bb = BBox.Encompass(bb, new v4(end, y1, -ZOrder.Max, 1f));
+						bb = BBox.Encompass(bb, new v4(end, y1, +ZOrder.Max, 1f));
 					}
 					else if (e.Axes.HasFlag(ChartControl.EAxis.YAxis))
 					{
+						throw new NotImplementedException();
 						//var idx_min = (int)Chart.XAxis.Min;
 						//var idx_max = (int)Chart.XAxis.Max;
 						//foreach (var candle in Instrument.CandleRange(idx_min, idx_max))
@@ -207,6 +240,7 @@ namespace CoinFlip.UI
 					}
 					else if (e.Axes.HasFlag(ChartControl.EAxis.XAxis))
 					{
+						throw new NotImplementedException();
 						//// Display the last few candles @ N pixels per candle
 						//var width = (int)(Chart.Scene.ActualWidth / 6); // in candles
 						//var idx_min = Instrument.Count - width * 4 / 5;
@@ -241,7 +275,18 @@ namespace CoinFlip.UI
 		private ChartControl m_chart;
 
 		/// <summary>Chart data legend</summary>
-		public ChartDataLegend Legend { get; }
+		public ChartDataLegend Legend
+		{
+			get => m_legend;
+			private set
+			{
+				if (m_legend == value) return;
+				Util.Dispose(ref m_legend);
+				m_legend = value;
+			}
+
+		}
+		private ChartDataLegend m_legend;
 
 		/// <summary>A string description of the period of time shown in the chart</summary>
 		public string VisibleTimeSpan
@@ -260,8 +305,9 @@ namespace CoinFlip.UI
 			if (!DockControl.IsVisible)
 				return;
 
-			// Equity
 			GfxEquity.BuildScene(Chart, window, m_chart_overlay);
+			GfxCompletedOrders.BuildScene(Model.SelectedCompletedOrders, Chart, m_chart_overlay);
+
 			// Put the call out so others can draw on this chart
 			//BuildScene?.Invoke(this, args);
 		}
@@ -278,6 +324,81 @@ namespace CoinFlip.UI
 			}
 		}
 		private GfxObjects.Equity m_gfx_equity;
+
+		/// <summary>Graphics for completed orders</summary>
+		private GfxObjects.Orders GfxCompletedOrders
+		{
+			get { return m_gfx_completed_orders; }
+			set
+			{
+				if (m_gfx_completed_orders == value) return;
+				Util.Dispose(ref m_gfx_completed_orders);
+				m_gfx_completed_orders = value;
+			}
+		}
+		private GfxObjects.Orders m_gfx_completed_orders;
+
+		/// <summary>Callbacks for positioning order graphics</summary>
+		private double IOrderToXValue(IOrder order)
+		{
+			return (order.Created.Value - Misc.CryptoCurrencyEpoch).TotalDays;
+		}
+		private double IOrderToYValue(IOrder order)
+		{
+			return Equity.NettWorthHistory().FirstOrDefault(x => x.Time == order.Created).Worth;
+		}
+
+		/// <summary>Replace the chart context menus</summary>
+		private void ModifyContextMenus()
+		{
+			// Modify the main chart area menu
+			{
+				var cmenu = Chart.Scene.ContextMenu;
+
+				// Move the existing chart menu into a sub menu
+				var chart_options_menu = new MenuItem { Header = "Chart Options" };
+				{
+					var items = cmenu.Items.Cast<MenuItem>().ToList();
+					cmenu.Items.Clear();
+					chart_options_menu.Items.AddRange(items);
+				}
+
+				cmenu.Items.Add(new Separator());
+
+				// Add the chart options menu at the end
+				cmenu.Items.Add(chart_options_menu);
+
+				// Add this last so it occurs after the other handlers attached to 'Opened'
+				cmenu.Opened += Gui_.TidySeparators;
+			}
+
+			// Modify the XAxis context menu
+			{
+				var cmenu = Chart.XAxis.ContextMenu;
+
+				// Insert an option for changing the units of the XAxis
+				var idx = 0;
+				{
+					var opt = cmenu.Items.Insert2(idx++, new MenuItem { Header = "Label Mode" });
+					{
+						var cb = opt.Items.Add2(new ComboBox
+						{
+							ItemsSource = Enum<EXAxisLabelMode>.ValuesArray,
+							Style = FindResource(System.Windows.Controls.ToolBar.ComboBoxStyleKey) as Style,
+							Background = SystemColors.ControlBrush,
+							BorderThickness = new Thickness(0),
+							Margin = new Thickness(1, 1, 20, 1),
+							MinWidth = 80,
+						});
+						cb.SetBinding(ComboBox.SelectedItemProperty, new Binding(nameof(EquitySettings.XAxisLabelMode)) { Source = SettingsData.Settings.Equity });
+						cb.SelectionChanged += (s, a) =>
+						{
+							SettingsData.Settings.Equity.XAxisLabelMode = (EXAxisLabelMode)cb.SelectedItem;
+						};
+					}
+				}
+			}
+		}
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler PropertyChanged;

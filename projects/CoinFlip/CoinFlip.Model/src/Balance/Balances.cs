@@ -127,7 +127,7 @@ namespace CoinFlip
 		/// <summary>The nett available balance is the (total - held) balance reported by the exchange</summary>
 		public Unit<double> NettAvailable => NettTotal - NettHeld;
 
-		/// <summary>The USD value of the nett total</summary>
+		/// <summary>The value of the nett total in valuation currency</summary>
 		public Unit<double> NettValue => Coin.ValueOf(NettTotal);
 
 		/// <summary>Fake additional funds</summary>
@@ -277,6 +277,7 @@ namespace CoinFlip
 					if (m_total == value) return;
 					m_total = value;
 					NotifyPropertyChanged(nameof(Total));
+					NotifyPropertyChanged(nameof(Available));
 				}
 			}
 			private Unit<double> m_total;
@@ -317,7 +318,7 @@ namespace CoinFlip
 			public Guid Hold(Unit<double> amount)
 			{
 				var ts = Model.UtcNow;
-				return Hold(amount, b => b.LastUpdated < ts);
+				return Hold(amount, b => b.LastUpdated <= ts);
 			}
 
 			/// <summary>Reserve 'amount' until 'still_needed' returns false.</summary>
@@ -330,6 +331,7 @@ namespace CoinFlip
 				// Create a new fund hold
 				var id = Guid.NewGuid();
 				Holds.Add(new FundHold(id, amount, still_needed));
+				NotifyPropertyChanged(nameof(Available));
 				NotifyPropertyChanged(nameof(HeldForTrades));
 				return id;
 			}

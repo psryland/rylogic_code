@@ -96,6 +96,9 @@ namespace CoinFlip
 		/// <summary>Trade history on this exchange, keyed on order ID</summary>
 		private OrdersCompletedCollection History => Exchange.History;
 
+		/// <summary>The deposits/withdrawals</summary>
+		private TransfersCollection Transfers => Exchange.Transfers;
+
 		/// <summary>Reset the Sim Exchange</summary>
 		public void Reset()
 		{
@@ -115,12 +118,18 @@ namespace CoinFlip
 			// Reset the balances to the initial values
 			m_bal.Clear();
 			Balance.Clear();
+			Transfers.Clear();
 			var exch_data = SettingsData.Settings.BackTesting.AccountBalances[Exchange.Name];
 			foreach (var coin in Coins.Values)
 			{
 				var bal = exch_data[coin.Symbol];
 				m_bal.Add(coin, new AccountBalance(coin, bal.Total._(coin), bal.Held._(coin)));
 				Balance.Add(coin, new Balances(coin, bal.Total._(coin), Sim.Clock));
+
+				// Add a "deposit" for each non-zero balance
+				if (bal.Total != 0)
+					Transfers.Add(new Transfer("BackTesting", ETransfer.Deposit, coin, bal.Total._(coin), Model.UtcNow, Transfer.EStatus.Complete));
+
 				CoinData.NotifyBalanceChanged(coin);
 			}
 

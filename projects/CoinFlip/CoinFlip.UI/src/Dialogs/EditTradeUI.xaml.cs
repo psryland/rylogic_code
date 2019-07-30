@@ -220,7 +220,7 @@ namespace CoinFlip.UI
 		public Unit<double> AvailableOut => Exchange.Balance[CoinOut][Trade.FundId].Available;
 
 		/// <summary>Description of the amount sold in the trade</summary>
-		public string TradeDescriptionIn => $"Trading {Math_.Clamp(Math_.Div(Trade.AmountIn, AvailableIn, 0.0._(CoinIn)), 0, 1):P2} of {CoinIn} balance";
+		public string TradeDescriptionIn => $"Trading {Math_.Clamp(Math_.Div<double>(Trade.AmountIn, AvailableIn, 0), 0, 1):P2} of {CoinIn} balance";
 
 		/// <summary>Description of the amount received from the trade</summary>
 		public string TradeDescriptionOut => $"After Fees: {Trade.AmountNett.ToString("F8", true)}";

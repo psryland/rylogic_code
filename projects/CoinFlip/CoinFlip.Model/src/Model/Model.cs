@@ -12,6 +12,7 @@ using System.Windows.Threading;
 using CoinFlip.Bots;
 using CoinFlip.Settings;
 using Rylogic.Common;
+using Rylogic.Container;
 using Rylogic.Extn;
 using Rylogic.Utility;
 
@@ -162,6 +163,9 @@ namespace CoinFlip
 						if (!BackTesting)
 							IntegrateDataUpdates();
 
+						// Update the nett worth value
+						UpdateNettWorth();
+
 						// Simulate fake orders being filled
 						if (!AllowTrades && !BackTesting)
 						{ }// todo SimulateFakeOrders();
@@ -238,7 +242,7 @@ namespace CoinFlip
 				// Integrate market updates so that updates from live data don't end up in back testing data.
 				IntegrateDataUpdates();
 
-				// Save and rseet the current Fund container
+				// Save and reset the current Fund container
 				Funds.SaveToSettings(Exchanges);
 				Funds.AssignFunds(new FundData[0]);
 
@@ -332,8 +336,59 @@ namespace CoinFlip
 			private set
 			{
 				if (m_exchanges == value) return;
-				Util.DisposeAll(m_exchanges);
+				if (m_exchanges != null)
+				{
+					m_exchanges.CollectionChanged -= HandleExchangeCollectionChanged;
+					Util.DisposeAll(m_exchanges);
+				}
 				m_exchanges = value;
+				if (m_exchanges != null)
+				{
+					m_exchanges.CollectionChanged += HandleExchangeCollectionChanged;
+				}
+
+				// Handlers
+				void HandleExchangeCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+				{
+					switch (e.Action)
+					{
+					case NotifyCollectionChangedAction.Add:
+						{
+							foreach (var exch in e.NewItems.Cast<Exchange>())
+							{
+								exch.Coins.ListChanging += HandleCoinsChanging;
+								exch.Orders.ListChanging += HandleOrdersChanging;
+								exch.History.ListChanging += HandleHistoryChanging;
+							}
+							break;
+						}
+					case NotifyCollectionChangedAction.Remove:
+						{
+							foreach (var exch in e.OldItems.Cast<Exchange>())
+							{
+								exch.History.ListChanging -= HandleHistoryChanging;
+								exch.Orders.ListChanging -= HandleOrdersChanging;
+								exch.Coins.ListChanging -= HandleCoinsChanging;
+							}
+							break;
+						}
+					}
+				}
+				void HandleCoinsChanging(object sender, ListChgEventArgs<Coin> e)
+				{
+					var exchange = ((CoinCollection)sender).Exchange;
+					CoinChanging?.Invoke(exchange, e);
+				}
+				void HandleOrdersChanging(object sender, ListChgEventArgs<Order> e)
+				{
+					var exchange = ((OrdersCollection)sender).Exchange;
+					OrderChanging?.Invoke(exchange, e);
+				}
+				void HandleHistoryChanging(object sender, ListChgEventArgs<OrderCompleted> e)
+				{
+					var exchange = ((OrdersCompletedCollection)sender).Exchange;
+					HistoryChanging?.Invoke(exchange, e);
+				}
 			}
 		}
 		private ExchangeContainer m_exchanges;
@@ -419,20 +474,31 @@ namespace CoinFlip
 		/// <summary>Raised when market data changes, i.e. before and after 'IntegrateDataUpdates' is called</summary>
 		public event EventHandler<DataChangingEventArgs> DataChanging;
 
+		/// <summary>Raised when a coin is added or removed from an exchange</summary>
+		public event EventHandler<ListChgEventArgs<Coin>> CoinChanging;
+
+		/// <summary>Raised when an order is added or removed from an exchange</summary>
+		public event EventHandler<ListChgEventArgs<Order>> OrderChanging;
+
+		/// <summary>Raised when a completed order is added or updated from an exchange</summary>
+		public event EventHandler<ListChgEventArgs<OrderCompleted>> HistoryChanging;
+
+		/// <summary>Notify when the NettWorth value changes</summary>
+		public event EventHandler<ValueChangedEventArgs<Unit<double>>> NettWorthChanged;
+
 		/// <summary>Total holdings value across all exchanges and all currencies</summary>
 		public Unit<double> NettWorth
 		{
-			get
+			get => m_nett_worth;
+			set
 			{
-				Unit<double> worth = 0.0;
-				foreach (var exch in Exchanges)
-				{
-					foreach (var bal in exch.Balance.Values)
-						worth += bal.NettValue;
-				}
-				return worth;
+				if (m_nett_worth == value) return;
+				var args = new ValueChangedEventArgs<Unit<double>>(value, m_nett_worth);
+				m_nett_worth = value;
+				NettWorthChanged?.Invoke(this, args);
 			}
 		}
+		private Unit<double> m_nett_worth;
 
 		/// <summary>Persist the current fund balances to settings</summary>
 		public void SaveFundBalances()
@@ -468,6 +534,9 @@ namespace CoinFlip
 		/// <summary>Process any pending data updates</summary>
 		public void IntegrateDataUpdates()
 		{
+			// Notes: do do 'other' jobs in here, this is just for data integration.
+			// Put 'main loop' tasks in the HandleTick of the main loop.
+
 			Debug.Assert(Misc.AssertMainThread());
 			Debug.Assert(m_in_integrate_data_updates == 0);
 			Debug.Assert(!BackTesting);
@@ -495,6 +564,18 @@ namespace CoinFlip
 			DataChanging?.Invoke(this, new DataChangingEventArgs(done: true));
 		}
 		private int m_in_integrate_data_updates;
+
+		/// <summary>Set the latest value of 'NettWorth'</summary>
+		private void UpdateNettWorth()
+		{
+			var worth = 0.0._(SettingsData.Settings.ValuationCurrency);
+			foreach (var exch in Exchanges)
+			{
+				foreach (var bal in exch.Balance.Values)
+					worth += bal.NettValue;
+			}
+			NettWorth = worth;
+		}
 	}
 
 	#region EventArgs

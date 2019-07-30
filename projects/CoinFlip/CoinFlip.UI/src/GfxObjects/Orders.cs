@@ -19,12 +19,14 @@ namespace CoinFlip.UI.GfxObjects
 		// Notes:
 		//  - A manager class for adding graphics to a chart for completed open orders
 
-		private Instrument m_instrument;
+		private Func<IOrder, double> m_xvalue;
+		private Func<IOrder, double> m_yvalue;
 		private Cache<long, OrderGfx> m_cache;
 
-		public Orders(Instrument instrument)
+		public Orders(Func<IOrder, double> xvalue, Func<IOrder, double> yvalue)
 		{
-			m_instrument = instrument;
+			m_xvalue = xvalue;
+			m_yvalue = yvalue;
 			m_cache = new Cache<long, OrderGfx>(int.MaxValue);
 		}
 		public void Dispose()
@@ -47,9 +49,8 @@ namespace CoinFlip.UI.GfxObjects
 				var gfx = m_cache.Get(order.OrderId, k => new OrderGfx(order));
 
 				// Update the position
-				var t = order is Order ? Model.UtcNow : order.Created.Value;
-				var x = m_instrument.IndexAt(new TimeFrameTime(t, m_instrument.TimeFrame));
-				var y = order.PriceQ2B;
+				var x = m_xvalue(order);
+				var y = m_yvalue(order);
 				var s = chart.ChartToClient(new Point(x, y));
 				gfx.Update(overlay, s);
 			}
@@ -130,10 +131,11 @@ namespace CoinFlip.UI.GfxObjects
 				Misc.AddToOverlay(Label, overlay);
 				Label.Visibility = SettingsData.Settings.Chart.ShowTradeDescriptions ? Visibility.Visible : Visibility.Collapsed;
 				Label.FontSize = SettingsData.Settings.Chart.TradeLabelSize;
+				Label.Measure(Rylogic.Extn.Windows.Size_.Infinity);
 				Label.Background = new SolidColorBrush(Colour32.White.Alpha(1.0f - (float)SettingsData.Settings.Chart.TradeLabelTransparency).ToMediaColor());
-				Label.RenderTransform = new MatrixTransform(1.0, 0.0, 0.0, 1.0,
-					s.X + (TradeType == ETradeType.Q2B ? -(7.0+Label.ActualWidth) : +7.0),
-					s.Y + (TradeType == ETradeType.Q2B ? -2.5 : -(Label.ActualHeight-2.5)));
+				Label.RenderTransform = new MatrixTransform(1.0, 0.0, 0.0, 1.0, s.X - (7.0 + Label.DesiredSize.Width), s.Y + -2.5);
+					//s.X + (TradeType == ETradeType.Q2B ? -(7.0+Label.ActualWidth) : +7.0),
+					//s.Y + (TradeType == ETradeType.Q2B ? -2.5 : -(Label.ActualHeight-2.5)));
 			}
 		}
 	}

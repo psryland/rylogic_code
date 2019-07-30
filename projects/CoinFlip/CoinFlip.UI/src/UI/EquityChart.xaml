@@ -41,6 +41,22 @@
 			<ColumnDefinition Width="Auto"/>
 		</Grid.ColumnDefinitions>
 
+		<!-- Show Range -->
+		<DatePicker
+			Grid.Column="0"
+			SelectedDate="{Binding Equity.Since}"
+			VerticalAlignment="Center"
+			BorderThickness="0"
+			Margin="2"
+			/>
+		<Button
+			Grid.Column="1"
+			Content="All"
+			VerticalAlignment="Center"
+			Padding="3,0,3,0"
+			Margin="2"
+			/>
+
 		<!-- Time Range -->
 		<TextBlock
 			Grid.Column="10"

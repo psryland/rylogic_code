@@ -15,8 +15,6 @@ namespace Bot.Rebalance
 			Pair = string.Empty;
 			AllInPrice = 0.0;
 			AllOutPrice = 100_000.0;
-			BaseCurrencyBalance = 0.0;
-			QuoteCurrencyBalance = 0.0;
 			RebalanceThreshold = 0.1;
 			PendingOrders = new MonitoredOrders();
 
@@ -56,20 +54,6 @@ namespace Bot.Rebalance
 			set { set(nameof(AllOutPrice), value); }
 		}
 
-		/// <summary>The current balance of base currency (in Base) </summary>
-		public double BaseCurrencyBalance
-		{
-			get { return get<double>(nameof(BaseCurrencyBalance)); }
-			set { set(nameof(BaseCurrencyBalance), value); }
-		}
-
-		/// <summary>The current balance of quote currency (in Quote) </summary>
-		public double QuoteCurrencyBalance
-		{
-			get { return get<double>(nameof(QuoteCurrencyBalance)); }
-			set { set(nameof(QuoteCurrencyBalance), value); }
-		}
-
 		/// <summary>The minimum ratio difference before a rebalance is done</summary>
 		public double RebalanceThreshold
 		{
@@ -100,18 +84,17 @@ namespace Bot.Rebalance
 			if (AllInPrice >= AllOutPrice)
 				return new Exception("Price range is invalid");
 
-			var base_balance = BaseCurrencyBalance._(pair.Base);
-			if (base_balance < 0 || base_balance > fund[pair.Base].Total)
-				return new Exception("Base holdings is invalid");
+			if (fund[pair.Base].Total < 0)
+				return new Exception("Fund base amount is invalid");
+			if (fund[pair.Quote].Total < 0)
+				return new Exception("Fund quote amount is invalid");
 
-			var quote_balance = QuoteCurrencyBalance._(pair.Quote);
-			if (quote_balance < 0 || quote_balance > fund[pair.Quote].Total)
-				return new Exception("Quote holdings is invalid");
-
-			if (BaseCurrencyBalance == 0 && QuoteCurrencyBalance == 0)
+			if (fund[pair.Base].Total == 0 && fund[pair.Quote].Total == 0)
 				return new Exception("Combined holdings must be > 0");
+
 			if (RebalanceThreshold <= 0)
 				return new Exception("Rebalance threshold is invalid");
+
 			return null;
 		}
 	}

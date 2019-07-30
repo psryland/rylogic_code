@@ -141,13 +141,13 @@
 			<DataGridTextColumn
 				Header="Available"
 				ToolTipService.ToolTip="The amount of the coin available for trading"
-				Binding="{Binding Available, Mode=OneWay, Converter={conv:WithoutUnits}, ConverterParameter='F8'}"
+				Binding="{Binding Available, Mode=OneWay, Converter={conv:StringFormat}, ConverterParameter='8, false'}"
 				Width="1.5*"
 				/>
 			<DataGridTextColumn
 				Header="Total"
 				ToolTipService.ToolTip="The total balance amount of the coin"
-				Binding="{Binding Total, Mode=OneWay, Converter={conv:WithoutUnits}, ConverterParameter='F8'}"
+				Binding="{Binding Total, Mode=OneWay, Converter={conv:StringFormat}, ConverterParameter='8, false'}"
 				Width="1.5*"
 				/>
 		</DataGrid.Columns>

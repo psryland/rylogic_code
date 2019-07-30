@@ -649,115 +649,120 @@ namespace CoinFlip
 		/// <summary>Place an order on the exchange to buy/sell 'amount' (currency depends on 'tt')</summary>
 		public async Task<OrderResult> CreateOrder(string fund_id, TradePair pair, ETradeType tt, EPlaceOrderType ot, Unit<double> amount_, Unit<double> price_, CancellationToken cancel, string creator_name)
 		{
-			// 'fund_id' is the context id of the entity creating the trade
-
-			// Sanity checks
-			if (pair.Exchange != this)
+			using (Scope.Create(() => ++m_in_create_order, () => --m_in_create_order))
 			{
-				throw new Exception($"Pair {pair} is not provided by this exchange");
-			}
-			if (tt == ETradeType.B2Q)
-			{
-				if (amount_ <= 0.0._(pair.Base))
-					throw new Exception($"Invalid trade amount: {amount_}");
-				if (price_ <= 0.0._(pair.Quote) / 1.0._(pair.Base))
-					throw new Exception($"Invalid exchange rate: {price_}");
-				if (amount_ > Balance[pair.Base][fund_id].Available)
-					throw new Exception($"Order amount ({amount_}) is greater than the current balance: {Balance[pair.Base][fund_id].Available}");
-			}
-			if (tt == ETradeType.Q2B)
-			{
-				if (amount_ <= 0.0._(pair.Quote))
-					throw new Exception($"Invalid trade amount: {amount_}");
-				if (price_ <= 0.0._(pair.Base) / 1.0._(pair.Quote))
-					throw new Exception($"Invalid exchange rate: {price_}");
-				if (amount_ > Balance[pair.Quote][fund_id].Available)
-					throw new Exception($"Order amount ({amount_}) is greater than the current balance: {Balance[pair.Quote][fund_id].Available}");
-			}
+				if (m_in_create_order != 1)
+					throw new Exception("Re-entrant call to CreateOrder");
 
-			// Convert the amount to base currency and the price to quote/base
-			var amount = tt.AmountIn(amount_, price_);
-			var price = tt.PriceQ2B(price_);
-			var now = Model.UtcNow;
-
-			// Put a hold on the balance we're about to trade to prevent a race condition
-			// with other trades being placed while we wait for this one to go through.
-			// Only reduce balances, don't assume the trade has completed.
-			// If we're live trading, remove the balance until the next balance update is received.
-			// If not live trading, hold the balance until the fake order is removed (hold is updated below)
-			var bal = tt.CoinIn(pair).Balances[fund_id];
-			var hold = tt.AmountIn(amount, price);
-			var hold_id = bal.Hold(hold);
-
-			// Fake positions when not back testing and not live trading.
-			// Back testing looks like live trading because of the emulated exchanges.
-			var fake = Model.AllowTrades == false && Model.BackTesting == false;
-
-			// Make the trade
-			// This can have the following results:
-			// 1) the entire trade is added to the order book for the pair -> a single order number is returned
-			// 2) the entire trade can be met by existing orders in the order book -> a collection of trade IDs is returned
-			// 3) some of the trade can be met by existing orders -> a single order number and a collection of trade IDs are returned.
-			var result =
-				Sim != null ? Sim.CreateOrderInternal(pair, tt, ot, amount, price) :
-				Model.AllowTrades ? await CreateOrderInternal(pair, tt, ot, amount, price, cancel) :
-				new OrderResult(pair, ++m_fake_order_number, filled: false);
-
-			// Log the event
-			Model.Log.Write(ELogLevel.Info, $"{Name}: (id={result.OrderId}) {amount_.ToString("F8", true)} → {(amount_ * price_).ToString("F8", true)} @ {price.ToString("F8", true)}");
-
-			// The order may have been completed or partially filled. Add the filled orders to the trade history.
-			foreach (var fill in result.Trades)
-			{
-				// At this stage we don't know how the amount is distributed across the individual trades
-				var order_completed = History.GetOrAdd(result.OrderId, x => new OrderCompleted(x, fund_id, tt, pair));
-				order_completed.Trades[fill.TradeId] = new TradeCompleted(order_completed, fill.TradeId, fill.Price, fill.Amount, fill.Commission, now, now);
-			}
-
-			// Add the order to the Orders collection so that there is no race condition
-			// between placing an order and checking 'Orders' for the existence of the order just placed.
-			if (!result.Filled)
-			{
-				// Save the extra details about the live order.
-				ExchSettings.OrderDetails.Add(new OrderDetails(result.OrderId, fund_id, creator_name));
-				ExchSettings.Save();
-
-				// Add a 'Position' to the collection, this will be overwritten on the next update.
-				var order = new Order(result.OrderId, fund_id, tt, pair, price, amount, amount, now, now, fake: fake);
-				Orders.AddOrUpdate(order);
-
-				// The order is on the exchange, so update the held amount to be held on the exchange
-				if (fake)
+				// Sanity checks
+				if (pair.Exchange != this)
 				{
-					// Update the hold with a 'StillNeeded' function
-					bal.Hold(hold_id, b => Orders[result.OrderId] != null);
+					throw new Exception($"Pair {pair} is not provided by this exchange");
+				}
+				if (tt == ETradeType.B2Q)
+				{
+					if (amount_ <= 0.0._(pair.Base))
+						throw new Exception($"Invalid trade amount: {amount_}");
+					if (price_ <= 0.0._(pair.Quote) / 1.0._(pair.Base))
+						throw new Exception($"Invalid exchange rate: {price_}");
+					if (amount_ > Balance[pair.Base][fund_id].Available)
+						throw new Exception($"Order amount ({amount_}) is greater than the current balance: {Balance[pair.Base][fund_id].Available}");
+				}
+				if (tt == ETradeType.Q2B)
+				{
+					if (amount_ <= 0.0._(pair.Quote))
+						throw new Exception($"Invalid trade amount: {amount_}");
+					if (price_ <= 0.0._(pair.Base) / 1.0._(pair.Quote))
+						throw new Exception($"Invalid exchange rate: {price_}");
+					if (amount_ > Balance[pair.Quote][fund_id].Available)
+						throw new Exception($"Order amount ({amount_}) is greater than the current balance: {Balance[pair.Quote][fund_id].Available}");
+				}
+
+				// Convert the amount to base currency and the price to quote/base
+				var amount = tt.AmountIn(amount_, price_);
+				var price = tt.PriceQ2B(price_);
+				var now = Model.UtcNow;
+
+				// Put a hold on the balance we're about to trade to prevent a race condition
+				// with other trades being placed while we wait for this one to go through.
+				// Only reduce balances, don't assume the trade has completed.
+				// If we're live trading, remove the balance until the next balance update is received.
+				// If not live trading, hold the balance until the fake order is removed (hold is updated below)
+				var bal = tt.CoinIn(pair).Balances[fund_id];
+				var hold = tt.AmountIn(amount, price);
+				var hold_id = bal.Hold(hold);
+
+				// Fake positions when not back testing and not live trading.
+				// Back testing looks like live trading because of the emulated exchanges.
+				var fake = Model.AllowTrades == false && Model.BackTesting == false;
+
+				// Make the trade
+				// This can have the following results:
+				// 1) the entire trade is added to the order book for the pair -> a single order number is returned
+				// 2) the entire trade can be met by existing orders in the order book -> a collection of trade IDs is returned
+				// 3) some of the trade can be met by existing orders -> a single order number and a collection of trade IDs are returned.
+				var result =
+					Sim != null ? Sim.CreateOrderInternal(pair, tt, ot, amount, price) :
+					Model.AllowTrades ? await CreateOrderInternal(pair, tt, ot, amount, price, cancel) :
+					new OrderResult(pair, ++m_fake_order_number, filled: false);
+
+				// Log the event
+				Model.Log.Write(ELogLevel.Info, $"{Name}: (id={result.OrderId}) {amount_.ToString("F8", true)} → {(amount_ * price_).ToString("F8", true)} @ {price.ToString("F8", true)}");
+
+				// The order may have been completed or partially filled. Add the filled orders to the trade history.
+				foreach (var fill in result.Trades)
+				{
+					// At this stage we don't know how the amount is distributed across the individual trades
+					var order_completed = History.GetOrAdd(result.OrderId, x => new OrderCompleted(x, fund_id, tt, pair));
+					order_completed.Trades[fill.TradeId] = new TradeCompleted(order_completed, fill.TradeId, fill.Price, fill.Amount, fill.Commission, now, now);
+				}
+
+				// Add the order to the Orders collection so that there is no race condition
+				// between placing an order and checking 'Orders' for the existence of the order just placed.
+				if (!result.Filled)
+				{
+					// Save the extra details about the live order.
+					ExchSettings.OrderDetails.Add(new OrderDetails(result.OrderId, fund_id, creator_name));
+					ExchSettings.Save();
+
+					// Add a 'Position' to the collection, this will be overwritten on the next update.
+					var order = new Order(result.OrderId, fund_id, tt, pair, price, amount, amount, now, now, fake: fake);
+					Orders.AddOrUpdate(order);
+
+					// The order is on the exchange, so update the held amount to be held on the exchange
+					if (fake)
+					{
+						// Update the hold with a 'StillNeeded' function
+						bal.Hold(hold_id, b => Orders[result.OrderId] != null);
+					}
+					else
+					{
+						bal.Release(hold_id);
+						bal.HeldOnExch = hold;
+					}
 				}
 				else
 				{
+					// If the order was immediately completely filled, apply the changes to the associated fund.
+					// There was never any amount held on the exchange in this case
 					bal.Release(hold_id);
-					bal.HeldOnExch = hold;
+					ApplyChangesToFund(History[result.OrderId], false, now);
 				}
-			}
-			else
-			{
-				// If the order was immediately completely filled, apply the changes to the associated fund.
-				// There was never any amount held on the exchange in this case
-				bal.Release(hold_id);
-				ApplyChangesToFund(History[result.OrderId], false, now);
-			}
 
-			// Remove entries from the order book that this order should have filled.
-			// This will be overwritten with the next update.
-			pair.OrderBook(tt).Consume(pair, ot, price, amount, out var remaining);
+				// Remove entries from the order book that this order should have filled.
+				// This will be overwritten with the next update.
+				pair.OrderBook(tt).Consume(pair, ot, price, amount, out var remaining);
 
-			// Trigger updates
-			MarketDataUpdateRequired = true;
-			OrdersUpdateRequired = true;
-			BalanceUpdateRequired = true;
-			return result;
+				// Trigger updates
+				MarketDataUpdateRequired = true;
+				OrdersUpdateRequired = true;
+				BalanceUpdateRequired = true;
+				return result;
+			}
 		}
 		protected abstract Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EPlaceOrderType ot, Unit<double> volume_base, Unit<double> price, CancellationToken cancel);
 		private long m_fake_order_number;
+		private int m_in_create_order;
 
 		/// <summary>Enumerate all candle data and time frames provided by this exchange</summary>
 		public IEnumerable<PairAndTF> EnumAvailableCandleData(TradePair pair = null)
@@ -919,8 +924,10 @@ namespace CoinFlip
 				if (order.Created >= timestamp)
 					continue;
 
-				// If the order is now in the history, it has been completed.
-				// Apply the trade amounts to the associated fund.
+				// If the order is no longer in the live orders list and is now in the history,
+				// then it has been completed. Apply the trade amounts to the associated fund.
+				// Note: this only happens when the order is fully filled because if it wasn't
+				// filled it'd still be in the live orders list.
 				var was_filled = History.TryGetValue(order.OrderId, out var his);
 				if (was_filled)
 					ApplyChangesToFund(his, true, timestamp);
@@ -1026,6 +1033,8 @@ namespace CoinFlip
 		/// <summary>Adjust the balances of a fund based on a completed order</summary>
 		private void ApplyChangesToFund(OrderCompleted his, bool amount_in_was_held, DateTimeOffset timestamp)
 		{
+			// 'amount_in_was_held' means that the amount 'his.AmountIn' in represented in the 
+			// 'HeldOnExch' amount so, now that the order is completed, this amount is no longer held.
 			if (his.FundId == Fund.Main)
 				return;
 
@@ -1042,6 +1051,7 @@ namespace CoinFlip
 			{
 				Debug.Assert(Misc.AssertMainThread());
 				m_populate_history_signalled = false;
+				if (DB == null) return;
 
 				var history = new Dictionary<long, OrderCompleted>();
 				var history_first = DateTimeOffset.MaxValue;

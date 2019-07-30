@@ -279,14 +279,7 @@ namespace CoinFlip
 							break;
 						}
 					}
-
-					// Cap the next clock value to real time
-					var caught_up_to_realtime = false;
-					if (next_clock > DateTimeOffset.UtcNow)
-					{
-						next_clock = DateTimeOffset.UtcNow;
-						caught_up_to_realtime = true;
-					}
+					next_clock = DateTimeOffset_.Clamp(next_clock, StartTime, EndTime);
 
 					// Make sure bots get stepped at their required rate
 					for (; Running;)
@@ -295,7 +288,7 @@ namespace CoinFlip
 						var bot = NextBotToStep();
 
 						// If the next bot to step is within this step, step it.
-						if (bot != null && bot.LastStepTime + bot.LoopPeriod <= next_clock)
+						if (bot != null && bot.LastStepTime + bot.LoopPeriod < next_clock)
 						{
 							// Advance to clock to the bot's next step time
 							Clock = bot.LastStepTime + bot.LoopPeriod;
@@ -314,7 +307,7 @@ namespace CoinFlip
 
 					// Advance the clock to the end of the step and stop if the clock has caught up to real time
 					Clock = next_clock;
-					if (caught_up_to_realtime)
+					if (Clock == EndTime)
 					{
 						Running = false;
 						return;

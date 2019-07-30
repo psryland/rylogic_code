@@ -96,19 +96,19 @@ namespace CoinFlip.UI
 				{
 					Model.AllowTradesChanged -= HandleAllowTradesChanged;
 					Model.BackTestingChange -= HandleBackTestingChange;
-					m_model.MainLoopTick -= HandleModelHeartBeat;
+					m_model.NettWorthChanged -= HandleNettWorthChanged;
 					Util.Dispose(ref m_model);
 				}
 				m_model = value;
 				if (m_model != null)
 				{
-					m_model.MainLoopTick += HandleModelHeartBeat;
+					m_model.NettWorthChanged += HandleNettWorthChanged;
 					Model.BackTestingChange += HandleBackTestingChange;
 					Model.AllowTradesChanged += HandleAllowTradesChanged;
 				}
 
 				// Handler
-				void HandleModelHeartBeat(object sender, EventArgs e)
+				void HandleNettWorthChanged(object sender, EventArgs e)
 				{
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(NettWorth)));
 				}

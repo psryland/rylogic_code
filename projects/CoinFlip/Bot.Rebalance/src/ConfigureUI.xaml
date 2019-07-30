@@ -209,15 +209,14 @@
 					Orientation="Horizontal"
 					>
 					<TextBlock
-						Text="Allocation (Base):"
+						Text="Amount (Base):"
 						VerticalAlignment="Center"
 						MinWidth="100"
 						/>
-					<TextBox
-						Text="{Binding Settings.BaseCurrencyBalance, StringFormat={}{0:F8}}"
-						ToolTip="The current balance of base currency"
+					<TextBlock
+						Text="{Binding HoldingsBase, Converter={conv:StringFormat}, ConverterParameter='8,false'}"
 						VerticalAlignment="Center"
-						HorizontalContentAlignment="Right"
+						TextAlignment="Right"
 						MinWidth="100"
 						MaxWidth="100"
 						Margin="3"
@@ -227,15 +226,6 @@
 						VerticalAlignment="Center"
 						MinWidth="40"
 						/>
-					<Button
-						Content="All"
-						Command="{Binding AllocateAllAvailableBase}"
-						VerticalAlignment="Center"
-						Background="Transparent"
-						BorderThickness="1"
-						BorderBrush="#AAF"
-						Padding="1,0,1,0"
-						/>
 				</StackPanel>
 
 				<!-- Quote Currency Balance -->
@@ -244,15 +234,14 @@
 					Orientation="Horizontal"
 					>
 					<TextBlock
-						Text="Allocation (Quote):"
+						Text="Amount (Quote):"
 						VerticalAlignment="Center"
 						MinWidth="100"
 						/>
-					<TextBox
-						Text="{Binding Settings.QuoteCurrencyBalance, StringFormat={}{0:F8}}"
-						ToolTip="The current balance of quote currency"
-						HorizontalContentAlignment="Right"
+					<TextBlock
+						Text="{Binding HoldingsQuote, Converter={conv:StringFormat}, ConverterParameter='8, false'}"
 						VerticalAlignment="Center"
+						TextAlignment="Right"
 						MinWidth="100"
 						MaxWidth="100"
 						Margin="3"
@@ -261,15 +250,6 @@
 						Text="{Binding ChartSelector.Pair.Quote.Symbol}"
 						VerticalAlignment="Center"
 						MinWidth="40"
-						/>
-					<Button
-						Content="All"
-						Command="{Binding AllocateAllAvailableQuote}"
-						VerticalAlignment="Center"
-						Background="Transparent"
-						BorderThickness="1"
-						BorderBrush="#AAF"
-						Padding="1,0,1,0"
 						/>
 				</StackPanel>
 			</Grid>

@@ -49,6 +49,7 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="src\Account\Equity.cs" />
     <Compile Include="src\Account\User.cs" />
     <Compile Include="src\Balance\Balances.cs" />
     <Compile Include="src\Balance\ETransfer.cs" />

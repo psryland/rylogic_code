@@ -1,7 +1,12 @@
 Immediate ToDo:
 
 CoinFlip
+	- Allow trading in back testing mode, remove "fake" cash/trades
+	- Show 'hodls' in equity plot
+	- Allow selecting the fund to manually trade from
+	- Make the chart context menu for manual trades display market order when near the current spot price
 	- Depth of market scale indicator/adjuster
+	- Add a Transfer grid
 	- Support create trade at market price (so that it always fills)
 	- Do something so that all pairs are not queried for history all the time on startup
 	- Figure out how to isolate the monitored orders between back testing and live mode
@@ -9,7 +14,6 @@ CoinFlip
 	- Add spot price support to Poloniex and Bittrex
 	- Variable spread for backtesting
 	- Dashed 'crosshair' line, also in a lighter colour
-	- determine equity in backwards from current balance
 	- pending orders (Stop, OneEnablesOther, )
 	- Make orders glow when hovered
 	- Add more graphics to the positions, so they look better. Also, have orders at the current time, with their 'line' going back to when they were created.
@@ -25,7 +29,6 @@ CoinFlip
 	- Line indicators
 	- Equity graph
 	- MOAR indicators
-	- Equity graph for live account
 	
 EDTradeAdvisor
 	- ED Style

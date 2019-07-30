@@ -29,8 +29,6 @@ namespace Bot.Rebalance
 			// Commands
 			Accept = Command.Create(this, AcceptInternal);
 			ShowOnChart = Command.Create(this, ShowOnChartInternal);
-			AllocateAllAvailableBase = Command.Create(this, AllocateAllAvailableBaseInternal);
-			AllocateAllAvailableQuote = Command.Create(this, AllocateAllAvailableQuoteInternal);
 
 			DataContext = this;
 		}
@@ -55,6 +53,12 @@ namespace Bot.Rebalance
 
 		/// <summary>App logic</summary>
 		public Model Model => m_bot.Model;
+
+		/// <summary>The amount held in base currency</summary>
+		public Unit<double> HoldingsBase => Fund[ChartSelector.Pair.Base].Total;
+
+		/// <summary>The amount held in quote currency</summary>
+		public Unit<double> HoldingsQuote => Fund[ChartSelector.Pair.Quote].Total;
 
 		/// <summary>The fund assigned to the bot being configured</summary>
 		public Fund Fund
@@ -118,10 +122,10 @@ namespace Bot.Rebalance
 				// Check that the balances are available in the fund
 				if (Fund == null)
 					return new Exception("No fund is assigned");
-				if (Fund[pair.Base].Available < Settings.BaseCurrencyBalance._(pair.Base))
-					return new Exception($"Fund {Fund.Id} does not have enough {pair.Base.Symbol}");
-				if (Fund[pair.Quote].Available < Settings.QuoteCurrencyBalance._(pair.Quote))
-					return new Exception($"Fund {Fund.Id} does not have enough {pair.Quote.Symbol}");
+				//if (Fund[pair.Base].Available < Settings.BaseCurrencyBalance._(pair.Base))
+				//	return new Exception($"Fund {Fund.Id} does not have enough {pair.Base.Symbol}");
+				//if (Fund[pair.Quote].Available < Settings.QuoteCurrencyBalance._(pair.Quote))
+				//	return new Exception($"Fund {Fund.Id} does not have enough {pair.Quote.Symbol}");
 
 				// Check the settings are valid
 				var err = Settings.Validate(Model, Fund);
@@ -151,24 +155,6 @@ namespace Bot.Rebalance
 			chart.EnsureActiveContent();
 
 			// Add graphics + support for resizing price range
-		}
-
-		/// <summary>Use all available base currency in the current fund for the bot</summary>
-		public Command AllocateAllAvailableBase { get; }
-		private void AllocateAllAvailableBaseInternal()
-		{
-			if (ChartSelector.Pair == null) return;
-			var available = Fund[ChartSelector.Pair.Base].Available;
-			Settings.BaseCurrencyBalance = available;
-		}
-
-		/// <summary>Use all available quote currency in the current fund for the bot</summary>
-		public Command AllocateAllAvailableQuote { get; }
-		private void AllocateAllAvailableQuoteInternal()
-		{
-			if (ChartSelector.Pair == null) return;
-			var available = Fund[ChartSelector.Pair.Quote].Available;
-			Settings.QuoteCurrencyBalance = available;
 		}
 
 		/// <summary></summary>

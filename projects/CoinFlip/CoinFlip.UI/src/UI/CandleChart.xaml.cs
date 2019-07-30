@@ -52,6 +52,9 @@ namespace CoinFlip.UI
 			GfxOpenOrders = null;
 			GfxCompletedOrders = null;
 			GfxUpdatingText = null;
+			GfxQ2B = null;
+			GfxB2Q = null;
+			GfxMarketDepth = null;
 			GfxCandles = null;
 			ChartSelector = null;
 			Instrument = null;
@@ -391,8 +394,8 @@ namespace CoinFlip.UI
 				if (m_instrument != null)
 				{
 					GfxCandles = new GfxObjects.Candles(m_instrument);
-					GfxOpenOrders = new GfxObjects.Orders(m_instrument);
-					GfxCompletedOrders = new GfxObjects.Orders(m_instrument);
+					GfxOpenOrders = new GfxObjects.Orders(IOrderToXValue, IOrderToYValue);
+					GfxCompletedOrders = new GfxObjects.Orders(IOrderToXValue, IOrderToYValue);
 					GfxMarketDepth = new GfxObjects.MarketDepth(m_instrument.Pair.MarketDepth);
 					m_instrument.DataChanged += HandleDataChanged;
 					m_instrument.DataSyncingChanged += HandleDataSyncingChanged;
@@ -443,6 +446,15 @@ namespace CoinFlip.UI
 				{
 					// Signal a refresh
 					Chart.Scene.Invalidate();
+				}
+				double IOrderToXValue(IOrder order)
+				{
+					var time = order is Order ? Model.UtcNow : order.Created.Value;
+					return m_instrument.IndexAt(new TimeFrameTime(time, m_instrument.TimeFrame));
+				}
+				double IOrderToYValue(IOrder order)
+				{
+					return order.PriceQ2B;
 				}
 			}
 		}
@@ -980,7 +992,7 @@ namespace CoinFlip.UI
 		{
 			// Modify the main chart area menu
 			{
-				var cmenu = m_chart.Scene.ContextMenu;
+				var cmenu = Chart.Scene.ContextMenu;
 
 				// Move the existing chart menu into a sub menu
 				var chart_options_menu = new MenuItem { Header = "Chart Options" };
@@ -1107,7 +1119,7 @@ namespace CoinFlip.UI
 
 			// Modify the XAxis context menu
 			{
-				var cmenu = m_chart.XAxis.ContextMenu;
+				var cmenu = Chart.XAxis.ContextMenu;
 
 				// Insert an option for changing the units of the XAxis
 				var idx = 0;
@@ -1117,7 +1129,6 @@ namespace CoinFlip.UI
 						var cb = opt.Items.Add2(new ComboBox
 						{
 							ItemsSource = Enum<EXAxisLabelMode>.ValuesArray,
-							//SelectedItem = SettingsData.Settings.Chart.XAxisLabelMode,
 							Style = FindResource(System.Windows.Controls.ToolBar.ComboBoxStyleKey) as Style,
 							Background = SystemColors.ControlBrush,
 							BorderThickness = new Thickness(0),

@@ -41,7 +41,6 @@ namespace Bot.Rebalance
 		{
 			// Load the bot settings
 			Settings = new SettingsData(SettingsFilepath);
-			Settings.PendingOrders.OrderCompleted += HandleOrderCompleted;
 			m_monitor = Settings.PendingOrders.Register(model);
 		}
 		public override void Dispose()
@@ -112,15 +111,20 @@ namespace Bot.Rebalance
 					if (quote_holdings_ratio - price_ratio > Settings.RebalanceThreshold)
 					{
 						// The amount to buy is the amount that will bring the quote holdings
-						// ratio down to match the price ratio.
+						// ratio down to match the price ratio. We're trading quote for base
+						// so clamp 'quote' the amount available
 						var target_quote_holdings = price_ratio * total_holdings;
-						var quote_holdings_difference = HoldingsQuote - target_quote_holdings;
-						Debug.Assert(quote_holdings_difference > 0._(Pair.Quote));
-
-						// Place the rebalance order
-						trade = new Trade(Fund.Id, tt, pair, price, quote_holdings_difference / price);
-						Debug.Assert(trade.Validate() == EValidation.Valid);
-						break;
+						var amount_quote = HoldingsQuote - target_quote_holdings;
+						var amount_base = amount_quote / price;
+						if (Fund[pair.Quote].Available >= amount_quote &&
+							Pair.AmountRangeQuote.Contains(amount_quote) &&
+							Pair.AmountRangeBase.Contains(amount_base))
+						{
+							// Place the rebalance order
+							trade = new Trade(Fund.Id, tt, pair, price, amount_base);
+							Debug.Assert(trade.Validate() == EValidation.Valid);
+							break;
+						}
 					}
 				}
 				else
@@ -132,13 +136,17 @@ namespace Bot.Rebalance
 						// The amount to sell is the amount that will bring the quote holdings
 						// ratio up to match the price ratio.
 						var target_quote_holdings = price_ratio * total_holdings;
-						var quote_holdings_difference = target_quote_holdings - HoldingsQuote;
-						Debug.Assert(quote_holdings_difference > 0._(Pair.Quote));
-
-						// Place the rebalance order
-						trade = new Trade(Fund.Id, tt, pair, price, quote_holdings_difference / price);
-						Debug.Assert(trade.Validate() == EValidation.Valid);
-						break;
+						var amount_quote = target_quote_holdings - HoldingsQuote;
+						var amount_base = amount_quote / price;
+						if (Fund[pair.Base].Available >= amount_base &&
+							Pair.AmountRangeQuote.Contains(amount_quote) &&
+							Pair.AmountRangeBase.Contains(amount_base))
+						{
+							// Place the rebalance order
+							trade = new Trade(Fund.Id, tt, pair, price, amount_base);
+							Debug.Assert(trade.Validate() == EValidation.Valid);
+							break;
+						}
 					}
 				}
 			}
@@ -150,7 +158,10 @@ namespace Bot.Rebalance
 			// An adjustment trade is needed, place the order now
 			Log.Write(ELogLevel.Debug, $"Rebalance trade created: {trade.Description}");
 			var order = await trade.CreateOrder(Cancel.Token, Name);
-			Settings.PendingOrders.Add(order);
+			if (order != null)
+				Settings.PendingOrders.Add(order);
+			else
+				Log.Write(ELogLevel.Error, $"Trade not created: {trade.Description}");
 		}
 
 		/// <summary>The exchange we're trading on</summary>
@@ -160,18 +171,10 @@ namespace Bot.Rebalance
 		private TradePair Pair => Exchange?.Pairs[Settings.Pair];
 
 		/// <summary>The amount held in base currency</summary>
-		private Unit<double> HoldingsBase
-		{
-			get => Settings.BaseCurrencyBalance._(Pair.Base);
-			set => Settings.BaseCurrencyBalance = value;
-		}
+		private Unit<double> HoldingsBase => Fund[Pair.Base].Total;
 
 		/// <summary>The amount held in quote currency</summary>
-		private Unit<double> HoldingsQuote
-		{
-			get => Settings.QuoteCurrencyBalance._(Pair.Quote);
-			set => Settings.QuoteCurrencyBalance = value;
-		}
+		private Unit<double> HoldingsQuote => Fund[Pair.Quote].Total;
 
 		/// <summary>Get the fractional position of 'price' within the price range. [0,1] = [AllIn,AllOut]</summary>
 		private double PriceFrac(Unit<double> price)
@@ -179,33 +182,6 @@ namespace Bot.Rebalance
 			var numer = (double)price - Settings.AllInPrice;
 			var denom = Settings.AllOutPrice - Settings.AllInPrice;
 			return Math_.Clamp(numer / denom, 0.0, 1.0);
-		}
-
-		/// <summary>Handle an order being filled</summary>
-		private void HandleOrderCompleted(object sender, MonitoredOrderEventArgs e)
-		{
-			// When an order is completed, update the holdings
-			var his = e.Exchange.History[e.OrderId];
-			if (his == null)
-				throw new NotSupportedException("Completed order not found in history");
-
-			// Update the holdings
-			switch (his.TradeType)
-			{
-			default: throw new Exception("Unknown trade type");
-			case ETradeType.Q2B:
-				{
-					HoldingsQuote -= his.AmountIn;
-					HoldingsBase += his.AmountNett;
-					break;
-				}
-			case ETradeType.B2Q:
-				{
-					HoldingsQuote += his.AmountNett;
-					HoldingsBase -= his.AmountIn;
-					break;
-				}
-			}
 		}
 	}
 }

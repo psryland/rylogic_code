@@ -50,31 +50,31 @@
 			/>
 		<DataGridTextColumn
 			Header="Price"
-			Binding="{Binding PriceQ2B, Converter={conv:WithUnits}, ConverterParameter='G8', Mode=OneWay}"
+			Binding="{Binding PriceQ2B, Converter={conv:StringFormat}, ConverterParameter='8, true', Mode=OneWay}"
 			ElementStyle="{StaticResource RightAlignedTextColumn}"
 			Width="1*"
 			/>
 		<DataGridTextColumn
 			Header="Spot Price"
-			Binding="{Binding SpotPriceQ2B, Converter={conv:WithUnits}, ConverterParameter='G8', Mode=OneWay}"
+			Binding="{Binding SpotPriceQ2B, Converter={conv:StringFormat}, ConverterParameter='8, true', Mode=OneWay}"
 			ElementStyle="{StaticResource RightAlignedTextColumn}"
 			Width="1*"
 			/>
 		<DataGridTextColumn
 			Header="Distance"
-			Binding="{Binding DistanceQ2BDesc, Converter={conv:WithUnits}, ConverterParameter='G8', Mode=OneWay}"
+			Binding="{Binding DistanceQ2BDesc, Mode=OneWay}"
 			ElementStyle="{StaticResource RightAlignedTextColumn}"
 			Width="1*"
 			/>
 		<DataGridTextColumn
 			Header="Amount (Base)"
-			Binding="{Binding AmountBase, Converter={conv:WithUnits}, ConverterParameter='G8', Mode=OneWay}"
+			Binding="{Binding AmountBase, Converter={conv:StringFormat}, ConverterParameter='8, true', Mode=OneWay}"
 			ElementStyle="{StaticResource RightAlignedTextColumn}"
 			Width="1*"
 			/>
 		<DataGridTextColumn
 			Header="Amount (Quote)"
-			Binding="{Binding AmountQuote, Converter={conv:WithUnits}, ConverterParameter='G8', Mode=OneWay}"
+			Binding="{Binding AmountQuote, Converter={conv:StringFormat}, ConverterParameter='8, true', Mode=OneWay}"
 			ElementStyle="{StaticResource RightAlignedTextColumn}"
 			Width="1*"
 			/>
