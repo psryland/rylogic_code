@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Drawing;
 using System.Globalization;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Interop;
 using System.Windows.Markup;
 using System.Windows.Media.Imaging;
+using Rylogic.Extn;
 using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF.Converters
@@ -47,32 +49,45 @@ namespace Rylogic.Gui.WPF.Converters
 	}
 
 	/// <summary>Display a Unit'T value as a string with units. 'parameter' is the format string</summary>
-	public class WithUnits : MarkupExtension, IValueConverter
+	public class StringFormat :MarkupExtension, IValueConverter
 	{
 		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
 		{
 			if (value == null)
 				return null;
 
-			// The parameter is the format string
-			var fmt = (string)parameter ?? string.Empty;
-
-			// If 'value' is not an instance of 'Unit<>' just convert to string
+			// Get the type of 'value'
 			var ty = value.GetType();
-			if (!ty.IsGenericType || ty.GetGenericTypeDefinition() != typeof(Unit<>))
-				return value.ToString();
 
-			// Find the method 'ToString(string fmt, bool include_units)'
-			var to_string = ty.GetMethod(nameof(ToString), new[] { typeof(string), typeof(bool) });
-			if (to_string == null)
-				return value.ToString();
+			// The parameter is the format string
+			var fmt = (string)parameter;
+			MethodInfo mi;
 
-			// Convert to string with units
-			return (string)to_string.Invoke(value, new object[] { fmt, true });
+			// Specialty types first
+			if (ty.IsGenericType && ty.GetGenericTypeDefinition() == typeof(Unit<>))
+			{
+				// Find the method 'ToString(int sd, bool include_units)'
+				if (fmt.TryConvertTo<int,bool>(out var p0) && (mi = ty.GetMethod(nameof(ToString), new[] { typeof(int), typeof(bool) })) != null)
+					return (string)mi.Invoke(value, new object[] { p0.Item1, p0.Item2 });
+
+				// Find the method 'ToString(string fmt, bool include_units)'
+				if (fmt.TryConvertTo<string,bool>(out var p1) && (mi = ty.GetMethod(nameof(ToString), new[] { typeof(string), typeof(bool) })) != null)
+					return (string)mi.Invoke(value, new object[] { p0.Item1, p0.Item2 });
+			}
+
+			// Find the method 'ToString(int sd)'
+			if (fmt.TryConvertTo<int>(out var sd) && (mi = ty.GetMethod(nameof(ToString), new[] { typeof(int) })) != null)
+				return (string)mi.Invoke(value, new object[] { sd });
+
+			// Find the method 'ToString(string fmt)'
+			if (fmt != null && (mi = ty.GetMethod(nameof(ToString), new[] { typeof(string) })) != null)
+				return (string)mi.Invoke(value, new object[] { fmt });
+
+			return value.ToString();
 		}
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
 		{
-			throw new NotImplementedException($"MarkupExtension '{nameof(WithUnits)}' cannot convert any types back to '{targetType.Name}'");
+			throw new NotImplementedException($"MarkupExtension '{nameof(StringFormat)}' cannot convert any types back to '{targetType.Name}'");
 		}
 		public override object ProvideValue(IServiceProvider serviceProvider)
 		{
@@ -80,37 +95,72 @@ namespace Rylogic.Gui.WPF.Converters
 		}
 	}
 
-	/// <summary>Display a Unit'T value as a string without units. 'parameter' is the format string</summary>
-	public class WithoutUnits :MarkupExtension, IValueConverter
-	{
-		public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-		{
-			if (value == null)
-				return null;
 
-			// The parameter is the format string
-			var fmt = (string)parameter ?? string.Empty;
+	///// <summary>Display a Unit'T value as a string with units. 'parameter' is the format string</summary>
+	//public class WithUnits : MarkupExtension, IValueConverter
+	//{
+	//	public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+	//	{
+	//		if (value == null)
+	//			return null;
 
-			// If 'value' is not an instance of 'Unit<>' just convert to string
-			var ty = value.GetType();
-			if (!ty.IsGenericType || ty.GetGenericTypeDefinition() != typeof(Unit<>))
-				return value.ToString();
+	//		// The parameter is the format string
+	//		var fmt = (string)parameter ?? string.Empty;
 
-			// Find the method 'ToString(string fmt, bool include_units)'
-			var to_string = ty.GetMethod(nameof(ToString), new[] { typeof(string), typeof(bool) });
-			if (to_string == null)
-				return value.ToString();
+	//		// If 'value' is not an instance of 'Unit<>' just convert to string
+	//		var ty = value.GetType();
+	//		if (!ty.IsGenericType || ty.GetGenericTypeDefinition() != typeof(Unit<>))
+	//			return value.ToString();
 
-			// Convert to string with units
-			return (string)to_string.Invoke(value, new object[] { fmt, false });
-		}
-		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-		{
-			throw new NotImplementedException($"MarkupExtension '{nameof(WithUnits)}' cannot convert any types back to '{targetType.Name}'");
-		}
-		public override object ProvideValue(IServiceProvider serviceProvider)
-		{
-			return this;
-		}
-	}
+	//		// Find the method 'ToString(string fmt, bool include_units)'
+	//		var to_string = ty.GetMethod(nameof(ToString), new[] { typeof(string), typeof(bool) });
+	//		if (to_string == null)
+	//			return value.ToString();
+
+	//		// Convert to string with units
+	//		return (string)to_string.Invoke(value, new object[] { fmt, true });
+	//	}
+	//	public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+	//	{
+	//		throw new NotImplementedException($"MarkupExtension '{nameof(WithUnits)}' cannot convert any types back to '{targetType.Name}'");
+	//	}
+	//	public override object ProvideValue(IServiceProvider serviceProvider)
+	//	{
+	//		return this;
+	//	}
+	//}
+
+	///// <summary>Display a Unit'T value as a string without units. 'parameter' is the format string</summary>
+	//public class WithoutUnits :MarkupExtension, IValueConverter
+	//{
+	//	public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+	//	{
+	//		if (value == null)
+	//			return null;
+
+	//		// The parameter is the format string
+	//		var fmt = (string)parameter ?? string.Empty;
+
+	//		// If 'value' is not an instance of 'Unit<>' just convert to string
+	//		var ty = value.GetType();
+	//		if (!ty.IsGenericType || ty.GetGenericTypeDefinition() != typeof(Unit<>))
+	//			return value.ToString();
+
+	//		// Find the method 'ToString(string fmt, bool include_units)'
+	//		var to_string = ty.GetMethod(nameof(ToString), new[] { typeof(string), typeof(bool) });
+	//		if (to_string == null)
+	//			return value.ToString();
+
+	//		// Convert to string with units
+	//		return (string)to_string.Invoke(value, new object[] { fmt, false });
+	//	}
+	//	public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+	//	{
+	//		throw new NotImplementedException($"MarkupExtension '{nameof(WithUnits)}' cannot convert any types back to '{targetType.Name}'");
+	//	}
+	//	public override object ProvideValue(IServiceProvider serviceProvider)
+	//	{
+	//		return this;
+	//	}
+	//}
 }

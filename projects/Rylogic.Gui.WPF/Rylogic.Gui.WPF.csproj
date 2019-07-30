@@ -80,6 +80,7 @@
 		<ProjectReference Include="..\Rylogic.View3d\Rylogic.View3d.csproj" />
 	</ItemGroup>
 	<ItemGroup>
+		<Reference Include="Microsoft.CSharp" />
 		<Reference Include="PresentationCore" />
 		<Reference Include="PresentationFramework" />
 		<Reference Include="WindowsBase" />

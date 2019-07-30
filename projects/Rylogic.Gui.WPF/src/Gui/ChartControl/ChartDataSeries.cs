@@ -93,6 +93,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Cause all graphics models to be recreated</summary>
 		public void FlushCachedGraphics()
 		{
+			Invalidate();
 			Cache.Invalidate();
 			m_range_x = RangeF.Invalid;
 		}
@@ -100,6 +101,7 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Cause graphics model that intersect 'x_range' to be recreated</summary>
 		public void FlushCachedGraphics(RangeF x_range)
 		{
+			Invalidate();
 			Cache.Invalidate(x_range);
 			if (m_range_x != RangeF.Invalid)
 				m_range_x.Encompass(x_range);
@@ -338,7 +340,8 @@ namespace Rylogic.Gui.WPF
 			// Create the vertex/index data
 			int vidx = 0, iidx = 0, nidx = 0;
 			var col = Options.Colour;
-			var width = Options.BarWidth;
+			var lwidth = (0.0 - Options.BarHorizontalAlignment) * Options.BarWidth;
+			var rwidth = (1.0 - Options.BarHorizontalAlignment) * Options.BarWidth;
 			var x_range = RangeF.Invalid;
 			for (int i = 0; i != n; ++i)
 			{
@@ -349,10 +352,10 @@ namespace Rylogic.Gui.WPF
 				var pt_r = j + 1 != m_data.Count ? m_data[j + 1] : null;
 
 				// Get the distance to the left and right of 'pt.x'
-				var l = pt_l != null ? 0.5f * width * (pt.xf - pt_l.xf) : 0f;
-				var r = pt_r != null ? 0.5f * width * (pt_r.xf - pt.xf) : 0f;
-				if (l == 0f) l = r;
-				if (r == 0f) r = l;
+				var l = pt_l != null ? lwidth * (pt_l.xf - pt.xf) : 0;
+				var r = pt_r != null ? rwidth * (pt_r.xf - pt.xf) : 0;
+				if (j == 0 && j + 1 != m_data.Count) l = -lwidth * (pt_r.xf - pt.xf);
+				if (j + 1 == m_data.Count && j != 0) r = -rwidth * (pt_l.xf - pt.xf);
 
 				var v = vidx;
 				m_vbuf[vidx++] = new View3d.Vertex(new v4((float)(pt.xf + r), (float)(pt.yf >= 0f ? pt.yf : 0f), 0f, 1f), col);
@@ -880,7 +883,8 @@ namespace Rylogic.Gui.WPF
 				PointSize = 10f;
 				LineWidth = 5f;
 				PointsOnLinePlot = true;
-				BarWidth = 0.8f;
+				BarWidth = 0.8;
+				BarHorizontalAlignment = 0.5;
 				LinesOnBarPlot = true;
 				//Visible        = true;
 				//DrawData       = true;
@@ -909,6 +913,7 @@ namespace Rylogic.Gui.WPF
 				LineWidth = rhs.LineWidth;
 				PointsOnLinePlot = rhs.PointsOnLinePlot;
 				BarWidth = rhs.BarWidth;
+				BarHorizontalAlignment = rhs.BarHorizontalAlignment;
 				LinesOnBarPlot = rhs.LinesOnBarPlot;
 			}
 
@@ -955,10 +960,17 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>The normalised bar width in bar plots</summary>
-			public float BarWidth
+			public double BarWidth
 			{
-				get => get<float>(nameof(BarWidth));
+				get => get<double>(nameof(BarWidth));
 				set => set(nameof(BarWidth), value);
+			}
+
+			/// <summary>The normalised alignment of the bar to the point. 0 = point is at the left edge, 0.5 = in the middle, 1.0 at the right edge</summary>
+			public double BarHorizontalAlignment
+			{
+				get => get<double>(nameof(BarHorizontalAlignment));
+				set => set(nameof(BarHorizontalAlignment), value);
 			}
 
 			/// <summary>True if line graphics should be drawn on the tops of bar plots</summary>

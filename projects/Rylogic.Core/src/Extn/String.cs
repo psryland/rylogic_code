@@ -12,6 +12,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Rylogic.Common;
+using Rylogic.Utility;
 
 namespace Rylogic.Extn
 {
@@ -407,6 +408,44 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Parse this string against 'regex'</summary>
+		public static P0 ConvertTo<P0>(this string str)
+		{
+			return Util.ConvertTo<P0>(str);
+		}
+		public static Tuple<P0,P1> ConvertTo<P0, P1>(this string str, char sep = ',')
+		{
+			var parts = str.Split(sep);
+			return Tuple.Create(
+				Util.ConvertTo<P0>(parts[0]),
+				Util.ConvertTo<P1>(parts[1]));
+		}
+		public static Tuple<P0,P1,P2> ConvertTo<P0,P1,P2>(this string str, char sep = ',')
+		{
+			var parts = str.Split(sep);
+			return Tuple.Create(
+				Util.ConvertTo<P0>(parts[0]),
+				Util.ConvertTo<P1>(parts[1]),
+				Util.ConvertTo<P2>(parts[2]));
+		}
+
+		/// <summary>Parse this string against 'regex'</summary>
+		public static bool TryConvertTo<P0>(this string str, out P0 p)
+		{
+			try { p = str.ConvertTo<P0>(); return true; }
+			catch { p = default; return false; }
+		}
+		public static bool TryConvertTo<P0, P1>(this string str, out Tuple<P0, P1> p, char sep = ',')
+		{
+			try { p = str.ConvertTo<P0, P1>(); return true; }
+			catch { p = default; return false; }
+		}
+		public static bool TryConvertTo<P0, P1, P2>(this string str, out Tuple<P0, P1, P2> p, char sep = ',')
+		{
+			try { p = str.ConvertTo<P0, P1, P2>(); return true; }
+			catch { p = default; return false; }
+		}
+
+		/// <summary>Parse this string against 'regex'</summary>
 		public static void Parse<P0>(this string str, string regex, out P0 p0)
 		{
 			var m = Regex.Match(str, regex);
@@ -445,7 +484,7 @@ namespace Rylogic.Extn
 			try { str.Parse(regex, out p0, out p1, out p2); return true; }
 			catch { p0 = default(P0); p1 = default(P1); p2 = default(P2); return false; }
 		}
-		
+
 		//public static string HaackFormat(this string format, object source)
 		//{
 		//    var formattedStrings = (from expression in SplitFormat(format) select expression.Eval(source)).ToArray();
@@ -502,29 +541,29 @@ namespace Rylogic.Extn
 		//    while (expStartIndex > -1);
 		//}
 
-  //static int IndexOfExpressionEnd(this string format, int startIndex)
-  //{
-  //  int endBraceIndex = format.IndexOf('}', startIndex);
-  //  if (endBraceIndex == -1) {
-  //    return endBraceIndex;
-  //  }
-  //  //start peeking ahead until there are no more braces...
-  //  // }}}}
-  //  int braceCount = 0;
-  //  for (int i = endBraceIndex + 1; i < format.Length; i++) {
-  //    if (format[i] == '}') {
-  //      braceCount++;
-  //    }
-  //    else {
-  //      break;
-  //    }
-  //  }
-  //  if (braceCount % 2 == 1) {
-  //    return IndexOfExpressionEnd(format, endBraceIndex + braceCount + 1);
-  //  }
+		//static int IndexOfExpressionEnd(this string format, int startIndex)
+		//{
+		//  int endBraceIndex = format.IndexOf('}', startIndex);
+		//  if (endBraceIndex == -1) {
+		//    return endBraceIndex;
+		//  }
+		//  //start peeking ahead until there are no more braces...
+		//  // }}}}
+		//  int braceCount = 0;
+		//  for (int i = endBraceIndex + 1; i < format.Length; i++) {
+		//    if (format[i] == '}') {
+		//      braceCount++;
+		//    }
+		//    else {
+		//      break;
+		//    }
+		//  }
+		//  if (braceCount % 2 == 1) {
+		//    return IndexOfExpressionEnd(format, endBraceIndex + braceCount + 1);
+		//  }
 
-  //  return endBraceIndex;
-  //}
+		//  return endBraceIndex;
+		//}
 	}
 
 	/// <summary>An interface for string-like objects (typically StringBuilder or System.String)</summary>
