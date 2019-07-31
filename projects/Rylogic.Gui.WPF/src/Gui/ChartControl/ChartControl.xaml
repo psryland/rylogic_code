@@ -165,6 +165,12 @@
 		ContextMenu="{StaticResource ChartCMenu}"
 		Stretch="Fill"
 		/>
+	<Canvas
+		Grid.Row="3"
+		Grid.Column="2"
+		x:Name="m_chart_overlay"
+		ClipToBounds="True"
+		/>
 
 	<!-- Show Value pop up -->
 	<Popup

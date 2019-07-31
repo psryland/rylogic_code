@@ -228,6 +228,9 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The view3d part of the chart</summary>
 		public ChartPanel Scene => m_chart_panel;
 
+		/// <summary>A WPF canvas that overlays the 3d part of the chart</summary>
+		public Canvas Overlay => m_chart_overlay;
+
 		/// <summary>View3d context reference</summary>
 		private View3d View3d
 		{

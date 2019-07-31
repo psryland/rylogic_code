@@ -76,7 +76,7 @@ namespace Rylogic.Gui.WPF.Converters
 			}
 
 			// Find the method 'ToString(int sd)'
-			if (fmt.TryConvertTo<int>(out var sd) && (mi = ty.GetMethod(nameof(ToString), new[] { typeof(int) })) != null)
+			if (int.TryParse(fmt, out var sd) && (mi = ty.GetMethod(nameof(ToString), new[] { typeof(int) })) != null)
 				return (string)mi.Invoke(value, new object[] { sd });
 
 			// Find the method 'ToString(string fmt)'

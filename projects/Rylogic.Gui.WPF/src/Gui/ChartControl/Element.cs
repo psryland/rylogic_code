@@ -99,6 +99,7 @@ namespace Rylogic.Gui.WPF
 				// Detach from the old chart
 				if (m_chart != null && update)
 				{
+					InvalidateChart();
 					m_chart.Elements.Remove(this);
 				}
 
@@ -110,10 +111,10 @@ namespace Rylogic.Gui.WPF
 				{
 					Debug.Assert(!m_chart.Elements.Contains(this), "Element already in the Chart's Elements collection");
 					m_chart.Elements.Add(this);
+					InvalidateChart();
 				}
 
 				Debug.Assert(CheckConsistency());
-				Invalidate();
 			}
 
 			/// <summary>Add or remove this element from 'chart'</summary>
