@@ -41,10 +41,11 @@
 			<ColumnDefinition Width="Auto"/>
 		</Grid.ColumnDefinitions>
 
-		<!-- Show Range -->
+		<!-- Show Range 
+			SelectedDate="{Binding Equity.Since}"
+		-->
 		<DatePicker
 			Grid.Column="0"
-			SelectedDate="{Binding Equity.Since}"
 			VerticalAlignment="Center"
 			BorderThickness="0"
 			Margin="2"

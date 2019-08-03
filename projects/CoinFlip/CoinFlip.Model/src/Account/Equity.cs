@@ -120,14 +120,18 @@ namespace CoinFlip
 					if (chg.SymbolIn != null)
 						amount += chg.AmountIn * rate_of[chg.SymbolIn];
 					if (chg.SymbolOut != null)
-						amount -= chg.AmountNett * rate_of[chg.SymbolOut];
+						amount -= chg.AmountOut * rate_of[chg.SymbolOut];
+					if (chg.SymbolComm != null)
+						amount += chg.AmountComm * rate_of[chg.SymbolComm];
 				}
 				else
 				{
 					if (chg.SymbolIn == coin.Symbol)
 						amount += chg.AmountIn * rate_of[chg.SymbolIn];
 					if (chg.SymbolOut == coin.Symbol)
-						amount -= chg.AmountNett * rate_of[chg.SymbolOut];
+						amount -= chg.AmountOut * rate_of[chg.SymbolOut];
+					if (chg.SymbolComm == coin.Symbol)
+						amount += chg.AmountComm * rate_of[chg.SymbolComm];
 				}
 
 				// Yield the balance change value
@@ -254,32 +258,35 @@ namespace CoinFlip
 			// - This type can also represent deposits and withdrawals.
 			//   A deposit has SymbolIn/AmountIn = null/0.
 			//   A withdrawal has SymbolOut/AmountOut = null/0.
-			public BalanceChange(DateTimeOffset time, string symbol_in = null, string symbol_out = null, double? amount_in = null, double? amount_out = null, double? amount_nett = null)
+			public BalanceChange(DateTimeOffset time, string symbol_in = null, string symbol_out = null, string symbol_commission = null, double? amount_in = null, double? amount_out = null, double? amount_commission = null)
 			{
 				Time = time;
 				SymbolIn = symbol_in;
 				SymbolOut = symbol_out;
+				SymbolComm = symbol_commission;
 				AmountIn = amount_in ?? 0;
 				AmountOut = amount_out ?? 0;
-				AmountNett = amount_nett ?? amount_out ?? 0;
+				AmountComm = amount_commission ?? 0;
 			}
 			public BalanceChange(OrderCompleted order)
 			{
 				Time = order.Created;
 				SymbolIn = order.CoinIn;
 				SymbolOut = order.CoinOut;
+				SymbolComm = order.CommissionCoin.Symbol;
 				AmountIn = order.AmountIn;
 				AmountOut = order.AmountOut;
-				AmountNett = order.AmountNett;
+				AmountComm = order.Commission;
 			}
 			public BalanceChange(Transfer transfer)
 			{
 				Time = transfer.Created;
 				SymbolIn = transfer.Type == ETransfer.Withdrawal ? transfer.Coin : null;
 				SymbolOut = transfer.Type == ETransfer.Deposit ? transfer.Coin : null;
+				SymbolComm = null;
 				AmountIn = transfer.Type == ETransfer.Withdrawal ? transfer.Amount : 0.0._(transfer.Coin);
 				AmountOut = transfer.Type == ETransfer.Deposit ? transfer.Amount : 0.0._(transfer.Coin);
-				AmountNett = AmountOut;
+				AmountComm = 0;
 			}
 
 			// The timestamp of this amount snapshot
@@ -291,14 +298,17 @@ namespace CoinFlip
 			/// <summary>The currency bought</summary>
 			public string SymbolOut { get; }
 
+			/// <summary>The currency that commission was charged in</summary>
+			public string SymbolComm { get; }
+
 			/// <summary>The amount sold</summary>
 			public Unit<double> AmountIn { get; }
 
 			/// <summary>The amount bought</summary>
 			public Unit<double> AmountOut { get; }
 
-			/// <summary>The amount bought after fees</summary>
-			public Unit<double> AmountNett { get; }
+			/// <summary>The amount charged in commission</summary>
+			public Unit<double> AmountComm { get; }
 		}
 		public class CoinBalanceInfo
 		{

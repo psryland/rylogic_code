@@ -15,9 +15,10 @@
 			OrderId = trade.OrderId;
 			Created = trade.Created.Ticks;
 			Updated = trade.Updated.Ticks;
-			PriceQ2B = trade.PriceQ2B;
-			AmountBase = trade.AmountBase;
-			CommissionQuote = trade.CommissionQuote;
+			AmountIn = trade.AmountIn;
+			AmountOut = trade.AmountOut;
+			Commission = trade.Commission;
+			CommissionCoin = trade.CommissionCoin.Symbol;
 		}
 
 		/// <summary>The trade id</summary>
@@ -32,13 +33,16 @@
 		/// <summary>When this trade was last updated from the server</summary>
 		public long Updated { get; set; }
 
-		/// <summary>The price that the trade occurred at</summary>
-		public double PriceQ2B { get; set; }
+		/// <summary>The amount sold</summary>
+		public double AmountIn { get; set; }
 
-		/// <summary>The amount traded (in base currency)</summary>
-		public double AmountBase { get; set; }
+		/// <summary>The amount received</summary>
+		public double AmountOut { get; set; }
 
 		/// <summary>The amount charged as commission on the trade</summary>
-		public double CommissionQuote { get; set; }
+		public double Commission { get; set; }
+
+		/// <summary>The currency that the commission was charged in</summary>
+		public string CommissionCoin { get; set; }
 	}
 }

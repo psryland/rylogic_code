@@ -80,7 +80,17 @@ namespace CoinFlip
 			var price = (Unit<double>?)price_q2b;
 			return
 				tt == ETradeType.B2Q ? (amount_in ?? (amount_out / price) ?? throw new Exception("One of 'amount_in' or 'amount_out' must be given")) :
-				tt == ETradeType.Q2B ? ((amount_in / price) ?? amount_out ?? throw new Exception("One of 'amount_in' or 'amount_out' must be given")) :
+				tt == ETradeType.Q2B ? (amount_out ?? (amount_in / price) ?? throw new Exception("One of 'amount_in' or 'amount_out' must be given")) :
+				throw new Exception("Unknown trade type");
+		}
+
+		/// <summary>Return the 'quote' amount for a trade in this trade direction</summary>
+		public static Unit<double> AmountQuote(this ETradeType tt, Unit<double> price_q2b, Unit<double>? amount_in = null, Unit<double>? amount_out = null)
+		{
+			var price = (Unit<double>?)price_q2b;
+			return
+				tt == ETradeType.B2Q ? (amount_out ?? (amount_in * price) ?? throw new Exception("One of 'amount_in' or 'amount_out' must be given")) :
+				tt == ETradeType.Q2B ? (amount_in ?? (amount_out * price) ?? throw new Exception("One of 'amount_in' or 'amount_out' must be given")) :
 				throw new Exception("Unknown trade type");
 		}
 

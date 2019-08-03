@@ -92,12 +92,6 @@
 				Width="1*"
 				/>
 			<DataGridTextColumn
-				Header="Amount Nett"
-				Binding="{Binding AmountNett, Converter={conv:StringFormat}, ConverterParameter='8, true', Mode=OneWay}"
-				ElementStyle="{StaticResource RightAlignedTextColumn}"
-				Width="1*"
-				/>
-			<DataGridTextColumn
 				Header="Commission"
 				Binding="{Binding Commission, Converter={conv:StringFormat}, ConverterParameter='8, true', Mode=OneWay}"
 				ElementStyle="{StaticResource RightAlignedTextColumn}"

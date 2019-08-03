@@ -223,13 +223,13 @@ namespace Poloniex.API
 		}
 
 		/// <summary>Create an order to buy/sell. Returns a unique order ID</summary>
-		public async Task<TradeResult> SubmitTrade(CurrencyPair pair, EOrderSide type, double price_per_coin, double volume_base, CancellationToken? cancel = null)
+		public async Task<TradeResult> SubmitTrade(CurrencyPair pair, EOrderSide type, double price_q2b, double amount_base, CancellationToken? cancel = null)
 		{
 			var jtok = await PostData(Method.Account, Conv.ToString(type), cancel, new Params
 			{
 				{ "currencyPair", pair.Id },
-				{ "rate", price_per_coin },
-				{ "amount", volume_base },
+				{ "rate", price_q2b },
+				{ "amount", amount_base },
 			});
 
 			return ParseJsonReply<TradeResult>(jtok);

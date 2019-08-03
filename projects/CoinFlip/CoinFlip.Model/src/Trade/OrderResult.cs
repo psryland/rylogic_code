@@ -41,25 +41,32 @@ namespace CoinFlip
 		/// <summary>Trades that occurred immediately to fill or partially fill the order</summary>
 		public class Fill
 		{
-			public Fill(long trade_id, Unit<double> price, Unit<double> amount, Unit<double> commission)
+			public Fill(long trade_id, Unit<double> amount_in, Unit<double> amount_out, Unit<double> commission, Coin commission_coin, float sig_change)
 			{
 				TradeId = trade_id;
-				Price = price;
-				Amount = amount;
+				AmountIn = amount_in;
+				AmountOut = amount_out;
 				Commission = commission;
+				CommissionCoin = commission_coin;
 			}
 
 			/// <summary>The exchange assigned Id for the trade</summary>
 			public long TradeId { get; }
 
-			/// <summary>The price that the trade was filled at</summary>
-			public Unit<double> Price { get; }
+			/// <summary>The amount that was sold in this trade</summary>
+			public Unit<double> AmountIn { get; }
 
-			/// <summary>The amount that was traded in this trade</summary>
-			public Unit<double> Amount { get; }
+			/// <summary>The amount that was bought in this trade (excluding commission)</summary>
+			public Unit<double> AmountOut { get; }
 
-			/// <summary>The amount of commission charged on the trade</summary>
+			/// <summary>The amount of commission charged on the trade (in CommissionCurrency)</summary>
 			public Unit<double> Commission { get; }
+
+			/// <summary>The currency that the commission was charged in</summary>
+			public Coin CommissionCoin { get; }
+
+			/// <summary>The price that the trade was filled at</summary>
+			public Unit<double> PriceQ2B(ETradeType tt) => tt.PriceQ2B(AmountOut / AmountIn);
 		}
 	}
 }

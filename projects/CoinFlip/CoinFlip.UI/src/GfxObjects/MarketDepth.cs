@@ -107,7 +107,7 @@ namespace CoinFlip.UI.GfxObjects
 		}
 
 		/// <summary>Add the graphics objects to the scene</summary>
-		public void BuildScene(ChartControl chart, View3d.Window window, Canvas overlay)
+		public void BuildScene(ChartControl chart)
 		{
 			if (Gfx != null)
 			{
@@ -115,7 +115,7 @@ namespace CoinFlip.UI.GfxObjects
 				// Position the depth info at the far right of the chart
 				var x_scale = (float)(0.25 * chart.XAxis.Span / chart.YAxis.Span);
 				Gfx.O2P = m4x4.Translation((float)chart.XAxis.Max, 0f, CandleChart.ZOrder.Indicators) * m4x4.Scale(x_scale, 1f, 1f, v4.Origin);
-				window.AddObject(Gfx);
+				chart.Window.AddObject(Gfx);
 			}
 
 			// Add the scale indicator
@@ -143,12 +143,12 @@ namespace CoinFlip.UI.GfxObjects
 			var price_range = RangeF.Invalid;
 			foreach (var order in b2q)
 			{
-				price_range.Encompass(order.Price);
+				price_range.Encompass(order.PriceQ2B);
 				b2q_volume += order.AmountBase;
 			}
 			foreach (var order in q2b)
 			{
-				price_range.Encompass(order.Price);
+				price_range.Encompass(order.PriceQ2B);
 				q2b_volume += order.AmountBase;
 			}
 
@@ -185,8 +185,8 @@ namespace CoinFlip.UI.GfxObjects
 			for (int i = 0; i != count_b2q; ++i)
 			{
 				volume += b2q[i].AmountBase;
-				var y1 = (float)b2q[i].Price;
-				var y0 = i + 1 != count_b2q ? (float)b2q[i + 1].Price : y1;
+				var y1 = (float)b2q[i].PriceQ2B;
+				var y0 = i + 1 != count_b2q ? (float)b2q[i + 1].PriceQ2B : y1;
 				var dx = (float)(width_scale * volume);
 				var v = vert;
 
@@ -208,8 +208,8 @@ namespace CoinFlip.UI.GfxObjects
 			for (int i = 0; i != count_q2b; ++i)
 			{
 				volume += q2b[i].AmountBase;
-				var y0 = (float)q2b[i].Price;
-				var y1 = i + 1 != count_q2b ? (float)q2b[i + 1].Price : y0;
+				var y0 = (float)q2b[i].PriceQ2B;
+				var y1 = i + 1 != count_q2b ? (float)q2b[i + 1].PriceQ2B : y0;
 				var dx = (float)(width_scale * volume);
 				var v = vert;
 

@@ -114,6 +114,32 @@ namespace CoinFlip
 			throw new Exception("Unknown trade type string");
 		}
 
+		/// <summary>Convert a Binance order type to EPlaceOrderType</summary>
+		public static EOrderType OrderType(this global::Binance.API.EOrderType order_type)
+		{
+			switch (order_type)
+			{
+			default: throw new Exception("Unknown order type string");
+			case global::Binance.API.EOrderType.LIMIT: return EOrderType.Limit;
+			case global::Binance.API.EOrderType.MARKET: return EOrderType.Market;
+			case global::Binance.API.EOrderType.STOP_LOSS: return EOrderType.Limit;
+			case global::Binance.API.EOrderType.STOP_LOSS_LIMIT: return EOrderType.Limit;
+			case global::Binance.API.EOrderType.TAKE_PROFIT: return EOrderType.Stop;
+			case global::Binance.API.EOrderType.TAKE_PROFIT_LIMIT: return EOrderType.Stop;
+			case global::Binance.API.EOrderType.LIMIT_MAKER: return EOrderType.Limit;
+			}
+		}
+		public static global::Binance.API.EOrderType ToBinanceOT(this EOrderType order_type)
+		{
+			switch (order_type)
+			{
+			default: throw new Exception("Unknown trade type");
+			case EOrderType.Market: return global::Binance.API.EOrderType.MARKET;
+			case EOrderType.Limit: return global::Binance.API.EOrderType.LIMIT;
+			case EOrderType.Stop: return global::Binance.API.EOrderType.TAKE_PROFIT;
+			}
+		}
+
 		/// <summary>Convert a Binance trade type to ETradeType</summary>
 		public static ETradeType TradeType(this global::Binance.API.EOrderSide order_side)
 		{
@@ -155,7 +181,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Convert a Bittrex trade type to ETradeType</summary>
-		public static ETradeType TradeType(global::Bittrex.API.EOrderSide order_type)
+		public static ETradeType TradeType(this global::Bittrex.API.EOrderSide order_type)
 		{
 			switch (order_type)
 			{

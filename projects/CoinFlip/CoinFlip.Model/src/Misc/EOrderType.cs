@@ -2,7 +2,7 @@
 
 namespace CoinFlip
 {
-	public enum EPlaceOrderType
+	public enum EOrderType
 	{
 		/// <summary>Place the order at the current price, whatever it is</summary>
 		[Desc("Market Price")] Market,

@@ -32,22 +32,19 @@ namespace Poloniex.API.DomainObjects
 
 			/// <summary>A Buy or Sell order</summary>
 			public EOrderSide Type { get; private set; }
-			[JsonProperty("type")] private string TypeInternal
-			{
-				set { Type = Conv.ToOrderType(value); }
-			}
+			[JsonProperty("type")] private string TypeInternal { set => Type = Conv.ToOrderType(value); }
 
 			/// <summary>The trade price (in quote currency)</summary>
 			[JsonProperty("rate")]
-			public double Price { get; internal set; }
+			public double PriceQ2B { get; internal set; }
 
 			/// <summary>The traded volume (in base currency)</summary>
 			[JsonProperty("amount")]
-			public double VolumeBase { get; private set; }
+			public double AmountBase { get; private set; }
 
 			/// <summary></summary>
 			[JsonProperty("commission")] // TODO:
-			public double Commission { get; private set; }
+			public double CommissionQuote { get; private set; }
 
 			/// <summary>The value of the trade (equal to Price * VolumeBase) (in quote currency)</summary>
 			[JsonProperty("total")]

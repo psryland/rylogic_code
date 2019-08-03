@@ -40,8 +40,6 @@ namespace CoinFlip.UI
 			AddCoin = Command.Create(this, AddCoinInternal);
 			RemoveCoin = Command.Create(this, RemoveCoinInternal);
 			SetBackTestingBalances = Command.Create(this, SetBackTestingBalancesInternal);
-			SetFakeCash = Command.Create(this, SetFakeCashInternal);
-			ResetFakeCash = Command.Create(this, ResetFakeCashInternal);
 
 			DataContext = this;
 		}
@@ -181,43 +179,7 @@ namespace CoinFlip.UI
 			var dlg = new BackTestingConfigUI(Window.GetWindow(this), Model);
 			if (dlg.ShowDialog() == true)
 			{
-			}
-		}
-
-		/// <summary>Add/Remove fake funds for testing</summary>
-		public Command SetFakeCash { get; }
-		private void SetFakeCashInternal()
-		{
-			if (Current == null) return;
-			var dlg = new PromptUI(Window.GetWindow(this))
-			{
-				Title = "Add/Remove Fake Cash!",
-				Prompt = "Set the amount of fake funds on each exchange",
-				Value = "0",
-				ValueAlignment = HorizontalAlignment.Right,
-				Units = Current.Symbol,
-				Validate = x => !double.TryParse(x, out var v) || v < 0 ? new ValidationResult(false, "Value must be a positive amount") : ValidationResult.ValidResult,
-			};
-			if (dlg.ShowDialog() == true)
-			{
-				var amount = double.Parse(dlg.Value);
-				foreach (var exch in Model.TradingExchanges)
-				{
-					var coin = exch.Coins[Current.Symbol];
-					exch.Balance[coin].FakeCash = amount._(coin);
-				}
-			}
-		}
-
-		/// <summary>Clear fake funds</summary>
-		public Command ResetFakeCash { get; }
-		private void ResetFakeCashInternal()
-		{
-			if (Current == null) return;
-			foreach (var exch in Model.TradingExchanges)
-			{
-				var coin = exch.Coins[Current.Symbol];
-				exch.Balance[coin].FakeCash = 0.0._(coin);
+				Model.Simulation.Reset();
 			}
 		}
 

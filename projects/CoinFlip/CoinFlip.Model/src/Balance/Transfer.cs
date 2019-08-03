@@ -11,9 +11,9 @@ namespace CoinFlip
 		// Notes:
 		//  - A transfer of funds on or off an exchange (i.e. deposit or withdrawal)
 
-		public Transfer(string id, ETransfer type, Coin coin, Unit<double> amount, DateTimeOffset created, EStatus status)
+		public Transfer(string transaction_id, ETransfer type, Coin coin, Unit<double> amount, DateTimeOffset created, EStatus status)
 		{
-			TransactionId = id;
+			TransactionId = transaction_id;
 			Type          = type;
 			Coin          = coin;
 			Amount        = amount;

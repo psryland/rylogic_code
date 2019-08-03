@@ -312,10 +312,11 @@ namespace CoinFlip
 
 								// Update the balances
 								const double BalanceUpdatePeriodMS = 1000;
-								if (!ExchSettings.PublicAPIOnly && (BalanceUpdateRequired || (Model.UtcNow - Balance.LastUpdated).TotalMilliseconds > BalanceUpdatePeriodMS))
+								if (BalanceUpdateRequired || (Model.UtcNow - Balance.LastUpdated).TotalMilliseconds > BalanceUpdatePeriodMS)
 								{
 									BalanceUpdateRequired = false;
-									await UpdateBalances();
+									if (!ExchSettings.PublicAPIOnly)
+										await UpdateBalances();
 								}
 
 								// Update market data
@@ -328,18 +329,20 @@ namespace CoinFlip
 
 								// Update orders/history
 								const int OrdersUpdatePeriodMS = 1000;
-								if (!ExchSettings.PublicAPIOnly && (OrdersUpdateRequired || (Model.UtcNow - Orders.LastUpdated).TotalMilliseconds > OrdersUpdatePeriodMS))
+								if (OrdersUpdateRequired || (Model.UtcNow - Orders.LastUpdated).TotalMilliseconds > OrdersUpdatePeriodMS)
 								{
 									OrdersUpdateRequired = false;
-									await UpdateOrdersAndHistory();
+									if (!ExchSettings.PublicAPIOnly)
+										await UpdateOrdersAndHistory();
 								}
 
 								// Update funds transfers
 								const int TransfersUpdatePeriodMS = 60000;
-								if (!ExchSettings.PublicAPIOnly && (TransfersUpdateRequired || (Model.UtcNow - Transfers.LastUpdated).TotalMilliseconds > TransfersUpdatePeriodMS))
+								if (TransfersUpdateRequired || (Model.UtcNow - Transfers.LastUpdated).TotalMilliseconds > TransfersUpdatePeriodMS)
 								{
 									TransfersUpdateRequired = false;
-									await UpdateTransfers();
+									if (!ExchSettings.PublicAPIOnly)
+										await UpdateTransfers();
 								}
 							}
 							catch (OperationCanceledException) { break; }
@@ -647,99 +650,75 @@ namespace CoinFlip
 		protected abstract Task<bool> CancelOrderInternal(TradePair pair, long order_id, CancellationToken cancel);
 
 		/// <summary>Place an order on the exchange to buy/sell 'amount' (currency depends on 'tt')</summary>
-		public async Task<OrderResult> CreateOrder(string fund_id, TradePair pair, ETradeType tt, EPlaceOrderType ot, Unit<double> amount_, Unit<double> price_, CancellationToken cancel, string creator_name)
+		public async Task<OrderResult> CreateOrder(Fund fund, TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, CancellationToken cancel, string creator_name, float sig_change)
 		{
 			using (Scope.Create(() => ++m_in_create_order, () => --m_in_create_order))
 			{
+				// Sanity checks
 				if (m_in_create_order != 1)
 					throw new Exception("Re-entrant call to CreateOrder");
-
-				// Sanity checks
+				if (!Model.AllowTrades && !Model.BackTesting)
+					throw new Exception($"Cannot place orders when Trading is disabled");
 				if (pair.Exchange != this)
-				{
 					throw new Exception($"Pair {pair} is not provided by this exchange");
-				}
-				if (tt == ETradeType.B2Q)
-				{
-					if (amount_ <= 0.0._(pair.Base))
-						throw new Exception($"Invalid trade amount: {amount_}");
-					if (price_ <= 0.0._(pair.Quote) / 1.0._(pair.Base))
-						throw new Exception($"Invalid exchange rate: {price_}");
-					if (amount_ > Balance[pair.Base][fund_id].Available)
-						throw new Exception($"Order amount ({amount_}) is greater than the current balance: {Balance[pair.Base][fund_id].Available}");
-				}
-				if (tt == ETradeType.Q2B)
-				{
-					if (amount_ <= 0.0._(pair.Quote))
-						throw new Exception($"Invalid trade amount: {amount_}");
-					if (price_ <= 0.0._(pair.Base) / 1.0._(pair.Quote))
-						throw new Exception($"Invalid exchange rate: {price_}");
-					if (amount_ > Balance[pair.Quote][fund_id].Available)
-						throw new Exception($"Order amount ({amount_}) is greater than the current balance: {Balance[pair.Quote][fund_id].Available}");
-				}
+				if (amount_in <= 0.0._(tt.CoinIn(pair)))
+					throw new Exception($"Invalid trade 'in' amount: {amount_in}");
+				if (amount_out <= 0.0._(tt.CoinOut(pair)))
+					throw new Exception($"Invalid trade 'out' amount: {amount_out}");
+				if (amount_in > fund[tt.CoinIn(pair)].Available)
+					throw new Exception($"Order amount ({amount_in}) is greater than the current available balance: {fund[tt.CoinIn(pair)].Available}");
 
 				// Convert the amount to base currency and the price to quote/base
-				var amount = tt.AmountIn(amount_, price_);
-				var price = tt.PriceQ2B(price_);
+				//var amount = tt.AmountIn(amount_, price_);
+
+				// Get the creation time of the order
 				var now = Model.UtcNow;
 
 				// Put a hold on the balance we're about to trade to prevent a race condition
 				// with other trades being placed while we wait for this one to go through.
-				// Only reduce balances, don't assume the trade has completed.
-				// If we're live trading, remove the balance until the next balance update is received.
-				// If not live trading, hold the balance until the fake order is removed (hold is updated below)
-				var bal = tt.CoinIn(pair).Balances[fund_id];
-				var hold = tt.AmountIn(amount, price);
-				var hold_id = bal.Hold(hold);
-
-				// Fake positions when not back testing and not live trading.
-				// Back testing looks like live trading because of the emulated exchanges.
-				var fake = Model.AllowTrades == false && Model.BackTesting == false;
+				// Don't need to account for the fee in the hold because the fee is taken from
+				// the received amount (usually).
+				var bal = fund[tt.CoinIn(pair)];
+				var hold_amount = amount_in;
+				var hold_id = bal.Hold(hold_amount);
 
 				// Make the trade
 				// This can have the following results:
-				// 1) the entire trade is added to the order book for the pair -> a single order number is returned
-				// 2) the entire trade can be met by existing orders in the order book -> a collection of trade IDs is returned
+				// 1) the entire trade is added to the order book for the pair -> a single order number is returned.
+				// 2) the entire trade can be met by existing orders in the order book -> a collection of trade IDs is returned.
 				// 3) some of the trade can be met by existing orders -> a single order number and a collection of trade IDs are returned.
 				var result =
-					Sim != null ? Sim.CreateOrderInternal(pair, tt, ot, amount, price) :
-					Model.AllowTrades ? await CreateOrderInternal(pair, tt, ot, amount, price, cancel) :
-					new OrderResult(pair, ++m_fake_order_number, filled: false);
+					Sim != null ? Sim.CreateOrderInternal(pair, tt, ot, amount_in, amount_out, sig_change) :
+					Model.AllowTrades ? await CreateOrderInternal(pair, tt, ot, amount_in, amount_out, cancel, sig_change) :
+					throw new Exception("Cannot create order, trading not enabled");
 
 				// Log the event
-				Model.Log.Write(ELogLevel.Info, $"{Name}: (id={result.OrderId}) {amount_.ToString("F8", true)} → {(amount_ * price_).ToString("F8", true)} @ {price.ToString("F8", true)}");
+				var price_q2b = ot == EOrderType.Market ? pair.SpotPrice[tt].Value : tt.PriceQ2B(amount_out / amount_in);
+				Model.Log.Write(ELogLevel.Info, $"{Name}: (id={result.OrderId}) {amount_in.ToString(8, true)} → {amount_out.ToString(8, true)} @ {price_q2b.ToString(8, true)}");
 
 				// The order may have been completed or partially filled. Add the filled orders to the trade history.
 				foreach (var fill in result.Trades)
 				{
-					// At this stage we don't know how the amount is distributed across the individual trades
-					var order_completed = History.GetOrAdd(result.OrderId, x => new OrderCompleted(x, fund_id, tt, pair));
-					order_completed.Trades[fill.TradeId] = new TradeCompleted(order_completed, fill.TradeId, fill.Price, fill.Amount, fill.Commission, now, now);
+					var order_completed = History.GetOrAdd(result.OrderId, x => new OrderCompleted(x, fund, pair, tt));
+					order_completed.Trades[fill.TradeId] = new TradeCompleted(order_completed, fill.TradeId, fill.AmountIn, fill.AmountOut, fill.Commission, fill.CommissionCoin, now, now);
 				}
 
-				// Add the order to the Orders collection so that there is no race condition
-				// between placing an order and checking 'Orders' for the existence of the order just placed.
+				// Add the order to the Orders collection so that there is no race condition between
+				// placing an order and checking 'Orders' for the existence of the order just placed.
 				if (!result.Filled)
 				{
 					// Save the extra details about the live order.
-					ExchSettings.OrderDetails.Add(new OrderDetails(result.OrderId, fund_id, creator_name));
+					ExchSettings.OrderDetails.Add(new OrderDetails(result.OrderId, fund, creator_name));
 					ExchSettings.Save();
 
 					// Add a 'Position' to the collection, this will be overwritten on the next update.
-					var order = new Order(result.OrderId, fund_id, tt, pair, price, amount, amount, now, now, fake: fake);
+					var filled_in = result.Trades.Sum(x => x.AmountIn)._(tt.CoinIn(pair));
+					var order = new Order(result.OrderId, fund, pair, ot, tt, amount_in, amount_out, amount_in - filled_in, now, now);
 					Orders.AddOrUpdate(order);
 
 					// The order is on the exchange, so update the held amount to be held on the exchange
-					if (fake)
-					{
-						// Update the hold with a 'StillNeeded' function
-						bal.Hold(hold_id, b => Orders[result.OrderId] != null);
-					}
-					else
-					{
-						bal.Release(hold_id);
-						bal.HeldOnExch = hold;
-					}
+					bal.Release(hold_id);
+					bal.HeldOnExch = hold_amount;
 				}
 				else
 				{
@@ -751,7 +730,8 @@ namespace CoinFlip
 
 				// Remove entries from the order book that this order should have filled.
 				// This will be overwritten with the next update.
-				pair.OrderBook(tt).Consume(pair, ot, price, amount, out var remaining);
+				var amount_base = tt.AmountBase(price_q2b, amount_in, amount_out);
+				pair.MarketDepth.Consume(pair, tt, ot, price_q2b, amount_base, out var _);
 
 				// Trigger updates
 				MarketDataUpdateRequired = true;
@@ -760,8 +740,7 @@ namespace CoinFlip
 				return result;
 			}
 		}
-		protected abstract Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EPlaceOrderType ot, Unit<double> volume_base, Unit<double> price, CancellationToken cancel);
-		private long m_fake_order_number;
+		protected abstract Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, CancellationToken cancel, float sig_change);
 		private int m_in_create_order;
 
 		/// <summary>Enumerate all candle data and time frames provided by this exchange</summary>
@@ -884,9 +863,10 @@ namespace CoinFlip
 				$"  [{nameof(TradeRecord.OrderId)}] integer,\n" +
 				$"  [{nameof(TradeRecord.Created)}] integer,\n" +
 				$"  [{nameof(TradeRecord.Updated)}] integer,\n" +
-				$"  [{nameof(TradeRecord.PriceQ2B)}] real,\n" +
-				$"  [{nameof(TradeRecord.AmountBase)}] real,\n" +
-				$"  [{nameof(TradeRecord.CommissionQuote)}] real,\n" +
+				$"  [{nameof(TradeRecord.AmountIn)}] real,\n" +
+				$"  [{nameof(TradeRecord.AmountOut)}] real,\n" +
+				$"  [{nameof(TradeRecord.Commission)}] real,\n" +
+				$"  [{nameof(TradeRecord.CommissionCoin)}] text,\n" +
 				$"\n" +
 				$"  foreign key ({nameof(TradeRecord.OrderId)}) references {Table.OrderComplete}([{nameof(OrderRecord.OrderId)}])\n" +
 				$"     on update cascade\n" +
@@ -1004,11 +984,12 @@ namespace CoinFlip
 				$"  [{nameof(TradeRecord.OrderId)}],\n" +
 				$"  [{nameof(TradeRecord.Created)}],\n" +
 				$"  [{nameof(TradeRecord.Updated)}],\n" +
-				$"  [{nameof(TradeRecord.PriceQ2B)}],\n" +
-				$"  [{nameof(TradeRecord.AmountBase)}],\n" +
-				$"  [{nameof(TradeRecord.CommissionQuote)}]\n" +
+				$"  [{nameof(TradeRecord.AmountIn)}],\n" +
+				$"  [{nameof(TradeRecord.AmountOut)}],\n" +
+				$"  [{nameof(TradeRecord.Commission)}],\n" +
+				$"  [{nameof(TradeRecord.CommissionCoin)}]\n" +
 				$") values (\n" +
-				$"  @trade_id, @order_id, @created, @updated, @price_q2b, @amount_base, @commission_quote\n" +
+				$"  @trade_id, @order_id, @created, @updated, @amount_in, @amount_out, @commission, @commission_coin\n" +
 				$")",
 				new
 				{
@@ -1016,30 +997,34 @@ namespace CoinFlip
 					order_id = rec.OrderId,
 					created = rec.Created,
 					updated = rec.Updated,
-					price_q2b = rec.PriceQ2B,
-					amount_base = rec.AmountBase,
-					commission_quote = rec.CommissionQuote,
+					amount_in = rec.AmountIn,
+					amount_out = rec.AmountOut,
+					commission = rec.Commission,
+					commission_coin = rec.CommissionCoin,
 				},
 				transaction); 
 		}
 
 		/// <summary>Return the fund id associated with an order id (from the order details)</summary>
-		public string OrderIdToFundId(long order_id)
+		public Fund OrderIdToFund(long order_id)
 		{
 			var details = ExchSettings.OrderDetails.FirstOrDefault(x => x.OrderId == order_id);
-			return details?.FundId ?? Fund.Main;
+			return new Fund(details?.FundId ?? Fund.Main);
 		}
 
 		/// <summary>Adjust the balances of a fund based on a completed order</summary>
 		private void ApplyChangesToFund(OrderCompleted his, bool amount_in_was_held, DateTimeOffset timestamp)
 		{
-			// 'amount_in_was_held' means that the amount 'his.AmountIn' in represented in the 
-			// 'HeldOnExch' amount so, now that the order is completed, this amount is no longer held.
-			if (his.FundId == Fund.Main)
+			if (his.Fund.Id == Fund.Main)
 				return;
 
-			Balance[his.CoinIn].ChangeFundBalance(his.FundId, -his.AmountIn, amount_in_was_held ? -his.AmountIn : (Unit<double>?)null, timestamp);
-			Balance[his.CoinOut].ChangeFundBalance(his.FundId, +his.AmountNett, null, timestamp);
+			// 'amount_in_was_held' means that the amount 'his.AmountIn' in represented in the 
+			// 'HeldOnExch' amount so, now that the order is completed, this amount is no longer held.
+			Balance[his.CoinIn].ChangeFundBalance(his.Fund, -his.AmountIn, amount_in_was_held, timestamp);
+			Balance[his.CoinOut].ChangeFundBalance(his.Fund, +his.AmountOut, false, timestamp);
+			if (his.CommissionCoin != null)
+				Balance[his.CommissionCoin].ChangeFundBalance(his.Fund, -his.Commission, amount_in_was_held, timestamp);
+
 		}
 
 		/// <summary>Update the trade history from the DB</summary>
@@ -1065,22 +1050,24 @@ namespace CoinFlip
 				{
 					var pair = Pairs[order.Pair];
 					if (pair != null)
-						history.Add(order.OrderId, new OrderCompleted(order.OrderId, order.FundId, Enum<ETradeType>.Parse(order.TradeType), pair));
+						history.Add(order.OrderId, new OrderCompleted(order.OrderId, order.Fund, pair, Enum<ETradeType>.Parse(order.TradeType)));
 				}
 
 				// Get the trades that make up the completed orders
 				var trades = await DB.QueryAsync<TradeRecord>($"select * from {Table.TradeComplete}");
 				foreach (var trade in trades)
 				{
+					// Get the completed order that 'trade' belongs to
 					if (history.TryGetValue(trade.OrderId, out var order_completed))
 					{
 						var pair = order_completed.Pair;
-						var price_q2b = trade.PriceQ2B._(pair.RateUnits);
-						var amount_base = trade.AmountBase._(pair.Base);
-						var commission_quote = trade.CommissionQuote._(pair.Quote);
+						var amount_in = trade.AmountIn._(order_completed.CoinIn);
+						var amount_out = trade.AmountOut._(order_completed.CoinOut);
+						var commission_coin = Coins[trade.CommissionCoin];
+						var commission = trade.Commission._(commission_coin);
 						var created = new DateTimeOffset(trade.Created, TimeSpan.Zero);
 						var updated = new DateTimeOffset(trade.Updated, TimeSpan.Zero);
-						order_completed.Trades.Add(new TradeCompleted(order_completed, trade.TradeId, price_q2b, amount_base, commission_quote, created, updated));
+						order_completed.Trades.Add(new TradeCompleted(order_completed, trade.TradeId, amount_in, amount_out, commission, commission_coin, created, updated));
 
 						// Record the range of completed orders
 						if (created < history_first)
@@ -1167,38 +1154,6 @@ namespace CoinFlip
 		private static int m_colour_index;
 	}
 }
-
-
-
-///// <summary>Get/Set the amount of fake cash for the given symbol assigned to this exchange</summary>
-//public Unit<double> FakeCash(string sym)
-//{
-//	// Look for the coin on this exchange. If not supported, ignore.
-//	var coin = Coins[sym];
-//	if (coin == null)
-//		return 0.0._(sym);
-
-//	// Get the balance of this coin
-//	var balances = Balance[coin];
-//	return balances.FakeCash;
-//}
-//public void FakeCash(string sym, double amount)
-//{
-//	// Look for the coin on this exchange. If not supported, ignore.
-//	var coin = Coins[sym];
-//	if (coin == null)
-//		return;
-
-//	// Get the balance of this coin
-//	var balances = Balance[coin];
-//	balances.FakeCash = amount._(coin);
-
-//	//// Distribute the fake cash evenly over each fund
-//	//var fund_count = (double)balances.Funds.Count;
-//	//foreach (var fund in balances.Funds.Values)
-//	//	fund.FakeCash = (amount / fund_count)._(coin);
-//}
-
 
 ///// <summary>App logic</summary>
 //public Model Model

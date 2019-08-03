@@ -122,7 +122,7 @@ namespace CoinFlip
 					var coin = Coins.GetOrAdd(b.Symbol);
 
 					// Update the balance
-					Balance.AssignFundBalance(coin, Fund.Main, b.Total._(coin), (b.Total - b.Available)._(coin), last_updated);
+					Balance.AssignFundBalance(coin, Fund.Default, b.Total._(coin), (b.Total - b.Available)._(coin), last_updated);
 				}
 
 				// Notify updated
@@ -164,8 +164,8 @@ namespace CoinFlip
 				{
 					// Get/Add the completed order
 					var ids = ToIdPair(exch_order.OrderId);
-					var order_completed = History.GetOrAdd(ids.OrderId, x => new OrderCompleted(x, OrderIdToFundId(x),
-						Misc.TradeType(exch_order.Type), Pairs.GetOrAdd(exch_order.Pair.Base, exch_order.Pair.Quote)));
+					var order_completed = History.GetOrAdd(ids.OrderId,
+						x => new OrderCompleted(x, OrderIdToFund(x), Pairs.GetOrAdd(exch_order.Pair.Base, exch_order.Pair.Quote), exch_order.Type.TradeType()));
 
 					// Add the trade to the completed order
 					var fill = TradeCompletedFrom(exch_order, order_completed, timestamp);
@@ -225,7 +225,7 @@ namespace CoinFlip
 						continue;
 
 					// Update the market order book
-					pair.MarketDepth.UpdateOrderBook(update.buys, update.sells);
+					pair.MarketDepth.UpdateOrderBooks(update.buys, update.sells);
 				}
 
 				// Notify updated
@@ -287,19 +287,25 @@ namespace CoinFlip
 		}
 
 		/// <summary>Open a trade</summary>
-		protected async override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EPlaceOrderType ot, Unit<double> amount, Unit<double> price, CancellationToken cancel)
+		protected async override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, CancellationToken cancel, float sig_change)
 		{
 			try
 			{
 				// Place the trade order
-				if (ot != EPlaceOrderType.Limit) throw new NotImplementedException();
-				var res = await Api.SubmitTrade(new CurrencyPair(pair.Base, pair.Quote), tt.ToBittrexTT(), price, amount);
+				if (ot != EOrderType.Limit)
+					throw new NotImplementedException();
+
+				var price_q2b = tt.PriceQ2B(amount_out / amount_in);
+				var amount_base = tt.AmountBase(price_q2b, amount_in, amount_out);
+				var res = await Api.SubmitTrade(new CurrencyPair(pair.Base, pair.Quote), tt.ToBittrexTT(), price_q2b, amount_base, cancel);
+
+				// Return the order result
 				var order_id = ToIdPair(res.Id).OrderId;
 				return new OrderResult(pair, order_id, filled: false);
 			}
 			catch (Exception ex)
 			{
-				throw new Exception($"Bittrex: Submit trade failed. {ex.Message}\n{tt} Pair: {pair.Name}  Vol: {amount.ToString("F8", true)} @  {price.ToString("F8", true)}", ex);
+				throw new Exception($"Bittrex: Submit trade failed. {ex.Message}\n{tt} Pair: {pair.Name}  Vol: {amount_in.ToString(8, true)} @  {(amount_out/amount_in).ToString(8, true)}", ex);
 			}
 		}
 
@@ -308,14 +314,15 @@ namespace CoinFlip
 		{
 			// Get the associated trade pair (add the pair if it doesn't exist)
 			var order_id = ToIdPair(order.OrderId).OrderId;
-			var fund_id = OrderIdToFundId(order_id);
+			var fund_id = OrderIdToFund(order_id);
+			var ot = EOrderType.Limit;
 			var tt = Misc.TradeType(order.Type);
 			var pair = Pairs.GetOrAdd(order.Pair.Base, order.Pair.Quote);
-			var price = order.Limit._(pair.RateUnits);
-			var amount = order.VolumeBase._(pair.Base);
-			var remaining = order.RemainingBase._(pair.Base);
+			var amount_in = tt.AmountIn(order.AmountBase._(pair.Base), order.LimitQ2B._(pair.RateUnits));
+			var amount_out = tt.AmountOut(order.AmountBase._(pair.Base), order.LimitQ2B._(pair.RateUnits));
+			var remaining_in = tt.AmountIn(order.RemainingBase._(pair.Base), order.LimitQ2B._(pair.RateUnits));
 			var created = order.Created;
-			return new Order(order_id, fund_id, tt, pair, price, amount, remaining, created, updated);
+			return new Order(order_id, fund_id, pair, ot, tt, amount_in, amount_out, remaining_in, created, updated);
 		}
 
 		/// <summary>Convert a Cryptopia trade history result into a position object</summary>
@@ -324,14 +331,16 @@ namespace CoinFlip
 			// Get the associated trade pair (add the pair if it doesn't exist)
 			// Bittrex doesn't use trade ids. Make them up using the Remaining
 			// volume so that each trade for a given order is unique (ish).
+			var tt = Misc.TradeType(his.Type);
 			var pair = order_completed.Pair;
 			var ids = ToIdPair(his.OrderId);
 			var trade_id = ids.TradeId;
-			var price = his.PricePerUnit._(pair.RateUnits);
-			var amount_base = his.FilledBase._(pair.Base);
-			var commission_quote = his.Commission._(pair.Quote);
+			var amount_in = tt.AmountIn(his.FilledBase._(pair.Base), his.PricePerUnit._(pair.RateUnits));
+			var amount_out = tt.AmountOut(his.FilledBase._(pair.Base), his.PricePerUnit._(pair.RateUnits));
+			var commission = his.Commission._(pair.Quote);
+			var commission_coin = pair.Quote;
 			var created = his.Created;
-			return new TradeCompleted(order_completed, trade_id, price, amount_base, commission_quote, created, updated);
+			return new TradeCompleted(order_completed, trade_id, amount_in, amount_out, commission, commission_coin, created, updated);
 		}
 
 		/// <summary>Convert a poloniex deposit into a 'Transfer'</summary>

@@ -118,7 +118,7 @@
     <Compile Include="src\Settings\OrderDetails.cs" />
     <Compile Include="src\Settings\PoloniexSettings.cs" />
     <Compile Include="src\Settings\SettingsData.cs" />
-    <Compile Include="src\Misc\EPlaceOrderType.cs" />
+    <Compile Include="src\Misc\EOrderType.cs" />
     <Compile Include="src\Settings\UISettings.cs" />
     <Compile Include="src\Simulation\SimExchange.cs" />
     <Compile Include="src\Simulation\Simulation.cs" />

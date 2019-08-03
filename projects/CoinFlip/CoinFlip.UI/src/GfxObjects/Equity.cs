@@ -105,7 +105,7 @@ namespace CoinFlip.UI.GfxObjects
 		}
 
 		/// <summary>Add the graphics objects to the scene</summary>
-		public void BuildScene(ChartControl chart, View3d.Window window, Canvas overlay)
+		public void BuildScene(ChartControl chart)
 		{
 			//TODO: Make the region line "nett" a new chart dataq series plot type
 			// Ensure the plots are added to the scene

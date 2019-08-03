@@ -14,8 +14,8 @@ namespace Poloniex.API.DomainObjects
 		internal Order(EOrderSide order_type, double price, double volume)
 		{
 			Type = order_type;
-			Price = price;
-			VolumeBase = volume;
+			PriceQ2B = price;
+			AmountBase = volume;
 		}
 
 		/// <summary>The pair that this position is held on</summary>
@@ -34,11 +34,11 @@ namespace Poloniex.API.DomainObjects
 
 		/// <summary>The trade price (in quote currency)</summary>
 		[JsonProperty("rate")]
-		public double Price { get; internal set; }
+		public double PriceQ2B { get; internal set; }
 
 		/// <summary>The trade volume (in base currency)</summary>
 		[JsonProperty("startingAmount")]
-		public double VolumeBase { get; internal set; }
+		public double AmountBase { get; internal set; }
 
 		/// <summary>The trade volume remaining (in base currency)</summary>
 		[JsonProperty("amount")]

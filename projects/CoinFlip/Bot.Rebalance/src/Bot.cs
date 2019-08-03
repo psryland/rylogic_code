@@ -114,14 +114,14 @@ namespace Bot.Rebalance
 						// ratio down to match the price ratio. We're trading quote for base
 						// so clamp 'quote' the amount available
 						var target_quote_holdings = price_ratio * total_holdings;
-						var amount_quote = HoldingsQuote - target_quote_holdings;
-						var amount_base = amount_quote / price;
-						if (Fund[pair.Quote].Available >= amount_quote &&
-							Pair.AmountRangeQuote.Contains(amount_quote) &&
-							Pair.AmountRangeBase.Contains(amount_base))
+						var amount_in = HoldingsQuote - target_quote_holdings;
+						var amount_out = amount_in / price;
+						if (Fund[pair.Quote].Available >= amount_in &&
+							Pair.AmountRangeQuote.Contains(amount_in) &&
+							Pair.AmountRangeBase.Contains(amount_out))
 						{
 							// Place the rebalance order
-							trade = new Trade(Fund.Id, tt, pair, price, amount_base);
+							trade = new Trade(Fund, pair, EOrderType.Market, tt, amount_in, amount_out);
 							Debug.Assert(trade.Validate() == EValidation.Valid);
 							break;
 						}
@@ -136,14 +136,14 @@ namespace Bot.Rebalance
 						// The amount to sell is the amount that will bring the quote holdings
 						// ratio up to match the price ratio.
 						var target_quote_holdings = price_ratio * total_holdings;
-						var amount_quote = target_quote_holdings - HoldingsQuote;
-						var amount_base = amount_quote / price;
-						if (Fund[pair.Base].Available >= amount_base &&
-							Pair.AmountRangeQuote.Contains(amount_quote) &&
-							Pair.AmountRangeBase.Contains(amount_base))
+						var amount_out = target_quote_holdings - HoldingsQuote;
+						var amount_in = amount_out / price;
+						if (Fund[pair.Base].Available >= amount_in &&
+							Pair.AmountRangeBase.Contains(amount_in) &&
+							Pair.AmountRangeQuote.Contains(amount_out))
 						{
 							// Place the rebalance order
-							trade = new Trade(Fund.Id, tt, pair, price, amount_base);
+							trade = new Trade(Fund, pair, EOrderType.Market, tt, amount_in, amount_out);
 							Debug.Assert(trade.Validate() == EValidation.Valid);
 							break;
 						}

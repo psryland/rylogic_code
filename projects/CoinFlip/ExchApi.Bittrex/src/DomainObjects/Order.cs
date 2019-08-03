@@ -24,7 +24,7 @@ namespace Bittrex.API.DomainObjects
 
 		/// <summary>The limit price at which the trade will be filled (in quote currency)</summary>
 		[JsonProperty("Limit")]
-		public double Limit { get; internal set; }
+		public double LimitQ2B { get; internal set; }
 
 		/// <summary>The price that the trade has been filled at (in quote currency)</summary>
 		[JsonProperty("Price")]
@@ -36,7 +36,7 @@ namespace Bittrex.API.DomainObjects
 
 		/// <summary>The volume to trade (in base currency)</summary>
 		[JsonProperty("Quantity")]
-		public double VolumeBase { get; set; }
+		public double AmountBase { get; set; }
 
 		/// <summary>The volume that remains to be traded (in base currency)</summary>
 		[JsonProperty("QuantityRemaining")]

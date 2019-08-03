@@ -19,8 +19,9 @@ namespace CoinFlip
 		// - This is basically a wrapper around a string
 
 		/// <summary>The default fund</summary>
+		public static Fund Default => new Fund(Main);
 		public const string Main = "Main";
-
+		
 		public Fund(string id)
 		{
 			Id = id;
@@ -30,12 +31,20 @@ namespace CoinFlip
 		public string Id { get; }
 
 		/// <summary>Return the balance of 'coin' associated with this fund. (Coin implies the exchange)</summary>
-		public IBalance this[Coin coin] => coin.Balances[Id];
+		public IBalance this[Coin coin] => coin.Balances[this];
 
 		#region Equals
+		public static bool operator ==(Fund lhs, Fund rhs)
+		{
+			return lhs?.Id == rhs?.Id;
+		}
+		public static bool operator !=(Fund lhs, Fund rhs)
+		{
+			return lhs?.Id != rhs?.Id;
+		}
 		public bool Equals(Fund rhs)
 		{
-			return rhs != null && rhs.Id == Id;
+			return this == rhs;;
 		}
 		public override bool Equals(object obj)
 		{
@@ -44,6 +53,10 @@ namespace CoinFlip
 		public override int GetHashCode()
 		{
 			return new { Id }.GetHashCode();
+		}
+		public override string ToString()
+		{
+			return Id;
 		}
 		#endregion
 	}

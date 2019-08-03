@@ -238,8 +238,8 @@ namespace Binance.API
 					if (existing != null)
 					{
 						existing.ClientOrderId = update.ClientOrderId;
-						existing.Price = update.Price;
-						existing.Amount = update.AmountBase;
+						existing.PriceQ2B = update.Price;
+						existing.AmountBase = update.AmountBase;
 						existing.AmountCompleted = update.AmountBaseCumulativeFilled;
 						existing.CummulativeAmountQuote = update.AmountQuoteCumulativeFilled;
 						existing.Status = update.Status;
@@ -543,8 +543,8 @@ namespace Binance.API
 					Pair = update.Pair,
 					OrderId = update.OrderId,
 					ClientOrderId = update.ClientOrderId,
-					Price = update.Price,
-					Amount = update.AmountBase,
+					PriceQ2B = update.Price,
+					AmountBase = update.AmountBase,
 					AmountCompleted = update.AmountBaseCumulativeFilled,
 					CummulativeAmountQuote = update.AmountQuoteCumulativeFilled,
 					Status = update.Status,

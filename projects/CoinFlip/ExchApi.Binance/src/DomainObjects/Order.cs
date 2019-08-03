@@ -20,11 +20,11 @@ namespace Binance.API.DomainObjects
 
 		/// <summary></summary>
 		[JsonProperty("price")]
-		public double Price { get; set; }
+		public double PriceQ2B { get; set; }
 
 		/// <summary>The initial amount of the order</summary>
 		[JsonProperty("origQty")]
-		public double Amount { get; set; }
+		public double AmountBase { get; set; }
 
 		/// <summary>The amount of the order that has been filled so far</summary>
 		[JsonProperty("executedQty")]
@@ -35,7 +35,7 @@ namespace Binance.API.DomainObjects
 		public double CummulativeAmountQuote { get; set; }
 
 		/// <summary>The outstanding amount of the order yet to be filled</summary>
-		public double Remaining => Amount - AmountCompleted;
+		public double Remaining => AmountBase - AmountCompleted;
 
 		/// <summary></summary>
 		public EOrderStatus Status { get; set; }

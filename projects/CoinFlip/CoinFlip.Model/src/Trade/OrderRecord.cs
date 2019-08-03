@@ -11,7 +11,7 @@
 		public OrderRecord(OrderCompleted order)
 		{
 			OrderId = order.OrderId;
-			FundId = order.FundId;
+			FundId = order.Fund.Id;
 			TradeType = order.TradeType.ToString();
 			Pair = order.Pair.Name;
 		}
@@ -21,6 +21,7 @@
 
 		/// <summary>The fund the order was associated with</summary>
 		public string FundId { get; private set; }
+		public Fund Fund => new Fund(FundId);
 
 		/// <summary>The direction of the trade</summary>
 		public string TradeType { get; private set; }

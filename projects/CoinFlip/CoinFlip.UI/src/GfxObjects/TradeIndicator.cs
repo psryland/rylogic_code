@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
 using CoinFlip.Settings;
@@ -45,7 +46,12 @@ namespace CoinFlip.UI.GfxObjects
 			void HandleMouseDown(object sender, MouseButtonEventArgs args)
 			{
 				if (Hovered && args.ChangedButton == MouseButton.Left && args.LeftButton == MouseButtonState.Pressed)
-					Chart.MouseOperations.SetPending(MouseButton.Left, new DragPrice(this));
+				{
+					if (Trade.OrderType != EOrderType.Market)
+						Chart.MouseOperations.SetPending(MouseButton.Left, new DragPrice(this));
+					else
+						args.Handled = true;
+				}
 			}
 		}
 		protected override void UpdateGfxCore()
@@ -58,8 +64,8 @@ namespace CoinFlip.UI.GfxObjects
 
 			// Colour based on trade direction
 			var col =
-				TradeType == ETradeType.Q2B ? SettingsData.Settings.Chart.B2QColour :
-				TradeType == ETradeType.B2Q ? SettingsData.Settings.Chart.Q2BColour :
+				TradeType == ETradeType.Q2B ? SettingsData.Settings.Chart.Q2BColour :
+				TradeType == ETradeType.B2Q ? SettingsData.Settings.Chart.B2QColour :
 				throw new Exception("Unknown trade type");
 
 			var ldr =
@@ -83,6 +89,7 @@ namespace CoinFlip.UI.GfxObjects
 
 			if (Visible)
 			{
+				Debug.Assert(Math_.IsFinite(PriceQ2B));
 				Gfx.Child("halo").Visible = Hovered;
 				Gfx.O2P =
 					m4x4.Translation((float)Chart.XAxis.Min, (float)PriceQ2B, CandleChart.ZOrder.Indicators) *

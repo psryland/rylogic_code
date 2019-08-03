@@ -13,11 +13,13 @@
 	d:DesignHeight="400"
 	Title="Modify Trade"
 	WindowStartupLocation="CenterOwner"
-	SizeToContent="WidthAndHeight"
 	ResizeMode="CanResizeWithGrip"
 	ShowInTaskbar="True"
-	MinHeight="300"
-	MinWidth="340"
+	Height="440"
+	Width="380"
+	MinWidth="380"
+	MinHeight="440"
+	Background="{Binding TradeTypeBgColour, Converter={conv:ColourToBrush}}"
 	>
 	<Window.Resources>
 		<ResourceDictionary>
@@ -26,13 +28,14 @@
 			<BitmapImage x:Key="check_reject" UriSource="/CoinFlip.UI;component/res/check_reject.png" />
 		</ResourceDictionary>
 	</Window.Resources>
+	
 	<Grid
-		Margin="3"
+		Margin="8"
 		>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
-			<RowDefinition Height="*"/>
 			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
 			<RowDefinition Height="Auto"/>
 		</Grid.RowDefinitions>
 
@@ -40,26 +43,21 @@
 		<Grid
 			Grid.Row="0"
 			>
-			<Grid.RowDefinitions>
-				<RowDefinition Height="Auto"/>
-				<RowDefinition Height="Auto"/>
-			</Grid.RowDefinitions>
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="Auto"/>
 				<ColumnDefinition Width="*"/>
 			</Grid.ColumnDefinitions>
-			
+
 			<!-- Icon -->
 			<Image
 				Grid.Row="0"
-				Grid.RowSpan="2"
 				Grid.Column="0"
 				Source="{StaticResource dollar_sign}"
 				RenderOptions.BitmapScalingMode="HighQuality"
 				MaxWidth="48"
 				Margin="8"
 				/>
-			
+
 			<!-- Exchange Selector -->
 			<Grid
 				Grid.Row="0"
@@ -86,34 +84,6 @@
 					Margin="4"
 					/>
 			</Grid>
-
-			<!-- Trade Type Selector -->
-			<Grid
-				Grid.Row="1"
-				Grid.Column="1"
-				>
-				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="1*"/>
-					<ColumnDefinition Width="2*"/>
-				</Grid.ColumnDefinitions>
-				<TextBlock
-					Grid.Column="0"
-					Text="Trade Type:"
-					HorizontalAlignment="Right"
-					VerticalAlignment="Center"
-					Margin="4"
-					/>
-				<ComboBox
-					Grid.Column="1"
-					ItemsSource="{Binding TradeType, Converter={conv:EnumValues}, Mode=OneTime}"
-					ItemTemplate="{conv:EnumValues+ToDesc}"
-					SelectedItem="{Binding TradeType}"
-					HorizontalAlignment="Left"
-					VerticalAlignment="Center"
-					MinWidth="100"
-					Margin="4"
-					/>
-			</Grid>
 		</Grid>
 		
 		<!-- Trade price/amount-->
@@ -123,16 +93,53 @@
 			<Grid.RowDefinitions>
 				<RowDefinition Height="Auto"/>
 				<RowDefinition Height="Auto"/>
-				<RowDefinition Height="*"/>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="Auto"/>
 			</Grid.RowDefinitions>
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="*"/>
 				<ColumnDefinition Width="*"/>
 			</Grid.ColumnDefinitions>
 			
-			<!-- Order Price -->
+			<!-- Fund Selector -->
 			<StackPanel
 				Grid.Row="0"
+				Grid.Column="0"
+				>
+				<TextBlock
+					Text="Fund:"
+					Margin="3"
+					/>
+				<ComboBox
+					ItemsSource="{Binding Funds}"
+					SelectedItem="{Binding Funds/}"
+					HorizontalContentAlignment="Center"
+					DisplayMemberPath="Id"
+					Margin="20,1,3,1"
+					/>
+			</StackPanel>
+			
+			<!-- Trade type -->
+			<StackPanel
+				Grid.Row="0"
+				Grid.Column="1"
+				>
+				<TextBlock
+					Text="Trade Type:"
+					Margin="3"
+					/>
+				<ComboBox
+					ItemsSource="{Binding TradeType, Converter={conv:EnumValues}, Mode=OneTime}"
+					ItemTemplate="{conv:EnumValues+ToDesc}"
+					SelectedItem="{Binding TradeType}"
+					HorizontalContentAlignment="Center"
+					Margin="20,1,3,1"
+					/>
+			</StackPanel>
+
+			<!-- Order Price -->
+			<StackPanel
+				Grid.Row="1"
 				Grid.Column="0"
 				>
 				<TextBlock
@@ -141,16 +148,19 @@
 					/>
 				<TextBox
 					ToolTip="The price at which to make the trade"
+					x:Name="m_tb_price"
 					HorizontalContentAlignment="Right"
-					Text="{Binding PriceQ2B}"
+					Text="{Binding PriceQ2B, UpdateSourceTrigger=PropertyChanged}"
+					IsEnabled="{Binding CanChoosePrice}"
 					Margin="20,1,3,1"
+					Padding="3"
 					>
 					<TextBox.Style>
 						<Style TargetType="{x:Type TextBox}">
 							<Style.Triggers>
 								<DataTrigger Binding="{Binding IsPriceValid}" Value="True">
 									<Setter Property="Foreground" Value="Black"/>
-									<Setter Property="BorderBrush" Value="Black"/>
+									<Setter Property="BorderBrush" Value="#AAA"/>
 								</DataTrigger>
 								<DataTrigger Binding="{Binding IsPriceValid}" Value="False">
 									<Setter Property="Foreground" Value="#A00"/>
@@ -165,26 +175,25 @@
 
 			<!-- Order Type -->
 			<StackPanel
-				Grid.Row="0"
+				Grid.Row="1"
 				Grid.Column="1"
 				>
 				<TextBlock
 					Text="Order Type:"
 					Margin="3"
 					/>
-				<TextBox
-					Text="{Binding OrderType, Converter={conv:EnumToDesc}, Mode=OneWay}"
-					Background="{Binding TradeTypeBgColour, Converter={conv:ColourToBrush}}"
-					BorderThickness="0"
+				<ComboBox
+					ItemsSource="{Binding OrderType, Converter={conv:EnumValues}}"
+					SelectedItem="{Binding OrderType}"
 					HorizontalContentAlignment="Center"
 					Margin="20,1,3,1"
-					IsReadOnly="True"
+					Padding="3"
 					/>
 			</StackPanel>
 
 			<!-- Amount to Sell -->
 			<StackPanel
-				Grid.Row="1"
+				Grid.Row="2"
 				Grid.Column="0"
 				>
 				<TextBlock
@@ -192,9 +201,11 @@
 					Margin="3"
 					/>
 				<TextBox
+					x:Name="m_tb_amount_in"
 					HorizontalContentAlignment="Right"
-					Text="{Binding AmountIn}"
+					Text="{Binding AmountIn, StringFormat={}{0:F8}, UpdateSourceTrigger=Default}"
 					Margin="20,1,3,1"
+					Padding="3"
 					>
 					<TextBox.Style>
 						<Style TargetType="{x:Type TextBox}">
@@ -205,20 +216,21 @@
 								</DataTrigger>
 								<DataTrigger Binding="{Binding IsAmountInValid}" Value="False">
 									<Setter Property="Foreground" Value="#A00"/>
-									<Setter Property="Background" Value="#FDD"/>
 									<Setter Property="BorderBrush" Value="#F22"/>
 								</DataTrigger>
 							</Style.Triggers>
 						</Style>
 					</TextBox.Style>
 				</TextBox>
+				
+				<!-- Use All button -->
 				<StackPanel
 					Orientation="Horizontal"
 					Margin="20,0,3,3"
 					HorizontalAlignment="Right"
 					>
 					<TextBlock
-						Text="{Binding AvailableIn, StringFormat=Available: {0:F8}}"
+						Text="{Binding AvailableIn, Converter={conv:StringFormat}, ConverterParameter='8, true'}"
 						Foreground="Gray"
 						Margin="2"
 						/>
@@ -247,7 +259,7 @@
 
 			<!-- Amount to Buy -->
 			<StackPanel
-				Grid.Row="1"
+				Grid.Row="2"
 				Grid.Column="1"
 				>
 				<TextBlock
@@ -255,9 +267,11 @@
 					Margin="3"
 					/>
 				<TextBox
+					x:Name="m_tb_amount_out"
 					HorizontalContentAlignment="Right"
-					Text="{Binding AmountOut}"
+					Text="{Binding AmountOut, StringFormat={}{0:F8}, UpdateSourceTrigger=PropertyChanged}"
 					Margin="20,1,3,1"
+					Padding="3"
 					>
 					<TextBox.Style>
 						<Style TargetType="{x:Type TextBox}">
@@ -268,7 +282,6 @@
 								</DataTrigger>
 								<DataTrigger Binding="{Binding IsAmountOutValid}" Value="False">
 									<Setter Property="Foreground" Value="#A00"/>
-									<Setter Property="Background" Value="#FDD"/>
 									<Setter Property="BorderBrush" Value="#F22"/>
 								</DataTrigger>
 							</Style.Triggers>
@@ -279,16 +292,18 @@
 			
 			<!-- Description In-->
 			<TextBlock
-				Grid.Row="2"
+				Grid.Row="3"
 				Grid.Column="0"
 				Text="{Binding TradeDescriptionIn}"
+				TextWrapping="Wrap"
 				Foreground="Blue"
 				Margin="8,1,8,8"
 				/>
 			<TextBlock
-				Grid.Row="2"
+				Grid.Row="3"
 				Grid.Column="1"
 				Text="{Binding TradeDescriptionOut}"
+				TextWrapping="Wrap"
 				Foreground="Blue"
 				Margin="8,1,8,8"
 				/>
@@ -298,11 +313,16 @@
 		<Grid
 			Grid.Row="2"
 			>
-			<TextBlock
-				Text="{Binding ValidationResults}"
-				Foreground="Red"
-				Margin="3"
-				/>
+			<ScrollViewer
+				VerticalScrollBarVisibility="Auto"
+				>
+				<TextBlock
+					Text="{Binding ValidationResults}"
+					TextWrapping="Wrap"
+					Foreground="Red"
+					Margin="3"
+					/>
+			</ScrollViewer>
 		</Grid>
 
 		<!-- Buttons -->

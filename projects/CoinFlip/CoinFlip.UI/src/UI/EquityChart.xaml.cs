@@ -43,6 +43,9 @@ namespace CoinFlip.UI
 			Legend = new ChartDataLegend { Chart = Chart, BackColour = 0xFFE0E0E0 };
 			Model = model;
 
+			// Commands
+			ShowChartOptions = Command.Create(this, ShowChartOptionsInternal);
+
 			ModifyContextMenus();
 			DataContext = this;
 		}
@@ -264,7 +267,7 @@ namespace CoinFlip.UI
 				}
 				void HandleBuildScene(object sender, View3dControl.BuildSceneEventArgs e)
 				{
-					BuildScene(e.Window);
+					BuildScene();
 				}
 				void HandleMoved(object sender, ChartControl.ChartMovedEventArgs e)
 				{
@@ -299,14 +302,14 @@ namespace CoinFlip.UI
 		}
 
 		/// <summary>Add graphics and elements to the chart</summary>
-		private void BuildScene(View3d.Window window)
+		private void BuildScene()
 		{
-			window.RemoveObjects(new[] { CtxId }, 1, 0);
+			Chart.Window.RemoveObjects(new[] { CtxId }, 1, 0);
 			if (!DockControl.IsVisible)
 				return;
 
-			GfxEquity.BuildScene(Chart, window, m_chart_overlay);
-			GfxCompletedOrders.BuildScene(Model.SelectedCompletedOrders, Chart, m_chart_overlay);
+			GfxEquity.BuildScene(Chart);
+			GfxCompletedOrders.BuildScene(Model.SelectedCompletedOrders, Chart);
 
 			// Put the call out so others can draw on this chart
 			//BuildScene?.Invoke(this, args);
@@ -346,6 +349,16 @@ namespace CoinFlip.UI
 		private double IOrderToYValue(IOrder order)
 		{
 			return Equity.NettWorthHistory().FirstOrDefault(x => x.Time == order.Created).Worth;
+		}
+
+		/// <summary>Show the options dialog for chart behaviour</summary>
+		public Command ShowChartOptions { get; }
+		private void ShowChartOptionsInternal()
+		{
+			var wnd = Window.GetWindow(this);
+			var pt = wnd.PointToScreen(Mouse.GetPosition(wnd));
+			var dlg = new ChartOptionsUI(wnd) { Left = pt.X, Top = pt.Y }.OnScreen();
+			dlg.ShowDialog();
 		}
 
 		/// <summary>Replace the chart context menus</summary>

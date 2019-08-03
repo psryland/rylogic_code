@@ -166,10 +166,6 @@ namespace CoinFlip
 						// Update the nett worth value
 						UpdateNettWorth();
 
-						// Simulate fake orders being filled
-						if (!AllowTrades && !BackTesting)
-						{ }// todo SimulateFakeOrders();
-
 						// Notify Heartbeat 
 						MainLoopTick?.Invoke(this, EventArgs.Empty);
 					}
@@ -542,7 +538,7 @@ namespace CoinFlip
 			Debug.Assert(!BackTesting);
 
 			// Notify market data about to update
-			DataChanging?.Invoke(this, new DataChangingEventArgs(done: false));
+			DataChanging?.Invoke(this, new DataChangingEventArgs(after: false));
 
 			using (Scope.Create(() => ++m_in_integrate_data_updates, () => --m_in_integrate_data_updates))
 			{
@@ -561,7 +557,7 @@ namespace CoinFlip
 			}
 
 			// Notify market data update complete
-			DataChanging?.Invoke(this, new DataChangingEventArgs(done: true));
+			DataChanging?.Invoke(this, new DataChangingEventArgs(after: true));
 		}
 		private int m_in_integrate_data_updates;
 
@@ -579,13 +575,11 @@ namespace CoinFlip
 	}
 
 	#region EventArgs
-	public class DataChangingEventArgs : EventArgs
+	public class DataChangingEventArgs : PrePostEventArgs
 	{
-		public DataChangingEventArgs(bool done)
-		{
-			Done = done;
-		}
-		public bool Done { get; private set; }
+		public DataChangingEventArgs(bool after)
+			:base(after)
+		{}
 	}
 	#endregion
 }

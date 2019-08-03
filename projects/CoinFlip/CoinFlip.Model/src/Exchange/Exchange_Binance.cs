@@ -193,7 +193,7 @@ namespace CoinFlip
 					var coin = Coins.GetOrAdd(b.Asset);
 
 					// Update the balance
-					Balance.AssignFundBalance(coin, Fund.Main, b.Total._(coin), b.Locked._(coin), msg.UpdateTime);
+					Balance.AssignFundBalance(coin, Fund.Default, b.Total._(coin), b.Locked._(coin), msg.UpdateTime);
 				}
 
 				// Notify updated
@@ -216,19 +216,22 @@ namespace CoinFlip
 			// Request all the existing orders
 			var existing_orders = pairs.SelectMany(pair =>
 			{
+				Shutdown.Token.ThrowIfCancellationRequested();
 				var cp = new CurrencyPair(pair.Base.Symbol, pair.Quote.Symbol);
 				var orders = Api.UserData.Orders[cp];
 				return orders;
 			}).ToList();
-			existing_orders.Sort(x => x.Created);
 
 			// Request all trade history since 'm_history_last'
 			var history_orders = pairs.SelectMany(pair =>
 			{
+				Shutdown.Token.ThrowIfCancellationRequested();
 				var cp = new CurrencyPair(pair.Base.Symbol, pair.Quote.Symbol);
 				var history = Api.UserData.History[cp, m_history_last, m_history_last_id];
 				return history;
 			}).ToList();
+
+			existing_orders.Sort(x => x.Created);
 			history_orders.Sort(x => x.Created);
 
 			// Record the time that history has been updated to
@@ -254,8 +257,8 @@ namespace CoinFlip
 				foreach (var exch_order in history_orders)
 				{
 					// Get/Add the completed order
-					var order_completed = History.GetOrAdd(exch_order.OrderId, x => new OrderCompleted(x, OrderIdToFundId(x),
-						Misc.TradeType(exch_order.Side), Pairs.GetOrAdd(exch_order.Pair.Base, exch_order.Pair.Quote)));
+					var order_completed = History.GetOrAdd(exch_order.OrderId,
+						x => new OrderCompleted(x, OrderIdToFund(x), Pairs.GetOrAdd(exch_order.Pair.Base, exch_order.Pair.Quote), exch_order.Side.TradeType()));
 
 					// Add the trade to the completed order
 					var fill = TradeCompletedFrom(exch_order, order_completed, timestamp);
@@ -300,6 +303,7 @@ namespace CoinFlip
 			// Get the ticker info for each pair
 			var ticker_updates = pairs.Select(pair =>
 			{
+				Shutdown.Token.ThrowIfCancellationRequested();
 				var cp = new CurrencyPair(pair.Base.Symbol, pair.Quote.Symbol);
 				var ticker = Api.TickerData[cp];
 				return new { pair, ticker };
@@ -355,7 +359,7 @@ namespace CoinFlip
 						continue;
 
 					// Update the depth of market data
-					pair.MarketDepth.UpdateOrderBook(update.b2q, update.q2b);
+					pair.MarketDepth.UpdateOrderBooks(update.b2q, update.q2b);
 				}
 
 				// Notify updated
@@ -399,7 +403,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Open a trade</summary>
-		protected override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EPlaceOrderType ot, Unit<double> amount_base, Unit<double> q2b_price, CancellationToken cancel)
+		protected override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, CancellationToken cancel, float sig_change)
 		{
 			try
 			{
@@ -414,7 +418,7 @@ namespace CoinFlip
 			}
 			catch (Exception ex)
 			{
-				throw new Exception($"Binance: Submit trade failed. {ex.Message}\n{tt} Pair: {pair.Name}  Vol: {amount_base.ToString("F8", true)} @  {q2b_price.ToString("F8", true)}", ex);
+				throw new Exception($"Binance: Submit trade failed. {ex.Message}\n{tt} Pair: {pair.Name}  Amt: {amount_in.ToString(8, true)} @  {(amount_out / amount_in).ToString(8, true)}", ex);
 			}
 		}
 
@@ -440,35 +444,29 @@ namespace CoinFlip
 		private Order OrderFrom(global::Binance.API.DomainObjects.Order order, DateTimeOffset updated)
 		{
 			var order_id = order.OrderId;
-			var fund_id = OrderIdToFundId(order_id);
+			var fund_id = OrderIdToFund(order_id);
+			var ot = Misc.OrderType(order.OrderType);
 			var tt = Misc.TradeType(order.OrderSide);
 			var pair = Pairs.GetOrAdd(order.Pair.Base, order.Pair.Quote);
-			var price_q2b = order.Price._(pair.RateUnits);
-			var amount_base = order.Amount._(pair.Base);
+			var amount_in = tt.AmountIn(order.AmountBase._(pair.Base), order.PriceQ2B._(pair.RateUnits));
+			var amount_out = tt.AmountOut(order.AmountBase._(pair.Base), order.PriceQ2B._(pair.RateUnits));
+			var remaining_in = amount_in;
 			var created = order.Created;
-			return new Order(order_id, fund_id, tt, pair, price_q2b, amount_base, amount_base, created, updated);
+			return new Order(order_id, fund_id, pair, ot, tt, amount_in, amount_out, remaining_in, created, updated);
 		}
 
 		/// <summary>Convert an exchange order into a CoinFlip order completed</summary>
 		private TradeCompleted TradeCompletedFrom(global::Binance.API.DomainObjects.OrderFill fill, OrderCompleted order_completed, DateTimeOffset updated)
 		{
+			var tt = order_completed.TradeType;
 			var pair = order_completed.Pair;
 			var trade_id = fill.TradeId;
-			var price_q2b = fill.Price._(pair.RateUnits);
-			var amount_base = fill.AmountBase._(pair.Base);
+			var amount_in = tt.AmountIn(fill.AmountBase._(pair.Base), fill.Price._(pair.RateUnits));
+			var amount_out = tt.AmountOut(fill.AmountBase._(pair.Base), fill.Price._(pair.RateUnits));
 			var commission = fill.Commission._(fill.CommissionAsset);
+			var commission_coin = Coins[fill.CommissionAsset];
 			var created = fill.Created;
-
-			// Binance doesn't seem to take the commission out of the amount traded. The commission is
-			// charged in the 'CoinOut' currency, or BNB tokens. To be consistent with other exchanges,
-			// convert the commission to quote currency. If the commission is in BNB then treat the
-			// commission as zero, assume the user controls the commission funds separately.
-			var commission_quote =
-				fill.CommissionAsset == fill.Pair.Base ? (commission * fill.Price)._(pair.Quote) :
-				fill.CommissionAsset == fill.Pair.Quote ? commission._(pair.Quote) :
-				0.0._(pair.Quote);
-
-			return new TradeCompleted(order_completed, trade_id, price_q2b, amount_base, commission_quote, created, updated);
+			return new TradeCompleted(order_completed, trade_id, amount_in, amount_out, commission, commission_coin, created, updated);
 		}
 
 		/// <summary>Convert a market period to a time frame</summary>

@@ -15,6 +15,16 @@
 			-->
 			<BitmapImage x:Key="Money" UriSource="../res/money.png" />
 
+			<!-- Fix for Library binding bugs -->
+			<Style TargetType="ComboBoxItem">
+				<Setter Property="HorizontalContentAlignment" Value="Left" />
+				<Setter Property="VerticalContentAlignment" Value="Center" />
+			</Style>
+			<Style TargetType="MenuItem">
+				<Setter Property="HorizontalContentAlignment" Value="Left" />
+				<Setter Property="VerticalContentAlignment" Value="Center" />
+			</Style>
+			
 			<!-- Global style for grids -->
 			<SolidColorBrush x:Key="SelectionForeground" Color="Black" />
 			<SolidColorBrush x:Key="SelectionBackground" Color="#CCDDCC" />

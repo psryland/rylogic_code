@@ -71,7 +71,7 @@ namespace CoinFlip
 					{
 						// 'coin_balance' contains the balance info for a coin.
 						// Save the amount allocated to each fund (if non zero)
-						var balance = coin_balance[fund.Id];
+						var balance = coin_balance[fund];
 						if (balance.Total == 0) continue;
 						bal_data.Add(new FundData.BalData(coin_balance.Coin.Symbol, balance.Total, balance.HeldOnExch));
 					}

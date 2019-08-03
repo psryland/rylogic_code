@@ -100,7 +100,7 @@ namespace CoinFlip
 					// Available balance is applied after the loop is identified.
 					var buys = new[] { new Offer(1.0._(pair.RateUnits), double.MaxValue._(pair.Base)) };
 					var sells = new[] { new Offer(1.0._(pair.RateUnits), double.MaxValue._(pair.Base)) };
-					pair.MarketDepth.UpdateOrderBook(buys, sells);
+					pair.MarketDepth.UpdateOrderBooks(buys, sells);
 
 					// Notify updated
 					Pairs.LastUpdated = DateTimeOffset.Now;
@@ -116,7 +116,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Open a trade</summary>
-		protected override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EPlaceOrderType ot, Unit<double> volume_base, Unit<double> price, CancellationToken cancel)
+		protected override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, CancellationToken cancel, float sig_change)
 		{
 			return Task.FromResult(new OrderResult(pair, false));
 		}

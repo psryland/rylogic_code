@@ -79,21 +79,6 @@
 				Command="{Binding SetBackTestingBalances}"
 				/>
 		</StackPanel>
-		
-		<!-- Reset fake cash -->
-		<StackPanel
-			Orientation="Vertical"
-			Margin="3,6,3,3"
-			>
-			<TextBlock
-				Text="Fake Cash"
-				/>
-			<Button
-				Content="Reset"
-				BorderBrush="DarkGray"
-				Command="{Binding ResetFakeCash}"
-				/>
-		</StackPanel>
 	</StackPanel>
 
 	<!-- Grid of coins -->
@@ -171,13 +156,6 @@
 					IsEnabled="{Binding Current, Converter={conv:NotNull}}"
 					Command="{Binding EditLiveValueConversion}"
 					/>-->
-				<Separator />
-				<MenuItem
-					Header="Fake Cash..."
-					Visibility="{Binding AllowTrades, Converter={conv:BoolToCollapsed}}"
-					IsEnabled="{Binding Current, Converter={conv:NotNull}}"
-					Command="{Binding SetFakeCash}"
-					/>
 			</ContextMenu>
 		</DataGrid.ContextMenu>
 	</DataGrid>

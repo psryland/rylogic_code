@@ -39,7 +39,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Update the balance of the fund 'fund_id'</summary>
-		public void AssignFundBalance(Coin coin, string fund_id, Unit<double> total, Unit<double> held_on_exch, DateTimeOffset update_time)
+		public void AssignFundBalance(Coin coin, Fund fund, Unit<double> total, Unit<double> held_on_exch, DateTimeOffset update_time)
 		{
 			Debug.Assert(Misc.AssertMarketDataWrite());
 
@@ -51,11 +51,11 @@ namespace CoinFlip
 			var balances = GetOrAdd(coin);
 
 			// Ignore out-of-date data
-			if (balances[fund_id].LastUpdated > update_time)
+			if (balances[fund].LastUpdated > update_time)
 				return;
 
 			// Assign the new fund balance
-			balances.AssignFundBalance(fund_id, total, held_on_exch, update_time);
+			balances.AssignFundBalance(fund, total, held_on_exch, update_time);
 
 			// Invalidate bindings
 			ResetItem(balances);

@@ -10,8 +10,8 @@ namespace CoinFlip
 		//  - This interface is used to isolate the rest of the code from the
 		//    Fund/Balance system (which is a bit confusing).
 
-		/// <summary>The fund id that this balance belongs to</summary>
-		string FundId { get; }
+		/// <summary>The fund that this balance belongs to</summary>
+		Fund Fund { get; }
 
 		/// <summary>The currency that the balance is in</summary>
 		Coin Coin { get; }

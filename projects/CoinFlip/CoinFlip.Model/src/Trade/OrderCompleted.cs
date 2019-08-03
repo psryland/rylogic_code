@@ -15,16 +15,16 @@ namespace CoinFlip
 		//  - An OrderCompleted is a completed (or partially completed) Order consisting
 		//    of one or more 'TradeCompleted's that where made to complete the order.
 
-		public OrderCompleted(long order_id, string fund_id, ETradeType tt, TradePair pair)
+		public OrderCompleted(long order_id, Fund fund, TradePair pair, ETradeType tt)
 		{
 			OrderId   = order_id;
-			FundId    = fund_id;
+			Fund      = fund;
 			TradeType = tt;
 			Pair      = pair;
 			Trades    = new TradeCompletedCollection(this);
 		}
 		public OrderCompleted(OrderCompleted rhs)
-			:this(rhs.OrderId, rhs.FundId, rhs.TradeType, rhs.Pair)
+			:this(rhs.OrderId, rhs.Fund, rhs.Pair, rhs.TradeType)
 		{
 			foreach (var fill in rhs.Trades.Values)
 				Trades.Add(fill.TradeId, new TradeCompleted(fill));
@@ -34,16 +34,18 @@ namespace CoinFlip
 		public long OrderId { get; }
 
 		/// <summary>The fund that this order was associated with</summary>
-		public string FundId { get; }
+		public Fund Fund { get; }
 
 		/// <summary>The exchange that this trade occurred on</summary>
 		public Exchange Exchange => Pair?.Exchange;
 
 		/// <summary>The trade type</summary>
 		public ETradeType TradeType { get; }
+
+		/// <summary>The trade type as a string description</summary>
 		public string TradeTypeDesc =>
-			TradeType == ETradeType.Q2B? $"{Pair.Quote}→{Pair.Base} ({TradeType})" :
-			TradeType == ETradeType.B2Q? $"{Pair.Base}→{Pair.Quote} ({TradeType})" :
+			TradeType == ETradeType.Q2B ? $"{Pair.Quote}→{Pair.Base} ({TradeType})" :
+			TradeType == ETradeType.B2Q ? $"{Pair.Base}→{Pair.Quote} ({TradeType})" :
 			"---";
 
 		/// <summary>The pair traded</summary>
@@ -59,13 +61,9 @@ namespace CoinFlip
 		{
 			get
 			{
-				if (Trades.Count == 0)
-					return 0.0._(Pair.RateUnits);
-
-				return
-					TradeType == ETradeType.B2Q ? Trades.Values.Min(x => x.PriceQ2B) :
-					TradeType == ETradeType.Q2B ? Trades.Values.Max(x => x.PriceQ2B) :
-					throw new Exception("Unknown trade type");
+				return Trades.Count != 0
+					? Trades.Values.Average(x => x.PriceQ2B)._(Pair.RateUnits)
+					: 0.0._(Pair.RateUnits);
 			}
 		}
 
@@ -81,11 +79,11 @@ namespace CoinFlip
 		/// <summary>The sum of trade output amounts</summary>
 		public Unit<double> AmountOut => Trades.Values.Sum(x => x.AmountOut)._(CoinOut);
 
-		/// <summary>The sum of trade nett output amounts</summary>
-		public Unit<double> AmountNett => Trades.Values.Sum(x => x.AmountNett)._(CoinOut);
+		/// <summary>The sum of trade commissions (in CommissionCoin)</summary>
+		public Unit<double> Commission => Trades.Values.Sum(x => x.Commission)._(CommissionCoin);
 
-		/// <summary>The sum of trade commissions (in amount out units)</summary>
-		public Unit<double> Commission => Trades.Values.Sum(x => x.Commission)._(CoinOut);
+		/// <summary>The currency that commission was charged in</summary>
+		public Coin CommissionCoin => Trades.Values.FirstOrDefault()?.CommissionCoin;
 
 		/// <summary>The coin type being sold</summary>
 		public Coin CoinIn => TradeType == ETradeType.B2Q ? Pair.Base : Pair.Quote;
@@ -98,16 +96,10 @@ namespace CoinFlip
 		DateTimeOffset? IOrder.Created => Created;
 
 		/// <summary>Description string for the trade</summary>
-		public string Description => $"{AmountIn.ToString(6, true)} → {AmountNett.ToString(6, true)} @ {PriceQ2B.ToString(4, true)}";
+		public string Description => $"{AmountIn.ToString(6, true)} → {AmountOut.ToString(6, true)} @ {PriceQ2B.ToString(4, true)}";
 
 		/// <summary>INotifyPropertyChanged</summary>
 		public event PropertyChangedEventHandler PropertyChanged;
-		private void SetProp<T>(ref T prop, T value, string name)
-		{
-			if (Equals(prop, value)) return;
-			prop = value;
-			RaisePropertyChanged(name);
-		}
 		private void RaisePropertyChanged(string name)
 		{
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
 using Rylogic.Extn;
 using Rylogic.Utility;
 
@@ -12,14 +13,19 @@ namespace CoinFlip
 	{
 		public MarketDepth(Coin @base, Coin quote)
 		{
+			RateUnits = @base.Symbol != quote.Symbol ? $"{quote}/{@base}" : string.Empty;
 			Q2B = new OrderBook(@base, quote, ETradeType.Q2B);
 			B2Q = new OrderBook(@base, quote, ETradeType.B2Q);
 		}
 		public MarketDepth(MarketDepth rhs)
 		{
+			RateUnits = rhs.RateUnits;
 			Q2B = new OrderBook(rhs.Q2B);
 			B2Q = new OrderBook(rhs.B2Q);
 		}
+
+		/// <summary>The units of the prices in this market</summary>
+		public string RateUnits { get; }
 
 		/// <summary>Prices for converting Quote to Base. First price is a minimum</summary>
 		public OrderBook Q2B { [DebuggerStepThrough] get; }
@@ -28,7 +34,10 @@ namespace CoinFlip
 		public OrderBook B2Q { [DebuggerStepThrough] get; }
 
 		/// <summary>Access the order book for the given trade direction</summary>
-		public OrderBook this[ETradeType tt] => tt == ETradeType.B2Q ? B2Q : Q2B;
+		public OrderBook this[ETradeType tt] =>
+			tt == ETradeType.B2Q ? B2Q :
+			tt == ETradeType.Q2B ? Q2B :
+			throw new Exception("Unknown trade type");
 
 		/// <summary>True when something is interested in this market data</summary>
 		public bool IsNeeded
@@ -50,14 +59,110 @@ namespace CoinFlip
 		/// references disappear and 'Needed' will return false</summary>
 		public event EventHandler<HandledEventArgs> Needed;
 
+		/// <summary>
+		/// Consume orders up to 'price_q2b' or 'amount_base' (simulating them being filled).
+		/// 'pair' is the trade pair that this market depth data is associated with.
+		/// Returns the orders that were consumed. 'amount_remaining' is what remains unfilled</summary>
+		public IList<Offer> Consume(TradePair pair, ETradeType tt, EOrderType ot, Unit<double> price_q2b, Unit<double> amount_base, out Unit<double> remaining_base)
+		{
+			// Note: this function cannot use 'amount_in' + 'amount_out' parameters because the
+			// price to consume up to is not necessarity 'amount_out/amount_in'. 'amount_in' may
+			// be the partial remaining amount of a trade.
+			var order_book = this[tt];
+			remaining_base = amount_base;
+
+			var count = 0;
+			var offers = order_book.Offers;
+			foreach (var offer in offers)
+			{
+				// Price is too high/low to fill 'offer', stop.
+				if (ot != EOrderType.Market && tt.Sign() * price_q2b.CompareTo(offer.PriceQ2B) < 0)
+					break;
+
+				// The volume remaining is less than the volume of 'offer', stop
+				if (remaining_base <= offer.AmountBase)
+					break;
+
+				// 'offer' is smaller than the remaining volume so it would be consumed. However, don't consume
+				// 'offer' if doing so would leave 'amount_remaining' with an invalid trading amount.
+				var rem = remaining_base - offer.AmountBase;
+				if (!pair.AmountRangeBase.Contains(rem) || !pair.AmountRangeQuote.Contains(rem * price_q2b))
+					break;
+
+				remaining_base = rem;
+				++count;
+			}
+
+			// Remove the orders that have been filled
+			var consumed = offers.GetRange(0, count);
+			offers.RemoveRange(0, count);
+
+			// Remove any remaining amount from the top remaining order if doing so doesn't leave an invalid trading amount
+			if (remaining_base != 0 && offers.Count != 0 && (ot == EOrderType.Market || tt.Sign() * price_q2b.CompareTo(offers[0].PriceQ2B) >= 0))
+			{
+				var rem = offers[0].AmountBase - remaining_base;
+				if (pair.AmountRangeBase.Contains(rem) && pair.AmountRangeQuote.Contains(rem * offers[0].PriceQ2B))
+				{
+					consumed.Add(new Offer(offers[0].PriceQ2B, remaining_base));
+					offers[0] = new Offer(offers[0].PriceQ2B, rem);
+					remaining_base = 0.0._(amount_base);
+				}
+			}
+			return consumed;
+		}
+
+		/// <summary>The position of this trade in the order book for the trade type</summary>
+		public int OrderBookIndex(ETradeType tt, Unit<double> price_q2b, out bool beyond_order_book)
+		{
+			// Check units
+			if (price_q2b < 0.0._(RateUnits))
+				throw new Exception("Invalid price");
+
+			// If a trade cannot be filled by existing orders, it becomes an offer.
+			// E.g.
+			//  - Want to trade B2Q == Sell our 'B' to get 'Q'.
+			//  - If there are no suitable B2Q.Orders (i.e. people wanting to buy 'B') then our trade becomes an offer in the Q2B order book.
+			//    i.e. we want to buy 'Q' so our trade is a Q2B offer.
+			var idx = -1;
+			switch (tt)
+			{
+			default: throw new Exception($"Unknown trade type:{tt}");
+			case ETradeType.B2Q:
+				{
+					idx = Q2B.Offers.BinarySearch(x => +x.PriceQ2B.CompareTo(price_q2b), find_insert_position: true);
+					beyond_order_book = idx == Q2B.Offers.Count;
+					break;
+				}
+			case ETradeType.Q2B:
+				{
+					idx = B2Q.Offers.BinarySearch(x => -x.PriceQ2B.CompareTo(price_q2b), find_insert_position: true);
+					beyond_order_book = idx == B2Q.Offers.Count;
+					break;
+				}
+			}
+			return idx;
+		}
+
+		/// <summary>The total value of orders with a better price than 'price'</summary>
+		public Unit<double> OrderBookDepth(ETradeType tt, Unit<double> price_q2b, out bool beyond_order_book)
+		{
+			var index = OrderBookIndex(tt, price_q2b, out beyond_order_book);
+			var orders = tt == ETradeType.B2Q ? Q2B.Offers : B2Q.Offers;
+			return orders.Take(index).Sum(x => x.AmountBase);
+		}
+
 		/// <summary>Update the list of buy/sell orders</summary>
-		public void UpdateOrderBook(IList<Offer> b2q, IList<Offer> q2b)
+		public void UpdateOrderBooks(IList<Offer> b2q, IList<Offer> q2b)
 		{
 			B2Q.Offers.Assign(b2q);
 			Q2B.Offers.Assign(q2b);
 
 			Debug.Assert(AssertOrdersValid());
 			OrderBookChanged?.Invoke(this, EventArgs.Empty);
+		}
+		public void UpdateOrderBooks(MarketDepth rhs)
+		{
+			UpdateOrderBooks(rhs.B2Q.Offers, rhs.Q2B.Offers);
 		}
 
 		/// <summary>Check the orders are in the correct order</summary>
@@ -71,22 +176,22 @@ namespace CoinFlip
 			// The Q2B prices should increase, i.e. the best offer from a trader's point of view is the lowest price.
 			for (int i = 0; i != Q2B.Count; ++i)
 			{
-				if (Q2B[i].Price < q2b_price0)
+				if (Q2B[i].PriceQ2B < q2b_price0)
 					throw new Exception("Q2B order book price is invalid");
 				if (Q2B[i].AmountBase < q2b0)
 					throw new Exception("Q2B order book volume is invalid");
-				if (i > 0 && Q2B[i-1].Price > Q2B[i].Price)
+				if (i > 0 && Q2B[i-1].PriceQ2B > Q2B[i].PriceQ2B)
 					throw new Exception("Q2B order book prices are out of order");
 			}
 
 			// The B2Q prices should decrease, i.e. the best offer from a trader's point of view is the highest price.
 			for (int i = 0; i != B2Q.Count; ++i)
 			{
-				if (B2Q[i].Price < b2q_price0)
+				if (B2Q[i].PriceQ2B < b2q_price0)
 					throw new Exception("B2Q order book price is invalid");
 				if (B2Q[i].AmountBase < b2q0)
 					throw new Exception("B2Q order book volume is invalid");
-				if (i > 0 && B2Q[i-1].Price < B2Q[i].Price)
+				if (i > 0 && B2Q[i-1].PriceQ2B < B2Q[i].PriceQ2B)
 					throw new Exception("B2Q order book prices are out of order");
 			}
 

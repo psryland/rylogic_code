@@ -35,7 +35,7 @@ namespace CoinFlip.UI.GfxObjects
 		}
 
 		/// <summary>Update the scene for the given orders</summary>
-		public void BuildScene(IEnumerable<IOrder> orders, ChartControl chart, Canvas overlay)
+		public void BuildScene(IEnumerable<IOrder> orders, ChartControl chart)
 		{
 			// Remove all gfx no longer in the scene
 			var in_scene = orders.ToHashSet(x => x.OrderId);
@@ -52,7 +52,7 @@ namespace CoinFlip.UI.GfxObjects
 				var x = m_xvalue(order);
 				var y = m_yvalue(order);
 				var s = chart.ChartToClient(new Point(x, y));
-				gfx.Update(overlay, s);
+				gfx.Update(chart.Overlay, s);
 			}
 		}
 
@@ -126,16 +126,14 @@ namespace CoinFlip.UI.GfxObjects
 			public void Update(Canvas overlay, Point s)
 			{
 				Misc.AddToOverlay(Mark, overlay);
-				Mark.RenderTransform = new MatrixTransform(1.0, 0.0, 0.0, 1.0, s.X, s.Y);
+				Mark.RenderTransform = new TranslateTransform(s.X, s.Y);
 
 				Misc.AddToOverlay(Label, overlay);
 				Label.Visibility = SettingsData.Settings.Chart.ShowTradeDescriptions ? Visibility.Visible : Visibility.Collapsed;
 				Label.FontSize = SettingsData.Settings.Chart.TradeLabelSize;
 				Label.Measure(Rylogic.Extn.Windows.Size_.Infinity);
 				Label.Background = new SolidColorBrush(Colour32.White.Alpha(1.0f - (float)SettingsData.Settings.Chart.TradeLabelTransparency).ToMediaColor());
-				Label.RenderTransform = new MatrixTransform(1.0, 0.0, 0.0, 1.0, s.X - (7.0 + Label.DesiredSize.Width), s.Y + -2.5);
-					//s.X + (TradeType == ETradeType.Q2B ? -(7.0+Label.ActualWidth) : +7.0),
-					//s.Y + (TradeType == ETradeType.Q2B ? -2.5 : -(Label.ActualHeight-2.5)));
+				Label.RenderTransform = new TranslateTransform(s.X - Label.DesiredSize.Width - 7.0, s.Y - Label.DesiredSize.Height/2);
 			}
 		}
 	}

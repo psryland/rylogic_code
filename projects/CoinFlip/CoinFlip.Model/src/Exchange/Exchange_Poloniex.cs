@@ -123,7 +123,7 @@ namespace CoinFlip
 					var coin = Coins.GetOrAdd(b.Key);
 
 					// Update the balance
-					Balance.AssignFundBalance(coin, Fund.Main, (b.Value.HeldForTrades + b.Value.Available)._(coin), b.Value.HeldForTrades._(coin), timestamp);
+					Balance.AssignFundBalance(coin, Fund.Default, (b.Value.HeldForTrades + b.Value.Available)._(coin), b.Value.HeldForTrades._(coin), timestamp);
 				}
 
 				// Notify updated
@@ -164,8 +164,8 @@ namespace CoinFlip
 				foreach (var exch_order in history.Values.SelectMany(x => x))
 				{
 					// Get/Add the completed order
-					var order_completed = History.GetOrAdd(exch_order.OrderId, x => new OrderCompleted(x, OrderIdToFundId(x),
-						exch_order.Type.TradeType(), Pairs.GetOrAdd(exch_order.Pair.Base, exch_order.Pair.Quote)));
+					var order_completed = History.GetOrAdd(exch_order.OrderId,
+						x => new OrderCompleted(x, OrderIdToFund(x), Pairs.GetOrAdd(exch_order.Pair.Base, exch_order.Pair.Quote), exch_order.Type.TradeType()));
 
 					// Add the trade to the completed order
 					var fill = TradeCompletedFrom(exch_order, order_completed, timestamp);
@@ -221,7 +221,7 @@ namespace CoinFlip
 					// Update the depth of market data
 					var buys = orders.BuyOffers.Select(x => new Offer(x.Price._(pair.RateUnits), x.AmountBase._(pair.Base))).ToArray();
 					var sells = orders.SellOffers.Select(x => new Offer(x.Price._(pair.RateUnits), x.AmountBase._(pair.Base))).ToArray();
-					pair.MarketDepth.UpdateOrderBook(buys, sells);
+					pair.MarketDepth.UpdateOrderBooks(buys, sells);
 				}
 
 				// Notify updated
@@ -273,7 +273,7 @@ namespace CoinFlip
 			var market_depth = new MarketDepth(pair.Base, pair.Quote);
 			var buys = orders.BuyOffers.Select(x => new Offer(x.Price._(pair.RateUnits), x.AmountBase._(pair.Base))).ToArray();
 			var sells = orders.SellOffers.Select(x => new Offer(x.Price._(pair.RateUnits), x.AmountBase._(pair.Base))).ToArray();
-			market_depth.UpdateOrderBook(buys, sells);
+			market_depth.UpdateOrderBooks(buys, sells);
 			return market_depth;
 		}
 
@@ -305,19 +305,35 @@ namespace CoinFlip
 		}
 
 		/// <summary>Open a trade</summary>
-		protected async override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EPlaceOrderType ot, Unit<double> amount, Unit<double> price, CancellationToken cancel)
+		protected async override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, CancellationToken cancel, float sig_change)
 		{
 			try
 			{
 				// Place the trade order
-				if (ot != EPlaceOrderType.Limit) throw new NotImplementedException();
-				var res = await Api.SubmitTrade(new CurrencyPair(pair.Base, pair.Quote), tt.ToPoloniexTT(), price, amount);
-				return new OrderResult(pair, res.OrderId, false, res.FilledOrders.Select(x =>
-					new OrderResult.Fill(x.TradeId, x.Price._(pair.RateUnits), x.VolumeBase._(pair.Base), x.Commission._(pair.Quote))));
+				if (ot != EOrderType.Limit)
+					throw new NotImplementedException();
+
+				var coin_in = tt.CoinIn(pair);
+				var coin_out = tt.CoinOut(pair);
+				var price_q2b = tt.PriceQ2B(amount_out / amount_in);
+				var amount_base = tt.AmountBase(price_q2b, amount_in, amount_out);
+				var res = await Api.SubmitTrade(new CurrencyPair(pair.Base, pair.Quote), tt.ToPoloniexTT(), price_q2b, amount_base, cancel);
+
+				// Get the immediate fills
+				var fills = new List<OrderResult.Fill>();
+				foreach (var fill in res.FilledOrders)
+				{
+					var fill_in = tt.AmountIn(fill.AmountBase, fill.PriceQ2B)._(coin_in);
+					var fill_out = tt.AmountOut(fill.AmountBase, fill.PriceQ2B)._(coin_out);
+					fills.Add(new OrderResult.Fill(fill.TradeId, fill_in, fill_out, fill.CommissionQuote, pair.Quote, 0f));
+				}
+
+				// Return the order result
+				return new OrderResult(pair, res.OrderId, false, fills);
 			}
 			catch (Exception ex)
 			{
-				throw new Exception($"Poloniex: Submit trade failed. {ex.Message}\n{tt} Pair: {pair.Name}  Amt: {amount.ToString("G8",true)} @  {price.ToString("G8",true)}", ex);
+				throw new Exception($"Poloniex: Submit trade failed. {ex.Message}\n{tt} Pair: {pair.Name}  Amt: {amount_in.ToString(8,true)} @  {(amount_out/amount_in).ToString(8,true)}", ex);
 			}
 		}
 
@@ -340,28 +356,30 @@ namespace CoinFlip
 		}
 
 		/// <summary>Convert a Poloniex order into an order</summary>
-		private Order OrderFrom(global::Poloniex.API.DomainObjects.Order odr, DateTimeOffset updated)
+		private Order OrderFrom(global::Poloniex.API.DomainObjects.Order order, DateTimeOffset updated)
 		{
-			var order_id = odr.OrderId;
-			var fund_id  = OrderIdToFundId(order_id);
-			var tt       = Misc.TradeType(odr.Type);
-			var pair     = Pairs.GetOrAdd(odr.Pair.Base, odr.Pair.Quote);
-			var price    = odr.Price._(pair.RateUnits);
-			var amount   = odr.VolumeBase._(pair.Base);
-			var created  = odr.Created;
-			return new Order(order_id, fund_id, tt, pair, price, amount, amount, created, updated);
+			var order_id   = order.OrderId;
+			var fund_id    = OrderIdToFund(order_id);
+			var ot         = EOrderType.Limit;
+			var tt         = Misc.TradeType(order.Type);
+			var pair       = Pairs.GetOrAdd(order.Pair.Base, order.Pair.Quote);
+			var amount_in  = tt.AmountIn(order.AmountBase._(pair.Base), order.PriceQ2B._(pair.RateUnits));
+			var amount_out = tt.AmountOut(order.AmountBase._(pair.Base), order.PriceQ2B._(pair.RateUnits));
+			var created    = order.Created;
+			return new Order(order_id, fund_id, pair, ot, tt, amount_in, amount_out, amount_in, created, updated);
 		}
 
 		/// <summary>Convert a Poloniex trade history result into a completed order</summary>
 		private TradeCompleted TradeCompletedFrom(global::Poloniex.API.DomainObjects.TradeCompleted his, OrderCompleted order_completed, DateTimeOffset updated)
 		{
-			var pair             = order_completed.Pair;
-			var trade_id         = his.GlobalTradeId;
-			var price            = his.Price._(pair.RateUnits);
-			var amount_base      = his.Amount._(pair.Base);
-			var commission_quote = price * amount_base * his.Fee;
-			var created          = his.Timestamp;
-			return new TradeCompleted(order_completed, trade_id, price, amount_base, commission_quote, created, updated);
+			var tt         = Misc.TradeType(his.Type);
+			var pair       = order_completed.Pair;
+			var trade_id   = his.GlobalTradeId;
+			var amount_in  = tt.AmountIn(his.AmountBase._(pair.Base), his.PriceQ2B._(pair.RateUnits));
+			var amount_out = tt.AmountOut(his.AmountBase._(pair.Base), his.PriceQ2B._(pair.RateUnits));
+			var commission = amount_out * his.Fee;
+			var created    = his.Timestamp;
+			return new TradeCompleted(order_completed, trade_id, amount_in, amount_out, commission, pair.Quote, created, updated);
 		}
 
 		/// <summary>Convert a poloniex deposit into a 'Transfer'</summary>

@@ -25,7 +25,7 @@ namespace CoinFlip
 		/// <summary>The units that the spot prices are in</summary>
 		public string RateUnits => $"{Quote}/{Base}";
 
-		/// <summary>Get/Set spot price</summary>
+		/// <summary>Get/Set spot price (in Quote/Base)</summary>
 		public Unit<double>? this[ETradeType tt]
 		{
 			get

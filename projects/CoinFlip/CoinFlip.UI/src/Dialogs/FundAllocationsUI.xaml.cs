@@ -183,7 +183,7 @@ namespace CoinFlip.UI
 					var max_available = balances.NettAvailable;
 					foreach (var bal in balances.FundsExceptMain)
 					{
-						if (bal.FundId == SelectedFund?.Id)
+						if (bal.Fund == SelectedFund)
 							max_available += bal.HeldOnExch - bal.Total;
 						else
 							max_available -= bal.Total;
@@ -197,14 +197,14 @@ namespace CoinFlip.UI
 			{
 				get
 				{
-					var fund_id = SelectedFund?.Id;
-					if (fund_id == null) return 0;
-					return Coin?.Balances[fund_id].Total ?? 0;
+					var fund = SelectedFund;
+					if (fund == null) return 0;
+					return Coin?.Balances[fund].Total ?? 0;
 				}
 				set
 				{
-					var fund_id = SelectedFund?.Id;
-					if (fund_id == null)
+					var fund = SelectedFund;
+					if (fund == null)
 						return;
 
 					var coin = Coin;
@@ -212,7 +212,7 @@ namespace CoinFlip.UI
 						return;
 
 					value = Math.Max(value, 0);
-					coin.Balances.AssignFundBalance(fund_id, value._(coin), null, Model.UtcNow);
+					coin.Balances.AssignFundBalance(fund, value._(coin), null, Model.UtcNow);
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(MaxAvailable)));
 					m_owner.NotifyPropertyChanged(nameof(FundAllocationsUI.Validate));
 				}

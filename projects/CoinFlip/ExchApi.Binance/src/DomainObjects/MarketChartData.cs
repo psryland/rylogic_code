@@ -67,7 +67,7 @@ namespace Binance.API.DomainObjects
 		/// <summary></summary>
 		public double TakerBuyVolumeQuote { get; }
 
-		/// <summary>Fake median data, since Binance doesn't supply this info</summary>
+		/// <summary>Approximate median data, since Binance doesn't supply this info</summary>
 		public double Median => (Open + High + Low + Close) / 4;
 
 		/// <summary></summary>

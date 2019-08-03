@@ -36,7 +36,7 @@ namespace CoinFlip
 			TradePairId = trade_pair_id;
 			AmountRangeBase  = amount_range_base  ?? new RangeF<Unit<double>>(0.0._(Base), double.MaxValue._(Base));
 			AmountRangeQuote = amount_range_quote ?? new RangeF<Unit<double>>(0.0._(Quote), double.MaxValue._(Quote));
-			PriceRange       = price_range        ?? new RangeF<Unit<double>>(0.0._(RateUnits), double.MaxValue._(RateUnits));
+			PriceRangeQ2B       = price_range        ?? new RangeF<Unit<double>>(0.0._(RateUnits), double.MaxValue._(RateUnits));
 			MarketDepth      = new MarketDepth(base_, quote);
 		}
 
@@ -147,21 +147,6 @@ namespace CoinFlip
 		}
 		private MarketDepth m_market_depth;
 
-		/// <summary>Prices for converting Base to Quote. First price is a maximum</summary>
-		public OrderBook B2Q => MarketDepth.B2Q;
-
-		/// <summary>Prices for converting Quote to Base. First price is a minimum</summary>
-		public OrderBook Q2B => MarketDepth.Q2B;
-
-		/// <summary>Return the order book that provides offers for a trade in this direction</summary>
-		public OrderBook OrderBook(ETradeType tt)
-		{
-			return
-				tt == ETradeType.B2Q ? B2Q :
-				tt == ETradeType.Q2B ? Q2B :
-				throw new Exception("Unknown trade type");
-		}
-
 		/// <summary>The allowable range of amounts for trading the base currency</summary>
 		public RangeF<Unit<double>> AmountRangeBase { get; private set; }
 
@@ -169,7 +154,7 @@ namespace CoinFlip
 		public RangeF<Unit<double>> AmountRangeQuote { get; private set; }
 
 		/// <summary>The allowed price range (in Quote/Base) when trading this pair</summary>
-		public RangeF<Unit<double>> PriceRange { get; private set; }
+		public RangeF<Unit<double>> PriceRangeQ2B { get; private set; }
 
 		/// <summary>Return the Fee charged when trading this pair. When the pairs are on different exchanges there is no fee</summary>
 		public double Fee => Base.Exchange == Quote.Exchange ? Base.Exchange.Fee : 0;
@@ -182,7 +167,7 @@ namespace CoinFlip
 		public IEnumerable<ETimeFrame> CandleDataAvailable => Exchange.EnumAvailableCandleData(this).Select(x => x.TimeFrame);
 
 		/// <summary>Return the order type implied by the given trade type and price relative to the spot price</summary>
-		public EPlaceOrderType? OrderType(ETradeType trade_type, Unit<double> price_q2b)
+		public EOrderType? OrderType(ETradeType trade_type, Unit<double> price_q2b)
 		{
 			// If the spot price is unknown, then so is the impled order type
 			var market_price_q2b = SpotPrice[trade_type];
@@ -192,16 +177,16 @@ namespace CoinFlip
 			if (trade_type == ETradeType.Q2B)
 			{
 				return
-					price_q2b > market_price_q2b.Value * (1.0 + SettingsData.Settings.MarketOrderPriceToleranceFrac) ? EPlaceOrderType.Stop :
-					price_q2b < market_price_q2b.Value * (1.0 - SettingsData.Settings.MarketOrderPriceToleranceFrac) ? EPlaceOrderType.Limit :
-					EPlaceOrderType.Market;
+					price_q2b > market_price_q2b.Value * (1.0 + SettingsData.Settings.MarketOrderPriceToleranceFrac) ? EOrderType.Stop :
+					price_q2b < market_price_q2b.Value * (1.0 - SettingsData.Settings.MarketOrderPriceToleranceFrac) ? EOrderType.Limit :
+					EOrderType.Market;
 			}
 			if (trade_type == ETradeType.B2Q)
 			{
 				return
-					price_q2b < market_price_q2b.Value * (1.0 + SettingsData.Settings.MarketOrderPriceToleranceFrac) ? EPlaceOrderType.Stop :
-					price_q2b > market_price_q2b.Value * (1.0 - SettingsData.Settings.MarketOrderPriceToleranceFrac) ? EPlaceOrderType.Limit :
-					EPlaceOrderType.Market;
+					price_q2b < market_price_q2b.Value * (1.0 + SettingsData.Settings.MarketOrderPriceToleranceFrac) ? EOrderType.Stop :
+					price_q2b > market_price_q2b.Value * (1.0 - SettingsData.Settings.MarketOrderPriceToleranceFrac) ? EOrderType.Limit :
+					EOrderType.Market;
 			}
 			throw new Exception("Unknown trade type");
 		}
@@ -210,29 +195,29 @@ namespace CoinFlip
 		/// Convert an amount of 'Base' currency to 'Quote' currency using the available orders.
 		/// If there is insufficient liquidity, returns the amount traded from what was available.
 		/// Also returns the price at which the conversion would happen.
-		/// Use 'amount' = 0 to get the spot price</summary>
-		public Trade BaseToQuote(string fund_id, Unit<double> amount)
+		/// Use 'amount_base' = 0 to get the spot price</summary>
+		public Trade BaseToQuote(Fund fund, Unit<double> amount_base)
 		{
-			if (amount < 0.0._(Base))
+			if (amount_base < 0.0._(Base))
 				throw new Exception("Invalid amount");
 
 			// Determine the best price and amount in quote currency.
-			var trade = new Trade(fund_id, ETradeType.B2Q, this, 0.0._(RateUnits), 0.0._(Base));
-			foreach (var x in B2Q)
+			var trade = new Trade(fund, this, EOrderType.Limit, ETradeType.B2Q, 0.0._(Base), 0.0._(Quote));
+			foreach (var x in MarketDepth.B2Q)
 			{
-				if (x.AmountBase > amount)
+				if (x.AmountBase < amount_base)
 				{
-					trade.Price = x.Price;
-					trade.AmountIn += amount;
-					trade.AmountOut += x.Price * amount;
-					break;
+					trade.PriceQ2B = x.PriceQ2B;
+					trade.AmountIn += x.AmountBase;
+					trade.AmountOut += x.PriceQ2B * x.AmountBase;
+					amount_base -= x.AmountBase;
 				}
 				else
 				{
-					trade.Price = x.Price;
-					trade.AmountIn += x.AmountBase;
-					trade.AmountOut += x.Price * x.AmountBase;
-					amount -= x.AmountBase;
+					trade.PriceQ2B = x.PriceQ2B;
+					trade.AmountIn += amount_base;
+					trade.AmountOut += x.PriceQ2B * amount_base;
+					break;
 				}
 			}
 			return trade;
@@ -242,83 +227,55 @@ namespace CoinFlip
 		/// Convert an amount of 'Quote' currency to 'Base' currency using the available orders.
 		/// If there is insufficient liquidity, returns the amount traded from what was available.
 		/// Also returns the price at which the conversion would happen.
-		/// Use 'amount' = 0 to get the spot price</summary>
-		public Trade QuoteToBase(string fund_id, Unit<double> amount)
+		/// Use 'amount_quote' = 0 to get the spot price</summary>
+		public Trade QuoteToBase(Fund fund, Unit<double> amount_quote)
 		{
-			if (amount < 0.0._(Quote))
+			if (amount_quote < 0.0._(Quote))
 				throw new Exception("Invalid amount");
 
 			// Determine the best price and amount in base currency.
 			// Note, the units are not the typical units for an order because
 			// I'm just using 'trade' to pass back a price and amount pair.
-			var trade = new Trade(fund_id, ETradeType.Q2B, this, price_q2b:0.0._(RateUnits), amount_base:0.0._(Base));
-			foreach (var x in Q2B)
+			var trade = new Trade(fund, this, EOrderType.Limit, ETradeType.Q2B, 0.0._(Quote), 0.0._(Base));
+			foreach (var x in MarketDepth.Q2B)
 			{
-				if (x.Price * x.AmountBase > amount)
+				if (x.PriceQ2B * x.AmountBase < amount_quote)
 				{
-					trade.Price = 1.0 / x.Price;
-					trade.AmountIn += amount;
-					trade.AmountOut += amount / x.Price;
-					break;
+					trade.PriceQ2B = x.PriceQ2B;
+					trade.AmountIn += x.AmountQuote;
+					trade.AmountOut += x.AmountBase;
+					amount_quote -= x.AmountQuote;
 				}
 				else
 				{
-					trade.Price = 1.0 / x.Price;
-					trade.AmountIn += x.AmountQuote;
-					trade.AmountOut += x.AmountBase;
-					amount -= x.AmountQuote;
+					trade.PriceQ2B = x.PriceQ2B;
+					trade.AmountIn += amount_quote;
+					trade.AmountOut += amount_quote / x.PriceQ2B;
+					break;
 				}
 			}
 			return trade;
 		}
 
 		/// <summary>Convert an amount of currency using the available orders. e.g. Q2B => 'amount' in Quote, out in 'Base'</summary>
-		public Trade MakeTrade(string fund_id, ETradeType tt, Unit<double> amount)
+		public Trade MarketTrade(Fund fund, ETradeType tt, Unit<double> amount)
 		{
 			return
-				tt == ETradeType.Q2B ? QuoteToBase(fund_id, amount) :
-				tt == ETradeType.B2Q ? BaseToQuote(fund_id, amount) :
+				tt == ETradeType.Q2B ? QuoteToBase(fund, amount) :
+				tt == ETradeType.B2Q ? BaseToQuote(fund, amount) :
 				throw new Exception("Unknown trade type");
 		}
 
 		/// <summary>The position of this trade in the order book for the trade type</summary>
-		public int OrderBookIndex(ETradeType tt, Unit<double> price, out bool beyond_order_book)
+		public int OrderBookIndex(ETradeType tt, Unit<double> price_q2b, out bool beyond_order_book)
 		{
-			// Check units
-			if (price < 0.0._(RateUnits))
-				throw new Exception("Invalid price");
-
-			// If a trade cannot be filled by existing orders, it becomes an offer.
-			// E.g.
-			//  - Want to trade B2Q == Sell our 'B' to get 'Q'.
-			//  - If there are no suitable B2Q.Orders (i.e. people wanting to buy 'B') then our trade becomes an offer in the Q2B order book.
-			//    i.e. we want to buy 'Q' so our trade is a Q2B offer.
-			var idx = -1;
-			switch (tt)
-			{
-			default: throw new Exception($"Unknown trade type:{tt}");
-			case ETradeType.B2Q:
-				{
-					idx = Q2B.Offers.BinarySearch(x => +x.Price.CompareTo(price), find_insert_position: true);
-					beyond_order_book = idx == Q2B.Offers.Count;
-					break;
-				}
-			case ETradeType.Q2B:
-				{
-					idx = B2Q.Offers.BinarySearch(x => -x.Price.CompareTo(price), find_insert_position: true);
-					beyond_order_book = idx == B2Q.Offers.Count;
-					break;
-				}
-			}
-			return idx;
+			return MarketDepth.OrderBookIndex(tt, price_q2b, out beyond_order_book);
 		}
 
 		/// <summary>The total value of orders with a better price than 'price'</summary>
-		public Unit<double> OrderBookDepth(ETradeType tt, Unit<double> price, out bool beyond_order_book)
+		public Unit<double> OrderBookDepth(ETradeType tt, Unit<double> price_q2b, out bool beyond_order_book)
 		{
-			var index = OrderBookIndex(tt, price, out beyond_order_book);
-			var orders = tt == ETradeType.B2Q ? Q2B.Offers : B2Q.Offers;
-			return orders.Take(index).Sum(x => x.AmountBase);
+			return MarketDepth.OrderBookDepth(tt, price_q2b, out beyond_order_book);
 		}
 
 		/// <summary>Update this pair using the contents of 'rhs'</summary>
@@ -329,11 +286,11 @@ namespace CoinFlip
 				throw new Exception("Update for the wrong trading pair");
 
 			// Update the update-able parts
-			TradePairId      = rhs.TradePairId;
-			AmountRangeBase  = rhs.AmountRangeBase;
+			TradePairId = rhs.TradePairId;
+			AmountRangeBase = rhs.AmountRangeBase;
 			AmountRangeQuote = rhs.AmountRangeQuote;
-			PriceRange       = rhs.PriceRange;
-			MarketDepth.UpdateOrderBook(rhs.B2Q.Offers, rhs.Q2B.Offers);
+			PriceRangeQ2B = rhs.PriceRangeQ2B;
+			MarketDepth.UpdateOrderBooks(rhs.MarketDepth);
 		}
 
 		/// <summary>Return the default amount to use for a trade on 'pair' (in CoinIn currency)</summary>
@@ -410,27 +367,7 @@ namespace CoinFlip
 		/// <summary>Check the orders are in the correct order</summary>
 		public bool AssertOrdersValid()
 		{
-			// Asking price should increase
-			for (int i = 0; i != Q2B.Count; ++i)
-			{
-				if (Q2B[i].Price < 0)
-					throw new Exception("Q2B order book price is invalid");
-				if (Q2B[i].AmountBase < 0)
-					throw new Exception("Q2B order book amount is invalid");
-				if (i > 0 && Q2B[i-1].Price > Q2B[i].Price)
-					throw new Exception("Q2B order book prices are out of order");
-			}
-
-			// Bid price should decrease
-			for (int i = 0; i != B2Q.Count; ++i)
-			{
-				if (B2Q[i].Price < 0)
-					throw new Exception("B2Q order book price is invalid");
-				if (B2Q[i].AmountBase < 0)
-					throw new Exception("B2Q order book amount is invalid");
-				if (i > 0 && B2Q[i-1].Price < B2Q[i].Price)
-					throw new Exception("B2Q order book prices are out of order");
-			}
+			MarketDepth.AssertOrdersValid();
 
 			// Check the spread
 			if (Spread < 0.0._(RateUnits))

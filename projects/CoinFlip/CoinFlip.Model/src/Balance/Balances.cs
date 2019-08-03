@@ -55,7 +55,7 @@ namespace CoinFlip
 			// the main fund, its just a place holder. Its accessors use the 'ExchTotal'
 			// and 'ExchHeld' properties in this class.
 			m_funds = new List<Balance>{};
-			m_funds.Add(new Balance(this, Fund.Main));
+			m_funds.Add(new Balance(this, new Fund(Fund.Main)));
 
 			// Assign the balance info from the exchange
 			ExchTotal = total;
@@ -73,13 +73,14 @@ namespace CoinFlip
 					continue;
 
 				// Ensure the fund exists
-				var bal = m_funds.Add2(new Balance(this, fd.Id));
+				var fund = new Fund(fd.Id);
+				var bal = m_funds.Add2(new Balance(this, fund));
 
 				// Look for balance data for this fund/exchange.
 				var bal_data = fd[Exchange.Name][Coin.Symbol];
 
 				// Attribute the balance amount to fund 'fd.Id'
-				AssignFundBalance(fd.Id, bal_data.Total._(Coin), bal_data.Held._(Coin), Model.UtcNow, notify: notify);
+				AssignFundBalance(fund, bal_data.Total._(Coin), bal_data.Held._(Coin), Model.UtcNow, notify: notify);
 			}
 		}
 
@@ -96,7 +97,7 @@ namespace CoinFlip
 		public IEnumerable<IBalance> FundsExceptMain => Funds.Skip(1);
 
 		/// <summary>The nett total balance is the balance that the exchange reports (regardless of what the funds think they have)</summary>
-		public Unit<double> NettTotal => ExchTotal + (!Model.AllowTrades ? FakeCash : 0.0._(Coin));
+		public Unit<double> NettTotal => ExchTotal;
 		private Unit<double> ExchTotal
 		{
 			get => m_exch_total;
@@ -130,22 +131,18 @@ namespace CoinFlip
 		/// <summary>The value of the nett total in valuation currency</summary>
 		public Unit<double> NettValue => Coin.ValueOf(NettTotal);
 
-		/// <summary>Fake additional funds</summary>
-		public Unit<double> FakeCash { get; set; }
-
 		/// <summary>Access balances associated with the given fund. Unknown fund ids return an empty balance</summary>
-		public IBalance this[string fund_id] => Funds.FirstOrDefault(x => x.FundId == fund_id) ?? new Balance(this, fund_id);
-		public IBalance this[Fund fund] => this[fund?.Id];
+		public IBalance this[Fund fund] => Funds.FirstOrDefault(x => x.Fund == fund) ?? new Balance(this, fund);
 
 		/// <summary>Set the total balance attributed to the fund 'fund_id'. Only non-null values are changed</summary>
-		public void AssignFundBalance(string fund_id, Unit<double>? total, Unit<double>? held_on_exch, DateTimeOffset now, bool notify = true)
+		public void AssignFundBalance(Fund fund, Unit<double>? total, Unit<double>? held_on_exch, DateTimeOffset now, bool notify = true)
 		{
 			// Notes:
 			// - Don't throw if the nett total becomes negative, that probably just means a fund
 			//   has been assigned too much. Allow the user to reduce the allocations.
 
-			var balance = (Balance)Funds.FirstOrDefault(x => x.FundId == fund_id);
-			if (fund_id == Fund.Main)
+			var balance = (Balance)Funds.FirstOrDefault(x => x.Fund == fund);
+			if (fund.Id == Fund.Main)
 			{
 				if (total != null)
 					ExchTotal = total.Value;
@@ -155,7 +152,7 @@ namespace CoinFlip
 			else
 			{
 				// Get the balance info for 'fund_id', create if necessary
-				balance = balance ?? m_funds.Add2(new Balance(this, fund_id));
+				balance = balance ?? m_funds.Add2(new Balance(this, fund));
 				if (total != null)
 					balance.Total = total.Value;
 				if (held_on_exch != null)
@@ -171,24 +168,24 @@ namespace CoinFlip
 		}
 
 		/// <summary>Add or subtract an amount from a fund</summary>
-		public void ChangeFundBalance(string fund_id, Unit<double>? change_total, Unit<double>? change_held_on_exch, DateTimeOffset now, bool notify = true)
+		public void ChangeFundBalance(Fund fund, Unit<double>? change_amount, bool apply_to_held_also, DateTimeOffset now, bool notify = true)
 		{
-			var balance = (Balance)Funds.FirstOrDefault(x => x.FundId == fund_id);
-			if (fund_id == Fund.Main)
+			var balance = (Balance)Funds.FirstOrDefault(x => x.Fund == fund);
+			if (fund.Id == Fund.Main)
 			{
-				if (change_total != null)
-					ExchTotal += change_total.Value;
-				if (change_held_on_exch != null)
-					ExchHeld += change_held_on_exch.Value;
+				if (change_amount != null)
+					ExchTotal += change_amount.Value;
+				if (apply_to_held_also)
+					ExchHeld += change_amount.Value;
 			}
 			else
 			{
 				// Get the balance info for 'fund_id', create if necessary
-				balance = balance ?? m_funds.Add2(new Balance(this, fund_id));
-				if (change_total != null)
-					balance.Total += change_total.Value;
-				if (change_held_on_exch != null)
-					balance.HeldOnExch += change_held_on_exch.Value;
+				balance = balance ?? m_funds.Add2(new Balance(this, fund));
+				if (change_amount != null)
+					balance.Total += change_amount.Value;
+				if (apply_to_held_also)
+					balance.HeldOnExch += change_amount.Value;
 			}
 
 			balance.LastUpdated = now;
@@ -214,11 +211,11 @@ namespace CoinFlip
 			foreach (var fund in Funds)
 			{
 				if (fund.Total < 0.0._(Coin))
-					return new Exception($"Fund {fund.FundId} balance invalid: Total < 0");
+					return new Exception($"Fund {fund.Fund.Id} balance invalid: Total < 0");
 				if (fund.HeldOnExch < 0.0._(Coin))
-					return new Exception($"Fund {fund.FundId} balance invalid: Held < 0");
+					return new Exception($"Fund {fund.Fund.Id} balance invalid: Held < 0");
 				if (fund.HeldOnExch > fund.Total)
-					return new Exception($"Fund {fund.FundId} balance invalid: Held > Total");
+					return new Exception($"Fund {fund.Fund.Id} balance invalid: Held > Total");
 			}
 
 			return null;
@@ -242,17 +239,17 @@ namespace CoinFlip
 		private class Balance :IBalance, IValueTotalAvail
 		{
 			private readonly Balances m_balances;
-			public Balance(Balances balances, string fund_id)
+			public Balance(Balances balances, Fund fund)
 			{
 				m_balances = balances;
 				m_total = 0.0._(balances.Coin);
 				m_held_on_exch = 0.0._(balances.Coin);
-				FundId = fund_id;
+				Fund = fund;
 				Holds = new List<FundHold>();
 			}
 
-			/// <summary>The Fund id that this balance belongs to</summary>
-			public string FundId { get; }
+			/// <summary>The Fund that this balance belongs to</summary>
+			public Fund Fund { get; }
 
 			/// <summary>The currency that the balance is in</summary>
 			public Coin Coin => m_balances.Coin;
@@ -270,12 +267,15 @@ namespace CoinFlip
 			public Unit<double> Total
 			{
 				// The Main fund contains whatever is left over after the other funds have their share
-				get { return FundId != Fund.Main ? m_total : m_balances.NettTotal - m_balances.FundsExceptMain.Sum(x => x.Total); }
+				get { return Fund.Id == Fund.Main ? m_balances.NettTotal - m_balances.FundsExceptMain.Sum(x => x.Total) : m_total; }
 				set
 				{
-					Debug.Assert(FundId != Fund.Main);
-					if (m_total == value) return;
-					m_total = value;
+					if (Total == value) return;
+					if (Fund.Id == Fund.Main)
+						m_balances.ExchTotal = value + m_balances.FundsExceptMain.Sum(x => x.Total);
+					else
+						m_total = value;
+
 					NotifyPropertyChanged(nameof(Total));
 					NotifyPropertyChanged(nameof(Available));
 				}
@@ -296,12 +296,15 @@ namespace CoinFlip
 			/// <summary>Total amount set aside for pending orders and trade strategies</summary>
 			public Unit<double> HeldOnExch
 			{
-				get { return FundId != Fund.Main ? m_held_on_exch : m_balances.NettHeld - m_balances.FundsExceptMain.Sum(x => x.HeldOnExch); }
+				get { return Fund.Id == Fund.Main ? m_balances.NettHeld - m_balances.FundsExceptMain.Sum(x => x.HeldOnExch) : m_held_on_exch; }
 				set
 				{
-					Debug.Assert(FundId != Fund.Main);
-					if (m_held_on_exch == value) return;
-					m_held_on_exch = value;
+					if (HeldOnExch == value) return;
+					if (Fund.Id == Fund.Main)
+						m_balances.ExchHeld = value + m_balances.FundsExceptMain.Sum(x => x.HeldOnExch);
+					else
+						m_held_on_exch = value;
+
 					NotifyPropertyChanged(nameof(Available));
 					NotifyPropertyChanged(nameof(HeldForTrades));
 				}
@@ -380,7 +383,7 @@ namespace CoinFlip
 			}
 
 			/// <summary>String description of this fund balance</summary>
-			public string Description => $"{Coin} Fund={FundId} Avail={Available} Total={Total}";
+			public string Description => $"{Coin} Fund={Fund.Id} Avail={Available} Total={Total}";
 		}
 
 

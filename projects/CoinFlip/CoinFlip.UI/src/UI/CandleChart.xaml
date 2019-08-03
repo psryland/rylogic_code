@@ -212,13 +212,9 @@
 		ChartBackground="White"
 		Margin="4"
 		/>
-	<Canvas
-		Grid.Row="1"
-		x:Name="m_chart_overlay"
-		ClipToBounds="True"
-		Margin="4"
-		>
-		<StackPanel
+	<Canvas>
+	</Canvas>
+	<!--<StackPanel
 			Canvas.Left="900"
 			Canvas.Top="0"
 			Orientation="Horizontal"
@@ -235,8 +231,7 @@
 				VerticalAlignment="Center"
 				HorizontalAlignment="Center"
 				/>
-		</StackPanel>
+		</StackPanel>-->
 
-	</Canvas>
 </Grid>
 	

@@ -72,6 +72,8 @@ namespace CoinFlip.UI
 				if (m_model == value) return;
 				if (m_model != null)
 				{
+					m_model.OrderChanging -= Chart.Invalidate;
+					m_model.HistoryChanging -= Chart.Invalidate;
 					m_model.Charts.CollectionChanged -= HandleChartsCollectionChanged;
 					SettingsData.Settings.Chart.SettingChange -= HandleSettingChange;
 					m_model.Charts.Remove(this);
@@ -82,6 +84,8 @@ namespace CoinFlip.UI
 					m_model.Charts.Add(this);
 					SettingsData.Settings.Chart.SettingChange += HandleSettingChange;
 					m_model.Charts.CollectionChanged += HandleChartsCollectionChanged;
+					m_model.HistoryChanging += Chart.Invalidate;
+					m_model.OrderChanging += Chart.Invalidate;
 				}
 				HandleChartsCollectionChanged(this, null);
 
@@ -92,28 +96,28 @@ namespace CoinFlip.UI
 					{
 					case nameof(ChartSettings.ShowOpenOrders):
 						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowOpenOrders)));
-						Chart.Scene.Invalidate();
+						Chart.Invalidate();
 						break;
 					case nameof(ChartSettings.ShowCompletedOrders):
 						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowCompletedOrders)));
-						Chart.Scene.Invalidate();
+						Chart.Invalidate();
 						break;
 					case nameof(ChartSettings.ShowMarketDepth):
 						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowMarketDepth)));
 						GfxMarketDepth.Invalidate();
-						Chart.Scene.Invalidate();
+						Chart.Invalidate();
 						break;
 					case nameof(ChartSettings.XAxisLabelMode):
 						Chart.XAxisPanel.Invalidate();
 						break;
 					case nameof(ChartSettings.TradeLabelSize):
-						Chart.Scene.Invalidate();
+						Chart.Invalidate();
 						break;
 					case nameof(ChartSettings.TradeLabelTransparency):
-						Chart.Scene.Invalidate();
+						Chart.Invalidate();
 						break;
 					case nameof(ChartSettings.ShowTradeDescriptions):
-						Chart.Scene.Invalidate();
+						Chart.Invalidate();
 						break;
 					}
 				}
@@ -363,7 +367,7 @@ namespace CoinFlip.UI
 				}
 				void HandleBuildScene(object sender, View3dControl.BuildSceneEventArgs e)
 				{
-					BuildScene(e.Window);
+					BuildScene();
 				}
 				void HandleMoved(object sender, ChartControl.ChartMovedEventArgs e)
 				{
@@ -440,12 +444,12 @@ namespace CoinFlip.UI
 					m_prev_count = latest_count;
 
 					// Signal a refresh
-					Chart.Scene.Invalidate();
+					Chart.Invalidate();
 				}
 				void HandleDataSyncingChanged(object sender, EventArgs e)
 				{
 					// Signal a refresh
-					Chart.Scene.Invalidate();
+					Chart.Invalidate();
 				}
 				double IOrderToXValue(IOrder order)
 				{
@@ -497,9 +501,9 @@ namespace CoinFlip.UI
 		}
 
 		/// <summary>Add graphics and elements to the chart</summary>
-		private void BuildScene(View3d.Window window)
+		private void BuildScene()
 		{
-			window.RemoveObjects(new[] { CtxId }, 1, 0);
+			Chart.Window.RemoveObjects(new[] { CtxId }, 1, 0);
 			if (Instrument == null || !DockControl.IsVisible)
 				return;
 
@@ -511,7 +515,7 @@ namespace CoinFlip.UI
 
 				// Add the candles that cover 'range'
 				foreach (var gfx in GfxCandles.Get(range))
-					window.AddObject(gfx);
+					Chart.Window.AddObject(gfx);
 			}
 
 			// Price Data
@@ -534,14 +538,14 @@ namespace CoinFlip.UI
 					if (GfxQ2B != null)
 					{
 						GfxQ2B.O2P = m4x4.Scale((float)Chart.XAxis.Span, 1f, 1f, new v4((float)Chart.XAxis.Min, (float)price, ZOrder.CurrentPrice, 1f));
-						window.AddObject(GfxQ2B);
+						Chart.Window.AddObject(GfxQ2B);
 					}
 				}
 				else
 				{
 					Q2BPriceLabel.Visibility = Visibility.Collapsed;
 					if (GfxQ2B != null)
-						window.RemoveObject(GfxQ2B);
+						Chart.Window.RemoveObject(GfxQ2B);
 				}
 
 				var spot_b2q = pair.SpotPrice[ETradeType.B2Q];
@@ -560,14 +564,14 @@ namespace CoinFlip.UI
 					if (GfxB2Q != null)
 					{
 						GfxB2Q.O2P = m4x4.Scale((float)Chart.XAxis.Span, 1f, 1f, new v4((float)Chart.XAxis.Min, (float)price, ZOrder.CurrentPrice, 1f));
-						window.AddObject(GfxB2Q);
+						Chart.Window.AddObject(GfxB2Q);
 					}
 				}
 				else
 				{
 					B2QPriceLabel.Visibility = Visibility.Collapsed;
 					if (GfxB2Q != null)
-						window.RemoveObject(GfxB2Q);
+						Chart.Window.RemoveObject(GfxB2Q);
 				}
 			}
 
@@ -580,13 +584,13 @@ namespace CoinFlip.UI
 				case EShowItems.Disabled: break;
 				case EShowItems.Selected:
 					{
-						GfxOpenOrders.BuildScene(Model.SelectedOpenOrders.Where(Visible), Chart, m_chart_overlay);
+						GfxOpenOrders.BuildScene(Model.SelectedOpenOrders.Where(Visible), Chart);
 						break;
 					}
 				case EShowItems.All:
 					{
 						if (Instrument.Count == 0) break;
-						GfxOpenOrders.BuildScene(Exchange.Orders.Values.Where(Visible), Chart, m_chart_overlay);
+						GfxOpenOrders.BuildScene(Exchange.Orders.Values.Where(Visible), Chart);
 						break;
 					}
 				}
@@ -613,13 +617,13 @@ namespace CoinFlip.UI
 				case EShowItems.Disabled: break;
 				case EShowItems.Selected:
 					{
-						GfxCompletedOrders.BuildScene(Model.SelectedCompletedOrders.Where(Visible), Chart, m_chart_overlay);
+						GfxCompletedOrders.BuildScene(Model.SelectedCompletedOrders.Where(Visible), Chart);
 						break;
 					}
 				case EShowItems.All:
 					{
 						if (Instrument.Count == 0) break;
-						GfxCompletedOrders.BuildScene(Exchange.History.Values.Where(Visible), Chart, m_chart_overlay);
+						GfxCompletedOrders.BuildScene(Exchange.History.Values.Where(Visible), Chart);
 						break;
 					}
 				}
@@ -640,7 +644,7 @@ namespace CoinFlip.UI
 			// Market Depth
 			if (ShowMarketDepth)
 			{
-				GfxMarketDepth.BuildScene(Chart, window, m_chart_overlay);
+				GfxMarketDepth.BuildScene(Chart);
 			}
 
 			// Bots
@@ -654,7 +658,7 @@ namespace CoinFlip.UI
 			{
 				// Updating text
 				if (GfxUpdatingText != null && Instrument?.DataSyncing == true)
-					window.AddObject(GfxUpdatingText);
+					Chart.Window.AddObject(GfxUpdatingText);
 
 				// Cross hair labels
 				if (Chart.ShowCrossHair)
@@ -920,7 +924,7 @@ namespace CoinFlip.UI
 			{
 				Chart.XAxis.Centre = idx_range.Beg;
 				Chart.AutoRange(axes: ChartControl.EAxis.YAxis);
-				Chart.Scene.Invalidate();
+				Chart.Invalidate();
 			}
 		}
 
@@ -949,11 +953,16 @@ namespace CoinFlip.UI
 		public Command ShowChartOptions { get; }
 		private void ShowChartOptionsInternal()
 		{
-			var wnd = Window.GetWindow(this);
-			var pt = wnd.PointToScreen(Mouse.GetPosition(wnd));
-			var dlg = new ChartOptionsUI(wnd) { Left = pt.X, Top = pt.Y }.OnScreen();
-			dlg.ShowDialog();
+			if (m_dlg_chart_options == null)
+			{
+				var wnd = Window.GetWindow(this);
+				var pt = wnd.PointToScreen(Mouse.GetPosition(wnd));
+				m_dlg_chart_options = new ChartOptionsUI(wnd);
+				m_dlg_chart_options.SetLocation(pt.X - m_dlg_chart_options.DesiredSize.Width, pt.Y).OnScreen();
+			}
+			m_dlg_chart_options.Show();
 		}
+		private ChartOptionsUI m_dlg_chart_options;
 
 		/// <summary>Edit a trade</summary>
 		public Command EditTrade { get; }
@@ -969,14 +978,18 @@ namespace CoinFlip.UI
 			var ui = new EditTradeUI(Window.GetWindow(this), Model, trade, order_id);
 			ui.Closed += (s, a) =>
 			{
-				indy.Chart = null;
+				//indy.Chart = null;
 				Util.Dispose(ref indy);
 				if (ui.Result == true)
 				{
 					// Create or Update trade on the exchange
 					Misc.RunOnMainThread(async () =>
 					{
-						try { await trade.CreateOrder(Model.Shutdown.Token, ui.CreatorName); }
+						try
+						{
+							await trade.CreateOrder(Model.Shutdown.Token, ui.CreatorName);
+							Chart.Invalidate();
+						}
 						catch (Exception ex)
 						{
 							MsgBox.Show(Window.GetWindow(this), ex.MessageFull(), "Create/Modify Order", MsgBox.EButtons.OK, MsgBox.EIcon.Error);
@@ -1059,18 +1072,18 @@ namespace CoinFlip.UI
 				var buy = cmenu.Items.Add2(new MenuItem
 				{
 					Header = "base",
-					Foreground = new SolidColorBrush(SettingsData.Settings.Chart.B2QColour.ToMediaColor()),
+					Foreground = new SolidColorBrush(SettingsData.Settings.Chart.Q2BColour.ToMediaColor()),
 					Command = EditTrade,
 				});
 				var sel = cmenu.Items.Add2(new MenuItem
 				{
 					Header = "quote",
-					Foreground = new SolidColorBrush(SettingsData.Settings.Chart.Q2BColour.ToMediaColor()),
+					Foreground = new SolidColorBrush(SettingsData.Settings.Chart.B2QColour.ToMediaColor()),
 					Command = EditTrade,
 				});
 				cmenu.Opened += (s, a) =>
 				{
-					// Get the spot price at the mouse location
+					// Get the price at the mouse location
 					var hit = Chart.HitTestZoneCS(Mouse.GetPosition(Chart), ModifierKeys.None, WPFUtil.MouseBtns());
 					var visible = Instrument != null && hit.ChartPoint.Y > 0;
 
@@ -1080,31 +1093,22 @@ namespace CoinFlip.UI
 					if (!visible)
 						return;
 
-					var click_price = hit.ChartPoint.Y._(Instrument.Pair.RateUnits);
+					var click_price = hit.ChartPoint.Y._(Pair.RateUnits);
 
 					// Buy base currency (Q2B)
 					{
-						var trade = new Trade(Fund.Main, ETradeType.Q2B, Instrument.Pair, click_price, Instrument.Pair.Base.DefaultTradeAmount);
-						buy.Header = $"{OrderType(trade)} at {trade.PriceQ2B.ToString(5, true)}";
+						var order_type = Pair.OrderType(ETradeType.Q2B, click_price) ?? EOrderType.Market;
+						var trade = new Trade(Fund.Default, Pair, order_type, ETradeType.Q2B, 0.0._(Pair.Quote), 0.0._(Pair.Base)) { PriceQ2B = click_price };
+						buy.Header = $"Buy {Pair.Base} at {trade.PriceQ2B.ToString(5, true)}";
 						buy.CommandParameter = trade;
 					}
 
 					// Buy quote currency (B2Q)
 					{
-						var trade = new Trade(Fund.Main, ETradeType.B2Q, Instrument.Pair, click_price, Instrument.Pair.Base.DefaultTradeAmount);
-						sel.Header = $"{OrderType(trade)} at {trade.PriceQ2B.ToString(5, true)}";
+						var order_type = Pair.OrderType(ETradeType.B2Q, click_price) ?? EOrderType.Market;
+						var trade = new Trade(Fund.Default, Pair, order_type, ETradeType.B2Q, 0.0._(Pair.Base), 0.0._(Pair.Quote)) { PriceQ2B = click_price };
+						sel.Header = $"Sell {Pair.Base} at {trade.PriceQ2B.ToString(5, true)}";
 						sel.CommandParameter = trade;
-					}
-
-					// Convert the trade order type to a string
-					string OrderType(Trade trade)
-					{
-						return
-							trade == null ? "Market order" :
-							trade.OrderType == EPlaceOrderType.Market ? (trade.TradeType == ETradeType.Q2B ? "Buy" : "Sell") :
-							trade.OrderType == EPlaceOrderType.Limit ? "Limit order" :
-							trade.OrderType == EPlaceOrderType.Stop ? "Stop order" :
-							string.Empty;
 					}
 				};
 

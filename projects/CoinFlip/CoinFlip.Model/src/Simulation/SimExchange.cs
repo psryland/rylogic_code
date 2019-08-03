@@ -128,7 +128,7 @@ namespace CoinFlip
 
 				// Add a "deposit" for each non-zero balance
 				if (bal.Total != 0)
-					Transfers.Add(new Transfer("BackTesting", ETransfer.Deposit, coin, bal.Total._(coin), Model.UtcNow, Transfer.EStatus.Complete));
+					Transfers.Add(new Transfer($"{bal.Symbol}-BackTesting", ETransfer.Deposit, coin, bal.Total._(coin), Model.UtcNow, Transfer.EStatus.Complete));
 
 				CoinData.NotifyBalanceChanged(coin);
 			}
@@ -139,7 +139,7 @@ namespace CoinFlip
 			{
 				pair.SpotPrice[ETradeType.Q2B] = null;
 				pair.SpotPrice[ETradeType.B2Q] = null;
-				pair.MarketDepth.UpdateOrderBook(new Offer[0], new Offer[0]);
+				pair.MarketDepth.UpdateOrderBooks(new Offer[0], new Offer[0]);
 
 				// Set the spot prices from the current candle at the simulation time
 				var latest = PriceData[pair, Sim.TimeFrame]?.Current;
@@ -184,9 +184,9 @@ namespace CoinFlip
 					var md = GenerateMarketDepth(pair, latest, Sim.TimeFrame);
 
 					// Update the spot price and order book
-					pair.MarketDepth.UpdateOrderBook(md.B2Q.ToArray(), md.Q2B.ToArray());
-					pair.SpotPrice[ETradeType.Q2B] = md.Q2B[0].Price;
-					pair.SpotPrice[ETradeType.B2Q] = md.B2Q[0].Price;
+					pair.MarketDepth.UpdateOrderBooks(md.B2Q.ToArray(), md.Q2B.ToArray());
+					pair.SpotPrice[ETradeType.Q2B] = md.Q2B[0].PriceQ2B;
+					pair.SpotPrice[ETradeType.B2Q] = md.B2Q[0].PriceQ2B;
 
 					// Q2B => first price is the minimum, B2Q => first price is a maximum
 					Debug.Assert(pair.SpotPrice[ETradeType.Q2B] == latest.Close._(pair.RateUnits));
@@ -208,7 +208,7 @@ namespace CoinFlip
 					// If 'his' is null, then the position can't be filled can remains unchanged
 					// If 'pos' is null, then the position is completely filled.
 					// 'order.OrderType' should have a value because the trade cannot be submitted without knowing the spot price
-					TryFillOrder(order.Pair, order.FundId, order.OrderId, order.TradeType, order.OrderType.Value, order.PriceQ2B, order.AmountBase, order.RemainingBase, out var pos, out var his);
+					TryFillOrder(order.Pair, order.Fund, order.OrderId, order.TradeType, order.OrderType, order.AmountIn, order.AmountOut, order.Remaining, out var pos, out var his);
 					if (his == null)
 						continue;
 
@@ -238,7 +238,7 @@ namespace CoinFlip
 					}
 
 					// Sanity check that the partial trade isn't gaining or losing amount
-					Debug.Assert(order.AmountBase == (pos?.RemainingBase ?? 0) + (his?.Trades.Values.Sum(x => x.AmountBase) ?? 0));
+					Debug.Assert(Math_.FEqlRelative(order.AmountBase, (pos?.RemainingBase ?? 0) + (his?.Trades.Values.Sum(x => x.AmountBase) ?? 0), 0.00000001));
 				}
 
 				// This is equivalent to the 'DataUpdates' code in 'UpdateOrdersAndHistoryInternal'
@@ -258,11 +258,11 @@ namespace CoinFlip
 					foreach (var exch_order in history_updates.SelectMany(x => x.Trades.Values))
 					{
 						// Get/Add the completed order
-						var order_completed = History.GetOrAdd(exch_order.OrderId, x => new OrderCompleted(x, Exchange.OrderIdToFundId(x),
-							exch_order.TradeType, exch_order.Pair));
+						var order_completed = History.GetOrAdd(exch_order.OrderId,
+							x => new OrderCompleted(x, Exchange.OrderIdToFund(x), exch_order.Pair, exch_order.TradeType));
 
 						// Add the trade to the completed order
-						var fill = new TradeCompleted(order_completed, exch_order.TradeId, exch_order.PriceQ2B, exch_order.AmountBase, exch_order.CommissionQuote, exch_order.Created, timestamp);
+						var fill = new TradeCompleted(order_completed, exch_order.TradeId, exch_order.AmountIn, exch_order.AmountOut, exch_order.Commission, exch_order.CommissionCoin, exch_order.Created, timestamp);
 						order_completed.Trades[fill.TradeId] = fill;
 
 						// Update the history of the completed orders
@@ -291,7 +291,7 @@ namespace CoinFlip
 						var coin = Coins.GetOrAdd(b.Coin.Symbol);
 
 						// Update the balance
-						Balance.AssignFundBalance(coin, Fund.Main, b.Total._(coin), b.Held._(coin), timestamp);
+						Balance.AssignFundBalance(coin, Fund.Default, b.Total._(coin), b.Held._(coin), timestamp);
 					}
 
 					// Notify updated
@@ -302,17 +302,17 @@ namespace CoinFlip
 		}
 
 		/// <summary>Create an order on this simulated exchange</summary>
-		public OrderResult CreateOrderInternal(TradePair pair, ETradeType tt, EPlaceOrderType ot, Unit<double> amount, Unit<double> price)
+		public OrderResult CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, float sig_change)
 		{
 			// Validate the order
 			if (pair.Exchange != Exchange)
 				throw new Exception($"SimExchange: Attempt to trade a pair not provided by this exchange");
-			if (m_bal[tt.CoinIn(pair)].Available < tt.AmountIn(amount, price))
-				throw new Exception($"SimExchange: Submit trade failed. Insufficient balance\n{tt} Pair: {pair.Name}  Vol: {amount.ToString("G8",true)} @  {price.ToString("G8",true)}");
-			if (!pair.AmountRangeBase.Contains(amount))
-				throw new Exception($"SimExchange: Amount in base currency is out of range");
-			if (!pair.AmountRangeQuote.Contains(price * amount))
-				throw new Exception($"SimExchange: Amount in quote currency is out of range");
+			if (m_bal[tt.CoinIn(pair)].Available < amount_in)
+				throw new Exception($"SimExchange: Submit trade failed. Insufficient balance\n{tt} Pair: {pair.Name}  Amt: {amount_in.ToString(8,true)} @  {(amount_out/amount_in).ToString(8,true)}");
+			if (!pair.AmountRangeIn(tt).Contains(amount_in))
+				throw new Exception($"SimExchange: 'In' amount is out of range");
+			if (!pair.AmountRangeOut(tt).Contains(amount_out))
+				throw new Exception($"SimExchange: 'Out' amount is out of range");
 
 			// Stop the sim for 'RunToTrade' mode
 			if (Sim.RunMode == Simulation.ERunMode.RunToTrade)
@@ -322,7 +322,7 @@ namespace CoinFlip
 			var order_id = ++m_order_id;
 
 			// The order can be filled immediately, filled partially, or not filled and remain as a 'Position'
-			TryFillOrder(pair, Fund.Main, order_id, tt, ot, price, amount, amount, out var pos, out var his);
+			TryFillOrder(pair, Fund.Default, order_id, tt, ot, amount_in, amount_out, amount_in, out var pos, out var his);
 			if (pos != null) m_ord[order_id] = pos;
 			if (his != null) m_his[order_id] = his;
 
@@ -331,7 +331,7 @@ namespace CoinFlip
 
 			// Record the filled orders in the trade result
 			return new OrderResult(pair, order_id, pos == null, his?.Trades.Values.Select(x =>
-				new OrderResult.Fill(x.TradeId, x.PriceQ2B, x.AmountBase, x.CommissionQuote)));
+				new OrderResult.Fill(x.TradeId, x.AmountIn, x.AmountOut, x.Commission, x.CommissionCoin, 0f)));
 		}
 
 		/// <summary>Cancel an existing position</summary>
@@ -356,26 +356,32 @@ namespace CoinFlip
 		}
 
 		/// <summary>Attempt to make a trade on 'pair' for the given 'price' and base 'amount'</summary>
-		private void TryFillOrder(TradePair pair, string fund_id, long order_id, ETradeType tt, EPlaceOrderType ot, Unit<double> price, Unit<double> initial_amount, Unit<double> current_amount, out Order pos, out OrderCompleted his)
+		private void TryFillOrder(TradePair pair, Fund fund, long order_id, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, Unit<double> remaining_in, out Order pos, out OrderCompleted his)
 		{
-			// The order can be filled immediately, filled partially, or not filled and remain as an 'Order'
-			var offers = m_depth[pair][tt];
+			// The order can be filled immediately, filled partially, or not filled and remain as an 'Order'.
+			// Also, exchanges use the base currency as the amount to fill, so for Q2B trades it's possible
+			// that 'amount_in' is less than the trade asked for.
+			var market = m_depth[pair];
 
 			// Consume orders
-			var filled = offers.Consume(pair, ot, price, current_amount, out var remaining);
-			Debug.Assert(current_amount == remaining + filled.Sum(x => x.AmountBase));
+			var price_q2b = tt.PriceQ2B(amount_out / amount_in);
+			var amount_base = tt.AmountBase(price_q2b, amount_in: remaining_in);
+			var filled = market.Consume(pair, tt, ot, price_q2b, amount_base, out var remaining_base);
+			Debug.Assert(Math_.FEqlRelative(amount_base, remaining_base + filled.Sum(x => x.AmountBase), 0.000000001));
 
 			// The order is partially or completely filled...
-			pos = remaining != 0              ? new Order(order_id, fund_id, tt, pair, price, initial_amount, remaining, Model.UtcNow, Model.UtcNow) : null;
-			his = remaining != current_amount ? new OrderCompleted(order_id, fund_id, tt, pair) : null;
+			pos = remaining_base != 0 ? new Order(order_id, fund, pair, ot, tt, amount_in, amount_out, tt.AmountIn(remaining_base, price_q2b), Model.UtcNow, Model.UtcNow) : null;
+			his = remaining_base != amount_base ? new OrderCompleted(order_id, fund, pair, tt) : null;
+
+			// Add 'TradeCompleted' entries for each order book offer that was filled
 			foreach (var fill in filled)
-				his.Trades.Add(new TradeCompleted(his, ++m_history_id, fill.Price, fill.AmountBase, Exchange.Fee * fill.AmountQuote, Model.UtcNow, Model.UtcNow));
+				his.Trades.Add(new TradeCompleted(his, ++m_history_id, fill.AmountIn(tt), fill.AmountOut(tt), Exchange.Fee * fill.AmountOut(tt), tt.CoinOut(pair), Model.UtcNow, Model.UtcNow));
 		}
 
 		/// <summary>Apply the implied changes to the current balance by the given order and completed order</summary>
 		private void ApplyToBalance(Order ord, OrderCompleted his)
 		{
-			var coins = new HashSet<Coin>();
+			var coins = new HashSet<Coin>(); // why??
 			if (his != null)
 			{
 				foreach (var fill in his.Trades.Values)
@@ -387,8 +393,13 @@ namespace CoinFlip
 					}
 					{// Credit to CoinOut
 						var bal = m_bal[fill.CoinOut];
-						bal.Total += fill.AmountNett;
+						bal.Total += fill.AmountOut;
 						coins.Add(fill.CoinOut);
+					}
+					{// Debt the commission
+						var bal = m_bal[fill.CommissionCoin];
+						bal.Total -= fill.Commission;
+						coins.Add(fill.CommissionCoin);
 					}
 				}
 			}
@@ -408,7 +419,7 @@ namespace CoinFlip
 			bal.Held -= order.Remaining;
 		}
 
-		/// <summary>Generate fake market depth for 'pair', using 'latest' as the reference for the current spot price</summary>
+		/// <summary>Generate simulated market depth for 'pair', using 'latest' as the reference for the current spot price</summary>
 		private MarketDepth GenerateMarketDepth(TradePair pair, Candle latest, ETimeFrame time_frame)
 		{
 			// Notes:

@@ -13,7 +13,9 @@
 
 		<!-- Cell template for fund balances -->
 		<DataTemplate x:Key="FundBalanceDataTemplate">
-			<Grid>
+			<Grid
+				Margin="0,2,0,2"
+				>
 				<Grid.RowDefinitions>
 					<RowDefinition Height="Auto"/>
 					<RowDefinition Height="Auto"/>

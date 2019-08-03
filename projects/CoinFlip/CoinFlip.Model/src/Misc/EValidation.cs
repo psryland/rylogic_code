@@ -15,6 +15,8 @@ namespace CoinFlip
 		PriceIsInvalid      = 1 << 4,
 		AmountInIsInvalid   = 1 << 5,
 		AmountOutIsInvalid  = 1 << 6,
+		InvalidOrderType    = 1 << 7,
+		Inconsistent        = 1 << 8,
 	}
 
 	public static class EValidationExtn
@@ -58,6 +60,17 @@ namespace CoinFlip
 				sb.AppendLine("The amount of currency being bought is invalid.");
 				val ^= EValidation.AmountOutIsInvalid;
 			}
+			if (val.HasFlag(EValidation.InvalidOrderType))
+			{
+				sb.AppendLine("The order type is not valid for the given price relative to the spot price.");
+				val ^= EValidation.InvalidOrderType;
+			}
+			if (val.HasFlag(EValidation.Inconsistent))
+			{
+				sb.AppendLine("The trade amounts are inconsistent with the price.");
+				val ^= EValidation.Inconsistent;
+			}
+			
 			if (val != 0)
 			{
 				throw new Exception("Unknown validation flags");

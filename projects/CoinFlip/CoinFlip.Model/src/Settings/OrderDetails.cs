@@ -6,12 +6,12 @@ namespace CoinFlip.Settings
 	public class OrderDetails :SettingsXml<OrderDetails>
 	{
 		public OrderDetails()
-			:this(0, string.Empty, string.Empty)
+			:this(0, Fund.Default, string.Empty)
 		{ }
-		public OrderDetails(long order_id, string fund_id, string bot_name)
+		public OrderDetails(long order_id, Fund fund, string bot_name)
 		{
 			OrderId = order_id;
-			FundId = fund_id;
+			FundId = fund.Id;
 			BotName = bot_name;
 		}
 		public OrderDetails(XElement node)
