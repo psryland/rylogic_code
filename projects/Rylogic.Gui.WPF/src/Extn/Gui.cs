@@ -458,11 +458,16 @@ namespace Rylogic.Gui.WPF
 			return new PathGeometry(new[]{ new PathFigure(start, segments, true) });
 		}
 
-		/// <summary>Set the position of this window to 'pt'</summary>
-		public static void SetLocation(this Window wnd, Point pt)
+		/// <summary>Set the position of this window Note: Fluent return allows 'SetLocation(x,y).OnScreen()'</summary>
+		public static Window SetLocation(this Window wnd, Point pt)
 		{
-			wnd.Left = pt.X;
-			wnd.Top = pt.Y;
+			return SetLocation(wnd, pt.X, pt.Y);
+		}
+		public static Window SetLocation(this Window wnd, double left, double top)
+		{
+			wnd.Left = left;
+			wnd.Top = top;
+			return wnd;
 		}
 
 		/// <summary>True if this window was shown using ShowDialog</summary>

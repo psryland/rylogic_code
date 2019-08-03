@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Text;
 using System.Windows;
 
@@ -61,6 +62,41 @@ namespace Rylogic.Gui.WPF
 			var msg = m_message.Append(message).ToString();
 			m_message.Length = 0;
 			MessageBox.Show(msg, "Binding Error", MessageBoxButton.OK, MessageBoxImage.Error);
+		}
+	}
+
+	/// <summary></summary>
+	public class OnBindingError :TraceListener
+	{
+		// Notes:
+		//   Credit: https://thecolorofcode.com/2018/01/30/how-to-never-miss-a-wpf-binding-error-again/
+		// 
+		// Use:
+		//	public partial class Window1 : Window
+		//	{
+		//		public Window1()
+		//		{
+		//			new OnBindingError(msg => Debugger.Break());
+		//			InitializeComponent();
+		//		}
+		//	}
+
+		private readonly Action<string> m_error_handler;
+
+		public OnBindingError(Action<string> error_handler)
+		{
+			m_error_handler = error_handler;
+
+			var binding_trace = PresentationTraceSources.DataBindingSource;
+			binding_trace.Listeners.Add(this);
+			binding_trace.Switch.Level = SourceLevels.Information;
+		}
+		public override void WriteLine(string message)
+		{
+			m_error_handler?.Invoke(message);
+		}
+		public override void Write(string message)
+		{
 		}
 	}
 }

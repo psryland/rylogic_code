@@ -460,6 +460,24 @@ namespace Rylogic.Maths
 	/// <summary>Maths overloads for Unit</summary>
 	public static partial class Math_
 	{
+		/// <summary>Truncate a number to 'digits' significant digits</summary>
+		public static Utility.Unit<int> TruncSD(Utility.Unit<int> d, int significant_digits)
+		{
+			return Utility.Unit_._(TruncSD(d.Value, significant_digits), d);
+		}
+		public static Utility.Unit<long> TruncSD(Utility.Unit<long> d, int significant_digits)
+		{
+			return Utility.Unit_._(TruncSD(d.Value, significant_digits), d);
+		}
+		public static Utility.Unit<double> TruncSD(Utility.Unit<double> d, int significant_digits)
+		{
+			return Utility.Unit_._(TruncSD(d.Value, significant_digits), d);
+		}
+		public static Utility.Unit<decimal> TruncSD(Utility.Unit<decimal> d, int significant_digits)
+		{
+			return Utility.Unit_._(TruncSD(d.Value, significant_digits), d);
+		}
+
 		public static Utility.Unit<long> RoundSD(Utility.Unit<long> d, int significant_digits, MidpointRounding rounding = MidpointRounding.ToEven)
 		{
 			return Utility.Unit_._(RoundSD(d.Value, significant_digits, rounding), d);

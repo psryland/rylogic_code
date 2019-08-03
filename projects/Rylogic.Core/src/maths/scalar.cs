@@ -521,6 +521,24 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Truncate a number to 'digits' significant digits</summary>
+		public static int TruncSD(int d, int significant_digits)
+		{
+			if (significant_digits < 0)
+				throw new ArgumentOutOfRangeException(nameof(significant_digits), "value must be >= 0");
+
+			// No significant digits is always zero
+			if (d == 0 || significant_digits == 0)
+				return 0;
+
+			// long.MaxValue is 19 digits
+			if (significant_digits > 19)
+				return d;
+
+			var pow = (int)Math.Floor(Math.Log10(d >= 0 ? d : ~d));
+			var scale = (decimal)Math.Pow(10, significant_digits - pow - 1); // Double cannot represent long.MaxValue
+			var result = scale != 0 ? (int)((long)(d * scale) / scale) : 0;
+			return result;
+		}
 		public static long TruncSD(long d, int significant_digits)
 		{
 			if (significant_digits < 0)
@@ -577,7 +595,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Quantise a value to 'scale'. For best results, 'scale' should be a power of 2, i.e. 256, 1024, 2048, etc</summary>
-		public static double Quantise(double x, int scale)
+		public static double Quantise(double x, long scale)
 		{
 			return (long)(x*scale) / (double)scale;
 		}
@@ -706,8 +724,8 @@ namespace Rylogic.UnitTests
 		[Test]
 		public void TestTruncSD()
 		{
-			Assert.Equal(0L, Math_.TruncSD(0, 1));
-			Assert.Equal(0L, Math_.TruncSD(1234, 0));
+			Assert.Equal(0, Math_.TruncSD(0, 1));
+			Assert.Equal(0, Math_.TruncSD(1234, 0));
 			Assert.Equal(+100000000L, Math_.TruncSD(+123456789L, 1));
 			Assert.Equal(-100000000L, Math_.TruncSD(-123456789L, 1));
 			Assert.Equal(+123000000L, Math_.TruncSD(+123456789L, 3));

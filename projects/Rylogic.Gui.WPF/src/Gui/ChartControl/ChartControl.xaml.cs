@@ -257,6 +257,16 @@ namespace Rylogic.Gui.WPF
 			remove { Scene.BuildScene -= value; }
 		}
 
+		/// <summary>Invalidate the chart, triggering a redraw</summary>
+		public void Invalidate()
+		{
+			Scene.Invalidate();
+		}
+		public void Invalidate(object sender, EventArgs args)
+		{
+			Invalidate();
+		}
+
 		/// <summary></summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 		internal void NotifyPropertyChanged(string prop_name)
