@@ -32,7 +32,7 @@ namespace CoinFlip
 			Model.DataUpdates.Add(() =>
 			{
 				// Create cross-exchange pairs for each coin of interest
-				foreach (var cd in SettingsData.Settings.Coins.Where(x => x.OfInterest))
+				foreach (var cd in SettingsData.Settings.Coins.Where(x => x.CreateCrossExchangePairs))
 				{
 					var sym = cd.Symbol;
 
@@ -67,7 +67,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Update account balance data</summary>
-		protected override Task UpdateBalancesInternal() // Worker thread context
+		protected override Task UpdateBalancesInternal(HashSet<string> coins) // Worker thread context
 		{
 			Model.DataUpdates.Add(() =>
 			{

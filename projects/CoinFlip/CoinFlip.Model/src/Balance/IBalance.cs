@@ -26,19 +26,16 @@ namespace CoinFlip
 		Unit<double> Available { get; }
 
 		/// <summary>Total amount set aside for pending orders and trade strategies</summary>
-		Unit<double> HeldOnExch { get; set; }
+		Unit<double> Held { get; set; }
 
-		/// <summary>Reserve 'amount' until the next balance update</summary>
-		Guid Hold(Unit<double> amount);
-
-		/// <summary>Reserve 'amount' until 'still_needed' returns false.</summary>
-		Guid Hold(Unit<double> amount, Func<IBalance, bool> still_needed);
+		/// <summary>Reserve 'amount' (related to 'order_id') until 'still_needed' returns false.</summary>
+		Guid Hold(long? order_id, Unit<double> amount, Func<IBalance, bool> still_needed);
 
 		/// <summary>Update the 'still_needed' function for a balance hold</summary>
-		void Hold(Guid hold_id, Func<IBalance, bool> still_needed);
+		void Update(Guid hold_id, long? order_id = null, Func<IBalance, bool> still_needed = null);
 
-		/// <summary>Release a hold on funds</summary>
-		void Release(Guid hold_id);
+		/// <summary>Release a hold on funds by hold id or order id</summary>
+		void Release(Guid? hold_id = null, long? order_id = null);
 
 		/// <summary>Return the amount held for the given id</summary>
 		Unit<double> Reserved(Guid hold_id);

@@ -16,7 +16,7 @@ using Rylogic.Utility;
 namespace CoinFlip
 {
 	/// <summary>A container for the data maintained by the back testing simulation</summary>
-	public class Simulation :IDisposable, INotifyPropertyChanged
+	public class Simulation :IDisposable
 	{
 		public Simulation(IEnumerable<Exchange> exchanges, PriceDataMap price_data_map, BotContainer bots)
 		{
@@ -58,13 +58,7 @@ namespace CoinFlip
 			{
 				if (Model.SimClock == value) return;
 				Model.SimClock = DateTimeOffset_.Clamp(value, StartTime, EndTime);
-
-				NotifyPropertyChanged(nameof(Clock));
-				NotifyPropertyChanged(nameof(PercentComplete));
-				NotifyPropertyChanged(nameof(CanReset));
-				NotifyPropertyChanged(nameof(CanStepOne));
-				NotifyPropertyChanged(nameof(CanRunToTrade));
-				NotifyPropertyChanged(nameof(CanRun));
+				NotifySimPropertyChanged();
 			}
 		}
 
@@ -76,10 +70,7 @@ namespace CoinFlip
 			{
 				if (SettingsData.Settings.BackTesting.TimeFrame == value) return;
 				SettingsData.Settings.BackTesting.TimeFrame = value;
-				NotifyPropertyChanged(nameof(TimeFrame));
-				NotifyPropertyChanged(nameof(StartTime));
-				NotifyPropertyChanged(nameof(EndTime));
-				NotifyPropertyChanged(nameof(Steps));
+				NotifySimPropertyChanged();
 			}
 		}
 
@@ -94,8 +85,7 @@ namespace CoinFlip
 				EndTime = DateTimeOffset_.Max(EndTime, StartTime + Misc.TimeFrameToTimeSpan(1.0, TimeFrame));
 				Clock = DateTimeOffset_.Clamp(Clock, StartTime, EndTime);
 				UpdatePriceData();
-				NotifyPropertyChanged(nameof(StartTime));
-				NotifyPropertyChanged(nameof(Steps));
+				NotifySimPropertyChanged();
 			}
 		}
 
@@ -110,8 +100,7 @@ namespace CoinFlip
 				StartTime = DateTimeOffset_.Min(StartTime, EndTime - Misc.TimeFrameToTimeSpan(1.0, TimeFrame));
 				Clock = DateTimeOffset_.Clamp(Clock, StartTime, EndTime);
 				UpdatePriceData();
-				NotifyPropertyChanged(nameof(EndTime));
-				NotifyPropertyChanged(nameof(Steps));
+				NotifySimPropertyChanged();
 			}
 		}
 
@@ -123,8 +112,7 @@ namespace CoinFlip
 			{
 				if (SettingsData.Settings.BackTesting.StepsPerCandle == value) return;
 				SettingsData.Settings.BackTesting.StepsPerCandle = value;
-				NotifyPropertyChanged(nameof(StepsPerCandle));
-				NotifyPropertyChanged(nameof(CanStepOne));
+				NotifySimPropertyChanged();
 			}
 		}
 
@@ -151,6 +139,13 @@ namespace CoinFlip
 
 		/// <summary>Raised when the simulation starts/stops</summary>
 		public event EventHandler<PrePostEventArgs> SimRunningChanged;
+
+		/// <summary>Raised when a property of the sim changes</summary>
+		public event EventHandler SimPropertyChanged;
+		private void NotifySimPropertyChanged()
+		{
+			SimPropertyChanged?.Invoke(this, EventArgs.Empty);
+		}
 
 		/// <summary>Reset the sim back to the start time</summary>
 		public void Reset()
@@ -240,8 +235,7 @@ namespace CoinFlip
 					m_timer.Start();
 				}
 				SimRunningChanged?.Invoke(this, new PrePostEventArgs(after: true));
-				NotifyPropertyChanged(nameof(Running));
-				NotifyPropertyChanged(nameof(CanPause));
+				NotifySimPropertyChanged();
 
 				// Handlers
 				async void HandleTick(object sender, EventArgs args)
@@ -349,13 +343,6 @@ namespace CoinFlip
 
 			foreach (var exch in Exchanges.Values)
 				exch.Step();
-		}
-
-		/// <summary></summary>
-		public event PropertyChangedEventHandler PropertyChanged;
-		public void NotifyPropertyChanged(string prop_name)
-		{
-			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 		}
 
 		/// <summary>States for the simulation</summary>

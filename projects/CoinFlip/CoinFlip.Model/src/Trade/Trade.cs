@@ -197,7 +197,7 @@ namespace CoinFlip
 		/// <summary>The price (in CoinOut/CoinIn)</summary>
 		public Unit<double> Price
 		{
-			get => PriceQ2B != 0 ? TradeType.Price(PriceQ2B) : 0.0._(PriceQ2B);
+			get => PriceQ2B != 0 ? TradeType.Price(PriceQ2B) : 0.0._(TradeType.RateUnits(Pair));
 			set => PriceQ2B = value != 0 ? TradeType.PriceQ2B(value) : 0.0._(Pair.RateUnits);
 		}
 

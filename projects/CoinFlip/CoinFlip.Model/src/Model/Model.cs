@@ -409,7 +409,7 @@ namespace CoinFlip
 				// Handlers
 				void HandleCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 				{
-					// Refresh the coins in each exchange
+					// Refresh the pairs in each exchange
 					foreach (var exch in Exchanges)
 						exch.PairsUpdateRequired = true;
 				}
@@ -443,8 +443,22 @@ namespace CoinFlip
 			private set
 			{
 				if (m_simulation == value) return;
-				Util.Dispose(ref m_simulation);
+				if (m_simulation != null)
+				{
+					m_simulation.SimPropertyChanged -= HandleSimPropertyChanged;
+					Util.Dispose(ref m_simulation);
+				}
 				m_simulation = value;
+				if (m_simulation != null)
+				{
+					m_simulation.SimPropertyChanged += HandleSimPropertyChanged;
+				}
+
+				// Handler
+				void HandleSimPropertyChanged(object sender, EventArgs e)
+				{
+					SimPropertyChanged?.Invoke(Simulation, e);
+				}
 			}
 		}
 		private Simulation m_simulation;
@@ -481,6 +495,9 @@ namespace CoinFlip
 
 		/// <summary>Notify when the NettWorth value changes</summary>
 		public event EventHandler<ValueChangedEventArgs<Unit<double>>> NettWorthChanged;
+
+		/// <summary>Raised when a property of the simulation changes</summary>
+		public event EventHandler SimPropertyChanged;
 
 		/// <summary>Total holdings value across all exchanges and all currencies</summary>
 		public Unit<double> NettWorth

@@ -47,7 +47,7 @@ namespace CoinFlip
 				PriceData = price_data;
 				m_ord     = new LazyDictionary<long, Order>(k => null);
 				m_his     = new LazyDictionary<long, OrderCompleted>(k => null);
-				m_bal     = new LazyDictionary<Coin, AccountBalance>(k => new AccountBalance(k, 0.0._(k), 0.0._(k)));
+				m_bal     = new LazyDictionary<Coin, AccountBalance>(k => new AccountBalance(k, 0.0._(k)));
 				m_depth   = new LazyDictionary<TradePair, MarketDepth>(k => new MarketDepth(k.Base, k.Quote));
 				m_rng     = null;
 
@@ -123,7 +123,7 @@ namespace CoinFlip
 			foreach (var coin in Coins.Values)
 			{
 				var bal = exch_data[coin.Symbol];
-				m_bal.Add(coin, new AccountBalance(coin, bal.Total._(coin), bal.Held._(coin)));
+				m_bal.Add(coin, new AccountBalance(coin, bal.Total._(coin)));
 				Balance.Add(coin, new Balances(coin, bal.Total._(coin), Sim.Clock));
 
 				// Add a "deposit" for each non-zero balance
@@ -208,7 +208,7 @@ namespace CoinFlip
 					// If 'his' is null, then the position can't be filled can remains unchanged
 					// If 'pos' is null, then the position is completely filled.
 					// 'order.OrderType' should have a value because the trade cannot be submitted without knowing the spot price
-					TryFillOrder(order.Pair, order.Fund, order.OrderId, order.TradeType, order.OrderType, order.AmountIn, order.AmountOut, order.Remaining, out var pos, out var his);
+					TryFillOrder(order.Pair, order.Fund, order.OrderId, order.TradeType, order.OrderType, order.AmountIn, order.AmountOut, order.RemainingIn, out var pos, out var his);
 					if (his == null)
 						continue;
 
@@ -217,7 +217,6 @@ namespace CoinFlip
 						Sim.Pause();
 
 					// If 'his' is not null, some or all of the position was filled.
-					ReverseBalance(order);
 					ApplyToBalance(pos, his);
 
 					// Update the position store
@@ -338,14 +337,15 @@ namespace CoinFlip
 		public bool CancelOrderInternal(TradePair pair, long order_id)
 		{
 			// Doesn't exist?
-			if (!m_ord.TryGetValue(order_id, out var pos))
+			if (!m_ord.TryGetValue(order_id, out var order))
 				return false;
 
 			// Remove 'pos'
 			m_ord.Remove(order_id);
 
-			// Reverse the balance changes due to 'pos'
-			ReverseBalance(pos);
+			// Remove any hold on the balance for this trade
+			var bal = m_bal[order.CoinIn];
+			bal.Holds.Remove(order_id);
 			return true;
 		}
 
@@ -381,42 +381,35 @@ namespace CoinFlip
 		/// <summary>Apply the implied changes to the current balance by the given order and completed order</summary>
 		private void ApplyToBalance(Order ord, OrderCompleted his)
 		{
-			var coins = new HashSet<Coin>(); // why??
 			if (his != null)
 			{
-				foreach (var fill in his.Trades.Values)
+				foreach (var trade in his.Trades.Values)
 				{
 					{// Debt from CoinIn
-						var bal = m_bal[fill.CoinIn];
-						bal.Total -= fill.AmountIn;
-						coins.Add(fill.CoinIn);
+						var bal = m_bal[trade.CoinIn];
+						bal.Total -= trade.AmountIn;
 					}
 					{// Credit to CoinOut
-						var bal = m_bal[fill.CoinOut];
-						bal.Total += fill.AmountOut;
-						coins.Add(fill.CoinOut);
+						var bal = m_bal[trade.CoinOut];
+						bal.Total += trade.AmountOut;
 					}
 					{// Debt the commission
-						var bal = m_bal[fill.CommissionCoin];
-						bal.Total -= fill.Commission;
-						coins.Add(fill.CommissionCoin);
+						var bal = m_bal[trade.CommissionCoin];
+						bal.Total -= trade.Commission;
 					}
 				}
+				{// Remove the hold
+					var bal = m_bal[his.CoinIn];
+					bal.Holds.Remove(his.OrderId);
+				}
 			}
+
 			if (ord != null)
 			{
-				// Hold for trade
+				// Update the hold for the trade
 				var bal = m_bal[ord.CoinIn];
-				bal.Held += ord.Remaining;
-				coins.Add(ord.CoinIn);
+				bal.Holds[ord.OrderId] = ord.RemainingIn;
 			}
-		}
-
-		/// <summary>Reverse the balance changes due to 'order'</summary>
-		private void ReverseBalance(Order order)
-		{
-			var bal = m_bal[order.CoinIn];
-			bal.Held -= order.Remaining;
 		}
 
 		/// <summary>Generate simulated market depth for 'pair', using 'latest' as the reference for the current spot price</summary>
@@ -464,16 +457,17 @@ namespace CoinFlip
 		/// <summary>Represents the simulated user account on the exchange</summary>
 		private class AccountBalance
 		{
-			public AccountBalance(Coin coin, Unit<double> total, Unit<double> held)
+			public AccountBalance(Coin coin, Unit<double> total)
 			{
 				Coin = coin;
 				Total = total;
-				Held = held;
+				Holds = new Dictionary<long, double>();
 			}
 			public Coin Coin { get; }
 			public Unit<double> Total { get; set; }
-			public Unit<double> Held { get; set; }
+			public Unit<double> Held => Holds.Values.Sum();
 			public Unit<double> Available => Total - Held;
+			public Dictionary<long, double> Holds { get; }
 		}
 	}
 }

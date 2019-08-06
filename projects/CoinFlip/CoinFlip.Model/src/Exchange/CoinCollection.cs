@@ -21,6 +21,7 @@ namespace CoinFlip
 		public Coin GetOrAdd(string sym)
 		{
 			Debug.Assert(Misc.AssertMainThread());
+			Debug.Assert(m_coin_data.IndexOf(x => x.Symbol == sym) != -1, "Don't add coins that are not in the settings");
 			return this.GetOrAdd(sym, CreateCoin);
 		}
 

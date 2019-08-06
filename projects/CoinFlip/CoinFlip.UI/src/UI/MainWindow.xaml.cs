@@ -13,7 +13,7 @@ using Rylogic.Utility;
 
 namespace CoinFlip.UI
 {
-	public partial class MainWindow : Window, INotifyPropertyChanged
+	public partial class MainWindow :Window, INotifyPropertyChanged
 	{
 		public MainWindow()
 		{
@@ -26,7 +26,6 @@ namespace CoinFlip.UI
 			NewChart = Command.Create(this, NewChartInternal);
 			ToggleLiveTrading = Command.Create(this, ToggleLiveTradingInternal);
 			ToggleBackTesting = Command.Create(this, ToggleBackTestingInternal);
-
 			DataContext = this;
 		}
 		protected override void OnSourceInitialized(EventArgs e)
@@ -41,6 +40,7 @@ namespace CoinFlip.UI
 			m_dc.Add(new GridFunds(Model), EDockSite.Left, EDockSite.Bottom);
 			m_dc.Add(new GridTradeOrders(Model), 0, EDockSite.Bottom);
 			m_dc.Add(new GridTradeHistory(Model), 1, EDockSite.Bottom);
+			m_dc.Add(new GridTransfers(Model), 2, EDockSite.Bottom);
 			m_dc.Add(new CandleChart(Model), 0, EDockSite.Centre);
 			m_dc.Add(new EquityChart(Model), 1, EDockSite.Centre);
 			m_dc.Add(new LogView(), 2, EDockSite.Right).IsAutoHide = true;
@@ -97,11 +97,13 @@ namespace CoinFlip.UI
 					Model.AllowTradesChanged -= HandleAllowTradesChanged;
 					Model.BackTestingChange -= HandleBackTestingChange;
 					m_model.NettWorthChanged -= HandleNettWorthChanged;
+					Simulation = null;
 					Util.Dispose(ref m_model);
 				}
 				m_model = value;
 				if (m_model != null)
 				{
+					Simulation = new SimulationView(m_model);
 					m_model.NettWorthChanged += HandleNettWorthChanged;
 					Model.BackTestingChange += HandleBackTestingChange;
 					Model.AllowTradesChanged += HandleAllowTradesChanged;
@@ -110,17 +112,16 @@ namespace CoinFlip.UI
 				// Handler
 				void HandleNettWorthChanged(object sender, EventArgs e)
 				{
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(NettWorth)));
+					NotifyPropertyChanged(nameof(NettWorth));
 				}
 				void HandleAllowTradesChanged(object sender, EventArgs e)
 				{
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AllowTrades)));
+					NotifyPropertyChanged(nameof(AllowTrades));
 				}
 				void HandleBackTestingChange(object sender, PrePostEventArgs e)
 				{
 					if (e.Before) return;
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BackTesting)));
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Simulation)));
+					NotifyPropertyChanged(nameof(BackTesting));
 				}
 			}
 		}
@@ -141,7 +142,18 @@ namespace CoinFlip.UI
 		}
 
 		/// <summary>Access the main simulation model</summary>
-		public Simulation Simulation => Model.Simulation;
+		public SimulationView Simulation
+		{
+			get => m_simulation_view;
+			set
+			{
+				if (m_simulation_view == value) return;
+				Util.Dispose(ref m_simulation_view);
+				m_simulation_view = value;
+				NotifyPropertyChanged(nameof(Simulation));
+			}
+		}
+		private SimulationView m_simulation_view;
 
 		/// <summary>Total holdings value across all exchanges and all currencies</summary>
 		public double NettWorth => Model.NettWorth;
@@ -177,17 +189,17 @@ namespace CoinFlip.UI
 
 			// Prompt for a user log-on
 			var ui = new LogOnUI { Username = SettingsData.Settings.LastUser };
-			#if DEBUG
+#if DEBUG
 			ui.Username = "Paul";
 			ui.Password = "UltraSecurePasswordWotIMade";
-			#else
+#else
 			// If log on fails, close the application
 			if (ui.ShowDialog() != true)
 			{
 				Close();
 				return;
 			}
-			#endif
+#endif
 
 			// Create the user instance from the log-on details
 			Model.User = ui.User;
@@ -254,5 +266,9 @@ namespace CoinFlip.UI
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler PropertyChanged;
+		private void NotifyPropertyChanged(string prop_name)
+		{
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+		}
 	}
 }

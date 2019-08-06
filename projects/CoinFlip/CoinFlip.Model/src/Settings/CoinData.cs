@@ -20,7 +20,7 @@ namespace CoinFlip.Settings
 			Symbol = symbol;
 			SD = 8;
 			AssignedValue = 0;
-			OfInterest = false;
+			CreateCrossExchangePairs = false;
 			AutoTradingLimit = 1;
 			DefaultTradeAmount = 1;
 			BackTestingInitialBalance = 1;
@@ -71,11 +71,11 @@ namespace CoinFlip.Settings
 			set { set(nameof(BackTestingInitialBalance), value); }
 		}
 
-		/// <summary>True if coins of this type should be included in loops</summary>
-		public bool OfInterest
+		/// <summary>True if cross-exchange pairs should be created for this coin</summary>
+		public bool CreateCrossExchangePairs
 		{
-			get { return get<bool>(nameof(OfInterest)); }
-			set { set(nameof(OfInterest), value); }
+			get { return get<bool>(nameof(CreateCrossExchangePairs)); }
+			set { set(nameof(CreateCrossExchangePairs), value); }
 		}
 
 		/// <summary>Raised when the live price of 'coin' changes</summary>

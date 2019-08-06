@@ -41,7 +41,7 @@
 				<!-- Held for Trades -->
 				<TextBlock
 					Grid.Row="2"
-					Text="{Binding HeldForTrades, Converter={conv:StringFormat}, ConverterParameter='8, false', StringFormat=Held: {0}}"
+					Text="{Binding Held, Converter={conv:StringFormat}, ConverterParameter='8, false', StringFormat=Held: {0}}"
 					Foreground="DarkRed"
 					FontSize="10"
 					/>

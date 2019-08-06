@@ -58,8 +58,8 @@ namespace CoinFlip.UI
 			GfxCandles = null;
 			ChartSelector = null;
 			Instrument = null;
-			Chart = null;
 			Model = null;
+			Chart = null;
 			DockControl = null;
 		}
 
@@ -72,8 +72,8 @@ namespace CoinFlip.UI
 				if (m_model == value) return;
 				if (m_model != null)
 				{
-					m_model.OrderChanging -= Chart.Invalidate;
-					m_model.HistoryChanging -= Chart.Invalidate;
+					m_model.OrderChanging -= RefreshChart;
+					m_model.HistoryChanging -= RefreshChart;
 					m_model.Charts.CollectionChanged -= HandleChartsCollectionChanged;
 					SettingsData.Settings.Chart.SettingChange -= HandleSettingChange;
 					m_model.Charts.Remove(this);
@@ -84,8 +84,8 @@ namespace CoinFlip.UI
 					m_model.Charts.Add(this);
 					SettingsData.Settings.Chart.SettingChange += HandleSettingChange;
 					m_model.Charts.CollectionChanged += HandleChartsCollectionChanged;
-					m_model.HistoryChanging += Chart.Invalidate;
-					m_model.OrderChanging += Chart.Invalidate;
+					m_model.HistoryChanging += RefreshChart;
+					m_model.OrderChanging += RefreshChart;
 				}
 				HandleChartsCollectionChanged(this, null);
 
@@ -125,6 +125,10 @@ namespace CoinFlip.UI
 				{
 					DockControl.TabText = ChartName;
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ChartName)));
+				}
+				void RefreshChart(object sender, EventArgs args)
+				{
+					Chart?.Invalidate();
 				}
 			}
 		}

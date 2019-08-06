@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Rylogic.Container;
 using Rylogic.Utility;
 
@@ -50,6 +51,16 @@ namespace Rylogic.Extn
 				if (!comparer.Equals(kvp.Value, secondValue)) return false;
 			}
 			return true;
+		}
+
+		/// <summary>Remove entries from the dictionary that match 'pred'</summary>
+		public static int RemoveAll<TKey, TValue>(this IDictionary<TKey, TValue> dic, Func<KeyValuePair<TKey, TValue>, bool> pred)
+		{
+			var to_remove = dic.Where(pred).ToList();
+			foreach (var kv in to_remove)
+				dic.Remove(kv);
+
+			return to_remove.Count;
 		}
 
 		/// <summary>Get or add a new item in the dictionary</summary>

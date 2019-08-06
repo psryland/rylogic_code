@@ -20,12 +20,12 @@ namespace CoinFlip
 		{
 			OrderId = order_id;
 			UniqueKey = Guid.NewGuid();
-			Remaining = remaining_in;
+			RemainingIn = remaining_in;
 			Created = created;
 			Updated = updated;
 		}
 		public Order(Order rhs)
-			:this(rhs.OrderId, rhs.Fund, rhs.Pair, rhs.OrderType, rhs.TradeType, rhs.AmountIn, rhs.AmountOut, rhs.Remaining, rhs.Created, rhs.Updated)
+			:this(rhs.OrderId, rhs.Fund, rhs.Pair, rhs.OrderType, rhs.TradeType, rhs.AmountIn, rhs.AmountOut, rhs.RemainingIn, rhs.Created, rhs.Updated)
 		{}
 
 		/// <summary>Unique Id for the open position on an exchange</summary>
@@ -36,13 +36,13 @@ namespace CoinFlip
 		public Guid UniqueKey { get; }
 
 		/// <summary>The remaining amount to be traded (in CoinIn)</summary>
-		public Unit<double> Remaining { get; private set; }
+		public Unit<double> RemainingIn { get; private set; }
 
 		/// <summary>The remaining amount to be traded in base currency</summary>
-		public Unit<double> RemainingBase => TradeType.AmountBase(PriceQ2B, amount_in: Remaining);
+		public Unit<double> RemainingBase => TradeType.AmountBase(PriceQ2B, amount_in: RemainingIn);
 
 		/// <summary>The remaining amount to be traded as a fraction</summary>
-		public double RemainingFrac => Math_.Div(Remaining, AmountIn, 0);
+		public double RemainingFrac => Math_.Div(RemainingIn, AmountIn, 0);
 
 		/// <summary>When the order was created</summary>
 		public DateTimeOffset? Created { get; private set; }
@@ -76,7 +76,7 @@ namespace CoinFlip
 			// Update fields
 			update.AmountIn = update.AmountIn;
 			update.AmountOut = update.AmountOut;
-			update.Remaining = update.Remaining;
+			update.RemainingIn = update.RemainingIn;
 			update.Created = update.Created;
 			update.Updated = update.Updated;
 		}

@@ -67,13 +67,16 @@ namespace CoinFlip
 			// and we don't want updating pairs to be interrupted by the update thread stopping
 			var markets = await Api.GetMarkets(cancel: Shutdown.Token);
 
+			// Remove markets we don't care about
+			markets.RemoveAll(x => !(coins.Contains(x.Pair.Base) && coins.Contains(x.Pair.Quote)));
+
 			// Add an action to integrate the data
 			Model.DataUpdates.Add(() =>
 			{
 				var pairs = new HashSet<CurrencyPair>();
 
 				// Create the trade pairs and associated coins
-				foreach (var m in markets.Where(x => coins.Contains(x.Pair.Base) && coins.Contains(x.Pair.Quote)))
+				foreach (var m in markets)
 				{
 					var base_ = Coins.GetOrAdd(m.Pair.Base);
 					var quote = Coins.GetOrAdd(m.Pair.Quote);
@@ -104,7 +107,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Update account balance data</summary>
-		protected async override Task UpdateBalancesInternal() // Worker thread context
+		protected async override Task UpdateBalancesInternal(HashSet<string> coins) // Worker thread context
 		{
 			// Record the time just before the query to the server
 			var last_updated = DateTimeOffset.Now;
@@ -112,11 +115,15 @@ namespace CoinFlip
 			// Request the account data
 			var balances = await Api.GetBalances(cancel: Shutdown.Token);
 
+			// Remove balances we don't care about
+			var auto_add_coins = SettingsData.Settings.AutoAddCoins;
+			balances.RemoveAll(x => !(coins.Contains(x.Symbol) || (auto_add_coins && x.Total != 0)));
+
 			// Queue integration of the market data
 			Model.DataUpdates.Add(() =>
 			{
 				// Update the account balance
-				foreach (var b in balances.Where(x => x.Available != 0 || Coins.ContainsKey(x.Symbol)))
+				foreach (var b in balances)
 				{
 					// Find the currency that this balance is for
 					var coin = Coins.GetOrAdd(b.Symbol);
@@ -131,7 +138,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Update open orders and completed trades</summary>
-		protected async override Task UpdateOrdersAndHistoryInternal() // Worker thread context
+		protected async override Task UpdateOrdersAndHistoryInternal(HashSet<string> coins) // Worker thread context
 		{
 			// Record the time just before the query to the server
 			var timestamp = DateTimeOffset.Now;
@@ -141,6 +148,13 @@ namespace CoinFlip
 
 			// Request the history
 			var history = await Api.GetTradeHistory(cancel: Shutdown.Token);
+
+			// Remove orders and history we don't care about
+			if (!SettingsData.Settings.AutoAddCoins)
+			{
+				positions.RemoveAll(x => !(coins.Contains(x.Pair.Base) && coins.Contains(x.Pair.Quote)));
+				history.RemoveAll(x => !(coins.Contains(x.Pair.Base) && coins.Contains(x.Pair.Quote)));
+			}
 
 			// Record the time that history has been updated to
 			m_history_last = timestamp;
@@ -236,13 +250,20 @@ namespace CoinFlip
 		}
 
 		/// <summary>Return the deposits and withdrawals made on this exchange</summary>
-		protected async override Task UpdateTransfersInternal() // worker thread context
+		protected async override Task UpdateTransfersInternal(HashSet<string> coins) // worker thread context
 		{
 			var timestamp = DateTimeOffset.Now;
 
 			// Request the transfers data
 			var deposits = await Api.GetDeposits(cancel: Shutdown.Token);
 			var withdrawals = await Api.GetWithdrawals(cancel: Shutdown.Token);
+
+			// Remove transfers we don't care about
+			if (!SettingsData.Settings.AutoAddCoins)
+			{
+				deposits.RemoveAll(x => !coins.Contains(x.Currency));
+				withdrawals.RemoveAll(x => !coins.Contains(x.Currency));
+			}
 
 			// Record the time that transfer history has been updated to
 			m_transfers_last = timestamp;

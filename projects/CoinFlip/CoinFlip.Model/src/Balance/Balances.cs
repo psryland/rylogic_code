@@ -120,7 +120,7 @@ namespace CoinFlip
 				if (m_exch_held == value) return;
 				m_exch_held = value;
 				m_funds[0].NotifyPropertyChanged(nameof(Balance.Available));
-				m_funds[0].NotifyPropertyChanged(nameof(Balance.HeldForTrades));
+				m_funds[0].NotifyPropertyChanged(nameof(Balance.Held));
 			}
 		}
 		private Unit<double> m_exch_held;
@@ -135,28 +135,27 @@ namespace CoinFlip
 		public IBalance this[Fund fund] => Funds.FirstOrDefault(x => x.Fund == fund) ?? new Balance(this, fund);
 
 		/// <summary>Set the total balance attributed to the fund 'fund_id'. Only non-null values are changed</summary>
-		public void AssignFundBalance(Fund fund, Unit<double>? total, Unit<double>? held_on_exch, DateTimeOffset now, bool notify = true)
+		public void AssignFundBalance(Fund fund, Unit<double>? total, Unit<double>? held, DateTimeOffset now, bool notify = true)
 		{
 			// Notes:
 			// - Don't throw if the nett total becomes negative, that probably just means a fund
 			//   has been assigned too much. Allow the user to reduce the allocations.
 
-			var balance = (Balance)Funds.FirstOrDefault(x => x.Fund == fund);
+			var balance = (Balance)Funds.FirstOrDefault(x => x.Fund == fund) ?? m_funds.Add2(new Balance(this, fund));
 			if (fund.Id == Fund.Main)
 			{
 				if (total != null)
 					ExchTotal = total.Value;
-				if (held_on_exch != null)
-					ExchHeld = held_on_exch.Value;
+				if (held != null)
+					ExchHeld = held.Value;
 			}
 			else
 			{
 				// Get the balance info for 'fund_id', create if necessary
-				balance = balance ?? m_funds.Add2(new Balance(this, fund));
 				if (total != null)
 					balance.Total = total.Value;
-				if (held_on_exch != null)
-					balance.HeldOnExch = held_on_exch.Value;
+				if (held != null)
+					balance.Held = held.Value;
 			}
 
 			balance.LastUpdated = now;
@@ -168,27 +167,19 @@ namespace CoinFlip
 		}
 
 		/// <summary>Add or subtract an amount from a fund</summary>
-		public void ChangeFundBalance(Fund fund, Unit<double>? change_amount, bool apply_to_held_also, DateTimeOffset now, bool notify = true)
+		public void ChangeFundBalance(Fund fund, Unit<double>? change_amount, DateTimeOffset now, bool notify = true)
 		{
-			var balance = (Balance)Funds.FirstOrDefault(x => x.Fund == fund);
-			if (fund.Id == Fund.Main)
+			// Get the balance info for 'fund_id', create if necessary
+			var balance = (Balance)Funds.FirstOrDefault(x => x.Fund == fund) ?? m_funds.Add2(new Balance(this, fund));
+
+			// Apply the balance change to the total
+			if (change_amount != null && balance.LastUpdated <= now)
 			{
-				if (change_amount != null)
-					ExchTotal += change_amount.Value;
-				if (apply_to_held_also)
-					ExchHeld += change_amount.Value;
-			}
-			else
-			{
-				// Get the balance info for 'fund_id', create if necessary
-				balance = balance ?? m_funds.Add2(new Balance(this, fund));
-				if (change_amount != null)
-					balance.Total += change_amount.Value;
-				if (apply_to_held_also)
-					balance.HeldOnExch += change_amount.Value;
+				balance.Total += change_amount.Value;
+				balance.LastUpdated = now;
 			}
 
-			balance.LastUpdated = now;
+			// Look for any expired holds
 			balance.CheckHolds();
 
 			// Signal balance changed
@@ -212,10 +203,8 @@ namespace CoinFlip
 			{
 				if (fund.Total < 0.0._(Coin))
 					return new Exception($"Fund {fund.Fund.Id} balance invalid: Total < 0");
-				if (fund.HeldOnExch < 0.0._(Coin))
+				if (fund.Held < 0.0._(Coin))
 					return new Exception($"Fund {fund.Fund.Id} balance invalid: Held < 0");
-				if (fund.HeldOnExch > fund.Total)
-					return new Exception($"Fund {fund.Fund.Id} balance invalid: Held > Total");
 			}
 
 			return null;
@@ -243,7 +232,7 @@ namespace CoinFlip
 			{
 				m_balances = balances;
 				m_total = 0.0._(balances.Coin);
-				m_held_on_exch = 0.0._(balances.Coin);
+				m_held = 0.0._(balances.Coin);
 				Fund = fund;
 				Holds = new List<FundHold>();
 			}
@@ -267,7 +256,7 @@ namespace CoinFlip
 			public Unit<double> Total
 			{
 				// The Main fund contains whatever is left over after the other funds have their share
-				get { return Fund.Id == Fund.Main ? m_balances.NettTotal - m_balances.FundsExceptMain.Sum(x => x.Total) : m_total; }
+				get { return Fund.Id == Fund.Main ? m_balances.ExchTotal - m_balances.FundsExceptMain.Sum(x => x.Total) : m_total; }
 				set
 				{
 					if (Total == value) return;
@@ -288,44 +277,31 @@ namespace CoinFlip
 				get
 				{
 					CheckHolds();
-					var avail = Total - HeldForTrades;
+					var avail = Total - Held;
 					return avail > 0 ? avail : 0.0._(Coin);
 				}
 			}
 
 			/// <summary>Total amount set aside for pending orders and trade strategies</summary>
-			public Unit<double> HeldOnExch
+			public Unit<double> Held
 			{
-				get { return Fund.Id == Fund.Main ? m_balances.NettHeld - m_balances.FundsExceptMain.Sum(x => x.HeldOnExch) : m_held_on_exch; }
+				get { return Fund.Id == Fund.Main ? m_balances.ExchHeld - m_balances.FundsExceptMain.Sum(x => x.Held) : m_held; }
 				set
 				{
-					if (HeldOnExch == value) return;
+					if (Held == value) return;
 					if (Fund.Id == Fund.Main)
-						m_balances.ExchHeld = value + m_balances.FundsExceptMain.Sum(x => x.HeldOnExch);
+						m_balances.ExchHeld = value + m_balances.FundsExceptMain.Sum(x => x.Held);
 					else
-						m_held_on_exch = value;
+						m_held = value;
 
 					NotifyPropertyChanged(nameof(Available));
-					NotifyPropertyChanged(nameof(HeldForTrades));
+					NotifyPropertyChanged(nameof(Held));
 				}
 			}
-			private Unit<double> m_held_on_exch;
-
-			/// <summary>Amount set aside (locally) for trading strategies associated with this fund</summary>
-			public Unit<double> HeldLocally => Holds.Sum(x => x.Volume);
-
-			/// <summary>Total amount set aside for pending orders and trade strategies</summary>
-			public Unit<double> HeldForTrades => HeldOnExch + HeldLocally;
-
-			/// <summary>Reserve 'amount' until the next balance update</summary>
-			public Guid Hold(Unit<double> amount)
-			{
-				var ts = Model.UtcNow;
-				return Hold(amount, b => b.LastUpdated <= ts);
-			}
+			private Unit<double> m_held;
 
 			/// <summary>Reserve 'amount' until 'still_needed' returns false.</summary>
-			public Guid Hold(Unit<double> amount, Func<IBalance, bool> still_needed)
+			public Guid Hold(long? order_id, Unit<double> amount, Func<IBalance, bool> still_needed)
 			{
 				// 'Available' removes stale holds
 				if (amount > Available)
@@ -333,30 +309,31 @@ namespace CoinFlip
 
 				// Create a new fund hold
 				var id = Guid.NewGuid();
-				Holds.Add(new FundHold(id, amount, still_needed));
+				Holds.Add(new FundHold(id, order_id, amount, still_needed));
 				NotifyPropertyChanged(nameof(Available));
-				NotifyPropertyChanged(nameof(HeldForTrades));
+				NotifyPropertyChanged(nameof(Held));
 				return id;
 			}
 
 			/// <summary>Update the 'StillNeeded' function for a balance hold</summary>
-			public void Hold(Guid hold_id, Func<IBalance, bool> still_needed)
+			public void Update(Guid hold_id, long? order_id = null, Func<IBalance, bool> still_needed = null)
 			{
 				var hold = Holds.First(x => x.Id == hold_id);
-				hold.StillNeeded = still_needed;
+				if (order_id != null) hold.OrderId = order_id.Value;
+				if (still_needed != null) hold.StillNeeded = still_needed;
 			}
 
 			/// <summary>Release a hold on funds</summary>
-			public void Release(Guid hold_id)
+			public void Release(Guid? hold_id = null, long? order_id = null)
 			{
-				if (Holds.RemoveAll(x => x.Id == hold_id) != 0)
-					NotifyPropertyChanged(nameof(HeldForTrades));
+				if (Holds.RemoveAll(x => x.Id == hold_id || x.OrderId == order_id) != 0)
+					NotifyPropertyChanged(nameof(Held));
 			}
 
 			/// <summary>Return the amount held for the given id</summary>
 			public Unit<double> Reserved(Guid hold_id)
 			{
-				return Holds.Where(x => x.Id == hold_id).Sum(x => x.Volume);
+				return Holds.Where(x => x.Id == hold_id).Sum(x => x.Amount);
 			}
 
 			/// <summary>Test the 'StillNeeded' callback on each hold, removing those that are no longer needed</summary>
@@ -372,7 +349,7 @@ namespace CoinFlip
 					holds_removed = true;
 				}
 				if (holds_removed)
-					NotifyPropertyChanged(nameof(HeldForTrades));
+					NotifyPropertyChanged(nameof(Held));
 			}
 
 			/// <summary></summary>
@@ -385,89 +362,5 @@ namespace CoinFlip
 			/// <summary>String description of this fund balance</summary>
 			public string Description => $"{Coin} Fund={Fund.Id} Avail={Available} Total={Total}";
 		}
-
-
-
-
-
-
-
-
-#if false
-
-
-
-		/// <summary>The maximum amount that bots are allowed to trade</summary>
-		public Unit<double> AutoTradeLimit
-		{
-			get { return Coin.AutoTradeLimit; }
-			set { Coin.AutoTradeLimit = value._(Coin); }
-		}
-
-		/// <summary>Update the balance partitions corresponding to each fund</summary>
-		public void UpdateBalancePartitions(IEnumerable<Fund> funds)
-		{
-			// The fund ids that we need to have
-			var fund_ids = funds.Select(x => x.Id).Prepend(Fund.Main).ToHashSet(0);
-
-			// Remove fund balances that aren't in the settings
-			var to_remove = Funds.Keys.Where(x => !fund_ids.Contains(x)).ToList();
-			foreach (var id in to_remove)
-				RemoveFund(id);
-
-			// Create fund balances for funds that don't already exist
-			foreach (var id in fund_ids.Where(x => !Funds.ContainsKey(x)))
-				AddFund(id);
-		}
-
-		/// <summary>Create a fund (sub account)</summary>
-		private void AddFund(string fund_id, Unit<double>? amount = null, double? fraction = null)
-		{
-			// Close any existing fund associated with 'fund_id'
-			RemoveFund(fund_id);
-
-			// Get the amount to move from the main fund
-			var volume =
-				amount   != null ? amount.Value :                        // Create from a fixed amount
-				fraction != null ? NettTotal * (double)fraction.Value : // Create as a fraction of the nett total balance
-				0.0._(Coin);
-
-			// Check there is enough in the main fund to cover 'volume'
-			var pot = Funds[Fund.Main];
-			if (pot.Available < volume)
-				throw new Exception($"Cannot create fund for {Coin}, insufficient available (Avail:{pot.Available}, Requested:{volume})");
-
-			// Move balance from the main fund to this new one
-			var bal = Funds[fund_id] = new FundBalance(fund_id, Coin);
-			bal.Update(Model.UtcNow, total: bal.Total + volume);
-			pot.Update(Model.UtcNow, total: pot.Total - volume);
-
-			Debug.Assert(AssertValid());
-		}
-
-		/// <summary>Close a fund, returning the balance to the main fund</summary>
-		private void RemoveFund(string fund_id)
-		{
-			// Can't remove the main fund
-			if (fund_id == Fund.Main || !Funds.ContainsKey(fund_id))
-				return;
-
-			var bal = Funds[fund_id];
-			var volume = bal.Total;
-
-			// Return the funds to the main fund
-			var pot = Funds[Fund.Main];
-			bal.Update(Model.UtcNow, total: bal.Total - volume);
-			pot.Update(Model.UtcNow, total: pot.Total + volume);
-			Funds.Remove(fund_id);
-
-			Debug.Assert(AssertValid());
-		}
-
-
-
-#endif
-
-
 	}
 }

@@ -24,6 +24,15 @@ namespace CoinFlip
 				throw new Exception("Unknown trade type");
 		}
 
+		/// <summary>Return the unit type for a trade of this type on 'pair'</summary>
+		public static string RateUnits(this ETradeType tt, TradePair pair)
+		{
+			return
+				tt == ETradeType.B2Q ? pair.RateUnits :
+				tt == ETradeType.Q2B ? pair.RateUnitsInv :
+				throw new Exception("Unknown trade type");
+		}
+
 		/// <summary>Return the 'in' coin for a trade on 'pair' in this trade direction</summary>
 		public static Coin CoinIn(this ETradeType tt, TradePair pair)
 		{
@@ -109,15 +118,6 @@ namespace CoinFlip
 			return
 				tt == ETradeType.B2Q ? amount_base * price_q2b :
 				tt == ETradeType.Q2B ? amount_base :
-				throw new Exception("Unknown trade type");
-		}
-
-		/// <summary>Return the commission in 'out' amount for a trade in this trade direction</summary>
-		public static Unit<double> Commission(this ETradeType tt, Unit<double> commission_quote, Unit<double> price_q2b)
-		{
-			return
-				tt == ETradeType.B2Q ? (commission_quote) :
-				tt == ETradeType.Q2B ? (commission_quote / price_q2b) :
 				throw new Exception("Unknown trade type");
 		}
 	}

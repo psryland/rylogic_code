@@ -135,13 +135,16 @@ namespace CoinFlip
 			// and we don't want updating pairs to be interrupted by the update thread stopping
 			var server_rules = await Api.ServerRules(cancel: Shutdown.Token);
 
+			// Filter out the coins we don't care about
+			server_rules.Symbols.RemoveAll(x => !(coins.Contains(x.BaseAsset) && coins.Contains(x.QuoteAsset)));
+
 			// Add an action to integrate the data
 			Model.DataUpdates.Add(() =>
 			{
 				var pairs = new HashSet<TradePair>();
 
 				// Create the trade pairs and associated coins
-				foreach (var p in server_rules.Symbols.Where(x => coins.Contains(x.BaseAsset) && coins.Contains(x.QuoteAsset)))
+				foreach (var p in server_rules.Symbols)
 				{
 					var base_ = Coins.GetOrAdd(p.BaseAsset);
 					var quote = Coins.GetOrAdd(p.QuoteAsset);
@@ -171,39 +174,40 @@ namespace CoinFlip
 		}
 
 		/// <summary>Update account balance data</summary>
-		protected override Task UpdateBalancesInternal() // Worker thread context
+		protected override Task UpdateBalancesInternal(HashSet<string> coins) // Worker thread context
 		{
 			// Request the account data
 			var balance_data = Api.UserData.Balances;
 
+			// Ignore coins that aren't in the settings or don't qualify for auto add.
+			var auto_add_coins = SettingsData.Settings.AutoAddCoins;
+			balance_data.Balances.RemoveAll(x => !(coins.Contains(x.Asset) || (auto_add_coins && x.Total != 0)));
+
 			// Queue integration of the market data
 			Model.DataUpdates.Add(() =>
 			{
-				// Process the account data and update the balances
-				var msg = balance_data;
-
 				// Ignore out of date data
-				if (msg.UpdateTime < Balance.LastUpdated)
+				if (balance_data.UpdateTime < Balance.LastUpdated)
 					return;
 
 				// Update the account balance
-				foreach (var b in msg.Balances.Where(x => x.Total != 0 || Coins.ContainsKey(x.Asset)))
+				foreach (var b in balance_data.Balances)
 				{
 					// Find the currency that this balance is for
 					var coin = Coins.GetOrAdd(b.Asset);
 
 					// Update the balance
-					Balance.AssignFundBalance(coin, Fund.Default, b.Total._(coin), b.Locked._(coin), msg.UpdateTime);
+					Balance.AssignFundBalance(coin, Fund.Default, b.Total._(coin), b.Locked._(coin), balance_data.UpdateTime);
 				}
 
 				// Notify updated
-				Balance.LastUpdated = msg.UpdateTime;
+				Balance.LastUpdated = balance_data.UpdateTime;
 			});
 			return Task.CompletedTask;
 		}
 
 		/// <summary>Update open orders and completed trades</summary>
-		protected async override Task UpdateOrdersAndHistoryInternal() // Worker thread context
+		protected async override Task UpdateOrdersAndHistoryInternal(HashSet<string> coins) // Worker thread context
 		{
 			// Record the time just before the query to the server
 			var timestamp = DateTimeOffset.Now;
@@ -213,23 +217,29 @@ namespace CoinFlip
 			lock (m_pairs)
 				pairs = m_pairs.ToList();
 
-			// Request all the existing orders
-			var existing_orders = pairs.SelectMany(pair =>
-			{
-				Shutdown.Token.ThrowIfCancellationRequested();
-				var cp = new CurrencyPair(pair.Base.Symbol, pair.Quote.Symbol);
-				var orders = Api.UserData.Orders[cp];
-				return orders;
-			}).ToList();
+			var auto_add_coins = SettingsData.Settings.AutoAddCoins;
 
-			// Request all trade history since 'm_history_last'
-			var history_orders = pairs.SelectMany(pair =>
-			{
-				Shutdown.Token.ThrowIfCancellationRequested();
-				var cp = new CurrencyPair(pair.Base.Symbol, pair.Quote.Symbol);
-				var history = Api.UserData.History[cp, m_history_last, m_history_last_id];
-				return history;
-			}).ToList();
+			// Request all the existing orders
+			var existing_orders = pairs
+				.Where(pair => auto_add_coins || (coins.Contains(pair.Base) && coins.Contains(pair.Quote)))
+				.SelectMany(pair =>
+				{
+					Shutdown.Token.ThrowIfCancellationRequested();
+					var cp = new CurrencyPair(pair.Base.Symbol, pair.Quote.Symbol);
+					var orders = Api.UserData.Orders[cp];
+					return orders;
+				}).ToList();
+
+			// Request all the existing completed orders since 'm_history_last'
+			var history_orders = pairs
+				.Where(pair => auto_add_coins || (coins.Contains(pair.Base) && coins.Contains(pair.Quote)))
+				.SelectMany(pair =>
+				{
+					Shutdown.Token.ThrowIfCancellationRequested();
+					var cp = new CurrencyPair(pair.Base.Symbol, pair.Quote.Symbol);
+					var history = Api.UserData.History[cp, m_history_last, m_history_last_id];
+					return history;
+				}).ToList();
 
 			existing_orders.Sort(x => x.Created);
 			history_orders.Sort(x => x.Created);

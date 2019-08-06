@@ -50,9 +50,6 @@ namespace CoinFlip
 		/// <summary>The default amount to use when creating a trade from this Coin</summary>
 		public Unit<double> DefaultTradeAmount => Meta.DefaultTradeAmount._(Symbol);
 
-		/// <summary>True if this coin type is of interest</summary>
-		public bool OfInterest => Meta.OfInterest;
-
 		/// <summary>Return the balance for this coin on its associated exchange</summary>
 		public Balances Balances => Exchange.Balance[this];
 

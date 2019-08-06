@@ -37,8 +37,9 @@ namespace CoinFlip.Settings
 			PriceDataUpdatePeriodMS = 500;
 			MarketOrderPriceToleranceFrac = 0.0001;
 			ValuationCurrency = "USDT";
+			AutoAddCoins = false;
 
-			Coins = new CoinData[] { new CoinData("BTC") { OfInterest = true }, new CoinData("ETH") { OfInterest = true } };
+			Coins = new CoinData[] { new CoinData("BTC") { CreateCrossExchangePairs = true } };
 			LiveFunds = new FundData[1] { new FundData(Fund.Main, new FundData.ExchData[0]) };
 			LiveBots = new BotData[0];
 			Chart = new ChartSettings();
@@ -120,6 +121,13 @@ namespace CoinFlip.Settings
 		{
 			get { return get<string>(nameof(ValuationCurrency)); }
 			set { set(nameof(ValuationCurrency), value); }
+		}
+
+		/// <summary>True if coins with non-zero balances and coins involved in trades are added automatically</summary>
+		public bool AutoAddCoins
+		{
+			get { return get<bool>(nameof(AutoAddCoins)); }
+			set { set(nameof(AutoAddCoins), value); }
 		}
 
 		/// <summary>Meta data for known coins</summary>

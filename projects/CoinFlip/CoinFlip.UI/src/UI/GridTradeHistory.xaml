@@ -15,7 +15,7 @@
 		<RowDefinition Height="*"/>
 	</Grid.RowDefinitions>
 
-	<Grid
+	<!--<Grid
 		Grid.Row="0"
 		>
 		<Grid.ColumnDefinitions>
@@ -35,7 +35,7 @@
 			MinWidth="80"
 			Margin="3"
 			/>
-	</Grid>
+	</Grid>-->
 	
 	<DataGrid
 		Grid.Row="1"
@@ -59,14 +59,14 @@
 		<!-- Columns -->
 		<DataGrid.Columns>
 			<DataGridTextColumn
-				Header="Order/Trade Id"
-				Binding="{Binding OrderId, Mode=OneWay}"
-				Width="0.5*"
-				/>
-			<DataGridTextColumn
 				Header="Date"
 				Binding="{Binding Created.LocalDateTime, StringFormat={}{0:yyyy-MM-dd  HH:mm:ss}, Mode=OneWay}"
 				Width="0.7*"
+				/>
+			<DataGridTextColumn
+				Header="Order/Trade Id"
+				Binding="{Binding OrderId, Mode=OneWay}"
+				Width="0.5*"
 				/>
 			<DataGridTextColumn
 				Header="Type"

@@ -184,7 +184,7 @@ namespace CoinFlip.UI
 					foreach (var bal in balances.FundsExceptMain)
 					{
 						if (bal.Fund == SelectedFund)
-							max_available += bal.HeldOnExch - bal.Total;
+							max_available += bal.Held - bal.Total;
 						else
 							max_available -= bal.Total;
 					}

@@ -161,7 +161,7 @@ namespace CoinFlip.UI
 				Prompt = "Enter the Symbol Code for the coin to add",
 			};
 			if (dlg.ShowDialog() == true)
-				Model.Coins.Add(new CoinData(dlg.Value) { OfInterest = true });
+				Model.Coins.Add(new CoinData(dlg.Value));
 		}
 
 		/// <summary>Remove a coin from the collection</summary>

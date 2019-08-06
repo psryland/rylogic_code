@@ -26,7 +26,6 @@ namespace CoinFlip.UI
 			PairNames = new ListCollectionView(new List<string>());
 			Model = model;
 
-
 			m_grid.SelectionChanged += (s, a) =>
 			{
 				foreach (var item in a.RemovedItems.Cast<OrderCompleted>())
@@ -141,7 +140,7 @@ namespace CoinFlip.UI
 		/// <summary>The currently selected exchange</summary>
 		public OrderCompleted Current
 		{
-			get => (OrderCompleted)History?.CurrentItem;
+			get => History?.CurrentAs<OrderCompleted>();
 			set => History?.MoveCurrentTo(value);
 		}
 

@@ -74,8 +74,10 @@ namespace CoinFlip
 					// Initialise currencies and balances
 					if (!(this is CrossExchange))
 					{
-						await UpdatePairs();
-						await UpdateBalances();
+						// Get the set of coins from the settings
+						var coins = SettingsData.Settings.Coins.ToHashSet(x => x.Symbol);
+						await UpdatePairs(coins);
+						await UpdateBalances(coins);
 						OrdersUpdateRequired = true;
 						MarketDataUpdateRequired = true;
 						TransfersUpdateRequired = true;
@@ -303,11 +305,14 @@ namespace CoinFlip
 								if (m_update_thread_step.WaitOne(MainLoopPeriodMS))
 									continue;
 
+								// Get the set of coins from the settings
+								var coins = SettingsData.Settings.Coins.ToHashSet(x => x.Symbol);
+
 								// Update pairs
 								if (PairsUpdateRequired)
 								{
 									PairsUpdateRequired = false;
-									await UpdatePairs();
+									await UpdatePairs(coins);
 								}
 
 								// Update the balances
@@ -316,7 +321,7 @@ namespace CoinFlip
 								{
 									BalanceUpdateRequired = false;
 									if (!ExchSettings.PublicAPIOnly)
-										await UpdateBalances();
+										await UpdateBalances(coins);
 								}
 
 								// Update market data
@@ -333,7 +338,7 @@ namespace CoinFlip
 								{
 									OrdersUpdateRequired = false;
 									if (!ExchSettings.PublicAPIOnly)
-										await UpdateOrdersAndHistory();
+										await UpdateOrdersAndHistory(coins);
 								}
 
 								// Update funds transfers
@@ -342,7 +347,7 @@ namespace CoinFlip
 								{
 									TransfersUpdateRequired = false;
 									if (!ExchSettings.PublicAPIOnly)
-										await UpdateTransfers();
+										await UpdateTransfers(coins);
 								}
 							}
 							catch (OperationCanceledException) { break; }
@@ -447,9 +452,6 @@ namespace CoinFlip
 		/// <summary>The number of trading pairs available</summary>
 		public int PairsAvailable => Pairs.Count;
 
-		/// <summary>Return the coins available on this exchange that are coins of interest</summary>
-		public IEnumerable<Coin> CoinsOfInterest => Coins.Values.Where(x => x.OfInterest);
-
 		/// <summary>An identifying colour for the exchange</summary>
 		public uint Colour { get; set; }
 
@@ -472,7 +474,7 @@ namespace CoinFlip
 		public TransfersCollection Transfers { get; }
 
 		/// <summary>Update the collections of coins and pairs</summary>
-		public async Task UpdatePairs() // Worker thread context
+		public async Task UpdatePairs(HashSet<string> coins) // Worker thread context
 		{
 			// Allow update pairs in back testing mode as well
 
@@ -480,10 +482,7 @@ namespace CoinFlip
 			{
 				Debug.Assert(Misc.AssertBackgroundThread());
 
-				// Create a set of coins to find pairs for.
-				var coins = SettingsData.Settings.Coins.Select(x => x.Symbol).Prepend("BTC").ToHashSet(0);
 				await UpdatePairsInternal(coins);
-
 				LastRequestFailed = false;
 			}
 			catch (Exception ex)
@@ -500,13 +499,13 @@ namespace CoinFlip
 		}
 
 		/// <summary>Update the account balances</summary>
-		protected async Task UpdateBalances()  // Worker thread context
+		protected async Task UpdateBalances(HashSet<string> coins)  // Worker thread context
 		{
 			try
 			{
 				Debug.Assert(Misc.AssertBackgroundThread());
 
-				await UpdateBalancesInternal();
+				await UpdateBalancesInternal(coins);
 				LastRequestFailed = false;
 
 			}
@@ -515,14 +514,14 @@ namespace CoinFlip
 				HandleException(nameof(UpdateBalances), ex);
 			}
 		}
-		protected virtual Task UpdateBalancesInternal()  // Worker thread context
+		protected virtual Task UpdateBalancesInternal(HashSet<string> coins)  // Worker thread context
 		{
 			Balance.LastUpdated = Model.UtcNow;
 			return Task.CompletedTask;
 		}
 
 		/// <summary>Update all open orders and completed trades</summary>
-		protected async Task UpdateOrdersAndHistory() // Worker thread context
+		protected async Task UpdateOrdersAndHistory(HashSet<string> coins) // Worker thread context
 		{
 			try
 			{
@@ -530,7 +529,7 @@ namespace CoinFlip
 
 				// Do orders and history together so there's no chance of a
 				// position being filled without it appearing in the history.
-				await UpdateOrdersAndHistoryInternal();
+				await UpdateOrdersAndHistoryInternal(coins);
 				LastRequestFailed = false;
 			}
 			catch (Exception ex)
@@ -538,7 +537,7 @@ namespace CoinFlip
 				HandleException(nameof(UpdateOrdersAndHistory), ex);
 			}
 		}
-		protected virtual Task UpdateOrdersAndHistoryInternal() // Worker thread context
+		protected virtual Task UpdateOrdersAndHistoryInternal(HashSet<string> coins) // Worker thread context
 		{
 			Orders.LastUpdated = Model.UtcNow;
 			History.LastUpdated = Model.UtcNow;
@@ -567,13 +566,13 @@ namespace CoinFlip
 		}
 
 		/// <summary>Update all deposits and withdrawals made on this exchange</summary>
-		protected async Task UpdateTransfers() // Worker thread context
+		protected async Task UpdateTransfers(HashSet<string> coins) // Worker thread context
 		{
 			try
 			{
 				Debug.Assert(Misc.AssertBackgroundThread());
 
-				await UpdateTransfersInternal();
+				await UpdateTransfersInternal(coins);
 				LastRequestFailed = false;
 			}
 			catch (Exception ex)
@@ -581,7 +580,7 @@ namespace CoinFlip
 				HandleException(nameof(UpdatePairs), ex);
 			}
 		}
-		protected virtual Task UpdateTransfersInternal() // Worker thread context
+		protected virtual Task UpdateTransfersInternal(HashSet<string> coins) // Worker thread context
 		{
 			return Task.CompletedTask;
 		}
@@ -668,9 +667,6 @@ namespace CoinFlip
 				if (amount_in > fund[tt.CoinIn(pair)].Available)
 					throw new Exception($"Order amount ({amount_in}) is greater than the current available balance: {fund[tt.CoinIn(pair)].Available}");
 
-				// Convert the amount to base currency and the price to quote/base
-				//var amount = tt.AmountIn(amount_, price_);
-
 				// Get the creation time of the order
 				var now = Model.UtcNow;
 
@@ -680,7 +676,7 @@ namespace CoinFlip
 				// the received amount (usually).
 				var bal = fund[tt.CoinIn(pair)];
 				var hold_amount = amount_in;
-				var hold_id = bal.Hold(hold_amount);
+				var hold_id = bal.Hold(null, hold_amount, x => x.LastUpdated <= now);
 
 				// Make the trade
 				// This can have the following results:
@@ -696,6 +692,10 @@ namespace CoinFlip
 				var price_q2b = ot == EOrderType.Market ? pair.SpotPrice[tt].Value : tt.PriceQ2B(amount_out / amount_in);
 				Model.Log.Write(ELogLevel.Info, $"{Name}: (id={result.OrderId}) {amount_in.ToString(8, true)} → {amount_out.ToString(8, true)} @ {price_q2b.ToString(8, true)}");
 
+				// Save the extra details about the live order.
+				ExchSettings.OrderDetails.Add(new OrderDetails(result.OrderId, fund, creator_name));
+				ExchSettings.Save();
+
 				// The order may have been completed or partially filled. Add the filled orders to the trade history.
 				foreach (var fill in result.Trades)
 				{
@@ -707,25 +707,20 @@ namespace CoinFlip
 				// placing an order and checking 'Orders' for the existence of the order just placed.
 				if (!result.Filled)
 				{
-					// Save the extra details about the live order.
-					ExchSettings.OrderDetails.Add(new OrderDetails(result.OrderId, fund, creator_name));
-					ExchSettings.Save();
-
 					// Add a 'Position' to the collection, this will be overwritten on the next update.
 					var filled_in = result.Trades.Sum(x => x.AmountIn)._(tt.CoinIn(pair));
 					var order = new Order(result.OrderId, fund, pair, ot, tt, amount_in, amount_out, amount_in - filled_in, now, now);
 					Orders.AddOrUpdate(order);
 
-					// The order is on the exchange, so update the held amount to be held on the exchange
-					bal.Release(hold_id);
-					bal.HeldOnExch = hold_amount;
+					// Update the hold with the order id.
+					bal.Update(hold_id, result.OrderId, x => Orders.ContainsKey(order.OrderId));
 				}
 				else
 				{
 					// If the order was immediately completely filled, apply the changes to the associated fund.
-					// There was never any amount held on the exchange in this case
+					// There was never any amount held on the exchange in this case.
 					bal.Release(hold_id);
-					ApplyChangesToFund(History[result.OrderId], false, now);
+					ApplyCompletedOrderToFund(History[result.OrderId], now);
 				}
 
 				// Remove entries from the order book that this order should have filled.
@@ -904,21 +899,21 @@ namespace CoinFlip
 				if (order.Created >= timestamp)
 					continue;
 
+				// The order is no longer on the exchange, so remove it from this collection
+				Orders.Remove(order.OrderId);
+
 				// If the order is no longer in the live orders list and is now in the history,
 				// then it has been completed. Apply the trade amounts to the associated fund.
 				// Note: this only happens when the order is fully filled because if it wasn't
 				// filled it'd still be in the live orders list.
 				var was_filled = History.TryGetValue(order.OrderId, out var his);
 				if (was_filled)
-					ApplyChangesToFund(his, true, timestamp);
-
-				// Remove the entry from the persisted order details (if it's there)
-				ExchSettings.OrderDetails.RemoveIf(x => x.OrderId == order.OrderId);
-				ExchSettings.Save();
-
-				// The order is no longer on the exchange, so remove it from this collection
-				Orders.Remove(order.OrderId);
+					ApplyCompletedOrderToFund(his, timestamp);
 			}
+
+			// Remove entries from the persisted order details
+			if (ExchSettings.OrderDetails.RemoveAll(x => !live_order_ids.Contains(x.OrderId)) != 0)
+				ExchSettings.Save();
 		}
 
 		/// <summary>Add a new or modified OrderCompleted to the trade history DB</summary>
@@ -1012,19 +1007,25 @@ namespace CoinFlip
 			return new Fund(details?.FundId ?? Fund.Main);
 		}
 
-		/// <summary>Adjust the balances of a fund based on a completed order</summary>
-		private void ApplyChangesToFund(OrderCompleted his, bool amount_in_was_held, DateTimeOffset timestamp)
+		/// <summary>Adjust the balances of a fund based on 'order' and 'his'</summary>
+		private void ApplyCompletedOrderToFund(OrderCompleted his, DateTimeOffset timestamp)
 		{
-			if (his.Fund.Id == Fund.Main)
-				return;
-
-			// 'amount_in_was_held' means that the amount 'his.AmountIn' in represented in the 
-			// 'HeldOnExch' amount so, now that the order is completed, this amount is no longer held.
-			Balance[his.CoinIn].ChangeFundBalance(his.Fund, -his.AmountIn, amount_in_was_held, timestamp);
-			Balance[his.CoinOut].ChangeFundBalance(his.Fund, +his.AmountOut, false, timestamp);
-			if (his.CommissionCoin != null)
-				Balance[his.CommissionCoin].ChangeFundBalance(his.Fund, -his.Commission, amount_in_was_held, timestamp);
-
+			foreach (var trade in his.Trades.Values)
+			{
+				{// Debt from CoinIn
+					var bal = Balance[trade.CoinIn];
+					bal.ChangeFundBalance(his.Fund, -trade.AmountIn, timestamp);
+				}
+				{// Credit to CoinOut
+					var bal = Balance[trade.CoinOut];
+					bal.ChangeFundBalance(his.Fund, +trade.AmountOut, timestamp);
+				}
+				if (trade.CommissionCoin != null) // Debt the commission
+				{
+					var bal = Balance[trade.CommissionCoin];
+					bal.ChangeFundBalance(his.Fund, -trade.Commission, timestamp);
+				}
+			}
 		}
 
 		/// <summary>Update the trade history from the DB</summary>

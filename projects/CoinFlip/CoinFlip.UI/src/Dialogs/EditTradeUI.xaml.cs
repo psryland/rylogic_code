@@ -138,11 +138,11 @@ namespace CoinFlip.UI
 							}
 						case nameof(Trade.PriceQ2B):
 							{
-								if (Trade.AmountIn != 0)
+								if (Trade.AmountIn != 0 && Trade.Price != 0)
 								{
 									Trade.AmountOut = Trade.AmountIn * Trade.Price;
 								}
-								else if (Trade.AmountOut != 0)
+								else if (Trade.AmountOut != 0 && Trade.Price != 0)
 								{
 									Trade.AmountIn = Trade.AmountOut / Trade.Price;
 								}

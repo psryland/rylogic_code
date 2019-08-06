@@ -94,6 +94,7 @@
     <Compile Include="src\GfxObjects\SpotPrice.cs" />
     <Compile Include="src\GfxObjects\UpdatingText.cs" />
     <Compile Include="src\Misc\CoinFilter.cs" />
+    <Compile Include="src\Misc\SimulationView.cs" />
     <Compile Include="src\Misc\SkinResourceDictionary.cs" />
     <Compile Include="src\Misc\SignedValueToBrush.cs" />
     <Compile Include="src\UI\CandleChart.xaml.cs">
@@ -172,6 +173,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="src\UI\GridTransfers.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="src\UI\LogView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -192,6 +197,9 @@
     </Compile>
     <Compile Include="src\UI\GridTradeOrders.xaml.cs">
       <DependentUpon>GridTradeOrders.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="src\UI\GridTransfers.xaml.cs">
+      <DependentUpon>GridTransfers.xaml</DependentUpon>
     </Compile>
     <Compile Include="src\UI\LogView.xaml.cs">
       <DependentUpon>LogView.xaml</DependentUpon>

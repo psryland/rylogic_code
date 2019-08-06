@@ -35,8 +35,8 @@ namespace CoinFlip.Settings
 		/// <summary>The name of the bot that created the order</summary>
 		public string BotName
 		{
-			get { return get<string>(nameof(FundId)); }
-			set { set(nameof(FundId), value); }
+			get { return get<string>(nameof(BotName)); }
+			set { set(nameof(BotName), value); }
 		}
 	}
 }
