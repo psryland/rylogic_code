@@ -1,34 +1,45 @@
 ﻿using System;
 using System.Windows;
-using System.Windows.Media;
+using Rylogic.Gfx;
 
 namespace Rylogic.Gui.WPF
 {
-    public partial class ColourPickerUI : Window
+	public partial class ColourPickerUI : Window
 	{
+		static ColourPickerUI()
+		{
+			ColourProperty = Gui_.DPRegister<ColourPickerUI>(nameof(Colour));
+		}
 		public ColourPickerUI()
 		{
 			InitializeComponent();
+			Accept = Command.Create(this, AcceptInternal);
+			DataContext = this;
 		}
 
 		/// <summary>The colour selected in the dialog</summary>
-		public Color Color
+		public Colour32 Colour
 		{
-			get { return m_colour_wheel.Colour; }
-			set { m_colour_wheel.Colour = value; }
+			get { return (Colour32)GetValue(ColourProperty); }
+			set { SetValue(ColourProperty, value); }
 		}
+		private void Colour_Changed()
+		{
+			ColorChanged?.Invoke(this, new ColourWheel.ColourEventArgs(Colour));
+		}
+		public static readonly DependencyProperty ColourProperty;
 
 		/// <summary>Raised when the colour is changed</summary>
-		public event EventHandler<ColourWheel.ColourEventArgs> ColorChanged
-		{
-			add { m_colour_wheel.ColourChanged += value; }
-			remove { m_colour_wheel.ColourChanged -= value; }
-		}
+		public event EventHandler<ColourWheel.ColourEventArgs> ColorChanged;
 
-		/// <summary>Handlers</summary>
-		private void HandleOkButton(object sender, RoutedEventArgs e)
+		/// <summary>Accept button</summary>
+		public Command Accept { get; }
+		private void AcceptInternal()
 		{
-			DialogResult = true;
+			if (this.IsModal())
+				DialogResult = true;
+
+			Close();
 		}
 	}
 }

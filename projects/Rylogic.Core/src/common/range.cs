@@ -369,7 +369,7 @@ namespace Rylogic.Common
 			End = end;
 		}
 
-		/// <summary>True if the range spans zero elements</summary>
+		/// <summary>True if Beg == End</summary>
 		public bool Empty
 		{
 			get { return Equals(Beg,End); }

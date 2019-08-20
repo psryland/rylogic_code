@@ -190,6 +190,23 @@ namespace Rylogic.Gui.WPF
 			return item;
 		}
 
+		/// <summary>Ensure 'item' is a child of 'panel', removing from its existing parent and adding if needed</summary>
+		public static T Adopt<T>(this Panel panel, T item) where T:FrameworkElement
+		{
+			if (item.Parent is Panel parent)
+			{
+				// Already a child.
+				if (parent == panel)
+					return item;
+
+				// Child of a different panel
+				parent.Children.Remove(item);
+			}
+
+			// Add 'item' as a child of 'panel'
+			return panel.Children.Add2(item);
+		}
+
 		/// <summary>Recursively enumerates all visual children of this DependencyObject (depth first)</summary>
 		public static IEnumerable<DependencyObject> AllVisualChildren(this DependencyObject parent)
 		{

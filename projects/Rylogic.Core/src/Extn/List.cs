@@ -278,18 +278,18 @@ namespace Rylogic.Extn
 		/// <summary>
 		/// Remove items from a list by predicate.
 		/// Returns the number of elements removed.</summary>
-		public static int RemoveIf<T>(this List<T> list, Func<T,bool> pred, bool stable)
+		public static int RemoveIf<T>(this List<T> list, Func<T,bool> pred, bool stable, bool dispose = false)
 		{
-			return RemoveIf(list, pred, stable, 0, list.Count);
+			return RemoveIf(list, pred, stable, 0, list.Count, dispose);
 		}
-		public static int RemoveIf<T>(this List<T> list, Func<T,bool> pred, bool stable, int start, int count)
+		public static int RemoveIf<T>(this List<T> list, Func<T,bool> pred, bool stable, int start, int count, bool dispose = false)
 		{
 			if (start < 0) throw new ArgumentOutOfRangeException("start",$"Start index {start} out of range [0,{list.Count})");
 			if (start + count > list.Count) throw new ArgumentOutOfRangeException("count",$"Item count {count} out of range [0,{list.Count}]");
 
 			// If stable remove is needed, use the IList version
 			if (stable)
-				return ((IList<T>)list).RemoveIf(pred, start, count);
+				return ((IList<T>)list).RemoveIf(pred, start, count, dispose);
 
 			int end = list.Count;
 			for (int i = start + count; i-- != start;)
@@ -298,45 +298,52 @@ namespace Rylogic.Extn
 				list.Swap(i, --end);
 			}
 			int removed = list.Count - end;
-			list.RemoveRange(end, removed);
+			list.RemoveRange(end, removed, dispose);
 			return removed;
 		}
 
 		/// <summary>
 		/// Remove items from a list by predicate.
 		/// Note generic list has an unstable faster version of this.
+		/// If 'dispose' is true, removed elements are also disposed (if IDisposable)
 		/// Returns the number of elements removed.</summary>
-		public static int RemoveIf<T>(this IList<T> list, Func<T,bool> pred)
+		public static int RemoveIf<T>(this IList<T> list, Func<T,bool> pred, bool dispose = false)
 		{
-			return RemoveIf(list, pred, 0, list.Count);
+			return RemoveIf(list, pred, 0, list.Count, dispose);
 		}
-		public static int RemoveIf<T>(this IList list, Func<T,bool> pred)
+		public static int RemoveIf<T>(this IList list, Func<T,bool> pred, bool dispose = false)
 		{
-			return RemoveIf(list, pred, 0, list.Count);
+			return RemoveIf(list, pred, 0, list.Count, dispose);
 		}
-		public static int RemoveIf<T>(this IList<T> list, Func<T,bool> pred, int start, int count)
+		public static int RemoveIf<T>(this IList<T> list, Func<T,bool> pred, int start, int count, bool dispose = false)
 		{
-			if (start < 0) throw new ArgumentOutOfRangeException("start",$"Start index {start} out of range [0,{list.Count})");
-			if (start + count > list.Count) throw new ArgumentOutOfRangeException("count",$"Item count {count} out of range [0,{list.Count}]");
+			if (start < 0)
+				throw new ArgumentOutOfRangeException("start",$"Start index {start} out of range [0,{list.Count})");
+			if (start + count > list.Count)
+				throw new ArgumentOutOfRangeException("count",$"Item count {count} out of range [0,{list.Count}]");
 
 			int removed = 0;
 			for (int i = start + count; i-- != start;)
 			{
 				if (!pred(list[i])) continue;
+				if (dispose && list[i] is IDisposable disp) disp.Dispose();
 				list.RemoveAt(i);
 				++removed;
 			}
 			return removed;
 		}
-		public static int RemoveIf<T>(this IList list, Func<T,bool> pred, int start, int count)
+		public static int RemoveIf<T>(this IList list, Func<T,bool> pred, int start, int count, bool dispose = false)
 		{
-			if (start < 0) throw new ArgumentOutOfRangeException("start",$"Start index {start} out of range [0,{list.Count})");
-			if (start + count > list.Count) throw new ArgumentOutOfRangeException("count",$"Item count {count} out of range [0,{list.Count}]");
+			if (start < 0)
+				throw new ArgumentOutOfRangeException("start",$"Start index {start} out of range [0,{list.Count})");
+			if (start + count > list.Count)
+				throw new ArgumentOutOfRangeException("count",$"Item count {count} out of range [0,{list.Count}]");
 
 			int removed = 0;
 			for (int i = start + count; i-- != start;)
 			{
 				if (!pred((T)list[i])) continue;
+				if (dispose && list[i] is IDisposable disp) disp.Dispose();
 				list.RemoveAt(i);
 				++removed;
 			}
@@ -344,29 +351,38 @@ namespace Rylogic.Extn
 		}
 
 		/// <summary>Remove a range of items from this list</summary>
-		public static void RemoveRange<T>(this IList<T> list, int start, int count)
+		public static void RemoveRange<T>(this IList<T> list, int start, int count, bool dispose = false)
 		{
 			for (int i = count; i-- != 0;)
+			{
+				if (dispose && list[start + i] is IDisposable disp) disp.Dispose();
 				list.RemoveAt(start + i);
+			}
 		}
 
 		/// <summary>Remove the range of elements from [start_index, list.Count)</summary>
-		public static void RemoveToEnd<T>(this IList<T> list, int start_index)
+		public static void RemoveToEnd<T>(this IList<T> list, int start_index, bool dispose = false)
 		{
 			for (var i = list.Count; i-- > start_index;)
+			{
+				if (dispose && list[start_index] is IDisposable disp) disp.Dispose();
 				list.RemoveAt(start_index);
+			}
 		}
 
 		/// <summary>Remove all items in 'set' from this list. (More efficient that removing one at a time if 'set' is a large fraction of this list)</summary>
-		public static void RemoveAll<T>(this IList<T> list, IEnumerable<T> set)
+		public static void RemoveAll<T>(this IList<T> list, IEnumerable<T> set, bool dispose = false)
 		{
-			list.RemoveAll(set.ToHashSet());
+			list.RemoveAll(set.ToHashSet(), dispose);
 		}
-		public static void RemoveAll<T>(this IList<T> list, HashSet<T> set)
+		public static void RemoveAll<T>(this IList<T> list, HashSet<T> set, bool dispose = false)
 		{
 			for (int i = list.Count; i-- != 0;)
-				if (set.Contains(list[i]))
-					list.RemoveAt(i);
+			{
+				if (!set.Contains(list[i])) continue;
+				if (dispose && list[i] is IDisposable disp) disp.Dispose();
+				list.RemoveAt(i);
+			}
 		}
 
 		/// <summary>Fill a sub-range of this list with the given value</summary>

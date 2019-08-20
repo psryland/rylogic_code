@@ -37,6 +37,10 @@ namespace TestWPF
 			m_recent_files.Add("Three");
 			m_recent_files.RecentFileSelected += s => Debug.WriteLine(s);
 
+			ShowColourPicker = Command.Create(this, () =>
+			{
+				new ColourPickerUI().Show();
+			});
 			ShowChart = Command.Create(this, () =>
 			{
 				new ChartUI().Show();
@@ -131,6 +135,7 @@ namespace TestWPF
 			DataContext = this;
 		}
 
+		public Command ShowColourPicker { get; }
 		public Command ShowChart { get; }
 		public Command ShowDiagram { get; }
 		public Command ShowDockContainer { get; }

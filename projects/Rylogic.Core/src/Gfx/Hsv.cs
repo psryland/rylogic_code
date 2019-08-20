@@ -49,7 +49,13 @@ namespace Rylogic.Gfx
 		/// <summary>Convert this HSV to RGB</summary>
 		public Color ToColor()
 		{
-			return ToColor(this);
+			return ToColour32().ToColor();
+		}
+
+		/// <summary>Convert this HSV to RGB</summary>
+		public Colour32 ToColour32()
+		{
+			return ToColour32(A, H, S, V);
 		}
 
 		/// <summary>Create an HSV from components</summary>
@@ -79,7 +85,7 @@ namespace Rylogic.Gfx
 		}
 
 		/// <summary>Return the HSV colour as a standard ARGB colour</summary>
-		public static Color ToColor(float a, float h, float s, float v)
+		public static Colour32 ToColour32(float a, float h, float s, float v)
 		{
 			Debug.Assert(
 				a >= 0f && a <= 1f &&
@@ -91,9 +97,9 @@ namespace Rylogic.Gfx
 			// Saturation == 0f means 'sec' is undefined
 			if (Math.Abs(s) < float.Epsilon)
 			{
-				var A = (int)Math_.Clamp(a * 255, 0, 255);
-				var I = (int)Math_.Clamp(v * 255, 0, 255);
-				return Color.FromArgb(A,I,I,I);
+				var A = Math_.Clamp(a, 0f, 1f);
+				var I = Math_.Clamp(v, 0f, 1f);
+				return new Colour32(A,I,I,I);
 			}
 
 			// Hue is divided into 6 sectors: red -> magenta -> blue -> cyan -> green -> yellow -> red
@@ -119,19 +125,17 @@ namespace Rylogic.Gfx
 			case 4: r = t; g = p; b = v; break;
 			case 5: r = v; g = p; b = q; break;
 			}
-			return Color.FromArgb((int)(a * 255), (int)(r * 255), (int)(g * 255), (int)(b * 255));
-		}
-
-		/// <summary>Return the HSV colour as a standard ARGB colour</summary>
-		public static Color ToColor(HSV hsv)
-		{
-			return ToColor(hsv.A, hsv.H, hsv.S, hsv.V);
+			return new Colour32((float)a, (float)r, (float)g, (float)b);
 		}
 
 		/// <summary>
 		/// Return an HSV colour from a standard ARGB colour.
 		/// 'undef_h' is the value to use for h when it would otherwise be undefined.
 		/// Use previous value in order to preserve it through the singular points.</summary>
+		public static HSV FromColour32(Colour32 rgb, float undef_h = 0f)
+		{
+			return FromColor(rgb.A, rgb.R, rgb.G, rgb.B, undef_h);
+		}
 		public static HSV FromColor(Color rgb, float undef_h = 0f)
 		{
 			return FromColor(rgb.A, rgb.R, rgb.G, rgb.B, undef_h);

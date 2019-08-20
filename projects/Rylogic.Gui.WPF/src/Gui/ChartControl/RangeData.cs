@@ -465,8 +465,8 @@ namespace Rylogic.Gui.WPF
 					var wh = cam.ViewArea(cam.FocusDist);
 					GridLines(out var min, out var max, out var step);
 					var pos =
-						AxisType == EAxis.XAxis ? new v4((float)(wh.x / 2 - min), wh.y / 2, cam.FocusDist * m_chart.Options.GridZOffset, 0) :
-						AxisType == EAxis.YAxis ? new v4(wh.x / 2, (float)(wh.y / 2 - min), cam.FocusDist * m_chart.Options.GridZOffset, 0) :
+						AxisType == EAxis.XAxis ? new v4((float)(wh.x / 2 - min), wh.y / 2, (float)(cam.FocusDist * m_chart.Options.GridZOffset), 0) :
+						AxisType == EAxis.YAxis ? new v4(wh.x / 2, (float)(wh.y / 2 - min), (float)(cam.FocusDist * m_chart.Options.GridZOffset), 0) :
 						throw new Exception("Unknown axis type");
 
 					var o2w = cam.O2W;

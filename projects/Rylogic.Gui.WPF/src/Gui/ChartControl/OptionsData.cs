@@ -1,8 +1,5 @@
 ﻿using System.ComponentModel;
-using System.Drawing;
-using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 using System.Xml.Linq;
 using Rylogic.Extn;
 using Rylogic.Gfx;
@@ -25,15 +22,15 @@ namespace Rylogic.Gui.WPF
 				LockAspect = null;
 				BackgroundColour = Colour32.LightGray;
 				SelectionColour = 0x8060A0E0;
-				GridZOffset = 0.001f;
-				CrossHairZOffset = 0.005f;
+				GridZOffset = 0.001;
+				CrossHairZOffset = 0.005;
 				ShowAxes = true;
 				AntiAliasing = true;
 				FillMode = View3d.EFillMode.Solid;
 				CullMode = View3d.ECullMode.Back;
 				Orthographic = false;
-				MinSelectionDistance = 10f;
-				MinDragPixelDistance = 5f;
+				MinSelectionDistance = 10.0;
+				MinDragPixelDistance = 5.0;
 				MouseCentredZoom = true;
 				ResetForward = -v4.ZAxis;
 				ResetUp = +v4.YAxis;
@@ -118,63 +115,63 @@ namespace Rylogic.Gui.WPF
 			/// <summary>The control method used for shifting the camera</summary>
 			public ENavMode NavigationMode
 			{
-				get { return m_NavigationMode; }
-				set { SetProp(ref m_NavigationMode, value, nameof(NavigationMode)); }
+				get => m_NavigationMode;
+				set => SetProp(ref m_NavigationMode, value, nameof(NavigationMode));
 			}
 			private ENavMode m_NavigationMode;
 
 			/// <summary>Lock the aspect ratio for the chart (null means unlocked)</summary>
 			public double? LockAspect
 			{
-				get { return m_LockAspect; }
-				set { SetProp(ref m_LockAspect, value, nameof(LockAspect)); }
+				get => m_LockAspect;
+				set => SetProp(ref m_LockAspect, value, nameof(LockAspect));
 			}
 			private double? m_LockAspect;
 
 			/// <summary>The chart area background colour</summary>
 			public Colour32 BackgroundColour
 			{
-				get { return m_BackgroundColour; }
-				set { SetProp(ref m_BackgroundColour, value, nameof(BackgroundColour)); }
+				get => m_BackgroundColour;
+				set => SetProp(ref m_BackgroundColour, value, nameof(BackgroundColour));
 			}
 			private Colour32 m_BackgroundColour;
 
 			/// <summary>Area selection colour</summary>
 			public Colour32 SelectionColour
 			{
-				get { return m_SelectionColour; }
-				set { SetProp(ref m_SelectionColour, value, nameof(SelectionColour)); }
+				get => m_SelectionColour;
+				set => SetProp(ref m_SelectionColour, value, nameof(SelectionColour));
 			}
 			private Colour32 m_SelectionColour;
 
 			/// <summary>The offset from the origin for the grid, in the forward direction of the camera (focus distance relative)</summary>
-			public float GridZOffset
+			public double GridZOffset
 			{
-				get { return m_GridZOffset; }
-				set { SetProp(ref m_GridZOffset, value, nameof(GridZOffset)); }
+				get => m_GridZOffset;
+				set => SetProp(ref m_GridZOffset, value, nameof(GridZOffset));
 			}
-			private float m_GridZOffset;
+			private double m_GridZOffset;
 
 			/// <summary>The depth position of the cross hair (focus distance relative)</summary>
-			public float CrossHairZOffset
+			public double CrossHairZOffset
 			{
-				get { return m_CrossHairZOffset; }
-				set { SetProp(ref m_CrossHairZOffset, value, nameof(CrossHairZOffset)); }
+				get => m_CrossHairZOffset;
+				set => SetProp(ref m_CrossHairZOffset, value, nameof(CrossHairZOffset));
 			}
-			private float m_CrossHairZOffset;
+			private double m_CrossHairZOffset;
 
 			/// <summary>Show/Hide the chart axes</summary>
 			public bool ShowAxes
 			{
-				get { return m_ShowAxes; }
-				set { SetProp(ref m_ShowAxes, value, nameof(ShowAxes)); }
+				get => m_ShowAxes;
+				set => SetProp(ref m_ShowAxes, value, nameof(ShowAxes));
 			}
 			private bool m_ShowAxes;
 
 			/// <summary>Show hide both X and Y Axis grid lines</summary>
 			public bool ShowGridLines
 			{
-				get { return XAxis.ShowGridLines || YAxis.ShowGridLines; }
+				get => XAxis.ShowGridLines || YAxis.ShowGridLines;
 				set
 				{
 					var shown = ShowGridLines;
@@ -186,79 +183,79 @@ namespace Rylogic.Gui.WPF
 			/// <summary>Enable/Disable multi-sampling in the view3d view. Can only be changed before the view is created</summary>
 			public bool AntiAliasing
 			{
-				get { return m_AntiAliasing; }
-				set { SetProp(ref m_AntiAliasing, value, nameof(AntiAliasing)); }
+				get => m_AntiAliasing;
+				set => SetProp(ref m_AntiAliasing, value, nameof(AntiAliasing));
 			}
 			private bool m_AntiAliasing;
 
 			/// <summary>Fill mode, solid, wire, or both</summary>
 			public View3d.EFillMode FillMode
 			{
-				get { return m_FillMode; }
-				set { SetProp(ref m_FillMode, value, nameof(FillMode)); }
+				get => m_FillMode;
+				set => SetProp(ref m_FillMode, value, nameof(FillMode));
 			}
 			private View3d.EFillMode m_FillMode;
 
 			/// <summary>Fill mode, solid, wire, or both</summary>
 			public View3d.ECullMode CullMode
 			{
-				get { return m_CullMode; }
-				set { SetProp(ref m_CullMode, value, nameof(CullMode)); }
+				get => m_CullMode;
+				set => SetProp(ref m_CullMode, value, nameof(CullMode));
 			}
 			private View3d.ECullMode m_CullMode;
 
 			/// <summary>Get/Set orthographic camera projection</summary>
 			public bool Orthographic
 			{
-				get { return m_Orthographic; }
-				set { SetProp(ref m_Orthographic, value, nameof(Orthographic)); }
+				get => m_Orthographic;
+				set => SetProp(ref m_Orthographic, value, nameof(Orthographic));
 			}
 			private bool m_Orthographic;
 
 			/// <summary>How close a click has to be for selection to occur (in client space)</summary>
-			public float MinSelectionDistance
+			public double MinSelectionDistance
 			{
-				get { return m_MinSelectionDistance; }
-				set { SetProp(ref m_MinSelectionDistance, value, nameof(MinSelectionDistance)); }
+				get => m_MinSelectionDistance;
+				set => SetProp(ref m_MinSelectionDistance, value, nameof(MinSelectionDistance));
 			}
-			private float m_MinSelectionDistance;
+			private double m_MinSelectionDistance;
 
 			/// <summary>Minimum distance in pixels before the chart starts dragging</summary>
-			public float MinDragPixelDistance
+			public double MinDragPixelDistance
 			{
-				get { return m_MinDragPixelDistance; }
-				set { SetProp(ref m_MinDragPixelDistance, value, nameof(MinDragPixelDistance)); }
+				get => m_MinDragPixelDistance;
+				set => SetProp(ref m_MinDragPixelDistance, value, nameof(MinDragPixelDistance));
 			}
-			private float m_MinDragPixelDistance;
+			private double m_MinDragPixelDistance;
 
 			/// <summary>True if the camera should move along a ray cast through the mouse point</summary>
 			public bool MouseCentredZoom
 			{
-				get { return m_MouseCentredZoom; }
-				set { SetProp(ref m_MouseCentredZoom, value, nameof(MouseCentredZoom)); }
+				get => m_MouseCentredZoom;
+				set => SetProp(ref m_MouseCentredZoom, value, nameof(MouseCentredZoom));
 			}
 			private bool m_MouseCentredZoom;
 
 			/// <summary>The forward direction of the camera when reset</summary>
 			public v4 ResetForward
 			{
-				get { return m_ResetForward; }
-				set { SetProp(ref m_ResetForward, value, nameof(ResetForward)); }
+				get => m_ResetForward;
+				set => SetProp(ref m_ResetForward, value, nameof(ResetForward));
 			}
 			public v4 m_ResetForward;
 
 			/// <summary>The up direction of the camera when reset</summary>
 			public v4 ResetUp
 			{
-				get { return m_ResetUp; }
-				set { SetProp(ref m_ResetUp, value, nameof(ResetUp)); }
+				get => m_ResetUp;
+				set => SetProp(ref m_ResetUp, value, nameof(ResetUp));
 			}
 			public v4 m_ResetUp;
 
 			/// <summary>XAxis rendering options</summary>
 			public Axis XAxis
 			{
-				get { return m_XAxis; }
+				get => m_XAxis;
 				private set
 				{
 					if (m_XAxis == value) return;
@@ -278,7 +275,7 @@ namespace Rylogic.Gui.WPF
 			/// <summary>YAxis rendering options</summary>
 			public Axis YAxis
 			{
-				get { return m_YAxis; }
+				get => m_YAxis;
 				private set
 				{
 					if (m_YAxis == value) return;

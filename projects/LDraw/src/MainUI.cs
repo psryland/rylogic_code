@@ -290,7 +290,7 @@ namespace LDraw
 				OpenFile(file, true);
 
 			// Start the RPC service
-			Model.RPCService.Active = true;
+			//Model.RPCService.Active = true;
 
 			base.OnShown(e);
 		}

@@ -31,8 +31,9 @@
 					<MenuItem Header="_View3D" Command="{Binding ShowView3DUI}"/>
 				</MenuItem>
 				<MenuItem Header="_Dialogs">
-					<MenuItem Header="_Message Box UI" Command="{Binding ShowMsgBox}"/>
+					<MenuItem Header="_Colour Picker UI" Command="{Binding ShowColourPicker}"/>
 					<MenuItem Header="_List UI" Command="{Binding ShowListUI}"/>
+					<MenuItem Header="_Message Box UI" Command="{Binding ShowMsgBox}"/>
 					<MenuItem Header="_Pattern Editor" Command="{Binding ShowPatternEditor}"/>
 					<MenuItem Header="_Progress UI" Command="{Binding ShowProgressUI }"/>
 					<MenuItem Header="_Prompt UI" Command="{Binding ShowPromptUI }"/>

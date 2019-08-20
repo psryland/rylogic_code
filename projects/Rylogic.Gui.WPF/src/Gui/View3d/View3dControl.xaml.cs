@@ -1,15 +1,12 @@
 using System;
 using System.ComponentModel;
-using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using Rylogic.Attrib;
-using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
@@ -53,78 +50,15 @@ namespace Rylogic.Gui.WPF
 				Source = D3DImage = new D3D11Image();
 
 				// Initialise commands
-				ToggleOriginPoint = Command.Create(this, () =>
-				{
-					Window.OriginPointVisible = !Window.OriginPointVisible;
-					Invalidate();
-				});
-				ToggleFocusPoint = Command.Create(this, () =>
-				{
-					Window.FocusPointVisible = !Window.FocusPointVisible;
-					Invalidate();
-				});
-				ToggleOrthographic = Command.Create(this, () =>
-				{
-					Camera.Orthographic = !Camera.Orthographic;
-					Invalidate();
-				});
-				ToggleAntialiasing = Command.Create(this, () =>
-				{
-					MultiSampling = MultiSampling == 1 ? 4 : 1;
-					Invalidate();
-				});
-				ResetView = Command.Create(this, () =>
-				{
-					Camera.ResetView();
-					Invalidate();
-				});
-				SetBackgroundColour = Command.Create(this, () =>
-				{
-					var bg = Window.BackgroundColour;
-					var dlg = new ColourPickerUI
-					{
-						Title = "Background Colour",
-						Owner = System.Windows.Window.GetWindow(this),
-						Color = bg.ToMediaColor(),
-					};
-					dlg.ColorChanged += (s, a) =>
-					{
-						Window.BackgroundColour = a.Colour.ToColour32();
-					};
-					if (dlg.ShowDialog() == true)
-						Window.BackgroundColour = dlg.Color.ToColour32();
-					else
-						Window.BackgroundColour = bg;
-				});
-				ShowMeasureTool = Command.Create(this, () =>
-				{
-					m_measurement_ui = m_measurement_ui ?? new View3dMeasurementUI(this);
-					m_measurement_ui.Closed += (s, a) => { m_measurement_ui = null; Invalidate(); };
-					m_measurement_ui.Show();
-					m_measurement_ui.Focus();
-				});
-				ShowLightingUI = Command.Create(this, () =>
-				{
-					var light = new View3d.Light(Window.LightProperties);
-					light.PropertyChanged += (s, a) =>
-					{
-						Window.LightProperties = m_lighting_ui.Light;
-						Invalidate();
-					};
-
-					m_lighting_ui = m_lighting_ui ?? new View3dLightingUI(this);
-					m_lighting_ui.Closed += (s, a) => m_lighting_ui = null;
-					m_lighting_ui.Light = light;
-					m_lighting_ui.Show();
-					m_lighting_ui.Focus();
-				});
-				ShowObjectManager = Command.Create(this, () =>
-				{
-					m_object_manager_ui = m_object_manager_ui ?? new View3dObjectManagerUI(this);
-					m_object_manager_ui.Closed += (s, a) => m_object_manager_ui = null;
-					m_object_manager_ui.Show();
-					m_object_manager_ui.Focus();
-				});
+				ToggleOriginPoint = Command.Create(this, ToggleOriginPointInternal);
+				ToggleFocusPoint = Command.Create(this, ToggleFocusPointInternal);
+				ToggleOrthographic = Command.Create(this, ToggleOrthographicInternal);
+				ToggleAntialiasing = Command.Create(this, ToggleAntialiasingInternal);
+				ResetView = Command.Create(this, ResetViewInternal);
+				SetBackgroundColour = Command.Create(this, SetBackgroundColourInternal);
+				ShowMeasureTool = Command.Create(this, ShowMeasureToolInternal);
+				ShowLightingUI = Command.Create(this, ShowLightingUIInternal);
+				ShowObjectManager = Command.Create(this, ShowObjectManagerInternal);
 
 				ViewPresets = new ListCollectionView(Enum<EViewPresets>.ValuesArray);
 				AlignDirections = new ListCollectionView(Enum<EAlignDirections>.ValuesArray);
@@ -154,13 +88,19 @@ namespace Rylogic.Gui.WPF
 			m_resized = true;
 			base.OnRenderSizeChanged(size_info);
 			D3DImage.Invalidate();
-			Invalidate();
+			var resize_issue = ++m_resize_issue;
+			Dispatcher_.BeginInvokeDelayed(() =>
+			{
+				if (resize_issue != m_resize_issue) return;
+				Invalidate();
+			}, TimeSpan.FromMilliseconds(10), System.Windows.Threading.DispatcherPriority.Background);
 		}
 		protected override void OnMouseDown(MouseButtonEventArgs e)
 		{
 			Keyboard.Focus(this);
 			base.OnMouseDown(e);
 		}
+		private int m_resize_issue;
 		private bool m_resized;
 
 		/// <summary>View3d context reference</summary>
@@ -513,32 +453,104 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>Toggle visibility of the origin point</summary>
 		public Command ToggleOriginPoint { get; }
+		private void ToggleOriginPointInternal()
+		{
+			Window.OriginPointVisible = !Window.OriginPointVisible;
+			Invalidate();
+		}
 
 		/// <summary>Toggle visibility of the focus point</summary>
 		public Command ToggleFocusPoint { get; }
+		private void ToggleFocusPointInternal()
+		{
+			Window.FocusPointVisible = !Window.FocusPointVisible;
+			Invalidate();
+		}
 
 		/// <summary>Toggle between orthographic and perspective projection</summary>
 		public Command ToggleOrthographic { get; }
+		private void ToggleOrthographicInternal()
+		{
+			Camera.Orthographic = !Camera.Orthographic;
+			Invalidate();
+		}
 
 		/// <summary>Toggle Antialiasing on or off</summary>
 		public Command ToggleAntialiasing { get; }
+		private void ToggleAntialiasingInternal()
+		{
+			MultiSampling = MultiSampling == 1 ? 4 : 1;
+			Invalidate();
+		}
 
 		/// <summary>Reset the camera to the default view for the scene</summary>
 		public Command ResetView { get; }
+		private void ResetViewInternal()
+		{
+			Camera.ResetView();
+			Invalidate();
+		}
 
 		/// <summary>Show a dialog for changing the background colour</summary>
 		public Command SetBackgroundColour { get; }
+		private void SetBackgroundColourInternal()
+		{
+			var bg = Window.BackgroundColour;
+			var dlg = new ColourPickerUI
+			{
+				Title = "Background Colour",
+				Owner = System.Windows.Window.GetWindow(this),
+				Colour = bg,
+			};
+			dlg.ColorChanged += (s, a) =>
+			{
+				Window.BackgroundColour = a.Colour;
+			};
+			if (dlg.ShowDialog() == true)
+				Window.BackgroundColour = dlg.Colour;
+			else
+				Window.BackgroundColour = bg;
+		}
 
 		/// <summary>Show a measurement tool window</summary>
 		public Command ShowMeasureTool { get; }
+		private void ShowMeasureToolInternal()
+		{
+			m_measurement_ui = m_measurement_ui ?? new View3dMeasurementUI(this);
+			m_measurement_ui.Closed += (s, a) => { m_measurement_ui = null; Invalidate(); };
+			m_measurement_ui.Show();
+			m_measurement_ui.Focus();
+		}
 		private View3dMeasurementUI m_measurement_ui;
 
 		/// <summary>Show the UI for changing the lighting</summary>
 		public Command ShowLightingUI { get; }
+		private void ShowLightingUIInternal()
+		{
+			var light = new View3d.Light(Window.LightProperties);
+			light.PropertyChanged += (s, a) =>
+			{
+				Window.LightProperties = m_lighting_ui.Light;
+				Invalidate();
+			};
+
+			m_lighting_ui = m_lighting_ui ?? new View3dLightingUI(this);
+			m_lighting_ui.Closed += (s, a) => m_lighting_ui = null;
+			m_lighting_ui.Light = light;
+			m_lighting_ui.Show();
+			m_lighting_ui.Focus();
+		}
 		private View3dLightingUI m_lighting_ui;
 
 		/// <summary>Show the UI for objects in the scene</summary>
 		public Command ShowObjectManager { get; }
+		private void ShowObjectManagerInternal()
+		{
+			m_object_manager_ui = m_object_manager_ui ?? new View3dObjectManagerUI(this);
+			m_object_manager_ui.Closed += (s, a) => m_object_manager_ui = null;
+			m_object_manager_ui.Show();
+			m_object_manager_ui.Focus();
+		}
 		private View3dObjectManagerUI m_object_manager_ui;
 
 		/// <summary>Pre-set view directions</summary>

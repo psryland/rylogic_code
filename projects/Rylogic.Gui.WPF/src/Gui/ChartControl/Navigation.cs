@@ -44,7 +44,6 @@ namespace Rylogic.Gui.WPF
 
 		/// <summary>The default behaviour of area select mode</summary>
 		public EAreaSelectMode AreaSelectMode { get; set; }
-		public enum EAreaSelectMode { Disabled, SelectElements, Zoom }
 
 		/// <summary>Mouse/key events on the chart</summary>
 		protected override void OnMouseDown(MouseButtonEventArgs args)
@@ -246,7 +245,7 @@ namespace Rylogic.Gui.WPF
 			// If the current mouse operation doesn't use the key,
 			// see if it's a default keyboard shortcut.
 			if (!args.Handled && DefaultKeyboardShortcuts)
-				TranslateKey(args);
+				OnTranslateKey(args);
 		}
 		protected override void OnKeyUp(KeyEventArgs args)
 		{
@@ -271,6 +270,14 @@ namespace Rylogic.Gui.WPF
 		protected virtual void OnChartClicked(ChartClickedEventArgs args)
 		{
 			ChartClicked?.Invoke(this, args);
+		}
+
+		/// <summary>Raised when the chart is dragged with the mouse</summary>
+		public event EventHandler<ChartDraggedEventArgs> ChartDragged;
+		protected virtual void OnChartDragged(ChartDraggedEventArgs args)
+		{
+			// This allows custom behaviour of a mouse drag on the chart
+			ChartDragged?.Invoke(this, args);
 		}
 
 		/// <summary>Raised when the chart is area selected</summary>
@@ -300,7 +307,24 @@ namespace Rylogic.Gui.WPF
 						PositionChart(args.SelectionArea);
 						break;
 					}
+				case EAreaSelectMode.ZoomIfNoSelection:
+					{
+						if (Selected.Count == 0)
+							PositionChart(args.SelectionArea);
+						break;
+					}
 				}
+			}
+		}
+		private bool DoChartAreaSelect()
+		{
+			switch (AreaSelectMode)
+			{
+			default: throw new Exception($"Unknown area selection mode: {AreaSelectMode}");
+			case EAreaSelectMode.Disabled: return false;
+			case EAreaSelectMode.SelectElements: return true;
+			case EAreaSelectMode.Zoom: return true;
+			case EAreaSelectMode.ZoomIfNoSelection: return Selected.Count == 0;
 			}
 		}
 
@@ -325,9 +349,14 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Handle navigation keyboard shortcuts</summary>
-		public virtual void TranslateKey(KeyEventArgs e)
+		public virtual void OnTranslateKey(KeyEventArgs e)
 		{
 			if (e.Handled) return;
+
+			// Allow users to handle the key
+			TranslateKey?.Invoke(this, e);
+			if (e.Handled) return;
+
 			switch (e.Key)
 			{
 			case Key.Escape:
@@ -341,7 +370,7 @@ namespace Rylogic.Gui.WPF
 				}
 			case Key.Delete:
 				{
-					if (AllowEditing)
+					//if (AllowEditing)
 					{
 						//// Allow the caller to cancel the deletion or change the selection
 						//var res = new DiagramChangedRemoveElementsEventArgs(Selected.ToArray());
@@ -388,6 +417,22 @@ namespace Rylogic.Gui.WPF
 					break;
 				}
 			}
+		}
+		public event EventHandler<KeyEventArgs> TranslateKey;
+
+		/// <summary>Area selection mode</summary>
+		public enum EAreaSelectMode
+		{
+			Disabled,
+
+			/// <summary>Elements within the dragged area become selected</summary>
+			SelectElements,
+
+			/// <summary>The dragged out area becomes the new chart bounds</summary>
+			Zoom,
+
+			/// <summary>Only area-zoom if there are no elements in the selected state</summary>
+			ZoomIfNoSelection,
 		}
 	}
 }

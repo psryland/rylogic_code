@@ -286,7 +286,7 @@ namespace Rylogic.Gui.WinForms
 						(float)(dim.Centre.X + dim.Radius * Math.Cos(i * Math_.Tau / ColourCount)),
 						(float)(dim.Centre.Y + dim.Radius * Math.Sin(i * Math_.Tau / ColourCount)));
 				
-					colours[i] = HSV.ToColor(1f, (float)i / ColourCount, 1f, 1f);
+					colours[i] = HSV.ToColour32(1f, (float)i / ColourCount, 1f, 1f);
 				}
 
 				using (var pgb = new PathGradientBrush(points))

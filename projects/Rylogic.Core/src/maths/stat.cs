@@ -53,10 +53,14 @@ namespace Rylogic.Maths
 		/// <summary>Add values to the stat</summary>
 		void Add(T x, T y);
 	}
+	public interface IStatMeanSingleVariable<T> :IStatMean<T>, IStatSingleVariable<T>
+	{ }
+	public interface IStatMeanAndVarianceSingleVariable<T> :IStatMeanAndVariance<T>, IStatSingleVariable<T>
+	{ }
 
 	/// <summary>Simple Running Average</summary>
 	[DebuggerDisplay("{Mean} N={Count}")]
-	public class Average : IStatMean<double>, IStatSingleVariable<double>
+	public class Average : IStatMeanSingleVariable<double>
 	{
 		//' let: D(k) = X(k) - avr(k-1)           => X(k) = D(k) + avr(k-1)
 		//'  avr(k-1) = SUM{X(k-1)} / (k-1)       => SUM{X(k-1)} = (k-1)*avr(k-1)
@@ -129,7 +133,7 @@ namespace Rylogic.Maths
 		}
 	}
 	[DebuggerDisplay("{Mean} N={Count}")]
-	public class Average<T> :IStatMean<T>, IStatSingleVariable<T>
+	public class Average<T> :IStatMeanSingleVariable<T>
 	{
 		public Average()
 		{
@@ -197,7 +201,7 @@ namespace Rylogic.Maths
 
 	/// <summary>Running Average with standard deviation and variance</summary>
 	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count}")]
-	public class AverageVariance : Average, IStatMeanAndVariance<double>, IStatSingleVariable<double>
+	public class AverageVariance : Average, IStatMeanAndVarianceSingleVariable<double>
 	{
 		//' let: D(k) = X(k) - avr(k-1)           => X(k) = D(k) + avr(k-1)
 		//'  avr(k-1) = SUM{X(k-1)} / (k-1)       => SUM{X(k-1)} = (k-1)*avr(k-1)
@@ -276,7 +280,7 @@ namespace Rylogic.Maths
 		}
 	}
 	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count}")]
-	public class AverageVariance<T> :Average<T>, IStatMeanAndVariance<T>, IStatSingleVariable<T>
+	public class AverageVariance<T> :Average<T>, IStatMeanAndVarianceSingleVariable<T>
 	{
 		protected T m_var;
 		
@@ -330,7 +334,7 @@ namespace Rylogic.Maths
 
 	/// <summary>Running average with standard deviation and min/max range</summary>
 	[DebuggerDisplay("{Mean ({PopStdDev}) N={Count} R=[{Min},{Max}]")]
-	public class AverageVarianceMinMax : AverageVariance, IStatMeanAndVariance<double>, IStatSingleVariable<double>
+	public class AverageVarianceMinMax : AverageVariance, IStatMeanSingleVariable<double>
 	{
 		public AverageVarianceMinMax()
 			: base()
@@ -396,7 +400,7 @@ namespace Rylogic.Maths
 		}
 	}
 	[DebuggerDisplay("{Mean ({PopStdDev}) N={Count} R=[{Min},{Max}]")]
-	public class AverageVarianceMinMax<T> :AverageVariance<T>, IStatMeanAndVariance<T>, IStatSingleVariable<T>
+	public class AverageVarianceMinMax<T> :AverageVariance<T>, IStatMeanAndVarianceSingleVariable<T>
 	{
 		public AverageVarianceMinMax()
 			:base()
@@ -461,7 +465,7 @@ namespace Rylogic.Maths
 
 	/// <summary>Moving Window Average</summary>
 	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count}")]
-	public class MovingAverage : IStatMeanAndVariance<double>, IStatSingleVariable<double>
+	public class SimpleMovingAverage : IStatMeanAndVarianceSingleVariable<double>
 	{
 		// Let: D(k) = X(k) - X(k-N) => X(k-N) = X(k) - D(k)
 		// Average:
@@ -470,11 +474,11 @@ namespace Rylogic.Maths
 		private double[] m_window;
 		private int m_i;
 
-		public MovingAverage(int window_size)
+		public SimpleMovingAverage(int window_size)
 		{
 			Reset(window_size);
 		}
-		public MovingAverage(MovingAverage rhs)
+		public SimpleMovingAverage(SimpleMovingAverage rhs)
 			: this(rhs.m_window.Length)
 		{
 			Array.Copy(rhs.m_window, m_window, m_window.Length);
@@ -530,7 +534,7 @@ namespace Rylogic.Maths
 		}
 
 		/// <summary>Add a value to the moving average</summary>
-		public MovingAverage Add(double value)
+		public SimpleMovingAverage Add(double value)
 		{
 			if (m_count == m_window.Length)
 			{
@@ -558,7 +562,7 @@ namespace Rylogic.Maths
 
 	/// <summary>Exponential Moving Average</summary>
 	[DebuggerDisplay("{Mean} ({PopStdDev}) N={Count}")]
-	public class ExponentialMovingAverage : IStatMeanAndVariance<double>, IStatSingleVariable<double>
+	public class ExponentialMovingAverage : IStatMeanAndVarianceSingleVariable<double>
 	{
 		//'  avr(k) = a * X(k) + (1 - a) * avr(k-1)
 		//'         = a * X(k) + avr(k-1) - a * avr(k-1)
@@ -1288,7 +1292,7 @@ namespace Rylogic.UnitTests
 			const int BufSz = 13;
 
 			var rng = new Random();
-			var s = new MovingAverage(BufSz);
+			var s = new SimpleMovingAverage(BufSz);
 			double[] buf = new double[BufSz];
 			int idx = 0;
 			int count = 0;

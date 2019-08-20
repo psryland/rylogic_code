@@ -129,7 +129,7 @@ namespace Rylogic.Gfx
 		{
 			return Bit.SetBits(m_argb, 0xFF000000, (uint)alpha << 24);
 		}
-		public Colour32 Alpha(float alpha)
+		public Colour32 Alpha(double alpha)
 		{
 			return Alpha((byte)(alpha * 0xFF));
 		}

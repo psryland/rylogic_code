@@ -369,7 +369,7 @@ namespace Rylogic.Gui.WinForms
 			get
 			{
 				Debug.Assert(PinTarget != null);
-				return PinTarget.TopLevelControl != PinTarget
+				return PinTarget.TopLevelControl != null && PinTarget.TopLevelControl != PinTarget
 					? PinTarget.TopLevelControl.RectangleToScreen(PinTarget.Bounds)
 					: PinTarget.Bounds;
 			}

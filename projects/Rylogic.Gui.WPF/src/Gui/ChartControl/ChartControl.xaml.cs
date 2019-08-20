@@ -32,6 +32,10 @@ namespace Rylogic.Gui.WPF
 		// - After setting the camera position, call SetRangeFromCamera()
 		// - Mouse wheel moves the camera in the camera z direction
 		// - Mouse wheel on an axis (changing the aspect ratio) changes the FoV
+		// - Client space is the control's coordinates. The View3D part typically has a non-zero
+		//   offset from the control origin. e.g. SceneBounds = [30,10,100,100] say.
+		//   Note: the overlay has a transform applied to it so that points in client space are
+		//   correctly positioned.
 
 		static ChartControl()
 		{
@@ -60,11 +64,13 @@ namespace Rylogic.Gui.WPF
 				Hovered = new HoveredCollection(this);
 				Tools = new ChartTools(this);
 
-				AllowEditing = false;
 				AllowSelection = false;
+				AllowElementDragging = false;
 				DefaultMouseControl = true;
 				DefaultKeyboardShortcuts = true;
 				AreaSelectMode = EAreaSelectMode.Zoom;
+
+				Scene.BuildScene += OnBuildScene;
 
 				InitCommands();
 				InitNavigation();
@@ -251,10 +257,22 @@ namespace Rylogic.Gui.WPF
 		public View3d.Camera Camera => Scene?.Camera;
 
 		/// <summary>Raised just before the chart renders, allowing users to add custom graphics</summary>
-		public event EventHandler<View3dControl.BuildSceneEventArgs> BuildScene
+		public event EventHandler<View3dControl.BuildSceneEventArgs> BuildScene;
+		private void OnBuildScene(object sender, View3dControl.BuildSceneEventArgs e)
 		{
-			add { Scene.BuildScene += value; }
-			remove { Scene.BuildScene -= value; }
+			// Notes:
+			//  - 'Elements' manage their graphics directly in the View3d.Window. Those
+			//    with overlay controls also have direct access to 'Chart.Overlay'
+			//  - BuildScene is really just for graphics elements that aren't derived
+			//    from 'Chart.Element'.
+
+			// The offset in client space to the overlay origin
+			var pt = TransformToDescendant(Scene).Transform(new Point());
+			Canvas.SetLeft(Overlay, pt.X);
+			Canvas.SetTop(Overlay, pt.Y);
+
+			// Allow external additions to the scene
+			BuildScene?.Invoke(this, e);
 		}
 
 		/// <summary>Invalidate the chart, triggering a redraw</summary>
@@ -651,21 +669,11 @@ namespace Rylogic.Gui.WPF
 				elem.PositionZ = HighestZ += Camera.FocusDist * 0.001f;
 		}
 
-		/// <summary>True if users are allowed to add/remove/edit elements on the diagram</summary>
-		public bool AllowEditing
-		{
-			get { return m_impl_allow_editing; }
-			set
-			{
-				if (m_impl_allow_editing == value) return;
-				m_impl_allow_editing = value;
-				//UpdateEditToolbar();
-			}
-		}
-		private bool m_impl_allow_editing;
-
 		/// <summary>True if users are allowed to select elements on the diagram</summary>
 		public bool AllowSelection { get; set; }
+
+		/// <summary>True if users are allowed to drag the selected elements around on the chart</summary>
+		public bool AllowElementDragging { get; set; }
 
 		/// <summary>Return a string representation of a location on the chart. 'location' is in ChartControl client space</summary>
 		public string LocationText(Point location)
@@ -708,14 +716,6 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 		private MouseOps m_mouse_ops;
-
-		/// <summary>Move the selected elements by 'delta'</summary>
-		private void DragSelected(Vector delta, bool commit)
-		{
-			if (!AllowEditing) return;
-			foreach (var elem in Selected)
-				elem.Drag(delta, commit);
-		}
 
 		/// <summary>
 		/// Select elements that are wholly within 'rect'. (rect is in chart space)
@@ -905,7 +905,7 @@ namespace Rylogic.Gui.WPF
 					// Scale by 2* because the cross hair may be near the border of the chart
 					// and we need one half of the cross to be scaled to the full chart width.
 					var o2p = new m4x4(Camera.O2W.rot, Camera.O2W * pt_cs) * m3x4.Scale(2 * view.x, 2 * view.y, 1f).m4x4;
-					o2p.w.z += Camera.FocusDist * Options.CrossHairZOffset;
+					o2p.w.z += (float)(Camera.FocusDist * Options.CrossHairZOffset);
 					Tools.CrossHair.O2P = o2p;
 
 					Scene.Invalidate();

@@ -36,12 +36,13 @@ namespace Rylogic.Gui.WPF
 		public static void ColumnVisibility(object sender, MouseButtonEventArgs args)
 		{
 			// Unfortunately, binding like this 'MouseRightButtonUp="{Binding DataGrid_.ColumnVisibility}"'
-			// doesn't work. You'd need to provide an instance method that forwarded to this call, so you
+			// doesn't work. You'd need to provide an instance method that forwards to this call, so you
 			// might as well just sign up the event handler in the constructor:
 			//  m_grid.MouseRightButtonUp += DataGrid_.ColumnVisibility;
 			if (args.ChangedButton != MouseButton.Right || args.RightButton != MouseButtonState.Released)
 				return;
 
+			// If this throws, check you've actually signed up to a DataGrid (i.e. not a Grid)
 			var grid = (DataGrid)sender;
 			var hit = (DependencyObject)args.OriginalSource;
 

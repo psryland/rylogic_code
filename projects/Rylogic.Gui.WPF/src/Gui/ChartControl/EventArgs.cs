@@ -85,6 +85,28 @@ namespace Rylogic.Gui.WPF
 			public bool Handled { get; set; }
 		}
 
+		/// <summary>Event args for when an element or elements is dragged within the chart</summary>
+		public class ChartDraggedEventArgs :EventArgs
+		{
+			public ChartDraggedEventArgs(HitTestResult hits, Vector delta, bool commit)
+			{
+				HitResult = hits;
+				Handled = false;
+			}
+
+			/// <summary>Results of a hit test performed at the click location</summary>
+			public HitTestResult HitResult { get; }
+
+			/// <summary>The drag vector from the start position</summary>
+			public Vector Delta { get; }
+
+			/// <summary>True when the drag is to be committed (i.e. at the end of a drag and escape not pressed)</summary>
+			public bool Commit { get; }
+
+			/// <summary>Set to true to suppress default chart click behaviour</summary>
+			public bool Handled { get; set; }
+		}
+
 		/// <summary>Event args for area selection</summary>
 		public class ChartAreaSelectEventArgs : EventArgs
 		{

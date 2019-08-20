@@ -490,11 +490,17 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>Handle a click event on this element</summary>
-			public virtual void HandleClicked(ChartClickedEventArgs args)
-			{ }
+			internal void HandleClickedInternal(ChartClickedEventArgs args) => HandleClicked(args);
+			protected virtual void HandleClicked(ChartClickedEventArgs args)
+			{}
 
-			/// <summary>Drag the element 'delta' from the DragStartPosition</summary>
-			public virtual void Drag(Vector delta, bool commit)
+			/// <summary>Handle a drag event on this element</summary>
+			internal void HandleDraggedInternal(ChartDraggedEventArgs args) => HandleDragged(args);
+			protected virtual void HandleDragged(ChartDraggedEventArgs args)
+			{}
+
+			/// <summary>Translate this element from the drag start position</summary>
+			public void DragTranslate(Vector delta, bool commit)
 			{
 				var p = DragStartPosition;
 				p.pos.x += (float)delta.X;
@@ -505,7 +511,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>Position recorded at the time dragging starts</summary>
-			internal m4x4 DragStartPosition { get; set; }
+			public m4x4 DragStartPosition { get; internal set; }
 
 			/// <summary>Update the graphics and object transforms associated with this element</summary>
 			public void UpdateGfx(object sender = null, EventArgs args = null)

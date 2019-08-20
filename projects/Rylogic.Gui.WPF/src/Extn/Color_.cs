@@ -66,6 +66,16 @@ namespace Rylogic.Gui.WPF
 			return Color.FromArgb(col.A, col.R, col.G, col.B);
 		}
 
+		/// <summary>Convert this colour to a media solid colour brush</summary>
+		public static SolidColorBrush ToMediaBrush(this Colour32 col)
+		{
+			return new SolidColorBrush(col.ToMediaColor());
+		}
+		public static SolidColorBrush ToMediaBrush(this System.Drawing.Color col)
+		{
+			return new SolidColorBrush(col.ToMediaColor());
+		}
+
 		/// <summary>Convert this media color to an ARGB value</summary>
 		public static int ToArgb(this Color col)
 		{

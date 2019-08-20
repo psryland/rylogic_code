@@ -16,6 +16,10 @@ namespace Rylogic.Gui.WPF
 		private const string AlphaLabel = "A";
 		private EParts m_selected_part;
 
+		static ColourWheel()
+		{
+			ColourProperty = Gui_.DPRegister<ColourWheel>(nameof(Colour));
+		}
 		public ColourWheel()
 		{
 			InitializeComponent();
@@ -23,7 +27,7 @@ namespace Rylogic.Gui.WPF
 			Orientation = Orientation.Horizontal;
 			SliderWidth = 20.0;
 			SelectionIndicatorSize = 6.0;
-			Colour = Colors.White;
+			Colour = Colour32.White;
 		}
 		protected override void OnMouseDown(MouseButtonEventArgs e)
 		{
@@ -204,33 +208,24 @@ namespace Rylogic.Gui.WPF
 		private double m_selection_indicator_size;
 
 		/// <summary>The currently selected colour (RGB)</summary>
-		public Color Colour
+		public Colour32 Colour
 		{
-			get { return m_colour; }
-			set
-			{
-				if (m_colour == value) return;
-				m_colour = value;
-				ColourChanged?.Invoke(this, new ColourEventArgs(Colour));
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Colour)));
-				InvalidateVisual();
-			}
+			get { return (Colour32)GetValue(ColourProperty); }
+			set { SetValue(ColourProperty, value); }
 		}
-		private Color m_colour;
+		private void Colour_Changed()
+		{
+			ColourChanged?.Invoke(this, new ColourEventArgs(Colour));
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Colour)));
+			InvalidateVisual();
+		}
+		public static readonly DependencyProperty ColourProperty;
 
 		/// <summary>The currently selected colour (HSV)</summary>
 		public HSV HSVColour
 		{
-			get
-			{
-				var c = Colour;
-				return HSV.FromColor(c.A, c.R, c.G, c.B);
-			}
-			set
-			{
-				var c = value.ToColor();
-				Colour = Color.FromArgb(c.A, c.R, c.G, c.B);
-			}
+			get => HSV.FromColour32(Colour);
+			set => Colour = value.ToColour32();
 		}
 
 		/// <summary>Wheel point based on the current dimensions</summary>
@@ -330,7 +325,7 @@ namespace Rylogic.Gui.WPF
 						(float)(centre.X + radius * Math.Cos(i * Math_.Tau / ColourCount)),
 						(float)(centre.Y + radius * Math.Sin(i * Math_.Tau / ColourCount)));
 
-					colours[i] = HSV.ToColor(1f, (float)i / ColourCount, 1f, 1f);
+					colours[i] = HSV.ToColour32(1f, (float)i / ColourCount, 1f, 1f);
 				}
 
 				// Generate a wheel bitmap
@@ -359,8 +354,7 @@ namespace Rylogic.Gui.WPF
 		private void RenderColourSelection(DrawingContext gfx, Point pt)
 		{
 			var radius = SelectionIndicatorSize;
-			var b = new SolidColorBrush(Colour);
-			gfx.DrawEllipse(b, new Pen(Brushes.Black, 1), pt, radius, radius);
+			gfx.DrawEllipse(Colour.ToMediaBrush(), new Pen(Brushes.Black, 1), pt, radius, radius);
 		}
 
 		/// <summary>Draw the slider body</summary>
@@ -506,13 +500,13 @@ namespace Rylogic.Gui.WPF
 		#region EventArgs
 		public class ColourEventArgs : EventArgs
 		{
-			public ColourEventArgs(Color colour)
+			public ColourEventArgs(Colour32 colour)
 			{
 				Colour = colour;
 			}
 
 			/// <summary>The selected colour</summary>
-			public Color Colour { get; private set; }
+			public Colour32 Colour { get; }
 		}
 		#endregion
 	}

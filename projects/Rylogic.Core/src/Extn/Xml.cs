@@ -880,6 +880,13 @@ namespace Rylogic.Extn
 			return attr != null ? attr.Value : def;
 		}
 
+		/// <summary>Fluent method for setting the value of an attribute</summary>
+		public static XElement AttrValueSet(this XElement elem, XName name, object value)
+		{
+			elem.SetAttributeValue(name, value);
+			return elem;
+		}
+
 		/// <summary>Enumerates the leaf XNodes of 'node'. (Depth-first). (Use LeafElements() if you just want elements)</summary>
 		public static IEnumerable<XNode> LeafNodes(this XContainer node)
 		{

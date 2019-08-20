@@ -22,14 +22,29 @@
 			Background="{x:Static SystemColors.ControlBrush}"
 			LastChildFill="False"
 			>
-			<Button DockPanel.Dock="Right" Content="Cancel" MinWidth="60" Margin="8" IsCancel="True" />
-			<Button DockPanel.Dock="Right" Content="OK" MinWidth="60" Margin="8" IsDefault="True" Click="HandleOkButton"/>
+			<Button
+				DockPanel.Dock="Right"
+				Content="Cancel"
+				MinWidth="60"
+				Margin="8"
+				IsCancel="True"
+				/>
+			<Button
+				DockPanel.Dock="Right"
+				Content="OK"
+				MinWidth="60"
+				Margin="8"
+				IsDefault="True"
+				Command="{Binding Accept}"
+				/>
 		</DockPanel>
+
 		<gui2:ColourWheel
 			x:Name="m_colour_wheel"
 			Orientation="Horizontal"
 			HorizontalAlignment="Center"
-            Margin="8"
+			Colour="{Binding Colour}"
+			Margin="8"
 			/>
 	</DockPanel>
 </Window>

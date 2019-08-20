@@ -16,7 +16,7 @@ using Rylogic.Utility;
 namespace Rylogic.Gui.WPF
 {
 	/// <summary>Represents a data source that can be added to a chart control</summary>
-	public class ChartDataSeries : ChartControl.Element
+	public partial class ChartDataSeries : ChartControl.Element
 	{
 		private PointStyleTextures m_point_textures;
 
@@ -40,7 +40,7 @@ namespace Rylogic.Gui.WPF
 		private void Init()
 		{
 			m_data = new List<Pt>();
-			Cache = new GfxCache(CreatePiece);
+			Cache = new ChartGfxCache(CreatePiece);
 			m_point_textures = new PointStyleTextures();
 			m_range_x = RangeF.Invalid;
 		}
@@ -136,7 +136,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Generate a piece of the graphics for 'x'</summary>
-		private GfxPiece CreatePiece(double x, RangeF missing)
+		private ChartGfxPiece CreatePiece(double x, RangeF missing)
 		{
 			Debug.Assert(missing.Contains(x));
 			using (Lock())
@@ -164,32 +164,32 @@ namespace Rylogic.Gui.WPF
 					{
 						return idx_range.Size > 0
 							? CreatePointPlot(idx_range)
-							: new GfxPiece(null, missing);
+							: new ChartGfxPiece(null, missing);
 					}
 				case EPlotType.Line:
 					{
 						return idx_range.Size > 1
 							? CreateLinePlot(idx_range)
-							: new GfxPiece(null, missing);
+							: new ChartGfxPiece(null, missing);
 					}
 				case EPlotType.StepLine:
 					{
 						return idx_range.Size > 1
 							? CreateStepLinePlot(idx_range)
-							: new GfxPiece(null, missing);
+							: new ChartGfxPiece(null, missing);
 					}
 				case EPlotType.Bar:
 					{
 						return idx_range.Size > 1
 							? CreateBarPlot(idx_range)
-							: new GfxPiece(null, missing);
+							: new ChartGfxPiece(null, missing);
 					}
 				}
 			}
 		}
 
 		/// <summary>Create a point cloud plot</summary>
-		private GfxPiece CreatePointPlot(Range idx_range)
+		private ChartGfxPiece CreatePointPlot(Range idx_range)
 		{
 			var n = idx_range.Sizei;
 
@@ -219,11 +219,11 @@ namespace Rylogic.Gui.WPF
 
 			// Create the graphics
 			var gfx = new View3d.Object($"{Name}-[{idx_range.Beg},{idx_range.End})", 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray(), Id);
-			return new GfxPiece(gfx, x_range);
+			return new ChartGfxPiece(gfx, x_range);
 		}
 
 		/// <summary>Create a line plot</summary>
-		private GfxPiece CreateLinePlot(Range idx_range)
+		private ChartGfxPiece CreateLinePlot(Range idx_range)
 		{
 			var n = idx_range.Sizei;
 			if (n == 0)
@@ -268,11 +268,11 @@ namespace Rylogic.Gui.WPF
 
 			// Create the graphics
 			var gfx = new View3d.Object($"{Name}-[{idx_range.Beg},{idx_range.End})", 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray(), Id);
-			return new GfxPiece(gfx, x_range);
+			return new ChartGfxPiece(gfx, x_range);
 		}
 
 		/// <summary>Create a step line plot</summary>
-		private GfxPiece CreateStepLinePlot(Range idx_range)
+		private ChartGfxPiece CreateStepLinePlot(Range idx_range)
 		{
 			var n = idx_range.Sizei;
 
@@ -305,7 +305,7 @@ namespace Rylogic.Gui.WPF
 			{
 				var mat = View3d.Material.New();
 				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.ThickLineListGS, $"*LineWidth {{{Options.LineWidth}}}");
-				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert | View3d.EGeom.Colr, 0, (uint)vert, 0, (uint)indx, false, false, mat);
+				m_nbuf[0] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert | View3d.EGeom.Colr, 0, (uint)vert, 0, (uint)indx, View3d.ENuggetFlag.None, false, mat);
 			}
 
 			// Create a nugget for the points (if visible)
@@ -319,16 +319,16 @@ namespace Rylogic.Gui.WPF
 				var mat = View3d.Material.New();
 				mat.m_diff_tex = m_point_textures[Options.PointStyle]?.Handle ?? IntPtr.Zero;
 				mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.PointSpritesGS, $"*PointSize {{{Options.PointSize} {Options.PointSize}}} *Depth {{{false}}}");
-				m_nbuf[1] = new View3d.Nugget(View3d.EPrim.PointList, View3d.EGeom.Vert | View3d.EGeom.Colr | View3d.EGeom.Tex0, 0, (uint)vert, (uint)i0, (uint)indx, false, false, mat);
+				m_nbuf[1] = new View3d.Nugget(View3d.EPrim.PointList, View3d.EGeom.Vert | View3d.EGeom.Colr | View3d.EGeom.Tex0, 0, (uint)vert, (uint)i0, (uint)indx, View3d.ENuggetFlag.None, false, mat);
 			}
 
 			// Create the graphics
 			var gfx = new View3d.Object($"{Name}-[{idx_range.Beg},{idx_range.End})", 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray(), Id);
-			return new GfxPiece(gfx, x_range);
+			return new ChartGfxPiece(gfx, x_range);
 		}
 
 		/// <summary>Create a bar graph</summary>
-		private GfxPiece CreateBarPlot(Range idx_range)
+		private ChartGfxPiece CreateBarPlot(Range idx_range)
 		{
 			var n = idx_range.Sizei;
 
@@ -376,7 +376,8 @@ namespace Rylogic.Gui.WPF
 			// Create a nugget for the tri list
 			uint v0 = 0, v1 = (uint)vidx;
 			uint i0 = 0, i1 = (uint)iidx;
-			m_nbuf[nidx++] = new View3d.Nugget(View3d.EPrim.TriList, View3d.EGeom.Vert | View3d.EGeom.Colr, v0, v1, i0, i1, has_alpha: col.A != 0xff);
+			var flags = col.A != 0xff ? View3d.ENuggetFlag.GeometryHasAlpha : View3d.ENuggetFlag.None;
+			m_nbuf[nidx++] = new View3d.Nugget(View3d.EPrim.TriList, View3d.EGeom.Vert | View3d.EGeom.Colr, v0, v1, i0, i1, flags);
 
 			// Add the bar 'tops'
 			if (Options.LinesOnBarPlot)
@@ -403,16 +404,16 @@ namespace Rylogic.Gui.WPF
 				// Create a nugget for the bar tops
 				v0 = v1; v1 += (uint)(n * 2);
 				i0 = i1; i1 += (uint)(n * 2);
-				m_nbuf[nidx++] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert | View3d.EGeom.Colr, v0, v1, i0, i1, has_alpha: false);
+				m_nbuf[nidx++] = new View3d.Nugget(View3d.EPrim.LineList, View3d.EGeom.Vert | View3d.EGeom.Colr, v0, v1, i0, i1);
 			}
 
 			// Create the graphics
 			var gfx = new View3d.Object($"{Name}-[{idx_range.Beg},{idx_range.End})", 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray(), Id);
-			return new GfxPiece(gfx, x_range);
+			return new ChartGfxPiece(gfx, x_range);
 		}
 
 		/// <summary>A cache of graphics pieces for this data series</summary>
-		private GfxCache Cache
+		private ChartGfxCache Cache
 		{
 			get { return m_impl_cache; }
 			set
@@ -422,7 +423,7 @@ namespace Rylogic.Gui.WPF
 				m_impl_cache = value;
 			}
 		}
-		private GfxCache m_impl_cache;
+		private ChartGfxCache m_impl_cache;
 
 		/// <summary>ToString</summary>
 		public override string ToString() => $"{Name} count={m_data.Count}";
@@ -455,124 +456,6 @@ namespace Rylogic.Gui.WPF
 
 			XIntgYIntg = XIntg | YIntg,
 			XRealYReal = XReal | YReal,
-		}
-
-		/// <summary>A cache of graphics objects that span the X-Axis</summary>
-		public class GfxCache : IDisposable
-		{
-			// Notes:
-			// - This cache is intended to be used by other ChartDataSeries-like classes.
-			//   If provides the functionality of breaking a data series up into pieces
-			//   so that the limit of 64K indices is not exceeded.
-			public GfxCache(CreatePieceHandler handler)
-			{
-				Pieces = new List<GfxPiece>();
-				CreatePiece = handler;
-			}
-			public void Dispose()
-			{
-				Pieces = null;
-			}
-
-			/// <summary>Reset the cache</summary>
-			public void Invalidate()
-			{
-				Util.DisposeRange(Pieces);
-				Pieces.Clear();
-			}
-			public void Invalidate(RangeF x_range)
-			{
-				var beg = Pieces.BinarySearch(p => p.Range.CompareTo(x_range.Beg), find_insert_position: true);
-				var end = Pieces.BinarySearch(p => p.Range.CompareTo(x_range.End), find_insert_position: true);
-				Util.DisposeRange(Pieces, beg, end - beg);
-				Pieces.RemoveRange(beg, end - beg);
-			}
-
-			/// <summary>The collection of cached graphics models</summary>
-			private List<GfxPiece> Pieces
-			{
-				get { return m_pieces; }
-				set
-				{
-					if (m_pieces == value) return;
-					Util.DisposeRange(m_pieces);
-					m_pieces = value;
-				}
-			}
-			private List<GfxPiece> m_pieces;
-
-			/// <summary>Get the series data graphics that spans the given x range</summary>
-			public IEnumerable<GfxPiece> Get(RangeF range)
-			{
-				// Return each graphics piece over the range
-				for (var x = range.Beg; x < range.End;)
-				{
-					var piece = CacheGet(x);
-					yield return piece;
-					Debug.Assert(piece.Range.End > x);
-					x = piece.Range.End;
-				}
-			}
-
-			/// <summary>Return the graphics piece that spans 'x'</summary>
-			public GfxPiece CacheGet(double x)
-			{
-				// Search the cache for the model that spans 'x'
-				var idx = Pieces.BinarySearch(p => p.Range.CompareTo(x));
-				if (idx < 0)
-				{
-					idx = ~idx;
-
-					// Get the X-range that is not cached
-					var missing = new RangeF(
-						idx != 0 ? Pieces[idx - 1].Range.End : double.MinValue,
-						idx != Pieces.Count ? Pieces[idx].Range.Beg : double.MaxValue);
-
-					// There is no cached graphics for 'x', create it now
-					var piece = CreatePiece(x, missing);
-					Pieces.Insert(idx, piece);
-				}
-				return Pieces[idx];
-			}
-
-			/// <summary>The handler for providing pieces of the graphics</summary>
-			public CreatePieceHandler CreatePiece { get; set; }
-
-			/// <summary>
-			/// Implementers of this handler should return a graphics object that spans
-			/// some region about 'x', clipped by 'missing'. The returned graphics piece
-			/// should contain the x-range that the graphics represents.</summary>
-			public delegate GfxPiece CreatePieceHandler(double x, RangeF missing);
-		}
-
-		/// <summary>Graphics for a part of the series data</summary>
-		public class GfxPiece : IDisposable
-		{
-			public GfxPiece(View3d.Object gfx, RangeF range)
-			{
-				Gfx = gfx;
-				Range = range;
-			}
-			public void Dispose()
-			{
-				Gfx = null;
-			}
-
-			/// <summary>The model for the piece of the series data graphics</summary>
-			public View3d.Object Gfx
-			{
-				get { return m_gfx; }
-				private set
-				{
-					if (m_gfx == value) return;
-					Util.Dispose(ref m_gfx);
-					m_gfx = value;
-				}
-			}
-			private View3d.Object m_gfx;
-
-			/// <summary>The X-Axis span covered by this piece</summary>
-			public RangeF Range { get; private set; }
 		}
 
 		/// <summary>A single point in the data series. A class so that it can be sub-classed</summary>

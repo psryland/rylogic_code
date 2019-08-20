@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System;
+using System.Windows;
 using Rylogic.Maths;
 
 namespace Rylogic.Gui.WPF
@@ -27,12 +28,6 @@ namespace Rylogic.Gui.WPF
 		public static v2 ToV2(this Vector v)
 		{
 			return new v2((float)v.X, (float)v.Y);
-		}
-
-		/// <summary>The squared length of the vector</summary>
-		public static double LengthSq(this Vector v)
-		{
-			return Math_.Sqr(v.X) + Math_.Sqr(v.Y);
 		}
 	}
 }

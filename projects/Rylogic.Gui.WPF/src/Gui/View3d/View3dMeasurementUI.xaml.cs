@@ -1,18 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using Rylogic.Extn;
 using Rylogic.Gfx;
 using Rylogic.Maths;
@@ -34,9 +26,9 @@ namespace Rylogic.Gui.WPF
 			// Set up commands
 			ChangeSpotColour = Command.Create(this, () =>
 			{
-				var dlg = new ColourPickerUI { Owner = this, Color = Measurement.SpotColour.ToMediaColor() };
+				var dlg = new ColourPickerUI { Owner = this, Colour = Measurement.SpotColour };
 				if (dlg.ShowDialog() == true)
-					Measurement.SpotColour = dlg.Color.ToColour32();
+					Measurement.SpotColour = dlg.Colour;
 			});
 			ReferenceFrames = new ListCollectionView(Enum<Measurement.EReferenceFrame>.ValuesArray);
 

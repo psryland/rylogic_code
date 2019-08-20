@@ -171,7 +171,7 @@ namespace Rylogic.Gui.WPF
 				if (!m_is_click) return false;
 				var grab = m_grab_client;
 				var diff = location - grab;
-				return m_is_click = diff.LengthSq() < Math_.Sqr(Chart.Options.MinDragPixelDistance);
+				return m_is_click = diff.LengthSquared < Math_.Sqr(Chart.Options.MinDragPixelDistance);
 			}
 
 			/// <summary>Called on mouse down</summary>
@@ -242,17 +242,32 @@ namespace Rylogic.Gui.WPF
 				if (IsClick(location))
 					return;
 
-				var drag_selected = Chart.AllowEditing && m_hit_selected != null;
-				if (drag_selected)
+				// Pass the drag event out to users first
+				var delta = Chart.ClientToChart(location) - m_grab_chart;
+				var args = new ChartDraggedEventArgs(m_hit_result, delta, false);
+				Chart.OnChartDragged(args);
+
+				// See if the selected element handles dragging
+				if (!args.Handled && m_hit_selected != null)
 				{
-					// If the drag operation started on a selected element then drag the
-					// selected elements within the diagram.
-					var delta = Chart.ClientToChart(location) - m_grab_chart;
-					Chart.DragSelected(delta, false);
+					m_hit_selected.Element.HandleDraggedInternal(args);
 				}
+
+				// See if selected element dragging is enabled
+				if (!args.Handled && Chart.AllowElementDragging && m_hit_selected != null)
+				{
+					foreach (var elem in Chart.Selected)
+						elem.DragTranslate(args.Delta, args.Commit);
+
+					args.Handled = true;
+				}
+
+				// Otherwise, interpret drag as a navigation
+				if (args.Handled)
+				{ }
 				else if (Chart.Options.NavigationMode == ENavMode.Chart2D)
 				{
-					if (Chart.AreaSelectMode != EAreaSelectMode.Disabled)
+					if (Chart.DoChartAreaSelect())
 					{
 						// Otherwise change the selection area
 						if (m_cleanup_selection_graphic == null)
@@ -264,11 +279,7 @@ namespace Rylogic.Gui.WPF
 
 						// Position the selection graphic
 						var selection_area = BRect.FromBounds(m_grab_chart.ToV2(), Chart.ClientToChart(location).ToV2());
-						Chart.Tools.AreaSelect.O2P = m4x4.Scale(
-							selection_area.SizeX,
-							selection_area.SizeY,
-							1f,
-							new v4(selection_area.Centre, Chart.HighestZ, 1));
+						Chart.Tools.AreaSelect.O2P = m4x4.Scale(selection_area.SizeX, selection_area.SizeY, 1f, new v4(selection_area.Centre, Chart.HighestZ, 1));
 					}
 				}
 				else if (Chart.Options.NavigationMode == ENavMode.Scene3D)
@@ -293,14 +304,14 @@ namespace Rylogic.Gui.WPF
 					// If a selected element was hit on mouse down, see if it handles the click
 					if (!args.Handled && m_hit_selected != null)
 					{
-						m_hit_selected.Element.HandleClicked(args);
+						m_hit_selected.Element.HandleClickedInternal(args);
 					}
 
 					// If no selected element was hit, try hovered elements
 					if (!args.Handled && m_hit_result.Hits.Count != 0)
 					{
 						for (int i = 0; i != m_hit_result.Hits.Count && !args.Handled; ++i)
-							m_hit_result.Hits[i].Element.HandleClicked(args);
+							m_hit_result.Hits[i].Element.HandleClickedInternal(args);
 					}
 
 					// If the click is still unhandled, use the click to try to select something (if within the chart)
@@ -313,16 +324,33 @@ namespace Rylogic.Gui.WPF
 				// Otherwise this is a drag action
 				else
 				{
-					// If an element was selected, drag it around
-					if (m_hit_selected != null && Chart.AllowEditing)
+					// Pass the drag event out to users first
+					var delta = Chart.ClientToChart(location) - m_grab_chart;
+					var args = new ChartDraggedEventArgs(m_hit_result, delta, true);
+					Chart.OnChartDragged(args);
+
+					// See if the selected element handles dragging
+					if (!args.Handled && m_hit_selected != null)
 					{
-						var delta = Chart.ClientToChart(location) - m_grab_chart;
-						Chart.DragSelected(delta, true);
+						m_hit_selected.Element.HandleDraggedInternal(args);
 					}
+
+					// See if selected element dragging is enabled
+					if (!args.Handled && Chart.AllowElementDragging && m_hit_selected != null)
+					{
+						foreach (var elem in Chart.Selected)
+							elem.DragTranslate(args.Delta, args.Commit);
+
+						args.Handled = true;
+					}
+
+					// Otherwise, interpret drag as a navigation
+					if (args.Handled)
+					{}
 					else if (Chart.Options.NavigationMode == ENavMode.Chart2D)
 					{
 						// Otherwise create an area selection if the click started within the chart
-						if (m_hit_result.Zone.HasFlag(EZone.Chart) && Chart.AreaSelectMode != EAreaSelectMode.Disabled)
+						if (m_hit_result.Zone.HasFlag(EZone.Chart) && m_cleanup_selection_graphic != null)
 						{
 							var selection_area = BBox.From(new v4(m_grab_chart.ToV2(), 0, 1f), new v4(Chart.ClientToChart(location).ToV2(), 0f, 1f));
 							Chart.OnChartAreaSelect(new ChartAreaSelectEventArgs(selection_area, e.ToMouseBtns()));

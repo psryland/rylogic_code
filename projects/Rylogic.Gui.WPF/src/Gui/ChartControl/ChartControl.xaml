@@ -10,6 +10,7 @@
 	mc:Ignorable="d" 
 	d:DesignWidth="800"
 	d:DesignHeight="450"
+	UseLayoutRounding="True"
 	Background="#EEE"
 	x:Name="m_root"
 	>
@@ -88,13 +89,6 @@
 			</ContextMenu>
 		</ResourceDictionary>
 	</Grid.Resources>
-	<Grid.ColumnDefinitions>
-		<ColumnDefinition Width="Auto"/> <!-- YAxis Label (Dock=Left) -->
-		<ColumnDefinition Width="Auto"/> <!-- YAxis Panel (Dock=Left) -->
-		<ColumnDefinition Width="*"/>    <!-- Chart area-->
-		<ColumnDefinition Width="Auto"/> <!-- YAxis Panel (Dock=Right) -->
-		<ColumnDefinition Width="Auto"/> <!-- YAxis Label (Dock=Right) -->
-	</Grid.ColumnDefinitions>
 	<Grid.RowDefinitions>
 		<RowDefinition Height="Auto"/> <!-- Title -->
 		<RowDefinition Height="Auto"/> <!-- XAxis Label (Dock=Top) -->
@@ -103,6 +97,13 @@
 		<RowDefinition Height="Auto"/> <!-- XAxis Panel (Dock=Bottom) -->
 		<RowDefinition Height="Auto"/> <!-- XAxis Label (Dock=Bottom) -->
 	</Grid.RowDefinitions>
+	<Grid.ColumnDefinitions>
+		<ColumnDefinition Width="Auto"/> <!-- YAxis Label (Dock=Left) -->
+		<ColumnDefinition Width="Auto"/> <!-- YAxis Panel (Dock=Left) -->
+		<ColumnDefinition Width="*"/>    <!-- Chart area-->
+		<ColumnDefinition Width="Auto"/> <!-- YAxis Panel (Dock=Right) -->
+		<ColumnDefinition Width="Auto"/> <!-- YAxis Label (Dock=Right) -->
+	</Grid.ColumnDefinitions>
 
 	<!-- Title -->
 	<Label
@@ -161,17 +162,22 @@
 	<local:ChartPanel
 		Grid.Row="3"
 		Grid.Column="2"
-		x:Name="m_chart_panel"
+		UseLayoutRounding="True"
 		ContextMenu="{StaticResource ChartCMenu}"
 		Stretch="Fill"
+		x:Name="m_chart_panel"
 		/>
 	<Canvas
 		Grid.Row="3"
 		Grid.Column="2"
-		x:Name="m_chart_overlay"
+		UseLayoutRounding="True"
 		ClipToBounds="True"
-		/>
-
+		>
+		<Canvas
+			x:Name="m_chart_overlay"
+			/>
+	</Canvas>
+	
 	<!-- Show Value pop up -->
 	<Popup
 		Name="m_popup_show_value"

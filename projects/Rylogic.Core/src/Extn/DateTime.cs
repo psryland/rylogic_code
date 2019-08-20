@@ -144,6 +144,12 @@ namespace Rylogic.Extn
 			return time;
 		}
 
+		/// <summary>True if this time is in the range [beg,end) or [end,beg) (whichever is a positive range)</summary>
+		public static bool Within(this DateTimeOffset time, DateTimeOffset beg, DateTimeOffset end)
+		{
+			return time.Ticks.Within(beg.Ticks, end.Ticks);
+		}
+
 		/// <summary>Returns the fractional distance of 'x' between [min,max]</summary>
 		public static double Frac(DateTimeOffset min, DateTimeOffset x, DateTimeOffset max)
 		{

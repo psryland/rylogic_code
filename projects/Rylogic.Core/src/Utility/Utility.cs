@@ -76,6 +76,17 @@ namespace Rylogic.Utility
 			}
 		}
 
+		/// <summary>Disposes values in the 'doomed' dictionary. On return, 'doomed' will be an empty dictionary</summary>
+		[DebuggerStepThrough]
+		public static void DisposeAll<K,V>(IDictionary<K,V> doomed) where V : class, IDisposable
+		{
+			if (doomed == null) return;
+			foreach (var kv in doomed)
+				kv.Value.Dispose();
+
+			doomed.Clear();
+		}
+
 		/// <summary>Dispose a range of doomed items</summary>
 		[DebuggerStepThrough]
 		public static IEnumerable<T> DisposeRange<T>(IEnumerable<T> doomed) where T : class, IDisposable
