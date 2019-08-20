@@ -139,10 +139,9 @@ namespace pr
 		explicit Quat(m3_cref<A,B> m)
 		{
 			assert("Only orientation matrices can be converted into quaternions" && IsOrthonormal(m));
-			auto trace = m.x.x + m.y.y + m.z.z;
-			if (trace >= 0.0f)
+			if (m.x.x + m.y.y + m.z.z >= 0)
 			{
-				auto s = 0.5f * Rsqrt1(1.0f + trace);
+				auto s = 0.5f * Rsqrt1(1.0f + m.x.x + m.y.y + m.z.z);
 				x = (m.y.z - m.z.y) * s;
 				y = (m.z.x - m.x.z) * s;
 				z = (m.x.y - m.y.x) * s;
@@ -472,6 +471,8 @@ namespace pr::maths
 {
 	PRUnitTest(QuaternionTests)
 	{
+		std::default_random_engine rng(1U);
+
 		{ // Create
 			#if PR_MATHS_USE_INTRINSICS
 			auto p = DegreesToRadians(  43.0f);
@@ -483,10 +484,23 @@ namespace pr::maths
 			PR_CHECK(FEql4(q0, q1), true);
 			#endif
 		}
+		{ // Create from m3x4
+			std::uniform_real_distribution<float> rng_angle(-maths::tauf, +maths::tauf);
+			for (int i = 0; i != 100; ++i)
+			{
+				auto ang = rng_angle(rng);
+				auto axis = Random3N(rng, 0);
+				auto mat = m3x4::Rotation(axis, ang);
+				auto q = quat(mat);
+				auto v0 = Random3N(rng, 0);
+				auto r0 = mat * v0;
+				auto r1 = Rotate(q, v0);
+				PR_CHECK(FEql4(r0, r1), true);
+			}
+		}
 		{ // Average
 			auto ideal_mean = quat(Normalise3(v4(1,1,1,0)), 0.5f);
 
-			std::default_random_engine rng(1U);
 			std::uniform_int_distribution<int> rng_bool(0, 1);
 			std::uniform_real_distribution<float> rng_angle(ideal_mean.Angle() - 0.2f, ideal_mean.Angle() + 0.2f);
 

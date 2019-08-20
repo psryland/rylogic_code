@@ -5,6 +5,7 @@
 #pragma once
 
 #include <type_traits>
+#include <d3dcommon.h>
 #include "pr/common/cast.h"
 #include "pr/common/colour.h"
 #include "pr/common/range.h"
@@ -37,13 +38,17 @@ namespace pr::geometry
 	// EPrim
 	enum class EPrim
 	{
-		Invalid   = 0,
-		None      = 0,
-		PointList = 1,
-		LineList  = 2,
-		LineStrip = 3,
-		TriList   = 4,
-		TriStrip  = 5,
+		None         = 0,
+		Invalid      = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED,
+		PointList    = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST,
+		LineList     = D3D11_PRIMITIVE_TOPOLOGY_LINELIST,
+		LineStrip    = D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP,
+		TriList      = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
+		TriStrip     = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
+		LineListAdj  = D3D11_PRIMITIVE_TOPOLOGY_LINELIST_ADJ,
+		LineStripAdj = D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP_ADJ,
+		TriListAdj   = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ,
+		TriStripAdj  = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ,
 	};
 
 	struct Props

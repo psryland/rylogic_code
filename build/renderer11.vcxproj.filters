@@ -477,6 +477,9 @@
     <None Include="..\projects\renderer11\shaders\hlsl\utility\env_map.hlsli">
       <Filter>shaders\hlsl\utility</Filter>
     </None>
+    <None Include="..\projects\renderer11\shaders\hlsl\forward\forward.hlsli">
+      <Filter>shaders\hlsl\forward</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\projects\renderer11\shaders\hlsl\shadow\shadow_map.hlsl">

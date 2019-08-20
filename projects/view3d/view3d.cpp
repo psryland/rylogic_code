@@ -1743,7 +1743,30 @@ VIEW3D_API void __stdcall View3D_ObjectSortGroupSet(View3DObject object, EView3D
 		object->SortGroup(static_cast<pr::rdr::ESortGroup>(group), name);
 	}
 	CatchAndReport(View3D_ObjectSortGroupSet, ,);
+}
 
+// Get/Set the nugget flags on an object or its children
+VIEW3D_API EView3DNuggetFlag __stdcall View3D_ObjectNuggetFlagsGet(View3DObject object, char const* name, int index)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		return static_cast<EView3DNuggetFlag>(object->NuggetFlags(name, index));
+	}
+	CatchAndReport(View3D_ObjectNuggetFlagsGet, ,EView3DNuggetFlag::None);
+}
+VIEW3D_API void __stdcall View3D_ObjectNuggetFlagsSet(View3DObject object, EView3DNuggetFlag flags, char const* name, int index)
+{
+	try
+	{
+		if (!object) throw std::runtime_error("Object is null");
+
+		DllLockGuard;
+		object->NuggetFlags(static_cast<pr::rdr::ENuggetFlag>(flags), name, index);
+	}
+	CatchAndReport(View3D_ObjectNuggetFlagsSet, ,);
 }
 
 // Get/Set the current or base colour of an object (the first object to match 'name') (See LdrObject::Apply)
@@ -3174,6 +3197,18 @@ static_assert(int(EView3DGeom::Vert   ) == int(pr::rdr::EGeom::Vert   ));
 static_assert(int(EView3DGeom::Colr   ) == int(pr::rdr::EGeom::Colr   ));
 static_assert(int(EView3DGeom::Norm   ) == int(pr::rdr::EGeom::Norm   ));
 static_assert(int(EView3DGeom::Tex0   ) == int(pr::rdr::EGeom::Tex0   ));
+
+static_assert(int(EView3DPrim::Invalid   ) == int(pr::rdr::EPrim::Invalid   ));
+static_assert(int(EView3DPrim::PointList ) == int(pr::rdr::EPrim::PointList ));
+static_assert(int(EView3DPrim::LineList  ) == int(pr::rdr::EPrim::LineList  ));
+static_assert(int(EView3DPrim::LineStrip ) == int(pr::rdr::EPrim::LineStrip ));
+static_assert(int(EView3DPrim::TriList   ) == int(pr::rdr::EPrim::TriList   ));
+static_assert(int(EView3DPrim::TriStrip  ) == int(pr::rdr::EPrim::TriStrip  ));
+
+static_assert(int(EView3DNuggetFlag::None            ) == int(pr::rdr::ENuggetFlag::None            ));
+static_assert(int(EView3DNuggetFlag::Hidden          ) == int(pr::rdr::ENuggetFlag::Hidden          ));
+static_assert(int(EView3DNuggetFlag::GeometryHasAlpha) == int(pr::rdr::ENuggetFlag::GeometryHasAlpha));
+static_assert(int(EView3DNuggetFlag::TintHasAlpha    ) == int(pr::rdr::ENuggetFlag::TintHasAlpha    ));
 
 static_assert(int(EView3DGizmoEvent::StartManip) == int(pr::ldr::ELdrGizmoEvent::StartManip));
 static_assert(int(EView3DGizmoEvent::Moving    ) == int(pr::ldr::ELdrGizmoEvent::Moving    ));

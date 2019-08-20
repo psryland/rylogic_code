@@ -100,7 +100,7 @@ namespace pr::rdr
 			hlsl::fwd::CBufModel cb1 = {};
 			SetModelFlags(*dle.m_instance, nugget, *m_scene, cb1);
 			SetTxfm(*dle.m_instance, m_scene->m_view, cb1);
-			SetTint(*dle.m_instance, cb1);
+			SetTint(*dle.m_instance, nugget, cb1);
 			SetEnvMap(*dle.m_instance, nugget, cb1);
 			SetTexDiffuse(nugget, cb1);
 			WriteConstants(dc, m_cbuf_nugget.get(), cb1, EShaderType::VS|EShaderType::PS);

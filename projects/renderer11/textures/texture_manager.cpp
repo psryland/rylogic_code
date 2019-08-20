@@ -42,8 +42,8 @@ namespace pr::rdr
 			if (auto h = GetModuleHandleW(name.c_str()); h != nullptr)
 				return h;
 
-			wchar_t* end = nullptr;
-			ptrdiff_t address = std::wcstoll(s, &end, 16);
+			auto end = (wchar_t*)nullptr;
+			auto address = std::wcstoll(s, &end, 16);
 			if (auto h = reinterpret_cast<HMODULE>((uint8_t*)nullptr + (end == e ? address : 0)); h != nullptr)
 				return h;
 

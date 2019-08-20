@@ -47,6 +47,7 @@ namespace pr
 			x(ShadowMapPS     ,)\
 			x(PointSpritesGS  ,)\
 			x(ThickLineListGS ,)\
+			x(ThickLineStripGS,)\
 			x(ArrowHeadGS     ,)
 		PR_DEFINE_ENUM2_BASE(EStockShader, PR_ENUM, RdrId);
 		#undef PR_ENUM

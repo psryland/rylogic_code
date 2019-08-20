@@ -166,9 +166,10 @@ namespace view3d
 			if (n->m_fill_mode != EView3DFillMode::Default) nug.m_rsb.Set(ERS::FillMode, static_cast<D3D11_FILL_MODE>(n->m_fill_mode));
 			nug.m_vrange = n->m_v0 != n->m_v1 ? Range(n->m_v0, n->m_v1) : Range(0, vcount);
 			nug.m_irange = n->m_i0 != n->m_i1 ? Range(n->m_i0, n->m_i1) : Range(0, icount);
-			nug.m_flags = pr::SetBits(nug.m_flags, ENuggetFlag::GeometryHasAlpha, n->m_has_alpha != 0);
+			nug.m_flags = static_cast<ENuggetFlag>(n->m_flags);
 			nug.m_tex_diffuse = Texture2DPtr(n->m_mat.m_diff_tex, true);
 			nug.m_range_overlaps = n->m_range_overlaps;
+			nug.m_tint = n->m_mat.m_tint;
 		
 			for (int rs = 1; rs != ERenderStep_::NumberOf; ++rs)
 			{
@@ -225,8 +226,18 @@ namespace view3d
 						{
 							Reader reader(rstep0.m_gs.params);
 							auto line_width = reader.Keyword(L"LineWidth").RealS<float>();
-							auto id = pr::hash::Hash("ThickLine", line_width);
+							auto id = pr::hash::Hash("ThickLineList", line_width);
 							auto shdr = m_rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id, RdrId(EStockShader::ThickLineListGS));
+							shdr->m_width = line_width;
+							rstep1.m_gs = shdr;
+							break;
+						}
+					case EView3DShaderGS::ThickLineStripGS:
+						{
+							Reader reader(rstep0.m_gs.params);
+							auto line_width = reader.Keyword(L"LineWidth").RealS<float>();
+							auto id = pr::hash::Hash("ThickLineStrip", line_width);
+							auto shdr = m_rdr.m_shdr_mgr.GetShader<ThickLineStripGS>(id, RdrId(EStockShader::ThickLineStripGS));
 							shdr->m_width = line_width;
 							rstep1.m_gs = shdr;
 							break;

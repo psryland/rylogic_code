@@ -64,6 +64,19 @@ namespace Rylogic.Gfx
 			TriList = 4,
 			TriStrip = 5,
 		}
+		[Flags] public enum ENuggetFlag :uint
+		{
+			None = 0,
+
+			// Exclude this nugget when rendering a model
+			Hidden = 1 << 0,
+
+			// Set if the geometry data for the nugget contains alpha colours
+			GeometryHasAlpha = 1 << 1,
+
+			// Set if the tint colour contains alpha
+			TintHasAlpha = 1 << 2,
+		}
 		public enum EShaderVS
 		{
 			Standard = 0,
@@ -77,6 +90,7 @@ namespace Rylogic.Gfx
 			Standard = 0,
 			PointSpritesGS,
 			ThickLineListGS,
+			ThickLineStripGS,
 			ArrowHeadGS,
 		}
 		public enum EShaderCS
@@ -508,10 +522,11 @@ namespace Rylogic.Gfx
 			{
 				return new Material(null);
 			}
-			public Material(HTexture? diff_tex = null, ShaderMap? shdr_map = null, float? relative_reflectivity = null)
+			public Material(Colour32? colour = null, HTexture? diff_tex = null, ShaderMap? shdr_map = null, float? relative_reflectivity = null)
 			{
 				m_diff_tex = diff_tex ?? HTexture.Zero;
 				m_shader_map = shdr_map ?? ShaderMap.New();
+				m_tint = colour ?? Colour32.White;
 				m_relative_reflectivity = relative_reflectivity ?? 1f;
 			}
 
@@ -520,6 +535,9 @@ namespace Rylogic.Gfx
 
 			/// <summary>Shader overrides</summary>
 			public ShaderMap m_shader_map;
+
+			/// <summary>Tint colour</summary>
+			public Colour32 m_tint;
 
 			/// <summary>How reflective this nugget is relative to the over all model</summary>
 			public float m_relative_reflectivity;
@@ -557,11 +575,11 @@ namespace Rylogic.Gfx
 			public EFillMode m_fill_mode;
 			public uint m_v0, m_v1;       // Vertex buffer range. Set to 0,0 to mean the whole buffer
 			public uint m_i0, m_i1;       // Index buffer range. Set to 0,0 to mean the whole buffer
-			public bool m_has_alpha;      // True of the nugget contains transparent elements
+			public ENuggetFlag m_flags;   // Nugget flags (ENuggetFlag)
 			public bool m_range_overlaps; // True if the nugget V/I range overlaps earlier nuggets
 			public Material m_mat;
 
-			public Nugget(EPrim topo, EGeom geom, uint v0 = 0, uint v1 = 0, uint i0 = 0, uint i1 = 0, bool has_alpha = false, bool range_overlaps = false, Material? mat = null, ECullMode cull_mode = ECullMode.Back, EFillMode fill_mode = EFillMode.Solid)
+			public Nugget(EPrim topo, EGeom geom, uint v0 = 0, uint v1 = 0, uint i0 = 0, uint i1 = 0, ENuggetFlag flags = ENuggetFlag.None, bool range_overlaps = false, Material? mat = null, ECullMode cull_mode = ECullMode.Back, EFillMode fill_mode = EFillMode.Solid)
 			{
 				Debug.Assert(mat == null || mat.Value.m_shader_map.m_rstep != null, "Don't use default(Material)");
 				m_topo = topo;
@@ -572,7 +590,7 @@ namespace Rylogic.Gfx
 				m_v1 = v1;
 				m_i0 = i0;
 				m_i1 = i1;
-				m_has_alpha = has_alpha;
+				m_flags = flags;
 				m_range_overlaps = range_overlaps;
 				m_mat = mat ?? new Material(null);
 			}
@@ -2362,48 +2380,45 @@ namespace ldr
 			/// <summary>Object name</summary>
 			public string Name
 			{
-				get { return View3D_ObjectNameGetBStr(Handle); }
-				set { View3D_ObjectNameSet(Handle, value); }
+				get => View3D_ObjectNameGetBStr(Handle);
+				set => View3D_ObjectNameSet(Handle, value);
 			}
 
 			/// <summary>Get the type of Ldr object this is</summary>
-			public string Type
-			{
-				get { return View3D_ObjectTypeGetBStr(Handle); }
-			}
+			public string Type => View3D_ObjectTypeGetBStr(Handle);
 
 			/// <summary>Get/Set the visibility of this object (set applies to all child objects as well)</summary>
 			public bool Visible
 			{
-				get { return VisibleGet(string.Empty); }
-				set { VisibleSet(value, string.Empty); }
+				get => VisibleGet(string.Empty);
+				set => VisibleSet(value, string.Empty);
 			}
 
 			/// <summary>Get/Set the visibility of this object (set applies to all child objects as well)</summary>
 			public Colour32 Colour
 			{
-				get { return ColourGet(false, string.Empty); }
-				set { ColourSet(value, string.Empty); }
+				get => ColourGet(false, string.Empty);
+				set => ColourSet(value, string.Empty);
 			}
 
 			/// <summary>Get/Set the reflectivity of this object (set applies to all child objects as well)</summary>
 			public float Reflectivity
 			{
-				get { return ReflectivityGet(string.Empty); }
-				set { ReflectivitySet(value, string.Empty); }
+				get => ReflectivityGet(string.Empty);
+				set => ReflectivitySet(value, string.Empty);
 			}
 
 			/// <summary>Get/Set wire-frame mode of this object (set applies to all child objects as well)</summary>
 			public bool Wireframe
 			{
-				get { return WireframeGet(string.Empty); }
-				set { WireframeSet(value, string.Empty); }
+				get => WireframeGet(string.Empty);
+				set => WireframeSet(value, string.Empty);
 			}
 
 			/// <summary>Get/Set the state flags of this object</summary>
 			public EFlags Flags
 			{
-				get { return FlagsGet(string.Empty); }
+				get => FlagsGet(string.Empty);
 				set
 				{
 					FlagsSet(~EFlags.None, false);
@@ -2414,15 +2429,19 @@ namespace ldr
 			/// <summary>Get/Set sort group of this object</summary>
 			public ESortGroup SortGroup
 			{
-				get { return SortGroupGet(string.Empty); }
-				set { SortGroupSet(value, string.Empty); }
+				get => SortGroupGet(string.Empty);
+				set => SortGroupSet(value, string.Empty);
+			}
+
+			/// <summary>Get/Set the nugget flags for the first nugget of this object</summary>
+			public ENuggetFlag NuggetFlags
+			{
+				get => NuggetFlagsGet(string.Empty);
+				set => NuggetFlagsSet(value, string.Empty);
 			}
 
 			/// <summary>The context id that this object belongs to</summary>
-			public Guid ContextId
-			{
-				get { return View3D_ObjectContextIdGet(Handle); }
-			}
+			public Guid ContextId => View3D_ObjectContextIdGet(Handle);
 
 			/// <summary>Change the model for this object</summary>
 			public void UpdateModel(string ldr_script, EUpdateObject flags = EUpdateObject.All)
@@ -2597,7 +2616,19 @@ namespace ldr
 			{
 				View3D_ObjectSortGroupSet(Handle, group, name);
 			}
-			
+
+			/// <summary>
+			/// Get/Set the nugget flags for a nugget within this object
+			/// See LdrObject::Apply for docs on the format of 'name'</summary>
+			public ENuggetFlag NuggetFlagsGet(string name = null, int index = 0)
+			{
+				return View3D_ObjectNuggetFlagsGet(Handle, name, index);
+			}
+			public void NuggetFlagsSet(ENuggetFlag flags, string name = null, int index = 0)
+			{
+				View3D_ObjectNuggetFlagsSet(Handle, flags, name, index);
+			}
+
 			/// <summary>
 			/// Get/Set the colour of this object or the first child object that matches 'name'.
 			/// 'base_colour', if true returns the objects base colour, if false, returns the current colour.
@@ -3590,6 +3621,8 @@ namespace ldr
 		[DllImport(Dll)] private static extern void              View3D_ObjectFlagsSet           (HObject obj, EFlags flags, bool state, string name);
 		[DllImport(Dll)] private static extern ESortGroup        View3D_ObjectSortGroupGet       (HObject obj, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectSortGroupSet       (HObject obj, ESortGroup group, string name);
+		[DllImport(Dll)] private static extern ENuggetFlag       View3D_ObjectNuggetFlagsGet     (HObject obj, string name, int index);
+		[DllImport(Dll)] private static extern void              View3D_ObjectNuggetFlagsSet     (HObject obj, ENuggetFlag flags, string name, int index);
 		[DllImport(Dll)] private static extern uint              View3D_ObjectColourGet          (HObject obj, bool base_colour, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectColourSet          (HObject obj, uint colour, uint mask, string name, EColourOp op, float op_value);
 		[DllImport(Dll)] private static extern float             View3D_ObjectReflectivityGet    (HObject obj, string name);

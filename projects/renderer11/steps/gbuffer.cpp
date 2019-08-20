@@ -201,16 +201,17 @@ namespace pr
 				StateStack::DleFrame frame(ss, dle);
 				ss.Commit();
 
+				auto const& nugget = *dle.m_nugget;
+
 				// Set the per-nugget constants
 				hlsl::ds::CBufModel cb1 = {};
 				SetModelFlags(*dle.m_instance, *dle.m_nugget, *m_scene, cb1);
 				SetTxfm(*dle.m_instance, m_scene->m_view, cb1);
-				SetTint(*dle.m_instance, cb1);
+				SetTint(*dle.m_instance, nugget, cb1);
 				SetTexDiffuse(*dle.m_nugget, cb1);
 				WriteConstants(dc, m_cbuf_nugget.get(), cb1, EShaderType::VS|EShaderType::PS);
 
 				// Add the nugget to the device context
-				Nugget const& nugget = *dle.m_nugget;
 				dc->DrawIndexed(
 					UINT(nugget.m_irange.size()),
 					UINT(nugget.m_irange.m_beg),

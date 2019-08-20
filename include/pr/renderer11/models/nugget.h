@@ -56,11 +56,14 @@ namespace pr
 		{
 			None = 0,
 
+			// Exclude this nugget when rendering a model
+			Hidden = 1 << 0,
+
 			// Set if the geometry data for the nugget contains alpha colours
-			GeometryHasAlpha = 1 << 0,
+			GeometryHasAlpha = 1 << 1,
 
 			// Set if the tint colour contains alpha
-			TintHasAlpha = 1 << 1,
+			TintHasAlpha = 1 << 2,
 
 			_bitwise_operators_allowed,
 		};
@@ -72,6 +75,7 @@ namespace pr
 			EGeom          m_geom;                  // The valid geometry components within this range
 			ShaderMap      m_smap;                  // The shaders to use (optional, some render steps use their own shaders)
 			Texture2DPtr   m_tex_diffuse;           // Diffuse texture
+			Colour32       m_tint;                  // Per-nugget tint
 			BSBlock        m_bsb;                   // Rendering states
 			DSBlock        m_dsb;                   // Rendering states
 			RSBlock        m_rsb;                   // Rendering states
@@ -127,6 +131,10 @@ namespace pr
 			template <typename TDrawList>
 			void AddToDrawlist(TDrawList& drawlist, BaseInstance const& inst, SKOverride const* sko, ERenderStep id) const
 			{
+				// Ignore if not visible
+				if (AllSet(m_flags, ENuggetFlag::Hidden))
+					return;
+
 				// Create the sort key for this nugget
 				auto sk = SortKey(id);
 				if (sko) sk = sko->Combine(sk);

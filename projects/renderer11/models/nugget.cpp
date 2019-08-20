@@ -13,6 +13,7 @@ namespace pr::rdr
 		,m_geom(geom)
 		,m_smap(smap ? *smap : ShaderMap())
 		,m_tex_diffuse()
+		,m_tint(Colour32White)
 		,m_bsb()
 		,m_dsb()
 		,m_rsb()

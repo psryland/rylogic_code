@@ -193,11 +193,6 @@ namespace pr::rdr
 				srv[0]  = pending.m_tex_diffuse->m_srv.get();
 				samp[0] = pending.m_tex_diffuse->m_samp.get();
 			}
-			//if (pending.m_dle != nullptr && pending.m_dle->m_nugget->m_tex_diffuse != nullptr)
-			//{
-			//	srv[0]  = pending.m_dle->m_nugget->m_tex_diffuse->m_srv.m_ptr;
-			//	samp[0] = pending.m_dle->m_nugget->m_tex_diffuse->m_samp.m_ptr;
-			//}
 
 			// Diffuse texture hard-coded to slot 0 here
 			m_dc->PSSetShaderResources(UINT(hlsl::ERegister::t0), 1, srv);
@@ -208,7 +203,7 @@ namespace pr::rdr
 		if (current.m_tex_envmap != pending.m_tex_envmap || force)
 		{
 			ID3D11ShaderResourceView* srv[1]  = {nullptr};
-			ID3D11SamplerState*       samp[1] = {nullptr};
+			ID3D11SamplerState*       samp[1] = {m_tex_default->m_samp.get()};
 
 			if (pending.m_tex_envmap != nullptr)
 			{

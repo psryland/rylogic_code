@@ -99,12 +99,31 @@ extern "C"
 	};
 	enum class EView3DPrim :int
 	{
-		Invalid   = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED,
-		PointList = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST,
-		LineList  = D3D11_PRIMITIVE_TOPOLOGY_LINELIST,
-		LineStrip = D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP,
-		TriList   = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
-		TriStrip  = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
+		Invalid      = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED,
+		PointList    = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST,
+		LineList     = D3D11_PRIMITIVE_TOPOLOGY_LINELIST,
+		LineStrip    = D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP,
+		TriList      = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
+		TriStrip     = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
+		LineListAdj  = D3D11_PRIMITIVE_TOPOLOGY_LINELIST_ADJ,
+		LineStripAdj = D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP_ADJ,
+		TriListAdj   = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ,
+		TriStripAdj  = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ,
+	};
+	enum class EView3DNuggetFlag :int
+	{
+		None = 0,
+
+		// Exclude this nugget when rendering a model
+		Hidden = 1 << 0,
+
+		// Set if the geometry data for the nugget contains alpha colours
+		GeometryHasAlpha = 1 << 1,
+
+		// Set if the tint colour contains alpha
+		TintHasAlpha = 1 << 2,
+
+		_bitwise_operators_allowed,
 	};
 	enum class EView3DShaderVS :int
 	{
@@ -130,6 +149,9 @@ extern "C"
 
 		// Thick line params: *LineWidth {width}
 		ThickLineListGS,
+
+		// Thick line params: *LineWidth {width}
+		ThickLineStripGS,
 
 		// Arrow params: *Size {size}
 		ArrowHeadGS,
@@ -350,6 +372,7 @@ extern "C"
 
 		View3DTexture m_diff_tex;
 		ShaderMap     m_shader_map;
+		UINT32        m_tint;
 		float         m_relative_reflectivity;
 	};
 	struct View3DNugget
@@ -360,7 +383,7 @@ extern "C"
 		EView3DFillMode m_fill_mode;
 		UINT32          m_v0, m_v1;       // Vertex buffer range. Set to 0,0 to mean the whole buffer
 		UINT32          m_i0, m_i1;       // Index buffer range. Set to 0,0 to mean the whole buffer
-		BOOL            m_has_alpha;      // True of the nugget contains transparent elements
+		UINT32          m_flags;          // Nugget flags (EView3DNuggetFlag)
 		BOOL            m_range_overlaps; // True if the nugget V/I range overlaps earlier nuggets
 		View3DMaterial  m_mat;
 	};
@@ -620,44 +643,46 @@ extern "C"
 	VIEW3D_API void        __stdcall View3D_LightShowDialog          (View3DWindow window);
 
 	// Objects
-	VIEW3D_API GUID             __stdcall View3D_ObjectContextIdGet       (View3DObject object);
-	VIEW3D_API View3DObject     __stdcall View3D_ObjectCreateLdr          (wchar_t const* ldr_script, BOOL file, GUID const* context_id, View3DIncludes const* includes);
-	VIEW3D_API View3DObject     __stdcall View3D_ObjectCreate             (char const* name, View3DColour colour, int vcount, int icount, int ncount, View3DVertex const* verts, UINT16 const* indices, View3DNugget const* nuggets, GUID const& context_id);
-	VIEW3D_API View3DObject     __stdcall View3D_ObjectCreateEditCB       (char const* name, View3DColour colour, int vcount, int icount, int ncount, View3D_EditObjectCB edit_cb, void* ctx, GUID const& context_id);
-	VIEW3D_API View3DObject     __stdcall View3D_ObjectCreateInstance     (View3DObject object);
-	VIEW3D_API void             __stdcall View3D_ObjectEdit               (View3DObject object, View3D_EditObjectCB edit_cb, void* ctx);
-	VIEW3D_API void             __stdcall View3D_ObjectUpdate             (View3DObject object, wchar_t const* ldr_script, EView3DUpdateObject flags);
-	VIEW3D_API void             __stdcall View3D_ObjectDelete             (View3DObject object);
-	VIEW3D_API View3DObject     __stdcall View3D_ObjectGetRoot            (View3DObject object);
-	VIEW3D_API View3DObject     __stdcall View3D_ObjectGetParent          (View3DObject object);
-	VIEW3D_API View3DObject     __stdcall View3D_ObjectGetChildByName     (View3DObject object, char const* name);
-	VIEW3D_API View3DObject     __stdcall View3D_ObjectGetChildByIndex    (View3DObject object, int index);
-	VIEW3D_API int              __stdcall View3D_ObjectChildCount         (View3DObject object);
-	VIEW3D_API void             __stdcall View3D_ObjectEnumChildren       (View3DObject object, View3D_EnumObjectsCB enum_objects_cb, void* ctx);
-	VIEW3D_API BSTR             __stdcall View3D_ObjectNameGetBStr        (View3DObject object);
-	VIEW3D_API char const*      __stdcall View3D_ObjectNameGet            (View3DObject object);
-	VIEW3D_API void             __stdcall View3D_ObjectNameSet            (View3DObject object, char const* name);
-	VIEW3D_API BSTR             __stdcall View3D_ObjectTypeGetBStr        (View3DObject object);
-	VIEW3D_API char const*      __stdcall View3D_ObjectTypeGet            (View3DObject object);
-	VIEW3D_API View3DM4x4       __stdcall View3D_ObjectO2WGet             (View3DObject object, char const* name);
-	VIEW3D_API void             __stdcall View3D_ObjectO2WSet             (View3DObject object, View3DM4x4 const& o2w, char const* name);
-	VIEW3D_API View3DM4x4       __stdcall View3D_ObjectO2PGet             (View3DObject object, char const* name);
-	VIEW3D_API void             __stdcall View3D_ObjectO2PSet             (View3DObject object, View3DM4x4 const& o2p, char const* name);
-	VIEW3D_API BOOL             __stdcall View3D_ObjectVisibilityGet      (View3DObject object, char const* name);
-	VIEW3D_API void             __stdcall View3D_ObjectVisibilitySet      (View3DObject obj, BOOL visible, char const* name);
-	VIEW3D_API EView3DFlags     __stdcall View3D_ObjectFlagsGet           (View3DObject object, char const* name);
-	VIEW3D_API void             __stdcall View3D_ObjectFlagsSet           (View3DObject object, EView3DFlags flags, BOOL state, char const* name);
-	VIEW3D_API EView3DSortGroup __stdcall View3D_ObjectSortGroupGet       (View3DObject object, char const* name);
-	VIEW3D_API void             __stdcall View3D_ObjectSortGroupSet       (View3DObject object, EView3DSortGroup group, char const* name);
-	VIEW3D_API View3DColour     __stdcall View3D_ObjectColourGet          (View3DObject object, BOOL base_colour, char const* name);
-	VIEW3D_API void             __stdcall View3D_ObjectColourSet          (View3DObject object, View3DColour colour, UINT32 mask, char const* name, EView3DColourOp op, float op_value);
-	VIEW3D_API float            __stdcall View3D_ObjectReflectivityGet    (View3DObject object, char const* name);
-	VIEW3D_API void             __stdcall View3D_ObjectReflectivitySet    (View3DObject object, float reflectivity, char const* name);
-	VIEW3D_API BOOL             __stdcall View3D_ObjectWireframeGet       (View3DObject object, char const* name);
-	VIEW3D_API void             __stdcall View3D_ObjectWireframeSet       (View3DObject object, BOOL wireframe, char const* name);
-	VIEW3D_API void             __stdcall View3D_ObjectResetColour        (View3DObject object, char const* name);
-	VIEW3D_API void             __stdcall View3D_ObjectSetTexture         (View3DObject object, View3DTexture tex, char const* name);
-	VIEW3D_API View3DBBox       __stdcall View3D_ObjectBBoxMS             (View3DObject object, int include_children);
+	VIEW3D_API GUID              __stdcall View3D_ObjectContextIdGet       (View3DObject object);
+	VIEW3D_API View3DObject      __stdcall View3D_ObjectCreateLdr          (wchar_t const* ldr_script, BOOL file, GUID const* context_id, View3DIncludes const* includes);
+	VIEW3D_API View3DObject      __stdcall View3D_ObjectCreate             (char const* name, View3DColour colour, int vcount, int icount, int ncount, View3DVertex const* verts, UINT16 const* indices, View3DNugget const* nuggets, GUID const& context_id);
+	VIEW3D_API View3DObject      __stdcall View3D_ObjectCreateEditCB       (char const* name, View3DColour colour, int vcount, int icount, int ncount, View3D_EditObjectCB edit_cb, void* ctx, GUID const& context_id);
+	VIEW3D_API View3DObject      __stdcall View3D_ObjectCreateInstance     (View3DObject object);
+	VIEW3D_API void              __stdcall View3D_ObjectEdit               (View3DObject object, View3D_EditObjectCB edit_cb, void* ctx);
+	VIEW3D_API void              __stdcall View3D_ObjectUpdate             (View3DObject object, wchar_t const* ldr_script, EView3DUpdateObject flags);
+	VIEW3D_API void              __stdcall View3D_ObjectDelete             (View3DObject object);
+	VIEW3D_API View3DObject      __stdcall View3D_ObjectGetRoot            (View3DObject object);
+	VIEW3D_API View3DObject      __stdcall View3D_ObjectGetParent          (View3DObject object);
+	VIEW3D_API View3DObject      __stdcall View3D_ObjectGetChildByName     (View3DObject object, char const* name);
+	VIEW3D_API View3DObject      __stdcall View3D_ObjectGetChildByIndex    (View3DObject object, int index);
+	VIEW3D_API int               __stdcall View3D_ObjectChildCount         (View3DObject object);
+	VIEW3D_API void              __stdcall View3D_ObjectEnumChildren       (View3DObject object, View3D_EnumObjectsCB enum_objects_cb, void* ctx);
+	VIEW3D_API BSTR              __stdcall View3D_ObjectNameGetBStr        (View3DObject object);
+	VIEW3D_API char const*       __stdcall View3D_ObjectNameGet            (View3DObject object);
+	VIEW3D_API void              __stdcall View3D_ObjectNameSet            (View3DObject object, char const* name);
+	VIEW3D_API BSTR              __stdcall View3D_ObjectTypeGetBStr        (View3DObject object);
+	VIEW3D_API char const*       __stdcall View3D_ObjectTypeGet            (View3DObject object);
+	VIEW3D_API View3DM4x4        __stdcall View3D_ObjectO2WGet             (View3DObject object, char const* name);
+	VIEW3D_API void              __stdcall View3D_ObjectO2WSet             (View3DObject object, View3DM4x4 const& o2w, char const* name);
+	VIEW3D_API View3DM4x4        __stdcall View3D_ObjectO2PGet             (View3DObject object, char const* name);
+	VIEW3D_API void              __stdcall View3D_ObjectO2PSet             (View3DObject object, View3DM4x4 const& o2p, char const* name);
+	VIEW3D_API BOOL              __stdcall View3D_ObjectVisibilityGet      (View3DObject object, char const* name);
+	VIEW3D_API void              __stdcall View3D_ObjectVisibilitySet      (View3DObject obj, BOOL visible, char const* name);
+	VIEW3D_API EView3DFlags      __stdcall View3D_ObjectFlagsGet           (View3DObject object, char const* name);
+	VIEW3D_API void              __stdcall View3D_ObjectFlagsSet           (View3DObject object, EView3DFlags flags, BOOL state, char const* name);
+	VIEW3D_API EView3DSortGroup  __stdcall View3D_ObjectSortGroupGet       (View3DObject object, char const* name);
+	VIEW3D_API void              __stdcall View3D_ObjectSortGroupSet       (View3DObject object, EView3DSortGroup group, char const* name);
+	VIEW3D_API EView3DNuggetFlag __stdcall View3D_ObjectNuggetFlagsGet     (View3DObject object, char const* name, int index);
+	VIEW3D_API void              __stdcall View3D_ObjectNuggetFlagsSet     (View3DObject object, EView3DNuggetFlag flags, char const* name, int index);
+	VIEW3D_API View3DColour      __stdcall View3D_ObjectColourGet          (View3DObject object, BOOL base_colour, char const* name);
+	VIEW3D_API void              __stdcall View3D_ObjectColourSet          (View3DObject object, View3DColour colour, UINT32 mask, char const* name, EView3DColourOp op, float op_value);
+	VIEW3D_API float             __stdcall View3D_ObjectReflectivityGet    (View3DObject object, char const* name);
+	VIEW3D_API void              __stdcall View3D_ObjectReflectivitySet    (View3DObject object, float reflectivity, char const* name);
+	VIEW3D_API BOOL              __stdcall View3D_ObjectWireframeGet       (View3DObject object, char const* name);
+	VIEW3D_API void              __stdcall View3D_ObjectWireframeSet       (View3DObject object, BOOL wireframe, char const* name);
+	VIEW3D_API void              __stdcall View3D_ObjectResetColour        (View3DObject object, char const* name);
+	VIEW3D_API void              __stdcall View3D_ObjectSetTexture         (View3DObject object, View3DTexture tex, char const* name);
+	VIEW3D_API View3DBBox        __stdcall View3D_ObjectBBoxMS             (View3DObject object, int include_children);
 
 	// Materials
 	VIEW3D_API View3DTexture __stdcall View3D_TextureCreate               (UINT32 width, UINT32 height, void const* data, UINT32 data_size, View3DTextureOptions const& options);

@@ -32,6 +32,17 @@ namespace pr::rdr
 		void Setup(ID3D11DeviceContext* dc, DeviceState& state) override;
 	};
 
+	// A geometry shader for creating thick lines from line strip geometry
+	struct ThickLineStripGS :ShaderT<ID3D11GeometryShader, ThickLineStripGS>
+	{
+		using base = ShaderT<ID3D11GeometryShader, ThickLineStripGS>;
+		D3DPtr<ID3D11Buffer> m_cbuf;
+		float m_width;
+
+		ThickLineStripGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader> const& shdr);
+		void Setup(ID3D11DeviceContext* dc, DeviceState& state) override;
+	};
+
 	// A geometry shader for creating arrow heads from point list geometry
 	struct ArrowHeadGS :ShaderT<ID3D11GeometryShader, ArrowHeadGS>
 	{

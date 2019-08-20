@@ -23,5 +23,6 @@ namespace pr::rdr
 
 	struct PointSpritesGS;
 	struct ThickLineListGS;
+	struct ThickLineStripGS;
 	struct ArrowHeadGS;
 }

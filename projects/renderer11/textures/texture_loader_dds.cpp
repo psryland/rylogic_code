@@ -375,7 +375,7 @@ namespace pr::rdr
 			throw std::runtime_error("File '"s + filepath.string() + "' does not exist");
 
 		// Get the file size
-		auto size = std::filesystem::file_size(filepath);
+		auto size = size_t(std::filesystem::file_size(filepath));
 
 		// Need at least enough data to fill the header and magic number to be a valid DDS
 		if (size < sizeof(dds::Header) + sizeof(uint32_t))
@@ -436,14 +436,14 @@ namespace pr::rdr
 		auto bits_end = bits.end();
 
 		// Generate mips for each texture in the array
-		for (int j = 0; j != array_size; ++j)
+		for (int j = 0, jend = int(array_size); j != jend; ++j)
 		{
 			auto w = width;
 			auto h = height;
 			auto d = depth;
 
 			// Generate each mip level
-			for (int i = 0; i != mip_count; ++i)
+			for (int i = 0, iend = int(mip_count); i != iend; ++i)
 			{
 				// Get the image dimensions for the given width and height
 				size_t num_bytes, row_bytes, num_rows;
@@ -473,9 +473,9 @@ namespace pr::rdr
 				images.push_back(data);
 
 				// Do the next mip
-				w = std::max(w >> 1, 1ULL);
-				h = std::max(h >> 1, 1ULL);
-				d = std::max(d >> 1, 1ULL);
+				w = std::max<size_t>(w >> 1, 1ULL);
+				h = std::max<size_t>(h >> 1, 1ULL);
+				d = std::max<size_t>(d >> 1, 1ULL);
 				bits_beg += num_bytes * d;
 			}
 		}

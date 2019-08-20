@@ -68,6 +68,7 @@ namespace pr::rdr
 		// Other shaders
 		CreateShader<PointSpritesGS>();
 		CreateShader<ThickLineListGS>();
+		CreateShader<ThickLineStripGS>();
 		CreateShader<ArrowHeadGS>();
 	}
 

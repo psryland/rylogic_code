@@ -397,7 +397,7 @@ namespace pr::rdr
 
 		// Load each image frame
 		vector<RefPtr<IWICBitmapFrameDecode>> frames;
-		for (int i = 0; i != images.size(); ++i)
+		for (int i = 0, iend = int(images.size()); i != iend; ++i)
 		{
 			auto& img = images[i];
 

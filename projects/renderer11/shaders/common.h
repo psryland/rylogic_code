@@ -33,6 +33,9 @@ namespace pr::rdr
 	// - The 'Setup' function in your ShaderT<> derived object should follow the 'SetXYZConstants'
 	//   pattern. You should be able to #include the 'your_file_cbuf.hlsli' file in the 'shdr_your_file.cpp'
 	//   where the 'Setup' method is implemented.
+	// - If your shader is a stock resource,
+	//      - add it to the enum in "stock_resources.h", 
+	//      - forward declare the shader struct in "shader_forward.h"
 
 	#if PR_RDR_RUNTIME_SHADERS
 	void RegisterRuntimeShader(RdrId id, char const* cso_filepath);
@@ -122,10 +125,10 @@ namespace pr::rdr
 	}
 
 	// Set the tint properties of a constants buffer
-	template <typename TCBuf> void SetTint(BaseInstance const& inst, TCBuf& cb)
+	template <typename TCBuf> void SetTint(BaseInstance const& inst, NuggetData const& nug, TCBuf& cb)
 	{
 		pr::Colour32 const* col = inst.find<pr::Colour32>(EInstComp::TintColour32);
-		pr::Colour c = col ? *col : pr::ColourWhite;
+		pr::Colour c = (col ? *col : pr::ColourWhite) * nug.m_tint;
 		cb.m_tint = c.rgba;
 	}
 

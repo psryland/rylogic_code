@@ -1148,6 +1148,12 @@ namespace pr
 				}
 				else if (m_linestrip)
 				{
+					if (m_line_width != 0.0f)
+					{
+						// The thick line strip shader uses lineadj which requires duplicating the first and last vert
+						m_point.insert(std::begin(m_point), m_point.front());
+						m_point.insert(std::end(m_point), m_point.back());
+					}
 					obj->m_model = ModelGenerator<>::LineStrip(p.m_rdr, int(m_point.size() - 1), m_point.data(), int(m_color.size()), m_color.data());
 				}
 				else
@@ -1159,13 +1165,29 @@ namespace pr
 				// Use thick lines
 				if (m_line_width != 0.0f)
 				{
-					// Get or create an instance of the thick line shader
-					auto id = pr::hash::Hash("ThickLine", m_line_width);
-					auto shdr = p.m_rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id, RdrId(EStockShader::ThickLineListGS));
-					shdr->m_width = m_line_width;
-
-					for (auto& nug : obj->m_model->m_nuggets)
-						nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
+					if (m_linestrip)
+					{
+						// Get or create an instance of the thick line shader
+						auto id = pr::hash::Hash("ThickLineStrip", m_line_width);
+						auto shdr = p.m_rdr.m_shdr_mgr.GetShader<ThickLineStripGS>(id, RdrId(EStockShader::ThickLineStripGS));
+						shdr->m_width = m_line_width;
+						for (auto& nug : obj->m_model->m_nuggets)
+						{
+							nug.m_topo = EPrim::LineStripAdj;
+							nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
+						}
+					}
+					else
+					{
+						// Get or create an instance of the thick line shader
+						auto id = pr::hash::Hash("ThickLineList", m_line_width);
+						auto shdr = p.m_rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id, RdrId(EStockShader::ThickLineListGS));
+						shdr->m_width = m_line_width;
+						for (auto& nug : obj->m_model->m_nuggets)
+						{
+							nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
+						}
+					}
 				}
 			}
 			void DashLineStrip(VCont const& in, VCont& out, v2 const& dash)
@@ -1914,7 +1936,7 @@ namespace pr
 				obj->m_model->m_name = obj->TypeAndName();
 
 				// Get instances of the arrow head geometry shader and the thick line shader
-				auto id_thk = pr::hash::Hash("ThickLine", m_line_width);
+				auto id_thk = pr::hash::Hash("ThickLineList", m_line_width);
 				auto thk_shdr = p.m_rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id_thk, RdrId(EStockShader::ThickLineListGS));
 				thk_shdr->m_width = m_line_width;
 
@@ -3067,7 +3089,7 @@ namespace pr
 					if (m_width != 0.0f)
 					{
 						// Use thick lines
-						auto id = pr::hash::Hash("ThickLine", m_width);
+						auto id = pr::hash::Hash("ThickLineList", m_width);
 						auto shdr = p.m_rdr.m_shdr_mgr.GetShader<ThickLineListGS>(id, RdrId(EStockShader::ThickLineListGS));
 						shdr->m_width = m_width;
 						nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
@@ -5055,11 +5077,13 @@ LR"(// *************************************************************************
 				o->m_flags = SetBits(o->m_flags, flags, state);
 
 				// Hidden
-				if (AllSet(o->m_flags, ELdrFlags::Hidden))
+				if (o->m_model != nullptr)
 				{
-				}
-				else
-				{
+					// Even though Ldraw doesn't add instances that are hidden,
+					// set the visibility flags on the nuggets for consistency.
+					auto hidden = AllSet(o->m_flags, ELdrFlags::Hidden);
+					for (auto& nug : o->m_model->m_nuggets)
+						SetBits(nug.m_flags, ENuggetFlag::Hidden, hidden);
 				}
 
 				// Wireframe
@@ -5113,6 +5137,34 @@ LR"(// *************************************************************************
 			Apply([=](LdrObject* o)
 			{
 				o->m_sko.Group(grp);
+				return true;
+			}, name);
+		}
+
+		// Get/Set the nugget flags for this object or child objects matching 'name' (see Apply)
+		rdr::ENuggetFlag LdrObject::NuggetFlags(char const* name, int index) const
+		{
+			auto obj = Child(name);
+			if (obj != nullptr && obj->m_model != nullptr)
+				return rdr::ENuggetFlag::None;
+
+			if (index >= obj->m_model->m_nuggets.size())
+				throw std::runtime_error("nugget index out of range");
+
+			auto nug = obj->m_model->m_nuggets.begin();
+			for (int i = 0; i != index; ++i, ++nug) {}
+			return nug->m_flags;
+		}
+		void LdrObject::NuggetFlags(rdr::ENuggetFlag flags, char const* name, int index)
+		{
+			Apply([=](LdrObject* obj)
+			{
+				if (obj->m_model != nullptr)
+				{
+					auto nug = obj->m_model->m_nuggets.begin();
+					for (int i = 0; i != index; ++i, ++nug) {}
+					nug->m_flags = flags;
+				}
 				return true;
 			}, name);
 		}
