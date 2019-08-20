@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Binance.API.DomainObjects;
 using ExchApi.Common.JsonConverter;
@@ -28,8 +29,6 @@ namespace Binance.API
 
 			// Create the socket
 			Socket = new WebSocket(EndPoint);
-			Socket.Connect();
-			await Task.CompletedTask;
 		}
 
 		/// <summary>The owning API instance</summary>
@@ -63,7 +62,7 @@ namespace Binance.API
 		/// <summary></summary>
 		private WebSocket Socket
 		{
-			get { return m_socket; }
+			get => m_socket;
 			set
 			{
 				if (m_socket == value) return;
@@ -82,6 +81,7 @@ namespace Binance.API
 					m_socket.OnMessage += HandleMessage;
 					m_socket.OnError += HandleError;
 					m_socket.OnClose += HandleClosed;
+					m_socket.Connect();
 				}
 
 				// Handlers
@@ -92,13 +92,10 @@ namespace Binance.API
 				void HandleClosed(object sender, CloseEventArgs e)
 				{
 					BinanceApi.Log.Write(ELogLevel.Debug, $"WebSocket stream closed for ticker data");
-					Socket = null;
 				}
 				void HandleError(object sender, ErrorEventArgs e)
 				{
 					BinanceApi.Log.Write(ELogLevel.Error, e.Exception, $"WebSocket stream error for ticker data");
-					Socket = null;
-					return;
 				}
 				void HandleMessage(object sender, MessageEventArgs e)
 				{

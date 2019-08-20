@@ -1,4 +1,5 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.ObjectModel;
 using System.Linq;
 using CoinFlip.Bots;
 using CoinFlip.Settings;
@@ -13,15 +14,14 @@ namespace CoinFlip
 		{
 			m_model = model;
 		}
-
-		public void RemoveAll()
+		protected override void ClearItems()
 		{
 			// Deactivate and dispose all existing bots
 			foreach (var bot in this)
 				bot.Active = false;
 
 			Util.DisposeRange(this);
-			Clear();
+			base.ClearItems();
 		}
 
 		/// <summary>Create instances of the bots from settings</summary>

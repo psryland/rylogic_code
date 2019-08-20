@@ -1,0 +1,114 @@
+﻿<Window
+	x:Class="CoinFlip.UI.Indicators.TrendLineUI"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+	mc:Ignorable="d"
+	Title="TrendLine Properties"
+	SizeToContent="WidthAndHeight"
+	WindowStartupLocation="CenterOwner"
+	WindowStyle="ToolWindow"
+	Width="200"
+	Height="200"
+	>
+	<Grid
+		Margin="6"
+		>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
+
+		<!-- Name -->
+		<StackPanel
+			Grid.Row="0"
+			Orientation="Horizontal"
+			>
+			<TextBlock
+				Text="Name:"
+				Width="40"
+				/>
+			<TextBox
+				Text="{Binding Data.Name}"
+				HorizontalContentAlignment="Center"
+				Width="140"
+				Margin="3"
+				/>
+		</StackPanel>
+		
+		<!-- Colour -->
+		<StackPanel
+			Grid.Row="1"
+			Orientation="Horizontal"
+			>
+			<TextBlock
+				Text="Colour:"
+				Width="40"
+				/>
+			<gui:ColourWheel
+				Orientation="Horizontal"
+				Colour="{Binding Data.Colour}"
+				Margin="3"
+				Width="140"
+				Height="80"
+				/>
+		</StackPanel>
+		
+		<!-- Width -->
+		<StackPanel
+			Grid.Row="2"
+			Orientation="Horizontal"
+			>
+			<TextBlock
+				Text="Width:"
+				Width="40"
+				/>
+			<Slider
+				MinWidth="140"
+				Margin="3"
+				Minimum="0.1"
+				Maximum="20"
+				Value="{Binding Data.Width}"
+				/>
+		</StackPanel>
+
+		<!-- Style -->
+		<StackPanel
+			Grid.Row="3"
+			Orientation="Horizontal"
+			>
+			<TextBlock
+				Text="Style:"
+				Width="40"
+				/>
+			<ComboBox
+				ItemsSource="{Binding Data.LineStyle, Converter={conv:EnumValues}}"
+				SelectedItem="{Binding Data.LineStyle}"
+				HorizontalContentAlignment="Center"
+				MinWidth="140"
+				Margin="3"
+				/>
+		</StackPanel>
+
+		<!-- Buttons -->
+		<StackPanel
+			Grid.Row="10"
+			HorizontalAlignment="Right"
+			>
+			<Button
+				Content="OK"
+				Command="{Binding Accept}"
+				IsDefault="True"
+				MinWidth="60"
+				Margin="8"
+				/>
+		</StackPanel>
+	</Grid>
+</Window>

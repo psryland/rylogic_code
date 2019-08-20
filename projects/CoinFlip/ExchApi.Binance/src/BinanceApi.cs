@@ -243,23 +243,21 @@ namespace Binance.API
 		}
 
 		/// <summary>Kick the user data watch dog</summary>
-		internal async Task<string> KeepAliveUserDataStream(string listen_key, CancellationToken? cancel = null)
+		internal async Task KeepAliveUserDataStream(string listen_key, CancellationToken? cancel = null)
 		{
 			// https://api.binance.com/api/v1/userDataStream
 			var parms = new Params { };
 			parms["listenKey"] = listen_key;
-			var jtok = await GetData(HttpMethod.Put, ESecurityType.USER_STREAM, "api/v1/userDataStream", cancel, parms);
-			return jtok["listenKey"].Value<string>();
+			await GetData(HttpMethod.Put, ESecurityType.USER_STREAM, "api/v1/userDataStream", cancel, parms);
 		}
 
 		/// <summary>Stop the user data stream</summary>
-		internal async Task<string> CloseUserDataStream(string listen_key, CancellationToken? cancel = null)
+		internal async Task CloseUserDataStream(string listen_key, CancellationToken? cancel = null)
 		{
 			// https://api.binance.com/api/v1/userDataStream
 			var parms = new Params { };
 			parms["listenKey"] = listen_key;
-			var jtok = await GetData(HttpMethod.Delete, ESecurityType.USER_STREAM, "api/v1/userDataStream", cancel, parms);
-			return jtok["listenKey"].Value<string>();
+			await GetData(HttpMethod.Delete, ESecurityType.USER_STREAM, "api/v1/userDataStream", cancel, parms);
 		}
 
 		/// <summary>Return the balances for the account</summary>

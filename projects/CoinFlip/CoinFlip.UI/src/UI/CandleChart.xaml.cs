@@ -10,6 +10,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using CoinFlip.Settings;
+using CoinFlip.UI.Indicators;
 using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Gfx;
@@ -26,6 +27,7 @@ namespace CoinFlip.UI
 			InitializeComponent();
 			DockControl = new DockControl(this, "Chart") { DestroyOnClose = true };
 			ChartSelector = new ExchPairTimeFrame(model);
+			IndicatorViews = new List<IIndicatorView>();
 			Chart = m_chart_candles;
 			Model = model;
 
@@ -58,6 +60,7 @@ namespace CoinFlip.UI
 			GfxCandles = null;
 			ChartSelector = null;
 			Instrument = null;
+			IndicatorViews = null;
 			Model = null;
 			Chart = null;
 			DockControl = null;
@@ -74,7 +77,10 @@ namespace CoinFlip.UI
 				{
 					m_model.OrderChanging -= RefreshChart;
 					m_model.HistoryChanging -= RefreshChart;
+					m_model.SelectedOpenOrders.CollectionChanged -= RefreshChart;
+					m_model.SelectedCompletedOrders.CollectionChanged -= RefreshChart;
 					m_model.Charts.CollectionChanged -= HandleChartsCollectionChanged;
+					m_model.Indicators.CollectionChanged -= HandleIndicatorCollectionChanged;
 					SettingsData.Settings.Chart.SettingChange -= HandleSettingChange;
 					m_model.Charts.Remove(this);
 				}
@@ -83,7 +89,10 @@ namespace CoinFlip.UI
 				{
 					m_model.Charts.Add(this);
 					SettingsData.Settings.Chart.SettingChange += HandleSettingChange;
+					m_model.Indicators.CollectionChanged += HandleIndicatorCollectionChanged;
 					m_model.Charts.CollectionChanged += HandleChartsCollectionChanged;
+					m_model.SelectedCompletedOrders.CollectionChanged += RefreshChart;
+					m_model.SelectedOpenOrders.CollectionChanged += RefreshChart;
 					m_model.HistoryChanging += RefreshChart;
 					m_model.OrderChanging += RefreshChart;
 				}
@@ -94,6 +103,9 @@ namespace CoinFlip.UI
 				{
 					switch (e.Key)
 					{
+					case nameof(ChartSettings.SelectionDistance):
+						Chart.Options.MinSelectionDistance = SettingsData.Settings.Chart.SelectionDistance;
+						break;
 					case nameof(ChartSettings.ShowOpenOrders):
 						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowOpenOrders)));
 						Chart.Invalidate();
@@ -125,6 +137,29 @@ namespace CoinFlip.UI
 				{
 					DockControl.TabText = ChartName;
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ChartName)));
+				}
+				void HandleIndicatorCollectionChanged(object sender, IndicatorEventArgs e)
+				{
+					switch (e.Action)
+					{
+					case NotifyCollectionChangedAction.Reset:
+						{
+							PopulateIndicators();
+							break;
+						}
+					case NotifyCollectionChangedAction.Add:
+						{
+							if (Instrument != null && e.PairName == Pair.Name)
+								IndicatorViews.Add(e.Indicator.CreateView(this));
+							break;
+						}
+					case NotifyCollectionChangedAction.Remove:
+						{
+							IndicatorViews.RemoveIf(x => x.IndicatorId == e.Indicator.Id, dispose:true);
+							break;
+						}
+					}
+					Chart?.Invalidate();
 				}
 				void RefreshChart(object sender, EventArgs args)
 				{
@@ -179,12 +214,13 @@ namespace CoinFlip.UI
 		/// <summary>The chart control</summary>
 		public ChartControl Chart
 		{
-			get { return m_chart; }
+			get => m_chart;
 			private set
 			{
 				if (m_chart == value) return;
 				if (m_chart != null)
 				{
+					m_chart.TranslateKey -= HandleKey;
 					m_chart.ChartMoved -= HandleMoved;
 					m_chart.BuildScene -= HandleBuildScene;
 					m_chart.MouseDown -= HandleMouseDown;
@@ -197,10 +233,14 @@ namespace CoinFlip.UI
 				if (m_chart != null)
 				{
 					// Customise the chart for candles
+					m_chart.AllowSelection = true;
+					m_chart.AllowElementDragging = false;
+					m_chart.AreaSelectMode = ChartControl.EAreaSelectMode.ZoomIfNoSelection;
 					m_chart.Options.AntiAliasing = false;
 					m_chart.Options.Orthographic = true;
 					m_chart.Options.SelectionColour = new Colour32(0x8092A1B1);
 					m_chart.Options.CrossHairZOffset = ZOrder.Cursors;
+					m_chart.Options.MinSelectionDistance = SettingsData.Settings.Chart.SelectionDistance;
 					m_chart.XAxis.Options.PixelsPerTick = 50.0;
 					m_chart.XAxis.Options.TickTextTemplate = "XX:XX\r\nXXX XX XXXX";
 					m_chart.YAxis.Options.TickTextTemplate = "X.XXXX";
@@ -211,6 +251,7 @@ namespace CoinFlip.UI
 					m_chart.MouseDown += HandleMouseDown;
 					m_chart.BuildScene += HandleBuildScene;
 					m_chart.ChartMoved += HandleMoved;
+					m_chart.TranslateKey += HandleKey;
 				}
 
 				// Handlers
@@ -377,6 +418,22 @@ namespace CoinFlip.UI
 				{
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(VisibleTimeSpan)));
 				}
+				void HandleKey(object sender, KeyEventArgs e)
+				{
+					switch (e.Key)
+					{
+					case Key.Delete:
+						{
+							// Delete selected indicators
+							foreach (var indy in IndicatorViews.Where(x => x.Selected).ToList())
+							{
+								Model.Indicators.Remove(Pair.Name, indy.IndicatorId);
+							}
+							e.Handled = true;
+							break;
+						}
+					}
+				}
 			}
 		}
 		private ChartControl m_chart;
@@ -408,6 +465,9 @@ namespace CoinFlip.UI
 					m_instrument.DataChanged += HandleDataChanged;
 					m_instrument.DataSyncingChanged += HandleDataSyncingChanged;
 				}
+
+				// Add indicators
+				PopulateIndicators();
 
 				// Auto Range and refresh
 				Chart.AutoRange();
@@ -468,6 +528,19 @@ namespace CoinFlip.UI
 		}
 		private Instrument m_instrument;
 		private int m_prev_count;
+
+		/// <summary>Indicators on this chart</summary>
+		private List<IIndicatorView> IndicatorViews
+		{
+			get => m_indicator_views;
+			set
+			{
+				if (m_indicator_views == value) return;
+				Util.DisposeAll(m_indicator_views);
+				m_indicator_views = value;
+			}
+		}
+		private List<IIndicatorView> m_indicator_views;
 
 		/// <summary>A string description of the period of time shown in the chart</summary>
 		public string VisibleTimeSpan
@@ -585,16 +658,25 @@ namespace CoinFlip.UI
 				switch (ShowOpenOrders)
 				{
 				default: throw new Exception($"Unknown 'ShowOpenOrders' mode: {ShowOpenOrders}");
-				case EShowItems.Disabled: break;
+				case EShowItems.Disabled:
+					{
+						GfxOpenOrders.ClearScene();
+						break;
+					}
 				case EShowItems.Selected:
 					{
-						GfxOpenOrders.BuildScene(Model.SelectedOpenOrders.Where(Visible), Chart);
+						if (Instrument.Count != 0)
+							GfxOpenOrders.BuildScene(Model.SelectedOpenOrders.Where(Visible), null, Chart);
+						else
+							GfxOpenOrders.ClearScene();
 						break;
 					}
 				case EShowItems.All:
 					{
-						if (Instrument.Count == 0) break;
-						GfxOpenOrders.BuildScene(Exchange.Orders.Values.Where(Visible), Chart);
+						if (Exchange != null && Instrument.Count != 0)
+							GfxOpenOrders.BuildScene(Exchange.Orders.Values.Where(Visible), Model.SelectedOpenOrders, Chart);
+						else
+							GfxOpenOrders.ClearScene();
 						break;
 					}
 				}
@@ -614,20 +696,29 @@ namespace CoinFlip.UI
 
 			// Completed Orders
 			{
-				// Draw the selected history trade
+				// Draw the completed orders
 				switch (ShowCompletedOrders)
 				{
 				default: throw new Exception($"Unknown 'ShowCompletedOrders' mode: {ShowCompletedOrders}");
-				case EShowItems.Disabled: break;
+				case EShowItems.Disabled:
+					{
+						GfxCompletedOrders.ClearScene();
+						break;
+					}
 				case EShowItems.Selected:
 					{
-						GfxCompletedOrders.BuildScene(Model.SelectedCompletedOrders.Where(Visible), Chart);
+						if (Instrument.Count != 0)
+							GfxCompletedOrders.BuildScene(Model.SelectedCompletedOrders.Where(Visible), null, Chart);
+						else
+							GfxCompletedOrders.ClearScene();
 						break;
 					}
 				case EShowItems.All:
 					{
-						if (Instrument.Count == 0) break;
-						GfxCompletedOrders.BuildScene(Exchange.History.Values.Where(Visible), Chart);
+						if (Exchange != null && Instrument.Count != 0)
+							GfxCompletedOrders.BuildScene(Exchange.History.Values.Where(Visible), Model.SelectedCompletedOrders, Chart);
+						else
+							GfxCompletedOrders.ClearScene();
 						break;
 					}
 				}
@@ -646,9 +737,9 @@ namespace CoinFlip.UI
 			}
 
 			// Market Depth
-			if (ShowMarketDepth)
 			{
-				GfxMarketDepth.BuildScene(Chart);
+				if (ShowMarketDepth)
+					GfxMarketDepth.BuildScene(Chart);
 			}
 
 			// Bots
@@ -656,6 +747,12 @@ namespace CoinFlip.UI
 				//// See if any bots want to draw on this chart
 				//foreach (var bot in Model.Bots.Where(x => x.Active))
 				//	bot.OnChartRendering(Instrument, ChartSettings, args);
+			}
+
+			// Indicator Views
+			{
+				foreach (var indy in IndicatorViews)
+					indy.BuildScene(this);
 			}
 
 			// Other
@@ -688,9 +785,6 @@ namespace CoinFlip.UI
 					CrossHairPriceLabel.Visibility = Visibility.Collapsed;
 				}
 			}
-
-			// Put the call out so others can draw on this chart
-			//BuildScene?.Invoke(this, args);
 		}
 
 		/// <summary>Graphics objects for the candle data</summary>
@@ -892,21 +986,21 @@ namespace CoinFlip.UI
 		/// <summary>The source exchange</summary>
 		public Exchange Exchange
 		{
-			get => ChartSelector.Exchange;
+			get => ChartSelector?.Exchange;
 			set => ChartSelector.Exchange = value;
 		}
 
 		/// <summary>The source pair</summary>
 		public TradePair Pair
 		{
-			get => ChartSelector.Pair;
+			get => ChartSelector?.Pair;
 			set => ChartSelector.Pair = value;
 		}
 
 		/// <summary>The source time frame</summary>
 		public ETimeFrame TimeFrame
 		{
-			get => ChartSelector.TimeFrame;
+			get => ChartSelector?.TimeFrame ?? ETimeFrame.None;
 			set => ChartSelector.TimeFrame = value;
 		}
 
@@ -957,16 +1051,10 @@ namespace CoinFlip.UI
 		public Command ShowChartOptions { get; }
 		private void ShowChartOptionsInternal()
 		{
-			if (m_dlg_chart_options == null)
-			{
-				var wnd = Window.GetWindow(this);
-				var pt = wnd.PointToScreen(Mouse.GetPosition(wnd));
-				m_dlg_chart_options = new ChartOptionsUI(wnd);
-				m_dlg_chart_options.SetLocation(pt.X - m_dlg_chart_options.DesiredSize.Width, pt.Y).OnScreen();
-			}
-			m_dlg_chart_options.Show();
+			var owner = Window.GetWindow(this);
+			var pt = owner.PointToScreen(Mouse.GetPosition(owner));
+			ChartOptionsUI.Show(owner, pt);
 		}
-		private ChartOptionsUI m_dlg_chart_options;
 
 		/// <summary>Edit a trade</summary>
 		public Command EditTrade { get; }
@@ -1029,7 +1117,8 @@ namespace CoinFlip.UI
 						var opt = add_menu.Items.Add2(new MenuItem { Header = "Moving Average" });
 						opt.Click += (s, a) =>
 						{
-							throw new NotImplementedException("Edit Moving Average Indicator not implemented");
+							if (Instrument == null) return;
+							Model.Indicators.Add(Instrument.Pair.Name, new MovingAverage { });
 						};
 					}
 					{
@@ -1037,7 +1126,14 @@ namespace CoinFlip.UI
 						var opt = add_menu.Items.Add2(new MenuItem { Header = "Trend Line" });
 						opt.Click += (s, a) =>
 						{
-							throw new NotImplementedException("Edit Trend Line Indicator not implemented");
+							if (Instrument == null) return;
+							Model.Indicators.Add(Instrument.Pair.Name, new TrendLine
+							{
+								Time0 = Instrument.TimeAtFIndex(Math_.Lerp(Chart.XAxis.Min, Chart.XAxis.Max, 0.25)),
+								Time1 = Instrument.TimeAtFIndex(Math_.Lerp(Chart.XAxis.Min, Chart.XAxis.Max, 0.75)),
+								Price0 = Math_.Lerp(Chart.YAxis.Min, Chart.YAxis.Max, 0.25),
+								Price1 = Math_.Lerp(Chart.YAxis.Min, Chart.YAxis.Max, 0.75),
+							});
 						};
 					}
 					{
@@ -1063,9 +1159,20 @@ namespace CoinFlip.UI
 						for (; indicators_menu.Items.Count > 1;)
 							indicators_menu.Items.RemoveAt(1);
 
+						if (IndicatorViews.Count == 0)
+							return;
+
 						indicators_menu.Items.Add(new Separator());
-						indicators_menu.Items.Add2(new MenuItem { Header = "<placeholder1>" });
-						indicators_menu.Items.Add2(new MenuItem { Header = "<placeholder2>" });
+						foreach (var indy in IndicatorViews)
+						{
+							var opt = indicators_menu.Items.Add2(new MenuItem
+							{
+								Header = indy.Name,
+								Foreground = indy.Colour.ToMediaBrush(),
+								FontWeight = indy.Selected ? FontWeights.Bold : FontWeights.Regular,
+							});
+							opt.Click += delegate { indy.Selected = true; };
+						}
 					};
 				}
 
@@ -1151,6 +1258,17 @@ namespace CoinFlip.UI
 					}
 				}
 			}
+		}
+
+		/// <summary>Create indicator views for the current instrument</summary>
+		private void PopulateIndicators()
+		{
+			Util.DisposeAll(IndicatorViews);
+			if (Pair == null || Instrument == null)
+				return;
+
+			foreach (var indy in Model.Indicators[Pair])
+				IndicatorViews.Add(indy.CreateView(this));
 		}
 
 		/// <summary></summary>

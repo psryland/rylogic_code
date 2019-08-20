@@ -226,7 +226,7 @@ namespace CoinFlip.UI.GfxObjects
 				m_ibuf[indx++] = (ushort)(v + 0);
 			}
 
-			m_nbuf[0] = new View3d.Nugget(View3d.EPrim.TriList, View3d.EGeom.Vert | View3d.EGeom.Colr, 0, (uint)vert, 0, (uint)indx, true);
+			m_nbuf[0] = new View3d.Nugget(View3d.EPrim.TriList, View3d.EGeom.Vert | View3d.EGeom.Colr, 0, (uint)vert, 0, (uint)indx, View3d.ENuggetFlag.GeometryHasAlpha);
 			var gfx = new View3d.Object("MarketDepth", 0xFFFFFFFF, vert, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray(), CandleChart.CtxId);
 			gfx.Flags = View3d.EFlags.SceneBoundsExclude;
 

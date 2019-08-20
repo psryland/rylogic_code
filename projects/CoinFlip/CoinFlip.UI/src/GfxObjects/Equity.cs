@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Windows.Controls;
 using CoinFlip.Settings;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
@@ -25,7 +24,7 @@ namespace CoinFlip.UI.GfxObjects
 			NettWorthPlot = new ChartDataSeries("Nett Worth", ChartDataSeries.EFormat.XRealYReal, new ChartDataSeries.OptionsData
 			{
 				PlotType = ChartDataSeries.EPlotType.Bar,
-				Colour = SettingsData.Settings.Equity.NettWorthColour.Alpha(0.5f),
+				Colour = SettingsData.Settings.Chart.NettWorthColour.Alpha(0.7f),
 				BarWidth = 1,
 				BarHorizontalAlignment = 1,
 			});

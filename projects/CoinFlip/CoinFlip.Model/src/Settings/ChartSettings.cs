@@ -10,6 +10,7 @@ namespace CoinFlip.Settings
 		{
 			Q2BColour = new Colour32(0xff22b14c); // Green
 			B2QColour = new Colour32(0xffed1c24); // Red
+			NettWorthColour = new Colour32(0xffbbd2eb); // Blueish
 			ShowOpenOrders = EShowItems.Disabled;
 			ShowCompletedOrders = EShowItems.Disabled;
 			ShowMarketDepth = false;
@@ -17,10 +18,12 @@ namespace CoinFlip.Settings
 			TradeLabelSize = 10.0;
 			TradeLabelTransparency = 1.0;
 			ShowTradeDescriptions = true;
+			LabelsToTheLeft = true;
+			SelectionDistance = 5.0;
 		}
 		public ChartSettings(XElement node)
 			: base(node)
-		{}
+		{ }
 
 		/// <summary>The colour to draw 'Buy Price, Bid, Long, Highest one on a chart' things</summary>
 		public Colour32 Q2BColour
@@ -34,6 +37,13 @@ namespace CoinFlip.Settings
 		{
 			get { return get<Colour32>(nameof(B2QColour)); }
 			set { set(nameof(B2QColour), value); }
+		}
+
+		/// <summary>The colour to draw the Nett Value region with</summary>
+		public Colour32 NettWorthColour
+		{
+			get { return get<Colour32>(nameof(NettWorthColour)); }
+			set { set(nameof(NettWorthColour), value); }
 		}
 
 		/// <summary>Show current trades</summary>
@@ -84,5 +94,20 @@ namespace CoinFlip.Settings
 			get { return get<bool>(nameof(ShowTradeDescriptions)); }
 			set { set(nameof(ShowTradeDescriptions), value); }
 		}
+
+		/// <summary>Show the labels to the left of the trade markers</summary>
+		public bool LabelsToTheLeft
+		{
+			get { return get<bool>(nameof(LabelsToTheLeft)); }
+			set { set(nameof(LabelsToTheLeft), value); }
+		}
+
+		/// <summary>The distance in pixels needed to selected something</summary>
+		public double SelectionDistance
+		{
+			get { return get<double>(nameof(SelectionDistance)); }
+			set { set(nameof(SelectionDistance), value); }
+		}
+
 	}
 }

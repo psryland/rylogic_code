@@ -17,6 +17,9 @@ namespace CoinFlip
 		/// <summary>The currently selected time frame</summary>
 		ETimeFrame TimeFrame { get; set; }
 
+		/// <summary>The instrument displayed on the chart</summary>
+		Instrument Instrument { get; }
+
 		/// <summary>True if this chart is at the front of it's dock pane</summary>
 		bool IsActiveContentInPane { get; }
 

@@ -54,6 +54,7 @@ namespace CoinFlip
 				Bots = new BotContainer(this);
 				PriceData = new PriceDataMap(Shutdown.Token);
 				Charts = new ChartContainer(create_chart_cb);
+				Indicators = new IndicatorContainer();
 				SelectedOpenOrders = new ObservableCollection<Order>();
 				SelectedCompletedOrders = new ObservableCollection<OrderCompleted>();
 
@@ -72,8 +73,8 @@ namespace CoinFlip
 		}
 		public void Dispose()
 		{
-			Util.DisposeRange(Bots);
 			Bots.Clear();
+			Indicators.Clear();
 
 			MainLoopRunning = false;
 
@@ -233,7 +234,7 @@ namespace CoinFlip
 					pd.UpdateThreadActive = false;
 
 				// Deactivate all live trading bots (actually, deactivate all of them)
-				Bots.RemoveAll();
+				Bots.Clear();
 
 				// Integrate market updates so that updates from live data don't end up in back testing data.
 				IntegrateDataUpdates();
@@ -241,6 +242,10 @@ namespace CoinFlip
 				// Save and reset the current Fund container
 				Funds.SaveToSettings(Exchanges);
 				Funds.AssignFunds(new FundData[0]);
+
+				// Save and reset the indicator container
+				Indicators.Save();
+				Indicators.Clear();
 
 				// Disable live trading
 				AllowTrades = false;
@@ -251,6 +256,9 @@ namespace CoinFlip
 			{
 				// Create the fund container from the back testing settings
 				Funds.AssignFunds(SettingsData.Settings.BackTesting.TestFunds);
+
+				// Restore the backtesting indicators
+				Indicators.Load();
 
 				// Create the back testing bots
 				Bots.LoadFromSettings();
@@ -271,10 +279,14 @@ namespace CoinFlip
 			if (BackTesting && e.Before)
 			{
 				// Deactivate all back testing bots (actually, deactivate all of them)
-				Bots.RemoveAll();
+				Bots.Clear();
 
 				// Remove (without saving) the current fund container
 				Funds.AssignFunds(new FundData[0]);
+
+				// Save and reset the indicator container
+				Indicators.Save();
+				Indicators.Clear();
 			}
 
 			// If back testing has just been disabled...
@@ -285,6 +297,9 @@ namespace CoinFlip
 
 				// Restore the fund container from settings
 				Funds.AssignFunds(SettingsData.Settings.LiveFunds);
+
+				// Restore the indicators
+				Indicators.Load();
 
 				// Restore the live trading bots
 				Bots.LoadFromSettings();
@@ -465,6 +480,9 @@ namespace CoinFlip
 
 		/// <summary>The available charts</summary>
 		public ChartContainer Charts { get; }
+
+		/// <summary>The indicators associated with each pair</summary>
+		public IndicatorContainer Indicators { get; }
 
 		/// <summary>Open orders that are 'selected'</summary>
 		public ObservableCollection<Order> SelectedOpenOrders { get; }

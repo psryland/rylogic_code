@@ -6,11 +6,9 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using CoinFlip.Settings;
-using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
-using Rylogic.Utility;
 
 namespace CoinFlip.UI.GfxObjects
 {
@@ -21,38 +19,54 @@ namespace CoinFlip.UI.GfxObjects
 
 		private Func<IOrder, double> m_xvalue;
 		private Func<IOrder, double> m_yvalue;
-		private Cache<long, OrderGfx> m_cache;
+		private Dictionary<long, OrderGfx> m_gfx;
 
 		public Orders(Func<IOrder, double> xvalue, Func<IOrder, double> yvalue)
 		{
 			m_xvalue = xvalue;
 			m_yvalue = yvalue;
-			m_cache = new Cache<long, OrderGfx>(int.MaxValue);
+			m_gfx = new Dictionary<long, OrderGfx>();
 		}
 		public void Dispose()
 		{
-			Util.Dispose(ref m_cache);
+			ClearScene();
+		}
+
+		/// <summary>Remove all order graphics from the scene</summary>
+		public void ClearScene()
+		{
+			foreach (var gfx in m_gfx)
+				gfx.Value.Dispose();
+
+			m_gfx.Clear();
 		}
 
 		/// <summary>Update the scene for the given orders</summary>
-		public void BuildScene(IEnumerable<IOrder> orders, ChartControl chart)
+		public void BuildScene(IEnumerable<IOrder> orders, IEnumerable<IOrder> highlighted, ChartControl chart)
 		{
-			// Remove all gfx no longer in the scene
 			var in_scene = orders.ToHashSet(x => x.OrderId);
-			foreach (var gfx in m_cache.CachedItems.Where(x => !in_scene.Contains(x.OrderId)).ToList())
-				m_cache.Invalidate(gfx.OrderId);
+			var highlight = highlighted?.ToHashSet(x => x.OrderId) ?? new HashSet<long>();
 
-			// Add graphics objects for each order
+			// Remove all gfx no longer in the scene
+			var remove = m_gfx.Where(kv => !in_scene.Contains(kv.Key)).ToList();
+			foreach (var gfx in remove)
+			{
+				m_gfx.Remove(gfx.Key);
+				gfx.Value.Dispose();
+			}
+
+			// Add graphics objects for each order in the scene
 			foreach (var order in orders)
 			{
 				// Get the associated graphics objects
-				var gfx = m_cache.Get(order.OrderId, k => new OrderGfx(order));
+				var gfx = m_gfx.GetOrAdd(order.OrderId, k => new OrderGfx(order));
 
 				// Update the position
 				var x = m_xvalue(order);
 				var y = m_yvalue(order);
 				var s = chart.ChartToClient(new Point(x, y));
-				gfx.Update(chart.Overlay, s);
+				var hl = highlight.Contains(order.OrderId);
+				gfx.Update(chart.Overlay, s, hl);
 			}
 		}
 
@@ -123,17 +137,20 @@ namespace CoinFlip.UI.GfxObjects
 			private TextBlock m_label;
 
 			/// <summary>Resize and reposition the graphics</summary>
-			public void Update(Canvas overlay, Point s)
+			public void Update(Canvas overlay, Point s, bool highlight)
 			{
-				Misc.AddToOverlay(Mark, overlay);
-				Mark.RenderTransform = new TranslateTransform(s.X, s.Y);
+				overlay.Adopt(Mark);
+				Mark.RenderTransform = new MatrixTransform(1, 0, 0, 1, s.X, s.Y);
 
-				Misc.AddToOverlay(Label, overlay);
+				overlay.Adopt(Label);
 				Label.Visibility = SettingsData.Settings.Chart.ShowTradeDescriptions ? Visibility.Visible : Visibility.Collapsed;
 				Label.FontSize = SettingsData.Settings.Chart.TradeLabelSize;
+				Label.FontWeight = highlight ? FontWeights.Bold : FontWeights.Normal;
 				Label.Measure(Rylogic.Extn.Windows.Size_.Infinity);
 				Label.Background = new SolidColorBrush(Colour32.White.Alpha(1.0f - (float)SettingsData.Settings.Chart.TradeLabelTransparency).ToMediaColor());
-				Label.RenderTransform = new TranslateTransform(s.X - Label.DesiredSize.Width - 7.0, s.Y - Label.DesiredSize.Height/2);
+				Label.RenderTransform = SettingsData.Settings.Chart.LabelsToTheLeft
+					? new MatrixTransform(1, 0, 0, 1, s.X - Label.DesiredSize.Width - 7.0, s.Y - Label.DesiredSize.Height/2)
+					: new MatrixTransform(1, 0, 0, 1, s.X + 7.0, s.Y - Label.DesiredSize.Height / 2);
 			}
 		}
 	}

@@ -84,6 +84,19 @@ namespace CoinFlip
 		}
 		private DateTimeOffset m_since;
 
+		/// <summary>The time range (in days since crypto epoch) that spans the equity data</summary>
+		public RangeF TimeInterval
+		{
+			get
+			{
+				var beg = BalanceChanges.Count != 0 ? BalanceChanges.Front().Time : Since;
+				var end = BalanceChanges.Count != 0 ? BalanceChanges.Back().Time : beg + TimeSpan.FromDays(1.0);
+				return new RangeF(
+					(beg - Misc.CryptoCurrencyEpoch).TotalDays,
+					(end - Misc.CryptoCurrencyEpoch).TotalDays);
+			}
+		}
+
 		/// <summary>Raised when the equity data has changed</summary>
 		public event EventHandler EquityChanged;
 
@@ -207,7 +220,7 @@ namespace CoinFlip
 
 				// If our data is up to date then don't signal prices changed
 				var old = CoinInfo.FirstOrDefault(x => x.Coin == coin);
-				if (old != null && old.Total == new_total && Math_.FEqlRelative(old.Value, new_value, 0.01))
+				if (old != null && old.Total == new_total && Math_.FEqlRelative(old.Value, new_value, 0.0001))
 					continue;
 
 				// Add or update the new value for 'coin'

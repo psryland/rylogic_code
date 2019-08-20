@@ -5,6 +5,7 @@
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
 	xmlns:gui2="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+	xmlns:settings="clr-namespace:CoinFlip.Settings;assembly=CoinFlip.Model"
 	mc:Ignorable="d" 
 	d:DesignHeight="450"
 	d:DesignWidth="800"
@@ -58,6 +59,35 @@
 			Margin="2"
 			/>
 
+		<!-- Show Completed orders -->
+		<Button
+			Grid.Column="7"
+			Command="{Binding ToggleShowCompletedOrders}"
+			MaxWidth="22"
+			Margin="3"
+			>
+			<Image Stretch="UniformToFill" StretchDirection="DownOnly" RenderOptions.BitmapScalingMode="HighQuality">
+				<Image.Style>
+					<Style TargetType="{x:Type Image}">
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding ShowCompletedOrders}" Value="{x:Static settings:EShowItems.Disabled}">
+								<Setter Property="Source" Value="{StaticResource history_black}"/>
+								<Setter Property="ToolTip" Value="Display completed orders on the chart"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding ShowCompletedOrders}" Value="{x:Static settings:EShowItems.Selected}">
+								<Setter Property="Source" Value="{StaticResource history_green}"/>
+								<Setter Property="ToolTip" Value="Showing the selected completed order on the chart"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding ShowCompletedOrders}" Value="{x:Static settings:EShowItems.All}">
+								<Setter Property="Source" Value="{StaticResource history_blue}"/>
+								<Setter Property="ToolTip" Value="Showing all completed orders on the chart"/>
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</Image.Style>
+			</Image>
+		</Button>
+		
 		<!-- Time Range -->
 		<TextBlock
 			Grid.Column="10"
@@ -84,29 +114,4 @@
 		x:Name="m_chart_equity"
 		Margin="4"
 		/>
-	<Canvas
-		Grid.Row="1"
-		x:Name="m_chart_overlay"
-		ClipToBounds="True"
-		Margin="4"
-		>
-		<StackPanel
-			Canvas.Left="900"
-			Canvas.Top="0"
-			Orientation="Horizontal"
-			Background="#FFF"
-			Cursor="SizeWE"
-			>
-			<Polygon
-				Points="0,10 5,5 -5,5"
-				Stroke="Black"
-				/>
-			<TextBlock
-				Text="100 BTC"
-				FontSize="10"
-				VerticalAlignment="Center"
-				HorizontalAlignment="Center"
-				/>
-		</StackPanel>
-	</Canvas>
 </Grid>

@@ -21,11 +21,11 @@ namespace CoinFlip.UI
 		public GridTradeHistory(Model model)
 		{
 			InitializeComponent();
-			MouseRightButtonUp += DataGrid_.ColumnVisibility;
 			DockControl = new DockControl(this, "History");
 			PairNames = new ListCollectionView(new List<string>());
 			Model = model;
 
+			m_grid.MouseRightButtonUp += DataGrid_.ColumnVisibility;
 			m_grid.SelectionChanged += (s, a) =>
 			{
 				foreach (var item in a.RemovedItems.Cast<OrderCompleted>())
@@ -97,7 +97,7 @@ namespace CoinFlip.UI
 		/// <summary>The global exchanges view. Provides the source of the "Current" exchange </summary>
 		private ICollectionView Exchanges
 		{
-			get { return m_exchanges; }
+			get => m_exchanges;
 			set
 			{
 				if (m_exchanges == value) return;
@@ -115,24 +115,50 @@ namespace CoinFlip.UI
 				// Handler
 				void HandleCurrentChanged(object sender, EventArgs e)
 				{
-					var history = ((Exchange)Exchanges?.CurrentItem)?.History;
+					var history = Exchanges?.CurrentAs<Exchange>()?.History;
 					History = history != null ? new ListCollectionView(history) : null;
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(History)));
+				}
+			}
+		}
+		private ICollectionView m_exchanges;
 
+		/// <summary>The history of the currently selected exchange</summary>
+		public ICollectionView History
+		{
+			get => m_history;
+			private set
+			{
+				if (m_history == value) return;
+				if (m_history != null)
+				{
+					((OrdersCompletedCollection)m_history.SourceCollection).CollectionChanged -= HandleHistoryCollectionChanged;
+				}
+				m_history = value;
+				if (m_history != null)
+				{
+					((OrdersCompletedCollection)m_history.SourceCollection).CollectionChanged += HandleHistoryCollectionChanged;
+				}
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(History)));
+				UpdatePairsFilter();
+
+				// Handlers
+				void HandleHistoryCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+				{
+				}
+				void UpdatePairsFilter()
+				{
+					// Update the pairs filter
 					using (Scope.Create(() => PairNames.CurrentItem, n => PairNames.MoveCurrentToOrFirst(n)))
 					{
 						var list = (List<string>)PairNames.SourceCollection;
-						var pairs = ((Exchange)Exchanges?.CurrentItem)?.Pairs.Values;
+						var pairs = Exchanges?.CurrentAs<Exchange>()?.Pairs.Values;
 						list.Assign(pairs != null ? pairs.Select(x => x.Name).Prepend("All Pairs") : new string[0]);
 					}
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PairNames)));
 				}
 			}
 		}
-		private ICollectionView m_exchanges;
-
-		/// <summary>The view of the trade history</summary>
-		public ICollectionView History { get; private set; }
+		private ICollectionView m_history;
 
 		/// <summary>The names of pairs to filter the list by</summary>
 		public ICollectionView PairNames { get; }

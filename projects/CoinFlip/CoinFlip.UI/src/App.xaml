@@ -14,6 +14,15 @@
 				- Resources defined in App.xaml can be used statically in any other XAML file, *except* theme files such as Generic.xaml
 			-->
 			<BitmapImage x:Key="Money" UriSource="../res/money.png" />
+			<BitmapImage x:Key="dollar_sign_black" UriSource="/CoinFlip.UI;component/res/dollar_sign_black.png" />
+			<BitmapImage x:Key="dollar_sign_green" UriSource="/CoinFlip.UI;component/res/dollar_sign_green.png" />
+			<BitmapImage x:Key="dollar_sign_blue" UriSource="/CoinFlip.UI;component/res/dollar_sign_blue.png" />
+			<BitmapImage x:Key="history_black" UriSource="/CoinFlip.UI;component/res/history_black.png" />
+			<BitmapImage x:Key="history_green" UriSource="/CoinFlip.UI;component/res/history_green.png" />
+			<BitmapImage x:Key="history_blue" UriSource="/CoinFlip.UI;component/res/history_blue.png" />
+			<BitmapImage x:Key="market_depth_colour" UriSource="/CoinFlip.UI;component/res/market_depth_colour.png" />
+			<BitmapImage x:Key="market_depth_gray" UriSource="/CoinFlip.UI;component/res/market_depth_gray.png" />
+			<BitmapImage x:Key="options" UriSource="/CoinFlip.UI;component/res/options.png" />
 
 			<!-- Fix for Library binding bugs -->
 			<Style TargetType="ComboBoxItem">

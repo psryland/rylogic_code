@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Binance.API.DomainObjects;
 using ExchApi.Common;
 using ExchApi.Common.JsonConverter;
@@ -104,7 +106,6 @@ namespace Binance.API
 					// Create the stream connection and start buffering events
 					m_pending = new List<MarketUpdate>();
 					Socket = new WebSocket(EndPoint);
-					Socket.Connect();
 
 					// Request a full snapshot to initialise the order book
 					var ob = Api.GetOrderBook(Pair, 1000, Api.Shutdown).Result;
@@ -144,7 +145,7 @@ namespace Binance.API
 			/// <summary></summary>
 			public WebSocket Socket
 			{
-				get { return m_socket; }
+				get => m_socket;
 				private set
 				{
 					if (m_socket == value) return;
@@ -163,6 +164,7 @@ namespace Binance.API
 						m_socket.OnMessage += HandleMessage;
 						m_socket.OnError += HandleError;
 						m_socket.OnClose += HandleClosed;
+						Socket.Connect();
 					}
 
 					// Handlers
@@ -173,13 +175,10 @@ namespace Binance.API
 					void HandleClosed(object sender, CloseEventArgs e)
 					{
 						BinanceApi.Log.Write(ELogLevel.Debug, $"WebSocket stream closed for Market Data {Pair.Id}");
-						Socket = null;
 					}
 					void HandleError(object sender, ErrorEventArgs e)
 					{
 						BinanceApi.Log.Write(ELogLevel.Error, e.Exception, $"WebSocket stream error for Market Data {Pair.Id}");
-						Socket = null;
-						return;
 					}
 					void HandleMessage(object sender, MessageEventArgs e)
 					{

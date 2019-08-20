@@ -84,7 +84,6 @@ namespace Binance.API
 					// Create the stream connection and start buffering events
 					m_pending = new List<CandleUpdate>();
 					Socket = new WebSocket(EndPoint);
-					Socket.Connect();
 
 					// Request a snapshot to initialise the candle data
 					// We can only buffer a limited range of candles. Outside that range forward to the rest api
@@ -146,6 +145,7 @@ namespace Binance.API
 						m_socket.OnMessage += HandleMessage;
 						m_socket.OnError += HandleError;
 						m_socket.OnClose += HandleClosed;
+						Socket.Connect();
 					}
 
 					// Handlers
@@ -156,13 +156,10 @@ namespace Binance.API
 					void HandleClosed(object sender, CloseEventArgs e)
 					{
 						BinanceApi.Log.Write(ELogLevel.Debug, $"WebSocket stream closed for Candle Data {Pair.Id}");
-						Socket = null;
 					}
 					void HandleError(object sender, ErrorEventArgs e)
 					{
 						BinanceApi.Log.Write(ELogLevel.Error, e.Exception, $"WebSocket stream error for Candle Data {Pair.Id}");
-						Socket = null;
-						return;
 					}
 					void HandleMessage(object sender, MessageEventArgs e)
 					{

@@ -2,11 +2,15 @@ Immediate ToDo:
 
 CoinFlip
 	- Allow trading in back testing mode
+	- Heikin-Ashi candle mode
+	- TD sequential
 	- Show 'hodls' in equity plot
+	- Auto range equity chart
+	- History is broken
 	- Allow selecting the fund to manually trade from
 	- Make the chart context menu for manual trades display market order when near the current spot price
 	- Depth of market scale indicator/adjuster
-	- Add a Transfer grid
+	- Add price scenarios to the equity grid (dialog with sliders for each currency)
 	- Support create trade at market price (so that it always fills)
 	- Do something so that all pairs are not queried for history all the time on startup
 	- Figure out how to isolate the monitored orders between back testing and live mode
@@ -15,19 +19,13 @@ CoinFlip
 	- Variable spread for backtesting
 	- Dashed 'crosshair' line, also in a lighter colour
 	- pending orders (Stop, OneEnablesOther, )
-	- Make orders glow when hovered
-	- Add more graphics to the positions, so they look better. Also, have orders at the current time, with their 'line' going back to when they were created.
-	- Use smaller text for orders/history, single line, show both base and quote amounts
-	- Add a toggle for show/hide order/history text
 	- saving/loading history to/from db
-	- equity plotting
 	- highlight selected positions on graph
 	- remove old positions from charts	
 	- Log view isn't updating when window doesn't have focus
 	- Add S&R lines + other drawing tools
 	- Add pending orders
 	- Line indicators
-	- Equity graph
 	- MOAR indicators
 	
 EDTradeAdvisor

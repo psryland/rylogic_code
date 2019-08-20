@@ -82,6 +82,8 @@
     <Compile Include="src\Misc\EValidation.cs" />
     <Compile Include="src\Misc\EXAxisLabelMode.cs" />
     <Compile Include="src\Misc\ExchPairTimeFrame.cs" />
+    <Compile Include="src\Model\IIndicator.cs" />
+    <Compile Include="src\Model\IndicatorContainer.cs" />
     <Compile Include="src\Settings\EquitySettings.cs" />
     <Compile Include="src\Trade\IOrder.cs" />
     <Compile Include="src\Misc\IValueTotalAvail.cs" />

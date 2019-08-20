@@ -82,7 +82,7 @@ namespace CoinFlip.UI.GfxObjects
 		}
 		protected override void UpdateSceneCore(View3d.Window window)
 		{
-			/// <summary>Add the graphics to the chart</summary>
+			// Add the graphics to the chart
 			base.UpdateSceneCore(window);
 			if (Gfx == null)
 				return;

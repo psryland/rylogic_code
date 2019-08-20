@@ -23,7 +23,7 @@ namespace CoinFlip
 {
 	/// <summary>Base class for exchanges</summary>
 	[DebuggerDisplay("{Name,nq}")]
-	public abstract class Exchange : IDisposable, INotifyPropertyChanged, IComparable<Exchange>, IComparable
+	public abstract class Exchange :IDisposable, INotifyPropertyChanged, IComparable<Exchange>, IComparable
 	{
 		// Notes:
 		//  - Exchanges are 'below' the Model, i.e. they are unaware of the Model class.
@@ -65,7 +65,8 @@ namespace CoinFlip
 				Misc.RunOnMainThread(async () =>
 				{
 					// Perform async initialisation
-					await ExchangeApi.InitAsync();
+					try { await ExchangeApi.InitAsync(); }
+					catch (OperationCanceledException) { return; };
 
 					// Start the exchange if enabled in the settings
 					if (!ExchSettings.Active)
@@ -78,9 +79,6 @@ namespace CoinFlip
 						var coins = SettingsData.Settings.Coins.ToHashSet(x => x.Symbol);
 						await UpdatePairs(coins);
 						await UpdateBalances(coins);
-						OrdersUpdateRequired = true;
-						MarketDataUpdateRequired = true;
-						TransfersUpdateRequired = true;
 					}
 
 					// Start the Exchange's main loop after the pairs and balances have been integrated.
@@ -88,8 +86,11 @@ namespace CoinFlip
 					{
 						// Attach observers to Pairs changed
 						Pairs.CollectionChanged += delegate { UpdateValuationPaths(); };
-						Pairs.CollectionChanged += delegate { PopulateTradeHistory(); };
+						Pairs.CollectionChanged += delegate { SignalPopulateTradeHistory(); };
 						PopulateTradeHistory();
+						OrdersUpdateRequired = true;
+						MarketDataUpdateRequired = true;
+						TransfersUpdateRequired = true;
 						UpdateThreadActive = true;
 					});
 				});
@@ -824,7 +825,7 @@ namespace CoinFlip
 		/// <summary>The table name for the trade history</summary>
 		private string DBFilepath => Model.BackTesting
 			? Misc.ResolveUserPath("Sim", "History", $"TradeHistory-{Name}.db")
-			: Misc.ResolveUserPath("History",$"TradeHistory-{Name}.db");
+			: Misc.ResolveUserPath("History", $"TradeHistory-{Name}.db");
 
 		/// <summary>Initialise the trade history table</summary>
 		private void InitTradeHistoryTables()
@@ -837,7 +838,7 @@ namespace CoinFlip
 
 			// In back testing mode, delete the history first
 			if (Model.BackTesting)
-				Path_.DelFile(DBFilepath, fail_if_missing:false);
+				Path_.DelFile(DBFilepath, fail_if_missing: false);
 
 			// Connect
 			DB = new SQLiteConnection($"Data Source={DBFilepath};Version=3;journal mode=Memory;synchronous=Off;foreign_keys=On");
@@ -879,7 +880,7 @@ namespace CoinFlip
 				DateTimeOffset_.UnixEpoch.Ticks);
 
 			// Note: the 'History' Collection cannot be populated
-			// here because at this point the Trade pairs are not known.
+			// here because at this point the Trade pairs may not known.
 		}
 
 		/// <summary>Ensure the valuation paths for the current coins are up to date</summary>
@@ -997,7 +998,7 @@ namespace CoinFlip
 					commission = rec.Commission,
 					commission_coin = rec.CommissionCoin,
 				},
-				transaction); 
+				transaction);
 		}
 
 		/// <summary>Return the fund id associated with an order id (from the order details)</summary>
@@ -1031,78 +1032,79 @@ namespace CoinFlip
 		/// <summary>Update the trade history from the DB</summary>
 		private void PopulateTradeHistory()
 		{
-			if (m_populate_history_signalled) return;
-			m_populate_history_signalled = true;
-			Misc.RunOnMainThread(async () =>
+			Debug.Assert(Misc.AssertMainThread());
+			m_populate_history_signalled = false;
+			if (DB == null) return;
+
+			var history = new Dictionary<long, OrderCompleted>();
+			var history_first = DateTimeOffset.MaxValue;
+			var history_last = Misc.CryptoCurrencyEpoch;
+			var transfers_last = Misc.CryptoCurrencyEpoch;
+			var history_last_id = 0L;
+
+			// Get the completed orders
+			var orders = DB.Query<OrderRecord>($"select * from {Table.OrderComplete}");
+			foreach (var order in orders)
 			{
-				Debug.Assert(Misc.AssertMainThread());
-				m_populate_history_signalled = false;
-				if (DB == null) return;
+				var pair = Pairs[order.Pair];
+				if (pair != null)
+					history.Add(order.OrderId, new OrderCompleted(order.OrderId, order.Fund, pair, Enum<ETradeType>.Parse(order.TradeType)));
+			}
 
-				var history = new Dictionary<long, OrderCompleted>();
-				var history_first = DateTimeOffset.MaxValue;
-				var history_last = DateTimeOffset_.UnixEpoch;
-				var transfers_last = DateTimeOffset_.UnixEpoch;
-				var history_last_id = 0L;
-
-				// Get the completed orders
-				var orders = await DB.QueryAsync<OrderRecord>($"select * from {Table.OrderComplete}");
-				foreach (var order in orders)
+			// Get the trades that make up the completed orders
+			var trades = DB.Query<TradeRecord>($"select * from {Table.TradeComplete}");
+			foreach (var trade in trades)
+			{
+				// Get the completed order that 'trade' belongs to
+				if (history.TryGetValue(trade.OrderId, out var order_completed))
 				{
-					var pair = Pairs[order.Pair];
-					if (pair != null)
-						history.Add(order.OrderId, new OrderCompleted(order.OrderId, order.Fund, pair, Enum<ETradeType>.Parse(order.TradeType)));
-				}
+					var pair = order_completed.Pair;
+					var amount_in = trade.AmountIn._(order_completed.CoinIn);
+					var amount_out = trade.AmountOut._(order_completed.CoinOut);
+					var commission_coin = Coins[trade.CommissionCoin];
+					var commission = trade.Commission._(commission_coin);
+					var created = new DateTimeOffset(trade.Created, TimeSpan.Zero);
+					var updated = new DateTimeOffset(trade.Updated, TimeSpan.Zero);
+					order_completed.Trades.Add(new TradeCompleted(order_completed, trade.TradeId, amount_in, amount_out, commission, commission_coin, created, updated));
 
-				// Get the trades that make up the completed orders
-				var trades = await DB.QueryAsync<TradeRecord>($"select * from {Table.TradeComplete}");
-				foreach (var trade in trades)
-				{
-					// Get the completed order that 'trade' belongs to
-					if (history.TryGetValue(trade.OrderId, out var order_completed))
+					// Record the range of completed orders
+					if (created < history_first)
 					{
-						var pair = order_completed.Pair;
-						var amount_in = trade.AmountIn._(order_completed.CoinIn);
-						var amount_out = trade.AmountOut._(order_completed.CoinOut);
-						var commission_coin = Coins[trade.CommissionCoin];
-						var commission = trade.Commission._(commission_coin);
-						var created = new DateTimeOffset(trade.Created, TimeSpan.Zero);
-						var updated = new DateTimeOffset(trade.Updated, TimeSpan.Zero);
-						order_completed.Trades.Add(new TradeCompleted(order_completed, trade.TradeId, amount_in, amount_out, commission, commission_coin, created, updated));
-
-						// Record the range of completed orders
-						if (created < history_first)
-						{
-							history_first = created;
-						}
-						if (created > history_last)
-						{
-							history_last = created;
-							history_last_id = trade.OrderId;
-						}
+						history_first = created;
+					}
+					if (created > history_last)
+					{
+						history_last = created;
+						history_last_id = trade.TradeId;
 					}
 				}
+			}
 
-				// Assign to the collection
-				History.Clear();
-				History.AddRange(history);
+			// Assign to the collection
+			History.Clear();
+			History.AddRange(history);
 
-				// Set the time to get history from
-				m_history_last = history_last;
-				m_transfers_last = transfers_last;
-				m_history_last_id = history_last_id;
+			// Set the time to get history from
+			m_history_last = history_last;
+			m_transfers_last = transfers_last;
+			m_history_last_id = history_last_id;
 
-				// Set the range to span the available history
-				if (history_first <= history_last)
-					HistoryInterval = new Range(history_first.Ticks, history_last.Ticks);
-			});
+			// Set the range to span the available history
+			if (history_first <= history_last)
+				HistoryInterval = new Range(history_first.Ticks, history_last.Ticks);
+		}
+		private void SignalPopulateTradeHistory()
+		{
+			if (m_populate_history_signalled) return;
+			m_populate_history_signalled = true;
+			Misc.RunOnMainThread(PopulateTradeHistory);
 		}
 		private bool m_populate_history_signalled;
 
 		/// <summary>The time range that the completed orders history covers (in ticks)</summary>
 		public Range HistoryInterval { get; protected set; }
 		protected DateTimeOffset m_history_last; // Worker thread context only
-		protected long m_history_last_id; // Worker thread context only
+		protected long m_history_last_id; // TradeId. Worker thread context only
 
 		/// <summary>The time range that the transfer history covers (in ticks)</summary>
 		public Range TransfersInterval { get; protected set; }

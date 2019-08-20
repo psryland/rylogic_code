@@ -156,7 +156,7 @@ namespace CoinFlip
 			// Restore the state before deleting the bot so that, by default, 
 			// a bot can be constructed in it's initial state.
 			foreach (var bot in Bots) bot.RestoreInitialState();
-			Bots.RemoveAll();
+			Bots.Clear();
 
 			// Reset the sim time back to 'StartTime'
 			RunMode = ERunMode.Stopped;

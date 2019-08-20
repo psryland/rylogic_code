@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Binance.API.DomainObjects;
 using ExchApi.Common.JsonConverter;
@@ -41,7 +42,6 @@ namespace Binance.API
 
 			// Create the socket (requires the ListenKey in the endpoint URL)
 			Socket = new WebSocket(EndPoint);
-			Socket.Connect();
 		}
 
 		/// <summary>The owning API instance</summary>
@@ -81,7 +81,7 @@ namespace Binance.API
 		/// <summary></summary>
 		private WebSocket Socket
 		{
-			get { return m_socket; }
+			get => m_socket;
 			set
 			{
 				if (m_socket == value) return;
@@ -100,6 +100,7 @@ namespace Binance.API
 					m_socket.OnMessage += HandleMessage;
 					m_socket.OnError += HandleError;
 					m_socket.OnClose += HandleClosed;
+					m_socket.Connect();
 				}
 
 				// Handlers
@@ -110,13 +111,10 @@ namespace Binance.API
 				void HandleClosed(object sender, CloseEventArgs e)
 				{
 					BinanceApi.Log.Write(ELogLevel.Info, $"WebSocket stream closed for user data {ListenKey}");
-					Socket = null;
 				}
 				void HandleError(object sender, ErrorEventArgs e)
 				{
 					BinanceApi.Log.Write(ELogLevel.Error, e.Exception, $"WebSocket stream error for user data {ListenKey}");
-					Socket = null;
-					return;
 				}
 				void HandleMessage(object sender, MessageEventArgs e)
 				{
@@ -144,7 +142,7 @@ namespace Binance.API
 					// Kick the watchdog if it's time
 					if (DateTimeOffset.Now - m_listen_key_bump > UserDataKeepAliveTimeout)
 					{
-						ListenKey = Api.KeepAliveUserDataStream(ListenKey).Result;
+						Api.KeepAliveUserDataStream(ListenKey).Wait();
 						m_listen_key_bump = DateTimeOffset.Now;
 					}
 				}
@@ -322,8 +320,9 @@ namespace Binance.API
 						{
 							// Note: can't delay the 'GetTradeHistory' call because the caller needs
 							// accurate results on *this* call, not at some later time.
-							history_per_pair = m_history[pair] = m_api.GetTradeHistory(pair, from_id ?? 0L).Result;
+							history_per_pair = m_api.GetTradeHistory(pair, beg: since).Result;
 							history_per_pair.Sort(x => x.Created);
+							m_history[pair] = history_per_pair;
 						}
 					}
 					lock (history_per_pair)

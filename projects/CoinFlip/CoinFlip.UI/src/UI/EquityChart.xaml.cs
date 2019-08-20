@@ -40,20 +40,22 @@ namespace CoinFlip.UI
 			Equity = new Equity(model);
 			GfxEquity = new GfxObjects.Equity(Equity);
 			GfxCompletedOrders = new GfxObjects.Orders(IOrderToXValue, IOrderToYValue);
-			Legend = new ChartDataLegend { Chart = Chart, BackColour = 0xFFE0E0E0 };
 			Model = model;
 
 			// Commands
 			ShowChartOptions = Command.Create(this, ShowChartOptionsInternal);
+			ToggleShowCompletedOrders = Command.Create(this, ToggleShowCompletedOrdersInternal);
+			AutoRange = Command.Create(this, AutoRangeInternal);
 
+			IsVisibleChanged += delegate { AutoRangeIfNeeded(); };
 			ModifyContextMenus();
 			DataContext = this;
 		}
 		public void Dispose()
 		{
-			Legend = null;
 			GfxEquity = null;
 			Chart = null;
+			Equity = null;
 			Model = null;
 			DockControl = null;
 		}
@@ -67,58 +69,82 @@ namespace CoinFlip.UI
 				if (m_model == value) return;
 				if (m_model != null)
 				{
-					m_model.SelectedCompletedOrders.CollectionChanged -= HandleSelectedCompletedOrdersChanged;
+					m_model.OrderChanging -= RefreshChart;
+					m_model.HistoryChanging -= RefreshChart;
+					m_model.SelectedCompletedOrders.CollectionChanged -= RefreshChart;
 					SettingsData.Settings.SettingChange -= HandleSettingChange;
+					Exchanges = CollectionViewSource.GetDefaultView(null);
 				}
 				m_model = value;
 				if (m_model != null)
 				{
+					Exchanges = CollectionViewSource.GetDefaultView(m_model.Exchanges);
 					SettingsData.Settings.SettingChange += HandleSettingChange;
-					m_model.SelectedCompletedOrders.CollectionChanged += HandleSelectedCompletedOrdersChanged;
+					m_model.SelectedCompletedOrders.CollectionChanged += RefreshChart;
+					m_model.HistoryChanging += RefreshChart;
+					m_model.OrderChanging += RefreshChart;
 				}
 
 				// Handler
-				void HandleSelectedCompletedOrdersChanged(object sender, NotifyCollectionChangedEventArgs e)
-				{
-					Chart.Scene.Invalidate();
-				}
 				void HandleSettingChange(object sender, SettingChangeEventArgs e)
 				{
-					//switch (e.Key)
-					//{
-					//case nameof(ChartSettings.ShowOpenOrders):
-					//	PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowOpenOrders)));
-					//	Chart.Scene.Invalidate();
-					//	break;
-					//case nameof(ChartSettings.ShowCompletedOrders):
-					//	PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowCompletedOrders)));
-					//	Chart.Scene.Invalidate();
-					//	break;
-					//case nameof(ChartSettings.ShowMarketDepth):
-					//	PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowMarketDepth)));
-					//	GfxMarketDepth.Invalidate();
-					//	Chart.Scene.Invalidate();
-					//	break;
-					//case nameof(ChartSettings.XAxisLabelMode):
-					//	Chart.XAxisPanel.Invalidate();
-					//	break;
-					//case nameof(ChartSettings.TradeLabelSize):
-					//	Chart.Scene.Invalidate();
-					//	break;
-					//case nameof(ChartSettings.TradeLabelTransparency):
-					//	Chart.Scene.Invalidate();
-					//	break;
-					//case nameof(ChartSettings.ShowTradeDescriptions):
-					//	Chart.Scene.Invalidate();
-					//	break;
-					//}
+					switch (e.Key)
+					{
+					case nameof(ChartSettings.ShowCompletedOrders):
+						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowCompletedOrders)));
+						Chart.Scene.Invalidate();
+						break;
+					case nameof(ChartSettings.XAxisLabelMode):
+						Chart.XAxisPanel.Invalidate();
+						break;
+					case nameof(ChartSettings.TradeLabelSize):
+						Chart.Scene.Invalidate();
+						break;
+					case nameof(ChartSettings.TradeLabelTransparency):
+						Chart.Scene.Invalidate();
+						break;
+					case nameof(ChartSettings.ShowTradeDescriptions):
+						Chart.Scene.Invalidate();
+						break;
+					case nameof(ChartSettings.LabelsToTheLeft):
+						Chart.Scene.Invalidate();
+						break;
+					}
+				}
+				void RefreshChart(object sender, EventArgs args)
+				{
+					Chart?.Invalidate();
 				}
 			}
 		}
 		private Model m_model;
 
 		/// <summary>The source equity data</summary>
-		public Equity Equity { get; }
+		public Equity Equity
+		{
+			get => m_equity;
+			set
+			{
+				if (m_equity == value) return;
+				if (m_equity != null)
+				{
+					m_equity.EquityChanged -= HandleEquityChanged;
+				}
+				m_equity = value;
+				if (m_equity != null)
+				{
+					m_equity.EquityChanged += HandleEquityChanged;
+				}
+
+				// Handler
+				void HandleEquityChanged(object sender, EventArgs e)
+				{
+					AutoRangeIfNeeded();
+					Chart.Invalidate();
+				}
+			}
+		}
+		private Equity m_equity;
 
 		/// <summary>Provides support for the DockContainer</summary>
 		public DockControl DockControl
@@ -178,7 +204,7 @@ namespace CoinFlip.UI
 				// Handlers
 				string HandleChartXAxisTickText(double x, double step)
 				{
-					if (SettingsData.Settings.Equity.XAxisLabelMode == EXAxisLabelMode.AxisIndex)
+					if (SettingsData.Settings.Chart.XAxisLabelMode == EXAxisLabelMode.AxisIndex)
 						return x.ToString();
 
 					if (x < 0 || x > (Model.UtcNow - Misc.CryptoCurrencyEpoch).TotalDays + 365)
@@ -192,7 +218,7 @@ namespace CoinFlip.UI
 					var dt_prev = Misc.CryptoCurrencyEpoch + TimeSpan.FromDays(x - step);
 
 					// Get the date time values in the correct time zone
-					dt_curr = (SettingsData.Settings.Equity.XAxisLabelMode == EXAxisLabelMode.LocalTime)
+					dt_curr = (SettingsData.Settings.Chart.XAxisLabelMode == EXAxisLabelMode.LocalTime)
 						? dt_curr.LocalDateTime
 						: dt_curr.UtcDateTime;
 					dt_prev = (SettingsData.Settings.Chart.XAxisLabelMode == EXAxisLabelMode.LocalTime)
@@ -277,19 +303,37 @@ namespace CoinFlip.UI
 		}
 		private ChartControl m_chart;
 
-		/// <summary>Chart data legend</summary>
-		public ChartDataLegend Legend
+		/// <summary>The global exchanges view. Provides the source of the "Current" exchange </summary>
+		private ICollectionView Exchanges
 		{
-			get => m_legend;
-			private set
+			get { return m_exchanges; }
+			set
 			{
-				if (m_legend == value) return;
-				Util.Dispose(ref m_legend);
-				m_legend = value;
-			}
+				if (m_exchanges == value) return;
+				if (m_exchanges != null)
+				{
+					m_exchanges.CurrentChanged -= HandleCurrentChanged;
+				}
+				m_exchanges = value;
+				if (m_exchanges != null)
+				{
+					m_exchanges.CurrentChanged += HandleCurrentChanged;
+				}
+				HandleCurrentChanged(null, null);
 
+				// Handler
+				void HandleCurrentChanged(object sender, EventArgs e)
+				{
+					var history = ((Exchange)Exchanges?.CurrentItem)?.History;
+					History = history != null ? new ListCollectionView(history) : null;
+					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(History)));
+				}
+			}
 		}
-		private ChartDataLegend m_legend;
+		private ICollectionView m_exchanges;
+
+		/// <summary>The view of the trade history</summary>
+		public ICollectionView History { get; private set; }
 
 		/// <summary>A string description of the period of time shown in the chart</summary>
 		public string VisibleTimeSpan
@@ -301,6 +345,13 @@ namespace CoinFlip.UI
 			}
 		}
 
+		/// <summary>Show completed orders on the chart</summary>
+		public EShowItems ShowCompletedOrders
+		{
+			get => SettingsData.Settings.Chart.ShowCompletedOrders;
+			set => SettingsData.Settings.Chart.ShowCompletedOrders = value;
+		}
+
 		/// <summary>Add graphics and elements to the chart</summary>
 		private void BuildScene()
 		{
@@ -309,10 +360,36 @@ namespace CoinFlip.UI
 				return;
 
 			GfxEquity.BuildScene(Chart);
-			GfxCompletedOrders.BuildScene(Model.SelectedCompletedOrders, Chart);
 
-			// Put the call out so others can draw on this chart
-			//BuildScene?.Invoke(this, args);
+			{ // Completed order markers
+				switch (ShowCompletedOrders)
+				{
+				default: throw new Exception($"Unknown 'ShowCompletedOrders' mode: {ShowCompletedOrders}");
+				case EShowItems.Disabled:
+					{
+						GfxCompletedOrders.ClearScene();
+						break;
+					}
+				case EShowItems.Selected:
+					{
+						GfxCompletedOrders.BuildScene(Model.SelectedCompletedOrders.Where(Visible), null, Chart);
+						break;
+					}
+				case EShowItems.All:
+					{
+						var exchange = Exchanges.CurrentAs<Exchange>();
+						if (exchange != null)
+							GfxCompletedOrders.BuildScene(exchange.History.Values.Where(Visible), Model.SelectedCompletedOrders, Chart);
+						break;
+					}
+				}
+				bool Visible(OrderCompleted ord)
+				{
+					var time_min = Misc.CryptoCurrencyEpoch + TimeSpan.FromDays(Chart.XAxis.Min);
+					var time_max = Misc.CryptoCurrencyEpoch + TimeSpan.FromDays(Chart.XAxis.Max);
+					return ord.Created.Within(time_min, time_max);
+				}
+			}
 		}
 
 		/// <summary>Graphics objects for the candle data</summary>
@@ -341,6 +418,14 @@ namespace CoinFlip.UI
 		}
 		private GfxObjects.Orders m_gfx_completed_orders;
 
+		/// <summary>Auto range the chart if not spanning the data</summary>
+		private void AutoRangeIfNeeded()
+		{
+			// If the chart X axis range does not overlap the equity data range, auto range.
+			if (Chart.XAxis.Range.Intersect(Equity.TimeInterval).Empty)
+				AutoRange.Execute();
+		}
+
 		/// <summary>Callbacks for positioning order graphics</summary>
 		private double IOrderToXValue(IOrder order)
 		{
@@ -351,14 +436,27 @@ namespace CoinFlip.UI
 			return Equity.NettWorthHistory().FirstOrDefault(x => x.Time == order.Created).Worth;
 		}
 
+		/// <summary>Auto range the chart (if needed)</summary>
+		public Command AutoRange { get; }
+		private void AutoRangeInternal()
+		{
+			Chart.AutoRange();
+		}
+
+		/// <summary>Cycle the 'show completed orders' state</summary>
+		public Command ToggleShowCompletedOrders { get; }
+		private void ToggleShowCompletedOrdersInternal()
+		{
+			ShowCompletedOrders = Enum<EShowItems>.Cycle(ShowCompletedOrders);
+		}
+
 		/// <summary>Show the options dialog for chart behaviour</summary>
 		public Command ShowChartOptions { get; }
 		private void ShowChartOptionsInternal()
 		{
-			var wnd = Window.GetWindow(this);
-			var pt = wnd.PointToScreen(Mouse.GetPosition(wnd));
-			var dlg = new ChartOptionsUI(wnd) { Left = pt.X, Top = pt.Y }.OnScreen();
-			dlg.ShowDialog();
+			var owner = Window.GetWindow(this);
+			var pt = owner.PointToScreen(Mouse.GetPosition(owner));
+			ChartOptionsUI.Show(owner, pt);
 		}
 
 		/// <summary>Replace the chart context menus</summary>
@@ -403,10 +501,10 @@ namespace CoinFlip.UI
 							Margin = new Thickness(1, 1, 20, 1),
 							MinWidth = 80,
 						});
-						cb.SetBinding(ComboBox.SelectedItemProperty, new Binding(nameof(EquitySettings.XAxisLabelMode)) { Source = SettingsData.Settings.Equity });
+						cb.SetBinding(ComboBox.SelectedItemProperty, new Binding(nameof(ChartSettings.XAxisLabelMode)) { Source = SettingsData.Settings.Equity });
 						cb.SelectionChanged += (s, a) =>
 						{
-							SettingsData.Settings.Equity.XAxisLabelMode = (EXAxisLabelMode)cb.SelectedItem;
+							SettingsData.Settings.Chart.XAxisLabelMode = (EXAxisLabelMode)cb.SelectedItem;
 						};
 					}
 				}

@@ -93,6 +93,13 @@
     <Compile Include="src\GfxObjects\Candles.cs" />
     <Compile Include="src\GfxObjects\SpotPrice.cs" />
     <Compile Include="src\GfxObjects\UpdatingText.cs" />
+    <Compile Include="src\Indicators\MovingAverage.cs" />
+    <Compile Include="src\Misc\ELineStyles.cs" />
+    <Compile Include="src\Indicators\IndicatorView.cs" />
+    <Compile Include="src\Indicators\TrendLine.cs" />
+    <Compile Include="src\Indicators\TrendLineUI.xaml.cs">
+      <DependentUpon>TrendLineUI.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\Misc\CoinFilter.cs" />
     <Compile Include="src\Misc\SimulationView.cs" />
     <Compile Include="src\Misc\SkinResourceDictionary.cs" />
@@ -138,6 +145,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="src\Dialogs\NewBotUI.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Indicators\TrendLineUI.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

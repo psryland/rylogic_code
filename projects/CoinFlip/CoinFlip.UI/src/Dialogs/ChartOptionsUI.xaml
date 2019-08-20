@@ -70,6 +70,13 @@
 					IsChecked="{Binding ShowTradeDescriptions, Mode=TwoWay}"
 					Margin="2"
 					/>
+
+				<!-- Trade label descriptions -->
+				<CheckBox
+					Content="Labels Left of Marker"
+					IsChecked="{Binding LabelsToTheLeft, Mode=TwoWay}"
+					Margin="2"
+					/>
 			</StackPanel>
 		</GroupBox>
 

@@ -11,6 +11,8 @@ namespace CoinFlip.UI.GfxObjects
 {
 	public class Candles :Buffers
 	{
+		//Todo: this class could use ChartGfxCache/ChartGfxPiece
+
 		private const int BatchSize = 1024;
 
 		public Candles(Instrument instrument)
@@ -207,15 +209,14 @@ namespace CoinFlip.UI.GfxObjects
 			}
 			public void Dispose()
 			{
-				Gfx = Util.Dispose(Gfx);
-				DBIndexRange = Range.Zero;
+				Util.Dispose(Gfx);
 			}
 
 			/// <summary>The graphics object containing 'GfxModelBatchSize' candles</summary>
-			public View3d.Object Gfx { get; private set; }
+			public View3d.Object Gfx { get; }
 
 			/// <summary>The index range of candles in this graphic</summary>
-			public Range DBIndexRange { get; private set; }
+			public Range DBIndexRange { get; }
 		}
 	}
 }

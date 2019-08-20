@@ -259,7 +259,7 @@ namespace CoinFlip
 				var dist = DistanceQ2B;
 				var idx = Pair.OrderBookIndex(TradeType, PriceQ2B, out var beyond);
 				var pls = beyond ? "+" : string.Empty;
-				return dist != null ? $"{dist:G8} ({idx}{pls})" : "---";
+				return dist != null ? $"{dist.Value.ToString(6, false)} ({idx}{pls})" : "---";
 			}
 		}
 
