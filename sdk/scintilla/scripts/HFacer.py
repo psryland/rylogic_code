@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # HFacer.py - regenerate the Scintilla.h and SciLexer.h files from the Scintilla.iface interface
 # definition file.
 # Implemented 2000 by Neil Hodgson neilh@scintilla.org
@@ -78,11 +78,11 @@ def printCSFile(f):
 
 def RegenerateAll(root, showMaxID):
 	f = Face.Face()
-	f.ReadFromFile(os.path.abspath(root + "include/Scintilla.iface"))
-	Regenerate(os.path.abspath(root + "include/Scintilla.h"), "/* ", printHFile(f))
-	Regenerate(os.path.abspath(root + "include/SciLexer.h"), "/* ", printLexHFile(f))
-	Regenerate(os.path.abspath(root + "include/Scintilla.cs"), "/* ", printCSFile(f))
-	Regenerate(os.path.abspath(root + "include/SciLexer.cs"), "/* ", printLexCSFile(f))
+	f.ReadFromFile(os.path.abspath(os.path.join(root, "include", "Scintilla.iface")))
+	Regenerate(os.path.abspath(os.path.join(root, "include", "Scintilla.h" )), "/* ", printHFile(f))
+	Regenerate(os.path.abspath(os.path.join(root, "include", "SciLexer.h"  )), "/* ", printLexHFile(f))
+	Regenerate(os.path.abspath(os.path.join(root, "include", "Scintilla.cs")), "/* ", printCSFile(f))
+	Regenerate(os.path.abspath(os.path.join(root, "include", "SciLexer.cs" )), "/* ", printLexCSFile(f))
 	if showMaxID:
 		valueSet = set(int(x) for x in f.values if int(x) < 3000)
 		maximumID = max(valueSet)
@@ -93,4 +93,5 @@ def RegenerateAll(root, showMaxID):
 			#~ print(v)
 
 if __name__ == "__main__":
-	RegenerateAll("../", False)
+	root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+	RegenerateAll(root, False)

@@ -90,10 +90,8 @@
       <TargetMachine>MachineX86</TargetMachine>
     </Lib>
     <PreBuildEvent>
-      <Command>cd $(ProjectDir)scripts
-py $(ProjectDir)scripts\LexGen.py
-py $(ProjectDir)scripts\HFacer.py
-</Command>
+      <Command>py $(ProjectDir)scripts\LexGen.py
+py $(ProjectDir)scripts\HFacer.py</Command>
     </PreBuildEvent>
     <PostBuildEvent />
     <Link>
@@ -118,10 +116,8 @@ py $(ProjectDir)scripts\HFacer.py
       <LinkTimeCodeGeneration>true</LinkTimeCodeGeneration>
     </Lib>
     <PreBuildEvent>
-      <Command>cd $(ProjectDir)scripts
-py $(ProjectDir)scripts\LexGen.py
-py $(ProjectDir)scripts\HFacer.py
-</Command>
+      <Command>py $(ProjectDir)scripts\LexGen.py
+py $(ProjectDir)scripts\HFacer.py</Command>
     </PreBuildEvent>
     <PostBuildEvent />
     <Link>
@@ -143,10 +139,8 @@ py $(ProjectDir)scripts\HFacer.py
     </ClCompile>
     <PostBuildEvent />
     <PreBuildEvent>
-      <Command>cd $(ProjectDir)scripts
-py $(ProjectDir)scripts\LexGen.py
-py $(ProjectDir)scripts\HFacer.py
-</Command>
+      <Command>py $(ProjectDir)scripts\LexGen.py
+py $(ProjectDir)scripts\HFacer.py</Command>
     </PreBuildEvent>
     <PostBuildEvent />
     <Lib>
@@ -171,10 +165,8 @@ py $(ProjectDir)scripts\HFacer.py
     </ClCompile>
     <PostBuildEvent />
     <PreBuildEvent>
-      <Command>cd $(ProjectDir)scripts
-py $(ProjectDir)scripts\LexGen.py
-py $(ProjectDir)scripts\HFacer.py
-</Command>
+      <Command>py $(ProjectDir)scripts\LexGen.py
+py $(ProjectDir)scripts\HFacer.py</Command>
     </PreBuildEvent>
     <PostBuildEvent />
     <Link>

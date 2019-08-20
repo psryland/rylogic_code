@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # ScintillaData.py - implemented 2013 by Neil Hodgson neilh@scintilla.org
 # Released to the public domain.
 
@@ -154,16 +155,14 @@ def SortListInsensitive(l):
 class ScintillaData:
     def __init__(self, scintillaRoot):
         # Discover verion information
-        with open(scintillaRoot + "version.txt") as f:
+        with open(os.path.join(scintillaRoot, "version.txt")) as f:
             self.version = f.read().strip()
-        self.versionDotted = self.version[0] + '.' + self.version[1] + '.' + \
-            self.version[2]
-        self.versionCommad = self.version[0] + ', ' + self.version[1] + ', ' + \
-            self.version[2] + ', 0'
+        self.versionDotted = f"{self.version[0]}.{self.version[1]}.{self.version[2]}"
+        self.versionCommad = f"{self.version[0]},{self.version[1]},{self.version[2]},0"
 
-        with open(scintillaRoot + "doc/index.html") as f:
-            self.dateModified = [l for l in f.readlines() if "Date.Modified" in l]\
-                [0].split('\"')[3]
+        with open(os.path.join(scintillaRoot, "doc", "index.html")) as f:
+            dateModifiedLine = [l for l in f.readlines() if "Date.Modified" in l][0]
+            self.dateModified = dateModifiedLine.split('\"')[3]
             # 20130602
             # index.html, SciTE.html
             dtModified = datetime.datetime.strptime(self.dateModified, "%Y%m%d")
@@ -179,7 +178,7 @@ class ScintillaData:
             self.myModified = monthModified + " " + self.yearModified
 
         # Find all the lexer source code files
-        lexFilePaths = glob.glob(scintillaRoot + "src/lexers/Lex*.cxx")
+        lexFilePaths = glob.glob(os.path.join(scintillaRoot, "src", "lexers", "Lex*.cxx"))
         SortListInsensitive(lexFilePaths)
         self.lexFiles = [os.path.basename(f)[:-4] for f in lexFilePaths]
         self.lexerModules = []
@@ -197,13 +196,14 @@ class ScintillaData:
         self.lexerProperties = list(lexerProperties)
         SortListInsensitive(self.lexerProperties)
 
-        self.credits = FindCredits(scintillaRoot + "doc/ScintillaHistory.html")
+        self.credits = FindCredits(os.path.join(scintillaRoot, "doc", "ScintillaHistory.html"))
 
 def printWrapped(text):
     print(textwrap.fill(text, subsequent_indent="    "))
 
 if __name__=="__main__":
-    sci = ScintillaData("../")
+    root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    sci = ScintillaData(root)
     print("Version   %s   %s   %s" % (sci.version, sci.versionDotted, sci.versionCommad))
     print("Date last modified    %s   %s   %s   %s   %s" % (
         sci.dateModified, sci.yearModified, sci.mdyModified, sci.dmyModified, sci.myModified))
