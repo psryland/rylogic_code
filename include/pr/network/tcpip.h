@@ -97,7 +97,7 @@ namespace pr::network
 		// For a UDP conection without any default ip/port, use 'nullptr, 0, IPPROTO_UDP'
 		//  Send/Recv return errors for this connection type, however, SendTo and RecvFrom work.
 		// Returns true if the connection is established, false on timeout. Throws on failure
-		bool Connect(char const* ip, uint16 port, int timeout_ms = ~0)
+		bool Connect(char const* ip, uint16_t port, int timeout_ms = ~0)
 		{
 			if (m_socket == INVALID_SOCKET)
 				CreateSocket();

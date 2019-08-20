@@ -43,12 +43,12 @@ namespace pr::network
 			auto timeout = TimeVal(timeout_ms);
 			int result = ::select(0, &set, 0, 0, timeout_ms == ~0 ? nullptr : &timeout);
 			if (result == 0) return true; // timeout, no more bytes available, connection still fine
-			Check(result, "Select failed");
+			Check(result != SOCKET_ERROR, "Select failed");
 
 			// Read the data
 			int read = ::recv(socket, ptr, int(size), flags);
 			if (read == 0) return false; // read zero bytes indicates the socket has been closed gracefully
-			Check(read);
+			Check(read != SOCKET_ERROR);
 
 			ptr += read;
 			bytes_read += read;
@@ -74,13 +74,13 @@ namespace pr::network
 			auto timeout = TimeVal(timeout_ms);
 			int result = ::select(0, &set, 0, 0, timeout_ms == ~0 ? nullptr : &timeout);
 			if (result == 0) return true; // timeout, no more bytes available, connection still fine
-			Check(result, "Select failed");
+			Check(result != SOCKET_ERROR, "Select failed");
 
 			// Read the data
 			int addr_size = sizeof(addr);
 			int read = ::recvfrom(socket, ptr, int(size), flags, (sockaddr*)&addr, &addr_size);
 			if (read == 0) return false; // read zero bytes indicates the socket has been closed gracefully
-			Check(read, "recvform failed");
+			Check(read != SOCKET_ERROR, "recvform failed");
 
 			ptr += read;
 			bytes_read += read;
@@ -104,11 +104,11 @@ namespace pr::network
 			auto timeout = TimeVal(timeout_ms);
 			int result = ::select(0, 0, &set, 0, timeout_ms == ~0 ? nullptr : &timeout);
 			if (result == 0) return false; // timeout, connection still fine but not all bytes sent
-			Check(result, "Select failed");
+			Check(result != SOCKET_ERROR, "Select failed");
 
 			// Send data
 			int sent = ::send(socket, ptr, int(size > max_packet_size ? max_packet_size : size), 0);
-			if (sent != 0) Check(sent);
+			Check(sent == 0 || sent != SOCKET_ERROR);
 
 			ptr += sent;
 			bytes_sent += sent;
@@ -135,11 +135,11 @@ namespace pr::network
 			auto timeout = TimeVal(timeout_ms);
 			int result = ::select(0, 0, &set, 0, timeout_ms == ~0 ? nullptr : &timeout);
 			if (result == 0) return false; // timeout, connection still fine but not all bytes sent
-			Check(result, "Select failed");
+			Check(result != SOCKET_ERROR, "Select failed");
 
 			// Send data
 			int sent = ::sendto(socket, ptr, int(size <= max_packet_size ? size : max_packet_size), 0, (sockaddr const*)&addr, sizeof(addr));
-			if (sent != 0) Check(sent);
+			Check(sent == 0 || sent != SOCKET_ERROR);
 
 			ptr += sent;
 			bytes_sent += sent;
@@ -241,13 +241,13 @@ namespace pr::network
 			auto timeout = TimeVal(timeout_ms);
 			int result = ::select(0, &set, 0, 0, &timeout);
 			if (result == 0) return 0; // no incoming connections
-			Check(result, "Select socket failed");
+			Check(result != SOCKET_ERROR, "Select socket failed");
 
 			// Someone is trying to connect
 			sockaddr_in client_addr;
 			auto client_addr_size = static_cast<int>(sizeof(client_addr));
 			auto client = ::accept(m_listen_socket, (sockaddr*)&client_addr, &client_addr_size);
-			Check(client, "Accepting connection failed");
+			Check(client != INVALID_SOCKET, "Accepting connection failed");
 
 			// Add 'client'
 			Lock lock(m_mutex);
@@ -275,7 +275,7 @@ namespace pr::network
 				auto timeout = TimeVal(0);
 				int result = ::select(0, &set, 0, 0, &timeout);
 				if (result == 0) continue; // socket cannot be read (i.e. no data, that's fine it's not closed)
-				Check(result, "Select failed");
+				Check(result != SOCKET_ERROR, "Select failed");
 
 				char sink_char;
 				result = ::recv(client, &sink_char, 1, MSG_PEEK);
@@ -582,11 +582,11 @@ namespace pr::network
 		// 'optlen' [in, out] - The size, in bytes, of the 'optval' buffer.
 		void GetSocketOption(int level, int optname, char* optval, int& optlen) const
 		{
-			Check(::getsockopt(m_socket, level, optname, optval, &optlen), "getsockopt failed");
+			Check(::getsockopt(m_socket, level, optname, optval, &optlen) == 0, "getsockopt failed");
 		}
 		void SetSocketOption(int level, int optname, char const* optval, int optlen)
 		{
-			Check(::setsockopt(m_socket, level, optname, optval, optlen), "setsockopt failed");
+			Check(::setsockopt(m_socket, level, optname, optval, optlen) == 0, "setsockopt failed");
 		}
 		template <typename OptType> OptType SocketOption(int level, int optname) const
 		{

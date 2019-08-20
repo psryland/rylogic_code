@@ -210,9 +210,9 @@ namespace pr::network
 	}
 
 	// Error checking helper
-	inline void Check(UINT_PTR socket, std::string_view message = "")
+	inline void Check(bool success, std::string_view message = "")
 	{
-		if (socket != SOCKET_ERROR && socket != 0) return;
+		if (success) return;
 		Throw(WSAGetLastError(), message);
 	}
 

@@ -86,35 +86,47 @@ namespace pr::network
 			if (server == INVALID_SOCKET)
 				throw std::runtime_error("Failed to open socket to mail server");
 
+			int result;
+
 			// Connect the Socket
-			Check(connect(server, reinterpret_cast<SOCKADDR const*>(&addr), sizeof(addr)), "Failed to connect to the email server");
+			result = connect(server, reinterpret_cast<SOCKADDR const*>(&addr), sizeof(addr));
+			Check(result != SOCKET_ERROR, "Failed to connect to the email server");
 
 			// Receive initial response from SMTP server
 			std::array<char, 4096> buffer;
-			Check(recv(server, buffer.data(), int(buffer.size()), 0), "'recv' error");
+			result = recv(server, buffer.data(), int(buffer.size()), 0);
+			Check(result != SOCKET_ERROR, "'recv' error");
 
 			std::string msg;
 			msg.reserve(4096);
 
 			// Send 'HELO server.com'
 			msg.clear(); msg.append("HELO ").append(smtp_server_name).append("\r\n");
-			Check(send(server, msg.data(), int(msg.size()), 0), "'send' HELO error");
-			Check(recv(server, buffer.data(), int(buffer.size()), 0), "'recv' HELO error");
+			result = send(server, msg.data(), int(msg.size()), 0);
+			Check(result != SOCKET_ERROR, "'send' HELO error");
+			result = recv(server, buffer.data(), int(buffer.size()), 0);
+			Check(result != SOCKET_ERROR, "'recv' HELO error");
 
 			// Send MAIL FROM: <sender@mydomain.com>
 			msg.clear(); msg.append("MAIL FROM:<").append(m_from_addr).append(">\r\n");
-			Check(send(server, msg.data(), int(msg.size()), 0), "'send' MAIL FROM error");
-			Check(recv(server, buffer.data(), int(buffer.size()), 0), "'recv' MAIL FROM error");
+			result = send(server, msg.data(), int(msg.size()), 0);
+			Check(result != SOCKET_ERROR, "'send' MAIL FROM error");
+			result = recv(server, buffer.data(), int(buffer.size()), 0);
+			Check(result != SOCKET_ERROR, "'recv' MAIL FROM error");
 
 			// Send RCPT TO: <receiver@domain.com>
 			msg.clear(); msg.append("RCPT TO:<").append(m_to_addr).append(">\r\n");
-			Check(send(server, msg.data(), int(msg.size()), 0), "'send' RCPT TO error");
-			Check(recv(server, buffer.data(), int(buffer.size()), 0), "'recv' RCPT TO error");
+			result = send(server, msg.data(), int(msg.size()), 0);
+			Check(result != SOCKET_ERROR, "'send' RCPT TO error");
+			result = recv(server, buffer.data(), int(buffer.size()), 0);
+			Check(result != SOCKET_ERROR, "'recv' RCPT TO error");
 
 			// Send DATA
 			msg.clear(); msg.append("DATA\r\n");
-			Check(send(server, msg.data(), int(msg.size()), 0), "'send' DATA error");
-			Check(recv(server, buffer.data(), int(buffer.size()), 0), "'recv' DATA error");
+			result = send(server, msg.data(), int(msg.size()), 0);
+			Check(result != SOCKET_ERROR, "'send' DATA error");
+			result = recv(server, buffer.data(), int(buffer.size()), 0);
+			Check(result != SOCKET_ERROR, "'recv' DATA error");
 
 			// Send all lines of message body
 			for (std::stringstream ss(m_body); ss.good();)
@@ -124,18 +136,23 @@ namespace pr::network
 				msg.resize(len);
 				msg.append("\r\n");
 
-				Check(send(server, msg.data(), int(msg.size()), 0), "'send' message-line error");
+				result = send(server, msg.data(), int(msg.size()), 0);
+				Check(result != SOCKET_ERROR, "'send' message-line error");
 			}
 
 			// Send blank line and a period
 			msg.clear(); msg.append("\r\n.\r\n");
-			Check(send(server, msg.data(), int(msg.size()), 0), "'send' end-message");
-			Check(recv(server, buffer.data(), int(buffer.size()), 0), "'recv' end-message");
+			result = send(server, msg.data(), int(msg.size()), 0);
+			Check(result != SOCKET_ERROR, "'send' end-message");
+			result = recv(server, buffer.data(), int(buffer.size()), 0);
+			Check(result != SOCKET_ERROR, "'recv' end-message");
 
 			// Send QUIT
 			msg.clear(); msg.append("QUIT\r\n");
-			Check(send(server, msg.data(), int(msg.size()), 0), "'send' QUIT error");
-			Check(recv(server, buffer.data(), int(buffer.size()), 0), "'recv' QUIT error");
+			result = send(server, msg.data(), int(msg.size()), 0);
+			Check(result != SOCKET_ERROR, "'send' QUIT error");
+			result = recv(server, buffer.data(), int(buffer.size()), 0);
+			Check(result != SOCKET_ERROR, "'recv' QUIT error");
 		}
 	};
 }

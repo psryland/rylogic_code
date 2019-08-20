@@ -46,7 +46,7 @@ namespace pr
 			// Attempt to connect on construction
 			Connect();
 		}
-		Pipe(Pipe&& rhs)
+		Pipe(Pipe&& rhs) noexcept
 			:Pipe(L"")
 		{
 			std::swap(m_pipe_name , rhs.m_pipe_name );
@@ -64,7 +64,7 @@ namespace pr
 
 		// Assignment
 		Pipe& operator = (Pipe const& rhs) = delete;
-		Pipe& operator = (Pipe&& rhs)
+		Pipe& operator = (Pipe&& rhs) noexcept
 		{
 			if (this == &rhs) return *this;
 			std::swap(m_pipe_name , rhs.m_pipe_name );
