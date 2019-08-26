@@ -8,19 +8,16 @@
 #include "pr/script/forward.h"
 #include "pr/script/location.h"
 
-namespace pr
+namespace pr::script
 {
-	namespace script
+	// Script exception
+	struct Exception :pr::Exception<EResult>
 	{
-		// Script exception
-		struct Exception :pr::Exception<EResult>
-		{
-			Location m_loc;
+		Location m_loc;
 
-			Exception(EResult result, Location const& loc, std::string msg)
-				:pr::Exception<EResult>(result, msg.append("\nError Code: ").append(ToStringA(result)).append("\nLocation: ").append(Narrow(loc.ToString())))
-				,m_loc(loc)
-			{}
-		};
-	}
+		Exception(EResult result, Location const& loc, std::string msg)
+			:pr::Exception<EResult>(result, msg.append("\nError Code: ").append(ToStringA(result)).append("\nLocation: ").append(Narrow(loc.ToString())))
+			,m_loc(loc)
+		{}
+	};
 }
