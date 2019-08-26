@@ -66,11 +66,11 @@ PSOut PSDefault(PSIn In)
 
 	PSOut Out;
 
-	// Transform
-	In.ws_norm = normalize(In.ws_norm);
-
 	// Tinting
 	Out.diff = In.diff;
+
+	// Transform
+	In.ws_norm = normalize(In.ws_norm);
 
 	// Texture2D (with transform)
 	if (HasTex0)

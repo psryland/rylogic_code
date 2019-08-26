@@ -1150,7 +1150,7 @@ namespace pr
 				{
 					if (m_line_width != 0.0f)
 					{
-						// The thick line strip shader uses lineadj which requires duplicating the first and last vert
+						// The thick line strip shader uses lineadj which requires an extra first and last vert
 						m_point.insert(std::begin(m_point), m_point.front());
 						m_point.insert(std::end(m_point), m_point.back());
 					}

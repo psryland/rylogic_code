@@ -1,6 +1,6 @@
 //***********************************************
 // Renderer
-//  Copyright © Rylogic Ltd 2010
+//  Copyright ï¿½ Rylogic Ltd 2010
 //***********************************************
 
 #ifndef PR_RDR_VECTOR_HLSLI
@@ -28,6 +28,16 @@ float SumComponents(float4 vec)
 float Triple(float4 a, float4 b, float4 c)
 {
 	return dot(a, float4(cross(b.xyz, c.xyz), 0));
+}
+
+// Rotate a 2D vector
+float2 RotateCW(float2 a)
+{
+	return float2(a.y, -a.x);
+}
+float2 RotateCCW(float2 a)
+{
+	return float2(-a.y, a.x);
 }
 
 #endif

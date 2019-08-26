@@ -42,14 +42,19 @@ namespace pr
 		// Returns the number of primitives implied by an index count and geometry topology
 		size_t PrimCount(size_t icount, EPrim topo)
 		{
+			// https://docs.microsoft.com/en-us/windows/win32/direct3d11/d3d10-graphics-programming-guide-primitive-topologies
 			switch (topo)
 			{
 			default: PR_ASSERT(PR_DBG_RDR, false, "Unknown primitive type"); return 0;
 			case EPrim::PointList: return icount;
-			case EPrim::LineList:  PR_ASSERT(PR_DBG_RDR, (icount%2) == 0, "Incomplete primitive implied by i-count"); return icount / 2;
-			case EPrim::LineStrip: PR_ASSERT(PR_DBG_RDR,  icount    >= 2, "Incomplete primitive implied by i-count"); return icount - 1;
-			case EPrim::TriList:   PR_ASSERT(PR_DBG_RDR, (icount%3) == 0, "Incomplete primitive implied by i-count"); return icount / 3;
-			case EPrim::TriStrip:  PR_ASSERT(PR_DBG_RDR,  icount    >= 3, "Incomplete primitive implied by i-count"); return icount - 2;
+			case EPrim::LineList:    PR_ASSERT(PR_DBG_RDR, (icount%2) == 0, "Incomplete primitive implied by i-count"); return icount / 2;
+			case EPrim::LineStrip:   PR_ASSERT(PR_DBG_RDR,  icount    >= 2, "Incomplete primitive implied by i-count"); return icount - 1;
+			case EPrim::TriList:     PR_ASSERT(PR_DBG_RDR, (icount%3) == 0, "Incomplete primitive implied by i-count"); return icount / 3;
+			case EPrim::TriStrip:    PR_ASSERT(PR_DBG_RDR,  icount    >= 3, "Incomplete primitive implied by i-count"); return icount - 2;
+			case EPrim::LineListAdj: PR_ASSERT(PR_DBG_RDR, (icount%4) == 0, "Incomplete primitive implied by i-count"); return icount / 4;
+			case EPrim::LineStripAdj:PR_ASSERT(PR_DBG_RDR,  icount    >= 4, "Incomplete primitive implied by i-count"); return (icount - 2) - 1;
+			case EPrim::TriListAdj:  PR_ASSERT(PR_DBG_RDR, (icount%6) == 0, "Incomplete primitive implied by i-count"); return icount / 6;
+			case EPrim::TriStripAdj: PR_ASSERT(PR_DBG_RDR,  icount    >= 3, "Incomplete primitive implied by i-count"); return (icount - 4) / 2;
 			}
 		}
 
@@ -60,11 +65,15 @@ namespace pr
 			switch (topo)
 			{
 			default: PR_ASSERT(PR_DBG_RDR, false, "Unknown primitive type"); return 0;
-			case EPrim::PointList: return pcount;
-			case EPrim::LineList:  return pcount * 2;
-			case EPrim::LineStrip: return pcount + 1;
-			case EPrim::TriList:   return pcount * 3;
-			case EPrim::TriStrip:  return pcount + 2;
+			case EPrim::PointList:   return pcount;
+			case EPrim::LineList:    return pcount * 2;
+			case EPrim::LineStrip:   return pcount + 1;
+			case EPrim::TriList:     return pcount * 3;
+			case EPrim::TriStrip:    return pcount + 2;
+			case EPrim::LineListAdj: return pcount * 4;
+			case EPrim::LineStripAdj:return (pcount + 1) + 2;
+			case EPrim::TriListAdj:  return pcount * 6;
+			case EPrim::TriStripAdj: return (pcount * 2) + 4;
 			}
 		}
 

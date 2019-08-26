@@ -566,7 +566,7 @@ namespace pr
 		}
 		template <typename Str1, typename Str2, typename Iter = traits<Str1>::iter> inline Iter FindStrI(Str1& str, Str2 const& what)
 		{
-			return FindStr(Begin(str), End(str), what);
+			return FindStrI(Begin(str), End(str), what);
 		}
 		#pragma endregion
 
