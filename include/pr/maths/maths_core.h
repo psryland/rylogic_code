@@ -1868,12 +1868,13 @@ namespace pr::maths
 
 			float arr3[] = {+1,-2,+3,-4};
 			float arr4[] = {+1,+2,+3,+4};
-			std::span<float const> span0(Abs(arr3));
+			auto arr5 = Abs(arr3);
+			std::span<float const> span0(arr5);
 			std::span<float const> span1(arr4);
 			PR_CHECK(FEql(span0, span1), true);
 
-			std::array<float, 5> const arr5 = { 1, 2, 3, 4, 5 };
-			std::span<float const> span5(arr5);
+			std::array<float, 5> const arr6 = { 1, 2, 3, 4, 5 };
+			std::span<float const> span5(arr6);
 		}
 		{// Truncate
 			v4 arr0 = {+1.1f, -1.2f, +2.8f, -2.9f};
