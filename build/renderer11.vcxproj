@@ -294,9 +294,6 @@
     <CustomBuild Include="..\projects\renderer11\shaders\hlsl\forward\forward_radial_fade.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\projects\renderer11\shaders\hlsl\screenspace\thick_line.hlsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
     <CustomBuild Include="..\projects\renderer11\shaders\hlsl\utility\ray_cast.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
@@ -304,6 +301,14 @@
       <FileType>Document</FileType>
     </CustomBuild>
     <CustomBuild Include="..\projects\renderer11\shaders\hlsl\screenspace\point_sprites.hlsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\projects\renderer11\shaders\hlsl\screenspace\thick_line_list.hlsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="..\projects\renderer11\shaders\hlsl\screenspace\thick_line_strip.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
   </ItemGroup>

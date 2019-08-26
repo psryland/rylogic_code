@@ -94,6 +94,9 @@
     <Compile Include="src\GfxObjects\SpotPrice.cs" />
     <Compile Include="src\GfxObjects\UpdatingText.cs" />
     <Compile Include="src\Indicators\MovingAverage.cs" />
+    <Compile Include="src\Indicators\MovingAverageUI.xaml.cs">
+      <DependentUpon>MovingAverageUI.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\Misc\ELineStyles.cs" />
     <Compile Include="src\Indicators\IndicatorView.cs" />
     <Compile Include="src\Indicators\TrendLine.cs" />
@@ -145,6 +148,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="src\Dialogs\NewBotUI.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Indicators\MovingAverageUI.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

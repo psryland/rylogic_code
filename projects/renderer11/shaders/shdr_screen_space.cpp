@@ -64,14 +64,14 @@ namespace pr::rdr
 	#pragma region ThickLineListGS
 
 	// include generated header files
-	#include PR_RDR_SHADER_COMPILED_DIR(thick_linelist_gs.h)
+	#include PR_RDR_SHADER_COMPILED_DIR(thick_line_list_gs.h)
 
 	ThickLineListGS::ThickLineListGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader> const& shdr)
 		:base(mgr, id, sort_id, name, shdr)
 		,m_cbuf(m_mgr->GetCBuf<hlsl::ss::CBufFrame>("ss::CBufFrame"))
 		,m_width(2.0f)
 	{
-		PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "thick_linelist_gs.cso"));
+		PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "thick_line_list_gs.cso"));
 	}
 
 	// Set up the shader ready to be used on 'dle'
@@ -87,9 +87,9 @@ namespace pr::rdr
 	template <> void ShaderManager::CreateShader<ThickLineListGS>()
 	{
 		// Create the dx shaders
-		GShaderDesc desc(thick_linelist_gs);
+		GShaderDesc desc(thick_line_list_gs);
 		auto dx = GetGS(RdrId(EStockShader::ThickLineListGS), &desc);
-		m_stock_shaders.emplace_back(CreateShader<ThickLineListGS>(RdrId(EStockShader::ThickLineListGS), dx, "thick_linelist_gs"));
+		m_stock_shaders.emplace_back(CreateShader<ThickLineListGS>(RdrId(EStockShader::ThickLineListGS), dx, "thick_line_list_gs"));
 	}
 
 	#pragma endregion
@@ -97,14 +97,14 @@ namespace pr::rdr
 	#pragma region ThickLineStripGS
 
 	// include generated header files
-	#include PR_RDR_SHADER_COMPILED_DIR(thick_linestrip_gs.h)
+	#include PR_RDR_SHADER_COMPILED_DIR(thick_line_strip_gs.h)
 
 	ThickLineStripGS::ThickLineStripGS(ShaderManager* mgr, RdrId id, SortKeyId sort_id, char const* name, D3DPtr<ID3D11GeometryShader> const& shdr)
 		:base(mgr, id, sort_id, name, shdr)
 		,m_cbuf(m_mgr->GetCBuf<hlsl::ss::CBufFrame>("ss::CBufFrame"))
 		,m_width(2.0f)
 	{
-		PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "thick_linestrip_gs.cso"));
+		PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "thick_line_strip_gs.cso"));
 	}
 
 	// Set up the shader ready to be used on 'dle'
@@ -120,9 +120,9 @@ namespace pr::rdr
 	template <> void ShaderManager::CreateShader<ThickLineStripGS>()
 	{
 		// Create the dx shaders
-		GShaderDesc desc(thick_linelist_gs);
+		GShaderDesc desc(thick_line_strip_gs);
 		auto dx = GetGS(RdrId(EStockShader::ThickLineStripGS), &desc);
-		m_stock_shaders.emplace_back(CreateShader<ThickLineStripGS>(RdrId(EStockShader::ThickLineStripGS), dx, "thick_linestrip_gs"));
+		m_stock_shaders.emplace_back(CreateShader<ThickLineStripGS>(RdrId(EStockShader::ThickLineStripGS), dx, "thick_line_strip_gs"));
 	}
 
 	#pragma endregion

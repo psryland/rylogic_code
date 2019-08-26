@@ -26,7 +26,6 @@ namespace CoinFlip.UI.Indicators
 			Periods = 50;
 			Colour = Colour32.Blue;
 			Width = 1.0;
-			LineStyle = ELineStyles.Solid;
 			ShowBollingerBands = false;
 			BollingerBandsStdDev = 2.0;
 			ColourBollingerBands = Colour32.LightBlue;
@@ -79,13 +78,6 @@ namespace CoinFlip.UI.Indicators
 		{
 			get => get<double>(nameof(Width));
 			set => set(nameof(Width), value);
-		}
-
-		/// <summary>The style of line</summary>
-		public ELineStyles LineStyle
-		{
-			get => get<ELineStyles>(nameof(LineStyle));
-			set => set(nameof(LineStyle), value);
 		}
 
 		/// <summary>Show Bollinger Bands around the MA</summary>
@@ -361,8 +353,8 @@ namespace CoinFlip.UI.Indicators
 					foreach (var piece in Cache.Get(range))
 					{
 						// Show or hide the glow based on selected/hovered state
-					//	var flags = (Hovered || Selected ? View3d.ENuggetFlag.None : View3d.ENuggetFlag.Hidden) | View3d.ENuggetFlag.TintHasAlpha;
-					//	piece.Gfx.NuggetFlagsSet(flags, null, 1);
+						var flags = (Hovered || Selected ? View3d.ENuggetFlag.None : View3d.ENuggetFlag.Hidden) | View3d.ENuggetFlag.TintHasAlpha;
+						piece.Gfx.NuggetFlagsSet(flags, null, 1);
 
 						piece.Gfx.O2P = m4x4.Translation((float)MA.XOffset, 0f, 0f);
 						window.AddObject(piece.Gfx);
@@ -405,11 +397,12 @@ namespace CoinFlip.UI.Indicators
 				var idx_range = new Range(
 					Math.Max(idx_missing.Beg, idx - PieceBlockSize),
 					Math.Min(idx_missing.End, idx + PieceBlockSize));
+				Debug.Assert(!idx_range.Empty);
 
-				// Resize the geometry buffers
+				// Resize the geometry buffers (+2 because line strip adj is used)
 				var count = idx_range.Counti;
-				m_vbuf.Resize(count);
-				m_ibuf.Resize(count);
+				m_vbuf.Resize(count + 2);
+				m_ibuf.Resize(count + 2);
 				m_nbuf.Resize(2);
 
 				// Get the colours for the MA line
@@ -419,25 +412,37 @@ namespace CoinFlip.UI.Indicators
 				// Create the MA model
 				var vert = 0;
 				var indx = 0;
+				{ // Adjacent start vertex
+					var v = vert;
+					var ma = Data[idx_range.Begi - (idx_range.Beg == 0 ? 0 : 1)];
+					m_vbuf[vert++] = new View3d.Vertex(new v4((float)ma.CandleIndex, (float)ma.Value, 0, 1f), ma_colour);
+					m_ibuf[indx++] = (ushort)v;
+				}
 				foreach (var i in idx_range.Enumeratei)
 				{
 					var v = vert;
 					var ma = Data[i];
 					m_vbuf[vert++] = new View3d.Vertex(new v4((float)ma.CandleIndex, (float)ma.Value, 0, 1f), ma_colour);
-					m_ibuf[indx++] = (ushort)(v);
+					m_ibuf[indx++] = (ushort)v;
+				}
+				{ // Adjacent end vertex
+					var v = vert;
+					var ma = Data[idx_range.Endi - (idx_range.End == Data.Count ? 1 : 0)];
+					m_vbuf[vert++] = new View3d.Vertex(new v4((float)ma.CandleIndex, (float)ma.Value, 0, 1f), ma_colour);
+					m_ibuf[indx++] = (ushort)v;
 				}
 
 				{// Create a nugget for the MA model
 					var mat = View3d.Material.New();
-					mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.ThickLineListGS, $"*LineWidth {{{MA.Width}}}");
-					m_nbuf[0] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert | View3d.EGeom.Colr, 0, (uint)vert, 0, (uint)indx, View3d.ENuggetFlag.None, false, mat);
+					mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.ThickLineStripGS, $"*LineWidth {{{MA.Width}}}");
+					m_nbuf[0] = new View3d.Nugget(View3d.EPrim.LineStripAdj, View3d.EGeom.Vert | View3d.EGeom.Colr, 0, (uint)vert, 0, (uint)indx, View3d.ENuggetFlag.None, false, mat);
 				}
 
 				{// Create a nugget for the hover glow
 					var mat = View3d.Material.New();
 					mat.m_tint = ma_colour.Alpha(0.25);
 					mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.ThickLineStripGS, $"*LineWidth {{{MA.Width + GlowRadius * 2}}}");
-					m_nbuf[1] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert | View3d.EGeom.Colr, 0, (uint)vert, 0, (uint)indx, View3d.ENuggetFlag.TintHasAlpha, true, mat);
+					m_nbuf[1] = new View3d.Nugget(View3d.EPrim.LineStripAdj, View3d.EGeom.Vert | View3d.EGeom.Colr, 0, (uint)vert, 0, (uint)indx, View3d.ENuggetFlag.TintHasAlpha, true, mat);
 				}
 
 				// Add geometry for Bollinger bands
@@ -496,7 +501,7 @@ namespace CoinFlip.UI.Indicators
 
 				// Find the closest point to see if there's a hit
 				var hit_pt = (v2?)null;
-				for (int i = idx_range.Begi, iend = idx_range.Endi - 1; i < iend; ++i)
+				for (int i = idx_range.Begi, iend = Math.Min(idx_range.Endi, Data.Count - 1); i < iend; ++i)
 				{
 					var ma0 = Data[i + 0];
 					var ma1 = Data[i + 1];

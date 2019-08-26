@@ -497,9 +497,6 @@
     <CustomBuild Include="..\projects\renderer11\shaders\hlsl\forward\forward_radial_fade.hlsl">
       <Filter>shaders\hlsl\forward</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\projects\renderer11\shaders\hlsl\screenspace\thick_line.hlsl">
-      <Filter>shaders\hlsl\screenspace</Filter>
-    </CustomBuild>
     <CustomBuild Include="..\projects\renderer11\shaders\hlsl\screenspace\arrow_head.hlsl">
       <Filter>shaders\hlsl\screenspace</Filter>
     </CustomBuild>
@@ -509,5 +506,13 @@
     <CustomBuild Include="..\projects\renderer11\shaders\hlsl\utility\ray_cast.hlsl">
       <Filter>shaders\hlsl\utility</Filter>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="..\projects\renderer11\shaders\hlsl\screenspace\thick_line_list.hlsl">
+      <Filter>shaders\hlsl\screenspace</Filter>
+    </FxCompile>
+    <FxCompile Include="..\projects\renderer11\shaders\hlsl\screenspace\thick_line_strip.hlsl">
+      <Filter>shaders\hlsl\screenspace</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

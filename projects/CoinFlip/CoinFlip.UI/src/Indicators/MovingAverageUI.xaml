@@ -1,0 +1,206 @@
+﻿<Window
+	x:Class="CoinFlip.UI.Indicators.MovingAverageUI"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+	mc:Ignorable="d"
+	Title="Moving Average Properties"
+	SizeToContent="WidthAndHeight"
+	WindowStartupLocation="CenterOwner"
+	WindowStyle="ToolWindow"
+	Width="410"
+	Height="280"
+	>
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="*"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
+		
+		<Grid
+			Grid.Row="0"
+			Margin="6"
+			>
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="Auto"/>
+				<ColumnDefinition Width="Auto"/>
+			</Grid.ColumnDefinitions>
+
+			<!-- Left panel -->
+			<Grid
+				Margin="6"
+				>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="*"/>
+				</Grid.RowDefinitions>
+
+				<!-- Name -->
+				<StackPanel
+					Grid.Row="0"
+					Orientation="Horizontal"
+					>
+					<TextBlock
+						Text="Name:"
+						VerticalAlignment="Center"
+						Width="40"
+						/>
+					<TextBox
+						Text="{Binding Data.Name}"
+						HorizontalContentAlignment="Center"
+						Width="140"
+						Margin="3"
+						/>
+				</StackPanel>
+
+				<!-- Periods -->
+				<StackPanel
+					Grid.Row="1"
+					Orientation="Horizontal"
+					>
+					<TextBlock
+						Text="Periods:"
+						VerticalAlignment="Center"
+						Width="40"
+						/>
+					<TextBox
+						Text="{Binding Data.Periods}"
+						HorizontalContentAlignment="Center"
+						Width="140"
+						Margin="3"
+						/>
+				</StackPanel>
+
+				<!-- Exponential -->
+				<StackPanel
+					Grid.Row="2"
+					Orientation="Horizontal"
+					>
+					<CheckBox
+						Content="Exponential moving average"
+						Margin="3"
+						/>
+				</StackPanel>
+
+				<!-- Colour -->
+				<StackPanel
+					Grid.Row="3"
+					Orientation="Horizontal"
+					>
+					<TextBlock
+						Text="Colour:"
+						Width="40"
+						/>
+					<gui:ColourWheel
+						Orientation="Horizontal"
+						Colour="{Binding Data.Colour}"
+						Margin="3"
+						Width="140"
+						Height="80"
+						/>
+				</StackPanel>
+
+				<!-- Width -->
+				<StackPanel
+					Grid.Row="4"
+					Orientation="Horizontal"
+					>
+					<TextBlock
+						Text="Width:"
+						VerticalAlignment="Center"
+						Width="40"
+						/>
+					<Slider
+						MinWidth="140"
+						Margin="3"
+						Minimum="0.1"
+						Maximum="20"
+						Value="{Binding Data.Width}"
+						/>
+				</StackPanel>
+			</Grid>
+
+			<!-- Bollinger group -->
+			<GroupBox
+				Grid.Column="1"
+				IsEnabled="{Binding Data.ShowBollingerBands}"
+				>
+				<GroupBox.Header>
+					<CheckBox
+						Content="Show Bollinger Bands"
+						IsChecked="{Binding Data.ShowBollingerBands}"
+						Margin="3"
+						/>
+				</GroupBox.Header>
+
+				<Grid>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="Auto"/>
+						<RowDefinition Height="*"/>
+					</Grid.RowDefinitions>
+
+					<!-- Std Dev -->
+					<StackPanel
+						Grid.Row="0"
+						Orientation="Horizontal"
+						>
+						<TextBlock
+							Text="Std Dev:"
+							VerticalAlignment="Center"
+							Width="50"
+							/>
+						<TextBox
+							Text="{Binding Data.BollingerBandsStdDev}"
+							HorizontalContentAlignment="Center"
+							Width="130"
+							Margin="3"
+							/>
+					</StackPanel>
+
+					<!-- Colour -->
+					<StackPanel
+						Grid.Row="1"
+						Orientation="Horizontal"
+						Margin="3"
+						>
+						<TextBlock
+							Text="Colour:"
+							Width="40"
+							/>
+						<gui:ColourWheel
+							Orientation="Horizontal"
+							Colour="{Binding Data.ColourBollingerBands}"
+							Margin="3"
+							Width="140"
+							Height="80"
+							/>
+					</StackPanel>
+
+				</Grid>
+			</GroupBox>
+		</Grid>
+
+		<!-- Buttons -->
+		<StackPanel
+			Grid.Row="1"
+			HorizontalAlignment="Right"
+			>
+			<Button
+				Content="OK"
+				Command="{Binding Accept}"
+				IsDefault="True"
+				MinWidth="60"
+				Margin="8"
+				/>
+		</StackPanel>
+
+	</Grid>
+</Window>

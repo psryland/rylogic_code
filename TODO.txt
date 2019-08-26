@@ -27,6 +27,7 @@ CoinFlip
 	- Add pending orders
 	- Line indicators
 	- MOAR indicators
+	- Consider an arbitrage loop between BTC/USDT/USDC (check it for profitability)
 	
 EDTradeAdvisor
 	- ED Style

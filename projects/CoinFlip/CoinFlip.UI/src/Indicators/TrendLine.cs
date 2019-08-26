@@ -123,7 +123,7 @@ namespace CoinFlip.UI.Indicators
 				Glow = new Line
 				{
 					Stroke = TL.Colour.Alpha(0.25f).ToMediaBrush(),
-					StrokeThickness = TL.Width + GlowRadius * 2,
+					StrokeThickness = TL.Width + GlowRadius,
 					StrokeStartLineCap = PenLineCap.Round,
 					StrokeEndLineCap = PenLineCap.Round
 				};
