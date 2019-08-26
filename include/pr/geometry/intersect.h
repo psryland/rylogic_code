@@ -11,19 +11,77 @@
 
 namespace pr
 {
-	// Given a 2D line that passes through 'a' and 'b' and another that passes through 'c' and 'd'
-	// returns true if the lines intersect, false if they don't. Returns the point of intersect
-	inline bool Intersect2D_InfiniteLineToInfiniteLine(v2 const& b, v2 const& a, v2 const& d, v2 const& c, v2& intersect)
+	// Given a 2D line that passes through 'a' and 'b' and another that passes through 'c' and 'd'.
+	// Returns true if the lines intersect, false if they don't. Returns the point of intersection.
+	// Note: returns false if parallel, *even* if colinear.
+	inline bool Intersect2D_InfiniteLineToInfiniteLine(v2_cref<> a0, v2_cref<> a1, v2_cref<> b0, v2_cref<> b1, v2& intersect)
 	{
-		v2 ab = b - a;
-		v2 cd = d - c;
-		float denom = ab.x * cd.y - ab.y * cd.x;
+		auto da = a1 - a0;
+		auto db = b1 - b0;
+		auto denom = Cross2(da, db);
 		if (FEql(denom, 0.0f)) return false;
-		float e = b.x * a.y - b.y * a.x;
-		float f = d.x * c.y - d.y * c.x;
-		intersect.x = (cd.x * e - ab.x * f) / denom;
-		intersect.y = (cd.y * e - ab.y * f) / denom;
+		auto i = Cross2(a0, a1);
+		auto j = Cross2(b0, b1);
+		intersect.x = (da.x * j - db.x * i) / denom;
+		intersect.y = (da.y * j - db.y * i) / denom;
 		return true;
+	}
+
+	// Find the intersection of two 2D line segments
+	inline bool Intersect2D_LineSegmentToLineSegment(v2_cref<> a0, v2_cref<> a1, v2_cref<> b0, v2_cref<> b1, float& ta, float& tb)
+	{
+		// 'a' and 'b' intersect if there exists values for 'ta' and 'tb' such that: a0 + ta*da == b0 + tb*db
+		// Solve for 'ta'
+		//  => (a0 + ta*da) x db == (b0 + tb*db) x db        ; cross both sides by 'db' noting db x db == 0
+		//    a0 x db + ta*da x db == b0 x db + tb*db x db
+		//    ta*da x db == (b0 - a0) x db
+		//    ta = (b0 - a0) x db / (da x db)
+		//    tb = (b0 - a0) x da / (da x db)    ; similarly, using (da x db) = -(db x da)
+		// Four cases:
+		//  (da x db) == 0, (b0 - a0) x da == 0 => lines are colinear => degenerates to 1D overlap
+		//  (da x db) == 0, (b0 - a0) x da != 0 => lines are parallal but not colinear => no intersect
+		//  (da x db) != 0, ta in [0,1] and tb in [0,1] => intersection
+		//  no intersection
+		// In the 1D overlap case, return 'ta' as the minimum overlap along 'da', and 'tb' as the maximum
+		// overlap along 'da' expressed as a point on 'b'. This means the points calculated using 'ta' and 'tb'
+		// give the overlap interval.
+		auto ab = b0 - a0;
+		auto da = a1 - a0;
+		auto db = b1 - b0;
+		auto denom = Cross2(da, db);
+		if (!FEql(denom, 0)) // not parallel
+		{
+			ta = Cross2(ab, db) / denom;
+			tb = Cross2(ab, da) / denom;
+			return ta >= 0 && ta <= 1 && tb >= 0 && tb <= 1;
+		}
+
+		auto numer = Cross2(ab, da);
+		if (!FEql(numer, 0)) // not colinear
+			return false;
+			
+		auto dd = Dot(da, db);
+		auto da_sq = Dot(da, da);
+		auto db_sq = Dot(db, db);
+		if (FEql(dd, 0)) // one or both of 'a' and 'b' are points
+		{
+			ta = FEql(da_sq, 0) ? 0 : Dot(b0 - a0, da) / da_sq;
+			tb = FEql(db_sq, 0) ? 0 : Dot(a0 - b0, db) / db_sq;
+		}
+		else if (dd > 0) // 'da' and 'db' in the same direction
+		{
+			ta = std::max(0.0f, Dot(b0 - a0, da) / da_sq);
+			tb = std::min(1.0f, Dot(a1 - b0, db) / db_sq);
+		}
+		else // 'da' and 'db' are in opposite directions
+		{
+			ta = std::min(1.0f, Dot(b1 - a0, da) / da_sq);
+			tb = std::max(0.0f, Dot(a1 - b0, db) / db_sq);
+		}
+
+		return (ta == 0 && tb == 0)
+			? FEql(a0, b0)                                  // both 'a' and 'b' are points
+			: (ta >= 0 && ta <= 1) && (tb >= 0 && tb <= 1); // one of 'a' or 'b' is a point
 	}
 
 	// Find the region of intersection between two convex polygons.
@@ -469,6 +527,53 @@ namespace pr::geometry
 {
 	PRUnitTest(IntersectTests)
 	{
+		{// Intersect2D_InfiniteLineToInfiniteLine
+			v2 pt;
+			PR_CHECK(Intersect2D_InfiniteLineToInfiniteLine(v2{ 0, 2 }, v2{ 2, 0 }, v2{ 0, 0.5f }, v2{ 2, 1.5f }, pt), true);
+			PR_CHECK(FEql(pt, v2(1,1)), true);
+
+			// Parallel
+			PR_CHECK(Intersect2D_InfiniteLineToInfiniteLine(v2{ 0, 2 }, v2{ 2, 0 }, v2{ 1, 0 }, v2{ 0, 1 }, pt), false);
+
+			// Colinear
+			PR_CHECK(Intersect2D_InfiniteLineToInfiniteLine(v2{ 0, 2 }, v2{ 1, 1 }, v2{ 2, 0 }, v2{ 1, 1 }, pt), false);
+		}
+		{// Intersect2D_LineSegmentToLineSegment
+			float ta,tb;
+
+			PR_CHECK(Intersect2D_LineSegmentToLineSegment(v2{ 0, 2 }, v2{ 2, 0 }, v2{ 0, 0.5f }, v2{ 2, 1.5f }, ta, tb), true);
+			PR_CHECK(FEql(ta, 0.5f), true);
+			PR_CHECK(FEql(tb, 0.5f), true);
+
+			// Non-parallel but not crossing
+			PR_CHECK(Intersect2D_LineSegmentToLineSegment(v2{ 0, 2 }, v2{ 2, 0 }, v2{ 0, 0.5f }, v2{ 0.9f, 0.95f }, ta, tb), false);
+
+			// Non-parallel but not crossing, other side
+			PR_CHECK(Intersect2D_LineSegmentToLineSegment(v2{ 0, 2 }, v2{ 2, 0 }, v2{ 1.1f, 1.01f}, v2{ 2, 1.5f }, ta, tb), false);
+
+			// Parallel
+			PR_CHECK(Intersect2D_LineSegmentToLineSegment(v2{ 0, 2 }, v2{ 2, 0 }, v2{ 1, 0 }, v2{ 0, 1 }, ta, tb), false);
+
+			// Colinear - meeting at point
+			PR_CHECK(Intersect2D_LineSegmentToLineSegment(v2{ 0, 2 }, v2{ 1, 1 }, v2{ 2, 0 }, v2{ 1, 1 }, ta, tb), true);
+			PR_CHECK(FEql(ta, 1.0f), true);
+			PR_CHECK(FEql(tb, 1.0f), true);
+
+			// Colinear - overlapping
+			PR_CHECK(Intersect2D_LineSegmentToLineSegment(v2{ 0, 2 }, v2{ 2, 0 }, v2{ 1, 1 }, v2{ 2, 0 }, ta, tb), true);
+			PR_CHECK(FEql(ta, 0.5f), true);
+			PR_CHECK(FEql(tb, 1.0f), true);
+
+			// Colinear - overlapping b within a
+			PR_CHECK(Intersect2D_LineSegmentToLineSegment(v2{ 0, 2 }, v2{ 2, 0 }, v2{ 0.5f, 1.5f }, v2{ 1.5f, 0.5f }, ta, tb), true);
+			PR_CHECK(FEql(ta, 0.25f), true);
+			PR_CHECK(FEql(tb, 1.0f), true);
+
+			// Colinear - overlapping a within b
+			PR_CHECK(Intersect2D_LineSegmentToLineSegment(v2{ 0, 2 }, v2{ 2, 0 }, v2{-0.5f, 2.5f }, v2{ 2.5f,-0.5f }, ta, tb), true);
+			PR_CHECK(FEql(ta, 0.0f), true);
+			PR_CHECK(FEql(tb, 5.f/6.f), true);
+		}
 		{// Intersect_LineToBBox
 			float tmin = 0.0f, tmax = 1.0f;
 			auto s = pr::v4(+1.0f, +0.2f, +0.5f, 1.0f);
