@@ -427,7 +427,7 @@ namespace Rylogic.Gui.WPF
 			ui.FontSize = size;
 		}
 
-		/// <summary>Convert a point from 'src' space to 'dst' space</summary>
+		/// <summary>Convert a point from 'src' space to 'dst' space. Consider using 'TransformToAncestor/Descendant'</summary>
 		public static Point MapPoint(Visual src, Visual dst, Point pt)
 		{
 			var p0 = src.PointToScreen(pt);

@@ -525,13 +525,13 @@ namespace Rylogic.Common
 		/// <summary>Allow implicit cast from 'Range'</summary>
 		public static implicit operator RangeF(Range r)
 		{
-			return new RangeF(r.Beg, r.End);
+			return r != Range.Invalid ? new RangeF(r.Beg, r.End) : RangeF.Invalid;
 		}
 
 		/// <summary>Allow explicit cast to 'Range'</summary>
 		public static explicit operator Range(RangeF r)
 		{
-			return new Range((long)r.Beg, (long)r.End);
+			return r != RangeF.Invalid ? new Range((long)r.Beg, (long)r.End) : Range.Invalid;
 		}
 
 		#region Equals
@@ -857,6 +857,15 @@ namespace Rylogic.UnitTests
 				var r = RangeF.From(new[] { 1f, 4f, -2f, 5f, 7f, -3f });
 				Assert.Equal(r, new RangeF(-3f, 7f));
 			}
+		}
+
+		[Test]
+		public void Casting()
+		{
+			Assert.True((RangeF)new Range(10, 20) == new RangeF(10, 20));
+			Assert.True((Range)new RangeF(-10, 20) == new Range(-10, 20));
+			Assert.True((RangeF)Range.Invalid == RangeF.Invalid);
+			Assert.True((Range)RangeF.Invalid == Range.Invalid);
 		}
 
 		[Test]

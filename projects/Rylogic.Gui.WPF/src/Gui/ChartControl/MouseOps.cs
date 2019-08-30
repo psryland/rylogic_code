@@ -198,6 +198,10 @@ namespace Rylogic.Gui.WPF
 		{
 			private HitTestResult.Hit m_hit_selected;
 			private IDisposable m_cleanup_selection_graphic;
+			private IDisposable m_defer_nav_checkpoint;
+			private Element m_dragging_element;
+			private EDragState m_drag_state;
+			private int m_click_count;
 			private EAxis m_hit_axis;
 
 			public MouseOpDefaultLButton(ChartControl chart) : base(chart)
@@ -210,6 +214,8 @@ namespace Rylogic.Gui.WPF
 			public override void MouseDown(MouseButtonEventArgs e)
 			{
 				var location = e.GetPosition(Chart);
+				m_drag_state = EDragState.Start;
+				m_click_count = e.ClickCount;
 
 				// See where mouse down occurred
 				if (Chart.SceneBounds.Contains(location)) m_hit_axis = EAxis.None;
@@ -233,6 +239,10 @@ namespace Rylogic.Gui.WPF
 
 				// Prevent events while dragging the elements around
 				m_suspended_chart_changed = Chart.SuspendChartChanged(raise_on_resume: true);
+				m_defer_nav_checkpoint = Chart.DeferNavCheckpoints();
+
+				// Don't swallow the event
+				e.Handled = false;
 			}
 			public override void MouseMove(MouseEventArgs e)
 			{
@@ -244,20 +254,23 @@ namespace Rylogic.Gui.WPF
 
 				// Pass the drag event out to users first
 				var delta = Chart.ClientToChart(location) - m_grab_chart;
-				var args = new ChartDraggedEventArgs(m_hit_result, delta, false);
+				var args = new ChartDraggedEventArgs(m_hit_result, delta, m_drag_state);
+				m_drag_state = EDragState.Dragging;
 				Chart.OnChartDragged(args);
 
 				// See if the selected element handles dragging
 				if (!args.Handled && m_hit_selected != null)
 				{
 					m_hit_selected.Element.HandleDraggedInternal(args);
+					if (args.Handled)
+						m_dragging_element = m_hit_selected.Element;
 				}
 
 				// See if selected element dragging is enabled
 				if (!args.Handled && Chart.AllowElementDragging && m_hit_selected != null)
 				{
 					foreach (var elem in Chart.Selected)
-						elem.DragTranslate(args.Delta, args.Commit);
+						elem.DragTranslate(args.Delta, args.State);
 
 					args.Handled = true;
 				}
@@ -288,17 +301,20 @@ namespace Rylogic.Gui.WPF
 					Chart.Scene.Window.MouseNavigate(point_ss, e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Rotate, false);
 				}
 				Chart.Scene.Invalidate();
+
+				e.Handled = args.Handled;
 			}
 			public override void MouseUp(MouseButtonEventArgs e)
 			{
 				Util.Dispose(ref m_suspended_chart_changed);
+				Util.Dispose(ref m_defer_nav_checkpoint);
 				var location = e.GetPosition(Chart);
 
-				// If this is a single click...
+				// If this is a click...
 				if (IsClick(location))
 				{
 					// Pass the click event out to users first
-					var args = new ChartClickedEventArgs(m_hit_result, e);
+					var args = new ChartClickedEventArgs(m_hit_result, e, m_click_count);
 					Chart.OnChartClicked(args);
 
 					// If a selected element was hit on mouse down, see if it handles the click
@@ -311,7 +327,10 @@ namespace Rylogic.Gui.WPF
 					if (!args.Handled && m_hit_result.Hits.Count != 0)
 					{
 						for (int i = 0; i != m_hit_result.Hits.Count && !args.Handled; ++i)
+						{
+							if (m_hit_result.Hits[i] == m_hit_selected) continue;
 							m_hit_result.Hits[i].Element.HandleClickedInternal(args);
+						}
 					}
 
 					// If the click is still unhandled, use the click to try to select something (if within the chart)
@@ -320,26 +339,34 @@ namespace Rylogic.Gui.WPF
 						var selection_area = new Rect(m_grab_chart, Size_.Zero);
 						Chart.SelectElements(selection_area, Keyboard.Modifiers, e.ToMouseBtns());
 					}
+
+					e.Handled = args.Handled;
 				}
 				// Otherwise this is a drag action
 				else
 				{
+					// Commit if dragging hasn't been cancelled
+					if (m_drag_state == EDragState.Dragging)
+						m_drag_state = EDragState.Commit;
+
 					// Pass the drag event out to users first
 					var delta = Chart.ClientToChart(location) - m_grab_chart;
-					var args = new ChartDraggedEventArgs(m_hit_result, delta, true);
+					var args = new ChartDraggedEventArgs(m_hit_result, delta, m_drag_state);
 					Chart.OnChartDragged(args);
 
 					// See if the selected element handles dragging
-					if (!args.Handled && m_hit_selected != null)
+					if (!args.Handled && m_dragging_element != null)
 					{
-						m_hit_selected.Element.HandleDraggedInternal(args);
+						m_dragging_element.HandleDraggedInternal(args);
+						m_dragging_element = null;
+						args.Handled = true;
 					}
 
 					// See if selected element dragging is enabled
 					if (!args.Handled && Chart.AllowElementDragging && m_hit_selected != null)
 					{
 						foreach (var elem in Chart.Selected)
-							elem.DragTranslate(args.Delta, args.Commit);
+							elem.DragTranslate(args.Delta, args.State);
 
 						args.Handled = true;
 					}
@@ -362,6 +389,8 @@ namespace Rylogic.Gui.WPF
 						var point_ss = e.GetPosition(Chart.Scene).ToPointF();
 						Chart.Scene.Window.MouseNavigate(point_ss, e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Rotate, true);
 					}
+
+					e.Handled = args.Handled;
 				}
 
 				Util.Dispose(ref m_cleanup_selection_graphic);
@@ -374,7 +403,19 @@ namespace Rylogic.Gui.WPF
 				if (e.Key == Key.Escape)
 				{
 					Cancelled = true;
+					m_drag_state = EDragState.Cancel;
+
+					// Abort dragging
+					if (m_dragging_element != null)
+					{
+						m_dragging_element.HandleDraggedInternal(new ChartDraggedEventArgs(m_hit_result, default, m_drag_state));
+						m_dragging_element = null;
+					}
+
+					// Remove the selection graphics
 					Util.Dispose(ref m_cleanup_selection_graphic);
+
+					// Refresh
 					Chart.Scene.Invalidate();
 				}
 			}
@@ -385,6 +426,7 @@ namespace Rylogic.Gui.WPF
 		{
 			//private HintBalloon m_tape_measure_balloon;
 			private bool m_tape_measure_graphic_added;
+			private IDisposable m_defer_nav_checkpoint;
 
 			public MouseOpDefaultMButton(ChartControl chart) : base(chart)
 			{
@@ -398,6 +440,7 @@ namespace Rylogic.Gui.WPF
 			}
 			public override void MouseDown(MouseButtonEventArgs e)
 			{
+				m_defer_nav_checkpoint = Chart.DeferNavCheckpoints();
 				var location = e.GetPosition(Chart);
 
 				// If mouse down occurred within the chart, record it
@@ -439,6 +482,7 @@ namespace Rylogic.Gui.WPF
 			public override void MouseUp(MouseButtonEventArgs e)
 			{
 				Util.Dispose(ref m_suspended_chart_changed);
+				Util.Dispose(ref m_defer_nav_checkpoint);
 				var location = e.GetPosition(Chart);
 
 				// If this is a single click...
@@ -478,8 +522,8 @@ namespace Rylogic.Gui.WPF
 		/// <summary>A mouse operation for dragging the chart around or right clicking (Right Button)</summary>
 		public class MouseOpDefaultRButton : MouseOp
 		{
-			/// <summary>The allowed motion based on where the chart was grabbed</summary>
-			private EAxis m_drag_axis_allow;
+			private EAxis m_drag_axis_allow; // The allowed motion based on where the chart was grabbed
+			private IDisposable m_defer_nav_checkpoint;
 
 			public MouseOpDefaultRButton(ChartControl chart)
 				: base(chart)
@@ -497,6 +541,8 @@ namespace Rylogic.Gui.WPF
 				// Right mouse translates for 2D and 3D scene
 				var point_ss = e.GetPosition(Chart.Scene).ToPointF();
 				Chart.Scene.Window.MouseNavigate(point_ss, e.ToMouseBtns(Keyboard.Modifiers), View3d.ENavOp.Translate, true);
+
+				m_defer_nav_checkpoint = Chart.DeferNavCheckpoints();
 			}
 			public override void MouseMove(MouseEventArgs e)
 			{
@@ -522,6 +568,7 @@ namespace Rylogic.Gui.WPF
 			public override void MouseUp(MouseButtonEventArgs e)
 			{
 				Chart.Cursor = Cursors.Arrow;
+				Util.Dispose(ref m_defer_nav_checkpoint);
 				var location = e.GetPosition(Chart);
 
 				// If we haven't dragged, treat it as a click instead

@@ -128,8 +128,8 @@ namespace Rylogic.Gui.WPF
 				Selected = false;
 
 				// Remove any graphics from the previous chart
-				if (m_chart != null)
-					m_chart.Window.RemoveObjects(new[] { Id }, 1, 0);
+				if (m_chart?.Scene != null)
+					m_chart.Scene.Window.RemoveObjects(new[] { Id }, 1, 0);
 
 				// Set the new chart
 				m_chart = chart;
@@ -500,14 +500,17 @@ namespace Rylogic.Gui.WPF
 			{}
 
 			/// <summary>Translate this element from the drag start position</summary>
-			public void DragTranslate(Vector delta, bool commit)
+			public void DragTranslate(Vector delta, EDragState state)
 			{
 				var p = DragStartPosition;
 				p.pos.x += (float)delta.X;
 				p.pos.y += (float)delta.Y;
 				Position = p;
-				if (commit)
+
+				if (state == EDragState.Commit)
 					DragStartPosition = Position;
+				if (state == EDragState.Cancel)
+					Position = DragStartPosition;
 			}
 
 			/// <summary>Position recorded at the time dragging starts</summary>
@@ -526,19 +529,19 @@ namespace Rylogic.Gui.WPF
 			protected virtual void UpdateGfxCore() { }
 			private int m_impl_updating_gfx;
 
-			/// <summary>Add/Remove the graphics associated with this element to the window</summary>
-			internal void UpdateScene(View3d.Window window)
+			/// <summary>Add/Remove the graphics associated with this element to the scene</summary>
+			internal void UpdateScene()
 			{
 				if (IsInvalidated) UpdateGfx();
-				UpdateSceneCore(window);
+				UpdateSceneCore();
 			}
-			protected virtual void UpdateSceneCore(View3d.Window window)
+			protected virtual void UpdateSceneCore()
 			{
 				// Add or remove associated graphics
 				// if (Visible)
-				// 	window.AddObject();
+				// 	Chart.Scene.Window.AddObject();
 				// else
-				// 	window.RemoveObject();
+				// 	Chart.Scene.Window.RemoveObject();
 			}
 
 			/// <summary>Check the self consistency of this element</summary>

@@ -124,6 +124,12 @@ namespace Rylogic.Gfx
 			return alpha_too ? ~m_argb : Bit.SetBits(m_argb, 0x00FFFFFF, ~m_argb);
 		}
 
+		/// <summary>Return Black or White, whichever is best contrast to this colour</summary>
+		public Colour32 InvertBW()
+		{
+			return Intensity > 0.6 ? Black : White;
+		}
+
 		/// <summary>Return this colour with the alpha value changed</summary>
 		public Colour32 Alpha(byte alpha)
 		{

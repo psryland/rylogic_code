@@ -17,17 +17,15 @@ CoinFlip
 	- Figure out how to isolate the order details between back testing and live mode
 	- Add spot price support to Poloniex and Bittrex
 	- Variable spread for backtesting
-	- Dashed 'crosshair' line, also in a lighter colour
 	- pending orders (Stop, OneEnablesOther, )
 	- saving/loading history to/from db
 	- highlight selected positions on graph
 	- remove old positions from charts	
 	- Log view isn't updating when window doesn't have focus
-	- Add S&R lines + other drawing tools
 	- Add pending orders
-	- Line indicators
 	- MOAR indicators
 	- Consider an arbitrage loop between BTC/USDT/USDC (check it for profitability)
+	- Create an indicators panel (like trading view) that makes adding/accessing indicators easier
 	
 EDTradeAdvisor
 	- ED Style

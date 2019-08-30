@@ -96,7 +96,7 @@ namespace Rylogic.Gui.WPF
 			}
 
 			/// <summary>Add the graphics associated with the axes to the scene</summary>
-			internal void AddToScene(View3d.Window window)
+			internal void UpdateScene(View3d.Window window)
 			{
 				// Position the grid lines so that they line up with the axis tick marks
 				// Grid lines are modelled from the bottom left corner
@@ -152,7 +152,7 @@ namespace Rylogic.Gui.WPF
 			[DebuggerDisplay("{AxisType} [{Min} , {Max}]")]
 			public class Axis : IDisposable
 			{
-				public delegate string TickTextCB(double x, double step);
+				public delegate string TickTextCB(double x, double? step = null);
 
 				private readonly ChartControl m_chart;
 				public Axis(EAxis axis, ChartControl chart)
@@ -477,7 +477,7 @@ namespace Rylogic.Gui.WPF
 				}
 
 				/// <summary>Default value to text conversion</summary>
-				public string DefaultTickText(double x, double step)
+				public string DefaultTickText(double x, double? step = null)
 				{
 					// This solves the rounding problem for values near zero when the axis span could be anything
 					return !Math_.FEql(x / Span, 0.0) ? Math_.RoundSD(x, 5).ToString("G8") : "0";

@@ -7,14 +7,29 @@ using Rylogic.Common;
 using Rylogic.Extn;
 using Rylogic.Extn.Windows;
 using Rylogic.Maths;
+using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
 	public partial class ChartControl
 	{
+		private UndoHistory<NavHistoryRecord> m_nav_history;
+
 		/// <summary>Set up the chart for MouseOps</summary>
 		private void InitNavigation()
-		{}
+		{
+			m_nav_history = new UndoHistory<NavHistoryRecord>
+			{
+				IsDuplicate = NavHistoryRecord.ApproxEqual,
+				ApplySnapshot = snapshot =>
+				{
+					XAxis.Range = snapshot.XRange;
+					YAxis.Range = snapshot.YRange;
+					SetCameraFromRange();
+					Scene.Invalidate();
+				},
+			};
+		}
 
 		/// <summary>Enable/Disable mouse navigation</summary>
 		public bool DefaultMouseControl
@@ -79,6 +94,8 @@ namespace Rylogic.Gui.WPF
 				case MouseButton.Left:   MouseOperations.SetPending(args.ChangedButton, new MouseOpDefaultLButton(this)); break;
 				case MouseButton.Middle: MouseOperations.SetPending(args.ChangedButton, new MouseOpDefaultMButton(this)); break;
 				case MouseButton.Right:  MouseOperations.SetPending(args.ChangedButton, new MouseOpDefaultRButton(this)); break;
+				case MouseButton.XButton1: UndoNavigation(); break;
+				case MouseButton.XButton2: RedoNavigation(); break;
 				}
 			}
 
@@ -157,6 +174,14 @@ namespace Rylogic.Gui.WPF
 			var chart_pt = ClientToChart(location);
 			var hit = HitTestZoneCS(location, Keyboard.Modifiers, args.ToMouseBtns());
 
+			// Batch mouse wheel events into 100ms groups
+			var defer_nav_checkpoint = DeferNavCheckpoints();
+			Dispatcher_.BeginInvokeDelayed(() =>
+			{
+				Util.Dispose(ref defer_nav_checkpoint);
+				SaveNavCheckpoint();
+			}, TimeSpan.FromMilliseconds(100));
+
 			var scale = 0.001f;
 			if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) scale *= 0.1f;
 			if (Keyboard.Modifiers.HasFlag(ModifierKeys.Alt)) scale *= 0.01f;
@@ -233,6 +258,8 @@ namespace Rylogic.Gui.WPF
 				break;
 			}
 		}
+
+		/// <summary>Handle key events</summary>
 		protected override void OnKeyDown(KeyEventArgs args)
 		{
 			// *** Use PreviewKeyDown to add MouseOps ***
@@ -419,6 +446,62 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 		public event EventHandler<KeyEventArgs> TranslateKey;
+
+		/// <summary>Remove all nav checkpoint history</summary>
+		public void ClearNavHistory()
+		{
+			m_nav_history.Clear();
+		}
+
+		/// <summary>Add an undo record to the navigation history</summary>
+		public void SaveNavCheckpoint()
+		{
+			m_nav_history.Add(new NavHistoryRecord(this));
+		}
+
+		/// <summary>Prevent navigation check points from being added to the history</summary>
+		public IDisposable DeferNavCheckpoints()
+		{
+			return m_nav_history.Defer();
+		}
+
+		/// <summary>Go back to the previous chart position</summary>
+		public void UndoNavigation()
+		{
+			m_nav_history.Undo();
+		}
+
+		/// <summary>Go forward to the next chart position</summary>
+		public void RedoNavigation()
+		{
+			m_nav_history.Redo();
+		}
+
+		/// <summary>A snapshot of the axis range</summary>
+		private class NavHistoryRecord
+		{
+			public NavHistoryRecord(ChartControl chart)
+			{
+				XRange = chart.XAxis.Range;
+				YRange = chart.YAxis.Range;
+			}
+
+			/// <summary>The chart range at the snapshot</summary>
+			public RangeF XRange { get; }
+			public RangeF YRange { get; }
+
+			/// <summary>True if 'lhs' and 'rhs' are very similar</summary>
+			public static bool ApproxEqual(NavHistoryRecord lhs, NavHistoryRecord rhs)
+			{
+				// Use a tolerance of 1% of the smallest range
+				var tol = 0.01 * Math.Min(Math.Min(lhs.XRange.Size, lhs.YRange.Size), Math.Min(rhs.XRange.Size, rhs.YRange.Size));
+				return
+					Math_.FEqlAbsolute(lhs.XRange.Beg, rhs.XRange.Beg, tol) &&
+					Math_.FEqlAbsolute(lhs.XRange.End, rhs.XRange.End, tol) &&
+					Math_.FEqlAbsolute(lhs.YRange.Beg, rhs.YRange.Beg, tol) &&
+					Math_.FEqlAbsolute(lhs.YRange.End, rhs.YRange.End, tol);
+			}
+		}
 
 		/// <summary>Area selection mode</summary>
 		public enum EAreaSelectMode

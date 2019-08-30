@@ -108,10 +108,10 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Update the graphics for this indicator and add it to the scene</summary>
-		protected override void UpdateSceneCore(View3d.Window window)
+		protected override void UpdateSceneCore()
 		{
 			// Remove all series data graphics
-			window.RemoveObjects(new[] { Id }, 1, 0);
+			Chart.Scene.Window.RemoveObjects(new[] { Id }, 1, 0);
 
 			// Add each graphics piece over the range
 			if (Visible)
@@ -127,10 +127,10 @@ namespace Rylogic.Gui.WPF
 					Math.Min(Chart.XAxis.Max, range_x.End));
 
 				// Add each graphics piece over the range
-				foreach (var piece in Cache.Get(range))
+				foreach (var piece in Cache.Get(range).OfType<ChartGfxPiece>())
 				{
-					if (piece.Gfx == null) continue;
-					window.AddObject(piece.Gfx);
+					if (piece.Gfx == null) return;
+					Chart.Scene.Window.AddObject(piece.Gfx);
 				}
 			}
 		}

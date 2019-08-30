@@ -8,6 +8,13 @@ using Rylogic.Utility;
 
 namespace Rylogic.Gui.WPF
 {
+	/// <summary>Interface of a graphics element representing an X-Axis range in a chart</summary>
+	public interface IChartGfxPiece :IDisposable
+	{
+		/// <summary>The X-Axis span covered by this piece</summary>
+		RangeF Range { get; }
+	}
+
 	/// <summary>A cache of graphics objects that span the X-Axis</summary>
 	public class ChartGfxCache : IDisposable
 	{
@@ -18,7 +25,7 @@ namespace Rylogic.Gui.WPF
 
 		public ChartGfxCache(CreatePieceHandler handler)
 		{
-			Pieces = new List<ChartGfxPiece>();
+			Pieces = new List<IChartGfxPiece>();
 			CreatePiece = handler;
 		}
 		public void Dispose()
@@ -34,27 +41,34 @@ namespace Rylogic.Gui.WPF
 		}
 		public void Invalidate(RangeF x_range)
 		{
-			var beg = Pieces.BinarySearch(p => p.Range.CompareTo(x_range.Beg), find_insert_position: true);
-			var end = Pieces.BinarySearch(p => p.Range.CompareTo(x_range.End), find_insert_position: true);
-			Util.DisposeRange(Pieces, beg, end - beg);
-			Pieces.RemoveRange(beg, end - beg);
+			if (x_range == RangeF.Invalid)
+			{
+				Invalidate();
+			}
+			else
+			{
+				var beg = Pieces.BinarySearch(p => p.Range.CompareTo(x_range.Beg), find_insert_position: true);
+				var end = Pieces.BinarySearch(p => p.Range.CompareTo(x_range.End), find_insert_position: true);
+				Util.DisposeRange(Pieces, beg, end - beg);
+				Pieces.RemoveRange(beg, end - beg);
+			}
 		}
 
 		/// <summary>The collection of cached graphics models</summary>
-		private List<ChartGfxPiece> Pieces
+		public List<IChartGfxPiece> Pieces
 		{
-			get { return m_pieces; }
-			set
+			get => m_pieces;
+			private set
 			{
 				if (m_pieces == value) return;
 				Util.DisposeRange(m_pieces);
 				m_pieces = value;
 			}
 		}
-		private List<ChartGfxPiece> m_pieces;
+		private List<IChartGfxPiece> m_pieces;
 
 		/// <summary>Get the series data graphics that spans the given x range</summary>
-		public IEnumerable<ChartGfxPiece> Get(RangeF range)
+		public IEnumerable<IChartGfxPiece> Get(RangeF range)
 		{
 			// Return each graphics piece over the range
 			for (var x = range.Beg; x < range.End;)
@@ -67,7 +81,7 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Return the graphics piece that spans 'x'</summary>
-		public ChartGfxPiece CacheGet(double x)
+		public IChartGfxPiece CacheGet(double x)
 		{
 			// Search the cache for the model that spans 'x'
 			var idx = Pieces.BinarySearch(p => p.Range.CompareTo(x));
@@ -94,11 +108,11 @@ namespace Rylogic.Gui.WPF
 		/// Implementers of this handler should return a graphics object that spans
 		/// some region about 'x', clipped by 'missing'. The returned graphics piece
 		/// should contain the x-range that the graphics represents.</summary>
-		public delegate ChartGfxPiece CreatePieceHandler(double x, RangeF missing);
+		public delegate IChartGfxPiece CreatePieceHandler(double x, RangeF missing);
 	}
 
-	/// <summary>Graphics for a part of the series data</summary>
-	public class ChartGfxPiece :IDisposable
+	/// <summary>View3d graphics for a part of the series data</summary>
+	public class ChartGfxPiece :IChartGfxPiece
 	{
 		public ChartGfxPiece(View3d.Object gfx, RangeF range)
 		{

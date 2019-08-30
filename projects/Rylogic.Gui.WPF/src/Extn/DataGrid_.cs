@@ -9,6 +9,34 @@ namespace Rylogic.Gui.WPF
 {
 	public static class DataGrid_
 	{
+		public struct GridAddressData
+		{
+			public int CellIndex;
+			public int RowIndex;
+		}
+
+		/// <summary>Returns the cell that contains 'dp' (or null)</summary>
+		public static DataGridCell GetCell(DependencyObject dp)
+		{
+			return Gui_.FindVisualParent<DataGridCell>(dp);
+		}
+
+		/// <summary>Returns the row that contains this cell</summary>
+		public static DataGridRow GetRow(this DataGridCell cell)
+		{
+			return Gui_.FindVisualParent<DataGridRow>(cell);
+		}
+
+		/// <summary>Returns the cell and column index of this cell</summary>
+		public static GridAddressData GridAddress(this DataGridCell cell)
+		{
+			return new GridAddressData
+			{
+				CellIndex = cell.Column.DisplayIndex,
+				RowIndex = cell.GetRow().GetIndex(),
+			};
+		}
+
 		/// <summary>Display a context menu for showing/hiding columns in the grid (at 'location' relative to the grid).</summary>
 		public static void ColumnVisibilityCMenu(this DataGrid grid, Action<DataGridColumn> on_vis_changed = null)
 		{

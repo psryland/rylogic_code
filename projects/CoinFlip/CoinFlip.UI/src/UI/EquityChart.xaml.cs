@@ -202,7 +202,7 @@ namespace CoinFlip.UI
 				}
 
 				// Handlers
-				string HandleChartXAxisTickText(double x, double step)
+				string HandleChartXAxisTickText(double x, double? step = null)
 				{
 					if (SettingsData.Settings.Chart.XAxisLabelMode == EXAxisLabelMode.AxisIndex)
 						return x.ToString();
@@ -212,10 +212,10 @@ namespace CoinFlip.UI
 
 					// Convert the x axis value to a date time.
 					var dt_curr = Misc.CryptoCurrencyEpoch + TimeSpan.FromDays(x);
-					if (x - step < 0)
+					if (step == null || x - step < 0)
 						return Misc.ShortTimeString(dt_curr, dt_curr, true);
 
-					var dt_prev = Misc.CryptoCurrencyEpoch + TimeSpan.FromDays(x - step);
+					var dt_prev = Misc.CryptoCurrencyEpoch + TimeSpan.FromDays(x - step.Value);
 
 					// Get the date time values in the correct time zone
 					dt_curr = (SettingsData.Settings.Chart.XAxisLabelMode == EXAxisLabelMode.LocalTime)
@@ -226,7 +226,7 @@ namespace CoinFlip.UI
 						: dt_prev.UtcDateTime;
 
 					// First tick on the x axis
-					var first_tick = x - step < Chart.XAxis.Min;
+					var first_tick = x - step.Value < Chart.XAxis.Min;
 
 					// Show more of the time stamp depending on how it differs from the previous time stamp
 					return Misc.ShortTimeString(dt_curr, dt_prev, first_tick);

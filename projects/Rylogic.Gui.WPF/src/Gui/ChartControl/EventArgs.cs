@@ -41,27 +41,32 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Event args for the ChartClicked event</summary>
-		public class ChartClickedEventArgs : EventArgs
+		public class ChartClickedEventArgs :EventArgs
 		{
+			// Notes:
+			//  - MouseButtonEventArgs.ClickCount is always 1 for mouse up events in windows, so to 
+			//    support multiple clicks on the chart I'm allowing the click count to be provided externally.
+
 			private readonly MouseButtonEventArgs m_mouse_event;
-			public ChartClickedEventArgs(HitTestResult hits, MouseButtonEventArgs mouse_event)
+			public ChartClickedEventArgs(HitTestResult hits, MouseButtonEventArgs mouse_event, int click_count = 0)
 			{
 				m_mouse_event = mouse_event;
 				HitResult = hits;
+				ClickCount = Math.Max(mouse_event.ClickCount, click_count);
 				Handled = false;
 			}
 
 			/// <summary>Results of a hit test performed at the click location</summary>
 			public HitTestResult HitResult { get; }
 
+			/// <summary>The number of times the changed button was clicked.</summary>
+			public int ClickCount { get; }
+
 			/// <summary>The button that was clicked</summary>
 			public MouseButton ChangedButton => m_mouse_event.ChangedButton;
 
 			/// <summary>The state of the clicked button</summary>
 			public MouseButtonState ButtonState => m_mouse_event.ButtonState;
-
-			/// <summary>The number of times the changed button was clicked.</summary>
-			public int ClickCount => m_mouse_event.ClickCount;
 
 			/// <summary>the current state of the left mouse button.</summary>
 			public MouseButtonState LeftButton => m_mouse_event.LeftButton;
@@ -88,20 +93,22 @@ namespace Rylogic.Gui.WPF
 		/// <summary>Event args for when an element or elements is dragged within the chart</summary>
 		public class ChartDraggedEventArgs :EventArgs
 		{
-			public ChartDraggedEventArgs(HitTestResult hits, Vector delta, bool commit)
+			public ChartDraggedEventArgs(HitTestResult hits, Vector delta, EDragState state)
 			{
 				HitResult = hits;
+				Delta = delta;
+				State = state;
 				Handled = false;
 			}
 
 			/// <summary>Results of a hit test performed at the click location</summary>
 			public HitTestResult HitResult { get; }
 
-			/// <summary>The drag vector from the start position</summary>
+			/// <summary>The drag vector from the start position (in chart space)</summary>
 			public Vector Delta { get; }
 
 			/// <summary>True when the drag is to be committed (i.e. at the end of a drag and escape not pressed)</summary>
-			public bool Commit { get; }
+			public EDragState State { get; }
 
 			/// <summary>Set to true to suppress default chart click behaviour</summary>
 			public bool Handled { get; set; }

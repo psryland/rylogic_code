@@ -107,11 +107,11 @@ namespace Rylogic.Extn.Windows
 		{
 			return new Maths.v2((float)pt.X, (float)pt.Y);
 		}
-		public static Point ToSysWinPoint(this System.Drawing.PointF pt)
+		public static Point ToPointD(this System.Drawing.PointF pt)
 		{
 			return new Point(pt.X, pt.Y);
 		}
-		public static Point ToSysWinPoint(this Maths.v2 pt)
+		public static Point ToPointD(this Maths.v2 pt)
 		{
 			return new Point(pt.x, pt.y);
 		}
@@ -128,7 +128,7 @@ namespace Rylogic.Extn.Windows
 		{
 			return new System.Drawing.RectangleF((float)rect.X, (float)rect.Y, (float)rect.Width, (float)rect.Height);
 		}
-		public static Rect ToSysWinRect(this System.Drawing.RectangleF rect)
+		public static Rect ToRectD(this System.Drawing.RectangleF rect)
 		{
 			return new Rect(rect.X, rect.Y, rect.Width, rect.Height);
 		}

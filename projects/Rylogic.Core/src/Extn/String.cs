@@ -217,6 +217,13 @@ namespace Rylogic.Extn
 			return idx == -1 ? str : str.Substring(0, idx) + Environment.NewLine + "...";
 		}
 
+		/// <summary>Returns this string with 'prefix' prepended, and 'postfix' appended, if this string is not null or empty</summary>
+		public static string Surround(this string str, string prefix, string postfix)
+		{
+			if (string.IsNullOrEmpty(str)) return str;
+			return prefix + str + postfix;
+		}
+
 		/// <summary>Pluralise this string based on count.</summary>
 		public static string Plural(this string str, int count)
 		{

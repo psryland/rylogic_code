@@ -223,6 +223,15 @@ namespace Rylogic.Gui.WPF.Converters
 				throw new Exception($"{nameof(BoolSelect)} parameter has the incorrect format. Expected '<true_value>|<false_value>'");
 
 			var val = b ? c[0] : c[1];
+
+			// Special case conversions not handled by 'ConvertTo'
+			if (targetType == typeof(Colour32))
+				return Colour32.Parse(val);
+			if (targetType == typeof(Color))
+				return Colour32.Parse(val).ToMediaColor();
+			if (targetType == typeof(Brush))
+				return Colour32.Parse(val).ToMediaBrush();
+
 			return Util.ConvertTo(val, targetType);
 		}
 		public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

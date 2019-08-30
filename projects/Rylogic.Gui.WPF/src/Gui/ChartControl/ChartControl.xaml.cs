@@ -852,67 +852,38 @@ namespace Rylogic.Gui.WPF
 		/// <summary>True while the cross hair is visible</summary>
 		public bool ShowCrossHair
 		{
-			get { return m_show_cross_hair; }
+			get => m_xhair != null;
 			set
 			{
-				if (m_show_cross_hair == value) return;
-				if (m_show_cross_hair)
+				if (ShowCrossHair == value) return;
+				if (ShowCrossHair)
 				{
 					MouseMove -= OnMouseMoveCrossHair;
 					MouseWheel -= OnMouseWheelCrossHair;
-					Scene.RemoveObject(Tools.CrossHair);
+					Util.Dispose(ref m_xhair);
 				}
-				m_show_cross_hair = value;
-				if (m_show_cross_hair)
+				m_xhair = value ? new CrossHair(this) : null;
+				if (ShowCrossHair)
 				{
-					Scene.AddObject(Tools.CrossHair);
 					MouseWheel += OnMouseWheelCrossHair;
 					MouseMove += OnMouseMoveCrossHair;
 				}
-				Scene.Invalidate();
 
 				// Handlers
 				void OnMouseMoveCrossHair(object sender, MouseEventArgs e)
 				{
 					var location = e.GetPosition(this);
 					if (SceneBounds.Contains(location))
-					{
-						PositionCrossHair(ClientToChart(location));
-						Scene.Invalidate();
-					}
+						m_xhair.PositionCrossHair(location);
 				}
 				void OnMouseWheelCrossHair(object sender, MouseEventArgs e)
 				{
 					var location = e.GetPosition(this);
-					if (SceneBounds.Contains(location))
-					{
-						PositionCrossHair(ClientToChart(location));
-						Scene.Invalidate();
-					}
-				}
-				void PositionCrossHair(Point chart_pt)
-				{
-					if (Tools.CrossHair == null)
-						return;
-
-					// The visible area of the chart at the camera focus distance
-					var view = Camera.ViewArea(Camera.FocusDist);
-
-					// 'chart_pt' converted to camera space
-					var pt_cs = ChartToCamera(chart_pt);
-
-					// Set the o2w for the cross hair
-					// Scale by 2* because the cross hair may be near the border of the chart
-					// and we need one half of the cross to be scaled to the full chart width.
-					var o2p = new m4x4(Camera.O2W.rot, Camera.O2W * pt_cs) * m3x4.Scale(2 * view.x, 2 * view.y, 1f).m4x4;
-					o2p.w.z += (float)(Camera.FocusDist * Options.CrossHairZOffset);
-					Tools.CrossHair.O2P = o2p;
-
-					Scene.Invalidate();
+					m_xhair.PositionCrossHair(location);
 				}
 			}
 		}
-		private bool m_show_cross_hair;
+		private CrossHair m_xhair;
 
 		/// <summary>Binding helpers</summary>
 		public Visibility XAxisLabelVisibility => Options.ShowAxes && XAxis.Label.HasValue() ? Visibility.Visible : Visibility.Collapsed;

@@ -56,11 +56,11 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		protected override void OnBuildScene()
 		{
 			// Update axis graphics
-			Chart.Range.AddToScene(Window);
+			Chart.Range.UpdateScene(Window);
 
 			// Add/Remove all chart elements
 			foreach (var elem in Chart.Elements)
-				elem.UpdateScene(Window);
+				elem.UpdateScene();
 
 			// Raise the BuildScene event
 			base.OnBuildScene();

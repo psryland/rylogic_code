@@ -64,5 +64,14 @@ namespace Rylogic.Gui.WPF
 			/// Setting 'Cancel' for this event will abort the deletion.</summary>
 			RemovingElements,
 		}
+
+		/// <summary>Actions used during dragging</summary>
+		public enum EDragState
+		{
+			Start,
+			Dragging,
+			Commit,
+			Cancel,
+		}
 	}
 }

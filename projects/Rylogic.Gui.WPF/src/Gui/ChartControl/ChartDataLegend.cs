@@ -158,16 +158,16 @@ namespace Rylogic.Gui.WPF
 		}
 
 		/// <summary>Add/Remove graphics from the scene</summary>
-		protected override void UpdateSceneCore(View3d.Window window)
+		protected override void UpdateSceneCore()
 		{
-			base.UpdateSceneCore(window);
+			base.UpdateSceneCore();
 			if (Gfx != null)
 			{
 				Gfx.O2P = Position;
 				if (Visible)
-					window.AddObject(Gfx);
+					Chart.Scene.Window.AddObject(Gfx);
 				else
-					window.RemoveObject(Gfx);
+					Chart.Scene.Window.RemoveObject(Gfx);
 			}
 		}
 

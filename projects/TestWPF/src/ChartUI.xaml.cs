@@ -66,7 +66,7 @@ namespace TestWPF
 
 			m_chart.BuildScene += (s, a) =>
 			{
-				m_chart.Window.AddObject(m_obj0);
+				m_chart.Scene.Window.AddObject(m_obj0);
 			};
 
 			m_series = new ChartDataSeries("waves", ChartDataSeries.EFormat.XRealYReal);

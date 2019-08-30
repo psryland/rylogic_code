@@ -70,13 +70,13 @@ namespace Rylogic.Common
 		public DispatcherPriority Priority { get; set; }
 
 		/// <summary>The thread context in which to invoke 'Action'</summary>
-		public Dispatcher Dispatcher { get; private set; }
+		public Dispatcher Dispatcher { get; }
 
 		/// <summary>Toggle switch for batching on/off</summary>
 		public bool Immediate
 		{
-			get { return m_immediate || AllImmediate; }
-			set { m_immediate = value; }
+			get => m_immediate || AllImmediate;
+			set => m_immediate = value;
 		}
 		private bool m_immediate;
 
