@@ -80,10 +80,10 @@ namespace CoinFlip.UI.GfxObjects
 
 			Gfx = new View3d.Object(ldr, false, Id, null);
 		}
-		protected override void UpdateSceneCore(View3d.Window window)
+		protected override void UpdateSceneCore()
 		{
 			// Add the graphics to the chart
-			base.UpdateSceneCore(window);
+			base.UpdateSceneCore();
 			if (Gfx == null)
 				return;
 
@@ -95,11 +95,11 @@ namespace CoinFlip.UI.GfxObjects
 					m4x4.Translation((float)Chart.XAxis.Min, (float)PriceQ2B, CandleChart.ZOrder.Indicators) *
 					m4x4.Scale((float)Chart.XAxis.Span, 1f, 1f, v4.Origin);
 
-				window.AddObject(Gfx);
+				Chart.Scene.Window.AddObject(Gfx);
 			}
 			else
 			{
-				window.RemoveObject(Gfx);
+				Chart.Scene.Window.RemoveObject(Gfx);
 			}
 		}
 

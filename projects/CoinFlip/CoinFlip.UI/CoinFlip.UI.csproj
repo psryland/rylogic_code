@@ -93,13 +93,19 @@
     <Compile Include="src\GfxObjects\Candles.cs" />
     <Compile Include="src\GfxObjects\SpotPrice.cs" />
     <Compile Include="src\GfxObjects\UpdatingText.cs" />
+    <Compile Include="src\Indicators\HorizontalLine.cs" />
+    <Compile Include="src\Indicators\IndicatorLegend.xaml.cs">
+      <DependentUpon>IndicatorLegend.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\Indicators\MovingAverage.cs" />
     <Compile Include="src\Indicators\MovingAverageUI.xaml.cs">
       <DependentUpon>MovingAverageUI.xaml</DependentUpon>
     </Compile>
-    <Compile Include="src\Misc\ELineStyles.cs" />
     <Compile Include="src\Indicators\IndicatorView.cs" />
     <Compile Include="src\Indicators\TrendLine.cs" />
+    <Compile Include="src\Indicators\HorizontalLineUI.xaml.cs">
+      <DependentUpon>HorizontalLineUI.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\Indicators\TrendLineUI.xaml.cs">
       <DependentUpon>TrendLineUI.xaml</DependentUpon>
     </Compile>
@@ -151,9 +157,17 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="src\Indicators\IndicatorLegend.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="src\Indicators\MovingAverageUI.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Indicators\HorizontalLineUI.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="src\Indicators\TrendLineUI.xaml">
       <SubType>Designer</SubType>
@@ -264,6 +278,10 @@
     <Resource Include="money.ico" />
   </ItemGroup>
   <ItemGroup>
+    <Resource Include="res\plus_gray.png" />
+    <Resource Include="res\plus.png" />
+    <Resource Include="res\cross_hair_blue.png" />
+    <Resource Include="res\cross_hair_gray.png" />
     <Resource Include="res\options.png" />
     <Resource Include="res\market_depth_colour.png" />
     <Resource Include="res\market_depth_gray.png" />

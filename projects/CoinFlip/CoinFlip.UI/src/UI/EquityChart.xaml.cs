@@ -355,7 +355,7 @@ namespace CoinFlip.UI
 		/// <summary>Add graphics and elements to the chart</summary>
 		private void BuildScene()
 		{
-			Chart.Window.RemoveObjects(new[] { CtxId }, 1, 0);
+			Chart.Scene.Window.RemoveObjects(new[] { CtxId }, 1, 0);
 			if (!DockControl.IsVisible)
 				return;
 

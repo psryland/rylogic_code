@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -27,17 +29,13 @@ namespace CoinFlip.UI
 			InitializeComponent();
 			DockControl = new DockControl(this, "Chart") { DestroyOnClose = true };
 			ChartSelector = new ExchPairTimeFrame(model);
-			IndicatorViews = new List<IIndicatorView>();
+			IndicatorViews = new ObservableCollection<IIndicatorView>();
 			Chart = m_chart_candles;
+			Legend = m_indicator_legend;
 			Model = model;
 
-			GfxB2Q = new GfxObjects.SpotPrice(SettingsData.Settings.Chart.B2QColour);
-			GfxQ2B = new GfxObjects.SpotPrice(SettingsData.Settings.Chart.Q2BColour);
-			GfxUpdatingText = new GfxObjects.UpdatingText();
-			B2QPriceLabel = new TextBlock(); // Add first, so green is above red
-			Q2BPriceLabel = new TextBlock();
-			CrossHairCandleLabel = new TextBlock();
-			CrossHairPriceLabel = new TextBlock();
+			GfxSpotPrices = new GfxObjects.SpotPrices(Chart);
+			GfxUpdatingText = new GfxObjects.UpdatingText(Chart);
 
 			// Commands
 			ToggleShowOpenOrders = Command.Create(this, ToggleShowOpenOrdersInternal);
@@ -54,8 +52,7 @@ namespace CoinFlip.UI
 			GfxOpenOrders = null;
 			GfxCompletedOrders = null;
 			GfxUpdatingText = null;
-			GfxQ2B = null;
-			GfxB2Q = null;
+			GfxSpotPrices = null;
 			GfxMarketDepth = null;
 			GfxCandles = null;
 			ChartSelector = null;
@@ -69,7 +66,7 @@ namespace CoinFlip.UI
 		/// <summary>Logic</summary>
 		public Model Model
 		{
-			get { return m_model; }
+			get => m_model;
 			private set
 			{
 				if (m_model == value) return;
@@ -155,7 +152,7 @@ namespace CoinFlip.UI
 						}
 					case NotifyCollectionChangedAction.Remove:
 						{
-							IndicatorViews.RemoveIf(x => x.IndicatorId == e.Indicator.Id, dispose:true);
+							IndicatorViews.RemoveIf(x => x.IndicatorId == e.Indicator.Id, dispose: true);
 							break;
 						}
 					}
@@ -255,7 +252,7 @@ namespace CoinFlip.UI
 				}
 
 				// Handlers
-				string HandleChartXAxisTickText(double x, double step)
+				string HandleChartXAxisTickText(double x, double? step = null)
 				{
 					// Note:
 					// The X axis is not a linear time axis because the markets are not online all the time.
@@ -276,11 +273,11 @@ namespace CoinFlip.UI
 
 					// If the ticks are within the range of instrument data, use the actual time stamp.
 					// This accounts for missing candles in the data range.
-					var prev = (int)(x - step);
+					var prev = (int)(x - step ?? 0.0);
 					var curr = (int)(x);
 
 					// If the current tick mark represents the same candle as the previous one, no text is required
-					if (prev == curr)
+					if (prev == curr && step != null)
 						return string.Empty;
 
 					// Get the date time for the tick
@@ -297,8 +294,7 @@ namespace CoinFlip.UI
 						prev < last ? Instrument[prev].TimestampUTC :
 						prev < last + 1000 ? Instrument[last - 1].TimestampUTC + Misc.TimeFrameToTimeSpan(prev - last + 1, Instrument.TimeFrame) :
 						default;
-					if (dt_curr == default ||
-						dt_prev == default)
+					if (dt_curr == default || dt_prev == default)
 						return string.Empty;
 
 					// Get the date time values in the correct time zone
@@ -310,12 +306,12 @@ namespace CoinFlip.UI
 						: dt_prev.UtcDateTime;
 
 					// First tick on the x axis
-					var first_tick = curr == first || prev < first || x - step < Chart.XAxis.Min;
+					var first_tick = curr == first || prev < first || step == null || x - step < Chart.XAxis.Min;
 
 					// Show more of the time stamp depending on how it differs from the previous time stamp
 					return Misc.ShortTimeString(dt_curr, dt_prev, first_tick);
 				}
-				string HandleChartYAxisTickText(double x, double step)
+				string HandleChartYAxisTickText(double x, double? step = null)
 				{
 					if (Instrument == null)
 						return string.Empty;
@@ -426,9 +422,8 @@ namespace CoinFlip.UI
 						{
 							// Delete selected indicators
 							foreach (var indy in IndicatorViews.Where(x => x.Selected).ToList())
-							{
 								Model.Indicators.Remove(Pair.Name, indy.IndicatorId);
-							}
+
 							e.Handled = true;
 							break;
 						}
@@ -437,6 +432,44 @@ namespace CoinFlip.UI
 			}
 		}
 		private ChartControl m_chart;
+
+		/// <summary>The indicator legend</summary>
+		public IndicatorLegend Legend
+		{
+			get => m_legend;
+			private set
+			{
+				if (m_legend == value) return;
+				if (m_legend != null)
+				{
+					m_legend.PreviewKeyDown -= HandleKey;
+				}
+				m_legend = value;
+				if (m_legend != null)
+				{
+					m_legend.PreviewKeyDown += HandleKey;
+				}
+
+				// Handlers
+				void HandleKey(object sender, KeyEventArgs e)
+				{
+					switch (e.Key)
+					{
+					case Key.Delete:
+						{
+							// Delete the selected indicator
+							var indy = Legend.SelectedIndicator;
+							if (indy != null)
+								Model.Indicators.Remove(Pair.Name, indy.IndicatorId);
+
+							e.Handled = true;
+							break;
+						}
+					}
+				}
+			}
+		}
+		private IndicatorLegend m_legend;
 
 		/// <summary>The data displayed on the chart</summary>
 		public Instrument Instrument
@@ -530,17 +563,31 @@ namespace CoinFlip.UI
 		private int m_prev_count;
 
 		/// <summary>Indicators on this chart</summary>
-		private List<IIndicatorView> IndicatorViews
+		private ObservableCollection<IIndicatorView> IndicatorViews
 		{
 			get => m_indicator_views;
 			set
 			{
+				// Notes:
+				//  - Don't make this an observable collection. This collection is maintained by Model.Indicators.CollectionChanged
+				//    to match indicator views 1-to-1 with the indicators in the model associated with this instrument. Do not try
+				//    to delete Model.Indicators based on removals from this collection.
+				//  - This collection is observable so that the DataGrid updates in the UI automatically.
+
 				if (m_indicator_views == value) return;
-				Util.DisposeAll(m_indicator_views);
+				if (m_indicator_views != null)
+				{
+					m_indicator_legend.Indicators = null;
+					Util.DisposeAll(m_indicator_views);
+				}
 				m_indicator_views = value;
+				if (m_indicator_views != null)
+				{
+					m_indicator_legend.Indicators = CollectionViewSource.GetDefaultView(m_indicator_views);
+				}
 			}
 		}
-		private List<IIndicatorView> m_indicator_views;
+		private ObservableCollection<IIndicatorView> m_indicator_views;
 
 		/// <summary>A string description of the period of time shown in the chart</summary>
 		public string VisibleTimeSpan
@@ -580,7 +627,7 @@ namespace CoinFlip.UI
 		/// <summary>Add graphics and elements to the chart</summary>
 		private void BuildScene()
 		{
-			Chart.Window.RemoveObjects(new[] { CtxId }, 1, 0);
+			Chart.Scene.Window.RemoveObjects(new[] { CtxId }, 1, 0);
 			if (Instrument == null || !DockControl.IsVisible)
 				return;
 
@@ -592,65 +639,11 @@ namespace CoinFlip.UI
 
 				// Add the candles that cover 'range'
 				foreach (var gfx in GfxCandles.Get(range))
-					Chart.Window.AddObject(gfx);
+					Chart.Scene.Window.AddObject(gfx);
 			}
 
 			// Price Data
-			{
-				// Add the spot price lines and labels
-				var pair = Instrument.Pair;
-				var spot_q2b = pair.SpotPrice[ETradeType.Q2B];
-				if (spot_q2b != null)
-				{
-					var price = spot_q2b.Value;
-					var pt = Chart.ChartToClient(new Point(Chart.XAxis.Max, price));
-					pt = Gui_.MapPoint(Chart, Chart.YAxisPanel, pt);
-
-					// Spot price label
-					Canvas.SetLeft(Q2BPriceLabel, 0);
-					Canvas.SetTop(Q2BPriceLabel, pt.Y - Q2BPriceLabel.RenderSize.Height/2);
-					Q2BPriceLabel.Text = spot_q2b.Value.ToString(8, false);
-					Q2BPriceLabel.Visibility = Visibility.Visible;
-
-					if (GfxQ2B != null)
-					{
-						GfxQ2B.O2P = m4x4.Scale((float)Chart.XAxis.Span, 1f, 1f, new v4((float)Chart.XAxis.Min, (float)price, ZOrder.CurrentPrice, 1f));
-						Chart.Window.AddObject(GfxQ2B);
-					}
-				}
-				else
-				{
-					Q2BPriceLabel.Visibility = Visibility.Collapsed;
-					if (GfxQ2B != null)
-						Chart.Window.RemoveObject(GfxQ2B);
-				}
-
-				var spot_b2q = pair.SpotPrice[ETradeType.B2Q];
-				if (spot_b2q != null)
-				{
-					var price = spot_b2q.Value;
-					var pt = Chart.ChartToClient(new Point(Chart.XAxis.Max, price));
-					pt = Gui_.MapPoint(Chart, Chart.YAxisPanel, pt);
-
-					// Spot price label
-					Canvas.SetLeft(B2QPriceLabel, 0);
-					Canvas.SetTop(B2QPriceLabel, pt.Y - B2QPriceLabel.RenderSize.Height / 2);
-					B2QPriceLabel.Text = spot_b2q.Value.ToString(8, false);
-					B2QPriceLabel.Visibility = Visibility.Visible;
-
-					if (GfxB2Q != null)
-					{
-						GfxB2Q.O2P = m4x4.Scale((float)Chart.XAxis.Span, 1f, 1f, new v4((float)Chart.XAxis.Min, (float)price, ZOrder.CurrentPrice, 1f));
-						Chart.Window.AddObject(GfxB2Q);
-					}
-				}
-				else
-				{
-					B2QPriceLabel.Visibility = Visibility.Collapsed;
-					if (GfxB2Q != null)
-						Chart.Window.RemoveObject(GfxB2Q);
-				}
-			}
+			GfxSpotPrices.BuildScene(Instrument.Pair, Chart);
 
 			// Open Orders
 			{
@@ -737,10 +730,8 @@ namespace CoinFlip.UI
 			}
 
 			// Market Depth
-			{
-				if (ShowMarketDepth)
-					GfxMarketDepth.BuildScene(Chart);
-			}
+			if (ShowMarketDepth)
+				GfxMarketDepth.BuildScene(Chart);
 
 			// Bots
 			{
@@ -750,41 +741,11 @@ namespace CoinFlip.UI
 			}
 
 			// Indicator Views
-			{
-				foreach (var indy in IndicatorViews)
-					indy.BuildScene(this);
-			}
+			foreach (var indy in IndicatorViews)
+				indy.BuildScene(this);
 
-			// Other
-			{
-				// Updating text
-				if (GfxUpdatingText != null && Instrument?.DataSyncing == true)
-					Chart.Window.AddObject(GfxUpdatingText);
-
-				// Cross hair labels
-				if (Chart.ShowCrossHair)
-				{
-					var xhair = Chart.Tools.CrossHair.O2P.pos.xy;
-					var pt = Chart.ChartToClient(new Point(xhair.x, xhair.y));
-
-					// Position the candle label
-					CrossHairCandleLabel.Visibility = Visibility.Visible;
-					CrossHairCandleLabel.Text = Chart.XAxis.TickText(xhair.x, Chart.XAxis.Span);
-					Canvas.SetLeft(CrossHairCandleLabel, Gui_.MapPoint(Chart, Chart.XAxisPanel, pt).X - CrossHairPriceLabel.RenderSize.Width / 2);
-					Canvas.SetTop(CrossHairCandleLabel, 0);
-
-					// Position the price label
-					CrossHairPriceLabel.Visibility = Visibility.Visible;
-					CrossHairPriceLabel.Text = ((decimal)xhair.y).ToString(8);
-					Canvas.SetLeft(CrossHairPriceLabel, 0);
-					Canvas.SetTop(CrossHairPriceLabel, Gui_.MapPoint(Chart, Chart.YAxisPanel, pt).Y - CrossHairPriceLabel.RenderSize.Height / 2);
-				}
-				else
-				{
-					CrossHairCandleLabel.Visibility = Visibility.Collapsed;
-					CrossHairPriceLabel.Visibility = Visibility.Collapsed;
-				}
-			}
+			// Updating text
+			GfxUpdatingText.BuildScene(Instrument?.DataSyncing == true, Chart);
 		}
 
 		/// <summary>Graphics objects for the candle data</summary>
@@ -800,36 +761,23 @@ namespace CoinFlip.UI
 		}
 		private GfxObjects.Candles m_gfx_candles;
 
-		/// <summary>Graphics for the base->quote price line</summary>
-		private GfxObjects.SpotPrice GfxB2Q
-		{
-			get { return m_gfx_b2q; }
-			set
-			{
-				if (m_gfx_b2q == value) return;
-				Util.Dispose(ref m_gfx_b2q);
-				m_gfx_b2q = value;
-			}
-		}
-		private GfxObjects.SpotPrice m_gfx_b2q;
-
 		/// <summary>Graphics for the quote->base price line</summary>
-		private GfxObjects.SpotPrice GfxQ2B
+		private GfxObjects.SpotPrices GfxSpotPrices
 		{
-			get { return m_gfx_q2b; }
+			get => m_gfx_spot_price;
 			set
 			{
-				if (m_gfx_q2b == value) return;
-				Util.Dispose(ref m_gfx_q2b);
-				m_gfx_q2b = value;
+				if (m_gfx_spot_price == value) return;
+				Util.Dispose(ref m_gfx_spot_price);
+				m_gfx_spot_price = value;
 			}
 		}
-		private GfxObjects.SpotPrice m_gfx_q2b;
+		private GfxObjects.SpotPrices m_gfx_spot_price;
 
 		/// <summary>A message to indicate the chart is updating</summary>
 		private GfxObjects.UpdatingText GfxUpdatingText
 		{
-			get { return m_gfx_updating_text; }
+			get => m_gfx_updating_text;
 			set
 			{
 				if (m_gfx_updating_text == value) return;
@@ -877,108 +825,6 @@ namespace CoinFlip.UI
 			}
 		}
 		private GfxObjects.MarketDepth m_gfx_market_depth;
-
-		/// <summary>A text label for the current spot price</summary>
-		public TextBlock Q2BPriceLabel
-		{
-			get { return m_gfx_q2b_price_label; }
-			private set
-			{
-				if (m_gfx_q2b_price_label == value) return;
-				if (m_gfx_q2b_price_label != null)
-				{
-					Chart.YAxisPanel.Children.Remove(m_gfx_q2b_price_label);
-				}
-				m_gfx_q2b_price_label = value;
-				if (m_gfx_q2b_price_label != null)
-				{
-					m_gfx_q2b_price_label.Name = "m_gfx_q2b_price_label";
-					m_gfx_q2b_price_label.Visibility = Visibility.Collapsed;
-					m_gfx_q2b_price_label.Typeface(Chart.YAxisPanel.Typeface, Chart.YAxisPanel.FontSize);
-					m_gfx_q2b_price_label.Background = new SolidColorBrush(SettingsData.Settings.Chart.Q2BColour.ToMediaColor());
-					m_gfx_q2b_price_label.Foreground = Brushes.White;
-					Chart.YAxisPanel.Children.Add(m_gfx_q2b_price_label);
-				}
-			}
-		}
-		private TextBlock m_gfx_q2b_price_label;
-
-		/// <summary>A text label for the current spot price</summary>
-		public TextBlock B2QPriceLabel
-		{
-			get { return m_gfx_b2q_price_label; }
-			private set
-			{
-				if (m_gfx_b2q_price_label == value) return;
-				if (m_gfx_b2q_price_label != null)
-				{
-					Chart.YAxisPanel.Children.Remove(m_gfx_b2q_price_label);
-				}
-				m_gfx_b2q_price_label = value;
-				if (m_gfx_b2q_price_label != null)
-				{
-					m_gfx_b2q_price_label.Name = "m_gfx_b2q_price_label";
-					m_gfx_b2q_price_label.Visibility = Visibility.Collapsed;
-					m_gfx_b2q_price_label.Typeface(Chart.YAxisPanel.Typeface, Chart.YAxisPanel.FontSize);
-					m_gfx_b2q_price_label.Background = new SolidColorBrush(SettingsData.Settings.Chart.B2QColour.ToMediaColor());
-					m_gfx_b2q_price_label.Foreground = Brushes.White;
-					Chart.YAxisPanel.Children.Add(m_gfx_b2q_price_label);
-				}
-			}
-		}
-		private TextBlock m_gfx_b2q_price_label;
-
-		/// <summary>A text label for the cross hair candle/time</summary>
-		public TextBlock CrossHairCandleLabel
-		{
-			get { return m_gfx_cross_hair_candle_label; }
-			private set
-			{
-				if (m_gfx_cross_hair_candle_label == value) return;
-				if (m_gfx_cross_hair_candle_label != null)
-				{
-					Chart.XAxisPanel.Children.Remove(m_gfx_cross_hair_candle_label);
-				}
-				m_gfx_cross_hair_candle_label = value;
-				if (m_gfx_cross_hair_candle_label != null)
-				{
-					m_gfx_cross_hair_candle_label.Name = "m_gfx_cross_hair_candle_label";
-					m_gfx_cross_hair_candle_label.Visibility = Visibility.Collapsed;
-					m_gfx_cross_hair_candle_label.TextAlignment = TextAlignment.Center;
-					m_gfx_cross_hair_candle_label.Typeface(Chart.YAxisPanel.Typeface, Chart.YAxisPanel.FontSize);
-					m_gfx_cross_hair_candle_label.Background = new SolidColorBrush(Chart.Tools.CrossHairColour.ToMediaColor());
-					m_gfx_cross_hair_candle_label.Foreground = new SolidColorBrush(Chart.Tools.CrossHairColour.Invert().ToMediaColor());
-					Chart.XAxisPanel.Children.Add(m_gfx_cross_hair_candle_label);
-				}
-			}
-		}
-		private TextBlock m_gfx_cross_hair_candle_label;
-
-		/// <summary>A text label for the cross hair price</summary>
-		public TextBlock CrossHairPriceLabel
-		{
-			get { return m_gfx_cross_hair_price_label; }
-			private set
-			{
-				if (m_gfx_cross_hair_price_label == value) return;
-				if (m_gfx_cross_hair_price_label != null)
-				{
-					Chart.YAxisPanel.Children.Remove(m_gfx_cross_hair_price_label);
-				}
-				m_gfx_cross_hair_price_label = value;
-				if (m_gfx_cross_hair_price_label != null)
-				{
-					m_gfx_cross_hair_price_label.Name = "m_gfx_cross_hair_price";
-					m_gfx_cross_hair_price_label.Visibility = Visibility.Collapsed;
-					m_gfx_cross_hair_price_label.TextAlignment = TextAlignment.Left;
-					m_gfx_cross_hair_price_label.Typeface(Chart.YAxisPanel.Typeface, Chart.YAxisPanel.FontSize);
-					m_gfx_cross_hair_price_label.Background = new SolidColorBrush(Chart.Tools.CrossHairColour.ToMediaColor());
-					m_gfx_cross_hair_price_label.Foreground = new SolidColorBrush(Chart.Tools.CrossHairColour.Invert().ToMediaColor());
-					Chart.YAxisPanel.Children.Add(m_gfx_cross_hair_price_label);
-				}
-			}
-		}
-		private TextBlock m_gfx_cross_hair_price_label;
 
 		/// <summary>Add an ordinal to the chart name based on it's position in the model's chart view collection</summary>
 		public string ChartName => Model != null && Model.Charts.Count != 1 ? $"Chart:{Model.Charts.IndexOf(this)+1}" : $"Chart";
@@ -1110,20 +956,21 @@ namespace CoinFlip.UI
 				// Indicators sub menu
 				var indicators_menu = cmenu.Items.Add2(new MenuItem { Header = "Indicators" });
 				{
-					// Add an option to add an indicator to the chart
-					var add_menu = indicators_menu.Items.Add2(new MenuItem { Header = "Add Indicator" });
 					{
-						// New Moving Average
-						var opt = add_menu.Items.Add2(new MenuItem { Header = "Moving Average" });
+						// Horizontal line
+						var opt = indicators_menu.Items.Add2(new MenuItem { Header = "Horizontal Line" });
 						opt.Click += (s, a) =>
 						{
 							if (Instrument == null) return;
-							Model.Indicators.Add(Instrument.Pair.Name, new MovingAverage { });
+							Model.Indicators.Add(Instrument.Pair.Name, new HorizontalLine
+							{
+								Price = Math_.Lerp(Chart.YAxis.Min, Chart.YAxis.Max, 0.5),
+							});
 						};
 					}
 					{
 						// Trend line
-						var opt = add_menu.Items.Add2(new MenuItem { Header = "Trend Line" });
+						var opt = indicators_menu.Items.Add2(new MenuItem { Header = "Trend Line" });
 						opt.Click += (s, a) =>
 						{
 							if (Instrument == null) return;
@@ -1137,43 +984,14 @@ namespace CoinFlip.UI
 						};
 					}
 					{
-						// Horizontal line
-						var opt = add_menu.Items.Add2(new MenuItem { Header = "Horizontal Line" });
+						// New Moving Average
+						var opt = indicators_menu.Items.Add2(new MenuItem { Header = "Moving Average" });
 						opt.Click += (s, a) =>
 						{
-							throw new NotImplementedException("Edit Horizontal Line Indicator not implemented");
+							if (Instrument == null) return;
+							Model.Indicators.Add(Instrument.Pair.Name, new MovingAverage { });
 						};
 					}
-					{
-						// Vertical line
-						var opt = add_menu.Items.Add2(new MenuItem { Header = "Vertical Line" });
-						opt.Click += (s, a) =>
-						{
-							throw new NotImplementedException("Edit Vertical Line Indicator not implemented");
-						};
-					}
-
-					// When the indicators menu opens, add menu items for any existing indicators
-					indicators_menu.SubmenuOpened += (s, a) =>
-					{
-						for (; indicators_menu.Items.Count > 1;)
-							indicators_menu.Items.RemoveAt(1);
-
-						if (IndicatorViews.Count == 0)
-							return;
-
-						indicators_menu.Items.Add(new Separator());
-						foreach (var indy in IndicatorViews)
-						{
-							var opt = indicators_menu.Items.Add2(new MenuItem
-							{
-								Header = indy.Name,
-								Foreground = indy.Colour.ToMediaBrush(),
-								FontWeight = indy.Selected ? FontWeights.Bold : FontWeights.Regular,
-							});
-							opt.Click += delegate { indy.Selected = true; };
-						}
-					};
 				}
 
 				cmenu.Items.Add(new Separator());
@@ -1210,7 +1028,7 @@ namespace CoinFlip.UI
 					{
 						var order_type = Pair.OrderType(ETradeType.Q2B, click_price) ?? EOrderType.Market;
 						var trade = new Trade(Fund.Default, Pair, order_type, ETradeType.Q2B, 0.0._(Pair.Quote), 0.0._(Pair.Base)) { PriceQ2B = click_price };
-						buy.Header = $"Buy {Pair.Base} at {trade.PriceQ2B.ToString(5, true)}";
+						buy.Header = $"Buy {Pair.Base} at {trade.PriceQ2B.ToString(5, true)}...";
 						buy.CommandParameter = trade;
 					}
 
@@ -1218,7 +1036,7 @@ namespace CoinFlip.UI
 					{
 						var order_type = Pair.OrderType(ETradeType.B2Q, click_price) ?? EOrderType.Market;
 						var trade = new Trade(Fund.Default, Pair, order_type, ETradeType.B2Q, 0.0._(Pair.Base), 0.0._(Pair.Quote)) { PriceQ2B = click_price };
-						sel.Header = $"Sell {Pair.Base} at {trade.PriceQ2B.ToString(5, true)}";
+						sel.Header = $"Sell {Pair.Base} at {trade.PriceQ2B.ToString(5, true)}...";
 						sel.CommandParameter = trade;
 					}
 				};

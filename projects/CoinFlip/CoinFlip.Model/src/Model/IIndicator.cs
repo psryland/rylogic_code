@@ -9,6 +9,9 @@ namespace CoinFlip
 		/// <summary>Instance id for the indicator. Used to tell multiple instances of the same indicator apart</summary>
 		Guid Id { get; }
 
+		/// <summary>The label to use when displaying this indicator</summary>
+		string Label { get; }
+
 		/// <summary>Colour of the indicator line</summary>
 		Colour32 Colour { get; }
 
@@ -21,8 +24,8 @@ namespace CoinFlip
 		/// <summary>The id of the indicator this is a view of</summary>
 		Guid IndicatorId { get; }
 
-		/// <summary>Name of the indicators</summary>
-		string Name { get; }
+		/// <summary>Description/Name of the indicator</summary>
+		string Label { get; }
 
 		/// <summary>The main colour of the indicator</summary>
 		Colour32 Colour { get; }
@@ -30,7 +33,13 @@ namespace CoinFlip
 		/// <summary>True when the indicator is selected</summary>
 		bool Selected { get; set; }
 
+		/// <summary>True when the indicator is visible</summary>
+		bool Visible { get; set; }
+
 		/// <summary></summary>
 		void BuildScene(IChartView chart);
+
+		/// <summary>Display the options UI</summary>
+		void ShowOptionsUI();
 	}
 }

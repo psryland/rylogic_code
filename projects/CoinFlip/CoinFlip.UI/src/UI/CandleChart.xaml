@@ -6,7 +6,9 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:settings="clr-namespace:CoinFlip.Settings;assembly=CoinFlip.Model"
     xmlns:gui2="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
-    mc:Ignorable="d" 
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+	xmlns:local="clr-namespace:CoinFlip.UI"
+	mc:Ignorable="d" 
 	d:DesignWidth="500"
 	d:DesignHeight="350"
 	>
@@ -17,173 +19,9 @@
 	</Grid.RowDefinitions>
 
 	<!-- Tool bar -->
-	<DockPanel>
-
-		<!-- Chart Options -->
-		<Button
-			DockPanel.Dock="Right"
-			Command="{Binding ShowChartOptions}"
-			Background="Transparent"
-			BorderThickness="0"
-			MaxWidth="26"
-			Margin="3"
-			>
-			<Image Source="{StaticResource options}" Stretch="UniformToFill" StretchDirection="DownOnly" RenderOptions.BitmapScalingMode="HighQuality"/>
-		</Button>
-
-		<!-- Time Range -->
-		<TextBlock
-			DockPanel.Dock="Right"
-			Text="{Binding VisibleTimeSpan}"
-			VerticalAlignment="Center"
-			Margin="3"
-			/>
-
-		<ToolBar
-			Grid.Row="0"
-			ToolBarTray.IsLocked="True"
-			>
-
-			<!-- Exchange -->
-			<TextBlock
-				Text="Exchange:"
-				VerticalAlignment="Center"
-				Margin="2"
-				/>
-			<ComboBox
-				ItemsSource="{Binding ChartSelector.Exchanges}"
-				SelectedItem="{Binding ChartSelector.Exchange, Mode=TwoWay}"
-				ToolTip="Select the exchange that lists the pair"
-				VerticalAlignment="Center"
-				MinWidth="80"
-				Margin="2"
-				/>
-
-			<!-- Pair -->
-			<TextBlock
-				Text="Pair:"
-				VerticalAlignment="Center"
-				Margin="2"
-				/>
-			<ComboBox
-				ItemsSource="{Binding ChartSelector.Pairs}"
-				SelectedItem="{Binding ChartSelector.Pair, Mode=TwoWay}"
-				ToolTip="Select the currency pair"
-				VerticalAlignment="Center"
-				MinWidth="80"
-				Margin="2"
-				/>
-
-			<!-- Time frame -->
-			<TextBlock
-				Text="Time Frame:"
-				VerticalAlignment="Center"
-				Margin="2"
-				/>
-			<ComboBox
-				ItemsSource="{Binding ChartSelector.TimeFrames}"
-				SelectedItem="{Binding ChartSelector.TimeFrame, Mode=TwoWay}"
-				ToolTip="Select the time frame"
-				VerticalAlignment="Center"
-				MinWidth="80"
-				Margin="2"
-				/>
-
-			<Separator/>
-
-			<!-- Cross hair -->
-			<Button
-				Content="X Hair"
-				Command="{Binding Chart.ToggleShowCrossHair}"
-				/>
-		
-			<Separator/>
-
-			<!-- Show Current Trades -->
-			<Button
-				Command="{Binding ToggleShowOpenOrders}"
-				MaxWidth="22"
-				Margin="3"
-				>
-				<Image Stretch="UniformToFill" StretchDirection="DownOnly" RenderOptions.BitmapScalingMode="HighQuality">
-					<Image.Style>
-						<Style TargetType="{x:Type Image}">
-							<Style.Triggers>
-								<DataTrigger Binding="{Binding ShowOpenOrders}" Value="{x:Static settings:EShowItems.Disabled}">
-									<Setter Property="Source" Value="{StaticResource dollar_sign_black}"/>
-									<Setter Property="ToolTip" Value="Display open orders on the chart"/>
-								</DataTrigger>
-								<DataTrigger Binding="{Binding ShowOpenOrders}" Value="{x:Static settings:EShowItems.Selected}">
-									<Setter Property="Source" Value="{StaticResource dollar_sign_green}"/>
-									<Setter Property="ToolTip" Value="Showing the selected open order on the chart"/>
-								</DataTrigger>
-								<DataTrigger Binding="{Binding ShowOpenOrders}" Value="{x:Static settings:EShowItems.All}">
-									<Setter Property="Source" Value="{StaticResource dollar_sign_blue}"/>
-									<Setter Property="ToolTip" Value="Showing all open orders on the chart"/>
-								</DataTrigger>
-							</Style.Triggers>
-						</Style>
-					</Image.Style>
-				</Image>
-			</Button>
-
-			<!-- Show Completed orders -->
-			<Button
-				Command="{Binding ToggleShowCompletedOrders}"
-				MaxWidth="22"
-				Margin="3"
-				>
-				<Image Stretch="UniformToFill" StretchDirection="DownOnly" RenderOptions.BitmapScalingMode="HighQuality">
-					<Image.Style>
-						<Style TargetType="{x:Type Image}">
-							<Style.Triggers>
-								<DataTrigger Binding="{Binding ShowCompletedOrders}" Value="{x:Static settings:EShowItems.Disabled}">
-									<Setter Property="Source" Value="{StaticResource history_black}"/>
-									<Setter Property="ToolTip" Value="Display completed orders on the chart"/>
-								</DataTrigger>
-								<DataTrigger Binding="{Binding ShowCompletedOrders}" Value="{x:Static settings:EShowItems.Selected}">
-									<Setter Property="Source" Value="{StaticResource history_green}"/>
-									<Setter Property="ToolTip" Value="Showing the selected completed order on the chart"/>
-								</DataTrigger>
-								<DataTrigger Binding="{Binding ShowCompletedOrders}" Value="{x:Static settings:EShowItems.All}">
-									<Setter Property="Source" Value="{StaticResource history_blue}"/>
-									<Setter Property="ToolTip" Value="Showing all completed orders on the chart"/>
-								</DataTrigger>
-							</Style.Triggers>
-						</Style>
-					</Image.Style>
-				</Image>
-			</Button>
-
-			<!-- Market Depth -->
-			<Button
-				Command="{Binding ToggleMarketDepth}"
-				MaxWidth="22"
-				Margin="3"
-				>
-				<Image Stretch="UniformToFill" StretchDirection="DownOnly" RenderOptions.BitmapScalingMode="HighQuality">
-					<Image.Style>
-						<Style TargetType="{x:Type Image}">
-							<Style.Triggers>
-								<DataTrigger Binding="{Binding ShowMarketDepth}" Value="False">
-									<Setter Property="Source" Value="{StaticResource market_depth_gray}"/>
-									<Setter Property="ToolTip" Value="Display market depth on the chart"/>
-								</DataTrigger>
-								<DataTrigger Binding="{Binding ShowMarketDepth}" Value="True">
-									<Setter Property="Source" Value="{StaticResource market_depth_colour}"/>
-									<Setter Property="ToolTip" Value="Showing the selected completed order on the chart"/>
-								</DataTrigger>
-							</Style.Triggers>
-						</Style>
-					</Image.Style>
-				</Image>
-			</Button>
-		</ToolBar>
-	</DockPanel>
-
 	<Grid
-		Name="m_toolbar"
-		Grid.Row="1"
+		Grid.Row="0"
+		x:Name="m_toolbar"
 		>
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="Auto"/>
@@ -199,9 +37,220 @@
 			<ColumnDefinition Width="Auto"/>
 			<ColumnDefinition Width="Auto"/>
 		</Grid.ColumnDefinitions>
+			
+		<!-- Exchange -->
+		<StackPanel
+			Grid.Column="0"
+			Orientation="Horizontal"
+			>
+			<TextBlock
+				Text="Exchange:"
+				VerticalAlignment="Center"
+				Margin="2"
+				/>
+			<ComboBox
+				ItemsSource="{Binding ChartSelector.Exchanges}"
+				SelectedItem="{Binding ChartSelector.Exchange, Mode=TwoWay}"
+				ToolTip="Select the exchange that lists the pair"
+				VerticalAlignment="Center"
+				MinWidth="80"
+				Margin="2"
+				/>
+		</StackPanel>
 
+		<!-- Pair -->
+		<StackPanel
+			Grid.Column="1"
+			Orientation="Horizontal"
+			>
+			<TextBlock
+				Text="Pair:"
+				VerticalAlignment="Center"
+				Margin="2"
+				/>
+			<ComboBox
+				ItemsSource="{Binding ChartSelector.Pairs}"
+				SelectedItem="{Binding ChartSelector.Pair, Mode=TwoWay}"
+				ToolTip="Select the currency pair"
+				VerticalAlignment="Center"
+				MinWidth="80"
+				Margin="2"
+				/>
+		</StackPanel>
 
-		
+		<!-- Time frame -->
+		<StackPanel
+			Grid.Column="2"
+			Orientation="Horizontal"
+			>
+			<TextBlock
+				Text="Time Frame:"
+				VerticalAlignment="Center"
+				Margin="2"
+				/>
+			<ComboBox
+				ItemsSource="{Binding ChartSelector.TimeFrames}"
+				SelectedItem="{Binding ChartSelector.TimeFrame, Mode=TwoWay}"
+				ToolTip="Select the time frame"
+				VerticalAlignment="Center"
+				MinWidth="80"
+				Margin="2"
+				/>
+		</StackPanel>
+
+		<!-- Separator -->
+		<Line
+			Grid.Column="3"
+			X1="0" Y1="3" X2="0" Y2="26"
+			Stroke="#AAA"
+			SnapsToDevicePixels="True"
+			Margin="3"
+			/>
+			
+		<!-- Cross hair -->
+		<Button
+			Grid.Column="4"
+			Command="{Binding Chart.ToggleShowCrossHair}"
+			ToolTip="Display the cross hair"
+			Background="Transparent"
+			BorderThickness="0"
+			MaxWidth="26"
+			Margin="3"
+			>
+			<Image Stretch="UniformToFill" StretchDirection="DownOnly" RenderOptions.BitmapScalingMode="HighQuality">
+				<Image.Style>
+					<Style TargetType="{x:Type Image}">
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding Chart.ShowCrossHair}" Value="False">
+								<Setter Property="Source" Value="{StaticResource cross_hair_gray}"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding Chart.ShowCrossHair}" Value="True">
+								<Setter Property="Source" Value="{StaticResource cross_hair_blue}"/>
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</Image.Style>
+			</Image>
+		</Button>
+
+		<!-- Separator -->
+		<Line
+			Grid.Column="5"
+			X1="0" Y1="3" X2="0" Y2="26"
+			SnapsToDevicePixels="True"
+			Stroke="#AAA"
+			Margin="3"
+			/>
+
+		<!-- Show Current Trades -->
+		<Button
+			Grid.Column="6"
+			Command="{Binding ToggleShowOpenOrders}"
+			Background="Transparent"
+			BorderThickness="0"
+			MaxWidth="26"
+			Margin="3"
+			>
+			<Image Stretch="UniformToFill" StretchDirection="DownOnly" RenderOptions.BitmapScalingMode="HighQuality">
+				<Image.Style>
+					<Style TargetType="{x:Type Image}">
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding ShowOpenOrders}" Value="{x:Static settings:EShowItems.Disabled}">
+								<Setter Property="Source" Value="{StaticResource dollar_sign_black}"/>
+								<Setter Property="ToolTip" Value="Display open orders on the chart"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding ShowOpenOrders}" Value="{x:Static settings:EShowItems.Selected}">
+								<Setter Property="Source" Value="{StaticResource dollar_sign_green}"/>
+								<Setter Property="ToolTip" Value="Showing the selected open order on the chart"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding ShowOpenOrders}" Value="{x:Static settings:EShowItems.All}">
+								<Setter Property="Source" Value="{StaticResource dollar_sign_blue}"/>
+								<Setter Property="ToolTip" Value="Showing all open orders on the chart"/>
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</Image.Style>
+			</Image>
+		</Button>
+
+		<!-- Show Completed orders -->
+		<Button
+			Grid.Column="7"
+			Command="{Binding ToggleShowCompletedOrders}"
+			Background="Transparent"
+			BorderThickness="0"
+			MaxWidth="26"
+			Margin="3"
+			>
+			<Image Stretch="UniformToFill" StretchDirection="DownOnly" RenderOptions.BitmapScalingMode="HighQuality">
+				<Image.Style>
+					<Style TargetType="{x:Type Image}">
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding ShowCompletedOrders}" Value="{x:Static settings:EShowItems.Disabled}">
+								<Setter Property="Source" Value="{StaticResource history_black}"/>
+								<Setter Property="ToolTip" Value="Display completed orders on the chart"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding ShowCompletedOrders}" Value="{x:Static settings:EShowItems.Selected}">
+								<Setter Property="Source" Value="{StaticResource history_green}"/>
+								<Setter Property="ToolTip" Value="Showing the selected completed order on the chart"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding ShowCompletedOrders}" Value="{x:Static settings:EShowItems.All}">
+								<Setter Property="Source" Value="{StaticResource history_blue}"/>
+								<Setter Property="ToolTip" Value="Showing all completed orders on the chart"/>
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</Image.Style>
+			</Image>
+		</Button>
+
+		<!-- Market Depth -->
+		<Button
+			Grid.Column="8"
+			Command="{Binding ToggleMarketDepth}"
+			Background="Transparent"
+			BorderThickness="0"
+			MaxWidth="26"
+			Margin="3"
+			>
+			<Image Stretch="UniformToFill" StretchDirection="DownOnly" RenderOptions.BitmapScalingMode="HighQuality">
+				<Image.Style>
+					<Style TargetType="{x:Type Image}">
+						<Style.Triggers>
+							<DataTrigger Binding="{Binding ShowMarketDepth}" Value="False">
+								<Setter Property="Source" Value="{StaticResource market_depth_gray}"/>
+								<Setter Property="ToolTip" Value="Display market depth on the chart"/>
+							</DataTrigger>
+							<DataTrigger Binding="{Binding ShowMarketDepth}" Value="True">
+								<Setter Property="Source" Value="{StaticResource market_depth_colour}"/>
+								<Setter Property="ToolTip" Value="Showing the selected completed order on the chart"/>
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</Image.Style>
+			</Image>
+		</Button>
+
+		<!-- Time Range -->
+		<TextBlock
+			Grid.Column="10"
+			DockPanel.Dock="Right"
+			Text="{Binding VisibleTimeSpan}"
+			VerticalAlignment="Center"
+			Margin="3"
+			/>
+
+		<!-- Chart Options -->
+		<Button
+			Grid.Column="11"
+			Command="{Binding ShowChartOptions}"
+			Background="Transparent"
+			BorderThickness="0"
+			MaxWidth="26"
+			Margin="3"
+			>
+			<Image Source="{StaticResource options}" Stretch="UniformToFill" StretchDirection="DownOnly" RenderOptions.BitmapScalingMode="HighQuality"/>
+		</Button>
 	</Grid>
 
 	<!-- Candle Chart -->
@@ -209,44 +258,22 @@
 		Grid.Row="1"
 		x:Name="m_chart_candles"
 		ChartBackground="White"
-		Margin="4"
+		Margin="4,0,4,4"
 		/>
-	<Canvas>
-		<!--<Line
-			X1="10" Y1="10"
-			X2="100" Y2="100"
-			Stroke="Black"
-			StrokeThickness="10"
-			StrokeStartLineCap="Round"
-			StrokeEndLineCap="Round"
-			StrokeDashArray="1"
-			
-			/>-->
-		<!--<Ellipse
-			Fill="#F00"
-			Stroke="Black"
-			Height="10"
-			Width="10"
-			/>-->
-	</Canvas>
-	<!--<StackPanel
-			Canvas.Left="900"
-			Canvas.Top="0"
-			Orientation="Horizontal"
-			Background="#FFF"
-			Cursor="SizeWE"
-			>
-			<Polygon
-				Points="0,10 5,5 -5,5"
-				Stroke="Black"
-				/>
-			<TextBlock
-				Text="100 BTC"
-				FontSize="10"
-				VerticalAlignment="Center"
-				HorizontalAlignment="Center"
-				/>
-		</StackPanel>-->
+	
+	<!-- Indicators -->
+	<local:IndicatorLegend
+		Grid.Row="1"
+		x:Name="m_indicator_legend"
+		HorizontalAlignment="Left"
+		Expanded="False"
+		Margin="4,0,0,0"
+		/>
 
+	<!-- For doodling -->
+	<Canvas
+		Grid.Row="1"
+		>
+	</Canvas>
 </Grid>
 	

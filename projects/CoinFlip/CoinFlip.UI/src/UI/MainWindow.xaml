@@ -12,19 +12,7 @@
 	Width="1400"
 	PresentationTraceSources.TraceLevel="High" 
 	>
-	<Window.Resources>
-		<ResourceDictionary>
-			<BitmapImage x:Key="money" UriSource="/CoinFlip.UI;component/res/money.png" />
-			<BitmapImage x:Key="clock" UriSource="/CoinFlip.UI;component/res/clock.png" />
-			<BitmapImage x:Key="media_player_end" UriSource="/CoinFlip.UI;component/res/media_player_end.png" />
-			<BitmapImage x:Key="media_player_pause" UriSource="/CoinFlip.UI;component/res/media_player_pause.png" />
-			<BitmapImage x:Key="media_player_play" UriSource="/CoinFlip.UI;component/res/media_player_play.png" />
-			<BitmapImage x:Key="media_player_start" UriSource="/CoinFlip.UI;component/res/media_player_start.png" />
-			<BitmapImage x:Key="media_player_step_fwd" UriSource="/CoinFlip.UI;component/res/media_player_step_fwd.png" />
-			<BitmapImage x:Key="media_player_stop" UriSource="/CoinFlip.UI;component/res/media_player_stop.png" />
-		</ResourceDictionary>
-	</Window.Resources>
-	
+
 	<Window.InputBindings>
 		<KeyBinding Key="F5" Command="{Binding Simulation.Toggle}" />
 		<KeyBinding Key="F5" Modifiers="Shift" Command="{Binding Simulation.Reset}" />
@@ -60,6 +48,7 @@
 			>
 			<!-- Main Tool bar -->
 			<ToolBar
+				ToolBarTray.IsLocked="True"
 				Band="0"
 				BandIndex="0"
 				MaxHeight="32"

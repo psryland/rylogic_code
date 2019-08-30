@@ -24,7 +24,7 @@ namespace CoinFlip
 		// - The candle cache size has no upper bound. Potentially all candle data can be loaded into memory.
 		//   This only happens on demand however, by default only the last Chunk of candles are loaded.
 		// - The candle cache is an ordered collection of candles, sorted by time
-		private const int CacheChunkSize = 10_000;
+		public const int CacheChunkSize = 10_000;
 
 		/// <summary>Create a view of price data that updates as new data arrives</summary>
 		public Instrument(string name, PriceData pd)
@@ -348,7 +348,7 @@ namespace CoinFlip
 		#region Candle Cache
 
 		/// <summary>The candle index range covered by 'm_cache'. 0 = Oldest, Count = Latest</summary>
-		public Range CachedIndexRange { get; private set; }
+		private Range CachedIndexRange { get; set; }
 
 		/// <summary>Invalidate the cached data</summary>
 		public void InvalidateCachedData()

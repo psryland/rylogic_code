@@ -8,10 +8,10 @@ using System.Xml.Linq;
 using CoinFlip.Settings;
 using Rylogic.Common;
 using Rylogic.Extn;
+using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
 using Rylogic.Maths;
-using Rylogic.Utility;
 
 namespace CoinFlip.UI.Indicators
 {
@@ -20,7 +20,8 @@ namespace CoinFlip.UI.Indicators
 		public TrendLine()
 		{
 			Id = Guid.NewGuid();
-			Name = nameof(TrendLine);
+			Name = null;
+			TrendType = ETrendType.Slope;
 			Time0 = Misc.CryptoCurrencyEpoch.Ticks;
 			Time1 = Misc.CryptoCurrencyEpoch.Ticks;
 			Price0 = 0.0;
@@ -35,6 +36,51 @@ namespace CoinFlip.UI.Indicators
 		public void Dispose()
 		{
 		}
+		protected override void OnSettingChange(SettingChangeEventArgs args)
+		{
+			if (args.After)
+			{
+				switch (args.Key)
+				{
+				case nameof(Time0):
+					{
+						if (TrendType == ETrendType.Vertical)
+							Time1 = Time0;
+						break;
+					}
+				case nameof(Time1):
+					{
+						if (TrendType == ETrendType.Vertical)
+							Time0 = Time1;
+						break;
+					}
+				case nameof(Price0):
+					{
+						if (TrendType == ETrendType.Horizontal)
+							Price1 = Price0;
+						break;
+					}
+				case nameof(Price1):
+					{
+						if (TrendType == ETrendType.Horizontal)
+							Price0 = Price1;
+						break;
+					}
+				case nameof(TrendType):
+					{
+						switch (TrendType)
+						{
+						default: throw new Exception("Unknown trend type");
+						case ETrendType.Slope: break;
+						case ETrendType.Horizontal: Price0 = Price1 = (Price0 + Price1) / 2; break;
+						case ETrendType.Vertical: Time0 = Time1 = (Time0 + Time1) / 2; break;
+						}
+						break;
+					}
+				}
+			}
+			base.OnSettingChange(args);
+		}
 
 		/// <summary>Instance id</summary>
 		public Guid Id
@@ -43,11 +89,18 @@ namespace CoinFlip.UI.Indicators
 			set => set(nameof(Id), value);
 		}
 
-		/// <summary>String identifier for the indicator</summary>
+		/// <summary>String notes for the indicator</summary>
 		public string Name
 		{
 			get => get<string>(nameof(Name));
 			set => set(nameof(Name), value);
+		}
+
+		/// <summary>The behaviour of this trend line</summary>
+		public ETrendType TrendType
+		{
+			get => get<ETrendType>(nameof(TrendType));
+			set => set(nameof(TrendType), value);
 		}
 
 		/// <summary>Start point time (in ticks)</summary>
@@ -99,6 +152,9 @@ namespace CoinFlip.UI.Indicators
 			set => set(nameof(LineStyle), value);
 		}
 
+		/// <summary>The label to use when displaying this indicator</summary>
+		public string Label => $"Trend Line {Name.Surround("(",")")}";
+
 		/// <summary>Create a view of this indicator for displaying on a chart</summary>
 		public IIndicatorView CreateView(IChartView chart)
 		{
@@ -108,9 +164,8 @@ namespace CoinFlip.UI.Indicators
 		/// <summary>A view of the indicator</summary>
 		public class View :IndicatorView
 		{
-			private const double GrabRadius = 5.0;
 			public View(TrendLine tl, IChartView chart)
-				:base(tl.Id, tl.Name, chart, tl)
+				:base(tl.Id, nameof(TrendLine), chart, tl)
 			{
 				Line = new Line
 				{
@@ -141,24 +196,6 @@ namespace CoinFlip.UI.Indicators
 					Height = 2 * GrabRadius,
 					Width = 2 * GrabRadius
 				};
-
-				Line.MouseDown += HandleMouseDown;
-				Line.MouseMove += HandleMouseMove;
-				Line.MouseUp   += HandleMouseUp;
-
-				Glow.MouseDown += HandleMouseDown;
-				Glow.MouseMove += HandleMouseMove;
-				Glow.MouseUp   += HandleMouseUp;
-
-				Grab0.MouseDown += HandleMouseDown;
-				Grab0.MouseMove += HandleMouseMove;
-				Grab0.MouseUp   += HandleMouseUp;
-
-				Grab1.MouseDown += HandleMouseDown;
-				Grab1.MouseMove += HandleMouseMove;
-				Grab1.MouseUp   += HandleMouseUp;
-
-				Glow.MouseLeftButtonDown += HandleDoubleClick;
 			}
 			public override void Dispose()
 			{
@@ -168,34 +205,6 @@ namespace CoinFlip.UI.Indicators
 				Glow.Detach();
 				base.Dispose();
 			}
-			protected override void HandleSettingChange(object sender, SettingChangeEventArgs e)
-			{
-				switch (e.Key)
-				{
-				case nameof(Colour):
-					{
-						Line.Stroke = TL.Colour.ToMediaBrush();
-						Glow.Stroke = TL.Colour.Alpha(0.25).ToMediaBrush();
-						Grab0.Stroke = TL.Colour.ToMediaBrush();
-						Grab1.Stroke = TL.Colour.ToMediaBrush();
-						Grab0.Fill = TL.Colour.Alpha(0.25).ToMediaBrush();
-						Grab1.Fill = TL.Colour.Alpha(0.25).ToMediaBrush();
-						break;
-					}
-				case nameof(Width):
-					{
-						Line.StrokeThickness = TL.Width;
-						Glow.StrokeThickness = TL.Width + GlowRadius * 2;
-						break;
-					}
-				case nameof(LineStyle):
-					{
-						Line.StrokeDashArray = TL.LineStyle.ToStrokeDashArray();
-						break;
-					}
-				}
-				Invalidate();
-			}
 
 			/// <summary>The indicator data source</summary>
 			private TrendLine TL => (TrendLine)Indicator;
@@ -203,7 +212,7 @@ namespace CoinFlip.UI.Indicators
 			/// <summary>Chart space coordinates of the trend line end points</summary>
 			private Point Pt0
 			{
-				get => new Point(Instrument.IndexAt(new TimeFrameTime(TL.Time0, Instrument.TimeFrame)), TL.Price0);
+				get => new Point(Instrument.FIndexAt(new TimeFrameTime(TL.Time0, Instrument.TimeFrame)), TL.Price0);
 				set
 				{
 					TL.Time0 = Instrument.TimeAtFIndex(value.X);
@@ -244,10 +253,49 @@ namespace CoinFlip.UI.Indicators
 			/// <summary>A grab handle for adjusting the trend line</summary>
 			private Ellipse Grab1 { get; }
 
-			/// <summary>Update the transforms for the graphics model</summary>
-			protected override void UpdateSceneCore(View3d.Window window)
+			/// <summary>Update when indicator settings change</summary>
+			protected override void HandleSettingChange(object sender, SettingChangeEventArgs e)
 			{
-				base.UpdateSceneCore(window);
+				if (e.Before) return;
+				switch (e.Key)
+				{
+				case nameof(Colour):
+					{
+						Line.Stroke = TL.Colour.ToMediaBrush();
+						Glow.Stroke = TL.Colour.Alpha(0.25).ToMediaBrush();
+						Grab0.Stroke = TL.Colour.ToMediaBrush();
+						Grab1.Stroke = TL.Colour.ToMediaBrush();
+						Grab0.Fill = TL.Colour.Alpha(0.25).ToMediaBrush();
+						Grab1.Fill = TL.Colour.Alpha(0.25).ToMediaBrush();
+						break;
+					}
+				case nameof(Width):
+					{
+						Line.StrokeThickness = TL.Width;
+						Glow.StrokeThickness = TL.Width + GlowRadius;
+						break;
+					}
+				case nameof(LineStyle):
+					{
+						Line.StrokeDashArray = TL.LineStyle.ToStrokeDashArray();
+						break;
+					}
+				}
+				Invalidate();
+			}
+
+			/// <summary>Update the transforms for the graphics model</summary>
+			protected override void UpdateSceneCore()
+			{
+				base.UpdateSceneCore();
+				if (Instrument.Count == 0)
+				{
+					Line.Detach();
+					Glow.Detach();
+					Grab0.Detach();
+					Grab1.Detach();
+					return;
+				}
 
 				var pt0 = ScnPt0;
 				var pt1 = ScnPt1;
@@ -294,13 +342,29 @@ namespace CoinFlip.UI.Indicators
 				}
 			}
 
+			/// <summary>Display the options UI</summary>
+			protected override void ShowOptionsUICore()
+			{
+				if (m_trend_line_ui == null)
+				{
+					m_trend_line_ui = new TrendLineUI(Window.GetWindow(Chart), TL);
+					m_trend_line_ui.Closed += delegate { m_trend_line_ui = null; };
+					m_trend_line_ui.Show();
+				}
+				m_trend_line_ui.Focus();
+			}
+			private TrendLineUI m_trend_line_ui;
+
 			/// <summary>Hit test the indicator</summary>
 			public override ChartControl.HitTestResult.Hit HitTest(Point chart_point, Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
 			{
+				if (Instrument.Count == 0)
+					return null;
+
 				// Find the nearest point to 'client_point' on the line
-				var p0 = ScnPt0.ToV2();
-				var p1 = ScnPt1.ToV2();
-				var pt = client_point.ToV2();
+				var p0 = Drawing_.ToV2(ScnPt0);
+				var p1 = Drawing_.ToV2(ScnPt1);
+				var pt = Drawing_.ToV2(client_point);
 				var t = Rylogic.Maths.Geometry.ClosestPoint(p0, p1, pt);
 				var closest = p0 * (1f - t) + p1 * (t);
 
@@ -310,56 +374,54 @@ namespace CoinFlip.UI.Indicators
 				return null;
 			}
 
-			/// <summary>Drag end point or whole line</summary>
-			private void HandleMouseDown(object sender, MouseButtonEventArgs e)
+			/// <summary>Support dragging</summary>
+			protected override void HandleDragged(ChartControl.ChartDraggedEventArgs args)
 			{
-				var grab = (UIElement)sender;
-				if (Selected && e.ChangedButton == MouseButton.Left && grab.CaptureMouse())
+				switch (args.State)
 				{
-					m_mouse_down_at = e.GetPosition(Chart.Overlay);
-					m_drag_start0 = ScnPt0;
-					m_drag_start1 = ScnPt1;
-					m_move = EMove.Beg | EMove.End;
-					if ((m_mouse_down_at - m_drag_start0).LengthSquared < Math_.Sqr(SettingsData.Settings.Chart.SelectionDistance)) m_move ^= EMove.End;
-					if ((m_mouse_down_at - m_drag_start1).LengthSquared < Math_.Sqr(SettingsData.Settings.Chart.SelectionDistance)) m_move ^= EMove.Beg;
-					e.Handled = true;
+				default: throw new Exception($"Unknown drag state: {args.State}");
+				case ChartControl.EDragState.Start:
+					{
+						m_drag_start0 = ScnPt0;
+						m_drag_start1 = ScnPt1;
+						m_move = EMove.Beg | EMove.End;
+						var pos = args.HitResult.ClientPoint;
+						if ((pos - m_drag_start0).LengthSquared < Math_.Sqr(SettingsData.Settings.Chart.SelectionDistance)) m_move ^= EMove.End;
+						if ((pos - m_drag_start1).LengthSquared < Math_.Sqr(SettingsData.Settings.Chart.SelectionDistance)) m_move ^= EMove.Beg;
+						break;
+					}
+				case ChartControl.EDragState.Dragging:
+					{
+						var ofs = Chart.ChartToClient(args.Delta);
+						if (m_move.HasFlag(EMove.Beg)) ScnPt0 = m_drag_start0 + ofs;
+						if (m_move.HasFlag(EMove.End)) ScnPt1 = m_drag_start1 + ofs;
+						break;
+					}
+				case ChartControl.EDragState.Commit:
+					{
+						break;
+					}
+				case ChartControl.EDragState.Cancel:
+					{
+						ScnPt0 = m_drag_start0;
+						ScnPt1 = m_drag_start1;
+						break;
+					}
 				}
-			}
-			private void HandleMouseMove(object sender, MouseEventArgs e)
-			{
-				var line = (UIElement)sender;
-				if (line.IsMouseCaptured)
-				{
-					var location = e.GetPosition(Chart.Overlay);
-					if (m_move.HasFlag(EMove.Beg)) ScnPt0 = m_drag_start0 + (location - m_mouse_down_at);
-					if (m_move.HasFlag(EMove.End)) ScnPt1 = m_drag_start1 + (location - m_mouse_down_at);
-					e.Handled = true;
-				}
-			}
-			private void HandleMouseUp(object sender, MouseButtonEventArgs e)
-			{
-				var grab = (UIElement)sender;
-				if (grab.IsMouseCaptured)
-				{
-					grab.ReleaseMouseCapture();
-					e.Handled = true;
-				}
+				args.Handled = true;
 			}
 			[Flags] private enum EMove { Beg = 1 << 0, End = 1 << 1 }
-			private Point m_mouse_down_at;
 			private Point m_drag_start0;
 			private Point m_drag_start1;
 			private EMove m_move;
+		}
 
-			/// <summary>Handle mouse double clicks to show the edit dialog</summary>
-			private void HandleDoubleClick(object sender, MouseButtonEventArgs e)
-			{
-				if (Selected && e.ClickCount == 2)
-				{
-					new TrendLineUI(Window.GetWindow(Chart), TL).ShowDialog();
-					e.Handled = true;
-				}
-			}
+		/// <summary>Behaivours for this trend line</summary>
+		public enum ETrendType
+		{
+			Slope,
+			Horizontal,
+			Vertical,
 		}
 	}
 }

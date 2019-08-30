@@ -167,8 +167,10 @@ namespace CoinFlip.UI
 		}
 
 		/// <summary></summary>
-		private void HandleActiveCellClick(object sender, MouseButtonEventArgs e)
+		private void HandleToggleActive(object sender, MouseButtonEventArgs e)
 		{
+			var cell = DataGrid_.GetCell((DependencyObject)e.OriginalSource);
+			Bots.MoveCurrentTo(cell.GetRow().Item);
 			ToggleActive.Execute();
 		}
 	}

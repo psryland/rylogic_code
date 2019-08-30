@@ -16,12 +16,33 @@
 	>
 	<Grid>
 		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="*"/>
 			<RowDefinition Height="Auto"/>
 		</Grid.RowDefinitions>
-		
-		<Grid
+
+		<!-- Name -->
+		<StackPanel
 			Grid.Row="0"
+			Orientation="Horizontal"
+			HorizontalAlignment="Center"
+			>
+			<TextBlock
+				Text="Name:"
+				VerticalAlignment="Center"
+				Width="40"
+				/>
+			<TextBox
+				Text="{Binding Data.Name}"
+				HorizontalContentAlignment="Center"
+				Width="140"
+				Margin="3"
+				/>
+		</StackPanel>
+
+		<Grid
+			Grid.Row="1"
 			Margin="6"
 			>
 			<Grid.ColumnDefinitions>
@@ -31,7 +52,8 @@
 
 			<!-- Left panel -->
 			<Grid
-				Margin="6"
+				Grid.Column="0"
+				Margin="3"
 				>
 				<Grid.RowDefinitions>
 					<RowDefinition Height="Auto"/>
@@ -42,23 +64,13 @@
 					<RowDefinition Height="*"/>
 				</Grid.RowDefinitions>
 
-				<!-- Name -->
-				<StackPanel
+				<!-- Exponential -->
+				<CheckBox
 					Grid.Row="0"
-					Orientation="Horizontal"
-					>
-					<TextBlock
-						Text="Name:"
-						VerticalAlignment="Center"
-						Width="40"
-						/>
-					<TextBox
-						Text="{Binding Data.Name}"
-						HorizontalContentAlignment="Center"
-						Width="140"
-						Margin="3"
-						/>
-				</StackPanel>
+					Content="Exponential moving average"
+					IsChecked="{Binding Data.Exponential}"
+					Margin="3"
+					/>
 
 				<!-- Periods -->
 				<StackPanel
@@ -68,129 +80,208 @@
 					<TextBlock
 						Text="Periods:"
 						VerticalAlignment="Center"
-						Width="40"
+						Width="50"
 						/>
 					<TextBox
 						Text="{Binding Data.Periods}"
 						HorizontalContentAlignment="Center"
-						Width="140"
-						Margin="3"
-						/>
-				</StackPanel>
-
-				<!-- Exponential -->
-				<StackPanel
-					Grid.Row="2"
-					Orientation="Horizontal"
-					>
-					<CheckBox
-						Content="Exponential moving average"
+						Width="130"
 						Margin="3"
 						/>
 				</StackPanel>
 
 				<!-- Colour -->
 				<StackPanel
-					Grid.Row="3"
+					Grid.Row="2"
 					Orientation="Horizontal"
 					>
 					<TextBlock
 						Text="Colour:"
-						Width="40"
+						Width="50"
 						/>
 					<gui:ColourWheel
 						Orientation="Horizontal"
 						Colour="{Binding Data.Colour}"
-						Margin="3"
-						Width="140"
+						Width="130"
 						Height="80"
+						Margin="3"
 						/>
 				</StackPanel>
 
 				<!-- Width -->
 				<StackPanel
-					Grid.Row="4"
+					Grid.Row="3"
 					Orientation="Horizontal"
 					>
 					<TextBlock
 						Text="Width:"
 						VerticalAlignment="Center"
-						Width="40"
+						Width="50"
 						/>
 					<Slider
-						MinWidth="140"
-						Margin="3"
+						Value="{Binding Data.Width}"
 						Minimum="0.1"
 						Maximum="20"
-						Value="{Binding Data.Width}"
+						MinWidth="100"
+						Margin="3"
+						/>
+					<TextBox
+						Text="{Binding Data.Width, StringFormat={}{0:N1}}"
+						VerticalAlignment="Center"
+						MinWidth="24"
+						/>
+				</StackPanel>
+				
+				<!-- Style -->
+				<StackPanel
+					Grid.Row="4"
+					Orientation="Horizontal"
+					>
+					<TextBlock
+						Text="Style:"
+						VerticalAlignment="Center"
+						Width="50"
+						/>
+					<ComboBox
+						ItemsSource="{Binding Data.LineStyle, Converter={conv:EnumValues}}"
+						SelectedItem="{Binding Data.LineStyle}"
+						HorizontalContentAlignment="Center"
+						MinWidth="130"
+						Margin="3"
+						/>
+				</StackPanel>
+
+				<!-- XOffset -->
+				<StackPanel
+					Grid.Row="5"
+					Orientation="Horizontal"
+					>
+					<TextBlock
+						Text="Offset:"
+						VerticalAlignment="Center"
+						Width="50"
+						/>
+					<Slider
+						Value="{Binding Data.XOffset}"
+						Minimum="{Binding Data.Periods, Converter={conv:ScaleValue}, ConverterParameter=-2}"
+						Maximum="{Binding Data.Periods, Converter={conv:ScaleValue}, ConverterParameter=+2}"
+						MinWidth="100"
+						Margin="3"
+						/>
+					<TextBox
+						Text="{Binding Data.XOffset, StringFormat={}{0:N1}}"
+						VerticalAlignment="Center"
+						MinWidth="24"
 						/>
 				</StackPanel>
 			</Grid>
 
-			<!-- Bollinger group -->
-			<GroupBox
+			<!-- Right panel -->
+			<Grid
 				Grid.Column="1"
-				IsEnabled="{Binding Data.ShowBollingerBands}"
+				Margin="3"
 				>
-				<GroupBox.Header>
-					<CheckBox
-						Content="Show Bollinger Bands"
-						IsChecked="{Binding Data.ShowBollingerBands}"
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="*"/>
+				</Grid.RowDefinitions>
+				
+				<!-- Show Bollinger bands-->
+				<CheckBox
+					Grid.Row="0"
+					Content="Show Bollinger Bands"
+					IsChecked="{Binding Data.ShowBollingerBands}"
+					Margin="3"
+					/>
+
+				<!-- Std Dev -->
+				<StackPanel
+					Grid.Row="1"
+					Orientation="Horizontal"
+					>
+					<TextBlock
+						Text="Std Dev:"
+						VerticalAlignment="Center"
+						Width="50"
+						/>
+					<TextBox
+						Text="{Binding Data.BBStdDev}"
+						HorizontalContentAlignment="Center"
+						Width="130"
 						Margin="3"
 						/>
-				</GroupBox.Header>
+				</StackPanel>
 
-				<Grid>
-					<Grid.RowDefinitions>
-						<RowDefinition Height="Auto"/>
-						<RowDefinition Height="Auto"/>
-						<RowDefinition Height="*"/>
-					</Grid.RowDefinitions>
-
-					<!-- Std Dev -->
-					<StackPanel
-						Grid.Row="0"
+				<!-- BBColour -->
+				<StackPanel
+					Grid.Row="2"
+					Orientation="Horizontal"
+					>
+					<TextBlock
+						Text="Colour:"
+						Width="50"
+						/>
+					<gui:ColourWheel
 						Orientation="Horizontal"
-						>
-						<TextBlock
-							Text="Std Dev:"
-							VerticalAlignment="Center"
-							Width="50"
-							/>
-						<TextBox
-							Text="{Binding Data.BollingerBandsStdDev}"
-							HorizontalContentAlignment="Center"
-							Width="130"
-							Margin="3"
-							/>
-					</StackPanel>
-
-					<!-- Colour -->
-					<StackPanel
-						Grid.Row="1"
-						Orientation="Horizontal"
+						Colour="{Binding Data.BBColour}"
+						Width="130"
+						Height="80"
 						Margin="3"
-						>
-						<TextBlock
-							Text="Colour:"
-							Width="40"
-							/>
-						<gui:ColourWheel
-							Orientation="Horizontal"
-							Colour="{Binding Data.ColourBollingerBands}"
-							Margin="3"
-							Width="140"
-							Height="80"
-							/>
-					</StackPanel>
+						/>
+				</StackPanel>
 
-				</Grid>
-			</GroupBox>
+				<!-- BBWidth -->
+				<StackPanel
+					Grid.Row="3"
+					Orientation="Horizontal"
+					>
+					<TextBlock
+						Text="Width:"
+						VerticalAlignment="Center"
+						Width="50"
+						/>
+					<Slider
+						Value="{Binding Data.BBWidth}"
+						Minimum="0.1"
+						Maximum="20"
+						MinWidth="100"
+						Margin="3"
+						/>
+					<TextBox
+						Text="{Binding Data.BBWidth, StringFormat={}{0:N1}}"
+						VerticalAlignment="Center"
+						MinWidth="24"
+						/>
+				</StackPanel>
+
+				<!-- Style -->
+				<StackPanel
+					Grid.Row="4"
+					Orientation="Horizontal"
+					>
+					<TextBlock
+						Text="Style:"
+						VerticalAlignment="Center"
+						Width="50"
+						/>
+					<ComboBox
+						ItemsSource="{Binding Data.BBLineStyle, Converter={conv:EnumValues}}"
+						SelectedItem="{Binding Data.BBLineStyle}"
+						HorizontalContentAlignment="Center"
+						MinWidth="130"
+						Margin="3"
+						/>
+				</StackPanel>
+			</Grid>
 		</Grid>
 
 		<!-- Buttons -->
 		<StackPanel
-			Grid.Row="1"
+			Grid.Row="4"
 			HorizontalAlignment="Right"
 			>
 			<Button

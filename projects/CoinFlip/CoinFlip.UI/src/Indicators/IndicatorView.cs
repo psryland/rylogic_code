@@ -23,8 +23,11 @@ namespace CoinFlip.UI.Indicators
 			base.Dispose();
 		}
 
-		/// <summary>The size in pixel to 'glow' by</summary>
+		/// <summary>The size in pixels to 'glow' by</summary>
 		public const double GlowRadius = 10.0;
+
+		/// <summary>The size in pixels of the grab handles</summary>
+		public const double GrabRadius = 5.0;
 
 		/// <summary>The Id of the indicator instance</summary>
 		public Guid IndicatorId => Id;
@@ -48,10 +51,11 @@ namespace CoinFlip.UI.Indicators
 			}
 		}
 		private IIndicator m_indicator;
-		protected virtual void HandleSettingChange(object sender, SettingChangeEventArgs args)
-		{ }
 
-		/// <summary></summary>
+		/// <summary>The string description of the indicator</summary>
+		public string Label => Indicator.Label;
+
+		/// <summary>Indicator colour</summary>
 		public Colour32 Colour => Indicator.Colour;
 
 		/// <summary>The instrument that this indicator is associated with</summary>
@@ -69,6 +73,28 @@ namespace CoinFlip.UI.Indicators
 		{
 			m_instrument = instr;
 		}
+
+		/// <summary>Handle indicator settings changing</summary>
+		protected virtual void HandleSettingChange(object sender, SettingChangeEventArgs args)
+		{ }
+
+		/// <summary>Handle double click to show the UI</summary>
+		protected override void HandleClicked(ChartControl.ChartClickedEventArgs args)
+		{
+			if (Selected && args.ClickCount == 2)
+			{
+				ShowOptionsUI();
+				args.Handled = true;
+			}
+		}
+
+		/// <summary>Display the options UI</summary>
+		public void ShowOptionsUI()
+		{
+			ShowOptionsUICore();
+		}
+		protected virtual void ShowOptionsUICore()
+		{}
 
 		/// <summary>Update per-frame elements</summary>
 		void IIndicatorView.BuildScene(IChartView chart)

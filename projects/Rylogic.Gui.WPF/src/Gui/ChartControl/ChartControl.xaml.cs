@@ -6,7 +6,6 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Interop;
 using System.Windows.Media;
 using Rylogic.Common;
 using Rylogic.Extn;
@@ -234,6 +233,12 @@ namespace Rylogic.Gui.WPF
 		/// <summary>The view3d part of the chart</summary>
 		public ChartPanel Scene => m_chart_panel;
 
+		/// <summary>The camera view of the scene</summary>
+		public View3d.Camera Camera => Scene?.Camera; 
+
+		/// <summary>The view3d window associated with 'Scene'</summary>
+		private View3d.Window Window => Scene?.Window; // Keep private, clients should be using 'Scene'
+
 		/// <summary>A WPF canvas that overlays the 3d part of the chart</summary>
 		public Canvas Overlay => m_chart_overlay;
 
@@ -249,12 +254,6 @@ namespace Rylogic.Gui.WPF
 			}
 		}
 		private View3d m_view3d;
-
-		/// <summary>The view3d window for this control instance</summary>
-		public View3d.Window Window => Scene?.Window;
-
-		/// <summary>The view of the chart</summary>
-		public View3d.Camera Camera => Scene?.Camera;
 
 		/// <summary>Raised just before the chart renders, allowing users to add custom graphics</summary>
 		public event EventHandler<View3dControl.BuildSceneEventArgs> BuildScene;
@@ -347,6 +346,15 @@ namespace Rylogic.Gui.WPF
 				(client_size.Width * XAxis.Span / SceneBounds.Width),
 				(client_size.Height * YAxis.Span / SceneBounds.Height));
 		}
+		public Vector ClientToChart(Vector client_vec)
+		{
+			if (SceneBounds.Width == 0 || SceneBounds.Height == 0)
+				throw new Exception("Chart size is zero, cannot convert from client space to chart space");
+
+			return new Vector(
+				(+client_vec.X * XAxis.Span / SceneBounds.Width),
+				(-client_vec.Y * YAxis.Span / SceneBounds.Height));
+		}
 		public Rect ClientToChart(Rect client_rect)
 		{
 			return new Rect(
@@ -372,6 +380,15 @@ namespace Rylogic.Gui.WPF
 			return new Size(
 				(chart_size.Width * SceneBounds.Width / XAxis.Span),
 				(chart_size.Height * SceneBounds.Height / YAxis.Span));
+		}
+		public Vector ChartToClient(Vector chart_vec)
+		{
+			if (SceneBounds.Width == 0 || SceneBounds.Height == 0)
+				throw new Exception("Chart size is zero, cannot convert from chart space to client space");
+
+			return new Vector(
+				(+chart_vec.X * SceneBounds.Width / XAxis.Span),
+				(-chart_vec.Y * SceneBounds.Height / YAxis.Span));
 		}
 		public Rect ChartToClient(Rect chart_rect)
 		{
@@ -623,6 +640,8 @@ namespace Rylogic.Gui.WPF
 			var ymax = -w2c.pos.y + wh.y * 0.5;
 			if (xmin < xmax) XAxis.Set(xmin, xmax);
 			if (ymin < ymax) YAxis.Set(ymin, ymax);
+
+			SaveNavCheckpoint();
 		}
 
 		/// <summary>Position the camera based on the axis range</summary>
@@ -651,6 +670,8 @@ namespace Rylogic.Gui.WPF
 
 			Scene.Camera.O2W = c2w;
 			Scene.Camera.Commit();
+
+			SaveNavCheckpoint();
 		}
 
 		/// <summary>The Z value of the highest element in the diagram</summary>
@@ -868,6 +889,7 @@ namespace Rylogic.Gui.WPF
 					MouseWheel += OnMouseWheelCrossHair;
 					MouseMove += OnMouseMoveCrossHair;
 				}
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowCrossHair)));
 
 				// Handlers
 				void OnMouseMoveCrossHair(object sender, MouseEventArgs e)

@@ -257,9 +257,6 @@ namespace CoinFlip
 				// Create the fund container from the back testing settings
 				Funds.AssignFunds(SettingsData.Settings.BackTesting.TestFunds);
 
-				// Restore the backtesting indicators
-				Indicators.Load();
-
 				// Create the back testing bots
 				Bots.LoadFromSettings();
 
@@ -273,6 +270,9 @@ namespace CoinFlip
 				// Enable backtesting bots based on their settings
 				foreach (var bot in Bots.Where(x => x.BackTesting))
 					bot.Active = bot.BotData.Active;
+
+				// Restore the backtesting indicators
+				Indicators.Load();
 			}
 
 			// If back testing is about to be disabled...

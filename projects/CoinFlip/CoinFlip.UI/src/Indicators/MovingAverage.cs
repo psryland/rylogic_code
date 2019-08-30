@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Shapes;
 using System.Xml.Linq;
 using Rylogic.Common;
 using Rylogic.Extn;
@@ -21,14 +21,17 @@ namespace CoinFlip.UI.Indicators
 		public MovingAverage()
 		{
 			Id = Guid.NewGuid();
-			Name = nameof(MovingAverage);
+			Name = null;
 			Exponential = false;
 			Periods = 50;
 			Colour = Colour32.Blue;
 			Width = 1.0;
+			LineStyle = ELineStyles.Solid;
 			ShowBollingerBands = false;
-			BollingerBandsStdDev = 2.0;
-			ColourBollingerBands = Colour32.LightBlue;
+			BBStdDev = 2.0;
+			BBColour = Colour32.LightBlue;
+			BBWidth = 1.0;
+			BBLineStyle = ELineStyles.Solid;
 			XOffset = 0.0;
 		}
 		public MovingAverage(XElement node)
@@ -80,6 +83,13 @@ namespace CoinFlip.UI.Indicators
 			set => set(nameof(Width), value);
 		}
 
+		/// <summary>The style of line</summary>
+		public ELineStyles LineStyle
+		{
+			get => get<ELineStyles>(nameof(LineStyle));
+			set => set(nameof(LineStyle), value);
+		}
+
 		/// <summary>Show Bollinger Bands around the MA</summary>
 		public bool ShowBollingerBands
 		{
@@ -88,17 +98,31 @@ namespace CoinFlip.UI.Indicators
 		}
 
 		/// <summary>The Bollinger band size in units of the standard deviations</summary>
-		public double BollingerBandsStdDev
+		public double BBStdDev
 		{
-			get { return get<double>(nameof(BollingerBandsStdDev)); }
-			set { set(nameof(BollingerBandsStdDev), Math_.Clamp(value, 0, 5.0f)); }
+			get { return get<double>(nameof(BBStdDev)); }
+			set { set(nameof(BBStdDev), Math_.Clamp(value, 0, 5.0f)); }
 		}
 
 		/// <summary>The line colour for the Bollinger Bands</summary>
-		public Colour32 ColourBollingerBands
+		public Colour32 BBColour
 		{
-			get { return get<Colour32>(nameof(ColourBollingerBands)); }
-			set { set(nameof(ColourBollingerBands), value); }
+			get { return get<Colour32>(nameof(BBColour)); }
+			set { set(nameof(BBColour), value); }
+		}
+
+		/// <summary>The width of the Bollinger bands</summary>
+		public double BBWidth
+		{
+			get => get<double>(nameof(BBWidth));
+			set => set(nameof(BBWidth), value);
+		}
+
+		/// <summary>The style of line</summary>
+		public ELineStyles BBLineStyle
+		{
+			get => get<ELineStyles>(nameof(BBLineStyle));
+			set => set(nameof(BBLineStyle), value);
 		}
 
 		/// <summary>Shift the indicator in the X axis direction</summary>
@@ -107,6 +131,9 @@ namespace CoinFlip.UI.Indicators
 			get { return get<double>(nameof(XOffset)); }
 			set { set(nameof(XOffset), value); }
 		}
+
+		/// <summary>The label to use when displaying this indicator</summary>
+		public string Label => $"{(Exponential?"E":"")}MA-{Periods} {Name.Surround("(", ")")}";
 
 		/// <summary>Create a view of this indicator for displaying on a chart</summary>
 		public IIndicatorView CreateView(IChartView chart)
@@ -131,6 +158,14 @@ namespace CoinFlip.UI.Indicators
 			public void Dispose()
 			{
 				Instrument = null;
+			}
+
+			/// <summary>Reset the data and recalculate</summary>
+			public void Reset()
+			{
+				m_data.Clear();
+				m_stat = null;
+				CalculateMA(Range);
 			}
 
 			/// <summary>Basic list access</summary>
@@ -158,16 +193,29 @@ namespace CoinFlip.UI.Indicators
 					m_instrument = value;
 					if (m_instrument != null)
 					{
-						// Calculate the MA over the cached range of instrument data.
-						Range = m_instrument.CachedIndexRange;
+						HandleDataChanged(null, null);
 						m_instrument.DataChanged += HandleDataChanged;
 					}
 
 					// Handler
 					void HandleDataChanged(object sender, DataEventArgs e)
 					{
-						// Update the data when the instrument changes
-						Range = m_instrument.CachedIndexRange;
+						// Update the range when the instrument changes.
+						if (Range == Range.Invalid)
+						{
+							// If the range is currently invalid, use a sensible default
+							Range = new Range(
+								Math.Max(0, m_instrument.Count - Instrument.CacheChunkSize),
+								m_instrument.Count);
+						}
+						else
+						{
+							// If the range used to include the latest candle, grow the range as new candles arrive
+							var grow = Math.Abs(m_instrument.Count - Range.End) <= 1 ? 1 : 0;
+							Range = new Range(
+								Math_.Clamp(Range.Beg, 0, m_instrument.Count),
+								Math_.Clamp(Range.End + grow, 0, m_instrument.Count));
+						}
 					}
 				}
 			}
@@ -179,89 +227,103 @@ namespace CoinFlip.UI.Indicators
 				get => m_range;
 				set
 				{
-					// Flush the data
-					if (value == Range.Invalid || Instrument == null || Instrument.Count == 0)
-					{
-						m_data.Clear();
-						m_range = Range.Invalid;
-						return;
-					}
-
-					// Do not include 'Instrument.Count-1' in 'm_stat' because it is changing all the time.
-					var new_range = value;
-					var old_range = m_range;
-					if (new_range.End == Instrument.Count) --new_range.End;
-					if (old_range.End == Instrument.Count) --old_range.End;
-
-					// Populate the data over 'range'
-					if (old_range == Range.Invalid)
-					{
-						m_stat = NewStat();
-						m_data.Capacity = new_range.Sizei;
-						m_data.Assign(CalculateMA(new_range, m_stat));
-					}
-					else
-					{
-						// If the end of the range has been extended, append to the data
-						if (new_range.End > old_range.End)
-						{
-							var r = new Range(old_range.End, new_range.End);
-							m_data.RemoveToEnd(IndexOf(r.Beg));
-							m_data.AddRange(CalculateMA(r, m_stat));
-						}
-
-						// If start of the range has been extended, prepend to the data
-						if (new_range.Beg < old_range.Beg)
-						{
-							// Overlap the existing range by 'Periods' because of the warm up period with moving averages
-							var r = new Range(new_range.Beg, Math.Min(old_range.Beg + m_ma.Periods, Instrument.Count - 1));
-							m_data.RemoveRange(0, IndexOf(r.End));
-							m_data.InsertRange(0, CalculateMA(r, NewStat()));
-						}
-					}
-
-					// If the requested range includes the latest candle, add one more data point to the data
-					// using a copy of 'm_stat' since the latest candle changes.
-					if (value.End == Instrument.Count)
-					{
-						var r = new Range(Instrument.Count - 1, Instrument.Count);
-						m_data.AddRange(CalculateMA(r, CopyStat(m_stat)));
-					}
-
-					// Save the new range
-					m_range = value;
-
-					// Return the moving average points over the given range
-					IEnumerable<MAPoint> CalculateMA(Range r, IStatMeanAndVarianceSingleVariable<double> stat)
-					{
-						var ts = Misc.CryptoCurrencyEpoch.Ticks;
-						foreach (var i in r.Enumeratei)
-						{
-							var candle = Instrument[i];
-							Debug.Assert(candle.Timestamp >= ts, "Candle data must be strictly ordered by timestamp because of binary searches");
-							ts = candle.Timestamp;
-
-							// Calculate the MA value and save it
-							stat.Add(candle.Close);
-							yield return new MAPoint(i, ts, stat.Mean, stat.PopStdDev);
-						}
-					}
-					IStatMeanAndVarianceSingleVariable<double> NewStat()
-					{
-						// Create a new instance of the stat type
-						return m_ma.Exponential
-							? (IStatMeanAndVarianceSingleVariable<double>)new ExponentialMovingAverage(m_ma.Periods)
-							: (IStatMeanAndVarianceSingleVariable<double>)new SimpleMovingAverage(m_ma.Periods);
-					}
-					IStatMeanAndVarianceSingleVariable<double> CopyStat(IStatMeanAndVarianceSingleVariable<double> rhs)
-					{
-						return m_ma.Exponential
-							? (IStatMeanAndVarianceSingleVariable<double>)new ExponentialMovingAverage((ExponentialMovingAverage)rhs)
-							: (IStatMeanAndVarianceSingleVariable<double>)new SimpleMovingAverage((SimpleMovingAverage)rhs);
-					}
+					if (m_range == value) return;
+					CalculateMA(value);
 				}
 			}
 			private Range m_range;
+
+			/// <summary>Calculate the data points over 'range'</summary>
+			private void CalculateMA(Range range)
+			{
+				// Flush the data
+				if (range == Range.Invalid || Instrument == null || Instrument.Count == 0)
+				{
+					m_data.Clear();
+					m_range = Range.Invalid;
+					DataChanged?.Invoke(this, new DataChangedEventArgs(Range.Invalid));
+					return;
+				}
+
+				// Do not include 'Instrument.Count-1' in 'm_stat' because it is changing all the time.
+				var new_range = range;
+				var old_range = m_range;
+				if (new_range.End == Instrument.Count) --new_range.End;
+				if (old_range.End == Instrument.Count) --old_range.End;
+
+				// Populate the data over 'range'
+				if (m_stat == null || old_range == Range.Invalid)
+				{
+					m_stat = NewStat();
+					m_data.Capacity = new_range.Sizei;
+					m_data.Assign(CalculateMA(new_range, m_stat));
+				}
+				else
+				{
+					// If the end of the range has been extended, append to the data
+					if (new_range.End > old_range.End)
+					{
+						var r = new Range(old_range.End, new_range.End);
+						m_data.RemoveToEnd(IndexOf(r.Beg));
+						m_data.AddRange(CalculateMA(r, m_stat));
+						DataChanged?.Invoke(this, new DataChangedEventArgs(r));
+					}
+
+					// If start of the range has been extended, prepend to the data
+					if (new_range.Beg < old_range.Beg)
+					{
+						// Overlap the existing range by 'Periods' because of the warm up period with moving averages
+						var r = new Range(new_range.Beg, Math.Min(old_range.Beg + m_ma.Periods, Instrument.Count - 1));
+						m_data.RemoveRange(0, IndexOf(r.End));
+						m_data.InsertRange(0, CalculateMA(r, NewStat()));
+						DataChanged?.Invoke(this, new DataChangedEventArgs(r));
+					}
+				}
+
+				// If the requested range includes the latest candle, add one more data point to the data
+				// using a copy of 'm_stat' since the latest candle changes.
+				if (range.End == Instrument.Count)
+				{
+					var r = new Range(Instrument.Count - 1, Instrument.Count);
+					m_data.AddRange(CalculateMA(r, CopyStat(m_stat)));
+					DataChanged?.Invoke(this, new DataChangedEventArgs(r));
+				}
+
+				// Save the new range
+				m_range = range;
+
+				// Return the moving average points over the given range
+				IEnumerable<MAPoint> CalculateMA(Range r, IStatMeanAndVarianceSingleVariable<double> stat)
+				{
+					var ts = Misc.CryptoCurrencyEpoch.Ticks;
+					foreach (var i in r.Enumeratei)
+					{
+						var candle = Instrument[i];
+						Debug.Assert(candle.Timestamp >= ts, "Candle data must be strictly ordered by timestamp because of binary searches");
+						ts = candle.Timestamp;
+
+						// Calculate the MA value and save it
+						stat.Add(candle.Close);
+						yield return new MAPoint(i, ts, stat.Mean, stat.PopStdDev);
+					}
+				}
+				IStatMeanAndVarianceSingleVariable<double> NewStat()
+				{
+					// Create a new instance of the stat type
+					return m_ma.Exponential
+						? (IStatMeanAndVarianceSingleVariable<double>)new ExponentialMovingAverage(m_ma.Periods)
+						: (IStatMeanAndVarianceSingleVariable<double>)new SimpleMovingAverage(m_ma.Periods);
+				}
+				IStatMeanAndVarianceSingleVariable<double> CopyStat(IStatMeanAndVarianceSingleVariable<double> rhs)
+				{
+					return m_ma.Exponential
+						? (IStatMeanAndVarianceSingleVariable<double>)new ExponentialMovingAverage((ExponentialMovingAverage)rhs)
+						: (IStatMeanAndVarianceSingleVariable<double>)new SimpleMovingAverage((SimpleMovingAverage)rhs);
+				}
+			}
+
+			/// <summary>Raised when data is changed</summary>
+			public event EventHandler<DataChangedEventArgs> DataChanged;
 
 			/// <summary>A single point in the MA curve, representing a single candle</summary>
 			[DebuggerDisplay("{Description,nq}")]
@@ -300,66 +362,16 @@ namespace CoinFlip.UI.Indicators
 			{
 				Cache = new ChartGfxCache(CreatePiece);
 				Data = new MAContext(ma, chart.Instrument);
+				Data.DataChanged += (s,a) =>
+				{
+					Cache.Invalidate(a.Range);
+				};
 			}
 			public override void Dispose()
 			{
 				Util.Dispose(Data);
 				Cache = null;
 				base.Dispose();
-			}
-			protected override void HandleSettingChange(object sender, SettingChangeEventArgs e)
-			{
-				//switch (e.Key)
-				//{
-				//case nameof(Colour):
-				//	{
-				//		Line.Stroke = Data.Colour.ToMediaBrush();
-				//		Glow.Stroke = Data.Colour.Alpha(0.25).ToMediaBrush();
-				//		Grab0.Stroke = Data.Colour.ToMediaBrush();
-				//		Grab1.Stroke = Data.Colour.ToMediaBrush();
-				//		Grab0.Fill = Data.Colour.Alpha(0.25).ToMediaBrush();
-				//		Grab1.Fill = Data.Colour.Alpha(0.25).ToMediaBrush();
-				//		break;
-				//	}
-				//case nameof(Width):
-				//	{
-				//		Line.StrokeThickness = Data.Width;
-				//		Glow.StrokeThickness = Data.Width + GrabRadius * 2;
-				//		break;
-				//	}
-				//case nameof(LineStyle):
-				//	{
-				//		Line.StrokeDashArray = Data.LineStyle.ToStrokeDashArray();
-				//		break;
-				//	}
-				//}
-				Invalidate();
-			}
-			protected override void UpdateSceneCore(View3d.Window window)
-			{
-				base.UpdateSceneCore(window);
-
-				// Remove graphics
-				window.RemoveObjects(new[] { Id }, 1, 0);
-
-				// Add the graphics pieces over the visible range
-				if (Data.Count != 0 && Visible)
-				{
-					// Get the range required for display
-					var range = Data.CandleRange.Intersect(Chart.XAxis.Range);
-
-					// Add each graphics piece. Really, 'Cache.Get' should be
-					// called in UpdateGfxCore but this seems to be fast enough.
-					foreach (var piece in Cache.Get(range))
-					{
-						// Show or hide the glow based on selected/hovered state
-						var flags = (Hovered || Selected ? View3d.ENuggetFlag.None : View3d.ENuggetFlag.Hidden) | View3d.ENuggetFlag.TintHasAlpha;
-						piece.Gfx.NuggetFlagsSet(flags, null, 1);
-
-						piece.Gfx.O2P = m4x4.Translation((float)MA.XOffset, 0f, 0f);
-						window.AddObject(piece.Gfx);
-					}
-				}
 			}
 
 			/// <summary>The indicator data source</summary>
@@ -382,7 +394,7 @@ namespace CoinFlip.UI.Indicators
 			private ChartGfxCache m_cache;
 
 			/// <summary>Create graphics for an X-range spanning 'x'</summary>
-			private ChartGfxPiece CreatePiece(double x, RangeF missing)
+			private MAPiece CreatePiece(double x, RangeF missing)
 			{
 				// Find the nearest point in the data to 'x'
 				var idx = Data.IndexOf(x);
@@ -399,85 +411,150 @@ namespace CoinFlip.UI.Indicators
 					Math.Min(idx_missing.End, idx + PieceBlockSize));
 				Debug.Assert(!idx_range.Empty);
 
-				// Resize the geometry buffers (+2 because line strip adj is used)
-				var count = idx_range.Counti;
-				m_vbuf.Resize(count + 2);
-				m_ibuf.Resize(count + 2);
-				m_nbuf.Resize(2);
-
-				// Get the colours for the MA line
-				var ma_colour = MA.Colour;
-				var bol_colour = MA.ColourBollingerBands;
-
-				// Create the MA model
-				var vert = 0;
-				var indx = 0;
-				{ // Adjacent start vertex
-					var v = vert;
-					var ma = Data[idx_range.Begi - (idx_range.Beg == 0 ? 0 : 1)];
-					m_vbuf[vert++] = new View3d.Vertex(new v4((float)ma.CandleIndex, (float)ma.Value, 0, 1f), ma_colour);
-					m_ibuf[indx++] = (ushort)v;
-				}
-				foreach (var i in idx_range.Enumeratei)
-				{
-					var v = vert;
-					var ma = Data[i];
-					m_vbuf[vert++] = new View3d.Vertex(new v4((float)ma.CandleIndex, (float)ma.Value, 0, 1f), ma_colour);
-					m_ibuf[indx++] = (ushort)v;
-				}
-				{ // Adjacent end vertex
-					var v = vert;
-					var ma = Data[idx_range.Endi - (idx_range.End == Data.Count ? 1 : 0)];
-					m_vbuf[vert++] = new View3d.Vertex(new v4((float)ma.CandleIndex, (float)ma.Value, 0, 1f), ma_colour);
-					m_ibuf[indx++] = (ushort)v;
-				}
-
-				{// Create a nugget for the MA model
-					var mat = View3d.Material.New();
-					mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.ThickLineStripGS, $"*LineWidth {{{MA.Width}}}");
-					m_nbuf[0] = new View3d.Nugget(View3d.EPrim.LineStripAdj, View3d.EGeom.Vert | View3d.EGeom.Colr, 0, (uint)vert, 0, (uint)indx, View3d.ENuggetFlag.None, false, mat);
-				}
-
-				{// Create a nugget for the hover glow
-					var mat = View3d.Material.New();
-					mat.m_tint = ma_colour.Alpha(0.25);
-					mat.Use(View3d.ERenderStep.ForwardRender, View3d.EShaderGS.ThickLineStripGS, $"*LineWidth {{{MA.Width + GlowRadius * 2}}}");
-					m_nbuf[1] = new View3d.Nugget(View3d.EPrim.LineStripAdj, View3d.EGeom.Vert | View3d.EGeom.Colr, 0, (uint)vert, 0, (uint)indx, View3d.ENuggetFlag.TintHasAlpha, true, mat);
-				}
-
-				// Add geometry for Bollinger bands
-				if (MA.ShowBollingerBands && MA.BollingerBandsStdDev != 0)
-				{
-					m_vbuf.Resize(m_vbuf.Count + 2 * count);
-					m_ibuf.Resize(m_ibuf.Count + 2 * count);
-					m_nbuf.Resize(m_nbuf.Count + 2);
-
-					// Lower band
-					foreach (var i in idx_range.Enumeratei)
-					{
-						var v = vert;
-						var ma = Data[i];
-						m_vbuf[vert++] = new View3d.Vertex(new v4((float)ma.CandleIndex, (float)(ma.Value - MA.BollingerBandsStdDev * ma.StdDev), 0, 1f), bol_colour);
-						m_ibuf[indx++] = (ushort)(v);
-					}
-					m_nbuf[1] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert | View3d.EGeom.Colr, (uint)(vert - count), (uint)vert, (uint)(indx - count), (uint)indx);
-
-					// Upper band
-					foreach (var i in idx_range.Enumeratei)
-					{
-						var v = vert;
-						var ma = Data[i];
-						m_vbuf[vert++] = new View3d.Vertex(new v4((float)ma.CandleIndex, (float)(ma.Value + MA.BollingerBandsStdDev * ma.StdDev), 0, 1f), bol_colour);
-						m_ibuf[indx++] = (ushort)(v);
-					}
-					m_nbuf[2] = new View3d.Nugget(View3d.EPrim.LineStrip, View3d.EGeom.Vert | View3d.EGeom.Colr, (uint)(vert - count), (uint)vert, (uint)(indx - count), (uint)indx);
-				}
-
-				// Create the graphics
-				var gfx = new View3d.Object($"{Name}-[{idx_range.Beg},{idx_range.End}]", 0xFFFFFFFF, m_vbuf.Count, m_ibuf.Count, m_nbuf.Count, m_vbuf.ToArray(), m_ibuf.ToArray(), m_nbuf.ToArray(), Id);
-				var x_range = new RangeF(Data[idx_range.Begi].CandleIndex, Data[idx_range.Endi - 1].CandleIndex + 1);
-				return new ChartGfxPiece(gfx, x_range);
+				// Create a piece that spans the missing range
+				var data = idx_missing.Select(i => Data[(int)i]);
+				var piece = new MAPiece(idx_missing, MA, data);
+				return piece;
 			}
+
+			/// <summary>Update when indicator settings change</summary>
+			protected override void HandleSettingChange(object sender, SettingChangeEventArgs e)
+			{
+				if (e.Before) return;
+				switch (e.Key)
+				{
+				case nameof(Exponential):
+				case nameof(Periods):
+				case nameof(BBStdDev):
+					{
+						Data.Reset();
+						Cache.Invalidate();
+						break;
+					}
+				case nameof(Colour):
+					{
+						foreach (var piece in Cache.Pieces.OfType<MAPiece>())
+						{
+							piece.Line.Stroke = MA.Colour.ToMediaBrush();
+							piece.Glow.Stroke = MA.Colour.Alpha(0.25).ToMediaBrush();
+						}
+						break;
+					}
+				case nameof(BBColour):
+					{
+						foreach (var piece in Cache.Pieces.OfType<MAPiece>())
+						{
+							piece.High.Stroke = MA.BBColour.ToMediaBrush();
+							piece.Low.Stroke = MA.BBColour.ToMediaBrush();
+						}
+						break;
+					}
+				case nameof(Width):
+					{
+						foreach (var piece in Cache.Pieces.OfType<MAPiece>())
+						{
+							piece.Line.StrokeThickness = MA.Width;
+							piece.Glow.StrokeThickness = MA.Width + GlowRadius;
+						}
+						break;
+					}
+				case nameof(BBWidth):
+					{
+						foreach (var piece in Cache.Pieces.OfType<MAPiece>())
+						{
+							piece.High.StrokeThickness = MA.BBWidth;
+							piece.Low.StrokeThickness = MA.BBWidth;
+						}
+						break;
+					}
+				case nameof(LineStyle):
+					{
+						foreach (var piece in Cache.Pieces.OfType<MAPiece>())
+						{
+							piece.Line.StrokeDashArray = MA.LineStyle.ToStrokeDashArray();
+						}
+						break;
+					}
+				case nameof(BBLineStyle):
+					{
+						foreach (var piece in Cache.Pieces.OfType<MAPiece>())
+						{
+							piece.High.StrokeDashArray = MA.BBLineStyle.ToStrokeDashArray();
+							piece.Low.StrokeDashArray = MA.BBLineStyle.ToStrokeDashArray();
+						}
+						break;
+					}
+				}
+				Invalidate();
+			}
+
+			/// <summary>Update the transforms for the graphics model</summary>
+			protected override void UpdateSceneCore()
+			{
+				base.UpdateSceneCore();
+
+				// Add the graphics pieces over the visible range
+				if (Data.Count == 0 || !Visible)
+				{
+					foreach (var piece in Cache.Pieces.OfType<MAPiece>())
+						piece.Detach();
+
+					return;
+				}
+
+				// Get the range required for display
+				var range = Data.CandleRange.Intersect(Chart.XAxis.Range);
+
+				// The line graphics are in chart space, get the transform to client space
+				var c2c = Chart.ChartToClientSpace();
+				var c2c_2d = new MatrixTransform(c2c.x.x, 0, 0, c2c.y.y, c2c.w.x + MA.XOffset, c2c.w.y);
+
+				// Add each graphics piece. Really, 'Cache.Get' should be
+				// called in UpdateGfxCore but this seems to be fast enough.
+				foreach (var piece in Cache.Get(range).OfType<MAPiece>())
+				{
+					piece.Line.Data.Transform = c2c_2d;
+					Chart.Overlay.Adopt(piece.Line);
+
+					// Show or hide the glow based on selected/hovered state
+					if (Hovered || Selected)
+					{
+						piece.Glow.Data.Transform = c2c_2d;
+						Chart.Overlay.Adopt(piece.Glow);
+					}
+					else
+					{
+						piece.Glow.Detach();
+					}
+
+					// Show BollingerBands
+					if (MA.ShowBollingerBands && MA.BBStdDev != 0)
+					{
+						piece.High.Data.Transform = c2c_2d;
+						piece.Low.Data.Transform = c2c_2d;
+						Chart.Overlay.Adopt(piece.High);
+						Chart.Overlay.Adopt(piece.Low);
+					}
+					else
+					{
+						piece.High.Detach();
+						piece.Low.Detach();
+					}
+				}
+			}
+
+			/// <summary>Display the options UI</summary>
+			protected override void ShowOptionsUICore()
+			{
+				if (m_moving_average_ui == null)
+				{
+					m_moving_average_ui = new MovingAverageUI(Window.GetWindow(Chart), MA);
+					m_moving_average_ui.Closed += delegate { m_moving_average_ui = null; };
+					m_moving_average_ui.Show();
+				}
+				m_moving_average_ui.Focus();
+			}
+			private MovingAverageUI m_moving_average_ui;
 
 			/// <summary>Hit test this indicator</summary>
 			public override ChartControl.HitTestResult.Hit HitTest(Point chart_point, Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
@@ -495,8 +572,8 @@ namespace CoinFlip.UI.Indicators
 					Data.IndexOf(Math.Floor(chart_point.X + sel_dist.Width) + 1));
 
 				// The various y offsets to test
-				var yofs = MA.ShowBollingerBands && MA.BollingerBandsStdDev != 0
-					? new[] { 0.0, -MA.BollingerBandsStdDev, +MA.BollingerBandsStdDev }
+				var yofs = MA.ShowBollingerBands && MA.BBStdDev != 0
+					? new[] { 0.0, -MA.BBStdDev, +MA.BBStdDev }
 					: new[] { 0.0 };
 
 				// Find the closest point to see if there's a hit
@@ -509,7 +586,7 @@ namespace CoinFlip.UI.Indicators
 					{
 						var p0 = Chart.ChartToClient(new Point(ma0.CandleIndex, ma0.Value + y * ma0.StdDev)).ToV2();
 						var p1 = Chart.ChartToClient(new Point(ma1.CandleIndex, ma1.Value + y * ma1.StdDev)).ToV2();
-						var t = Geometry.ClosestPoint(p0, p1, pt);
+						var t = Rylogic.Maths.Geometry.ClosestPoint(p0, p1, pt);
 						var closest = p0 * (1f - t) + p1 * (t);
 
 						// Record the closest hit point
@@ -526,6 +603,102 @@ namespace CoinFlip.UI.Indicators
 					? new ChartControl.HitTestResult.Hit(this, new Point(hit_pt.Value.x, hit_pt.Value.y), null)
 					: null;
 			}
+
+			/// <summary>Graphics for a piece of the moving average line</summary>
+			private class MAPiece :IChartGfxPiece
+			{
+				public MAPiece(RangeF range, MovingAverage ma, IEnumerable<MAContext.MAPoint> data)
+				{
+					Range = range;
+
+					{// Create the path for the MA
+						var path = Geometry_.MakePolyline(data.Select(x => new Point(x.CandleIndex, x.Value)));
+						Line = new Path
+						{
+							Data = path,
+							Stroke = ma.Colour.ToMediaBrush(),
+							StrokeThickness = ma.Width,
+							StrokeDashArray = ma.LineStyle.ToStrokeDashArray(),
+							StrokeStartLineCap = PenLineCap.Round,
+							StrokeEndLineCap = PenLineCap.Round,
+							StrokeLineJoin = PenLineJoin.Round,
+						};
+						Glow = new Path
+						{
+							Data = path,
+							Stroke = ma.Colour.Alpha(0.25).ToMediaBrush(),
+							StrokeThickness = ma.Width + GlowRadius,
+							StrokeStartLineCap = PenLineCap.Round,
+							StrokeEndLineCap = PenLineCap.Round,
+							StrokeLineJoin = PenLineJoin.Round,
+						};
+					}
+					{// Create the path the high BB
+						var path = Geometry_.MakePolyline(data.Select(x => new Point(x.CandleIndex, x.Value + ma.BBStdDev * x.StdDev)));
+						High = new Path
+						{
+							Data = path,
+							Stroke = ma.BBColour.ToMediaBrush(),
+							StrokeThickness = ma.Width * 0.5,
+							StrokeStartLineCap = PenLineCap.Round,
+							StrokeEndLineCap = PenLineCap.Round,
+							StrokeLineJoin = PenLineJoin.Round,
+						};
+					}
+					{// Create the path the low BB
+						var path = Geometry_.MakePolyline(data.Select(x => new Point(x.CandleIndex, x.Value - ma.BBStdDev * x.StdDev)));
+						Low = new Path
+						{
+							Data = path,
+							Stroke = ma.BBColour.ToMediaBrush(),
+							StrokeThickness = ma.Width * 0.5,
+							StrokeStartLineCap = PenLineCap.Round,
+							StrokeEndLineCap = PenLineCap.Round,
+							StrokeLineJoin = PenLineJoin.Round,
+						};
+					}
+				}
+				public void Dispose()
+				{
+					Detach();
+				}
+
+				/// <summary>Detach all graphics</summary>
+				public void Detach()
+				{
+					Line.Detach();
+					Glow.Detach();
+					High.Detach();
+					Low.Detach();
+				}
+
+				/// <summary>The X-Axis span covered by this piece</summary>
+				public RangeF Range { get; }
+
+				/// <summary>The moving average line</summary>
+				public Path Line { get; }
+
+				/// <summary>The glow when when the line is hovered</summary>
+				public Path Glow { get; }
+
+				/// <summary>The high Bollinger band</summary>
+				public Path High { get; }
+
+				/// <summary>The low Bollinger band</summary>
+				public Path Low { get; }
+			}
+		}
+
+		/// <summary>Event args for MAContext.DataChanged</summary>
+		public class DataChangedEventArgs
+		{
+			public DataChangedEventArgs(Range range)
+			{
+				Range = range;
+			}
+
+			/// <summary>The X Range of the data that has changed</summary>
+			public Range Range { get; }
 		}
 	}
 }

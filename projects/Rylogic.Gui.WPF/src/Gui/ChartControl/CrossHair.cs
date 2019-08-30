@@ -1,15 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
-using Rylogic.Extn;
 using Rylogic.Gfx;
-using Rylogic.Maths;
 
 namespace Rylogic.Gui.WPF
 {
@@ -25,18 +19,20 @@ namespace Rylogic.Gui.WPF
 				LineV = new Line
 				{
 					Stroke = LineColour.ToMediaBrush(),
-					StrokeThickness = 0.5,
+					StrokeThickness = 1.0,
 					StrokeDashArray = ELineStyles.Dashed.ToStrokeDashArray(),
 					StrokeStartLineCap = PenLineCap.Flat,
 					StrokeEndLineCap = PenLineCap.Flat,
+					IsHitTestVisible = false,
 				};
 				LineH = new Line
 				{
 					Stroke = LineColour.ToMediaBrush(),
-					StrokeThickness = 0.5,
+					StrokeThickness = 1.0,
 					StrokeDashArray = ELineStyles.Dashed.ToStrokeDashArray(),
 					StrokeStartLineCap = PenLineCap.Flat,
 					StrokeEndLineCap = PenLineCap.Flat,
+					IsHitTestVisible = false,
 				};
 				LabelX = new TextBlock
 				{

@@ -55,10 +55,10 @@ namespace Bot.Rebalance
 		public Model Model => m_bot.Model;
 
 		/// <summary>The amount held in base currency</summary>
-		public Unit<double> HoldingsBase => Fund[ChartSelector.Pair.Base].Total;
+		public Unit<double> HoldingsBase => ChartSelector.Pair != null ? Fund[ChartSelector.Pair.Base].Total : 0;
 
 		/// <summary>The amount held in quote currency</summary>
-		public Unit<double> HoldingsQuote => Fund[ChartSelector.Pair.Quote].Total;
+		public Unit<double> HoldingsQuote => ChartSelector.Pair != null ? Fund[ChartSelector.Pair.Quote].Total : 0;
 
 		/// <summary>The fund assigned to the bot being configured</summary>
 		public Fund Fund

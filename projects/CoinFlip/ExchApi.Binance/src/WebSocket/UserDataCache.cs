@@ -195,7 +195,10 @@ namespace Binance.API
 				lock (m_orders)
 				{
 					foreach (var order in orders)
-						m_orders[order.Pair] = new List<Order> { order };
+					{
+						var orders_per_pair = m_orders.GetOrAdd(order.Pair);
+						orders_per_pair.Add(order);
+					}
 				}
 			}
 
@@ -309,9 +312,9 @@ namespace Binance.API
 			}
 
 			/// <summary>Access all historic trades for the given currency pair, since 'since' if given</summary>
-			public List<OrderFill> this[CurrencyPair pair, DateTimeOffset? since = null, long? from_id = null]
+			public List<OrderFill> this[CurrencyPair pair, DateTimeOffset? since = null, long? from_id = null] // Worker thread context
 			{
-				get // Worker thread context
+				get
 				{
 					var history_per_pair = (List<OrderFill>)null;
 					lock (m_history)

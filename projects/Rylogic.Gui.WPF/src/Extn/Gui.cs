@@ -9,7 +9,6 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using Microsoft.Win32;
 using Rylogic.Core.Windows;
-using Rylogic.Extn;
 using Rylogic.Extn.Windows;
 using Rylogic.Gfx;
 
@@ -230,7 +229,7 @@ namespace Rylogic.Gui.WPF
 			yield return parent;
 		}
 
-		/// <summary>Finds a child in the visual tree matching the specified type (and, optionally, name). Depth-first search</summary>
+		/// <summary>Finds a child in the visual tree matching the specified type (and, optionally, predicate). Depth-first search</summary>
 		public static T FindVisualChild<T>(this DependencyObject parent, Func<T, bool> pred = null) where T : DependencyObject
 		{
 			for (int i = 0, iend = VisualTreeHelper.GetChildrenCount(parent); i != iend; ++i)
@@ -250,6 +249,27 @@ namespace Rylogic.Gui.WPF
 		public static DependencyObject FindVisualChild(this DependencyObject parent, Func<DependencyObject, bool> pred = null)
 		{
 			return FindVisualChild<DependencyObject>(parent, pred);
+		}
+
+		/// <summary>Finds a child in the logical tree matching the specified type (and, optionally, predicate). Depth-first search</summary>
+		public static T FindLogicalChild<T>(this DependencyObject parent, Func<T, bool> pred = null) where T : DependencyObject
+		{
+			foreach (var child in LogicalTreeHelper.GetChildren(parent).OfType<T>())
+			{
+				// Check each child
+				if (child is T tchild && (pred == null || pred(tchild)))
+					return tchild;
+
+				// Recurse into children
+				var item = child.FindLogicalChild<T>(pred);
+				if (item != null)
+					return item;
+			}
+			return null;
+		}
+		public static DependencyObject FindLogicalChild(this DependencyObject parent, Func<DependencyObject, bool> pred = null)
+		{
+			return FindLogicalChild<DependencyObject>(parent, pred);
 		}
 
 		/// <summary>
@@ -436,7 +456,7 @@ namespace Rylogic.Gui.WPF
 		}
 		public static System.Drawing.PointF MapPoint(Visual src, Visual dst, System.Drawing.PointF pt)
 		{
-			return MapPoint(src, dst, pt.ToSysWinPoint()).ToPointF();
+			return MapPoint(src, dst, pt.ToPointD()).ToPointF();
 		}
 
 		/// <summary>Converts a Rect from screen space to the space of this visual</summary>
@@ -457,22 +477,6 @@ namespace Rylogic.Gui.WPF
 			var pt = new Point();
 			if (relative_to_ancestor != null) pt = vis.TransformToAncestor(relative_to_ancestor).Transform(pt);
 			return new Rect(pt, vis.RenderSize);
-		}
-
-		/// <summary>Create a path geometry from a list of x,y pairs defining line segments</summary>
-		public static Geometry MakePolygonGeometry(params double[] xy)
-		{
-			if ((xy.Length % 2) == 1) throw new Exception("Point list must be a list of X,Y pairs");
-			return MakePolygonGeometry(xy.InPairs().Select(x => new Point(x.Item1, x.Item2)).ToArray());
-		}
-
-		/// <summary>Create a region from a list of x,y pairs defining line segments</summary>
-		public static Geometry MakePolygonGeometry(params Point[] pts)
-		{
-			if (pts.Length < 3) return Geometry.Empty;
-			var start = pts[0];
-			var segments = pts.Skip(1).Select(pt => new LineSegment(pt, false));
-			return new PathGeometry(new[]{ new PathFigure(start, segments, true) });
 		}
 
 		/// <summary>Set the position of this window Note: Fluent return allows 'SetLocation(x,y).OnScreen()'</summary>
