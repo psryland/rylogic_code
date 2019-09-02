@@ -41,14 +41,18 @@ namespace Rylogic.Gui.WPF
 		}
 		public void Invalidate(RangeF x_range)
 		{
+			if (Pieces.Count == 0)
+				return;
+
 			if (x_range == RangeF.Invalid)
 			{
 				Invalidate();
 			}
 			else
 			{
+				// Invalidate all pieces that overlap the given range
 				var beg = Pieces.BinarySearch(p => p.Range.CompareTo(x_range.Beg), find_insert_position: true);
-				var end = Pieces.BinarySearch(p => p.Range.CompareTo(x_range.End), find_insert_position: true);
+				var end = Math.Min(Pieces.Count, Pieces.BinarySearch(p => p.Range.CompareTo(x_range.End), find_insert_position: true) + 1);
 				Util.DisposeRange(Pieces, beg, end - beg);
 				Pieces.RemoveRange(beg, end - beg);
 			}

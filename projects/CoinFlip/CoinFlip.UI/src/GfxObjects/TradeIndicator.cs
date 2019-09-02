@@ -2,7 +2,9 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Shapes;
 using CoinFlip.Settings;
 using Rylogic.Common;
 using Rylogic.Extn;
@@ -16,97 +18,38 @@ namespace CoinFlip.UI.GfxObjects
 	/// <summary>Chart graphics representing the trade</summary>
 	public class TradeIndicator : ChartControl.Element
 	{
-		private const float GripperWidthFrac = 0.05f;
-		private const float GripperHeight = 24f;
-
-		public TradeIndicator(Trade trade)
+		public TradeIndicator(Trade trade, CandleChart candle_chart)
 			: base(Guid.NewGuid(), m4x4.Identity, "Trade")
 		{
 			Trade = trade;
+			CandleChart = candle_chart;
+
+			LabelEP = new TextBlock
+			{
+			};
+			LineEP = new Line
+			{
+				StrokeThickness = 1,
+			};
+			GlowEP = new Line
+			{
+				StrokeThickness = 5,
+			};
+			LabelEP.Typeface(candle_chart.Chart.XAxisPanel.Typeface, candle_chart.Chart.XAxisPanel.FontSize);
 		}
 		public override void Dispose()
 		{
-			Gfx = null;
+			LabelEP.Detach();
+			LineEP.Detach();
+			GlowEP.Detach();
 			Trade = null;
 			base.Dispose();
-		}
-		protected override void SetChartCore(ChartControl chart)
-		{
-			if (Chart != null)
-			{
-				Chart.PreviewMouseDown -= HandleMouseDown;
-			}
-			base.SetChartCore(chart);
-			if (Chart != null)
-			{
-				Chart.PreviewMouseDown += HandleMouseDown;
-			}
-
-			// Handlers
-			void HandleMouseDown(object sender, MouseButtonEventArgs args)
-			{
-				if (Hovered && args.ChangedButton == MouseButton.Left && args.LeftButton == MouseButtonState.Pressed)
-				{
-					if (Trade.OrderType != EOrderType.Market)
-						Chart.MouseOperations.SetPending(MouseButton.Left, new DragPrice(this));
-					else
-						args.Handled = true;
-				}
-			}
-		}
-		protected override void UpdateGfxCore()
-		{
-			/// <summary>Position/Colour the graphics</summary>
-			base.UpdateGfxCore();
-
-			// Price displayed with 8 significant figures
-			var price = PriceQ2B.ToString(8);
-
-			// Colour based on trade direction
-			var col =
-				TradeType == ETradeType.Q2B ? SettingsData.Settings.Chart.Q2BColour :
-				TradeType == ETradeType.B2Q ? SettingsData.Settings.Chart.B2QColour :
-				throw new Exception("Unknown trade type");
-
-			var ldr =
-				$"*Group trade " +
-				$"{{" +
-				$"  *Line gripper {col} {{ {1f - GripperWidthFrac} 0 0  1 0 0 *Width {{{GripperHeight}}} }}" +
-				$"  *Line level {col} {{0 0 0 1 0 0}}" +
-				$"  *Line halo {col.Alpha(0.25f)} {{0 0 0 1 0 0 *Width {{{GripperHeight * 0.75f}}} *Hidden }}" +
-				$"  *Font{{*Name{{\"tahoma\"}} *Size{{10}} *Weight{{500}} *Colour{{FFFFFFFF}}}}" +
-				$"  *Text price {{ \"{price}\" *Billboard *Anchor {{+1 0}} *BackColour {{{col}}} *o2w{{*pos{{1 0 0}}}} *NoZTest }}" +
-				$"}}";
-
-			Gfx = new View3d.Object(ldr, false, Id, null);
-		}
-		protected override void UpdateSceneCore()
-		{
-			// Add the graphics to the chart
-			base.UpdateSceneCore();
-			if (Gfx == null)
-				return;
-
-			if (Visible)
-			{
-				Debug.Assert(Math_.IsFinite(PriceQ2B));
-				Gfx.Child("halo").Visible = Hovered;
-				Gfx.O2P =
-					m4x4.Translation((float)Chart.XAxis.Min, (float)PriceQ2B, CandleChart.ZOrder.Indicators) *
-					m4x4.Scale((float)Chart.XAxis.Span, 1f, 1f, v4.Origin);
-
-				Chart.Scene.Window.AddObject(Gfx);
-			}
-			else
-			{
-				Chart.Scene.Window.RemoveObject(Gfx);
-			}
 		}
 
 		/// <summary>The Trade being 'indicated'</summary>
 		private Trade Trade
 		{
-			get { return m_trade; }
+			get => m_trade;
 			set
 			{
 				if (m_trade == value) return;
@@ -123,18 +66,8 @@ namespace CoinFlip.UI.GfxObjects
 		}
 		private Trade m_trade;
 
-		/// <summary>The graphics object</summary>
-		public View3d.Object Gfx
-		{
-			get { return m_gfx; }
-			private set
-			{
-				if (m_gfx == value) return;
-				Util.Dispose(ref m_gfx);
-				m_gfx = value;
-			}
-		}
-		private View3d.Object m_gfx;
+		/// <summary>The candle chart that this widget is on</summary>
+		private CandleChart CandleChart { get; }
 
 		/// <summary>The trade type being represented</summary>
 		public ETradeType TradeType => Trade.TradeType;
@@ -146,37 +79,110 @@ namespace CoinFlip.UI.GfxObjects
 			set => Trade.PriceQ2B = value;
 		}
 
+		/// <summary>Graphics</summary>
+		private TextBlock LabelEP { get; }
+		private Line LineEP { get; }
+		private Line GlowEP { get; }
+
+		/// <summary>Update the scene</summary>
+		protected override void UpdateSceneCore()
+		{
+			if (Visible)
+			{
+				var pt0 = Chart.ChartToClient(new Point(Chart.XAxis.Min, PriceQ2B));
+				var pt1 = Chart.ChartToClient(new Point(Chart.XAxis.Max, PriceQ2B));
+
+				// Colour based on trade direction
+				var col =
+					TradeType == ETradeType.Q2B ? SettingsData.Settings.Chart.Q2BColour :
+					TradeType == ETradeType.B2Q ? SettingsData.Settings.Chart.B2QColour :
+					throw new Exception("Unknown trade type");
+
+				// Entry price label
+				LabelEP.Text = PriceQ2B.ToString(6, false);
+				LabelEP.Background = col.ToMediaBrush();
+				LabelEP.Foreground = col.InvertBW().ToMediaBrush();
+				LabelEP.Measure(Rylogic.Extn.Windows.Size_.Infinity);
+				Canvas.SetLeft(LabelEP, pt1.X - LabelEP.DesiredSize.Width);
+				Canvas.SetTop(LabelEP, pt1.Y - LabelEP.DesiredSize.Height / 2);
+				Chart.Overlay.Adopt(LabelEP);
+
+				// Entry price line
+				LineEP.X1 = pt0.X;
+				LineEP.Y1 = pt0.Y;
+				LineEP.X2 = pt1.X - LabelEP.DesiredSize.Width;
+				LineEP.Y2 = pt1.Y;
+				LineEP.Stroke = col.ToMediaBrush();
+				Chart.Overlay.Adopt(LineEP);
+
+				// Add the glow if hovered or selected
+				if (Hovered || Selected)
+				{
+					GlowEP.X1 = pt0.X;
+					GlowEP.Y1 = pt0.Y;
+					GlowEP.X2 = pt1.X - LabelEP.DesiredSize.Width;
+					GlowEP.Y2 = pt1.Y;
+					GlowEP.Stroke = col.Alpha(0.25).ToMediaBrush();
+					Chart.Overlay.Adopt(GlowEP);
+				}
+				else
+				{
+					GlowEP.Detach();
+				}
+			}
+			else
+			{
+				LabelEP.Detach();
+				LineEP.Detach();
+				GlowEP.Detach();
+			}
+		}
+
 		/// <summary>Hit test the trade price indicator</summary>
 		public override ChartControl.HitTestResult.Hit HitTest(Point chart_point, Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
 		{
-			// Find the nearest point to 'client_point' on the line
-			var chart_pt = chart_point;
-			var client_pt = Chart.ChartToClient(new Point(chart_pt.X, PriceQ2B));
+			// Hit if over a price label
+			var pt0 = Chart.TransformToDescendant(LabelEP).Transform(client_point);
+			if (LabelEP.RenderArea().Contains(pt0))
+				return new ChartControl.HitTestResult.Hit(this, pt0, null);
 
-			// If the point is within tolerance of the gripper
-			if (Math_.Frac(Chart.XAxis.Min, chart_pt.X, Chart.XAxis.Max) > 1.0f - GripperWidthFrac &&
-				Math.Abs(client_pt.Y - client_point.Y) < GripperHeight)
-				return new ChartControl.HitTestResult.Hit(this, new Point(chart_pt.X, PriceQ2B), null);
+			// Get the price in client space
+			var client_price = Chart.ChartToClient(new Point(chart_point.X, PriceQ2B));
+			if (Math.Abs(client_price.Y - client_point.Y) < Chart.Options.MinSelectionDistance)
+				return new ChartControl.HitTestResult.Hit(this, client_price, null);
 
 			return null;
 		}
 
-		/// <summary>Drag the indicator to change the price</summary>
-		private class DragPrice : ChartControl.MouseOp
+		/// <summary>Support dragging</summary>
+		protected override void HandleDragged(ChartControl.ChartDraggedEventArgs args)
 		{
-			private readonly TradeIndicator m_trade_indicator;
-			public DragPrice(TradeIndicator trade_indicator)
-				: base(trade_indicator.Chart)
+			switch (args.State)
 			{
-				m_trade_indicator = trade_indicator;
+			default: throw new Exception($"Unknown drag state: {args.State}");
+			case ChartControl.EDragState.Start:
+				{
+					m_drag_start = PriceQ2B;
+					break;
+				}
+			case ChartControl.EDragState.Dragging:
+				{
+					PriceQ2B = (m_drag_start + args.Delta.Y)._(PriceQ2B);
+					break;
+				}
+			case ChartControl.EDragState.Commit:
+				{
+					break;
+				}
+			case ChartControl.EDragState.Cancel:
+				{
+					PriceQ2B = m_drag_start._(PriceQ2B);
+					break;
+				}
 			}
-			public override void MouseMove(MouseEventArgs e)
-			{
-				var chart_pt = Chart.ClientToChart(e.GetPosition(Chart));
-				m_trade_indicator.PriceQ2B = chart_pt.Y._(m_trade_indicator.PriceQ2B);
-				base.MouseMove(e);
-			}
+			args.Handled = true;
 		}
+		private double m_drag_start;
 	}
 }
 

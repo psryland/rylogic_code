@@ -16,7 +16,7 @@ namespace CoinFlip.Bots
 		//  - Intended usage is;
 		//      - Bots include an instance of this type in their settings type.
 		//      - On start up, Bots register the monitor with the model. Whenever
-		//        a filled position is detected....
+		//        a filled order is detected....
 
 		public MonitoredOrders()
 		{

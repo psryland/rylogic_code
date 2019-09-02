@@ -187,13 +187,9 @@ namespace CoinFlip
 			get
 			{
 				m_current = m_current ?? CurrentAt(Model.UtcNow.Ticks);
-				if (m_current != null && Model.BackTesting)
-				{
-					// Interpolate the latest candle to determine the spot price
-					var t = Math_.Frac(m_current.Timestamp, Model.UtcNow.Ticks, m_current.Timestamp + Misc.TimeFrameToTicks(1.0, TimeFrame));
-					return m_current.SubCandle(Math_.Clamp(t, 0.0, 1.0));
-				}
-				return m_current;
+				return Model.BackTesting
+					? m_current?.SubCandle(Model.UtcNow, TimeFrame)
+					: m_current;
 			}
 		}
 		private Candle m_current;
@@ -236,10 +232,18 @@ namespace CoinFlip
 		public IEnumerable<Candle> ReadCandles(Range time_period)
 		{
 			// Read from the database. Order by timestamp so that the oldest is first, and the newest is at the end.
-			return DB.Query<Candle>(
+			var candles = DB.Query<Candle>(
 				$"select * from {TimeFrame}\n" +
 				$"order by [{nameof(Candle.Timestamp)}] limit @start,@count",
 				new { start = time_period.Beg, count = time_period.Size });
+
+			if (Model.BackTesting)
+			{
+				var latest_time = new TimeFrameTime(Model.UtcNow, TimeFrame).IntgTicks;
+				candles = candles.Select(x => x.Timestamp < latest_time ? x : x.SubCandle(Model.UtcNow, TimeFrame));
+			}
+
+			return candles;
 		}
 
 		/// <summary>Raised whenever candles are added/modified</summary>

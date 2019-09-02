@@ -94,21 +94,19 @@
 			<MenuItem
 				Header="Cancel Order"
 				IsEnabled="{Binding Current, Converter={conv:NotNull}}"
-				/>
-			<MenuItem
-				Header="'Fill' Order"
-				IsEnabled="{Binding Current, Converter={conv:NotNull}}"
+				Command="{Binding CancelOrder}"
 				/>
 			<Separator/>
 			<MenuItem
-				Name="m_menu_show_on_chart"
 				Header="Show On Chart"
 				IsEnabled="{Binding Current, Converter={conv:NotNull}}"
+				Name="m_menu_show_on_chart"
 				/>
 			<Separator/>
 			<MenuItem
 				Header="Modify"
 				IsEnabled="{Binding Current, Converter={conv:NotNull}}"
+				Command="{Binding ModifyOrder}"
 				/>
 		</ContextMenu>
 	</DataGrid.ContextMenu>

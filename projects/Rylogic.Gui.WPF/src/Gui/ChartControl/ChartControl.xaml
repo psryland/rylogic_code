@@ -24,8 +24,8 @@
 				DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
 				>
 				<MenuItem Header="Objects">
-					<MenuItem Header="Origin" IsChecked="{Binding Window.OriginPointVisible}" Command="{Binding ToggleOriginPoint}"/>
-					<MenuItem Header="Focus" IsChecked="{Binding Window.FocusPointVisible}" Command="{Binding ToggleFocusPoint}"/>
+					<MenuItem Header="Origin" IsChecked="{Binding Scene.Window.OriginPointVisible}" Command="{Binding ToggleOriginPoint}"/>
+					<MenuItem Header="Focus" IsChecked="{Binding Scene.Window.FocusPointVisible}" Command="{Binding ToggleFocusPoint}"/>
 					<MenuItem Header="Grid Lines" IsChecked="{Binding Options.ShowGridLines}" Command="{Binding ToggleGridLines}"/>
 					<MenuItem Header="Axes" IsChecked="{Binding Options.ShowAxes}" Command="{Binding ToggleAxes}"/>
 				</MenuItem>

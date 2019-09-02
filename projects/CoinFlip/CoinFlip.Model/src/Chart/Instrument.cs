@@ -200,7 +200,7 @@ namespace CoinFlip
 		/// <summary>The latest candle w.r.t to Model.UtcNow</summary>
 		public Candle Latest => Count != 0 ? this[Count - 1] : null;
 
-		/// <summary>The raw data. Idx = 0 is the oldest, Idx = Count is the latest</summary>
+		/// <summary>The raw data. Idx = 0 is the oldest, Idx = Count-1 is the latest</summary>
 		public Candle this[int idx]
 		{
 			get
@@ -372,28 +372,25 @@ namespace CoinFlip
 			if (idx == -1 || CachedIndexRange.Contains(idx))
 				return;
 
-			// Read from the database of historic price data
-			Candle[] ReadCandles(Range read) => PriceData.ReadCandles(read).ToArray();
-
 			// Determine the range of data to read
 			if (CachedIndexRange.Empty)
 			{
 				var read = new Range(Math.Max(0L, idx - CacheChunkSize), Math.Min(DBCandleCount, idx + CacheChunkSize));
-				m_cache.AddRange(ReadCandles(read));
+				m_cache.AddRange(PriceData.ReadCandles(read));
 				CachedIndexRange = read;
 			}
 			else if (idx >= CachedIndexRange.End)
 			{
 				var chunks = (idx+1 - CachedIndexRange.End + CacheChunkSize - 1) / CacheChunkSize;
 				var read = new Range(CachedIndexRange.End, Math.Min(DBCandleCount, CachedIndexRange.End + chunks*CacheChunkSize));
-				m_cache.AddRange(ReadCandles(read));
+				m_cache.AddRange(PriceData.ReadCandles(read));
 				CachedIndexRange = new Range(CachedIndexRange.Beg, read.End);
 			}
 			else if (idx < CachedIndexRange.Beg)
 			{
 				var chunks = (CachedIndexRange.Beg - idx + CacheChunkSize - 1) / CacheChunkSize;
 				var read = new Range(Math.Max(0L, CachedIndexRange.Beg - chunks*CacheChunkSize), CachedIndexRange.Beg);
-				m_cache.InsertRange(0, ReadCandles(read));
+				m_cache.InsertRange(0, PriceData.ReadCandles(read));
 				CachedIndexRange = new Range(read.Beg, CachedIndexRange.End);
 			}
 			else

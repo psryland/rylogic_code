@@ -201,20 +201,20 @@ namespace CoinFlip.UI.Indicators
 					void HandleDataChanged(object sender, DataEventArgs e)
 					{
 						// Update the range when the instrument changes.
-						if (Range == Range.Invalid)
+						if (Range == Range.Invalid || Range.End > Instrument.Count)
 						{
 							// If the range is currently invalid, use a sensible default
 							Range = new Range(
-								Math.Max(0, m_instrument.Count - Instrument.CacheChunkSize),
-								m_instrument.Count);
+								Math.Max(0, Instrument.Count - Instrument.CacheChunkSize),
+								Instrument.Count);
 						}
 						else
 						{
 							// If the range used to include the latest candle, grow the range as new candles arrive
-							var grow = Math.Abs(m_instrument.Count - Range.End) <= 1 ? 1 : 0;
+							var grow = Math.Abs(Instrument.Count - Range.End) <= 1 ? 1 : 0;
 							Range = new Range(
-								Math_.Clamp(Range.Beg, 0, m_instrument.Count),
-								Math_.Clamp(Range.End + grow, 0, m_instrument.Count));
+								Math_.Clamp(Range.Beg, 0, Instrument.Count),
+								Math_.Clamp(Range.End + grow, 0, Instrument.Count));
 						}
 					}
 				}
@@ -237,56 +237,38 @@ namespace CoinFlip.UI.Indicators
 			private void CalculateMA(Range range)
 			{
 				// Flush the data
-				if (range == Range.Invalid || Instrument == null || Instrument.Count == 0)
+				if (range == Range.Invalid || range.Empty || Instrument == null || Instrument.Count == 0)
 				{
 					m_data.Clear();
+					m_stat = null;
 					m_range = Range.Invalid;
 					DataChanged?.Invoke(this, new DataChangedEventArgs(Range.Invalid));
 					return;
 				}
 
-				// Do not include 'Instrument.Count-1' in 'm_stat' because it is changing all the time.
-				var new_range = range;
-				var old_range = m_range;
-				if (new_range.End == Instrument.Count) --new_range.End;
-				if (old_range.End == Instrument.Count) --old_range.End;
+				// 'm_stat' does not include the candle at 'Range.End-1'. This candle is typically the 
+				// latest candle which is changing all the time. It's simplier to always exclude the last
+				// candle from 'm_stat' than to try and track what's happening to Instruction.Count.
+				m_data.Capacity = Math.Max(m_data.Capacity, range.Sizei);
 
-				// Populate the data over 'range'
-				if (m_stat == null || old_range == Range.Invalid)
+				// See if we can incrementally update the range
+				if (m_stat != null && Range != Range.Invalid && !Range.Empty && Range.Beg <= range.Beg && range.End > Range.End - 1)
 				{
-					m_stat = NewStat();
-					m_data.Capacity = new_range.Sizei;
-					m_data.Assign(CalculateMA(new_range, m_stat));
+					// Incremental update
+					m_data.RemoveToEnd(IndexOf(Range.End - 1));
+					m_data.AddRange(CalculateMA(new Range(Range.End - 1, range.End - 1), m_stat));
+					m_data.AddRange(CalculateMA(new Range(range.End - 1, range.End), CopyStat(m_stat)));
+					DataChanged?.Invoke(this, new DataChangedEventArgs(new Range(Range.End - 1, range.End)));
 				}
 				else
 				{
-					// If the end of the range has been extended, append to the data
-					if (new_range.End > old_range.End)
-					{
-						var r = new Range(old_range.End, new_range.End);
-						m_data.RemoveToEnd(IndexOf(r.Beg));
-						m_data.AddRange(CalculateMA(r, m_stat));
-						DataChanged?.Invoke(this, new DataChangedEventArgs(r));
-					}
+					m_stat = NewStat();
 
-					// If start of the range has been extended, prepend to the data
-					if (new_range.Beg < old_range.Beg)
-					{
-						// Overlap the existing range by 'Periods' because of the warm up period with moving averages
-						var r = new Range(new_range.Beg, Math.Min(old_range.Beg + m_ma.Periods, Instrument.Count - 1));
-						m_data.RemoveRange(0, IndexOf(r.End));
-						m_data.InsertRange(0, CalculateMA(r, NewStat()));
-						DataChanged?.Invoke(this, new DataChangedEventArgs(r));
-					}
-				}
-
-				// If the requested range includes the latest candle, add one more data point to the data
-				// using a copy of 'm_stat' since the latest candle changes.
-				if (range.End == Instrument.Count)
-				{
-					var r = new Range(Instrument.Count - 1, Instrument.Count);
-					m_data.AddRange(CalculateMA(r, CopyStat(m_stat)));
-					DataChanged?.Invoke(this, new DataChangedEventArgs(r));
+					// Recalculate all
+					m_data.Clear();
+					m_data.AddRange(CalculateMA(new Range(range.Beg, range.End - 1), m_stat));
+					m_data.AddRange(CalculateMA(new Range(range.End - 1, range.End), CopyStat(m_stat)));
+					DataChanged?.Invoke(this, new DataChangedEventArgs(range));
 				}
 
 				// Save the new range
@@ -405,15 +387,15 @@ namespace CoinFlip.UI.Indicators
 					Data.IndexOf(missing.End));
 
 				// Limit the size of 'idx_missing' to the block size
-				const int PieceBlockSize = 4096;
+				const int PieceBlockSize = 256;
 				var idx_range = new Range(
 					Math.Max(idx_missing.Beg, idx - PieceBlockSize),
 					Math.Min(idx_missing.End, idx + PieceBlockSize));
 				Debug.Assert(!idx_range.Empty);
 
 				// Create a piece that spans the missing range
-				var data = idx_missing.Select(i => Data[(int)i]);
-				var piece = new MAPiece(idx_missing, MA, data);
+				var data = idx_range.Select(i => Data[(int)i]);
+				var piece = new MAPiece(idx_range, MA, data);
 				return piece;
 			}
 
@@ -607,7 +589,7 @@ namespace CoinFlip.UI.Indicators
 			/// <summary>Graphics for a piece of the moving average line</summary>
 			private class MAPiece :IChartGfxPiece
 			{
-				public MAPiece(RangeF range, MovingAverage ma, IEnumerable<MAContext.MAPoint> data)
+				public MAPiece(Range range, MovingAverage ma, IEnumerable<MAContext.MAPoint> data)
 				{
 					Range = range;
 

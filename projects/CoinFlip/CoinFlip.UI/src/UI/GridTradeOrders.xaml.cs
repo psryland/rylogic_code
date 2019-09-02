@@ -20,6 +20,9 @@ namespace CoinFlip.UI
 			DockControl = new DockControl(this, "Orders");
 			Model = model;
 
+			CancelOrder = Command.Create(this, CancelOrderInternal);
+			ModifyOrder = Command.Create(this, ModifyOrderInternal);
+
 			DataContext = this;
 		}
 		public void Dispose()
@@ -40,7 +43,10 @@ namespace CoinFlip.UI
 			base.OnMouseDoubleClick(e);
 			var chart = Model.Charts.ActiveChart;
 			if (chart != null)
+			{
 				ShowCurrentOrderOnChart(chart);
+				e.Handled = true;
+			}
 		}
 
 		/// <summary></summary>
@@ -126,6 +132,18 @@ namespace CoinFlip.UI
 		{
 			get => (Order)Orders?.CurrentItem;
 			set => Orders?.MoveCurrentTo(value);
+		}
+
+		/// <summary>Cancel the selected order</summary>
+		public Command CancelOrder { get; }
+		private void CancelOrderInternal()
+		{
+		}
+
+		/// <summary>Modify an existing order</summary>
+		public Command ModifyOrder { get; }
+		private void ModifyOrderInternal()
+		{
 		}
 
 		/// <summary>Show the chart for the selected trade pair</summary>

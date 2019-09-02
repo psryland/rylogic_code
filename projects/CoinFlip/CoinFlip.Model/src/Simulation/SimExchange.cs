@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -105,12 +105,12 @@ namespace CoinFlip
 			// Use the same random numbers for each run
 			m_rng = new Random(54281);
 
-			// Reset positions
+			// Reset orders
 			m_ord.Clear();
 			Orders.Clear();
 			m_order_id = 0;
 
-			// Reset History
+			// Reset history
 			m_his.Clear();
 			History.Clear();
 			m_history_id = 0;
@@ -356,7 +356,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Attempt to make a trade on 'pair' for the given 'price' and base 'amount'</summary>
-		private void TryFillOrder(TradePair pair, Fund fund, long order_id, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, Unit<double> remaining_in, out Order pos, out OrderCompleted his)
+		private void TryFillOrder(TradePair pair, Fund fund, long order_id, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, Unit<double> remaining_in, out Order ord, out OrderCompleted his)
 		{
 			// The order can be filled immediately, filled partially, or not filled and remain as an 'Order'.
 			// Also, exchanges use the base currency as the amount to fill, so for Q2B trades it's possible
@@ -367,10 +367,10 @@ namespace CoinFlip
 			var price_q2b = tt.PriceQ2B(amount_out / amount_in);
 			var amount_base = tt.AmountBase(price_q2b, amount_in: remaining_in);
 			var filled = market.Consume(pair, tt, ot, price_q2b, amount_base, out var remaining_base);
-			Debug.Assert(Math_.FEqlRelative(amount_base, remaining_base + filled.Sum(x => x.AmountBase), 0.000000001));
 
 			// The order is partially or completely filled...
-			pos = remaining_base != 0 ? new Order(order_id, fund, pair, ot, tt, amount_in, amount_out, tt.AmountIn(remaining_base, price_q2b), Model.UtcNow, Model.UtcNow) : null;
+			Debug.Assert(Math_.FEqlRelative(amount_base, remaining_base + filled.Sum(x => x.AmountBase), 0.000000001));
+			ord = remaining_base != 0 ? new Order(order_id, fund, pair, ot, tt, amount_in, amount_out, tt.AmountIn(remaining_base, price_q2b), Model.UtcNow, Model.UtcNow) : null;
 			his = remaining_base != amount_base ? new OrderCompleted(order_id, fund, pair, tt) : null;
 
 			// Add 'TradeCompleted' entries for each order book offer that was filled

@@ -60,16 +60,27 @@ namespace CoinFlip
 		public event EventHandler<HandledEventArgs> Needed;
 
 		/// <summary>
-		/// Consume orders up to 'price_q2b' or 'amount_base' (simulating them being filled).
+		/// Consume offers up to 'price_q2b' or 'amount_base' (based on order type).
 		/// 'pair' is the trade pair that this market depth data is associated with.
-		/// Returns the orders that were consumed. 'amount_remaining' is what remains unfilled</summary>
+		/// Returns the offers that were consumed. 'amount_remaining' is what remains unfilled</summary>
 		public IList<Offer> Consume(TradePair pair, ETradeType tt, EOrderType ot, Unit<double> price_q2b, Unit<double> amount_base, out Unit<double> remaining_base)
 		{
-			// Note: this function cannot use 'amount_in' + 'amount_out' parameters because the
-			// price to consume up to is not necessarity 'amount_out/amount_in'. 'amount_in' may
-			// be the partial remaining amount of a trade.
+			// Notes:
+			//  - 'remaining_base' should only be non zero if the order book is empty
+			//  - Handling 'dust' amounts:
+			//     If the amount to fill almost matches an offer, where the difference is an amount too small to trade,
+			//     the offer amount is adjusted to exactly match. The small difference is absorbed by the exchange.
+			//  - This function cannot use 'amount_in' + 'amount_out' parameters because the price to consume up to
+			//    is not necessarity 'amount_out/amount_in'. 'amount_in' may be the partial remaining amount of a trade.
+
 			var order_book = this[tt];
 			remaining_base = amount_base;
+
+			// Stop orders become market orders when the price reaches the stop level
+			if (ot == EOrderType.Stop && order_book.Count != 0 && tt.Sign() * price_q2b.CompareTo(order_book[0].PriceQ2B) <= 0)
+				ot = EOrderType.Market;
+			else
+				return new List<Offer>();
 
 			var count = 0;
 			var offers = order_book.Offers;
@@ -79,14 +90,10 @@ namespace CoinFlip
 				if (ot != EOrderType.Market && tt.Sign() * price_q2b.CompareTo(offer.PriceQ2B) < 0)
 					break;
 
-				// The volume remaining is less than the volume of 'offer', stop
-				if (remaining_base <= offer.AmountBase)
-					break;
-
-				// 'offer' is smaller than the remaining volume so it would be consumed. However, don't consume
-				// 'offer' if doing so would leave 'amount_remaining' with an invalid trading amount.
 				var rem = remaining_base - offer.AmountBase;
-				if (!pair.AmountRangeBase.Contains(rem) || !pair.AmountRangeQuote.Contains(rem * price_q2b))
+
+				// The remaining amount is large enough to consider the next offer
+				if (rem < pair.AmountRangeBase.Beg || rem * offer.PriceQ2B < pair.AmountRangeQuote.Beg)
 					break;
 
 				remaining_base = rem;
@@ -97,16 +104,19 @@ namespace CoinFlip
 			var consumed = offers.GetRange(0, count);
 			offers.RemoveRange(0, count);
 
-			// Remove any remaining amount from the top remaining order if doing so doesn't leave an invalid trading amount
+			// Remove any remaining amount from the top remaining offer (if the price is right)
 			if (remaining_base != 0 && offers.Count != 0 && (ot == EOrderType.Market || tt.Sign() * price_q2b.CompareTo(offers[0].PriceQ2B) >= 0))
 			{
-				var rem = offers[0].AmountBase - remaining_base;
-				if (pair.AmountRangeBase.Contains(rem) && pair.AmountRangeQuote.Contains(rem * offers[0].PriceQ2B))
-				{
-					consumed.Add(new Offer(offers[0].PriceQ2B, remaining_base));
+				var offer = offers[0];
+
+				var rem = offer.AmountBase - remaining_base;
+				if (pair.AmountRangeBase.Contains(rem) && pair.AmountRangeQuote.Contains(rem * offer.PriceQ2B))
 					offers[0] = new Offer(offers[0].PriceQ2B, rem);
-					remaining_base = 0.0._(amount_base);
-				}
+				else
+					offers.RemoveAt(0);
+
+				consumed.Add(new Offer(offer.PriceQ2B, remaining_base));
+				remaining_base = 0.0._(amount_base);
 			}
 			return consumed;
 		}

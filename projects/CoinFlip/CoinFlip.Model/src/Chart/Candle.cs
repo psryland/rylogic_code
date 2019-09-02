@@ -173,12 +173,25 @@ namespace CoinFlip
 		{
 			// Bullish candles, return: Open, Low, High, Close
 			// Bearish candles, return: Open, High, Low, Close
+			var vol = Math_.Lerp(t, 0, Volume);
+			var t0 = Bullish ? 0.6667 : 0.3333;
+			var t1 = Bullish ? 0.3333 : 0.6667;
 			var close = Bullish
 				? Math_.Lerp(t, Open, Low, High, Close)
 				: Math_.Lerp(t, Open, High, Low, Close);
-			var vol = Math_.Lerp(t, 0, Volume);
-			return new Candle(Timestamp, Open, High, Low, close, Median, vol);
+
+			return new Candle(Timestamp, Open,
+				t < t0 ? Math.Max(Open, close) : High,
+				t < t1 ? Math.Min(Open, close) : Low,
+				close, Median, vol);
 		}
+		public Candle SubCandle(DateTimeOffset now, ETimeFrame time_frame)
+		{
+			// Interpolate the latest candle to determine the spot price
+			var t = Math_.Frac(Timestamp, now.Ticks, Timestamp + Misc.TimeFrameToTicks(1.0, time_frame));
+			return SubCandle(Math_.Clamp(t, 0.0, 1.0));
+		}
+
 
 		/// <summary>Debugging check for self consistency</summary>
 		public bool Valid()

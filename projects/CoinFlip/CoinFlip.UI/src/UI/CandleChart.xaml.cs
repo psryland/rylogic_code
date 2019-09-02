@@ -673,7 +673,6 @@ namespace CoinFlip.UI
 						break;
 					}
 				}
-
 				bool Visible(Order ord)
 				{
 					var time_min = Instrument.TimeAtFIndex(Chart.XAxis.Min);
@@ -715,7 +714,6 @@ namespace CoinFlip.UI
 						break;
 					}
 				}
-
 				bool Visible(OrderCompleted ord)
 				{
 					var time_min = Instrument.TimeAtFIndex(Chart.XAxis.Min);
@@ -910,7 +908,7 @@ namespace CoinFlip.UI
 			var order_id = (trade as Order)?.OrderId;
 
 			// Create a graphic to represent the trade on the chart
-			var indy = new GfxObjects.TradeIndicator(trade) { Chart = Chart };
+			var indy = new GfxObjects.TradeIndicator(trade, this) { Chart = Chart };
 
 			// Create an editor window for the trade
 			var ui = new EditTradeUI(Window.GetWindow(this), Model, trade, order_id);

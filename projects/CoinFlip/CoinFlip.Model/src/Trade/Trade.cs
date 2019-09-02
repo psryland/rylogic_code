@@ -21,7 +21,7 @@ namespace CoinFlip
 		//    The price will represent the best price that covers all of the amount, not
 		//    the spot price.
 		//  - Don't implicitly change amounts/prices based on order type for the same reason.
-		//    Instead, allow any values to be set and use  alidate to check they're correct.
+		//    Instead, allow any values to be set and use validate to check they're correct.
 		//    The 'EditTradeUI' should be used to modify properties and ensure correct behaviour
 		//    w.r.t to order type.
 		// Rounding issues: 
