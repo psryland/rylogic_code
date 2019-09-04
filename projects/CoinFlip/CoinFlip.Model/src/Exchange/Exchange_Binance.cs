@@ -9,7 +9,6 @@ using Binance.API.DomainObjects;
 using CoinFlip.Settings;
 using ExchApi.Common;
 using Rylogic.Common;
-using Rylogic.Container;
 using Rylogic.Extn;
 using Rylogic.Utility;
 
@@ -197,7 +196,7 @@ namespace CoinFlip
 					var coin = Coins.GetOrAdd(b.Asset);
 
 					// Update the balance
-					Balance.AssignFundBalance(coin, Fund.Default, b.Total._(coin), b.Locked._(coin), balance_data.UpdateTime);
+					Balance.ExchangeUpdate(coin, b.Total._(coin), b.Locked._(coin), balance_data.UpdateTime);
 				}
 
 				// Notify updated
@@ -250,20 +249,12 @@ namespace CoinFlip
 			// Queue integration of the market data
 			Model.DataUpdates.Add(() =>
 			{
-				var order_ids = new HashSet<long>();
+				//var order_ids = new HashSet<long>();
+				var orders = new List<Order>();
 				var new_pairs = new HashSet<TradePair>();
 				var history_last_id = 0L;
 
-				// Update the collection of existing orders
-				foreach (var exch_order in existing_orders)
-				{
-					// Get/Add the order
-					var order = OrderFrom(exch_order, timestamp);
-					Orders.AddOrUpdate(order);
-
-					order_ids.Add(order.OrderId);
-					new_pairs.Add(order.Pair);
-				}
+				// Update the trade history
 				foreach (var exch_order in history_orders)
 				{
 					// Get/Add the completed order
@@ -281,15 +272,21 @@ namespace CoinFlip
 					history_last_id = fill.OrderId;
 				}
 
+				// Update the collection of existing orders
+				foreach (var exch_order in existing_orders)
+				{
+					// Get/Add the order
+					var order = orders.Add2(OrderFrom(exch_order, timestamp));
+					new_pairs.Add(order.Pair);
+				}
+				SynchroniseOrders(orders, timestamp);
+
 				// Merge pairs that have trades into the 'm_pairs' set
 				lock (m_pairs)
 				{
 					m_pairs.AddRange(new_pairs);
 					m_history_last_id = history_last_id;
 				}
-
-				// Remove any positions that are no longer valid.
-				SynchroniseOrders(order_ids, timestamp);
 
 				// Notify updated
 				History.LastUpdated = timestamp;
@@ -413,7 +410,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Open a trade</summary>
-		protected override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, CancellationToken cancel, float sig_change)
+		protected override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, CancellationToken cancel)
 		{
 			try
 			{
@@ -473,8 +470,8 @@ namespace CoinFlip
 			var trade_id = fill.TradeId;
 			var amount_in = tt.AmountIn(fill.AmountBase._(pair.Base), fill.Price._(pair.RateUnits));
 			var amount_out = tt.AmountOut(fill.AmountBase._(pair.Base), fill.Price._(pair.RateUnits));
-			var commission = fill.Commission._(fill.CommissionAsset);
-			var commission_coin = Coins[fill.CommissionAsset];
+			var commission = fill.CommissionAsset != null ? fill.Commission._(fill.CommissionAsset) : 0.0._(pair.Base);
+			var commission_coin = fill.CommissionAsset != null ? Coins[fill.CommissionAsset] : Coins[pair.Base];
 			var created = fill.Created;
 			return new TradeCompleted(order_completed, trade_id, amount_in, amount_out, commission, commission_coin, created, updated);
 		}

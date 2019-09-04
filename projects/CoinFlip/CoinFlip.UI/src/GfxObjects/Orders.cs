@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using CoinFlip.Settings;
@@ -59,7 +60,7 @@ namespace CoinFlip.UI.GfxObjects
 			foreach (var order in orders)
 			{
 				// Get the associated graphics objects
-				var gfx = m_gfx.GetOrAdd(order.OrderId, k => new OrderGfx(order));
+				var gfx = m_gfx.GetOrAdd(order.OrderId, k => new OrderGfx(order, this));
 
 				// Update the position
 				var x = m_xvalue(order);
@@ -70,20 +71,32 @@ namespace CoinFlip.UI.GfxObjects
 			}
 		}
 
+		/// <summary>Interaction events on the orders</summary>
+		public event EventHandler<OrderEventArgs> OrderSelected;
+		private void NotifyOrderSelected(IOrder order)
+		{
+			OrderSelected?.Invoke(this, new OrderEventArgs(order));
+		}
+
+		/// <summary>Interaction events on the orders</summary>
+		public event EventHandler<OrderEventArgs> EditOrder;
+		private void NotifyEditOrder(IOrder order)
+		{
+			EditOrder?.Invoke(this, new OrderEventArgs(order));
+		}
+
 		/// <summary>Graphics for a single collected order</summary>
 		private class OrderGfx :IDisposable
 		{
-			public OrderGfx(IOrder order)
+			private readonly Orders m_orders;
+			private readonly IOrder m_order;
+			public OrderGfx(IOrder order, Orders owner)
 			{
-				OrderId = order.OrderId;
-				TradeType = order.TradeType;
+				m_orders = owner;
+				m_order = order;
 
-				var col = TradeType == ETradeType.Q2B
-					? new SolidColorBrush(SettingsData.Settings.Chart.Q2BColour.Darken(0.5f).ToMediaColor())
-					: new SolidColorBrush(SettingsData.Settings.Chart.B2QColour.Darken(0.5f).ToMediaColor());
 				Mark = new Polygon
 				{
-					Fill = col,
 					Stroke = Brushes.Black,
 					Points = TradeType == ETradeType.Q2B
 						? new PointCollection(new[] { new Point(0, 0), new Point(-5, +5), new Point(+5, +5) })
@@ -92,57 +105,41 @@ namespace CoinFlip.UI.GfxObjects
 				Label = new TextBlock
 				{
 					Text = order.Description,
-					Foreground = col,
 					FontSize = 8.0,
 				};
+
+				Mark.MouseLeftButtonDown += HandleMouseLeftButtonDown;
 			}
 			public void Dispose()
 			{
-				Mark = null;
-				Label = null;
+				Mark.Detach();
+				Label.Detach();
 			}
 
 			/// <summary>The ID of the order these graphics objects are for</summary>
-			public long OrderId { get; }
+			public long OrderId => m_order.OrderId;
 
 			/// <summary></summary>
-			public ETradeType TradeType { get; }
+			public ETradeType TradeType => m_order.TradeType;
 
 			/// <summary>The triangle marker</summary>
-			public Polygon Mark
-			{
-				get => m_mark;
-				private set
-				{
-					if (m_mark == value) return;
-					if (m_mark?.Parent is Canvas parent)
-						parent.Children.Remove(m_mark);
-					m_mark = value;
-				}
-			}
-			private Polygon m_mark;
+			private Polygon Mark { get; }
 
 			/// <summary>A text label</summary>
-			public TextBlock Label
-			{
-				get => m_label;
-				private set
-				{
-					if (m_label == value) return;
-					if (m_label?.Parent is Canvas parent)
-						parent.Children.Remove(m_label);
-					m_label = value;
-				}
-			}
-			private TextBlock m_label;
+			private TextBlock Label { get; }
 
 			/// <summary>Resize and reposition the graphics</summary>
 			public void Update(Canvas overlay, Point s, bool highlight)
 			{
-				overlay.Adopt(Mark);
-				Mark.RenderTransform = new MatrixTransform(1, 0, 0, 1, s.X, s.Y);
+				var col = TradeType == ETradeType.Q2B
+					? new SolidColorBrush(SettingsData.Settings.Chart.Q2BColour.Darken(0.5f).ToMediaColor())
+					: new SolidColorBrush(SettingsData.Settings.Chart.B2QColour.Darken(0.5f).ToMediaColor());
 
-				overlay.Adopt(Label);
+				Mark.Fill = col;
+				Mark.RenderTransform = new MatrixTransform(1, 0, 0, 1, s.X, s.Y);
+				overlay.Adopt(Mark);
+
+				Label.Foreground = col;
 				Label.Visibility = SettingsData.Settings.Chart.ShowTradeDescriptions ? Visibility.Visible : Visibility.Collapsed;
 				Label.FontSize = SettingsData.Settings.Chart.TradeLabelSize;
 				Label.FontWeight = highlight ? FontWeights.Bold : FontWeights.Normal;
@@ -151,7 +148,29 @@ namespace CoinFlip.UI.GfxObjects
 				Label.RenderTransform = SettingsData.Settings.Chart.LabelsToTheLeft
 					? new MatrixTransform(1, 0, 0, 1, s.X - Label.DesiredSize.Width - 7.0, s.Y - Label.DesiredSize.Height/2)
 					: new MatrixTransform(1, 0, 0, 1, s.X + 7.0, s.Y - Label.DesiredSize.Height / 2);
+				overlay.Adopt(Label);
 			}
+
+			/// <summary>Handle selection and double clicks</summary>
+			private void HandleMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+			{
+				if (e.ClickCount == 2)
+					m_orders.NotifyEditOrder(m_order);
+				else if (e.ClickCount == 1)
+					m_orders.NotifyOrderSelected(m_order);
+			}
+		}
+
+		/// <summary>Event args for 'OrderGfx' interactions</summary>
+		public class OrderEventArgs :EventArgs
+		{
+			public OrderEventArgs(IOrder order)
+			{
+				Order = order;
+			}
+
+			/// <summary>The selected order</summary>
+			public IOrder Order { get; }
 		}
 	}
 }

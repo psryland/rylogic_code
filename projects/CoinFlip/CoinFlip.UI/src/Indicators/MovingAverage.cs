@@ -475,14 +475,13 @@ namespace CoinFlip.UI.Indicators
 			{
 				base.UpdateSceneCore();
 
-				// Add the graphics pieces over the visible range
-				if (Data.Count == 0 || !Visible)
-				{
-					foreach (var piece in Cache.Pieces.OfType<MAPiece>())
-						piece.Detach();
+				// Detach all first
+				foreach (var piece in Cache.Pieces.OfType<MAPiece>())
+					piece.Detach();
 
+				// No data, no MA
+				if (Data.Count == 0 || !Visible)
 					return;
-				}
 
 				// Get the range required for display
 				var range = Data.CandleRange.Intersect(Chart.XAxis.Range);
@@ -495,12 +494,14 @@ namespace CoinFlip.UI.Indicators
 				// called in UpdateGfxCore but this seems to be fast enough.
 				foreach (var piece in Cache.Get(range).OfType<MAPiece>())
 				{
+					piece.Line.Stroke = MA.Colour.ToMediaBrush();
 					piece.Line.Data.Transform = c2c_2d;
 					Chart.Overlay.Adopt(piece.Line);
 
 					// Show or hide the glow based on selected/hovered state
 					if (Hovered || Selected)
 					{
+						piece.Glow.Stroke = MA.Colour.Alpha(Selected ? 0.25 : 0.15).ToMediaBrush();
 						piece.Glow.Data.Transform = c2c_2d;
 						Chart.Overlay.Adopt(piece.Glow);
 					}
@@ -598,7 +599,6 @@ namespace CoinFlip.UI.Indicators
 						Line = new Path
 						{
 							Data = path,
-							Stroke = ma.Colour.ToMediaBrush(),
 							StrokeThickness = ma.Width,
 							StrokeDashArray = ma.LineStyle.ToStrokeDashArray(),
 							StrokeStartLineCap = PenLineCap.Round,
@@ -608,7 +608,6 @@ namespace CoinFlip.UI.Indicators
 						Glow = new Path
 						{
 							Data = path,
-							Stroke = ma.Colour.Alpha(0.25).ToMediaBrush(),
 							StrokeThickness = ma.Width + GlowRadius,
 							StrokeStartLineCap = PenLineCap.Round,
 							StrokeEndLineCap = PenLineCap.Round,

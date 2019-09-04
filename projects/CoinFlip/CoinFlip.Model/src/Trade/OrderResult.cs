@@ -41,7 +41,7 @@ namespace CoinFlip
 		/// <summary>Trades that occurred immediately to fill or partially fill the order</summary>
 		public class Fill
 		{
-			public Fill(long trade_id, Unit<double> amount_in, Unit<double> amount_out, Unit<double> commission, Coin commission_coin, float sig_change)
+			public Fill(long trade_id, Unit<double> amount_in, Unit<double> amount_out, Unit<double> commission, Coin commission_coin)
 			{
 				TradeId = trade_id;
 				AmountIn = amount_in;

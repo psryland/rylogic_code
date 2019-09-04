@@ -26,8 +26,8 @@ namespace CoinFlip.Bots
 		/// <summary>Details of orders that are persisted to settings</summary>
 		public PersistedOrder[] Orders
 		{
-			get { return get<PersistedOrder[]>(nameof(Orders)); }
-			set { set(nameof(Orders), value); }
+			get => get<PersistedOrder[]>(nameof(Orders));
+			set => set(nameof(Orders), value);
 		}
 
 		/// <summary>Register this monitor with the model to monitor completed orders</summary>
@@ -148,15 +148,15 @@ namespace CoinFlip.Bots
 			/// <summary>The name of the exchange that the order is on</summary>
 			public string ExchangeName
 			{
-				get { return get<string>(nameof(ExchangeName)); }
-				set { set(nameof(ExchangeName), value); }
+				get => get<string>(nameof(ExchangeName));
+				set => set(nameof(ExchangeName), value);
 			}
 
 			/// <summary>The exchange's assigned Id of the order</summary>
 			public long OrderId
 			{
-				get { return get<long>(nameof(OrderId)); }
-				set { set(nameof(OrderId), value); }
+				get => get<long>(nameof(OrderId));
+				set => set(nameof(OrderId), value);
 			}
 		}
 	}

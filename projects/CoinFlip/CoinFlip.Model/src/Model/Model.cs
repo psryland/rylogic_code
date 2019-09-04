@@ -7,6 +7,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Data;
 using System.Windows.Threading;
 using CoinFlip.Bots;
@@ -393,7 +394,7 @@ namespace CoinFlip
 				void HandleOrdersChanging(object sender, ListChgEventArgs<Order> e)
 				{
 					var exchange = ((OrdersCollection)sender).Exchange;
-					OrderChanging?.Invoke(exchange, e);
+					OrdersChanging?.Invoke(exchange, e);
 				}
 				void HandleHistoryChanging(object sender, ListChgEventArgs<OrderCompleted> e)
 				{
@@ -506,7 +507,7 @@ namespace CoinFlip
 		public event EventHandler<ListChgEventArgs<Coin>> CoinChanging;
 
 		/// <summary>Raised when an order is added or removed from an exchange</summary>
-		public event EventHandler<ListChgEventArgs<Order>> OrderChanging;
+		public event EventHandler<ListChgEventArgs<Order>> OrdersChanging;
 
 		/// <summary>Raised when a completed order is added or updated from an exchange</summary>
 		public event EventHandler<ListChgEventArgs<OrderCompleted>> HistoryChanging;
@@ -607,6 +608,14 @@ namespace CoinFlip
 			}
 			NettWorth = worth;
 		}
+
+		/// <summary>Edit a new or existing trade</summary>
+		public void EditTrade(Trade trade)
+		{
+			// Initiate a trade edit
+			EditingTrade?.Invoke(this, new EditTradeEventArgs(trade, this));
+		}
+		public event EventHandler<EditTradeEventArgs> EditingTrade;
 	}
 
 	#region EventArgs
@@ -615,6 +624,58 @@ namespace CoinFlip
 		public DataChangingEventArgs(bool after)
 			:base(after)
 		{}
+	}
+	public class EditTradeEventArgs : EventArgs
+	{
+		// Notes:
+		//  - Observers sign up to the 'EditingTrade' event. When the event fires, observers attach
+		//    handlers to this instance. It is expected that some user interface element will call
+		//    CancelTrade(), CommitChanges(), or EndEdit() which will signal to all observers the
+		//    outcome of the edit and this dispose this instance.
+
+		public EditTradeEventArgs(Trade original, Model model)
+		{
+			Original = original;
+			Trade = new Trade(original);
+			Model = model;
+		}
+
+		/// <summary>The existing, unmodified trade or order</summary>
+		public Trade Original { get; }
+
+		/// <summary>The trade to edit</summary>
+		public Trade Trade { get; }
+
+		/// <summary>The app model</summary>
+		public Model Model { get; }
+
+		/// <summary></summary>
+		public async Task Commit()
+		{
+			// If the original trade is a live order...
+			if (Original is Order order)
+			{
+				// If it hasn't actually changed don't bother modifying the order.
+				if (Original.Equals(Trade))
+					return;
+
+				// Cancel the previous order
+				await order.CancelOrder(Model.Shutdown.Token);
+			}
+
+			// Create a new trade, or update the existing one
+			await Trade.CreateOrder(Model.Shutdown.Token);
+		}
+
+		/// <summary>Notify that editing is finished</summary>
+		public void EndEdit()
+		{
+			// Notify of closing, then drop all handlers
+			Closed?.Invoke(this, this);
+			Closed = null;
+		}
+		public event EventHandler Closed;
+
 	}
 	#endregion
 }

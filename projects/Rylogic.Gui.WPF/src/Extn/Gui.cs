@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Media3D;
 using Microsoft.Win32;
 using Rylogic.Core.Windows;
 using Rylogic.Extn.Windows;
@@ -279,6 +280,8 @@ namespace Rylogic.Gui.WPF
 		public static T FindVisualParent<T>(this DependencyObject item, Func<T, bool> pred = null, DependencyObject root = null) where T : DependencyObject
 		{
 			if (item == null)
+				return null;
+			if (!(item is Visual) && !(item is Visual3D))
 				return null;
 			if (ReferenceEquals(item, root))
 				return item as T;

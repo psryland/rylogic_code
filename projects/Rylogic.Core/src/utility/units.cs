@@ -1,8 +1,4 @@
-﻿#if DEBUG
-#define UNITS_ENABLED
-#endif
-
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
@@ -281,17 +277,12 @@ namespace Rylogic.Utility
 		/// <summary>Return the unique id assigned to a unit</summary>
 		public static int UnitId(string unit_name)
 		{
-#if UNITS_ENABLED
 			return Types.GetOrAdd(unit_name, s => ++UnitTypeId);
-#else
-			return NoUnitsId;
-#endif
 		}
 
 		/// <summary>Combine unit ids into a new unit</summary>
 		public static int CombineUnits(int lhs, int rhs, bool divide)
 		{
-#if UNITS_ENABLED
 			// Unit ids are always positive, so the sign bit is free
 			Debug.Assert(lhs >= 0 && rhs >= 0);
 
@@ -309,9 +300,6 @@ namespace Rylogic.Utility
 			{
 				return UnitId(CombineUnits(Types[lhs], Types[rhs], divide));
 			});
-#else
-			return NoUnitsId;
-#endif
 		}
 
 		/// <summary>Combine unit strings into a new unit</summary>
@@ -329,17 +317,17 @@ namespace Rylogic.Utility
 			var powers = new Accumulator<string, int>();
 
 			// Characters that are allowed for unit strings
-			Func<string, int, bool> IsUnitChar = (string str, int idx) =>
+			bool IsUnitChar(string str, int idx)
 			{
 				// '1' is a special case. It's a unit char if not followed by [./²³^] or the end of string
 				var ch = str[idx];
 				if (ch == '1' && idx + 1 == str.Length) return false;
 				if (ch == '1' && idx + 1 < str.Length) ch = str[idx + 1];
 				return ch != '.' && ch != '/' && ch != '²' && ch != '³' && ch != '^';
-			};
+			}
 
 			// Decomposes a unit string into powers of each unit type
-			Action<string, int> Decompose = (str, sign) =>
+			void Decompose(string str, int sign)
 			{
 				// Parse the unit string to determine the counts of each unit type
 				var prev = string.Empty;
@@ -365,7 +353,7 @@ namespace Rylogic.Utility
 					else if (str[e] == '.') { ++e; }
 					else if (str[e] == '/') { ++e; sign = -sign; }
 				}
-			};
+			}
 
 			// Counts of each unit type
 			Decompose(lhs, +1);
@@ -542,7 +530,6 @@ namespace Rylogic.UnitTests
 			Assert.True(v0 <= 0.123m._("A"));
 			Assert.True(v1 >= 0.456m._("A"));
 
-			#if UNITS_ENABLED
 			Assert.Throws<Exception>(() => { var b = 0.123._("A") == 0.123._("B"); });
 			Assert.Throws<Exception>(() => { var b = 0.123._("A") != 0.123._("B"); });
 			Assert.Throws<Exception>(() => { var b = v0 < v2; });
@@ -553,7 +540,6 @@ namespace Rylogic.UnitTests
 			// Cast between units
 			var v3 = v0._("C");
 			Assert.Throws<Exception>(() => { var b = v0 == v3; });
-			#endif
 		}
 		[Test] public void CombineUnits()
 		{

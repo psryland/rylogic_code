@@ -26,18 +26,12 @@ namespace CoinFlip
 		Unit<double> Available { get; }
 
 		/// <summary>Total amount set aside for pending orders and trade strategies</summary>
-		Unit<double> Held { get; set; }
+		Unit<double> Held { get; }
 
-		/// <summary>Reserve 'amount' (related to 'order_id') until 'still_needed' returns false.</summary>
-		Guid Hold(long? order_id, Unit<double> amount, Func<IBalance, bool> still_needed);
+		/// <summary>Holds on this fund balance</summary>
+		FundHoldContainer Holds { get; }
 
-		/// <summary>Update the 'still_needed' function for a balance hold</summary>
-		void Update(Guid hold_id, long? order_id = null, Func<IBalance, bool> still_needed = null);
-
-		/// <summary>Release a hold on funds by hold id or order id</summary>
-		void Release(Guid? hold_id = null, long? order_id = null);
-
-		/// <summary>Return the amount held for the given id</summary>
-		Unit<double> Reserved(Guid hold_id);
+		/// <summary>Notify property changed for 'Total', 'Available', and 'Held'</summary>
+		void Invalidate();
 	}
 }

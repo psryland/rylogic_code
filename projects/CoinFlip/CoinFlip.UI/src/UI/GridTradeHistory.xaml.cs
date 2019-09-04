@@ -115,8 +115,15 @@ namespace CoinFlip.UI
 				// Handler
 				void HandleCurrentChanged(object sender, EventArgs e)
 				{
+					History = null;
+
 					var history = Exchanges?.CurrentAs<Exchange>()?.History;
-					History = history != null ? new ListCollectionView(history) : null;
+					if (history != null)
+					{
+						var view = new ListCollectionView(history);
+						view.SortDescriptions.Add(new SortDescription(nameof(OrderCompleted.Created), ListSortDirection.Descending));
+						History = view;
+					}
 				}
 			}
 		}

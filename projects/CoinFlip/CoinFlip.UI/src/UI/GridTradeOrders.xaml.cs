@@ -117,7 +117,7 @@ namespace CoinFlip.UI
 				void HandleCurrentChanged(object sender, EventArgs e)
 				{
 					var exchange = (Exchange)Exchanges?.CurrentItem;
-					Orders = exchange != null ? new ListCollectionView(exchange.Orders) : null;
+					Orders = exchange != null ? CollectionViewSource.GetDefaultView(exchange.Orders) : null;
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Orders)));
 				}
 			}
@@ -136,14 +136,18 @@ namespace CoinFlip.UI
 
 		/// <summary>Cancel the selected order</summary>
 		public Command CancelOrder { get; }
-		private void CancelOrderInternal()
+		private async void CancelOrderInternal()
 		{
+			if (Current == null) return;
+			await Current.CancelOrder(Model.Shutdown.Token);
 		}
 
 		/// <summary>Modify an existing order</summary>
 		public Command ModifyOrder { get; }
 		private void ModifyOrderInternal()
 		{
+			if (Current == null) return;
+			Model.EditTrade(Current);
 		}
 
 		/// <summary>Show the chart for the selected trade pair</summary>

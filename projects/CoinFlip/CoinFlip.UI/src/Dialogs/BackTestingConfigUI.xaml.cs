@@ -46,7 +46,7 @@ namespace CoinFlip.UI
 				foreach (var bal in exch.Value)
 				{
 					if (bal.Value == 0) continue;
-					bal_data.Add(new FundData.BalData(bal.Key, bal.Value, 0));
+					bal_data.Add(new FundData.BalData(bal.Key, bal.Value));
 				}
 				if (bal_data.Count == 0) continue;
 				exch_data.Add(new FundData.ExchData(exch.Key, bal_data.ToArray()));

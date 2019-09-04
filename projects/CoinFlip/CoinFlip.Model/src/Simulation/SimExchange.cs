@@ -242,17 +242,10 @@ namespace CoinFlip
 
 				// This is equivalent to the 'DataUpdates' code in 'UpdateOrdersAndHistoryInternal'
 				{
-					var order_ids = new HashSet<long>();
+					var orders = new List<Order>();
 					var timestamp = Model.UtcNow;
 
-					// Update the collection of existing orders
-					foreach (var exch_order in m_ord.Values)
-					{
-						// Add the order to the collection
-						var order = new Order(exch_order);
-						Orders[exch_order.OrderId] = order;
-						order_ids.Add(order.OrderId);
-					}
+					// Update the trade history
 					var history_updates = m_his.Values.Where(x => x.Created.Ticks >= Exchange.HistoryInterval.End);
 					foreach (var exch_order in history_updates.SelectMany(x => x.Trades.Values))
 					{
@@ -261,15 +254,20 @@ namespace CoinFlip
 							x => new OrderCompleted(x, Exchange.OrderIdToFund(x), exch_order.Pair, exch_order.TradeType));
 
 						// Add the trade to the completed order
-						var fill = new TradeCompleted(order_completed, exch_order.TradeId, exch_order.AmountIn, exch_order.AmountOut, exch_order.Commission, exch_order.CommissionCoin, exch_order.Created, timestamp);
+						var fill = TradeCompletedFrom(exch_order, order_completed, timestamp);
 						order_completed.Trades[fill.TradeId] = fill;
 
 						// Update the history of the completed orders
 						Exchange.AddToTradeHistory(order_completed);
 					}
 
-					// Remove any orders that are no longer valid
-					Exchange.SynchroniseOrders(order_ids, timestamp);
+					// Update the collection of existing orders
+					foreach (var exch_order in m_ord.Values)
+					{
+						// Add the order to the collection
+						orders.Add2(OrderFrom(exch_order, timestamp));
+					}
+					Exchange.SynchroniseOrders(orders, timestamp);
 
 					// Notify updated. Notify history before positions so that orders don't "disappear" temporarily
 					History.LastUpdated = timestamp;
@@ -290,7 +288,7 @@ namespace CoinFlip
 						var coin = Coins.GetOrAdd(b.Coin.Symbol);
 
 						// Update the balance
-						Balance.AssignFundBalance(coin, Fund.Default, b.Total._(coin), b.Held._(coin), timestamp);
+						Balance.ExchangeUpdate(coin, b.Total._(coin), b.Held._(coin), timestamp);
 					}
 
 					// Notify updated
@@ -301,13 +299,14 @@ namespace CoinFlip
 		}
 
 		/// <summary>Create an order on this simulated exchange</summary>
-		public OrderResult CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, float sig_change)
+		public OrderResult CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out)
 		{
 			// Validate the order
+			var bal = m_bal[tt.CoinIn(pair)];
 			if (pair.Exchange != Exchange)
 				throw new Exception($"SimExchange: Attempt to trade a pair not provided by this exchange");
-			if (m_bal[tt.CoinIn(pair)].Available < amount_in)
-				throw new Exception($"SimExchange: Submit trade failed. Insufficient balance\n{tt} Pair: {pair.Name}  Amt: {amount_in.ToString(8,true)} @  {(amount_out/amount_in).ToString(8,true)}");
+			if (bal.Available < amount_in)
+				throw new Exception($"SimExchange: Submit trade failed. Insufficient balance\n{tt} Pair: {pair.Name}  Amt: {amount_in.ToString(8,true)}  Bal:{bal.Available.ToString(8,true)}");
 			if (!pair.AmountRangeIn(tt).Contains(amount_in))
 				throw new Exception($"SimExchange: 'In' amount is out of range");
 			if (!pair.AmountRangeOut(tt).Contains(amount_out))
@@ -330,7 +329,7 @@ namespace CoinFlip
 
 			// Record the filled orders in the trade result
 			return new OrderResult(pair, order_id, pos == null, his?.Trades.Values.Select(x =>
-				new OrderResult.Fill(x.TradeId, x.AmountIn, x.AmountOut, x.Commission, x.CommissionCoin, 0f)));
+				new OrderResult.Fill(x.TradeId, x.AmountIn, x.AmountOut, x.Commission, x.CommissionCoin)));
 		}
 
 		/// <summary>Cancel an existing position</summary>
@@ -454,6 +453,37 @@ namespace CoinFlip
 			}
 		}
 
+		/// <summary>Convert an exchange order into a CoinFlip order</summary>
+		private Order OrderFrom(Order order, DateTimeOffset updated)
+		{
+			// This is mainly to mirror the behaviour of the actual exchanges
+			var order_id = order.OrderId;
+			var fund_id = Exchange.OrderIdToFund(order_id);
+			var ot = order.OrderType;
+			var tt = order.TradeType;
+			var pair = Pairs.GetOrAdd(order.Pair.Base, order.Pair.Quote);
+			var amount_in = tt.AmountIn(order.AmountBase._(pair.Base), order.PriceQ2B._(pair.RateUnits));
+			var amount_out = tt.AmountOut(order.AmountBase._(pair.Base), order.PriceQ2B._(pair.RateUnits));
+			var remaining_in = amount_in;
+			var created = order.Created;
+			return new Order(order_id, fund_id, pair, ot, tt, amount_in, amount_out, remaining_in, created, updated);
+		}
+
+		/// <summary>Convert an exchange order into a CoinFlip order completed</summary>
+		private TradeCompleted TradeCompletedFrom(TradeCompleted fill, OrderCompleted order_completed, DateTimeOffset updated)
+		{
+			// This is mainly to mirror the behaviour of the actual exchanges
+			var tt = order_completed.TradeType;
+			var pair = order_completed.Pair;
+			var trade_id = fill.TradeId;
+			var amount_in = fill.AmountIn;
+			var amount_out = fill.AmountOut;
+			var commission = fill.Commission;
+			var commission_coin = fill.CommissionCoin;
+			var created = fill.Created;
+			return new TradeCompleted(order_completed, trade_id, amount_in, amount_out, commission, commission_coin, created, updated);
+		}
+
 		/// <summary>Represents the simulated user account on the exchange</summary>
 		private class AccountBalance
 		{
@@ -461,13 +491,13 @@ namespace CoinFlip
 			{
 				Coin = coin;
 				Total = total;
-				Holds = new Dictionary<long, double>();
+				Holds = new Dictionary<long, Unit<double>>();
 			}
 			public Coin Coin { get; }
 			public Unit<double> Total { get; set; }
-			public Unit<double> Held => Holds.Values.Sum();
+			public Unit<double> Held => Holds.Values.Sum(x => x);
 			public Unit<double> Available => Total - Held;
-			public Dictionary<long, double> Holds { get; }
+			public Dictionary<long, Unit<double>> Holds { get; }
 		}
 	}
 }

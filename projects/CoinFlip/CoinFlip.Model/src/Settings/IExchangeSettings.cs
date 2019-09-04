@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using Rylogic.Common;
 
 namespace CoinFlip.Settings
@@ -23,9 +22,6 @@ namespace CoinFlip.Settings
 
 		/// <summary>True if only public API calls should be made on this exchange</summary>
 		bool PublicAPIOnly { get; set; }
-
-		/// <summary>Extra details about orders expected to the live on the exchange</summary>
-		List<OrderDetails> OrderDetails { get; }
 
 		/// <summary>Save the current settings</summary>
 		void Save();

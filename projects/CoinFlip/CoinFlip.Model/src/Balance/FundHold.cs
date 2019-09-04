@@ -8,12 +8,12 @@ namespace CoinFlip
 	[DebuggerDisplay("{Description,nq}")]
 	public class FundHold
 	{
-		public FundHold(Guid id, long? order_id, Unit<double> amount, Func<IBalance, bool> still_needed)
+		public FundHold(Guid id, long? order_id, Unit<double> amount, bool local)
 		{
 			Id = id;
 			OrderId = order_id;
 			Amount = amount;
-			StillNeeded = still_needed;
+			Local = local;
 		}
 
 		/// <summary>The Id of the reserver</summary>
@@ -23,10 +23,10 @@ namespace CoinFlip
 		public long? OrderId { get; set; }
 
 		/// <summary>How much to reserve</summary>
-		public Unit<double> Amount { get; }
+		public Unit<double> Amount { get; set; }
 
-		/// <summary>Callback function to test whether the reserve is still required</summary>
-		public Func<IBalance, bool> StillNeeded { get; set; }
+		/// <summary>True if this hold is not part of the held balance reported by the exchange</summary>
+		public bool Local { get; set; }
 
 		/// <summary></summary>
 		public string Description => $"[{OrderId}] {Amount}";

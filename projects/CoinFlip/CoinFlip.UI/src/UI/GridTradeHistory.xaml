@@ -64,14 +64,24 @@
 				Width="0.7*"
 				/>
 			<DataGridTextColumn
-				Header="Order/Trade Id"
+				Header="Id"
 				Binding="{Binding OrderId, Mode=OneWay}"
+				Width="0.3*"
+				/>
+			<DataGridTextColumn
+				Header="Fund"
+				Binding="{Binding Fund.Id, Mode=OneWay}"
 				Width="0.5*"
 				/>
 			<DataGridTextColumn
-				Header="Type"
+				Header="Side"
 				Binding="{Binding TradeTypeDesc, Mode=OneWay}"
-				Width="0.6*"
+				Width="0.5*"
+				/>
+			<DataGridTextColumn
+				Header="Pair"
+				Binding="{Binding Pair, Mode=OneWay}"
+				Width="0.5*"
 				/>
 			<DataGridTextColumn
 				Header="Price"

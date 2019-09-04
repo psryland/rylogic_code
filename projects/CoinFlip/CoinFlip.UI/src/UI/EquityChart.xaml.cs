@@ -69,7 +69,7 @@ namespace CoinFlip.UI
 				if (m_model == value) return;
 				if (m_model != null)
 				{
-					m_model.OrderChanging -= RefreshChart;
+					m_model.OrdersChanging -= RefreshChart;
 					m_model.HistoryChanging -= RefreshChart;
 					m_model.SelectedCompletedOrders.CollectionChanged -= RefreshChart;
 					SettingsData.Settings.SettingChange -= HandleSettingChange;
@@ -82,7 +82,7 @@ namespace CoinFlip.UI
 					SettingsData.Settings.SettingChange += HandleSettingChange;
 					m_model.SelectedCompletedOrders.CollectionChanged += RefreshChart;
 					m_model.HistoryChanging += RefreshChart;
-					m_model.OrderChanging += RefreshChart;
+					m_model.OrdersChanging += RefreshChart;
 				}
 
 				// Handler
@@ -340,8 +340,15 @@ namespace CoinFlip.UI
 		{
 			get
 			{
-				var span = Chart.XAxis.Range.Size;
-				return TimeSpan.FromDays(span).ToPrettyString();
+				try
+				{
+					var span = Chart.XAxis.Range.Size;
+					return TimeSpan.FromDays(span).ToPrettyString();
+				}
+				catch
+				{
+					return string.Empty;
+				}
 			}
 		}
 

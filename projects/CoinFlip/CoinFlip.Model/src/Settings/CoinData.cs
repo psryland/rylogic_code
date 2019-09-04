@@ -9,7 +9,7 @@ namespace CoinFlip.Settings
 {
 	[Serializable]
 	[TypeConverter(typeof(TyConv))]
-	[DebuggerDisplay("{Symbol} {AssignedValue} {OfInterest}")]
+	[DebuggerDisplay("{Symbol} {AssignedValue}")]
 	public class CoinData : SettingsXml<CoinData>
 	{
 		public CoinData()

@@ -77,10 +77,13 @@ namespace CoinFlip
 			remaining_base = amount_base;
 
 			// Stop orders become market orders when the price reaches the stop level
-			if (ot == EOrderType.Stop && order_book.Count != 0 && tt.Sign() * price_q2b.CompareTo(order_book[0].PriceQ2B) <= 0)
-				ot = EOrderType.Market;
-			else
-				return new List<Offer>();
+			if (ot == EOrderType.Stop)
+			{
+				if (order_book.Count != 0 && tt.Sign() * price_q2b.CompareTo(order_book[0].PriceQ2B) <= 0)
+					ot = EOrderType.Market;
+				else
+					return new List<Offer>();
+			}
 
 			var count = 0;
 			var offers = order_book.Offers;

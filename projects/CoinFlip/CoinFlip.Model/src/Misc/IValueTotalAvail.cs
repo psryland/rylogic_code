@@ -8,9 +8,9 @@ namespace CoinFlip
 		double Value { get; }
 
 		/// <summary>The total amount of the coin (in coin currency)</summary>
-		Unit<double> Total { get; }
+		double Total { get; }
 
 		/// <summary>The available amount of the coin (in coin currency)</summary>
-		Unit<double> Available { get; }
+		double Available { get; }
 	}
 }

@@ -121,7 +121,7 @@ namespace Bot.Rebalance
 							Pair.AmountRangeBase.Contains(amount_out))
 						{
 							// Place the rebalance order
-							trade = new Trade(Fund, pair, EOrderType.Market, tt, amount_in, amount_out);
+							trade = new Trade(Fund, pair, EOrderType.Market, tt, amount_in, amount_out, creator: Name);
 							Debug.Assert(trade.Validate() == EValidation.Valid);
 							break;
 						}
@@ -143,7 +143,7 @@ namespace Bot.Rebalance
 							Pair.AmountRangeQuote.Contains(amount_out))
 						{
 							// Place the rebalance order
-							trade = new Trade(Fund, pair, EOrderType.Market, tt, amount_in, amount_out);
+							trade = new Trade(Fund, pair, EOrderType.Market, tt, amount_in, amount_out, creator: Name);
 							Debug.Assert(trade.Validate() == EValidation.Valid);
 							break;
 						}
@@ -157,7 +157,7 @@ namespace Bot.Rebalance
 
 			// An adjustment trade is needed, place the order now
 			Log.Write(ELogLevel.Debug, $"Rebalance trade created: {trade.Description}");
-			var order = await trade.CreateOrder(Cancel.Token, Name);
+			var order = await trade.CreateOrder(Cancel.Token);
 			if (order != null)
 				Settings.PendingOrders.Add(order);
 			else

@@ -55,6 +55,7 @@
     <Compile Include="src\Balance\ETransfer.cs" />
     <Compile Include="src\Balance\Fund.cs" />
     <Compile Include="src\Balance\FundHold.cs" />
+    <Compile Include="src\Balance\FundHoldContainer.cs" />
     <Compile Include="src\Balance\IBalance.cs" />
     <Compile Include="src\Balance\Transfer.cs" />
     <Compile Include="src\Balance\Transfers.cs" />
@@ -117,21 +118,21 @@
     <Compile Include="src\Settings\FundData.cs" />
     <Compile Include="src\Settings\ExchangeSettings.cs" />
     <Compile Include="src\Settings\IExchangeSettings.cs" />
-    <Compile Include="src\Settings\OrderDetails.cs" />
+    <Compile Include="src\Trade\OrderRecord.cs" />
     <Compile Include="src\Settings\PoloniexSettings.cs" />
     <Compile Include="src\Settings\SettingsData.cs" />
     <Compile Include="src\Misc\EOrderType.cs" />
     <Compile Include="src\Settings\UISettings.cs" />
     <Compile Include="src\Simulation\SimExchange.cs" />
     <Compile Include="src\Simulation\Simulation.cs" />
-    <Compile Include="src\Trade\OrderRecord.cs" />
+    <Compile Include="src\Trade\OrderCompletedRecord.cs" />
     <Compile Include="src\Trade\SpotPrices.cs" />
     <Compile Include="src\Trade\TradeCompleted.cs" />
     <Compile Include="src\Trade\Order.cs" />
     <Compile Include="src\Trade\OrderCompleted.cs" />
     <Compile Include="src\Trade\Trade.cs" />
     <Compile Include="src\Trade\TradePair.cs" />
-    <Compile Include="src\Trade\TradeRecord.cs" />
+    <Compile Include="src\Trade\TradeCompletedRecord.cs" />
     <Compile Include="src\Trade\OrderResult.cs" />
   </ItemGroup>
   <ItemGroup>

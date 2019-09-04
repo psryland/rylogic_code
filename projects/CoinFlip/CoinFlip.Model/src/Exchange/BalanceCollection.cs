@@ -20,6 +20,13 @@ namespace CoinFlip
 			SupportsSorting = false;
 		}
 
+		/// <summary>Get or add a coin type that there is a balance for on the exchange</summary>
+		public Balances GetOrAdd(Coin coin)
+		{
+			Debug.Assert(Misc.AssertMarketDataWrite());
+			return this.GetOrAdd(coin, x => new Balances(x, DateTimeOffset.MinValue));
+		}
+
 		/// <summary>Get/Set the balance for the given coin. Returns zero balance for unknown coins</summary>
 		public override Balances this[Coin coin]
 		{
@@ -31,42 +38,29 @@ namespace CoinFlip
 			}
 		}
 
-		/// <summary>Get or add a coin type that there is a balance for on the exchange</summary>
-		public Balances GetOrAdd(Coin coin)
-		{
-			Debug.Assert(Misc.AssertMarketDataWrite());
-			return this.GetOrAdd(coin, x => new Balances(x, DateTimeOffset.MinValue));
-		}
-
-		/// <summary>Update the balance of the fund 'fund_id'</summary>
-		public void AssignFundBalance(Coin coin, Fund fund, Unit<double> total, Unit<double> held_on_exch, DateTimeOffset update_time)
-		{
-			Debug.Assert(Misc.AssertMarketDataWrite());
-
-			// Check the assigned balance info is for this exchange
-			if (coin.Exchange != Exchange && !(Exchange is CrossExchange))
-				throw new Exception("Currency not associated with this exchange");
-
-			// Get the balances associated with this coin
-			var balances = GetOrAdd(coin);
-
-			// Ignore out-of-date data
-			if (balances[fund].LastUpdated > update_time)
-				return;
-
-			// Assign the new fund balance
-			balances.AssignFundBalance(fund, total, held_on_exch, update_time);
-
-			// Invalidate bindings
-			ResetItem(balances);
-		}
-
 		/// <summary>Get the balance by coin symbol name</summary>
 		public Balances Get(string sym)
 		{
 			// Don't provide this: 'public Balance this[string sym]', the Coin implicit cast is favoured over the overloaded method
 			var coin = Exchange.Coins[sym];
 			return this[coin];
+		}
+
+		/// <summary>Apply an update from an exchange for 'coin'</summary>
+		public void ExchangeUpdate(Coin coin, Unit<double> total, Unit<double> held, DateTimeOffset update_time)
+		{
+			Debug.Assert(Misc.AssertMainThread());
+
+			// Check the assigned balance info is for this exchange
+			if (coin.Exchange != Exchange && !(Exchange is CrossExchange))
+				throw new Exception("Currency not associated with this exchange");
+
+			// Get the balances associated with 'coin'
+			var balances = GetOrAdd(coin);
+			balances.ExchangeUpdate(total, held, update_time);
+
+			// Invalidate bindings
+			ResetItem(balances);
 		}
 	}
 }

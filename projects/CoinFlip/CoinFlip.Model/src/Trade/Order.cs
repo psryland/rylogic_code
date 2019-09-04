@@ -53,13 +53,13 @@ namespace CoinFlip
 		/// <summary>String description of the trade</summary>
 		public override string Description => $"[Id:{OrderId}] {base.Description}";
 
-		/// <summary>Cancel this position</summary>
+		/// <summary>Cancel this order</summary>
 		public async Task CancelOrder(CancellationToken cancel)
 		{
 			await Exchange.CancelOrder(Pair, OrderId, cancel);
 		}
 
-		/// <summary>Update the state of this order (from data received from the exchange)</summary>
+		/// <summary>Update the state of this order (with data received from the exchange)</summary>
 		public void Update(Order update)
 		{
 			if (OrderId != update.OrderId)

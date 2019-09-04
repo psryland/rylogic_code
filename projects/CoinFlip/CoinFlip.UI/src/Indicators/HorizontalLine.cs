@@ -107,7 +107,6 @@ namespace CoinFlip.UI.Indicators
 			{
 				Line = new Line
 				{
-					Stroke = HL.Colour.ToMediaBrush(),
 					StrokeThickness = HL.Width,
 					StrokeDashArray = HL.LineStyle.ToStrokeDashArray(),
 					StrokeStartLineCap = PenLineCap.Flat,
@@ -115,7 +114,6 @@ namespace CoinFlip.UI.Indicators
 				};
 				Glow = new Line
 				{
-					Stroke = HL.Colour.Alpha(0.25f).ToMediaBrush(),
 					StrokeThickness = HL.Width + GlowRadius,
 					StrokeStartLineCap = PenLineCap.Flat,
 					StrokeEndLineCap = PenLineCap.Flat,
@@ -197,6 +195,7 @@ namespace CoinFlip.UI.Indicators
 					Line.Y1 = pt0.Y;
 					Line.X2 = pt1.X;
 					Line.Y2 = pt1.Y;
+					Line.Stroke = HL.Colour.ToMediaBrush();
 					Chart.Overlay.Adopt(Line);
 
 					var pt = Chart.TransformToDescendant(Chart.YAxisPanel).Transform(pt1);
@@ -204,25 +203,28 @@ namespace CoinFlip.UI.Indicators
 					Canvas.SetTop(Price, pt.Y - Price.RenderSize.Height / 2);
 					Price.Text = HL.Price.ToString(8);
 					Chart.YAxisPanel.Adopt(Price);
+
+					if (Hovered || Selected)
+					{
+						Glow.X1 = pt0.X;
+						Glow.X2 = pt1.X;
+						Glow.Y1 = pt0.Y;
+						Glow.Y2 = pt1.Y;
+						Glow.Stroke = HL.Colour.Alpha(Selected ? 0.25 : 0.15).ToMediaBrush();
+						Chart.Overlay.Adopt(Glow);
+					}
+					else
+					{
+						Glow.Detach();
+					}
 				}
 				else
 				{
 					Line.Detach();
+					Glow.Detach();
 					Price.Detach();
 				}
 
-				if (Visible && (Hovered || Selected))
-				{
-					Glow.X1 = pt0.X;
-					Glow.X2 = pt1.X;
-					Glow.Y1 = pt0.Y;
-					Glow.Y2 = pt1.Y;
-					Chart.Overlay.Adopt(Glow);
-				}
-				else
-				{
-					Glow.Detach();
-				}
 			}
 
 			/// <summary>Display the options UI</summary>

@@ -126,13 +126,13 @@
 			<DataGridTextColumn
 				Header="Available"
 				ToolTipService.ToolTip="The amount of the coin available for trading"
-				Binding="{Binding Available, Mode=OneWay, Converter={conv:StringFormat}, ConverterParameter='8, false'}"
+				Binding="{Binding Available, Mode=OneWay, Converter={conv:StringFormat}, ConverterParameter='8'}"
 				Width="1.5*"
 				/>
 			<DataGridTextColumn
 				Header="Total"
 				ToolTipService.ToolTip="The total balance amount of the coin"
-				Binding="{Binding Total, Mode=OneWay, Converter={conv:StringFormat}, ConverterParameter='8, false'}"
+				Binding="{Binding Total, Mode=OneWay, Converter={conv:StringFormat}, ConverterParameter='8'}"
 				Width="1.5*"
 				/>
 		</DataGrid.Columns>
@@ -145,9 +145,9 @@
 					Command="{Binding AddCoin}"
 					/>
 				<MenuItem
-					Header="{Binding Current.Symbol, FallbackValue='Coin'}"
+					Header="{Binding Coins/Symbol, FallbackValue='Coin'}"
 					HeaderStringFormat="Remove {0}"
-					IsEnabled="{Binding Current, Converter={conv:NotNull}}"
+					IsEnabled="{Binding Coins/, Converter={conv:NotNull}, FallbackValue=false}"
 					Command="{Binding RemoveCoin}"
 					/>
 				<!--<Separator/>

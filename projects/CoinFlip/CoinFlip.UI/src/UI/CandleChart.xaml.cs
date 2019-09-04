@@ -12,6 +12,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using CoinFlip.Settings;
+using CoinFlip.UI.GfxObjects;
 using CoinFlip.UI.Indicators;
 using Rylogic.Common;
 using Rylogic.Extn;
@@ -72,7 +73,8 @@ namespace CoinFlip.UI
 				if (m_model == value) return;
 				if (m_model != null)
 				{
-					m_model.OrderChanging -= RefreshChart;
+					m_model.EditingTrade -= EditingTrade;
+					m_model.OrdersChanging -= RefreshChart;
 					m_model.HistoryChanging -= RefreshChart;
 					m_model.SelectedOpenOrders.CollectionChanged -= RefreshChart;
 					m_model.SelectedCompletedOrders.CollectionChanged -= RefreshChart;
@@ -91,7 +93,8 @@ namespace CoinFlip.UI
 					m_model.SelectedCompletedOrders.CollectionChanged += RefreshChart;
 					m_model.SelectedOpenOrders.CollectionChanged += RefreshChart;
 					m_model.HistoryChanging += RefreshChart;
-					m_model.OrderChanging += RefreshChart;
+					m_model.OrdersChanging += RefreshChart;
+					m_model.EditingTrade += EditingTrade;
 				}
 				HandleChartsCollectionChanged(this, null);
 
@@ -161,6 +164,15 @@ namespace CoinFlip.UI
 				void RefreshChart(object sender, EventArgs args)
 				{
 					Chart?.Invalidate();
+				}
+				void EditingTrade(object sender, EditTradeEventArgs e)
+				{
+					var indy = new GfxObjects.TradeWidget(e.Trade, this) { Chart = Chart };
+					e.Closed += delegate
+					{
+						Util.Dispose(indy);
+						Chart.Invalidate();
+					};
 				}
 			}
 		}
@@ -492,8 +504,8 @@ namespace CoinFlip.UI
 				if (m_instrument != null)
 				{
 					GfxCandles = new GfxObjects.Candles(m_instrument);
-					GfxOpenOrders = new GfxObjects.Orders(IOrderToXValue, IOrderToYValue);
-					GfxCompletedOrders = new GfxObjects.Orders(IOrderToXValue, IOrderToYValue);
+					GfxOpenOrders = new GfxObjects.Orders(OrderToXValue, OrderToYValue);
+					GfxCompletedOrders = new GfxObjects.Orders(OrderToXValue, OrderToYValue);
 					GfxMarketDepth = new GfxObjects.MarketDepth(m_instrument.Pair.MarketDepth);
 					m_instrument.DataChanged += HandleDataChanged;
 					m_instrument.DataSyncingChanged += HandleDataSyncingChanged;
@@ -548,12 +560,12 @@ namespace CoinFlip.UI
 					// Signal a refresh
 					Chart.Invalidate();
 				}
-				double IOrderToXValue(IOrder order)
+				double OrderToXValue(IOrder order)
 				{
 					var time = order is Order ? Model.UtcNow : order.Created.Value;
 					return m_instrument.IndexAt(new TimeFrameTime(time, m_instrument.TimeFrame));
 				}
-				double IOrderToYValue(IOrder order)
+				double OrderToYValue(IOrder order)
 				{
 					return order.PriceQ2B;
 				}
@@ -792,8 +804,28 @@ namespace CoinFlip.UI
 			set
 			{
 				if (m_gfx_open_orders == value) return;
-				Util.Dispose(ref m_gfx_open_orders);
+				if (m_gfx_open_orders != null)
+				{
+					m_gfx_open_orders.OrderSelected -= HandleOrderSelected;
+					m_gfx_open_orders.EditOrder -= HandleEditOrder;
+					Util.Dispose(ref m_gfx_open_orders);
+				}
 				m_gfx_open_orders = value;
+				if (m_gfx_open_orders != null)
+				{
+					m_gfx_open_orders.OrderSelected += HandleOrderSelected;
+					m_gfx_open_orders.EditOrder += HandleEditOrder;
+				}
+
+				// Handlers
+				void HandleEditOrder(object sender, Orders.OrderEventArgs e)
+				{
+					Model.EditTrade((Order)e.Order);
+				}
+				void HandleOrderSelected(object sender, Orders.OrderEventArgs e)
+				{
+					Model.SelectedOpenOrders.Add((Order)e.Order);
+				}
 			}
 		}
 		private GfxObjects.Orders m_gfx_open_orders;
@@ -904,36 +936,7 @@ namespace CoinFlip.UI
 		public Command EditTrade { get; }
 		private void EditTradeInternal(object x)
 		{
-			var trade = (Trade)x;
-			var order_id = (trade as Order)?.OrderId;
-
-			// Create a graphic to represent the trade on the chart
-			var indy = new GfxObjects.TradeIndicator(trade, this) { Chart = Chart };
-
-			// Create an editor window for the trade
-			var ui = new EditTradeUI(Window.GetWindow(this), Model, trade, order_id);
-			ui.Closed += (s, a) =>
-			{
-				//indy.Chart = null;
-				Util.Dispose(ref indy);
-				if (ui.Result == true)
-				{
-					// Create or Update trade on the exchange
-					Misc.RunOnMainThread(async () =>
-					{
-						try
-						{
-							await trade.CreateOrder(Model.Shutdown.Token, ui.CreatorName);
-							Chart.Invalidate();
-						}
-						catch (Exception ex)
-						{
-							MsgBox.Show(Window.GetWindow(this), ex.MessageFull(), "Create/Modify Order", MsgBox.EButtons.OK, MsgBox.EIcon.Error);
-						}
-					});
-				}
-			};
-			ui.Show();
+			Model.EditTrade((Trade)x);
 		}
 
 		/// <summary>Replace the chart context menus</summary>

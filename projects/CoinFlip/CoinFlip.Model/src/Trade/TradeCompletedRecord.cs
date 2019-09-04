@@ -1,15 +1,16 @@
 ﻿namespace CoinFlip
 {
-	internal class TradeRecord
+	internal class TradeCompletedRecord
 	{
 		// Notes:
 		//  - This is a domain object used to stored a history of trades in a DB Table
 		//  - This type is used instead of 'TradeCompleted' because it doesn't have
 		//    Unit<double> properties and DateTimeOffset's etc. It's easier to store
 		//    in a DB table.
-		public TradeRecord()
+
+		public TradeCompletedRecord()
 		{ }
-		public TradeRecord(TradeCompleted trade)
+		public TradeCompletedRecord(TradeCompleted trade)
 		{
 			TradeId = trade.TradeId;
 			OrderId = trade.OrderId;

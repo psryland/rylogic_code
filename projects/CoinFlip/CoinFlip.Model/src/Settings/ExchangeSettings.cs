@@ -15,7 +15,6 @@ namespace CoinFlip.Settings
 			MarketDepth = 100;
 			ServerRequestRateLimit = 10;
 			PublicAPIOnly = false;
-			OrderDetails = new List<OrderDetails>();
 		}
 
 		/// <summary>True if the exchange is active</summary>
@@ -58,13 +57,6 @@ namespace CoinFlip.Settings
 		{
 			get { return get<bool>(nameof(PublicAPIOnly)); }
 			set { set(nameof(PublicAPIOnly), value); }
-		}
-
-		/// <summary>Persisted details about live orders</summary>
-		public List<OrderDetails> OrderDetails
-		{
-			get { return get<List<OrderDetails>>(nameof(OrderDetails)); }
-			set { set(nameof(OrderDetails), value); }
 		}
 	}
 }

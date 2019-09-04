@@ -76,8 +76,17 @@ namespace Rylogic.Gui.WPF.Converters
 			}
 
 			// Find the method 'ToString(int sd)'
-			if (int.TryParse(fmt, out var sd) && (mi = ty.GetMethod(nameof(ToString), new[] { typeof(int) })) != null)
-				return (string)mi.Invoke(value, new object[] { sd });
+			if (int.TryParse(fmt, out var sd))
+			{
+				if ((mi = ty.GetMethod(nameof(ToString), new[] { typeof(int) })) != null)
+					return (string)mi.Invoke(value, new object[] { sd });
+				if (value is float f)
+					return float_.ToString(f, sd);
+				if (value is double d)
+					return double_.ToString(d, sd);
+				if (value is decimal m)
+					return decimal_.ToString(m, sd);
+			}
 
 			// Find the method 'ToString(string fmt)'
 			if (fmt != null && (mi = ty.GetMethod(nameof(ToString), new[] { typeof(string) })) != null)

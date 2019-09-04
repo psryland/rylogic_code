@@ -83,7 +83,7 @@ namespace CoinFlip
 		public Unit<double> Commission => Trades.Values.Sum(x => x.Commission)._(CommissionCoin);
 
 		/// <summary>The currency that commission was charged in</summary>
-		public Coin CommissionCoin => Trades.Values.FirstOrDefault()?.CommissionCoin;
+		public Coin CommissionCoin => Trades.Values.FirstOrDefault()?.CommissionCoin ?? CoinOut;
 
 		/// <summary>The coin type being sold</summary>
 		public Coin CoinIn => TradeType == ETradeType.B2Q ? Pair.Base : Pair.Quote;

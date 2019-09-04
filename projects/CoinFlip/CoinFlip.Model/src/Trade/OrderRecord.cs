@@ -1,32 +1,30 @@
 ﻿namespace CoinFlip
 {
-	internal class OrderRecord
+	public class OrderRecord
 	{
 		// Notes:
-		//  - This type is used instead of 'OrderCompleted' because it doesn't have
-		//    Unit<double> properties and DateTimeOffset's etc. It's easier to store
-		//    in a DB table.
+		//  - This type persists details about a live order that is not available from the exchanges
+		//    such as the fund the order is associated with.
+
 		public OrderRecord()
 		{ }
-		public OrderRecord(OrderCompleted order)
+		public OrderRecord(Order order)
+			:this(order.OrderId, order.Fund.Id, order.CreatorName)
+		{}
+		public OrderRecord(long order_id, string fund_id, string creator_name)
 		{
-			OrderId = order.OrderId;
-			FundId = order.Fund.Id;
-			TradeType = order.TradeType.ToString();
-			Pair = order.Pair.Name;
+			OrderId = order_id;
+			FundId = fund_id;
+			CreatorName = creator_name;
 		}
 
-		/// <summary>The ID of the order that was completed</summary>
+		/// <summary>The order id</summary>
 		public long OrderId { get; private set; }
 
-		/// <summary>The fund the order was associated with</summary>
+		/// <summary>The fund the order is associated with</summary>
 		public string FundId { get; private set; }
-		public Fund Fund => new Fund(FundId);
 
-		/// <summary>The direction of the trade</summary>
-		public string TradeType { get; private set; }
-
-		/// <summary>The name of the pair that was traded</summary>
-		public string Pair { get; private set; }
+		/// <summary>The name of the entity that created the order</summary>
+		public string CreatorName { get; private set; }
 	}
 }

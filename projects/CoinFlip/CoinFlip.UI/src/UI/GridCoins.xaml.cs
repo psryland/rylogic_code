@@ -244,10 +244,10 @@ namespace CoinFlip.UI
 			public double Value => CoinData.AverageValue(SourceExchanges);
 
 			/// <summary>The sum of account balances across all exchanges for this coin</summary>
-			public Unit<double> Total => CoinData.NettTotal(SourceExchanges);
+			public double Total => CoinData.NettTotal(SourceExchanges);
 
 			/// <summary>The sum of available balance across all exchanges</summary>
-			public Unit<double> Available => CoinData.NettAvailable(SourceExchanges);
+			public double Available => CoinData.NettAvailable(SourceExchanges);
 
 			/// <summary>True if a live value could be calculated</summary>
 			public bool LiveValueAvailable => SourceExchanges.Any(x => x.Coins[Symbol]?.LivePriceAvailable ?? false);

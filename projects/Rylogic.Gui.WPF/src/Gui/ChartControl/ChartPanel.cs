@@ -55,6 +55,9 @@ namespace Rylogic.Gui.WPF.ChartDetail
 		/// <summary>Prepare the scene for rendering</summary>
 		protected override void OnBuildScene()
 		{
+			if (Chart == null)
+				return;
+
 			// Update axis graphics
 			Chart.Range.UpdateScene(Window);
 

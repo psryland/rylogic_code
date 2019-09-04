@@ -129,7 +129,7 @@ namespace CoinFlip
 		/// <summary>Settings for this exchange</summary>
 		public IExchangeSettings ExchSettings
 		{
-			get { return m_exch_settings; }
+			get => m_exch_settings;
 			private set
 			{
 				if (m_exch_settings == value) return;
@@ -217,14 +217,7 @@ namespace CoinFlip
 			set
 			{
 				if (m_sim == value) return;
-				if (m_sim != null)
-				{
-				}
 				m_sim = value;
-				if (m_sim != null)
-				{
-
-				}
 
 				// Reconnect to the appropriate trade history database
 				InitTradeHistoryTables();
@@ -239,7 +232,7 @@ namespace CoinFlip
 		/// <summary>Enable/Disable the exchange update thread</summary>
 		public bool UpdateThreadActive
 		{
-			get { return m_update_thread != null; }
+			get => m_update_thread != null;
 			set
 			{
 				if (UpdateThreadActive == value) return;
@@ -631,26 +624,8 @@ namespace CoinFlip
 		}
 		public bool CandleDataUpdateInProgress { get; private set; }
 
-		/// <summary>Cancel an existing order</summary>
-		public async Task<bool> CancelOrder(TradePair pair, long order_id, CancellationToken cancel)
-		{
-			var result =
-				Sim != null ? Sim.CancelOrderInternal(pair, order_id) :
-				Model.AllowTrades ? await CancelOrderInternal(pair, order_id, cancel) :
-				true;
-
-			// Remove the position from the Positions collection so that there is no race condition
-			Orders.RemoveIf(x => x.Pair == pair && x.OrderId == order_id);
-
-			// Trigger a positions and balances update
-			OrdersUpdateRequired = true;
-			BalanceUpdateRequired = true;
-			return result;
-		}
-		protected abstract Task<bool> CancelOrderInternal(TradePair pair, long order_id, CancellationToken cancel);
-
 		/// <summary>Place an order on the exchange to buy/sell 'amount' (currency depends on 'tt')</summary>
-		public async Task<OrderResult> CreateOrder(Fund fund, TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, CancellationToken cancel, string creator_name, float sig_change)
+		public async Task<OrderResult> CreateOrder(Fund fund, TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, CancellationToken cancel, string creator_name)
 		{
 			using (Scope.Create(() => ++m_in_create_order, () => --m_in_create_order))
 			{
@@ -677,7 +652,7 @@ namespace CoinFlip
 				// the received amount (usually).
 				var bal = fund[tt.CoinIn(pair)];
 				var hold_amount = amount_in;
-				var hold_id = bal.Hold(null, hold_amount, x => x.LastUpdated <= now);
+				var hold = bal.Holds.Create(hold_amount, local: true);
 
 				// Make the trade
 				// This can have the following results:
@@ -685,8 +660,8 @@ namespace CoinFlip
 				// 2) the entire trade can be met by existing orders in the order book -> a collection of trade IDs is returned.
 				// 3) some of the trade can be met by existing orders -> a single order number and a collection of trade IDs are returned.
 				var result =
-					Sim != null ? Sim.CreateOrderInternal(pair, tt, ot, amount_in, amount_out, sig_change) :
-					Model.AllowTrades ? await CreateOrderInternal(pair, tt, ot, amount_in, amount_out, cancel, sig_change) :
+					Sim != null ? Sim.CreateOrderInternal(pair, tt, ot, amount_in, amount_out) :
+					Model.AllowTrades ? await CreateOrderInternal(pair, tt, ot, amount_in, amount_out, cancel) :
 					throw new Exception("Cannot create order, trading not enabled");
 
 				// Log the event
@@ -694,8 +669,7 @@ namespace CoinFlip
 				Model.Log.Write(ELogLevel.Info, $"{Name}: (id={result.OrderId}) {amount_in.ToString(8, true)} → {amount_out.ToString(8, true)} @ {price_q2b.ToString(8, true)}");
 
 				// Save the extra details about the live order.
-				ExchSettings.OrderDetails.Add(new OrderDetails(result.OrderId, fund, creator_name));
-				ExchSettings.Save();
+				UpsertLiveOrder(result.OrderId, fund, creator_name);
 
 				// The order may have been completed or partially filled. Add the filled orders to the trade history.
 				foreach (var fill in result.Trades)
@@ -714,14 +688,16 @@ namespace CoinFlip
 					Orders.AddOrUpdate(order);
 
 					// Update the hold with the order id.
-					bal.Update(hold_id, result.OrderId, x => Orders.ContainsKey(order.OrderId));
+					// Holds need to exist for the life of the order so we know how much
+					// of the exchange held amount to attributed to each fund.
+					hold.OrderId = result.OrderId;
 				}
 				else
 				{
 					// If the order was immediately completely filled, apply the changes to the associated fund.
 					// There was never any amount held on the exchange in this case.
-					bal.Release(hold_id);
-					ApplyCompletedOrderToFund(History[result.OrderId], now);
+					bal.Holds.Remove(hold);
+					ApplyCompletedOrderToFund(History[result.OrderId]);
 				}
 
 				// Remove entries from the order book that this order should have filled.
@@ -736,8 +712,45 @@ namespace CoinFlip
 				return result;
 			}
 		}
-		protected abstract Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, CancellationToken cancel, float sig_change);
+		protected abstract Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, CancellationToken cancel);
 		private int m_in_create_order;
+
+		/// <summary>Cancel an existing order</summary>
+		public async Task<bool> CancelOrder(TradePair pair, long order_id, CancellationToken cancel)
+		{
+			var result =
+				Sim != null ? Sim.CancelOrderInternal(pair, order_id) :
+				Model.AllowTrades ? await CancelOrderInternal(pair, order_id, cancel) :
+				true;
+
+			// Remove the position from the orders collection so that there is no
+			// race condition while waiting for the orders to update from the server.
+			if (Orders.TryGetValue(order_id, out var order))
+			{
+				Orders.Remove(order_id);
+
+				var bal = Balance[order.CoinIn];
+				var fund = bal[order.Fund];
+
+				// Release any holds associated with 'order_id'.
+				if (fund.Holds.TryGet(order_id, out var hold))
+				{
+					// Remove the hold
+					fund.Holds.Remove(order_id: order_id);
+
+					// If the hold is not local only, adjust the held amount so that a new
+					// trade can be placed without having to wait for the next balance update.
+					if (!hold.Local)
+						bal.ExchangeUpdate(bal.ExchTotal, bal.ExchHeld - order.AmountIn, bal.LastUpdated);
+				}
+			}
+
+			// Trigger a positions and balances update
+			OrdersUpdateRequired = true;
+			BalanceUpdateRequired = true;
+			return result;
+		}
+		protected abstract Task<bool> CancelOrderInternal(TradePair pair, long order_id, CancellationToken cancel);
 
 		/// <summary>Enumerate all candle data and time frames provided by this exchange</summary>
 		public IEnumerable<PairAndTF> EnumAvailableCandleData(TradePair pair = null)
@@ -843,28 +856,36 @@ namespace CoinFlip
 			// Connect
 			DB = new SQLiteConnection($"Data Source={DBFilepath};Version=3;journal mode=Memory;synchronous=Off;foreign_keys=On");
 
+			// Ensure the LiveOrders table exists
+			DB.Execute(
+				$"create table if not exists {Table.LiveOrders} (\n" +
+				$"  [{nameof(OrderRecord.OrderId)}] integer unique primary key,\n" +
+				$"  [{nameof(OrderRecord.FundId)}] text,\n" +
+				$"  [{nameof(OrderRecord.CreatorName)}] text\n" +
+				$")");
+
 			// Ensure the OrderComplete table exists
 			DB.Execute(
 				$"create table if not exists {Table.OrderComplete} (\n" +
-				$"  [{nameof(OrderRecord.OrderId)}] integer unique primary key,\n" +
-				$"  [{nameof(OrderRecord.FundId)}] text,\n" +
-				$"  [{nameof(OrderRecord.TradeType)}] text,\n" +
-				$"  [{nameof(OrderRecord.Pair)}] text\n" +
+				$"  [{nameof(OrderCompletedRecord.OrderId)}] integer unique primary key,\n" +
+				$"  [{nameof(OrderCompletedRecord.FundId)}] text,\n" +
+				$"  [{nameof(OrderCompletedRecord.TradeType)}] text,\n" +
+				$"  [{nameof(OrderCompletedRecord.Pair)}] text\n" +
 				$")");
 
 			// Ensure the TradeComplete table exists
 			DB.Execute(
 				$"create table if not exists {Table.TradeComplete} (\n" +
-				$"  [{nameof(TradeRecord.TradeId)}] integer unique primary key,\n" +
-				$"  [{nameof(TradeRecord.OrderId)}] integer,\n" +
-				$"  [{nameof(TradeRecord.Created)}] integer,\n" +
-				$"  [{nameof(TradeRecord.Updated)}] integer,\n" +
-				$"  [{nameof(TradeRecord.AmountIn)}] real,\n" +
-				$"  [{nameof(TradeRecord.AmountOut)}] real,\n" +
-				$"  [{nameof(TradeRecord.Commission)}] real,\n" +
-				$"  [{nameof(TradeRecord.CommissionCoin)}] text,\n" +
+				$"  [{nameof(TradeCompletedRecord.TradeId)}] integer unique primary key,\n" +
+				$"  [{nameof(TradeCompletedRecord.OrderId)}] integer,\n" +
+				$"  [{nameof(TradeCompletedRecord.Created)}] integer,\n" +
+				$"  [{nameof(TradeCompletedRecord.Updated)}] integer,\n" +
+				$"  [{nameof(TradeCompletedRecord.AmountIn)}] real,\n" +
+				$"  [{nameof(TradeCompletedRecord.AmountOut)}] real,\n" +
+				$"  [{nameof(TradeCompletedRecord.Commission)}] real,\n" +
+				$"  [{nameof(TradeCompletedRecord.CommissionCoin)}] text,\n" +
 				$"\n" +
-				$"  foreign key ({nameof(TradeRecord.OrderId)}) references {Table.OrderComplete}([{nameof(OrderRecord.OrderId)}])\n" +
+				$"  foreign key ({nameof(TradeCompletedRecord.OrderId)}) references {Table.OrderComplete}([{nameof(OrderCompletedRecord.OrderId)}])\n" +
 				$"     on update cascade\n" +
 				$"     on delete cascade\n" +
 				$")");
@@ -880,7 +901,7 @@ namespace CoinFlip
 				DateTimeOffset_.UnixEpoch.Ticks);
 
 			// Note: the 'History' Collection cannot be populated
-			// here because at this point the Trade pairs may not known.
+			// here because at this point the Trade pairs may not be known.
 		}
 
 		/// <summary>Ensure the valuation paths for the current coins are up to date</summary>
@@ -890,31 +911,57 @@ namespace CoinFlip
 				coin.UpdateValuationPaths();
 		}
 
-		/// <summary>Synchronise the Orders collection with 'live_order_ids'</summary>
-		public void SynchroniseOrders(HashSet<long> live_order_ids, DateTimeOffset timestamp)
+		/// <summary>Synchronise the Orders collection with 'orders'</summary>
+		public void SynchroniseOrders(IList<Order> live_orders, DateTimeOffset timestamp)
 		{
-			// Remove orders not in 'live_order_ids'
+			// Notes:
+			//  - This method should be called after the history has been updated so
+			//    that it can detect the difference between a filled and cancelled order.
+
+			var live_order_ids = live_orders.ToHashSet(x => x.OrderId);
+
+			// Remove all orders that are no longer live
 			foreach (var order in Orders.Values.Where(x => !live_order_ids.Contains(x.OrderId)).ToArray())
 			{
 				// 'order' is newer than 'timestamp', so it can stay
 				if (order.Created >= timestamp)
 					continue;
 
-				// The order is no longer on the exchange, so remove it from this collection
+				// The order is no longer on the exchange, so remove it from 'Orders'
 				Orders.Remove(order.OrderId);
 
+				// Remove any holds associated with this order
+				order.Fund[order.CoinIn].Holds.Remove(order_id: order.OrderId);
+
+				// Remove the live order details
+				DeleteLiveOrderDetails(order.OrderId);
+
 				// If the order is no longer in the live orders list and is now in the history,
-				// then it has been completed. Apply the trade amounts to the associated fund.
+				// then it has been filled. Apply the trade amounts to the associated fund.
 				// Note: this only happens when the order is fully filled because if it wasn't
 				// filled it'd still be in the live orders list.
 				var was_filled = History.TryGetValue(order.OrderId, out var his);
 				if (was_filled)
-					ApplyCompletedOrderToFund(his, timestamp);
+					ApplyCompletedOrderToFund(his);
 			}
 
-			// Remove entries from the persisted order details
-			if (ExchSettings.OrderDetails.RemoveAll(x => !live_order_ids.Contains(x.OrderId)) != 0)
-				ExchSettings.Save();
+			// Add/Update new orders in the orders collection
+			foreach (var order in live_orders)
+			{
+				Orders.AddOrUpdate(order);
+
+				// Ensure a fund hold exists for each live order
+				var holds = order.Fund[order.CoinIn].Holds;
+				if (holds.TryGet(order.OrderId, out var hold))
+				{
+					hold.Amount = order.AmountIn;
+					hold.Local = false;
+				}
+				else
+				{
+					holds.Create(order.AmountIn, order_id: order.OrderId, local: false);
+				}
+			}
 		}
 
 		/// <summary>Add a new or modified OrderCompleted to the trade history DB</summary>
@@ -947,16 +994,50 @@ namespace CoinFlip
 				Math.Max(HistoryInterval.End, order.Created.Ticks));
 		}
 
+		/// <summary>Update or insert a live order</summary>
+		private void UpsertLiveOrder(long order_id, Fund fund, string creator_name, IDbTransaction transaction = null)
+		{
+			var rec = new OrderRecord(order_id, fund.Id, creator_name);
+			DB.Execute(
+				$"insert or replace into {Table.LiveOrders} (\n" +
+				$"  [{nameof(OrderRecord.OrderId)}],\n" +
+				$"  [{nameof(OrderRecord.FundId)}],\n" +
+				$"  [{nameof(OrderRecord.CreatorName)}]\n" +
+				$") values (\n" +
+				$"  @order_id, @fund_id, @creator_name\n" +
+				$")",
+				new
+				{
+					order_id = rec.OrderId,
+					fund_id = rec.FundId,
+					creator_name = rec.CreatorName,
+				},
+				transaction);
+		}
+
+		/// <summary>Remove the live order details from the DB associated with 'order_id'</summary>
+		private void DeleteLiveOrderDetails(long order_id, IDbTransaction transaction = null)
+		{
+			DB.Execute(
+				$"delete from {Table.LiveOrders}\n" +
+				$"where [{nameof(OrderRecord.OrderId)}] = @order_id",
+				new
+				{
+					order_id
+				},
+				transaction);
+		}
+
 		/// <summary>Update or insert an 'OrderCompleted'</summary>
 		private void UpsertOrderCompleted(OrderCompleted order, IDbTransaction transaction = null)
 		{
-			var rec = new OrderRecord(order);
+			var rec = new OrderCompletedRecord(order);
 			DB.Execute(
 				$"insert or replace into {Table.OrderComplete} (\n" +
-				$"  [{nameof(OrderRecord.OrderId)}],\n" +
-				$"  [{nameof(OrderRecord.FundId)}],\n" +
-				$"  [{nameof(OrderRecord.TradeType)}],\n" +
-				$"  [{nameof(OrderRecord.Pair)}]\n" +
+				$"  [{nameof(OrderCompletedRecord.OrderId)}],\n" +
+				$"  [{nameof(OrderCompletedRecord.FundId)}],\n" +
+				$"  [{nameof(OrderCompletedRecord.TradeType)}],\n" +
+				$"  [{nameof(OrderCompletedRecord.Pair)}]\n" +
 				$") values (\n" +
 				$"  @order_id, @fund_id, @trade_type, @pair\n" +
 				$")",
@@ -973,17 +1054,17 @@ namespace CoinFlip
 		/// <summary>Update or insert a 'TradeCompleted'</summary>
 		private void UpsertTradeCompleted(TradeCompleted trade, IDbTransaction transaction = null)
 		{
-			var rec = new TradeRecord(trade);
+			var rec = new TradeCompletedRecord(trade);
 			DB.Execute(
 				$"insert or replace into {Table.TradeComplete} (\n" +
-				$"  [{nameof(TradeRecord.TradeId)}],\n" +
-				$"  [{nameof(TradeRecord.OrderId)}],\n" +
-				$"  [{nameof(TradeRecord.Created)}],\n" +
-				$"  [{nameof(TradeRecord.Updated)}],\n" +
-				$"  [{nameof(TradeRecord.AmountIn)}],\n" +
-				$"  [{nameof(TradeRecord.AmountOut)}],\n" +
-				$"  [{nameof(TradeRecord.Commission)}],\n" +
-				$"  [{nameof(TradeRecord.CommissionCoin)}]\n" +
+				$"  [{nameof(TradeCompletedRecord.TradeId)}],\n" +
+				$"  [{nameof(TradeCompletedRecord.OrderId)}],\n" +
+				$"  [{nameof(TradeCompletedRecord.Created)}],\n" +
+				$"  [{nameof(TradeCompletedRecord.Updated)}],\n" +
+				$"  [{nameof(TradeCompletedRecord.AmountIn)}],\n" +
+				$"  [{nameof(TradeCompletedRecord.AmountOut)}],\n" +
+				$"  [{nameof(TradeCompletedRecord.Commission)}],\n" +
+				$"  [{nameof(TradeCompletedRecord.CommissionCoin)}]\n" +
 				$") values (\n" +
 				$"  @trade_id, @order_id, @created, @updated, @amount_in, @amount_out, @commission, @commission_coin\n" +
 				$")",
@@ -1004,27 +1085,31 @@ namespace CoinFlip
 		/// <summary>Return the fund id associated with an order id (from the order details)</summary>
 		public Fund OrderIdToFund(long order_id)
 		{
-			var details = ExchSettings.OrderDetails.FirstOrDefault(x => x.OrderId == order_id);
-			return new Fund(details?.FundId ?? Fund.Main);
+			var fund_id = DB.QuerySingleOrDefault<string>(
+				$"select [{nameof(OrderRecord.FundId)}] from {Table.LiveOrders}\n" +
+				$"where [{nameof(OrderRecord.OrderId)}] = @order_id",
+				new { order_id });
+
+			return new Fund(fund_id ?? Fund.Main);
 		}
 
-		/// <summary>Adjust the balances of a fund based on 'order' and 'his'</summary>
-		private void ApplyCompletedOrderToFund(OrderCompleted his, DateTimeOffset timestamp)
+		/// <summary>Adjust the balances of a fund based on a completed order</summary>
+		private void ApplyCompletedOrderToFund(OrderCompleted his)
 		{
 			foreach (var trade in his.Trades.Values)
 			{
 				{// Debt from CoinIn
 					var bal = Balance[trade.CoinIn];
-					bal.ChangeFundBalance(his.Fund, -trade.AmountIn, timestamp);
+					bal.ChangeFundBalance(his.Fund, -trade.AmountIn);
 				}
 				{// Credit to CoinOut
 					var bal = Balance[trade.CoinOut];
-					bal.ChangeFundBalance(his.Fund, +trade.AmountOut, timestamp);
+					bal.ChangeFundBalance(his.Fund, +trade.AmountOut);
 				}
 				if (trade.CommissionCoin != null) // Debt the commission
 				{
 					var bal = Balance[trade.CommissionCoin];
-					bal.ChangeFundBalance(his.Fund, -trade.Commission, timestamp);
+					bal.ChangeFundBalance(his.Fund, -trade.Commission);
 				}
 			}
 		}
@@ -1043,7 +1128,7 @@ namespace CoinFlip
 			var history_last_id = 0L;
 
 			// Get the completed orders
-			var orders = DB.Query<OrderRecord>($"select * from {Table.OrderComplete}");
+			var orders = DB.Query<OrderCompletedRecord>($"select * from {Table.OrderComplete}");
 			foreach (var order in orders)
 			{
 				var pair = Pairs[order.Pair];
@@ -1052,7 +1137,7 @@ namespace CoinFlip
 			}
 
 			// Get the trades that make up the completed orders
-			var trades = DB.Query<TradeRecord>($"select * from {Table.TradeComplete}");
+			var trades = DB.Query<TradeCompletedRecord>($"select * from {Table.TradeComplete}");
 			foreach (var trade in trades)
 			{
 				// Get the completed order that 'trade' belongs to
@@ -1148,6 +1233,7 @@ namespace CoinFlip
 		/// <summary>Trade history table names</summary>
 		private static class Table
 		{
+			public const string LiveOrders = "LiveOrders";
 			public const string OrderComplete = "OrderComplete";
 			public const string TradeComplete = "TradeComplete";
 		}

@@ -129,7 +129,7 @@ namespace CoinFlip
 					var coin = Coins.GetOrAdd(b.Symbol);
 
 					// Update the balance
-					Balance.AssignFundBalance(coin, Fund.Default, b.Total._(coin), (b.Total - b.Available)._(coin), last_updated);
+					Balance.ExchangeUpdate(coin, b.Total._(coin), (b.Total - b.Available)._(coin), last_updated);
 				}
 
 				// Notify updated
@@ -162,18 +162,10 @@ namespace CoinFlip
 			// Queue integration of the market data
 			Model.DataUpdates.Add(() =>
 			{
-				var order_ids = new HashSet<long>();
+				var orders = new List<Order>();
 				var pairs = new HashSet<CurrencyPair>();
 
-				// Update the collection of existing orders
-				foreach (var exch_order in positions)
-				{
-					// Add the order to the collection
-					var order = OrderFrom(exch_order, timestamp);
-					Orders.AddOrUpdate(order);
-					order_ids.Add(order.OrderId);
-					pairs.Add(exch_order.Pair);
-				}
+				// Update the trade history
 				foreach (var exch_order in history)
 				{
 					// Get/Add the completed order
@@ -189,12 +181,18 @@ namespace CoinFlip
 					AddToTradeHistory(order_completed);
 				}
 
+				// Update the collection of existing orders
+				foreach (var exch_order in positions)
+				{
+					// Add the order to the collection
+					var order = orders.Add2(OrderFrom(exch_order, timestamp));
+					pairs.Add(exch_order.Pair);
+				}
+				SynchroniseOrders(orders, timestamp);
+
 				// Update the trade pairs
 				lock (m_pairs)
 					m_pairs.AddRange(pairs);
-
-				// Remove any positions that are no longer valid.
-				SynchroniseOrders(order_ids, timestamp);
 
 				// Notify updated
 				History.LastUpdated = timestamp;
@@ -308,7 +306,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Open a trade</summary>
-		protected async override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, CancellationToken cancel, float sig_change)
+		protected async override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, CancellationToken cancel)
 		{
 			try
 			{

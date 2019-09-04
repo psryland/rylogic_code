@@ -88,7 +88,7 @@
     <Compile Include="src\GfxObjects\Misc.cs" />
     <Compile Include="src\GfxObjects\Orders.cs" />
     <Compile Include="src\GfxObjects\MarketDepth.cs" />
-    <Compile Include="src\GfxObjects\TradeIndicator.cs" />
+    <Compile Include="src\GfxObjects\TradeWidget.cs" />
     <Compile Include="src\GfxObjects\Buffers.cs" />
     <Compile Include="src\GfxObjects\Candles.cs" />
     <Compile Include="src\GfxObjects\SpotPrice.cs" />

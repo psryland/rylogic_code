@@ -155,10 +155,10 @@ namespace CoinFlip.UI
 			public double Value => Coin?.ValueOf(1) ?? 0;
 
 			/// <summary>The total amount of the coin (in coin currency)</summary>
-			public Unit<double> Total => Coin?.Balances.Sum(x => x.Total) ?? 0.0._(Symbol);
+			public double Total => Coin?.Balances.Sum(x => x.Total) ?? 0.0;
 
 			/// <summary>The available amount of the coin (in coin currency)</summary>
-			public Unit<double> Available => Coin?.Balances.Sum(x => x.Available) ?? 0.0._(Symbol);
+			public double Available => Coin?.Balances.Sum(x => x.Available) ?? 0.0;
 
 			/// <summary>The currently selected exchange</summary>
 			private Exchange SelectedExchange => (Exchange)m_owner.Exchanges.CurrentItem;
@@ -212,7 +212,7 @@ namespace CoinFlip.UI
 						return;
 
 					value = Math.Max(value, 0);
-					coin.Balances.AssignFundBalance(fund, value._(coin), null, Model.UtcNow);
+					coin.Balances.AssignFundBalance(fund, value._(coin));
 					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(MaxAvailable)));
 					m_owner.NotifyPropertyChanged(nameof(FundAllocationsUI.Validate));
 				}

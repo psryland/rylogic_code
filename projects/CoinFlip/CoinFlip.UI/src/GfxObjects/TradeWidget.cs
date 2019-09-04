@@ -1,13 +1,10 @@
 ﻿using System;
-using System.ComponentModel;
-using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Shapes;
 using CoinFlip.Settings;
 using Rylogic.Common;
-using Rylogic.Extn;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
 using Rylogic.Maths;
@@ -16,9 +13,9 @@ using Rylogic.Utility;
 namespace CoinFlip.UI.GfxObjects
 {
 	/// <summary>Chart graphics representing the trade</summary>
-	public class TradeIndicator : ChartControl.Element
+	public class TradeWidget : ChartControl.Element
 	{
-		public TradeIndicator(Trade trade, CandleChart candle_chart)
+		public TradeWidget(Trade trade, CandleChart candle_chart)
 			: base(Guid.NewGuid(), m4x4.Identity, "Trade")
 		{
 			Trade = trade;
@@ -47,10 +44,10 @@ namespace CoinFlip.UI.GfxObjects
 		}
 
 		/// <summary>The Trade being 'indicated'</summary>
-		private Trade Trade
+		public Trade Trade
 		{
 			get => m_trade;
-			set
+			private set
 			{
 				if (m_trade == value) return;
 				if (m_trade != null)
@@ -122,7 +119,7 @@ namespace CoinFlip.UI.GfxObjects
 					GlowEP.Y1 = pt0.Y;
 					GlowEP.X2 = pt1.X - LabelEP.DesiredSize.Width;
 					GlowEP.Y2 = pt1.Y;
-					GlowEP.Stroke = col.Alpha(0.25).ToMediaBrush();
+					GlowEP.Stroke = col.Alpha(Selected ? 0.25 : 0.15).ToMediaBrush();
 					Chart.Overlay.Adopt(GlowEP);
 				}
 				else
@@ -141,15 +138,18 @@ namespace CoinFlip.UI.GfxObjects
 		/// <summary>Hit test the trade price indicator</summary>
 		public override ChartControl.HitTestResult.Hit HitTest(Point chart_point, Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
 		{
-			// Hit if over a price label
-			var pt0 = Chart.TransformToDescendant(LabelEP).Transform(client_point);
-			if (LabelEP.RenderArea().Contains(pt0))
-				return new ChartControl.HitTestResult.Hit(this, pt0, null);
+			if (Chart.IsAncestorOf(LabelEP))
+			{
+				// Hit if over a price label
+				var pt0 = Chart.TransformToDescendant(LabelEP).Transform(client_point);
+				if (LabelEP.RenderArea().Contains(pt0))
+					return new ChartControl.HitTestResult.Hit(this, pt0, null);
 
-			// Get the price in client space
-			var client_price = Chart.ChartToClient(new Point(chart_point.X, PriceQ2B));
-			if (Math.Abs(client_price.Y - client_point.Y) < Chart.Options.MinSelectionDistance)
-				return new ChartControl.HitTestResult.Hit(this, client_price, null);
+				// Get the price in client space
+				var client_price = Chart.ChartToClient(new Point(chart_point.X, PriceQ2B));
+				if (Math.Abs(client_price.Y - client_point.Y) < Chart.Options.MinSelectionDistance)
+					return new ChartControl.HitTestResult.Hit(this, client_price, null);
+			}
 
 			return null;
 		}

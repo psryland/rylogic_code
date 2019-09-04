@@ -62,6 +62,7 @@ namespace CoinFlip.UI
 					m_model.Exchanges.CollectionChanged -= HandleFundsChanged;
 					m_model.Coins.CollectionChanged -= HandleFundsChanged;
 					m_model.Funds.CollectionChanged -= HandleFundsChanged;
+					CoinData.BalanceChanged -= HandleBalanceChanged;
 					SettingsData.Settings.SettingChange -= HandleSettingChange;
 					Model.BackTestingChange -= HandleBackTestingChanged;
 				}
@@ -70,6 +71,7 @@ namespace CoinFlip.UI
 				{
 					Model.BackTestingChange += HandleBackTestingChanged;
 					SettingsData.Settings.SettingChange += HandleSettingChange;
+					CoinData.BalanceChanged += HandleBalanceChanged;
 					m_model.Funds.CollectionChanged += HandleFundsChanged;
 					m_model.Coins.CollectionChanged += HandleFundsChanged;
 					m_model.Exchanges.CollectionChanged += HandleFundsChanged;
@@ -90,6 +92,11 @@ namespace CoinFlip.UI
 				void HandleFundsChanged(object sender = null, NotifyCollectionChangedEventArgs e = null)
 				{
 					CreateFundColumns();
+				}
+				void HandleBalanceChanged(object sender, CoinEventArgs e)
+				{
+					var coin = Coins.Cast<CoinDataAdapter>().FirstOrDefault(x => x.CoinData.Symbol == e.Coin.Symbol);
+					coin?.Invalidate();
 				}
 			}
 		}
@@ -250,6 +257,7 @@ namespace CoinFlip.UI
 					CellTemplate = templ,
 					Binding = new Binding()
 					{
+						Path = new PropertyPath(nameof(CoinDataAdapter.This)),
 						Mode = BindingMode.OneWay,
 						Converter = conv,
 						ConverterParameter = fund,
@@ -261,6 +269,11 @@ namespace CoinFlip.UI
 		/// <summary>Wraps 'CoinData' to expose properties for binding</summary>
 		private class CoinDataAdapter :IValueTotalAvail, INotifyPropertyChanged
 		{
+			// Notes:
+			//  - This represents a row in GridFunds.
+			//  - The column binding for the grid binds to 'This' with a converter that converts
+			//    this adaptor to an IBalance instance associated with the fund for the column
+
 			private readonly GridFunds m_me;
 			public CoinDataAdapter(GridFunds me, CoinData cd)
 			{
@@ -280,14 +293,17 @@ namespace CoinFlip.UI
 			/// <summary>The coin on the currently selected exchange (can be null if there is no selected Exchange)</summary>
 			public Coin Coin => Exchange?.Coins[Symbol];
 
+			/// <summary></summary>
+			public CoinDataAdapter This => this;
+
 			/// <summary>Value of the coin (probably in USD)</summary>
 			public double Value => Coin?.ValueOf(1) ?? 0;
 
 			/// <summary>The total amount of the coin (in coin currency)</summary>
-			public Unit<double> Total => Coin?.Balances.NettTotal ?? 0.0._(Symbol);
+			public double Total => Coin?.Balances.NettTotal ?? 0.0;
 
 			/// <summary>The available amount of the coin (in coin currency)</summary>
-			public Unit<double> Available => Coin?.Balances.NettAvailable ?? 0.0._(Symbol);
+			public double Available => Coin?.Balances.NettAvailable ?? 0.0;
 
 			/// <summary>The amount that is locked</summary>
 			public Unit<double> Held => Coin?.Balances.NettHeld ?? 0.0._(Symbol);
@@ -295,9 +311,18 @@ namespace CoinFlip.UI
 			/// <summary></summary>
 			public void Invalidate(object sender = null, EventArgs args = null)
 			{
+				// Invalidate the IBalance instance for this coin in all funds
+				if (Coin != null)
+				{
+					foreach (var fund in Coin.Balances.Funds)
+						fund.Invalidate();
+				}
+
+				NotifyPropertyChanged(nameof(This));
 				NotifyPropertyChanged(nameof(Value));
 				NotifyPropertyChanged(nameof(Total));
 				NotifyPropertyChanged(nameof(Available));
+				NotifyPropertyChanged(nameof(Held));
 			}
 
 			/// <summary></summary>

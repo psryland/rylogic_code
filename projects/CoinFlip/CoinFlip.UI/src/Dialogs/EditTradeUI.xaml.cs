@@ -15,22 +15,26 @@ namespace CoinFlip.UI
 	{
 		// Notes:
 		//  - This dialog is used to edit the properties of a trade or order.
+		//  - When modifying an existing order, the trade type cannot be changed because
+		//    the 'AdditionalIn' amount is based on the held amount of 'CoinIn' currency.
+		//    Changing the trade side means 'AdditionalIn' is the wrong currency and value.
 
-		public EditTradeUI(Window owner, Model model, Trade trade, long? existing_order_id)
+		public EditTradeUI(Window owner, Model model, Trade trade, bool existing_order)
 		{
 			InitializeComponent();
-			Title = existing_order_id != null ? "Modify Order" : "Create Order";
+			Title = existing_order ? "Modify Order" : "Create Order";
 			Icon = owner?.Icon;
 			Owner = owner;
+			Left = owner.Left + 80;
+			Top = owner.Top + (owner.Height - Height) / 2;
 
 			Model = model;
 			Trade = trade;
+			IsNewTrade = !existing_order;
 			PriceQ2B = Trade.PriceQ2B.ToString();
 			AmountIn = Trade.AmountIn.ToString();
 			AmountOut = Trade.AmountOut.ToString();
-			Original = new Trade(trade);
-			ExistingOrderId = existing_order_id;
-			CreatorName = string.Empty;//todo
+			AcceptText = existing_order ? "Modify" : "Create";
 
 			// Find the exchanges that offer the trade pair
 			ExchangesOfferingPair = new ListCollectionView(Model.Exchanges.Where(x => x.Pairs.ContainsKey(trade.Pair.UniqueKey)).ToList());
@@ -39,6 +43,8 @@ namespace CoinFlip.UI
 			Funds = new ListCollectionView(Model.Funds);
 
 			// Commands
+			Accept = Command.Create(this, AcceptInternal);
+			Cancel = Command.Create(this, CancelInternal);
 			SetSellAmountToMaximum = Command.Create(this, SetSellAmountToMaximumInternal);
 
 			DataContext = this;
@@ -53,11 +59,6 @@ namespace CoinFlip.UI
 		protected override void OnClosed(EventArgs e)
 		{
 			base.OnClosed(e);
-
-			// If the trade is actually a live order, and it hasn't
-			// actually changed ensure the 'Result' is 'cancelled'
-			if (Result == true && ExistingOrderId != null && Original.Equals(Trade))
-				Result = false;
 
 			// If the dialog was used modally, set 'DialogResult'
 			if (this.IsModal())
@@ -111,6 +112,8 @@ namespace CoinFlip.UI
 				m_trade = value;
 				if (m_trade != null)
 				{
+					m_existing_held = m_trade.AmountIn;
+					m_existing_trade_type = m_trade.TradeType;
 					m_trade.PropertyChanged += HandleTradePropertyChanged;
 				}
 
@@ -190,14 +193,11 @@ namespace CoinFlip.UI
 				}
 			}
 		}
-		private Trade m_trade;
 		private int m_in_trade_property_changed;
+		private Trade m_trade;
 
-		/// <summary>The trade provided to this editor. Used to detect changes</summary>
-		private Trade Original { get; }
-
-		/// <summary>Non-null if 'Original' is actually an order, live on an exchange</summary>
-		public long? ExistingOrderId { get; }
+		/// <summary>True if we're not editing an existing order</summary>
+		public bool IsNewTrade { get; }
 
 		/// <summary>The exchanges that allow trades of 'Pair'</summary>
 		public ICollectionView ExchangesOfferingPair
@@ -268,6 +268,9 @@ namespace CoinFlip.UI
 			set
 			{
 				if (TradeType == value) return;
+				if (!IsNewTrade)
+					throw new Exception("Existing orders cannot change trade type");
+
 				Trade.TradeType = value;
 				NotifyPropertyChanged(string.Empty);
 			}
@@ -289,7 +292,11 @@ namespace CoinFlip.UI
 		public bool CanChoosePrice => OrderType != EOrderType.Market;
 
 		/// <summary>User text associated with the trade</summary>
-		public string CreatorName { get; set; }
+		public string CreatorName
+		{
+			get => Trade.CreatorName;
+			set => Trade.CreatorName = value;
+		}
 
 		/// <summary>The amount to trade</summary>
 		public string AmountIn
@@ -392,8 +399,7 @@ namespace CoinFlip.UI
 		private int m_in_price_q2b;
 
 		/// <summary>Return the available balance of currency to sell. Includes the 'm_initial.AmountIn' when modifying 'Trade'</summary>
-		public Unit<double> AvailableIn => Trade.Fund[CoinIn].Available + AdditionalIn;
-		private Unit<double> AdditionalIn => ExistingOrderId != null ? Original.AmountIn : 0.0._(CoinIn);
+		public Unit<double> AvailableIn => Trade.Fund[CoinIn].Available + ExistingHeld;
 
 		/// <summary>Return the available balance of currency to buy. Includes the 'm_initial.VolumeIn' when modifying 'Trade'</summary>
 		public Unit<double> AvailableOut => Trade.Fund[CoinOut].Available;
@@ -416,8 +422,13 @@ namespace CoinFlip.UI
 			TradeType == ETradeType.B2Q ? SettingsData.Settings.Chart.B2QColour.Lerp(Colour32.White,0.9f) :
 			throw new Exception($"Unknown trade type: {TradeType}");
 
+		/// <summary>The amount held for the existing trade</summary>
+		private Unit<double> ExistingHeld => (IsNewTrade || TradeType != m_existing_trade_type) ? 0.0._(CoinIn) : m_existing_held;
+		private ETradeType m_existing_trade_type;
+		private Unit<double> m_existing_held;
+
 		/// <summary>Validate the trade data</summary>
-		public EValidation Validation => Trade.Validate(additional_balance_in: AdditionalIn);
+		public EValidation Validation => Trade.Validate(additional_balance_in: ExistingHeld);
 
 		/// <summary>A description of the validation errors</summary>
 		public string ValidationResults => Validation.ToErrorDescription();
@@ -434,15 +445,9 @@ namespace CoinFlip.UI
 		/// <summary>True if the amount value is valid</summary>
 		public bool IsAmountOutValid => !Bit.AnySet(Validation, EValidation.AmountOutIsInvalid | EValidation.AmountOutOutOfRange | EValidation.InsufficientBalance);
 
-		/// <summary>Set the trade sell amount to the maximum available</summary>
-		public Command SetSellAmountToMaximum { get; }
-		private void SetSellAmountToMaximumInternal()
-		{
-			Trade.AmountIn = AvailableIn;
-		}
-
 		/// <summary>Close the dialog in the 'accepted' state</summary>
-		public void Accept()
+		public Command Accept { get; }
+		private void AcceptInternal()
 		{
 			// Grab focus to ensure values are validated
 			if (!m_btn_accept.Focus())
@@ -457,11 +462,22 @@ namespace CoinFlip.UI
 		}
 
 		/// <summary>Close the dialog in the 'cancelled' state</summary>
-		public void Cancel()
+		public Command Cancel { get; }
+		private void CancelInternal()
 		{
 			Result = false;
 			Close();
 		}
+
+		/// <summary>Set the trade sell amount to the maximum available</summary>
+		public Command SetSellAmountToMaximum { get; }
+		private void SetSellAmountToMaximumInternal()
+		{
+			Trade.AmountIn = AvailableIn;
+		}
+
+		/// <summary>Text to display on the accept button</summary>
+		public string AcceptText { get; }
 
 		/// <summary>The dialog result when closed</summary>
 		public bool? Result { get; private set; }

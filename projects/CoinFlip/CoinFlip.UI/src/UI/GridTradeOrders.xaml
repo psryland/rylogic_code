@@ -34,13 +34,23 @@
 			Width="0.7*"
 			/>
 		<DataGridTextColumn
-			Header="Order/Trade Id"
+			Header="Id"
 			Binding="{Binding OrderId, Mode=OneWay}"
+			Width="0.3*"
+			/>
+		<DataGridTextColumn
+			Header="Fund"
+			Binding="{Binding Fund, Mode=OneWay}"
 			Width="0.5*"
 			/>
 		<DataGridTextColumn
-			Header="Type"
+			Header="Side"
 			Binding="{Binding TradeTypeDesc, Mode=OneWay}"
+			Width="0.6*"
+			/>
+		<DataGridTextColumn
+			Header="Type"
+			Binding="{Binding OrderType, Mode=OneWay}"
 			Width="0.6*"
 			/>
 		<DataGridTextColumn
@@ -92,21 +102,20 @@
 			DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
 			>
 			<MenuItem
-				Header="Cancel Order"
-				IsEnabled="{Binding Current, Converter={conv:NotNull}}"
-				Command="{Binding CancelOrder}"
-				/>
-			<Separator/>
-			<MenuItem
 				Header="Show On Chart"
 				IsEnabled="{Binding Current, Converter={conv:NotNull}}"
 				Name="m_menu_show_on_chart"
 				/>
 			<Separator/>
 			<MenuItem
-				Header="Modify"
+				Header="Modify Order"
 				IsEnabled="{Binding Current, Converter={conv:NotNull}}"
 				Command="{Binding ModifyOrder}"
+				/>
+			<MenuItem
+				Header="Cancel Order"
+				IsEnabled="{Binding Current, Converter={conv:NotNull}}"
+				Command="{Binding CancelOrder}"
 				/>
 		</ContextMenu>
 	</DataGrid.ContextMenu>

@@ -97,6 +97,7 @@ namespace CoinFlip.UI
 					Model.AllowTradesChanged -= HandleAllowTradesChanged;
 					Model.BackTestingChange -= HandleBackTestingChange;
 					m_model.NettWorthChanged -= HandleNettWorthChanged;
+					m_model.EditingTrade -= HandleEditingTrade;
 					Simulation = null;
 					Util.Dispose(ref m_model);
 				}
@@ -104,12 +105,35 @@ namespace CoinFlip.UI
 				if (m_model != null)
 				{
 					Simulation = new SimulationView(m_model);
+					m_model.EditingTrade += HandleEditingTrade;
 					m_model.NettWorthChanged += HandleNettWorthChanged;
 					Model.BackTestingChange += HandleBackTestingChange;
 					Model.AllowTradesChanged += HandleAllowTradesChanged;
 				}
 
 				// Handler
+				void HandleEditingTrade(object sender, EditTradeEventArgs e)
+				{
+					// Create an editor window for the trade
+					var ui = new EditTradeUI(GetWindow(this), Model, e.Trade, e.Original is Order);
+					ui.Closed += async (s, a) =>
+					{
+						// Signal the end of editing
+						e.EndEdit();
+
+						// Create or Update trade on the exchange
+						if (ui.Result == true)
+						{
+							try { await e.Commit(); }
+							catch (OperationCanceledException) { }
+							catch (Exception ex) { MsgBox.Show(GetWindow(this), ex.MessageFull(), "Create/Modify Order", MsgBox.EButtons.OK, MsgBox.EIcon.Error); }
+						}
+					};
+					ui.Show();
+
+					// If the EditTrade instance is closed externally, close 'ui'
+					e.Closed += delegate { ui.Close(); };
+				}
 				void HandleNettWorthChanged(object sender, EventArgs e)
 				{
 					NotifyPropertyChanged(nameof(NettWorth));

@@ -30,7 +30,7 @@ namespace CoinFlip
 		//    price and allow control over which side of the trade gets rounded.
 
 		/// <summary>Create a trade on 'pair' to convert 'amount_in' of 'coin_in' to 'amount_out'</summary>
-		public Trade(Fund fund, TradePair pair, EOrderType order_type, ETradeType trade_type, Unit<double> amount_in, Unit<double> amount_out)
+		public Trade(Fund fund, TradePair pair, EOrderType order_type, ETradeType trade_type, Unit<double> amount_in, Unit<double> amount_out, Unit<double>? price_q2b = null, string creator = null)
 		{
 			// Check trade amounts and units
 			if (amount_in < 0.0._(trade_type.CoinIn(pair)))
@@ -40,24 +40,31 @@ namespace CoinFlip
 			if (amount_out != 0 && amount_in != 0 && trade_type.PriceQ2B(amount_out / amount_in) < 0.0._(pair.RateUnits))
 				throw new Exception("Invalid trade price");
 
+			CreatorName = creator ?? string.Empty;
 			Fund = fund;
 			Pair = pair;
 			OrderType = order_type;
 			TradeType = trade_type;
 			AmountIn = amount_in;
 			AmountOut = amount_out;
-			PriceQ2B = amount_out != 0 && amount_in != 0 ? TradeType.PriceQ2B(amount_out / amount_in) : SpotPriceQ2B;
+			PriceQ2B =
+				price_q2b != null ? price_q2b.Value :
+				amount_out != 0 && amount_in != 0 ? TradeType.PriceQ2B(amount_out / amount_in) :
+				SpotPriceQ2B;
 		}
 
 		/// <summary>Copy construct a trade, with the amount scaled by 'scale'</summary>
 		public Trade(Trade rhs, double scale = 1)
-			: this(rhs.Fund, rhs.Pair, rhs.OrderType, rhs.TradeType, rhs.AmountIn * scale, rhs.AmountOut * scale)
+			: this(rhs.Fund, rhs.Pair, rhs.OrderType, rhs.TradeType, rhs.AmountIn * scale, rhs.AmountOut * scale, rhs.PriceQ2B, rhs.CreatorName)
 		{ }
 
 		/// <summary>Create a trade based on an existing position</summary>
-		public Trade(Order order)
-			: this(order.Fund, order.Pair, order.OrderType, order.TradeType, order.AmountIn, order.AmountOut)
+		public Trade(Order rhs)
+			: this(rhs.Fund, rhs.Pair, rhs.OrderType, rhs.TradeType, rhs.AmountIn, rhs.AmountOut, rhs.PriceQ2B, rhs.CreatorName)
 		{ }
+
+		/// <summary>A helper string for recording who created this trade</summary>
+		public string CreatorName { get; set; }
 
 		/// <summary>The fund associated with this trade</summary>
 		public Fund Fund
@@ -311,7 +318,7 @@ namespace CoinFlip
 			// Check for sufficient balance
 			var bal = Fund[TradeType.CoinIn(Pair)];
 			var available = bal.Available;
-			if (reserved_balance_in != null) available += bal.Reserved(reserved_balance_in.Value);
+			if (reserved_balance_in != null) available += bal.Holds[reserved_balance_in.Value].Amount;
 			if (additional_balance_in != null) available += additional_balance_in.Value;
 			if (AmountIn > available)
 				result |= EValidation.InsufficientBalance;
@@ -320,23 +327,11 @@ namespace CoinFlip
 		}
 
 		/// <summary>Create this trade on the Exchange that owns 'Pair'</summary>
-		public async Task<OrderResult> CreateOrder(CancellationToken cancel, string creator_name)
+		public async Task<OrderResult> CreateOrder(CancellationToken cancel)
 		{
-			Model.Log.Write(ELogLevel.Info, $"Creating or modifying trade: {Description}");
-
-			// If this trade is actually an existing order, we need to cancel it first
-			if (this is Order order)
-			{
-				// Cancel the previous order
-				await order.CancelOrder(cancel);
-
-				// Trigger and wait for a balance update
-				Exchange.BalanceUpdateRequired = true;
-				await Exchange.Balance.Updated.WaitAsync();
-			}
-
 			// Create the order on the exchange
-			return await Exchange.CreateOrder(Fund, Pair, TradeType, OrderType, AmountIn, AmountOut, cancel, creator_name, 0f);
+			Model.Log.Write(ELogLevel.Info, $"Creating or modifying trade: {Description}");
+			return await Exchange.CreateOrder(Fund, Pair, TradeType, OrderType, AmountIn, AmountOut, cancel, CreatorName);
 		}
 
 		/// <summary>Trade property changed</summary>

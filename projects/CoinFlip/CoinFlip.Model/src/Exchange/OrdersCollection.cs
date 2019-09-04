@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using Rylogic.Extn;
+﻿using System.Diagnostics;
 
 namespace CoinFlip
 {
@@ -34,12 +30,12 @@ namespace CoinFlip
 		}
 
 		/// <summary>Get/Set a position by order id</summary>
-		public override Order this[long key]
+		public override Order this[long order_id]
 		{
 			get
 			{
 				Debug.Assert(Misc.AssertMarketDataRead());
-				return TryGetValue(key, out var pos) ? pos : null;
+				return TryGetValue(order_id, out var ord) ? ord : null;
 			}
 		}
 	}
