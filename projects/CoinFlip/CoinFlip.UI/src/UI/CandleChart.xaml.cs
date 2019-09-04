@@ -800,7 +800,7 @@ namespace CoinFlip.UI
 		/// <summary>Graphics for open orders</summary>
 		private GfxObjects.Orders GfxOpenOrders
 		{
-			get { return m_gfx_open_orders; }
+			get => m_gfx_open_orders;
 			set
 			{
 				if (m_gfx_open_orders == value) return;
@@ -824,6 +824,7 @@ namespace CoinFlip.UI
 				}
 				void HandleOrderSelected(object sender, Orders.OrderEventArgs e)
 				{
+					Model.SelectedOpenOrders.Clear();
 					Model.SelectedOpenOrders.Add((Order)e.Order);
 				}
 			}
@@ -833,12 +834,27 @@ namespace CoinFlip.UI
 		/// <summary>Graphics for completed orders</summary>
 		private GfxObjects.Orders GfxCompletedOrders
 		{
-			get { return m_gfx_completed_orders; }
+			get => m_gfx_completed_orders;
 			set
 			{
 				if (m_gfx_completed_orders == value) return;
-				Util.Dispose(ref m_gfx_completed_orders);
+				if (m_gfx_completed_orders != null)
+				{
+					m_gfx_completed_orders.OrderSelected -= HandleOrderSelected;
+					Util.Dispose(ref m_gfx_completed_orders);
+				}
 				m_gfx_completed_orders = value;
+				if (m_gfx_completed_orders != null)
+				{
+					m_gfx_completed_orders.OrderSelected += HandleOrderSelected;
+				}
+
+				// Handler
+				void HandleOrderSelected(object sender, Orders.OrderEventArgs e)
+				{
+					Model.SelectedCompletedOrders.Clear();
+					Model.SelectedCompletedOrders.Add((OrderCompleted)e.Order);
+				}
 			}
 		}
 		private GfxObjects.Orders m_gfx_completed_orders;

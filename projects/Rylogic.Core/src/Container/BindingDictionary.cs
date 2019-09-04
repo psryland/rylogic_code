@@ -93,17 +93,10 @@ namespace Rylogic.Container
 
 		/// <summary>A function to return the key from a value</summary>
 		[DebuggerBrowsable(DebuggerBrowsableState.Never)]
-		public Func<TValue, TKey> KeyFrom
-		{
-			get;
-			set;
-		}
+		public Func<TValue, TKey> KeyFrom { get; set; }
 
 		/// <summary>The number of items in the collection</summary>
-		public int Count
-		{
-			get { return m_dict.Count; }
-		}
+		public int Count => m_dict.Count;
 
 		/// <summary>Reset the collection</summary>
 		public void Clear()
@@ -134,16 +127,10 @@ namespace Rylogic.Container
 		}
 
 		/// <summary>The keys collection</summary>
-		public ICollection<TKey> Keys
-		{
-			get { return m_dict.Keys; }
-		}
+		public ICollection<TKey> Keys => m_dict.Keys;
 
 		/// <summary>The values collection</summary>
-		public ICollection<TValue> Values
-		{
-			get { return m_dict.Values; }
-		}
+		public ICollection<TValue> Values => m_dict.Values;
 
 		/// <summary>List changed notification</summary>
 		public event ListChangedEventHandler ListChanged;

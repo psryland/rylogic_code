@@ -28,10 +28,13 @@ namespace CoinFlip.UI
 			m_grid.MouseRightButtonUp += DataGrid_.ColumnVisibility;
 			m_grid.SelectionChanged += (s, a) =>
 			{
-				foreach (var item in a.RemovedItems.Cast<OrderCompleted>())
-					Model.SelectedCompletedOrders.Remove(item);
-				foreach (var item in a.AddedItems.Cast<OrderCompleted>())
-					Model.SelectedCompletedOrders.Add(item);
+				if (m_selecting_orders != 0) return;
+				using (Scope.Create(() => ++m_selecting_orders, () => --m_selecting_orders))
+				{
+					Model.SelectedCompletedOrders.Clear();
+					foreach (var item in a.AddedItems.Cast<OrderCompleted>())
+						Model.SelectedCompletedOrders.Add(item);
+				}
 			};
 			m_grid.MouseDoubleClick += (s, a) =>
 			{
@@ -47,6 +50,7 @@ namespace CoinFlip.UI
 			Model = null;
 			DockControl = null;
 		}
+		private int m_selecting_orders;
 
 		/// <summary></summary>
 		public Model Model
@@ -59,15 +63,30 @@ namespace CoinFlip.UI
 				{
 					Exchanges = CollectionViewSource.GetDefaultView(null);
 					m_model.Charts.CollectionChanged -= HandleChartCollectionChanged;
+					m_model.SelectedCompletedOrders.CollectionChanged -= HandleSelectedOrdersChanged;
 				}
 				m_model = value;
 				if (m_model != null)
 				{
+					m_model.SelectedCompletedOrders.CollectionChanged += HandleSelectedOrdersChanged;
 					m_model.Charts.CollectionChanged += HandleChartCollectionChanged;
 					Exchanges = CollectionViewSource.GetDefaultView(m_model.Exchanges);
 				}
 
 				// Handler
+				void HandleSelectedOrdersChanged(object sender, NotifyCollectionChangedEventArgs e)
+				{
+					if (e.Action == NotifyCollectionChangedAction.Add)
+					{
+						if (m_selecting_orders != 0) return;
+						using (Scope.Create(() => ++m_selecting_orders, () => --m_selecting_orders))
+						{
+							m_grid.SelectedItems.Clear();
+							foreach (var item in e.NewItems)
+								m_grid.SelectedItems.Add(item);
+						}
+					}
+				}
 				void HandleChartCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 				{
 					m_menu_show_on_chart.Items.Clear();
