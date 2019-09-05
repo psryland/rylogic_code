@@ -96,7 +96,7 @@ namespace CoinFlip
 		DateTimeOffset? IOrder.Created => Created;
 
 		/// <summary>Description string for the trade</summary>
-		public string Description => $"{AmountIn.ToString(6, true)} → {AmountOut.ToString(6, true)} @ {PriceQ2B.ToString(4, true)}";
+		public string Description => $"{AmountIn.ToString(6, true)} → {AmountOut.ToString(6, true)} @ ~{PriceQ2B.ToString(4, true)}";
 
 		/// <summary>INotifyPropertyChanged</summary>
 		public event PropertyChangedEventHandler PropertyChanged;

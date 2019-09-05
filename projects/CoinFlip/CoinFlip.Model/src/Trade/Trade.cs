@@ -351,7 +351,7 @@ namespace CoinFlip
 			"---";
 
 		/// <summary>String description of the trade</summary>
-		public virtual string Description => $"{AmountIn.ToString(6, true)} → {AmountOut.ToString(6, true)} @ {PriceQ2B.ToString(4, true)}";
+		public virtual string Description => $"{AmountIn.ToString(6, true)} → {AmountOut.ToString(6, true)} @ ~{PriceQ2B.ToString(4, true)}";
 
 		#region Equals
 		public bool Equals(Trade rhs)

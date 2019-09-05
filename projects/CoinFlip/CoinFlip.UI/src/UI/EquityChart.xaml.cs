@@ -39,7 +39,7 @@ namespace CoinFlip.UI
 			Chart = m_chart_equity;
 			Equity = new Equity(model);
 			GfxEquity = new GfxObjects.Equity(Equity);
-			GfxCompletedOrders = new GfxObjects.Orders(IOrderToXValue, IOrderToYValue);
+			GfxCompletedOrders = new GfxObjects.Orders(OrderToXValue, OrderToYValue);
 			Model = model;
 
 			// Commands
@@ -207,29 +207,16 @@ namespace CoinFlip.UI
 					if (SettingsData.Settings.Chart.XAxisLabelMode == EXAxisLabelMode.AxisIndex)
 						return x.ToString();
 
-					if (x < 0 || x > (Model.UtcNow - Misc.CryptoCurrencyEpoch).TotalDays + 365)
+					var idx = (int)x;
+					if (idx < 0 || idx > Equity.Count)
 						return string.Empty;
 
-					// Convert the x axis value to a date time.
-					var dt_curr = Misc.CryptoCurrencyEpoch + TimeSpan.FromDays(x);
-					if (step == null || x - step < 0)
-						return Misc.ShortTimeString(dt_curr, dt_curr, true);
-
-					var dt_prev = Misc.CryptoCurrencyEpoch + TimeSpan.FromDays(x - step.Value);
-
-					// Get the date time values in the correct time zone
-					dt_curr = (SettingsData.Settings.Chart.XAxisLabelMode == EXAxisLabelMode.LocalTime)
-						? dt_curr.LocalDateTime
-						: dt_curr.UtcDateTime;
-					dt_prev = (SettingsData.Settings.Chart.XAxisLabelMode == EXAxisLabelMode.LocalTime)
-						? dt_prev.LocalDateTime
-						: dt_prev.UtcDateTime;
-
-					// First tick on the x axis
-					var first_tick = x - step.Value < Chart.XAxis.Min;
-
-					// Show more of the time stamp depending on how it differs from the previous time stamp
-					return Misc.ShortTimeString(dt_curr, dt_prev, first_tick);
+					var dt = idx == Equity.Count ? Model.UtcNow : Equity.BalanceChanges[idx].Time;
+					dt = (SettingsData.Settings.Chart.XAxisLabelMode == EXAxisLabelMode.LocalTime)
+						? dt.LocalDateTime
+						: dt.UtcDateTime;
+					
+					return dt.ToString("HH:mm'\r\n'dd-MMM-yy");
 				}
 				void HandleAutoRanging(object sender, ChartControl.AutoRangeEventArgs e)
 				{
@@ -237,24 +224,13 @@ namespace CoinFlip.UI
 					if (e.Axes.HasFlag(ChartControl.EAxis.XAxis) && e.Axes.HasFlag(ChartControl.EAxis.YAxis))
 					{
 						// Display the full equity history
-						var utc_now = Model.UtcNow;
-						var first = utc_now;
-						foreach (var exch in Model.Exchanges)
-						{
-							foreach (var his in exch.History.Values)
-								first = DateTimeOffset_.Min(first, his.Created);
-							foreach (var xfr in exch.Transfers.Values)
-								first = DateTimeOffset_.Min(first, xfr.Created);
-						}
-						if (first == utc_now)
-							first = utc_now - TimeSpan.FromDays(365);
+						var xrange = new RangeF(0, Equity.BalanceChanges.Count);
+						var yrange = RangeF.Invalid;
+						foreach (var chg in Equity.NettWorthHistory())
+							yrange.Encompass(chg.Worth);
 
-						var beg = (float)(first - Misc.CryptoCurrencyEpoch).TotalDays;
-						var end = (float)(utc_now - Misc.CryptoCurrencyEpoch).TotalDays;
-						var y0 = 0f;
-						var y1 = (float)Model.NettWorth * 2f;
-						bb = BBox.Encompass(bb, new v4(beg, y0, -ZOrder.Max, 1f));
-						bb = BBox.Encompass(bb, new v4(end, y1, +ZOrder.Max, 1f));
+						bb = BBox.Encompass(bb, new v4((float)xrange.Beg, (float)yrange.Beg, -ZOrder.Max, 1f));
+						bb = BBox.Encompass(bb, new v4((float)xrange.End, (float)yrange.End, +ZOrder.Max, 1f));
 					}
 					else if (e.Axes.HasFlag(ChartControl.EAxis.YAxis))
 					{
@@ -369,6 +345,8 @@ namespace CoinFlip.UI
 			GfxEquity.BuildScene(Chart);
 
 			{ // Completed order markers
+				// Convert the visible axis range to a time range
+				var visible_time_range = Equity.TimeRange(Chart.XAxis.Range);
 				switch (ShowCompletedOrders)
 				{
 				default: throw new Exception($"Unknown 'ShowCompletedOrders' mode: {ShowCompletedOrders}");
@@ -379,22 +357,20 @@ namespace CoinFlip.UI
 					}
 				case EShowItems.Selected:
 					{
-						GfxCompletedOrders.BuildScene(Model.SelectedCompletedOrders.Where(Visible), null, Chart);
+						var orders = Model.SelectedCompletedOrders.Where(x => visible_time_range.Contains(x.Created.Ticks));
+						GfxCompletedOrders.BuildScene(orders, null, Chart);
 						break;
 					}
 				case EShowItems.All:
 					{
 						var exchange = Exchanges.CurrentAs<Exchange>();
 						if (exchange != null)
-							GfxCompletedOrders.BuildScene(exchange.History.Values.Where(Visible), Model.SelectedCompletedOrders, Chart);
+						{
+							var orders = exchange.History.Values.Where(x => visible_time_range.Contains(x.Created.Ticks));
+							GfxCompletedOrders.BuildScene(orders, Model.SelectedCompletedOrders, Chart);
+						}
 						break;
 					}
-				}
-				bool Visible(OrderCompleted ord)
-				{
-					var time_min = Misc.CryptoCurrencyEpoch + TimeSpan.FromDays(Chart.XAxis.Min);
-					var time_max = Misc.CryptoCurrencyEpoch + TimeSpan.FromDays(Chart.XAxis.Max);
-					return ord.Created.Within(time_min, time_max);
 				}
 			}
 		}
@@ -415,7 +391,7 @@ namespace CoinFlip.UI
 		/// <summary>Graphics for completed orders</summary>
 		private GfxObjects.Orders GfxCompletedOrders
 		{
-			get { return m_gfx_completed_orders; }
+			get => m_gfx_completed_orders;
 			set
 			{
 				if (m_gfx_completed_orders == value) return;
@@ -429,16 +405,16 @@ namespace CoinFlip.UI
 		private void AutoRangeIfNeeded()
 		{
 			// If the chart X axis range does not overlap the equity data range, auto range.
-			if (Chart.XAxis.Range.Intersect(Equity.TimeInterval).Empty)
+			if (Chart.XAxis.Range.Intersect(new Range(0, Equity.Count)).Empty)
 				AutoRange.Execute();
 		}
 
 		/// <summary>Callbacks for positioning order graphics</summary>
-		private double IOrderToXValue(IOrder order)
+		private double OrderToXValue(IOrder order)
 		{
-			return (order.Created.Value - Misc.CryptoCurrencyEpoch).TotalDays;
+			return Equity.BalanceChanges.BinarySearch(x => x.Time.CompareTo(order.Created.Value), find_insert_position: true);
 		}
-		private double IOrderToYValue(IOrder order)
+		private double OrderToYValue(IOrder order)
 		{
 			return Equity.NettWorthHistory().FirstOrDefault(x => x.Time == order.Created).Worth;
 		}

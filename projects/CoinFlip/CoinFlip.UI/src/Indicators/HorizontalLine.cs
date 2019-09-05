@@ -35,6 +35,7 @@ namespace CoinFlip.UI.Indicators
 		}
 		protected override void OnSettingChange(SettingChangeEventArgs args)
 		{
+			base.OnSettingChange(args);
 			if (args.After)
 			{
 				switch (args.Key)
@@ -45,7 +46,6 @@ namespace CoinFlip.UI.Indicators
 					}
 				}
 			}
-			base.OnSettingChange(args);
 		}
 
 		/// <summary>Instance id</summary>
@@ -148,30 +148,33 @@ namespace CoinFlip.UI.Indicators
 			/// <summary>Update when indicator settings change</summary>
 			protected override void HandleSettingChange(object sender, SettingChangeEventArgs e)
 			{
-				if (e.Before) return;
-				switch (e.Key)
+				base.HandleSettingChange(sender, e);
+				if (e.After)
 				{
-				case nameof(Colour):
+					switch (e.Key)
 					{
-						Line.Stroke = HL.Colour.ToMediaBrush();
-						Glow.Stroke = HL.Colour.Alpha(0.25).ToMediaBrush();
-						Price.Background = HL.Colour.ToMediaBrush();
-						Price.Foreground = HL.Colour.InvertBW().ToMediaBrush();
-						break;
+					case nameof(Colour):
+						{
+							Line.Stroke = HL.Colour.ToMediaBrush();
+							Glow.Stroke = HL.Colour.Alpha(0.25).ToMediaBrush();
+							Price.Background = HL.Colour.ToMediaBrush();
+							Price.Foreground = HL.Colour.InvertBW().ToMediaBrush();
+							break;
+						}
+					case nameof(Width):
+						{
+							Line.StrokeThickness = HL.Width;
+							Glow.StrokeThickness = HL.Width + GlowRadius;
+							break;
+						}
+					case nameof(LineStyle):
+						{
+							Line.StrokeDashArray = HL.LineStyle.ToStrokeDashArray();
+							break;
+						}
 					}
-				case nameof(Width):
-					{
-						Line.StrokeThickness = HL.Width;
-						Glow.StrokeThickness = HL.Width + GlowRadius;
-						break;
-					}
-				case nameof(LineStyle):
-					{
-						Line.StrokeDashArray = HL.LineStyle.ToStrokeDashArray();
-						break;
-					}
+					Invalidate();
 				}
-				Invalidate();
 			}
 
 			/// <summary>Update the transforms for the graphics model</summary>

@@ -33,7 +33,7 @@ namespace Binance.API
 			{
 				lock (Streams)
 				{
-					var dead = Streams.Where(x => !x.Value.Socket.IsAlive).ToList();
+					var dead = Streams.Where(x => x.Value.Socket.ReadyState != WebSocketState.Open).ToList();
 					foreach (var corpse in dead)
 					{
 						Util.Dispose(corpse.Value);

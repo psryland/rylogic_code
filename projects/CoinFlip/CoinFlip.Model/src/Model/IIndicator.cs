@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using Rylogic.Common;
 using Rylogic.Gfx;
 
@@ -8,6 +9,9 @@ namespace CoinFlip
 	{
 		/// <summary>Instance id for the indicator. Used to tell multiple instances of the same indicator apart</summary>
 		Guid Id { get; }
+
+		/// <summary>User assigned name for the indicator</summary>
+		string Name { get; }
 
 		/// <summary>The label to use when displaying this indicator</summary>
 		string Label { get; }
@@ -19,7 +23,7 @@ namespace CoinFlip
 		IIndicatorView CreateView(IChartView chart);
 	}
 
-	public interface IIndicatorView :IDisposable
+	public interface IIndicatorView :IDisposable, INotifyPropertyChanged
 	{
 		/// <summary>The id of the indicator this is a view of</summary>
 		Guid IndicatorId { get; }

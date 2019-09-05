@@ -49,7 +49,7 @@ namespace Binance.API
 		{
 			Api.Dispatcher.BeginInvoke(new Action(() =>
 			{
-				if (!Socket.IsAlive)
+				if (Socket != null && Socket.ReadyState != WebSocketState.Open)
 					Socket = new WebSocket(EndPoint);
 			}));
 		}

@@ -84,21 +84,24 @@ namespace CoinFlip
 		}
 		private DateTimeOffset m_since;
 
-		/// <summary>The time range (in days since crypto epoch) that spans the equity data</summary>
-		public RangeF TimeInterval
+		/// <summary>Return the time range (in ticks) spanned by the given index range</summary>
+		public Range TimeRange(RangeF index_range)
 		{
-			get
-			{
-				var beg = BalanceChanges.Count != 0 ? BalanceChanges.Front().Time : Since;
-				var end = BalanceChanges.Count != 0 ? BalanceChanges.Back().Time : beg + TimeSpan.FromDays(1.0);
-				return new RangeF(
-					(beg - Misc.CryptoCurrencyEpoch).TotalDays,
-					(end - Misc.CryptoCurrencyEpoch).TotalDays);
-			}
+			if (Count == 0)
+				return new Range(Misc.CryptoCurrencyEpoch.Ticks, Misc.CryptoCurrencyEpoch.Ticks);
+
+			var now = Model.UtcNow.Ticks;
+			var idx0 = Math_.Clamp((int)(index_range.Beg + 0), 0, Count);
+			var idx1 = Math_.Clamp((int)(index_range.End + 1), 0, Count);
+			var range = new Range(
+					idx0 != Count ? BalanceChanges[idx0].Time.Ticks : now,
+					idx1 != Count ? BalanceChanges[idx1].Time.Ticks : now);
+
+			return range;
 		}
 
-		/// <summary>Raised when the equity data has changed</summary>
-		public event EventHandler EquityChanged;
+		/// <summary>The number of changes in equity</summary>
+		public int Count => BalanceChanges.Count;
 
 		/// <summary>The history of the changes in amounts of each currency over time</summary>
 		public List<BalanceChange> BalanceChanges { get; }
@@ -160,6 +163,9 @@ namespace CoinFlip
 			m_invalidated = true;
 		}
 		private bool m_invalidated;
+
+		/// <summary>Raised when the equity data has changed</summary>
+		public event EventHandler EquityChanged;
 
 		/// <summary>Update the equity state using the data from the model</summary>
 		private void Update()

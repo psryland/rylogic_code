@@ -581,10 +581,10 @@ namespace CoinFlip.UI
 		private int m_prev_count;
 
 		/// <summary>Indicators on this chart</summary>
-		private ObservableCollection<IIndicatorView> IndicatorViews
+		public ObservableCollection<IIndicatorView> IndicatorViews
 		{
 			get => m_indicator_views;
-			set
+			private set
 			{
 				// Notes:
 				//  - Don't make this an observable collection. This collection is maintained by Model.Indicators.CollectionChanged
@@ -612,12 +612,19 @@ namespace CoinFlip.UI
 		{
 			get
 			{
-				if (Instrument == null)
-					return string.Empty;
+				try
+				{
+					if (Instrument == null)
+						return string.Empty;
 
-				var candle_span = Chart.XAxis.Range.Size;
-				var ticks = Misc.TimeFrameToTicks(candle_span, Instrument.TimeFrame);
-				return TimeSpan.FromTicks(ticks).ToPrettyString();
+					var candle_span = Chart.XAxis.Range.Size;
+					var ticks = Misc.TimeFrameToTicks(candle_span, Instrument.TimeFrame);
+					return TimeSpan.FromTicks(ticks).ToPrettyString();
+				}
+				catch
+				{
+					return string.Empty;
+				}
 			}
 		}
 

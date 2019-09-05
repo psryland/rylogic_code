@@ -256,32 +256,35 @@ namespace CoinFlip.UI.Indicators
 			/// <summary>Update when indicator settings change</summary>
 			protected override void HandleSettingChange(object sender, SettingChangeEventArgs e)
 			{
-				if (e.Before) return;
-				switch (e.Key)
+				base.HandleSettingChange(sender, e);
+				if (e.After)
 				{
-				case nameof(Colour):
+					switch (e.Key)
 					{
-						Line.Stroke = TL.Colour.ToMediaBrush();
-						Glow.Stroke = TL.Colour.Alpha(0.25).ToMediaBrush();
-						Grab0.Stroke = TL.Colour.ToMediaBrush();
-						Grab1.Stroke = TL.Colour.ToMediaBrush();
-						Grab0.Fill = TL.Colour.Alpha(0.25).ToMediaBrush();
-						Grab1.Fill = TL.Colour.Alpha(0.25).ToMediaBrush();
-						break;
+					case nameof(Colour):
+						{
+							Line.Stroke = TL.Colour.ToMediaBrush();
+							Glow.Stroke = TL.Colour.Alpha(0.25).ToMediaBrush();
+							Grab0.Stroke = TL.Colour.ToMediaBrush();
+							Grab1.Stroke = TL.Colour.ToMediaBrush();
+							Grab0.Fill = TL.Colour.Alpha(0.25).ToMediaBrush();
+							Grab1.Fill = TL.Colour.Alpha(0.25).ToMediaBrush();
+							break;
+						}
+					case nameof(Width):
+						{
+							Line.StrokeThickness = TL.Width;
+							Glow.StrokeThickness = TL.Width + GlowRadius;
+							break;
+						}
+					case nameof(LineStyle):
+						{
+							Line.StrokeDashArray = TL.LineStyle.ToStrokeDashArray();
+							break;
+						}
 					}
-				case nameof(Width):
-					{
-						Line.StrokeThickness = TL.Width;
-						Glow.StrokeThickness = TL.Width + GlowRadius;
-						break;
-					}
-				case nameof(LineStyle):
-					{
-						Line.StrokeDashArray = TL.LineStyle.ToStrokeDashArray();
-						break;
-					}
+					Invalidate();
 				}
-				Invalidate();
 			}
 
 			/// <summary>Update the transforms for the graphics model</summary>

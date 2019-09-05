@@ -76,7 +76,23 @@ namespace CoinFlip.UI.Indicators
 
 		/// <summary>Handle indicator settings changing</summary>
 		protected virtual void HandleSettingChange(object sender, SettingChangeEventArgs args)
-		{ }
+		{
+			if (args.After)
+			{
+				switch (args.Key)
+				{
+				case nameof(IIndicator.Name):
+					NotifyPropertyChanged(nameof(Label));
+					break;
+				case nameof(IIndicator.Label):
+					NotifyPropertyChanged(nameof(Label));
+					break;
+				case nameof(IIndicator.Colour):
+					NotifyPropertyChanged(nameof(Colour));
+					break;
+				}
+			}
+		}
 
 		/// <summary>Handle double click to show the UI</summary>
 		protected override void HandleClicked(ChartControl.ChartClickedEventArgs args)

@@ -156,7 +156,9 @@ namespace CoinFlip.UI.Indicators
 				m_data = new List<MAPoint>();
 				MA = ma;
 				Instrument = instrument;
+
 				Reset();
+				CalculateMA();
 			}
 			public void Dispose()
 			{
@@ -190,11 +192,13 @@ namespace CoinFlip.UI.Indicators
 						case nameof(MovingAverage.Exponential):
 							{
 								Reset();
+								CalculateMA();
 								break;
 							}
 						case nameof(MovingAverage.Periods):
 							{
 								Reset();
+								CalculateMA();
 								break;
 							}
 						}
@@ -210,8 +214,6 @@ namespace CoinFlip.UI.Indicators
 				m_stat = MA.Exponential
 					? (IStatMeanAndVarianceSingleVariable<double>)new ExponentialMovingAverage(MA.Periods)
 					: (IStatMeanAndVarianceSingleVariable<double>)new SimpleMovingAverage(MA.Periods);
-
-				CalculateMA();
 			}
 
 			/// <summary>The number of points in the MA</summary>
@@ -252,17 +254,32 @@ namespace CoinFlip.UI.Indicators
 			}
 			private Instrument m_instrument;
 
-			/// <summary>Calculate the data points over 'range'</summary>
-			private void CalculateMA()
+			/// <summary>Update the MA to match the current state of 'Instrument'</summary>
+			public void CalculateMA()
 			{
 				// 'm_stat' does not include the latest candle as it changes all the time.
-				var range = new Range(Math.Max(0, m_data.Count - 1), Instrument.Count);
 
-				// Trim the MA data for the latest candle
+				// No instrument data means no MA
+				if (Instrument.Count == 0)
+				{
+					Reset();
+					return;
+				}
+
+				// The instrument count can go backwards when back testing
+				if (Instrument.Count < m_data.Count)
+				{
+					Reset();
+				}
+
+				// Trim the MA data to exclude the latest candle
 				m_data.Resize(Math.Max(0, m_data.Count - 1));
 
-				// Append MA data up to the latest candle
-				m_data.AddRange(CalculateMA(m_data.Count, Math.Max(0, Instrument.Count - 1), m_stat));
+				// Get the range of new MA data
+				var range = new Range(m_data.Count, Instrument.Count);
+
+				// Append MA data upto, but excluding, the latest candle
+				m_data.AddRange(CalculateMA(m_data.Count, Instrument.Count - 1, m_stat));
 
 				// Append the latest candle
 				m_data.AddRange(CalculateMA(m_data.Count, Instrument.Count, CopyStat(m_stat)));
@@ -273,6 +290,7 @@ namespace CoinFlip.UI.Indicators
 				// Return the moving average points over the given range
 				IEnumerable<MAPoint> CalculateMA(int beg, int end, IStatMeanAndVarianceSingleVariable<double> stat)
 				{
+					Debug.Assert(beg <= end);
 					var ts = Misc.CryptoCurrencyEpoch.Ticks;
 					for (var i = beg; i != end; ++i)
 					{
@@ -406,72 +424,81 @@ namespace CoinFlip.UI.Indicators
 			/// <summary>Update when indicator settings change</summary>
 			protected override void HandleSettingChange(object sender, SettingChangeEventArgs e)
 			{
-				if (e.Before) return;
-				switch (e.Key)
+				base.HandleSettingChange(sender, e);
+				if (e.After)
 				{
-				case nameof(Exponential):
-				case nameof(Periods):
-				case nameof(BBStdDev):
+					switch (e.Key)
 					{
-						Data.Reset();
-						Cache.Invalidate();
-						break;
-					}
-				case nameof(Colour):
-					{
-						foreach (var piece in Cache.Pieces.OfType<MAPiece>())
+					case nameof(Exponential):
+					case nameof(BBStdDev):
 						{
-							piece.Line.Stroke = MA.Colour.ToMediaBrush();
-							piece.Glow.Stroke = MA.Colour.Alpha(0.25).ToMediaBrush();
+							Data.Reset();
+							Cache.Invalidate();
+							break;
 						}
-						break;
-					}
-				case nameof(BBColour):
-					{
-						foreach (var piece in Cache.Pieces.OfType<MAPiece>())
+					case nameof(Periods):
 						{
-							piece.High.Stroke = MA.BBColour.ToMediaBrush();
-							piece.Low.Stroke = MA.BBColour.ToMediaBrush();
+							Data.Reset();
+							Cache.Invalidate();
+							NotifyPropertyChanged(nameof(Label));
+							break;
 						}
-						break;
-					}
-				case nameof(Width):
-					{
-						foreach (var piece in Cache.Pieces.OfType<MAPiece>())
+					case nameof(Colour):
 						{
-							piece.Line.StrokeThickness = MA.Width;
-							piece.Glow.StrokeThickness = MA.Width + GlowRadius;
+							foreach (var piece in Cache.Pieces.OfType<MAPiece>())
+							{
+								piece.Line.Stroke = MA.Colour.ToMediaBrush();
+								piece.Glow.Stroke = MA.Colour.Alpha(0.25).ToMediaBrush();
+							}
+							break;
 						}
-						break;
-					}
-				case nameof(BBWidth):
-					{
-						foreach (var piece in Cache.Pieces.OfType<MAPiece>())
+					case nameof(BBColour):
 						{
-							piece.High.StrokeThickness = MA.BBWidth;
-							piece.Low.StrokeThickness = MA.BBWidth;
+							foreach (var piece in Cache.Pieces.OfType<MAPiece>())
+							{
+								piece.High.Stroke = MA.BBColour.ToMediaBrush();
+								piece.Low.Stroke = MA.BBColour.ToMediaBrush();
+							}
+							break;
 						}
-						break;
-					}
-				case nameof(LineStyle):
-					{
-						foreach (var piece in Cache.Pieces.OfType<MAPiece>())
+					case nameof(Width):
 						{
-							piece.Line.StrokeDashArray = MA.LineStyle.ToStrokeDashArray();
+							foreach (var piece in Cache.Pieces.OfType<MAPiece>())
+							{
+								piece.Line.StrokeThickness = MA.Width;
+								piece.Glow.StrokeThickness = MA.Width + GlowRadius;
+							}
+							break;
 						}
-						break;
-					}
-				case nameof(BBLineStyle):
-					{
-						foreach (var piece in Cache.Pieces.OfType<MAPiece>())
+					case nameof(BBWidth):
 						{
-							piece.High.StrokeDashArray = MA.BBLineStyle.ToStrokeDashArray();
-							piece.Low.StrokeDashArray = MA.BBLineStyle.ToStrokeDashArray();
+							foreach (var piece in Cache.Pieces.OfType<MAPiece>())
+							{
+								piece.High.StrokeThickness = MA.BBWidth;
+								piece.Low.StrokeThickness = MA.BBWidth;
+							}
+							break;
 						}
-						break;
+					case nameof(LineStyle):
+						{
+							foreach (var piece in Cache.Pieces.OfType<MAPiece>())
+							{
+								piece.Line.StrokeDashArray = MA.LineStyle.ToStrokeDashArray();
+							}
+							break;
+						}
+					case nameof(BBLineStyle):
+						{
+							foreach (var piece in Cache.Pieces.OfType<MAPiece>())
+							{
+								piece.High.StrokeDashArray = MA.BBLineStyle.ToStrokeDashArray();
+								piece.Low.StrokeDashArray = MA.BBLineStyle.ToStrokeDashArray();
+							}
+							break;
+						}
 					}
+					Invalidate();
 				}
-				Invalidate();
 			}
 
 			/// <summary>Update the transforms for the graphics model</summary>

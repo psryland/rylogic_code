@@ -190,15 +190,15 @@ namespace Rylogic.Gui.WPF
 
 			/// <summary>Raised whenever a property of this Element changes</summary>
 			public event PropertyChangedEventHandler PropertyChanged;
-			protected virtual void OnPropertyChanged(PropertyChangedEventArgs args)
+			protected void NotifyPropertyChanged(string prop_name)
 			{
-				PropertyChanged?.Invoke(this, args);
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
 			}
 			protected void SetProp<T>(ref T prop, T value, string name, bool invalidate_graphics, bool invalidate_chart)
 			{
 				if (Equals(prop, value)) return;
 				prop = value;
-				OnPropertyChanged(new PropertyChangedEventArgs(name));
+				NotifyPropertyChanged(name);
 				if (invalidate_graphics) Invalidate();
 				if (invalidate_chart) InvalidateChart();
 			}
@@ -436,7 +436,7 @@ namespace Rylogic.Gui.WPF
 			{
 				m_impl_position = pos;
 				OnPositionChanged();
-				OnPropertyChanged(new PropertyChangedEventArgs(nameof(Position)));
+				NotifyPropertyChanged(nameof(Position));
 			}
 
 			/// <summary>Get/Set the XY position of the element</summary>

@@ -23,10 +23,11 @@ namespace CoinFlip.UI.GfxObjects
 			CoinPlots = new List<CoinPlot>();
 			NettWorthPlot = new ChartDataSeries("Nett Worth", ChartDataSeries.EFormat.XRealYReal, new ChartDataSeries.OptionsData
 			{
-				PlotType = ChartDataSeries.EPlotType.Bar,
-				Colour = SettingsData.Settings.Chart.NettWorthColour.Alpha(0.7f),
-				BarWidth = 1,
-				BarHorizontalAlignment = 1,
+				PlotType = ChartDataSeries.EPlotType.Line,
+				PointsOnLinePlot = true,
+				Colour = SettingsData.Settings.Chart.NettWorthColour,
+				LineWidth = 5,
+				PointSize = 10,
 			});
 			Data = equity;
 		}
@@ -97,7 +98,8 @@ namespace CoinFlip.UI.GfxObjects
 				var i = plot.Count - 1;
 				foreach (var chg in Data.NettWorthHistory())
 				{
-					var x = (chg.Time - CoinFlip.Misc.CryptoCurrencyEpoch).TotalDays;
+					//var x = (chg.Time - CoinFlip.Misc.CryptoCurrencyEpoch).TotalDays;
+					var x = (double)i;
 					plot[i--] = new ChartDataSeries.Pt(x, chg.Worth);
 				}
 			}
