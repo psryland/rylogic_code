@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 using Binance.API.DomainObjects;
 using ExchApi.Common.JsonConverter;
@@ -29,6 +28,16 @@ namespace Binance.API
 
 			// Create the socket
 			Socket = new WebSocket(EndPoint);
+		}
+
+		/// <summary>Check all streams are alive and healthy, if not remove them</summary>
+		public void WatchDog()
+		{
+			Api.Dispatcher.BeginInvoke(new Action(() =>
+			{
+				if (!Socket.IsAlive)
+					Socket = new WebSocket(EndPoint);
+			}));
 		}
 
 		/// <summary>The owning API instance</summary>

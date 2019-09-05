@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Binance.API.DomainObjects;
 using ExchApi.Common.JsonConverter;
@@ -23,6 +24,23 @@ namespace Binance.API
 		{
 			Util.DisposeRange(Streams.Values);
 			Streams.Clear();
+		}
+
+		/// <summary>Check all streams are alive and healthy, if not remove them</summary>
+		public void WatchDog()
+		{
+			Api.Dispatcher.BeginInvoke(new Action(() =>
+			{
+				lock (Streams)
+				{
+					var dead = Streams.Where(x => !x.Value.Socket.IsAlive).ToList();
+					foreach (var corpse in dead)
+					{
+						Util.Dispose(corpse.Value);
+						Streams.Remove(corpse.Key);
+					}
+				}
+			}));
 		}
 
 		/// <summary>The owning API instance</summary>

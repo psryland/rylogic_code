@@ -44,6 +44,16 @@ namespace Binance.API
 			Socket = new WebSocket(EndPoint);
 		}
 
+		/// <summary>Check all streams are alive and healthy, if not remove them</summary>
+		public void WatchDog()
+		{
+			Api.Dispatcher.BeginInvoke(new Action(() =>
+			{
+				if (!Socket.IsAlive)
+					Socket = new WebSocket(EndPoint);
+			}));
+		}
+
 		/// <summary>The owning API instance</summary>
 		private BinanceApi Api { get; }
 

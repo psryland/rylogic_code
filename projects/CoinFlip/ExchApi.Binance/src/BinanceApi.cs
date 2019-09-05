@@ -33,6 +33,8 @@ namespace Binance.API
 				MarketData = new MarketDataCache(this);
 				CandleData = new CandleDataCache(this);
 				UserData = new UserDataCache(this);
+
+				WatchDog = true;
 			}
 			catch
 			{
@@ -42,6 +44,7 @@ namespace Binance.API
 		}
 		public override void Dispose()
 		{
+			WatchDog = false;
 			UserData = null;
 			CandleData = null;
 			MarketData = null;
@@ -79,6 +82,43 @@ namespace Binance.API
 			await TickerData.InitAsync();
 			await UserData.InitAsync();
 		}
+
+		/// <summary>Watchdog background thread for keeping web socket connections alive</summary>
+		private bool WatchDog
+		{
+			get => m_watch_dog != null;
+			set
+			{
+				if (WatchDog == value) return;
+				if (WatchDog)
+				{
+					m_watch_dog_exit.Cancel();
+					m_watch_dog.Join();
+				}
+				m_watch_dog = value ? new Thread(new ParameterizedThreadStart(WatchDogEntryPoint)) : null;
+				if (WatchDog)
+				{
+					m_watch_dog_exit = CancellationTokenSource.CreateLinkedTokenSource(Shutdown);
+					m_watch_dog.Start(m_watch_dog_exit.Token);
+				}
+
+				void WatchDogEntryPoint(object exit_)
+				{
+					for (var exit = (CancellationToken)exit_; ;)
+					{
+						if (exit.WaitHandle.WaitOne(TimeSpan.FromSeconds(1)))
+							break;
+
+						UserData.WatchDog();
+						CandleData.WatchDog();
+						MarketData.WatchDog();
+						TickerData.WatchDog();
+					}
+				}
+			}
+		}
+		private CancellationTokenSource m_watch_dog_exit;
+		private Thread m_watch_dog;
 
 		/// <summary>Static log instance</summary>
 		public static Logger Log { get; private set; }

@@ -81,7 +81,7 @@ namespace ExchApi.Common
 		private HttpClient m_client;
 
 		/// <summary>For marshalling to the main thread</summary>
-		protected Dispatcher Dispatcher { get; }
+		public Dispatcher Dispatcher { get; }
 	}
 	public class ExchangeApi<THasher> :ExchangeApi where THasher : HMAC
 	{
