@@ -5,10 +5,9 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:settings="clr-namespace:CoinFlip.Settings;assembly=CoinFlip.Model"
-    xmlns:gui2="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
-	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
-	xmlns:local="clr-namespace:CoinFlip.UI"
-	mc:Ignorable="d" 
+    xmlns:local="clr-namespace:CoinFlip.UI"
+	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
+    mc:Ignorable="d" 
 	d:DesignWidth="500"
 	d:DesignHeight="350"
 	>
@@ -254,7 +253,7 @@
 	</Grid>
 
 	<!-- Candle Chart -->
-	<gui2:ChartControl
+	<gui:ChartControl
 		Grid.Row="1"
 		x:Name="m_chart_candles"
 		ChartBackground="White"

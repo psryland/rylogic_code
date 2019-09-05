@@ -85,7 +85,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Settings filepath for stored indicator configurations</summary>
-		private static string IndicatorsFilepath => Model.BackTesting 
+		private string Filepath => Model.BackTesting 
 			? Misc.ResolveUserPath("Sim", "indicators.xml")
 			: Misc.ResolveUserPath("indicators.xml");
 
@@ -99,7 +99,7 @@ namespace CoinFlip
 				foreach (var indy in kv.Value)
 					pair.Add2(XmlTag.Indy, indy, true);
 			}
-			root.Save(IndicatorsFilepath);
+			root.Save(Filepath);
 			m_save_pending = false;
 		}
 
@@ -107,10 +107,10 @@ namespace CoinFlip
 		public void Load()
 		{
 			Clear();
-			if (!Path_.FileExists(IndicatorsFilepath))
+			if (!Path_.FileExists(Filepath))
 				return;
 
-			var root = XElement.Load(IndicatorsFilepath);
+			var root = XElement.Load(Filepath);
 			foreach (var elem_pair in root.Elements(XmlTag.Pair))
 			{
 				var list = Indicators.GetOrAdd(elem_pair.AttrValue(XmlTag.Name), x => new List<IIndicator>());

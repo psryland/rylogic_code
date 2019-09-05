@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -101,10 +101,16 @@ namespace CoinFlip.UI
 				// Handler
 				void HandleSettingChange(object sender, SettingChangeEventArgs e)
 				{
+					if (e.Before) return;
 					switch (e.Key)
 					{
 					case nameof(ChartSettings.SelectionDistance):
 						Chart.Options.MinSelectionDistance = SettingsData.Settings.Chart.SelectionDistance;
+						break;
+					case nameof(ChartSettings.CandleStyle):
+						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CandleStyle)));
+						GfxCandles?.Invalidate();
+						Chart.Invalidate();
 						break;
 					case nameof(ChartSettings.ShowOpenOrders):
 						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowOpenOrders)));
@@ -615,6 +621,13 @@ namespace CoinFlip.UI
 			}
 		}
 
+		/// <summary>The style of candles to use</summary>
+		public ECandleStyle CandleStyle
+		{
+			get => SettingsData.Settings.Chart.CandleStyle;
+			set => SettingsData.Settings.Chart.CandleStyle = value;
+		}
+
 		/// <summary>Show currently open orders on the chart</summary>
 		public EShowItems ShowOpenOrders
 		{
@@ -644,15 +657,7 @@ namespace CoinFlip.UI
 				return;
 
 			// Candles
-			{
-				// Convert the XAxis values into an index range.
-				// (indices, not time frame units, because of the gaps in the price data).
-				var range = Instrument.IndexRange((int)(Chart.XAxis.Min - 1), (int)(Chart.XAxis.Max + 1));
-
-				// Add the candles that cover 'range'
-				foreach (var gfx in GfxCandles.Get(range))
-					Chart.Scene.Window.AddObject(gfx);
-			}
+			GfxCandles.BuildScene(Chart);
 
 			// Price Data
 			GfxSpotPrices.BuildScene(Instrument.Pair, Chart);
@@ -970,12 +975,34 @@ namespace CoinFlip.UI
 					chart_options_menu.Items.AddRange(items);
 				}
 
-				// Indicators sub menu
-				var indicators_menu = cmenu.Items.Add2(new MenuItem { Header = "Indicators" });
+				// Candle style menu
+				var candles_menu = cmenu.Items.Add2(new MenuItem { Header = "Candles" });
+				{
+					var opt = candles_menu.Items.Add2(new ComboBox
+					{
+						ItemsSource = Enum<ECandleStyle>.Values,
+						Style = (Style)FindResource(System.Windows.Controls.ToolBar.ComboBoxStyleKey),
+						SelectedItem = CandleStyle,
+						BorderThickness = new Thickness(0),
+						Margin = new Thickness(1,1,20,1),
+						MinWidth = 60,
+					});
+					opt.SelectionChanged += (s, a) =>
+					{
+						CandleStyle = (ECandleStyle)opt.SelectedItem;
+					};
+					candles_menu.ContextMenuOpening += (s, a) =>
+					{
+						opt.SelectedItem = CandleStyle;
+					};
+				}
+
+				// Drawing tools menu
+				var drawing_menu = cmenu.Items.Add2(new MenuItem { Header = "Drawing" });
 				{
 					{
 						// Horizontal line
-						var opt = indicators_menu.Items.Add2(new MenuItem { Header = "Horizontal Line" });
+						var opt = drawing_menu.Items.Add2(new MenuItem { Header = "Horizontal Line" });
 						opt.Click += (s, a) =>
 						{
 							if (Instrument == null) return;
@@ -987,7 +1014,7 @@ namespace CoinFlip.UI
 					}
 					{
 						// Trend line
-						var opt = indicators_menu.Items.Add2(new MenuItem { Header = "Trend Line" });
+						var opt = drawing_menu.Items.Add2(new MenuItem { Header = "Trend Line" });
 						opt.Click += (s, a) =>
 						{
 							if (Instrument == null) return;
@@ -1000,6 +1027,11 @@ namespace CoinFlip.UI
 							});
 						};
 					}
+				}
+
+				// Indicators sub menu
+				var indicators_menu = cmenu.Items.Add2(new MenuItem { Header = "Indicators" });
+				{
 					{
 						// New Moving Average
 						var opt = indicators_menu.Items.Add2(new MenuItem { Header = "Moving Average" });

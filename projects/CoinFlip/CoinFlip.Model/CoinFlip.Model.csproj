@@ -74,6 +74,7 @@
     <Compile Include="src\Extn\CoinData_.cs" />
     <Compile Include="src\Extn\TradeType_.cs" />
     <Compile Include="src\Misc\DapperExtensions.cs" />
+    <Compile Include="src\Misc\ECandleStyle.cs" />
     <Compile Include="src\Misc\EShowItems.cs" />
     <Compile Include="src\Misc\ESkin.cs" />
     <Compile Include="src\Misc\ETimeFrame.cs" />

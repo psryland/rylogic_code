@@ -1,32 +1,26 @@
 Immediate ToDo:
 
 CoinFlip
-	- Heikin-Ashi candle mode
+	- Separate indicators and drawing tools
 	- TD sequential
+	- Support user defined ordering of coins in Coin grid and fund grid
+	- Colour TradeType text in Orders grid
 	- Show 'hodls' in equity plot
 	- Auto range equity chart
-	- History is broken
-	- Change the equity chart to have constant spacing between trades
-	- Double click trade indicators opens edit trade ui
-	- Allow selecting the fund to manually trade from
-	- Make the chart context menu for manual trades display market order when near the current spot price
+	- History is broken - after deleting the DB the old history isn't restored
+	- Change the equity chart to have constant spacing between trades, change to line chart.
 	- Depth of market scale indicator/adjuster
 	- Add price scenarios to the equity grid (dialog with sliders for each currency)
-	- Support create trade at market price (so that it always fills)
 	- Do something so that all pairs are not queried for history all the time on startup
 	- Figure out how to isolate the monitored orders between back testing and live mode
 	- Add spot price support to Poloniex and Bittrex
 	- Variable spread for backtesting
-	- pending orders (Stop, OneEnablesOther, )
-	- saving/loading history to/from db
-	- highlight selected positions on graph
-	- remove old positions from charts	
 	- Log view isn't updating when window doesn't have focus
-	- Add pending orders
 	- MOAR indicators
 	- Free draw line indicator
 	- Consider an arbitrage loop between BTC/USDT/USDC (check it for profitability)
-	- Create an indicators panel (like trading view) that makes adding/accessing indicators easier
+	- Support minimise to tray
+	- Fix dropped connection to exchange when waking from sleep
 	
 EDTradeAdvisor
 	- ED Style

@@ -144,39 +144,87 @@ namespace CoinFlip.UI.Indicators
 		/// <summary>A MA data set based on an instrument</summary>
 		public class MAContext :IDisposable
 		{
-			private readonly MovingAverage m_ma;
+			// Notes:
+			//  - Calculate the MA for the full range (or perhaps limit to 1,000,000).
+			//    It's not worth the memory/time/effort limiting the MA data to a range.
+
 			private readonly List<MAPoint> m_data;
 			private IStatMeanAndVarianceSingleVariable<double> m_stat;
 
 			public MAContext(MovingAverage ma, Instrument instrument)
 			{
-				m_ma = ma;
 				m_data = new List<MAPoint>();
-				Range = Range.Invalid;
+				MA = ma;
 				Instrument = instrument;
+				Reset();
 			}
 			public void Dispose()
 			{
 				Instrument = null;
+				MA = null;
 			}
+
+			/// <summary>The moving average this context is based on</summary>
+			private MovingAverage MA
+			{
+				get => m_ma;
+				set
+				{
+					if (m_ma == value) return;
+					if (m_ma != null)
+					{
+						m_ma.SettingChange -= HandleSettingChange;
+					}
+					m_ma = value;
+					if (m_ma != null)
+					{
+						m_ma.SettingChange += HandleSettingChange;
+					}
+
+					// Handler
+					void HandleSettingChange(object sender, SettingChangeEventArgs e)
+					{
+						if (e.Before) return;
+						switch (e.Key)
+						{
+						case nameof(MovingAverage.Exponential):
+							{
+								Reset();
+								break;
+							}
+						case nameof(MovingAverage.Periods):
+							{
+								Reset();
+								break;
+							}
+						}
+					}
+				}
+			}
+			private MovingAverage m_ma;
 
 			/// <summary>Reset the data and recalculate</summary>
 			public void Reset()
 			{
 				m_data.Clear();
-				m_stat = null;
-				CalculateMA(Range);
+				m_stat = MA.Exponential
+					? (IStatMeanAndVarianceSingleVariable<double>)new ExponentialMovingAverage(MA.Periods)
+					: (IStatMeanAndVarianceSingleVariable<double>)new SimpleMovingAverage(MA.Periods);
+
+				CalculateMA();
 			}
 
-			/// <summary>Basic list access</summary>
+			/// <summary>The number of points in the MA</summary>
 			public int Count => m_data.Count;
+
+			/// <summary>Basic list access</summary>
 			public MAPoint this[int i] => m_data[i];
 
 			/// <summary>Returns the nearest index position of 'candle_index' within the data</summary>
 			public int IndexOf(double candle_index) => m_data.BinarySearch(pt => pt.CandleIndex.CompareTo(candle_index), find_insert_position: true);
 
 			/// <summary>The candle range spanned by this context</summary>
-			public RangeF CandleRange => Count != 0 ? new RangeF(m_data.Front().CandleIndex, m_data.Back().CandleIndex) : Range.Invalid;
+			public RangeF CandleRange => Count != 0 ? new RangeF(m_data.Front().CandleIndex, m_data.Back().CandleIndex + 1) : Range.Invalid;
 
 			/// <summary>The instrument to calculate the moving average over</summary>
 			public Instrument Instrument
@@ -188,97 +236,45 @@ namespace CoinFlip.UI.Indicators
 					if (m_instrument != null)
 					{
 						m_instrument.DataChanged -= HandleDataChanged;
-						Range = Range.Invalid;
 					}
 					m_instrument = value;
 					if (m_instrument != null)
 					{
-						HandleDataChanged(null, null);
 						m_instrument.DataChanged += HandleDataChanged;
 					}
 
 					// Handler
 					void HandleDataChanged(object sender, DataEventArgs e)
 					{
-						// Update the range when the instrument changes.
-						if (Range == Range.Invalid || Range.End > Instrument.Count)
-						{
-							// If the range is currently invalid, use a sensible default
-							Range = new Range(
-								Math.Max(0, Instrument.Count - Instrument.CacheChunkSize),
-								Instrument.Count);
-						}
-						else
-						{
-							// If the range used to include the latest candle, grow the range as new candles arrive
-							var grow = Math.Abs(Instrument.Count - Range.End) <= 1 ? 1 : 0;
-							Range = new Range(
-								Math_.Clamp(Range.Beg, 0, Instrument.Count),
-								Math_.Clamp(Range.End + grow, 0, Instrument.Count));
-						}
+						CalculateMA();
 					}
 				}
 			}
 			private Instrument m_instrument;
 
-			/// <summary>The requested data range</summary>
-			public Range Range
-			{
-				get => m_range;
-				set
-				{
-					if (m_range == value) return;
-					CalculateMA(value);
-				}
-			}
-			private Range m_range;
-
 			/// <summary>Calculate the data points over 'range'</summary>
-			private void CalculateMA(Range range)
+			private void CalculateMA()
 			{
-				// Flush the data
-				if (range == Range.Invalid || range.Empty || Instrument == null || Instrument.Count == 0)
-				{
-					m_data.Clear();
-					m_stat = null;
-					m_range = Range.Invalid;
-					DataChanged?.Invoke(this, new DataChangedEventArgs(Range.Invalid));
-					return;
-				}
+				// 'm_stat' does not include the latest candle as it changes all the time.
+				var range = new Range(Math.Max(0, m_data.Count - 1), Instrument.Count);
 
-				// 'm_stat' does not include the candle at 'Range.End-1'. This candle is typically the 
-				// latest candle which is changing all the time. It's simplier to always exclude the last
-				// candle from 'm_stat' than to try and track what's happening to Instruction.Count.
-				m_data.Capacity = Math.Max(m_data.Capacity, range.Sizei);
+				// Trim the MA data for the latest candle
+				m_data.Resize(Math.Max(0, m_data.Count - 1));
 
-				// See if we can incrementally update the range
-				if (m_stat != null && Range != Range.Invalid && !Range.Empty && Range.Beg <= range.Beg && range.End > Range.End - 1)
-				{
-					// Incremental update
-					m_data.RemoveToEnd(IndexOf(Range.End - 1));
-					m_data.AddRange(CalculateMA(new Range(Range.End - 1, range.End - 1), m_stat));
-					m_data.AddRange(CalculateMA(new Range(range.End - 1, range.End), CopyStat(m_stat)));
-					DataChanged?.Invoke(this, new DataChangedEventArgs(new Range(Range.End - 1, range.End)));
-				}
-				else
-				{
-					m_stat = NewStat();
+				// Append MA data up to the latest candle
+				m_data.AddRange(CalculateMA(m_data.Count, Math.Max(0, Instrument.Count - 1), m_stat));
 
-					// Recalculate all
-					m_data.Clear();
-					m_data.AddRange(CalculateMA(new Range(range.Beg, range.End - 1), m_stat));
-					m_data.AddRange(CalculateMA(new Range(range.End - 1, range.End), CopyStat(m_stat)));
-					DataChanged?.Invoke(this, new DataChangedEventArgs(range));
-				}
+				// Append the latest candle
+				m_data.AddRange(CalculateMA(m_data.Count, Instrument.Count, CopyStat(m_stat)));
 
-				// Save the new range
-				m_range = range;
+				// Notify
+				DataChanged?.Invoke(this, new DataChangedEventArgs(range));
 
 				// Return the moving average points over the given range
-				IEnumerable<MAPoint> CalculateMA(Range r, IStatMeanAndVarianceSingleVariable<double> stat)
+				IEnumerable<MAPoint> CalculateMA(int beg, int end, IStatMeanAndVarianceSingleVariable<double> stat)
 				{
 					var ts = Misc.CryptoCurrencyEpoch.Ticks;
-					foreach (var i in r.Enumeratei)
+					for (var i = beg; i != end; ++i)
 					{
 						var candle = Instrument[i];
 						Debug.Assert(candle.Timestamp >= ts, "Candle data must be strictly ordered by timestamp because of binary searches");
@@ -289,18 +285,12 @@ namespace CoinFlip.UI.Indicators
 						yield return new MAPoint(i, ts, stat.Mean, stat.PopStdDev);
 					}
 				}
-				IStatMeanAndVarianceSingleVariable<double> NewStat()
-				{
-					// Create a new instance of the stat type
-					return m_ma.Exponential
-						? (IStatMeanAndVarianceSingleVariable<double>)new ExponentialMovingAverage(m_ma.Periods)
-						: (IStatMeanAndVarianceSingleVariable<double>)new SimpleMovingAverage(m_ma.Periods);
-				}
 				IStatMeanAndVarianceSingleVariable<double> CopyStat(IStatMeanAndVarianceSingleVariable<double> rhs)
 				{
-					return m_ma.Exponential
-						? (IStatMeanAndVarianceSingleVariable<double>)new ExponentialMovingAverage((ExponentialMovingAverage)rhs)
-						: (IStatMeanAndVarianceSingleVariable<double>)new SimpleMovingAverage((SimpleMovingAverage)rhs);
+					return 
+						rhs is ExponentialMovingAverage ema ? (IStatMeanAndVarianceSingleVariable<double>)new ExponentialMovingAverage(ema) :
+						rhs is SimpleMovingAverage sma ? (IStatMeanAndVarianceSingleVariable<double>)new SimpleMovingAverage(sma) :
+						throw new Exception("Unknown moving average type");
 				}
 			}
 
@@ -378,24 +368,38 @@ namespace CoinFlip.UI.Indicators
 			/// <summary>Create graphics for an X-range spanning 'x'</summary>
 			private MAPiece CreatePiece(double x, RangeF missing)
 			{
+				// The x-axis range spanned by the data
+				var x_range = Data.CandleRange;
+
+				// If there is no data, return a null piece spanning the entire range
+				if (x_range == RangeF.Invalid)
+					return new MAPiece(missing);
+
+				// If 'x' is before the data range, return a null piece for the range [-inf, Data[0])
+				if (x_range.CompareTo(x) > 0)
+					return new MAPiece(new RangeF(missing.Beg, x_range.Beg));
+
+				// If 'x' is after the data range, return a null piece for the range [Data[N], +inf)
+				if (x_range.CompareTo(x) < 0)
+					return new MAPiece(new RangeF(x_range.End, missing.End));
+
 				// Find the nearest point in the data to 'x'
 				var idx = Data.IndexOf(x);
+				Debug.Assert(idx >= 0 && idx < Data.Count);
 
-				// Convert 'missing' to an index range within the data
-				var idx_missing = new Range(
-					Data.IndexOf(missing.Beg),
-					Data.IndexOf(missing.End));
+				// Generate an index range based on 'missing', limited to the block size
+				const int PieceBlockSize = 512;
+				var idx0 = Math.Max(Data.IndexOf(missing.Beg), idx - PieceBlockSize);
+				var idx1 = Math.Min(Data.IndexOf(missing.End), idx + PieceBlockSize);
 
-				// Limit the size of 'idx_missing' to the block size
-				const int PieceBlockSize = 256;
-				var idx_range = new Range(
-					Math.Max(idx_missing.Beg, idx - PieceBlockSize),
-					Math.Min(idx_missing.End, idx + PieceBlockSize));
-				Debug.Assert(!idx_range.Empty);
+				// Set the x-axis range represented by this piece
+				x_range.Beg = idx0 == 0          ? missing.Beg : Data[idx0].CandleIndex;
+				x_range.End = idx1 == Data.Count ? missing.End : Data[idx1].CandleIndex;
 
-				// Create a piece that spans the missing range
-				var data = idx_range.Select(i => Data[(int)i]);
-				var piece = new MAPiece(idx_range, MA, data);
+				// Create a piece that spans the index range
+				idx1 = Math.Min(idx1 + 1, Data.Count); // Add 1 to connect to the next piece
+				var data = new Range(idx0, idx1).Select(i => Data[(int)i]);
+				var piece = new MAPiece(x_range, MA, data);
 				return piece;
 			}
 
@@ -494,6 +498,10 @@ namespace CoinFlip.UI.Indicators
 				// called in UpdateGfxCore but this seems to be fast enough.
 				foreach (var piece in Cache.Get(range).OfType<MAPiece>())
 				{
+					// Ignore null graphics pieces (places where there is no data)
+					if (piece.NoGfx)
+						continue;
+
 					piece.Line.Stroke = MA.Colour.ToMediaBrush();
 					piece.Line.Data.Transform = c2c_2d;
 					Chart.Overlay.Adopt(piece.Line);
@@ -590,7 +598,15 @@ namespace CoinFlip.UI.Indicators
 			/// <summary>Graphics for a piece of the moving average line</summary>
 			private class MAPiece :IChartGfxPiece
 			{
-				public MAPiece(Range range, MovingAverage ma, IEnumerable<MAContext.MAPoint> data)
+				public MAPiece(RangeF range)
+				{
+					Range = range;
+					Line = null;
+					Glow = null;
+					High = null;
+					Low = null;
+				}
+				public MAPiece(RangeF range, MovingAverage ma, IEnumerable<MAContext.MAPoint> data)
 				{
 					Range = range;
 
@@ -641,7 +657,8 @@ namespace CoinFlip.UI.Indicators
 				}
 				public void Dispose()
 				{
-					Detach();
+					if (!NoGfx)
+						Detach();
 				}
 
 				/// <summary>Detach all graphics</summary>
@@ -652,6 +669,9 @@ namespace CoinFlip.UI.Indicators
 					High.Detach();
 					Low.Detach();
 				}
+
+				/// <summary>True if this is a null graphics piece</summary>
+				public bool NoGfx => Line == null;
 
 				/// <summary>The X-Axis span covered by this piece</summary>
 				public RangeF Range { get; }
@@ -683,3 +703,4 @@ namespace CoinFlip.UI.Indicators
 		}
 	}
 }
+

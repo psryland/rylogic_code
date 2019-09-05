@@ -11,6 +11,12 @@ namespace Rylogic.Gui.WPF
 	/// <summary>Interface of a graphics element representing an X-Axis range in a chart</summary>
 	public interface IChartGfxPiece :IDisposable
 	{
+		// Notes:
+		//  - See the notes for the CreatePieceHandler.
+		//  - 'Range' should represent an X-axis region in the cache, *not* the size of the returned graphics.
+		//    If graphics can't be created for a region, then return a piece containing null graphics and a range
+		//    that covers the 'no-data' range
+
 		/// <summary>The X-Axis span covered by this piece</summary>
 		RangeF Range { get; }
 	}
@@ -38,6 +44,19 @@ namespace Rylogic.Gui.WPF
 		{
 			Util.DisposeRange(Pieces);
 			Pieces.Clear();
+		}
+		public void Invalidate(double x)
+		{
+			if (Pieces.Count == 0)
+				return;
+
+			// Invalidate the piece that contains 'x'
+			var idx = Pieces.BinarySearch(p => p.Range.CompareTo(x), find_insert_position: true);
+			if (idx != Pieces.Count && Pieces[idx].Range.Contains(x))
+			{
+				Util.Dispose(Pieces[idx]);
+				Pieces.RemoveAt(idx);
+			}
 		}
 		public void Invalidate(RangeF x_range)
 		{
@@ -71,15 +90,24 @@ namespace Rylogic.Gui.WPF
 		}
 		private List<IChartGfxPiece> m_pieces;
 
-		/// <summary>Get the series data graphics that spans the given x range</summary>
+		/// <summary>
+		/// Get the series data graphics that spans the given x range.
+		/// Note: if there is no data for parts of 'range' the returned pieces will have 'null' graphics.</summary>
 		public IEnumerable<IChartGfxPiece> Get(RangeF range)
 		{
 			// Return each graphics piece over the range
 			for (var x = range.Beg; x < range.End;)
 			{
+				// If a piece cannot be created for 'x' then stop iterating because we cannot advance the range.
+				// If there is no data at 'x', the returned piece should have null graphics but with a range that
+				// covers the no-data range. Returning null indicates an error, not no data.
 				var piece = CacheGet(x);
-				yield return piece;
+				if (piece == null)
+					break;
+
+				// The returned piece must span 'x' or we cannot advance
 				Debug.Assert(piece.Range.End > x);
+				yield return piece;
 				x = piece.Range.End;
 			}
 		}
@@ -97,21 +125,29 @@ namespace Rylogic.Gui.WPF
 				var missing = new RangeF(
 					idx != 0 ? Pieces[idx - 1].Range.End : double.MinValue,
 					idx != Pieces.Count ? Pieces[idx].Range.Beg : double.MaxValue);
+				Debug.Assert(missing.Contains(x));
 
-				// There is no cached graphics for 'x', create it now
+				// There is no cached graphics for 'x', create it now. If no graphics can
+				// be created (because there's no data at 'x') then return null.
 				var piece = CreatePiece(x, missing);
+				if (piece == null)
+					return null;
+
+				// Pieces should not overlap on 'Range', their graphics
+				// might overlap but not the range each piece represents.
+				Debug.Assert(Pieces.TrueForAll(p => p.Range.Intersect(piece.Range).Empty));
 				Pieces.Insert(idx, piece);
 			}
 			return Pieces[idx];
 		}
 
-		/// <summary>The handler for providing pieces of the graphics</summary>
-		public CreatePieceHandler CreatePiece { get; set; }
-
 		/// <summary>
-		/// Implementers of this handler should return a graphics object that spans
-		/// some region about 'x', clipped by 'missing'. The returned graphics piece
-		/// should contain the x-range that the graphics represents.</summary>
+		/// The handler for providing pieces of the graphics.
+		/// Implementers of this handler should return a graphics object that spans some region about 'x',
+		/// clipped by 'missing'. The returned graphics piece should contain the x-range that the graphics
+		/// represents. If there is no data at 'x' the returned piece should contain null graphics with a
+		/// range covering the 'no-data' range. Note: missing.Contains(x) == true</summary>
+		public CreatePieceHandler CreatePiece { get; set; }
 		public delegate IChartGfxPiece CreatePieceHandler(double x, RangeF missing);
 	}
 
