@@ -1,17 +1,15 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Windows;
-using System.Windows.Data;
 using CoinFlip;
+using CoinFlip.Bots;
 using CoinFlip.Settings;
 using Rylogic.Common;
 using Rylogic.Gui.WPF;
-using Rylogic.Maths;
-using Rylogic.Utility;
 
-namespace Bot.Rebalance
+namespace Bot.HeikinAshiChaser
 {
-	public partial class ConfigureUI : Window, IDisposable, INotifyPropertyChanged
+	public partial class ConfigureUI :Window, IDisposable, INotifyPropertyChanged
 	{
 		private readonly Bot m_bot;
 		public ConfigureUI(Window owner, Bot bot)
@@ -22,13 +20,11 @@ namespace Bot.Rebalance
 			m_bot = bot;
 
 			ChartSelector = new ExchPairTimeFrame(Model);
-			GfxPriceRange = null;//todo new GfxPriceRange(BotData.Id);
 			Settings.SettingChange += HandleSettingChange;
 			m_bot.BotData.SettingChange += HandleSettingChange;
 
 			// Commands
 			Accept = Command.Create(this, AcceptInternal);
-			ShowOnChart = Command.Create(this, ShowOnChartInternal);
 
 			DataContext = this;
 		}
@@ -36,7 +32,6 @@ namespace Bot.Rebalance
 		{
 			m_bot.BotData.SettingChange -= HandleSettingChange;
 			Settings.SettingChange -= HandleSettingChange;
-			GfxPriceRange = null;
 			ChartSelector = null;
 		}
 		protected override void OnClosed(EventArgs e)
@@ -61,19 +56,10 @@ namespace Bot.Rebalance
 			set => m_bot.Fund = value;
 		}
 
-		/// <summary>The amount held in base currency</summary>
-		public Unit<double> HoldingsBase => ChartSelector.Pair != null ? Fund[ChartSelector.Pair.Base].Total : 0;
-
-		/// <summary>The amount held in quote currency</summary>
-		public Unit<double> HoldingsQuote => ChartSelector.Pair != null ? Fund[ChartSelector.Pair.Quote].Total : 0;
-
-		/// <summary>The available funds</summary>
-		public ICollectionView Funds => CollectionViewSource.GetDefaultView(m_bot.Model.Funds);
-
 		/// <summary>Trading instrument selector</summary>
 		public ExchPairTimeFrame ChartSelector
 		{
-			get { return m_chart_selector; }
+			get => m_chart_selector;
 			private set
 			{
 				if (m_chart_selector == value) return;
@@ -86,6 +72,7 @@ namespace Bot.Rebalance
 				{
 					m_chart_selector.Exchange = Model.Exchanges[Settings.Exchange];
 					m_chart_selector.Pair = m_chart_selector.Exchange?.Pairs[Settings.Pair];
+					m_chart_selector.TimeFrame = Settings.TimeFrame;
 					m_chart_selector.PropertyChanged += HandleInstrumentChanged;
 				}
 
@@ -102,6 +89,11 @@ namespace Bot.Rebalance
 					case nameof(SettingsData.Pair):
 						{
 							Settings.Pair = ChartSelector.Pair.Name;
+							break;
+						}
+					case nameof(SettingsData.TimeFrame):
+						{
+							Settings.TimeFrame = ChartSelector.TimeFrame;
 							break;
 						}
 					}
@@ -143,38 +135,13 @@ namespace Bot.Rebalance
 			Close();
 		}
 
-		/// <summary>Show the price range on a chart</summary>
-		public Command ShowOnChart { get; }
-		private void ShowOnChartInternal()
-		{
-			// Get the active chart
-			var chart = Model.Charts.ActiveChart;
-			chart.Exchange = ChartSelector.Exchange;
-			chart.Pair = ChartSelector.Pair;
-			chart.TimeFrame = ETimeFrame.Day1;
-			chart.EnsureActiveContent();
-
-			// Add graphics + support for resizing price range
-		}
-
 		/// <summary></summary>
 		public event PropertyChangedEventHandler PropertyChanged;
 		private void HandleSettingChange(object sender, SettingChangeEventArgs e)
 		{
+			if (e.Before) return;
 			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Validate)));
+			m_bot.NotifyPropertyChanged(nameof(IBot.CanActivate));
 		}
-
-		/// <summary>Graphics object for showing the price range</summary>
-		private GfxPriceRange GfxPriceRange
-		{
-			get { return m_gfx_price_range; }
-			set
-			{
-				if (m_gfx_price_range == value) return;
-				Util.Dispose(ref m_gfx_price_range);
-				m_gfx_price_range = value;
-			}
-		}
-		private GfxPriceRange m_gfx_price_range;
 	}
 }

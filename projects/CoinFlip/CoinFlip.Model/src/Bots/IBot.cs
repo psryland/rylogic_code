@@ -28,11 +28,20 @@ namespace CoinFlip.Bots
 		//
 		// How to:
 		//  - Create a .NET framework 4.7.2 class library project called 'Bot.<BotName>'
-		//  - Add references to 'CoinFlip.Model' and 'Rylogic'
+		//  - The main namespace for the project should be 'Bot.<BotName>'
+		//  - Add references to 'CoinFlip.Model', 'Rylogic.Core', 'Rylogic.Gui.WPF', 'PresentationCore', and 'PresentationFramework'
 		//  - Sub-class 'IBot' and decorate with '[Plugin(typeof(IBot))]'
 		//  - Add a project dependency to CoinFlip.UI on this new Bot so that it's built before CoinFlip.UI
 		//  - Set the post build event to: @"py $(ProjectDir)..\post_build_bot.py $(TargetPath) $(ProjectDir) $(ConfigurationName)"
-		//  - The derived type must have a constructor with the same signature as IBot
+		//  - Add constructor: public Bot(CoinFlip.Settings.BotData bot_data, Model model) :base(bot_data, model) {}
+		//  - Compile and run
+		//  - Go to back testing, and add a new bot instance of the new bot type
+		//  - The skeleton bot is now ready
+		// Next Steps:
+		//  - Add a text description of the bot algorithm to the main IBot class.
+		//  - Create a SettingsData class for persisting bot state.
+		//  - Add a 'MonitoredOrders' instance to the settings if needed.
+		//  - Create a config dialog (ConfigureUI), and overload 'ConfigureInternal' to display it
 
 		public IBot(BotData bot_data, Model model)
 		{
@@ -65,12 +74,13 @@ namespace CoinFlip.Bots
 		/// <summary>The fund interface</summary>
 		public Fund Fund
 		{
-			get { return Model.Funds[BotData.FundId]; }
+			get => Model.Funds[BotData.FundId];
 			set
 			{
 				if (Fund?.Id == value?.Id) return;
 				BotData.FundId = value?.Id ?? string.Empty;
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Fund)));
+				NotifyPropertyChanged(nameof(Fund));
+				NotifyPropertyChanged(nameof(CanActivate));
 				BotData.Save();
 			}
 		}
@@ -78,19 +88,19 @@ namespace CoinFlip.Bots
 		/// <summary>User assigned name for the bot</summary>
 		public string Name
 		{
-			get { return BotData.Name; }
+			get => BotData.Name;
 			set
 			{
 				if (Name == value) return;
 				BotData.Name = value;
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Name)));
+				NotifyPropertyChanged(nameof(Name));
 			}
 		}
 
 		/// <summary>Activate/Deactivate the bot</summary>
 		public bool Active
 		{
-			get { return m_bot_main_timer != null; }
+			get => m_bot_main_timer != null;
 			set
 			{
 				// Notes:
@@ -99,7 +109,7 @@ namespace CoinFlip.Bots
 				//    issues with shutdown and switching between backtesting and live.
 				//  - Don't activate from the constructor of IBot, because derived bots may not
 				//    be fully set up yet.
-				//  - The bot stepping mechanism is different for backtesting because we want to
+				//  - The bot stepping mechanism is different for backtesting because I want to
 				//    run it at faster than real time. The timer is still created in backtesting
 				//    mode but it doesn't call Step. Instead, the simulation calls step on bots
 				//    as the simulation time advances
@@ -114,18 +124,18 @@ namespace CoinFlip.Bots
 					Cancel.Cancel();
 					Model.Log.Write(ELogLevel.Info, $"Bot '{Name}' stopped");
 				}
-				m_bot_main_timer = value ? new DispatcherTimer(LoopPeriod, DispatcherPriority.Normal, HandleTick, Dispatcher.CurrentDispatcher) : null;
+				m_bot_main_timer = value ? new DispatcherTimer(TimeSpan.FromMilliseconds(1), DispatcherPriority.Normal, HandleTick, Dispatcher.CurrentDispatcher) : null;
 				if (Active)
 				{
 					Model.Log.Write(ELogLevel.Info, $"Bot '{Name}' started");
-					Cancel = CancellationTokenSource.CreateLinkedTokenSource(Shutdown);
 					LastStepTime = Model.UtcNow - LoopPeriod;
-					m_bot_main_timer.Start();
+					Cancel = CancellationTokenSource.CreateLinkedTokenSource(Shutdown);
+					if (!Model.BackTesting) m_bot_main_timer.Start();
 					HandleTick();
 				}
 
 				// Notify active changed
-				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Active)));
+				NotifyPropertyChanged(nameof(Active));
 
 				// Handlers
 				async void HandleTick(object sender = null, EventArgs e = null)
@@ -136,8 +146,16 @@ namespace CoinFlip.Bots
 						if (!Active)
 							return;
 
-						if (!Model.BackTesting)
-							await Step();
+						// Stop the timer until we know when to next step the bot
+						m_bot_main_timer.Stop();
+
+						// Step
+						Debug.Assert(!Model.BackTesting);
+						await Step();
+
+						// Restart the timer
+						m_bot_main_timer.Interval = LoopPeriod;
+						m_bot_main_timer.Start();
 					}
 					catch (Exception ex)
 					{
@@ -150,14 +168,14 @@ namespace CoinFlip.Bots
 		}
 		private DispatcherTimer m_bot_main_timer;
 
-		/// <summary>How frequently the Bot wants to be stepped</summary>
+		/// <summary>How frequently the Bot wants to be stepped. Note: this is evaluated with each step so steps don't have to be regular</summary>
 		public virtual TimeSpan LoopPeriod => TimeSpan.FromMilliseconds(1000);
-
-		/// <summary>The time span until this bot is due to be stepped</summary>
-		public TimeSpan TimeTillNextStep => (LastStepTime + LoopPeriod) - Model.UtcNow;
 
 		/// <summary>Time stamp of when the last occurred</summary>
 		public DateTimeOffset LastStepTime { get; private set; }
+
+		/// <summary>The time span until this bot is due to be stepped</summary>
+		public TimeSpan TimeTillNextStep => (LastStepTime + LoopPeriod) - Model.UtcNow;
 
 		/// <summary>Cancel token for deactivating the bot</summary>
 		public CancellationTokenSource Cancel { get; private set; }
@@ -258,5 +276,9 @@ namespace CoinFlip.Bots
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler PropertyChanged;
+		public void NotifyPropertyChanged(string prop_name)
+		{
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+		}
 	}
 }

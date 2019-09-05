@@ -4,7 +4,7 @@ using CoinFlip.Bots;
 using Rylogic.Common;
 using Rylogic.Extn;
 
-namespace Bot.Rebalance
+namespace Bot.HeikinAshiChaser
 {
 	public class SettingsData :SettingsBase<SettingsData>
 	{
@@ -12,9 +12,7 @@ namespace Bot.Rebalance
 		{
 			Exchange = string.Empty;
 			Pair = string.Empty;
-			AllInPrice = 0.0;
-			AllOutPrice = 100_000.0;
-			RebalanceThreshold = 0.1;
+			TimeFrame = ETimeFrame.Day1;
 			PendingOrders = new MonitoredOrders();
 
 			AutoSaveOnChanges = true;
@@ -39,25 +37,11 @@ namespace Bot.Rebalance
 			set => set(nameof(Pair), value);
 		}
 
-		/// <summary>The price (in Quote/Base) at which the balance is maximally in the base currency</summary>
-		public double AllInPrice
+		/// <summary>The name of the pair to trade</summary>
+		public ETimeFrame TimeFrame
 		{
-			get => get<double>(nameof(AllInPrice));
-			set => set(nameof(AllInPrice), value);
-		}
-
-		/// <summary>The price (in Quote/Base) at which the balance is maximally in the quote currency</summary>
-		public double AllOutPrice
-		{
-			get => get<double>(nameof(AllOutPrice));
-			set => set(nameof(AllOutPrice), value);
-		}
-
-		/// <summary>The minimum ratio difference before a rebalance is done</summary>
-		public double RebalanceThreshold
-		{
-			get => get<double>(nameof(RebalanceThreshold));
-			set => set(nameof(RebalanceThreshold), value);
+			get => get<ETimeFrame>(nameof(TimeFrame));
+			set => set(nameof(TimeFrame), value);
 		}
 
 		/// <summary>Orders that have been created and are live on an exchange waiting to be filled</summary>
@@ -72,16 +56,24 @@ namespace Bot.Rebalance
 		{
 			if (!Exchange.HasValue())
 				return new Exception("No exchange configured");
-			if (model.Exchanges[Exchange] == null)
+
+			var exchange = model.Exchanges[Exchange];
+			if (exchange == null)
 				return new Exception("The configured exchange is not available");
+
 			if (!Pair.HasValue())
 				return new Exception("No pair configured");
 
-			var pair = model.Exchanges[Exchange].Pairs[Pair];
+			var pair = exchange.Pairs[Pair];
 			if (pair == null)
 				return new Exception("The configured paid is not available");
-			if (AllInPrice >= AllOutPrice)
-				return new Exception("Price range is invalid");
+
+			if (TimeFrame == ETimeFrame.None)
+				return new Exception("No timeframe configured");
+
+			var tf = pair.CandleDataAvailable.IndexOf(x => x == TimeFrame) != -1;
+			if (tf == false)
+				return new Exception("Timeframe not available for the configured pair and exchange");
 
 			if (fund[pair.Base].Total < 0)
 				return new Exception("Fund base amount is invalid");
@@ -90,9 +82,6 @@ namespace Bot.Rebalance
 
 			if (fund[pair.Base].Total == 0 && fund[pair.Quote].Total == 0)
 				return new Exception("Combined holdings must be > 0");
-
-			if (RebalanceThreshold <= 0)
-				return new Exception("Rebalance threshold is invalid");
 
 			return null;
 		}

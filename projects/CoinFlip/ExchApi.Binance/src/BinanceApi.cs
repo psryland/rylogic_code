@@ -77,10 +77,6 @@ namespace Binance.API
 						throw new Exception($"Unknown interval value: {limit.Interval}");
 				}
 			}
-
-			// Initialise the local caches
-			await TickerData.InitAsync();
-			await UserData.InitAsync();
 		}
 
 		/// <summary>Watchdog background thread for keeping web socket connections alive</summary>
@@ -102,17 +98,20 @@ namespace Binance.API
 					m_watch_dog.Start(m_watch_dog_exit.Token);
 				}
 
-				void WatchDogEntryPoint(object exit_)
+				async void WatchDogEntryPoint(object exit_)
 				{
 					for (var exit = (CancellationToken)exit_; ;)
 					{
 						if (exit.WaitHandle.WaitOne(TimeSpan.FromSeconds(1)))
 							break;
 
-						UserData.WatchDog();
-						CandleData.WatchDog();
-						MarketData.WatchDog();
-						TickerData.WatchDog();
+						await Dispatcher.BeginInvoke(new Action(() =>
+						{
+							UserData.WatchDog();
+							CandleData.WatchDog();
+							MarketData.WatchDog();
+							TickerData.WatchDog();
+						}));
 					}
 				}
 			}

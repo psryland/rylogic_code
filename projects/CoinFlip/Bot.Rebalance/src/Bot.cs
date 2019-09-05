@@ -56,22 +56,21 @@ namespace Bot.Rebalance
 		public override TimeSpan LoopPeriod => TimeSpan.FromMinutes(60);
 
 		/// <summary>True if the bot is ok to run</summary>
-		protected override bool CanActivateInternal
-		{
-			get
-			{
-				var err = Settings.Validate(Model, Fund);
-				if (err == null) return true;
-				return false;
-			}
-		}
+		protected override bool CanActivateInternal => Settings.Validate(Model, Fund) == null;
 
 		/// <summary>Configure</summary>
 		protected override Task ConfigureInternal(object owner)
 		{
-			new ConfigureUI((Window)owner, this).Show();
+			if (m_config_ui == null)
+			{
+				m_config_ui = new ConfigureUI((Window)owner, this);
+				m_config_ui.Closed += delegate { m_config_ui = null; };
+				m_config_ui.Show();
+			}
+			m_config_ui.Focus();
 			return Task.CompletedTask;
 		}
+		private ConfigureUI m_config_ui;
 
 		/// <summary>Step the bot</summary>
 		protected override async Task StepInternal()

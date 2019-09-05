@@ -20,170 +20,275 @@ namespace Binance.API
 		public UserDataCache(BinanceApi api)
 		{
 			Api = api;
-			Balances = new BalancesData();
-			Orders = new OrdersStream(Api);
-			History = new HistoryStream(Api);
-			UserDataKeepAliveTimeout = TimeSpan.FromMinutes(30);
+			Streams = new Dictionary<int, UserDataStream>();
 		}
 		public void Dispose()
 		{
-			// Don't worry about closing the user stream, dropping the connection takes care of it
-			Socket = null;
-		}
-		public async Task InitAsync()
-		{
-			Balances = await Api.GetBalances();
-			await Orders.InitAsync();
-			await History.InitAsync();
-
-			// Start the user data stream. User data times out after 60minutes
-			ListenKey = await Api.StartUserDataStream();
-			m_listen_key_bump = DateTimeOffset.Now;
-
-			// Create the socket (requires the ListenKey in the endpoint URL)
-			Socket = new WebSocket(EndPoint);
+			Util.DisposeRange(Streams.Values);
+			Streams.Clear();
 		}
 
 		/// <summary>Check all streams are alive and healthy, if not remove them</summary>
 		public void WatchDog()
 		{
-			Api.Dispatcher.BeginInvoke(new Action(() =>
+			lock (Streams)
 			{
-				if (Socket != null && Socket.ReadyState != WebSocketState.Open)
-					Socket = new WebSocket(EndPoint);
-			}));
+				var dead = Streams.Where(x => x.Value.Socket.ReadyState != WebSocketState.Open).ToList();
+				foreach (var corpse in dead)
+				{
+					BinanceApi.Log.Write(ELogLevel.Warn, $"Restarting user data stream");
+					Util.Dispose(corpse.Value);
+					Streams.Remove(corpse.Key);
+				}
+			}
 		}
 
 		/// <summary>The owning API instance</summary>
 		private BinanceApi Api { get; }
 
-		/// <summary>How often to kick the user data watchdog</summary>
-		private TimeSpan UserDataKeepAliveTimeout { get; }
-
-		/// <summary>A token used for user data identification</summary>
-		private string ListenKey { get; set; }
-		private DateTimeOffset m_listen_key_bump;
+		/// <summary>Container of ticker stream instances</summary>
+		private Dictionary<int, UserDataStream> Streams { get; set; }
 
 		/// <summary>Account balance data</summary>
 		public BalancesData Balances
 		{
-			get // Worker thread context
+			get
 			{
-				lock (m_balance_data)
-					return new BalancesData(m_balance_data);
-			}
-			private set
-			{
-				m_balance_data = value;
+				const int key = 0;
+				try
+				{
+					var stream = (UserDataStream)null;
+					lock (Streams)
+					{
+						if (!Streams.TryGetValue(key, out stream) || stream.Socket == null)
+							stream = Streams[key] = new UserDataStream(this);
+					}
+					return stream.Balances;
+				}
+				catch (Exception ex)
+				{
+					BinanceApi.Log.Write(ELogLevel.Error, ex, $"Subscribing to user data failed.");
+					lock (Streams) Streams.Remove(key);
+					return null;
+				}
 			}
 		}
-		private BalancesData m_balance_data;
 
 		/// <summary>Currently active orders on the exchange (per currency pair)</summary>
-		public OrdersStream Orders { get; }
+		public OrdersStream Orders
+		{
+			get
+			{
+				const int key = 0;
+				try
+				{
+					var stream = (UserDataStream)null;
+					lock (Streams)
+					{
+						if (!Streams.TryGetValue(key, out stream) || stream.Socket == null)
+							stream = Streams[key] = new UserDataStream(this);
+					}
+					return stream.Orders;
+				}
+				catch (Exception ex)
+				{
+					BinanceApi.Log.Write(ELogLevel.Error, ex, $"Subscribing to user data failed.");
+					lock (Streams) Streams.Remove(key);
+					return null;
+				}
+			}
+		}
 
 		/// <summary>Completed trades on the exchange (per currency pair)</summary>
-		public HistoryStream History { get; }
-
-		/// <summary>The Url endpoint for the user data stream</summary>
-		private string EndPoint => $"{Api.UrlSocketAddress}ws/{ListenKey}";
-
-		/// <summary></summary>
-		private WebSocket Socket
+		public HistoryStream History
 		{
-			get => m_socket;
-			set
+			get
 			{
-				if (m_socket == value) return;
-				if (m_socket != null)
+				const int key = 0;
+				try
 				{
-					m_socket.OnClose -= HandleClosed;
-					m_socket.OnError -= HandleError;
-					m_socket.OnMessage -= HandleMessage;
-					m_socket.OnOpen -= HandleOpened;
-					Util.Dispose(ref m_socket);
-				}
-				m_socket = value;
-				if (m_socket != null)
-				{
-					m_socket.OnOpen += HandleOpened;
-					m_socket.OnMessage += HandleMessage;
-					m_socket.OnError += HandleError;
-					m_socket.OnClose += HandleClosed;
-					m_socket.Connect();
-				}
-
-				// Handlers
-				void HandleOpened(object sender, EventArgs e)
-				{
-					BinanceApi.Log.Write(ELogLevel.Info, $"WebSocket stream opened for user data {ListenKey}");
-				}
-				void HandleClosed(object sender, CloseEventArgs e)
-				{
-					BinanceApi.Log.Write(ELogLevel.Info, $"WebSocket stream closed for user data {ListenKey}");
-				}
-				void HandleError(object sender, ErrorEventArgs e)
-				{
-					BinanceApi.Log.Write(ELogLevel.Error, e.Exception, $"WebSocket stream error for user data {ListenKey}");
-				}
-				void HandleMessage(object sender, MessageEventArgs e)
-				{
-					var jtok = JToken.Parse(e.Data);
-					var event_type = jtok["e"].Value<string>();
-					switch (event_type)
+					var stream = (UserDataStream)null;
+					lock (Streams)
 					{
-					default:
-						{
-							BinanceApi.Log.Write(ELogLevel.Warn, $"Unknown event type received in user data stream");
-							break;
-						}
-					case WebSocketEvent.EventName.AccountInfo:
-						{
-							ApplyUpdate(jtok.ToObject<AccountUpdate>());
-							break;
-						}
-					case WebSocketEvent.EventName.OrderTrade:
-						{
-							ApplyUpdate(jtok.ToObject<TradeOrderUpdate>());
-							break;
-						}
+						if (!Streams.TryGetValue(key, out stream) || stream.Socket == null)
+							stream = Streams[key] = new UserDataStream(this);
 					}
-
-					// Kick the watchdog if it's time
-					if (DateTimeOffset.Now - m_listen_key_bump > UserDataKeepAliveTimeout)
-					{
-						Api.KeepAliveUserDataStream(ListenKey).Wait();
-						m_listen_key_bump = DateTimeOffset.Now;
-					}
+					return stream.History;
+				}
+				catch (Exception ex)
+				{
+					BinanceApi.Log.Write(ELogLevel.Error, ex, $"Subscribing to user data failed.");
+					lock (Streams) Streams.Remove(key);
+					return null;
 				}
 			}
 		}
-		private WebSocket m_socket;
 
-		/// <summary>Update account data</summary>
-		private void ApplyUpdate(AccountUpdate update)
+		/// <summary>User data</summary>
+		private class UserDataStream :IDisposable
 		{
-			lock (m_balance_data)
+			public UserDataStream(UserDataCache owner)
 			{
-				var map = update.Balances.ToDictionary(x => x.Asset, x => x);
-				foreach (var bal in m_balance_data.Balances)
+				try
 				{
-					if (map.TryGetValue(bal.Asset, out var upd))
+					Cache = owner;
+					Balances = Api.GetBalances().Result;
+					Orders = new OrdersStream(Api);
+					History = new HistoryStream(Api);
+					UserDataKeepAliveTimeout = TimeSpan.FromMinutes(30);
+
+					// Start the user data stream. User data times out after 60minutes
+					ListenKey = Api.StartUserDataStream().Result;
+					m_listen_key_bump = DateTimeOffset.Now;
+
+					// Create the socket (requires the ListenKey in the endpoint URL)
+					Socket = new WebSocket(EndPoint);
+				}
+				catch
+				{
+					Dispose();
+					throw;
+				}
+			}
+			public void Dispose()
+			{
+				Socket = null;
+			}
+
+			/// <summary>The owning cache</summary>
+			private UserDataCache Cache { get; }
+
+			/// <summary></summary>
+			private BinanceApi Api => Cache.Api;
+
+			/// <summary>Account balance data</summary>
+			public BalancesData Balances // Worker thread context
+			{
+				get
+				{
+					lock (m_balance_data)
+						return new BalancesData(m_balance_data);
+				}
+				private set
+				{
+					m_balance_data = value;
+				}
+			}
+			private BalancesData m_balance_data;
+
+			/// <summary>Currently active orders on the exchange (per currency pair)</summary>
+			public OrdersStream Orders { get; }
+
+			/// <summary>Completed trades on the exchange (per currency pair)</summary>
+			public HistoryStream History { get; }
+
+			/// <summary>The Url endpoint for the user data stream</summary>
+			private string EndPoint => $"{Api.UrlSocketAddress}ws/{ListenKey}";
+
+			/// <summary></summary>
+			public WebSocket Socket
+			{
+				get => m_socket;
+				private set
+				{
+					if (m_socket == value) return;
+					if (m_socket != null)
 					{
-						bal.Free = upd.Free;
-						bal.Locked = upd.Locked;
+						m_socket.OnClose -= HandleClosed;
+						m_socket.OnError -= HandleError;
+						m_socket.OnMessage -= HandleMessage;
+						m_socket.OnOpen -= HandleOpened;
+						Util.Dispose(ref m_socket);
+					}
+					m_socket = value;
+					if (m_socket != null)
+					{
+						m_socket.OnOpen += HandleOpened;
+						m_socket.OnMessage += HandleMessage;
+						m_socket.OnError += HandleError;
+						m_socket.OnClose += HandleClosed;
+						m_socket.Connect();
+					}
+
+					// Handlers
+					void HandleOpened(object sender, EventArgs e)
+					{
+						BinanceApi.Log.Write(ELogLevel.Info, $"WebSocket stream opened for user data {ListenKey}");
+					}
+					void HandleClosed(object sender, CloseEventArgs e)
+					{
+						BinanceApi.Log.Write(ELogLevel.Info, $"WebSocket stream closed for user data {ListenKey}");
+					}
+					void HandleError(object sender, ErrorEventArgs e)
+					{
+						BinanceApi.Log.Write(ELogLevel.Error, e.Exception, $"WebSocket stream error for user data {ListenKey}");
+					}
+					void HandleMessage(object sender, MessageEventArgs e)
+					{
+						var jtok = JToken.Parse(e.Data);
+						var event_type = jtok["e"].Value<string>();
+						switch (event_type)
+						{
+						default:
+							{
+								BinanceApi.Log.Write(ELogLevel.Warn, $"Unknown event type ({event_type}) received in user data stream");
+								break;
+							}
+						case WebSocketEvent.EventName.AccountInfo:
+							{
+								ApplyUpdate(jtok.ToObject<AccountUpdate>());
+								break;
+							}
+						case WebSocketEvent.EventName.OrderTrade:
+							{
+								ApplyUpdate(jtok.ToObject<TradeOrderUpdate>());
+								break;
+							}
+						}
+
+						// Kick the watchdog if it's time
+						if (DateTimeOffset.Now - m_listen_key_bump > UserDataKeepAliveTimeout)
+						{
+							Api.KeepAliveUserDataStream(ListenKey).Wait();
+							m_listen_key_bump = DateTimeOffset.Now;
+						}
 					}
 				}
-				m_balance_data.UpdateTime = update.Updated;
 			}
-		}
+			private WebSocket m_socket;
 
-		/// <summary>Update account data</summary>
-		private void ApplyUpdate(TradeOrderUpdate update)
-		{
-			// Apply the consequences of this update to the orders and the history
-			Orders.ApplyUpdate(update);
-			History.ApplyUpdate(update);
+			/// <summary>How often to kick the user data watchdog</summary>
+			private TimeSpan UserDataKeepAliveTimeout { get; }
+
+			/// <summary>A token used for user data identification</summary>
+			private string ListenKey { get; set; }
+			private DateTimeOffset m_listen_key_bump;
+
+			/// <summary>Update account data</summary>
+			private void ApplyUpdate(AccountUpdate update)
+			{
+				lock (m_balance_data)
+				{
+					var map = update.Balances.ToDictionary(x => x.Asset, x => x);
+					foreach (var bal in m_balance_data.Balances)
+					{
+						if (map.TryGetValue(bal.Asset, out var upd))
+						{
+							bal.Free = upd.Free;
+							bal.Locked = upd.Locked;
+						}
+					}
+					m_balance_data.UpdateTime = update.Updated;
+				}
+			}
+
+			/// <summary>Update account data</summary>
+			private void ApplyUpdate(TradeOrderUpdate update)
+			{
+				// Apply the consequences of this update to the orders and the history
+				Orders.ApplyUpdate(update);
+				History.ApplyUpdate(update);
+			}
 		}
 
 		/// <summary>Proxy object for lists of active orders</summary>
@@ -196,12 +301,10 @@ namespace Binance.API
 			{
 				m_api = api;
 				m_orders = new LazyDictionary<CurrencyPair, List<Order>>();
-			}
-			public async Task InitAsync()
-			{
+
 				// Get all open orders at start up.
 				// That way any pair missing in 'm_orders' does not have any orders
-				var orders = await m_api.GetOpenOrders();
+				var orders = m_api.GetOpenOrders().Result;
 				lock (m_orders)
 				{
 					foreach (var order in orders)
@@ -230,7 +333,7 @@ namespace Binance.API
 				}
 			}
 
-			/// <summary>Apply an update to the trade history</summary>
+			/// <summary>Apply an update to the order stream</summary>
 			internal void ApplyUpdate(TradeOrderUpdate update)
 			{
 				// Get the orders associated with the pair in the update
@@ -293,7 +396,7 @@ namespace Binance.API
 						{
 							// A trade was made in relation to this order
 							// The order was filled, so remove it from the orders list
-							if (update.Status == EOrderStatus.PARTIALLY_FILLED) {}
+							if (update.Status == EOrderStatus.PARTIALLY_FILLED) { }
 							else if (update.Status == EOrderStatus.FILLED)
 								orders_per_pair.RemoveIf(x => x.OrderId == update.OrderId);
 							else
@@ -315,10 +418,6 @@ namespace Binance.API
 			{
 				m_api = api;
 				m_history = new Dictionary<CurrencyPair, List<OrderFill>>();
-			}
-			public async Task InitAsync()
-			{
-				await Task.CompletedTask;
 			}
 
 			/// <summary>Access all historic trades for the given currency pair, since 'since' if given</summary>
@@ -342,7 +441,7 @@ namespace Binance.API
 					{
 						if (since != null)
 						{
-							var idx = history_per_pair.BinarySearch(x => x.Created.CompareTo(since.Value), find_insert_position:true);
+							var idx = history_per_pair.BinarySearch(x => x.Created.CompareTo(since.Value), find_insert_position: true);
 							return history_per_pair.GetRange(idx, history_per_pair.Count - idx);
 						}
 						else

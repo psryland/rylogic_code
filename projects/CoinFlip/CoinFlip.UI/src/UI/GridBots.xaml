@@ -55,8 +55,37 @@
 				</DataGridTemplateColumn.CellEditingTemplate>
 			</DataGridTemplateColumn>
 			<DataGridTemplateColumn
+				Header="Valid"
+				Width="0.4*"
+				>
+				<DataGridTemplateColumn.CellTemplate>
+					<DataTemplate>
+						<Image
+							Stretch="UniformToFill"
+							StretchDirection="DownOnly"
+							RenderOptions.BitmapScalingMode="HighQuality"
+							PreviewMouseLeftButtonDown="HandleShowConfigureUI"
+							MaxWidth="18"
+							>
+							<Image.Style>
+								<Style TargetType="{x:Type Image}">
+									<Style.Triggers>
+										<DataTrigger Binding="{Binding CanActivate}" Value="False">
+											<Setter Property="Source" Value="{StaticResource check_reject}"/>
+										</DataTrigger>
+										<DataTrigger Binding="{Binding CanActivate}" Value="True">
+											<Setter Property="Source" Value="{StaticResource check_accept}"/>
+										</DataTrigger>
+									</Style.Triggers>
+								</Style>
+							</Image.Style>
+						</Image>
+					</DataTemplate>
+				</DataGridTemplateColumn.CellTemplate>
+			</DataGridTemplateColumn>
+			<DataGridTemplateColumn
 				Header="Active"
-				Width="0.3*"
+				Width="0.4*"
 				>
 				<DataGridTemplateColumn.CellTemplate>
 					<DataTemplate>

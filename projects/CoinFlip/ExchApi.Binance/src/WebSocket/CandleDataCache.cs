@@ -29,18 +29,16 @@ namespace Binance.API
 		/// <summary>Check all streams are alive and healthy, if not remove them</summary>
 		public void WatchDog()
 		{
-			Api.Dispatcher.BeginInvoke(new Action(() =>
+			lock (Streams)
 			{
-				lock (Streams)
+				var dead = Streams.Where(x => x.Value.Socket.ReadyState != WebSocketState.Open).ToList();
+				foreach (var corpse in dead)
 				{
-					var dead = Streams.Where(x => x.Value.Socket.ReadyState != WebSocketState.Open).ToList();
-					foreach (var corpse in dead)
-					{
-						Util.Dispose(corpse.Value);
-						Streams.Remove(corpse.Key);
-					}
+					BinanceApi.Log.Write(ELogLevel.Warn, $"Restarting candle data stream for {corpse.Key.Pair.Id}");
+					Util.Dispose(corpse.Value);
+					Streams.Remove(corpse.Key);
 				}
-			}));
+			}
 		}
 
 		/// <summary>The owning API instance</summary>
@@ -79,7 +77,7 @@ namespace Binance.API
 				}
 				catch (Exception ex)
 				{
-					BinanceApi.Log.Write(ELogLevel.Error, $"Subscribing to candle data for {pair}/{period} failed. {ex.Message}");
+					BinanceApi.Log.Write(ELogLevel.Error, ex, $"Subscribing to candle data for {pair.Id}/{period} failed.");
 					lock (Streams) Streams.Remove(key);
 					return new List<MarketChartData>();
 				}

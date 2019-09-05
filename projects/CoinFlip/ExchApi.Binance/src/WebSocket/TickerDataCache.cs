@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Binance.API.DomainObjects;
 using ExchApi.Common.JsonConverter;
@@ -16,200 +17,247 @@ namespace Binance.API
 		public TickerDataCache(BinanceApi api)
 		{
 			Api = api;
+			Streams = new Dictionary<int, TickerStream>();
 		}
 		public void Dispose()
 		{
-			Socket = null;
-		}
-		public async Task InitAsync()
-		{
-			m_ticker = await Api.GetTicker();
-			m_ticker.Sort(x => x.Pair.Id);
-
-			// Create the socket
-			Socket = new WebSocket(EndPoint);
+			Util.DisposeRange(Streams.Values);
+			Streams.Clear();
 		}
 
 		/// <summary>Check all streams are alive and healthy, if not remove them</summary>
 		public void WatchDog()
 		{
-			Api.Dispatcher.BeginInvoke(new Action(() =>
+			lock (Streams)
 			{
-				if (Socket != null && Socket.ReadyState != WebSocketState.Open)
-					Socket = new WebSocket(EndPoint);
-			}));
+				var dead = Streams.Where(x => x.Value.Socket.ReadyState != WebSocketState.Open).ToList();
+				foreach (var corpse in dead)
+				{
+					BinanceApi.Log.Write(ELogLevel.Warn, $"Restarting ticker data stream");
+					Util.Dispose(corpse.Value);
+					Streams.Remove(corpse.Key);
+				}
+			}
 		}
 
 		/// <summary>The owning API instance</summary>
 		private BinanceApi Api { get; }
 
-		/// <summary>Account balance data</summary>
-		public List<Ticker> AllTickers() // Worker thread context
-		{
-			lock (m_ticker)
-				return new List<Ticker>(m_ticker);
-		}
-		private List<Ticker> m_ticker;
+		/// <summary>Container of ticker stream instances</summary>
+		private Dictionary<int, TickerStream> Streams { get; set; }
 
 		/// <summary>Return the spot price for the given pair</summary>
 		public Ticker this[CurrencyPair pair] // Worker thread context
 		{
 			get
 			{
-				lock (m_ticker)
+				const int key = 0;
+				try
 				{
-					var sym = pair.Id;
-					var idx = m_ticker.BinarySearch(x => x.Pair.Id.CompareTo(sym));
-					return idx >= 0 ? new Ticker(m_ticker[idx]) : null;
+					var stream = (TickerStream)null;
+					lock (Streams)
+					{
+						if (!Streams.TryGetValue(key, out stream) || stream.Socket == null)
+							stream = Streams[key] = new TickerStream(this);
+					}
+					lock (stream.TickerData)
+					{
+						var sym = pair.Id;
+						var idx = stream.TickerData.BinarySearch(x => x.Pair.Id.CompareTo(sym));
+						return idx >= 0 ? new Ticker(stream.TickerData[idx]) : null;
+					}
+				}
+				catch (Exception ex)
+				{
+					BinanceApi.Log.Write(ELogLevel.Error, ex, $"Subscribing to ticker data failed.");
+					lock (Streams) Streams.Remove(key);
+					return null;
 				}
 			}
 		}
 
-		/// <summary>The Url endpoint for the user data stream</summary>
-		private string EndPoint => $"{Api.UrlSocketAddress}ws/!ticker@arr";
-
-		/// <summary></summary>
-		private WebSocket Socket
+		/// <summary>Ticker data</summary>
+		private class TickerStream :IDisposable
 		{
-			get => m_socket;
-			set
+			public TickerStream(TickerDataCache owner)
 			{
-				if (m_socket == value) return;
-				if (m_socket != null)
+				try
 				{
-					m_socket.OnClose -= HandleClosed;
-					m_socket.OnError -= HandleError;
-					m_socket.OnMessage -= HandleMessage;
-					m_socket.OnOpen -= HandleOpened;
-					Util.Dispose(ref m_socket);
-				}
-				m_socket = value;
-				if (m_socket != null)
-				{
-					m_socket.OnOpen += HandleOpened;
-					m_socket.OnMessage += HandleMessage;
-					m_socket.OnError += HandleError;
-					m_socket.OnClose += HandleClosed;
-					m_socket.Connect();
-				}
+					Cache = owner;
 
-				// Handlers
-				void HandleOpened(object sender, EventArgs e)
-				{
-					BinanceApi.Log.Write(ELogLevel.Debug, $"WebSocket stream opened for ticker data");
+					// Request a snapshot to initialise the ticker data
+					TickerData = Api.GetTicker().Result;
+					TickerData.Sort(x => x.Pair.Id);
+
+					// Create the socket
+					Socket = new WebSocket(EndPoint);
 				}
-				void HandleClosed(object sender, CloseEventArgs e)
+				catch
 				{
-					BinanceApi.Log.Write(ELogLevel.Debug, $"WebSocket stream closed for ticker data");
-				}
-				void HandleError(object sender, ErrorEventArgs e)
-				{
-					BinanceApi.Log.Write(ELogLevel.Error, e.Exception, $"WebSocket stream error for ticker data");
-				}
-				void HandleMessage(object sender, MessageEventArgs e)
-				{
-					ApplyUpdate(JToken.Parse(e.Data).ToObject<List<TickerUpdate>>());
+					Dispose();
+					throw;
 				}
 			}
-		}
-		private WebSocket m_socket;
-
-		/// <summary></summary>
-		private void ApplyUpdate(List<TickerUpdate> updates)
-		{
-			lock (m_ticker)
+			public void Dispose()
 			{
-				foreach (var update in updates)
-				{
-					var sym = update.Ticker.Pair.Id;
-					var idx = m_ticker.BinarySearch(x => x.Pair.Id.CompareTo(sym));
-					if (idx >= 0)
-						m_ticker[idx] = update.Ticker;
-					else
-						m_ticker.Insert(~idx, update.Ticker);
-				}
+				Socket = null;
 			}
-		}
 
-		/// <summary></summary>
-		private class TickerUpdate
-		{
-			public TickerUpdate()
-			{
-				Ticker = new Ticker();
-			}
-			
+			/// <summary>The owning cache</summary>
+			private TickerDataCache Cache { get; }
+
 			/// <summary></summary>
-			public Ticker Ticker { get; }
+			private BinanceApi Api => Cache.Api;
 
-			[JsonProperty("e")]
-			public string EventType { get; set; }
+			/// <summary>The ticker data, sorted by pair</summary>
+			public List<Ticker> TickerData { get; }
 
-			[JsonProperty("E"), JsonConverter(typeof(UnixMSToDateTimeOffset))]
-			public DateTimeOffset EventTime { get; set; }
+			/// <summary>The Url endpoint for the user data stream</summary>
+			private string EndPoint => $"{Api.UrlSocketAddress}ws/!ticker@arr";
 
-			[JsonProperty("s")]
-			private string PairInternal { set => Ticker.Pair = CurrencyPair.Parse(value); }
+			/// <summary></summary>
+			public WebSocket Socket
+			{
+				get => m_socket;
+				private set
+				{
+					if (m_socket == value) return;
+					if (m_socket != null)
+					{
+						m_socket.OnClose -= HandleClosed;
+						m_socket.OnError -= HandleError;
+						m_socket.OnMessage -= HandleMessage;
+						m_socket.OnOpen -= HandleOpened;
+						Util.Dispose(ref m_socket);
+					}
+					m_socket = value;
+					if (m_socket != null)
+					{
+						m_socket.OnOpen += HandleOpened;
+						m_socket.OnMessage += HandleMessage;
+						m_socket.OnError += HandleError;
+						m_socket.OnClose += HandleClosed;
+						m_socket.Connect();
+					}
 
-			[JsonProperty("p")]
-			private double PriceChange { set => Ticker.PriceChange = value; }
+					// Handlers
+					void HandleOpened(object sender, EventArgs e)
+					{
+						BinanceApi.Log.Write(ELogLevel.Debug, $"WebSocket stream opened for ticker data");
+					}
+					void HandleClosed(object sender, CloseEventArgs e)
+					{
+						BinanceApi.Log.Write(ELogLevel.Debug, $"WebSocket stream closed for ticker data");
+					}
+					void HandleError(object sender, ErrorEventArgs e)
+					{
+						BinanceApi.Log.Write(ELogLevel.Error, e.Exception, $"WebSocket stream error for ticker data");
+					}
+					void HandleMessage(object sender, MessageEventArgs e)
+					{
+						ApplyUpdate(JToken.Parse(e.Data).ToObject<List<TickerUpdate>>());
+					}
+				}
+			}
+			private WebSocket m_socket;
 
-			[JsonProperty("P")]
-			private double PriceChangePercent { set => Ticker.PriceChangePercent = value; }
+			/// <summary></summary>
+			private void ApplyUpdate(List<TickerUpdate> updates)
+			{
+				lock (TickerData)
+				{
+					foreach (var update in updates)
+					{
+						var sym = update.Ticker.Pair.Id;
+						var idx = TickerData.BinarySearch(x => x.Pair.Id.CompareTo(sym));
+						if (idx >= 0)
+							TickerData[idx] = update.Ticker;
+						else
+							TickerData.Insert(~idx, update.Ticker);
+					}
+				}
+			}
 
-			[JsonProperty("w")]
-			private double WeightedAvgPrice { set => Ticker.WeightedAvgPrice = value; }
+			/// <summary></summary>
+			private class TickerUpdate
+			{
+				public TickerUpdate()
+				{
+					Ticker = new Ticker();
+				}
+			
+				/// <summary></summary>
+				public Ticker Ticker { get; }
 
-			[JsonProperty("x")]
-			private double PrevClosePrice { set => Ticker.PrevClosePrice = value; }
+				[JsonProperty("e")]
+				public string EventType { get; set; }
 
-			[JsonProperty("c")]
-			private double LastPrice { set => Ticker.LastPrice = value; }
+				[JsonProperty("E"), JsonConverter(typeof(UnixMSToDateTimeOffset))]
+				public DateTimeOffset EventTime { get; set; }
 
-			[JsonProperty("Q")]
-			private double LastQty { set => Ticker.LastQty = value; }
+				[JsonProperty("s")]
+				private string PairInternal { set => Ticker.Pair = CurrencyPair.Parse(value); }
 
-			[JsonProperty("b")]
-			private double PriceB2Q { set => Ticker.PriceB2Q = value; }
+				[JsonProperty("p")]
+				private double PriceChange { set => Ticker.PriceChange = value; }
 
-			[JsonProperty("a")]
-			private double PriceQ2B { set => Ticker.PriceQ2B = value; }
+				[JsonProperty("P")]
+				private double PriceChangePercent { set => Ticker.PriceChangePercent = value; }
 
-			[JsonProperty("B")]
-			public double B2QVolumeQuote { get; set; }
+				[JsonProperty("w")]
+				private double WeightedAvgPrice { set => Ticker.WeightedAvgPrice = value; }
 
-			[JsonProperty("A")]
-			public double Q2BVolumeQuote { get; set; }
+				[JsonProperty("x")]
+				private double PrevClosePrice { set => Ticker.PrevClosePrice = value; }
 
-			[JsonProperty("o")]
-			private double OpenPrice { set => Ticker.OpenPrice = value; }
+				[JsonProperty("c")]
+				private double LastPrice { set => Ticker.LastPrice = value; }
 
-			[JsonProperty("h")]
-			private double HighPrice { set => Ticker.HighPrice = value; }
+				[JsonProperty("Q")]
+				private double LastQty { set => Ticker.LastQty = value; }
 
-			[JsonProperty("l")]
-			private double LowPrice { set => Ticker.LowPrice = value; }
+				[JsonProperty("b")]
+				private double PriceB2Q { set => Ticker.PriceB2Q = value; }
 
-			[JsonProperty("v")]
-			private double VolumeBase { set => Ticker.VolumeBase = value; }
+				[JsonProperty("a")]
+				private double PriceQ2B { set => Ticker.PriceQ2B = value; }
 
-			[JsonProperty("q")]
-			private double VolumeQuote { set => Ticker.VolumeQuote = value; }
+				[JsonProperty("B")]
+				public double B2QVolumeQuote { get; set; }
 
-			[JsonProperty("openTime"), JsonConverter(typeof(UnixMSToDateTimeOffset))]
-			public DateTimeOffset OpenTime { set => Ticker.OpenTime = value; }
+				[JsonProperty("A")]
+				public double Q2BVolumeQuote { get; set; }
 
-			[JsonProperty("closeTime"), JsonConverter(typeof(UnixMSToDateTimeOffset))]
-			public DateTimeOffset CloseTime { set => Ticker.CloseTime = value; }
+				[JsonProperty("o")]
+				private double OpenPrice { set => Ticker.OpenPrice = value; }
 
-			[JsonProperty("F")]
-			private long FirstTradeId { set => Ticker.FirstTradeId = value; }
+				[JsonProperty("h")]
+				private double HighPrice { set => Ticker.HighPrice = value; }
 
-			[JsonProperty("L")]
-			private long LastTradeId { set => Ticker.LastTradeId = value; }
+				[JsonProperty("l")]
+				private double LowPrice { set => Ticker.LowPrice = value; }
 
-			[JsonProperty("n")]
-			private long TradeCount { set => Ticker.TradeCount = value; }
+				[JsonProperty("v")]
+				private double VolumeBase { set => Ticker.VolumeBase = value; }
+
+				[JsonProperty("q")]
+				private double VolumeQuote { set => Ticker.VolumeQuote = value; }
+
+				[JsonProperty("openTime"), JsonConverter(typeof(UnixMSToDateTimeOffset))]
+				public DateTimeOffset OpenTime { set => Ticker.OpenTime = value; }
+
+				[JsonProperty("closeTime"), JsonConverter(typeof(UnixMSToDateTimeOffset))]
+				public DateTimeOffset CloseTime { set => Ticker.CloseTime = value; }
+
+				[JsonProperty("F")]
+				private long FirstTradeId { set => Ticker.FirstTradeId = value; }
+
+				[JsonProperty("L")]
+				private long LastTradeId { set => Ticker.LastTradeId = value; }
+
+				[JsonProperty("n")]
+				private long TradeCount { set => Ticker.TradeCount = value; }
+			}
 		}
 	}
 }

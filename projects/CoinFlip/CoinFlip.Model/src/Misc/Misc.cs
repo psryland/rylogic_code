@@ -122,8 +122,8 @@ namespace CoinFlip
 			default: throw new Exception("Unknown order type string");
 			case global::Binance.API.EOrderType.LIMIT: return EOrderType.Limit;
 			case global::Binance.API.EOrderType.MARKET: return EOrderType.Market;
-			case global::Binance.API.EOrderType.STOP_LOSS: return EOrderType.Limit;
-			case global::Binance.API.EOrderType.STOP_LOSS_LIMIT: return EOrderType.Limit;
+			case global::Binance.API.EOrderType.STOP_LOSS: return EOrderType.Stop;
+			case global::Binance.API.EOrderType.STOP_LOSS_LIMIT: return EOrderType.Stop;
 			case global::Binance.API.EOrderType.TAKE_PROFIT: return EOrderType.Stop;
 			case global::Binance.API.EOrderType.TAKE_PROFIT_LIMIT: return EOrderType.Stop;
 			case global::Binance.API.EOrderType.LIMIT_MAKER: return EOrderType.Limit;

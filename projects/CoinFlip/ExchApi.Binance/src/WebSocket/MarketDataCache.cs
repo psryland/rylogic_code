@@ -36,18 +36,16 @@ namespace Binance.API
 		/// <summary>Check all streams are alive and healthy, if not remove them</summary>
 		public void WatchDog()
 		{
-			Api.Dispatcher.BeginInvoke(new Action(() =>
+			lock (Streams)
 			{
-				lock (Streams)
+				var dead = Streams.Where(x => x.Value.Socket.ReadyState != WebSocketState.Open).ToList();
+				foreach (var corpse in dead)
 				{
-					var dead = Streams.Where(x => x.Value.Socket.ReadyState != WebSocketState.Open).ToList();
-					foreach (var corpse in dead)
-					{
-						Util.Dispose(corpse.Value);
-						Streams.Remove(corpse.Key);
-					}
+					BinanceApi.Log.Write(ELogLevel.Warn, $"Restarting market data stream for {corpse.Key.Id}");
+					Util.Dispose(corpse.Value);
+					Streams.Remove(corpse.Key);
 				}
-			}));
+			}
 		}
 
 		/// <summary>The owning API instance</summary>
@@ -90,7 +88,7 @@ namespace Binance.API
 				}
 				catch (Exception ex)
 				{
-					BinanceApi.Log.Write(ELogLevel.Error, $"Subscribing to market updates for {pair} failed. {ex.Message}");
+					BinanceApi.Log.Write(ELogLevel.Error, ex, $"Subscribing to market updates for {pair.Id} failed.");
 					lock (Streams) Streams.Remove(pair);
 					return new MarketDepth(pair);
 				}

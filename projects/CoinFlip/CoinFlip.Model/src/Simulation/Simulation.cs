@@ -214,7 +214,7 @@ namespace CoinFlip
 		/// <summary>Get/Set whether the simulation is running</summary>
 		public bool Running
 		{
-			get { return m_timer != null; }
+			get => m_timer != null;
 			private set
 			{
 				if (Running == value) return;
