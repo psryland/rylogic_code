@@ -20,7 +20,7 @@
 		GridLinesVisibility="None"
 		HeadersVisibility="Column"
 		ItemsSource="{Binding Orders}"
-		SelectedItem="{Binding Orders/, Mode=TwoWay}"
+		SelectedItem="{Binding Current, Mode=TwoWay}"
 		IsReadOnly="True"
 		x:Name="m_grid"
 		>

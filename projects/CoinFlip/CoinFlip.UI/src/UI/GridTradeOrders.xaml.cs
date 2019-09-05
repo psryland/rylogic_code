@@ -76,14 +76,28 @@ namespace CoinFlip.UI
 				// Handlers
 				void HandleSelectedOrdersChanged(object sender, NotifyCollectionChangedEventArgs e)
 				{
-					if (e.Action == NotifyCollectionChangedAction.Add)
+					if (m_selecting_orders != 0) return;
+					using (Scope.Create(() => ++m_selecting_orders, () => --m_selecting_orders))
 					{
-						if (m_selecting_orders != 0) return;
-						using (Scope.Create(() => ++m_selecting_orders, () => --m_selecting_orders))
+						switch (e.Action)
 						{
-							m_grid.SelectedItems.Clear();
-							foreach (var item in e.NewItems)
-								m_grid.SelectedItems.Add(item);
+						case NotifyCollectionChangedAction.Reset:
+							{
+								m_grid.SelectedItems.Clear();
+								break;
+							}
+						case NotifyCollectionChangedAction.Add:
+							{
+								foreach (var item in e.NewItems)
+									m_grid.SelectedItems.Add(item);
+								break;
+							}
+						case NotifyCollectionChangedAction.Remove:
+							{
+								foreach (var item in e.OldItems)
+									m_grid.SelectedItems.Remove(item);
+								break;
+							}
 						}
 					}
 				}
@@ -146,7 +160,7 @@ namespace CoinFlip.UI
 		public ICollectionView Orders { get; private set; }
 
 		/// <summary>The currently selected exchange</summary>
-		private Order Current
+		public Order Current
 		{
 			get => (Order)Orders?.CurrentItem;
 			set => Orders?.MoveCurrentTo(value);

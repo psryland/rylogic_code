@@ -58,6 +58,7 @@ namespace CoinFlip
 				Indicators = new IndicatorContainer();
 				SelectedOpenOrders = new ObservableCollection<Order>();
 				SelectedCompletedOrders = new ObservableCollection<OrderCompleted>();
+				EditTradeContexts = new List<EditTradeContext>();
 
 				// Enable settings auto save after everything is up and running
 				SettingsData.Settings.AutoSaveOnChanges = true;
@@ -613,9 +614,21 @@ namespace CoinFlip
 		public void EditTrade(Trade trade)
 		{
 			// Initiate a trade edit
-			EditingTrade?.Invoke(this, new EditTradeEventArgs(trade, this));
+			var args = EditTradeContexts.Add2(new EditTradeContext(trade, this));
+			args.Closed += delegate { EditTradeContexts.Remove(args); };
+
+			// Start editing 'trade'
+			EditingTrade?.Invoke(this, args);
 		}
-		public event EventHandler<EditTradeEventArgs> EditingTrade;
+		private List<EditTradeContext> EditTradeContexts { get; }
+		public event EventHandler<EditTradeContext> EditingTrade;
+
+		/// <summary>True if 'trade' is open in an editor somewhere</summary>
+		public bool IsOpenInEditor(Trade trade)
+		{
+			return trade is Order ord && EditTradeContexts.Any(x => x.OrderId == ord.OrderId);
+		}
+
 	}
 
 	#region EventArgs
@@ -625,7 +638,7 @@ namespace CoinFlip
 			:base(after)
 		{}
 	}
-	public class EditTradeEventArgs : EventArgs
+	public class EditTradeContext : EventArgs
 	{
 		// Notes:
 		//  - Observers sign up to the 'EditingTrade' event. When the event fires, observers attach
@@ -633,12 +646,15 @@ namespace CoinFlip
 		//    CancelTrade(), CommitChanges(), or EndEdit() which will signal to all observers the
 		//    outcome of the edit and this dispose this instance.
 
-		public EditTradeEventArgs(Trade original, Model model)
+		public EditTradeContext(Trade original, Model model)
 		{
 			Original = original;
 			Trade = new Trade(original);
 			Model = model;
 		}
+
+		/// <summary>The order of the order being editted (null if the trade is not an existing order)</summary>
+		public long? OrderId => (Original as Order)?.OrderId;
 
 		/// <summary>The existing, unmodified trade or order</summary>
 		public Trade Original { get; }
@@ -674,6 +690,8 @@ namespace CoinFlip
 			Closed?.Invoke(this, this);
 			Closed = null;
 		}
+
+		/// <summary>Raised when editting ends</summary>
 		public event EventHandler Closed;
 
 	}

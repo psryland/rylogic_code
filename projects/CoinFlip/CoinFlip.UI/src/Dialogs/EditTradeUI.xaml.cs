@@ -124,6 +124,7 @@ namespace CoinFlip.UI
 					using (Scope.Create(() => ++m_in_trade_property_changed, () => --m_in_trade_property_changed))
 					{
 						// Ensure the trade remains consistent
+						var update_amounts = false;
 						switch (args.PropertyName)
 						{
 						case nameof(Trade.OrderType):
@@ -132,10 +133,12 @@ namespace CoinFlip.UI
 								{
 									Trade.PriceQ2B = Trade.SpotPriceQ2B;
 									Trade.AmountOut = Trade.AmountIn * Trade.Price;
+									update_amounts = true;
 								}
 								else if (Trade.AmountOut != 0 && Trade.AmountIn != 0)
 								{
 									Trade.Price = Trade.AmountOut / Trade.AmountIn;
+									update_amounts = true;
 								}
 								break;
 							}
@@ -144,10 +147,12 @@ namespace CoinFlip.UI
 								if (Trade.AmountIn != 0 && Trade.Price != 0)
 								{
 									Trade.AmountOut = Trade.AmountIn * Trade.Price;
+									update_amounts = true;
 								}
 								else if (Trade.AmountOut != 0 && Trade.Price != 0)
 								{
 									Trade.AmountIn = Trade.AmountOut / Trade.Price;
+									update_amounts = true;
 								}
 								break;
 							}
@@ -158,10 +163,12 @@ namespace CoinFlip.UI
 								if (Trade.OrderType == EOrderType.Market)
 								{
 									Trade.AmountOut = Trade.AmountIn * Trade.Price;
+									update_amounts = true;
 								}
 								else if (Trade.AmountIn != 0 && Trade.PriceQ2B != 0)
 								{
 									Trade.AmountOut = Trade.AmountIn * Trade.Price;
+									update_amounts = true;
 								}
 								break;
 							}
@@ -172,10 +179,12 @@ namespace CoinFlip.UI
 								if (Trade.OrderType == EOrderType.Market)
 								{
 									Trade.AmountIn = Trade.AmountOut / Trade.Price;
+									update_amounts = true;
 								}
 								else if (Trade.AmountOut != 0 && Trade.PriceQ2B != 0)
 								{
 									Trade.AmountIn = Trade.AmountOut / Trade.Price;
+									update_amounts = true;
 								}
 								break;
 							}
@@ -185,10 +194,12 @@ namespace CoinFlip.UI
 						// These will be ignored if the update comes from the setters.
 						// Use default 'ToString' here because these are user amounts
 						// which don't need to display the full number of SD.
-						PriceQ2B = Trade.PriceQ2B.ToString(8, false);
-						AmountIn = Trade.AmountIn.ToString();
-						AmountOut = Trade.AmountOut.ToString();
-						NotifyPropertyChanged(string.Empty);
+						if (update_amounts)
+						{
+							PriceQ2B = Trade.PriceQ2B.ToString(8, false);
+							AmountIn = Trade.AmountIn.ToString();
+							AmountOut = Trade.AmountOut.ToString();
+						}
 					}
 				}
 			}
@@ -331,6 +342,12 @@ namespace CoinFlip.UI
 					// For valid amounts, update the displayed string
 					if (amount_in != 0)
 						m_amount_in = Trade.AmountIn.ToString();
+
+					NotifyPropertyChanged(nameof(AmountIn));
+					NotifyPropertyChanged(nameof(TradeDescriptionIn));
+					NotifyPropertyChanged(nameof(ValidationResults));
+					NotifyPropertyChanged(nameof(IsAmountInValid));
+					NotifyPropertyChanged(nameof(IsValid));
 				}
 			}
 		}
@@ -361,6 +378,12 @@ namespace CoinFlip.UI
 					// For valid amounts, update the displayed string
 					if (amount_out != 0)
 						m_amount_out = Trade.AmountOut.ToString();
+
+					NotifyPropertyChanged(nameof(AmountOut));
+					NotifyPropertyChanged(nameof(TradeDescriptionOut));
+					NotifyPropertyChanged(nameof(ValidationResults));
+					NotifyPropertyChanged(nameof(IsAmountOutValid));
+					NotifyPropertyChanged(nameof(IsValid));
 				}
 			}
 		}
@@ -392,6 +415,12 @@ namespace CoinFlip.UI
 					// Update the string when a valid
 					if (price_q2b != 0)
 						m_price_q2b = Trade.PriceQ2B.ToString();
+
+					NotifyPropertyChanged(nameof(PriceQ2B));
+					NotifyPropertyChanged(nameof(ValidationResults));
+					NotifyPropertyChanged(nameof(IsAmountInValid));
+					NotifyPropertyChanged(nameof(IsAmountOutValid));
+					NotifyPropertyChanged(nameof(IsValid));
 				}
 			}
 		}

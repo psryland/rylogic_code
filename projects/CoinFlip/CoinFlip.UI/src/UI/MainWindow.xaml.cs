@@ -112,7 +112,7 @@ namespace CoinFlip.UI
 				}
 
 				// Handler
-				void HandleEditingTrade(object sender, EditTradeEventArgs e)
+				void HandleEditingTrade(object sender, EditTradeContext e)
 				{
 					// Create an editor window for the trade
 					var ui = new EditTradeUI(GetWindow(this), Model, e.Trade, e.Original is Order);

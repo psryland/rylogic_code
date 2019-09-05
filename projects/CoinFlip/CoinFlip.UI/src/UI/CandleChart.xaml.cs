@@ -171,7 +171,7 @@ namespace CoinFlip.UI
 				{
 					Chart?.Invalidate();
 				}
-				void EditingTrade(object sender, EditTradeEventArgs e)
+				void EditingTrade(object sender, EditTradeContext e)
 				{
 					var indy = new GfxObjects.TradeWidget(e.Trade, this) { Chart = Chart };
 					e.Closed += delegate
@@ -706,7 +706,8 @@ namespace CoinFlip.UI
 					return
 						ord.Pair.Equals(Pair) &&
 						Model.UtcNow.Ticks.Within(time_min, time_max) &&
-						ord.PriceQ2B.Within(price_min, price_max);
+						ord.PriceQ2B.Within(price_min, price_max) &&
+						!Model.IsOpenInEditor(ord);
 				}
 			}
 

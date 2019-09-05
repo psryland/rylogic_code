@@ -137,13 +137,19 @@ namespace CoinFlip.UI
 				}
 
 				// Handler
-				void HandleEquityChanged(object sender, EventArgs e)
+				void HandleEquityChanged(object sender = null, EventArgs e = null)
 				{
-					AutoRangeIfNeeded();
+					// Auto range on the first new data
+					if (m_equity_count == 0 && (m_equity_count = Equity.Count) != 0)
+						Chart.AutoRange();
+					else
+						AutoRangeIfNeeded();
+
 					Chart.Invalidate();
 				}
 			}
 		}
+		private int m_equity_count;
 		private Equity m_equity;
 
 		/// <summary>Provides support for the DockContainer</summary>

@@ -86,7 +86,7 @@
 						<DataTemplate>
 							<TextBlock
 								Text="{Binding Label}"
-								Foreground="{Binding Colour, Converter={conv:ColourToBrush}}"
+								Foreground="{Binding Colour.RGB, Converter={conv:ColourToBrush}}"
 								PreviewMouseLeftButtonDown="HandleDoubleClick"
 								/>
 						</DataTemplate>

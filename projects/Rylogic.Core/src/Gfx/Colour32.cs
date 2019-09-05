@@ -17,6 +17,8 @@ namespace Rylogic.Gfx
 	[StructLayout(LayoutKind.Sequential)]
 	public struct Colour32 :IComparable<Colour32> ,IComparable
 	{
+		private uint m_argb;
+
 		static Colour32()
 		{
 			NamedValues = typeof(Colour32)
@@ -37,7 +39,9 @@ namespace Rylogic.Gfx
 
 		/// <summary>Uint representation</summary>
 		public uint ARGB => m_argb;
-		private uint m_argb;
+
+		/// <summary>Opaque colour</summary>
+		public Colour32 RGB => new Colour32(m_argb | 0xFF000000);
 
 		// Byte components
 		public byte A { get { return (byte)((m_argb >> 24) & 0xFF); } set { m_argb = ((uint)value << 24) | (m_argb & 0x00FFFFFF); } }

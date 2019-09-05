@@ -577,7 +577,7 @@ namespace CoinFlip.UI.Indicators
 			/// <summary>Hit test this indicator</summary>
 			public override ChartControl.HitTestResult.Hit HitTest(Point chart_point, Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
 			{
-				if (Data.Count == 0)
+				if (Data.Count == 0 || !Visible)
 					return null;
 
 				var pt = client_point.ToV2();

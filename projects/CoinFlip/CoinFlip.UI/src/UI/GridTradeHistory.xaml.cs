@@ -81,9 +81,26 @@ namespace CoinFlip.UI
 						if (m_selecting_orders != 0) return;
 						using (Scope.Create(() => ++m_selecting_orders, () => --m_selecting_orders))
 						{
-							m_grid.SelectedItems.Clear();
-							foreach (var item in e.NewItems)
-								m_grid.SelectedItems.Add(item);
+							switch (e.Action)
+							{
+							case NotifyCollectionChangedAction.Reset:
+								{
+									m_grid.SelectedItems.Clear();
+									break;
+								}
+							case NotifyCollectionChangedAction.Add:
+								{
+									foreach (var item in e.NewItems)
+										m_grid.SelectedItems.Add(item);
+									break;
+								}
+							case NotifyCollectionChangedAction.Remove:
+								{
+									foreach (var item in e.OldItems)
+										m_grid.SelectedItems.Remove(item);
+									break;
+								}
+							}
 						}
 					}
 				}
