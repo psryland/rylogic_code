@@ -431,7 +431,9 @@ namespace Rylogic.Gui.WPF
 				ActualPixelAspect = DesiredPixelAspect;
 
 				// Allow objects to be added/removed from the scene
-				OnBuildScene();
+				try { OnBuildScene(); }
+				catch (OperationCanceledException) { }
+				catch (Exception ex) { OnReportError(new ReportErrorEventArgs($"Error during build scene: {ex.Message}")); }
 
 				// Render the scene
 				Window.RestoreRT();

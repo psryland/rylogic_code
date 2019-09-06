@@ -254,7 +254,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Indicates that the data is out of date and is being updated. False when UtcNow is within [Newest.Timestamp, Newest.Timestamp + TimeFrame)</summary>
-		public bool DataSyncing => Newest == null || Model.UtcNow > Newest.TimestampEnd(TimeFrame);
+		public bool DataSyncing => Newest == null || Model.UtcNow > Newest.CloseTime(TimeFrame);
 
 		/// <summary>Raised when the state of the price data changes from up-to-date to syncing or visa versa</summary>
 		public event EventHandler DataSyncingChanged;

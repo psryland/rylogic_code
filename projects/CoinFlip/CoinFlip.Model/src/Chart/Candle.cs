@@ -17,8 +17,8 @@ namespace CoinFlip
 		{
 			Timestamp = timestamp;
 			Open      = open;
-			High      = Math.Max(high, Math.Max(open, close));
-			Low       = Math.Min(low , Math.Min(open, close));
+			High      = Math_.Max(high, open, close);
+			Low       = Math_.Min(low , open, close);
 			Close     = close;
 			Median    = median;
 			Volume    = volume;
@@ -163,7 +163,7 @@ namespace CoinFlip
 		public DateTime TimestampLocal => TimeZone.CurrentTimeZone.ToLocalTime(TimestampUTC.DateTime);
 
 		/// <summary>Return the end time for this candle given 'time_frame'</summary>
-		public DateTimeOffset TimestampEnd(ETimeFrame time_frame)
+		public DateTimeOffset CloseTime(ETimeFrame time_frame)
 		{
 			return TimestampUTC + Misc.TimeFrameToTimeSpan(1.0, time_frame);
 		}
@@ -191,7 +191,6 @@ namespace CoinFlip
 			var t = Math_.Frac(Timestamp, now.Ticks, Timestamp + Misc.TimeFrameToTicks(1.0, time_frame));
 			return SubCandle(Math_.Clamp(t, 0.0, 1.0));
 		}
-
 
 		/// <summary>Debugging check for self consistency</summary>
 		public bool Valid()

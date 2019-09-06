@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using Rylogic.Common;
 using Rylogic.Gfx;
 using Rylogic.Gui.WPF;
@@ -15,9 +16,13 @@ namespace CoinFlip.UI.Indicators
 			Instrument = chart.Instrument;
 			if (chart is CandleChart candle_chart)
 				Chart = candle_chart.Chart;
+			Visible = indicator.Visible;
+
+			PropertyChanged += HandlePropertyChanged;
 		}
 		public override void Dispose()
 		{
+			PropertyChanged -= HandlePropertyChanged;
 			Instrument = null;
 			Indicator = null;
 			base.Dispose();
@@ -72,6 +77,19 @@ namespace CoinFlip.UI.Indicators
 		protected virtual void SetInstrumentCore(Instrument instr)
 		{
 			m_instrument = instr;
+		}
+
+		/// <summary>Handle properties changing</summary>
+		protected virtual void HandlePropertyChanged(object sender, PropertyChangedEventArgs e)
+		{
+			switch (e.PropertyName)
+			{
+			case nameof(ChartControl.Element.Visible):
+				{
+					Indicator.Visible = Visible;
+					break;
+				}
+			}
 		}
 
 		/// <summary>Handle indicator settings changing</summary>

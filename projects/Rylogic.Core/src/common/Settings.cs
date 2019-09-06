@@ -746,6 +746,9 @@ namespace Rylogic.Common
 			// Use 'new T().Data' so that reference types can be used, otherwise we'll change the defaults
 			m_data = new T().m_data;
 		}
+		protected SettingsXml(SettingsXml<T> rhs)
+			: this(rhs.ToXml(new XElement("root")))
+		{ }
 		public virtual XElement ToXml(XElement node)
 		{
 			var ty = typeof(T);

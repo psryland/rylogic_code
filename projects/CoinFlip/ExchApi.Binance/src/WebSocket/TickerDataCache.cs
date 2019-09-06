@@ -1,19 +1,31 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Binance.API.DomainObjects;
 using ExchApi.Common.JsonConverter;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Rylogic.Extn;
 using Rylogic.Utility;
-using WebSocketSharp;
 
 namespace Binance.API
 {
 	public class TickerDataCache :IDisposable
 	{
+		// Notes:
+		//  - This is the simplest example of a websocket stream. The design is
+		//    A cache of ticker data that contains an instance of a stream object
+		//    that handles the interaction with the WebSocket. Clients access data
+		//    in the cache which lazily creates the stream object. If a socket error
+		//    occurs, the stream object disposes itself. The next client access will
+		//    create a new stream object.
+		//  - The general flow of a stream object is to take a snapshot of the data,
+		//    connect the web socket, and handle messages to keep the data up to date.
+		//  - There shouldn't be any need for a "watchdog" mechanism, each stream object
+		//    should be able to tell when its connection is in a bad state and dispose
+		//    itself. Reconnection isn't necessary, the client triggers that with the
+		//    next access.
+
 		public TickerDataCache(BinanceApi api)
 		{
 			Api = api;
@@ -23,21 +35,6 @@ namespace Binance.API
 		{
 			Util.DisposeRange(Streams.Values);
 			Streams.Clear();
-		}
-
-		/// <summary>Check all streams are alive and healthy, if not remove them</summary>
-		public void WatchDog()
-		{
-			lock (Streams)
-			{
-				var dead = Streams.Where(x => x.Value.Socket.ReadyState != WebSocketState.Open).ToList();
-				foreach (var corpse in dead)
-				{
-					BinanceApi.Log.Write(ELogLevel.Warn, $"Restarting ticker data stream");
-					Util.Dispose(corpse.Value);
-					Streams.Remove(corpse.Key);
-				}
-			}
 		}
 
 		/// <summary>The owning API instance</summary>
@@ -90,7 +87,7 @@ namespace Binance.API
 					TickerData.Sort(x => x.Pair.Id);
 
 					// Create the socket
-					Socket = new WebSocket(EndPoint);
+					Socket = new WebSocket(Api.Shutdown);
 				}
 				catch
 				{
@@ -137,25 +134,33 @@ namespace Binance.API
 						m_socket.OnMessage += HandleMessage;
 						m_socket.OnError += HandleError;
 						m_socket.OnClose += HandleClosed;
-						m_socket.Connect();
+						m_socket.Connect(EndPoint).Wait();
 					}
 
 					// Handlers
-					void HandleOpened(object sender, EventArgs e)
+					void HandleOpened(object sender, WebSocket.OpenEventArgs e)
 					{
 						BinanceApi.Log.Write(ELogLevel.Debug, $"WebSocket stream opened for ticker data");
 					}
-					void HandleClosed(object sender, CloseEventArgs e)
+					void HandleClosed(object sender, WebSocket.CloseEventArgs e)
 					{
-						BinanceApi.Log.Write(ELogLevel.Debug, $"WebSocket stream closed for ticker data");
+						BinanceApi.Log.Write(ELogLevel.Debug, $"WebSocket stream closed for ticker data. {e.Reason}");
+						Dispose();
 					}
-					void HandleError(object sender, ErrorEventArgs e)
+					void HandleError(object sender, WebSocket.ErrorEventArgs e)
 					{
 						BinanceApi.Log.Write(ELogLevel.Error, e.Exception, $"WebSocket stream error for ticker data");
+						Dispose();
 					}
-					void HandleMessage(object sender, MessageEventArgs e)
+					void HandleMessage(object sender, WebSocket.MessageEventArgs e)
 					{
-						ApplyUpdate(JToken.Parse(e.Data).ToObject<List<TickerUpdate>>());
+						try { ApplyUpdate(JToken.Parse(e.Text).ToObject<List<TickerUpdate>>()); }
+						catch (OperationCanceledException) { Dispose(); }
+						catch (Exception ex)
+						{
+							BinanceApi.Log.Write(ELogLevel.Error, ex, $"WebSocket message error for ticker data");
+							Dispose();
+						}
 					}
 				}
 			}

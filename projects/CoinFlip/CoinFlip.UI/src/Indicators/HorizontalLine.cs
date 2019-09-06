@@ -24,6 +24,7 @@ namespace CoinFlip.UI.Indicators
 			Name = null;
 			Price = 0.0;
 			Colour = 0xFF00C000;
+			Visible = true;
 			Width = 3.0;
 			LineStyle = ELineStyles.Solid;
 		}
@@ -32,20 +33,6 @@ namespace CoinFlip.UI.Indicators
 		{ }
 		public void Dispose()
 		{
-		}
-		protected override void OnSettingChange(SettingChangeEventArgs args)
-		{
-			base.OnSettingChange(args);
-			if (args.After)
-			{
-				switch (args.Key)
-				{
-				case nameof(Price):
-					{
-						break;
-					}
-				}
-			}
 		}
 
 		/// <summary>Instance id</summary>
@@ -74,6 +61,13 @@ namespace CoinFlip.UI.Indicators
 		{
 			get => get<Colour32>(nameof(Colour));
 			set => set(nameof(Colour), value);
+		}
+
+		/// <summary>Show this indicator</summary>
+		public bool Visible
+		{
+			get => get<bool>(nameof(Visible));
+			set => set(nameof(Visible), value);
 		}
 
 		/// <summary>The width of the trend line</summary>

@@ -280,7 +280,7 @@ namespace Rylogic.Gui.WPF
 				{ }
 				else if (Chart.Options.NavigationMode == ENavMode.Chart2D)
 				{
-					if (Chart.DoChartAreaSelect())
+					if (Chart.DoChartAreaSelect(m_hit_result.ModifierKeys))
 					{
 						// Otherwise change the selection area
 						if (m_cleanup_selection_graphic == null)

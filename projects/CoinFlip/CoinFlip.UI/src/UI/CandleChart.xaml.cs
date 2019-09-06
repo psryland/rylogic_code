@@ -250,7 +250,8 @@ namespace CoinFlip.UI
 					// Customise the chart for candles
 					m_chart.AllowSelection = true;
 					m_chart.AllowElementDragging = false;
-					m_chart.AreaSelectMode = ChartControl.EAreaSelectMode.ZoomIfNoSelection;
+					m_chart.Options.AreaSelectMode = ChartControl.EAreaSelectMode.ZoomIfNoSelection;
+					m_chart.Options.AreaSelectRequiresShiftKey = true;
 					m_chart.Options.AntiAliasing = false;
 					m_chart.Options.Orthographic = true;
 					m_chart.Options.SelectionColour = new Colour32(0x8092A1B1);

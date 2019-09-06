@@ -17,6 +17,7 @@ namespace Binance.API
 		public static class EventName
 		{
 			public const string AccountInfo = "outboundAccountInfo";
+			public const string AccountPosition = "outboundAccountPosition";
 			public const string OrderTrade = "executionReport";
 		}
 	}

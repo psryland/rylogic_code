@@ -25,6 +25,7 @@ namespace CoinFlip.UI.Indicators
 			Exponential = false;
 			Periods = 50;
 			Colour = Colour32.Blue;
+			Visible = true;
 			Width = 1.0;
 			LineStyle = ELineStyles.Solid;
 			ShowBollingerBands = false;
@@ -74,6 +75,13 @@ namespace CoinFlip.UI.Indicators
 		{
 			get => get<Colour32>(nameof(Colour));
 			set => set(nameof(Colour), value);
+		}
+
+		/// <summary>Show this indicator</summary>
+		public bool Visible
+		{
+			get => get<bool>(nameof(Visible));
+			set => set(nameof(Visible), value);
 		}
 
 		/// <summary>The width of the line</summary>

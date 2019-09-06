@@ -17,7 +17,10 @@ namespace CoinFlip
 		string Label { get; }
 
 		/// <summary>Colour of the indicator line</summary>
-		Colour32 Colour { get; }
+		Colour32 Colour { get; set; }
+
+		/// <summary>Show this indicator</summary>
+		bool Visible { get; set; }
 
 		/// <summary>Create a view of this indicator for displaying on a chart</summary>
 		IIndicatorView CreateView(IChartView chart);

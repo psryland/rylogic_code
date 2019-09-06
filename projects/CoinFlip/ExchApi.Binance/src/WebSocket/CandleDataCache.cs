@@ -9,12 +9,14 @@ using Newtonsoft.Json.Linq;
 using Rylogic.Attrib;
 using Rylogic.Extn;
 using Rylogic.Utility;
-using WebSocketSharp;
 
 namespace Binance.API
 {
 	public class CandleDataCache :IDisposable
 	{
+		// Notes:
+		//  - See TickerDataCache for the simplest example
+
 		public CandleDataCache(BinanceApi api)
 		{
 			Api = api;
@@ -24,21 +26,6 @@ namespace Binance.API
 		{
 			Util.DisposeRange(Streams.Values);
 			Streams.Clear();
-		}
-
-		/// <summary>Check all streams are alive and healthy, if not remove them</summary>
-		public void WatchDog()
-		{
-			lock (Streams)
-			{
-				var dead = Streams.Where(x => x.Value.Socket.ReadyState != WebSocketState.Open).ToList();
-				foreach (var corpse in dead)
-				{
-					BinanceApi.Log.Write(ELogLevel.Warn, $"Restarting candle data stream for {corpse.Key.Pair.Id}");
-					Util.Dispose(corpse.Value);
-					Streams.Remove(corpse.Key);
-				}
-			}
 		}
 
 		/// <summary>The owning API instance</summary>
@@ -99,7 +86,7 @@ namespace Binance.API
 
 					// Create the stream connection and start buffering events
 					m_pending = new List<CandleUpdate>();
-					Socket = new WebSocket(EndPoint);
+					Socket = new WebSocket(Api.Shutdown);
 
 					// Request a snapshot to initialise the candle data
 					// We can only buffer a limited range of candles. Outside that range forward to the rest api
@@ -161,25 +148,33 @@ namespace Binance.API
 						m_socket.OnMessage += HandleMessage;
 						m_socket.OnError += HandleError;
 						m_socket.OnClose += HandleClosed;
-						Socket.Connect();
+						Socket.Connect(EndPoint).Wait();
 					}
 
 					// Handlers
-					void HandleOpened(object sender, EventArgs e)
+					void HandleOpened(object sender, WebSocket.OpenEventArgs e)
 					{
 						BinanceApi.Log.Write(ELogLevel.Debug, $"WebSocket stream opened for Candle Data {Pair.Id}");
 					}
-					void HandleClosed(object sender, CloseEventArgs e)
+					void HandleClosed(object sender, WebSocket.CloseEventArgs e)
 					{
-						BinanceApi.Log.Write(ELogLevel.Debug, $"WebSocket stream closed for Candle Data {Pair.Id}");
+						BinanceApi.Log.Write(ELogLevel.Debug, $"WebSocket stream closed for Candle Data {Pair.Id}. {e.Reason}");
+						Dispose();
 					}
-					void HandleError(object sender, ErrorEventArgs e)
+					void HandleError(object sender, WebSocket.ErrorEventArgs e)
 					{
 						BinanceApi.Log.Write(ELogLevel.Error, e.Exception, $"WebSocket stream error for Candle Data {Pair.Id}");
+						Dispose();
 					}
-					void HandleMessage(object sender, MessageEventArgs e)
+					void HandleMessage(object sender, WebSocket.MessageEventArgs e)
 					{
-						ApplyUpdate(JObject.Parse(e.Data).ToObject<CandleUpdate>());
+						try { ApplyUpdate(JObject.Parse(e.Text).ToObject<CandleUpdate>()); }
+						catch (OperationCanceledException) { Dispose(); }
+						catch (Exception ex)
+						{
+							BinanceApi.Log.Write(ELogLevel.Error, ex, $"WebSocket message error for ticker data");
+							Dispose();
+						}
 					}
 				}
 			}

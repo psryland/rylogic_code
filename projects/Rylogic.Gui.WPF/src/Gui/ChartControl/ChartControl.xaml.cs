@@ -67,7 +67,6 @@ namespace Rylogic.Gui.WPF
 				AllowElementDragging = false;
 				DefaultMouseControl = true;
 				DefaultKeyboardShortcuts = true;
-				AreaSelectMode = EAreaSelectMode.Zoom;
 
 				Scene.BuildScene += OnBuildScene;
 

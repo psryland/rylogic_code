@@ -45,82 +45,13 @@ namespace CoinFlip
 				if (m_api == value) return;
 				if (m_api != null)
 				{
-					//m_api.OnOrdersChanged -= HandleOrdersChanged;
-					//m_api.OnConnectionChanged -= HandleConnectionEstablished;
 					Util.Dispose(ref m_api);
 				}
 				m_api = value;
 				if (m_api != null)
 				{
 					m_api.RequestThrottle.RequestRateLimit = ExchSettings.ServerRequestRateLimit;
-					//m_api.OnConnectionChanged += HandleConnectionEstablished;
-					//m_api.OnOrdersChanged += HandleOrdersChanged;
 				}
-
-				// Handlers
-				//void HandleOrdersChanged(object sender, OrderBookChangedEventArgs args)
-				//{
-				//	// This is currently broken on the Poloniex site
-				//
-				//	// Don't care about trade history at this point
-				//	if (args.Update.Type == OrderBookUpdate.EUpdateType.NewTrade)
-				//		return;
-				//
-				//	// Look for the associated pair, ignore if not found
-				//	var pair = Pairs[args.Pair.Base, args.Pair.Quote];
-				//	if (pair == null)
-				//		return;
-				//
-				//	// Create the order
-				//	var ty = args.Update.Order.Type;
-				//	var order = new Offer(args.Update.Order.Price._(pair.RateUnits), args.Update.Order.VolumeBase._(pair.Base));
-				//
-				//	// Get the orders that the update applies to
-				//	var book = (OrderBook)null;
-				//	var sign = 0;
-				//	switch (ty)
-				//	{
-				//	default: throw new Exception(string.Format("Unknown order update type: {0}", ty));
-				//	case EOrderType.Sell: book = pair.B2Q; sign = -1; break;
-				//	case EOrderType.Buy: book = pair.Q2B; sign = +1; break;
-				//	}
-				//
-				//	// Find the position in 'book.Orders' of where the update applies
-				//	var idx = book.Orders.BinarySearch(x => sign * x.Price.CompareTo(order.Price));
-				//	if (idx < 0 && ~idx >= book.Orders.Count)
-				//		return;
-				//
-				//	// Apply the update.
-				//	switch (args.Update.Type)
-				//	{
-				//	default: throw new Exception(string.Format("Unknown order book update type: {0}", args.Update.Type));
-				//	case OrderBookUpdate.EUpdateType.Modify:
-				//		{
-				//			// "Modify" means insert or replace the order with the matching price.
-				//			if (idx >= 0)
-				//				book.Orders[idx] = order;
-				//			//else
-				//			//	book.Orders.Insert(~idx, order);
-				//			break;
-				//		}
-				//	case OrderBookUpdate.EUpdateType.Remove:
-				//		{
-				//			// "Remove" means remove the order with the matching price.
-				//			if (idx >= 0)
-				//				book.Orders.RemoveAt(idx);
-				//			break;
-				//		}
-				//	}
-				//
-				//	Debug.Assert(pair.AssertOrdersValid());
-				//}
-				//void HandleConnectionEstablished(object sender, EventArgs e)
-				//{
-				//	if (Api.IsConnected)
-				//		Model.Log.Write(ELogLevel.Info, $"Poloniex connection established");
-				//	else
-				//		Model.Log.Write(ELogLevel.Info, $"Poloniex connection offline");
-				//}
 			}
 		}
 		private BinanceApi m_api;
@@ -206,7 +137,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Update open orders and completed trades</summary>
-		protected async override Task UpdateOrdersAndHistoryInternal(HashSet<string> coins) // Worker thread context
+		protected override Task UpdateOrdersAndHistoryInternal(HashSet<string> coins) // Worker thread context
 		{
 			// Record the time just before the query to the server
 			var timestamp = DateTimeOffset.Now;
@@ -219,26 +150,28 @@ namespace CoinFlip
 			var auto_add_coins = SettingsData.Settings.AutoAddCoins;
 
 			// Request all the existing orders
-			var existing_orders = pairs
-				.Where(pair => auto_add_coins || (coins.Contains(pair.Base) && coins.Contains(pair.Quote)))
-				.SelectMany(pair =>
-				{
-					Shutdown.Token.ThrowIfCancellationRequested();
-					var cp = new CurrencyPair(pair.Base.Symbol, pair.Quote.Symbol);
-					var orders = Api.UserData.Orders[cp];
-					return orders;
-				}).ToList();
+			var existing_orders = new List<global::Binance.API.DomainObjects.Order>();
+			foreach (var pair in pairs)
+			{
+				if (Shutdown.IsCancellationRequested) return Task.CompletedTask;
+				if (!auto_add_coins && (!coins.Contains(pair.Base) || !coins.Contains(pair.Quote))) continue;
+
+				var cp = new CurrencyPair(pair.Base.Symbol, pair.Quote.Symbol);
+				var orders = Api.UserData.Orders[cp];
+				existing_orders.AddRange(orders);
+			}
 
 			// Request all the existing completed orders since 'm_history_last'
-			var history_orders = pairs
-				.Where(pair => auto_add_coins || (coins.Contains(pair.Base) && coins.Contains(pair.Quote)))
-				.SelectMany(pair =>
-				{
-					Shutdown.Token.ThrowIfCancellationRequested();
-					var cp = new CurrencyPair(pair.Base.Symbol, pair.Quote.Symbol);
-					var history = Api.UserData.History[cp, m_history_last, m_history_last_id];
-					return history;
-				}).ToList();
+			var history_orders = new List<OrderFill>();
+			foreach (var pair in pairs)
+			{
+				if (Shutdown.IsCancellationRequested) return Task.CompletedTask;
+				if (!auto_add_coins && (!coins.Contains(pair.Base) || !coins.Contains(pair.Quote))) continue;
+
+				var cp = new CurrencyPair(pair.Base.Symbol, pair.Quote.Symbol);
+				var history = Api.UserData.History[cp, m_history_last, m_history_last_id];
+				history_orders.AddRange(history);
+			}
 
 			existing_orders.Sort(x => x.Created);
 			history_orders.Sort(x => x.Created);
@@ -292,8 +225,7 @@ namespace CoinFlip
 				History.LastUpdated = timestamp;
 				Orders.LastUpdated = timestamp;
 			});
-
-			await Task.CompletedTask;
+			return Task.CompletedTask;
 		}
 
 		/// <summary>Update the market data, balances, and open positions</summary>
@@ -308,13 +240,14 @@ namespace CoinFlip
 				pairs = m_pairs.ToList();
 
 			// Get the ticker info for each pair
-			var ticker_updates = pairs.Select(pair =>
+			var ticker_updates = new List<PairAndTicker>();
+			foreach (var pair in pairs)
 			{
-				Shutdown.Token.ThrowIfCancellationRequested();
+				if (Shutdown.IsCancellationRequested) return Task.CompletedTask;
 				var cp = new CurrencyPair(pair.Base.Symbol, pair.Quote.Symbol);
 				var ticker = Api.TickerData[cp];
-				return new { pair, ticker };
-			}).ToList();
+				ticker_updates.Add(new PairAndTicker{Pair = cp, Ticker = ticker});
+			}
 
 			// Stop market updates for unreferenced pairs
 			var pairs_cached = Api.MarketData.Cached.ToHashSet(0);
@@ -326,22 +259,22 @@ namespace CoinFlip
 			}
 
 			// For each pair, get the updated market depth info.
-			// If no one needs the market data, ignore it.
-			var depth_updates = pairs
-				.Where(x => x.MarketDepth.IsNeeded)
-				.Select(pair =>
-				{
-					// Get the latest market data for 'pair'
-					var cp = new CurrencyPair(pair.Base.Symbol, pair.Quote.Symbol);
-					var ob = Api.MarketData[cp];
+			var depth_updates = new List<PairAndMarketData>();
+			foreach (var pair in pairs)
+			{
+				// If no one needs the market data, ignore it.
+				if (!pair.MarketDepth.IsNeeded) continue;
 
-					// Convert to CoinFlip market data format
-					var rate_units = $"{pair.Quote}/{pair.Base}";
-					var b2q = ob.B2QOffers.Select(x => new Offer(x.PriceQ2B._(rate_units), x.AmountBase._(pair.Base))).ToArray();
-					var q2b = ob.Q2BOffers.Select(x => new Offer(x.PriceQ2B._(rate_units), x.AmountBase._(pair.Base))).ToArray();
+				// Get the latest market data for 'pair'
+				var cp = new CurrencyPair(pair.Base.Symbol, pair.Quote.Symbol);
+				var ob = Api.MarketData[cp];
 
-					return new { pair, b2q, q2b};
-				}).ToList();
+				// Convert to CoinFlip market data format
+				var rate_units = $"{pair.Quote}/{pair.Base}";
+				var b2q = ob.B2QOffers.Select(x => new Offer(x.PriceQ2B._(rate_units), x.AmountBase._(pair.Base))).ToArray();
+				var q2b = ob.Q2BOffers.Select(x => new Offer(x.PriceQ2B._(rate_units), x.AmountBase._(pair.Base))).ToArray();
+				depth_updates.Add(new PairAndMarketData { Pair = cp, B2Q = b2q, Q2B = q2b });
+			}
 
 			// Queue integration of the market data
 			Model.DataUpdates.Add(() =>
@@ -349,24 +282,24 @@ namespace CoinFlip
 				// Update the spot price on each pair
 				foreach (var upd in ticker_updates)
 				{
-					var pair = Pairs[upd.pair.Base, upd.pair.Quote];
+					var pair = Pairs[upd.Pair.Base, upd.Pair.Quote];
 					if (pair == null)
 						continue;
 
-					pair.SpotPrice[ETradeType.Q2B] = upd.ticker.PriceQ2B._(pair.RateUnits);
-					pair.SpotPrice[ETradeType.B2Q] = upd.ticker.PriceB2Q._(pair.RateUnits);
+					pair.SpotPrice[ETradeType.Q2B] = upd.Ticker.PriceQ2B._(pair.RateUnits);
+					pair.SpotPrice[ETradeType.B2Q] = upd.Ticker.PriceB2Q._(pair.RateUnits);
 				}
 
 				// Process the order book data and update the pairs
 				foreach (var update in depth_updates)
 				{
 					// Find the pair to update.
-					var pair = Pairs[update.pair.Base, update.pair.Quote];
+					var pair = Pairs[update.Pair.Base, update.Pair.Quote];
 					if (pair == null)
 						continue;
 
 					// Update the depth of market data
-					pair.MarketDepth.UpdateOrderBooks(update.b2q, update.q2b);
+					pair.MarketDepth.UpdateOrderBooks(update.B2Q, update.Q2B);
 				}
 
 				// Notify updated
@@ -551,6 +484,19 @@ namespace CoinFlip
 			case ETimeFrame.Month1:
 				return EMarketPeriod.Month1;
 			}
+		}
+
+		/// <summary></summary>
+		struct PairAndTicker
+		{
+			public CurrencyPair Pair;
+			public Ticker Ticker;
+		}
+		struct PairAndMarketData
+		{
+			public CurrencyPair Pair;
+			public Offer[] B2Q;
+			public Offer[] Q2B;
 		}
 	}
 }

@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Binance.API.DomainObjects;
 using ExchApi.Common.JsonConverter;
 using Newtonsoft.Json;
@@ -11,12 +8,14 @@ using Newtonsoft.Json.Linq;
 using Rylogic.Container;
 using Rylogic.Extn;
 using Rylogic.Utility;
-using WebSocketSharp;
 
 namespace Binance.API
 {
 	public class UserDataCache :IDisposable
 	{
+		// Notes:
+		//  - See TickerDataCache for the simplest example
+
 		public UserDataCache(BinanceApi api)
 		{
 			Api = api;
@@ -26,21 +25,6 @@ namespace Binance.API
 		{
 			Util.DisposeRange(Streams.Values);
 			Streams.Clear();
-		}
-
-		/// <summary>Check all streams are alive and healthy, if not remove them</summary>
-		public void WatchDog()
-		{
-			lock (Streams)
-			{
-				var dead = Streams.Where(x => x.Value.Socket.ReadyState != WebSocketState.Open).ToList();
-				foreach (var corpse in dead)
-				{
-					BinanceApi.Log.Write(ELogLevel.Warn, $"Restarting user data stream");
-					Util.Dispose(corpse.Value);
-					Streams.Remove(corpse.Key);
-				}
-			}
 		}
 
 		/// <summary>The owning API instance</summary>
@@ -69,7 +53,7 @@ namespace Binance.API
 				{
 					BinanceApi.Log.Write(ELogLevel.Error, ex, $"Subscribing to user data failed.");
 					lock (Streams) Streams.Remove(key);
-					return null;
+					return new BalancesData();
 				}
 			}
 		}
@@ -142,7 +126,7 @@ namespace Binance.API
 					m_listen_key_bump = DateTimeOffset.Now;
 
 					// Create the socket (requires the ListenKey in the endpoint URL)
-					Socket = new WebSocket(EndPoint);
+					Socket = new WebSocket(Api.Shutdown);
 				}
 				catch
 				{
@@ -207,50 +191,66 @@ namespace Binance.API
 						m_socket.OnMessage += HandleMessage;
 						m_socket.OnError += HandleError;
 						m_socket.OnClose += HandleClosed;
-						m_socket.Connect();
+						m_socket.Connect(EndPoint).Wait();
 					}
 
 					// Handlers
-					void HandleOpened(object sender, EventArgs e)
+					void HandleOpened(object sender, WebSocket.OpenEventArgs e)
 					{
 						BinanceApi.Log.Write(ELogLevel.Info, $"WebSocket stream opened for user data {ListenKey}");
 					}
-					void HandleClosed(object sender, CloseEventArgs e)
+					void HandleClosed(object sender, WebSocket.CloseEventArgs e)
 					{
-						BinanceApi.Log.Write(ELogLevel.Info, $"WebSocket stream closed for user data {ListenKey}");
+						BinanceApi.Log.Write(ELogLevel.Info, $"WebSocket stream closed for user data {ListenKey}. {e.Reason}");
+						Dispose();
 					}
-					void HandleError(object sender, ErrorEventArgs e)
+					void HandleError(object sender, WebSocket.ErrorEventArgs e)
 					{
 						BinanceApi.Log.Write(ELogLevel.Error, e.Exception, $"WebSocket stream error for user data {ListenKey}");
+						Dispose();
 					}
-					void HandleMessage(object sender, MessageEventArgs e)
+					void HandleMessage(object sender, WebSocket.MessageEventArgs e)
 					{
-						var jtok = JToken.Parse(e.Data);
-						var event_type = jtok["e"].Value<string>();
-						switch (event_type)
+						try
 						{
-						default:
+							var jtok = JToken.Parse(e.Text);
+							var event_type = jtok["e"].Value<string>();
+							switch (event_type)
 							{
-								BinanceApi.Log.Write(ELogLevel.Warn, $"Unknown event type ({event_type}) received in user data stream");
-								break;
+							default:
+								{
+									BinanceApi.Log.Write(ELogLevel.Warn, $"Unknown event type ({event_type}) received in user data stream");
+									break;
+								}
+							case WebSocketEvent.EventName.AccountInfo:
+								{
+									ApplyUpdate(jtok.ToObject<AccountUpdate>());
+									break;
+								}
+							case WebSocketEvent.EventName.AccountPosition:
+								{
+									ApplyUpdate(jtok.ToObject<AccountBalanceUpdate>());
+									break;
+								}
+							case WebSocketEvent.EventName.OrderTrade:
+								{
+									ApplyUpdate(jtok.ToObject<TradeOrderUpdate>());
+									break;
+								}
 							}
-						case WebSocketEvent.EventName.AccountInfo:
+
+							// Kick the watchdog if it's time
+							if (DateTimeOffset.Now - m_listen_key_bump > UserDataKeepAliveTimeout)
 							{
-								ApplyUpdate(jtok.ToObject<AccountUpdate>());
-								break;
-							}
-						case WebSocketEvent.EventName.OrderTrade:
-							{
-								ApplyUpdate(jtok.ToObject<TradeOrderUpdate>());
-								break;
+								Api.KeepAliveUserDataStream(ListenKey).Wait();
+								m_listen_key_bump = DateTimeOffset.Now;
 							}
 						}
-
-						// Kick the watchdog if it's time
-						if (DateTimeOffset.Now - m_listen_key_bump > UserDataKeepAliveTimeout)
+						catch (OperationCanceledException) { Dispose(); }
+						catch (Exception ex)
 						{
-							Api.KeepAliveUserDataStream(ListenKey).Wait();
-							m_listen_key_bump = DateTimeOffset.Now;
+							BinanceApi.Log.Write(ELogLevel.Error, ex, $"WebSocket message error for ticker data");
+							Dispose();
 						}
 					}
 				}
@@ -266,6 +266,24 @@ namespace Binance.API
 
 			/// <summary>Update account data</summary>
 			private void ApplyUpdate(AccountUpdate update)
+			{
+				lock (m_balance_data)
+				{
+					var map = update.Balances.ToDictionary(x => x.Asset, x => x);
+					foreach (var bal in m_balance_data.Balances)
+					{
+						if (map.TryGetValue(bal.Asset, out var upd))
+						{
+							bal.Free = upd.Free;
+							bal.Locked = upd.Locked;
+						}
+					}
+					m_balance_data.UpdateTime = update.Updated;
+				}
+			}
+
+			/// <summary>Update account data</summary>
+			private void ApplyUpdate(AccountBalanceUpdate update)
 			{
 				lock (m_balance_data)
 				{
@@ -530,6 +548,40 @@ namespace Binance.API
 				[JsonProperty("l")]
 				public double Locked { get; set; }
 			}
+		}
+
+		/// <summary>Account balance update for a single balance</summary>
+		private class AccountBalanceUpdate
+		{
+			/// <summary></summary>
+			[JsonProperty("e")]
+			public string EventType { get; set; }
+
+			/// <summary></summary>
+			[JsonProperty("E"), JsonConverter(typeof(UnixMSToDateTimeOffset))]
+			public DateTimeOffset EventTime { get; set; }
+
+			/// <summary></summary>
+			[JsonProperty("u"), JsonConverter(typeof(UnixMSToDateTimeOffset))]
+			public DateTimeOffset Updated { get; set; }
+
+			/// <summary></summary>
+			[JsonProperty("B")]
+			public List<BalanceData> Balances { get; set; }
+
+			/// <summary></summary>
+			public class BalanceData
+			{
+				[JsonProperty("a")]
+				public string Asset { get; set; }
+
+				[JsonProperty("f")]
+				public double Free { get; set; }
+
+				[JsonProperty("l")]
+				public double Locked { get; set; }
+			}
+
 		}
 
 		/// <summary>Order or OrderFill update</summary>

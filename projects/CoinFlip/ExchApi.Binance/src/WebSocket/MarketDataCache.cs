@@ -1,24 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Binance.API.DomainObjects;
-using ExchApi.Common;
 using ExchApi.Common.JsonConverter;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Rylogic.Extn;
 using Rylogic.Utility;
-using WebSocketSharp;
 
 namespace Binance.API
 {
 	public class MarketDataCache :IDisposable
 	{
 		// Notes:
+		//  - See TickerDataCache for the simplest example
 		//  - Using one socket per currency pair because there is no mechanism
 		//    for adding/removing subscriptions to streams.
 
@@ -31,21 +27,6 @@ namespace Binance.API
 		{
 			Util.DisposeRange(Streams.Values);
 			Streams.Clear();
-		}
-
-		/// <summary>Check all streams are alive and healthy, if not remove them</summary>
-		public void WatchDog()
-		{
-			lock (Streams)
-			{
-				var dead = Streams.Where(x => x.Value.Socket.ReadyState != WebSocketState.Open).ToList();
-				foreach (var corpse in dead)
-				{
-					BinanceApi.Log.Write(ELogLevel.Warn, $"Restarting market data stream for {corpse.Key.Id}");
-					Util.Dispose(corpse.Value);
-					Streams.Remove(corpse.Key);
-				}
-			}
 		}
 
 		/// <summary>The owning API instance</summary>
@@ -120,7 +101,7 @@ namespace Binance.API
 
 					// Create the stream connection and start buffering events
 					m_pending = new List<MarketUpdate>();
-					Socket = new WebSocket(EndPoint);
+					Socket = new WebSocket(Api.Shutdown);
 
 					// Request a full snapshot to initialise the order book
 					var ob = Api.GetOrderBook(Pair, 1000, Api.Shutdown).Result;
@@ -179,25 +160,33 @@ namespace Binance.API
 						m_socket.OnMessage += HandleMessage;
 						m_socket.OnError += HandleError;
 						m_socket.OnClose += HandleClosed;
-						Socket.Connect();
+						Socket.Connect(EndPoint).Wait();
 					}
 
 					// Handlers
-					void HandleOpened(object sender, EventArgs e)
+					void HandleOpened(object sender, WebSocket.OpenEventArgs e)
 					{
 						BinanceApi.Log.Write(ELogLevel.Debug, $"WebSocket stream opened for Market Data {Pair.Id}");
 					}
-					void HandleClosed(object sender, CloseEventArgs e)
+					void HandleClosed(object sender, WebSocket.CloseEventArgs e)
 					{
-						BinanceApi.Log.Write(ELogLevel.Debug, $"WebSocket stream closed for Market Data {Pair.Id}");
+						BinanceApi.Log.Write(ELogLevel.Debug, $"WebSocket stream closed for Market Data {Pair.Id}. {e.Reason}");
+						Dispose();
 					}
-					void HandleError(object sender, ErrorEventArgs e)
+					void HandleError(object sender, WebSocket.ErrorEventArgs e)
 					{
 						BinanceApi.Log.Write(ELogLevel.Error, e.Exception, $"WebSocket stream error for Market Data {Pair.Id}");
+						Dispose();
 					}
-					void HandleMessage(object sender, MessageEventArgs e)
+					void HandleMessage(object sender, WebSocket.MessageEventArgs e)
 					{
-						ApplyUpdate(JObject.Parse(e.Data).ToObject<MarketUpdate>());
+						try { ApplyUpdate(JObject.Parse(e.Text).ToObject<MarketUpdate>()); }
+						catch (OperationCanceledException) { Dispose(); }
+						catch (Exception ex)
+						{
+							BinanceApi.Log.Write(ELogLevel.Error, ex, $"WebSocket message error for ticker data");
+							Dispose();
+						}
 					}
 				}
 			}

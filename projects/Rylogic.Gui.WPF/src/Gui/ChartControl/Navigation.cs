@@ -57,9 +57,6 @@ namespace Rylogic.Gui.WPF
 		}
 		private bool m_default_keyshortcuts;
 
-		/// <summary>The default behaviour of area select mode</summary>
-		public EAreaSelectMode AreaSelectMode { get; set; }
-
 		/// <summary>Mouse/key events on the chart</summary>
 		protected override void OnMouseDown(MouseButtonEventArgs args)
 		{
@@ -316,7 +313,7 @@ namespace Rylogic.Gui.WPF
 			// Select chart elements by default
 			if (!args.Handled)
 			{
-				switch (AreaSelectMode)
+				switch (Options.AreaSelectMode)
 				{
 				default: throw new Exception("Unknown area select mode");
 				case EAreaSelectMode.Disabled:
@@ -343,11 +340,14 @@ namespace Rylogic.Gui.WPF
 				}
 			}
 		}
-		private bool DoChartAreaSelect()
+		private bool DoChartAreaSelect(ModifierKeys modifier_keys)
 		{
-			switch (AreaSelectMode)
+			if (Options.AreaSelectRequiresShiftKey && !modifier_keys.HasFlag(ModifierKeys.Shift))
+				return false;
+
+			switch (Options.AreaSelectMode)
 			{
-			default: throw new Exception($"Unknown area selection mode: {AreaSelectMode}");
+			default: throw new Exception($"Unknown area selection mode: {Options.AreaSelectMode}");
 			case EAreaSelectMode.Disabled: return false;
 			case EAreaSelectMode.SelectElements: return true;
 			case EAreaSelectMode.Zoom: return true;

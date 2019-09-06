@@ -154,7 +154,7 @@ namespace CoinFlip.Bots
 						await Step();
 
 						// Restart the timer
-						m_bot_main_timer.Interval = LoopPeriod;
+						m_bot_main_timer.Interval = TimeTillNextStep;
 						m_bot_main_timer.Start();
 					}
 					catch (Exception ex)
@@ -168,14 +168,17 @@ namespace CoinFlip.Bots
 		}
 		private DispatcherTimer m_bot_main_timer;
 
-		/// <summary>How frequently the Bot wants to be stepped. Note: this is evaluated with each step so steps don't have to be regular</summary>
+		/// <summary>The time at which to step this bot again</summary>
+		public virtual DateTimeOffset NextStepTime => LastStepTime + LoopPeriod;
+
+		/// <summary>How frequently the Bot wants to be stepped</summary>
 		public virtual TimeSpan LoopPeriod => TimeSpan.FromMilliseconds(1000);
 
 		/// <summary>Time stamp of when the last occurred</summary>
 		public DateTimeOffset LastStepTime { get; private set; }
 
 		/// <summary>The time span until this bot is due to be stepped</summary>
-		public TimeSpan TimeTillNextStep => (LastStepTime + LoopPeriod) - Model.UtcNow;
+		public TimeSpan TimeTillNextStep => NextStepTime - Model.UtcNow;
 
 		/// <summary>Cancel token for deactivating the bot</summary>
 		public CancellationTokenSource Cancel { get; private set; }

@@ -9,8 +9,8 @@ using Rylogic.Utility;
 namespace Bot.HeikinAshiChaser
 {
 	[Plugin(typeof(IBot))]
-    public class Bot :IBot
-    {
+	public class Bot :IBot
+	{
 		// Notes:
 		//  - This bot is based on the fact that HA candles seem to produce nice obvious trends.
 		//  - The idea is to have a trailing stop order that follows the open of the previous HA candle.
@@ -18,7 +18,7 @@ namespace Bot.HeikinAshiChaser
 
 		private IDisposable m_monitor;
 		public Bot(CoinFlip.Settings.BotData bot_data, Model model)
-			:base(bot_data, model)
+			: base(bot_data, model)
 		{
 			// Load the bot settings
 			Settings = new SettingsData(SettingsFilepath);
@@ -43,12 +43,12 @@ namespace Bot.HeikinAshiChaser
 				if (m_instrument == value) return;
 				if (m_instrument != null)
 				{
-				//	m_instrument.DataChanged -= HandleDataChanged;
+					//	m_instrument.DataChanged -= HandleDataChanged;
 				}
 				m_instrument = value;
 				if (m_instrument != null)
 				{
-				//	m_instrument.DataChanged += HandleDataChanged;
+					//	m_instrument.DataChanged += HandleDataChanged;
 				}
 
 				// Handler
@@ -60,8 +60,18 @@ namespace Bot.HeikinAshiChaser
 		}
 		private Instrument m_instrument;
 
-		/// <summary></summary>
-		//public override TimeSpan LoopPeriod { get; private set; }
+		/// <summary>Step this bot after each candle close</summary>
+		public override DateTimeOffset NextStepTime
+		{
+			get
+			{
+				var latest = Instrument.Latest;
+				return latest != null ? latest.CloseTime(Instrument.TimeFrame) : base.NextStepTime;
+			}
+		}
+
+		/// <summary>True if the bot is ok to run</summary>
+		protected override bool CanActivateInternal => Settings.Validate(Model, Fund) == null;
 
 		/// <summary>Configure</summary>
 		protected override Task ConfigureInternal(object owner)
@@ -77,8 +87,7 @@ namespace Bot.HeikinAshiChaser
 		}
 		private ConfigureUI m_config_ui;
 
-		/// <summary>True if the bot is ok to run</summary>
-		protected override bool CanActivateInternal => Settings.Validate(Model, Fund) == null;
+		private Candle LastHACandle { get; }
 
 		/// <summary>Step the bot</summary>
 		protected override Task StepInternal()
@@ -90,6 +99,12 @@ namespace Bot.HeikinAshiChaser
 				var price_data = Model.PriceData[pair, Settings.TimeFrame];
 				Instrument = new Instrument(Name, price_data);
 			}
+			if (Instrument.Count == 0)
+			{
+				return Task.CompletedTask;
+			}
+
+
 			return Task.CompletedTask;
 		}
 	}
