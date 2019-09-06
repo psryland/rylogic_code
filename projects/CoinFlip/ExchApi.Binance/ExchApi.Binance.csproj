@@ -61,7 +61,6 @@
     <Compile Include="src\Misc\Enumerations.cs" />
     <Compile Include="src\Misc\Conv.cs" />
     <Compile Include="src\Misc\MarketDataSubscription.cs" />
-    <Compile Include="src\WebSocket\WebSocket.cs" />
     <Compile Include="src\WebSocket\WebSocketEvent.cs" />
     <Compile Include="src\WebSocket\CandleDataCache.cs" />
     <Compile Include="src\WebSocket\MarketDataCache.cs" />

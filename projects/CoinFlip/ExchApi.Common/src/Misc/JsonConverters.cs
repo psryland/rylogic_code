@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Reflection;
 using Newtonsoft.Json;
-using Rylogic.Extn;
 using Rylogic.Utility;
 
 namespace ExchApi.Common.JsonConverter
@@ -60,7 +59,7 @@ namespace ExchApi.Common.JsonConverter
 		}
 		public override void WriteJson(JsonWriter writer, T value, JsonSerializer serializer)
 		{
-			throw new NotImplementedException();
+			writer.WriteValue(value.ToString());
 		}
 	}
 	public class ToUnixSec : JsonConverter<UnixSec>

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using System.Windows.Threading;
 using Rylogic.Utility;
 
-namespace Binance.API
+namespace ExchApi.Common
 {
 	public class WebSocket :IDisposable
 	{
@@ -39,9 +39,8 @@ namespace Binance.API
 		public bool Healthy
 		{
 			get =>
-				m_socket.State == System.Net.WebSockets.WebSocketState.Open ||
-				m_socket.State == System.Net.WebSockets.WebSocketState.Connecting;
-			//get => m_socket.ReadyState != WebSocketState.Open;
+				m_socket.State == WebSocketState.Open ||
+				m_socket.State == WebSocketState.Connecting;
 		}
 
 		/// <summary>Connect the web socket</summary>

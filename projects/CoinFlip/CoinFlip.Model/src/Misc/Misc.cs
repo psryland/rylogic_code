@@ -114,18 +114,18 @@ namespace CoinFlip
 			throw new Exception("Unknown trade type string");
 		}
 
-		/// <summary>Convert a Binance order type to EPlaceOrderType</summary>
-		public static EOrderType OrderType(this global::Binance.API.EOrderType order_type)
+		/// <summary>Convert a Binance order type to EOrderType. "is_working" is binance's way of distingishing stop orders that have reached their limit</summary>
+		public static EOrderType OrderType(this global::Binance.API.EOrderType order_type, bool is_working)
 		{
 			switch (order_type)
 			{
 			default: throw new Exception("Unknown order type string");
 			case global::Binance.API.EOrderType.LIMIT: return EOrderType.Limit;
 			case global::Binance.API.EOrderType.MARKET: return EOrderType.Market;
-			case global::Binance.API.EOrderType.STOP_LOSS: return EOrderType.Stop;
-			case global::Binance.API.EOrderType.STOP_LOSS_LIMIT: return EOrderType.Stop;
-			case global::Binance.API.EOrderType.TAKE_PROFIT: return EOrderType.Stop;
-			case global::Binance.API.EOrderType.TAKE_PROFIT_LIMIT: return EOrderType.Stop;
+			case global::Binance.API.EOrderType.STOP_LOSS: return is_working ? EOrderType.Market : EOrderType.Stop;
+			case global::Binance.API.EOrderType.STOP_LOSS_LIMIT: return is_working ? EOrderType.Limit : EOrderType.Stop;
+			case global::Binance.API.EOrderType.TAKE_PROFIT: return is_working ? EOrderType.Market : EOrderType.Stop;
+			case global::Binance.API.EOrderType.TAKE_PROFIT_LIMIT: return is_working ? EOrderType.Limit : EOrderType.Stop;
 			case global::Binance.API.EOrderType.LIMIT_MAKER: return EOrderType.Limit;
 			}
 		}

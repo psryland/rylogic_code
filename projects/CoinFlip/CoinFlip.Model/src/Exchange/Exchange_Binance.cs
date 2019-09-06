@@ -385,7 +385,7 @@ namespace CoinFlip
 		{
 			var order_id = order.OrderId;
 			var fund_id = OrderIdToFund(order_id);
-			var ot = Misc.OrderType(order.OrderType);
+			var ot = Misc.OrderType(order.OrderType, order.IsWorking);
 			var tt = Misc.TradeType(order.OrderSide);
 			var pair = Pairs.GetOrAdd(order.Pair.Base, order.Pair.Quote);
 			var amount_in = tt.AmountIn(order.AmountBase._(pair.Base), order.PriceQ2B._(pair.RateUnits));

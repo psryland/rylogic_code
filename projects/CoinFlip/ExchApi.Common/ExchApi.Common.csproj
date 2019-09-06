@@ -52,6 +52,7 @@
     <Compile Include="src\Misc\RequestThrottle.cs" />
     <Compile Include="src\WebSockets\Subscription.cs" />
     <Compile Include="src\WebSockets\SubscriptionContainer.cs" />
+    <Compile Include="src\WebSockets\WebSocket.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Rylogic.Core\Rylogic.Core.csproj">

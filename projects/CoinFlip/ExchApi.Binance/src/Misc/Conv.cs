@@ -1,4 +1,6 @@
 ﻿using System;
+using Binance.API.DomainObjects;
+using Newtonsoft.Json;
 
 namespace Binance.API
 {
@@ -26,6 +28,17 @@ namespace Binance.API
 			case EMarketPeriod.Week1:     return TimeSpan.FromDays(7 * count);
 			case EMarketPeriod.Month1:    return TimeSpan.FromDays(30.44 * count);
 			}
+		}
+	}
+	public class ToCurrencyPair :JsonConverter<CurrencyPair>
+	{
+		public override CurrencyPair ReadJson(JsonReader reader, Type objectType, CurrencyPair existingValue, bool hasExistingValue, JsonSerializer serializer)
+		{
+			return CurrencyPair.Parse((string)reader.Value);
+		}
+		public override void WriteJson(JsonWriter writer, CurrencyPair value, JsonSerializer serializer)
+		{
+			writer.WriteValue(value.Id);
 		}
 	}
 }

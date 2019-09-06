@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Binance.API.DomainObjects;
+using ExchApi.Common;
 using ExchApi.Common.JsonConverter;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -303,6 +304,8 @@ namespace Binance.API
 			/// <summary>Update account data</summary>
 			private void ApplyUpdate(TradeOrderUpdate update)
 			{
+				BinanceApi.Log.Write(ELogLevel.Debug, $"Order Update: {JsonConvert.SerializeObject(update, Formatting.Indented)}");
+
 				// Apply the consequences of this update to the orders and the history
 				Orders.ApplyUpdate(update);
 				History.ApplyUpdate(update);
@@ -354,6 +357,16 @@ namespace Binance.API
 			/// <summary>Apply an update to the order stream</summary>
 			internal void ApplyUpdate(TradeOrderUpdate update)
 			{
+				// Binance's Documentation is unbelievablely shit.
+				// Notes:
+				//  - Normal orders
+				//  - Stop-Limit orders:
+				//    Initially appear as a "NEW" order with 'w' (working) as false.
+				//    When the stop is hit, another NEW update is sent with the same ClientOrderId but new OrderId. 'w' is true.
+				//  - Cancelling an order looks like a completely different order, except the OriginalClientOrderId will match
+				//    an existing order.
+				//    
+
 				// Get the orders associated with the pair in the update
 				var orders_per_pair = (List<Order>)null;
 				lock (m_orders)
@@ -365,33 +378,19 @@ namespace Binance.API
 				// Apply the update to the specific order
 				lock (orders_per_pair)
 				{
-					// If there is an existing order with this order id, update it
-					var existing = orders_per_pair.FirstOrDefault(x => x.OrderId == update.OrderId);
-					if (existing != null)
-					{
-						existing.ClientOrderId = update.ClientOrderId;
-						existing.PriceQ2B = update.Price;
-						existing.AmountBase = update.AmountBase;
-						existing.AmountCompleted = update.AmountBaseCumulativeFilled;
-						existing.CummulativeAmountQuote = update.AmountQuoteCumulativeFilled;
-						existing.Status = update.Status;
-						existing.TimeInForce = update.TimeInForce;
-						existing.OrderType = update.OrderType;
-						existing.OrderSide = update.OrderSide;
-						existing.StopPrice = update.StopPrice;
-						existing.IcebergAmount = update.IcebergAmountBase;
-						existing.Created = update.Created;
-						existing.Updated = update.Updated;
-						existing.IsWorking = update.IsOrderWorking;
-					}
-
 					// Do something to the order based on execution type
 					switch (update.ExecutionType)
 					{
-					default: throw new Exception($"Unknown order update execution type: {update.ExecutionType}");
+					default:
+						{
+							BinanceApi.Log.Write(ELogLevel.Warn, $"Unknown execution type: ({update.ExecutionType}) received in OrdersStream.ApplyUpdate");
+							BinanceApi.Log.Write(ELogLevel.Debug, $"{JsonConvert.SerializeObject(update, Formatting.Indented)}");
+							break;
+						}
 					case EExecutionType.NEW:
 						{
-							orders_per_pair.RemoveIf(x => x.OrderId == update.OrderId);
+							// Remove any stop orders associated with this trade
+							orders_per_pair.RemoveIf(x => x.ClientOrderId == update.ClientOrderId);
 							orders_per_pair.Add(update);
 							break;
 						}
@@ -399,26 +398,40 @@ namespace Binance.API
 					case EExecutionType.REJECTED:
 					case EExecutionType.EXPIRED:
 						{
-							orders_per_pair.RemoveIf(x => x.OrderId == update.OrderId);
+							orders_per_pair.RemoveIf(x => x.ClientOrderId == update.OriginalClientOrderId);
 							break;
 						}
 					case EExecutionType.REPLACED:
 						{
 							// Notes: the API docs say this is currently unused.
 							// The order has been replaced with an updated version
-							orders_per_pair.Remove(existing);
+							orders_per_pair.RemoveIf(x => x.ClientOrderId == update.OriginalClientOrderId);
 							orders_per_pair.Add(update);
 							throw new NotSupportedException("Supposed to not be used according to the Binance API docs");
 						}
 					case EExecutionType.TRADE:
 						{
 							// A trade was made in relation to this order
-							// The order was filled, so remove it from the orders list
-							if (update.Status == EOrderStatus.PARTIALLY_FILLED) { }
-							else if (update.Status == EOrderStatus.FILLED)
-								orders_per_pair.RemoveIf(x => x.OrderId == update.OrderId);
-							else
-								throw new Exception("Order update with unhandled order status");
+							switch (update.Status)
+							{
+							default:
+								{
+									BinanceApi.Log.Write(ELogLevel.Warn, $"Unknown trade status: ({update.Status}) received in OrdersStream.ApplyUpdate");
+									BinanceApi.Log.Write(ELogLevel.Debug, $"{JsonConvert.SerializeObject(update, Formatting.Indented)}");
+									break;
+								}
+							case EOrderStatus.PARTIALLY_FILLED:
+								{
+									// Partially filled means the order is still live
+									break;
+								}
+							case EOrderStatus.FILLED:
+								{
+									// The order was filled, so remove it from the orders list
+									orders_per_pair.RemoveIf(x => x.ClientOrderId == update.OriginalClientOrderId);
+									break;
+								}
+							}
 							break;
 						}
 					}
@@ -482,9 +495,47 @@ namespace Binance.API
 				// Add the update as a new OrderFill item
 				lock (orderfills_per_pair)
 				{
-					orderfills_per_pair.RemoveIf(x => x.OrderId == update.OrderId && x.TradeId == update.TradeId);
-					orderfills_per_pair.Add(update);
-					orderfills_per_pair.Sort(x => x.Created);
+					switch (update.ExecutionType)
+					{
+					default:
+						{
+							BinanceApi.Log.Write(ELogLevel.Warn, $"Unknown execution type: ({update.ExecutionType}) received in HistoryStream.ApplyUpdate");
+							BinanceApi.Log.Write(ELogLevel.Debug, $"{JsonConvert.SerializeObject(update, Formatting.Indented)}");
+							break;
+						}
+					case EExecutionType.TRADE:
+						{
+							// A trade was made in relation to this order
+							switch (update.Status)
+							{
+							default:
+								{
+									BinanceApi.Log.Write(ELogLevel.Warn, $"Unknown trade status: ({update.Status}) received in OrdersStream.ApplyUpdate");
+									BinanceApi.Log.Write(ELogLevel.Debug, $"{JsonConvert.SerializeObject(update, Formatting.Indented)}");
+									break;
+								}
+							case EOrderStatus.PARTIALLY_FILLED:
+							case EOrderStatus.FILLED:
+								{
+									// Add each partial trade
+									orderfills_per_pair.RemoveIf(x => x.OrderId == update.OrderId && x.TradeId == update.TradeId);
+									orderfills_per_pair.Add(update);
+									orderfills_per_pair.Sort(x => x.Created);
+									break;
+								}
+							}
+							break;
+						}
+					case EExecutionType.NEW:
+					case EExecutionType.CANCELED:
+					case EExecutionType.REPLACED:
+					case EExecutionType.REJECTED:
+					case EExecutionType.EXPIRED:
+						{
+							// No effect on history
+							break;
+						}
+					}
 				}
 			}
 		}
@@ -596,8 +647,8 @@ namespace Binance.API
 			public DateTimeOffset EventTime { get; set; }
 
 			/// <summary>Transaction instrument</summary>
+			[JsonProperty("s"), JsonConverter(typeof(ToCurrencyPair))]
 			public CurrencyPair Pair { get; set; }
-			[JsonProperty("s")] private string PairInternal { set => Pair = CurrencyPair.Parse(value); }
 
 			/// <summary>Client order id</summary>
 			[JsonProperty("c")]
@@ -691,7 +742,9 @@ namespace Binance.API
 			[JsonProperty("t")]
 			public long TradeId { get; set; }
 
-			/// <summary>Is the order working? Stops will have</summary>
+			/// <summary>
+			/// "Working". For stop orders this is initially false until the stop limit is hit.
+			/// After being hit, another update is sent with type "NEW", same ClientOrderId, and Working == true</summary>
 			[JsonProperty("w")]
 			public bool IsOrderWorking { get; set; }
 
