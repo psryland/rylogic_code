@@ -627,10 +627,10 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					return new Hotspot[]
 					{
 								new Hotspot(new RectangleGeometry(new Rect(b,b,cx,cx)), EDropSite.PaneCentre),
-								new Hotspot(Geometry_.MakePolygon(a,a, b,b, b,c, a,d), EDropSite.PaneLeft),
-								new Hotspot(Geometry_.MakePolygon(d,d, c,c, c,b, d,a), EDropSite.PaneRight),
-								new Hotspot(Geometry_.MakePolygon(a,a, d,a, c,b, b,b), EDropSite.PaneTop),
-								new Hotspot(Geometry_.MakePolygon(d,d, a,d, b,c, c,c), EDropSite.PaneBottom),
+								new Hotspot(Geometry_.MakePolygon(true, a,a, b,b, b,c, a,d), EDropSite.PaneLeft),
+								new Hotspot(Geometry_.MakePolygon(true, d,d, c,c, c,b, d,a), EDropSite.PaneRight),
+								new Hotspot(Geometry_.MakePolygon(true, a,a, d,a, c,b, b,b), EDropSite.PaneTop),
+								new Hotspot(Geometry_.MakePolygon(true, d,d, a,d, b,c, c,c), EDropSite.PaneBottom),
 								new Hotspot(new RectangleGeometry(new Rect(0,a,32,64)), EDropSite.BranchLeft),
 								new Hotspot(new RectangleGeometry(new Rect(d,a,32,64)), EDropSite.BranchRight),
 								new Hotspot(new RectangleGeometry(new Rect(a,0,64,32)), EDropSite.BranchTop),
@@ -643,10 +643,10 @@ namespace Rylogic.Gui.WPF.DockContainerDetail
 					return new Hotspot[]
 					{
 								new Hotspot(new RectangleGeometry(new Rect(b,b,cx,cx)), EDropSite.PaneCentre),
-								new Hotspot(Geometry_.MakePolygon(a,a, b,b, b,c, a,d), EDropSite.PaneLeft),
-								new Hotspot(Geometry_.MakePolygon(d,d, c,c, c,b, d,a), EDropSite.PaneRight),
-								new Hotspot(Geometry_.MakePolygon(a,a, d,a, c,b, b,b), EDropSite.PaneTop),
-								new Hotspot(Geometry_.MakePolygon(d,d, a,d, b,c, c,c), EDropSite.PaneBottom),
+								new Hotspot(Geometry_.MakePolygon(true, a,a, b,b, b,c, a,d), EDropSite.PaneLeft),
+								new Hotspot(Geometry_.MakePolygon(true, d,d, c,c, c,b, d,a), EDropSite.PaneRight),
+								new Hotspot(Geometry_.MakePolygon(true, a,a, d,a, c,b, b,b), EDropSite.PaneTop),
+								new Hotspot(Geometry_.MakePolygon(true, d,d, a,d, b,c, c,c), EDropSite.PaneBottom),
 					};
 				}
 			case EIndicator.dock_site_left:

@@ -29,6 +29,14 @@ namespace CoinFlip
 		/// <summary>The sum of holds that the exchange is aware oforder</summary>
 		public Unit<double> ExchHeld => m_holds.Where(x => !x.Local).Sum(x => x.Amount);
 
+		/// <summary>Create a hold that lasts until disposed</summary>
+		public IDisposable CreateTempoary(Unit<double> amount, Guid? id = null, long? order_id = null, bool local = true)
+		{
+			return Scope.Create(
+				() => Create(amount, id, order_id, local),
+				h => Remove(h));
+		}
+
 		/// <summary>Create a new hold instance</summary>
 		public FundHold Create(Unit<double> amount, Guid? id = null, long? order_id = null, bool local = true)
 		{

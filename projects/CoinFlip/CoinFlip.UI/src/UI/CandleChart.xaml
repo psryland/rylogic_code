@@ -7,7 +7,8 @@
     xmlns:settings="clr-namespace:CoinFlip.Settings;assembly=CoinFlip.Model"
     xmlns:local="clr-namespace:CoinFlip.UI"
 	xmlns:gui="clr-namespace:Rylogic.Gui.WPF;assembly=Rylogic.Gui.WPF"
-    mc:Ignorable="d" 
+	xmlns:conv="clr-namespace:Rylogic.Gui.WPF.Converters;assembly=Rylogic.Gui.WPF"
+	mc:Ignorable="d" 
 	d:DesignWidth="500"
 	d:DesignHeight="350"
 	>
@@ -231,13 +232,22 @@
 		</Button>
 
 		<!-- Time Range -->
-		<TextBlock
+		<StackPanel
 			Grid.Column="10"
-			DockPanel.Dock="Right"
-			Text="{Binding VisibleTimeSpan}"
-			VerticalAlignment="Center"
-			Margin="3"
-			/>
+			>
+			<TextBlock
+				Text="{Binding VisibleTimeSpan}"
+				VerticalAlignment="Center"
+				Margin="3,0,3,0"
+				/>
+			<TextBlock
+				Text="{Binding AccountPositionDesc}"
+				Background="{Binding AccountPositionColour, Converter={conv:ColourToBrush}}"
+				TextAlignment="Center"
+				VerticalAlignment="Center"
+				Margin="3,0,3,0"
+				/>
+		</StackPanel>
 
 		<!-- Chart Options -->
 		<Button

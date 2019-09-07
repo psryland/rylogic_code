@@ -579,28 +579,6 @@ namespace CoinFlip
 			return Task.CompletedTask;
 		}
 
-		/// <summary>Return the order book for 'pair' to a depth of 'depth'</summary>
-		public async Task<MarketDepth> MarketDepth(TradePair pair, int depth) // Worker thread context
-		{
-			try
-			{
-				Debug.Assert(Misc.AssertBackgroundThread());
-
-				return Sim != null
-					? Sim.MarketDepthInternal(pair, depth)
-					: await MarketDepthInternal(pair, depth);
-			}
-			catch (Exception ex)
-			{
-				HandleException(nameof(MarketDepth), ex);
-				return new MarketDepth(pair.Base, pair.Quote);
-			}
-		}
-		protected virtual Task<MarketDepth> MarketDepthInternal(TradePair pair, int count) // Worker thread context
-		{
-			return Task.FromResult(new MarketDepth(pair.Base, pair.Quote));
-		}
-
 		/// <summary>Return the candle data for a given pair, over a given time range</summary>
 		public async Task<List<Candle>> CandleData(TradePair pair, ETimeFrame timeframe, UnixSec time_beg, UnixSec time_end, CancellationToken? cancel) // Worker thread context
 		{
@@ -653,6 +631,7 @@ namespace CoinFlip
 				var bal = fund[tt.CoinIn(pair)];
 				var hold_amount = amount_in;
 				var hold = bal.Holds.Create(hold_amount, local: true);
+//				using hold;
 
 				// Make the trade
 				// This can have the following results:

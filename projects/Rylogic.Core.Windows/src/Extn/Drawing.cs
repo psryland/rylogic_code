@@ -107,6 +107,10 @@ namespace Rylogic.Extn.Windows
 		{
 			return new Maths.v2((float)pt.X, (float)pt.Y);
 		}
+		public static Maths.v2 ToV2(this Vector v)
+		{
+			return new Maths.v2((float)v.X, (float)v.Y);
+		}
 		public static Point ToPointD(this System.Drawing.PointF pt)
 		{
 			return new Point(pt.X, pt.Y);
@@ -114,6 +118,10 @@ namespace Rylogic.Extn.Windows
 		public static Point ToPointD(this Maths.v2 pt)
 		{
 			return new Point(pt.x, pt.y);
+		}
+		public static Vector ToVectorD(this Maths.v2 pt)
+		{
+			return new Vector(pt.x, pt.y);
 		}
 		public static Point ToNormalisedScreenSpace(Point pt, double screen_width, double screen_height)
 		{

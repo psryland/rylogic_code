@@ -126,7 +126,14 @@ namespace CoinFlip.UI
 						{
 							try { await e.Commit(); }
 							catch (OperationCanceledException) { }
-							catch (Exception ex) { MsgBox.Show(GetWindow(this), ex.MessageFull(), "Create/Modify Order", MsgBox.EButtons.OK, MsgBox.EIcon.Error); }
+							catch (Exception ex)
+							{
+								Model.Log.Write(ELogLevel.Error, ex, "Creating/Updating trade failed");
+								await Misc.RunOnMainThread(() =>
+								{
+									MsgBox.Show(GetWindow(this), ex.MessageFull(), "Create/Modify Order", MsgBox.EButtons.OK, MsgBox.EIcon.Error);
+								});
+							}
 						}
 					};
 					ui.Show();

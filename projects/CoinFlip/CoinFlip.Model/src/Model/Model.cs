@@ -75,8 +75,8 @@ namespace CoinFlip
 		}
 		public void Dispose()
 		{
-			Bots.Clear();
-			Indicators.Clear();
+			Bots?.Clear();
+			Indicators?.Clear();
 
 			MainLoopRunning = false;
 

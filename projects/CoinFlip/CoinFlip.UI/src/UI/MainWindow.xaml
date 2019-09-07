@@ -56,6 +56,8 @@
 				<ToggleButton
 					ToolTip="Enable account trading"
 					IsChecked="{Binding AllowTrades}"
+					BorderBrush="{Binding AllowTrades, Converter={conv:BoolToBrush}, ConverterParameter='Black|Transparent'}"
+					Background="{Binding AllowTrades, Converter={conv:BoolToBrush}, ConverterParameter='#FFA|Transparent'}"
 					>
 					<StackPanel Orientation="Horizontal">
 						<Image

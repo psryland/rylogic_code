@@ -281,6 +281,9 @@ namespace CoinFlip
 		/// <summary>Return the fractional index of the candle at 'time_stamp'</summary>
 		public double FIndexAt(TimeFrameTime time_stamp)
 		{
+			if (Count == 0)
+				throw new Exception("FIndexAt is not defined when there is no data");
+
 			var idx = IndexAt(time_stamp);
 			var frac = Misc.TicksToTimeFrame(time_stamp.ExactTicks - this[idx].Timestamp, TimeFrame);
 			return idx + frac;

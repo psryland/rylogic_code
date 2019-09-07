@@ -82,12 +82,25 @@ namespace Binance.API
 	/// <summary>Order type</summary>
 	public enum EOrderType
 	{
+		/// <summary>Trade at a fixed price</summary>
 		LIMIT,
+
+		/// <summary>Trade at the current market price, consuming offers until the trade is filled</summary>
 		MARKET,
+
+		/// <summary>When the spot price reaches the target price, place a market order. Stop loss orders are not visible in the order book</summary>
 		STOP_LOSS,
+
+		/// <summary>When the spot price reaches the target price, place a limit order. Stop loss limit orders are not visible in the order book</summary>
 		STOP_LOSS_LIMIT,
+
+		/// <summary>When the spot price reaches the target price, place a market order. Take profit orders are not visible in the order book</summary>
 		TAKE_PROFIT,
+
+		/// <summary>When the spot price reaches the target price, place a limit order. Take profit limit orders are not visible in the order book</summary>
 		TAKE_PROFIT_LIMIT,
+
+		/// <summary>Limit maker orders are limit orders that will be rejected if they would immediately match and trade as a taker. The distinction effects the fees charged</summary>
 		LIMIT_MAKER,
 	}
 

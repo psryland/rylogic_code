@@ -217,6 +217,18 @@ namespace CoinFlip.UI.Indicators
 			/// <summary>The indicator data source</summary>
 			private TrendLine TL => (TrendLine)Indicator;
 
+			/// <summary>The trend line</summary>
+			private Line Line { get; }
+
+			/// <summary>The glow around the trend line when hovered or selected</summary>
+			private Line Glow { get; }
+
+			/// <summary>A grab handle for adjusting the trend line</summary>
+			private Ellipse Grab0 { get; }
+
+			/// <summary>A grab handle for adjusting the trend line</summary>
+			private Ellipse Grab1 { get; }
+
 			/// <summary>Chart space coordinates of the trend line end points</summary>
 			private Point Pt0
 			{
@@ -248,18 +260,6 @@ namespace CoinFlip.UI.Indicators
 				get => Chart.ChartToClient(Pt1);
 				set => Pt1 = Chart.ClientToChart(value);
 			}
-
-			/// <summary>The trend line</summary>
-			private Line Line { get; }
-
-			/// <summary>The glow around the trend line when hovered or selected</summary>
-			private Line Glow { get; }
-
-			/// <summary>A grab handle for adjusting the trend line</summary>
-			private Ellipse Grab0 { get; }
-
-			/// <summary>A grab handle for adjusting the trend line</summary>
-			private Ellipse Grab1 { get; }
 
 			/// <summary>Update when indicator settings change</summary>
 			protected override void HandleSettingChange(object sender, SettingChangeEventArgs e)

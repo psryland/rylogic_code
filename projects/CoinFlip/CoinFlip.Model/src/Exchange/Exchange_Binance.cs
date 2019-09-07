@@ -308,21 +308,6 @@ namespace CoinFlip
 			return Task.CompletedTask;
 		}
 
-		/// <summary>Return the order book for 'pair' to a depth of 'count'</summary>
-		protected override Task<MarketDepth> MarketDepthInternal(TradePair pair, int depth) // Worker thread context
-		{
-			throw new Exception("WTF");
-			//var cp = new CurrencyPair(pair.Base, pair.Quote);
-			//var orders = await Api.GetOrderBook(cp, depth, cancel: Shutdown.Token);
-			//
-			//// Update the depth of market data
-			//var market_depth = new MarketDepth(pair.Base, pair.Quote);
-			//var buys = orders.BuyOffers.Select(x => new Offer(x.PriceQ2B._(pair.RateUnits), x.AmountBase._(pair.Base))).ToArray();
-			//var sells = orders.SellOffers.Select(x => new Offer(x.PriceQ2B._(pair.RateUnits), x.AmountBase._(pair.Base))).ToArray();
-			//market_depth.UpdateOrderBook(buys, sells);
-			//return market_depth;
-		}
-
 		/// <summary>Return the chart data for a given pair, over a given time range</summary>
 		protected override Task<List<Candle>> CandleDataInternal(TradePair pair, ETimeFrame timeframe, UnixSec time_beg, UnixSec time_end, CancellationToken? cancel) // Worker thread context
 		{
@@ -336,29 +321,43 @@ namespace CoinFlip
 			return Task.FromResult(candles);
 		}
 
-		/// <summary>Cancel an open trade</summary>
-		protected override Task<bool> CancelOrderInternal(TradePair pair, long order_id, CancellationToken cancel)
-		{
-			throw new NotImplementedException();
-		}
-
 		/// <summary>Open a trade</summary>
-		protected override Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, CancellationToken cancel)
+		protected override async Task<OrderResult> CreateOrderInternal(TradePair pair, ETradeType tt, EOrderType ot, Unit<double> amount_in, Unit<double> amount_out, CancellationToken cancel)
 		{
 			try
 			{
-				throw new NotImplementedException();
 				// Place the trade order
-				//svar cp = new CurrencyPair(pair.Base, pair.Quote);
-				//svar res = await Api.SubmitTrade(cp, tt.ToBinanceTT(), q2b_price, amount_base, EOrderType.LIMIT, cancel:cancel);
-				//s
-				//s
-				//svar order_id = ToIdPair(res.Id).OrderId;
-				//sreturn new OrderResult(pair, order_id, filled: false);
+				var cp = new CurrencyPair(pair.Base, pair.Quote);
+				var side = tt.ToBinanceTT();
+				var type = ot.ToBinanceOT();
+				var price_q2b = tt.PriceQ2B(amount_out / amount_in);
+				var amount_base = tt.AmountBase(price_q2b, amount_in: amount_in);
+
+				var res = await Api.SubmitTrade(cp, side, type, ot != EOrderType.Market ? price_q2b : (double?)null, amount_base, null, cancel);
+
+				// Binance seem to be a bit loose with order ids. You might need to use 'ClientOrderId' instead
+				// 'ClientOrderId' can be a Guid specified when the trade is created.
+				var order_id = res.OrderId;//ToIdPair(res.OrderId).OrderId;
+				return new OrderResult(pair, order_id, filled: false);
 			}
 			catch (Exception ex)
 			{
 				throw new Exception($"Binance: Submit trade failed. {ex.Message}\n{tt} Pair: {pair.Name}  Amt: {amount_in.ToString(8, true)} @  {(amount_out / amount_in).ToString(8, true)}", ex);
+			}
+		}
+
+		/// <summary>Cancel an open trade</summary>
+		protected override async Task<bool> CancelOrderInternal(TradePair pair, long order_id, CancellationToken cancel)
+		{
+			try
+			{
+				var cp = new CurrencyPair(pair.Base, pair.Quote);
+				var res = await Api.CancelTrade(cp, order_id, cancel);
+				return res.Status == EOrderStatus.CANCELED;
+			}
+			catch (Exception ex)
+			{
+				throw new Exception($"Binance: Cancel trade failed. {ex.Message}\nOrder Id: {order_id } Pair: {pair.Name}", ex);
 			}
 		}
 
@@ -396,7 +395,7 @@ namespace CoinFlip
 		}
 
 		/// <summary>Convert an exchange order into a CoinFlip order completed</summary>
-		private TradeCompleted TradeCompletedFrom(global::Binance.API.DomainObjects.OrderFill fill, OrderCompleted order_completed, DateTimeOffset updated)
+		private TradeCompleted TradeCompletedFrom(OrderFill fill, OrderCompleted order_completed, DateTimeOffset updated)
 		{
 			var tt = order_completed.TradeType;
 			var pair = order_completed.Pair;

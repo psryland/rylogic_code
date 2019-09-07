@@ -153,6 +153,7 @@ namespace Rylogic.Gui.WPF
 				get => get<double>(nameof(MinSelectionDistance));
 				set => set(nameof(MinSelectionDistance), value);
 			}
+			public double MinSelectionDistanceSq => MinSelectionDistance * MinSelectionDistance;
 
 			/// <summary>Minimum distance in pixels before the chart starts dragging</summary>
 			public double MinDragPixelDistance

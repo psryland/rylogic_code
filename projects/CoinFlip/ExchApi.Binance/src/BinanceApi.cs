@@ -52,17 +52,17 @@ namespace Binance.API
 		public override async Task InitAsync()
 		{
 			// Populate the currency pair map.
-			var rules = await ServerRules(Shutdown);
+			Rules = await ServerRules(Shutdown);
 
 			// Record the current server time
-			ServerTimeOffsetMS = (long)(rules.ServerTime - DateTimeOffset.UtcNow).TotalMilliseconds;
+			ServerTimeOffsetMS = (long)(Rules.ServerTime - DateTimeOffset.UtcNow).TotalMilliseconds;
 
 			// Update the mapping from 'Symbol' to currency pairs
-			foreach (var sym in rules.Symbols)
+			foreach (var sym in Rules.Symbols)
 				CurrencyPair.SymbolToPair[sym.Symbol] = new CurrencyPair(sym.BaseAsset, sym.QuoteAsset);
 
 			// Initialise the throttle with the weight limits
-			foreach (var limit in rules.RateLimits)
+			foreach (var limit in Rules.RateLimits)
 			{
 				if (limit.RateLimitType == ERateLimitType.REQUEST_WEIGHT)
 				{
@@ -81,6 +81,9 @@ namespace Binance.API
 
 		/// <summary>Return a timestamp for a request in Unix MS</summary>
 		private long RequestTimestamp => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + ServerTimeOffsetMS;
+
+		/// <summary>Global server rules</summary>
+		private ServerRulesData Rules { get; set; }
 
 		/// <summary>The offset between our clock and the time reported by the server (in ms)</summary>
 		private long ServerTimeOffsetMS { get; set; }
@@ -307,16 +310,25 @@ namespace Binance.API
 		}
 
 		/// <summary>Create an order to buy/sell</summary>
-		public async Task<TradeResult> SubmitTrade(CurrencyPair pair, EOrderSide side, decimal? price, decimal amount_base, EOrderType type, ETimeInForce? time_in_force = null, CancellationToken? cancel = null)
+		public async Task<TradeResult> SubmitTrade(CurrencyPair pair, EOrderSide side, EOrderType type, double? price_q2b, double amount_base, ETimeInForce? time_in_force = null, CancellationToken? cancel = null)
 		{
 			// https://api.binance.com/api/v3/order
+
+			var rules = Rules.Symbols.First(x => x.Symbol == pair.Id);
+			if (!rules.IsSpotTradingAllowed)
+				throw new Exception($"Spot trading is not allowed for {pair.Id}");
+			if (rules.Status != ESymbolStatus.TRADING)
+				throw new Exception($"{pair.Id} is not available for trading");
+			if (!rules.OrderTypes.Contains(type))
+				throw new Exception($"Order type {type} is not support for {pair.Id}");
+
 			var parms = new Params { };
 			parms["symbol"] = pair.Id;
 			parms["side"] = side;
 			parms["type"] = type;
-			parms["quantity"] = amount_base;
+			parms["quantity"] = amount_base.ToString(rules.BaseAssetPrecision);
 			parms["newOrderRespType"] = "FULL";
-			if (price != null) parms["price"] = price.Value;
+			if (price_q2b != null) parms["price"] = price_q2b.Value.ToString(8);
 			if (time_in_force != null) parms["timeInForce"] = time_in_force.Value;
 
 			// Place the order

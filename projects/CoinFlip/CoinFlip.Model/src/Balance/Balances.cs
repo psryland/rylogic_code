@@ -122,8 +122,8 @@ namespace CoinFlip
 		/// <summary>Apply an update from an exchange for this currency</summary>
 		public void ExchangeUpdate(Unit<double> total, Unit<double> held, DateTimeOffset update_time)
 		{
-			// Ignore out-of-date data
-			if (LastUpdated > update_time)
+			// Ignore out-of-date data (unless back testing where time can go backwards)
+			if (LastUpdated > update_time && !Model.BackTesting)
 				return;
 
 			ExchTotal = total;

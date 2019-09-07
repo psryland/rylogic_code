@@ -281,19 +281,19 @@ namespace CoinFlip
 			});
 		}
 
-		/// <summary>Return the order book for 'pair' to a depth of 'count'</summary>
-		protected async override Task<MarketDepth> MarketDepthInternal(TradePair pair, int depth) // Worker thread context
-		{
-			var cp = new CurrencyPair(pair.Base, pair.Quote);
-			var orders = await Api.GetOrderBook(cp, depth, cancel: Shutdown.Token);
+		///// <summary>Return the order book for 'pair' to a depth of 'count'</summary>
+		//protected async override Task<MarketDepth> MarketDepthInternal(TradePair pair, int depth) // Worker thread context
+		//{
+		//	var cp = new CurrencyPair(pair.Base, pair.Quote);
+		//	var orders = await Api.GetOrderBook(cp, depth, cancel: Shutdown.Token);
 
-			// Update the depth of market data
-			var market_depth = new MarketDepth(pair.Base, pair.Quote);
-			var buys = orders.BuyOffers.Select(x => new Offer(x.Price._(pair.RateUnits), x.AmountBase._(pair.Base))).ToArray();
-			var sells = orders.SellOffers.Select(x => new Offer(x.Price._(pair.RateUnits), x.AmountBase._(pair.Base))).ToArray();
-			market_depth.UpdateOrderBooks(buys, sells);
-			return market_depth;
-		}
+		//	// Update the depth of market data
+		//	var market_depth = new MarketDepth(pair.Base, pair.Quote);
+		//	var buys = orders.BuyOffers.Select(x => new Offer(x.Price._(pair.RateUnits), x.AmountBase._(pair.Base))).ToArray();
+		//	var sells = orders.SellOffers.Select(x => new Offer(x.Price._(pair.RateUnits), x.AmountBase._(pair.Base))).ToArray();
+		//	market_depth.UpdateOrderBooks(buys, sells);
+		//	return market_depth;
+		//}
 
 		/// <summary>Return the chart data for a given pair, over a given time range</summary>
 		protected async override Task<List<Candle>> CandleDataInternal(TradePair pair, ETimeFrame timeframe, UnixSec time_beg, UnixSec time_end, CancellationToken? cancel) // Worker thread context

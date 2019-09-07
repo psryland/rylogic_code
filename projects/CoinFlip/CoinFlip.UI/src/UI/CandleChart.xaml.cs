@@ -81,12 +81,14 @@ namespace CoinFlip.UI
 					m_model.Charts.CollectionChanged -= HandleChartsCollectionChanged;
 					m_model.Indicators.CollectionChanged -= HandleIndicatorCollectionChanged;
 					SettingsData.Settings.Chart.SettingChange -= HandleSettingChange;
+					CoinData.BalanceChanged -= HandleBalanceChanged;
 					m_model.Charts.Remove(this);
 				}
 				m_model = value;
 				if (m_model != null)
 				{
 					m_model.Charts.Add(this);
+					CoinData.BalanceChanged += HandleBalanceChanged;
 					SettingsData.Settings.Chart.SettingChange += HandleSettingChange;
 					m_model.Indicators.CollectionChanged += HandleIndicatorCollectionChanged;
 					m_model.Charts.CollectionChanged += HandleChartsCollectionChanged;
@@ -99,6 +101,15 @@ namespace CoinFlip.UI
 				HandleChartsCollectionChanged(this, null);
 
 				// Handler
+				void HandleBalanceChanged(object sender, CoinEventArgs e)
+				{
+					if (e.Coin == Pair?.Base || e.Coin == Pair?.Quote)
+					{
+						NotifyPropertyChanged(nameof(AccountPosition));
+						NotifyPropertyChanged(nameof(AccountPositionDesc));
+						NotifyPropertyChanged(nameof(AccountPositionColour));
+					}
+				}
 				void HandleSettingChange(object sender, SettingChangeEventArgs e)
 				{
 					if (e.Before) return;
@@ -108,20 +119,20 @@ namespace CoinFlip.UI
 						Chart.Options.MinSelectionDistance = SettingsData.Settings.Chart.SelectionDistance;
 						break;
 					case nameof(ChartSettings.CandleStyle):
-						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(CandleStyle)));
+						NotifyPropertyChanged(nameof(CandleStyle));
 						GfxCandles?.Invalidate();
 						Chart.Invalidate();
 						break;
 					case nameof(ChartSettings.ShowOpenOrders):
-						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowOpenOrders)));
+						NotifyPropertyChanged(nameof(ShowOpenOrders));
 						Chart.Invalidate();
 						break;
 					case nameof(ChartSettings.ShowCompletedOrders):
-						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowCompletedOrders)));
+						NotifyPropertyChanged(nameof(ShowCompletedOrders));
 						Chart.Invalidate();
 						break;
 					case nameof(ChartSettings.ShowMarketDepth):
-						PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowMarketDepth)));
+						NotifyPropertyChanged(nameof(ShowMarketDepth));
 						GfxMarketDepth.Invalidate();
 						Chart.Invalidate();
 						break;
@@ -142,7 +153,7 @@ namespace CoinFlip.UI
 				void HandleChartsCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
 				{
 					DockControl.TabText = ChartName;
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ChartName)));
+					NotifyPropertyChanged(nameof(ChartName));
 				}
 				void HandleIndicatorCollectionChanged(object sender, IndicatorEventArgs e)
 				{
@@ -431,7 +442,7 @@ namespace CoinFlip.UI
 				}
 				void HandleMoved(object sender, ChartControl.ChartMovedEventArgs e)
 				{
-					PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(VisibleTimeSpan)));
+					NotifyPropertyChanged(nameof(VisibleTimeSpan));
 				}
 				void HandleKey(object sender, KeyEventArgs e)
 				{
@@ -626,6 +637,43 @@ namespace CoinFlip.UI
 				{
 					return string.Empty;
 				}
+			}
+		}
+
+		/// <summary>The account balance weighting for this chart. -1 = %100 bearish, +1 = %100 bullish</summary>
+		public double AccountPosition
+		{
+			get
+			{
+				if (Exchange == null || Pair == null) return 0.0;
+				var total_base = Exchange.Balance[Pair.Base].NettTotal;
+				var total_quote = Exchange.Balance[Pair.Quote].NettTotal;
+				var value_base = (double)Pair.Base.ValueOf(total_base);
+				var value_quote = (double)Pair.Quote.ValueOf(total_quote);
+				var denom = value_base + value_quote;
+				return !Math_.FEql(denom, 0) ? (value_base - value_quote) / denom : 0.0;
+			}
+		}
+		public string AccountPositionDesc
+		{
+			get
+			{
+				var pos = AccountPosition;
+				return
+					pos > 0 ? $"{+pos:P0} Bullish" :
+					pos < 0 ? $"{-pos:P0} Bearish" :
+					"0% Neutral";
+			}
+		}
+		public Colour32 AccountPositionColour
+		{
+			get
+			{
+				var pos = AccountPosition;
+				return
+					pos > 0 ? SettingsData.Settings.Chart.Q2BColour.Alpha(+pos) :
+					pos < 0 ? SettingsData.Settings.Chart.B2QColour.Alpha(-pos) :
+					Colour32.Transparent;
 			}
 		}
 
@@ -1009,8 +1057,7 @@ namespace CoinFlip.UI
 				// Drawing tools menu
 				var drawing_menu = cmenu.Items.Add2(new MenuItem { Header = "Drawing" });
 				{
-					{
-						// Horizontal line
+					{// Horizontal line
 						var opt = drawing_menu.Items.Add2(new MenuItem { Header = "Horizontal Line" });
 						opt.Click += (s, a) =>
 						{
@@ -1021,8 +1068,7 @@ namespace CoinFlip.UI
 							});
 						};
 					}
-					{
-						// Trend line
+					{// Trend line
 						var opt = drawing_menu.Items.Add2(new MenuItem { Header = "Trend Line" });
 						opt.Click += (s, a) =>
 						{
@@ -1033,6 +1079,22 @@ namespace CoinFlip.UI
 								Time1 = Instrument.TimeAtFIndex(Math_.Lerp(Chart.XAxis.Min, Chart.XAxis.Max, 0.75)),
 								Price0 = Math_.Lerp(Chart.YAxis.Min, Chart.YAxis.Max, 0.25),
 								Price1 = Math_.Lerp(Chart.YAxis.Min, Chart.YAxis.Max, 0.75),
+							});
+						};
+					}
+					{// Triangle
+						var opt = drawing_menu.Items.Add2(new MenuItem { Header = "Triangle" });
+						opt.Click += (s, a) =>
+						{
+							if (Instrument == null) return;
+							Model.Indicators.Add(Instrument.Pair.Name, new TrianglePattern
+							{
+								Type = TrianglePattern.ETrianglePatternType.Symmetric,
+								Time0 = Instrument.TimeAtFIndex(Math_.Lerp(Chart.XAxis.Min, Chart.XAxis.Max, 0.25)),
+								Time1 = Instrument.TimeAtFIndex(Math_.Lerp(Chart.XAxis.Min, Chart.XAxis.Max, 0.75)),
+								Price2 = Math_.Lerp(Chart.YAxis.Min, Chart.YAxis.Max, 0.75),
+								Price0 = Math_.Lerp(Chart.YAxis.Min, Chart.YAxis.Max, 0.25),
+								Price1 = Math_.Lerp(Chart.YAxis.Min, Chart.YAxis.Max, 0.5),
 							});
 						};
 					}
@@ -1149,6 +1211,10 @@ namespace CoinFlip.UI
 
 		/// <summary></summary>
 		public event PropertyChangedEventHandler PropertyChanged;
+		private void NotifyPropertyChanged(string prop_name)
+		{
+			PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(prop_name));
+		}
 
 		/// <summary>Z-values for chart elements</summary>
 		public static class ZOrder

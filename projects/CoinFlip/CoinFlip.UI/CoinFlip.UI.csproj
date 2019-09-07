@@ -109,6 +109,10 @@
     <Compile Include="src\Indicators\TrendLineUI.xaml.cs">
       <DependentUpon>TrendLineUI.xaml</DependentUpon>
     </Compile>
+    <Compile Include="src\Indicators\TrianglePattern.cs" />
+    <Compile Include="src\Indicators\TrianglePatternUI.xaml.cs">
+      <DependentUpon>TrianglePatternUI.xaml</DependentUpon>
+    </Compile>
     <Compile Include="src\Misc\CoinFilter.cs" />
     <Compile Include="src\Misc\SimulationView.cs" />
     <Compile Include="src\Misc\SkinResourceDictionary.cs" />
@@ -170,6 +174,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="src\Indicators\TrendLineUI.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="src\Indicators\TrianglePatternUI.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

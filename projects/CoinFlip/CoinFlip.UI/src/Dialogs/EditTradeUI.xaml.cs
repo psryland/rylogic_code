@@ -77,10 +77,12 @@ namespace CoinFlip.UI
 				if (m_model != null)
 				{
 					m_model.DataChanging -= HandleDataChanging;
+					CoinData.BalanceChanged -= HandleBalanceChanged;
 				}
 				m_model = value;
 				if (m_model != null)
 				{
+					CoinData.BalanceChanged += HandleBalanceChanged;
 					m_model.DataChanging += HandleDataChanging;
 				}
 
@@ -92,6 +94,18 @@ namespace CoinFlip.UI
 					{
 						Trade.PriceQ2B = Pair.MarketTrade(Trade.Fund, Trade.TradeType, Trade.AmountIn).PriceQ2B;
 						NotifyPropertyChanged(nameof(PriceQ2B));
+					}
+				}
+				void HandleBalanceChanged(object sender, CoinEventArgs e)
+				{
+					if (e.Coin == CoinIn)
+					{
+						NotifyPropertyChanged(nameof(AvailableIn));
+						NotifyPropertyChanged(nameof(TradeDescriptionIn));
+						NotifyPropertyChanged(nameof(TradeDescriptionIn));
+						NotifyPropertyChanged(nameof(ValidationResults));
+						NotifyPropertyChanged(nameof(IsAmountInValid));
+						NotifyPropertyChanged(nameof(IsValid));
 					}
 				}
 			}
@@ -427,11 +441,14 @@ namespace CoinFlip.UI
 		private string m_price_q2b;
 		private int m_in_price_q2b;
 
-		/// <summary>Return the available balance of currency to sell. Includes the 'm_initial.AmountIn' when modifying 'Trade'</summary>
+		/// <summary>The available balance of currency to sell. Includes the 'm_initial.AmountIn' when modifying 'Trade'</summary>
 		public Unit<double> AvailableIn => Trade.Fund[CoinIn].Available + ExistingHeld;
 
-		/// <summary>Return the available balance of currency to buy. Includes the 'm_initial.VolumeIn' when modifying 'Trade'</summary>
+		/// <summary>The available balance of currency to buy. Includes the 'm_initial.VolumeIn' when modifying 'Trade'</summary>
 		public Unit<double> AvailableOut => Trade.Fund[CoinOut].Available;
+
+		/// <summary>The total account balance of currency to sell</summary>
+		public Unit<double> BalanceIn => Trade.Fund[CoinIn].Total;
 
 		/// <summary>The currency sold</summary>
 		public Coin CoinIn => Trade.CoinIn;
@@ -440,7 +457,9 @@ namespace CoinFlip.UI
 		public Coin CoinOut => Trade.CoinOut;
 
 		/// <summary>Description of the amount sold in the trade</summary>
-		public string TradeDescriptionIn => $"Trading {Math_.Clamp(Math_.Div<double>(Trade.AmountIn, AvailableIn, 0), 0, 1):P2} of {CoinIn} balance";
+		public string TradeDescriptionIn => 
+			$"{Math_.Clamp(Math_.Div<double>(Trade.AmountIn, AvailableIn, 0), 0, 1):P1} of available {CoinIn}\n" +
+			$"{Math_.Clamp(Math_.Div<double>(Trade.AmountIn, BalanceIn, 0), 0, 1):P1} of account balance.\n";
 
 		/// <summary>Description of the amount received from the trade</summary>
 		public string TradeDescriptionOut => $"Fee: {Trade.Commission.ToString(8, true)} ({Trade.CommissionCoin.ValueOf(Trade.Commission).ToString(6,true)})";

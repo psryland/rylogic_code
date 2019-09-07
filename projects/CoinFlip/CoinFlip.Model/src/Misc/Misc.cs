@@ -131,12 +131,14 @@ namespace CoinFlip
 		}
 		public static global::Binance.API.EOrderType ToBinanceOT(this EOrderType order_type)
 		{
+			// In CoinFlip, a stop order is just a limit order on the wrong side of the spot price.
+			// In Binance speak, these are stop loss limits regardless of the trade side.
 			switch (order_type)
 			{
 			default: throw new Exception("Unknown trade type");
 			case EOrderType.Market: return global::Binance.API.EOrderType.MARKET;
 			case EOrderType.Limit: return global::Binance.API.EOrderType.LIMIT;
-			case EOrderType.Stop: return global::Binance.API.EOrderType.TAKE_PROFIT;
+			case EOrderType.Stop: return global::Binance.API.EOrderType.STOP_LOSS_LIMIT;
 			}
 		}
 

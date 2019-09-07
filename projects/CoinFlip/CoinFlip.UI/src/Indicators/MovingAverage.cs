@@ -396,6 +396,7 @@ namespace CoinFlip.UI.Indicators
 			{
 				// The x-axis range spanned by the data
 				var x_range = Data.CandleRange;
+				x = Math.Floor(x);
 
 				// If there is no data, return a null piece spanning the entire range
 				if (x_range == RangeF.Invalid)
@@ -572,15 +573,15 @@ namespace CoinFlip.UI.Indicators
 			/// <summary>Display the options UI</summary>
 			protected override void ShowOptionsUICore()
 			{
-				if (m_moving_average_ui == null)
+				if (m_ui == null)
 				{
-					m_moving_average_ui = new MovingAverageUI(Window.GetWindow(Chart), MA);
-					m_moving_average_ui.Closed += delegate { m_moving_average_ui = null; };
-					m_moving_average_ui.Show();
+					m_ui = new MovingAverageUI(Window.GetWindow(Chart), MA);
+					m_ui.Closed += delegate { m_ui = null; };
+					m_ui.Show();
 				}
-				m_moving_average_ui.Focus();
+				m_ui.Focus();
 			}
-			private MovingAverageUI m_moving_average_ui;
+			private MovingAverageUI m_ui;
 
 			/// <summary>Hit test this indicator</summary>
 			public override ChartControl.HitTestResult.Hit HitTest(Point chart_point, Point client_point, ModifierKeys modifier_keys, EMouseBtns mouse_btns, View3d.Camera cam)
@@ -646,7 +647,7 @@ namespace CoinFlip.UI.Indicators
 					Range = range;
 
 					{// Create the path for the MA
-						var path = Geometry_.MakePolyline(data.Select(x => new Point(x.CandleIndex, x.Value)));
+						var path = Geometry_.MakePolygon(false, data.Select(x => new Point(x.CandleIndex, x.Value)));
 						Line = new Path
 						{
 							Data = path,
@@ -666,7 +667,7 @@ namespace CoinFlip.UI.Indicators
 						};
 					}
 					{// Create the path the high BB
-						var path = Geometry_.MakePolyline(data.Select(x => new Point(x.CandleIndex, x.Value + ma.BBStdDev * x.StdDev)));
+						var path = Geometry_.MakePolygon(false, data.Select(x => new Point(x.CandleIndex, x.Value + ma.BBStdDev * x.StdDev)));
 						High = new Path
 						{
 							Data = path,
@@ -678,7 +679,7 @@ namespace CoinFlip.UI.Indicators
 						};
 					}
 					{// Create the path the low BB
-						var path = Geometry_.MakePolyline(data.Select(x => new Point(x.CandleIndex, x.Value - ma.BBStdDev * x.StdDev)));
+						var path = Geometry_.MakePolygon(false, data.Select(x => new Point(x.CandleIndex, x.Value - ma.BBStdDev * x.StdDev)));
 						Low = new Path
 						{
 							Data = path,
