@@ -380,6 +380,13 @@ namespace Rylogic.Utility
 			return numer.Append('/').Append(denom).ToString();
 		}
 
+		/// <summary>Explicit cast unit types</summary>
+		public static Unit<U> Cast<U, T>(Unit<T> x) where T : IComparable where U : IComparable
+		{
+			var u = Operators<U, T>.Cast(x.Value);
+			return new Unit<U>(u, x.UnitId);
+		}
+
 		/// <summary>Convert this raw value into a type with a known unit</summary>
 		[DebuggerStepThrough] public static Unit<T> _<T>(this T x, string unit) where T : IComparable
 		{
